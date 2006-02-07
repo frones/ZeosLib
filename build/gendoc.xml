@@ -1,0 +1,121 @@
+<?xml version="1.0"?>
+
+<!--
+  Project: Zeos Database Objects.
+  Module: Build & Test Environment.
+  Copyrights: (c) Zeos Development Group 1999-2003
+  
+  Calling conventions:
+    gendoc <doctype> <useronly> <target.path>
+
+  Parameters:
+    doctype = html | xhtml | pdf | chunk | hh | text
+    useronly = true | false
+    destination = <destination directory>
+-->
+
+<project name="gendoc" default="main" basedir=".">
+
+  <property file="build.properties" />
+
+  <property name="root.dir" value="${project.home}"/>
+  <property name="packages.dir" value="${root.dir}/packages"/>
+  <property name="src.dir" value="${root.dir}/src"/>
+  <property name="test.dir" value="${root.dir}/test"/>
+  <property name="doc.dir" value="${root.dir}/doc"/>
+  <property name="examples.dir" value="${root.dir}/examples"/>
+  <property name="lib.dir" value="${root.dir}/lib"/>
+  <property name="temp.dir" value="${root.dir}/temp"/>
+  <property name="release.dir" value="${root.dir}/releases"/>
+  <property name="target.dir" value="${destination}"/>
+
+  <property name="log.file" value="${logfile}"/>
+
+  <target name="prepare">
+
+    <mkdir dir="${target.dir}"/>
+
+  </target>
+
+  <target name="main" depends="prepare">
+
+    <antcall target="gen_user_doc"/>
+
+    <condition property="projectdoc.flag">
+      <isfalse value="${useronly}"/>
+    </condition>
+    <antcall target="gen_project_doc"/>
+
+  </target>
+
+  <target name="gen_user_doc">
+
+    <mkdir dir="${target.dir}/release"/>
+
+    <ant dir="." antfile="docbook.xml" inheritAll="false">
+      <property name="source.path" value="${doc.dir}/release"/>
+      <property name="target.path" value="${target.dir}/release"/>
+      <property name="doctype" value="${doctype}"/>
+      <property name="document" value="Changes"/>
+      <property name="logfile" value="${log.file}"/>
+    </ant>
+
+    <ant dir="." antfile="docbook.xml" inheritAll="false">
+      <property name="source.path" value="${doc.dir}/release"/>
+      <property name="target.path" value="${target.dir}/release"/>
+      <property name="doctype" value="${doctype}"/>
+      <property name="document" value="KnownBugs"/>
+      <property name="logfile" value="${log.file}"/>
+    </ant>
+
+    <ant dir="." antfile="docbook.xml" inheritAll="false">
+      <property name="source.path" value="${doc.dir}/release"/>
+      <property name="target.path" value="${target.dir}/release"/>
+      <property name="doctype" value="${doctype}"/>
+      <property name="document" value="ReadMe"/>
+      <property name="logfile" value="${log.file}"/>
+    </ant>
+
+    <ant dir="." antfile="docbook.xml" inheritAll="false">
+      <property name="source.path" value="${doc.dir}/release"/>
+      <property name="target.path" value="${target.dir}/release"/>
+      <property name="doctype" value="${doctype}"/>
+      <property name="document" value="License"/>
+      <property name="logfile" value="${log.file}"/>
+    </ant>
+
+    <ant dir="." antfile="docbook.xml" inheritAll="false">
+      <property name="source.path" value="${doc.dir}/release"/>
+      <property name="target.path" value="${target.dir}/release"/>
+      <property name="doctype" value="${doctype}"/>
+      <property name="document" value="Install"/>
+      <property name="logfile" value="${log.file}"/>
+    </ant>
+
+    <mkdir dir="${target.dir}/user"/>
+
+    <ant dir="." antfile="docbook.xml" inheritAll="false">
+      <property name="source.path" value="${doc.dir}/user"/>
+      <property name="target.path" value="${target.dir}/user"/>
+      <property name="doctype" value="${doctype}"/>
+      <property name="document" value="Parameters"/>
+      <property name="logfile" value="${log.file}"/>
+    </ant>
+
+  </target>
+
+  <target name="gen_project_doc" if="projectdoc.flag">
+
+    <mkdir dir="${target.dir}/develop"/>
+
+    <ant dir="." antfile="docbook.xml" inheritAll="false">
+      <property name="source.path" value="${doc.dir}/develop"/>
+      <property name="target.path" value="${target.dir}/develop"/>
+      <property name="doctype" value="${doctype}"/>
+      <property name="document" value="Overview"/>
+      <property name="logfile" value="${log.file}"/>
+    </ant>
+
+  </target>
+
+</project>

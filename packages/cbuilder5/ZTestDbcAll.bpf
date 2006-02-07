@@ -1,0 +1,24 @@
+USEUNIT("ZTestDbcAll.cpp");
+USEUNIT("..\..\test\external\TestFrameWork.pas");
+USEUNIT("..\..\test\external\TextTestRunner.pas");
+USEUNIT("..\..\test\dbc\ZTestDbcUtils.pas");
+USEUNIT("..\..\test\dbc\ZTestDbcCache.pas");
+USEUNIT("..\..\test\dbc\ZTestDbcCachedResultSet.pas");
+USEUNIT("..\..\test\dbc\ZTestDbcGeneric.pas");
+USEUNIT("..\..\test\dbc\ZTestDbcInterbaseMetadata.pas");
+USEUNIT("..\..\test\dbc\ZTestDbcInterbase.pas");
+USEUNIT("..\..\test\dbc\ZTestDbcMetadata.pas");
+USEUNIT("..\..\test\dbc\ZTestDbcMsSql.pas");
+USEUNIT("..\..\test\dbc\ZTestDbcMySql.pas");
+USEUNIT("..\..\test\dbc\ZTestDbcMySqlMetadata.pas");
+USEUNIT("..\..\test\dbc\ZTestDbcPostgreSql.pas");
+USEUNIT("..\..\test\dbc\ZTestDbcPostgreSqlMetadata.pas");
+USEUNIT("..\..\test\dbc\ZTestDbcResolver.pas");
+USEUNIT("..\..\test\dbc\ZTestDbcResultSet.pas");
+USEUNIT("..\..\test\dbc\ZTestDbcResultSetMetadata.pas");
+USEUNIT("..\..\test\dbc\ZTestDbcSqLite.pas");
+USEUNIT("..\..\test\dbc\ZTestDbcOracle.pas");
+//---------------------------------------------------------------------------
+This file is used by the project manager only and should be treated like the project file
+
+main

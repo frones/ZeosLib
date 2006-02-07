@@ -1,0 +1,1 @@
+ant -buildfile releasedoc.xml -Ddoctype=%1 

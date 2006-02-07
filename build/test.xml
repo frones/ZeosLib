@@ -1,0 +1,202 @@
+<?xml version="1.0"?>
+
+<!--
+  Project: Zeos Database Objects.
+  Module: Build & Test Environment.
+  Copyrights: (c) Zeos Development Group 1999-2003
+-->
+
+<project name="compile" default="main" basedir=".">
+
+  <property file="build.properties" />
+
+  <property name="root.dir" value="${project.home}"/>
+  <property name="packages.dir" value="${root.dir}/packages"/>
+  <property name="src.dir" value="${root.dir}/src"/>
+  <property name="test.dir" value="${root.dir}/test"/>
+  <property name="examples.dir" value="${root.dir}/examples"/>
+
+  <property name="logs.dir" value="${root.dir}/build/logs"/>
+
+  <target name="prepare">
+    <mkdir dir="${logs.dir}" />
+
+    <tstamp>
+      <format property="tstamp" pattern="yyyyMMdd" />
+    </tstamp>
+
+    <property name="log.file" value="${logs.dir}/test-${tstamp}.log"/>
+  </target>
+
+
+  <target name="main" depends="prepare">
+
+    <echo message="Testing Zeos DBO Project..."
+      file="${log.file}" append="true" />
+
+    <condition property="core.run">
+      <istrue value="${test.core}"/>
+    </condition>
+
+    <condition property="parsesql.run">
+      <istrue value="${test.parsesql}"/>
+    </condition>
+
+    <condition property="dbc.run">
+      <istrue value="${test.dbc}"/>
+    </condition>
+
+    <condition property="component.run">
+      <istrue value="${test.component}"/>
+    </condition>
+
+    <condition property="bugreport.run">
+      <istrue value="${test.bugreport}"/>
+    </condition>
+
+    <condition property="performance.run">
+      <istrue value="${test.performance}"/>
+    </condition>
+
+    <condition property="delphi5.run">
+      <istrue value="${delphi5.active}"/>
+    </condition>
+    <antcall target="delphi5_run"/>
+
+    <condition property="delphi6.run">
+      <istrue value="${delphi6.active}"/>
+    </condition>
+    <antcall target="delphi6_run"/>
+
+    <condition property="delphi7.run">
+      <istrue value="${delphi7.active}"/>
+    </condition>
+    <antcall target="delphi7_run"/>
+
+    <condition property="delphi9.run">
+      <istrue value="${delphi9.active}"/>
+    </condition>
+    <antcall target="delphi9_run"/>
+
+
+    <condition property="cbuilder5.run">
+      <istrue value="${cbuilder5.active}"/>
+    </condition>
+    <antcall target="cbuilder5_run"/>
+
+    <condition property="cbuilder6.run">
+      <istrue value="${cbuilder6.active}"/>
+    </condition>
+    <antcall target="cbuilder6_run"/>
+
+  </target>
+
+  <target name="delphi5_run" if="delphi5.run">
+    <antcall target="test_run_all">
+      <param name="compiler" value="delphi5"/>
+      <param name="compiler.dir" value="${delphi5.home}"/>
+    </antcall>
+  </target>
+
+  <target name="delphi6_run" if="delphi6.run">
+    <antcall target="test_run_all">
+      <param name="compiler" value="delphi6"/>
+      <param name="compiler.dir" value="${delphi6.home}"/>
+    </antcall>
+  </target>
+
+  <target name="delphi7_run" if="delphi7.run">
+    <antcall target="test_run_all">
+      <param name="compiler" value="delphi7"/>
+      <param name="compiler.dir" value="${delphi7.home}"/>
+    </antcall>
+  </target>
+  
+  <target name="delphi9_run" if="delphi9.run">
+    <antcall target="test_run_all">
+      <param name="compiler" value="delphi9"/>
+      <param name="compiler.dir" value="${delphi9.home}"/>
+    </antcall>
+  </target>
+
+  <target name="cbuilder5_run" if="cbuilder5.run">
+    <antcall target="test_run_all">
+      <param name="compiler" value="cbuilder5"/>
+      <param name="compiler.dir" value="${cbuilder5.home}"/>
+    </antcall>
+  </target>
+
+  <target name="cbuilder6_run" if="cbuilder6.run">
+    <antcall target="test_run_all">
+      <param name="compiler" value="cbuilder6"/>
+      <param name="compiler.dir" value="${cbuilder6.home}"/>
+    </antcall>
+  </target>
+
+  <target name="test_run_all">
+    <echo message="Testing packages for ${compiler}..."
+      file="${log.file}" append="true" />
+
+    <property name="package.dir" value="${packages.dir}/${compiler}"/>
+    <property name="build.dir" value="${package.dir}/build"/>
+
+    <antcall target="test_core_run" inheritAll="true"/>
+    <antcall target="test_parsesql_run" inheritAll="true"/>
+    <antcall target="test_dbc_run" inheritAll="true"/>
+    <antcall target="test_component_run" inheritAll="true"/>
+    <antcall target="test_bugreport_run" inheritAll="true"/>
+    <antcall target="test_performance_run" inheritAll="true"/>
+  </target>
+
+  <target name="test_core_run" if="core.run">
+    <antcall target="test_element_run" inheritAll="true">
+      <param name="test.exec" value="ZTestCoreAll"/>
+    </antcall>
+  </target>
+
+  <target name="test_parsesql_run" if="parsesql.run">
+    <antcall target="test_element_run" inheritAll="true">
+      <param name="test.exec" value="ZTestParseSqlAll"/>
+    </antcall>
+  </target>
+
+  <target name="test_dbc_run" if="dbc.run">
+    <antcall target="test_element_run" inheritAll="true">
+      <param name="test.exec" value="ZTestDbcAll"/>
+    </antcall>
+  </target>
+
+  <target name="test_component_run" if="component.run">
+    <antcall target="test_element_run" inheritAll="true">
+      <param name="test.exec" value="ZTestComponentAll"/>
+    </antcall>
+  </target>
+
+  <target name="test_bugreport_run" if="bugreport.run">
+    <antcall target="test_element_run" inheritAll="true">
+      <param name="test.exec" value="ZTestBugReport"/>
+    </antcall>
+  </target>
+
+  <target name="test_performance_run" if="performance.run">
+    <antcall target="test_element_run" inheritAll="true">
+      <param name="test.exec" value="ZTestPerformance"/>
+    </antcall>
+  </target>
+
+  <target name="test_element_run">
+    <echo message="Testing ... ${test.exec} ..."/>
+    <exec dir="${build.dir}" executable="${build.dir}/${test.exec}"
+       output="${log.file}" append="true">
+       <!--
+       BCB5 needs CC3250MT.DLL + some of the BPL's (which must be in path)
+       Other compilers may need similar things
+       Note : The environment variable's name ('Path/PATH') may be case sensitive
+	<env key="Path" path="${compiler.dir}/bin;${package.dir};${root.dir}/lib/mysql;${root.dir}/lib/postgresql"/>
+	<env key="PATH" path="${compiler.dir}/bin;${package.dir};${root.dir}/lib/mysql;${root.dir}/lib/postgresql"/>
+       -->
+	<env key="Path" path="${compiler.dir}/bin;${package.dir}"/>
+    </exec>
+  </target>
+
+</project>

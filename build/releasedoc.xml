@@ -1,0 +1,77 @@
+<?xml version="1.0"?>
+
+<!--
+  Project: Zeos Database Objects.
+  Module: Build & Test Environment.
+  Copyrights: (c) Zeos Development Group 1999-2003
+  
+  Calling conventions:
+    gendoc <doctype>
+
+  Parameters:
+    doctype = html | xhtml | pdf | chunk | hh | text
+-->
+
+<project name="releasedoc" default="main" basedir=".">
+
+  <property file="build.properties" />
+
+  <property name="root.dir" value="${project.home}"/>
+  <property name="packages.dir" value="${root.dir}/packages"/>
+  <property name="src.dir" value="${root.dir}/src"/>
+  <property name="test.dir" value="${root.dir}/test"/>
+  <property name="doc.dir" value="${root.dir}/doc"/>
+  <property name="examples.dir" value="${root.dir}/examples"/>
+  <property name="lib.dir" value="${root.dir}/lib"/>
+  <property name="temp.dir" value="${root.dir}/temp"/>
+  <property name="release.dir" value="${root.dir}/releases"/>
+
+  <property name="logs.dir" value="${root.dir}/build/logs"/>
+
+  <target name="prepare">
+
+    <mkdir dir="${release.dir}"/>
+    <delete dir="${temp.dir}" failonerror="false"/>
+    <mkdir dir="${temp.dir}"/>
+    <mkdir dir="${logs.dir}" />
+
+    <tstamp>
+      <format property="timestamp" pattern="yyyy-MM-dd hh:mm:ss" />
+    </tstamp>
+
+    <tstamp>
+      <format property="tstamp" pattern="yyyyMMdd" />
+    </tstamp>
+
+    <property name="log.file" value="${logs.dir}/releasedoc-${tstamp}.log"/>
+  </target>
+
+  <target name="main" depends="prepare">
+
+    <echo message="Generating Documentation for Zeos DBO Project..."
+      file="${log.file}" append="true" />
+
+    <ant dir="." antfile="gendoc.xml">
+      <property name="doctype" value="${doctype}"/>
+      <property name="useronly" value="false"/>
+      <property name="destination" value="${temp.dir}"/>
+      <property name="logfile" value="${log.file}"/>
+    </ant>
+
+    <move todir="${temp.dir}">
+      <fileset dir="${temp.dir}/release"/>
+    </move>
+
+    <delete dir="${temp.dir}/release" />
+
+    <echo message="${release.version} build at ${timestamp}" file="${temp.dir}/VERSION"/>
+
+    <zip zipfile="${release.dir}/zeosdbo-${release.version}-doc.zip">
+      <fileset dir="${temp.dir}"/>
+    </zip>
+
+    <delete dir="${temp.dir}" />
+
+  </target>
+
+</project>

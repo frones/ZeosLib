@@ -1,0 +1,1 @@
+brc32.exe -r -fo..\src\component\ZComponent.dcr ZComponent.rc

@@ -1,0 +1,15 @@
+USEUNIT("ZTestParseSqlAll.cpp");
+USEUNIT("..\..\test\external\TestFrameWork.pas");
+USEUNIT("..\..\test\external\TextTestRunner.pas");
+USEUNIT("..\..\test\parsesql\ZTestSybaseToken.pas");
+USEUNIT("..\..\test\parsesql\ZTestInterbaseToken.pas");
+USEUNIT("..\..\test\parsesql\ZTestMySqlToken.pas");
+USEUNIT("..\..\test\parsesql\ZTestPostgreSqlToken.pas");
+USEUNIT("..\..\test\parsesql\ZTestScriptParser.pas");
+USEUNIT("..\..\test\parsesql\ZTestSqlAnalyser.pas");
+USEUNIT("..\..\test\parsesql\ZTestSqLiteToken.pas");
+USEUNIT("..\..\test\parsesql\ZTestOracleToken.pas");
+//---------------------------------------------------------------------------
+This file is used by the project manager only and should be treated like the project file
+
+main

@@ -1,0 +1,100 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<!-- C++Builder XML Project -->
+<PROJECT>
+  <MACROS>
+    <VERSION value="BCB.05.03"/>
+    <PROJECT value="build\ZTestDbcAll.exe"/>
+    <OBJFILES value="build\TestFrameWork.obj build\TextTestRunner.obj build\ZTestDbcUtils.obj 
+      build\ZTestDbcCache.obj build\ZTestDbcCachedResultSet.obj 
+      build\ZTestDbcGeneric.obj build\ZTestDbcInterbaseMetadata.obj 
+      build\ZTestDbcInterbase.obj build\ZTestDbcMetadata.obj 
+      build\ZTestDbcMsSql.obj build\ZTestDbcMySql.obj 
+      build\ZTestDbcMySqlMetadata.obj build\ZTestDbcPostgreSql.obj 
+      build\ZTestDbcPostgreSqlMetadata.obj build\ZTestDbcResolver.obj 
+      build\ZTestDbcResultSet.obj build\ZTestDbcResultSetMetadata.obj 
+      build\ZTestDbcSqLite.obj build\ZTestDbcOracle.obj build\ZTestDbcAll.obj"/>
+    <RESFILES value=""/>
+    <IDLFILES value=""/>
+    <IDLGENFILES value=""/>
+    <DEFFILE value=""/>
+    <RESDEPEN value="$(RESFILES)"/>
+    <LIBFILES value=""/>
+    <LIBRARIES value="ZTestFramework.lib ZDbc.lib ZCore.lib"/>
+    <SPARELIBS value="Vcl50.lib ZCore.lib ZDbc.lib ZTestFramework.lib"/>
+    <PACKAGES value="Vcl50.bpi Vcldb50.bpi vclado50.bpi"/>
+    <PATHCPP value=".;"/>
+    <PATHPAS value=".;..\..\test\external;..\..\test\dbc"/>
+    <PATHRC value=".;"/>
+    <PATHASM value=".;"/>
+    <DEBUGLIBPATH value="$(BCB)\lib\debug"/>
+    <RELEASELIBPATH value="$(BCB)\lib\release"/>
+    <LINKER value="tlink32"/>
+    <USERDEFINES value=""/>
+    <SYSDEFINES value="NO_STRICT;_RTLDLL;USEPACKAGES"/>
+    <MAINSOURCE value="ZTestDbcAll.bpf"/>
+    <INCLUDEPATH value="..\..\test\dbc;..\..\test\external;$(BCB)\include;$(BCB)\include\vcl;build"/>
+    <LIBPATH value="$(BCB)\Projects\Lib;..\..\test\dbc;..\..\test\external;$(BCB)\lib\obj;$(BCB)\lib;build"/>
+    <WARNINGS value="-w-par"/>
+  </MACROS>
+  <OPTIONS>
+    <IDLCFLAGS value="-I..\..\test\dbc -I..\..\test\external -I$(BCB)\include 
+      -I$(BCB)\include\vcl -Ibuild -src_suffix cpp -boa"/>
+    <CFLAG1 value="-Od -Vx -Ve -X- -r- -a8 -6 -b- -k -y -v -vi- -tWC -tWM -c"/>
+    <PFLAGS value="-N2build -N0build -$YD -$W -$R -$Q -$O- -v -JPHNE -M"/>
+    <RFLAGS value=""/>
+    <AFLAGS value="/mx /w2 /zd"/>
+    <LFLAGS value="-Ibuild -D&quot;&quot; -ap -Tpe -x -Gn -v"/>
+  </OPTIONS>
+  <LINKER>
+    <ALLOBJ value="c0x32.obj $(PACKAGES) Memmgr.Lib sysinit.obj $(OBJFILES)"/>
+    <ALLRES value="$(RESFILES)"/>
+    <ALLLIB value="$(LIBFILES) $(LIBRARIES) import32.lib cp32mti.lib"/>
+  </LINKER>
+  <IDEOPTIONS>
+[Version Info]
+IncludeVerInfo=0
+AutoIncBuild=0
+MajorVer=1
+MinorVer=0
+Release=0
+Build=0
+Debug=0
+PreRelease=0
+Special=0
+Private=0
+DLL=0
+Locale=1033
+CodePage=1252
+
+[Version Info Keys]
+CompanyName=
+FileDescription=
+FileVersion=1.0.0.0
+InternalName=
+LegalCopyright=
+LegalTrademarks=
+OriginalFilename=
+ProductName=
+ProductVersion=1.0.0.0
+Comments=
+
+[Debugging]
+DebugSourceDirs=$(BCB)\source\vcl;build
+
+[Parameters]
+RunParams=
+HostApplication=
+RemoteHost=
+RemotePath=
+RemoteDebug=0
+
+[Compiler]
+ShowInfoMsgs=0
+LinkDebugVcl=0
+
+[CORBA]
+AddServerUnit=1
+AddClientUnit=1
+PrecompiledHeaders=1
+  </IDEOPTIONS>
+</PROJECT>
