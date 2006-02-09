@@ -52,11 +52,16 @@
       <istrue value="${delphi7.active}"/>
     </condition>
     <antcall target="delphi7_compile"/>
-    
+
     <condition property="delphi9.compile">
       <istrue value="${delphi9.active}"/>
     </condition>
     <antcall target="delphi9_compile"/>
+
+    <condition property="delphi10.compile">
+      <istrue value="${delphi10.active}"/>
+    </condition>
+    <antcall target="delphi10_compile"/>
 
     <condition property="cbuilder5.compile">
       <istrue value="${cbuilder5.active}"/>
@@ -113,6 +118,15 @@
       <param name="compile" value="${delphi9.compile}"/>
       <param name="compiler" value="delphi9"/>
       <param name="compiler.dir" value="${delphi9.home}"/>
+    </antcall>
+  </target>
+
+  <target name="delphi10_compile" if="delphi10.compile">
+    <property name="bpl.dir" value="${delphi10.bpl.dir}"/>
+    <antcall target="delphi_compile">
+      <param name="compile" value="${delphi10.compile}"/>
+      <param name="compiler" value="delphi10"/>
+      <param name="compiler.dir" value="${delphi10.home}"/>
     </antcall>
   </target>
 
@@ -274,6 +288,7 @@
 
   <target name="delphi_compile_project">
     <echo message="Compiling ${project.name} ... "/>
+    <echo message="FOS: Compiler ${compiler.dir}/bin/dcc32 Dir: ${package.dir}"/>
     <exec dir="${package.dir}" executable="${compiler.dir}/bin/dcc32"
       output="${log.file}" append="true" failonerror="true">
       <arg value="-Q"/>

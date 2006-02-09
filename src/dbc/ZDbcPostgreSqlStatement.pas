@@ -351,10 +351,11 @@ begin
       stAsciiStream, stUnicodeStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
-          if not TempBlob.IsEmpty then
-          begin
+          if not TempBlob.IsEmpty then begin
             Result := EncodeString(TempBlob.GetString)
-          end else Result := 'NULL';
+          end else begin
+           Result := 'NULL';
+          end;
         end;
       stBinaryStream:
         begin

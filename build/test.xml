@@ -78,6 +78,10 @@
     </condition>
     <antcall target="delphi9_run"/>
 
+    <condition property="delphi10.run">
+      <istrue value="${delphi10.active}"/>
+    </condition>
+    <antcall target="delphi10_run"/>
 
     <condition property="cbuilder5.run">
       <istrue value="${cbuilder5.active}"/>
@@ -111,11 +115,18 @@
       <param name="compiler.dir" value="${delphi7.home}"/>
     </antcall>
   </target>
-  
+
   <target name="delphi9_run" if="delphi9.run">
     <antcall target="test_run_all">
       <param name="compiler" value="delphi9"/>
       <param name="compiler.dir" value="${delphi9.home}"/>
+    </antcall>
+  </target>
+
+  <target name="delphi10_run" if="delphi10.run">
+    <antcall target="test_run_all">
+      <param name="compiler" value="delphi10"/>
+      <param name="compiler.dir" value="${delphi10.home}"/>
     </antcall>
   </target>
 

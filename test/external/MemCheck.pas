@@ -1,7 +1,7 @@
 (*
 MemCheck: the ultimate memory troubles hunter
 Created by: Jean Marc Eber & Vincent Mahon, Société Générale, INFI/SGOP/R&D
-Version 2.70	-> Also update OutputFileHeader when changing the version #
+Version 2.73	-> Also update OutputFileHeader when changing the version #
 
 Contact...
 	Vincent.Mahon@free.fr
@@ -88,16 +88,28 @@ the fifteen, but this would be more work, and I know it is useless).
 unit MemCheck;
 {$A+}
 {$H+}
-{$HINTS OFF}
-{$IFDEF VER150}
-	{$IF RTLVersion = 15.0}	//I hope this is ok ! What I want is to detect Delphi 7.1 (but not Delphi 7.0)
-		{$DEFINE DELPHI71_OR_LATER}
-	{$IFEND}
+{$IFDEF VER180}
+  //VER180 = Delphi 2006 for Win32
+  //Don't define DELPHI71_OR_LATER for Delphi 2006 for Win32.
+  {$UNDEF DELPHI71_OR_LATER}
+  {$DEFINE DELPHI6_OR_LATER}
+  {$DEFINE DELPHI7_OR_LATER}
+{$ENDIF}
+{$IFDEF VER170}
+  //VER170 = Delphi 2005 for Win32
+  //Don't define DELPHI71_OR_LATER for Delphi 2005 for Win32.
+  {$UNDEF DELPHI71_OR_LATER}
+  {$DEFINE DELPHI6_OR_LATER}
+  {$DEFINE DELPHI7_OR_LATER}
 {$ENDIF}
 {$IFDEF VER150}
-	{$DEFINE DELPHI6_OR_LATER}
-	{$DEFINE DELPHI7_OR_LATER}
-	{$WARNINGS OFF}	//We probably don't want to hear about warnings - Not sure about that
+  {$IFNDEF DELPHI70_MODE}
+    {$DEFINE DELPHI71_OR_LATER}
+    //If you are using Delphi 7.0 (not 7.1), then specify DELPHI70_MODE symbol in "Project/Options/Conditional defines" - Delphi 7.1 has build no. 4.453
+  {$ENDIF}
+  {$DEFINE DELPHI7_OR_LATER}
+  {$DEFINE DELPHI6_OR_LATER}
+  {$WARNINGS OFF}	//We probably don't want to hear about warnings - Not sure about that
 {$ENDIF}
 {$IFDEF VER140}
 	{$DEFINE DELPHI6_OR_LATER}
@@ -153,7 +165,7 @@ var
 	constant to 0. If you want blocks to be never deallocated, set the cstte to MaxInt. When blocks are not deallocated,
 	MemCheck can give information about when the second deallocation occured}
 
-	ShowLogFileWhenUseful: Boolean = False;
+	ShowLogFileWhenUseful: Boolean = True;
 
 const
 	StoredCallStackDepth = 26;
@@ -472,7 +484,7 @@ var
 	RoutinesCount: integer;
 	Units: array of TUnitDebugInfos;
 	UnitsCount: integer;
-	OutputFileHeader: string = 'MemCheck version 2.70'#13#10;
+	OutputFileHeader: string = 'MemCheck version 2.73'#13#10;
 	HeapStatusSynchro : TSynchroObject;
 
 {$IFDEF USE_JEDI_JCL}
@@ -1529,6 +1541,7 @@ var
 const
 	DummyToFinalizationOffset = {$IFOPT I+}356{$ELSE}352{$ENDIF};
 begin
+  exit;
 	{$IFNDEF DELPHI7_OR_LATER}
 	UnitsInfo:= PackageInfo(pointer(Pointer(PChar(@AllocMemSize) + 31 * 4 + 8)^));	//Hacky, no ? I learnt to count on my fingers ! (this stuff is not exported by system.pas)
 	{$ELSE}
@@ -1540,14 +1553,17 @@ begin
 			CurrentUnitInfo:= UnitsInfo.UnitInfo^[i];
 			GetMem(CurrentUnitInfoCopy, SizeOf(PackageUnitEntry));
 			CurrentUnitInfoCopy^:= CurrentUnitInfo;
-			if {$IFNDEF DELPHI6_OR_LATER}@{$ENDIF}CurrentUnitInfo.Init = @System.System then
+//			if {$IFNDEF DELPHI6_OR_LATER}@{$ENDIF}CurrentUnitInfo.Init = @System.System then
+			if CurrentUnitInfo.Init =nil then
 				NewUnitsInfoOrder.Insert(0, CurrentUnitInfoCopy)
 			else
-				if {$IFNDEF DELPHI6_OR_LATER}@{$ENDIF}CurrentUnitInfo.Init = @SysUtils.SysUtils then
+//				if {$IFNDEF DELPHI6_OR_LATER}@{$ENDIF}CurrentUnitInfo.Init = @SysUtils.SysUtils then
+   			if CurrentUnitInfo.Init =nil then
 					NewUnitsInfoOrder.Insert(1, CurrentUnitInfoCopy)
 				else
 					{$IFDEF DELPHI6_OR_LATER}
-					if CurrentUnitInfo.Init = @Variants.Variants then
+//					if CurrentUnitInfo.Init = @Variants.Variants then
+    			if CurrentUnitInfo.Init =nil then
 						NewUnitsInfoOrder.Insert(2, CurrentUnitInfoCopy)
 					else
 					{$ENDIF}

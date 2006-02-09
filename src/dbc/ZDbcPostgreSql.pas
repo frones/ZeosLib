@@ -130,7 +130,7 @@ type
     function GetServerMinorVersion: Integer;
   end;
 
-  {** Implements a Interbase 6 sequence. }
+  {** Implements a Postgres sequence. }
   TZPostgreSQLSequence = class(TZAbstractSequence)
   public
     function GetCurrentValue: Int64; override;

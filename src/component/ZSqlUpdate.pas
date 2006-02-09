@@ -694,27 +694,28 @@ begin
   RefreshRowAccessor := NewRowAccessor;
   case UpdateType of
     utInserted,utModified: begin
-     Refresh_OldSQL:=FRefreshSql.Text;
-     try
-      Config:=FRefreshSQL;
-      if UpdateType=utInserted then begin
-       if Dataset is TZAbstractDataset then begin
-        if FRefresh_OLD_ID_SEQ then begin
-         if assigned(TZAbstractDataset(DataSet).Sequence) and (TZAbstractDataset(DataSet).SequenceField<>'') then begin
-          Config.Text:=StringReplace(uppercase(Config.Text),':OLD_'+uppercase(TZAbstractDataset(DataSet).SequenceField),TZAbstractDataset(DataSet).Sequence.GetCurrentValueSQL,[rfReplaceAll]);
+     if FRefreshSql.Text<>'' then begin
+      Refresh_OldSQL:=FRefreshSql.Text;
+      try
+       Config:=FRefreshSQL;
+       if UpdateType=utInserted then begin
+        if Dataset is TZAbstractDataset then begin
+         if FRefresh_OLD_ID_SEQ then begin
+          if assigned(TZAbstractDataset(DataSet).Sequence) and (TZAbstractDataset(DataSet).SequenceField<>'') then begin
+           Config.Text:=StringReplace(uppercase(Config.Text),':OLD_'+uppercase(TZAbstractDataset(DataSet).SequenceField),TZAbstractDataset(DataSet).Sequence.GetCurrentValueSQL,[rfReplaceAll]);
+          end;
          end;
         end;
        end;
+        if CONFIG.StatementCount<>1 then begin
+        Statement := Sender.GetStatement.GetConnection.PrepareStatement(Config.Statements[0].SQL);
+        FillStatement(Sender, Statement, Config.Statements[0],OldRowAccessor, NewRowAccessor);
+        RefreshResultSet:=Statement.ExecuteQueryPrepared;
+        Apply_RefreshResultSet;
+       end;
+      finally
+       FRefreshSQL.Text:=Refresh_OldSQL;
       end;
-      if CONFIG.StatementCount<>1 then begin
-       raise EZDatabaseError.Create(SUpdateSQLRefreshStatementcount);
-      end;
-      Statement := Sender.GetStatement.GetConnection.PrepareStatement(Config.Statements[0].SQL);
-      FillStatement(Sender, Statement, Config.Statements[0],OldRowAccessor, NewRowAccessor);
-      RefreshResultSet:=Statement.ExecuteQueryPrepared;
-      Apply_RefreshResultSet;
-     finally
-      FRefreshSQL.Text:=Refresh_OldSQL;
      end;
     end;
   end;

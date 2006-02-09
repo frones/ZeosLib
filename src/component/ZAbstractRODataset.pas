@@ -936,9 +936,9 @@ begin
           Continue;
       end;
 
-      if Param.IsNull then
-        Statement.SetNull(I + 1, ConvertDatasetToDbcType(Param.DataType))
-      else begin
+      if Param.IsNull then begin
+         Statement.SetNull(I + 1, ConvertDatasetToDbcType(Param.DataType))
+      end else begin
         case Param.DataType of
           ftBoolean:
             Statement.SetBoolean(I + 1, Param.AsBoolean);
