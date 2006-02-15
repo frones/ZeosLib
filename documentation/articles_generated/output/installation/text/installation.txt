@@ -1,0 +1,111 @@
+
+This document was created using the >e-novative> DocBook Environment (eDE)
+
+
+
+
+
+
+ZeosDBO Installation Guide
+==========================
+
+
+
+
+
+ZeosLib Development Group
+=========================
+
+
+
+
+23 June 2005
+
+
+
+===========================================================================
+
+
+You can download the current (CVS) version from http://www.zeoslib.net
+
+
+1. Unpack the archive to a folder
+
+2. Copy the required dlls from lib directory to the windows system
+   directory (usually Windows\System or winnt\system32)
+
+3. Add the build Directory of the package you are about to install to
+   Delphi's library path.
+
+4. Locate the package directory associated with your compiler and open
+   the ZeosDbo.bpg project group. Load the project and compile the
+   following components in the order listed (or just choose compile all
+   from Project-Menu):
+
+   * ZCore.bpl
+   * ZParseSql.bpl
+   * ZPlain.bpl
+   * ZDbc.bpl
+
+
+
+5. If all the packages, listed above are successfully compiled you
+   have to install the ZComponent.bpl. After that all ZEOS components are
+   available in the IDE.
+
+6. Create your own project and start adding the compoents through the
+   IDE and set connection properties. For a quick tutorial, use the
+   example provided with the project or browse the resources on the web
+   page.
+
+
+
+
+*Observations:*
+
+1. When installing the library under C++ Builder (any version) it is
+   highly recommended to remove any previously installed version of
+   ZEOSDBO.
+
+   To do that you should first close C++ Builder (as some of these files
+   may be locked) and remove the
+   (ZCore|ZParseSql|ZPlain|Zdbc|ZComponent)(.bpl|.tds|.bpi|.lib) files
+   from $(BCB)\Projects\Lib and $(BCB)\Projects\Bpl (where $(BCB) is
+   something like C:\Program Files\Borland\CBuilder[4-6]).
+
+2. When compiling the library from ZeosDbo.bpg under C++ Builder you
+   may receive some warnings like 'Unable to find package import XXX.bpi'
+   and you may have to press Cancel multiple times to continue.
+
+   We're trying to get rid of this annoying behaviour, but until then
+   here are some possible ways to avoid it, if needed:
+
+   1. Open, compile and install the packages (*.bpk) in the
+      appropriate order (see Installation step #3) - i.e without using
+      ZeosDbo.bpg.
+   2. Open a command line in \packages\CBuilder[4-6] and do a
+      manual make - like this: *make -f ZeosDbo.bpg*. This requires the
+      PATH and LIB environment variables to be set properly, like this:
+SET BCB=d:\borland\cbuilder6
+SET PATH=%BCB%\bin
+SET LIB=%BCB%\lib
+      Then open ZeosDbo.bpg in the IDE and install the packages the usual
+      way.
+
+
+
+
+3. While installing ZEOSDBO under C++ Builder version 4 from the IDE,
+   you may get this error when compiling the ZDbc package :
+[Pascal Fatal Error] ZDbcMetadata.pas(3076): Internal error: SY876.
+   Currently, there is no known solution to this problem. Therefore,it is
+   recommended to compile Zeoslib from the command line (issuing a *make
+   -f ZeosDBO.bpg* from the directory /packages/cbuilder4 should
+   accomplish this) and then to install the packages through menu
+   Component->Install Packages.
+
+
+
+
+This document was created using the >e-novative> DocBook Environment (eDE)
+

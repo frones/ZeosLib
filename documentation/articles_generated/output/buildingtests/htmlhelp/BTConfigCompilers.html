@@ -1,0 +1,92 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   
+      <title>2.2.&nbsp;Compiler Section</title>
+      <link rel="stylesheet" href="ede.css" type="text/css">
+      <meta name="generator" content="DocBook XSL Stylesheets V1.66.0">
+      <link rel="start" href="index.html" title="Building Tests for the ZEOS Library">
+      <link rel="up" href="BTConfig.html" title="2.&nbsp;Build &amp; Test Configuration">
+      <link rel="prev" href="BTConfigCommon.html" title="2.1.&nbsp;Common Section">
+      <link rel="next" href="BTConfigTests.html" title="2.3.&nbsp;Tests Section">
+   </head>
+   <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+      <div id="customheader">
+         This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+         
+      </div>
+      <div class="section" lang="en">
+         <div class="titlepage">
+            <div>
+               <div>
+                  <h3 class="title"><a name="BTConfigCompilers"></a>2.2.&nbsp;Compiler Section
+                  </h3>
+               </div>
+            </div>
+         </div>
+         <p>
+            The second section is the compiler-section it contains informations about the
+            active compilers to use for building the test applications. Each supported
+            compiler has its own "section". It describes wether the compiler (prefix of
+              the key (e. g. "delphi5")) is active and determines the installation directory
+              of the compiler.
+              
+         </p><pre class="programlisting">
+  [compilers]
+  delphi5.active=false <a name="da"></a><img src="images/callouts/1.png" alt="1" border="0">
+  delphi5.home=C:/Program Files/Borland/Delphi5 <a name="dh"></a><img src="images/callouts/2.png" alt="2" border="0">
+  :
+  delphi9.active=true
+  delphi9.home=d:\\programme\\borland\\bds\\3.0
+  delphi9.bpl.dir=c:\\dokumente und einstellungen\\user\\eigene dateien\\borland studio-projekte\\bpl <a name="bd"></a><img src="images/callouts/3.png" alt="3" border="0">
+  :
+  kylix3.active=false <a name="ks"></a><img src="images/callouts/4.png" alt="4" border="0">
+  kylix3.home=/opt/kylix3
+  </pre><div class="calloutlist">
+            <table border="0" summary="Callout list">
+               <tr>
+                  <td width="5%" valign="top" align="left"><a href="#da"><img src="images/callouts/1.png" alt="1" border="0"></a> 
+                  </td>
+                  <td valign="top" align="left">
+                     <p>"true" if the compiler is installed (active), "false" if not.
+                          
+                     </p>
+                  </td>
+               </tr>
+               <tr>
+                  <td width="5%" valign="top" align="left"><a href="#dh"><img src="images/callouts/2.png" alt="2" border="0"></a> 
+                  </td>
+                  <td valign="top" align="left">
+                     <p>The installation path of the compiler (here: Delphi 5).</p>
+                  </td>
+               </tr>
+               <tr>
+                  <td width="5%" valign="top" align="left"><a href="#bd"><img src="images/callouts/3.png" alt="3" border="0"></a> 
+                  </td>
+                  <td valign="top" align="left">
+                     <p>Special for Delhi 9: you have to specify your BPL-dir because in Delphi 9
+                          the standardized ...\projects\bpl doesn't exist anymore (here: german
+                          Delphi / WinXP example).
+                          
+                     </p>
+                  </td>
+               </tr>
+               <tr>
+                  <td width="5%" valign="top" align="left"><a href="#ks"><img src="images/callouts/4.png" alt="4" border="0"></a> 
+                  </td>
+                  <td valign="top" align="left">
+                     <p>Kylix 3 settings for compilation (Kylix 3 is not installed this is why
+                          kylix3.active=false)
+                          
+                     </p>
+                  </td>
+               </tr>
+            </table>
+         </div>
+      </div>
+      <div id="customfooter">
+         This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+         
+      </div>
+   </body>
+</html>

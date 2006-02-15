@@ -1,0 +1,83 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   
+      <title>2.1.&nbsp;Common Section</title>
+      <link rel="stylesheet" href="ede.css" type="text/css">
+      <meta name="generator" content="DocBook XSL Stylesheets V1.66.0">
+      <link rel="start" href="index.html" title="Building Tests for the ZEOS Library">
+      <link rel="up" href="BTConfig.html" title="2.&nbsp;Build &amp; Test Configuration">
+      <link rel="prev" href="BTConfig.html" title="2.&nbsp;Build &amp; Test Configuration">
+      <link rel="next" href="BTConfigCompilers.html" title="2.2.&nbsp;Compiler Section">
+   </head>
+   <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+      <div id="customheader">
+         This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+         
+      </div>
+      <div class="section" lang="en">
+         <div class="titlepage">
+            <div>
+               <div>
+                  <h3 class="title"><a name="BTConfigCommon"></a>2.1.&nbsp;Common Section
+                  </h3>
+               </div>
+            </div>
+         </div>
+         <p>
+              The first section is the common-section it contains common informations for
+              building the test applications:
+              
+         </p><pre class="programlisting">
+  [common]
+  project.home=d:/workshop/zeosdbo_rework <a name="ph"></a><img src="images/callouts/1.png" alt="1" border="0">
+  release.version =6.5.2-beta  <a name="rv"></a><img src="images/callouts/2.png" alt="2" border="0">
+  copy.verbose=false <a name="cv"></a><img src="images/callouts/3.png" alt="3" border="0">
+  dunit.dir=d:/programme/borland/delphi7/dunit/src <a name="dd"></a><img src="images/callouts/4.png" alt="4" border="0">
+  kunit.dir= <a name="kd"></a><img src="images/callouts/5.png" alt="5" border="0">
+  </pre><div class="calloutlist">
+            <table border="0" summary="Callout list">
+               <tr>
+                  <td width="5%" valign="top" align="left"><a href="#ph"><img src="images/callouts/1.png" alt="1" border="0"></a> 
+                  </td>
+                  <td valign="top" align="left">
+                     <p>The project directory</p>
+                  </td>
+               </tr>
+               <tr>
+                  <td width="5%" valign="top" align="left"><a href="#rv"><img src="images/callouts/2.png" alt="2" border="0"></a> 
+                  </td>
+                  <td valign="top" align="left">
+                     <p>The version number of the ZEOSLib (put into version file).</p>
+                  </td>
+               </tr>
+               <tr>
+                  <td width="5%" valign="top" align="left"><a href="#cv"><img src="images/callouts/3.png" alt="3" border="0"></a> 
+                  </td>
+                  <td valign="top" align="left">
+                     <p>Determines whether copy operations shall displayed on screen.</p>
+                  </td>
+               </tr>
+               <tr>
+                  <td width="5%" valign="top" align="left"><a href="#dd"><img src="images/callouts/4.png" alt="4" border="0"></a> 
+                  </td>
+                  <td valign="top" align="left">
+                     <p>The source directory of DUnit.</p>
+                  </td>
+               </tr>
+               <tr>
+                  <td width="5%" valign="top" align="left"><a href="#kd"><img src="images/callouts/5.png" alt="5" border="0"></a> 
+                  </td>
+                  <td valign="top" align="left">
+                     <p>The source directory of DUnit (for Kylix).</p>
+                  </td>
+               </tr>
+            </table>
+         </div>
+      </div>
+      <div id="customfooter">
+         This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+         
+      </div>
+   </body>
+</html>

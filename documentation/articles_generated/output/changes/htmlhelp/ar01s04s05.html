@@ -1,0 +1,57 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   
+      <title>4.5.&nbsp;Release 6.0.11 - 08 July 2003</title>
+      <link rel="stylesheet" href="ede.css" type="text/css">
+      <meta name="generator" content="DocBook XSL Stylesheets V1.66.0">
+      <link rel="start" href="index.html" title="ZeosDBO Change Notes">
+      <link rel="up" href="ar01s04.html" title="4.&nbsp;Changes in Release 6.0">
+      <link rel="prev" href="ar01s04s04.html" title="4.4.&nbsp;Release 6.0.12 - 18 July 2003">
+      <link rel="next" href="ar01s04s06.html" title="4.6.&nbsp;Release 6.0.10 - 13 June 2003">
+   </head>
+   <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+      <div id="customheader">
+         This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+         
+      </div>
+      <div class="sect2" lang="en">
+         <div class="titlepage">
+            <div>
+               <div>
+                  <h3 class="title"><a name="d4e1225"></a>4.5.&nbsp;Release 6.0.11 - 08 July 2003
+                  </h3>
+               </div>
+            </div>
+         </div>
+         <div class="itemizedlist">
+            <ul type="disc">
+               <li>/<span class="othername">SS</span>/ Eliminated all overrided methods in API, fixed support for C++ Builder 4,5,6 compilers.
+               </li>
+               <li>/<span class="othername">SS</span>/ Added optimization to <tt class="classname">TZAbstractDODataset</tt>.<tt class="methodname">ExecSQL</tt> and <tt class="classname">TZEmulatedPreparedStatement</tt>. Now executing prepared statements without parameters about 10 times faster, with parameters - 25% faster.
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed <tt class="classname">TZConnection</tt>.<tt class="methodname">AutoCommit</tt> and <tt class="classname">TZConnection</tt>.<tt class="methodname">TransactIsolationLevel</tt> property behavior.
+               </li>
+               <li>/<span class="othername">JF</span>/ <span class="property">LoginPrompt</span> support added. Delphi4 and Delphi5 needs some extra work.
+               </li>
+               <li>/<span class="othername">SM</span>/ Fixed Bug #759184 empty <span class="type">string</span> field return by SQL query with concatination fields
+               </li>
+               <li>/<span class="othername">SM</span>/ Fixed Bug #707337 emty values for virtual columns
+               </li>
+               <li>/<span class="othername">SS</span>/ Added support for quoted parameters in <tt class="classname">TZQuery</tt> and <tt class="classname">TZUpdateSQL</tt>.
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#771217 caused by incorrect processing MySQL table names with special characters like 'my-table'
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#773022: wrong <tt class="classname">TQuery</tt>.<tt class="methodname">RecordCount</tt> after deletes
+               </li>
+               <li>/<span class="othername">SS</span>/ Changed processing of &#8220;<span class="quote">0000-00-00</span>&#8221; dates in MySQL. Now they are treated as NULLs simular to ODBC drivers.
+               </li>
+            </ul>
+         </div>
+      </div>
+      <div id="customfooter">
+         This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+         
+      </div>
+   </body>
+</html>

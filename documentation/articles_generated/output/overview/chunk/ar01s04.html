@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+      <title>4. Component Layer</title>
+      <link rel="stylesheet" href="ede.css" type="text/css"/>
+      <meta name="generator" content="DocBook XSL Stylesheets V1.66.0"/>
+      <link rel="start" href="index.html" title="Overview of the Zeos Database Objects Architecture"/>
+      <link rel="up" href="index.html" title="Overview of the Zeos Database Objects Architecture"/>
+      <link rel="prev" href="ar01s03.html" title="3. Database Connectivity Layer"/>
+      <link rel="next" href="ar01s05.html" title="5. Epilog"/>
+   </head>
+   <body>
+      <div xmlns="" id="customheader">
+This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+</div>
+      <div class="sect1" lang="en">
+         <div class="titlepage">
+            <div>
+               <div>
+                  <h2 class="title" style="clear: both">
+                     <a id="d4e92"/>4. Component Layer</h2>
+               </div>
+            </div>
+         </div>
+         <p>The last top layer in ZeosDBO library implements dbware components. These components are used for development in Delphi, C++ Builder or Kylix. Currently Borland compilers support several standards for dbware components:
+
+			<div class="orderedlist">
+               <ol type="1">
+                  <li>
+                     <tt class="classname">TDataset</tt> descendent components</li>
+                  <li>DbExpress drivers</li>
+                  <li>Data providers for multi-tier Midas technology</li>
+               </ol>
+            </div>
+         </p>
+         <p>At the time of this writing this article ZeosDBO library only supported TDataset descendent components. Implementation of other component types is scheduled for future versions.</p>
+         <p>The component class diagram is presented on picture 3:
+
+			<div class="mediaobject">
+               <img src="images/Overview003.gif"/>
+            </div>
+            <div class="orderedlist">
+               <ol type="1">
+                  <li>
+                     <tt class="classname">TZAbstractRODataset</tt>, <tt class="classname">TZAbstractDataset</tt>, <tt class="classname">TZAbstractStoredProc</tt> - abstract classes for <tt class="classname">TDataset</tt> descendant components</li>
+                  <li>
+                     <tt class="classname">TZReadOnlyQuery</tt>, <tt class="classname">TZQuery</tt>, <tt class="classname">TZStoredProc</tt> - universal <tt class="classname">TDataset</tt> descendant components</li>
+                  <li>
+                     <tt class="classname">TZReadOnlyXXSQLQuery</tt>, <tt class="classname">TZXXSQLQuery</tt>, <tt class="classname">TZXXSQLStoredProc</tt> - <tt class="classname">TDatasets</tt> specific for each supported SQL server. The way how they are propagating server specific functions is described in the previous chapter about DBC Layer.</li>
+                  <li>
+                     <tt class="classname">TZSQLMonitor</tt>, <tt class="classname">TZUpdateSQL</tt>, <tt class="classname">TZSQLProcessor</tt> - generic auxiliary components</li>
+               </ol>
+            </div>
+         </p>
+         <p>
+            <tt class="classname">TDataset</tt> uses maximum the DBC layer functionality to read, modify and store data. Additionally it implements extra functions to filter, search and sort data, connect to visual components and many other things.</p>
+      </div>
+      <div xmlns="" id="customfooter">
+This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+</div>
+      <div class="navfooter">
+         <hr/>
+         <table width="100%" summary="Navigation footer">
+            <tr>
+               <td width="40%" align="left">
+                  <a accesskey="p" href="ar01s03.html">Prev</a> </td>
+               <td width="20%" align="center">
+                  <a accesskey="u" href="index.html">Up</a>
+               </td>
+               <td width="40%" align="right"> <a accesskey="n" href="ar01s05.html">Next</a>
+               </td>
+            </tr>
+            <tr>
+               <td width="40%" align="left" valign="top">3. Database Connectivity Layer </td>
+               <td width="20%" align="center">
+                  <a accesskey="h" href="index.html">Home</a>
+               </td>
+               <td width="40%" align="right" valign="top"> 5. Epilog</td>
+            </tr>
+         </table>
+      </div>
+   </body>
+</html>

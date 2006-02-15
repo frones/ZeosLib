@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+      <title>3.1. Common Section</title>
+      <link rel="stylesheet" href="ede.css" type="text/css"/>
+      <meta name="generator" content="DocBook XSL Stylesheets V1.66.0"/>
+      <link rel="start" href="index.html" title="Building Tests for the ZEOS Library"/>
+      <link rel="up" href="DBConfig.html" title="3. Database Configuration"/>
+      <link rel="prev" href="DBConfig.html" title="3. Database Configuration"/>
+      <link rel="next" href="DBDatabaseConfig.html" title="3.2. Database Settings"/>
+   </head>
+   <body>
+      <div xmlns="" id="customheader">
+This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+</div>
+      <div class="section" lang="en">
+         <div class="titlepage">
+            <div>
+               <div>
+                  <h3 class="title">
+                     <a id="DBConfigCommon"/>3.1. Common Section</h3>
+               </div>
+            </div>
+         </div>
+         <p>
+  The first section is the common-section it contains common informations about
+  the databases to test by test applications:
+  </p>
+         <pre class="programlisting">
+  [common]
+  common.connections=sqlite28,firebird15 <a id="cc"/>
+            <img src="images/callouts/1.png" alt="1" border="0"/>
+  
+         </pre>
+         <div class="calloutlist">
+            <table border="0" summary="Callout list">
+               <tr>
+                  <td width="5%" valign="top" align="left">
+                     <a href="#tc">
+                        <img src="images/callouts/1.png" alt="1" border="0"/>
+                     </a> 
+                  </td>
+                  <td valign="top" align="left">
+                     <p>
+  This key holds the active servernames of the SQL servers that will be
+  tested in the test applications. Corresponding to the servers given here
+  there has to exist a "database section" with the same name that determines
+  the database settings for testing. The server names for this key have to
+  be seperated by comma.
+  </p>
+                  </td>
+               </tr>
+            </table>
+         </div>
+      </div>
+      <div xmlns="" id="customfooter">
+This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+</div>
+      <div class="navfooter">
+         <hr/>
+         <table width="100%" summary="Navigation footer">
+            <tr>
+               <td width="40%" align="left">
+                  <a accesskey="p" href="DBConfig.html">Prev</a> </td>
+               <td width="20%" align="center">
+                  <a accesskey="u" href="DBConfig.html">Up</a>
+               </td>
+               <td width="40%" align="right"> <a accesskey="n" href="DBDatabaseConfig.html">Next</a>
+               </td>
+            </tr>
+            <tr>
+               <td width="40%" align="left" valign="top">3. Database Configuration </td>
+               <td width="20%" align="center">
+                  <a accesskey="h" href="index.html">Home</a>
+               </td>
+               <td width="40%" align="right" valign="top"> 3.2. Database Settings</td>
+            </tr>
+         </table>
+      </div>
+   </body>
+</html>

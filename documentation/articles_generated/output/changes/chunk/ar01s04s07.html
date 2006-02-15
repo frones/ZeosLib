@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+      <title>4.7. Release 6.0.9 - 18 May 2003</title>
+      <link rel="stylesheet" href="ede.css" type="text/css"/>
+      <meta name="generator" content="DocBook XSL Stylesheets V1.66.0"/>
+      <link rel="start" href="index.html" title="ZeosDBO Change Notes"/>
+      <link rel="up" href="ar01s04.html" title="4. Changes in Release 6.0"/>
+      <link rel="prev" href="ar01s04s06.html" title="4.6. Release 6.0.10 - 13 June 2003"/>
+      <link rel="next" href="ar01s04s08.html" title="4.8. Release 6.0.8 - 15 April 2003"/>
+   </head>
+   <body>
+      <div xmlns="" id="customheader">
+This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+</div>
+      <div class="sect2" lang="en">
+         <div class="titlepage">
+            <div>
+               <div>
+                  <h3 class="title">
+                     <a id="d4e1363"/>4.7. Release 6.0.9 - 18 May 2003</h3>
+               </div>
+            </div>
+         </div>
+         <div class="itemizedlist">
+            <ul type="disc">
+               <li>/<span class="othername">SS</span>/ Fixed bugs in <tt class="classname">TZCollection</tt> class and <tt class="classname">TZAbstractObject</tt>.<span class="property">Equals</span> (Thanks for Karl Waclawek).</li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#733209 with incorrect decimal separator in <tt class="classname">TZToken</tt>.<tt class="methodname">GetString</tt>. (Thanks to Leonardo Quaggiotto).</li>
+               <li>/<span class="othername">SS</span>/ Added support for MySQL <span class="type">boolean</span> type  /<span class="type">enum('Y','N')</span>/</li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#726788 with mixed identificators in MySQL (Thanks to Maarten Bremer).</li>
+               <li>/<span class="othername">SS</span>/ Fixed bug in numeric tokenizer. Combinations of symbols '.e' and '.E' were always processed as numbers. For example: a.eq_id was tokenized as 'a' '.e' 'q_id' instead 'a' '.' 'eq_id'</li>
+               <li>/<span class="othername">SM</span>/ Added support Interbase 5, 6.X, Firebird 1.X</li>
+               <li>/<span class="othername">SM</span>/ GetImportedKeys, GetExportedKeys, GetIndexInfo done for Interbase Database Metadata </li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#740144 with search by Null fields in TZQuery.Locate</li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#740899. Expressions Field=NULL were not properly converted into Field IS NULL in where clauses.</li>
+               <li>/<span class="othername">SS</span>/ Completely rewritten SQL parsers because of peformance reasons.</li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#739514 with national string convertion for postgresql.</li>
+               <li>/<span class="othername">JF</span>/ Fixed Bug#728955 multiple results returned</li>
+               <li>/<span class="othername">JF</span>/ Fixed datatype handling in metadata getColumn to match the modifications via Seroukhov</li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#746225 with updating empty Memo fields.</li>
+               <li>/<span class="othername">SM</span>/ Fixed Interbase metadata GetPrimaryKeys, GetProcedures, GetProcedureColumns</li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#739448 with duplicated column names. Now if query returns columns: 'fld','fld','fld', result set will contain display labels 'fld','fld_1','fld_2'</li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#733236 with time fields convertion in TDataset.Locate.</li>
+               <li>/<span class="othername">SS</span>/ Optimized code, added DISABLE_CHECKING compiler definition into Zeos.inc file. According performance tests this definition gives about 10% speedup. </li>
+               <li>/<span class="othername">SM</span>/ Fixed problem with WasNull in fetch processing in InterbaseResultSet.</li>
+               <li>/<span class="othername">SM</span>/ Added example - controls.</li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#725053 with empty lookup fields</li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#739707: Variant convertion error in IZPreparedStatement.SetBlob</li>
+               <li>/<span class="othername">JF</span>/ Fixed Numeric scale errors in sybase, was caused by usage of float type instead of double</li>
+               <li>/<span class="othername">JF</span>/ Added a workaround for a bug? in mssql dblib interface. All text like '\'#13 was replaced to just #13. I just double the backslash in this case.</li>
+            </ul>
+         </div>
+      </div>
+      <div xmlns="" id="customfooter">
+This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+</div>
+      <div class="navfooter">
+         <hr/>
+         <table width="100%" summary="Navigation footer">
+            <tr>
+               <td width="40%" align="left">
+                  <a accesskey="p" href="ar01s04s06.html">Prev</a> </td>
+               <td width="20%" align="center">
+                  <a accesskey="u" href="ar01s04.html">Up</a>
+               </td>
+               <td width="40%" align="right"> <a accesskey="n" href="ar01s04s08.html">Next</a>
+               </td>
+            </tr>
+            <tr>
+               <td width="40%" align="left" valign="top">4.6. Release 6.0.10 - 13 June 2003 </td>
+               <td width="20%" align="center">
+                  <a accesskey="h" href="index.html">Home</a>
+               </td>
+               <td width="40%" align="right" valign="top"> 4.8. Release 6.0.8 - 15 April 2003</td>
+            </tr>
+         </table>
+      </div>
+   </body>
+</html>

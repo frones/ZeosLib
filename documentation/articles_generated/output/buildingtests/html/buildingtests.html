@@ -1,0 +1,174 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+   <title>Building Tests for the ZEOS Library</title><link rel="stylesheet" href="ede.css" type="text/css"><meta name="generator" content="DocBook XSL Stylesheets V1.66.0"><meta name="description" content="&#xA;  This document describes how to set up the ZEOS Build &amp; Test environment&#xA;  and shows how to compile gui and console based test applications to test&#xA;  the ZEOSLib code. It also describes the setup that has to be made for&#xA;  testing the library with various databases.&#xA;  "></head><body><div xmlns="" id="customheader">
+This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+</div><div class="article" lang="en"><div class="titlepage"><div><div><h1 class="title"><a id="d4e1"></a>Building Tests for the ZEOS Library</h1></div><div><div class="author"><h3 class="author"><span class="firstname">Michael</span> <span class="surname">Seeger</span></h3><tt class="email">&lt;<a href="mailto:miseeger*at*users*dot*sourceforge*dot*net">miseeger*at*users*dot*sourceforge*dot*net</a>&gt;</tt></div></div><div><div class="abstract"><p class="title"><b>Abstract</b></p><p>
+  This document describes how to set up the ZEOS Build &amp; Test environment
+  and shows how to compile gui and console based test applications to test
+  the ZEOSLib code. It also describes the setup that has to be made for
+  testing the library with various databases.
+  </p></div></div></div><hr></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="section"><a href="#BTReqirements">1. Requirements to build ZEOSLib tests</a></span></dt><dt><span class="section"><a href="#BTConfig">2. Build &amp; Test Configuration</a></span></dt><dt><span class="section"><a href="#DBConfig">3. Database Configuration</a></span></dt><dt><span class="section"><a href="#Compiling">4. Compiling Tests</a></span></dt><dt><span class="section"><a href="#Running">5. Running Tests</a></span></dt></dl></div><div class="section" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a id="BTReqirements"></a>1.&nbsp;Requirements to build ZEOSLib tests</h2></div></div></div><p>
+  In order to run the tests for the ZEOSLib you have to be sure that you have
+  insalled the following software on your system:
+  </p><div class="itemizedlist"><ul type="disc"><li><p>Delphi Compiler / IDE (min. professional versions 5, 6, 7 or 2005)</p></li><li><p>DUnit Xtreme testing framework for Delphi  [<a href="http://dunit.sourceforge.net" target="_top">
+  Homepage</a> | <a href="https://sourceforge.net/projects/dunit" target="_top">
+  Download Page</a>]
+  </p></li><li><p>Java Runtime Environment or SDK (Version 1.4.2)  [<a href="http://java.sun.com" target="_top">Homepage</a> |
+  <a href="http://java.sun.com/j2se/1.4.2/download.htm" target="_top">Download Page</a>]
+  </p></li><li><p>Jakarta Ant  [<a href="http://ant.apache.org" target="_top">Download Page</a> |
+  <a href="http://ant.apache.org/bindownload.cgi" target="_top">Download Page</a>]
+  </p></li><li><p>The supported SQL Servers you want to test with</p></li></ul></div><p>
+  Make sure that the environment variable JAVA_HOME is set to the directory
+  where you installed the Java Runtine or SDK (e. g. JAVA_HOME = c:\java\j2sdk1.4.2_06).
+  </p><p>
+  Also set the environment variable ANT_HOME to the directory where you installed
+  Jakarta ANT (e. g. ANT_HOME = C:\Programs\ANT).
+  </p></div><div class="section" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a id="BTConfig"></a>2.&nbsp;Build &amp; Test Configuration</h2></div></div></div><div class="toc"><dl><dt><span class="section"><a href="#BTConfigCommon">2.1. Common Section</a></span></dt><dt><span class="section"><a href="#BTConfigCompilers">2.2. Compiler Section</a></span></dt><dt><span class="section"><a href="#BTConfigTests">2.3. Tests Section</a></span></dt></dl></div><p>
+  Before you are able to start compiling the ZEOS test applications you have to
+  configure the compiler environment. All settings for compiling building and
+  testing are stored in a file called build.properties. To get this file just
+  copy the build_template.properties file in build directory and name it
+  build.properties. The build.properties file has four sections that are important
+  for compiling the test applications: "common" and "compilers". There is another
+  section that determines which tests will be executed by calling test.cmd batchfile.
+  This section is not important for compiling tests but it will also be documented.
+  </p><p>
+  In a Windows environment it is recommended that you use double backslash as
+  directory  separator. "Normal" slash will work but causes some problems in a
+  Delphi 9 environment. In a Unix / Linux environment it is recommended use
+  the "normal" slash as direcrory separator.
+  </p><div class="section" lang="en"><div class="titlepage"><div><div><h3 class="title"><a id="BTConfigCommon"></a>2.1.&nbsp;Common Section</h3></div></div></div><p>
+  The first section is the common-section it contains common informations for
+  building the test applications:
+  </p><pre class="programlisting">
+  [common]
+  project.home=d:/workshop/zeosdbo_rework <a id="ph"></a><img src="images/callouts/1.png" alt="1" border="0">
+  release.version =6.5.2-beta  <a id="rv"></a><img src="images/callouts/2.png" alt="2" border="0">
+  copy.verbose=false <a id="cv"></a><img src="images/callouts/3.png" alt="3" border="0">
+  dunit.dir=d:/programme/borland/delphi7/dunit/src <a id="dd"></a><img src="images/callouts/4.png" alt="4" border="0">
+  kunit.dir= <a id="kd"></a><img src="images/callouts/5.png" alt="5" border="0">
+  </pre><div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><a href="#ph"><img src="images/callouts/1.png" alt="1" border="0"></a> </td><td valign="top" align="left"><p>The project directory</p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#rv"><img src="images/callouts/2.png" alt="2" border="0"></a> </td><td valign="top" align="left"><p>The version number of the ZEOSLib (put into version file).</p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#cv"><img src="images/callouts/3.png" alt="3" border="0"></a> </td><td valign="top" align="left"><p>Determines whether copy operations shall displayed on screen.</p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#dd"><img src="images/callouts/4.png" alt="4" border="0"></a> </td><td valign="top" align="left"><p>The source directory of DUnit.</p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#kd"><img src="images/callouts/5.png" alt="5" border="0"></a> </td><td valign="top" align="left"><p>The source directory of DUnit (for Kylix).</p></td></tr></table></div></div><div class="section" lang="en"><div class="titlepage"><div><div><h3 class="title"><a id="BTConfigCompilers"></a>2.2.&nbsp;Compiler Section</h3></div></div></div><p>
+  The second section is the compiler-section it contains informations about the
+  active compilers to use for building the test applications. Each supported
+  compiler has its own "section". It describes wether the compiler (prefix of
+  the key (e. g. "delphi5")) is active and determines the installation directory
+  of the compiler.
+  </p><pre class="programlisting">
+  [compilers]
+  delphi5.active=false <a id="da"></a><img src="images/callouts/1.png" alt="1" border="0">
+  delphi5.home=C:/Program Files/Borland/Delphi5 <a id="dh"></a><img src="images/callouts/2.png" alt="2" border="0">
+  :
+  delphi9.active=true
+  delphi9.home=d:\\programme\\borland\\bds\\3.0
+  delphi9.bpl.dir=c:\\dokumente und einstellungen\\user\\eigene dateien\\borland studio-projekte\\bpl <a id="bd"></a><img src="images/callouts/3.png" alt="3" border="0">
+  :
+  kylix3.active=false <a id="ks"></a><img src="images/callouts/4.png" alt="4" border="0">
+  kylix3.home=/opt/kylix3
+  </pre><div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><a href="#da"><img src="images/callouts/1.png" alt="1" border="0"></a> </td><td valign="top" align="left"><p>"true" if the compiler is installed (active), "false" if not.
+  </p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#dh"><img src="images/callouts/2.png" alt="2" border="0"></a> </td><td valign="top" align="left"><p>The installation path of the compiler (here: Delphi 5).</p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#bd"><img src="images/callouts/3.png" alt="3" border="0"></a> </td><td valign="top" align="left"><p>Special for Delhi 9: you have to specify your BPL-dir because in Delphi 9
+  the standardized ...\projects\bpl doesn't exist anymore (here: german
+  Delphi / WinXP example).
+  </p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#ks"><img src="images/callouts/4.png" alt="4" border="0"></a> </td><td valign="top" align="left"><p>Kylix 3 settings for compilation (Kylix 3 is not installed this is why
+  kylix3.active=false)
+  </p></td></tr></table></div></div><div class="section" lang="en"><div class="titlepage"><div><div><h3 class="title"><a id="BTConfigTests"></a>2.3.&nbsp;Tests Section</h3></div></div></div><p>
+  This section is necessary to determine which tests will be run when executing
+  the test.cmd batchfile (only makes sense when compiling the test applications
+  as console applications).
+  </p><pre class="programlisting">
+  [tests]
+  test.core=true <a id="tc"></a><img src="images/callouts/1.png" alt="1" border="0">
+  test.parsesql=true <a id="tp"></a><img src="images/callouts/2.png" alt="2" border="0">
+  test.dbc=true <a id="td"></a><img src="images/callouts/3.png" alt="3" border="0">
+  test.component=true <a id="tco"></a><img src="images/callouts/4.png" alt="4" border="0">
+  test.bugreport=true <a id="tb"></a><img src="images/callouts/5.png" alt="5" border="0">
+  test.performance=false <a id="tperf"></a><img src="images/callouts/6.png" alt="6" border="0">
+  </pre><div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><a href="#tc"><img src="images/callouts/1.png" alt="1" border="0"></a> </td><td valign="top" align="left"><p>Execute core tests if set to "true".</p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#tp"><img src="images/callouts/2.png" alt="2" border="0"></a> </td><td valign="top" align="left"><p>Execute parsing tests if set to "true".</p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#td"><img src="images/callouts/3.png" alt="3" border="0"></a> </td><td valign="top" align="left"><p>Execute connectivity tests if set to "true".</p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#tco"><img src="images/callouts/4.png" alt="4" border="0"></a> </td><td valign="top" align="left"><p>Execute component tests if set to "true".</p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#tb"><img src="images/callouts/5.png" alt="5" border="0"></a> </td><td valign="top" align="left"><p>Execute bug tests if set to "true".</p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#tperf"><img src="images/callouts/6.png" alt="6" border="0"></a> </td><td valign="top" align="left"><p>Execute performance tests if set to "true".</p></td></tr></table></div></div></div><div class="section" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a id="DBConfig"></a>3.&nbsp;Database Configuration</h2></div></div></div><div class="toc"><dl><dt><span class="section"><a href="#DBConfigCommon">3.1. Common Section</a></span></dt><dt><span class="section"><a href="#DBDatabaseConfig">3.2. Database Settings</a></span></dt></dl></div><p>
+  It is possible to run the ZEOS tests for a number of SQL servers that are
+  currently running on the test machine. Therefor the Build and Test Environment
+  has to be configured.
+  </p><p>
+  Setting up the database parameters is done in the test.properites file that is
+  located in the "database" direcory. To get this file just copy the
+  test_template.properties file and rename it to test.properties and then make
+  your settings.
+  </p><p>
+  At the moment we do not execute performance tests so only the common section
+  and the database sections are of importance for testing the ZEOS Library.
+  </p><div class="section" lang="en"><div class="titlepage"><div><div><h3 class="title"><a id="DBConfigCommon"></a>3.1.&nbsp;Common Section</h3></div></div></div><p>
+  The first section is the common-section it contains common informations about
+  the databases to test by test applications:
+  </p><pre class="programlisting">
+  [common]
+  common.connections=sqlite28,firebird15 <a id="cc"></a><img src="images/callouts/1.png" alt="1" border="0">
+  </pre><div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><a href="#tc"><img src="images/callouts/1.png" alt="1" border="0"></a> </td><td valign="top" align="left"><p>
+  This key holds the active servernames of the SQL servers that will be
+  tested in the test applications. Corresponding to the servers given here
+  there has to exist a "database section" with the same name that determines
+  the database settings for testing. The server names for this key have to
+  be seperated by comma.
+  </p></td></tr></table></div></div><div class="section" lang="en"><div class="titlepage"><div><div><h3 class="title"><a id="DBDatabaseConfig"></a>3.2.&nbsp;Database Settings</h3></div></div></div><p>
+  Corresponding to the active servers listed in the common.connections key (here:
+  SQLite 2.8 and Firebird 1.5.x) there are configuration sections that contain the
+  settings for running tests with the given database. Each section consists of the
+  same keys so we will take the Firebird 1.5 database configuration to explain
+  them:
+  </p><pre class="programlisting">
+  [firebird15]
+  firebird15.protocol=firebird-1.5 <a id="fbp"></a><img src="images/callouts/1.png" alt="1" border="0">
+  firebird15.alias=firebird_zeoslib <a id="fba"></a><img src="images/callouts/2.png" alt="2" border="0">
+  firebird15.host=localhost <a id="fbh"></a><img src="images/callouts/3.png" alt="3" border="0">
+  firebird15.port= <a id="fbport"></a><img src="images/callouts/4.png" alt="4" border="0">
+  firebird15.database=d:\SQLServerFarm\Firebird\15\Data\zeoslib.fdb <a id="fbdb"></a><img src="images/callouts/5.png" alt="5" border="0">
+  firebird15.user=SYSDBA <a id="fbu"></a><img src="images/callouts/6.png" alt="6" border="0">
+  firebird15.password=masterkey <a id="fbpw"></a><img src="images/callouts/7.png" alt="7" border="0">
+  firebird15.rebuild=yes <a id="fbr"></a><img src="images/callouts/8.png" alt="8" border="0">
+  firebird15.delimiter.type=SetTerm <a id="fbdt"></a><img src="images/callouts/9.png" alt="9" border="0">
+  firebird15.delimiter=; <a id="fbdel"></a><img src="images/callouts/10.png" alt="10" border="0">
+  firebird15.create.scripts=create_interbase.sql,populate_any.sql,populate_interbase.sql,create_interbase_bugreport.sql <a id="fbcdbo"></a>(11)
+  firebird15.drop.scripts=drop_interbase.sql,drop_interbase_bugreport.sql <a id="fbddbo"></a>(12)
+  </pre><div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><a href="#fbp"><img src="images/callouts/1.png" alt="1" border="0"></a> </td><td valign="top" align="left"><p>DBC protocol name</p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#fba"><img src="images/callouts/2.png" alt="2" border="0"></a> </td><td valign="top" align="left"><p>BDE alias for performance tests</p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#fbh"><img src="images/callouts/3.png" alt="3" border="0"></a> </td><td valign="top" align="left"><p>Host name</p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#fbport"><img src="images/callouts/4.png" alt="4" border="0"></a> </td><td valign="top" align="left"><p>Port number</p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#fbdb"><img src="images/callouts/5.png" alt="5" border="0"></a> </td><td valign="top" align="left"><p>Database name</p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#fbu"><img src="images/callouts/6.png" alt="6" border="0"></a> </td><td valign="top" align="left"><p>User name</p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#fbpw"><img src="images/callouts/7.png" alt="7" border="0"></a> </td><td valign="top" align="left"><p>User password</p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#fbpw"><img src="images/callouts/7.png" alt="7" border="0"></a> </td><td valign="top" align="left"><p>User password</p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#fbpw"><img src="images/callouts/7.png" alt="7" border="0"></a> </td><td valign="top" align="left"><p>Flag to rebuild database before each test</p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#fbdt"><img src="images/callouts/9.png" alt="9" border="0"></a> </td><td valign="top" align="left"><p>SQL delimiter type in SQL scripts (Default, Go, SetTerm or EmptyLine)</p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#fbdel"><img src="images/callouts/10.png" alt="10" border="0"></a> </td><td valign="top" align="left"><p>SQL delimiter string</p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#fbcdbo">(11)</a> </td><td valign="top" align="left"><p>SQL scripts to create database objects. All scripts have to be placed in
+  the "database" directory (where the test.properties file is located).
+  </p></td></tr><tr><td width="5%" valign="top" align="left"><a href="#fbddbo">(12)</a> </td><td valign="top" align="left"><p>SQL scripts to drop database objects. All scripts have to be placed in
+  the "database" directory (where the test.properties file is located).
+  </p></td></tr></table></div><p>
+  Due to techniques used in the ZEOS Testframework classes it is necessary to set
+  a prefix in front of the key that is identical to the section name followed by
+  a dot. E. g.: firebird15.password - where "firebird15" is the repeated name of the
+  section (see above).
+  </p></div></div><div class="section" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a id="Compiling"></a>4.&nbsp;Compiling Tests</h2></div></div></div><p>
+  When all the required Software is installed and you made the configurations
+  that are necessary for your test environment you are ready to start compiling
+  the test applications. This is easyly done by calling the batch script
+  "compiletests.cmd" from commandline in "build" directory. When all applications
+  are successfully compiled you are able to test ZEOSLib funcionality.
+  </p><p>
+  ZEOS BTE splits the tests into seven parts (separate applications):
+  <div class="itemizedlist"><ul type="disc"><li><p>Bug Report Tests (ZTestBugReport.EXE)</p></li><li><p>Component Tests (ZTestComponentAll.EXE)</p></li><li><p>Core Tests (ZTestCoreAll.EXE)</p></li><li><p>Database Connectivity (DBC) Tests (ZTestDbcAll.EXE)</p></li><li><p>SQL Parser Tests (ZTestParseSqlAll.EXE)</p></li><li><p>Performance Tests - currently not executed - (ZTestPerformance.EXE)</p></li></ul></div>
+  </p><p>
+  The applications listed above are compiled into the build directory of the
+  corresponding package (e. g.: ...\packages\delphi7\build). Normally the applications
+  are compiled to execute as console applications but if you want to run them
+  as GUI applications just remove the comment from "{$DEFINE TESTGUI}" in the
+  ZEOS.INC file. If you now call one of the test applications they are executed in
+  a GUI. If you want to create console test applications you just have to comment
+  the "{$DEFINE TESTGUI}" again (in ZEOS.INC).
+  </p></div><div class="section" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a id="Running"></a>5.&nbsp;Running Tests</h2></div></div></div><p>
+  As written in section "Compiling Tests", it is possible to execute special
+  tests (e. g. only Bug Report Tests) by calling the EXE-file explicitly. Depending
+  on the settings you will start one console application or one GUI application.
+  You also may run all tests by running them sequentially via batch script (consider
+  to compile all the tests as a console application!)
+  </p><p>
+  Before you run tests make sure that all the database servers you want to test are
+  up and running!</p><p>
+  To do run all tests (that are defined to run in section "tests" of the build.properties
+  file), automatically, just type "test" from a commandline in "build" directory. The
+  test result is output to screen and into a log file located in the "build"
+  subdirectory "logs". The logfile is called "test-YYYYMMDD.log"  where "YYYYMMDD"
+  is the current date.
+  </p></div></div><div xmlns="" id="customfooter">
+This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+</div></body></html>

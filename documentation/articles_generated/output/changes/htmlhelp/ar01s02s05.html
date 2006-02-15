@@ -1,0 +1,63 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   
+      <title>2.5.&nbsp;Release 6.5.1 - 17 July 2004</title>
+      <link rel="stylesheet" href="ede.css" type="text/css">
+      <meta name="generator" content="DocBook XSL Stylesheets V1.66.0">
+      <link rel="start" href="index.html" title="ZeosDBO Change Notes">
+      <link rel="up" href="ar01s02.html" title="2.&nbsp;Changes in Release 6.5">
+      <link rel="prev" href="ar01s02s04.html" title="2.4.&nbsp;Release 6.5.1 - 23 Nov 2004">
+      <link rel="next" href="ar01s02s06.html" title="2.6.&nbsp;Release 6.5.0 - 10 March 2004">
+   </head>
+   <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+      <div id="customheader">
+         This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+         
+      </div>
+      <div class="sect2" lang="en">
+         <div class="titlepage">
+            <div>
+               <div>
+                  <h3 class="title"><a name="d4e305"></a>2.5.&nbsp;Release 6.5.1 - 17 July 2004
+                  </h3>
+               </div>
+            </div>
+         </div>
+         <div class="itemizedlist">
+            <ul type="disc">
+               <li>/<span class="othername">SM</span>/ Fixed Bug#1021705 Numeric values overflow
+               </li>
+               <li>/<span class="othername">SM</span>/ Fixed Bug#1034795 Metadata don't filter the table type
+               </li>
+               <li>/<span class="othername">SM</span>/ Fixed Bug#993352 problem with TZInterbase6DatabaseMetadata.GetTables table type SYSTEM TABLE
+               </li>
+               <li>/<span class="othername">SM</span>/ Fixed Bug#991069 Creation of a DB and FKs in Firebird
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#985629 Locate and Lookup don't find float fields.
+               </li>
+               <li>/<span class="othername">SS</span>/ Added database error codes to rethrown exceptions in dataset.
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#993981 MySQL and PostgreSQL drivers do not process float values if decimal separator other then &#8220;<span class="quote">.</span>&#8221;.
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#995080 &#8220;<span class="quote">List Index Out of Bounds</span>&#8221; exception in <tt class="classname">Dataset</tt>.<tt class="methodname">UpdateStatus</tt> on empty resultset.
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#999658 Truncation of BigDecimal fields. Thanks to Kestutis Laurinavicius.
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#1000534. SQL Parser error when &#8220;<span class="quote">join ... on</span>&#8221; clause contains functions with parameters.
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#1004534 Access Violation when <tt class="methodname">RecNo</tt> is called on closed Dataset.
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#1045286 Method <tt class="methodname">IsNull</tt> returns incorrect result for fields containing &#8220;<span class="quote"></span>&#8221; characters.
+               </li>
+               <li>/<span class="othername">SS</span>/ Added support for cidr, inet and macaddr column types into PostgreSQL driver.
+               </li>
+            </ul>
+         </div>
+      </div>
+      <div id="customfooter">
+         This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+         
+      </div>
+   </body>
+</html>

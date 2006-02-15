@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+      <title>2. Plain API Layer</title>
+      <link rel="stylesheet" href="ede.css" type="text/css"/>
+      <meta name="generator" content="DocBook XSL Stylesheets V1.66.0"/>
+      <link rel="start" href="index.html" title="Overview of the Zeos Database Objects Architecture"/>
+      <link rel="up" href="index.html" title="Overview of the Zeos Database Objects Architecture"/>
+      <link rel="prev" href="ar01s01.html" title="1. General Overview"/>
+      <link rel="next" href="ar01s03.html" title="3. Database Connectivity Layer"/>
+   </head>
+   <body>
+      <div xmlns="" id="customheader">
+This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+</div>
+      <div class="sect1" lang="en">
+         <div class="titlepage">
+            <div>
+               <div>
+                  <h2 class="title" style="clear: both">
+                     <a id="d4e44"/>2. Plain API Layer</h2>
+               </div>
+            </div>
+         </div>
+         <p>ZeosDBO components do not communicate directly with SQL servers. Instead they use native client libraries provided with SQL databases. The Plain API layer provides an access to functions of native client libraries, constants and data structures (usually written in plain C) from the Object Pascal language or C++.</p>
+         <p>That functionality was the original basis for ZeosDBO. Support for multiple versions of client libraries and SQL servers was the main deficiency of earlier designs...</p>
+         <p>Native library calls (dynamic libraries in Windows and shared libraries in Unix) are represented in programming language as regular functions. For example:
+
+<pre class="programlisting">ZPlainMySql323.pas:
+
+function mysql_init(Handle: PMYSQL): PMYSQL; external 'libmysql.dll';</pre>
+         </p>
+         <p>Usually database APIs do not significantly change between versions. But because function calls do not allow polymorphism adding support for new versions of the Plain API is coding intensive. Hard coded approaches are inflexible and error-prone, which limit long term feasibility.
+
+<pre class="programlisting">if Version = 'mysql-3.23' then
+  ZPlainMySql323.mysql_init(...)
+else ZPlainMySql40.mysql_init(...);</pre>
+         </p>
+         <p>To implement polymorphism, simplify source code, and provide insulation from changes in SQL server protocols a new extremely thin interface layer was added into ZeosDBO. That layer is called “<span class="quote">Plain Drivers</span>” and implemented as follows:
+
+<pre class="programlisting">// Generic MySQL driver interface
+IZMySQLDriver = interface ...
+  function mysql_init(...)
+end;
+
+// MySQL driver for version 3.23
+TZMySQL323Driver = class (TInterfacedObject, IZMySQLDriver)
+  function mysql_init(...)
+end;
+
+// MySQL driver for version 4.0
+TZMySQL40Driver = class (TInterfacedObject, IZMySQLDriver)
+  function mysql_init(...)
+end;
+
+function TZMySQL323Driver.mysql_init(...)
+begin
+  Result := ZPlainMySql323.mysql_init(...);
+end;
+
+function TZMySQL40Driver.mysql_init(...)
+begin
+  Result := ZPlainMySql40.mysql_init(...);
+end;</pre>
+         </p>
+         <p>Using such thin class wrapper allows easy addition of new client interfaces. The specific functionality that requires overriding is encapsulated in the Plain driver. The rest of the code now has a uniform method of providing native database calls, without requiring specific knowledge about the database server.
+
+<pre class="programlisting">// Initialize plain driver
+PlainDriver: IZMySqlDriver;
+
+if Version = 'mysql-3.23' then
+  PlainDriver := TZMySQL323Driver.Create()
+else PlainDriver := TZMySQL40Driver.Create();
+
+// Use plain driver
+PlainDriver.mysql_init(...)</pre>
+         </p>
+         <p>With this approach it is possible to use the same API for different SQL servers, independently of version.</p>
+      </div>
+      <div xmlns="" id="customfooter">
+This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+</div>
+      <div class="navfooter">
+         <hr/>
+         <table width="100%" summary="Navigation footer">
+            <tr>
+               <td width="40%" align="left">
+                  <a accesskey="p" href="ar01s01.html">Prev</a> </td>
+               <td width="20%" align="center">
+                  <a accesskey="u" href="index.html">Up</a>
+               </td>
+               <td width="40%" align="right"> <a accesskey="n" href="ar01s03.html">Next</a>
+               </td>
+            </tr>
+            <tr>
+               <td width="40%" align="left" valign="top">1. General Overview </td>
+               <td width="20%" align="center">
+                  <a accesskey="h" href="index.html">Home</a>
+               </td>
+               <td width="40%" align="right" valign="top"> 3. Database Connectivity Layer</td>
+            </tr>
+         </table>
+      </div>
+   </body>
+</html>

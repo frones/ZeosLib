@@ -1,0 +1,102 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   
+      <title>3.&nbsp;Bug Fixing Test</title>
+      <link rel="stylesheet" href="ede.css" type="text/css">
+      <meta name="generator" content="DocBook XSL Stylesheets V1.66.0">
+      <link rel="start" href="index.html" title="Bug Reporting in ZEOS Library">
+      <link rel="up" href="index.html" title="Bug Reporting in ZEOS Library">
+      <link rel="prev" href="FixingProcedure.html" title="2.&nbsp;Bug Fixing Proecedure">
+      <link rel="next" href="SampleBRTestCase.html" title="4.&nbsp;Sample Bug Report Testcase">
+   </head>
+   <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+      <div id="customheader">
+         This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+         
+      </div>
+      <div class="section" lang="en">
+         <div class="titlepage">
+            <div>
+               <div>
+                  <h2 class="title" style="clear: both"><a name="FixingText"></a>3.&nbsp;Bug Fixing Test
+                  </h2>
+               </div>
+            </div>
+         </div>
+         <p>
+            Bug Report Tests is a special category of tests it is obvious that bugs may
+            happen in all groups of finctional tests described before. From that p
+              erspective Bug Report Tests should repeat the hierarchy of functional tests:
+              
+         </p>
+         <p>
+              
+            <div class="orderedlist">
+               <ol type="1">
+                  <li>
+                     <p>TZAbstractBugReportTestCase - a base abstract class for Bug Report Tests.</p>
+                  </li>
+                  <li>
+                     <p>
+                          TZGenericBugReport, TZPortableSQLBugReport and TZSpecificSQLBugReport - abstract
+                          classes for "Generic", "SQL Prtable" and "SQL Specific" tests.
+                          
+                     </p>
+                  </li>
+                  <li>
+                     <p>
+                          TZCompPortableSQLBugReport, TZCompMySQLBugReport, TZCompInterbaseBugReport,
+                          TZDbcPortableSQLBugReport, TZDbcMySQLBugReport, TZDbcInterbaseBugReport, etc. -
+                          specific test cases.
+                          
+                     </p>
+                  </li>
+               </ol>
+            </div>
+              
+         </p>
+         <p>
+              For Bug Report Test cases we set a convention to name test methodes as "Test" + ID, where
+              ID is a unique number of associated bug report in Bug Tracker on SourceForge. That convention
+              allows us to do following things:
+              
+         </p>
+         <p>
+              
+            <div class="orderedlist">
+               <ol type="1">
+                  <li>
+                     <p>Enforce creation of bug repot for each found bug.</p>
+                  </li>
+                  <li>
+                     <p>Easy navigate between bug reports and related test cases.</p>
+                  </li>
+                  <li>
+                     <p>
+                          TZCompPortableSQLBugReport, TZCompMySQLBugReport, TZCompInterbaseBugReport,
+                          TZDbcPortableSQLBugReport, TZDbcMySQLBugReport, TZDbcInterbaseBugReport, etc. -
+                          specific test cases.
+                          
+                     </p>
+                  </li>
+               </ol>
+            </div>
+              
+         </p>
+         <p>
+              During bug fixing developer usually have to run a specific test case many times.
+              To speed up the process we added to TZAbstractBugReportTestCase class a convenient
+              function called SkipClosed. If SkipClosed property ist set to true for "bugreport"
+              category in configuration file, SkipClosed returns true and allows to skip
+              completed tests for fixed bugs. It dramatically decreases number of tests to run
+              and makes developer's vork much more productive.
+              
+         </p>
+      </div>
+      <div id="customfooter">
+         This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+         
+      </div>
+   </body>
+</html>

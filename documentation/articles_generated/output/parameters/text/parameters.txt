@@ -1,0 +1,315 @@
+
+This document was created using the >e-novative> DocBook Environment (eDE)
+
+
+
+
+
+
+ZeosDBO SQL Specific Parameters
+===============================
+
+
+
+
+
+ZeosLib Development Group
+=========================
+
+
+
+
+05 November 2003
+
+
+
+===========================================================================
+
+
+
+*Table of Contents*
+
+1. Generic Parameters
+2. MySQL Driver Parameters
+3. PostgreSQL Driver Parameters
+4. MS SQL Driver Parameters
+5. Interbase Driver Parameters
+
+
+
+
+
+
+1. Generic Parameters
+=====================
+
+
+
+
+
+
+1.1. Connection parameters
+1.2. Statement parameters
+
+
+
+
+
+
+1.1. Connection parameters
+==========================
+
+
+
+
+
+defaults=[yes,no] - Calculate default values for NULL fields.
+
+
+
+
+
+
+
+1.2. Statement parameters
+=========================
+
+
+
+
+
+defaults=[yes,no] - Calculate default values for NULL fields.
+
+
+
+
+
+
+
+
+2. MySQL Driver Parameters
+==========================
+
+
+
+
+
+
+2.1. Connection parameters
+2.2. Statement parameters
+
+
+
+
+
+
+2.1. Connection parameters
+==========================
+
+
+
+
+
+compress=[yes,no] - Turn on/off compression protocol
+
+dbless=[yes,no] - Connect to the real database or not (dbless mode)
+
+useresult=[yes,no] - Fetching rows using UseResult instead StoreResult.
+
+timeout=<seconds> - Connection timeout in seconds.
+
+codepage=<client codepage> - Sets a client codepage. It executes a SET
+CHARACTER SET <client codepage> statement righ after connect. Right now
+MySQL supports only cp1251_koi8 value. Refer your MySQL server manual for
+details.
+
+
+
+
+
+
+
+2.2. Statement parameters
+=========================
+
+
+
+
+
+useresult=[yes,no] - Fetching rows using UseResult instead StoreResult.
+
+
+
+
+
+
+
+
+3. PostgreSQL Driver Parameters
+===============================
+
+
+
+
+
+
+3.1. Connection parameters
+3.2. Statement parameters
+
+
+
+
+
+
+3.1. Connection parameters
+==========================
+
+
+
+
+
+beginreq=[yes,no] - Is BEGIN required at the transaction start or not.
+
+oidasblob=[yes,no] - Is Oid type treated as Large Object handle (blob) or
+as a regular integer.
+
+timeout=<seconds> - Connection timeout in seconds.
+
+codepage=<client codepage> - Sets a client codepage. It executes a SET
+CLIENT_ENCODING '<client codepage>' statement righ after connect.
+
+
+
+
+
+
+
+3.2. Statement parameters
+=========================
+
+
+
+
+
+oidasblob=[yes,no] - Is Oid type treated as Large Object handle (blob) or
+as a regular integer.
+
+
+
+
+
+
+
+
+4. MS SQL Driver Parameters
+===========================
+
+
+
+
+
+
+4.1. Connection parameters
+
+
+
+
+
+
+4.1. Connection parameters
+==========================
+
+
+
+
+
+appname=<application name> - The given application name is sent to
+sqlserver.
+
+workstation=<workstation name> - The given workstation name is sent to
+sqlserver
+
+secure=[yes,no] - This means that SQL Server will use Windows
+Authentication security.
+
+trusted=[yes,no] - This means that SQL Server will use Windows
+Authentication security.
+
+language=<national language name> - The given language is sent to
+sqlserver. If language support is installed in the server, error messages
+are returned in the designated national language.
+
+fallback=[yes,no] - Enables or disables failover support
+
+timeout=<seconds> - Is the time-out value, or the number of seconds that
+DB-Library waits for a login response before timing out. A time-out value
+of 0 represents an infinite time-out period. The default time-out value
+is 60 seconds.
+
+
+
+
+
+
+
+
+5. Interbase Driver Parameters
+==============================
+
+
+
+
+
+
+5.1. Connection parameters
+5.2. Statement parameters
+
+
+
+
+
+
+5.1. Connection parameters
+==========================
+
+
+
+
+
+codepage=<national language name> - The given language is sent to
+sqlserver. If language support is installed in the server, error messages
+are returned in the designated national language.
+
+createNewDatabase=<sql command database creation> - Created new database
+before open database defined in TZConnection.
+
+dialect=it is parameter of Interbase/Firebird sql dialect. dialect
+parameter is sinonim of isc_dpb_sql_dialect parameter.
+
+RoleName=it is sinonim for isc_dpb_sql_role_name parameter
+Interbase/Firebird. It allow set user role name to work with database and
+to gain the privileges of that role.
+
+
+
+
+
+
+
+5.2. Statement parameters
+=========================
+
+
+
+
+
+cursor=<cursor name> - The given cusor name is sent to sql server.
+
+cashedblob=[yes,no] - This means that blob data fetch immediate if [yes]
+or used interbase blob if [no].
+
+
+
+
+This document was created using the >e-novative> DocBook Environment (eDE)
+

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+      <title>3.5. Release 6.1.0 - 28 July 2003</title>
+      <link rel="stylesheet" href="ede.css" type="text/css"/>
+      <meta name="generator" content="DocBook XSL Stylesheets V1.66.0"/>
+      <link rel="start" href="index.html" title="ZeosDBO Change Notes"/>
+      <link rel="up" href="ar01s03.html" title="3. Changes in Release 6.1"/>
+      <link rel="prev" href="ar01s03s04.html" title="3.4. Release 6.1.1 - 28 September 2003"/>
+      <link rel="next" href="ar01s04.html" title="4. Changes in Release 6.0"/>
+   </head>
+   <body>
+      <div xmlns="" id="customheader">
+This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+</div>
+      <div class="sect2" lang="en">
+         <div class="titlepage">
+            <div>
+               <div>
+                  <h3 class="title">
+                     <a id="d4e986"/>3.5. Release 6.1.0 - 28 July 2003</h3>
+               </div>
+            </div>
+         </div>
+         <div class="itemizedlist">
+            <ul type="disc">
+               <li>/<span class="othername">SS</span>/ Rewritten SQL parsers, removed Parse package from the project.</li>
+               <li>/<span class="othername">SS</span>/ Modified <tt class="classname">TZSQLProcessor</tt> component.</li>
+               <li>/<span class="othername">JF</span>/ ADO driver is added.</li>
+               <li>/<span class="othername">JF</span>/ Modified <tt class="classname">TZBlobStream</tt> to support notification about change.</li>
+               <li>/<span class="othername">SS</span>/ Code has been optimized.</li>
+               <li>/<span class="othername">SS</span>/ Finished source code review.</li>
+               <li>/<span class="othername">SS</span>/ Added parameters to ZDBC statements.</li>
+               <li>/<span class="othername">SS</span>/ Added multiple statements property to <tt class="classname">TZUpdateSQL</tt>.</li>
+               <li>/<span class="othername">SS</span>/ Added <tt class="classname">TZSQLMonitor</tt> component.</li>
+               <li>/<span class="othername">SS</span>/ Added filter expressions</li>
+               <li>/<span class="othername">JF</span>/ Stored procedure support for mssql dblib interface, works for sybase also</li>
+               <li>/<span class="othername">SS</span>/ Added <span class="property">DataSource</span> property in <tt class="classname">TDataset</tt> to support master-detail links.</li>
+               <li>/<span class="othername">SS</span>/ Added <span class="property">MasterSource</span>, <span class="property">MasterFields</span> and <span class="property">IndexFieldNames</span> to support master-detail links with client-side filtering</li>
+               <li>/<span class="othername">SS</span>/ Added support for MySQL autoincremented fields</li>
+               <li>/<span class="othername">JF</span>/ Added support for Sybase and MS SQL identity fields</li>
+               <li>/<span class="othername">JF</span>/ Added support for exiting without error messages in case of broken connection</li>
+               <li>/<span class="othername">JF</span>/ Added some new metadata columns to getcolumns to support calculated fields</li>
+               <li>/<span class="othername">JF</span>/ Autoincremented field support for mssql, sybase and ado added  to return the generated value.</li>
+               <li>/<span class="othername">JF</span>/ Added workaround for procedure parameter type query for sybase. It works only for ASE12.5 or above</li>
+               <li>/<span class="othername">JF</span>/ Added workaround for sybase structure 'AND NULL IS NULL' resulted in error: Invalid operator for datatype op: is null type: VOID TYPE.</li>
+               <li>/<span class="othername">SS</span>/ Added <tt class="classname">TZTable</tt> component.</li>
+               <li>/<span class="othername">SS</span>/ Added <tt class="classname">TZSQLMetadata</tt> component.</li>
+               <li>/<span class="othername">SS</span>/ Added caching for database metadata</li>
+               <li>/<span class="othername">SM</span>/ Fixed Bug#804112 AutoCommit Interbase/Firebird transaction problem.</li>
+               <li>/<span class="othername">SM</span>/ Fixed Bug#795832 Exception handling in Interbase statement</li>
+               <li>/<span class="othername">SM</span>/ Added Plain API for DB2 </li>
+            </ul>
+         </div>
+      </div>
+      <div xmlns="" id="customfooter">
+This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+</div>
+      <div class="navfooter">
+         <hr/>
+         <table width="100%" summary="Navigation footer">
+            <tr>
+               <td width="40%" align="left">
+                  <a accesskey="p" href="ar01s03s04.html">Prev</a> </td>
+               <td width="20%" align="center">
+                  <a accesskey="u" href="ar01s03.html">Up</a>
+               </td>
+               <td width="40%" align="right"> <a accesskey="n" href="ar01s04.html">Next</a>
+               </td>
+            </tr>
+            <tr>
+               <td width="40%" align="left" valign="top">3.4. Release 6.1.1 - 28 September 2003 </td>
+               <td width="20%" align="center">
+                  <a accesskey="h" href="index.html">Home</a>
+               </td>
+               <td width="40%" align="right" valign="top"> 4. Changes in Release 6.0</td>
+            </tr>
+         </table>
+      </div>
+   </body>
+</html>

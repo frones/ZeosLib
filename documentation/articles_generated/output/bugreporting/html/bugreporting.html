@@ -1,0 +1,132 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+   <title>Bug Reporting in ZEOS Library</title><link rel="stylesheet" href="ede.css" type="text/css"><meta name="generator" content="DocBook XSL Stylesheets V1.66.0"><meta name="description" content="&#xA;  The currect bug reporting procedure is absolutely critical to improve&#xA;  the quality of ZEOS. It defines steps to fix bugs, to notify the reported&#xA;  user about the change and update the test harness to ensure the bug will&#xA;  never happen again. Unfortunately in free ware projets it's hard to maintain&#xA;  good test coverage. The Bug Report procedure allows to improve the test&#xA;  coverage and to increase the stability of the Libary afterward, when the code is&#xA;  written and released. It relieves developers because writing tests is partially&#xA;  moved to responsibilities of QA group.&#xA;  "></head><body><div xmlns="" id="customheader">
+This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+</div><div class="article" lang="en"><div class="titlepage"><div><div><h1 class="title"><a id="d4e1"></a>Bug Reporting in ZEOS Library</h1></div><div><div class="author"><h3 class="author"><span class="firstname">Michael</span> <span class="surname">Seeger</span></h3></div></div><div><div class="abstract"><p class="title"><b>Abstract</b></p><p>
+  The currect bug reporting procedure is absolutely critical to improve
+  the quality of ZEOS. It defines steps to fix bugs, to notify the reported
+  user about the change and update the test harness to ensure the bug will
+  never happen again. Unfortunately in free ware projets it's hard to maintain
+  good test coverage. The Bug Report procedure allows to improve the test
+  coverage and to increase the stability of the Libary afterward, when the code is
+  written and released. It relieves developers because writing tests is partially
+  moved to responsibilities of QA group.
+  </p></div></div></div><hr></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="section"><a href="#Recommendation">1. Recommendation to a Bug Report</a></span></dt><dt><span class="section"><a href="#FixingProcedure">2. Bug Fixing Proecedure</a></span></dt><dt><span class="section"><a href="#FixingText">3. Bug Fixing Test</a></span></dt><dt><span class="section"><a href="#SampleBRTestCase">4. Sample Bug Report Testcase</a></span></dt></dl></div><div class="section" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a id="Recommendation"></a>1.&nbsp;Recommendation to a Bug Report</h2></div></div></div><p>
+  A "valid" bug report has to contain the following informations:
+  </p><div class="itemizedlist"><ul type="disc"><li><p>Database server and server version</p></li><li><p>Version of used components</p></li><li><p>Name component or class that raised the error</p></li><li><p>Information about user properties for components and/or classes</p></li><li><p>Exact description of the error</p></li><li><p>Sql query and table(s) structure and table(s) data for user specified table(s)</p></li></ul></div><p>
+  If it is necessary and possible the user may be asked for a sample application that
+  reproduces the error
+  </p></div><div class="section" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a id="FixingProcedure"></a>2.&nbsp;Bug Fixing Proecedure</h2></div></div></div><div class="orderedlist"><ol type="1"><li><p>User submits a bug report on SourceForge Bug Tracker.</p></li><li><p>
+  Elaborate information about the bug and close the bug if it has no sense.
+  Notify the user about the action taken and exlain why this was done
+  (performed by QA Group)
+  </p></li><li><p>
+  Implement a Bug Report Test Case which relicates the problem (performed by
+  QA Group)
+  </p></li><li><p>Switch the bug to the responsible developer</p></li><li><p>
+  Fix the bug. Document yor changes in sourcecode, carefully! (performed by
+  responsible developer)
+  </p></li><li><p>
+  Fill out the bug report e-Form and document your doings, carefully!
+  The given Template (bug_report_form.txt has to be saved as <tt class="filename">
+  BugID.txt</tt> where <tt class="filename">ID</tt> means the Bug's
+  ID from the SourceForge Bug Tracker.
+  </p></li><li><p>
+  Close the bug report and notify the user about the changes done (if possible)
+  and mention when it will be officially released (performed by responsible
+  developer)
+  </p></li></ol></div></div><div class="section" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a id="FixingText"></a>3.&nbsp;Bug Fixing Test</h2></div></div></div><p>
+  Bug Report Tests is a special category of tests it is obvious that bugs may
+  happen in all groups of finctional tests described before. From that p
+  erspective Bug Report Tests should repeat the hierarchy of functional tests:
+  </p><p>
+  <div class="orderedlist"><ol type="1"><li><p>TZAbstractBugReportTestCase - a base abstract class for Bug Report Tests.</p></li><li><p>
+  TZGenericBugReport, TZPortableSQLBugReport and TZSpecificSQLBugReport - abstract
+  classes for "Generic", "SQL Prtable" and "SQL Specific" tests.
+  </p></li><li><p>
+  TZCompPortableSQLBugReport, TZCompMySQLBugReport, TZCompInterbaseBugReport,
+  TZDbcPortableSQLBugReport, TZDbcMySQLBugReport, TZDbcInterbaseBugReport, etc. -
+  specific test cases.
+  </p></li></ol></div>
+  </p><p>
+  For Bug Report Test cases we set a convention to name test methodes as "Test" + ID, where
+  ID is a unique number of associated bug report in Bug Tracker on SourceForge. That convention
+  allows us to do following things:
+  </p><p>
+  <div class="orderedlist"><ol type="1"><li><p>Enforce creation of bug repot for each found bug.</p></li><li><p>Easy navigate between bug reports and related test cases.</p></li><li><p>
+  TZCompPortableSQLBugReport, TZCompMySQLBugReport, TZCompInterbaseBugReport,
+  TZDbcPortableSQLBugReport, TZDbcMySQLBugReport, TZDbcInterbaseBugReport, etc. -
+  specific test cases.
+  </p></li></ol></div>
+  </p><p>
+  During bug fixing developer usually have to run a specific test case many times.
+  To speed up the process we added to TZAbstractBugReportTestCase class a convenient
+  function called SkipClosed. If SkipClosed property ist set to true for "bugreport"
+  category in configuration file, SkipClosed returns true and allows to skip
+  completed tests for fixed bugs. It dramatically decreases number of tests to run
+  and makes developer's vork much more productive.
+  </p></div><div class="section" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a id="SampleBRTestCase"></a>4.&nbsp;Sample Bug Report Testcase</h2></div></div></div><p>
+  <pre class="programlisting">
+  UNIT ZTestCompCore;
+  &nbsp;
+  INTERFACE
+  &nbsp;
+  {$I ZBugReport.inc}
+  &nbsp;
+  USES Classed, DB, TestFramework, ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
+       ZCompatibility, ZSqlUpdate, ZSqlProcessor;
+  &nbsp;
+  TYPE ZTestCompCoreBugReport = class (TZPortableSQLBugReportTestCase)
+          :
+          published
+             :
+             Procedure Test833197;
+             :
+       End;
+  &nbsp;
+  IMPLEMENTATION
+  &nbsp;
+  :
+  &nbsp;
+  {** Bugreport #833197:
+  Refresh problem with filtered data. }
+  &nbsp;
+  Procedure ZTestCompCoreBugReport.Test833197;
+  Var Connection: TZConnection;
+      Query     : TZQuery;
+  Begin
+     If SkipClosed Then Exit;
+     &nbsp;
+     Connection       := Self.CreateDatasetConnection;
+     Query            := TZQuery.Create (nil);
+     Query.Connection := Connection;
+     Query.SQL.Text   := 'SELECT * FROM poeple';
+     &nbsp;
+     Try
+        Query.Open;
+        Query.Filter   := 'p_name = "Aleksey Petrov"';
+        Query.Filtered := True;
+        CheckEquals (1, Query.RecordCount);
+        Query.Refresh;
+        CheckEquals (1, Query.RecordCount);
+        Query.Close;
+     Finally
+        Connection.Free;
+        Query.Free;
+     End;
+  End; // Test833197
+  &nbsp;
+  :
+  &nbsp;
+  INITIALIZATION
+  &nbsp;
+     TestFramework.RegisterTest (ZTestCompCoreBugReort.Suite);
+  &nbsp;
+  End.
+  </pre>
+  </p></div></div><div xmlns="" id="customfooter">
+This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+</div></body></html>

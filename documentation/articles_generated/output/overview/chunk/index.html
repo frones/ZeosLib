@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+      <title>Overview of the Zeos Database Objects Architecture</title>
+      <link rel="stylesheet" href="ede.css" type="text/css"/>
+      <meta name="generator" content="DocBook XSL Stylesheets V1.66.0"/>
+      <link rel="start" href="index.html" title="Overview of the Zeos Database Objects Architecture"/>
+      <link rel="next" href="ar01s01.html" title="1. General Overview"/>
+   </head>
+   <body>
+      <div xmlns="" id="customheader">
+This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+</div>
+      <div class="article" lang="en">
+         <div class="titlepage">
+            <div>
+               <div>
+                  <h1 class="title">
+                     <a id="d4e1"/>Overview of the Zeos Database Objects Architecture</h1>
+               </div>
+               <div>
+                  <div class="author">
+                     <h3 class="author">
+                        <span class="firstname">Sergey</span> 
+                        <span class="surname">Seroukhov</span>
+                     </h3>
+                  </div>
+               </div>
+               <div>
+                  <div class="author">
+                     <h3 class="author">
+                        <span class="firstname">Merlin</span> 
+                        <span class="surname">Moncure</span>
+                     </h3>
+                  </div>
+               </div>
+               <div>
+                  <p class="pubdate">26 November 2003</p>
+               </div>
+            </div>
+            <hr/>
+         </div>
+         <div class="toc">
+            <p>
+               <b>Table of Contents</b>
+            </p>
+            <dl>
+               <dt>
+                  <span class="sect1">
+                     <a href="ar01s01.html">1. General Overview</a>
+                  </span>
+               </dt>
+               <dt>
+                  <span class="sect1">
+                     <a href="ar01s02.html">2. Plain API Layer</a>
+                  </span>
+               </dt>
+               <dt>
+                  <span class="sect1">
+                     <a href="ar01s03.html">3. Database Connectivity Layer</a>
+                  </span>
+               </dt>
+               <dt>
+                  <span class="sect1">
+                     <a href="ar01s04.html">4. Component Layer</a>
+                  </span>
+               </dt>
+               <dt>
+                  <span class="sect1">
+                     <a href="ar01s05.html">5. Epilog</a>
+                  </span>
+               </dt>
+            </dl>
+         </div>
+         <p>Direct access to SQL databases continues to be a vital technology even in today's enterprise environment. Thousands of two-tier client server applications are developed and maintained in the international business community. Most of them are built off of specially designed application programming interfaces (APIs) to retrieve relational data and execute SQL statements.</p>
+         <p>Currently, there is several standardized and widely used APIs to access SQL databases, such as ODBC, JDBC, and ADO. Borland also released their proprietary database middleware interface for its development tools, called the Borland Database Engine (BDE). Despite being freely distributed with Borland's popular line of application development tools, the BDE was unpopular because of complexities in installation and poor performance. As Delphi became one of the leading application development tools for the Windows platform, individuals and companies proposed alternative interfaces to the BDE. These “<span class="quote">BDE Alternatives</span>” optimized access to the database by directly using the native database driver, providing performance and feature advantages with respect to the BDE.</p>
+         <p>Realizing the limitations of the BDE, Borland proposed a new type of database interface called dbExpress. This interface was designed to broker access between Delphi and virtually any relational database through 3rd party drivers. Borland significantly improved the performance of dbExpress with respect to the BDE, but the implementation was buggy and supported only a limited subset of SQL that hampered functionality.</p>
+         <p>The Zeos Database Object component library (ZeosLib) is one of the best-known BDE alternatives. Originally the library was developed for MySQL and PostgreSQL databases, but support for other vendors was soon added. During the development process, certain limitations of the original design became more and more apparent. These limitations began to put a strain on the overall architecture and the development team decided a ground up rewrite was the best way to proceed. The new design was built to handle an extended feature list with several new requirements:
+
+		<div class="orderedlist">
+               <ol type="1">
+                  <li>Support for different compilers</li>
+                  <li>Versioning database driver system</li>
+                  <li>“<span class="quote">Database Insensitive</span>” design for cross-database development</li>
+                  <li>Support for multiple high level interfaces (TDataset, dbExpress, Midas)</li>
+                  <li>Extensible feature system for server specific support</li>
+               </ol>
+            </div>
+         </p>
+      </div>
+      <div xmlns="" id="customfooter">
+This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+</div>
+      <div class="navfooter">
+         <hr/>
+         <table width="100%" summary="Navigation footer">
+            <tr>
+               <td width="40%" align="left"> </td>
+               <td width="20%" align="center"> </td>
+               <td width="40%" align="right"> <a accesskey="n" href="ar01s01.html">Next</a>
+               </td>
+            </tr>
+            <tr>
+               <td width="40%" align="left" valign="top"> </td>
+               <td width="20%" align="center"> </td>
+               <td width="40%" align="right" valign="top"> 1. General Overview</td>
+            </tr>
+         </table>
+      </div>
+   </body>
+</html>

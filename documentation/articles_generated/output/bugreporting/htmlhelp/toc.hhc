@@ -1,0 +1,26 @@
+<HTML>
+<HEAD>
+</HEAD>
+  <BODY>
+<OBJECT type="text/site properties">
+	<param name="ImageType" value="Folder">
+</OBJECT>
+<UL>
+<LI> <OBJECT type="text/sitemap">
+      <param name="Name" value="Bug Reporting in ZEOS Library">
+      <param name="Local" value="v:\zeosdbo_rework\documentation\articles_generated\output\bugreporting\htmlhelp\index.html">
+    </OBJECT><UL><LI> <OBJECT type="text/sitemap">
+      <param name="Name" value="Recommendation to a Bug Report">
+      <param name="Local" value="v:\zeosdbo_rework\documentation\articles_generated\output\bugreporting\htmlhelp\Recommendation.html">
+    </OBJECT><LI> <OBJECT type="text/sitemap">
+      <param name="Name" value="Bug Fixing Proecedure">
+      <param name="Local" value="v:\zeosdbo_rework\documentation\articles_generated\output\bugreporting\htmlhelp\FixingProcedure.html">
+    </OBJECT><LI> <OBJECT type="text/sitemap">
+      <param name="Name" value="Bug Fixing Test">
+      <param name="Local" value="v:\zeosdbo_rework\documentation\articles_generated\output\bugreporting\htmlhelp\FixingText.html">
+    </OBJECT><LI> <OBJECT type="text/sitemap">
+      <param name="Name" value="Sample Bug Report Testcase">
+      <param name="Local" value="v:\zeosdbo_rework\documentation\articles_generated\output\bugreporting\htmlhelp\SampleBRTestCase.html">
+    </OBJECT></UL></UL>
+</BODY>
+</HTML>

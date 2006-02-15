@@ -1,0 +1,92 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   
+      <title>2.3.&nbsp;Tests Section</title>
+      <link rel="stylesheet" href="ede.css" type="text/css">
+      <meta name="generator" content="DocBook XSL Stylesheets V1.66.0">
+      <link rel="start" href="index.html" title="Building Tests for the ZEOS Library">
+      <link rel="up" href="BTConfig.html" title="2.&nbsp;Build &amp; Test Configuration">
+      <link rel="prev" href="BTConfigCompilers.html" title="2.2.&nbsp;Compiler Section">
+      <link rel="next" href="DBConfig.html" title="3.&nbsp;Database Configuration">
+   </head>
+   <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+      <div id="customheader">
+         This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+         
+      </div>
+      <div class="section" lang="en">
+         <div class="titlepage">
+            <div>
+               <div>
+                  <h3 class="title"><a name="BTConfigTests"></a>2.3.&nbsp;Tests Section
+                  </h3>
+               </div>
+            </div>
+         </div>
+         <p>
+            This section is necessary to determine which tests will be run when executing
+              the test.cmd batchfile (only makes sense when compiling the test applications
+              as console applications).
+              
+         </p><pre class="programlisting">
+  [tests]
+  test.core=true <a name="tc"></a><img src="images/callouts/1.png" alt="1" border="0">
+  test.parsesql=true <a name="tp"></a><img src="images/callouts/2.png" alt="2" border="0">
+  test.dbc=true <a name="td"></a><img src="images/callouts/3.png" alt="3" border="0">
+  test.component=true <a name="tco"></a><img src="images/callouts/4.png" alt="4" border="0">
+  test.bugreport=true <a name="tb"></a><img src="images/callouts/5.png" alt="5" border="0">
+  test.performance=false <a name="tperf"></a><img src="images/callouts/6.png" alt="6" border="0">
+  </pre><div class="calloutlist">
+            <table border="0" summary="Callout list">
+               <tr>
+                  <td width="5%" valign="top" align="left"><a href="#tc"><img src="images/callouts/1.png" alt="1" border="0"></a> 
+                  </td>
+                  <td valign="top" align="left">
+                     <p>Execute core tests if set to "true".</p>
+                  </td>
+               </tr>
+               <tr>
+                  <td width="5%" valign="top" align="left"><a href="#tp"><img src="images/callouts/2.png" alt="2" border="0"></a> 
+                  </td>
+                  <td valign="top" align="left">
+                     <p>Execute parsing tests if set to "true".</p>
+                  </td>
+               </tr>
+               <tr>
+                  <td width="5%" valign="top" align="left"><a href="#td"><img src="images/callouts/3.png" alt="3" border="0"></a> 
+                  </td>
+                  <td valign="top" align="left">
+                     <p>Execute connectivity tests if set to "true".</p>
+                  </td>
+               </tr>
+               <tr>
+                  <td width="5%" valign="top" align="left"><a href="#tco"><img src="images/callouts/4.png" alt="4" border="0"></a> 
+                  </td>
+                  <td valign="top" align="left">
+                     <p>Execute component tests if set to "true".</p>
+                  </td>
+               </tr>
+               <tr>
+                  <td width="5%" valign="top" align="left"><a href="#tb"><img src="images/callouts/5.png" alt="5" border="0"></a> 
+                  </td>
+                  <td valign="top" align="left">
+                     <p>Execute bug tests if set to "true".</p>
+                  </td>
+               </tr>
+               <tr>
+                  <td width="5%" valign="top" align="left"><a href="#tperf"><img src="images/callouts/6.png" alt="6" border="0"></a> 
+                  </td>
+                  <td valign="top" align="left">
+                     <p>Execute performance tests if set to "true".</p>
+                  </td>
+               </tr>
+            </table>
+         </div>
+      </div>
+      <div id="customfooter">
+         This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+         
+      </div>
+   </body>
+</html>

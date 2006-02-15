@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+      <title>4.6. Release 6.0.10 - 13 June 2003</title>
+      <link rel="stylesheet" href="ede.css" type="text/css"/>
+      <meta name="generator" content="DocBook XSL Stylesheets V1.66.0"/>
+      <link rel="start" href="index.html" title="ZeosDBO Change Notes"/>
+      <link rel="up" href="ar01s04.html" title="4. Changes in Release 6.0"/>
+      <link rel="prev" href="ar01s04s05.html" title="4.5. Release 6.0.11 - 08 July 2003"/>
+      <link rel="next" href="ar01s04s07.html" title="4.7. Release 6.0.9 - 18 May 2003"/>
+   </head>
+   <body>
+      <div xmlns="" id="customheader">
+This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+</div>
+      <div class="sect2" lang="en">
+         <div class="titlepage">
+            <div>
+               <div>
+                  <h3 class="title">
+                     <a id="d4e1282"/>4.6. Release 6.0.10 - 13 June 2003</h3>
+               </div>
+            </div>
+         </div>
+         <div class="itemizedlist">
+            <ul type="disc">
+               <li>/<span class="othername">SS</span>/ Fixed Bug#752603 in <tt class="classname">TZDataset</tt>.<tt class="methodname">GetFieldData</tt> method which set <span class="property">Field</span>.<span class="property">IsNull</span> = <tt class="constant">True</tt> all the time.</li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#753397: in bounds checking in <tt class="classname">TZCollection</tt>.<tt class="methodname">SetCapacity</tt> which followed to Access Violation in Delphi 4.</li>
+               <li>/<span class="othername">SM</span>/ Finished scripts build &amp; test environment</li>
+               <li>/<span class="othername">SM</span>/ Added Kylix2 support</li>
+               <li>/<span class="othername">SM</span>/ Fixed test framework and tests for Kylix/Linux support</li>
+               <li>/<span class="othername">SS</span>/ Fixed remaining issues with Delphi 4 and 5 compilers. The testing libraries for Delphi 4,5 are work as expected.</li>
+               <li>/<span class="othername">SM</span>/ Fixed Interbase <span class="type">datetime</span> parameters </li>
+               <li>/<span class="othername">JF</span>/ Fixed <span class="type">varbinary</span> datatype. It will be a <span class="type">blob</span> field.</li>
+               <li>/<span class="othername">SS</span>/ Fixed bug#750912: Interbase Lookup fields.</li>
+               <li>/<span class="othername">SM</span>/ Fixed bug#754009: Cast error while fetching</li>
+               <li>/<span class="othername">SM</span>/ Added Firebird 1.5 support</li>
+               <li>/<span class="othername">SM</span>/ Fixed leak memory in <tt class="methodname">GetBlob</tt> method for MySQL &amp; PostgreSql</li>
+               <li>/<span class="othername">SS</span>/ Added support for MySQL 4.0 native client</li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#761300 Memory leak in <tt class="classname">TZReadOnlyQuery</tt>
+               </li>
+               <li>/<span class="othername">JF</span>/ The <tt class="classname">TDataset's</tt> default <tt class="methodname">Translate</tt> method is overriden in order to provide basic OEM/ANSI translation, but later it should be database specific.</li>
+               <li>/<span class="othername">JF</span>/ The previous one is removed because it caused more problems than it solved.</li>
+            </ul>
+         </div>
+      </div>
+      <div xmlns="" id="customfooter">
+This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+</div>
+      <div class="navfooter">
+         <hr/>
+         <table width="100%" summary="Navigation footer">
+            <tr>
+               <td width="40%" align="left">
+                  <a accesskey="p" href="ar01s04s05.html">Prev</a> </td>
+               <td width="20%" align="center">
+                  <a accesskey="u" href="ar01s04.html">Up</a>
+               </td>
+               <td width="40%" align="right"> <a accesskey="n" href="ar01s04s07.html">Next</a>
+               </td>
+            </tr>
+            <tr>
+               <td width="40%" align="left" valign="top">4.5. Release 6.0.11 - 08 July 2003 </td>
+               <td width="20%" align="center">
+                  <a accesskey="h" href="index.html">Home</a>
+               </td>
+               <td width="40%" align="right" valign="top"> 4.7. Release 6.0.9 - 18 May 2003</td>
+            </tr>
+         </table>
+      </div>
+   </body>
+</html>

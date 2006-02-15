@@ -1,0 +1,118 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   
+      <title>2.6.&nbsp;Release 6.5.0 - 10 March 2004</title>
+      <link rel="stylesheet" href="ede.css" type="text/css">
+      <meta name="generator" content="DocBook XSL Stylesheets V1.66.0">
+      <link rel="start" href="index.html" title="ZeosDBO Change Notes">
+      <link rel="up" href="ar01s02.html" title="2.&nbsp;Changes in Release 6.5">
+      <link rel="prev" href="ar01s02s05.html" title="2.5.&nbsp;Release 6.5.1 - 17 July 2004">
+      <link rel="next" href="ar01s03.html" title="3.&nbsp;Changes in Release 6.1">
+   </head>
+   <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+      <div id="customheader">
+         This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+         
+      </div>
+      <div class="sect2" lang="en">
+         <div class="titlepage">
+            <div>
+               <div>
+                  <h3 class="title"><a name="d4e368"></a>2.6.&nbsp;Release 6.5.0 - 10 March 2004
+                  </h3>
+               </div>
+            </div>
+         </div>
+         <div class="itemizedlist">
+            <ul type="disc">
+               <li>/<span class="othername">SS</span>/ Added IProviderSupport interface implementation to datasets.
+               </li>
+               <li>/<span class="othername">SS</span>/ Added support for MySQL 4.1 database.
+               </li>
+               <li>/<span class="othername">SS</span>/ Added support for PostgreSQL 7.4 database.
+               </li>
+               <li>/<span class="othername">SS</span>/ Added support for Oracle 9i database.
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#981208 SELECT * FROM mydb.mytable is not updateable.
+               </li>
+               <li>/<span class="othername">SS</span>/ Replaced thrown exception type from Datasets to <tt class="classname">EZDatabaseError</tt> custom class.
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#966267 Fixed processing OnEditError, OnPostError, OnDeleteError events.
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed memory leak in <tt class="classname">Statement</tt>.<tt class="methodname">Execute</tt>. Now all <tt class="classname">Connections</tt>, <tt class="classname">Statements</tt> and <tt class="classname">ResultSets</tt> must be explicitely closed before desposing.
+               </li>
+               <li>/<span class="othername">SS</span>/ Added doSmartOpen option to <tt class="classname">Dataset</tt> to allow executing DML statements by <tt class="methodname">Open</tt> without throwing exception. 
+               </li>
+               <li>/<span class="othername">SM</span>/ Fixed Bug#959307 <tt class="classname">TZDBLibCallableStatement</tt>.<tt class="methodname">Execute</tt> Empty parameter string sever translate as null value
+               </li>
+               <li>/<span class="othername">SM</span>/ Fixed Bug#907497 <tt class="classname">TZDBLibCallableStatement</tt>.<tt class="methodname">ExecutePrepared</tt> Return incorrect string values of stored procedure
+               </li>
+               <li>/<span class="othername">SM</span>/ Fixed Bug#951881 <tt class="classname">TZFirebirdNativeLibraryLoader</tt> Interbase do not work with INTERBASE_CRYPT enabled
+               </li>
+               <li>/<span class="othername">SM</span>/ Fixed #956613 <tt class="classname">TZInterbase6DatabaseMetadata</tt>.<tt class="methodname">GetTables</tt> Error in metadata reading
+               </li>
+               <li>/<span class="othername">SM</span>/ Fixed #947915 <tt class="classname">TZInterbase6CallableStatement</tt>.<tt class="methodname">ExecuteUpdatePrepared</tt> do noit raised exception in Stored Procedure
+               </li>
+               <li>/<span class="othername">SM</span>/ Fixed #945251 <tt class="classname">TZAbstractDatabaseMetadata</tt>.<tt class="methodname">GetTableTypes</tt> always returns &#8220;<span class="quote">TABLE</span>&#8221; as result, never&#8220;<span class="quote">VIEW</span>&#8221; and never &#8220;<span class="quote">SYSTEM TABLE</span>&#8221;.
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#914057 <tt class="classname">ZSQLMonitor</tt>.<tt class="methodname">SaveToFile</tt> don't use <span class="property">FileName</span>.
+               </li>
+               <li>/<span class="othername">SM</span>/ Fixed Bug #914436 Text fields with specified character set are not recognized in MySQL driver.
+               </li>
+               <li>/<span class="othername">SM</span>/ Fixed Bug #914369 Fixed memory leaks in Interbase driver
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#912220 PostgreSQL driver doesn't read oid blobs.
+               </li>
+               <li>/<span class="othername">SM</span>/ Fixed Bug#909181 do not sets fields to null
+               </li>
+               <li>/<span class="othername">SM</span>/ Fixed Bug #914436 Bug several MySQL TEXT Fields are not correct identified
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug #919395 Memory leak in <tt class="classname">TZExpressionParser</tt>.<tt class="methodname">TokenizeExpression</tt>. Thanks to mocarts.
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug #919401 When dataset is in Edit mode function <tt class="methodname">UpdatesPending</tt> always returns true does matter were changes made or not. Thanks to mocarts.
+               </li>
+               <li>/<span class="othername">SS</span>/ Added processing for query parameters with ftGraphic type. Thanks to Pavel Blahovec.
+               </li>
+               <li>/<span class="othername">SS</span>/ Added support for SQL specific syntax in Query.SQL and UpdateSQL.
+               </li>
+               <li>/<span class="othername">SS</span>/ Added support for SQLite 2.8 database.
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug #924861 Memory leak, when client cannot connect to server
+               </li>
+               <li>/<span class="othername">SS</span>/ Added depended compilation for drivers, included into TZConnection drivers list. Now users may select which drivers they
+                  want to use to decrease size of their applications. (See /src/Zeos.inc file for details)
+               </li>
+               <li>/<span class="othername">SS</span>/ Refactored ZDBC metadata classes.
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed processing of Int64 values in Dataset.Refresh.
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug #933623 'current transaction is aborted, commands ignored until end of transaction block.' error in postgresql
+                  when previous statement in transaction fails. Now if autocommit mode is set components automatically rollback failed statements.
+                  In manual commit mode developer should explicitely call Connection.Rollback.
+               </li>
+               <li>/<span class="othername">SS</span>/ Added GetProtocolNames, GetCatalogNames, GetSchemaNames, GetTableNames, GetStoredProcNames methods into TZConnection component.
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug #824786 TZMetadata shows PostgreSQL 7.4 system tables from 'information_schema' as regular tables.
+               </li>
+               <li>/<span class="othername">SS</span>/ Changed type for Dataset.ShowRecordTypes to TUpdateStatusSet.
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed duplicated <tt class="methodname">AfterScroll</tt> event in <tt class="classname">Query</tt>.<tt class="methodname">Locate</tt> and <tt class="classname">Query</tt>.<tt class="methodname">FindRecord</tt> methods.
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#948940 Random &#8220;<span class="quote">Can not update this query type</span>&#8221; error in PostgreSQL driver. Thanks to Sergio Freue.
+               </li>
+               <li>/<span class="othername">SS</span>/ Replaced <span class="property">RequestLive</span> with <span class="property">ReadOnly</span> property in <tt class="classname">TZTable</tt> component to make it more compatible with standard <tt class="classname">TTable</tt>.
+               </li>
+               <li>/<span class="othername">SS</span>/ Added <span class="property">InTransaction</span> property in <tt class="classname">TZConnection</tt>component.
+               </li>
+               <li>/<span class="othername">SS</span>/ Fixed Bug#957126 Incorrect processing of empty strings in default values in MySQL driver. Thanks to Alex/ghost3k.
+               </li>
+            </ul>
+         </div>
+      </div>
+      <div id="customfooter">
+         This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+         
+      </div>
+   </body>
+</html>

@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+      <title>2.3. Release 6.5.1 - 23 Jun 2005</title>
+      <link rel="stylesheet" href="ede.css" type="text/css"/>
+      <meta name="generator" content="DocBook XSL Stylesheets V1.66.0"/>
+      <link rel="start" href="index.html" title="ZeosDBO Change Notes"/>
+      <link rel="up" href="ar01s02.html" title="2. Changes in Release 6.5"/>
+      <link rel="prev" href="ar01s02s02.html" title="2.2. Release 6.5.1 - 23 Sep 2005"/>
+      <link rel="next" href="ar01s02s04.html" title="2.4. Release 6.5.1 - 23 Nov 2004"/>
+   </head>
+   <body>
+      <div xmlns="" id="customheader">
+This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+</div>
+      <div class="sect2" lang="en">
+         <div class="titlepage">
+            <div>
+               <div>
+                  <h3 class="title">
+                     <a id="d4e99"/>2.3. Release 6.5.1 - 23 Jun 2005</h3>
+               </div>
+            </div>
+         </div>
+         <div class="itemizedlist">
+            <ul type="disc">
+               <li>/<span class="othername">SG</span>/ Fixed Bug when using GetPChar()  Result of GetPChar() points to unallocated memory.</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #966217  ZeosDBO (Ado) update problem with TZUpdateSQL</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #972461  Username property not refreshed if changed in login box</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1013579  Problem with TZTable refresh method</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1017034  IProviderSupport - PSUpdateRecord</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1030721  Firebird 1.5 Read Only Database on CD</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1035896  ZQuery's FieldsEditor brings diff. types for the same field</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1036906  Login Dialog unstable appearance</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1075822  Wrong results for lookup fields</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1076975  open cursors in Oracle</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1084237  Change data when Dataset.State = dsBrowse</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1086415  Exception when deleting record with ClientDataSet</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1086575  Strange behaviour Zeos - DBLookUpComboBox</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1113306  CreateStatement and Properties</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1113393  WideString Updates</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1116986  MySQL:zeos doesnt assign default '0000-00-00' to Date Fields</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1118495  TZAbstractRODataset.RereadRows;</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1124098  CaseSensitive locate on WideString fields</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1126163  Filter issues</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1154489  AV error when opening a DML with a TZQuery using doSmartOpen</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1164443  Incorrect TZPostgreSQLNotify definition</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1167367  Access violation on large string fields.</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1173358  MySQL Date/Time bug + Fix</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1186833  Firebird 1.5: unsupported datatype</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1214110  Startup failing if compiled with "Full Boolean Evaluation"</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1219599  SetFieldData for ftString don't refresh</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1219718  ADO TDateTime parameter wrong type</li>
+               <li>/<span class="othername">SG</span>/ Fixed Bug #1224963  TZTable's TabeleName Property - not list with ADO protocol</li>
+               <li>/<span class="othername">SG</span>/ Added const "ZEOS_VERSION" to ZClasses and added property "Version" to TZConnection.</li>
+               <li>/<span class="othername">SG</span>/ Added support of fkInternalCalcFields for ZEOS datasets.</li>
+               <li>/<span class="othername">SG</span>/ Added property "DesignConnection" to turn off active design time connections during runtime, automatically.</li>
+               <li>/<span class="othername">SG</span>/ Added PropertyEditor for TField-properties in several components.</li>
+               <li>
+                  <p>/<span class="othername">SG</span>/ Added default values to the following properties:</p>
+                  <div class="itemizedlist">
+                     <ul type="circle">
+                        <li>TZAbstractRODataset.RequestLive: False</li>
+                        <li>TZAbstractRODataset.ParamCheck: True</li>
+                        <li>TZAbstractRODataset.ShowRecordTypes: [usUnmodified, usModified, usInserted]</li>
+                        <li>TZAbstractRODataset.IsUniDirectional: False</li>
+                        <li>TZAbstractRODataset.Options: [doCalcDefaults]</li>
+                        <li>TZAbstractRODataset.ReadOnly: True</li>
+                        <li>TZAbstractDataset.UpdateMode: umUpdateChanged</li>
+                        <li>TZAbstractDataset.WhereMode: wmWhereKeyOnly</li>
+                        <li>TZAbstractDataset.CachedUpdates: False</li>
+                        <li>TZConnection.SQLHourGlass: False</li>
+                        <li>TZQuery.ReadOnly: False</li>
+                        <li>TZTable.ReadOnly: False</li>
+                        <li>TZSqlMetadata.Scope: 0</li>
+                        <li>TZSqlMetadata.Nullable: False</li>
+                        <li>TZSqlMetadata.Unique: False</li>
+                        <li>TZSqlMetadata.Approximate: False</li>
+                     </ul>
+                  </div>
+               </li>
+               <li>
+                  <p>/<span class="othername">SG</span>/ Changed default values for following properties:</p>
+                  <div class="itemizedlist">
+                     <ul type="circle">
+                        <li>TZConnection.ReadOnly: False</li>
+                     </ul>
+                  </div>
+               </li>
+               <li>
+                  <p>/<span class="othername">SG</span>/ Changed following default initializations:</p>
+                  <div class="itemizedlist">
+                     <ul type="circle">
+                        <li>- TZAbstractDataset.RequestLive := True;</li>
+                        <li>TZConnection.ReadOnly := False;</li>
+                     </ul>
+                  </div>
+               </li>
+               <li>
+                  <p>/<span class="othername">SG</span>/ Changed following property names:</p>
+                  <div class="itemizedlist">
+                     <ul type="circle">
+                        <li>TZQuery.RequestLive --&gt; TZQuery.ReadOnly</li>
+                     </ul>
+                  </div>
+               </li>
+               <li>/<span class="othername">SG</span>/ Added parameter capability to TZSQLProcessor like in TZQuery.</li>
+            </ul>
+         </div>
+      </div>
+      <div xmlns="" id="customfooter">
+This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+</div>
+      <div class="navfooter">
+         <hr/>
+         <table width="100%" summary="Navigation footer">
+            <tr>
+               <td width="40%" align="left">
+                  <a accesskey="p" href="ar01s02s02.html">Prev</a> </td>
+               <td width="20%" align="center">
+                  <a accesskey="u" href="ar01s02.html">Up</a>
+               </td>
+               <td width="40%" align="right"> <a accesskey="n" href="ar01s02s04.html">Next</a>
+               </td>
+            </tr>
+            <tr>
+               <td width="40%" align="left" valign="top">2.2. Release 6.5.1 - 23 Sep 2005 </td>
+               <td width="20%" align="center">
+                  <a accesskey="h" href="index.html">Home</a>
+               </td>
+               <td width="40%" align="right" valign="top"> 2.4. Release 6.5.1 - 23 Nov 2004</td>
+            </tr>
+         </table>
+      </div>
+   </body>
+</html>

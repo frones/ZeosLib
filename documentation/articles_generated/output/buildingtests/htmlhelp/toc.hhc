@@ -1,0 +1,44 @@
+<HTML>
+<HEAD>
+</HEAD>
+  <BODY>
+<OBJECT type="text/site properties">
+	<param name="ImageType" value="Folder">
+</OBJECT>
+<UL>
+<LI> <OBJECT type="text/sitemap">
+      <param name="Name" value="Building Tests for the ZEOS Library">
+      <param name="Local" value="v:\zeosdbo_rework\documentation\articles_generated\output\buildingtests\htmlhelp\index.html">
+    </OBJECT><UL><LI> <OBJECT type="text/sitemap">
+      <param name="Name" value="Requirements to build ZEOSLib tests">
+      <param name="Local" value="v:\zeosdbo_rework\documentation\articles_generated\output\buildingtests\htmlhelp\BTReqirements.html">
+    </OBJECT><LI> <OBJECT type="text/sitemap">
+      <param name="Name" value="Build &amp; Test Configuration">
+      <param name="Local" value="v:\zeosdbo_rework\documentation\articles_generated\output\buildingtests\htmlhelp\BTConfig.html">
+    </OBJECT><UL><LI> <OBJECT type="text/sitemap">
+      <param name="Name" value="Common Section">
+      <param name="Local" value="v:\zeosdbo_rework\documentation\articles_generated\output\buildingtests\htmlhelp\BTConfigCommon.html">
+    </OBJECT><LI> <OBJECT type="text/sitemap">
+      <param name="Name" value="Compiler Section">
+      <param name="Local" value="v:\zeosdbo_rework\documentation\articles_generated\output\buildingtests\htmlhelp\BTConfigCompilers.html">
+    </OBJECT><LI> <OBJECT type="text/sitemap">
+      <param name="Name" value="Tests Section">
+      <param name="Local" value="v:\zeosdbo_rework\documentation\articles_generated\output\buildingtests\htmlhelp\BTConfigTests.html">
+    </OBJECT></UL><LI> <OBJECT type="text/sitemap">
+      <param name="Name" value="Database Configuration">
+      <param name="Local" value="v:\zeosdbo_rework\documentation\articles_generated\output\buildingtests\htmlhelp\DBConfig.html">
+    </OBJECT><UL><LI> <OBJECT type="text/sitemap">
+      <param name="Name" value="Common Section">
+      <param name="Local" value="v:\zeosdbo_rework\documentation\articles_generated\output\buildingtests\htmlhelp\DBConfigCommon.html">
+    </OBJECT><LI> <OBJECT type="text/sitemap">
+      <param name="Name" value="Database Settings">
+      <param name="Local" value="v:\zeosdbo_rework\documentation\articles_generated\output\buildingtests\htmlhelp\DBDatabaseConfig.html">
+    </OBJECT></UL><LI> <OBJECT type="text/sitemap">
+      <param name="Name" value="Compiling Tests">
+      <param name="Local" value="v:\zeosdbo_rework\documentation\articles_generated\output\buildingtests\htmlhelp\Compiling.html">
+    </OBJECT><LI> <OBJECT type="text/sitemap">
+      <param name="Name" value="Running Tests">
+      <param name="Local" value="v:\zeosdbo_rework\documentation\articles_generated\output\buildingtests\htmlhelp\Running.html">
+    </OBJECT></UL></UL>
+</BODY>
+</HTML>
