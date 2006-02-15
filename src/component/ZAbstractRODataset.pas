@@ -301,7 +301,7 @@ type
     procedure Notification(AComponent: TComponent;
       Operation: TOperation); override;
 
-    procedure RefreshParams;
+    procedure RefreshParams;virtual;
 
   protected
   {$IFDEF WITH_IPROVIDER}
