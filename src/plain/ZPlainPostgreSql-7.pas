@@ -36,7 +36,7 @@
 {                                 Zeos Development Group. }
 {*********************************************************}
 
-unit ZPlainPostgreSql74;
+unit ZPlainPostgreSql7;
 
 interface
 
