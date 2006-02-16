@@ -317,7 +317,9 @@ end;
 }
 function TZPostgreSQLResultSet.GetString(ColumnIndex: Integer): String;
 begin
-  Result := DecodeString(GetRawString(ColumnIndex));
+//  Result := DecodeString(GetRawString(ColumnIndex));
+//FOSPATCH Why Decode a String ???
+  Result := GetRawString(ColumnIndex);
 end;
 
 {**

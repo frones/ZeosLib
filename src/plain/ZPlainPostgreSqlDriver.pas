@@ -139,8 +139,7 @@ type
     ['{03CD6345-2D7A-4FE2-B03D-3C5656789FEB}']
 
     function ConnectDatabase(ConnInfo: PChar): PZPostgreSQLConnect;
-    function SetDatabaseLogin(Host, Port, Options, TTY, Db, User,
-      Passwd: PChar): PZPostgreSQLConnect;
+    function SetDatabaseLogin(Host, Port, Options, TTY, Db, User,Passwd: PChar): PZPostgreSQLConnect;
     function GetConnectDefaults: PZPostgreSQLConnectInfoOption;
 
     procedure Finish(Handle: PZPostgreSQLConnect);
@@ -153,19 +152,16 @@ type
     function GetPort(Handle: PZPostgreSQLConnect): PChar;
     function GetTTY(Handle: PZPostgreSQLConnect): PChar; cdecl;
     function GetOptions(Handle: PZPostgreSQLConnect): PChar;
-    function GetStatus(Handle: PZPostgreSQLConnect):
-      TZPostgreSQLConnectStatusType;
+    function GetStatus(Handle: PZPostgreSQLConnect):TZPostgreSQLConnectStatusType;
 
     function GetErrorMessage(Handle: PZPostgreSQLConnect): PChar;
     function GetSocket(Handle: PZPostgreSQLConnect): Integer;
     function GetBackendPID(Handle: PZPostgreSQLConnect): Integer;
     procedure Trace(Handle: PZPostgreSQLConnect; DebugPort: Pointer);
     procedure Untrace(Handle: PZPostgreSQLConnect);
-    procedure SetNoticeProcessor(Handle: PZPostgreSQLConnect;
-      Proc: TZPostgreSQLNoticeProcessor; Arg: Pointer);
+    procedure SetNoticeProcessor(Handle: PZPostgreSQLConnect;Proc: TZPostgreSQLNoticeProcessor; Arg: Pointer);
 
-    function ExecuteQuery(Handle: PZPostgreSQLConnect;
-      Query: PChar): PZPostgreSQLResult;
+    function ExecuteQuery(Handle: PZPostgreSQLConnect;Query: PChar): PZPostgreSQLResult;
 
     function Notifies(Handle: PZPostgreSQLConnect): PZPostgreSQLNotify;
     procedure FreeNotify(Handle: PZPostgreSQLNotify);
@@ -585,8 +581,7 @@ type
   end;
 
   {** Implements a driver for PostgreSQL 8.1 }
-  TZPostgreSQL81PlainDriver = class(TZAbstractObject, IZPlainDriver,
-    IZPostgreSQLPlainDriver)
+  TZPostgreSQL81PlainDriver = class(TZAbstractObject, IZPlainDriver,IZPostgreSQLPlainDriver)
   public
     constructor Create;
 

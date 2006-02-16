@@ -36,6 +36,10 @@
 {                                 Zeos Development Group. }
 {*********************************************************}
 
+// 150206 FirmOS
+// New defines for lipq
+
+
 unit ZPlainPostgreSql81;
 
 interface
@@ -192,12 +196,19 @@ type
 { ************** Plain API Function types definition ************* }
 
 { ===	in fe-connect.c === }
-  TPQconnectdb     = function(ConnInfo: PChar): PPGconn; cdecl;
-  TPQsetdbLogin    = function(Host, Port, Options, Tty, Db, User, Passwd: PChar): PPGconn; cdecl;
+  TPQconnectdb     = function(ConnInfo: PChar): PPGconn; cdecl; // FirmOS 8.1 OK
+  TPQsetdbLogin    = function(Host, Port, Options, Tty, Db, User, Passwd: PChar): PPGconn; cdecl; // FirmOS 8.1 OK
+//15022006 FirmOS: omitting   PQconnectStart
+//15022006 FirmOS: omitting  PQconnectPoll
   TPQconndefaults  = function: PPQconninfoOption; cdecl;
   TPQfinish        = procedure(Handle: PPGconn); cdecl;
   TPQreset         = procedure(Handle: PPGconn); cdecl;
+
+//15022006 FirmOS: omitting PQresetStart
+//15022006 FirmOS: omitting PQresetPoll
+
   TPQrequestCancel = function(Handle: PPGconn): Integer; cdecl;
+
   TPQdb            = function(Handle: PPGconn): PChar; cdecl;
   TPQuser          = function(Handle: PPGconn): PChar; cdecl;
   TPQpass          = function(Handle: PPGconn): PChar; cdecl;
@@ -206,9 +217,21 @@ type
   TPQtty           = function(Handle: PPGconn): PChar; cdecl;
   TPQoptions       = function(Handle: PPGconn): PChar; cdecl;
   TPQstatus        = function(Handle: PPGconn): ConnStatusType; cdecl;
+
+//TBD  PGTransactionStatusType PQtransactionStatus(const PGconn *conn);
+
+//15022006 FirmOS: omitting const char *PQparameterStatus(const PGconn *conn, const char *paramName);
+
+//15022006 FirmOS: omitting  PQprotocolVersion
+//15022006 FirmOS: omitting  PQserverVersion
+
   TPQerrorMessage  = function(Handle: PPGconn): PChar; cdecl;
   TPQsocket        = function(Handle: PPGconn): Integer; cdecl;
   TPQbackendPID    = function(Handle: PPGconn): Integer; cdecl;
+
+//15022006 FirmOS: omitting  SSL *PQgetssl(const PGconn *conn);
+
+
   TPQtrace         = procedure(Handle: PPGconn; DebugPort: Pointer); cdecl;
   TPQuntrace       = procedure(Handle: PPGconn); cdecl;
   TPQsetNoticeProcessor = procedure(Handle: PPGconn; Proc: PQnoticeProcessor; Arg: Pointer); cdecl;
@@ -246,6 +269,12 @@ type
   TPQgetisnull     = function(Result: PPGresult; tup_num, field_num: Integer): Integer; cdecl;
   TPQclear         = procedure(Result: PPGresult); cdecl;
   TPQmakeEmptyPGresult  = function(Handle: PPGconn; status: ExecStatusType): PPGresult; cdecl;
+
+//FirmOS: New defines
+
+//  TPQescapeString  = function (too:PChar, from: PChar, length:cardinal):cardinal;
+  
+// size_t PQescapeString (char *to, const char *from, size_t length);
 
 { === in fe-lobj.c === }
   Tlo_open         = function(Handle: PPGconn; lobjId: Oid; mode: Integer): Integer; cdecl;

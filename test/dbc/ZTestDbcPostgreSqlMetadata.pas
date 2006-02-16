@@ -90,7 +90,7 @@ uses ZTestCase;
 }
 function TZTestPostgreSqlMetadataCase.GetSupportedProtocols: string;
 begin
-  Result := 'postgresql,postgresql-7.3,postgresql-7.4,postgresql-8.x';
+  Result := 'postgresql,postgresql-7.3,postgresql-7.4,postgresql-8.1';
 end;
 
 {**
@@ -557,9 +557,11 @@ begin
     CheckEquals(True, Next);
     CheckEquals('', GetStringByName('PKTABLE_CAT'));
 //    CheckEquals('public', GetStringByName('PKTABLE_SCHEM'));
+
     CheckEquals('department', GetStringByName('PKTABLE_NAME'));
     CheckEquals('dep_id', GetStringByName('PKCOLUMN_NAME'));
     CheckEquals('', GetStringByName('FKTABLE_CAT'));
+
 //    CheckEquals('public', GetStringByName('FKTABLE_SCHEM'));
     CheckEquals('people', GetStringByName('FKTABLE_NAME'));
     CheckEquals('p_dep_id', GetStringByName('FKCOLUMN_NAME'));

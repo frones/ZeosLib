@@ -554,7 +554,7 @@ end;
 }
 function TZPlainPostgreSQLPerformanceTestCase.GetSupportedProtocols: string;
 begin
-  Result := 'postgresql,postgresql-6.5,postgresql-7.2';
+  Result := 'postgresql,postgresql-6.5,postgresql-7.2,postgresql-8.1';
 end;
 
 {**

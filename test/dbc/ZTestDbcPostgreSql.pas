@@ -78,7 +78,7 @@ uses SysUtils, ZSysUtils, ZTestConsts;
 }
 function TZTestDbcPostgreSQLCase.GetSupportedProtocols: string;
 begin
-  Result := 'postgresql,postgresql-7.3,postgresql-7.4,postgresql-8.x';
+  Result := 'postgresql,postgresql-7.3,postgresql-7.4,postgresql-8.1';
 end;
 
 {**

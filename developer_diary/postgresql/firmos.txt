@@ -1,0 +1,5 @@
+FirmOS
+15-02-2006:
+Many features of lipq plain driver are not defined in "ZPlainPostgreSql81"
+The Diff shows no differences from 7.3 to 8.1 exept Driver Name !
+String Escaping in Zeos is Buggy !

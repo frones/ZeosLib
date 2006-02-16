@@ -161,6 +161,7 @@ var
   Query: TZQuery;
   StrStream, BinStream: TMemoryStream;
   StrStream1, BinStream1: TMemoryStream;
+  s:string;
 begin
   Query := TZQuery.Create(nil);
   try
@@ -193,7 +194,7 @@ begin
       Params[5].DataType := ftDate;
 
       Params[0].AsInteger := TEST_ROW_ID;
-      Params[1].AsString := '\xyz\'#13;
+      Params[1].AsString := '\xyz\'+#13;
       Params[2].AsInteger := 7;
       Params[3].AsFloat := 1234.567;
       Params[4].AsDateTime := EncodeDate(1999, 8, 5);
@@ -212,7 +213,8 @@ begin
       CheckEquals(1, RecordCount);
       CheckEquals(False, IsEmpty);
       CheckEquals(TEST_ROW_ID, FieldByName('eq_id').AsInteger);
-      CheckEquals('\xyz\'#13, FieldByName('eq_name').AsString);
+      s:=FieldByName('eq_name').AsString;
+      CheckEquals('\xyz\'#13, s);
       CheckEquals(7, FieldByName('eq_type').AsInteger);
       CheckEquals(1234.567, FieldByName('eq_cost').AsFloat, 0.001);
       CheckEquals(EncodeDate(1999, 8, 5), FieldByName('eq_date').AsDateTime);
@@ -286,7 +288,7 @@ begin
       CheckEquals(1, Params.Count);
       Params[0].DataType := ftInteger;
       Params[0].AsInteger := TEST_ROW_ID;
-
+      ReadOnly:=True;
       Open;
       CheckEquals(TEST_ROW_ID, FieldByName('p_id').AsInteger);
       CheckEquals(False, FieldByName('p_id').IsNull);

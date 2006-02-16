@@ -151,4 +151,4 @@
 
 // Compile test applications with a graphical user interface (GUI)
 // Comment this definition if you want to compile console test applications
-//{$DEFINE TESTGUI}
+{$DEFINE TESTGUI}
