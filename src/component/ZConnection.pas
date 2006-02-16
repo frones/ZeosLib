@@ -71,7 +71,11 @@ uses
 {$IFDEF ENABLE_ASA}
   ZDbcASA,
 {$ENDIF}
+ {$IFDEF FPC}
+  SysUtils, Classes, ZDbcIntfs, DB,ZCompatibility;
+ {$ELSE}
   SysUtils, Classes, ZDbcIntfs, DB,ZCompatibility,dbcommontypes;
+ {$ENDIF}
 
 
 type

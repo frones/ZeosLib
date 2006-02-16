@@ -2922,8 +2922,18 @@ end;
 
 {$ENDIF}
 
-procedure TZAbstractRODataset.CheckFieldCompatibility(Field: TField;
-  FieldDef: TFieldDef);
+procedure TZAbstractRODataset.CheckFieldCompatibility(Field: TField;FieldDef: TFieldDef);
+
+{$IFDEF FPC}
+const
+  BaseFieldTypes: array[TFieldType] of TFieldType = (
+    ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,
+    ftFloat, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
+    ftInteger, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftUnknown,
+    ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
+    ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp, ftFMTBcd);
+
+{$ELSE}
 const
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,
@@ -2932,6 +2942,7 @@ const
     ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
     ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp, ftFMTBcd,
     ftFixedWideChar,ftWideMemo,ftOraTimeStamp,ftOraInterval);
+{$ENDIF}
 
   CheckTypeSizes = [ftBytes, ftVarBytes, ftBCD, ftReference];
 

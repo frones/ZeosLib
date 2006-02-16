@@ -1439,7 +1439,11 @@ begin
       DT_LONGVARCHAR : ReadBlobToString( Index, Result);
       DT_TIMESTAMP_STRUCT : Result := DateToStr( GetTimestamp( Index));
       DT_TINYINT     : Result := IntToStr( PByte(sqldata)^);
+      {$IFDEF FPC}
+      DT_BIT         : Result := BoolToStr( ( PByte(sqldata)^ = 1));
+      {$ELSE}
       DT_BIT         : Result := BoolToStr( ( PByte(sqldata)^ = 1), True);
+      {$ENDIF}
       DT_BIGINT,
       DT_UNSBIGINT   : Result := IntToStr( PInt64(sqldata)^);
     else
