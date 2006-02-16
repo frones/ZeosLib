@@ -87,7 +87,7 @@ uses ZSysUtils, ZTestCase;
 
 function TZTestCompPostgreSQLBugReport.GetSupportedProtocols: string;
 begin
-  Result := 'postgresql,postgresql-6.5,postgresql-7.2,postgresql-7.3,postgresql-8.1';
+  Result := 'postgresql,postgresql-7,postgresql-8';
 end;
 
 procedure TZTestCompPostgreSQLBugReport.SetUp;
@@ -428,7 +428,7 @@ var
   Metadata: TZSQLMetadata;
 begin
   if SkipClosed then Exit;
-  if Connection.Protocol <> 'postgresql-7.3' then
+  if Connection.Protocol <> 'postgresql-7' then
     Exit;
 
   Metadata := TZSQLMetadata.Create(nil);
@@ -457,7 +457,7 @@ var
   Query: TZQuery;
 begin
   if SkipClosed then Exit;
-  if Connection.Protocol <> 'postgresql-7.3' then
+  if Connection.Protocol <> 'postgresql-7' then
     Exit;
 
   Query := TZQuery.Create(nil);

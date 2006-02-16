@@ -49,18 +49,18 @@ uses
   ZTestConfig,
   ZSqlTestCase,
   ZTestDbcCore in '..\..\test\bugreport\ZTestDbcCore.pas',
-  ZTestDbcMySql in '..\..\test\bugreport\ZTestDbcMySql.pas',
+//  ZTestDbcMySql in '..\..\test\bugreport\ZTestDbcMySql.pas',
   ZTestDbcPostgreSql in '..\..\test\bugreport\ZTestDbcPostgreSql.pas',
-  ZTestDbcASA in '..\..\test\bugreport\ZTestDbcASA.pas',
+//  ZTestDbcASA in '..\..\test\bugreport\ZTestDbcASA.pas',
   ZTestDbcDbLib in '..\..\test\bugreport\ZTestDbcDbLib.pas',
   ZTestCompCore in '..\..\test\bugreport\ZTestCompCore.pas',
-  ZTestCompMySql in '..\..\test\bugreport\ZTestCompMySql.pas',
-  ZTestCompMSSql in '..\..\test\bugreport\ZTestCompMSSql.pas',
-  ZTestCompPostgreSql in '..\..\test\bugreport\ZTestCompPostgreSql.pas',
-  ZTestCompASA in '..\..\test\bugreport\ZTestCompASA.pas',
-  ZTestCompDbLib in '..\..\test\bugreport\ZTestCompDbLib.pas',
-  ZTestDbcInterbase in '..\..\test\bugreport\ZTestDbcInterbase.pas',
-  ZTestCompInterbase in '..\..\test\bugreport\ZTestCompInterbase.pas';
+//  ZTestCompMySql in '..\..\test\bugreport\ZTestCompMySql.pas',
+//  ZTestCompMSSql in '..\..\test\bugreport\ZTestCompMSSql.pas',
+  ZTestCompPostgreSql in '..\..\test\bugreport\ZTestCompPostgreSql.pas';
+//  ZTestCompASA in '..\..\test\bugreport\ZTestCompASA.pas',
+//  ZTestCompDbLib in '..\..\test\bugreport\ZTestCompDbLib.pas',
+//  ZTestDbcInterbase in '..\..\test\bugreport\ZTestDbcInterbase.pas',
+//  ZTestCompInterbase in '..\..\test\bugreport\ZTestCompInterbase.pas';
 
 begin
   TestGroup := BUGREPORT_TEST_GROUP;

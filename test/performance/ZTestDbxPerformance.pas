@@ -228,7 +228,7 @@ begin
   Result := 'mysql,mysql-3.20,mysql-3.23,mysql-4.0'
     + ',sybase,interbase,interbase-5,interbase-6'
     + ',firebird-1.0,firebird-1.5'
-    + ',postgresql,postgresql-6.5,postgresql-7.2,,postgresql-8.1';
+    + ',postgresql,postgresql-7,postgresql-8';
 {$IFNDEF LINUX}
   Result := Result + ',mssql';
 {$ENDIF}
@@ -567,7 +567,7 @@ begin
   Result := 'mysql,mysql-3.20,mysql-3.23,mysql-4.0'
     + ',sybase,interbase,interbase-5,interbase-6'
     + ',firebird-1.0,firebird-1.5'
-    + ',postgresql,postgresql-6.5,postgresql-7.2,postgresql-8.1';
+    + ',postgresql,postgresql-7,postgresql-8';
 {$IFNDEF LINUX}
   Result := Result + ',mssql';
 {$ENDIF}

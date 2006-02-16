@@ -53,10 +53,8 @@ type
   {** Implements PostgreSQL Database Driver. }
   TZPostgreSQLDriver = class(TZAbstractDriver)
   private
-    FPostgreSQL73PlainDriver: IZPostgreSQLPlainDriver;
-    FPostgreSQL74PlainDriver: IZPostgreSQLPlainDriver;
-    FPostgreSQL80PlainDriver: IZPostgreSQLPlainDriver;
-    FPostgreSQL81PlainDriver: IZPostgreSQLPlainDriver;
+    FPostgreSQL7PlainDriver: IZPostgreSQLPlainDriver;
+    FPostgreSQL8PlainDriver: IZPostgreSQLPlainDriver;
   protected
     function GetPlainDriver(Url: string): IZPostgreSQLPlainDriver;
   public
@@ -158,10 +156,8 @@ uses
 }
 constructor TZPostgreSQLDriver.Create;
 begin
-  FPostgreSQL73PlainDriver := TZPostgreSQL73PlainDriver.Create;
-  FPostgreSQL74PlainDriver := TZPostgreSQL74PlainDriver.Create;
-  FPostgreSQL80PlainDriver := TZPostgreSQL80PlainDriver.Create;
-  FPostgreSQL81PlainDriver := TZPostgreSQL81PlainDriver.Create;
+  FPostgreSQL7PlainDriver := TZPostgreSQL7PlainDriver.Create;
+  FPostgreSQL8PlainDriver := TZPostgreSQL8PlainDriver.Create;
 end;
 
 {**
@@ -252,12 +248,10 @@ end;
 }
 function TZPostgreSQLDriver.GetSupportedProtocols: TStringDynArray;
 begin
-  SetLength(Result, 5);
+  SetLength(Result, 3);
   Result[0] := 'postgresql';
-  Result[1] := FPostgreSQL73PlainDriver.GetProtocol;
-  Result[2] := FPostgreSQL74PlainDriver.GetProtocol;
-  Result[3] := FPostgreSQL80PlainDriver.GetProtocol;
-  Result[4] := FPostgreSQL81PlainDriver.GetProtocol;
+  Result[1] := FPostgreSQL7PlainDriver.GetProtocol;
+  Result[2] := FPostgreSQL8PlainDriver.GetProtocol;
 end;
 
 {**
@@ -271,15 +265,12 @@ var
 begin
   Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
 
-  if Protocol = FPostgreSQL73PlainDriver.GetProtocol then
-    Result := FPostgreSQL73PlainDriver
-  else if Protocol = FPostgreSQL74PlainDriver.GetProtocol then
-    Result := FPostgreSQL74PlainDriver
-  else if Protocol = FPostgreSQL80PlainDriver.GetProtocol then
-    Result := FPostgreSQL80PlainDriver
-  else if Protocol = FPostgreSQL81PlainDriver.GetProtocol then
-    Result := FPostgreSQL81PlainDriver
-  else Result := FPostgreSQL81PlainDriver;
+  if Protocol = FPostgreSQL7PlainDriver.GetProtocol then
+    Result := FPostgreSQL7PlainDriver
+  else if Protocol = FPostgreSQL8PlainDriver.GetProtocol then
+    Result := FPostgreSQL8PlainDriver
+  else
+    Result := FPostgreSQL8PlainDriver;
   Result.Initialize;
 end;
 

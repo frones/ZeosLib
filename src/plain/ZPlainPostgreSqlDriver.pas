@@ -482,7 +482,7 @@ end;
 
 function TZPostgreSQL7PlainDriver.GetProtocol: string;
 begin
-  Result := 'postgresql7';
+  Result := 'postgresql-7';
 end;
 
 function TZPostgreSQL7PlainDriver.GetDescription: string;
@@ -880,7 +880,7 @@ end;
 
 function TZPostgreSQL8PlainDriver.GetProtocol: string;
 begin
-  Result := 'postgresql8';
+  Result := 'postgresql-8';
 end;
 
 function TZPostgreSQL8PlainDriver.GetDescription: string;
