@@ -60,11 +60,14 @@ type
   EZSQLThrowable = class(Exception)
   private
     FErrorCode: Integer;
+    FStatusCode: String;
   public
     constructor Create(const Msg: string);
     constructor CreateWithCode(const ErrorCode: Integer; const Msg: string);
+    constructor CreateWithStatus(const StatusCode: String; const Msg: string);
 
     property ErrorCode: Integer read FErrorCode;
+    property StatusCode:String read FStatuscode; // The "String" Errocode // FirmOS
   end;
 
   {** Generic SQL exception. }
@@ -208,6 +211,12 @@ type
 
     procedure Commit;
     procedure Rollback;
+
+    //2Phase Commit Support initially for PostgresSQL (firmos) 21022006
+    procedure PrepareTransaction(transactionid:string);
+    procedure CommitPrepared(transactionid:string);
+    procedure RollbackPrepared(transactionid:string);
+
 
     procedure Open;
     procedure Close;
@@ -1052,6 +1061,12 @@ constructor EZSQLThrowable.CreateWithCode(const ErrorCode: Integer;
 begin
   inherited Create(Msg);
   FErrorCode := ErrorCode;
+end;
+
+constructor EZSQLThrowable.CreateWithStatus(const StatusCode, Msg: string);
+begin
+  inherited Create(Msg);
+  FStatusCode := StatusCode;
 end;
 
 initialization

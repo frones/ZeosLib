@@ -678,6 +678,7 @@ resourcestring
   SConnectionIsNotOpened = 'Connection is not opened yet';
   SInvalidOpInAutoCommit = 'Invalid operation in AutoCommit mode';
   SInvalidOpInNonAutoCommit = 'Invalid operation in non AutoCommit mode';
+  SInvalidOpPrepare = 'Prepare transaction only possible on matching first(!) Starttransaction';
 
   SConnectionIsNotAssigned = 'Database connection component is not assigned';
   SQueryIsEmpty = 'SQL Query is empty';

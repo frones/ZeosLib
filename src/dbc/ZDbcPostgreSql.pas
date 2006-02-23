@@ -107,11 +107,15 @@ type
     function CreatePreparedStatement(SQL: string; Info: TStrings):
       IZPreparedStatement; override;
 
-    function CreateSequence(Sequence: string; BlockSize: Integer):
-      IZSequence; override;
+    function CreateSequence(Sequence: string; BlockSize: Integer): IZSequence; override;
 
     procedure Commit; override;
     procedure Rollback; override;
+    //2Phase Commit Support initially for PostgresSQL (firmos) 21022006
+    procedure PrepareTransaction(transactionid:string);override;
+    procedure CommitPrepared(transactionid:string);override;
+    procedure RollbackPrepared(transactionid:string);override;
+
 
     procedure Open; override;
     procedure Close; override;
@@ -370,8 +374,8 @@ begin
     begin
       SQL := 'BEGIN';
       QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL);
+      CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
       FPlainDriver.Clear(QueryHandle);
-      CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL);
       DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
     end;
 
@@ -379,16 +383,16 @@ begin
     begin
       SQL := 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED';
       QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL);
+      CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
       FPlainDriver.Clear(QueryHandle);
-      CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL);
       DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
     end
     else if TransactIsolationLevel = tiSerializable then
     begin
       SQL := 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE';
       QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL);
+      CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
       FPlainDriver.Clear(QueryHandle);
-      CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL);
       DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
     end
     else
@@ -412,7 +416,7 @@ begin
   { Connect to PostgreSQL database. }
   FHandle := FPlainDriver.ConnectDatabase(PChar(BuildConnectStr));
   if FPlainDriver.GetStatus(FHandle) = CONNECTION_BAD then
-    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcConnect, LogMessage)
+    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcConnect, LogMessage,nil)
   else
     DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
 
@@ -421,8 +425,8 @@ begin
   begin
     SQL := PChar(Format('SET CLIENT_ENCODING = ''%s''', [FClientCodePage]));
     QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL);
+    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
     FPlainDriver.Clear(QueryHandle);
-    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL);
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
   end;
 
@@ -432,6 +436,23 @@ begin
 //  PQsetNoticeProcessor(FHandle, NoticeProc, Self);
 
   inherited Open;
+end;
+
+procedure TZPostgreSQLConnection.PrepareTransaction(transactionid: string);
+var  QueryHandle: PZPostgreSQLResult;
+     SQL: PChar;
+     Temp:String;
+begin
+  if (TransactIsolationLevel <> tiNone) and not Closed then
+  begin
+    Temp:='PREPARE TRANSACTION '''+copy(transactionid,1,200)+'''';
+    SQL := PChar(Temp);
+    QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL);
+    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
+    FPlainDriver.Clear(QueryHandle);
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+    StartTransactionSupport;
+  end;
 end;
 
 {**
@@ -507,10 +528,27 @@ begin
   begin
     SQL := 'COMMIT';
     QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL);
+    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
     FPlainDriver.Clear(QueryHandle);
-    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL);
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
 
+    StartTransactionSupport;
+  end;
+end;
+
+procedure TZPostgreSQLConnection.CommitPrepared(transactionid: string);
+var  QueryHandle: PZPostgreSQLResult;
+     SQL: PChar;
+     Temp:String;
+begin
+  if (TransactIsolationLevel = tiNone) and not Closed then
+  begin
+    Temp:='COMMIT PREPARED '''+copy(transactionid,1,200)+'''';
+    SQL := PChar(Temp);
+    QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL);
+    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
+    FPlainDriver.Clear(QueryHandle);
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
     StartTransactionSupport;
   end;
 end;
@@ -531,10 +569,27 @@ begin
   begin
     SQL := 'ROLLBACK';
     QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL);
+    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
     FPlainDriver.Clear(QueryHandle);
-    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL);
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
 
+    StartTransactionSupport;
+  end;
+end;
+
+procedure TZPostgreSQLConnection.RollbackPrepared(transactionid: string);
+var  QueryHandle: PZPostgreSQLResult;
+     SQL: PChar;
+     Temp:String;
+begin
+  if (TransactIsolationLevel = tiNone) and not Closed then
+  begin
+    Temp:='ROLLBACK PREPARED '''+copy(transactionid,1,200)+'''';
+    SQL := PChar(Temp);
+    QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL);
+    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
+    FPlainDriver.Clear(QueryHandle);
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
     StartTransactionSupport;
   end;
 end;
@@ -579,8 +634,8 @@ begin
   begin
     SQL := 'END';
     QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL);
+    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
     FPlainDriver.Clear(QueryHandle);
-    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL);
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
   end;
 
@@ -640,7 +695,7 @@ begin
         + ' WHERE oid<10000 OR typbasetype<>0 ORDER BY oid';
 
     QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL);
-    CheckPostgreSQLError(Self, FPlainDriver, FHandle, lcExecute, SQL);
+    CheckPostgreSQLError(Self, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
 
     FTypeList := TStringList.Create;
@@ -709,7 +764,7 @@ begin
 
   SQL := 'SELECT version()';
   QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL);
-  CheckPostgreSQLError(Self, FPlainDriver, FHandle, lcExecute, SQL);
+  CheckPostgreSQLError(Self, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
 
   Temp := FPlainDriver.GetValue(QueryHandle, 0, 0);

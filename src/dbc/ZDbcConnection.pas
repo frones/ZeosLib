@@ -147,6 +147,12 @@ type
     procedure Commit; virtual;
     procedure Rollback; virtual;
 
+    //2Phase Commit Support initially for PostgresSQL (firmos) 21022006
+    procedure PrepareTransaction(transactionid:string);virtual;
+    procedure CommitPrepared(transactionid:string);virtual;
+    procedure RollbackPrepared(transactionid:string);virtual;
+
+
     procedure Open; virtual;
     procedure Close; virtual;
     function IsClosed: Boolean; virtual;
@@ -517,6 +523,11 @@ begin
   Result := CreatePreparedStatement(SQL, Info);
 end;
 
+procedure TZAbstractConnection.PrepareTransaction(transactionid: string);
+begin
+  RaiseUnsupportedException;
+end;
+
 {**
   Creates a prepared statement object.
   @param SQL a SQL query string.
@@ -680,6 +691,11 @@ begin
   RaiseUnsupportedException;
 end;
 
+procedure TZAbstractConnection.CommitPrepared(transactionid: string);
+begin
+  RaiseUnsupportedException;
+end;
+
 {**
   Drops all changes made since the previous
   commit/rollback and releases any database locks currently held
@@ -688,6 +704,11 @@ end;
   @see #setAutoCommit
 }
 procedure TZAbstractConnection.Rollback;
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZAbstractConnection.RollbackPrepared(transactionid: string);
 begin
   RaiseUnsupportedException;
 end;

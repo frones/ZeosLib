@@ -156,6 +156,11 @@ type
     procedure Commit; virtual;
     procedure Rollback; virtual;
 
+    procedure PrepareTransaction(transactionid:string);virtual;
+    procedure CommitPrepared(transactionid:string);virtual;
+    procedure RollbackPrepared(transactionid:string);virtual;
+
+
     procedure RegisterDataSet(DataSet: TDataset);
     procedure UnregisterDataSet(DataSet: TDataset);
 
@@ -635,6 +640,16 @@ begin
     Dec(FExplicitTransactionCounter);
 end;
 
+procedure TZConnection.CommitPrepared(transactionid: string);
+var oldlev:TZTransactIsolationLevel;
+begin
+  CheckAutoCommitMode;
+  oldlev:=TransactIsolationLevel;
+  TransactIsolationLevel:=tiNone;
+  FConnection.CommitPrepared(transactionid);
+  TransactIsolationLevel:=oldLev;
+end;
+
 {**
   Rollbacks the current transaction.
 }
@@ -667,7 +682,22 @@ begin
     Dec(FExplicitTransactionCounter);
 end;
 
-{**
+procedure TZConnection.RollbackPrepared(transactionid: string);
+var oldlev:TZTransactIsolationLevel;
+begin
+  CheckAutoCommitMode;
+  oldlev:=TransactIsolationLevel;
+  TransactIsolationLevel:=tiNone;
+  FConnection.RollbackPrepared(transactionid);
+  TransactIsolationLevel:=oldLev;
+end;
+
+{procedure TZConnection.RollbackPrepared(transactionid: string);
+begin
+
+end;
+
+**
   Processes component notifications.
   @param AComponent a changed component object.
   @param Operation a component operation code.
@@ -683,7 +713,40 @@ begin
   end;
 end;
 
-{**
+procedure TZConnection.PrepareTransaction(transactionid: string);
+var
+  ExplicitTran: Boolean;
+begin
+  CheckConnected;
+  CheckNonAutoCommitMode;
+  if FExplicitTransactionCounter<>1 then begin
+    raise EZDatabaseError.Create(SInvalidOpPrepare);
+  end;
+    ShowSQLHourGlass;
+    try
+      try
+        FConnection.PrepareTransaction(transactionid);
+      finally
+        FExplicitTransactionCounter := 0;
+        AutoCommit := True;
+      end;
+    finally
+      HideSQLHourGlass;
+    end;
+end;
+
+
+{procedure TZConnection.PrepareTransaction(transactionid: string);
+begin
+
+end;
+
+*procedure TZConnection.PrepareTransaction(transactionid: string);
+begin
+
+end;
+
+*
   Closes all registered datasets.
 }
 procedure TZConnection.CloseAllDataSets;

@@ -100,11 +100,15 @@ function DecodeString(Value: string): string;
   @param Handle a PostgreSQL connection reference.
   @param LogCategory a logging category.
   @param LogMessage a logging message.
+  @param ResultHandle the Handle to the Result
 }
+
 procedure CheckPostgreSQLError(Connection: IZConnection;
   PlainDriver: IZPostgreSQLPlainDriver;
   Handle: PZPostgreSQLConnect; LogCategory: TZLoggingCategory;
-  LogMessage: string);
+  LogMessage: string;
+  ResultHandle: PZPostgreSQLResult);
+
 
 {**
    Resolve problem with minor version in PostgreSql bettas
@@ -368,17 +372,43 @@ end;
   @param Handle a PostgreSQL connection reference.
   @param LogCategory a logging category.
   @param LogMessage a logging message.
+  //FirmOS 22.02.06
+  @param ResultHandle the Handle to the Result
 }
 procedure CheckPostgreSQLError(Connection: IZConnection;
   PlainDriver: IZPostgreSQLPlainDriver;
   Handle: PZPostgreSQLConnect; LogCategory: TZLoggingCategory;
-  LogMessage: string);
-var
-  ErrorMessage: string;
+  LogMessage: string;
+  ResultHandle: PZPostgreSQLResult);
+
+var ErrorMessage: string;
+//FirmOS
+    StatusCode:String;
 begin
   if Assigned(Handle) then
     ErrorMessage := Trim(StrPas(PlainDriver.GetErrorMessage(Handle)))
   else ErrorMessage := '';
+  if ErrorMessage<>'' then begin
+    if Assigned(ResultHandle) then begin
+{     StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SEVERITY)));
+     StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_MESSAGE_PRIMARY)));
+     StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_MESSAGE_DETAIL)));
+     StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_MESSAGE_HINT)));
+     StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_STATEMENT_POSITION)));
+     StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_INTERNAL_POSITION)));
+     StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_INTERNAL_QUERY)));
+     StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_CONTEXT)));
+     StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SOURCE_FILE)));
+     StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SOURCE_LINE)));
+     StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SOURCE_FUNCTION)));
+}
+     StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SQLSTATE)));
+    end else begin
+     StatusCode:='';
+    end;
+  end;
+
+
 
   if ErrorMessage <> '' then
   begin
@@ -387,7 +417,7 @@ begin
 
     DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,
       0, ErrorMessage);
-    raise EZSQLException.Create(Format(SSQLError1, [ErrorMessage]));
+    raise EZSQLException.CreateWithStatus(StatusCode,Format(SSQLError1, [ErrorMessage]));
   end;
 end;
 

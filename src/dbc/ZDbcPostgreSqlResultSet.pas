@@ -700,8 +700,7 @@ begin
   if not Updated and (FBlobOid > 0) then
   begin
     BlobHandle := FPlainDriver.OpenLargeObject(FHandle, FBlobOid, INV_READ);
-    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther,
-      'Read Large Object');
+    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther,'Read Large Object',nil);
     if BlobHandle >= 0 then
     begin
       ReadStream := TMemoryStream.Create;
@@ -743,13 +742,13 @@ begin
   begin
     FBlobOid := FPlainDriver.CreateLargeObject(FHandle, INV_WRITE);
     CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther,
-      'Create Large Object');
+      'Create Large Object',nil);
   end;
 
   { Opens and writes a large object. }
   BlobHandle := FPlainDriver.OpenLargeObject(FHandle, FBlobOid, INV_WRITE);
   CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther,
-    'Open Large Object');
+    'Open Large Object',nil);
 
   Position := 0;
   while Position < BlobSize do
@@ -760,13 +759,13 @@ begin
     FPlainDriver.WriteLargeObject(FHandle, BlobHandle,
       Pointer(LongInt(BlobData) + Position), Size);
     CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther,
-      'Write Large Object');
+      'Write Large Object',nil);
     Inc(Position, Size);
   end;
 
   FPlainDriver.CloseLargeObject(FHandle, BlobHandle);
   CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther,
-    'Close Large Object');
+    'Close Large Object',nil);
 end;
 
 {**

@@ -16,5 +16,19 @@ Only 2 Drivers Protocol names exist from now on postgresql-7 and postgresql-8
 
 Tested compileability for fpc 2.0.2 and 2.1.1, BDS 2006
 
+21-02-2006:
+Working on 2 Phase Commit (Postgres)
+SInvalidOpPrepare = 'Prepare transaction only possible on matching Starttransaction';
+
+22-02-2006:
+
+New Define:
+  TPQresultErrorField=function(result: PPGResult; fieldcode:integer):PChar;cdecl;
+  To make Zeos Postgres ErrorHandling a little bit better
+
+Zeos: Errorhandling for Postgres - Retruns Resultcodes from Server
+2 Phase Commit runs
+
+
 
 

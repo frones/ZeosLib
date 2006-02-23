@@ -182,7 +182,7 @@ var
 begin
   Result := nil;
   QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PChar(SQL));
-  CheckPostgreSQLError(Connection, FPlainDriver, FHandle, lcExecute, SQL);
+  CheckPostgreSQLError(Connection, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
   if QueryHandle <> nil then
     Result := CreateResultSet(SQL, QueryHandle)
@@ -206,7 +206,7 @@ var
 begin
   Result := -1;
   QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PChar(SQL));
-  CheckPostgreSQLError(Connection, FPlainDriver, FHandle, lcExecute, SQL);
+  CheckPostgreSQLError(Connection, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
 
   if QueryHandle <> nil then
@@ -246,7 +246,7 @@ var
   ResultStatus: TZPostgreSQLExecStatusType;
 begin
   QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PChar(SQL));
-  CheckPostgreSQLError(Connection, FPlainDriver, FHandle, lcExecute, SQL);
+  CheckPostgreSQLError(Connection, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
 
   { Process queries with result sets }

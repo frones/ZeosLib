@@ -467,14 +467,14 @@ begin
   { Turn on transaction mode }
   QueryHandle := FPlainDriver.ExecuteQuery(FHandle,
     'SET TRANSACTION ISOLATION LEVEL READ COMMITTED');
-  FPlainDriver.Clear(QueryHandle);
   if CheckPostgreSQLError then
     Fail('Error set transaction isolation level');
+  FPlainDriver.Clear(QueryHandle);
 
   QueryHandle := FPlainDriver.ExecuteQuery(FHandle, 'BEGIN');
-  FPlainDriver.Clear(QueryHandle);
   if CheckPostgreSQLError then
     Fail('Fail start transaction');
+  FPlainDriver.Clear(QueryHandle);
 end;
 
 {**
@@ -505,9 +505,9 @@ end;
 procedure TZPlainPostgreSQLPerformanceTestCase.Disconnect;
 begin
   QueryHandle := FPlainDriver.ExecuteQuery(FHandle, 'COMMIT');
-  FPlainDriver.Clear(QueryHandle);
   if CheckPostgreSQLError then
     Fail('Fail stop transaction');
+  FPlainDriver.Clear(QueryHandle);
 
   FPlainDriver.Finish(FHandle);
   FHandle := nil;
@@ -534,9 +534,9 @@ procedure TZPlainPostgreSQLPerformanceTestCase.ExecuteUpdate(
   Query: string);
 begin
   QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PChar(Query));
-  FPlainDriver.Clear(FQueryHandle);
   if CheckPostgreSQLError then
     Fail('Error sql update excution');
+  FPlainDriver.Clear(FQueryHandle);
 end;
 
 {**

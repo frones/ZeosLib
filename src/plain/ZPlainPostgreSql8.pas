@@ -252,6 +252,9 @@ type
   TPQfn            = function(Handle: PPGconn; fnid: Integer; result_buf, result_len: PInteger; result_is_int: Integer; args: PPQArgBlock; nargs: Integer): PPGresult; cdecl;
   TPQresultStatus  = function(Result: PPGresult): ExecStatusType; cdecl;
   TPQresultErrorMessage = function(Result: PPGresult): PChar; cdecl;
+//new  char *PQresultErrorField(const PGresult *res, int fieldcode);
+  TPQresultErrorField=function(result: PPGResult; fieldcode:integer):PChar;cdecl;
+
   TPQntuples       = function(Result: PPGresult): Integer; cdecl;
   TPQnfields       = function(Result: PPGresult): Integer; cdecl;
   TPQbinaryTuples  = function(Result: PPGresult): Integer; cdecl;
@@ -330,6 +333,7 @@ var
   PQfn:            TPQfn;
   PQresultStatus:  TPQresultStatus;
   PQresultErrorMessage: TPQresultErrorMessage;
+  PQresultErrorField: TPQresultErrorField; //Firmos
   PQntuples:       TPQntuples;
   PQnfields:       TPQnfields;
   PQbinaryTuples:  TPQbinaryTuples;
@@ -420,6 +424,7 @@ begin
   @PQfn           := GetAddress('PQfn');
   @PQresultStatus := GetAddress('PQresultStatus');
   @PQresultErrorMessage := GetAddress('PQresultErrorMessage');
+  @PQresultErrorField := GetAddress('PQresultErrorField');
   @PQntuples      := GetAddress('PQntuples');
   @PQnfields      := GetAddress('PQnfields');
   @PQbinaryTuples := GetAddress('PQbinaryTuples');

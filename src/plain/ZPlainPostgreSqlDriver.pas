@@ -65,6 +65,21 @@ type
     CONNECTION_BAD
   );
 
+  TZPostgreSQLFieldCode=( // FirmOS
+            PG_DIAG_SEVERITY=ord('S'),
+            PG_DIAG_SQLSTATE=ord('C'),
+            PG_DIAG_MESSAGE_PRIMARY=ord('M'),
+            PG_DIAG_MESSAGE_DETAIL=ord('D'),
+            PG_DIAG_MESSAGE_HINT=ord('H'),
+            PG_DIAG_STATEMENT_POSITION=ord('P'),
+            PG_DIAG_INTERNAL_POSITION=ord('p'),
+            PG_DIAG_INTERNAL_QUERY=ord('q'),
+            PG_DIAG_CONTEXT=ord('W'),
+            PG_DIAG_SOURCE_FILE=ord('F'),
+            PG_DIAG_SOURCE_LINE=ord('L'),
+            PG_DIAG_SOURCE_FUNCTION=ord('R')
+            );
+
   TZPostgreSQLExecStatusType = (
     PGRES_EMPTY_QUERY,
     PGRES_COMMAND_OK,		{ a query command that doesn't return anything
@@ -184,7 +199,9 @@ type
       args: PZPostgreSQLArgBlock; nargs: Integer): PZPostgreSQLResult;
     function GetResultStatus(Res: PZPostgreSQLResult):
       TZPostgreSQLExecStatusType;
+
     function GetResultErrorMessage(Res: PZPostgreSQLResult): PChar;
+    function GetResultErrorField(Res: PZPostgreSQLResult;FieldCode:TZPostgreSQLFieldCode):Pchar;
 
     function GetRowCount(Res: PZPostgreSQLResult): Integer;
     function GetFieldCount(Res: PZPostgreSQLResult): Integer;
@@ -300,6 +317,7 @@ type
     function GetResultStatus(Res: PZPostgreSQLResult):
       TZPostgreSQLExecStatusType;
     function GetResultErrorMessage(Res: PZPostgreSQLResult): PChar;
+    function GetResultErrorField(Res: PZPostgreSQLResult;FieldCode:TZPostgreSQLFieldCode):PChar;
 
     function GetRowCount(Res: PZPostgreSQLResult): Integer;
     function GetFieldCount(Res: PZPostgreSQLResult): Integer;
@@ -413,7 +431,9 @@ type
       args: PZPostgreSQLArgBlock; nargs: Integer): PZPostgreSQLResult;
     function GetResultStatus(Res: PZPostgreSQLResult):
       TZPostgreSQLExecStatusType;
+
     function GetResultErrorMessage(Res: PZPostgreSQLResult): PChar;
+    function GetResultErrorField(Res: PZPostgreSQLResult;FieldCode:TZPostgreSQLFieldCode):PChar;
 
     function GetRowCount(Res: PZPostgreSQLResult): Integer;
     function GetFieldCount(Res: PZPostgreSQLResult): Integer;
@@ -703,6 +723,12 @@ function TZPostgreSQL7PlainDriver.GetResult(
   Handle: PZPostgreSQLConnect): PZPostgreSQLResult;
 begin
   Result := ZPlainPostgreSql7.PQgetResult(Handle);
+end;
+
+function TZPostgreSQL7PlainDriver.GetResultErrorField(Res: PZPostgreSQLResult;  FieldCode: TZPostgreSQLFieldCode): PChar;
+begin
+ // Not implemented for 7
+ result:='';
 end;
 
 function TZPostgreSQL7PlainDriver.GetResultErrorMessage(
@@ -1103,8 +1129,12 @@ begin
   Result := ZPlainPostgreSql8.PQgetResult(Handle);
 end;
 
-function TZPostgreSQL8PlainDriver.GetResultErrorMessage(
-  Res: PZPostgreSQLResult): PChar;
+function TZPostgreSQL8PlainDriver.GetResultErrorField(Res: PZPostgreSQLResult;  FieldCode: TZPostgreSQLFieldCode): PChar;
+begin
+  Result := ZPlainPostgreSql8.PQresultErrorField(Res,ord(FieldCode));
+end;
+
+function TZPostgreSQL8PlainDriver.GetResultErrorMessage(Res: PZPostgreSQLResult): PChar;
 begin
   Result := ZPlainPostgreSql8.PQresultErrorMessage(Res);
 end;
