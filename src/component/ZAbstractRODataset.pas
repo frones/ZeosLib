@@ -74,11 +74,14 @@ type
   EZDatabaseError = class(EDatabaseError)
   private
     FErrorCode: Integer;
-  public
+    FStatusCode: String;
+    procedure SetStatusCode(const Value: String);
+   public
     constructor Create(Msg: string);
     constructor CreateFromException(E: EZSQLThrowable);
 
     property ErrorCode: Integer read FErrorCode write FErrorCode;
+    property StatusCode: String read FStatusCode write SetStatusCode;
   end;
 
   {** Dataset Linker class. }
@@ -404,9 +407,20 @@ constructor EZDatabaseError.CreateFromException(E: EZSQLThrowable);
 begin
   inherited Create(E.Message);
   ErrorCode := E.ErrorCode;
+  Statuscode:= E.StatusCode;
 end;
 
-{ TZDataLink }
+procedure EZDatabaseError.SetStatusCode(const Value: String);
+begin
+ FStatusCode:=value;
+end;
+
+{ procedure EZDatabaseError.SetStatusCode(const Value: String);
+begin
+  FStatusCode := Value;
+end;
+
+TZDataLink }
 
 {**
   Creates this dataset link object.

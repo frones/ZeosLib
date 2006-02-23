@@ -401,7 +401,7 @@ begin
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SOURCE_FILE)));
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SOURCE_LINE)));
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SOURCE_FUNCTION)));
-}
+}     
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SQLSTATE)));
     end else begin
      StatusCode:='';
@@ -415,8 +415,7 @@ begin
     if Assigned(Connection) and Connection.GetAutoCommit then
       Connection.Rollback;
 
-    DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,
-      0, ErrorMessage);
+    DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,      0, ErrorMessage);
     raise EZSQLException.CreateWithStatus(StatusCode,Format(SSQLError1, [ErrorMessage]));
   end;
 end;

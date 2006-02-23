@@ -65,6 +65,7 @@ type
     constructor Create(const Msg: string);
     constructor CreateWithCode(const ErrorCode: Integer; const Msg: string);
     constructor CreateWithStatus(const StatusCode: String; const Msg: string);
+    constructor CreateClone(const E:EZSQLThrowable);
 
     property ErrorCode: Integer read FErrorCode;
     property StatusCode:String read FStatuscode; // The "String" Errocode // FirmOS
@@ -1045,6 +1046,13 @@ end;
   Creates an exception with message string.
   @param Msg a error description.
 }
+constructor EZSQLThrowable.CreateClone(const E: EZSQLThrowable);
+begin
+  inherited Create(E.Message);
+  FErrorCode:=E.ErrorCode;
+  FStatusCode:=E.Statuscode;
+end;
+
 constructor EZSQLThrowable.Create(const Msg: string);
 begin
   inherited Create(Msg);
