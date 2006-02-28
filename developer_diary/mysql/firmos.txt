@@ -1,0 +1,3 @@
+27.02.2006
+Copied Mysql5 Plain Driver and integrated it.
+Done some basic tests - working...
