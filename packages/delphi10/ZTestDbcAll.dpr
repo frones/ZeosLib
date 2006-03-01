@@ -61,13 +61,14 @@ uses
   ZTestDbcGeneric in '..\..\test\dbc\ZTestDbcGeneric.pas',
 //  ZTestDbcASAMetadata in '..\..\test\dbc\ZTestDbcASAMetadata.pas',
 //  ZTestDbcASA in '..\..\test\dbc\ZTestDbcASA.pas',
-//  ZTestDbcMySqlMetadata in '..\..\test\dbc\ZTestDbcMySqlMetadata.pas',
-//  ZTestDbcMySql in '..\..\test\dbc\ZTestDbcMySql.pas',
+
+  ZTestDbcMySqlMetadata in '..\..\test\dbc\ZTestDbcMySqlMetadata.pas',
+  ZTestDbcMySql in '..\..\test\dbc\ZTestDbcMySql.pas',
   ZTestDbcPostgreSqlMetadata in '..\..\test\dbc\ZTestDbcPostgreSqlMetadata.pas',
-  ZTestDbcPostgreSql in '..\..\test\dbc\ZTestDbcPostgreSql.pas'
+  ZTestDbcPostgreSql in '..\..\test\dbc\ZTestDbcPostgreSql.pas',
 //  ZTestDbcMsSql in '..\..\test\dbc\ZTestDbcMsSql.pas',
 //  ZTestDbcOracle in '..\..\test\dbc\ZTestDbcOracle.pas',
-//  ZTestDbcSqLite in '..\..\test\dbc\ZTestDbcSqLite.pas',
+  ZTestDbcSqLite in '..\..\test\dbc\ZTestDbcSqLite.pas'
 //  ZTestDbcInterbaseMetadata in '..\..\test\dbc\ZTestDbcInterbaseMetadata.pas',
 //  ZTestDbcInterbase in '..\..\test\dbc\ZTestDbcInterbase.pas';
 ;

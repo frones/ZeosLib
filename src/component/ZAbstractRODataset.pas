@@ -1387,6 +1387,7 @@ begin
       raise Exception.Create(SCanNotOpenResultSet);
 
     { Reads metadata from resultset. }
+
     with ResultSet.GetMetadata do
     begin
       for I := 1 to GetColumnCount do
@@ -1410,11 +1411,14 @@ begin
           Size, False, I) do
         begin
           {$IFNDEF FPC}
+{$IFNDEF FOSNOMETA}
           Required := IsNullable(I) = ntNoNulls;
+{$ENDIF}
           {$ENDIF}
-          if IsReadOnly(I) then
-            Attributes := Attributes + [faReadonly];
+{$IFNDEF FOSNOMETA}
+          if IsReadOnly(I) then Attributes := Attributes + [faReadonly];
           Precision := GetPrecision(I);
+{$ENDIF}
           DisplayName := FName;
         end;
       end;
@@ -1528,6 +1532,7 @@ begin
 
     { Initializes field and index defs. }
     InternalInitFieldDefs;
+
     if DefaultFields and not FRefreshInProgress then
       CreateFields;
     BindFields(True);

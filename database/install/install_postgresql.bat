@@ -1,7 +1,7 @@
-set Host=10.0.0.10
+set Host=127.0.0.1
 set Database=zeoslib
-set user=firmos
-set Password=gimmehard
+set user=zeos
+set Password=zeos
 set pg_home=C:\Programme\PostgreSQL\8.1\bin
 
 %pg_home%\dropdb -h %Host% -U %User% %Database%

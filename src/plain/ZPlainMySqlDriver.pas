@@ -491,8 +491,7 @@ type
   end;
 
   {** Implements a driver for MySQL 4.1 }
-  TZMySQL41PlainDriver = class (TZAbstractObject, IZPlainDriver,
-    IZMySQLPlainDriver)
+  TZMySQL41PlainDriver = class (TZAbstractObject, IZPlainDriver,IZMySQLPlainDriver)
   public
     constructor Create;
 
@@ -576,9 +575,95 @@ type
     function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PChar;
   end;
 
+
+
+  TZMySQL5PlainDriver = class (TZAbstractObject, IZPlainDriver,IZMySQLPlainDriver)
+  public
+    constructor Create;
+
+    function GetProtocol: string;
+    function GetDescription: string;
+    procedure Initialize;
+
+    procedure Debug(Debug: PChar);
+    function DumpDebugInfo(Handle: PZMySQLConnect): Integer;
+    function GetLastError(Handle: PZMySQLConnect): PChar;
+    function GetLastErrorCode(Handle: PZMySQLConnect): Integer;
+    function Init(var Handle: PZMySQLConnect): PZMySQLConnect;
+    procedure Despose(var Handle: PZMySQLConnect);
+
+    function Connect(Handle: PZMySQLConnect;
+      const Host, User, Password: PChar): PZMySQLConnect;
+    function RealConnect(Handle: PZMySQLConnect;
+      const Host, User, Password, Db: PChar; Port: Cardinal;
+      UnixSocket: PChar; ClientFlag: Cardinal): PZMySQLConnect;
+    procedure Close(Handle: PZMySQLConnect);
+
+    function ExecQuery(Handle: PZMySQLConnect; const Query: PChar): Integer;
+    function ExecRealQuery(Handle: PZMySQLConnect; const Query: PChar;
+      Length: Integer): Integer;
+
+    function SelectDatabase(Handle: PZMySQLConnect;
+      const Database: PChar): Integer;
+    function CreateDatabase(Handle: PZMySQLConnect;
+      const Database: PChar): Integer;
+    function DropDatabase(Handle: PZMySQLConnect;
+      const Database: PChar): Integer;
+
+    function Shutdown(Handle: PZMySQLConnect): Integer;
+    function Refresh(Handle: PZMySQLConnect; Options: Cardinal): Integer;
+    function Kill(Handle: PZMySQLConnect; Pid: LongInt): Integer;
+    function Ping(Handle: PZMySQLConnect): Integer;
+
+    function GetStatInfo(Handle: PZMySQLConnect): PChar;
+    function SetOptions(Handle: PZMySQLConnect; Option: TZMySQLOption;
+      const Arg: PChar): Integer;
+    function GetEscapeString(StrTo, StrFrom: PChar; Length: Cardinal): Cardinal;
+
+    function GetServerInfo(Handle: PZMySQLConnect): PChar;
+    function GetClientInfo: PChar;
+    function GetHostInfo(Handle: PZMySQLConnect): PChar;
+    function GetProtoInfo(Handle: PZMySQLConnect): Cardinal;
+    function GetThreadId(Handle: PZMySQLConnect): Cardinal;
+
+    function GetListDatabases(Handle: PZMySQLConnect;
+      Wild: PChar): PZMySQLResult;
+    function GetListTables(Handle: PZMySQLConnect;
+      const Wild: PChar): PZMySQLResult;
+    function GetListFields(Handle: PZMySQLConnect;
+      const Table, Wild: PChar): PZMySQLResult;
+    function GetListProcesses(Handle: PZMySQLConnect): PZMySQLResult;
+
+    function StoreResult(Handle: PZMySQLConnect): PZMySQLResult;
+    function UseResult(Handle: PZMySQLConnect): PZMySQLResult;
+    procedure FreeResult(Res: PZMySQLResult);
+    function GetAffectedRows(Handle: PZMySQLConnect): Int64;
+
+    function FetchRow(Res: PZMySQLResult): PZMySQLRow;
+    function FetchLengths(Res: PZMySQLResult): PLongInt;
+    function FetchField(Res: PZMySQLResult): PZMySQLField;
+
+    procedure SeekData(Res: PZMySQLResult; Offset: Cardinal);
+    function SeekRow(Res: PZMySQLResult; Row: PZMySQLRowOffset): PZMySQLRowOffset;
+    function SeekField(Res: PZMySQLResult; Offset: Cardinal): Cardinal;
+
+    function GetFieldType(Field: PZMySQLField): Byte;
+    function GetFieldFlags(Field: PZMySQLField): Integer;
+    function GetStatus(Handle: PZMySQLConnect): TZMySQLStatus;
+    function GetRowCount(Res: PZMySQLResult): Int64;
+    function GetFieldCount(Res: PZMySQLResult): Integer;
+    function GetFieldName(Field: PZMySQLField): PChar;
+    function GetFieldTable(Field: PZMySQLField): PChar;
+    function GetFieldLength(Field: PZMySQLField): Integer;
+    function GetFieldMaxLength(Field: PZMySQLField): Integer;
+    function GetFieldDecimals(Field: PZMySQLField): Integer;
+    function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PChar;
+  end;
+
+
 implementation
 
-uses SysUtils, ZPlainMySql320, ZPlainMySql323, ZPlainMySql40, ZPlainMySql41;
+uses SysUtils, ZPlainMySql320, ZPlainMySql323, ZPlainMySql40, ZPlainMySql41,ZPlainMySql5;
 
 { TZMySQL320PlainDriver }
 
@@ -1791,8 +1876,316 @@ end;
 
 function TZMySQL41PlainDriver.GetLastErrorCode(Handle: PZMySQLConnect): Integer;
 begin
-  Result := ZPlainMySql41.mysql_errno(PMYSQL(Handle));
+  Result := ZPlainMySql41.mysql_errno(ZPlainMySql41.PMYSQL(Handle));
 end;
+
+
+{ TZMySQL5PlainDriver }
+
+constructor TZMySQL5PlainDriver.Create;
+begin
+end;
+
+function TZMySQL5PlainDriver.GetProtocol: string;
+begin
+  Result := 'mysql-5';
+end;
+
+function TZMySQL5PlainDriver.GetDescription: string;
+begin
+  Result := 'Native Plain Driver for MySQL 4.1+';
+end;
+
+procedure TZMySQL5PlainDriver.Initialize;
+begin
+  ZPlainMySql5.LibraryLoader.LoadIfNeeded;
+end;
+
+procedure TZMySQL5PlainDriver.Close(Handle: PZMySQLConnect);
+begin
+  ZPlainMySql5.mysql_close(Handle);
+end;
+
+function TZMySQL5PlainDriver.Connect(Handle: PZMySQLConnect; const Host,
+  User, Password: PChar): PZMySQLConnect;
+begin
+  Result := ZPlainMySql5.mysql_connect(Handle, Host, User, Password);
+end;
+
+function TZMySQL5PlainDriver.CreateDatabase(Handle: PZMySQLConnect;
+  const Database: PChar): Integer;
+begin
+  Result := ZPlainMySql5.mysql_create_db(Handle, Database);
+end;
+
+procedure TZMySQL5PlainDriver.Debug(Debug: PChar);
+begin
+  ZPlainMySql5.mysql_debug(Debug);
+end;
+
+function TZMySQL5PlainDriver.DropDatabase(Handle: PZMySQLConnect;
+  const Database: PChar): Integer;
+begin
+  Result := ZPlainMySql5.mysql_drop_db(Handle, Database);
+end;
+
+function TZMySQL5PlainDriver.DumpDebugInfo(Handle: PZMySQLConnect): Integer;
+begin
+  Result := ZPlainMySql5.mysql_dump_debug_info(Handle);
+end;
+
+function TZMySQL5PlainDriver.ExecQuery(Handle: PZMySQLConnect;
+  const Query: PChar): Integer;
+begin
+  Result := ZPlainMySql5.mysql_query(Handle, Query);
+end;
+
+function TZMySQL5PlainDriver.ExecRealQuery(Handle: PZMySQLConnect;
+  const Query: PChar; Length: Integer): Integer;
+begin
+  Result := ZPlainMySql5.mysql_real_query(Handle, Query, Length);
+end;
+
+function TZMySQL5PlainDriver.FetchField(Res: PZMySQLResult): PZMySQLField;
+begin
+  Result := ZPlainMySql5.mysql_fetch_field(Res);
+end;
+
+function TZMySQL5PlainDriver.FetchLengths(Res: PZMySQLResult): PLongInt;
+begin
+  Result := ZPlainMySql5.mysql_fetch_lengths(Res);
+end;
+
+function TZMySQL5PlainDriver.FetchRow(Res: PZMySQLResult): PZMySQLRow;
+begin
+  Result := ZPlainMySql5.mysql_fetch_row(Res);
+end;
+
+procedure TZMySQL5PlainDriver.FreeResult(Res: PZMySQLResult);
+begin
+  ZPlainMySql5.mysql_free_result(Res);
+end;
+
+function TZMySQL5PlainDriver.GetAffectedRows(Handle: PZMySQLConnect): Int64;
+begin
+  Result := ZPlainMySql5.mysql_affected_rows(Handle);
+end;
+
+function TZMySQL5PlainDriver.GetClientInfo: PChar;
+begin
+  Result := ZPlainMySql5.mysql_get_client_info;
+end;
+
+function TZMySQL5PlainDriver.GetEscapeString(StrTo, StrFrom: PChar;
+  Length: Cardinal): Cardinal;
+begin
+  Result := ZPlainMySql5.mysql_escape_string(StrTo, StrFrom, Length);
+end;
+
+function TZMySQL5PlainDriver.GetHostInfo(Handle: PZMySQLConnect): PChar;
+begin
+  Result := ZPlainMySql5.mysql_get_host_info(Handle);
+end;
+
+function TZMySQL5PlainDriver.GetListDatabases(Handle: PZMySQLConnect;
+  Wild: PChar): PZMySQLResult;
+begin
+  Result := ZPlainMySql5.mysql_list_dbs(Handle, Wild);
+end;
+
+function TZMySQL5PlainDriver.GetListFields(Handle: PZMySQLConnect;
+  const Table, Wild: PChar): PZMySQLResult;
+begin
+  Result := ZPlainMySql5.mysql_list_fields(Handle, Table, Wild);
+end;
+
+function TZMySQL5PlainDriver.GetListProcesses(
+  Handle: PZMySQLConnect): PZMySQLResult;
+begin
+  Result := ZPlainMySql5.mysql_list_processes(Handle);
+end;
+
+function TZMySQL5PlainDriver.GetListTables(Handle: PZMySQLConnect;
+  const Wild: PChar): PZMySQLResult;
+begin
+  Result := ZPlainMySql5.mysql_list_tables(Handle, Wild);
+end;
+
+function TZMySQL5PlainDriver.GetProtoInfo(Handle: PZMySQLConnect): Cardinal;
+begin
+  Result := ZPlainMySql5.mysql_get_proto_info(Handle);
+end;
+
+function TZMySQL5PlainDriver.GetServerInfo(Handle: PZMySQLConnect): PChar;
+begin
+  Result := ZPlainMySql5.mysql_get_server_info(Handle);
+end;
+
+function TZMySQL5PlainDriver.GetStatInfo(Handle: PZMySQLConnect): PChar;
+begin
+  Result := ZPlainMySql5.mysql_stat(Handle);
+end;
+
+function TZMySQL5PlainDriver.GetThreadId(Handle: PZMySQLConnect): Cardinal;
+begin
+  Result := ZPlainMySql5.mysql_thread_id(Handle);
+end;
+
+function TZMySQL5PlainDriver.Init(var Handle: PZMySQLConnect): PZMySQLConnect;
+begin
+//  Handle := AllocMem(SizeOf(ZPlainMySql5.MYSQL));
+//  Result := ZPlainMySql5.mysql_init(Handle);
+  Handle := ZPlainMySql5.mysql_init(nil);
+  Result := Handle;
+end;
+
+procedure TZMySQL5PlainDriver.Despose(var Handle: PZMySQLConnect);
+begin
+//  if Handle <> nil then
+//    FreeMem(Handle);
+  Handle := nil;
+end;
+
+function TZMySQL5PlainDriver.Kill(Handle: PZMySQLConnect;
+  Pid: Integer): Integer;
+begin
+  Result := ZPlainMySql5.mysql_kill(Handle, Pid);
+end;
+
+function TZMySQL5PlainDriver.Ping(Handle: PZMySQLConnect): Integer;
+begin
+  Result := ZPlainMySql5.mysql_ping(Handle);
+end;
+
+function TZMySQL5PlainDriver.RealConnect(Handle: PZMySQLConnect;
+  const Host, User, Password, Db: PChar; Port: Cardinal; UnixSocket: PChar;
+  ClientFlag: Cardinal): PZMySQLConnect;
+begin
+  Result := ZPlainMySql5.mysql_real_connect(Handle, Host, User, Password, Db,
+    Port, UnixSocket, ClientFlag);
+end;
+
+function TZMySQL5PlainDriver.Refresh(Handle: PZMySQLConnect;
+  Options: Cardinal): Integer;
+begin
+  Result := ZPlainMySql5.mysql_refresh(Handle, Options);
+end;
+
+procedure TZMySQL5PlainDriver.SeekData(Res: PZMySQLResult;
+  Offset: Cardinal);
+begin
+  ZPlainMySql5.mysql_data_seek(Res, Offset);
+end;
+
+function TZMySQL5PlainDriver.SeekField(Res: PZMySQLResult;
+  Offset: Cardinal): Cardinal;
+begin
+  Result := ZPlainMySql5.mysql_field_seek(Res, Offset);
+end;
+
+function TZMySQL5PlainDriver.SeekRow(Res: PZMySQLResult;
+  Row: PZMySQLRowOffset): PZMySQLRowOffset;
+begin
+  Result := ZPlainMySql5.mysql_row_seek(Res, Row);
+end;
+
+function TZMySQL5PlainDriver.SelectDatabase(Handle: PZMySQLConnect;
+  const Database: PChar): Integer;
+begin
+  Result := ZPlainMySql5.mysql_select_db(Handle, Database);
+end;
+
+function TZMySQL5PlainDriver.SetOptions(Handle: PZMySQLConnect;
+  Option: TZMySQLOption; const Arg: PChar): Integer;
+begin
+  Result := ZPlainMySql5.mysql_options(Handle,
+    ZPlainMySql5.TMySqlOption(Option), Arg);
+end;
+
+function TZMySQL5PlainDriver.Shutdown(Handle: PZMySQLConnect): Integer;
+begin
+  Result := ZPlainMySql5.mysql_shutdown(Handle);
+end;
+
+function TZMySQL5PlainDriver.StoreResult(
+  Handle: PZMySQLConnect): PZMySQLResult;
+begin
+  Result := ZPlainMySql5.mysql_store_result(Handle);
+end;
+
+function TZMySQL5PlainDriver.UseResult(Handle: PZMySQLConnect): PZMySQLResult;
+begin
+  Result := ZPlainMySql5.mysql_use_result(Handle);
+end;
+
+function TZMySQL5PlainDriver.GetLastError(Handle: PZMySQLConnect): PChar;
+begin
+  Result := ZPlainMySql5.mysql_error(Handle);
+end;
+
+function TZMySQL5PlainDriver.GetFieldType(Field: PZMySQLField): Byte;
+begin
+  Result := ZPlainMySql5.PMYSQL_FIELD(Field)^._type;
+end;
+
+function TZMySQL5PlainDriver.GetFieldFlags(Field: PZMySQLField): Integer;
+begin
+  Result := ZPlainMySql5.PMYSQL_FIELD(Field)^.flags;
+end;
+
+function TZMySQL5PlainDriver.GetRowCount(Res: PZMySQLResult): Int64;
+begin
+  Result := ZPlainMySql5.PMYSQL_RES(Res).row_count;
+end;
+
+function TZMySQL5PlainDriver.GetStatus(Handle: PZMySQLConnect): TZMySQLStatus;
+begin
+  Result := TZMySQLStatus(ZPlainMySql5.PMYSQL(Handle).status);
+end;
+
+function TZMySQL5PlainDriver.GetFieldCount(Res: PZMySQLResult): Integer;
+begin
+  Result := ZPlainMySql5.PMYSQL_RES(Res).field_count;
+end;
+
+function TZMySQL5PlainDriver.GetFieldDecimals(Field: PZMySQLField): Integer;
+begin
+  Result := ZPlainMySql5.PMYSQL_FIELD(Field)^.decimals;
+end;
+
+function TZMySQL5PlainDriver.GetFieldLength(Field: PZMySQLField): Integer;
+begin
+  Result := ZPlainMySql5.PMYSQL_FIELD(Field)^.length;
+end;
+
+function TZMySQL5PlainDriver.GetFieldMaxLength(Field: PZMySQLField): Integer;
+begin
+  Result := ZPlainMySql5.PMYSQL_FIELD(Field)^.max_length;
+end;
+
+function TZMySQL5PlainDriver.GetFieldName(Field: PZMySQLField): PChar;
+begin
+  Result := ZPlainMySql5.PMYSQL_FIELD(Field)^.name;
+end;
+
+function TZMySQL5PlainDriver.GetFieldTable(Field: PZMySQLField): PChar;
+begin
+  Result := ZPlainMySql5.PMYSQL_FIELD(Field)^.table;
+end;
+
+function TZMySQL5PlainDriver.GetFieldData(Row: PZMySQLRow;
+  Offset: Cardinal): PChar;
+begin
+  Result := ZPlainMySql5.PMYSQL_ROW(ROW)[Offset];
+end;
+
+function TZMySQL5PlainDriver.GetLastErrorCode(Handle: PZMySQLConnect): Integer;
+begin
+  Result := ZPlainMySql5.mysql_errno(ZPlainMySql5.PMYSQL(Handle));
+end;
+
+
+
 
 end.
 

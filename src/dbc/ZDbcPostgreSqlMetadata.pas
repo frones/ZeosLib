@@ -1244,7 +1244,9 @@ var
   I, ReturnType, ColumnTypeOid, ArgOid: Integer;
   Key, SQL, ReturnTypeType: string;
   ArgTypes: TStrings;
-  ResultSet, ColumnsRS: IZResultSet;
+  ResultSet,
+  ColumnsRS: IZResultSet;
+//  IZCO:IZConnection;
 begin
   Key := Format('get-procedure-columns:%s:%s:%s:%s',
     [Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern]);
@@ -1277,7 +1279,8 @@ begin
 
     ArgTypes := TStringList.Create;
     try
-      with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+      ResultSet:=GetConnection.CreateStatement.ExecuteQuery(SQL); //FirmOS Patch
+      with ResultSet do
       begin
         while Next do
         begin

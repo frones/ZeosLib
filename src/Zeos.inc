@@ -85,22 +85,22 @@
 {$DEFINE ENABLE_SQLITE}
 
 // Enables Oracle support in TZConnection/TZDataset
-{$DEFINE ENABLE_ORACLE}
+{.$DEFINE ENABLE_ORACLE}
 
 // Enables ASA support in TZConnection/TZDataset
-{$DEFINE ENABLE_ASA}
+{.$DEFINE ENABLE_ASA}
 
 // Supported language. Now available languages:
 // ENGLISH, GERMAN, PORTUGUESE, DUTCH, SPANISH
 {$DEFINE ENGLISH}
 
 // Prevents loading default libmysql.dll
-{$DEFINE MYSQL_STRICT_DLL_LOADING}
+{.$DEFINE MYSQL_STRICT_DLL_LOADING}
 
 // Prevents loading default libpq.dll
-{$DEFINE POSTGRESQL_STRICT_DLL_LOADING}
+{.$DEFINE POSTGRESQL_STRICT_DLL_LOADING}
 
-//Allows to see SQL exceptions as strings 
+//Allows to see SQL exceptions as strings
 {$DEFINE INTERBASE_EXTENDED_MESSAGES}
 
 // Loads libcrypt.so before Firebird client library.
@@ -152,3 +152,7 @@
 // Compile test applications with a graphical user interface (GUI)
 // Comment this definition if you want to compile console test applications
 {$DEFINE TESTGUI}
+
+//PATCH TO DO NO METADATALOADING / UNTESTED HIGH RISK
+{.$DEFINE FOSNOMETA}
+

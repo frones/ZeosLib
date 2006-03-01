@@ -57,6 +57,7 @@ type
     FMySQL323PlainDriver: IZMySQLPlainDriver;
     FMySQL40PlainDriver: IZMySQLPlainDriver;
     FMySQL41PlainDriver: IZMySQLPlainDriver;
+    FMySQL5PlainDriver: IZMySQLPlainDriver;
   protected
     function GetPlainDriver(Url: string): IZMySQLPlainDriver;
   public
@@ -134,6 +135,7 @@ begin
   FMySQL323PlainDriver := TZMySQL323PlainDriver.Create;
   FMySQL40PlainDriver := TZMySQL40PlainDriver.Create;
   FMySQL41PlainDriver := TZMySQL41PlainDriver.Create;
+  FMySQL5PlainDriver := TZMySQL5PlainDriver.Create;
 end;
 
 {**
@@ -224,12 +226,13 @@ end;
 }
 function TZMySQLDriver.GetSupportedProtocols: TStringDynArray;
 begin
-  SetLength(Result, 5);
+  SetLength(Result, 6);
   Result[0] := 'mysql';
   Result[1] := FMySQL320PlainDriver.GetProtocol;
   Result[2] := FMySQL323PlainDriver.GetProtocol;
   Result[3] := FMySQL40PlainDriver.GetProtocol;
   Result[4] := FMySQL41PlainDriver.GetProtocol;
+  Result[5] := FMySQL5PlainDriver.GetProtocol;
 end;
 
 {**
@@ -250,7 +253,10 @@ begin
     Result := FMySQL40PlainDriver
   else if Protocol = FMySQL41PlainDriver.GetProtocol then
     Result := FMySQL41PlainDriver
-  else Result := FMySQL41PlainDriver;
+  else if Protocol = FMySQL5PlainDriver.GetProtocol then
+    Result := FMySQL5PlainDriver
+  else
+    Result := FMySQL5PlainDriver;
   Result.Initialize;
 end;
 
