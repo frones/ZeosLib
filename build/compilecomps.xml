@@ -54,6 +54,12 @@
     </condition>
     <antcall target="delphi9_compile"/>
 
+    <condition property="delphi10.compile">
+      <istrue value="${delphi10.active}"/>
+    </condition>
+    <antcall target="delphi10_compile"/>
+
+
     <condition property="cbuilder5.compile">
       <istrue value="${cbuilder5.active}"/>
     </condition>
@@ -111,6 +117,16 @@
       <param name="compiler.dir" value="${delphi9.home}"/>
     </antcall>
   </target>
+  
+  <target name="delphi10_compile" if="delphi10.compile">
+    <property name="bpl.dir" value="${delphi10.bpl.dir}"/>
+    <antcall target="delphi_compile">
+      <param name="compile" value="${delphi10.compile}"/>
+      <param name="compiler" value="delphi10"/>
+      <param name="compiler.dir" value="${delphi10.home}"/>
+    </antcall>
+  </target>
+  
 
   <target name="cbuilder5_compile" if="cbuilder5.compile">
     <antcall target="cbuilder_compile">
@@ -147,6 +163,8 @@
   <target name="delphi_compile">
     <echo message="Compiling packages for ${compiler}..."
       file="${log.file}" append="true" />
+
+    <echo message="DEBUG FOS : Compiler.Dir ${compiler.dir}\Projects\bpl\ZCore.bpl ..." />
 
     <property name="package.dir" value="${packages.dir}\${compiler}"/>
     <property name="build.dir" value="${package.dir}\build"/>

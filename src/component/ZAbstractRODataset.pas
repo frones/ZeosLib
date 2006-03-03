@@ -2953,7 +2953,8 @@ const
     ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp, ftFMTBcd);
 
 {$ELSE}
-const
+ {$IFDEF VER180}
+ const
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,
     ftFloat, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
@@ -2961,6 +2962,15 @@ const
     ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
     ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp, ftFMTBcd,
     ftFixedWideChar,ftWideMemo,ftOraTimeStamp,ftOraInterval);
+ {$ELSE}
+ const
+  BaseFieldTypes: array[TFieldType] of TFieldType = (
+    ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,
+    ftFloat, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
+    ftInteger, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftUnknown,
+    ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
+    ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp, ftFMTBcd);
+ {$ENDIF}
 {$ENDIF}
 
   CheckTypeSizes = [ftBytes, ftVarBytes, ftBCD, ftReference];

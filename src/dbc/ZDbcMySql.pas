@@ -45,8 +45,8 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection,
-  ZPlainMySqlDriver, ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser;
+  ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection,ZPlainMySqlDriver,
+  ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser;
 
 type
 
@@ -133,9 +133,9 @@ constructor TZMySQLDriver.Create;
 begin
   FMySQL320PlainDriver := TZMySQL320PlainDriver.Create;
   FMySQL323PlainDriver := TZMySQL323PlainDriver.Create;
-  FMySQL40PlainDriver := TZMySQL40PlainDriver.Create;
-  FMySQL41PlainDriver := TZMySQL41PlainDriver.Create;
-  FMySQL5PlainDriver := TZMySQL5PlainDriver.Create;
+  FMySQL40PlainDriver  := TZMySQL40PlainDriver.Create;
+  FMySQL41PlainDriver  := TZMySQL41PlainDriver.Create;
+  FMySQL5PlainDriver   := TZMySQL5PlainDriver.Create;
 end;
 
 {**

@@ -645,6 +645,7 @@ var
   FPostgreSQL65PlainDriver: IZPostgreSQLPlainDriver;
   FPostgreSQL72PlainDriver: IZPostgreSQLPlainDriver;
 begin
+{ TODO
   FPostgreSQL65PlainDriver := TZPostgreSQL65PlainDriver.Create;
   FPostgreSQL72PlainDriver := TZPostgreSQL72PlainDriver.Create;
 
@@ -653,8 +654,8 @@ begin
   else if Protocol = FPostgreSQL72PlainDriver.GetProtocol then
     PlainDriver := FPostgreSQL72PlainDriver
   else PlainDriver := FPostgreSQL72PlainDriver;
-
   PlainDriver.Initialize;
+ }
 end;
 
 {**

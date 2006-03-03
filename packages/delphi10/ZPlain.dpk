@@ -44,6 +44,7 @@ contains
   ZPlainMySql323 in '..\..\src\plain\ZPlainMySql323.pas',
   ZPlainMySql40 in '..\..\src\plain\ZPlainMySql40.pas',
   ZPlainMySql41 in '..\..\src\plain\ZPlainMySql41.pas',
+  ZPlainMySql5 in '..\..\src\plain\ZPlainMySql5.pas',
   ZPlainMySqlDriver in '..\..\src\plain\ZPlainMySqlDriver.pas',
   ZPlainPostgreSql7 in '..\..\src\plain\ZPlainPostgreSql7.pas',
   ZPlainPostgreSql8 in '..\..\src\plain\ZPlainPostgreSql8.pas',

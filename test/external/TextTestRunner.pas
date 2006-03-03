@@ -1,7 +1,7 @@
-{ $Id: TextTestRunner.pas,v 1.1 2003/07/01 07:05:33 seroukhov Exp $ }
+{ $Id: TextTestRunner.pas,v 1.28 2004/10/17 10:39:00 neuromancer Exp $ }
 {: DUnit: An XTreme testing framework for Delphi programs.
    @author  The DUnit Group.
-   @version $Revision: 1.1 $
+   @version $Revision: 1.28 $
 }
 (*
  * The contents of this file are subject to the Mozilla Public
@@ -19,7 +19,7 @@
  * The Initial Developers of the Original Code are Kent Beck, Erich Gamma,
  * and Juancarlo Añez.
  * Portions created The Initial Developers are Copyright (C) 1999-2000.
- * Portions created by The DUnit Group are Copyright (C) 2000-2003.
+ * Portions created by The DUnit Group are Copyright (C) 2000-2004.
  * All rights reserved.
  *
  * Contributor(s):
@@ -33,9 +33,6 @@
  *
  *)
 
-{$IFDEF DUNIT_DLL}
-  {$LONGSTRINGS OFF}
-{$ENDIF}
 unit TextTestRunner;
 
 interface
@@ -45,7 +42,7 @@ uses
   TestFramework;
 
 const
-  rcs_id :string = '#(@)$Id: TextTestRunner.pas,v 1.1 2003/07/01 07:05:33 seroukhov Exp $';
+  rcs_id :string = '#(@)$Id: TextTestRunner.pas,v 1.28 2004/10/17 10:39:00 neuromancer Exp $';
 
 type
   TRunnerExitBehavior = (
@@ -54,7 +51,7 @@ type
     rxbHaltOnFailures
     );
 
-  TTextTestListener = class(TInterfacedObject, ITestListener)
+  TTextTestListener = class(TInterfacedObject, ITestListener, ITestListenerX)
   protected
     startTime: TDateTime;
     endTime: TDateTime;
@@ -65,11 +62,14 @@ type
     procedure AddError(error: TTestFailure); virtual;
     procedure AddFailure(failure: TTestFailure); virtual;
     function  ShouldRunTest(test :ITest):boolean; virtual;
+    procedure StartSuite(suite: ITest); virtual;
+    procedure EndSuite(suite: ITest); virtual;
     procedure StartTest(test: ITest); virtual;
     procedure EndTest(test: ITest); virtual;
     procedure TestingStarts; virtual;
     procedure TestingEnds(testResult: TTestResult); virtual;
     procedure Status(test :ITest; const Msg :string);
+    procedure Warning(test :ITest; const Msg :string);
     function  Report(r: TTestResult): string;
     class function RunTest(suite: ITest; exitBehavior: TRunnerExitBehavior = rxbContinue): TTestResult; overload;
     class function RunRegisteredTests(exitBehavior: TRunnerExitBehavior = rxbContinue): TTestResult;
@@ -274,11 +274,13 @@ begin
       except
       end;
     rxbHaltOnFailures:
+{$IFNDEF CLR}
       with Result do
       begin
         if not WasSuccessful then
           System.Halt(ErrorCount+FailureCount);
       end
+{$ENDIF}
     // else fall through
   end;
 end;
@@ -290,7 +292,7 @@ end;
 
 function RunTest(suite: ITest; exitBehavior: TRunnerExitBehavior = rxbContinue): TTestResult;
 begin
-  Result := RunTest(suite, [TTextTestListener.Create]);
+  Result := TestFramework.RunTest(suite, [TTextTestListener.Create]);
   case exitBehavior of
     rxbPause:
       try
@@ -299,11 +301,13 @@ begin
       except
       end;
     rxbHaltOnFailures:
+{$IFNDEF CLR}
       with Result do
       begin
         if not WasSuccessful then
           System.Halt(ErrorCount+FailureCount);
       end
+{$ENDIF}
     // else fall through
   end;
 end;
@@ -319,9 +323,22 @@ begin
   writeln(Format('%s: %s', [test.Name, Msg]));
 end;
 
+procedure TTextTestListener.Warning(test: ITest; const Msg: string);
+begin
+  writeln(Format('%s: %s', [test.Name, Msg]));
+end;
+
 function TTextTestListener.ShouldRunTest(test: ITest): boolean;
 begin
   Result := test.Enabled;
+end;
+
+procedure TTextTestListener.EndSuite(suite: ITest);
+begin
+end;
+
+procedure TTextTestListener.StartSuite(suite: ITest);
+begin
 end;
 
 end.

@@ -1,4 +1,4 @@
-{#(@)$Id: TestFrameWork.pas,v 1.3 2004/04/17 04:40:24 seroukhov Exp $ }
+{#(@)$Id: TestFramework.pas,v 1.116 2005/06/06 22:36:52 skaug Exp $ }
 {  DUnit: An XTreme testing framework for Delphi programs. }
 (*
  * The contents of this file are subject to the Mozilla Public
@@ -16,7 +16,7 @@
  * The Initial Developers of the Original Code are Kent Beck, Erich Gamma,
  * and Juancarlo Añez.
  * Portions created The Initial Developers are Copyright (C) 1999-2000.
- * Portions created by The DUnit Group are Copyright (C) 2000-2003.
+ * Portions created by The DUnit Group are Copyright (C) 2000-2004.
  * All rights reserved.
  *
  * Contributor(s):
@@ -32,24 +32,38 @@
  *
  *)
 
-{$IFDEF DUNIT_DLL}
-  {$LONGSTRINGS OFF}
+{$IFDEF CLR}
+  {$UNSAFECODE ON}
 {$ENDIF}
 {$BOOLEVAL OFF}
-unit TestFrameWork;
+unit TestFramework;
 
 interface
 uses
+{$IFDEF CLR}System.Reflection,{$ENDIF}
   SysUtils,
   Classes,
   IniFiles;
 
 const
-  rcs_id: string = '#(@)$Id: TestFrameWork.pas,v 1.3 2004/04/17 04:40:24 seroukhov Exp $';
-  rcs_verion : string = '$Revision: 1.3 $';
+  rcs_id: string = '#(@)$Id: TestFramework.pas,v 1.116 2005/06/06 22:36:52 skaug Exp $';
+  rcs_verion : string = '$Revision: 1.116 $';
 
 type
+{$IFDEF CLR}
+//  Pointer = Borland.Delphi.System.Pointer;
+  IUnknown = interface(IInterface)
+  end;
+
+  TestAttribute = class(TCustomAttribute)
+  end;
+{$ENDIF}
+
+{$IFDEF CLR}
+  TTestMethod  = string;
+{$ELSE}
   TTestMethod  = procedure of object;
+{$ENDIF}
   TTestProc    = procedure;
 
   TTestCaseClass  = class of TTestCase;
@@ -115,14 +129,17 @@ type
     function  GetStatus :string;
 
     procedure LoadConfiguration(const iniFile :TCustomIniFile; const section :string);  overload;
-    procedure LoadConfiguration(const fileName: string; const UseRegistry: boolean); overload;
+    procedure LoadConfiguration(const fileName: string; const useRegistry, useMemIni: boolean); overload;
 
     procedure SaveConfiguration(const iniFile :TCustomIniFile; const section :string);  overload;
-    procedure SaveConfiguration(const fileName: string; const UseRegistry: boolean); overload;
+    procedure SaveConfiguration(const fileName: string; const useRegistry, useMemIni: boolean); overload;
 
+    procedure SetGUIObject(const guiObject: TObject);
+    function  GetGUIObject: TObject;
 
     property Name:    string  read GetName;
     property Enabled: boolean read GetEnabled write SetEnabled;
+    property GUIObject: TObject read GetGUIObject write SetGUIObject;
     property Status:  string  read GetStatus;
 
     property StartTime: Int64 read GetStartTime write SetStartTime;
@@ -143,9 +160,8 @@ type
   IStatusListener = interface
   ['{8681DC88-033C-4A42-84F4-4C52EF9ABAC0}']
     procedure Status(test :ITest; const Msg :string);
+    procedure Warning(test: ITest; const Msg: string);
   end;
-
-
 
   { ITestListeners get notified of testing events.
     See TTestResult.AddListener()
@@ -166,6 +182,14 @@ type
     function  ShouldRunTest(test :ITest):boolean;
   end;
 
+
+  ITestListenerX = interface(ITestListener)
+    ['{5C28B1BE-38B5-4D6F-AA96-A04E9302C317}']
+
+    procedure StartSuite(suite: ITest);
+    procedure EndSuite(suite: ITest);
+  end;
+
   // a named collection of tests
   ITestSuite = interface(ITest)
     ['{C20E38EF-7369-44D9-9D84-08E84EC1DCF0}']
@@ -182,6 +206,7 @@ type
   public
     constructor Create(TestResult :TTestResult);
     procedure   Status(Test :ITest; const Msg :string);
+    procedure   Warning(Test: ITest; const Msg: string);
   end;
 
   { A TTestResult collects the results of executing a test case.
@@ -192,7 +217,9 @@ type
   protected
     fFailures: TList;
     fErrors: TList;
+    fWarnings: TStrings;
     fListeners: IInterfaceList;
+    FRootTest: ITest;
     fRunTests: integer;
     fStop: boolean;
     FBreakOnFailures :boolean;
@@ -205,9 +232,12 @@ type
     function  RunTestRun(test: ITest) : boolean; virtual;
 
     procedure TestingStarts;                           virtual;
+    procedure StartSuite(suite: ITest);                virtual;
     procedure StartTest(test: ITest);                  virtual;
     function  ShouldRunTest(test :ITest) :boolean;     virtual;
     procedure Status(test :ITest; const Msg :string);  virtual;
+    procedure Warning(test: ITest; const Msg: string); virtual;
+    procedure EndSuite(suite: ITest);                  virtual;
     procedure EndTest(test: ITest);                    virtual;
     procedure TestingEnds;                             virtual;
   public
@@ -229,9 +259,11 @@ type
     function RunCount: integer;     virtual;
     function ErrorCount: integer;   virtual;
     function FailureCount: integer; virtual;
+    function WarningCount: integer; virtual;
 
     function  GetError(Index :Integer) :TTestFailure;
     function  GetFailure(Index :Integer) :TTestFailure;
+    function  GetWarning(Index :Integer) :string;
 
     function  WasStopped :boolean; virtual;
     function  WasSuccessful: boolean; virtual;
@@ -241,6 +273,7 @@ type
 
     property Errors[i :Integer] :TTestFailure read GetError;
     property Failures[i :Integer] :TTestFailure read GetFailure;
+    property Warnings[i :Integer] :string read GetWarning;
   end;
 
 
@@ -257,6 +290,10 @@ type
 
     FExpectedException: ExceptionClass;
 
+    // Object used by the GUI to map the test onto a GUI object such as a tree node
+    FGUIObject: TObject;
+
+    procedure Invoke(AMethod: TTestMethod); virtual;
     procedure RunWithFixture(testResult: TTestResult); virtual;
     procedure RunTest(testResult: TTestResult); virtual;
 
@@ -268,6 +305,14 @@ type
 
     procedure SetStopTime(Value :Int64);  virtual;
     function  GetStopTime : Int64;        virtual;
+
+    procedure SetGUIObject(const guiObject: TObject);
+    function  GetGUIObject: TObject;
+
+    {$IFNDEF CLR} // related to Check(Not)EqualsMem, pointer based, unsuitable for .NET
+    function GetMemDiffStr(expected, actual: pointer; size:longword; msg:string):string;
+    {$ENDIF}
+
   public
     constructor Create(Name: string);
     destructor Destroy; override;
@@ -291,9 +336,9 @@ type
     procedure Status(const Msg :string);
     function  GetStatus :string;
 
-    procedure LoadConfiguration(const fileName: string; const UseRegistry: boolean); overload;
+    procedure LoadConfiguration(const fileName: string; const useRegistry, useMemIni: boolean); overload;
     procedure LoadConfiguration(const iniFile :TCustomIniFile; const section :string);  overload; virtual;
-    procedure SaveConfiguration(const fileName: string; const UseRegistry: boolean); overload;
+    procedure SaveConfiguration(const fileName: string; const useRegistry, useMemIni: boolean); overload;
     procedure SaveConfiguration(const iniFile :TCustomIniFile; const section :string);  overload; virtual;
 
 
@@ -304,16 +349,34 @@ type
     function  BoolToStr(ABool: boolean): string;
 
     procedure Check(condition: boolean; msg: string = ''); virtual;
+    procedure CheckTrue(condition: boolean; msg: string = ''); virtual;
+    procedure CheckFalse(condition: boolean; msg: string = ''); virtual;
     procedure CheckEquals(expected, actual: extended; msg: string = ''); overload; virtual;
     procedure CheckEquals(expected, actual: extended; delta: extended; msg: string = ''); overload; virtual;
     procedure CheckEquals(expected, actual: integer; msg: string = ''); overload; virtual;
     procedure CheckEquals(expected, actual: string; msg: string = ''); overload; virtual;
+    procedure CheckEqualsString(expected, actual: string; msg: string = ''); virtual;
+{$IFNDEF CLR}
+    procedure CheckEquals(expected, actual: WideString; msg: string = ''); overload; virtual;
+    procedure CheckEqualsWideString(expected, actual: WideString; msg: string = ''); virtual;
+    procedure CheckEqualsMem(expected, actual: pointer; size:longword; msg:string=''); virtual;
+{$ENDIF}
     procedure CheckEquals(expected, actual: boolean; msg: string = ''); overload; virtual;
+    procedure CheckEqualsBin(expected, actual: longword; msg: string = ''; digits: integer=32); virtual;
+    procedure CheckEqualsHex(expected, actual: longword; msg: string = ''; digits: integer=8); virtual;
 
     procedure CheckNotEquals(expected, actual: integer; msg: string = ''); overload; virtual;
     procedure CheckNotEquals(expected: extended; actual: extended; delta: extended = 0; msg: string = ''); overload; virtual;
     procedure CheckNotEquals(expected, actual: string; msg: string = ''); overload; virtual;
+    procedure CheckNotEqualsString(expected, actual: string; msg: string = ''); virtual;
+{$IFNDEF CLR}
+    procedure CheckNotEquals(const expected, actual: WideString; msg: string = ''); overload; virtual;
+    procedure CheckNotEqualsWideString(const expected, actual: WideString; msg: string = ''); virtual;
+    procedure CheckNotEqualsMem(expected, actual: pointer; size:longword; msg:string=''); virtual;
+{$ENDIF}
     procedure CheckNotEquals(expected, actual: boolean; msg: string = ''); overload; virtual;
+    procedure CheckNotEqualsBin(expected, actual: longword; msg: string = ''; digits: integer=32); virtual;
+    procedure CheckNotEqualsHex(expected, actual: longword; msg: string = ''; digits: integer=8); virtual;
 
     procedure CheckNotNull(obj :IUnknown; msg :string = ''); overload; virtual;
     procedure CheckNull(obj: IUnknown; msg: string = ''); overload; virtual;
@@ -326,23 +389,25 @@ type
     procedure CheckException(AMethod: TTestMethod; AExceptionClass: TClass; msg :string = '');
     procedure CheckEquals(  expected, actual: TClass; msg: string = ''); overload; virtual;
     procedure CheckInherits(expected, actual: TClass; msg: string = ''); overload; virtual;
-    procedure CheckIs(obj :TObject; klass: TClass; msg: string = ''); overload; virtual;
+    procedure CheckIs(AObject :TObject; AClass: TClass; msg: string = ''); overload; virtual;
 
-    procedure Fail(msg: string; errorAddr: Pointer = nil); overload; virtual;
-    procedure FailEquals(expected, actual: string; msg: string = ''; errorAddr: Pointer = nil); virtual;
-    procedure FailNotEquals(expected, actual: string; msg: string = ''; errorAddr: Pointer = nil); virtual;
-    procedure FailNotSame(expected, actual: string; msg: string = ''; errorAddr: Pointer = nil); virtual;
+    procedure Fail(msg: sTring; errorAddr: Pointer = nil); overload; virtual;
+    procedure FailEquals(expected, actual: WideString; msg: string = ''; errorAddr: Pointer = nil); virtual;
+    procedure FailNotEquals(expected, actual: WideString; msg: string = ''; errorAddr: Pointer = nil); virtual;
+    procedure FailNotSame(expected, actual: WideString; msg: string = ''; errorAddr: Pointer = nil); virtual;
 
-    function EqualsErrorMessage(expected, actual, msg: string): string;
-    function NotEqualsErrorMessage(expected, actual, msg: string): string;
-    function NotSameErrorMessage(expected, actual, msg: string): string;
+    function EqualsErrorMessage(expected, actual :WideString; msg: string): WideString;
+    function NotEqualsErrorMessage(expected, actual :WideString; msg: string): WideString;
+    function NotSameErrorMessage(expected, actual, msg: string): WideString;
 
     procedure StopTests(msg: string = ''); virtual;
 
+{$IFNDEF CLR}
     procedure CheckMethodIsNotEmpty(MethodPointer: pointer);
+{$ENDIF}    
 
     procedure StartExpectingException(e: ExceptionClass);
-    procedure StopExpectingException(Msg :string = '');
+    procedure StopExpectingException(msg :string = '');
 
     property ExpectedException :ExceptionClass
       read  fExpectedException
@@ -350,11 +415,11 @@ type
   end;
 
 
-
   TTestCase = class(TAbstractTest, ITest)
   protected
     fMethod:    TTestMethod;
 
+    procedure Invoke(AMethod: TTestMethod); override;
     procedure RunWithFixture(testResult: TTestResult); override;
     procedure RunTest(testResult: TTestResult); override;
 
@@ -387,8 +452,8 @@ type
 
     procedure RunTest(testResult: TTestResult); override;
 
-    procedure LoadConfiguration(const iniFile: TCustomIniFile; const section: string);  overload; override;
-    procedure SaveConfiguration(const iniFile: TCustomIniFile; const section: string);  overload; override;
+    procedure LoadConfiguration(const iniFile: TCustomIniFile; const section: string);  override;
+    procedure SaveConfiguration(const iniFile: TCustomIniFile; const section: string);  override;
   end;
 
 
@@ -446,12 +511,23 @@ function RunRegisteredTests(listeners: array of ITestListener): TTestResult;
 
 
 // utility routines
-function CallerAddr: Pointer; assembler;
+function CallerAddr: Pointer; {$IFNDEF CLR} assembler; {$ENDIF}
 function PtrToStr(p: Pointer): string;
 function PointerToLocationInfo(Addr: Pointer): string;
 function PointerToAddressInfo(Addr: Pointer):  string;
-function isTestMethod(aTest : ITest) : Boolean;
-function isDecorator(aTest : ITest) : Boolean;
+function IsTestMethod(aTest: ITest): Boolean;
+function IsDecorator(aTest: ITest): Boolean;
+function GetDUnitRegistryKey: string;
+procedure SetDUnitRegistryKey(const NewKey: string);
+{$IFNDEF CLR}  // - unsuitable for .NET, pointer magic
+function FirstByteDiff(p1, p2: pointer; size: longword; out b1, b2: byte): integer;
+{$ENDIF}
+
+
+//  strings, used in TAbstractTestCase.EqualsErrorMessage etc.:
+const sExpButWasFmt    = '%sexpected: <%s> but was: <%s>';
+      sExpAndActualFmt = '%sexpected and actual were: <%s>';
+
 
 ///////////////////////////////////////////////////////////////////////////
 implementation
@@ -468,6 +544,17 @@ uses
  TypInfo;
 
 {$STACKFRAMES ON} //required to retreive caller's address
+
+type
+  TMemIniFileTrimmed = class(TMemIniFile)
+  public
+    // Override the read string method to trim the string for compatibility with TIniFile
+    function ReadString(const Section, Ident, Default: string): string; override;
+  end;
+
+var
+  // SubKey of HKEY_CURRENT_USER for storing configurations in the registry (end with \)
+  DUnitRegistryKey: string = ''; // How about 'Software\DUnitTests\';
 
 {$IFDEF LINUX}
 
@@ -509,18 +596,25 @@ begin
    Result := Format('%p', [p])
 end;
 
-function IsBadPointer(P: Pointer):boolean; register;
+function IsBadPointer(P: Pointer):boolean; {$IFNDEF CLR} register; {$ENDIF}
 begin
   try
     Result  := (p = nil)
+{$IFNDEF CLR}
               or ((Pointer(P^) <> P) and (Pointer(P^) = P));
+{$ENDIF}
   except
     Result := true;
   end
 end;
 
 
-function CallerAddr: Pointer; assembler;
+function CallerAddr: Pointer; {$IFNDEF CLR} assembler; {$ENDIF}
+{$IFDEF CLR}
+begin
+  Result := nil;
+end;
+{$ELSE}
 const
   CallerIP = $4;
 asm
@@ -542,6 +636,7 @@ asm
    xor eax, eax
 @@Finish:
 end;
+{$ENDIF}
 
 {$IFNDEF USE_JEDI_JCL}
 function PointerToLocationInfo(Addr: Pointer): string;
@@ -582,10 +677,10 @@ begin
 end;
 {$ENDIF}
 
-function isTestMethod(aTest : ITest) : Boolean;
+function IsTestMethod(aTest: ITest): Boolean;
 var
-  aTestSuite : ITestSuite;
-  aTestDecorator : ITestDecorator;
+  aTestSuite: ITestSuite;
+  aTestDecorator: ITestDecorator;
 begin
   Assert(Assigned(aTest));
 
@@ -598,6 +693,10 @@ begin
   Result := (aTest.CountTestCases = 1);
 
   // But not when the test is a suite? (It could have one test.)
+{$IFDEF CLR}
+  if Supports(aTest, ITestSuite) or Supports(aTest, ITestDecorator) then
+    Result := false;
+{$ELSE}
   aTest.QueryInterface(ITestSuite, aTestSuite);
   if Assigned(aTestSuite) then
     Result := false;
@@ -606,20 +705,61 @@ begin
   aTest.QueryInterface(ITestDecorator, aTestDecorator);
   if Assigned(aTestDecorator) then
     Result := false;
+{$ENDIF}
 end;
 
-function isDecorator(aTest : ITest) : Boolean;
+function IsDecorator(aTest: ITest): Boolean;
 var
-  aTestDecorator : ITestDecorator;
+  aTestDecorator: ITestDecorator;
 begin
   Assert(Assigned(aTest));
 
   // Initialize to be sure
   aTestDecorator := nil;
 
+{$IFDEF CLR}
+  Result := Supports(aTest, ItestDecorator);
+{$ELSE}
   aTest.QueryInterface(ITestDecorator, aTestDecorator);
   Result := Assigned(aTestDecorator);
+{$ENDIF}
 end;
+
+function GetDUnitRegistryKey: string;
+begin
+  Result := DUnitRegistryKey;
+end;
+
+procedure SetDUnitRegistryKey(const NewKey: string);
+begin
+  DUnitRegistryKey := NewKey;
+end;
+
+{$IFNDEF CLR} // KGS: not expected to work in .NET, pointer magic follows
+function ByteAt(p: pointer; const Offset: integer): byte;
+begin
+  Result:=pByte(integer(p)+Offset)^;
+end;
+
+function FirstByteDiff(p1, p2: pointer; size: longword; out b1, b2: byte): integer;
+// Returns offset of first byte pair (left to right, incrementing address) that is unequal
+// Returns -1 if no difference found, or if size=0
+var
+  i: integer;
+begin
+  Result:=-1;
+  if size>0 then
+  for i:=0 to size-1 do // Subject to optimisation for sure:
+    if ByteAt(p1,i)<>ByteAt(p2,i) then
+    begin
+      Result:=i;
+      b1:=ByteAt(p1,i);
+      b2:=ByteAt(p2,i);
+      break;
+    end;
+end;
+{$ENDIF}
+
 
 { TTestResult }
 
@@ -738,6 +878,11 @@ begin
   end;
 end;
 
+procedure TTestResult.Warning(test: ITest; const Msg: string);
+begin
+  assert(assigned(fWarnings));
+  fWarnings.Add(Msg);
+end;
 
 function TTestResult.GetError(Index :Integer): TTestFailure;
 begin
@@ -747,6 +892,11 @@ end;
 function TTestResult.GetFailure(Index :Integer): TTestFailure;
 begin
   Result := TObject(FFailures[Index]) as TTestFailure;
+end;
+
+function TTestResult.GetWarning(Index: Integer): string;
+begin
+  Result := fWarnings[Index];
 end;
 
 function TTestResult.RunTestSetup(test: ITest):boolean;
@@ -794,7 +944,7 @@ begin
   {$ENDIF}
     try
       test.RunTest(self);
-      fTotalTime := test.ElapsedTestTime + fTotalTime;
+      fTotalTime := FRootTest.ElapsedTestTime;
       AddSuccess(test);
       Result := true;
     except
@@ -828,7 +978,7 @@ begin
   begin
     try
        raise EBreakingTestFailure.Create(failure.ThrownExceptionMessage)
-          at failure.ThrownExceptionAddress;
+          {$IFNDEF CLR}at failure.ThrownExceptionAddress{$ENDIF};
     except
     end;
   end;
@@ -896,6 +1046,13 @@ begin
   result := fFailures.count;
 end;
 
+function TTestResult.WarningCount: integer;
+begin
+  assert(assigned(fWarnings));
+
+  result := fWarnings.count;
+end;
+
 function TTestResult.WasSuccessful: boolean;
 begin
   result := (FailureCount = 0) and (ErrorCount() = 0) and not WasStopped;
@@ -946,10 +1103,43 @@ procedure TTestResult.RunSuite(test: ITest);
 begin
   TestingStarts;
   try
+    FRootTest := test;
     test.RunWithFixture(self);
   finally
     TestingEnds
   end
+end;
+
+procedure TTestResult.EndSuite(suite: ITest);
+var
+  i: Integer;
+  l: ITestListenerX;
+begin
+  for i := 0 to fListeners.count - 1 do
+  begin
+{$IFDEF CLR}
+    if Supports(fListeners[i], ITestListenerX, l) then
+{$ELSE}
+    if fListeners[i].QueryInterface(ITestListenerX, l) = 0 then
+{$ENDIF}
+       l.EndSuite(suite);
+  end;
+end;
+
+procedure TTestResult.StartSuite(suite: ITest);
+var
+  i: Integer;
+  l: ITestListenerX;
+begin
+  for i := 0 to fListeners.count - 1 do
+  begin
+{$IFDEF CLR}
+    if Supports(fListeners[i], ITestListenerX, l) then
+{$ELSE}
+    if fListeners[i].QueryInterface(ITestListenerX, l) = 0 then
+{$ENDIF}
+      l.StartSuite(suite);
+  end;
 end;
 
 { TStatusToResultAdapter }
@@ -967,6 +1157,11 @@ begin
   FTestResult.Status(Test, Msg);
 end;
 
+procedure TStatusToResultAdapter.Warning(Test: ITest; const Msg: string);
+begin
+  FTestResult.Warning(Test, Msg);
+end;
+
 { TAbstractTest }
 
 constructor TAbstractTest.Create(Name: string);
@@ -980,6 +1175,10 @@ destructor TAbstractTest.Destroy;
 begin
   FStatusStrings.Free;
   inherited;
+end;
+
+procedure TAbstractTest.Invoke(AMethod: TTestMethod);
+begin
 end;
 
 procedure TAbstractTest.Run(testResult: TTestResult);
@@ -1010,16 +1209,19 @@ begin
   Result := fTestName
 end;
 
-procedure TAbstractTest.LoadConfiguration(const fileName: string; const UseRegistry: boolean);
+procedure TAbstractTest.LoadConfiguration(const fileName: string; const useRegistry, useMemIni: boolean);
 var
   f: TCustomIniFile;
 begin
 {$IFNDEF LINUX}
-  if UseRegistry then
-    f := TRegistryIniFile.Create(fileName)
+  if useRegistry then
+    f := TRegistryIniFile.Create(DUnitRegistryKey + fileName)
   else
 {$ENDIF}
-    f := TIniFile.Create(fileName);
+    if useMemIni then
+      f := TMemIniFileTrimmed.Create(fileName)
+    else
+      f := TIniFile.Create(fileName);
 
   try
     LoadConfiguration(f, 'Tests')
@@ -1033,16 +1235,19 @@ begin
   self.setEnabled(iniFile.readBool(section, self.GetName, True));
 end;
 
-procedure TAbstractTest.SaveConfiguration(const fileName: string; const UseRegistry: boolean);
+procedure TAbstractTest.SaveConfiguration(const fileName: string; const useRegistry, useMemIni: boolean);
 var
   f: TCustomIniFile;
 begin
 {$IFNDEF LINUX}
-  if UseRegistry then
-    f := TRegistryIniFile.Create(fileName)
+  if useRegistry then
+    f := TRegistryIniFile.Create(DUnitRegistryKey + fileName)
   else
 {$ENDIF}
-    f := TIniFile.Create(fileName);
+    if useMemIni then
+      f := TMemIniFileTrimmed.Create(fileName)
+    else
+      f := TIniFile.Create(fileName);
 
   try
     SaveConfiguration(f, 'Tests');
@@ -1054,7 +1259,10 @@ end;
 
 procedure TAbstractTest.SaveConfiguration(const iniFile: TCustomIniFile; const section: string);
 begin
-  iniFile.writeBool(section, self.GetName, self.getEnabled);
+  if self.GetEnabled then
+    iniFile.deleteKey(section, self.GetName)
+  else
+    iniFile.writeBool(section, self.GetName, False);
 end;
 
 function TAbstractTest.Run: TTestResult;
@@ -1126,12 +1334,16 @@ function TAbstractTest.ElapsedTestTime: Cardinal;
 var
   Freq, Time: Int64;
 begin
-// returns TestTime in millisecs
+  // returns TestTime in millisecs
   if fStopTime > 0 then
     Time := fStopTime
+  else if fStartTime > 0 then
+    QueryPerformanceCounter(Time)
   else
-    QueryPerformanceCounter(Time);
+    Time := 0;
+
   Time := Time - fStartTime;
+
   if QueryPerformanceFrequency(Freq) then
     Result := (1000*Time) div Freq
   else
@@ -1174,12 +1386,29 @@ begin
         Fail(msg, CallerAddr);
 end;
 
+procedure TAbstractTest.CheckTrue(condition: boolean; msg: string);
+begin
+  if (not condition) then
+      FailNotEquals(BoolToStr(true), BoolToStr(false), msg, CallerAddr);
+end;
+
+procedure TAbstractTest.CheckFalse(condition: boolean; msg: string);
+begin
+  if (condition) then
+      FailNotEquals(BoolToStr(false), BoolToStr(true), msg, CallerAddr);
+end;
+
+
 procedure TAbstractTest.Fail(msg: string; errorAddr: Pointer = nil);
 begin
+{$IFDEF CLR}
+  raise ETestFailure.Create(msg);
+{$ELSE}
   if errorAddr = nil then
     raise ETestFailure.Create(msg) at CallerAddr
   else
     raise ETestFailure.Create(msg) at errorAddr;
+{$ENDIF}
 end;
 
 procedure TAbstractTest.StopTests(msg: string);
@@ -1188,25 +1417,25 @@ begin
 end;
 
 procedure TAbstractTest.FailNotEquals( expected,
-                                   actual   : string;
-                                   msg      : string = '';
-                                   errorAddr: Pointer = nil);
+                                       actual   : WideString;
+                                       msg      : string = '';
+                                       errorAddr: Pointer = nil);
 begin
     Fail(notEqualsErrorMessage(expected, actual, msg), errorAddr);
 end;
 
-procedure TAbstractTest.FailEquals( expected,
-                                actual   : string;
-                                msg      : string = '';
-                                errorAddr: Pointer = nil);
+procedure TAbstractTest.FailEquals(       expected,
+                                          actual   : WideString;
+                                          msg      : string = '';
+                                          errorAddr: Pointer = nil);
 begin
     Fail(EqualsErrorMessage(expected, actual, msg), errorAddr);
 end;
 
 procedure TAbstractTest.FailNotSame( expected,
-                                 actual   : string;
-                                 msg      : string = '';
-                                 errorAddr: Pointer = nil);
+                                     actual   : WideString;
+                                     msg      : string = '';
+                                     errorAddr: Pointer = nil);
 begin
     Fail(NotSameErrorMessage(expected, actual, msg), errorAddr);
 end;
@@ -1245,17 +1474,81 @@ end;
 
 procedure TAbstractTest.CheckEquals(expected, actual: string; msg: string = '');
 begin
-   if expected <> actual then begin
-      FailNotEquals(expected, actual, msg, CallerAddr);
-   end
+  if expected <> actual then
+    FailNotEquals(expected, actual, msg, CallerAddr);
 end;
+
+procedure TAbstractTest.CheckEqualsString(expected, actual: string; msg: string = '');
+begin
+  if expected <> actual then
+    FailNotEquals(expected, actual, msg, CallerAddr);
+end;
+
+{$IFNDEF CLR}
+procedure TAbstractTest.CheckEquals(expected, actual: WideString; msg: string = '');
+begin
+  if expected <> actual then
+    FailNotEquals(expected, actual, msg, CallerAddr);
+end;
+
+procedure TAbstractTest.CheckEqualsWideString(expected, actual: WideString; msg: string = '');
+begin
+  if expected <> actual then
+    FailNotEquals(expected, actual, msg, CallerAddr);
+end;
+
+function TAbstractTest.GetMemDiffStr(expected, actual: pointer; size:longword; msg:string):string;
+var
+  db1, db2: byte;
+  Offset: integer;
+begin
+  Offset:=FirstByteDiff(expected,actual,size,db1,db2);
+  Result:=NotEqualsErrorMessage(IntToHex(db1,2),IntToHex(db2,2),msg);
+  Result:=Result+' at Offset = '+IntToHex(Offset,4)+'h';
+end;
+
+procedure TAbstractTest.CheckEqualsMem(expected, actual: pointer; size:longword; msg:string='');
+begin
+  if not CompareMem(expected, actual, size) then
+    Fail(GetMemDiffStr(expected, actual, size, msg), CallerAddr);
+end;
+{$ENDIF}
 
 procedure TAbstractTest.CheckNotEquals(expected, actual: string; msg: string = '');
 begin
-   if expected = actual then begin
-      FailEquals(expected, actual, msg, CallerAddr);
-   end
+  if expected = actual then
+    FailEquals(expected, actual, msg, CallerAddr);
 end;
+
+procedure TAbstractTest.CheckNotEqualsString(expected, actual: string; msg: string = '');
+begin
+  if expected = actual then
+    FailEquals(expected, actual, msg, CallerAddr);
+end;
+
+{$IFNDEF CLR}
+procedure TAbstractTest.CheckNotEquals(const expected, actual: WideString; msg: string = '');
+begin
+  if expected = actual then
+    FailEquals(expected, actual, msg, CallerAddr);
+end;
+
+procedure TAbstractTest.CheckNotEqualsWideString(const expected, actual: WideString; msg: string = '');
+begin
+  if expected = actual then
+    FailEquals(expected, actual, msg, CallerAddr);
+end;
+
+// Expected not to work under CLR (pointer based) - KGS
+procedure TAbstractTest.CheckNotEqualsMem(expected, actual: pointer; size:longword; msg:string='');
+begin
+  if CompareMem(expected, actual, size) then
+  begin
+    if msg <>'' then msg := msg + ', ';
+    Fail(msg+'Memory content was identical', CallerAddr);
+  end;
+end;
+{$ENDIF}
 
 procedure TAbstractTest.CheckEquals(expected, actual: integer; msg: string);
 begin
@@ -1287,6 +1580,54 @@ begin
     FailEquals(BoolToStr(expected), BoolToStr(actual), msg, CallerAddr);
 end;
 
+{ [KGS] IntToBin: Elected not to add to TestFrameWork interface,
+        many people already have a self made version: }
+function IntToBin(const value, digits: longword): string;
+const 
+  ALL_32_BIT_0 = '00000000000000000000000000000000';
+var
+  counter: integer;
+  pow:     integer;
+begin
+  Result := ALL_32_BIT_0;
+  SetLength(Result, digits);
+  pow := 1 shl (digits - 1);
+  if value <> 0 then
+  for counter := 0 to digits - 1 do
+  begin
+    if (value and (pow shr counter)) <> 0 then
+      Result[counter+1] := '1';
+  end;
+end;
+
+procedure TAbstractTest.CheckEqualsBin(expected, actual: longword;
+                                       msg: string = ''; digits: integer=32);
+begin
+  if expected <> actual then
+    FailNotEquals(IntToBin(expected, digits), IntToBin(actual, digits), msg, CallerAddr);
+end;
+
+procedure TAbstractTest.CheckNotEqualsBin(expected, actual: longword;
+                                       msg: string = ''; digits: integer=32);
+begin
+  if (expected = actual) then
+    FailEquals(IntToBin(expected, digits), IntToBin(actual, digits), msg, CallerAddr);
+end;
+
+procedure TAbstractTest.CheckEqualsHex(expected, actual: longword;
+                                       msg: string = ''; digits: integer=8);
+begin
+  if expected <> actual then
+    FailNotEquals(IntToHex(expected, digits), IntToHex(actual, digits), msg, CallerAddr);
+end;
+
+procedure TAbstractTest.CheckNotEqualsHex(expected, actual: longword;
+                                       msg: string = ''; digits: integer=8);
+begin
+  if (expected = actual) then
+    FailEquals(IntToHex(expected, digits), IntToHex(actual, digits), msg, CallerAddr);
+end;
+
 procedure TAbstractTest.CheckSame(expected, actual: TObject; msg: string);
 begin
     if (expected <> actual) then
@@ -1305,30 +1646,30 @@ begin
        FailNotSame('nil', PtrToStr(Pointer(obj)), msg, CallerAddr);
 end;
 
-function TAbstractTest.NotEqualsErrorMessage(expected, actual: string; msg: string): string;
+function TAbstractTest.NotEqualsErrorMessage(expected, actual: WideString; msg: string): WideString;
 begin
     if (msg <> '') then
         msg := msg + ', ';
-    Result := Format('%sexpected: <%s> but was: <%s>', [msg, expected, actual])
+    Result := Format( sExpButWasFmt , [msg, expected, actual])
 end;
 
-function TAbstractTest.EqualsErrorMessage(expected, actual: string; msg: string): string;
+function TAbstractTest.EqualsErrorMessage(expected, actual: WideString; msg: string): WideString;
 begin
     if (msg <> '') then
         msg := msg + ', ';
-    Result := Format('%sexpected and actual were: <%s>', [msg, expected])
+    Result := Format( sExpAndActualFmt, [msg, expected])
 end;
 
-function TAbstractTest.NotSameErrorMessage(expected, actual, msg: string): string;
+function TAbstractTest.NotSameErrorMessage(expected, actual, msg: string): WideString;
 begin
     if (msg <> '') then
         msg := msg + ', ';
-    Result := Format('%sexpected: <%s> but was: <%s>', [msg, expected, actual])
+    Result := Format( sExpButWasFmt, [msg, expected, actual])
 end;
 
 function TAbstractTest.BoolToStr(ABool: boolean): string;
 begin
-	Result := BooleanIdents[aBool];
+  Result := BooleanIdents[aBool];
 end;
 
 procedure TAbstractTest.StartExpectingException(e: ExceptionClass);
@@ -1337,12 +1678,22 @@ begin
   fExpectedException := e;
 end;
 
-procedure TAbstractTest.StopExpectingException(Msg :string);
+procedure TAbstractTest.StopExpectingException(msg :string);
 begin
-  if fExpectedException <> nil then
-    raise ETestFailure.Create(Format('Expected exception <%s> but there was none. %s', [fExpectedException.ClassName, Msg]));
+  try
+    if fExpectedException <> nil then
+    begin
+      Fail( Format( 'Expected exception "%s" but there was none. %s',
+                                        [fExpectedException.ClassName,
+                                        Msg]),
+                                        CallerAddr);
+    end;
+  finally
+    fExpectedException := nil;
+  end;
 end;
 
+{$IFNDEF CLR}
 procedure TAbstractTest.CheckMethodIsNotEmpty(MethodPointer: pointer);
 const
   AssemblerRet = $C3;
@@ -1350,11 +1701,12 @@ begin
   if byte(MethodPointer^) = AssemblerRet then
     fail('Empty test', MethodPointer);
 end;
+{$ENDIF}
 
 procedure TAbstractTest.CheckException(AMethod: TTestMethod; AExceptionClass: TClass; msg :string);
 begin
   try
-    AMethod;
+    Invoke(AMethod);
   except
     on e :Exception do
     begin
@@ -1393,31 +1745,70 @@ begin
    FailNotEquals(expected.ClassName, actual.ClassName, msg, CallerAddr)
 end;
 
-procedure TAbstractTest.CheckIs(obj: TObject; klass: TClass; msg: string);
+procedure TAbstractTest.CheckIs(AObject: TObject; AClass: TClass; msg: string);
 begin
- Assert(klass <> nil);
- if obj = nil then
-   FailNotEquals('nil', klass.ClassName, msg, CallerAddr)
- else if not obj.ClassType.InheritsFrom(klass) then
-   FailNotEquals(obj.ClassName, klass.ClassName, msg, CallerAddr)
+ Assert(AClass <> nil);
+ if AObject = nil then
+   FailNotEquals(AClass.ClassName, 'nil', msg, CallerAddr)
+ else if not AObject.ClassType.InheritsFrom(AClass) then
+   FailNotEquals(AClass.ClassName, AObject.ClassName, msg, CallerAddr)
 end;
 
+function TAbstractTest.GetGUIObject: TObject;
+begin
+  Result := FGUIObject;
+end;
+
+procedure TAbstractTest.SetGUIObject(const guiObject: TObject);
+begin
+  FGUIObject := guiObject;
+end;
 
 { TTestCase }
 
 constructor TTestCase.Create(MethodName: string);
+{$IFNDEF CLR}
 var
   RunMethod: TMethod;
+{$ENDIF}
 begin
   assert(length(MethodName) >0);
+{$IFNDEF CLR}
   assert(assigned(MethodAddress(MethodName)));
+{$ELSE}
+  assert(MethodName <> '');
+{$ENDIF}
 
   inherited Create(MethodName);
+{$IFDEF CLR}
+  FMethod := MethodName;
+{$ELSE}
   RunMethod.code := MethodAddress(MethodName);
   RunMethod.Data := self;
   fMethod := TTestMethod(RunMethod);
 
   assert(assigned(fMethod));
+{$ENDIF}
+end;
+
+procedure TTestCase.Invoke(AMethod: TTestMethod);
+{$IFDEF CLR}
+var
+  TestType: System.type;
+  Args: array of System.Object;
+  Flags: BindingFlags;
+{$ENDIF}
+begin
+{$IFDEF CLR}
+  try
+    GetType.InvokeMember(AMethod, BindingFlags.Public or BindingFlags.Instance or BindingFlags.InvokeMethod, nil, Self, Args);
+  except
+    on E:TargetInvocationException do
+      raise E.InnerException;
+  end;
+{$ELSE}
+  AMethod;
+{$ENDIF}
 end;
 
 procedure TTestCase.RunWithFixture(testResult: TTestResult);
@@ -1435,20 +1826,28 @@ begin
   assert(assigned(fMethod), 'Method "' + FTestName + '" not found');
   fExpectedException := nil;
   try
-    CheckMethodIsNotEmpty(tMethod(fMethod).Code);
-    fMethod;
-  except
-    on E: Exception  do
-    begin
-      if not Assigned(fExpectedException) then
-        raise
-      else if not E.ClassType.InheritsFrom(fExpectedException) then
-         FailNotEquals(fExpectedException.ClassName, E.ClassName, 'unexpected exception', ExceptAddr)
-      else
-        fExpectedException := nil;
-    end
+    try
+{$IFNDEF CLR}
+      CheckMethodIsNotEmpty(tMethod(fMethod).Code);
+{$ENDIF}
+      Invoke(fMethod);
+      StopExpectingException;
+    except
+      on E: ETestFailure  do
+      begin
+        raise;
+      end;
+      on E: Exception  do
+      begin
+        if  not Assigned(fExpectedException) then
+          raise
+        else if not E.ClassType.InheritsFrom(fExpectedException) then
+           FailNotEquals(fExpectedException.ClassName, E.ClassName, 'unexpected exception', ExceptAddr);
+      end
+    end;
+  finally
+    fExpectedException := nil;
   end;
-  StopExpectingException;
 end;
 
 procedure TTestCase.Run(testResult: TTestResult);
@@ -1534,7 +1933,7 @@ end;
 
 constructor TTestSuite.Create;
 begin
-  self.Create(self.ClassName);
+  Create(TObject.ClassName);
 end;
 
 constructor TTestSuite.Create(name: string);
@@ -1642,6 +2041,7 @@ begin
   assert(assigned(testResult));
   assert(assigned(fTests));
 
+  testResult.StartSuite(self);
   for i := 0 to fTests.Count - 1 do
   begin
     if testResult.ShouldStop then
@@ -1649,6 +2049,7 @@ begin
     test := fTests[i] as ITest;
     test.RunWithFixture(testResult);
   end;
+  testResult.EndSuite(self);
 end;
 
 function TTestSuite.Tests: IInterfaceList;
@@ -1660,22 +2061,26 @@ procedure TTestSuite.LoadConfiguration(const iniFile: TCustomIniFile; const sect
 var
   i    : integer;
   Tests: IInterfaceList;
+  TestSection: string;
 begin
   inherited LoadConfiguration(iniFile, section);
   Tests := self.Tests;
+  TestSection := section + '.' + self.GetName;
   for i := 0 to Tests.count-1 do
-    (Tests[i] as ITest).LoadConfiguration(iniFile, section + '.' + self.GetName);
+    (Tests[i] as ITest).LoadConfiguration(iniFile, TestSection);
 end;
 
 procedure TTestSuite.SaveConfiguration(const iniFile: TCustomIniFile; const section: string);
 var
   i    : integer;
   Tests: IInterfaceList;
+  TestSection: string;
 begin
   inherited SaveConfiguration(iniFile, section);
   Tests := self.Tests;
+  TestSection := section + '.' + self.GetName;
   for i := 0 to Tests.count-1 do
-    (Tests[i] as ITest).SaveConfiguration(iniFile, section + '.' + self.GetName);
+    (Tests[i] as ITest).SaveConfiguration(iniFile, TestSection);
 end;
 
 
@@ -1703,9 +2108,45 @@ begin
    inherited Create(msg)
 end;
 
+{ TMemIniFileTrimmed }
+
+function TMemIniFileTrimmed.ReadString(const Section, Ident,
+  Default: string): string;
+begin
+  // Trim the result for compatibility with TIniFile
+  Result := Trim(inherited ReadString(Section, Ident, Default));
+end;
+
 { TMethodEnumerator }
 
 constructor TMethodEnumerator.Create(AClass: TClass);
+{$IFDEF CLR}
+var
+  I, L: integer;
+  T: System.Type;
+  Methods: array of MethodInfo;
+
+  function IsTest(AMethod: MethodInfo): boolean;
+  var
+    CustomAttr: array of System.Object;
+    I: integer;
+  begin
+    Result := false;
+    if AMethod.IsPublic then
+    begin
+      CustomAttr := AMethod.GetCustomAttributes(false);
+
+      for I := 0 to System.Array(CustomAttr).Length - 1 do
+      begin
+        if CustomAttr[I].ClassNameIs('TestAttribute') then
+        begin
+          Result := true;
+          Break;
+        end;;
+      end;
+    end;
+  end;
+{$ELSE}
 type
   TMethodTable = packed record
     count: SmallInt;
@@ -1715,8 +2156,22 @@ var
   table: ^TMethodTable;
   name:  ^ShortString;
   i, j:  Integer;
+{$ENDIF}
 begin
   inherited Create;
+{$IFDEF CLR}
+  T := AClass.ClassInfo;
+  Methods := T.GetMethods();
+  L := 0;
+  SetLength(FMethodNameList, L);
+  for I := 0 to System.Array(Methods).Length - 1 do
+    if IsTest(Methods[I]) then
+    begin
+      L := L + 1;
+      SetLength(FMethodNameList, L);
+      FMethodNameList[L-1] := Methods[I].Name;
+    end;
+{$ELSE}
   while aclass <> nil do
   begin
     // *** HACK ALERT *** !!!
@@ -1747,6 +2202,7 @@ begin
     end;
     aclass := aclass.ClassParent;
   end;
+{$ENDIF}
 end;
 
 function TMethodEnumerator.GetMethodCount: Integer;
@@ -1802,57 +2258,65 @@ begin
     begin
       suiteName := path;
       pathRemainder := '';
-		end;
-		Tests := rootSuite.Tests;
+    end;
+    Tests := rootSuite.Tests;
 
-		// Check to see if the path already exists
-		targetSuite := nil;
-		Tests := rootSuite.Tests;
-		for i := 0 to Tests.count -1 do
-		begin
-			currentTest := Tests[i] as ITest;
-			currentTest.queryInterface(ITestSuite, suite);
-			if suite <> nil then
-			begin
-				if (currentTest.GetName = suiteName) then
-				begin
-					targetSuite := suite;
-					break;
-				end;
-			end;
-		end;
+    // Check to see if the path already exists
+    targetSuite := nil;
+    Tests := rootSuite.Tests;
+    for i := 0 to Tests.count -1 do
+    begin
+      currentTest := Tests[i] as ITest;
+{$IFDEF CLR}
+      if Supports(currentTest, ITestSuite, suite) then
+{$ELSE}
+      currentTest.queryInterface(ITestSuite, suite);
+      if Assigned(suite) then
+{$ENDIF}
+      begin
+        if (currentTest.GetName = suiteName) then
+        begin
+          targetSuite := suite;
+          break;
+        end;
+      end;
+    end;
 
-		if not assigned(targetSuite) then
-		begin
-			targetSuite := TTestSuite.Create(suiteName);
-			rootSuite.addTest(targetSuite);
-		end;
+    if not assigned(targetSuite) then
+    begin
+      targetSuite := TTestSuite.Create(suiteName);
+      rootSuite.addTest(targetSuite);
+    end;
 
-		RegisterTestInSuite(targetSuite, pathRemainder, test);
-	end;
+    RegisterTestInSuite(targetSuite, pathRemainder, test);
+  end;
 end;
 
 procedure CreateRegistry;
 var
-	MyName :AnsiString;
+  MyName :AnsiString;
 begin
-	SetLength(MyName, 1024);
-	GetModuleFileName(hInstance, PChar(MyName), Length(MyName));
-	MyName := Trim(PChar(MyName));
-	MyName := ExtractFileName(MyName);
-	__TestRegistry := TTestSuite.Create(MyName);
+{$IFDEF CLR}
+  MyName := ExtractFileName(ParamStr(0));
+{$ELSE}
+  SetLength(MyName, 1024);
+  GetModuleFileName(hInstance, PChar(MyName), Length(MyName));
+  MyName := Trim(PChar(MyName));
+  MyName := ExtractFileName(MyName);
+{$ENDIF}
+  __TestRegistry := TTestSuite.Create(MyName);
 end;
 
 procedure RegisterTest(SuitePath: string; test: ITest);
 begin
-	assert(assigned(test));
-	if __TestRegistry = nil then CreateRegistry;
-	RegisterTestInSuite(__TestRegistry, SuitePath, test);
+  assert(assigned(test));
+  if __TestRegistry = nil then CreateRegistry;
+  RegisterTestInSuite(__TestRegistry, SuitePath, test);
 end;
 
 procedure RegisterTest(test: ITest);
 begin
-	RegisterTest('', test);
+  RegisterTest('', test);
 end;
 
 procedure RegisterTests(SuitePath: string; const Tests: array of ITest);
@@ -1892,16 +2356,13 @@ end;
 
 procedure ClearRegistry;
 begin
-	__TestRegistry := nil;
+  __TestRegistry := nil;
 end;
 
 initialization
 {$IFDEF LINUX}
-//  PerformanceCounterInitValue := Now;
   InitPerformanceCounter;
 {$ENDIF}
 finalization
   ClearRegistry;
 end.
-
-

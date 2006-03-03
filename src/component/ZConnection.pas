@@ -74,7 +74,11 @@ uses
  {$IFDEF FPC}
   SysUtils, Classes, ZDbcIntfs, DB,ZCompatibility;
  {$ELSE}
-  SysUtils, Classes, ZDbcIntfs, DB,ZCompatibility,dbcommontypes;
+  {$IFNDEF VER180}
+   SysUtils, Classes, ZDbcIntfs, DB,ZCompatibility;
+  {$ELSE}
+   SysUtils, Classes, ZDbcIntfs, DB,ZCompatibility,dbcommontypes;
+  {$ENDIF}
  {$ENDIF}
 
 

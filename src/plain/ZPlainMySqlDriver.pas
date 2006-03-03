@@ -576,7 +576,6 @@ type
   end;
 
 
-
   TZMySQL5PlainDriver = class (TZAbstractObject, IZPlainDriver,IZMySQLPlainDriver)
   public
     constructor Create;
