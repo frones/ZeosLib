@@ -84,10 +84,6 @@ object frmMain: TfrmMain
       TabOrder = 3
       object tshQuery: TTabSheet
         Caption = ' &Query     '
-        ExplicitLeft = 0
-        ExplicitTop = 0
-        ExplicitWidth = 0
-        ExplicitHeight = 0
         object memQuery: TMemo
           Left = 0
           Top = 0
@@ -95,18 +91,16 @@ object frmMain: TfrmMain
           Height = 93
           Align = alClient
           Lines.Strings = (
-            'SELECT * FROM T;')
+            'SELECT * FROM TSITE;')
           TabOrder = 0
           OnChange = PropertiesChange
+          ExplicitLeft = -2
+          ExplicitTop = -2
         end
       end
       object tshInsert: TTabSheet
         Caption = '&Insert     '
         ImageIndex = 1
-        ExplicitLeft = 0
-        ExplicitTop = 0
-        ExplicitWidth = 0
-        ExplicitHeight = 0
         object memInsert: TMemo
           Left = 0
           Top = 0
@@ -122,10 +116,6 @@ object frmMain: TfrmMain
       object tshUpdate: TTabSheet
         Caption = '&Update    '
         ImageIndex = 2
-        ExplicitLeft = 0
-        ExplicitTop = 0
-        ExplicitWidth = 0
-        ExplicitHeight = 0
         object memUpdate: TMemo
           Left = 0
           Top = 0
@@ -139,10 +129,6 @@ object frmMain: TfrmMain
       object tshDelete: TTabSheet
         Caption = '&Delete     '
         ImageIndex = 3
-        ExplicitLeft = 0
-        ExplicitTop = 0
-        ExplicitWidth = 0
-        ExplicitHeight = 0
         object memDelete: TMemo
           Left = 0
           Top = 0

@@ -38,7 +38,6 @@
 program ZSimple;
 
 uses
-  ExceptionLog,
   Forms,
   ZSimpleMain in 'ZSimpleMain.pas' {frmMain};
 

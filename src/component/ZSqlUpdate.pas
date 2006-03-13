@@ -186,7 +186,8 @@ begin
   FDeleteSQL.Free;
   FInsertSQL.Free;
   FModifySQL.Free;
-
+  FRefreshSQL.Free;
+  
   inherited Destroy;
 end;
 

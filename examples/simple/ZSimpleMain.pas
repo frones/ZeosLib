@@ -143,7 +143,7 @@ begin
 //  Dataset.CachedUpdates := True;
 //  Dataset.IsUniDirectional := True;
 
-  dataset.SQL.Add('SELECT id,b FROM T1');
+  dataset.SQL.Add('SELECT * FROM tsite');
 //  Dataset.OnCalcFields := DataSetCalcFields;
 //  Dataset.OnFilterRecord := DataSetFilterRecord;
 //  Dataset.Filtered := True;

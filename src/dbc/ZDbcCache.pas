@@ -41,7 +41,6 @@ interface
 
 {$I ZDbc.inc}
 
-{$R-}
 
 uses
 {$IFNDEF VER130BELOW}

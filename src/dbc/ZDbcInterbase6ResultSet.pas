@@ -566,7 +566,6 @@ begin
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
 
   ColumnsInfo.Clear;
-  {$RANGECHECKS OFF}
   for I := 0 to FSqlData.GetFieldCount - 1 do
   begin
     ColumnInfo := TZColumnInfo.Create;
