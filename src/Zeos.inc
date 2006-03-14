@@ -40,28 +40,28 @@
 {$IFDEF BINARY_RELEASE}
 
 // Settings for Release mode
-{$C-}
-{$I-}
-{$R-}
-{$L-}
-{$Q-}
-{$IFNDEF FPC}
-{$O+}
-{$W-}
-{$ENDIF}
+{.$C-}
+{.$I-}
+{.$R-}
+{.$L-}
+{.$Q-}
+{.$IFNDEF FPC}
+{.$O+}
+{.$W-}
+{.$ENDIF}
 
 {$ELSE}
 
 // Settings for Debug mode
-{$C+}
-{$I+}
-{$R+}
-{$L+}
-{$Q+}
-{$IFNDEF FPC}
-{$O-}
-{$W+}
-{$ENDIF}
+{.$C+}
+{.$I+}
+{.$R+}
+{.$L+}
+{.$Q+}
+{.$IFNDEF FPC}
+{.$O-}
+{.$W+}
+{.$ENDIF}
 
 {$ENDIF}
 
