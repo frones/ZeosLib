@@ -163,6 +163,7 @@ type
     procedure PrepareTransaction(transactionid:string);virtual;
     procedure CommitPrepared(transactionid:string);virtual;
     procedure RollbackPrepared(transactionid:string);virtual;
+    procedure Ping_Server;virtual;
 
 
     procedure RegisterDataSet(DataSet: TDataset);
@@ -241,7 +242,6 @@ var
 constructor TZConnection.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-
   FAutoCommit := True;
   FReadOnly := False;
   FTransactIsolationLevel := tiNone;
@@ -715,6 +715,11 @@ begin
   begin
     UnregisterDataSet(TDataset(AComponent));
   end;
+end;
+
+procedure TZConnection.Ping_Server;
+begin
+ FConnection.Ping_Server;
 end;
 
 procedure TZConnection.PrepareTransaction(transactionid: string);

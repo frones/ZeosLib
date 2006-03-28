@@ -100,6 +100,8 @@ type
     procedure Commit; override;
     procedure Rollback; override;
 
+    procedure Ping_Server;override;
+
     procedure Open; override;
     procedure Close; override;
 
@@ -382,6 +384,14 @@ begin
   end;
 
   inherited Open;
+end;
+
+procedure TZMySQLConnection.Ping_Server;
+var i:integer;
+begin
+   i:=FPlainDriver.Ping(FHandle);
+   CheckMySQLError(FPlainDriver, FHandle, lcExecute,'PING MYSQL (FOS)');
+   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol,'PING MYSQL (FOS) '+inttostr(i));
 end;
 
 {**

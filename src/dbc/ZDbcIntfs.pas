@@ -218,8 +218,10 @@ type
     procedure CommitPrepared(transactionid:string);
     procedure RollbackPrepared(transactionid:string);
 
+    //Ping Server Support (firmos) 27032006
+    procedure Ping_Server;
 
-    procedure Open;
+    procedure Open;
     procedure Close;
     function IsClosed: Boolean;
 

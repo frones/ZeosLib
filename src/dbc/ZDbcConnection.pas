@@ -152,6 +152,9 @@ type
     procedure CommitPrepared(transactionid:string);virtual;
     procedure RollbackPrepared(transactionid:string);virtual;
 
+    //Ping Support initially for MySQL 27032006 (firmos)
+    procedure Ping_Server;virtual;
+
 
     procedure Open; virtual;
     procedure Close; virtual;
@@ -566,6 +569,11 @@ end;
   @return a new CallableStatement object containing the
     pre-compiled SQL statement
 }
+procedure TZAbstractConnection.Ping_Server;
+begin
+  RaiseUnsupportedException;
+end;
+
 function TZAbstractConnection.PrepareCall(
   SQL: string): IZCallableStatement;
 begin
