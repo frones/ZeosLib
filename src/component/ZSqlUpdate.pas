@@ -708,7 +708,7 @@ begin
          end;
         end;
        end;
-        if CONFIG.StatementCount<>1 then begin
+        if CONFIG.StatementCount=1 then begin
         Statement := Sender.GetStatement.GetConnection.PrepareStatement(Config.Statements[0].SQL);
         FillStatement(Sender, Statement, Config.Statements[0],OldRowAccessor, NewRowAccessor);
         RefreshResultSet:=Statement.ExecuteQueryPrepared;
