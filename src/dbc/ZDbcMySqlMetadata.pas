@@ -980,6 +980,8 @@ begin
         Close;
       end;
 
+      if TableNameList.Count = 0 then TableNameList.Add(TableNamePattern); //PATCH mdaems 02042006
+
       for I := 0 to TableNameList.Count - 1 do
       begin
         OrdPosition := 1;
