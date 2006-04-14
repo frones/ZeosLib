@@ -360,8 +360,13 @@ end;
   @return <code>true</code> if so; <code>false</code> otherwise
 }
 function TZMySQLDatabaseMetadata.SupportsOrderByUnrelated: Boolean;
+var
+  MajorVersion: Integer;
+  MinorVersion: Integer;
 begin
-  Result := False;
+  GetVersion(MajorVersion, MinorVersion);
+  // changed from False by mdaems. After testing with lower versions, please correct.
+  Result := MajorVersion >= 5;
 end;
 
 {**
@@ -799,6 +804,26 @@ begin
       Close;
     end;
 
+    // If a table was specified but not found, check if it could be a temporary table
+    IF Not Result.First and (TableNamePattern <> '%') then
+      Try
+        if GetConnection.CreateStatement.ExecuteQuery(
+          Format('SHOW COLUMNS FROM %s.%s',
+          [GetIdentifierConvertor.Quote(Catalog),
+          GetIdentifierConvertor.Quote(TableNamePattern)])).next then
+            begin
+              Result.MoveToInsertRow;
+              Result.UpdateString(1, Catalog);
+              Result.UpdateString(3, TableNamePattern);
+              Result.UpdateString(4, 'TABLE');
+              Result.InsertRow;
+            end;
+      Except
+        On EZSQLException Do
+          begin
+          end;
+      End;
+
     AddResultSetToCache(Key, Result);
   end;
 end;
@@ -979,8 +1004,6 @@ begin
         end;
         Close;
       end;
-
-      if TableNameList.Count = 0 then TableNameList.Add(TableNamePattern); //PATCH mdaems 02042006
 
       for I := 0 to TableNameList.Count - 1 do
       begin

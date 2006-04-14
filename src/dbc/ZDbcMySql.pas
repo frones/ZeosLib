@@ -312,6 +312,7 @@ var
   OldAutoCommit: Boolean;
   ConnectTimeout: Integer;
   SQL: PChar;
+  ClientFlag : Cardinal;
 begin
   if not Closed then Exit;
 
@@ -321,6 +322,7 @@ begin
   try
     { Sets a default port number. }
     if Port = 0 then Port := MYSQL_PORT;
+
     { Turn on compression protocol. }
     if StrToBoolEx(Info.Values['compress']) then
       FPlainDriver.SetOptions(FHandle, MYSQL_OPT_COMPRESS, nil);
@@ -331,32 +333,41 @@ begin
       FPlainDriver.SetOptions(FHandle, MYSQL_OPT_CONNECT_TIMEOUT,
         PChar(@ConnectTimeout));
     end;
+
+    { Set ClientFlag }
+    ClientFlag := 0;
+    if Not StrToBoolEx(Info.Values['dbless']) then ClientFlag := _CLIENT_CONNECT_WITH_DB;
+    if StrToBoolEx(Info.Values['CLIENT_LONG_PASSWORD']) then   ClientFlag := Clientflag OR _CLIENT_LONG_PASSWORD;	  { new more secure passwords }
+    if StrToBoolEx(Info.Values['CLIENT_FOUND_ROWS']) then   ClientFlag := Clientflag OR _CLIENT_FOUND_ROWS;	  { Found instead of affected rows }
+    if StrToBoolEx(Info.Values['CLIENT_LONG_FLAG']) then   ClientFlag := Clientflag OR _CLIENT_LONG_FLAG;	  { Get all column flags }
+    if StrToBoolEx(Info.Values['CLIENT_CONNECT_WITH_DB']) then   ClientFlag := Clientflag OR _CLIENT_CONNECT_WITH_DB;	  { One can specify db on connect }
+    if StrToBoolEx(Info.Values['CLIENT_NO_SCHEMA']) then   ClientFlag := Clientflag OR _CLIENT_NO_SCHEMA;	  { Don't allow database.table.column }
+    if StrToBoolEx(Info.Values['CLIENT_COMPRESS']) then   ClientFlag := Clientflag OR _CLIENT_COMPRESS;	  { Can use compression protcol }
+    if StrToBoolEx(Info.Values['CLIENT_ODBC']) then   ClientFlag := Clientflag OR _CLIENT_ODBC;	  { Odbc client }
+    if StrToBoolEx(Info.Values['CLIENT_LOCAL_FILES']) then   ClientFlag := Clientflag OR _CLIENT_LOCAL_FILES;  { Can use LOAD DATA LOCAL }
+    if StrToBoolEx(Info.Values['CLIENT_IGNORE_SPACE']) then   ClientFlag := Clientflag OR _CLIENT_IGNORE_SPACE;  { Ignore spaces before '(' }
+    if StrToBoolEx(Info.Values['CLIENT_CHANGE_USER']) then   ClientFlag := Clientflag OR _CLIENT_CHANGE_USER;  { Support the mysql_change_user() }
+    if StrToBoolEx(Info.Values['CLIENT_INTERACTIVE']) then   ClientFlag := Clientflag OR _CLIENT_INTERACTIVE; { This is an interactive client }
+    if StrToBoolEx(Info.Values['CLIENT_SSL']) then   ClientFlag := Clientflag OR _CLIENT_SSL; { Switch to SSL after handshake }
+    if StrToBoolEx(Info.Values['CLIENT_IGNORE_SIGPIPE']) then   ClientFlag := Clientflag OR _CLIENT_IGNORE_SIGPIPE; { IGNORE sigpipes }
+    if StrToBoolEx(Info.Values['CLIENT_TRANSACTIONS']) then   ClientFlag := Clientflag OR _CLIENT_TRANSACTIONS; { Client knows about transactions }
+    if StrToBoolEx(Info.Values['CLIENT_RESERVED']) then   ClientFlag := Clientflag OR _CLIENT_RESERVED; { Old flag for 4.1 protocol  }
+    if StrToBoolEx(Info.Values['CLIENT_SECURE_CONNECTION']) then   ClientFlag := Clientflag OR _CLIENT_SECURE_CONNECTION; { New 4.1 authentication }
+    if StrToBoolEx(Info.Values['CLIENT_MULTI_STATEMENTS']) then   ClientFlag := Clientflag OR _CLIENT_MULTI_STATEMENTS; { Enable/disable multi-stmt support }
+    if StrToBoolEx(Info.Values['CLIENT_MULTI_RESULTS']) then   ClientFlag := Clientflag OR _CLIENT_MULTI_RESULTS; { Enable/disable multi-results }
+    if StrToBoolEx(Info.Values['CLIENT_REMEMBER_OPTIONS']) then   ClientFlag := Clientflag OR _CLIENT_REMEMBER_OPTIONS; {Enable/disable multi-results }
+
     { Connect to MySQL database. }
-    if StrToBoolEx(Info.Values['dbless']) then
+    if FPlainDriver.RealConnect(FHandle, PChar(HostName), PChar(User),
+      PChar(Password), PChar(Database), Port, nil,
+      ClientFlag) = nil then
     begin
-      if FPlainDriver.RealConnect(FHandle, PChar(HostName), PChar(User),
-        PChar(Password), nil, Port, nil, 0) = nil then
-      begin
-        CheckMySQLError(FPlainDriver, FHandle, lcConnect, LogMessage);
-        DriverManager.LogError(lcConnect, FPlainDriver.GetProtocol, LogMessage,
-          0, SUnknownError);
-        raise EZSQLException.Create(SCanNotConnectToServer);
-      end;
-      DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
-    end
-    else
-    begin
-      if FPlainDriver.RealConnect(FHandle, PChar(HostName), PChar(User),
-        PChar(Password), PChar(Database), Port, nil,
-        _CLIENT_CONNECT_WITH_DB) = nil then
-      begin
-        CheckMySQLError(FPlainDriver, FHandle, lcConnect, LogMessage);
-        DriverManager.LogError(lcConnect, FPlainDriver.GetProtocol, LogMessage,
-          0, SUnknownError);
-        raise EZSQLException.Create(SCanNotConnectToServer);
-      end;
-      DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
+      CheckMySQLError(FPlainDriver, FHandle, lcConnect, LogMessage);
+      DriverManager.LogError(lcConnect, FPlainDriver.GetProtocol, LogMessage,
+        0, SUnknownError);
+      raise EZSQLException.Create(SCanNotConnectToServer);
     end;
+    DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
 
     { Sets a client codepage. }
     if FClientCodePage <> '' then

@@ -127,6 +127,11 @@ const
   _CLIENT_SSL             = 2048; { Switch to SSL after handshake }
   _CLIENT_IGNORE_SIGPIPE  = 4096; { IGNORE sigpipes }
   _CLIENT_TRANSACTIONS    = 8196; { Client knows about transactions }
+  _CLIENT_RESERVED        = 16384; { Old flag for 4.1 protocol  }
+  _CLIENT_SECURE_CONNECTION = 32768; { New 4.1 authentication }
+  _CLIENT_MULTI_STATEMENTS = 65536; { Enable/disable multi-stmt support }
+  _CLIENT_MULTI_RESULTS   = 131072; { Enable/disable multi-results }
+  _CLIENT_REMEMBER_OPTIONS = 2147483648; {Enable/disable multi-results }
 
 type
   PZMySQLConnect = Pointer;
