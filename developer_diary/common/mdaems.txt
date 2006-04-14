@@ -1,1 +1,3 @@
 20060414 : Updated lazarus package for correct compilation. (Missing packages, corrupt package file,...) - Asked by IgD
+
+20060414 : Const modifier added to function definitions where possible to improve speed. - Patch by AHUser - See  http://seegernet.koolhost.de/zeosforum/viewtopic.php?t=519

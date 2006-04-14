@@ -894,7 +894,7 @@ begin
   if not FPrepared then
     Result := ExecuteUpdate( SQL)
   else begin
-    Result := -1;
+//    Result := -1;
     with FASAConnection do
     begin
 

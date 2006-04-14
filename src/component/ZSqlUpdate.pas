@@ -449,7 +449,7 @@ var
   ParamValue: TParam;
   ParamName: string;
   OldParam: Boolean;
-  SeqParam: Boolean;
+//  SeqParam: Boolean;
   WasNull: Boolean;
   RowAccessor: TZRowAccessor;
   Stream: TStream;
@@ -458,7 +458,7 @@ begin
   for I := 0 to Config.ParamCount - 1 do begin
     ParamValue := Params.FindParam(Config.ParamNames[I]);
     ParamName := Config.ParamNames[I];
-    OldParam := False;Seqparam:=False;
+    OldParam := False;{Seqparam:=False;}
     if StrLIComp(PChar(ParamName), 'NEW_', 4) = 0 then begin
       ParamName := Copy(ParamName, 5, Length(ParamName) - 4)
     end else

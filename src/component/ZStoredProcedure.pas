@@ -62,7 +62,7 @@ type
 {    property CallableResultSet: IZCallableStatement read FCallableStatement
       write FCallableStatement;}
 
-    function CreateStatement(SQL: string; Properties: TStrings):
+    function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; override;
     procedure SetStatementParams(Statement: IZPreparedStatement;
       ParamNames: TStringDynArray; Params: TParams;
@@ -103,7 +103,7 @@ uses ZDatasetUtils;
   @param Properties a statement specific properties.
   @returns a created DBC statement.
 }
-function TZStoredProc.CreateStatement(SQL: string; Properties: TStrings):
+function TZStoredProc.CreateStatement(const SQL: string; Properties: TStrings):
   IZPreparedStatement;
 var
   I: Integer;

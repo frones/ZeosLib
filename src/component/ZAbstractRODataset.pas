@@ -77,7 +77,7 @@ type
     FStatusCode: String;
     procedure SetStatusCode(const Value: String);
    public
-    constructor Create(Msg: string);
+    constructor Create(const Msg: string);
     constructor CreateFromException(E: EZSQLThrowable);
 
     property ErrorCode: Integer read FErrorCode write FErrorCode;
@@ -155,13 +155,13 @@ type
     procedure SetConnection(Value: TZConnection);
     procedure SetDataSource(Value: TDataSource);
     function GetMasterFields: string;
-    procedure SetMasterFields(Value: string);
+    procedure SetMasterFields(const Value: string);
     function GetMasterDataSource: TDataSource;
     procedure SetMasterDataSource(Value: TDataSource);
     function GetIndexFieldNames: string;
-    procedure SetIndexFieldNames(Value: string);
+    procedure SetIndexFieldNames(const Value: string);
     procedure SetOptions(Value: TZDatasetOptions);
-    procedure SetSortedFields(Value: string);
+    procedure SetSortedFields(const Value: string);
     procedure SetProperties(const Value: TStrings);
 
     procedure UpdateSQLStrings(Sender: TObject);
@@ -258,9 +258,9 @@ type
     function AllocRecordBuffer: PChar; override;
     procedure FreeRecordBuffer(var Buffer: PChar); override;
     procedure CloseBlob(Field: TField); override;
-    function CreateStatement(SQL: string; Properties: TStrings):
+    function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; virtual;
-    function CreateResultSet(SQL: string; MaxRows: Integer):
+    function CreateResultSet(const SQL: string; MaxRows: Integer):
       IZResultSet; virtual;
 
     procedure CheckFieldCompatibility(Field: TField; FieldDef: TFieldDef);
@@ -283,7 +283,7 @@ type
     procedure SetBookmarkFlag(Buffer: PChar; Value: TBookmarkFlag); override;
     procedure SetBookmarkData(Buffer: PChar; Data: Pointer); override;
 
-    function InternalLocate(KeyFields: string; KeyValues: Variant;
+    function InternalLocate(const KeyFields: string; const KeyValues: Variant;
       Options: TLocateOptions): LongInt;
     function FindRecord(Restart, GoForward: Boolean): Boolean; override;
     procedure SetFiltered(Value: Boolean); override;
@@ -394,7 +394,7 @@ uses Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSchema,
   Constructs a database exception with a string message.
   @param Msg a string message which describes the error.
 }
-constructor EZDatabaseError.Create(Msg: string);
+constructor EZDatabaseError.Create(const Msg: string);
 begin
   inherited Create(Msg);
 end;
@@ -1448,7 +1448,7 @@ end;
   @param Properties a statement specific properties.
   @returns a created DBC statement.
 }
-function TZAbstractRODataset.CreateStatement(SQL: string; Properties: TStrings):
+function TZAbstractRODataset.CreateStatement(const SQL: string; Properties: TStrings):
   IZPreparedStatement;
 var
   Temp: TStrings;
@@ -1474,7 +1474,7 @@ end;
   @param MaxRows a maximum rows number (-1 for all).
   @returns a created DBC resultset.
 }
-function TZAbstractRODataset.CreateResultSet(SQL: string;
+function TZAbstractRODataset.CreateResultSet(const SQL: string;
   MaxRows: Integer): IZResultSet;
 begin
   Connection.ShowSQLHourGlass;
@@ -1755,7 +1755,7 @@ end;
   Sets master link fields.
   @param Value a new master link fields.
 }
-procedure TZAbstractRODataset.SetMasterFields(Value: string);
+procedure TZAbstractRODataset.SetMasterFields(const Value: string);
 begin
   if FMasterLink.FieldNames <> Value then
   begin
@@ -1837,7 +1837,7 @@ end;
   Sets a new list of index field names.
   @param Value a new list of index field names.
 }
-procedure TZAbstractRODataset.SetIndexFieldNames(Value: string);
+procedure TZAbstractRODataset.SetIndexFieldNames(const Value: string);
 begin
   if FIndexFieldNames <> Value then
   begin
@@ -1867,7 +1867,7 @@ end;
   Sets a new sorted fields.
   @param Value a new sorted fields.
 }
-procedure TZAbstractRODataset.SetSortedFields(Value: string);
+procedure TZAbstractRODataset.SetSortedFields(const Value: string);
 begin
   if FSortedFields <> Value then
   begin
@@ -2258,8 +2258,8 @@ end;
   @param Options a search options.
   @return an index of found row or -1 if nothing was found.
 }
-function TZAbstractRODataset.InternalLocate(KeyFields: string;
-  KeyValues: Variant; Options: TLocateOptions): LongInt;
+function TZAbstractRODataset.InternalLocate(const KeyFields: string;
+  const KeyValues: Variant; Options: TLocateOptions): LongInt;
 var
   I, RowNo, RowCount: Integer;
   FieldRefs: TObjectDynArray;

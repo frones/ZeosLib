@@ -447,7 +447,7 @@ end;
 }
 procedure TZASAConnection.Open;
 var
-  i: integer;
+//  i: integer;
   ConnectionString: string;
 begin
   if not Closed then Exit;

@@ -50,7 +50,7 @@ type
     FName: string;
     FValue: TZVariant;
   public
-    constructor Create(Name: string; Value: TZVariant);
+    constructor Create(const Name: string; const Value: TZVariant);
 
     property Name: string read FName write FName;
     property Value: TZVariant read FValue write FValue;
@@ -67,13 +67,13 @@ type
     function GetCount: Integer;
     function GetName(Index: Integer): string;
     function GetValue(Index: Integer): TZVariant;
-    procedure SetValue(Index: Integer; Value: TZVariant);
-    function GetValueByName(Name: string): TZVariant;
-    procedure SetValueByName(Name: string; Value: TZVariant);
+    procedure SetValue(Index: Integer; const Value: TZVariant);
+    function GetValueByName(const Name: string): TZVariant;
+    procedure SetValueByName(const Name: string; const Value: TZVariant);
 
-    procedure Add(Name: string; Value: TZVariant);
-    procedure Remove(Name: string);
-    function FindByName(Name: string): Integer;
+    procedure Add(const Name: string; const Value: TZVariant);
+    procedure Remove(const Name: string);
+    function FindByName(const Name: string): Integer;
 
     procedure ClearValues;
     procedure Clear;
@@ -90,7 +90,7 @@ uses ZMessages;
   @param Name a variable name.
   @param Value a variable value.
 }
-constructor TZVariable.Create(Name: string; Value: TZVariant);
+constructor TZVariable.Create(const Name: string; const Value: TZVariant);
 begin
   FName := Name;
   FValue := Value;
@@ -120,17 +120,18 @@ end;
   @param Name a name of the variable.
   @returns a found variable index or <code>-1</code> otherwise.
 }
-function TZVariablesList.FindByName(Name: string): Integer;
+function TZVariablesList.FindByName(const Name: string): Integer;
 var
   I: Integer;
   Current: TZVariable;
+  UpperName: string;
 begin
   Result := -1;
-  Name := UpperCase(Name);
+  UpperName := UpperCase(Name);
   for I := 0 to FVariables.Count - 1 do
   begin
     Current := TZVariable(FVariables[I]);
-    if Current.Name = Name then
+    if Current.Name = UpperName then
     begin
       Result := I;
       Break;
@@ -143,7 +144,7 @@ end;
   @param Name a name of the new variable.
   @param Value a value for the new variable.
 }
-procedure TZVariablesList.Add(Name: string; Value: TZVariant);
+procedure TZVariablesList.Add(const Name: string; const Value: TZVariant);
 begin
   if FindByName(Name) >= 0 then
     raise Exception.Create(Format(SVariableAlreadyExists, [Name]));
@@ -154,7 +155,7 @@ end;
   Removes a variable by specified name.
   @param Name a name of variable to be removed.
 }
-procedure TZVariablesList.Remove(Name: string);
+procedure TZVariablesList.Remove(const Name: string);
 var
   Index: Integer;
 begin
@@ -216,7 +217,7 @@ end;
   @param Name a variable name.
   @returns a variable value.
 }
-function TZVariablesList.GetValueByName(Name: string): TZVariant;
+function TZVariablesList.GetValueByName(const Name: string): TZVariant;
 var
   Index: Integer;
 begin
@@ -231,7 +232,7 @@ end;
   @param Index a variable index.
   @param Value a variable value.
 }
-procedure TZVariablesList.SetValue(Index: Integer; Value: TZVariant);
+procedure TZVariablesList.SetValue(Index: Integer; const Value: TZVariant);
 begin
   TZVariable(FVariables[Index]).Value := Value;
 end;
@@ -241,7 +242,7 @@ end;
   @param Index a variable name.
   @param Value a variable value.
 }
-procedure TZVariablesList.SetValueByName(Name: string; Value: TZVariant);
+procedure TZVariablesList.SetValueByName(const Name: string; const Value: TZVariant);
 var
   Index: Integer;
 begin

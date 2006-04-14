@@ -61,8 +61,8 @@ type
     function GetFunction(Index: Integer): IZFunction;
 
     procedure Add(Func: IZFunction);
-    procedure Remove(Name: string);
-    function FindByName(Name: string): Integer;
+    procedure Remove(const Name: string);
+    function FindByName(const Name: string): Integer;
 
     procedure Clear;
   end;
@@ -338,17 +338,18 @@ end;
 {**
   Finds a function reference
 }
-function TZFunctionsList.FindByName(Name: string): Integer;
+function TZFunctionsList.FindByName(const Name: string): Integer;
 var
   I: Integer;
   Current: IZFunction;
+  UpperName: string;
 begin
   Result := -1;
-  Name := UpperCase(Name);
+  UpperName := UpperCase(Name);
   for I := 0 to FFunctions.Count - 1 do
   begin
     Current := FFunctions[I] as IZFunction;
-    if UpperCase(Current.Name) = Name then
+    if UpperCase(Current.Name) = UpperName then
     begin
       Result := I;
       Break;
@@ -373,7 +374,7 @@ end;
   Removes a reference to functoin by it's name.
   @param Name a name of the function to be removed.
 }
-procedure TZFunctionsList.Remove(Name: string);
+procedure TZFunctionsList.Remove(const Name: string);
 var
   Index: Integer;
 begin

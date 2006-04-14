@@ -59,8 +59,8 @@ type
     function NextToken(Stream: TStream; FirstChar: Char;
       Tokenizer: TZTokenizer): TZToken; override;
 
-    function EncodeString(Value: string; QuoteChar: Char): string; override;
-    function DecodeString(Value: string; QuoteChar: Char): string; override;
+    function EncodeString(const Value: string; QuoteChar: Char): string; override;
+    function DecodeString(const Value: string; QuoteChar: Char): string; override;
   end;
 
   {**
@@ -250,7 +250,7 @@ end;
   @param QuoteChar a string quote character.
   @returns an encoded string.
 }
-function TZMySQLQuoteState.EncodeString(Value: string; QuoteChar: Char): string;
+function TZMySQLQuoteState.EncodeString(const Value: string; QuoteChar: Char): string;
 begin
   if QuoteChar in [#39, '"', '`'] then
     Result := QuoteChar + EncodeCString(Value) + QuoteChar
@@ -263,13 +263,16 @@ end;
   @param QuoteChar a string quote character.
   @returns an decoded string.
 }
-function TZMySQLQuoteState.DecodeString(Value: string; QuoteChar: Char): string;
+function TZMySQLQuoteState.DecodeString(const Value: string; QuoteChar: Char): string;
+var
+  Len: Integer;
 begin
-  if (Length(Value) >= 2) and (QuoteChar in [#39, '"', '`'])
-    and (Value[1] = QuoteChar) and (Value[Length(Value)] = QuoteChar) then
+  Len := Length(Value);
+  if (Len >= 2) and (QuoteChar in [#39, '"', '`'])
+    and (Value[1] = QuoteChar) and (Value[Len] = QuoteChar) then
   begin
-    if Length(Value) > 2 then
-      Result := DecodeCString(Copy(Value, 2, Length(Value) - 2))
+    if Len > 2 then
+      Result := DecodeCString(Copy(Value, 2, Len - 2))
     else Result := '';
   end
   else Result := Value;

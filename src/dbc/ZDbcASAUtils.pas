@@ -151,7 +151,7 @@ type
     function GetFieldCount: Integer;
     function GetFieldName(const Index: Word): string;
     function GetFieldIndex(const Name: String): Word;
-    function GetFieldScale(const Index: Word): integer;
+    function GetFieldScale(const Index: Word): Integer;
     function GetFieldSqlType(const Index: Word): TZSQLType;
     function GetFieldLength(const Index: Word): Word;
 
@@ -479,6 +479,7 @@ begin
       if StrLIComp( @FSQLDA.sqlvar[ Result].sqlname.data, PChar(Name),
         Length(name)) = 0 then Exit;
   CreateException( Format( SFieldNotFound1, [name]));
+  Result := 0; // satisfy compiler
 end;
 
 {**

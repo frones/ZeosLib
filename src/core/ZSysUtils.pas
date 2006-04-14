@@ -75,7 +75,7 @@ const
   @param Str a string to be checked.
   @return a position of the first found delimiter or 0 if no delimiters was found.
 }
-function FirstDelimiter(Delimiters: string; Str: string): Integer;
+function FirstDelimiter(const Delimiters, Str: string): Integer;
 
 {**
   Determines a position of a LAST delimiter.
@@ -83,7 +83,7 @@ function FirstDelimiter(Delimiters: string; Str: string): Integer;
   @param Str a string to be checked.
   @return a position of the last found delimiter or 0 if no delimiters was found.
 }
-function LastDelimiter(Delimiters: string; Str: string): Integer;
+function LastDelimiter(const Delimiters, Str: string): Integer;
 
 {**
   Checks is the string starts with substring.
@@ -91,7 +91,7 @@ function LastDelimiter(Delimiters: string; Str: string): Integer;
   @param SubStr a string to test at the start of the Str.
   @return <code>True</code> if Str started with SubStr;
 }
-function StartsWith(Str: string; SubStr: string): Boolean;
+function StartsWith(const Str, SubStr: string): Boolean;
 
 {**
   Checks is the string ends with substring.
@@ -99,7 +99,7 @@ function StartsWith(Str: string; SubStr: string): Boolean;
   @param SubStr a string to test at the end of the Str.
   @return <code>True</code> if Str ended with SubStr;
 }
-function EndsWith(Str: string; SubStr: string): Boolean;
+function EndsWith(const Str, SubStr: string): Boolean;
 
 {**
   Converts SQL string into float value.
@@ -114,7 +114,7 @@ function SQLStrToFloatDef(Str: string; Def: Extended): Extended;
   @param Str an SQL string with comma delimiter.
   @return a converted value or Def if conversion was failt.
 }
-function SQLStrToFloat(Str: string): Extended;
+function SQLStrToFloat(const Str: string): Extended;
 
 {**
   Converts a character buffer into pascal string.
@@ -137,7 +137,7 @@ function StrToBoolEx(Str: string): Boolean;
   @return <code>True</code> if the string can represent an IP address
     or <code>False</code> otherwise.
 }
-function IsIpAddr(Str: string): Boolean;
+function IsIpAddr(const Str: string): Boolean;
 
 {**
   Splits string using the multiple chars.
@@ -145,7 +145,7 @@ function IsIpAddr(Str: string): Boolean;
   @param Delimiters the delimiters string
   @return the result list where plased delimited string
 }
-function SplitString(Str, Delimiters: string): TStrings;
+function SplitString(Str: string; const Delimiters: string): TStrings;
 
 {**
   Puts to list a splitted string using the multiple chars which replaces
@@ -154,7 +154,7 @@ function SplitString(Str, Delimiters: string): TStrings;
   @param Str the source string
   @param Delimiters the delimiters string
 }
-procedure PutSplitString(List: TStrings; Str, Delimiters: string);
+procedure PutSplitString(List: TStrings; const Str, Delimiters: string);
 
 {**
   Appends to list a splitted string using the multiple chars.
@@ -162,7 +162,7 @@ procedure PutSplitString(List: TStrings; Str, Delimiters: string);
   @param Str the source string
   @param Delimiters the delimiters string
 }
-procedure AppendSplitString(List: TStrings; Str, Delimiters: string);
+procedure AppendSplitString(List: TStrings; const Str, Delimiters: string);
 
 {**
   Composes a string from the specified strings list delimited with
@@ -171,7 +171,7 @@ procedure AppendSplitString(List: TStrings; Str, Delimiters: string);
   @param Delimiter a delimiter string.
   @return a composed string from the list.
 }
-function ComposeString(List: TStrings; Delimiter: string): string;
+function ComposeString(List: TStrings; const Delimiter: string): string;
 
 {**
   Converts a float value into SQL string with '.' delimiter.
@@ -187,7 +187,7 @@ function FloatToSQLStr(Value: Extended): string;
   @param Str the source string
   @param Delimiters the delimiter string
 }
-procedure PutSplitStringEx(List: TStrings; Str, Delimiter: string);
+procedure PutSplitStringEx(List: TStrings; const Str, Delimiter: string);
 
 {**
   Splits string using the delimiter string.
@@ -195,7 +195,7 @@ procedure PutSplitStringEx(List: TStrings; Str, Delimiter: string);
   @param Delimiters the delimiter string
   @return the result list where plased delimited string
 }
-function SplitStringEx(Str, Delimiter: string): TStrings;
+function SplitStringEx(const Str, Delimiter: string): TStrings;
 
 {**
   Appends to list a splitted string using the delimeter string.
@@ -203,35 +203,35 @@ function SplitStringEx(Str, Delimiter: string): TStrings;
   @param Str the source string
   @param Delimiters the delimiters string
 }
-procedure AppendSplitStringEx(List: TStrings; Str, Delimiter: string);
+procedure AppendSplitStringEx(List: TStrings; const Str, Delimiter: string);
 
 {**
   Converts bytes into a string representation.
   @param Value an array of bytes to be converted.
   @return a converted string.
 }
-function BytesToStr(Value: TByteDynArray): string;
+function BytesToStr(const Value: TByteDynArray): string;
 
 {**
   Converts string into an array of bytes.
   @param Value a string to be converted.
   @return a converted array of bytes.
 }
-function StrToBytes(Value: string): TByteDynArray;
+function StrToBytes(const Value: string): TByteDynArray;
 
 {**
   Converts bytes into a variant representation.
   @param Value an array of bytes to be converted.
   @return a converted variant.
 }
-function BytesToVar(Value: TByteDynArray): Variant;
+function BytesToVar(const Value: TByteDynArray): Variant;
 
 {**
   Converts variant into an array of bytes.
   @param Value a varaint to be converted.
   @return a converted array of bytes.
 }
-function VarToBytes(Value: Variant): TByteDynArray;
+function VarToBytes(const Value: Variant): TByteDynArray;
 
 {$IFDEF VER130BELOW}
 {**
@@ -263,7 +263,7 @@ function StrToFloatDef(const S: string; const Default: Extended): Extended;
   @param Value a date and time string.
   @return a decoded TDateTime value.
 }
-function AnsiSQLDateToDateTime(Value: string): TDateTime;
+function AnsiSQLDateToDateTime(const Value: string): TDateTime;
 
 {**
   Converts TDateTime to Ansi SQL Date/Time
@@ -277,14 +277,14 @@ function DateTimeToAnsiSQLDate(Value: TDateTime): string;
   @param Value a regular string.
   @return a string in PostgreSQL escape format.
 }
-function EncodeCString(Value: string): string;
+function EncodeCString(const Value: string): string;
 
 {**
   Converts an string from escape PostgreSQL format.
   @param Value a string in PostgreSQL escape format.
   @return a regular string.
 }
-function DecodeCString(Value: string): string;
+function DecodeCString(const Value: string): string;
 
 {**
   Replace chars in the string
@@ -313,7 +313,7 @@ uses ZMatchPattern;
   @param Str a string to be checked.
   @return a position of the first found delimiter or 0 if no delimiters was found.
 }
-function FirstDelimiter(Delimiters: string; Str: string): Integer;
+function FirstDelimiter(const Delimiters, Str: string): Integer;
 var
   I, Index: Integer;
 begin
@@ -332,7 +332,7 @@ end;
   @param Str a string to be checked.
   @return a position of the last found delimiter or 0 if no delimiters was found.
 }
-function LastDelimiter(Delimiters: string; Str: string): Integer;
+function LastDelimiter(const Delimiters, Str: string): Integer;
 var
   I, Index: Integer;
 begin
@@ -354,7 +354,7 @@ end;
   @param SubStr a string to test at the start of the Str.
   @return <code>True</code> if Str started with SubStr;
 }
-function StartsWith(Str: string; SubStr: string): Boolean;
+function StartsWith(const Str, SubStr: string): Boolean;
 begin
   Result := Copy(Str, 1, Length(SubStr)) = SubStr;
 end;
@@ -365,7 +365,7 @@ end;
   @param SubStr a string to test at the end of the Str.
   @return <code>True</code> if Str ended with SubStr;
 }
-function EndsWith(Str: string; SubStr: string): Boolean;
+function EndsWith(const Str, SubStr: string): Boolean;
 begin
   if Length(SubStr) <= Length(Str) then
   begin
@@ -398,7 +398,7 @@ end;
   @param Str an SQL string with comma delimiter.
   @return a converted value or Def if conversion was failt.
 }
-function SQLStrToFloat(Str: string): Extended;
+function SQLStrToFloat(const Str: string): Extended;
 var
   OldDecimalSeparator: Char;
 begin
@@ -437,7 +437,7 @@ end;
   @return <code>True</code> if the string can represent an IP address
     or <code>False</code> otherwise.
 }
-function IsIpAddr(Str: string): Boolean;
+function IsIpAddr(const Str: string): Boolean;
 var
   I, N, M, Pos: Integer;
 begin
@@ -469,7 +469,7 @@ end;
   @param Delimiters the delimiters string
   @return the result list where plased delimited string
 }
-function SplitString(Str, Delimiters: string): TStrings;
+function SplitString(Str: string; const Delimiters: string): TStrings;
 var
   DelimPos: Integer;
 begin
@@ -495,7 +495,7 @@ end;
   @param Str the source string
   @param Delimiters the delimiters string
 }
-procedure PutSplitString(List: TStrings; Str, Delimiters: string);
+procedure PutSplitString(List: TStrings; const Str, Delimiters: string);
 var
   Temp: TStrings;
 begin
@@ -513,7 +513,7 @@ end;
   @param Str the source string
   @param Delimiters the delimiters string
 }
-procedure AppendSplitString(List: TStrings; Str, Delimiters: string);
+procedure AppendSplitString(List: TStrings; const Str, Delimiters: string);
 var
   Temp: TStrings;
 begin
@@ -532,7 +532,7 @@ end;
   @param Delimiter a delimiter string.
   @return a composed string from the list.
 }
-function ComposeString(List: TStrings; Delimiter: string): string;
+function ComposeString(List: TStrings; const Delimiter: string): string;
 var
   I: Integer;
 begin
@@ -567,7 +567,7 @@ end;
   @param Str the source string
   @param Delimiters the delimiter string
 }
-procedure PutSplitStringEx(List: TStrings; Str, Delimiter: string);
+procedure PutSplitStringEx(List: TStrings; const Str, Delimiter: string);
 var
   Temp: TStrings;
 begin
@@ -586,7 +586,7 @@ end;
   @param Delimiters the delimiter string
   @return the result list where plased delimited string
 }
-function SplitStringEx(Str, Delimiter: string): TStrings;
+function SplitStringEx(const Str, Delimiter: string): TStrings;
 var
  Pos: integer;
  Temp: string;
@@ -608,7 +608,7 @@ end;
   @param Str the source string
   @param Delimiters the delimiters string
 }
-procedure AppendSplitStringEx(List: TStrings; Str, Delimiter: string);
+procedure AppendSplitStringEx(List: TStrings; const Str, Delimiter: string);
 var
   Temp: TStrings;
 begin
@@ -625,7 +625,7 @@ end;
   @param Value an array of bytes to be converted.
   @return a converted string.
 }
-function BytesToStr(Value: TByteDynArray): string;
+function BytesToStr(const Value: TByteDynArray): string;
 var
   I: Integer;
 begin
@@ -639,7 +639,7 @@ end;
   @param Value a string to be converted.
   @return a converted array of bytes.
 }
-function StrToBytes(Value: string): TByteDynArray;
+function StrToBytes(const Value: string): TByteDynArray;
 var
   I: Integer;
 begin
@@ -653,7 +653,7 @@ end;
   @param Value an array of bytes to be converted.
   @return a converted variant.
 }
-function BytesToVar(Value: TByteDynArray): Variant;
+function BytesToVar(const Value: TByteDynArray): Variant;
 var
   I: Integer;
 begin
@@ -667,7 +667,7 @@ end;
   @param Value a varaint to be converted.
   @return a converted array of bytes.
 }
-function VarToBytes(Value: Variant): TByteDynArray;
+function VarToBytes(const Value: Variant): TByteDynArray;
 var
   I: Integer;
 begin
@@ -723,7 +723,7 @@ end;
   @param Value a date and time string.
   @return a decoded TDateTime value.
 }
-function AnsiSQLDateToDateTime(Value: string): TDateTime;
+function AnsiSQLDateToDateTime(const Value: string): TDateTime;
 var
   Year, Month, Day, Hour, Min, Sec: Word;
   Temp: string;
@@ -819,7 +819,7 @@ end;
   @param Value a regular string.
   @return a string in PostgreSQL escape format.
 }
-function EncodeCString(Value: string): string;
+function EncodeCString(const Value: string): string;
 var
   I: Integer;
   SrcLength, DestLength: Integer;
@@ -872,7 +872,7 @@ end;
   @param Value a string in PostgreSQL escape format.
   @return a regular string.
 }
-function DecodeCString(Value: string): string;
+function DecodeCString(const Value: string): string;
 var
   SrcLength, DestLength: Integer;
   SrcBuffer, DestBuffer: PChar;

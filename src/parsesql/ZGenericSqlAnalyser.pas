@@ -51,7 +51,7 @@ type
     FName: string;
     FTokens: TStrings;
   public
-    constructor Create(Name: string; Tokens: TStrings);
+    constructor Create(const Name: string; Tokens: TStrings);
     destructor Destroy; override;
 
     function Clone: TZStatementSection;
@@ -64,7 +64,7 @@ type
   IZStatementAnalyser = interface(IZInterface)
     ['{967635B6-411B-4DEF-990C-9C6C01F3DC0A}']
 
-    function TokenizeQuery(Tokenizer: IZTokenizer; SQL: string;
+    function TokenizeQuery(Tokenizer: IZTokenizer; const SQL: string;
       Cleanup: Boolean): TStrings;
     function SplitSections(Tokens: TStrings): TObjectList;
 
@@ -74,7 +74,7 @@ type
     function DefineSelectSchemaFromSections(
       Sections: TObjectList): IZSelectSchema;
     function DefineSelectSchemaFromQuery(Tokenizer: IZTokenizer;
-      SQL: string): IZSelectSchema;
+      const SQL: string): IZSelectSchema;
   end;
 
   {** Implements an SQL statements analyser. }
@@ -85,10 +85,10 @@ type
     FFromJoins: TStrings;
     FFromClauses: TStrings;
   protected
-    function ArrayToStrings(Value: array of string): TStrings;
+    function ArrayToStrings(const Value: array of string): TStrings;
     function CheckForKeyword(Tokens: TStrings; TokenIndex: Integer;
       Keywords: TStrings; var Keyword: string; var WordCount: Integer): Boolean;
-    function FindSectionTokens(Sections: TObjectList; Name: string): TStrings;
+    function FindSectionTokens(Sections: TObjectList; const Name: string): TStrings;
 
     procedure FillFieldRefs(SelectSchema: IZSelectSchema; SelectTokens: TStrings);
     procedure FillTableRefs(SelectSchema: IZSelectSchema; FromTokens: TStrings);
@@ -106,7 +106,7 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    function TokenizeQuery(Tokenizer: IZTokenizer; SQL: string;
+    function TokenizeQuery(Tokenizer: IZTokenizer; const SQL: string;
       Cleanup: Boolean): TStrings;
     function SplitSections(Tokens: TStrings): TObjectList;
 
@@ -115,7 +115,7 @@ type
 
     function DefineSelectSchemaFromSections(
       Sections: TObjectList): IZSelectSchema;
-    function DefineSelectSchemaFromQuery(Tokenizer: IZTokenizer; SQL: string):
+    function DefineSelectSchemaFromQuery(Tokenizer: IZTokenizer; const SQL: string):
       IZSelectSchema;
   end;
 
@@ -128,7 +128,7 @@ uses SysUtils;
 {**
   Create SQL statement section object.
 }
-constructor TZStatementSection.Create(Name: string; Tokens: TStrings);
+constructor TZStatementSection.Create(const Name: string; Tokens: TStrings);
 begin
   FName := Name;
   FTokens := Tokens;
@@ -209,7 +209,7 @@ end;
   @return a TStrings object with specified strings.
 }
 function TZGenericStatementAnalyser.ArrayToStrings(
-  Value: array of string): TStrings;
+  const Value: array of string): TStrings;
 var
   I: Integer;
 begin
@@ -280,7 +280,7 @@ end;
     if section is was not found.
 }
 function TZGenericStatementAnalyser.FindSectionTokens(
-  Sections: TObjectList; Name: string): TStrings;
+  Sections: TObjectList; const Name: string): TStrings;
 var
   I: Integer;
   Current: TZStatementSection;
@@ -304,7 +304,7 @@ end;
   @return a list with tokens.
 }
 function TZGenericStatementAnalyser.TokenizeQuery(
-  Tokenizer: IZTokenizer; SQL: string; Cleanup: Boolean): TStrings;
+  Tokenizer: IZTokenizer; const SQL: string; Cleanup: Boolean): TStrings;
 begin
   if Cleanup then
   begin
@@ -498,12 +498,12 @@ begin
       SelectTokens.Objects[TokenIndex]{$IFDEF FPC}){$ENDIF});
 
     { Switches to alias part. }
-    if (CurrentUpper = 'AS') or (CurrentType = ttWhitespace) then
+    if (CurrentType = ttWhitespace) or (CurrentUpper = 'AS') then
     begin
-      ReadField := ReadField and (CurrentUpper <> 'AS') and (Field = '');
+      ReadField := ReadField and (Field = '') and (CurrentUpper <> 'AS');
     end
     { Reads field. }
-    else if (ReadField = True) and ((CurrentType = ttWord) or
+    else if ReadField and ((CurrentType = ttWord) or
       (CurrentValue = '*')) then
     begin
       Catalog := Schema;
@@ -512,11 +512,11 @@ begin
       Field := CurrentValue;
     end
     { Skips a '.' in field part. }
-    else if (ReadField = True) and (CurrentValue = '.') then
+    else if ReadField and (CurrentValue = '.') then
     begin
     end
     { Reads alias. }
-    else if (ReadField = False) and (CurrentType = ttWord) then
+    else if not ReadField and (CurrentType = ttWord) then
     begin
       Alias := CurrentValue;
     end
@@ -630,23 +630,23 @@ begin
       end;
     end
     { Switches to alias part. }
-    else if (CurrentUpper = 'AS') or (CurrentType = ttWhitespace) then
+    else if (CurrentType = ttWhitespace) or (CurrentUpper = 'AS') then
     begin
-      ReadTable := ReadTable and (CurrentUpper <> 'AS') and (Table = '');
+      ReadTable := ReadTable and (Table = '') and (CurrentUpper <> 'AS');
     end
     { Reads table. }
-    else if (ReadTable = True) and (CurrentType = ttWord) then
+    else if ReadTable and (CurrentType = ttWord) then
     begin
       Catalog := Schema;
       Schema := Table;
       Table := CurrentValue;
     end
     { Skips a '.' in table part. }
-    else if (ReadTable = True) and (CurrentValue = '.') then
+    else if ReadTable and (CurrentValue = '.') then
     begin
     end
     { Reads alias. }
-    else if (ReadTable = False) and (CurrentType = ttWord) then
+    else if not ReadTable and (CurrentType = ttWord) then
     begin
       Alias := CurrentValue;
     end
@@ -706,7 +706,7 @@ end;
   @return a select statement schema.
 }
 function TZGenericStatementAnalyser.DefineSelectSchemaFromQuery(
-  Tokenizer: IZTokenizer; SQL: string): IZSelectSchema;
+  Tokenizer: IZTokenizer; const SQL: string): IZSelectSchema;
 var
   Tokens: TStrings;
   Sections: TObjectList;

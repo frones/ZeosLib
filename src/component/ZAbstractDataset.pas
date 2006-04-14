@@ -106,9 +106,9 @@ type
     procedure InternalUpdate;
     procedure InternalCancel; override;
 
-    function CreateStatement(SQL: string; Properties: TStrings):
+    function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; override;
-    function CreateResultSet(SQL: string; MaxRows: Integer):
+    function CreateResultSet(const SQL: string; MaxRows: Integer):
       IZResultSet; override;
     procedure Notification(AComponent: TComponent; Operation: TOperation);
       override;
@@ -259,7 +259,7 @@ end;
   @returns a created DBC statement.
 }
 function TZAbstractDataset.CreateStatement(
-  SQL: string; Properties: TStrings): IZPreparedStatement;
+  const SQL: string; Properties: TStrings): IZPreparedStatement;
 var
   Temp: TStrings;
 begin
@@ -290,7 +290,7 @@ end;
   @param MaxRows a maximum rows number (-1 for all).
   @returns a created DBC resultset.
 }
-function TZAbstractDataset.CreateResultSet(SQL: string; MaxRows: Integer):
+function TZAbstractDataset.CreateResultSet(const SQL: string; MaxRows: Integer):
   IZResultSet;
 begin
   Result := inherited CreateResultSet(SQL, MaxRows);

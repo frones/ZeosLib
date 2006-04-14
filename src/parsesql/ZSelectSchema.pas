@@ -49,10 +49,10 @@ type
   IZIdentifierConvertor = interface (IZInterface)
     ['{2EB07B9B-1E96-4A42-8084-6F98D9140B27}']
 
-    function IsCaseSensitive(Value: string): Boolean;
-    function IsQuoted(Value: string): Boolean;
-    function Quote(Value: string): string;
-    function ExtractQuote(Value: string): string;
+    function IsCaseSensitive(const Value: string): Boolean;
+    function IsQuoted(const Value: string): Boolean;
+    function Quote(const Value: string): string;
+    function ExtractQuote(const Value: string): string;
   end;
 
   {** Implements a table reference assembly. }
@@ -63,7 +63,7 @@ type
     FTable: string;
     FAlias: string;
   public
-    constructor Create(Catalog, Schema, Table, Alias: string);
+    constructor Create(const Catalog, Schema, Table, Alias: string);
     function FullName: string;
 
     property Catalog: string read FCatalog write FCatalog;
@@ -84,7 +84,7 @@ type
     FTableRef: TZTableRef;
     FLinked: Boolean;
   public
-    constructor Create(IsField: Boolean; Catalog, Schema, Table,
+    constructor Create(IsField: Boolean; const Catalog, Schema, Table,
       Field, Alias: string; TableRef: TZTableRef);
 
     property IsField: Boolean read FIsField write FIsField;
@@ -109,12 +109,12 @@ type
 
     procedure LinkReferences(Convertor: IZIdentifierConvertor);
 
-    function FindTableByFullName(Catalog, Schema, Table: string): TZTableRef;
-    function FindTableByShortName(Table: string): TZTableRef;
-    function FindFieldByShortName(Field: string): TZFieldRef;
+    function FindTableByFullName(const Catalog, Schema, Table: string): TZTableRef;
+    function FindTableByShortName(const Table: string): TZTableRef;
+    function FindFieldByShortName(const Field: string): TZFieldRef;
 
     function LinkFieldByIndexAndShortName(
-      ColumnIndex: Integer; Field: string): TZFieldRef;
+      ColumnIndex: Integer; const Field: string): TZFieldRef;
 
     function GetFieldCount: Integer;
     function GetTableCount: Integer;
@@ -146,12 +146,12 @@ type
 
     procedure LinkReferences(Convertor: IZIdentifierConvertor);
 
-    function FindTableByFullName(Catalog, Schema, Table: string): TZTableRef;
-    function FindTableByShortName(Table: string): TZTableRef;
-    function FindFieldByShortName(Field: string): TZFieldRef;
+    function FindTableByFullName(const Catalog, Schema, Table: string): TZTableRef;
+    function FindTableByShortName(const Table: string): TZTableRef;
+    function FindFieldByShortName(const Field: string): TZFieldRef;
 
     function LinkFieldByIndexAndShortName(
-      ColumnIndex: Integer; Field: string): TZFieldRef;
+      ColumnIndex: Integer; const Field: string): TZFieldRef;
 
     function GetFieldCount: Integer;
     function GetTableCount: Integer;
@@ -175,7 +175,7 @@ implementation
   @param Table a table name.
   @param Alias a table alias.
 }
-constructor TZTableRef.Create(Catalog, Schema, Table, Alias: string);
+constructor TZTableRef.Create(const Catalog, Schema, Table, Alias: string);
 begin
   FCatalog := Catalog;
   FSchema := Schema;
@@ -207,7 +207,7 @@ end;
   @param Field a field name.
   @param Alias a field alias.
 }
-constructor TZFieldRef.Create(IsField: Boolean; Catalog, Schema, Table,
+constructor TZFieldRef.Create(IsField: Boolean; const Catalog, Schema, Table,
   Field, Alias: string; TableRef: TZTableRef);
 begin
   FIsField := IsField;
@@ -248,7 +248,7 @@ end;
   @return a found table reference object or <code>null</code> otherwise.
 }
 function TZSelectSchema.FindTableByFullName(
-  Catalog, Schema, Table: string): TZTableRef;
+  const Catalog, Schema, Table: string): TZTableRef;
 var
   I: Integer;
   Current: TZTableRef;
@@ -283,7 +283,7 @@ end;
   @param Table a database table name or alias.
   @return a found table reference object or <code>null</code> otherwise.
 }
-function TZSelectSchema.FindTableByShortName(Table: string): TZTableRef;
+function TZSelectSchema.FindTableByShortName(const Table: string): TZTableRef;
 var
   I: Integer;
   Current: TZTableRef;
@@ -318,7 +318,7 @@ end;
   @param Field a table field name or alias.
   @return a found field reference object or <code>null</code> otherwise.
 }
-function TZSelectSchema.FindFieldByShortName(Field: string): TZFieldRef;
+function TZSelectSchema.FindFieldByShortName(const Field: string): TZFieldRef;
 var
   I: Integer;
   Current: TZFieldRef;
@@ -357,7 +357,7 @@ end;
   @return a found field reference object or <code>null</code> otherwise.
 }
 function TZSelectSchema.LinkFieldByIndexAndShortName(
-  ColumnIndex: Integer; Field: string): TZFieldRef;
+  ColumnIndex: Integer; const Field: string): TZFieldRef;
 var
   I: Integer;
   Current: TZFieldRef;

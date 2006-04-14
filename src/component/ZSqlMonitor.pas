@@ -84,7 +84,7 @@ type
 
     procedure LogEvent(Event: TZLoggingEvent);
     procedure Save();
-    procedure SaveToFile(FileName: string);
+    procedure SaveToFile(const FileName: string);
 
     property TraceCount: Integer read GetTraceCount;
     property TraceList[Index: Integer]: TZLoggingEvent read GetTraceItem;
@@ -217,7 +217,7 @@ end;
   Saves the logging events to the specified file.
   @param FileName a name of the file to write the events.
 }
-procedure TZSQLMonitor.SaveToFile(FileName: string);
+procedure TZSQLMonitor.SaveToFile(const FileName: string);
 var
   I: Integer;
   Stream: TFileStream;

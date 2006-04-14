@@ -138,7 +138,7 @@ type
     procedure CheckAutoCommitMode;
     procedure CheckNonAutoCommitMode;
 
-    function ConstructURL(UserName: string; Password: string): string;
+    function ConstructURL(const UserName, Password: string): string;
 
     procedure CloseAllDataSets;
     procedure UnregisterAllDataSets;
@@ -160,10 +160,10 @@ type
     procedure Commit; virtual;
     procedure Rollback; virtual;
 
-    procedure PrepareTransaction(transactionid:string);virtual;
-    procedure CommitPrepared(transactionid:string);virtual;
-    procedure RollbackPrepared(transactionid:string);virtual;
-    procedure Ping_Server;virtual;
+    procedure PrepareTransaction(const transactionid: string); virtual;
+    procedure CommitPrepared(const transactionid: string); virtual;
+    procedure RollbackPrepared(const transactionid: string); virtual;
+    procedure Ping_Server; virtual;
 
 
     procedure RegisterDataSet(DataSet: TDataset);
@@ -397,7 +397,7 @@ end;
   @param Password a user password.
   @returns a constructed connection URL.
 }
-function TZConnection.ConstructURL(UserName: string; Password: string): string;
+function TZConnection.ConstructURL(const UserName, Password: string): string;
 begin
   if Port <> 0 then
   begin
@@ -644,14 +644,15 @@ begin
     Dec(FExplicitTransactionCounter);
 end;
 
-procedure TZConnection.CommitPrepared(transactionid: string);
-var oldlev:TZTransactIsolationLevel;
+procedure TZConnection.CommitPrepared(const transactionid: string);
+var
+  oldlev: TZTransactIsolationLevel;
 begin
   CheckAutoCommitMode;
-  oldlev:=TransactIsolationLevel;
-  TransactIsolationLevel:=tiNone;
+  oldlev := TransactIsolationLevel;
+  TransactIsolationLevel := tiNone;
   FConnection.CommitPrepared(transactionid);
-  TransactIsolationLevel:=oldLev;
+  TransactIsolationLevel := oldLev;
 end;
 
 {**
@@ -686,14 +687,15 @@ begin
     Dec(FExplicitTransactionCounter);
 end;
 
-procedure TZConnection.RollbackPrepared(transactionid: string);
-var oldlev:TZTransactIsolationLevel;
+procedure TZConnection.RollbackPrepared(const transactionid: string);
+var
+  oldlev: TZTransactIsolationLevel;
 begin
   CheckAutoCommitMode;
-  oldlev:=TransactIsolationLevel;
-  TransactIsolationLevel:=tiNone;
+  oldlev := TransactIsolationLevel;
+  TransactIsolationLevel := tiNone;
   FConnection.RollbackPrepared(transactionid);
-  TransactIsolationLevel:=oldLev;
+  TransactIsolationLevel := oldLev;
 end;
 
 {procedure TZConnection.RollbackPrepared(transactionid: string);
@@ -722,9 +724,9 @@ begin
  FConnection.Ping_Server;
 end;
 
-procedure TZConnection.PrepareTransaction(transactionid: string);
-var
-  ExplicitTran: Boolean;
+procedure TZConnection.PrepareTransaction(const transactionid: string);
+{var
+  ExplicitTran: Boolean;}
 begin
   CheckConnected;
   CheckNonAutoCommitMode;
@@ -745,12 +747,12 @@ begin
 end;
 
 
-{procedure TZConnection.PrepareTransaction(transactionid: string);
+{procedure TZConnection.PrepareTransaction(const transactionid: string);
 begin
 
 end;
 
-*procedure TZConnection.PrepareTransaction(transactionid: string);
+*procedure TZConnection.PrepareTransaction(const transactionid: string);
 begin
 
 end;

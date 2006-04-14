@@ -310,16 +310,16 @@ type
   protected
     property Metadata: IZDatabaseMetadata read FMetadata write FMetadata;
 
-    function IsLowerCase(Value: string): Boolean;
-    function IsUpperCase(Value: string): Boolean;
-    function IsSpecialCase(Value: string): Boolean;
+    function IsLowerCase(const Value: string): Boolean;
+    function IsUpperCase(const Value: string): Boolean;
+    function IsSpecialCase(const Value: string): Boolean;
   public
     constructor Create(Metadata: IZDatabaseMetadata);
 
-    function IsCaseSensitive(Value: string): Boolean;
-    function IsQuoted(Value: string): Boolean;
-    function Quote(Value: string): string;
-    function ExtractQuote(Value: string): string;
+    function IsCaseSensitive(const Value: string): Boolean;
+    function IsQuoted(const Value: string): Boolean;
+    function Quote(const Value: string): string;
+    function ExtractQuote(const Value: string): string;
   end;
 
 var
@@ -2921,7 +2921,7 @@ end;
   @param an identifier string.
   @return <code>True</code> is the identifier string in lower case.
 }
-function TZDefaultIdentifierConvertor.IsLowerCase(Value: string): Boolean;
+function TZDefaultIdentifierConvertor.IsLowerCase(const Value: string): Boolean;
 var
   I: Integer;
 begin
@@ -2941,7 +2941,7 @@ end;
   @param an identifier string.
   @return <code>True</code> is the identifier string in upper case.
 }
-function TZDefaultIdentifierConvertor.IsUpperCase(Value: string): Boolean;
+function TZDefaultIdentifierConvertor.IsUpperCase(const Value: string): Boolean;
 var
   I: Integer;
 begin
@@ -2961,7 +2961,7 @@ end;
   @param an identifier string.
   @return <code>True</code> is the identifier string in mixed case.
 }
-function TZDefaultIdentifierConvertor.IsSpecialCase(Value: string): Boolean;
+function TZDefaultIdentifierConvertor.IsSpecialCase(const Value: string): Boolean;
 var
   I: Integer;
 begin
@@ -2980,7 +2980,7 @@ end;
   Checks is the string case sensitive.
   @return <code>True</code> if the string case sensitive.
 }
-function TZDefaultIdentifierConvertor.IsCaseSensitive(Value: string): Boolean;
+function TZDefaultIdentifierConvertor.IsCaseSensitive(const Value: string): Boolean;
 const
   AnsiSQLKeywords = 'insert,update,delete,select,drop,create,from,set,values,'
     + 'where,order,group,by,having,into,as,table,index,primary,key,on,is,null,'
@@ -3012,7 +3012,7 @@ end;
   Checks is the string quoted.
   @return <code>True</code> is the string quoted.
 }
-function TZDefaultIdentifierConvertor.IsQuoted(Value: string): Boolean;
+function TZDefaultIdentifierConvertor.IsQuoted(const Value: string): Boolean;
 var
   QuoteDelim: string;
 begin
@@ -3025,7 +3025,7 @@ end;
   @param an identifier string.
   @return a extracted and processed string.
 }
-function TZDefaultIdentifierConvertor.ExtractQuote(Value: string): string;
+function TZDefaultIdentifierConvertor.ExtractQuote(const Value: string): string;
 begin
   if IsQuoted(Value) then
   begin
@@ -3056,7 +3056,7 @@ end;
   @param an identifier string.
   @return a quoted string.
 }
-function TZDefaultIdentifierConvertor.Quote(Value: string): string;
+function TZDefaultIdentifierConvertor.Quote(const Value: string): string;
 var
   QuoteDelim: string;
 begin

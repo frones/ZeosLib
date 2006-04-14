@@ -119,7 +119,7 @@ var
     APassword: string): Boolean;
   DBScreen: IDBScreen;
 
-function StrToFloatDef(Str: string; Def: Extended): Extended;
+function StrToFloatDef(const Str: string; Def: Extended): Extended;
 {$ENDIF}
 
 {$IFDEF VER130BELOW}
@@ -148,7 +148,7 @@ implementation
 
 {$IFDEF VER130BELOW}
 
-function StrToFloatDef(Str: string; Def: Extended): Extended;
+function StrToFloatDef(const Str: string; Def: Extended): Extended;
 begin
   try
     if Str <> '' then
