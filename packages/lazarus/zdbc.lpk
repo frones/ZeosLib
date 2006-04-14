@@ -193,7 +193,7 @@
       </Item42>
       <Item43>
         <Filename Value="../../src/dbc/ZDbcASA.pas"/>
-        <UnitName Value="ZDbcASA/>
+        <UnitName Value="ZDbcASA"/>
       </Item43>
       <Item44>
         <Filename Value="../../src/dbc/ZDbcASAMetadata.pas"/>

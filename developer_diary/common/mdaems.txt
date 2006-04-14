@@ -1,0 +1,1 @@
+20060414 : Updated lazarus package for correct compilation. (Missing packages, corrupt package file,...) - Asked by IgD
