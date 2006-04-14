@@ -6,7 +6,7 @@
       <Version Value="5"/>
       <SearchPaths>
         <OtherUnitFiles Value="../../src/dbc/"/>
-        <UnitOutputDirectory Value="build/"/>
+        <UnitOutputDirectory Value="build"/>
       </SearchPaths>
       <Parsing>
         <SyntaxOptions>
@@ -22,7 +22,7 @@
     </CompilerOptions>
     <Description Value="Zeos Low Level Database API"/>
     <Version Major="6" Minor="5" Release="1"/>
-    <Files Count="42">
+    <Files Count="45">
       <Item1>
         <Filename Value="../../src/dbc/ZDbcCache.pas"/>
         <UnitName Value="ZDbcCache"/>
@@ -203,14 +203,6 @@
         <Filename Value="../../src/dbc/ZDbcASAResultSet.pas"/>
         <UnitName Value="ZDbcASAResultSet"/>
       </Item45>
-      <Item46>
-        <Filename Value="../../src/dbc/ZDbcSqLiteStatement.pas"/>
-        <UnitName Value="ZDbcASAStatement"/>
-      </Item46>
-      <Item47>
-        <Filename Value="../../src/dbc/ZDbcSqLiteUtils.pas"/>
-        <UnitName Value="ZDbcASAUtils"/>
-      </Item47>
     </Files>
     <RequiredPkgs Count="5">
       <Item1>
@@ -235,6 +227,7 @@
     </UsageOptions>
     <PublishOptions>
       <Version Value="2"/>
+      <DestinationDirectory Value="$(TestDir)/publishedpackage/"/>
       <IgnoreBinaries Value="False"/>
     </PublishOptions>
   </Package>
