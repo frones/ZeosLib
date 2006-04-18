@@ -2304,27 +2304,31 @@ begin
   Stream.Position := 0;
   BlobSize := Stream.Size;
   Buffer := AllocMem(BlobSize);
-  Stream.ReadBuffer(Buffer^, BlobSize);
+  Try
+    Stream.ReadBuffer(Buffer^, BlobSize);
 
-  { put data to blob }
-  CurPos := 0;
-  SegLen := DefaultBlobSegmentSize;
-  while (CurPos < BlobSize) do
-  begin
-    if (CurPos + SegLen > BlobSize) then
-      SegLen := BlobSize - CurPos;
-    if FPlainDriver.isc_put_segment(@StatusVector, @BlobHandle, SegLen,
-         PChar(@Buffer[CurPos])) > 0 then
+    { put data to blob }
+    CurPos := 0;
+    SegLen := DefaultBlobSegmentSize;
+    while (CurPos < BlobSize) do
+    begin
+      if (CurPos + SegLen > BlobSize) then
+        SegLen := BlobSize - CurPos;
+      if FPlainDriver.isc_put_segment(@StatusVector, @BlobHandle, SegLen,
+           PChar(@Buffer[CurPos])) > 0 then
+        CheckInterbase6Error(FPlainDriver, StatusVector);
+      Inc(CurPos, SegLen);
+    end;
+
+    { close blob handle }
+    FPlainDriver.isc_close_blob(@StatusVector, @BlobHandle);
     CheckInterbase6Error(FPlainDriver, StatusVector);
-    Inc(CurPos, SegLen);
-  end;
 
-  { close blob handle }
-  FPlainDriver.isc_close_blob(@StatusVector, @BlobHandle);
-  CheckInterbase6Error(FPlainDriver, StatusVector);
-
-  Stream.Seek(0, 0);
-  UpdateQuad(Index, BlobId);
+    Stream.Seek(0, 0);
+    UpdateQuad(Index, BlobId);
+  Finally
+    Freemem(Buffer);
+  End;
 end;
 
 { TResultSQLDA }
