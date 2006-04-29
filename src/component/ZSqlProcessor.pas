@@ -402,7 +402,9 @@ procedure TZSQLProcessor.Parse;
 begin
   CheckConnected;
   FScriptParser.Tokenizer := Connection.DbcDriver.GetTokenizer;
-  FScriptParser.Clear;
+// mdaems 20060429 : Clear would reset the delimiter of the scriptparser
+//  FScriptParser.Clear;
+  FScriptParser.ClearUncompleted;
   FScriptParser.ParseText(FScript.Text);
 end;
 
