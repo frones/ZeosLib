@@ -854,6 +854,7 @@ var i: Integer;
     val,cname,ctype: PChar;
     pazValue0, pazColName0, pazColType: PPChar;
 begin
+  pazValue0 := nil; // satisfy compiler
   Result := ZPlainSqLite3.sqlite_step(pVm);
   if (Result=SQLITE_ROW) or (Result=SQLITE_DONE) then begin
     pN:= ZPlainSqLite3.sqlite_column_count(pVm);
@@ -864,15 +865,22 @@ begin
     pazColName:= AllocMem(SizeOf(PPChar)*pN*2+1);
     pazColName0:= pazColName;
     pazColType:= pazColName;
-    for i:=1 to pN do
-      inc(pazColType);
+
+    Inc(pazColType, pN);
+//    for i:=1 to pN do
+//      inc(pazColType);
     for i:=0 to pN-1 do begin
-      if  Result=SQLITE_ROW then
+      if Result = SQLITE_ROW then
+      begin
         val  := ZPlainSqLite3.sqlite_column_bytes(pVm, i);
-      cname:= ZPlainSqLite3.sqlite_column_name(pVm, i);
-      ctype:= ZPlainSqLite3.sqlite_column_decltype(pVm, i);
-      if  Result=SQLITE_ROW then begin
+        cname:= ZPlainSqLite3.sqlite_column_name(pVm, i);
+        ctype:= ZPlainSqLite3.sqlite_column_decltype(pVm, i);
         pazValue0^  := val; inc(pazValue0);
+      end
+      else
+      begin
+        cname:= ZPlainSqLite3.sqlite_column_name(pVm, i);
+        ctype:= ZPlainSqLite3.sqlite_column_decltype(pVm, i);
       end;
       pazColName0^:= cname;
       pazColType^ := ctype;

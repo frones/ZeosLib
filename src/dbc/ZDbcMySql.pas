@@ -59,10 +59,10 @@ type
     FMySQL41PlainDriver: IZMySQLPlainDriver;
     FMySQL5PlainDriver: IZMySQLPlainDriver;
   protected
-    function GetPlainDriver(Url: string): IZMySQLPlainDriver;
+    function GetPlainDriver(const Url: string): IZMySQLPlainDriver;
   public
     constructor Create;
-    function Connect(Url: string; Info: TStrings): IZConnection; override;
+    function Connect(const Url: string; Info: TStrings): IZConnection; override;
 
     function GetSupportedProtocols: TStringDynArray; override;
     function GetMajorVersion: Integer; override;
@@ -88,13 +88,13 @@ type
     FHandle: PZMySQLConnect;
     FClientCodePage: string;
   public
-    constructor Create(Driver: IZDriver; Url: string;
-      PlainDriver: IZMySQLPlainDriver; HostName: string; Port: Integer;
-      Database: string; User: string; Password: string; Info: TStrings);
+    constructor Create(Driver: IZDriver; const Url: string;
+      PlainDriver: IZMySQLPlainDriver; const HostName: string; Port: Integer;
+      const Database: string; const User: string; const Password: string; Info: TStrings);
     destructor Destroy; override;
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
-    function CreatePreparedStatement(SQL: string; Info: TStrings):
+    function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
 
     procedure Commit; override;
@@ -105,7 +105,7 @@ type
     procedure Open; override;
     procedure Close; override;
 
-    procedure SetCatalog(Catalog: string); override;
+    procedure SetCatalog(const Catalog: string); override;
     function GetCatalog: string; override;
 
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
@@ -163,7 +163,7 @@ end;
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
-function TZMySQLDriver.Connect(Url: string; Info: TStrings): IZConnection;
+function TZMySQLDriver.Connect(const Url: string; Info: TStrings): IZConnection;
 var
   TempInfo: TStrings;
   HostName, Database, UserName, Password: string;
@@ -242,7 +242,7 @@ end;
   @param Url a database connection URL.
   @return a selected protocol.
 }
-function TZMySQLDriver.GetPlainDriver(Url: string): IZMySQLPlainDriver;
+function TZMySQLDriver.GetPlainDriver(const Url: string): IZMySQLPlainDriver;
 var
   Protocol: string;
 begin
@@ -275,9 +275,9 @@ end;
   @param Password a user password.
   @param Info a string list with extra connection parameters.
 }
-constructor TZMySQLConnection.Create(Driver: IZDriver; Url: string;
-  PlainDriver: IZMySQLPlainDriver; HostName: string; Port: Integer;
-  Database, User, Password: string; Info: TStrings);
+constructor TZMySQLConnection.Create(Driver: IZDriver; const Url: string;
+  PlainDriver: IZMySQLPlainDriver; const HostName: string; Port: Integer;
+  const Database, User, Password: string; Info: TStrings);
 begin
   inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
     TZMySQLDatabaseMetadata.Create(Self, Url, Info));
@@ -454,7 +454,7 @@ end;
   @return a new PreparedStatement object containing the
     pre-compiled statement
 }
-function TZMySQLConnection.CreatePreparedStatement(SQL: string;
+function TZMySQLConnection.CreatePreparedStatement(const SQL: string;
   Info: TStrings): IZPreparedStatement;
 begin
   if IsClosed then Open;
@@ -541,7 +541,7 @@ end;
   Sets a new selected catalog name.
   @param Catalog a selected catalog name.
 }
-procedure TZMySQLConnection.SetCatalog(Catalog: string);
+procedure TZMySQLConnection.SetCatalog(const Catalog: string);
 begin
   FCatalog := Catalog;
 end;

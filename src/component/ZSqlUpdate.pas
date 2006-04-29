@@ -69,8 +69,8 @@ type
     FAfterDeleteSQL: TNotifyEvent;
     FAfterInsertSQL: TNotifyEvent;
     FAfterModifySQL: TNotifyEvent;
-    FRefresh_OLD_ID_SEQ: boolean;
-    procedure SetRefresh_OLD_ID_SEQ(const Value: boolean);
+    FRefresh_OLD_ID_SEQ: Boolean;
+    procedure SetRefresh_OLD_ID_SEQ(const Value: Boolean);
 
     procedure SetDataset(Value: TDataset);
     function GetSQL(UpdateKind: TUpdateKind): TStrings;
@@ -89,7 +89,7 @@ type
 
     //FOSPATCH
     function GetRefreshSQL: TStrings;
-    procedure SetRefreshSQL(const Value: TStrings);
+    procedure SetRefreshSQL(Value: TStrings);
     //FOSPATCH
 
     procedure ReadParamData(Reader: TReader);
@@ -130,7 +130,7 @@ type
     //FOSPATCH
     property RefreshSQL: TStrings read GetRefreshSQL write SetRefreshSQL;
     //FOSPATCH
-    property Refresh_OLD_ID_SEQ:boolean read FRefresh_OLD_ID_SEQ write SetRefresh_OLD_ID_SEQ;
+    property Refresh_OLD_ID_SEQ:Boolean read FRefresh_OLD_ID_SEQ write SetRefresh_OLD_ID_SEQ;
 
 
     property Params: TParams read FParams write SetParamsList stored False;
@@ -285,12 +285,12 @@ begin
   FParams.AssignValues(Value);
 end;
 
-procedure TZUpdateSQL.SetRefreshSQL(const Value: TStrings);
+procedure TZUpdateSQL.SetRefreshSQL(Value: TStrings);
 begin
   FRefreshSQL.Assign(Value);
 end;
 
-procedure TZUpdateSQL.SetRefresh_OLD_ID_SEQ(const Value: boolean);
+procedure TZUpdateSQL.SetRefresh_OLD_ID_SEQ(const Value: Boolean);
 begin
   FRefresh_OLD_ID_SEQ := Value;
 end;
@@ -616,44 +616,45 @@ var I: Integer;
     Refresh_OldSQL:String;
     RefreshColumnType:TZSQLType;
 
- procedure Apply_RefreshResultSet;
- var i:integer;
- begin
-        if Assigned(RefreshResultSet) then begin
-           if not RefreshResultSet.First then begin
-            raise EZDatabaseError.Create(SUpdateSQLNoResult);
-           end;
-           for I := 1 to RefreshResultSet.GetMetadata.GetColumnCount do begin
-              RefreshColumnName:=RefreshResultSet.GetMetadata.GetColumnName(I); // What Column from Resultset should be updated
-              RefreshColumnIndex := Sender.FindColumn(RefreshColumnName); // Is the Column available in the select ?
-              if RefreshColumnIndex=0 then begin
-                continue; // Column not found in Select from Dataset
-              end;
-              if RefreshResultSet.IsNull(I) then begin
-               RefreshRowAccessor.SetNull(I);
-              end else begin
-               RefreshColumnType  := RefreshResultSet.GetMetadata.GetColumnType(RefreshColumnIndex); // Type of Column ?
-               case RefreshColumnType of
-                 stBoolean: RefreshRowAccessor.SetBoolean(RefreshColumnIndex, RefreshResultSet.GetBoolean(I));
-                 stByte: RefreshRowAccessor.SetByte(RefreshColumnIndex, RefreshResultSet.GetByte(I));
-                 stShort: RefreshRowAccessor.SetShort(RefreshColumnIndex, RefreshResultSet.GetShort(I));
-                 stInteger: RefreshRowAccessor.SetInt(RefreshColumnIndex, RefreshResultSet.GetInt(I));
-                 stLong: RefreshRowAccessor.SetLong(RefreshColumnIndex, RefreshResultSet.GetLong(I));
-                 stFloat: RefreshRowAccessor.SetFloat(RefreshColumnIndex, RefreshResultSet.GetFloat(I));
-                 stDouble: RefreshRowAccessor.SetDouble(RefreshColumnIndex, RefreshResultSet.GetDouble(I));
-                 stBigDecimal: RefreshRowAccessor.SetBigDecimal(RefreshColumnIndex, RefreshResultSet.GetBigDecimal(I));
-                 stString: RefreshRowAccessor.SetPChar(RefreshColumnIndex, RefreshResultSet.GetPChar(I));
-                 stUnicodeString: RefreshRowAccessor.SetUnicodeString(RefreshColumnIndex, RefreshResultSet.GetUnicodeString(I));
-                 stBytes: RefreshRowAccessor.SetBytes(RefreshColumnIndex, RefreshResultSet.GetBytes(I));
-                 stDate: RefreshRowAccessor.SetDate(RefreshColumnIndex, RefreshResultSet.GetDate(I));
-                 stTime: RefreshRowAccessor.SetTime(RefreshColumnIndex, RefreshResultSet.GetTime(I));
-                 stTimestamp: RefreshRowAccessor.SetTimestamp(RefreshColumnIndex, RefreshResultSet.GetTimestamp(I));
-                 stAsciiStream, stUnicodeStream, stBinaryStream:RefreshRowAccessor.SetBlob(RefreshColumnIndex, RefreshResultSet.GetBlob(I));
-               end;
-              end;
-           end;
+  procedure Apply_RefreshResultSet;
+  var
+    i: Integer;
+  begin
+    if Assigned(RefreshResultSet) then begin
+      if not RefreshResultSet.First then begin
+        raise EZDatabaseError.Create(SUpdateSQLNoResult);
+      end;
+      for I := 1 to RefreshResultSet.GetMetadata.GetColumnCount do begin
+        RefreshColumnName:=RefreshResultSet.GetMetadata.GetColumnName(I); // What Column from Resultset should be updated
+        RefreshColumnIndex := Sender.FindColumn(RefreshColumnName); // Is the Column available in the select ?
+        if RefreshColumnIndex=0 then begin
+          continue; // Column not found in Select from Dataset
         end;
- end;
+        if RefreshResultSet.IsNull(I) then begin
+          RefreshRowAccessor.SetNull(I);
+        end else begin
+          RefreshColumnType  := RefreshResultSet.GetMetadata.GetColumnType(RefreshColumnIndex); // Type of Column ?
+          case RefreshColumnType of
+            stBoolean: RefreshRowAccessor.SetBoolean(RefreshColumnIndex, RefreshResultSet.GetBoolean(I));
+            stByte: RefreshRowAccessor.SetByte(RefreshColumnIndex, RefreshResultSet.GetByte(I));
+            stShort: RefreshRowAccessor.SetShort(RefreshColumnIndex, RefreshResultSet.GetShort(I));
+            stInteger: RefreshRowAccessor.SetInt(RefreshColumnIndex, RefreshResultSet.GetInt(I));
+            stLong: RefreshRowAccessor.SetLong(RefreshColumnIndex, RefreshResultSet.GetLong(I));
+            stFloat: RefreshRowAccessor.SetFloat(RefreshColumnIndex, RefreshResultSet.GetFloat(I));
+            stDouble: RefreshRowAccessor.SetDouble(RefreshColumnIndex, RefreshResultSet.GetDouble(I));
+            stBigDecimal: RefreshRowAccessor.SetBigDecimal(RefreshColumnIndex, RefreshResultSet.GetBigDecimal(I));
+            stString: RefreshRowAccessor.SetPChar(RefreshColumnIndex, RefreshResultSet.GetPChar(I));
+            stUnicodeString: RefreshRowAccessor.SetUnicodeString(RefreshColumnIndex, RefreshResultSet.GetUnicodeString(I));
+            stBytes: RefreshRowAccessor.SetBytes(RefreshColumnIndex, RefreshResultSet.GetBytes(I));
+            stDate: RefreshRowAccessor.SetDate(RefreshColumnIndex, RefreshResultSet.GetDate(I));
+            stTime: RefreshRowAccessor.SetTime(RefreshColumnIndex, RefreshResultSet.GetTime(I));
+            stTimestamp: RefreshRowAccessor.SetTimestamp(RefreshColumnIndex, RefreshResultSet.GetTimestamp(I));
+            stAsciiStream, stUnicodeStream, stBinaryStream:RefreshRowAccessor.SetBlob(RefreshColumnIndex, RefreshResultSet.GetBlob(I));
+          end;
+        end;
+      end;
+    end;
+  end;
 
 begin
   if (UpdateType = utDeleted)

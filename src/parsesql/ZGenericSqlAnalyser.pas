@@ -121,7 +121,7 @@ type
 
 implementation
 
-uses SysUtils;
+uses SysUtils, ZSysUtils;
 
 { TZStatementSection }
 
@@ -191,15 +191,10 @@ end;
 }
 destructor TZGenericStatementAnalyser.Destroy;
 begin
-  if Assigned(FSectionNames) then
-    FSectionNames.Free;
-  if Assigned(FSelectOptions) then
-    FSelectOptions.Free;
-  if Assigned(FFromJoins) then
-    FFromJoins.Free;
-  if Assigned(FFromClauses) then
-    FFromClauses.Free;
-
+  FSectionNames.Free;
+  FSelectOptions.Free;
+  FFromJoins.Free;
+  FFromClauses.Free;
   inherited Destroy;
 end;
 
@@ -321,8 +316,7 @@ end;
     a list of tokens in the section. It initial list is not started
     with a section name the first section is unnamed ('').
 }
-function TZGenericStatementAnalyser.SplitSections(
-  Tokens: TStrings): TObjectList;
+function TZGenericStatementAnalyser.SplitSections(Tokens: TStrings): TObjectList;
 var
   I: Integer;
   Keyword: string;
@@ -374,12 +368,8 @@ end;
   @returns a composes string.
 }
 function TZGenericStatementAnalyser.ComposeTokens(Tokens: TStrings): string;
-var
-  I: Integer;
 begin
-  Result := '';
-  for I := 0 to Tokens.Count - 1 do
-    Result := Result + Tokens[I];
+  Result := ComposeString(Tokens, '');
 end;
 
 {**
@@ -387,8 +377,7 @@ end;
   @param Tokens a list of statement sections.
   @returns a composes string.
 }
-function TZGenericStatementAnalyser.ComposeSections(
-  Sections: TObjectList): string;
+function TZGenericStatementAnalyser.ComposeSections(Sections: TObjectList): string;
 var
   I: Integer;
 begin

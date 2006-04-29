@@ -67,7 +67,7 @@ function ResolveConnectionProtocol(Url: string;
   @param Password a user's password.
   @param ResutlInfo a result info parameters.
 }
-procedure ResolveDatabaseUrl(Url: string; Info: TStrings;
+procedure ResolveDatabaseUrl(const Url: string; Info: TStrings;
   var HostName: string; var Port: Integer; var Database: string;
   var UserName: string; var Password: string; ResultInfo: TStrings);
 
@@ -107,8 +107,31 @@ procedure CopyColumnsInfo(FromList: TObjectList; ToList: TObjectList);
   @param Default a parameter default value.
   @return a parameter value or default if nothing was found.
 }
-function DefineStatementParameter(Statement: IZStatement; ParamName: string;
-  Default: string): string;
+function DefineStatementParameter(Statement: IZStatement; const ParamName: string;
+  const Default: string): string;
+
+{**
+  AnsiQuotedStr or NullText
+  @param S the string
+  @param NullText the "NULL"-Text
+  @param QuoteChar the char that is used for quotation
+  @return 'null' if S is '', otherwise AnsiQuotedStr(S)
+}
+function AQSNullText(const Value, NullText: string; QuoteChar: Char = ''''): string;
+
+{**
+  AnsiQuotedStr or Null
+  @param S the string
+  @return 'null' if S is '', otherwise AnsiQuotedStr(S)
+}
+function AQSNull(const Value: string; QuoteChar: Char = ''''): string;
+
+{**
+  ToLikeString returns the given string or if the string is empty it returns '%'
+  @param Value the string
+  @return given Value or '%'
+}
+function ToLikeString(const Value: string): string;
 
 implementation
 
@@ -165,7 +188,7 @@ end;
   @param Password a user's password.
   @param ResutlInfo a result info parameters.
 }
-procedure ResolveDatabaseUrl(Url: string; Info: TStrings;
+procedure ResolveDatabaseUrl(const Url: string; Info: TStrings;
   var HostName: string; var Port: Integer; var Database: string;
   var UserName: string; var Password: string; ResultInfo: TStrings);
 var
@@ -190,7 +213,8 @@ begin
   Index := FirstDelimiter(':', Temp);
   if Index > 0 then
     Temp := Copy(Temp, Index + 1, Length(Temp) - Index)
-  else RaiseException;
+  else
+    RaiseException;
 
   { Retrieves the host name. }
   if Pos('//', Temp) = 1 then
@@ -380,14 +404,53 @@ end;
   @param Default a parameter default value.
   @return a parameter value or default if nothing was found.
 }
-function DefineStatementParameter(Statement: IZStatement; ParamName: string;
-  Default: string): string;
+function DefineStatementParameter(Statement: IZStatement; const ParamName: string;
+  const Default: string): string;
 begin
   Result := Statement.GetParameters.Values[ParamName];
   if Result = '' then
     Result := Statement.GetConnection.GetParameters.Values[ParamName];
   if Result = '' then
     Result := Default;
+end;
+
+{**
+  AnsiQuotedStr or NullText
+  @param S the string
+  @param NullText the "NULL"-Text
+  @param QuoteChar the char that is used for quotation
+  @return 'null' if S is '', otherwise AnsiQuotedStr(S)
+}
+function AQSNullText(const Value, NullText: string; QuoteChar: Char): string;
+begin
+  if Value = '' then
+    Result := NullText
+  else
+    Result := AnsiQuotedStr(Value, QuoteChar);
+end;
+
+{**
+  AnsiQuotedStr or Null
+  @param S the string
+  @param QuoteChar the char that is used for quotation
+  @return 'null' if S is '', otherwise AnsiQuotedStr(S)
+}
+function AQSNull(const Value: string; QuoteChar: Char): string;
+begin
+  Result := AQSNullText(Value, 'null', QuoteChar);
+end;
+
+{**
+  ToLikeString returns the given string or if the string is empty it returns '%'
+  @param Value the string
+  @return given Value or '%'
+}
+function ToLikeString(const Value: string): string;
+begin
+  if Value = '' then
+    Result := '%'
+  else
+    Result := Value;
 end;
 
 end.

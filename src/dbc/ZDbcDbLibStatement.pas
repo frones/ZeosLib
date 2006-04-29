@@ -64,9 +64,9 @@ type
     destructor Destroy; override;
 
     function GetMoreResults: Boolean; override;
-    function ExecuteQuery(SQL: string): IZResultSet; override;
-    function ExecuteUpdate(SQL: string): Integer; override;
-    function Execute(SQL: string): Boolean; override;
+    function ExecuteQuery(const SQL: string): IZResultSet; override;
+    function ExecuteUpdate(const SQL: string): Integer; override;
+    function Execute(const SQL: string): Boolean; override;
   end;
 
   {** Implements Prepared SQL Statement. With emulation}
@@ -304,7 +304,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZDBLibStatement.ExecuteQuery(SQL: string): IZResultSet;
+function TZDBLibStatement.ExecuteQuery(const SQL: string): IZResultSet;
 begin
   Result := nil;
   FSQL := SQL;
@@ -333,7 +333,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZDBLibStatement.ExecuteUpdate(SQL: string): Integer;
+function TZDBLibStatement.ExecuteUpdate(const SQL: string): Integer;
 begin
   FSQL := SQL;
   InternalExecuteStatement(SQL);
@@ -363,7 +363,7 @@ end;
   @return <code>true</code> if the next result is a <code>ResultSet</code> object;
   <code>false</code> if it is an update count or there are no more results
 }
-function TZDBLibStatement.Execute(SQL: string): Boolean;
+function TZDBLibStatement.Execute(const SQL: string): Boolean;
 begin
   FSQL := SQL;
   InternalExecuteStatement(SQL);

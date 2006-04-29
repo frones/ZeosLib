@@ -60,7 +60,7 @@ type
     function GetParamName(Index: Integer): string;
     function GetParamNamesArray: TStringDynArray;
   protected
-    constructor Create(const SQL: string; ParamIndices: TIntegerDynArray;
+    constructor Create(const SQL: string; const ParamIndices: TIntegerDynArray;
       Params: TStrings);
   public
     property SQL: string read FSQL;
@@ -117,7 +117,7 @@ uses ZMessages, ZAbstractRODataset, ZDatasetUtils;
   @param Params a list with all parameter names.
 }
 constructor TZSQLStatement.Create(const SQL: string;
-  ParamIndices: TIntegerDynArray; Params: TStrings);
+  const ParamIndices: TIntegerDynArray; Params: TStrings);
 begin
   FSQL := SQL;
   FParamIndices := ParamIndices;

@@ -77,7 +77,6 @@ type
     procedure TruncateTraceList(Count: Integer);
     procedure DoTrace(Event: TZLoggingEvent; var LogTrace: Boolean);
     procedure DoLogTrace(Event: TZLoggingEvent);
-
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -88,7 +87,6 @@ type
 
     property TraceCount: Integer read GetTraceCount;
     property TraceList[Index: Integer]: TZLoggingEvent read GetTraceItem;
-
   published
     property Active: Boolean read FActive write SetActive default False;
     property AutoSave: Boolean read FAutoSave write FAutoSave default False;

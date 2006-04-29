@@ -62,16 +62,16 @@ type
     FPlainDriver: IZPostgreSQLPlainDriver;
     FOidAsBlob: Boolean;
   protected
-    function CreateResultSet(SQL: string;
+    function CreateResultSet(const SQL: string;
       QueryHandle: PZPostgreSQLResult): IZResultSet;
   public
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
       Connection: IZConnection; Info: TStrings; Handle: PZPostgreSQLConnect);
     destructor Destroy; override;
 
-    function ExecuteQuery(SQL: string): IZResultSet; override;
-    function ExecuteUpdate(SQL: string): Integer; override;
-    function Execute(SQL: string): Boolean; override;
+    function ExecuteQuery(const SQL: string): IZResultSet; override;
+    function ExecuteUpdate(const SQL: string): Integer; override;
+    function Execute(const SQL: string): Boolean; override;
 
     function IsOidAsBlob: Boolean;
   end;
@@ -86,7 +86,7 @@ type
     function PrepareSQLParam(ParamIndex: Integer): string; override;
   public
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
-      Connection: IZConnection; SQL: string; Info: TStrings;
+      Connection: IZConnection; const SQL: string; Info: TStrings;
       Handle: PZPostgreSQLConnect);
   end;
 
@@ -150,7 +150,7 @@ end;
   Creates a result set based on the current settings.
   @return a created result set object.
 }
-function TZPostgreSQLStatement.CreateResultSet(SQL: string;
+function TZPostgreSQLStatement.CreateResultSet(const SQL: string;
   QueryHandle: PZPostgreSQLResult): IZResultSet;
 var
   NativeResultSet: TZPostgreSQLResultSet;
@@ -176,7 +176,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZPostgreSQLStatement.ExecuteQuery(SQL: string): IZResultSet;
+function TZPostgreSQLStatement.ExecuteQuery(const SQL: string): IZResultSet;
 var
   QueryHandle: PZPostgreSQLResult;
 begin
@@ -200,7 +200,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZPostgreSQLStatement.ExecuteUpdate(SQL: string): Integer;
+function TZPostgreSQLStatement.ExecuteUpdate(const SQL: string): Integer;
 var
   QueryHandle: PZPostgreSQLResult;
 begin
@@ -240,7 +240,7 @@ end;
   @return <code>true</code> if the next result is a <code>ResultSet</code> object;
   <code>false</code> if it is an update count or there are no more results
 }
-function TZPostgreSQLStatement.Execute(SQL: string): Boolean;
+function TZPostgreSQLStatement.Execute(const SQL: string): Boolean;
 var
   QueryHandle: PZPostgreSQLResult;
   ResultStatus: TZPostgreSQLExecStatusType;
@@ -289,7 +289,7 @@ end;
 }
 constructor TZPostgreSQLPreparedStatement.Create(
   PlainDriver: IZPostgreSQLPlainDriver; Connection: IZConnection;
-  SQL: string; Info: TStrings; Handle: PZPostgreSQLConnect);
+  const SQL: string; Info: TStrings; Handle: PZPostgreSQLConnect);
 begin
   inherited Create(Connection, SQL, Info);
   FHandle := Handle;

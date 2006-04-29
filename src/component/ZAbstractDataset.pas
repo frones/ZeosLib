@@ -412,8 +412,8 @@ var
 begin
   if (FSequenceField <> '') and Assigned(FSequence) then
   begin
-  if FieldByName(FSequenceField).IsNull then
-   FieldByName(FSequenceField).Value := FSequence.GetNextValue;
+    if FieldByName(FSequenceField).IsNull then
+      FieldByName(FSequenceField).Value := FSequence.GetNextValue;
   end;
 
   inherited;

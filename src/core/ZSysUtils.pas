@@ -86,6 +86,14 @@ function FirstDelimiter(const Delimiters, Str: string): Integer;
 function LastDelimiter(const Delimiters, Str: string): Integer;
 
 {**
+  Compares two PChars without stopping at #0
+  @param P1 first PChar
+  @param P2 seconds PChar
+  @return <code>True</code> if the memory at P1 and P2 are equal 
+}
+function MemLComp(P1, P2: PChar; Len: Integer): Boolean;
+
+{**
   Checks is the string starts with substring.
   @param Str a string to be checked.
   @param SubStr a string to test at the start of the Str.
@@ -145,7 +153,7 @@ function IsIpAddr(const Str: string): Boolean;
   @param Delimiters the delimiters string
   @return the result list where plased delimited string
 }
-function SplitString(Str: string; const Delimiters: string): TStrings;
+function SplitString(const Str, Delimiters: string): TStrings;
 
 {**
   Puts to list a splitted string using the multiple chars which replaces
@@ -299,7 +307,7 @@ function ReplaceChar(const Source, Target: Char; const Str: string): string;
    Copy buffer to the pascal string
    @param Buffer a buffer with data
    @param Length a buffer length
-   @return a bufeer content
+   @return a buffer content
 }
 function MemPas(Buffer: PChar; Length: LongInt): string;
 
@@ -349,14 +357,41 @@ begin
 end;
 
 {**
+  Compares two PChars without stopping at #0
+  @param P1 first PChar
+  @param P2 seconds PChar
+  @return <code>True</code> if the memory at P1 and P2 are equal
+}
+function MemLComp(P1, P2: PChar; Len: Integer): Boolean;
+begin
+  while (Len > 0) and (P1^ = P2^) do
+  begin
+    Inc(P1);
+    Inc(P2);
+    Dec(Len);
+  end;
+  Result := Len = 0;
+end;
+
+{**
   Checks is the string starts with substring.
   @param Str a string to be checked.
   @param SubStr a string to test at the start of the Str.
   @return <code>True</code> if Str started with SubStr;
 }
 function StartsWith(const Str, SubStr: string): Boolean;
+var
+  LenSubStr: Integer;
 begin
-  Result := Copy(Str, 1, Length(SubStr)) = SubStr;
+  LenSubStr := Length(SubStr);
+  if SubStr = '' then
+    Result := True
+  else
+  if LenSubStr <= Length(Str) then
+    //Result := Copy(Str, 1, Length(SubStr)) = SubStr;
+    Result := MemLComp(PChar(Str), PChar(SubStr), LenSubStr)
+  else
+    Result := False;
 end;
 
 {**
@@ -366,13 +401,22 @@ end;
   @return <code>True</code> if Str ended with SubStr;
 }
 function EndsWith(const Str, SubStr: string): Boolean;
+var
+  LenSubStr: Integer;
+  LenStr: Integer;
 begin
-  if Length(SubStr) <= Length(Str) then
+  if SubStr = '' then
+    Result := False // act like Delphi's AnsiEndsStr()
+  else
   begin
-    Result := Copy(Str, Length(Str) - Length(SubStr) + 1,
-    Length(SubStr)) = SubStr;
-  end else
-    Result := False;
+    LenSubStr := Length(SubStr);
+    LenStr := Length(Str);
+    if LenSubStr <= LenStr then
+      //Result := Copy(Str, LenStr - LenSubStr + 1, LenSubStr) = SubStr
+      Result := MemLComp(PChar(Pointer(Str)) + LenStr - LenSubStr, Pointer(SubStr), LenSubStr)
+    else
+      Result := False;
+  end;
 end;
 
 {**
@@ -387,8 +431,8 @@ var
 begin
   OldDecimalSeparator := DecimalSeparator;
   DecimalSeparator := '.';
-  if Pos('$', Str) = 1 then
-    Str := Copy(Str, 2, Pred(Length(Str)));
+  if (Str <> '') and (Str[1] = '$') then
+    Str := Copy(Str, 2, MaxInt);
   Result := StrToFloatDef(Str, Def);
   DecimalSeparator := OldDecimalSeparator;
 end;
@@ -463,29 +507,39 @@ begin
     Result := False;
 end;
 
+procedure SplitToStringList(List: TStrings; Str: string; const Delimiters: string);
+var
+  DelimPos: Integer;
+begin
+  repeat
+    DelimPos := FirstDelimiter(Delimiters, Str);
+    if DelimPos > 0 then
+    begin
+      if DelimPos > 1 then
+        List.Add(Copy(Str, 1, DelimPos - 1));
+      Str := Copy(Str, DelimPos + 1, Length(Str) - DelimPos);
+    end else
+      Break;
+  until DelimPos <= 0;
+  if Str <> '' then
+    List.Add(Str);
+end;
+
 {**
   Splits string using the multiple chars.
   @param Str the source string
   @param Delimiters the delimiters string
   @return the result list where plased delimited string
 }
-function SplitString(Str: string; const Delimiters: string): TStrings;
-var
-  DelimPos: Integer;
+function SplitString(const Str, Delimiters: string): TStrings;
 begin
   Result := TStringList.Create;
-  repeat
-    DelimPos := FirstDelimiter(Delimiters, Str);
-    if DelimPos > 0 then
-    begin
-      if DelimPos > 1 then
-        Result.Add(Copy(Str, 1, DelimPos - 1));
-      Str := Copy(Str, DelimPos + 1, Length(Str) - DelimPos);
-    end else
-      Break;
-  until DelimPos <= 0;
-  if Str <> '' then
-    Result.Add(Str);
+  try
+    SplitToStringList(Result, Str, Delimiters);
+  except
+    Result.Free;
+    raise;
+  end;
 end;
 
 {**
@@ -496,15 +550,9 @@ end;
   @param Delimiters the delimiters string
 }
 procedure PutSplitString(List: TStrings; const Str, Delimiters: string);
-var
-  Temp: TStrings;
 begin
-  Temp := SplitString(Str, Delimiters);
-  try
-    List.Assign(Temp);
-  finally
-    Temp.Free;
-  end;
+  List.Clear;
+  SplitToStringList(List, Str, Delimiters);
 end;
 
 {**
@@ -514,15 +562,8 @@ end;
   @param Delimiters the delimiters string
 }
 procedure AppendSplitString(List: TStrings; const Str, Delimiters: string);
-var
-  Temp: TStrings;
 begin
-  Temp := SplitString(Str, Delimiters);
-  try
-    List.AddStrings(Temp);
-  finally
-    Temp.Free;
-  end;
+  SplitToStringList(List, Str, Delimiters);
 end;
 
 {**
@@ -534,14 +575,34 @@ end;
 }
 function ComposeString(List: TStrings; const Delimiter: string): string;
 var
-  I: Integer;
+  i, Len, DelimLen: Integer;
+  S: string;
+  P: PChar;
 begin
-  Result := '';
-  for I := 0 to List.Count - 1 do
+  DelimLen := Length(Delimiter);
+  Len := 0;
+  if List.Count > 0 then
   begin
-    if Result <> '' then
-      Result := Result + Delimiter;
-    Result := Result + List[I];
+    Inc(Len, Length(List[0]));
+    for i := 1 to List.Count - 1 do
+      Inc(Len, DelimLen + Length(List[i]));
+  end;
+  SetLength(Result, Len);
+  P := Pointer(Result);
+  for i := 0 to List.Count - 1 do
+  begin
+    if (i > 0) and (DelimLen > 0) then
+    begin
+      Move(Pointer(Delimiter)^, P^, DelimLen * SizeOf(Char));
+      Inc(P, DelimLen);
+    end;
+    S := List[i];
+    Len := Length(S);
+    if Len > 0 then
+    begin
+      Move(Pointer(S)^, P^, Len * SizeOf(Char));
+      Inc(P, Len);
+    end;
   end;
 end;
 
@@ -556,8 +617,26 @@ var
 begin
   OldDecimalSeparator := DecimalSeparator;
   DecimalSeparator := '.';
-  Result := FloatToStr(Value);
-  DecimalSeparator := OldDecimalSeparator;
+  try
+    Result := FloatToStr(Value);
+  finally
+    DecimalSeparator := OldDecimalSeparator;
+  end;
+end;
+
+procedure SplitToStringListEx(List: TStrings; const Str, Delimiter: string);
+var
+  Pos: integer;
+  Temp: string;
+begin
+  Temp := Str;
+  repeat
+    Pos := AnsiPos(Delimiter, Temp);
+    List.Add(Copy(Temp, 1, Pos - 1));
+    Delete(Temp, 1, Pos + Length(Delimiter) - 1);
+  until Pos = 0;
+  if Temp <> '' then
+    List.Add(Temp);
 end;
 
 {**
@@ -568,16 +647,9 @@ end;
   @param Delimiters the delimiter string
 }
 procedure PutSplitStringEx(List: TStrings; const Str, Delimiter: string);
-var
-  Temp: TStrings;
 begin
-  Temp := SplitStringEx(Str, Delimiter);
-  try
-    List.Clear;
-    List.AddStrings(Temp);
-  finally
-    Temp.Free;
-  end;
+  List.Clear;
+  SplitToStringListEx(List, Str, Delimiter);
 end;
 
 {**
@@ -587,19 +659,14 @@ end;
   @return the result list where plased delimited string
 }
 function SplitStringEx(const Str, Delimiter: string): TStrings;
-var
- Pos: integer;
- Temp: string;
 begin
   Result := TStringList.Create;
-  Temp := Str;
-  repeat
-    Pos := AnsiPos(Delimiter, Temp);
-    Result.Add(Copy(Temp, 1, Pos - 1));
-    Delete(Temp, 1, Pos + Length(Delimiter) - 1);
-  until Pos = 0;
-  if Temp <> '' then
-    Result.Add(Temp);
+  try
+    SplitToStringListEx(Result, Str, Delimiter);
+  except
+    Result.Free;
+    raise;
+  end;
 end;
 
 {**
@@ -609,15 +676,8 @@ end;
   @param Delimiters the delimiters string
 }
 procedure AppendSplitStringEx(List: TStrings; const Str, Delimiter: string);
-var
-  Temp: TStrings;
 begin
-  Temp := SplitStringEx(Str, Delimiter);
-  try
-    List.AddStrings(Temp);
-  finally
-    Temp.Free;
-  end;
+  SplitToStringListEx(List, Str, Delimiter);
 end;
 
 {**
@@ -626,12 +686,13 @@ end;
   @return a converted string.
 }
 function BytesToStr(const Value: TByteDynArray): string;
-var
-  I: Integer;
+{var
+  I: Integer;}
 begin
-  SetLength(Result, Length(Value));
-  for I := 1 to Length(Value) do
-    Result[I] := Char(Value[I - 1]);
+  SetString(Result, PChar(@Value[0]), Length(Value))
+{  SetLength(Result, Length(Value));
+  for I := 0 to Length(Value) - 1 do
+    Result[I + 1] := Char(Value[I]);}
 end;
 
 {**
@@ -640,12 +701,16 @@ end;
   @return a converted array of bytes.
 }
 function StrToBytes(const Value: string): TByteDynArray;
-var
-  I: Integer;
+{var
+  I: Integer;}
 begin
   SetLength(Result, Length(Value));
-  for I := 1 to Length(Value) do
-    Result[I - 1] := Ord(Value[I]);
+  if Value <> '' then
+  begin
+    Move(Value[1], Result[0], Length(Value))
+    {for I := 0 to Length(Value) - 1 do
+      Result[I] := Ord(Value[I + 1]);}
+  end;
 end;
 
 {**
@@ -930,19 +995,27 @@ end;
 }
 function ReplaceChar(const Source, Target: Char; const Str: string): string;
 var
- I: integer;
+  I: integer;
+  P: PChar;
 begin
   Result := Str;
-  for i := 1 to Length(Str) do
-    if Result[I] = Source then
-      Result[I] := Target;
+  UniqueString(Result);
+  P := Pointer(Result);
+  for i := 0 to Length(Str) - 1 do
+  begin
+    if P^ = Source then
+      P^ := Target;
+    Inc(P);
+    {if Result[I + 1] = Source then
+      Result[I + 1] := Target;}
+  end;
 end;
 
 {**
    Copy buffer to the pascal string
    @param Buffer a buffer with data
    @param Length a buffer length
-   @return a bufeer content
+   @return a buffer content
 }
 function MemPas(Buffer: PChar; Length: LongInt): string;
 begin

@@ -53,10 +53,10 @@ type
     FASA8PlainDriver: IZASA8PlainDriver;
     FASA9PlainDriver: IZASA9PlainDriver;
   protected
-    function GetPlainDriver(Url: string): IZASAPlainDriver;
+    function GetPlainDriver(const Url: string): IZASAPlainDriver;
   public
     constructor Create;
-    function Connect(Url: string; Info: TStrings): IZConnection; override;
+    function Connect(const Url: string; Info: TStrings): IZConnection; override;
 
     function GetSupportedProtocols: TStringDynArray; override;
     function GetMajorVersion: Integer; override;
@@ -82,10 +82,10 @@ type
   private
     procedure StartTransaction; virtual;
   public
-    constructor Create(Driver: IZDriver; Url: string;
+    constructor Create(Driver: IZDriver; const Url: string;
       PlainDriver: IZASAPlainDriver;
-      HostName: string; Port: Integer; Database: string;
-      User: string; Password: string; Info: TStrings);
+      const HostName: string; Port: Integer; const Database: string;
+      const User: string; const Password: string; Info: TStrings);
     destructor Destroy; override;
 
     function GetDBHandle: PZASASQLCA;
@@ -93,15 +93,15 @@ type
 //    procedure CreateNewDatabase(SQL: String);
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
-    function CreatePreparedStatement(SQL: string; Info: TStrings):
+    function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
-    function CreateCallableStatement(SQL: string; Info: TStrings):
+    function CreateCallableStatement(const SQL: string; Info: TStrings):
       IZCallableStatement; override;
 
     procedure Commit; override;
     procedure Rollback; override;
-    procedure SetOption( Temporary: Integer; User: PChar; Option: String;
-      Value: String);
+    procedure SetOption(Temporary: Integer; User: PChar; const Option: string;
+      const Value: string);
 
     procedure Open; override;
     procedure Close; override;
@@ -149,7 +149,7 @@ uses
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
-function TZASADriver.Connect(Url: string; Info: TStrings): IZConnection;
+function TZASADriver.Connect(const Url: string; Info: TStrings): IZConnection;
 var
   TempInfo: TStrings;
   HostName, Database, UserName, Password: string;
@@ -223,7 +223,7 @@ end;
   @param Url a database connection URL.
   @return a selected protocol.
 }
-function TZASADriver.GetPlainDriver(Url: string): IZASAPlainDriver;
+function TZASADriver.GetPlainDriver(const Url: string): IZASAPlainDriver;
 var
   Protocol: string;
 begin
@@ -315,9 +315,9 @@ end;
   @param Password a user password.
   @param Info a string list with extra connection parameters.
 }
-constructor TZASAConnection.Create(Driver: IZDriver; Url: string;
-  PlainDriver: IZASAPlainDriver; HostName: string; Port: Integer;
-  Database, User, Password: string; Info: TStrings);
+constructor TZASAConnection.Create(Driver: IZDriver; const Url: string;
+  PlainDriver: IZASAPlainDriver; const HostName: string; Port: Integer;
+  const Database, User, Password: string; Info: TStrings);
 begin
   inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
     TZASADatabaseMetadata.Create(Self, Url, Info));
@@ -351,7 +351,7 @@ end;
   @return a new CallableStatement object containing the
     pre-compiled SQL statement
 }
-function TZASAConnection.CreateCallableStatement(SQL: string;
+function TZASAConnection.CreateCallableStatement(const SQL: string;
   Info: TStrings): IZCallableStatement;
 begin
   if IsClosed then Open;
@@ -385,7 +385,7 @@ end;
   @return a new PreparedStatement object containing the
     pre-compiled statement
 }
-function TZASAConnection.CreatePreparedStatement(SQL: string;
+function TZASAConnection.CreatePreparedStatement(const SQL: string;
   Info: TStrings): IZPreparedStatement;
 begin
   if IsClosed then Open;
@@ -530,12 +530,12 @@ begin
   end;
 end;
 
-procedure TZASAConnection.SetOption( Temporary: Integer; User: PChar;
-  Option: String; Value: String);
+procedure TZASAConnection.SetOption(Temporary: Integer; User: PChar;
+  const Option: string; const Value: string);
 var
   SQLDA: PASASQLDA;
   Sz: Integer;
-  S: String;
+  S: string;
 begin
   if Assigned( FHandle) then
   begin

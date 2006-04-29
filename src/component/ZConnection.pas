@@ -222,7 +222,6 @@ type
     property OnLogin: TLoginEvent read FOnLogin write FOnLogin;
     property OnStartTransaction: TNotifyEvent
       read FOnStartTransaction write FOnStartTransaction;
-
   end;
 
 implementation

@@ -84,7 +84,7 @@ type
     procedure CheckColumnConvertion(ColumnIndex: Integer; ResultType: TZSQLType);
     procedure CheckBlobColumn(ColumnIndex: Integer);
     procedure Open; virtual;
-    function GetColumnIndex(ColumnName: string): Integer;
+    function GetColumnIndex(const ColumnName: string): Integer;
 
     property RowNo: Integer read FRowNo write FRowNo;
     property LastRowNo: Integer read FLastRowNo write FLastRowNo;
@@ -139,27 +139,27 @@ type
     // Methods for accessing results by column name
     //======================================================================
 
-    function IsNullByName(ColumnName: string): Boolean; virtual;
-    function GetPCharByName(ColumnName: string): PChar; virtual;
-    function GetStringByName(ColumnName: string): string; virtual;
-    function GetUnicodeStringByName(ColumnName: string): WideString; virtual;
-    function GetBooleanByName(ColumnName: string): Boolean; virtual;
-    function GetByteByName(ColumnName: string): ShortInt; virtual;
-    function GetShortByName(ColumnName: string): SmallInt; virtual;
-    function GetIntByName(ColumnName: string): Integer; virtual;
-    function GetLongByName(ColumnName: string): Int64; virtual;
-    function GetFloatByName(ColumnName: string): Single; virtual;
-    function GetDoubleByName(ColumnName: string): Double; virtual;
-    function GetBigDecimalByName(ColumnName: string): Extended; virtual;
-    function GetBytesByName(ColumnName: string): TByteDynArray; virtual;
-    function GetDateByName(ColumnName: string): TDateTime; virtual;
-    function GetTimeByName(ColumnName: string): TDateTime; virtual;
-    function GetTimestampByName(ColumnName: string): TDateTime; virtual;
-    function GetAsciiStreamByName(ColumnName: string): TStream; virtual;
-    function GetUnicodeStreamByName(ColumnName: string): TStream; virtual;
-    function GetBinaryStreamByName(ColumnName: string): TStream; virtual;
-    function GetBlobByName(ColumnName: string): IZBlob; virtual;
-    function GetValueByName(ColumnName: string): TZVariant; virtual;
+    function IsNullByName(const ColumnName: string): Boolean; virtual;
+    function GetPCharByName(const ColumnName: string): PChar; virtual;
+    function GetStringByName(const ColumnName: string): string; virtual;
+    function GetUnicodeStringByName(const ColumnName: string): WideString; virtual;
+    function GetBooleanByName(const ColumnName: string): Boolean; virtual;
+    function GetByteByName(const ColumnName: string): ShortInt; virtual;
+    function GetShortByName(const ColumnName: string): SmallInt; virtual;
+    function GetIntByName(const ColumnName: string): Integer; virtual;
+    function GetLongByName(const ColumnName: string): Int64; virtual;
+    function GetFloatByName(const ColumnName: string): Single; virtual;
+    function GetDoubleByName(const ColumnName: string): Double; virtual;
+    function GetBigDecimalByName(const ColumnName: string): Extended; virtual;
+    function GetBytesByName(const ColumnName: string): TByteDynArray; virtual;
+    function GetDateByName(const ColumnName: string): TDateTime; virtual;
+    function GetTimeByName(const ColumnName: string): TDateTime; virtual;
+    function GetTimestampByName(const ColumnName: string): TDateTime; virtual;
+    function GetAsciiStreamByName(const ColumnName: string): TStream; virtual;
+    function GetUnicodeStreamByName(const ColumnName: string): TStream; virtual;
+    function GetBinaryStreamByName(const ColumnName: string): TStream; virtual;
+    function GetBlobByName(const ColumnName: string): IZBlob; virtual;
+    function GetValueByName(const ColumnName: string): TZVariant; virtual;
 
     //=====================================================================
     // Advanced features:
@@ -170,7 +170,7 @@ type
 
     function GetCursorName: string; virtual;
     function GetMetaData: IZResultSetMetaData; virtual;
-    function FindColumn(ColumnName: string): Integer; virtual;
+    function FindColumn(const ColumnName: string): Integer; virtual;
 
     //---------------------------------------------------------------------
     // Traversal/Positioning
@@ -223,43 +223,43 @@ type
     procedure UpdateDouble(ColumnIndex: Integer; Value: Double); virtual;
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended); virtual;
     procedure UpdatePChar(ColumnIndex: Integer; Value: PChar); virtual;
-    procedure UpdateString(ColumnIndex: Integer; Value: string); virtual;
-    procedure UpdateUnicodeString(ColumnIndex: Integer; Value: WideString);
+    procedure UpdateString(ColumnIndex: Integer; const Value: string); virtual;
+    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString);
       virtual;
-    procedure UpdateBytes(ColumnIndex: Integer; Value: TByteDynArray); virtual;
+    procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray); virtual;
     procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime); virtual;
     procedure UpdateTime(ColumnIndex: Integer; Value: TDateTime); virtual;
     procedure UpdateTimestamp(ColumnIndex: Integer; Value: TDateTime); virtual;
     procedure UpdateAsciiStream(ColumnIndex: Integer; Value: TStream); virtual;
     procedure UpdateUnicodeStream(ColumnIndex: Integer; Value: TStream); virtual;
     procedure UpdateBinaryStream(ColumnIndex: Integer; Value: TStream); virtual;
-    procedure UpdateValue(ColumnIndex: Integer; Value: TZVariant); virtual;
+    procedure UpdateValue(ColumnIndex: Integer; const Value: TZVariant); virtual;
 
     //======================================================================
     // Methods for accessing results by column name
     //======================================================================
 
-    procedure UpdateNullByName(ColumnName: string); virtual;
-    procedure UpdateBooleanByName(ColumnName: string; Value: Boolean); virtual;
-    procedure UpdateByteByName(ColumnName: string; Value: ShortInt); virtual;
-    procedure UpdateShortByName(ColumnName: string; Value: SmallInt); virtual;
-    procedure UpdateIntByName(ColumnName: string; Value: Integer); virtual;
-    procedure UpdateLongByName(ColumnName: string; Value: Int64); virtual;
-    procedure UpdateFloatByName(ColumnName: string; Value: Single); virtual;
-    procedure UpdateDoubleByName(ColumnName: string; Value: Double); virtual;
-    procedure UpdateBigDecimalByName(ColumnName: string; Value: Extended); virtual;
-    procedure UpdatePCharByName(ColumnName: string; Value: PChar); virtual;
-    procedure UpdateStringByName(ColumnName: string; Value: string); virtual;
-    procedure UpdateUnicodeStringByName(ColumnName: string; Value: WideString);
+    procedure UpdateNullByName(const ColumnName: string); virtual;
+    procedure UpdateBooleanByName(const ColumnName: string; Value: Boolean); virtual;
+    procedure UpdateByteByName(const ColumnName: string; Value: ShortInt); virtual;
+    procedure UpdateShortByName(const ColumnName: string; Value: SmallInt); virtual;
+    procedure UpdateIntByName(const ColumnName: string; Value: Integer); virtual;
+    procedure UpdateLongByName(const ColumnName: string; Value: Int64); virtual;
+    procedure UpdateFloatByName(const ColumnName: string; Value: Single); virtual;
+    procedure UpdateDoubleByName(const ColumnName: string; Value: Double); virtual;
+    procedure UpdateBigDecimalByName(const ColumnName: string; Value: Extended); virtual;
+    procedure UpdatePCharByName(const ColumnName: string; Value: PChar); virtual;
+    procedure UpdateStringByName(const ColumnName: string; const Value: string); virtual;
+    procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: WideString);
       virtual;
-    procedure UpdateBytesByName(ColumnName: string; Value: TByteDynArray); virtual;
-    procedure UpdateDateByName(ColumnName: string; Value: TDateTime); virtual;
-    procedure UpdateTimeByName(ColumnName: string; Value: TDateTime); virtual;
-    procedure UpdateTimestampByName(ColumnName: string; Value: TDateTime); virtual;
-    procedure UpdateAsciiStreamByName(ColumnName: string; Value: TStream); virtual;
-    procedure UpdateUnicodeStreamByName(ColumnName: string; Value: TStream); virtual;
-    procedure UpdateBinaryStreamByName(ColumnName: string; Value: TStream); virtual;
-    procedure UpdateValueByName(ColumnName: string; Value: TZVariant); virtual;
+    procedure UpdateBytesByName(const ColumnName: string; const Value: TByteDynArray); virtual;
+    procedure UpdateDateByName(const ColumnName: string; Value: TDateTime); virtual;
+    procedure UpdateTimeByName(const ColumnName: string; Value: TDateTime); virtual;
+    procedure UpdateTimestampByName(const ColumnName: string; Value: TDateTime); virtual;
+    procedure UpdateAsciiStreamByName(const ColumnName: string; Value: TStream); virtual;
+    procedure UpdateUnicodeStreamByName(const ColumnName: string; Value: TStream); virtual;
+    procedure UpdateBinaryStreamByName(const ColumnName: string; Value: TStream); virtual;
+    procedure UpdateValueByName(const ColumnName: string; const Value: TZVariant); virtual;
 
     procedure InsertRow; virtual;
     procedure UpdateRow; virtual;
@@ -269,8 +269,8 @@ type
     procedure MoveToInsertRow; virtual;
     procedure MoveToCurrentRow; virtual;
 
-    function CompareRows(Row1, Row2: Integer; ColumnIndices: TIntegerDynArray;
-      ColumnDirs: TBooleanDynArray): Integer; virtual;
+    function CompareRows(Row1, Row2: Integer; const ColumnIndices: TIntegerDynArray;
+      const ColumnDirs: TBooleanDynArray): Integer; virtual;
 
     function GetStatement: IZStatement; virtual;
 
@@ -297,11 +297,11 @@ type
     function Length: LongInt; virtual;
 
     function GetString: string; virtual;
-    procedure SetString(Value: string); virtual;
+    procedure SetString(const Value: string); virtual;
     function GetUnicodeString: WideString; virtual;
-    procedure SetUnicodeString(Value: WideString); virtual;
+    procedure SetUnicodeString(const Value: WideString); virtual;
     function GetBytes: TByteDynArray; virtual;
-    procedure SetBytes(Value: TByteDynArray); virtual;
+    procedure SetBytes(const Value: TByteDynArray); virtual;
     function GetStream: TStream; virtual;
     procedure SetStream(Value: TStream); virtual;
 
@@ -1025,7 +1025,7 @@ end;
   @return if the value is SQL <code>NULL</code>, the
     value returned is <code>true</code>. <code>false</code> otherwise.
 }
-function TZAbstractResultSet.IsNullByName(ColumnName: string): Boolean;
+function TZAbstractResultSet.IsNullByName(const ColumnName: string): Boolean;
 begin
   Result := IsNull(GetColumnIndex(ColumnName));
 end;
@@ -1039,7 +1039,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetPCharByName(ColumnName: string): PChar;
+function TZAbstractResultSet.GetPCharByName(const ColumnName: string): PChar;
 begin
   Result := GetPChar(GetColumnIndex(ColumnName));
 end;
@@ -1053,7 +1053,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetStringByName(ColumnName: string): string;
+function TZAbstractResultSet.GetStringByName(const ColumnName: string): string;
 begin
   Result := GetString(GetColumnIndex(ColumnName));
 end;
@@ -1067,7 +1067,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetUnicodeStringByName(ColumnName: string):
+function TZAbstractResultSet.GetUnicodeStringByName(const ColumnName: string):
   WideString;
 begin
   Result := GetUnicodeString(GetColumnIndex(ColumnName));
@@ -1082,7 +1082,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>false</code>
 }
-function TZAbstractResultSet.GetBooleanByName(ColumnName: string): Boolean;
+function TZAbstractResultSet.GetBooleanByName(const ColumnName: string): Boolean;
 begin
   Result := GetBoolean(GetColumnIndex(ColumnName));
 end;
@@ -1096,7 +1096,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZAbstractResultSet.GetByteByName(ColumnName: string): ShortInt;
+function TZAbstractResultSet.GetByteByName(const ColumnName: string): ShortInt;
 begin
   Result := GetByte(GetColumnIndex(ColumnName));
 end;
@@ -1110,7 +1110,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZAbstractResultSet.GetShortByName(ColumnName: string): SmallInt;
+function TZAbstractResultSet.GetShortByName(const ColumnName: string): SmallInt;
 begin
   Result := GetShort(GetColumnIndex(ColumnName));
 end;
@@ -1124,7 +1124,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZAbstractResultSet.GetIntByName(ColumnName: string): Integer;
+function TZAbstractResultSet.GetIntByName(const ColumnName: string): Integer;
 begin
   Result := GetInt(GetColumnIndex(ColumnName));
 end;
@@ -1138,7 +1138,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZAbstractResultSet.GetLongByName(ColumnName: string): Int64;
+function TZAbstractResultSet.GetLongByName(const ColumnName: string): Int64;
 begin
   Result := GetLong(GetColumnIndex(ColumnName));
 end;
@@ -1152,7 +1152,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZAbstractResultSet.GetFloatByName(ColumnName: string): Single;
+function TZAbstractResultSet.GetFloatByName(const ColumnName: string): Single;
 begin
   Result := GetFloat(GetColumnIndex(ColumnName));
 end;
@@ -1166,7 +1166,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZAbstractResultSet.GetDoubleByName(ColumnName: string): Double;
+function TZAbstractResultSet.GetDoubleByName(const ColumnName: string): Double;
 begin
   Result := GetDouble(GetColumnIndex(ColumnName));
 end;
@@ -1180,7 +1180,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetBigDecimalByName(ColumnName: string): Extended;
+function TZAbstractResultSet.GetBigDecimalByName(const ColumnName: string): Extended;
 begin
   Result := GetBigDecimal(GetColumnIndex(ColumnName));
 end;
@@ -1195,7 +1195,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetBytesByName(ColumnName: string): TByteDynArray;
+function TZAbstractResultSet.GetBytesByName(const ColumnName: string): TByteDynArray;
 begin
   Result := GetBytes(GetColumnIndex(ColumnName));
 end;
@@ -1209,7 +1209,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetDateByName(ColumnName: string): TDateTime;
+function TZAbstractResultSet.GetDateByName(const ColumnName: string): TDateTime;
 begin
   Result := GetDate(GetColumnIndex(ColumnName));
 end;
@@ -1223,7 +1223,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>,
     the value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetTimeByName(ColumnName: string): TDateTime;
+function TZAbstractResultSet.GetTimeByName(const ColumnName: string): TDateTime;
 begin
   Result := GetTime(GetColumnIndex(ColumnName));
 end;
@@ -1237,7 +1237,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetTimestampByName(ColumnName: string): TDateTime;
+function TZAbstractResultSet.GetTimestampByName(const ColumnName: string): TDateTime;
 begin
   Result := GetTimestamp(GetColumnIndex(ColumnName));
 end;
@@ -1263,7 +1263,7 @@ end;
     If the value is SQL <code>NULL</code>,
     the value returned is <code>null</code>.
 }
-function TZAbstractResultSet.GetAsciiStreamByName(ColumnName: string): TStream;
+function TZAbstractResultSet.GetAsciiStreamByName(const ColumnName: string): TStream;
 begin
   Result := GetAsciiStream(GetColumnIndex(ColumnName));
 end;
@@ -1290,7 +1290,7 @@ end;
     as a stream of two-byte Unicode characters.
     If the value is SQL <code>NULL</code>, the value returned is <code>null</code>.
 }
-function TZAbstractResultSet.GetUnicodeStreamByName(ColumnName: string): TStream;
+function TZAbstractResultSet.GetUnicodeStreamByName(const ColumnName: string): TStream;
 begin
   Result := GetUnicodeStream(GetColumnIndex(ColumnName));
 end;
@@ -1315,7 +1315,7 @@ end;
     as a stream of uninterpreted bytes;
     if the value is SQL <code>NULL</code>, the result is <code>null</code>
 }
-function TZAbstractResultSet.GetBinaryStreamByName(ColumnName: string): TStream;
+function TZAbstractResultSet.GetBinaryStreamByName(const ColumnName: string): TStream;
 begin
   Result := GetBinaryStream(GetColumnIndex(ColumnName));
 end;
@@ -1329,7 +1329,7 @@ end;
   @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
     the specified column
 }
-function TZAbstractResultSet.GetBlobByName(ColumnName: string): IZBlob;
+function TZAbstractResultSet.GetBlobByName(const ColumnName: string): IZBlob;
 begin
   Result := GetBlob(GetColumnIndex(ColumnName));
 end;
@@ -1342,7 +1342,7 @@ end;
   @return a <code>Blob</code> object representing the SQL <code>Any</code>
     value in the specified column
 }
-function TZAbstractResultSet.GetValueByName(ColumnName: string): TZVariant;
+function TZAbstractResultSet.GetValueByName(const ColumnName: string): TZVariant;
 begin
   Result := GetValue(GetColumnIndex(ColumnName));
 end;
@@ -1428,7 +1428,7 @@ end;
   @param columnName the name of the column
   @return the column index of the given column name
 }
-function TZAbstractResultSet.GetColumnIndex(ColumnName: string): Integer;
+function TZAbstractResultSet.GetColumnIndex(const ColumnName: string): Integer;
 begin
   Result := FindColumn(ColumnName);
 
@@ -1443,7 +1443,7 @@ end;
   @param columnName the name of the column
   @return the column index of the given column name
 }
-function TZAbstractResultSet.FindColumn(ColumnName: string): Integer;
+function TZAbstractResultSet.FindColumn(const ColumnName: string): Integer;
 var
   I: Integer;
   Metadata: TZAbstractResultSetMetadata;
@@ -1980,7 +1980,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateString(ColumnIndex: Integer; Value: string);
+procedure TZAbstractResultSet.UpdateString(ColumnIndex: Integer; const Value: string);
 begin
   RaiseReadOnlyException;
 end;
@@ -1996,7 +1996,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractResultSet.UpdateUnicodeString(ColumnIndex: Integer;
-  Value: WideString);
+  const Value: WideString);
 begin
   RaiseReadOnlyException;
 end;
@@ -2012,7 +2012,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractResultSet.UpdateBytes(ColumnIndex: Integer;
-  Value: TByteDynArray);
+  const Value: TByteDynArray);
 begin
   RaiseReadOnlyException;
 end;
@@ -2124,7 +2124,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractResultSet.UpdateValue(ColumnIndex: Integer;
-  Value: TZVariant);
+  const Value: TZVariant);
 begin
   case Value.VType of
     vtBoolean: UpdateBoolean(ColumnIndex, Value.VBoolean);
@@ -2146,7 +2146,7 @@ end;
 
   @param columnName the name of the column
 }
-procedure TZAbstractResultSet.UpdateNullByName(ColumnName: string);
+procedure TZAbstractResultSet.UpdateNullByName(const ColumnName: string);
 begin
   UpdateNull(GetColumnIndex(ColumnName));
 end;
@@ -2161,7 +2161,7 @@ end;
   @param columnName the name of the column
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateBooleanByName(ColumnName: string;
+procedure TZAbstractResultSet.UpdateBooleanByName(const ColumnName: string;
   Value: Boolean);
 begin
   UpdateBoolean(GetColumnIndex(ColumnName), Value);
@@ -2177,7 +2177,7 @@ end;
   @param columnName the name of the column
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateByteByName(ColumnName: string;
+procedure TZAbstractResultSet.UpdateByteByName(const ColumnName: string;
   Value: ShortInt);
 begin
   UpdateByte(GetColumnIndex(ColumnName), Value);
@@ -2193,7 +2193,7 @@ end;
   @param columnName the name of the column
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateShortByName(ColumnName: string;
+procedure TZAbstractResultSet.UpdateShortByName(const ColumnName: string;
   Value: SmallInt);
 begin
   UpdateShort(GetColumnIndex(ColumnName), Value);
@@ -2209,7 +2209,7 @@ end;
   @param columnName the name of the column
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateIntByName(ColumnName: string;
+procedure TZAbstractResultSet.UpdateIntByName(const ColumnName: string;
   Value: Integer);
 begin
   UpdateInt(GetColumnIndex(ColumnName), Value);
@@ -2225,7 +2225,7 @@ end;
   @param columnName the name of the column
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateLongByName(ColumnName: string;
+procedure TZAbstractResultSet.UpdateLongByName(const ColumnName: string;
   Value: Int64);
 begin
   UpdateLong(GetColumnIndex(ColumnName), Value);
@@ -2241,7 +2241,7 @@ end;
   @param columnName the name of the column
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateFloatByName(ColumnName: string;
+procedure TZAbstractResultSet.UpdateFloatByName(const ColumnName: string;
   Value: Single);
 begin
   UpdateFloat(GetColumnIndex(ColumnName), Value);
@@ -2257,7 +2257,7 @@ end;
   @param columnName the name of the column
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateDoubleByName(ColumnName: string;
+procedure TZAbstractResultSet.UpdateDoubleByName(const ColumnName: string;
   Value: Double);
 begin
   UpdateDouble(GetColumnIndex(ColumnName), Value);
@@ -2274,7 +2274,7 @@ end;
   @param columnName the name of the column
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateBigDecimalByName(ColumnName: string;
+procedure TZAbstractResultSet.UpdateBigDecimalByName(const ColumnName: string;
   Value: Extended);
 begin
   UpdateBigDecimal(GetColumnIndex(ColumnName), Value);
@@ -2290,7 +2290,7 @@ end;
   @param columnName the name of the column
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdatePCharByName(ColumnName: string;
+procedure TZAbstractResultSet.UpdatePCharByName(const ColumnName: string;
   Value: PChar);
 begin
   UpdatePChar(GetColumnIndex(ColumnName), Value);
@@ -2306,8 +2306,8 @@ end;
   @param columnName the name of the column
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateStringByName(ColumnName: string;
-  Value: string);
+procedure TZAbstractResultSet.UpdateStringByName(const ColumnName: string;
+  const Value: string);
 begin
   UpdateString(GetColumnIndex(ColumnName), Value);
 end;
@@ -2322,8 +2322,8 @@ end;
   @param columnName the name of the column
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateUnicodeStringByName(ColumnName: string;
-  Value: WideString);
+procedure TZAbstractResultSet.UpdateUnicodeStringByName(const ColumnName: string;
+  const Value: WideString);
 begin
   UpdateUnicodeString(GetColumnIndex(ColumnName), Value);
 end;
@@ -2347,8 +2347,8 @@ end;
   @param columnName the name of the column
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateBytesByName(ColumnName: string;
-  Value: TByteDynArray);
+procedure TZAbstractResultSet.UpdateBytesByName(const ColumnName: string;
+  const Value: TByteDynArray);
 begin
   UpdateBytes(GetColumnIndex(ColumnName), Value);
 end;
@@ -2363,7 +2363,7 @@ end;
   @param columnName the name of the column
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateDateByName(ColumnName: string;
+procedure TZAbstractResultSet.UpdateDateByName(const ColumnName: string;
   Value: TDateTime);
 begin
   UpdateDate(GetColumnIndex(ColumnName), Value);
@@ -2379,7 +2379,7 @@ end;
   @param columnName the name of the column
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateTimeByName(ColumnName: string;
+procedure TZAbstractResultSet.UpdateTimeByName(const ColumnName: string;
   Value: TDateTime);
 begin
   UpdateTime(GetColumnIndex(ColumnName), Value);
@@ -2396,7 +2396,7 @@ end;
   @param columnName the name of the column
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateTimestampByName(ColumnName: string;
+procedure TZAbstractResultSet.UpdateTimestampByName(const ColumnName: string;
   Value: TDateTime);
 begin
   UpdateTimestamp(GetColumnIndex(ColumnName), Value);
@@ -2412,7 +2412,7 @@ end;
   @param columnName the name of the column
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateAsciiStreamByName(ColumnName: string;
+procedure TZAbstractResultSet.UpdateAsciiStreamByName(const ColumnName: string;
   Value: TStream);
 begin
   UpdateAsciiStream(GetColumnIndex(ColumnName), Value);
@@ -2428,7 +2428,7 @@ end;
   @param columnName the name of the column
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateBinaryStreamByName(ColumnName: string;
+procedure TZAbstractResultSet.UpdateBinaryStreamByName(const ColumnName: string;
   Value: TStream);
 begin
   UpdateBinaryStream(GetColumnIndex(ColumnName), Value);
@@ -2444,7 +2444,7 @@ end;
   @param columnName the name of the column
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateUnicodeStreamByName(ColumnName: string;
+procedure TZAbstractResultSet.UpdateUnicodeStreamByName(const ColumnName: string;
   Value: TStream);
 begin
   UpdateUnicodeStream(GetColumnIndex(ColumnName), Value);
@@ -2460,8 +2460,8 @@ end;
   @param columnName the name of the column
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateValueByName(ColumnName: string;
-  Value: TZVariant);
+procedure TZAbstractResultSet.UpdateValueByName(const ColumnName: string;
+  const Value: TZVariant);
 begin
   UpdateValue(GetColumnIndex(ColumnName), Value);
 end;
@@ -2576,7 +2576,7 @@ end;
   @param ColumnDirs compare direction for each columns.
 }
 function TZAbstractResultSet.CompareRows(Row1, Row2: Integer;
-  ColumnIndices: TIntegerDynArray; ColumnDirs: TBooleanDynArray): Integer;
+  const ColumnIndices: TIntegerDynArray; const ColumnDirs: TBooleanDynArray): Integer;
 var
   I: Integer;
   ColumnIndex: Integer;
@@ -2788,7 +2788,7 @@ end;
   Sets a new string data to this blob content.
   @param Value a new string data.
 }
-procedure TZAbstractBlob.SetString(Value: string);
+procedure TZAbstractBlob.SetString(const Value: string);
 begin
   Clear;
   FBlobSize := System.Length(Value);
@@ -2813,7 +2813,7 @@ end;
   Sets a new string data to this blob content.
   @param Value a new wide string data.
 }
-procedure TZAbstractBlob.SetUnicodeString(Value: WideString);
+procedure TZAbstractBlob.SetUnicodeString(const Value: WideString);
 begin
   SetString(Value);
 end;
@@ -2841,7 +2841,7 @@ end;
   Sets a new byte buffer to this blob content.
   @param Value a new byte buffer.
 }
-procedure TZAbstractBlob.SetBytes(Value: TByteDynArray);
+procedure TZAbstractBlob.SetBytes(const Value: TByteDynArray);
 var
   I: Integer;
   TempString: AnsiString;

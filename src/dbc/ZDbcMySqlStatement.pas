@@ -62,14 +62,14 @@ type
     FPlainDriver: IZMySQLPlainDriver;
     FUseResult: Boolean;
 
-    function CreateResultSet(SQL: string): IZResultSet;
+    function CreateResultSet(const SQL: string): IZResultSet;
   public
     constructor Create(PlainDriver: IZMySQLPlainDriver;
       Connection: IZConnection; Info: TStrings; Handle: PZMySQLConnect);
 
-    function ExecuteQuery(SQL: string): IZResultSet; override;
-    function ExecuteUpdate(SQL: string): Integer; override;
-    function Execute(SQL: string): Boolean; override;
+    function ExecuteQuery(const SQL: string): IZResultSet; override;
+    function ExecuteUpdate(const SQL: string): Integer; override;
+    function Execute(const SQL: string): Boolean; override;
 
     function IsUseResult: Boolean;
   end;
@@ -81,11 +81,11 @@ type
     FPlainDriver: IZMySQLPlainDriver;
   protected
     function CreateExecStatement: IZStatement; override;
-    function GetEscapeString(Value: string): string;
+    function GetEscapeString(const Value: string): string;
     function PrepareSQLParam(ParamIndex: Integer): string; override;
   public
     constructor Create(PlainDriver: IZMySQLPlainDriver;
-      Connection: IZConnection; SQL: string; Info: TStrings;
+      Connection: IZConnection; const SQL: string; Info: TStrings;
       Handle: PZMySQLConnect);
   end;
 
@@ -132,7 +132,7 @@ end;
   Creates a result set based on the current settings.
   @return a created result set object.
 }
-function TZMySQLStatement.CreateResultSet(SQL: string): IZResultSet;
+function TZMySQLStatement.CreateResultSet(const SQL: string): IZResultSet;
 var
   CachedResolver: TZMySQLCachedResolver;
   NativeResultSet: TZMySQLResultSet;
@@ -160,7 +160,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZMySQLStatement.ExecuteQuery(SQL: string): IZResultSet;
+function TZMySQLStatement.ExecuteQuery(const SQL: string): IZResultSet;
 begin
   Result := nil;
   if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then
@@ -184,7 +184,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZMySQLStatement.ExecuteUpdate(SQL: string): Integer;
+function TZMySQLStatement.ExecuteUpdate(const SQL: string): Integer;
 var
   QueryHandle: PZMySQLResult;
 begin
@@ -230,7 +230,7 @@ end;
   @return <code>true</code> if the next result is a <code>ResultSet</code> object;
   <code>false</code> if it is an update count or there are no more results
 }
-function TZMySQLStatement.Execute(SQL: string): Boolean;
+function TZMySQLStatement.Execute(const SQL: string): Boolean;
 begin
   Result := False;
   if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then
@@ -262,7 +262,7 @@ end;
   @param Handle a connection handle pointer.
 }
 constructor TZMySQLPreparedStatement.Create(PlainDriver: IZMySQLPlainDriver;
-  Connection: IZConnection; SQL: string; Info: TStrings; Handle: PZMySQLConnect);
+  Connection: IZConnection; const SQL: string; Info: TStrings; Handle: PZMySQLConnect);
 begin
   inherited Create(Connection, SQL, Info);
   FHandle := Handle;
@@ -285,7 +285,7 @@ end;
   @param Value a regular string.
   @return a string in MySQL escape format.
 }
-function TZMySQLPreparedStatement.GetEscapeString(Value: string): string;
+function TZMySQLPreparedStatement.GetEscapeString(const Value: string): string;
 var
   BufferLen: Integer;
   Buffer: PChar;

@@ -149,49 +149,48 @@ type
     function DataDefinitionCausesTransactionCommit: Boolean; override;
     function DataDefinitionIgnoredInTransactions: Boolean; override;
 
-    function GetProcedures(Catalog: string; SchemaPattern: string;
-      ProcedureNamePattern: string): IZResultSet; override;
-    function GetProcedureColumns(Catalog: string; SchemaPattern: string;
-      ProcedureNamePattern: string; ColumnNamePattern: string):
+    function GetProcedures(const Catalog: string; const SchemaPattern: string;
+      const ProcedureNamePattern: string): IZResultSet; override;
+    function GetProcedureColumns(const Catalog: string; const SchemaPattern: string;
+      const ProcedureNamePattern: string; const ColumnNamePattern: string):
       IZResultSet; override;
 
-    function GetTables(Catalog: string; SchemaPattern: string;
-      TableNamePattern: string; Types: TStringDynArray): IZResultSet; override;
+    function GetTables(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
     function GetSchemas: IZResultSet; override;
     function GetCatalogs: IZResultSet; override;
     function GetTableTypes: IZResultSet; override;
-    function GetColumns(Catalog: string; SchemaPattern: string;
-      TableNamePattern: string; ColumnNamePattern: string): IZResultSet;
-      override;
-    function GetColumnPrivileges(Catalog: string; Schema: string;
-      Table: string; ColumnNamePattern: string): IZResultSet; override;
+    function GetColumns(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
+    function GetColumnPrivileges(const Catalog: string; const Schema: string;
+      const Table: string; const ColumnNamePattern: string): IZResultSet; override;
 
-    function GetTablePrivileges(Catalog: string; SchemaPattern: string;
-      TableNamePattern: string): IZResultSet; override;
-    function GetVersionColumns(Catalog: string; Schema: string;
-      Table: string): IZResultSet; override;
+    function GetTablePrivileges(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string): IZResultSet; override;
+    function GetVersionColumns(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
 
-    function GetPrimaryKeys(Catalog: string; Schema: string;
-      Table: string): IZResultSet; override;
-    function GetImportedKeys(Catalog: string; Schema: string;
-      Table: string): IZResultSet; override;
-    function GetExportedKeys(Catalog: string; Schema: string;
-      Table: string): IZResultSet; override;
-    function GetCrossReference(PrimaryCatalog: string; PrimarySchema: string;
-      PrimaryTable: string; ForeignCatalog: string; ForeignSchema: string;
-      ForeignTable: string): IZResultSet; override;
+    function GetPrimaryKeys(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+    function GetImportedKeys(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+    function GetExportedKeys(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+    function GetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
+      const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
+      const ForeignTable: string): IZResultSet; override;
 
     function GetTypeInfo: IZResultSet; override;
 
-    function GetIndexInfo(Catalog: string; Schema: string; Table: string;
+    function GetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
       Unique: Boolean; Approximate: Boolean): IZResultSet; override;
 
     function SupportsResultSetType(_Type: TZResultSetType): Boolean; override;
     function SupportsResultSetConcurrency(_Type: TZResultSetType;
       Concurrency: TZResultSetConcurrency): Boolean; override;
 
-    function GetUDTs(Catalog: string; SchemaPattern: string;
-      TypeNamePattern: string; Types: TIntegerDynArray): IZResultSet; override;
+    function GetUDTs(const Catalog: string; const SchemaPattern: string;
+      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
   end;
 
 implementation
@@ -1117,8 +1116,8 @@ end;
   @return <code>ResultSet</code> - each row is a procedure description
   @see #getSearchStringEscape
 }
-function TZSQLiteDatabaseMetadata.GetProcedures(Catalog: string;
-  SchemaPattern: string; ProcedureNamePattern: string): IZResultSet;
+function TZSQLiteDatabaseMetadata.GetProcedures(const Catalog: string;
+  const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 begin
   Result := inherited GetProcedures(Catalog, SchemaPattern,
     ProcedureNamePattern);
@@ -1180,9 +1179,9 @@ end;
        column
   @see #getSearchStringEscape
 }
-function TZSQLiteDatabaseMetadata.GetProcedureColumns(Catalog: string;
-  SchemaPattern: string; ProcedureNamePattern: string;
-  ColumnNamePattern: string): IZResultSet;
+function TZSQLiteDatabaseMetadata.GetProcedureColumns(const Catalog: string;
+  const SchemaPattern: string; const ProcedureNamePattern: string;
+  const ColumnNamePattern: string): IZResultSet;
 begin
   Result := inherited GetProcedureColumns(Catalog, SchemaPattern,
     ProcedureNamePattern, ColumnNamePattern);
@@ -1218,9 +1217,9 @@ end;
   @return <code>ResultSet</code> - each row is a table description
   @see #getSearchStringEscape
 }
-function TZSQLiteDatabaseMetadata.GetTables(Catalog: string;
-  SchemaPattern: string; TableNamePattern: string;
-  Types: TStringDynArray): IZResultSet;
+function TZSQLiteDatabaseMetadata.GetTables(const Catalog: string;
+  const SchemaPattern: string; const TableNamePattern: string;
+  const Types: TStringDynArray): IZResultSet;
 var
   I: Integer;
   Key, WhereClause, SQL: string;
@@ -1245,9 +1244,6 @@ begin
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
-    if TableNamePattern = '' then
-      TableNamePattern := '%';
-
     WhereClause := '';
     if IncludedType('TABLE') then
       WhereClause := 'TYPE=''table''';
@@ -1264,7 +1260,7 @@ begin
     if Catalog <> '' then
       SQL := SQL + Catalog + '.';
     SQL := SQL + 'SQLITE_MASTER WHERE ' + WhereClause
-      + ' AND TBL_NAME LIKE ''' + TableNamePattern + '''';
+      + ' AND TBL_NAME LIKE ''' + ToLikeString(TableNamePattern) + '''';
 
     Result := CopyToVirtualResultSet(
       GetConnection.CreateStatement.ExecuteQuery(SQL),
@@ -1398,9 +1394,9 @@ end;
   @return <code>ResultSet</code> - each row is a column description
   @see #getSearchStringEscape
 }
-function TZSQLiteDatabaseMetadata.GetColumns(Catalog: string;
-  SchemaPattern: string; TableNamePattern: string;
-  ColumnNamePattern: string): IZResultSet;
+function TZSQLiteDatabaseMetadata.GetColumns(const Catalog: string;
+  const SchemaPattern: string; const TableNamePattern: string;
+  const ColumnNamePattern: string): IZResultSet;
 var
   Key, Temp: string;
   Precision, Decimals: Integer;
@@ -1504,8 +1500,8 @@ end;
   @return <code>ResultSet</code> - each row is a column privilege description
   @see #getSearchStringEscape
 }
-function TZSQLiteDatabaseMetadata.GetColumnPrivileges(Catalog: string;
-  Schema: string; Table: string; ColumnNamePattern: string): IZResultSet;
+function TZSQLiteDatabaseMetadata.GetColumnPrivileges(const Catalog: string;
+  const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
 begin
   Result := inherited GetColumnPrivileges(Catalog, Schema, Table,
     ColumnNamePattern);
@@ -1543,8 +1539,8 @@ end;
   @return <code>ResultSet</code> - each row is a table privilege description
   @see #getSearchStringEscape
 }
-function TZSQLiteDatabaseMetadata.GetTablePrivileges(Catalog: string;
-  SchemaPattern: string; TableNamePattern: string): IZResultSet;
+function TZSQLiteDatabaseMetadata.GetTablePrivileges(const Catalog: string;
+  const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
 begin
   Result := inherited GetTablePrivileges(Catalog, SchemaPattern,
     TableNamePattern);
@@ -1580,8 +1576,8 @@ end;
   @return <code>ResultSet</code> - each row is a column description
   @exception SQLException if a database access error occurs
 }
-function TZSQLiteDatabaseMetadata.GetVersionColumns(Catalog: string;
-  Schema: string; Table: string): IZResultSet;
+function TZSQLiteDatabaseMetadata.GetVersionColumns(const Catalog: string;
+  const Schema: string; const Table: string): IZResultSet;
 begin
   Result := inherited GetVersionColumns(Catalog, Schema, Table);
 end;
@@ -1608,8 +1604,8 @@ end;
   @return <code>ResultSet</code> - each row is a primary key column description
   @exception SQLException if a database access error occurs
 }
-function TZSQLiteDatabaseMetadata.GetPrimaryKeys(Catalog: string;
-  Schema: string; Table: string): IZResultSet;
+function TZSQLiteDatabaseMetadata.GetPrimaryKeys(const Catalog: string;
+  const Schema: string; const Table: string): IZResultSet;
 var
   Key: string;
   Index: Integer;
@@ -1718,8 +1714,8 @@ end;
   @return <code>ResultSet</code> - each row is a primary key column description
   @see #getExportedKeys
 }
-function TZSQLiteDatabaseMetadata.GetImportedKeys(Catalog: string;
-  Schema: string; Table: string): IZResultSet;
+function TZSQLiteDatabaseMetadata.GetImportedKeys(const Catalog: string;
+  const Schema: string; const Table: string): IZResultSet;
 begin
   Result := inherited GetImportedKeys(Catalog, Schema, Table);
 end;
@@ -1791,8 +1787,8 @@ end;
   @return <code>ResultSet</code> - each row is a foreign key column description
   @see #getImportedKeys
 }
-function TZSQLiteDatabaseMetadata.GetExportedKeys(Catalog: string;
-  Schema: string; Table: string): IZResultSet;
+function TZSQLiteDatabaseMetadata.GetExportedKeys(const Catalog: string;
+  const Schema: string; const Table: string): IZResultSet;
 begin
   Result := inherited GetExportedKeys(Catalog, Schema, Table);
 end;
@@ -1872,9 +1868,9 @@ end;
   @return <code>ResultSet</code> - each row is a foreign key column description
   @see #getImportedKeys
 }
-function TZSQLiteDatabaseMetadata.GetCrossReference(PrimaryCatalog: string;
-  PrimarySchema: string; PrimaryTable: string; ForeignCatalog: string;
-  ForeignSchema: string; ForeignTable: string): IZResultSet;
+function TZSQLiteDatabaseMetadata.GetCrossReference(const PrimaryCatalog: string;
+  const PrimarySchema: string; const PrimaryTable: string; const ForeignCatalog: string;
+  const ForeignSchema: string; const ForeignTable: string): IZResultSet;
 begin
   Result := inherited GetCrossReference(PrimaryCatalog, PrimarySchema,
     PrimaryTable, ForeignCatalog, ForeignSchema, ForeignTable);
@@ -2044,8 +2040,8 @@ end;
       accurate
   @return <code>ResultSet</code> - each row is an index column description
 }
-function TZSQLiteDatabaseMetadata.GetIndexInfo(Catalog: string;
-  Schema: string; Table: string; Unique: Boolean;
+function TZSQLiteDatabaseMetadata.GetIndexInfo(const Catalog: string;
+  const Schema: string; const Table: string; Unique: Boolean;
   Approximate: Boolean): IZResultSet;
 var
   Key: string;
@@ -2160,9 +2156,9 @@ end;
   STRUCT, or DISTINCT); null returns all types
   @return <code>ResultSet</code> - each row is a type description
 }
-function TZSQLiteDatabaseMetadata.GetUDTs(Catalog: string;
-  SchemaPattern: string; TypeNamePattern: string;
-  Types: TIntegerDynArray): IZResultSet;
+function TZSQLiteDatabaseMetadata.GetUDTs(const Catalog: string;
+  const SchemaPattern: string; const TypeNamePattern: string;
+  const Types: TIntegerDynArray): IZResultSet;
 begin
   Result := GetUDTs(Catalog, SchemaPattern, TypeNamePattern, Types);
 end;

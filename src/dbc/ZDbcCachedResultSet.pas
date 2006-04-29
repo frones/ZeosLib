@@ -177,9 +177,9 @@ type
     procedure UpdateDouble(ColumnIndex: Integer; Value: Double); override;
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended); override;
     procedure UpdatePChar(ColumnIndex: Integer; Value: PChar); override;
-    procedure UpdateString(ColumnIndex: Integer; Value: string); override;
-    procedure UpdateUnicodeString(ColumnIndex: Integer; Value: widestring); override;
-    procedure UpdateBytes(ColumnIndex: Integer; Value: TByteDynArray); override;
+    procedure UpdateString(ColumnIndex: Integer; const Value: string); override;
+    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString); override;
+    procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray); override;
     procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime); override;
     procedure UpdateTime(ColumnIndex: Integer; Value: TDateTime); override;
     procedure UpdateTimestamp(ColumnIndex: Integer; Value: TDateTime); override;
@@ -194,8 +194,8 @@ type
     procedure MoveToInsertRow; override;
     procedure MoveToCurrentRow; override;
 
-    function CompareRows(Row1, Row2: Integer; ColumnIndices: TIntegerDynArray;
-      ColumnDirs: TBooleanDynArray): Integer; override;
+    function CompareRows(Row1, Row2: Integer; const ColumnIndices: TIntegerDynArray;
+      const ColumnDirs: TBooleanDynArray): Integer; override;
 
     //---------------------------------------------------------------------
     // Cached Updates
@@ -1146,7 +1146,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateString(ColumnIndex: Integer;
-  Value: string);
+  const Value: string);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1166,7 +1166,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateUnicodeString(ColumnIndex: Integer;
-  Value: Widestring);
+  const Value: WideString);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1186,7 +1186,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateBytes(ColumnIndex: Integer;
-  Value: TByteDynArray);
+  const Value: TByteDynArray);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1631,7 +1631,7 @@ end;
   @param ColumnDirs compare direction for each columns.
 }
 function TZAbstractCachedResultSet.CompareRows(Row1, Row2: Integer;
-  ColumnIndices: TIntegerDynArray; ColumnDirs: TBooleanDynArray): Integer;
+  const ColumnIndices: TIntegerDynArray; const ColumnDirs: TBooleanDynArray): Integer;
 var
   RowBuffer1, RowBuffer2: PZRowBuffer;
 begin

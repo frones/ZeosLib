@@ -54,13 +54,13 @@ type
     FStatusVector: TARRAY_ISC_STATUS;
     FIBConnection: IZInterbase6Connection;
   protected
-    procedure CheckInterbase6Error(Sql: string = '');
+    procedure CheckInterbase6Error(const Sql: string = '');
   public
     constructor Create(Connection: IZConnection; Info: TStrings);
 
-    function ExecuteQuery(SQL: string): IZResultSet; override;
-    function ExecuteUpdate(SQL: string): Integer; override;
-    function Execute(SQL: string): Boolean; override;
+    function ExecuteQuery(const SQL: string): IZResultSet; override;
+    function ExecuteUpdate(const SQL: string): Integer; override;
+    function Execute(const SQL: string): Boolean; override;
   end;
 
   {** Implements Prepared SQL Statement. }
@@ -71,13 +71,13 @@ type
     FStatusVector: TARRAY_ISC_STATUS;
     FIBConnection: IZInterbase6Connection;
   protected
-    procedure CheckInterbase6Error(Sql: string = '');
+    procedure CheckInterbase6Error(const Sql: string = '');
   public
-    constructor Create(Connection: IZConnection; SQL: string; Info: TStrings);
+    constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
 
-    function ExecuteQuery(SQL: string): IZResultSet; override;
-    function ExecuteUpdate(SQL: string): Integer; override;
-    function Execute(SQL: string): Boolean; override;
+    function ExecuteQuery(const SQL: string): IZResultSet; override;
+    function ExecuteUpdate(const SQL: string): Integer; override;
+    function Execute(const SQL: string): Boolean; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -91,16 +91,16 @@ type
     FStatusVector: TARRAY_ISC_STATUS;
     FIBConnection: IZInterbase6Connection;
   protected
-    procedure CheckInterbase6Error(Sql: string = '');
+    procedure CheckInterbase6Error(const Sql: string = '');
     procedure FetchOutParams(Value: IZResultSQLDA);
     function GetProcedureSql(SelectProc: boolean): string;
     procedure TrimInParameters;
   public
-    constructor Create(Connection: IZConnection; SQL: string; Info: TStrings);
+    constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
 
-    function ExecuteQuery(SQL: string): IZResultSet; override;
-    function ExecuteUpdate(SQL: string): Integer; override;
-    function Execute(SQL: string): Boolean; override;
+    function ExecuteQuery(const SQL: string): IZResultSet; override;
+    function ExecuteUpdate(const SQL: string): Integer; override;
+    function Execute(const SQL: string): Boolean; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -117,7 +117,7 @@ uses ZDbcCachedResultSet, ZSysUtils, ZDbcUtils;
    Check interbase error status
    @param Sql the used sql tring
 }
-procedure TZInterbase6Statement.CheckInterbase6Error(Sql: string = '');
+procedure TZInterbase6Statement.CheckInterbase6Error(const Sql: string = '');
 begin
   ZDbcInterbase6Utils.CheckInterbase6Error(FIBConnection.GetPlainDriver,
     FStatusVector, lcExecute, SQL);
@@ -151,7 +151,7 @@ end;
     given query; never <code>null</code>
 }
 {$HINTS OFF}
-function TZInterbase6Statement.ExecuteQuery(SQL: string): IZResultSet;
+function TZInterbase6Statement.ExecuteQuery(const SQL: string): IZResultSet;
 var
   Cursor: string;
   SQLData: IZResultSQLDA;
@@ -219,7 +219,7 @@ end;
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
 {$HINTS OFF}
-function TZInterbase6Statement.ExecuteUpdate(SQL: string): Integer;
+function TZInterbase6Statement.ExecuteUpdate(const SQL: string): Integer;
 var
   StmtHandle: TISC_STMT_HANDLE;
   StatementType: TZIbSqlStatementType;
@@ -283,7 +283,7 @@ end;
   @see #getMoreResults
 }
 {$HINTS OFF}
-function TZInterbase6Statement.Execute(SQL: string): Boolean;
+function TZInterbase6Statement.Execute(const SQL: string): Boolean;
 var
   Cursor: string;
   SQLData: IZResultSQLDA;
@@ -364,7 +364,7 @@ end;
    Check interbase error status
    @param Sql the used sql tring
 }
-procedure TZInterbase6PreparedStatement.CheckInterbase6Error(Sql: string);
+procedure TZInterbase6PreparedStatement.CheckInterbase6Error(const Sql: string);
 begin
   ZDbcInterbase6Utils.CheckInterbase6Error(FIBConnection.GetPlainDriver,
     FStatusVector, lcExecute, SQL);
@@ -378,7 +378,7 @@ end;
   @param Info a statement parameters.
 }
 constructor TZInterbase6PreparedStatement.Create(Connection: IZConnection;
-  SQL: string; Info: TStrings);
+  const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
 
@@ -413,7 +413,7 @@ end;
   @see #getMoreResults
 }
 
-function TZInterbase6PreparedStatement.Execute(SQL: string): Boolean;
+function TZInterbase6PreparedStatement.Execute(const SQL: string): Boolean;
 begin
   Self.SQL := SQL;
   Result := ExecutePrepared;
@@ -503,7 +503,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZInterbase6PreparedStatement.ExecuteQuery(SQL: string): IZResultSet;
+function TZInterbase6PreparedStatement.ExecuteQuery(const SQL: string): IZResultSet;
 begin
   Self.SQL := SQL;
   Result := ExecuteQueryPrepared;
@@ -585,7 +585,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZInterbase6PreparedStatement.ExecuteUpdate(SQL: string): Integer;
+function TZInterbase6PreparedStatement.ExecuteUpdate(const SQL: string): Integer;
 begin
   Self.SQL := SQL;
   Result := ExecuteUpdatePrepared;
@@ -652,7 +652,7 @@ end;
    Check interbase error status
    @param Sql the used sql tring
 }
-procedure TZInterbase6CallableStatement.CheckInterbase6Error(Sql: string);
+procedure TZInterbase6CallableStatement.CheckInterbase6Error(const Sql: string);
 begin
   ZDbcInterbase6Utils.CheckInterbase6Error(FIBConnection.GetPlainDriver,
     FStatusVector, lcExecute, SQL);
@@ -666,7 +666,7 @@ end;
   @param Info a statement parameters.
 }
 constructor TZInterbase6CallableStatement.Create(Connection: IZConnection;
-  SQL: string; Info: TStrings);
+  const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
 
@@ -701,7 +701,7 @@ end;
   @see #getMoreResults
 }
 
-function TZInterbase6CallableStatement.Execute(SQL: string): Boolean;
+function TZInterbase6CallableStatement.Execute(const SQL: string): Boolean;
 begin
   Self.SQL := SQL;
   Result := ExecutePrepared;
@@ -788,7 +788,7 @@ end;
     given query; never <code>null</code>
 }
 function TZInterbase6CallableStatement.ExecuteQuery(
-  SQL: string): IZResultSet;
+  const SQL: string): IZResultSet;
 begin
   Self.SQL := SQL;
   Result := ExecuteQueryPrepared;
@@ -871,7 +871,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZInterbase6CallableStatement.ExecuteUpdate(SQL: string): Integer;
+function TZInterbase6CallableStatement.ExecuteUpdate(const SQL: string): Integer;
 begin
   Self.SQL := SQL;
   Result := ExecuteUpdatePrepared;
