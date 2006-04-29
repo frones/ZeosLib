@@ -151,8 +151,8 @@ type
     procedure CommitPrepared(const transactionid: string);virtual;
     procedure RollbackPrepared(const transactionid: string);virtual;
 
-    //Ping Support initially for MySQL 27032006 (firmos)
-    procedure Ping_Server;virtual;
+    //Ping Support initially for MySQL 27032006 (firmos)
+    procedure Ping_Server;virtual;
 
 
     procedure Open; virtual;
