@@ -1767,7 +1767,7 @@ begin
     DT_INT:
       Result := stInteger;
     DT_DECIMAL:
-      Result := stDouble; //BCD Felder mom. nicht unterst¸tzt
+      Result := stDouble; //BCD Felder mom. nicht unterstÅtzt
     DT_FLOAT:
       Result := stFloat;
     DT_DOUBLE:
@@ -1818,7 +1818,7 @@ begin
     DT_INT:
       Result := 'DT_INT';
     DT_DECIMAL:
-      Result := 'DT_DECIMAL'; //BCD Felder mom. nicht unterst¸tzt
+      Result := 'DT_DECIMAL'; //BCD Felder mom. nicht unterstÅtzt
     DT_FLOAT:
       Result := 'DT_FLOAT';
     DT_DOUBLE:
