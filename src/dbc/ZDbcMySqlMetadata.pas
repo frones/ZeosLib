@@ -819,25 +819,30 @@ begin
     end;
 
     // If a table was specified but not found, check if it could be a temporary table
-    IF Not Result.First and (LTableNamePattern <> '%') then
-      Try
-        if GetConnection.CreateStatement.ExecuteQuery(
-          Format('SHOW COLUMNS FROM %s.%s',
-          [GetIdentifierConvertor.Quote(LCatalog),
-           GetIdentifierConvertor.Quote(LTableNamePattern)])).Next then
-            begin
-              Result.MoveToInsertRow;
-              Result.UpdateString(1, LCatalog);
-              Result.UpdateString(3, LTableNamePattern);
-              Result.UpdateString(4, 'TABLE');
-              Result.InsertRow;
-            end;
-      Except
-        On EZSQLException Do
+    if not Result.First and (LTableNamePattern <> '%') then
+    begin
+      try
+        EnterSilentMySQLError;
+        try
+          if GetConnection.CreateStatement.ExecuteQuery(
+            Format('SHOW COLUMNS FROM %s.%s',
+            [GetIdentifierConvertor.Quote(LCatalog),
+             GetIdentifierConvertor.Quote(LTableNamePattern)])).Next then
           begin
+            Result.MoveToInsertRow;
+            Result.UpdateString(1, LCatalog);
+            Result.UpdateString(3, LTableNamePattern);
+            Result.UpdateString(4, 'TABLE');
+            Result.InsertRow;
           end;
-      End;
-
+        finally
+          LeaveSilentMySQLError;
+        end;
+      except
+        on EZMySQLSilentException do ;
+        on EZSQLException do ;
+      end;
+    end;
     AddResultSetToCache(Key, Result);
   end;
 end;

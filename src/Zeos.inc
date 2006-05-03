@@ -92,7 +92,7 @@
 {$DEFINE ENABLE_SQLITE}
 
 // Enables Oracle support in TZConnection/TZDataset
-{.$DEFINE ENABLE_ORACLE}
+{$DEFINE ENABLE_ORACLE}
 
 // Enables ASA support in TZConnection/TZDataset
 {.$DEFINE ENABLE_ASA}

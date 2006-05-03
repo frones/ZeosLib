@@ -42,6 +42,9 @@ interface
 {$I ZDbc.inc}
 
 uses
+{$IFDEF MSWINDOWS}
+  Windows,
+{$ENDIF MSWINDOWS}
   Classes, SysUtils, Contnrs, ZDbcIntfs, ZClasses, ZCollections, ZSysUtils,
 {$IFNDEF VER130BELOW}
   Types,

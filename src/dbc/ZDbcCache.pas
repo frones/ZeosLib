@@ -43,6 +43,9 @@ interface
 
 
 uses
+{$IFDEF MSWINDOWS}
+  Windows,
+{$ENDIF MSWINDOWS}
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}

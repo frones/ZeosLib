@@ -42,6 +42,9 @@ interface
 {$I ZCore.inc}
 
 uses
+  {$IFDEF MSWINDOWS}
+  Windows,
+  {$ENDIF MSWINDOWS}
   Classes, SysUtils, ZCompatibility, ZClasses, ZSysUtils;
 
 const

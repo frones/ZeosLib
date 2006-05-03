@@ -47,6 +47,10 @@ uses
 const
   MAXBUF = 65535;
 
+type
+  {** Silent exception }
+  EZMySQLSilentException = class(EAbort);
+
 {**
   Converts a MySQL native types into ZDBC SQL types.
   @param PlainDriver a native MySQL plain driver.
@@ -69,7 +73,7 @@ function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull: string): TZSQLType;
   @param Value a timestamp string.
   @return a decoded TDateTime value.
 }
-function MySQLTimestampToDateTime(Value: string): TDateTime;
+function MySQLTimestampToDateTime(const Value: string): TDateTime;
 
 {**
   Checks for possible sql errors.
@@ -79,11 +83,27 @@ function MySQLTimestampToDateTime(Value: string): TDateTime;
   @param LogMessage a logging message.
 }
 procedure CheckMySQLError(PlainDriver: IZMySQLPlainDriver;
-  Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; LogMessage: string);
+  Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; const LogMessage: string);
+
+procedure EnterSilentMySQLError;
+procedure LeaveSilentMySQLError;
 
 implementation
 
 uses ZMessages;
+
+threadvar
+  SilentMySQLError: Integer;
+
+procedure EnterSilentMySQLError;
+begin
+  Inc(SilentMySQLError);
+end;
+
+procedure LeaveSilentMySQLError;
+begin
+  Dec(SilentMySQLError);
+end;
 
 {**
   Converts a MySQL native types into ZDBC SQL types.
@@ -282,7 +302,7 @@ end;
   @param Value a timestamp string.
   @return a decoded TDateTime value.
 }
-function MySQLTimestampToDateTime(Value: string): TDateTime;
+function MySQLTimestampToDateTime(const Value: string): TDateTime;
 var
   Year, Month, Day, Hour, Min, Sec: Integer;
   StrLength, StrPos: Integer;
@@ -347,7 +367,7 @@ end;
   @param LogMessage a logging message.
 }
 procedure CheckMySQLError(PlainDriver: IZMySQLPlainDriver;
-  Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; LogMessage: string);
+  Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; const LogMessage: string);
 var
   ErrorMessage: string;
   ErrorCode: Integer;
@@ -356,6 +376,9 @@ begin
   ErrorCode := PlainDriver.GetLastErrorCode(Handle);
   if (ErrorCode <> 0) and (ErrorMessage <> '') then
   begin
+    if SilentMySQLError > 0 then
+      raise EZMySQLSilentException.CreateFmt(SSQLError1, [ErrorMessage]);
+
     DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,
       ErrorCode, ErrorMessage);
     raise EZSQLException.CreateWithCode(ErrorCode,
