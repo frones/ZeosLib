@@ -244,7 +244,7 @@ function RandomString( Len: integer): string;
 
 implementation
 
-uses Variants, ZMessages, ZDbcCachedResultSet, Math;
+uses {$IFNDEF VER130BELOW}Variants,{$ENDIF} ZMessages, ZDbcCachedResultSet, Math;
 
 { TZASASQLDA }
 
@@ -1008,9 +1008,7 @@ begin
   case VarType( Value) of
     varEmpty,
     varNull       : UpdateNull( Index, True);
-    varWord,
     varSmallint   : UpdateShort( Index, Value);
-    varLongWord,
     varInteger    : UpdateInt( Index, Value);
     varSingle     : UpdateFloat( Index, Value);
     varDouble     : UpdateDouble( Index, Value);
@@ -1020,10 +1018,12 @@ begin
     varString,
     varOleStr     : UpdateString( Index, Value);
     varBoolean    : UpdateBoolean( Index, Value);
-    varShortInt,
     varByte       : UpdateByte( Index, Value);
 {$IFDEF COMPILER6_UP}
     varInt64      : UpdateLong( Index, Value);
+    varShortInt   : UpdateByte( Index, Value);
+    varLongWord   : UpdateInt( Index, Value);
+    varWord       : UpdateShort( Index, Value);
 {$ENDIF}
   else
     if VarArrayDimCount( Value) = 1 then
@@ -1108,7 +1108,7 @@ begin
       DT_SMALLINT    : Result := PSmallint(sqldata)^;
       DT_UNSSMALLINT : Result := PWord(sqldata)^;
       DT_INT         : Result := PInteger(sqldata)^;
-      DT_UNSINT      : Result := PLongWord(sqldata)^;
+      {$IFNDEF VER130}DT_UNSINT      : Result := PLongWord(sqldata)^;{$ENDIF}
       DT_FLOAT       : Result := PSingle(sqldata)^;
       DT_DOUBLE      : Result := PDouble(sqldata)^;
       DT_VARCHAR     : begin
@@ -1146,7 +1146,7 @@ begin
       DT_SMALLINT    : Result := PSmallint(sqldata)^ <> 0;
       DT_UNSSMALLINT : Result := PWord(sqldata)^ <> 0;
       DT_INT         : Result := PInteger(sqldata)^ <> 0;
-      DT_UNSINT      : Result := PLongWord(sqldata)^ <> 0;
+      {$IFNDEF VER130}DT_UNSINT      : Result := PLongWord(sqldata)^ <> 0;{$ENDIF}
       DT_FLOAT       : Result := PSingle(sqldata)^ <> 0;
       DT_DOUBLE      : Result := PDouble(sqldata)^ <> 0;
       DT_VARCHAR     : begin
@@ -1184,7 +1184,7 @@ begin
       DT_SMALLINT    : Result := PSmallint(sqldata)^;
       DT_UNSSMALLINT : Result := PWord(sqldata)^;
       DT_INT         : Result := PInteger(sqldata)^;
-      DT_UNSINT      : Result := PLongWord(sqldata)^;
+      {$IFNDEF VER130}DT_UNSINT      : Result := PLongWord(sqldata)^;{$ENDIF}
       DT_FLOAT       : Result := Trunc( PSingle(sqldata)^);
       DT_DOUBLE      : Result := Trunc( PDouble(sqldata)^);
       DT_VARCHAR     : begin
@@ -1257,7 +1257,7 @@ begin
       DT_SMALLINT    : Result := PSmallint(sqldata)^;
       DT_UNSSMALLINT : Result := PWord(sqldata)^;
       DT_INT         : Result := PInteger(sqldata)^;
-      DT_UNSINT      : Result := PLongWord(sqldata)^;
+      {$IFNDEF VER130}DT_UNSINT      : Result := PLongWord(sqldata)^;{$ENDIF}
       DT_FLOAT       : Result := PSingle(sqldata)^;
       DT_DOUBLE      : Result := PDouble(sqldata)^;
       DT_VARCHAR     : begin
@@ -1295,7 +1295,7 @@ begin
       DT_SMALLINT    : Result := PSmallint(sqldata)^;
       DT_UNSSMALLINT : Result := PWord(sqldata)^;
       DT_INT         : Result := PInteger(sqldata)^;
-      DT_UNSINT      : Result := PLongWord(sqldata)^;
+      {$IFNDEF VER130}DT_UNSINT      : Result := PLongWord(sqldata)^;{$ENDIF}
       DT_FLOAT       : Result := PSingle(sqldata)^;
       DT_DOUBLE      : Result := PDouble(sqldata)^;
       DT_VARCHAR     : begin
@@ -1333,7 +1333,7 @@ begin
       DT_SMALLINT    : Result := PSmallint(sqldata)^;
       DT_UNSSMALLINT : Result := PWord(sqldata)^;
       DT_INT         : Result := PInteger(sqldata)^;
-      DT_UNSINT      : Result := PLongWord(sqldata)^;
+      {$IFNDEF VER130}DT_UNSINT      : Result := PLongWord(sqldata)^;{$ENDIF}
       DT_FLOAT       : Result := Trunc( PSingle(sqldata)^);
       DT_DOUBLE      : Result := Trunc( PDouble(sqldata)^);
       DT_VARCHAR     : begin
@@ -1371,7 +1371,7 @@ begin
       DT_SMALLINT    : Result := PSmallint(sqldata)^;
       DT_UNSSMALLINT : Result := PWord(sqldata)^;
       DT_INT         : Result := PInteger(sqldata)^;
-      DT_UNSINT      : Result := PLongWord(sqldata)^;
+      {$IFNDEF VER130}DT_UNSINT      : Result := PLongWord(sqldata)^;{$ENDIF}
       DT_FLOAT       : Result := Trunc( PSingle(sqldata)^);
       DT_DOUBLE      : Result := Trunc( PDouble(sqldata)^);
       DT_VARCHAR     : begin
@@ -1432,7 +1432,7 @@ begin
       DT_SMALLINT    : Result := IntToStr( PSmallint(sqldata)^);
       DT_UNSSMALLINT : Result := IntToStr( PWord(sqldata)^);
       DT_INT         : Result := IntToStr( PInteger(sqldata)^);
-      DT_UNSINT      : Result := IntToStr( PLongWord(sqldata)^);
+      {$IFNDEF VER130}DT_UNSINT      : Result := IntToStr( PLongWord(sqldata)^);{$ENDIF}
       DT_FLOAT       : Result := FloatToStr( PSingle(sqldata)^);
       DT_DOUBLE      : Result := FloatToStr( PDouble(sqldata)^);
       DT_VARCHAR     : SetString( Result, PChar( @PZASASQLSTRING( sqlData).data[0]),
@@ -1440,7 +1440,7 @@ begin
       DT_LONGVARCHAR : ReadBlobToString( Index, Result);
       DT_TIMESTAMP_STRUCT : Result := DateToStr( GetTimestamp( Index));
       DT_TINYINT     : Result := IntToStr( PByte(sqldata)^);
-      {$IFDEF FPC}
+      {$IFDEF VER130BELOW}
       DT_BIT         : Result := BoolToStr( ( PByte(sqldata)^ = 1));
       {$ELSE}
       DT_BIT         : Result := BoolToStr( ( PByte(sqldata)^ = 1), True);
@@ -1473,7 +1473,7 @@ begin
       DT_SMALLINT    : Result := PSmallint(sqldata)^;
       DT_UNSSMALLINT : Result := PWord(sqldata)^;
       DT_INT         : Result := PInteger(sqldata)^;
-      DT_UNSINT      : Result := PLongWord(sqldata)^;
+//      DT_UNSINT      : Result := PLongWord(sqldata)^;
       DT_FLOAT       : Result := Trunc( PSingle(sqldata)^);
       DT_DOUBLE      : Result := Trunc( PDouble(sqldata)^);
       DT_VARCHAR     : begin
@@ -1551,7 +1551,7 @@ begin
       DT_SMALLINT    : Result := PSmallint(sqldata)^;
       DT_UNSSMALLINT : Result := PWord(sqldata)^;
       DT_INT         : Result := PInteger(sqldata)^;
-      DT_UNSINT      : Result := PLongWord(sqldata)^;
+//      DT_UNSINT      : Result := PLongWord(sqldata)^;
       DT_FLOAT       : Result := PSingle(sqldata)^;
       DT_DOUBLE      : Result := PDouble(sqldata)^;
       DT_VARCHAR     : begin
@@ -1767,7 +1767,7 @@ begin
     DT_INT:
       Result := stInteger;
     DT_DECIMAL:
-      Result := stDouble; //BCD Felder mom. nicht unterstÅtzt
+      Result := stDouble; //BCD Felder mom. nicht unterst√ºtzt
     DT_FLOAT:
       Result := stFloat;
     DT_DOUBLE:
@@ -1818,7 +1818,7 @@ begin
     DT_INT:
       Result := 'DT_INT';
     DT_DECIMAL:
-      Result := 'DT_DECIMAL'; //BCD Felder mom. nicht unterstÅtzt
+      Result := 'DT_DECIMAL'; //BCD Felder mom. nicht unterst√ºtzt
     DT_FLOAT:
       Result := 'DT_FLOAT';
     DT_DOUBLE:

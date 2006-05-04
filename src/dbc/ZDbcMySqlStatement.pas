@@ -93,7 +93,7 @@ implementation
 
 uses
   ZDbcMySql, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZMySqlToken, ZSysUtils,
-  ZMessages, ZDbcCachedResultSet, ZDbcUtils, DateUtils;
+  ZMessages, ZDbcCachedResultSet, ZDbcUtils{$IFNDEF VER130BELOW}, DateUtils{$ENDIF};
 
 { TZMySQLStatement }
 
@@ -332,22 +332,43 @@ begin
         Result := GetEscapeString(SoftVarManager.GetAsString(Value));
       stDate:
       begin
+        {$IFNDEF VER130BELOW}
         DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
           AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
+        {$ELSE}
+        DecodeDate(SoftVarManager.GetAsDateTime(Value),
+          AYear, AMonth, ADay);
+        DecodeTime(SoftVarManager.GetAsDateTime(Value),
+          AHour, AMinute, ASecond, AMilliSecond);
+        {$ENDIF}
         Result := '''' + Format('%0.4d-%0.2d-%0.2d',
           [AYear, AMonth, ADay]) + '''';
       end;
       stTime:
       begin
+        {$IFNDEF VER130BELOW}
         DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
           AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
+        {$ELSE}
+        DecodeDate(SoftVarManager.GetAsDateTime(Value),
+          AYear, AMonth, ADay);
+        DecodeTime(SoftVarManager.GetAsDateTime(Value),
+          AHour, AMinute, ASecond, AMilliSecond);
+        {$ENDIF}
         Result := '''' + Format('%0.2d:%0.2d:%0.2d',
           [AHour, AMinute, ASecond]) + '''';
       end;
       stTimestamp:
       begin
+        {$IFNDEF VER130BELOW}
         DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
           AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
+        {$ELSE}
+        DecodeDate(SoftVarManager.GetAsDateTime(Value),
+          AYear, AMonth, ADay);
+        DecodeTime(SoftVarManager.GetAsDateTime(Value),
+          AHour, AMinute, ASecond, AMilliSecond);
+        {$ENDIF}
         Result := '''' + Format('%0.4d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d',
           [AYear, AMonth, ADay, AHour, AMinute, ASecond]) + '''';
       end;

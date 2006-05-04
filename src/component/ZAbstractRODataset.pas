@@ -49,6 +49,9 @@ uses
   Types,
   Variants,
 {$ENDIF}
+{$IFDEF VER130}
+  Forms,
+{$ENDIF}
   SysUtils, DB, Classes, ZSysUtils, ZConnection, ZDbcIntfs, ZSqlStrings,
   Contnrs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility, ZExpression;
 
@@ -851,7 +854,11 @@ begin
     try
       OnFilterRecord(Self, Result);
     except
+      {$IFNDEF VER130}
       ApplicationHandleException(Self);
+      {$ELSE}
+      Application.HandleException(Self);
+      {$ENDIF}
     end;
 
     CurrentRow := SavedRow;
@@ -974,7 +981,7 @@ begin
             Statement.SetDate(I + 1, Param.AsDate);
           ftTime:
             Statement.SetTime(I + 1, Param.AsTime);
-          ftDateTime, ftTimestamp:
+          ftDateTime{$IFNDEF VER130}, ftTimestamp{$ENDIF}:
             Statement.SetTimestamp(I + 1, Param.AsDateTime);
           ftMemo:
             begin
@@ -1953,7 +1960,7 @@ end;
 }
 procedure TZAbstractRODataset.InternalPost;
 begin
-{$IFNDEF FPC}
+{$IFNDEF VER130BELOW}
   inherited;
 {$ENDIF}
   if not (Self is TZAbstractDataset) then
@@ -2969,7 +2976,7 @@ const
     ftFloat, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
     ftInteger, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftUnknown,
     ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
-    ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp, ftFMTBcd);
+    ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString{$IFNDEF VER130}, ftTimestamp, ftFMTBcd{$ENDIF});
  {$ENDIF}
 {$ENDIF}
 

@@ -41,7 +41,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  ZCompatibility, Types, Classes, Contnrs, SysUtils, ZDbcIntfs,
+  ZCompatibility, {$IFNDEF VER130BELOW}Types,{$ENDIF}
+  Classes, Contnrs, SysUtils, ZDbcIntfs,
   ZDbcConnection, ZPlainASADriver, ZSysUtils, ZTokenizer,
   ZDbcGenericResolver, ZGenericSqlAnalyser;
 

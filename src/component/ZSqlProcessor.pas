@@ -42,7 +42,7 @@ interface
 {$I ZComponent.inc}
 
 uses ZCompatibility, Classes, SysUtils, DB, ZDbcIntfs, ZConnection, ZTokenizer,
-  ZScriptParser, ZSqlStrings, Types;
+  ZScriptParser, ZSqlStrings{$IFNDEF VER130BELOW}, Types{$ENDIF};
 
 type
 
@@ -476,7 +476,7 @@ begin
             Statement.SetDate(I + 1, Param.AsDate);
           ftTime:
             Statement.SetTime(I + 1, Param.AsTime);
-          ftDateTime, ftTimestamp:
+          ftDateTime{$IFNDEF VER130}, ftTimestamp{$ENDIF}:
             Statement.SetTimestamp(I + 1, Param.AsDateTime);
           ftMemo:
             begin

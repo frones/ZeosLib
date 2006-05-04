@@ -164,7 +164,7 @@ begin
           Statement.SetDate(I+1, Param.AsDate);
         ftTime:
           Statement.SetTime(I+1, Param.AsTime);
-        ftDateTime, ftTimestamp:
+        ftDateTime{$IFNDEF VER130}, ftTimestamp{$ENDIF}:
           Statement.SetTimestamp(I+1, Param.AsDateTime);
         ftMemo:
           begin
