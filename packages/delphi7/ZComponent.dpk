@@ -1,4 +1,5 @@
 package ZComponent;
+{$LIBSUFFIX '70'}
 
 {$R *.res}
 {$R '..\..\src\component\ZComponent.dcr'}

@@ -1,5 +1,5 @@
 package ZComponent;
-
+{$LIBSUFFIX '100'}
 {$R *.res}
 {$R '..\..\src\component\ZComponent.dcr'}
 {$ALIGN 8}

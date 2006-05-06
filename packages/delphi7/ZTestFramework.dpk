@@ -1,5 +1,5 @@
 package ZTestFramework;
-
+{$LIBSUFFIX '70'}
 {$R *.res}
 {$ALIGN 8}
 {$ASSERTIONS ON}
