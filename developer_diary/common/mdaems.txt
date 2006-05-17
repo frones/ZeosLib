@@ -3,3 +3,21 @@
 20060414 : Const modifier added to function definitions where possible to improve speed. - Patch by AHUser - See  http://seegernet.koolhost.de/zeosforum/viewtopic.php?t=519
 
 20060415 : Removed old CVS related files/directories from the source tree.  - Asked by IgD
+
+20060415 : Some more Lazarus package modifications.  - Patch by IgD
+
+20060417 : Memory leak bug fixed by DavidVTailor - See http://seegernet.koolhost.de/zeosforum/viewtopic.php?t=461
+
+20060429 : Delimiter problem in ZSQLProcessor fixed - See http://seegernet.koolhost.de/zeosforum/viewtopic.php?t=527
+
+20060430 : Fixed wrong line breaks in source files - See http://seegernet.koolhost.de/zeosforum/viewtopic.php?t=553
+
+20060503 : MissingConsts, Inlining, SilentException patch - Sent by AHUser - See http://seegernet.koolhost.de/zeosforum/viewtopic.php?t=566
+
+20060505 : Fixed Delphi 5 install problems - See http://seegernet.koolhost.de/zeosforum/viewtopic.php?t=335
+
+20060506 : Added {$LIBSUFFIX 'X0'} to projectfiles of D7 and D2006 - http://seegernet.koolhost.de/zeosforum/viewtopic.php?t=561
+
+20060508 : Removed ASA driver from Lazarus packages because not compilable in Lazarus.
+
+20060517 : Bug in GetIndexInfo - Patch by the_kique - See http://seegernet.koolhost.de/zeosforum/viewtopic.php?t=196

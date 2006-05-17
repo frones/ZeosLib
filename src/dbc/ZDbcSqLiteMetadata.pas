@@ -2061,7 +2061,7 @@ begin
       while Next do
       begin
         if (Pos(' autoindex ', GetString(2)) = 0)
-          and ((Unique = False) or (GetInt(3) <> 0)) then
+          and ((Unique = False) or (GetInt(3) = 0)) then
         begin
           ResultSet := GetConnection.CreateStatement.ExecuteQuery(
             Format('PRAGMA index_info(''%s'')', [GetString(2)]));
@@ -2074,7 +2074,7 @@ begin
             else Result.UpdateNull(1);
             Result.UpdateNull(2);
             Result.UpdateString(3, Table);
-            Result.UpdateBoolean(4, GetInt(3) <> 0);
+            Result.UpdateBoolean(4, GetInt(3) = 0);
             Result.UpdateNull(5);
             Result.UpdateString(6, GetString(2));
             Result.UpdateNull(7);
