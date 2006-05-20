@@ -84,10 +84,10 @@ resourcestring
   SVariableAlreadyExists = 'Variável "%s" já existe';
   STypesMismatch = 'Tipos não combinam';
   SUnsupportedVariantType = 'Tipo variante não suportado';
-  SUnsupportedOperation = 'Operação não suportado';
+  SUnsupportedOperation = 'Operação não suportada';
 
-  STokenizerIsNotDefined = 'Tokenizer is not defined';
-  SLibraryNotFound = 'Nenhuma biblioteca dinaêmica da lista %s foi encontrada';
+  STokenizerIsNotDefined = 'Sinalizador não definido';
+  SLibraryNotFound = 'Nenhuma biblioteca dinâmica da lista %s foi encontrada';
   SEncodeDateIsNotSupported = 'Esta versão não suporta isc_encode_sql_date';
   SEncodeTimeIsNotSupported = 'Esta versão não suporta supported isc_encode_sql_time';
   SEncodeTimestampIsNotSupported = 'Esta versão não suporta supported isc_encode_sql_timestamp';
@@ -124,6 +124,7 @@ resourcestring
   SConnectionIsNotOpened = 'Conexão ainda não está aberta.';
   SInvalidOpInAutoCommit = 'Operação inválida no modo AutoCommit.';
   SInvalidOpInNonAutoCommit = 'Operação inválida quando o modo AutoCommit é False.';
+  SInvalidOpPrepare = 'Prepare transaction somente é possível após comandar Starttransaction';
 
   SConnectionIsNotAssigned = 'Componente de conexão de banco de dados não atribuído';
   SQueryIsEmpty = 'Consulta SQL está vazia';
@@ -162,35 +163,39 @@ resourcestring
 
   SLoginPromptFailure = 'Não foi possível encontrar o diálogo padrão de login. Por favor adicione DBLogDlg para a seção uses de seu arquivo principal.';
 
-  SPropertyQuery = 'The Query may last a while on large databases!';
-  SPropertyTables = 'You should limit it by Catalog and/or Schema.';
-  SPropertyColumns = 'You should limit it by Catalog, Schema and/or TableName.';
-  SPropertyProcedures = 'You should limit it by Catalog and/or Schema.';
-  SPropertySequences = 'You should limit it by Catalog and/or Schema.';
-  SPropertyExecute = 'Should the Query be executed anyway?';
+  SPropertyQuery = 'A Query poderá demorar em bancos de dados volumosos!';
+  SPropertyTables = 'Você deveria limitar por Catalogo e/ou Esquema.';
+  SPropertyColumns = 'Você deveria limitar por Catalogo, Esquema e/ou Tabela.';
+  SPropertyProcedures = 'Você deveria limitar por Catalogo e/ou Esquema.';
+  SPropertySequences = 'Você deveria limitar por Catalogo e/ou Esquema..';
+  SPropertyExecute = 'Executar a Query de qualquer maneira?';
 
-  SFormTest = 'ZEOS SQL Editor Test';
-  SButtonClose = '&Close';
-  SFormEditor = 'ZEOS SQL Editor';
-  STabSheetSelect = 'Select SQL';
-  SMenuLoad = 'Load';
-  SMenuSave = 'Save';
-  SButtonGenerate = '&Generate';
-  SButtonCheck = 'C&heck';
-  SButtonTest = '&Test';
+  SFormTest = 'Teste Editor ZEOS SQL';
+  SButtonClose = '&Fechar';
+  SFormEditor = 'Editor ZEOS SQL';
+  STabSheetSelect = 'SQL Select';
+  SMenuLoad = 'Carregar';
+  SMenuSave = 'Salvar';
+  SButtonGenerate = '&Gerar';
+  SButtonCheck = '&Verificar';
+  SButtonTest = '&Testar';
   SButtonOk = '&OK';
-  SButtonCancel = '&Cancel';
-  STableAlias = 'T&able alias';
-  SReplaceSQL = '&Replace SQL';
-  SDialogOpenTitle = 'Open SQL File';
-  SDialogSaveTitle = 'Save SQL File';
-  SSQLEditor = 'SQL Editor';
-  SDatabaseDialog = 'Open existing database';
+  SButtonCancel = '&Cancelar';
+  STableAlias = '&Alias Tabela';
+  SReplaceSQL = '&Substituir SQL';
+  SDialogOpenTitle = 'Abrir Arquivo SQL';
+  SDialogSaveTitle = 'Salvar Arquivo SQL';
+  SSQLEditor = 'Editor SQL';
+  SDatabaseDialog = 'Abrir Banco de Dados existente';
+
+  SUpdateSQLNoResult = 'SQL Update Refresh resultou num conjunto vazio';
+  SUpdateSQLRefreshStatementcount ='Usar somente 1 declaraçao SQL para Update Refresh';
+
 
   {$IFDEF FPC}
-  SNotEditing = 'Dataset not in edit or insert mode';
-  SFieldTypeMismatch = 'Type mismatch for field ''%s'', expecting: %s actual: %s';
-  SFieldSizeMismatch = 'Size mismatch for field ''%s'', expecting: %d actual: %d';
+  SNotEditing = 'Dataset não está em modo de edição ou inserção';
+  SFieldTypeMismatch = 'Tipo inválido para o campo ''%s'', esperado: %s atual: %s';
+  SFieldSizeMismatch = 'Tamanho Inválido para o campo ''%s'', esperado: %d atual: %d';
   {$ENDIF}
 
 {$ELSE}
@@ -226,40 +231,40 @@ resourcestring
 
   STokenizerIsNotDefined = 'Tokenizer is niet gedefinieerd';
   SLibraryNotFound = 'DLL van de lijst %s werd niet gevonden';
-  SEncodeDateIsNotSupported = 'Deze versie ondersteund isc_encode_sql_date niet';
-  SEncodeTimeIsNotSupported = 'Deze versie ondersteund isc_encode_sql_time niet';
-  SEncodeTimestampIsNotSupported = 'Deze versie ondersteund isc_encode_sql_timestamp niet';
-  SDecodeDateIsNotSupported = 'Deze versie ondersteund isc_decode_sql_date niet';
-  SDecodeTimeIsNotSupported = 'Deze versie ondersteund isc_decode_sql_time niet';
-  SDecodeTimestampIsNotSupported = 'Deze versie ondersteund isc_decode_sql_timestamp niet';
+  SEncodeDateIsNotSupported = 'Deze versie ondersteunt isc_encode_sql_date niet';
+  SEncodeTimeIsNotSupported = 'Deze versie ondersteunt isc_encode_sql_time niet';
+  SEncodeTimestampIsNotSupported = 'Deze versie ondersteunt isc_encode_sql_timestamp niet';
+  SDecodeDateIsNotSupported = 'Deze versie ondersteunt isc_decode_sql_date niet';
+  SDecodeTimeIsNotSupported = 'Deze versie ondersteunt isc_decode_sql_time niet';
+  SDecodeTimestampIsNotSupported = 'Deze versie ondersteunt isc_decode_sql_timestamp niet';
 
   SCanNotRetrieveResultSetData = 'Kan ResultSet data niet ophalen';
   SRowBufferIsNotAssigned = 'Row buffer is niet toegekend';
-  SColumnIsNotAccessable = 'Kolom met index %d is not bereikbaar';
+  SColumnIsNotAccessable = 'Kolom met index %d is niet bereikbaar';
   SConvertionIsNotPossible = 'Conversie is niet mogelijk voor kolom %d van %s tot %s';
   SCanNotAccessBlobRecord = 'Kan het blob record in kolom %d met type %s niet benaderen';
   SRowDataIsNotAvailable = 'Rij data is niet beschikbaar';
-  SResolverIsNotSpecified = 'Resolver is not gespecificeerd voor deze ResultSet';
+  SResolverIsNotSpecified = 'Resolver is niet gespecificeerd voor deze ResultSet';
   SResultsetIsAlreadyOpened = 'ResultSet is al geopend';
   SCanNotUpdateEmptyRow = 'Kan een lege rij niet updaten';
   SCanNotUpdateDeletedRow = 'Kan een verwijderde rij niet updaten';
   SCanNotDeleteEmptyRow = 'Kan een lege rij niet verwijderen';
   SCannotUseCommit = 'Commit in autocommit mode is niet mogelijk';
   SCannotUseRollBack = 'Rollback in autocommit mode is niet mogelijk';
-  SCanNotUpdateComplexQuery = 'Kan een complex query met meerdere tabellen niet updaten';
+  SCanNotUpdateComplexQuery = 'Kan een complexe query met meerdere tabellen niet updaten';
   SCanNotUpdateThisQueryType = 'Kan dit query type niet updaten';
   SDriverWasNotFound = 'Gevraagde database driver is niet gevonden';
   SCanNotConnectToServer = 'Kan geen verbinding maken met de SQL server';
-  STableIsNotSpecified = 'Table is not gespecificeerd';
+  STableIsNotSpecified = 'Tabel is niet gespecifieerd';
   SLiveResultSetsAreNotSupported = 'Live query is niet ondersteund door deze klasse';
   SInvalidInputParameterCount = 'Input parameter aantal is lager dan verwacht';
-  SIsolationIsNotSupported = 'Transact isolation level wordt niet ondersteund';
+  SIsolationIsNotSupported = 'Transactie isolatie niveau wordt niet ondersteund';
   SColumnWasNotFound = 'Kolom met naam "%s" bestaat niet';
   SWrongTypeForBlobParameter = 'Verkeerde type voor Blob parameter';
   SIncorrectConnectionURL = 'Ongeldige connectie URL: %s';
   SUnsupportedProtocol = 'Niet ondersteund protocol: %s';
 
-  SConnectionIsNotOpened = 'Verbinding is niet niet gemaakt.';
+  SConnectionIsNotOpened = 'Verbinding is niet gemaakt.';
   SInvalidOpInAutoCommit = 'Ongeldige operatie in AutoCommit mode.';
   SInvalidOpInNonAutoCommit = 'Ongeldige operatie in non AutoCommit mode.';
 
@@ -270,23 +275,23 @@ resourcestring
   SOperationIsNotAllowed2 = 'Bewerking is niet toegestaan in READ ONLY mode';
   SOperationIsNotAllowed3 = 'Bewerking is niet toegestaan in %s mode';
   SOperationIsNotAllowed4 = 'Bewerking is niet toegestaan voor gesloten dataset';
-  SNoMoreRecords = 'Geen meer records in ResultSet aanwezig';
+  SNoMoreRecords = 'Geen records meer aanwezig in ResultSet';
   SCanNotOpenResultSet = 'Kan een ResultSet niet openen';
-  SCircularLink = 'Databron maakt een oneindige verbinding';
+  SCircularLink = 'Databron maakt een oneindige verbindingslus';
   SBookmarkWasNotFound = 'Bookmark niet gevonden';
   SIncorrectSearchFieldsNumber = 'Incorrect aantal zoekvelden';
   SInvalidOperationInTrans = 'Ongeldige operatie in explicit transaction mode';
   SIncorrectSymbol = 'Ongeldig symbool in veld lijst "%s".';
   SIncorrectToken = 'Ongeldig teken gevolgd door ":"';
 
-  SSelectedTransactionIsolation = 'Geselecteerd transaction isolation level niet ondersteund';
+  SSelectedTransactionIsolation = 'Geselecteerd transactie isolatie niveau niet ondersteund';
   SDriverNotSupported = 'Driver niet ondersteund %s';
   SPattern2Long = 'Patroon is te lang';
-  SDriverNotCapableOutParameters = 'Driver is not capable out parameters';
+  SDriverNotCapableOutParameters = 'Driver ondersteunt geen out parameters';
   SStatementIsNotAllowed = 'Statement is niet toegestaan';
-  SStoredProcIsNotAllowed = 'De stored proc is niet toegestaan';
+  SStoredProcIsNotAllowed = 'Stored procedures zijn niet toegestaan';
   SCannotPerformOperation = 'Kan operatie niet uitvoeren op een gesloten ResultSet';
-  SInvalidState = 'Ongeldige state';
+  SInvalidState = 'Ongeldige status';
   SErrorConvertion = 'Conversiefout';
   SDataTypeDoesNotSupported = 'Data type is niet onderstuend';
   SUnsupportedParameterType = 'Niet ondersteund parameter type';
@@ -298,7 +303,7 @@ resourcestring
   SFieldNotFound1 = 'Veld "%s" niet gevonden';
   SFieldNotFound2 = 'Veld %d niet gevonden';
 
-  SLoginPromptFailure = 'Kan de standaard login promt niet vinden.  Voeg DBLogDlg toe aan de uses sectie.';
+  SLoginPromptFailure = 'Kan de standaard login prompt niet vinden.  Voeg DBLogDlg toe aan de uses sectie.';
 
   SPropertyQuery = 'De Query kan enige tijd duren bij grote databases!';
   SPropertyTables = 'Limiet op Catalog en/of Schema is vereist.';
@@ -308,27 +313,27 @@ resourcestring
   SPropertyExecute = 'Dient de Query toch te worden uitgevoerd?';
 
   SFormTest = 'ZEOS SQL Editor Test';
-  SButtonClose = '&Close';
+  SButtonClose = '&Sluiten';
   SFormEditor = 'ZEOS SQL Editor';
   STabSheetSelect = 'Select SQL';
-  SMenuLoad = 'Load';
-  SMenuSave = 'Save';
-  SButtonGenerate = '&Generate';
+  SMenuLoad = 'Laden';
+  SMenuSave = 'Opslaan';
+  SButtonGenerate = '&Genereren';
   SButtonCheck = 'C&heck';
   SButtonTest = '&Test';
   SButtonOk = '&OK';
-  SButtonCancel = '&Cancel';
-  STableAlias = 'T&able alias';
-  SReplaceSQL = '&Replace SQL';
-  SDialogOpenTitle = 'Open SQL File';
-  SDialogSaveTitle = 'Save SQL File';
+  SButtonCancel = '&Annuleren';
+  STableAlias = 'Tabel al&ias';
+  SReplaceSQL = '&Vervang SQL';
+  SDialogOpenTitle = 'SQL Bestand Openen';
+  SDialogSaveTitle = 'SQL Bestand Opslaan';
   SSQLEditor = 'SQL Editor';
-  SDatabaseDialog = 'Open existing database';
+  SDatabaseDialog = 'Open bestaande database';
 
   {$IFDEF FPC}
-  SNotEditing = 'Dataset not in edit or insert mode';
-  SFieldTypeMismatch = 'Type mismatch for field ''%s'', expecting: %s actual: %s';
-  SFieldSizeMismatch = 'Size mismatch for field ''%s'', expecting: %d actual: %d';
+  SNotEditing = 'Dataset is niet in edit of insert modus';
+  SFieldTypeMismatch = 'Type mismatch voor veld ''%s'', verwacht: %s actueel: %s';
+  SFieldSizeMismatch = 'Size mismatch voor veld ''%s'', verwacht: %d actueel: %d';
   {$ENDIF}
 
 {$ELSE}
