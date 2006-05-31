@@ -409,8 +409,13 @@ begin
   end
   else if TransactIsolationLevel = tiReadCommitted then
   begin
-    SQL := 'SET TRANSACTION ISOLATION LEVEL READONLY';
-    Isolation := OCI_TRANS_READONLY;
+// Behaviour changed by mdaems 31/05/2006 : Read Committed is the default
+// isolation level used by oracle. This property should not be abused to add
+// the non-standard isolation level 'read only' thats invented by oracle.
+//    SQL := 'SET TRANSACTION ISOLATION LEVEL READONLY';
+//    Isolation := OCI_TRANS_READONLY;
+    SQL := 'SET TRANSACTION ISOLATION LEVEL DEFAULT';
+    Isolation := OCI_DEFAULT;
   end
   else if TransactIsolationLevel = tiRepeatableRead then
   begin
