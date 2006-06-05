@@ -62,6 +62,7 @@ contains
   ZPlainASA9 in '..\..\src\plain\ZPlainASA9.pas',
   ZPlainASA8 in '..\..\src\plain\ZPlainASA8.pas',
   ZPlainASA7 in '..\..\src\plain\ZPlainASA7.pas',
-  ZPlainMySql5 in '..\..\src\plain\ZPlainMySql5.pas';
+  ZPlainMySql5 in '..\..\src\plain\ZPlainMySql5.pas',
+  ZPlainMysqlConstants in '..\..\src\plain\ZPlainMysqlConstants.pas';
 
 end.

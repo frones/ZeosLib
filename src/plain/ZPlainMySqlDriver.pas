@@ -1803,7 +1803,7 @@ end;
 
 function TZMySQL41PlainDriver.Shutdown(Handle: PZMySQLConnect): Integer;
 begin
-  Result := ZPlainMySql41.mysql_shutdown(Handle);
+  Result := ZPlainMySql41.mysql_shutdown(Handle,ZPlainMySqlConstants.SHUTDOWN_DEFAULT);
 end;
 
 function TZMySQL41PlainDriver.StoreResult(

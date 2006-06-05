@@ -1,3 +1,7 @@
 20060414 : Corrected the temporary tables patch. Now it tries to get information on a 'non-existing' table, just in case it is a temporarary one. If it is temporary the table is added to the cache If it's not, the resulting error is suppressed but the table will stay unknown.
 
 20060414 : Enabled all connection options for mysql. Now one can add the desired options by adding them to the connections property strings.
+
+20060604 : Added new library functions to plain mysql drivers (4.0 and 5.0) -> PDO integration
+
+20060605 : Added new library functions to plain mysql drivers (4.1) -> PDO integration
