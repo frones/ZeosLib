@@ -35,6 +35,13 @@
 {                                                         }
 {                                 Zeos Development Group. }
 {*********************************************************}
+{*********************************************************}
+{    Thanks to :                                          }
+{               Pascal Data Objects Library               }
+{                                                         }
+{    Copyright (c) 2006 John Marino, www.synsport.com     }
+{                                                         }
+{*********************************************************}
 
 unit ZPlainMySql5;
 
@@ -48,27 +55,16 @@ interface
 {$A8}
 {$ENDIF}
 
-uses Classes, ZPlainLoader, ZCompatibility;
+uses Classes, ZPlainLoader, ZCompatibility, ZPlainMySqlConstants;
 
 { ***************** Plain API Constants definition **************** }
 
 const
   WINDOWS1_DLL_LOCATION = 'libmysql50.dll';
-{$IFNDEF STRICT_DLL_LOADING}
-  WINDOWS2_DLL_LOCATION = 'libmysql.dll';
-{$ENDIF}
-  LINUX_DLL_LOCATION = 'libmysqlclient.so';
 
 { General Declarations }
-  MYSQL_ERRMSG_SIZE    = 512;
-  SQLSTATE_LENGTH      = 5;
-  SCRAMBLE_LENGTH      = 20;
-
-  MYSQL_PORT           = 3306;
-  LOCAL_HOST           = 'localhost';
-  NAME_LEN             = 64;
-  PROTOCOL_VERSION     = 10;
-  FRM_VER              = 6;
+//  PROTOCOL_VERSION     = 10;
+//  FRM_VER              = 6;
 
 { Enum Field Types }
   FIELD_TYPE_DECIMAL   = 0;
@@ -99,66 +95,6 @@ const
 { For Compatibility }
   FIELD_TYPE_CHAR      = FIELD_TYPE_TINY;
   FIELD_TYPE_INTERVAL  = FIELD_TYPE_ENUM;
-
-{ Field's flags }
-  NOT_NULL_FLAG          = 1;     { Field can't be NULL }
-  PRI_KEY_FLAG           = 2;     { Field is part of a primary key }
-  UNIQUE_KEY_FLAG        = 4;     { Field is part of a unique key }
-  MULTIPLE_KEY_FLAG      = 8;     { Field is part of a key }
-  BLOB_FLAG              = 16;    { Field is a blob }
-  UNSIGNED_FLAG          = 32;    { Field is unsigned }
-  ZEROFILL_FLAG          = 64;    { Field is zerofill }
-  BINARY_FLAG            = 128;   { Field is binary }
-  ENUM_FLAG              = 256;   { Field is an enum }
-  AUTO_INCREMENT_FLAG    = 512;   { Field is a autoincrement field }
-  TIMESTAMP_FLAG         = 1024;  { Field is a timestamp }
-  SET_FLAG               = 2048;  { Field is a set }
-  NUM_FLAG               = 32768; { Field is num (for clients) }
-  PART_KEY_FLAG	         = 16384; { Intern; Part of some key }
-  GROUP_FLAG	         = 32768; { Intern: Group field }
-  UNIQUE_FLAG            = 65536; { Intern: Used by sql_yacc }
-
-{ Server Administration Refresh Options }
-  REFRESH_GRANT	         = 1;     { Refresh grant tables }
-  REFRESH_LOG		 = 2;     { Start on new log file }
-  REFRESH_TABLES	 = 4;     { close all tables }
-  REFRESH_HOSTS	         = 8;     { Flush host cache }
-  REFRESH_STATUS         = 16;    { Flush status variables }
-  REFRESH_THREADS        = 32;    { Flush status variables }
-  REFRESH_SLAVE          = 64;    { Reset master info abd restat slave thread }
-  REFRESH_MASTER         = 128;   { Remove all bin logs in the index and truncate the index }
-  REFRESH_READ_LOCK      = 16384; { Lock tables for read }
-  REFRESH_FAST		 = 32768; { Intern flag }
-  REFRESH_QUERY_CACHE	 = 65536;
-  REFRESH_QUERY_CACHE_FREE = $20000; { Pack query cache }
-  REFRESH_DES_KEY_FILE	 = $40000;
-  REFRESH_USER_RESOURCES = $80000;
-
-{ Client Connection Options }
-  _CLIENT_LONG_PASSWORD	  = 1;	  { new more secure passwords }
-  _CLIENT_FOUND_ROWS	  = 2;	  { Found instead of affected rows }
-  _CLIENT_LONG_FLAG	  = 4;	  { Get all column flags }
-  _CLIENT_CONNECT_WITH_DB = 8;	  { One can specify db on connect }
-  _CLIENT_NO_SCHEMA	  = 16;	  { Don't allow database.table.column }
-  _CLIENT_COMPRESS	  = 32;	  { Can use compression protcol }
-  _CLIENT_ODBC		  = 64;	  { Odbc client }
-  _CLIENT_LOCAL_FILES	  = 128;  { Can use LOAD DATA LOCAL }
-  _CLIENT_IGNORE_SPACE	  = 256;  { Ignore spaces before '(' }
-  _CLIENT_PROTOCOL_41	  = 512;  { New 4.1 protocol }
-  _CLIENT_INTERACTIVE	  = 1024; { This is an interactive client }
-  _CLIENT_SSL             = 2048; { Switch to SSL after handshake }
-  _CLIENT_IGNORE_SIGPIPE  = 4096; { IGNORE sigpipes }
-  _CLIENT_TRANSACTIONS	  = 8192; { Client knows about transactions }
-  _CLIENT_RESERVED        = 16384; { Old flag for 4.1 protocol  }
-  _CLIENT_SECURE_CONNECTION = 32768; { New 4.1 authentication }
-  _CLIENT_MULTI_STATEMENTS = 65536; { Enable/disable multi-stmt support }
-  _CLIENT_MULTI_RESULTS   = 131072; { Enable/disable multi-results }
-  _CLIENT_REMEMBER_OPTIONS = 2147483648; {Enable/disable multi-results }
-
-{ Net type }
-  NET_TYPE_TCPIP = 0;
-  NET_TYPE_SOCKET = 1;
-  NET_TYPE_NAMEDPIPE = 2;
 
   MAX_MYSQL_MANAGER_ERR = 256;
   MAX_MYSQL_MANAGER_MSG = 256;
@@ -350,6 +286,7 @@ type
     next:       PMYSQL_ROWS;
     data:       PMYSQL_ROW;
   end;
+
   MYSQL_ROW_OFFSET = PMYSQL_ROWS;
 
   MYSQL_DATA = record
@@ -402,15 +339,19 @@ type
     local_infile_userdata:    Pointer;
   end;
 
-  PLIST = ^LIST;
-  LIST = record
-    prev:       PLIST;
-    next:       PLIST;
-    data:       Pointer;
+  PMY_CHARSET_INFO = ^MY_CHARSET_INFO;
+  MY_CHARSET_INFO = record
+    number:         Cardinal;
+    state:          Cardinal;
+    csname:         PChar;
+    name:           PChar;
+    comment:        PChar;
+    dir:            PChar;
+    mbminlen:       Cardinal;
+    mbmaxlen:       Cardinal;
   end;
 
   PMYSQL_METHODS =  ^MYSQL_METHODS;
-
   PMYSQL = ^MYSQL;
   MYSQL = record
     _net:            NET;
@@ -524,7 +465,7 @@ type
     result_buffered:      Byte;
   end;
 
-  MYSQL_METHODS = record
+    MYSQL_METHODS = record
     read_query_result: function(handle: PMYSQL): Byte;
     advanced_command:  function(handle: PMYSQL; command: TMySqlServerCommand;
       header: PChar; header_length: LongInt; const arg: PChar;
@@ -547,6 +488,7 @@ type
   TQuoteOptions = (QUOTE_STRIP_CR,QUOTE_STRIP_LF);
   TQuoteOptionsSet = set of TQuoteOptions;
 
+  PMYSQL_MANAGER = ^MYSQL_MANAGER;
   MYSQL_MANAGER = record
     _net:               NET;
     host:               PChar;
@@ -563,7 +505,6 @@ type
     net_buf_size:       Integer;
     last_error:         array[1..MAX_MYSQL_MANAGER_ERR] of Char;
   end;
-  PMYSQL_MANAGER = ^MYSQL_MANAGER;
 
   { Options for mysql_set_option }
   TMySqlSetOption = (
@@ -573,115 +514,143 @@ type
   
 { ************** Plain API Function types definition ************* }
 
-  {
-    Set up and bring down the server; to ensure that applications will
-    work when linked against either the standard client library or the
-    embedded server library, these functions should be called.
-  }
-  Tmysql_server_init = function(Argc: Integer; Argv, Groups: Pointer): Integer;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_server_end = procedure;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  { Set up and bring down a thread; these function should be called
-    for each thread in an application which opens at least one MySQL
-    connection.  All uses of the connection(s) should be between these
-    function calls. }
-  Tmysql_thread_init = function: Byte;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_thread_end = procedure;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
   { Functions to get information from the MYSQL and MYSQL_RES structures
     Should definitely be used if one uses shared libraries. }
-  Tmysql_num_rows = function(Result: PMYSQL_RES): Int64;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  Tmysql_num_fields = function(Result: PMYSQL_RES): Cardinal;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_affected_rows          = function(Handle: PMYSQL): Int64;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_autocommit             = function(Handle: PMYSQL; const mode: Byte): Byte;                    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_change_user            = function(mysql: PMYSQL; const user: PChar; const passwd: PChar; const db: PChar): Byte;
+                                                                                                       {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_character_set_name     = function(Handle: PMYSQL): PChar;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_close                  = procedure(Handle: PMYSQL);                                           {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_commit                 = function(Handle: PMYSQL): Byte;                                      {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_connect                = function(Handle: PMYSQL; const Host, User, Passwd: PChar): PMYSQL;   {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_create_db              = function(Handle: PMYSQL; const Db: PChar): Integer;                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_data_seek              = procedure(Result: PMYSQL_RES; Offset: Int64);                        {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_debug                  = procedure(Debug: PChar);                                             {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_drop_db                = function(Handle: PMYSQL; const Db: PChar): Integer;                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_dump_debug_info        = function(Handle: PMYSQL): Integer;                                   {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_eof                    = function(Result: PMYSQL_RES): Byte;                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_errno                  = function(Handle: PMYSQL): Cardinal;                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_error                  = function(Handle: PMYSQL): PChar;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_escape_string          = function(PTo, PFrom: PChar; Len: Cardinal): Cardinal;                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_fetch_field            = function(Result: PMYSQL_RES): PMYSQL_FIELD;                          {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_fetch_field_direct     = function(Result: PMYSQL_RES; FieldNo: Cardinal): PMYSQL_FIELD;       {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_fetch_fields           = function(Result: PMYSQL_RES): PMYSQL_FIELD;                          {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_fetch_lengths          = function(Result: PMYSQL_RES): PLongInt;                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_fetch_row              = function(Result: PMYSQL_RES): PMYSQL_ROW;                            {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_field_count            = function(Handle: PMYSQL): Cardinal;                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_field_seek             = function(Result: PMYSQL_RES; Offset: MYSQL_FIELD_OFFSET): MYSQL_FIELD_OFFSET;
+                                                                                                       {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_field_tell             = function(Result: PMYSQL_RES): MYSQL_FIELD_OFFSET;                    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_free_result            = procedure(Result: PMYSQL_RES);                                       {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_get_character_set_info = procedure(Handle: PMYSQL; cs: PMY_CHARSET_INFO);
+  Tmysql_get_client_info        = function: PChar;                                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_get_client_version     = function: Cardinal;                                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_get_host_info          = function(Handle: PMYSQL): PChar;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_get_proto_info         = function(Handle: PMYSQL): Cardinal;                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_get_server_info        = function(Handle: PMYSQL): PChar;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_get_server_version     = function(Handle: PMYSQL): Cardinal;                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_hex_string             = function(PTo, PFrom: Pchar; Len: Cardinal): Cardinal;                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_info                   = function(Handle: PMYSQL): PChar;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_init                   = function(Handle: PMYSQL): PMYSQL;                                    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_insert_id              = function(Handle: PMYSQL): Int64;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_kill                   = function(Handle: PMYSQL; Pid: LongInt): Integer;                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_list_dbs               = function(Handle: PMYSQL; Wild: PChar): PMYSQL_RES;                   {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_list_fields            = function(Handle: PMYSQL; const Table, Wild: PChar): PMYSQL_RES;      {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_list_processes         = function(Handle: PMYSQL): PMYSQL_RES;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_list_tables            = function(Handle: PMYSQL; const Wild: PChar): PMYSQL_RES;             {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_more_results           = function(Handle: PMYSQL): Byte;                                      {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_next_result            = function(Handle: PMYSQL): Integer;                                   {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_num_fields             = function(Result: PMYSQL_RES): Cardinal;                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_num_rows               = function(Result: PMYSQL_RES): Int64;                                 {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_options                = function(Handle: PMYSQL; Option: TMySqlOption; const Arg: PChar): Integer;
+                                                                                                       {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_ping                   = function(Handle: PMYSQL): Integer;                                   {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_query                  = function(Handle: PMYSQL; const Query: PChar): Integer;               {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_real_connect           = function(Handle: PMYSQL; const Host, User, Passwd, Db: PChar; 
+                                           Port: Cardinal; const UnixSocket: PChar; ClientFlag: Cardinal): PMYSQL;
+                                                                                                       {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_real_escape_string     = function(Handle: PMYSQL; PTo: PChar; const PFrom: PChar; length: Cardinal): Cardinal;
+                                                                                                       {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_real_query             = function(Handle: PMYSQL; const Query: PChar; Length: Cardinal): Integer;
+                                                                                                       {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_refresh                = function(Handle: PMYSQL; Options: Cardinal): Integer;                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_rollback               = function(Handle: PMYSQL): Byte;                                      {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_row_seek               = function(Result: PMYSQL_RES; Offset: PMYSQL_ROWS): PMYSQL_ROWS;      {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_row_tell               = function(Result: PMYSQL_RES): PMYSQL_ROWS;                           {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_select_db              = function(Handle: PMYSQL; const Db: PChar): Integer;                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_set_character_set      = function(Handle: PMYSQL; csname: PChar): Integer;                    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_set_server_option      = function(Handle: PMYSQL; Option: TMysqlSetOption): Integer;          {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_shutdown               = function(Handle: PMYSQL; shutdown_level: TMysqlShutdownLevel): Integer;
+                                                                                                       {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_sqlstate               = function(Handle: PMYSQL): PChar;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_ssl_set                = function(Handle: PMYSQL; const key, cert, CA, CApath, cipher:
+                                  PChar): Byte;                                                        {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stat                   = function(Handle: PMYSQL): PChar;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_store_result           = function(Handle: PMYSQL): PMYSQL_RES;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_thread_id              = function(Handle: PMYSQL): Cardinal;                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_use_result             = function(Handle: PMYSQL): PMYSQL_RES;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_warning_count          = function(Handle: PMYSQL): Cardinal;                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  Tmysql_eof = function(Result: PMYSQL_RES): Byte;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  Tmysql_fetch_field_direct = function(Result: PMYSQL_RES;
-    FieldNo: Cardinal): PMYSQL_FIELD;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  { Set up and bring down a thread; these function should be called for each thread in an application which
+    opens at least one MySQL connection.  All uses of the connection(s) should be between these function calls. }
 
-  Tmysql_fetch_fields = function(Result: PMYSQL_RES): PMYSQL_FIELD;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmy_init                      = procedure;                                                          {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_thread_init            = function: Byte;                                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_thread_end             = procedure;                                                          {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_thread_safe            = function: Cardinal;                                                 {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  Tmysql_row_tell = function(Result: PMYSQL_RES): MYSQL_ROW_OFFSET;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  Tmysql_field_tell = function(Result: PMYSQL_RES): MYSQL_FIELD_OFFSET;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  { Set up and bring down the server; to ensure that applications will work when linked against either the
+    standard client library or the embedded server library, these functions should be called. }
 
-  Tmysql_field_count = function(Handle: PMYSQL): Cardinal;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_server_init            = function(Argc: Integer; Argv, Groups: Pointer): Integer;            {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_server_end             = procedure;                                                          {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  Tmysql_affected_rows = function(Handle: PMYSQL): Int64;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  Tmysql_insert_id = function(Handle: PMYSQL): Int64;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+{BELOW are new PREPARED STATEMENTS}
 
-  Tmysql_errno = function(Handle: PMYSQL): Cardinal;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_affected_rows     = function(stmt: PMYSQL_STMT): Int64;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_attr_get          = function(stmt: PMYSQL_STMT; option: TMysqlStmtAttrType;
+                                  arg: PChar): Integer;                                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_attr_set          = function(stmt: PMYSQL_STMT; option: TMysqlStmtAttrType;
+                                  const arg: PChar): Integer;                                        {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_bind_param        = function(stmt: PMYSQL_STMT; bind: PMYSQL_BIND2): Byte;              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_bind_result       = function(stmt: PMYSQL_STMT; bind: PMYSQL_BIND2): Byte;              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_close             = function(stmt: PMYSQL_STMT): Byte;                                 {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_data_seek         = procedure(stmt: PMYSQL_STMT; offset: Int64);                       {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_errno             = function(stmt: PMYSQL_STMT): Cardinal;                             {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_error             = function(stmt: PMYSQL_STMT): PChar;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_execute           = function(stmt: PMYSQL_STMT): Integer;                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_fetch             = function(stmt: PMYSQL_STMT): Integer;                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_fetch_column      = function(stmt: PMYSQL_STMT; bind: PMYSQL_BIND2; column: Cardinal;
+                                  offset: Cardinal): Integer;                                        {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_field_count       = function(stmt: PMYSQL_STMT): Cardinal;                             {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_free_result       = function(stmt: PMYSQL_STMT): Byte;                                 {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_init              = function(Handle: PMYSQL): PMYSQL_STMT;                             {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_insert_id         = function(stmt: PMYSQL_STMT): Int64;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_num_rows          = function(stmt: PMYSQL_STMT): Int64;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_param_count       = function(stmt: PMYSQL_STMT): Cardinal;                             {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_param_metadata    = function(stmt: PMYSQL_STMT): PMYSQL_RES;                           {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_prepare           = function(stmt: PMYSQL_STMT; const query: PChar; length: Cardinal):
+                                  Integer;                                                           {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_reset             = function(stmt: PMYSQL_STMT): Byte;                                 {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_result_metadata   = function(stmt: PMYSQL_STMT): PMYSQL_RES;                           {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_row_seek          = function(stmt: PMYSQL_STMT; offset: PMYSQL_ROWS): PMYSQL_ROWS;     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_row_tell          = function(stmt: PMYSQL_STMT): PMYSQL_ROWS;                          {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_send_long_data    = function(stmt: PMYSQL_STMT; parameter_number: Cardinal; const 
+                                  data: PChar; length: Cardinal): Byte;                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_sqlstate          = function(stmt: PMYSQL_STMT): PChar;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF}; 
+  Tmysql_stmt_store_result      = function(stmt: PMYSQL_STMT): Integer;                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};  
 
-  Tmysql_error = function(Handle: PMYSQL): PChar;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_sqlstate = function(Handle: PMYSQL): PChar;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_warning_count = function(Handle: PMYSQL): Cardinal;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_info = function(Handle: PMYSQL): PChar;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_thread_id = function(Handle: PMYSQL): Cardinal;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_character_set_name = function(Handle: PMYSQL): PChar;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_init = function(Handle: PMYSQL): PMYSQL;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_ssl_set = function(mysql: PMYSQL; const key: PChar; const cert: PChar;
-    const ca: PChar; const capath: PChar; const cipher: PChar): Byte;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_change_user = function(mysql: PMYSQL; const user: PChar;
-    const passwd: PChar; const db: PChar): Byte;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_real_connect = function(Handle: PMYSQL;
-    const Host, User, Passwd, Db: PChar; Port: Cardinal;
-    UnixSocket: PChar; ClientFlag: Cardinal): PMYSQL;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_select_db = function(Handle: PMYSQL; const Db: PChar): Integer;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_query = function(Handle: PMYSQL; const Query: PChar): Integer;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
+{BELOW are functions not implemented in PDO}
   Tmysql_send_query = function(mysql: PMYSQL; const query: PChar;
     length: Cardinal): Integer;
     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  Tmysql_real_query = function(Handle: PMYSQL; const Query: PChar;
-    Len: Cardinal): Integer;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_store_result = function(Handle: PMYSQL): PMYSQL_RES;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_use_result = function(Handle: PMYSQL): PMYSQL_RES;
+  Tmysql_read_query_result = function(mysql: PMYSQL): Integer;
     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
   { Perform query on master }
@@ -741,95 +710,6 @@ type
     port: Cardinal; const user: PChar; const passwd: PChar): Integer;
     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  Tmysql_shutdown = function(Handle: PMYSQL): Integer;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_dump_debug_info = function(Handle: PMYSQL): Integer;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_refresh = function(Handle: PMYSQL; Options: Cardinal): Integer;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_kill = function(Handle: PMYSQL; Pid: LongInt): Integer;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_set_server_option = function(Handle: PMYSQL;
-    Option: TMySqlSetOption): Integer;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_ping = function(Handle: PMYSQL): Integer;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_stat = function(Handle: PMYSQL): PChar;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_get_server_info = function(Handle: PMYSQL): PChar;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_get_client_info = function: PChar;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_get_client_version = function: Cardinal;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_get_host_info = function(Handle: PMYSQL): PChar;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_get_server_version = function(Handle: PMYSQL): Cardinal;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_get_proto_info = function(Handle: PMYSQL): Cardinal;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_list_dbs = function(Handle: PMYSQL; Wild: PChar): PMYSQL_RES;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_list_tables = function(Handle: PMYSQL; const Wild: PChar): PMYSQL_RES;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_list_fields = function(Handle: PMYSQL; const Table, Wild: PChar):
-    PMYSQL_RES; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_list_processes = function(Handle: PMYSQL): PMYSQL_RES;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_options = function(Handle: PMYSQL; Option: TMySqlOption;
-    const Arg: PChar): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_free_result = procedure(Result: PMYSQL_RES);
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_data_seek = procedure(Result: PMYSQL_RES; Offset: Int64);
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_row_seek = function(Result: PMYSQL_RES; Row: MYSQL_ROW_OFFSET):
-    MYSQL_ROW_OFFSET; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_field_seek = function(Result: PMYSQL_RES; Offset: MYSQL_FIELD_OFFSET):
-    MYSQL_FIELD_OFFSET; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_fetch_row = function(Result: PMYSQL_RES): PMYSQL_ROW;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_fetch_lengths = function(Result: PMYSQL_RES): PLongInt;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_fetch_field = function(Result: PMYSQL_RES): PMYSQL_FIELD;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_escape_string = function(PTo, PFrom: PChar; Len: Cardinal): Cardinal;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_real_escape_string = function(mysql: PMYSQL; toStr: PChar;
-    const fromStr: PChar; length: Cardinal): Cardinal;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_debug = procedure(Debug: PChar);
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_thread_safe = function: Cardinal;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
   Tmysql_manager_init = function(con: PMYSQL_MANAGER): PMYSQL_MANAGER;
     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
@@ -848,69 +728,123 @@ type
     res_buf_size: Integer): Integer;
     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  Tmysql_read_query_result = function(mysql: PMYSQL): Byte;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_connect = function(Handle: PMYSQL; const Host, User, Passwd: PChar):
-    PMYSQL; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_create_db = function(Handle: PMYSQL; const Db: PChar): Integer;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_drop_db = function(Handle: PMYSQL; const Db: PChar): Integer;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_close = procedure(Handle: PMYSQL);
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
 var
 
 { ************* Plain API Function variables definition ************ }
 
-  mysql_debug:          Tmysql_debug;
-  mysql_dump_debug_info: Tmysql_dump_debug_info;
-  mysql_server_init:     Tmysql_server_init;
-  mysql_server_end:     Tmysql_server_end;
-  mysql_init:           Tmysql_init;
-  mysql_connect:        Tmysql_connect;
-  mysql_real_connect:   Tmysql_real_connect;
-  mysql_close:          Tmysql_close;
-  mysql_select_db:      Tmysql_select_db;
-  mysql_create_db:      Tmysql_create_db;
-  mysql_drop_db:        Tmysql_drop_db;
-  mysql_query:          Tmysql_query;
-  mysql_real_query:     Tmysql_real_query;
-  mysql_shutdown:       Tmysql_shutdown;
-  mysql_refresh:        Tmysql_refresh;
-  mysql_kill:           Tmysql_kill;
-  mysql_ping:           Tmysql_ping;
-  mysql_stat:           Tmysql_stat;
-  mysql_options:        Tmysql_options;
-  mysql_escape_string:  Tmysql_escape_string;
-  mysql_get_server_info: Tmysql_get_server_info;
-  mysql_get_client_info: Tmysql_get_client_info;
-  mysql_get_host_info:  Tmysql_get_host_info;
-  mysql_get_proto_info: Tmysql_get_proto_info;
-  mysql_list_dbs:       Tmysql_list_dbs;
-  mysql_list_tables:    Tmysql_list_tables;
-  mysql_list_fields:    Tmysql_list_fields;
-  mysql_list_processes: Tmysql_list_processes;
-  mysql_data_seek:      Tmysql_data_seek;
-  mysql_row_seek:       Tmysql_row_seek;
-  mysql_field_seek:     Tmysql_field_seek;
-  mysql_fetch_row:      Tmysql_fetch_row;
-  mysql_fetch_lengths:  Tmysql_fetch_lengths;
-  mysql_fetch_field:    Tmysql_fetch_field;
-  mysql_store_result:   Tmysql_store_result;
-  mysql_use_result:     Tmysql_use_result;
-  mysql_free_result:    Tmysql_free_result;
+  mysql_affected_rows:          Tmysql_affected_rows;	          {mysql 3.2}
+  mysql_autocommit:             Tmysql_autocommit;              {mysql 4.1}
+  mysql_change_user:            Tmysql_change_user;             {mysql 3.2}
+  mysql_character_set_name:     Tmysql_character_set_name;      {mysql 3.2}
+  mysql_close:                  Tmysql_close;                   {mysql 3.2}
+  mysql_commit:                 Tmysql_commit;                  {mysql 4.1}
+  mysql_connect:                Tmysql_connect;                 {mysql 3.2} {deprecated for mysql_real_connect}
+  mysql_create_db:              Tmysql_create_db;               {mysql 3.2} {deprecated for mysql_query}
+  mysql_data_seek:              Tmysql_data_seek;               {mysql 3.2}
+  mysql_debug:                  Tmysql_debug;                   {mysql 3.2}
+  mysql_drop_db:                Tmysql_drop_db;                 {mysql 3.2} {deprecated for mysql_query}
+  mysql_dump_debug_info:        Tmysql_dump_debug_info;         {mysql 3.2}
+  mysql_eof:                    Tmysql_eof;                     {mysql 3.2} {deprecated for mysql_error/mysql_errno}
+  mysql_errno:                  Tmysql_errno;	                {mysql 3.2}
+  mysql_error:                  Tmysql_error;                   {mysql 3.2}
+  mysql_escape_string:          Tmysql_escape_string;           {mysql 3.2} {deprecated for mysql_real_escape_string}
+  mysql_fetch_field:            Tmysql_fetch_field;             {mysql 3.2}
+  mysql_fetch_field_direct:     Tmysql_fetch_field_direct;      {mysql 3.2}
+  mysql_fetch_fields:           Tmysql_fetch_fields;            {mysql 3.2}
+  mysql_fetch_lengths:          Tmysql_fetch_lengths;           {mysql 3.2}
+  mysql_fetch_row:              Tmysql_fetch_row;               {mysql 3.2}
+  mysql_field_count:            Tmysql_field_count;             {mysql 3.2}
+  mysql_field_seek:             Tmysql_field_seek;              {mysql 3.2}
+  mysql_field_tell:             Tmysql_field_tell;              {mysql 3.2}
+  mysql_free_result:            Tmysql_free_result;             {mysql 3.2}
+  mysql_get_character_set_info: Tmysql_get_character_set_info;  {mysql 5.0.10}
+  mysql_get_client_info:        Tmysql_get_client_info;         {mysql 3.2}
+  mysql_get_client_version:     Tmysql_get_client_version;      {mysql 4.0}
+  mysql_get_host_info:          Tmysql_get_host_info;           {mysql 3.2}
+  mysql_get_proto_info:         Tmysql_get_proto_info;          {mysql 3.2}
+  mysql_get_server_info:        Tmysql_get_server_info;         {mysql 3.2}
+  mysql_get_server_version:     Tmysql_get_server_version;      {mysql 4.1}
+  mysql_hex_string:             Tmysql_hex_string;              {mysql 4.1.8}
+  mysql_info:                   Tmysql_info;                    {mysql 3.2}
+  mysql_init:                   Tmysql_init;                    {mysql 3.2}
+  mysql_insert_id:              Tmysql_insert_id;               {mysql 3.2}
+  mysql_kill:                   Tmysql_kill;                    {mysql 3.2}
+  mysql_list_dbs:               Tmysql_list_dbs;                {mysql 3.2}
+  mysql_list_fields:            Tmysql_list_fields;             {mysql 3.2}
+  mysql_list_processes:         Tmysql_list_processes;          {mysql 3.2}
+  mysql_list_tables:            Tmysql_list_tables;             {mysql 3.2}
+  mysql_more_results:           Tmysql_more_results;            {mysql 4.1}
+  mysql_next_result:            Tmysql_next_result;             {mysql 4.1}
+  mysql_num_fields:             Tmysql_num_fields;              {mysql 3.2}
+  mysql_num_rows:               Tmysql_num_rows;                {mysql 3.2}
+  mysql_options:                Tmysql_options;                 {mysql 3.2}
+  mysql_ping:                   Tmysql_ping;	                   {mysql 3.2}
+  mysql_query:                  Tmysql_query;                   {mysql 3.2} {deprecated for mysql_real_query}
+  mysql_real_connect:           Tmysql_real_connect;            {mysql 3.2}
+  mysql_real_escape_string:     Tmysql_real_escape_string;      {mysql 3.2}
+  mysql_real_query:             Tmysql_real_query;              {mysql 3.2}
+  mysql_refresh:                Tmysql_refresh;                 {mysql 3.2}
+  mysql_rollback:               Tmysql_rollback;                {mysql 4.1}
+  mysql_row_seek:               Tmysql_row_seek;                {mysql 3.2}
+  mysql_row_tell:               Tmysql_row_tell;                {mysql 3.2}
+  mysql_select_db:              Tmysql_select_db;               {mysql 3.2}
+  mysql_set_character_set:      Tmysql_set_character_set;       {mysql 4.1.13}
+  mysql_set_server_option:      Tmysql_set_server_option;       {mysql 4.1}
+  mysql_shutdown:               Tmysql_shutdown;                {mysql 3.2} {new argument 4.1}
+  mysql_sqlstate:               Tmysql_sqlstate;                {mysql 4.1}
+  mysql_ssl_set:                Tmysql_ssl_set;                 {mysql 3.2}
+  mysql_stat:                   Tmysql_stat;                    {mysql 3.2}
+  mysql_store_result:           Tmysql_store_result;            {mysql 3.2}
+  mysql_thread_id:              Tmysql_thread_id;               {mysql 3.2}
+  mysql_use_result:             Tmysql_use_result;              {mysql 3.2}
+  mysql_warning_count:          Tmysql_warning_count;           {mysql 4.1}
 
-  { New functions in MySQL 4.0 }
 
-  mysql_thread_init:    Tmysql_thread_init;
-  mysql_thread_end:     Tmysql_thread_end;
-  mysql_ssl_set:        Tmysql_ssl_set;
-  mysql_change_user:    Tmysql_change_user;
+  {API for THREADED FUNCTIONS }
+
+  my_init:                      Tmy_init;                       {mysql 3.2}
+  mysql_thread_init:            Tmysql_thread_init;             {mysql 3.2}
+  mysql_thread_end:             Tmysql_thread_end;              {mysql 3.2}
+  mysql_thread_safe:            tmysql_thread_safe;             {mysql 3.2}
+
+
+  {API for EMBEDDED SERVER  }
+
+  mysql_server_init:            Tmysql_server_init;             {mysql 3.2}
+  mysql_server_end:             Tmysql_server_end;              {mysql 3.2}
+
+
+  {API for PREPARED STATEMENTS}
+
+  mysql_stmt_affected_rows:     Tmysql_stmt_affected_rows;      {mysql 4.1.0}
+  mysql_stmt_attr_get:          Tmysql_stmt_attr_get;           {mysql 4.1.2}
+  mysql_stmt_attr_set:          Tmysql_stmt_attr_set;           {mysql 4.1.2} {augmented 5.0.2/6}
+  mysql_stmt_bind_param:        Tmysql_stmt_bind_param;         {mysql 4.1.2}
+  mysql_stmt_bind_result:       Tmysql_stmt_bind_result;        {mysql 4.1.2}
+  mysql_stmt_close:             Tmysql_stmt_close;              {mysql 4.1.0}
+  mysql_stmt_data_seek:         Tmysql_stmt_data_seek;          {mysql 4.1.1}
+  mysql_stmt_errno:             Tmysql_stmt_errno;              {mysql 4.1.0}
+  mysql_stmt_error:             Tmysql_stmt_error;              {mysql 4.1.0}
+  mysql_stmt_execute:           Tmysql_stmt_execute;            {mysql 4.1.2}
+  mysql_stmt_fetch:             Tmysql_stmt_fetch;              {mysql 4.1.2}
+  mysql_stmt_fetch_column:      Tmysql_stmt_fetch_column;       {mysql 4.1.2}
+  mysql_stmt_field_count:       Tmysql_stmt_field_count;        {mysql 4.1.3}
+  mysql_stmt_free_result:       Tmysql_stmt_free_result;        {mysql 4.1.1}
+  mysql_stmt_init:              Tmysql_stmt_init;               {mysql 4.1.2}
+  mysql_stmt_insert_id:         Tmysql_stmt_insert_id;          {mysql 4.1.2}
+  mysql_stmt_num_rows:          Tmysql_stmt_num_rows;           {mysql 4.1.1}
+  mysql_stmt_param_count:       Tmysql_stmt_param_count;        {mysql 4.1.2}
+  mysql_stmt_param_metadata:    Tmysql_stmt_param_metadata;     {mysql 4.1.2}
+  mysql_stmt_prepare:           Tmysql_stmt_prepare;            {mysql 4.1.2}
+  mysql_stmt_reset:             Tmysql_stmt_reset;              {mysql 4.1.1}
+  mysql_stmt_result_metadata:   Tmysql_stmt_result_metadata;    {mysql 4.1.2}
+  mysql_stmt_row_seek:          Tmysql_stmt_row_seek;           {mysql 4.1.1}
+  mysql_stmt_row_tell:          Tmysql_stmt_row_tell;           {mysql 4.1.1}
+  mysql_stmt_send_long_data:    Tmysql_stmt_send_long_data;     {mysql 4.1.2}
+  mysql_stmt_sqlstate:          Tmysql_stmt_sqlstate;           {mysql 4.1.1}
+  mysql_stmt_store_result:      Tmysql_stmt_store_result;       {mysql 4.1.0}
+
+  {BELOW are functions not implemented in PDO}
   mysql_send_query:     Tmysql_send_query;
   mysql_read_query_result: Tmysql_read_query_result;
   mysql_master_query:   Tmysql_master_query;
@@ -927,33 +861,11 @@ var
   mysql_rpl_probe:      Tmysql_rpl_probe;
   mysql_set_master:     Tmysql_set_master;
   mysql_add_slave:      Tmysql_add_slave;
-  mysql_real_escape_string: Tmysql_real_escape_string;
-  mysql_thread_safe:    Tmysql_thread_safe;
   mysql_manager_init:   Tmysql_manager_init;
   mysql_manager_connect: Tmysql_manager_connect;
   mysql_manager_close:  Tmysql_manager_close;
   mysql_manager_command: Tmysql_manager_command;
   mysql_manager_fetch_line: Tmysql_manager_fetch_line;
-  mysql_num_rows:       Tmysql_num_rows;
-  mysql_num_fields:     Tmysql_num_fields;
-  mysql_eof:            Tmysql_eof;
-  mysql_fetch_field_direct: Tmysql_fetch_field_direct;
-  mysql_fetch_fields:   Tmysql_fetch_fields;
-  mysql_row_tell:       Tmysql_row_tell;
-  mysql_field_tell:     Tmysql_field_tell;
-  mysql_field_count:    Tmysql_field_count;
-  mysql_affected_rows:   Tmysql_affected_rows;
-  mysql_insert_id:      Tmysql_insert_id;
-  mysql_errno:          Tmysql_errno;
-  mysql_error:          Tmysql_error;
-  mysql_sqlstate:       Tmysql_sqlstate;
-  mysql_warning_count:  Tmysql_warning_count;
-  mysql_info:           Tmysql_info;
-  mysql_thread_id:      Tmysql_thread_id;
-  mysql_character_set_name: Tmysql_character_set_name;
-  mysql_set_server_option: Tmysql_set_server_option;
-  mysql_get_client_version: Tmysql_get_client_version;
-  mysql_get_server_version: Tmysql_get_server_version;
 
 var
   LibraryLoader: TZNativeLibraryLoader;
@@ -977,37 +889,113 @@ function TZMySQLNativeLibraryLoader.Load: Boolean;
 begin
   Result := inherited Load;
 
-  @mysql_server_init     := GetAddress('mysql_server_init');
-  @mysql_server_end      := GetAddress('mysql_server_end');
-  @mysql_thread_init     := GetAddress('mysql_thread_init');
-  @mysql_thread_end      := GetAddress('mysql_thread_end');
-  @mysql_num_rows        := GetAddress('mysql_num_rows');
-  @mysql_num_fields      := GetAddress('mysql_num_fields');
-  @mysql_eof             := GetAddress('mysql_eof');
-  @mysql_fetch_field_direct := GetAddress('mysql_fetch_field_direct');
-  @mysql_fetch_fields    := GetAddress('mysql_fetch_fields');
-  @mysql_row_tell        := GetAddress('mysql_row_tell');
-  @mysql_field_tell      := GetAddress('mysql_field_tell');
-  @mysql_field_count     := GetAddress('mysql_field_count');
-  @mysql_affected_rows   := GetAddress('mysql_affected_rows');
-  @mysql_insert_id       := GetAddress('mysql_insert_id');
-  @mysql_errno           := GetAddress('mysql_errno');
-  @mysql_error           := GetAddress('mysql_error');
-  @mysql_sqlstate        := GetAddress('mysql_sqlstate');
-  @mysql_warning_count   := GetAddress('mysql_warning_count');
-  @mysql_info            := GetAddress('mysql_info');
-  @mysql_thread_id       := GetAddress('mysql_thread_id');
-  @mysql_character_set_name := GetAddress('mysql_character_set_name');
-  @mysql_init            := GetAddress('mysql_init');
-  @mysql_ssl_set         := GetAddress('mysql_ssl_set');
-  @mysql_change_user     := GetAddress('mysql_change_user');
-  @mysql_real_connect    := GetAddress('mysql_real_connect');
-  @mysql_select_db       := GetAddress('mysql_select_db');
-  @mysql_query           := GetAddress('mysql_query');
+  @mysql_affected_rows          := GetAddress('mysql_affected_rows');
+  @mysql_autocommit             := GetAddress('mysql_autocommit');
+  @mysql_change_user            := GetAddress('mysql_change_user');
+  @mysql_character_set_name     := GetAddress('mysql_character_set_name');
+  @mysql_close                  := GetAddress('mysql_close');
+  @mysql_commit                 := GetAddress('mysql_commit');
+  @mysql_connect                := GetAddress('mysql_connect');
+  @mysql_create_db              := GetAddress('mysql_create_db');
+  @mysql_data_seek              := GetAddress('mysql_data_seek');
+  @mysql_debug                  := GetAddress('mysql_debug');
+  @mysql_drop_db                := GetAddress('mysql_drop_db');
+  @mysql_dump_debug_info        := GetAddress('mysql_dump_debug_info');
+  @mysql_eof                    := GetAddress('mysql_eof');
+  @mysql_errno                  := GetAddress('mysql_errno');
+  @mysql_error                  := GetAddress('mysql_error');
+  @mysql_escape_string          := GetAddress('mysql_escape_string');
+  @mysql_fetch_field            := GetAddress('mysql_fetch_field');
+  @mysql_fetch_field_direct     := GetAddress('mysql_fetch_field_direct');
+  @mysql_fetch_fields           := GetAddress('mysql_fetch_fields');
+  @mysql_fetch_lengths          := GetAddress('mysql_fetch_lengths');
+  @mysql_fetch_row              := GetAddress('mysql_fetch_row');
+  @mysql_field_count            := GetAddress('mysql_field_count');
+  @mysql_field_seek             := GetAddress('mysql_field_seek');
+  @mysql_field_tell             := GetAddress('mysql_field_tell');
+  @mysql_free_result            := GetAddress('mysql_free_result');
+  @mysql_get_character_set_info := GetAddress('mysql_get_character_set_info');
+  @mysql_get_client_info        := GetAddress('mysql_get_client_info');
+  @mysql_get_client_version     := GetAddress('mysql_get_client_version');
+  @mysql_get_host_info          := GetAddress('mysql_get_host_info');
+  @mysql_get_proto_info         := GetAddress('mysql_get_proto_info');
+  @mysql_get_server_info        := GetAddress('mysql_get_server_info');
+  @mysql_get_server_version     := GetAddress('mysql_get_server_version');
+  @mysql_hex_string             := GetAddress('mysql_hex_string');
+  @mysql_info                   := GetAddress('mysql_info');
+  @mysql_init                   := GetAddress('mysql_init');
+  @mysql_insert_id              := GetAddress('mysql_insert_id');
+  @mysql_kill                   := GetAddress('mysql_kill');
+  @mysql_list_dbs               := GetAddress('mysql_list_dbs');
+  @mysql_list_fields            := GetAddress('mysql_list_fields');
+  @mysql_list_processes         := GetAddress('mysql_list_processes');
+  @mysql_list_tables            := GetAddress('mysql_list_tables');
+  @mysql_more_results           := GetAddress('mysql_more_results');
+  @mysql_next_result            := GetAddress('mysql_next_result');
+  @mysql_num_fields             := GetAddress('mysql_num_fields');
+  @mysql_num_rows               := GetAddress('mysql_num_rows');
+  @mysql_options                := GetAddress('mysql_options');
+  @mysql_ping                   := GetAddress('mysql_ping');
+  @mysql_query                  := GetAddress('mysql_query');
+  @mysql_real_connect           := GetAddress('mysql_real_connect');
+  @mysql_real_escape_string     := GetAddress('mysql_real_escape_string');
+  @mysql_real_query             := GetAddress('mysql_real_query');
+  @mysql_refresh                := GetAddress('mysql_refresh');
+  @mysql_rollback               := GetAddress('mysql_rollback');
+  @mysql_row_seek               := GetAddress('mysql_row_seek');
+  @mysql_row_tell               := GetAddress('mysql_row_tell');
+  @mysql_select_db              := GetAddress('mysql_select_db');
+  @mysql_set_character_set      := GetAddress('mysql_set_character_set');
+  @mysql_set_server_option      := GetAddress('mysql_set_server_option');
+  @mysql_shutdown               := GetAddress('mysql_shutdown');
+  @mysql_sqlstate               := GetAddress('mysql_sqlstate');
+  @mysql_ssl_set                := GetAddress('mysql_ssl_set');
+  @mysql_stat                   := GetAddress('mysql_stat');
+  @mysql_store_result           := GetAddress('mysql_store_result');
+  @mysql_thread_id              := GetAddress('mysql_thread_id');
+  @mysql_use_result             := GetAddress('mysql_use_result');
+  @mysql_warning_count          := GetAddress('mysql_warning_count');
+
+  @my_init                      := GetAddress('my_init');
+  @mysql_thread_init            := GetAddress('mysql_thread_init');
+  @mysql_thread_end             := GetAddress('mysql_thread_end');
+  @mysql_thread_safe            := GetAddress('mysql_thread_safe');
+
+  @mysql_server_init            := GetAddress('mysql_server_init');
+  @mysql_server_end             := GetAddress('mysql_server_end');
+
+  @mysql_stmt_affected_rows     := GetAddress('mysql_stmt_affected_rows');
+  @mysql_stmt_attr_get          := GetAddress('mysql_stmt_attr_get');
+  @mysql_stmt_attr_set          := GetAddress('mysql_stmt_attr_set');
+  @mysql_stmt_bind_param        := GetAddress('mysql_stmt_bind_param');
+  @mysql_stmt_bind_result       := GetAddress('mysql_stmt_bind_result');
+  @mysql_stmt_close             := GetAddress('mysql_stmt_close');
+  @mysql_stmt_data_seek         := GetAddress('mysql_stmt_data_seek');
+  @mysql_stmt_errno             := GetAddress('mysql_stmt_errno');
+  @mysql_stmt_error             := GetAddress('mysql_stmt_error');
+  @mysql_stmt_execute           := GetAddress('mysql_stmt_execute');
+  @mysql_stmt_fetch             := GetAddress('mysql_stmt_fetch');
+  @mysql_stmt_fetch_column      := GetAddress('mysql_stmt_fetch_column');
+  @mysql_stmt_field_count       := GetAddress('mysql_stmt_field_count');
+  @mysql_stmt_free_result       := GetAddress('mysql_stmt_free_result');
+  @mysql_stmt_init              := GetAddress('mysql_stmt_init');
+  @mysql_stmt_insert_id         := GetAddress('mysql_stmt_insert_id');
+  @mysql_stmt_num_rows          := GetAddress('mysql_stmt_num_rows');
+  @mysql_stmt_param_count       := GetAddress('mysql_stmt_param_count');
+  @mysql_stmt_param_metadata    := GetAddress('mysql_stmt_param_metadata');
+  @mysql_stmt_prepare           := GetAddress('mysql_stmt_prepare');
+  @mysql_stmt_reset             := GetAddress('mysql_stmt_reset');
+  @mysql_stmt_result_metadata   := GetAddress('mysql_stmt_result_metadata');
+  @mysql_stmt_row_seek          := GetAddress('mysql_stmt_row_seek');
+  @mysql_stmt_row_tell          := GetAddress('mysql_stmt_row_tell');
+  @mysql_stmt_send_long_data    := GetAddress('mysql_stmt_send_long_data');
+  @mysql_stmt_sqlstate          := GetAddress('mysql_stmt_sqlstate');
+  @mysql_stmt_store_result      := GetAddress('mysql_stmt_store_result');
+
+
+  {BELOW are functions not implemented in PDO}
   @mysql_send_query      := GetAddress('mysql_send_query');
-  @mysql_real_query      := GetAddress('mysql_real_query');
-  @mysql_store_result    := GetAddress('mysql_store_result');
-  @mysql_use_result      := GetAddress('mysql_use_result');
+  @mysql_read_query_result := GetAddress('mysql_read_query_result');
   @mysql_master_query    := GetAddress('mysql_master_query');
   @mysql_master_send_query := GetAddress('mysql_master_send_query');
   @mysql_slave_query     := GetAddress('mysql_slave_query');
@@ -1015,50 +1003,13 @@ begin
   @mysql_enable_rpl_parse := GetAddress('mysql_enable_rpl_parse');
   @mysql_disable_rpl_parse := GetAddress('mysql_disable_rpl_parse');
   @mysql_rpl_parse_enabled := GetAddress('mysql_rpl_parse_enabled');
-  @mysql_enable_reads_from_master :=
-    GetAddress('mysql_enable_reads_from_master');
-  @mysql_disable_reads_from_master :=
-    GetAddress('mysql_disable_reads_from_master');
-  @mysql_reads_from_master_enabled :=
-    GetAddress('mysql_reads_from_master_enabled');
+  @mysql_enable_reads_from_master := GetAddress('mysql_enable_reads_from_master');
+  @mysql_disable_reads_from_master := GetAddress('mysql_disable_reads_from_master');
+  @mysql_reads_from_master_enabled := GetAddress('mysql_reads_from_master_enabled');
   @mysql_rpl_query_type  := GetAddress('mysql_rpl_query_type');
-  @mysql_shutdown        := GetAddress('mysql_shutdown');
-  @mysql_dump_debug_info := GetAddress('mysql_dump_debug_info');
-  @mysql_refresh         := GetAddress('mysql_refresh');
-  @mysql_kill            := GetAddress('mysql_kill');
-  @mysql_set_server_option := GetAddress('mysql_set_server_option');
-  @mysql_ping            := GetAddress('mysql_ping');
-  @mysql_stat            := GetAddress('mysql_stat');
-  @mysql_get_server_info := GetAddress('mysql_get_server_info');
-  @mysql_get_client_info := GetAddress('mysql_get_client_info');
-  @mysql_get_client_version := GetAddress('mysql_get_client_version');
-  @mysql_get_host_info   := GetAddress('mysql_get_host_info');
-  @mysql_get_server_version := GetAddress('mysql_get_server_version');
-  @mysql_get_proto_info  := GetAddress('mysql_get_proto_info');
-  @mysql_list_fields     := GetAddress('mysql_list_fields');
-  @mysql_list_processes  := GetAddress('mysql_list_processes');
-  @mysql_list_dbs        := GetAddress('mysql_list_dbs');
-  @mysql_list_tables     := GetAddress('mysql_list_tables');
-  @mysql_options         := GetAddress('mysql_options');
-  @mysql_free_result     := GetAddress('mysql_free_result');
-  @mysql_data_seek       := GetAddress('mysql_data_seek');
-  @mysql_row_seek        := GetAddress('mysql_row_seek');
-  @mysql_field_seek      := GetAddress('mysql_field_seek');
-  @mysql_fetch_row       := GetAddress('mysql_fetch_row');
-  @mysql_fetch_lengths   := GetAddress('mysql_fetch_lengths');
-  @mysql_fetch_field     := GetAddress('mysql_fetch_field');
-  @mysql_debug           := GetAddress('mysql_debug');
-  @mysql_connect         := GetAddress('mysql_connect');
-  @mysql_close           := GetAddress('mysql_close');
-  @mysql_create_db       := GetAddress('mysql_create_db');
-  @mysql_drop_db         := GetAddress('mysql_drop_db');
-  @mysql_escape_string   := GetAddress('mysql_escape_string');
-  @mysql_read_query_result := GetAddress('mysql_read_query_result');
   @mysql_rpl_probe       := GetAddress('mysql_rpl_probe');
   @mysql_set_master      := GetAddress('mysql_set_master');
   @mysql_add_slave       := GetAddress('mysql_add_slave');
-  @mysql_real_escape_string := GetAddress('mysql_real_escape_string');
-  @mysql_thread_safe     := GetAddress('mysql_thread_safe');
   @mysql_manager_init    := GetAddress('mysql_manager_init');
   @mysql_manager_connect := GetAddress('mysql_manager_connect');
   @mysql_manager_close   := GetAddress('mysql_manager_close');
@@ -1070,9 +1021,9 @@ initialization
 {$IFNDEF UNIX}
   LibraryLoader := TZMySQLNativeLibraryLoader.Create(
     [WINDOWS1_DLL_LOCATION
-{.$IFNDEF MYSQL_STRICT_DLL_LOADING}
+{$IFNDEF MYSQL_STRICT_DLL_LOADING}
     , WINDOWS2_DLL_LOCATION
-{.$ENDIF}
+{$ENDIF}
     ]);
 {$ELSE}
   LibraryLoader := TZMySQLNativeLibraryLoader.Create(
@@ -1082,4 +1033,3 @@ finalization
   if Assigned(LibraryLoader) then
     LibraryLoader.Free;
 end.
-

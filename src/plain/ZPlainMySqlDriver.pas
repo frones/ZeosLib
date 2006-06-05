@@ -667,7 +667,7 @@ type
 
 implementation
 
-uses SysUtils, ZPlainMySql320, ZPlainMySql323, ZPlainMySql40, ZPlainMySql41,ZPlainMySql5;
+uses SysUtils, ZPlainMySql320, ZPlainMySql323, ZPlainMySql40, ZPlainMySql41,ZPlainMySql5,ZPlainMysqlConstants;
 
 { TZMySQL320PlainDriver }
 
@@ -2108,7 +2108,7 @@ end;
 
 function TZMySQL5PlainDriver.Shutdown(Handle: PZMySQLConnect): Integer;
 begin
-  Result := ZPlainMySql5.mysql_shutdown(Handle);
+  Result := ZPlainMySql5.mysql_shutdown(Handle,ZPlainMysqlConstants.SHUTDOWN_DEFAULT);
 end;
 
 function TZMySQL5PlainDriver.StoreResult(

@@ -431,8 +431,8 @@ var
 begin
   OldDecimalSeparator := DecimalSeparator;
   DecimalSeparator := '.';
-  if (Str <> '') and (Str[1] = '$') then
-    Str := Copy(Str, 2, MaxInt);
+  if Pos('$', Str) = 1 then
+    Str := Copy(Str, 2, Pred(Length(Str)));
   Result := StrToFloatDef(Str, Def);
   DecimalSeparator := OldDecimalSeparator;
 end;
@@ -686,13 +686,8 @@ end;
   @return a converted string.
 }
 function BytesToStr(const Value: TByteDynArray): string;
-{var
-  I: Integer;}
 begin
   SetString(Result, PChar(@Value[0]), Length(Value))
-{  SetLength(Result, Length(Value));
-  for I := 0 to Length(Value) - 1 do
-    Result[I + 1] := Char(Value[I]);}
 end;
 
 {**
@@ -701,16 +696,10 @@ end;
   @return a converted array of bytes.
 }
 function StrToBytes(const Value: string): TByteDynArray;
-{var
-  I: Integer;}
 begin
   SetLength(Result, Length(Value));
   if Value <> '' then
-  begin
     Move(Value[1], Result[0], Length(Value))
-    {for I := 0 to Length(Value) - 1 do
-      Result[I] := Ord(Value[I + 1]);}
-  end;
 end;
 
 {**
@@ -995,8 +984,8 @@ end;
 }
 function ReplaceChar(const Source, Target: Char; const Str: string): string;
 var
-  I: integer;
   P: PChar;
+  I:Integer;
 begin
   Result := Str;
   UniqueString(Result);
@@ -1006,8 +995,6 @@ begin
     if P^ = Source then
       P^ := Target;
     Inc(P);
-    {if Result[I + 1] = Source then
-      Result[I + 1] := Target;}
   end;
 end;
 
