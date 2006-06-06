@@ -54,7 +54,7 @@ interface
 {$A8}
 {$ENDIF}
 
-uses Classes, ZPlainLoader, ZCompatibility, ZPlainMysqlConstants;
+uses Classes, ZPlainLoader, ZCompatibility, ZPlainMySqlConstants;
 
 { ***************** Plain API Constants definition **************** }
 

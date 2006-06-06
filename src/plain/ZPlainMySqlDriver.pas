@@ -887,7 +887,7 @@ function TZMySQL320PlainDriver.SetOptions(Handle: PZMySQLConnect;
   Option: TZMySQLOption; const Arg: PChar): Integer;
 begin
   Result := ZPlainMySql320.mysql_options(Handle,
-    ZPlainMySql320.mysql_option(Option), Arg);
+    ZPlainMySql320.Tmysqloption(Option), Arg);
 end;
 
 function TZMySQL320PlainDriver.Shutdown(Handle: PZMySQLConnect): Integer;
@@ -1191,7 +1191,7 @@ function TZMySQL323PlainDriver.SetOptions(Handle: PZMySQLConnect;
   Option: TZMySQLOption; const Arg: PChar): Integer;
 begin
   Result := ZPlainMySql323.mysql_options(Handle,
-    ZPlainMySql323.mysql_option(Option), Arg);
+    ZPlainMySql323.Tmysqloption(Option), Arg);
 end;
 
 function TZMySQL323PlainDriver.Shutdown(Handle: PZMySQLConnect): Integer;

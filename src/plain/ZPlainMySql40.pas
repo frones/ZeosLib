@@ -204,6 +204,7 @@ type
     query_cache_query: Pointer;
   end;
 
+  PMYSQL_FIELD = ^MYSQL_FIELD;
   MYSQL_FIELD = record
     name:       PChar;   // Name of column
     table:      PChar;   // Table of column if column was a field
@@ -216,7 +217,6 @@ type
     decimals:   Integer; // Number of decimals in field
     _type:      Byte;    // Type of field. Se mysql_com.h for types
   end;
-  PMYSQL_FIELD = ^MYSQL_FIELD;
 
   MYSQL_FIELD_OFFSET = Cardinal;
 
@@ -378,6 +378,7 @@ type
                                                                                                        {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_field_tell             = function(Result: PMYSQL_RES): MYSQL_FIELD_OFFSET;                    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_free_result            = procedure(Result: PMYSQL_RES);                                       {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+//  Tmysql_get_character_set_info = procedure(Handle: PMYSQL; cs: PMY_CHARSET_INFO);
   Tmysql_get_client_info        = function: PChar;                                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_get_client_version     = function: Cardinal;                                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_get_host_info          = function(Handle: PMYSQL): PChar;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
@@ -411,7 +412,6 @@ type
   Tmysql_refresh                = function(Handle: PMYSQL; Options: Cardinal): Integer;                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 //  Tmysql_rollback               = function(Handle: PMYSQL): Byte;                                      {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_row_seek               = function(Result: PMYSQL_RES; Offset: PMYSQL_ROWS): PMYSQL_ROWS;      {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-//----  Tmysql_row_seek = function(Result: PMYSQL_RES; Row: MYSQL_ROW_OFFSET):    MYSQL_ROW_OFFSET; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_row_tell               = function(Result: PMYSQL_RES): PMYSQL_ROWS;                           {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_select_db              = function(Handle: PMYSQL; const Db: PChar): Integer;                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 //  Tmysql_set_character_set      = function(Handle: PMYSQL; csname: PChar): Integer;                    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
@@ -569,7 +569,7 @@ var
 
   mysql_affected_rows:          Tmysql_affected_rows;	        {mysql 3.2}
 //  mysql_autocommit:             Tmysql_autocommit;              {mysql 4.1}
-  mysql_change_user:            Tmysql_change_user;             {mysql 3.2}
+  mysql_change_user:            Tmysql_change_user;             {mysql 3.23}
   mysql_character_set_name:     Tmysql_character_set_name;      {mysql 3.2}
   mysql_close:                  Tmysql_close;                   {mysql 3.2}
 //  mysql_commit:                 Tmysql_commit;                  {mysql 4.1}
@@ -588,11 +588,11 @@ var
   mysql_fetch_fields:           Tmysql_fetch_fields;            {mysql 3.2}
   mysql_fetch_lengths:          Tmysql_fetch_lengths;           {mysql 3.2}
   mysql_fetch_row:              Tmysql_fetch_row;               {mysql 3.2}
-  mysql_field_count:            Tmysql_field_count;             {mysql 3.2}
+  mysql_field_count:            Tmysql_field_count;             {mysql 3.22}
   mysql_field_seek:             Tmysql_field_seek;              {mysql 3.2}
   mysql_field_tell:             Tmysql_field_tell;              {mysql 3.2}
   mysql_free_result:            Tmysql_free_result;             {mysql 3.2}
-//  mysql_get_character_set_info: Tmysql_get_character_set_info; {mysql 5.0.10 ++}
+//  mysql_get_character_set_info: Tmysql_get_character_set_info; {mysql 5.0.10}
   mysql_get_client_info:        Tmysql_get_client_info;         {mysql 3.2}
   mysql_get_client_version:     Tmysql_get_client_version;      {mysql 4.0}
   mysql_get_host_info:          Tmysql_get_host_info;           {mysql 3.2}
@@ -842,12 +842,9 @@ begin
   @mysql_enable_rpl_parse := GetAddress('mysql_enable_rpl_parse');
   @mysql_disable_rpl_parse := GetAddress('mysql_disable_rpl_parse');
   @mysql_rpl_parse_enabled := GetAddress('mysql_rpl_parse_enabled');
-  @mysql_enable_reads_from_master :=
-    GetAddress('mysql_enable_reads_from_master');
-  @mysql_disable_reads_from_master :=
-    GetAddress('mysql_disable_reads_from_master');
-  @mysql_reads_from_master_enabled :=
-    GetAddress('mysql_reads_from_master_enabled');
+  @mysql_enable_reads_from_master := GetAddress('mysql_enable_reads_from_master');
+  @mysql_disable_reads_from_master := GetAddress('mysql_disable_reads_from_master');
+  @mysql_reads_from_master_enabled := GetAddress('mysql_reads_from_master_enabled');
   @mysql_rpl_query_type  := GetAddress('mysql_rpl_query_type');
   @mysql_rpl_probe       := GetAddress('mysql_rpl_probe');
   @mysql_set_master      := GetAddress('mysql_set_master');

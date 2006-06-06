@@ -734,7 +734,7 @@ var
 
   mysql_affected_rows:          Tmysql_affected_rows;	          {mysql 3.2}
   mysql_autocommit:             Tmysql_autocommit;              {mysql 4.1}
-  mysql_change_user:            Tmysql_change_user;             {mysql 3.2}
+  mysql_change_user:            Tmysql_change_user;             {mysql 3.23}
   mysql_character_set_name:     Tmysql_character_set_name;      {mysql 3.2}
   mysql_close:                  Tmysql_close;                   {mysql 3.2}
   mysql_commit:                 Tmysql_commit;                  {mysql 4.1}
@@ -753,7 +753,7 @@ var
   mysql_fetch_fields:           Tmysql_fetch_fields;            {mysql 3.2}
   mysql_fetch_lengths:          Tmysql_fetch_lengths;           {mysql 3.2}
   mysql_fetch_row:              Tmysql_fetch_row;               {mysql 3.2}
-  mysql_field_count:            Tmysql_field_count;             {mysql 3.2}
+  mysql_field_count:            Tmysql_field_count;             {mysql 3.22}
   mysql_field_seek:             Tmysql_field_seek;              {mysql 3.2}
   mysql_field_tell:             Tmysql_field_tell;              {mysql 3.2}
   mysql_free_result:            Tmysql_free_result;             {mysql 3.2}
