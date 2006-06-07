@@ -1,5 +1,4 @@
 package ZComponent;
-{$LIBSUFFIX '100'}
 {$R *.res}
 {$R '..\..\src\component\ZComponent.dcr'}
 {$ALIGN 8}
@@ -14,6 +13,7 @@ package ZComponent;
 {$OPENSTRINGS ON}
 {$OPTIMIZATION ON}
 {$OVERFLOWCHECKS ON}
+{$RANGECHECKS OFF}
 {$REFERENCEINFO ON}
 {$SAFEDIVIDE OFF}
 {$STACKFRAMES ON}
@@ -23,6 +23,7 @@ package ZComponent;
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
 {$DESCRIPTION 'Zeos Database Components'}
+{$LIBSUFFIX '100'}
 {$IMPLICITBUILD OFF}
 
 requires

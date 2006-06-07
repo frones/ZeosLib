@@ -41,6 +41,7 @@ contains
   ZPlainInterbase6 in '..\..\src\plain\ZPlainInterbase6.pas',
   ZPlainInterbaseDriver in '..\..\src\plain\ZPlainInterbaseDriver.pas',
   ZPlainLoader in '..\..\src\plain\ZPlainLoader.pas',
+  ZPlainMySqlConstants in '..\..\src\plain\ZPlainMySqlConstants.pas',
   ZPlainMySql320 in '..\..\src\plain\ZPlainMySql320.pas',
   ZPlainMySql323 in '..\..\src\plain\ZPlainMySql323.pas',
   ZPlainMySql40 in '..\..\src\plain\ZPlainMySql40.pas',

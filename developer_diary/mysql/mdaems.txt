@@ -5,3 +5,7 @@
 20060604 : Added new library functions to plain mysql drivers (4.0 and 5.0) -> PDO integration
 
 20060605 : Added new library functions to plain mysql drivers (4.1) -> PDO integration
+
+20060606 : Added new library functions to plain mysql drivers (3.23 and 3.20) -> PDO integration
+
+20060607 : Moved all duplicate types/vars/getaddresses to ZPlainMysql.inc
