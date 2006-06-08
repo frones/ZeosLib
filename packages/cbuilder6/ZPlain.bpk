@@ -11,8 +11,7 @@
       build\ZPlainInterbaseDriver.obj build\ZPlainLoader.obj 
       build\ZPlainMySql320.obj build\ZPlainMySql323.obj build\ZPlainMySql40.obj 
       build\ZPlainMySql41.obj build\ZPlainMySqlDriver.obj 
-      build\ZPlainPostgreSql73.obj build\ZPlainPostgreSql74.obj
-      build\ZPlainPostgreSql80.obj build\ZPlainPostgreSql81.obj build\ZPlainDb2.obj
+      build\ZPlainPostgreSql7.obj build\ZPlainPostgreSql8.obj build\ZPlainDb2.obj
       build\ZPlainDb2Driver.obj build\ZPlainFirebird10.obj 
       build\ZPlainFirebird15.obj build\ZPlainFirebird20.obj build\ZPlainAdo.obj
       build\ZPlainAdoDriver.obj build\ZPlainSqLiteDriver.obj 

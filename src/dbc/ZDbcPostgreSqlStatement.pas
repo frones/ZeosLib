@@ -44,7 +44,7 @@ interface
 uses
   Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcStatement, ZDbcLogging,
   ZPlainPostgreSqlDriver, ZCompatibility, ZVariant, ZDbcGenericResolver,
-  ZDbcCachedResultSet;
+  ZDbcCachedResultSet, ZDbcPostgreSql;
 
 type
 
@@ -81,6 +81,7 @@ type
   private
     FHandle: PZPostgreSQLConnect;
     FPlainDriver: IZPostgreSQLPlainDriver;
+    FCharactersetCode : TZPgCharactersetType;
   protected
     function CreateExecStatement: IZStatement; override;
     function PrepareSQLParam(ParamIndex: Integer): string; override;
@@ -99,7 +100,7 @@ type
 implementation
 
 uses
-  ZMessages, ZDbcPostgreSql, ZDbcPostgreSqlResultSet, ZPostgreSqlToken,
+  ZMessages, ZDbcPostgreSqlResultSet, ZPostgreSqlToken,
   ZDbcPostgreSqlUtils;
 
 { TZPostgreSQLStatement }
@@ -113,20 +114,17 @@ uses
 }
 constructor TZPostgreSQLStatement.Create(PlainDriver: IZPostgreSQLPlainDriver;
   Connection: IZConnection; Info: TStrings; Handle: PZPostgreSQLConnect);
-var
-  PostgreSQLConnection: IZPostgreSQLConnection;
 begin
   inherited Create(Connection, Info);
   FHandle := Handle;
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
 
-  PostgreSQLConnection := Connection as IZPostgreSQLConnection;
   { Processes connection properties. }
   if Self.Info.Values['oidasblob'] <> '' then
     FOidAsBlob := StrToBoolEx(Self.Info.Values['oidasblob'])
   else
-    FOidAsBlob := PostgreSQLConnection.IsOidAsBlob;
+    FOidAsBlob := (Connection as IZPostgreSQLConnection).IsOidAsBlob;
 end;
 
 {**
@@ -295,6 +293,7 @@ begin
   FHandle := Handle;
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
+  FCharactersetCode := (Connection as IZPostgreSQLConnection).GetCharactersetCode;
 end;
 
 {**
@@ -337,7 +336,7 @@ begin
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
       stString, stBytes:
-        Result := EncodeString(SoftVarManager.GetAsString(Value));
+        Result := EncodeString(FCharactersetCode,SoftVarManager.GetAsString(Value));
       stDate:
         Result := Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]);
