@@ -349,12 +349,12 @@ type
 
 { ************** Plain API Function types definition ************* }
 {$DEFINE LOAD_MYSQL_API_FUNC}
-{$I ZPlainMySql.inc}
+{$I ZPlainMysql.inc}
 {$UNDEF LOAD_MYSQL_API_FUNC}
 var
 { ************* Plain API Function variables definition ************ }
 {$DEFINE MYSQL_API_VAR}
-{$I ZPlainMySql.inc}
+{$I ZPlainMysql.inc}
 {$UNDEF MYSQL_API_VAR}
 
   LibraryLoader: TZNativeLibraryLoader;
@@ -380,7 +380,7 @@ begin
 
 { ************** Load adresses of API Functions ************* }
 {$DEFINE LOAD_MYSQL_API}
-{$I ZPlainMySql.inc}
+{$I ZPlainMysql.inc}
 {$UNDEF LOAD_MYSQL_API}
 end;
 

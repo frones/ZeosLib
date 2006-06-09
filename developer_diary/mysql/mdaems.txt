@@ -9,3 +9,5 @@
 20060606 : Added new library functions to plain mysql drivers (3.23 and 3.20) -> PDO integration
 
 20060607 : Moved all duplicate types/vars/getaddresses to ZPlainMysql.inc
+
+20060609 : Lazarus for unix filename fix - Patch by Barko - See http://zeos.firmos.at/viewtopic.php?t=593
