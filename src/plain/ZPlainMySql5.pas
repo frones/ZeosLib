@@ -532,6 +532,7 @@ type
   {** Implements a loader for MySQL native library. }
   TZMySQLNativeLibraryLoader = class (TZNativeLibraryLoader)
   public
+    destructor Destroy; override;
     function Load: Boolean; override;
   end;
 
@@ -549,6 +550,16 @@ begin
 {$DEFINE LOAD_MYSQL_API}
 {$I ZPlainMysql.inc}
 {$UNDEF LOAD_MYSQL_API}
+end;
+
+{**
+  Destroys the library and cleanups the memory.
+}
+destructor TZMySQLNativeLibraryLoader.Destroy;
+begin
+  if Loaded then
+    mysql_server_end;
+  inherited Destroy;
 end;
 
 initialization

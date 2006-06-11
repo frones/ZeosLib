@@ -823,6 +823,7 @@ end;
 
 function TZMySQL320PlainDriver.Init(var Handle: PZMySQLConnect): PZMySQLConnect;
 begin
+  ZPlainMySql320.mysql_server_init(0,nil,nil);
   Handle := AllocMem(SizeOf(ZPlainMySql320.MYSQL));
   Result := ZPlainMySql320.mysql_init(Handle);
 end;
@@ -1127,6 +1128,7 @@ end;
 
 function TZMySQL323PlainDriver.Init(var Handle: PZMySQLConnect): PZMySQLConnect;
 begin
+  ZPlainMySql323.mysql_server_init(0,nil,nil);
   Handle := AllocMem(SizeOf(ZPlainMySql323.MYSQL));
   Result := ZPlainMySql323.mysql_init(Handle);
 end;
@@ -1430,6 +1432,7 @@ end;
 
 function TZMySQL40PlainDriver.Init(var Handle: PZMySQLConnect): PZMySQLConnect;
 begin
+  ZPlainMySql40.mysql_server_init(0,nil,nil);
   Handle := AllocMem(SizeOf(ZPlainMySql40.MYSQL));
   Result := ZPlainMySql40.mysql_init(Handle);
 end;
@@ -1734,6 +1737,7 @@ function TZMySQL41PlainDriver.Init(var Handle: PZMySQLConnect): PZMySQLConnect;
 begin
 //  Handle := AllocMem(SizeOf(ZPlainMySql41.MYSQL));
 //  Result := ZPlainMySql41.mysql_init(Handle);
+  ZPlainMySql41.mysql_server_init(0,nil,nil);
   Handle := ZPlainMySql41.mysql_init(nil);
   Result := Handle;
 end;
@@ -2039,6 +2043,7 @@ function TZMySQL5PlainDriver.Init(var Handle: PZMySQLConnect): PZMySQLConnect;
 begin
 //  Handle := AllocMem(SizeOf(ZPlainMySql5.MYSQL));
 //  Result := ZPlainMySql5.mysql_init(Handle);
+  ZPlainMySql5.mysql_server_init(0,nil,nil);
   Handle := ZPlainMySql5.mysql_init(nil);
   Result := Handle;
 end;
