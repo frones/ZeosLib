@@ -42,7 +42,6 @@
 {    Copyright (c) 2006 John Marino, www.synsport.com     }
 {                                                         }
 {*********************************************************}
-
 unit ZPlainMySql5;
 
 interface
@@ -56,12 +55,13 @@ interface
 {$A8}
 {$ENDIF}
 
-uses Dialogs, Classes, ZPlainLoader, ZCompatibility, ZPlainMySqlConstants;
+uses Classes, ZPlainLoader, ZCompatibility, ZPlainMySqlConstants;
 
 { ***************** Plain API Constants definition **************** }
 
 const
-  WINDOWS1_DLL_LOCATION = 'libmysql50.dll';
+  WINDOWS1_DLL_LOCATION = 'libmysql5.dll';
+  WINDOWS1_DLL_LOCATION_EMBEDDED = 'libmysqld5.dll';
 
 { General Declarations }
 //  PROTOCOL_VERSION     = 10;
@@ -466,7 +466,7 @@ type
     result_buffered:      Byte;
   end;
 
-    MYSQL_METHODS = record
+  MYSQL_METHODS = record
     read_query_result: function(handle: PMYSQL): Byte;
     advanced_command:  function(handle: PMYSQL; command: TMySqlServerCommand;
       header: PChar; header_length: LongInt; const arg: PChar;
@@ -518,23 +518,28 @@ type
 {$I ZPlainMysql.inc}
 {$UNDEF LOAD_MYSQL_API_FUNC}
 
-var
-{ ************* Plain API Function variables definition ************ }
+{ ************** Collection of Plain API Function types definition ************* }
+MYSQL5_API = record
 {$DEFINE MYSQL_API_VAR}
 {$I ZPlainMysql.inc}
 {$UNDEF MYSQL_API_VAR}
-
-  LibraryLoader: TZNativeLibraryLoader;
-
-implementation
+END;
 
 type
   {** Implements a loader for MySQL native library. }
   TZMySQLNativeLibraryLoader = class (TZNativeLibraryLoader)
   public
+    api_rec : MYSQL5_API;
     destructor Destroy; override;
     function Load: Boolean; override;
   end;
+
+var
+
+  LibraryLoader: TZMySQLNativeLibraryLoader;
+  LibraryLoaderEmbedded: TZMySQLNativeLibraryLoader;
+
+implementation
 
 { TZMySQLNativeLibraryLoader }
 
@@ -547,9 +552,9 @@ begin
   Result := inherited Load;
 
 { ************** Load adresses of API Functions ************* }
-{$DEFINE LOAD_MYSQL_API}
+{$DEFINE LOAD_MYSQL_API_REC}
 {$I ZPlainMysql.inc}
-{$UNDEF LOAD_MYSQL_API}
+{$UNDEF LOAD_MYSQL_API_REC}
 end;
 
 {**
@@ -558,7 +563,7 @@ end;
 destructor TZMySQLNativeLibraryLoader.Destroy;
 begin
   if Loaded then
-    mysql_server_end;
+    api_rec.mysql_server_end;
   inherited Destroy;
 end;
 
@@ -570,13 +575,20 @@ initialization
     , WINDOWS2_DLL_LOCATION
 {$ENDIF}
     ]);
+  LibraryLoaderEmbedded := TZMySQLNativeLibraryLoader.Create(
+    [WINDOWS1_DLL_LOCATION_EMBEDDED
+{$IFNDEF MYSQL_STRICT_DLL_LOADING}
+    , WINDOWS2_DLL_LOCATION_EMBEDDED
+{$ENDIF}
+    ]);
 {$ELSE}
   LibraryLoader := TZMySQLNativeLibraryLoader.Create(
     [LINUX_DLL_LOCATION]);
+  LibraryLoaderEmbedded := TZMySQLNativeLibraryLoader.Create(
+    [LINUX_DLL_LOCATION_EMBEDDED]);
 {$ENDIF}
 {$UNDEF MYSQL_5_API}
 finalization
   if Assigned(LibraryLoader) then
     LibraryLoader.Free;
 end.
-

@@ -45,7 +45,7 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection,ZPlainMySqlDriver,
+  ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection, ZPlainMySqlDriver,
   ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser;
 
 type
@@ -58,6 +58,9 @@ type
     FMySQL40PlainDriver: IZMySQLPlainDriver;
     FMySQL41PlainDriver: IZMySQLPlainDriver;
     FMySQL5PlainDriver: IZMySQLPlainDriver;
+    // embedded drivers
+    FMySQLD41PlainDriver: IZMySQLPlainDriver;
+    FMySQLD5PlainDriver: IZMySQLPlainDriver;
   protected
     function GetPlainDriver(const Url: string): IZMySQLPlainDriver;
   public
@@ -138,6 +141,9 @@ begin
   FMySQL40PlainDriver  := TZMySQL40PlainDriver.Create;
   FMySQL41PlainDriver  := TZMySQL41PlainDriver.Create;
   FMySQL5PlainDriver   := TZMySQL5PlainDriver.Create;
+  // embedded drivers
+  FMySQLD41PlainDriver  := TZMySQLD41PlainDriver.Create;
+  FMySQLD5PlainDriver   := TZMySQLD5PlainDriver.Create;
 end;
 
 {**
@@ -228,13 +234,19 @@ end;
 }
 function TZMySQLDriver.GetSupportedProtocols: TStringDynArray;
 begin
-  SetLength(Result, 6);
+  SetLength(Result, 8);
+
+  // Generic driver
   Result[0] := 'mysql';
+
   Result[1] := FMySQL320PlainDriver.GetProtocol;
   Result[2] := FMySQL323PlainDriver.GetProtocol;
   Result[3] := FMySQL40PlainDriver.GetProtocol;
   Result[4] := FMySQL41PlainDriver.GetProtocol;
   Result[5] := FMySQL5PlainDriver.GetProtocol;
+  // embedded drivers
+  Result[6] := FMySQLD41PlainDriver.GetProtocol;
+  Result[7] := FMySQLD5PlainDriver.GetProtocol;
 end;
 
 {**
@@ -257,6 +269,12 @@ begin
     Result := FMySQL41PlainDriver
   else if Protocol = FMySQL5PlainDriver.GetProtocol then
     Result := FMySQL5PlainDriver
+  // embedded drivers
+  else if Protocol = FMySQLD41PlainDriver.GetProtocol then
+    Result := FMySQLD41PlainDriver
+  else if Protocol = FMySQLD5PlainDriver.GetProtocol then
+    Result := FMySQLD5PlainDriver
+  // Generic driver
   else
     Result := FMySQL5PlainDriver;
   Result.Initialize;

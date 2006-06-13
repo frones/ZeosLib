@@ -61,6 +61,7 @@ uses Classes, ZPlainLoader, ZCompatibility, ZPlainMySqlConstants;
 
 const
   WINDOWS1_DLL_LOCATION = 'libmysql41.dll';
+  WINDOWS1_DLL_LOCATION_EMBEDDED = 'libmysqld41.dll';
 
 { General Declarations }
 //  PROTOCOL_VERSION     = 10;
@@ -511,23 +512,29 @@ type
 {$DEFINE LOAD_MYSQL_API_FUNC}
 {$I ZPlainMysql.inc}
 {$UNDEF LOAD_MYSQL_API_FUNC}
-var
-{ ************* Plain API Function variables definition ************ }
+
+{ ************** Collection of Plain API Function types definition ************* }
+MYSQL41_API = record
 {$DEFINE MYSQL_API_VAR}
 {$I ZPlainMysql.inc}
 {$UNDEF MYSQL_API_VAR}
-
-  LibraryLoader: TZNativeLibraryLoader;
-
-implementation
+END;
 
 type
   {** Implements a loader for MySQL native library. }
   TZMySQLNativeLibraryLoader = class (TZNativeLibraryLoader)
   public
+    api_rec : MYSQL41_API;
     destructor Destroy; override;
     function Load: Boolean; override;
   end;
+
+var
+
+  LibraryLoader: TZMySQLNativeLibraryLoader;
+  LibraryLoaderEmbedded: TZMySQLNativeLibraryLoader;
+
+implementation
 
 { TZMySQLNativeLibraryLoader }
 
@@ -540,9 +547,9 @@ begin
   Result := inherited Load;
 
 { ************** Load adresses of API Functions ************* }
-{$DEFINE LOAD_MYSQL_API}
+{$DEFINE LOAD_MYSQL_API_REC}
 {$I ZPlainMysql.inc}
-{$UNDEF LOAD_MYSQL_API}
+{$UNDEF LOAD_MYSQL_API_REC}
 end;
 
 {**
@@ -551,7 +558,7 @@ end;
 destructor TZMySQLNativeLibraryLoader.Destroy;
 begin
   if Loaded then
-    mysql_server_end;
+    api_rec.mysql_server_end;
   inherited Destroy;
 end;
 
@@ -563,9 +570,17 @@ initialization
     , WINDOWS2_DLL_LOCATION
 {$ENDIF}
     ]);
+  LibraryLoaderEmbedded := TZMySQLNativeLibraryLoader.Create(
+    [WINDOWS1_DLL_LOCATION_EMBEDDED
+{$IFNDEF MYSQL_STRICT_DLL_LOADING}
+    , WINDOWS2_DLL_LOCATION_EMBEDDED
+{$ENDIF}
+    ]);
 {$ELSE}
   LibraryLoader := TZMySQLNativeLibraryLoader.Create(
     [LINUX_DLL_LOCATION]);
+  LibraryLoaderEmbedded := TZMySQLNativeLibraryLoader.Create(
+    [LINUX_DLL_LOCATION_EMBEDDED]);
 {$ENDIF}
 {$UNDEF MYSQL_41_API}
 finalization

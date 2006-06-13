@@ -53,8 +53,10 @@ interface
 const
 {$IFNDEF STRICT_DLL_LOADING}
   WINDOWS2_DLL_LOCATION = 'libmysql.dll';
+  WINDOWS2_DLL_LOCATION_EMBEDDED = 'libmysqld.dll';
 {$ENDIF}
   LINUX_DLL_LOCATION = 'libmysqlclient.so';
+  LINUX_DLL_LOCATION_EMBEDDED = 'libmysqld.so';
 
 { General Declarations }
   MYSQL_ERRMSG_SIZE    = 512;
@@ -155,7 +157,7 @@ type
     PZMySqlPrepStmt = Pointer;
     PZMysqlBindArray = Pointer;
 
-    TMySqlServerCommand = (
+{    TMySqlServerCommand = (
     COM_SLEEP,
     COM_QUIT,
     COM_INIT_DB,
@@ -187,7 +189,7 @@ type
     COM_STMT_FETCH,
     COM_END
   );
-
+}
 { Enum Field Types }
     TMysqlFieldTypes = (
         MYSQL_TYPE_DECIMAL,
@@ -239,7 +241,7 @@ type
     KILL_CONNECTION{$IFNDEF VER130} = 255{$ENDIF}
   );
 
-  TMySqlOption = (
+{  TMySqlOption = (
     MYSQL_OPT_CONNECT_TIMEOUT,
     MYSQL_OPT_COMPRESS,
     MYSQL_OPT_NAMED_PIPE,
@@ -274,7 +276,7 @@ type
     MYSQL_RPL_SLAVE,
     MYSQL_RPL_ADMIN
   );
-
+}
   TMySqlProtocolType = (
     MYSQL_PROTOCOL_DEFAULT,
     MYSQL_PROTOCOL_TCP,
@@ -301,7 +303,7 @@ type
     second_part:         Int64;
   end;
 
-  PUSED_MEM=^USED_MEM;
+{  PUSED_MEM=^USED_MEM;
   USED_MEM = packed record
     next:       PUSED_MEM;
     left:       Integer;
@@ -364,7 +366,7 @@ type
     local_infile_error:       Pointer;
     local_infile_userdata:    Pointer;
   end;
-
+}
   PLIST = ^LIST;
   LIST = record
     prev:       PLIST;
@@ -374,27 +376,27 @@ type
 
   MYSQL_FIELD_OFFSET = Cardinal;
 
-  PMYSQL_BIND = ^MYSQL_BIND;
-  MYSQL_BIND =  record
-    length:            {$IFNDEF VER130}PLongWord{$ELSE}^Cardinal{$ENDIF};
-    is_null:           {$IFNDEF VER130}PByte{$ELSE}^Byte{$ENDIF};
-    buffer:            PChar;
-    buffer_type:       TMysqlFieldTypes;
-    buffer_length:     LongWord;
+//  PMYSQL_BIND = ^MYSQL_BIND;
+//  MYSQL_BIND =  record
+//    length:            {$IFNDEF VER130}PLongWord{$ELSE}^Cardinal{$ENDIF};
+//    is_null:           {$IFNDEF VER130}PByte{$ELSE}^Byte{$ENDIF};
+//    buffer:            PChar;
+//    buffer_type:       TMysqlFieldTypes;
+//    buffer_length:     LongWord;
 
     {all but is_unsigned is used internally by mysql server}
-    inter_buffer:      {$IFNDEF VER130}PByte{$ELSE}^Byte{$ENDIF};
-    offset:            LongWord;
-    internal_length:   LongWord;
-    param_number:      Cardinal;
-    pack_length:       Cardinal;
-    is_unsigned:       Byte;
-    long_data_used:    Byte;
-    internal_is_null:  Byte;
-    store_param_funct: Pointer;  {procedure: (NET *net, struct st_mysql_bind *param)}
-    fetch_result:      Pointer;  {prcoedure: (struct st_mysql_bind *, unsigned char **row)}
-    skip_result:       Pointer;  {(struct st_mysql_bind *, MYSQL_FIELD *, unsigned char **row)}
-  end;
+//    inter_buffer:      {$IFNDEF VER130}PByte{$ELSE}^Byte{$ENDIF};
+//    offset:            LongWord;
+//    internal_length:   LongWord;
+//    param_number:      Cardinal;
+//    pack_length:       Cardinal;
+//    is_unsigned:       Byte;
+//    long_data_used:    Byte;
+//    internal_is_null:  Byte;
+//    store_param_funct: Pointer;  {procedure: (NET *net, struct st_mysql_bind *param)}
+//    fetch_result:      Pointer;  {prcoedure: (struct st_mysql_bind *, unsigned char **row)}
+//    skip_result:       Pointer;  {(struct st_mysql_bind *, MYSQL_FIELD *, unsigned char **row)}
+//  end;
 
   PMYSQL_BIND2 = ^MYSQL_BIND2;
   MYSQL_BIND2 =  record
@@ -416,8 +418,12 @@ type
     store_param_funct: Pointer;
     fetch_result:      Pointer;
     skip_result:       Pointer;
-  end;      
+  end;
 
+const
+  SERVER_GROUPS : array [0..2] of PChar = ('embedded'#0,'server'#0, nil);
+
+  DEFAULT_PARAMS : array [0..2] of PChar = ('not_used'#0, {$IFDEF WIN32}'--datadir=.\'#0{$ELSE}'--datadir=./'{$ENDIF}, '--set-variable=key_buffer_size=32M'#0);
 
 implementation
 

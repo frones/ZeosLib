@@ -11,3 +11,7 @@
 20060607 : Moved all duplicate types/vars/getaddresses to ZPlainMysql.inc
 
 20060609 : Lazarus for unix filename fix - Patch by Barko - See http://zeos.firmos.at/viewtopic.php?t=593
+
+20060611 : Added first simple embedded dll support - Written by mdaems
+
+20060613 : Rewrote ZPlainMysqlXX files to add embedded server support for versions 4.0,4.1,5 of  mysql - Written by mdaems
