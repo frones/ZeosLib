@@ -1100,6 +1100,7 @@ end;
   @return a data which contains a value.
 }
 function NativeToDateTime(DataType: TFieldType; Buffer: Pointer): TDateTime;
+{$IFNDEF FPC}
 var
   TimeStamp: TTimeStamp;
 begin
@@ -1123,6 +1124,10 @@ begin
     end;
   end;
   Result := TimeStampToDateTime(TimeStamp);
+{$ELSE}
+begin
+  Result := TDateTime(Buffer^);
+{$ENDIF}
 end;
 
 {**

@@ -24,5 +24,8 @@
 
 20060520 : Translated some dutch strings in ZMessages
            Added patch from Paulonki for Delphi 2005 / Portuguese - See http://seegernet.koolhost.de/zeosforum/viewtopic.php?t=586
+
 20060531 : Delphi 6 project filetuning, asked by tomazzupan. - See : http://zeos.firmos.at/viewtopic.php?t=577
            Can still be bugged. I hope he keeps me informed.
+
+20060616 : Date, Time and Float on Lazarus - Patch by fbaqui - See http://zeos.firmos.at/viewtopic.php?t=598
