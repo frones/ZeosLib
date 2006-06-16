@@ -2758,7 +2758,7 @@ begin
 
     if Unique then
       SQL := SQL + ' AND i.indisunique ';
-    SQL := SQL + ' ORDER BY NON_UNIQUE, TYPE, INDEX_NAME ';
+    SQL := SQL + ' ORDER BY NON_UNIQUE, TYPE, INDEX_NAME, ORDINAL_POSITION ';
 
     Result := CopyToVirtualResultSet(
       GetConnection.CreateStatement.ExecuteQuery(SQL),
