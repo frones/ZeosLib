@@ -58,6 +58,7 @@ const
   WINDOWS2_DLL_LOCATION   = 'libpq.dll';
 {$ENDIF}
   LINUX_DLL_LOCATION   = 'libpq.so';
+  LINUX_DLL_LOCATION2  = 'libpq.so.4';
 
 { Type Lengths }
   NAMEDATALEN  = 32;
@@ -465,8 +466,7 @@ initialization
 {$ENDIF}
     ]);
 {$ELSE}
-  LibraryLoader := TZPostgreSQLNativeLibraryLoader.Create(
-    [LINUX_DLL_LOCATION]);
+  LibraryLoader := TZPostgreSQLNativeLibraryLoader.Create([LINUX_DLL_LOCATION,LINUX_DLL_LOCATION2]);
 {$ENDIF}
 finalization
   if Assigned(LibraryLoader) then
