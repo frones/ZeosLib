@@ -183,7 +183,7 @@ type
     function GetPropertyInfo(const Url: string; Info: TStrings): TStrings;
     function GetMajorVersion: Integer;
     function GetMinorVersion: Integer;
-
+    function GetSubVersion: Integer;
     function GetTokenizer: IZTokenizer;
     function GetStatementAnalyser: IZStatementAnalyser;
   end;
@@ -221,7 +221,7 @@ type
 
     //Ping Server Support (firmos) 27032006
 
-    procedure Ping_Server;
+    function PingServer: Integer;
 
 
     procedure Open;
@@ -231,6 +231,8 @@ type
     function GetDriver: IZDriver;
     function GetMetadata: IZDatabaseMetadata;
     function GetParameters: TStrings;
+    function GetClientVersion: Integer;
+    function GetHostVersion: Integer;
 
     procedure SetReadOnly(Value: Boolean);
     function IsReadOnly: Boolean;

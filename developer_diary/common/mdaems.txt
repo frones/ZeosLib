@@ -29,3 +29,5 @@
            Can still be bugged. I hope he keeps me informed.
 
 20060616 : Date, Time and Float on Lazarus - Patch by fbaqui - See http://zeos.firmos.at/viewtopic.php?t=598
+
+20060620 : Added GetClientVersion and GetServerVersion to Connection/Driver interfaces - Modification by fduenas

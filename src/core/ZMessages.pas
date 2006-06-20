@@ -120,6 +120,7 @@ resourcestring
   SWrongTypeForBlobParameter = 'Tipo errado para parâmetro Blob';
   SIncorrectConnectionURL = 'Conexão incorreta URL: %s';
   SUnsupportedProtocol = 'Protocolo não suportado: %s';
+  SUnsupportedByDriver    = 'Translate: Driver can not support this feature natively: [%s]';
 
   SConnectionIsNotOpened = 'Conexão ainda não está aberta.';
   SInvalidOpInAutoCommit = 'Operação inválida no modo AutoCommit.';
@@ -263,6 +264,7 @@ resourcestring
   SWrongTypeForBlobParameter = 'Verkeerde type voor Blob parameter';
   SIncorrectConnectionURL = 'Ongeldige connectie URL: %s';
   SUnsupportedProtocol = 'Niet ondersteund protocol: %s';
+  SUnsupportedByDriver    = 'De driver ondersteunt deze functie niet: [%s]';
 
   SConnectionIsNotOpened = 'Verbinding is niet gemaakt.';
   SInvalidOpInAutoCommit = 'Ongeldige operatie in AutoCommit mode.';
@@ -368,6 +370,7 @@ resourcestring
   STypesMismatch = 'Inkompatible Typen';
   SUnsupportedVariantType = 'Nicht unterstützter Variant-Typ';
   SUnsupportedOperation = 'Nicht unterstützte Operation';
+  SUnsupportedByDriver    = 'Translate: Driver can not support this feature natively: [%s]';
 
   STokenizerIsNotDefined = 'Tokenizer wurde nicht definiert';
   SLibraryNotFound = 'Es wurde keine der in %s gelisteten DLL''s gefunden';
@@ -403,6 +406,7 @@ resourcestring
   SWrongTypeForBlobParameter = 'Falscher Typ für einen BLOB-Parameter';
   SIncorrectConnectionURL = 'Falsche Verbindungs-URL: %s';
   SUnsupportedProtocol = 'Nicht unterstütztes Protokoll: %s';
+  SUnsupportedByDriver    = 'Translate: Driver can not support this feature natively: [%s]';
 
   SConnectionIsNotOpened = 'Die Verbindung zur Datenbank ist noch nicht hergestellt';
   SInvalidOpInAutoCommit = 'Ungültige Operation im AUTOCOMMIT-Modus';
@@ -541,6 +545,7 @@ resourcestring
   SWrongTypeForBlobParameter = 'Tipo incorrecto para el parámetro Blob';
   SIncorrectConnectionURL = 'URL de conexión incorrecta: %s';
   SUnsupportedProtocol = 'Protocolo no soportado: %s';
+  SUnsupportedByDriver    = 'Translate: Driver can not support this feature natively: [%s]';
 
   SConnectionIsNotOpened = 'La conexión no ha sido abierta todavía';
   SInvalidOpInAutoCommit = 'Operación inválida en modo AutoCommit';
@@ -679,6 +684,7 @@ resourcestring
   SWrongTypeForBlobParameter = 'Wrong type for Blob parameter';
   SIncorrectConnectionURL = 'Incorrect connection URL: %s';
   SUnsupportedProtocol = 'Unsupported protocol: %s';
+  SUnsupportedByDriver    = 'Driver can not support this feature natively: [%s]';
 
   SConnectionIsNotOpened = 'Connection is not opened yet';
   SInvalidOpInAutoCommit = 'Invalid operation in AutoCommit mode';

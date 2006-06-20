@@ -49,7 +49,7 @@ uses
     Variants,
   {$ENDIF}
 {$ENDIF}
-  ZMessages, ZCompatibility, Classes, SysUtils;
+  ZMessages, ZCompatibility, Classes, Math, SysUtils;
 
 type
   {** Modified comaprison function. }
@@ -310,6 +310,31 @@ function ReplaceChar(const Source, Target: Char; const Str: string): string;
    @return a buffer content
 }
 function MemPas(Buffer: PChar; Length: LongInt): string;
+
+{**
+  Decodes a Full Version Value encoded with the format:
+   (major_version * 1,000,000) + (minor_version * 1,000) + sub_version
+  into separated major, minor and subversion values
+  @param FullVersion an integer containing the Full Version to decode.
+  @param MajorVersion an integer containing the Major Version decoded.
+  @param MinorVersion an integer containing the Minor Version decoded.
+  @param SubVersion an integer contaning the Sub Version (revision) decoded.
+}
+procedure DecodeSQLVersioning(const FullVersion: Integer;
+ out MajorVersion: Integer; out MinorVersion: Integer;
+ out SubVersion: Integer);
+
+{**
+  Encodes major, minor and subversion (revision) values in this format:
+   (major_version * 1,000,000) + (minor_version * 1,000) + sub_version
+  For example, 4.1.12 is returned as 4001012.
+  @param MajorVersion an integer containing the Major Version.
+  @param MinorVersion an integer containing the Minor Version.
+  @param SubVersion an integer containing the Sub Version (revision).
+  @return an integer containing the full version.
+}
+function EncodeSQLVersioning(const MajorVersion: Integer;
+ const MinorVersion: Integer; const SubVersion: Integer): Integer;
 
 implementation
 
@@ -1024,6 +1049,39 @@ begin
   Result := '';
   if Assigned(Buffer) then
     SetString(Result, Buffer, Length);
+end;
+
+{**
+  Decodes a full version value encoded with Zeos SQL format:
+   (major_version * 1,000,000) + (minor_version * 1,000) + sub_version
+  into separated major, minor and subversion values
+  @param FullVersion an integer containing the Full Version to decode.
+  @param MajorVersion an integer containing the Major Version decoded.
+  @param MinorVersion an integer containing the Minor Version decoded.
+  @param SubVersion an integer contaning the Sub Version (revision) decoded.
+}
+procedure DecodeSQLVersioning(const FullVersion: Integer;
+ out MajorVersion: Integer; out MinorVersion: Integer;
+ out SubVersion: Integer);
+begin
+ MajorVersion := Trunc(FullVersion/1000000);
+ MinorVersion := Trunc((FullVersion-(MajorVersion*1000000))/1000);
+ SubVersion   := Trunc((FullVersion-(MajorVersion*1000000)-(MinorVersion*1000)));
+end;
+
+{**
+  Encodes major, minor and subversion (revision) values in Zeos SQL format:
+   (major_version * 1,000,000) + (minor_version * 1,000) + sub_version
+  For example, 4.1.12 is returned as 4001012.
+  @param MajorVersion an integer containing the Major Version.
+  @param MinorVersion an integer containing the Minor Version.
+  @param SubVersion an integer containing the Sub Version (revision).
+  @return an integer containing the full version.
+}
+function EncodeSQLVersioning(const MajorVersion: Integer;
+ const MinorVersion: Integer; const SubVersion: Integer): Integer;
+begin
+ Result := (MajorVersion * 1000000) + (MinorVersion * 1000) + SubVersion;
 end;
 
 end.

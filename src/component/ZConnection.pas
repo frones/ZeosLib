@@ -125,7 +125,8 @@ type
     procedure SetAutoCommit(Value: Boolean);
     function GetDbcDriver: IZDriver;
     function GetInTransaction: Boolean;
-
+    function GetClientVersion: Integer;
+    function GetServerVersion: Integer;
     procedure DoBeforeConnect;
     procedure DoAfterConnect;
     procedure DoBeforeDisconnect;
@@ -163,8 +164,7 @@ type
     procedure PrepareTransaction(const transactionid: string); virtual;
     procedure CommitPrepared(const transactionid: string); virtual;
     procedure RollbackPrepared(const transactionid: string); virtual;
-    procedure Ping_Server; virtual;
-
+    function PingServer: Boolean; virtual;
 
     procedure RegisterDataSet(DataSet: TDataset);
     procedure UnregisterDataSet(DataSet: TDataset);
@@ -179,7 +179,8 @@ type
 
     property DbcDriver: IZDriver read GetDbcDriver;
     property DbcConnection: IZConnection read FConnection;
-
+    property ClientVersion: Integer read GetClientVersion;
+    property ServerVersion: Integer read GetServerVersion;
     procedure ShowSQLHourGlass;
     procedure HideSQLHourGlass;
 
@@ -280,7 +281,7 @@ begin
       if Assigned(Classes.ApplicationHandleException) then
         Classes.ApplicationHandleException(ExceptObject)
       else
-    {$ENDIF}  
+    {$ENDIF}
         ShowException(ExceptObject, ExceptAddr)
     else
       raise;
@@ -388,6 +389,32 @@ function TZConnection.GetInTransaction: Boolean;
 begin
   CheckConnected;
   Result := not FAutoCommit or (FExplicitTransactionCounter > 0);
+end;
+
+{**
+  Gets client's full version number.
+  The format of the version resturned must be XYYYZZZ where
+   X   = Major version
+   YYY = Minor version
+   ZZZ = Sub version
+  @return this clients's full version number
+}
+function TZConnection.GetClientVersion: Integer;
+begin
+ Result := DbcConnection.GetClientVersion;
+end;
+
+{**
+  Gets server's full version number.
+  The format of the version resturned must be XYYYZZZ where
+   X   = Major version
+   YYY = Minor version
+   ZZZ = Sub version
+  @return this clients's full version number
+}
+function TZConnection.GetServerVersion: Integer;
+begin
+ Result := DbcConnection.GetHostVersion;
 end;
 
 {**
@@ -718,9 +745,9 @@ begin
   end;
 end;
 
-procedure TZConnection.Ping_Server;
+function TZConnection.PingServer: Boolean;
 begin
- FConnection.Ping_Server;
+ Result := (FConnection.PingServer=0);
 end;
 
 procedure TZConnection.PrepareTransaction(const transactionid: string);

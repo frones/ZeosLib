@@ -76,7 +76,7 @@ type
     function GetPropertyInfo(const Url: string; Info: TStrings): TStrings; virtual;
     function GetMajorVersion: Integer; virtual;
     function GetMinorVersion: Integer; virtual;
-
+    function GetSubVersion: Integer; virtual;
     function GetTokenizer: IZTokenizer; virtual;
     function GetStatementAnalyser: IZStatementAnalyser; virtual;
   end;
@@ -152,8 +152,7 @@ type
     procedure RollbackPrepared(const transactionid: string);virtual;
 
     //Ping Support initially for MySQL 27032006 (firmos)
-    procedure Ping_Server;virtual;
-
+    function PingServer: Integer; virtual;
 
     procedure Open; virtual;
     procedure Close; virtual;
@@ -162,7 +161,10 @@ type
     function GetDriver: IZDriver;
     function GetMetadata: IZDatabaseMetadata;
     function GetParameters: TStrings;
-
+    {ADDED by fduenas 15-06-2006}
+    function GetClientVersion: Integer; virtual;
+    function GetHostVersion: Integer; virtual;
+    {END ADDED by fduenas 15-06-2006}
     procedure SetReadOnly(ReadOnly: Boolean); virtual;
     function IsReadOnly: Boolean; virtual;
 
@@ -335,6 +337,14 @@ begin
   Result := 0;
 end;
 
+{**
+  Gets the driver's sub version (revision) number. Initially this should be 0.
+  @return this driver's sub version number
+}
+function TZAbstractDriver.GetSubVersion: Integer;
+begin
+ Result := 0;
+end;
 {**
   Creates a generic statement analyser object.
   @returns a generic statement analyser object.
@@ -566,10 +576,6 @@ end;
   @return a new CallableStatement object containing the
     pre-compiled SQL statement
 }
-procedure TZAbstractConnection.Ping_Server;
-begin
-  RaiseUnsupportedException;
-end;
 
 function TZAbstractConnection.PrepareCall(
   const SQL: string): IZCallableStatement;
@@ -719,6 +725,16 @@ begin
 end;
 
 {**
+  Ping Current Connection's server, if client was disconnected,
+  the connection is resumed.
+  @return 0 if succesfull or error code if any error occurs
+}
+function TZAbstractConnection.PingServer: Integer;
+begin
+  RaiseUnsupportedException;
+end;
+
+{**
   Releases a Connection's database and JDBC resources
   immediately instead of waiting for
   them to be automatically released.
@@ -773,6 +789,33 @@ function TZAbstractConnection.GetParameters: TStrings;
 begin
   Result := Info;
 end;
+
+{**
+  Gets the client's full version number. Initially this should be 0.
+  The format of the version resturned must be XYYYZZZ where
+   X   = Major version
+   YYY = Minor version
+   ZZZ = Sub version
+  @return this clients's full version number
+}
+function TZAbstractConnection.GetClientVersion: Integer;
+begin
+ Result := 0;
+end;
+
+{**
+  Gets the host's full version number. Initially this should be 0.
+  The format of the version returned must be XYYYZZZ where
+   X   = Major version
+   YYY = Minor version
+   ZZZ = Sub version
+  @return this server's full version number
+}
+function TZAbstractConnection.GetHostVersion: Integer;
+begin
+ Result := 0;
+end;
+{END ADDED by fduenas 15-06-2006}
 
 {**
   Puts this connection in read-only mode as a hint to enable

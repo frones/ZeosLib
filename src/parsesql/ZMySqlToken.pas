@@ -345,6 +345,9 @@ begin
   Add('<>');
   Add('<<');
   Add('>>');
+  {BEGIN PATCH: added by fduenas}
+  Add(':=');
+  {END PATCH: added by fduenas}
 end;
 
 { TZMySQLWordState }

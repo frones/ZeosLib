@@ -207,6 +207,8 @@ type
         MYSQL_TYPE_DATETIME,     {BIND}
         MYSQL_TYPE_YEAR,
         MYSQL_TYPE_NEWDATE,
+        MYSQL_TYPE_VARCHAR, //<--ADDED by fduenas 20-06-2006
+        MYSQL_TYPE_BIT,     //<--ADDED by fduenas 20-06-2006
         MYSQL_TYPE_NEWDECIMAL{$IFNDEF VER130}=246{$ENDIF},
         MYSQL_TYPE_ENUM,
         MYSQL_TYPE_SET,
@@ -421,9 +423,17 @@ type
   end;
 
 const
-  SERVER_GROUPS : array [0..2] of PChar = ('embedded'#0,'server'#0, nil);
+  WINDOWS_EMBEDDED_DEFAULT_DATA_DIR = '.\data\';
+  UNIX_EMBEDDED_DEFAULT_DATA_DIR = './data/';
+  SERVER_GROUPS : array [0..2] of PChar = ('embedded'#0, 'server'#0, nil);
 
-  DEFAULT_PARAMS : array [0..2] of PChar = ('not_used'#0, {$IFDEF WIN32}'--datadir=.\'#0{$ELSE}'--datadir=./'{$ENDIF}, '--set-variable=key_buffer_size=32M'#0);
+  DEFAULT_PARAMS : array [0..2] of PChar = ('not_used'#0,
+                                             {$IFDEF WIN32}
+                                              '--datadir='+WINDOWS_EMBEDDED_DEFAULT_DATA_DIR+#0
+                                             {$ELSE}
+                                              '--datadir='+UNIX_EMBEDDED_DEFAULT_DATA_DIR#0
+                                             {$ENDIF}
+                                              , '--set-variable=key_buffer_size=32M'#0);
 
 implementation
 

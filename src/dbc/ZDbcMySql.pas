@@ -46,7 +46,7 @@ uses
   Types,
 {$ENDIF}
   ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection, ZPlainMySqlDriver,
-  ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser;
+  ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser, ZPlainMysqlConstants;
 
 type
 
@@ -103,7 +103,7 @@ type
     procedure Commit; override;
     procedure Rollback; override;
 
-    procedure Ping_Server;override;
+    function PingServer: Integer; override;
 
     procedure Open; override;
     procedure Close; override;
@@ -113,9 +113,13 @@ type
 
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     procedure SetAutoCommit(AutoCommit: Boolean); override;
-
+    {ADDED by fduenas 15-06-2006}
+    function GetClientVersion: Integer; override;
+    function GetHostVersion: Integer; override;
+    {END ADDED by fduenas 15-06-2006}
     function GetPlainDriver: IZMySQLPlainDriver;
     function GetConnectionHandle: PZMySQLConnect;
+    function GetDescription: AnsiString;
   end;
 
 
@@ -415,12 +419,19 @@ begin
   inherited Open;
 end;
 
-procedure TZMySQLConnection.Ping_Server;
-var i:integer;
+{**
+  Ping Current Connection's server, if client was disconnected,
+  the connection is resumed.
+  @return 0 if succesfull or error code if any error occurs
+}
+function TZMySQLConnection.PingServer: Integer;
+var MySQLPingError: Integer;
 begin
-   i:=FPlainDriver.Ping(FHandle);
+   MySQLPingError := FPlainDriver.Ping(FHandle);
+   Result := MySQLPingError;
    CheckMySQLError(FPlainDriver, FHandle, lcExecute,'PING MYSQL (FOS)');
-   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol,'PING MYSQL (FOS) '+inttostr(i));
+   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol,
+    'PING MYSQL (FOS) '+IntToStr(MySQLPingError));
 end;
 
 {**
@@ -572,38 +583,40 @@ procedure TZMySQLConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);
 var
   SQL: PChar;
+  testResult: Integer;
 begin
   if TransactIsolationLevel <> Level then
   begin
     inherited SetTransactionIsolation(Level);
-
+    testResult := 1;
     if not Closed then
     begin
       case TransactIsolationLevel of
         tiNone, tiReadUncommitted:
           begin
             SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED';
-            FPlainDriver.ExecQuery(FHandle, SQL);
+            testResult := FPlainDriver.ExecQuery(FHandle, SQL);
           end;
         tiReadCommitted:
           begin
             SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED';
-            FPlainDriver.ExecQuery(FHandle, SQL);
+            testResult := FPlainDriver.ExecQuery(FHandle, SQL);
           end;
         tiRepeatableRead:
           begin
             SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ';
-            FPlainDriver.ExecQuery(FHandle, SQL);
+            testResult := FPlainDriver.ExecQuery(FHandle, SQL);
           end;
         tiSerializable:
           begin
             SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE';
-            FPlainDriver.ExecQuery(FHandle, SQL);
+            testResult := FPlainDriver.ExecQuery(FHandle, SQL);
           end;
         else
           SQL := '';
       end;
-      CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
+      if (testResult <> 0) then
+          CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
       if SQL <> '' then
         DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
     end;
@@ -651,6 +664,33 @@ begin
 end;
 
 {**
+  Gets client's full version number.
+  The format of the version returned must be XYYYZZZ where
+   X   = Major version
+   YYY = Minor version
+   ZZZ = Sub version
+  @return this clients's full version number
+}
+function TZMySQLConnection.GetClientVersion: Integer;
+begin
+ Result := ConvertMySQLVersionToSQLVersion( FPlainDriver.GetClientVersion );
+end;
+
+{**
+  Gets server's full version number.
+  The format of the returned version must be XYYYZZZ where
+   X   = Major version
+   YYY = Minor version
+   ZZZ = Sub version
+  @return this clients's full version number
+}
+function TZMySQLConnection.GetHostVersion: Integer;
+begin
+ Result := ConvertMySQLVersionToSQLVersion( FPlainDriver.GetServerVersion(FHandle) );
+ CheckMySQLError(FPlainDriver, FHandle, lcExecute, 'mysql_get_server_version()');
+end;
+
+{**
   Gets a reference to MySQL connection handle.
   @return a reference to MySQL connection handle.
 }
@@ -666,6 +706,11 @@ end;
 function TZMySQLConnection.GetPlainDriver: IZMySQLPlainDriver;
 begin
   Result := FPlainDriver;
+End;
+
+function TZMySQLConnection.GetDescription: AnsiString;
+begin
+    Result := self.FPlainDriver.GetDescription;
 end;
 
 initialization

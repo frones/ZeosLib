@@ -60,6 +60,10 @@ type
       RowAccessor: TZRowAccessor);
     procedure PostUpdates(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       OldRowAccessor, NewRowAccessor: TZRowAccessor);
+    {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
+    procedure UpdateAutoIncrementFields(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
+      OldRowAccessor, NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver);
+    {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
   end;
 
   {** Represents a cached result set. }
@@ -68,6 +72,14 @@ type
 
     function GetResolver: IZCachedResolver;
     procedure SetResolver(Resolver: IZCachedResolver);
+
+    {BEGIN PATCH [1214009] Calc Defaults in TZUpdateSQL and Added Methods to GET and SET the database Native Resolver
+      will help to implemented feature to Calculate default values in TZUpdateSQL
+      comment: add this properties to get the original Resolver
+      this will be useful whn using TZUpdateSQL //added by fduenas
+    }
+    function GetNativeResolver: IZCachedResolver;
+   {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
 
     function IsCachedUpdates: Boolean;
     procedure SetCachedUpdates(Value: Boolean);
@@ -94,6 +106,9 @@ type
     FOldRowAccessor: TZRowAccessor;
     FNextRowIndex: Integer;
     FResolver: IZCachedResolver;
+    {BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
+    FNativeResolver: IZCachedResolver;
+    {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   protected
     constructor CreateWithStatement(SQL: string; Statement: IZStatement);
 
@@ -125,6 +140,9 @@ type
       write FNewRowAccessor;
     property NextRowIndex: Integer read FNextRowIndex write FNextRowIndex;
     property Resolver: IZCachedResolver read FResolver write FResolver;
+    {BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
+    property NativeResolver: IZCachedResolver read FNativeResolver;
+    {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   public
     constructor CreateWithColumns(ColumnsInfo: TObjectList; SQL: string);
     destructor Destroy; override;
@@ -203,7 +221,9 @@ type
 
     function GetResolver: IZCachedResolver;
     procedure SetResolver(Resolver: IZCachedResolver);
-
+    {BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
+    function GetNativeResolver: IZCachedResolver;
+    {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
     function IsCachedUpdates: Boolean;
     procedure SetCachedUpdates(Value: Boolean);
     function IsPendingUpdates: Boolean; virtual;
@@ -281,6 +301,9 @@ end;
 destructor TZAbstractCachedResultSet.Destroy;
 begin
   FResolver := nil;
+  {BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
+  FNativeResolver := nil;
+  {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   inherited Destroy;
 end;
 
@@ -414,6 +437,16 @@ procedure TZAbstractCachedResultSet.SetResolver(Resolver: IZCachedResolver);
 begin
   FResolver := Resolver;
 end;
+{BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
+{**
+  Gets a Native cached updates resolver object.
+  @return a Native cached updates resolver object.
+}
+function TZAbstractCachedResultSet.GetNativeResolver: IZCachedResolver;
+begin
+  Result := FNativeResolver;
+end;
+{END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
 
 {**
   Checks is the cached updates mode turned on.
@@ -1658,6 +1691,9 @@ begin
   inherited Create(ResultSet.GetStatement, SQL, nil);
   FResultSet := ResultSet;
   FResolver := Resolver;
+  {BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
+  FNativeResolver := Resolver;
+  {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   Open;
 end;
 
