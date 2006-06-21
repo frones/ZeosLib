@@ -431,7 +431,7 @@ const
                                              {$IFDEF WIN32}
                                               '--datadir='+WINDOWS_EMBEDDED_DEFAULT_DATA_DIR+#0
                                              {$ELSE}
-                                              '--datadir='+UNIX_EMBEDDED_DEFAULT_DATA_DIR#0
+                                              '--datadir='+UNIX_EMBEDDED_DEFAULT_DATA_DIR+#0
                                              {$ENDIF}
                                               , '--set-variable=key_buffer_size=32M'#0);
 
