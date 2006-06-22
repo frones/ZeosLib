@@ -429,4 +429,6 @@ initialization
 finalization
   if Assigned(LibraryLoader) then
     LibraryLoader.Free;
+  if Assigned(LibraryLoaderEmbedded) then
+    LibraryLoaderEmbedded.Free;
 end.

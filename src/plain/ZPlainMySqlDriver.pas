@@ -232,7 +232,7 @@ type
 
     // change_user
     // field_count
-    // function GetClientVersion: AnsiString; override;
+    // function GetClientVersion: AnsiString; 
 
     function Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMysqlConstants.SHUTDOWN_DEFAULT): Integer; // 2 versions!!
 
@@ -299,51 +299,17 @@ type
 }
   end;
 
-  {** Base class of a generic MySQL plain driver. }
-  TZMySQLAbstractPlainDriver = class(TZAbstractObject, IZPlainDriver)
-    function GetProtocol: string; virtual; abstract;
-    function GetDescription: string; virtual; abstract;
-    function GetClientVersion: Integer; virtual; abstract;
-    function GetServerVersion(Handle: PZMySQLConnect): Integer; virtual; abstract;
-    procedure Initialize; virtual; abstract;
-
-    function SetAutocommit (Handle: PZMySQLConnect; mode: Boolean): Boolean; virtual; abstract;
-    function Commit (Handle: PZMySQLConnect): Boolean; virtual; abstract;
-    function CheckAnotherRowset   (Handle: PZMySQLConnect): Boolean; virtual;
-    function RetrieveNextRowset   (Handle: PZMySQLConnect): Integer; virtual;
-    function Rollback (Handle: PZMySQLConnect): Boolean; virtual; abstract;
-    function GetSQLState (Handle: PZMySQLConnect): AnsiString; virtual;
-
-    function GetPreparedAffectedRows (Handle: PZMySqlPrepStmt): Int64; virtual;
-    function BindParameters (Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte; virtual;
-    function BindResult (Handle: PZMySqlPrepStmt;  bindArray: PZMysqlBindArray): Byte; virtual;
-    function ClosePrepStmt (PrepStmtHandle: PZMySqlPrepStmt): PZMySqlPrepStmt; virtual;
-    function GetLastPreparedErrorCode(Handle: PZMySqlPrepStmt): Integer; virtual;
-    function GetLastPreparedError(Handle: PZMySqlPrepStmt): AnsiString; virtual;
-    function ExecuteStmt (Handle: PZMySqlPrepStmt): Integer; virtual;
-    function FetchBoundResults (Handle: PZMySqlPrepStmt): Integer; virtual;
-    function GetPreparedFieldCount(Handle: PZMySqlPrepStmt): Integer; virtual;
-    function InitializePrepStmt (Handle: PZMySQLConnect): PZMySqlPrepStmt; virtual;
-    function GetPreparedInsertID (Handle: PZMySqlPrepStmt): Int64; virtual;
-    function GetPreparedNumRows (Handle: PZMySqlPrepStmt): Int64; virtual;
-    function GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal; virtual; // param_count
-    function PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PChar; Length: Integer): Integer; virtual;
-    function GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult; virtual;
-    function GetPreparedSQLState (Handle: PZMySqlPrepStmt): PChar; virtual;
-    function StorePreparedResult (Handle: PZMySqlPrepStmt): Integer; virtual;
-  end;
-
   {** Implements a driver for MySQL 3.20 }
-  TZMySQL320PlainDriver = class (TZMySQLAbstractPlainDriver, IZPlainDriver,
+  TZMySQL320PlainDriver = class (TZAbstractObject, IZPlainDriver,
     IZMySQLPlainDriver)
   protected
     MYSQL_API : ZPlainMysql320.mysql320_API;
   public
     constructor Create;
 
-    function GetProtocol: string; override;
-    function GetDescription: string; override;
-    procedure Initialize; override;
+    function GetProtocol: string;
+    function GetDescription: string;
+    procedure Initialize;
 
     procedure Debug(Debug: PChar);
     function DumpDebugInfo(Handle: PZMySQLConnect): Integer;
@@ -373,9 +339,30 @@ type
 
     function Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMysqlConstants.SHUTDOWN_DEFAULT): Integer;
 
-    function SetAutocommit (Handle: PZMySQLConnect; mode: Boolean): Boolean; override;
-    function Commit (Handle: PZMySQLConnect): Boolean; override;
-    function Rollback (Handle: PZMySQLConnect): Boolean; override;
+    function SetAutocommit (Handle: PZMySQLConnect; mode: Boolean): Boolean;
+    function Commit (Handle: PZMySQLConnect): Boolean;
+    function CheckAnotherRowset   (Handle: PZMySQLConnect): Boolean;
+    function RetrieveNextRowset   (Handle: PZMySQLConnect): Integer;
+    function Rollback (Handle: PZMySQLConnect): Boolean;
+    function GetSQLState (Handle: PZMySQLConnect): AnsiString;
+
+    function GetPreparedAffectedRows (Handle: PZMySqlPrepStmt): Int64;
+    function BindParameters (Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
+    function BindResult (Handle: PZMySqlPrepStmt;  bindArray: PZMysqlBindArray): Byte;
+    function ClosePrepStmt (PrepStmtHandle: PZMySqlPrepStmt): PZMySqlPrepStmt;
+    function GetLastPreparedErrorCode(Handle: PZMySqlPrepStmt): Integer;
+    function GetLastPreparedError(Handle: PZMySqlPrepStmt): AnsiString;
+    function ExecuteStmt (Handle: PZMySqlPrepStmt): Integer;
+    function FetchBoundResults (Handle: PZMySqlPrepStmt): Integer;
+    function GetPreparedFieldCount(Handle: PZMySqlPrepStmt): Integer;
+    function InitializePrepStmt (Handle: PZMySQLConnect): PZMySqlPrepStmt;
+    function GetPreparedInsertID (Handle: PZMySqlPrepStmt): Int64;
+    function GetPreparedNumRows (Handle: PZMySqlPrepStmt): Int64;
+    function GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal; // param_count
+    function PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PChar; Length: Integer): Integer;
+    function GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
+    function GetPreparedSQLState (Handle: PZMySqlPrepStmt): PChar;
+    function StorePreparedResult (Handle: PZMySqlPrepStmt): Integer;
 
     function Refresh(Handle: PZMySQLConnect; Options: Cardinal): Integer;
     function Kill(Handle: PZMySQLConnect; Pid: LongInt): Integer;
@@ -392,8 +379,8 @@ type
     function GetProtoInfo(Handle: PZMySQLConnect): Cardinal;
     function GetThreadId(Handle: PZMySQLConnect): Cardinal;
     {ADDED by fduenas 15-06-2006}
-    function GetClientVersion: Integer; override;
-    function GetServerVersion(Handle: PZMySQLConnect): Integer; override;
+    function GetClientVersion: Integer;
+    function GetServerVersion(Handle: PZMySQLConnect): Integer;
     {END ADDED by fduenas 15-06-2006}
     function GetListDatabases(Handle: PZMySQLConnect;
       Wild: PChar): PZMySQLResult;
@@ -432,16 +419,16 @@ type
   end;
 
   {** Implements a driver for MySQL 3.23 }
-  TZMySQL323PlainDriver = class (TZMySQLAbstractPlainDriver, IZPlainDriver,
+  TZMySQL323PlainDriver = class (TZAbstractObject, IZPlainDriver,
     IZMySQLPlainDriver)
   protected
     MYSQL_API : ZPlainMysql323.mysql323_API;
   public
     constructor Create;
 
-    function GetProtocol: string; override;
-    function GetDescription: string;  override;
-    procedure Initialize;  override;
+    function GetProtocol: string;
+    function GetDescription: string;
+    procedure Initialize;
 
     procedure Debug(Debug: PChar);
     function DumpDebugInfo(Handle: PZMySQLConnect): Integer;
@@ -470,10 +457,30 @@ type
       const Database: PChar): Integer;
 
     function Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMysqlConstants.SHUTDOWN_DEFAULT): Integer; // 2 versions!!
+    function SetAutocommit (Handle: PZMySQLConnect; mode: Boolean): Boolean;
+    function Commit (Handle: PZMySQLConnect): Boolean;
+    function CheckAnotherRowset   (Handle: PZMySQLConnect): Boolean;
+    function RetrieveNextRowset   (Handle: PZMySQLConnect): Integer;
+    function Rollback (Handle: PZMySQLConnect): Boolean;
+    function GetSQLState (Handle: PZMySQLConnect): AnsiString;
 
-    function SetAutocommit (Handle: PZMySQLConnect; mode: Boolean): Boolean; override;
-    function Commit (Handle: PZMySQLConnect): Boolean; override;
-    function Rollback (Handle: PZMySQLConnect): Boolean; override;
+    function GetPreparedAffectedRows (Handle: PZMySqlPrepStmt): Int64;
+    function BindParameters (Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
+    function BindResult (Handle: PZMySqlPrepStmt;  bindArray: PZMysqlBindArray): Byte;
+    function ClosePrepStmt (PrepStmtHandle: PZMySqlPrepStmt): PZMySqlPrepStmt;
+    function GetLastPreparedErrorCode(Handle: PZMySqlPrepStmt): Integer;
+    function GetLastPreparedError(Handle: PZMySqlPrepStmt): AnsiString;
+    function ExecuteStmt (Handle: PZMySqlPrepStmt): Integer;
+    function FetchBoundResults (Handle: PZMySqlPrepStmt): Integer;
+    function GetPreparedFieldCount(Handle: PZMySqlPrepStmt): Integer;
+    function InitializePrepStmt (Handle: PZMySQLConnect): PZMySqlPrepStmt;
+    function GetPreparedInsertID (Handle: PZMySqlPrepStmt): Int64;
+    function GetPreparedNumRows (Handle: PZMySqlPrepStmt): Int64;
+    function GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal; // param_count
+    function PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PChar; Length: Integer): Integer;
+    function GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
+    function GetPreparedSQLState (Handle: PZMySqlPrepStmt): PChar;
+    function StorePreparedResult (Handle: PZMySqlPrepStmt): Integer;
 
     function Refresh(Handle: PZMySQLConnect; Options: Cardinal): Integer;
     function Kill(Handle: PZMySQLConnect; Pid: LongInt): Integer;
@@ -490,8 +497,8 @@ type
     function GetProtoInfo(Handle: PZMySQLConnect): Cardinal;
     function GetThreadId(Handle: PZMySQLConnect): Cardinal;
     {ADDED by fduenas 15-06-2006}
-    function GetClientVersion: Integer; override;
-    function GetServerVersion(Handle: PZMySQLConnect): Integer; override;
+    function GetClientVersion: Integer;
+    function GetServerVersion(Handle: PZMySQLConnect): Integer;
     {END ADDED by fduenas 15-06-2006}
     function GetListDatabases(Handle: PZMySQLConnect;
       Wild: PChar): PZMySQLResult;
@@ -530,16 +537,16 @@ type
   end;
 
   {** Implements a driver for MySQL 4.0 }
-  TZMySQL40PlainDriver = class (TZMySQLAbstractPlainDriver, IZPlainDriver,
+  TZMySQL40PlainDriver = class (TZAbstractObject, IZPlainDriver,
     IZMySQLPlainDriver)
   protected
     MYSQL_API : ZPlainMysql40.mysql40_API;
   public
     constructor Create;
 
-    function GetProtocol: string;  override;
-    function GetDescription: string;  override;
-    procedure Initialize;  override;
+    function GetProtocol: string; virtual;
+    function GetDescription: string; virtual;
+    procedure Initialize; virtual;
 
     procedure Debug(Debug: PChar);
     function DumpDebugInfo(Handle: PZMySQLConnect): Integer;
@@ -568,10 +575,30 @@ type
       const Database: PChar): Integer;
 
     function Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMysqlConstants.SHUTDOWN_DEFAULT): Integer; // 2 versions!!
+    function SetAutocommit (Handle: PZMySQLConnect; mode: Boolean): Boolean;
+    function Commit (Handle: PZMySQLConnect): Boolean;
+    function CheckAnotherRowset   (Handle: PZMySQLConnect): Boolean;
+    function RetrieveNextRowset   (Handle: PZMySQLConnect): Integer;
+    function Rollback (Handle: PZMySQLConnect): Boolean;
+    function GetSQLState (Handle: PZMySQLConnect): AnsiString;
 
-    function SetAutocommit (Handle: PZMySQLConnect; mode: Boolean): Boolean; override;
-    function Commit (Handle: PZMySQLConnect): Boolean; override;
-    function Rollback (Handle: PZMySQLConnect): Boolean; override;
+    function GetPreparedAffectedRows (Handle: PZMySqlPrepStmt): Int64;
+    function BindParameters (Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
+    function BindResult (Handle: PZMySqlPrepStmt;  bindArray: PZMysqlBindArray): Byte;
+    function ClosePrepStmt (PrepStmtHandle: PZMySqlPrepStmt): PZMySqlPrepStmt;
+    function GetLastPreparedErrorCode(Handle: PZMySqlPrepStmt): Integer;
+    function GetLastPreparedError(Handle: PZMySqlPrepStmt): AnsiString;
+    function ExecuteStmt (Handle: PZMySqlPrepStmt): Integer;
+    function FetchBoundResults (Handle: PZMySqlPrepStmt): Integer;
+    function GetPreparedFieldCount(Handle: PZMySqlPrepStmt): Integer;
+    function InitializePrepStmt (Handle: PZMySQLConnect): PZMySqlPrepStmt;
+    function GetPreparedInsertID (Handle: PZMySqlPrepStmt): Int64;
+    function GetPreparedNumRows (Handle: PZMySqlPrepStmt): Int64;
+    function GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal; // param_count
+    function PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PChar; Length: Integer): Integer;
+    function GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
+    function GetPreparedSQLState (Handle: PZMySqlPrepStmt): PChar;
+    function StorePreparedResult (Handle: PZMySqlPrepStmt): Integer;
 
     function Refresh(Handle: PZMySQLConnect; Options: Cardinal): Integer;
     function Kill(Handle: PZMySQLConnect; Pid: LongInt): Integer;
@@ -588,8 +615,8 @@ type
     function GetProtoInfo(Handle: PZMySQLConnect): Cardinal;
     function GetThreadId(Handle: PZMySQLConnect): Cardinal;
     {ADDED by fduenas 15-06-2006}
-    function GetClientVersion: Integer; override;
-    function GetServerVersion(Handle: PZMySQLConnect): Integer; override;
+    function GetClientVersion: Integer;
+    function GetServerVersion(Handle: PZMySQLConnect): Integer;
     {END ADDED by fduenas 15-06-2006}
     function GetListDatabases(Handle: PZMySQLConnect;
       Wild: PChar): PZMySQLResult;
@@ -636,16 +663,16 @@ type
   end;
 
   {** Implements a driver for MySQL 4.1 }
-  TZMySQL41PlainDriver = class (TZMySQLAbstractPlainDriver, IZPlainDriver,
+  TZMySQL41PlainDriver = class (TZAbstractObject, IZPlainDriver,
     IZMySQLPlainDriver)
   protected
     MYSQL_API : ZPlainMysql41.mysql41_API;
   public
     constructor Create;
 
-    function GetProtocol: string;  override;
-    function GetDescription: string;  override;
-    procedure Initialize;  override;
+    function GetProtocol: string; virtual;
+    function GetDescription: string; virtual;
+    procedure Initialize; virtual; 
 
     procedure Debug(Debug: PChar);
     function DumpDebugInfo(Handle: PZMySQLConnect): Integer;
@@ -674,31 +701,30 @@ type
       const Database: PChar): Integer;
 
     function Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMysqlConstants.SHUTDOWN_DEFAULT): Integer; // 2 versions!!
+    function SetAutocommit (Handle: PZMySQLConnect; mode: Boolean): Boolean;
+    function Commit (Handle: PZMySQLConnect): Boolean;
+    function CheckAnotherRowset   (Handle: PZMySQLConnect): Boolean;
+    function RetrieveNextRowset   (Handle: PZMySQLConnect): Integer;
+    function Rollback (Handle: PZMySQLConnect): Boolean;
+    function GetSQLState (Handle: PZMySQLConnect): AnsiString;
 
-    function SetAutocommit (Handle: PZMySQLConnect; mode: Boolean): Boolean; override;
-    function Commit (Handle: PZMySQLConnect): Boolean; override;
-    function CheckAnotherRowset   (Handle: PZMySQLConnect): Boolean; override;
-    function RetrieveNextRowset   (Handle: PZMySQLConnect): Integer; override;
-    function Rollback (Handle: PZMySQLConnect): Boolean; override;
-    function GetSQLState (Handle: PZMySQLConnect): AnsiString; override;
-
-    function GetPreparedAffectedRows (Handle: PZMySqlPrepStmt): Int64; override;
-    function BindParameters (Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte; override;
-    function BindResult (Handle: PZMySqlPrepStmt;  bindArray: PZMysqlBindArray): Byte; override;
-    function ClosePrepStmt (PrepStmtHandle: PZMySqlPrepStmt): PZMySqlPrepStmt; override;
-    function GetLastPreparedErrorCode(Handle: PZMySqlPrepStmt): Integer; override;
-    function GetLastPreparedError(Handle: PZMySqlPrepStmt): AnsiString; override;
-    function ExecuteStmt (Handle: PZMySqlPrepStmt): Integer; override;
-    function FetchBoundResults (Handle: PZMySqlPrepStmt): Integer; override;
-    function GetPreparedFieldCount(Handle: PZMySqlPrepStmt): Integer; override;
-    function InitializePrepStmt (Handle: PZMySQLConnect): PZMySqlPrepStmt; override;
-    function GetPreparedInsertID (Handle: PZMySqlPrepStmt): Int64; override;
-    function GetPreparedNumRows (Handle: PZMySqlPrepStmt): Int64; override;
-    function GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal; override; // param_count
-    function PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PChar; Length: Integer): Integer; override;
-    function GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult; override;
-    function GetPreparedSQLState (Handle: PZMySqlPrepStmt): PChar; override;
-    function StorePreparedResult (Handle: PZMySqlPrepStmt): Integer; override;
+    function GetPreparedAffectedRows (Handle: PZMySqlPrepStmt): Int64;
+    function BindParameters (Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
+    function BindResult (Handle: PZMySqlPrepStmt;  bindArray: PZMysqlBindArray): Byte;
+    function ClosePrepStmt (PrepStmtHandle: PZMySqlPrepStmt): PZMySqlPrepStmt;
+    function GetLastPreparedErrorCode(Handle: PZMySqlPrepStmt): Integer;
+    function GetLastPreparedError(Handle: PZMySqlPrepStmt): AnsiString;
+    function ExecuteStmt (Handle: PZMySqlPrepStmt): Integer;
+    function FetchBoundResults (Handle: PZMySqlPrepStmt): Integer;
+    function GetPreparedFieldCount(Handle: PZMySqlPrepStmt): Integer;
+    function InitializePrepStmt (Handle: PZMySQLConnect): PZMySqlPrepStmt;
+    function GetPreparedInsertID (Handle: PZMySqlPrepStmt): Int64;
+    function GetPreparedNumRows (Handle: PZMySqlPrepStmt): Int64;
+    function GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal; // param_count
+    function PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PChar; Length: Integer): Integer;
+    function GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
+    function GetPreparedSQLState (Handle: PZMySqlPrepStmt): PChar;
+    function StorePreparedResult (Handle: PZMySqlPrepStmt): Integer;
 
     function Refresh(Handle: PZMySQLConnect; Options: Cardinal): Integer;
     function Kill(Handle: PZMySQLConnect; Pid: LongInt): Integer;
@@ -715,8 +741,8 @@ type
     function GetProtoInfo(Handle: PZMySQLConnect): Cardinal;
     function GetThreadId(Handle: PZMySQLConnect): Cardinal;
     {ADDED by fduenas 15-06-2006}
-    function GetClientVersion: Integer; override;
-    function GetServerVersion(Handle: PZMySQLConnect): Integer; override;
+    function GetClientVersion: Integer;
+    function GetServerVersion(Handle: PZMySQLConnect): Integer;
     {END ADDED by fduenas 15-06-2006}
     function GetListDatabases(Handle: PZMySQLConnect;
       Wild: PChar): PZMySQLResult;
@@ -763,16 +789,16 @@ type
     function Init(var Handle: PZMySQLConnect): PZMySQLConnect; override;
   end;
 
-  TZMySQL5PlainDriver = class (TZMySQLAbstractPlainDriver, IZPlainDriver,
+  TZMySQL5PlainDriver = class (TZAbstractObject, IZPlainDriver,
     IZMySQLPlainDriver)
   protected
     MYSQL_API : ZPlainMysql5.mysql5_API;
   public
     constructor Create;
 
-    function GetProtocol: string;  override;
-    function GetDescription: string;  override;
-    procedure Initialize;  override;
+    function GetProtocol: string; virtual;
+    function GetDescription: string; virtual;
+    procedure Initialize; virtual; 
 
     procedure Debug(Debug: PChar);
     function DumpDebugInfo(Handle: PZMySQLConnect): Integer;
@@ -801,31 +827,30 @@ type
       const Database: PChar): Integer;
 
     function Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMysqlConstants.SHUTDOWN_DEFAULT): Integer; // 2 versions!!
+    function SetAutocommit (Handle: PZMySQLConnect; mode: Boolean): Boolean;
+    function Commit (Handle: PZMySQLConnect): Boolean;
+    function CheckAnotherRowset   (Handle: PZMySQLConnect): Boolean;
+    function RetrieveNextRowset   (Handle: PZMySQLConnect): Integer;
+    function Rollback (Handle: PZMySQLConnect): Boolean;
+    function GetSQLState (Handle: PZMySQLConnect): AnsiString;
 
-    function SetAutocommit (Handle: PZMySQLConnect; mode: Boolean): Boolean; override;
-    function Commit (Handle: PZMySQLConnect): Boolean; override;
-    function CheckAnotherRowset   (Handle: PZMySQLConnect): Boolean; override;
-    function RetrieveNextRowset   (Handle: PZMySQLConnect): Integer; override;
-    function Rollback (Handle: PZMySQLConnect): Boolean; override;
-    function GetSQLState (Handle: PZMySQLConnect): AnsiString; override;
-
-    function GetPreparedAffectedRows (Handle: PZMySqlPrepStmt): Int64; override;
-    function BindParameters (Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte; override;
-    function BindResult (Handle: PZMySqlPrepStmt;  bindArray: PZMysqlBindArray): Byte; override;
-    function ClosePrepStmt (PrepStmtHandle: PZMySqlPrepStmt): PZMySqlPrepStmt; override;
-    function GetLastPreparedErrorCode(Handle: PZMySqlPrepStmt): Integer; override;
-    function GetLastPreparedError(Handle: PZMySqlPrepStmt): AnsiString; override;
-    function ExecuteStmt (Handle: PZMySqlPrepStmt): Integer; override;
-    function FetchBoundResults (Handle: PZMySqlPrepStmt): Integer; override;
-    function GetPreparedFieldCount(Handle: PZMySqlPrepStmt): Integer; override;
-    function InitializePrepStmt (Handle: PZMySQLConnect): PZMySqlPrepStmt; override;
-    function GetPreparedInsertID (Handle: PZMySqlPrepStmt): Int64; override;
-    function GetPreparedNumRows (Handle: PZMySqlPrepStmt): Int64; override;
-    function GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal; override; // param_count
-    function PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PChar; Length: Integer): Integer; override;
-    function GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult; override;
-    function GetPreparedSQLState (Handle: PZMySqlPrepStmt): PChar; override;
-    function StorePreparedResult (Handle: PZMySqlPrepStmt): Integer; override;
+    function GetPreparedAffectedRows (Handle: PZMySqlPrepStmt): Int64;
+    function BindParameters (Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
+    function BindResult (Handle: PZMySqlPrepStmt;  bindArray: PZMysqlBindArray): Byte;
+    function ClosePrepStmt (PrepStmtHandle: PZMySqlPrepStmt): PZMySqlPrepStmt;
+    function GetLastPreparedErrorCode(Handle: PZMySqlPrepStmt): Integer;
+    function GetLastPreparedError(Handle: PZMySqlPrepStmt): AnsiString;
+    function ExecuteStmt (Handle: PZMySqlPrepStmt): Integer;
+    function FetchBoundResults (Handle: PZMySqlPrepStmt): Integer;
+    function GetPreparedFieldCount(Handle: PZMySqlPrepStmt): Integer;
+    function InitializePrepStmt (Handle: PZMySQLConnect): PZMySqlPrepStmt;
+    function GetPreparedInsertID (Handle: PZMySqlPrepStmt): Int64;
+    function GetPreparedNumRows (Handle: PZMySqlPrepStmt): Int64;
+    function GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal; // param_count
+    function PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PChar; Length: Integer): Integer;
+    function GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
+    function GetPreparedSQLState (Handle: PZMySqlPrepStmt): PChar;
+    function StorePreparedResult (Handle: PZMySqlPrepStmt): Integer;
 
     function Refresh(Handle: PZMySQLConnect; Options: Cardinal): Integer;
     function Kill(Handle: PZMySQLConnect; Pid: LongInt): Integer;
@@ -842,8 +867,8 @@ type
     function GetProtoInfo(Handle: PZMySQLConnect): Cardinal;
     function GetThreadId(Handle: PZMySQLConnect): Cardinal;
     {ADDED by fduenas 15-06-2006}
-    function GetClientVersion: Integer; override;
-    function GetServerVersion(Handle: PZMySQLConnect): Integer; override;
+    function GetClientVersion: Integer;
+    function GetServerVersion(Handle: PZMySQLConnect): Integer;
     {END ADDED by fduenas 15-06-2006}
     function GetListDatabases(Handle: PZMySQLConnect;
       Wild: PChar): PZMySQLResult;
@@ -891,128 +916,8 @@ type
 implementation
 uses SysUtils, ZMessages;
 
-{ TZMySQLAbstractPlainDriver }
-function TZMySQLAbstractPlainDriver.CheckAnotherRowset(Handle: PZMySQLConnect): Boolean;
-Begin
-    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_more_results']);
-    result := false;
-End;
-
-function TZMySQLAbstractPlainDriver.RetrieveNextRowset(Handle: PZMySQLConnect): Integer;
-Begin
-    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_next_rowset']);
-    result := 1;
-End;
-
-function TZMySQLAbstractPlainDriver.getSQLState (Handle: PZMySQLConnect): AnsiString;
-begin
-    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_sqlstate']);
-    Result := '?????';  {mysql 3.20 doesn't support this}
-end;
-
-function TZMySQLAbstractPlainDriver.GetPreparedAffectedRows(Handle: PZMySqlPrepStmt): Int64;
-Begin
-    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_affected_rows']);
-    result := 0;
-End;
-
-function TZMySQLAbstractPlainDriver.BindParameters(Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
-Begin
-    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_bind_parameters']);
-    result := 1;
-End;
-
-function TZMySQLAbstractPlainDriver.BindResult(Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
-Begin
-    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_bind_result']);
-    result := 1;
-End;
-
-function TZMySQLAbstractPlainDriver.ClosePrepStmt (PrepStmtHandle: PZMySqlPrepStmt): PZMySqlPrepStmt;
-begin
-    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_close']);
-    result := nil;
-end;
-
-function TZMySQLAbstractPlainDriver.GetLastPreparedErrorCode(Handle: PZMySqlPrepStmt):Integer;
-Begin
-    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_errno']);
-    result :=  0;
-End;
-
-function TZMySQLAbstractPlainDriver.GetLastPreparedError(Handle: PZMySqlPrepStmt):AnsiString;
-begin
-    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_error'] );
-    result := '';
-end;
-
-function TZMySQLAbstractPlainDriver.ExecuteStmt(Handle: PZMySqlPrepStmt): Integer;
-Begin
-    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_execute']);
-    result := 1;
-End;
-
-function TZMySQLAbstractPlainDriver.FetchBoundResults(Handle: PZMySqlPrepStmt): Integer;
-Begin
-    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_fetch']);
-    result := 1;
-End;
-
-function TZMySQLAbstractPlainDriver.GetPreparedFieldCount(Handle: PZMySqlPrepStmt): Integer;
-Begin
-    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_field_count']);
-    result := 0;
-End;
-
-function TZMySQLAbstractPlainDriver.InitializePrepStmt (Handle: PZMySQLConnect): PZMySqlPrepStmt;
-begin
-    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_init']);
-    result := nil;
-end;
-
-function TZMySQLAbstractPlainDriver.GetPreparedInsertID(Handle: PZMySqlPrepStmt): Int64;
-Begin
-    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_insert_id']);
-    result := 0;
-End;
-
-function TZMySQLAbstractPlainDriver.GetPreparedNumRows(Handle: PZMySqlPrepStmt): Int64;
-Begin
-    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_num_rows']);
-    result := 0;
-End;
-
-function TZMySQLAbstractPlainDriver.GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal;
-Begin
-    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_param_count']);
-    result := 0;
-End;
-
-function TZMySQLAbstractPlainDriver.PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PChar; Length: Integer): Integer;
-begin
-    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_prepare']);
-    Result := 1;
-end;
-
-function TZMySQLAbstractPlainDriver.GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
-Begin
-    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_result_metadata']);
-    result := nil;
-End;
-
-function TZMySQLAbstractPlainDriver.GetPreparedSQLState(Handle: PZMySqlPrepStmt): PChar;
-begin
-    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_sql_state']);
-    result := '?????';
-end;
-
-function TZMySQLAbstractPlainDriver.StorePreparedResult (Handle: PZMySqlPrepStmt): Integer;
-Begin
-    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_store_result']);
-    result := 1;
-End;
-
 { TZMySQL320PlainDriver }
+
 constructor TZMySQL320PlainDriver.Create;
 begin
 end;
@@ -1273,6 +1178,18 @@ begin
     Result := (testResult = 0);
 end;
 
+function TZMySQL320PlainDriver.CheckAnotherRowset(Handle: PZMySQLConnect): Boolean;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_more_results']);
+    result := false;
+End;
+
+function TZMySQL320PlainDriver.RetrieveNextRowset(Handle: PZMySQLConnect): Integer;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_next_rowset']);
+    result := 1;
+End;
+
 function TZMySQL320PlainDriver.Rollback (Handle: PZMySQLConnect): Boolean;
 var
     testResult: Integer;
@@ -1280,6 +1197,115 @@ begin
     testResult := MYSQL_API.mysql_query(ZPlainMySql320.PMYSQL(Handle),'ROLLBACK');
     Result := (testResult = 0);
 end;
+
+function TZMySQL320PlainDriver.getSQLState (Handle: PZMySQLConnect): AnsiString;
+begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_sqlstate']);
+    Result := '?????';  {mysql 3.20 doesn't support this}
+end;
+
+function TZMySQL320PlainDriver.GetPreparedAffectedRows(Handle: PZMySqlPrepStmt): Int64;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_affected_rows']);
+    result := 0;
+End;
+
+function TZMySQL320PlainDriver.BindParameters(Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_bind_parameters']);
+    result := 1;
+End;
+
+function TZMySQL320PlainDriver.BindResult(Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_bind_result']);
+    result := 1;
+End;
+
+function TZMySQL320PlainDriver.ClosePrepStmt (PrepStmtHandle: PZMySqlPrepStmt): PZMySqlPrepStmt;
+begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_close']);
+    result := nil;
+end;
+
+function TZMySQL320PlainDriver.GetLastPreparedErrorCode(Handle: PZMySqlPrepStmt):Integer;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_errno']);
+    result :=  0;
+End;
+
+function TZMySQL320PlainDriver.GetLastPreparedError(Handle: PZMySqlPrepStmt):AnsiString;
+begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_error'] );
+    result := '';
+end;
+
+function TZMySQL320PlainDriver.ExecuteStmt(Handle: PZMySqlPrepStmt): Integer;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_execute']);
+    result := 1;
+End;
+
+function TZMySQL320PlainDriver.FetchBoundResults(Handle: PZMySqlPrepStmt): Integer;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_fetch']);
+    result := 1;
+End;
+
+function TZMySQL320PlainDriver.GetPreparedFieldCount(Handle: PZMySqlPrepStmt): Integer;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_field_count']);
+    result := 0;
+End;
+
+function TZMySQL320PlainDriver.InitializePrepStmt (Handle: PZMySQLConnect): PZMySqlPrepStmt;
+begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_init']);
+    result := nil;
+end;
+
+function TZMySQL320PlainDriver.GetPreparedInsertID(Handle: PZMySqlPrepStmt): Int64;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_insert_id']);
+    result := 0;
+End;
+
+function TZMySQL320PlainDriver.GetPreparedNumRows(Handle: PZMySqlPrepStmt): Int64;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_num_rows']);
+    result := 0;
+End;
+
+function TZMySQL320PlainDriver.GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_param_count']);
+    result := 0;
+End;
+
+function TZMySQL320PlainDriver.PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PChar; Length: Integer): Integer;
+begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_prepare']);
+    Result := 1;
+end;
+
+function TZMySQL320PlainDriver.GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_result_metadata']);
+    result := nil;
+End;
+
+function TZMySQL320PlainDriver.GetPreparedSQLState(Handle: PZMySqlPrepStmt): PChar;
+begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_sql_state']);
+    result := '?????';
+end;
+
+function TZMySQL320PlainDriver.StorePreparedResult (Handle: PZMySqlPrepStmt): Integer;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_store_result']);
+    result := 1;
+End;
+
 
 function TZMySQL320PlainDriver.StoreResult(
   Handle: PZMySQLConnect): PZMySQLResult;
@@ -1632,6 +1658,18 @@ begin
     Result := (testResult = 0);
 end;
 
+function TZMySQL323PlainDriver.CheckAnotherRowset(Handle: PZMySQLConnect): Boolean;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_more_results']);
+    result := false;
+End;
+
+function TZMySQL323PlainDriver.RetrieveNextRowset(Handle: PZMySQLConnect): Integer;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_next_rowset']);
+    result := 1;
+End;
+
 function TZMySQL323PlainDriver.Rollback (Handle: PZMySQLConnect): Boolean;
 var
     testResult: Integer;
@@ -1639,6 +1677,114 @@ begin
     testResult := MYSQL_API.mysql_query(ZPlainMySql323.PMYSQL(Handle),'ROLLBACK');
     Result := (testResult = 0);
 end;
+
+function TZMySQL323PlainDriver.getSQLState (Handle: PZMySQLConnect): AnsiString;
+begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_sqlstate']);
+    Result := '?????';  {mysql 3.23 doesn't support this}
+end;
+
+function TZMySQL323PlainDriver.GetPreparedAffectedRows(Handle: PZMySqlPrepStmt): Int64;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_affected_rows']);
+    result := 0;
+End;
+
+function TZMySQL323PlainDriver.BindParameters(Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_bind_parameters']);
+    result := 1;
+End;
+
+function TZMySQL323PlainDriver.BindResult(Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_bind_result']);
+    result := 1;
+End;
+
+function TZMySQL323PlainDriver.ClosePrepStmt (PrepStmtHandle: PZMySqlPrepStmt): PZMySqlPrepStmt;
+begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_close']);
+    result := nil;
+end;
+
+function TZMySQL323PlainDriver.GetLastPreparedErrorCode(Handle: PZMySqlPrepStmt):Integer;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_errno']);
+    result :=  0;
+End;
+
+function TZMySQL323PlainDriver.GetLastPreparedError(Handle: PZMySqlPrepStmt):AnsiString;
+begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_error'] );
+    result := '';
+end;
+
+function TZMySQL323PlainDriver.ExecuteStmt(Handle: PZMySqlPrepStmt): Integer;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_execute']);
+    result := 1;
+End;
+
+function TZMySQL323PlainDriver.FetchBoundResults(Handle: PZMySqlPrepStmt): Integer;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_fetch']);
+    result := 1;
+End;
+
+function TZMySQL323PlainDriver.GetPreparedFieldCount(Handle: PZMySqlPrepStmt): Integer;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_field_count']);
+    result := 0;
+End;
+
+function TZMySQL323PlainDriver.InitializePrepStmt (Handle: PZMySQLConnect): PZMySqlPrepStmt;
+begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_init']);
+    result := nil;
+end;
+
+function TZMySQL323PlainDriver.GetPreparedInsertID(Handle: PZMySqlPrepStmt): Int64;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_insert_id']);
+    result := 0;
+End;
+
+function TZMySQL323PlainDriver.GetPreparedNumRows(Handle: PZMySqlPrepStmt): Int64;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_num_rows']);
+    result := 0;
+End;
+
+function TZMySQL323PlainDriver.GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_param_count']);
+    result := 0;
+End;
+
+function TZMySQL323PlainDriver.PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PChar; Length: Integer): Integer;
+begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_prepare']);
+    Result := 1;
+end;
+
+function TZMySQL323PlainDriver.GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_result_metadata']);
+    result := nil;
+End;
+
+function TZMySQL323PlainDriver.GetPreparedSQLState(Handle: PZMySqlPrepStmt): PChar;
+begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_sql_state']);
+    result := '?????';
+end;
+
+function TZMySQL323PlainDriver.StorePreparedResult (Handle: PZMySqlPrepStmt): Integer;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_store_result']);
+    result := 1;
+End;
 
 function TZMySQL323PlainDriver.StoreResult(
   Handle: PZMySQLConnect): PZMySQLResult;
@@ -1990,6 +2136,18 @@ begin
     Result := (testResult = 0);
 end;
 
+function TZMySQL40PlainDriver.CheckAnotherRowset(Handle: PZMySQLConnect): Boolean;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_more_results']);
+    result := false;
+End;
+
+function TZMySQL40PlainDriver.RetrieveNextRowset(Handle: PZMySQLConnect): Integer;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_next_rowset']);
+    result := 1;
+End;
+
 function TZMySQL40PlainDriver.Rollback (Handle: PZMySQLConnect): Boolean;
 var
     testResult: Integer;
@@ -1997,6 +2155,114 @@ begin
     testResult := MYSQL_API.mysql_query(ZPlainMySql40.PMYSQL(Handle),'ROLLBACK');
     Result := (testResult = 0);
 end;
+
+function TZMySQL40PlainDriver.getSQLState (Handle: PZMySQLConnect): AnsiString;
+begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_sqlstate']);
+    Result := '?????';  {mysql 4.0 doesn't support this}
+end;
+
+function TZMySQL40PlainDriver.GetPreparedAffectedRows(Handle: PZMySqlPrepStmt): Int64;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_affected_rows']);
+    result := 0;
+End;
+
+function TZMySQL40PlainDriver.BindParameters(Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_bind_parameters']);
+    result := 1;
+End;
+
+function TZMySQL40PlainDriver.BindResult(Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_bind_result']);
+    result := 1;
+End;
+
+function TZMySQL40PlainDriver.ClosePrepStmt (PrepStmtHandle: PZMySqlPrepStmt): PZMySqlPrepStmt;
+begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_close']);
+    result := nil;
+end;
+
+function TZMySQL40PlainDriver.GetLastPreparedErrorCode(Handle: PZMySqlPrepStmt):Integer;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_errno']);
+    result :=  0;
+End;
+
+function TZMySQL40PlainDriver.GetLastPreparedError(Handle: PZMySqlPrepStmt):AnsiString;
+begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_error'] );
+    result := '';
+end;
+
+function TZMySQL40PlainDriver.ExecuteStmt(Handle: PZMySqlPrepStmt): Integer;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_execute']);
+    result := 1;
+End;
+
+function TZMySQL40PlainDriver.FetchBoundResults(Handle: PZMySqlPrepStmt): Integer;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_fetch']);
+    result := 1;
+End;
+
+function TZMySQL40PlainDriver.GetPreparedFieldCount(Handle: PZMySqlPrepStmt): Integer;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_field_count']);
+    result := 0;
+End;
+
+function TZMySQL40PlainDriver.InitializePrepStmt (Handle: PZMySQLConnect): PZMySqlPrepStmt;
+begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_init']);
+    result := nil;
+end;
+
+function TZMySQL40PlainDriver.GetPreparedInsertID(Handle: PZMySqlPrepStmt): Int64;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_insert_id']);
+    result := 0;
+End;
+
+function TZMySQL40PlainDriver.GetPreparedNumRows(Handle: PZMySqlPrepStmt): Int64;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_num_rows']);
+    result := 0;
+End;
+
+function TZMySQL40PlainDriver.GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_param_count']);
+    result := 0;
+End;
+
+function TZMySQL40PlainDriver.PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PChar; Length: Integer): Integer;
+begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_prepare']);
+    Result := 1;
+end;
+
+function TZMySQL40PlainDriver.GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_result_metadata']);
+    result := nil;
+End;
+
+function TZMySQL40PlainDriver.GetPreparedSQLState(Handle: PZMySqlPrepStmt): PChar;
+begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_sql_state']);
+    result := '?????';
+end;
+
+function TZMySQL40PlainDriver.StorePreparedResult (Handle: PZMySqlPrepStmt): Integer;
+Begin
+    Exception.CreateFmt (SUnsupportedByDriver, ['mysql_stmt_store_result']);
+    result := 1;
+End;
 
 function TZMySQL40PlainDriver.StoreResult(
   Handle: PZMySQLConnect): PZMySQLResult;
