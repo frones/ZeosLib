@@ -57,7 +57,8 @@ const
 {$IFNDEF STRICT_DLL_LOADING}
   WINDOWS2_DLL_LOCATION = 'libmysql.dll';
 {$ENDIF}
-  LINUX_DLL_LOCATION = 'libmysqlclient.so';
+  LINUX_DLL_LOCATION = 'libmysqlclient.so.14';
+  LINUX_DLL_LOCATION2 = 'libmysqlclient.so';
 
 { General Declarations }
   MYSQL_ERRMSG_SIZE    = 512;
@@ -1076,7 +1077,7 @@ initialization
     ]);
 {$ELSE}
   LibraryLoader := TZMySQLNativeLibraryLoader.Create(
-    [LINUX_DLL_LOCATION]);
+    [LINUX_DLL_LOCATION,LINUX_DLL_LOCATION2]);
 {$ENDIF}
 finalization
   if Assigned(LibraryLoader) then
