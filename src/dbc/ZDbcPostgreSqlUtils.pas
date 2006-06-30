@@ -91,7 +91,7 @@ function EncodeString(Value: string): string;
   @param Value a string in PostgreSQL escape format.
   @return a regular string.
 }
-function DecodeString(Value: string): string;
+//function DecodeString(Value: string): string;
 
 {**
   Checks for possible sql errors.

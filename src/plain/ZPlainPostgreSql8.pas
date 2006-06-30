@@ -276,9 +276,17 @@ type
 
 //FirmOS: New defines
 
-//  TPQescapeString  = function (too:PChar, from: PChar, length:cardinal):cardinal;
-  
-// size_t PQescapeString (char *to, const char *from, size_t length);
+  TPQescapeByteaConn =function(Handle: PPGconn;const from:pchar;from_length:longword;to_lenght:PLongword):PChar;cdecl;
+  TPQescapeBytea     =function(const from:pchar;from_length:longword;to_lenght:PLongword):PChar;cdecl;
+//unsigned char *PQescapeByteaConn(PGconn *conn,
+//                                 const unsigned char *from,
+//                                 size_t from_length,
+//                                 size_t *to_length);
+  TPQunescapeBytea     =function(const from:pchar;to_lenght:PLongword):PChar;cdecl;
+//unsigned char *PQunescapeBytea(const unsigned char *from, size_t *to_length);
+
+  TPQFreemem       = procedure(ptr:Pointer);cdecl;
+// void PQfreemem(void *ptr);
 
 { === in fe-lobj.c === }
   Tlo_open         = function(Handle: PPGconn; lobjId: Oid; mode: Integer): Integer; cdecl;
@@ -353,6 +361,12 @@ var
   PQclear:         TPQclear;
   PQmakeEmptyPGresult:  TPQmakeEmptyPGresult;
 
+//FirmOS: New defines
+  PQescapeByteaConn:TPQescapeByteaConn;
+  PQescapeBytea:TPQescapeBytea;
+  PQunescapeBytea:TPQunescapeBytea;
+  PQFreemem:TPQFreemem;
+
 { === in fe-lobj.c === }
   lo_open:         Tlo_open;
   lo_close:        Tlo_close;
@@ -388,6 +402,11 @@ begin
   Result := inherited Load;
 
 { ===	in fe-connect.c === }
+  @PQfreemem           := GetAddress('PQfreemem');
+  @PQescapeByteaConn   := GetAddress('PQescapeByteaConn');
+  @PQescapeBytea       := GetAddress('PQescapeBytea');
+  @PQunescapeBytea     := GetAddress('PQunescapeBytea');
+
   @PQconnectdb    := GetAddress('PQconnectdb');
   @PQsetdbLogin   := GetAddress('PQsetdbLogin');
   @PQconndefaults := GetAddress('PQconndefaults');

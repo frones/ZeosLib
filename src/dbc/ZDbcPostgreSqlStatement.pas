@@ -375,15 +375,17 @@ begin
                 WriteTempBlob := nil;
                 TempStream.Free;
               end;
-            end
-            else
-            begin
-              Result := EncodeString(TempBlob.GetString);
-              Result := Copy(Result, 2, Length(Result) - 2);
-              Result := EncodeString(Result);
+            end else begin
+              result:= FPlainDriver.EncodeBYTEA(TempBlob.GetString,FHandle); // FirmOS
+              {
+               Result := EncodeString(TempBlob.GetString);
+               Result := Copy(Result, 2, Length(Result) - 2);
+               Result := EncodeString(Result);
+              }
             end;
-          end else
+          end else begin
             Result := 'NULL';
+          end;
         end;
     end;
   end;
