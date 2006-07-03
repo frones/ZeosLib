@@ -51,11 +51,11 @@ interface
 {$I ZPlain.inc}
 
 const
-{$IFNDEF STRICT_DLL_LOADING}
+{$IFNDEF MYSQL_STRICT_DLL_LOADING}
   WINDOWS2_DLL_LOCATION = 'libmysql.dll';
   WINDOWS2_DLL_LOCATION_EMBEDDED = 'libmysqld.dll';
 {$ENDIF}
-  LINUX_DLL_LOCATION = 'libmysqlclient.so';
+  LINUX2_DLL_LOCATION = 'libmysqlclient.so';
   LINUX_DLL_LOCATION_EMBEDDED = 'libmysqld.so';
 
 { General Declarations }

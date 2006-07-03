@@ -57,7 +57,8 @@ const
 {$IFNDEF STRICT_DLL_LOADING}
   WINDOWS2_DLL_LOCATION   = 'libpq.dll';
 {$ENDIF}
-  LINUX_DLL_LOCATION   = 'libpq.so';
+  LINUX1_DLL_LOCATION  = 'libpq.so.4';
+  LINUX2_DLL_LOCATION   = 'libpq.so';
 
 { Type Lengths }
   NAMEDATALEN  = 32;
@@ -465,8 +466,7 @@ initialization
 {$ENDIF}
     ]);
 {$ELSE}
-  LibraryLoader := TZPostgreSQLNativeLibraryLoader.Create(
-    [LINUX_DLL_LOCATION]);
+  LibraryLoader := TZPostgreSQLNativeLibraryLoader.Create([LINUX1_DLL_LOCATION,LINUX2_DLL_LOCATION]);
 {$ENDIF}
 finalization
   if Assigned(LibraryLoader) then

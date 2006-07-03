@@ -62,6 +62,7 @@ uses Classes, ZPlainLoader, ZCompatibility, ZPlainMySqlConstants;
 const
   WINDOWS1_DLL_LOCATION = 'libmysql5.dll';
   WINDOWS1_DLL_LOCATION_EMBEDDED = 'libmysqld5.dll';
+  LINUX1_DLL_LOCATION  = 'libmysqlclient.so.15';
 
 { General Declarations }
 //  PROTOCOL_VERSION     = 10;
@@ -586,7 +587,7 @@ initialization
     ]);
 {$ELSE}
   LibraryLoader := TZMySQLNativeLibraryLoader.Create(
-    [LINUX_DLL_LOCATION]);
+    [LINUX1_DLL_LOCATION,LINUX2_DLL_LOCATION]);
   LibraryLoaderEmbedded := TZMySQLNativeLibraryLoader.Create(
     [LINUX_DLL_LOCATION_EMBEDDED]);
 {$ENDIF}

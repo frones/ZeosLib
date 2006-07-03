@@ -58,6 +58,7 @@ uses Classes, ZPlainLoader, ZCompatibility, ZPlainMySqlConstants;
 
 const
   WINDOWS1_DLL_LOCATION = 'libmysql320.dll';
+  LINUX1_DLL_LOCATION = 'libmysqlclient.so.10';
 
 { General Declarations }
 //  PROTOCOL_VERSION     = 10;
@@ -353,7 +354,7 @@ initialization
     ]);
 {$ELSE}
   LibraryLoader := TZMySQLNativeLibraryLoader.Create(
-    [LINUX_DLL_LOCATION]);
+    [LINUX1_DLL_LOCATION,LINUX2_DLL_LOCATION]);
 {$ENDIF}
 {$UNDEF MYSQL_320_API}
 finalization
