@@ -124,7 +124,7 @@ function ConvertMySQLVersionToSQLVersion( const MySQLVersion: Integer ): Integer
 
 implementation
 
-uses ZMessages, Math, dialogs;
+uses ZMessages, Math;
 
 threadvar
   SilentMySQLError: Integer;
