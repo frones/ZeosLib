@@ -53,13 +53,11 @@ uses
 { ***************** Plain API Constants definition **************** }
 
 const
-  WINDOWS_DLL_LOCATION   = 'fbclient.dll';
-{$IFDEF USELIBFBCLIENTSO}
-  LINUX_DLL_LOCATION   = 'libfbclient.so';
-{$ELSE}
-   LINUX_DLL_LOCATION   = 'libfbembed.so';
-{$ENDIF}
-   LINUX_IB_CRYPT_LOCATION = 'libcrypt.so';
+  WINDOWS_DLL_LOCATION   = 'fbclient15.dll';
+  WINDOWS_DLL_LOCATION_EMBEDDED = 'fbclientd15.dll';
+  LINUX_DLL_LOCATION   = 'libfbclient.so.15';
+  LINUX_DLL_LOCATION_EMBEDDED = 'libfbembed.so.15';
+  LINUX_IB_CRYPT_LOCATION = 'libcrypt.so.15';
 
 type
 
@@ -378,6 +376,7 @@ var
 
 var
   LibraryLoader: TZNativeLibraryLoader;
+  LibraryLoaderEmbedded: TZNativeLibraryLoader;
 
 implementation
 
@@ -575,16 +574,25 @@ initialization
 {$IFNDEF UNIX}
   LibraryLoader := TZFirebirdNativeLibraryLoader.Create(
     [WINDOWS_DLL_LOCATION]);
+  LibraryLoaderEmbedded := TZFirebirdNativeLibraryLoader.Create(
+    [WINDOWS_DLL_LOCATION_EMBEDDED]);
 {$ELSE}
   {$IFDEF ENABLE_INTERBASE_CRYPT}
   LibraryLoader := TZFirebirdNativeLibraryLoader.Create(
     [LINUX_IB_CRYPT_LOCATION], [LINUX_DLL_LOCATION]);
+  LibraryLoaderEmbedded := TZFirebirdNativeLibraryLoader.Create(
+    [LINUX_IB_CRYPT_LOCATION], [LINUX_DLL_LOCATION_EMBEDDED]);
   {$ELSE}
   LibraryLoader := TZFirebirdNativeLibraryLoader.Create(
     [LINUX_DLL_LOCATION]);
+  LibraryLoaderEmbedded := TZFirebirdNativeLibraryLoader.Create(
+     [LINUX_DLL_LOCATION_EMBEDDED]);
   {$ENDIF}
 {$ENDIF}
 finalization
   if Assigned(LibraryLoader) then
     LibraryLoader.Free;
+  if Assigned(LibraryLoaderEmbedded) then
+    LibraryLoaderEmbedded.Free;
+
 end.

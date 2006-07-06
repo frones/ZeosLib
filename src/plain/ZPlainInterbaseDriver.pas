@@ -1132,9 +1132,9 @@ type
   public
     constructor Create;
 
-    function GetProtocol: string;
-    function GetDescription: string;
-    procedure Initialize;
+    function GetProtocol: string;virtual;
+    function GetDescription: string;virtual;
+    procedure Initialize;virtual;
 
     function isc_attach_database (status_vector: PISC_STATUS;
       db_name_length: Short; db_name: PChar; db_handle: PISC_DB_HANDLE;
@@ -1263,7 +1263,15 @@ type
       ib_timestamp: PISC_TIMESTAMP);
     function isc_vax_integer(buffer: PChar; length: Short): ISC_LONG;
   end;
-  
+
+  TZFirebirdD15PlainDriver = class (TZFirebird15PlainDriver)
+  public
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+    procedure Initialize; override;
+  end;
+
+
   {** Represents an interface to Interbase 6+ native API. }
   IZFirebird20PlainDriver = interface (IZInterbasePlainDriver)
     ['{AFCC45CF-CF6D-499B-8EC2-5C1737A59E30}']
@@ -1275,9 +1283,9 @@ type
   public
     constructor Create;
 
-    function GetProtocol: string;
-    function GetDescription: string;
-    procedure Initialize;
+    function GetProtocol: string;virtual;
+    function GetDescription: string;virtual;
+    procedure Initialize;virtual;
 
     function isc_attach_database (status_vector: PISC_STATUS;
       db_name_length: Short; db_name: PChar; db_handle: PISC_DB_HANDLE;
@@ -1407,6 +1415,12 @@ type
     function isc_vax_integer(buffer: PChar; length: Short): ISC_LONG;
   end;
 
+  TZFirebirdD20PlainDriver = class (TZFirebird20PlainDriver)
+  public
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+    procedure Initialize; override;
+  end;
 
   function XSQLDA_LENGTH(Value: LongInt): LongInt;
 
@@ -3058,6 +3072,26 @@ begin
   Result := ZPlainFirebird15.isc_vax_integer(buffer, length);
 end;
 
+
+{ IZFirebird15PlainDriver }
+
+function TZFirebirdD15PlainDriver.GetProtocol: string;
+begin
+  Result := 'firebirdd-1.5';
+end;
+
+function TZFirebirdD15PlainDriver.GetDescription: string;
+begin
+  Result := 'Native Plain Driver for Firebird Embedded 1.5';
+end;
+
+procedure TZFirebirdD15PlainDriver.Initialize;
+begin
+  ZPlainFirebird15.LibraryLoaderEmbedded.LoadIfNeeded;
+
+end;
+
+
 { IZFirebird20PlainDriver }
 
 constructor TZFirebird20PlainDriver.Create;
@@ -3465,6 +3499,25 @@ function TZFirebird20PlainDriver.isc_vax_integer(buffer: PChar;
   length: Short): ISC_LONG;
 begin
   Result := ZPlainFirebird20.isc_vax_integer(buffer, length);
+end;
+
+
+{ IZFirebirdD20PlainDriver }
+
+function TZFirebirdD20PlainDriver.GetProtocol: string;
+begin
+  Result := 'firebirdd-2.0';
+end;
+
+function TZFirebirdD20PlainDriver.GetDescription: string;
+begin
+  Result := 'Native Plain Driver for Firebird Embedded 2.0';
+end;
+
+procedure TZFirebirdD20PlainDriver.Initialize;
+begin
+  ZPlainFirebird20.LibraryLoaderEmbedded.LoadIfNeeded;
+
 end;
 
 end.

@@ -59,6 +59,10 @@ type
     FFirebird10PlainDriver: IZFirebird10PlainDriver;
     FFirebird15PlainDriver: IZFirebird15PlainDriver;
     FFirebird20PlainDriver: IZFirebird20PlainDriver;
+    // embedded drivers
+    FFirebirdD15PlainDriver: IZFirebird15PlainDriver;
+    FFirebirdD20PlainDriver: IZFirebird20PlainDriver;
+
   protected
     function GetPlainDriver(const Url: string): IZInterbasePlainDriver;
   public
@@ -202,6 +206,10 @@ begin
   FFirebird10PlainDriver := TZFirebird10PlainDriver.Create;
   FFirebird15PlainDriver := TZFirebird15PlainDriver.Create;
   FFirebird20PlainDriver := TZFirebird20PlainDriver.Create;
+  // embedded drivers
+  FFirebirdD15PlainDriver := TZFirebirdD15PlainDriver.Create;
+  FFirebirdD20PlainDriver := TZFirebirdD20PlainDriver.Create;
+
 end;
 
 {**
@@ -266,6 +274,12 @@ begin
     Result := FFirebird15PlainDriver
   else if Protocol = FFirebird20PlainDriver.GetProtocol then
     Result := FFirebird20PlainDriver
+  // embedded drivers
+  else if Protocol = FFirebirdD15PlainDriver.GetProtocol then
+    Result := FFirebirdD15PlainDriver
+  else if Protocol = FFirebirdD20PlainDriver.GetProtocol then
+    Result := FFirebirdD20PlainDriver
+  // Generic driver
   else Result := FInterbase6PlainDriver;
   Result.Initialize;
 end;
@@ -276,12 +290,16 @@ end;
 }
 function TZInterbase6Driver.GetSupportedProtocols: TStringDynArray;
 begin
-  SetLength(Result, 5);
+  SetLength(Result, 7);
   Result[0] := 'interbase-5';
   Result[1] := 'interbase-6';
   Result[2] := 'firebird-1.0';
   Result[3] := 'firebird-1.5';
   Result[4] := 'firebird-2.0';
+  // embedded drivers
+  Result[5] := 'firebirdd-1.5';
+  Result[6] := 'firebirdd-2.0';
+
 end;
 
 { TZInterbase6Connection }
