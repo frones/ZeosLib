@@ -120,9 +120,6 @@ var
   DBScreen: IDBScreen;
 
 function StrToFloatDef(const Str: string; Def: Extended): Extended;
-{$ENDIF}
-
-{$IFDEF VER130BELOW}
 function AnsiDequotedStr(const S: string; AQuote: Char): string;
 function BoolToStr(Value: Boolean): string;
 function VarIsStr(const V: Variant): Boolean;
@@ -139,8 +136,8 @@ type
 function LoadLibrary(ModuleName: PChar): HMODULE;
 function FreeLibrary(Module: HMODULE): LongBool;
 function GetProcAddress(Module: HMODULE; Proc: PChar): Pointer;
-function GetModuleFileName(Module: HMODULE; Buffer: PChar; BufLen: Integer): Integer;
-function GetModuleHandle(Location: Pchar): HMODULE;
+//function GetModuleFileName(Module: HMODULE; Buffer: PChar; BufLen: Integer): Integer;
+//function GetModuleHandle(Location: Pchar): HMODULE;
   {$ENDIF FPC}
 {$ENDIF UNIX}
 
@@ -204,7 +201,7 @@ begin
   Result := dlsym(pointer(Module), Proc);
 end;
 
-function GetModuleFileName(Module: HMODULE; Buffer: PChar; BufLen: Integer): Integer;
+{function GetModuleFileName(Module: HMODULE; Buffer: PChar; BufLen: Integer): Integer;
 begin
   Result := 0;
 end;
@@ -213,7 +210,7 @@ function GetModuleHandle(Location: Pchar): HMODULE;
 begin
   Result := 0;
 end;
-
+}
   {$ENDIF FPC}
 {$ENDIF UNIX}
 

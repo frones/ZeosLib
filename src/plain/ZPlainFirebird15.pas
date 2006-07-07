@@ -53,11 +53,16 @@ uses
 { ***************** Plain API Constants definition **************** }
 
 const
-  WINDOWS_DLL_LOCATION   = 'fbclient15.dll';
-  WINDOWS_DLL_LOCATION_EMBEDDED = 'fbclientd15.dll';
-  LINUX_DLL_LOCATION   = 'libfbclient.so.15';
-  LINUX_DLL_LOCATION_EMBEDDED = 'libfbembed.so.15';
-  LINUX_IB_CRYPT_LOCATION = 'libcrypt.so.15';
+  WINDOWS1_DLL_LOCATION   = 'fbclient15.dll';
+  WINDOWS2_DLL_LOCATION   = 'fbclient.dll';
+  WINDOWS1_DLL_LOCATION_EMBEDDED = 'fbclientd15.dll';
+  WINDOWS2_DLL_LOCATION_EMBEDDED = 'fbclientd.dll';
+  LINUX1_DLL_LOCATION   = 'libfbclient.so.15';
+  LINUX2_DLL_LOCATION   = 'libfbclient.so';
+  LINUX1_IB_CRYPT_LOCATION = 'libcrypt.so.15';
+  LINUX2_IB_CRYPT_LOCATION = 'libcrypt.so';
+  LINUX1_DLL_LOCATION_EMBEDDED = 'libfbembed.so.15';
+  LINUX2_DLL_LOCATION_EMBEDDED = 'libfbembed.so';
 
 type
 
@@ -573,20 +578,20 @@ end;
 initialization
 {$IFNDEF UNIX}
   LibraryLoader := TZFirebirdNativeLibraryLoader.Create(
-    [WINDOWS_DLL_LOCATION]);
+    [WINDOWS1_DLL_LOCATION,WINDOWS2_DLL_LOCATION]);
   LibraryLoaderEmbedded := TZFirebirdNativeLibraryLoader.Create(
-    [WINDOWS_DLL_LOCATION_EMBEDDED]);
+    [WINDOWS2_DLL_LOCATION_EMBEDDED,WINDOWS2_DLL_LOCATION_EMBEDDED]);
 {$ELSE}
   {$IFDEF ENABLE_INTERBASE_CRYPT}
   LibraryLoader := TZFirebirdNativeLibraryLoader.Create(
-    [LINUX_IB_CRYPT_LOCATION], [LINUX_DLL_LOCATION]);
+    [LINUX1_IB_CRYPT_LOCATION,LINUX2_IB_CRYPT_LOCATION], [LINUX1_DLL_LOCATION,LINUX2_DLL_LOCATION]);
   LibraryLoaderEmbedded := TZFirebirdNativeLibraryLoader.Create(
-    [LINUX_IB_CRYPT_LOCATION], [LINUX_DLL_LOCATION_EMBEDDED]);
+    [LINUX1_IB_CRYPT_LOCATION,LINUX2_IB_CRYPT_LOCATION], [LINUX1_DLL_LOCATION_EMBEDDED,LINUX2_DLL_LOCATION_EMBEDDED]);
   {$ELSE}
   LibraryLoader := TZFirebirdNativeLibraryLoader.Create(
-    [LINUX_DLL_LOCATION]);
+    [LINUX1_DLL_LOCATION,LINUX2_DLL_LOCATION]);
   LibraryLoaderEmbedded := TZFirebirdNativeLibraryLoader.Create(
-     [LINUX_DLL_LOCATION_EMBEDDED]);
+    [LINUX1_DLL_LOCATION_EMBEDDED,LINUX2_DLL_LOCATION_EMBEDDED]);
   {$ENDIF}
 {$ENDIF}
 finalization

@@ -1,1 +1,5 @@
 20060418 : Memory leak bug fixed by DavidVTailor - See http://seegernet.koolhost.de/zeosforum/viewtopic.php?t=461
+
+20060707 : Added separate drivers for embedded Firebird server - Patch by Terence - see http://zeos.firmos.at/viewtopic.php?t=630
+
+20060707 : Correction of patch above : added support for non-strict dllloading - Written by mdaems
