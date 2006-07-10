@@ -43,8 +43,8 @@ interface
 
 uses
   Classes, ZSysUtils, ZCollections, ZDbcIntfs, ZDbcResultSet, ZDbcInterbase6,
-  ZPlainInterbaseDriver, ZClasses, ZCompatibility, ZDbcResultSetMetadata,
-  ZDbcInterbase6Utils, ZMessages;
+  ZPlainInterbaseDriver, ZPlainFirebirdInterbaseConstants, ZClasses,
+  ZCompatibility, ZDbcResultSetMetadata, ZDbcInterbase6Utils, ZMessages;
 
 type
 

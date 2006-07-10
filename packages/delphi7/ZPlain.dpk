@@ -65,6 +65,8 @@ contains
   ZPlainASA9 in '..\..\src\plain\ZPlainASA9.pas',
   ZPlainASA8 in '..\..\src\plain\ZPlainASA8.pas',
   ZPlainASA7 in '..\..\src\plain\ZPlainASA7.pas',
-  ZPlainMysqlConstants in '..\..\src\plain\ZPlainMysqlConstants.pas';
+  ZPlainMysqlConstants in '..\..\src\plain\ZPlainMysqlConstants.pas',
+  ZPlainFirebirdDriver in '..\..\src\plain\ZPlainFirebirdDriver.pas',
+  ZPlainFirebirdInterbaseConstants in '..\..\src\plain\ZPlainFirebirdInterbaseConstants.pas';
 
 end.

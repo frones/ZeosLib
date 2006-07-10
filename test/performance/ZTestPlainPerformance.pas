@@ -40,7 +40,8 @@ interface
 
 uses TestFramework, SysUtils, Classes, ZPerformanceTestCase, ZPlainMySqlDriver,
   ZPlainPostgreSqlDriver, ZPlainInterbaseDriver, ZSysUtils, ZDbcUtils,
-  ZCompatibility, ZDbcInterbase6Utils, ZPlainASADriver, ZDbcASAUtils;
+  ZCompatibility, ZDbcInterbase6Utils, ZPlainASADriver, ZDbcASAUtils,
+  ZPlainFirebirdDriver,ZPlainFirebirdInterbaseConstants;
 
 type
 

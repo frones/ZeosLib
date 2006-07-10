@@ -63,6 +63,8 @@ contains
   ZPlainASA8 in '..\..\src\plain\ZPlainASA8.pas',
   ZPlainASA7 in '..\..\src\plain\ZPlainASA7.pas',
   ZPlainMySql5 in '..\..\src\plain\ZPlainMySql5.pas',
+  ZPlainFirebirdDriver in '..\..\src\plain\ZPlainFirebirdDriver.pas',
+  ZPlainFirebirdInterbaseConstants in '..\..\src\plain\ZPlainFirebirdInterbaseConstants.pas',
   ZPlainMysqlConstants in '..\..\src\plain\ZPlainMysqlConstants.pas';
 
 end.

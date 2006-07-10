@@ -3,3 +3,5 @@
 20060707 : Added separate drivers for embedded Firebird server - Patch by Terence - see http://zeos.firmos.at/viewtopic.php?t=630
 
 20060707 : Correction of patch above : added support for non-strict dllloading - Written by mdaems
+
+20060710 : Integrated contribution from Terence : separated Firebird from interbase/strict dll loading for Firebird

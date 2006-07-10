@@ -46,8 +46,9 @@ uses
   Types,
 {$ENDIF}
   ZCompatibility, Classes, SysUtils, ZDbcUtils, ZDbcIntfs, ZDbcConnection,
-  Contnrs, ZPlainInterbaseDriver, ZSysUtils, ZDbcInterbase6Utils,
-  ZDbcLogging, ZDbcGenericResolver, ZTokenizer, ZGenericSqlAnalyser;
+  Contnrs, ZPlainInterbaseDriver, ZPlainFirebirdDriver,
+  ZPlainFirebirdInterbaseConstants, ZSysUtils, ZDbcInterbase6Utils, ZDbcLogging,
+  ZDbcGenericResolver, ZTokenizer, ZGenericSqlAnalyser;
 
 type
 

@@ -426,7 +426,8 @@ type
     function GetConnection: IZConnection;
     function GetIdentifierConvertor: IZIdentifierConvertor;
 
-    procedure ClearCache;
+    procedure ClearCache;overload;
+		procedure ClearCache(const Key: string);overload;
   end;
 
   {** Generic SQL statement interface. }

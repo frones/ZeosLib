@@ -1410,23 +1410,20 @@ var
   Key, TableTypes: string;
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := '';
+  Key := GetTablesMetaDataCacheKey(Catalog,SchemaPattern,TableNamePattern,Types);
   TableTypes := '';
-  for I := Low(Types) to High(Types) do
-  begin
-    Key := Key + ':' + Types[I];
-    if Length(TableTypes) > 0 then
-      TableTypes := TableTypes + ',';
-    TableTypes := TableTypes + Types[I];
-  end;
-
-  Key := Format('get-tables:%s:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern, Key]);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
     Result := ConstructVirtualResultSet(TableColumnsDynArray);
+
+    for I := Low(Types) to High(Types) do
+    begin
+      if Length(TableTypes) > 0 then
+        TableTypes := TableTypes + ',';
+      TableTypes := TableTypes + Types[I];
+    end;
 
     AdoRecordSet := AdoOpenSchema(adSchemaTables,
       [Catalog, SchemaPattern, TableNamePattern, TableTypes]);

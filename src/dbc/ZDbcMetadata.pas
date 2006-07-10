@@ -299,7 +299,8 @@ type
     function GetConnection: IZConnection; virtual;
 
     function GetIdentifierConvertor: IZIdentifierConvertor; virtual;
-    procedure ClearCache; virtual;
+    procedure ClearCache; overload;virtual;
+		procedure ClearCache(const Key: string);overload;virtual;
   end;
 
   {** Implements a default Case Sensitive/Unsensitive identifier convertor. }
@@ -321,6 +322,10 @@ type
     function Quote(const Value: string): string;
     function ExtractQuote(const Value: string): string;
   end;
+
+  function GetTablesMetaDataCacheKey(Const Catalog:String;
+      Const SchemaPattern:String;	Const TableNamePattern:String;const Types: TStringDynArray):String;
+
 
 var
   ProceduresColumnsDynArray: TZMetadataColumnDefs;
@@ -428,6 +433,17 @@ end;
 procedure TZAbstractDatabaseMetadata.ClearCache;
 begin
   FCachedResultSets.Clear;
+end;
+
+{**
+  Clears specific cached metadata.
+}
+procedure TZAbstractDatabaseMetadata.ClearCache(const Key: string);
+var
+  TempKey: IZAnyValue;
+begin
+  TempKey := TZAnyValue.CreateWithString(Key);
+  FCachedResultSets.Remove(TempKey);
 end;
 
 {**
@@ -1897,16 +1913,9 @@ function TZAbstractDatabaseMetadata.GetTables(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const Types: TStringDynArray): IZResultSet;
 var
-  I: Integer;
   Key: string;
 begin
-  Key := '';
-  for I := Low(Types) to High(Types) do
-    Key := Key + ':' + Types[I];
-
-  Key := Format('get-tables:%s:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern, Key]);
-
+  Key := GetTablesMetaDataCacheKey(Catalog,SchemaPattern,TableNamePattern,Types);
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -3070,6 +3079,27 @@ begin
       Result := QuoteDelim[1] + Result + QuoteDelim[1];
   end;
 end;
+
+{**
+  rerurns cache key for get tables metadata entry
+  @param Catalog catalog name
+  @param SchemaPattern schema pattern
+  @param TableNamePattern table name pattern
+  @param Types table types
+  @return the cache key string
+}
+function GetTablesMetaDataCacheKey(Const Catalog:String;
+      Const SchemaPattern:String;	Const TableNamePattern:String;const Types: TStringDynArray):String;
+Var I : Integer;
+    Key :  String;
+begin
+  for I := Low(Types) to High(Types) do
+    Key := Key + ':' + Types[I];
+
+  Result:= Format('get-tables:%s:%s:%s:%s',
+    [Catalog, SchemaPattern, TableNamePattern, Key]);
+end;
+
 
 const
   ProceduresColumnCount = 8;

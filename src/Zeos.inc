@@ -104,6 +104,9 @@
 // Prevents loading default libmysql.dll
 {.$DEFINE MYSQL_STRICT_DLL_LOADING}
 
+// Prevents loading default firebird.dll
+{.$DEFINE FIREBIRD_STRICT_DLL_LOADING}
+
 // Prevents loading default libpq.dll
 {.$DEFINE POSTGRESQL_STRICT_DLL_LOADING}
 

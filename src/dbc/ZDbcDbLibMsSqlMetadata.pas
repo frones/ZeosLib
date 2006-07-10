@@ -1312,13 +1312,7 @@ var
   I: Integer;
   Key, TableTypes: string;
 begin
-  Key := '';
-  for I := Low(Types) to High(Types) do
-    Key := Key + ':' + Types[I];
-
-  Key := Format('get-tables:%s:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern, Key]);
-
+  Key := GetTablesMetaDataCacheKey(Catalog,SchemaPattern,TableNamePattern,Types);
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin

@@ -31,3 +31,5 @@
 20060616 : Date, Time and Float on Lazarus - Patch by fbaqui - See http://zeos.firmos.at/viewtopic.php?t=598
 
 20060620 : Added GetClientVersion and GetServerVersion to Connection/Driver interfaces - Modification by fduenas
+
+20060710 : Integrated contribution from Terence : Added more specific metadata clearcache possibilities.

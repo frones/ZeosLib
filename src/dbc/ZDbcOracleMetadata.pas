@@ -1217,7 +1217,6 @@ function TZOracleDatabaseMetadata.GetTables(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const Types: TStringDynArray): IZResultSet;
 var
-  I: Integer;
   Key, PartSQL, SQL: string;
 
   function IncludedType(const TypeName: string): Boolean;
@@ -1230,13 +1229,7 @@ var
   end;
 
 begin
-  Key := '';
-  for I := Low(Types) to High(Types) do
-    Key := Key + ':' + Types[I];
-
-  Key := Format('get-tables:%s:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern, Key]);
-
+  Key := GetTablesMetaDataCacheKey(Catalog,SchemaPattern,TableNamePattern,Types);
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
