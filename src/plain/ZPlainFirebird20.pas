@@ -540,9 +540,9 @@ begin
       for I := 0 to High(FPreLocations) do
       begin
         Location := FPreLocations[I];
-        PreHandle := GetModuleHandle(PChar(Location));
-        if PreHandle = 0 then
-        begin
+//        PreHandle := GetModuleHandle(PChar(Location));
+//        if PreHandle = 0 then
+//        begin
 {$IFDEF UNIX}
   {$IFDEF FPC}
           PreHandle := ZCompatibility.LoadLibrary(PChar(Location));
@@ -552,7 +552,7 @@ begin
 {$ELSE}
           PreHandle := LoadLibrary(PChar(Location));
 {$ENDIF}
-        end;
+//        end;
         if PreHandle <> 0 then
         begin
           PreLoaded := True;
