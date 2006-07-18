@@ -278,6 +278,9 @@ type
 
   TPQescapeByteaConn =function(Handle: PPGconn;const from:pchar;from_length:longword;to_lenght:PLongword):PChar;cdecl;
   TPQescapeBytea     =function(const from:pchar;from_length:longword;to_lenght:PLongword):PChar;cdecl;
+
+//TODO  TPQescapeString    =function(const from:pchar;from_length:longword;to_lenght:PLongword):PChar;cdecl;
+
 //unsigned char *PQescapeByteaConn(PGconn *conn,
 //                                 const unsigned char *from,
 //                                 size_t from_length,
