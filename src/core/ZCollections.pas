@@ -353,7 +353,8 @@ begin
   Result := FCount;
   if Result = FCapacity then
     Grow;
-  FList^[Result] := Item as IZInterface;
+//  FList^[Result] := Item as IZInterface; // enourmous Memory Hole in FPC > 2.0.2 Release
+  FList^[Result] := Item;
   Inc(FCount);
 end;
 
