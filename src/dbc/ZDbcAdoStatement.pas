@@ -304,6 +304,7 @@ begin
     end;
   end;
 
+  RetValue:= Value;
   if (SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then
   begin
     B := DefVarManager.GetAsInterface(Value) as IZBlob;
