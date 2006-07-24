@@ -353,7 +353,8 @@ begin
   Result := FCount;
   if Result = FCapacity then
     Grow;
-  FList^[Result] := Item as IZInterface;
+//  FList^[Result] := Item as IZInterface; // enourmous Memory Hole in FPC > 2.0.2 Release
+  FList^[Result] := Item;
   Inc(FCount);
 end;
 
@@ -519,7 +520,8 @@ begin
   { Find ordinary objects }
   else
   begin
-    Unknown := Item as IZInterface;
+//    Unknown := Item as IZInterface;
+    Unknown := Item;
     for I := 0 to FCount - 1 do
     begin
       if Unknown = FList^[I] then
@@ -550,7 +552,8 @@ begin
     System.Move(FList^[Index], FList^[Index + 1],
       (FCount - Index) * SizeOf(IZInterface));
   end;
-  FList^[Index] := Item as IZInterface;
+//  FList^[Index] := Item as IZInterface;
+  FList^[Index] := Item;
   Inc(FCount);
 end;
 
@@ -574,7 +577,8 @@ begin
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
 {$ENDIF}
-  FList^[Index] := Item as IZInterface;
+//  FList^[Index] := Item as IZInterface;
+  FList^[Index] := Item;
 end;
 
 {**
