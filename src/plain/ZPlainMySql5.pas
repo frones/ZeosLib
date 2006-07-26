@@ -60,8 +60,8 @@ uses Classes, ZPlainLoader, ZCompatibility, ZPlainMySqlConstants;
 { ***************** Plain API Constants definition **************** }
 
 const
-  WINDOWS1_DLL_LOCATION = 'libmysql5.dll';
-  WINDOWS1_DLL_LOCATION_EMBEDDED = 'libmysqld5.dll';
+  WINDOWS1_DLL_LOCATION = 'libmysql50.dll';
+  WINDOWS1_DLL_LOCATION_EMBEDDED = 'libmysqld50.dll';
   LINUX1_DLL_LOCATION  = 'libmysqlclient.so.15';
 
 { General Declarations }
