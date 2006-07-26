@@ -172,7 +172,9 @@ type
     procedure GetProtocolNames(List: TStrings);
     procedure GetCatalogNames(List: TStrings);
     procedure GetSchemaNames(List: TStrings);
-    procedure GetTableNames(const Pattern: string; List: TStrings);
+    procedure GetTableNames(const Pattern: string; List: TStrings);overload;
+		procedure GetTableNames(const tablePattern,shemaPattern: string; List: TStrings);overload;
+
     procedure GetStoredProcNames(const Pattern: string; List: TStrings);
 
     property InTransaction: Boolean read GetInTransaction;
@@ -953,6 +955,26 @@ begin
   List.Clear;
   Metadata := DbcConnection.GetMetadata;
   ResultSet := Metadata.GetTables('', '', Pattern, nil);
+  while ResultSet.Next do
+    List.Add(ResultSet.GetStringByName('TABLE_NAME'));
+end;
+
+{**
+  Fills string list with table names.
+  @param tablePattern a pattern for table names.
+  @param shemaPattern a pattern for shema names.
+  @param List a string list to fill out.
+}
+procedure TZConnection.GetTableNames(const tablePattern,shemaPattern: string; List: TStrings);
+var
+  Metadata: IZDatabaseMetadata;
+  ResultSet: IZResultSet;
+begin
+  CheckConnected;
+
+  List.Clear;
+  Metadata := DbcConnection.GetMetadata;
+  ResultSet := Metadata.GetTables('', shemaPattern, tablePattern, nil);
   while ResultSet.Next do
     List.Add(ResultSet.GetStringByName('TABLE_NAME'));
 end;
