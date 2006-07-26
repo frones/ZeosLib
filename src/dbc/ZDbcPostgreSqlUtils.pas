@@ -87,6 +87,17 @@ function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
 function EncodeString(Value: string): string; overload;
 
 {**
+  add by Perger -> based on SourceForge:
+  [ 1520587 ] Fix for 1484704: bytea corrupted on post when not using utf8,
+  file: 1484704.patch
+
+  Converts a binary string into escape PostgreSQL format.
+  @param Value a binary stream.
+  @return a string in PostgreSQL binary string escape format.
+}
+function EncodeBinaryString(Value: string): string;
+
+{**
   Determine the character code in terms of enumerated number.
   @param InputString the input string.
   @return the character code in terms of enumerated number.
@@ -608,6 +619,62 @@ begin
         DestBuffer[3] := Chr(Ord('0') + (Byte(SrcBuffer^) and $07));
         Inc(DestBuffer, 4);
       end
+    else
+    begin
+      DestBuffer^ := SrcBuffer^;
+      Inc(DestBuffer);
+    end;
+    Inc(SrcBuffer);
+  end;
+  DestBuffer^ := '''';
+end;
+
+
+{**
+  add by Perger -> based on SourceForge:
+  [ 1520587 ] Fix for 1484704: bytea corrupted on post when not using utf8,
+  file: 1484704.patch
+
+  Converts a binary string into escape PostgreSQL format.
+  @param Value a binary stream.
+  @return a string in PostgreSQL binary string escape format.
+}
+function EncodeBinaryString(Value: string): string;
+var
+  I: Integer;
+  SrcLength, DestLength: Integer;
+  SrcBuffer, DestBuffer: PChar;
+begin
+  SrcLength := Length(Value);
+  SrcBuffer := PChar(Value);
+  DestLength := 2;
+  for I := 1 to SrcLength do
+  begin
+    if (Byte(SrcBuffer^) < 32) or (Byte(SrcBuffer^) > 126)
+    or (SrcBuffer^ in ['''', '\']) then
+      Inc(DestLength, 5)
+    else Inc(DestLength);
+    Inc(SrcBuffer);
+  end;
+
+  SrcBuffer := PChar(Value);
+  SetLength(Result, DestLength);
+  DestBuffer := PChar(Result);
+  DestBuffer^ := '''';
+  Inc(DestBuffer);
+
+  for I := 1 to SrcLength do
+  begin
+    if (Byte(SrcBuffer^) < 32) or (Byte(SrcBuffer^) > 126)
+    or (SrcBuffer^ in ['''', '\']) then
+    begin
+      DestBuffer[0] := '\';
+      DestBuffer[1] := '\';
+      DestBuffer[2] := Chr(Ord('0') + (Byte(SrcBuffer^) shr 6));
+      DestBuffer[3] := Chr(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
+      DestBuffer[4] := Chr(Ord('0') + (Byte(SrcBuffer^) and $07));
+      Inc(DestBuffer, 5);
+    end
     else
     begin
       DestBuffer^ := SrcBuffer^;

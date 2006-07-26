@@ -377,9 +377,14 @@ begin
             end
             else
             begin
+              (* removed by Perger -> based on SourceForge:
+              [ 1520587 ] Fix for 1484704: bytea corrupted on post when not using utf8,
+              file: 1484704.patch
               Result := EncodeString(TempBlob.GetString);
               Result := Copy(Result, 2, Length(Result) - 2);
               Result := EncodeString(Result);
+              *)
+              Result := EncodeBinaryString(TempBlob.GetString);
             end;
           end else
             Result := 'NULL';
