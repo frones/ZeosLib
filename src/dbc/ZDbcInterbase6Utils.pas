@@ -457,14 +457,16 @@ end;
 function GetCachedResultSet(SQL: string;
   Statement: IZStatement; NativeResultSet: IZResultSet): IZResultSet;
 var
+  CachedResolver: TZInterbase6CachedResolver;
   CachedResultSet: TZCachedResultSet;
 begin
   if (Statement.GetResultSetConcurrency <> rcReadOnly)
     or (Statement.GetResultSetType <> rtForwardOnly) then
   begin
-    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil);
-    CachedResultSet.SetResolver(TZInterbase6CachedResolver.Create(
-      Statement,  NativeResultSet.GetMetadata));
+    CachedResolver  := TZInterbase6CachedResolver.Create(
+      Statement,  NativeResultSet.GetMetadata);
+    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
+      CachedResolver);
     CachedResultSet.SetConcurrency(Statement.GetResultSetConcurrency);
     Result := CachedResultSet;
   end else

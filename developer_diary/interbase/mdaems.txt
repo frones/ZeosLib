@@ -7,3 +7,5 @@
 20060710 : Integrated contribution from Terence : separated Firebird from interbase/strict dll loading for Firebird
 
 20060726 : Bytea/blob - PostgreSQL - UNICODE/UTF8 - patch by aperger - see http://zeos.firmos.at/viewtopic.php?t=683
+
+20060802 : Integrated patch from Fduenas concerning http://zeos.firmos.at/viewtopic.php?t=677

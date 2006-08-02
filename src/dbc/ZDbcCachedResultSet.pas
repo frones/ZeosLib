@@ -436,6 +436,10 @@ end;
 procedure TZAbstractCachedResultSet.SetResolver(Resolver: IZCachedResolver);
 begin
   FResolver := Resolver;
+{BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
+  if FNativeResolver = nil then
+     FNativeResolver := Resolver;
+{END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
 end;
 {BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
 {**
