@@ -1079,7 +1079,8 @@ end;
 
 function TZMySQL320PlainDriver.Init(var Handle: PZMySQLConnect): PZMySQLConnect;
 begin
-  MYSQL_API.mysql_server_init(1, nil, nil);
+  if @MYSQL_API.mysql_server_init <> nil then
+    MYSQL_API.mysql_server_init(1, nil, nil);
   Handle := AllocMem(SizeOf(ZPlainMySql320.MYSQL));
   Result := MYSQL_API.mysql_init(Handle);
 end;
@@ -1559,7 +1560,8 @@ end;
 
 function TZMySQL323PlainDriver.Init(var Handle: PZMySQLConnect): PZMySQLConnect;
 begin
-  MYSQL_API.mysql_server_init(1, nil, nil);
+  if @MYSQL_API.mysql_server_init <> nil then
+    MYSQL_API.mysql_server_init(1, nil, nil);
   Handle := AllocMem(SizeOf(ZPlainMySql323.MYSQL));
   Result := MYSQL_API.mysql_init(Handle);
 end;
@@ -2037,7 +2039,8 @@ end;
 
 function TZMySQL40PlainDriver.Init(var Handle: PZMySQLConnect): PZMySQLConnect;
 begin
-  MYSQL_API.mysql_server_init(1, nil, nil);
+  if @MYSQL_API.mysql_server_init <> nil then
+    MYSQL_API.mysql_server_init(1, nil, nil);
   Handle := AllocMem(SizeOf(ZPlainMySql40.mysql));
   Result := MYSQL_API.mysql_init(Handle);
 end;
@@ -2366,7 +2369,8 @@ end;
 
 function TZMySQLD40PlainDriver.Init(var Handle: PZMySQLConnect): PZMySQLConnect;
 begin
-  MYSQL_API.mysql_server_init(3, @DEFAULT_PARAMS, @SERVER_GROUPS);
+  if @MYSQL_API.mysql_server_init <> nil then
+    MYSQL_API.mysql_server_init(3, @DEFAULT_PARAMS, @SERVER_GROUPS);
   Handle := MYSQL_API.mysql_init(nil);
   Result := Handle;
 end;
@@ -2539,7 +2543,8 @@ end;
 
 function TZMySQL41PlainDriver.Init(var Handle: PZMySQLConnect): PZMySQLConnect;
 begin
-  MYSQL_API.mysql_server_init(0, nil, nil);
+  if @MYSQL_API.mysql_server_init <> nil then
+    MYSQL_API.mysql_server_init(1, nil, nil);
   Handle := MYSQL_API.mysql_init(nil);
   Result := Handle;
 end;
@@ -2860,7 +2865,8 @@ end;
 
 function TZMySQLD41PlainDriver.Init(var Handle: PZMySQLConnect): PZMySQLConnect;
 begin
-  MYSQL_API.mysql_server_init(3, @DEFAULT_PARAMS, @SERVER_GROUPS);
+  if @MYSQL_API.mysql_server_init <> nil then
+    MYSQL_API.mysql_server_init(3, @DEFAULT_PARAMS, @SERVER_GROUPS);
   Handle := MYSQL_API.mysql_init(nil);
   Result := Handle;
 end;
@@ -3033,7 +3039,8 @@ end;
 
 function TZMySQL5PlainDriver.Init(var Handle: PZMySQLConnect): PZMySQLConnect;
 begin
-  MYSQL_API.mysql_server_init(1, nil, nil);
+  if @MYSQL_API.mysql_server_init <> nil then
+    MYSQL_API.mysql_server_init(1, nil, nil);
   Handle := MYSQL_API.mysql_init(nil);
   Result := Handle;
 end;
@@ -3354,7 +3361,8 @@ end;
 
 function TZMySQLD5PlainDriver.Init(var Handle: PZMySQLConnect): PZMySQLConnect;
 begin
-  MYSQL_API.mysql_server_init(3, @DEFAULT_PARAMS, @SERVER_GROUPS);
+  if @MYSQL_API.mysql_server_init <> nil then
+    MYSQL_API.mysql_server_init(3, @DEFAULT_PARAMS, @SERVER_GROUPS);
   Handle := MYSQL_API.mysql_init(nil);
   Result := Handle;
 end;

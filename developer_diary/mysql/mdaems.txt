@@ -17,3 +17,5 @@
 20060613 : Rewrote ZPlainMysqlXX files to add embedded server support for versions 4.0,4.1,5 of  mysql - Written by mdaems
 
 20060620 : Various modifications/extentions to Mysql DBC and Plain driver units - Written by fduenas and mdaems
+
+20060802 : Changed for compatibility with C++ Builder 6 - by mdaems - see http://zeos.firmos.at/viewtopic.php?t=694
