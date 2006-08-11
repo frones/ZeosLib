@@ -269,6 +269,7 @@ resourcestring
   SConnectionIsNotOpened = 'Verbinding is niet gemaakt.';
   SInvalidOpInAutoCommit = 'Ongeldige operatie in AutoCommit mode.';
   SInvalidOpInNonAutoCommit = 'Ongeldige operatie in non AutoCommit mode.';
+  SInvalidOpPrepare = 'Transactie voorbereiden is enkel mogelijk bij de eerste aanroep van Starttransaction!';
 
   SConnectionIsNotAssigned = 'Database connectie component is niet toegekend';
   SQueryIsEmpty = 'SQL Query is leeg';
@@ -332,6 +333,9 @@ resourcestring
   SSQLEditor = 'SQL Editor';
   SDatabaseDialog = 'Open bestaande database';
 
+  SUpdateSQLNoResult = 'Der zuvor aktualisierte SQL liefert kein Resultset zurück';
+  SUpdateSQLRefreshStatementcount ='Update Refresh SQL Statement count moet 1 zijn';
+
   {$IFDEF FPC}
   SNotEditing = 'Dataset is niet in edit of insert modus';
   SFieldTypeMismatch = 'Type mismatch voor veld ''%s'', verwacht: %s actueel: %s';
@@ -370,7 +374,7 @@ resourcestring
   STypesMismatch = 'Inkompatible Typen';
   SUnsupportedVariantType = 'Nicht unterstützter Variant-Typ';
   SUnsupportedOperation = 'Nicht unterstützte Operation';
-  SUnsupportedByDriver    = 'Translate: Driver can not support this feature natively: [%s]';
+  SUnsupportedByDriver    = 'Der Treiber unterstützt dieses Feature nicht von haus aus: [%s]';
 
   STokenizerIsNotDefined = 'Tokenizer wurde nicht definiert';
   SLibraryNotFound = 'Es wurde keine der in %s gelisteten DLL''s gefunden';
@@ -406,11 +410,11 @@ resourcestring
   SWrongTypeForBlobParameter = 'Falscher Typ für einen BLOB-Parameter';
   SIncorrectConnectionURL = 'Falsche Verbindungs-URL: %s';
   SUnsupportedProtocol = 'Nicht unterstütztes Protokoll: %s';
-  SUnsupportedByDriver    = 'Translate: Driver can not support this feature natively: [%s]';
 
   SConnectionIsNotOpened = 'Die Verbindung zur Datenbank ist noch nicht hergestellt';
   SInvalidOpInAutoCommit = 'Ungültige Operation im AUTOCOMMIT-Modus';
   SInvalidOpInNonAutoCommit = 'Ungültige Operation außerhalb des AUTOCOMMIT-Modus';
+  SInvalidOpPrepare = 'Transaktion vorzubereiten ist nur beim ersten Aufruf von Starttransaction möglich!';
 
   SConnectionIsNotAssigned = 'Die Datenbank-Verbindungskomponente ist nicht angegeben';
   SQueryIsEmpty = 'SQL Query leer';
@@ -473,6 +477,9 @@ resourcestring
   SDialogSaveTitle = 'SQL Script speichern';
   SSQLEditor = 'SQL Editor';
   SDatabaseDialog = 'Existierende Datenbank öffnen';
+
+  SUpdateSQLNoResult = 'Translate : Update Refresh SQL delivered no resultset';
+  SUpdateSQLRefreshStatementcount ='Translate : Update Refresh SQL Statement count must be 1';
 
   {$IFDEF FPC}
   SNotEditing = 'Das DataSet ist nicht im "edit" oder "insert" Modus.';
@@ -550,6 +557,7 @@ resourcestring
   SConnectionIsNotOpened = 'La conexión no ha sido abierta todavía';
   SInvalidOpInAutoCommit = 'Operación inválida en modo AutoCommit';
   SInvalidOpInNonAutoCommit = 'Operación inválida en modo No-AutoCommit';
+  SInvalidOpPrepare = 'Translate : Prepare transaction only possible on matching first(!) Starttransaction';
 
   SConnectionIsNotAssigned = 'El componente de conexión a base de datos no está asigando';
   SQueryIsEmpty = 'La Consulta SQL está vacía';
@@ -613,6 +621,9 @@ resourcestring
   SDialogSaveTitle = 'Guardar archivo SQL';
   SSQLEditor = 'Editor SQL';
   SDatabaseDialog = 'Abrir base de datos existente';
+
+  SUpdateSQLNoResult = 'Translate : Update Refresh SQL delivered no resultset';
+  SUpdateSQLRefreshStatementcount ='Translate : Update Refresh SQL Statement count must be 1';
 
   {$IFDEF FPC}
   SNotEditing = 'El Dataset no se encuentra en modo de edición o inserción';

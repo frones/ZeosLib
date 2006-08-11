@@ -33,3 +33,6 @@
 20060620 : Added GetClientVersion and GetServerVersion to Connection/Driver interfaces - Modification by fduenas
 
 20060710 : Integrated contribution from Terence : Added more specific metadata clearcache possibilities.
+
+20060811 : Updated some message translations - German versions by wdbrmpft (Klaus) - See http://zeos.firmos.at/viewtopic.php?t=704
+           Synchronized Trunk change by Helmut (Firmos)

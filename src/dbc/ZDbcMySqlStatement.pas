@@ -166,8 +166,8 @@ begin
   if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
-    if FPlainDriver.GetStatus(FHandle) = MYSQL_STATUS_READY then
-      raise EZSQLException.Create(SCanNotOpenResultSet);
+//    if FPlainDriver.GetStatus(FHandle) = MYSQL_STATUS_READY then
+//      raise EZSQLException.Create(SCanNotOpenResultSet);
     Result := CreateResultSet(SQL);
   end else
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
