@@ -1077,7 +1077,9 @@ initialization
     ]);
 {$ELSE}
   LibraryLoader := TZMySQLNativeLibraryLoader.Create(
-    [LINUX_DLL_LOCATION,LINUX_DLL_LOCATION2]);
+    [LINUX_DLL_LOCATION
+//    ,LINUX_DLL_LOCATION2
+    ]);
 {$ENDIF}
 finalization
   if Assigned(LibraryLoader) then
