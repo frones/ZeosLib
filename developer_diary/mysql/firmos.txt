@@ -6,3 +6,7 @@ Done some basic tests - working...
 MySQL Ping Commando added
 
 02042006 MDAEMS Mysql MetaData Patch Temporary Tables
+
+14082006
+Patched MyQSL Plain Driver / MYSQL Structur should not be used anymore ... incompatibilities
+are always possible - New Function ResultsetExists ...

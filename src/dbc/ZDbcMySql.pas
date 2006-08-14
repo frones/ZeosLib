@@ -53,9 +53,6 @@ type
   {** Implements MySQL Database Driver. }
   TZMySQLDriver = class(TZAbstractDriver)
   private
-    FMySQL320PlainDriver: IZMySQLPlainDriver;
-    FMySQL323PlainDriver: IZMySQLPlainDriver;
-    FMySQL40PlainDriver: IZMySQLPlainDriver;
     FMySQL41PlainDriver: IZMySQLPlainDriver;
     FMySQL5PlainDriver: IZMySQLPlainDriver;
   protected
@@ -133,9 +130,6 @@ uses
 }
 constructor TZMySQLDriver.Create;
 begin
-  FMySQL320PlainDriver := TZMySQL320PlainDriver.Create;
-  FMySQL323PlainDriver := TZMySQL323PlainDriver.Create;
-  FMySQL40PlainDriver  := TZMySQL40PlainDriver.Create;
   FMySQL41PlainDriver  := TZMySQL41PlainDriver.Create;
   FMySQL5PlainDriver   := TZMySQL5PlainDriver.Create;
 end;
@@ -230,11 +224,8 @@ function TZMySQLDriver.GetSupportedProtocols: TStringDynArray;
 begin
   SetLength(Result, 6);
   Result[0] := 'mysql';
-  Result[1] := FMySQL320PlainDriver.GetProtocol;
-  Result[2] := FMySQL323PlainDriver.GetProtocol;
-  Result[3] := FMySQL40PlainDriver.GetProtocol;
-  Result[4] := FMySQL41PlainDriver.GetProtocol;
-  Result[5] := FMySQL5PlainDriver.GetProtocol;
+  Result[1] := FMySQL41PlainDriver.GetProtocol;
+  Result[2] := FMySQL5PlainDriver.GetProtocol;
 end;
 
 {**
@@ -247,13 +238,7 @@ var
   Protocol: string;
 begin
   Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
-  if Protocol = FMySQL320PlainDriver.GetProtocol then
-    Result := FMySQL320PlainDriver
-  else if Protocol = FMySQL323PlainDriver.GetProtocol then
-    Result := FMySQL323PlainDriver
-  else if Protocol = FMySQL40PlainDriver.GetProtocol then
-    Result := FMySQL40PlainDriver
-  else if Protocol = FMySQL41PlainDriver.GetProtocol then
+  if Protocol = FMySQL41PlainDriver.GetProtocol then
     Result := FMySQL41PlainDriver
   else if Protocol = FMySQL5PlainDriver.GetProtocol then
     Result := FMySQL5PlainDriver
@@ -275,12 +260,9 @@ end;
   @param Password a user password.
   @param Info a string list with extra connection parameters.
 }
-constructor TZMySQLConnection.Create(Driver: IZDriver; Url: string;
-  PlainDriver: IZMySQLPlainDriver; HostName: string; Port: Integer;
-  Database, User, Password: string; Info: TStrings);
+constructor TZMySQLConnection.Create(Driver: IZDriver; Url: string;PlainDriver: IZMySQLPlainDriver; HostName: string; Port: Integer; Database, User, Password: string; Info: TStrings);
 begin
-  inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
-    TZMySQLDatabaseMetadata.Create(Self, Url, Info));
+  inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,TZMySQLDatabaseMetadata.Create(Self, Url, Info));
 
   { Sets a default properties }
   FPlainDriver := PlainDriver;

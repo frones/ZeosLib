@@ -413,6 +413,8 @@ type
   PMYSQL_METHODS =  ^MYSQL_METHODS;
 
   PMYSQL = ^MYSQL;
+  MYSQL  = pointer;
+{ // This Structure Changes from Time to Time, so avoid using it !
   MYSQL = record
     _net:            NET;
     connector_fd:    Pointer;
@@ -450,11 +452,12 @@ type
     next_slave:      PMYSQL;
     last_used_slave: PMYSQL;
     last_used_con:   PMYSQL;
-    stmts:           Pointer; //PLIST;            {list of all statements }
+    stmts:           Pointer; //PLIST;
     methods:         Pointer;  //PMYSQL_METHODS;
     thd:             Pointer;
     unbuffered_fetch_owner: PByte;
   end;
+ }
 
   MYSQL_RES = record
     row_count:       Int64;
@@ -1078,7 +1081,7 @@ initialization
 {$ELSE}
   LibraryLoader := TZMySQLNativeLibraryLoader.Create(
     [LINUX_DLL_LOCATION
-//    ,LINUX_DLL_LOCATION2
+    ,LINUX_DLL_LOCATION2
     ]);
 {$ENDIF}
 finalization

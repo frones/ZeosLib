@@ -163,14 +163,15 @@ end;
 function TZMySQLStatement.ExecuteQuery(SQL: string): IZResultSet;
 begin
   Result := nil;
-  if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then
-  begin
+  if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
-//    if FPlainDriver.GetStatus(FHandle) = MYSQL_STATUS_READY then
-//      raise EZSQLException.Create(SCanNotOpenResultSet);
+    if not FPlainDriver.ResultSetExists(FHandle) then begin
+      raise EZSQLException.Create(SCanNotOpenResultSet);
+    end;
     Result := CreateResultSet(SQL);
-  end else
+  end else begin
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
+  end;
 end;
 
 {**
@@ -193,20 +194,20 @@ begin
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
     { Process queries with result sets }
-    if FPlainDriver.GetStatus(FHandle) <> MYSQL_STATUS_READY then
-    begin
+    if FPlainDriver.ResultSetExists(FHandle) then begin
       QueryHandle := FPlainDriver.StoreResult(FHandle);
-      if QueryHandle <> nil then
-      begin
+      if QueryHandle <> nil then begin
         Result := FPlainDriver.GetRowCount(QueryHandle);
         FPlainDriver.FreeResult(QueryHandle);
-      end else
+      end else begin
         Result := FPlainDriver.GetAffectedRows(FHandle);
-    end
-    { Process regular query }
-    else Result := FPlainDriver.GetAffectedRows(FHandle);
-  end else
+      end;
+    end else  begin { Process regular query }
+     Result := FPlainDriver.GetAffectedRows(FHandle);
+    end;
+  end else begin
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
+  end;
   LastUpdateCount := Result;
 end;
 
@@ -233,23 +234,19 @@ end;
 function TZMySQLStatement.Execute(SQL: string): Boolean;
 begin
   Result := False;
-  if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then
-  begin
+  if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
     { Process queries with result sets }
-    if FPlainDriver.GetStatus(FHandle) <> MYSQL_STATUS_READY then
-    begin
+    if FPlainDriver.ResultSetExists(FHandle) then begin
       Result := True;
       LastResultSet := CreateResultSet(SQL);
-    end
-    { Processes regular query. }
-    else
-    begin
+    end else begin { Processes regular query. }
       Result := False;
       LastUpdateCount := FPlainDriver.GetAffectedRows(FHandle);
     end;
-  end else
+  end else begin
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
+  end;
 end;
 
 { TZMySQLPreparedStatement }
