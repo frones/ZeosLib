@@ -73,6 +73,9 @@
 
 // Enables MySQL support in TZConnection/TZDataset
 {$DEFINE ENABLE_MYSQL}
+// Enables Mysql 3.x and 4.0 support
+// These versions are deprecated and will not be supported in future versions of zeoslib.
+{.$DEFINE ENABLE_MYSQL_DEPRECATED}
 
 // Enables PostgreSQL support in TZConnection/TZDataset
 {$DEFINE ENABLE_POSTGRESQL}

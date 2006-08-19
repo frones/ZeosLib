@@ -53,9 +53,11 @@ type
   {** Implements MySQL Database Driver. }
   TZMySQLDriver = class(TZAbstractDriver)
   private
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
     FMySQL320PlainDriver: IZMySQLPlainDriver;
     FMySQL323PlainDriver: IZMySQLPlainDriver;
     FMySQL40PlainDriver: IZMySQLPlainDriver;
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
     FMySQL41PlainDriver: IZMySQLPlainDriver;
     FMySQL5PlainDriver: IZMySQLPlainDriver;
     // embedded drivers
@@ -140,9 +142,11 @@ uses
 }
 constructor TZMySQLDriver.Create;
 begin
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
   FMySQL320PlainDriver := TZMySQL320PlainDriver.Create;
   FMySQL323PlainDriver := TZMySQL323PlainDriver.Create;
   FMySQL40PlainDriver  := TZMySQL40PlainDriver.Create;
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
   FMySQL41PlainDriver  := TZMySQL41PlainDriver.Create;
   FMySQL5PlainDriver   := TZMySQL5PlainDriver.Create;
   // embedded drivers
@@ -237,20 +241,34 @@ end;
   For example: mysql, oracle8 or postgresql72
 }
 function TZMySQLDriver.GetSupportedProtocols: TStringDynArray;
+var i : smallint;
 begin
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
   SetLength(Result, 8);
-
+{$ELSE}
+  SetLength(Result, 5);
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
+  i := 0;
   // Generic driver
-  Result[0] := 'mysql';
+  Result[i] := 'mysql';
+  inc(i);
 
-  Result[1] := FMySQL320PlainDriver.GetProtocol;
-  Result[2] := FMySQL323PlainDriver.GetProtocol;
-  Result[3] := FMySQL40PlainDriver.GetProtocol;
-  Result[4] := FMySQL41PlainDriver.GetProtocol;
-  Result[5] := FMySQL5PlainDriver.GetProtocol;
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
+  Result[i] := FMySQL320PlainDriver.GetProtocol;
+  inc(i);
+  Result[i] := FMySQL323PlainDriver.GetProtocol;
+  inc(i);
+  Result[i] := FMySQL40PlainDriver.GetProtocol;
+  inc(i);
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
+  Result[i] := FMySQL41PlainDriver.GetProtocol;
+  inc(i);
+  Result[i] := FMySQL5PlainDriver.GetProtocol;
+  inc(i);
   // embedded drivers
-  Result[6] := FMySQLD41PlainDriver.GetProtocol;
-  Result[7] := FMySQLD5PlainDriver.GetProtocol;
+  Result[i] := FMySQLD41PlainDriver.GetProtocol;
+  inc(i);
+  Result[i] := FMySQLD5PlainDriver.GetProtocol;
 end;
 
 {**
@@ -263,12 +281,15 @@ var
   Protocol: string;
 begin
   Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
-  if Protocol = FMySQL320PlainDriver.GetProtocol then
+  if false then
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
+  else if Protocol = FMySQL320PlainDriver.GetProtocol then
     Result := FMySQL320PlainDriver
   else if Protocol = FMySQL323PlainDriver.GetProtocol then
     Result := FMySQL323PlainDriver
   else if Protocol = FMySQL40PlainDriver.GetProtocol then
     Result := FMySQL40PlainDriver
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
   else if Protocol = FMySQL41PlainDriver.GetProtocol then
     Result := FMySQL41PlainDriver
   else if Protocol = FMySQL5PlainDriver.GetProtocol then

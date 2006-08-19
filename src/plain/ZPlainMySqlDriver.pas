@@ -49,7 +49,8 @@ interface
 {$I ZPlain.inc}
 
 uses ZClasses, ZPlainDriver, ZCompatibility, ZPlainMysqlConstants,
-     ZPlainMySql320, ZPlainMySql323, ZPlainMySql40, ZPlainMySql41, ZPlainMySql5;
+     {$IFDEF ENABLE_MYSQL_DEPRECATED} ZPlainMySql320, ZPlainMySql323, ZPlainMySql40,{$ENDIF}
+     ZPlainMySql41, ZPlainMySql5;
 
 const
 
@@ -299,7 +300,10 @@ type
 }
   end;
 
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
+
   {** Implements a driver for MySQL 3.20 }
+
   TZMySQL320PlainDriver = class (TZAbstractObject, IZPlainDriver,
     IZMySQLPlainDriver)
   protected
@@ -661,6 +665,7 @@ type
     procedure Initialize; override;
     function Init(var Handle: PZMySQLConnect): PZMySQLConnect; override;
   end;
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
 
   {** Implements a driver for MySQL 4.1 }
   TZMySQL41PlainDriver = class (TZAbstractObject, IZPlainDriver,
@@ -672,7 +677,7 @@ type
 
     function GetProtocol: string; virtual;
     function GetDescription: string; virtual;
-    procedure Initialize; virtual; 
+    procedure Initialize; virtual;
 
     procedure Debug(Debug: PChar);
     function DumpDebugInfo(Handle: PZMySQLConnect): Integer;
@@ -916,6 +921,7 @@ type
 implementation
 uses SysUtils, ZMessages;
 
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
 { TZMySQL320PlainDriver }
 
 constructor TZMySQL320PlainDriver.Create;
@@ -2380,6 +2386,7 @@ begin
   ZPlainMySql40.LibraryLoaderEmbedded.LoadIfNeeded;
   MYSQL_API := ZPlainMySql40.LibraryLoaderEmbedded.api_rec;
 end;
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
 
 { TZMySQL41PlainDriver }
 
