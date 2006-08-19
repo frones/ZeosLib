@@ -358,6 +358,10 @@ type
 
   PMYSQL_METHODS =  ^MYSQL_METHODS;
   PMYSQL = ^MYSQL;
+
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
+ // This Structure Changes from Time to Time, so avoid using it !
+ // Used by old GetStatus ,function necessary for mysql3.20
   MYSQL = record
     _net:            NET;
     connector_fd:    Pointer;
@@ -400,6 +404,9 @@ type
     thd:             Pointer;
     unbuffered_fetch_owner: PByte;
   end;
+{$ELSE}
+  MYSQL  = pointer;
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
 
   MYSQL_RES = record
     row_count:       Int64;

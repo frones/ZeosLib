@@ -282,7 +282,10 @@ type
     {non API functions}
     function GetFieldType(Field: PZMySQLField): Byte;
     function GetFieldFlags(Field: PZMySQLField): Integer;
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
     function GetStatus(Handle: PZMySQLConnect): TZMySQLStatus;
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
+    function ResultSetExists(Handle: PZMySQLConnect):Boolean;
     function GetRowCount(Res: PZMySQLResult): Int64;
     function GetFieldCount(Res: PZMySQLResult): Integer;
     function GetFieldName(Field: PZMySQLField): PChar;
@@ -412,6 +415,7 @@ type
     function GetFieldType(Field: PZMySQLField): Byte;
     function GetFieldFlags(Field: PZMySQLField): Integer;
     function GetStatus(Handle: PZMySQLConnect): TZMySQLStatus;
+    function ResultSetExists(Handle: PZMySQLConnect):Boolean;
     function GetRowCount(Res: PZMySQLResult): Int64;
     function GetFieldCount(Res: PZMySQLResult): Integer;
     function GetFieldName(Field: PZMySQLField): PChar;
@@ -530,6 +534,7 @@ type
     function GetFieldType(Field: PZMySQLField): Byte;
     function GetFieldFlags(Field: PZMySQLField): Integer;
     function GetStatus(Handle: PZMySQLConnect): TZMySQLStatus;
+    function ResultSetExists(Handle: PZMySQLConnect):Boolean;
     function GetRowCount(Res: PZMySQLResult): Int64;
     function GetFieldCount(Res: PZMySQLResult): Integer;
     function GetFieldName(Field: PZMySQLField): PChar;
@@ -648,6 +653,7 @@ type
     function GetFieldType(Field: PZMySQLField): Byte;
     function GetFieldFlags(Field: PZMySQLField): Integer;
     function GetStatus(Handle: PZMySQLConnect): TZMySQLStatus;
+    function ResultSetExists(Handle: PZMySQLConnect):Boolean;
     function GetRowCount(Res: PZMySQLResult): Int64;
     function GetFieldCount(Res: PZMySQLResult): Integer;
     function GetFieldName(Field: PZMySQLField): PChar;
@@ -774,7 +780,10 @@ type
 
     function GetFieldType(Field: PZMySQLField): Byte;
     function GetFieldFlags(Field: PZMySQLField): Integer;
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
     function GetStatus(Handle: PZMySQLConnect): TZMySQLStatus;
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
+    function ResultSetExists(Handle: PZMySQLConnect):Boolean;
     function GetRowCount(Res: PZMySQLResult): Int64;
     function GetFieldCount(Res: PZMySQLResult): Integer;
     function GetFieldName(Field: PZMySQLField): PChar;
@@ -899,7 +908,10 @@ type
 
     function GetFieldType(Field: PZMySQLField): Byte;
     function GetFieldFlags(Field: PZMySQLField): Integer;
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
     function GetStatus(Handle: PZMySQLConnect): TZMySQLStatus;
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
+    function ResultSetExists(Handle: PZMySQLConnect):Boolean;
     function GetRowCount(Res: PZMySQLResult): Int64;
     function GetFieldCount(Res: PZMySQLResult): Integer;
     function GetFieldName(Field: PZMySQLField): PChar;
@@ -1350,6 +1362,12 @@ begin
   Result := TZMySQLStatus(ZPlainMySql320.PMYSQL(Handle).status);
 end;
 
+function TZMySQL320PlainDriver.ResultSetExists(Handle: PZMySQLConnect): Boolean;
+begin
+  Exception.CreateFmt (SUnsupportedByDriver, ['ResultSetExists']);
+  result := False;
+end;
+
 function TZMySQL320PlainDriver.GetFieldCount(Res: PZMySQLResult): Integer;
 begin
   Result := ZPlainMySql320.PMYSQL_RES(Res).field_count;
@@ -1394,13 +1412,13 @@ end;
 
 function TZMySQL320PlainDriver.GetClientVersion: Integer;
 begin
- Result := 30200;
+ Result := 32000;
 end;
 
 function TZMySQL320PlainDriver.GetServerVersion(
   Handle: PZMySQLConnect): Integer;
 begin
- Result := 30200;
+ Result := 32000;
 end;
 
 { TZMySQL323PlainDriver }
@@ -1830,6 +1848,12 @@ begin
   Result := TZMySQLStatus(ZPlainMySql323.PMYSQL(Handle).status);
 end;
 
+function TZMySQL323PlainDriver.ResultSetExists(Handle: PZMySQLConnect): Boolean;
+begin
+ result := MYSQL_API.mysql_field_count(Handle)<>0;
+ // True If statement should return a resultset
+end;
+
 function TZMySQL323PlainDriver.GetFieldCount(Res: PZMySQLResult): Integer;
 begin
   Result := ZPlainMySql323.PMYSQL_RES(Res).field_count;
@@ -1874,13 +1898,13 @@ end;
 
 function TZMySQL323PlainDriver.GetClientVersion: Integer;
 begin
- Result := 30203;
+ Result := 32300;
 end;
 
 function TZMySQL323PlainDriver.GetServerVersion(
   Handle: PZMySQLConnect): Integer;
 begin
- Result := 30203;
+ Result := 32300;
 end;
 
 { TZMySQL40PlainDriver }
@@ -2307,6 +2331,12 @@ end;
 function TZMySQL40PlainDriver.GetStatus(Handle: PZMySQLConnect): TZMySQLStatus;
 begin
   Result := TZMySQLStatus(ZPlainMySql40.PMYSQL(Handle).status);
+end;
+
+function TZMySQL40PlainDriver.ResultSetExists(Handle: PZMySQLConnect): Boolean;
+begin
+ result := MYSQL_API.mysql_field_count(Handle)<>0;
+ // True If statement should return a resultset
 end;
 
 function TZMySQL40PlainDriver.GetFieldCount(Res: PZMySQLResult): Integer;
@@ -2801,9 +2831,17 @@ begin
   Result := ZPlainMySql41.PMYSQL_RES(Res).row_count;
 end;
 
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
 function TZMySQL41PlainDriver.GetStatus(Handle: PZMySQLConnect): TZMySQLStatus;
 begin
   Result := TZMySQLStatus(ZPlainMySql41.PMYSQL(Handle).status);
+end;
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
+
+function TZMySQL41PlainDriver.ResultSetExists(Handle: PZMySQLConnect): Boolean;
+begin
+ result := MYSQL_API.mysql_field_count(Handle)<>0;
+ // True If statement should return a resultset
 end;
 
 function TZMySQL41PlainDriver.GetFieldCount(Res: PZMySQLResult): Integer;
@@ -3297,9 +3335,17 @@ begin
   Result := ZPlainMySql5.PMYSQL_RES(Res).row_count;
 end;
 
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
 function TZMySQL5PlainDriver.GetStatus(Handle: PZMySQLConnect): TZMySQLStatus;
 begin
   Result := TZMySQLStatus(ZPlainMySql5.PMYSQL(Handle).status);
+end;
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
+
+function TZMySQL5PlainDriver.ResultSetExists(Handle: PZMySQLConnect): Boolean;
+begin
+ result := MYSQL_API.mysql_field_count(Handle)<>0;
+ // True If statement should return a resultset
 end;
 
 function TZMySQL5PlainDriver.GetFieldCount(Res: PZMySQLResult): Integer;

@@ -166,8 +166,17 @@ begin
   if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
-//    if FPlainDriver.GetStatus(FHandle) = MYSQL_STATUS_READY then
-//      raise EZSQLException.Create(SCanNotOpenResultSet);
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
+    if FPlainDriver.GetClientVersion < 32200 then
+      begin
+        // ResultSetExists is only useable since mysql 3.22
+        if FPlainDriver.GetStatus(FHandle) = MYSQL_STATUS_READY then
+          raise EZSQLException.Create(SCanNotOpenResultSet);
+      end
+    else
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
+    if not FPlainDriver.ResultSetExists(FHandle) then
+      raise EZSQLException.Create(SCanNotOpenResultSet);
     Result := CreateResultSet(SQL);
   end else
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
@@ -187,13 +196,22 @@ end;
 function TZMySQLStatement.ExecuteUpdate(const SQL: string): Integer;
 var
   QueryHandle: PZMySQLResult;
+  HasResultset : Boolean;
 begin
   Result := -1;
   if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
+    if FPlainDriver.GetClientVersion < 32200 then
+      HasResultSet := FPlainDriver.GetStatus(FHandle) <> MYSQL_STATUS_READY
+    else
+      HasResultSet := FPlainDriver.ResultSetExists(FHandle);
+{$ELSE}
+    HasResultSet := FPlainDriver.ResultSetExists(FHandle);
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
     { Process queries with result sets }
-    if FPlainDriver.GetStatus(FHandle) <> MYSQL_STATUS_READY then
+    if HasResultSet then
     begin
       QueryHandle := FPlainDriver.StoreResult(FHandle);
       if QueryHandle <> nil then
@@ -231,13 +249,23 @@ end;
   <code>false</code> if it is an update count or there are no more results
 }
 function TZMySQLStatement.Execute(const SQL: string): Boolean;
+var
+  HasResultset : Boolean;
 begin
   Result := False;
   if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
+    if FPlainDriver.GetClientVersion < 32200 then
+      HasResultSet := FPlainDriver.GetStatus(FHandle) <> MYSQL_STATUS_READY
+    else
+      HasResultSet := FPlainDriver.ResultSetExists(FHandle);
+{$ELSE}
+    HasResultSet := FPlainDriver.ResultSetExists(FHandle);
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
     { Process queries with result sets }
-    if FPlainDriver.GetStatus(FHandle) <> MYSQL_STATUS_READY then
+    if HasResultSet then
     begin
       Result := True;
       LastResultSet := CreateResultSet(SQL);

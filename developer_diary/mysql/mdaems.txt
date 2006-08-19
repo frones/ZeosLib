@@ -19,3 +19,7 @@
 20060620 : Various modifications/extentions to Mysql DBC and Plain driver units - Written by fduenas and mdaems
 
 20060802 : Changed for compatibility with C++ Builder 6 - by mdaems - see http://zeos.firmos.at/viewtopic.php?t=694
+
+20060819 : Changed mysql 3.x and 4.0 to deprecated - written by mdaems
+
+20060819 : Removed calls to Mysql datastructure where possible (Only necessary for mysql3.20) - written by mdaems
