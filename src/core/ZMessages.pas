@@ -191,6 +191,10 @@ resourcestring
 
   SUpdateSQLNoResult = 'SQL Update Refresh resultou num conjunto vazio';
   SUpdateSQLRefreshStatementcount ='Usar somente 1 declaraçao SQL para Update Refresh';
+  SFailedToBindAllValues  = 'Translate: Application failed to pre-bind all values';
+  SAttemptExecOnBadPrep   = 'Translate: Attempt made to execute a statement before a successful preparation.';
+  SBindingFailure         = 'Translate: Failed to bind parameter set';
+  SPreparedStmtExecFailure = 'Translate: Prepared statement failed to execute';
 
 
   {$IFDEF FPC}
@@ -198,6 +202,15 @@ resourcestring
   SFieldTypeMismatch = 'Tipo inválido para o campo ''%s'', esperado: %s atual: %s';
   SFieldSizeMismatch = 'Tamanho Inválido para o campo ''%s'', esperado: %d atual: %d';
   {$ENDIF}
+
+  SFailedtoInitPrepStmt   = 'Translate: Prepared statement failed to initialize';
+  SFailedtoPrepareStmt    = 'Translate: Statement failed during prepare process';
+  SFailedToBindAllValues  = 'Translate: Application failed to pre-bind all values';
+  SAttemptExecOnBadPrep   = 'Translate: Attempt made to execute a statement before a successful preparation.';
+  SBindingFailure         = 'Translate: Failed to bind parameter set';
+  SPreparedStmtExecFailure = 'Translate: Prepared statement failed to execute';
+  SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
+  SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
 
 {$ELSE}
 
@@ -341,6 +354,15 @@ resourcestring
   SFieldTypeMismatch = 'Type mismatch voor veld ''%s'', verwacht: %s actueel: %s';
   SFieldSizeMismatch = 'Size mismatch voor veld ''%s'', verwacht: %d actueel: %d';
   {$ENDIF}
+
+  SFailedtoInitPrepStmt   = 'Initialisatie van Prepared statement mislukt';
+  SFailedtoPrepareStmt    = 'Statement mislukt tijdens prepare';
+  SFailedToBindAllValues  = 'Pre-bind van allewaarden is mislukt';
+  SAttemptExecOnBadPrep   = 'Poging om een statement uit te voeren voor een succesvolle prepare';
+  SBindingFailure         = 'Binding van parameterset mislukt';
+  SPreparedStmtExecFailure = 'Uitvoeren van Prepared statement mislukt';
+  SBoundVarStrIndexMissing = 'Tekst index van bound variable bestaat niet: "%s"';
+  SBindVarOutOfRange      = 'Bound variable index buitenbereik: %d';
 
 {$ELSE}
 // <- ms, 09/05/2005
@@ -487,6 +509,16 @@ resourcestring
   SFieldSizeMismatch = 'Die Größe des Feldes ''%s'' stimmt nicht. Erwartet wird  %d die Größe ist aber momentan %d';
   {$ENDIF}
   // <- ms, 03/05/2005
+
+  SFailedtoInitPrepStmt   = 'Translate: Prepared statement failed to initialize';
+  SFailedtoPrepareStmt    = 'Translate: Statement failed during prepare process';
+  SFailedToBindAllValues  = 'Translate: Application failed to pre-bind all values';
+  SAttemptExecOnBadPrep   = 'Translate: Attempt made to execute a statement before a successful preparation.';
+  SBindingFailure         = 'Translate: Failed to bind parameter set';
+  SPreparedStmtExecFailure = 'Translate: Prepared statement failed to execute';
+  SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
+  SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
+
 {$ELSE}
   // -> fduenas, 28/06/2005
 {$IFDEF SPANISH} //Spanish translations
@@ -631,7 +663,169 @@ resourcestring
   SFieldSizeMismatch = 'El Tamaño de dato no coincide para el campo ''%s'', se espera: %d, actual: %d';
   {$ENDIF}
 
-{$ELSE} // default: ENGLISH
+  SFailedtoInitPrepStmt   = 'Translate: Prepared statement failed to initialize';
+  SFailedtoPrepareStmt    = 'Translate: Statement failed during prepare process';
+  SFailedToBindAllValues  = 'Translate: Application failed to pre-bind all values';
+  SAttemptExecOnBadPrep   = 'Translate: Attempt made to execute a statement before a successful preparation.';
+  SBindingFailure         = 'Translate: Failed to bind parameter set';
+  SPreparedStmtExecFailure = 'Translate: Prepared statement failed to execute';
+  SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
+  SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
+{$ELSE}
+
+{$IFDEF ROMANA}
+
+
+ SSQLError1 = 'SQL Eroare: %s';
+  SSQLError2 = 'SQL Eroare: %s Cod: %d';
+  SSQLError3 = 'SQL Eroare: %s Cod: %d SQL: %s';
+  SSQLError4 = 'SQL Eroare: %s Cod: %d Mesaj: %s';
+
+  SListCapacityError = 'Capacitatea listei este în afara limitelor (%d)';
+  SListCountError = 'Contorul listei este în afara limitelor (%d)';
+  SListIndexError = 'Indexul listei este în afara limitelor (%d)';
+
+  SClonningIsNotSupported = 'Clonning nu este suportat de aceastã clasã';
+  SImmutableOpIsNotAllowed = 'Operaþia nu este permisã ori colecþia nu este modificabilã';
+  SStackIsEmpty = 'Stiva este goalã';
+  SVariableWasNotFound = 'Variabila "%s" nu a fost gãsitã';
+  SFunctionWasNotFound = 'Funcþia "%s" nu a fost gãsitã';
+  SInternalError = 'Eroare Internã';
+  SSyntaxErrorNear = 'Eroare de sintaxã lângã "%s"';
+  SSyntaxError = 'Eroare de sintaxã';
+  SUnknownSymbol = 'Simbol necunoscut "%s"';
+  SUnexpectedExprEnd = 'Final neaºteptat pentru expresie';
+  SRightBraceExpected = ') aºteptat';
+  SParametersError = 'parametrul %d a fost aºteptat dar %d a fost gãsit';
+  SExpectedMoreParams = 'Mai nult de doi parametrii sunt aºteptaþi';
+  SInvalidVarByteArray = 'Arie VarByte invalidã';
+  SVariableAlreadyExists = 'Variabila "%s" deja existã';
+  STypesMismatch = 'Tip nepotrivit';
+  SUnsupportedVariantType = 'Tip variant neasteptat';
+  SUnsupportedOperation = 'Operaþie nesuportatã';
+
+  STokenizerIsNotDefined = 'Simbolistica nu este definitã';
+  SLibraryNotFound = 'None of the dynamic libraries can be found: %s';
+  SEncodeDateIsNotSupported = 'Aceastã versiune nu suportã isc_encode_sql_date';
+  SEncodeTimeIsNotSupported = 'Aceastã versiune nu suportã isc_encode_sql_time';
+  SEncodeTimestampIsNotSupported = 'Aceastã versiune nu suportã isc_encode_sql_timestamp';
+  SDecodeDateIsNotSupported = 'Aceastã versiune nu suportã isc_decode_sql_date';
+  SDecodeTimeIsNotSupported = 'Aceastã versiune nu suportã isc_decode_sql_time';
+  SDecodeTimestampIsNotSupported = 'Aceastã versiune nu suportã isc_decode_sql_timestamp';
+
+  SCanNotRetrieveResultSetData = 'Nu pot returna  Resultset data';
+  SRowBufferIsNotAssigned = 'Row buffer nu este asignat';
+  SColumnIsNotAccessable = 'Column with index %d nu este accesibil';
+  SConvertionIsNotPossible = 'Conversia nu este posibilã pentru coloana %d din %s în %s';
+  SCanNotAccessBlobRecord = 'Nu pot aceesa înregistrarea blob în coloana %d cu tipul %s';
+  SRowDataIsNotAvailable = 'Row data nu este disponibil';
+  SResolverIsNotSpecified = 'Resolver nu este specificat pentru acest ResultSet';
+  SResultsetIsAlreadyOpened = 'Resultset este deja deschisã';
+  SCanNotUpdateEmptyRow = 'Nu pot updata o înregistrare goalã';
+  SCanNotUpdateDeletedRow = 'Nu pot updata o înregistrare ºtearsã';
+  SCanNotDeleteEmptyRow = 'Nu pot ºterge o înregistrare goalã';
+  SCannotUseCommit = 'Nu poþi folosi COMMIT în modul AUTOCOMMIT ';
+  SCannotUseRollBack = 'Nu poþi folosi ROLLBACK în modul AUTOCOMMIT ';
+  SCanNotUpdateComplexQuery = 'Nu pot updata un query complex cu mai mult de un tabel';
+  SCanNotUpdateThisQueryType = 'Nu pot updata acest tip de query';
+  SDriverWasNotFound = 'Driverul pentru baza de date nu a fost gãsit';
+  SCanNotConnectToServer = 'Nu ma pot conecta la serverul SQL';
+  STableIsNotSpecified = 'Tbelul nu este specificat';
+  SLiveResultSetsAreNotSupported = 'Live query is not supported by this class';
+  SInvalidInputParameterCount = 'Input parameter count is less then expected';
+  SIsolationIsNotSupported = 'Transaction isolation level nu este suportat';
+  SColumnWasNotFound = 'Coloana cu numele "%s" nu a fost fãsitã';
+  SWrongTypeForBlobParameter = 'Tip greºit pentru parametru Blob';
+  SIncorrectConnectionURL = 'Conexiune URL incorectã: %s';
+  SUnsupportedProtocol = 'Protocol nesuportat: %s';
+  SUnsupportedByDriver    = 'Driver nu poate suporta aceastã facilitate : [%s]';
+
+  SConnectionIsNotOpened = 'Conexiune nu este deschisã incã';
+  SInvalidOpInAutoCommit = 'Operaþie invalidã în modul AutoCommit';
+  SInvalidOpInNonAutoCommit = 'Operaþie invalidã în modul non AutoCommit ';
+  SInvalidOpPrepare = 'Prepare transaction only possible on matching first(!) Starttransaction';
+
+  SConnectionIsNotAssigned = 'Nu este asignatã o componentã Database connection';
+  SQueryIsEmpty = 'SQL Query este gol';
+  SCanNotExecuteMoreQueries = 'Nu pot executa mai mult de un query';
+  SOperationIsNotAllowed1 = 'Operaþia nu este permisã în modul FORWARD ONLY ';
+  SOperationIsNotAllowed2 = 'Operaþia nu este permisã în modul READ ONLY';
+  SOperationIsNotAllowed3 = 'Operaþia nu este permisã în modul %s ';
+  SOperationIsNotAllowed4 = 'Operaþia nu este permisã pentru în dataset închis';
+  SNoMoreRecords = 'Nu mai sunt înregistrãri în Resultset';
+  SCanNotOpenResultSet = 'Nu pot deschide Resultset';
+  SCircularLink = 'Datasource makes a circular link';
+  SBookmarkWasNotFound = 'Bookmark nu a fost gãsit';
+  SIncorrectSearchFieldsNumber = 'Numãr incorect of search field values';
+  SInvalidOperationInTrans = 'Operaþie invalidã în modul explicit transaction';
+  SIncorrectSymbol = 'Simbol incorect în lista de câmpuri  "%s".';
+  SIncorrectToken = 'Incorect token dupã ":"';
+
+  SSelectedTransactionIsolation = 'Selected transaction isolation level is not supported';
+  SDriverNotSupported = 'Driver nesuportat %s';
+  SPattern2Long = 'Pattern is too long';
+  SDriverNotCapableOutParameters = 'Driver nu este capabil sã mânuie parametrii';
+  SStatementIsNotAllowed = 'Statement nu sunt permise';
+  SStoredProcIsNotAllowed = 'The stored proc nu sunt permise';
+  SCannotPerformOperation = 'Nu se pot face operaþii cu Resultset închis';
+  SInvalidState = 'Stare invalidã';
+  SErrorConvertion = 'Eroare de conversie';
+  SDataTypeDoesNotSupported = 'Tip de datã nesuportat';
+  SUnsupportedParameterType = 'Tip parametru nesuportat';
+  SUnsupportedDataType = 'Tip datã nesuportat';
+  SErrorConvertionField = 'Eroare de conversie pentru câmpul "%s" în TipSQL "%s"';
+  SBadOCI = 'Bad OCI version [%s]. Version 8.0.3 or older is required';
+  SConnect2AsUser = 'Conectare la "%s" ca utlizator "%s"';
+  SUnknownError = 'Eroare necunoscutã';
+  SFieldNotFound1 = 'Câmpul "%s" nu a fost gãsit';
+  SFieldNotFound2 = 'Câmpul %d nu a fost gãsit';
+
+  SLoginPromptFailure = 'Nu gãsesc fereastra de dialog implicitã pentru login. Vã rog adãugaþi DBLogDlg în secþiunea uses.';
+
+  SPropertyQuery = 'The Query may last a while on large databases!';
+  SPropertyTables = 'You should limit it by Catalog and/or Schema.';
+  SPropertyColumns = 'You should limit it by Catalog, Schema and/or TableName.';
+  SPropertyProcedures = 'You should limit it by Catalog and/or Schema.';
+  SPropertySequences = 'You should limit it by Catalog and/or Schema.';
+  SPropertyExecute = 'Query va fi executatã oricum?';
+
+  SFormTest = 'ZEOS SQL Editor Test';
+  SButtonClose = 'În&chide';
+  SFormEditor = 'ZEOS SQL Editor';
+  STabSheetSelect = 'Select SQL';
+  SMenuLoad = 'Deschide';
+  SMenuSave = 'Salvare';
+  SButtonGenerate = '&Generare';
+  SButtonCheck = 'Verificare';
+  SButtonTest = '&Test';
+  SButtonOk = '&OK';
+  SButtonCancel = 'Revo&care';
+  STableAlias = 'T&able alias';
+  SReplaceSQL = '&Replace SQL';
+  SDialogOpenTitle = 'Deschide Fiºier SQL';
+  SDialogSaveTitle = 'Salveazã Fiºier SQL';
+  SSQLEditor = 'SQL Editor';
+  SDatabaseDialog = 'Deschide bazã date existentã';
+
+  SUpdateSQLNoResult = '"Update Refresh SQL" furnizat nu este un recordset';
+  SUpdateSQLRefreshStatementcount ='Declaraþia "Update Refresh SQL" ca numãr trebuie sã fie una';
+
+  {$IFDEF FPC}
+  SNotEditing = 'Dataset nu este în modul de editare sau inserare';
+  SFieldTypeMismatch = 'Tip nepotrivit pentru câmpul ''%s'', aºteptat: %s actual: %s';
+  SFieldSizeMismatch = 'Dimensiune nepotrivitã pentru câmpul  ''%s'', aºteptat: %d actual: %d';
+  {$ENDIF}
+
+  SFailedtoInitPrepStmt   = 'Translate: Prepared statement failed to initialize';
+  SFailedtoPrepareStmt    = 'Translate: Statement failed during prepare process';
+  SFailedToBindAllValues  = 'Translate: Application failed to pre-bind all values';
+  SAttemptExecOnBadPrep   = 'Translate: Attempt made to execute a statement before a successful preparation.';
+  SBindingFailure         = 'Translate: Failed to bind parameter set';
+  SPreparedStmtExecFailure = 'Translate: Prepared statement failed to execute';
+  SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
+  SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
+
+  {$ELSE} // default: ENGLISH
 
   SSQLError1 = 'SQL Error: %s';
   SSQLError2 = 'SQL Error: %s Code: %d';
@@ -772,6 +966,17 @@ resourcestring
   SFieldTypeMismatch = 'Type mismatch for field ''%s'', expecting: %s actual: %s';
   SFieldSizeMismatch = 'Size mismatch for field ''%s'', expecting: %d actual: %d';
   {$ENDIF}
+
+  SFailedtoInitPrepStmt   = 'Prepared statement failed to initialize';
+  SFailedtoPrepareStmt    = 'Statement failed during prepare process';
+  SFailedToBindAllValues  = 'Application failed to pre-bind all values';
+  SAttemptExecOnBadPrep   = 'Attempt made to execute a statement before a successful preparation.';
+  SBindingFailure         = 'Failed to bind parameter set';
+  SPreparedStmtExecFailure = 'Prepared statement failed to execute';
+  SBoundVarStrIndexMissing = 'Bound variable text index "%s" does not exist';
+  SBindVarOutOfRange      = 'Bound variable index out of range: %d';
+
+{$ENDIF}   // ROMANA
 
 {$ENDIF} //SPANISH
 
