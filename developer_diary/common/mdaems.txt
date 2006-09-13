@@ -36,3 +36,6 @@
 
 20060811 : Updated some message translations - German versions by wdbrmpft (Klaus) - See http://zeos.firmos.at/viewtopic.php?t=704
            Synchronized Trunk change by Helmut (Firmos)
+
+20060913 : Delphi 7 : Split up Component Package into Component and ComponentDesign - See http://zeos.firmos.at/viewtopic.php?t=726
+           Delphi 7 : Added compiler directives to avoid inclusion of not wanted database drivers. - See http://zeos.firmos.at/viewtopic.php?t=746
