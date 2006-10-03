@@ -1,0 +1,54 @@
+061002 22:04:29 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:04:50 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:05:20 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:06:26 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:06:47 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:18:34 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:19:39 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:30:12 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:30:33 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:31:38 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:32:05 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:34:00 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:35:16 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:37:02 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:37:10 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:38:00 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:41:21 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:42:52 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:45:49 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:46:43 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:47:07 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:47:44 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:48:27 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+InnoDB: The first specified data file C:\Documents and Settings\GMX\My Documents\Borland Studio Projects\embedded\data\ibdata1 did not exist:
+InnoDB: a new database to be created!
+061002 22:49:21  InnoDB: Setting file C:\Documents and Settings\GMX\My Documents\Borland Studio Projects\embedded\data\ibdata1 size to 10 MB
+InnoDB: Database physically writes the file full: wait...
+061002 22:49:22  InnoDB: Log file C:\Documents and Settings\GMX\My Documents\Borland Studio Projects\embedded\data\ib_logfile0 did not exist: new to be created
+InnoDB: Setting log file C:\Documents and Settings\GMX\My Documents\Borland Studio Projects\embedded\data\ib_logfile0 size to 5 MB
+InnoDB: Database physically writes the file full: wait...
+061002 22:49:22  InnoDB: Log file C:\Documents and Settings\GMX\My Documents\Borland Studio Projects\embedded\data\ib_logfile1 did not exist: new to be created
+InnoDB: Setting log file C:\Documents and Settings\GMX\My Documents\Borland Studio Projects\embedded\data\ib_logfile1 size to 5 MB
+InnoDB: Database physically writes the file full: wait...
+InnoDB: Doublewrite buffer not found: creating new
+InnoDB: Doublewrite buffer created
+InnoDB: Creating foreign key constraint system tables
+InnoDB: Foreign key constraint system tables created
+061002 22:49:31 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:49:39 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:50:40 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:51:29 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 22:51:45 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 23:00:24 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 23:02:05 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 23:04:48 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 23:19:02 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 23:19:10 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 23:38:24 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 23:39:16 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 23:41:11 [Warning] Can't open and lock time zone table: Tabla 'mysql.time_zone_leap_second' no existe trying to live without them
+061002 23:41:47 [Warning] Can't open and lock time zone table: Tabla 'mysql.time_zone_leap_second' no existe trying to live without them
+061002 23:42:24 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 23:51:26 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them
+061002 23:51:51 [Warning] Can't open and lock time zone table: Table 'mysql.time_zone_leap_second' doesn't exist trying to live without them

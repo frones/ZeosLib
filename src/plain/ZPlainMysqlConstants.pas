@@ -423,17 +423,16 @@ type
   end;
 
 const
-  WINDOWS_EMBEDDED_DEFAULT_DATA_DIR = '.\data\';
-  UNIX_EMBEDDED_DEFAULT_DATA_DIR = './data/';
+  EMBEDDED_DEFAULT_DATA_DIR = {$IFDEF WIN32}
+                               '.\data\'
+                              {$ELSE} './data/'
+                              {$ENDIF};
+  SERVER_ARGUMENTS_KEY_PREFIX = 'ServerArgument';
   SERVER_GROUPS : array [0..2] of PChar = ('embedded'#0, 'server'#0, nil);
 
   DEFAULT_PARAMS : array [0..2] of PChar = ('not_used'#0,
-                                             {$IFDEF WIN32}
-                                              '--datadir='+WINDOWS_EMBEDDED_DEFAULT_DATA_DIR+#0
-                                             {$ELSE}
-                                              '--datadir='+UNIX_EMBEDDED_DEFAULT_DATA_DIR+#0
-                                             {$ENDIF}
-                                              , '--set-variable=key_buffer_size=32M'#0);
+                                            '--datadir='+EMBEDDED_DEFAULT_DATA_DIR+#0,
+                                            '--set-variable=key_buffer_size=32M'#0);
 
 implementation
 

@@ -48,7 +48,7 @@ interface
 
 {$I ZPlain.inc}
 
-uses ZClasses, ZPlainDriver, ZCompatibility, ZPlainMysqlConstants,
+uses Classes, ZClasses, ZPlainDriver, ZCompatibility, ZPlainMysqlConstants,
      {$IFDEF ENABLE_MYSQL_DEPRECATED} ZPlainMySql320, ZPlainMySql323, ZPlainMySql40,{$ENDIF}
      ZPlainMySql41, ZPlainMySql5;
 
@@ -294,6 +294,7 @@ type
     function GetFieldMaxLength(Field: PZMySQLField): Integer;
     function GetFieldDecimals(Field: PZMySQLField): Integer;
     function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PChar;
+    procedure BuildArguments(Options: TStrings);
 
 {
     function GetProtocol: string; virtual;
@@ -424,6 +425,7 @@ type
     function GetFieldMaxLength(Field: PZMySQLField): Integer;
     function GetFieldDecimals(Field: PZMySQLField): Integer;
     function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PChar;
+    procedure BuildArguments(Options: TStrings);
   end;
 
   {** Implements a driver for MySQL 3.23 }
@@ -543,6 +545,7 @@ type
     function GetFieldMaxLength(Field: PZMySQLField): Integer;
     function GetFieldDecimals(Field: PZMySQLField): Integer;
     function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PChar;
+    procedure BuildArguments(Options: TStrings);
   end;
 
   {** Implements a driver for MySQL 4.0 }
@@ -662,6 +665,7 @@ type
     function GetFieldMaxLength(Field: PZMySQLField): Integer;
     function GetFieldDecimals(Field: PZMySQLField): Integer;
     function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PChar;
+    procedure BuildArguments(Options: TStrings); virtual;
   end;
 
   TZMySQLD40PlainDriver = class (TZMySQL40PlainDriver)
@@ -670,6 +674,7 @@ type
     function GetDescription: string; override;
     procedure Initialize; override;
     function Init(var Handle: PZMySQLConnect): PZMySQLConnect; override;
+    procedure BuildArguments(Options: TStrings); override;
   end;
 {$ENDIF ENABLE_MYSQL_DEPRECATED}
 
@@ -792,6 +797,7 @@ type
     function GetFieldMaxLength(Field: PZMySQLField): Integer;
     function GetFieldDecimals(Field: PZMySQLField): Integer;
     function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PChar;
+    procedure BuildArguments(Options: TStrings); virtual;
   end;
 
   {** Implements a driver for MySQL 4.1 }
@@ -801,6 +807,7 @@ type
     function GetDescription: string; override;
     procedure Initialize; override;
     function Init(var Handle: PZMySQLConnect): PZMySQLConnect; override;
+    procedure BuildArguments(Options: TStrings); override;
   end;
 
   TZMySQL5PlainDriver = class (TZAbstractObject, IZPlainDriver,
@@ -920,6 +927,7 @@ type
     function GetFieldMaxLength(Field: PZMySQLField): Integer;
     function GetFieldDecimals(Field: PZMySQLField): Integer;
     function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PChar;
+    procedure BuildArguments(Options: TStrings); virtual;
   end;
 
   TZMySQLD5PlainDriver = class (TZMySQL5PlainDriver)
@@ -928,10 +936,40 @@ type
     function GetDescription: string; override;
     procedure Initialize; override;
     function Init(var Handle: PZMySQLConnect): PZMySQLConnect; override;
+    procedure BuildArguments(Options: TStrings); override;
   end;
 
 implementation
 uses SysUtils, ZMessages;
+
+var
+  ServerArgs: array of PChar;
+  ServerArgsLen: Integer;
+
+procedure BuildServerArguments(Options: TStrings);
+var
+  TmpList: TStringList;
+  i: Integer;
+begin
+  TmpList := TStringList.Create;
+  try
+    TmpList.Add(ParamStr(0));
+    for i := 0 to Options.Count - 1 do
+      if SameText(SERVER_ARGUMENTS_KEY_PREFIX,
+                  Copy(Options.Names[i], 1,
+                       Length(SERVER_ARGUMENTS_KEY_PREFIX))) then
+        TmpList.Add(Options.ValueFromIndex[i]);
+    //Check if DataDir is specified, if not, then add it to the Arguments List
+    If TmpList.Values['--datadir'] = '' then
+       TmpList.Add('--datadir='+EMBEDDED_DEFAULT_DATA_DIR);
+    ServerArgsLen := TmpList.Count;
+    SetLength(ServerArgs, ServerArgsLen);
+    for i := 0 to ServerArgsLen - 1 do
+      ServerArgs[i] := StrNew(PChar(TmpList[i]));
+  finally
+    TmpList.Free;
+  end;
+end;
 
 {$IFDEF ENABLE_MYSQL_DEPRECATED}
 { TZMySQL320PlainDriver }
@@ -1421,6 +1459,11 @@ begin
  Result := 32000;
 end;
 
+procedure TZMySQL320PlainDriver.BuildArguments(Options: TStrings);
+begin
+
+end;
+
 { TZMySQL323PlainDriver }
 
 constructor TZMySQL323PlainDriver.Create;
@@ -1907,6 +1950,11 @@ begin
  Result := 32300;
 end;
 
+procedure TZMySQL323PlainDriver.BuildArguments(Options: TStrings);
+begin
+
+end;
+
 { TZMySQL40PlainDriver }
 
 constructor TZMySQL40PlainDriver.Create;
@@ -2391,6 +2439,11 @@ begin
  Result := 40000;
 end;
 
+procedure TZMySQL40PlainDriver.BuildArguments(Options: TStrings);
+begin
+
+end;
+
 { TZMySQLD40PlainDriver }
 
 function TZMySQLD40PlainDriver.GetProtocol: string;
@@ -2406,7 +2459,8 @@ end;
 function TZMySQLD40PlainDriver.Init(var Handle: PZMySQLConnect): PZMySQLConnect;
 begin
   if @MYSQL_API.mysql_server_init <> nil then
-    MYSQL_API.mysql_server_init(3, @DEFAULT_PARAMS, @SERVER_GROUPS);
+    MYSQL_API.mysql_server_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS);
+//    MYSQL_API.mysql_server_init(3, @DEFAULT_PARAMS, @SERVER_GROUPS);
   Handle := MYSQL_API.mysql_init(nil);
   Result := Handle;
 end;
@@ -2416,6 +2470,12 @@ begin
   ZPlainMySql40.LibraryLoaderEmbedded.LoadIfNeeded;
   MYSQL_API := ZPlainMySql40.LibraryLoaderEmbedded.api_rec;
 end;
+
+procedure TZMySQLD40PlainDriver.BuildArguments(Options: TStrings);
+begin
+  BuildServerArguments(Options);
+end;
+
 {$ENDIF ENABLE_MYSQL_DEPRECATED}
 
 { TZMySQL41PlainDriver }
@@ -2896,6 +2956,11 @@ begin
  Result := MYSQL_API.mysql_get_server_version(Handle);
 end;
 
+procedure TZMySQL41PlainDriver.BuildArguments(Options: TStrings);
+begin
+
+end;
+
 { TZMySQLD41PlainDriver }
 
 function TZMySQLD41PlainDriver.GetProtocol: string;
@@ -2911,7 +2976,8 @@ end;
 function TZMySQLD41PlainDriver.Init(var Handle: PZMySQLConnect): PZMySQLConnect;
 begin
   if @MYSQL_API.mysql_server_init <> nil then
-    MYSQL_API.mysql_server_init(3, @DEFAULT_PARAMS, @SERVER_GROUPS);
+    MYSQL_API.mysql_server_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS);
+//    MYSQL_API.mysql_server_init(3, @DEFAULT_PARAMS, @SERVER_GROUPS);
   Handle := MYSQL_API.mysql_init(nil);
   Result := Handle;
 end;
@@ -2920,6 +2986,11 @@ procedure TZMySQLD41PlainDriver.Initialize;
 begin
   ZPlainMySql41.LibraryLoaderEmbedded.LoadIfNeeded;
   MYSQL_API := ZPlainMySql41.LibraryLoaderEmbedded.api_rec;
+end;
+
+procedure TZMySQLD41PlainDriver.BuildArguments(Options: TStrings);
+begin
+  BuildServerArguments(Options);
 end;
 
 { TZMySQL5PlainDriver }
@@ -3400,7 +3471,12 @@ begin
  Result := MYSQL_API.mysql_get_server_version(Handle);
 end;
 
-{ TZMySQLD41PlainDriver }
+procedure TZMySQL5PlainDriver.BuildArguments(Options: TStrings);
+begin
+
+end;
+
+{ TZMySQLD5PlainDriver }
 
 function TZMySQLD5PlainDriver.GetProtocol: string;
 begin
@@ -3415,7 +3491,8 @@ end;
 function TZMySQLD5PlainDriver.Init(var Handle: PZMySQLConnect): PZMySQLConnect;
 begin
   if @MYSQL_API.mysql_server_init <> nil then
-    MYSQL_API.mysql_server_init(3, @DEFAULT_PARAMS, @SERVER_GROUPS);
+    MYSQL_API.mysql_server_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS);
+//    MYSQL_API.mysql_server_init(3, @DEFAULT_PARAMS, @SERVER_GROUPS);
   Handle := MYSQL_API.mysql_init(nil);
   Result := Handle;
 end;
@@ -3424,6 +3501,11 @@ procedure TZMySQLD5PlainDriver.Initialize;
 begin
   ZPlainMySql5.LibraryLoaderEmbedded.LoadIfNeeded;
   MYSQL_API := ZPlainMySql5.LibraryLoaderEmbedded.api_rec;
+end;
+
+procedure TZMySQLD5PlainDriver.BuildArguments(Options: TStrings);
+begin
+  BuildServerArguments(Options);
 end;
 
 end.

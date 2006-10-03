@@ -189,6 +189,9 @@ begin
     PlainDriver := GetPlainDriver(Url);
     ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
       UserName, Password, TempInfo);
+    // PATCH ADDED BY tohenk
+    if PlainDriver <> nil then
+      PlainDriver.BuildArguments(TempInfo);
     Result := TZMySQLConnection.Create(Self, Url, PlainDriver, HostName, Port,
       Database, UserName, Password, TempInfo);
   finally
