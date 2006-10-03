@@ -63,6 +63,8 @@ type
   end;
   {$ENDIF}
 
+  TSortType = (stAscending, stDescending);   {bangfauzan addition}
+
   {** Options for dataset. }
   TZDatasetOption = (doOemTranslate, doCalcDefaults, doAlwaysDetailResync,
     doSmartOpen);
@@ -138,6 +140,8 @@ type
     FIndexFieldNames: string;
     FIndexFields: TList;
 
+    FSortType : TSortType; {bangfauzan addition}
+
     FSortedFields: string;
     FSortedFieldRefs: TObjectDynArray;
     FSortedFieldIndices: TIntegerDynArray;
@@ -166,6 +170,8 @@ type
     procedure SetOptions(Value: TZDatasetOptions);
     procedure SetSortedFields(const Value: string);
     procedure SetProperties(const Value: TStrings);
+
+    Procedure SetSortType(Value : TSortType); {bangfauzan addition}
 
     procedure UpdateSQLStrings(Sender: TObject);
     procedure ReadParamData(Reader: TReader);
@@ -367,6 +373,8 @@ type
   published
     property Connection: TZConnection read FConnection write SetConnection;
     property SortedFields: string read FSortedFields write SetSortedFields;
+    property SortType : TSortType read FSortType write SetSortType
+      default stAscending; {bangfauzan addition}
 
     property AutoCalcFields;
     property BeforeOpen;
@@ -1880,7 +1888,13 @@ begin
   begin
     FSortedFields := Value;
     if Active then
-      InternalSort;
+      {InternalSort;}
+      {bangfauzan modification}
+       if (FSortedFields = '') then
+          Self.InternalRefresh
+       else
+          InternalSort;
+      {end of bangfauzan modification}
   end;
 end;
 
@@ -2543,12 +2557,23 @@ procedure TZAbstractRODataset.InternalSort;
 var
   I, RowNo: Integer;
   SavedRowBuffer: PZRowBuffer;
+  SortString:String;
 begin
+  {======================bangfauzan addition===================}
+  if FSortedFields = '' then exit;
+  SortString:=FSortedFields;
+  if FSortType = stAscending then
+    SortString:=SortString+' ASC' 
+  else
+    SortString:=SortString+' DESC';
+  {======================end of bangfauzan addition===================}
+
   if (ResultSet <> nil) and not IsUniDirectional then
   begin
-    FSortedFields := Trim(FSortedFields);
-    DefineSortedFields(Self, FSortedFields, FSortedFieldRefs,
-      FSortedFieldDirs, FSortedOnlyDataFields);
+    {FSortedFields := Trim(FSortedFields);}
+    SortString:=Trim(SortString);
+    DefineSortedFields(Self, {FSortedFields} SortString {bangfauzan modification},
+    FSortedFieldRefs, FSortedFieldDirs, FSortedOnlyDataFields);
 
     if (CurrentRow <= CurrentRows.Count) and (CurrentRows.Count > 0)
       and (CurrentRow > 0) then
@@ -3006,6 +3031,21 @@ begin
     if (Fields[Index - 1].FieldKind in [fkCalculated, fkLookup]) then
       RowAccessor.SetNull(Index);
 end;
+
+{=======================bangfauzan addition========================}
+procedure TZAbstractRODataset.SetSortType(Value: TSortType);
+begin
+  if FSortType <> Value then
+  begin
+    FSortType := Value;
+    if Active then
+       if (FSortedFields = '') then
+          Self.InternalRefresh
+      else
+          InternalSort;
+  end;
+end;
+{====================end of bangfauzan addition====================}
 
 end.
 

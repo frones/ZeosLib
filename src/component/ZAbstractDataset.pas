@@ -81,6 +81,10 @@ type
     FWhereMode: TZWhereMode;
     FSequence: TZSequence;
     FSequenceField: string;
+
+    FBeforeApplyUpdates: TNotifyEvent; {bangfauzan addition}
+    FAfterApplyUpdates: TNotifyEvent; {bangfauzan addition}
+
   private
     function GetUpdatesPending: Boolean;
     procedure SetUpdateObject(Value: TZUpdateSQL);
@@ -106,6 +110,10 @@ type
     procedure InternalUpdate;
     procedure InternalCancel; override;
 
+    procedure DOBeforeApplyUpdates; {bangfauzan addition}
+    procedure DOAfterApplyUpdates; {bangfauzan addition}
+
+
     function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; override;
     function CreateResultSet(const SQL: string; MaxRows: Integer):
@@ -127,6 +135,8 @@ type
     procedure CancelUpdates;
     procedure RevertRecord;
 
+    procedure EmptyDataSet; {bangfauzan addition}
+
   public
     property UpdatesPending: Boolean read GetUpdatesPending;
     property Sequence: TZSequence read FSequence write FSequence;
@@ -141,6 +151,12 @@ type
       write FOnApplyUpdateError;
     property OnUpdateRecord: TUpdateRecordEvent read FOnUpdateRecord
       write FOnUpdateRecord;
+
+    property BeforeApplyUpdates: TNotifyEvent read FBeforeApplyUpdates
+      write FBeforeApplyUpdates; {bangfauzan addition}
+    property AfterApplyUpdates: TNotifyEvent read FAfterApplyUpdates
+      write FAfterApplyUpdates; {bangfauzan addition}
+
 
   published
 //    property Constraints;
@@ -409,6 +425,9 @@ end;
 procedure TZAbstractDataset.InternalPost;
 var
   RowBuffer: PZRowBuffer;
+  SField:String;
+  SIsi:Variant;
+  i:Integer;
 begin
   if (FSequenceField <> '') and Assigned(FSequence) then
   begin
@@ -430,6 +449,29 @@ begin
     if State = dsInsert then
       InternalAddRecord(RowBuffer, False)
     else InternalUpdate;
+
+    {BUG-FIX: bangfauzan addition}
+
+    FreeFieldBuffers;
+    SetState(dsBrowse);
+    if (SortedFields<>'') then begin
+      SField:='';
+      SIsi:=VarArrayCreate([0, FieldCount-1], varVariant);
+      for i:=0 to FieldCount-1 do begin
+        if SField='' then
+          SField:=Fields[i].FieldName
+        else
+          SField:=SField+';'+Fields[i].FieldName;
+        SIsi[i]:=Fields[i].Value;
+      end;
+      DisableControls;
+      InternalSort;
+      Locate(SField, SIsi, []);
+      EnableControls;
+    end;
+
+    {end of bangfauzan addition}
+
   finally
     Connection.HideSqlHourGlass;
   end;
@@ -521,11 +563,16 @@ begin
   try
     if State in [dsEdit, dsInsert] then Post;
 
+    DoBeforeApplyUpdates; {bangfauzan addition}
+
     if CachedResultSet <> nil then
       CachedResultSet.PostUpdates;
 
     if not (State in [dsInactive]) then
       Resync([]);
+
+  DOAfterApplyUpdates; {bangfauzan addition}
+
   finally
     Connection.HideSqlHourGlass;
   end;
@@ -762,6 +809,34 @@ begin
     Self.Active := ActiveMode;
   end;
 end;
+
+{============================bangfauzan addition===================}
+
+procedure TZAbstractDataset.DOBeforeApplyUpdates;
+begin
+  if assigned(BeforeApplyUpdates) then
+    FBeforeApplyUpdates(Self);
+end;
+
+procedure TZAbstractDataset.DOAfterApplyUpdates;
+begin
+  if assigned(AfterApplyUpdates) then
+    FAfterApplyUpdates(Self);
+end;
+
+procedure TZAbstractDataset.EmptyDataSet;
+begin
+  if Active then
+  begin
+    Self.CancelUpdates;
+    Self.CurrentRows.Clear;
+    Self.CurrentRow:=0;
+    Resync([]);
+    InitRecord(ActiveBuffer);
+  end;
+end;
+
+{========================end of bangfauzan addition================}
 
 {$ENDIF}
 

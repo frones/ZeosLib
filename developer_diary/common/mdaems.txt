@@ -39,3 +39,6 @@
 
 20060913 : Delphi 7 : Split up Component Package into Component and ComponentDesign - See http://zeos.firmos.at/viewtopic.php?t=726
            Delphi 7 : Added compiler directives to avoid inclusion of not wanted database drivers. - See http://zeos.firmos.at/viewtopic.php?t=746
+
+20061003 : New Dataset features : BeforeApplyUpdates (event), AfterApplyUpdates (event), SortType (property), EmptyDataSet (procedure) 
+           Bug-Fix InternalPost (Procedure) - Written by Bangfauzan - See http://zeos.firmos.at/viewtopic.php?t=781
