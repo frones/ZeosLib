@@ -40,6 +40,7 @@ object fmMain: TfmMain
     Height = 28
     Align = alTop
     TabOrder = 2
+    ExplicitTop = -6
     object btOpen: TButton
       Left = 0
       Top = 3
@@ -75,10 +76,11 @@ object fmMain: TfmMain
     Height = 72
     Align = alTop
     Lines.Strings = (
-      'SELECT * FROM Emp')
+      'SELECT * FROM people;')
     ScrollBars = ssVertical
     TabOrder = 0
     OnExit = meSQLExit
+    ExplicitTop = 33
   end
   object StatusBar: TStatusBar
     Left = 0
@@ -144,7 +146,7 @@ object fmMain: TfmMain
   end
   object ZConnection1: TZConnection
     Protocol = 'mysqld-4.1'
-    Database = 'test'
+    Database = 'zeoslib'
     Properties.Strings = (
       'compress=yes'
       'dbless=no'
