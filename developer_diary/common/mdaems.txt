@@ -41,4 +41,8 @@
            Delphi 7 : Added compiler directives to avoid inclusion of not wanted database drivers. - See http://zeos.firmos.at/viewtopic.php?t=746
 
 20061003 : New Dataset features : BeforeApplyUpdates (event), AfterApplyUpdates (event), SortType (property), EmptyDataSet (procedure) 
-           Bug-Fix InternalPost (Procedure) - Written by Bangfauzan - See http://zeos.firmos.at/viewtopic.php?t=781
+           Bugfix InternalPost (Procedure) - Written by Bangfauzan - See http://zeos.firmos.at/viewtopic.php?t=781
+
+20061007 : New embedded mysql server example
+           Bugfix Updatesql component (OnUpdate event)
+           Added D2006 Project Group  - All written by fduenas

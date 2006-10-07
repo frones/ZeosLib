@@ -24,22 +24,18 @@ type
     StatusBar: TStatusBar;
     Panel1: TPanel;
     DBNavigator1: TDBNavigator;
-    btRefreshRecord: TButton;
     btApplyUpdates: TButton;
     btCancelUpdates: TButton;
     btExecute: TButton;
-    ZConnection1: TZConnection;
+    EmbeddedConnection: TZConnection;
     ClientDataSet: TZQuery;
     procedure btOpenClick(Sender: TObject);
     procedure btCloseClick(Sender: TObject);
     procedure btExecuteClick(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure meSQLExit(Sender: TObject);
-    procedure btRefreshRecordClick(Sender: TObject);
     procedure btApplyUpdatesClick(Sender: TObject);
     procedure btCancelUpdatesClick(Sender: TObject);
-    procedure ClientDataSetAfterExecute(Sender: TObject;
-      var OwnerData: OleVariant);
     procedure FormCreate(Sender: TObject);
   private
     { Private declarations }
@@ -144,11 +140,6 @@ begin
   ShowState;
 end;
 
-procedure TfmMain.btRefreshRecordClick(Sender: TObject);
-begin
-  //ClientDataSet.RefreshRecord;
-end;
-
 procedure TfmMain.btApplyUpdatesClick(Sender: TObject);
 begin
   ClientDataSet.ApplyUpdates;
@@ -159,19 +150,9 @@ begin
   ClientDataSet.CancelUpdates;
 end;
 
-procedure TfmMain.ClientDataSetAfterExecute(Sender: TObject;
-  var OwnerData: OleVariant);
-begin
-  ShowState;
-
-{$IFDEF WIN32}
-  MessageBeep(1);
-{$ENDIF}
-end;
-
 procedure TfmMain.FormCreate(Sender: TObject);
 begin
- ZConnection1.Connected := true;
+ EmbeddedConnection.Connected := true;
 end;
 
 end.

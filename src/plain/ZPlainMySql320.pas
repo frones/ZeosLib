@@ -339,7 +339,7 @@ end;
 }
 destructor TZMySQLNativeLibraryLoader.Destroy;
 begin
-  if Loaded then
+  if (Loaded) and (@api_rec.mysql_server_end <> nil) then
     api_rec.mysql_server_end;
   inherited Destroy;
 end;

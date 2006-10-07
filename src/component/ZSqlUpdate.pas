@@ -774,13 +774,10 @@ begin
               DoAfterDeleteSQLStatement(Self, I);
             utInserted:
               begin
-               if CalcDefaultValues then
-               begin
-                DoAfterInsertSQLStatement(Self, I, UpdateAutoIncFields);
-                if UpdateAutoIncFields then
-                   UpdateAutoIncrementFields(Sender, UpdateType,
-                     OldRowAccessor, NewRowAccessor, Self);
-               end
+               DoAfterInsertSQLStatement(Self, I, UpdateAutoIncFields);
+               if CalcDefaultValues and UpdateAutoIncFields then
+                  UpdateAutoIncrementFields(Sender, UpdateType,
+                                            OldRowAccessor, NewRowAccessor, Self);
               end;
             utModified:
               DoAfterModifySQLStatement(Self,I);

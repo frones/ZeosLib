@@ -40,7 +40,6 @@ object fmMain: TfmMain
     Height = 28
     Align = alTop
     TabOrder = 2
-    ExplicitTop = -6
     object btOpen: TButton
       Left = 0
       Top = 3
@@ -80,7 +79,6 @@ object fmMain: TfmMain
     ScrollBars = ssVertical
     TabOrder = 0
     OnExit = meSQLExit
-    ExplicitTop = 33
   end
   object StatusBar: TStatusBar
     Left = 0
@@ -111,15 +109,6 @@ object fmMain: TfmMain
       DataSource = DataSource
       TabOrder = 0
     end
-    object btRefreshRecord: TButton
-      Left = 512
-      Top = 0
-      Width = 96
-      Height = 24
-      Caption = 'RefreshRecord'
-      TabOrder = 3
-      OnClick = btRefreshRecordClick
-    end
     object btApplyUpdates: TButton
       Left = 272
       Top = 0
@@ -144,7 +133,7 @@ object fmMain: TfmMain
     Left = 472
     Top = 40
   end
-  object ZConnection1: TZConnection
+  object EmbeddedConnection: TZConnection
     Protocol = 'mysqld-4.1'
     Database = 'zeoslib'
     Properties.Strings = (
@@ -162,7 +151,7 @@ object fmMain: TfmMain
     Top = 176
   end
   object ClientDataSet: TZQuery
-    Connection = ZConnection1
+    Connection = EmbeddedConnection
     CachedUpdates = True
     Params = <>
     Options = [doCalcDefaults, doSmartOpen]
