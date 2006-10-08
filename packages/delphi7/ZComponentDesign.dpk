@@ -1,6 +1,7 @@
 package ZComponentDesign;
 
 {$R *.res}
+{$R '..\..\src\component\ZComponentDesign.dcr'}
 {$ALIGN 8}
 {$ASSERTIONS ON}
 {$BOOLEVAL OFF}
