@@ -798,6 +798,8 @@ begin
   end;
 end;
 
+{$ENDIF}
+
 {============================bangfauzan addition===================}
 
 procedure TZAbstractDataset.DOBeforeApplyUpdates;
@@ -826,6 +828,5 @@ end;
 
 {========================end of bangfauzan addition================}
 
-{$ENDIF}
 
 end.
