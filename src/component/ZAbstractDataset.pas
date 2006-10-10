@@ -425,9 +425,7 @@ end;
 procedure TZAbstractDataset.InternalPost;
 var
   RowBuffer: PZRowBuffer;
-  SField:String;
-  SIsi:Variant;
-  i:Integer;
+  BM:TBookMarkStr;
 begin
   if (FSequenceField <> '') and Assigned(FSequence) then
   begin
@@ -451,27 +449,17 @@ begin
     else InternalUpdate;
 
     {BUG-FIX: bangfauzan addition}
-
-    FreeFieldBuffers;
-    SetState(dsBrowse);
     if (SortedFields<>'') then begin
-      SField:='';
-      SIsi:=VarArrayCreate([0, FieldCount-1], varVariant);
-      for i:=0 to FieldCount-1 do begin
-        if SField='' then
-          SField:=Fields[i].FieldName
-        else
-          SField:=SField+';'+Fields[i].FieldName;
-        SIsi[i]:=Fields[i].Value;
-      end;
+      FreeFieldBuffers;
+      SetState(dsBrowse);
+      Resync([]);
+      BM:=Bookmark;
       DisableControls;
       InternalSort;
-      Locate(SField, SIsi, []);
+      BookMark:=BM;
       EnableControls;
     end;
-
     {end of bangfauzan addition}
-
   finally
     Connection.HideSqlHourGlass;
   end;

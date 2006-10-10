@@ -98,7 +98,7 @@ type
     property Active;
     property MasterFields;
     property MasterSource;
-    property IndexFieldNames;
+    property LinkedFields; {renamed by bangfauzan}
   end;
 
 implementation
