@@ -46,3 +46,6 @@
 20061007 : New embedded mysql server example
            Bugfix Updatesql component (OnUpdate event)
            Added D2006 Project Group  - All written by fduenas
+
+20061010 : Bug fix for Mssql Memory leak
+           Bug fix for Mssql Select * error - Written by rautgigi - See http://zeos.firmos.at/viewtopic.php?t=788
