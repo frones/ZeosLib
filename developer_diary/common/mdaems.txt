@@ -49,3 +49,7 @@
 
 20061010 : Bug fix for Mssql Memory leak
            Bug fix for Mssql Select * error - Written by rautgigi - See http://zeos.firmos.at/viewtopic.php?t=788
+
+20061010 : New feature : LinkedFieldNames vs. IndexFieldnames - Written by Bangfauzan - See http://zeos.firmos.at/viewtopic.php?t=796
+
+20061011 : Added Lazarus fixes : ASA support did not comile well.
