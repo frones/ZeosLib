@@ -156,6 +156,7 @@ type
 
     procedure Connect; virtual;
     procedure Disconnect; virtual;
+    function Ping: Boolean; virtual;
 
     procedure StartTransaction; virtual;
     procedure Commit; virtual;
@@ -599,6 +600,15 @@ begin
     DoAfterDisconnect;
   end;
 end;
+
+
+{**
+  Sends a ping to the server.
+}
+function TZConnection.Ping: Boolean; 
+begin 
+  Result := (FConnection <> nil) and (FConnection.PingServer=0); 
+end; 
 
 {**
   Checks if this connection is active.
