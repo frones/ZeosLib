@@ -205,10 +205,6 @@ resourcestring
 
   SFailedtoInitPrepStmt   = 'Translate: Prepared statement failed to initialize';
   SFailedtoPrepareStmt    = 'Translate: Statement failed during prepare process';
-  SFailedToBindAllValues  = 'Translate: Application failed to pre-bind all values';
-  SAttemptExecOnBadPrep   = 'Translate: Attempt made to execute a statement before a successful preparation.';
-  SBindingFailure         = 'Translate: Failed to bind parameter set';
-  SPreparedStmtExecFailure = 'Translate: Prepared statement failed to execute';
   SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
 

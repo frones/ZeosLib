@@ -244,7 +244,7 @@ function RandomString( Len: integer): string;
 
 implementation
 
-uses {$IFNDEF VER130BELOW}Variants,{$ENDIF} ZMessages, ZDbcCachedResultSet, Math;
+uses {$IFDEF FPC}Variants,{$ELSE}{$IFNDEF VER130BELOW}Variants,{$ENDIF}{$ENDIF} ZMessages, ZDbcCachedResultSet, Math;
 
 { TZASASQLDA }
 
@@ -1005,7 +1005,7 @@ end;
 }
 procedure TZASASQLDA.UpdateValue(const Index: Word; Value: Variant);
 begin
-  case VarType( Value) of
+  case VarType(Value) of
     varEmpty,
     varNull       : UpdateNull( Index, True);
     varSmallint   : UpdateShort( Index, Value);
