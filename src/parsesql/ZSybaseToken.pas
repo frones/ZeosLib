@@ -59,8 +59,8 @@ type
     function NextToken(Stream: TStream; FirstChar: Char;
       Tokenizer: TZTokenizer): TZToken; override;
 
-    function EncodeString(Value: string; QuoteChar: Char): string; override;
-    function DecodeString(Value: string; QuoteChar: Char): string; override;
+    function EncodeString(const Value: string; QuoteChar: Char): string; override;
+    function DecodeString(const Value: string; QuoteChar: Char): string; override;
   end;
 
   {**
@@ -252,7 +252,7 @@ end;
   @param QuoteChar a string quote character.
   @returns an encoded string.
 }
-function TZSybaseQuoteState.EncodeString(Value: string; QuoteChar: Char): string;
+function TZSybaseQuoteState.EncodeString(const Value: string; QuoteChar: Char): string;
 begin
   if QuoteChar = '[' then
     Result := '[' + Value + ']'
@@ -267,7 +267,7 @@ end;
   @param QuoteChar a string quote character.
   @returns an decoded string.
 }
-function TZSybaseQuoteState.DecodeString(Value: string; QuoteChar: Char): string;
+function TZSybaseQuoteState.DecodeString(const Value: string; QuoteChar: Char): string;
 begin
   Result := Value;
   if Length(Value) >= 2 then
