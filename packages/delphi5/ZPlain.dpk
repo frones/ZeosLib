@@ -13,6 +13,7 @@ package ZPlain;
 {$OPENSTRINGS ON}
 {$OPTIMIZATION OFF}
 {$OVERFLOWCHECKS ON}
+{$RANGECHECKS ON}
 {$REFERENCEINFO ON}
 {$SAFEDIVIDE OFF}
 {$STACKFRAMES ON}
@@ -22,7 +23,7 @@ package ZPlain;
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
 {$DESCRIPTION 'Zeos Plain Database API'}
-{$RUNONLY ON}
+{$RUNONLY}
 {$IMPLICITBUILD OFF}
 
 requires
@@ -43,10 +44,8 @@ contains
   ZPlainMySql40 in '..\..\src\plain\ZPlainMySql40.pas',
   ZPlainMySql41 in '..\..\src\plain\ZPlainMySql41.pas',
   ZPlainMySqlDriver in '..\..\src\plain\ZPlainMySqlDriver.pas',
-  ZPlainPostgreSql73 in '..\..\src\plain\ZPlainPostgreSql73.pas',
-  ZPlainPostgreSql74 in '..\..\src\plain\ZPlainPostgreSql74.pas',
-  ZPlainPostgreSql80 in '..\..\src\plain\ZPlainPostgreSql80.pas',
-  ZPlainPostgreSql81 in '..\..\src\plain\ZPlainPostgreSql81.pas',
+  ZPlainPostgreSql7 in '..\..\src\plain\ZPlainPostgreSql7.pas',
+  ZPlainPostgreSql8 in '..\..\src\plain\ZPlainPostgreSql8.pas',
   ZPlainDb2 in '..\..\src\plain\ZPlainDb2.pas',
   ZPlainDb2Driver in '..\..\src\plain\ZPlainDb2Driver.pas',
   ZPlainFirebird10 in '..\..\src\plain\ZPlainFirebird10.pas',
@@ -57,11 +56,15 @@ contains
   ZPlainOracleDriver in '..\..\src\plain\ZPlainOracleDriver.pas',
   ZPlainOracle9i in '..\..\src\plain\ZPlainOracle9i.pas',
   ZPlainSqLite28 in '..\..\src\plain\ZPlainSqLite28.pas',
-  ZPlainSqLite3 in '..\..\src\plain\ZPlainSqLite3.pas',  
+  ZPlainSqLite3 in '..\..\src\plain\ZPlainSqLite3.pas',
   ZPlainSqLiteDriver in '..\..\src\plain\ZPlainSqLiteDriver.pas',
   ZPlainASADriver in '..\..\src\plain\ZPlainASADriver.pas',
   ZPlainASA9 in '..\..\src\plain\ZPlainASA9.pas',
   ZPlainASA8 in '..\..\src\plain\ZPlainASA8.pas',
-  ZPlainASA7 in '..\..\src\plain\ZPlainASA7.pas';
+  ZPlainASA7 in '..\..\src\plain\ZPlainASA7.pas',
+  ZPlainMySql5 in '..\..\src\plain\ZPlainMySql5.pas',
+  ZPlainFirebirdDriver in '..\..\src\plain\ZPlainFirebirdDriver.pas',
+  ZPlainFirebirdInterbaseConstants in '..\..\src\plain\ZPlainFirebirdInterbaseConstants.pas',
+  ZPlainMysqlConstants in '..\..\src\plain\ZPlainMysqlConstants.pas';
 
 end.

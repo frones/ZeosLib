@@ -9,10 +9,9 @@ MAKE = $(ROOT)\bin\make.exe -$(MAKEFLAGS) -f$**
 DCC = $(ROOT)\bin\dcc32.exe $**
 BRCC = $(ROOT)\bin\brcc32.exe $**
 #------------------------------------------------------------------------------
-PROJECTS = ZCore.bpl ZParseSql.bpl ZPlain.bpl ZDbc.bpl \
-  ZComponent.bpl ZTestFramework.bpl ZTestCoreAll.exe \
-  ZTestParseSqlAll.exe ZTestDbcAll.exe ZTestComponentAll.exe ZTestBugReport.exe \
-  ZTestPerformance.exe
+PROJECTS = ZCore.bpl ZParseSql.bpl ZPlain.bpl ZDbc.bpl ZComponent.bpl \
+  ZComponentDesign70.bpl ZTestFramework.bpl ZTestCoreAll.exe ZTestParseSqlAll.exe \
+  ZTestDbcAll.exe ZTestComponentAll.exe ZTestBugReport.exe ZTestPerformance.exe
 #------------------------------------------------------------------------------
 default: $(PROJECTS)
 #------------------------------------------------------------------------------
@@ -51,6 +50,9 @@ ZTestBugReport.exe: ZTestBugReport.dpr
   $(DCC)
 
 ZTestPerformance.exe: ZTestPerformance.dpr
+  $(DCC)
+
+ZComponentDesign70.bpl: ZComponentDesign.dpk
   $(DCC)
 
 

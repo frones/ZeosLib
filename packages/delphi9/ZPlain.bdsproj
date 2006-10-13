@@ -123,10 +123,10 @@
 			<Directories Name="UnitOutputDir">build</Directories>
 			<Directories Name="PackageDLLOutputDir">$(BDSPROJECTSDIR)\bpl</Directories>
 			<Directories Name="PackageDCPOutputDir">$(BDSPROJECTSDIR)\bpl</Directories>
-			<Directories Name="SearchPath"></Directories>
+			<Directories Name="SearchPath">build</Directories>
 			<Directories Name="Packages"></Directories>
 			<Directories Name="Conditionals"></Directories>
-			<Directories Name="DebugSourceDirs"></Directories>
+			<Directories Name="DebugSourceDirs">build</Directories>
 			<Directories Name="UsePackages">False</Directories>
 		</Directories>
 		<Parameters>
@@ -174,9 +174,11 @@
 			<Language Name="ActiveLang"></Language>
 			<Language Name="ProjectLang">$00000000</Language>
 			<Language Name="RootDir"></Language>
-		</Language>
-	</Delphi.Personality>
-<!-- EurekaLog First Line
+		</Language>  <Excluded_Packages>
+      <Excluded_Packages Name="c:\program files\borland\bds\3.0\Bin\dcltee90.bpl">TeeChart Components</Excluded_Packages>
+    </Excluded_Packages>
+  </Delphi.Personality>
+	<!-- EurekaLog First Line
 [Exception Log]
 EurekaLog Version=513
 Activate=1

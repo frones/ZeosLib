@@ -52,16 +52,24 @@ uses
   ZTestConfig,
   ZSqlTestCase,
   ZTestDbcCore in '..\..\test\bugreport\ZTestDbcCore.pas',
-  ZTestDbcMySql in '..\..\test\bugreport\ZTestDbcMySql.pas',
-  ZTestDbcPostgreSql in '..\..\test\bugreport\ZTestDbcPostgreSql.pas',
-  ZTestDbcInterbase in '..\..\test\bugreport\ZTestDbcInterbase.pas',
-  ZTestDbcDbLib in '..\..\test\bugreport\ZTestDbcDbLib.pas',
   ZTestCompCore in '..\..\test\bugreport\ZTestCompCore.pas',
+{$IFDEF ENABLE_MYSQL}
+  ZTestDbcMySql in '..\..\test\bugreport\ZTestDbcMySql.pas',
   ZTestCompMySql in '..\..\test\bugreport\ZTestCompMySql.pas',
-  ZTestCompMSSql in '..\..\test\bugreport\ZTestCompMSSql.pas',
+{$ENDIF}
+{$IFDEF ENABLE_POSTGRESQL}
+  ZTestDbcPostgreSql in '..\..\test\bugreport\ZTestDbcPostgreSql.pas',
   ZTestCompPostgreSql in '..\..\test\bugreport\ZTestCompPostgreSql.pas',
+{$ENDIF}
+{$IFDEF ENABLE_INTERBASE}
+  ZTestDbcInterbase in '..\..\test\bugreport\ZTestDbcInterbase.pas',
   ZTestCompInterbase in '..\..\test\bugreport\ZTestCompInterbase.pas',
-  ZTestCompDbLib in '..\..\test\bugreport\ZTestCompDbLib.pas';
+{$ENDIF}
+{$IFDEF ENABLE_DBLIB}
+  ZTestDbcDbLib in '..\..\test\bugreport\ZTestDbcDbLib.pas',
+  ZTestCompDbLib in '..\..\test\bugreport\ZTestCompDbLib.pas',
+{$ENDIF}
+  ZTestCompMSSql in '..\..\test\bugreport\ZTestCompMSSql.pas';
 
 begin
   TestGroup := BUGREPORT_TEST_GROUP;
