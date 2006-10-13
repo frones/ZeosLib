@@ -73,6 +73,9 @@
 
 // Enables MySQL support in TZConnection/TZDataset
 {$DEFINE ENABLE_MYSQL}
+// Enables Mysql 3.x and 4.0 support
+// These versions are deprecated and will not be supported in future versions of zeoslib.
+{.$DEFINE ENABLE_MYSQL_DEPRECATED}
 
 // Enables PostgreSQL support in TZConnection/TZDataset
 {$DEFINE ENABLE_POSTGRESQL}
@@ -92,7 +95,7 @@
 {$DEFINE ENABLE_SQLITE}
 
 // Enables Oracle support in TZConnection/TZDataset
-{.$DEFINE ENABLE_ORACLE}
+{$DEFINE ENABLE_ORACLE}
 
 // Enables ASA support in TZConnection/TZDataset
 {.$DEFINE ENABLE_ASA}
@@ -103,6 +106,9 @@
 
 // Prevents loading default libmysql.dll
 {.$DEFINE MYSQL_STRICT_DLL_LOADING}
+
+// Prevents loading default firebird.dll
+{.$DEFINE FIREBIRD_STRICT_DLL_LOADING}
 
 // Prevents loading default libpq.dll
 {.$DEFINE POSTGRESQL_STRICT_DLL_LOADING}
@@ -158,7 +164,7 @@
 
 // Compile test applications with a graphical user interface (GUI)
 // Comment this definition if you want to compile console test applications
-{$DEFINE TESTGUI}
+{.$DEFINE TESTGUI}
 
 //PATCH TO DO NO METADATALOADING / UNTESTED HIGH RISK
 {.$DEFINE FOSNOMETA}
