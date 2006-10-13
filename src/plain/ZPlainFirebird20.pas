@@ -48,18 +48,18 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  ZCompatibility, ZPlainLoader, ZPlainInterbaseDriver;
+  ZCompatibility, ZPlainLoader, ZPlainFirebirdInterbaseConstants,
+  ZPlainFirebirdDriver;
 
 { ***************** Plain API Constants definition **************** }
 
 const
-  WINDOWS_DLL_LOCATION   = 'fbclient.dll';
-{$IFDEF USELIBFBCLIENTSO}
-  LINUX_DLL_LOCATION   = 'libfbclient.so';
-{$ELSE}
-   LINUX_DLL_LOCATION   = 'libfbembed.so';
-{$ENDIF}
-   LINUX_IB_CRYPT_LOCATION = 'libcrypt.so';
+  WINDOWS1_DLL_LOCATION   = 'fbclient20.dll';
+  WINDOWS1_DLL_LOCATION_EMBEDDED = 'fbclientd20.dll';
+
+  LINUX1_DLL_LOCATION   = 'libfbclient.so.20';
+  LINUX1_DLL_LOCATION_EMBEDDED = 'libfbembed.so.20';
+  LINUX1_IB_CRYPT_LOCATION = 'libcrypt.so.20';
 
 type
 
@@ -378,6 +378,7 @@ var
 
 var
   LibraryLoader: TZNativeLibraryLoader;
+  LibraryLoaderEmbedded: TZNativeLibraryLoader;
 
 implementation
 
@@ -539,9 +540,9 @@ begin
       for I := 0 to High(FPreLocations) do
       begin
         Location := FPreLocations[I];
-        PreHandle := GetModuleHandle(PChar(Location));
-        if PreHandle = 0 then
-        begin
+//        PreHandle := GetModuleHandle(PChar(Location));
+//        if PreHandle = 0 then
+//        begin
 {$IFDEF UNIX}
   {$IFDEF FPC}
           PreHandle := ZCompatibility.LoadLibrary(PChar(Location));
@@ -551,7 +552,7 @@ begin
 {$ELSE}
           PreHandle := LoadLibrary(PChar(Location));
 {$ENDIF}
-        end;
+//        end;
         if PreHandle <> 0 then
         begin
           PreLoaded := True;
@@ -574,17 +575,60 @@ end;
 initialization
 {$IFNDEF UNIX}
   LibraryLoader := TZFirebirdNativeLibraryLoader.Create(
-    [WINDOWS_DLL_LOCATION]);
+    [WINDOWS1_DLL_LOCATION
+		{$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
+    	, WINDOWS2_DLL_LOCATION
+		{$ENDIF}
+    ]);
+  LibraryLoaderEmbedded := TZFirebirdNativeLibraryLoader.Create(
+    [WINDOWS1_DLL_LOCATION_EMBEDDED
+		{$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
+    	,WINDOWS2_DLL_LOCATION_EMBEDDED
+		{$ENDIF}
+    ]);
+
 {$ELSE}
   {$IFDEF ENABLE_INTERBASE_CRYPT}
-  LibraryLoader := TZFirebirdNativeLibraryLoader.Create(
-    [LINUX_IB_CRYPT_LOCATION], [LINUX_DLL_LOCATION]);
+  	LibraryLoader := TZFirebirdNativeLibraryLoader.Create(
+  	[LINUX1_IB_CRYPT_LOCATION
+		{$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
+	  	, LINUX2_IB_CRYPT_LOCATION
+		{$ENDIF}
+	  ],[LINUX1_DLL_LOCATION
+
+		{$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
+	  	,LINUX2_DLL_LOCATION
+		{$ENDIF}
+	  ]);
+
+ 		LibraryLoaderEmbedded := TZFirebirdNativeLibraryLoader.Create(
+    [LINUX1_IB_CRYPT_LOCATION
+		{$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
+    	,LINUX2_IB_CRYPT_LOCATION
+		{$ENDIF}
+    ], [LINUX1_DLL_LOCATION_EMBEDDED
+		{$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
+    	,LINUX2_DLL_LOCATION_EMBEDDED
+		{$ENDIF}
+    ]);
   {$ELSE}
-  LibraryLoader := TZFirebirdNativeLibraryLoader.Create(
-    [LINUX_DLL_LOCATION]);
-  {$ENDIF}
+  	LibraryLoader := TZFirebirdNativeLibraryLoader.Create(
+    [LINUX1_DLL_LOCATION
+		{$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
+    	,LINUX2_DLL_LOCATION
+		{$ENDIF}
+    ]);
+  	LibraryLoaderEmbedded := TZFirebirdNativeLibraryLoader.Create(
+    [LINUX1_DLL_LOCATION_EMBEDDED
+		{$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
+    	,LINUX2_DLL_LOCATION_EMBEDDED
+		{$ENDIF}
+    ]);
+ 	{$ENDIF}
 {$ENDIF}
 finalization
   if Assigned(LibraryLoader) then
     LibraryLoader.Free;
+  if Assigned(LibraryLoaderEmbedded) then
+    LibraryLoaderEmbedded.Free;
 end.

@@ -876,6 +876,8 @@ procedure TZDBLibSybaseASE125PlainDriver.CheckError;
 var
   I: Integer;
   S: string;
+  lErrorEntry: PDBLibError;
+  lMesageEntry: PDBLibMessage;
 begin
   { TODO -ofjanos -cGeneral : Error handling should be based on connection object.
   At the moment it is global. }
@@ -890,13 +892,15 @@ begin
       S := S + PDBLibMessage(SybaseMessages.Items[I]).MsgText + ' '#13;
   while SybaseErrors.Count > 0 do
   begin
-    Dispose(SybaseErrors.Items[0]);
+    lErrorEntry := SybaseErrors.Items[0];
+    Dispose(lErrorEntry);
     SybaseErrors.Delete(0);
   end;
   SybaseErrors.Clear;
   while SybaseMessages.Count > 0 do
   begin
-    Dispose(SybaseMessages.Items[0]);
+    lMesageEntry := SybaseMessages.Items[0];
+    Dispose(lMesageEntry);
     SybaseMessages.Delete(0);
   end;
   SybaseMessages.Clear;
@@ -1162,6 +1166,8 @@ procedure TZDBLibMSSQL7PlainDriver.CheckError;
 var
   I: Integer;
   S: string;
+  lErrorEntry: PDBLibError;
+  lMesageEntry: PDBLibMessage;
 begin
   { TODO -ofjanos -cGeneral : Error handling should be based on connection object.
   At the moment it is global. }
@@ -1176,13 +1182,15 @@ begin
       S := S + PDBLibMessage(MSSqlMessages.Items[I]).MsgText + ' '#13;
   while MSSqlErrors.Count > 0 do
   begin
-    Dispose(MSSqlErrors.Items[0]);
+    lErrorEntry := MSSqlErrors.Items[0];
+    Dispose(lErrorEntry);
     MSSqlErrors.Delete(0);
   end;
   MSSqlErrors.Clear;
   while MSSqlMessages.Count > 0 do
   begin
-    Dispose(MSSqlMessages.Items[0]);
+    lMesageEntry := MSSqlMessages.Items[0];
+    Dispose(lMesageEntry);
     MSSqlMessages.Delete(0);
   end;
   MSSqlMessages.Clear;

@@ -143,9 +143,9 @@ begin
     for I := 0 to High(FLocations) do
     begin
       Location := FLocations[I];
-      Handle := GetModuleHandle(PChar(Location));
-      if Handle = 0 then
-      begin
+//      Handle := GetModuleHandle(PChar(Location));
+//      if Handle = 0 then
+//      begin
 {$IFDEF UNIX}
   {$IFDEF FPC}
         Handle := LoadLibrary(PChar(Location));
@@ -155,7 +155,7 @@ begin
 {$ELSE}
         Handle := LoadLibrary(PChar(Location));
 {$ENDIF}
-      end;
+//      end;
       if Handle <> 0 then
       begin
         Loaded := True;
