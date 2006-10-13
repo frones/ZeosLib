@@ -97,6 +97,11 @@ type
       RowAccessor: TZRowAccessor);
     procedure PostUpdates(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       OldRowAccessor, NewRowAccessor: TZRowAccessor);
+    {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
+    procedure UpdateAutoIncrementFields(Sender: IZCachedResultSet;
+      UpdateType: TZRowUpdateType;
+      OldRowAccessor, NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver); virtual;
+    {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
   end;
 
 implementation
@@ -1006,6 +1011,15 @@ begin
   end;
 *)
 end;
+
+{BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
+procedure TZEmptyResolver.UpdateAutoIncrementFields(
+  Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
+  NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver);
+begin
+ //Should be implemented at Specific database Level Cached resolver
+end;
+{END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 
 initialization
   TestFramework.RegisterTest(TZTestCachedResultSetCase.Suite);
