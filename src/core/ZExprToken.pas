@@ -59,8 +59,8 @@ type
     function NextToken(Stream: TStream; FirstChar: Char;
       Tokenizer: TZTokenizer): TZToken; override;
 
-    function EncodeString(Value: string; QuoteChar: Char): string; override;
-    function DecodeString(Value: string; QuoteChar: Char): string; override;
+    function EncodeString(const Value: string; QuoteChar: Char): string; override;
+    function DecodeString(const Value: string; QuoteChar: Char): string; override;
   end;
 
   {**
@@ -229,7 +229,7 @@ end;
   @param QuoteChar a string quote character.
   @returns an encoded string.
 }
-function TZExpressionQuoteState.EncodeString(Value: string;
+function TZExpressionQuoteState.EncodeString(const Value: string;
   QuoteChar: Char): string;
 begin
   if QuoteChar in [#39, '"'] then
@@ -243,7 +243,7 @@ end;
   @param QuoteChar a string quote character.
   @returns an decoded string.
 }
-function TZExpressionQuoteState.DecodeString(Value: string;
+function TZExpressionQuoteState.DecodeString(const Value: string;
   QuoteChar: Char): string;
 begin
   if (Length(Value) >= 2) and (QuoteChar in [#39, '"'])

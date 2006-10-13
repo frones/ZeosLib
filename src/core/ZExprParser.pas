@@ -63,7 +63,7 @@ type
     FTokenType: TZExpressionTokenType;
     FValue: TZVariant;
   public
-    constructor Create(TokenType: TZExpressionTokenType; Value: TZVariant);
+    constructor Create(TokenType: TZExpressionTokenType; const Value: TZVariant);
 
     property TokenType: TZExpressionTokenType read FTokenType write FTokenType;
     property Value: TZVariant read FValue write FValue;
@@ -120,7 +120,7 @@ uses ZSysUtils, ZMessages;
   @param Value a token value.
 }
 constructor TZExpressionToken.Create(TokenType: TZExpressionTokenType;
-  Value: TZVariant);
+  const Value: TZVariant);
 begin
   FTokenType := TokenType;
   FValue := Value;

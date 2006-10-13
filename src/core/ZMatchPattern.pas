@@ -69,7 +69,7 @@ interface
 uses SysUtils;
 
 { Check if Text equal to pattern }
-function IsMatch(Pattern, Text: string): Boolean;
+function IsMatch(const Pattern, Text: string): Boolean;
 
 implementation
 
@@ -100,7 +100,7 @@ function Matche(Pattern, Text: string): Integer; forward;
 function MatchAfterStar(Pattern, Text: string): Integer; forward;
 //function IsPattern(Pattern: string): Boolean; forward;
 
-function IsMatch(Pattern, Text: string): Boolean;
+function IsMatch(const Pattern, Text: string): Boolean;
 begin
   Result := (Matche(Pattern, Text) = 1);
 end;
@@ -279,7 +279,7 @@ begin
 end;
 
 (*
-function IsPattern(Pattern: string): Boolean;
+function IsPattern(const Pattern: string): Boolean;
 var
   I: Integer;
 begin

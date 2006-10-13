@@ -42,6 +42,9 @@ interface
 {$I ZCore.inc}
 
 uses
+  {$IFDEF MSWINDOWS}
+  Windows,
+  {$ENDIF MSWINDOWS}
   Classes, SysUtils, ZCompatibility, ZClasses, ZSysUtils;
 
 const
@@ -97,29 +100,29 @@ type
     procedure SetAsBoolean(var Value: TZVariant; Data: Boolean);
     procedure SetAsInteger(var Value: TZVariant; Data: Int64);
     procedure SetAsFloat(var Value: TZVariant; Data: Extended);
-    procedure SetAsString(var Value: TZVariant; Data: AnsiString);
-    procedure SetAsUnicodeString(var Value: TZVariant; Data: WideString);
+    procedure SetAsString(var Value: TZVariant; const Data: AnsiString);
+    procedure SetAsUnicodeString(var Value: TZVariant; const Data: WideString);
     procedure SetAsDateTime(var Value: TZVariant; Data: TDateTime);
     procedure SetAsPointer(var Value: TZVariant; Data: Pointer);
     procedure SetAsInterface(var Value: TZVariant; Data: IZInterface);
 
-    function OpAdd(Value1, Value2: TZVariant): TZVariant;
-    function OpSub(Value1, Value2: TZVariant): TZVariant;
-    function OpMul(Value1, Value2: TZVariant): TZVariant;
-    function OpDiv(Value1, Value2: TZVariant): TZVariant;
-    function OpMod(Value1, Value2: TZVariant): TZVariant;
-    function OpPow(Value1, Value2: TZVariant): TZVariant;
-    function OpAnd(Value1, Value2: TZVariant): TZVariant;
-    function OpOr(Value1, Value2: TZVariant): TZVariant;
-    function OpXor(Value1, Value2: TZVariant): TZVariant;
-    function OpNot(Value: TZVariant): TZVariant;
-    function OpNegative(Value: TZVariant): TZVariant;
-    function OpEqual(Value1, Value2: TZVariant): TZVariant;
-    function OpNotEqual(Value1, Value2: TZVariant): TZVariant;
-    function OpMore(Value1, Value2: TZVariant): TZVariant;
-    function OpLess(Value1, Value2: TZVariant): TZVariant;
-    function OpMoreEqual(Value1, Value2: TZVariant): TZVariant;
-    function OpLessEqual(Value1, Value2: TZVariant): TZVariant;
+    function OpAdd(const Value1, Value2: TZVariant): TZVariant;
+    function OpSub(const Value1, Value2: TZVariant): TZVariant;
+    function OpMul(const Value1, Value2: TZVariant): TZVariant;
+    function OpDiv(const Value1, Value2: TZVariant): TZVariant;
+    function OpMod(const Value1, Value2: TZVariant): TZVariant;
+    function OpPow(const Value1, Value2: TZVariant): TZVariant;
+    function OpAnd(const Value1, Value2: TZVariant): TZVariant;
+    function OpOr(const Value1, Value2: TZVariant): TZVariant;
+    function OpXor(const Value1, Value2: TZVariant): TZVariant;
+    function OpNot(const Value: TZVariant): TZVariant;
+    function OpNegative(const Value: TZVariant): TZVariant;
+    function OpEqual(const Value1, Value2: TZVariant): TZVariant;
+    function OpNotEqual(const Value1, Value2: TZVariant): TZVariant;
+    function OpMore(const Value1, Value2: TZVariant): TZVariant;
+    function OpLess(const Value1, Value2: TZVariant): TZVariant;
+    function OpMoreEqual(const Value1, Value2: TZVariant): TZVariant;
+    function OpLessEqual(const Value1, Value2: TZVariant): TZVariant;
   end;
 
   {** Implements a variant manager with strict convertion rules. }
@@ -149,29 +152,29 @@ type
     procedure SetAsBoolean(var Value: TZVariant; Data: Boolean);
     procedure SetAsInteger(var Value: TZVariant; Data: Int64);
     procedure SetAsFloat(var Value: TZVariant; Data: Extended);
-    procedure SetAsString(var Value: TZVariant; Data: AnsiString);
-    procedure SetAsUnicodeString(var Value: TZVariant; Data: WideString);
+    procedure SetAsString(var Value: TZVariant; const Data: AnsiString);
+    procedure SetAsUnicodeString(var Value: TZVariant; const Data: WideString);
     procedure SetAsDateTime(var Value: TZVariant; Data: TDateTime);
     procedure SetAsPointer(var Value: TZVariant; Data: Pointer);
     procedure SetAsInterface(var Value: TZVariant; Data: IZInterface);
 
-    function OpAdd(Value1, Value2: TZVariant): TZVariant;
-    function OpSub(Value1, Value2: TZVariant): TZVariant;
-    function OpMul(Value1, Value2: TZVariant): TZVariant;
-    function OpDiv(Value1, Value2: TZVariant): TZVariant;
-    function OpMod(Value1, Value2: TZVariant): TZVariant;
-    function OpPow(Value1, Value2: TZVariant): TZVariant;
-    function OpAnd(Value1, Value2: TZVariant): TZVariant;
-    function OpOr(Value1, Value2: TZVariant): TZVariant;
-    function OpXor(Value1, Value2: TZVariant): TZVariant;
-    function OpNot(Value: TZVariant): TZVariant;
-    function OpNegative(Value: TZVariant): TZVariant;
-    function OpEqual(Value1, Value2: TZVariant): TZVariant;
-    function OpNotEqual(Value1, Value2: TZVariant): TZVariant;
-    function OpMore(Value1, Value2: TZVariant): TZVariant;
-    function OpLess(Value1, Value2: TZVariant): TZVariant;
-    function OpMoreEqual(Value1, Value2: TZVariant): TZVariant;
-    function OpLessEqual(Value1, Value2: TZVariant): TZVariant;
+    function OpAdd(const Value1, Value2: TZVariant): TZVariant;
+    function OpSub(const Value1, Value2: TZVariant): TZVariant;
+    function OpMul(const Value1, Value2: TZVariant): TZVariant;
+    function OpDiv(const Value1, Value2: TZVariant): TZVariant;
+    function OpMod(const Value1, Value2: TZVariant): TZVariant;
+    function OpPow(const Value1, Value2: TZVariant): TZVariant;
+    function OpAnd(const Value1, Value2: TZVariant): TZVariant;
+    function OpOr(const Value1, Value2: TZVariant): TZVariant;
+    function OpXor(const Value1, Value2: TZVariant): TZVariant;
+    function OpNot(const Value: TZVariant): TZVariant;
+    function OpNegative(const Value: TZVariant): TZVariant;
+    function OpEqual(const Value1, Value2: TZVariant): TZVariant;
+    function OpNotEqual(const Value1, Value2: TZVariant): TZVariant;
+    function OpMore(const Value1, Value2: TZVariant): TZVariant;
+    function OpLess(const Value1, Value2: TZVariant): TZVariant;
+    function OpMoreEqual(const Value1, Value2: TZVariant): TZVariant;
+    function OpLessEqual(const Value1, Value2: TZVariant): TZVariant;
   end;
 
   {** Implements a variant manager with soft convertion rules. }
@@ -203,12 +206,12 @@ type
   private
     FValue: TZVariant;
   public
-    constructor Create(Value: TZVariant);
+    constructor Create(const Value: TZVariant);
     constructor CreateWithBoolean(Value: Boolean);
     constructor CreateWithInteger(Value: Int64);
     constructor CreateWithFloat(Value: Extended);
-    constructor CreateWithString(Value: AnsiString);
-    constructor CreateWithUnicodeString(Value: WideString);
+    constructor CreateWithString(const Value: AnsiString);
+    constructor CreateWithUnicodeString(const Value: WideString);
     constructor CreateWithDateTime(Value: TDateTime);
 
     function IsNull: Boolean;
@@ -231,28 +234,28 @@ type
   @param Value a custom variant value to be encoded.
   @returns an encoded standard variant.
 }
-function EncodeVariant(Value: TZVariant): Variant;
+function EncodeVariant(const Value: TZVariant): Variant;
 
 {**
   Encodes an array of custom variant values into array of standard variants.
   @param Value an array of custom variant values to be encoded.
   @returns an encoded array of standard variants.
 }
-function EncodeVariantArray(Value: TZVariantDynArray): Variant;
+function EncodeVariantArray(const Value: TZVariantDynArray): Variant;
 
 {**
   Decodes a standard variant value into custom variant.
   @param Value a standard variant value to be decoded.
   @returns an decoded custom variant.
 }
-function DecodeVariant(Value: Variant): TZVariant;
+function DecodeVariant(const Value: Variant): TZVariant;
 
 {**
   Decodes an array of standard variant values into array of custom variants.
   @param Value an array of standard variant values to be decoded.
   @returns an decoded array of custom variants.
 }
-function DecodeVariantArray(Value: Variant): TZVariantDynArray;
+function DecodeVariantArray(const Value: Variant): TZVariantDynArray;
 
 var
   {** Declares a default variant manager with strict convertion rules. }
@@ -643,7 +646,7 @@ end;
   @param Data a value to be assigned.
 }
 procedure TZDefaultVariantManager.SetAsString(var Value: TZVariant;
-  Data: AnsiString);
+  const Data: AnsiString);
 begin
   Value.VType := vtString;
   Value.VString := Data;
@@ -655,7 +658,7 @@ end;
   @param Data a value to be assigned.
 }
 procedure TZDefaultVariantManager.SetAsUnicodeString(var Value: TZVariant;
-  Data: WideString);
+  const Data: WideString);
 begin
   Value.VType := vtUnicodeString;
   Value.VUnicodeString := Data;
@@ -703,7 +706,7 @@ end;
   @param Value2 the second variant argument.
   @returns an operation result.
 }
-function TZDefaultVariantManager.OpAdd(Value1,
+function TZDefaultVariantManager.OpAdd(const Value1,
   Value2: TZVariant): TZVariant;
 begin
   case Value1.VType of
@@ -726,7 +729,7 @@ end;
   @param Value2 the second variant argument.
   @returns an operation result.
 }
-function TZDefaultVariantManager.OpAnd(Value1,
+function TZDefaultVariantManager.OpAnd(const Value1,
   Value2: TZVariant): TZVariant;
 begin
   case Value1.VType of
@@ -748,7 +751,7 @@ end;
   @param Value2 the second variant argument.
   @returns an operation result.
 }
-function TZDefaultVariantManager.OpDiv(Value1,
+function TZDefaultVariantManager.OpDiv(const Value1,
   Value2: TZVariant): TZVariant;
 begin
   case Value1.VType of
@@ -770,7 +773,7 @@ end;
   @param Value2 the second variant argument.
   @returns an operation result.
 }
-function TZDefaultVariantManager.OpEqual(Value1,
+function TZDefaultVariantManager.OpEqual(const Value1,
   Value2: TZVariant): TZVariant;
 begin
   SetAsBoolean(Result, Compare(Value1, Value2) = 0);
@@ -782,7 +785,7 @@ end;
   @param Value2 the second variant argument.
   @returns an operation result.
 }
-function TZDefaultVariantManager.OpLess(Value1,
+function TZDefaultVariantManager.OpLess(const Value1,
   Value2: TZVariant): TZVariant;
 begin
   SetAsBoolean(Result, Compare(Value1, Value2) < 0);
@@ -794,7 +797,7 @@ end;
   @param Value2 the second variant argument.
   @returns an operation result.
 }
-function TZDefaultVariantManager.OpLessEqual(Value1,
+function TZDefaultVariantManager.OpLessEqual(const Value1,
   Value2: TZVariant): TZVariant;
 begin
   SetAsBoolean(Result, Compare(Value1, Value2) <= 0);
@@ -806,7 +809,7 @@ end;
   @param Value2 the second variant argument.
   @returns an operation result.
 }
-function TZDefaultVariantManager.OpMod(Value1,
+function TZDefaultVariantManager.OpMod(const Value1,
   Value2: TZVariant): TZVariant;
 begin
   case Value1.VType of
@@ -828,7 +831,7 @@ end;
   @param Value2 the second variant argument.
   @returns an operation result.
 }
-function TZDefaultVariantManager.OpMore(Value1,
+function TZDefaultVariantManager.OpMore(const Value1,
   Value2: TZVariant): TZVariant;
 begin
   SetAsBoolean(Result, Compare(Value1, Value2) > 0);
@@ -840,7 +843,7 @@ end;
   @param Value2 the second variant argument.
   @returns an operation result.
 }
-function TZDefaultVariantManager.OpMoreEqual(Value1,
+function TZDefaultVariantManager.OpMoreEqual(const Value1,
   Value2: TZVariant): TZVariant;
 begin
   SetAsBoolean(Result, Compare(Value1, Value2) >= 0);
@@ -852,7 +855,7 @@ end;
   @param Value2 the second variant argument.
   @returns an operation result.
 }
-function TZDefaultVariantManager.OpMul(Value1,
+function TZDefaultVariantManager.OpMul(const Value1,
   Value2: TZVariant): TZVariant;
 begin
   case Value1.VType of
@@ -873,7 +876,7 @@ end;
   @param Value the variant argument.
   @returns an operation result.
 }
-function TZDefaultVariantManager.OpNegative(Value: TZVariant): TZVariant;
+function TZDefaultVariantManager.OpNegative(const Value: TZVariant): TZVariant;
 begin
   case Value.VType of
     vtNull: SetNull(Result);
@@ -893,7 +896,7 @@ end;
   @param Value the variant argument.
   @returns an operation result.
 }
-function TZDefaultVariantManager.OpNot(Value: TZVariant): TZVariant;
+function TZDefaultVariantManager.OpNot(const Value: TZVariant): TZVariant;
 begin
   case Value.VType of
     vtNull: SetNull(Result);
@@ -914,7 +917,7 @@ end;
   @param Value2 the second variant argument.
   @returns an operation result.
 }
-function TZDefaultVariantManager.OpNotEqual(Value1,
+function TZDefaultVariantManager.OpNotEqual(const Value1,
   Value2: TZVariant): TZVariant;
 begin
   SetAsBoolean(Result, Compare(Value1, Value2) <> 0);
@@ -926,7 +929,7 @@ end;
   @param Value2 the second variant argument.
   @returns an operation result.
 }
-function TZDefaultVariantManager.OpOr(Value1,
+function TZDefaultVariantManager.OpOr(const Value1,
   Value2: TZVariant): TZVariant;
 begin
   case Value1.VType of
@@ -948,7 +951,7 @@ end;
   @param Value2 the second variant argument.
   @returns an operation result.
 }
-function TZDefaultVariantManager.OpPow(Value1,
+function TZDefaultVariantManager.OpPow(const Value1,
   Value2: TZVariant): TZVariant;
 begin
   case Value1.VType of
@@ -970,7 +973,7 @@ end;
   @param Value2 the second variant argument.
   @returns an operation result.
 }
-function TZDefaultVariantManager.OpSub(Value1,
+function TZDefaultVariantManager.OpSub(const Value1,
   Value2: TZVariant): TZVariant;
 begin
   case Value1.VType of
@@ -992,7 +995,7 @@ end;
   @param Value2 the second variant argument.
   @returns an operation result.
 }
-function TZDefaultVariantManager.OpXor(Value1,
+function TZDefaultVariantManager.OpXor(const Value1,
   Value2: TZVariant): TZVariant;
 var
   TempBool1, TempBool2: Boolean;
@@ -1221,7 +1224,7 @@ end;
   Constructs this object and assignes the main properties.
   @param Value an any value.
 }
-constructor TZAnyValue.Create(Value: TZVariant);
+constructor TZAnyValue.Create(const Value: TZVariant);
 begin
   FValue := Value;
 end;
@@ -1266,7 +1269,7 @@ end;
   Constructs this object and assignes the main properties.
   @param Value a string value.
 }
-constructor TZAnyValue.CreateWithString(Value: AnsiString);
+constructor TZAnyValue.CreateWithString(const Value: AnsiString);
 begin
   DefVarManager.SetAsString(FValue, Value);
 end;
@@ -1275,7 +1278,7 @@ end;
   Constructs this object and assignes the main properties.
   @param Value a unicode string value.
 }
-constructor TZAnyValue.CreateWithUnicodeString(Value: WideString);
+constructor TZAnyValue.CreateWithUnicodeString(const Value: WideString);
 begin
   DefVarManager.SetAsUnicodeString(FValue, Value);
 end;
@@ -1395,7 +1398,7 @@ end;
   @param Value a custom variant value to be encoded.
   @returns an encoded standard variant.
 }
-function EncodeVariant(Value: TZVariant): Variant;
+function EncodeVariant(const Value: TZVariant): Variant;
 begin
   case Value.VType of
     vtBoolean: Result := Value.VBoolean;
@@ -1418,7 +1421,7 @@ end;
   @param Value an array of custom variant values to be encoded.
   @returns an encoded array of standard variants.
 }
-function EncodeVariantArray(Value: TZVariantDynArray): Variant;
+function EncodeVariantArray(const Value: TZVariantDynArray): Variant;
 var
   I, L: Integer;
 begin
@@ -1433,7 +1436,7 @@ end;
   @param Value a standard variant value to be decoded.
   @returns an decoded custom variant.
 }
-function DecodeVariant(Value: Variant): TZVariant;
+function DecodeVariant(const Value: Variant): TZVariant;
 begin
   case VarType(Value) of
     varSmallint, varInteger, varByte:
@@ -1461,7 +1464,7 @@ end;
   @param Value an array of standard variant values to be decoded.
   @returns an decoded array of custom variants.
 }
-function DecodeVariantArray(Value: Variant): TZVariantDynArray;
+function DecodeVariantArray(const Value: Variant): TZVariantDynArray;
 var
   I, L, H: Integer;
 begin
