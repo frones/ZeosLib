@@ -81,6 +81,10 @@ type
     FWhereMode: TZWhereMode;
     FSequence: TZSequence;
     FSequenceField: string;
+
+    FBeforeApplyUpdates: TNotifyEvent; {bangfauzan addition}
+    FAfterApplyUpdates: TNotifyEvent; {bangfauzan addition}
+
   private
     function GetUpdatesPending: Boolean;
     procedure SetUpdateObject(Value: TZUpdateSQL);
@@ -106,9 +110,13 @@ type
     procedure InternalUpdate;
     procedure InternalCancel; override;
 
-    function CreateStatement(SQL: string; Properties: TStrings):
+    procedure DOBeforeApplyUpdates; {bangfauzan addition}
+    procedure DOAfterApplyUpdates; {bangfauzan addition}
+
+
+    function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; override;
-    function CreateResultSet(SQL: string; MaxRows: Integer):
+    function CreateResultSet(const SQL: string; MaxRows: Integer):
       IZResultSet; override;
     procedure Notification(AComponent: TComponent; Operation: TOperation);
       override;
@@ -127,6 +135,8 @@ type
     procedure CancelUpdates;
     procedure RevertRecord;
 
+    procedure EmptyDataSet; {bangfauzan addition}
+
   public
     property UpdatesPending: Boolean read GetUpdatesPending;
     property Sequence: TZSequence read FSequence write FSequence;
@@ -141,6 +151,12 @@ type
       write FOnApplyUpdateError;
     property OnUpdateRecord: TUpdateRecordEvent read FOnUpdateRecord
       write FOnUpdateRecord;
+
+    property BeforeApplyUpdates: TNotifyEvent read FBeforeApplyUpdates
+      write FBeforeApplyUpdates; {bangfauzan addition}
+    property AfterApplyUpdates: TNotifyEvent read FAfterApplyUpdates
+      write FAfterApplyUpdates; {bangfauzan addition}
+
 
   published
 //    property Constraints;
@@ -259,7 +275,7 @@ end;
   @returns a created DBC statement.
 }
 function TZAbstractDataset.CreateStatement(
-  SQL: string; Properties: TStrings): IZPreparedStatement;
+  const SQL: string; Properties: TStrings): IZPreparedStatement;
 var
   Temp: TStrings;
 begin
@@ -290,7 +306,7 @@ end;
   @param MaxRows a maximum rows number (-1 for all).
   @returns a created DBC resultset.
 }
-function TZAbstractDataset.CreateResultSet(SQL: string; MaxRows: Integer):
+function TZAbstractDataset.CreateResultSet(const SQL: string; MaxRows: Integer):
   IZResultSet;
 begin
   Result := inherited CreateResultSet(SQL, MaxRows);
@@ -409,11 +425,16 @@ end;
 procedure TZAbstractDataset.InternalPost;
 var
   RowBuffer: PZRowBuffer;
+  BM:TBookMarkStr;
 begin
   if (FSequenceField <> '') and Assigned(FSequence) then
   begin
-  if FieldByName(FSequenceField).IsNull then
-   FieldByName(FSequenceField).Value := FSequence.GetNextValue;
+    if FieldByName(FSequenceField).IsNull then
+    {$IFDEF VER130} //Delphi5 
+      FieldByName(FSequenceField).Value := Integer(FSequence.GetNextValue);
+    {$ELSE}
+      FieldByName(FSequenceField).Value := FSequence.GetNextValue;
+    {$ENDIF}
   end;
 
   inherited;
@@ -426,6 +447,19 @@ begin
     if State = dsInsert then
       InternalAddRecord(RowBuffer, False)
     else InternalUpdate;
+
+    {BUG-FIX: bangfauzan addition}
+    if (SortedFields<>'') then begin
+      FreeFieldBuffers;
+      SetState(dsBrowse);
+      Resync([]);
+      BM:=Bookmark;
+      DisableControls;
+      InternalSort;
+      BookMark:=BM;
+      EnableControls;
+    end;
+    {end of bangfauzan addition}
   finally
     Connection.HideSqlHourGlass;
   end;
@@ -517,11 +551,16 @@ begin
   try
     if State in [dsEdit, dsInsert] then Post;
 
+    DoBeforeApplyUpdates; {bangfauzan addition}
+
     if CachedResultSet <> nil then
       CachedResultSet.PostUpdates;
 
     if not (State in [dsInactive]) then
       Resync([]);
+
+  DOAfterApplyUpdates; {bangfauzan addition}
+
   finally
     Connection.HideSqlHourGlass;
   end;
@@ -760,5 +799,34 @@ begin
 end;
 
 {$ENDIF}
+
+{============================bangfauzan addition===================}
+
+procedure TZAbstractDataset.DOBeforeApplyUpdates;
+begin
+  if assigned(BeforeApplyUpdates) then
+    FBeforeApplyUpdates(Self);
+end;
+
+procedure TZAbstractDataset.DOAfterApplyUpdates;
+begin
+  if assigned(AfterApplyUpdates) then
+    FAfterApplyUpdates(Self);
+end;
+
+procedure TZAbstractDataset.EmptyDataSet;
+begin
+  if Active then
+  begin
+    Self.CancelUpdates;
+    Self.CurrentRows.Clear;
+    Self.CurrentRow:=0;
+    Resync([]);
+    InitRecord(ActiveBuffer);
+  end;
+end;
+
+{========================end of bangfauzan addition================}
+
 
 end.

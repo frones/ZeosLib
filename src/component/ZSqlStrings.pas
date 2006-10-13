@@ -60,7 +60,7 @@ type
     function GetParamName(Index: Integer): string;
     function GetParamNamesArray: TStringDynArray;
   protected
-    constructor Create(SQL: string; ParamIndices: TIntegerDynArray;
+    constructor Create(const SQL: string; const ParamIndices: TIntegerDynArray;
       Params: TStrings);
   public
     property SQL: string read FSQL;
@@ -88,7 +88,7 @@ type
     procedure SetMultiStatements(Value: Boolean);
   protected
     procedure Changed; override;
-    function FindParam(ParamName: string): Integer;
+    function FindParam(const ParamName: string): Integer;
     procedure RebuildAll;
   public
     constructor Create;
@@ -116,8 +116,8 @@ uses ZMessages, ZAbstractRODataset, ZDatasetUtils;
   @param ParamIndices a parameter indices.
   @param Params a list with all parameter names.
 }
-constructor TZSQLStatement.Create(SQL: string;
-  ParamIndices: TIntegerDynArray; Params: TStrings);
+constructor TZSQLStatement.Create(const SQL: string;
+  const ParamIndices: TIntegerDynArray; Params: TStrings);
 begin
   FSQL := SQL;
   FParamIndices := ParamIndices;
@@ -264,7 +264,7 @@ end;
   @param ParamName a parameter name.
   @return an index of found parameters or -1 if nothing was found.
 }
-function TZSQLStrings.FindParam(ParamName: string): Integer;
+function TZSQLStrings.FindParam(const ParamName: string): Integer;
 begin
 {$IFNDEF VER130BELOW}
   FParams.CaseSensitive := False;

@@ -64,8 +64,8 @@ type
 
     function GetCurrentValue: Int64;
     function GetNextValue: Int64;
-    function  GetCurrentValueSQL:String; // Get the Sequence as SQL-Text
-    function  GetNextValueSQL:String;   // Get the Sequence as SQL-Text
+    function  GetCurrentValueSQL: string; // Get the Sequence as SQL-Text
+    function  GetNextValueSQL: string;   // Get the Sequence as SQL-Text
 
   published
     property BlockSize: Integer read FBlockSize write SetBlockSize default 1;
@@ -96,7 +96,7 @@ begin
     Result := 0;
 end;
 
-function TZSequence.GetCurrentValueSQL: String;
+function TZSequence.GetCurrentValueSQL: string;
 begin
   GetSequence;
   if Assigned(FSequence) then begin
@@ -119,7 +119,7 @@ begin
     Result := 0;
 end;
 
-function TZSequence.GetNextValueSQL: String;
+function TZSequence.GetNextValueSQL: string;
 begin
   GetSequence;
   if Assigned(FSequence) then begin

@@ -90,8 +90,8 @@ begin
   RegisterPropertyEditor(TypeInfo(string), TZConnection, 'Catalog',
     TZCatalogPropertyEditor);
 
-  RegisterPropertyEditor(TypeInfo(string), TZQuery, 'IndexFieldNames',
-    TZDataFieldPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZQuery, 'LinkedFields',
+    TZDataFieldPropertyEditor); {renamed by bangfauzan}
   RegisterPropertyEditor(TypeInfo(string), TZQuery, 'MasterFields',
     TZMasterFieldPropertyEditor);
   RegisterPropertyEditor(TypeInfo(string), TZQuery, 'SortedFields',
@@ -99,8 +99,8 @@ begin
   RegisterPropertyEditor(TypeInfo(string), TZQuery, 'SequenceField',
     TZDataFieldPropertyEditor);
 
-  RegisterPropertyEditor(TypeInfo(string), TZReadOnlyQuery, 'IndexFieldNames',
-    TZDataFieldPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZReadOnlyQuery, 'LinkedFields',
+    TZDataFieldPropertyEditor); {renamed by bangfauzan}
   RegisterPropertyEditor(TypeInfo(string), TZReadOnlyQuery, 'MasterFields',
     TZMasterFieldPropertyEditor);
   RegisterPropertyEditor(TypeInfo(string), TZReadOnlyQuery, 'SortedFields',
@@ -108,8 +108,8 @@ begin
 
   RegisterPropertyEditor(TypeInfo(string), TZTable, 'TableName',
     TZTableNamePropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZTable, 'IndexFieldNames',
-    TZDataFieldPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZTable, 'LinkedFields',
+    TZDataFieldPropertyEditor); {renamed by bangfauzan}
   RegisterPropertyEditor(TypeInfo(string), TZTable, 'MasterFields',
     TZMasterFieldPropertyEditor);
   RegisterPropertyEditor(TypeInfo(string), TZTable, 'SortedFields',
@@ -136,8 +136,8 @@ begin
     TZSchemaPropertyEditor);
   RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'ForeignTableName',
     TZTableNamePropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'IndexFieldNames',
-    TZDataFieldPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'LinkedFields',
+    TZDataFieldPropertyEditor); {renamed by bangfauzan}
   RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'MasterFields',
     TZMasterFieldPropertyEditor);
   RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'ProcedureName',

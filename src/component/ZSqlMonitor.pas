@@ -77,18 +77,16 @@ type
     procedure TruncateTraceList(Count: Integer);
     procedure DoTrace(Event: TZLoggingEvent; var LogTrace: Boolean);
     procedure DoLogTrace(Event: TZLoggingEvent);
-
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
     procedure LogEvent(Event: TZLoggingEvent);
     procedure Save();
-    procedure SaveToFile(FileName: string);
+    procedure SaveToFile(const FileName: string);
 
     property TraceCount: Integer read GetTraceCount;
     property TraceList[Index: Integer]: TZLoggingEvent read GetTraceItem;
-
   published
     property Active: Boolean read FActive write SetActive default False;
     property AutoSave: Boolean read FAutoSave write FAutoSave default False;
@@ -217,7 +215,7 @@ end;
   Saves the logging events to the specified file.
   @param FileName a name of the file to write the events.
 }
-procedure TZSQLMonitor.SaveToFile(FileName: string);
+procedure TZSQLMonitor.SaveToFile(const FileName: string);
 var
   I: Integer;
   Stream: TFileStream;

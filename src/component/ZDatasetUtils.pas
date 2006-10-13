@@ -77,7 +77,7 @@ function ConvertFieldsToColumnInfo(Fields: TFields): TObjectList;
   @param RowAccessor a destination row accessor.
 }
 procedure FetchFromResultSet(ResultSet: IZResultSet;
-  FieldsLookupTable: TIntegerDynArray; Fields: TFields;
+  const FieldsLookupTable: TIntegerDynArray; Fields: TFields;
   RowAccessor: TZRowAccessor);
 
 {**
@@ -88,7 +88,7 @@ procedure FetchFromResultSet(ResultSet: IZResultSet;
   @param RowAccessor a destination row accessor.
 }
 procedure PostToResultSet(ResultSet: IZResultSet;
-  FieldsLookupTable: TIntegerDynArray; Fields: TFields;
+  const FieldsLookupTable: TIntegerDynArray; Fields: TFields;
   RowAccessor: TZRowAccessor);
 
 {**
@@ -97,7 +97,7 @@ procedure PostToResultSet(ResultSet: IZResultSet;
   @param FieldNames a list of field names.
   @param OnlyDataFields <code>True</code> if only data fields selected.
 }
-function DefineFields(DataSet: TDataset; FieldNames: string;
+function DefineFields(DataSet: TDataset; const FieldNames: string;
   var OnlyDataFields: Boolean): TObjectDynArray;
 
 {**
@@ -116,7 +116,7 @@ function DefineFilterFields(DataSet: TDataset;
   @param ResultValues a container for result values.
   @return an array with field values.
 }
-procedure RetrieveDataFieldsFromResultSet(FieldRefs: TObjectDynArray;
+procedure RetrieveDataFieldsFromResultSet(const FieldRefs: TObjectDynArray;
   ResultSet: IZResultSet; var ResultValues: TZVariantDynArray);
 
 {**
@@ -127,8 +127,8 @@ procedure RetrieveDataFieldsFromResultSet(FieldRefs: TObjectDynArray;
   @param ResultValues a container for result values.
   @return an array with field values.
 }
-procedure RetrieveDataFieldsFromRowAccessor(FieldRefs: TObjectDynArray;
-  FieldIndices: TIntegerDynArray; RowAccessor: TZRowAccessor;
+procedure RetrieveDataFieldsFromRowAccessor(const FieldRefs: TObjectDynArray;
+  const FieldIndices: TIntegerDynArray; RowAccessor: TZRowAccessor;
   var ResultValues: TZVariantDynArray);
 
 {**
@@ -137,7 +137,7 @@ procedure RetrieveDataFieldsFromRowAccessor(FieldRefs: TObjectDynArray;
   @param ResultSet an initial result set object.
   @param Variables a list of variables.
 }
-procedure CopyDataFieldsToVars(Fields: TObjectDynArray;
+procedure CopyDataFieldsToVars(const Fields: TObjectDynArray;
   ResultSet: IZResultSet; Variables: IZVariablesList);
 
 {**
@@ -148,7 +148,7 @@ procedure CopyDataFieldsToVars(Fields: TObjectDynArray;
   @param PartialKey <code>True</code> if values should be started with the keys.
   @param CaseInsensitive <code>True</code> if keys are case insensitive.
 }
-procedure PrepareValuesForComparison(FieldRefs: TObjectDynArray;
+procedure PrepareValuesForComparison(const FieldRefs: TObjectDynArray;
   var DecodedKeyValues: TZVariantDynArray; ResultSet: IZResultSet;
   PartialKey: Boolean; CaseInsensitive: Boolean);
 
@@ -172,8 +172,8 @@ function CompareDataFields(const KeyValues, RowValues: TZVariantDynArray;
   @param CaseInsensitive <code>True</code> if keys are case insensitive.
   @return <code> if values are equal.
 }
-function CompareFieldsFromResultSet(FieldRefs: TObjectDynArray;
-  KeyValues: TZVariantDynArray; ResultSet: IZResultSet; PartialKey: Boolean;
+function CompareFieldsFromResultSet(const FieldRefs: TObjectDynArray;
+  const KeyValues: TZVariantDynArray; ResultSet: IZResultSet; PartialKey: Boolean;
   CaseInsensitive: Boolean): Boolean;
 
 {**
@@ -218,7 +218,7 @@ function CompareKeyFields(Field1: TField; ResultSet: IZResultSet;
   @param OnlyDataFields <code>True</code> if only data fields selected.
 }
 procedure DefineSortedFields(DataSet: TDataset;
-  SortedFields: string; var FieldRefs: TObjectDynArray;
+  const SortedFields: string; var FieldRefs: TObjectDynArray;
   var FieldDirs: TBooleanDynArray; var OnlyDataFields: Boolean);
 
 {**
@@ -235,7 +235,7 @@ function CreateFieldsLookupTable(Fields: TFields): TIntegerDynArray;
   @param Field a TDataset field object.
   @returns an original fields index or -1 otherwise.
 }
-function DefineFieldIndex(FieldsLookupTable: TIntegerDynArray;
+function DefineFieldIndex(const FieldsLookupTable: TIntegerDynArray;
   Field: TField): Integer;
 
 {**
@@ -244,8 +244,8 @@ function DefineFieldIndex(FieldsLookupTable: TIntegerDynArray;
   @param FieldRefs a TDataset field object references.
   @returns an array with original fields indices.
 }
-function DefineFieldIndices(FieldsLookupTable: TIntegerDynArray;
-  FieldRefs: TObjectDynArray): TIntegerDynArray;
+function DefineFieldIndices(const FieldsLookupTable: TIntegerDynArray;
+  const FieldRefs: TObjectDynArray): TIntegerDynArray;
 
 {**
   Splits up a qualified object name into pieces. Catalog, schema
@@ -383,7 +383,7 @@ end;
   @param RowAccessor a destination row accessor.
 }
 procedure FetchFromResultSet(ResultSet: IZResultSet;
-  FieldsLookupTable: TIntegerDynArray; Fields: TFields;
+  const FieldsLookupTable: TIntegerDynArray; Fields: TFields;
   RowAccessor: TZRowAccessor);
 var
   I, FieldIndex: Integer;
@@ -446,7 +446,7 @@ end;
   @param RowAccessor a destination row accessor.
 }
 procedure PostToResultSet(ResultSet: IZResultSet;
-  FieldsLookupTable: TIntegerDynArray; Fields: TFields;
+  const FieldsLookupTable: TIntegerDynArray; Fields: TFields;
   RowAccessor: TZRowAccessor);
 var
   I, FieldIndex: Integer;
@@ -531,7 +531,7 @@ end;
   @param FieldNames a list of field names.
   @param OnlyDataFields <code>True</code> if only data fields selected.
 }
-function DefineFields(DataSet: TDataset; FieldNames: string;
+function DefineFields(DataSet: TDataset; const FieldNames: string;
   var OnlyDataFields: Boolean): TObjectDynArray;
 var
   I: Integer;
@@ -618,7 +618,7 @@ end;
   @param ResultValues a container for result values.
   @return an array with field values.
 }
-procedure RetrieveDataFieldsFromResultSet(FieldRefs: TObjectDynArray;
+procedure RetrieveDataFieldsFromResultSet(const FieldRefs: TObjectDynArray;
   ResultSet: IZResultSet; var ResultValues: TZVariantDynArray);
 var
   I, ColumnIndex: Integer;
@@ -668,8 +668,8 @@ end;
   @param ResultValues a container for result values.
   @return an array with field values.
 }
-procedure RetrieveDataFieldsFromRowAccessor(FieldRefs: TObjectDynArray;
-  FieldIndices: TIntegerDynArray; RowAccessor: TZRowAccessor;
+procedure RetrieveDataFieldsFromRowAccessor(const FieldRefs: TObjectDynArray;
+  const FieldIndices: TIntegerDynArray; RowAccessor: TZRowAccessor;
   var ResultValues: TZVariantDynArray);
 var
   I: Integer;
@@ -719,7 +719,7 @@ end;
   @param ResultSet an initial result set object.
   @param Variables a list of variables.
 }
-procedure CopyDataFieldsToVars(Fields: TObjectDynArray;
+procedure CopyDataFieldsToVars(const Fields: TObjectDynArray;
   ResultSet: IZResultSet; Variables: IZVariablesList);
 var
   I, ColumnIndex: Integer;
@@ -817,7 +817,7 @@ end;
   @param PartialKey <code>True</code> if values should be started with the keys.
   @param CaseInsensitive <code>True</code> if keys are case insensitive.
 }
-procedure PrepareValuesForComparison(FieldRefs: TObjectDynArray;
+procedure PrepareValuesForComparison(const FieldRefs: TObjectDynArray;
   var DecodedKeyValues: TZVariantDynArray; ResultSet: IZResultSet;
   PartialKey: Boolean; CaseInsensitive: Boolean);
 var
@@ -939,8 +939,8 @@ end;
   @param CaseInsensitive <code>True</code> if keys are case insensitive.
   @return <code> if values are equal.
 }
-function CompareFieldsFromResultSet(FieldRefs: TObjectDynArray;
-  KeyValues: TZVariantDynArray; ResultSet: IZResultSet; PartialKey: Boolean;
+function CompareFieldsFromResultSet(const FieldRefs: TObjectDynArray;
+  const KeyValues: TZVariantDynArray; ResultSet: IZResultSet; PartialKey: Boolean;
   CaseInsensitive: Boolean): Boolean;
 var
   I: Integer;
@@ -1100,6 +1100,7 @@ end;
   @return a data which contains a value.
 }
 function NativeToDateTime(DataType: TFieldType; Buffer: Pointer): TDateTime;
+{$IFNDEF FPC}
 var
   TimeStamp: TTimeStamp;
 begin
@@ -1123,6 +1124,10 @@ begin
     end;
   end;
   Result := TimeStampToDateTime(TimeStamp);
+{$ELSE}
+begin
+  Result := TDateTime(Buffer^);
+{$ENDIF}
 end;
 
 {**
@@ -1188,7 +1193,7 @@ end;
   @param OnlyDataFields <code>True</code> if only data fields selected.
 }
 procedure DefineSortedFields(DataSet: TDataset;
-  SortedFields: string; var FieldRefs: TObjectDynArray;
+  const SortedFields: string; var FieldRefs: TObjectDynArray;
   var FieldDirs: TBooleanDynArray; var OnlyDataFields: Boolean);
 var
   I: Integer;
@@ -1268,7 +1273,7 @@ end;
   @param Field a TDataset field object.
   @returns an original fields index or -1 otherwise.
 }
-function DefineFieldIndex(FieldsLookupTable: TIntegerDynArray;
+function DefineFieldIndex(const FieldsLookupTable: TIntegerDynArray;
   Field: TField): Integer;
 var
   I: Integer;
@@ -1290,8 +1295,8 @@ end;
   @param FieldRefs a TDataset field object references.
   @returns an array with original fields indices.
 }
-function DefineFieldIndices(FieldsLookupTable: TIntegerDynArray;
-  FieldRefs: TObjectDynArray): TIntegerDynArray;
+function DefineFieldIndices(const FieldsLookupTable: TIntegerDynArray;
+  const FieldRefs: TObjectDynArray): TIntegerDynArray;
 var
   I: Integer;
 begin

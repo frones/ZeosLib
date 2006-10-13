@@ -125,7 +125,8 @@ type
     procedure SetAutoCommit(Value: Boolean);
     function GetDbcDriver: IZDriver;
     function GetInTransaction: Boolean;
-
+    function GetClientVersion: Integer;
+    function GetServerVersion: Integer;
     procedure DoBeforeConnect;
     procedure DoAfterConnect;
     procedure DoBeforeDisconnect;
@@ -138,7 +139,7 @@ type
     procedure CheckAutoCommitMode;
     procedure CheckNonAutoCommitMode;
 
-    function ConstructURL(UserName: string; Password: string): string;
+    function ConstructURL(const UserName, Password: string): string;
 
     procedure CloseAllDataSets;
     procedure UnregisterAllDataSets;
@@ -155,16 +156,16 @@ type
 
     procedure Connect; virtual;
     procedure Disconnect; virtual;
+    function Ping: Boolean; virtual;
 
     procedure StartTransaction; virtual;
     procedure Commit; virtual;
     procedure Rollback; virtual;
 
-    procedure PrepareTransaction(transactionid:string);virtual;
-    procedure CommitPrepared(transactionid:string);virtual;
-    procedure RollbackPrepared(transactionid:string);virtual;
-    procedure Ping_Server;virtual;
-
+    procedure PrepareTransaction(const transactionid: string); virtual;
+    procedure CommitPrepared(const transactionid: string); virtual;
+    procedure RollbackPrepared(const transactionid: string); virtual;
+    function PingServer: Boolean; virtual;
 
     procedure RegisterDataSet(DataSet: TDataset);
     procedure UnregisterDataSet(DataSet: TDataset);
@@ -172,14 +173,17 @@ type
     procedure GetProtocolNames(List: TStrings);
     procedure GetCatalogNames(List: TStrings);
     procedure GetSchemaNames(List: TStrings);
-    procedure GetTableNames(const Pattern: string; List: TStrings);
+    procedure GetTableNames(const Pattern: string; List: TStrings);overload;
+		procedure GetTableNames(const tablePattern,shemaPattern: string; List: TStrings);overload;
+
     procedure GetStoredProcNames(const Pattern: string; List: TStrings);
 
     property InTransaction: Boolean read GetInTransaction;
 
     property DbcDriver: IZDriver read GetDbcDriver;
     property DbcConnection: IZConnection read FConnection;
-
+    property ClientVersion: Integer read GetClientVersion;
+    property ServerVersion: Integer read GetServerVersion;
     procedure ShowSQLHourGlass;
     procedure HideSQLHourGlass;
 
@@ -222,7 +226,6 @@ type
     property OnLogin: TLoginEvent read FOnLogin write FOnLogin;
     property OnStartTransaction: TNotifyEvent
       read FOnStartTransaction write FOnStartTransaction;
-
   end;
 
 implementation
@@ -281,7 +284,7 @@ begin
       if Assigned(Classes.ApplicationHandleException) then
         Classes.ApplicationHandleException(ExceptObject)
       else
-    {$ENDIF}  
+    {$ENDIF}
         ShowException(ExceptObject, ExceptAddr)
     else
       raise;
@@ -392,12 +395,38 @@ begin
 end;
 
 {**
+  Gets client's full version number.
+  The format of the version resturned must be XYYYZZZ where
+   X   = Major version
+   YYY = Minor version
+   ZZZ = Sub version
+  @return this clients's full version number
+}
+function TZConnection.GetClientVersion: Integer;
+begin
+ Result := DbcConnection.GetClientVersion;
+end;
+
+{**
+  Gets server's full version number.
+  The format of the version resturned must be XYYYZZZ where
+   X   = Major version
+   YYY = Minor version
+   ZZZ = Sub version
+  @return this clients's full version number
+}
+function TZConnection.GetServerVersion: Integer;
+begin
+ Result := DbcConnection.GetHostVersion;
+end;
+
+{**
   Constructs ZDBC connection URL string.
   @param UserName a name of the user.
   @param Password a user password.
   @returns a constructed connection URL.
 }
-function TZConnection.ConstructURL(UserName: string; Password: string): string;
+function TZConnection.ConstructURL(const UserName, Password: string): string;
 begin
   if Port <> 0 then
   begin
@@ -572,6 +601,15 @@ begin
   end;
 end;
 
+
+{**
+  Sends a ping to the server.
+}
+function TZConnection.Ping: Boolean; 
+begin 
+  Result := (FConnection <> nil) and (FConnection.PingServer=0); 
+end; 
+
 {**
   Checks if this connection is active.
 }
@@ -644,14 +682,15 @@ begin
     Dec(FExplicitTransactionCounter);
 end;
 
-procedure TZConnection.CommitPrepared(transactionid: string);
-var oldlev:TZTransactIsolationLevel;
+procedure TZConnection.CommitPrepared(const transactionid: string);
+var
+  oldlev: TZTransactIsolationLevel;
 begin
   CheckAutoCommitMode;
-  oldlev:=TransactIsolationLevel;
-  TransactIsolationLevel:=tiNone;
+  oldlev := TransactIsolationLevel;
+  TransactIsolationLevel := tiNone;
   FConnection.CommitPrepared(transactionid);
-  TransactIsolationLevel:=oldLev;
+  TransactIsolationLevel := oldLev;
 end;
 
 {**
@@ -686,14 +725,15 @@ begin
     Dec(FExplicitTransactionCounter);
 end;
 
-procedure TZConnection.RollbackPrepared(transactionid: string);
-var oldlev:TZTransactIsolationLevel;
+procedure TZConnection.RollbackPrepared(const transactionid: string);
+var
+  oldlev: TZTransactIsolationLevel;
 begin
   CheckAutoCommitMode;
-  oldlev:=TransactIsolationLevel;
-  TransactIsolationLevel:=tiNone;
+  oldlev := TransactIsolationLevel;
+  TransactIsolationLevel := tiNone;
   FConnection.RollbackPrepared(transactionid);
-  TransactIsolationLevel:=oldLev;
+  TransactIsolationLevel := oldLev;
 end;
 
 {procedure TZConnection.RollbackPrepared(transactionid: string);
@@ -717,14 +757,14 @@ begin
   end;
 end;
 
-procedure TZConnection.Ping_Server;
+function TZConnection.PingServer: Boolean;
 begin
- FConnection.Ping_Server;
+ Result := (FConnection.PingServer=0);
 end;
 
-procedure TZConnection.PrepareTransaction(transactionid: string);
-var
-  ExplicitTran: Boolean;
+procedure TZConnection.PrepareTransaction(const transactionid: string);
+{var
+  ExplicitTran: Boolean;}
 begin
   CheckConnected;
   CheckNonAutoCommitMode;
@@ -745,12 +785,12 @@ begin
 end;
 
 
-{procedure TZConnection.PrepareTransaction(transactionid: string);
+{procedure TZConnection.PrepareTransaction(const transactionid: string);
 begin
 
 end;
 
-*procedure TZConnection.PrepareTransaction(transactionid: string);
+*procedure TZConnection.PrepareTransaction(const transactionid: string);
 begin
 
 end;
@@ -925,6 +965,26 @@ begin
   List.Clear;
   Metadata := DbcConnection.GetMetadata;
   ResultSet := Metadata.GetTables('', '', Pattern, nil);
+  while ResultSet.Next do
+    List.Add(ResultSet.GetStringByName('TABLE_NAME'));
+end;
+
+{**
+  Fills string list with table names.
+  @param tablePattern a pattern for table names.
+  @param shemaPattern a pattern for shema names.
+  @param List a string list to fill out.
+}
+procedure TZConnection.GetTableNames(const tablePattern,shemaPattern: string; List: TStrings);
+var
+  Metadata: IZDatabaseMetadata;
+  ResultSet: IZResultSet;
+begin
+  CheckConnected;
+
+  List.Clear;
+  Metadata := DbcConnection.GetMetadata;
+  ResultSet := Metadata.GetTables('', shemaPattern, tablePattern, nil);
   while ResultSet.Next do
     List.Add(ResultSet.GetStringByName('TABLE_NAME'));
 end;

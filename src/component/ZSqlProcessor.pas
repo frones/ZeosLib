@@ -42,7 +42,7 @@ interface
 {$I ZComponent.inc}
 
 uses ZCompatibility, Classes, SysUtils, DB, ZDbcIntfs, ZConnection, ZTokenizer,
-  ZScriptParser, ZSqlStrings, Types;
+  ZScriptParser, ZSqlStrings{$IFNDEF VER130BELOW}, Types{$ENDIF};
 
 type
 
@@ -83,9 +83,9 @@ type
     function GetDelimiterType: TZDelimiterType;
     procedure SetDelimiterType(Value: TZDelimiterType);
     function GetDelimiter: string;
-    procedure SetDelimiter(Value: string);
-    function GetCleanupStatements: boolean;
-    procedure SetCleanupStatements(const Value: boolean);
+    procedure SetDelimiter(const Value: string);
+    function GetCleanupStatements: Boolean;
+    procedure SetCleanupStatements(const Value: Boolean);
 
     function GetParamCheck: Boolean;
     procedure SetParamCheck(Value: Boolean);
@@ -97,16 +97,16 @@ type
     procedure DoBeforeExecute(StatementIndex: Integer);
     procedure DoAfterExecute(StatementIndex: Integer);
 
-    function CreateStatement(SQL: string; Properties: TStrings):
+    function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; virtual;
     procedure SetStatementParams(Statement: IZPreparedStatement;
-      ParamNames: TStringDynArray; Params: TParams); virtual;
+      const ParamNames: TStringDynArray; Params: TParams); virtual;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
     procedure LoadFromStream(Stream: TStream);
-    procedure LoadFromFile(FileName: string);
+    procedure LoadFromFile(const FileName: string);
 
     procedure Execute;
     procedure Parse;
@@ -125,7 +125,7 @@ type
     property DelimiterType: TZDelimiterType read GetDelimiterType
       write SetDelimiterType default dtDefault;
     property Delimiter: string read GetDelimiter write SetDelimiter;
-    property CleanupStatements: boolean read GetCleanupStatements
+    property CleanupStatements: Boolean read GetCleanupStatements
       write SetCleanupStatements default False; 
     property OnError: TZProcessorErrorEvent read FOnError write FOnError;
     property AfterExecute: TZProcessorNotifyEvent read FAfterExecute write FAfterExecute;
@@ -235,7 +235,7 @@ end;
   Sets a new Processor delimiter.
   @param Value a new Processor delimiter.
 }
-procedure TZSQLProcessor.SetDelimiter(Value: string);
+procedure TZSQLProcessor.SetDelimiter(const Value: string);
 begin
   if FScriptParser.Delimiter <> Value then
   begin
@@ -320,7 +320,7 @@ end;
   Loads a SQL Processor from the local file.
   @param FileName a name of the file.
 }
-procedure TZSQLProcessor.LoadFromFile(FileName: string);
+procedure TZSQLProcessor.LoadFromFile(const FileName: string);
 begin
   FScript.LoadFromFile(FileName);
 end;
@@ -402,7 +402,9 @@ procedure TZSQLProcessor.Parse;
 begin
   CheckConnected;
   FScriptParser.Tokenizer := Connection.DbcDriver.GetTokenizer;
-  FScriptParser.Clear;
+// mdaems 20060429 : Clear would reset the delimiter of the scriptparser
+//  FScriptParser.Clear;
+  FScriptParser.ClearUncompleted;
   FScriptParser.ParseText(FScript.Text);
 end;
 
@@ -412,7 +414,7 @@ end;
   @param Properties a statement specific properties.
   @returns a created DBC statement.
 }
-function TZSQLProcessor.CreateStatement(SQL: string;
+function TZSQLProcessor.CreateStatement(const SQL: string;
   Properties: TStrings): IZPreparedStatement;
 var
   Temp: TStrings;
@@ -435,7 +437,7 @@ end;
   @param Params a collection of SQL parameters.
 }
 procedure TZSQLProcessor.SetStatementParams(Statement: IZPreparedStatement;
-  ParamNames: TStringDynArray; Params: TParams);
+  const ParamNames: TStringDynArray; Params: TParams);
 var
   I: Integer;
   TempParam, Param: TParam;
@@ -474,7 +476,7 @@ begin
             Statement.SetDate(I + 1, Param.AsDate);
           ftTime:
             Statement.SetTime(I + 1, Param.AsTime);
-          ftDateTime, ftTimestamp:
+          ftDateTime{$IFNDEF VER130}, ftTimestamp{$ENDIF}:
             Statement.SetTimestamp(I + 1, Param.AsDateTime);
           ftMemo:
             begin
@@ -552,12 +554,12 @@ begin
   UpdateSQLStrings(Self);
 end;
 
-function TZSQLProcessor.GetCleanupStatements: boolean;
+function TZSQLProcessor.GetCleanupStatements: Boolean;
 begin
   Result := FScriptParser.CleanupStatements;
 end;
 
-procedure TZSQLProcessor.SetCleanupStatements(const Value: boolean);
+procedure TZSQLProcessor.SetCleanupStatements(const Value: Boolean);
 begin
   if FScriptParser.CleanupStatements <> Value then
   begin

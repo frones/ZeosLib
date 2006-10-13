@@ -60,6 +60,8 @@ type
   end;
   {$ENDIF}
 
+  TSortType = (stAscending, stDescending);   {bangfauzan addition}
+
   {** Options for dataset. }
   TZDatasetOption = (doOemTranslate, doCalcDefaults, doAlwaysDetailResync,
     doSmartOpen);
@@ -77,7 +79,7 @@ type
     FStatusCode: String;
     procedure SetStatusCode(const Value: String);
    public
-    constructor Create(Msg: string);
+    constructor Create(const Msg: string);
     constructor CreateFromException(E: EZSQLThrowable);
 
     property ErrorCode: Integer read FErrorCode write FErrorCode;
@@ -132,8 +134,12 @@ type
 
     FDataLink: TDataLink;
     FMasterLink: TMasterDataLink;
-    FIndexFieldNames: string;
+    FLinkedFields: string; {renamed by bangfauzan}
+    FIndexFieldNames : String; {bangfauzan addition}
+
     FIndexFields: TList;
+
+    FSortType : TSortType; {bangfauzan addition}
 
     FSortedFields: string;
     FSortedFieldRefs: TObjectDynArray;
@@ -155,14 +161,19 @@ type
     procedure SetConnection(Value: TZConnection);
     procedure SetDataSource(Value: TDataSource);
     function GetMasterFields: string;
-    procedure SetMasterFields(Value: string);
+    procedure SetMasterFields(const Value: string);
     function GetMasterDataSource: TDataSource;
     procedure SetMasterDataSource(Value: TDataSource);
-    function GetIndexFieldNames: string;
-    procedure SetIndexFieldNames(Value: string);
+    function GetLinkedFields: string; {renamed by bangfauzan}
+    procedure SetLinkedFields(const Value: string);  {renamed by bangfauzan}
+    function GetIndexFieldNames : String; {bangfauzan addition}
+    procedure SetIndexFieldNames(Value : String); {bangfauzan addition}
     procedure SetOptions(Value: TZDatasetOptions);
-    procedure SetSortedFields(Value: string);
+    procedure SetSortedFields({const} Value: string); {bangfauzan modification}
     procedure SetProperties(const Value: TStrings);
+
+    function GetSortType : TSortType; {bangfauzan addition}
+    Procedure SetSortType(Value : TSortType); {bangfauzan addition}
 
     procedure UpdateSQLStrings(Sender: TObject);
     procedure ReadParamData(Reader: TReader);
@@ -237,8 +248,10 @@ type
       write SetMasterFields;
     property MasterSource: TDataSource read GetMasterDataSource
       write SetMasterDataSource;
-    property IndexFieldNames: string read GetIndexFieldNames
-      write SetIndexFieldNames;
+    property LinkedFields: string read GetLinkedFields
+      write SetLinkedFields; {renamed by bangfauzan}
+    property IndexFieldNames:String read GetIndexFieldNames
+      write SetIndexFieldNames; {bangfauzan addition}
 
   protected
     { Abstracts methods }
@@ -258,9 +271,9 @@ type
     function AllocRecordBuffer: PChar; override;
     procedure FreeRecordBuffer(var Buffer: PChar); override;
     procedure CloseBlob(Field: TField); override;
-    function CreateStatement(SQL: string; Properties: TStrings):
+    function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; virtual;
-    function CreateResultSet(SQL: string; MaxRows: Integer):
+    function CreateResultSet(const SQL: string; MaxRows: Integer):
       IZResultSet; virtual;
 
     procedure CheckFieldCompatibility(Field: TField; FieldDef: TFieldDef);
@@ -283,7 +296,7 @@ type
     procedure SetBookmarkFlag(Buffer: PChar; Value: TBookmarkFlag); override;
     procedure SetBookmarkData(Buffer: PChar; Data: Pointer); override;
 
-    function InternalLocate(KeyFields: string; KeyValues: Variant;
+    function InternalLocate(const KeyFields: string; const KeyValues: Variant;
       Options: TLocateOptions): LongInt;
     function FindRecord(Restart, GoForward: Boolean): Boolean; override;
     procedure SetFiltered(Value: Boolean); override;
@@ -364,6 +377,8 @@ type
   published
     property Connection: TZConnection read FConnection write SetConnection;
     property SortedFields: string read FSortedFields write SetSortedFields;
+    property SortType : TSortType read GetSortType write SetSortType
+      default stAscending; {bangfauzan addition}
 
     property AutoCalcFields;
     property BeforeOpen;
@@ -394,7 +409,7 @@ uses Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSchema,
   Constructs a database exception with a string message.
   @param Msg a string message which describes the error.
 }
-constructor EZDatabaseError.Create(Msg: string);
+constructor EZDatabaseError.Create(const Msg: string);
 begin
   inherited Create(Msg);
 end;
@@ -974,7 +989,7 @@ begin
             Statement.SetDate(I + 1, Param.AsDate);
           ftTime:
             Statement.SetTime(I + 1, Param.AsTime);
-          ftDateTime, ftTimestamp:
+          ftDateTime{$IFNDEF VER130}, ftTimestamp{$ENDIF}:
             Statement.SetTimestamp(I + 1, Param.AsDateTime);
           ftMemo:
             begin
@@ -1448,7 +1463,7 @@ end;
   @param Properties a statement specific properties.
   @returns a created DBC statement.
 }
-function TZAbstractRODataset.CreateStatement(SQL: string; Properties: TStrings):
+function TZAbstractRODataset.CreateStatement(const SQL: string; Properties: TStrings):
   IZPreparedStatement;
 var
   Temp: TStrings;
@@ -1474,7 +1489,7 @@ end;
   @param MaxRows a maximum rows number (-1 for all).
   @returns a created DBC resultset.
 }
-function TZAbstractRODataset.CreateResultSet(SQL: string;
+function TZAbstractRODataset.CreateResultSet(const SQL: string;
   MaxRows: Integer): IZResultSet;
 begin
   Connection.ShowSQLHourGlass;
@@ -1551,7 +1566,7 @@ begin
     InitFilterFields := False;
 
     IndexFields.Clear;
-    GetFieldList(IndexFields, FIndexFieldNames);
+    GetFieldList(IndexFields, FLinkedFields); {renamed by bangfauzan}
 
     { Performs sorting. }
     if FSortedFields <> '' then
@@ -1755,7 +1770,7 @@ end;
   Sets master link fields.
   @param Value a new master link fields.
 }
-procedure TZAbstractRODataset.SetMasterFields(Value: string);
+procedure TZAbstractRODataset.SetMasterFields(const Value: string);
 begin
   if FMasterLink.FieldNames <> Value then
   begin
@@ -1828,24 +1843,24 @@ end;
   Gets a list of index field names.
   @returns a list of index field names.
 }
-function TZAbstractRODataset.GetIndexFieldNames: string;
+function TZAbstractRODataset.GetLinkedFields: string; {renamed by bangfauzan}
 begin
-  Result := FIndexFieldNames;
+  Result := FLinkedFields; {renamed by bangfauzan}
 end;
 
 {**
   Sets a new list of index field names.
   @param Value a new list of index field names.
 }
-procedure TZAbstractRODataset.SetIndexFieldNames(Value: string);
+procedure TZAbstractRODataset.SetLinkedFields(const Value: string); {renamed by bangfauzan}
 begin
-  if FIndexFieldNames <> Value then
+  if FLinkedFields <> Value then {renamed by bangfauzan}
   begin
-    FIndexFieldNames := Value;
+    FLinkedFields := Value; {renamed by bangfauzan}
     IndexFields.Clear;
     if State <> dsInactive then
     begin
-      GetFieldList(IndexFields, FIndexFieldNames);
+      GetFieldList(IndexFields, FLinkedFields); {renamed by bangfauzan}
       RereadRows;
     end;
   end;
@@ -1867,13 +1882,24 @@ end;
   Sets a new sorted fields.
   @param Value a new sorted fields.
 }
-procedure TZAbstractRODataset.SetSortedFields(Value: string);
+procedure TZAbstractRODataset.SetSortedFields({const} Value: string); {bangfauzan modification}
 begin
-  if FSortedFields <> Value then
+  {removing ASC or DESC behind space}
+  if Pos(' ',Value)>0 then
+    Value:=Copy(Value,1,Pos(' ',Value)-1); {bangfauzan addition}
+  if FSortedFields <> Value then {bangfauzan modification}
   begin
     FSortedFields := Value;
+    FSortType := GetSortType; {bangfauzan addition}
+    FIndexFieldNames := GetIndexFieldNames; {bangfauzan addition}
     if Active then
-      InternalSort;
+      {InternalSort;}
+      {bangfauzan modification}
+       if (FSortedFields = '') then
+          Self.InternalRefresh
+       else
+          InternalSort;
+      {end of bangfauzan modification}
   end;
 end;
 
@@ -1953,7 +1979,7 @@ end;
 }
 procedure TZAbstractRODataset.InternalPost;
 begin
-{$IFNDEF FPC}
+{$IFNDEF VER130BELOW}
   inherited;
 {$ENDIF}
   if not (Self is TZAbstractDataset) then
@@ -2258,8 +2284,8 @@ end;
   @param Options a search options.
   @return an index of found row or -1 if nothing was found.
 }
-function TZAbstractRODataset.InternalLocate(KeyFields: string;
-  KeyValues: Variant; Options: TLocateOptions): LongInt;
+function TZAbstractRODataset.InternalLocate(const KeyFields: string;
+  const KeyValues: Variant; Options: TLocateOptions): LongInt;
 var
   I, RowNo, RowCount: Integer;
   FieldRefs: TObjectDynArray;
@@ -2537,11 +2563,12 @@ var
   I, RowNo: Integer;
   SavedRowBuffer: PZRowBuffer;
 begin
+  if FIndexFieldNames = '' then exit; {bangfauzan addition}
   if (ResultSet <> nil) and not IsUniDirectional then
   begin
-    FSortedFields := Trim(FSortedFields);
-    DefineSortedFields(Self, FSortedFields, FSortedFieldRefs,
-      FSortedFieldDirs, FSortedOnlyDataFields);
+    FIndexFieldNames := Trim(FIndexFieldNames); {bangfauzan modification}
+    DefineSortedFields(Self, {FSortedFields} FIndexFieldNames {bangfauzan modification},
+    FSortedFieldRefs, FSortedFieldDirs, FSortedOnlyDataFields);
 
     if (CurrentRow <= CurrentRows.Count) and (CurrentRows.Count > 0)
       and (CurrentRow > 0) then
@@ -2969,7 +2996,7 @@ const
     ftFloat, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
     ftInteger, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftUnknown,
     ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
-    ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp, ftFMTBcd);
+    ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString{$IFNDEF VER130}, ftTimestamp, ftFMTBcd{$ENDIF});
  {$ENDIF}
 {$ENDIF}
 
@@ -2999,6 +3026,61 @@ begin
     if (Fields[Index - 1].FieldKind in [fkCalculated, fkLookup]) then
       RowAccessor.SetNull(Index);
 end;
+
+{=======================bangfauzan addition========================}
+function TZAbstractRODataset.GetSortType: TSortType;
+begin
+  Result:=stAscending;
+  if Pos('DESC',UpperCase(FIndexFieldNames))>0 then
+    Result:=stDescending;
+end;
+
+procedure TZAbstractRODataset.SetSortType(Value: TSortType);
+begin
+  if FSortType <> Value then
+  begin
+    FSortType := Value;
+    FIndexFieldNames:=GetIndexFieldNames; {bangfauzan addition}
+    if Active then
+       if (FSortedFields = '') then
+          Self.InternalRefresh
+      else
+          InternalSort;
+  end;
+end;
+
+function TZAbstractRODataset.GetIndexFieldNames : String;
+begin
+  Result:=FSortedFields;
+  if Result<>'' then begin
+    if FSortType=stAscending then Result:=Result+' Asc';
+    if FSortType=stDescending then Result:=Result+' Desc';
+  end;
+end;
+
+procedure TZAbstractRODataset.SetIndexFieldNames(Value: String);
+begin
+  Value:=Trim(Value);
+  if Pos('[',Value)>0 then
+     Value:=Copy(Value,1,Pos('[',Value)-1)+Copy(Value,Pos('[',Value)+1,Length(Value));
+  if Pos(']',Value)>0 then
+     Value:=Copy(Value,1,Pos(']',Value)-1)+Copy(Value,Pos(']',Value)+1,Length(Value));
+  if FIndexFieldNames <> Value then begin
+    FIndexFieldNames := Value;
+    if pos(' ',value)>0 then Value:=Copy(Value,1,Pos(' ',Value)-1);
+    FSortedFields:=Value;
+    FSortType:=GetSortType;
+  end;
+
+  {Perform sorting}
+  if Active then
+     if (FSortedFields = '') then
+        Self.InternalRefresh
+     else
+        InternalSort;
+end;
+
+{====================end of bangfauzan addition====================}
 
 end.
 
