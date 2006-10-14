@@ -64,9 +64,9 @@ type
     destructor Destroy; override;
     procedure Close; override;
 
-    function ExecuteQuery(SQL: string): IZResultSet; override;
-    function ExecuteUpdate(SQL: string): Integer; override;
-    function Execute(SQL: string): Boolean; override;
+    function ExecuteQuery(const SQL: string): IZResultSet; override;
+    function ExecuteUpdate(const SQL: string): Integer; override;
+    function Execute(const SQL: string): Boolean; override;
     function GetMoreResults: Boolean; override;
   end;
 
@@ -76,7 +76,7 @@ type
     FAdoCommand: ZPlainAdo.Command;
     procedure SetInParamCount(NewParamCount: Integer); override;
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
-      Value: TZVariant); override;
+      const Value: TZVariant); override;
   public
     constructor Create(PlainDriver: IZPlainDriver; Connection: IZConnection; SQL: string; Info: TStrings);
     destructor Destroy; override;
@@ -131,7 +131,7 @@ begin
   Result := Uppercase(Copy(TrimLeft(Sql), 1, 6)) = 'SELECT';
 end;
 
-function TZAdoStatement.ExecuteQuery(SQL: string): IZResultSet;
+function TZAdoStatement.ExecuteQuery(const SQL: string): IZResultSet;
 begin
   Result := nil;
   LastResultSet := nil;
@@ -141,7 +141,7 @@ begin
   Result := LastResultSet
 end;
 
-function TZAdoStatement.ExecuteUpdate(SQL: string): Integer;
+function TZAdoStatement.ExecuteUpdate(const SQL: string): Integer;
 begin
   Result := -1;
   LastResultSet := nil;
@@ -150,7 +150,7 @@ begin
     Result := LastUpdateCount;
 end;
 
-function TZAdoStatement.Execute(SQL: string): Boolean;
+function TZAdoStatement.Execute(const SQL: string): Boolean;
 var
   RC: OleVariant;
 begin
@@ -253,7 +253,7 @@ end;
   @paran Value a new parameter value.
 }
 procedure TZAdoPreparedStatement.SetInParam(ParameterIndex: Integer;
-  SQLType: TZSQLType; Value: TZVariant);
+  SQLType: TZSQLType; const Value: TZVariant);
 var
   S: Integer;
   HR: HResult;
@@ -268,6 +268,7 @@ var
   OleDBPC: Cardinal;
   ParamInfo: PDBParamInfo;
   NamesBuffer: PPOleStr;
+  RetValue: TZVariant;
 begin
   PC := 0;
   if FAdoCommand.CommandType = adCmdStoredProc then
@@ -303,6 +304,7 @@ begin
     end;
   end;
 
+  RetValue:= Value;
   if (SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then
   begin
     B := DefVarManager.GetAsInterface(Value) as IZBlob;
@@ -310,32 +312,32 @@ begin
       stAsciiStream:
         begin
           if Assigned(B) then
-            DefVarManager.SetAsString(Value, B.GetString);
+            DefVarManager.SetAsString(RetValue, B.GetString);
           SQLType := stString;
         end;
       stUnicodeStream:
         begin
           if Assigned(B) then
-            DefVarManager.SetAsUnicodeString(Value, B.GetUnicodeString);
+            DefVarManager.SetAsUnicodeString(RetValue, B.GetUnicodeString);
           SQLType := stUnicodeString;
         end;
       stBinaryStream:
         begin
           if Assigned(B) then
-            DefVarManager.SetAsString(Value, BytesToStr(B.GetBytes));
+            DefVarManager.SetAsString(RetValue, BytesToStr(B.GetBytes));
           SQLType := stBytes;
         end;
     end;
   end;
 
-  case Value.VType of
+  case RetValue.VType of
     vtNull: V := Null;
-    vtBoolean: V := SoftVarManager.GetAsBoolean(Value);
-    vtInteger: V := Integer(SoftVarManager.GetAsInteger(Value));
-    vtFloat: V := SoftVarManager.GetAsFloat(Value);
-    vtString: V := SoftVarManager.GetAsString(Value);
-    vtUnicodeString: V := SoftVarManager.GetAsUnicodeString(Value);
-    vtDateTime: V := SoftVarManager.GetAsDateTime(Value);
+    vtBoolean: V := SoftVarManager.GetAsBoolean(RetValue);
+    vtInteger: V := Integer(SoftVarManager.GetAsInteger(RetValue));
+    vtFloat: V := SoftVarManager.GetAsFloat(RetValue);
+    vtString: V := SoftVarManager.GetAsString(RetValue);
+    vtUnicodeString: V := SoftVarManager.GetAsUnicodeString(RetValue);
+    vtDateTime: V := SoftVarManager.GetAsDateTime(RetValue);
   end;
 
   S := 0;

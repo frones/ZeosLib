@@ -46,8 +46,9 @@ uses
   Types,
 {$ENDIF}
   ZCompatibility, Classes, SysUtils, ZDbcUtils, ZDbcIntfs, ZDbcConnection,
-  Contnrs, ZPlainInterbaseDriver, ZSysUtils, ZDbcInterbase6Utils,
-  ZDbcLogging, ZDbcGenericResolver, ZTokenizer, ZGenericSqlAnalyser;
+  Contnrs, ZPlainInterbaseDriver, ZPlainFirebirdDriver,
+  ZPlainFirebirdInterbaseConstants, ZSysUtils, ZDbcInterbase6Utils, ZDbcLogging,
+  ZDbcGenericResolver, ZTokenizer, ZGenericSqlAnalyser;
 
 type
 
@@ -59,11 +60,15 @@ type
     FFirebird10PlainDriver: IZFirebird10PlainDriver;
     FFirebird15PlainDriver: IZFirebird15PlainDriver;
     FFirebird20PlainDriver: IZFirebird20PlainDriver;
+    // embedded drivers
+    FFirebirdD15PlainDriver: IZFirebird15PlainDriver;
+    FFirebirdD20PlainDriver: IZFirebird20PlainDriver;
+
   protected
-    function GetPlainDriver(Url: string): IZInterbasePlainDriver;
+    function GetPlainDriver(const Url: string): IZInterbasePlainDriver;
   public
     constructor Create;
-    function Connect(Url: string; Info: TStrings): IZConnection; override;
+    function Connect(const Url: string; Info: TStrings): IZConnection; override;
 
     function GetSupportedProtocols: TStringDynArray; override;
     function GetMajorVersion: Integer; override;
@@ -80,7 +85,7 @@ type
     function GetTrHandle: PISC_TR_HANDLE;
     function GetDialect: Word;
     function GetPlainDriver: IZInterbasePlainDriver;
-    procedure CreateNewDatabase(SQL: String);
+    procedure CreateNewDatabase(const SQL: String);
   end;
 
   {** Implements Interbase6 Database Connection. }
@@ -94,25 +99,25 @@ type
   private
     procedure StartTransaction; virtual;
   public
-    constructor Create(Driver: IZDriver; Url: string;
+    constructor Create(Driver: IZDriver; const Url: string;
       PlainDriver: IZInterbasePlainDriver;
-      HostName: string; Port: Integer; Database: string;
-      User: string; Password: string; Info: TStrings);
+      const HostName: string; Port: Integer; const Database: string;
+      const User: string; const Password: string; Info: TStrings);
     destructor Destroy; override;
 
     function GetDBHandle: PISC_DB_HANDLE;
     function GetTrHandle: PISC_TR_HANDLE;
     function GetDialect: Word;
     function GetPlainDriver: IZInterbasePlainDriver;
-    procedure CreateNewDatabase(SQL: String);
+    procedure CreateNewDatabase(const SQL: String);
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
-    function CreatePreparedStatement(SQL: string; Info: TStrings):
+    function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
-    function CreateCallableStatement(SQL: string; Info: TStrings):
+    function CreateCallableStatement(const SQL: string; Info: TStrings):
       IZCallableStatement; override;
 
-    function CreateSequence(Sequence: string; BlockSize: Integer):
+    function CreateSequence(const Sequence: string; BlockSize: Integer):
       IZSequence; override;
 
     procedure Commit; override;
@@ -125,16 +130,16 @@ type
   {** Implements a specialized cached resolver for Interbase/Firebird. }
   TZInterbase6CachedResolver = class(TZGenericCachedResolver)
   public
-     function FormCalculateStatement(Columns: TObjectList): string; override;
+    function FormCalculateStatement(Columns: TObjectList): string; override;
   end;
 
   {** Implements a Interbase 6 sequence. }
   TZInterbase6Sequence = class(TZAbstractSequence)
   public
-    function  GetCurrentValue: Int64; override;
-    function  GetNextValue: Int64; override;
-    function  GetCurrentValueSQL:String;override;
-    function  GetNextValueSQL:String;override;
+    function GetCurrentValue: Int64; override;
+    function GetNextValue: Int64; override;
+    function GetCurrentValueSQL: string; override;
+    function GetNextValueSQL: string; override;
   end;
 
 
@@ -172,7 +177,7 @@ uses ZDbcInterbase6Statement, ZDbcInterbase6Metadata,
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
-function TZInterbase6Driver.Connect(Url: string;
+function TZInterbase6Driver.Connect(const Url: string;
   Info: TStrings): IZConnection;
 var
   TempInfo: TStrings;
@@ -202,6 +207,10 @@ begin
   FFirebird10PlainDriver := TZFirebird10PlainDriver.Create;
   FFirebird15PlainDriver := TZFirebird15PlainDriver.Create;
   FFirebird20PlainDriver := TZFirebird20PlainDriver.Create;
+  // embedded drivers
+  FFirebirdD15PlainDriver := TZFirebirdD15PlainDriver.Create;
+  FFirebirdD20PlainDriver := TZFirebirdD20PlainDriver.Create;
+
 end;
 
 {**
@@ -250,7 +259,7 @@ end;
   @return a selected protocol.
 }
 function TZInterbase6Driver.GetPlainDriver(
-  Url: string): IZInterbasePlainDriver;
+  const Url: string): IZInterbasePlainDriver;
 var
   Protocol: string;
 begin
@@ -266,6 +275,12 @@ begin
     Result := FFirebird15PlainDriver
   else if Protocol = FFirebird20PlainDriver.GetProtocol then
     Result := FFirebird20PlainDriver
+  // embedded drivers
+  else if Protocol = FFirebirdD15PlainDriver.GetProtocol then
+    Result := FFirebirdD15PlainDriver
+  else if Protocol = FFirebirdD20PlainDriver.GetProtocol then
+    Result := FFirebirdD20PlainDriver
+  // Generic driver
   else Result := FInterbase6PlainDriver;
   Result.Initialize;
 end;
@@ -276,12 +291,16 @@ end;
 }
 function TZInterbase6Driver.GetSupportedProtocols: TStringDynArray;
 begin
-  SetLength(Result, 5);
+  SetLength(Result, 7);
   Result[0] := 'interbase-5';
   Result[1] := 'interbase-6';
   Result[2] := 'firebird-1.0';
   Result[3] := 'firebird-1.5';
   Result[4] := 'firebird-2.0';
+  // embedded drivers
+  Result[5] := 'firebirdd-1.5';
+  Result[6] := 'firebirdd-2.0';
+
 end;
 
 { TZInterbase6Connection }
@@ -354,9 +373,9 @@ end;
   @param Password a user password.
   @param Info a string list with extra connection parameters.
 }
-constructor TZInterbase6Connection.Create(Driver: IZDriver; Url: string;
-  PlainDriver: IZInterbasePlainDriver; HostName: string; Port: Integer;
-  Database, User, Password: string; Info: TStrings);
+constructor TZInterbase6Connection.Create(Driver: IZDriver; const Url: string;
+  PlainDriver: IZInterbasePlainDriver; const HostName: string; Port: Integer;
+  const Database, User, Password: string; Info: TStrings);
 var
   RoleName: string;
   ClientCodePage: string;
@@ -546,7 +565,7 @@ end;
     pre-compiled statement
 }
 function TZInterbase6Connection.CreatePreparedStatement(
-  SQL: string; Info: TStrings): IZPreparedStatement;
+  const SQL: string; Info: TStrings): IZPreparedStatement;
 begin
   if IsClosed then Open;
   Result := TZInterbase6PreparedStatement.Create(Self, SQL, Info);
@@ -578,7 +597,7 @@ end;
   @return a new CallableStatement object containing the
     pre-compiled SQL statement
 }
-function TZInterbase6Connection.CreateCallableStatement(SQL: string;
+function TZInterbase6Connection.CreateCallableStatement(const SQL: string;
   Info: TStrings): IZCallableStatement;
 begin
  if IsClosed then Open;
@@ -670,7 +689,7 @@ end;
   Creates new database
   @param SQL a sql strinf for creation database
 }
-procedure TZInterbase6Connection.CreateNewDatabase(SQL: String);
+procedure TZInterbase6Connection.CreateNewDatabase(const SQL: String);
 var
   DbHandle: PISC_DB_HANDLE;
   TrHandle: PISC_TR_HANDLE;
@@ -691,7 +710,7 @@ end;
   @param BlockSize a number of unique keys requested in one trip to SQL server.
   @returns a created sequence object.
 }
-function TZInterbase6Connection.CreateSequence(Sequence: string;
+function TZInterbase6Connection.CreateSequence(const Sequence: string;
   BlockSize: Integer): IZSequence;
 begin
   Result := TZInterbase6Sequence.Create(Self, Sequence, BlockSize);
@@ -750,7 +769,7 @@ end;
   Gets the next unique key generated by this sequence.
   @param the next generated unique key.
 }
-function TZInterbase6Sequence.GetCurrentValueSQL: String;
+function TZInterbase6Sequence.GetCurrentValueSQL: string;
 begin
  result:=' GEN_ID(' + Name + ', 0) ';
 end;
@@ -773,9 +792,9 @@ begin
   Statement.Close;
 end;
 
-function TZInterbase6Sequence.GetNextValueSQL: String;
+function TZInterbase6Sequence.GetNextValueSQL: string;
 begin
- result:=' GEN_ID(' + Name + ', ' + IntToStr(BlockSize) + ') ';
+  Result:=' GEN_ID(' + Name + ', ' + IntToStr(BlockSize) + ') ';
 end;
 
 initialization

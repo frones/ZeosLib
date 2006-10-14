@@ -57,7 +57,7 @@ type
     FAdoPlainDriver: IZPlainDriver;
   public
     constructor Create;
-    function Connect(Url: string; Info: TStrings): IZConnection; override;
+    function Connect(const Url: string; Info: TStrings): IZConnection; override;
 
     function GetSupportedProtocols: TStringDynArray; override;
     function GetMajorVersion: Integer; override;
@@ -68,7 +68,7 @@ type
   IZAdoConnection = interface (IZConnection)
     ['{50D1AF76-0174-41CD-B90B-4FB770EFB14F}']
     function GetAdoConnection: ZPlainAdo.Connection;
-    procedure InternalExecuteStatement(SQL: string);
+    procedure InternalExecuteStatement(const SQL: string);
     procedure CheckAdoError;
   end;
 
@@ -80,23 +80,23 @@ type
     FAdoConnection: ZPlainAdo.Connection;
     FPlainDriver: IZPlainDriver;
     function GetAdoConnection: ZPlainAdo.Connection; virtual;
-    procedure InternalExecuteStatement(SQL: string); virtual;
+    procedure InternalExecuteStatement(const SQL: string); virtual;
     procedure CheckAdoError; virtual;
     procedure StartTransaction; virtual;
   public
-    constructor Create(Driver: IZDriver; Url: string;
-      PlainDriver: IZPlainDriver; HostName: string; Port: Integer;
-      Database: string; User: string; Password: string; Info: TStrings);
+    constructor Create(Driver: IZDriver; const Url: string;
+      PlainDriver: IZPlainDriver; const HostName: string; Port: Integer;
+      const Database: string; const User: string; const Password: string; Info: TStrings);
 
     destructor Destroy; override;
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
-    function CreatePreparedStatement(SQL: string; Info: TStrings):
+    function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
-    function CreateCallableStatement(SQL: string; Info: TStrings):
+    function CreateCallableStatement(const SQL: string; Info: TStrings):
       IZCallableStatement; override;
 
-    function NativeSQL(SQL: string): string; override;
+    function NativeSQL(const SQL: string): string; override;
 
     procedure SetAutoCommit(AutoCommit: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
@@ -109,7 +109,7 @@ type
 
     procedure SetReadOnly(ReadOnly: Boolean); override;
 
-    procedure SetCatalog(Catalog: string); override;
+    procedure SetCatalog(const Catalog: string); override;
     function GetCatalog: string; override;
 
     function GetWarnings: EZSQLWarning; override;
@@ -154,7 +154,7 @@ end;
 {**
   Attempts to make a database connection to the given URL.
 }
-function TZAdoDriver.Connect(Url: string; Info: TStrings): IZConnection;
+function TZAdoDriver.Connect(const Url: string; Info: TStrings): IZConnection;
 var
   TempInfo: TStrings;
   HostName, Database, UserName, Password: string;
@@ -207,9 +207,9 @@ end;
   @param Password a user password.
   @param Info a string list with extra connection parameters.
 }
-constructor TZAdoConnection.Create(Driver: IZDriver; Url: string;
-  PlainDriver: IZPlainDriver; HostName: string; Port: Integer;
-  Database: string; User: string; Password: string; Info: TStrings);
+constructor TZAdoConnection.Create(Driver: IZDriver; const Url: string;
+  PlainDriver: IZPlainDriver; const HostName: string; Port: Integer;
+  const Database: string; const User: string; const Password: string; Info: TStrings);
 begin
   FAdoConnection := CoConnection.Create;
   FPLainDriver := PlainDriver;
@@ -238,7 +238,7 @@ end;
 {**
   Executes simple statements internally.
 }
-procedure TZAdoConnection.InternalExecuteStatement(SQL: string);
+procedure TZAdoConnection.InternalExecuteStatement(const SQL: string);
 var
   RowsAffected: OleVariant;
 begin
@@ -350,7 +350,7 @@ end;
     pre-compiled statement
 }
 function TZAdoConnection.CreatePreparedStatement(
-  SQL: string; Info: TStrings): IZPreparedStatement;
+  const SQL: string; Info: TStrings): IZPreparedStatement;
 begin
   if IsClosed then Open;
   Result := TZAdoPreparedStatement.Create(FPLainDriver, Self, SQL, Info);
@@ -382,7 +382,7 @@ end;
   @return a new CallableStatement object containing the
     pre-compiled SQL statement
 }
-function TZAdoConnection.CreateCallableStatement(SQL: string; Info: TStrings):
+function TZAdoConnection.CreateCallableStatement(const SQL: string; Info: TStrings):
   IZCallableStatement;
 begin
   if IsClosed then Open;
@@ -399,7 +399,7 @@ end;
     parameter placeholders
   @return the native form of this statement
 }
-function TZAdoConnection.NativeSQL(SQL: string): string;
+function TZAdoConnection.NativeSQL(const SQL: string): string;
 begin
   Result := SQL;
 end;
@@ -591,7 +591,7 @@ end;
   If the driver does not support catalogs, it will
   silently ignore this request.
 }
-procedure TZAdoConnection.SetCatalog(Catalog: string);
+procedure TZAdoConnection.SetCatalog(const Catalog: string);
 var
   LogMessage: string;
 begin

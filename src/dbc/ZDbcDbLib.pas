@@ -61,7 +61,7 @@ type
     FSybasePlainDriver: IZDBLibPlainDriver;
   public
     constructor Create;
-    function Connect(Url: string; Info: TStrings): IZConnection; override;
+    function Connect(const Url: string; Info: TStrings): IZConnection; override;
 
     function GetSupportedProtocols: TStringDynArray; override;
     function GetMajorVersion: Integer; override;
@@ -77,8 +77,8 @@ type
 
     function GetPlainDriver: IZDBLibPlainDriver;
     function GetConnectionHandle: PDBPROCESS;
-    procedure InternalExecuteStatement(SQL: string);
-    procedure CheckDBLibError(LogCategory: TZLoggingCategory; LogMessage: string);
+    procedure InternalExecuteStatement(const SQL: string);
+    procedure CheckDBLibError(LogCategory: TZLoggingCategory; const LogMessage: string);
   end;
 
   {** Implements a generic DBLib Connection. }
@@ -89,26 +89,26 @@ type
   protected
     FPlainDriver: IZDBLibPlainDriver;
     FHandle: PDBPROCESS;
-    procedure InternalExecuteStatement(SQL: string); virtual;
+    procedure InternalExecuteStatement(const SQL: string); virtual;
     procedure InternalLogin; virtual;
     function GetPlainDriver: IZDBLibPlainDriver;
     function GetConnectionHandle: PDBPROCESS;
-    procedure CheckDBLibError(LogCategory: TZLoggingCategory; LogMessage: string); virtual;
+    procedure CheckDBLibError(LogCategory: TZLoggingCategory; const LogMessage: string); virtual;
     procedure StartTransaction; virtual;
   public
-    constructor Create(Driver: IZDriver; Url: string;
-      PlainDriver: IZDBLibPlainDriver; HostName: string; Port: Integer;
-      Database: string; User: string; Password: string; Info: TStrings);
+    constructor Create(Driver: IZDriver; const Url: string;
+      PlainDriver: IZDBLibPlainDriver; const HostName: string; Port: Integer;
+      const Database: string; const User: string; const Password: string; Info: TStrings);
 
     destructor Destroy; override;
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
-    function CreatePreparedStatement(SQL: string; Info: TStrings):
+    function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
-    function CreateCallableStatement(SQL: string; Info: TStrings):
+    function CreateCallableStatement(const SQL: string; Info: TStrings):
       IZCallableStatement; override;
 
-    function NativeSQL(SQL: string): string; override;
+    function NativeSQL(const SQL: string): string; override;
 
     procedure SetAutoCommit(AutoCommit: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
@@ -121,7 +121,7 @@ type
 
     procedure SetReadOnly(ReadOnly: Boolean); override;
 
-    procedure SetCatalog(Catalog: string); override;
+    procedure SetCatalog(const Catalog: string); override;
     function GetCatalog: string; override;
 
     function GetWarnings: EZSQLWarning; override;
@@ -163,7 +163,7 @@ end;
 {**
   Attempts to make a database connection to the given URL.
 }
-function TZDBLibDriver.Connect(Url: string; Info: TStrings): IZConnection;
+function TZDBLibDriver.Connect(const Url: string; Info: TStrings): IZConnection;
 var
   TempInfo: TStrings;
   HostName, Database, UserName, Password: string;
@@ -240,9 +240,9 @@ end;
   @param Password a user password.
   @param Info a string list with extra connection parameters.
 }
-constructor TZDBLibConnection.Create(Driver: IZDriver; Url: string;
-  PlainDriver: IZDBLibPlainDriver; HostName: string; Port: Integer;
-  Database: string; User: string; Password: string; Info: TStrings);
+constructor TZDBLibConnection.Create(Driver: IZDriver; const Url: string;
+  PlainDriver: IZDBLibPlainDriver; const HostName: string; Port: Integer;
+  const Database: string; const User: string; const Password: string; Info: TStrings);
 var
   Metadata: TContainedObject;
 begin
@@ -271,23 +271,27 @@ end;
 {**
   Executes simple statements internally.
 }
-procedure TZDBLibConnection.InternalExecuteStatement(SQL: string);
+procedure TZDBLibConnection.InternalExecuteStatement(const SQL: string);
+var
+  LSQL: string;
 begin
   FHandle := GetConnectionHandle;
   if FPlainDriver.dbCancel(FHandle) <> DBSUCCEED then
     CheckDBLibError(lcExecute, SQL);
   if FPlainDriver.GetProtocol = 'mssql' then
-    SQL := StringReplace(Sql, '\'#13, '\\'#13, [rfReplaceAll]);
-  if FPlainDriver.dbcmd(FHandle, PChar(Sql)) <> DBSUCCEED then
-    CheckDBLibError(lcExecute, SQL);
+    LSQL := StringReplace(Sql, '\'#13, '\\'#13, [rfReplaceAll])
+  else
+    LSQL := SQL;
+  if FPlainDriver.dbcmd(FHandle, PChar(LSql)) <> DBSUCCEED then
+    CheckDBLibError(lcExecute, LSQL);
   if FPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED then
-    CheckDBLibError(lcExecute, SQL);
+    CheckDBLibError(lcExecute, LSQL);
   repeat
     FPlainDriver.dbresults(FHandle);
     FPlainDriver.dbcanquery(FHandle);
   until FPlainDriver.dbmorecmds(FHandle) = DBFAIL;
-  CheckDBLibError(lcExecute, SQL);
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, Sql);
+  CheckDBLibError(lcExecute, LSQL);
+  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LSQL);
 end;
 
 {**
@@ -375,7 +379,7 @@ begin
   Result := FHandle;
 end;
 
-procedure TZDBLibConnection.CheckDBLibError(LogCategory: TZLoggingCategory; LogMessage: string);
+procedure TZDBLibConnection.CheckDBLibError(LogCategory: TZLoggingCategory; const LogMessage: string);
 begin
   try
     FPlainDriver.CheckError;
@@ -477,7 +481,7 @@ end;
     pre-compiled statement
 }
 function TZDBLibConnection.CreatePreparedStatement(
-  SQL: string; Info: TStrings): IZPreparedStatement;
+  const SQL: string; Info: TStrings): IZPreparedStatement;
 begin
   if IsClosed then Open;
   Result := TZDBLibPreparedStatementEmulated.Create(Self, SQL, Info);
@@ -510,7 +514,7 @@ end;
     pre-compiled SQL statement
 }
 function TZDBLibConnection.CreateCallableStatement(
-  SQL: string; Info: TStrings): IZCallableStatement;
+  const SQL: string; Info: TStrings): IZCallableStatement;
 begin
   if IsClosed then Open;
   Result := TZDBLibCallableStatement.Create(Self, SQL, Info);
@@ -526,7 +530,7 @@ end;
     parameter placeholders
   @return the native form of this statement
 }
-function TZDBLibConnection.NativeSQL(SQL: string): string;
+function TZDBLibConnection.NativeSQL(const SQL: string): string;
 begin
   Result := SQL;
 end;
@@ -689,7 +693,7 @@ end;
   If the driver does not support catalogs, it will
   silently ignore this request.
 }
-procedure TZDBLibConnection.SetCatalog(Catalog: string);
+procedure TZDBLibConnection.SetCatalog(const Catalog: string);
 var
   LogMessage: string;
 begin

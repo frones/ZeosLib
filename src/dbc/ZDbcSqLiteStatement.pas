@@ -53,16 +53,16 @@ type
     FHandle: Psqlite;
     FPlainDriver: IZSQLitePlainDriver;
 
-    function CreateResultSet(SQL: string; StmtHandle: Psqlite_vm;
+    function CreateResultSet(const SQL: string; StmtHandle: Psqlite_vm;
       ColumnCount: Integer; ColumnNames: PPChar;
       ColumnValues: PPChar): IZResultSet;
   public
     constructor Create(PlainDriver: IZSQLitePlainDriver;
       Connection: IZConnection; Info: TStrings; Handle: Psqlite);
 
-    function ExecuteQuery(SQL: string): IZResultSet; override;
-    function ExecuteUpdate(SQL: string): Integer; override;
-    function Execute(SQL: string): Boolean; override;
+    function ExecuteQuery(const SQL: string): IZResultSet; override;
+    function ExecuteUpdate(const SQL: string): Integer; override;
+    function Execute(const SQL: string): Boolean; override;
   end;
 
   {** Implements Prepared SQL Statement. }
@@ -72,11 +72,11 @@ type
     FPlainDriver: IZSQLitePlainDriver;
   protected
     function CreateExecStatement: IZStatement; override;
-    function GetEscapeString(Value: string): string;
+    function GetEscapeString(const Value: string): string;
     function PrepareSQLParam(ParamIndex: Integer): string; override;
   public
     constructor Create(PlainDriver: IZSQLitePlainDriver;
-      Connection: IZConnection; SQL: string; Info: TStrings;
+      Connection: IZConnection; const SQL: string; Info: TStrings;
       Handle: Psqlite);
   end;
 
@@ -108,7 +108,7 @@ end;
   Creates a result set based on the current settings.
   @return a created result set object.
 }
-function TZSQLiteStatement.CreateResultSet(SQL: string; StmtHandle: Psqlite_vm;
+function TZSQLiteStatement.CreateResultSet(const SQL: string; StmtHandle: Psqlite_vm;
   ColumnCount: Integer; ColumnNames: PPChar; ColumnValues: PPChar): IZResultSet;
 var
   CachedResolver: TZSQLiteCachedResolver;
@@ -141,7 +141,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZSQLiteStatement.ExecuteQuery(SQL: string): IZResultSet;
+function TZSQLiteStatement.ExecuteQuery(const SQL: string): IZResultSet;
 var
   ErrorCode: Integer;
   ErrorMessage: PChar;
@@ -180,7 +180,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZSQLiteStatement.ExecuteUpdate(SQL: string): Integer;
+function TZSQLiteStatement.ExecuteUpdate(const SQL: string): Integer;
 var
   ErrorCode: Integer;
   ErrorMessage: PChar;
@@ -213,7 +213,7 @@ end;
   @return <code>true</code> if the next result is a <code>ResultSet</code> object;
   <code>false</code> if it is an update count or there are no more results
 }
-function TZSQLiteStatement.Execute(SQL: string): Boolean;
+function TZSQLiteStatement.Execute(const SQL: string): Boolean;
 var
   ErrorCode: Integer;
   ErrorMessage: PChar;
@@ -265,7 +265,7 @@ end;
   @param Handle a connection handle pointer.
 }
 constructor TZSQLitePreparedStatement.Create(PlainDriver: IZSQLitePlainDriver;
-  Connection: IZConnection; SQL: string; Info: TStrings; Handle: Psqlite);
+  Connection: IZConnection; const SQL: string; Info: TStrings; Handle: Psqlite);
 begin
   inherited Create(Connection, SQL, Info);
   FHandle := Handle;
@@ -288,7 +288,7 @@ end;
   @param Value a regular string.
   @return a string in SQLite escape format.
 }
-function TZSQLitePreparedStatement.GetEscapeString(Value: string): string;
+function TZSQLitePreparedStatement.GetEscapeString(const Value: string): string;
 begin
   Result := AnsiQuotedStr(Value, '''');
 end;

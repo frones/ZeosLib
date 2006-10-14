@@ -64,9 +64,9 @@ type
     function GetWarnings: EZSQLWarning; override;
     procedure ClearWarnings; override;
     function GetMoreResults: Boolean; override;
-    function ExecuteQuery(SQL: string): IZResultSet; override;
-    function ExecuteUpdate(SQL: string): Integer; override;
-    function Execute(SQL: string): Boolean; override;
+    function ExecuteQuery(const SQL: string): IZResultSet; override;
+    function ExecuteUpdate(const SQL: string): Integer; override;
+    function Execute(const SQL: string): Boolean; override;
   end;
 
   {** Implements Prepared SQL Statement. }
@@ -80,7 +80,7 @@ type
     FMoreResults: Boolean;
     FPrepared: Boolean;
   public
-    constructor Create(Connection: IZConnection; SQL: string; Info: TStrings);
+    constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
     destructor Destroy; override;
 
     procedure Close; override;
@@ -88,9 +88,9 @@ type
     function GetWarnings: EZSQLWarning; override;
     procedure ClearWarnings; override;
     function GetMoreResults: Boolean; override;
-    function ExecuteQuery(SQL: string): IZResultSet; override;
-    function ExecuteUpdate(SQL: string): Integer; override;
-    function Execute(SQL: string): Boolean; override;
+    function ExecuteQuery(const SQL: string): IZResultSet; override;
+    function ExecuteUpdate(const SQL: string): Integer; override;
+    function Execute(const SQL: string): Boolean; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -111,7 +111,7 @@ type
     function GetProcedureSQL: String;
     procedure TrimInParameters;
   public
-    constructor Create(Connection: IZConnection; SQL: string; Info: TStrings);
+    constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
     destructor Destroy; override;
 
     procedure Close; override;
@@ -119,9 +119,9 @@ type
     function GetWarnings: EZSQLWarning; override;
     procedure ClearWarnings; override;
     function GetMoreResults: Boolean; override;
-    function ExecuteQuery(SQL: string): IZResultSet; override;
-    function ExecuteUpdate(SQL: string): Integer; override;
-    function Execute(SQL: string): Boolean; override;
+    function ExecuteQuery(const SQL: string): IZResultSet; override;
+    function ExecuteUpdate(const SQL: string): Integer; override;
+    function Execute(const SQL: string): Boolean; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -226,7 +226,7 @@ end;
     given query; never <code>null</code>
 }
 {$HINTS OFF}
-function TZASAStatement.ExecuteQuery(SQL: string): IZResultSet;
+function TZASAStatement.ExecuteQuery(const SQL: string): IZResultSet;
 var
   Cursor: string;
   CursorOptions: SmallInt;
@@ -301,7 +301,7 @@ end;
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
 {$HINTS OFF}
-function TZASAStatement.ExecuteUpdate(SQL: string): Integer;
+function TZASAStatement.ExecuteUpdate(const SQL: string): Integer;
 begin
   Close;
   Result := -1;
@@ -343,7 +343,7 @@ end;
   @see #getUpdateCount
   @see #getMoreResults
 }
-function TZASAStatement.Execute(SQL: string): Boolean;
+function TZASAStatement.Execute(const SQL: string): Boolean;
 begin
   try
     LastResultSet := ExecuteQuery( SQL);
@@ -364,7 +364,7 @@ end;
   @param Info a statement parameters.
 }
 constructor TZASAPreparedStatement.Create(Connection: IZConnection;
-  SQL: string; Info: TStrings);
+  const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
 
@@ -466,7 +466,7 @@ end;
   @see #getMoreResults
 }
 
-function TZASAPreparedStatement.Execute(SQL: string): Boolean;
+function TZASAPreparedStatement.Execute(const SQL: string): Boolean;
 begin
   if Self.SQL <> SQL then
   begin
@@ -504,7 +504,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZASAPreparedStatement.ExecuteQuery(SQL: string): IZResultSet;
+function TZASAPreparedStatement.ExecuteQuery(const SQL: string): IZResultSet;
 begin
   if Self.SQL <> SQL then
   begin
@@ -578,7 +578,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZASAPreparedStatement.ExecuteUpdate(SQL: string): Integer;
+function TZASAPreparedStatement.ExecuteUpdate(const SQL: string): Integer;
 begin
   if Self.SQL <> SQL then
   begin
@@ -633,7 +633,7 @@ end;
   @param Info a statement parameters.
 }
 constructor TZASACallableStatement.Create(Connection: IZConnection;
-  SQL: string; Info: TStrings);
+  const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
 
@@ -733,7 +733,7 @@ end;
   @see #getMoreResults
 }
 
-function TZASACallableStatement.Execute(SQL: string): Boolean;
+function TZASACallableStatement.Execute(const SQL: string): Boolean;
 var
   ProcSQL: string;
 begin
@@ -781,7 +781,7 @@ end;
     given query; never <code>null</code>
 }
 function TZASACallableStatement.ExecuteQuery(
-  SQL: string): IZResultSet;
+  const SQL: string): IZResultSet;
 var
   ProcSQL: string;
 begin
@@ -863,7 +863,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZASACallableStatement.ExecuteUpdate(SQL: string): Integer;
+function TZASACallableStatement.ExecuteUpdate(const SQL: string): Integer;
 var
   ProcSQL: string;
 begin
@@ -894,7 +894,7 @@ begin
   if not FPrepared then
     Result := ExecuteUpdate( SQL)
   else begin
-    Result := -1;
+//    Result := -1;
     with FASAConnection do
     begin
 

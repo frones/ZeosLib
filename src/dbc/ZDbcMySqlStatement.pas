@@ -62,14 +62,14 @@ type
     FPlainDriver: IZMySQLPlainDriver;
     FUseResult: Boolean;
 
-    function CreateResultSet(SQL: string): IZResultSet;
+    function CreateResultSet(const SQL: string): IZResultSet;
   public
     constructor Create(PlainDriver: IZMySQLPlainDriver;
       Connection: IZConnection; Info: TStrings; Handle: PZMySQLConnect);
 
-    function ExecuteQuery(SQL: string): IZResultSet; override;
-    function ExecuteUpdate(SQL: string): Integer; override;
-    function Execute(SQL: string): Boolean; override;
+    function ExecuteQuery(const SQL: string): IZResultSet; override;
+    function ExecuteUpdate(const SQL: string): Integer; override;
+    function Execute(const SQL: string): Boolean; override;
 
     function IsUseResult: Boolean;
   end;
@@ -81,11 +81,11 @@ type
     FPlainDriver: IZMySQLPlainDriver;
   protected
     function CreateExecStatement: IZStatement; override;
-    function GetEscapeString(Value: string): string;
+    function GetEscapeString(const Value: string): string;
     function PrepareSQLParam(ParamIndex: Integer): string; override;
   public
     constructor Create(PlainDriver: IZMySQLPlainDriver;
-      Connection: IZConnection; SQL: string; Info: TStrings;
+      Connection: IZConnection; const SQL: string; Info: TStrings;
       Handle: PZMySQLConnect);
   end;
 
@@ -93,7 +93,7 @@ implementation
 
 uses
   ZDbcMySql, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZMySqlToken, ZSysUtils,
-  ZMessages, ZDbcCachedResultSet, ZDbcUtils, DateUtils;
+  ZMessages, ZDbcCachedResultSet, ZDbcUtils{$IFNDEF VER130BELOW}, DateUtils{$ENDIF};
 
 { TZMySQLStatement }
 
@@ -132,7 +132,7 @@ end;
   Creates a result set based on the current settings.
   @return a created result set object.
 }
-function TZMySQLStatement.CreateResultSet(SQL: string): IZResultSet;
+function TZMySQLStatement.CreateResultSet(const SQL: string): IZResultSet;
 var
   CachedResolver: TZMySQLCachedResolver;
   NativeResultSet: TZMySQLResultSet;
@@ -160,18 +160,26 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZMySQLStatement.ExecuteQuery(SQL: string): IZResultSet;
+function TZMySQLStatement.ExecuteQuery(const SQL: string): IZResultSet;
 begin
   Result := nil;
-  if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then begin
+  if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then
+  begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
-    if not FPlainDriver.ResultSetExists(FHandle) then begin
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
+    if FPlainDriver.GetClientVersion < 32200 then
+      begin
+        // ResultSetExists is only useable since mysql 3.22
+        if FPlainDriver.GetStatus(FHandle) = MYSQL_STATUS_READY then
+          raise EZSQLException.Create(SCanNotOpenResultSet);
+      end
+    else
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
+    if not FPlainDriver.ResultSetExists(FHandle) then
       raise EZSQLException.Create(SCanNotOpenResultSet);
-    end;
     Result := CreateResultSet(SQL);
-  end else begin
+  end else
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
-  end;
 end;
 
 {**
@@ -185,29 +193,38 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZMySQLStatement.ExecuteUpdate(SQL: string): Integer;
+function TZMySQLStatement.ExecuteUpdate(const SQL: string): Integer;
 var
   QueryHandle: PZMySQLResult;
+  HasResultset : Boolean;
 begin
   Result := -1;
   if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
+    if FPlainDriver.GetClientVersion < 32200 then
+      HasResultSet := FPlainDriver.GetStatus(FHandle) <> MYSQL_STATUS_READY
+    else
+      HasResultSet := FPlainDriver.ResultSetExists(FHandle);
+{$ELSE}
+    HasResultSet := FPlainDriver.ResultSetExists(FHandle);
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
     { Process queries with result sets }
-    if FPlainDriver.ResultSetExists(FHandle) then begin
+    if HasResultSet then
+    begin
       QueryHandle := FPlainDriver.StoreResult(FHandle);
-      if QueryHandle <> nil then begin
+      if QueryHandle <> nil then
+      begin
         Result := FPlainDriver.GetRowCount(QueryHandle);
         FPlainDriver.FreeResult(QueryHandle);
-      end else begin
+      end else
         Result := FPlainDriver.GetAffectedRows(FHandle);
-      end;
-    end else  begin { Process regular query }
-     Result := FPlainDriver.GetAffectedRows(FHandle);
-    end;
-  end else begin
+    end
+    { Process regular query }
+    else Result := FPlainDriver.GetAffectedRows(FHandle);
+  end else
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
-  end;
   LastUpdateCount := Result;
 end;
 
@@ -231,22 +248,36 @@ end;
   @return <code>true</code> if the next result is a <code>ResultSet</code> object;
   <code>false</code> if it is an update count or there are no more results
 }
-function TZMySQLStatement.Execute(SQL: string): Boolean;
+function TZMySQLStatement.Execute(const SQL: string): Boolean;
+var
+  HasResultset : Boolean;
 begin
   Result := False;
-  if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then begin
+  if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then
+  begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
+    if FPlainDriver.GetClientVersion < 32200 then
+      HasResultSet := FPlainDriver.GetStatus(FHandle) <> MYSQL_STATUS_READY
+    else
+      HasResultSet := FPlainDriver.ResultSetExists(FHandle);
+{$ELSE}
+    HasResultSet := FPlainDriver.ResultSetExists(FHandle);
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
     { Process queries with result sets }
-    if FPlainDriver.ResultSetExists(FHandle) then begin
+    if HasResultSet then
+    begin
       Result := True;
       LastResultSet := CreateResultSet(SQL);
-    end else begin { Processes regular query. }
+    end
+    { Processes regular query. }
+    else
+    begin
       Result := False;
       LastUpdateCount := FPlainDriver.GetAffectedRows(FHandle);
     end;
-  end else begin
+  end else
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
-  end;
 end;
 
 { TZMySQLPreparedStatement }
@@ -259,7 +290,7 @@ end;
   @param Handle a connection handle pointer.
 }
 constructor TZMySQLPreparedStatement.Create(PlainDriver: IZMySQLPlainDriver;
-  Connection: IZConnection; SQL: string; Info: TStrings; Handle: PZMySQLConnect);
+  Connection: IZConnection; const SQL: string; Info: TStrings; Handle: PZMySQLConnect);
 begin
   inherited Create(Connection, SQL, Info);
   FHandle := Handle;
@@ -282,7 +313,7 @@ end;
   @param Value a regular string.
   @return a string in MySQL escape format.
 }
-function TZMySQLPreparedStatement.GetEscapeString(Value: string): string;
+function TZMySQLPreparedStatement.GetEscapeString(const Value: string): string;
 var
   BufferLen: Integer;
   Buffer: PChar;
@@ -329,22 +360,43 @@ begin
         Result := GetEscapeString(SoftVarManager.GetAsString(Value));
       stDate:
       begin
+        {$IFNDEF VER130BELOW}
         DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
           AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
+        {$ELSE}
+        DecodeDate(SoftVarManager.GetAsDateTime(Value),
+          AYear, AMonth, ADay);
+        DecodeTime(SoftVarManager.GetAsDateTime(Value),
+          AHour, AMinute, ASecond, AMilliSecond);
+        {$ENDIF}
         Result := '''' + Format('%0.4d-%0.2d-%0.2d',
           [AYear, AMonth, ADay]) + '''';
       end;
       stTime:
       begin
+        {$IFNDEF VER130BELOW}
         DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
           AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
+        {$ELSE}
+        DecodeDate(SoftVarManager.GetAsDateTime(Value),
+          AYear, AMonth, ADay);
+        DecodeTime(SoftVarManager.GetAsDateTime(Value),
+          AHour, AMinute, ASecond, AMilliSecond);
+        {$ENDIF}
         Result := '''' + Format('%0.2d:%0.2d:%0.2d',
           [AHour, AMinute, ASecond]) + '''';
       end;
       stTimestamp:
       begin
+        {$IFNDEF VER130BELOW}
         DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
           AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
+        {$ELSE}
+        DecodeDate(SoftVarManager.GetAsDateTime(Value),
+          AYear, AMonth, ADay);
+        DecodeTime(SoftVarManager.GetAsDateTime(Value),
+          AHour, AMinute, ASecond, AMilliSecond);
+        {$ENDIF}
         Result := '''' + Format('%0.4d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d',
           [AYear, AMonth, ADay, AHour, AMinute, ASecond]) + '''';
       end;
