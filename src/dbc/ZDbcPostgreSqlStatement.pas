@@ -44,7 +44,7 @@ interface
 uses
   Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcStatement, ZDbcLogging,
   ZPlainPostgreSqlDriver, ZCompatibility, ZVariant, ZDbcGenericResolver,
-  ZDbcCachedResultSet;
+  ZDbcCachedResultSet, ZDbcPostgreSql;
 
 type
 
@@ -62,16 +62,16 @@ type
     FPlainDriver: IZPostgreSQLPlainDriver;
     FOidAsBlob: Boolean;
   protected
-    function CreateResultSet(SQL: string;
+    function CreateResultSet(const SQL: string;
       QueryHandle: PZPostgreSQLResult): IZResultSet;
   public
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
       Connection: IZConnection; Info: TStrings; Handle: PZPostgreSQLConnect);
     destructor Destroy; override;
 
-    function ExecuteQuery(SQL: string): IZResultSet; override;
-    function ExecuteUpdate(SQL: string): Integer; override;
-    function Execute(SQL: string): Boolean; override;
+    function ExecuteQuery(const SQL: string): IZResultSet; override;
+    function ExecuteUpdate(const SQL: string): Integer; override;
+    function Execute(const SQL: string): Boolean; override;
 
     function IsOidAsBlob: Boolean;
   end;
@@ -81,12 +81,13 @@ type
   private
     FHandle: PZPostgreSQLConnect;
     FPlainDriver: IZPostgreSQLPlainDriver;
+    FCharactersetCode : TZPgCharactersetType;
   protected
     function CreateExecStatement: IZStatement; override;
     function PrepareSQLParam(ParamIndex: Integer): string; override;
   public
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
-      Connection: IZConnection; SQL: string; Info: TStrings;
+      Connection: IZConnection; const SQL: string; Info: TStrings;
       Handle: PZPostgreSQLConnect);
   end;
 
@@ -99,7 +100,7 @@ type
 implementation
 
 uses
-  ZMessages, ZDbcPostgreSql, ZDbcPostgreSqlResultSet, ZPostgreSqlToken,
+  ZMessages, ZDbcPostgreSqlResultSet, ZPostgreSqlToken,
   ZDbcPostgreSqlUtils;
 
 { TZPostgreSQLStatement }
@@ -113,20 +114,17 @@ uses
 }
 constructor TZPostgreSQLStatement.Create(PlainDriver: IZPostgreSQLPlainDriver;
   Connection: IZConnection; Info: TStrings; Handle: PZPostgreSQLConnect);
-var
-  PostgreSQLConnection: IZPostgreSQLConnection;
 begin
   inherited Create(Connection, Info);
   FHandle := Handle;
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
 
-  PostgreSQLConnection := Connection as IZPostgreSQLConnection;
   { Processes connection properties. }
   if Self.Info.Values['oidasblob'] <> '' then
     FOidAsBlob := StrToBoolEx(Self.Info.Values['oidasblob'])
   else
-    FOidAsBlob := PostgreSQLConnection.IsOidAsBlob;
+    FOidAsBlob := (Connection as IZPostgreSQLConnection).IsOidAsBlob;
 end;
 
 {**
@@ -150,7 +148,7 @@ end;
   Creates a result set based on the current settings.
   @return a created result set object.
 }
-function TZPostgreSQLStatement.CreateResultSet(SQL: string;
+function TZPostgreSQLStatement.CreateResultSet(const SQL: string;
   QueryHandle: PZPostgreSQLResult): IZResultSet;
 var
   NativeResultSet: TZPostgreSQLResultSet;
@@ -176,7 +174,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZPostgreSQLStatement.ExecuteQuery(SQL: string): IZResultSet;
+function TZPostgreSQLStatement.ExecuteQuery(const SQL: string): IZResultSet;
 var
   QueryHandle: PZPostgreSQLResult;
 begin
@@ -200,7 +198,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZPostgreSQLStatement.ExecuteUpdate(SQL: string): Integer;
+function TZPostgreSQLStatement.ExecuteUpdate(const SQL: string): Integer;
 var
   QueryHandle: PZPostgreSQLResult;
 begin
@@ -240,7 +238,7 @@ end;
   @return <code>true</code> if the next result is a <code>ResultSet</code> object;
   <code>false</code> if it is an update count or there are no more results
 }
-function TZPostgreSQLStatement.Execute(SQL: string): Boolean;
+function TZPostgreSQLStatement.Execute(const SQL: string): Boolean;
 var
   QueryHandle: PZPostgreSQLResult;
   ResultStatus: TZPostgreSQLExecStatusType;
@@ -289,12 +287,13 @@ end;
 }
 constructor TZPostgreSQLPreparedStatement.Create(
   PlainDriver: IZPostgreSQLPlainDriver; Connection: IZConnection;
-  SQL: string; Info: TStrings; Handle: PZPostgreSQLConnect);
+  const SQL: string; Info: TStrings; Handle: PZPostgreSQLConnect);
 begin
   inherited Create(Connection, SQL, Info);
   FHandle := Handle;
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
+  FCharactersetCode := (Connection as IZPostgreSQLConnection).GetCharactersetCode;
 end;
 
 {**
@@ -337,7 +336,7 @@ begin
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
       stString, stBytes:
-        Result := EncodeString(SoftVarManager.GetAsString(Value));
+        Result := EncodeString(FCharactersetCode,SoftVarManager.GetAsString(Value));
       stDate:
         Result := Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]);
@@ -383,9 +382,8 @@ begin
                Result := EncodeString(Result);
               }
             end;
-          end else begin
+          end else
             Result := 'NULL';
-          end;
         end;
     end;
   end;
