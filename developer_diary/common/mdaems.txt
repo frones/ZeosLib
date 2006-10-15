@@ -52,4 +52,6 @@
 
 20061010 : New feature : LinkedFieldNames vs. IndexFieldnames - Written by Bangfauzan - See http://zeos.firmos.at/viewtopic.php?t=796
 
-20061011 : Added Lazarus fixes : ASA support did not comile well.
+20061011 : Added Lazarus fixes : ASA support did not compile well.
+
+20061015 : Added Indonesian messages - Written by tohenk
