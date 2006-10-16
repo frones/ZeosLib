@@ -1,0 +1,1 @@
+20060531 : Bad tiReadCommited corrected - See http://zeos.firmos.at/viewtopic.php?t=570
