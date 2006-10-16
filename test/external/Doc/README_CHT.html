@@ -1,0 +1,637 @@
+<!-- saved from url=(0022)http://internet.e-mail -->
+<!-- saved from url=(0022)http://internet.e-mail -->
+<html>
+
+<head>
+<meta http-equiv="Content-Language" content="en-gb">
+<meta http-equiv="Content-Type" content="text/html; charset=big5">
+<meta name="GENERATOR" content="Microsoft FrontPage 5.0">
+<meta name="ProgId" content="FrontPage.Editor.Document">
+<title>DUnit Xtreme testing for Delphi</title>
+<style type="text/css">P.center {
+	TEXT-ALIGN: center
+}
+PRE {
+	MARGIN-LEFT: 16px
+}
+P.indent {
+	MARGIN-LEFT: 0.5in; MARGIN-RIGHT: 0.5in
+}
+TD.c17 {
+	BORDER-RIGHT: #cccccc 0.75pt inset; PADDING-RIGHT: 3pt; BORDER-TOP: #cccccc 0.75pt inset; PADDING-LEFT: 3pt; PADDING-BOTTOM: 3pt; BORDER-LEFT: #cccccc 0.75pt inset; PADDING-TOP: 3pt; BORDER-BOTTOM: #cccccc 0.75pt inset
+}
+TH.header {
+	BACKGROUND-COLOR: silver
+}
+CODE {
+	FONT-SIZE: 90%
+}
+P.credits {
+	FONT-SIZE: 80%; FONT-STYLE: italic; TEXT-ALIGN: right
+}
+SPAN.u {
+	COLOR: magenta
+}
+SPAN.D {
+	COLOR: green
+}
+</style>
+</head>
+
+<body class="c37">
+
+<h1><span class="D">
+<img border="0" alt="DUnit logo" hspace="8" align="left" vspace="8" src="images/xtao128_new.png" width="128" height="128">D</span><span class="u">U</span>nit<br>
+Delphi 的終極測試工具</h1>
+<p align="right"><i><small>by Will Watts<br>
+edited by Juanco A&ntilde;ez<br>
+Copyright &copy; 1999 Will Watts. All rights reserved.<br>
+Later versions are &copy; 2000-2003 The DUnit Group. All rights reserved.<br>
+This text may be distributed freely as long as it's reproduced in its entirety.
+<br>
+<img alt="US flag" src="images/usa.gif" width="32" height="22"><br>
+There's an English version of this document <a href="README.html">here</a>
+</small></i></p>
+<p align="right">翻譯：<a href="mailto:huanlin_tsai@yahoo.com">蔡煥麟</a></p>
+<h2>內容</h2>
+<blockquote>
+  <p><a href="#_Introducing_Unit_Testing">採用 DUnit 進行單元測試</a></p>
+</blockquote>
+<blockquote>
+  <blockquote>
+    <p><a href="#_Archive_contents">檔案內容</a><br>
+    <a href="#_Getting_started">起步</a><br>
+    <a href="#_Your_first_testing">你的第一個測試專案</a><br>
+    <a href="#_SetUp_and_TearDown">SetUp 與 TearDown</a><br>
+    <a href="#_Test_suites">測試套件</a><br>
+    <a href="#_Building_test_suites">逐步建立測試套件</a></p>
+  </blockquote>
+  <p><a href="#_Other_Features">其他功能</a></p>
+  <blockquote>
+    <p><a href="#_Running_Tests_in">在主控台模式下執行測試</a><br>
+    <a href="#_Extensions">擴充功能</a></p>
+  </blockquote>
+  <p><a href="#_References">參考資料</a></p>
+</blockquote>
+<h2><span><a name="_Introducing_Unit_Testing">採用 </a></span>
+<a name="_Introducing_Unit_Testing"><b><span class="D">D</span><span class="u">U</span>nit</b><span> 
+進行單元測試</span>&nbsp;</a></h2>
+<p><b><span class="D">D</span><span class="u">U</span>nit</b> 是一個類別框架，目的是要支援 
+<a href="http://www.xprogramming.com/" target="_blank">XP</a> 的軟體測試方法。它支援 Delphi 
+4 以後的版本。</p>
+<p>
+其概念為，當你在開發或修改程式碼時，你就要同時開發出相稱的測試程式，而不是把它們延後到測試階段。若能隨時更新測試程式並且經常反覆地執行它們，你就能夠更輕易地產生可靠的程式碼，而且在進行修改與重整（refactorings）時更有把握不會破壞原有的程式碼，於是，應用程式等於有了自我測試的能力。</p>
+<p><b><span class="D">D</span><span class="u">U</span>nit</b> 
+提供了一些類別以便組織與執行這些測試。<b><span class="D">D</span><span class="u">U</span>nit</b> 
+提供兩種執行測試的方式：</p>
+<ul>
+  <li>圖形使用者介面的應用程式，讓你方便地選擇個別的以及一整組的測試。</li>
+  <li>主控台（console）應用程式。</li>
+</ul>
+<p><b><span class="D">D</span><span class="u">U</span>nit</b> 的靈感源自 JUnit 
+框架，該框架是由 Kent Beck 與 Erich Gamma 為 Java 程式語言所設計的，但是 DUnit 已經逐漸發展成威力更強的 Delphi 
+專屬工具。最早是由 <a href="http://www.suigeneris.org/juanca">Juanco A&ntilde;ez</a> 設計成 Delphi 
+的版本，目前則是由 <a href="http://www.sourceforge.net/login">SourceForge</a> 的 
+<a href="http://dunit.sourceforge.net/"><b><span class="D">D</span><span class="u">U</span>nit</b> 
+Group</a> 所維護。</p>
+<h3><a name="_Archive_contents">檔案內容</a></h3>
+<p>隨著 <b><span class="D">D</span><span class="u">U</span>nit</b> 
+套件所發布的檔案應該存放在一個屬於自己的目錄下，以便保留完整的目錄結構：</p>
+<table borderColor="black" cellSpacing="0" cellPadding="0" border="1">
+  <tr>
+    <th class="header" colSpan="4">目錄名稱</th>
+    <th class="header">說明</th>
+  </tr>
+  <tr>
+    <td class="c17" colSpan="4">DUnit</td>
+    <td class="c17">　</td>
+  </tr>
+  <tr>
+    <td class="c17">　</td>
+    <td class="c17" colSpan="3">framework</td>
+    <td class="c17">事先編譯好的框架模組</td>
+  </tr>
+  <tr>
+    <td class="c17">　</td>
+    <td class="c17" colSpan="3">src</td>
+    <td class="c17">函式庫原始碼</td>
+  </tr>
+  <tr>
+    <td class="c17">　</td>
+    <td class="c17" colSpan="3">doc</td>
+    <td class="c17">輔助說明檔，網頁與 MPL 授權許可</td>
+  </tr>
+  <tr>
+    <td class="c17">　</td>
+    <td class="c17">　</td>
+    <td class="c17" colSpan="2">images</td>
+    <td class="c17">網頁的圖形檔案</td>
+  </tr>
+  <tr>
+    <td class="c17"><br>
+    <br>
+    </td>
+    <td class="c17"><br>
+    <br>
+    </td>
+    <td class="c17" colSpan="2">
+    <a href="http://dunit.sourceforge.net/API/IDH_Library_DUnit_-_Xtreme_Unit_Testing_for_Delphi.htm">
+    API</a></td>
+    <td class="c17">Time2Help 產生的 API 文件</td>
+  </tr>
+  <tr>
+    <td class="c17">　</td>
+    <td class="c17" colSpan="3">Contrib</td>
+    <td class="c17">其他人貢獻的模組</td>
+  </tr>
+  <tr>
+    <td class="c17">　</td>
+    <td class="c17">　</td>
+    <td class="c17" colSpan="2">
+    <a href="http://dunit.sourceforge.net/Contrib/XPGen/readme.html">XPGen</a></td>
+    <td class="c17">一個可以自動產生測試案例（test cases）的工具</td>
+  </tr>
+  <tr>
+    <td class="c17">　</td>
+    <td class="c17" colSpan="3">tests</td>
+    <td class="c17">給這個框架本身所使用的測試案例</td>
+  </tr>
+  <tr>
+    <td class="c17">　</td>
+    <td class="c17" colSpan="3">bin</td>
+    <td class="c17">事先編譯好，可以單獨執行的 GUI 測試程式</td>
+  </tr>
+  <tr>
+    <td class="c17">　</td>
+    <td class="c17" colSpan="3">examples</td>
+    <td class="c17">　</td>
+  </tr>
+  <tr>
+    <td class="c17">　</td>
+    <td class="c17">　</td>
+    <td class="c17" colSpan="2">cmdline</td>
+    <td class="c17">示範如何在命令列環境下使用 DUnit</td>
+  </tr>
+  <tr>
+    <td class="c17">　</td>
+    <td class="c17">　</td>
+    <td class="c17" colSpan="2">collection</td>
+    <td class="c17">一個類似 Java 的集合（collections）實作以及它的 DUnit 測試案例</td>
+  </tr>
+  <tr>
+    <td class="c17">　</td>
+    <td class="c17">　</td>
+    <td class="c17" colSpan="2">registration</td>
+    <td class="c17">使用測試案例註冊系統（registration system）（譯註：示範幾種註冊測試案例的方法）</td>
+  </tr>
+  <tr>
+    <td class="c17">　</td>
+    <td class="c17">　</td>
+    <td class="c17" colSpan="2">
+    <a href="http://dunit.sourceforge.net/examples/structure/readme.html">
+    structure</a></td>
+    <td class="c17">組織測試程式碼的方式</td>
+  </tr>
+  <tr>
+    <td class="c17">　</td>
+    <td class="c17">　</td>
+    <td class="c17">　</td>
+    <td class="c17">diffunit</td>
+    <td class="c17">把測試案例放在獨立的單元裡面</td>
+  </tr>
+  <tr>
+    <td class="c17">　</td>
+    <td class="c17">　</td>
+    <td class="c17">　</td>
+    <td class="c17">sameunit</td>
+    <td class="c17">把測試案例和被測試的程式碼放在同一個單元裡面</td>
+  </tr>
+  <tr>
+    <td class="c17"><br>
+    <br>
+    </td>
+    <td class="c17"><br>
+    <br>
+    </td>
+    <td class="c17" colSpan="2">
+    <a href="http://dunit.sourceforge.net/examples/registry/readme.html">
+    registry</a></td>
+    <td class="c17">一步步教你建立一個存取 Registry 的工具及其測試案例</td>
+  </tr>
+  <tr>
+    <td class="c17">　</td>
+    <td class="c17">　</td>
+    <td class="c17" colSpan="2">
+    <a href="http://dunit.sourceforge.net/examples/embeddable/readme.html">
+    embeddable</a></td>
+    <td class="c17">示範如何將 GUITestRunner 嵌入至其他視窗內</td>
+  </tr>
+  <tr>
+    <td class="c17">　</td>
+    <td class="c17">　</td>
+    <td class="c17" colSpan="2">(...)</td>
+    <td class="c17">　</td>
+  </tr>
+  <tr>
+    <td class="c17">　</td>
+    <td class="c17">　</td>
+    <td class="c17" colSpan="2">TListTest</td>
+    <td class="c17">給 Delphi 的 Classes.TList 物件使用的測試案例</td>
+  </tr>
+</table>
+<p>目錄 src 包含下列檔案</p>
+<table cellSpacing="0" cellPadding="0" border="1">
+  <tr>
+    <th class="header">檔案名稱</th>
+    <th class="header">說明</th>
+  </tr>
+  <tr>
+    <td class="c17">
+    <a href="http://dunit.sourceforge.net/API/IDH_Unit_TestFramework.htm">
+    TestFramework.pas</a></td>
+    <td class="c17">框架本身</td>
+  </tr>
+  <tr>
+    <td class="c17">
+    <a href="http://dunit.sourceforge.net/API/IDH_Unit_TestExtensions.htm">
+    TestExtensions.pas</a></td>
+    <td class="c17">可用來擴充測試案例的 Decorator 類別</td>
+  </tr>
+  <tr>
+    <td class="c17">
+    <a href="http://dunit.sourceforge.net/API/IDH_Unit_GUITesting.htm">
+    GUITesting.pas</a></td>
+    <td class="c17">用來測試使用者介面（視窗與對話盒）的類別</td>
+  </tr>
+  <tr>
+    <td class="c17">
+    <a href="http://dunit.sourceforge.net/API/IDH_Unit_TextTestRunner.htm">
+    TextTestRunner.pas</a></td>
+    <td class="c17">在主控台模式下執行測試的函式</td>
+  </tr>
+  <tr>
+    <td class="c17">
+    <a href="http://dunit.sourceforge.net/API/IDH_Unit_GUITestRunner.htm">
+    GUITestRunner.pas</a></td>
+    <td class="c17">此框架的圖形化使用者介面</td>
+  </tr>
+  <tr>
+    <td class="c17">
+    <a href="http://dunit.sourceforge.net/API/IDH_Unit_GUITestRunner.htm">
+    GUITestRunner.dfm</a></td>
+    <td class="c17">GUITestRunner Form</td>
+  </tr>
+</table>
+<p>framework 目錄中包含以上各單元編譯過的版本，以及用來連結 .BPL 的 .DCP 檔案（對應的 .BPL 檔案存在 bin 目錄裡）（<a href="#譯註">譯註1</a>）。</p>
+<h3><a name="_Getting_started">起步</a></h3>
+<p>在開始使用 <b><span class="D">D</span><span class="u">U</span>nit</b> 之前，Delphi 
+的單元搜尋路徑裡必須包含 <b><span class="D">D</span><span class="u">U</span>nit</b> 
+的原始碼或編譯後的檔案路徑 。你可以在 Delphi IDE 中點選 Tools | Environment Options | Library，然後把 <b>
+<span class="D">D</span><span class="u">U</span>nit</b> 路徑加到原有的路徑清單裡：</p>
+<blockquote>
+  <p>
+  <img id="_x0000_i1027" alt="Delphi's environment options dialog" src="images/environment_options.jpg" border="0" width="437" height="219"></p>
+</blockquote>
+<p>另一種做法，是將 <b><span class="D">D</span><span class="u">U</span>nit</b> 
+路徑加到預設的專案選項或者特定的專案選項裡，在 IDE 中點選 Project | Options：</p>
+<blockquote>
+  <p>
+  <img id="_x0000_i1028" alt="Delphi's project options dialog" src="images/project_options.jpg" border="0" width="421" height="195"></p>
+</blockquote>
+<h3><a name="_Your_first_testing">你的第一個測試專案</a></h3>
+<p>建立一個新的應用程式，然後關閉 Delphi 為你自動產生的 Unit1.pas 並且不要儲存。儲存這個新的專案（在你想要測試的應用程式的相同目錄下的 
+'real life' 目錄）並且命名為 Project1Test.dpr。</p>
+<p>點選 File | New | Unit 以建立一個新的（沒有 form 的）單元，由於我們會把<b>測試案例</b>寫在這個檔案裡面，所以儲存的時候就取&nbsp; 
+Project1TestCases 之類的檔案名稱，接著在 interface 的 uses 子句裡加入 
+<a href="http://dunit.sourceforge.net/API/IDH_Unit_TestFramework.htm">
+TestFramework</a>。</p>
+<p>宣告一個 TTestCaseFirst 類別，該類別繼承自 
+<a href="http://dunit.sourceforge.net/API/IDH_Class_TTestCase.htm">TTestCase</a>，然後實作一個如下所示的 
+TestFirst 方法（顯然地，這個小範例只是為了讓你順利起步），注意最後的 initialization 區段，TTestCaseFirst 
+類別就是在這裡完成註冊的。</p>
+<pre><font face="Courier New"><b>unit</b> Project1TestCases;
+
+<b>interface</b>
+
+<b>uses</b>
+  TestFrameWork;
+
+<b>type</b>
+  TTestCaseFirst = <b>class</b>(TTestCase)
+  <b>published
+</b>    <b>procedure</b> TestFirst;
+  <b>end</b>;
+
+<b>implementation</b>
+
+<b>procedure</b> TTestCaseFirst.TestFirst;
+<b>begin</b>
+  Check(1 + 1 = 2, 'Catastrophic arithmetic failure!');
+<b>end</b>;
+
+<b>initialization</b>
+  TestFramework.RegisterTest(TTestCaseFirst.Suite);
+<b>end</b>.</font></pre>
+<p>測試的結果是置於所呼叫的<font color="#FF0000">
+<a href="http://dunit.sourceforge.net/API/IDH_TTestCase_Check.htm">Check</a>
+</font>方法裡面，這裡我很無聊地想要確認 1 + 1 是否等於 2。<a href="http://dunit.sourceforge.net/API/IDH_TestFramework_RegisterTest.htm">TestFramework.RegisterTest</a> 
+程序會把傳入的測試案例物件註冊到此框架的註冊系統裡。</p>
+<p>在執行這個專案以前，點選主選單的 Project | View Source 以開啟專案的原始碼，把 
+<a href="http://dunit.sourceforge.net/API/IDH_Unit_TestFramework.htm">
+TestFrameWork</a> 以及 
+<a href="http://dunit.sourceforge.net/API/IDH_Unit_GUITestRunner.htm">
+GUITestRunner</a> 加到 uses 子句裡，然後移除預設的 Application 程式碼，並以下面的程式碼取代：</p>
+<pre><font face="Courier New"><b>program</b> Project1Test;
+
+<b>uses</b>
+ Forms,
+ TestFrameWork,
+ GUITestRunner,
+ Project1TestCases in 'Project1TestCases.pas';
+
+{$R *.RES}
+
+<b>begin</b>
+ Application.Initialize;
+ GUITestRunner.RunRegisteredTests;
+<b>end</b>.</font></pre>
+<p>現在試著執行程式，如果一切正常，你應該會看到 <b><span class="D">D</span><span class="u">U</span>nit</b> 
+的 GUITestRunner 視窗，裡面有一個樹狀元件顯示可用的測試（目前只有 TestFirst），點一下 <i>Run</i> 
+按鈕即可執行測試。畫面上的核取方塊可以讓你以階層的方式選擇欲測試的項目，還有額外的按鈕以便切換測試項目或整個分支的選取狀態。</p>
+<p>若要加入更多的測試，只需簡單地在 TTestCaseFirst 裡加入新的測試方法，<a href="http://dunit.sourceforge.net/API/IDH_TTestCase_Suite.htm">TTestCase.Suite</a> 
+類別方法會透過 RTTI（RunTime Type Information，執行時期型態資訊）自動地尋找並且呼叫它們，這些測試方法必須符合兩個條件：</p>
+<ul>
+  <li>測試方法必須是不帶參數的程序。</li>
+  <li>測試方法必須宣告為 published。</li>
+</ul>
+<p>注意 <b><span class="D">D</span><span class="u">U</span>nit</b> 
+會為它所找到的每個方法各自建立一個類別的實體（instance），所以測試方法之間不可共享實體的資料。</p>
+<p>現在要再加入兩個測試方法：TestSecond 與 TestThird，其宣告如下：</p>
+<pre><font face="Courier New">TTestCaseFirst = <b>class</b>(TTestCase)
+<b>published</b>
+  <b>procedure</b> TestFirst;
+  <b>procedure</b> TestSecond;
+  <b>procedure</b> TestThird;
+ <b>end</b>;
+
+...
+
+<b>procedure</b> TTestCaseFirst.TestSecond;
+<b>begin</b>
+  Check(1 + 1 = 3, 'Deliberate failure');
+<b>end</b>;</font></pre>
+<pre><font face="Courier New"><b>procedure</b> TTestCaseFirst.TestThird;
+<b>var</b>
+  i: Integer;
+<b>begin</b>
+  i := 0;
+  Check(1 div i = i, 'Deliberate exception');
+<b>end</b>;</font></pre>
+<p>如果你重新執行這個程式，你就會看到 TestSecond 測試失敗了（旁邊有一個小的紫紅色方框），而 TestThird 
+會丟出一個異常（旁邊的方框是紅色的），通過測試的方框會是綠色的，而沒有執行的測試則是灰色的。失敗的測試清單會被列在下方的面板上，當你去點選它們就可以在底部的面板上看到它們的詳細資料。</p>
+<p>如果你在 IDE 裡面執行程式，你會發現每當程式發生錯誤時就會暫停，當你用 <b><span class="D">D</span><span class="u">U</span>nit</b> 
+進行測試時，這樣的行為可能不是你想要的，你可以照下面的步驟將 IDE 的這項功能關掉：點選 Tools | Debugger Options，然後把 
+Language Exceptions 頁夾的 Stop on Delphi Exceptions 項目取消。</p>
+<h3><a name="_SetUp_and_TearDown">Setup 與 TearDown</a></h3>
+<p>
+我們通常會在執行一組測試之前進行一般的準備工作，並在事後進行清理。比如說，在測試一個類別的時候，你也許會想要建立該類別的實體，然後對它施行一些檢查，最後再將它釋放，如果測試項目很多的話，你將免不了在每一個測試方法裡面撰寫重複的程式碼。<b><span class="D">D</span><span class="u">U</span>nit</b> 
+對此提出的解決方案是，在每一個測試方法被執行之前和之後分別去呼叫 
+<a href="http://dunit.sourceforge.net/API/IDH_Class_TTestCase.htm">TTestCase</a> 
+的虛擬方法 <a href="http://dunit.sourceforge.net/API/IDH_TTestCase_SetUp.htm">Setup</a> 
+與 <a href="http://dunit.sourceforge.net/API/IDH_TTestCase_TearDown.htm">TearDown</a>，以終極測試的行話來說，由這兩個方法來提供測試前的必要處理就稱為一個 
+fixture（<a href="#譯註">譯註 2</a>）。</p>
+<p>以下範例擴充了 TTestCaseFirst 並增加幾個測試 Delphi 集合類別 TStringList 的方法：</p>
+<pre><font face="Courier New"><b>interface</b>
+
+<b>uses</b>
+ TestFrameWork,
+ Classes;  <font color="#008000">// needed for TStringList</font>
+
+<b>type</b>
+ TTestCaseFirst = <b>class</b>(TTestCase)
+ <b>private</b>
+   Fsl: TStringList;
+ <b>protected</b>
+   <b>procedure</b> SetUp; override;
+   <b>procedure</b> TearDown; override;
+ <b>published</b>
+   <b>procedure</b> TestFirst;
+   <b>procedure</b> TestSecond;
+   <b>procedure</b> TestThird;
+   <b>procedure</b> TestPopulateStringList;
+   <b>procedure</b> TestSortStringList;
+ <b>end</b>;
+
+...
+
+<b>procedure</b> TTestCaseFirst.SetUp;
+<b>begin</b>
+ Fsl := TStringList.Create;
+<b>end</b>;
+
+<b>procedure</b> TTestCaseFirst.TearDown;
+<b>begin</b>
+  Fsl.Free;
+<b>end</b>;
+
+<b>procedure</b> TTestCaseFirst.TestPopulateStringList;
+<b>var</b>
+ i: Integer;
+<b>begin</b>
+ Check(Fsl.Count = 0);
+ <b>for</b> i := 1 <b>to</b> 50 <b>do</b>    <font color="#008000">// Iterate</font>
+   Fsl.Add('i');
+ Check(Fsl.Count = 50);
+<b>end</b>;
+
+<b>procedure</b> TTestCaseFirst.TestSortStringList;
+<b>begin</b>
+  Check(Fsl.Sorted = False);
+  Check(Fsl.Count = 0);
+  Fsl.Add('You');
+  Fsl.Add('Love');
+  Fsl.Add('I');
+  Fsl.Sorted := True;
+  Check(Fsl[2] = 'You');
+  Check(Fsl[1] = 'Love');
+  Check(Fsl[0] = 'I');
+<b>end</b>;</font></pre>
+<h3><a name="_Test_suites">測試套件</a>（Test suites）</h3>
+<p>當你在測試一個真正有用的（non-trivial）應用程式時，你會想要建立一個以上的 
+<a href="http://dunit.sourceforge.net/API/IDH_Class_TTestCase.htm">TTestCase</a> 
+衍生類別，欲將這些類別加到上層節點，你只需在 initialization 
+子句裡面註冊它們就行了，寫法跟上面的範例一樣。有時候，你可能想要更清楚地定義測試案例之間的結構關係，為此 <b><span class="D">D</span><span class="u">U</span>nit</b> 
+提供了建立<b>測試套件</b>的功能，它可以讓你在測試案例中包含其他的測試案例或測試套件（使用 Composite 樣式）。</p>
+<p>如同在 TTestCaseFirst 測試案例中所顯示的，當算術運算的測試方法執行時，SetUp 和 TearDown 
+方法雖然有被呼叫但完全沒做任何事。其中有兩個處理字串串列的方法，最好能將它們分離成獨立的測試套件，做法是先把 TTestCaseFirst 拆成兩個類別，分別是 
+TTestArithmetic 與 TTestStringList：</p>
+<pre><font face="Courier New"><b>type</b>
+  TTestArithmetic = <b>class</b>(TTestCase)
+  <b>published</b>
+    <b>procedure</b> TestFirst;
+    <b>procedure</b> TestSecond;
+    <b>procedure</b> TestThird;
+  <b>end</b>;
+
+ TTestStringlist = <b>class</b>(TTestCase)
+ <b>private</b>
+   Fsl: TStringList;
+ <b>protected</b>
+   <b>procedure</b> SetUp; <b>override</b>;
+   <b>procedure</b> TearDown; <b>override</b>;
+ <b>published</b>
+   <b>procedure</b> TestPopulateStringList;
+   <b>procedure</b> TestSortStringList;
+ <b>end</b>;</font></pre>
+<p>（當然啦，你也得更新這些方法的實作才行）</p>
+<p>然後把 inistailization 的程式碼改成這樣：</p>
+<pre><font face="Courier New">RegisterTest('Simple suite', TTestArithmetic.Suite);
+RegisterTest('Simple suite', TTestStringList.Suite);</font>
+</pre>
+<h3><a name="_Building_test_suites">逐步建立測試套件</a></h3>
+<p><a href="http://dunit.sourceforge.net/API/IDH_Unit_TestFramework.htm">
+TestFramework</a> 單元的 
+<a href="http://dunit.sourceforge.net/API/IDH_Class_TTestSuite.htm">TTestSuite</a> 
+類別實作了測試套件，所以你可以用更明顯的方式建立測試階層：</p>
+<p>下面的 UnitTests 函式會建立一個測試套件，並且在其中加入兩個測試類別：</p>
+<pre><font face="Courier New"><b>function</b> UnitTests: ITestSuite;
+<b>var</b>
+  ATestSuite: TTestSuite;
+<b>begin</b>
+  ATestSuite := TTestSuite.Create('Some trivial tests');
+  ATestSuite.AddTests(TTestArithmetic.Suite);
+  ATestSuite.AddTests(TTestStringlist.Suite);
+  Result := ATestSuite;
+<b>end</b>;</font></pre>
+<p>還有另一種寫法，跟上面的作用也是完全相同的：</p>
+<pre><font face="Courier New"><b>function</b> UnitTests: ITestSuite;
+<b>begin</b>
+  Result := TTestSuite.Create('Some trivial tests',
+                         [                 
+                          TTestArithmetic.Suite,
+                          TTestStringlist.Suite
+                          ]);
+<b>end</b>;</font>
+</pre>
+<p>上面的範例是在呼叫 <a href="http://dunit.sourceforge.net/API/IDH_Class_TTestSuite.htm">
+TTestSuite</a> 的建構元時，把要加入的測試一併透過陣列傳遞過去。</p>
+<p>使用上述任一種方式建立的測試套件，其註冊方式跟你之前註冊個別測試案例的方式是相同的：</p>
+<pre><font face="Courier New"><b>initialization</b>
+  RegisterTest('Simple Test', UnitTests);
+<b>end</b>.</font></pre>
+<p>當測試程式執行時，你就會在 
+<a href="http://dunit.sourceforge.net/API/IDH_Unit_GUITestRunner.htm">
+GUITestRunner</a> 視窗上看到新的樹狀階層。</p>
+<p>　</p>
+<h2 class="c34"><a name="_Other_Features">其他功能</a></h2>
+<h3><a name="_Running_Tests_in">在主控台模式下執行測試</a></h3>
+<p>有時候，我們會想要在主控台模式下執行測試套件，比如說當你想要用一個 Makefile 
+執行整批的測試，這時候主控台模式就很有用。如要在主控台模式下執行測試，之前在 DPR 檔案裡面的 uses 子句中的 GUITestRunner 就要改成 
+TextTestRunner，並且加入條件編譯 {$APPTYPE CONSOLE} 或者在 IDE 裡點選 Project | Options | 
+Linker | Generate console application 選項。</p>
+<p>以下範例 Project1TestConsole.dpr 的專案原始碼：</p>
+<pre><font face="Courier New">{$APPTYPE CONSOLE}
+
+<b>program</b> Project1TestConsole;
+<b>uses</b>
+ TestFrameWork,
+ TextTestRunner,
+ Project1TestCases in 'Project1TestCases.pas';
+
+{$R *.RES}
+
+<b>begin</b>
+  TextTestRunner.RunRegisteredTests;
+<b>end</b>.</font></pre>
+<p>程式執行的輸出結果會像這樣：</p>
+<pre><font face="Courier New">--
+DUnit: Testing.
+..F.E..
+Time: 0.20
+FAILURES!!!
+Test Results:
+Run: 5
+Failures: 1
+Errors: 1
+
+There was 1 error:
+1) TestThird: EDivByZero: Division by zero
+
+There was 1 failure:
+1) TestSecond</font>
+</pre>
+<p>注意第三行的 '..F.E..' 字串，其中每一個句點（.）代表一項執行無誤的測試，'F' 表示測試失敗（failed），而 'E' 
+表示發生異常（exception）。</p>
+<p>如果你希望當測試失敗時，讓 <span>
+<a href="http://dunit.sourceforge.net/API/IDH_Unit_TextTestRunner.htm">
+TextTestRunner</a></span> 停止執行並且傳回一個非零的結束碼，你可以傳入一個<span><a href="http://dunit.sourceforge.net/API/IDH_Type_TRunnerExitBehavior.htm">rxbHaltOnFailures</a> 
+參數值，像這樣：</span></p>
+<pre><font face="Courier New">TextTestRunner.RunRegisteredTests(rxbHaltOnFailures);</font></pre>
+<p>當你使用 Makefile 來執行測試套件的時候，這些回傳的結束碼會很有用處。</p>
+<h3><a name="_Extensions">擴充功能</a></h3>
+<p>The <a href="http://dunit.sourceforge.net/API/IDH_Unit_TestExtensions.htm">
+TextExtensions</a> 單元中的類別是用來擴充 <b><span class="D">D</span><span class="u">U</span>nit</b> 
+框架的功能，大部分的類別使用了「四人幫」（GoF, Gang of Four）的 &quot;Design Patterns&quot; 書中所定義的 decorator 樣式。</p>
+<h4>TRepeatedTest</h4>
+<p><span><a href="http://dunit.sourceforge.net/API/IDH_Class_TRepeatedTest.htm">
+TRepeatedTest</a></span> 類別允選你重複裝飾的測試許多次，例如，重複執行 TestFirst 測試案例中的 
+TTestArithmetic 10 次，你的程式可以這麼寫：</p>
+<pre><font face="Courier New"><b>uses</b>
+ TestFrameWork,
+ TestExtensions, <font color="#008000">// needed for TRepeatedTest</font>
+ Classes;        <font color="#008000">// needed for TStringList</font>
+
+...
+
+<b>function</b> UnitTests: ITest;
+<b>var</b>
+  ATestArithmetic : TTestArithmetic;
+<b>begin</b>
+  ATestArithmetic := TTestArithmetic.Create('TestFirst');
+  Result := TRepeatedTest.Create(ATestArithmetic, 10);
+<b>end</b>;</font>
+</pre>
+<p>請注意 TTestArithmetic 的建構元：</p>
+<pre><font face="Courier New">ATestArithmetic := TTestArithmetic.Create('TestFirst');</font>
+</pre>
+<p>這裡我把要重複執行的測試方法的名稱傳遞給建構元，當然這個名稱一定不能寫錯，否則隨後執行時只能得到令人失望的結果。</p>
+<p>如果你想要重複測試 TTestArithmetic 的<b>全部</b>方法，你可以把它們放在一個套件裡：</p>
+<pre><font face="Courier New"><b>function</b> UnitTests: ITest;
+<b>begin</b>
+  Result := TRepeatedTest.Create(ATestArithmetic.Suite, 10);
+<b>end</b>;</font>
+</pre>
+<h4>TTestSetup</h4>
+<p><span><a href="http://dunit.sourceforge.net/API/IDH_Class_TTestSetup.htm">
+TTestSetup</a></span> 類別可以讓你為一個測試案例類別進行唯一一次的初始化設定（Setup 與 TearDown 
+方法是每次執行測試方法時就會被呼叫）。例如，如果你正在撰寫一組測試以驗證某些存取資料庫的程式碼，你可能會從 <span>
+<a href="http://dunit.sourceforge.net/API/IDH_Class_TTestSetup.htm">TTestSetup</a></span> 
+衍生一個類別，並且利用它來開啟和關閉資料庫。</p>
+<p>　</p>
+<h2><a name="_References">參考資料</a></h2>
+<p>位於 SourceForge 的 <b><span class="D">D</span><span class="u">U</span>nit</b> 
+首頁（<a href="https://sourceforge.net/projects/dunit/">https://sourceforge.net/projects/dunit/</a>），有最新的原始碼，郵遞論壇，問答集...等。</p>
+<p>Delphi 的終極測試工具 （ 
+<a href="http://www.suigeneris.org/juanca/writings/1999-11-29.html">
+http://www.suigeneris.org/juanca/writings/1999-11-29.html</a>），Juancarlo A&ntilde;ez 
+在這篇文章裡介紹了他設計的 <b><span class="D">D</span><span class="u">U</span>nit</b> 
+類別，此文最初公佈於 Borland 開發人員社群網站。</p>
+<p>JUnit Test Infected: Programmers Love Writing Tests (<a href="http://www.junit.org/junit/doc/testinfected/testing.htm">http://www.junit.org/junit/doc/testinfected/testing.htm</a>)，這是一篇介紹 
+JUnit 的好文章， <b><span class="D">D</span><span class="u">U</span>nit</b> 
+就是以此框架為基礎而發展出來的。</p>
+<p>Simple Smalltalk Testing: With Patterns（<a href="http://www.xprogramming.com/testfram.htm">http://www.xprogramming.com/testfram.htm</a>），Kent 
+Beck 最早的文件，比較適合熟悉 Smalltalk 的人閱讀。</p>
+<p class="center">~o~</p>
+<h4><a name="譯註">譯註</a></h4>
+<ol>
+  <li>部分檔案目錄在新版本裡面已經不存在了，例如：framework，故應以官方釋出的最新版的目錄結構為準。</li>
+  <li>Fixture 是 XP 術語。在一個 Test Case 裡面，負責初始化及清理的動作，對應到實作上就是 SetUp 與 TearDown 
+  這兩個虛擬方法。每次執行測試時，會事先呼叫所有的 fixture 的 Setup 方法，並且在測試結束前呼叫 TearDown，我想也就因為這些是固定要執行的動作，所以取其名為 
+  fixture，若要譯成中文，也許可以說成「固定裝置」或「固定機制」。 fixture 的典型用法是在 Setup 方法裡面配置資源，並且在 
+  TearDown 裡面釋放資源，如果你正在測試存取資料庫的程式，並且希望測試的過程不會改變資料庫的內容，也可以在 TearDown 
+  裡面將所有的交易撤回，或者撰寫交易補償的程式碼。 </li>
+</ol>
+
+</body>
+
+</html>

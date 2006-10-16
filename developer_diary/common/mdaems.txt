@@ -1,0 +1,57 @@
+20060414 : Updated lazarus package for correct compilation. (Missing packages, corrupt package file,...) - Asked by IgD
+
+20060414 : Const modifier added to function definitions where possible to improve speed. - Patch by AHUser - See  http://seegernet.koolhost.de/zeosforum/viewtopic.php?t=519
+
+20060415 : Removed old CVS related files/directories from the source tree.  - Asked by IgD
+
+20060415 : Some more Lazarus package modifications.  - Patch by IgD
+
+20060417 : Memory leak bug fixed by DavidVTailor - See http://seegernet.koolhost.de/zeosforum/viewtopic.php?t=461
+
+20060429 : Delimiter problem in ZSQLProcessor fixed - See http://seegernet.koolhost.de/zeosforum/viewtopic.php?t=527
+
+20060430 : Fixed wrong line breaks in source files - See http://seegernet.koolhost.de/zeosforum/viewtopic.php?t=553
+
+20060503 : MissingConsts, Inlining, SilentException patch - Sent by AHUser - See http://seegernet.koolhost.de/zeosforum/viewtopic.php?t=566
+
+20060505 : Fixed Delphi 5 install problems - See http://seegernet.koolhost.de/zeosforum/viewtopic.php?t=335
+
+20060506 : Added {$LIBSUFFIX 'X0'} to projectfiles of D7 and D2006 - http://seegernet.koolhost.de/zeosforum/viewtopic.php?t=561
+
+20060508 : Removed ASA driver from Lazarus packages because not compilable in Lazarus.
+
+20060517 : Bug in GetIndexInfo - Patch by the_kique - See http://seegernet.koolhost.de/zeosforum/viewtopic.php?t=196
+
+20060520 : Translated some dutch strings in ZMessages
+           Added patch from Paulonki for Delphi 2005 / Portuguese - See http://seegernet.koolhost.de/zeosforum/viewtopic.php?t=586
+
+20060531 : Delphi 6 project filetuning, asked by tomazzupan. - See : http://zeos.firmos.at/viewtopic.php?t=577
+           Can still be bugged. I hope he keeps me informed.
+
+20060616 : Date, Time and Float on Lazarus - Patch by fbaqui - See http://zeos.firmos.at/viewtopic.php?t=598
+
+20060620 : Added GetClientVersion and GetServerVersion to Connection/Driver interfaces - Modification by fduenas
+
+20060710 : Integrated contribution from Terence : Added more specific metadata clearcache possibilities.
+
+20060811 : Updated some message translations - German versions by wdbrmpft (Klaus) - See http://zeos.firmos.at/viewtopic.php?t=704
+           Synchronized Trunk change by Helmut (Firmos)
+
+20060913 : Delphi 7 : Split up Component Package into Component and ComponentDesign - See http://zeos.firmos.at/viewtopic.php?t=726
+           Delphi 7 : Added compiler directives to avoid inclusion of not wanted database drivers. - See http://zeos.firmos.at/viewtopic.php?t=746
+
+20061003 : New Dataset features : BeforeApplyUpdates (event), AfterApplyUpdates (event), SortType (property), EmptyDataSet (procedure) 
+           Bugfix InternalPost (Procedure) - Written by Bangfauzan - See http://zeos.firmos.at/viewtopic.php?t=781
+
+20061007 : New embedded mysql server example
+           Bugfix Updatesql component (OnUpdate event)
+           Added D2006 Project Group  - All written by fduenas
+
+20061010 : Bug fix for Mssql Memory leak
+           Bug fix for Mssql Select * error - Written by rautgigi - See http://zeos.firmos.at/viewtopic.php?t=788
+
+20061010 : New feature : LinkedFieldNames vs. IndexFieldnames - Written by Bangfauzan - See http://zeos.firmos.at/viewtopic.php?t=796
+
+20061011 : Added Lazarus fixes : ASA support did not compile well.
+
+20061015 : Added Indonesian messages - Written by tohenk

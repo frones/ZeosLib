@@ -1,0 +1,103 @@
+<html>
+
+<head>
+<meta http-equiv="Content-Language" content="es-ve">
+<meta name="GENERATOR" content="Microsoft FrontPage 5.0">
+<meta name="ProgId" content="FrontPage.Editor.Document">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<title>Access to DBAccess CVS Repository</title>
+</head>
+
+<body>
+
+<h1><span lang="en-gb">How to Access to </span>t<span lang="en-gb">he </span>
+DUnit<span lang="en-gb"> CVS Repository</span></h1>
+<pre><span lang="en-gb">$Id: cvs_access.html,v 1.1 2003/02/15 04:25:40 juanco Exp $</span></pre>
+<h2><span lang="en-gb">CygWin Installation</span></h2>
+<p><span lang="en-gb">CygWin needs to be installed in order to have access to a 
+working version of the Secure Shell protocol (SSH).</span></p>
+<ol>
+  <li><span lang="en-gb">Download and install CygWin from
+  <a href="http://www.cygwin.com/">http://www.cygwin.com/</a>. Make sure that 
+  the required programs, CVS, and SSH are selected for installation:</span><ul>
+    <li><span lang="en-gb">Net/openssh</span></li>
+    <li><span lang="en-gb">Net/openssl</span></li>
+    <li><span lang="en-gb">Devel/cvs.</span></li>
+  </ul>
+  </li>
+  <li><span lang="en-gb">Open Control Panel/System/Advanced/Environment 
+  Variables and define the following User variables:</span><ul>
+    <li><span lang="en-gb">CVS_RSH=ssh</span></li>
+    <li><span lang="en-gb">EDITOR=&lt;path to your favourite text editor&gt;</span></li>
+  </ul>
+  </li>
+  <li><span lang="en-gb">In the same dialog, make sure that the PATH environment 
+  variable includes the CygWin bin, usr\bin, and usr\local\bin directories.</span></li>
+  <li><span lang="en-gb">Open a Command Prompt (console window) and type:</span><pre><span lang="en-gb">cvs --help</span></pre>
+  <p><span lang="en-gb">you should get the CVS help output.</span></li>
+  <li><span lang="en-gb">Type the following SSH command:</span><pre><span lang="en-gb">ssh -l mySourceforgeId dunit.sourceforge.net</span></pre>
+  <p><span lang="en-gb">You should be prompted for a password. Press Ctrl+C to 
+  abort the connection.</span></li>
+</ol>
+<h3><span lang="en-gb">CygWin Repository Setup</span></h3>
+<ol>
+  <li><span lang="en-gb">Open a Command Prompt</span></li>
+  <li><span lang="en-gb">Change to the directory where the local copy of the 
+  repository should be created. For example:</span><pre><span lang="en-gb">cd c:\home</span></pre>
+  </li>
+  <li><span lang="en-gb">Type the following CVS command:</span><pre><span lang="en-gb">cvs -d :ext:</span>mySourceForgeId<span lang="en-gb">@cvs.dunit.sourceforge.net:/cvsroot/dunit checkout </span>dunit</pre>
+  <p><span lang="en-gb">Type your password when CVS requests it, and wait. CVS 
+  should start checking out a local copy of the repository to your hard drive 
+  (e.g. to c:\home\dunit).</span></li>
+</ol>
+<h2><span lang="en-gb">WinCVS</span></h2>
+<ol>
+  <li><span lang="en-gb">You can download a Windows GUI for CVS from
+  <a href="http://www.wincvs.org">http://www.wincvs.org</a>. Go carefully 
+  through the preferences dialog after installation.</span></li>
+  <li><span lang="en-gb">You can combine WinCVS with a visual Diff engine. One 
+  of the options Component Software Diff for Windows available at
+  <a href="http://www.componentsoftware.com/products/csdiff/">h</a></span><a href="http://www.componentsoftware.com/products/csdiff/">ttp://www.componentsoftware.com/products/csdiff/</a><span lang="en-gb">. 
+  You'll have to set the options in the Admin/Preferences/WinCVS/External Diff 
+  dialog, and in the </span></li>
+</ol>
+<h3><span lang="en-gb">WinCVS Repository Setup</span></h3>
+<p><span lang="en-gb">This is an alternative way to set up a local copy of the 
+CVS repository. If you successfully set up the local copy using CygWin, you 
+should skip this step.</span></p>
+<ol>
+  <li><span lang="en-gb">Launch WinCVS</span></li>
+  <li><span lang="en-gb">Select Create/Checkout Module from the WinCVS menu.</span></li>
+  <li><span lang="en-gb">Fill in the &quot;Checkout settings&quot; tab like this:</span><pre><img border="0" src="images/wincvs_setup_1.jpg" width="452" height="326"></pre>
+  <p>&nbsp;</li>
+  <li><span lang="en-gb">Leave the &quot;Checkout options&quot; and the &quot;Merge options&quot; 
+  tabs unchanged.</span></li>
+  <li><span lang="en-gb">Fill in the &quot;General&quot; tab as follows:</span><pre><img border="0" src="images/wincvs_setup_2.jpg" width="452" height="326"></pre>
+  </li>
+  <li><span lang="en-gb">Press the &quot;Settings&quot; button and write the complete path 
+  to the CygWin version of the SSH program.</span></li>
+  <li><span lang="en-gb">Leave the &quot;Globals&quot; tab unchanged.</span></li>
+  <li><span lang="en-gb">Press OK.</span></li>
+  <li><span lang="en-gb">Provide the password when requested by the console 
+  window (see below to learn how to avoid typing passwords).</span></li>
+  <li><span lang="en-gb">A local copy of the CVS repository will be checked out 
+  to the designated directory on your local hard drive.</span></li>
+</ol>
+<h2><span lang="en-gb">Setting Up No-Password Access to the Repository</span></h2>
+<ol>
+  <li><span lang="en-gb">Use SSH to create your key pairs:</span><pre><span lang="en-gb">ssh-keygen -t rsa</span></pre>
+  </li>
+  <li><span lang="en-gb">Copy the contents of the generated public key 
+  id_rsa.pub file to clipboard.</span></li>
+  <li><span lang="en-gb">Go to <a href="https://sourceforge.net/my/">
+  https://sourceforge.net/my/</a>, select Account Options, scroll to the bottom 
+  of the page, paste your public key on the text box, and press the Update 
+  button.</span></li>
+  <li><span lang="en-gb">You should now be able to perform CVS operations on the 
+  DUnit CVS repository without providing a password.</span></li>
+</ol>
+<p align="center"><span lang="en-gb"><b>~o~</b></span></p>
+
+</body>
+
+</html>

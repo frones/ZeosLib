@@ -1,0 +1,909 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content="HTML Tidy, see www.w3.org">
+<meta http-equiv="Content-Language" content="en-gb">
+<meta name="generator" content="Microsoft FrontPage 5.0">
+<title>DUnit - Xtreme testing for Delphi</title>
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
+<meta name="ProgId" content="FrontPage.Editor.Document">
+<style type="text/css">
+p.center        { text-align: center }
+pre          { margin-left: 16 }
+p.indent        { margin-left: .5in; margin-right: .5in }
+td.c17       { border: .75pt inset #CCCCCC; padding: 3.0pt }
+th.header    { background-color: silver; }
+code         {font-size:90%; }
+p.credits    { font-size: 80%; font-style: italic; text-align: right }
+span.u       { color: magenta }
+span.D       { color: green }
+
+</style>
+</head>
+<body class="c37" lang="EN-US">
+<p><img src="images/xtao128_new.png" alt="DUnit logo" align="left"
+border="0" height="128" hspace="8" vspace="8" width="128"></p>
+
+<h1><span class="D">D</span><span class="u">U</span>nit<br>
+Xtreme testing for Delphi</h1>
+
+<p class="credits">by Will Watts<br>
+edited by Juanco A&ntilde;ez<br>
+Copyright &copy; 1999 Will Watts. All rights reserved.<br>
+Later versions are &copy; 2000-2004 The DUnit Group. All rights
+reserved.<br>
+This text may be distributed freely as long as it's reproduced in
+its entirety.<br>
+<a href="README_CHT.html"><img src="images/tw.jpg" alt="China flag"
+height="30" width="45"></a><br>
+A Ttraditional Chinese translation of this document can be found <a
+href="README_CHT.html">here</a></p>
+
+<h2>Contents</h2>
+
+<blockquote>
+<p><a href="#_Introducing_Unit_Testing">Introducing Unit Testing
+with DUnit</a></p>
+
+<blockquote>
+<p><a href="#_Archive_contents">Archive contents</a><br>
+ <a href="#_Getting_started">Getting started</a><br>
+ <a href="#_Your_first_testing">Your first testing project</a><br>
+ <a href="#_SetUp_and_TearDown">SetUp and TearDown</a><br>
+ <a href="#_Test_suites">Test suites</a><br>
+ <a href="#_Building_test_suites">Building suites step by
+step</a></p>
+</blockquote>
+
+<p><a href="#_Other_Features">Other Features</a></p>
+
+<blockquote>
+<p><a href="#_Running_Tests_in">Running tests in console
+mode</a><br>
+ <a href="#_Extensions">Extensions</a><br>
+ <a href="#_Third_Party_Extensions">Third-Party Extensions</a></p>
+</blockquote>
+
+<p><a href="#_References">References</a></p>
+</blockquote>
+
+<h2><a name="Introducing"></a><a name=
+"_Introducing_Unit_Testing"></a><span>Introducing Unit Testing
+with</span> <b><span class="D">D</span><span class=
+"u">U</span>nit</b></h2>
+
+<p><b><span class="D">D</span><span class="u">U</span>nit</b> is a
+framework of classes designed to support the <a href=
+"http://www.xprogramming.com/">Xtreme</a> approach to software
+testing. It supports Delphi 4 and later.</p>
+
+<p>The idea is that, as you develop or change code, you develop
+appropriate verification tests at the same time, rather than
+postponing them to a later test phase. By keeping the tests
+up-to-date and re-applying them at regular intervals, it becomes
+easier to produce reliable code, and to be confident that
+alterations (and <i>refactorings</i>) do not break existing code.
+Applications become self-testing.</p>
+
+<p><b><span class="D">D</span><span class="u">U</span>nit</b>
+supplies classes that make it easy to organize and run these tests.
+<b><span class="D">D</span><span class="u">U</span>nit</b> provides
+two options for running the tests:</p>
+
+<ul type="disc">
+<li>As a GUI application, which allows easy selection of individual
+tests and groups of tests,</li>
+
+<li>As a console application.</li>
+</ul>
+
+<p><b><span class="D">D</span><span class="u">U</span>nit</b> was
+originally inspired on the JUnit framework, designed by Kent Beck
+and Erich Gamma for the Java language, but the framework has
+already evolved into a more powerful tool, very specific to Delphi
+programming. The original Delphi port was done by <a href=
+"http://www.suigeneris.org/juanca">Juanco A&ntilde;ez,</a> and the
+framework is now maintained by the <a href=
+"http://dunit.sourceforge.net/"><b><span class="D">D</span><span
+class="u">U</span>nit</b> Group</a> at <a href=
+"http://www.sourceforge.net/login">SourceForge</a>.</p>
+
+<h3><a name="_Archive_contents"></a>Archive contents</h3>
+
+<p>The <b><span class="D">D</span><span class="u">U</span>nit</b>
+distribution archive should be expanded into a directory of its own
+in a way so that its directory structure is preserved:</p>
+
+<table style="border-collapse: collapse;" border="1" bordercolor=
+"black" cellpadding="0" cellspacing="0">
+<tbody>
+<tr>
+<th colspan="4" class="header">Directory</th>
+<th class="header">Description</th>
+</tr>
+
+<tr>
+<td colspan="4" class="c17">DUnit</td>
+<td class="c17">&nbsp;</td>
+</tr>
+
+<tr>
+<td class="c17">&nbsp;</td>
+<td colspan="3" class="c17">src</td>
+<td class="c17">Library source</td>
+</tr>
+
+<tr>
+<td class="c17">&nbsp;</td>
+<td colspan="3" class="c17">doc</td>
+<td class="c17">Help file, home page and MPL license</td>
+</tr>
+
+<tr>
+<td class="c17">&nbsp;</td>
+<td class="c17">&nbsp;</td>
+<td colspan="2" class="c17">images</td>
+<td class="c17">Home page images</td>
+</tr>
+
+<tr>
+<td class="c17"><br>
+ <br>
+ </td>
+<td class="c17"><br>
+ <br>
+ </td>
+<td colspan="2" class="c17"><a href=
+"API/IDH_Library_DUnit_-_Xtreme_Unit_Testing_for_Delphi.htm">API</a>
+</td>
+<td class="c17">Time2Help generated API documentation</td>
+</tr>
+
+<tr>
+<td class="c17">&nbsp;</td>
+<td colspan="3" class="c17">Contrib</td>
+<td class="c17">Contributed modules.</td>
+</tr>
+
+<tr>
+<td class="c17">&nbsp;</td>
+<td class="c17">&nbsp;</td>
+<td colspan="2" class="c17"><a href=
+"../Contrib/XPGen/readme.html">XPGen</a> </td>
+<td class="c17">A tool for automatically generating test cases</td>
+</tr>
+
+<tr>
+<td class="c17">&nbsp;</td>
+<td colspan="3" class="c17">tests</td>
+<td class="c17">Test cases for the framework itself.</td>
+</tr>
+
+<tr>
+<td class="c17">&nbsp;</td>
+<td colspan="3" class="c17">bin</td>
+<td class="c17">Precompiled, standalone GUI test runner.</td>
+</tr>
+
+<tr>
+<td class="c17">&nbsp;</td>
+<td colspan="3" class="c17">examples</td>
+<td class="c17">&nbsp;</td>
+</tr>
+
+<tr>
+<td class="c17">&nbsp;</td>
+<td class="c17">&nbsp;</td>
+<td colspan="2" class="c17">cmdline</td>
+<td class="c17">Examples of how to invoke DUnit from the command
+line</td>
+</tr>
+
+<tr>
+<td class="c17">&nbsp;</td>
+<td class="c17">&nbsp;</td>
+<td colspan="2" class="c17">collection</td>
+<td class="c17">A Java-like collections implementation and its
+DUnit test cases</td>
+</tr>
+
+<tr>
+<td class="c17">&nbsp;</td>
+<td class="c17">&nbsp;</td>
+<td colspan="2" class="c17"><a href=
+"../examples/embeddable/readme.html">embeddable</a> </td>
+<td class="c17">Shows how to embed the GUITestRunner in another
+tool's forms.</td>
+</tr>
+
+<tr>
+<td class="c17">&nbsp;</td>
+<td class="c17">&nbsp;</td>
+<td colspan="2" class="c17">registration</td>
+<td class="c17">Using the test case registration system</td>
+</tr>
+
+<tr>
+<td class="c17"><br>
+ <br>
+ </td>
+<td class="c17"><br>
+ <br>
+ </td>
+<td colspan="2" class="c17"><a href=
+"../examples/registry/readme.html">registry</a> </td>
+<td class="c17">A step by step example of building a registry
+utility, with test cases</td>
+</tr>
+
+<tr>
+<td class="c17">&nbsp;</td>
+<td class="c17">&nbsp;</td>
+<td colspan="2" class="c17"><a href=
+"../examples/structure/readme.html">structure</a> </td>
+<td class="c17">Alternative ways to organize tests</td>
+</tr>
+
+<tr>
+<td class="c17">&nbsp;</td>
+<td class="c17">&nbsp;</td>
+<td class="c17">&nbsp;</td>
+<td class="c17">diffunit</td>
+<td class="c17">Placing test cases in their own units</td>
+</tr>
+
+<tr>
+<td class="c17">&nbsp;</td>
+<td class="c17">&nbsp;</td>
+<td class="c17">&nbsp;</td>
+<td class="c17">sameunit</td>
+<td class="c17">Placing test cases in the same unit as the tested
+code</td>
+</tr>
+
+<tr>
+<td class="c17">&nbsp;</td>
+<td class="c17">&nbsp;</td>
+<td colspan="2" class="c17">testexception<br>
+ </td>
+<td class="c17">&nbsp;Shows two ways to test for expected
+exceptions<br>
+ </td>
+</tr>
+
+<tr>
+<td class="c17">&nbsp;</td>
+<td class="c17">&nbsp;</td>
+<td colspan="2" class="c17">TListTest</td>
+<td class="c17">Test cases for the Delphi Classes.TList object</td>
+</tr>
+</tbody>
+</table>
+
+<p>The <code><span>src</span></code> directory contains the
+following files:</p>
+
+<table border="1" cellpadding="0" cellspacing="0">
+<tbody>
+<tr>
+<th class="header">File</th>
+<th class="header">Description</th>
+</tr>
+
+<tr>
+<td class="c17"><a href=
+"API/IDH_Unit_TestFramework.htm">TestFramework.pas</a> </td>
+<td class="c17">The framework itself.</td>
+</tr>
+
+<tr>
+<td class="c17"><a href=
+"API/IDH_Unit_TestExtensions.htm">TestExtensions.pas</a> </td>
+<td class="c17">Decorator classes that may be used to extend test
+cases.</td>
+</tr>
+
+<tr>
+<td class="c17"><a href=
+"API/IDH_Unit_GUITesting.htm">GUITesting.pas</a> </td>
+<td class="c17">Classes for testing user interfaces (Forms and
+Dialogs).</td>
+</tr>
+
+<tr>
+<td class="c17"><a href=
+"API/IDH_Unit_TextTestRunner.htm">TextTestRunner.pas</a> </td>
+<td class="c17">Routines to run tests in console mode.</td>
+</tr>
+
+<tr>
+<td class="c17"><a href=
+"API/IDH_Unit_GUITestRunner.htm">GUITestRunner.pas</a> </td>
+<td class="c17">The graphical user interface to the
+framework..</td>
+</tr>
+
+<tr>
+<td class="c17"><a href=
+"API/IDH_Unit_GUITestRunner.htm">GUITestRunner.dfm</a> </td>
+<td class="c17">The GUITestRunner Form</td>
+</tr>
+</tbody>
+</table>
+
+<p>The <code><span>framework</span></code> directory contains
+precompiled versions of the above framework units, as well as a
+Delphi .DCP package definition file that can be used to link the
+library as a package (the corresponding .BPL file is in the
+<code><span>bin</span></code> directory).</p>
+
+<h3><a name="_Getting_started"></a>Getting started</h3>
+
+<p>To write programs that use <b><span class="D">D</span><span
+class="u">U</span>nit</b>, either the source code or the
+precompiled framework directories should be included in your unit
+search path. You can do this by selecting <code><span>Tools |
+Environment Options | Library</span></code> in the Delphi IDE, and
+adding the <b><span class="D">D</span><span class=
+"u">U</span>nit</b> path to the list of paths shown. For
+example:</p>
+
+<p class="indent"><img id="_x0000_i1025" src=
+"images/environment_options.jpg" alt=
+"Delphi's environment options dialog" border="0" height="219"
+width="437"></p>
+
+<p>Alternatively, you can add the <b><span class="D">D</span><span
+class="u">U</span>nit</b> path to the default project options, or
+to a specific project's options by selecting <code><span>Project |
+Options</span></code> in the IDE:</p>
+
+<p class="indent"><img id="_x0000_i1026" src=
+"images/project_options.jpg" alt="Delphi's project options dialog"
+border="0" height="195" width="421"></p>
+
+<h3><a name="_Your_first_testing"></a>Your first testing
+project</h3>
+
+<p>Create a new application, and close the <code><span class=
+"c21">Unit1.pas</span></code> that Delphi automatically generates
+you without saving it. Save the new project (in 'real life' placed
+in the same directory as the application that you wish to test)
+giving it a name like
+<code><span>Project1Test.dpr</span></code>.</p>
+
+<p>Create a new (formless) unit with <code><span>File | New |
+Unit</span></code>. This is the file that will contain the test
+cases, so save it as something like Project1TestCases. In the
+interface uses clause, add a reference to <code><span><a href=
+"API/IDH_Unit_TestFramework.htm">TestFramework</a></span></code>.</p>
+
+<p>Declare a class <code><span>TTestCaseFirst</span></code> derived
+from <code><span class="c19"><a href=
+"API/IDH_Class_TTestCase.htm">TTestCase</a></span></code>, and
+implement a single method <code><span>TestFirst</span></code> as
+shown below (obviously this is a very diddy example to get you
+going). Note the initialization section at the bottom, which
+registers the <code><span>TTestCaseFirst</span></code> class with
+the <b><span class="D">D</span><span class="u">U</span>nit</b>
+framework.</p>
+
+<pre>
+unit Project1TestCases;<br>
+interface<br>
+uses<br>
+ TestFrameWork;<br>
+<br>
+type<br>
+ TTestCaseFirst = class(TTestCase)<br>
+ published<br>
+   procedure TestFirst;<br>
+ end;<br>
+<br>
+implementation<br>
+<br>
+procedure TTestCaseFirst.TestFirst;<br>
+begin<br>
+ Check(1 + 1 = 2, 'Catastrophic arithmetic failure!');<br>
+end;<br>
+<br>
+initialization<br>
+ TestFramework.RegisterTest(TTestCaseFirst.Suite);<br>
+end.<br>
+</pre>
+
+<p>The results that are to be tested are placed in calls to the
+<code><span><a href=
+"API/IDH_TTestCase_Check.htm">Check</a></span></code> method. Here
+I am unimaginatively confirming that 1 + 1 is 2. The <code><span><a
+href=
+"API/IDH_TestFramework_RegisterTest.htm">TestFramework.RegisterTest</a></span></code>
+<span>procedure registers the given test in the frameworks test
+registration system.</span></p>
+
+<p>Now, before running the project, select the <code><span class=
+"c21">Project | View Source</span></code> menu option to open the
+project's source. Add <code><span><a href=
+"API/IDH_Unit_TestFramework.htm">TestFrameWork</a></span></code>
+and <code><span><a href=
+"API/IDH_Unit_GUITestRunner.htm">GUITestRunner</a></span></code> to
+the uses clause. Remove the default Application code, and replace
+it with the code shown below:</p>
+
+<pre>
+program Project1Test;<br>
+uses<br>
+ Forms,<br>
+ TestFrameWork,<br>
+ GUITestRunner,<br>
+ Project1TestCases in 'Project1TestCases.pas';<br>
+<br>
+{$R *.RES}<br>
+<br>
+begin<br>
+ Application.Initialize;<br>
+ GUITestRunner.RunRegisteredTests;<br>
+end.<br>
+</pre>
+
+<p>Now try running the program. If all goes well, you should see
+the <b><span class="D">D</span><span class="u">U</span>nit</b> GUI,
+complete with a tree display showing available tests (currently
+only <code><span>TestFirst</span></code>). Clicking the <i>Run</i>
+button runs the test. The GUI also allows you to enable and disable
+parts of the test hierarchy by clicking on checkboxes, and has
+extra buttons for conveniently selecting and deselecting tests, and
+complete branches.</p>
+
+<p>To add further tests, simply create new test methods in
+<code><span>TTestCaseFirst</span></code>. The <code><span><a href=
+"API/IDH_TTestCase_Suite.htm">TTestCase.Suite</a></span></code>
+class method uses RTTI (RunTime Type Information) to find them and
+call them automatically, provided the methods meet these two
+conditions:</p>
+
+<ul>
+<li>Test methods are parameter-less procedures.</li>
+
+<li>Test methods are declared
+<code><span>published</span></code>.</li>
+</ul>
+
+<p>Note that <b><span class="D">D</span><span class=
+"u">U</span>nit</b> builds a separate instance of the class for
+each method that it finds, so test methods cannot share instance
+data.</p>
+
+<p>To add two more tests, <code><span>TestSecond</span></code> and
+<code><span>TestThird,</span></code> declare the methods like
+this:</p>
+
+<pre>
+TTestCaseFirst = class(TTestCase)<br>
+published<br>
+  procedure TestFirst;<br>
+  procedure TestSecond;<br>
+  procedure TestThird;<br>
+ end;<br>
+<br>
+...<br>
+<br>
+procedure TTestCaseFirst.TestSecond;<br>
+begin<br>
+ Check(1 + 1 = 3, 'Deliberate failure');<br>
+end;<br>
+</pre>
+
+<pre>
+procedure TTestCaseFirst.TestThird;<br>
+var<br>
+ i : Integer;<br>
+begin<br>
+  i := 0;<br>
+  Check(1 div i = i, 'Deliberate exception');<br>
+end;<br>
+</pre>
+
+<p>If you rerun the program, you will see that
+<code><span>TestSecond</span></code> fails (it has small magenta
+box next to it), and <code><span>TestThird</span></code> threw an
+exception (the box next to it is red). If any tests had succeeded
+their boxes would have been green. Tests that are not run bear gray
+boxes. The list of failed tests is reported in the pane bellow, and
+the details for each of them can be seen in the bottom pane when
+they are clicked.</p>
+
+<p>If you are running the program from within the IDE, you may find
+that the program halts when you hit an exception. This is probably
+not the behavior that you want while using <b><span class=
+"D">D</span><span class="u">U</span>nit</b>. You can disable
+breaking on exceptions using the <code><span class="c19">Tools |
+Debugger Options | Language Exceptions</span></code> dialog, and
+un-checking the "<code><span>Stop on Delphi
+Exceptions"</span></code> option.</p>
+
+<h3><a name="_SetUp_and_TearDown"></a>SetUp and TearDown</h3>
+
+<p>One often needs to do some common preparation before running a
+group of tests, and some tidying up afterwards. For example, when
+testing a class, you might want to create an instance of that
+class, run some checks on it, and finally free it. If you have a
+lot of tests to make, you'll end up with repetitive code in each
+test method. <b><span class="D">D</span><span class=
+"u">U</span>nit</b> provides support for these situations through
+the <code><span><a href=
+"API/IDH_Class_TTestCase.htm">TTestCase</a></span></code> virtual
+methods <code><span><a href=
+"API/IDH_TTestCase_SetUp.htm">SetUp</a></span></code> and
+<code><span><a href=
+"API/IDH_TTestCase_TearDown.htm">TearDown</a></span></code>, which
+are called, respectively, before and after each test method is
+executed. In Xtreme testing jargon, a prerequisite state like the
+one provided by these two methods is known as a <i>fixture</i>.</p>
+
+<p>The following example extends
+<code><span>TTestCaseFirst</span></code> to do a couple of tests on
+the Delphi collection class
+<code><span>TStringList</span></code>:</p>
+
+<pre>
+interface<br>
+uses<br>
+ TestFrameWork,<br>
+ Classes;  // needed for TStringList<br>
+<br>
+type<br>
+ TTestCaseFirst = class(TTestCase)<br>
+ private<br>
+   Fsl : TStringList;<br>
+ protected<br>
+   procedure SetUp; override;<br>
+   procedure TearDown; override;<br>
+ published<br>
+   procedure TestFirst;<br>
+   procedure TestSecond;<br>
+   procedure TestThird;<br>
+   procedure TestPopulateStringList;<br>
+   procedure TestSortStringList;<br>
+ end;<br>
+<br>
+...<br>
+<br>
+procedure TTestCaseFirst.SetUp;<br>
+begin<br>
+ Fsl := TStringList.Create;<br>
+end;<br>
+<br>
+procedure TTestCaseFirst.TearDown;<br>
+begin<br>
+ Fsl.Free;<br>
+end;<br>
+<br>
+procedure TTestCaseFirst.TestPopulateStringList;<br>
+var<br>
+ i : Integer;<br>
+begin<br>
+ Check(Fsl.Count = 0);<br>
+ for i := 1 to 50 do    // Iterate<br>
+   Fsl.Add('i');<br>
+ Check(Fsl.Count = 50);<br>
+end;<br>
+<br>
+procedure TTestCaseFirst.TestSortStringList;<br>
+begin<br>
+ Check(Fsl.Sorted = False);<br>
+ Check(Fsl.Count = 0);<br>
+ Fsl.Add('You');<br>
+ Fsl.Add('Love');<br>
+ Fsl.Add('I');<br>
+ Fsl.Sorted := True;<br>
+ Check(Fsl[2] = 'You');<br>
+ Check(Fsl[1] = 'Love');<br>
+ Check(Fsl[0] = 'I');<br>
+end;<br>
+</pre>
+
+<h3><a name="_Test_suites"></a>Test suites</h3>
+
+<p>When testing a non-trivial application, you will want to create
+more than one class derived from <code><span><a href=
+"API/IDH_Class_TTestCase.htm">TTestCase</a></span></code>. To add
+these as top-level nodes, you can simply register them in
+initialization clauses, as was shown in the above example. Other
+times, you may want to give more structure to your set of test
+cases. For this purpose, <b><span class="D">D</span><span class=
+"u">U</span>nit</b> supports the creation of <i>test suites</i>,
+which are tests that can contain other tests, including other test
+suites (it is an application of the <i>Composite</i> design
+pattern).</p>
+
+<p>As it stands in the <code><span>TTestCaseFirst</span></code>
+test case, the <code><span class="c19">SetUp</span></code> and
+<code><span>TearDown</span></code> methods are called uselessly
+when the arithmetic testing methods run. The two methods that deal
+with string lists would be better if separated into their own test
+case. To do this, start by pulling apart
+<code><span>TTestCaseFirst</span></code> into two classes,
+<code><span>TTestArithmetic</span></code> and
+<code><span>TTestStringlist</span></code>:</p>
+
+<pre>
+type<br>
+  TTestArithmetic = class(TTestCase)<br>
+  published<br>
+    procedure TestFirst;<br>
+    procedure TestSecond;<br>
+    procedure TestThird;<br>
+  end;<br>
+<br>
+ TTestStringlist = class(TTestCase)<br>
+ private<br>
+   Fsl : TStringList;<br>
+ protected<br>
+   procedure SetUp; override;<br>
+   procedure TearDown; override;<br>
+ published<br>
+   procedure TestPopulateStringList;<br>
+   procedure TestSortStringList;<br>
+ end;<br>
+</pre>
+
+<p>(Of course, you should update the method implementations
+too).</p>
+
+<p>Now, change the unit's initialization code to read as
+follows:</p>
+
+<pre>
+RegisterTest('Simple suite', TTestArithmetic.Suite);<br>
+RegisterTest('Simple suite', TTestStringList.Suite);<br>
+</pre>
+
+<h3><a name="_Building_test_suites"></a>Building test suites step
+by step</h3>
+
+<p>The <code><span><a href=
+"API/IDH_Unit_TestFramework.htm">TestFramework</a></span></code>
+<span>unit exposes the</span> <code><span><a href=
+"API/IDH_Class_TTestSuite.htm">TTestSuite</a></span></code>
+<span>class, the class that implements test suites, so you can
+create test hierarchies using more explicit code:</span></p>
+
+<p>The following function, <code><span>UnitTests</span></code>,
+creates a test suite and adds the two test classes to it:</p>
+
+<pre>
+function UnitTests: ITestSuite;<br>
+var<br>
+ ATestSuite: TTestSuite;<br>
+begin<br>
+ ATestSuite := TTestSuite.create('Some trivial tests');<br>
+ ATestSuite.addTest(TTestArithmetic.Suite);<br>
+ ATestSuite.addTest(TTestStringlist.Suite);<br>
+ Result := ATestSuite;<br>
+end;<br>
+</pre>
+
+<p>Yet another way to implement the above function would be:</p>
+
+<pre>
+function UnitTests: ITestSuite;<br>
+begin<br>
+  Result := TTestSuite.Create('Some trivial tests',<br>
+                         [                <br>
+                          TTestArithmetic.Suite,<br>
+                          TTestStringlist.Suite<br>
+                          ]);<br>
+end;<br>
+</pre>
+
+<p>In the above example, the <code><span><a href=
+"API/IDH_Class_TTestSuite.htm">TTestSuite</a></span></code>
+<span>constructor adds the tests in the passed array to the
+suite.</span></p>
+
+<p>You can register a test suite created in any of the above ways
+by using the same call you use to register individual test
+cases:</p>
+
+<pre>
+initialization<br>
+   RegisterTest('Simple Test', UnitTests);<br>
+end.<br>
+</pre>
+
+<p>When run with <code><span><a href=
+"API/IDH_Unit_GUITestRunner.htm">GUITestRunner</a></span></code>,
+you will see the new hierarchy.</p>
+
+<h2 class="c34"><a name="_Other_Features"></a>Other Features</h2>
+
+<h3><a name="_Running_Tests_in"></a>Running Tests in Console
+Mode</h3>
+
+<p>Sometimes it is quite useful to be able run our test suites in a
+console window, like when running them from within a Makefile. To
+run tests in console mode, create a DPR file that uses
+<code><span><a href=
+"API/IDH_Unit_TextTestRunner.htm">TextTestRunner</a></span></code>
+instead of <code><span class="c19"><a href=
+"API/IDH_Unit_GUITestRunner.htm">GUITestRunner</a></span></code>,
+and add the compiler directive <code><span>{$APPTYPE
+CONSOLE}</span></code> <span>to the project file, or select</span>
+<code><span>Project | Options | Linker | Generate console
+appliation</span></code> <span>option in the IDE</span>.</p>
+
+<p>To run the example developed above as a console app, create
+Project1TestConsole.dpr as follows:</p>
+
+<pre>
+{$APPTYPE CONSOLE}<br>
+<br>
+program Project1TestConsole;<br>
+uses<br>
+ TestFrameWork,<br>
+ TextTestRunner,<br>
+ Project1TestCases in 'Project1TestCases.pas';<br>
+<br>
+{$R *.RES}<br>
+<br>
+begin<br>
+ TextTestRunner.RunRegisteredTests;<br>
+end.<br>
+</pre>
+
+<p>When the program is run, the output looks like this:</p>
+
+<pre>
+--<br>
+DUnit: Testing.<br>
+..F.E..<br>
+Time: 0.20<br>
+FAILURES!!!<br>
+Test Results:<br>
+Run: 5<br>
+Failures: 1<br>
+Errors: 1<br>
+<br>
+There was 1 error:<br>
+1) TestThird: EDivByZero: Division by zero<br>
+<br>
+There was 1 failure:<br>
+1) TestSecond<br>
+</pre>
+
+<p>Notice the string <code><span>'..F.E..'.</span></code> Here the
+framework has printed out a period for each test passed
+successfully, an 'F' for tests that failed, and an 'E' for tests
+that raised an exception.</p>
+
+<p>You can make the <code><span><a href=
+"API/IDH_Unit_TextTestRunner.htm">TextTestRunner</a></span></code>
+halt the program with a non-zero exit code when failures are
+encountered by passing a parameter with value <code><span><a href=
+"API/IDH_Type_TRunnerExitBehavior.htm">rxbHaltOnFailures</a></span></code><span>
+, like this:</span></p>
+
+<pre>
+        TextTestRunner.RunRegisteredTests(rxbHaltOnFailures);<br>
+    <br>
+</pre>
+
+<p>Halting with a non-zero exit code becomes very useful when
+running test suites from within a Makefile.</p>
+
+<h3><a name="_Extensions"></a>Extensions</h3>
+
+<p>The <a href="API/IDH_Unit_TestExtensions.htm">TextExtensions</a>
+unit contains classes that extend the functionality of the <b><span
+class="D">D</span><span class="u">U</span>nit</b> framework. Most
+of the classes use the <i>decorator</i> pattern, as defined in the
+GoF (Gang of Four) "Patterns of Software Design" book.</p>
+
+<h4>TRepeatedTest</h4>
+
+<p><code><span><a href=
+"API/IDH_Class_TRepeatedTest.htm">TRepeatedTest</a></span></code>
+allows you to repeat the decorated test a number of times. For
+example, to repeat the <code><span>TestFirst</span></code> test
+case of <code><span>TTestArithmetic</span></code> 10 times, you
+could write the following code:</p>
+
+<pre>
+uses<br>
+ TestFrameWork,<br>
+ TestExtensions, // needed for TRepeatedTest<br>
+ Classes;        // needed for TStringList<br>
+<br>
+...<br>
+<br>
+function UnitTests: ITest;<br>
+var<br>
+  ATestArithmetic : TTestArithmetic;<br>
+begin<br>
+ ATestArithmetic := TTestArithmetic.create('TestFirst');<br>
+ Result := TRepeatedTest.Create(ATestArithmetic, 10);<br>
+end;<br>
+</pre>
+
+<p>Notice the constructor for
+<code><span>TTestArithmetic</span></code>.</p>
+
+<pre>
+ATestArithmetic := TTestArithmetic.create('TestFirst');<br>
+</pre>
+
+<p>Here I have passed in the name of the test method that is to be
+repeated. Naturally it must be spelled correctly, or disappointment
+will follow shortly thereafter.</p>
+
+<p>If you wanted to test <i>all</i> of the
+<code><span>TTestArithmetic</span></code> methods repeatedly you
+can stick them in a suite:</p>
+
+<pre>
+function UnitTests: ITest;<br>
+begin<br>
+ Result := TRepeatedTest.Create(ATestArithmetic.Suite, 10);<br>
+end;<br>
+</pre>
+
+<h4 class="c35">TTestSetup</h4>
+
+<p><code><span><a href=
+"API/IDH_Class_TTestSetup.htm">TTestSetup</a></span></code> can be
+used when you wish to set up state exactly once for a test case
+class (the <code><span>SetUp</span></code> and
+<code><span>TearDown</span></code> methods are called once for each
+test method). For example, if you were writing a suite of tests to
+exercise some database code, you might subclass <code><span><a
+href="API/IDH_Class_TTestSetup.htm">TTestSetup</a></span></code>
+and use it to open and close the database before executing the
+suite.</p>
+
+<h3><a name="_Third_Party_Extensions">Third-Party
+Extensions</a></h3>
+
+<h4>XPGen</h4>
+
+<p>XPGen is a tool that automatically generates skeleton test cases
+for a given class. The tool can be found under the Contrib/XPGen
+directory in the <b><span class="D">D</span><span class=
+"u">U</span>nit</b> distribution.</p>
+
+<h4>DUnitWizard</h4>
+
+<p>DUnitWizard is an open-sourced Delphi 5-7 plug-in for DUnit
+created by Paul Spain &lt;paul at xpro dot con dot au&gt;. The
+plug-in creates the skeleton code for DUnit projects and test
+cases, leaving you to concentrate on writing tests. If you would
+like to find out more or download visit <a href=
+"http://xpro.com.au/Freeware/DUnitWizard.htm">http://xpro.com.au/Freeware/DUnitWizard.htm</a></p>
+
+<h2><a name="_References"></a>References</h2>
+
+<p><b><span class="D">D</span><span class="u">U</span>nit</b>
+homepage at SourceForge (<a href=
+"https://sourceforge.net/projects/dunit/">https://sourceforge.net/projects/dunit/</a>)
+Latest source, mailing lists, FAQs etc</p>
+
+<p>Xtreme testing for Delphi programs ( <a href=
+"http://www.suigeneris.org/juanca/writings/1999-11-29.html">http://www.suigeneris.org/juanca/writings/1999-11-29.html</a>)
+Juancarlo A&ntilde;ez's introduction to his <b><span class=
+"D">D</span><span class="u">U</span>nit</b> classes, originally
+published on the Borland Community website.</p>
+
+<p>JUnit Test Infected: Programmers Love Writing Tests (<a href=
+"http://www.junit.org/junit/doc/testinfected/testing.htm">http://www.junit.org/junit/doc/testinfected/testing.htm</a>)
+A good article describing JUnit, the Java framework upon which
+<b><span class="D">D</span><span class="u">U</span>nit</b> is
+based.</p>
+
+<p>Simple Smalltalk Testing: With Patterns (<a href=
+"http://www.xprogramming.com/testfram.htm">http://www.xprogramming.com/testfram.htm</a>)
+Kent Beck's original paper. Hard going for non-Smalltalkers.</p>
+
+<p class="center">~o~</p>
+</body>
+</html>
+

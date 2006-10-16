@@ -1,0 +1,1103 @@
+<html xmlns="http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+  <head>
+    <meta name="generator" content="Microsoft FrontPage 5.0" />
+    <meta name="generator" content="Microsoft FrontPage 5.0" />
+    <title>
+      Using DUnit by Yong Yoon Kit
+    </title>
+    <link rel="stylesheet" type="text/css" href="dunit.css" />
+  </head>
+  <body>
+    <h1>
+      Using DUnit<br />
+       <i>by Yong Yoon Kit</i>
+    </h1>
+    <p>
+      &nbsp;
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <div>
+<pre> 
+020607  yky  Modified UML diagram, added some Questionsns
+020610  yky  Modified changed example to TCounter from TPDObject added UML diag.g.
+ 
+</pre>
+    </div>
+    <p>
+      &nbsp;
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <h2>
+      Abstract
+    </h2>
+    <p>
+      This document will briefly introduce one aspect of eXtreme
+      Programming (XP) which we will use in our development cycle, the
+      DUnit. It will describe how to Use Test Harnesses to test the
+      code we have written and demonstrate its advantages in
+      refactoring, optimizations, peace of mind and the quality of our
+      software.
+    </p>
+    <h2>
+      Introduction
+    </h2>
+    <p>
+      DUnit orgininates from an eXtreme Programming module which tests
+      the developers code and confirms that the code or module does
+      what it should.
+    </p>
+    <p>
+      The concept is simple: write your test harness first and expect
+      your code to fail before implementation. After implementation,
+      ALL tests should pass. If you can think of different scenarios,
+      write the test cases, testing for the correct results. And
+      remember, when a bug is found, the developer will only test that
+      bug once manually because he MUST write a test case to keep
+      testing for that bug in the future.
+    </p>
+    <p>
+      On unit tests, please refer to this page:
+    </p>
+    <p>
+      &nbsp; <a href=
+      "http://www.extremeprogramming.org/rules/unittests.html">
+      http://www.extremeprogramming.org/rules/unittests.html</a>
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <h3>
+      SUnit, JUnit, CUnit, etc...
+    </h3>
+    <p>
+      DUnit is a member of the *Unit family for all the different
+      programming languages. It is developed as an Open Source project
+      in sourceforge (<a href=
+      "http://dunit.sourceforge.net/">dunit.sourceforge.net</a>) and
+      can be freely downloaded and used.
+    </p>
+    <h3>
+      Refactoring
+    </h3>
+    <p>
+      It is also important that when we review (clean up ugly code,
+      make things more readable) and optimize (make things faster) we
+      do not break the software. If we have written complete test
+      harnesses, then ALL tests should pass as before. This gives us a
+      lot of opportunity to modify (for the better) existing code but
+      ensuring that the process does not affect the end result.
+    </p>
+    <p>
+      Refactoring is this process of going back into old code,
+      improving it, and ensuring that the results are the same if not
+      better.
+    </p>
+    <p>
+      This is especially important for the case of OO Programming where
+      changes in the Base class may have dire consequences to the
+      inherited classes. So if we have tests written throughout the
+      hierarchy, changes which change the behaviour of descendant
+      classes can be detected.
+    </p>
+    <h3>
+      eXtreme Programming (XP)
+    </h3>
+    <p align="left">
+      On more about eXtreme Programming as a software development
+      methodology, please go to <a href=
+      "http://www.extremeprogramming.org/">
+      www.extremeprogramming.org</a> or <a href=
+      "http://www.xprogramming.com/xpmag/whatisxp.htm">
+      http://www.xprogramming.com/xpmag/whatisxp.htm</a>
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <h2>
+      Example Test Harness
+    </h2>
+    <p>
+      In this Example, we will demonstrate how to
+    </p>
+    <p>
+      1.create a simple class declaration without its implementation
+    </p>
+    <p>
+      2.setup the test harness
+    </p>
+    <p>
+      3.write its test cases
+    </p>
+    <p>
+      4.run the test harness expecting errors because of the incomplete
+      implementation
+    </p>
+    <p>
+      5.implement each function one by one
+    </p>
+    <p>
+      6.continuously test our creation iteratively
+    </p>
+    <p>
+      The example is to create a simple Counting object called TCounter
+      which takes in an input value and when functions like double,
+      factorial, power are called, it will do the operation on the
+      value and also return the values.
+    </p>
+    <p>
+      Here is the UML diagram which describes the classes inheritance,
+      the attributes and functions we need to implement.
+    </p>
+    <p>
+      &nbsp;</p>
+    <h4>
+      For any Class, there must be another Class to test it.
+    </h4>
+    <p>
+      For example, TCounter will have a TCounterTest, and this should
+      exist in a seperate application from the actual usable app.
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <h2>
+      Setting up the Project Test Harness
+    </h2>
+    <p>
+      Here are the steps to create a Test Harness:
+    </p>
+    <p>
+      1.Make a New project
+    </p>
+    <p>
+      2.Remove Unit1 (the default Form unit) from the Project
+    </p>
+    <p>
+      3.Add to the project these units: <b>GUITestRunner</b> and <b>
+      TestFrameWork</b> which are located in crmpos/Tests/DUnit
+    </p>
+    <p>
+      4.Replace Application.Initialize and Application.Run&nbsp; with
+      GUITestRunner.runRegisteredTests
+    </p>
+    <p>
+      5.Thats all you have to do, and the project code should look
+      something like this:
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <div>
+<pre> 
+ 
+uses
+  CounterCls in 'CounterCls.pas',,
+  CounterTest in 'CounterTest.pas',,
+  TestFramework in '..\..\..\Tests\DUnit\TestFramework.pas',
+  GUITestRunner in '..\..\..\Tests\DUnit\GUITestRunner.pas' {GUITestRunner};
+ 
+{$R *.res}
+ 
+begin
+  
+end.h
+ 
+</pre>
+    </div>
+    <p>
+      &nbsp;
+    </p>
+    <h2>
+      Making a new Unit Test
+    </h2>
+    <p>
+      If we were to test the TCounter class, we will create a new unit
+      and call it <b>CounterTest.pas</b>
+    </p>
+    <p>
+      In it, we must use <b>TestFrameWork</b> from DUnit. Of course we
+      will also use the objects which we want to test which is
+      CounterCls.pas
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <div>
+<pre> 
+{   020607  yky  Created to illustrate the use of DUnitUnit
+                   This unit will test the TCounter Class.he TCounter Class.
+}
+interface
+uses
+   , ;
+ 
+</pre>
+    </div>
+    <p>
+      &nbsp;
+    </p>
+    <h3>
+      Inheriting TTestCase
+    </h3>
+    <p>
+      The first thing to do is to create a Test Case Object, and to do
+      so, we inherit from TTestCase.
+    </p>
+    <p>
+      We will also then <b>override</b> two <b>protected</b> <b>
+      procedures</b> called <b>SetUp</b> and <b>TearDown</b>.
+    </p>
+    <p>
+      Subsequent Tests will be <b>published procedures</b> which have
+      names starting with '<b>test</b>'.
+    </p>
+    <p>
+      The code should look something like this:
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <div>
+<pre> 
+  TCounterTest = class(TTestCase))
+  protectedd
+       mCounter: TCounter;
+    procedure SetUp; override;de;
+    procedure TearDown; override;de;
+  publishedd
+    procedure testDouble;le;
+       procedure testPower;
+    procedure testFactorial;al;
+  end;;
+ 
+</pre>
+    </div>
+    <p>
+      &nbsp;
+    </p>
+    <h3>
+      SetUp
+    </h3>
+    <p>
+      The SetUp function is called for every published test procedure
+      in this Harness.
+    </p>
+    <p>
+      In this case we need a FObj instantiated every time.
+    </p>
+    <div>
+<pre> 
+begin
+  inherited;;
+
+end;
+ 
+</pre>
+    </div>
+    <p>
+      The FObj is usually the object we intend to test.
+    </p>
+    <h3>
+      TearDown
+    </h3>
+    <p>
+      For everything that has been Created, we will need to destroy. So
+      TearDown would look something like this:
+    </p>
+    <div>
+<pre> 
+begin
+  inherited;;
+
+end;
+ 
+</pre>
+    </div>
+    <p>
+      &nbsp;
+    </p>
+    <p>
+      Now that we have done our housekeeping, we are ready to test the
+      hell out of mCounter!
+    </p>
+    <h2>
+      Writing some tests
+    </h2>
+    <p>
+      Before we write the tests, we have to look at the object we are
+      testing and its specifications. We do not need to have the object
+      implemented yet. Here is the object:
+    </p>
+    <div>
+<pre> 
+   publisheded
+     property input: real;eal;
+     property DoubleIt: real;eal;
+     property PowerIt: real;eal;
+     property FactorialIt: real;eal;
+   end;d;
+ 
+</pre>
+    </div>
+    <p>
+      &nbsp;
+    </p>
+    <p>
+      This object is rather basic. Given and input, it can calculate
+      the double with DoubleIt, the power of itself with PowerIt and
+      the factorial with FactorialIt.
+    </p>
+    <p>
+      Now that we know what our Class to be tested is suppose to do, we
+      can proceed in writing the Test Harness before implementing it!
+    </p>
+    <h3>
+      Publishing the testDouble
+    </h3>
+    <p>
+      The first thing to do is write a published procedure called
+      testDouble. The Test Harness Class should look something like
+      this:
+    </p>
+    <div>
+<pre> 
+  protectedd
+    mCounter: TCounter;er;
+    procedure SetUp; override;de;
+    procedure TearDown; override;de;
+  publishedd
+       
+    procedure testPower;er;
+    procedure testFactorial;al;
+    procedure testFactorialNegative;ve;
+  end;;
+ 
+</pre>
+    </div>
+    <p>
+      &nbsp;
+    </p>
+    <h3>
+      Using Check
+    </h3>
+    <p>
+      <b>Check</b> is a DUnit function which takes in two parameters;
+      the first is the <b>logical</b> operation and the second is the
+      <b>error</b> <b>message</b> or information to report if something
+      did go wrong.
+    </p>
+    <h3>
+      Test Plan for DoubleIt
+    </h3>
+    <p>
+      This is a test plan for DoubleIt
+    </p>
+    <p>
+      1.Set the input to 5
+    </p>
+    <p>
+      2.Check that DoubleIt is 10
+    </p>
+    <p>
+      3.Check larger numbers of Doubleit
+    </p>
+    <p>
+      4.Check Fractions of double it
+    </p>
+    <p>
+      5.Check negative numbers of DoubleIt
+    </p>
+    <div>
+<pre> 
+begin
+  with mCounter doo
+  beginn
+     input := 5;= 5;
+     Check( input = 5, 'input should be 5');5');
+     Check( DoubleIt = 10, 'double of 5 should be 10');0');
+     input := 1055;055;
+     Check( DoubleIt = 2110, 'double of 1055 should be 2110');0');
+     input := 11.23;.23;
+     Check( abs(DoubleIt - 22.46) &lt; 0.001,001,
+                  'double should work for fractions ' + FloatToStr( DoubleIt ));Str( DoubleIt ));
+     input := -23.43;.43;
+     Check( abs(DoubleIt - (-46.86)) &lt; 0.001,001,
+                  'double should work for negatives too'); negatives too');
+  end;;
+end;
+ 
+</pre>
+    </div>
+    <p>
+      <i>We need to use the funny abs function &lt; 0.001 because
+      floating point numbers do not equate well with fractions.</i>
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <h3>
+      Testing Exceptions
+    </h3>
+    <p>
+      There will definitely be cases where we purposely attempt to
+      break the object by giving it invalid data: Exceptions would be
+      raised during Validations or operations.
+    </p>
+    <p>
+      In the Counter Class code, we have defined factorial only able to
+      accept positive numbers. Negative numbers will result in an
+      exception being raised.
+    </p>
+    <p>
+      This is the Test Harness of the plan and code for
+      testFactorialNegative:
+    </p>
+    <p>
+      1.Set the input value to -5
+    </p>
+    <p>
+      2.Attempt to get the Factorial Value
+    </p>
+    <p>
+      3.If an exception was not raised, then report and error in the
+      implementation
+    </p>
+    <p>
+      4.If an exception called ECounterNegative was caught then the
+      Counter class was constructed well.
+    </p>
+    <p>
+      Here is the code:
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <div>
+<pre> 
+begin
+  with mCounter doo
+  beginn
+     input := -5; -5;
+     try try
+        Check( FactorialIt &gt; 0, 'Factorial it should raise an exception');tion');
+        Check( False, 'This should never execute.');ute.');
+     exceptcept
+       on ECounterNegative do Check(True, 'Negative Factorial detected OK'); OK');
+     end;end;
+  end;;
+end;
+ 
+</pre>
+    </div>
+    <p>
+      &nbsp;
+    </p>
+    <p>
+      Notice how we use the Check function. In this case, we do not use
+      it to test anything, but hard code True and False values into it
+      to send messages to the DUnit interface.
+    </p>
+    <p>
+      We always must send a Check(False) if we do not want the
+      execution to continue; where errors that have occurred yet no
+      exceptions were raised.
+    </p>
+    <p>
+      Use Check(True) just to confirm to ourselves that the execution
+      was correct.
+    </p>
+    <h2>
+      Registering TTestCase
+    </h2>
+    <p>
+      Once we have completed writing the test harness, we will have to
+      register this so that the GUITestRunner can run the tests. To do
+      so, add this in the initialization section of the Unit.
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <div>
+<pre> 
+   ('Tutorial/Counter', TCounterTest.Suite);
+end.
+ 
+</pre>
+    </div>
+    <p>
+      &nbsp;
+    </p>
+    <p>
+      In RegisterTest, the first parameter describes the Tree or
+      Hierarchy in the placement of the tests.
+    </p>
+    <p>
+      The second parameter is the TTestCase object which you have just
+      defined. The published test procedures will be displayed in the
+      UI
+    </p>
+    <h2>
+      Running the Test Harness
+    </h2>
+    <p>
+      Just press F9 within Delphi, or run the compiled application
+      directly, and the DUnit interface will appear. Just press the
+      green Play button, and it will run through the tests.
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <p>
+      If there are any Check errors, a pink result will appear. Any
+      uncaught exceptions will be represented by red colour.
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <p>
+      If everything goes well, then all the tests should be green.
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <p>
+      <br clear="ALL" />
+       &nbsp;
+    </p>
+    <h3>
+      Implementing the Counter Class
+    </h3>
+    <p>
+      We are now ready to implement the Counter Class. Looks something
+      like this:
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <div>
+<pre> 
+begin
+  Result := Finput * 2;;
+  Finput := Result;;
+end;
+ 
+function TCounter.: real;
+var i: integer;
+begin
+  if Finput &lt; 0 thenn
+          .Create('Cannot Factorial a negative number');
+  Result := 1;;
+  for i := 1 to trunc( Finput ) doo
+    Result := Result * i; i;
+  Finput := Result;;
+end;
+ 
+function TCounter.: real;
+begin
+  Result := Finput * Finput;;
+  Finput := Result;;
+end;
+ 
+procedure TCounter.(const Value: real);
+begin
+  Finput := Value;;
+end;
+ 
+</pre>
+    </div>
+    <p>
+      &nbsp;
+    </p>
+    <p>
+      We can then run DUnit again, and expect all the tests to pass.
+    </p>
+    <h2>
+      DUnit in production
+    </h2>
+    <p>
+      Eventually the list of tests would be extremely long, covering
+      all aspects of the code we have written. Daily test runs will be
+      run in batch mode and any problems can be easily detected and
+      fixed.
+    </p>
+    <p>
+      Please use DUnit extensively and update the test cases whenever
+      you detect a new bug, think of a strange scenario or want peace
+      of mind.
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <p>
+      <br clear="all" />
+       &nbsp;
+    </p>
+    <p>
+      DUnit Tutorial
+    </p>
+    <h2>
+      Overview
+    </h2>
+    <p>
+      This tutorial will cover the creation of a new object with
+      specific attributes and functions. Before the implementation of
+      this object, a test harness is written to confirm that the object
+      works. Using this harness we can also attempt to break this
+      object, refactor and confirm that the objects works just as
+      before, if not better.
+    </p>
+    <h2>
+      Specifications
+    </h2>
+    <p>
+      The purpose of this Tutorial is to create an object called <b>
+      TNumList</b>&nbsp; which can do these things:
+    </p>
+    <p>
+      &bull;collect an array of reals (maximum is 200 numbers)
+    </p>
+    <p>
+      &bull;Add another real at the end of the list
+    </p>
+    <p>
+      &bull;keep a Count / Tally of the number of Reals
+    </p>
+    <p>
+      &bull;Total Up the array of Reals
+    </p>
+    <p>
+      &bull;Find the Average of the Reals
+    </p>
+    <p>
+      &bull;Inherites directly from TObject
+    </p>
+    <p>
+      Here is the UML:
+    </p>
+    <p>
+    </p>
+    <p>
+      <br clear="ALL" />
+       &nbsp;
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <h2>
+      Setting up
+    </h2>
+    <h3>
+      the Project
+    </h3>
+    <p>
+      Refer to the &ldquo;Setting up the Project Test Harness&rdquo;
+      instructions.
+    </p>
+    <p>
+      Create two new units and save them as NumListCls and NumListTest.
+    </p>
+    <p>
+      The resultant code for the project should look something like
+      this:
+    </p>
+    <div>
+<pre> 
+ 
+uses
+  TestFramework in '..\..\..\Tests\DUnit\TestFramework.pas',,
+  GUITestRunner in '..\..\..\Tests\DUnit\GUITestRunner.pas' {GUITestRunner},,
+  NumListCls in 'NumListCls.pas',,
+  NumListTest in 'NumListTest.pas';;
+ 
+{$R *.res}
+ 
+begin
+  GUITestRunner.runRegisteredTests;;
+end.
+ 
+</pre>
+    </div>
+    <p>
+      &nbsp;
+    </p>
+    <h3>
+      the NumListCls Unit file
+    </h3>
+    <p>
+      We will have to create a skeleton class with the necessary
+      published properties as defined in the UML. So quickly define
+      TNumList as such, without the need to implement. Just make sure
+      it compiles with stub code.
+    </p>
+    <div>
+<pre> 
+  privatee
+      FCount: integer;
+    FNums: array [0..199] of real;al;
+    function GetCount: integer;er;
+    function GetAverage: real;al;
+    function GetTotal: real;al;
+    function GetNums(ind: Integer): real;al;
+    procedure SetNums(ind: Integer; const Value: real);l);
+  publicc
+    constructor Create;te;
+    procedure   Add( pNum: real );al );
+    property Nums[ ind: Integer ]: real read GetNums write SetNums;ms;
+  publishedd
+    property Count: integer read GetCount;nt;
+    property Total: real    read GetTotal;Total;
+    property Average: real  read GetAverage;age;
+  end;;
+ 
+</pre>
+    </div>
+    <p>
+      &nbsp;
+    </p>
+    <p align="center">
+      <b>!!!! DO NOT PROCEED IN IMPLEMENTING THIS TNumList CLASS
+      !!!!</b>
+    </p>
+    <h3>
+      the NumListTest Unit file
+    </h3>
+    <p>
+      Now lets set up the Test Harness Unit. Follow the instructions in
+      the section &ldquo;Making a new Unit Test&rdquo;
+    </p>
+    <p>
+      Your code should look like this:
+    </p>
+    <div>
+<pre> 
+ 
+interface
+uses
+   ;
+ 
+type
+ 
+  TNumListTest = class(()
+  protectedd
+    procedure SetUp; override;de;
+    procedure TearDown; override;de;
+  publishedd
+  end;;
+    :  :
+ 
+</pre>
+    </div>
+    <p>
+      &nbsp;
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <h2>
+      Writing the Test Harness
+    </h2>
+    <p>
+      Now that you have set up your 3 files, you are ready to create
+      the tests prior to implementation. This ensures that you have
+      understood all the requirements and you know what to expect given
+      the pre-conditions and inputs.
+    </p>
+    <p>
+      Define a protected variable called <b>mNumList</b> of type <b>
+      TNumList</b>. Make sure that your SetUp procedure creates this
+      object and your TearDown frees it.
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <h3>
+      Exercise 1 &ndash; implementing testAdd
+    </h3>
+    <p>
+      The first thing we would like to test is the Add procedure.
+    </p>
+    <p>
+      Here is our test plan for Add:
+    </p>
+    <p>
+      1.Make sure the NumList has zero Count
+    </p>
+    <p>
+      2.Add a number like 321 in it
+    </p>
+    <p>
+      3.Check that the Count has increased by one (no more no less)
+    </p>
+    <p>
+      4.Add the next number 456
+    </p>
+    <p>
+      5.Check that the Count has increased again
+    </p>
+    <p>
+      6.Check using Nums that Nums[0] is equal to 321
+    </p>
+    <p>
+      7.Check that Nums[1] is 456
+    </p>
+    <p>
+      That should be enough to test the functionality of Add.
+    </p>
+    <p>
+      We need to assume that Count, SetNum and GetNum already work for
+      the simple cases. However for more extensive tests, we need
+      testGetNum and testSetNum
+    </p>
+    <p>
+      Please create a new published procedure in TNumListTest and
+      implement this test plan.
+    </p>
+    <h3>
+      Exercise 2 &ndash; implementing testGetNum
+    </h3>
+    <p>
+      Make sure that mNumList.Nums[2] works as planned. Make a test
+      plan and implement it. It may be quite simple.
+    </p>
+    <h3>
+      Exercise 3 &ndash; implementing testSetNum
+    </h3>
+    <p>
+      Make sure that mNumList.Nums[2] := 343, works as planned. Make a
+      test plan and implement it. It may be quite simple too.
+    </p>
+    <h3>
+      Exercise 4 &ndash; implementing testTotal
+    </h3>
+    <p>
+      Come up with your own test plan for testTotal, and implement it
+    </p>
+    <h3>
+      Exercise 5 &ndash; implementing testAverage
+    </h3>
+    <p>
+      Come up with your own test plan for testAverage, and implement it
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <h3>
+      Running the test Harness
+    </h3>
+    <p>
+      Using the path of 'Tutorial/NumList', register your TestCase. See
+      the section &ldquo;Registering TTestCase&rdquo; on how to do
+      this.
+    </p>
+    <p>
+      Now that you have created 3 tests you can try running this
+      application by pressing F9. Click on the green Run button, and
+      you should see something like this:
+    </p>
+    <p>
+      <br clear="ALL" />
+       &nbsp;
+    </p>
+    <p>
+      Running this, the DUnit interface reports errors in All of our 3
+      test. This is as expected because we haven't implemented the
+      TNumList object yet!
+    </p>
+    <h3>
+      Exercise 6 &ndash; Implementation of the TNumList
+    </h3>
+    <p>
+      Now you can proceed in implementing this simple object. After
+      every step, run the DUnit interface to run through the tests for
+      instant gratification.
+    </p>
+    <p>
+      1.Implement Add, which increments Count after adding onto the
+      list
+    </p>
+    <p>
+      2.Implement Total which totals up all the reals up to Count-1
+    </p>
+    <p>
+      3.Implement Average which is the totals divided by Count
+    </p>
+    <h3>
+      Exercise 7 &ndash; testSetNum and its implementation
+    </h3>
+    <p>
+      Make a test procedure to test the ability of <b>
+      mNumList.Nums[0]</b> to be altered
+    </p>
+    <h3>
+      Exercise 8 &ndash; Further Testing
+    </h3>
+    <p>
+      We will now proceed with further testing, and this normally
+      called
+    </p>
+    <h4>
+      Breaking the object!
+    </h4>
+    <p>
+      &bull;What happens when we Access (Get) Nums[-1] or Nums[202] or
+      even Nums[Count]?
+    </p>
+    <p>
+      &bull;What happens when we write (Set) Nums[-1] or Nums[202] or
+      Nums[Count]?
+    </p>
+    <p>
+      &bull;What happens when we add more than 200 items in the list?
+      <i>(Please turn on Project/Options/Compiler/Range Checking +
+      Overflow)</i>
+    </p>
+    <p>
+      &bull;What happens when we try to get the Average without any
+      items in the list?
+    </p>
+    <p>
+      &bull;What happens when we put very large reals in the list and
+      find the Total? Use MaxDouble from Math
+    </p>
+    <h3>
+      Decide on how to handle problems
+    </h3>
+    <p>
+      We will now need to decide how to handle these problems.
+    </p>
+    <p>
+      1.If this object is accessed (either Get or Set) outside its
+      Bounds, i.e. Nums[-1] or Nums[Count] then an exception called
+      ENumListIndexOutOfBounds should be raised
+    </p>
+    <p>
+      2.If we attempt to add more than 200 items, then an exception
+      called ENumListCapacityExceeded should be raised
+    </p>
+    <p>
+      3.If we try to get the Average from an empty list, then the
+      result should be zero.
+    </p>
+    <p>
+      4.If the total is too large for the type an exception called
+      ENumListTotalOverflow should be raised.
+    </p>
+    <h3>
+      Write the new tests
+    </h3>
+    <p>
+      Now that you have decided on the peculiar situations, write out
+      the tests to re-create this with the proper exception handling if
+      necessary.
+    </p>
+    <h3>
+      Fix the object
+    </h3>
+    <p>
+      After the test harness has been completed, run DUnit and expect
+      failures.
+    </p>
+    <p>
+      Go back to the object and build in the necessary new behaviours
+      of the object.
+    </p>
+    <h2>
+      Refactoring and modifications
+    </h2>
+    <p>
+      eXtreme Programming is about change. Customers tend to change
+      their minds during the progress of a project. We should not
+      encourage their changes, but we must be prepared that changes do
+      occur.
+    </p>
+    <p>
+      So the new requirement are:
+    </p>
+    <p>
+      1.From the previous requirement of only 200 reals to be kept, we
+      now need to keep track of an Unlimited (as much as RAM can
+      handle) number of items
+    </p>
+    <p>
+      2.There should be a method to delete any real given an index
+    </p>
+    <p>
+      3.These numbers should be able to be sorted by Values
+    </p>
+    <h3>
+      Exercise 9 &ndash; Changing an Array to a TStringList
+    </h3>
+    <p>
+      Given the 3 new requirements, we should consider changing our
+      static Array FNums into a more dynamic TList descendant which can
+      cater for Unlimited entries, sort functions and Deletes. The most
+      user friendly one which comes to mind is a TStringList.
+    </p>
+    <p>
+      The only drawback is that we will have to convert reals to
+      Strings, which may hinder performance slightly.
+    </p>
+    <p>
+      But lets go along with that idea anyway, and proceed with this
+      plan in REFACTORING our array into a TStringList.
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <p>
+      After we have done so, please run the DUnit checks to make sure
+      that all the test cases work. If it does, congratulations, you
+      have improved your code yet kept the functionality the same. Isnt
+      encapsulation wonderful?
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <h3>
+      Exercise 10 &ndash; Creating more tests for the new functions
+    </h3>
+    <p>
+      Please proceed in planning and implementing tests for <b>
+      testDelete</b> and <b>testSort</b>
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <h2>
+      Questions
+    </h2>
+    <p>
+      What is the parameter format of Check?
+    </p>
+    <p>
+      How do I test for an expected Exception?
+    </p>
+    <p>
+      What will DUnit show if there was an unexpected Exception?
+    </p>
+    <p>
+      What happens when you dont have any code in a test procedure?
+    </p>
+    <p>
+      Does the order of the published test procedures matter to the
+      DUnit UI?
+    </p>
+    <p>
+      Do we delete the trivial tests as we move on to more complex
+      scenarios?
+    </p>
+    <p>
+      &nbsp;
+    </p>
+    <p align="center">
+      ~END~
+    </p>
+  </body>
+</html>
