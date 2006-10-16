@@ -552,7 +552,7 @@ begin
     System.Move(FList^[Index], FList^[Index + 1],
       (FCount - Index) * SizeOf(IZInterface));
   end;
-//  FList^[Index] := Item as IZInterface;
+//  FList^[Index] := Item as IZInterface; //MEMORY HOG
   FList^[Index] := Item;
   Inc(FCount);
 end;
@@ -577,7 +577,7 @@ begin
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
 {$ENDIF}
-//  FList^[Index] := Item as IZInterface;
+//  FList^[Index] := Item as IZInterface; //MEMORY HOG
   FList^[Index] := Item;
 end;
 

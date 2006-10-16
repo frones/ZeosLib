@@ -49,9 +49,6 @@ uses
   Types,
   Variants,
 {$ENDIF}
-{$IFDEF VER130}
-  Forms,
-{$ENDIF}
   SysUtils, DB, Classes, ZSysUtils, ZConnection, ZDbcIntfs, ZSqlStrings,
   Contnrs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility, ZExpression;
 
@@ -869,11 +866,7 @@ begin
     try
       OnFilterRecord(Self, Result);
     except
-      {$IFNDEF VER130}
       ApplicationHandleException(Self);
-      {$ELSE}
-      Application.HandleException(Self);
-      {$ENDIF}
     end;
 
     CurrentRow := SavedRow;

@@ -168,6 +168,9 @@ type
   IZPostgreSQLPlainDriver = interface (IZPlainDriver)
     ['{03CD6345-2D7A-4FE2-B03D-3C5656789FEB}']
 
+    function  EncodeBYTEA(Value: string;Handle: PZPostgreSQLConnect): string;
+    function  DecodeBYTEA(value: string): string;
+
     function ConnectDatabase(ConnInfo: PChar): PZPostgreSQLConnect;
     function SetDatabaseLogin(Host, Port, Options, TTY, Db, User,Passwd: PChar): PZPostgreSQLConnect;
     function GetConnectDefaults: PZPostgreSQLConnectInfoOption;
@@ -281,6 +284,9 @@ type
     function GetDescription: string;
     procedure Initialize;
 
+    function  EncodeBYTEA(Value: string;Handle: PZPostgreSQLConnect): string;
+    function  DecodeBYTEA(value: string): string;
+
     function ConnectDatabase(ConnInfo: PChar): PZPostgreSQLConnect;
     function SetDatabaseLogin(Host, Port, Options, TTY, Db, User,
       Passwd: PChar): PZPostgreSQLConnect;
@@ -389,6 +395,8 @@ type
 
   {** Implements a driver for PostgreSQL 8.1 }
   TZPostgreSQL8PlainDriver = class(TZAbstractObject, IZPlainDriver,IZPostgreSQLPlainDriver)
+  private
+    procedure PQFreeMem(ptr: Pointer);
   public
     constructor Create;
 
@@ -400,6 +408,9 @@ type
     function SetDatabaseLogin(Host, Port, Options, TTY, Db, User,
       Passwd: PChar): PZPostgreSQLConnect;
     function GetConnectDefaults: PZPostgreSQLConnectInfoOption;
+
+    function  EncodeBYTEA(Value: string;Handle: PZPostgreSQLConnect): string;
+    function  DecodeBYTEA(value: string): string;
 
     procedure Finish(Handle: PZPostgreSQLConnect);
     procedure Reset(Handle: PZPostgreSQLConnect);
@@ -557,6 +568,16 @@ function TZPostgreSQL7PlainDriver.CreateLargeObject(
   Handle: PZPostgreSQLConnect; Mode: Integer): Oid;
 begin
   Result := ZPlainPostgreSql7.lo_creat(Handle, Mode);
+end;
+
+function TZPostgreSQL7PlainDriver.DecodeBYTEA(value: string): string;
+begin
+ result:=value;
+end;
+
+function TZPostgreSQL7PlainDriver.EncodeBYTEA(Value: string;  Handle: PZPostgreSQLConnect): string;
+begin
+ result:=value;
 end;
 
 function TZPostgreSQL7PlainDriver.EndCopy(
@@ -963,8 +984,36 @@ begin
   Result := ZPlainPostgreSql8.lo_creat(Handle, Mode);
 end;
 
-function TZPostgreSQL8PlainDriver.EndCopy(
-  Handle: PZPostgreSQLConnect): Integer;
+function TZPostgreSQL8PlainDriver.DecodeBYTEA(value: string): string;
+var decoded,dest:pchar;
+    len:Longword;
+    von,nach:string;
+begin
+  decoded:=ZPlainPostgreSql8.PQunescapeBytea(pansichar(value),@len);
+  SetLength(result,len);
+  dest:=pchar(result);
+  Move(decoded^,result[1],len);
+  ZPlainPostgreSql8.PQFreemem(decoded);
+end;
+
+function TZPostgreSQL8PlainDriver.EncodeBYTEA(Value: string;Handle: PZPostgreSQLConnect): string;
+var encoded:pchar;
+    len:Longword;
+    leng:cardinal;
+begin
+ leng:=Length(Value);
+ if assigned(ZPlainPostgreSql8.PQescapeByteaConn) then begin
+  encoded:=ZPlainPostgreSql8.PQescapeByteaConn(Handle,pansichar(value),leng,@len);
+ end else begin
+  encoded:=ZPlainPostgreSql8.PQescapeBytea(pansichar(value),leng,@len);
+ end;
+ setlength(result,len-1);
+ StrCopy(pansichar(result),encoded);
+ ZPlainPostgreSql8.PQFreemem(encoded);
+ result:=''''+result+'''';
+end;
+
+function TZPostgreSQL8PlainDriver.EndCopy( Handle: PZPostgreSQLConnect): Integer;
 begin
   Result := ZPlainPostgreSql8.PQendcopy(Handle);
 end;
@@ -1226,6 +1275,11 @@ function TZPostgreSQL8PlainDriver.OpenLargeObject(
   Handle: PZPostgreSQLConnect; ObjId: Oid; Mode: Integer): Integer;
 begin
   Result := ZPlainPostgreSql8.lo_open(Handle, ObjId, Mode);
+end;
+
+procedure TZPostgreSQL8PlainDriver.PQFreeMem(ptr: Pointer);
+begin
+ ZPlainPostgreSql8.PQFreemem(ptr);
 end;
 
 function TZPostgreSQL8PlainDriver.PutBytes(Handle: PZPostgreSQLConnect;

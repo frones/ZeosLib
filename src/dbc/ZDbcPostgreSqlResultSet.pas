@@ -573,7 +573,8 @@ begin
     begin
       Stream := nil;
       try
-        Stream := TStringStream.Create(DecodeString(GetString(ColumnIndex)));
+//        Stream := TStringStream.Create(DecodeString(GetRawString(ColumnIndex)));
+        Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)));
         Result := TZAbstractBlob.CreateWithStream(Stream);
       finally
         if Assigned(Stream) then
