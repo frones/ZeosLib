@@ -208,6 +208,9 @@ resourcestring
   SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
 
+  // added by tohenk
+  SDriverLibraryUnsupported = 'Translate: Driver doesn''t support this version of %s. It might be outdated';
+
 {$ELSE}
 
 {$IFDEF DUTCH}
@@ -359,6 +362,9 @@ resourcestring
   SPreparedStmtExecFailure = 'Uitvoeren van Prepared statement mislukt';
   SBoundVarStrIndexMissing = 'Tekst index van bound variable bestaat niet: "%s"';
   SBindVarOutOfRange      = 'Bound variable index buitenbereik: %d';
+
+  // added by tohenk
+  SDriverLibraryUnsupported = 'Translate: Driver doesn''t support this version of %s. It might be outdated';
 
 {$ELSE}
 // <- ms, 09/05/2005
@@ -515,6 +521,9 @@ resourcestring
   SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
 
+  // added by tohenk
+  SDriverLibraryUnsupported = 'Translate: Driver doesn''t support this version of %s. It might be outdated';
+
 {$ELSE}
   // -> fduenas, 28/06/2005
 {$IFDEF SPANISH} //Spanish translations
@@ -667,6 +676,10 @@ resourcestring
   SPreparedStmtExecFailure = 'Translate: Prepared statement failed to execute';
   SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
+
+  // added by tohenk
+  SDriverLibraryUnsupported = 'Translate: Driver doesn''t support this version of %s. It might be outdated';
+
 {$ELSE}
 
 {$IFDEF ROMANA}
@@ -821,6 +834,166 @@ resourcestring
   SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
 
+  // added by tohenk
+  SDriverLibraryUnsupported = 'Translate: Driver doesn''t support this version of %s. It might be outdated';
+
+  // <-- added by tohenk
+  {$ELSE}
+  {$IFDEF INDONESIAN}
+  SSQLError1 = 'Kesalahan SQL: %s';
+  SSQLError2 = 'Kesalahan SQL: %s Kode: %d';
+  SSQLError3 = 'Kesalahan SQL: %s Kode: %d SQL: %s';
+  SSQLError4 = 'Kesalahan SQL: %s Kode: %d Pesan: %s';
+
+  SListCapacityError = 'Kapasitas List diluar jangkauan (%d)';
+  SListCountError = 'Jumlah List diluar jangkauan (%d)';
+  SListIndexError = 'Indeks List diluar jangkauan (%d)';
+
+  SClonningIsNotSupported = 'Class ini tidak mendukung kloning';
+  SImmutableOpIsNotAllowed = 'Operasi tidak diperkenankan pada koleksi yang tidak dapat diubah';
+  SStackIsEmpty = 'Stack kosong';
+  SVariableWasNotFound = 'Variabel "%s" tidak ada';
+  SFunctionWasNotFound = 'Fungsi "%s" tidak ada';
+  SInternalError = 'Kesalahan internal';
+  SSyntaxErrorNear = 'Kesalahan Syntax di dekat "%s"';
+  SSyntaxError = 'Kesalahan Syntax';
+  SUnknownSymbol = 'Simbol tidak dikenali "%s"';
+  SUnexpectedExprEnd = 'Tidak dibutuhkan, akhir dari ekspresi';
+  SRightBraceExpected = ') dibutuhkan';
+  SParametersError = '%d parameter dibutuhkan tapi terdapat %d parameter';
+  SExpectedMoreParams = 'Dibutuhkan lebih dari dua parameter';
+  SInvalidVarByteArray = 'array VarByte tidak valid';
+  SVariableAlreadyExists = 'Variabel "%s" sudah ada';
+  STypesMismatch = 'Tipe tidak sesuai';
+  SUnsupportedVariantType = 'Tipe variant tidak didukung';
+  SUnsupportedOperation = 'Operasi tidak didukung';
+
+  STokenizerIsNotDefined = 'Tokenizer belum ditentukan';
+  SLibraryNotFound = 'Tidak ada library ditemukan: %s';
+  SEncodeDateIsNotSupported = 'Versi ini tidak mendukung isc_encode_sql_date';
+  SEncodeTimeIsNotSupported = 'Versi ini tidak mendukung isc_encode_sql_time';
+  SEncodeTimestampIsNotSupported = 'Versi ini tidak mendukung isc_encode_sql_timestamp';
+  SDecodeDateIsNotSupported = 'Versi ini tidak mendukung isc_decode_sql_date';
+  SDecodeTimeIsNotSupported = 'Versi ini tidak mendukung isc_decode_sql_time';
+  SDecodeTimestampIsNotSupported = 'Versi ini tidak mendukung isc_decode_sql_timestamp';
+
+  SCanNotRetrieveResultSetData = 'Tidak dapat mengambil data Resultset';
+  SRowBufferIsNotAssigned = 'Row buffer tidak disediakan';
+  SColumnIsNotAccessable = 'Kolom dengan indeks %d tidak dapat diakses';
+  SConvertionIsNotPossible = 'Konversi tidak dimungkinkan pada kolom %d dari %s ke %s';
+  SCanNotAccessBlobRecord = 'Tidak dapat mengakses rekord `blob` pada kolom %d dengan tipe %s';
+  SRowDataIsNotAvailable = 'Data Row tidak tersedia';
+  SResolverIsNotSpecified = 'Resolver belum ditentukan pada ResultSet ini';
+  SResultsetIsAlreadyOpened = 'Resultset sudah terbuka';
+  SCanNotUpdateEmptyRow = 'Tidak dapat meng-update row kosong';
+  SCanNotUpdateDeletedRow = 'Tidak dapat meng-update row terhapus';
+  SCanNotDeleteEmptyRow = 'Tidak dapat meng-hapus row kosong';
+  SCannotUseCommit = 'COMMIT tidak dapat digunakan pada mode AUTOCOMMIT';
+  SCannotUseRollBack = 'ROLLBACK tidak dapat digunakan pada mode AUTOCOMMIT';
+  SCanNotUpdateComplexQuery = 'Tidak dapat meng-update query kompleks dengan lebih dari satu tabel';
+  SCanNotUpdateThisQueryType = 'Tidak dapat meng-update query dengan tipe ini';
+  SDriverWasNotFound = 'Driver database yang diminta tidak ada';
+  SCanNotConnectToServer = 'Tidak dapat terhubung ke server SQL';
+  STableIsNotSpecified = 'Tabel belum ditentukan';
+  SLiveResultSetsAreNotSupported = 'Live query tidak didukung oleh Class ini';
+  SInvalidInputParameterCount = 'Jumlah parameter Input kurang dari yang dibutuhkan';
+  SIsolationIsNotSupported = 'Level Isolasi Transaksi tidak didukung';
+  SColumnWasNotFound = 'Kolom dengan nama "%s" tidak ada';
+  SWrongTypeForBlobParameter = 'Salah tipe untuk parameter Blob';
+  SIncorrectConnectionURL = 'Salah koneksi URL: %s';
+  SUnsupportedProtocol = 'Protokol tidak didukung: %s';
+  SUnsupportedByDriver    = 'Driver tidak mendukung fitur: [%s]';
+
+  SConnectionIsNotOpened = 'Koneksi belum dibuka';
+  SInvalidOpInAutoCommit = 'Operasi tidak valid pada mode AUTOCOMMIT';
+  SInvalidOpInNonAutoCommit = 'Operasi tidak valid pada mode non AUTOCOMMIT';
+  SInvalidOpPrepare = 'Persiapan transaksi hanya mungkin pada (!) Starttransaction pertama';
+
+  SConnectionIsNotAssigned = 'Komponen koneksi Database tidak ditentukan';
+  SQueryIsEmpty = 'Query SQL kosong';
+  SCanNotExecuteMoreQueries = 'Tidak dapat meng-eksekusi lebih dari satu query';
+  SOperationIsNotAllowed1 = 'Operasi tidak diperkenankan pada mode FORWARD ONLY';
+  SOperationIsNotAllowed2 = 'Operasi tidak diperkenankan pada mode READ ONLY';
+  SOperationIsNotAllowed3 = 'Operasi tidak diperkenankan pada mode %s';
+  SOperationIsNotAllowed4 = 'Operasi tidak diperkenankan pada dataset tertutup';
+  SNoMoreRecords = 'Tidak ada rekord lagi pada Resultset';
+  SCanNotOpenResultSet = 'Tidak dapat membuka Resultset';
+  SCircularLink = 'Terjadi hubungan Datasource circular';
+  SBookmarkWasNotFound = 'Bookmark tidak ada';
+  SIncorrectSearchFieldsNumber = 'Salah jumlah nilai field pada pencarian';
+  SInvalidOperationInTrans = 'Operasi tidak valid pada mode explicit transaction';
+  SIncorrectSymbol = 'Simbol salah pada daftar field "%s".';
+  SIncorrectToken = 'Token salah setelah ":"';
+
+  SSelectedTransactionIsolation = 'Level Isolasi Transaksi terpilih tidak didukung';
+  SDriverNotSupported = 'Driver tidak mendukung %s';
+  SPattern2Long = 'Pola terlalu panjang';
+  SDriverNotCapableOutParameters = 'Driver tidak mampu menangani parameter';
+  SStatementIsNotAllowed = 'Statement tidak diperbolehkan';
+  SStoredProcIsNotAllowed = 'StoredProc tidak diperbolehkan';
+  SCannotPerformOperation = 'Tidak dapat melakukan operasi pada Resultset tertutup';
+  SInvalidState = 'Sate tidak valid';
+  SErrorConvertion = 'Kesalahan konversi';
+  SDataTypeDoesNotSupported = 'Tipe Data tidak didukung';
+  SUnsupportedParameterType = 'Tidak mendukung tipe parameter';
+  SUnsupportedDataType = 'Tidak mendukung tipe data';
+  SErrorConvertionField = 'Kesalahan konversi field "%s" ke Tipe SQL "%s"';
+  SBadOCI = 'OCI version [%s] tidak sah. Dibutuhkan versi 8.0.3 atau terdahulu';
+  SConnect2AsUser = 'Koneksi ke "%s" dengan user "%s"';
+  SUnknownError = 'Kesalahan tidak diketahui';
+  SFieldNotFound1 = 'Field "%s" tidak ada';
+  SFieldNotFound2 = 'Field %d tidak ada';
+
+  SLoginPromptFailure = 'Tidak ada dialog Login default. Silahkan tambahkan DBLogDlg ke klausula `uses` pada file utama.';
+
+  SPropertyQuery = 'Query mungkin berlangsung lama pada database besar!';
+  SPropertyTables = 'Batasi dengan Katalog data/atau Skema.';
+  SPropertyColumns = 'Batasi dengan Katalog, Skema dan/atau Nama Tabel.';
+  SPropertyProcedures = 'Batasi dengan Katalog dan/atau Skema.';
+  SPropertySequences = 'Batasi dengan Katalog dan/atau Skema.';
+  SPropertyExecute = 'Apakah Query jadi dieksekusi?';
+
+  SFormTest = 'Tes Editor SQLZEOS';
+  SButtonClose = '&Tutup';
+  SFormEditor = 'Editor SQL ZEOS';
+  STabSheetSelect = 'SQL Select';
+  SMenuLoad = 'Ambil';
+  SMenuSave = 'Simpan';
+  SButtonGenerate = '&Generate';
+  SButtonCheck = '&Cek';
+  SButtonTest = 'T&es';
+  SButtonOk = '&OK';
+  SButtonCancel = '&Batal';
+  STableAlias = 'Alias T&abel';
+  SReplaceSQL = 'SQL &Replace';
+  SDialogOpenTitle = 'Buka File SQL';
+  SDialogSaveTitle = 'Simpan File SQL';
+  SSQLEditor = 'Editor SQL';
+  SDatabaseDialog = 'Buka database yang tersedia';
+
+  SUpdateSQLNoResult = 'Tidak ada Resultset pada Update Refresh SQL';
+  SUpdateSQLRefreshStatementcount ='Jumlah Statement pada Update Refresh SQL harus 1';
+
+  {$IFDEF FPC}
+  SNotEditing = 'Dataset tidak dalam mode edit atau sisip';
+  SFieldTypeMismatch = 'Tipe tidak sesuai pada field ''%s'', seharusnya: %s aktual: %s';
+  SFieldSizeMismatch = 'Ukuran tidak sesuai pada field ''%s'', seharusnya: %d aktual: %d';
+  {$ENDIF}
+
+  SFailedtoInitPrepStmt   = 'Gagal inisialisasi Prepared statement';
+  SFailedtoPrepareStmt    = 'Statemen gagal sewaktu proses persiapan';
+  SFailedToBindAllValues  = 'Aplikasi gagal dalam penggabungan (bind) pendahuluan semua nilai';
+  SAttemptExecOnBadPrep   = 'Percobaan eksekusi statemen dilakukan sebelum persiapan berhasil.';
+  SBindingFailure         = 'Gagal mem-gabungkan (bind) parameter';
+  SPreparedStmtExecFailure = 'Prepared Statement gagal dieksekusi';
+  SBoundVarStrIndexMissing = 'Teks variabel indeks "%s" tidak ada';
+  SBindVarOutOfRange      = 'Variabel indeks diluar jangkauan: %d';
+
+  // added by tohenk
+  SDriverLibraryUnsupported = 'Driver tidak mendukung %s versi ini. Library ini mungkin kedaluarsa.';
+
+  // <--- end added by tohenk
+
   {$ELSE} // default: ENGLISH
 
   SSQLError1 = 'SQL Error: %s';
@@ -971,6 +1144,11 @@ resourcestring
   SPreparedStmtExecFailure = 'Prepared statement failed to execute';
   SBoundVarStrIndexMissing = 'Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Bound variable index out of range: %d';
+
+  // added by tohenk
+  SDriverLibraryUnsupported = 'Driver doesn''t support this version of %s. It might be outdated';
+
+{$ENDIF}   // INDONESIAN <--- added by tohenk
 
 {$ENDIF}   // ROMANA
 

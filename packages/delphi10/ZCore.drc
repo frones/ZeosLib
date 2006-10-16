@@ -8,60 +8,72 @@
   resources were bound to the produced executable.
 */
 
-#define ZMessages_STableAlias 65408
-#define ZMessages_SReplaceSQL 65409
-#define ZMessages_SDialogOpenTitle 65410
-#define ZMessages_SDialogSaveTitle 65411
-#define ZMessages_SSQLEditor 65412
-#define ZMessages_SDatabaseDialog 65413
-#define ZMessages_SPropertyTables 65424
-#define ZMessages_SPropertyColumns 65425
-#define ZMessages_SPropertyProcedures 65426
-#define ZMessages_SPropertySequences 65427
-#define ZMessages_SPropertyExecute 65428
-#define ZMessages_SFormTest 65429
-#define ZMessages_SButtonClose 65430
-#define ZMessages_SFormEditor 65431
-#define ZMessages_STabSheetSelect 65432
-#define ZMessages_SMenuLoad 65433
-#define ZMessages_SMenuSave 65434
-#define ZMessages_SButtonGenerate 65435
-#define ZMessages_SButtonCheck 65436
-#define ZMessages_SButtonTest 65437
-#define ZMessages_SButtonOk 65438
-#define ZMessages_SButtonCancel 65439
-#define ZMessages_SStatementIsNotAllowed 65440
-#define ZMessages_SStoredProcIsNotAllowed 65441
-#define ZMessages_SCannotPerformOperation 65442
-#define ZMessages_SInvalidState 65443
-#define ZMessages_SErrorConvertion 65444
-#define ZMessages_SDataTypeDoesNotSupported 65445
-#define ZMessages_SUnsupportedParameterType 65446
-#define ZMessages_SUnsupportedDataType 65447
-#define ZMessages_SErrorConvertionField 65448
-#define ZMessages_SBadOCI 65449
-#define ZMessages_SConnect2AsUser 65450
-#define ZMessages_SUnknownError 65451
-#define ZMessages_SFieldNotFound1 65452
-#define ZMessages_SFieldNotFound2 65453
-#define ZMessages_SLoginPromptFailure 65454
-#define ZMessages_SPropertyQuery 65455
-#define ZMessages_SOperationIsNotAllowed1 65456
-#define ZMessages_SOperationIsNotAllowed2 65457
-#define ZMessages_SOperationIsNotAllowed3 65458
-#define ZMessages_SOperationIsNotAllowed4 65459
-#define ZMessages_SNoMoreRecords 65460
-#define ZMessages_SCanNotOpenResultSet 65461
-#define ZMessages_SCircularLink 65462
-#define ZMessages_SBookmarkWasNotFound 65463
-#define ZMessages_SIncorrectSearchFieldsNumber 65464
-#define ZMessages_SInvalidOperationInTrans 65465
-#define ZMessages_SIncorrectSymbol 65466
-#define ZMessages_SIncorrectToken 65467
-#define ZMessages_SSelectedTransactionIsolation 65468
-#define ZMessages_SDriverNotSupported 65469
-#define ZMessages_SPattern2Long 65470
-#define ZMessages_SDriverNotCapableOutParameters 65471
+#define ZMessages_SBoundVarStrIndexMissing 65392
+#define ZMessages_SBindVarOutOfRange 65393
+#define ZMessages_SButtonOk 65408
+#define ZMessages_SButtonCancel 65409
+#define ZMessages_STableAlias 65410
+#define ZMessages_SReplaceSQL 65411
+#define ZMessages_SDialogOpenTitle 65412
+#define ZMessages_SDialogSaveTitle 65413
+#define ZMessages_SSQLEditor 65414
+#define ZMessages_SDatabaseDialog 65415
+#define ZMessages_SUpdateSQLNoResult 65416
+#define ZMessages_SUpdateSQLRefreshStatementcount 65417
+#define ZMessages_SFailedtoInitPrepStmt 65418
+#define ZMessages_SFailedtoPrepareStmt 65419
+#define ZMessages_SFailedToBindAllValues 65420
+#define ZMessages_SAttemptExecOnBadPrep 65421
+#define ZMessages_SBindingFailure 65422
+#define ZMessages_SPreparedStmtExecFailure 65423
+#define ZMessages_SLoginPromptFailure 65424
+#define ZMessages_SPropertyQuery 65425
+#define ZMessages_SPropertyTables 65426
+#define ZMessages_SPropertyColumns 65427
+#define ZMessages_SPropertyProcedures 65428
+#define ZMessages_SPropertySequences 65429
+#define ZMessages_SPropertyExecute 65430
+#define ZMessages_SFormTest 65431
+#define ZMessages_SButtonClose 65432
+#define ZMessages_SFormEditor 65433
+#define ZMessages_STabSheetSelect 65434
+#define ZMessages_SMenuLoad 65435
+#define ZMessages_SMenuSave 65436
+#define ZMessages_SButtonGenerate 65437
+#define ZMessages_SButtonCheck 65438
+#define ZMessages_SButtonTest 65439
+#define ZMessages_SPattern2Long 65440
+#define ZMessages_SDriverNotCapableOutParameters 65441
+#define ZMessages_SStatementIsNotAllowed 65442
+#define ZMessages_SStoredProcIsNotAllowed 65443
+#define ZMessages_SCannotPerformOperation 65444
+#define ZMessages_SInvalidState 65445
+#define ZMessages_SErrorConvertion 65446
+#define ZMessages_SDataTypeDoesNotSupported 65447
+#define ZMessages_SUnsupportedParameterType 65448
+#define ZMessages_SUnsupportedDataType 65449
+#define ZMessages_SErrorConvertionField 65450
+#define ZMessages_SBadOCI 65451
+#define ZMessages_SConnect2AsUser 65452
+#define ZMessages_SUnknownError 65453
+#define ZMessages_SFieldNotFound1 65454
+#define ZMessages_SFieldNotFound2 65455
+#define ZMessages_SQueryIsEmpty 65456
+#define ZMessages_SCanNotExecuteMoreQueries 65457
+#define ZMessages_SOperationIsNotAllowed1 65458
+#define ZMessages_SOperationIsNotAllowed2 65459
+#define ZMessages_SOperationIsNotAllowed3 65460
+#define ZMessages_SOperationIsNotAllowed4 65461
+#define ZMessages_SNoMoreRecords 65462
+#define ZMessages_SCanNotOpenResultSet 65463
+#define ZMessages_SCircularLink 65464
+#define ZMessages_SBookmarkWasNotFound 65465
+#define ZMessages_SIncorrectSearchFieldsNumber 65466
+#define ZMessages_SInvalidOperationInTrans 65467
+#define ZMessages_SIncorrectSymbol 65468
+#define ZMessages_SIncorrectToken 65469
+#define ZMessages_SSelectedTransactionIsolation 65470
+#define ZMessages_SDriverNotSupported 65471
 #define ZMessages_SDriverWasNotFound 65472
 #define ZMessages_SCanNotConnectToServer 65473
 #define ZMessages_STableIsNotSpecified 65474
@@ -72,12 +84,12 @@
 #define ZMessages_SWrongTypeForBlobParameter 65479
 #define ZMessages_SIncorrectConnectionURL 65480
 #define ZMessages_SUnsupportedProtocol 65481
-#define ZMessages_SConnectionIsNotOpened 65482
-#define ZMessages_SInvalidOpInAutoCommit 65483
-#define ZMessages_SInvalidOpInNonAutoCommit 65484
-#define ZMessages_SConnectionIsNotAssigned 65485
-#define ZMessages_SQueryIsEmpty 65486
-#define ZMessages_SCanNotExecuteMoreQueries 65487
+#define ZMessages_SUnsupportedByDriver 65482
+#define ZMessages_SConnectionIsNotOpened 65483
+#define ZMessages_SInvalidOpInAutoCommit 65484
+#define ZMessages_SInvalidOpInNonAutoCommit 65485
+#define ZMessages_SInvalidOpPrepare 65486
+#define ZMessages_SConnectionIsNotAssigned 65487
 #define ZMessages_SDecodeTimestampIsNotSupported 65488
 #define ZMessages_SCanNotRetrieveResultSetData 65489
 #define ZMessages_SRowBufferIsNotAssigned 65490
@@ -128,12 +140,26 @@
 #define ZMessages_SUnknownSymbol 65535
 STRINGTABLE
 BEGIN
+	ZMessages_SBoundVarStrIndexMissing,	"Bound variable text index \"%s\" does not exist"
+	ZMessages_SBindVarOutOfRange,	"Bound variable index out of range: %d"
+	ZMessages_SButtonOk,	"&OK"
+	ZMessages_SButtonCancel,	"&Cancel"
 	ZMessages_STableAlias,	"T&able alias"
 	ZMessages_SReplaceSQL,	"&Replace SQL"
 	ZMessages_SDialogOpenTitle,	"Open SQL File"
 	ZMessages_SDialogSaveTitle,	"Save SQL File"
 	ZMessages_SSQLEditor,	"SQL Editor"
 	ZMessages_SDatabaseDialog,	"Open existing database"
+	ZMessages_SUpdateSQLNoResult,	"Update Refresh SQL delivered no resultset"
+	ZMessages_SUpdateSQLRefreshStatementcount,	"Update Refresh SQL Statement count must be 1"
+	ZMessages_SFailedtoInitPrepStmt,	"Prepared statement failed to initialize"
+	ZMessages_SFailedtoPrepareStmt,	"Statement failed during prepare process"
+	ZMessages_SFailedToBindAllValues,	"Application failed to pre-bind all values"
+	ZMessages_SAttemptExecOnBadPrep,	"Attempt made to execute a statement before a successful preparation."
+	ZMessages_SBindingFailure,	"Failed to bind parameter set"
+	ZMessages_SPreparedStmtExecFailure,	"Prepared statement failed to execute"
+	ZMessages_SLoginPromptFailure,	"Can not find default login prompt dialog. Please add DBLogDlg to the uses section of your main file."
+	ZMessages_SPropertyQuery,	"The Query may last a while on large databases!"
 	ZMessages_SPropertyTables,	"You should limit it by Catalog and/or Schema."
 	ZMessages_SPropertyColumns,	"You should limit it by Catalog, Schema and/or TableName."
 	ZMessages_SPropertyProcedures,	"You should limit it by Catalog and/or Schema."
@@ -148,8 +174,8 @@ BEGIN
 	ZMessages_SButtonGenerate,	"&Generate"
 	ZMessages_SButtonCheck,	"C&heck"
 	ZMessages_SButtonTest,	"&Test"
-	ZMessages_SButtonOk,	"&OK"
-	ZMessages_SButtonCancel,	"&Cancel"
+	ZMessages_SPattern2Long,	"Pattern is too long"
+	ZMessages_SDriverNotCapableOutParameters,	"Driver is not capable to handle parameters"
 	ZMessages_SStatementIsNotAllowed,	"Statement is not allowed"
 	ZMessages_SStoredProcIsNotAllowed,	"The stored proc is not allowed"
 	ZMessages_SCannotPerformOperation,	"Can not perform operation on closed Resultset"
@@ -164,8 +190,8 @@ BEGIN
 	ZMessages_SUnknownError,	"Unknown error"
 	ZMessages_SFieldNotFound1,	"Field \"%s\" was not found"
 	ZMessages_SFieldNotFound2,	"Field %d was not found"
-	ZMessages_SLoginPromptFailure,	"Can not find default login prompt dialog. Please add DBLogDlg to the uses section of your main file."
-	ZMessages_SPropertyQuery,	"The Query may last a while on large databases!"
+	ZMessages_SQueryIsEmpty,	"SQL Query is empty"
+	ZMessages_SCanNotExecuteMoreQueries,	"Cannot execute more then one query"
 	ZMessages_SOperationIsNotAllowed1,	"Operation is not allowed in FORWARD ONLY mode"
 	ZMessages_SOperationIsNotAllowed2,	"Operation is not allowed in READ ONLY mode"
 	ZMessages_SOperationIsNotAllowed3,	"Operation is not allowed in %s mode"
@@ -180,8 +206,6 @@ BEGIN
 	ZMessages_SIncorrectToken,	"Incorrect token followed by \":\""
 	ZMessages_SSelectedTransactionIsolation,	"Selected transaction isolation level is not supported"
 	ZMessages_SDriverNotSupported,	"Driver not supported %s"
-	ZMessages_SPattern2Long,	"Pattern is too long"
-	ZMessages_SDriverNotCapableOutParameters,	"Driver is not capable to handle parameters"
 	ZMessages_SDriverWasNotFound,	"Requested database driver was not found"
 	ZMessages_SCanNotConnectToServer,	"Cannot connect to SQL server"
 	ZMessages_STableIsNotSpecified,	"Table is not specified"
@@ -192,12 +216,12 @@ BEGIN
 	ZMessages_SWrongTypeForBlobParameter,	"Wrong type for Blob parameter"
 	ZMessages_SIncorrectConnectionURL,	"Incorrect connection URL: %s"
 	ZMessages_SUnsupportedProtocol,	"Unsupported protocol: %s"
+	ZMessages_SUnsupportedByDriver,	"Driver can not support this feature natively: [%s]"
 	ZMessages_SConnectionIsNotOpened,	"Connection is not opened yet"
 	ZMessages_SInvalidOpInAutoCommit,	"Invalid operation in AutoCommit mode"
 	ZMessages_SInvalidOpInNonAutoCommit,	"Invalid operation in non AutoCommit mode"
+	ZMessages_SInvalidOpPrepare,	"Prepare transaction only possible on matching first(!) Starttransaction"
 	ZMessages_SConnectionIsNotAssigned,	"Database connection component is not assigned"
-	ZMessages_SQueryIsEmpty,	"SQL Query is empty"
-	ZMessages_SCanNotExecuteMoreQueries,	"Cannot execute more then one query"
 	ZMessages_SDecodeTimestampIsNotSupported,	"This version does not support isc_decode_sql_timestamp"
 	ZMessages_SCanNotRetrieveResultSetData,	"Cannot retrieve Resultset data"
 	ZMessages_SRowBufferIsNotAssigned,	"Row buffer is not assigned"

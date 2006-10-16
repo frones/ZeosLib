@@ -98,10 +98,10 @@
 {$DEFINE ENABLE_ORACLE}
 
 // Enables ASA support in TZConnection/TZDataset
-{.$DEFINE ENABLE_ASA}
+{$DEFINE ENABLE_ASA}
 
 // Supported language. Now available languages:
-// ENGLISH, GERMAN, PORTUGUESE, DUTCH, SPANISH
+// ENGLISH, GERMAN, PORTUGUESE, DUTCH, SPANISH, ROMANA, INDONESIAN
 {$DEFINE ENGLISH}
 
 // Prevents loading default libmysql.dll
@@ -168,4 +168,5 @@
 
 //PATCH TO DO NO METADATALOADING / UNTESTED HIGH RISK
 {.$DEFINE FOSNOMETA}
+
 
