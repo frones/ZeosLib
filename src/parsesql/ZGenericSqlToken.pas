@@ -67,8 +67,8 @@ type
     function NextToken(Stream: TStream; FirstChar: Char;
       Tokenizer: TZTokenizer): TZToken; override;
 
-    function EncodeString(Value: string; QuoteChar: Char): string; override;
-    function DecodeString(Value: string; QuoteChar: Char): string; override;
+    function EncodeString(const Value: string; QuoteChar: Char): string; override;
+    function DecodeString(const Value: string; QuoteChar: Char): string; override;
   end;
 
   {** Implements a default tokenizer object. }
@@ -181,7 +181,7 @@ end;
   @param QuoteChar a string quote character.
   @returns an encoded string.
 }
-function TZGenericSQLQuoteState.EncodeString(Value: string;
+function TZGenericSQLQuoteState.EncodeString(const Value: string;
   QuoteChar: Char): string;
 begin
   if QuoteChar in [#39, '"', '`'] then
@@ -195,13 +195,16 @@ end;
   @param QuoteChar a string quote character.
   @returns an decoded string.
 }
-function TZGenericSQLQuoteState.DecodeString(Value: string;
+function TZGenericSQLQuoteState.DecodeString(const Value: string;
   QuoteChar: Char): string;
+var
+  Len: Integer;
 begin
-  if (Length(Value) >= 2) and (QuoteChar in [#39, '"', '`'])
-    and (Value[1] = QuoteChar) and (Value[Length(Value)] = QuoteChar) then
+  Len := Length(Value);
+  if (Len >= 2) and (QuoteChar in [#39, '"', '`'])
+    and (Value[1] = QuoteChar) and (Value[Len] = QuoteChar) then
   begin
-    if Length(Value) > 2 then
+    if Len > 2 then
       Result := AnsiDequotedStr(Value, QuoteChar)
     else Result := '';
   end

@@ -56,10 +56,10 @@ type
     FSQLite28PlainDriver: IZSQLitePlainDriver;
     FSQLite3PlainDriver: IZSQLitePlainDriver;
   protected
-    function GetPlainDriver(Url: string): IZSQLitePlainDriver;
+    function GetPlainDriver(const Url: string): IZSQLitePlainDriver;
   public
     constructor Create;
-    function Connect(Url: string; Info: TStrings): IZConnection; override;
+    function Connect(const Url: string; Info: TStrings): IZConnection; override;
 
     function GetSupportedProtocols: TStringDynArray; override;
     function GetMajorVersion: Integer; override;
@@ -88,13 +88,13 @@ type
     procedure StartTransactionSupport;
 
   public
-    constructor Create(Driver: IZDriver; Url: string;
-      PlainDriver: IZSQLitePlainDriver; HostName: string; Port: Integer;
-      Database: string; User: string; Password: string; Info: TStrings);
+    constructor Create(Driver: IZDriver; const Url: string;
+      PlainDriver: IZSQLitePlainDriver; const HostName: string; Port: Integer;
+      const Database: string; const User: string; const Password: string; Info: TStrings);
     destructor Destroy; override;
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
-    function CreatePreparedStatement(SQL: string; Info: TStrings):
+    function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
 
     procedure Commit; override;
@@ -103,7 +103,7 @@ type
     procedure Open; override;
     procedure Close; override;
 
-    procedure SetCatalog(Catalog: string); override;
+    procedure SetCatalog(const Catalog: string); override;
     function GetCatalog: string; override;
 
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
@@ -156,7 +156,7 @@ end;
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
-function TZSQLiteDriver.Connect(Url: string; Info: TStrings): IZConnection;
+function TZSQLiteDriver.Connect(const Url: string; Info: TStrings): IZConnection;
 var
   TempInfo: TStrings;
   HostName, Database, UserName, Password: string;
@@ -232,7 +232,7 @@ end;
   @param Url a database connection URL.
   @return a selected protocol.
 }
-function TZSQLiteDriver.GetPlainDriver(Url: string): IZSQLitePlainDriver;
+function TZSQLiteDriver.GetPlainDriver(const Url: string): IZSQLitePlainDriver;
 var
   Protocol: string;
 begin
@@ -258,9 +258,9 @@ end;
   @param Password a user password.
   @param Info a string list with extra connection parameters.
 }
-constructor TZSQLiteConnection.Create(Driver: IZDriver; Url: string;
-  PlainDriver: IZSQLitePlainDriver; HostName: string; Port: Integer;
-  Database, User, Password: string; Info: TStrings);
+constructor TZSQLiteConnection.Create(Driver: IZDriver; const Url: string;
+  PlainDriver: IZSQLitePlainDriver; const HostName: string; Port: Integer;
+  const Database, User, Password: string; Info: TStrings);
 begin
   inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
     TZSQLiteDatabaseMetadata.Create(Self, Url, Info));
@@ -373,7 +373,7 @@ end;
   @return a new PreparedStatement object containing the
     pre-compiled statement
 }
-function TZSQLiteConnection.CreatePreparedStatement(SQL: string;
+function TZSQLiteConnection.CreatePreparedStatement(const SQL: string;
   Info: TStrings): IZPreparedStatement;
 begin
   if IsClosed then Open;
@@ -486,7 +486,7 @@ end;
   Sets a new selected catalog name.
   @param Catalog a selected catalog name.
 }
-procedure TZSQLiteConnection.SetCatalog(Catalog: string);
+procedure TZSQLiteConnection.SetCatalog(const Catalog: string);
 begin
   FCatalog := Catalog;
 end;

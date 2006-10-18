@@ -1,5 +1,5 @@
 package ZTestFramework;
-
+{$LIBSUFFIX '70'}
 {$R *.res}
 {$ALIGN 8}
 {$ASSERTIONS ON}
@@ -48,13 +48,13 @@ contains
   ZBugReport in '..\..\test\framework\ZBugReport.pas',
   ZPerformanceTestCase in '..\..\test\framework\ZPerformanceTestCase.pas',
 
-  MemCheck in '..\..\test\external\MemCheck.pas';
+  MemCheck in '..\..\test\external\MemCheck.pas',
 
-  {TestFrameWork in '..\..\test\external\TestFrameWork.pas',
+  TestFrameWork in '..\..\test\external\TestFrameWork.pas',
   TextTestRunner in '..\..\test\external\TextTestRunner.pas',
   GUITestRunner in '..\..\test\external\GUITestRunner.pas',
   ZMidasTestServer_TLB in '..\..\test\framework\ZMidasTestServer_TLB.pas',
-  ZMidasTestCase in '..\..\test\framework\ZMidasTestCase.pas';}
+  ZMidasTestCase in '..\..\test\framework\ZMidasTestCase.pas';
 
   {ZRemoteDM: TRemoteDataModule;}
 

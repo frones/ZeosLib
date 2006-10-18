@@ -66,6 +66,7 @@ type
   );
 
   TZPostgreSQLFieldCode=( // FirmOS
+        {$IFNDEF VER130}// not possible for Delphi5
             PG_DIAG_SEVERITY=ord('S'),
             PG_DIAG_SQLSTATE=ord('C'),
             PG_DIAG_MESSAGE_PRIMARY=ord('M'),
@@ -78,6 +79,20 @@ type
             PG_DIAG_SOURCE_FILE=ord('F'),
             PG_DIAG_SOURCE_LINE=ord('L'),
             PG_DIAG_SOURCE_FUNCTION=ord('R')
+        {$ELSE}
+            PG_DIAG_SEVERITY,
+            PG_DIAG_SQLSTATE,
+            PG_DIAG_MESSAGE_PRIMARY,
+            PG_DIAG_MESSAGE_DETAIL,
+            PG_DIAG_MESSAGE_HINT,
+            PG_DIAG_STATEMENT_POSITION,
+            PG_DIAG_INTERNAL_POSITION,
+            PG_DIAG_INTERNAL_QUERY,
+            PG_DIAG_CONTEXT,
+            PG_DIAG_SOURCE_FILE,
+            PG_DIAG_SOURCE_LINE,
+            PG_DIAG_SOURCE_FUNCTION
+        {$ENDIF}
             );
 
   TZPostgreSQLExecStatusType = (

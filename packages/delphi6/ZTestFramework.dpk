@@ -1,5 +1,5 @@
 package ZTestFramework;
-
+{$LIBSUFFIX '60'}
 {$R *.res}
 {$ALIGN 8}
 {$ASSERTIONS ON}
@@ -25,29 +25,33 @@ package ZTestFramework;
 {$IMPLICITBUILD OFF}
 
 requires
+  ZComponent,
+  ZCore,
+  ZDbc,
   rtl,
   dbrtl,
-  ZDbc,
-  ZComponent,
   dsnap,
-  dsnapcon;
+  dsnapcon,
+  ZParseSql,
+  ZPlain;
 
 contains
-  ZSqlTestCase in '..\..\test\framework\ZSqlTestCase.pas',
   ZTestConfig in '..\..\test\framework\ZTestConfig.pas',
   ZTestConsts in '..\..\test\framework\ZTestConsts.pas',
   ZTestDefinitions in '..\..\test\framework\ZTestDefinitions.pas',
+  ZSqlTestCase in '..\..\test\framework\ZSqlTestCase.pas',
   ZTestCase in '..\..\test\framework\ZTestCase.pas',
   ZBugReport in '..\..\test\framework\ZBugReport.pas',
   ZPerformanceTestCase in '..\..\test\framework\ZPerformanceTestCase.pas',
-  MemCheck in '..\..\test\external\MemCheck.pas';
 
-  {TextTestRunner in '..\..\test\external\TextTestRunner.pas',
+  MemCheck in '..\..\test\external\MemCheck.pas',
+
   TestFrameWork in '..\..\test\external\TestFrameWork.pas',
+  TextTestRunner in '..\..\test\external\TextTestRunner.pas',
   GUITestRunner in '..\..\test\external\GUITestRunner.pas',
   ZMidasTestServer_TLB in '..\..\test\framework\ZMidasTestServer_TLB.pas',
-  ZMidasTestCase in '..\..\test\framework\ZMidasTestCase.pas';}
+  ZMidasTestCase in '..\..\test\framework\ZMidasTestCase.pas';
 
-  {ZRemoteDM: TRemoteDataModule};
+  {ZRemoteDM: TRemoteDataModule;}
 
 end.

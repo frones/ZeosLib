@@ -69,8 +69,8 @@ type
     procedure ClearCompleted;
     procedure ClearUncompleted;
 
-    procedure ParseText(Text: string);
-    procedure ParseLine(Line: string);
+    procedure ParseText(const Text: string);
+    procedure ParseLine(const Line: string);
 
     property Delimiter: string read FDelimiter write FDelimiter;
     property DelimiterType: TZDelimiterType read FDelimiterType
@@ -170,7 +170,7 @@ end;
   The line appends with EOL character.
   @param Line a line to be parsed.
 }
-procedure TZSQLScriptParser.ParseLine(Line: string);
+procedure TZSQLScriptParser.ParseLine(const Line: string);
 begin
   ParseText(#10 + Line + #10);
 end;
@@ -179,7 +179,7 @@ end;
   Parses a complete text with several lines.
   @oaram Text a text of the SQL script to be parsed.
 }
-procedure TZSQLScriptParser.ParseText(Text: string);
+procedure TZSQLScriptParser.ParseText(const Text: string);
 var
   Tokens: TStrings;
   TokenType: TZTokenType;
@@ -189,7 +189,7 @@ var
   EndOfStatement: Boolean;
   Extract: Boolean;
 
-  function CountChars(Str: string; Chr: Char): Integer;
+  function CountChars(const Str: string; Chr: Char): Integer;
   var
     I: Integer;
   begin

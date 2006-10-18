@@ -1,5 +1,4 @@
 package ZPlain;
-
 {$R *.res}
 {$ALIGN 8}
 {$ASSERTIONS ON}
@@ -13,6 +12,7 @@ package ZPlain;
 {$OPENSTRINGS ON}
 {$OPTIMIZATION OFF}
 {$OVERFLOWCHECKS ON}
+{$RANGECHECKS ON}
 {$REFERENCEINFO ON}
 {$SAFEDIVIDE OFF}
 {$STACKFRAMES ON}
@@ -22,12 +22,14 @@ package ZPlain;
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
 {$DESCRIPTION 'Zeos Plain Database API'}
+{$LIBSUFFIX '100'}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
 
 requires
   ZCore,
-  rtl;
+  rtl,
+  vcl;
 
 contains
   ZPlainPostgreSqlDriver in '..\..\src\plain\ZPlainPostgreSqlDriver.pas',
@@ -39,6 +41,7 @@ contains
   ZPlainInterbase6 in '..\..\src\plain\ZPlainInterbase6.pas',
   ZPlainInterbaseDriver in '..\..\src\plain\ZPlainInterbaseDriver.pas',
   ZPlainLoader in '..\..\src\plain\ZPlainLoader.pas',
+  ZPlainMySqlConstants in '..\..\src\plain\ZPlainMySqlConstants.pas',
   ZPlainMySql320 in '..\..\src\plain\ZPlainMySql320.pas',
   ZPlainMySql323 in '..\..\src\plain\ZPlainMySql323.pas',
   ZPlainMySql40 in '..\..\src\plain\ZPlainMySql40.pas',
@@ -52,6 +55,8 @@ contains
   ZPlainFirebird10 in '..\..\src\plain\ZPlainFirebird10.pas',
   ZPlainFirebird15 in '..\..\src\plain\ZPlainFirebird15.pas',
   ZPlainFirebird20 in '..\..\src\plain\ZPlainFirebird20.pas',
+  ZPlainFirebirdDriver in '..\..\src\plain\ZPlainFirebirdDriver.pas',
+  ZPlainFirebirdInterbaseConstants in '..\..\src\plain\ZPlainFirebirdInterbaseConstants.pas',
   ZPlainAdoDriver in '..\..\src\plain\ZPlainAdoDriver.pas',
   ZPlainAdo in '..\..\src\plain\ZPlainAdo.pas',
   ZPlainOracleDriver in '..\..\src\plain\ZPlainOracleDriver.pas',

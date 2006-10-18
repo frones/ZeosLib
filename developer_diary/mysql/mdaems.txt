@@ -1,0 +1,27 @@
+20060414 : Corrected the temporary tables patch. Now it tries to get information on a 'non-existing' table, just in case it is a temporarary one. If it is temporary the table is added to the cache If it's not, the resulting error is suppressed but the table will stay unknown.
+
+20060414 : Enabled all connection options for mysql. Now one can add the desired options by adding them to the connections property strings.
+
+20060604 : Added new library functions to plain mysql drivers (4.0 and 5.0) -> PDO integration
+
+20060605 : Added new library functions to plain mysql drivers (4.1) -> PDO integration
+
+20060606 : Added new library functions to plain mysql drivers (3.23 and 3.20) -> PDO integration
+
+20060607 : Moved all duplicate types/vars/getaddresses to ZPlainMysql.inc
+
+20060609 : Lazarus for unix filename fix - Patch by Barko - See http://zeos.firmos.at/viewtopic.php?t=593
+
+20060611 : Added first simple embedded dll support - Written by mdaems
+
+20060613 : Rewrote ZPlainMysqlXX files to add embedded server support for versions 4.0,4.1,5 of  mysql - Written by mdaems
+
+20060620 : Various modifications/extentions to Mysql DBC and Plain driver units - Written by fduenas and mdaems
+
+20060802 : Changed for compatibility with C++ Builder 6 - by mdaems - see http://zeos.firmos.at/viewtopic.php?t=694
+
+20060819 : Changed mysql 3.x and 4.0 to deprecated - written by mdaems
+
+20060819 : Removed calls to Mysql datastructure where possible (Only necessary for mysql3.20) - written by mdaems
+
+20061003 : Added embedded startup option settings, dll's - Patch by Tohenk and Fduenas - See http://zeos.firmos.at/viewtopic.php?t=777

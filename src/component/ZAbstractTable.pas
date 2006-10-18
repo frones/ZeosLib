@@ -54,7 +54,7 @@ type
     FTableName: string;
 
   private
-    procedure SetTableName(Value: string);
+    procedure SetTableName(const Value: string);
 
   protected
   {$IFDEF WITH_IPROVIDER}
@@ -76,7 +76,7 @@ implementation
   Sets a new table name and generates a related SQL statement.
   @param Value a new name of table.
 }
-procedure TZAbstractTable.SetTableName(Value: string);
+procedure TZAbstractTable.SetTableName(const Value: string);
 begin
   if FTableName <> Value then
   begin

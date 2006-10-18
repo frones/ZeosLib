@@ -47,6 +47,10 @@ uses
 const
   MAXBUF = 65535;
 
+type
+  {** Silent exception }
+  EZMySQLSilentException = class(EAbort);
+
 {**
   Converts a MySQL native types into ZDBC SQL types.
   @param PlainDriver a native MySQL plain driver.
@@ -69,7 +73,7 @@ function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull: string): TZSQLType;
   @param Value a timestamp string.
   @return a decoded TDateTime value.
 }
-function MySQLTimestampToDateTime(Value: string): TDateTime;
+function MySQLTimestampToDateTime(const Value: string): TDateTime;
 
 {**
   Checks for possible sql errors.
@@ -79,11 +83,61 @@ function MySQLTimestampToDateTime(Value: string): TDateTime;
   @param LogMessage a logging message.
 }
 procedure CheckMySQLError(PlainDriver: IZMySQLPlainDriver;
-  Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; LogMessage: string);
+  Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; const LogMessage: string);
+
+procedure EnterSilentMySQLError;
+procedure LeaveSilentMySQLError;
+
+{**
+  Decodes a MySQL Version Value encoded with format:
+   (major_version * 10,000) + (minor_version * 100) + sub_version
+  into separated major, minor and subversion values
+  @param MySQLVersion an integer containing the MySQL Full Version to decode.
+  @param MajorVersion an integer containing the Major Version decoded.
+  @param MinorVersion an integer containing the Minor Version decoded.
+  @param SubVersion an integer contaning the Sub Version (revision) decoded.
+}
+procedure DecodeMySQLVersioning(const MySQLVersion: Integer;
+ out MajorVersion: Integer; out MinorVersion: Integer;
+ out SubVersion: Integer);
+
+{**
+  Encodes major, minor and subversion (revision) values in MySQL format:
+   (major_version * 10,000) + (minor_version * 100) + sub_version
+  For example, 4.1.12 is returned as 40112.
+  @param MajorVersion an integer containing the Major Version.
+  @param MinorVersion an integer containing the Minor Version.
+  @param SubVersion an integer containing the Sub Version (revision).
+  @return an integer containing the full version.
+}
+function EncodeMySQLVersioning(const MajorVersion: Integer;
+ const MinorVersion: Integer; const SubVersion: Integer): Integer;
+
+{**
+  Decodes a MySQL Version Value and Encodes it to a Zeos SQL Version format:
+   (major_version * 1,000,000) + (minor_version * 1,000) + sub_version
+  into separated major, minor and subversion values
+  @param MySQLVersion an integer containing the Full Version to decode.
+  @return Encoded Zeos SQL Version Value.
+}
+function ConvertMySQLVersionToSQLVersion( const MySQLVersion: Integer ): Integer;
 
 implementation
 
-uses ZMessages;
+uses ZMessages, Math;
+
+threadvar
+  SilentMySQLError: Integer;
+
+procedure EnterSilentMySQLError;
+begin
+  Inc(SilentMySQLError);
+end;
+
+procedure LeaveSilentMySQLError;
+begin
+  Dec(SilentMySQLError);
+end;
 
 {**
   Converts a MySQL native types into ZDBC SQL types.
@@ -122,7 +176,7 @@ begin
       end;
     FIELD_TYPE_FLOAT:
       Result := stFloat;
-    FIELD_TYPE_DECIMAL:
+    FIELD_TYPE_DECIMAL, FIELD_TYPE_NEWDECIMAL: {ADDED FIELD_TYPE_NEWDECIMAL by fduenas 20-06-2006}
       begin
         if PlainDriver.GetFieldDecimals(FieldHandle) = 0 then
         begin
@@ -282,7 +336,7 @@ end;
   @param Value a timestamp string.
   @return a decoded TDateTime value.
 }
-function MySQLTimestampToDateTime(Value: string): TDateTime;
+function MySQLTimestampToDateTime(const Value: string): TDateTime;
 var
   Year, Month, Day, Hour, Min, Sec: Integer;
   StrLength, StrPos: Integer;
@@ -347,7 +401,7 @@ end;
   @param LogMessage a logging message.
 }
 procedure CheckMySQLError(PlainDriver: IZMySQLPlainDriver;
-  Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; LogMessage: string);
+  Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; const LogMessage: string);
 var
   ErrorMessage: string;
   ErrorCode: Integer;
@@ -356,11 +410,65 @@ begin
   ErrorCode := PlainDriver.GetLastErrorCode(Handle);
   if (ErrorCode <> 0) and (ErrorMessage <> '') then
   begin
+    if SilentMySQLError > 0 then
+      raise EZMySQLSilentException.CreateFmt(SSQLError1, [ErrorMessage]);
+
     DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,
       ErrorCode, ErrorMessage);
     raise EZSQLException.CreateWithCode(ErrorCode,
       Format(SSQLError1, [ErrorMessage]));
   end;
+end;
+
+{**
+  Decodes a MySQL Version Value encoded with format:
+   (major_version * 10,000) + (minor_version * 100) + sub_version
+  into separated major, minor and subversion values
+  @param MySQLVersion an integer containing the MySQL Full Version to decode.
+  @param MajorVersion an integer containing the Major Version decoded.
+  @param MinorVersion an integer containing the Minor Version decoded.
+  @param SubVersion an integer contaning the Sub Version (revision) decoded.
+}
+procedure DecodeMySQLVersioning(const MySQLVersion: Integer;
+ out MajorVersion: Integer; out MinorVersion: Integer;
+ out SubVersion: Integer);
+begin
+ MajorVersion := Trunc(MySQLVersion/10000);
+ MinorVersion := Trunc((MySQLVersion-(MajorVersion*10000))/100);
+ SubVersion   := Trunc((MySQLVersion-(MajorVersion*10000)-(MinorVersion*100)));
+end;
+
+{**
+  Encodes major, minor and subversion (revision) values in MySQL format:
+   (major_version * 10,000) + (minor_version * 100) + sub_version
+  For example, 4.1.12 is returned as 40112.
+  @param MajorVersion an integer containing the Major Version.
+  @param MinorVersion an integer containing the Minor Version.
+  @param SubVersion an integer containing the Sub Version (revision).
+  @return an integer containing the full version.
+}
+function EncodeMySQLVersioning(const MajorVersion: Integer;
+ const MinorVersion: Integer; const SubVersion: Integer): Integer;
+begin
+ Result := (MajorVersion * 10000) + (MinorVersion * 100) + SubVersion;
+end;
+
+{**
+  Decodes a MySQL Version Value and Encodes it to a Zeos SQL Version format:
+   (major_version * 1,000,000) + (minor_version * 1,000) + sub_version
+  into separated major, minor and subversion values
+  So it transforms a version in format XYYZZ to XYYYZZZ where:
+   X = major_version
+   Y = minor_version
+   Z = sub version
+  @param MySQLVersion an integer containing the Full MySQL Version to decode.
+  @return Encoded Zeos SQL Version Value.
+}
+function ConvertMySQLVersionToSQLVersion( const MySQLVersion: Integer ): integer;
+var MajorVersion, MinorVersion, SubVersion: Integer;
+begin
+ DecodeMySQLVersioning(MySQLVersion,MajorVersion,MinorVersion,SubVersion);
+ Result := EncodeSQLVersioning(MajorVersion,MinorVersion,SubVersion);
 end;
 
 end.

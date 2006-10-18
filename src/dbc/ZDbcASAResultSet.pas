@@ -110,17 +110,17 @@ type
     procedure UpdateDouble(ColumnIndex: Integer; Value: Double); override;
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended); override;
     procedure UpdatePChar(ColumnIndex: Integer; Value: PChar); override;
-    procedure UpdateString(ColumnIndex: Integer; Value: string); override;
-    procedure UpdateUnicodeString(ColumnIndex: Integer; Value: WideString);
+    procedure UpdateString(ColumnIndex: Integer; const Value: string); override;
+    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString);
       override;
-    procedure UpdateBytes(ColumnIndex: Integer; Value: TByteDynArray); override;
+    procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray); override;
     procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime); override;
     procedure UpdateTime(ColumnIndex: Integer; Value: TDateTime); override;
     procedure UpdateTimestamp(ColumnIndex: Integer; Value: TDateTime); override;
     procedure UpdateAsciiStream(ColumnIndex: Integer; Value: TStream); override;
     procedure UpdateUnicodeStream(ColumnIndex: Integer; Value: TStream); override;
     procedure UpdateBinaryStream(ColumnIndex: Integer; Value: TStream); override;
-    procedure UpdateValue(ColumnIndex: Integer; Value: TZVariant); override;
+    procedure UpdateValue(ColumnIndex: Integer; const Value: TZVariant); override;
 
     procedure InsertRow; override;
     procedure UpdateRow; override;
@@ -773,19 +773,19 @@ begin
   FUpdateSqlData.UpdatePChar( ColumnIndex, Value);
 end;
 
-procedure TZASAResultSet.UpdateString(ColumnIndex: Integer; Value: string);
+procedure TZASAResultSet.UpdateString(ColumnIndex: Integer; const Value: string);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.UpdateString( ColumnIndex, Value);
 end;
 
-procedure TZASAResultSet.UpdateUnicodeString(ColumnIndex: Integer; Value: WideString);
+procedure TZASAResultSet.UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.UpdatePChar( ColumnIndex, PChar( Value));
 end;
 
-procedure TZASAResultSet.UpdateBytes(ColumnIndex: Integer; Value: TByteDynArray);
+procedure TZASAResultSet.UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.UpdateBytes( ColumnIndex, Value);
@@ -827,7 +827,7 @@ begin
   FUpdateSqlData.WriteBlob( ColumnIndex, Value);
 end;
 
-procedure TZASAResultSet.UpdateValue(ColumnIndex: Integer; Value: TZVariant);
+procedure TZASAResultSet.UpdateValue(ColumnIndex: Integer; const Value: TZVariant);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.UpdateValue( ColumnIndex, EncodeVariant( Value));

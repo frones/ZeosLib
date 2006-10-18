@@ -59,7 +59,8 @@ type
     property DataSource;
     property MasterFields;
     property MasterSource;
-    property IndexFieldNames;
+    property LinkedFields; {renamed by bangfauzan}
+    property IndexFieldNames; {bangfauzan addition}
     property Options;
   end;
 
@@ -76,7 +77,8 @@ type
     property DataSource;
     property MasterFields;
     property MasterSource;
-    property IndexFieldNames;
+    property LinkedFields; {renamed by bangfauzan}
+    property IndexFieldNames; {bangfauzan addition}
     property UpdateMode;
     property WhereMode;
     property Options;
@@ -94,7 +96,8 @@ type
     property Properties;
     property MasterFields;
     property MasterSource;
-    property IndexFieldNames;
+    property LinkedFields; {renamed by bangfauzan}
+    property IndexFieldNames; {bangfauzan addition}
     property UpdateMode;
     property WhereMode;
     property Options;

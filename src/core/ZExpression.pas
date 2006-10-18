@@ -77,13 +77,13 @@ type
     function GetCount: Integer;
     function GetName(Index: Integer): string;
     function GetValue(Index: Integer): TZVariant;
-    procedure SetValue(Index: Integer; Value: TZVariant);
-    function GetValueByName(Name: string): TZVariant;
-    procedure SetValueByName(Name: string; Value: TZVariant);
+    procedure SetValue(Index: Integer; const Value: TZVariant);
+    function GetValueByName(const Name: string): TZVariant;
+    procedure SetValueByName(const Name: string; const Value: TZVariant);
 
-    procedure Add(Name: string; Value: TZVariant);
-    procedure Remove(Name: string);
-    function FindByName(Name: string): Integer;
+    procedure Add(const Name: string; const Value: TZVariant);
+    procedure Remove(const Name: string);
+    function FindByName(const Name: string): Integer;
 
     procedure ClearValues;
     procedure Clear;
@@ -91,7 +91,7 @@ type
     property Count: Integer read GetCount;
     property Names[Index: Integer]: string read GetName;
     property Values[Index: Integer]: TZVariant read GetValue write SetValue;
-    property NamedValues[Index: string]: TZVariant read GetValueByName
+    property NamedValues[const Index: string]: TZVariant read GetValueByName
       write SetValueByName;
   end;
 
@@ -115,8 +115,8 @@ type
     function GetFunction(Index: Integer): IZFunction;
 
     procedure Add(Func: IZFunction);
-    procedure Remove(Name: string);
-    function FindByName(Name: string): Integer;
+    procedure Remove(const Name: string);
+    function FindByName(const Name: string): Integer;
     procedure Clear;
 
     property Count: Integer read GetCount;
@@ -131,7 +131,7 @@ type
     function GetTokenizer: IZTokenizer;
     procedure SetTokenizer(Value: IZTokenizer);
     function GetExpression: string;
-    procedure SetExpression(Value: string);
+    procedure SetExpression(const Value: string);
     function GetVariantManager: IZVariantManager;
     procedure SetVariantManager(Value: IZVariantManager);
     function GetDefaultVariables: IZVariablesList;
@@ -176,7 +176,7 @@ type
     function GetTokenizer: IZTokenizer;
     procedure SetTokenizer(Value: IZTokenizer);
     function GetExpression: string;
-    procedure SetExpression(Value: string);
+    procedure SetExpression(const Value: string);
     function GetVariantManager: IZVariantManager;
     procedure SetVariantManager(Value: IZVariantManager);
     function GetDefaultVariables: IZVariablesList;
@@ -187,7 +187,7 @@ type
     procedure SetAutoVariables(Value: Boolean);
   public
     constructor Create;
-    constructor CreateWithExpression(Expression: string);
+    constructor CreateWithExpression(const Expression: string);
     destructor Destroy; override;
 
     function Evaluate: TZVariant;
@@ -330,7 +330,7 @@ end;
   Creates this expression calculator and assignes expression string.
   @param Expression an expression string.
 }
-constructor TZExpression.CreateWithExpression(Expression: string);
+constructor TZExpression.CreateWithExpression(const Expression: string);
 begin
   Create;
   SetExpression(Expression);
@@ -417,7 +417,7 @@ end;
   Sets a new expression string.
   @param Value a new expression string.
 }
-procedure TZExpression.SetExpression(Value: string);
+procedure TZExpression.SetExpression(const Value: string);
 begin
   TZExpressionParser(FParser).Expression := Value;
   if FAutoVariables then

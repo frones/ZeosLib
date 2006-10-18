@@ -1,0 +1,11 @@
+20060418 : Memory leak bug fixed by DavidVTailor - See http://seegernet.koolhost.de/zeosforum/viewtopic.php?t=461
+
+20060707 : Added separate drivers for embedded Firebird server - Patch by Terence - see http://zeos.firmos.at/viewtopic.php?t=630
+
+20060707 : Correction of patch above : added support for non-strict dllloading - Written by mdaems
+
+20060710 : Integrated contribution from Terence : separated Firebird from interbase/strict dll loading for Firebird
+
+20060726 : Bytea/blob - PostgreSQL - UNICODE/UTF8 - patch by aperger - see http://zeos.firmos.at/viewtopic.php?t=683
+
+20060802 : Integrated patch from Fduenas concerning http://zeos.firmos.at/viewtopic.php?t=677

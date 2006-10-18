@@ -54,13 +54,9 @@ USEUNIT("..\..\src\plain\ZPlainMySql323.pas");
 
 USEUNIT("..\..\src\plain\ZPlainMySqlDriver.pas");
 
-USEUNIT("..\..\src\plain\ZPlainPostgreSql73.pas");
+USEUNIT("..\..\src\plain\ZPlainPostgreSql7.pas");
 
-USEUNIT("..\..\src\plain\ZPlainPostgreSql74.pas");
-
-USEUNIT("..\..\src\plain\ZPlainPostgreSql80.pas");
-
-USEUNIT("..\..\src\plain\ZPlainPostgreSql81.pas");
+USEUNIT("..\..\src\plain\ZPlainPostgreSql8.pas");
 
 USEUNIT("..\..\src\plain\ZPlainSqLiteDriver.pas");
 

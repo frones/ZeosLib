@@ -102,8 +102,8 @@ type
   public
     destructor Destroy; override;
 
-    function ExecuteQuery(SQL: string): IZResultSet; virtual;
-    function ExecuteUpdate(SQL: string): Integer; virtual;
+    function ExecuteQuery(const SQL: string): IZResultSet; virtual;
+    function ExecuteUpdate(const SQL: string): Integer; virtual;
     procedure Close; virtual;
 
     function GetMaxFieldSize: Integer; virtual;
@@ -114,9 +114,9 @@ type
     function GetQueryTimeout: Integer; virtual;
     procedure SetQueryTimeout(Value: Integer); virtual;
     procedure Cancel; virtual;
-    procedure SetCursorName(Value: string); virtual;
+    procedure SetCursorName(const Value: string); virtual;
 
-    function Execute(SQL: string): Boolean; virtual;
+    function Execute(const SQL: string): Boolean; virtual;
     function GetResultSet: IZResultSet; virtual;
     function GetUpdateCount: Integer; virtual;
     function GetMoreResults: Boolean; virtual;
@@ -136,7 +136,7 @@ type
     procedure SetLocateUpdates(Value: TZLocateUpdatesMode);
     function GetLocateUpdates: TZLocateUpdatesMode;
 
-    procedure AddBatch(SQL: string); virtual;
+    procedure AddBatch(const SQL: string); virtual;
     procedure ClearBatch; virtual;
     function ExecuteBatch: TIntegerDynArray; virtual;
 
@@ -156,10 +156,10 @@ type
     FInParamDefaultValues: TStringDynArray;
     FInParamCount: Integer;
   protected
-    constructor Create(Connection: IZConnection; SQL: string; Info: TStrings);
+    constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
     procedure SetInParamCount(NewParamCount: Integer); virtual;
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
-      Value: TZVariant); virtual;
+      const Value: TZVariant); virtual;
 
     property SQL: string read FSQL write FSQL;
     property InParamValues: TZVariantDynArray
@@ -176,7 +176,7 @@ type
     function ExecuteUpdatePrepared: Integer; virtual;
     function ExecutePrepared: Boolean; virtual;
 
-    procedure SetDefaultValue(ParameterIndex: Integer; Value: string);
+    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
 
     procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType); virtual;
     procedure SetBoolean(ParameterIndex: Integer; Value: Boolean); virtual;
@@ -188,10 +188,10 @@ type
     procedure SetDouble(ParameterIndex: Integer; Value: Double); virtual;
     procedure SetBigDecimal(ParameterIndex: Integer; Value: Extended); virtual;
     procedure SetPChar(ParameterIndex: Integer; Value: PChar); virtual;
-    procedure SetString(ParameterIndex: Integer; Value: string); virtual;
+    procedure SetString(ParameterIndex: Integer; const Value: string); virtual;
     procedure SetUnicodeString(ParameterIndex: Integer;
-      Value: WideString); virtual;
-    procedure SetBytes(ParameterIndex: Integer; Value: TByteDynArray); virtual;
+      const Value: WideString); virtual;
+    procedure SetBytes(ParameterIndex: Integer; const Value: TByteDynArray); virtual;
     procedure SetDate(ParameterIndex: Integer; Value: TDateTime); virtual;
     procedure SetTime(ParameterIndex: Integer; Value: TDateTime); virtual;
     procedure SetTimestamp(ParameterIndex: Integer; Value: TDateTime); virtual;
@@ -200,7 +200,7 @@ type
     procedure SetBinaryStream(ParameterIndex: Integer; Value: TStream); virtual;
     procedure SetBlob(ParameterIndex: Integer; SQLType: TZSQLType;
       Value: IZBlob); virtual;
-    procedure SetValue(ParameterIndex: Integer; Value: TZVariant); virtual;
+    procedure SetValue(ParameterIndex: Integer; const Value: TZVariant); virtual;
 
     procedure ClearParameters; virtual;
 
@@ -278,9 +278,9 @@ type
 
     procedure Close; override;
 
-    function ExecuteQuery(SQL: string): IZResultSet; override;
-    function ExecuteUpdate(SQL: string): Integer; override;
-    function Execute(SQL: string): Boolean; override;
+    function ExecuteQuery(const SQL: string): IZResultSet; override;
+    function ExecuteUpdate(const SQL: string): Integer; override;
+    function Execute(const SQL: string): Boolean; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -362,7 +362,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZAbstractStatement.ExecuteQuery(SQL: string): IZResultSet;
+function TZAbstractStatement.ExecuteQuery(const SQL: string): IZResultSet;
 begin
   Result := nil;
   RaiseUnsupportedException;
@@ -379,7 +379,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZAbstractStatement.ExecuteUpdate(SQL: string): Integer;
+function TZAbstractStatement.ExecuteUpdate(const SQL: string): Integer;
 begin
   Result := 0;
   RaiseUnsupportedException;
@@ -563,7 +563,7 @@ end;
 
   @param name the new cursor name, which must be unique within a connection
 }
-procedure TZAbstractStatement.SetCursorName(Value: string);
+procedure TZAbstractStatement.SetCursorName(const Value: string);
 begin
   FCursorName := Value;
 end;
@@ -591,7 +591,7 @@ end;
   @see #getUpdateCount
   @see #getMoreResults
 }
-function TZAbstractStatement.Execute(SQL: string): Boolean;
+function TZAbstractStatement.Execute(const SQL: string): Boolean;
 begin
   Result := False;
   LastResultSet := nil;
@@ -801,7 +801,7 @@ end;
   @param sql typically this is a static SQL <code>INSERT</code> or
   <code>UPDATE</code> statement
 }
-procedure TZAbstractStatement.AddBatch(SQL: string);
+procedure TZAbstractStatement.AddBatch(const SQL: string);
 begin
   FBatchQueries.Add(SQL);
 end;
@@ -896,7 +896,7 @@ end;
   @param Info a statement parameters.
 }
 constructor TZAbstractPreparedStatement.Create(Connection: IZConnection;
-  SQL: string; Info: TStrings);
+  const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, Info);
   FSQL := SQL;
@@ -941,7 +941,7 @@ end;
   @paran Value a new parameter value.
 }
 procedure TZAbstractPreparedStatement.SetInParam(ParameterIndex: Integer;
-  SQLType: TZSQLType; Value: TZVariant);
+  SQLType: TZSQLType; const Value: TZVariant);
 begin
   if ParameterIndex >= FInParamCount then
     SetInParamCount(ParameterIndex);
@@ -987,7 +987,7 @@ end;
   @param Value the default value normally defined in the field's DML SQL statement
 }
 procedure TZAbstractPreparedStatement.SetDefaultValue(
-  ParameterIndex: Integer; Value: string);
+  ParameterIndex: Integer; const Value: string);
 begin
  if ParameterIndex >= FInParamCount then
    SetInParamCount(ParameterIndex);
@@ -1176,7 +1176,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetString(ParameterIndex: Integer;
-  Value: string);
+  const Value: string);
 var
   Temp: TZVariant;
 begin
@@ -1196,7 +1196,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetUnicodeString(ParameterIndex: Integer;
-  Value: WideString);
+  const Value: WideString);
 var
   Temp: TZVariant;
 begin
@@ -1214,7 +1214,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetBytes(ParameterIndex: Integer;
-  Value: TByteDynArray);
+  const Value: TByteDynArray);
 var
   Temp: TZVariant;
 begin
@@ -1363,7 +1363,7 @@ end;
   @param Value the variant value.
 }
 procedure TZAbstractPreparedStatement.SetValue(ParameterIndex: Integer;
-  Value: TZVariant);
+  const Value: TZVariant);
 var
   SQLType: TZSQLType;
 begin
@@ -1940,7 +1940,7 @@ end;
   @return <code>true</code> if the next result is a <code>ResultSet</code> object;
   <code>false</code> if it is an update count or there are no more results
 }
-function TZEmulatedPreparedStatement.Execute(SQL: string): Boolean;
+function TZEmulatedPreparedStatement.Execute(const SQL: string): Boolean;
 begin
   LastStatement := GetExecStatement;
   Result := LastStatement.Execute(SQL);
@@ -1956,7 +1956,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZEmulatedPreparedStatement.ExecuteQuery(SQL: string): IZResultSet;
+function TZEmulatedPreparedStatement.ExecuteQuery(const SQL: string): IZResultSet;
 begin
   Result := GetExecStatement.ExecuteQuery(SQL);
 end;
@@ -1972,7 +1972,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZEmulatedPreparedStatement.ExecuteUpdate(SQL: string): Integer;
+function TZEmulatedPreparedStatement.ExecuteUpdate(const SQL: string): Integer;
 begin
   Result := GetExecStatement.ExecuteUpdate(SQL);
   LastUpdateCount := Result;

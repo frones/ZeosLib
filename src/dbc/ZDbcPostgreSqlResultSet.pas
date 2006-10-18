@@ -53,7 +53,6 @@ type
     FHandle: PZPostgreSQLConnect;
     FQueryHandle: PZPostgreSQLResult;
     FPlainDriver: IZPostgreSQLPlainDriver;
-    function GetRawString(ColumnIndex: Integer): string;
   protected
     procedure Open; override;
     procedure DefinePostgreSQLToSQLType(ColumnIndex: Integer;
@@ -294,7 +293,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZPostgreSQLResultSet.GetRawString(ColumnIndex: Integer): string;
+function TZPostgreSQLResultSet.GetString(ColumnIndex: Integer): string;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
@@ -313,16 +312,6 @@ begin
 end;
 
 {**
-  Returns string reverted from escaped string.   
-}
-function TZPostgreSQLResultSet.GetString(ColumnIndex: Integer): String;
-begin
-//  Result := DecodeString(GetRawString(ColumnIndex));
-//FOSPATCH Why Decode a String ???
-  Result := GetRawString(ColumnIndex);
-end;
-
-{**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
   a <code>boolean</code> in the Java programming language.
@@ -338,7 +327,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-  Temp := UpperCase(GetRawString(ColumnIndex));
+  Temp := UpperCase(GetString(ColumnIndex));
   Result := (Temp = 'Y') or (Temp = 'YES') or (Temp = 'T') or
     (Temp = 'TRUE') or (StrToIntDef(Temp, 0) <> 0);
 end;
@@ -357,7 +346,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  Result := ShortInt(StrToIntDef(GetRawString(ColumnIndex), 0));
+  Result := ShortInt(StrToIntDef(GetString(ColumnIndex), 0));
 end;
 
 {**
@@ -374,7 +363,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
-  Result := SmallInt(StrToIntDef(GetRawString(ColumnIndex), 0));
+  Result := SmallInt(StrToIntDef(GetString(ColumnIndex), 0));
 end;
 
 {**
@@ -391,7 +380,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
-  Result := StrToIntDef(GetRawString(ColumnIndex), 0);
+  Result := StrToIntDef(GetString(ColumnIndex), 0);
 end;
 
 {**
@@ -408,7 +397,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-  Result := StrToInt64Def(GetRawString(ColumnIndex), 0);
+  Result := StrToInt64Def(GetString(ColumnIndex), 0);
 end;
 
 {**
@@ -425,7 +414,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
-  Result := SQLStrToFloatDef(GetRawString(ColumnIndex), 0);
+  Result := SQLStrToFloatDef(GetString(ColumnIndex), 0);
 end;
 
 {**
@@ -442,7 +431,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
-  Result := SQLStrToFloatDef(GetRawString(ColumnIndex), 0);
+  Result := SQLStrToFloatDef(GetString(ColumnIndex), 0);
 end;
 
 {**
@@ -460,7 +449,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
-  Result := SQLStrToFloatDef(GetRawString(ColumnIndex), 0);
+  Result := SQLStrToFloatDef(GetString(ColumnIndex), 0);
 end;
 
 {**
@@ -478,7 +467,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
 {$ENDIF}
-  Result := StrToBytes(GetString(ColumnIndex));
+  Result := StrToBytes(DecodeString(GetString(ColumnIndex)));
 end;
 
 {**
@@ -497,7 +486,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
-  Value := GetRawString(ColumnIndex);
+  Value := GetString(ColumnIndex);
   if IsMatch('????-??-??*', Value) then
     Result := Trunc(AnsiSQLDateToDateTime(Value))
   else Result := Trunc(MySQLTimestampToDateTime(Value));
@@ -519,7 +508,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-  Value := GetRawString(ColumnIndex);
+  Value := GetString(ColumnIndex);
   if IsMatch('*??:??:??*', Value) then
     Result := Frac(AnsiSQLDateToDateTime(Value))
   else Result := Frac(MySQLTimestampToDateTime(Value));
@@ -542,7 +531,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
 {$ENDIF}
-  Value := GetRawString(ColumnIndex);
+  Value := GetString(ColumnIndex);
   if IsMatch('????-??-??*', Value) then
     Result := AnsiSQLDateToDateTime(Value)
   else Result := MySQLTimestampToDateTime(Value);
@@ -573,7 +562,7 @@ begin
     and (Statement.GetConnection as IZPostgreSQLConnection).IsOidAsBlob then
   begin
     if FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1, ColumnIndex - 1) = 0 then
-      BlobOid := StrToIntDef(GetRawString(ColumnIndex), 0)
+      BlobOid := StrToIntDef(GetString(ColumnIndex), 0)
     else BlobOid := 0;
 
     Result := TZPostgreSQLBlob.Create(FPlainDriver, nil, 0, FHandle, BlobOid);
@@ -585,7 +574,7 @@ begin
       Stream := nil;
       try
 //        Stream := TStringStream.Create(DecodeString(GetRawString(ColumnIndex)));
-        Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(GetRawString(ColumnIndex)));
+        Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)));
         Result := TZAbstractBlob.CreateWithStream(Stream);
       finally
         if Assigned(Stream) then
@@ -701,7 +690,7 @@ begin
   if not Updated and (FBlobOid > 0) then
   begin
     BlobHandle := FPlainDriver.OpenLargeObject(FHandle, FBlobOid, INV_READ);
-    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther,'Read Large Object',nil);
+    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Read Large Object',nil);
     if BlobHandle >= 0 then
     begin
       ReadStream := TMemoryStream.Create;
@@ -742,14 +731,12 @@ begin
   if FBlobOid = 0 then
   begin
     FBlobOid := FPlainDriver.CreateLargeObject(FHandle, INV_WRITE);
-    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther,
-      'Create Large Object',nil);
+    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Create Large Object',nil);
   end;
 
   { Opens and writes a large object. }
   BlobHandle := FPlainDriver.OpenLargeObject(FHandle, FBlobOid, INV_WRITE);
-  CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther,
-    'Open Large Object',nil);
+  CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Open Large Object',nil);
 
   Position := 0;
   while Position < BlobSize do
@@ -759,14 +746,12 @@ begin
     else Size := 1024;
     FPlainDriver.WriteLargeObject(FHandle, BlobHandle,
       Pointer(LongInt(BlobData) + Position), Size);
-    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther,
-      'Write Large Object',nil);
+    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Write Large Object',nil);
     Inc(Position, Size);
   end;
 
   FPlainDriver.CloseLargeObject(FHandle, BlobHandle);
-  CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther,
-    'Close Large Object',nil);
+  CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Close Large Object',nil);
 end;
 
 {**

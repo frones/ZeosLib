@@ -58,16 +58,26 @@ uses
   ZTestDbcResultSetMetadata in '..\..\test\dbc\ZTestDbcResultSetMetadata.pas',
   ZTestDbcResolver in '..\..\test\dbc\ZTestDbcResolver.pas',
   ZTestDbcMetadata in '..\..\test\dbc\ZTestDbcMetadata.pas',
-  ZTestDbcGeneric in '..\..\test\dbc\ZTestDbcGeneric.pas',
+{$IFDEF ENABLE_INTERBASE}
   ZTestDbcInterbaseMetadata in '..\..\test\dbc\ZTestDbcInterbaseMetadata.pas',
   ZTestDbcInterbase in '..\..\test\dbc\ZTestDbcInterbase.pas',
+{$ENDIF}
+{$IFDEF ENABLE_MYSQL}
   ZTestDbcMySqlMetadata in '..\..\test\dbc\ZTestDbcMySqlMetadata.pas',
   ZTestDbcMySql in '..\..\test\dbc\ZTestDbcMySql.pas',
+{$ENDIF}
+{$IFDEF ENABLE_POSTGRESQL}
   ZTestDbcPostgreSqlMetadata in '..\..\test\dbc\ZTestDbcPostgreSqlMetadata.pas',
   ZTestDbcPostgreSql in '..\..\test\dbc\ZTestDbcPostgreSql.pas',
+{$ENDIF}
   ZTestDbcMsSql in '..\..\test\dbc\ZTestDbcMsSql.pas',
+{$IFDEF ENABLE_ORACLE}
   ZTestDbcOracle in '..\..\test\dbc\ZTestDbcOracle.pas',
-  ZTestDbcSqLite in '..\..\test\dbc\ZTestDbcSqLite.pas';
+{$ENDIF}
+{$IFDEF ENABLE_SQLITE}
+  ZTestDbcSqLite in '..\..\test\dbc\ZTestDbcSqLite.pas',
+{$ENDIF}
+  ZTestDbcGeneric in '..\..\test\dbc\ZTestDbcGeneric.pas';
 
 begin
   TestGroup := DBC_TEST_GROUP;

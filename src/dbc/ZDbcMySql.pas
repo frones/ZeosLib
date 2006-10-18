@@ -45,21 +45,29 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection,ZPlainMySqlDriver,
-  ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser;
+  ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection, ZPlainMySqlDriver,
+  ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser, ZPlainMysqlConstants;
 
 type
 
   {** Implements MySQL Database Driver. }
   TZMySQLDriver = class(TZAbstractDriver)
   private
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
+    FMySQL320PlainDriver: IZMySQLPlainDriver;
+    FMySQL323PlainDriver: IZMySQLPlainDriver;
+    FMySQL40PlainDriver: IZMySQLPlainDriver;
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
     FMySQL41PlainDriver: IZMySQLPlainDriver;
     FMySQL5PlainDriver: IZMySQLPlainDriver;
+    // embedded drivers
+    FMySQLD41PlainDriver: IZMySQLPlainDriver;
+    FMySQLD5PlainDriver: IZMySQLPlainDriver;
   protected
-    function GetPlainDriver(Url: string): IZMySQLPlainDriver;
+    function GetPlainDriver(const Url: string): IZMySQLPlainDriver;
   public
     constructor Create;
-    function Connect(Url: string; Info: TStrings): IZConnection; override;
+    function Connect(const Url: string; Info: TStrings): IZConnection; override;
 
     function GetSupportedProtocols: TStringDynArray; override;
     function GetMajorVersion: Integer; override;
@@ -85,31 +93,35 @@ type
     FHandle: PZMySQLConnect;
     FClientCodePage: string;
   public
-    constructor Create(Driver: IZDriver; Url: string;
-      PlainDriver: IZMySQLPlainDriver; HostName: string; Port: Integer;
-      Database: string; User: string; Password: string; Info: TStrings);
+    constructor Create(Driver: IZDriver; const Url: string;
+      PlainDriver: IZMySQLPlainDriver; const HostName: string; Port: Integer;
+      const Database: string; const User: string; const Password: string; Info: TStrings);
     destructor Destroy; override;
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
-    function CreatePreparedStatement(SQL: string; Info: TStrings):
+    function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
 
     procedure Commit; override;
     procedure Rollback; override;
 
-    procedure Ping_Server;override;
+    function PingServer: Integer; override;
 
     procedure Open; override;
     procedure Close; override;
 
-    procedure SetCatalog(Catalog: string); override;
+    procedure SetCatalog(const Catalog: string); override;
     function GetCatalog: string; override;
 
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     procedure SetAutoCommit(AutoCommit: Boolean); override;
-
+    {ADDED by fduenas 15-06-2006}
+    function GetClientVersion: Integer; override;
+    function GetHostVersion: Integer; override;
+    {END ADDED by fduenas 15-06-2006}
     function GetPlainDriver: IZMySQLPlainDriver;
     function GetConnectionHandle: PZMySQLConnect;
+    function GetDescription: AnsiString;
   end;
 
 
@@ -130,8 +142,16 @@ uses
 }
 constructor TZMySQLDriver.Create;
 begin
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
+  FMySQL320PlainDriver := TZMySQL320PlainDriver.Create;
+  FMySQL323PlainDriver := TZMySQL323PlainDriver.Create;
+  FMySQL40PlainDriver  := TZMySQL40PlainDriver.Create;
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
   FMySQL41PlainDriver  := TZMySQL41PlainDriver.Create;
   FMySQL5PlainDriver   := TZMySQL5PlainDriver.Create;
+  // embedded drivers
+  FMySQLD41PlainDriver  := TZMySQLD41PlainDriver.Create;
+  FMySQLD5PlainDriver   := TZMySQLD5PlainDriver.Create;
 end;
 
 {**
@@ -157,7 +177,7 @@ end;
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
-function TZMySQLDriver.Connect(Url: string; Info: TStrings): IZConnection;
+function TZMySQLDriver.Connect(const Url: string; Info: TStrings): IZConnection;
 var
   TempInfo: TStrings;
   HostName, Database, UserName, Password: string;
@@ -169,6 +189,9 @@ begin
     PlainDriver := GetPlainDriver(Url);
     ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
       UserName, Password, TempInfo);
+    // PATCH ADDED BY tohenk
+    if PlainDriver <> nil then
+      PlainDriver.BuildArguments(TempInfo);
     Result := TZMySQLConnection.Create(Self, Url, PlainDriver, HostName, Port,
       Database, UserName, Password, TempInfo);
   finally
@@ -221,11 +244,34 @@ end;
   For example: mysql, oracle8 or postgresql72
 }
 function TZMySQLDriver.GetSupportedProtocols: TStringDynArray;
+var i : smallint;
 begin
-  SetLength(Result, 6);
-  Result[0] := 'mysql';
-  Result[1] := FMySQL41PlainDriver.GetProtocol;
-  Result[2] := FMySQL5PlainDriver.GetProtocol;
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
+  SetLength(Result, 8);
+{$ELSE}
+  SetLength(Result, 5);
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
+  i := 0;
+  // Generic driver
+  Result[i] := 'mysql';
+  inc(i);
+
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
+  Result[i] := FMySQL320PlainDriver.GetProtocol;
+  inc(i);
+  Result[i] := FMySQL323PlainDriver.GetProtocol;
+  inc(i);
+  Result[i] := FMySQL40PlainDriver.GetProtocol;
+  inc(i);
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
+  Result[i] := FMySQL41PlainDriver.GetProtocol;
+  inc(i);
+  Result[i] := FMySQL5PlainDriver.GetProtocol;
+  inc(i);
+  // embedded drivers
+  Result[i] := FMySQLD41PlainDriver.GetProtocol;
+  inc(i);
+  Result[i] := FMySQLD5PlainDriver.GetProtocol;
 end;
 
 {**
@@ -233,15 +279,30 @@ end;
   @param Url a database connection URL.
   @return a selected protocol.
 }
-function TZMySQLDriver.GetPlainDriver(Url: string): IZMySQLPlainDriver;
+function TZMySQLDriver.GetPlainDriver(const Url: string): IZMySQLPlainDriver;
 var
   Protocol: string;
 begin
   Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
-  if Protocol = FMySQL41PlainDriver.GetProtocol then
+  if false then
+{$IFDEF ENABLE_MYSQL_DEPRECATED}
+  else if Protocol = FMySQL320PlainDriver.GetProtocol then
+    Result := FMySQL320PlainDriver
+  else if Protocol = FMySQL323PlainDriver.GetProtocol then
+    Result := FMySQL323PlainDriver
+  else if Protocol = FMySQL40PlainDriver.GetProtocol then
+    Result := FMySQL40PlainDriver
+{$ENDIF ENABLE_MYSQL_DEPRECATED}
+  else if Protocol = FMySQL41PlainDriver.GetProtocol then
     Result := FMySQL41PlainDriver
   else if Protocol = FMySQL5PlainDriver.GetProtocol then
     Result := FMySQL5PlainDriver
+  // embedded drivers
+  else if Protocol = FMySQLD41PlainDriver.GetProtocol then
+    Result := FMySQLD41PlainDriver
+  else if Protocol = FMySQLD5PlainDriver.GetProtocol then
+    Result := FMySQLD5PlainDriver
+  // Generic driver
   else
     Result := FMySQL5PlainDriver;
   Result.Initialize;
@@ -260,9 +321,12 @@ end;
   @param Password a user password.
   @param Info a string list with extra connection parameters.
 }
-constructor TZMySQLConnection.Create(Driver: IZDriver; Url: string;PlainDriver: IZMySQLPlainDriver; HostName: string; Port: Integer; Database, User, Password: string; Info: TStrings);
+constructor TZMySQLConnection.Create(Driver: IZDriver; const Url: string;
+  PlainDriver: IZMySQLPlainDriver; const HostName: string; Port: Integer;
+  const Database, User, Password: string; Info: TStrings);
 begin
-  inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,TZMySQLDatabaseMetadata.Create(Self, Url, Info));
+  inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
+    TZMySQLDatabaseMetadata.Create(Self, Url, Info));
 
   { Sets a default properties }
   FPlainDriver := PlainDriver;
@@ -294,6 +358,7 @@ var
   OldAutoCommit: Boolean;
   ConnectTimeout: Integer;
   SQL: PChar;
+  ClientFlag : Cardinal;
 begin
   if not Closed then Exit;
 
@@ -303,6 +368,7 @@ begin
   try
     { Sets a default port number. }
     if Port = 0 then Port := MYSQL_PORT;
+
     { Turn on compression protocol. }
     if StrToBoolEx(Info.Values['compress']) then
       FPlainDriver.SetOptions(FHandle, MYSQL_OPT_COMPRESS, nil);
@@ -313,32 +379,41 @@ begin
       FPlainDriver.SetOptions(FHandle, MYSQL_OPT_CONNECT_TIMEOUT,
         PChar(@ConnectTimeout));
     end;
+
+    { Set ClientFlag }
+    ClientFlag := 0;
+    if Not StrToBoolEx(Info.Values['dbless']) then ClientFlag := _CLIENT_CONNECT_WITH_DB;
+    if StrToBoolEx(Info.Values['CLIENT_LONG_PASSWORD']) then   ClientFlag := Clientflag OR _CLIENT_LONG_PASSWORD;	  { new more secure passwords }
+    if StrToBoolEx(Info.Values['CLIENT_FOUND_ROWS']) then   ClientFlag := Clientflag OR _CLIENT_FOUND_ROWS;	  { Found instead of affected rows }
+    if StrToBoolEx(Info.Values['CLIENT_LONG_FLAG']) then   ClientFlag := Clientflag OR _CLIENT_LONG_FLAG;	  { Get all column flags }
+    if StrToBoolEx(Info.Values['CLIENT_CONNECT_WITH_DB']) then   ClientFlag := Clientflag OR _CLIENT_CONNECT_WITH_DB;	  { One can specify db on connect }
+    if StrToBoolEx(Info.Values['CLIENT_NO_SCHEMA']) then   ClientFlag := Clientflag OR _CLIENT_NO_SCHEMA;	  { Don't allow database.table.column }
+    if StrToBoolEx(Info.Values['CLIENT_COMPRESS']) then   ClientFlag := Clientflag OR _CLIENT_COMPRESS;	  { Can use compression protcol }
+    if StrToBoolEx(Info.Values['CLIENT_ODBC']) then   ClientFlag := Clientflag OR _CLIENT_ODBC;	  { Odbc client }
+    if StrToBoolEx(Info.Values['CLIENT_LOCAL_FILES']) then   ClientFlag := Clientflag OR _CLIENT_LOCAL_FILES;  { Can use LOAD DATA LOCAL }
+    if StrToBoolEx(Info.Values['CLIENT_IGNORE_SPACE']) then   ClientFlag := Clientflag OR _CLIENT_IGNORE_SPACE;  { Ignore spaces before '(' }
+    if StrToBoolEx(Info.Values['CLIENT_CHANGE_USER']) then   ClientFlag := Clientflag OR _CLIENT_CHANGE_USER;  { Support the mysql_change_user() }
+    if StrToBoolEx(Info.Values['CLIENT_INTERACTIVE']) then   ClientFlag := Clientflag OR _CLIENT_INTERACTIVE; { This is an interactive client }
+    if StrToBoolEx(Info.Values['CLIENT_SSL']) then   ClientFlag := Clientflag OR _CLIENT_SSL; { Switch to SSL after handshake }
+    if StrToBoolEx(Info.Values['CLIENT_IGNORE_SIGPIPE']) then   ClientFlag := Clientflag OR _CLIENT_IGNORE_SIGPIPE; { IGNORE sigpipes }
+    if StrToBoolEx(Info.Values['CLIENT_TRANSACTIONS']) then   ClientFlag := Clientflag OR _CLIENT_TRANSACTIONS; { Client knows about transactions }
+    if StrToBoolEx(Info.Values['CLIENT_RESERVED']) then   ClientFlag := Clientflag OR _CLIENT_RESERVED; { Old flag for 4.1 protocol  }
+    if StrToBoolEx(Info.Values['CLIENT_SECURE_CONNECTION']) then   ClientFlag := Clientflag OR _CLIENT_SECURE_CONNECTION; { New 4.1 authentication }
+    if StrToBoolEx(Info.Values['CLIENT_MULTI_STATEMENTS']) then   ClientFlag := Clientflag OR _CLIENT_MULTI_STATEMENTS; { Enable/disable multi-stmt support }
+    if StrToBoolEx(Info.Values['CLIENT_MULTI_RESULTS']) then   ClientFlag := Clientflag OR _CLIENT_MULTI_RESULTS; { Enable/disable multi-results }
+    if StrToBoolEx(Info.Values['CLIENT_REMEMBER_OPTIONS']) then   ClientFlag := Clientflag OR _CLIENT_REMEMBER_OPTIONS; {Enable/disable multi-results }
+
     { Connect to MySQL database. }
-    if StrToBoolEx(Info.Values['dbless']) then
+    if FPlainDriver.RealConnect(FHandle, PChar(HostName), PChar(User),
+      PChar(Password), PChar(Database), Port, nil,
+      ClientFlag) = nil then
     begin
-      if FPlainDriver.RealConnect(FHandle, PChar(HostName), PChar(User),
-        PChar(Password), nil, Port, nil, 0) = nil then
-      begin
-        CheckMySQLError(FPlainDriver, FHandle, lcConnect, LogMessage);
-        DriverManager.LogError(lcConnect, FPlainDriver.GetProtocol, LogMessage,
-          0, SUnknownError);
-        raise EZSQLException.Create(SCanNotConnectToServer);
-      end;
-      DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
-    end
-    else
-    begin
-      if FPlainDriver.RealConnect(FHandle, PChar(HostName), PChar(User),
-        PChar(Password), PChar(Database), Port, nil,
-        _CLIENT_CONNECT_WITH_DB) = nil then
-      begin
-        CheckMySQLError(FPlainDriver, FHandle, lcConnect, LogMessage);
-        DriverManager.LogError(lcConnect, FPlainDriver.GetProtocol, LogMessage,
-          0, SUnknownError);
-        raise EZSQLException.Create(SCanNotConnectToServer);
-      end;
-      DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
+      CheckMySQLError(FPlainDriver, FHandle, lcConnect, LogMessage);
+      DriverManager.LogError(lcConnect, FPlainDriver.GetProtocol, LogMessage,
+        0, SUnknownError);
+      raise EZSQLException.Create(SCanNotConnectToServer);
     end;
+    DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
 
     { Sets a client codepage. }
     if FClientCodePage <> '' then
@@ -368,12 +443,19 @@ begin
   inherited Open;
 end;
 
-procedure TZMySQLConnection.Ping_Server;
-var i:integer;
+{**
+  Ping Current Connection's server, if client was disconnected,
+  the connection is resumed.
+  @return 0 if succesfull or error code if any error occurs
+}
+function TZMySQLConnection.PingServer: Integer;
+var MySQLPingError: Integer;
 begin
-   i:=FPlainDriver.Ping(FHandle);
+   MySQLPingError := FPlainDriver.Ping(FHandle);
+   Result := MySQLPingError;
    CheckMySQLError(FPlainDriver, FHandle, lcExecute,'PING MYSQL (FOS)');
-   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol,'PING MYSQL (FOS) '+inttostr(i));
+   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol,
+    'PING MYSQL (FOS) '+IntToStr(MySQLPingError));
 end;
 
 {**
@@ -425,7 +507,7 @@ end;
   @return a new PreparedStatement object containing the
     pre-compiled statement
 }
-function TZMySQLConnection.CreatePreparedStatement(SQL: string;
+function TZMySQLConnection.CreatePreparedStatement(const SQL: string;
   Info: TStrings): IZPreparedStatement;
 begin
   if IsClosed then Open;
@@ -512,7 +594,7 @@ end;
   Sets a new selected catalog name.
   @param Catalog a selected catalog name.
 }
-procedure TZMySQLConnection.SetCatalog(Catalog: string);
+procedure TZMySQLConnection.SetCatalog(const Catalog: string);
 begin
   FCatalog := Catalog;
 end;
@@ -525,38 +607,40 @@ procedure TZMySQLConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);
 var
   SQL: PChar;
+  testResult: Integer;
 begin
   if TransactIsolationLevel <> Level then
   begin
     inherited SetTransactionIsolation(Level);
-
+    testResult := 1;
     if not Closed then
     begin
       case TransactIsolationLevel of
         tiNone, tiReadUncommitted:
           begin
             SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED';
-            FPlainDriver.ExecQuery(FHandle, SQL);
+            testResult := FPlainDriver.ExecQuery(FHandle, SQL);
           end;
         tiReadCommitted:
           begin
             SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED';
-            FPlainDriver.ExecQuery(FHandle, SQL);
+            testResult := FPlainDriver.ExecQuery(FHandle, SQL);
           end;
         tiRepeatableRead:
           begin
             SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ';
-            FPlainDriver.ExecQuery(FHandle, SQL);
+            testResult := FPlainDriver.ExecQuery(FHandle, SQL);
           end;
         tiSerializable:
           begin
             SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE';
-            FPlainDriver.ExecQuery(FHandle, SQL);
+            testResult := FPlainDriver.ExecQuery(FHandle, SQL);
           end;
         else
           SQL := '';
       end;
-      CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
+      if (testResult <> 0) then
+          CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
       if SQL <> '' then
         DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
     end;
@@ -604,6 +688,33 @@ begin
 end;
 
 {**
+  Gets client's full version number.
+  The format of the version returned must be XYYYZZZ where
+   X   = Major version
+   YYY = Minor version
+   ZZZ = Sub version
+  @return this clients's full version number
+}
+function TZMySQLConnection.GetClientVersion: Integer;
+begin
+ Result := ConvertMySQLVersionToSQLVersion( FPlainDriver.GetClientVersion );
+end;
+
+{**
+  Gets server's full version number.
+  The format of the returned version must be XYYYZZZ where
+   X   = Major version
+   YYY = Minor version
+   ZZZ = Sub version
+  @return this clients's full version number
+}
+function TZMySQLConnection.GetHostVersion: Integer;
+begin
+ Result := ConvertMySQLVersionToSQLVersion( FPlainDriver.GetServerVersion(FHandle) );
+ CheckMySQLError(FPlainDriver, FHandle, lcExecute, 'mysql_get_server_version()');
+end;
+
+{**
   Gets a reference to MySQL connection handle.
   @return a reference to MySQL connection handle.
 }
@@ -619,6 +730,11 @@ end;
 function TZMySQLConnection.GetPlainDriver: IZMySQLPlainDriver;
 begin
   Result := FPlainDriver;
+End;
+
+function TZMySQLConnection.GetDescription: AnsiString;
+begin
+    Result := self.FPlainDriver.GetDescription;
 end;
 
 initialization

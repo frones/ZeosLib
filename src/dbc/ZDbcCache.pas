@@ -43,6 +43,9 @@ interface
 
 
 uses
+{$IFDEF MSWINDOWS}
+  Windows,
+{$ENDIF MSWINDOWS}
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
@@ -375,7 +378,6 @@ begin
   if Assigned(Buffer) then
   begin
     ClearBuffer(Buffer);
-//    FreeMem(Buffer, FRowSize);
     FreeMem(Buffer);
   end;
 end;

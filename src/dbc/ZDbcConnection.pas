@@ -70,14 +70,13 @@ type
     destructor Destroy; override;
 
     function GetSupportedProtocols: TStringDynArray; virtual; abstract;
-    function Connect(Url: string; Info: TStrings): IZConnection; virtual;
-    function AcceptsURL(Url: string): Boolean; virtual;
+    function Connect(const Url: string; Info: TStrings): IZConnection; virtual;
+    function AcceptsURL(const Url: string): Boolean; virtual;
 
-    function GetPropertyInfo(Url: string;
-      Info: TStrings): TStrings; virtual;
+    function GetPropertyInfo(const Url: string; Info: TStrings): TStrings; virtual;
     function GetMajorVersion: Integer; virtual;
     function GetMinorVersion: Integer; virtual;
-
+    function GetSubVersion: Integer; virtual;
     function GetTokenizer: IZTokenizer; virtual;
     function GetStatementAnalyser: IZStatementAnalyser; virtual;
   end;
@@ -98,16 +97,16 @@ type
     FClosed: Boolean;
     FMetadata: TContainedObject;
   protected
-    constructor Create(Driver: IZDriver; Url: string; HostName: string;
-      Port: Integer; Database: string; User: string; Password: string;
+    constructor Create(Driver: IZDriver; const Url: string; const HostName: string;
+      Port: Integer; const Database: string; const User: string; const Password: string;
       Info: TStrings; Metadata: TContainedObject);
     procedure RaiseUnsupportedException;
 
     function CreateRegularStatement(Info: TStrings): IZStatement;
       virtual;
-    function CreatePreparedStatement(SQL: string; Info: TStrings):
+    function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; virtual;
-    function CreateCallableStatement(SQL: string; Info: TStrings):
+    function CreateCallableStatement(const SQL: string; Info: TStrings):
       IZCallableStatement; virtual;
 
     property Driver: IZDriver read FDriver write FDriver;
@@ -126,20 +125,20 @@ type
     destructor Destroy; override;
 
     function CreateStatement: IZStatement;
-    function PrepareStatement(SQL: string): IZPreparedStatement;
-    function PrepareCall(SQL: string): IZCallableStatement;
+    function PrepareStatement(const SQL: string): IZPreparedStatement;
+    function PrepareCall(const SQL: string): IZCallableStatement;
 
     function CreateStatementWithParams(Info: TStrings): IZStatement;
-    function PrepareStatementWithParams(SQL: string; Info: TStrings):
+    function PrepareStatementWithParams(const SQL: string; Info: TStrings):
       IZPreparedStatement;
-    function PrepareCallWithParams(SQL: string; Info: TStrings):
+    function PrepareCallWithParams(const SQL: string; Info: TStrings):
       IZCallableStatement;
 
-    function CreateNotification(Event: string): IZNotification; virtual;
-    function CreateSequence(Sequence: string; BlockSize: Integer):
+    function CreateNotification(const Event: string): IZNotification; virtual;
+    function CreateSequence(const Sequence: string; BlockSize: Integer):
       IZSequence; virtual;
 
-    function NativeSQL(SQL: string): string; virtual;
+    function NativeSQL(const SQL: string): string; virtual;
 
     procedure SetAutoCommit(AutoCommit: Boolean); virtual;
     function GetAutoCommit: Boolean; virtual;
@@ -148,13 +147,12 @@ type
     procedure Rollback; virtual;
 
     //2Phase Commit Support initially for PostgresSQL (firmos) 21022006
-    procedure PrepareTransaction(transactionid:string);virtual;
-    procedure CommitPrepared(transactionid:string);virtual;
-    procedure RollbackPrepared(transactionid:string);virtual;
+    procedure PrepareTransaction(const transactionid: string);virtual;
+    procedure CommitPrepared(const transactionid: string);virtual;
+    procedure RollbackPrepared(const transactionid: string);virtual;
 
-    //Ping Support initially for MySQL 27032006 (firmos)
-    procedure Ping_Server;virtual;
-
+    //Ping Support initially for MySQL 27032006 (firmos)
+    function PingServer: Integer; virtual;
 
     procedure Open; virtual;
     procedure Close; virtual;
@@ -163,11 +161,14 @@ type
     function GetDriver: IZDriver;
     function GetMetadata: IZDatabaseMetadata;
     function GetParameters: TStrings;
-
+    {ADDED by fduenas 15-06-2006}
+    function GetClientVersion: Integer; virtual;
+    function GetHostVersion: Integer; virtual;
+    {END ADDED by fduenas 15-06-2006}
     procedure SetReadOnly(ReadOnly: Boolean); virtual;
     function IsReadOnly: Boolean; virtual;
 
-    procedure SetCatalog(Catalog: string); virtual;
+    procedure SetCatalog(const Catalog: string); virtual;
     function GetCatalog: string; virtual;
 
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); virtual;
@@ -216,8 +217,8 @@ type
     function GetCurrentValue: Int64; virtual;
     function GetNextValue: Int64; virtual;
 
-    function  GetCurrentValueSQL:String;virtual;abstract;
-    function  GetNextValueSQL:String;virtual;abstract;
+    function GetCurrentValueSQL: string; virtual; abstract;
+    function GetNextValueSQL: string; virtual; abstract;
 
     function GetConnection: IZConnection; virtual;
 
@@ -269,7 +270,7 @@ end;
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
-function TZAbstractDriver.Connect(Url: string; Info: TStrings): IZConnection;
+function TZAbstractDriver.Connect(const Url: string; Info: TStrings): IZConnection;
 begin
   Result := nil;
 end;
@@ -282,7 +283,7 @@ end;
   @param url the URL of the database
   @return true if this driver can connect to the given URL
 }
-function TZAbstractDriver.AcceptsURL(Url: string): Boolean;
+function TZAbstractDriver.AcceptsURL(const Url: string): Boolean;
 var
   I: Integer;
   Protocols: TStringDynArray;
@@ -313,8 +314,7 @@ end;
     properties.  This array may be an empty array if no properties
     are required.
 }
-function TZAbstractDriver.GetPropertyInfo(Url: string;
-  Info: TStrings): TStrings;
+function TZAbstractDriver.GetPropertyInfo(const Url: string; Info: TStrings): TStrings;
 begin
   Result := nil;
 end;
@@ -337,6 +337,14 @@ begin
   Result := 0;
 end;
 
+{**
+  Gets the driver's sub version (revision) number. Initially this should be 0.
+  @return this driver's sub version number
+}
+function TZAbstractDriver.GetSubVersion: Integer;
+begin
+ Result := 0;
+end;
 {**
   Creates a generic statement analyser object.
   @returns a generic statement analyser object.
@@ -372,9 +380,9 @@ end;
   @param Password a user password.
   @param Info a string list with extra connection parameters.
 }
-constructor TZAbstractConnection.Create(Driver: IZDriver; Url: string;
-  HostName: string; Port: Integer; Database: string; User: string;
-  Password: string; Info: TStrings; Metadata: TContainedObject);
+constructor TZAbstractConnection.Create(Driver: IZDriver; const Url: string;
+  const HostName: string; Port: Integer; const Database: string; const User: string;
+  const Password: string; Info: TStrings; Metadata: TContainedObject);
 begin
   FDriver := Driver;
   FHostName := HostName;
@@ -504,8 +512,7 @@ end;
   @return a new PreparedStatement object containing the
     pre-compiled statement
 }
-function TZAbstractConnection.PrepareStatement(
-  SQL: string): IZPreparedStatement;
+function TZAbstractConnection.PrepareStatement(const SQL: string): IZPreparedStatement;
 begin
   Result := CreatePreparedStatement(SQL, nil);
 end;
@@ -520,13 +527,13 @@ end;
   @return a new PreparedStatement object containing the
     pre-compiled statement
 }
-function TZAbstractConnection.PrepareStatementWithParams(SQL: string;
+function TZAbstractConnection.PrepareStatementWithParams(const SQL: string;
   Info: TStrings): IZPreparedStatement;
 begin
   Result := CreatePreparedStatement(SQL, Info);
 end;
 
-procedure TZAbstractConnection.PrepareTransaction(transactionid: string);
+procedure TZAbstractConnection.PrepareTransaction(const transactionid: string);
 begin
   RaiseUnsupportedException;
 end;
@@ -537,7 +544,7 @@ end;
   @param Info a statement parameters.
   @returns a created statement.
 }
-function TZAbstractConnection.CreatePreparedStatement(SQL: string;
+function TZAbstractConnection.CreatePreparedStatement(const SQL: string;
   Info: TStrings): IZPreparedStatement;
 begin
   Result := nil;
@@ -569,13 +576,9 @@ end;
   @return a new CallableStatement object containing the
     pre-compiled SQL statement
 }
-procedure TZAbstractConnection.Ping_Server;
-begin
-  RaiseUnsupportedException;
-end;
 
 function TZAbstractConnection.PrepareCall(
-  SQL: string): IZCallableStatement;
+  const SQL: string): IZCallableStatement;
 begin
   Result := CreateCallableStatement(SQL, nil);
 end;
@@ -594,7 +597,7 @@ end;
   @return a new CallableStatement object containing the
     pre-compiled SQL statement
 }
-function TZAbstractConnection.PrepareCallWithParams(SQL: string;
+function TZAbstractConnection.PrepareCallWithParams(const SQL: string;
   Info: TStrings): IZCallableStatement;
 begin
   Result := CreateCallableStatement(SQL, Info);
@@ -606,7 +609,7 @@ end;
   @param Info a statement parameters.
   @returns a created statement.
 }
-function TZAbstractConnection.CreateCallableStatement(SQL: string;
+function TZAbstractConnection.CreateCallableStatement(const SQL: string;
   Info: TStrings): IZCallableStatement;
 begin
   Result := nil;
@@ -618,7 +621,7 @@ end;
   @param Event an event name.
   @returns a created notification object.
 }
-function TZAbstractConnection.CreateNotification(Event: string): IZNotification;
+function TZAbstractConnection.CreateNotification(const Event: string): IZNotification;
 begin
   Result := nil;
   RaiseUnsupportedException;
@@ -630,7 +633,7 @@ end;
   @param BlockSize a number of unique keys requested in one trip to SQL server.
   @returns a created sequence object.
 }
-function TZAbstractConnection.CreateSequence(Sequence: string;
+function TZAbstractConnection.CreateSequence(const Sequence: string;
   BlockSize: Integer): IZSequence;
 begin
   Result := nil;
@@ -647,7 +650,7 @@ end;
     parameter placeholders
   @return the native form of this statement
 }
-function TZAbstractConnection.NativeSQL(SQL: string): string;
+function TZAbstractConnection.NativeSQL(const SQL: string): string;
 begin
   Result := SQL;
 end;
@@ -699,7 +702,7 @@ begin
   RaiseUnsupportedException;
 end;
 
-procedure TZAbstractConnection.CommitPrepared(transactionid: string);
+procedure TZAbstractConnection.CommitPrepared(const transactionid: string);
 begin
   RaiseUnsupportedException;
 end;
@@ -716,7 +719,17 @@ begin
   RaiseUnsupportedException;
 end;
 
-procedure TZAbstractConnection.RollbackPrepared(transactionid: string);
+procedure TZAbstractConnection.RollbackPrepared(const transactionid: string);
+begin
+  RaiseUnsupportedException;
+end;
+
+{**
+  Ping Current Connection's server, if client was disconnected,
+  the connection is resumed.
+  @return 0 if succesfull or error code if any error occurs
+}
+function TZAbstractConnection.PingServer: Integer;
 begin
   RaiseUnsupportedException;
 end;
@@ -778,6 +791,33 @@ begin
 end;
 
 {**
+  Gets the client's full version number. Initially this should be 0.
+  The format of the version resturned must be XYYYZZZ where
+   X   = Major version
+   YYY = Minor version
+   ZZZ = Sub version
+  @return this clients's full version number
+}
+function TZAbstractConnection.GetClientVersion: Integer;
+begin
+ Result := 0;
+end;
+
+{**
+  Gets the host's full version number. Initially this should be 0.
+  The format of the version returned must be XYYYZZZ where
+   X   = Major version
+   YYY = Minor version
+   ZZZ = Sub version
+  @return this server's full version number
+}
+function TZAbstractConnection.GetHostVersion: Integer;
+begin
+ Result := 0;
+end;
+{END ADDED by fduenas 15-06-2006}
+
+{**
   Puts this connection in read-only mode as a hint to enable
   database optimizations.
 
@@ -807,7 +847,7 @@ end;
   If the driver does not support catalogs, it will
   silently ignore this request.
 }
-procedure TZAbstractConnection.SetCatalog(Catalog: string);
+procedure TZAbstractConnection.SetCatalog(const Catalog: string);
 begin
 end;
 

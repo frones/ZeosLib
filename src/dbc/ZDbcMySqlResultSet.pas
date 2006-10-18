@@ -112,6 +112,10 @@ type
     // --> ms, 31/10/2005
     function FormCalculateStatement(Columns: TObjectList): string; override;
     // <-- ms
+    {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
+    procedure UpdateAutoIncrementFields(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
+      OldRowAccessor, NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver); override;
+    {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
   end;
 
 implementation
@@ -863,12 +867,21 @@ end;
 }
 procedure TZMySQLCachedResolver.PostUpdates(Sender: IZCachedResultSet;
   UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
+{BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL}
+{
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
+}
+{END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 begin
   inherited PostUpdates(Sender, UpdateType, OldRowAccessor, NewRowAccessor);
-
+  {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
+  if (UpdateType = utInserted) then
+  begin
+   UpdateAutoIncrementFields(Sender, UpdateType, OldRowAccessor, NewRowAccessor, Self);
+  end;
+  { commented, below code moved to 'CalculateDefaultsAfterUpdates' methods
   if (UpdateType = utInserted) and (FAutoColumnIndex > 0)
     and OldRowAccessor.IsNull(FAutoColumnIndex) then
   begin
@@ -882,7 +895,40 @@ begin
       Statement.Close;
     end;
   end;
+  }
+  {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 end;
+
+{BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
+{**
+ Do Tasks after Post updates to database.
+  @param Sender a cached result set object.
+  @param UpdateType a type of updates.
+  @param OldRowAccessor an accessor object to old column values.
+  @param NewRowAccessor an accessor object to new column values.
+}
+procedure TZMySQLCachedResolver.UpdateAutoIncrementFields(
+  Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
+  NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver);
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+begin
+  inherited UpdateAutoIncrementFields(Sender, UpdateType, OldRowAccessor, NewRowAccessor, Resolver);
+  if not ((FAutoColumnIndex > 0) and
+          OldRowAccessor.IsNull(FAutoColumnIndex)) then
+     exit;
+  Statement := Connection.CreateStatement;
+  ResultSet := Statement.ExecuteQuery('SELECT LAST_INSERT_ID()');
+  try
+    if ResultSet.Next then
+      NewRowAccessor.SetLong(FAutoColumnIndex, ResultSet.GetLong(1));
+  finally
+    ResultSet.Close;
+    Statement.Close;
+  end;
+end;
+{END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 
 // --> ms, 31/10/2005
 {**

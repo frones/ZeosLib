@@ -44,7 +44,8 @@ interface
 
 {$J+}
 
-uses ZCompatibility, ZPlainLoader, ZPlainInterbaseDriver;
+uses ZCompatibility, ZPlainLoader, ZPlainInterbaseDriver,
+		 ZPlainFirebirdInterbaseConstants;
 
 { ***************** Plain API Constants definition **************** }
 

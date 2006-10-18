@@ -75,16 +75,11 @@ type
     FSequenceName: string;
 
     procedure SetMetadataType(Value: TZMetadataType);
-
   protected
-    function CreateResultSet(SQL: string; MaxRows: Integer): IZResultSet;
+    function CreateResultSet(const SQL: string; MaxRows: Integer): IZResultSet;
       override;
-
-  public
-
   published
-    property MetadataType: TZMetadataType read FMetadataType
-      write SetMetadataType;
+    property MetadataType: TZMetadataType read FMetadataType write SetMetadataType;
     property Catalog: string read FCatalog write FCatalog;
     property Schema: string read FSchema write FSchema;
     property TableName: string read FTableName write FTableName;
@@ -94,18 +89,16 @@ type
     property Nullable: Boolean read FNullable write FNullable default False;
     property ForeignCatalog: string read FForeignCatalog write FForeignCatalog;
     property ForeignSchema: string read FForeignSchema write FForeignSchema;
-    property ForeignTableName: string read FForeignTableName
-      write FForeignTableName;
+    property ForeignTableName: string read FForeignTableName write FForeignTableName;
     property Unique: Boolean read FUnique write FUnique default False;
-    property Approximate: Boolean read FApproximate write FApproximate
-      default False;
+    property Approximate: Boolean read FApproximate write FApproximate default False;
     property TypeName: string read FTypeName write FTypeName;
     property SequenceName: string read FSequenceName write FSequenceName;
 
     property Active;
     property MasterFields;
     property MasterSource;
-    property IndexFieldNames;
+    property LinkedFields; {renamed by bangfauzan}
   end;
 
 implementation
@@ -131,7 +124,7 @@ end;
   @param MaxRows a maximum rows number (-1 for all).
   @returns a created DBC resultset.
 }
-function TZSQLMetadata.CreateResultSet(SQL: string; MaxRows: Integer):
+function TZSQLMetadata.CreateResultSet(const SQL: string; MaxRows: Integer):
   IZResultSet;
 var
   Metadata: IZDatabaseMetadata;
