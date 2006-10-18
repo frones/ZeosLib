@@ -118,7 +118,7 @@ function EncodeString(CharactersetCode: TZPgCharactersetType; Value: string): st
   @param Value a string in PostgreSQL escape format.
   @return a regular string.
 }
-//function DecodeString(Value: string): string;
+function DecodeString(Value: string): string;
 
 {**
   Checks for possible sql errors.

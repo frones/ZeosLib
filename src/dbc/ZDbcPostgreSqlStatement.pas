@@ -382,9 +382,8 @@ begin
                Result := EncodeString(Result);
               }
             end;
-          end else begin
+          end else
             Result := 'NULL';
-          end;
         end;
     end;
   end;
