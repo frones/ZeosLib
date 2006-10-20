@@ -25,3 +25,5 @@
 20060819 : Removed calls to Mysql datastructure where possible (Only necessary for mysql3.20) - written by mdaems
 
 20061003 : Added embedded startup option settings, dll's - Patch by Tohenk and Fduenas - See http://zeos.firmos.at/viewtopic.php?t=777
+
+20061020 : Solved mysql backticking problem - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=748
