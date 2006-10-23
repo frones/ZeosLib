@@ -191,22 +191,20 @@ resourcestring
 
   SUpdateSQLNoResult = 'SQL Update Refresh resultou num conjunto vazio';
   SUpdateSQLRefreshStatementcount ='Usar somente 1 declaraçao SQL para Update Refresh';
-  SFailedToBindAllValues  = 'Translate: Application failed to pre-bind all values';
-  SAttemptExecOnBadPrep   = 'Translate: Attempt made to execute a statement before a successful preparation.';
-  SBindingFailure         = 'Translate: Failed to bind parameter set';
-  SPreparedStmtExecFailure = 'Translate: Prepared statement failed to execute';
-
-
   {$IFDEF FPC}
   SNotEditing = 'Dataset não está em modo de edição ou inserção';
   SFieldTypeMismatch = 'Tipo inválido para o campo ''%s'', esperado: %s atual: %s';
   SFieldSizeMismatch = 'Tamanho Inválido para o campo ''%s'', esperado: %d atual: %d';
   {$ENDIF}
 
-  SFailedtoInitPrepStmt   = 'Translate: Prepared statement failed to initialize';
-  SFailedtoPrepareStmt    = 'Translate: Statement failed during prepare process';
-  SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
-  SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
+  SFailedtoInitPrepStmt   = 'A declaração preparada falhou ao inicializar'; 
+  SFailedtoPrepareStmt    = 'A declaração falhou durante o processo de preparo'; 
+  SFailedToBindAllValues  = 'A Aplicação falhou na tradução de todos os valores'; 
+  SAttemptExecOnBadPrep   = 'Tentativa de executar uma declaração que não foi corretamente preparada'; 
+  SBindingFailure         = 'Falha ao traduzir o conjunto de parâmetros'; 
+  SPreparedStmtExecFailure = 'A declaração preparada falhou ao executar'; 
+  SBoundVarStrIndexMissing = 'Índice de texto "%s" da variável de limite não existe'; 
+  SBindVarOutOfRange      = 'Índice da variável de limite fora de alcance: %d';
 
   // added by tohenk
   SDriverLibraryUnsupported = 'Translate: Driver doesn''t support this version of %s. It might be outdated';
