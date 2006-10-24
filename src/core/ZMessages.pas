@@ -206,9 +206,6 @@ resourcestring
   SBoundVarStrIndexMissing = 'Índice de texto "%s" da variável de limite não existe'; 
   SBindVarOutOfRange      = 'Índice da variável de limite fora de alcance: %d';
 
-  // added by tohenk
-  SDriverLibraryUnsupported = 'Translate: Driver doesn''t support this version of %s. It might be outdated';
-
 {$ELSE}
 
 {$IFDEF DUTCH}
@@ -360,9 +357,6 @@ resourcestring
   SPreparedStmtExecFailure = 'Uitvoeren van Prepared statement mislukt';
   SBoundVarStrIndexMissing = 'Tekst index van bound variable bestaat niet: "%s"';
   SBindVarOutOfRange      = 'Bound variable index buitenbereik: %d';
-
-  // added by tohenk
-  SDriverLibraryUnsupported = 'Translate: Driver doesn''t support this version of %s. It might be outdated';
 
 {$ELSE}
 // <- ms, 09/05/2005
@@ -519,9 +513,6 @@ resourcestring
   SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
 
-  // added by tohenk
-  SDriverLibraryUnsupported = 'Translate: Driver doesn''t support this version of %s. It might be outdated';
-
 {$ELSE}
   // -> fduenas, 28/06/2005
 {$IFDEF SPANISH} //Spanish translations
@@ -674,9 +665,6 @@ resourcestring
   SPreparedStmtExecFailure = 'Translate: Prepared statement failed to execute';
   SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
-
-  // added by tohenk
-  SDriverLibraryUnsupported = 'Translate: Driver doesn''t support this version of %s. It might be outdated';
 
 {$ELSE}
 
@@ -832,9 +820,6 @@ resourcestring
   SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
 
-  // added by tohenk
-  SDriverLibraryUnsupported = 'Translate: Driver doesn''t support this version of %s. It might be outdated';
-
   // <-- added by tohenk
   {$ELSE}
   {$IFDEF INDONESIAN}
@@ -986,9 +971,6 @@ resourcestring
   SPreparedStmtExecFailure = 'Prepared Statement gagal dieksekusi';
   SBoundVarStrIndexMissing = 'Teks variabel indeks "%s" tidak ada';
   SBindVarOutOfRange      = 'Variabel indeks diluar jangkauan: %d';
-
-  // added by tohenk
-  SDriverLibraryUnsupported = 'Driver tidak mendukung %s versi ini. Library ini mungkin kedaluarsa.';
 
   // <--- end added by tohenk
 
@@ -1142,9 +1124,6 @@ resourcestring
   SPreparedStmtExecFailure = 'Prepared statement failed to execute';
   SBoundVarStrIndexMissing = 'Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Bound variable index out of range: %d';
-
-  // added by tohenk
-  SDriverLibraryUnsupported = 'Driver doesn''t support this version of %s. It might be outdated';
 
 {$ENDIF}   // INDONESIAN <--- added by tohenk
 
