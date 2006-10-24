@@ -192,16 +192,18 @@ end;
 }
 procedure TZTestSysUtilsCase.TestStrToBoolEx;
 begin
-  CheckEquals(True, StrToBoolEx('Y'));
-  CheckEquals(True, StrToBoolEx('Yes'));
   CheckEquals(True, StrToBoolEx('YES'));
-  CheckEquals(True, StrToBoolEx('T'));
+  CheckEquals(True, StrToBoolEx('Yes'));
+  CheckEquals(True, StrToBoolEx('Y'));
   CheckEquals(True, StrToBoolEx('TRUE'));
   CheckEquals(True, StrToBoolEx('True'));
+  CheckEquals(True, StrToBoolEx('T'));
+  CheckEquals(False, StrToBoolEx('FALSE'));
   CheckEquals(False, StrToBoolEx('False'));
   CheckEquals(False, StrToBoolEx('F'));
-  CheckEquals(False, StrToBoolEx('N'));
+  CheckEquals(False, StrToBoolEx('NO'));
   CheckEquals(False, StrToBoolEx('No'));
+  CheckEquals(False, StrToBoolEx('N'));
 end;
 
 {**

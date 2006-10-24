@@ -35,16 +35,39 @@
 {*********************************************************}
 
 unit ZTestPlainPerformance;
+{$I ZPerformance.inc}
 
 interface
 
-uses TestFramework, SysUtils, Classes, ZPerformanceTestCase, ZPlainMySqlDriver,
-  ZPlainPostgreSqlDriver, ZPlainInterbaseDriver, ZSysUtils, ZDbcUtils,
-  ZCompatibility, ZDbcInterbase6Utils, ZPlainASADriver, ZDbcASAUtils,
-  ZPlainFirebirdDriver,ZPlainFirebirdInterbaseConstants;
+uses TestFramework, SysUtils, Classes, ZPerformanceTestCase,
+ {$IFDEF ENABLE_DBLIB}
+ {$ENDIF}
+ {$IFDEF ENABLE_INTERBASE}
+   ZPlainInterbaseDriver,
+   ZDbcInterbase6Utils,
+   ZPlainFirebirdDriver,
+   ZPlainFirebirdInterbaseConstants,
+ {$ENDIF}
+ {$IFDEF ENABLE_MYSQL}
+   ZPlainMySqlDriver,
+ {$ENDIF}
+ {$IFDEF ENABLE_POSTGRESQL}
+   ZPlainPostgreSqlDriver,
+ {$ENDIF}
+ {$IFDEF ENABLE_ADO}
+ {$ENDIF}
+ {$IFDEF ENABLE_ORACLE}
+ {$ENDIF}
+ {$IFDEF ENABLE_SQLITE}
+ {$ENDIF}
+ {$IFDEF ENABLE_ASA}
+   ZPlainASADriver, ZDbcASAUtils,
+ {$ENDIF}
 
+   ZSysUtils, ZDbcUtils, ZCompatibility;
+
+ {$IFDEF ENABLE_MYSQL}
 type
-
   {** Implements a performance test case for Plain MySQL API. }
   TZPlainMySQLPerformanceTestCase = class (TZPerformanceSQLTestCase)
   private
@@ -81,7 +104,10 @@ type
     procedure RunTestDelete; override;
     procedure RunTestDirectUpdate; override;
   end;
+ {$ENDIF}
 
+ {$IFDEF ENABLE_POSTGRESQL}
+type
   {** Implements a performance test case for Plain PostgreSQL API. }
   TZPlainPostgreSQLPerformanceTestCase = class (TZPerformanceSQLTestCase)
   private
@@ -117,8 +143,11 @@ type
     procedure RunTestDelete; override;
     procedure RunTestDirectUpdate; override;
   end;
+ {$ENDIF}
 
 
+ {$IFDEF ENABLE_INTERBASE}
+type
   {** Implements a performance test case for Plain Interbase API. }
   TZPlainInterbase6SQLPerformanceTestCase = class (TZPerformanceSQLTestCase)
   private
@@ -159,7 +188,10 @@ type
     procedure RunTestDelete; override;
     procedure RunTestDirectUpdate; override;
   end;
+ {$ENDIF}
 
+ {$IFDEF ENABLE_ASA}
+type
   {** Implements a performance test case for Plain ASA API. }
   TZPlainASASQLPerformanceTestCase = class (TZPerformanceSQLTestCase)
   private
@@ -199,13 +231,14 @@ type
     procedure RunTestDelete; override;
     procedure RunTestDirectUpdate; override;
   end;
+ {$ENDIF}
 
 implementation
 
 uses ZSqlTestCase;
 
-{ TZPlainMySQLPerformanceTestCase }
-
+{$IFDEF ENABLE_MYSQL}
+ { TZPlainMySQLPerformanceTestCase }
 {**
   Gets an array of protocols valid for this test.
   @return an array of valid protocols
@@ -447,9 +480,11 @@ procedure TZPlainMySQLPerformanceTestCase.RunTestDirectUpdate;
 begin
   RunTestUpdate;
 end;
+{$ENDIF}
 
+
+{$IFDEF ENABLE_POSTGRESQL}
 { TZPlainPostgreSQLPerformanceTestCase }
-
 {**
    Check error postgresql operation
 }
@@ -701,9 +736,11 @@ procedure TZPlainPostgreSQLPerformanceTestCase.RunTestDirectUpdate;
 begin
   RunTestUpdate;
 end;
+{$ENDIF}
 
+
+{$IFDEF ENABLE_INTERBASE}
 { TZPlainInterbase6SQLPerformanceTestCase }
-
 procedure TZPlainInterbase6SQLPerformanceTestCase.CheckInterbase6Error(Sql: string = '');
 var
   Msg: array[0..1024] of Char;
@@ -978,9 +1015,10 @@ procedure TZPlainInterbase6SQLPerformanceTestCase.RunTestDirectUpdate;
 begin
   RunTestUpdate;
 end;
+{$ENDIF}
 
+{$IFDEF ENABLE_ASA}
 { TZPlainASASQLPerformanceTestCase }
-
 procedure TZPlainASASQLPerformanceTestCase.CheckASAError(Sql: string = '');
 var
   ErrorBuf: array[0..1024] of Char;
@@ -1223,11 +1261,20 @@ procedure TZPlainASASQLPerformanceTestCase.RunTestDirectUpdate;
 begin
   RunTestUpdate;
 end;
+{$ENDIF}
 
 initialization
+{$IFDEF ENABLE_MYSQL}
   TestFramework.RegisterTest(TZPlainMySQLPerformanceTestCase.Suite);
+{$ENDIF}
+{$IFDEF ENABLE_POSTGRESQL}
   TestFramework.RegisterTest(TZPlainPostgreSQLPerformanceTestCase.Suite);
-  TestFramework.RegisterTest(TZPlainInterbase6SQLPerformanceTestCase.Suite);
+{$ENDIF}
+{$IFDEF ENABLE_INTERBASE}
+   TestFramework.RegisterTest(TZPlainInterbase6SQLPerformanceTestCase.Suite);
+{$ENDIF}
+{$IFDEF ENABLE_ASA}
   TestFramework.RegisterTest(TZPlainASASQLPerformanceTestCase.Suite);
+{$ENDIF}
 end.
 

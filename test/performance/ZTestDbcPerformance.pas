@@ -39,7 +39,11 @@ unit ZTestDbcPerformance;
 interface
 
 uses TestFramework, SysUtils, Classes, ZPerformanceTestCase, ZDbcIntfs,
-  ZDbcMySql, ZCompatibility, ZPlainMySqlDriver;
+  ZCompatibility
+  {$IFDEF ENABLE_MYSQL}
+    ZDbcMySql, ZPlainMySqlDriver,
+  {$ENDIF}
+  ;
 
 type
 
