@@ -9,3 +9,5 @@
 20060726 : Bytea/blob - PostgreSQL - UNICODE/UTF8 - patch by aperger - see http://zeos.firmos.at/viewtopic.php?t=683
 
 20060802 : Integrated patch from Fduenas concerning http://zeos.firmos.at/viewtopic.php?t=677
+
+20061025 : Blob handling error - Patch by lpolyak - See http://zeos.firmos.at/viewtopic.php?t=855
