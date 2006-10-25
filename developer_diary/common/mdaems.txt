@@ -57,3 +57,5 @@
 20061015 : Added Indonesian messages - Written by tohenk
 
 20061024 : Changed Test suite to accept Connection properties. (eg for mysqld testing) - By mdaems
+
+20061025 : Added Sqlite 3 driver dll's (Windows+Linux) - Send by Michael
