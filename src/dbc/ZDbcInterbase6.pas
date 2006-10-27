@@ -753,10 +753,9 @@ var
   ResultSet: IZResultSet;
 begin
   Statement := Connection.CreateStatement;
-  ResultSet := Statement.ExecuteQuery(
-    'SELECT GEN_ID(' + Name + ', 0) ' +
-    'FROM rdb$generators ' +
-    'WHERE rdb$generators.rdb$generator_name = ''' + Name + '''');
+  ResultSet := Statement.ExecuteQuery(Format(
+    'SELECT GEN_ID("%s", 0) FROM rdb$generators ' +
+    'WHERE rdb$generators.rdb$generator_name = ''%s''', [Name, Name]));
   if ResultSet.Next then
     Result := ResultSet.GetLong(1)
   else
@@ -771,7 +770,7 @@ end;
 }
 function TZInterbase6Sequence.GetCurrentValueSQL: string;
 begin
- result:=' GEN_ID(' + Name + ', 0) ';
+  Result := Format(' GEN_ID("%s", 0) ', [Name]);
 end;
 
 function TZInterbase6Sequence.GetNextValue: Int64;
@@ -780,10 +779,9 @@ var
   ResultSet: IZResultSet;
 begin
   Statement := Connection.CreateStatement;
-  ResultSet := Statement.ExecuteQuery(
-    'SELECT GEN_ID(' + Name + ', ' + IntToStr(BlockSize) + ') ' +
-    'FROM rdb$generators ' +
-    'WHERE rdb$generators.rdb$generator_name = ''' + Name + '''');
+  ResultSet := Statement.ExecuteQuery(Format(
+    'SELECT GEN_ID("%s", %d) FROM rdb$generators ' +
+    'WHERE rdb$generators.rdb$generator_name = ''%s''', [Name, BlockSize, Name]));
   if ResultSet.Next then
     Result := ResultSet.GetLong(1)
   else
@@ -794,7 +792,7 @@ end;
 
 function TZInterbase6Sequence.GetNextValueSQL: string;
 begin
-  Result:=' GEN_ID(' + Name + ', ' + IntToStr(BlockSize) + ') ';
+  Result := Format(' GEN_ID("%s", %d) ', [Name, BlockSize]);
 end;
 
 initialization
