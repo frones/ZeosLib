@@ -14,241 +14,142 @@
 <article class="techreport" lang="en">
 	<articleinfo>
 		<title>ZeosDBO Change Notes</title>
-		<pubdate>23 September 2005</pubdate>
+		<pubdate>23 October 2006</pubdate>
 		<corpauthor>ZeosLib Development Group</corpauthor>
 	</articleinfo>
 	<sect1>
-		<title>Changes in Release 6.5</title>
+		<title>Changes in Release 6.6.0 - beta</title>
 		<sect2>
-			<title>Release 6.5.1 - 12 Oct 2005</title>
+			<title>Features added</title>
 			<itemizedlist>
 				<listitem>
-					<simpara>&cnliou_tag; Added PostGre 8.x support, now supporting only PostGre 7.4 and 8.x (6.5, 7.2 and 7.3 are discontinued).</simpara>
+					<simpara>LinkedFieldNames vs. IndexFieldnames (See http://zeos.firmos.at/viewtopic.php?t=796) </simpara>
 				</listitem>
 				<listitem>
-					<simpara>&duetting_tag; Added Sybase Adapitive Serve Anywhere (ASA) Support for Versions 7, 8 and 9.</simpara>
-				</listitem>
-			</itemizedlist>
-		</sect2>
-	</sect1>
-	<sect1>
-		<title>Changes in Release 6.5</title>
-		<sect2>
-			<title>Release 6.5.1 - 25 Sep 2005</title>
-			<itemizedlist>
-				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1102816  Widestring Fields are always returning Null if one tries to access property Value.</simpara>
+					<simpara>New Dataset features : BeforeApplyUpdates (event), AfterApplyUpdates (event), SortType (property), EmptyDataSet (procedure) </simpara>
 				</listitem>
 				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1177394  Firebird 1.5: field named "STATUS_REG" that doesn't show in TZDataSet.</simpara>
+					<simpara>Added separate drivers for embedded Firebird server (http://zeos.firmos.at/viewtopic.php?t=630) </simpara>
 				</listitem>
 				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1195034  FPC/Lazarus: Connecting to a Firebird Database will cause a Range Check Error.</simpara>
+					<simpara>Delphi 2006 packages </simpara>
 				</listitem>
 				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1225966  Zeos appears to be bringing back Postgresql money type as ftfloat instead of ftcurrency.</simpara>
+					<simpara>Mysql5 Support integrated </simpara>
 				</listitem>
 				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1237728  Row inserting is impossible with simple queries when TZQuery.ReadOnly property set to false and no TZQuery.UpdateObject defined.</simpara>
+					<simpara>PostgreSQL 8.x Support integrated </simpara>
 				</listitem>
 				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1245583  In the metadata, all user tables were being reported as type VIEW.</simpara>
+					<simpara>Added Sybase Adapitive Serve Anywhere (ASA) Support for Versions 7, 8 and 9.</simpara>
 				</listitem>
 				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1274400  Problem in ZSysUtils.BytesToVar().</simpara>
+					<simpara>MySQL Ping Commando added </simpara>
 				</listitem>
 				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1274401  Problem with TZAbstractDataset.InternalPost.</simpara>
+					<simpara>Insert "const" for ref-counted parameter (http://zeos.firmos.at/viewtopic.php?t=519) </simpara>
 				</listitem>
 				<listitem>
-    				<simpara>&glienke_tag; Added parameter capability to TZSQLProcessor so you now can use paraneters inside your SQL scipts like you do in "normal" queries.</simpara>
-				</listitem>
-			</itemizedlist>
-		</sect2>
-		<sect2>
-			<title>Release 6.5.1 - 23 Sep 2005</title>
-			<itemizedlist>
-				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1102816  Widestring Fields are always returning Null if one tries to access property Value.</simpara>
+					<simpara>MySQL Embedded Server Arguments (http://zeos.firmos.at/viewtopic.php?t=777) </simpara>
 				</listitem>
 				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1177394  Firebird 1.5: field named "STATUS_REG" that doesn't show in TZDataSet.</simpara>
+					<simpara>separated Firebird from interbase/strict dll loading for Firebird </simpara>
 				</listitem>
 				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1195034  FPC/Lazarus: Connecting to a Firebird Database will cause a Range Check Error.</simpara>
+					<simpara>TZConnection: property 'Version', showing the current version </simpara>
+				</listitem>
+ 				<listitem>
+					<simpara>Support for fkInternalCalcFields in datasets </simpara>
 				</listitem>
 				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1225966  Zeos appears to be bringing back Postgresql money type as ftfloat instead of ftcurrency.</simpara>
+					<simpara>Added property DesignConnection: If DesignConnection is true connected is not set to true during runtime and must be set explicitly </simpara>
 				</listitem>
 				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1237728  Row inserting is impossible with simple queries when TZQuery.ReadOnly property set to false and no TZQuery.UpdateObject defined.</simpara>
+					<simpara>Enabled all connection options for mysql. Now one can add the desired options by adding them to the connections property strings. </simpara>
 				</listitem>
 				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1245583  In the metadata, all user tables were being reported as type VIEW.</simpara>
+					<simpara>Rewrite of ZPlainMysqlXX files to add embedded server support for versions 4.0,4.1,5 of  mysql </simpara>
 				</listitem>
 				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1274400  Problem in ZSysUtils.BytesToVar().</simpara>
+					<simpara>Added new library functions to plain mysql drivers (4.1) </simpara>
 				</listitem>
 				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1274401  Problem with TZAbstractDataset.InternalPost.</simpara>
+					<simpara>Added new library functions to plain mysql drivers (3.23 and 3.20) </simpara>
 				</listitem>
 				<listitem>
-    				<simpara>&glienke_tag; Added parameter capability to TZSQLProcessor so you now can use paraneters inside your SQL scipts like you do in "normal" queries.</simpara>
-				</listitem>
-			</itemizedlist>
-		</sect2>
-		<sect2>
-			<title>Release 6.5.1 - 23 Jun 2005</title>
-			<itemizedlist>
-				<listitem>
-					<simpara>&glienke_tag; Fixed Bug when using GetPChar()  Result of GetPChar() points to unallocated memory.</simpara>
+					<simpara>Errorhandling for Postgres now retruns resultcodes from server </simpara>
 				</listitem>
 				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #966217  ZeosDBO (Ado) update problem with TZUpdateSQL</simpara>
+					<simpara>Two Phase Commit for PostgreSQL </simpara>
 				</listitem>
 				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #972461  Username property not refreshed if changed in login box</simpara>
+      				        <simpara>Added parameter capability to TZSQLProcessor so you now can use paraneters inside your SQL scipts like you do in "normal" queries.</simpara>
 				</listitem>
 				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1013579  Problem with TZTable refresh method</simpara>
+    				        <simpara>Added const "ZEOS_VERSION" to ZClasses and added property "Version" to TZConnection.</simpara>
 				</listitem>
 				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1017034  IProviderSupport - PSUpdateRecord</simpara>
+    				        <simpara>Added support of fkInternalCalcFields for ZEOS datasets.</simpara>
 				</listitem>
 				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1030721  Firebird 1.5 Read Only Database on CD</simpara>
+    				        <simpara>Added property "DesignConnection" to turn off active design time connections during runtime, automatically.</simpara>
 				</listitem>
 				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1035896  ZQuery's FieldsEditor brings diff. types for the same field</simpara>
+    				        <simpara>Added PropertyEditor for TField-properties in several components.</simpara>
 				</listitem>
 				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1036906  Login Dialog unstable appearance</simpara>
-				</listitem>
-				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1075822  Wrong results for lookup fields</simpara>
-				</listitem>
-				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1076975  open cursors in Oracle</simpara>
-				</listitem>
-				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1084237  Change data when Dataset.State = dsBrowse</simpara>
-				</listitem>
-				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1086415  Exception when deleting record with ClientDataSet</simpara>
-				</listitem>
-				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1086575  Strange behaviour Zeos - DBLookUpComboBox</simpara>
-				</listitem>
-				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1113306  CreateStatement and Properties</simpara>
-				</listitem>
-				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1113393  WideString Updates</simpara>
-				</listitem>
-				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1116986  MySQL:zeos doesnt assign default '0000-00-00' to Date Fields</simpara>
-				</listitem>
-				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1118495  TZAbstractRODataset.RereadRows;</simpara>
-				</listitem>
-				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1124098  CaseSensitive locate on WideString fields</simpara>
-				</listitem>
-				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1126163  Filter issues</simpara>
-				</listitem>
-				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1154489  AV error when opening a DML with a TZQuery using doSmartOpen</simpara>
-				</listitem>
-				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1164443  Incorrect TZPostgreSQLNotify definition</simpara>
-				</listitem>
-				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1167367  Access violation on large string fields.</simpara>
-				</listitem>
-				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1173358  MySQL Date/Time bug + Fix</simpara>
-				</listitem>
-				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1186833  Firebird 1.5: unsupported datatype</simpara>
-				</listitem>
-				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1214110  Startup failing if compiled with "Full Boolean Evaluation"</simpara>
-				</listitem>
-				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1219599  SetFieldData for ftString don't refresh</simpara>
-				</listitem>
-				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1219718  ADO TDateTime parameter wrong type</simpara>
-				</listitem>
-				<listitem>
-					<simpara>&glienke_tag; Fixed Bug #1224963  TZTable's TabeleName Property - not list with ADO protocol</simpara>
-				</listitem>
-				<listitem>
-    				<simpara>&glienke_tag; Added const "ZEOS_VERSION" to ZClasses and added property "Version" to TZConnection.</simpara>
-				</listitem>
-				<listitem>
-    				<simpara>&glienke_tag; Added support of fkInternalCalcFields for ZEOS datasets.</simpara>
-				</listitem>
-				<listitem>
-    				<simpara>&glienke_tag; Added property "DesignConnection" to turn off active design time connections during runtime, automatically.</simpara>
-				</listitem>
-				<listitem>
-    				<simpara>&glienke_tag; Added PropertyEditor for TField-properties in several components.</simpara>
-				</listitem>
-				<listitem>
-    				<simpara>&glienke_tag; Added default values to the following properties:</simpara>
-               <itemizedlist>
-               <listitem>
-               <simpara>TZAbstractRODataset.RequestLive: False</simpara>
-               </listitem>
-               <listitem>
-               <simpara>TZAbstractRODataset.ParamCheck: True</simpara>
-               </listitem>
-               <listitem>
-               <simpara>TZAbstractRODataset.ShowRecordTypes: [usUnmodified, usModified, usInserted]</simpara>
-               </listitem>
-               <listitem>
-               <simpara>TZAbstractRODataset.IsUniDirectional: False</simpara>
-               </listitem>
-               <listitem>
-               <simpara>TZAbstractRODataset.Options: [doCalcDefaults]</simpara>
-               </listitem>
-               <listitem>
-               <simpara>TZAbstractRODataset.ReadOnly: True</simpara>
-               </listitem>
-               <listitem>
-               <simpara>TZAbstractDataset.UpdateMode: umUpdateChanged</simpara>
-               </listitem>
-               <listitem>
-               <simpara>TZAbstractDataset.WhereMode: wmWhereKeyOnly</simpara>
-               </listitem>
-               <listitem>
-               <simpara>TZAbstractDataset.CachedUpdates: False</simpara>
-               </listitem>
-               <listitem>
-               <simpara>TZConnection.SQLHourGlass: False</simpara>
-               </listitem>
-               <listitem>
-               <simpara>TZQuery.ReadOnly: False</simpara>
-               </listitem>
-               <listitem>
-               <simpara>TZTable.ReadOnly: False</simpara>
-               </listitem>
-               <listitem>
-               <simpara>TZSqlMetadata.Scope: 0</simpara>
-               </listitem>
-               <listitem>
-               <simpara>TZSqlMetadata.Nullable: False</simpara>
-               </listitem>
-               <listitem>
-               <simpara>TZSqlMetadata.Unique: False</simpara>
-               </listitem>
-               <listitem>
-               <simpara>TZSqlMetadata.Approximate: False</simpara>
-               </listitem>
+    				        <simpara>Added default values to the following properties:</simpara>
+                                        <itemizedlist>
+                                        <listitem>
+                                          <simpara>TZAbstractRODataset.RequestLive: False</simpara>
+                                        </listitem>
+                                        <listitem>
+                                          <simpara>TZAbstractRODataset.ParamCheck: True</simpara>
+                                        </listitem>
+                 <listitem>
+                   <simpara>TZAbstractRODataset.ShowRecordTypes: [usUnmodified, usModified, usInserted]</simpara>
+                 </listitem>
+                 <listitem>
+                   <simpara>TZAbstractRODataset.IsUniDirectional: False</simpara>
+                 </listitem>
+                 <listitem>
+                   <simpara>TZAbstractRODataset.Options: [doCalcDefaults]</simpara>
+                 </listitem>
+                 <listitem>
+                   <simpara>TZAbstractRODataset.ReadOnly: True</simpara>
+                 </listitem>
+                 <listitem>
+                   <simpara>TZAbstractDataset.UpdateMode: umUpdateChanged</simpara>
+                 </listitem>
+                 <listitem>
+                   <simpara>TZAbstractDataset.WhereMode: wmWhereKeyOnly</simpara>
+                 </listitem>
+                 <listitem>
+                   <simpara>TZAbstractDataset.CachedUpdates: False</simpara>
+                 </listitem>
+                 <listitem>
+                   <simpara>TZConnection.SQLHourGlass: False</simpara>
+                 </listitem>
+                 <listitem>
+                   <simpara>TZQuery.ReadOnly: False</simpara>
+                 </listitem>
+                 <listitem>
+                   <simpara>TZTable.ReadOnly: False</simpara>
+                 </listitem>
+                 <listitem>
+                 <simpara>TZSqlMetadata.Scope: 0</simpara>
+                 </listitem>
+                 <listitem>
+                 <simpara>TZSqlMetadata.Nullable: False</simpara>
+                 </listitem>
+                 <listitem>
+                 <simpara>TZSqlMetadata.Unique: False</simpara>
+                 </listitem>
+                 <listitem>
+                 <simpara>TZSqlMetadata.Approximate: False</simpara>
+                 </listitem>
                </itemizedlist>
-				</listitem>
+		</listitem>
 				<listitem>
     				<simpara>&glienke_tag; Changed default values for following properties:</simpara>
                <itemizedlist>
@@ -281,6 +182,262 @@
 				</listitem>
 			</itemizedlist>
 		</sect2>
+
+
+			</itemizedlist>
+		</sect2>
+		<sect2>
+			<title>Patches applied</title>
+			<itemizedlist>
+				<listitem>
+					<simpara>Const and optimization (http://zeos.firmos.at/viewtopic.php?t=551)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>MissingConsts, Inlining, SilentException (http://zeos.firmos.at/viewtopic.php?t=566)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Packages for delphi 6 (http://zeos.firmos.at/viewtopic.php?t=577)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>PostgreSQL EncodeString() (http://zeos.firmos.at/viewtopic.php?t=589)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Date, Time and Float on Lazarus (http://zeos.firmos.at/viewtopic.php?t=598)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Updates for ZMessages (translations)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Const modifier added to function definitions where possible to improve speed (http://zeos.firmos.atviewtopic.php?t=519)</simpara>
+				</listitem>
+			</itemizedlist>
+		</sect2>
+		<sect2>
+			<title>Bugs fixed</title>
+			<itemizedlist>
+				<listitem>
+					<simpara>ZDbcConnection.pas contains wrong line breaks (http://zeos.firmos.at/viewtopic.php?t=553)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Other files with LF instead of CRLF (http://zeos.firmos.at/viewtopic.php?t=554)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>svn rev. 59 (Linux filenames problem) (http://zeos.firmos.at/viewtopic.php?t=593)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>error type date in lazarus (http://zeos.firmos.at/viewtopic.php?t=574)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>MySQL v.5.0 .3+ and Decimals (http://zeos.firmos.at/viewtopic.php?t=605)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>ZSqlUpdate append error (http://zeos.firmos.at/viewtopic.php?t=677)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Error opening Query (http://zeos.firmos.at/viewtopic.php?t=628)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Compiling in Borland C++ Builder 6 (http://zeos.firmos.at/viewtopic.php?t=694)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>compiling for delphi5/6 (http://zeos.firmos.at/viewtopic.php?t=802)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Memory leak MSSQL2000 TZQuery.ExecSQL (http://zeos.firmos.at/viewtopic.php?t=788)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>ZEOS_TESTING_REV_113 Sybase-Bug (http://zeos.firmos.at/viewtopic.php?t=822)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Removed Rangecheck Directive (all files) (FPC 2.0.2 is buggy)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Updated lazarus package for correct compilation. (Missing packages, corrupt package file,...)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Some more Lazarus package modifications</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Memory leak bug fixed (http://zeos.firmos.at/viewtopic.php?t=461)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Delimiter problem in ZSQLProcessor fixed (http://zeos.firmos.at/viewtopic.php?t=527)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Fixed Delphi 5 install problems (http://zeos.firmos.at/viewtopic.php?t=335)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Added {$LIBSUFFIX 'X0'} to projectfiles of D7 and D2006 (http://zeos.firmos.at/viewtopic.php?t=561)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Removed ASA driver from Lazarus packages because not compilable in Lazarus.</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Bug in GetIndexInfo (http://zeos.firmos.at/viewtopic.php?t=196)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Added GetClientVersion and GetServerVersion to Connection/Driver interfaces</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Integrated contribution from Terence : Added more specific metadata clearcache possibilities.</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Delphi 7 : Split up Component Package into Component and ComponentDesign (http://zeos.firmos.at/viewtopic.php?t=726)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Delphi 7 : Added compiler directives to avoid inclusion of not wanted database drivers. (http://zeos.firmos.at/viewtopic.php?t=746)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>InternalPost (Procedure) (http://zeos.firmos.at/viewtopic.php?t=781)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Updatesql component (OnUpdate event)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Mssql Select * error (http://zeos.firmos.at/viewtopic.php?t=788)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Added Lazarus fixes : ASA support did not compile well.</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Firebird: Memory leak bug fixed (http://zeos.firmos.at/viewtopic.php?t=461)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Corrections for non-strict dllloading</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Bytea/blob - PostgreSQL - UNICODE/UTF8 (http://zeos.firmos.at/viewtopic.php?t=683)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Integrated patch from Fduenas concerning http://zeos.firmos.at/viewtopic.php?t=677</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Mysql MetaData Patch to support temporary tables</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Corrected the temporary tables patch. Now it tries to get information on a 'non-existing' table, just in case it is a temporarary one. If it is temporary the table is added to the cache If it's not, the resulting error is suppressed but the table will stay unknown.</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Various modifications/extentions to Mysql DBC and Plain driver units - Written by fduenas and mdaems</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Removed calls to Mysql datastructure where possible (Only necessary for mysql3.20) - written by mdaems</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Bad tiReadCommited corrected (http://zeos.firmos.at/viewtopic.php?t=570)</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Widestring Fields are always returning Null if one tries to access property Value.</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Firebird 1.5: field named "STATUS_REG" that doesn't show in TZDataSet.</simpara>
+				</listitem>
+				<listitem>
+					<simpara>FPC/Lazarus: Connecting to a Firebird Database will cause a Range Check Error.</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Zeos appears to be bringing back Postgresql money type as ftfloat instead of ftcurrency.</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Row inserting is impossible with simple queries when TZQuery.ReadOnly property set to false and no TZQuery.UpdateObject defined.</simpara>
+				</listitem>
+				<listitem>
+					<simpara>In the metadata, all user tables were being reported as type VIEW.</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Problem in ZSysUtils.BytesToVar().</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Problem with TZAbstractDataset.InternalPost.</simpara>
+				</listitem>
+				<listitem>
+					<simpara>When using GetPChar()  Result of GetPChar() points to unallocated memory.</simpara>
+				</listitem>
+				<listitem>
+					<simpara>ZeosDBO (Ado) update problem with TZUpdateSQL</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Username property not refreshed if changed in login box</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Problem with TZTable refresh method</simpara>
+				</listitem>
+				<listitem>
+					<simpara>IProviderSupport - PSUpdateRecord</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Firebird 1.5 Read Only Database on CD</simpara>
+				</listitem>
+				<listitem>
+					<simpara>ZQuery's FieldsEditor brings diff. types for the same field</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Login Dialog unstable appearance</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Wrong results for lookup fields</simpara>
+				</listitem>
+				<listitem>
+					<simpara>open cursors in Oracle</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Change data when Dataset.State = dsBrowse</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Exception when deleting record with ClientDataSet</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Strange behaviour Zeos - DBLookUpComboBox</simpara>
+				</listitem>
+				<listitem>
+					<simpara>CreateStatement and Properties</simpara>
+				</listitem>
+				<listitem>
+					<simpara>WideString Updates</simpara>
+				</listitem>
+				<listitem>
+					<simpara>MySQL:zeos doesnt assign default '0000-00-00' to Date Fields</simpara>
+				</listitem>
+				<listitem>
+					<simpara>TZAbstractRODataset.RereadRows;</simpara>
+				</listitem>
+				<listitem>
+					<simpara>CaseSensitive locate on WideString fields</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Filter issues</simpara>
+				</listitem>
+				<listitem>
+					<simpara>AV error when opening a DML with a TZQuery using doSmartOpen</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Incorrect TZPostgreSQLNotify definition</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Access violation on large string fields.</simpara>
+				</listitem>
+				<listitem>
+					<simpara>MySQL Date/Time bug + Fix</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Firebird 1.5: unsupported datatype</simpara>
+				</listitem>
+				<listitem>
+					<simpara>Startup failing if compiled with "Full Boolean Evaluation"</simpara>
+				</listitem>
+				<listitem>
+					<simpara>SetFieldData for ftString don't refresh</simpara>
+				</listitem>
+				<listitem>
+					<simpara>ADO TDateTime parameter wrong type</simpara>
+				</listitem>
+				<listitem>
+					<simpara>TZTable's TabeleName Property - not list with ADO protocol</simpara>
+				</listitem>
+		</sect2>
+	</sect1>
+	<sect1>
+		<title>Changes in Release 6.5</title>
 		<sect2>
 			<title>Release 6.5.1 - 23 Nov 2004</title>
 			<itemizedlist>
