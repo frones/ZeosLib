@@ -65,6 +65,7 @@ type
     FDelimiterType: TZDelimiterType;
     FCreateScripts: TStringDynArray;
     FDropScripts: TStringDynArray;
+    FProperties: TStringDynArray;
   public
     property Name: string read FName write FName;
     property Alias: string read FAlias write FAlias;
@@ -82,6 +83,8 @@ type
       write FCreateScripts;
     property DropScripts: TStringDynArray read FDropScripts
       write FDropScripts;
+    property Properties: TStringDynArray read FProperties
+      write FProperties;
   end;
 
   {** Implements an abstract class for all SQL test cases. }
@@ -101,6 +104,7 @@ type
     FRebuild: Boolean;
     FCreateScripts: TStringDynArray;
     FDropScripts: TStringDynArray;
+    FProperties: TStringDynArray;
 
   protected
     property Connections: TObjectList read FConnections write FConnections;
@@ -140,6 +144,7 @@ type
     property Rebuild: Boolean read FRebuild;
     property CreateScripts: TStringDynArray read FCreateScripts;
     property DropScripts: TStringDynArray read FDropScripts;
+    property Properties: TStringDynArray read FProperties;
   end;
 
   {** Implements a test case which runs all active connections. }
@@ -243,7 +248,8 @@ begin
       DATABASE_CREATE_SCRIPTS_KEY, ''), LIST_DELIMITERS);
     Current.DropScripts := SplitStringToArray(ReadProperty(ConnectionName,
       DATABASE_DROP_SCRIPTS_KEY, ''), LIST_DELIMITERS);
-
+    Current.Properties := SplitStringToArray(ReadProperty(ConnectionName,
+      DATABASE_PROPERTIES_KEY, ''), LIST_DELIMITERS);
     FConnections.Add(Current);
   end;
 end;
@@ -308,6 +314,7 @@ begin
   FRebuild := Connection.Rebuild;
   FCreateScripts := Connection.CreateScripts;
   FDropScripts := Connection.DropScripts;
+  FProperties := Connection.Properties;
 end;
 
 {**
@@ -361,11 +368,19 @@ end;
 function TZAbstractSQLTestCase.CreateDbcConnection: IZConnection;
 var
   URL: string;
+  TempProperties :TStrings;
+  I: Integer;
 begin
   if Port <> 0 then
-    URL := Format('zdbc:%s://%s:%d/%s', [Protocol, HostName, Port, Database])
-  else URL := Format('zdbc:%s://%s/%s', [Protocol, HostName, Database]);
-  Result := DriverManager.GetConnectionWithLogin(URL, UserName, Password);
+    URL := Format('zdbc:%s://%s:%d/%s?UID=%s;PWD=%s', [Protocol, HostName, Port, Database, UserName, Password])
+  else URL := Format('zdbc:%s://%s/%s?UID=%s;PWD=%s', [Protocol, HostName, Database, UserName, Password]);
+  TempProperties := TStringList.Create;
+  for I := 0 to High(Properties) do
+  begin
+    TempProperties.Add(Properties[I])
+  end;
+  Result := DriverManager.GetConnectionWithParams(URL, TempProperties);
+  TempProperties.Free;
 end;
 
 {**
@@ -373,6 +388,8 @@ end;
   @return a created database connection component.
 }
 function TZAbstractSQLTestCase.CreateDatasetConnection: TZConnection;
+var
+  I: Integer;
 begin
   Result := TZConnection.Create(nil);
   Result.Protocol := Protocol;
@@ -382,6 +399,10 @@ begin
   Result.User := UserName;
   Result.Password := Password;
   Result.LoginPrompt := False;
+  for I := 0 to High(Properties) do
+  begin
+    Result.Properties.Add(Properties[I])
+  end;
 end;
 
 {**

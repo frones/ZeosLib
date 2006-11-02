@@ -224,8 +224,12 @@ var
   ReadChar: Char;
   LastChar: Char;
 begin
-  Result.TokenType := ttQuoted;
   Result.Value := FirstChar;
+  If FirstChar = '`' then
+    Result.TokenType := ttQuotedIdentifier
+  Else
+    Result.TokenType := ttQuoted;
+
   LastChar := #0;
 
   while Stream.Read(ReadChar, 1) > 0 do

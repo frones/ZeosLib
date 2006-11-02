@@ -67,8 +67,8 @@ type
     segments count, segment size in bytes and blob type
     Note: blob type can be text an binary }
   TIbBlobInfo = record
-    NumSegments: SmallInt;
-    MaxSegmentSize: SmallInt;
+    NumSegments: Word;
+    MaxSegmentSize: Word;
     BlobType: SmallInt;
     TotalSize: LongInt;
   end;
@@ -1148,6 +1148,8 @@ begin
   GetBlobInfo(PlainDriver, BlobHandle, BlobInfo);
   BlobSize := BlobInfo.TotalSize;
   Size := BlobSize;
+
+  SegmentLenght := BlobInfo.MaxSegmentSize; 
 
   { Allocates a blob buffer }
   Buffer := AllocMem(BlobSize);

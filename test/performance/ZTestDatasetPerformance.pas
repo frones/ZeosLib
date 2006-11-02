@@ -39,7 +39,7 @@ unit ZTestDatasetPerformance;
 interface
 
 uses TestFramework, SysUtils, Classes, ZPerformanceTestCase, ZConnection,
-  ZAbstractRODataset, ZDataset, ZDbcMySql, ZDbcIntfs, DB;
+  ZAbstractRODataset, ZDataset, ZDbcIntfs, DB;
 
 type
 

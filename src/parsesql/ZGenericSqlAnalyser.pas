@@ -492,7 +492,7 @@ begin
       ReadField := ReadField and (Field = '') and (CurrentUpper <> 'AS');
     end
     { Reads field. }
-    else if ReadField and ((CurrentType = ttWord) or
+    else if ReadField and ((CurrentType = ttWord) or (CurrentType = ttQuotedIdentifier) or
       (CurrentValue = '*')) then
     begin
       Catalog := Schema;
@@ -624,7 +624,7 @@ begin
       ReadTable := ReadTable and (Table = '') and (CurrentUpper <> 'AS');
     end
     { Reads table. }
-    else if ReadTable and (CurrentType = ttWord) then
+    else if ReadTable and ((CurrentType = ttWord) or (CurrentType = ttQuotedIdentifier)) then
     begin
       Catalog := Schema;
       Schema := Table;

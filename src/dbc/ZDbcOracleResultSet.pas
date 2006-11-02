@@ -257,9 +257,15 @@ begin
       SQLT_BIN, SQLT_LBI:
         CurrentVar.ColType := stBinaryStream;
       SQLT_CLOB:
-        CurrentVar.ColType := stAsciiStream;
+        begin
+          CurrentVar.ColType := stAsciiStream;
+          CurrentVar.TypeCode := CurrentVar.DataType;
+        end;
       SQLT_BLOB:
-        CurrentVar.ColType := stBinaryStream;
+        begin
+          CurrentVar.ColType := stBinaryStream;
+          CurrentVar.TypeCode := CurrentVar.DataType;
+        end
       else
         CurrentVar.ColType := stUnknown;
     end;

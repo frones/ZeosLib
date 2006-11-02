@@ -108,6 +108,7 @@ const
   DATABASE_DELIMITER_KEY      = 'delimiter';
   DATABASE_CREATE_SCRIPTS_KEY = 'create.scripts';
   DATABASE_DROP_SCRIPTS_KEY   = 'drop.scripts';
+  DATABASE_PROPERTIES_KEY     = 'properties';
 
 const
   { SQL script delimiters }

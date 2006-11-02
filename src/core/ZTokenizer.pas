@@ -51,7 +51,7 @@ type
     such as "number", "symbol" or "word".
   }
   TZTokenType = (ttUnknown, ttEOF, ttFloat, ttInteger, ttHexDecimal,
-    ttNumber, ttSymbol, ttQuoted, ttWord, ttKeyword, ttWhitespace,
+    ttNumber, ttSymbol, ttQuoted, ttQuotedIdentifier, ttWord, ttKeyword, ttWhitespace,
     ttComment, ttSpecial);
 
   {**
@@ -160,7 +160,7 @@ type
   end;
 
   {*Fix for C++ Builder hpp generation bug - #817612 *}
-  (*$HPPEMIT 'namespace Ztokenizer {class DELPHICLASS TZSymbolNode;}' *) 
+  (*$HPPEMIT 'namespace Ztokenizer {class DELPHICLASS TZSymbolNode;}' *)
   // Forward declaration
   TZSymbolNode = class;
   TZSymbolNodeArray = array of TZSymbolNode;

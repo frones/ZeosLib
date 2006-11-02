@@ -117,6 +117,7 @@ type
     function GetCatalog: string; override;
 
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
+    function CreateSequence(const Sequence: string; BlockSize: Integer): IZSequence; override;
 
     function GetPlainDriver: IZOraclePlainDriver;
     function GetConnectionHandle: POCIEnv;
@@ -645,6 +646,16 @@ begin
   end;
 end;
 
+{**
+  Creates a sequence generator object.
+  @param Sequence a name of the sequence generator.
+  @param BlockSize a number of unique keys requested in one trip to SQL server.
+  @returns a created sequence object.
+}
+function TZOracleConnection.CreateSequence(const Sequence: string; BlockSize: Integer): IZSequence; 
+begin
+  Result := TZOracleSequence.Create(Self, Sequence, BlockSize);
+end;
 {**
   Gets a Oracle plain driver interface.
   @return a Oracle plain driver interface.

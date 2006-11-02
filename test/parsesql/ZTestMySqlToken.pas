@@ -93,7 +93,7 @@ procedure TZTestMySQLTokenizer.TestQuoteState;
 const
   TokenString1: string = '"aaa" `b``b`''c\''c''''c''';
   TokenTypes1: array[0..2] of TZTokenType = (
-    ttQuoted, ttQuoted, ttQuoted);
+    ttQuoted, ttQuotedIdentifier, ttQuoted);
   TokenValues1: array[0..2] of string = (
     '"aaa"', '`b``b`', '''c\''c''''c''');
 begin
