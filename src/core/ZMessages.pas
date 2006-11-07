@@ -206,6 +206,9 @@ resourcestring
   SBoundVarStrIndexMissing = 'Índice de texto "%s" da variável de limite não existe'; 
   SBindVarOutOfRange      = 'Índice da variável de limite fora de alcance: %d';
 
+  SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
+  SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
+
 {$ELSE}
 
 {$IFDEF DUTCH}
@@ -358,6 +361,9 @@ resourcestring
   SBoundVarStrIndexMissing = 'Tekst index van bound variable bestaat niet: "%s"';
   SBindVarOutOfRange      = 'Bound variable index buitenbereik: %d';
 
+  SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
+  SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
+  
 {$ELSE}
 // <- ms, 09/05/2005
 
@@ -513,6 +519,9 @@ resourcestring
   SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
 
+  SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
+  SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
+
 {$ELSE}
   // -> fduenas, 28/06/2005
 {$IFDEF SPANISH} //Spanish translations
@@ -665,6 +674,9 @@ resourcestring
   SPreparedStmtExecFailure = 'Translate: Prepared statement failed to execute';
   SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
+
+  SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
+  SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
 
 {$ELSE}
 
@@ -820,6 +832,9 @@ resourcestring
   SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
 
+  SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
+  SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
+  
   // <-- added by tohenk
   {$ELSE}
   {$IFDEF INDONESIAN}
@@ -971,6 +986,9 @@ resourcestring
   SPreparedStmtExecFailure = 'Prepared Statement gagal dieksekusi';
   SBoundVarStrIndexMissing = 'Teks variabel indeks "%s" tidak ada';
   SBindVarOutOfRange      = 'Variabel indeks diluar jangkauan: %d';
+
+  SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
+  SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
 
   // <--- end added by tohenk
 
@@ -1124,6 +1142,10 @@ resourcestring
   SPreparedStmtExecFailure = 'Prepared statement failed to execute';
   SBoundVarStrIndexMissing = 'Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Bound variable index out of range: %d';
+
+//FOS+ 07112006
+  SRefreshRowOnlySupportedWithUpdateObject = 'The refreshrow method is only supported with an update object';
+  SMustBeInBrowseMode = 'Operation is only allowed in dsBROWSE state';
 
 {$ENDIF}   // INDONESIAN <--- added by tohenk
 

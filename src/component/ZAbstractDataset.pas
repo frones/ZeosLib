@@ -134,6 +134,7 @@ type
     procedure CommitUpdates;
     procedure CancelUpdates;
     procedure RevertRecord;
+    procedure RefreshCurrentRow; //FOS+ 07112006
 
     procedure EmptyDataSet; {bangfauzan addition}
 
@@ -594,6 +595,18 @@ end;
 {**
   Reverts the previous status for the current row.
 }
+procedure TZAbstractDataset.RefreshCurrentRow;
+begin
+  if State=dsBrowse then begin
+   if CachedResultSet <> nil then begin
+    CachedResultSet.RefreshCurrentRow(CurrentRow);
+    if not (State in [dsInactive]) then Resync([]);
+   end;
+  end else begin
+    raise EZDatabaseError.Create(SInternalError);
+  end;
+end;
+
 procedure TZAbstractDataset.RevertRecord;
 begin
   if State in [dsInsert] then

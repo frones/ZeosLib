@@ -111,7 +111,10 @@ type
     procedure ReadParamData(Reader: TReader);
     procedure WriteParamData(Writer: TWriter);
 
+
   protected
+    procedure Apply_RefreshResultSet(const Sender:IZCachedResultSet;const RefreshResultSet: IZResultSet;const RefreshRowAccessor:TZRowAccessor);
+
     procedure DefineProperties(Filer: TFiler); override;
     procedure CalculateDefaults(Sender: IZCachedResultSet;
       RowAccessor: TZRowAccessor);
@@ -121,6 +124,9 @@ type
     procedure UpdateAutoIncrementFields(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       OldRowAccessor, NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver);
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
+
+    procedure RefreshCurrentRow(Sender: IZCachedResultSet;RowAccessor: TZRowAccessor);//FOS+ 07112006
+
     procedure Rebuild(SQLStrings: TZSQLStrings);
     procedure RebuildAll;
     procedure FillStatement(ResultSet: IZCachedResultSet;
@@ -485,6 +491,20 @@ begin
   end;
 end;
 
+procedure TZUpdateSQL.RefreshCurrentRow(Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);
+var Config: TZSQLStrings;
+    Statement: IZPreparedStatement;
+    RefreshResultSet: IZResultSet;
+begin
+ Config:=FRefreshSQL;
+ if CONFIG.StatementCount=1 then begin
+  Statement := Sender.GetStatement.GetConnection.PrepareStatement(Config.Statements[0].SQL);
+  FillStatement(Sender, Statement, Config.Statements[0],RowAccessor, RowAccessor);
+  RefreshResultSet:=Statement.ExecuteQueryPrepared;
+  Apply_RefreshResultSet(Sender,RefreshResultSet,RowAccessor);
+ end;
+end;
+
 {**
   Fills the specified statement with stored or given parameters.
   @param ResultSet a source result set object.
@@ -640,45 +660,20 @@ begin
 end;
 
 {**
-  Calculate default values for the fields.
-  @param Sender a cached result set object.
-  @param RowAccessor an accessor object to column values.
+  Apply the Refreshed values.
+  @param RefreshResultSet a result set object.
+  @param RefreshRowAccessor an accessor object to column values.
 }
-procedure TZUpdateSQL.CalculateDefaults(Sender: IZCachedResultSet;
-  RowAccessor: TZRowAccessor);
-begin
- {BEGIN PATCH [1214009] TZUpdateSQL - implemented feature to Calculate default values}
- Sender.GetNativeResolver.CalculateDefaults(Sender, RowAccessor);
- {END PATCH [1214009] TZUpdateSQL - implemented feature to Calculate default values}
-end;
 
-{**
-  Posts updates to database.
-  @param Sender a cached result set object.
-  @param UpdateType a type of updates.
-  @param OldRowAccessor an accessor object to old column values.
-  @param NewRowAccessor an accessor object to new column values.
-}
-procedure TZUpdateSQL.PostUpdates(Sender: IZCachedResultSet;
- UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
-var I: Integer;
-    Statement: IZPreparedStatement;
-    Config: TZSQLStrings;
-    CalcDefaultValues,
-    ExecuteStatement,
-    UpdateAutoIncFields: Boolean;
-
-    RefreshResultSet: IZResultSet;
-    RefreshRowAccessor: TZRowAccessor;
+procedure TZUpdateSQL.Apply_RefreshResultSet(const Sender:IZCachedResultSet;
+  const RefreshResultSet: IZResultSet; const RefreshRowAccessor: TZRowAccessor);
+var
+    I: Integer;
     RefreshColumnIndex:integer;
     RefreshColumnName:String;
-    Refresh_OldSQL:String;
     RefreshColumnType:TZSQLType;
 
-  procedure Apply_RefreshResultSet;
-  var
-    I: Integer;
-  begin
+begin
     if Assigned(RefreshResultSet) then begin
       if not RefreshResultSet.First then begin
         raise EZDatabaseError.Create(SUpdateSQLNoResult);
@@ -713,7 +708,38 @@ var I: Integer;
         end;
       end;
     end;
-  end;
+end;
+{**
+  Calculate default values for the fields.
+  @param Sender a cached result set object.
+  @param RowAccessor an accessor object to column values.
+}
+
+procedure TZUpdateSQL.CalculateDefaults(Sender: IZCachedResultSet;
+  RowAccessor: TZRowAccessor);
+begin
+ {BEGIN PATCH [1214009] TZUpdateSQL - implemented feature to Calculate default values}
+ Sender.GetNativeResolver.CalculateDefaults(Sender, RowAccessor);
+ {END PATCH [1214009] TZUpdateSQL - implemented feature to Calculate default values}
+end;
+
+{**
+  Posts updates to database.
+  @param Sender a cached result set object.
+  @param UpdateType a type of updates.
+  @param OldRowAccessor an accessor object to old column values.
+  @param NewRowAccessor an accessor object to new column values.
+}
+procedure TZUpdateSQL.PostUpdates(Sender: IZCachedResultSet;
+ UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
+var I: Integer;
+    Statement: IZPreparedStatement;
+    Config: TZSQLStrings;
+    CalcDefaultValues,
+    ExecuteStatement,
+    UpdateAutoIncFields: Boolean;
+    Refresh_OldSQL:String;
+    RefreshResultSet: IZResultSet;
 
 begin
   if (UpdateType = utDeleted)
@@ -785,8 +811,7 @@ begin
       end;
       {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     end;
-
-    RefreshRowAccessor := NewRowAccessor;
+//FOSPATCH
     case UpdateType of
       utInserted,utModified: begin
        if FRefreshSql.Text<>'' then begin
@@ -805,16 +830,15 @@ begin
            end;
           end;
          end;
-         if CONFIG.StatementCount=1 then
-         begin
+         if CONFIG.StatementCount=1 then begin
           Statement := Sender.GetStatement.GetConnection.PrepareStatement(Config.Statements[0].SQL);
-            FillStatement(Sender, Statement, Config.Statements[0],OldRowAccessor, NewRowAccessor);
+          FillStatement(Sender, Statement, Config.Statements[0],OldRowAccessor, NewRowAccessor);
           RefreshResultSet:=Statement.ExecuteQueryPrepared;
-          Apply_RefreshResultSet;
+          Apply_RefreshResultSet(Sender,RefreshResultSet,NewRowAccessor);
          end;
-       finally
-        FRefreshSQL.Text:=Refresh_OldSQL;
-       end;
+        finally
+         FRefreshSQL.Text:=Refresh_OldSQL;
+        end;
       end;
     end;
   end;

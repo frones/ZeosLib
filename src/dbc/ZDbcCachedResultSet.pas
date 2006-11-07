@@ -64,6 +64,7 @@ type
     procedure UpdateAutoIncrementFields(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       OldRowAccessor, NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver);
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
+    procedure RefreshCurrentRow(Sender: IZCachedResultSet;RowAccessor: TZRowAccessor); //FOS+ 07112006
   end;
 
   {** Represents a cached result set. }
@@ -89,6 +90,7 @@ type
     procedure CancelUpdates;
     procedure RevertRecord;
     procedure MoveToInitialRow;
+    procedure RefreshCurrentRow(const currentrow:integer); // FOS+ 071106
   end;
 
   {** Implements cached ResultSet. }
@@ -209,6 +211,9 @@ type
     procedure UpdateRow; override;
     procedure DeleteRow; override;
     procedure CancelRowUpdates; override;
+    procedure RefreshCurrentRow(const currentrow:integer);// FOS+ 071106
+
+
     procedure MoveToInsertRow; override;
     procedure MoveToCurrentRow; override;
 
@@ -571,6 +576,16 @@ end;
 {**
   Cancels updates for the current row.
 }
+procedure TZAbstractCachedResultSet.RefreshCurrentRow(const currentrow:integer);
+begin
+  if Resolver = nil then
+    raise EZSQLException.Create(SResolverIsNotSpecified);
+  if not MoveAbsolute(currentrow) then begin
+    raise EZSQLException.Create(SRowDataIsNotAvailable);
+  end;
+  Resolver.RefreshCurrentRow(Self,RowAccessor);
+end;
+
 procedure TZAbstractCachedResultSet.RevertRecord;
 var
   Index: Integer;
