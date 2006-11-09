@@ -63,6 +63,7 @@ type
     property Connection: IZConnection read FConnection write FConnection;
 
   published
+    procedure TestMetadataIdentifierQuoting;
     procedure TestMetadataGetCatalogs;
     procedure TestMetadataGetSchemas;
     procedure TestMetadataGetTableTypes;
@@ -117,6 +118,14 @@ begin
   MD := nil;
   Connection.Close;
   Connection := nil;
+end;
+
+procedure TZGenericTestDbcMetadata.TestMetadataIdentifierQuoting;
+begin
+  Check(MD.GetIdentifierConvertor.Quote('99')=MD.GetIdentifierQuoteString[1]+'99'+MD.GetIdentifierQuoteString[length(MD.GetIdentifierQuoteString)]);
+  Check(MD.GetIdentifierConvertor.Quote('9A')=MD.GetIdentifierQuoteString[1]+'9A'+MD.GetIdentifierQuoteString[length(MD.GetIdentifierQuoteString)]);
+  Check(MD.GetIdentifierConvertor.Quote('A9 A')=MD.GetIdentifierQuoteString[1]+'A9 A'+MD.GetIdentifierQuoteString[length(MD.GetIdentifierQuoteString)]);
+  Check(MD.GetIdentifierConvertor.Quote('A9A')='A9A');
 end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataGetTableTypes;

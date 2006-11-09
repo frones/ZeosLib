@@ -2975,6 +2975,11 @@ var
   I: Integer;
 begin
   Result := False;
+  if (Value[1] in ['0'..'9']) then
+  begin
+    Result := True;
+    exit;
+  end;
   for I := 1 to Length(Value) do
   begin
     if not (Value[I] in ['A'..'Z','a'..'z','0'..'9','_']) then
