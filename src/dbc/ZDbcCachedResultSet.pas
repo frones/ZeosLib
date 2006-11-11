@@ -90,7 +90,7 @@ type
     procedure CancelUpdates;
     procedure RevertRecord;
     procedure MoveToInitialRow;
-    procedure RefreshCurrentRow(const currentrow:integer); // FOS+ 071106
+    procedure RefreshRow; // FOS+ 071106
   end;
 
   {** Implements cached ResultSet. }
@@ -211,7 +211,7 @@ type
     procedure UpdateRow; override;
     procedure DeleteRow; override;
     procedure CancelRowUpdates; override;
-    procedure RefreshCurrentRow(const currentrow:integer);// FOS+ 071106
+    procedure RefreshRow;override;// FOS+ 071106
 
 
     procedure MoveToInsertRow; override;
@@ -576,13 +576,10 @@ end;
 {**
   Cancels updates for the current row.
 }
-procedure TZAbstractCachedResultSet.RefreshCurrentRow(const currentrow:integer);
+procedure TZAbstractCachedResultSet.RefreshRow;
 begin
   if Resolver = nil then
     raise EZSQLException.Create(SResolverIsNotSpecified);
-  if not MoveAbsolute(currentrow) then begin
-    raise EZSQLException.Create(SRowDataIsNotAvailable);
-  end;
   Resolver.RefreshCurrentRow(Self,RowAccessor);
 end;
 

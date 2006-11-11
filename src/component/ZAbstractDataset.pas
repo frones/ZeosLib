@@ -134,7 +134,7 @@ type
     procedure CommitUpdates;
     procedure CancelUpdates;
     procedure RevertRecord;
-    procedure RefreshCurrentRow; //FOS+ 07112006
+    procedure RefreshCurrentRow(const RefreshDetails:Boolean); //FOS+ 07112006
 
     procedure EmptyDataSet; {bangfauzan addition}
 
@@ -595,17 +595,38 @@ end;
 {**
   Reverts the previous status for the current row.
 }
-procedure TZAbstractDataset.RefreshCurrentRow;
+procedure TZAbstractDataset.RefreshCurrentRow(const RefreshDetails:Boolean);
+var RowNo:integer;
+    i: Integer;
+    ostate:TDataSetState;
 begin
   if State=dsBrowse then begin
    if CachedResultSet <> nil then begin
-    CachedResultSet.RefreshCurrentRow(CurrentRow);
-    if not (State in [dsInactive]) then Resync([]);
+    RowNo := Integer(CurrentRows[CurrentRow - 1]);
+    CachedResultSet.MoveAbsolute(RowNo);
+    CachedResultSet.RefreshRow;
+    if not (State in [dsInactive]) then begin
+     if RefreshDetails then begin
+      Resync([]);
+     end else begin
+      FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
+      ostate:=State;
+      SetTempState(dsInternalCalc);
+      try
+       for I := 0 to Fields.Count - 1 do begin
+        DataEvent(deFieldChange,longint(Fields[i]));
+       end;
+      finally
+       RestoreState(ostate);
+      end;
+     end;
+    end;
    end;
   end else begin
     raise EZDatabaseError.Create(SInternalError);
   end;
 end;
+
 
 procedure TZAbstractDataset.RevertRecord;
 begin
