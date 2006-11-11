@@ -11,3 +11,5 @@
 20060802 : Integrated patch from Fduenas concerning http://zeos.firmos.at/viewtopic.php?t=677
 
 20061025 : Blob handling error - Patch by lpolyak - See http://zeos.firmos.at/viewtopic.php?t=855
+
+20061027 : Fix for Bug in TZInterbase6Sequence.GetNextValue - patch by CharlesMcAllister - See http://zeos.firmos.at/viewtopic.php?t=856

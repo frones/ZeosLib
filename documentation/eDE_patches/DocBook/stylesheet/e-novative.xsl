@@ -394,7 +394,7 @@ sect2     toc
 
 <xsl:template name="user.header.content">
 <div id="customheader">
-This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+<a href="http://zeos.firmos.at/portal.php" style="color: #fff; font-weight: bold;">ZeosLib</a><b> - open source tools for your database solutions</b>
 </div>
 </xsl:template>
 
@@ -409,7 +409,7 @@ This document was created using the &gt;e-novative&gt; DocBook Environment (<a h
 
 <xsl:template name="user.footer.content">
 <div id="customfooter">
-This document was created using the &gt;e-novative&gt; DocBook Environment (<a href="http://www.e-novative.de/products/ede" style="color: #fff; font-weight: bold;">eDE</a>)
+(c) 1999 - 2006 The Zeos Development Group
 </div>
 </xsl:template>
 

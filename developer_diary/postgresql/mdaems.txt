@@ -1,3 +1,7 @@
 20060608 : Applied PostgreSQL encodestring - patch by cnliou - See http://zeos.firmos.at/viewtopic.php?t=589
 
 20060616 : Change to function TZPostgreSQLDatabaseMetadata.GetIndexInfo - Patch by Sandeep - See http://zeos.firmos.at/viewtopic.php?t=600
+
+20061029 : Change to function TZPostgreSQLDatabaseMetadata.GetTables - Patch by Sandeep - See http://zeos.firmos.at/viewtopic.php?t=864
+
+20061031 : Range Check Error in ZPlainPostgresqlDriver - Patch by plamendp - See http://zeos.firmos.at/viewtopic.php?t=763

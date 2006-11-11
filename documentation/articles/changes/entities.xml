@@ -26,6 +26,9 @@
 <!ENTITY glienke_tag "/<personname><othername>SG</othername></personname>/">
 <!ENTITY duetting_tag "/<personname><othername>MD</othername></personname>/">
 <!ENTITY seeger_tag "/<personname><othername>MS</othername></personname>/">
+<!ENTITY daems_tag "/<personname><othername>MD</othername></personname>/">
+<!ENTITY hartl_tag "/<personname><othername>HH</othername></personname>/">
+<!ENTITY duenas_tag "/<personname><othername>HH</othername></personname>/">
 <!ENTITY seroukhov_tag "/<personname><othername>SS</othername></personname>/">
 <!ENTITY merkuriev_tag "/<personname><othername>SM</othername></personname>/">
 <!ENTITY fegyverneki_tag "/<personname><othername>JF</othername></personname>/">

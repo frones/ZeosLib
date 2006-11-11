@@ -992,7 +992,7 @@ begin
   decoded:=ZPlainPostgreSql8.PQunescapeBytea(pansichar(value),@len);
   SetLength(result,len);
   dest:=pchar(result);
-  Move(decoded^,result[1],len);
+  if (len > 0) then Move(decoded^,result[1],len);
   ZPlainPostgreSql8.PQFreemem(decoded);
 end;
 

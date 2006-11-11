@@ -521,11 +521,17 @@ end;
   is also automatically closed when it is garbage collected.
 }
 procedure TZAbstractResultSet.Close;
+  var I : integer;
+  var FColumnInfo : TZColumnInfo;
 begin
   LastWasNull := True;
   FRowNo := 0;
   FLastRowNo := 0;
   FClosed := True;
+  for I := FColumnsInfo.Count-1 downto 0 do begin
+    FColumnInfo:=TZColumnInfo(FColumnsInfo.Extract(FColumnsInfo.Items[I]));
+    FColumnInfo.Free;
+  end;
   FColumnsInfo.Clear;
   FStatement := nil;
 end;
