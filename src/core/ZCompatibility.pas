@@ -93,6 +93,7 @@ type
   PCardinal             = ^Cardinal;
   PInt64                = ^Int64;
   PPChar                = ^PChar;
+  PLongWord             = ^LongWord;
 {$ENDIF}
   PWord                 = ^Word;
 

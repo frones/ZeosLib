@@ -50,6 +50,9 @@ interface
 
 {$I ZPlain.inc}
 
+uses 
+   ZCompatibility; 
+ 
 const
 {$IFNDEF MYSQL_STRICT_DLL_LOADING}
   WINDOWS2_DLL_LOCATION = 'libmysql.dll';
@@ -402,13 +405,13 @@ type
 
   PMYSQL_BIND2 = ^MYSQL_BIND2;
   MYSQL_BIND2 =  record
-    length:            {$IFNDEF VER130}PLongInt{$ELSE}^LongInt{$ENDIF};
-    is_null:           {$IFNDEF VER130}PByte{$ELSE}^Byte{$ENDIF};
+    length:            PLongInt; 
+    is_null:           PByte; 
     buffer:            PChar;
-    error:             {$IFNDEF VER130}PByte{$ELSE}^Byte{$ENDIF};
+    error:             PByte; 
     buffer_type:       TMysqlFieldTypes;
     buffer_length:     LongInt;
-    row_ptr:           {$IFNDEF VER130}PByte{$ELSE}^Byte{$ENDIF};
+    row_ptr:           PByte; 
     offset:            LongInt;
     length_value:      LongInt;
     param_number:      Cardinal;
