@@ -104,9 +104,11 @@ begin
       if Assigned(FField.Dataset) then
         THackedDataset(FField.DataSet).DataEvent(deFieldChange, LongInt(FField));
     except
-{$IFNDEF VER130BELOW}
-      ApplicationHandleException(Self);
-{$ENDIF}
+    {$IFNDEF VER130BELOW} 
+        ApplicationHandleException(Self); 
+    {$ELSE} 
+        ShowException(ExceptObject, ExceptAddr); 
+    {$ENDIF} 
     end;
   end;
   inherited Destroy;
