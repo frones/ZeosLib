@@ -27,3 +27,5 @@
 20061003 : Added embedded startup option settings, dll's - Patch by Tohenk and Fduenas - See http://zeos.firmos.at/viewtopic.php?t=777
 
 20061020 : Solved mysql backticking problem - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=748
+
+20061124 : Last_insert_id by native function instead of using 'select' - By mdaems
