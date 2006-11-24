@@ -63,3 +63,5 @@
 20061109 : Treat identifiers starting with numeric characters as 'specialcase' -> quote them when used in generated statements - See http://zeos.firmos.at/viewtopic.php?t=882
 
 20061113 : Fixed Delphi5 compilation of PLongword type. - Patch by gto - See http://zeos.firmos.at/viewtopic.php?t=886
+
+20061124 : Sortfields fix for Bangfauzan Patch - By Bangfauzan - See http://zeos.firmos.at/viewtopic.php?t=920

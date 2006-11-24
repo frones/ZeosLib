@@ -60,7 +60,7 @@ type
   end;
   {$ENDIF}
 
-  TSortType = (stAscending, stDescending);   {bangfauzan addition}
+  TSortType = (stAscending, stDescending, stIgnored);   {bangfauzan addition}
 
   {** Options for dataset. }
   TZDatasetOption = (doOemTranslate, doCalcDefaults, doAlwaysDetailResync,
@@ -1888,14 +1888,15 @@ end;
 }
 procedure TZAbstractRODataset.SetSortedFields({const} Value: string); {bangfauzan modification}
 begin
-  {removing ASC or DESC behind space}
-  if Pos(' ',Value)>0 then
-    Value:=Copy(Value,1,Pos(' ',Value)-1); {bangfauzan addition}
+  Value:=Trim(Value); {bangfauzan addition}
   if FSortedFields <> Value then {bangfauzan modification}
   begin
-    FSortedFields := Value;
+    FIndexFieldNames:=Value;
     FSortType := GetSortType; {bangfauzan addition}
-    FIndexFieldNames := GetIndexFieldNames; {bangfauzan addition}
+    {removing ASC or DESC behind space}
+    if (FSortType <> stIgnored) and (Pos(' ',Value)>0) then
+       Value:=Copy(Value,1,Pos(' ',Value)-1); {bangfauzan addition}
+    FSortedFields := Value;
     if Active then
       {InternalSort;}
       {bangfauzan modification}
@@ -3034,9 +3035,12 @@ end;
 {=======================bangfauzan addition========================}
 function TZAbstractRODataset.GetSortType: TSortType;
 begin
+  if (Pos(',',FIndexFieldNames)>0) or (Pos(';',FIndexFieldNames)>0) then
+     Result:=stIgnored
+  else if Pos(' DESC',UpperCase(FIndexFieldNames))>0 then
+     Result:=stDescending
+  else
   Result:=stAscending;
-  if Pos('DESC',UpperCase(FIndexFieldNames))>0 then
-    Result:=stDescending;
 end;
 
 procedure TZAbstractRODataset.SetSortType(Value: TSortType);
@@ -3044,7 +3048,9 @@ begin
   if FSortType <> Value then
   begin
     FSortType := Value;
-    FIndexFieldNames:=GetIndexFieldNames; {bangfauzan addition}
+    if (FSortType <> stIgnored) and (Pos(' ',FSortedFields)>0) then
+       FSortedFields:=Copy(FSortedFields,1,Pos(' ',FSortedFields)-1);
+    FIndexFieldNames:=GetIndexFieldNames;
     if Active then
        if (FSortedFields = '') then
           Self.InternalRefresh
@@ -3065,15 +3071,17 @@ end;
 procedure TZAbstractRODataset.SetIndexFieldNames(Value: String);
 begin
   Value:=Trim(Value);
-  if Pos('[',Value)>0 then
+  while Pos('[',Value)>0 do
      Value:=Copy(Value,1,Pos('[',Value)-1)+Copy(Value,Pos('[',Value)+1,Length(Value));
-  if Pos(']',Value)>0 then
+  while Pos(']',Value)>0 do
      Value:=Copy(Value,1,Pos(']',Value)-1)+Copy(Value,Pos(']',Value)+1,Length(Value));
+
   if FIndexFieldNames <> Value then begin
     FIndexFieldNames := Value;
-    if pos(' ',value)>0 then Value:=Copy(Value,1,Pos(' ',Value)-1);
-    FSortedFields:=Value;
     FSortType:=GetSortType;
+     if (FSortType <> stIgnored) and (pos(' ',value)>0) then
+        Value:=Copy(Value,1,Pos(' ',Value)-1);
+     FSortedFields:=Value;
   end;
 
   {Perform sorting}
