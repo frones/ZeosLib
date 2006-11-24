@@ -215,7 +215,7 @@ begin
   begin
     if CleanupStatements then
       SQL := SQL + ' '
-    else SQL := SQL + #13;
+    else SQL := SQL + #10;
   end;
   FUncompletedStatement := '';
   FStatements.Clear;
