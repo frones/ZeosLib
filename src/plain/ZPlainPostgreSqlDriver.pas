@@ -395,8 +395,6 @@ type
 
   {** Implements a driver for PostgreSQL 8.1 }
   TZPostgreSQL8PlainDriver = class(TZAbstractObject, IZPlainDriver,IZPostgreSQLPlainDriver)
-  private
-    procedure PQFreeMem(ptr: Pointer);
   public
     constructor Create;
 
@@ -985,13 +983,11 @@ begin
 end;
 
 function TZPostgreSQL8PlainDriver.DecodeBYTEA(value: string): string;
-var decoded,dest:pchar;
+var decoded:pchar;
     len:Longword;
-    von,nach:string;
 begin
-  decoded:=ZPlainPostgreSql8.PQunescapeBytea(pansichar(value),@len);
+  decoded:=ZPlainPostgreSql8.PQUnescapeBytea(pansichar(value),@len);
   SetLength(result,len);
-  dest:=pchar(result);
   if (len > 0) then Move(decoded^,result[1],len);
   ZPlainPostgreSql8.PQFreemem(decoded);
 end;
@@ -1275,11 +1271,6 @@ function TZPostgreSQL8PlainDriver.OpenLargeObject(
   Handle: PZPostgreSQLConnect; ObjId: Oid; Mode: Integer): Integer;
 begin
   Result := ZPlainPostgreSql8.lo_open(Handle, ObjId, Mode);
-end;
-
-procedure TZPostgreSQL8PlainDriver.PQFreeMem(ptr: Pointer);
-begin
- ZPlainPostgreSql8.PQFreemem(ptr);
 end;
 
 function TZPostgreSQL8PlainDriver.PutBytes(Handle: PZPostgreSQLConnect;

@@ -41,6 +41,9 @@ interface
 
 {$I ZPlain.inc}
 
+uses 
+   ZCompatibility; 
+
 const
   IBLocalBufferLength = 512;
   IBBigLocalBufferLength = IBLocalBufferLength * 2;
@@ -503,7 +506,7 @@ type
 			           { & text types only }
     sqllen:             Short;     { length of data area }
     sqldata:            PChar;     { address of data }
-    sqlind:             {$IFNDEF VER130}PSmallInt{$ELSE}^SmallInt{$ENDIF};  { address of indicator }
+    sqlind:             PSmallInt;  { address of indicator } 
                                    { variable }
     sqlname_length:     Short;     { length of sqlname field }
     { name of field, name length + space for NULL }

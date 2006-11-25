@@ -866,7 +866,11 @@ begin
     try
       OnFilterRecord(Self, Result);
     except
-      ApplicationHandleException(Self);
+    {$IFNDEF VER130BELOW}
+        ApplicationHandleException(Self);
+    {$ELSE}
+        ShowException(ExceptObject, ExceptAddr);
+    {$ENDIF}
     end;
 
     CurrentRow := SavedRow;

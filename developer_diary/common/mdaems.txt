@@ -59,3 +59,7 @@
 20061024 : Changed Test suite to accept Connection properties. (eg for mysqld testing) - By mdaems
 
 20061025 : Added Sqlite 3 driver dll's (Windows+Linux) - Send by Michael
+
+20061109 : Treat identifiers starting with numeric characters as 'specialcase' -> quote them when used in generated statements - See http://zeos.firmos.at/viewtopic.php?t=882
+
+20061113 : Fixed Delphi5 compilation of PLongword type. - Patch by gto - See http://zeos.firmos.at/viewtopic.php?t=886
