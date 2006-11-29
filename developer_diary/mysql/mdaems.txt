@@ -29,3 +29,5 @@
 20061020 : Solved mysql backticking problem - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=748
 
 20061124 : Last_insert_id by native function instead of using 'select' - By mdaems
+
+20061130 : Mysql Float Fields Precision - Patch by Jay (Jose Ostos) - See http://zeos.firmos.at/viewtopic.php?t=930
