@@ -60,7 +60,7 @@ type
   end;
   {$ENDIF}
 
-  TSortType = (stAscending, stDescending);   {bangfauzan addition}
+  TSortType = (stAscending, stDescending, stIgnored);   {bangfauzan addition}
 
   {** Options for dataset. }
   TZDatasetOption = (doOemTranslate, doCalcDefaults, doAlwaysDetailResync,
@@ -172,7 +172,7 @@ type
     procedure SetSortedFields({const} Value: string); {bangfauzan modification}
     procedure SetProperties(const Value: TStrings);
 
-    function GetSortType : TSortType; {bangfauzan addition}
+    //function GetSortType : TSortType; {bangfauzan addition}
     Procedure SetSortType(Value : TSortType); {bangfauzan addition}
 
     procedure UpdateSQLStrings(Sender: TObject);
@@ -377,7 +377,7 @@ type
   published
     property Connection: TZConnection read FConnection write SetConnection;
     property SortedFields: string read FSortedFields write SetSortedFields;
-    property SortType : TSortType read GetSortType write SetSortType
+    property SortType : TSortType read {GetSortType} FSortType write SetSortType
       default stAscending; {bangfauzan addition}
 
     property AutoCalcFields;
@@ -1888,14 +1888,17 @@ end;
 }
 procedure TZAbstractRODataset.SetSortedFields({const} Value: string); {bangfauzan modification}
 begin
-  {removing ASC or DESC behind space}
-  if Pos(' ',Value)>0 then
-    Value:=Copy(Value,1,Pos(' ',Value)-1); {bangfauzan addition}
+  Value:=Trim(Value); {bangfauzan addition}
   if FSortedFields <> Value then {bangfauzan modification}
   begin
+    //FIndexFieldNames:=Value;
+    //FSortType := GetSortType; {bangfauzan addition}
+    {removing ASC or DESC behind space}
+    if (FSortType <> stIgnored) then begin {pawelsel modification}
+       Value:=StringReplace(Value,' Desc','',[rfReplaceAll,rfIgnoreCase]);
+       Value:=StringReplace(Value,' Asc','',[rfReplaceAll,rfIgnoreCase]);
+    end;
     FSortedFields := Value;
-    FSortType := GetSortType; {bangfauzan addition}
-    FIndexFieldNames := GetIndexFieldNames; {bangfauzan addition}
     if Active then
       {InternalSort;}
       {bangfauzan modification}
@@ -3032,19 +3035,26 @@ begin
 end;
 
 {=======================bangfauzan addition========================}
-function TZAbstractRODataset.GetSortType: TSortType;
+{function TZAbstractRODataset.GetSortType: TSortType;
 begin
+  if (Pos(',',FIndexFieldNames)>0) or (Pos(';',FIndexFieldNames)>0) then
+     Result:=stIgnored
+  else if Pos(' DESC',UpperCase(FIndexFieldNames))>0 then
+     Result:=stDescending
+  else
   Result:=stAscending;
-  if Pos('DESC',UpperCase(FIndexFieldNames))>0 then
-    Result:=stDescending;
-end;
+end;}
 
 procedure TZAbstractRODataset.SetSortType(Value: TSortType);
 begin
   if FSortType <> Value then
   begin
     FSortType := Value;
-    FIndexFieldNames:=GetIndexFieldNames; {bangfauzan addition}
+    if (FSortType <> stIgnored) then begin {pawelsel modification}
+       FSortedFields:=StringReplace(FSortedFields,' Desc','',[rfReplaceAll,rfIgnoreCase]);
+       FSortedFields:=StringReplace(FSortedFields,' Asc','',[rfReplaceAll,rfIgnoreCase]);
+    end;
+    FIndexFieldNames:=GetIndexFieldNames;
     if Active then
        if (FSortedFields = '') then
           Self.InternalRefresh
@@ -3057,23 +3067,32 @@ function TZAbstractRODataset.GetIndexFieldNames : String;
 begin
   Result:=FSortedFields;
   if Result<>'' then begin
-    if FSortType=stAscending then Result:=Result+' Asc';
-    if FSortType=stDescending then Result:=Result+' Desc';
+    if FSortType=stAscending then begin
+       Result:=StringReplace(Result,';',' Asc;',[rfReplaceAll]);
+       Result:=StringReplace(Result,',',' Asc,',[rfReplaceAll]);
+       Result:=Result+' Asc';
+    end;
+    if FSortType=stDescending then begin
+       Result:=StringReplace(Result,';',' Desc;',[rfReplaceAll]);
+       Result:=StringReplace(Result,',',' Desc,',[rfReplaceAll]);
+       Result:=Result+' Desc';
+    end;
   end;
 end;
 
 procedure TZAbstractRODataset.SetIndexFieldNames(Value: String);
 begin
   Value:=Trim(Value);
-  if Pos('[',Value)>0 then
-     Value:=Copy(Value,1,Pos('[',Value)-1)+Copy(Value,Pos('[',Value)+1,Length(Value));
-  if Pos(']',Value)>0 then
-     Value:=Copy(Value,1,Pos(']',Value)-1)+Copy(Value,Pos(']',Value)+1,Length(Value));
+  Value:=StringReplace(Value,'[','',[rfReplaceAll]);
+  Value:=StringReplace(Value,']','',[rfReplaceAll]);
   if FIndexFieldNames <> Value then begin
     FIndexFieldNames := Value;
-    if pos(' ',value)>0 then Value:=Copy(Value,1,Pos(' ',Value)-1);
-    FSortedFields:=Value;
-    FSortType:=GetSortType;
+     //FSortType:=GetSortType; 
+     if (FSortType <> stIgnored) then begin {pawelsel modification}
+        Value:=StringReplace(Value,' Desc','',[rfReplaceAll,rfIgnoreCase]);
+        Value:=StringReplace(Value,' Asc','',[rfReplaceAll,rfIgnoreCase]);
+     end;
+     FSortedFields:=Value;
   end;
 
   {Perform sorting}

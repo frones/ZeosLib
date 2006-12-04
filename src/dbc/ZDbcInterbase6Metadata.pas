@@ -2639,8 +2639,8 @@ begin
     LSequenceNamePattern := ConstructNameCondition(SequenceNamePattern,
       'RDB$GENERATOR_NAME');
 
-    SQL := ' SELECT RDB$GENERATOR_NAME FROM RDB$GENERATORS ' +
-      'WHERE RDB$SYSTEM_FLAG IS NULL';
+    SQL := ' SELECT RDB$GENERATOR_NAME FROM RDB$GENERATORS ' + 
+      'WHERE (RDB$SYSTEM_FLAG IS NULL OR RDB$SYSTEM_FLAG = 0)';
 
     if LSequenceNamePattern <> '' then
       SQL := SQL + ' AND ' + LSequenceNamePattern;

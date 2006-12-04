@@ -121,7 +121,7 @@ type
 implementation
 
 uses
-  Math, ZMessages, ZDbcMySqlUtils, ZDbcUtils, ZMatchPattern, ZDbcMySqlMetadata;
+  Math, ZMessages, ZDbcMySqlUtils, ZDbcUtils, ZMatchPattern, ZDbcMySqlMetadata, ZDbcMysql;
 
 { TZMySQLResultSetMetadata }
 
@@ -913,12 +913,15 @@ procedure TZMySQLCachedResolver.UpdateAutoIncrementFields(
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
+  Plaindriver : IZMysqlPlainDriver;
 begin
   inherited UpdateAutoIncrementFields(Sender, UpdateType, OldRowAccessor, NewRowAccessor, Resolver);
   if not ((FAutoColumnIndex > 0) and
           OldRowAccessor.IsNull(FAutoColumnIndex)) then
      exit;
-  Statement := Connection.CreateStatement;
+  Plaindriver := (Connection as IZMysqlConnection).GetPlainDriver;
+  NewRowAccessor.SetLong(FAutoColumnIndex, PlainDriver.GetLastInsertID(FHandle));
+{  Statement := Connection.CreateStatement;
   ResultSet := Statement.ExecuteQuery('SELECT LAST_INSERT_ID()');
   try
     if ResultSet.Next then
@@ -927,6 +930,7 @@ begin
     ResultSet.Close;
     Statement.Close;
   end;
+}
 end;
 {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 
