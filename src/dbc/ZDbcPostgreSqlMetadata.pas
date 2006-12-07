@@ -1518,14 +1518,10 @@ begin
 
     SQL := SQL + ' AND c.relname LIKE ''' + EscapeQuotes(ToLikeString(TableNamePattern))
       + ''' AND (false ';
-    if (Length(Types) > 0) then 
-      SQL := SQL + 'AND (false ';
-    for I := 0 to High(Types) do
+    for I := 0 to High(LTypes) do
       SQL := SQL + ' OR ( ' + TableTypeSQLExpression(LTypes[i], UseSchemas) + ' ) ';
     SQL := SQL + ' )' + OrderBy;
-    if (Length(Types) > 0) then 
-      SQL := SQL + ' )';
-      
+
     Result := CopyToVirtualResultSet(
       GetConnection.CreateStatement.ExecuteQuery(SQL),
       ConstructVirtualResultSet(TableColumnsDynArray));
