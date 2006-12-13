@@ -120,7 +120,6 @@ type
 
     FRequestLive: Boolean;
     FSQL: TZSQLStrings;
-    FParamCheck: Boolean;
     FParams: TParams;
     FShowRecordTypes: TUpdateStatusSet;
     FOptions: TZDatasetOptions;
@@ -480,7 +479,6 @@ begin
   TZSQLStrings(FSQL).Dataset := Self;
   TZSQLStrings(FSQL).MultiStatements := False;
   FSQL.OnChange := UpdateSQLStrings;
-  FParamCheck := True;
   FParams := TParams.Create(Self);
   FCurrentRows := TZSortedList.Create;
   BookmarkSize := SizeOf(Integer);

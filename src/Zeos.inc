@@ -4,6 +4,15 @@
 {$DEFINE VER140BELOW}
 {$ENDIF}
 
+
+// Compilation directives for Delphi4
+{$IFDEF VER120}
+{$DEFINE VER125BELOW}
+{$DEFINE VER130BELOW}
+{$DEFINE VER130KBELOW}
+{$DEFINE VER140BELOW}
+{$ENDIF}
+
 // Compilation directives for Delphi 5
 {$IFDEF VER130}
 {$DEFINE VER130BELOW}
@@ -137,7 +146,9 @@
 
 // Turn on IProviderSupport interface
 {$IFNDEF FPC}
+{$IFNDEF VER125BELOW}
 {$DEFINE WITH_IPROVIDER}
+{$ENDIF}
 {$ENDIF}
 
 // Turn on multithreading

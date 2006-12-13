@@ -1504,7 +1504,7 @@ begin
         + ' NULL AS REMARKS FROM pg_class c WHERE true ';
     end;
 
-    if (Types = nil) or (High(Types) = 0) then
+    if (Types = nil) or (Length(Types) = 0) then
     begin
       SetLength(LTypes, 5);
       LTypes[0] := 'TABLE';
