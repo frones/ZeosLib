@@ -67,3 +67,5 @@
 20061124 : Sortfields fix for Bangfauzan Patch - By Bangfauzan - See http://zeos.firmos.at/viewtopic.php?t=920
 
 20061127 : Sorting features finetuning - By Bangfauzan - See http://zeos.firmos.at/viewtopic.php?t=935
+
+20061220 : Sorting features finetuning - By Bangfauzan and Pawelsel - See http://zeos.firmos.at/viewtopic.php?t=984
