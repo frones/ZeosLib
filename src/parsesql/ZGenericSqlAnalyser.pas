@@ -545,6 +545,7 @@ begin
         SelectSchema.AddField(TZFieldRef.Create(False, '', '', '', '',
           Alias, nil));
         ClearElements;
+        Dec(TokenIndex); // go back 1 token(Because of Inc in next lines)
       end;
     end;
     Inc(TokenIndex);
