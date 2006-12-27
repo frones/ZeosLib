@@ -143,7 +143,7 @@ begin
      Continue;
 
     if Param.IsNull then
-      Statement.SetNull(I, ConvertDatasetToDbcType(Param.DataType))
+      Statement.SetNull(I+1, ConvertDatasetToDbcType(Param.DataType))
     else begin
       case Param.DataType of
         ftBoolean:
@@ -156,7 +156,7 @@ begin
           Statement.SetDouble(I+1, Param.AsFloat);
         ftLargeInt:
           Statement.SetLong(I+1, StrToInt64(Param.AsString));
-        ftString:
+        ftString, ftFixedChar:
           Statement.SetString(I+1, Param.AsString);
         ftBytes:
           Statement.SetString(I+1, Param.AsString);

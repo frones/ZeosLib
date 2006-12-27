@@ -71,3 +71,5 @@
 20061220 : Sorting features finetuning - By Bangfauzan and Pawelsel - See http://zeos.firmos.at/viewtopic.php?t=984
 
 20061220 : One token could be skipped during creation of FieldRefs - See http://zeos.firmos.at/viewtopic.php?t=974 - Mantis Bug 3
+
+20061227 : StoredProc fixes - By Ochnap2 - See http://zeos.firmos.at/viewtopic.php?t=990
