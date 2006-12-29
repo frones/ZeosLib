@@ -45,8 +45,8 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  SysUtils, DB, Classes, ZConnection, ZDbcIntfs, ZAbstractDataset,
-  ZCompatibility;
+  SysUtils, DB, Classes, ZConnection, ZDbcIntfs,
+  ZAbstractDataset, ZCompatibility;
 
 type
 
@@ -93,7 +93,8 @@ type
 
 implementation
 
-uses ZDatasetUtils;
+uses
+  ZAbstractRODataset, ZMessages, ZDatasetUtils;
 
 { TZStoredProc }
 
@@ -156,7 +157,7 @@ begin
           Statement.SetDouble(I+1, Param.AsFloat);
         ftLargeInt:
           Statement.SetLong(I+1, StrToInt64(Param.AsString));
-        ftString, ftFixedChar:
+        ftString , ftFixedChar:
           Statement.SetString(I+1, Param.AsString);
         ftBytes:
           Statement.SetString(I+1, Param.AsString);
@@ -184,6 +185,8 @@ begin
               Stream.Free;
             end;
           end;
+        else
+          raise EZDatabaseError.Create(SUnKnownParamDataType);
       end;
     end;
   end;
@@ -241,7 +244,7 @@ begin
         ftDateTime:
           Param.AsDateTime := FCallableStatement.GetTimestamp(I + 1);
         else
-          Param.AsString := FCallableStatement.GetString(I + 1);
+           raise EZDatabaseError.Create(SUnKnownParamDataType);
       end;
   end;
 end;

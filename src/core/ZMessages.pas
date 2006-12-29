@@ -209,6 +209,8 @@ resourcestring
   SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
   SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
 
+  SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
+
 {$ELSE}
 
 {$IFDEF DUTCH}
@@ -361,9 +363,11 @@ resourcestring
   SBoundVarStrIndexMissing = 'Tekst index van bound variable bestaat niet: "%s"';
   SBindVarOutOfRange      = 'Bound variable index buitenbereik: %d';
 
-  SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
-  SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
-  
+  SRefreshRowOnlySupportedWithUpdateObject = 'De refreshrow methode is enkel ondersteund vooreen update object';
+  SMustBeInBrowseMode = 'Bewerking is enkel toegestaan in dsBROWSE status';
+
+  SUnKnownParamDataType = 'Param.DataType is onbekend';
+
 {$ELSE}
 // <- ms, 09/05/2005
 
@@ -522,6 +526,8 @@ resourcestring
   SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
   SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
 
+  SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
+
 {$ELSE}
   // -> fduenas, 28/06/2005
 {$IFDEF SPANISH} //Spanish translations
@@ -677,6 +683,8 @@ resourcestring
 
   SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
   SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
+
+  SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
 
 {$ELSE}
 
@@ -834,7 +842,9 @@ resourcestring
 
   SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
   SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
-  
+
+  SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
+
   // <-- added by tohenk
   {$ELSE}
   {$IFDEF INDONESIAN}
@@ -989,6 +999,8 @@ resourcestring
 
   SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
   SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
+
+  SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
 
   // <--- end added by tohenk
 
@@ -1146,6 +1158,8 @@ resourcestring
 //FOS+ 07112006
   SRefreshRowOnlySupportedWithUpdateObject = 'The refreshrow method is only supported with an update object';
   SMustBeInBrowseMode = 'Operation is only allowed in dsBROWSE state';
+
+  SUnKnownParamDataType = 'Unknown Param.DataType';
 
 {$ENDIF}   // INDONESIAN <--- added by tohenk
 

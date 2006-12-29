@@ -704,9 +704,11 @@ end;
    Create objects and allocate memory for variables
 }
 procedure TZPlainPostgreSQLPerformanceTestCase.SetUp;
+{ TODO
 var
   FPostgreSQL65PlainDriver: IZPostgreSQLPlainDriver;
   FPostgreSQL72PlainDriver: IZPostgreSQLPlainDriver;
+ }
 begin
 { TODO
   FPostgreSQL65PlainDriver := TZPostgreSQL65PlainDriver.Create;

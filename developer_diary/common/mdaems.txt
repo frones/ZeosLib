@@ -73,3 +73,5 @@
 20061220 : One token could be skipped during creation of FieldRefs - See http://zeos.firmos.at/viewtopic.php?t=974 - Mantis Bug 3
 
 20061227 : StoredProc fixes - By Ochnap2 - See http://zeos.firmos.at/viewtopic.php?t=990
+
+20061230 : StoredProc fixes Part 2 - By Ochnap2 & mdaems - See http://zeos.firmos.at/viewtopic.php?t=990
