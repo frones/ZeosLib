@@ -175,7 +175,8 @@ begin
         else Result := stBigDecimal;
       end;
     FIELD_TYPE_FLOAT:
-      Result := stFloat;
+//      Result := stFloat;
+      Result := stDouble;
     FIELD_TYPE_DECIMAL, FIELD_TYPE_NEWDECIMAL: {ADDED FIELD_TYPE_NEWDECIMAL by fduenas 20-06-2006}
       begin
         if PlainDriver.GetFieldDecimals(FieldHandle) = 0 then
@@ -271,9 +272,9 @@ begin
   end
   else if TypeName = 'FLOAT' then
   begin
-    if IsUnsigned then
+//    if IsUnsigned then
       Result := stDouble
-    else Result := stFloat;
+//    else Result := stFloat;
   end
   else if TypeName = 'DECIMAL' then
   begin

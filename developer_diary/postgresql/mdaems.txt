@@ -5,3 +5,5 @@
 20061029 : Change to function TZPostgreSQLDatabaseMetadata.GetTables - Patch by Sandeep - See http://zeos.firmos.at/viewtopic.php?t=864
 
 20061031 : Range Check Error in ZPlainPostgresqlDriver - Patch by plamendp - See http://zeos.firmos.at/viewtopic.php?t=763
+
+20061207 : Change to function TZPostgreSQLDatabaseMetadata.GetTables - Patch by Damien666 - See http://zeos.firmos.at/viewtopic.php?t=839

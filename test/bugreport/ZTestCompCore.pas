@@ -97,6 +97,7 @@ type
     procedure Test953557;
     procedure Test966267;
     procedure Test985629;
+    procedure TestFloatPrecision;
     procedure Test995080;
     procedure Test996283;
     procedure Test1004534;
@@ -1521,6 +1522,37 @@ begin
 
     Query.Close;
   finally
+    Query.Free;
+    Connection.Free;
+  end;
+end;
+
+{**
+  Bug report Float fields precision
+}
+procedure ZTestCompCoreBugReport.TestFloatPrecision;
+var
+  Connection: TZConnection;
+  Query: TZQuery;
+begin
+  if SkipClosed then Exit;
+
+  Connection := Self.CreateDatasetConnection;
+  Query := TZQuery.Create(nil);
+  Query.Connection := Connection;
+  Query.SQL.Text := 'Insert into number_values(n_id, n_money) values(999999,643.11)';
+  Query.ExecSQL;
+
+  try
+    Query.SQL.Text := 'select n_money from number_values';
+    Query.Open;
+    // uses format to avoid local separator differences 
+    CheckEquals(trim(Format('%8.2f', [643.11])),Query.Fields[0].AsString);
+
+    Query.Close;
+  finally
+    Query.SQL.Text := 'delete from number_values where n_id=999999';
+    Query.execSql;
     Query.Free;
     Connection.Free;
   end;

@@ -140,6 +140,13 @@ function BufferToStr(Buffer: PChar; Length: LongInt): string;
 function StrToBoolEx(Str: string): Boolean;
 
 {**
+  Converts a boolean into string value.
+  @param Bool a boolean value.
+  @return <code>"True"</code> or <code>"False"</code>
+}
+function BoolToStrEx(Bool: Boolean): String;
+
+{**
   Checks if the specified string can represent an IP address.
   @param Str a string value.
   @return <code>True</code> if the string can represent an IP address
@@ -513,6 +520,19 @@ begin
   Str := UpperCase(Str);
   Result := (Str = 'Y') or (Str = 'YES') or (Str = 'T') or (Str = 'TRUE')
     or (StrToIntDef(Str, 0) <> 0);
+end;
+
+{**
+  Converts a boolean into string value.
+  @param Bool a boolean value.
+  @return <code>"True"</code> or <code>"False"</code>
+}
+function BoolToStrEx(Bool: Boolean): String;
+begin
+  if Bool then
+    Result := 'True'
+  else
+    Result := 'False';
 end;
 
 {**

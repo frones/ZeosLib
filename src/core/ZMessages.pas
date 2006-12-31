@@ -206,6 +206,8 @@ resourcestring
   SBoundVarStrIndexMissing = 'Índice de texto "%s" da variável de limite não existe'; 
   SBindVarOutOfRange      = 'Índice da variável de limite fora de alcance: %d';
 
+  SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
+
 {$ELSE}
 
 {$IFDEF DUTCH}
@@ -357,6 +359,11 @@ resourcestring
   SPreparedStmtExecFailure = 'Uitvoeren van Prepared statement mislukt';
   SBoundVarStrIndexMissing = 'Tekst index van bound variable bestaat niet: "%s"';
   SBindVarOutOfRange      = 'Bound variable index buitenbereik: %d';
+
+  SRefreshRowOnlySupportedWithUpdateObject = 'De refreshrow methode is enkel ondersteund vooreen update object';
+  SMustBeInBrowseMode = 'Bewerking is enkel toegestaan in dsBROWSE status';
+
+  SUnKnownParamDataType = 'Param.DataType is onbekend';
 
 {$ELSE}
 // <- ms, 09/05/2005
@@ -513,6 +520,8 @@ resourcestring
   SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
 
+  SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
+
 {$ELSE}
   // -> fduenas, 28/06/2005
 {$IFDEF SPANISH} //Spanish translations
@@ -665,6 +674,8 @@ resourcestring
   SPreparedStmtExecFailure = 'Translate: Prepared statement failed to execute';
   SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
+
+  SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
 
 {$ELSE}
 
@@ -820,6 +831,11 @@ resourcestring
   SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
 
+  SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
+  SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
+
+  SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
+
   // <-- added by tohenk
   {$ELSE}
   {$IFDEF INDONESIAN}
@@ -971,6 +987,8 @@ resourcestring
   SPreparedStmtExecFailure = 'Prepared Statement gagal dieksekusi';
   SBoundVarStrIndexMissing = 'Teks variabel indeks "%s" tidak ada';
   SBindVarOutOfRange      = 'Variabel indeks diluar jangkauan: %d';
+
+  SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
 
   // <--- end added by tohenk
 
@@ -1124,6 +1142,8 @@ resourcestring
   SPreparedStmtExecFailure = 'Prepared statement failed to execute';
   SBoundVarStrIndexMissing = 'Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Bound variable index out of range: %d';
+
+  SUnKnownParamDataType = 'Unknown Param.DataType';
 
 {$ENDIF}   // INDONESIAN <--- added by tohenk
 

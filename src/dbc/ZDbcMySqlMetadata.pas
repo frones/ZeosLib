@@ -1021,6 +1021,7 @@ begin
             {initialise some variables}
             ColumnSize := 0;
             TypeInfoFirst := '';
+            TypeInfoSecond := '';
 
             Result.MoveToInsertRow;
             Result.UpdateString(1, TempCatalog);

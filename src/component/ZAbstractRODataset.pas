@@ -120,7 +120,6 @@ type
 
     FRequestLive: Boolean;
     FSQL: TZSQLStrings;
-    FParamCheck: Boolean;
     FParams: TParams;
     FShowRecordTypes: TUpdateStatusSet;
     FOptions: TZDatasetOptions;
@@ -172,7 +171,7 @@ type
     procedure SetSortedFields({const} Value: string); {bangfauzan modification}
     procedure SetProperties(const Value: TStrings);
 
-    //function GetSortType : TSortType; {bangfauzan addition}
+    function GetSortType : TSortType; {bangfauzan addition}
     Procedure SetSortType(Value : TSortType); {bangfauzan addition}
 
     procedure UpdateSQLStrings(Sender: TObject);
@@ -377,7 +376,7 @@ type
   published
     property Connection: TZConnection read FConnection write SetConnection;
     property SortedFields: string read FSortedFields write SetSortedFields;
-    property SortType : TSortType read {GetSortType} FSortType write SetSortType
+    property SortType : TSortType read FSortType write SetSortType
       default stAscending; {bangfauzan addition}
 
     property AutoCalcFields;
@@ -480,7 +479,6 @@ begin
   TZSQLStrings(FSQL).Dataset := Self;
   TZSQLStrings(FSQL).MultiStatements := False;
   FSQL.OnChange := UpdateSQLStrings;
-  FParamCheck := True;
   FParams := TParams.Create(Self);
   FCurrentRows := TZSortedList.Create;
   BookmarkSize := SizeOf(Integer);
@@ -1889,10 +1887,10 @@ end;
 procedure TZAbstractRODataset.SetSortedFields({const} Value: string); {bangfauzan modification}
 begin
   Value:=Trim(Value); {bangfauzan addition}
-  if FSortedFields <> Value then {bangfauzan modification}
+  if (FSortedFields <> Value) or (FIndexFieldNames <> Value)then {bangfauzan modification}
   begin
-    //FIndexFieldNames:=Value;
-    //FSortType := GetSortType; {bangfauzan addition}
+    FIndexFieldNames:=Value;
+    FSortType := GetSortType; {bangfauzan addition}
     {removing ASC or DESC behind space}
     if (FSortType <> stIgnored) then begin {pawelsel modification}
        Value:=StringReplace(Value,' Desc','',[rfReplaceAll,rfIgnoreCase]);
@@ -3035,15 +3033,35 @@ begin
 end;
 
 {=======================bangfauzan addition========================}
-{function TZAbstractRODataset.GetSortType: TSortType;
+function TZAbstractRODataset.GetSortType: TSortType;
+var
+  AscCount, DescCount: Integer;
+  s: String;
 begin
-  if (Pos(',',FIndexFieldNames)>0) or (Pos(';',FIndexFieldNames)>0) then
+  {pawelsel modification}
+  AscCount:=0;
+  DescCount:=0;
+  s:=StringReplace(FIndexFieldNames,';',',',[rfReplaceAll]);
+  while Pos(',',s)>0 do
+  begin
+    if Pos(' DESC',UpperCase(Copy(s,1,Pos(',',s))))>0 then
+      Inc(DescCount)
+    else
+      Inc(AscCount);
+    s:=Copy(s,Pos(',',s)+1,Length(s)-Pos(',',s));
+  end;
+  if Length(s)>0 then
+    if Pos(' DESC',UpperCase(s))>0 then
+      Inc(DescCount)
+    else
+      Inc(AscCount);
+  if (DescCount > 0) and (AscCount > 0) then
      Result:=stIgnored
-  else if Pos(' DESC',UpperCase(FIndexFieldNames))>0 then
+  else if (DescCount > 0) then
      Result:=stDescending
   else
-  Result:=stAscending;
-end;}
+     Result:=stAscending;
+end;
 
 procedure TZAbstractRODataset.SetSortType(Value: TSortType);
 begin
@@ -3066,7 +3084,7 @@ end;
 function TZAbstractRODataset.GetIndexFieldNames : String;
 begin
   Result:=FSortedFields;
-  if Result<>'' then begin
+  if Result<>'' then begin {pawelsel modification}
     if FSortType=stAscending then begin
        Result:=StringReplace(Result,';',' Asc;',[rfReplaceAll]);
        Result:=StringReplace(Result,',',' Asc,',[rfReplaceAll]);
@@ -3083,11 +3101,13 @@ end;
 procedure TZAbstractRODataset.SetIndexFieldNames(Value: String);
 begin
   Value:=Trim(Value);
+  {pawelsel modification}
   Value:=StringReplace(Value,'[','',[rfReplaceAll]);
   Value:=StringReplace(Value,']','',[rfReplaceAll]);
+
   if FIndexFieldNames <> Value then begin
-    FIndexFieldNames := Value;
-     //FSortType:=GetSortType; 
+     FIndexFieldNames := Value;
+     FSortType:=GetSortType;
      if (FSortType <> stIgnored) then begin {pawelsel modification}
         Value:=StringReplace(Value,' Desc','',[rfReplaceAll,rfIgnoreCase]);
         Value:=StringReplace(Value,' Asc','',[rfReplaceAll,rfIgnoreCase]);

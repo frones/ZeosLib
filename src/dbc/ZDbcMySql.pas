@@ -523,16 +523,13 @@ end;
   @see #setAutoCommit
 }
 procedure TZMySQLConnection.Commit;
-var
-  SQL: PChar;
 begin
   if (TransactIsolationLevel <> tiNone) and (AutoCommit <> True)
     and not Closed then
   begin
-    SQL := 'COMMIT';
-    FPlainDriver.ExecQuery(FHandle, SQL);
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+    If not FPlaindriver.Commit(FHandle) then
+      CheckMySQLError(FPlainDriver, FHandle, lcExecute, 'Native Commit call');
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, 'Native Commit call');
   end;
 end;
 
@@ -544,16 +541,13 @@ end;
   @see #setAutoCommit
 }
 procedure TZMySQLConnection.Rollback;
-var
-  SQL: PChar;
 begin
   if (TransactIsolationLevel <> tiNone) and (AutoCommit <> True)
     and not Closed then
   begin
-    SQL := 'ROLLBACK';
-    FPlainDriver.ExecQuery(FHandle, SQL);
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+    If not FPlaindriver.Rollback(FHandle) then
+      CheckMySQLError(FPlainDriver, FHandle, lcExecute, 'Native Rollback call');
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, 'Native Rollback call');
   end;
 end;
 
@@ -668,8 +662,6 @@ end;
   @param autoCommit true enables auto-commit; false disables auto-commit.
 }
 procedure TZMySQLConnection.SetAutoCommit(AutoCommit: Boolean);
-var
-  SQL: PChar;
 begin
   if AutoCommit <> Self.AutoCommit then
   begin
@@ -677,12 +669,9 @@ begin
 
     if not Closed then
     begin
-      if AutoCommit then
-        SQL := 'SET AUTOCOMMIT=1'
-      else SQL := 'SET AUTOCOMMIT=0';
-      FPlainDriver.ExecQuery(FHandle, SQL);
-      CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
-      DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+      if not FPlaindriver.SetAutocommit(FHandle, AutoCommit) then
+        CheckMySQLError(FPlainDriver, FHandle, lcExecute, 'Native SetAutoCommit '+BoolToStrEx(AutoCommit)+'call');
+      DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, 'Native SetAutoCommit '+BoolToStrEx(AutoCommit)+'call');
     end;
   end;
 end;
