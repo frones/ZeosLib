@@ -3,7 +3,7 @@
 {                 Zeos Database Objects                   }
 {            Compatibility Classes and Functions          }
 {                                                         }
-{          Originally Written by Sergey Seroukhov         }
+{          Originally written by Sergey Seroukhov         }
 {                                                         }
 {*********************************************************}
 

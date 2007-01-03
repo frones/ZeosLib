@@ -3,7 +3,7 @@
 {                 Zeos Database Objects                   }
 {             Variables classes and interfaces            }
 {                                                         }
-{            Originally Written by Sergey Seroukhov       }
+{            Originally written by Sergey Seroukhov       }
 {                                                         }
 {*********************************************************}
 

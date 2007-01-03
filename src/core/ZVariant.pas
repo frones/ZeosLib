@@ -3,7 +3,7 @@
 {                 Zeos Database Objects                   }
 {               Variant Processing Classes                }
 {                                                         }
-{            Originally Written by Sergey Seroukhov       }
+{            Originally written by Sergey Seroukhov       }
 {                                                         }
 {*********************************************************}
 

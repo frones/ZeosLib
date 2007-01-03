@@ -3,7 +3,7 @@
 {                 Zeos Database Objects                   }
 {        String tokenizing classes and interfaces         }
 {                                                         }
-{         Originally Written by Sergey Seroukhov          }
+{         Originally written by Sergey Seroukhov          }
 {                                                         }
 {*********************************************************}
 
