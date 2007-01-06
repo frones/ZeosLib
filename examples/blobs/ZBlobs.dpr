@@ -3,7 +3,6 @@
 {                 Zeos Database Objects                   }
 {               Blobs Example Application                 }
 {                                                         }
-{    Copyright (c) 1999-2003 Zeos Development Group       }
 {          Originally written by Sergey Seroukhov         }
 {                                                         }
 {*********************************************************}
