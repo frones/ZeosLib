@@ -75,3 +75,5 @@
 20061227 : StoredProc fixes - By Ochnap2 - See http://zeos.firmos.at/viewtopic.php?t=990
 
 20070102 : Modification of copyright statement
+
+20070110 : Kickoff for mysql prepared statements : Changed TZMysqlPreparedStatement to TZMysqlEmulatedPreparedStatement and added TZDataset option doPreferPrepared.

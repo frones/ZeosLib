@@ -527,8 +527,13 @@ function TZMySQLConnection.CreatePreparedStatement(const SQL: string;
   Info: TStrings): IZPreparedStatement;
 begin
   if IsClosed then Open;
-  Result := TZMySQLPreparedStatement.Create(FPlainDriver, Self, SQL,
-    Info, FHandle);
+  if Assigned(Info) then
+    if StrToBoolEx(Info.Values['preferprepared']) then
+      Result := TZMySQLPreparedStatement.Create(FPlainDriver, Self, SQL, Info, FHandle)
+    else
+      Result := TZMySQLEmulatedPreparedStatement.Create(FPlainDriver, Self, SQL, Info, FHandle)
+  else
+    Result := TZMySQLEmulatedPreparedStatement.Create(FPlainDriver, Self, SQL, Info, FHandle);
 end;
 
 {**

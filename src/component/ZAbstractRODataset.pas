@@ -80,7 +80,7 @@ type
 
   {** Options for dataset. }
   TZDatasetOption = (doOemTranslate, doCalcDefaults, doAlwaysDetailResync,
-    doSmartOpen);
+    doSmartOpen, doPreferPrepared);
 
   {** Set of dataset options. }
   TZDatasetOptions = set of TZDatasetOption;
@@ -1494,6 +1494,9 @@ begin
     if doCalcDefaults in FOptions then
       Temp.Values['defaults'] := 'true'
     else Temp.Values['defaults'] := 'false';
+    if doPreferPrepared in FOptions then
+      Temp.Values['preferprepared'] := 'true'
+    else Temp.Values['preferprepared'] := 'false';
 
     Result := FConnection.DbcConnection.PrepareStatementWithParams(SQL, Temp);
   finally

@@ -91,7 +91,7 @@ type
   end;
 
   {** Implements Prepared SQL Statement. }
-  TZMySQLPreparedStatement = class(TZEmulatedPreparedStatement)
+  TZMySQLEmulatedPreparedStatement = class(TZEmulatedPreparedStatement)
   private
     FHandle: PZMySQLConnect;
     FPlainDriver: IZMySQLPlainDriver;
@@ -104,6 +104,14 @@ type
       Connection: IZConnection; const SQL: string; Info: TStrings;
       Handle: PZMySQLConnect);
   end;
+
+{$IFNDEF MYSQL_USE_PREPARE}
+  TZMySQLPreparedStatement = class(TZMySQLEmulatedPreparedStatement)
+  end;
+{$ELSE}
+  TZMySQLPreparedStatement = class(TZMySQLEmulatedPreparedStatement)
+  end;
+{$ENDIF MYSQL_USE_PREPARE}
 
 implementation
 
@@ -296,7 +304,7 @@ begin
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
 end;
 
-{ TZMySQLPreparedStatement }
+{ TZMySQLEmulatedPreparedStatement }
 
 {**
   Constructs this object and assignes the main properties.
@@ -305,7 +313,7 @@ end;
   @param Info a statement parameters.
   @param Handle a connection handle pointer.
 }
-constructor TZMySQLPreparedStatement.Create(PlainDriver: IZMySQLPlainDriver;
+constructor TZMySQLEmulatedPreparedStatement.Create(PlainDriver: IZMySQLPlainDriver;
   Connection: IZConnection; const SQL: string; Info: TStrings; Handle: PZMySQLConnect);
 begin
   inherited Create(Connection, SQL, Info);
@@ -319,7 +327,7 @@ end;
   @param Info a statement parameters.
   @return a created statement object.
 }
-function TZMySQLPreparedStatement.CreateExecStatement: IZStatement;
+function TZMySQLEmulatedPreparedStatement.CreateExecStatement: IZStatement;
 begin
   Result := TZMySQLStatement.Create(FPlainDriver, Connection, Info,FHandle);
 end;
@@ -329,7 +337,7 @@ end;
   @param Value a regular string.
   @return a string in MySQL escape format.
 }
-function TZMySQLPreparedStatement.GetEscapeString(const Value: string): string;
+function TZMySQLEmulatedPreparedStatement.GetEscapeString(const Value: string): string;
 var
   BufferLen: Integer;
   Buffer: PChar;
@@ -346,7 +354,7 @@ end;
   @param ParameterIndex the first parameter is 1, the second is 2, ...
   @return a string representation of the parameter.
 }
-function TZMySQLPreparedStatement.PrepareSQLParam(ParamIndex: Integer): string;
+function TZMySQLEmulatedPreparedStatement.PrepareSQLParam(ParamIndex: Integer): string;
 var
   Value: TZVariant;
   TempBytes: TByteDynArray;
