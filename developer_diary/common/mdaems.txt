@@ -77,3 +77,7 @@
 20070102 : Modification of copyright statement
 
 20070110 : Kickoff for mysql prepared statements : Changed TZMysqlPreparedStatement to TZMysqlEmulatedPreparedStatement and added TZDataset option doPreferPrepared.
+
+20070111 : Integrated 2 patches - Written by tohenk
+           - Indonesian translations
+           - Missing IFDEF for ENABLE_ADO in property-editor

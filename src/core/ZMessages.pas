@@ -367,7 +367,7 @@ resourcestring
   SBindingFailure         = 'Binding van parameterset mislukt';
   SPreparedStmtExecFailure = 'Uitvoeren van Prepared statement mislukt';
   SBoundVarStrIndexMissing = 'Tekst index van bound variable bestaat niet: "%s"';
-  SBindVarOutOfRange      = 'Bound variable index buitenbereik: %d';
+  SBindVarOutOfRange      = 'Bound variable index buiten bereik: %d';
 
   SRefreshRowOnlySupportedWithUpdateObject = 'De refreshrow methode is enkel ondersteund vooreen update object';
   SMustBeInBrowseMode = 'Bewerking is enkel toegestaan in dsBROWSE status';
@@ -1003,10 +1003,10 @@ resourcestring
   SBoundVarStrIndexMissing = 'Teks variabel indeks "%s" tidak ada';
   SBindVarOutOfRange      = 'Variabel indeks diluar jangkauan: %d';
 
-  SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
-  SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
+  SRefreshRowOnlySupportedWithUpdateObject = 'Metode RefreshRow hanya didukung oleh obyek Update';
+  SMustBeInBrowseMode = 'Operasi hanya diperbolehkan pada status dsBrowse';
 
-  SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
+  SUnKnownParamDataType = 'Param.DataType tidak dikenal';
 
   // <--- end added by tohenk
 

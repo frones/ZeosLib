@@ -188,7 +188,9 @@ uses SysUtils, Forms, Dialogs, Controls, DB, TypInfo,
 {$ENDIF}
 {$IFNDEF UNIX}
   {$IFNDEF FPC}
+  {$IFDEF ENABLE_ADO}
 , ZDbcAdoUtils
+  {$ENDIF}
   {$ENDIF}
 {$ENDIF}
 ;
@@ -612,10 +614,12 @@ begin
       inherited
 {$IFNDEF UNIX}
 {$IFNDEF FPC}
+{$IFDEF ENABLE_ADO}
     else
     if ((GetComponent(0) as TZConnection).Protocol = 'ado') then
       (GetComponent(0) as TZConnection).Database := PromptDataSource(Application.Handle,
         (GetComponent(0) as TZConnection).Database)
+{$ENDIF}
 {$ENDIF}
 {$ENDIF}
     else
@@ -817,4 +821,5 @@ end;
 {$ENDIF}
 
 end.
+
 
