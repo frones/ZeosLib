@@ -416,7 +416,8 @@ implementation
 
 uses Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSchema,
   ZGenericSqlToken, ZTokenizer, ZGenericSqlAnalyser, ZAbstractDataset
-  {$IFNDEF FPC},DBConsts{$ENDIF};
+  {$IFNDEF FPC}, DBConsts{$ENDIF}
+  {$IFDEF BDS4_UP}, WideStrUtils{$ENDIF};
 
 { EZDatabaseError }
 
@@ -1206,7 +1207,11 @@ begin
           end;
         ftWideString:
           begin
-            PWideString(Buffer)^ := RowAccessor.GetUnicodeString(ColumnIndex, Result);
+            {$IFDEF BDS4_UP}
+              WStrCopy(Buffer, PWideChar(RowAccessor.GetUnicodeString(ColumnIndex, Result)));
+            {$ELSE}
+              PWideString(Buffer)^ := RowAccessor.GetUnicodeString(ColumnIndex, Result);
+            {$ENDIF ~BDS4_UP}
             Result := not Result;
           end;
         { Processes all other fields. }
