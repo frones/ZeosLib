@@ -1,52 +1,58 @@
-// ========================================================================= //
-//                                                                           //
-//                            Zeos Database Objects                          //
-//               Copyright (c) 1999-2005 Zeos Development Group              //
-//                                                                           //
-// ========================================================================= //
-//                                                                           //
-// License Agreement:                                                        //
-//                                                                           //
-// This library is free software; you can redistribute it and/or modify it   //
-// under the terms of the GNU Lesser General Public License as published by  //
-// the Free Software Foundation; either version 2.1 of the License, or (at   //
-// your option) any later version.                                           //
-//                                                                           //
-// This library is distributed in the hope that it will be useful, but       //
-// WITHOUT ANY WARRANTY; without even the implied warranty of                //
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser  //
-// General Public License for more details.                                  //
-//                                                                           //
-// You should have received a copy of the GNU Lesser General Public License  //
-// along with this library; if not, write to the Free Software Foundation,   //
-// Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA             //
-//                                                                           //
-// The project web site is located on:                                       //
-//    http://www.sourceforge.net/projects/zeoslib.                           //
-//    http://www.zeoslib.sourceforge.net                                     //
-//                                                                           //
-//                                                    Zeos Development Group //
-// ========================================================================= //
+{*********************************************************}
+{                                                         }
+{                 Zeos Database Objects                   }
+{                                                         }
+{ This unit contains all the messages that are output by  }
+{ ZEOS methods. One of the given language can be activated}
+{ by setting the language in ->                           }
+{ ZEOS.inc (e.g.: $DEFINE GERMAN).                        }
+{ If no language is defined english will be used.         }
+{                                                         }
+{*********************************************************}
 
-
-// ========================================================================= //
-// ZMessages.pas                                                             //
-// ========================================================================= //
-//                                                                           //
-// This unit contains all the messages that are output by ZEOS methods. One  //
-// of the given language can be activated by setting the language in ->      //
-// ZEOS.inc (e.g.: {$DEFINE GERMAN}). If no language is defined in ZEOS.inc  //
-// the english strings will be used.                                         //
-//                                                                           //
-// Date         Rev.   Sgn   Comment                                         //
-// ------------------------------------------------------------------------- //
-// 03/05/2005    1.9   ms    german messagetexts added and corrected some    //
-//                           english messages                                //
-// 09/05/2005    1.9   ms    dutch and portuguese messagetexts added         //
-// 23/06/2005    1.9   ms    added some new message strings (german and      //
-//                           english)                                        //
-// ========================================================================= //
-
+{@********************************************************}
+{    Copyright (c) 1999-2006 Zeos Development Group       }
+{                                                         }
+{ License Agreement:                                      }
+{                                                         }
+{ This library is distributed in the hope that it will be }
+{ useful, but WITHOUT ANY WARRANTY; without even the      }
+{ implied warranty of MERCHANTABILITY or FITNESS FOR      }
+{ A PARTICULAR PURPOSE.  See the GNU Lesser General       }
+{ Public License for more details.                        }
+{                                                         }
+{ The source code of the ZEOS Libraries and packages are  }
+{ distributed under the Library GNU General Public        }
+{ License (see the file COPYING / COPYING.ZEOS)           }
+{ with the following  modification:                       }
+{ As a special exception, the copyright holders of this   }
+{ library give you permission to link this library with   }
+{ independent modules to produce an executable,           }
+{ regardless of the license terms of these independent    }
+{ modules, and to copy and distribute the resulting       }
+{ executable under terms of your choice, provided that    }
+{ you also meet, for each linked independent module,      }
+{ the terms and conditions of the license of that module. }
+{ An independent module is a module which is not derived  }
+{ from or based on this library. If you modify this       }
+{ library, you may extend this exception to your version  }
+{ of the library, but you are not obligated to do so.     }
+{ If you do not wish to do so, delete this exception      }
+{ statement from your version.                            }
+{                                                         }
+{                                                         }
+{ The project web site is located on:                     }
+{   http://zeos.firmos.at  (FORUM)                        }
+{   http://zeosbugs.firmos.at (BUGTRACKER)                }
+{   svn://zeos.firmos.at/zeos/trunk (SVN Repository)      }
+{                                                         }
+{   http://www.sourceforge.net/projects/zeoslib.          }
+{   http://www.zeoslib.sourceforge.net                    }
+{                                                         }
+{                                                         }
+{                                                         }
+{                                 Zeos Development Group. }
+{********************************************************@}
 
 unit ZMessages;
 
@@ -206,6 +212,9 @@ resourcestring
   SBoundVarStrIndexMissing = 'Índice de texto "%s" da variável de limite não existe'; 
   SBindVarOutOfRange      = 'Índice da variável de limite fora de alcance: %d';
 
+  SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
+  SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
+
   SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
 
 {$ELSE}
@@ -358,7 +367,7 @@ resourcestring
   SBindingFailure         = 'Binding van parameterset mislukt';
   SPreparedStmtExecFailure = 'Uitvoeren van Prepared statement mislukt';
   SBoundVarStrIndexMissing = 'Tekst index van bound variable bestaat niet: "%s"';
-  SBindVarOutOfRange      = 'Bound variable index buitenbereik: %d';
+  SBindVarOutOfRange      = 'Bound variable index buiten bereik: %d';
 
   SRefreshRowOnlySupportedWithUpdateObject = 'De refreshrow methode is enkel ondersteund vooreen update object';
   SMustBeInBrowseMode = 'Bewerking is enkel toegestaan in dsBROWSE status';
@@ -520,6 +529,9 @@ resourcestring
   SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
 
+  SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
+  SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
+
   SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
 
 {$ELSE}
@@ -674,6 +686,9 @@ resourcestring
   SPreparedStmtExecFailure = 'Translate: Prepared statement failed to execute';
   SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
+
+  SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
+  SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
 
   SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
 
@@ -988,7 +1003,10 @@ resourcestring
   SBoundVarStrIndexMissing = 'Teks variabel indeks "%s" tidak ada';
   SBindVarOutOfRange      = 'Variabel indeks diluar jangkauan: %d';
 
-  SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
+  SRefreshRowOnlySupportedWithUpdateObject = 'Metode RefreshRow hanya didukung oleh obyek Update';
+  SMustBeInBrowseMode = 'Operasi hanya diperbolehkan pada status dsBrowse';
+
+  SUnKnownParamDataType = 'Param.DataType tidak dikenal';
 
   // <--- end added by tohenk
 
@@ -1142,6 +1160,10 @@ resourcestring
   SPreparedStmtExecFailure = 'Prepared statement failed to execute';
   SBoundVarStrIndexMissing = 'Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Bound variable index out of range: %d';
+
+//FOS+ 07112006
+  SRefreshRowOnlySupportedWithUpdateObject = 'The refreshrow method is only supported with an update object';
+  SMustBeInBrowseMode = 'Operation is only allowed in dsBROWSE state';
 
   SUnKnownParamDataType = 'Unknown Param.DataType';
 

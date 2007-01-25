@@ -74,4 +74,13 @@
 
 20061227 : StoredProc fixes - By Ochnap2 - See http://zeos.firmos.at/viewtopic.php?t=990
 
-20061230 : StoredProc fixes Part 2 - By Ochnap2 & mdaems - See http://zeos.firmos.at/viewtopic.php?t=990
+20070102 : Modification of copyright statement
+
+20070110 : Kickoff for mysql prepared statements : Changed TZMysqlPreparedStatement to TZMysqlEmulatedPreparedStatement and added TZDataset option doPreferPrepared.
+
+20070111 : Integrated 3 patches - Written by tohenk
+           - Indonesian translations
+           - Missing IFDEF for ENABLE_ADO in property-editor
+           - Missing res/dof/cfg files for ComponentDesign in D7-> wrong build dir.
+           
+20070117 : BDS 2006 WideString error - Patch by fduenas/cariad - See http://zeos.firmos.at/viewtopic.php?t=972
