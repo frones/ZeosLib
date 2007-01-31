@@ -1248,9 +1248,9 @@ var
     testResult: Integer;
 begin
     if (mode = True) then
-        query := 'AUTOCOMMIT=1'
+        query := 'SET AUTOCOMMIT=1'
     else
-        query := 'AUTOCOMMIT=0';
+        query := 'SET AUTOCOMMIT=0';
     testResult := MYSQL_API.mysql_query(ZPlainMySql320.PMYSQL(Handle),pchar(query));
     Result := (testResult = 0);
 end;
@@ -1751,9 +1751,9 @@ var
     testResult: Integer;
 begin
     if (mode = True) then
-        query := 'AUTOCOMMIT=1'
+        query := 'SET AUTOCOMMIT=1'
     else
-        query := 'AUTOCOMMIT=0';
+        query := 'SET AUTOCOMMIT=0';
     testResult := MYSQL_API.mysql_query(ZPlainMySql323.PMYSQL(Handle),pchar(query));
     Result := (testResult = 0);
 end;
@@ -2252,9 +2252,9 @@ var
     testResult: Integer;
 begin
     if (mode = True) then
-        query := 'AUTOCOMMIT=1'
+        query := 'SET AUTOCOMMIT=1'
     else
-        query := 'AUTOCOMMIT=0';
+        query := 'SET AUTOCOMMIT=0';
     testResult := MYSQL_API.mysql_query(ZPlainMySql40.PMYSQL(Handle),pchar(query));
     Result := (testResult = 0);
 end;

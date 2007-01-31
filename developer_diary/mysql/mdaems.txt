@@ -33,3 +33,7 @@
 20061130 : Mysql Float Fields Precision - Patch by Jay (Jose Ostos) - See http://zeos.firmos.at/viewtopic.php?t=930
 
 20061213 : Mysql Native Commit/Rollback/SetAutoCommit calls - By mdaems
+
+20070131 : Added library calls for 'mysql_stmt_data_seek' and 'mysql_stmt_row_seek'
+
+20070131 : Fixed error from 20061213 : 'Set' missing in SetAutocommit functions mysql 4.0 and below - Reported by Dhongu - See http://zeos.firmos.at/viewtopic.php?t=1054
