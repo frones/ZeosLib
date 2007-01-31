@@ -164,6 +164,12 @@ const
   MYSQL_SHUTDOWN_KILLABLE_LOCK_TABLE = 4;
   MYSQL_SHUTDOWN_KILLABLE_UPDATE     = 8;
 
+{prepared fetch results}
+  STMT_FETCH_OK         = 0;
+  STMT_FETCH_ERROR      = 1;
+  STMT_FETCH_NO_DATA    = 100;
+  STMT_FETCH_DATA_TRUNC = 101;
+
 type
     PZMySQLConnect = Pointer;
     PZMySQLResult = Pointer;
@@ -418,13 +424,13 @@ type
 
   PMYSQL_BIND2 = ^MYSQL_BIND2;
   MYSQL_BIND2 =  record
-    length:            PLongInt; 
-    is_null:           PByte; 
+    length:            PLongInt;
+    is_null:           PByte;
     buffer:            PChar;
-    error:             PByte; 
-    buffer_type:       TMysqlFieldTypes;
+    error:             PByte;
+    buffer_type:       Byte;
     buffer_length:     LongInt;
-    row_ptr:           PByte; 
+    row_ptr:           PByte;
     offset:            LongInt;
     length_value:      LongInt;
     param_number:      Cardinal;
@@ -436,6 +442,12 @@ type
     store_param_funct: Pointer;
     fetch_result:      Pointer;
     skip_result:       Pointer;
+  end;
+
+  PDOBindRecord2 = record
+      buffer:    Array of Byte;
+      length:    LongWord;
+      is_null:   Byte;
   end;
 
 const
