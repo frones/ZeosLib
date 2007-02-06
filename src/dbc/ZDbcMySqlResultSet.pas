@@ -933,7 +933,7 @@ var
 begin
   inherited UpdateAutoIncrementFields(Sender, UpdateType, OldRowAccessor, NewRowAccessor, Resolver);
   if not ((FAutoColumnIndex > 0) and
-          OldRowAccessor.IsNull(FAutoColumnIndex)) then
+          (OldRowAccessor.IsNull(FAutoColumnIndex) or (OldRowAccessor.GetValue(FAutoColumnIndex).VInteger=0))) then
      exit;
   Plaindriver := (Connection as IZMysqlConnection).GetPlainDriver;
   NewRowAccessor.SetLong(FAutoColumnIndex, PlainDriver.GetLastInsertID(FHandle));
