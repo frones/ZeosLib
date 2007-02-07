@@ -529,7 +529,7 @@ begin
   if IsClosed then Open;
   if Assigned(Info) then
     if StrToBoolEx(Info.Values['preferprepared']) then
-      Result := TZMySQLPreparedStatement.Create(FPlainDriver, Self, SQL, Info, FHandle)
+      Result := TZMySQLPreparedStatement.Create(FPlainDriver, Self, SQL, Info{$IFNDEF MYSQL_USE_PREPARE},FHandle{$ENDIF})
     else
       Result := TZMySQLEmulatedPreparedStatement.Create(FPlainDriver, Self, SQL, Info, FHandle)
   else

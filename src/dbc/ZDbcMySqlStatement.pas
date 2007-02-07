@@ -58,7 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZDbcIntfs, ZDbcStatement, ZPlainMySqlDriver,
+  Classes, SysUtils, ZDbcIntfs, ZDbcStatement, ZPlainMySqlDriver, ZPlainMySqlConstants,
   ZCompatibility, ZDbcLogging, ZVariant;
 
 type
@@ -68,8 +68,18 @@ type
     ['{A05DB91F-1E40-46C7-BF2E-25D74978AC83}']
 
     function IsUseResult: Boolean;
+{$IFDEF MYSQL_USE_PREPARE}
+    function IsPreparedStatement: Boolean;
+    function GetStmtHandle: PZMySqlPrepStmt;
+{$ENDIF}
   end;
 
+{$IFDEF MYSQL_USE_PREPARE}
+  {** Represents a MYSQL prepared Statement specific connection interface. }
+  IZMySQLPreparedStatement = interface (IZMySQLStatement)
+    ['{A05DB91F-1E40-46C7-BF2E-25D74978AC83}']
+  end;
+{$ENDIF}
 
   {** Implements Generic MySQL Statement. }
   TZMySQLStatement = class(TZAbstractStatement, IZMySQLStatement)
@@ -79,6 +89,9 @@ type
     FUseResult: Boolean;
 
     function CreateResultSet(const SQL: string): IZResultSet;
+{$IFDEF MYSQL_USE_PREPARE}
+    function GetStmtHandle : PZMySqlPrepStmt;
+{$ENDIF}
   public
     constructor Create(PlainDriver: IZMySQLPlainDriver;
       Connection: IZConnection; Info: TStrings; Handle: PZMySQLConnect);
@@ -88,6 +101,9 @@ type
     function Execute(const SQL: string): Boolean; override;
 
     function IsUseResult: Boolean;
+{$IFDEF MYSQL_USE_PREPARE}
+    function IsPreparedStatement: Boolean;
+{$ENDIF}
   end;
 
   {** Implements Prepared SQL Statement. }
@@ -109,7 +125,39 @@ type
   TZMySQLPreparedStatement = class(TZMySQLEmulatedPreparedStatement)
   end;
 {$ELSE}
-  TZMySQLPreparedStatement = class(TZMySQLEmulatedPreparedStatement)
+  {** Implements Prepared SQL Statement. }
+  TZMySQLPreparedStatement = class(TZAbstractPreparedStatement,IZMySQLPreparedStatement)
+  private
+    FPrepared: Boolean;
+    FHandle: PZMySQLConnect;
+    FStmtHandle: PZMySqlPrepStmt;
+    FPlainDriver: IZMySQLPlainDriver;
+    FUseResult: Boolean;
+
+    FParamBindArray: Array of MYSQL_BIND2;
+    FParamArray: Array of PDOBindRecord2;
+    function CreateResultSet(const SQL: string): IZResultSet;
+
+    procedure PrepareParameters;
+    function getFieldType (testVariant: TZVariant): Byte;
+  protected
+    property Prepared: Boolean read FPrepared write FPrepared;
+    function GetStmtHandle : PZMySqlPrepStmt;
+  public
+    property StmtHandle: PZMySqlPrepStmt read GetStmtHandle;
+    constructor Create(PlainDriver: IZMysqlPlainDriver; Connection: IZConnection; const SQL: string; Info: TStrings);
+    destructor Destroy; override;
+
+    function ExecuteQuery(const SQL: string): IZResultSet; override;
+    function ExecuteUpdate(const SQL: string): Integer; override;
+    function Execute(const SQL: string): Boolean; override;
+
+    function ExecuteQueryPrepared: IZResultSet; override;
+    function ExecuteUpdatePrepared: Integer; override;
+    function ExecutePrepared: Boolean; override;
+
+    function IsUseResult: Boolean;
+    function IsPreparedStatement: Boolean;
   end;
 {$ENDIF MYSQL_USE_PREPARE}
 
@@ -152,6 +200,22 @@ begin
   Result := FUseResult;
 end;
 
+{$IFDEF MYSQL_USE_PREPARE}
+{**
+  Checks if this is a prepared mysql statement.
+  @return <code>False</code> This is not a prepared mysql statement.
+}
+function TZMySQLStatement.IsPreparedStatement: Boolean;
+begin
+  Result := False;
+end;
+
+function TZMySQLStatement.GetStmtHandle: PZMySqlPrepStmt;
+begin
+  Result := nil;
+end;
+{$ENDIF}
+
 {**
   Creates a result set based on the current settings.
   @return a created result set object.
@@ -177,6 +241,7 @@ begin
   end else
     Result := NativeResultSet;
 end;
+
 
 {**
   Executes an SQL statement that returns a single <code>ResultSet</code> object.
@@ -434,5 +499,330 @@ begin
     end;
   end;
 end;
+
+{$IFDEF MYSQL_USE_PREPARE}
+{ TZMySQLPreparedStatement }
+
+{**
+  Constructs this object and assignes the main properties.
+  @param PlainDriver a Oracle plain driver.
+  @param Connection a database connection object.
+  @param Info a statement parameters.
+  @param Handle a connection handle pointer.
+}
+constructor TZMySQLPreparedStatement.Create(
+  PlainDriver: IZMySQLPlainDriver; Connection: IZConnection;
+  const SQL: string; Info: TStrings);
+var
+  MySQLConnection: IZMySQLConnection;
+begin
+  inherited Create(Connection, SQL, Info);
+  MySQLConnection := Connection as IZMySQLConnection;
+  FHandle := MysqlConnection.GetConnectionHandle;
+  FPlainDriver := PlainDriver;
+  ResultSetType := rtScrollInsensitive;
+
+  MySQLConnection := Connection as IZMySQLConnection;
+  FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
+  FPrepared := False;
+
+  FStmtHandle := FPlainDriver.InitializePrepStmt(FHandle);
+  if (FStmtHandle = nil) then
+    begin
+      CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoInitPrepStmt);
+      exit;
+    end;
+  if (FPlainDriver.PrepareStmt(FStmtHandle, PChar(SQL),length(SQL)) <> 0) then
+    begin
+      CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoPrepareStmt);
+      exit;
+    end;
+  FPrepared := true;
+  DriverManager.LogMessage(lcPrepStmt, FPlainDriver.GetProtocol, SQL);
+end;
+
+{**
+  Destroys this object and cleanups the memory.
+}
+destructor TZMySQLPreparedStatement.Destroy;
+begin
+  inherited Destroy;
+end;
+
+{**
+  Checks is use result should be used in result sets.
+  @return <code>True</code> use result in result sets,
+    <code>False</code> store result in result sets.
+}
+function TZMySQLPreparedStatement.IsUseResult: Boolean;
+begin
+  Result := FUseResult;
+end;
+
+{**
+  Checks if this is a prepared mysql statement.
+  @return <code>True</code> This is a prepared mysql statement.
+}
+function TZMySQLPreparedStatement.IsPreparedStatement: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Creates a result set based on the current settings.
+  @return a created result set object.
+}
+function TZMySQLPreparedStatement.CreateResultSet(const SQL: string): IZResultSet;
+var
+  CachedResolver: TZMySQLCachedResolver;
+  NativeResultSet: TZMySQLPreparedResultSet;
+  CachedResultSet: TZCachedResultSet;
+begin
+  NativeResultSet := TZMySQLPreparedResultSet.Create(FPlainDriver, Self, SQL, FHandle,
+    FUseResult);
+  NativeResultSet.SetConcurrency(rcReadOnly);
+  if (GetResultSetConcurrency <> rcReadOnly) or (FUseResult
+    and (GetResultSetType <> rtForwardOnly)) then
+  begin
+    CachedResolver := TZMySQLCachedResolver.Create(FPlainDriver, FHandle, (Self as IZMysqlStatement),
+      NativeResultSet.GetMetaData);
+    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
+      CachedResolver);
+    CachedResultSet.SetConcurrency(GetResultSetConcurrency);
+    Result := CachedResultSet;
+  end else
+    Result := NativeResultSet;
+end;
+
+procedure TZMysqlPreparedStatement.PrepareParameters;
+var
+    field_size, field_size_twin: LongWord;
+    field_type: Byte;
+    caststring : AnsiString;
+    PBuffer: Pointer;
+  I,J : integer;
+begin
+  If InParamCount = 0 then exit;
+    { Initialize Bind Array and Column Array }
+  SetLength(FParamBindArray, InParamCount);
+  SetLength(FParamArray, InParamCount);
+
+  For I := 0 to InParamCount - 1 do
+  begin
+    field_type := GetFieldType(InParamValues[I]);
+    field_size := getMySQLFieldSize(field_type,255);
+    if (field_type = FIELD_TYPE_STRING) then
+      begin
+        castString := InParamValues[I].VString;
+        field_size := length(castString);
+//        field_size_twin := field_size + 1;
+        field_size_twin := field_size;
+      end
+    else field_size_twin := field_size;
+
+    SetLength(FParamArray[I].buffer, field_size_twin);
+    PBuffer := @FParamArray[I].buffer[0];
+    with FParamBindArray[I] do begin
+        buffer_type   := field_type;
+        buffer_length := System.Length(FParamArray[I].buffer);
+        is_unsigned   := 0;
+        buffer        := @FParamArray[I].buffer[0];
+        length        := @FParamArray[I].length;
+        FParamArray[I].length := buffer_length;
+        is_null       := @FParamArray[I].is_null;
+        if InParamValues[I].VType=vtNull then
+         FParamArray[I].is_null := 1
+        else
+         FParamArray[I].is_null := 0;
+            case field_type of
+              FIELD_TYPE_FLOAT:    Single(PBuffer^)     := InParamValues[I].VFloat;
+              FIELD_TYPE_STRING:
+                begin
+                  CastString := InParamValues[I].VString;
+                  for J := 1 to system.length(CastString) do
+                    begin
+                      PChar(PBuffer)^ := CastString[J];
+                      inc(PChar(PBuffer));
+                    end;
+                  PChar(PBuffer)^ := chr(0);
+                end;
+              FIELD_TYPE_LONGLONG: Int64(PBuffer^) := InParamValues[I].VInteger;
+            end;
+     end;
+  end;
+
+     if (FPlainDriver.BindParameters(FStmtHandle, @FParamBindArray[0]) <> 0) then
+        begin
+          checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, SBindingFailure);
+          exit;
+        end;
+
+end;
+
+function TZMysqlPreparedStatement.getFieldType (testVariant: TZVariant): Byte;
+begin
+    case testVariant.vType of
+        vtNull:      Result := FIELD_TYPE_TINY;
+        vtBoolean:   Result := FIELD_TYPE_TINY;
+        vtInteger:   Result := FIELD_TYPE_LONGLONG;
+        vtFloat:    Result := FIELD_TYPE_FLOAT;
+        vtString:    Result := FIELD_TYPE_STRING;
+     else
+        raise EZSQLException.Create(SUnsupportedDataType);
+     end;
+end;
+
+{**
+  Executes an SQL statement that returns a single <code>ResultSet</code> object.
+  @param sql typically this is a static SQL <code>SELECT</code> statement
+  @return a <code>ResultSet</code> object that contains the data produced by the
+    given query; never <code>null</code>
+}
+function TZMySQLPreparedStatement.ExecuteQuery(const SQL: string): IZResultSet;
+begin
+  Self.SQL := SQL;
+  Result := ExecuteQueryPrepared;
+end;
+
+{**
+  Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
+  <code>DELETE</code> statement. In addition,
+  SQL statements that return nothing, such as SQL DDL statements,
+  can be executed.
+
+  @param sql an SQL <code>INSERT</code>, <code>UPDATE</code> or
+    <code>DELETE</code> statement or an SQL statement that returns nothing
+  @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
+    or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
+}
+function TZMySQLPreparedStatement.ExecuteUpdate(const SQL: string): Integer;
+begin
+  Self.SQL := SQL;
+  Result := ExecuteUpdatePrepared;
+end;
+
+{**
+  Executes an SQL statement that may return multiple results.
+  Under some (uncommon) situations a single SQL statement may return
+  multiple result sets and/or update counts.  Normally you can ignore
+  this unless you are (1) executing a stored procedure that you know may
+  return multiple results or (2) you are dynamically executing an
+  unknown SQL string.  The  methods <code>execute</code>,
+  <code>getMoreResults</code>, <code>getResultSet</code>,
+  and <code>getUpdateCount</code> let you navigate through multiple results.
+
+  The <code>execute</code> method executes an SQL statement and indicates the
+  form of the first result.  You can then use the methods
+  <code>getResultSet</code> or <code>getUpdateCount</code>
+  to retrieve the result, and <code>getMoreResults</code> to
+  move to any subsequent result(s).
+
+  @param sql any SQL statement
+  @return <code>true</code> if the next result is a <code>ResultSet</code> object;
+  <code>false</code> if it is an update count or there are no more results
+}
+function TZMySQLPreparedStatement.Execute(const SQL: string): Boolean;
+begin
+  Self.SQL := SQL;
+  Result := ExecutePrepared;
+end;
+
+{**
+  Executes the SQL query in this <code>PreparedStatement</code> object
+  and returns the result set generated by the query.
+
+  @return a <code>ResultSet</code> object that contains the data produced by the
+    query; never <code>null</code>
+}
+function TZMySQLPreparedStatement.ExecuteQueryPrepared: IZResultSet;
+begin
+  Result := nil;
+  PrepareParameters;
+  if (self.FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
+     begin
+        checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
+        exit;
+     End;
+  DriverManager.LogMessage(lcExecPrepStmt, FPlainDriver.GetProtocol, SQL);
+
+  if FPlainDriver.GetPreparedFieldCount(FStmtHandle) = 0 then
+      raise EZSQLException.Create(SCanNotOpenResultSet);
+  Result := CreateResultSet(SQL);
+end;
+
+{**
+  Executes the SQL INSERT, UPDATE or DELETE statement
+  in this <code>PreparedStatement</code> object.
+  In addition,
+  SQL statements that return nothing, such as SQL DDL statements,
+  can be executed.
+
+  @return either the row count for INSERT, UPDATE or DELETE statements;
+  or 0 for SQL statements that return nothing
+}
+function TZMySQLPreparedStatement.ExecuteUpdatePrepared: Integer;
+var
+  QueryHandle: PZMySQLResult;
+  HasResultset : Boolean;
+begin
+  Result := -1;
+  PrepareParameters;
+  if (self.FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
+     begin
+        checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
+        exit;
+     End;
+  DriverManager.LogMessage(lcExecPrepStmt, FPlainDriver.GetProtocol, SQL);
+    { Process queries with result sets }
+  if FPlainDriver.GetPreparedFieldCount(FStmtHandle) > 0 then
+    begin
+      FPlainDriver.StorePreparedResult(FStmtHandle);
+      Result := FPlainDriver.GetPreparedAffectedRows(FStmtHandle);
+    end
+    { Process regular query }
+  else
+    Result := FPlainDriver.GetPreparedAffectedRows(FStmtHandle);
+ LastUpdateCount := Result;
+end;
+
+{**
+  Executes any kind of SQL statement.
+  Some prepared statements return multiple results; the <code>execute</code>
+  method handles these complex statements as well as the simpler
+  form of statements handled by the methods <code>executeQuery</code>
+  and <code>executeUpdate</code>.
+  @see Statement#execute
+}
+function TZMySQLPreparedStatement.ExecutePrepared: Boolean;
+var
+  HasResultset : Boolean;
+begin
+  Result := False;
+  PrepareParameters;
+  if (FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
+     begin
+        checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
+        exit;
+     End;
+  DriverManager.LogMessage(lcExecPrepStmt, FPlainDriver.GetProtocol, SQL);
+
+  if FPlainDriver.GetPreparedFieldCount(FStmtHandle) > 0 then
+    begin
+      Result := True;
+      LastResultSet := CreateResultSet(SQL);
+    end
+    { Processes regular query. }
+  else
+    begin
+      Result := False;
+      LastUpdateCount := FPlainDriver.GetPreparedAffectedRows(FStmtHandle);
+    end;
+end;
+
+function TZMySQLPreparedStatement.GetStmtHandle: PZMySqlPrepStmt;
+begin
+  Result := FStmtHandle;
+end;
+{$ENDIF MYSQL_USE_PREPARE}
 
 end.

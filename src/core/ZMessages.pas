@@ -205,12 +205,13 @@ resourcestring
 
   SFailedtoInitPrepStmt   = 'A declaração preparada falhou ao inicializar'; 
   SFailedtoPrepareStmt    = 'A declaração falhou durante o processo de preparo'; 
-  SFailedToBindAllValues  = 'A Aplicação falhou na tradução de todos os valores'; 
-  SAttemptExecOnBadPrep   = 'Tentativa de executar uma declaração que não foi corretamente preparada'; 
-  SBindingFailure         = 'Falha ao traduzir o conjunto de parâmetros'; 
-  SPreparedStmtExecFailure = 'A declaração preparada falhou ao executar'; 
-  SBoundVarStrIndexMissing = 'Índice de texto "%s" da variável de limite não existe'; 
+  SFailedToBindAllValues  = 'A Aplicação falhou na tradução de todos os valores';
+  SAttemptExecOnBadPrep   = 'Tentativa de executar uma declaração que não foi corretamente preparada';
+  SBindingFailure         = 'Falha ao traduzir o conjunto de parâmetros';
+  SPreparedStmtExecFailure = 'A declaração preparada falhou ao executar';
+  SBoundVarStrIndexMissing = 'Índice de texto "%s" da variável de limite não existe';
   SBindVarOutOfRange      = 'Índice da variável de limite fora de alcance: %d';
+  SFailedToBindResults    = 'Translate: Application failed to bind to the result set';
 
   SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
   SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
@@ -362,12 +363,13 @@ resourcestring
 
   SFailedtoInitPrepStmt   = 'Initialisatie van Prepared statement mislukt';
   SFailedtoPrepareStmt    = 'Statement mislukt tijdens prepare';
-  SFailedToBindAllValues  = 'Pre-bind van allewaarden is mislukt';
+  SFailedToBindAllValues  = 'Pre-bind van alle waarden is mislukt';
   SAttemptExecOnBadPrep   = 'Poging om een statement uit te voeren voor een succesvolle prepare';
   SBindingFailure         = 'Binding van parameterset mislukt';
   SPreparedStmtExecFailure = 'Uitvoeren van Prepared statement mislukt';
   SBoundVarStrIndexMissing = 'Tekst index van bound variable bestaat niet: "%s"';
   SBindVarOutOfRange      = 'Bound variable index buiten bereik: %d';
+  SFailedToBindResults    = 'Binding van resultaat mislukt';
 
   SRefreshRowOnlySupportedWithUpdateObject = 'De refreshrow methode is enkel ondersteund vooreen update object';
   SMustBeInBrowseMode = 'Bewerking is enkel toegestaan in dsBROWSE status';
@@ -528,6 +530,7 @@ resourcestring
   SPreparedStmtExecFailure = 'Translate: Prepared statement failed to execute';
   SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
+  SFailedToBindResults    = 'Translate: Application failed to bind to the result set';
 
   SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
   SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
@@ -686,6 +689,7 @@ resourcestring
   SPreparedStmtExecFailure = 'Translate: Prepared statement failed to execute';
   SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
+  SFailedToBindResults    = 'Translate: Application failed to bind to the result set';
 
   SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
   SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
@@ -845,6 +849,7 @@ resourcestring
   SPreparedStmtExecFailure = 'Translate: Prepared statement failed to execute';
   SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
+  SFailedToBindResults    = 'Translate: Application failed to bind to the result set';
 
   SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
   SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
@@ -1002,6 +1007,7 @@ resourcestring
   SPreparedStmtExecFailure = 'Prepared Statement gagal dieksekusi';
   SBoundVarStrIndexMissing = 'Teks variabel indeks "%s" tidak ada';
   SBindVarOutOfRange      = 'Variabel indeks diluar jangkauan: %d';
+  SFailedToBindResults    = 'Translate: Application failed to bind to the result set';
 
   SRefreshRowOnlySupportedWithUpdateObject = 'Metode RefreshRow hanya didukung oleh obyek Update';
   SMustBeInBrowseMode = 'Operasi hanya diperbolehkan pada status dsBrowse';
@@ -1160,6 +1166,7 @@ resourcestring
   SPreparedStmtExecFailure = 'Prepared statement failed to execute';
   SBoundVarStrIndexMissing = 'Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Bound variable index out of range: %d';
+  SFailedToBindResults    = 'Application failed to bind to the result set';
 
 //FOS+ 07112006
   SRefreshRowOnlySupportedWithUpdateObject = 'The refreshrow method is only supported with an update object';
