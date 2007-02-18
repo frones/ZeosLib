@@ -41,3 +41,5 @@
 20070206 : Allowed GetLastInsertId for mysql after inserting 0 in autoincrement field - By mdaems
 
 20070207 : First experimental mysql prepared statement support (based on PDO project) added to Testing Branch - By mdaems
+
+20070218 : Split ZPlainMysql.inc to avoid locking problems in BDS2006 - Asked by David Dindorp of HeidiSql - Mantis Bug 22
