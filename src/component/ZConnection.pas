@@ -143,6 +143,8 @@ type
     function GetInTransaction: Boolean;
     function GetClientVersion: Integer;
     function GetServerVersion: Integer;
+    function GetClientVersionStr: String;
+    function GetServerVersionStr: String;
     procedure DoBeforeConnect;
     procedure DoAfterConnect;
     procedure DoBeforeDisconnect;
@@ -200,6 +202,8 @@ type
     property DbcConnection: IZConnection read FConnection;
     property ClientVersion: Integer read GetClientVersion;
     property ServerVersion: Integer read GetServerVersion;
+    property ClientVersionStr: String read GetClientVersionStr;
+    property ServerVersionStr: String read GetServerVersionStr;
     procedure ShowSQLHourGlass;
     procedure HideSQLHourGlass;
 
@@ -246,7 +250,7 @@ type
 
 implementation
 
-uses ZMessages, ZClasses, ZAbstractRODataset;
+uses ZMessages, ZClasses, ZAbstractRODataset, ZSysUtils;
 
 var
   SqlHourGlassLock: Integer;
@@ -420,7 +424,10 @@ end;
 }
 function TZConnection.GetClientVersion: Integer;
 begin
- Result := DbcConnection.GetClientVersion;
+  if FConnection <> nil then
+    Result := DbcConnection.GetClientVersion
+  else
+    Result := DriverManager.GetClientVersion(ConstructURL('', ''));
 end;
 
 {**
@@ -433,7 +440,34 @@ end;
 }
 function TZConnection.GetServerVersion: Integer;
 begin
- Result := DbcConnection.GetHostVersion;
+  CheckConnected;
+  Result := DbcConnection.GetHostVersion;
+end;
+
+{**
+  Gets client's full version number.
+  The format of the version resturned must be XYYYZZZ where
+   X   = Major version
+   YYY = Minor version
+   ZZZ = Sub version
+  @return this clients's full version number
+}
+function TZConnection.GetClientVersionStr: String;
+begin
+  Result := FormatSQLVersion(GetClientVersion);
+end;
+
+{**
+  Gets server's full version number.
+  The format of the version resturned must be XYYYZZZ where
+   X   = Major version
+   YYY = Minor version
+   ZZZ = Sub version
+  @return this clients's full version number
+}
+function TZConnection.GetServerVersionStr: String;
+begin
+  Result := FormatSQLVersion(GetServerVersion);
 end;
 
 {**

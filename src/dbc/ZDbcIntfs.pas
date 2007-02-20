@@ -171,6 +171,7 @@ type
       const Password: string): IZConnection;
 
     function GetDriver(const Url: string): IZDriver;
+    function GetClientVersion(const Url: string): Integer;
     procedure RegisterDriver(Driver: IZDriver);
     procedure DeregisterDriver(Driver: IZDriver);
 
@@ -194,6 +195,7 @@ type
 
     function GetSupportedProtocols: TStringDynArray;
     function Connect(const Url: string; Info: TStrings): IZConnection;
+    function GetClientVersion(const Url: string): Integer;
     function AcceptsURL(const Url: string): Boolean;
 
     function GetPropertyInfo(const Url: string; Info: TStrings): TStrings;
@@ -843,6 +845,8 @@ type
 
     function GetDrivers: IZCollection;
 
+    function GetClientVersion(const Url: string): Integer;
+
     function GetLoginTimeout: Integer;
     procedure SetLoginTimeout(Value: Integer);
 
@@ -968,6 +972,21 @@ begin
   if Driver = nil then
     raise EZSQLException.Create(SDriverWasNotFound);
   Result := Driver.Connect(Url, Info);
+end;
+
+{**
+  Locates a required driver and returns the client library version number.
+  @param Url a database connection Url.
+  @return client library version number.
+}
+function TZDriverManager.GetClientVersion(const Url: string): Integer;
+var
+  Driver: IZDriver;
+begin
+  Driver := GetDriver(Url);
+  if Driver = nil then
+    raise EZSQLException.Create(SDriverWasNotFound);
+  Result := Driver.GetClientVersion(Url);
 end;
 
 {**
