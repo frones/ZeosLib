@@ -16,7 +16,7 @@ K=0
 L=1
 M=0
 N=1
-O=0
+O=1
 P=1
 Q=1
 R=1
@@ -65,31 +65,4 @@ DebugCWD=
 /opt/zeosdbo_6_1/packages/kylix3/build/bplZDbc.so=Zeos Low Level Database API
 /opt/zeosdbo_6_1/packages/kylix3/build/bplZComponent.so=Zeos Database Components
 /opt/zeosdbo_6_1/packages/kylix3/build/bplZTestFramework.so=Zeos Testing Framework
-
-[HistoryLists\hlDebugSourcePath]
-Count=1
-Item0=build
-
-[HistoryLists\hlSearchPath]
-Count=2
-Item0=build:../../src/core:../../src/parsesql:../../src/plain:../../src/dbc:../../src/component:../../test/external:../../test/framework
-Item1=build
-
-[HistoryLists\hlUnitOutputDirectory]
-Count=1
-Item0=build
-
-[HistoryLists\hlOutputDirectorry]
-Count=2
-Item0=build
-Item1=./build
-
-[HistoryLists\hlBPLOutput]
-Count=2
-Item0=build
-Item1=./build
-
-[HistoryLists\hlDCPOutput]
-Count=1
-Item0=build
 

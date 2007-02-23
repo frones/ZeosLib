@@ -84,13 +84,13 @@ type
   public
     constructor Create;
     function Connect(const Url: string; Info: TStrings): IZConnection; override;
-
     function GetSupportedProtocols: TStringDynArray; override;
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
 
     function GetTokenizer: IZTokenizer; override;
     function GetStatementAnalyser: IZStatementAnalyser; override;
+    function GetClientVersion(const Url: string): Integer; override;
   end;
 
   {** Represents a MYSQL specific connection interface. }
@@ -322,6 +322,17 @@ begin
   else
     Result := FMySQL5PlainDriver;
   Result.Initialize;
+end;
+
+{**
+  Returns the version of the plain driver library that will be used to open a connection
+  to the given URL.
+  @param url the URL of the database
+  @return the version number of the plain driver library for the give URL
+}
+function TZMySQLDriver.GetClientVersion(const Url: string): Integer;
+begin
+  Result := ConvertMySQLVersionToSQLVersion(GetPlainDriver(Url).GetClientVersion);
 end;
 
 { TZMySQLConnection }

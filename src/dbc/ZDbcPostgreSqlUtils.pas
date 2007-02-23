@@ -281,6 +281,8 @@ begin
   else if (TypeName = 'int2vector') or (TypeName = 'oidvector')
     or (TypeName = '_aclitem') then
     Result := stAsciiStream
+  else if (TypeName[1] = '_') then // ARRAY TYPES
+    Result := stAsciiStream
   else
     Result := stUnknown;
 end;
@@ -325,6 +327,7 @@ begin
       end;
     1042: Result := stString; { bpchar }
     22,30: Result := stAsciiStream; { int2vector/oidvector. no '_aclitem' }
+    651, 1000..1028: Result := stAsciiStream;
     else
       Result := stUnknown;
   end;

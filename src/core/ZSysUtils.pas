@@ -359,6 +359,16 @@ procedure DecodeSQLVersioning(const FullVersion: Integer;
 function EncodeSQLVersioning(const MajorVersion: Integer;
  const MinorVersion: Integer; const SubVersion: Integer): Integer;
 
+{**
+  Formats a Zeos SQL Version format to X.Y.Z where:
+   X = major_version
+   Y = minor_version
+   Z = sub version
+  @param SQLVersion an integer
+  @return Formated Zeos SQL Version Value.
+}
+function FormatSQLVersion( const SQLVersion: Integer ): String;
+
 implementation
 
 uses ZMatchPattern;
@@ -1118,6 +1128,21 @@ function EncodeSQLVersioning(const MajorVersion: Integer;
  const MinorVersion: Integer; const SubVersion: Integer): Integer;
 begin
  Result := (MajorVersion * 1000000) + (MinorVersion * 1000) + SubVersion;
+end;
+
+{**
+  Formats a Zeos SQL Version format to X.Y.Z where:
+   X = major_version
+   Y = minor_version
+   Z = sub version
+  @param SQLVersion an integer
+  @return Formated Zeos SQL Version Value.
+}
+function FormatSQLVersion( const SQLVersion: Integer ): String;
+var MajorVersion, MinorVersion, SubVersion: Integer;
+begin
+ DecodeSQLVersioning(SQLVersion, MajorVersion, MinorVersion, SubVersion);
+ Result := IntToStr(MajorVersion)+'.'+IntToStr(MinorVersion)+'.'+IntToStr(SubVersion);
 end;
 
 end.

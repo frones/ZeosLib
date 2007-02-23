@@ -84,3 +84,5 @@
            - Missing res/dof/cfg files for ComponentDesign in D7-> wrong build dir.
            
 20070117 : BDS 2006 WideString error - Patch by fduenas/cariad - See http://zeos.firmos.at/viewtopic.php?t=972
+
+20070220 : Corrected GetServerVersion and GetClientVersion properties of ZConnection. Added String versions of these properties. By mdaems

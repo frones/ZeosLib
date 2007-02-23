@@ -29,7 +29,8 @@ package ZPlain;
 
 requires
   ZCore,
-  rtl;
+  rtl,
+  vcl;
 
 contains
   ZPlainPostgreSqlDriver in '..\..\src\plain\ZPlainPostgreSqlDriver.pas',

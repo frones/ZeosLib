@@ -170,7 +170,9 @@
 
 // Enables ADO support in TZConnection/TZDataset
 {$IFNDEF FPC}
-{$DEFINE ENABLE_ADO}
+ {$IFNDEF UNIX}
+  {$DEFINE ENABLE_ADO}
+ {$ENDIF}
 {$ENDIF}
 
 // Enables Interbase/Firebird support in TZConnection/TZDataset

@@ -1,7 +1,5 @@
 package ZComponent;
-
 {$R *.res}
-{$R '../../src/component/ZComponent.dcr'}
 {$ALIGN 8}
 {$ASSERTIONS ON}
 {$BOOLEVAL OFF}
@@ -12,7 +10,7 @@ package ZComponent;
 {$LOCALSYMBOLS ON}
 {$LONGSTRINGS ON}
 {$OPENSTRINGS ON}
-{$OPTIMIZATION OFF}
+{$OPTIMIZATION ON}
 {$OVERFLOWCHECKS ON}
 {$REFERENCEINFO ON}
 {$SAFEDIVIDE OFF}
@@ -23,6 +21,7 @@ package ZComponent;
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
 {$DESCRIPTION 'Zeos Database Components'}
+{$LIBSUFFIX 'k3'}
 {$IMPLICITBUILD OFF}
 
 requires
@@ -37,19 +36,17 @@ requires
 contains
   ZSqlUpdate in '../../src/component/ZSqlUpdate.pas',
   ZAbstractDataset in '../../src/component/ZAbstractDataset.pas',
+  ZAbstractRODataset in '../../src/component/ZAbstractRODataset.pas',
+  ZStreamBlob in '../../src/component/ZStreamBlob.pas',
   ZConnection in '../../src/component/ZConnection.pas',
   ZDataset in '../../src/component/ZDataset.pas',
   ZDatasetUtils in '../../src/component/ZDatasetUtils.pas',
-  ZAbstractRODataset in '../../src/component/ZAbstractRODataset.pas',
-  ZStreamBlob in '../../src/component/ZStreamBlob.pas',
   ZSqlStrings in '../../src/component/ZSqlStrings.pas',
-  ZComponentReg in '../../src/component/ZComponentReg.pas',
   ZSqlProcessor in '../../src/component/ZSqlProcessor.pas',
-  ZPropertyEditor in '../../src/component/ZPropertyEditor.pas',
-  ZStoredProcedure in '../../src/component/ZStoredProcedure.pas',
   ZSqlMonitor in '../../src/component/ZSqlMonitor.pas',
-  ZSqlMetadata in '../../src/component/ZSqlMetadata.pas',
+  ZStoredProcedure in '../../src/component/ZStoredProcedure.pas',
   ZAbstractTable in '../../src/component/ZAbstractTable.pas',
+  ZSqlMetadata in '../../src/component/ZSqlMetadata.pas',
   ZSequence in '../../src/component/ZSequence.pas';
 
 end.

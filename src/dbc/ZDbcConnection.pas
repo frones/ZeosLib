@@ -95,6 +95,7 @@ type
     function GetSubVersion: Integer; virtual;
     function GetTokenizer: IZTokenizer; virtual;
     function GetStatementAnalyser: IZStatementAnalyser; virtual;
+    function GetClientVersion(const Url: string): Integer; virtual;
   end;
 
   {** Implements Abstract Database Connection. }
@@ -381,6 +382,17 @@ begin
   if Tokenizer = nil then
     Tokenizer := TZGenericSQLTokenizer.Create;
   Result := Tokenizer;
+end;
+
+{**
+  Returns the version of the plain driver library that will be used to open a connection
+  to the given URL.
+  @param url the URL of the database
+  @return the version number of the plain driver library for the give URL
+}
+function TZAbstractDriver.GetClientVersion(const Url: string): Integer;
+begin
+  Result := 0;
 end;
 
 { TZAbstractConnection }
