@@ -347,6 +347,12 @@ begin
     SchemaToString(SelectSchema));
 
   SelectSchema := FAnalyser.DefineSelectSchemaFromQuery(FTokenizer,
+    'SELECT DISTINCT *, A AS B, Somefunction(Sum,2,re) AS C FROM Table AS T WHERE 0<>0');
+  CheckNotNull(SelectSchema);
+  CheckEquals('SS:[FR:*,FR:A/B,FR:/C][TR:Table/T]',
+    SchemaToString(SelectSchema));
+
+  SelectSchema := FAnalyser.DefineSelectSchemaFromQuery(FTokenizer,
     'SELECT * FROM D1.A1 AS T1 LEFT OUTER JOIN A2 AS T2 ON A1.K=T2.K');
   CheckNotNull(SelectSchema);
   CheckEquals('SS:[FR:*][TR:D1.A1/T1,TR:A2/T2]',

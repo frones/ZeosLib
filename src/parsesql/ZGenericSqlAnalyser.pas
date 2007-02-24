@@ -539,7 +539,6 @@ begin
     else
     begin
       ClearElements;
-      Inc(TokenIndex);
       while (TokenIndex < SelectTokens.Count) and (CurrentValue <> ',') do
       begin
         CurrentValue := SelectTokens[TokenIndex];
