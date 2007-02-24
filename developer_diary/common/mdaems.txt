@@ -83,6 +83,8 @@
            - Missing IFDEF for ENABLE_ADO in property-editor
            - Missing res/dof/cfg files for ComponentDesign in D7-> wrong build dir.
            
-20070117 : BDS 2006 WideString error - Patch by fduenas/cariad - See http://zeos.firmos.at/viewtopic.php?t=972
+20070117 : BDS 2006 WideString error - Patch by fduenas/cariad - See http://zeos.firmos.at/viewtopic.php?t=972 - Mantis Bug 10
 
 20070220 : Corrected GetServerVersion and GetClientVersion properties of ZConnection. Added String versions of these properties. By mdaems
+
+20070224 : BDS 2006 Problem using WideStrings and ADO protocol when changing WideString Field Data, same nature as Mantis Bug 10 - Mantis Bug 23 - Patch by Fduenas
