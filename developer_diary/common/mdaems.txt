@@ -90,3 +90,5 @@
 20070224 : BDS 2006 Problem using WideStrings and ADO protocol when changing WideString Field Data, same nature as Mantis Bug 10 - Mantis Bug 23 - Patch by Fduenas
 
 20070224 : GenericSqlAnalyser error when analysing functions calls with multiple input parameters - By mdaems - Mantis Bug 16
+
+20070227 : Added Russian translation - Translated by Ormada
