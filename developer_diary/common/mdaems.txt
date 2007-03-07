@@ -94,3 +94,5 @@
 20070227 : Added Russian translation - Translated by Ormada
 
 20070304 : FreeAndNil fix in ZSequence - Patch by madh - See http://zeos.firmos.at/viewtopic.php?t=1108
+
+20070307 : Avoid open/close of detail dataset on edit of master dataset- Patch by Edwin - See http://zeos.firmos.at/viewtopic.php?t=1093

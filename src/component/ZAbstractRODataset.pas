@@ -1950,7 +1950,7 @@ begin
     begin
       DataSet := FDataLink.DataSource.DataSet;
       if DataSet <> nil then
-        if DataSet.Active and (DataSet.State <> dsSetKey) then
+        if DataSet.Active and not (DataSet.State in [dsSetKey, dsEdit, dsInsert]) then
         begin
           Close;
           Open;
