@@ -1455,7 +1455,7 @@ begin
         begin
           {$IFNDEF FPC}
 {$IFNDEF FOSNOMETA}
-          Required := IsNullable(I) = ntNoNulls;
+          Required := IsWritable(I) and (IsNullable(I) = ntNoNulls);
 {$ENDIF}
           {$ENDIF}
 {$IFNDEF FOSNOMETA}

@@ -96,3 +96,5 @@
 20070304 : FreeAndNil fix in ZSequence - Patch by madh - See http://zeos.firmos.at/viewtopic.php?t=1108
 
 20070307 : Avoid open/close of detail dataset on edit of master dataset- Patch by Edwin - See http://zeos.firmos.at/viewtopic.php?t=1093
+
+20070307 : Required should be false if a field is not writable - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=767
