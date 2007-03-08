@@ -57,7 +57,7 @@ interface
 
 {$I ZComponent.inc}
 
-uses ZAbstractRODataset, ZAbstractDataset, ZAbstractTable;
+uses ZAbstractRODataset, ZAbstractDataset, ZAbstractTable {$IFDEF FPC}, DB {$ENDIF};
 
 type
 
