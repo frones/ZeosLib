@@ -87,6 +87,7 @@ type
     FHandle: PZMySQLConnect;
     FPlainDriver: IZMySQLPlainDriver;
     FUseResult: Boolean;
+    FSQL: string;
 
     function CreateResultSet(const SQL: string): IZResultSet;
 {$IFDEF MYSQL_USE_PREPARE}
@@ -99,6 +100,8 @@ type
     function ExecuteQuery(const SQL: string): IZResultSet; override;
     function ExecuteUpdate(const SQL: string): Integer; override;
     function Execute(const SQL: string): Boolean; override;
+
+    function GetMoreResults: Boolean; override;
 
     function IsUseResult: Boolean;
 {$IFDEF MYSQL_USE_PREPARE}
@@ -342,6 +345,7 @@ var
   HasResultset : Boolean;
 begin
   Result := False;
+  FSQL := SQL;
   if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
@@ -367,6 +371,45 @@ begin
     end;
   end else
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
+end;
+
+{**
+  Moves to a <code>Statement</code> object's next result.  It returns
+  <code>true</code> if this result is a <code>ResultSet</code> object.
+  This method also implicitly closes any current <code>ResultSet</code>
+  object obtained with the method <code>getResultSet</code>.
+
+  <P>There are no more results when the following is true:
+  <PRE>
+        <code>(!getMoreResults() && (getUpdateCount() == -1)</code>
+  </PRE>
+
+ @return <code>true</code> if the next result is a <code>ResultSet</code> object;
+   <code>false</code> if it is an update count or there are no more results
+ @see #execute
+}
+function TZMySQLStatement.GetMoreResults: Boolean;
+var
+  AStatus: integer;
+begin
+  Result := inherited GetMoreResults;
+  if FPlainDriver.GetClientVersion >= 41000 then
+  begin
+    AStatus := FPlainDriver.RetrieveNextRowset(FHandle);
+    if AStatus > 0 then
+      CheckMySQLError(FPlainDriver, FHandle, lcExecute, FSQL)
+    else
+      Result := (AStatus = 0);
+
+    if LastResultSet <> nil then
+      LastResultSet.Close;
+    LastResultSet := nil;
+    LastUpdateCount := -1;
+    if FPlainDriver.ResultSetExists(FHandle) then
+      LastResultSet := CreateResultSet(FSQL)
+    else
+      LastUpdateCount := FPlainDriver.GetAffectedRows(FHandle);
+  end;
 end;
 
 { TZMySQLEmulatedPreparedStatement }

@@ -43,3 +43,7 @@
 20070207 : First experimental mysql prepared statement support (based on PDO project) added to Testing Branch - By mdaems
 
 20070218 : Split ZPlainMysql.inc to avoid locking problems in BDS2006 - Asked by David Dindorp of HeidiSql - Mantis Bug 22
+
+20070313 : Modified Readme text for mysql embedded server example - Patch by fduenas
+
+20070314 : Added Multiple resultset support on Dbc level - Code by Asis - See http://zeos.firmos.at/viewtopic.php?t=459 and http://zeos.firmos.at/viewtopic.php?t=912
