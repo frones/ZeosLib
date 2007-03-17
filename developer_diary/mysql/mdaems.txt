@@ -47,3 +47,5 @@
 20070313 : Modified Readme text for mysql embedded server example - Patch by fduenas
 
 20070314 : Added Multiple resultset support on Dbc level - Code by Asis - See http://zeos.firmos.at/viewtopic.php?t=459 and http://zeos.firmos.at/viewtopic.php?t=912
+
+20070317 : Changed PingServer behaviour : Only return false when ping fails. No exception. This function is a check, so it should be allowed to return false. - By mdaems - On demand of HeidiSql team. 
