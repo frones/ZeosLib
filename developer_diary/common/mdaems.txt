@@ -100,3 +100,5 @@
 20070307 : Required should be false if a field is not writable - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=767
 
 20070308 : ZDataset Events in Lazarus - Patch by Edwin - See http://zeos.firmos.at/viewtopic.php?t=1130
+
+20070317 : TZConnection.Reconnect added - By HeidiSQL Team - See http://www.heidisql.com/forum/viewtopic.php?t=53

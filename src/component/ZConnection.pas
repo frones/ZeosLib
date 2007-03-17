@@ -129,6 +129,8 @@ type
     FBeforeDisconnect: TNotifyEvent;
     FAfterDisconnect: TNotifyEvent;
     FAfterConnect: TNotifyEvent;
+    FBeforeReconnect: TNotifyEvent;
+    FAfterReconnect: TNotifyEvent;
     FOnCommit: TNotifyEvent;
     FOnRollback: TNotifyEvent;
     FOnStartTransaction: TNotifyEvent;
@@ -149,6 +151,8 @@ type
     procedure DoAfterConnect;
     procedure DoBeforeDisconnect;
     procedure DoAfterDisconnect;
+    procedure DoBeforeReconnect;
+    procedure DoAfterReconnect;
     procedure DoCommit;
     procedure DoRollback;
     procedure DoStartTransaction;
@@ -174,6 +178,7 @@ type
 
     procedure Connect; virtual;
     procedure Disconnect; virtual;
+    procedure Reconnect;
     function Ping: Boolean; virtual;
 
     procedure StartTransaction; virtual;
@@ -239,6 +244,10 @@ type
       read FBeforeDisconnect write FBeforeDisconnect;
     property AfterDisconnect: TNotifyEvent
       read FAfterDisconnect write FAfterDisconnect;
+    property BeforeReconnect: TNotifyEvent
+      read FBeforeReconnect write FBeforeReconnect;
+    property AfterReconnect: TNotifyEvent
+      read FAfterReconnect write FAfterReconnect;
     property SQLHourGlass: Boolean read FSQLHourGlass write FSQLHourGlass
       default False;
     property OnCommit: TNotifyEvent read FOnCommit write FOnCommit;
@@ -527,6 +536,24 @@ begin
 end;
 
 {**
+  Fires an event before reconnect
+}
+procedure TZConnection.DoBeforeReconnect;
+begin
+  if Assigned(FBeforeReconnect) then
+    FBeforeReconnect(Self);
+end;
+
+{**
+  Fires an event after reconnect
+}
+procedure TZConnection.DoAfterReconnect;
+begin
+  if Assigned(FAfterReconnect) then
+    FAfterReconnect(Self);
+end;
+
+{**
   Fires an event after transaction commit
 }
 procedure TZConnection.DoCommit;
@@ -661,7 +688,32 @@ begin
 end; 
 
 {**
-  Checks if this connection is active.
+  Reconnect, doesn't destroy DataSets if successful.
+}
+procedure TZConnection.Reconnect;
+begin
+  if FConnection <> nil then
+  begin
+    DoBeforeReconnect;
+
+    ShowSqlHourGlass;
+    try
+      try
+        FConnection.Close;
+        FConnection.Open;
+      except
+        CloseAllDataSets;
+        raise;
+      end;
+    finally
+      HideSqlHourGlass;
+    end;
+
+    DoAfterReconnect;
+  end;
+end;
+
+{**  Checks if this connection is active.
 }
 procedure TZConnection.CheckConnected;
 begin
