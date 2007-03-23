@@ -51,3 +51,5 @@
 20070317 : Changed PingServer behaviour : Only return false when ping fails. No exception. This function is a check, so it should be allowed to return false. - By mdaems - On demand of HeidiSql team.
 
 20070323 : Zeos did not recognize UNSIGNED ZEROFILL columns as being UNSIGNED. - Patch by HeidiSql Team - See HeidiSQL SVN rev 521
+
+20070323 : Fix handling of MySQL default values. - Patch by HeidiSql Team - See HeidiSQL SVN rev 505
