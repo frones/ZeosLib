@@ -48,4 +48,6 @@
 
 20070314 : Added Multiple resultset support on Dbc level - Code by Asis - See http://zeos.firmos.at/viewtopic.php?t=459 and http://zeos.firmos.at/viewtopic.php?t=912
 
-20070317 : Changed PingServer behaviour : Only return false when ping fails. No exception. This function is a check, so it should be allowed to return false. - By mdaems - On demand of HeidiSql team. 
+20070317 : Changed PingServer behaviour : Only return false when ping fails. No exception. This function is a check, so it should be allowed to return false. - By mdaems - On demand of HeidiSql team.
+
+20070323 : Zeos did not recognize UNSIGNED ZEROFILL columns as being UNSIGNED. - Patch by HeidiSql Team - See HeidiSQL SVN rev 521
