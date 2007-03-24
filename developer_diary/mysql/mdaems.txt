@@ -53,3 +53,5 @@
 20070323 : Zeos did not recognize UNSIGNED ZEROFILL columns as being UNSIGNED. - Patch by HeidiSql Team - See HeidiSQL SVN rev 521
 
 20070323 : Fix handling of MySQL default values. - Patch by HeidiSql Team - See HeidiSQL SVN rev 505
+
+20070323 : Added function TZAbstractResultSetMetadata.HasDefaultValue  - Patch by HeidiSql Team - See HeidiSQL SVN rev 504
