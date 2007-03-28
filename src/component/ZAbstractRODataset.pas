@@ -1296,7 +1296,12 @@ begin
       { Processes widestring fields. }
       else if Field.DataType = ftWideString then
       begin
-        RowAccessor.SetUnicodeString(ColumnIndex, PWideString(Buffer)^);
+        {$IFDEF BDS4_UP}
+              RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(Buffer));
+        {$ELSE}
+              RowAccessor.SetUnicodeString(ColumnIndex, PWideString(Buffer)^);
+        {$ENDIF ~BDS4_UP}
+
       end
       { Processes all other fields. }
       else if (Field.FieldKind = fkData) and (Field.DataType = ftString) and
@@ -1450,7 +1455,7 @@ begin
         begin
           {$IFNDEF FPC}
 {$IFNDEF FOSNOMETA}
-          Required := IsNullable(I) = ntNoNulls;
+          Required := IsWritable(I) and (IsNullable(I) = ntNoNulls);
 {$ENDIF}
           {$ENDIF}
 {$IFNDEF FOSNOMETA}
@@ -1942,7 +1947,7 @@ begin
     begin
       DataSet := FDataLink.DataSource.DataSet;
       if DataSet <> nil then
-        if DataSet.Active and (DataSet.State <> dsSetKey) then
+        if DataSet.Active and not (DataSet.State in [dsSetKey, dsEdit, dsInsert]) then
         begin
           Close;
           Open;
@@ -3147,4 +3152,5 @@ end;
 {====================end of bangfauzan addition====================}
 
 end.
+
 

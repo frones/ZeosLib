@@ -22,7 +22,7 @@
       </Other>
     </CompilerOptions>
     <Description Value="Zeos Database Components"/>
-    <Version Major="6" Minor="5" Release="1"/>
+    <Version Major="6" Minor="6" Release="1"/>
     <Files Count="17">
       <Item1>
         <Filename Value="../../src/component/ZAbstractDataset.pas"/>

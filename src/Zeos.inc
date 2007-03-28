@@ -188,7 +188,7 @@
 {$DEFINE ENABLE_ASA}
 
 // Supported language. Now available languages:
-// ENGLISH, GERMAN, PORTUGUESE, DUTCH, SPANISH, ROMANA, INDONESIAN
+// ENGLISH, GERMAN, PORTUGUESE, DUTCH, SPANISH, ROMANA, INDONESIAN, RUSSIAN
 {$DEFINE ENGLISH}
 
 // Prevents loading default libmysql.dll

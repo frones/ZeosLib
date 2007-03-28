@@ -35,14 +35,17 @@ OPTIONAL:
              "--key_buffer_size=4096K"
 
 8) MySQL embedded server will also try to open the mysql server time zone's tables. 
-   So you can optionally have a 'mysql' database with the following tables (time_one*.*): 
+   So you can optionally have a 'mysql' database with the following tables (time_zone*.*): 
    - time_zone
    - time_zone_leap_second
    - time_zone_name
    - time_zone_transition
    - time_zone_transition_type
-   This is optional and only for 4.1 and above. They're only nedded to prevent the embeded server 
-   to write a record in the error log file each time application starts.
+   This is optional and only for 4.1 and above. They're only needed to prevent the embeded server 
+   to write a record in the error log file each time the application starts.
+
+9) Embedded Server options can also be set using a 'my.ini' file, that have to be in the same exe's folder.
+   For more info about How to use Embedded INI options, check MySQL documentation.
 
 NOTES: 
       - To see how to configure the above server variables and settings needed to make the 
@@ -51,7 +54,11 @@ NOTES:
       
       - The server specific arguments are specified by the "ServerArgument%N" prefix,
         Where "%N" is an argument secuential number. The "ServerArgument%N" prefix is used only by
-        ZeosLib. This prefix will help ZeosLib to identify with Connection parameters are 
+        ZeosLib. This prefix will help ZeosLib to identify which Connection parameters are 
         Server specific.
 
-      - Check MySQL Help file for more info of the Server specific parameters and how to use them.
+      - Check MySQL Help file for more info about Embedded Server usage, limitations, Server specific
+        parameters and how to use them.
+
+Regards
+fduenas - ZeosLib Developement Team Member 

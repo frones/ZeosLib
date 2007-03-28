@@ -169,7 +169,7 @@ begin
   if (Operation = opRemove) and (AComponent = FConnection) then
   begin
     FConnection := nil;
-    FreeAndNil(FSequence);
+    FSequence := nil;
   end;
 end;
 

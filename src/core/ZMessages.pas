@@ -1010,7 +1010,166 @@ resourcestring
 
   // <--- end added by tohenk
 
-  {$ELSE} // default: ENGLISH
+  //--- begin added by ORMADA --------------------------------------------------
+{$ELSE}
+{$IFDEF RUSSIAN}
+  SSQLError1                               = 'Ошибка в SQL выражении: %s';
+  SSQLError2                               = 'Ошибка в SQL выражении: %s Код ошибки: %d';
+  SSQLError3                               = 'Ошибка в SQL выражении: %s Код ошибки: %d SQL: %s';
+  SSQLError4                               = 'Ошибка в SQL выражении: %s Код ошибки: %d Сообщение: %s';
+
+  SListCapacityError                       = 'Размер списка вышел за границы (%d)';
+  SListCountError                          = 'Счетчик списка вышел за границы (%d)';
+  SListIndexError                          = 'Индекс списка вышел за границы (%d)';
+
+  SClonningIsNotSupported                  = 'Данный класс не поддерживает клонирование';
+  SImmutableOpIsNotAllowed                 = 'Операция не поддерживается на изменяемых коллекциях';
+  SStackIsEmpty                            = 'Стек пуст';
+  SVariableWasNotFound                     = 'Значение "%s" не найдено';
+  SFunctionWasNotFound                     = 'Функция "%s" не найдена';
+  SInternalError                           = 'Внутреняя ошибка';
+  SSyntaxErrorNear                         = 'Ошибка в синтаксисе "%s"';
+  SSyntaxError                             = 'Ошибка в синтаксисе';
+  SUnknownSymbol                           = 'Неизвестный символ "%s"';
+  SUnexpectedExprEnd                       = 'Неожиданный конец выражения';
+  SRightBraceExpected                      = ') пропущена';
+  SParametersError                         = 'ожидается %d параметров, найдено %d';
+  SExpectedMoreParams                      = 'Ожидается более 2-х параметров';
+  SInvalidVarByteArray                     = 'Неверный массив (VarByte)';
+  SVariableAlreadyExists                   = 'Значение "%s" уже существует';
+  STypesMismatch                           = 'Несовпадение типов';
+  SUnsupportedVariantType                  = 'Неподдерживаемый вариантный (variant) тип';
+  SUnsupportedOperation                    = 'Неподдерживаемая операция';
+
+  STokenizerIsNotDefined                   = 'Метка не определена';
+  SLibraryNotFound                         = 'Не одной динамической библиотеки не найдено: %s';
+  SEncodeDateIsNotSupported                = 'Эта версия не поддерживает isc_encode_sql_date';
+  SEncodeTimeIsNotSupported                = 'Эта версия не поддерживает isc_encode_sql_time';
+  SEncodeTimestampIsNotSupported           = 'Эта версия не поддерживает isc_encode_sql_timestamp';
+  SDecodeDateIsNotSupported                = 'Эта версия не поддерживает isc_decode_sql_date';
+  SDecodeTimeIsNotSupported                = 'Эта версия не поддерживает isc_decode_sql_time';
+  SDecodeTimestampIsNotSupported           = 'Эта версия не поддерживает isc_decode_sql_timestamp';
+
+  SCanNotRetrieveResultSetData             = 'Невозможно получить набор данных (Resultset)';
+  SRowBufferIsNotAssigned                  = 'Не назначен буффер строки';
+  SColumnIsNotAccessable                   = 'Недоступен столбец с индексом %d';
+  SConvertionIsNotPossible                 = 'Конвертация невозможна для столбца %d с %s на %s';
+  SCanNotAccessBlobRecord                  = 'Невозможно получить доступ к blob записи в столбце %d с типом %s';
+  SRowDataIsNotAvailable                   = 'Недоступны данные строки';
+  SResolverIsNotSpecified                  = 'Для данного набора данных (ResultSet) не задан Resolver';
+  SResultsetIsAlreadyOpened                = 'Набор данных (Resultset) уже открыт';
+  SCanNotUpdateEmptyRow                    = 'Невозможно обновить пустой строку';
+  SCanNotUpdateDeletedRow                  = 'Невозможно обновить удалённую строку';
+  SCanNotDeleteEmptyRow                    = 'Невозможно удалить пустую строку';
+  SCannotUseCommit                         = 'Невозможно использовать COMMIT в AUTOCOMMIT режиме';
+  SCannotUseRollBack                       = 'Невозможно использовать ROLLBACK в AUTOCOMMIT режиме';
+  SCanNotUpdateComplexQuery                = 'Невозможно обновить комплексный запрос с более чем одной таблицей';
+  SCanNotUpdateThisQueryType               = 'Невозможно обновить этот тип запроса';
+  SDriverWasNotFound                       = 'Требуемый драйвер БД не найден';
+  SCanNotConnectToServer                   = 'Невозможно подключиться к SQL серверу';
+  STableIsNotSpecified                     = 'Таблица не задана';
+  SLiveResultSetsAreNotSupported           = 'Живой набор данных не поддерживается этим классом';
+  SInvalidInputParameterCount              = 'Количество входных параметром is меньше чем ожидается';
+  SIsolationIsNotSupported                 = 'Уровень изоляции транзанкций не поддерживается';
+  SColumnWasNotFound                       = 'Не найден столбец с именем "%s"';
+  SWrongTypeForBlobParameter               = 'Неверный тип для Blob прараметра';
+  SIncorrectConnectionURL                  = 'Неверный путь (URL) для подключения: %s';
+  SUnsupportedProtocol                     = 'Неподдерживаемый протокол: %s';
+  SUnsupportedByDriver                     = 'Драйвер не поддерживает данную возможность : [%s]';
+
+  SConnectionIsNotOpened                   = 'Подключение не открыто';
+  SInvalidOpInAutoCommit                   = 'Неверная операция в режиме автоподтверждения (AutoCommit)';
+  SInvalidOpInNonAutoCommit                = 'Неверная операция в режиме НЕ автоподтверждения (non AutoCommit)';
+  SInvalidOpPrepare                        = 'Подготовка транзанкции возможна только при первом использовании(!) StartTransaction';
+
+  SConnectionIsNotAssigned                 = 'Подключения к БД не задано';
+  SQueryIsEmpty                            = 'SQL запрос пуст';
+  SCanNotExecuteMoreQueries                = 'Невозможно выполнить более одного запроса';
+  SOperationIsNotAllowed1                  = 'Операция не поддерживается в режиме только вперёд (FORWARD ONLY)';
+  SOperationIsNotAllowed2                  = 'Операция не поддерживается в режиме только для чтения (READ ONLY)';
+  SOperationIsNotAllowed3                  = 'Операция не поддерживается в %s режиме';
+  SOperationIsNotAllowed4                  = 'Операция не поддерживается на закрытом наборе данных';
+  SNoMoreRecords                           = 'В наборе данных (Resultset) нет записей';
+  SCanNotOpenResultSet                     = 'Невозможно открыть набор данных (Resultset)';
+  SCircularLink                            = 'Источник данных (Datasource) имеет циклицеские ссылки';
+  SBookmarkWasNotFound                     = 'Заметка (Bookmark) не найдена';
+  SIncorrectSearchFieldsNumber             = 'Некорректное число  Incorrect number of search field values';
+  SInvalidOperationInTrans                 = 'Неверная операция в рамках транзанкции';
+  SIncorrectSymbol                         = 'Неверный символ в списке полей "%s".';
+  SIncorrectToken                          = 'Неверный знак после ":"';
+
+  SSelectedTransactionIsolation            = 'Выбранный уровень изоляции транзанкции не поддерживается';
+  SDriverNotSupported                      = 'Драйвер не поддерживается %s';
+  SPattern2Long                            = 'Образец слишком длинный';
+  SDriverNotCapableOutParameters           = 'Драйвер не способен управлять параметрами';
+  SStatementIsNotAllowed                   = 'Выражение не поддерживается';
+  SStoredProcIsNotAllowed                  = 'Хранимая процедура не разрешена';
+  SCannotPerformOperation                  = 'Невозможно выполнить операцию на закрытом наборе данных (Resultset)';
+  SInvalidState                            = 'Неверное состояние';
+  SErrorConvertion                         = 'Ошибка преобразования';
+  SDataTypeDoesNotSupported                = 'Тип данных не поддерживается';
+  SUnsupportedParameterType                = 'Неподдерживаемый тип параметра';
+  SUnsupportedDataType                     = 'Неподдерживаемый тип данных';
+  SErrorConvertionField                    = 'Ошибка конвертации для поля "%s" в SQLType "%s"';
+  SBadOCI                                  = 'Неверная версия OCI [%s]. Необходимая версия 8.0.3 или выше';
+  SConnect2AsUser                          = 'Невозможно подключиться к "%s" пользователем "%s"';
+  SUnknownError                            = 'Неизвестная ошибка';
+  SFieldNotFound1                          = 'Поле "%s" не найдено';
+  SFieldNotFound2                          = 'Поле %d не найдено';
+
+  SLoginPromptFailure                      = 'Невозможно найти диалог авторизации по умолчанияю. Добавьте модуль DBLogDlg в секцию uses главного программного модуля.';
+
+  SPropertyQuery                           = 'Это может быть последний запрос пока БД большая The Query may last a while on large databases!';
+  SPropertyTables                          = 'Следует ограничить каталогом(Catalog) и/или схемой (Schema)';
+  SPropertyColumns                         = 'Следует ограничить каталогом (Catalog), схемой (Schema) и/или таблицей (TableName).';
+  SPropertyProcedures                      = 'Следует ограничить каталогом(Catalog) и/или схемой (Schema).';
+  SPropertySequences                       = 'Следует ограничить каталогом(Catalog) и/или схемой (Schema).';
+  SPropertyExecute                         = 'Всё равно выполнить запрос ?';
+
+  SFormTest                                = 'ZEOS SQL тест редактора';
+  SButtonClose                             = '&Закрыть';
+  SFormEditor                              = 'ZEOS SQL редактор';
+  STabSheetSelect                          = 'Выбор SQL';
+  SMenuLoad                                = 'Загрузить';
+  SMenuSave                                = 'Сохранить';
+  SButtonGenerate                          = '&Сгенерировать';
+  SButtonCheck                             = 'П&роверить';
+  SButtonTest                              = '&Тест';
+  SButtonOk                                = '&Ок';
+  SButtonCancel                            = '&Отмена';
+  STableAlias                              = 'П&севдоним таблицы';
+  SReplaceSQL                              = '&Заменить SQL';
+  SDialogOpenTitle                         = 'Открыть SQL файл';
+  SDialogSaveTitle                         = 'Сохранить SQL файл';
+  SSQLEditor                               = 'SQL редактор';
+  SDatabaseDialog                          = 'Открыть существующую БД';
+
+  SUpdateSQLNoResult                       = 'В результате обновления (Refresh) данные не получены';
+  SUpdateSQLRefreshStatementcount          = 'Refresh запрос должен быть только один';
+
+{$IFDEF FPC}
+  SNotEditing                              = 'Набор данных (Dataset) не в режиме редактирования или вставки';
+  SFieldTypeMismatch                       = 'Несовпадение типа для поля ''%s'', ожидается %s найден: %s';
+  SFieldSizeMismatch                       = 'Размер поля ''%s'' не совпадает, ожидается: %d найден: %d';
+{$ENDIF}
+
+  SFailedtoInitPrepStmt                    = 'Неудалось инициализировать подготовленное выражение';
+  SFailedtoPrepareStmt                     = 'Ошибка выполнения выражения в процессе подготовки';
+  SFailedToBindAllValues                   = 'Ошибка при пре-связываниии значений';
+  SAttemptExecOnBadPrep                    = 'Попытка выполнить выражение до успешной подготовки.';
+  SBindingFailure                          = 'Ошибка при связывании параметра';
+  SPreparedStmtExecFailure                 = 'Неудалось выполнить подготовленное выражение';
+  SBoundVarStrIndexMissing                 = 'Ограничение на текст с индексом "%s" не существует';
+  SBindVarOutOfRange                       = 'Индекс ограничения вышел за границы : %d';
+  SFailedToBindResults                     = 'Неудалось связать(bind) результат выполнения';
+
+  SRefreshRowOnlySupportedWithUpdateObject = 'Метод обновления строки (RefreshRow) поддерживается только при обновлении объекта';
+  SMustBeInBrowseMode                      = 'Операция поддерживает только в режиме просмотра (dsBROWSE)';
+
+  SUnKnownParamDataType                    = 'Неизвестный типа параметра (Param.DataType)';
+  //--- end added by ORMADA ----------------------------------------------------
+
+{$ELSE} // default: ENGLISH
 
   SSQLError1 = 'SQL Error: %s';
   SSQLError2 = 'SQL Error: %s Code: %d';
@@ -1166,6 +1325,8 @@ resourcestring
   SMustBeInBrowseMode = 'Operation is only allowed in dsBROWSE state';
 
   SUnKnownParamDataType = 'Unknown Param.DataType';
+
+{$ENDIF} // RUSSIAN
 
 {$ENDIF}   // INDONESIAN <--- added by tohenk
 

@@ -136,6 +136,12 @@ type
     function GetColumnData(ColumnIndex: Integer; var IsNull: Boolean): Pointer;
     function GetColumnDataSize(ColumnIndex: Integer): Integer;
 
+    function GetColumnName(ColumnIndex: Integer): string;
+    function GetColumnCase(ColumnIndex: Integer): Boolean;
+    function GetColumnType(ColumnIndex: Integer): TZSQLType;
+    function GetColumnLength(ColumnIndex: Integer): Integer;
+    function GetColumnOffSet(ColumnIndex: Integer): Integer;
+
     //======================================================================
     // Methods for accessing results by column index
     //======================================================================
@@ -748,6 +754,18 @@ begin
 end;
 
 {**
+  Gets the case sensitive flag of a column data buffer.
+
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return the case sensitive flag of the column data buffer.
+}
+function TZRowAccessor.GetColumnCase(ColumnIndex: Integer): Boolean;
+begin
+ CheckColumnIndex(ColumnIndex);
+ Result := FColumnCases[ColumnIndex-1];
+end;
+
+{**
   Gets a pointer to the column data buffer.
 
   @param ColumnIndex the first column is 1, the second is 2, ...
@@ -773,6 +791,55 @@ begin
   Result := FColumnLengths[ColumnIndex - 1];
 end;
 
+{**
+  Gets then length of a column data buffer.
+
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return the length of the column data buffer.
+}
+function TZRowAccessor.GetColumnLength(ColumnIndex: Integer): Integer;
+begin
+ CheckColumnIndex(ColumnIndex);
+ Result := FColumnLengths[ColumnIndex-1];
+end;
+
+{**
+  Gets then name of a column data buffer.
+
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return the name of the column data buffer.
+}
+function TZRowAccessor.GetColumnName(ColumnIndex: Integer): string;
+begin
+ CheckColumnIndex(ColumnIndex);
+ Result := FColumnNames[ColumnIndex-1];
+end;
+
+{**
+  Gets then offset of a column data buffer.
+
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return then offset of the column data buffer.
+}
+function TZRowAccessor.GetColumnOffSet(ColumnIndex: Integer): Integer;
+begin
+ CheckColumnIndex(ColumnIndex);
+ Result := FColumnOffSets[ColumnIndex-1];
+end;
+
+{**
+  Gets then SQLType of a column data buffer.
+
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return the SQLType of the column data buffer.
+}
+function TZRowAccessor.GetColumnType(ColumnIndex: Integer): TZSQLType;
+begin
+ CheckColumnIndex(ColumnIndex);
+ Result := FColumnTypes[ColumnIndex-1];
+end;
+
+//
 //======================================================================
 // Methods for accessing results by column index
 //======================================================================
@@ -2024,7 +2091,7 @@ begin
       begin
         FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
         Value := System.Copy(Value, 1, FColumnLengths[ColumnIndex - 1] div 2 - 1);
-
+        
         if Length(Value) > 0 then
           System.Move(PWideString(Value)^, Pointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, Length(Value) * 2 + 2)
         else

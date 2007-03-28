@@ -476,13 +476,14 @@ end;
   @return 0 if succesfull or error code if any error occurs
 }
 function TZMySQLConnection.PingServer: Integer;
-var MySQLPingError: Integer;
+const
+   PING_ERROR_ZEOSCONNCLOSED = -1;
+var
+   Closing: boolean;
 begin
-   MySQLPingError := FPlainDriver.Ping(FHandle);
-   Result := MySQLPingError;
-   CheckMySQLError(FPlainDriver, FHandle, lcExecute,'PING MYSQL (FOS)');
-   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol,
-    'PING MYSQL (FOS) '+IntToStr(MySQLPingError));
+   Closing := FHandle = nil;
+   if Closed or Closing then Result := PING_ERROR_ZEOSCONNCLOSED
+   else Result := FPlainDriver.Ping(FHandle);
 end;
 
 {**
