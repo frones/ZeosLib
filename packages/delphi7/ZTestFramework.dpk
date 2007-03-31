@@ -25,9 +25,7 @@ package ZTestFramework;
 {$IMPLICITBUILD OFF}
 
 requires
-  ZComponent,
-  ZCore,
-  ZDbc,
+  ZComponentDesign,
   rtl,
   dbrtl,
   dsnap,
@@ -35,9 +33,7 @@ requires
   vcl,
   vclactnband,
   vclx,
-  designide,
-  ZParseSql,
-  ZPlain;
+  designide;
 
 contains
   ZTestConfig in '..\..\test\framework\ZTestConfig.pas',
