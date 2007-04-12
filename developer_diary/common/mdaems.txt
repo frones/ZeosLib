@@ -104,3 +104,5 @@
 20070317 : TZConnection.Reconnect added - By HeidiSQL Team - See http://www.heidisql.com/forum/viewtopic.php?t=53
 
 20070331 : Ignore columns that do not originate from the table when resolving updates - By HeidiSQL Team - See http://fisheye3.cenqua.com/changelog/heidisql?cs=555
+
+20070412 : Added Delphi2007 package files - Patch by mosca_morta - See http://zeos.firmos.at/viewtopic.php?t=1173
