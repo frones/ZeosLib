@@ -9,3 +9,5 @@
 20061207 : Change to function TZPostgreSQLDatabaseMetadata.GetTables - Patch by Damien666 - See http://zeos.firmos.at/viewtopic.php?t=839
 
 20070124 : Array support for PostgresSQL - Patch by Malvo - See http://zeos.firmos.at/viewtopic.php?t=1044
+
+20070418 : Memory leak in CheckPostgreSQLError - Patch by sfxhomer - Mantis Bug 5
