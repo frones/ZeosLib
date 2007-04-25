@@ -2315,6 +2315,7 @@ end;
 procedure TZParamsSQLDA.UpdateString(const Index: Integer; Value: string);
 var
  SQLCode: SmallInt;
+ Stream: TStream;
 begin
   CheckRange(Index);
 //  SetFieldType(Index, Length(Value) + 1, SQL_TEXT + 1, 0);
@@ -2326,6 +2327,15 @@ begin
     case SQLCode of
       SQL_TEXT      : EncodeString(SQL_TEXT, Index, Value);
       SQL_VARYING   : EncodeString(SQL_VARYING, Index, Value);
+      SQL_LONG: PInteger(sqldata)^ := StrToInt(Value);
+      SQL_BLOB: begin
+        Stream := TStringStream.Create(Value);
+        try
+          WriteBlob(index, Stream);
+        finally
+          Stream.Free;
+        end;
+      end;
     else
       raise EZIBConvertError.Create(SErrorConvertion);
     end;
