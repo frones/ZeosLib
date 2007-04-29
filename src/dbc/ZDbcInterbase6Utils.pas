@@ -1153,7 +1153,7 @@ var
 begin
   BlobHandle := nil;
   CurPos := 0;
-  SegmentLenght := UShort(DefaultBlobSegmentSize);
+//  SegmentLenght := UShort(DefaultBlobSegmentSize);
 
   { open blob }
   PlainDriver.isc_open_blob2(@StatusVector, Handle,
@@ -2328,6 +2328,7 @@ begin
       SQL_TEXT      : EncodeString(SQL_TEXT, Index, Value);
       SQL_VARYING   : EncodeString(SQL_VARYING, Index, Value);
       SQL_LONG: PInteger(sqldata)^ := StrToInt(Value);
+      SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, Value); 
       SQL_BLOB: begin
         Stream := TStringStream.Create(Value);
         try
