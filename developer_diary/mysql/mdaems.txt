@@ -55,3 +55,5 @@
 20070323 : Fix handling of MySQL default values. - Patch by HeidiSql Team - See HeidiSQL SVN rev 505
 
 20070323 : Added function TZAbstractResultSetMetadata.HasDefaultValue  - Patch by HeidiSql Team - See HeidiSQL SVN rev 504
+
+20070430 : Added support for SSL connections - By mdaems

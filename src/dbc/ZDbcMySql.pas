@@ -386,6 +386,7 @@ var
   ConnectTimeout: Integer;
   SQL: PChar;
   ClientFlag : Cardinal;
+  SslCa, SslCaPath, SslKey, SslCert, SslCypher : PChar;
 begin
   if not Closed then Exit;
 
@@ -429,6 +430,18 @@ begin
     if StrToBoolEx(Info.Values['CLIENT_MULTI_STATEMENTS']) then   ClientFlag := Clientflag OR _CLIENT_MULTI_STATEMENTS; { Enable/disable multi-stmt support }
     if StrToBoolEx(Info.Values['CLIENT_MULTI_RESULTS']) then   ClientFlag := Clientflag OR _CLIENT_MULTI_RESULTS; { Enable/disable multi-results }
     if StrToBoolEx(Info.Values['CLIENT_REMEMBER_OPTIONS']) then   ClientFlag := Clientflag OR _CLIENT_REMEMBER_OPTIONS; {Enable/disable multi-results }
+
+    { Set SSL properties before connect}
+    if StrToBoolEx(Info.Values['MYSQL_SSL']) then
+      begin
+        If Info.Values['MYSQL_SSL_KEY'] <> '' then SslKey := PChar(Info.Values['MYSQL_SSL_KEY']);
+        If Info.Values['MYSQL_SSL_CERT'] <> '' then SslCert := PChar(Info.Values['MYSQL_SSL_CERT']);
+        If Info.Values['MYSQL_SSL_CA'] <> '' then SslCa := PChar(Info.Values['MYSQL_SSL_CA']);
+        If Info.Values['MYSQL_SSL_CAPATH'] <> '' then SslCaPath := PChar(Info.Values['MYSQL_SSL_CAPATH']);
+        If Info.Values['MYSQL_SSL_CYPHER'] <> '' then SslCypher := PChar(Info.Values['MYSQL_SSL_CYPHER']);
+        FPlainDriver.SslSet(FHandle, SslKey, SslCert, SslCa, SslCaPath, SslCypher);
+        DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, 'SSL options set');
+      end;
 
     { Connect to MySQL database. }
     if FPlainDriver.RealConnect(FHandle, PChar(HostName), PChar(User),
