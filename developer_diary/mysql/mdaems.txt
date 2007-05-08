@@ -57,3 +57,5 @@
 20070323 : Added function TZAbstractResultSetMetadata.HasDefaultValue  - Patch by HeidiSql Team - See HeidiSQL SVN rev 504
 
 20070430 : Added support for SSL connections - By mdaems
+
+20070508 : Fix of SSL patch - By Aperger - See http://zeos.firmos.at/viewtopic.php?t=1217
