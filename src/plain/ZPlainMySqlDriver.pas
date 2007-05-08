@@ -480,7 +480,8 @@ type
 
     function SelectDatabase(Handle: PZMySQLConnect;
       const Database: PChar): Integer;
-    function SslSet(Handle: PZMySQLConnect; const Key, Cert, Ca, Capath, Cipher: PChar): Integer;    function CreateDatabase(Handle: PZMySQLConnect;
+    function SslSet(Handle: PZMySQLConnect; const Key, Cert, Ca, Capath, Cipher: PChar): Integer;
+    function CreateDatabase(Handle: PZMySQLConnect;
       const Database: PChar): Integer;
     function DropDatabase(Handle: PZMySQLConnect;
       const Database: PChar): Integer;
