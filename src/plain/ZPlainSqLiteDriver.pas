@@ -801,9 +801,16 @@ function TZSQLite3PlainDriver.Open(const filename: PChar; mode: Integer;
   var errmsg: PChar): Psqlite;
 var
   Result0: Psqlite;
+  Version: string;
+  FileNameString: String;
 begin
   Result0:= nil;
-  ZPlainSqLite3.sqlite_open(filename, Result0);
+  Version := LibVersion;
+  FileNameString := filename;
+  if (Version > '3.2.5') then
+    ZPlainSqLite3.sqlite_open(PAnsiChar(AnsiToUTF8(FileNameString)), Result0)
+  else
+    ZPlainSqLite3.sqlite_open(filename, Result0);
   Result := Result0;
 end;
 
