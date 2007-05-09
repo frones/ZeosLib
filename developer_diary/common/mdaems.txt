@@ -108,3 +108,5 @@
 20070412 : Added Delphi2007 package files - Patch by mosca_morta - See http://zeos.firmos.at/viewtopic.php?t=1173
 
 20070430 : Added TZConnection.GetColumnNames function - by Simpsomboy/mdaems - See http://zeos.firmos.at/viewtopic.php?t=1127
+
+20070509 : Added new field types for FPC2.1.4 - by leiteiro/mdaems - Mantis Bug 37
