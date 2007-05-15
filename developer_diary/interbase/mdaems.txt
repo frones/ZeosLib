@@ -13,3 +13,7 @@
 20061025 : Blob handling error - Patch by lpolyak - See http://zeos.firmos.at/viewtopic.php?t=855
 
 20061027 : Fix for Bug in TZInterbase6Sequence.GetNextValue - patch by CharlesMcAllister - See http://zeos.firmos.at/viewtopic.php?t=856
+
+20070425 : Allow string values for integer and blob parameters - Patch by Andy - Mantis Bug 13 and 19
+
+20070430 : Allow string values for date parameters - Patch by Andrevanzuydam - Mantis Bug 33

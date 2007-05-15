@@ -197,7 +197,8 @@ type
     procedure GetCatalogNames(List: TStrings);
     procedure GetSchemaNames(List: TStrings);
     procedure GetTableNames(const Pattern: string; List: TStrings);overload;
-		procedure GetTableNames(const tablePattern,shemaPattern: string; List: TStrings);overload;
+    procedure GetTableNames(const tablePattern,schemaPattern: string; List: TStrings);overload;
+    procedure GetColumnNames(const TablePattern, ColumnPattern: string; List: TStrings);
 
     procedure GetStoredProcNames(const Pattern: string; List: TStrings);
 
@@ -1074,10 +1075,10 @@ end;
 {**
   Fills string list with table names.
   @param tablePattern a pattern for table names.
-  @param shemaPattern a pattern for shema names.
+  @param schemaPattern a pattern for schema names.
   @param List a string list to fill out.
 }
-procedure TZConnection.GetTableNames(const tablePattern,shemaPattern: string; List: TStrings);
+procedure TZConnection.GetTableNames(const tablePattern,schemaPattern: string; List: TStrings);
 var
   Metadata: IZDatabaseMetadata;
   ResultSet: IZResultSet;
@@ -1086,9 +1087,28 @@ begin
 
   List.Clear;
   Metadata := DbcConnection.GetMetadata;
-  ResultSet := Metadata.GetTables('', shemaPattern, tablePattern, nil);
+  ResultSet := Metadata.GetTables('', schemaPattern, tablePattern, nil);
   while ResultSet.Next do
     List.Add(ResultSet.GetStringByName('TABLE_NAME'));
+end;
+
+{**
+  Fills string list with column names.
+  @param TablePattern a pattern for table names.
+  @param ColumnPattern a pattern for column names.
+  @param List a string list to fill out.
+}
+procedure TZConnection.GetColumnNames(const TablePattern, ColumnPattern: string; List: TStrings);
+var
+  Metadata: IZDatabaseMetadata;
+  ResultSet: IZResultSet;
+begin
+  CheckConnected;
+  List.Clear;
+  Metadata := DbcConnection.GetMetadata;
+  ResultSet := Metadata.GetColumns('', '', TablePattern, ColumnPattern);
+  while ResultSet.Next do
+    List.Add(ResultSet.GetStringByName('COLUMN_NAME'));
 end;
 
 {**

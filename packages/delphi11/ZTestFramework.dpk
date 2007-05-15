@@ -1,5 +1,5 @@
 package ZTestFramework;
-{$LIBSUFFIX '70'}
+
 {$R *.res}
 {$ALIGN 8}
 {$ASSERTIONS ON}
@@ -25,7 +25,11 @@ package ZTestFramework;
 {$IMPLICITBUILD OFF}
 
 requires
-  ZComponentDesign,
+  ZComponent,
+  ZDbc,
+  ZPlain,
+  ZParseSql,
+  ZCore,
   rtl,
   dbrtl,
   dsnap,
@@ -43,14 +47,13 @@ contains
   ZTestCase in '..\..\test\framework\ZTestCase.pas',
   ZBugReport in '..\..\test\framework\ZBugReport.pas',
   ZPerformanceTestCase in '..\..\test\framework\ZPerformanceTestCase.pas',
+  TestFramework in '..\..\..\..\DUnit\src\TestFramework.pas',
+  MemCheck in '..\..\test\external\MemCheck.pas';
 
-  MemCheck in '..\..\test\external\MemCheck.pas',
-
-  TestFrameWork in '..\..\test\external\TestFrameWork.pas',
-  TextTestRunner in '..\..\test\external\TextTestRunner.pas',
+{TextTestRunner in '..\..\test\external\TextTestRunner.pas',
   GUITestRunner in '..\..\test\external\GUITestRunner.pas',
   ZMidasTestServer_TLB in '..\..\test\framework\ZMidasTestServer_TLB.pas',
-  ZMidasTestCase in '..\..\test\framework\ZMidasTestCase.pas';
+  ZMidasTestCase in '..\..\test\framework\ZMidasTestCase.pas';}
 
   {ZRemoteDM: TRemoteDataModule;}
 

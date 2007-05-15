@@ -225,13 +225,13 @@ type
     function Ping(Handle: PZMySQLConnect): Integer;
     function ExecQuery(Handle: PZMySQLConnect; const Query: PChar): Integer;
     function RealConnect(Handle: PZMySQLConnect; const Host, User, Password, Db: PChar; Port: Cardinal; UnixSocket: PChar; ClientFlag: Cardinal): PZMySQLConnect;
-    // real_escape_string
+    function GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PChar; Length: Cardinal): Cardinal;
     function ExecRealQuery(Handle: PZMySQLConnect; const Query: PChar; Length: Integer): Integer;
     function Refresh(Handle: PZMySQLConnect; Options: Cardinal): Integer;
     function SeekRow(Res: PZMySQLResult; Row: PZMySQLRowOffset): PZMySQLRowOffset;
     // row_tell
     function SelectDatabase(Handle: PZMySQLConnect; const Database: PChar): Integer;
-    //ssl_set
+    function SslSet(Handle: PZMySQLConnect; const Key, Cert, Ca, Capath, Cipher: PChar): Integer;
     function GetStatInfo(Handle: PZMySQLConnect): PChar;
     function StoreResult(Handle: PZMySQLConnect): PZMySQLResult;
     function GetThreadId(Handle: PZMySQLConnect): Cardinal;
@@ -247,7 +247,7 @@ type
 
     // change_user
     // field_count
-    // function GetClientVersion: AnsiString; 
+    // function GetClientVersion: AnsiString;
 
     function Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMysqlConstants.SHUTDOWN_DEFAULT): Integer; // 2 versions!!
 
@@ -346,6 +346,7 @@ type
     function RealConnect(Handle: PZMySQLConnect;
       const Host, User, Password, Db: PChar; Port: Cardinal;
       UnixSocket: PChar; ClientFlag: Cardinal): PZMySQLConnect;
+    function GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PChar; Length: Cardinal): Cardinal;
     procedure Close(Handle: PZMySQLConnect);
 
     function ExecQuery(Handle: PZMySQLConnect; const Query: PChar): Integer;
@@ -354,6 +355,7 @@ type
 
     function SelectDatabase(Handle: PZMySQLConnect;
       const Database: PChar): Integer;
+    function SslSet(Handle: PZMySQLConnect; const Key, Cert, Ca, Capath, Cipher: PChar): Integer;
     function CreateDatabase(Handle: PZMySQLConnect;
       const Database: PChar): Integer;
     function DropDatabase(Handle: PZMySQLConnect;
@@ -469,6 +471,7 @@ type
     function RealConnect(Handle: PZMySQLConnect;
       const Host, User, Password, Db: PChar; Port: Cardinal;
       UnixSocket: PChar; ClientFlag: Cardinal): PZMySQLConnect;
+    function GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PChar; Length: Cardinal): Cardinal;
     procedure Close(Handle: PZMySQLConnect);
 
     function ExecQuery(Handle: PZMySQLConnect; const Query: PChar): Integer;
@@ -477,6 +480,7 @@ type
 
     function SelectDatabase(Handle: PZMySQLConnect;
       const Database: PChar): Integer;
+    function SslSet(Handle: PZMySQLConnect; const Key, Cert, Ca, Capath, Cipher: PChar): Integer;
     function CreateDatabase(Handle: PZMySQLConnect;
       const Database: PChar): Integer;
     function DropDatabase(Handle: PZMySQLConnect;
@@ -591,6 +595,7 @@ type
     function RealConnect(Handle: PZMySQLConnect;
       const Host, User, Password, Db: PChar; Port: Cardinal;
       UnixSocket: PChar; ClientFlag: Cardinal): PZMySQLConnect;
+    function GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PChar; Length: Cardinal): Cardinal;
     procedure Close(Handle: PZMySQLConnect);
 
     function ExecQuery(Handle: PZMySQLConnect; const Query: PChar): Integer;
@@ -599,6 +604,7 @@ type
 
     function SelectDatabase(Handle: PZMySQLConnect;
       const Database: PChar): Integer;
+    function SslSet(Handle: PZMySQLConnect; const Key, Cert, Ca, Capath, Cipher: PChar): Integer;
     function CreateDatabase(Handle: PZMySQLConnect;
       const Database: PChar): Integer;
     function DropDatabase(Handle: PZMySQLConnect;
@@ -723,6 +729,7 @@ type
     function RealConnect(Handle: PZMySQLConnect;
       const Host, User, Password, Db: PChar; Port: Cardinal;
       UnixSocket: PChar; ClientFlag: Cardinal): PZMySQLConnect;
+    function GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PChar; Length: Cardinal): Cardinal;
     procedure Close(Handle: PZMySQLConnect);
 
     function ExecQuery(Handle: PZMySQLConnect; const Query: PChar): Integer;
@@ -731,6 +738,7 @@ type
 
     function SelectDatabase(Handle: PZMySQLConnect;
       const Database: PChar): Integer;
+    function SslSet(Handle: PZMySQLConnect; const Key, Cert, Ca, Capath, Cipher: PChar): Integer;
     function CreateDatabase(Handle: PZMySQLConnect;
       const Database: PChar): Integer;
     function DropDatabase(Handle: PZMySQLConnect;
@@ -856,6 +864,7 @@ type
     function RealConnect(Handle: PZMySQLConnect;
       const Host, User, Password, Db: PChar; Port: Cardinal;
       UnixSocket: PChar; ClientFlag: Cardinal): PZMySQLConnect;
+    function GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PChar; Length: Cardinal): Cardinal;
     procedure Close(Handle: PZMySQLConnect);
 
     function ExecQuery(Handle: PZMySQLConnect; const Query: PChar): Integer;
@@ -864,6 +873,7 @@ type
 
     function SelectDatabase(Handle: PZMySQLConnect;
       const Database: PChar): Integer;
+    function SslSet(Handle: PZMySQLConnect; const Key, Cert, Ca, Capath, Cipher: PChar): Integer;
     function CreateDatabase(Handle: PZMySQLConnect;
       const Database: PChar): Integer;
     function DropDatabase(Handle: PZMySQLConnect;
@@ -1033,6 +1043,12 @@ begin
   Result := MYSQL_API.mysql_connect(Handle, Host, User, Password);
 end;
 
+function TZMySQL320PlainDriver.SslSet(Handle: PZMySQLConnect;
+  const Key, Cert, Ca, Capath, Cipher: PChar): Integer;
+begin
+  Result := MYSQL_API.mysql_ssl_set(Handle, Key, Cert, Ca, Capath, Cipher);
+end;
+
 function TZMySQL320PlainDriver.CreateDatabase(Handle: PZMySQLConnect;
   const Database: PChar): Integer;
 begin
@@ -1198,6 +1214,12 @@ function TZMySQL320PlainDriver.RealConnect(Handle: PZMySQLConnect;
 begin
   Result := MYSQL_API.mysql_real_connect(Handle, Host, User, Password, Db,
     Port, UnixSocket, ClientFlag);
+end;
+
+function TZMySQL320PlainDriver.GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PChar;
+  Length: Cardinal): Cardinal;
+begin
+  Result := MYSQL_API.mysql_real_escape_string(Handle, StrTo, StrFrom, Length);
 end;
 
 function TZMySQL320PlainDriver.Refresh(Handle: PZMySQLConnect;
@@ -1536,6 +1558,12 @@ begin
   Result := MYSQL_API.mysql_connect(Handle, Host, User, Password);
 end;
 
+function TZMySQL323PlainDriver.SslSet(Handle: PZMySQLConnect;
+  const Key, Cert, Ca, Capath, Cipher: PChar): Integer;
+begin
+  Result := MYSQL_API.mysql_ssl_set(Handle, Key, Cert, Ca, Capath, Cipher);
+end;
+
 function TZMySQL323PlainDriver.CreateDatabase(Handle: PZMySQLConnect;
   const Database: PChar): Integer;
 begin
@@ -1701,6 +1729,12 @@ function TZMySQL323PlainDriver.RealConnect(Handle: PZMySQLConnect;
 begin
   Result := MYSQL_API.mysql_real_connect(Handle, Host, User, Password, Db,
     Port, UnixSocket, ClientFlag);
+end;
+
+function TZMySQL323PlainDriver.GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PChar;
+  Length: Cardinal): Cardinal;
+begin
+  Result := MYSQL_API.mysql_real_escape_string(Handle, StrTo, StrFrom, Length);
 end;
 
 function TZMySQL323PlainDriver.Refresh(Handle: PZMySQLConnect;
@@ -2038,6 +2072,12 @@ begin
   Result := MYSQL_API.mysql_connect(Handle, Host, User, Password);
 end;
 
+function TZMySQL40PlainDriver.SslSet(Handle: PZMySQLConnect;
+  const Key, Cert, Ca, Capath, Cipher: PChar): Integer;
+begin
+  Result := MYSQL_API.mysql_ssl_set(Handle, Key, Cert, Ca, Capath, Cipher);
+end;
+
 function TZMySQL40PlainDriver.CreateDatabase(Handle: PZMySQLConnect;
   const Database: PChar): Integer;
 begin
@@ -2202,6 +2242,12 @@ function TZMySQL40PlainDriver.RealConnect(Handle: PZMySQLConnect;
 begin
   Result := MYSQL_API.mysql_real_connect(Handle, Host, User, Password, Db,
     Port, UnixSocket, ClientFlag);
+end;
+
+function TZMySQL40PlainDriver.GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PChar;
+  Length: Cardinal): Cardinal;
+begin
+  Result := MYSQL_API.mysql_real_escape_string(Handle, StrTo, StrFrom, Length);
 end;
 
 function TZMySQL40PlainDriver.Refresh(Handle: PZMySQLConnect;
@@ -2572,6 +2618,12 @@ begin
   Result := MYSQL_API.mysql_connect(Handle, Host, User, Password);
 end;
 
+function TZMySQL41PlainDriver.SslSet(Handle: PZMySQLConnect;
+  const Key, Cert, Ca, Capath, Cipher: PChar): Integer;
+begin
+  Result := MYSQL_API.mysql_ssl_set(Handle, Key, Cert, Ca, Capath, Cipher);
+end;
+
 function TZMySQL41PlainDriver.CreateDatabase(Handle: PZMySQLConnect;
   const Database: PChar): Integer;
 begin
@@ -2734,6 +2786,12 @@ function TZMySQL41PlainDriver.RealConnect(Handle: PZMySQLConnect;
 begin
   Result := MYSQL_API.mysql_real_connect(Handle, Host, User, Password, Db,
     Port, UnixSocket, ClientFlag);
+end;
+
+function TZMySQL41PlainDriver.GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PChar;
+  Length: Cardinal): Cardinal;
+begin
+  Result := MYSQL_API.mysql_real_escape_string(Handle, StrTo, StrFrom, Length);
 end;
 
 function TZMySQL41PlainDriver.Refresh(Handle: PZMySQLConnect;
@@ -3097,6 +3155,12 @@ begin
   Result := MYSQL_API.mysql_connect(Handle, Host, User, Password);
 end;
 
+function TZMySQL5PlainDriver.SslSet(Handle: PZMySQLConnect;
+  Const Key, Cert, Ca, Capath, Cipher: PChar): Integer;
+begin
+  Result := MYSQL_API.mysql_ssl_set(Handle, Key, Cert, Ca, Capath, Cipher);
+end;
+
 function TZMySQL5PlainDriver.CreateDatabase(Handle: PZMySQLConnect;
   const Database: PChar): Integer;
 begin
@@ -3259,6 +3323,12 @@ function TZMySQL5PlainDriver.RealConnect(Handle: PZMySQLConnect;
 begin
   Result := MYSQL_API.mysql_real_connect(Handle, Host, User, Password, Db,
     Port, UnixSocket, ClientFlag);
+end;
+
+function TZMySQL5PlainDriver.GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PChar;
+  Length: Cardinal): Cardinal;
+begin
+  Result := MYSQL_API.mysql_real_escape_string(Handle, StrTo, StrFrom, Length);
 end;
 
 function TZMySQL5PlainDriver.Refresh(Handle: PZMySQLConnect;

@@ -804,6 +804,7 @@ begin
       Connection.Rollback;
 
     DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,      0, ErrorMessage);
+    if ResultHandle <> nil then PlainDriver.Clear(ResultHandle);
     raise EZSQLException.CreateWithStatus(StatusCode,Format(SSQLError1, [ErrorMessage]));
   end;
 end;

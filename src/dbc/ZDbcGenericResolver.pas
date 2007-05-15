@@ -242,8 +242,9 @@ begin
   for I := 0 to FromList.Count - 1 do
   begin
     Current := TZResolverParameter(FromList[I]);
-    ToList.Add(TZResolverParameter.Create(Current.ColumnIndex,
-      Current.ColumnName, Current.ColumnType, Current.NewValue, ''));
+    if Current.ColumnName <> '' then
+      ToList.Add(TZResolverParameter.Create(Current.ColumnIndex,
+        Current.ColumnName, Current.ColumnType, Current.NewValue, ''));
   end;
 end;
 
