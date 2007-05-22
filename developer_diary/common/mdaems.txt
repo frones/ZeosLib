@@ -110,3 +110,5 @@
 20070430 : Added TZConnection.GetColumnNames function - by Simpsomboy/mdaems - See http://zeos.firmos.at/viewtopic.php?t=1127
 
 20070509 : Added new field types for FPC2.1.4 - by leiteiro/mdaems - Mantis Bug 37
+
+20070522 : Bad CalcFields initialization after column reordering while a dataset is still open- by mdaems - Mantis Bug 34
