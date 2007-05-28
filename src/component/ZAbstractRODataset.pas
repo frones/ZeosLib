@@ -1391,7 +1391,10 @@ begin
     CheckConnected;
 
     if (Statement = nil) or (Statement.GetConnection.IsClosed) then
-      Statement := CreateStatement(FSQL.Statements[0].SQL, Properties);
+      Statement := CreateStatement(FSQL.Statements[0].SQL, Properties)
+    else
+      if (Assigned(Statement)) then
+         Statement.ClearParameters;
 
     SetStatementParams(Statement, FSQL.Statements[0].ParamNamesArray,
       FParams, FDataLink);

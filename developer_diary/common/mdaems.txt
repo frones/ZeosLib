@@ -111,4 +111,6 @@
 
 20070509 : Added new field types for FPC2.1.4 - by leiteiro/mdaems - Mantis Bug 37
 
-20070522 : Bad CalcFields initialization after column reordering while a dataset is still open- by mdaems - Mantis Bug 34
+20070522 : Bad CalcFields initialization after column reordering while a dataset is still open - by mdaems - Mantis Bug 34
+
+20070528 : Statement parameter initialization missing at second call - by cipto_kh - Mantis Bug 20
