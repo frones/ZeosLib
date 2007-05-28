@@ -448,7 +448,7 @@ begin
   begin
     if FieldByName(FSequenceField).IsNull then
     {$IFDEF VER130} //Delphi5 
-      FieldByName(FSequenceField).Value := Integer(FSequence.GetNextValue);
+      FieldByName(FSequenceField).AsString := IntToStr(FSequence.GetNextValue);
     {$ELSE}
       FieldByName(FSequenceField).Value := FSequence.GetNextValue;
     {$ENDIF}

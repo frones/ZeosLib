@@ -114,3 +114,5 @@
 20070522 : Bad CalcFields initialization after column reordering while a dataset is still open - by mdaems - Mantis Bug 34
 
 20070528 : Statement parameter initialization missing at second call - by cipto_kh - Mantis Bug 20
+
+20070528 : Delphi 5 conversion error when getting sequence in ZAbstractDataset.InternalPost - by shader - Mantis Bug 40
