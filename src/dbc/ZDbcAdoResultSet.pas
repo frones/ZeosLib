@@ -682,7 +682,7 @@ begin
   begin
     P := VarArrayLock(V);
     try
-      Result := TZAbstractBlob.CreateWithData(P, VarArrayHighBound(V, 1));
+      Result := TZAbstractBlob.CreateWithData(P, VarArrayHighBound(V, 1)+1);
     finally
       VarArrayUnLock(V);
     end;

@@ -1,0 +1,1 @@
+20070529 : Read blob truncates last byte for ADO - by zx - See http://zeos.firmos.at/viewtopic.php?t=1250
