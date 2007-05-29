@@ -116,3 +116,5 @@
 20070528 : Statement parameter initialization missing at second call - by cipto_kh - Mantis Bug 20
 
 20070528 : Delphi 5 conversion error when getting sequence in ZAbstractDataset.InternalPost - by shader - Mantis Bug 40
+
+20070529 : Close/Open sequence replaced by refresh in TZAbstractRODataset.RefreshParams - by zx - See http://zeos.firmos.at/viewtopic.php?t=1093
