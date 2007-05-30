@@ -1,1 +1,3 @@
 20070529 : Read blob truncates last byte for ADO - by zx - See http://zeos.firmos.at/viewtopic.php?t=1250
+
+20070530 : Error handling empty string values (makes them NULLS) - by zx - see http://zeos.firmos.at/viewtopic.php?t=1255
