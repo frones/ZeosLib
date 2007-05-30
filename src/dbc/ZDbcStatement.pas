@@ -1539,8 +1539,15 @@ end;
 function TZAbstractCallableStatement.GetOutParam(
   ParameterIndex: Integer): TZVariant;
 begin
-  Result := OutParamValues[ParameterIndex - 1];
-  FLastWasNull := DefVarManager.IsNull(Result);
+  if Assigned(OutParamValues) then
+  begin
+    Result := OutParamValues[ParameterIndex - 1];
+    FLastWasNull := DefVarManager.IsNull(Result);
+  end else
+  begin
+    Result:=NullVariant;
+    FLastWasNull:=True;
+  end;
 end;
 
 {**

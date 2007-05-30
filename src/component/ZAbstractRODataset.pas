@@ -1529,7 +1529,9 @@ begin
   Connection.ShowSQLHourGlass;
   try
     if not Assigned(Statement) then
-      Statement := CreateStatement(FSQL.Statements[0].SQL, Properties);
+      Statement := CreateStatement(FSQL.Statements[0].SQL, Properties)
+    else
+      Statement.ClearParameters;
     SetStatementParams(Statement, FSQL.Statements[0].ParamNamesArray,
       FParams, FDataLink);
     if RequestLive then

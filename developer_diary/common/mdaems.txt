@@ -118,3 +118,5 @@
 20070528 : Delphi 5 conversion error when getting sequence in ZAbstractDataset.InternalPost - by shader - Mantis Bug 40
 
 20070529 : Close/Open sequence replaced by refresh in TZAbstractRODataset.RefreshParams - by zx - See http://zeos.firmos.at/viewtopic.php?t=1093
+
+20070530 : Crash when using the same component (TZStoredProcedure) after ExecProc then using Open - by cipto_kh - Mantis Bug 42
