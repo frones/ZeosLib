@@ -198,7 +198,7 @@ type
     procedure CheckOpened;
     procedure CheckConnected;
     procedure CheckBiDirectional;
-    procedure CheckSQLQuery;
+    procedure CheckSQLQuery; virtual;
     procedure RaiseReadOnlyError;
 
     function FetchOneRow: Boolean;
@@ -1573,7 +1573,10 @@ begin
   Connection.ShowSQLHourGlass;
   try
     { Creates an SQL statement and resultsets }
-    ResultSet := CreateResultSet(FSQL.Statements[0].SQL, -1);
+    if FSQL.StatementCount> 0 then
+      ResultSet := CreateResultSet(FSQL.Statements[0].SQL, -1)
+    else
+      ResultSet := CreateResultSet('', -1);
     if not Assigned(ResultSet) then
     begin
       if not (doSmartOpen in FOptions) then

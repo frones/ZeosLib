@@ -120,3 +120,6 @@
 20070529 : Close/Open sequence replaced by refresh in TZAbstractRODataset.RefreshParams - by zx - See http://zeos.firmos.at/viewtopic.php?t=1093
 
 20070530 : Crash when using the same component (TZStoredProcedure) after ExecProc then using Open - by cipto_kh - Mantis Bug 42
+
+20070530 : TZSQLStrings.StatementCount = 1 when the statement is empty - by aducom/mdaems - See http://zeos.firmos.at/viewtopic.php?t=1228
+            -> this had implications on ZZSqlMetadata component : Failed as there SQL is empty.
