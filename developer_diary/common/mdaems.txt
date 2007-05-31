@@ -123,3 +123,5 @@
 
 20070530 : TZSQLStrings.StatementCount = 1 when the statement is empty - by aducom/mdaems - See http://zeos.firmos.at/viewtopic.php?t=1228
             -> this had implications on ZZSqlMetadata component : Failed as there SQL is empty.
+
+20070531 : Some people find maximum number of columns in rowbuffer should be more than 32k. Now it's 128k. - by xtra/mdaems - See http://zeos.firmos.at/viewtopic.php?t=1241
