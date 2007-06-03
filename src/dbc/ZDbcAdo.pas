@@ -445,9 +445,12 @@ begin
   if GetAutoCommit = AutoCommit then  Exit;
   if not Closed and AutoCommit then
   begin
-    if FAdoConnection.State = adStateOpen then
-      FAdoConnection.CommitTrans;
-    DriverManager.LogMessage(lcExecute, FPLainDriver.GetProtocol, 'COMMIT');
+    if (FAdoConnection.State = adStateOpen) and
+       (GetTransactionIsolation <> tiNone) then
+      begin
+        FAdoConnection.CommitTrans;
+        DriverManager.LogMessage(lcExecute, FPLainDriver.GetProtocol, 'COMMIT');
+      end;
   end;
   inherited;
   ReStartTransactionSupport;

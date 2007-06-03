@@ -3,3 +3,5 @@
 20070530 : Error handling empty string values (makes them NULLS) - by zx - see http://zeos.firmos.at/viewtopic.php?t=1255
 
 20070603 : TZAdoDatabaseMetadata.GetColumns doesn't fetch database and schema names. - by zx - See http://zeos.firmos.at/viewtopic.php?t=1252
+
+20070603 : Set autocommit issue when transaction isolation=tiNone - by zx - See http://zeos.firmos.at/viewtopic.php?t=1251
