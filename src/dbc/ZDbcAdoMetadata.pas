@@ -1681,9 +1681,9 @@ begin
         begin
           Result.MoveToInsertRow;
           Result.UpdateStringByName('TABLE_CAT',
-            ''{GetStringByName('TABLE_CATALOG')});
+            GetStringByName('TABLE_CATALOG'));
           Result.UpdateStringByName('TABLE_SCHEM',
-            ''{GetStringByName('TABLE_SCHEMA')});
+            GetStringByName('TABLE_SCHEMA'));
           Result.UpdateStringByName('TABLE_NAME',
             GetStringByName('TABLE_NAME'));
           Result.UpdateStringByName('COLUMN_NAME',
