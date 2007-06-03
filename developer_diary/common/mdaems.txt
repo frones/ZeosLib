@@ -127,3 +127,5 @@
 20070531 : Some people find maximum number of columns in rowbuffer should be more than 32k. Now it's 128k. - by xtra/mdaems - See http://zeos.firmos.at/viewtopic.php?t=1241
 
 20070603 : Rolled back last change. This used to much memory... - mdaems
+
+20070603 : TZRowAccessor.CompareBuffers didn't work for stUnicodeStreams - by zx - See http://zeos.firmos.at/viewtopic.php?t=1254
