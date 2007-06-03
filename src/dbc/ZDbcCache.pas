@@ -75,13 +75,11 @@ type
   TZRowUpdateTypes = set of TZRowUpdateType;
 
   {** Defines a header for row buffer. }
-  // change c.schiffler because 32kb was simply too small, we use 128kb now.
-  TZRowBuffColArray =array[0..131072] of Byte;
   TZRowBuffer = packed record
     Index: Integer;
     UpdateType: TZRowUpdateType;
     BookmarkFlag: Byte;
-    Columns: TZRowBuffColArray;// TByteArray;
+    Columns: TByteArray;
   end;
   PZRowBuffer = ^TZRowBuffer;
 
