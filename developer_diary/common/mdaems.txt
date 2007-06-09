@@ -129,3 +129,5 @@
 20070603 : Rolled back last change. This used to much memory... - mdaems
 
 20070603 : TZRowAccessor.CompareBuffers didn't work for stUnicodeStreams - by zx - See http://zeos.firmos.at/viewtopic.php?t=1254
+
+20070609 : When schema/catalog properties are not set for the connection the selection list for TZSequence.SequenceName could have ambigious entries in case a sequence name was used in more tan 1 schema. Now 'schema.sequencename' is added to the list when Connection.Catalog and Connection.Schemaname are both empty. - patch by shader - Mantis Bug 41

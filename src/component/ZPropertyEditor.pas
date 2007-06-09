@@ -464,7 +464,10 @@ begin
         // Look for the Procedures
         ResultSet := Metadata.GetSequences(Connection.Catalog, '', '');
         while ResultSet.Next do
-          List.Add(ResultSet.GetStringByName('SEQUENCE_NAME'));
+          if ResultSet.GetStringByName('SEQUENCE_SCHEM') <> '' then
+            List.Add(ResultSet.GetStringByName('SEQUENCE_SCHEM')+'.'+ResultSet.GetStringByName('SEQUENCE_NAME'))
+          else
+            List.Add(ResultSet.GetStringByName('SEQUENCE_NAME'));
       finally
         ResultSet.Close;
       end;
