@@ -108,3 +108,24 @@
 20070412 : Added Delphi2007 package files - Patch by mosca_morta - See http://zeos.firmos.at/viewtopic.php?t=1173
 
 20070430 : Added TZConnection.GetColumnNames function - by Simpsomboy/mdaems - See http://zeos.firmos.at/viewtopic.php?t=1127
+
+20070509 : Added new field types for FPC2.1.4 - by leiteiro/mdaems - Mantis Bug 37
+
+20070522 : Bad CalcFields initialization after column reordering while a dataset is still open - by mdaems - Mantis Bug 34
+
+20070528 : Statement parameter initialization missing at second call - by cipto_kh - Mantis Bug 20
+
+20070528 : Delphi 5 conversion error when getting sequence in ZAbstractDataset.InternalPost - by shader - Mantis Bug 40
+
+20070529 : Close/Open sequence replaced by refresh in TZAbstractRODataset.RefreshParams - by zx - See http://zeos.firmos.at/viewtopic.php?t=1093
+
+20070530 : Crash when using the same component (TZStoredProcedure) after ExecProc then using Open - by cipto_kh - Mantis Bug 42
+
+20070530 : TZSQLStrings.StatementCount = 1 when the statement is empty - by aducom/mdaems - See http://zeos.firmos.at/viewtopic.php?t=1228
+            -> this had implications on ZZSqlMetadata component : Failed as there SQL is empty.
+
+20070531 : Some people find maximum number of columns in rowbuffer should be more than 32k. Now it's 128k. - by xtra/mdaems - See http://zeos.firmos.at/viewtopic.php?t=1241
+
+20070603 : Rolled back last change. This used to much memory... - mdaems
+
+20070603 : TZRowAccessor.CompareBuffers didn't work for stUnicodeStreams - by zx - See http://zeos.firmos.at/viewtopic.php?t=1254

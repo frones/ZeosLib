@@ -198,7 +198,7 @@ type
     procedure CheckOpened;
     procedure CheckConnected;
     procedure CheckBiDirectional;
-    procedure CheckSQLQuery;
+    procedure CheckSQLQuery; virtual;
     procedure RaiseReadOnlyError;
 
     function FetchOneRow: Boolean;
@@ -1391,7 +1391,10 @@ begin
     CheckConnected;
 
     if (Statement = nil) or (Statement.GetConnection.IsClosed) then
-      Statement := CreateStatement(FSQL.Statements[0].SQL, Properties);
+      Statement := CreateStatement(FSQL.Statements[0].SQL, Properties)
+    else
+      if (Assigned(Statement)) then
+         Statement.ClearParameters;
 
     SetStatementParams(Statement, FSQL.Statements[0].ParamNamesArray,
       FParams, FDataLink);
@@ -1523,7 +1526,9 @@ begin
   Connection.ShowSQLHourGlass;
   try
     if not Assigned(Statement) then
-      Statement := CreateStatement(FSQL.Statements[0].SQL, Properties);
+      Statement := CreateStatement(FSQL.Statements[0].SQL, Properties)
+    else
+      Statement.ClearParameters;
     SetStatementParams(Statement, FSQL.Statements[0].ParamNamesArray,
       FParams, FDataLink);
     if RequestLive then
@@ -1565,7 +1570,10 @@ begin
   Connection.ShowSQLHourGlass;
   try
     { Creates an SQL statement and resultsets }
-    ResultSet := CreateResultSet(FSQL.Statements[0].SQL, -1);
+    if FSQL.StatementCount> 0 then
+      ResultSet := CreateResultSet(FSQL.Statements[0].SQL, -1)
+    else
+      ResultSet := CreateResultSet('', -1);
     if not Assigned(ResultSet) then
     begin
       if not (doSmartOpen in FOptions) then
@@ -1949,8 +1957,7 @@ begin
       if DataSet <> nil then
         if DataSet.Active and not (DataSet.State in [dsSetKey, dsEdit, dsInsert]) then
         begin
-          Close;
-          Open;
+          Refresh;
         end;
     end;
   finally
@@ -3054,8 +3061,8 @@ var
   Index: Integer;
 begin
   for Index := 1 to Fields.Count do
-    if (Fields[Index - 1].FieldKind in [fkCalculated, fkLookup]) then
-      RowAccessor.SetNull(Index);
+    if (Fields[Index-1].FieldKind in [fkCalculated, fkLookup]) then
+      RowAccessor.SetNull(DefineFieldindex(FFieldsLookupTable,Fields[Index-1]));
 end;
 
 {=======================bangfauzan addition========================}

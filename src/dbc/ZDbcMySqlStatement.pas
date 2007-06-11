@@ -320,7 +320,7 @@ var
   AStatus: integer;
 begin
   Result := inherited GetMoreResults;
-  if FPlainDriver.GetClientVersion >= 41000 then
+  if FPlainDriver.GetClientVersion >= 40100 then
   begin
     AStatus := FPlainDriver.RetrieveNextRowset(FHandle);
     if AStatus > 0 then

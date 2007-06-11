@@ -58,7 +58,7 @@ interface
 {$I ZComponent.inc}
 
 uses
-  SysUtils, DB, Classes, ZDbcIntfs, ZAbstractRODataset;
+  SysUtils, DB, Classes, ZDbcIntfs, ZAbstractRODataset, ZMessages;
 
 type
 
@@ -94,6 +94,7 @@ type
   protected
     function CreateResultSet(const SQL: string; MaxRows: Integer): IZResultSet;
       override;
+    procedure CheckSQLQuery; override;
   published
     property MetadataType: TZMetadataType read FMetadataType write SetMetadataType;
     property Catalog: string read FCatalog write FCatalog;
@@ -198,6 +199,14 @@ begin
   finally
     Connection.HideSQLHourGlass;
   end;
+end;
+
+{**
+  Checks the SQL query. The query has no meaning for this class.
+}
+procedure TZSQLMetadata.CheckSQLQuery;
+begin
+  // Here sql has no meaning. So it should not be tested.
 end;
 
 end.

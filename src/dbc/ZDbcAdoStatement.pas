@@ -363,17 +363,19 @@ begin
     if S = 0 then
     begin
       S := 1;
-      V := Null;
+//      patch by zx - see http://zeos.firmos.at/viewtopic.php?t=1255      
+//      V := Null;
     end;
   end;
 
-  if SQLType in [stUnicodeString] then
+  if SQLType = stUnicodeString then
   begin
     S := Length(VarToWideStr(V));
     if S = 0 then
     begin
       S := 1;
-      V := Null;
+//      patch by zx - see http://zeos.firmos.at/viewtopic.php?t=1255      
+//      V := Null;
     end;
   end;
 

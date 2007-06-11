@@ -318,6 +318,10 @@ begin
   SQL := '';
   ParamIndexCount := 0;
   SetLength(ParamIndices, ParamIndexCount);
+  
+  { Optimization for empty query. }
+  If Length(Trim(Text)) = 0 then
+    Exit;
 
   { Optimization for single query without parameters. }
   if (not FParamCheck or (Pos(':', Text) = 0))
