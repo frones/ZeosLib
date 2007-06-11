@@ -1,0 +1,1 @@
+20070609 : Fix opening databases with UTF8 characters in filename - by benstadin - Mantis Bug 38
