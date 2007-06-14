@@ -82,6 +82,7 @@ const
   procedureNullableUnknown = 2;
 
 type
+  TZWildcardsSet= set of Char;
 
   {** Defines a metadata resultset column definition. }
   TZMetadataColumnDef = packed record
@@ -120,6 +121,7 @@ type
     FInfo: TStrings;
     FCachedResultSets: IZHashMap;
   protected
+    WildcardsArray: array of char; //Added by Cipto
     constructor Create(ParentConnection: IZConnection;
       const Url: string; Info: TStrings);
 
@@ -131,6 +133,11 @@ type
     function CopyToVirtualResultSet(SrcResultSet: IZResultSet;
       DestResultSet: IZVirtualResultSet): IZVirtualResultSet;
     function CloneCachedResultSet(ResultSet: IZResultSet): IZResultSet;
+    //Added by Cipto
+    function AddEscapeCharToWildcards(const Pattern:string): string;
+    function GetWildcardsSet:TZWildcardsSet;
+    procedure FillWildcards; virtual;
+    //End Added by Cipto
 
     property Url: string read FUrl;
     property Info: TStrings read FInfo;
@@ -384,6 +391,7 @@ begin
   FUrl := Url;
   FInfo := Info;
   FCachedResultSets := TZHashMap.Create;
+  FillWildcards;
 end;
 
 {**  Destroys this object and cleanups the memory.
@@ -2876,6 +2884,54 @@ function TZAbstractDatabaseMetadata.GetIdentifierConvertor:
 begin
   Result := TZDefaultIdentifierConvertor.Create(Self);
 end;
+
+{**
+  Add escape character in the pattern that has wildcards character
+  @param Pattern The pattern that would be escaped
+  @return Escaped Pattern
+}
+function TZAbstractDatabaseMetadata.AddEscapeCharToWildcards(
+  const Pattern: string): string;
+var i:Integer;
+    EscapeChar : string;
+begin
+  EscapeChar:=GetSearchStringEscape;
+  if WildcardsArray<>nil then
+  begin
+    Result:=StringReplace(Pattern,EscapeChar,EscapeChar+EscapeChar,[rfReplaceAll]);
+    for i:=0 to High(WildcardsArray) do
+      Result:=StringReplace(Result,WildcardsArray[i],EscapeChar+WildcardsArray[i],[rfReplaceAll]);
+  end;
+end;
+
+{**
+  Set the Wildcards character for WildcardsArray variable.
+  Overrride this method if the wildcards character is different in other database
+}
+procedure TZAbstractDatabaseMetadata.FillWildcards;
+begin
+  try
+    SetLength(WildcardsArray,2);
+    WildcardsArray[0]:='_';
+    WildcardsArray[1]:='%';
+  except
+    WildcardsArray:=nil;
+  end;
+end;
+
+{**
+  Get the Wildscards in set of char type
+  @return TZWildcardsSet type
+}
+function TZAbstractDatabaseMetadata.GetWildcardsSet:TZWildcardsSet;
+var i:Integer;
+begin
+  Result:=[];
+  for i:=0 to High(WildcardsArray) do
+    Result:=Result+[WildcardsArray[i]];
+end;
+
+
 
 { TZVirtualResultSet }
 
