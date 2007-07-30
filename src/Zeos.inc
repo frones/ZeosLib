@@ -44,6 +44,8 @@
 
 // Compilation directives for Lazarus
 {$IFDEF FPC}
+{$MODE DELPHI}
+{$INTERFACES COM}
 {$DEFINE VER130BELOW}
 {$DEFINE VER140BELOW}
 {$ENDIF}
