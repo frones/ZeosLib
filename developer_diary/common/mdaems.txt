@@ -135,3 +135,5 @@
 20070613 : Changed compiler directive {$IFDEF VER2_1_3} to {$IFDEF VER2_1} - by mdaems - Mantis Bug 46
 
 20070730 : FPC changes -> now zeoslib also works with MSEIDE - patches by MSEIDE team
+
+20070731 : Wrong index variable used when doing "refresh" in ZUpdateSQL component - by tweidelt - Mantis Bug 55

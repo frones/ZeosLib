@@ -701,9 +701,9 @@ begin
           continue; // Column not found in Select from Dataset
         end;
         if RefreshResultSet.IsNull(I) then begin
-          RefreshRowAccessor.SetNull(I);
+          RefreshRowAccessor.SetNull(RefreshColumnIndex);
         end else begin
-          RefreshColumnType  := RefreshResultSet.GetMetadata.GetColumnType(RefreshColumnIndex); // Type of Column ?
+          RefreshColumnType  := RefreshResultSet.GetMetadata.GetColumnType(I); // Type of Column ?
           case RefreshColumnType of
             stBoolean: RefreshRowAccessor.SetBoolean(RefreshColumnIndex, RefreshResultSet.GetBoolean(I));
             stByte: RefreshRowAccessor.SetByte(RefreshColumnIndex, RefreshResultSet.GetByte(I));
