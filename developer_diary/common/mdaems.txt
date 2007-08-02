@@ -139,3 +139,5 @@
 20070731 : Wrong index variable used when doing "refresh" in ZUpdateSQL component - by tweidelt - Mantis Bug 55
 
 20070731 : Lookup fields with int64 data type not work in Delphi/C++Builder 5 - by shader - Mantis Bug 49
+
+20070802 : TZSequence error, value from prior database - by cipto_kh - Mantis Bug 7
