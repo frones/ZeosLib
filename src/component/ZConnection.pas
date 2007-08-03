@@ -171,7 +171,6 @@ type
 
     // Modified by cipto 8/1/2007 1:48:17 PM
     procedure CloseAllSequences;
-    procedure UnregisterAllSequences;
     ////////////////////////////////////////
 
     procedure Notification(AComponent: TComponent;
@@ -274,8 +273,7 @@ implementation
 
 uses ZMessages, ZClasses, ZAbstractRODataset, ZSysUtils,
       // Modified by cipto 8/2/2007 10:00:22 AM
-      ZSequence
-     ;
+      ZSequence;
 
 var
   SqlHourGlassLock: Integer;
@@ -312,8 +310,8 @@ begin
   FProperties.Free;
   FDatasets.Free;
   // Modified by cipto 8/1/2007 1:47:37 PM
+  FSequences.Clear;
   FSequences.Free;
-  UnregisterAllSequences;
   ////////////////////////////////////////
   inherited Destroy;
 end;
@@ -1172,11 +1170,8 @@ end;
 procedure TZConnection.CloseAllSequences;
 var
   I: Integer;
-  {$IFDEF ENABLE_INTERBASE}
   Current: TZSequence;
-  {$ENDIF}
 begin
- {$IFDEF ENABLE_INTERBASE}
   for I := 0 to FSequences.Count - 1 do
   begin
     Current := TZSequence(FSequences[I]);
@@ -1186,42 +1181,17 @@ begin
       // Ignore.
     end;
   end;
-  {$ENDIF}
-end;
-
-procedure TZConnection.UnregisterAllSequences;
-{$IFDEF ENABLE_INTERBASE}
-var
-  I: Integer;
-  Current: TZSequence;
-{$ENDIF}
-begin
-  {$IFDEF ENABLE_INTERBASE}
-  for I := FSequences.Count - 1 downto 0 do
-  begin
-    Current := TZSequence(FSequences[I]);
-    FSequences.Remove(Current);
-    try
-      Current.Connection := nil;
-    except
-      // Ignore.
-    end;
-  end;
-  {$ENDIF}
 end;
 
 procedure TZConnection.RegisterSequence(Sequence: TComponent);
 begin
-  {$IFDEF ENABLE_INTERBASE}
   FSequences.Add(TZSequence(Sequence));
-  {$ENDIF}
 end;
 
 procedure TZConnection.UnregisterSequence(Sequence: TComponent);
 begin
-  {$IFDEF ENABLE_INTERBASE}
-  FSequences.Remove(TZSequence(Sequence));
-  {$ENDIF}
+  if Assigned(FSequences) then
+    FSequences.Remove(TZSequence(Sequence));
 end;
 
 initialization

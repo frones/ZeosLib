@@ -98,9 +98,8 @@ implementation
 
 procedure TZSequence.CloseSequence;
 begin
-//  if Assigned(FSequence) then
-//    FreeAndNil(FSequence); //This line will create error
-  FSequence:=nil; //What better statement it must be or it is already correct? to indicate that this FSequence is no longer valid
+  if Assigned(FSequence) then
+    FSequence:=nil;
 end;
 
 constructor TZSequence.Create(AOwner: TComponent);
@@ -115,6 +114,7 @@ end;
 }
 destructor TZSequence.Destroy;
 begin
+  // Modified by cipto 8/3/2007 10:35:41 AM
   if Assigned(FConnection) then
      FConnection.UnregisterSequence(self);
   inherited;
@@ -186,9 +186,9 @@ begin
   if (Operation = opRemove) and (AComponent = FConnection) then
   begin
     // Modified by cipto 8/2/2007 12:07:57 PM
-    FConnection.UnregisterSequence(self);
     FConnection := nil;
-    FSequence := nil;
+    if Assigned(FSequence) then
+      FSequence := nil;
   end;
 end;
 
@@ -208,7 +208,8 @@ begin
       FSequence := nil;
     FConnection := Value;
     // Modified by cipto 8/2/2007 11:59:58 AM
-    FConnection.RegisterSequence(self);
+    if Assigned(FConnection) then
+      FConnection.RegisterSequence(self);
     GetSequence;
   end;
 end;
