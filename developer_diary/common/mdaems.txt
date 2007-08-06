@@ -141,3 +141,5 @@
 20070731 : Lookup fields with int64 data type not work in Delphi/C++Builder 5 - by shader - Mantis Bug 49
 
 20070802 : TZSequence error, value from prior database - by cipto_kh - Mantis Bug 7
+
+20070806 : Correction patch by shader for Mantis Bug 49. Lazarus didn't compile anymore - by mdaems
