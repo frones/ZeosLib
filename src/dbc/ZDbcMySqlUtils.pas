@@ -165,34 +165,35 @@ end;
 }
 function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
   FieldHandle: PZMySQLField; FieldFlags: Integer): TZSQLType;
-begin
-  case PlainDriver.GetFieldType(FieldHandle) of
+
+  function Signed: Boolean;
+  begin
+    Result := (UNSIGNED_FLAG and FieldFlags) = 0;
+  end;
+
+  begin
+    case PlainDriver.GetFieldType(FieldHandle) of
     FIELD_TYPE_TINY:
       begin
-        if (UNSIGNED_FLAG and FieldFlags) = 0 then
-          Result := stByte
+        if Signed then Result := stByte
         else Result := stShort;
       end;
     FIELD_TYPE_YEAR, FIELD_TYPE_SHORT:
       begin
-        if (UNSIGNED_FLAG and FieldFlags) = 0 then
-          Result := stShort
+        if Signed then Result := stShort
         else Result := stInteger;
       end;
     FIELD_TYPE_INT24, FIELD_TYPE_LONG:
       begin
-        if (UNSIGNED_FLAG and FieldFlags) = 0 then
-          Result := stInteger
+        if Signed then Result := stInteger
         else Result := stLong;
       end;
     FIELD_TYPE_LONGLONG:
       begin
-        if (UNSIGNED_FLAG and FieldFlags) = 0 then
-          Result := stLong
+        if Signed then Result := stLong
         else Result := stBigDecimal;
       end;
     FIELD_TYPE_FLOAT:
-//      Result := stFloat;
       Result := stDouble;
     FIELD_TYPE_DECIMAL, FIELD_TYPE_NEWDECIMAL: {ADDED FIELD_TYPE_NEWDECIMAL by fduenas 20-06-2006}
       begin
@@ -217,6 +218,8 @@ begin
       if (FieldFlags and BINARY_FLAG) = 0 then
         Result := stAsciiStream
       else Result := stBinaryStream;
+    FIELD_TYPE_BIT:
+      Result := stBinaryStream;
     else
       Result := stString;
   end;
@@ -264,22 +267,10 @@ begin
   end
   else if TypeName = 'MEDIUMINT' then
     Result := stInteger
-  else if TypeName = 'INT' then
+  else if (TypeName = 'INT') or (TypeName = 'INTEGER') then
   begin
-    if StartsWith(TypeNameFull, 'INT(10)') or
-      StartsWith(TypeNameFull, 'INT(11)') then
-    begin
-      if IsUnsigned then
-        Result := stLong
-      else Result := stInteger;
-    end else
-      Result := stInteger;
-  end
-  else if TypeName = 'INTEGER' then
-  begin
-    if IsUnsigned then
-      Result := stLong
-    else Result := stInteger;
+    if IsUnsigned then Result := stLong
+    else Result := stInteger
   end
   else if TypeName = 'BIGINT' then
     Result := stLong
@@ -350,7 +341,9 @@ begin
     else Result := stString;
   end
   else if TypeName = 'SET' then
-    Result := stString;
+    Result := stString
+  else if TypeName = 'BIT' then
+    Result := stBinaryStream;
 end;
 
 {**

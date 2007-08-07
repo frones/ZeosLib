@@ -53,10 +53,6 @@
 
 unit ZUpdateSqlEditor;
 
-{$IFDEF FPC}
-  {$MODE DELPHI}
-{$ENDIF}
-
 interface
 
 {$I ZComponent.inc}

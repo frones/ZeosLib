@@ -281,7 +281,7 @@ begin
   else if (TypeName = 'int2vector') or (TypeName = 'oidvector')
     or (TypeName = '_aclitem') then
     Result := stAsciiStream
-  else if (TypeName[1] = '_') then // ARRAY TYPES
+  else if (TypeName <> '') and (TypeName[1] = '_') then // ARRAY TYPES
     Result := stAsciiStream
   else
     Result := stUnknown;

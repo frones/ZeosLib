@@ -3016,7 +3016,7 @@ const
     ftInteger, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftUnknown,
     ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
     ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp, ftFMTBcd
-    {$IFDEF VER2_1_3}, ftString, ftBlob{$ENDIF});
+    {$IFDEF VER2_1}, ftString, ftBlob{$ENDIF});
 
 {$ELSE}
  {$IFDEF VER180}

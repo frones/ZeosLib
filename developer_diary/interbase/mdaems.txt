@@ -17,3 +17,5 @@
 20070425 : Allow string values for integer and blob parameters - Patch by Andy - Mantis Bug 13 and 19
 
 20070430 : Allow string values for date parameters - Patch by Andrevanzuydam - Mantis Bug 33
+
+20070614 : Bad wildcard handling in TZInterbase6DatabaseMetadata.ConstructNameCondition - patch by cipto_kh - Mantis Bug 28

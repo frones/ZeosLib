@@ -61,3 +61,5 @@
 20070508 : Fix of SSL patch - By Aperger - See http://zeos.firmos.at/viewtopic.php?t=1217
 
 20070609 : Added all reserved words, functions from mysql 5.1 documentation to metadata GetXXX functions - See http://zeos.firmos.at/viewtopic.php?t=1213
+
+20070725 : Make ConvertMySQLHandleToSQLType() more readable  - Patch by HeidiSql Team - See HeidiSQL SVN rev 676

@@ -1258,7 +1258,7 @@ begin
   begin
     Result := ConstructVirtualResultSet(ProceduresColColumnsDynArray);
 
-    LProcedureNamePattern := ConstructNameCondition(ProcedureNamePattern,
+    LProcedureNamePattern := ConstructNameCondition(ProcedureNamePattern, 
       'P.RDB$PROCEDURE_NAME');
     LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,
       'PP.RDB$PARAMETER_NAME');
@@ -1603,7 +1603,7 @@ begin
   begin
     Result := ConstructVirtualResultSet(TableColColumnsDynArray);
 
-    LTableNamePattern := ConstructNameCondition(TableNamePattern,
+    LTableNamePattern := ConstructNameCondition(TableNamePattern, 
       'a.RDB$RELATION_NAME');
     LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,
       'a.RDB$FIELD_NAME');
@@ -1779,7 +1779,7 @@ begin
   begin
     Result := ConstructVirtualResultSet(TableColPrivColumnsDynArray);
 
-    LTable := ConstructNameCondition(Table, 'a.RDB$RELATION_NAME');
+    LTable := ConstructNameCondition(AddEscapeCharToWildcards(Table), 'a.RDB$RELATION_NAME');// Modified by cipto 6/12/2007 2:26:18 PM
     LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,
       'a.RDB$FIELD_NAME');
 
@@ -1901,7 +1901,7 @@ begin
   begin
     Result := ConstructVirtualResultSet(TablePrivColumnsDynArray);
 
-    LTableNamePattern := ConstructNameCondition(TableNamePattern,
+    LTableNamePattern := ConstructNameCondition(TableNamePattern, 
       'a.RDB$RELATION_NAME');
 
     SQL := 'SELECT a.RDB$USER, a.RDB$GRANTOR, a.RDB$PRIVILEGE,'
@@ -2033,7 +2033,7 @@ begin
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
-    LTable := ConstructNameCondition(Table, 'a.RDB$RELATION_NAME');
+    LTable := ConstructNameCondition(AddEscapeCharToWildcards(Table), 'a.RDB$RELATION_NAME'); // Modified by cipto 6/12/2007 2:03:20 PM 
     SQL := ' SELECT null as TABLE_CAT, null as TABLE_SCHEM,'
       + ' a.RDB$RELATION_NAME as TABLE_NAME, b.RDB$FIELD_NAME as COLUMN_NAME,'
       + ' b.RDB$FIELD_POSITION+1 as KEY_SEQ, a.RDB$INDEX_NAME as PK_NAME'
@@ -2131,7 +2131,7 @@ begin
   begin
     Result := ConstructVirtualResultSet(ImportedKeyColumnsDynArray);
 
-    LTable := ConstructNameCondition(Table, 'RELC_FOR.RDB$RELATION_NAME');
+    LTable := ConstructNameCondition(AddEscapeCharToWildcards(Table), 'RELC_FOR.RDB$RELATION_NAME'); // Modified by cipto 6/11/2007 4:53:02 PM 
     SQL := 'SELECT RELC_PRIM.RDB$RELATION_NAME, '    // 1 prim.RDB$ key table name
       + ' IS_PRIM.RDB$FIELD_NAME, '         // 2 prim.RDB$ key column name
       + ' RELC_FOR.RDB$RELATION_NAME, '     // 3 foreign key table name
@@ -2286,7 +2286,7 @@ begin
   begin
     Result := ConstructVirtualResultSet(ExportedKeyColumnsDynArray);
 
-    LTable := ConstructNameCondition(Table, 'RC_PRIM.RDB$RELATION_NAME');
+    LTable := ConstructNameCondition(AddEscapeCharToWildcards(Table), 'RC_PRIM.RDB$RELATION_NAME'); // Modified by cipto 6/11/2007 4:54:02 PM
     SQL := ' SELECT RC_PRIM.RDB$RELATION_NAME, ' // prim.RDB$ key Table name
       + ' IS_PRIM.RDB$FIELD_NAME, '       // prim.RDB$ key column name
       + ' RC_FOR.RDB$RELATION_NAME, '     // foreign key Table name
@@ -2652,7 +2652,7 @@ begin
   begin
     Result := ConstructVirtualResultSet(SequenceColumnsDynArray);
 
-    LSequenceNamePattern := ConstructNameCondition(SequenceNamePattern,
+    LSequenceNamePattern := ConstructNameCondition(SequenceNamePattern, 
       'RDB$GENERATOR_NAME');
 
     SQL := ' SELECT RDB$GENERATOR_NAME FROM RDB$GENERATORS ' + 
@@ -2788,9 +2788,8 @@ begin
   end
   else
   begin
-    StrippedPattern := StripEscape(Pattern);
     Result := Format('%s || ''%s'' like ''%s%s%%''',
-      [Column, Spaces, StrippedPattern, Spaces]);
+      [Column, Spaces, Pattern, Spaces]);
   end;
 end;
 
@@ -2805,18 +2804,24 @@ var
   I: Integer;
   PreviousChar: string[1];
   PreviousCharWasEscape: Boolean;
+  EscapeChar : string;
+  WildcardsSet:TZWildcardsSet;
 begin
   Result := False;
   PreviousChar := '';
   PreviousCharWasEscape := False;
+  EscapeChar:=GetSearchStringEscape;
+  WildcardsSet:=GetWildcardsSet;
   for I := 1 to Length(Pattern) do
   begin
-    if not PreviousCharWasEscape and
-       ((Pattern[I] = '_') or (Pattern[I] = '%')) then
+    if (not PreviousCharWasEscape) and (Pattern[I] in WildcardsSet) then
      Exit;
 
-    PreviousCharWasEscape := (Pattern[I] = '\') and (PreviousChar = '\');
-    PreviousChar := Pattern[I];
+    PreviousCharWasEscape := (Pattern[I] = EscapeChar) and (PreviousChar <> EscapeChar);
+    if (PreviousCharWasEscape) and (Pattern[I]=EscapeChar) then
+      PreviousChar := ''
+    else
+      PreviousChar := Pattern[I];
   end;
   Result := True;
 end;
@@ -2831,14 +2836,24 @@ function TZInterbase6DatabaseMetadata.StripEscape(
 var
   I: Integer;
   PreviousChar: string[1];
+  EscapeChar : string;
 begin
   PreviousChar := '';
+  EscapeChar:=GetSearchStringEscape;
   for I := 1 to Length(Pattern) do
   begin
-    if (Pattern <> '\') and (PreviousChar <> '\') then
+    if (Pattern[i]<>EscapeChar) then
     begin
       Result := Result + Pattern[I];
       PreviousChar := Pattern[I];
+    end else
+    begin
+      if (PreviousChar = EscapeChar) then
+      begin
+        Result := Result + Pattern[I];
+        PreviousChar := '';
+      end else
+        PreviousChar := Pattern[i];
     end;
   end;
 end;
