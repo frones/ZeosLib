@@ -147,3 +147,5 @@
 20070806 : Processing of scripts without final delimiter by TZSQLProcessor - by mdaems - Mantis Bug 48
 
 20070808 : Added Delphi 10 zeosDBODev projectgroup - by mdaems
+
+20070808 : Fixed the automatic build system. Works now certainly for D5, D7, D2006 - by mdaems

@@ -16,6 +16,7 @@
   <property name="test.dir" value="${root.dir}/test"/>
   <property name="examples.dir" value="${root.dir}/examples"/>
   <property name="component.dir" value="${src.dir}/component"/>
+  <property name="componentdesign.dir" value="${src.dir}/componentdesign"/>
   <property name="core.dir" value="${src.dir}/core"/>
   <property name="dbc.dir" value="${src.dir}/dbc"/>
   <property name="parsesql.dir" value="${src.dir}/parsesql"/>
@@ -86,7 +87,7 @@
   </target>
 
   <target name="delphi5_compile" if="delphi5.compile">
-    <property name="bpl.dir" value="${compiler.dir}\Projects\bpl"/>
+    <property name="bpl.dir" value="${delphi5.home}\Projects\bpl"/>
     <antcall target="delphi_compile">
       <param name="compile" value="${delphi5.compile}"/>
       <param name="compiler" value="delphi5"/>
@@ -104,7 +105,7 @@
   </target>
 
   <target name="delphi7_compile" if="delphi7.compile">
-    <property name="bpl.dir" value="${compiler.dir}\Projects\bpl"/>
+    <property name="bpl.dir" value="${delphi7.home}\Projects\bpl"/>
     <antcall target="delphi_compile">
       <param name="compile" value="${delphi7.compile}"/>
       <param name="compiler" value="delphi7"/>
@@ -166,6 +167,10 @@
     <echo message="Compiling packages for ${compiler}..."
       file="${log.file}" append="true" />
 
+    <echo/>
+    <echo message="Compiling Test packages for ${compiler}..."/>
+    <echo/>
+
     <property name="package.dir" value="${packages.dir}/${compiler}"/>
     <property name="build.dir" value="${package.dir}/build"/>
     <!--property name="bpl.dir" value="${compiler.dir}/Projects/Bpl"/-->
@@ -195,12 +200,16 @@
     </antcall-->
 
     <!--delete file="${build.dir}/GUITestRunner.dfm"/-->
-
+    <echo/>
   </target>
 
   <target name="cbuilder_compile">
     <echo message="Compiling packages for ${compiler}..."
       file="${log.file}" append="true" />
+
+    <echo/>
+    <echo message="Compiling Test packages for ${compiler}..."/>
+    <echo/>
 
     <property name="package.dir" value="${packages.dir}/${compiler}"/>
     <property name="build.dir" value="${package.dir}/build"/>
@@ -236,6 +245,7 @@
       <param name="project.ext" value="bpr"/>
    </antcall>
    <antcall target="cbuilder_copy_bpl"/>
+   <echo/>
   </target>
 
   <target name="cbuilder_copy_bpl" description="Copies bpl/tds/bpi/lib files to folder $(BCB)/Projects">
@@ -257,6 +267,10 @@
   <target name="kylix_compile">
     <echo message="Compiling packages for ${compiler}..."
       file="${log.file}" append="true" />
+
+    <echo/>
+    <echo message="Compiling Test packages for ${compiler}..."/>
+    <echo/>
 
     <property name="package.dir" value="${packages.dir}/${compiler}"/>
     <property name="build.dir" value="${package.dir}/build"/>
@@ -283,12 +297,12 @@
     <antcall target="delphi_compile_project" inheritAll="true">
       <param name="project.name" value="ZTestPerformance.dpr"/>
     </antcall>
+    <echo/>
   </target>
 
 
   <target name="delphi_compile_project">
     <echo message="Compiling ${project.name} ... "/>
-    <echo message="FOS: Compiler ${compiler.dir}/bin/dcc32 Dir: ${package.dir}"/>
     <exec dir="${package.dir}" executable="${compiler.dir}/bin/dcc32"
       output="${log.file}" append="true" failonerror="true">
       <arg value="-Q"/>

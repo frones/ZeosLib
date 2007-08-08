@@ -148,6 +148,10 @@
     <echo message="Testing packages for ${compiler}..."
       file="${log.file}" append="true" />
 
+    <echo/>
+    <echo message="Testing packages for ${compiler} "/>
+    <echo/>
+
     <property name="package.dir" value="${packages.dir}/${compiler}"/>
     <property name="build.dir" value="${package.dir}/build"/>
 
@@ -157,6 +161,7 @@
     <antcall target="test_component_run" inheritAll="true"/>
     <antcall target="test_bugreport_run" inheritAll="true"/>
     <antcall target="test_performance_run" inheritAll="true"/>
+    <echo/>
   </target>
 
   <target name="test_core_run" if="core.run">
