@@ -52,6 +52,7 @@
 unit ZTestIBXPerformance;
 
 interface
+{$I ..\..\test\performance\ZPerformance.inc}
 
 uses TestFramework, SysUtils, Classes,
 {$IFNDEF EXCLUDE_IBX_TEST}
