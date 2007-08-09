@@ -80,6 +80,11 @@
     </condition>
     <antcall target="kylix3_compile"/>
 
+    <condition property="lazarus.compile">
+      <istrue value="${lazarus.active}"/>
+    </condition>
+    <antcall target="lazarus_compile"/>
+
   </target>
 
   <target name="delphi5_compile" if="delphi5.compile">
@@ -157,6 +162,14 @@
       <param name="compile" value="${kylix3.compile}"/>
       <param name="compiler" value="kylix3"/>
       <param name="compiler.dir" value="${kylix3.home}"/>
+    </antcall>
+  </target>
+
+  <target name="lazarus_compile" if="lazarus.compile">
+    <antcall target="fpc_version_compile">
+      <param name="compile" value="${lazarus.compile}"/>
+      <param name="compiler" value="fpc"/>
+      <param name="compiler.path" value="${lazarus.fpc.compiler}"/>
     </antcall>
   </target>
 
@@ -279,6 +292,39 @@
     <echo/>
   </target>
 
+  <target name="fpc_version_compile">
+    <echo message="Compiling packages for ${compiler}..."
+      file="${log.file}" append="true" />
+
+    <echo/>
+    <echo message="Compiling packages for ${compiler}    - Dir = ${compiler.path}" />
+    <echo/>
+
+    <property name="package.dir" value="${packages.dir}\lazarus"/>
+    <property name="build.dir" value="${package.dir}\build"/>
+
+    <antcall target="fpc_compile_project" inheritAll="true">
+      <param name="project.name" value="Core"/>
+      <param name="extra_unit_path" value=""/>
+    </antcall>
+    <antcall target="fpc_compile_project" inheritAll="true">
+      <param name="project.name" value="ParseSql"/>
+      <param name="extra_unit_path" value=""/>
+    </antcall>
+    <antcall target="fpc_compile_project" inheritAll="true">
+      <param name="project.name" value="Plain"/>
+      <param name="extra_unit_path" value=""/>
+    </antcall>
+    <antcall target="fpc_compile_project" inheritAll="true">
+      <param name="project.name" value="Dbc"/>
+      <param name="extra_unit_path" value=""/>
+    </antcall>
+    <antcall target="fpc_compile_project" inheritAll="true">
+      <param name="project.name" value="Component"/>
+      <param name="extra_unit_path" value=" -Fu${lazarus.path}\lcl\units\i386-win32\ -Fu${lazarus.path}\lcl\units\i386-win32\win32\ -Fu${lazarus.path}\packager\units\i386-win32\ -Fu${lazarus.path}\ideintf\units\i386-win32\"/>
+    </antcall>
+  </target>
+  
   <target name="delphi_compile_project" unless="dont_run">
     <echo message="Compiling ${project.name} ..." />
     <exec dir="${package.dir}" executable="${compiler.dir}\bin\dcc32"
@@ -324,6 +370,23 @@
       <arg value="-LE${bpl.dir}"/>
       <arg value="-LN${bpl.dir}"/>
       <arg value="${project.name}"/>
+    </exec>
+  </target>
+
+  <target name="fpc_compile_project">
+    <echo message="Compiling Z${project.name} ..." />
+    <exec dir="${package.dir}" executable="${compiler.path}"
+      output="${log.file}" append="true" failonerror="true">
+      <arg value="-S2cdgi"/>
+      <arg value="-OG1"/>
+      <arg value="-gl"/>
+      <arg value="-vewnhi"/>
+      <arg value="-l"/>
+      <arg line="-Fu..\..\src\${project.name}\ ${extra_unit_path}"/>
+      <arg value="-B"/>
+      <arg value="-FUbuild\"/>
+
+      <arg value="Z${project.name}.pas"/>
     </exec>
   </target>
 

@@ -151,3 +151,5 @@
 20070808 : Fixed the automatic build system. Works now certainly for D5, D7, D2006 - by mdaems
 
 20070808 : Fixed the test suite to work with Delphi 5 - by mdaems
+
+20070809 : Added Lazarus/Fpc to the automatic build system. Test suite is not available, however - by mdaems
