@@ -84,6 +84,11 @@
     </condition>
     <antcall target="kylix3_compile"/>
 
+    <condition property="lazarus.compile">
+      <istrue value="${lazarus.active}"/>
+    </condition>
+    <antcall target="lazarus_compile"/>
+
   </target>
 
   <target name="delphi5_compile" if="delphi5.compile">
@@ -160,6 +165,21 @@
       <param name="compile" value="${kylix3.compile}"/>
       <param name="compiler" value="kylix3"/>
       <param name="compiler.dir" value="${kylix3.home}"/>
+    </antcall>
+  </target>
+
+  <target name="lazarus_compile" if="lazarus.compile">
+     <echo message="Compiling packages for ${compiler}..."
+      file="${log.file}" append="true" />
+
+    <echo/>
+    <echo message="Compiling Test packages for Lazarus..."/>
+    <echo/>
+
+   <antcall target="fpc_compile">
+      <param name="compile" value="${lazarus.compile}"/>
+      <param name="compiler" value="fpc"/>
+      <param name="compiler.dir" value="${lazarus.fpc.home}"/>
     </antcall>
   </target>
 
@@ -299,6 +319,16 @@
     </antcall>
     <echo/>
   </target>
+
+<target name = "fpc_compile">
+    <echo message="There are no Test packages for ${compiler}..."
+      file="${log.file}" append="true" />
+
+    <echo/>
+    <echo message="There are no Test packages for ${compiler}..."/>
+    <echo/>
+
+</target>
 
 
   <target name="delphi_compile_project">
