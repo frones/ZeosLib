@@ -153,3 +153,5 @@
 20070808 : Fixed the test suite to work with Delphi 5 - by mdaems
 
 20070809 : Added Lazarus/Fpc to the automatic build system. Test suite is not available, however - by mdaems
+
+20070817 : Correction of child dataset refresh - by gto - See http://zeos.firmos.at/viewtopic.php?t=1381
