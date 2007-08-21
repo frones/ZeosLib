@@ -122,6 +122,7 @@ type
     procedure Rollback; override;
 
     function PingServer: Integer; override;
+    function EscapeString(Value : String) : String; override;
 
     procedure Open; override;
     procedure Close; override;
@@ -497,6 +498,30 @@ begin
    Closing := FHandle = nil;
    if Closed or Closing then Result := PING_ERROR_ZEOSCONNCLOSED
    else Result := FPlainDriver.Ping(FHandle);
+end;
+
+{**
+  Escape a string so it's acceptable for the Connection's server.
+  @param value string that should be escaped
+  @return Escaped string
+}
+function TZMySQLConnection.EscapeString(Value : String) : String;
+var
+   Closing: boolean;
+   Inlength, outlength: integer;
+   Outbuffer: String;
+begin
+   InLength := Length(Value);
+//   OutLength := 0;
+   Setlength(Outbuffer,Inlength*2+1);
+   Closing := FHandle = nil;
+   //RealConnect needs database connection handle
+   if Closed or Closing then
+     OutLength := FPlainDriver.GetEscapeString(PAnsiChar(OutBuffer),PAnsiChar(Value),InLength)
+   else
+     OutLength := FPlainDriver.GetRealEscapeString(FHandle, PAnsiChar(OutBuffer),PAnsiChar(Value),InLength);
+   Setlength(Outbuffer,OutLength);
+   Result := Outbuffer;
 end;
 
 {**

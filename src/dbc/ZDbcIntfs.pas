@@ -65,7 +65,7 @@ uses
   ZTokenizer, ZSelectSchema, ZGenericSqlAnalyser, ZDbcLogging, ZVariant;
 
 const
-  { Constatnts from JDBC DatabaseMetadata }
+  { Constants from JDBC DatabaseMetadata }
   TypeSearchable           = 3;
   ProcedureReturnsResult   = 2;
 
@@ -240,6 +240,7 @@ type
     //Ping Server Support (firmos) 27032006
 
     function PingServer: Integer;
+    function EscapeString(Value : String) : String;
 
 
     procedure Open;
