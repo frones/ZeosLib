@@ -21,10 +21,9 @@
     <echo message="Building Zeos DBO Project..." />
 -->
     <ant antfile="clean.xml"/>
-    <ant antfile="updatecvs.xml"/>
-    <ant antfile="compile.xml"/>
+    <ant antfile="compilecomps.xml"/>
+    <ant antfile="compiletests.xml"/>
     <ant antfile="test.xml"/>
-
   </target>
 
 </project>
