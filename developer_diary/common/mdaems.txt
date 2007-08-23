@@ -157,3 +157,5 @@
 20070817 : Correction of child dataset refresh - by gto - See http://zeos.firmos.at/viewtopic.php?t=1381
 
 20070822 : Added IZConnection.EscapeString function. This funtion returns a string that can be used in SQL statements. Uses Mysql_real_escape_string or Mysql_escape_string functions for mysql databases and EncodeCString function for other databases - by mdaems
+
+20070823 : Removed interception of EAbort after TZConnection.BeforeConnect - by tweidelt/mdaems - Mantis Bug 56

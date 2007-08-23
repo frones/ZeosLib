@@ -611,13 +611,14 @@ var
 begin
   if FConnection = nil then
   begin
-    try
+// Fixes Zeos Bug 00056
+//    try
       DoBeforeConnect;
-    except
+//    except
 //This is here to support aborting the Connection in BeforeConnect event without fatal errors
-      on E: EAbort do
-        Exit;
-    end;
+//      on E: EAbort do
+//        Exit;
+//    end;
 
     UserName := FUser;
     Password := FPassword;
