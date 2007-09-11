@@ -1553,16 +1553,13 @@ begin
 			CurrentUnitInfo:= UnitsInfo.UnitInfo^[i];
 			GetMem(CurrentUnitInfoCopy, SizeOf(PackageUnitEntry));
 			CurrentUnitInfoCopy^:= CurrentUnitInfo;
-//			if {$IFNDEF DELPHI6_OR_LATER}@{$ENDIF}CurrentUnitInfo.Init = @System.System then
-			if CurrentUnitInfo.Init =nil then
+			if {$IFNDEF DELPHI6_OR_LATER}@{$ENDIF}CurrentUnitInfo.Init =nil then
 				NewUnitsInfoOrder.Insert(0, CurrentUnitInfoCopy)
 			else
-//				if {$IFNDEF DELPHI6_OR_LATER}@{$ENDIF}CurrentUnitInfo.Init = @SysUtils.SysUtils then
-   			if CurrentUnitInfo.Init =nil then
+   			if {$IFNDEF DELPHI6_OR_LATER}@{$ENDIF}CurrentUnitInfo.Init =nil then
 					NewUnitsInfoOrder.Insert(1, CurrentUnitInfoCopy)
 				else
 					{$IFDEF DELPHI6_OR_LATER}
-//					if CurrentUnitInfo.Init = @Variants.Variants then
     			if CurrentUnitInfo.Init =nil then
 						NewUnitsInfoOrder.Insert(2, CurrentUnitInfoCopy)
 					else

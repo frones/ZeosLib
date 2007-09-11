@@ -807,9 +807,11 @@ begin
   Result0:= nil;
   Version := LibVersion;
   FileNameString := filename;
+  {$IFNDEF VER130}
   if (Version > '3.2.5') then
     ZPlainSqLite3.sqlite_open(PAnsiChar(AnsiToUTF8(FileNameString)), Result0)
   else
+  {$ENDIF}
     ZPlainSqLite3.sqlite_open(filename, Result0);
   Result := Result0;
 end;

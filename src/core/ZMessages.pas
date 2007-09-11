@@ -996,12 +996,13 @@ resourcestring
 
   SFailedtoInitPrepStmt   = 'Gagal inisialisasi Prepared statement';
   SFailedtoPrepareStmt    = 'Statemen gagal sewaktu proses persiapan';
-  SFailedToBindAllValues  = 'Aplikasi gagal dalam penggabungan (bind) pendahuluan semua nilai';
+  SFailedToBindAllValues  = 'Aplikasi gagal dalam penggabungan pendahuluan semua nilai';
   SAttemptExecOnBadPrep   = 'Percobaan eksekusi statemen dilakukan sebelum persiapan berhasil.';
-  SBindingFailure         = 'Gagal mem-gabungkan (bind) parameter';
+  SBindingFailure         = 'Gagal menggabungkan parameter';
   SPreparedStmtExecFailure = 'Prepared Statement gagal dieksekusi';
   SBoundVarStrIndexMissing = 'Teks variabel indeks "%s" tidak ada';
   SBindVarOutOfRange      = 'Variabel indeks diluar jangkauan: %d';
+  SFailedToBindResults    = 'Aplikasi gagal pada penggabungan ke Resultset';
 
   SRefreshRowOnlySupportedWithUpdateObject = 'Metode RefreshRow hanya didukung oleh obyek Update';
   SMustBeInBrowseMode = 'Operasi hanya diperbolehkan pada status dsBrowse';

@@ -119,6 +119,9 @@ type
     FTransactIsolationLevel: TZTransactIsolationLevel;
     FConnection: IZConnection;
     FDatasets: TList;
+    // Modified by cipto 8/1/2007 1:44:22 PM
+    FSequences: TList;
+
     FLoginPrompt: Boolean;
     FStreamedConnected: Boolean;
     FExplicitTransactionCounter: Integer;
@@ -166,6 +169,10 @@ type
     procedure CloseAllDataSets;
     procedure UnregisterAllDataSets;
 
+    // Modified by cipto 8/1/2007 1:48:17 PM
+    procedure CloseAllSequences;
+    ////////////////////////////////////////
+
     procedure Notification(AComponent: TComponent;
       Operation: TOperation); override;
     procedure Loaded; override;
@@ -192,6 +199,10 @@ type
 
     procedure RegisterDataSet(DataSet: TDataset);
     procedure UnregisterDataSet(DataSet: TDataset);
+    // Modified by cipto 8/2/2007 10:16:50 AM
+    procedure RegisterSequence(Sequence: TComponent);
+    procedure UnregisterSequence(Sequence: TComponent);
+    ///////////////////////////////////////////////////
 
     procedure GetProtocolNames(List: TStrings);
     procedure GetCatalogNames(List: TStrings);
@@ -260,7 +271,9 @@ type
 
 implementation
 
-uses ZMessages, ZClasses, ZAbstractRODataset, ZSysUtils;
+uses ZMessages, ZClasses, ZAbstractRODataset, ZSysUtils,
+      // Modified by cipto 8/2/2007 10:00:22 AM
+      ZSequence;
 
 var
   SqlHourGlassLock: Integer;
@@ -281,6 +294,8 @@ begin
   FConnection := nil;
   FProperties := TStringList.Create;
   FDatasets := TList.Create;
+  // Modified by cipto 8/1/2007 1:45:56 PM
+  FSequences:= TList.Create;
   FLoginPrompt := False;
   FDesignConnection := False;
 end;
@@ -294,6 +309,10 @@ begin
   UnregisterAllDataSets;
   FProperties.Free;
   FDatasets.Free;
+  // Modified by cipto 8/1/2007 1:47:37 PM
+  FSequences.Clear;
+  FSequences.Free;
+  ////////////////////////////////////////
   inherited Destroy;
 end;
 
@@ -592,13 +611,14 @@ var
 begin
   if FConnection = nil then
   begin
-    try
+// Fixes Zeos Bug 00056
+//    try
       DoBeforeConnect;
-    except
+//    except
 //This is here to support aborting the Connection in BeforeConnect event without fatal errors
-      on E: EAbort do
-        Exit;
-    end;
+//      on E: EAbort do
+//        Exit;
+//    end;
 
     UserName := FUser;
     Password := FPassword;
@@ -669,6 +689,8 @@ begin
     ShowSqlHourGlass;
     try
       CloseAllDataSets;
+      // Modified by cipto 8/2/2007 10:11:02 AM
+      CloseAllSequences;
       FConnection.Close;
       FConnection := nil;
     finally
@@ -854,9 +876,12 @@ procedure TZConnection.Notification(AComponent: TComponent;
 begin
   inherited Notification(AComponent, Operation);
 
-  if (Operation = opRemove) and (AComponent is TDataset) then
+  if (Operation = opRemove) then
   begin
-    UnregisterDataSet(TDataset(AComponent));
+    if (AComponent is TDataset) then
+      UnregisterDataSet(TDataset(AComponent));
+    if (AComponent is TZSequence) then
+      UnregisterSequence(TZSequence(AComponent));
   end;
 end;
 
@@ -1141,6 +1166,33 @@ end;
 
 procedure TZConnection.SetVersion(const Value: string);
 begin
+end;
+
+procedure TZConnection.CloseAllSequences;
+var
+  I: Integer;
+  Current: TZSequence;
+begin
+  for I := 0 to FSequences.Count - 1 do
+  begin
+    Current := TZSequence(FSequences[I]);
+    try
+      Current.CloseSequence;
+    except
+      // Ignore.
+    end;
+  end;
+end;
+
+procedure TZConnection.RegisterSequence(Sequence: TComponent);
+begin
+  FSequences.Add(TZSequence(Sequence));
+end;
+
+procedure TZConnection.UnregisterSequence(Sequence: TComponent);
+begin
+  if Assigned(FSequences) then
+    FSequences.Remove(TZSequence(Sequence));
 end;
 
 initialization

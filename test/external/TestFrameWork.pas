@@ -31,6 +31,37 @@
  * The DUnit group at SourceForge <http://dunit.sourceforge.net>
  *
  *)
+{$IFDEF VER180}
+  //VER180 = Delphi 2006 for Win32
+  //Don't define DELPHI71_OR_LATER for Delphi 2006 for Win32.
+  {$UNDEF DELPHI71_OR_LATER}
+  {$DEFINE DELPHI6_OR_LATER}
+  {$DEFINE DELPHI7_OR_LATER}
+{$ENDIF}
+{$IFDEF VER170}
+  //VER170 = Delphi 2005 for Win32
+  //Don't define DELPHI71_OR_LATER for Delphi 2005 for Win32.
+  {$UNDEF DELPHI71_OR_LATER}
+  {$DEFINE DELPHI6_OR_LATER}
+  {$DEFINE DELPHI7_OR_LATER}
+{$ENDIF}
+{$IFDEF VER150}
+  {$IFNDEF DELPHI70_MODE}
+    {$DEFINE DELPHI71_OR_LATER}
+    //If you are using Delphi 7.0 (not 7.1), then specify DELPHI70_MODE symbol in "Project/Options/Conditional defines" - Delphi 7.1 has build no. 4.453
+  {$ENDIF}
+  {$DEFINE DELPHI7_OR_LATER}
+  {$DEFINE DELPHI6_OR_LATER}
+  {$WARNINGS OFF}	//We probably don't want to hear about warnings - Not sure about that
+{$ENDIF}
+{$IFDEF VER140}
+	{$DEFINE DELPHI6_OR_LATER}
+{$ENDIF}
+{$IFDEF DELPHI6_OR_LATER}
+	{$WARN UNIT_PLATFORM OFF}	//NOT certified for Kylix
+	{$WARN SYMBOL_PLATFORM OFF}
+	{$WARN SYMBOL_PLATFORM OFF}
+{$ENDIF}
 
 {$IFDEF CLR}
   {$UNSAFECODE ON}
@@ -357,7 +388,9 @@ type
     procedure CheckEquals(expected, actual: string; msg: string = ''); overload; virtual;
     procedure CheckEqualsString(expected, actual: string; msg: string = ''); virtual;
 {$IFNDEF CLR}
+{$IFDEF DELPHI6_OR_LATER}
     procedure CheckEquals(expected, actual: WideString; msg: string = ''); overload; virtual;
+{$ENDIF}
     procedure CheckEqualsWideString(expected, actual: WideString; msg: string = ''); virtual;
     procedure CheckEqualsMem(expected, actual: pointer; size:longword; msg:string=''); virtual;
 {$ENDIF}
@@ -370,7 +403,9 @@ type
     procedure CheckNotEquals(expected, actual: string; msg: string = ''); overload; virtual;
     procedure CheckNotEqualsString(expected, actual: string; msg: string = ''); virtual;
 {$IFNDEF CLR}
+{$IFDEF DELPHI6_OR_LATER}
     procedure CheckNotEquals(const expected, actual: WideString; msg: string = ''); overload; virtual;
+{$ENDIF}
     procedure CheckNotEqualsWideString(const expected, actual: WideString; msg: string = ''); virtual;
     procedure CheckNotEqualsMem(expected, actual: pointer; size:longword; msg:string=''); virtual;
 {$ENDIF}
@@ -1485,11 +1520,13 @@ begin
 end;
 
 {$IFNDEF CLR}
+{$IFDEF DELPHI6_OR_LATER}
 procedure TAbstractTest.CheckEquals(expected, actual: WideString; msg: string = '');
 begin
   if expected <> actual then
     FailNotEquals(expected, actual, msg, CallerAddr);
 end;
+{$ENDIF}
 
 procedure TAbstractTest.CheckEqualsWideString(expected, actual: WideString; msg: string = '');
 begin
@@ -1527,12 +1564,13 @@ begin
 end;
 
 {$IFNDEF CLR}
+{$IFDEF DELPHI6_OR_LATER}
 procedure TAbstractTest.CheckNotEquals(const expected, actual: WideString; msg: string = '');
 begin
   if expected = actual then
     FailEquals(expected, actual, msg, CallerAddr);
 end;
-
+{$ENDIF}
 procedure TAbstractTest.CheckNotEqualsWideString(const expected, actual: WideString; msg: string = '');
 begin
   if expected = actual then

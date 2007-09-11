@@ -137,3 +137,25 @@
 20070730 : FPC changes -> now zeoslib also works with MSEIDE - patches by MSEIDE team
 
 20070731 : Wrong index variable used when doing "refresh" in ZUpdateSQL component - by tweidelt - Mantis Bug 55
+
+20070731 : Lookup fields with int64 data type not work in Delphi/C++Builder 5 - by shader - Mantis Bug 49
+
+20070802 : TZSequence error, value from prior database - by cipto_kh - Mantis Bug 7
+
+20070806 : Correction patch by shader for Mantis Bug 49. Lazarus didn't compile anymore - by mdaems
+
+20070806 : Processing of scripts without final delimiter by TZSQLProcessor - by mdaems - Mantis Bug 48
+
+20070808 : Added Delphi 10 zeosDBODev projectgroup - by mdaems
+
+20070808 : Fixed the automatic build system. Works now certainly for D5, D7, D2006 - by mdaems
+
+20070808 : Fixed the test suite to work with Delphi 5 - by mdaems
+
+20070809 : Added Lazarus/Fpc to the automatic build system. Test suite is not available, however - by mdaems
+
+20070817 : Correction of child dataset refresh - by gto - See http://zeos.firmos.at/viewtopic.php?t=1381
+
+20070822 : Added IZConnection.EscapeString function. This funtion returns a string that can be used in SQL statements. Uses Mysql_real_escape_string or Mysql_escape_string functions for mysql databases and EncodeCString function for other databases - by mdaems
+
+20070823 : Removed interception of EAbort after TZConnection.BeforeConnect - by tweidelt/mdaems - Mantis Bug 56

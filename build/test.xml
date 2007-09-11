@@ -93,6 +93,21 @@
     </condition>
     <antcall target="cbuilder6_run"/>
 
+    <condition property="kylix2.run">
+      <istrue value="${kylix2.active}"/>
+    </condition>
+    <antcall target="kylix2_run"/>
+
+    <condition property="kylix3.run">
+      <istrue value="${kylix3.active}"/>
+    </condition>
+    <antcall target="kylix3_run"/>
+
+    <condition property="lazarus.run">
+      <istrue value="${lazarus.active}"/>
+    </condition>
+    <antcall target="lazarus_run"/>
+
   </target>
 
   <target name="delphi5_run" if="delphi5.run">
@@ -144,9 +159,47 @@
     </antcall>
   </target>
 
+  <target name="kylix2_run" if="kylix2.run">
+    <antcall target="test_run_none">
+      <param name="compiler" value="kylix2"/>
+      <param name="compiler.dir" value="${kylix2.home}"/>
+    </antcall>
+  </target>
+
+  <target name="kylix3_run" if="kylix3.run">
+    <antcall target="test_run_none">
+      <param name="compiler" value="kylix3"/>
+      <param name="compiler.dir" value="${kylix3.home}"/>
+    </antcall>
+  </target>
+
+  <target name="lazarus_run" if="lazarus.run">
+    <antcall target="test_run_none">
+      <param name="compiler" value="lazarus"/>
+      <param name="compiler.dir" value="${lazarus.home}"/>
+    </antcall>
+  </target>
+
+  <target name="test_run_none">
+
+    <echo message="Testing packages for ${compiler}..."
+      file="${log.file}" append="true" />
+    <echo message="There are no Testing packages for ${compiler}..."
+      file="${log.file}" append="true" />
+
+    <echo/>
+    <echo message="Testing packages for ${compiler} "/>
+    <echo message="There are no Testing packages for ${compiler} "/>
+    <echo/>
+  </target>
+
   <target name="test_run_all">
     <echo message="Testing packages for ${compiler}..."
       file="${log.file}" append="true" />
+
+    <echo/>
+    <echo message="Testing packages for ${compiler} "/>
+    <echo/>
 
     <property name="package.dir" value="${packages.dir}/${compiler}"/>
     <property name="build.dir" value="${package.dir}/build"/>
@@ -157,6 +210,7 @@
     <antcall target="test_component_run" inheritAll="true"/>
     <antcall target="test_bugreport_run" inheritAll="true"/>
     <antcall target="test_performance_run" inheritAll="true"/>
+    <echo/>
   </target>
 
   <target name="test_core_run" if="core.run">

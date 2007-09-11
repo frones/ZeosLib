@@ -291,6 +291,8 @@ uses
 {$ELSE}
   {$IFDEF FPC}
     Variants,
+  {$ELSE} //delphi5
+    ActiveX, //(for VT_DECIMAL constant) 
   {$ENDIF}
 {$ENDIF}
   Math, ZMessages;
@@ -1470,6 +1472,11 @@ begin
     varShortInt, varWord, varLongWord:
       DefVarManager.SetAsInteger(Result, Value);
     varInt64: DefVarManager.SetAsInteger(Result, Value);
+{$ELSE}
+  {$IFNDEF FPC}
+    VT_DECIMAL {varInt64 in Delphi/C++Builder 5}:
+    DefVarManager.SetAsInteger(Result, Decimal(Value).lo64);
+  {$ENDIF}
 {$ENDIF}
     else DefVarManager.SetNull(Result);
   end;

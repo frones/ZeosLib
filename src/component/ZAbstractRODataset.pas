@@ -1955,7 +1955,7 @@ begin
     begin
       DataSet := FDataLink.DataSource.DataSet;
       if DataSet <> nil then
-        if DataSet.Active and not (DataSet.State in [dsSetKey, dsEdit, dsInsert]) then
+        if DataSet.Active and not (DataSet.State in [dsSetKey, dsEdit]) then
         begin
           Refresh;
         end;

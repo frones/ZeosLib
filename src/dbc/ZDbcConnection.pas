@@ -170,6 +170,7 @@ type
 
     //Ping Support initially for MySQL 27032006 (firmos)
     function PingServer: Integer; virtual;
+    function EscapeString(Value : String) : String; virtual;
 
     procedure Open; virtual;
     procedure Close; virtual;
@@ -763,6 +764,16 @@ begin
 end;
 
 {**
+  Escape a string so it's acceptable for the Connection's server.
+  @param value string that should be escaped
+  @return Escaped string
+}
+function TZAbstractConnection.EscapeString(Value : String) : String;
+begin
+  Result := EncodeCString(Value);
+end;
+
+{**
   Releases a Connection's database and JDBC resources
   immediately instead of waiting for
   them to be automatically released.
@@ -771,6 +782,7 @@ end;
   garbage collected. Certain fatal errors also result in a closed
   Connection.
 }
+
 procedure TZAbstractConnection.Close;
 begin
   FClosed := True;

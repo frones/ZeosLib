@@ -370,20 +370,23 @@ begin
     SQL.MultiStatements := False;
     Parse;
 
-    for I := 0 to Pred(FScriptParser.StatementCount) do
+    for I := 0 to Pred(StatementCount) do
     begin
       Action := eaSkip;
       DoBeforeExecute(I);
       repeat
         try
-          SQL.Text := FScriptParser.Statements[I];
+          SQL.Text := GetStatement(I);
           Statement := CreateStatement(SQL.Statements[0].SQL, nil);
           SetStatementParams(Statement, SQL.Statements[0].ParamNamesArray,
             FParams);
           Statement.ExecuteUpdatePrepared;
+          Statement := nil;
         except
           on E: Exception do
           begin
+            if Assigned(Statement) then
+              Statement := nil;
             Action := DoOnError(I, E);
             if Action = eaFail then
               RaiseSQLException(E)
