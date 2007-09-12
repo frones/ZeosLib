@@ -228,9 +228,28 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
       else Result := stBinaryStream;
     FIELD_TYPE_BIT:
       Result := stBinaryStream;
-    else
+    FIELD_TYPE_VARCHAR:
       Result := stString;
-  end;
+   FIELD_TYPE_VAR_STRING:
+      Result := stString;
+   FIELD_TYPE_STRING:
+      Result := stString;
+   FIELD_TYPE_ENUM:
+      Result := stString;
+   FIELD_TYPE_SET:
+      Result := stString;
+   FIELD_TYPE_NULL:
+      // Example: SELECT NULL FROM DUAL
+      Result := stString;
+   FIELD_TYPE_GEOMETRY:
+      // Todo: Would be nice to show as WKT.
+      Result := stBinaryStream;
+   else
+      raise Exception.Create('Unknown MySQL data type!');
+   end;
+  { Fix by the HeidiSql team. - See their SVN repository rev.775 and 900}
+  { SHOW FULL PROCESSLIST on 4.x servers can return veeery long FIELD_TYPE_VAR_STRINGs. The following helps avoid excessive row buffer allocation later on. }
+  if (Result = stString) and (PlainDriver.GetFieldLength(FieldHandle) > 8192) then Result := stAsciiStream;
 end;
 
 {**
@@ -239,9 +258,14 @@ end;
   @result the SQLType field type value
 }
 function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull: string): TZSQLType;
+const
+  GeoTypes: array[0..7] of string = (
+   'POINT','LINESTRING','POLYGON','GEOMETRY',
+   'MULTIPOINT','MULTILINESTRING','MULTIPOLYGON','GEOMETRYCOLLECTION'
+  );
 var
   IsUnsigned: Boolean;
-  Posi, Len: Integer;
+  Posi, Len, i: Integer;
   Spec: string;
 begin
   TypeName := UpperCase(TypeName);
@@ -351,7 +375,10 @@ begin
   else if TypeName = 'SET' then
     Result := stString
   else if TypeName = 'BIT' then
-    Result := stBinaryStream;
+    Result := stBinaryStream
+  else for i := 0 to Length(GeoTypes)-1 do if GeoTypes[i] = TypeName then Result := stBinaryStream;
+
+  if Result = stUnknown then raise Exception.Create('Unknown MySQL data type!');
 end;
 
 {**

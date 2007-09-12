@@ -63,3 +63,6 @@
 20070609 : Added all reserved words, functions from mysql 5.1 documentation to metadata GetXXX functions - See http://zeos.firmos.at/viewtopic.php?t=1213
 
 20070725 : Make ConvertMySQLHandleToSQLType() more readable  - Patch by HeidiSql Team - See HeidiSQL SVN rev 676
+
+20070912 : Fix bug "SHOW FULL PROCESSLIST on mysql v4 server messes Zeos up". - Patch by HeidiSql Team - See HeidiSQL SVN rev 775 and 900
+           Added unknown data types from mysql-5.0.48.tar.gz/include/mysql_com.h. - Patch by HeidiSql Team - See HeidiSQL SVN rev 835
