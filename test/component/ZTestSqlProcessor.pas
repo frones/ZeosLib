@@ -77,6 +77,19 @@ type
     procedure TestUncompleted;
   end;
 
+  {** Implements a test case for class TZSqlProcessor. }
+  TZTestSQLProcessorMysqlCase = class(TZComponentSpecificSQLTestCase)
+  private
+    FConnection: TZConnection;
+    FProcessor: TZSQLProcessor;
+  protected
+    procedure SetUp; override;
+    procedure TearDown; override;
+    function GetSupportedProtocols: string; override;
+  published
+    procedure TestSpecialCommentProcessor;
+  end;
+
 implementation
 
 uses Classes, ZDbcUtils, ZSysUtils;
@@ -255,6 +268,71 @@ begin
   CheckEquals('SELECT * FROM cargo', FProcessor.Statements[1]);
 end;
 
+{ TZTestSQLProcessorMysqlCase }
+
+{**
+  Prepares initial data before each test.
+}
+procedure TZTestSQLProcessorMysqlCase.SetUp;
+begin
+  FConnection := CreateDatasetConnection;
+  FProcessor := TZSQLProcessor.Create(nil);
+  FProcessor.Connection := FConnection;
+end;
+
+{**
+  Removes data after each test.
+}
+procedure TZTestSQLProcessorMysqlCase.TearDown;
+begin
+  FProcessor.Free;
+  FConnection.Free;
+end;
+
+{**
+  Gets an array of protocols valid for this test.
+  @return an array of valid protocols
+}
+function TZTestSQLProcessorMysqlCase.GetSupportedProtocols: string;
+begin
+  Result := 'mysql,mysql-3.20,mysql-3.23,mysql-4.0,mysql-4.1,mysqld-4.1,mysql-5,mysqld-5';
+end;
+
+{**
+  Runs a test for uncompleted SQL statements.
+}
+procedure TZTestSQLProcessorMysqlCase.TestSpecialCommentProcessor;
+var
+  SQLScript: string;
+begin
+  SQLScript := '/*!SELECT * FROM people*/;' + #10 + 'SELECT * FROM cargo;';
+  FProcessor.CleanupStatements := True;
+  FProcessor.Script.Text := SQLScript;
+  FProcessor.Parse;
+
+  CheckEquals(2, FProcessor.StatementCount);
+  CheckEquals('/*!SELECT * FROM people*/', FProcessor.Statements[0]);
+  CheckEquals('SELECT * FROM cargo', FProcessor.Statements[1]);
+
+  SQLScript := '--SELECT * FROM people;' + #10 + 'SELECT * FROM cargo;';
+  FProcessor.CleanupStatements := True;
+  FProcessor.Script.Text := SQLScript;
+  FProcessor.Parse;
+
+  CheckEquals(1, FProcessor.StatementCount);
+  CheckEquals('SELECT * FROM cargo', FProcessor.Statements[0]);
+
+  SQLScript := '/*SELECT * FROM people*/;' + #10 + 'SELECT * FROM cargo;';
+  FProcessor.CleanupStatements := True;
+  FProcessor.Script.Text := SQLScript;
+  FProcessor.Parse;
+
+  CheckEquals(1, FProcessor.StatementCount);
+  CheckEquals('SELECT * FROM cargo', FProcessor.Statements[0]);
+end;
+
+
 initialization
   TestFramework.RegisterTest(TZTestSQLProcessorCase.Suite);
+  TestFramework.RegisterTest(TZTestSQLProcessorMysqlCase.Suite);
 end.
