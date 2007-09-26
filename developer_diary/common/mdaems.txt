@@ -159,3 +159,5 @@
 20070822 : Added IZConnection.EscapeString function. This funtion returns a string that can be used in SQL statements. Uses Mysql_real_escape_string or Mysql_escape_string functions for mysql databases and EncodeCString function for other databases - by mdaems
 
 20070823 : Removed interception of EAbort after TZConnection.BeforeConnect - by tweidelt/mdaems - Mantis Bug 56
+
+20070926 : Changed Tokenizer : Line comment tokens now include the final line feed to avoid that they are stripped away when unifying whitespace - by mdaems - Mantis Bug 63

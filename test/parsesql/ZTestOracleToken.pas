@@ -91,10 +91,10 @@ end;
 procedure TZTestOracleTokenizer.TestCommentState;
 const
   TokenString1: string = '-aaa/*bbb*/ccc--ddd'#10;
-  TokenTypes1: array[0..5] of TZTokenType = (
-    ttSymbol, ttWord, ttComment, ttWord, ttComment, ttWhitespace);
-  TokenValues1: array[0..5] of string = (
-    '-', 'aaa', '/*bbb*/', 'ccc', '--ddd', #10);
+  TokenTypes1: array[0..4] of TZTokenType = (
+    ttSymbol, ttWord, ttComment, ttWord, ttComment);
+  TokenValues1: array[0..4] of string = (
+    '-', 'aaa', '/*bbb*/', 'ccc', '--ddd'#10);
 begin
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString1, [toSkipEOF]),
     TokenTypes1, TokenValues1);

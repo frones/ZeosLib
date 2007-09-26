@@ -657,8 +657,17 @@ begin
   while (Stream.Read(ReadChar, 1) > 0) and not (ReadChar in [#10, #13]) do
     Result := Result + ReadChar;
 
+  // mdaems : for single line comments the line ending must be included
+  // as it should never be stripped off or unified with other whitespace characters
   if ReadChar in [#10, #13] then
-    Stream.Seek(-1, soFromCurrent);
+    begin
+      Result := Result + ReadChar;
+      if (Stream.Read(ReadChar, 1) > 0) then
+        if (ReadChar in [#10, #13]) then
+          Result := Result + ReadChar
+        else
+          Stream.Seek(-1, soFromCurrent);
+    end;
 end;
 
 {**

@@ -264,7 +264,7 @@ begin
                 if TokenType = ttWhitespace then
                   Temp := Temp + TokenValue;
               end;
-              EndOfStatement := (TokenType = ttWhitespace);
+              EndOfStatement := (TokenType = ttWhitespace) or EndsWith(Sql, #10);
               if not EndOfStatement then
               begin
                 if SQL <> '' then

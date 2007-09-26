@@ -190,16 +190,16 @@ end;
 procedure TZTestTokenizer.TestComment;
 const
   TokenString1: string = 'aaa/*bbb*//ccc//ddd'#10;
-  TokenTypes1: array[0..5] of TZTokenType = (
-    ttWord, ttComment, ttSymbol, ttWord, ttComment, ttWhitespace);
-  TokenValues1: array[0..5] of string = (
-    'aaa', '/*bbb*/', '/', 'ccc', '//ddd', #10);
+  TokenTypes1: array[0..4] of TZTokenType = (
+    ttWord, ttComment, ttSymbol, ttWord, ttComment);
+  TokenValues1: array[0..4] of string = (
+    'aaa', '/*bbb*/', '/', 'ccc', '//ddd'#10);
 
   TokenString2: string = 'aaa/*bbb*//ccc//ddd'#10;
-  TokenTypes2: array[0..3] of TZTokenType = (
-    ttWord, ttSymbol, ttWord, ttWhitespace);
-  TokenValues2: array[0..3] of string = (
-    'aaa', '/', 'ccc', #10);
+  TokenTypes2: array[0..2] of TZTokenType = (
+    ttWord, ttSymbol, ttWord);
+  TokenValues2: array[0..2] of string = (
+    'aaa', '/', 'ccc');
 
 begin
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString1, [toSkipEOF]),
