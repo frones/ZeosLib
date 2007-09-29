@@ -163,3 +163,5 @@
 20070926 : Changed Tokenizer : Line comment tokens now include the final line feed to avoid that they are stripped away when unifying whitespace - by mdaems - Mantis Bug 63
 
 20070929 : SqlAnalyser got confused. In case of a from clause like 'from a left join b on a.id=b.id,c' table c was not recognised - by mdaems - Mantis Bug 61
+
+20070929 : Fixed fpc 2.2 compilation - by mdaems - Mantis Bug 65
