@@ -1,0 +1,85 @@
+<?xml version="1.0"?>
+<project name="svn-zeos" basedir="." default="buildTesting">
+  
+  <!--  all properties are in build.properties --> 
+  <property file="build.properties" /> 
+  <property name="root.dir" value="${project.home}"/>
+
+  <property name="temp.dir" value="${root.dir}/temp"/>
+  <property name="checktemp.dir" value="${root.dir}/checktemp"/>
+  <property name="release.dir" value="${root.dir}/releases"/>
+
+<!-- default SVN dirs-->
+  <property name="url.testing" value="svn://www.firmos.at/zeos/branches/testing"/>
+  <property name="url.trunk" value="svn://www.firmos.at/zeos/trunk"/>
+
+ 
+  <!-- path to the svnant libraries. Usually they will be located in ANT_HOME/lib -->
+  <path id="project.classpath">
+    <pathelement location=".\svnjavahl.jar" /> 
+    <pathelement location=".\svnant.jar" />
+    <pathelement location=".\svnClientAdapter.jar" />
+  </path>  
+  <!-- load the svn task -->
+  <taskdef resource="svntask.properties" classpathref="project.classpath"/>
+    
+  <target name="buildTesting">
+     <antcall target="buildZip">
+      <param name="branch" value="TESTING"/>
+      <param name="url" value="${url.testing}"/>
+      <param name="smallZip" value="true"/>
+      <param name="fullZip" value="true"/>
+    </antcall>
+</target>
+
+  <target name="buildTrunk">
+     <antcall target="buildZip">
+      <param name="branch" value="TRUNK"/>
+      <param name="url" value="${url.trunk}"/>
+      <param name="fullZip" value="true"/>
+    </antcall>
+  </target>
+
+  <target name="buildZip">
+    <delete dir="${checktemp.dir}" />
+    <svn username="anonymous" password="guest">
+      <checkout url="${url}" recurse="false" revision="HEAD" destPath="${checktemp.dir}" />
+      <status path="${checktemp.dir}" textStatusProperty="testStatus.textStatus" propStatusProperty="testStatus.propStatus" lastChangedRevisionProperty="testStatus.lastCommitRevision" revisionProperty="testStatus.revision" lastCommitAuthorProperty="testStatus.lastCommitAuthor" urlProperty="testStatus.url" />
+    </svn>
+    <property name="revision" value="${testStatus.lastCommitRevision}"/>
+
+
+    <delete dir="${checktemp.dir}" />
+
+    <delete dir="${temp.dir}" />
+
+    <svn username="anonymous" password="guest">
+      <export srcUrl="${url}" revision="HEAD" destPath="${temp.dir}" />
+    </svn>
+
+     <antcall target="buildFullZip" />
+     <antcall target="buildSmallZip" />
+
+    <delete dir="${temp.dir}" />
+    <echo message="Releasing Zeos DBO Project (${branch})... revision ${revision}"/>
+  </target>
+
+ <target name="buildFullZip" if="fullZip">
+    <delete file="${release.dir}/ZEOSLIB_${branch}_REV${revision}.zip" />
+     <zip zipfile="${release.dir}/ZEOSLIB_${branch}_REV${revision}.zip">
+      <fileset dir="${temp.dir}"/>
+    </zip>
+  </target>
+
+ <target name="buildSmallZip" if="smallZip">
+    <delete file="${release.dir}/ZEOSLIB_${branch}_REV${revision}_COMPACT.zip" />
+     <zip zipfile="${release.dir}/ZEOSLIB_${branch}_REV${revision}_COMPACT.zip">
+      <fileset dir="${temp.dir}">
+         <exclude name="**/lib/**"/>
+         <exclude name="**/documentation/**"/>
+         <exclude name="**/artwork/**"/>
+      </fileset>
+    </zip>
+  </target>
+
+</project>

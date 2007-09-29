@@ -405,6 +405,12 @@ begin
   CheckNotNull(SelectSchema);
   CheckEquals('SS:[FR:*][TR:prd,TR:bmi,TR:bom]',
     SchemaToString(SelectSchema));
+
+  SelectSchema := FAnalyser.DefineSelectSchemaFromQuery(FTokenizer,
+    'SELECT f1, f2, t1.f3 from t2 inner join t1 on t2.f3 = t1.f3, t3');
+  CheckNotNull(SelectSchema);
+  CheckEquals('SS:[FR:f1,FR:f2,FR:t1.f3][TR:t2,TR:t1,TR:t3]',
+    SchemaToString(SelectSchema));
 end;
 
 { TZTestGenericStatementAnalyser }
