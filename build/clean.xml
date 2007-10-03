@@ -68,6 +68,7 @@
     <antcall target="clean_delphi7"/>
     <antcall target="clean_delphi9"/>
     <antcall target="clean_delphi10"/>
+    <antcall target="clean_delphi11"/>
     <antcall target="clean_cbuilder5"/>
     <antcall target="clean_cbuilder6"/>
     <antcall target="clean_kylix2"/>
@@ -117,6 +118,15 @@
     </condition>
     <antcall target="clean_package_build">
       <param name="compiler" value="delphi10"/>
+    </antcall>
+  </target>
+
+  <target name="clean_delphi11">
+    <condition property="do_clean">
+      <istrue value="${delphi11.active}"/>
+    </condition>
+    <antcall target="clean_package_build">
+      <param name="compiler" value="delphi11"/>
     </antcall>
   </target>
 

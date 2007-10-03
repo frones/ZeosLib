@@ -165,3 +165,5 @@
 20070929 : SqlAnalyser got confused. In case of a from clause like 'from a left join b on a.id=b.id,c' table c was not recognised - by mdaems - Mantis Bug 61
 
 20070929 : Fixed fpc 2.2 compilation - by mdaems - Mantis Bug 65
+
+20071003 : Added Delphi 2007 to the automatic build system - by mdaems
