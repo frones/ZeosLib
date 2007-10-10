@@ -205,6 +205,7 @@
 	<exclude name="build/share/**" />
 	<exclude name="build/data/**" />
 	<exclude name="build/libmysql*.dll" />
+	<exclude name="build/sqlite*.dll" />
 	<exclude name="**/dummy.txt" />
       </fileset>
     </delete>
