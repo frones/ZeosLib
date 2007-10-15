@@ -75,10 +75,9 @@ type
     function GetParamCount: Integer;
     function GetParamName(Index: Integer): string;
     function GetParamNamesArray: TStringDynArray;
-  protected
+  public
     constructor Create(const SQL: string; const ParamIndices: TIntegerDynArray;
       Params: TStrings);
-  public
     property SQL: string read FSQL;
     property ParamCount: Integer read GetParamCount;
     property ParamNames[Index: Integer]: string read GetParamName;

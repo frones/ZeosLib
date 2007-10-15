@@ -182,7 +182,7 @@ implementation
 {$IFDEF WITH_PROPERTY_EDITOR}
 
 uses SysUtils, Forms, Dialogs, Controls, DB, TypInfo,
-  ZConnection, ZDataSet, ZStoredProcedure, ZMessages
+  ZConnection
 {$IFDEF USE_METADATA}
   , ZSqlMetadata
 {$ENDIF}

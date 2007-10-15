@@ -149,7 +149,7 @@ function getMySQLFieldSize (field_type: Byte; field_size: LongWord): LongWord;
 
 implementation
 
-uses ZMessages, Math, ZPlainMySqlConstants;
+uses ZMessages, ZPlainMySqlConstants;
 
 threadvar
   SilentMySQLError: Integer;
@@ -504,9 +504,9 @@ procedure DecodeMySQLVersioning(const MySQLVersion: Integer;
  out MajorVersion: Integer; out MinorVersion: Integer;
  out SubVersion: Integer);
 begin
- MajorVersion := Trunc(MySQLVersion/10000);
- MinorVersion := Trunc((MySQLVersion-(MajorVersion*10000))/100);
- SubVersion   := Trunc((MySQLVersion-(MajorVersion*10000)-(MinorVersion*100)));
+ MajorVersion := MySQLVersion DIV 10000;
+ MinorVersion := (MySQLVersion-(MajorVersion*10000)) DIV 100;
+ SubVersion   := MySQLVersion-(MajorVersion*10000)-(MinorVersion*100);
 end;
 
 {**

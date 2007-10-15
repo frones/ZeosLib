@@ -167,3 +167,5 @@
 20070929 : Fixed fpc 2.2 compilation - by mdaems - Mantis Bug 65
 
 20071003 : Added Delphi 2007 to the automatic build system - by mdaems
+
+20071016 : Code cleaning. Removed unused uses clauses. Compiler warnings/hints. - By mda

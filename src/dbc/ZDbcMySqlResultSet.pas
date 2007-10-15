@@ -58,8 +58,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZClasses, ZSysUtils, ZCollections, ZDbcIntfs,
-  Contnrs, ZDbcResultSet, ZDbcResultSetMetadata, ZPlainMySqlConstants,
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs,
+  Contnrs, ZDbcResultSet, ZDbcResultSetMetadata,
   ZCompatibility, ZDbcCache, ZDbcCachedResultSet, ZDbcGenericResolver,
   ZDbcMysqlStatement, ZPlainMysqlDriver, ZPlainMysql5;
 
@@ -185,7 +185,7 @@ type
 implementation
 
 uses
-  Math, ZMessages, ZDbcMySqlUtils, ZDbcUtils, ZMatchPattern, ZDbcMySqlMetadata, ZDbcMysql;
+  Math, ZMessages, ZDbcMySqlUtils, ZMatchPattern, ZDbcMysql;
 {$IFDEF MYSQL_USE_PREPARE}
 type
     TMysqlResult = class (TInterfacedObject)

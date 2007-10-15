@@ -7,10 +7,8 @@ unit zcomponent;
 interface
 
 uses
-  ZAbstractDataset, ZAbstractRODataset, ZAbstractTable, ZComponentReg, 
-    ZConnection, ZDataset, ZDatasetUtils, ZPropertyEditor, ZSqlMetadata, 
-    ZSqlMonitor, ZSqlProcessor, ZSqlStrings, ZSqlUpdate, ZStoredProcedure, 
-    ZStreamBlob, ZUpdateSqlEditor, ZSequence, LazarusPackageIntf; 
+  ZComponentReg, ZConnection, ZDatasetUtils, ZUpdateSqlEditor, 
+    LazarusPackageIntf; 
 
 implementation
 

@@ -221,7 +221,7 @@ type
 
 implementation
 
-uses ZTokenizer, ZGenericSqlToken, ZDatasetUtils, ZAbstractRODataset,ZAbstractDataset,
+uses ZGenericSqlToken, ZDatasetUtils, ZAbstractRODataset,ZAbstractDataset,
   ZSysUtils, ZDbcUtils,ZMessages;
 
 { TZUpdateSQL }
@@ -543,6 +543,7 @@ var
   Stream: TStream;
   TempBlob: IZBlob;
 begin
+  WasNull := False;
   for I := 0 to Config.ParamCount - 1 do begin
     ParamValue := Params.FindParam(Config.ParamNames[I]);
     ParamName := Config.ParamNames[I];

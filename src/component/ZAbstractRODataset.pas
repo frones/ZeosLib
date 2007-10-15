@@ -1259,6 +1259,7 @@ var
   RowBuffer: PZRowBuffer;
   WasNull: Boolean;
 begin
+  WasNull := False;
   if not Active then
     raise EZDatabaseError.Create(SOperationIsNotAllowed4);
   if not RequestLive and (Field.FieldKind = fkData) then
@@ -2130,6 +2131,7 @@ var
   FieldRefs: TObjectDynArray;
   OnlyDataFields: Boolean;
 begin
+  OnlyDataFields := False;
   FieldRefs := nil;
   if Active then
   begin
@@ -2338,6 +2340,7 @@ var
   PartialKey: Boolean;
   CaseInsensitive: Boolean;
 begin
+  OnlyDataFields := False;
   CheckBrowseMode;
   Result := -1;
   DecodedKeyValues := nil;
@@ -2465,6 +2468,7 @@ var
   SearchRowBuffer: PZRowBuffer;
   ResultValues: TZVariantDynArray;
 begin
+  OnlyDataFields := False;
   Result := Null;
   RowNo := InternalLocate(KeyFields, KeyValues, []);
   FieldRefs := nil;
@@ -2560,6 +2564,7 @@ var
   Blob: IZBlob;
   WasNull: Boolean;
 begin
+  WasNull := False;
   CheckActive;
 
   Result := nil;
