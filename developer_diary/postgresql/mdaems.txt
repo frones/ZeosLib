@@ -13,3 +13,5 @@
 20070418 : Memory leak in CheckPostgreSQLError - Patch by sfxhomer - Mantis Bug 5
 
 20070731 : 'Access Violation' error on ZQuery.Open on table that has columns with non-standard type - by shader - Mantis Bug 50
+
+20071016 : ZTestPlainPerformance.pas : QueryHandle is declared as PZMySQLResult instead of PZPostgreSQLResult. - by fx - Mantis Bug 68
