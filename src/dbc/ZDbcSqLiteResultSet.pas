@@ -763,14 +763,12 @@ begin
   end
   else
   begin
+    //ZPlainSQLLiteDriver.Step : AllocMem(SizeOf(PPChar)*pN+1); // Leak, if not freed ! [HD, 05.10.2007]
+    if FColumnValues <> nil then
+      FreeMem(FColumnValues,Sizeof(PPChar)*fColumnCount+1);
     FColumnValues := nil;
     if Assigned(FStmtHandle) then
     begin
-      //ZPlainSQLLiteDriver.Step : AllocMem(SizeOf(PPChar)*pN+1); // Leak, if not freed ! [HD, 05.10.2007]
-      if FColumnValues <> nil then
-        FreeMem(FColumnValues,Sizeof(PPChar)*fColumnCount+1);
-      FColumnValues := nil;
-
       //ZPlainSQLLiteDriver.Step : AllocMem(SizeOf(PPChar)*pN*2+1); // Leak, if not freed [HD, 05.10.2007]
       if FColumnNames <> nil then
         FreeMem(FColumnNames,Sizeof(PPChar)*fColumnCount*2+1);
