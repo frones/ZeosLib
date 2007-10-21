@@ -146,7 +146,7 @@ type
 
 implementation
 
-uses ZDbcCachedResultSet, ZSysUtils, ZDbcUtils;
+uses ZSysUtils, ZDbcUtils;
 
 { TZASAStatement }
 

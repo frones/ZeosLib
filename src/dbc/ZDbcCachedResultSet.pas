@@ -128,8 +128,6 @@ type
     FNativeResolver: IZCachedResolver;
     {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   protected
-    constructor CreateWithStatement(SQL: string; Statement: IZStatement);
-
     procedure CheckAvailable;
     procedure CheckUpdatable;
     procedure Open; override;
@@ -162,6 +160,7 @@ type
     property NativeResolver: IZCachedResolver read FNativeResolver;
     {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   public
+    constructor CreateWithStatement(SQL: string; Statement: IZStatement);
     constructor CreateWithColumns(ColumnsInfo: TObjectList; SQL: string);
     destructor Destroy; override;
 

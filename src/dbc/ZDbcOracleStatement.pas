@@ -59,8 +59,7 @@ interface
 
 uses
   Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcStatement, ZDbcLogging,
-  ZPlainOracleDriver, ZCompatibility, ZVariant, ZDbcGenericResolver,
-  ZDbcCachedResultSet, ZDbcOracleUtils;
+  ZPlainOracleDriver, ZCompatibility, ZVariant, ZDbcOracleUtils;
 
 type
 
@@ -136,7 +135,7 @@ type
 implementation
 
 uses
-  ZMessages, ZDbcOracle, ZDbcOracleResultSet, ZTokenizer;
+  ZTokenizer;
 
 { TZOracleStatement }
 

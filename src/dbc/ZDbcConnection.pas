@@ -114,9 +114,6 @@ type
     FClosed: Boolean;
     FMetadata: TContainedObject;
   protected
-    constructor Create(Driver: IZDriver; const Url: string; const HostName: string;
-      Port: Integer; const Database: string; const User: string; const Password: string;
-      Info: TStrings; Metadata: TContainedObject);
     procedure RaiseUnsupportedException;
 
     function CreateRegularStatement(Info: TStrings): IZStatement;
@@ -139,6 +136,9 @@ type
       read FTransactIsolationLevel write FTransactIsolationLevel;
     property Closed: Boolean read FClosed write FClosed;
   public
+    constructor Create(Driver: IZDriver; const Url: string; const HostName: string;
+      Port: Integer; const Database: string; const User: string; const Password: string;
+      Info: TStrings; Metadata: TContainedObject);
     destructor Destroy; override;
 
     function CreateStatement: IZStatement;
@@ -202,11 +202,10 @@ type
     FEventName: string;
     FConnection: IZConnection;
   protected
-    constructor Create(Connection: IZConnection; EventName: string);
-
     property EventName: string read FEventName write FEventName;
     property Connection: IZConnection read FConnection write FConnection;
   public
+    constructor Create(Connection: IZConnection; EventName: string);
     function GetEvent: string;
     procedure Listen; virtual;
     procedure Unlisten; virtual;
@@ -246,7 +245,7 @@ type
 
 implementation
 
-uses ZMessages, ZSysUtils, ZDbcUtils, ZDbcMetadata;
+uses ZMessages, ZSysUtils, ZDbcMetadata;
 
 { TZAbstractDriver }
 

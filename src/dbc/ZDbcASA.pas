@@ -465,12 +465,12 @@ end;
 }
 procedure TZASAConnection.Open;
 var
-//  i: integer;
   ConnectionString: string;
 begin
   if not Closed then Exit;
 
   FHandle := nil;
+  ConnectionString := '';
   try
     if FPlainDriver.db_init( @FSQLCA) = 0 then
     begin

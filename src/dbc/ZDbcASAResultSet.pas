@@ -58,8 +58,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, ZSysUtils, ZCollections, ZDbcIntfs, ZDbcResultSet, ZDbcASA,
-  ZPlainASADriver, ZClasses, ZCompatibility, ZDbcResultSetMetadata,
+  Classes, ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcASA,
+  ZPlainASADriver, ZCompatibility, ZDbcResultSetMetadata,
   ZDbcASAUtils, ZMessages, ZVariant;
 
 type
@@ -178,7 +178,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  ZDbcUtils, SysUtils, Math, ZdbcLogging, ZdbcStatement;
+  SysUtils, Math, ZdbcLogging;
 
 { TZASAResultSet }
 
