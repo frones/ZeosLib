@@ -61,8 +61,7 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  Classes, SysUtils, ZSysUtils, ZClasses, ZDbcIntfs, ZDbcMetadata,
-  ZDbcResultSet, ZTokenizer, ZDbcCachedResultSet, ZDbcResultsetMetadata,
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
   ZCompatibility, ZGenericSqlAnalyser, ZDbcConnection;
 
 type
@@ -212,8 +211,7 @@ type
 
 implementation
 
-uses Math, ZDbcUtils, ZCollections, ZSybaseToken, ZSybaseAnalyser,
-  ZDbcDbLibUtils;
+uses ZDbcUtils, ZDbcDbLibUtils;
 
 { TZSybaseDatabaseMetadata }
 
@@ -1297,6 +1295,7 @@ begin
     Result.BeforeFirst;
 
     NumberPart := '1';
+    ProcNamePart := '';
     if AnsiPos(';', ProcNamePart) > 0 then
     begin
       NumberPart := Copy(ProcNamePart, LastDelimiter(';', ProcNamePart) + 1,
@@ -1867,7 +1866,6 @@ end;
 function TZSybaseDatabaseMetadata.GetVersionColumns(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
-  MSCol_Type: string;
   Key: string;
 begin
   Key := Format('get-version-columns:%s:%s:%s', [Catalog, Schema, Table]);
@@ -1876,8 +1874,6 @@ begin
   if Result = nil then
   begin
     Result := ConstructVirtualResultSet(TableColVerColumnsDynArray);
-
-    MSCol_Type := '''V''';
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_getversioncolumns %s, %s, %s',

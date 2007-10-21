@@ -61,8 +61,7 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  Classes, SysUtils, ZSysUtils, ZClasses, ZDbcIntfs, ZDbcMetadata,
-  ZDbcResultSet, ZDbcCachedResultSet, ZDbcResultsetMetadata,
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
   ZCompatibility, ZDbcConnection;
 
 type
@@ -212,7 +211,7 @@ type
 
 implementation
 
-uses Math, ZDbcUtils, ZCollections, ZDbcDbLibUtils;
+uses ZDbcUtils, ZDbcDbLibUtils;
 
 { TZMsSqlDatabaseMetadata }
 

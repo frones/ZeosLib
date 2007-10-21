@@ -99,8 +99,8 @@ type
 implementation
 
 uses
-  ZDbcSqLite, ZDbcSqLiteUtils, ZDbcSqLiteResultSet, ZSqLiteToken, ZSysUtils,
-  ZMessages, ZDbcCachedResultSet, ZDbcUtils;
+  ZDbcSqLiteUtils, ZDbcSqLiteResultSet, ZSysUtils,
+  ZMessages, ZDbcCachedResultSet;
 
 { TZSQLiteStatement }
 
@@ -167,6 +167,9 @@ var
   ColumnValues: PPChar;
   ColumnNames: PPChar;
 begin
+  ErrorMessage := '';
+  SQLTail := '';
+  ColumnCount := 0;
   ErrorCode := FPlainDriver.Compile(FHandle, PChar(SQL), Length(SQL), SQLTail,
     StmtHandle, ErrorMessage);
   CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
@@ -201,6 +204,7 @@ var
   ErrorCode: Integer;
   ErrorMessage: PChar;
 begin
+  ErrorMessage := '';
   ErrorCode := FPlainDriver.Execute(FHandle, PChar(SQL), nil, nil,
     ErrorMessage);
   CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
@@ -239,6 +243,9 @@ var
   ColumnValues: PPChar;
   ColumnNames: PPChar;
 begin
+  ErrorMessage := '';
+  SQLTail := '';
+  ColumnCount := 0;
   ErrorCode := FPlainDriver.Compile(FHandle, PChar(SQL), Length(SQL), SQLTail,
     StmtHandle, ErrorMessage);
   CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);

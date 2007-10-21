@@ -58,7 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses Classes, SysUtils, ZCompatibility, ZClasses, ZSysUtils, ZCollections,
-  ZTokenizer, ZDbcIntfs, ZDbcStatement, ZDbcDbLib, ZPlainDbLibDriver;
+  ZDbcIntfs, ZDbcStatement, ZDbcDbLib, ZPlainDbLibDriver;
 
 type
   {** Implements Generic DBLib Statement. }
@@ -147,7 +147,7 @@ implementation
 
 uses
   ZDbcLogging, ZDbcCachedResultSet, ZDbcDbLibUtils, ZDbcDbLibResultSet,
-  ZSybaseToken, ZVariant;
+  ZVariant;
 
 constructor TZUpdateCount.Create(ACount: Integer);
 begin
@@ -782,14 +782,14 @@ begin
               FPLainDriver.dbRetData(FHandle, ParamIndex), 4,
               SQLDATETIME, @DatDBDATETIME, 8);
             DefVarManager.SetAsDateTime(Temp,
-              DatDBDATETIME.dtdays + 2 + (DatDBDATETIME.dttime / 25920000));
+              DatDBDATETIME.dtdays + 2 + (DatDBDATETIME.dttime DIV 25920000));
           end;
         SQLDATETIME:
           begin
             DatDBDATETIME := PDBDATETIME(
               FPLainDriver.dbRetData(FHandle, ParamIndex))^;
             DefVarManager.SetAsDateTime(Temp,
-              DatDBDATETIME.dtdays + 2 + (DatDBDATETIME.dttime / 25920000));
+              DatDBDATETIME.dtdays + 2 + (DatDBDATETIME.dttime DIV 25920000));
           end;
         else
           Temp := NullVariant;

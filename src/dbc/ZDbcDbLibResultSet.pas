@@ -62,7 +62,7 @@ uses
   Types,
   DateUtils,
 {$ENDIF}
-  Classes, SysUtils, ZClasses, ZSysUtils, ZCollections, ZDbcIntfs, ZDbcResultSet,
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcResultSet,
   ZCompatibility, ZDbcResultsetMetadata, ZDbcGenericResolver, ZDbcCachedResultSet,
   ZDbcCache, ZDbcDBLib, ZPlainDBLibDriver;
 
@@ -118,7 +118,7 @@ type
 
 implementation
 
-uses Math, ZMessages, ZDbcUtils, ZDbcLogging, ZDbcDBLibUtils;
+uses ZMessages, ZDbcLogging, ZDbcDBLibUtils;
 
 { TZDBLibResultSet }
 
@@ -642,7 +642,7 @@ begin
       FPlainDriver.dbconvert(FHandle, DT, Data, DL, SQLDATETIME,
         @TempDate, SizeOf(TempDate));
     end;
-    Result := TempDate.dtdays + 2 + (TempDate.dttime / 25920000);
+    Result := TempDate.dtdays + 2 + (TempDate.dttime DIV 25920000);
     //Perfect conversion no need to crack and reencode the date.
   end;
   FDBLibConnection.CheckDBLibError(lcOther, 'GETTIMESTAMP');
