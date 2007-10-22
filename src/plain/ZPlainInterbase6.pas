@@ -60,7 +60,7 @@ interface
 
 {$J+}
 
-uses ZCompatibility, ZPlainLoader, ZPlainInterbaseDriver,
+uses ZCompatibility, ZPlainLoader,
 		 ZPlainFirebirdInterbaseConstants;
 
 { ***************** Plain API Constants definition **************** }

@@ -57,7 +57,7 @@ interface
 
 {$I ZCore.inc}
 
-uses SysUtils, Classes, Contnrs, ZClasses, ZCompatibility, ZVariant,
+uses SysUtils, Classes, Contnrs, ZCompatibility, ZVariant,
   ZTokenizer;
 
 type

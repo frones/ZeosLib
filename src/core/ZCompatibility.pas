@@ -68,7 +68,7 @@ uses
     libc,
   {$ENDIF FPC}
 {$ENDIF UNIX}
-  Contnrs, Classes, SysUtils;
+  Classes, SysUtils;
 
 type
 

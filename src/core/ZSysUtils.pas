@@ -65,7 +65,7 @@ uses
     Variants,
   {$ENDIF}
 {$ENDIF}
-  ZMessages, ZCompatibility, Classes, Math, SysUtils;
+  ZMessages, ZCompatibility, Classes, SysUtils;
 
 type
   {** Modified comaprison function. }
@@ -853,6 +853,7 @@ end;
 }
 function StrToFloatDef(const S: string; const Default: Extended): Extended;
 begin
+  Result := Default;
   if not TextToFloat(PChar(S), Result, fvExtended) then
     Result := Default;
 end;
@@ -1110,9 +1111,9 @@ procedure DecodeSQLVersioning(const FullVersion: Integer;
  out MajorVersion: Integer; out MinorVersion: Integer;
  out SubVersion: Integer);
 begin
- MajorVersion := Trunc(FullVersion/1000000);
- MinorVersion := Trunc((FullVersion-(MajorVersion*1000000))/1000);
- SubVersion   := Trunc((FullVersion-(MajorVersion*1000000)-(MinorVersion*1000)));
+ MajorVersion := FullVersion DIV 1000000;
+ MinorVersion := (FullVersion-(MajorVersion*1000000)) DIV 1000;
+ SubVersion   := FullVersion-(MajorVersion*1000000)-(MinorVersion*1000);
 end;
 
 {**

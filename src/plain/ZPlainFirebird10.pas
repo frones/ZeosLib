@@ -64,8 +64,7 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  ZCompatibility, ZPlainLoader, ZPlainFirebirdInterbaseConstants,
-  ZPlainFirebirdDriver;
+  ZCompatibility, ZPlainLoader, ZPlainFirebirdInterbaseConstants;
 
 { ***************** Plain API Constants definition **************** }
 
