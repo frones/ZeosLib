@@ -1111,7 +1111,7 @@ var
 begin
   RowBuffer := nil;
   case State of
-    dsBrowse:
+    dsBrowse,dsblockread:
       if not IsEmpty then
         RowBuffer := PZRowBuffer(ActiveBuffer);
     dsEdit, dsInsert:

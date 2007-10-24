@@ -168,4 +168,6 @@
 
 20071003 : Added Delphi 2007 to the automatic build system - by mdaems
 
-20071016 : Code cleaning. Removed unused uses clauses. Compiler warnings/hints. - By mda
+20071016 : Code cleaning. Removed unused uses clauses. Compiler warnings/hints. - by mdaems
+
+20071024 : Fixed DatasetProvider bug. dsBlockRead dataset state was not handled. - by mdaems - Mantis Bug 43 - Mantis Bug 59
