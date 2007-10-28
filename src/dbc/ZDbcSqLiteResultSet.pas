@@ -58,7 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZClasses, ZSysUtils, ZCollections, ZDbcIntfs,
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs,
   Contnrs, ZDbcResultSet, ZDbcResultSetMetadata, ZPlainSqLiteDriver,
   ZCompatibility, ZDbcCache, ZDbcCachedResultSet, ZDbcGenericResolver;
 
@@ -134,8 +134,8 @@ type
 implementation
 
 uses
-  Math, ZMessages, ZDbcSQLiteUtils, ZDbcUtils, ZMatchPattern,
-  ZDbcSqLiteMetadata, ZDbcLogging, ZDbcMySqlUtils;
+  ZMessages, ZDbcSQLiteUtils, ZMatchPattern,
+  ZDbcLogging, ZDbcMySqlUtils;
 
 { TZSQLiteResultSetMetadata }
 
@@ -200,6 +200,16 @@ end;
 }
 destructor TZSQLiteResultSet.Destroy;
 begin
+  //ZPlainSQLLiteDriver.Step : AllocMem(SizeOf(PPChar)*pN+1); // Leak, if not freed ! [HD, 05.10.2007]
+  if FColumnValues <> nil then
+    FreeMem(FColumnValues,Sizeof(PPChar)*fColumnCount+1);
+  FColumnValues := nil;
+
+  //ZPlainSQLLiteDriver.Step : AllocMem(SizeOf(PPChar)*pN*2+1); // Leak, if not freed ! [HD, 05.10.2007]
+  if FColumnNames <> nil then
+    FreeMem(FColumnNames,Sizeof(PPChar)*fColumnCount*2+1);
+  FColumnNames := nil;
+
   inherited Destroy;
 end;
 
@@ -753,9 +763,16 @@ begin
   end
   else
   begin
+    //ZPlainSQLLiteDriver.Step : AllocMem(SizeOf(PPChar)*pN+1); // Leak, if not freed ! [HD, 05.10.2007]
+    if FColumnValues <> nil then
+      FreeMem(FColumnValues,Sizeof(PPChar)*fColumnCount+1);
     FColumnValues := nil;
     if Assigned(FStmtHandle) then
     begin
+      //ZPlainSQLLiteDriver.Step : AllocMem(SizeOf(PPChar)*pN*2+1); // Leak, if not freed [HD, 05.10.2007]
+      if FColumnNames <> nil then
+        FreeMem(FColumnNames,Sizeof(PPChar)*fColumnCount*2+1);
+      FColumnNames := nil;
       ErrorCode := FPlainDriver.Step(FStmtHandle, FColumnCount,
         FColumnValues, FColumnNames);
       CheckSQLiteError(FPlainDriver, ErrorCode, nil, lcOther, 'FETCH');

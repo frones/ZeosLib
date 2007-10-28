@@ -205,7 +205,7 @@ const
 
 implementation
 
-uses Math, ZMessages, ZSysUtils, ZDbcUtils, ZCollections;
+uses Math, ZMessages, ZSysUtils, ZDbcUtils;
 
 { TZRowAccessor }
 
@@ -1591,6 +1591,7 @@ var
   ValuePtr: Pointer;
   IsNull: Boolean;
 begin
+  IsNull := False;
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     ValuePtr := @FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1];
@@ -2040,6 +2041,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
+  IsNull := False;
   case FColumnTypes[ColumnIndex - 1] of
     stBoolean:
       begin
@@ -2245,6 +2247,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stAsciiStream);
 {$ENDIF}
+  IsNull := False;
   GetBlob(ColumnIndex, IsNull).SetStream(Value);
 end;
 
@@ -2266,6 +2269,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBinaryStream);
 {$ENDIF}
+  IsNull := False;
   GetBlob(ColumnIndex, IsNull).SetStream(Value);
 end;
 
@@ -2284,6 +2288,7 @@ procedure TZRowAccessor.SetUnicodeStream(ColumnIndex: Integer;
 var
   IsNull: Boolean;
 begin
+  IsNull := False;
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}

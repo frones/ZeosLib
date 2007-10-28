@@ -132,7 +132,7 @@ type
   protected
     property PlainDriver: IZPostgreSQLPlainDriver read FPlainDriver write FPlainDriver;
     property Handle: PZPostgreSQLConnect read FHandle write FHandle;
-    property QueryHandle: PZMySQLResult read FQueryHandle write FQueryHandle;
+    property QueryHandle: PZPostgreSQLResult read FQueryHandle write FQueryHandle;
 
     procedure Connect;
     procedure Disconnect;

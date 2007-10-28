@@ -66,7 +66,7 @@ uses
     Comobj,
   {$ENDIF}
 {$ENDIF}
-  Classes, SysUtils, Contnrs, ZSysUtils, ZClasses, ZDbcIntfs, ZTokenizer,
+  Classes, SysUtils, Contnrs, ZSysUtils, ZClasses, ZDbcIntfs,
   ZDbcResultSetMetadata, ZDbcCachedResultSet, ZDbcCache, ZCompatibility,
   ZSelectSchema;
 
@@ -122,9 +122,6 @@ type
     FCachedResultSets: IZHashMap;
   protected
     WildcardsArray: array of char; //Added by Cipto
-    constructor Create(ParentConnection: IZConnection;
-      const Url: string; Info: TStrings);
-
     { Metadata ResultSets Caching. }
     procedure AddResultSetToCache(const Key: string; ResultSet: IZResultSet);
     function GetResultSetFromCache(const Key: string): IZResultSet;
@@ -144,6 +141,8 @@ type
     property CachedResultSets: IZHashMap read FCachedResultSets
       write FCachedResultSets;
   public
+    constructor Create(ParentConnection: IZConnection;
+      const Url: string; Info: TStrings);
     destructor Destroy; override;
 
     function AllProceduresAreCallable: Boolean; virtual;
@@ -3170,6 +3169,7 @@ function GetTablesMetaDataCacheKey(Const Catalog:String;
 Var I : Integer;
     Key :  String;
 begin
+  Key := '';
   for I := Low(Types) to High(Types) do
     Key := Key + ':' + Types[I];
 

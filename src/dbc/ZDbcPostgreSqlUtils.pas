@@ -59,7 +59,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZDbcIntfs, ZPlainPostgreSqlDriver, ZDbcResultSetMetadata,
+  Classes, SysUtils, ZDbcIntfs, ZPlainPostgreSqlDriver,
   ZDbcPostgreSql, ZDbcLogging;
 
 {**
@@ -819,6 +819,7 @@ var
   I: integer;
   Temp: string;
 begin
+  Temp := '';
   for I := 1 to Length(Value) do
     if Value[I] in ['0'..'9'] then
       Temp := Temp + Value[I]

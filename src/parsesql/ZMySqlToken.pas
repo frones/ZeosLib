@@ -58,7 +58,7 @@ interface
 {$I ZParseSql.inc}
 
 uses
-  Classes, ZClasses, ZSysUtils, ZTokenizer, ZGenericSqlToken;
+  Classes, ZSysUtils, ZTokenizer, ZGenericSqlToken;
 
 type
 
@@ -309,7 +309,7 @@ function TZMySQLCommentState.NextToken(Stream: TStream; FirstChar: Char;
   Tokenizer: TZTokenizer): TZToken;
 var
   ReadChar: Char;
-  ReadNum: Integer;
+  ReadNum, ReadNum2: Integer;
 begin
   Result.TokenType := ttUnknown;
   Result.Value := FirstChar;
@@ -338,8 +338,19 @@ begin
     ReadNum := Stream.Read(ReadChar, 1);
     if (ReadNum > 0) and (ReadChar = '*') then
     begin
-      Result.TokenType := ttComment;
-      Result.Value := '/*' + GetMultiLineComment(Stream);
+      ReadNum2 := Stream.Read(ReadChar, 1);
+      // Don't treat '/*!' comments as normal comments!!
+      if (ReadNum2 > 0) and (ReadChar <> '!') then
+      begin
+        Result.TokenType := ttComment;
+        Result.Value := '/*'+ReadChar + GetMultiLineComment(Stream);
+      end
+      else
+      begin
+        if ReadNum2 > 0 then
+          Result.TokenType := ttSymbol;
+          Result.Value := '/*!' + GetMultiLineComment(Stream);
+      end;
     end
     else
     begin

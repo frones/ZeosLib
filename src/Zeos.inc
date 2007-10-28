@@ -44,10 +44,24 @@
 
 // Compilation directives for Lazarus
 {$IFDEF FPC}
-{$MODE DELPHI}
-{$INTERFACES COM}
-{$DEFINE VER130BELOW}
-{$DEFINE VER140BELOW}
+  {$MODE DELPHI}
+  {$INTERFACES COM}
+  {$DEFINE VER130BELOW}
+  {$DEFINE VER140BELOW}
+  // We assume 2 levels is sufficient.
+  // The higher the third number in a version, the better... (we hope)
+  {$IFDEF VER2_2}
+    {$DEFINE FPC2_2UP}
+    {$DEFINE FPC2_1UP}
+  {$ENDIF}
+
+  {$IFDEF VER2_1}
+    {$DEFINE FPC2_1UP}
+  {$ENDIF}
+
+  {$IFDEF VER2}
+    {$DEFINE FPC2_UP}
+  {$ENDIF}
 {$ENDIF}
 
 

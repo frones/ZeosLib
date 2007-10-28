@@ -135,7 +135,7 @@ var
 implementation
 
 uses
-  ZMessages, ZSysUtils, ZDbcUtils, ZDbcSqLiteStatement, ZSqLiteToken,
+  ZSysUtils, ZDbcUtils, ZDbcSqLiteStatement, ZSqLiteToken,
   ZDbcSqLiteUtils, ZDbcSqLiteMetadata, ZSqLiteAnalyser;
 
 { TZSQLiteDriver }
@@ -308,6 +308,7 @@ var
   SQL: string;
 begin
   if not Closed then Exit;
+  ErrorMessage := '';
 
   LogMessage := Format('CONNECT TO "%s" AS USER "%s"', [Database, User]);
 
@@ -408,6 +409,7 @@ var
 begin
   if TransactIsolationLevel <> tiNone then
   begin
+    ErrorMessage := '';
     SQL := 'BEGIN TRANSACTION';
     ErrorCode := FPlainDriver.Execute(FHandle, PChar(SQL), nil, nil,
       ErrorMessage);
@@ -431,6 +433,7 @@ var
 begin
   if (TransactIsolationLevel <> tiNone) and not Closed then
   begin
+    ErrorMessage := '';
     SQL := 'COMMIT TRANSACTION';
     ErrorCode := FPlainDriver.Execute(FHandle, PChar(SQL), nil, nil,
       ErrorMessage);
@@ -456,6 +459,7 @@ var
 begin
   if (TransactIsolationLevel <> tiNone) and not Closed then
   begin
+    ErrorMessage := '';
     SQL := 'ROLLBACK TRANSACTION';
     ErrorCode := FPlainDriver.Execute(FHandle, PChar(SQL), nil, nil,
       ErrorMessage);
@@ -520,6 +524,7 @@ var
 begin
   if (TransactIsolationLevel <> tiNone) and not Closed then
   begin
+    ErrorMessage := '';
     SQL := 'ROLLBACK TRANSACTION';
     ErrorCode := FPlainDriver.Execute(FHandle, PChar(SQL), nil, nil,
       ErrorMessage);

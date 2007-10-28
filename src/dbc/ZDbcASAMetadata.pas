@@ -213,7 +213,7 @@ type
 
 implementation
 
-uses ZMessages, ZDbcASAUtils, ZDbcUtils;
+uses ZDbcASAUtils, ZDbcUtils;
 
 { TZASADatabaseMetadata }
 

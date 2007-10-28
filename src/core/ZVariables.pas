@@ -57,7 +57,7 @@ interface
 
 {$I ZCore.inc}
 
-uses SysUtils, Classes, Contnrs, ZClasses, ZCompatibility, ZVariant, ZExpression;
+uses SysUtils, Classes, Contnrs, ZCompatibility, ZVariant, ZExpression;
 
 type
   {** Implements a variable holder object. }

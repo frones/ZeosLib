@@ -376,7 +376,7 @@ begin
   else FOidAsBlob := False;
   FClientCodePage := Trim(Info.Values['codepage']);
   FCharactersetCode := pg_CS_code(FClientCodePage);
-  DriverManager.LogError(lcOther,'','Create',Integer(FCharactersetCode),'');
+//  DriverManager.LogError(lcOther,'','Create',Integer(FCharactersetCode),'');
 end;
 
 {**

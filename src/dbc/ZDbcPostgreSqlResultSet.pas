@@ -58,7 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZClasses, ZSysUtils, ZCollections, ZDbcIntfs, ZDbcResultSet,
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcResultSet,
   ZPlainPostgreSqlDriver, ZDbcResultSetMetadata, ZDbcLogging, ZCompatibility;
 
 type
@@ -132,7 +132,7 @@ type
 implementation
 
 uses
-  Math, ZMessages, ZMatchPattern, ZDbcUtils, ZDbcPostgreSql,
+  Math, ZMessages, ZMatchPattern, ZDbcPostgreSql,
   ZDbcPostgreSqlUtils, ZDbcMySqlUtils;
 
 { TZPostgreSQLResultSet }

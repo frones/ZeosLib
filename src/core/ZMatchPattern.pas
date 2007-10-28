@@ -98,12 +98,12 @@ const
   MATCH_END	  = 2;
   MATCH_VALID	  = 1;
 { Pattern defines }
-  PATTERN_VALID	  =  0;
+{  PATTERN_VALID	  =  0;
   PATTERN_ESC	  = -1;
   PATTERN_RANGE	  = -2;
   PATTERN_CLOSE	  = -3;
   PATTERN_EMPTY	  = -4;
-{ Character defines }
+}{ Character defines }
   MATCH_CHAR_SINGLE	        = '?';
   MATCH_CHAR_KLEENE_CLOSURE     = '*';
   MATCH_CHAR_RANGE_OPEN	        = '[';

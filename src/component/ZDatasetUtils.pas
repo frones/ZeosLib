@@ -61,7 +61,7 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  Classes, SysUtils, Db, ZSysUtils, ZDbcIntfs, ZClasses, ZDbcCache,
+  Classes, SysUtils, Db, ZSysUtils, ZDbcIntfs, ZDbcCache,
   Contnrs, ZCompatibility, ZExpression, ZVariant, ZTokenizer;
 
 {**
@@ -277,7 +277,7 @@ var
 implementation
 
 uses
-  ZMessages, ZCollections, ZDbcResultSet, ZGenericSqlToken,
+  ZMessages, ZGenericSqlToken,
   ZDbcResultSetMetadata, ZAbstractRODataset;
 
 {**
@@ -471,6 +471,7 @@ var
   ColumnIndex, ColumnCount: Integer;
   Stream: TStream;
 begin
+  WasNull := False;
   RowAccessor.RowBuffer.Index := ResultSet.GetRow;
   ColumnCount := ResultSet.GetMetadata.GetColumnCount;
 
@@ -692,6 +693,7 @@ var
   ColumnIndex: Integer;
   WasNull: Boolean;
 begin
+  WasNull := False;
   for I := 0 to High(FieldRefs) do
   begin
     ColumnIndex := FieldIndices[I];

@@ -93,9 +93,6 @@ type
   protected
     LastWasNull: Boolean;
 
-    constructor Create(Statement: IZStatement; SQL: string;
-      Metadata: TContainedObject);
-
     procedure RaiseUnsupportedException;
     procedure RaiseForwardOnlyException;
     procedure RaiseReadOnlyException;
@@ -119,6 +116,8 @@ type
     property Statement: IZStatement read FStatement;
     property Metadata: TContainedObject read FMetadata write FMetadata;
   public
+    constructor Create(Statement: IZStatement; SQL: string;
+      Metadata: TContainedObject);
     destructor Destroy; override;
 
     procedure SetType(Value: TZResultSetType);

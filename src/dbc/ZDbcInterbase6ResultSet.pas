@@ -58,8 +58,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, ZSysUtils, ZCollections, ZDbcIntfs, ZDbcResultSet, ZDbcInterbase6,
-  ZPlainInterbaseDriver, ZPlainFirebirdInterbaseConstants, ZClasses,
+  Classes, ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcInterbase6,
+  ZPlainFirebirdInterbaseConstants,
   ZCompatibility, ZDbcResultSetMetadata, ZDbcInterbase6Utils, ZMessages;
 
 type
@@ -134,7 +134,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  ZDbcUtils, SysUtils, Math;
+  SysUtils;
 
 { TZInterbase6ResultSet }
 

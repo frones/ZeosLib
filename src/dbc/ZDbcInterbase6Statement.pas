@@ -59,7 +59,7 @@ interface
 
 uses Classes, SysUtils, ZDbcIntfs, ZDbcStatement, ZDbcInterbase6,
   ZPlainInterbase6, ZDbcInterbase6Utils, ZDbcInterbase6ResultSet,
-  ZPlainInterbaseDriver, ZPlainFirebirdInterbaseConstants,
+  ZPlainFirebirdInterbaseConstants,
   ZCompatibility, ZDbcLogging, ZVariant, ZMessages;
 
 type
@@ -126,7 +126,7 @@ type
 
 implementation
 
-uses ZDbcCachedResultSet, ZSysUtils, ZDbcUtils;
+uses ZSysUtils, ZDbcUtils;
 
 { TZInterbase6Statement }
 

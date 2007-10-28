@@ -61,7 +61,7 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  Classes, SysUtils, Contnrs, ZClasses, ZVariant, ZDbcIntfs, ZDbcResultSet,
+  Classes, SysUtils, Contnrs, ZVariant, ZDbcIntfs,
   ZDbcCache, ZDbcCachedResultSet, ZCompatibility, ZSelectSchema;
 
 type
@@ -517,6 +517,7 @@ var
   RowAccessor: TZRowAccessor;
   WasNull: Boolean;
 begin
+  WasNull := False;
   for I := 0 to Params.Count - 1 do
   begin
     Current := TZResolverParameter(Params[I]);

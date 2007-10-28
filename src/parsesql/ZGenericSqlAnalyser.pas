@@ -628,7 +628,10 @@ begin
       while (TokenIndex < FromTokens.Count)
         and (FromJoins.IndexOf(CurrentUpper) < 0) and (CurrentUpper <> ',') do
       begin
-        CurrentUpper := AnsiUpperCase(FromTokens[TokenIndex]);
+        CurrentValue := FromTokens[TokenIndex];
+        CurrentUpper := AnsiUpperCase(CurrentValue);
+        CurrentType := TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
+        FromTokens.Objects[TokenIndex]{$IFDEF FPC}){$ENDIF});
         if CurrentUpper = '(' then
           SkipBracketTokens(FromTokens, TokenIndex)
         else Inc(TokenIndex);
@@ -654,9 +657,9 @@ begin
     else if not ReadTable and (CurrentType = ttWord) then
     begin
       Alias := CurrentValue;
-    end
+    end;
     { Ends field reading. }
-    else if CurrentValue = ',' then
+    if CurrentValue = ',' then
     begin
       if Table <> '' then
         SelectSchema.AddTable(TZTableRef.Create(Catalog, Schema, Table, Alias));

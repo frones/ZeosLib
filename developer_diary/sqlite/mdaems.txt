@@ -1,1 +1,5 @@
 20070609 : Fix opening databases with UTF8 characters in filename - by benstadin - Mantis Bug 38
+
+20071010 : Memory leak - by Spongebob/mdaems - see http://zeos.firmos.at/viewtopic.php?t=1408
+
+20071020 : Memory leak, part II - by Spongebob/mdaems - see http://zeos.firmos.at/viewtopic.php?t=1408

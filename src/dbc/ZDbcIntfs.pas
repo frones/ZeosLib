@@ -861,14 +861,6 @@ type
       const Msg: string; ErrorCode: Integer; const Error: string);
   end;
 
-  {** Stores information about registered drivers *}
-  TZDriverInfo = class(TInterfacedObject, IZInterface)
-  private
-    FDriver: IZDriver;
-  public
-    property Driver: IZDriver read FDriver write FDriver;
-  end;
-
 { TZDriverManager }
 
 {**

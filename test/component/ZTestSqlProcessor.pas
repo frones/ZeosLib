@@ -77,6 +77,22 @@ type
     procedure TestUncompleted;
   end;
 
+  {** Implements a test case for class TZSqlProcessor. }
+  TZTestSQLProcessorMysqlCase = class(TZComponentSpecificSQLTestCase)
+  private
+    FConnection: TZConnection;
+    FProcessor: TZSQLProcessor;
+  protected
+    procedure SetUp; override;
+    procedure TearDown; override;
+    function GetSupportedProtocols: string; override;
+  published
+    procedure TestSpecialCommentProcessor;
+    procedure TestMysqlCommentDefaultProcessor;
+    procedure TestMysqlEmptyLineProcessor;
+    procedure TestMysqlSetTermProcessor;
+  end;
+
 implementation
 
 uses Classes, ZDbcUtils, ZSysUtils;
@@ -118,9 +134,7 @@ begin
 
   NewLine := #13#10;
   Line := '/AAA/ BBB CCC';
-  if StartsWith(Protocol, 'mysql') then
-    Comment := '# Comment...'
-  else Comment := '/* Comment... */';
+  Comment := '/* Comment... */';
   Delimiter := ';';
 
   Text := Comment + NewLine + Line + Delimiter + NewLine + '   ' + NewLine + Line +
@@ -150,9 +164,7 @@ begin
 
   NewLine := #13#10;
   Line := '/AAA/ BBB CCC';
-  if StartsWith(Protocol, 'mysql') then
-    Comment := '# Comment...'
-  else Comment := '/* Comment... */';
+  Comment := '/* Comment... */';
   Delimiter := NewLine + '  ';
 
   Text := Comment + NewLine + Line + Delimiter + NewLine + '   ' + NewLine + Line +
@@ -214,9 +226,7 @@ begin
 
   Line := '/AAA/ BBB CCC';
   NewLine := #13#10;
-  if StartsWith(Protocol, 'mysql') then
-    Comment := '# Comment...'
-  else Comment := '/* Comment... */';
+  Comment := '/* Comment... */';
   Delimiter := '^';
 
   Text := ' Set Term ^ ;' + NewLine + Comment + NewLine + Line + Delimiter + NewLine +
@@ -255,6 +265,156 @@ begin
   CheckEquals('SELECT * FROM cargo', FProcessor.Statements[1]);
 end;
 
+{ TZTestSQLProcessorMysqlCase }
+
+{**
+  Prepares initial data before each test.
+}
+procedure TZTestSQLProcessorMysqlCase.SetUp;
+begin
+  FConnection := CreateDatasetConnection;
+  FProcessor := TZSQLProcessor.Create(nil);
+  FProcessor.Connection := FConnection;
+end;
+
+{**
+  Removes data after each test.
+}
+procedure TZTestSQLProcessorMysqlCase.TearDown;
+begin
+  FProcessor.Free;
+  FConnection.Free;
+end;
+
+{**
+  Gets an array of protocols valid for this test.
+  @return an array of valid protocols
+}
+function TZTestSQLProcessorMysqlCase.GetSupportedProtocols: string;
+begin
+  Result := 'mysql,mysql-3.20,mysql-3.23,mysql-4.0,mysql-4.1,mysqld-4.1,mysql-5,mysqld-5';
+end;
+
+{**
+  Runs a test for uncompleted SQL statements.
+}
+procedure TZTestSQLProcessorMysqlCase.TestSpecialCommentProcessor;
+var
+  SQLScript: string;
+begin
+  SQLScript := '/*!SELECT * FROM people*/;' + #10 + 'SELECT * FROM cargo;';
+  FProcessor.CleanupStatements := True;
+  FProcessor.Script.Text := SQLScript;
+  FProcessor.Parse;
+
+  CheckEquals(2, FProcessor.StatementCount);
+  CheckEquals('/*!SELECT * FROM people*/', FProcessor.Statements[0]);
+  CheckEquals('SELECT * FROM cargo', FProcessor.Statements[1]);
+
+  SQLScript := '--SELECT * FROM people;' + #10 + 'SELECT * FROM cargo;';
+  FProcessor.CleanupStatements := True;
+  FProcessor.Script.Text := SQLScript;
+  FProcessor.Parse;
+
+  CheckEquals(1, FProcessor.StatementCount);
+  CheckEquals('SELECT * FROM cargo', FProcessor.Statements[0]);
+
+  SQLScript := '/*SELECT * FROM people*/;' + #10 + 'SELECT * FROM cargo;';
+  FProcessor.CleanupStatements := True;
+  FProcessor.Script.Text := SQLScript;
+  FProcessor.Parse;
+
+  CheckEquals(1, FProcessor.StatementCount);
+  CheckEquals('SELECT * FROM cargo', FProcessor.Statements[0]);
+end;
+
+{**
+  Runs a mysql specific test for SQL Processor with default line delimiters.
+}
+procedure TZTestSQLProcessorMysqlCase.TestMysqlCommentDefaultProcessor;
+var
+  Line: string;
+  Delimiter: string;
+  Comment: string;
+  Text: string;
+  NewLine: string;
+begin
+  CheckNotNull(FProcessor);
+
+  NewLine := #13#10;
+  Line := '/AAA/ BBB CCC';
+  Comment := '# Comment...';
+  Delimiter := ';';
+
+  Text := Comment + NewLine + Line + Delimiter + NewLine + '   ' + NewLine + Line +
+    Comment + Delimiter + NewLine + Comment + NewLine + Line;
+  FProcessor.Script.Text := Text;
+  FProcessor.Parse;
+
+  CheckEquals(2, FProcessor.StatementCount);
+  CheckEquals(Comment + NewLine + Line, FProcessor.Statements[0]);
+  CheckEquals(Line + Comment + Delimiter + NewLine + Comment + NewLine + Line, FProcessor.Statements[1]);
+end;
+
+{**
+  Runs a mysql specific test for SQL Processor with empty line delimiters.
+}
+procedure TZTestSQLProcessorMysqlCase.TestMysqlEmptyLineProcessor;
+var
+  Line: string;
+  Delimiter: string;
+  Comment: string;
+  Text: string;
+  NewLine: string;
+begin
+  CheckNotNull(FProcessor);
+  FProcessor.DelimiterType := dtEmptyLine;
+
+  NewLine := #13#10;
+  Line := '/AAA/ BBB CCC';
+
+  Comment := '# Comment...'+NewLine;
+  Delimiter := NewLine + '  ';
+  Text := Comment + Line + Delimiter + NewLine + '   ' + NewLine + Line +
+    Comment + Delimiter + NewLine + Comment + Line;
+  FProcessor.Script.Text := Text;
+  FProcessor.Parse;
+
+  CheckEquals(3, FProcessor.StatementCount);
+  CheckEquals(Comment + Line, FProcessor.Statements[0]);
+  CheckEquals(Line + Comment, FProcessor.Statements[1]);
+  CheckEquals(Comment + Line + ' ', FProcessor.Statements[2]);
+end;
+
+procedure TZTestSQLProcessorMysqlCase.TestMysqlSetTermProcessor;
+var
+  NewLine: String;
+  Line: string;
+  Delimiter: string;
+  Comment: string;
+  Text: string;
+begin
+  CheckNotNull(FProcessor);
+  FProcessor.DelimiterType := dtSetTerm;
+
+  Line := '/AAA/ BBB CCC';
+  NewLine := #13#10;
+  Comment := '# Comment...'+NewLine;
+  Delimiter := '^';
+
+  Text := ' Set Term ^ ;' + NewLine + Comment + NewLine + Line + Delimiter + NewLine +
+    '   ' + NewLine + Line + Comment + NewLine + Delimiter + NewLine + 'Set Term ; ^' +
+    Comment + NewLine + Line;
+  FProcessor.Script.Text := Text;
+  FProcessor.Parse;
+
+  CheckEquals(3, FProcessor.StatementCount);
+  CheckEquals(Comment + NewLine + Line, FProcessor.Statements[0]);
+  CheckEquals(Line + Comment, FProcessor.Statements[1]);
+  CheckEquals(Comment + NewLine + Line, FProcessor.Statements[2]);
+end;
+
 initialization
   TestFramework.RegisterTest(TZTestSQLProcessorCase.Suite);
+  TestFramework.RegisterTest(TZTestSQLProcessorMysqlCase.Suite);
 end.

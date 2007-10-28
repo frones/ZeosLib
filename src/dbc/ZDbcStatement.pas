@@ -90,7 +90,6 @@ type
     procedure SetLastResultSet(ResultSet: IZResultSet); virtual;
 
   protected
-    constructor Create(Connection: IZConnection; Info: TStrings);
     procedure RaiseUnsupportedException;
 
     property MaxFieldSize: Integer read FMaxFieldSize write FMaxFieldSize;
@@ -116,6 +115,7 @@ type
     property Closed: Boolean read FClosed write FClosed;
     
   public
+    constructor Create(Connection: IZConnection; Info: TStrings);
     destructor Destroy; override;
 
     function ExecuteQuery(const SQL: string): IZResultSet; virtual;
@@ -172,7 +172,6 @@ type
     FInParamDefaultValues: TStringDynArray;
     FInParamCount: Integer;
   protected
-    constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
     procedure SetInParamCount(NewParamCount: Integer); virtual;
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
       const Value: TZVariant); virtual;
@@ -186,6 +185,7 @@ type
       read FInParamDefaultValues write FInParamDefaultValues;
     property InParamCount: Integer read FInParamCount write FInParamCount;
   public
+    constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
     destructor Destroy; override;
 
     function ExecuteQueryPrepared: IZResultSet; virtual;
@@ -234,7 +234,6 @@ type
     FLastWasNull: Boolean;
     FTemp: string;
   protected
-    constructor Create(Connection: IZConnection; SQL: string; Info: TStrings);
     procedure SetOutParamCount(NewParamCount: Integer); virtual;
     function GetOutParam(ParameterIndex: Integer): TZVariant; virtual;
 
@@ -245,6 +244,7 @@ type
     property OutParamCount: Integer read FOutParamCount write FOutParamCount;
     property LastWasNull: Boolean read FLastWasNull write FLastWasNull;
   public
+    constructor Create(Connection: IZConnection; SQL: string; Info: TStrings);
     procedure ClearParameters; override;
     procedure RegisterOutParameter(ParameterIndex: Integer;
       SQLType: Integer); virtual;

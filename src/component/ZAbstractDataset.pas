@@ -62,8 +62,8 @@ uses
   Types,
   Variants,
 {$ENDIF}
-  SysUtils, DB, Classes, ZConnection, ZSqlUpdate, ZDbcIntfs, ZVariant,
-  ZDbcCache, ZDbcCachedResultSet, ZAbstractRODataset, ZDbcGenericResolver,
+  SysUtils, DB, Classes, ZSqlUpdate, ZDbcIntfs, ZVariant,
+  ZDbcCache, ZDbcCachedResultSet, ZAbstractRODataset,
   ZCompatibility, ZSequence;
 
 type

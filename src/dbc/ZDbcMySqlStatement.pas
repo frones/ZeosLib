@@ -111,7 +111,7 @@ type
 implementation
 
 uses
-  ZDbcMySql, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZMySqlToken, ZSysUtils,
+  ZDbcMySql, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZSysUtils,
   ZMessages, ZDbcCachedResultSet, ZDbcUtils{$IFNDEF VER130BELOW}, DateUtils{$ENDIF};
 
 { TZMySQLStatement }
