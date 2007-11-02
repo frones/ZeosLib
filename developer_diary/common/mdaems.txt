@@ -171,3 +171,5 @@
 20071016 : Code cleaning. Removed unused uses clauses. Compiler warnings/hints. - by mdaems
 
 20071024 : Fixed DatasetProvider bug. dsBlockRead dataset state was not handled. - by mdaems - Mantis Bug 43 - Mantis Bug 59
+
+20071102 : DIV doesn't seem to be exactly equal to / (floating point errors) - by cipto_kh - Mantis Bug 71
