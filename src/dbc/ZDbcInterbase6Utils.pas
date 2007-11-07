@@ -2555,10 +2555,10 @@ begin
     if (sqlscale < 0)  then
     begin
       case SQLCode of
-        SQL_SHORT  : Result := PSmallInt(sqldata)^ / IBScaleDivisor[sqlscale] <> 0;
-        SQL_LONG   : Result := PInteger(sqldata)^  / IBScaleDivisor[sqlscale] <> 0;
+        SQL_SHORT  : Result := PSmallInt(sqldata)^ div IBScaleDivisor[sqlscale] <> 0;
+        SQL_LONG   : Result := PInteger(sqldata)^  div IBScaleDivisor[sqlscale] <> 0;
         SQL_INT64,
-        SQL_QUAD   : Result := PInt64(sqldata)^    / IBScaleDivisor[sqlscale] <> 0;
+        SQL_QUAD   : Result := PInt64(sqldata)^    div IBScaleDivisor[sqlscale] <> 0;
         SQL_DOUBLE : Result := Trunc(PDouble(sqldata)^) > 0;
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
@@ -2745,10 +2745,10 @@ begin
     if (sqlscale < 0)  then
     begin
       case SQLCode of
-        SQL_SHORT  : Result := PSmallInt(sqldata)^ / IBScaleDivisor[sqlscale];
-        SQL_LONG   : Result := PInteger(sqldata)^  / IBScaleDivisor[sqlscale];
+        SQL_SHORT  : Result := PSmallInt(sqldata)^ div IBScaleDivisor[sqlscale];
+        SQL_LONG   : Result := PInteger(sqldata)^  div IBScaleDivisor[sqlscale];
         SQL_INT64,
-        SQL_QUAD   : Result := PInt64(sqldata)^    / IBScaleDivisor[sqlscale];
+        SQL_QUAD   : Result := PInt64(sqldata)^    div IBScaleDivisor[sqlscale];
         SQL_DOUBLE : Result := Trunc(PDouble(sqldata)^);
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
@@ -2808,10 +2808,10 @@ begin
     if (sqlscale < 0)  then
     begin
       case SQLCode of
-        SQL_SHORT  : Result := PSmallInt(sqldata)^ DIV IBScaleDivisor[sqlscale];
-        SQL_LONG   : Result := PInteger(sqldata)^  DIV IBScaleDivisor[sqlscale];
+        SQL_SHORT  : Result := PSmallInt(sqldata)^ div IBScaleDivisor[sqlscale];
+        SQL_LONG   : Result := PInteger(sqldata)^  div IBScaleDivisor[sqlscale];
         SQL_INT64,
-        SQL_QUAD   : Result := PInt64(sqldata)^    DIV IBScaleDivisor[sqlscale];
+        SQL_QUAD   : Result := PInt64(sqldata)^    div IBScaleDivisor[sqlscale];
         SQL_DOUBLE : Result := Trunc(PDouble(sqldata)^);
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
