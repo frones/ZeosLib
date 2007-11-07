@@ -1669,7 +1669,7 @@ begin
         DefaultValue := GetStringByName('RDB$DEFAULT_SOURCE');
         if DefaultValue = '' then
           DefaultValue := GetStringByName('RDB$DEFAULT_SOURCE_DOMAIN');
-        if StartsWith(UpperCase(DefaultValue), 'DEFAULT') then
+        if StartsWith(Trim(UpperCase(DefaultValue)), 'DEFAULT') then
         begin
           DefaultValue := Trim(Copy(DefaultValue,
             Length('DEFAULT') + 1, Length(DefaultValue)));

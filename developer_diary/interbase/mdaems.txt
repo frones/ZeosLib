@@ -19,3 +19,5 @@
 20070430 : Allow string values for date parameters - Patch by Andrevanzuydam - Mantis Bug 33
 
 20070614 : Bad wildcard handling in TZInterbase6DatabaseMetadata.ConstructNameCondition - patch by cipto_kh - Mantis Bug 28
+
+20071029 : Problem handling DEFAULT NULL in domain *AND* in table - patch by andrevanzuydam - Mantis Bug 27
