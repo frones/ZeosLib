@@ -433,11 +433,11 @@ begin
     if StrToBoolEx(Info.Values['CLIENT_REMEMBER_OPTIONS']) then   ClientFlag := Clientflag OR _CLIENT_REMEMBER_OPTIONS; {Enable/disable multi-results }
 
     { Set SSL properties before connect}
-    SslKey := '';
-    SslCert := '';
-    SslCa := '';
-    SslCaPath := '';
-    SslCypher := '';
+    SslKey := nil;
+    SslCert := nil;
+    SslCa := nil;
+    SslCaPath := nil;
+    SslCypher := nil;
     if StrToBoolEx(Info.Values['MYSQL_SSL']) then
       begin
         If Info.Values['MYSQL_SSL_KEY'] <> '' then SslKey := PChar(Info.Values['MYSQL_SSL_KEY']);
