@@ -150,7 +150,7 @@ implementation
 
 uses
   ZMessages, ZSysUtils, ZDbcUtils, ZDbcMySqlStatement, ZMySqlToken,
-  ZDbcMySqlUtils, ZDbcMySqlMetadata, ZMySqlAnalyser;
+  ZDbcMySqlUtils, ZDbcMySqlMetadata, ZMySqlAnalyser, TypInfo;
 
 { TZMySQLDriver }
 
@@ -388,6 +388,8 @@ var
   SQL: PChar;
   ClientFlag : Cardinal;
   SslCa, SslCaPath, SslKey, SslCert, SslCypher : PChar;
+  myopt: TZMySQLOption;
+  sMyOpt: string;
 begin
   if not Closed then Exit;
 
@@ -407,6 +409,17 @@ begin
     begin
       FPlainDriver.SetOptions(FHandle, MYSQL_OPT_CONNECT_TIMEOUT,
         PChar(@ConnectTimeout));
+    end;
+
+   (*Added lines to handle option parameters 21 november 2007 marco cotroneo*)
+    for myopt := low(TZMySQLOption) to high(TZMySQLOption) do
+    begin
+      sMyOpt:= GetEnumName(typeInfo(TZMySQLOption), integer(myOpt));
+      if Info.Values[sMyOpt] <> '' then
+      begin
+        FPlainDriver.SetOptions(FHandle, myopt,
+          PChar(Info.Values[sMyOpt]));
+      end;
     end;
 
     { Set ClientFlag }

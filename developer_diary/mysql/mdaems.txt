@@ -70,3 +70,5 @@
 20070919 : '/*!....*/ comments should not be treated as real comments. Otherwise they are stripped by 'CleanStatements' functionality of TZSQLProcessor - by mdaems - Mantis Bug 64
 
 20071117 : Bad SSL connection parameters initialization - by mdaems - Mantis Bug 76
+
+20071121 : All mysql_options() settings can now be set using TZConnection.Properties - by marcocot - See http://zeos.firmos.at/viewtopic.php?t=1528
