@@ -72,3 +72,5 @@
 20071117 : Bad SSL connection parameters initialization - by mdaems - Mantis Bug 76
 
 20071121 : All mysql_options() settings can now be set using TZConnection.Properties - by marcocot - See http://zeos.firmos.at/viewtopic.php?t=1528
+
+20071130 : Changed the connection flags code similar to mysql_options code - by marcocot - See http://zeos.firmos.at/viewtopic.php?t=1528
