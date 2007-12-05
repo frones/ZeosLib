@@ -1404,7 +1404,7 @@ begin
     LTableNamePattern := ConstructNameCondition(TableNamePattern,
       'a.RDB$RELATION_NAME');
     SQL := 'SELECT DISTINCT a.RDB$RELATION_NAME, b.RDB$SYSTEM_FLAG,'
-      + ' b.RDB$VIEW_CONTEXT, a.RDB$VIEW_SOURCE FROM RDB$RELATIONS a'
+      + ' b.RDB$VIEW_CONTEXT, a.RDB$VIEW_SOURCE, a.RDB$DESCRIPTION FROM RDB$RELATIONS a'
       + ' JOIN RDB$RELATION_FIELDS b ON a.RDB$RELATION_NAME'
       + '=b.RDB$RELATION_NAME';
 
@@ -1435,7 +1435,7 @@ begin
           Result.UpdateNull(2);
           Result.UpdateString(3, GetStringByName('RDB$RELATION_NAME'));
           Result.UpdateString(4, TableType);
-          Result.UpdateNull(5);
+          Result.UpdateString(5, Copy(GetStringByName('RDB$DESCRIPTION'),1,255));
           Result.InsertRow;
         end
         else begin
@@ -1448,7 +1448,7 @@ begin
               Result.UpdateNull(2);
               Result.UpdateString(3, GetStringByName('RDB$RELATION_NAME'));
               Result.UpdateString(4, TableType);
-              Result.UpdateNull(5);
+              Result.UpdateString(5, Copy(GetStringByName('RDB$DESCRIPTION'),1,255)); 
               Result.InsertRow;
             end;
           end;
@@ -1700,7 +1700,7 @@ begin
         else Result.UpdateInt(11, Ord(ntNullable));
 
         Result.UpdateString(12,
-          GetStringByName('RDB$DESCRIPTION'));   //REMARKS
+          Copy(GetStringByName('RDB$DESCRIPTION'),1,255));   //REMARKS
         Result.UpdateString(13, DefaultValue);   //COLUMN_DEF
         Result.UpdateNull(14);   //SQL_DATA_TYPE
         Result.UpdateNull(15);   //SQL_DATETIME_SUB

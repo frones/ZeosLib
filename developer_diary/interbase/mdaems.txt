@@ -21,3 +21,6 @@
 20070614 : Bad wildcard handling in TZInterbase6DatabaseMetadata.ConstructNameCondition - patch by cipto_kh - Mantis Bug 28
 
 20071029 : Problem handling DEFAULT NULL in domain *AND* in table - patch by andrevanzuydam - Mantis Bug 27
+
+20071205 : Metadata (mdTables) is missing remarks data - by Roaster - See http://zeos.firmos.at/viewtopic.php?t=1567
+           Typo in log message after create database - by Roaster - Mantis Bug 79
