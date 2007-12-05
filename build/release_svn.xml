@@ -66,20 +66,24 @@
 
  <target name="buildFullZip" if="fullZip">
     <delete file="${release.dir}/ZEOSLIB_${branch}_REV${revision}.zip" />
-     <zip zipfile="${release.dir}/ZEOSLIB_${branch}_REV${revision}.zip">
+    <zip zipfile="${release.dir}/ZEOSLIB_${branch}_REV${revision}.zip">
       <fileset dir="${temp.dir}"/>
     </zip>
+    <checksum file="${release.dir}/ZEOSLIB_${branch}_REV${revision}.zip" forceoverwrite="yes"/>
+    <checksum file="${release.dir}/ZEOSLIB_${branch}_REV${revision}.zip" algorithm="SHA" forceoverwrite="yes"/>
   </target>
 
  <target name="buildSmallZip" if="smallZip">
     <delete file="${release.dir}/ZEOSLIB_${branch}_REV${revision}_COMPACT.zip" />
-     <zip zipfile="${release.dir}/ZEOSLIB_${branch}_REV${revision}_COMPACT.zip">
+    <zip zipfile="${release.dir}/ZEOSLIB_${branch}_REV${revision}_COMPACT.zip">
       <fileset dir="${temp.dir}">
          <exclude name="**/lib/**"/>
          <exclude name="**/documentation/**"/>
          <exclude name="**/artwork/**"/>
       </fileset>
     </zip>
+    <checksum file="${release.dir}/ZEOSLIB_${branch}_REV${revision}_COMPACT.zip" forceoverwrite="yes"/>
+    <checksum file="${release.dir}/ZEOSLIB_${branch}_REV${revision}_COMPACT.zip" algorithm="SHA" forceoverwrite="yes"/>
   </target>
 
 </project>

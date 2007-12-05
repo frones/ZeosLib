@@ -62,8 +62,8 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  Classes, SysUtils, Contnrs, ZClasses, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
-  ZDbcResultSetMetadata, ZCompatibility, ZDbcPostgreSqlUtils, ZDbcConnection;
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
+  ZCompatibility, ZDbcPostgreSqlUtils, ZDbcConnection;
 
 type
 
@@ -228,7 +228,7 @@ type
 implementation
 
 uses
-  Math, ZMessages, ZDbcUtils, ZDbcPostgreSql;
+  ZMessages, ZDbcUtils, ZDbcPostgreSql;
 
 { TZMySQLDatabaseMetadata }
 
@@ -1713,9 +1713,9 @@ end;
 function TZPostgreSQLDatabaseMetadata.GetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
-const
+{const
   VARHDRSZ = 4;
-var
+}var
   TypeOid, AttTypMod: Integer;
   Key, SQL, PgType: string;
 begin
@@ -1868,7 +1868,7 @@ function TZPostgreSQLDatabaseMetadata.GetColumnPrivileges(const Catalog: string;
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
 var
   I, J: Integer;
-  Key, SQL, SchemaName, TableName, Column, Owner: string;
+  Key, SQL, {SchemaName, TableName,} Column, Owner: string;
   Privileges, Grantable, Grantee: string;
   Permissions, PermissionsExp: TStrings;
 begin
@@ -1910,11 +1910,10 @@ begin
       begin
         while Next do
         begin
-          SchemaName := GetStringByName('nspname');
-          TableName := GetStringByName('relname');
+          //SchemaName := GetStringByName('nspname');
+          //TableName := GetStringByName('relname');
           Column := GetStringByName('attname');
           Owner := GetStringByName('usename');
-          SchemaName := GetStringByName('nspname');
           Permissions.Clear;
           ParseACLArray(Permissions, GetStringByName('relacl'));
           for I := 0 to Permissions.Count-1 do
@@ -2419,7 +2418,7 @@ function TZPostgreSQLDatabaseMetadata.GetCrossReference(const PrimaryCatalog: st
 var
   Key, SQL, Select, From, Where: string;
   DeleteRule, UpdateRule, Rule: string;
-  FKeyName, FKeyColumn, PKeyColumn, Targs: string;
+  {FKeyName, }FKeyColumn, PKeyColumn, Targs: string;
   Action, KeySequence, Advance: Integer;
   List: TStrings;
   Deferrability: Integer;
@@ -2446,6 +2445,7 @@ begin
         + ' pg_catalog.pg_trigger t1 JOIN pg_catalog.pg_proc p1'
         + ' ON (t1.tgfoid=p1.oid), pg_catalog.pg_trigger t2 '
         + ' JOIN pg_catalog.pg_proc p2 ON (t2.tgfoid=p2.oid) ';
+      Where := '';
       if PrimarySchema <> ''then
       begin
         Where := Where + ' AND n1.nspname = '''
@@ -2510,7 +2510,7 @@ begin
           Result.UpdateString(3, GetString(3));
           Result.UpdateString(7, GetString(4));
 
-          FKeyName := GetString(5);
+          //FKeyName := GetString(5);
           UpdateRule := GetString(12);
           if UpdateRule <> '' then
           begin
