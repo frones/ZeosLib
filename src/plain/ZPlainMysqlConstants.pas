@@ -120,26 +120,6 @@ const
   REFRESH_DES_KEY_FILE	   = $40000;
   REFRESH_USER_RESOURCES   = $80000;
 
-{ Client Connection Options }
-  _CLIENT_LONG_PASSWORD	    = 1;	 { new more secure passwords }
-  _CLIENT_FOUND_ROWS	    = 2;	 { Found instead of affected rows }
-  _CLIENT_LONG_FLAG	        = 4;	 { Get all column flags }
-  _CLIENT_CONNECT_WITH_DB   = 8;	 { One can specify db on connect }
-  _CLIENT_NO_SCHEMA	        = 16;	 { Don't allow database.table.column }
-  _CLIENT_COMPRESS	        = 32;	 { Can use compression protcol }
-  _CLIENT_ODBC		        = 64;    { Odbc client }
-  _CLIENT_LOCAL_FILES	    = 128;   { Can use LOAD DATA LOCAL }
-  _CLIENT_IGNORE_SPACE	    = 256;   { Ignore spaces before '(' }
-  _CLIENT_PROTOCOL_41	    = 512;   { New 4.1 protocol }
-  _CLIENT_INTERACTIVE	    = 1024;  { This is an interactive client }
-  _CLIENT_SSL               = 2048;  { Switch to SSL after handshake }
-  _CLIENT_IGNORE_SIGPIPE    = $1000;    { IGNORE sigpipes }
-  _CLIENT_TRANSACTIONS	    = $2000;    { Client knows about transactions }
-  _CLIENT_RESERVED          = $4000;    { Old flag for 4.1 protocol  }
-  _CLIENT_SECURE_CONNECTION = $8000;    { New 4.1 authentication }
-  _CLIENT_MULTI_STATEMENTS  = $10000;   { Enable/disable multi-stmt support }
-  _CLIENT_MULTI_RESULTS     = $20000;   { Enable/disable multi-results }
-  _CLIENT_REMEMBER_OPTIONS  = $8000000; {Enable/disable multi-results }
 
   SERVER_STATUS_IN_TRANS          = 1;   {Transaction has started}
   SERVER_STATUS_AUTOCOMMIT        = 2;   {Server in Autocommit Mode}
@@ -265,7 +245,41 @@ type
     KILL_CONNECTION{$IFNDEF VER130} = 255{$ENDIF}
   );
 
-{  TMySqlOption = (
+TMYSQL_CLIENT_OPTIONS =
+( CLIENT_LONG_PASSWORD,	{  = 1;	  { new more secure passwords }
+  CLIENT_FOUND_ROWS ,	{	  = 2;	  { Found instead of affected rows }
+  CLIENT_LONG_FLAG	 ,	{ = 4;	  { Get all column flags }
+  CLIENT_CONNECT_WITH_DB ,	{ = 8;	  { One can specify db on connect }
+  CLIENT_NO_SCHEMA	 ,	{  = 16;	  { Don't allow database.table.column }
+  CLIENT_COMPRESS	 ,	{  = 32;	  { Can use compression protcol }
+  CLIENT_ODBC		 ,	{  = 64;	  { Odbc client }
+  CLIENT_LOCAL_FILES	  ,	{ = 128;  { Can use LOAD DATA LOCAL }
+  CLIENT_IGNORE_SPACE	 ,	{  = 256;  { Ignore spaces before '(' }
+  CLIENT_CHANGE_USER    ,	{  = 512;  { Support the mysql_change_user() }
+  CLIENT_INTERACTIVE    ,	{  = 1024; { This is an interactive client }
+  CLIENT_SSL     ,	{         = 2048; { Switch to SSL after handshake }
+  CLIENT_IGNORE_SIGPIPE  ,	{ = 4096; { IGNORE sigpipes }
+  CLIENT_TRANSACTIONS    ,	{ = 8196; { Client knows about transactions }
+  CLIENT_RESERVED     ,	{    = 16384; { Old flag for 4.1 protocol  }
+  CLIENT_SECURE_CONNECTION  ,	{= 32768; { New 4.1 authentication }
+  CLIENT_MULTI_STATEMENTS  ,	{= 65536; { Enable/disable multi-stmt support }
+  CLIENT_MULTI_RESULTS  ,	{  = 131072; { Enable/disable multi-results }
+  CLIENT_OPT_18,  {2^18 = 262144}
+  CLIENT_OPT_19,{2^19 = 524288}
+  CLIENT_OPT_20,  {2^20 = 1048576}
+  CLIENT_OPT_21,   {2^21 = 2097152 }
+  CLIENT_OPT_22,  {2^22 = 4194304}
+  CLIENT_OPT_23,  {2^23 = 8388608 }
+  CLIENT_OPT_24,   {2^24 = 16777216 }
+  CLIENT_OPT_25,   {2^25 = 33554432}
+  CLIENT_OPT_26,    {2^26 = 67108864}
+  CLIENT_OPT_27,    {2^27 = 134217728}
+  CLIENT_OPT_28,    {2^28 = 268435456}
+  CLIENT_OPT_29,    {2^29 = 536870912}
+  CLIENT_OPT_30,    {2^30 = 1073741824}
+  CLIENT_REMEMBER_OPTIONS	{ = 2147483648; {Enable/disable multi-results });
+
+  {  TMySqlOption = (
     MYSQL_OPT_CONNECT_TIMEOUT,
     MYSQL_OPT_COMPRESS,
     MYSQL_OPT_NAMED_PIPE,

@@ -173,3 +173,5 @@
 20071024 : Fixed DatasetProvider bug. dsBlockRead dataset state was not handled. - by mdaems - Mantis Bug 43 - Mantis Bug 59
 
 20071102 : DIV doesn't seem to be exactly equal to / (floating point errors) - by cipto_kh - Mantis Bug 71
+
+20071112 : Avoid an access violation within a for loop which got run once even when there were 0 columns in a result. - By HeidiSQL Team - See http://fisheye3.cenqua.com/changelog/heidisql?cs=993

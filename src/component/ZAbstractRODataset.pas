@@ -1437,7 +1437,7 @@ begin
 
     with ResultSet.GetMetadata do
     begin
-      for I := 1 to GetColumnCount do
+      if GetColumnCount > 0 then for I := 1 to GetColumnCount do
       begin
         FieldType := ConvertDbcToDatasetType(GetColumnType(I));
 

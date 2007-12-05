@@ -23,7 +23,7 @@
       </Other>
     </CompilerOptions>
     <Description Value="Zeos Database Components"/>
-    <Version Major="6" Minor="6" Release="1"/>
+    <Version Major="6" Minor="6" Release="2"/>
     <Files Count="4">
       <Item1>
         <Filename Value="..\..\src\component\ZComponentReg.pas"/>

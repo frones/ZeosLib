@@ -884,10 +884,10 @@ begin
   if (Result=SQLITE_ROW) or (Result=SQLITE_DONE) then begin
     pN:= ZPlainSqLite3.sqlite_column_count(pVm);
     if  Result=SQLITE_ROW then begin
-      pazValue:= AllocMem(SizeOf(PPChar)*pN+1);
+      pazValue:= AllocMem(SizeOf(PPChar)*(pN+1));
       pazValue0:= pazValue;
     end;
-    pazColName:= AllocMem(SizeOf(PPChar)*pN*2+1);
+    pazColName:= AllocMem(SizeOf(PPChar)*(pN+1)*2);
     pazColName0:= pazColName;
     pazColType:= pazColName;
 
