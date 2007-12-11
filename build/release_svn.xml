@@ -9,10 +9,19 @@
   <property name="checktemp.dir" value="${root.dir}/checktemp"/>
   <property name="release.dir" value="${root.dir}/releases"/>
 
+  <property name="build.majorversion" value="0"/>
+  <property name="build.minorversion" value="0"/>
+  <property name="build.release" value="0"/>
+  <property name="build.prerelease" value="1"/>
+  <property name="build.status" value="alpha"/>
+  <property name="build.fileversion" value="${build.majorversion}.${build.minorversion}.${build.release}"/>
+  <property name="build.productversion" value="${build.fileversion}-${build.status}"/>
+
+
 <!-- default SVN dirs-->
   <property name="url.testing" value="svn://www.firmos.at/zeos/branches/testing"/>
   <property name="url.trunk" value="svn://www.firmos.at/zeos/trunk"/>
-
+  <property name="url.tag" value="svn://www.firmos.at/zeos/tags/${build.productversion}"/>
  
   <!-- path to the svnant libraries. Usually they will be located in ANT_HOME/lib -->
   <path id="project.classpath">
@@ -36,6 +45,14 @@
      <antcall target="buildZip">
       <param name="branch" value="TRUNK"/>
       <param name="url" value="${url.trunk}"/>
+      <param name="fullZip" value="true"/>
+    </antcall>
+  </target>
+
+  <target name="buildTagged">
+     <antcall target="buildTagZip">
+      <param name="branch" value="TAG"/>
+      <param name="url" value="${url.tag}"/>
       <param name="fullZip" value="true"/>
     </antcall>
   </target>
@@ -84,6 +101,62 @@
     </zip>
     <checksum file="${release.dir}/ZEOSLIB_${branch}_REV${revision}_COMPACT.zip" forceoverwrite="yes"/>
     <checksum file="${release.dir}/ZEOSLIB_${branch}_REV${revision}_COMPACT.zip" algorithm="SHA" forceoverwrite="yes"/>
+  </target>
+
+  <target name="buildTagZip">
+    <delete dir="${temp.dir}" />
+
+    <svn username="anonymous" password="guest">
+      <export srcUrl="${url}" revision="HEAD" destPath="${temp.dir}" />
+    </svn>
+
+     <antcall target="buildVersionZip" />
+     <antcall target="buildDoc" />
+
+    <delete dir="${temp.dir}" />
+    <echo message="Releasing Zeos DBO Project (Version ${build.productversion})"/>
+  </target>
+
+  <target name="buildVersionZip">
+    <delete file="${release.dir}/ZEOSLIB_${build.productversion}.zip" />
+    <zip zipfile="${release.dir}/ZEOSLIB_${build.productversion}.zip">
+      <fileset dir="${temp.dir}">
+         <include name="*.txt"/>
+         <include name="src/**"/>
+         <include name="packages/**"/>
+         <include name="examples/**"/>
+      </fileset>
+    </zip>
+    <checksum file="${release.dir}/ZEOSLIB_${build.productversion}.zip" forceoverwrite="yes"/>
+    <checksum file="${release.dir}/ZEOSLIB_${build.productversion}.zip" algorithm="SHA" forceoverwrite="yes"/>
+  </target>
+
+  <target name="buildDoc">
+    <delete dir="${temp.dir}/doc" />
+
+    <copy todir="${temp.dir}/doc/articles" overwrite="true" preservelastmodified="true" includeEmptyDirs="false">
+      <fileset dir="${temp.dir}/documentation/articles_generated/output">
+         <include name="*/html/*"/>
+      </fileset>
+    </copy>
+
+    <exec osfamily="windows" executable="${temp.dir}/documentation/doxygen_build.bat" dir="${temp.dir}/documentation" failonerror="true"/>
+
+    <copy todir="${temp.dir}/doc/doxygen" overwrite="true" preservelastmodified="true" includeEmptyDirs="false" >
+      <fileset dir="${temp.dir}/doc/html">
+         <include name="**"/>
+      </fileset>
+    </copy>
+    <delete dir="${temp.dir}/doc/html" />
+
+    <delete file="${release.dir}/ZEOSLIB_${build.productversion}_doc.zip" />
+    <zip zipfile="${release.dir}/ZEOSLIB_${build.productversion}_doc.zip">
+      <fileset dir="${temp.dir}/doc">
+         <include name="**"/>
+      </fileset>
+    </zip>
+    <checksum file="${release.dir}/ZEOSLIB_${build.productversion}_doc.zip" forceoverwrite="yes"/>
+    <checksum file="${release.dir}/ZEOSLIB_${build.productversion}_doc.zip" algorithm="SHA" forceoverwrite="yes"/>
   </target>
 
 </project>

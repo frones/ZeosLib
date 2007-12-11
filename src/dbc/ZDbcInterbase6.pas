@@ -529,7 +529,7 @@ begin
       CreateNewDatabase(Info.Values['createNewDatabase']);
       { Logging connection action }
       DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol,
-        Format('CRATE DATABSE "%s" AS USER "%s"', [Info.Values['createNewDatabase'], User]));
+        Format('CREATE DATABASE "%s" AS USER "%s"', [Info.Values['createNewDatabase'], User]));
     end;
 
     { Connect to Interbase6 database. }
