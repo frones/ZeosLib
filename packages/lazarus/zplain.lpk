@@ -21,7 +21,7 @@
       </Other>
     </CompilerOptions>
     <Description Value="Zeos Plain Database API"/>
-    <Version Major="6" Minor="6" Release="1"/>
+    <Version Major="6" Minor="6" Release="2"/>
     <Files Count="34">
       <Item1>
         <Filename Value="../../src/plain/ZPlainDb2.pas"/>
