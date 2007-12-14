@@ -118,8 +118,8 @@
   </target>
 
   <target name="buildVersionZip">
-    <delete file="${release.dir}/ZEOSLIB_${build.productversion}.zip" />
-    <zip zipfile="${release.dir}/ZEOSLIB_${build.productversion}.zip">
+    <delete file="${release.dir}/ZEOSDBO-${build.productversion}.zip" />
+    <zip zipfile="${release.dir}/ZEOSDBO-${build.productversion}.zip">
       <fileset dir="${temp.dir}">
          <include name="*.txt"/>
          <include name="src/**"/>
@@ -127,8 +127,8 @@
          <include name="examples/**"/>
       </fileset>
     </zip>
-    <checksum file="${release.dir}/ZEOSLIB_${build.productversion}.zip" forceoverwrite="yes"/>
-    <checksum file="${release.dir}/ZEOSLIB_${build.productversion}.zip" algorithm="SHA" forceoverwrite="yes"/>
+    <checksum file="${release.dir}/ZEOSDBO-${build.productversion}.zip" forceoverwrite="yes"/>
+    <checksum file="${release.dir}/ZEOSDBO-${build.productversion}.zip" algorithm="SHA" forceoverwrite="yes"/>
   </target>
 
   <target name="buildDoc">
@@ -149,14 +149,14 @@
     </copy>
     <delete dir="${temp.dir}/doc/html" />
 
-    <delete file="${release.dir}/ZEOSLIB_${build.productversion}_doc.zip" />
-    <zip zipfile="${release.dir}/ZEOSLIB_${build.productversion}_doc.zip">
+    <delete file="${release.dir}/ZEOSDBO-${build.productversion}_doc.zip" />
+    <zip zipfile="${release.dir}/ZEOSDBO-${build.productversion}_doc.zip">
       <fileset dir="${temp.dir}/doc">
          <include name="**"/>
       </fileset>
     </zip>
-    <checksum file="${release.dir}/ZEOSLIB_${build.productversion}_doc.zip" forceoverwrite="yes"/>
-    <checksum file="${release.dir}/ZEOSLIB_${build.productversion}_doc.zip" algorithm="SHA" forceoverwrite="yes"/>
+    <checksum file="${release.dir}/ZEOSDBO-${build.productversion}_doc.zip" forceoverwrite="yes"/>
+    <checksum file="${release.dir}/ZEOSDBO-${build.productversion}_doc.zip" algorithm="SHA" forceoverwrite="yes"/>
   </target>
 
 </project>
