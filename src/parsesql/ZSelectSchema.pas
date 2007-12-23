@@ -205,11 +205,10 @@ end;
 }
 function TZTableRef.FullName: string;
 begin
-  Result := FTable;
-  if FCatalog <> '' then
-    Result := FCatalog + '.' + Result;
-  if FSchema <> '' then
-    Result := FSchema + '.' + Result;
+  Result := FCatalog + '.' + FSchema + '.' + FTable;
+  
+  while (Result <> '') and (Result[1] = '.') do
+    Delete(Result, 1, 1);
 end;
 
 { TZFieldRef }
