@@ -177,3 +177,5 @@
 20071112 : Avoid an access violation within a for loop which got run once even when there were 0 columns in a result. - By HeidiSQL Team - See http://fisheye3.cenqua.com/changelog/heidisql?cs=993
 
 20071223 : Incorrect TZTableRef.FullName when no schema present and incorrect order - by pgimeno - Mantis Bug 82
+
+20080116 : ant build support for Linux added - by mdaems
