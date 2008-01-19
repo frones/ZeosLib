@@ -179,3 +179,5 @@
 20071223 : Incorrect TZTableRef.FullName when no schema present and incorrect order - by pgimeno - Mantis Bug 82
 
 20080116 : ant build support for Linux added - by mdaems
+
+20080119 : Added *.dproj files for test packages for D2007 - Mantis Bug 88
