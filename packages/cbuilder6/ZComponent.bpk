@@ -10,7 +10,7 @@
       build\ZSqlUpdate.obj build\ZAbstractDataset.obj build\ZPropertyEditor.obj 
       build\ZSqlMonitor.obj build\ZStoredProcedure.obj build\ZAbstractTable.obj 
       build\ZSqlMetadata.obj build\ZSequence.obj"/>
-    <RESFILES value="ZComponent.res ZComponent.dcr"/>
+    <RESFILES value="ZComponent.res ..\..\src\component\ZComponent.dcr"/>
     <IDLFILES value=""/>
     <IDLGENFILES value=""/>
     <DEFFILE value=""/>
@@ -21,17 +21,17 @@
     <PACKAGES value="ZPlain.bpi ZDbc.bpi ZParseSql.bpi ZCore.bpi vcl.bpi dbrtl.bpi rtl.bpi 
       designide.bpi"/>
     <PATHCPP value=".;"/>
-    <PATHPAS value=".;..\..\src\component;..\..\src\component;..\..\src\component;..\..\src\component;..\..\src\component;..\..\src\component;..\..\src\component;..\..\src\component;..\..\src\component;..\..\src\component;..\..\src\component;..\..\src\component;..\..\src\component;..\..\src\component;..\..\src\component;..\..\src\component"/>
+    <PATHPAS value=".;..\..\src\component"/>
     <PATHRC value=".;"/>
     <PATHASM value=".;"/>
     <DEBUGLIBPATH value="$(BCB)\lib\debug"/>
     <RELEASELIBPATH value="$(BCB)\lib\release"/>
     <LINKER value="ilink32"/>
-    <USERDEFINES value="_DEBUG"/>
-    <SYSDEFINES value="NO_STRICT;_RTLDLL;USEPACKAGES"/>
+    <USERDEFINES value=""/>
+    <SYSDEFINES value="NO_STRICT;USEPACKAGES"/>
     <MAINSOURCE value="ZComponent.cpp"/>
     <INCLUDEPATH value="..\..\src\component;$(BCB)\include;$(BCB)\include\vcl;build;$(BCB)\Source\Toolsapi"/>
-    <LIBPATH value="$(BCB)\Projects\Lib;build;..\..\src\component;$(BCB)\lib\obj;$(BCB)\lib;$(BCB)\Source\Toolsapi"/>
+    <LIBPATH value="$(BCB)\Projects\Lib;build;..\..\src\component;$(BCB)\lib\obj;$(BCB)\lib;$(BCB)\Source\Toolsapi;$(RELEASELIBPATH)"/>
     <WARNINGS value="-w-par"/>
     <OTHERFILES value=""/>
   </MACROS>
@@ -46,7 +46,7 @@
     <OTHERFILES value=""/>
   </OPTIONS>
   <LINKER>
-    <ALLOBJ value="c0pkg32.obj $(PACKAGES) Memmgr.Lib sysinit.obj $(OBJFILES)"/>
+    <ALLOBJ value="c0pkg32.obj $(PACKAGES) sysinit.obj $(OBJFILES)"/>
     <ALLRES value="$(RESFILES)"/>
     <ALLLIB value="$(LIBFILES) $(LIBRARIES) import32.lib cp32mti.lib"/>
     <OTHERFILES value=""/>
@@ -54,7 +54,7 @@
   <FILELIST>
       <FILE FILENAME="ZComponent.cpp" FORMNAME="" UNITNAME="ZComponent" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="ZComponent.res" FORMNAME="" UNITNAME="ZComponent" CONTAINERID="ResTool" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="ZComponent.dcr" FORMNAME="" UNITNAME="ZComponent" CONTAINERID="DcrTool" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\component\ZComponent.dcr" FORMNAME="" UNITNAME="ZComponent" CONTAINERID="DcrTool" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\component\ZStreamBlob.pas" FORMNAME="" UNITNAME="ZStreamBlob" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\component\ZAbstractRODataset.pas" FORMNAME="" UNITNAME="ZAbstractRODataset" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\component\ZComponentReg.pas" FORMNAME="" UNITNAME="ZComponentReg" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>

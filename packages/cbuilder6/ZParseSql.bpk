@@ -21,17 +21,17 @@
     <SPARELIBS value="rtl.lib"/>
     <PACKAGES value="ZCore.bpi rtl.bpi"/>
     <PATHCPP value=".;"/>
-    <PATHPAS value=".;..\..\src\parsesql;..\..\src\parsesql;..\..\src\parsesql;..\..\src\parsesql;..\..\src\parsesql;..\..\src\parsesql;..\..\src\parsesql;..\..\src\parsesql;..\..\src\parsesql;..\..\src\parsesql;..\..\src\parsesql;..\..\src\parsesql;..\..\src\parsesql;..\..\src\parsesql;..\..\src\parsesql;..\..\src\parsesql"/>
+    <PATHPAS value=".;..\..\src\parsesql"/>
     <PATHRC value=".;"/>
     <PATHASM value=".;"/>
     <DEBUGLIBPATH value="$(BCB)\lib\debug"/>
     <RELEASELIBPATH value="$(BCB)\lib\release"/>
     <LINKER value="ilink32"/>
-    <USERDEFINES value="_DEBUG"/>
-    <SYSDEFINES value="_RTLDLL;NO_STRICT;USEPACKAGES"/>
+    <USERDEFINES value=""/>
+    <SYSDEFINES value="NO_STRICT;USEPACKAGES"/>
     <MAINSOURCE value="ZParseSql.cpp"/>
     <INCLUDEPATH value="..\..\src\parsesql;$(BCB)\include;$(BCB)\include\vcl;build"/>
-    <LIBPATH value="$(BCB)\Projects\Lib;..\..\src\parsesql;$(BCB)\lib\obj;$(BCB)\lib;build"/>
+    <LIBPATH value="$(BCB)\Projects\Lib;..\..\src\parsesql;$(BCB)\lib\obj;$(BCB)\lib;build;$(RELEASELIBPATH)"/>
     <WARNINGS value="-w-par"/>
     <OTHERFILES value=""/>
   </MACROS>
@@ -47,7 +47,7 @@
     <OTHERFILES value=""/>
   </OPTIONS>
   <LINKER>
-    <ALLOBJ value="c0pkg32.obj $(PACKAGES) Memmgr.Lib sysinit.obj $(OBJFILES)"/>
+    <ALLOBJ value="c0pkg32.obj $(PACKAGES) sysinit.obj $(OBJFILES)"/>
     <ALLRES value="$(RESFILES)"/>
     <ALLLIB value="$(LIBFILES) $(LIBRARIES) import32.lib cp32mti.lib"/>
     <OTHERFILES value=""/>

@@ -29,17 +29,17 @@
     <SPARELIBS value="rtl.lib"/>
     <PACKAGES value="ZCore.bpi rtl.bpi"/>
     <PATHCPP value=".;"/>
-    <PATHPAS value=".;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain;..\..\src\plain"/>
+    <PATHPAS value=".;..\..\src\plain"/>
     <PATHRC value=".;"/>
     <PATHASM value=".;"/>
     <DEBUGLIBPATH value="$(BCB)\lib\debug"/>
     <RELEASELIBPATH value="$(BCB)\lib\release"/>
     <LINKER value="ilink32"/>
-    <USERDEFINES value="_DEBUG"/>
-    <SYSDEFINES value="_RTLDLL;NO_STRICT;USEPACKAGES"/>
+    <USERDEFINES value=""/>
+    <SYSDEFINES value="NO_STRICT;USEPACKAGES"/>
     <MAINSOURCE value="ZPlain.cpp"/>
     <INCLUDEPATH value="..\..\src\plain;$(BCB)\include;$(BCB)\include\vcl;build"/>
-    <LIBPATH value="$(BCB)\Projects\Lib;..\..\src\plain;$(BCB)\lib\obj;$(BCB)\lib;build"/>
+    <LIBPATH value="$(BCB)\Projects\Lib;..\..\src\plain;$(BCB)\lib\obj;$(BCB)\lib;build;$(RELEASELIBPATH)"/>
     <WARNINGS value="-w-par"/>
     <OTHERFILES value=""/>
   </MACROS>
@@ -54,11 +54,49 @@
     <OTHERFILES value=""/>
   </OPTIONS>
   <LINKER>
-    <ALLOBJ value="c0pkg32.obj $(PACKAGES) Memmgr.Lib sysinit.obj $(OBJFILES)"/>
+    <ALLOBJ value="c0pkg32.obj $(PACKAGES) sysinit.obj $(OBJFILES)"/>
     <ALLRES value="$(RESFILES)"/>
     <ALLLIB value="$(LIBFILES) $(LIBRARIES) import32.lib cp32mti.lib"/>
     <OTHERFILES value=""/>
   </LINKER>
+  <FILELIST>
+      <FILE FILENAME="ZPlain.cpp" FORMNAME="" UNITNAME="ZPlain" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="ZPlain.res" FORMNAME="" UNITNAME="ZPlain" CONTAINERID="ResTool" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="rtl.bpi" FORMNAME="" UNITNAME="rtl" CONTAINERID="BPITool" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="ZCore.bpi" FORMNAME="" UNITNAME="ZCore" CONTAINERID="BPITool" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainPostgreSqlDriver.pas" FORMNAME="" UNITNAME="ZPlainPostgreSqlDriver" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainAdo.pas" FORMNAME="" UNITNAME="ZPlainAdo" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainAdoDriver.pas" FORMNAME="" UNITNAME="ZPlainAdoDriver" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainDb2.pas" FORMNAME="" UNITNAME="ZPlainDb2" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainDb2Driver.pas" FORMNAME="" UNITNAME="ZPlainDb2Driver" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainDbLibDriver.pas" FORMNAME="" UNITNAME="ZPlainDbLibDriver" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainDbLibMsSql7.pas" FORMNAME="" UNITNAME="ZPlainDbLibMsSql7" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainDbLibSybaseAse125.pas" FORMNAME="" UNITNAME="ZPlainDbLibSybaseAse125" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainDriver.pas" FORMNAME="" UNITNAME="ZPlainDriver" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainFirebird10.pas" FORMNAME="" UNITNAME="ZPlainFirebird10" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainFirebird15.pas" FORMNAME="" UNITNAME="ZPlainFirebird15" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainFirebird20.pas" FORMNAME="" UNITNAME="ZPlainFirebird20" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainInterbase5.pas" FORMNAME="" UNITNAME="ZPlainInterbase5" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainInterbase6.pas" FORMNAME="" UNITNAME="ZPlainInterbase6" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainInterbaseDriver.pas" FORMNAME="" UNITNAME="ZPlainInterbaseDriver" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainLoader.pas" FORMNAME="" UNITNAME="ZPlainLoader" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainMySql40.pas" FORMNAME="" UNITNAME="ZPlainMySql40" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainMySql41.pas" FORMNAME="" UNITNAME="ZPlainMySql41" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainMySql320.pas" FORMNAME="" UNITNAME="ZPlainMySql320" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainMySql323.pas" FORMNAME="" UNITNAME="ZPlainMySql323" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainMySqlDriver.pas" FORMNAME="" UNITNAME="ZPlainMySqlDriver" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainPostgreSql7.pas" FORMNAME="" UNITNAME="ZPlainPostgreSql7" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainPostgreSql8.pas" FORMNAME="" UNITNAME="ZPlainPostgreSql8" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainSqLiteDriver.pas" FORMNAME="" UNITNAME="ZPlainSqLiteDriver" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainOracle9i.pas" FORMNAME="" UNITNAME="ZPlainOracle9i" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainOracleDriver.pas" FORMNAME="" UNITNAME="ZPlainOracleDriver" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainSqLite28.pas" FORMNAME="" UNITNAME="ZPlainSqLite28" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainSqLite3.pas" FORMNAME="" UNITNAME="ZPlainSqLite3" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainASADriver.pas" FORMNAME="" UNITNAME="ZPlainASADriver" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainASA9.pas" FORMNAME="" UNITNAME="ZPlainASA9" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainASA8.pas" FORMNAME="" UNITNAME="ZPlainASA8" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainASA7.pas" FORMNAME="" UNITNAME="ZPlainASA7" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+  </FILELIST>
   <BUILDTOOLS>
   </BUILDTOOLS>
 
