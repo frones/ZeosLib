@@ -199,6 +199,8 @@ type
 
     procedure RegisterDataSet(DataSet: TDataset);
     procedure UnregisterDataSet(DataSet: TDataset);
+    function ExecuteDirect(SQL : String) : boolean;
+    function ExecuteUpdateDirect(SQL : String) : integer;
     // Modified by cipto 8/2/2007 10:16:50 AM
     procedure RegisterSequence(Sequence: TComponent);
     procedure UnregisterSequence(Sequence: TComponent);
@@ -1193,6 +1195,34 @@ procedure TZConnection.UnregisterSequence(Sequence: TComponent);
 begin
   if Assigned(FSequences) then
     FSequences.Remove(TZSequence(Sequence));
+end;
+
+{**
+  Executes the SQL statement immediately without the need of a TZQuery component
+  @param SQL the statement to be executed.
+  Returns an indication if execution was succesfull.
+}
+function TZConnection.ExecuteDirect(SQL : String) : boolean;
+var
+  stmt : IZStatement;
+begin
+  stmt := DbcConnection.CreateStatement;
+  result:= (stmt.ExecuteUpdate(SQL)<>-1);
+  stmt:=nil;
+end;
+
+{**
+  Executes the SQL statement immediately without the need of a TZQuery component
+  @param SQL the statement to be executed.
+  Returns the number of rows that was affected by te statement
+}
+function TZConnection.ExecuteUpdateDirect(SQL : String) : integer;
+var
+  stmt : IZStatement;
+begin
+  stmt := DbcConnection.CreateStatement;
+  result:= stmt.ExecuteUpdate(SQL);
+  stmt:=nil;
 end;
 
 initialization

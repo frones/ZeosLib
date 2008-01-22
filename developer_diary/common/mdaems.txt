@@ -181,3 +181,5 @@
 20080116 : ant build support for Linux added - by mdaems
 
 20080119 : Added *.dproj files for test packages for D2007 - Mantis Bug 88
+
+20080121 : Added ZConnection.ExecuteDirect and ZConnection.ExecuteUpdateDirect functions - by mdaems/wahono - See http://zeos.firmos.at/viewtopic.php?t=1656
