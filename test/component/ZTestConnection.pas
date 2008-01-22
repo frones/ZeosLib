@@ -3,8 +3,6 @@
 {                 Zeos Database Objects                   }
 {            Test Case for Connection Components          }
 {                                                         }
-{          Originally written by Sergey Seroukhov         }
-{                                                         }
 {*********************************************************}
 
 {@********************************************************}
@@ -69,7 +67,7 @@ type
     procedure TearDown; override;
   published
     procedure TestExecuteDirect;
-    procedure TestExecuteUpdateDirect;
+    procedure TestExecuteDirect2;
   end;
 
 implementation
@@ -112,16 +110,22 @@ end;
 {**
   Runs a test for ExecuteUpdateDirect.
 }
-procedure TZTestConnectionCase.TestExecuteUpdateDirect;
+procedure TZTestConnectionCase.TestExecuteDirect2;
 var
   l_int  : integer;
+  l_bool : boolean;
 begin
-  l_int := Connection.ExecuteUpdateDirect('insert into department (dep_id,dep_name) Values (87,"Dept87")');
-  l_int := l_int + Connection.ExecuteUpdateDirect('insert into department (dep_id,dep_name) Values (88,"Dept88")');
+  l_bool := Connection.ExecuteDirect('insert into department (dep_id,dep_name) Values (87,"Dept87")',l_int);
+  CheckEquals(true, l_bool);
+  CheckEquals(1, l_int);
+  l_bool := Connection.ExecuteDirect('insert into department (dep_id,dep_name) Values (88,"Dept88")',l_int);
+  CheckEquals(true, l_bool);
+  CheckEquals(1, l_int);
+  l_bool := Connection.ExecuteDirect('delete from department where dep_id between 87 and 88',l_int);
+  CheckEquals(true, l_bool);
   CheckEquals(2, l_int);
-  l_int := Connection.ExecuteUpdateDirect('delete from department where dep_id between 87 and 88');
-  CheckEquals(2, l_int);
-  l_int := Connection.ExecuteUpdateDirect('delete from department where dep_id between 87 and 88');
+  l_bool := Connection.ExecuteDirect('delete from department where dep_id between 87 and 88',l_int);
+  CheckEquals(true, l_bool);
   CheckEquals(0, l_int);
 end;
 

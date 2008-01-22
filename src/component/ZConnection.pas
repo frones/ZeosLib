@@ -199,8 +199,8 @@ type
 
     procedure RegisterDataSet(DataSet: TDataset);
     procedure UnregisterDataSet(DataSet: TDataset);
-    function ExecuteDirect(SQL : String) : boolean;
-    function ExecuteUpdateDirect(SQL : String) : integer;
+    function ExecuteDirect(SQL:string):boolean;overload;
+    function ExecuteDirect(SQL:string; var RowsAffected:integer):boolean;overload;
     // Modified by cipto 8/2/2007 10:16:50 AM
     procedure RegisterSequence(Sequence: TComponent);
     procedure UnregisterSequence(Sequence: TComponent);
@@ -1204,24 +1204,26 @@ end;
 }
 function TZConnection.ExecuteDirect(SQL : String) : boolean;
 var
-  stmt : IZStatement;
+  dummy : Integer;
 begin
-  stmt := DbcConnection.CreateStatement;
-  result:= (stmt.ExecuteUpdate(SQL)<>-1);
-  stmt:=nil;
+  result:= ExecuteDirect(SQL,dummy);
 end;
 
 {**
   Executes the SQL statement immediately without the need of a TZQuery component
   @param SQL the statement to be executed.
-  Returns the number of rows that was affected by te statement
+  @param RowsAffected the number of rows that were affected by the statement.
+  Returns an indication if execution was succesfull.
 }
-function TZConnection.ExecuteUpdateDirect(SQL : String) : integer;
+function TZConnection.ExecuteDirect(SQL:string; var RowsAffected:integer):boolean;
 var
   stmt : IZStatement;
 begin
+  result := False;
+  CheckConnected;
   stmt := DbcConnection.CreateStatement;
-  result:= stmt.ExecuteUpdate(SQL);
+  RowsAffected:= stmt.ExecuteUpdate(SQL);
+  result := (RowsAffected <> -1);
   stmt:=nil;
 end;
 
