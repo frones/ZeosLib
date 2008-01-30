@@ -126,6 +126,9 @@ type
 
     function GetPlainDriver: IZSQLitePlainDriver;
     function GetConnectionHandle: Psqlite;
+
+    function ReKey(const Key: string): Integer;
+    function Key(const Key: string): Integer; 
   end;
 
 var
@@ -298,6 +301,35 @@ begin
 end;
 
 {**
+  Set encryption key for a database
+  @param Key the key used to encrypt your database.
+  @return error code from SQLite Key function.
+}
+function TZSQLiteConnection.Key(const Key: string):Integer;
+var
+  ErrorCode: Integer;
+  ErrorMessage: PChar;
+begin
+  ErrorCode := FPlainDriver.Key(FHandle, PChar(Key), StrLen(PChar(Key)));
+  Result := ErrorCode;
+end;
+
+{**
+  Reencrypt a database with a new key. The old/current key needs to be
+  set before calling this function.
+  @param Key the new key used to encrypt your database.
+  @return error code from SQLite ReKey function.
+}
+function TZSQLiteConnection.ReKey(const Key: string):Integer;
+var
+  ErrorCode: Integer;
+  ErrorMessage: PChar;
+begin
+  ErrorCode := FPlainDriver.ReKey(FHandle, PChar(Key), StrLen(PChar(Key)));
+  Result := ErrorCode;
+end;
+
+{**
   Opens a connection to database server with specified parameters.
 }
 procedure TZSQLiteConnection.Open;
@@ -319,6 +351,13 @@ begin
       lcConnect, LogMessage);
   end;
   DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
+
+  { Turn on encryption if requested }
+  if StrToBoolEx(Info.Values['encrypted']) then
+  begin
+    ErrorCode := FPlainDriver.Key(FHandle, PChar(Password), StrLen(PChar(Password)));
+    CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcConnect, 'SQLite.Key');
+  end;
 
   try
     SQL := 'PRAGMA show_datatypes = ON';

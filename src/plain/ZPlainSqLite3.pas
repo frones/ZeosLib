@@ -62,7 +62,7 @@ const
   SQLITE_ISO8859   = 1;
   MASTER_NAME      = 'sqlite_master';
   TEMP_MASTER_NAME = 'sqlite_temp_master';
-  SQLITE_VERSION   = '3.2.7';
+  SQLITE_VERSION   = '3.5.4';
 
   { Return values for sqlite_exec() and sqlite_step() }
   SQLITE_OK           = 0;   // Successful result
@@ -243,6 +243,8 @@ type
     var pzErrmsg: PChar): Psqlite; cdecl;
   Tsqlite_rekey = function(db: Psqlite; const pKey: Pointer;
     nKey: Integer): Integer; cdecl;
+  Tsqlite_key = function(db: Psqlite; const pKey: Pointer;
+    nKey: Integer): Integer; cdecl;
 
 var
 
@@ -290,6 +292,7 @@ var
   sqlite_commit_hook: Tsqlite_commit_hook;
   sqlite_open_encrypted: Tsqlite_open_encrypted;
   sqlite_rekey: Tsqlite_rekey;
+  sqlite_key: Tsqlite_key;
 
 var
   LibraryLoader: TZNativeLibraryLoader;
@@ -353,7 +356,8 @@ begin
 {!}        @sqlite_progress_handler       := GetAddress('sqlite3_progress_handler');
 {!}        @sqlite_commit_hook            := GetAddress('sqlite3_commit_hook');
 { ?-       @sqlite_open_encrypted         := GetAddress('sqlite3_open_encrypted');}
-{ ?-       @sqlite_rekey                  := GetAddress('sqlite3_rekey');}
+{!}        @sqlite_rekey                  := GetAddress('sqlite3_rekey');
+{!}        @sqlite_key                    := GetAddress('sqlite3_key');
 
 end;
 
