@@ -71,6 +71,7 @@ type
   TZPostgreSQLDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
     FDatabase: string;
+    function EscapeString(const S: string): string;
   protected
     function HaveMinimumServerVersion(MajorVersion: Integer;
       MinorVersion: Integer): Boolean;
@@ -231,6 +232,23 @@ uses
   ZMessages, ZDbcUtils, ZDbcPostgreSql;
 
 { TZMySQLDatabaseMetadata }
+
+{**
+  @param S a string.
+  @return escaped string
+}
+function TZPostgreSQLDatabaseMetadata.EscapeString(const S: string): string;
+var
+  I: Integer;
+begin
+  Result := S;
+  for I := Length(Result) downto 1 do
+    if (Result[I] = '''') or (Result[I] = '\') then
+      Insert('\', Result, I);
+  Result := '''' + Result + '''';
+  if HaveMinimumServerVersion(8, 1) then
+    Result := 'E' + Result;
+end;
 
 {**
   Constructs this object and assignes the main properties.
@@ -1175,12 +1193,11 @@ begin
         + ' LEFT JOIN pg_catalog.pg_class c ON (d.classoid=c.oid AND'
         + ' c.relname=''pg_proc'') LEFT JOIN pg_catalog.pg_namespace pn ON'
         + ' (c.relnamespace=pn.oid AND pn.nspname=''pg_catalog'') '
-        + ' WHERE p.pronamespace=n.oid ';
+        + ' WHERE p.pronamespace=n.oid';
       if SchemaPattern <> '' then
-        SQL := SQL + 'AND n.nspname LIKE ''' + EscapeQuotes(SchemaPattern)+ ''' ';
-      SQL := SQL + ' AND p.proname LIKE '''
-        + EscapeQuotes(LProcedureNamePattern) +
-        ''' ORDER BY PROCEDURE_SCHEM, PROCEDURE_NAME ';
+        SQL := SQL + ' AND n.nspname LIKE ' + EscapeString(SchemaPattern);
+      SQL := SQL + ' AND p.proname LIKE ' + EscapeString(LProcedureNamePattern)
+        + ' ORDER BY PROCEDURE_SCHEM, PROCEDURE_NAME';
     end
     else
     begin
@@ -1188,9 +1205,9 @@ begin
         + ' p.proname AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2,'
         + ' NULL AS RESERVED3, NULL AS REMARKS, '
         + IntToStr(ProcedureReturnsResult) + ' AS PROCEDURE_TYPE'
-        + ' FROM pg_proc p WHERE p.proname LIKE '''
-        + EscapeQuotes(LProcedureNamePattern) + ''' '
-        + ' ORDER BY PROCEDURE_NAME ';
+        + ' FROM pg_proc p WHERE p.proname LIKE '
+        + EscapeString(LProcedureNamePattern)
+        + ' ORDER BY PROCEDURE_NAME';
     end;
 
     Result := CopyToVirtualResultSet(
@@ -1281,15 +1298,17 @@ begin
         + 't.typrelid FROM pg_catalog.pg_proc p, pg_catalog.pg_namespace n,'
         + ' pg_catalog.pg_type t WHERE p.pronamespace=n.oid AND p.prorettype=t.oid';
       if SchemaPattern <> '' then
-        SQL := SQL + ' AND n.nspname LIKE ''' + EscapeQuotes(SchemaPattern) + ''' ';
-      SQL := SQL + ' AND p.proname LIKE ''' + EscapeQuotes(ToLikeString(ProcedureNamePattern)) +
-        ''' ORDER BY n.nspname, p.proname ';
+        SQL := SQL + ' AND n.nspname LIKE ' + EscapeString(SchemaPattern);
+      SQL := SQL + ' AND p.proname LIKE ' + EscapeString(ToLikeString(ProcedureNamePattern))
+        + ' ORDER BY n.nspname, p.proname';
     end
     else
       SQL := 'SELECT NULL AS nspname,p.proname,p.prorettype,p.proargtypes,'
         + 't.typtype,t.typrelid FROM pg_proc p, pg_type t'
-        + ' WHERE p.prorettype=t.oid AND p.proname LIKE '''
-        + EscapeQuotes(ToLikeString(ProcedureNamePattern)) + ''' ORDER BY p.proname ';
+        + ' WHERE p.prorettype=t.oid'
+        + ' AND p.proname LIKE '
+        +   EscapeString(ToLikeString(ProcedureNamePattern))
+        + ' ORDER BY p.proname';
 
     ArgTypes := TStringList.Create;
     try
@@ -1475,10 +1494,10 @@ begin
         + ' WHERE c.relnamespace = n.oid ';
       //if SchemaPattern <> '' then // cannot happen due to SchemaPattern := '%'
       begin
-        SQL := SQL + ' AND n.nspname LIKE '''
-          + EscapeQuotes(ToLikeString(SchemaPattern)) + ''' ';
+        SQL := SQL + ' AND n.nspname LIKE '
+          + EscapeString(ToLikeString(SchemaPattern));
       end;
-      OrderBy := ' ORDER BY TABLE_TYPE,TABLE_SCHEM,TABLE_NAME ';
+      OrderBy := ' ORDER BY TABLE_TYPE,TABLE_SCHEM,TABLE_NAME';
     end
     else
     begin
@@ -1533,11 +1552,11 @@ begin
     else
       LTypes := Types;
 
-    SQL := SQL + ' AND c.relname LIKE ''' + EscapeQuotes(ToLikeString(TableNamePattern))
-      + ''' AND (false ';
+    SQL := SQL + ' AND c.relname LIKE ' + EscapeString(ToLikeString(TableNamePattern))
+      + ' AND (false';
     for I := 0 to High(LTypes) do
-      SQL := SQL + ' OR ( ' + TableTypeSQLExpression(LTypes[i], UseSchemas) + ' ) ';
-    SQL := SQL + ' )' + OrderBy;
+      SQL := SQL + ' OR (' + TableTypeSQLExpression(LTypes[i], UseSchemas) + ')';
+    SQL := SQL + ')' + OrderBy;
 
     Result := CopyToVirtualResultSet(
       GetConnection.CreateStatement.ExecuteQuery(SQL),
@@ -1740,11 +1759,11 @@ begin
         + ' LEFT JOIN pg_catalog.pg_class dc ON (dc.oid=dsc.classoid'
         + ' AND dc.relname=''pg_class'') LEFT JOIN pg_catalog.pg_namespace dn'
         + ' ON (dc.relnamespace=dn.oid AND dn.nspname=''pg_catalog'') '
-        + ' WHERE a.attnum > 0 AND NOT a.attisdropped ';
+        + ' WHERE a.attnum > 0 AND NOT a.attisdropped';
       if SchemaPattern <> '' then
       begin
-        SQL := SQL + ' AND n.nspname LIKE '''
-          + EscapeQuotes(SchemaPattern) +  ''' ';
+        SQL := SQL + ' AND n.nspname LIKE '
+          + EscapeString(SchemaPattern);
       end;
     end
     else
@@ -1755,9 +1774,9 @@ begin
         + ' WHERE a.attrelid=c.oid AND a.attnum > 0 ';
     end;
 
-    SQL := SQL + 'AND c.relname LIKE ''' + EscapeQuotes(ToLikeString(TableNamePattern))
-      + ''' AND a.attname LIKE ''' + EscapeQuotes(ToLikeString(ColumnNamePattern))
-      + ''' ORDER BY nspname,relname,attnum ';
+    SQL := SQL + ' AND c.relname LIKE ' + EscapeString(ToLikeString(TableNamePattern))
+      + ' AND a.attname LIKE ' + EscapeString(ToLikeString(ColumnNamePattern))
+      + ' ORDER BY nspname,relname,attnum';
 
     with GetConnection.CreateStatement.ExecuteQuery(SQL) do
     begin
@@ -1886,22 +1905,22 @@ begin
         + ' FROM pg_catalog.pg_namespace n, pg_catalog.pg_class c,'
         + ' pg_catalog.pg_user u, pg_catalog.pg_attribute a '
         + ' WHERE c.relnamespace = n.oid AND u.usesysid = c.relowner '
-        + ' AND c.oid = a.attrelid AND c.relkind = ''r'' '
-        + ' AND a.attnum > 0 AND NOT a.attisdropped ';
+        + ' AND c.oid = a.attrelid AND c.relkind = ''r'''
+        + ' AND a.attnum > 0 AND NOT a.attisdropped';
       if Schema <> '' then
-        SQL := SQL + 'AND n.nspname = ''' + EscapeQuotes(Schema) + ''' ';
+        SQL := SQL + ' AND n.nspname = ' + EscapeString(Schema);
     end
     else
     begin
       SQL := 'SELECT NULL::text AS nspname,c.relname,u.usename,c.relacl,'
         + 'a.attname FROM pg_class c, pg_user u,pg_attribute a '
         + ' WHERE u.usesysid = c.relowner AND c.oid = a.attrelid '
-        + ' AND a.attnum > 0 AND c.relkind = ''r'' ';
+        + ' AND a.attnum > 0 AND c.relkind = ''r''';
     end;
 
-    SQL := SQL + ' AND c.relname = ''' + EscapeQuotes(Table)+
-      ''' AND a.attname LIKE ''' + EscapeQuotes(ToLikeString(ToLikeString(ColumnNamePattern))) +
-      ''' ORDER BY attname ';
+    SQL := SQL + ' AND c.relname = ' + EscapeString(Table)
+      + ' AND a.attname LIKE ' + EscapeString(ToLikeString(ToLikeString(ColumnNamePattern)))
+      + ' ORDER BY attname';
 
     Permissions := TStringList.Create;
     PermissionsExp := TStringList.Create;
@@ -2009,7 +2028,7 @@ begin
         + ' pg_catalog.pg_user u WHERE c.relnamespace = n.oid '
         + ' AND u.usesysid = c.relowner AND c.relkind = ''r'' ';
       if SchemaPattern <> '' then
-        SQL := SQL + 'AND n.nspname LIKE ''' + EscapeQuotes(SchemaPattern) + ''' ';
+        SQL := SQL + ' AND n.nspname LIKE ' + EscapeString(SchemaPattern);
     end
     else
     begin
@@ -2018,8 +2037,8 @@ begin
         + ' AND c.relkind = ''r'' ';
     end;
 
-    SQL := SQL + ' AND c.relname LIKE ''' + EscapeQuotes(ToLikeString(TableNamePattern))
-      + ''' ORDER BY nspname, relname ';
+    SQL := SQL + ' AND c.relname LIKE ' + EscapeString(ToLikeString(TableNamePattern))
+      + ' ORDER BY nspname, relname';
 
     Permissions := TStringList.Create;
     PermissionsExp := TStringList.Create;
@@ -2163,26 +2182,27 @@ begin
   begin
     if HaveMinimumServerVersion(7, 3) then
     begin
-      Select := 'SELECT NULL AS TABLE_CAT, n.nspname AS TABLE_SCHEM, ';
+      Select := 'SELECT NULL AS TABLE_CAT, n.nspname AS TABLE_SCHEM,';
       From := ' FROM pg_catalog.pg_namespace n, pg_catalog.pg_class ct,'
         + ' pg_catalog.pg_class ci, pg_catalog.pg_attribute a,'
-        + ' pg_catalog.pg_index i ';
-      Where := ' AND ct.relnamespace = n.oid ';
+        + ' pg_catalog.pg_index i';
+      Where := ' AND ct.relnamespace = n.oid';
       if Schema <> '' then
-        Where := Where + ' AND n.nspname = ''' + EscapeQuotes(Schema) + ''' ';
+        Where := Where + ' AND n.nspname = ' + EscapeString(Schema);
     end
     else
     begin
-      Select := 'SELECT NULL AS TABLE_CAT, NULL AS TABLE_SCHEM, ';
-      From := ' FROM pg_class ct, pg_class ci, pg_attribute a, pg_index i ';
+      Select := 'SELECT NULL AS TABLE_CAT, NULL AS TABLE_SCHEM,';
+      From := ' FROM pg_class ct, pg_class ci, pg_attribute a, pg_index i';
     end;
-    SQL := Select + ' ct.relname AS TABLE_NAME, a.attname AS COLUMN_NAME, '
-      + ' a.attnum AS KEY_SEQ, ci.relname AS PK_NAME ' + From
-      + ' WHERE ct.oid=i.indrelid AND ci.oid=i.indexrelid '
-      + ' AND a.attrelid=ci.oid AND i.indisprimary ';
+    SQL := Select + ' ct.relname AS TABLE_NAME, a.attname AS COLUMN_NAME,'
+      + ' a.attnum AS KEY_SEQ, ci.relname AS PK_NAME'
+      + From
+      + ' WHERE ct.oid=i.indrelid AND ci.oid=i.indexrelid'
+      + ' AND a.attrelid=ci.oid AND i.indisprimary';
     if Table <> '' then
-       SQL := SQL + ' AND ct.relname = ''' + EscapeQuotes(Table) + ''' ';
-    SQL := SQL + Where + ' ORDER BY table_name, pk_name, key_seq ';
+       SQL := SQL + ' AND ct.relname = ' + EscapeString(Table);
+    SQL := SQL + Where + ' ORDER BY table_name, pk_name, key_seq';
 
     Result := CopyToVirtualResultSet(
       GetConnection.CreateStatement.ExecuteQuery(SQL),
@@ -2435,53 +2455,56 @@ begin
 
     if HaveMinimumServerVersion(7, 3) then
     begin
-      Select := 'SELECT DISTINCT n1.nspname as pnspname,n2.nspname as fnspname, ';
+      Select := 'SELECT DISTINCT n1.nspname as pnspname,n2.nspname as fnspname,';
       From := ' FROM pg_catalog.pg_namespace n1 JOIN pg_catalog.pg_class c1'
         + ' ON (c1.relnamespace = n1.oid) JOIN pg_catalog.pg_index i'
         + ' ON (c1.oid=i.indrelid) JOIN pg_catalog.pg_class ic'
         + ' ON (i.indexrelid=ic.oid) JOIN pg_catalog.pg_attribute a'
-        + ' ON (ic.oid=a.attrelid), pg_catalog.pg_namespace n2 '
-        + ' JOIN pg_catalog.pg_class c2 ON (c2.relnamespace=n2.oid), '
+        + ' ON (ic.oid=a.attrelid), pg_catalog.pg_namespace n2'
+        + ' JOIN pg_catalog.pg_class c2 ON (c2.relnamespace=n2.oid),'
         + ' pg_catalog.pg_trigger t1 JOIN pg_catalog.pg_proc p1'
-        + ' ON (t1.tgfoid=p1.oid), pg_catalog.pg_trigger t2 '
-        + ' JOIN pg_catalog.pg_proc p2 ON (t2.tgfoid=p2.oid) ';
+        + ' ON (t1.tgfoid=p1.oid), pg_catalog.pg_trigger t2'
+        + ' JOIN pg_catalog.pg_proc p2 ON (t2.tgfoid=p2.oid)';
       Where := '';
       if PrimarySchema <> ''then
       begin
-        Where := Where + ' AND n1.nspname = '''
-          + EscapeQuotes(PrimarySchema) + ''' ';
+        Where := Where + ' AND n1.nspname = '
+          + EscapeString(PrimarySchema);
       end;
       if ForeignSchema <> '' then
       begin
-        Where := Where + ' AND n2.nspname = '''
-          + EscapeQuotes(ForeignSchema) + ''' ';
+        Where := Where + ' AND n2.nspname = '
+          + EscapeString(ForeignSchema);
       end;
     end
     else
     begin
-      Select := 'SELECT DISTINCT NULL::text as pnspname, NULL::text as fnspname, ';
-      From := ' FROM pg_class c1 JOIN pg_index i ON (c1.oid=i.indrelid) '
+      Select := 'SELECT DISTINCT NULL::text as pnspname, NULL::text as fnspname,';
+      From := ' FROM pg_class c1 JOIN pg_index i ON (c1.oid=i.indrelid)'
         + ' JOIN pg_class ic ON (i.indexrelid=ic.oid) JOIN pg_attribute a'
-        + ' ON (ic.oid=a.attrelid), pg_class c2, pg_trigger t1 '
-        + ' JOIN pg_proc p1 ON (t1.tgfoid=p1.oid), pg_trigger t2 '
-        + ' JOIN pg_proc p2 ON (t2.tgfoid=p2.oid) ';
+        + ' ON (ic.oid=a.attrelid), pg_class c2, pg_trigger t1'
+        + ' JOIN pg_proc p1 ON (t1.tgfoid=p1.oid), pg_trigger t2'
+        + ' JOIN pg_proc p2 ON (t2.tgfoid=p2.oid)';
     end;
 
-    SQL := Select + 'c1.relname as prelname, c2.relname as frelname, '
-      + 't1.tgconstrname, a.attnum as keyseq, ic.relname as fkeyname, '
-      + 't1.tgdeferrable, t1.tginitdeferred, t1.tgnargs,t1.tgargs, '
-      + 'p1.proname as updaterule, p2.proname as deleterule ' + From
-      + 'WHERE (t1.tgrelid=c1.oid AND t1.tgisconstraint'
+    SQL := Select + ' c1.relname as prelname, c2.relname as frelname,'
+      + ' t1.tgconstrname, a.attnum as keyseq, ic.relname as fkeyname,'
+      + ' t1.tgdeferrable, t1.tginitdeferred, t1.tgnargs,t1.tgargs,'
+      + ' p1.proname as updaterule, p2.proname as deleterule'
+      + From
+      + ' WHERE (t1.tgrelid=c1.oid AND t1.tgisconstraint'
       + ' AND t1.tgconstrrelid=c2.oid AND p1.proname'
-      + ' LIKE ''RI\\_FKey\\_%\\_upd'') AND (t2.tgrelid=c1.oid '
-      + 'AND t2.tgisconstraint AND t2.tgconstrrelid=c2.oid '
-      + 'AND p2.proname LIKE ''RI\\_FKey\\_%\\_del'') AND i.indisprimary '
+      + ' LIKE ' + EscapeString('RI\_FKey\_%\_upd')
+      + ') AND (t2.tgrelid=c1.oid'
+      + ' AND t2.tgisconstraint AND t2.tgconstrrelid=c2.oid '
+      + ' AND p2.proname LIKE ' + EscapeString('RI\_FKey\_%\_del')
+      + ') AND i.indisprimary'
       + Where;
     if PrimaryTable <> '' then
-      SQL := SQL + 'AND c1.relname=''' + EscapeQuotes(PrimaryTable) + ''' ';
+      SQL := SQL + ' AND c1.relname=' + EscapeString(PrimaryTable);
     if ForeignTable <> '' then
-      SQL := SQL + 'AND c2.relname=''' + escapeQuotes(ForeignTable) + ''' ';
-    SQL := SQL + 'ORDER BY ';
+      SQL := SQL + ' AND c2.relname=' + EscapeString(ForeignTable);
+    SQL := SQL + ' ORDER BY ';
 
     if PrimaryTable <> '' then
     begin
@@ -2549,7 +2572,7 @@ begin
           Targs := GetString(11);
 
           //<unnamed>\000ww\000vv\000UNSPECIFIED\000m\000a\000n\000b\000
-          //for Posthresql 7.3
+          //for Postgresql 7.3
           //$1\000ww\000vv\000UNSPECIFIED\000m\000a\000n\000b\000
           //$2\000ww\000vv\000UNSPECIFIED\000m\000a\000n\000b\000
 
@@ -2740,36 +2763,37 @@ begin
   begin
     if HaveMinimumServerVersion(7, 3) then
     begin
-      Select := 'SELECT NULL AS TABLE_CAT, n.nspname AS TABLE_SCHEM, ';
+      Select := 'SELECT NULL AS TABLE_CAT, n.nspname AS TABLE_SCHEM,';
       From := ' FROM pg_catalog.pg_namespace n, pg_catalog.pg_class ct,'
         + ' pg_catalog.pg_class ci, pg_catalog.pg_index i,'
-        + ' pg_catalog.pg_attribute a, pg_catalog.pg_am am ';
-      Where := ' AND n.oid = ct.relnamespace ';
+        + ' pg_catalog.pg_attribute a, pg_catalog.pg_am am';
+      Where := ' AND n.oid = ct.relnamespace';
       if Schema <> '' then
-        Where := Where + ' AND n.nspname = ''' + EscapeQuotes(Schema) + ''' ';
+        Where := Where + ' AND n.nspname = ' + EscapeString(Schema);
     end
     else
     begin
-      Select := 'SELECT NULL AS TABLE_CAT, NULL AS TABLE_SCHEM, ';
+      Select := 'SELECT NULL AS TABLE_CAT, NULL AS TABLE_SCHEM,';
       From := ' FROM pg_class ct, pg_class ci, pg_index i, pg_attribute a,'
-        + ' pg_am am ';
+        + ' pg_am am';
     end;
 
     SQL := Select + ' ct.relname AS TABLE_NAME, NOT i.indisunique'
-      + ' AS NON_UNIQUE, NULL AS INDEX_QUALIFIER, ci.relname AS INDEX_NAME, '
+      + ' AS NON_UNIQUE, NULL AS INDEX_QUALIFIER, ci.relname AS INDEX_NAME,'
       + ' CASE i.indisclustered WHEN true THEN ' + IntToStr(Ord(tiClustered))
       + ' ELSE CASE am.amname WHEN ''hash'' THEN ' + IntToStr(Ord(tiHashed))
-      + ' ELSE ' + IntToStr(Ord(tiOther)) + ' END END AS TYPE, '
-      + ' a.attnum AS ORDINAL_POSITION, a.attname AS COLUMN_NAME, '
+      + ' ELSE ' + IntToStr(Ord(tiOther)) + ' END END AS TYPE,'
+      + ' a.attnum AS ORDINAL_POSITION, a.attname AS COLUMN_NAME,'
       + ' NULL AS ASC_OR_DESC, ci.reltuples AS CARDINALITY,'
-      + ' ci.relpages AS PAGES, NULL AS FILTER_CONDITION ' + From
+      + ' ci.relpages AS PAGES, NULL AS FILTER_CONDITION'
+      + From
       + ' WHERE ct.oid=i.indrelid AND ci.oid=i.indexrelid'
-      + ' AND a.attrelid=ci.oid AND ci.relam=am.oid ' + Where
-      + ' AND ct.relname = ''' + EscapeQuotes(Table) + ''' ';
+      + ' AND a.attrelid=ci.oid AND ci.relam=am.oid' + Where
+      + ' AND ct.relname = ' + EscapeString(Table);
 
     if Unique then
-      SQL := SQL + ' AND i.indisunique ';
-    SQL := SQL + ' ORDER BY NON_UNIQUE, TYPE, INDEX_NAME, ORDINAL_POSITION ';
+      SQL := SQL + ' AND i.indisunique';
+    SQL := SQL + ' ORDER BY NON_UNIQUE, TYPE, INDEX_NAME, ORDINAL_POSITION';
 
     Result := CopyToVirtualResultSet(
       GetConnection.CreateStatement.ExecuteQuery(SQL),

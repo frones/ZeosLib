@@ -70,13 +70,6 @@ uses
 function IsNumber(Value: TZSQLType): Boolean;
 
 {**
-  Remove qoutes from the string
-  @param  the quoted string
-  @result the string without qoutes
-}
-function EscapeQuotes(const Value: string): string;
-
-{**
    Return ZSQLType from PostgreSQL type name
    @param Connection a connection to PostgreSQL
    @param The TypeName is PostgreSQL type name
@@ -342,30 +335,6 @@ function IsNumber(Value: TZSQLType): Boolean;
 begin
   Result := Value in [stByte, stShort, stInteger, stLong,
     stFloat, stDouble, stBigDecimal];
-end;
-
-{**
-  Remove qoutes from the string
-  @param  the quoted string
-  @result the string without qoutes
-}
-function EscapeQuotes(const Value: string): string;
-var
-  I: Integer;
-  PrevChar, PrevPrevChar: string;
-begin
-  Result := '';
-  PrevChar := ' ';
-  PrevPrevChar := ' ';
-  for I := 1 to Length(Value) do
-  begin
-    Result := Result + Value[I];
-    if (Value[I] = '''') and ((PrevChar <> '\') or
-       (PrevChar = '\') or (PrevPrevChar = '\')) then
-      Result := Result + '''';
-    PrevPrevChar := PrevChar;
-    PrevChar := Value[I];
-  end;
 end;
 
 {**

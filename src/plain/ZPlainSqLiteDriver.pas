@@ -218,6 +218,7 @@ type
     function OpenEncrypted(const zFilename: PChar; const pKey: PChar;
       nKey: Integer; var pErrcode: Integer; var pzErrmsg: PChar): Psqlite;
     function ReKey(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
+    function Key(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
   end;
 
   {** Implements a driver for SQLite 2.8 }
@@ -294,6 +295,7 @@ type
     function OpenEncrypted(const zFilename: PChar; const pKey: PChar;
       nKey: Integer; var pErrcode: Integer; var pzErrmsg: PChar): Psqlite;
     function ReKey(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
+    function Key(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
   end;
 
   {** Implements a driver for SQLite 3 }
@@ -370,6 +372,7 @@ type
     function OpenEncrypted(const zFilename: PChar; const pKey: PChar;
       nKey: Integer; var pErrcode: Integer; var pzErrmsg: PChar): Psqlite;
     function ReKey(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
+    function Key(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
   end;
 
 implementation
@@ -538,8 +541,14 @@ end;
 function TZSQLite28PlainDriver.OpenEncrypted(const zFilename, pKey: PChar;
   nKey: Integer; var pErrcode: Integer; var pzErrmsg: PChar): Psqlite;
 begin
-  Result := ZPlainSqLite28.sqlite_open_encrypted(zFilename, pKey, nKey,
-    pErrcode, pzErrmsg);
+  if @ZPlainSqLite28.sqlite_open_encrypted = nil then
+  begin
+    Result := nil;
+  end
+  else begin
+    Result := ZPlainSqLite28.sqlite_open_encrypted(zFilename, pKey, nKey,
+      pErrcode, pzErrmsg);
+  end;
 end;
 
 procedure TZSQLite28PlainDriver.ProgressHandler(db: Psqlite; p1: Integer;
@@ -551,7 +560,25 @@ end;
 function TZSQLite28PlainDriver.ReKey(db: Psqlite; const pKey: Pointer;
   nKey: Integer): Integer;
 begin
-  Result := ZPlainSqLite28.sqlite_rekey(db, pKey, nKey);
+  if @ZPlainSqLite28.sqlite_rekey = nil then
+  begin
+    Result := SQLITE_OK;
+  end
+  else begin
+    Result := ZPlainSqLite28.sqlite_rekey(db, pKey, nKey);
+  end;
+end;
+
+function TZSQLite28PlainDriver.Key(db: Psqlite; const pKey: Pointer;
+  nKey: Integer): Integer;
+begin
+  if @ZPlainSqLite28.sqlite_key = nil then
+  begin
+    Result := SQLITE_OK;
+  end
+  else begin
+    Result := ZPlainSqLite28.sqlite_key(db, pKey, nKey);
+  end;
 end;
 
 function TZSQLite28PlainDriver.Reset(vm: Psqlite_vm;
@@ -833,7 +860,25 @@ end;
 function TZSQLite3PlainDriver.ReKey(db: Psqlite; const pKey: Pointer;
   nKey: Integer): Integer;
 begin
-  Result := SQLITE_MISUSE;
+  if @ZPlainSqLite3.sqlite_rekey = nil then
+  begin
+    Result := SQLITE_OK;
+  end
+  else begin
+    Result := ZPlainSqLite3.sqlite_rekey(db, pKey, nKey);
+  end;
+end;
+
+function TZSQLite3PlainDriver.Key(db: Psqlite; const pKey: Pointer;
+  nKey: Integer): Integer;
+begin
+  if @ZPlainSqLite3.sqlite_key = nil then
+  begin
+    Result := SQLITE_OK;
+  end
+  else begin
+    Result := ZPlainSqLite3.sqlite_key(db, pKey, nKey);
+  end;
 end;
 
 function TZSQLite3PlainDriver.Reset(vm: Psqlite_vm;

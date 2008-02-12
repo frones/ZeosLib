@@ -318,24 +318,24 @@
     <property name="build.dir" value="${package.dir}\build"/>
 
     <antcall target="fpc_compile_project" inheritAll="true">
-      <param name="project.name" value="Core"/>
+      <param name="project.name" value="core"/>
       <param name="extra_unit_path" value=""/>
     </antcall>
     <antcall target="fpc_compile_project" inheritAll="true">
-      <param name="project.name" value="ParseSql"/>
+      <param name="project.name" value="parsesql"/>
       <param name="extra_unit_path" value=""/>
     </antcall>
     <antcall target="fpc_compile_project" inheritAll="true">
-      <param name="project.name" value="Plain"/>
+      <param name="project.name" value="plain"/>
       <param name="extra_unit_path" value=""/>
     </antcall>
     <antcall target="fpc_compile_project" inheritAll="true">
-      <param name="project.name" value="Dbc"/>
+      <param name="project.name" value="dbc"/>
       <param name="extra_unit_path" value=""/>
     </antcall>
     <antcall target="fpc_compile_project" inheritAll="true">
-      <param name="project.name" value="Component"/>
-      <param name="extra_unit_path" value=" -Fu${lazarus.path}\lcl\units\i386-win32\ -Fu${lazarus.path}\lcl\units\i386-win32\win32\ -Fu${lazarus.path}\packager\units\i386-win32\ -Fu${lazarus.path}\ideintf\units\i386-win32\"/>
+      <param name="project.name" value="component"/>
+      <param name="extra_unit_path" value=" -Fu${lazarus.path}\lcl\units\${lazarus.processor}-${lazarus.os}\ -Fu${lazarus.path}\lcl\units\${lazarus.processor}-${lazarus.os}\${lazarus.os}\ -Fu${lazarus.path}\packager\units\${lazarus.processor}-${lazarus.os}\ -Fu${lazarus.path}\ideintf\units\${lazarus.processor}-${lazarus.os}\"/>
     </antcall>
   </target>
   
@@ -400,7 +400,7 @@
       <arg value="-B"/>
       <arg value="-FUbuild\"/>
 
-      <arg value="Z${project.name}.pas"/>
+      <arg value="z${project.name}.pas"/>
     </exec>
   </target>
 

@@ -1,7 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{           Test Suite for Database Components            }
+{            Test Case for Connection Components          }
 {                                                         }
 {*********************************************************}
 
@@ -49,41 +49,86 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-program ZTestComponentAll;
+unit ZTestConnection;
 
-{$IFNDEF TESTGUI}
-{$APPTYPE CONSOLE}
-{$ENDIF}
-
-
-{$I ..\..\test\component\ZComponent.inc}
+interface
 
 uses
-  TestFrameWork,
-{$IFDEF TESTGUI}
-  GUITestRunner,
-{$ELSE}
-  TextTestRunner,
-{$ENDIF}
-  ZTestConfig,
-  ZSqlTestCase,
-  ZTestSqlStrings in '..\..\test\component\ZTestSqlStrings.pas',
-  ZTestSqlProcessor in '..\..\test\component\ZTestSqlProcessor.pas',
-  ZTestStoredProcedure in '..\..\test\component\ZTestStoredProcedure.pas',
-  ZTestConnection in '..\..\test\component\ZTestConnection.pas',
-  ZTestExecuteSql in '..\..\test\component\ZTestExecuteSql.pas',
-  ZTestSqlTypes in '..\..\test\component\ZTestSqlTypes.pas',
-  ZTestDataSetGeneric in '..\..\test\component\ZTestDataSetGeneric.pas',
-  ZTestData in '..\..\test\component\ZTestData.pas'{,
-  ZTestMidas in '..\..\test\component\ZTestMidas.pas'} {ZRemoteDM: TRemoteDataModule};
+  TestFramework, Db, ZSqlStrings, SysUtils, ZConnection, ZTestDefinitions;
 
+type
+
+  {** Implements a test case for class TZReadOnlyQuery. }
+  TZTestConnectionCase = class(TZComponentPortableSQLTestCase)
+  private
+    Connection: TZConnection;
+  protected
+    procedure SetUp; override;
+    procedure TearDown; override;
+  published
+    procedure TestExecuteDirect;
+    procedure TestExecuteDirect2;
+  end;
+
+implementation
+
+uses Classes, ZDbcUtils, ZTestConsts, ZDbcIntfs;
+
+{ TZTestExecSQLCase }
+
+{**
+  Prepares initial data before each test.
+}
+procedure TZTestConnectionCase.SetUp;
 begin
-  TestGroup := COMPONENT_TEST_GROUP;
-  RebuildTestDatabases;
-{$IFDEF TESTGUI}
-  GUITestRunner.RunRegisteredTests;
-{$ELSE}
-  TextTestRunner.RunRegisteredTests;
-{$ENDIF}
-end.
+  Connection := CreateDatasetConnection;
+  Connection.Connect;
+end;
 
+{**
+  Removes data after each test.
+}
+procedure TZTestConnectionCase.TearDown;
+begin
+  Connection.Disconnect;
+  Connection.Free;
+end;
+
+{**
+  Runs a test for ExecuteDirect.
+}
+procedure TZTestConnectionCase.TestExecuteDirect;
+var
+  l_bool : boolean;
+begin
+  l_bool := Connection.ExecuteDirect('insert into department (dep_id,dep_name) Values (89,"Dept89")');
+  CheckEquals(true, l_bool);
+  l_bool := Connection.ExecuteDirect('delete from department where dep_id = 89');
+  CheckEquals(true, l_bool);
+end;
+
+{**
+  Runs a test for ExecuteUpdateDirect.
+}
+procedure TZTestConnectionCase.TestExecuteDirect2;
+var
+  l_int  : integer;
+  l_bool : boolean;
+begin
+  l_bool := Connection.ExecuteDirect('insert into department (dep_id,dep_name) Values (87,"Dept87")',l_int);
+  CheckEquals(true, l_bool);
+  CheckEquals(1, l_int);
+  l_bool := Connection.ExecuteDirect('insert into department (dep_id,dep_name) Values (88,"Dept88")',l_int);
+  CheckEquals(true, l_bool);
+  CheckEquals(1, l_int);
+  l_bool := Connection.ExecuteDirect('delete from department where dep_id between 87 and 88',l_int);
+  CheckEquals(true, l_bool);
+  CheckEquals(2, l_int);
+  l_bool := Connection.ExecuteDirect('delete from department where dep_id between 87 and 88',l_int);
+  CheckEquals(true, l_bool);
+  CheckEquals(0, l_int);
+end;
+
+initialization
+  TestFramework.RegisterTest(TZTestConnectionCase.Suite);
+end.

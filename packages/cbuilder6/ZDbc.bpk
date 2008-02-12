@@ -44,11 +44,11 @@
     <DEBUGLIBPATH value="$(BCB)\lib\debug"/>
     <RELEASELIBPATH value="$(BCB)\lib\release"/>
     <LINKER value="ilink32"/>
-    <USERDEFINES value="_DEBUG"/>
-    <SYSDEFINES value="_RTLDLL;NO_STRICT;USEPACKAGES"/>
+    <USERDEFINES value=""/>
+    <SYSDEFINES value="NO_STRICT;USEPACKAGES"/>
     <MAINSOURCE value="ZDbc.cpp"/>
     <INCLUDEPATH value="..\..\src\dbc;$(BCB)\include;$(BCB)\include\vcl;build"/>
-    <LIBPATH value="$(BCB)\Projects\Lib;..\..\src\dbc;$(BCB)\lib\obj;$(BCB)\lib;build"/>
+    <LIBPATH value="$(BCB)\Projects\Lib;..\..\src\dbc;$(BCB)\lib\obj;$(BCB)\lib;build;$(RELEASELIBPATH)"/>
     <WARNINGS value="-w-par"/>
     <OTHERFILES value=""/>
   </MACROS>
@@ -63,7 +63,7 @@
     <OTHERFILES value=""/>
   </OPTIONS>
   <LINKER>
-    <ALLOBJ value="c0pkg32.obj $(PACKAGES) Memmgr.Lib sysinit.obj $(OBJFILES)"/>
+    <ALLOBJ value="c0pkg32.obj $(PACKAGES) sysinit.obj $(OBJFILES)"/>
     <ALLRES value="$(RESFILES)"/>
     <ALLLIB value="$(LIBFILES) $(LIBRARIES) import32.lib cp32mti.lib"/>
     <OTHERFILES value=""/>

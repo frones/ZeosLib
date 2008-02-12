@@ -19,17 +19,17 @@
     <SPARELIBS value="rtl.lib"/>
     <PACKAGES value="vcl.bpi rtl.bpi bcbie.bpi"/>
     <PATHCPP value=".;"/>
-    <PATHPAS value=".;..\..\src\core;..\..\src\core;..\..\src\core;..\..\src\core;..\..\src\core;..\..\src\core;..\..\src\core;..\..\src\core;..\..\src\core;..\..\src\core;..\..\src\core;..\..\src\core;..\..\src\core"/>
+    <PATHPAS value=".;..\..\src\core"/>
     <PATHRC value=".;"/>
     <PATHASM value=".;"/>
     <DEBUGLIBPATH value="$(BCB)\lib\debug"/>
     <RELEASELIBPATH value="$(BCB)\lib\release"/>
     <LINKER value="ilink32"/>
-    <USERDEFINES value="_DEBUG"/>
-    <SYSDEFINES value="_RTLDLL;NO_STRICT;_VIS_NOLIB;USEPACKAGES"/>
+    <USERDEFINES value=""/>
+    <SYSDEFINES value="NO_STRICT;_VIS_NOLIB;USEPACKAGES"/>
     <MAINSOURCE value="ZCore.cpp"/>
     <INCLUDEPATH value="..\..\src\core;$(BCB)\include;$(BCB)\include\vcl;build"/>
-    <LIBPATH value="build;$(BCB)\Projects\Lib;..\..\src\core;$(BCB)\lib\obj;$(BCB)\lib"/>
+    <LIBPATH value="build;$(BCB)\Projects\Lib;..\..\src\core;$(BCB)\lib\obj;$(BCB)\lib;$(RELEASELIBPATH)"/>
     <WARNINGS value="-w-par -w-8027 -w-8026"/>
     <WARNOPTSTR value=""/>
     <OTHERFILES value=""/>
@@ -45,7 +45,7 @@
     <OTHERFILES value=""/>
   </OPTIONS>
   <LINKER>
-    <ALLOBJ value="c0pkg32.obj $(PACKAGES) Memmgr.Lib sysinit.obj $(OBJFILES)"/>
+    <ALLOBJ value="c0pkg32.obj $(PACKAGES) sysinit.obj $(OBJFILES)"/>
     <ALLRES value="$(RESFILES)"/>
     <ALLLIB value="$(LIBFILES) $(LIBRARIES) import32.lib cp32mti.lib"/>
     <OTHERFILES value=""/>

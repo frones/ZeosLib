@@ -15,3 +15,7 @@
 20070731 : 'Access Violation' error on ZQuery.Open on table that has columns with non-standard type - by shader - Mantis Bug 50
 
 20071016 : ZTestPlainPerformance.pas : QueryHandle is declared as PZMySQLResult instead of PZPostgreSQLResult. - by fx - Mantis Bug 68
+
+20071222 : Wrong behaviour for EscapeQuotes - by pgimeno - Mantis Bug 83
+
+20080116 : PostgreSql 8.1 Backslash problem - by btrewern - Mantis Bug 87

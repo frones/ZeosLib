@@ -242,6 +242,8 @@ type
     var pzErrmsg: PChar): Psqlite; cdecl;
   Tsqlite_rekey = function(db: Psqlite; const pKey: Pointer;
     nKey: Integer): Integer; cdecl;
+  Tsqlite_key = function(db: Psqlite; const pKey: Pointer;
+    nKey: Integer): Integer; cdecl;
 
 var
 
@@ -284,6 +286,7 @@ var
   sqlite_commit_hook: Tsqlite_commit_hook;
   sqlite_open_encrypted: Tsqlite_open_encrypted;
   sqlite_rekey: Tsqlite_rekey;
+  sqlite_key: Tsqlite_key;
 
 var
   LibraryLoader: TZNativeLibraryLoader;
@@ -344,6 +347,7 @@ begin
   @sqlite_commit_hook            := GetAddress('sqlite_commit_hook');
   @sqlite_open_encrypted         := GetAddress('sqlite_open_encrypted');
   @sqlite_rekey                  := GetAddress('sqlite_rekey');
+  @sqlite_key                    := GetAddress('sqlite_key');
 end;
 
 initialization

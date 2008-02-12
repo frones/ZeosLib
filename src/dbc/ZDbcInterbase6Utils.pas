@@ -2431,11 +2431,18 @@ end;
 }
 function TZResultSQLDA.DecodeString(const Code: Smallint;
   const Index: Word): String;
+var l : integer;
 begin
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   case Code of
-    SQL_TEXT    : Result := TrimRight(BufferToStr(sqldata, sqllen));
+    SQL_TEXT    : begin
+                    Result := BufferToStr(sqldata, sqllen);
+                    // Trim only spaces. TrimRight also removes other characters)
+                    l := sqllen;
+                    while (l>0) and (Result[l] = ' ') do dec(l);
+                    if l < sqllen then result := copy(result,1,l);
+                  end;
     SQL_VARYING : SetString(Result, PISC_VARYING(sqldata).str,
                     PISC_VARYING(sqldata).strlen);
   end;
@@ -2444,6 +2451,17 @@ begin
 {$ENDIF}
 end;
 
+{**
+   Decode Interbase field value to pascal string
+   @param Code the Interbase data type
+   @param Index field index
+   @param Str the field string
+}
+procedure TZResultSQLDA.DecodeString2(const Code: Smallint; const Index: Word;
+  out Str: string);
+begin
+  Str := DecodeString(Code,Index);
+end;
 
 {**
    Constructs this object and assignes the main properties.
@@ -2462,27 +2480,6 @@ begin
   FXSQLDA.sqld := 0;
 
   FXSQLDA.version := SQLDA_VERSION1;
-end;
-
-{**
-   Decode Interbase field value to pascal string
-   @param Code the Interbase data type
-   @param Index field index
-   @param the field string
-}
-procedure TZResultSQLDA.DecodeString2(const Code: Smallint; const Index: Word;
-  out Str: string);
-begin
-  {$R-}
-  with FXSQLDA.sqlvar[Index] do
-  case Code of
-    SQL_TEXT    : Str := TrimRight(BufferToStr(sqldata, sqllen));
-    SQL_VARYING : SetString(Str, PISC_VARYING(sqldata).str,
-      PISC_VARYING(sqldata).strlen);
-  end;
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
 end;
 
 {**

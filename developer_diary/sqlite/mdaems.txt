@@ -5,3 +5,5 @@
 20071020 : Memory leak, part II - by Spongebob/mdaems - see http://zeos.firmos.at/viewtopic.php?t=1408 - Mantis Bug 60
 
 20071121 : FastMM has detected an error during a free block scan operation. - by bernhard geyer - Mantis Bug 75
+
+20080130 : Added support for encrypted sqlite databases - by ehoffman - see http://zeos.firmos.at/viewtopic.php?t=1674

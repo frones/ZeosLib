@@ -24,3 +24,6 @@
 
 20071205 : Metadata (mdTables) is missing remarks data - by Roaster - See http://zeos.firmos.at/viewtopic.php?t=1567
            Typo in log message after create database - by Roaster - Mantis Bug 79
+
+20080119 : Special characters at the end of a Char column were trimmed away by TrimRight function - Mantis Bug 86
+           Even if trimming Char values seems wrong, this behaviour isn't changed now as existing programs may depend on it.
