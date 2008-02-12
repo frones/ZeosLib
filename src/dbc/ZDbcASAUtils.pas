@@ -419,7 +419,7 @@ var
 begin
   if Assigned( FSQLDA) then
   begin
-    for i := 0 to FSQLDA.sqld-1 do
+    for i := 0 to FSQLDA.sqn-1 do
     begin
       if Assigned( FSQLDA.sqlVar[i].sqlData) then
         FreeMem( FSQLDA.sqlVar[i].sqlData);
