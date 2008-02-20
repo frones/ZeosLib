@@ -2020,12 +2020,46 @@ end;
   Performs an internal post updates.
 }
 procedure TZAbstractRODataset.InternalPost;
+  Procedure Checkrequired;
+
+  Var I : longint;
+    columnindex : integer;
+
+  begin
+    For I:=0 to Fields.Count-1 do
+      With Fields[i] do
+        Case State of
+         dsEdit:
+          if Required and not ReadOnly and (FieldKind=fkData) and IsNull then
+            raise EZDatabaseError.Create(Format(SNeedField,[DisplayName]));
+         dsInsert:
+          if Required and not ReadOnly and (FieldKind=fkData) and IsNull then
+            begin
+           // allow autoincrement and defaulted fields to be null;
+              columnindex := DefineFieldIndex(FieldsLookupTable,Fields[i]);
+              if not Resultset.GetMetadata.HasDefaultValue(columnIndex) and
+                 not Resultset.GetMetadata.IsAutoIncrement(columnIndex) then
+                raise EZDatabaseError.Create(Format(SNeedField,[DisplayName]));
+            end;
+        End;
+  end;
+
 begin
-{$IFNDEF VER130BELOW}
-  inherited;
-{$ENDIF}
   if not (Self is TZAbstractDataset) then
     RaiseReadOnlyError;
+
+{$IFNDEF VER130BELOW}
+   // Delphi 5 checks required fields (= not nullable) during post.
+   // For other compilers we have a more elaborate check here
+   // allowing AutoIncrement fields and defaulted fields only to be null at insert.
+   // We override standard Delphi and Fpc code.
+//  inherited;
+  Checkrequired;
+{$ELSE}
+  {$IFDEF FPC}
+    Checkrequired;
+  {$ENDIF}
+{$ENDIF}
 end;
 
 {**

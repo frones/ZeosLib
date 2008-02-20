@@ -202,6 +202,7 @@ resourcestring
   SFieldTypeMismatch = 'Tipo inválido para o campo ''%s'', esperado: %s atual: %s';
   SFieldSizeMismatch = 'Tamanho Inválido para o campo ''%s'', esperado: %d atual: %d';
   {$ENDIF}
+  SNeedField               = 'Translate: Field %s is required, but not supplied.';
 
   SFailedtoInitPrepStmt   = 'A declaração preparada falhou ao inicializar'; 
   SFailedtoPrepareStmt    = 'A declaração falhou durante o processo de preparo'; 
@@ -360,6 +361,7 @@ resourcestring
   SFieldTypeMismatch = 'Type mismatch voor veld ''%s'', verwacht: %s actueel: %s';
   SFieldSizeMismatch = 'Size mismatch voor veld ''%s'', verwacht: %d actueel: %d';
   {$ENDIF}
+  SNeedField               = 'Veld %s is verplicht, maar niet ingevuld.';
 
   SFailedtoInitPrepStmt   = 'Initialisatie van Prepared statement mislukt';
   SFailedtoPrepareStmt    = 'Statement mislukt tijdens prepare';
@@ -520,7 +522,7 @@ resourcestring
   SFieldTypeMismatch = 'Der Typ für Feld ''%s'' stimmt nicht. Erwartet wird %s der Typ ist aber momentan %s';
   SFieldSizeMismatch = 'Die Größe des Feldes ''%s'' stimmt nicht. Erwartet wird  %d die Größe ist aber momentan %d';
   {$ENDIF}
-  // <- ms, 03/05/2005
+  SNeedField               = 'Translate: Field %s is required, but not supplied.';
 
   SFailedtoInitPrepStmt   = 'Translate: Prepared statement failed to initialize';
   SFailedtoPrepareStmt    = 'Translate: Statement failed during prepare process';
@@ -680,6 +682,7 @@ resourcestring
   SFieldTypeMismatch = 'El Tipo de dato no coincide para el campo ''%s'', se espera: %s, actual: %s';
   SFieldSizeMismatch = 'El Tamaño de dato no coincide para el campo ''%s'', se espera: %d, actual: %d';
   {$ENDIF}
+  SNeedField               = 'Translate: Field %s is required, but not supplied.';
 
   SFailedtoInitPrepStmt   = 'Translate: Prepared statement failed to initialize';
   SFailedtoPrepareStmt    = 'Translate: Statement failed during prepare process';
@@ -840,6 +843,7 @@ resourcestring
   SFieldTypeMismatch = 'Tip nepotrivit pentru câmpul ''%s'', aºteptat: %s actual: %s';
   SFieldSizeMismatch = 'Dimensiune nepotrivitã pentru câmpul  ''%s'', aºteptat: %d actual: %d';
   {$ENDIF}
+  SNeedField               = 'Translate: Field %s is required, but not supplied.';
 
   SFailedtoInitPrepStmt   = 'Translate: Prepared statement failed to initialize';
   SFailedtoPrepareStmt    = 'Translate: Statement failed during prepare process';
@@ -998,6 +1002,7 @@ resourcestring
   SFieldTypeMismatch = 'Tipe tidak sesuai pada field ''%s'', seharusnya: %s aktual: %s';
   SFieldSizeMismatch = 'Ukuran tidak sesuai pada field ''%s'', seharusnya: %d aktual: %d';
   {$ENDIF}
+  SNeedField               = 'Translate: Field %s is required, but not supplied.';
 
   SFailedtoInitPrepStmt   = 'Gagal inisialisasi Prepared statement';
   SFailedtoPrepareStmt    = 'Statemen gagal sewaktu proses persiapan';
@@ -1158,6 +1163,7 @@ resourcestring
   SFieldTypeMismatch                       = 'Íåñîâïàäåíèå òèïà äëÿ ïîëÿ ''%s'', îæèäàåòñÿ %s íàéäåí: %s';
   SFieldSizeMismatch                       = 'Ðàçìåð ïîëÿ ''%s'' íå ñîâïàäàåò, îæèäàåòñÿ: %d íàéäåí: %d';
 {$ENDIF}
+  SNeedField               = 'Translate: Field %s is required, but not supplied.';
 
   SFailedtoInitPrepStmt                    = 'Íåóäàëîñü èíèöèàëèçèðîâàòü ïîäãîòîâëåííîå âûðàæåíèå';
   SFailedtoPrepareStmt                     = 'Îøèáêà âûïîëíåíèÿ âûðàæåíèÿ â ïðîöåññå ïîäãîòîâêè';
@@ -1316,6 +1322,7 @@ resourcestring
   SFieldTypeMismatch = 'Type mismatch for field ''%s'', expecting: %s actual: %s';
   SFieldSizeMismatch = 'Size mismatch for field ''%s'', expecting: %d actual: %d';
   {$ENDIF}
+  SNeedField               = 'Field %s is required, but not supplied.';
 
   SFailedtoInitPrepStmt   = 'Prepared statement failed to initialize';
   SFailedtoPrepareStmt    = 'Statement failed during prepare process';
