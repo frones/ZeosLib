@@ -162,9 +162,18 @@ end;
 function TZMySQLResultSetMetadata.IsNullable(Column: Integer):
   TZColumnNullableType;
 begin
+  {$IFNDEF FPC}
+   {$IFDEF VER130BELOW}
+   // Delphi 5 checks required fields (= not nullable) during post, where we can't avoid it. So we
+   // have to allow null for autoincrement fields, even for updates.
+   // For other compilers We have a more elaborate check in TZAbstractRODataset.Internalpost
+   // allowing AutoIncrement fields and defaulted fields only to be null at insert
   if IsAutoIncrement(Column) then
     Result := ntNullable
-  else Result := inherited IsNullable(Column);
+  else
+   {$ENDIF}
+  {$ENDIF}
+    Result := inherited IsNullable(Column);
 end;
 
 { TZMySQLResultSet }

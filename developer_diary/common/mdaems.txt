@@ -183,3 +183,5 @@
 20080119 : Added *.dproj files for test packages for D2007 - Mantis Bug 88
 
 20080121 : Added ZConnection.ExecuteDirect and ZConnection.ExecuteUpdateDirect functions - by mdaems/wahono - See http://zeos.firmos.at/viewtopic.php?t=1656
+
+20080220 : Corrected Null fields handling in combination with autoinc and default values - by mdaems - Mantis Bug 90 - See http://zeos.firmos.at/viewtopic.php?p=6540
