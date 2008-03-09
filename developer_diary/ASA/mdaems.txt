@@ -1,0 +1,1 @@
+20080310 : Invalid argument to time encode - by Stressman - See Mantis Bug 94
