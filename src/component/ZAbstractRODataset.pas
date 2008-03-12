@@ -404,6 +404,10 @@ type
     property BeforeRefresh;
     property AfterRefresh;
     {$ENDIF}
+    {$IFDEF FPC2_UP}
+    property BeforeRefresh;
+    property AfterRefresh;
+    {$ENDIF}
     property BeforeScroll;
     property AfterScroll;
     property OnCalcFields;

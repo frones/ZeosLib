@@ -187,3 +187,5 @@
 20080220 : Corrected Null fields handling in combination with autoinc and default values - by mdaems - Mantis Bug 90 - See http://zeos.firmos.at/viewtopic.php?p=6540
 
 20080226 : Added tablename quoting to TZTable component - by mdaems - Mantis Bug 97
+
+20080312 : Enabled BeforeRefresh and AfterRefresh Dataset properties for FPC2 - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=1749
