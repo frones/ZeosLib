@@ -27,3 +27,5 @@
 
 20080119 : Special characters at the end of a Char column were trimmed away by TrimRight function - Mantis Bug 86
            Even if trimming Char values seems wrong, this behaviour isn't changed now as existing programs may depend on it.
+
+20080220 : Metadata.GetColumns corrected - by Sandeep_c24 - See http://zeos.firmos.at/viewtopic.php?t=1682

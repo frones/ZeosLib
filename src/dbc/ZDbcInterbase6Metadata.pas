@@ -1586,6 +1586,7 @@ end;
   @return <code>ResultSet</code> - each row is a column description
   @see #getSearchStringEscape
 }
+
 function TZInterbase6DatabaseMetadata.GetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
@@ -1683,10 +1684,29 @@ begin
         Result.UpdateString(4, ColumnName);    //COLUMN_NAME
         Result.UpdateInt(5,
           Ord(ConvertInterbase6ToSqlType(TypeName, SubTypeName))); //DATA_TYPE
-        Result.UpdateString(6,
-          GetStringByName('RDB$TYPE_NAME'));    //TYPE_NAME
-        Result.UpdateInt(7,
-          GetIntByName('RDB$FIELD_LENGTH'));    //COLUMN_SIZE
+        // TYPE_NAME
+        case TypeName of
+          7  : Result.UpdateString(6, 'SMALLINT');
+          8  : Result.UpdateString(6, 'INTEGER' );
+          16 :
+            begin
+              if (SubTypeName = 0) then
+                Result.UpdateString(6, GetStringByName('RDB$TYPE_NAME'));
+              if (SubTypeName = 1) then
+                Result.UpdateString(6, 'NUMERIC');
+              if (SubTypeName = 2) then
+                Result.UpdateString(6, 'DECIMAL');
+            end;
+          37 : Result.UpdateString(6, 'VARCHAR'); // Instead of VARYING
+          else Result.UpdateString(6, GetStringByName('RDB$TYPE_NAME'));
+        end;
+        // COLUMN_SIZE.
+        case TypeName of
+          7, 8 : Result.UpdateInt(7, 0);
+          16   : Result.UpdateInt(7, GetIntByName('RDB$FIELD_PRECISION'));
+          else Result.UpdateInt(7, GetIntByName('RDB$FIELD_LENGTH'));
+        end;
+       
         Result.UpdateNull(8);    //BUFFER_LENGTH
 
         if FieldScale < 0 then
