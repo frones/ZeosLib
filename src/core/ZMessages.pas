@@ -218,6 +218,7 @@ resourcestring
   SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
 
   SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
+  SFieldReadOnly        = 'TRANSLATE: Readonly field can''t be assigned a value: %d';
 
 {$ELSE}
 
@@ -377,6 +378,7 @@ resourcestring
   SMustBeInBrowseMode = 'Bewerking is enkel toegestaan in dsBROWSE status';
 
   SUnKnownParamDataType = 'Param.DataType is onbekend';
+  SFieldReadOnly        = 'Readonly veld kan geen waarde toegewezen krijgen: %d';
 
 {$ELSE}
 // <- ms, 09/05/2005
@@ -538,6 +540,7 @@ resourcestring
   SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
 
   SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
+  SFieldReadOnly        = 'TRANSLATE: Readonly field can''t be assigned a value: %d';
 
 {$ELSE}
   // -> fduenas, 28/06/2005
@@ -698,6 +701,7 @@ resourcestring
   SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
 
   SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
+  SFieldReadOnly        = 'TRANSLATE: Readonly field can''t be assigned a value: %d';
 
 {$ELSE}
 
@@ -1018,6 +1022,7 @@ resourcestring
   SMustBeInBrowseMode = 'Operasi hanya diperbolehkan pada status dsBrowse';
 
   SUnKnownParamDataType = 'Param.DataType tidak dikenal';
+  SFieldReadOnly        = 'TRANSLATE: Readonly field can''t be assigned a value: %d';
 
   // <--- end added by tohenk
 
@@ -1339,6 +1344,7 @@ resourcestring
   SMustBeInBrowseMode = 'Operation is only allowed in dsBROWSE state';
 
   SUnKnownParamDataType = 'Unknown Param.DataType';
+  SFieldReadOnly        = 'Readonly field can''t be assigned a value: %d';
 
 {$ENDIF} // RUSSIAN
 
