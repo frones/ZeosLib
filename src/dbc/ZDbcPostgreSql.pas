@@ -408,6 +408,19 @@ begin
      [HostName, Port, Database, User, Password]);
   end;
 
+  If Info.Values['sslmode'] <> '' then
+  begin
+    // the client (>= 7.3) sets the ssl mode for this connection
+    // (possible values are: require, prefer, allow, disable)
+    Result := Result + ' sslmode='+Info.Values['sslmode'];
+  end
+  else if Info.Values['requiressl'] <> '' then
+  begin
+    // the client (< 7.3) sets the ssl encription for this connection
+    // (possible values are: 0,1)
+    Result := Result + ' requiressl='+Info.Values['requiressl'];
+  end;
+
   { Sets a connection timeout. }
   ConnectTimeout := StrToIntDef(Info.Values['timeout'], -1);
   if ConnectTimeout >= 0 then
