@@ -404,6 +404,10 @@ type
     property BeforeRefresh;
     property AfterRefresh;
     {$ENDIF}
+    {$IFDEF FPC2_UP}
+    property BeforeRefresh;
+    property AfterRefresh;
+    {$ENDIF}
     property BeforeScroll;
     property AfterScroll;
     property OnCalcFields;
@@ -1264,6 +1268,8 @@ begin
     raise EZDatabaseError.Create(SOperationIsNotAllowed4);
   if not RequestLive and (Field.FieldKind = fkData) then
     RaiseReadOnlyError;
+  if Field.ReadOnly and not (State = dsFilter) then
+    DatabaseErrorFmt(SFieldReadOnly, [Field.DisplayName]);
   if not (State in dsWriteModes) then
     DatabaseError(SNotEditing, Self);
 

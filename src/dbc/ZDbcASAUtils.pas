@@ -993,7 +993,7 @@ begin
                               PZASASQLDateTime( sqlData).Minute := min;
                               PZASASQLDateTime( sqlData).Second := sec;
                               PZASASQLDateTime( sqlData).MicroSecond :=
-                                msec * 10;
+                                msec * 1000;
                               PZASASQLDateTime( sqlData).Day_of_Week := 0;
                               PZASASQLDateTime( sqlData).Day_of_Year := 0;
                             end;
@@ -1540,7 +1540,7 @@ begin
                               EncodeTime( PZASASQLDateTime( sqlData).Hour,
                               PZASASQLDateTime( sqlData).Minute,
                               PZASASQLDateTime( sqlData).Second,
-                              PZASASQLDateTime( sqlData).MicroSecond div 10);
+                              PZASASQLDateTime( sqlData).MicroSecond div 1000);
                             end;
     else
       CreateException( Format( SErrorConvertionField,

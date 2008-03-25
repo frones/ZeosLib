@@ -465,7 +465,7 @@ end;
 }
 procedure TZASAConnection.Open;
 var
-  ConnectionString: string;
+  ConnectionString, Links: string;
 begin
   if not Closed then Exit;
 
@@ -505,6 +505,16 @@ begin
       else
         ConnectionString := ConnectionString + 'DBN="' + Database + '"; ';
     end;
+
+    Links := '';
+    if Info.Values['CommLinks'] <> ''
+      then Links := 'CommLinks=' + Info.Values['CommLinks'];
+    if Info.Values['LINKS'] <> ''
+      then Links := 'LINKS=' + Info.Values['LINKS'];
+    if (Links = '') and (Port <> 0)
+      then Links := 'LINKS=tcpip(PORT=' + IntToStr(Port) + ')';
+    if Links <> ''
+      then ConnectionString := ConnectionString + Links + '; ';
 
     FPlainDriver.db_string_connect( FHandle, PChar( ConnectionString));
     CheckASAError( FPlainDriver, FHandle, lcConnect);
