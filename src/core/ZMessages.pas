@@ -220,6 +220,7 @@ resourcestring
 
   SUnKnownParamDataType = 'Param.DataType й de tipo desconhecido';
   SFieldReadOnly        = 'O campo %d й somente leitura e nгo pфde receber dados';
+  SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.'; 
 
 {$ELSE}
 
@@ -380,6 +381,7 @@ resourcestring
 
   SUnKnownParamDataType = 'Param.DataType is onbekend';
   SFieldReadOnly        = 'Readonly veld kan geen waarde toegewezen krijgen: %d';
+  SInvalidUpdateCount     = '%d record(s) gewijzigd. Slechts 1 record had gewijzigd mogen zijn.'; 
 
 {$ELSE}
 // <- ms, 09/05/2005
@@ -541,7 +543,8 @@ resourcestring
   SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
 
   SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
-  SFieldReadOnly        = 'TRANSLATE: Readonly field can''t be assigned a value: %d';
+  SFieldReadOnly          = 'Translate : Readonly field can''t be assigned a value: %d';
+  SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.'; 
 
 {$ELSE}
   // -> fduenas, 28/06/2005
@@ -702,7 +705,8 @@ resourcestring
   SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
 
   SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
-  SFieldReadOnly        = 'TRANSLATE: Readonly field can''t be assigned a value: %d';
+  SFieldReadOnly          = 'Translate : Readonly field can''t be assigned a value: %d';
+  SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.'; 
 
 {$ELSE}
 
@@ -1023,9 +1027,9 @@ resourcestring
   SMustBeInBrowseMode = 'Operasi hanya diperbolehkan pada status dsBrowse';
 
   SUnKnownParamDataType = 'Param.DataType tidak dikenal';
-  SFieldReadOnly        = 'TRANSLATE: Readonly field can''t be assigned a value: %d';
-
   // <--- end added by tohenk
+  SFieldReadOnly          = 'Translate : Readonly field can''t be assigned a value: %d';
+  SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.'; 
 
   //--- begin added by ORMADA --------------------------------------------------
 {$ELSE}
@@ -1186,7 +1190,8 @@ resourcestring
 
   SUnKnownParamDataType                    = 'Неизвестный типа параметра (Param.DataType)';
   //--- end added by ORMADA ----------------------------------------------------
-
+  SFieldReadOnly          = 'Translate : Readonly field can''t be assigned a value: %d';
+  SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.'; 
 {$ELSE} // default: ENGLISH
 
   SSQLError1 = 'SQL Error: %s';
@@ -1346,6 +1351,7 @@ resourcestring
 
   SUnKnownParamDataType = 'Unknown Param.DataType';
   SFieldReadOnly        = 'Readonly field can''t be assigned a value: %d';
+  SInvalidUpdateCount     = '%d record(s) updated. Only one record should have been updated.'; 
 
 {$ENDIF} // RUSSIAN
 

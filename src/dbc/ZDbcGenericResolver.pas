@@ -742,9 +742,11 @@ end;
 procedure TZGenericCachedResolver.PostUpdates(Sender: IZCachedResultSet;
   UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
 var
-  Statement: IZPreparedStatement;
-  SQL: string;
-  SQLParams: TObjectList;
+  Statement            : IZPreparedStatement;
+  SQL                  : string;
+  SQLParams            : TObjectList;
+  lUpdateCount         : Integer;
+  lValidateUpdateCount : Boolean;
 begin
   if (UpdateType = utDeleted)
     and (OldRowAccessor.RowBuffer.UpdateType = utInserted) then
@@ -767,7 +769,13 @@ begin
     begin
       Statement := Connection.PrepareStatement(SQL);
       FillStatement(Statement, SQLParams, OldRowAccessor, NewRowAccessor);
-      Statement.ExecuteUpdatePrepared;
+      lValidateUpdateCount := StrToBoolEx(
+        Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']);
+
+      lUpdateCount := Statement.ExecuteUpdatePrepared;
+      if  (lValidateUpdateCount)
+      and (lUpdateCount <> 1   ) then
+        raise EZSQLException.Create(Format(SInvalidUpdateCount, [lUpdateCount]));
     end;
   finally
     SQLParams.Free;
