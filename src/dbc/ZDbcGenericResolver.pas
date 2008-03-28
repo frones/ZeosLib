@@ -769,8 +769,9 @@ begin
     begin
       Statement := Connection.PrepareStatement(SQL);
       FillStatement(Statement, SQLParams, OldRowAccessor, NewRowAccessor);
-      lValidateUpdateCount := StrToBoolEx(
-        Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']);
+      // if Property ValidateUpdateCount isn't set : assume it's true
+      lValidateUpdateCount := (Sender.GetStatement.GetParameters.IndexOfName('ValidateUpdateCount') = -1)
+                            or StrToBoolEx(Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']);
 
       lUpdateCount := Statement.ExecuteUpdatePrepared;
       if  (lValidateUpdateCount)
