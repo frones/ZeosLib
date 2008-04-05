@@ -126,15 +126,15 @@ resourcestring
   SWrongTypeForBlobParameter = 'Tipo errado para parâmetro Blob';
   SIncorrectConnectionURL = 'Conexão incorreta URL: %s';
   SUnsupportedProtocol = 'Protocolo não suportado: %s';
-  SUnsupportedByDriver    = 'Translate: Driver can not support this feature natively: [%s]';
+  SUnsupportedByDriver    = 'O Driver não suporta este recurso nativamente: [%s]';
 
   SConnectionIsNotOpened = 'Conexão ainda não está aberta.';
   SInvalidOpInAutoCommit = 'Operação inválida no modo AutoCommit.';
   SInvalidOpInNonAutoCommit = 'Operação inválida quando o modo AutoCommit é False.';
-  SInvalidOpPrepare = 'Prepare transaction somente é possível após comandar Starttransaction';
+  SInvalidOpPrepare = 'Prepare transaction somente é possível após comandar StartTransaction';
 
   SConnectionIsNotAssigned = 'Componente de conexão de banco de dados não atribuído';
-  SQueryIsEmpty = 'Consulta SQL está vazia';
+  SQueryIsEmpty = 'A consulta SQL está vazia';
   SCanNotExecuteMoreQueries = 'Não é possível executar mais que uma query';
   SOperationIsNotAllowed1 = 'Operação não permitida no modo FORWARD ONLY';
   SOperationIsNotAllowed2 = 'Operação não permitida no modo READ ONLY';
@@ -142,7 +142,7 @@ resourcestring
   SOperationIsNotAllowed4 = 'Operação não permitida para DataSet fechado';
   SNoMoreRecords = 'Nenhum registro no ResultSet';
   SCanNotOpenResultSet = 'Não foi possível abrir o ResultSet';
-  SCircularLink = 'Datasource possui um link circular';
+  SCircularLink = 'DataSource possui um link circular';
   SBookmarkWasNotFound = 'Bookmark não foi encontrado';
   SIncorrectSearchFieldsNumber = 'Número incorreto de valores de campos de procura';
   SInvalidOperationInTrans = 'Operação inválida no modo de transação explícita';
@@ -152,9 +152,9 @@ resourcestring
   SSelectedTransactionIsolation = 'O nível selecionado do isolamento da transação não é suportado';
   SDriverNotSupported = 'Driver não suportado %s';
   SPattern2Long = 'Padrão é muito longo';
-  SDriverNotCapableOutParameters = 'Driver não é capaz sem parâmetros';
+  SDriverNotCapableOutParameters = 'O Driver não suporta a passagem de parâmetros';
   SStatementIsNotAllowed = 'Declaração não permitida';
-  SStoredProcIsNotAllowed = 'A stored proc não é permitida';
+  SStoredProcIsNotAllowed = 'A stored procedure não é permitida';
   SCannotPerformOperation = 'Não é possível executar a operação num ResultSet fechado';
   SInvalidState = 'Estado inválido';
   SErrorConvertion = 'Erro de conversão';
@@ -162,7 +162,7 @@ resourcestring
   SUnsupportedParameterType = 'Tipo de parâmetro não suportado';
   SUnsupportedDataType = 'Tipo de dado não suportado';
   SErrorConvertionField = 'Erro de conversão para do campo "%s" para SQLType "%s"';
-  SBadOCI = 'Versão de OCI ruim [% s]. Isto requer 8.0.3 ou mais velho';
+  SBadOCI = 'Versão de OCI incompatível [% s]. Requer 8.0.3 ou mais antigo';
   SConnect2AsUser = 'Conecte "% s" como usuário "% s"';
   SUnknownError = 'Erro desconhecido';
   SFieldNotFound1 = 'Campo "%s" não foi encontrado';
@@ -170,7 +170,7 @@ resourcestring
 
   SLoginPromptFailure = 'Não foi possível encontrar o diálogo padrão de login. Por favor adicione DBLogDlg para a seção uses de seu arquivo principal.';
 
-  SPropertyQuery = 'A Query poderá demorar em bancos de dados volumosos!';
+  SPropertyQuery = 'A Query poderá demorar em bancos de dados grandes!';
   SPropertyTables = 'Você deveria limitar por Catalogo e/ou Esquema.';
   SPropertyColumns = 'Você deveria limitar por Catalogo, Esquema e/ou Tabela.';
   SPropertyProcedures = 'Você deveria limitar por Catalogo e/ou Esquema.';
@@ -196,28 +196,31 @@ resourcestring
   SDatabaseDialog = 'Abrir Banco de Dados existente';
 
   SUpdateSQLNoResult = 'SQL Update Refresh resultou num conjunto vazio';
-  SUpdateSQLRefreshStatementcount ='Usar somente 1 declaraçao SQL para Update Refresh';
+  SUpdateSQLRefreshStatementcount ='Usar somente 1 declaração SQL para Update Refresh';
   {$IFDEF FPC}
   SNotEditing = 'Dataset não está em modo de edição ou inserção';
   SFieldTypeMismatch = 'Tipo inválido para o campo ''%s'', esperado: %s atual: %s';
   SFieldSizeMismatch = 'Tamanho Inválido para o campo ''%s'', esperado: %d atual: %d';
   {$ENDIF}
-  SNeedField               = 'Translate: Field %s is required, but not supplied.';
+  SNeedField               = 'O campo %s é obrigatório, mas não foi preenchido.';
 
   SFailedtoInitPrepStmt   = 'A declaração preparada falhou ao inicializar'; 
   SFailedtoPrepareStmt    = 'A declaração falhou durante o processo de preparo'; 
-  SFailedToBindAllValues  = 'A Aplicação falhou na tradução de todos os valores'; 
-  SAttemptExecOnBadPrep   = 'Tentativa de executar uma declaração que não foi corretamente preparada'; 
-  SBindingFailure         = 'Falha ao traduzir o conjunto de parâmetros'; 
-  SPreparedStmtExecFailure = 'A declaração preparada falhou ao executar'; 
-  SBoundVarStrIndexMissing = 'Índice de texto "%s" da variável de limite não existe'; 
+  SFailedToBindAllValues  = 'A Aplicação falhou na tradução de todos os valores';
+  SAttemptExecOnBadPrep   = 'Tentativa de executar uma declaração que não foi corretamente preparada';
+  SBindingFailure         = 'Falha ao traduzir o conjunto de parâmetros';
+  SPreparedStmtExecFailure = 'A declaração preparada falhou ao executar';
+  SBoundVarStrIndexMissing = 'Índice de texto "%s" da variável de limite não existe';
   SBindVarOutOfRange      = 'Índice da variável de limite fora de alcance: %d';
+  SFailedToBindResults    = 'A Aplicação falhou ao tratar o result set';
+  
 
-  SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
-  SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
+  SRefreshRowOnlySupportedWithUpdateObject = 'O método RefreshRow somente é suportado com um update object';
+  SMustBeInBrowseMode = 'A Operação é permitida somente no modo dsBrowse';
 
-  SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
-  SFieldReadOnly        = 'TRANSLATE: Readonly field can''t be assigned a value: %d';
+  SUnKnownParamDataType = 'Param.DataType é de tipo desconhecido';
+  SFieldReadOnly        = 'O campo %d é somente leitura e não pôde receber dados';
+  SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.'; 
 
 {$ELSE}
 
@@ -365,18 +368,20 @@ resourcestring
 
   SFailedtoInitPrepStmt   = 'Initialisatie van Prepared statement mislukt';
   SFailedtoPrepareStmt    = 'Statement mislukt tijdens prepare';
-  SFailedToBindAllValues  = 'Pre-bind van allewaarden is mislukt';
+  SFailedToBindAllValues  = 'Pre-bind van alle waarden is mislukt';
   SAttemptExecOnBadPrep   = 'Poging om een statement uit te voeren voor een succesvolle prepare';
   SBindingFailure         = 'Binding van parameterset mislukt';
   SPreparedStmtExecFailure = 'Uitvoeren van Prepared statement mislukt';
   SBoundVarStrIndexMissing = 'Tekst index van bound variable bestaat niet: "%s"';
   SBindVarOutOfRange      = 'Bound variable index buiten bereik: %d';
+  SFailedToBindResults    = 'Binding van resultaat mislukt';
 
   SRefreshRowOnlySupportedWithUpdateObject = 'De refreshrow methode is enkel ondersteund vooreen update object';
   SMustBeInBrowseMode = 'Bewerking is enkel toegestaan in dsBROWSE status';
 
   SUnKnownParamDataType = 'Param.DataType is onbekend';
   SFieldReadOnly        = 'Readonly veld kan geen waarde toegewezen krijgen: %d';
+  SInvalidUpdateCount     = '%d record(s) gewijzigd. Slechts 1 record had gewijzigd mogen zijn.'; 
 
 {$ELSE}
 // <- ms, 09/05/2005
@@ -532,12 +537,14 @@ resourcestring
   SPreparedStmtExecFailure = 'Translate: Prepared statement failed to execute';
   SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
+  SFailedToBindResults    = 'Translate: Application failed to bind to the result set';
 
   SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
   SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
 
   SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
-  SFieldReadOnly        = 'TRANSLATE: Readonly field can''t be assigned a value: %d';
+  SFieldReadOnly          = 'Translate : Readonly field can''t be assigned a value: %d';
+  SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.'; 
 
 {$ELSE}
   // -> fduenas, 28/06/2005
@@ -692,12 +699,14 @@ resourcestring
   SPreparedStmtExecFailure = 'Translate: Prepared statement failed to execute';
   SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
+  SFailedToBindResults    = 'Translate: Application failed to bind to the result set';
 
   SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
   SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
 
   SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
-  SFieldReadOnly        = 'TRANSLATE: Readonly field can''t be assigned a value: %d';
+  SFieldReadOnly          = 'Translate : Readonly field can''t be assigned a value: %d';
+  SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.'; 
 
 {$ELSE}
 
@@ -853,6 +862,7 @@ resourcestring
   SPreparedStmtExecFailure = 'Translate: Prepared statement failed to execute';
   SBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
+  SFailedToBindResults    = 'Translate: Application failed to bind to the result set';
 
   SRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
   SMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
@@ -1017,9 +1027,9 @@ resourcestring
   SMustBeInBrowseMode = 'Operasi hanya diperbolehkan pada status dsBrowse';
 
   SUnKnownParamDataType = 'Param.DataType tidak dikenal';
-  SFieldReadOnly        = 'TRANSLATE: Readonly field can''t be assigned a value: %d';
-
   // <--- end added by tohenk
+  SFieldReadOnly          = 'Translate : Readonly field can''t be assigned a value: %d';
+  SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.'; 
 
   //--- begin added by ORMADA --------------------------------------------------
 {$ELSE}
@@ -1180,7 +1190,8 @@ resourcestring
 
   SUnKnownParamDataType                    = 'Íåèçâåñòíûé òèïà ïàðàìåòðà (Param.DataType)';
   //--- end added by ORMADA ----------------------------------------------------
-
+  SFieldReadOnly          = 'Translate : Readonly field can''t be assigned a value: %d';
+  SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.'; 
 {$ELSE} // default: ENGLISH
 
   SSQLError1 = 'SQL Error: %s';
@@ -1332,6 +1343,7 @@ resourcestring
   SPreparedStmtExecFailure = 'Prepared statement failed to execute';
   SBoundVarStrIndexMissing = 'Bound variable text index "%s" does not exist';
   SBindVarOutOfRange      = 'Bound variable index out of range: %d';
+  SFailedToBindResults    = 'Application failed to bind to the result set';
 
 //FOS+ 07112006
   SRefreshRowOnlySupportedWithUpdateObject = 'The refreshrow method is only supported with an update object';
@@ -1339,6 +1351,7 @@ resourcestring
 
   SUnKnownParamDataType = 'Unknown Param.DataType';
   SFieldReadOnly        = 'Readonly field can''t be assigned a value: %d';
+  SInvalidUpdateCount     = '%d record(s) updated. Only one record should have been updated.'; 
 
 {$ENDIF} // RUSSIAN
 

@@ -19,3 +19,7 @@
 20071222 : Wrong behaviour for EscapeQuotes - by pgimeno - Mantis Bug 83
 
 20080116 : PostgreSql 8.1 Backslash problem - by btrewern - Mantis Bug 87
+
+20080326 : Added SSL support - by ldcbl - See http://zeos.firmos.at/viewtopic.php?t=1531
+
+20080330 : Fields default expresion is determined from the wrong source  - by Wild_Pointer - Mantis Bug 105

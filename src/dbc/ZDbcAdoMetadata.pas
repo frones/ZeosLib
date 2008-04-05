@@ -1659,7 +1659,7 @@ function TZAdoDatabaseMetadata.GetColumns(const Catalog: string;
   const ColumnNamePattern: string): IZResultSet;
 var
   AdoRecordSet: ZPlainAdo.RecordSet;
-//  Flags: Integer;
+  Flags: Integer;
   Key: string;
 begin
   Key := Format('get-columns:%s:%s:%s:%s',
@@ -1691,7 +1691,7 @@ begin
   //Datatype will come from the adorecordset
   //        Result.UpdateShortByName('DATA_TYPE',
   //          Ord(ConvertAdoToSqlType(GetShortByName('DATA_TYPE'))));
-  //        Flags := GetIntByName('COLUMN_FLAGS');
+          Flags := GetIntByName('COLUMN_FLAGS');
   //!!!If the field type is long then this is the only way to know it because it just returns string type
   //        if ConvertAdoToSqlType(GetShortByName('DATA_TYPE')) = stString then
   //          if (GetIntByName('COLUMN_FLAGS')
@@ -1726,19 +1726,15 @@ begin
           Result.UpdateStringByName('IS_NULLABLE',
             GetStringByName('IS_NULLABLE'));
 
-  //during resultset open the writable property will be set to false when basecolumnname is null, in this case it is a computed column
-  //it is required because in the flags it is shown as writable.
-  //        if (Flags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN)) = 0 then
-  //          Result.UpdateBooleanByName('WRITABLE', False)
-  //        else
-  //          Result.UpdateNullByName('WRITABLE');
+          Result.UpdateBooleanByName('WRITABLE',
+            (Flags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) <> 0)); 
 
-  //        Result.UpdateBooleanByName('DEFINITELYWRITABLE',
-  //          (Flags and (DBCOLUMNFLAGS_WRITE) <> 0));
-  //        Result.UpdateBooleanByName('READONLY',
-  //          (Flags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) = 0));
-  //        Result.UpdateBooleanByName('SEARCHABLE',
-  //          (Flags and (DBCOLUMNFLAGS_ISLONG) = 0));
+          Result.UpdateBooleanByName('DEFINITELYWRITABLE',
+            (Flags and (DBCOLUMNFLAGS_WRITE) <> 0));
+          Result.UpdateBooleanByName('READONLY',
+            (Flags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) = 0));
+          Result.UpdateBooleanByName('SEARCHABLE',
+            (Flags and (DBCOLUMNFLAGS_ISLONG) = 0));
 
           Result.InsertRow;
         end;

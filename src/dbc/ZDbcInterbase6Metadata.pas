@@ -1672,8 +1672,8 @@ begin
           DefaultValue := GetStringByName('RDB$DEFAULT_SOURCE_DOMAIN');
         if StartsWith(Trim(UpperCase(DefaultValue)), 'DEFAULT') then
         begin
-          DefaultValue := Trim(Copy(DefaultValue,
-            Length('DEFAULT') + 1, Length(DefaultValue)));
+          DefaultValue := Trim(StringReplace(DefaultValue, 'DEFAULT ', '',
+            [rfIgnoreCase]));
         end;
 
         Result.MoveToInsertRow;

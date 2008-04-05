@@ -5,3 +5,5 @@
 20070603 : TZAdoDatabaseMetadata.GetColumns doesn't fetch database and schema names. - by zx - See http://zeos.firmos.at/viewtopic.php?t=1252
 
 20070603 : Set autocommit issue when transaction isolation=tiNone - by zx - See http://zeos.firmos.at/viewtopic.php?t=1251
+
+20080325 : ADO and MsAccess Post() problem - by FrankSL - See http://zeos.firmos.at/viewtopic.php?t=1769

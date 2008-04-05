@@ -63,7 +63,7 @@ interface
 {$I ZPlain.inc}
 
 uses Classes, ZClasses, ZPlainDriver, ZCompatibility, ZPlainMysqlConstants,
-     {$IFDEF ENABLE_MYSQL_DEPRECATED} ZPlainMySql320, ZPlainMySql323, ZPlainMySql40,{$ENDIF}
+     {$IFDEF ENABLE_MYSQL_DEPRECATED} ZPlainMySql320, ZPlainMySql323, ZPlainMySql40, ZMessages,{$ENDIF}
      ZPlainMySql41, ZPlainMySql5;
 
 const
@@ -3660,4 +3660,5 @@ begin
 end;
 
 end.
+
 

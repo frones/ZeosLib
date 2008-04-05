@@ -1749,7 +1749,7 @@ begin
     if HaveMinimumServerVersion(7, 3) then
     begin
       SQL := 'SELECT n.nspname,c.relname,a.attname,a.atttypid,a.attnotnull,'
-        + 'a.atttypmod,a.attlen,a.attnum,def.adsrc,dsc.description '
+        + 'a.atttypmod,a.attlen,a.attnum,pg_get_expr(def.adbin, def.adrelid) as adsrc,dsc.description '
         + ' FROM pg_catalog.pg_namespace n '
         + ' JOIN pg_catalog.pg_class c ON (c.relnamespace = n.oid) '
         + ' JOIN pg_catalog.pg_attribute a ON (a.attrelid=c.oid) '
