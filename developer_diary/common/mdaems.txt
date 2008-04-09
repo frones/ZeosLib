@@ -193,3 +193,5 @@
 20080316 : Setting fields to ReadOnly didn't really block setting the field value - by btrewern - Mantis Bug 99 - See http://zeos.firmos.at/viewtopic.php?t=1742
 
 20080328 : Automatically generated updates could update more than 1 row at once or no row at all - by sandeep_c24 - See http://zeos.firmos.at/viewtopic.php?t=1757
+
+20080409 : Quoted Aliases in queries were not recognised - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=1797
