@@ -1191,8 +1191,174 @@ resourcestring
   SUnKnownParamDataType                    = 'Íåèçâåñòíûé òèïà ïàðàìåòðà (Param.DataType)';
   //--- end added by ORMADA ----------------------------------------------------
   SFieldReadOnly          = 'Translate : Readonly field can''t be assigned a value: %d';
-  SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.'; 
+  SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.';
+
+{$ELSE}
+
+//--- added by Petr Stasiak - pestasoft.com ------------------------------------
+{$IFDEF CZECH}
+  SSQLError1 = 'SQL chyba: %s';
+  SSQLError2 = 'SQL chyba: %s kód: %d';
+  SSQLError3 = 'SQL chyba: %s kód: %d SQL: %s';
+  SSQLError4 = 'SQL chyba: %s kód: %d Hlášení: %s';
+
+  SListCapacityError = 'Kapacita seznamu je mimo rozsah (%d)';
+  SListCountError = 'Poèet seznamù je mimo rozsah (%d)';
+  SListIndexError = 'Index v seznamu je mimo rozsah (%d)';
+
+  SClonningIsNotSupported = 'Klonování není v této tøídì podporováno';
+  SImmutableOpIsNotAllowed = 'Tato operace není povolena na nemìnitelné "collections"';
+  SStackIsEmpty = 'Zásobník je prázdný';
+  SVariableWasNotFound = 'Promìná "%s" neexistuje';
+  SFunctionWasNotFound = 'Funkce "%s" neexistuje';
+  SInternalError = 'Interní chyba';
+  SSyntaxErrorNear = 'Chybná syntaxe "%s"';
+  SSyntaxError = 'Chybná syntaxe';
+  SUnknownSymbol = 'Neznámý symbol "%s"';
+  SUnexpectedExprEnd = 'Neoèekávaný konec výrazu';
+  SRightBraceExpected = ') oèekáván(o/a/y)';
+  SParametersError = '%d parametrù oèekáváno, ale %d existuje';
+  SExpectedMoreParams = 'Je oèekáváno více, než 2 parametry';
+  SInvalidVarByteArray = 'Nesprávný VarByte array';
+  SVariableAlreadyExists = 'Promìná "%s" již existuje';
+  STypesMismatch = 'Nesouhlasné typy';
+  SUnsupportedVariantType = 'Nepodporovaný typ variant';
+  SUnsupportedOperation = 'Nepodporovaná operace';
+
+  STokenizerIsNotDefined = 'Není definován "Tokenizer"';
+  SLibraryNotFound = 'Neexistuje dll knihovna(y): %s';
+  SEncodeDateIsNotSupported = 'Tato verze nepodporuje isc_encode_sql_date';
+  SEncodeTimeIsNotSupported = 'Tato verze nepodporuje isc_encode_sql_time';
+  SEncodeTimestampIsNotSupported = 'Tato verze nepodporuje isc_encode_sql_timestamp';
+  SDecodeDateIsNotSupported = 'Tato verze nepodporuje isc_decode_sql_date';
+  SDecodeTimeIsNotSupported = 'Tato verze nepodporuje isc_decode_sql_time';
+  SDecodeTimestampIsNotSupported = 'Tato verze nepodporuje isc_decode_sql_timestamp';
+
+  SCanNotRetrieveResultSetData = 'Nelze získat data "Resultset"';
+  SRowBufferIsNotAssigned = 'Není pøiøazen øádkový buffer';
+  SColumnIsNotAccessable = 'Sloupec s indexem %d není pøístupný';
+  SConvertionIsNotPossible = 'Pøevod sloupce %d  není možný z %s na %s';
+  SCanNotAccessBlobRecord = 'Nelze pøistupovat k blob záznamu ze zloupce %d pøes typ %s';
+  SRowDataIsNotAvailable = 'Øádková data nejsou pøístupná';
+  SResolverIsNotSpecified = 'Není specifikován "rozkladaè" pro tento výsledek';
+  SResultsetIsAlreadyOpened = '"Resultset" byl již otevøen';
+  SCanNotUpdateEmptyRow = 'Nelze aktualizovat prázdný øádek';
+  SCanNotUpdateDeletedRow = 'Nelze aktualizovat smazaný øádek';
+  SCanNotDeleteEmptyRow = 'Nelze vymazat prázdný øádek';
+  SCannotUseCommit = 'Nepoužívejte COMMIT v módu AUTOCOMMIT';
+  SCannotUseRollBack = 'Nelze použít ROLLBACK v AUTOCOMMIT módu';
+  SCanNotUpdateComplexQuery = 'Nelze aktualizovat komplexní dotaz pro více, než jednu tabulku';
+  SCanNotUpdateThisQueryType = 'Nelze aktualizovat tento typ dotazu';
+  SDriverWasNotFound = 'Požadovaný databázový ovladaè nenalezen';
+  SCanNotConnectToServer = 'Nezdaøilo se pøipojení k SQL serveru';
+  STableIsNotSpecified = 'Tabulka není specifikována';
+  SLiveResultSetsAreNotSupported = '"Živý" dotaz není podporován v této tøídì';
+  SInvalidInputParameterCount = 'Poèet vstupních parametrù neodpovídá oèekávanému poètu';
+  SIsolationIsNotSupported = 'Míra izolace transakce není podporována';
+  SColumnWasNotFound = 'Sloupec s názvem "%s" neexistuje';
+  SWrongTypeForBlobParameter = 'Nesprávný typ pro Blob parametr';
+  SIncorrectConnectionURL = 'Nesprávný tvar URL adresy: %s';
+  SUnsupportedProtocol = 'Nepodporovaný protokol: %s';
+  SUnsupportedByDriver    = 'Ovladaè nepodporuje tuto vlastnost: [%s]';
+
+  SConnectionIsNotOpened = 'Spojení není otevøeno';
+  SInvalidOpInAutoCommit = 'Nesprávná operace v módu AutoCommit';
+  SInvalidOpInNonAutoCommit = 'Nesprávná operace v módu NE AutoCommit';
+  SInvalidOpPrepare = '"Prepare" transakce je možné pouze jako první! Starttransaction';
+
+  SConnectionIsNotAssigned = 'Není pøiøazen komponent "connection"';
+  SQueryIsEmpty = 'SQL dotaz je prázdný';
+  SCanNotExecuteMoreQueries = 'Nelze spustit více, než 1 dotaz';
+  SOperationIsNotAllowed1 = 'Operace není povolena v módu "FORWARD ONLY"';
+  SOperationIsNotAllowed2 = 'Operace není povolena v módu "READ ONLY"';
+  SOperationIsNotAllowed3 = 'Operace není povolena v módu "%s"';
+  SOperationIsNotAllowed4 = 'Operace není povolena pro zavøený zdroj dat (dataset)';
+  SNoMoreRecords = 'Nejsou další záznamy';
+  SCanNotOpenResultSet = 'Nelze otevøít výsledek dotazu';
+  SCircularLink = 'Datasource vytváøí cyklický dotaz';
+  SBookmarkWasNotFound = 'Záložka neexistuje';
+  SIncorrectSearchFieldsNumber = 'Nesprávný poèet vyhledávaných položek';
+  SInvalidOperationInTrans = 'Nesprávná operace v explicitním transakèním módu';
+  SIncorrectSymbol = 'Nesprávný symbol v seznamu položek "%s".';
+  SIncorrectToken = 'Za ":" následuje nesprávný znak';
+
+  SSelectedTransactionIsolation = 'Vybraná míra izolace transakcí není podporována';
+  SDriverNotSupported = 'Ovladaè %s není podporován';
+  SPattern2Long = 'Pattern je pøíliš dlouhý';
+  SDriverNotCapableOutParameters = 'Ovladaè není schopen pøijímat parametry';
+  SStatementIsNotAllowed = 'Pøíkaz není povolen';
+  SStoredProcIsNotAllowed = '"stored proc" není povolena';
+  SCannotPerformOperation = 'Nelze provést operaci na uzavøením výsledku dotazu (Resultset)';
+  SInvalidState = 'Nesprávný stav';
+  SErrorConvertion = 'Chyba pøevodu';
+  SDataTypeDoesNotSupported = 'Tento typ dat není podporován';
+  SUnsupportedParameterType = 'Nepodporovaný typ parametru';
+  SUnsupportedDataType = 'Nepodporovaný typ dat';
+  SErrorConvertionField = 'Chyba pøevodu sloupce "%s" na SQLTyp "%s"';
+  SBadOCI = 'Špatné verze OCI [%s]. Je vyžadována 8.0.3 nebo starší';
+  SConnect2AsUser = 'Pøipojit k "%s" jako "%s"';
+  SUnknownError = 'Neznámá chyba';
+  SFieldNotFound1 = 'Sloupec "%s" neexistuje';
+  SFieldNotFound2 = 'Sloupec %d neexistuje';
+
+  SLoginPromptFailure = 'Nelze najít výchozí pøihlašovací dialog. Prosím pøidejte DBLogDlg do sekce USES vašeho zdrojového souboru.';
+
+  SPropertyQuery = 'Dotaz mùže být poslední u vlelkých databází!';
+  SPropertyTables = 'Mìlo by být limitováno katalogen a/nebo schématem.';
+  SPropertyColumns = 'Mìlo by být limitováno katalogem, schématem a/nebo názvem tabulky.';
+  SPropertyProcedures = 'Mìlo by být limitováno katalogen a/nebo schématem.';
+  SPropertySequences = 'Mìlo by být limitováno katalogen a/nebo schématem.';
+  SPropertyExecute = 'Má se dotaz pøesto vykonat?';
+
+  SFormTest = 'ZEOS SQL Editor Test';
+  SButtonClose = '&Zavøít';
+  SFormEditor = 'ZEOS SQL Editor';
+  STabSheetSelect = 'Select SQL';
+  SMenuLoad = 'Naèíst';
+  SMenuSave = 'Uložit';
+  SButtonGenerate = '&Generovat';
+  SButtonCheck = '&Kontrola';
+  SButtonTest = '&Test';
+  SButtonOk = '&OK';
+  SButtonCancel = 'Z&rušit';
+  STableAlias = '&Alias tabulky';
+  SReplaceSQL = 'Nah&radit SQL';
+  SDialogOpenTitle = 'Otevøít SQL soubor';
+  SDialogSaveTitle = 'Uložit SQL soubor';
+  SSQLEditor = 'SQL Editor';
+  SDatabaseDialog = 'Otevøít existující databázi';
+
+  SUpdateSQLNoResult = 'Update Refresh SQL nevrátilo žádný výsledek';
+  SUpdateSQLRefreshStatementcount ='Poèet Update Refresh SQL pøíkazù musí být 1';
+
+  {$IFDEF FPC}
+  SNotEditing = 'Dataset není v editaèním (edit), ani vkládacím (insert) režimu';
+  SFieldTypeMismatch = 'Nesprávný typ pro sloupec ''%s'', oèekáváno: %s aktuální: %s';
+  SFieldSizeMismatch = 'Nesprávná velikost sloupce ''%s'', oèekáváno: %d aktuální: %d';
+  {$ENDIF}
+  SNeedField               = 'Sloupce %s je požadován, ale nezadán.';
+
+  SFailedtoInitPrepStmt   = 'Pøipravovaný pøíkaz nelze inicializovat';
+  SFailedtoPrepareStmt    = 'Pøíkaz selhal bìhem pøípravy procesu';
+  SFailedToBindAllValues  = 'Aplikace zkolabovala pøed pøípravou všech hodnot';
+  SAttemptExecOnBadPrep   = 'Pokoušíte sespustit pøíkaz pøed dokonèením jeho pøípravy.';
+  SBindingFailure         = 'Chyba pøi získávání sady parametrù';
+  SPreparedStmtExecFailure = 'Pøipravovaný pøíkaz selhal pøi vykonávání';
+  SBoundVarStrIndexMissing = 'Index textové promìné "%s" neexistuje';
+  SBindVarOutOfRange      = 'Index promené je mimo rozsah: %d';
+  SFailedToBindResults    = 'Aplikace selhala pøi získávání výsledkù dotazu';
+
+//FOS+ 07112006
+  SRefreshRowOnlySupportedWithUpdateObject = 'Metoda "refreshrow" je podporována pouze v "update object"';
+  SMustBeInBrowseMode = 'Operace je povolena pouze ve stavu dsBROWSE';
+
+  SUnKnownParamDataType = 'Neznámý parametr.typ dat (Param.DataType)';
+  SFieldReadOnly        = 'Sloupec pouze pro ètení nemùže být pøiøazen k hodnotì: %d';
+  SInvalidUpdateCount     = '%d záznam(ù) aktualizováno. Pouze jeden záznam byl zmìnìn.';
+//--- end added by Petr Stasiak - pestasoft.com ------------------------------------
+
 {$ELSE} // default: ENGLISH
+
 
   SSQLError1 = 'SQL Error: %s';
   SSQLError2 = 'SQL Error: %s Code: %d';
@@ -1351,7 +1517,9 @@ resourcestring
 
   SUnKnownParamDataType = 'Unknown Param.DataType';
   SFieldReadOnly        = 'Readonly field can''t be assigned a value: %d';
-  SInvalidUpdateCount     = '%d record(s) updated. Only one record should have been updated.'; 
+  SInvalidUpdateCount     = '%d record(s) updated. Only one record should have been updated.';
+
+{$ENDIF} // CZECH
 
 {$ENDIF} // RUSSIAN
 
