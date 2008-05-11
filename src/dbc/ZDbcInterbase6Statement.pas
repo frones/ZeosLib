@@ -939,6 +939,9 @@ begin
       LastUpdateCount := Result;
       { Fetch data and fill Output params }
       FetchOutParams(SQLData);
+      { Autocommit statement. }
+      if Connection.GetAutoCommit then
+        Connection.Commit;
       { Logging SQL Command }
       DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SQL);
     except
