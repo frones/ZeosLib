@@ -48,6 +48,7 @@ contains
   ZAbstractDataset in '..\..\src\component\ZAbstractDataset.pas',
   ZSqlMetadata in '..\..\src\component\ZSqlMetadata.pas',
   ZAbstractTable in '..\..\src\component\ZAbstractTable.pas',
-  ZSequence in '..\..\src\component\ZSequence.pas';
+  ZSequence in '..\..\src\component\ZSequence.pas',
+  ZIBEventAlerter in '..\..\src\component\ZIBEventAlerter.pas';
 
 end.

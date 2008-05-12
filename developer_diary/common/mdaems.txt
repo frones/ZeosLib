@@ -195,3 +195,5 @@
 20080328 : Automatically generated updates could update more than 1 row at once or no row at all - by sandeep_c24 - See http://zeos.firmos.at/viewtopic.php?t=1757
 
 20080409 : Quoted Aliases in queries were not recognised - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=1797
+
+20080512 : Added ZIBEventAlerter to the components package - by mdaems

@@ -49,6 +49,7 @@ contains
   ZStoredProcedure in '..\..\src\component\ZStoredProcedure.pas',
   ZAbstractTable in '..\..\src\component\ZAbstractTable.pas',
   ZSqlMetadata in '..\..\src\component\ZSqlMetadata.pas',
-  ZSequence in '..\..\src\component\ZSequence.pas';
+  ZSequence in '..\..\src\component\ZSequence.pas',
+  ZIBEventAlerter in '..\..\src\component\ZIBEventAlerter.pas';
 
 end.

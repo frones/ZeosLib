@@ -10,7 +10,7 @@
       build\ZSqlMetadata.obj build\ZSqlMonitor.obj build\ZSqlProcessor.obj 
       build\ZSqlStrings.obj build\ZSqlUpdate.obj build\ZStoredProcedure.obj 
       build\ZStreamBlob.obj build\ZComponent.obj build\ZSequence.obj
-      build\ZUpdateSqlEditor.obj"/>
+      build\ZUpdateSqlEditor.obj build\ZIBEventAlerter.obj"/>
     <RESFILES value="ZComponent.res ZComponent.dcr"/>
     <IDLFILES value=""/>
     <IDLGENFILES value=""/>

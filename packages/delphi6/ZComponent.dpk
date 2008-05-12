@@ -52,6 +52,7 @@ contains
   ZAbstractTable in '..\..\src\component\ZAbstractTable.pas',
   ZSqlMetadata in '..\..\src\component\ZSqlMetadata.pas',
   ZUpdateSqlEditor in '..\..\src\component\ZUpdateSqlEditor.pas' {ZUpdateSQLEditForm},
-  ZSequence in '..\..\src\component\ZSequence.pas';
+  ZSequence in '..\..\src\component\ZSequence.pas',
+  ZIBEventAlerter in '..\..\src\component\ZIBEventAlerter.pas';
 
 end.
