@@ -3109,6 +3109,7 @@ procedure TZAbstractRODataset.ClearCalcFields(Buffer: PChar);
 var
   Index: Integer;
 begin
+  RowAccessor.RowBuffer := PZRowBuffer(Buffer);
   for Index := 1 to Fields.Count do
     if (Fields[Index-1].FieldKind in [fkCalculated, fkLookup]) then
       RowAccessor.SetNull(DefineFieldindex(FFieldsLookupTable,Fields[Index-1]));

@@ -197,3 +197,5 @@
 20080409 : Quoted Aliases in queries were not recognised - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=1797
 
 20080512 : Added ZIBEventAlerter to the components package - by mdaems
+
+20080513 : Lookup field value disappear on insert and edit and reappear after post or cancel - by mdaems - Mantis Bug 111
