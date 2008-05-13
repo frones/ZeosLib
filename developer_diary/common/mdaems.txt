@@ -199,3 +199,5 @@
 20080512 : Added ZIBEventAlerter to the components package - by mdaems
 
 20080513 : Lookup field value disappear on insert and edit and reappear after post or cancel - by mdaems - Mantis Bug 111
+
+20080513 : Duplicated result when using locate, loPartialKey and Filter - by gto - Mantis Bug 108 -See http://zeos.firmos.at/viewtopic.php?t=1831

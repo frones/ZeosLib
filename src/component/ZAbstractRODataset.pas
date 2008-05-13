@@ -1727,6 +1727,7 @@ begin
   finally
     CurrentRow := PreviousCurrentRow;
   end;
+  UpdateCursorPos;
 end;
 
 {**
