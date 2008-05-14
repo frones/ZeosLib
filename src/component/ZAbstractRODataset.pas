@@ -1306,7 +1306,11 @@ begin
         {$IFDEF BDS4_UP}
               RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(Buffer));
         {$ELSE}
+          {$IFDEF FPC2_1UP}
+              RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(Buffer));
+          {$ELSE}
               RowAccessor.SetUnicodeString(ColumnIndex, PWideString(Buffer)^);
+          {$ENDIF ~FPC2_1UP}
         {$ENDIF ~BDS4_UP}
 
       end
