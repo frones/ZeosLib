@@ -193,3 +193,11 @@
 20080316 : Setting fields to ReadOnly didn't really block setting the field value - by btrewern - Mantis Bug 99 - See http://zeos.firmos.at/viewtopic.php?t=1742
 
 20080328 : Automatically generated updates could update more than 1 row at once or no row at all - by sandeep_c24 - See http://zeos.firmos.at/viewtopic.php?t=1757
+
+20080409 : Quoted Aliases in queries were not recognised - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=1797
+
+20080513 : Lookup field value disappear on insert and edit and reappear after post or cancel - by mdaems - Mantis Bug 111
+
+20080513 : Duplicated result when using locate, loPartialKey and Filter - by gto - Mantis Bug 108 -See http://zeos.firmos.at/viewtopic.php?t=1831
+
+20080514 : In Delphi 2006 and FPC 2.1 TWideStringField.SetAsWideString() puts a PWideChar into the buffer, so deserializing it as a PWideString is probably wrong. - By HeidiSQL Team - See http://fisheye3.cenqua.com/changelog/heidisql?cs=1383

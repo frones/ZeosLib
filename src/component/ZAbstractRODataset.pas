@@ -1306,7 +1306,11 @@ begin
         {$IFDEF BDS4_UP}
               RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(Buffer));
         {$ELSE}
+          {$IFDEF FPC2_1UP}
+              RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(Buffer));
+          {$ELSE}
               RowAccessor.SetUnicodeString(ColumnIndex, PWideString(Buffer)^);
+          {$ENDIF ~FPC2_1UP}
         {$ENDIF ~BDS4_UP}
 
       end
@@ -1724,6 +1728,7 @@ begin
   finally
     CurrentRow := PreviousCurrentRow;
   end;
+  UpdateCursorPos;
 end;
 
 {**
@@ -3106,6 +3111,7 @@ procedure TZAbstractRODataset.ClearCalcFields(Buffer: PChar);
 var
   Index: Integer;
 begin
+  RowAccessor.RowBuffer := PZRowBuffer(Buffer);
   for Index := 1 to Fields.Count do
     if (Fields[Index-1].FieldKind in [fkCalculated, fkLookup]) then
       RowAccessor.SetNull(DefineFieldindex(FFieldsLookupTable,Fields[Index-1]));

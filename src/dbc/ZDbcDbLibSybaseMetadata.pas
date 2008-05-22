@@ -1653,7 +1653,7 @@ begin
     with GetStatement.ExecuteQuery(
       Format('select c.colid, c.name, c.type, c.prec, c.scale, c.status'
       + ' from syscolumns c inner join sysobjects o on (o.id = c.id)'
-      + ' where o.name = "%s" order by colid', [TableNamePattern])) do
+      + ' where o.name = %s order by colid', [AnsiQuotedStr(TableNamePattern, '''')])) do
     begin
       while Next do
       begin

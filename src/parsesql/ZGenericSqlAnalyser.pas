@@ -479,6 +479,7 @@ var
   CurrentType: TZTokenType;
   CurrentUpper: string;
   ReadField: Boolean;
+  HadWhitespace : Boolean;
 
   procedure ClearElements;
   begin
@@ -539,6 +540,7 @@ begin
     else
     begin
       ClearElements;
+      HadWhitespace := False;
       while (TokenIndex < SelectTokens.Count) and (CurrentValue <> ',') do
       begin
         CurrentValue := SelectTokens[TokenIndex];
@@ -547,11 +549,13 @@ begin
         else begin
           CurrentType := TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
             SelectTokens.Objects[TokenIndex]{$IFDEF FPC}){$ENDIF});
-          if CurrentType = ttWord then
+          if HadWhitespace and (CurrentType in [ttWord, ttQuotedIdentifier]) then
             Alias := CurrentValue
           else if not (CurrentType in [ttWhitespace, ttComment])
             and (CurrentValue <> ',') then
-            Alias := '';
+              Alias := ''
+          else if CurrentType = ttWhitespace then
+              HadWhitespace := true;
           Inc(TokenIndex);
         end;
       end;
