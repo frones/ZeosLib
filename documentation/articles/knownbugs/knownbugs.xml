@@ -1,16 +1,10 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-
-<!DOCTYPE article
-  PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN" "file:/c:/docbook/dtd/docbookx.dtd"
-  [
-    <!ENTITY % global.entities SYSTEM "file:/c:/docbook/include/global.xml">
-    %global.entities;
-
-    <!ENTITY % entities SYSTEM "entities.xml">
-    %entities;
-  ]
->
-
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN" "file:/c:/docbook/dtd/docbookx.dtd" [
+<!ENTITY % global.entities SYSTEM "file:/c:/docbook/include/global.xml">
+<!-- e-novative DocBook environment --><!-- global entities                --><!-- (c) 2002 e-novative GmbH       --><!-- http://www.e-novative.de       --><!ENTITY global_entity "global entity (can be included in every document)">
+<!ENTITY % entities SYSTEM "entities.xml">
+<!-- >e-novative> DocBook Environment (eDE)                                  --><!-- (c) 2002 e-novative GmbH, Munich, Germany                               --><!-- http://www.e-novative.de                                                --><!-- DocBook entities template                                               --><!-- This file is part of eDE                                                --><!-- eDE is free software; you can redistribute it and/or modify             --><!-- it under the terms of the GNU General Public License as published by    --><!-- the Free Software Foundation; either version 2 of the License, or       --><!-- (at your option) any later version.                                     --><!-- eDE is distributed in the hope that it will be useful,                  --><!-- but WITHOUT ANY WARRANTY; without even the implied warranty of          --><!-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           --><!-- GNU General Public License for more details.                            --><!-- You should have received a copy of the GNU General Public License       --><!-- along with eDe; if not, write to the Free Software                   --><!-- Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA --><!ENTITY local_entity "local entity (defined per document)">
+]>
 <article>
 	<articleinfo>
 		<title>ZeosDBO Known Bugs</title>
@@ -31,7 +25,7 @@
 			<simpara>SQLHourGlass is never shown. Cursor is initialized in unit DBCtrls. If you want to see the SQLHourGlass then you have to add the unit DBCtrls to the uses-clause.</simpara>
 		</listitem>
 		<listitem>
-			<simpara>RequestLive (since V 6.5.2 renamed to ReadOnly), CachedUpdates and UpdateObject are processed by ZeosDBO Query differently from standard TQuery. In ZeosDBO there is no correlation between them as it done in VCL. If your query is alive you must set RequestLive=true doesn&apos;t matter have you set CachedUpdates+UpdateObject or not. Otherwise, if RequestLive=false your query will be always read-only. UpdateObject can be used in non-cached mode as well as in cached mode.</simpara>
+			<simpara>RequestLive (since V 6.5.2 renamed to ReadOnly), CachedUpdates and UpdateObject are processed by ZeosDBO Query differently from standard TQuery. In ZeosDBO there is no correlation between them as it done in VCL. If your query is alive you must set RequestLive=true doesn't matter have you set CachedUpdates+UpdateObject or not. Otherwise, if RequestLive=false your query will be always read-only. UpdateObject can be used in non-cached mode as well as in cached mode.</simpara>
 		</listitem>
 		<listitem>
 			<simpara>Because of the limitations of dblibrary only the first 255 char is returned for char and varchar columns.</simpara>
@@ -48,8 +42,5 @@
 		<listitem>
 			<simpara>If you are using dbgrid, all the records will be fetched because of a call to recordcount (in scrollbar). You can avoid this behavior if you turn on the Filtered property. In this case you can achieve fast open even on bigger resultsets.</simpara>
 		</listitem>
-		<listitem>
-			<simpara>Midas <classname>IProviderSupport</classname> interface is not completely supported. It may cause problems with <classname>TDatasetProvider</classname> and <classname>TClientDataset</classname>. Full support for <classname>IProviderSupport</classname> interface will be added to version 6.2.</simpara>
-		</listitem>
-	</orderedlist>
+		</orderedlist>
 </article>
