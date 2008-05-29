@@ -20,15 +20,14 @@
 <article class="techreport" lang="en">
   <articleinfo>
     <title>ZeosDBO Change Notes</title>
-    <pubdate>23 October 2006</pubdate>
-    <corpauthor>ZeosLib Development Group</corpauthor>
+   <corpauthor>ZeosLib Development Group</corpauthor>
   </articleinfo>
   <sect1>
     <title>Changes in Release 6.6.2 - rc (12.12.2007)</title>
     <sect2>
       <title>Bugs fixed from Mantis Bug Tracker</title>
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>#0000022: [general] Split ZPlainMysql.inc</simpara>
         </listitem>
@@ -147,7 +146,7 @@
     </sect2>
     <sect2>
       <title>Other Bugs fixed</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>Metadata (mdTables) was missing remarks data (http://zeos.firmos.at/viewtopic.php?t=1567)</simpara>
         </listitem>
@@ -192,7 +191,7 @@
         </listitem>
         <listitem>
           <simpara>Mysql fixes by HeidiSQL Team (Repository viewer at http://fisheye3.cenqua.com/changelog/heidisql)</simpara>
-          <itemizedlist>
+          <itemizedlist spacing="compact">
             <listitem><simpara>Avoid an access violation within a for loop which got run once even when there were 0 columns in a result. (HeidiSql rev. 993)</simpara></listitem>
             <listitem><simpara>Fix bug "SHOW FULL PROCESSLIST on mysql v4 server messes Zeos up". (HeidiSql rev. 775 and 900)</simpara></listitem>
             <listitem><simpara>Fix handling default values. (HeidiSql rev. 505)</simpara></listitem>
@@ -203,7 +202,7 @@
     </sect2>
     <sect2>
       <title>Features added</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>All mysql_options() and connection clientflag settings can now be set using TZConnection.Properties (http://zeos.firmos.at/viewtopic.php?t=1528)</simpara>
         </listitem>
@@ -251,7 +250,7 @@
         </listitem>
         <listitem>
           <simpara>New Features by HeidiSQL Team (Repository viewer at http://fisheye3.cenqua.com/changelog/heidisql)</simpara>
-          <itemizedlist>
+          <itemizedlist spacing="compact">
             <listitem><simpara>Added unknown data types from mysql_com.h. (HeidiSQL rev. 835)</simpara></listitem>
             <listitem><simpara>Make ConvertMySQLHandleToSQLType() more readable (HeidiSql rev. 676)</simpara></listitem>
             <listitem><simpara>Ignore columns that do not originate from the table when resolving updates (HeidiSql rev. 555)</simpara></listitem>
@@ -263,7 +262,7 @@
     </sect2>
     <sect2>
       <title>Internal changes</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>Release build script has been rewritten</simpara>
         </listitem>
@@ -289,7 +288,7 @@
     <title>Changes in Release 6.6.1 - beta (25.02.2007)</title>
     <sect2>
       <title>Bugs fixed</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>#0000003: Field confusion in GetColumnInfo</simpara>
         </listitem>
@@ -375,7 +374,7 @@
     <title>Changes in Release 6.6.0 - beta (20.10.2006)</title>
     <sect2>
       <title>Features added</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>LinkedFieldNames vs. IndexFieldnames (See http://zeos.firmos.at/viewtopic.php?t=796) </simpara>
         </listitem>
@@ -453,7 +452,7 @@
         </listitem>
         <listitem>
           <simpara>Added default values to the following properties:</simpara>
-          <itemizedlist>
+          <itemizedlist spacing="compact">
             <listitem>
               <simpara>TZAbstractRODataset.RequestLive: False</simpara>
             </listitem>
@@ -506,7 +505,7 @@
         </listitem>
         <listitem>
           <simpara>&glienke_tag; Changed default values for following properties:</simpara>
-          <itemizedlist>
+          <itemizedlist spacing="compact">
             <listitem>
               <simpara>TZConnection.ReadOnly: False</simpara>
             </listitem>
@@ -514,7 +513,7 @@
         </listitem>
         <listitem>
           <simpara>&glienke_tag; Changed following default initializations:</simpara>
-          <itemizedlist>
+          <itemizedlist spacing="compact">
             <listitem>
               <simpara>- TZAbstractDataset.RequestLive := True;</simpara>
             </listitem>
@@ -525,7 +524,7 @@
         </listitem>
         <listitem>
           <simpara>&glienke_tag; Changed following property names:</simpara>
-          <itemizedlist>
+          <itemizedlist spacing="compact">
             <listitem>
               <simpara>TZQuery.RequestLive --&gt; TZQuery.ReadOnly</simpara>
             </listitem>
@@ -538,7 +537,7 @@
     </sect2>
     <sect2>
       <title>Patches applied</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>Const and optimization (http://zeos.firmos.at/viewtopic.php?t=551)</simpara>
         </listitem>
@@ -564,7 +563,7 @@
     </sect2>
     <sect2>
       <title>Bugs fixed</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>ZDbcConnection.pas contains wrong line breaks (http://zeos.firmos.at/viewtopic.php?t=553)</simpara>
         </listitem>
@@ -791,7 +790,7 @@
     <title>Changes in Release 6.5</title>
     <sect2>
       <title>Release 6.5.1 - 23 Nov 2004</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>&cnliou_tag; Fixed Bug#912639 Result sets were not decoded</simpara>
         </listitem>
@@ -802,7 +801,7 @@
     </sect2>
     <sect2>
       <title>Release 6.5.1 - 17 July 2004</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>&merkuriev_tag; Fixed Bug#1021705 Numeric values overflow</simpara>
         </listitem>
@@ -846,7 +845,7 @@
     </sect2>
     <sect2>
       <title>Release 6.5.0 - 10 March 2004</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>&seroukhov_tag; Added IProviderSupport interface implementation to datasets.</simpara>
         </listitem>
@@ -971,7 +970,7 @@
     <title>Changes in Release 6.1</title>
     <sect2>
       <title>Release 6.1.4 - 21 January 2004</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>&seroukhov_tag; Fixed Bug#880459 Access Violation in <classname>ZSQLProcessor</classname>.<methodname>Execute</methodname> method when <classname>Connection</classname> is not assigned.</simpara>
         </listitem>
@@ -1021,7 +1020,7 @@
     </sect2>
     <sect2>
       <title>Release 6.1.3 - 11 December 2003</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>&seroukhov_tag; Fixed leaving cached statement object in <classname>TDataset</classname>.<methodname>ExecSQL</methodname> after connection component changed.</simpara>
         </listitem>
@@ -1059,7 +1058,7 @@
     </sect2>
     <sect2>
       <title>Release 6.1.2 - 12 November 2003</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>&seroukhov_tag; Added <literal>IS NULL</literal>, <literal>IS NOT NULL</literal>, <literal>NOT LIKE</literal> operations to Filter Expression.</simpara>
         </listitem>
@@ -1136,7 +1135,7 @@
     </sect2>
     <sect2>
       <title>Release 6.1.1 - 28 September 2003</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>&seroukhov_tag; Added support for column default values defined in database. Default values of <classname>TField</classname> are still unsupported.</simpara>
         </listitem>
@@ -1240,7 +1239,7 @@
     </sect2>
     <sect2>
       <title>Release 6.1.0 - 28 July 2003</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>&seroukhov_tag; Rewritten SQL parsers, removed Parse package from the project.</simpara>
         </listitem>
@@ -1326,7 +1325,7 @@
     <title>Changes in Release 6.0</title>
     <sect2>
       <title>Release 6.0.12 Patch#3 - 28 September 2003</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>&seroukhov_tag; Fixed Bug#817607 Fail refreshing Query when field names contain spaces.</simpara>
         </listitem>
@@ -1346,7 +1345,7 @@
     </sect2>
     <sect2>
       <title>Release 6.0.12 Patch #2 - 28 September 2003</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>&seroukhov_tag;  Fixed Bug#803616 Fail posting inserted and then updated records in cached updates mode.</simpara>
         </listitem>
@@ -1369,7 +1368,7 @@
     </sect2>
     <sect2>
       <title>Release 6.0.12 Patch #1 - 28 September 2003</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>&seroukhov_tag; Fixed Bug#793351 access violation when assigning a field value</simpara>
         </listitem>
@@ -1389,7 +1388,7 @@
     </sect2>
     <sect2>
       <title>Release 6.0.12 - 18 July 2003</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>&seroukhov_tag; Fixed Bug#773400. In plain interface for MySQL 4.0 the name of shared library was 'libmysqld.so' instead of 'libmysqlclient.so'</simpara>
         </listitem>
@@ -1412,7 +1411,7 @@
     </sect2>
     <sect2>
       <title>Release 6.0.11 - 08 July 2003</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>&seroukhov_tag; Eliminated all overrided methods in API, fixed support for C++ Builder 4,5,6 compilers.</simpara>
         </listitem>
@@ -1447,7 +1446,7 @@
     </sect2>
     <sect2>
       <title>Release 6.0.10 - 13 June 2003</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>&seroukhov_tag; Fixed Bug#752603 in <classname>TZDataset</classname>.<methodname>GetFieldData</methodname> method which set <property>Field</property>.<property>IsNull</property> = <constant>True</constant> all the time.</simpara>
         </listitem>
@@ -1500,7 +1499,7 @@
     </sect2>
     <sect2>
       <title>Release 6.0.9 - 18 May 2003</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>&seroukhov_tag; Fixed bugs in <classname>TZCollection</classname> class and <classname>TZAbstractObject</classname>.<property>Equals</property> (Thanks for Karl Waclawek).</simpara>
         </listitem>
@@ -1577,7 +1576,7 @@
     </sect2>
     <sect2>
       <title>Release 6.0.8 - 15 April 2003</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>&seroukhov_tag; Fixed Bug#722651 AV in TZDbcMySQLResultSet.GetTimestamp</simpara>
         </listitem>
@@ -1591,7 +1590,7 @@
     </sect2>
     <sect2>
       <title>Release 6.0.7 - 13 April 2003</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>&seroukhov_tag; Fixed Bug#706278 related to performance problems in MySQL</simpara>
         </listitem>
@@ -1629,7 +1628,7 @@
     </sect2>
     <sect2>
       <title>Release 6.0.6 - 30 March 2003</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>&seroukhov_tag; Fixed AV in Dataset.GetFieldData method.</simpara>
         </listitem>
@@ -1667,7 +1666,7 @@
     </sect2>
     <sect2>
       <title>Release 6.0.5 - 18 March 2003</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>&seroukhov_tag; Modified transaction support for MySQL (Thanks to Pavel Shibanov).</simpara>
         </listitem>
@@ -1711,7 +1710,7 @@
     </sect2>
     <sect2>
       <title>Release 6.0.4 - 24 February 2003</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>&seroukhov_tag; Added a reference implementation for Plain API multiversion support. It includes TZNativeLibraryLoader, IZPlainDriver, IZMySQLPlainDriver and other classes and interfaces.</simpara>
         </listitem>
@@ -1740,7 +1739,7 @@
     </sect2>
     <sect2>
       <title>Release 6.0.3 - 17 February 2003</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>&fegyverneki_tag; Fixed problem with queries using parameters with the same name</simpara>
         </listitem>
@@ -1757,7 +1756,7 @@
     </sect2>
     <sect2>
       <title>Release 6.0.2 - 9 February 2003</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>&seroukhov_tag; Updated project examples</simpara>
         </listitem>
@@ -1783,7 +1782,7 @@
     </sect2>
     <sect2>
       <title>Release 6.0.1 - 2 February 2003</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>&seroukhov_tag; Fixed date, time and datetime columns handling</simpara>
         </listitem>
@@ -1806,7 +1805,7 @@
     </sect2>
     <sect2>
       <title>Release 6.0.0 - 25 January 2003</title>
-      <itemizedlist>
+      <itemizedlist spacing="compact">
         <listitem>
           <simpara>Released the first alpha version with support for MySQL, PostgreSQL, Interbase 6+ and MS SQL.</simpara>
         </listitem>
