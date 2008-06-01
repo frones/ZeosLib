@@ -75,8 +75,10 @@ uses Classes, ZPlainLoader, ZCompatibility, ZPlainMySqlConstants;
 { ***************** Plain API Constants definition **************** }
 
 const
-  WINDOWS1_DLL_LOCATION = 'libmysql50.dll';
-  WINDOWS1_DLL_LOCATION_EMBEDDED = 'libmysqld50.dll';
+  WINDOWS_50_DLL_LOCATION = 'libmysql50.dll';
+  WINDOWS_51_DLL_LOCATION = 'libmysql51.dll';
+  WINDOWS_50_DLL_LOCATION_EMBEDDED = 'libmysqld50.dll';
+  WINDOWS_51_DLL_LOCATION_EMBEDDED = 'libmysqld51.dll';
   LINUX1_DLL_LOCATION  = 'libmysqlclient.so.15';
 
 { General Declarations }
@@ -572,13 +574,15 @@ end;
 initialization
 {$IFNDEF UNIX}
   LibraryLoader := TZMySQLNativeLibraryLoader.Create(
-    [WINDOWS1_DLL_LOCATION
+    [WINDOWS_51_DLL_LOCATION
+    , WINDOWS_50_DLL_LOCATION
 {$IFNDEF MYSQL_STRICT_DLL_LOADING}
     , WINDOWS2_DLL_LOCATION
 {$ENDIF}
     ]);
   LibraryLoaderEmbedded := TZMySQLNativeLibraryLoader.Create(
-    [WINDOWS1_DLL_LOCATION_EMBEDDED
+    [WINDOWS_51_DLL_LOCATION_EMBEDDED
+    , WINDOWS_50_DLL_LOCATION_EMBEDDED
 {$IFNDEF MYSQL_STRICT_DLL_LOADING}
     , WINDOWS2_DLL_LOCATION_EMBEDDED
 {$ENDIF}
