@@ -100,22 +100,26 @@ const
   SET_FLAG               = 2048;  { Field is a set }
   NUM_FLAG               = 32768; { Field is num (for clients) }
   PART_KEY_FLAG	         = 16384; { Intern; Part of some key }
-  GROUP_FLAG	         = 32768; { Intern: Group field }
+  GROUP_FLAG	           = 32768; { Intern: Group field }
   UNIQUE_FLAG            = 65536; { Intern: Used by sql_yacc }
   BINCMP_FLAG            = $20000; { Intern: Used by sql_yacc }
+  GET_FIXED_FIELDS_FLAG  = $40000; { Used to get fields in item tree }
+  FIELD_IN_PART_FUNC_FLAG= $80000; { Field part of partition func }
+  FIELD_IN_ADD_INDEX     = $100000; { Intern: Field used in ADD INDEX }
+  FIELD_IS_RENAMED       = $200000; { Intern: Field is being renamed}
 
 { Server Administration Refresh Options }
   REFRESH_GRANT	           = 1;     { Refresh grant tables }
-  REFRESH_LOG		       = 2;     { Start on new log file }
-  REFRESH_TABLES	       = 4;     { close all tables }
+  REFRESH_LOG		           = 2;     { Start on new log file }
+  REFRESH_TABLES	         = 4;     { close all tables }
   REFRESH_HOSTS	           = 8;     { Flush host cache }
   REFRESH_STATUS           = 16;    { Flush status variables }
   REFRESH_THREADS          = 32;    { Flush status variables }
   REFRESH_SLAVE            = 64;    { Reset master info abd restat slave thread }
   REFRESH_MASTER           = 128;   { Remove all bin logs in the index and truncate the index }
   REFRESH_READ_LOCK        = 16384; { Lock tables for read }
-  REFRESH_FAST		       = 32768; { Intern flag }
-  REFRESH_QUERY_CACHE	   = 65536;
+  REFRESH_FAST		         = 32768; { Intern flag }
+  REFRESH_QUERY_CACHE	     = 65536;
   REFRESH_QUERY_CACHE_FREE = $20000; { Pack query cache }
   REFRESH_DES_KEY_FILE	   = $40000;
   REFRESH_USER_RESOURCES   = $80000;
@@ -463,6 +467,12 @@ TMYSQL_CLIENT_OPTIONS =
       length:    LongWord;
       is_null:   Byte;
   end;
+
+// Structure of the MYSQL_RES record isn't used anymore.
+  // Access to the fields should be done using library functions
+  // Reason : the structure of these records tend to change now and then.
+  MYSQL_RES = pointer;
+  PMYSQL_RES = ^MYSQL_RES;
 
 const
   EMBEDDED_DEFAULT_DATA_DIR = {$IFDEF WIN32}

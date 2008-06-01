@@ -101,36 +101,6 @@ const
   FIELD_TYPE_CHAR      = FIELD_TYPE_TINY;
   FIELD_TYPE_INTERVAL  = FIELD_TYPE_ENUM;
 
-{ Field's flags }
-  NOT_NULL_FLAG          = 1;     { Field can't be NULL }
-  PRI_KEY_FLAG           = 2;     { Field is part of a primary key }
-  UNIQUE_KEY_FLAG        = 4;     { Field is part of a unique key }
-  MULTIPLE_KEY_FLAG      = 8;     { Field is part of a key }
-  BLOB_FLAG              = 16;    { Field is a blob }
-  UNSIGNED_FLAG          = 32;    { Field is unsigned }
-  ZEROFILL_FLAG          = 64;    { Field is zerofill }
-  BINARY_FLAG            = 128;   { Field is binary }
-  ENUM_FLAG              = 256;   { Field is an enum }
-  AUTO_INCREMENT_FLAG    = 512;   { Field is a autoincrement field }
-  TIMESTAMP_FLAG         = 1024;  { Field is a timestamp }
-  SET_FLAG               = 2048;  { Field is a set }
-  NUM_FLAG               = 32768; { Field is num (for clients) }
-  PART_KEY_FLAG	         = 16384; { Intern; Part of some key }
-  GROUP_FLAG	         = 32768; { Intern: Group field }
-  UNIQUE_FLAG            = 65536; { Intern: Used by sql_yacc }
-
-{ Server Administration Refresh Options }
-  REFRESH_GRANT	         = 1;     { Refresh grant tables }
-  REFRESH_LOG		 = 2;     { Start on new log file }
-  REFRESH_TABLES	 = 4;     { close all tables }
-  REFRESH_HOSTS	         = 8;     { Flush host cache }
-  REFRESH_STATUS         = 16;    { Flush status variables }
-  REFRESH_THREADS        = 32;    { Flush status variables }
-  REFRESH_SLAVE          = 64;    { Reset master info abd restat slave thread }
-  REFRESH_MASTER         = 128;   { Remove all bin logs in the index and truncate the index }
-  REFRESH_READ_LOCK      = 16384; { Lock tables for read }
-  REFRESH_FAST		 = 32768; { Intern flag }
-
 { Client Connection Options }
   _CLIENT_LONG_PASSWORD	  = 1;	  { new more secure passwords }
   _CLIENT_FOUND_ROWS	  = 2;	  { Found instead of affected rows }
@@ -1453,7 +1423,7 @@ end;
 
 function TZMySQL320PlainDriver.GetRowCount(Res: PZMySQLResult): Int64;
 begin
-  Result := ZPlainMySql320.PMYSQL_RES(Res).row_count;
+  Result := MYSQL_API.mysql_num_rows(Res);
 end;
 
 function TZMySQL320PlainDriver.GetStatus(Handle: PZMySQLConnect): TZMySQLStatus;
@@ -1469,7 +1439,7 @@ end;
 
 function TZMySQL320PlainDriver.GetFieldCount(Res: PZMySQLResult): Integer;
 begin
-  Result := ZPlainMySql320.PMYSQL_RES(Res).field_count;
+  Result := MYSQL_API.mysql_num_fields(Res);
 end;
 
 function TZMySQL320PlainDriver.GetFieldDecimals(Field: PZMySQLField): Integer;
@@ -1967,7 +1937,7 @@ end;
 
 function TZMySQL323PlainDriver.GetRowCount(Res: PZMySQLResult): Int64;
 begin
-  Result := ZPlainMySql323.PMYSQL_RES(Res).row_count;
+  Result := MYSQL_API.mysql_num_rows(Res);
 end;
 
 function TZMySQL323PlainDriver.GetStatus(Handle: PZMySQLConnect): TZMySQLStatus;
@@ -1983,7 +1953,7 @@ end;
 
 function TZMySQL323PlainDriver.GetFieldCount(Res: PZMySQLResult): Integer;
 begin
-  Result := ZPlainMySql323.PMYSQL_RES(Res).field_count;
+  Result := MYSQL_API.mysql_num_fields(Res);
 end;
 
 function TZMySQL323PlainDriver.GetFieldDecimals(Field: PZMySQLField): Integer;
@@ -2480,7 +2450,7 @@ end;
 
 function TZMySQL40PlainDriver.GetRowCount(Res: PZMySQLResult): Int64;
 begin
-  Result := ZPlainMySql40.PMYSQL_RES(Res).row_count;
+  Result := MYSQL_API.mysql_num_rows(Res);
 end;
 
 function TZMySQL40PlainDriver.GetStatus(Handle: PZMySQLConnect): TZMySQLStatus;
@@ -2496,7 +2466,7 @@ end;
 
 function TZMySQL40PlainDriver.GetFieldCount(Res: PZMySQLResult): Integer;
 begin
-  Result := ZPlainMySql40.PMYSQL_RES(Res).field_count;
+  Result := MYSQL_API.mysql_num_fields(Res);
 end;
 
 function TZMySQL40PlainDriver.GetFieldDecimals(Field: PZMySQLField): Integer;
@@ -3017,7 +2987,7 @@ end;
 
 function TZMySQL41PlainDriver.GetRowCount(Res: PZMySQLResult): Int64;
 begin
-  Result := ZPlainMySql41.PMYSQL_RES(Res).row_count;
+  Result := MYSQL_API.mysql_num_rows(Res);
 end;
 
 {$IFDEF ENABLE_MYSQL_DEPRECATED}
@@ -3035,7 +3005,7 @@ end;
 
 function TZMySQL41PlainDriver.GetFieldCount(Res: PZMySQLResult): Integer;
 begin
-  Result := ZPlainMySql41.PMYSQL_RES(Res).field_count;
+  Result := MYSQL_API.mysql_num_fields(Res);
 end;
 
 function TZMySQL41PlainDriver.GetFieldDecimals(Field: PZMySQLField): Integer;
@@ -3554,7 +3524,7 @@ end;
 
 function TZMySQL5PlainDriver.GetRowCount(Res: PZMySQLResult): Int64;
 begin
-  Result := ZPlainMySql5.PMYSQL_RES(Res).row_count;
+  Result := MYSQL_API.mysql_num_rows(Res);
 end;
 
 {$IFDEF ENABLE_MYSQL_DEPRECATED}
@@ -3572,7 +3542,7 @@ end;
 
 function TZMySQL5PlainDriver.GetFieldCount(Res: PZMySQLResult): Integer;
 begin
-  Result := ZPlainMySql5.PMYSQL_RES(Res).field_count;
+  Result := MYSQL_API.mysql_num_fields(Res);
 end;
 
 function TZMySQL5PlainDriver.GetFieldDecimals(Field: PZMySQLField): Integer;

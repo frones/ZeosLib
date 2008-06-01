@@ -423,24 +423,6 @@ type
   MYSQL  = pointer;
 {$ENDIF ENABLE_MYSQL_DEPRECATED}
 
-  MYSQL_RES = record
-    row_count:       Int64;
-    fields:          PMYSQL_FIELD;
-    data:            PMYSQL_DATA;
-    data_cursor:     PMYSQL_ROWS;
-    lengths:         PLongInt;
-    handle:          PMYSQL;
-    field_alloc:     MEM_ROOT;
-    field_count:     Integer;
-    current_field:   Integer;
-    row:             PMYSQL_ROW;
-    current_row:     PMYSQL_ROW;
-    eof:             Byte;
-    unbuffered_fetch_cancelled: Byte;
-    methods:         PMYSQL_METHODS;
-  end;
-  PMYSQL_RES = ^MYSQL_RES;
-
   PREP_STMT_STATE=(
     MY_ST_UNKNOWN,
     MY_ST_PREPARE,

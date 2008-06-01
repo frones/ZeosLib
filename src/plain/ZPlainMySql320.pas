@@ -285,22 +285,6 @@ type
     charset:         PChar;
   end;
 
-  MYSQL_RES = packed record
-    row_count:       Int64;
-    field_count:     Integer;
-    current_field:   Integer;
-    fields:          PMYSQL_FIELD;
-    data:            PMYSQL_DATA;
-    data_cursor:     PMYSQL_ROWS;
-    field_alloc:     MEM_ROOT;
-    row:             PMYSQL_ROW;
-    current_row:     PMYSQL_ROW;
-    lengths:         PLongInt;
-    handle:          PMYSQL;
-    eof:             Byte;
-  end;
-  PMYSQL_RES = ^MYSQL_RES;
-
   TModifyType = (MODIFY_INSERT, MODIFY_UPDATE, MODIFY_DELETE);
   TQuoteOptions = (QUOTE_STRIP_CR,QUOTE_STRIP_LF);
   TQuoteOptionsSet = set of TQuoteOptions;
