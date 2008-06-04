@@ -145,9 +145,9 @@ begin
     Result := stInteger
   else if TypeName = 'BIGINT' then
     Result := stLong
-  else if TypeName = 'REAL' then
+  else if StartsWith(TypeName, 'REAL') then
     Result := stDouble
-  else if TypeName = 'FLOAT' then
+  else if StartsWith(TypeName, 'FLOAT') then
     Result := stDouble
   else if (TypeName = 'NUMERIC') or (TypeName = 'DECIMAL')
     or (TypeName = 'NUMBER') then
@@ -156,11 +156,11 @@ begin
       Result := stInteger
     else} Result := stDouble;
   end
-  else if TypeName = 'DOUBLE' then
+  else if StartsWith(TypeName, 'DOUB') then
     Result := stDouble
   else if TypeName = 'MONEY' then
     Result := stBigDecimal
-  else if TypeName = 'CHAR' then
+  else if StartsWith(TypeName, 'CHAR') then
     Result := stString
   else if TypeName = 'VARCHAR' then
     Result := stString
@@ -178,6 +178,8 @@ begin
     Result := stTimestamp
   else if Pos('BLOB', TypeName) > 0 then
     Result := stBinaryStream
+  else if Pos('CLOB', TypeName) > 0 then
+    Result := stAsciiStream
   else if Pos('TEXT', TypeName) > 0 then
     Result := stAsciiStream;
     //Result := stString;
