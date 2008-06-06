@@ -112,6 +112,7 @@ type
     FTrHandle: TISC_TR_HANDLE;
     FStatusVector: TARRAY_ISC_STATUS;
     FPlainDriver: IZInterbasePlainDriver;
+    FHardCommit: boolean;
   private
     procedure StartTransaction; virtual;
   public
@@ -372,7 +373,13 @@ begin
 
   if FTrHandle <> nil then
   begin
-    FPlainDriver.isc_commit_retaining(@FStatusVector, @FTrHandle);
+    if FHardCommit then
+    begin
+      FPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
+      FTrHandle := nil;
+    end else
+      FPlainDriver.isc_commit_retaining(@FStatusVector, @FTrHandle);
+
     CheckInterbase6Error(FPlainDriver, FStatusVector, lcTransaction);
     DriverManager.LogMessage(lcTransaction,
       FPlainDriver.GetProtocol, 'TRANSACTION COMMIT');
@@ -399,6 +406,8 @@ var
 begin
   inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
     TZInterbase6DatabaseMetadata.Create(Self, Url, Info));
+
+  FHardCommit := StrToBoolEx(Info.Values['hard_commit']);
 
   FPlainDriver := PlainDriver;
 
@@ -494,6 +503,8 @@ end;
 }
 function TZInterbase6Connection.GetTrHandle: PISC_TR_HANDLE;
 begin
+  if (FHardCommit and (FTrHandle = nil)) then
+    StartTransaction;
   Result := @FTrHandle;
 end;
 
@@ -545,7 +556,8 @@ begin
       Format('CONNECT TO "%s" AS USER "%s"', [Database, User]));
 
     { Start transaction }
-    StartTransaction;
+    if not FHardCommit then
+      StartTransaction;
 
     inherited Open;
   finally
@@ -642,7 +654,12 @@ procedure TZInterbase6Connection.Rollback;
 begin
   if FTrHandle <> nil then
   begin
-    FPlainDriver.isc_rollback_retaining(@FStatusVector, @FTrHandle);
+    if FHardCommit then
+    begin
+      FPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle);
+      FTrHandle := nil;
+    end else
+      FPlainDriver.isc_rollback_retaining(@FStatusVector, @FTrHandle);
     CheckInterbase6Error(FPlainDriver, FStatusVector);
     DriverManager.LogMessage(lcTransaction,
       FPlainDriver.GetProtocol, 'TRANSACTION ROLLBACK');

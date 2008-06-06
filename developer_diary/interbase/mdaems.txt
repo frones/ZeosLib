@@ -31,3 +31,5 @@
 20080220 : Metadata.GetColumns corrected - by Sandeep_c24 - See http://zeos.firmos.at/viewtopic.php?t=1682
 
 20080511 : Autocommit didn't work for TZStoredProcedure when using Firebird - by mdaems
+
+20080606 : Added support for Firebird hard commits - by hgourvest
