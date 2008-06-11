@@ -1,30 +1,27 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-
-<!DOCTYPE article
-  PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN" "file:/c:/docbook/dtd/docbookx.dtd"
-  [
-    <!ENTITY % global.entities SYSTEM "file:/c:/docbook/include/global.xml">
-    %global.entities;
-
-    <!ENTITY % entities SYSTEM "entities.xml">
-    %entities;
-  ]
->
-
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN" "file:/c:/docbook/dtd/docbookx.dtd" [
+<!ENTITY % global.entities SYSTEM "file:/c:/docbook/include/global.xml">
+<!-- e-novative DocBook environment --><!-- global entities                --><!-- (c) 2002 e-novative GmbH       --><!-- http://www.e-novative.de       --><!ENTITY global_entity "global entity (can be included in every document)">
+<!ENTITY % entities SYSTEM "entities.xml">
+<!-- >e-novative> DocBook Environment (eDE)                                  --><!-- (c) 2002 e-novative GmbH, Munich, Germany                               --><!-- http://www.e-novative.de                                                --><!-- DocBook entities template                                               --><!-- This file is part of eDE                                                --><!-- eDE is free software; you can redistribute it and/or modify             --><!-- it under the terms of the GNU General Public License as published by    --><!-- the Free Software Foundation; either version 2 of the License, or       --><!-- (at your option) any later version.                                     --><!-- eDE is distributed in the hope that it will be useful,                  --><!-- but WITHOUT ANY WARRANTY; without even the implied warranty of          --><!-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           --><!-- GNU General Public License for more details.                            --><!-- You should have received a copy of the GNU General Public License       --><!-- along with eDe; if not, write to the Free Software                   --><!-- Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA --><!ENTITY local_entity "local entity (defined per document)">
+]>
 <article>
 	<articleinfo>
 		<title>ZeosDBO Technical Info</title>
-		<pubdate>09 July 2004</pubdate>
+		<pubdate>09 July 2004 (Updated 29/5/2008)</pubdate>
 		<corpauthor>ZeosLib Development Group</corpauthor>
 	</articleinfo>
 	<para>ZeosDBO is a database middleware components for Borland development tools, including Delphi, C++ Builder and Kylix.</para>
 	<para>The following compilers are supported:</para>
 	<itemizedlist spacing="compact">
 		<listitem>
-			<simpara>Delphi 5 - 7 and 9</simpara>
+			<simpara>Delphi 5 - 7 and 9-11</simpara>
 		</listitem>
 		<listitem>
 			<simpara>Lazarus (FreePascal)</simpara>
+		</listitem>
+		<listitem>
+			<simpara>MSEide+MSEgui (FreePascal)</simpara>
 		</listitem>
 		<listitem>
 			<simpara>C++ Builder 5 - 6</simpara>
@@ -36,13 +33,13 @@
 	<para>ZeosDBO supports direct connectivity to the following databases using the vendor provided, native interface:</para>
 	<itemizedlist spacing="compact">
 		<listitem>
-			<simpara>MySQL 3.20 - 4.1</simpara>
+			<simpara>MySQL 3.20 - 5.0</simpara>
 		</listitem>
 		<listitem>
-			<simpara>PostgreSQL 6.5 - 7.4</simpara>
+			<simpara>PostgreSQL 6.5 - 8.1</simpara>
 		</listitem>
 		<listitem>
-			<simpara>Firebird 1.0 - 1.5</simpara>
+			<simpara>Firebird 1.0 - 2.0</simpara>
 		</listitem>
 		<listitem>
 			<simpara>Interbase 5.0 - 7.5</simpara>
@@ -57,7 +54,7 @@
 			<simpara>Oracle 9i</simpara>
 		</listitem>
 		<listitem>
-			<simpara>SQLite 2.8</simpara>
+			<simpara>SQLite 2.8, 3.5</simpara>
 		</listitem>
 	</itemizedlist>
 	<para>For other databases we propose to use implemented Active Data Objects (ADO) Bridge.</para>
@@ -93,7 +90,10 @@
 		<listitem>
 			<simpara><classname>ZComponent</classname> - visual components descended from <classname>TDataset</classname>.</simpara>
 		</listitem>
-	</orderedlist>
+	<listitem>
+      <simpara><classname>ZComponentDesign</classname> - design time components. This package is not available for all compilers. If present it's only needed to install the components in the IDE.</simpara>
+    </listitem>
+   </orderedlist>
 	<para>Installed components:</para>
 	<orderedlist spacing="compact">
 		<listitem>
@@ -121,7 +121,7 @@
 			<simpara><classname>TZSQLMetadata</classname>: Specialized TDataset component which provides an access to database metadata such as tables, columns, indices, etc.</simpara>
 		</listitem>
 	</orderedlist>
-	<para>The project home page is here (for news, links and other project info): <ulink url="http://www.zeoslib.net">http://www.zeoslib.net</ulink></para>
+	<para>The project home page is here (for news, links and other project info): <ulink url="http://zeosfirmos.at/portal.php">http://zeos.firmos.at</ulink></para>
 	<para>The sourceforge development site is located here (for technical resources and anonymous web based cvs access):<ulink url="http://www.sourceforge.net/projects/zeoslib"> http://www.sourceforge.net/projects/zeoslib</ulink></para>
 	<para>Thank you for using our software,</para>
 	<para>The ZeosLib Development Group</para>

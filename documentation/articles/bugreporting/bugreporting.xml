@@ -1,13 +1,10 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!DOCTYPE article
-  PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN" "file:/c:/docbook/dtd/docbookx.dtd"
-  [
-    <!ENTITY % global.entities SYSTEM "file:/c:/docbook/include/global.xml">
-    %global.entities;
-    <!ENTITY % entities SYSTEM "entities.xml">
-    %entities;
-  ]
->
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN" "file:/c:/docbook/dtd/docbookx.dtd" [
+<!ENTITY % global.entities SYSTEM "file:/c:/docbook/include/global.xml">
+<!-- e-novative DocBook environment --><!-- global entities                --><!-- (c) 2002 e-novative GmbH       --><!-- http://www.e-novative.de       --><!ENTITY global_entity "global entity (can be included in every document)">
+<!ENTITY % entities SYSTEM "entities.xml">
+<!-- >e-novative> DocBook Environment (eDE)                                  --><!-- (c) 2002 e-novative GmbH, Munich, Germany                               --><!-- http://www.e-novative.de                                                --><!-- DocBook entities template                                               --><!-- This file is part of eDE                                                --><!-- eDE is free software; you can redistribute it and/or modify             --><!-- it under the terms of the GNU General Public License as published by    --><!-- the Free Software Foundation; either version 2 of the License, or       --><!-- (at your option) any later version.                                     --><!-- eDE is distributed in the hope that it will be useful,                  --><!-- but WITHOUT ANY WARRANTY; without even the implied warranty of          --><!-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           --><!-- GNU General Public License for more details.                            --><!-- You should have received a copy of the GNU General Public License       --><!-- along with eDe; if not, write to the Free Software                   --><!-- Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA --><!ENTITY local_entity "local entity (defined per document)">
+]>
 <article>
   <articleinfo><title>Bug Reporting in ZEOS Library</title>
     <author>
@@ -15,7 +12,12 @@
       <surname>Seeger</surname>
     </author>
   <date>2005-06-23</date>
-  <abstract>
+<abstract>
+<para>
+  <warning>
+<para>(By Mark Daems, 29 May 2008) This Article is somewhat outdated as it describes some project organisational structures. (eg. QA group) This structure isn't available anymore. However, most observations concerning what a good bug report is still apply.</para>
+</warning>
+</para>
   <para>
   The currect bug reporting procedure is absolutely critical to improve
   the quality of ZEOS. It defines steps to fix bugs, to notify the reported

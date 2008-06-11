@@ -328,22 +328,6 @@ type
     last_used_con:   PMYSQL;
   end;
 
-  MYSQL_RES = packed record
-    row_count:       Int64;
-    fields:          PMYSQL_FIELD;
-    data:            PMYSQL_DATA;
-    data_cursor:     PMYSQL_ROWS;
-    lengths:         PLongInt;
-    handle:          PMYSQL;
-    field_alloc:     MEM_ROOT;
-    field_count:     Integer;
-    current_field:   Integer;
-    row:             PMYSQL_ROW;
-    current_row:     PMYSQL_ROW;
-    eof:             Byte;
-  end;
-  PMYSQL_RES = ^MYSQL_RES;
-
   TModifyType = (MODIFY_INSERT, MODIFY_UPDATE, MODIFY_DELETE);
   TQuoteOptions = (QUOTE_STRIP_CR,QUOTE_STRIP_LF);
   TQuoteOptionsSet = set of TQuoteOptions;
