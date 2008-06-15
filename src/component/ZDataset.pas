@@ -104,6 +104,8 @@ type
 
   {** Implements an universal SQL query for single table access. }
   TZTable = class (TZAbstractTable)
+  public
+    property Exists;
   published
     property Active;
     property ReadOnly default False;
@@ -124,4 +126,5 @@ type
 implementation
 
 end.
+
 

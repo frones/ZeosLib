@@ -205,3 +205,5 @@
 20080514 : In Delphi 2006 and FPC 2.1 TWideStringField.SetAsWideString() puts a PWideChar into the buffer, so deserializing it as a PWideString is probably wrong. - By HeidiSQL Team - See http://fisheye3.cenqua.com/changelog/heidisql?cs=1383
 
 20080607 : Remove "TextHeight = 13" from UpdateSql Editor in Lazarus - by Edwin - see http://zeos.firmos.at/viewtopic.php?t=1872
+
+20080616 : patch for table.exists - by technobot - http://zeos.firmos.at/viewtopic.php?t=1879
