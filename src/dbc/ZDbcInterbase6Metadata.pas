@@ -1144,8 +1144,7 @@ var
   Key: string;
   LProcedureNamePattern: string;
 begin
-  Key := Format('get-procedures:%s:%s:%s',
-    [Catalog, SchemaPattern, ProcedureNamePattern]);
+  Key := GetProceduresCacheKey(Catalog, SchemaPattern, ProcedureNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1250,8 +1249,8 @@ var
   LProcedureNamePattern, LColumnNamePattern: string;
   TypeName, SubTypeName: Integer;
 begin
-  Key := Format('get-procedure-columns:%s:%s:%s:%s',
-    [Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern]);
+  Key := GetProcedureColumnsCacheKey(Catalog, SchemaPattern, ProcedureNamePattern,
+    ColumnNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1395,7 +1394,7 @@ var
   BLR: IZBlob;
   I, SystemFlag, ViewContext: Integer;
 begin
-  Key := GetTablesMetaDataCacheKey(Catalog,SchemaPattern,TableNamePattern,Types);
+  Key := GetTablesCacheKey(Catalog, SchemaPattern, TableNamePattern, Types);
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -1517,7 +1516,7 @@ var
   I: Integer;
   Key: string;
 begin
-  Key := 'get-table-types';
+  Key := GetTableTypesCacheKey;
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1596,8 +1595,8 @@ var
   TypeName, SubTypeName, FieldScale: integer;
   LTableNamePattern, LColumnNamePattern: string;
 begin
-  Key := Format('get-columns:%s:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern]);
+  Key := GetColumnsCacheKey(Catalog, SchemaPattern, TableNamePattern,
+    ColumnNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1791,8 +1790,8 @@ var
   Grantor, Grantee, Grantable: string;
   LColumnNamePattern, LTable: string;
 begin
-  Key := Format('get-column-privileges:%s:%s:%s:%s',
-    [Catalog, Schema, Table, ColumnNamePattern]);
+  Key := GetColumnPrivilegesCacheKey(Catalog, Schema, Table,
+    ColumnNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1913,8 +1912,8 @@ var
   Grantee, Grantable: string;
   LTableNamePattern: string;
 begin
-  Key := Format('get-table-privileges:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern]);
+  Key := GetTablePrivilegesCacheKey(Catalog, SchemaPattern,
+    TableNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1998,7 +1997,7 @@ function TZInterbase6DatabaseMetadata.GetVersionColumns(const Catalog: string;
 var
   Key: string;
 begin
-  Key := Format('get-version-columns:%s:%s:%s', [Catalog, Schema, Table]);
+  Key := GetVersionColumnsCacheKey(Catalog, Schema, Table);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2048,7 +2047,7 @@ var
   SQL, Key: string;
   LTable: string;
 begin
-  Key := Format('get-primary-keys:%s:%s:%s', [Catalog, Schema, Table]);
+  Key := GetPrimaryKeysCacheKey(Catalog, Schema, Table);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2144,7 +2143,7 @@ var
   Key, SQL: string;
   LTable: string;
 begin
-  Key := Format('get-imported-keys:%s:%s:%s', [Catalog, Schema, Table]);
+  Key := GetImportedKeysCacheKey(Catalog, Schema, Table);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2299,7 +2298,7 @@ var
   SQL, Key: string;
   LTable: string;
 begin
-  Key := Format('get-exported-keys:%s:%s:%s', [Catalog, Schema, Table]);
+  Key := GetExportedKeysCacheKey(Catalog, Schema, Table);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2513,7 +2512,7 @@ function TZInterbase6DatabaseMetadata.GetTypeInfo: IZResultSet;
 var
   SQL, Key: string;
 begin
-  Key := 'get-type-info';
+  Key := GetTypeInfoCacheKey;
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2602,8 +2601,8 @@ function TZInterbase6DatabaseMetadata.GetIndexInfo(const Catalog: string;
 var
   SQL, Key: string;
 begin
-  Key := Format('get-index-info:%s:%s:%s:%s:%s',
-    [Catalog, Schema, Table, BoolToStr(Unique), BoolToStr(Approximate)]);
+  Key := GetIndexInfoCacheKey(Catalog, Schema, Table, Unique,
+    Approximate);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2664,8 +2663,8 @@ var
   Key, SQL: string;
   LSequenceNamePattern: string;
 begin
-  Key := Format('get-sequences:%s:%s:%s',
-    [Catalog, SchemaPattern, SequenceNamePattern]);
+  Key := GetSequencesCacheKey(Catalog, SchemaPattern,
+    SequenceNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2893,4 +2892,5 @@ begin
 end;
 
 end.
+
 

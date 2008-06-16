@@ -1186,8 +1186,7 @@ var
   Key: string;
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := Format('get-procedures:%s:%s:%s',
-    [Catalog, SchemaPattern, ProcedureNamePattern]);
+  Key := GetProceduresCacheKey(Catalog, SchemaPattern, ProcedureNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1287,8 +1286,8 @@ var
   Key: string;
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := Format('get-procedure-columns:%s:%s:%s:%s',
-    [Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern]);
+  Key := GetProcedureColumnsCacheKey(Catalog, SchemaPattern, ProcedureNamePattern,
+    ColumnNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1426,7 +1425,7 @@ var
   Key, TableTypes: string;
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := GetTablesMetaDataCacheKey(Catalog,SchemaPattern,TableNamePattern,Types);
+  Key := GetTablesCacheKey(Catalog, SchemaPattern, TableNamePattern, Types);
   TableTypes := '';
 
   Result := GetResultSetFromCache(Key);
@@ -1488,7 +1487,7 @@ var
   Key: string;
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := 'get-schemas';
+  Key := GetSchemasCacheKey;
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1533,7 +1532,7 @@ var
   Key: string;
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := 'get-catalogs';
+  Key := GetCatalogsCacheKey;
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1585,7 +1584,7 @@ var
   I: Integer;
   Key: string;
 begin
-  Key := 'get-table-types';
+  Key := GetTableTypesCacheKey;
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1662,8 +1661,8 @@ var
   Flags: Integer;
   Key: string;
 begin
-  Key := Format('get-columns:%s:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern]);
+  Key := GetColumnsCacheKey(Catalog, SchemaPattern, TableNamePattern,
+    ColumnNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1781,8 +1780,8 @@ var
   Key: string;
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := Format('get-column-privileges:%s:%s:%s:%s',
-    [Catalog, Schema, Table, ColumnNamePattern]);
+  Key := GetColumnPrivilegesCacheKey(Catalog, Schema, Table,
+    ColumnNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1865,8 +1864,8 @@ var
   Key: string;
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := Format('get-table-privileges:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern]);
+  Key := GetTablePrivilegesCacheKey(Catalog, SchemaPattern,
+    TableNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1946,7 +1945,7 @@ var
   AdoRecordSet: ZPlainAdo.RecordSet;
   Key: string;
 begin
-  Key := Format('get-version-columns:%s:%s:%s', [Catalog, Schema, Table]);
+  Key := GetVersionColumnsCacheKey(Catalog, Schema, Table);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2017,7 +2016,7 @@ var
   AdoRecordSet: ZPlainAdo.RecordSet;
   Key: string;
 begin
-  Key := Format('get-primary-keys:%s:%s:%s', [Catalog, Schema, Table]);
+  Key := GetPrimaryKeysCacheKey(Catalog, Schema, Table);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2287,9 +2286,8 @@ var
   Key: string;
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := Format('get-cross-reference:%s:%s:%s:%s:%s:%s',
-    [PrimaryCatalog, PrimarySchema, PrimaryTable, ForeignCatalog,
-    ForeignSchema, ForeignTable]);
+  Key := GetCrossReferenceCacheKey(PrimaryCatalog, PrimarySchema, PrimaryTable,
+    ForeignCatalog, ForeignSchema, ForeignTable);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2395,7 +2393,7 @@ var
   Key: string;
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := 'get-type-info';
+  Key := GetTypeInfoCacheKey;
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2516,8 +2514,8 @@ var
   Key: string;
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := Format('get-index-info:%s:%s:%s:%s:%s',
-    [Catalog, Schema, Table, BoolToStr(Unique), BoolToStr(Approximate)]);
+  Key := GetIndexInfoCacheKey(Catalog, Schema, Table, Unique,
+    Approximate);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2633,16 +2631,12 @@ end;
 function TZAdoDatabaseMetadata.GetUDTs(const Catalog: string; const SchemaPattern: string;
   const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet;
 var
-  I: Integer;
   Key: string;
 //  Restrictions: Variant;
 //  AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := '';
-  for I := Low(Types) to High(Types) do
-    Key := Key + ':' + IntToStr(Types[I]);
-  Key := Format('get-udts:%s:%s:%s%s',
-    [Catalog, SchemaPattern, TypeNamePattern, Key]);
+  Key := GetUDTsCacheKey(Catalog, SchemaPattern, TypeNamePattern,
+    Types);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2812,4 +2806,5 @@ begin
 end;
 
 end.
+
 

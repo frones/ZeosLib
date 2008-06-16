@@ -206,4 +206,6 @@
 
 20080607 : Remove "TextHeight = 13" from UpdateSql Editor in Lazarus - by Edwin - see http://zeos.firmos.at/viewtopic.php?t=1872
 
-20080616 : patch for table.exists - by technobot - http://zeos.firmos.at/viewtopic.php?t=1879
+20080616 : patch for table.exists - by technobot - See http://zeos.firmos.at/viewtopic.php?t=1879
+
+20080617 : Added GetXxxCacheKey functions - by technobot - See http://zeos.firmos.at/viewtopic.php?t=1881

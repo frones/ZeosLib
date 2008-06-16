@@ -323,6 +323,52 @@ type
     function GetIdentifierConvertor: IZIdentifierConvertor; virtual;
     procedure ClearCache; overload;virtual;
 		procedure ClearCache(const Key: string);overload;virtual;
+
+    // --> technobot 2008-06-14:  metadata cache key retrieval API:
+    function GetProceduresCacheKey(const Catalog: string; const SchemaPattern: string;
+      const ProcedureNamePattern: string): string;
+    function GetProcedureColumnsCacheKey(const Catalog: string; const SchemaPattern: string;
+      const ProcedureNamePattern: string; const ColumnNamePattern: string): string;
+
+    function GetTablesCacheKey(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string; const Types: TStringDynArray): string;
+    function GetSchemasCacheKey: string;
+    function GetCatalogsCacheKey: string;
+    function GetTableTypesCacheKey: string;
+    function GetColumnsCacheKey(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string; const ColumnNamePattern: string): string;
+    function GetColumnPrivilegesCacheKey(const Catalog: string; const Schema: string;
+      const Table: string; const ColumnNamePattern: string): string;
+
+    function GetTablePrivilegesCacheKey(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string): string;
+    function GetBestRowIdentifierCacheKey(const Catalog: string; const Schema: string;
+      const Table: string; const Scope: Integer; const Nullable: Boolean): string;
+    function GetVersionColumnsCacheKey(const Catalog: string; const Schema: string;
+      const Table: string): string;
+
+    function GetPrimaryKeysCacheKey(const Catalog: string; const Schema: string;
+      const Table: string): string;
+    function GetImportedKeysCacheKey(const Catalog: string; const Schema: string;
+      const Table: string): string;
+    function GetExportedKeysCacheKey(const Catalog: string; const Schema: string;
+      const Table: string): string;
+    function GetCrossReferenceCacheKey(const PrimaryCatalog: string; const PrimarySchema: string;
+      const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
+      const ForeignTable: string): string;
+
+    function GetTypeInfoCacheKey: string;
+    function GetIndexInfoCacheKey(const Catalog: string; const Schema: string; const Table: string;
+      const Unique: Boolean; const Approximate: Boolean): string;
+
+    function GetSequencesCacheKey(const Catalog: string; const SchemaPattern: string;
+      const SequenceNamePattern: string): string;
+    function GetUDTsCacheKey(const Catalog: string; const SchemaPattern: string;
+      const TypeNamePattern: string; const Types: TIntegerDynArray): string;
+
+    procedure GetCacheKeys(List: TStrings);
+
+    // <-- technobot 2008-06-14
   end;
 
   {** Implements a default Case Sensitive/Unsensitive identifier convertor. }
@@ -347,6 +393,7 @@ type
 
   function GetTablesMetaDataCacheKey(Const Catalog:String;
       Const SchemaPattern:String;	Const TableNamePattern:String;const Types: TStringDynArray):String;
+      deprecated; // (technobot) use TZAbstractDatabaseMetadata.GetTablesCacheKey instead
 
 
 var
@@ -604,6 +651,7 @@ begin
     ColumnsInfo.Free;
   end;
 end;
+
 
 //----------------------------------------------------------------------
 // First, a variety of minor information about the target database.
@@ -1818,8 +1866,7 @@ function TZAbstractDatabaseMetadata.GetProcedures(const Catalog: string;
 var
   Key: string;
 begin
-  Key := Format('get-procedures:%s:%s:%s',
-    [Catalog, SchemaPattern, ProcedureNamePattern]);
+  Key := GetProceduresCacheKey(Catalog, SchemaPattern, ProcedureNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1891,8 +1938,8 @@ function TZAbstractDatabaseMetadata.GetProcedureColumns(const Catalog: string;
 var
   Key: string;
 begin
-  Key := Format('get-procedure-columns:%s:%s:%s:%s',
-    [Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern]);
+  Key := GetProcedureColumnsCacheKey(Catalog, SchemaPattern, ProcedureNamePattern,
+    ColumnNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1938,7 +1985,7 @@ function TZAbstractDatabaseMetadata.GetTables(const Catalog: string;
 var
   Key: string;
 begin
-  Key := GetTablesMetaDataCacheKey(Catalog,SchemaPattern,TableNamePattern,Types);
+  Key := GetTablesCacheKey(Catalog, SchemaPattern, TableNamePattern, Types);
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -1963,7 +2010,7 @@ function TZAbstractDatabaseMetadata.GetSchemas: IZResultSet;
 var
   Key: string;
 begin
-  Key := 'get-schemas';
+  Key := GetSchemasCacheKey;
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1989,7 +2036,7 @@ function TZAbstractDatabaseMetadata.GetCatalogs: IZResultSet;
 var
   Key: string;
 begin
-  Key := 'get-catalogs';
+  Key := GetCatalogsCacheKey;
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2017,7 +2064,7 @@ function TZAbstractDatabaseMetadata.GetTableTypes: IZResultSet;
 var
   Key: string;
 begin
-  Key := 'get-table-types';
+  Key := GetTableTypesCacheKey;
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2089,8 +2136,8 @@ function TZAbstractDatabaseMetadata.GetColumns(const Catalog: string;
 var
   Key: string;
 begin
-  Key := Format('get-columns:%s:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern]);
+  Key := GetColumnsCacheKey(Catalog, SchemaPattern, TableNamePattern,
+    ColumnNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2133,8 +2180,8 @@ function TZAbstractDatabaseMetadata.GetColumnPrivileges(const Catalog: string;
 var
   Key: string;
 begin
-  Key := Format('get-column-privileges:%s:%s:%s:%s',
-    [Catalog, Schema, Table, ColumnNamePattern]);
+  Key := GetColumnPrivilegesCacheKey(Catalog, Schema, Table,
+    ColumnNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2181,8 +2228,8 @@ function TZAbstractDatabaseMetadata.GetTablePrivileges(const Catalog: string;
 var
   Key: string;
 begin
-  Key := Format('get-table-privileges:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern]);
+  Key := GetTablePrivilegesCacheKey(Catalog, SchemaPattern,
+    TableNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2235,8 +2282,8 @@ var
   IndexName: string;
   ColumnNames: TStrings;
 begin
-  Key := Format('get-best-row-identifier:%s:%s:%s:%d:%s',
-    [Catalog, Schema, Table, Scope, BoolToStr(Nullable)]);
+  Key := GetBestRowIdentifierCacheKey(Catalog, Schema, Table, Scope,
+    Nullable);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2337,7 +2384,7 @@ function TZAbstractDatabaseMetadata.GetVersionColumns(const Catalog: string;
 var
   Key: string;
 begin
-  Key := Format('get-version-columns:%s:%s:%s', [Catalog, Schema, Table]);
+  Key := GetVersionColumnsCacheKey(Catalog, Schema, Table);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2374,7 +2421,7 @@ function TZAbstractDatabaseMetadata.GetPrimaryKeys(const Catalog: string;
 var
   Key: string;
 begin
-  Key := Format('get-primary-keys:%s:%s:%s', [Catalog, Schema, Table]);
+  Key := GetPrimaryKeysCacheKey(Catalog, Schema, Table);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2456,7 +2503,7 @@ function TZAbstractDatabaseMetadata.GetImportedKeys(const Catalog: string;
 var
   Key: string;
 begin
-  Key := Format('get-imported-keys:%s:%s:%s', [Catalog, Schema, Table]);
+  Key := GetImportedKeysCacheKey(Catalog, Schema, Table);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2538,7 +2585,7 @@ function TZAbstractDatabaseMetadata.GetExportedKeys(const Catalog: string;
 var
   Key: string;
 begin
-  Key := Format('get-exported-keys:%s:%s:%s', [Catalog, Schema, Table]);
+  Key := GetExportedKeysCacheKey(Catalog, Schema, Table);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2629,9 +2676,8 @@ function TZAbstractDatabaseMetadata.GetCrossReference(const PrimaryCatalog: stri
 var
   Key: string;
 begin
-  Key := Format('get-cross-reference:%s:%s:%s:%s:%s:%s',
-    [PrimaryCatalog, PrimarySchema, PrimaryTable, ForeignCatalog,
-    ForeignSchema, ForeignTable]);
+  Key := GetCrossReferenceCacheKey(PrimaryCatalog, PrimarySchema, PrimaryTable,
+    ForeignCatalog, ForeignSchema, ForeignTable);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2690,7 +2736,7 @@ function TZAbstractDatabaseMetadata.GetTypeInfo: IZResultSet;
 var
   Key: string;
 begin
-  Key := 'get-type-info';
+  Key := GetTypeInfoCacheKey;
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2757,8 +2803,8 @@ function TZAbstractDatabaseMetadata.GetIndexInfo(const Catalog: string;
 var
   Key: string;
 begin
-  Key := Format('get-index-info:%s:%s:%s:%s:%s',
-    [Catalog, Schema, Table, BoolToStr(Unique), BoolToStr(Approximate)]);
+  Key := GetIndexInfoCacheKey(Catalog, Schema, Table, Unique,
+    Approximate);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2773,8 +2819,8 @@ function TZAbstractDatabaseMetadata.GetSequences(const Catalog, SchemaPattern,
 var
   Key: string;
 begin
-  Key := Format('get-sequences:%s:%s:%s',
-    [Catalog, SchemaPattern, SequenceNamePattern]);
+  Key := GetSequencesCacheKey(Catalog, SchemaPattern,
+    SequenceNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2857,14 +2903,10 @@ function TZAbstractDatabaseMetadata.GetUDTs(const Catalog: string;
   const SchemaPattern: string; const TypeNamePattern: string;
   const Types: TIntegerDynArray): IZResultSet;
 var
-  I: Integer;
   Key: string;
 begin
-  Key := '';
-  for I := Low(Types) to High(Types) do
-    Key := Key + ':' + IntToStr(Types[I]);
-  Key := Format('get-udts:%s:%s:%s%s',
-    [Catalog, SchemaPattern, TypeNamePattern, Key]);
+  Key := GetUDTsCacheKey(Catalog, SchemaPattern, TypeNamePattern,
+    Types);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2930,6 +2972,306 @@ begin
     Result:=Result+[WildcardsArray[i]];
 end;
 
+//----------------------------------------------------------------------
+// Metadata cache key retrieval API (technobot 2008-06-14):
+
+{**
+  returns cache key for GetProcedures metadata entry
+  @param Catalog a catalog name
+  @param SchemaPattern a schema name pattern
+  @param ProcedureNamePattern a procedure name pattern
+  @return the cache key string
+}
+function TZAbstractDatabaseMetadata.GetProceduresCacheKey(const Catalog: string;
+  const SchemaPattern: string; const ProcedureNamePattern: string): string;
+begin
+  Result := Format('get-procedures:%s:%s:%s',
+    [Catalog, SchemaPattern, ProcedureNamePattern]);
+end;
+
+{**
+  returns cache key for GetProcedureColumns metadata entry
+  @param Catalog a catalog name
+  @param SchemaPattern a schema name pattern
+  @param ProcedureNamePattern a procedure name pattern
+  @param ColumnNamePattern a column name pattern
+  @return the cache key string
+}
+function TZAbstractDatabaseMetadata.GetProcedureColumnsCacheKey(const Catalog: string;
+  const SchemaPattern: string; const ProcedureNamePattern: string;
+  const ColumnNamePattern: string): string;
+begin
+  Result := Format('get-procedure-columns:%s:%s:%s:%s',
+    [Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern]);
+end;
+
+{**
+  returns cache key for GetTables metadata entry
+  @param Catalog a catalog name
+  @param SchemaPattern a schema name pattern
+  @param TableNamePattern a table name pattern
+  @param Types table types list
+  @return the cache key string
+}
+function TZAbstractDatabaseMetadata.GetTablesCacheKey(const Catalog: string;
+  const SchemaPattern: string; const TableNamePattern: string;
+  const Types: TStringDynArray): string;
+var
+  I: Integer;
+  Key: string;
+begin
+  Key := '';
+  for I := Low(Types) to High(Types) do
+    Key := Key + ':' + Types[I];
+
+  Result := Format('get-tables:%s:%s:%s:%s',
+    [Catalog, SchemaPattern, TableNamePattern, Key]);
+end;
+
+{**
+  returns cache key for GetSchemas metadata entry
+  @return the cache key string
+}
+function TZAbstractDatabaseMetadata.GetSchemasCacheKey: string;
+begin
+  Result := 'get-schemas';
+end;
+
+{**
+  returns cache key for GetCatalogs metadata entry
+  @return the cache key string
+}
+function TZAbstractDatabaseMetadata.GetCatalogsCacheKey: string;
+begin
+  Result := 'get-catalogs';
+end;
+
+{**
+  returns cache key for GetTableTypes metadata entry
+  @return the cache key string
+}
+function TZAbstractDatabaseMetadata.GetTableTypesCacheKey: string;
+begin
+  Result := 'get-table-types';
+end;
+
+{**
+  returns cache key for GetColumns metadata entry
+  @param Catalog a catalog name
+  @param SchemaPattern a schema name pattern
+  @param TableNamePattern a table name pattern
+  @param ColumnNamePattern a column name pattern
+  @return the cache key string
+}
+function TZAbstractDatabaseMetadata.GetColumnsCacheKey(const Catalog: string;
+  const SchemaPattern: string; const TableNamePattern: string;
+  const ColumnNamePattern: string): string;
+begin
+  Result := Format('get-columns:%s:%s:%s:%s',
+    [Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern]);
+end;
+
+{**
+  returns cache key for GetColumnPrivileges metadata entry
+  @param Catalog a catalog name
+  @param Schema a schema name
+  @param Table a table name
+  @param ColumnNamePattern a column name pattern
+  @return the cache key string
+}
+function TZAbstractDatabaseMetadata.GetColumnPrivilegesCacheKey(
+  const Catalog: string; const Schema: string; const Table: string;
+  const ColumnNamePattern: string): string;
+begin
+  Result := Format('get-column-privileges:%s:%s:%s:%s',
+    [Catalog, Schema, Table, ColumnNamePattern]);
+end;
+
+{**
+  returns cache key for GetTablePrivileges metadata entry
+  @param Catalog a catalog name
+  @param SchemaPattern a schema name pattern
+  @param TableNamePattern a table name pattern
+  @return the cache key string
+}
+function TZAbstractDatabaseMetadata.GetTablePrivilegesCacheKey(
+  const Catalog: string; const SchemaPattern: string;
+  const TableNamePattern: string): string;
+begin
+  Result := Format('get-table-privileges:%s:%s:%s',
+    [Catalog, SchemaPattern, TableNamePattern]);
+end;
+
+{**
+  returns cache key for GetBestRowIdentifier metadata entry
+  @param Catalog a catalog name
+  @param Schema a schema name
+  @param Table a table name
+  @param Scope the scope of interest
+  @param Nullable include columns that are nullable?
+  @return the cache key string
+}
+function TZAbstractDatabaseMetadata.GetBestRowIdentifierCacheKey(
+  const Catalog: string; const Schema: string; const Table: string;
+  const Scope: Integer; const Nullable: Boolean): string;
+begin
+  Result := Format('get-best-row-identifier:%s:%s:%s:%d:%s',
+    [Catalog, Schema, Table, Scope, BoolToStr(Nullable)]);
+end;
+
+{**
+  returns cache key for GetVersionColumns metadata entry
+  @param Catalog a catalog name
+  @param Schema a schema name
+  @param Table a table name
+  @return the cache key string
+}
+function TZAbstractDatabaseMetadata.GetVersionColumnsCacheKey(
+  const Catalog: string; const Schema: string; const Table: string): string;
+begin
+  Result := Format('get-version-columns:%s:%s:%s', [Catalog, Schema, Table]);
+end;
+
+{**
+  returns cache key for GetPrimaryKeys metadata entry
+  @param Catalog a catalog name
+  @param Schema a schema name
+  @param Table a table name
+  @return the cache key string
+}
+function TZAbstractDatabaseMetadata.GetPrimaryKeysCacheKey(const Catalog: string;
+  const Schema: string; const Table: string): string;
+begin
+  Result := Format('get-primary-keys:%s:%s:%s', [Catalog, Schema, Table]);
+end;
+
+{**
+  returns cache key for GetImportedKeys metadata entry
+  @param Catalog a catalog name
+  @param Schema a schema name
+  @param Table a table name
+  @return the cache key string
+}
+function TZAbstractDatabaseMetadata.GetImportedKeysCacheKey(const Catalog: string;
+  const Schema: string; const Table: string): string;
+begin
+  Result := Format('get-imported-keys:%s:%s:%s', [Catalog, Schema, Table]);
+end;
+
+{**
+  returns cache key for GetExportedKeys metadata entry
+  @param Catalog a catalog name
+  @param Schema a schema name
+  @param Table a table name
+  @return the cache key string
+}
+function TZAbstractDatabaseMetadata.GetExportedKeysCacheKey(const Catalog: string;
+  const Schema: string; const Table: string): string;
+begin
+  Result := Format('get-exported-keys:%s:%s:%s', [Catalog, Schema, Table]);
+end;
+
+{**
+  returns cache key for GetCrossReference metadata entry
+  @param PrimaryCatalog a catalog name for the primary table
+  @param PrimarySchema a schema name for the primary table
+  @param PrimaryTable the table name that exports the key
+  @param ForeignCatalog a catalog name for the foreign table
+  @param ForeignSchema a schema name for the foreign table
+  @param ForeignTable the table name that imports the key
+  @return the cache key string
+}
+function TZAbstractDatabaseMetadata.GetCrossReferenceCacheKey(
+  const PrimaryCatalog: string; const PrimarySchema: string;
+  const PrimaryTable: string; const ForeignCatalog: string;
+  const ForeignSchema: string; const ForeignTable: string): string;
+begin
+  Result := Format('get-cross-reference:%s:%s:%s:%s:%s:%s',
+    [PrimaryCatalog, PrimarySchema, PrimaryTable, ForeignCatalog,
+    ForeignSchema, ForeignTable]);
+end;
+
+{**
+  returns cache key for GetTypeInfo metadata entry
+  @return the cache key string
+}
+function TZAbstractDatabaseMetadata.GetTypeInfoCacheKey: string;
+begin
+  Result := 'get-type-info';
+end;
+
+{**
+  returns cache key for GetIndexInfo metadata entry
+  @param Catalog a catalog name
+  @param Schema a schema name
+  @param Table a table name
+  @param Unique when true, return key for a metadata entry that should contain
+      only indices for unique values; when false, return key for a metadata
+      entry that may contain indices to non-unique values
+  @param Approximate when true, return key for a metadata entry that may include
+      approximate or out of data values; when false, return key for a metadata
+      entry that should contain only accurate results
+  @return the cache key string
+}
+function TZAbstractDatabaseMetadata.GetIndexInfoCacheKey(const Catalog: string;
+  const Schema: string; const Table: string; const Unique: Boolean;
+  const Approximate: Boolean): string;
+begin
+  Result := Format('get-index-info:%s:%s:%s:%s:%s',
+    [Catalog, Schema, Table, BoolToStr(Unique), BoolToStr(Approximate)]);
+end;
+
+{**
+  returns cache key for GetSequences metadata entry
+  @param Catalog a catalog name
+  @param SchemaPattern a schema name pattern
+  @param SequenceNamePattern a sequence name pattern
+  @return the cache key string
+}
+function TZAbstractDatabaseMetadata.GetSequencesCacheKey(const Catalog: string;
+  const SchemaPattern: string; const SequenceNamePattern: string): string;
+begin
+  Result := Format('get-sequences:%s:%s:%s',
+    [Catalog, SchemaPattern, SequenceNamePattern]);
+end;
+
+{**
+  returns cache key for GetUDTs metadata entry
+  @param Catalog a catalog name
+  @param SchemaPattern a schema name pattern
+  @param TypeNamePattern a type name pattern
+  @param Types a list of user-named types to include
+  @return the cache key string
+}
+function TZAbstractDatabaseMetadata.GetUDTsCacheKey(const Catalog: string;
+  const SchemaPattern: string; const TypeNamePattern: string;
+  const Types: TIntegerDynArray): string;
+var
+  I: Integer;
+begin
+  Result := '';
+  for I := Low(Types) to High(Types) do
+    Result := Result + ':' + IntToStr(Types[I]);
+  Result := Format('get-udts:%s:%s:%s%s',
+    [Catalog, SchemaPattern, TypeNamePattern, Result]);
+end;
+
+{**
+  fills string list with the keys for the currently cached metadata entries
+  @param List a string list to fill out
+}
+procedure TZAbstractDatabaseMetadata.GetCacheKeys(List: TStrings);
+var
+  I: Integer;
+begin
+  List.Clear;
+  with CachedResultSets.Keys do
+    for I := 0 to Count-1 do
+      List.Add((Items[I] as IZAnyValue).GetString);
+end;
+
+// End of metadata cache key retrieval API (technobot 2008-06-14)
+//----------------------------------------------------------------------
 
 
 { TZVirtualResultSet }
@@ -3163,6 +3505,7 @@ end;
   @param TableNamePattern table name pattern
   @param Types table types
   @return the cache key string
+  @deprecated use TZAbstractDatabaseMetadata.GetTablesCacheKey instead
 }
 function GetTablesMetaDataCacheKey(Const Catalog:String;
       Const SchemaPattern:String;	Const TableNamePattern:String;const Types: TStringDynArray):String;

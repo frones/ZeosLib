@@ -1245,7 +1245,7 @@ var
   end;
 
 begin
-  Key := GetTablesMetaDataCacheKey(Catalog,SchemaPattern,TableNamePattern,Types);
+  Key := GetTablesCacheKey(Catalog, SchemaPattern, TableNamePattern, Types); 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -1317,7 +1317,7 @@ function TZOracleDatabaseMetadata.GetSchemas: IZResultSet;
 var
   Key: string;
 begin
-  Key := 'get-schemas';
+  Key := GetSchemasCacheKey; 
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1371,7 +1371,7 @@ var
   I: Integer;
   Key: string;
 begin
-  Key := 'get-table-types';
+  Key := GetTableTypesCacheKey; 
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1446,8 +1446,8 @@ function TZOracleDatabaseMetadata.GetColumns(const Catalog: string;
 var
   Key, SQL: string;
 begin
-  Key := Format('get-columns:%s:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern]);
+  Key := GetColumnsCacheKey(Catalog, SchemaPattern, TableNamePattern,
+    ColumnNamePattern); 
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1547,8 +1547,8 @@ function TZOracleDatabaseMetadata.GetColumnPrivileges(const Catalog: string;
 var
   Key, SQL: string;
 begin
-  Key := Format('get-column-privileges:%s:%s:%s:%s',
-    [Catalog, Schema, Table, ColumnNamePattern]);
+  Key := GetColumnPrivilegesCacheKey(Catalog, Schema, Table,
+    ColumnNamePattern); 
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1606,8 +1606,8 @@ function TZOracleDatabaseMetadata.GetTablePrivileges(const Catalog: string;
 var
   Key, SQL: string;
 begin
-  Key := Format('get-table-privileges:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern]);
+  Key := GetTablePrivilegesCacheKey(Catalog, SchemaPattern,
+    TableNamePattern); 
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1687,7 +1687,7 @@ function TZOracleDatabaseMetadata.GetPrimaryKeys(const Catalog: string;
 var
   SQL, Key: string;
 begin
-  Key := Format('get-primary-keys:%s:%s:%s', [Catalog, Schema, Table]);
+  Key := GetPrimaryKeysCacheKey(Catalog, Schema, Table); 
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2048,8 +2048,8 @@ function TZOracleDatabaseMetadata.GetIndexInfo(const Catalog: string;
 var
   Key, SQL: string;
 begin
-  Key := Format('get-index-info:%s:%s:%s:%s:%s',
-    [Catalog, Schema, Table, BoolToStr(Unique), BoolToStr(Approximate)]);
+  Key := GetIndexInfoCacheKey(Catalog, Schema, Table, Unique,
+    Approximate); 
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then

@@ -849,7 +849,7 @@ var
   Key: string;
   LCatalog, LTableNamePattern: string;
 begin
-  Key := GetTablesMetaDataCacheKey(Catalog,SchemaPattern,TableNamePattern,Types);
+  Key := GetTablesCacheKey(Catalog, SchemaPattern, TableNamePattern, Types);
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -915,9 +915,10 @@ end;
   catalog name
 }
 function TZMySQLDatabaseMetadata.GetCatalogs: IZResultSet;
-const
-  Key = 'get-catalogs';
+var
+  Key: string;
 begin
+  Key := GetCatalogsCacheKey;
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -953,9 +954,13 @@ end;
   table type
 }
 function TZMySQLDatabaseMetadata.GetTableTypes: IZResultSet;
-const
-  Key = 'get-catalogs';
+// original code before technobot... this can't be right, can it? :
+//const
+//  Key = 'get-catalogs';
+var
+  Key: string;
 begin
+  Key := GetTableTypesCacheKey;
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -1043,8 +1048,8 @@ var
   TableNameList: TStrings;
   TableNameLength: Integer;
 begin
-  Key := Format('get-columns:%s:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern]);
+  Key := GetColumnsCacheKey(Catalog, SchemaPattern, TableNamePattern,
+    ColumnNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1336,8 +1341,8 @@ var
   AllPrivileges, ColumnName, Privilege: string;
   PrivilegesList: TStrings;
 begin
-  Key := Format('get-column-privileges:%s:%s:%s:%s',
-    [Catalog, Schema, Table, ColumnNamePattern]);
+  Key := GetColumnPrivilegesCacheKey(Catalog, Schema, Table,
+    ColumnNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1439,8 +1444,8 @@ var
   AllPrivileges, Privilege: string;
   PrivilegesList: TStrings;
 begin
-  Key := Format('get-table-privileges:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern]);
+  Key := GetTablePrivilegesCacheKey(Catalog, SchemaPattern,
+    TableNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1527,7 +1532,7 @@ var
 begin
   if Table = '' then
     raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
-  Key := Format('get-primary-keys:%s:%s:%s', [Catalog, Schema, Table]);
+  Key := GetPrimaryKeysCacheKey(Catalog, Schema, Table);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1651,7 +1656,7 @@ var
 begin
   if Table = '' then
     raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
-  Key := Format('get-imported-keys:%s:%s:%s', [Catalog, Schema, Table]);
+  Key := GetImportedKeysCacheKey(Catalog, Schema, Table);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1806,7 +1811,7 @@ var
 begin
   if Table = '' then
     raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
-  Key := Format('get-exported-keys:%s:%s:%s', [Catalog, Schema, Table]);
+  Key := GetExportedKeysCacheKey(Catalog, Schema, Table);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1969,9 +1974,8 @@ var
 begin
   if PrimaryTable = '' then
     raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
-  Key := Format('get-cross-reference:%s:%s:%s:%s:%s:%s',
-    [PrimaryCatalog, PrimarySchema, PrimaryTable, ForeignCatalog,
-    ForeignSchema, ForeignTable]);
+  Key := GetCrossReferenceCacheKey(PrimaryCatalog, PrimarySchema, PrimaryTable,
+    ForeignCatalog, ForeignSchema, ForeignTable);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2118,11 +2122,11 @@ const
     1, -1, 4, 16, 16777215, 16777215, MAXBUF, 65535, 255, 255, 255,
     16777215, 16777215, 2147483647, 65535, 255, 255, 255, 17, 17, 10, 10,
     7, 4, 17, 10, 10, 65535, 64, -1, -1, -1, -1);
-
-  Key = 'get-type-info';
 var
   I: Integer;
+  Key: string; // modified by technbot (2008-06-14) for uniformity with other GetTypeInfo mehtods
 begin
+  Key := GetTypeInfoCacheKey;
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -2229,8 +2233,8 @@ var
 begin
   if Table = '' then
     raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
-  Key := Format('get-index-info:%s:%s:%s:%s:%s',
-    [Catalog, Schema, Table, BoolToStr(Unique), BoolToStr(Approximate)]);
+  Key := GetIndexInfoCacheKey(Catalog, Schema, Table, Unique,
+    Approximate);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2343,7 +2347,7 @@ function TZMySQLDatabaseMetadata.GetVersionColumns(const Catalog, Schema,
 var
   Key: string;
 begin
-  Key := Format('get-version-columns:%s:%s:%s', [Catalog, Schema, Table]);
+  Key := GetVersionColumnsCacheKey(Catalog, Schema, Table);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2366,4 +2370,5 @@ begin
 end;
 
 end.
+
 

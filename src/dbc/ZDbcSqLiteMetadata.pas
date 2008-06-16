@@ -1249,7 +1249,7 @@ var
   end;
 
 begin
-  Key := GetTablesMetaDataCacheKey(Catalog,SchemaPattern,TableNamePattern,Types);
+  Key := GetTablesCacheKey(Catalog, SchemaPattern, TableNamePattern, Types); 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -1334,7 +1334,7 @@ var
   I: Integer;
   Key: string;
 begin
-  Key := 'get-table-types';
+  Key := GetTableTypesCacheKey; 
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1410,8 +1410,8 @@ var
   Key, Temp: string;
   Precision, Decimals: Integer;
 begin
-  Key := Format('get-columns:%s:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern]);
+  Key := GetColumnsCacheKey(Catalog, SchemaPattern, TableNamePattern,
+    ColumnNamePattern); 
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1619,7 +1619,7 @@ var
   Key: string;
   Index: Integer;
 begin
-  Key := Format('get-primary-keys:%s:%s:%s', [Catalog, Schema, Table]);
+  Key := GetPrimaryKeysCacheKey(Catalog, Schema, Table); 
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1950,7 +1950,7 @@ var
   I: Integer;
   Key: string;
 begin
-  Key := 'get-type-info';
+  Key := GetTypeInfoCacheKey; 
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2056,8 +2056,8 @@ var
   Key: string;
   ResultSet: IZResultSet;
 begin
-  Key := Format('get-index-info:%s:%s:%s:%s:%s',
-    [Catalog, Schema, Table, BoolToStr(Unique), BoolToStr(Approximate)]);
+  Key := GetIndexInfoCacheKey(Catalog, Schema, Table, Unique,
+    Approximate); 
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2169,7 +2169,7 @@ function TZSQLiteDatabaseMetadata.GetUDTs(const Catalog: string;
   const SchemaPattern: string; const TypeNamePattern: string;
   const Types: TIntegerDynArray): IZResultSet;
 begin
-  Result := GetUDTs(Catalog, SchemaPattern, TypeNamePattern, Types);
+ Result := inherited GetUDTs(Catalog, SchemaPattern, TypeNamePattern, Types);
 end;
 
 end.

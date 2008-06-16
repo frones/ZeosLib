@@ -1140,8 +1140,7 @@ function TZSybaseDatabaseMetadata.GetProcedures(const Catalog: string;
 var
   Key: string;
 begin
-  Key := Format('get-procedures:%s:%s:%s',
-    [Catalog, SchemaPattern, ProcedureNamePattern]);
+  Key := GetProceduresCacheKey(Catalog, SchemaPattern, ProcedureNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1240,8 +1239,8 @@ var
 var
   Key: string;
 begin
-  Key := Format('get-procedure-columns:%s:%s:%s:%s',
-    [Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern]);
+  Key := GetProcedureColumnsCacheKey(Catalog, SchemaPattern, ProcedureNamePattern,
+    ColumnNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1379,7 +1378,7 @@ var
   Key: string;
   TableTypes: string;
 begin
-  Key := GetTablesMetaDataCacheKey(Catalog,SchemaPattern,TableNamePattern,Types);
+  Key := GetTablesCacheKey(Catalog, SchemaPattern, TableNamePattern, Types);
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -1435,7 +1434,7 @@ function TZSybaseDatabaseMetadata.GetSchemas: IZResultSet;
 var
   Key: string;
 begin
-  Key := 'get-schemas';
+  Key := GetSchemasCacheKey;
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1474,7 +1473,7 @@ function TZSybaseDatabaseMetadata.GetCatalogs: IZResultSet;
 var
   Key: string;
 begin
-  Key := 'get-catalogs';
+  Key := GetCatalogsCacheKey;
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1518,7 +1517,7 @@ var
   I: Integer;
   Key: string;
 begin
-  Key := 'get-table-types';
+  Key := GetTableTypesCacheKey;
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1593,8 +1592,8 @@ function TZSybaseDatabaseMetadata.GetColumns(const Catalog: string;
 var
   Key: string;
 begin
-  Key := Format('get-columns:%s:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern]);
+  Key := GetColumnsCacheKey(Catalog, SchemaPattern, TableNamePattern,
+    ColumnNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1717,8 +1716,8 @@ function TZSybaseDatabaseMetadata.GetColumnPrivileges(const Catalog: string;
 var
   Key: string;
 begin
-  Key := Format('get-column-privileges:%s:%s:%s:%s',
-    [Catalog, Schema, Table, ColumnNamePattern]);
+  Key := GetColumnPrivilegesCacheKey(Catalog, Schema, Table,
+    ColumnNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1795,8 +1794,8 @@ function TZSybaseDatabaseMetadata.GetTablePrivileges(const Catalog: string;
 var
   Key: string;
 begin
-  Key := Format('get-table-privileges:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern]);
+  Key := GetTablePrivilegesCacheKey(Catalog, SchemaPattern,
+    TableNamePattern);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1868,7 +1867,7 @@ function TZSybaseDatabaseMetadata.GetVersionColumns(const Catalog: string;
 var
   Key: string;
 begin
-  Key := Format('get-version-columns:%s:%s:%s', [Catalog, Schema, Table]);
+  Key := GetVersionColumnsCacheKey(Catalog, Schema, Table);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -1934,7 +1933,7 @@ function TZSybaseDatabaseMetadata.GetPrimaryKeys(const Catalog: string;
 var
   Key: string;
 begin
-  Key := Format('get-primary-keys:%s:%s:%s', [Catalog, Schema, Table]);
+  Key := GetPrimaryKeysCacheKey(Catalog, Schema, Table);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2041,7 +2040,7 @@ function TZSybaseDatabaseMetadata.GetImportedKeys(const Catalog: string;
 var
   Key: string;
 begin
-  Key := Format('get-imported-keys:%s:%s:%s', [Catalog, Schema, Table]);
+  Key := GetImportedKeysCacheKey(Catalog, Schema, Table);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2164,7 +2163,7 @@ function TZSybaseDatabaseMetadata.GetExportedKeys(const Catalog: string;
 var
   Key: string;
 begin
-  Key := Format('get-exported-keys:%s:%s:%s', [Catalog, Schema, Table]);
+  Key := GetExportedKeysCacheKey(Catalog, Schema, Table);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2296,9 +2295,8 @@ function TZSybaseDatabaseMetadata.GetCrossReference(const PrimaryCatalog: string
 var
   Key: string;
 begin
-  Key := Format('get-cross-reference:%s:%s:%s:%s:%s:%s',
-    [PrimaryCatalog, PrimarySchema, PrimaryTable, ForeignCatalog,
-    ForeignSchema, ForeignTable]);
+  Key := GetCrossReferenceCacheKey(PrimaryCatalog, PrimarySchema, PrimaryTable,
+    ForeignCatalog, ForeignSchema, ForeignTable);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2399,7 +2397,7 @@ function TZSybaseDatabaseMetadata.GetTypeInfo: IZResultSet;
 var
   Key: string;
 begin
-  Key := 'get-type-info';
+  Key := GetTypeInfoCacheKey;
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2514,8 +2512,8 @@ var
   Is_Unique, Accuracy: string;
   Key: string;
 begin
-  Key := Format('get-index-info:%s:%s:%s:%s:%s',
-    [Catalog, Schema, Table, BoolToStr(Unique), BoolToStr(Approximate)]);
+  Key := GetIndexInfoCacheKey(Catalog, Schema, Table, Unique,
+    Approximate);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2639,11 +2637,8 @@ var
   UDTypes: string;
   Key: string;
 begin
-  Key := '';
-  for I := Low(Types) to High(Types) do
-    Key := Key + ':' + IntToStr(Types[I]);
-  Key := Format('get-udts:%s:%s:%s%s',
-    [Catalog, SchemaPattern, TypeNamePattern, Key]);
+  Key := GetUDTsCacheKey(Catalog, SchemaPattern, TypeNamePattern,
+    Types);
 
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2698,4 +2693,5 @@ begin
 end;
 
 end.
+
 
