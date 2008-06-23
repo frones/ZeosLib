@@ -70,6 +70,38 @@ type
   TZMsSqlDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   protected
     function GetStatement: IZSTatement;
+    function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
+    function UncachedGetSchemas: IZResultSet; override;
+    function UncachedGetCatalogs: IZResultSet; override;
+    function UncachedGetTableTypes: IZResultSet; override;
+    function UncachedGetColumns(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
+    function UncachedGetTablePrivileges(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string): IZResultSet; override;
+    function UncachedGetColumnPrivileges(const Catalog: string; const Schema: string;
+      const Table: string; const ColumnNamePattern: string): IZResultSet; override;
+    function UncachedGetPrimaryKeys(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+    function UncachedGetImportedKeys(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+    function UncachedGetExportedKeys(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+    function UncachedGetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
+      const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
+      const ForeignTable: string): IZResultSet; override;
+    function UncachedGetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
+      Unique: Boolean; Approximate: Boolean): IZResultSet; override;
+//     function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
+//      const SequenceNamePattern: string): IZResultSet; virtual; -> Not implemented
+    function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
+      const ProcedureNamePattern: string): IZResultSet; override;
+    function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
+      const ProcedureNamePattern: string; const ColumnNamePattern: string):
+      IZResultSet; override;
+    function UncachedGetVersionColumns(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+    function UncachedGetTypeInfo: IZResultSet; override;
   public
     constructor Create(Connection: TZAbstractConnection; const Url: string;
       Info: TStrings);
@@ -164,42 +196,6 @@ type
     function SupportsDataManipulationTransactionsOnly: Boolean; override;
     function DataDefinitionCausesTransactionCommit: Boolean; override;
     function DataDefinitionIgnoredInTransactions: Boolean; override;
-
-    function GetProcedures(const Catalog: string; const SchemaPattern: string;
-      const ProcedureNamePattern: string): IZResultSet; override;
-    function GetProcedureColumns(const Catalog: string; const SchemaPattern: string;
-      const ProcedureNamePattern: string; const ColumnNamePattern: string):
-      IZResultSet; override;
-
-    function GetTables(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
-    function GetSchemas: IZResultSet; override;
-    function GetCatalogs: IZResultSet; override;
-    function GetTableTypes: IZResultSet; override;
-    function GetColumns(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
-    function GetColumnPrivileges(const Catalog: string; const Schema: string;
-      const Table: string; const ColumnNamePattern: string): IZResultSet; override;
-
-    function GetTablePrivileges(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string): IZResultSet; override;
-    function GetVersionColumns(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-
-    function GetPrimaryKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-    function GetImportedKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-    function GetExportedKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-    function GetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
-      const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
-      const ForeignTable: string): IZResultSet; override;
-
-    function GetTypeInfo: IZResultSet; override;
-
-    function GetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
-      Unique: Boolean; Approximate: Boolean): IZResultSet; override;
 
     function SupportsResultSetType(_Type: TZResultSetType): Boolean; override;
     function SupportsResultSetConcurrency(_Type: TZResultSetType;
@@ -1136,16 +1132,9 @@ end;
   @return <code>ResultSet</code> - each row is a procedure description
   @see #getSearchStringEscape
 }
-function TZMsSqlDatabaseMetadata.GetProcedures(const Catalog: string;
+function TZMsSqlDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
-var
-  Key: string;
 begin
-  Key := GetProceduresCacheKey(Catalog, SchemaPattern, ProcedureNamePattern);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(ProceduresColumnsDynArray);
 
     with GetStatement.ExecuteQuery(
@@ -1169,8 +1158,6 @@ begin
       Close;
     end;
     Result.BeforeFirst;
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1229,18 +1216,10 @@ end;
        column
   @see #getSearchStringEscape
 }
-function TZMsSqlDatabaseMetadata.GetProcedureColumns(const Catalog: string;
+function TZMsSqlDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
-var
-  Key: string;
 begin
-  Key := GetProcedureColumnsCacheKey(Catalog, SchemaPattern, ProcedureNamePattern,
-    ColumnNamePattern);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(ProceduresColColumnsDynArray);
 
     with GetStatement.ExecuteQuery(
@@ -1285,8 +1264,6 @@ begin
       Close;
     end;
     Result.BeforeFirst;
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1319,17 +1296,13 @@ end;
   @return <code>ResultSet</code> - each row is a table description
   @see #getSearchStringEscape
 }
-function TZMsSqlDatabaseMetadata.GetTables(const Catalog: string;
+function TZMsSqlDatabaseMetadata.UncachedGetTables(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const Types: TStringDynArray): IZResultSet;
 var
   I: Integer;
-  Key, TableTypes: string;
+  TableTypes: string;
 begin
-  Key := GetTablesCacheKey(Catalog, SchemaPattern, TableNamePattern, Types);
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TableColumnsDynArray);
 
     TableTypes := '';
@@ -1361,8 +1334,6 @@ begin
       Close;
     end;
     Result.BeforeFirst;
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1377,15 +1348,8 @@ end;
   @return <code>ResultSet</code> - each row has a single String column that is a
   schema name
 }
-function TZMsSqlDatabaseMetadata.GetSchemas: IZResultSet;
-var
-  Key: string;
+function TZMsSqlDatabaseMetadata.UncachedGetSchemas: IZResultSet;
 begin
-  Key := GetSchemasCacheKey;
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(SchemaColumnsDynArray);
 
     with GetStatement.ExecuteQuery(
@@ -1401,8 +1365,6 @@ begin
       Close;
     end;
     Result.BeforeFirst;
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1417,15 +1379,8 @@ end;
   @return <code>ResultSet</code> - each row has a single String column that is a
   catalog name
 }
-function TZMsSqlDatabaseMetadata.GetCatalogs: IZResultSet;
-var
-  Key: string;
+function TZMsSqlDatabaseMetadata.UncachedGetCatalogs: IZResultSet;
 begin
-  Key := GetCatalogsCacheKey;
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(CatalogColumnsDynArray);
 
     with GetStatement.ExecuteQuery('exec sp_databases') do
@@ -1440,8 +1395,6 @@ begin
       Close;
     end;
     Result.BeforeFirst;
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1458,20 +1411,13 @@ end;
   @return <code>ResultSet</code> - each row has a single String column that is a
   table type
 }
-function TZMsSqlDatabaseMetadata.GetTableTypes: IZResultSet;
+function TZMsSqlDatabaseMetadata.UncachedGetTableTypes: IZResultSet;
 const
   TableTypes: array[0..2] of string = ('SYSTEM TABLE', 'TABLE', 'VIEW');
 var
   I: Integer;
-  Key: string;
 begin
-  Key := GetTableTypesCacheKey;
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TableTypeColumnsDynArray);
-
     for I := 0 to 2 do
     begin
       Result.MoveToInsertRow;
@@ -1479,8 +1425,6 @@ begin
       Result.InsertRow;
     end;
     Result.BeforeFirst;
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1534,18 +1478,10 @@ end;
   @return <code>ResultSet</code> - each row is a column description
   @see #getSearchStringEscape
 }
-function TZMsSqlDatabaseMetadata.GetColumns(const Catalog: string;
+function TZMsSqlDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
-var
-  Key: string;
 begin
-  Key := GetColumnsCacheKey(Catalog, SchemaPattern, TableNamePattern,
-    ColumnNamePattern);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TableColColumnsDynArray);
 
     with GetStatement.ExecuteQuery(
@@ -1639,8 +1575,6 @@ begin
       Close;
     end;
     Result.BeforeFirst;
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1671,17 +1605,9 @@ end;
   @return <code>ResultSet</code> - each row is a column privilege description
   @see #getSearchStringEscape
 }
-function TZMsSqlDatabaseMetadata.GetColumnPrivileges(const Catalog: string;
+function TZMsSqlDatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: string;
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
-var
-  Key: string;
 begin
-  Key := GetColumnPrivilegesCacheKey(Catalog, Schema, Table,
-    ColumnNamePattern);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TableColPrivColumnsDynArray);
 
     with GetStatement.ExecuteQuery(
@@ -1712,8 +1638,6 @@ begin
       Close;
     end;
     Result.BeforeFirst;
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1748,17 +1672,9 @@ end;
   @return <code>ResultSet</code> - each row is a table privilege description
   @see #getSearchStringEscape
 }
-function TZMsSqlDatabaseMetadata.GetTablePrivileges(const Catalog: string;
+function TZMsSqlDatabaseMetadata.UncachedGetTablePrivileges(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
-var
-  Key: string;
 begin
-  Key := GetTablePrivilegesCacheKey(Catalog, SchemaPattern,
-    TableNamePattern);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TablePrivColumnsDynArray);
 
     with GetStatement.ExecuteQuery(
@@ -1787,8 +1703,6 @@ begin
       Close;
     end;
     Result.BeforeFirst;
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1821,17 +1735,11 @@ end;
   @return <code>ResultSet</code> - each row is a column description
   @exception SQLException if a database access error occurs
 }
-function TZMsSqlDatabaseMetadata.GetVersionColumns(const Catalog: string;
+function TZMsSqlDatabaseMetadata.UncachedGetVersionColumns(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
   MSCol_Type: string;
-  Key: string;
 begin
-  Key := GetVersionColumnsCacheKey(Catalog, Schema, Table);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TableColVerColumnsDynArray);
 
     MSCol_Type := '''V''';
@@ -1864,8 +1772,6 @@ begin
       Close;
     end;
     Result.BeforeFirst;
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1890,16 +1796,9 @@ end;
   @return <code>ResultSet</code> - each row is a primary key column description
   @exception SQLException if a database access error occurs
 }
-function TZMsSqlDatabaseMetadata.GetPrimaryKeys(const Catalog: string;
+function TZMsSqlDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
-var
-  Key: string;
 begin
-  Key := GetPrimaryKeysCacheKey(Catalog, Schema, Table);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(PrimaryKeyColumnsDynArray);
 
     with GetStatement.ExecuteQuery(
@@ -1926,8 +1825,6 @@ begin
       Close;
     end;
     Result.BeforeFirst;
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1997,7 +1894,7 @@ end;
   @return <code>ResultSet</code> - each row is a primary key column description
   @see #getExportedKeys
 }
-function TZMsSqlDatabaseMetadata.GetImportedKeys(const Catalog: string;
+function TZMsSqlDatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 begin
   Result := GetCrossReference('', '', '', Catalog, Schema, Table);
@@ -2070,7 +1967,7 @@ end;
   @return <code>ResultSet</code> - each row is a foreign key column description
   @see #getImportedKeys
 }
-function TZMsSqlDatabaseMetadata.GetExportedKeys(const Catalog: string;
+function TZMsSqlDatabaseMetadata.UncachedGetExportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 begin
   Result := GetCrossReference(Catalog, Schema, Table, '', '', '');
@@ -2151,18 +2048,10 @@ end;
   @return <code>ResultSet</code> - each row is a foreign key column description
   @see #getImportedKeys
 }
-function TZMsSqlDatabaseMetadata.GetCrossReference(const PrimaryCatalog: string;
+function TZMsSqlDatabaseMetadata.UncachedGetCrossReference(const PrimaryCatalog: string;
   const PrimarySchema: string; const PrimaryTable: string; const ForeignCatalog: string;
   const ForeignSchema: string; const ForeignTable: string): IZResultSet;
-var
-  Key: string;
 begin
-  Key := GetCrossReferenceCacheKey(PrimaryCatalog, PrimarySchema, PrimaryTable,
-    ForeignCatalog, ForeignSchema, ForeignTable);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(CrossRefColumnsDynArray);
 
     with GetStatement.ExecuteQuery(
@@ -2205,8 +2094,6 @@ begin
       Close;
     end;
     Result.BeforeFirst;
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -2254,15 +2141,8 @@ end;
 
   @return <code>ResultSet</code> - each row is an SQL type description
 }
-function TZMsSqlDatabaseMetadata.GetTypeInfo: IZResultSet;
-var
-  Key: string;
+function TZMsSqlDatabaseMetadata.UncachedGetTypeInfo: IZResultSet;
 begin
-  Key := GetTypeInfoCacheKey;
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TypeInfoColumnsDynArray);
 
     with GetStatement.ExecuteQuery('exec sp_datatype_info') do
@@ -2311,8 +2191,6 @@ begin
       Close;
     end;
     Result.BeforeFirst;
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -2366,20 +2244,12 @@ end;
       accurate
   @return <code>ResultSet</code> - each row is an index column description
 }
-function TZMsSqlDatabaseMetadata.GetIndexInfo(const Catalog: string;
+function TZMsSqlDatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
   const Schema: string; const Table: string; Unique: Boolean;
   Approximate: Boolean): IZResultSet;
 var
   Is_Unique, Accuracy: string;
-var
-  Key: string;
 begin
-  Key := GetIndexInfoCacheKey(Catalog, Schema, Table, Unique,
-    Approximate);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(IndexInfoColumnsDynArray);
 
     if Unique then
@@ -2427,8 +2297,6 @@ begin
       Close;
     end;
     Result.BeforeFirst;
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**

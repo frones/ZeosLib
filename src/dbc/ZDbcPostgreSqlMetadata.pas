@@ -84,6 +84,39 @@ type
       string;
     procedure ParseACLArray(List: TStrings; AclString: string);
     function GetPrivilegeName(Permission: char): string;
+
+    function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
+    function UncachedGetSchemas: IZResultSet; override;
+    function UncachedGetCatalogs: IZResultSet; override;
+    function UncachedGetTableTypes: IZResultSet; override;
+    function UncachedGetColumns(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
+    function UncachedGetTablePrivileges(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string): IZResultSet; override;
+    function UncachedGetColumnPrivileges(const Catalog: string; const Schema: string;
+      const Table: string; const ColumnNamePattern: string): IZResultSet; override;
+    function UncachedGetPrimaryKeys(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+    function UncachedGetImportedKeys(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+    function UncachedGetExportedKeys(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+    function UncachedGetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
+      const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
+      const ForeignTable: string): IZResultSet; override;
+    function UncachedGetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
+      Unique: Boolean; Approximate: Boolean): IZResultSet; override;
+     function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
+      const SequenceNamePattern: string): IZResultSet; virtual;
+    function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
+      const ProcedureNamePattern: string): IZResultSet; override;
+    function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
+      const ProcedureNamePattern: string; const ColumnNamePattern: string):
+      IZResultSet; override;
+    function UncachedGetVersionColumns(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+    function UncachedGetTypeInfo: IZResultSet; override;
   public
     constructor Create(Connection: TZAbstractConnection; Url: string;
       Info: TStrings);
@@ -178,45 +211,6 @@ type
     function SupportsDataManipulationTransactionsOnly: Boolean; override;
     function DataDefinitionCausesTransactionCommit: Boolean; override;
     function DataDefinitionIgnoredInTransactions: Boolean; override;
-
-    function GetProcedures(const Catalog: string; const SchemaPattern: string;
-      const ProcedureNamePattern: string): IZResultSet; override;
-    function GetProcedureColumns(const Catalog: string; const SchemaPattern: string;
-      const ProcedureNamePattern: string; const ColumnNamePattern: string):
-      IZResultSet; override;
-
-    function GetTables(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
-    function GetSchemas: IZResultSet; override;
-    function GetCatalogs: IZResultSet; override;
-    function GetTableTypes: IZResultSet; override;
-    function GetColumns(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
-    function GetColumnPrivileges(const Catalog: string; const Schema: string;
-      const Table: string; const ColumnNamePattern: string): IZResultSet; override;
-
-    function GetTablePrivileges(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string): IZResultSet; override;
-    function GetVersionColumns(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-
-    function GetPrimaryKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-    function GetImportedKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-    function GetExportedKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-    function GetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
-      const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
-      const ForeignTable: string): IZResultSet; override;
-
-    function GetTypeInfo: IZResultSet; override;
-
-    function GetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
-      Unique: Boolean; Approximate: Boolean): IZResultSet; override;
-
-    function GetSequences(const Catalog: string; const SchemaPattern: string;
-      const SequenceNamePattern: string): IZResultSet; override;
 
     function SupportsResultSetType(_Type: TZResultSetType): Boolean; override;
     function SupportsResultSetConcurrency(_Type: TZResultSetType;
@@ -1165,21 +1159,15 @@ end;
   @return <code>ResultSet</code> - each row is a procedure description
   @see #getSearchStringEscape
 }
-function TZPostgreSQLDatabaseMetadata.GetProcedures(const Catalog: string;
+function TZPostgreSQLDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 var
-  Key, SQL, LProcedureNamePattern: string;
+  SQL, LProcedureNamePattern: string;
 begin
-  Key := GetProceduresCacheKey(Catalog, SchemaPattern, ProcedureNamePattern); 
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     if ProcedureNamePattern = '' then
       LProcedureNamePattern := '%'
     else
       LProcedureNamePattern := ProcedureNamePattern;
-
 
     if HaveMinimumServerVersion(7, 3) then
     begin
@@ -1212,8 +1200,6 @@ begin
     Result := CopyToVirtualResultSet(
       GetConnection.CreateStatement.ExecuteQuery(SQL),
       ConstructVirtualResultSet(ProceduresColumnsDynArray));
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1272,23 +1258,16 @@ end;
        column
   @see #getSearchStringEscape
 }
-function TZPostgreSQLDatabaseMetadata.GetProcedureColumns(const Catalog: string;
+function TZPostgreSQLDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 var
   I, ReturnType, ColumnTypeOid, ArgOid: Integer;
-  Key, SQL, ReturnTypeType: string;
+  SQL, ReturnTypeType: string;
   ArgTypes: TStrings;
   ResultSet,
   ColumnsRS: IZResultSet;
-//  IZCO:IZConnection;
 begin
-  Key := GetProcedureColumnsCacheKey(Catalog, SchemaPattern, ProcedureNamePattern,
-    ColumnNamePattern); 
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(ProceduresColColumnsDynArray);
 
     if HaveMinimumServerVersion(7, 3) then
@@ -1393,9 +1372,6 @@ begin
     finally
       ArgTypes.Free;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1428,20 +1404,15 @@ end;
   @return <code>ResultSet</code> - each row is a table description
   @see #getSearchStringEscape
 }
-function TZPostgreSQLDatabaseMetadata.GetTables(const Catalog: string;
+function TZPostgreSQLDatabaseMetadata.UncachedGetTables(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const Types: TStringDynArray): IZResultSet;
 var
   I: Integer;
-  Key: string;
   TableType, OrderBy, SQL: string;
   UseSchemas: Boolean;
   LTypes: TStringDynArray;
 begin
-  Key := GetTablesCacheKey(Catalog, SchemaPattern, TableNamePattern, Types); 
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     UseSchemas := True;
 
     if HaveMinimumServerVersion(7, 3) then
@@ -1560,8 +1531,6 @@ begin
     Result := CopyToVirtualResultSet(
       GetConnection.CreateStatement.ExecuteQuery(SQL),
       ConstructVirtualResultSet(TableColumnsDynArray));
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1576,15 +1545,10 @@ end;
   @return <code>ResultSet</code> - each row has a single String column that is a
   schema name
 }
-function TZPostgreSQLDatabaseMetadata.GetSchemas: IZResultSet;
+function TZPostgreSQLDatabaseMetadata.UncachedGetSchemas: IZResultSet;
 var
-  Key, SQL: string;
+  SQL: string;
 begin
-  Key := GetSchemasCacheKey; 
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     if HaveMinimumServerVersion(7, 3) then
     begin
       SQL := 'SELECT nspname AS TABLE_SCHEM FROM pg_catalog.pg_namespace'
@@ -1596,8 +1560,6 @@ begin
     Result := CopyToVirtualResultSet(
       GetConnection.CreateStatement.ExecuteQuery(SQL),
       ConstructVirtualResultSet(SchemaColumnsDynArray));
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1612,15 +1574,10 @@ end;
   @return <code>ResultSet</code> - each row has a single String column that is a
   catalog name
 }
-function TZPostgreSQLDatabaseMetadata.GetCatalogs: IZResultSet;
+function TZPostgreSQLDatabaseMetadata.UncachedGetCatalogs: IZResultSet;
 var
-  Key, SQL: string;
+  SQL: string;
 begin
-  Key := GetCatalogsCacheKey; 
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     if HaveMinimumServerVersion(7, 3) then
     begin
       SQL := 'SELECT datname AS TABLE_CAT FROM pg_catalog.pg_database'
@@ -1631,8 +1588,6 @@ begin
     Result := CopyToVirtualResultSet(
       GetConnection.CreateStatement.ExecuteQuery(SQL),
       ConstructVirtualResultSet(CatalogColumnsDynArray));
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1649,7 +1604,7 @@ end;
   @return <code>ResultSet</code> - each row has a single String column that is a
   table type
 }
-function TZPostgreSQLDatabaseMetadata.GetTableTypes: IZResultSet;
+function TZPostgreSQLDatabaseMetadata.UncachedGetTableTypes: IZResultSet;
 const
   Types: array [0..10] of string = ('TABLE', 'VIEW', 'INDEX',
     'SEQUENCE', 'SYSTEM TABLE', 'SYSTEM TOAST TABLE',
@@ -1657,24 +1612,14 @@ const
     'TEMPORARY TABLE', 'TEMPORARY INDEX');
 var
   I: Integer;
-  Key: string;
 begin
-  Key := GetTableTypesCacheKey; 
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TableTypeColumnsDynArray);
-
     for I := 0 to 10 do
     begin
       Result.MoveToInsertRow;
       Result.UpdateString(1, Types[I]);
       Result.InsertRow;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1728,21 +1673,15 @@ end;
   @return <code>ResultSet</code> - each row is a column description
   @see #getSearchStringEscape
 }
-function TZPostgreSQLDatabaseMetadata.GetColumns(const Catalog: string;
+function TZPostgreSQLDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 {const
   VARHDRSZ = 4;
 }var
   TypeOid, AttTypMod: Integer;
-  Key, SQL, PgType: string;
+  SQL, PgType: string;
 begin
-  Key := GetColumnsCacheKey(Catalog, SchemaPattern, TableNamePattern,
-    ColumnNamePattern); 
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TableColColumnsDynArray);
 
     if HaveMinimumServerVersion(7, 3) then
@@ -1849,9 +1788,6 @@ begin
       end;
       Close;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1882,20 +1818,14 @@ end;
   @return <code>ResultSet</code> - each row is a column privilege description
   @see #getSearchStringEscape
 }
-function TZPostgreSQLDatabaseMetadata.GetColumnPrivileges(const Catalog: string;
+function TZPostgreSQLDatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: string;
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
 var
   I, J: Integer;
-  Key, SQL, {SchemaName, TableName,} Column, Owner: string;
+  SQL, Column, Owner: string;
   Privileges, Grantable, Grantee: string;
   Permissions, PermissionsExp: TStrings;
 begin
-  Key := GetColumnPrivilegesCacheKey(Catalog, Schema, Table,
-    ColumnNamePattern); 
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TableColPrivColumnsDynArray);
 
     if HaveMinimumServerVersion(7, 3) then
@@ -1967,9 +1897,6 @@ begin
       Permissions.Free;
       PermissionsExp.Free;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -2004,20 +1931,14 @@ end;
   @return <code>ResultSet</code> - each row is a table privilege description
   @see #getSearchStringEscape
 }
-function TZPostgreSQLDatabaseMetadata.GetTablePrivileges(const Catalog: string;
+function TZPostgreSQLDatabaseMetadata.UncachedGetTablePrivileges(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
 var
   I, J: Integer;
-  Key, SQL, SchemaName, TableName, Owner: string;
+  SQL, SchemaName, TableName, Owner: string;
   Privileges, Grantable, Grantee: string;
   Permissions, PermissionsExp: TStringList;
 begin
-  Key := GetTablePrivilegesCacheKey(Catalog, SchemaPattern,
-    TableNamePattern); 
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TablePrivColumnsDynArray);
 
     if HaveMinimumServerVersion(7, 3) then
@@ -2085,9 +2006,6 @@ begin
       Permissions.Free;
       PermissionsExp.Free;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -2120,16 +2038,9 @@ end;
   @return <code>ResultSet</code> - each row is a column description
   @exception SQLException if a database access error occurs
 }
-function TZPostgreSQLDatabaseMetadata.GetVersionColumns(const Catalog: string;
+function TZPostgreSQLDatabaseMetadata.UncachedGetVersionColumns(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
-var
-  Key: string;
 begin
-  Key := GetVersionColumnsCacheKey(Catalog, Schema, Table); 
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TableColVerColumnsDynArray);
 
     Result.MoveToInsertRow;
@@ -2142,9 +2053,6 @@ begin
     Result.UpdateNull(7);
     Result.UpdateInt(4, Ord(vcPseudo));
     Result.InsertRow;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -2169,16 +2077,11 @@ end;
   @return <code>ResultSet</code> - each row is a primary key column description
   @exception SQLException if a database access error occurs
 }
-function TZPostgreSQLDatabaseMetadata.GetPrimaryKeys(const Catalog: string;
+function TZPostgreSQLDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
-  Key, SQL, Select, From, Where: string;
+  SQL, Select, From, Where: string;
 begin
-  Key := GetPrimaryKeysCacheKey(Catalog, Schema, Table); 
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     if HaveMinimumServerVersion(7, 3) then
     begin
       Select := 'SELECT NULL AS TABLE_CAT, n.nspname AS TABLE_SCHEM,';
@@ -2206,8 +2109,6 @@ begin
     Result := CopyToVirtualResultSet(
       GetConnection.CreateStatement.ExecuteQuery(SQL),
       ConstructVirtualResultSet(PrimaryKeyColumnsDynArray));
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -2277,7 +2178,7 @@ end;
   @return <code>ResultSet</code> - each row is a primary key column description
   @see #getExportedKeys
 }
-function TZPostgreSQLDatabaseMetadata.GetImportedKeys(const Catalog: string;
+function TZPostgreSQLDatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 begin
   Result := GetCrossReference('', '', '', Catalog, Schema, Table);
@@ -2350,7 +2251,7 @@ end;
   @return <code>ResultSet</code> - each row is a foreign key column description
   @see #getImportedKeys
 }
-function TZPostgreSQLDatabaseMetadata.GetExportedKeys(const Catalog: string;
+function TZPostgreSQLDatabaseMetadata.UncachedGetExportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 begin
   Result := GetCrossReference(Catalog, Schema, Table, '', '', '');
@@ -2431,11 +2332,11 @@ end;
   @return <code>ResultSet</code> - each row is a foreign key column description
   @see #getImportedKeys
 }
-function TZPostgreSQLDatabaseMetadata.GetCrossReference(const PrimaryCatalog: string;
+function TZPostgreSQLDatabaseMetadata.UncachedGetCrossReference(const PrimaryCatalog: string;
   const PrimarySchema: string; const PrimaryTable: string; const ForeignCatalog: string;
   const ForeignSchema: string; const ForeignTable: string): IZResultSet;
 var
-  Key, SQL, Select, From, Where: string;
+  SQL, Select, From, Where: string;
   DeleteRule, UpdateRule, Rule: string;
   {FKeyName, }FKeyColumn, PKeyColumn, Targs: string;
   Action, KeySequence, Advance: Integer;
@@ -2443,12 +2344,6 @@ var
   Deferrability: Integer;
   Deferrable, InitiallyDeferred: Boolean;
 begin
-  Key := GetCrossReferenceCacheKey(PrimaryCatalog, PrimarySchema, PrimaryTable,
-    ForeignCatalog, ForeignSchema, ForeignTable); 
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(CrossRefColumnsDynArray);
 
     if HaveMinimumServerVersion(7, 3) then
@@ -2608,9 +2503,6 @@ begin
     finally
       List.Free;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -2658,15 +2550,10 @@ end;
 
   @return <code>ResultSet</code> - each row is an SQL type description
 }
-function TZPostgreSQLDatabaseMetadata.GetTypeInfo: IZResultSet;
+function TZPostgreSQLDatabaseMetadata.UncachedGetTypeInfo: IZResultSet;
 var
-  Key, SQL: string;
+  SQL: string;
 begin
-  Key := GetTypeInfoCacheKey; 
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TypeInfoColumnsDynArray);
 
     if HaveMinimumServerVersion(7, 3) then
@@ -2691,9 +2578,6 @@ begin
       end;
       Close;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -2747,18 +2631,12 @@ end;
       accurate
   @return <code>ResultSet</code> - each row is an index column description
 }
-function TZPostgreSQLDatabaseMetadata.GetIndexInfo(const Catalog: string;
+function TZPostgreSQLDatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
   const Schema: string; const Table: string; Unique: Boolean;
   Approximate: Boolean): IZResultSet;
 var
-  Key, SQL, Select, From, Where: string;
+  SQL, Select, From, Where: string;
 begin
-  Key := GetIndexInfoCacheKey(Catalog, Schema, Table, Unique,
-    Approximate); 
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     if HaveMinimumServerVersion(7, 3) then
     begin
       Select := 'SELECT NULL AS TABLE_CAT, n.nspname AS TABLE_SCHEM,';
@@ -2796,22 +2674,13 @@ begin
     Result := CopyToVirtualResultSet(
       GetConnection.CreateStatement.ExecuteQuery(SQL),
       ConstructVirtualResultSet(IndexInfoColumnsDynArray));
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
-function TZPostgreSQLDatabaseMetadata.GetSequences(const Catalog, SchemaPattern,
+function TZPostgreSQLDatabaseMetadata.UncachedGetSequences(const Catalog, SchemaPattern,
   SequenceNamePattern: string): IZResultSet;
 var
-  Key: string;
   SQL: string;
 begin
-  Key := GetSequencesCacheKey(Catalog, SchemaPattern,
-    SequenceNamePattern); 
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(SequenceColumnsDynArray);
 
     SQL := ' SELECT nspname, relname ' +
@@ -2836,8 +2705,6 @@ begin
       end;
       Close;
     end;
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**

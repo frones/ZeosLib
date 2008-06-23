@@ -72,6 +72,38 @@ type
     FASAConnection: TZASAConnection;
   protected
     function GetStatement: IZStatement;
+    function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
+    function UncachedGetSchemas: IZResultSet; override;
+//    function UncachedGetCatalogs: IZResultSet; override; -> Not implemented
+    function UncachedGetTableTypes: IZResultSet; override;
+    function UncachedGetColumns(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
+    function UncachedGetTablePrivileges(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string): IZResultSet; override;
+    function UncachedGetColumnPrivileges(const Catalog: string; const Schema: string;
+      const Table: string; const ColumnNamePattern: string): IZResultSet; override;
+    function UncachedGetPrimaryKeys(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+    function UncachedGetImportedKeys(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+    function UncachedGetExportedKeys(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+    function UncachedGetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
+      const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
+      const ForeignTable: string): IZResultSet; override;
+    function UncachedGetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
+      Unique: Boolean; Approximate: Boolean): IZResultSet; override;
+//     function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
+//      const SequenceNamePattern: string): IZResultSet; virtual; -> Not implemented
+    function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
+      const ProcedureNamePattern: string): IZResultSet; override;
+    function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
+      const ProcedureNamePattern: string; const ColumnNamePattern: string):
+      IZResultSet; override;
+    function UncachedGetVersionColumns(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+    function UncachedGetTypeInfo: IZResultSet; override;
   public
     constructor Create(Connection: TZAbstractConnection; Url: string; Info: TStrings);
     destructor Destroy; override;
@@ -166,42 +198,6 @@ type
     function SupportsDataManipulationTransactionsOnly: Boolean; override;
     function DataDefinitionCausesTransactionCommit: Boolean; override;
     function DataDefinitionIgnoredInTransactions: Boolean; override;
-
-    function GetProcedures(const Catalog: string; const SchemaPattern: string;
-      const ProcedureNamePattern: string): IZResultSet; override;
-    function GetProcedureColumns(const Catalog: string; const SchemaPattern: string;
-      const ProcedureNamePattern: string; const ColumnNamePattern: string):
-      IZResultSet; override;
-
-    function GetTables(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
-    function GetSchemas: IZResultSet; override;
-    function GetCatalogs: IZResultSet; override;
-    function GetTableTypes: IZResultSet; override;
-    function GetColumns(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
-    function GetColumnPrivileges(const Catalog: string; const Schema: string;
-      const Table: string; const ColumnNamePattern: string): IZResultSet; override;
-
-    function GetTablePrivileges(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string): IZResultSet; override;
-    function GetVersionColumns(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-
-    function GetPrimaryKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-    function GetImportedKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-    function GetExportedKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-    function GetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
-      const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
-      const ForeignTable: string): IZResultSet; override;
-
-    function GetTypeInfo: IZResultSet; override;
-
-    function GetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
-      Unique: Boolean; Approximate: Boolean): IZResultSet; override;
 
     function SupportsResultSetType(_Type: TZResultSetType): Boolean; override;
     function SupportsResultSetConcurrency(_Type: TZResultSetType;
@@ -1172,16 +1168,9 @@ end;
   @return <code>ResultSet</code> - each row is a procedure description
   @see #getSearchStringEscape
 }
-function TZASADatabaseMetadata.GetProcedures(const Catalog: string;
+function TZASADatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
-var
-  Key: string;
 begin
-  Key := GetProceduresCacheKey(Catalog, SchemaPattern, ProcedureNamePattern);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(ProceduresColumnsDynArray);
 
     with GetStatement.ExecuteQuery(
@@ -1205,9 +1194,6 @@ begin
       end;
       Close;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1266,18 +1252,10 @@ end;
        column
   @see #getSearchStringEscape
 }
-function TZASADatabaseMetadata.GetProcedureColumns(const Catalog: string;
+function TZASADatabaseMetadata.UncachedGetProcedureColumns(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
-var
-  Key: string;
 begin
-  Key := GetProcedureColumnsCacheKey(Catalog, SchemaPattern, ProcedureNamePattern,
-    ColumnNamePattern);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(ProceduresColColumnsDynArray);
 
     with GetStatement.ExecuteQuery(
@@ -1324,9 +1302,6 @@ begin
       end;
       Close;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1359,19 +1334,13 @@ end;
   @return <code>ResultSet</code> - each row is a table description
   @see #getSearchStringEscape
 }
-function TZASADatabaseMetadata.GetTables(const Catalog: string;
+function TZASADatabaseMetadata.UncachedGetTables(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const Types: TStringDynArray): IZResultSet;
 var
   I: Integer;
-  Key: string;
   TableTypes: string;
 begin
-  Key := GetTablesCacheKey(Catalog, SchemaPattern, TableNamePattern, Types);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TableColumnsDynArray);
 
     TableTypes := '';
@@ -1404,9 +1373,6 @@ begin
       end;
       Close;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1421,17 +1387,9 @@ end;
   @return <code>ResultSet</code> - each row has a single String column that is a
   schema name
 }
-function TZASADatabaseMetadata.GetSchemas: IZResultSet;
-var
-  Key: string;
+function TZASADatabaseMetadata.UncachedGetSchemas: IZResultSet;
 begin
-  Key := GetSchemasCacheKey;
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(SchemaColumnsDynArray);
-
     with GetStatement.ExecuteQuery('exec sp_jdbc_getschemas') do
     begin
       while Next do
@@ -1443,26 +1401,6 @@ begin
       end;
       Close;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
-end;
-
-{**
-  Gets the catalog names available in this database.  The results
-  are ordered by catalog name.
-
-  <P>The catalog column is:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => catalog name
-   </OL>
-
-  @return <code>ResultSet</code> - each row has a single String column that is a
-  catalog name
-}
-function TZASADatabaseMetadata.GetCatalogs: IZResultSet;
-begin
-  Result := inherited GetCatalogs;
 end;
 
 {**
@@ -1479,30 +1417,20 @@ end;
   @return <code>ResultSet</code> - each row has a single String column that is a
   table type
 }
-function TZASADatabaseMetadata.GetTableTypes: IZResultSet;
+function TZASADatabaseMetadata.UncachedGetTableTypes: IZResultSet;
 const
   TablesTypes: array [0..4] of string = ( 'TABLE', 'BASE', 'SYSTEM', 'VIEW',
     'GLOBAL TEMPORARY');
 var
   I: Integer;
-  Key: string;
 begin
-  Key := GetTableTypesCacheKey;
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TableTypeColumnsDynArray);
-
     for I := 0 to 4 do
     begin
       Result.MoveToInsertRow;
       Result.UpdateString(1, TablesTypes[I]);
       Result.InsertRow;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1556,18 +1484,10 @@ end;
   @return <code>ResultSet</code> - each row is a column description
   @see #getSearchStringEscape
 }
-function TZASADatabaseMetadata.GetColumns(const Catalog: string;
+function TZASADatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
-var
-  Key: string;
 begin
-  Key := GetColumnsCacheKey(Catalog, SchemaPattern, TableNamePattern,
-    ColumnNamePattern);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TableColColumnsDynArray);
 
     with GetStatement.ExecuteQuery(
@@ -1654,9 +1574,6 @@ begin
       end;
       Close;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1687,17 +1604,9 @@ end;
   @return <code>ResultSet</code> - each row is a column privilege description
   @see #getSearchStringEscape
 }
-function TZASADatabaseMetadata.GetColumnPrivileges(const Catalog: string;
+function TZASADatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: string;
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
-var
-  Key: string;
 begin
-  Key := GetColumnPrivilegesCacheKey(Catalog, Schema, Table,
-    ColumnNamePattern);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TableColPrivColumnsDynArray);
 
     with GetStatement.ExecuteQuery(
@@ -1727,9 +1636,6 @@ begin
       end;
       Close;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1764,17 +1670,9 @@ end;
   @return <code>ResultSet</code> - each row is a table privilege description
   @see #getSearchStringEscape
 }
-function TZASADatabaseMetadata.GetTablePrivileges(const Catalog: string;
+function TZASADatabaseMetadata.UncachedGetTablePrivileges(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
-var
-  Key: string;
 begin
-  Key := GetTablePrivilegesCacheKey(Catalog, SchemaPattern,
-    TableNamePattern);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TablePrivColumnsDynArray);
 
     with GetStatement.ExecuteQuery(
@@ -1802,9 +1700,6 @@ begin
       end;
       Close;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1837,16 +1732,9 @@ end;
   @return <code>ResultSet</code> - each row is a column description
   @exception SQLException if a database access error occurs
 }
-function TZASADatabaseMetadata.GetVersionColumns(const Catalog: string;
+function TZASADatabaseMetadata.UncachedGetVersionColumns(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
-var
-  Key: string;
 begin
-  Key := GetVersionColumnsCacheKey(Catalog, Schema, Table);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TableColVerColumnsDynArray);
 
     with GetStatement.ExecuteQuery(
@@ -1876,9 +1764,6 @@ begin
       end;
       Close;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1903,16 +1788,9 @@ end;
   @return <code>ResultSet</code> - each row is a primary key column description
   @exception SQLException if a database access error occurs
 }
-function TZASADatabaseMetadata.GetPrimaryKeys(const Catalog: string;
+function TZASADatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
-var
-  Key: string;
 begin
-  Key := GetPrimaryKeysCacheKey(Catalog, Schema, Table);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(PrimaryKeyColumnsDynArray);
 
     with GetStatement.ExecuteQuery(
@@ -1938,9 +1816,6 @@ begin
       end;
       Close;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -2010,16 +1885,9 @@ end;
   @return <code>ResultSet</code> - each row is a primary key column description
   @see #getExportedKeys
 }
-function TZASADatabaseMetadata.GetImportedKeys(const Catalog: string;
+function TZASADatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
-var
-  Key: string;
 begin
-  Key := GetImportedKeysCacheKey(Catalog, Schema, Table);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(ImportedKeyColumnsDynArray);
 
     with GetStatement.ExecuteQuery(
@@ -2061,9 +1929,6 @@ begin
       end;
       Close;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -2133,16 +1998,9 @@ end;
   @return <code>ResultSet</code> - each row is a foreign key column description
   @see #getImportedKeys
 }
-function TZASADatabaseMetadata.GetExportedKeys(const Catalog: string;
+function TZASADatabaseMetadata.UncachedGetExportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
-var
-  Key: string;
 begin
-  Key := GetExportedKeysCacheKey(Catalog, Schema, Table);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(ExportedKeyColumnsDynArray);
 
     with GetStatement.ExecuteQuery(
@@ -2184,9 +2042,6 @@ begin
       end;
       Close;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -2264,18 +2119,10 @@ end;
   @return <code>ResultSet</code> - each row is a foreign key column description
   @see #getImportedKeys
 }
-function TZASADatabaseMetadata.GetCrossReference(const PrimaryCatalog: string;
+function TZASADatabaseMetadata.UncachedGetCrossReference(const PrimaryCatalog: string;
   const PrimarySchema: string; const PrimaryTable: string; const ForeignCatalog: string;
   const ForeignSchema: string; const ForeignTable: string): IZResultSet;
-var
-  Key: string;
 begin
-  Key := GetCrossReferenceCacheKey(PrimaryCatalog, PrimarySchema, PrimaryTable,
-    ForeignCatalog, ForeignSchema, ForeignTable);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(CrossRefColumnsDynArray);
 
     with GetStatement.ExecuteQuery(
@@ -2318,9 +2165,6 @@ begin
       end;
       Close;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -2368,15 +2212,8 @@ end;
 
   @return <code>ResultSet</code> - each row is an SQL type description
 }
-function TZASADatabaseMetadata.GetTypeInfo: IZResultSet;
-var
-  Key: string;
+function TZASADatabaseMetadata.UncachedGetTypeInfo: IZResultSet;
 begin
-  Key := GetTypeInfoCacheKey;
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TypeInfoColumnsDynArray);
 
     with GetStatement.ExecuteQuery('exec sp_jdbc_datatype_info') do
@@ -2424,9 +2261,6 @@ begin
       end;
       Close;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -2480,19 +2314,12 @@ end;
       accurate
   @return <code>ResultSet</code> - each row is an index column description
 }
-function TZASADatabaseMetadata.GetIndexInfo(const Catalog: string;
+function TZASADatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
   const Schema: string; const Table: string; Unique: Boolean;
   Approximate: Boolean): IZResultSet;
 var
   Is_Unique, Accuracy: string;
-  Key: string;
 begin
-  Key := GetIndexInfoCacheKey(Catalog, Schema, Table, Unique,
-    Approximate);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(IndexInfoColumnsDynArray);
 
     if Unique then
@@ -2542,9 +2369,6 @@ begin
       end;
       Close;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**

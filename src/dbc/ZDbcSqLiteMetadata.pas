@@ -70,6 +70,39 @@ type
   TZSQLiteDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
     FDatabase: string;
+  protected
+    function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
+//    function UncachedGetSchemas: IZResultSet; override;  -> not implemented
+//    function UncachedGetCatalogs: IZResultSet; override;  -> not implemented
+    function UncachedGetTableTypes: IZResultSet; override;
+    function UncachedGetColumns(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
+//    function UncachedGetTablePrivileges(const Catalog: string; const SchemaPattern: string;  -> not implemented
+//      const TableNamePattern: string): IZResultSet; override;
+//    function UncachedGetColumnPrivileges(const Catalog: string; const Schema: string;  -> not implemented
+//      const Table: string; const ColumnNamePattern: string): IZResultSet; override;
+    function UncachedGetPrimaryKeys(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+//    function UncachedGetImportedKeys(const Catalog: string; const Schema: string;
+//      const Table: string): IZResultSet; override;
+//    function UncachedGetExportedKeys(const Catalog: string; const Schema: string;
+//      const Table: string): IZResultSet; override;
+//    function UncachedGetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
+//      const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
+//      const ForeignTable: string): IZResultSet; override;
+    function UncachedGetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
+      Unique: Boolean; Approximate: Boolean): IZResultSet; override;
+//     function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
+//      const SequenceNamePattern: string): IZResultSet; virtual; -> Not implemented
+//    function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
+//      const ProcedureNamePattern: string): IZResultSet; override;
+//    function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
+//      const ProcedureNamePattern: string; const ColumnNamePattern: string):
+//      IZResultSet; override;
+//    function UncachedGetVersionColumns(const Catalog: string; const Schema: string;
+//      const Table: string): IZResultSet; override;
+    function UncachedGetTypeInfo: IZResultSet; override;
   public
     constructor Create(Connection: TZAbstractConnection; Url: string;
       Info: TStrings);
@@ -164,42 +197,6 @@ type
     function SupportsDataManipulationTransactionsOnly: Boolean; override;
     function DataDefinitionCausesTransactionCommit: Boolean; override;
     function DataDefinitionIgnoredInTransactions: Boolean; override;
-
-    function GetProcedures(const Catalog: string; const SchemaPattern: string;
-      const ProcedureNamePattern: string): IZResultSet; override;
-    function GetProcedureColumns(const Catalog: string; const SchemaPattern: string;
-      const ProcedureNamePattern: string; const ColumnNamePattern: string):
-      IZResultSet; override;
-
-    function GetTables(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
-    function GetSchemas: IZResultSet; override;
-    function GetCatalogs: IZResultSet; override;
-    function GetTableTypes: IZResultSet; override;
-    function GetColumns(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
-    function GetColumnPrivileges(const Catalog: string; const Schema: string;
-      const Table: string; const ColumnNamePattern: string): IZResultSet; override;
-
-    function GetTablePrivileges(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string): IZResultSet; override;
-    function GetVersionColumns(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-
-    function GetPrimaryKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-    function GetImportedKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-    function GetExportedKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-    function GetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
-      const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
-      const ForeignTable: string): IZResultSet; override;
-
-    function GetTypeInfo: IZResultSet; override;
-
-    function GetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
-      Unique: Boolean; Approximate: Boolean): IZResultSet; override;
 
     function SupportsResultSetType(_Type: TZResultSetType): Boolean; override;
     function SupportsResultSetConcurrency(_Type: TZResultSetType;
@@ -1100,110 +1097,6 @@ begin
 end;
 
 {**
-  Gets a description of the stored procedures available in a
-  catalog.
-
-  <P>Only procedure descriptions matching the schema and
-  procedure name criteria are returned.  They are ordered by
-  PROCEDURE_SCHEM, and PROCEDURE_NAME.
-
-  <P>Each procedure description has the the following columns:
-   <OL>
- 	<LI><B>PROCEDURE_CAT</B> String => procedure catalog (may be null)
- 	<LI><B>PROCEDURE_SCHEM</B> String => procedure schema (may be null)
- 	<LI><B>PROCEDURE_NAME</B> String => procedure name
-   <LI> reserved for future use
-   <LI> reserved for future use
-   <LI> reserved for future use
- 	<LI><B>REMARKS</B> String => explanatory comment on the procedure
- 	<LI><B>PROCEDURE_TYPE</B> short => kind of procedure:
-       <UL>
-       <LI> procedureResultUnknown - May return a result
-       <LI> procedureNoResult - Does not return a result
-       <LI> procedureReturnsResult - Returns a result
-       </UL>
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schemaPattern a schema name pattern; "" retrieves those
-  without a schema
-  @param procedureNamePattern a procedure name pattern
-  @return <code>ResultSet</code> - each row is a procedure description
-  @see #getSearchStringEscape
-}
-function TZSQLiteDatabaseMetadata.GetProcedures(const Catalog: string;
-  const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
-begin
-  Result := inherited GetProcedures(Catalog, SchemaPattern,
-    ProcedureNamePattern);
-end;
-
-{**
-  Gets a description of a catalog's stored procedure parameters
-  and result columns.
-
-  <P>Only descriptions matching the schema, procedure and
-  parameter name criteria are returned.  They are ordered by
-  PROCEDURE_SCHEM and PROCEDURE_NAME. Within this, the return value,
-  if any, is first. Next are the parameter descriptions in call
-  order. The column descriptions follow in column number order.
-
-  <P>Each row in the <code>ResultSet</code> is a parameter description or
-  column description with the following fields:
-   <OL>
- 	<LI><B>PROCEDURE_CAT</B> String => procedure catalog (may be null)
- 	<LI><B>PROCEDURE_SCHEM</B> String => procedure schema (may be null)
- 	<LI><B>PROCEDURE_NAME</B> String => procedure name
- 	<LI><B>COLUMN_NAME</B> String => column/parameter name
- 	<LI><B>COLUMN_TYPE</B> Short => kind of column/parameter:
-       <UL>
-       <LI> procedureColumnUnknown - nobody knows
-       <LI> procedureColumnIn - IN parameter
-       <LI> procedureColumnInOut - INOUT parameter
-       <LI> procedureColumnOut - OUT parameter
-       <LI> procedureColumnReturn - procedure return value
-       <LI> procedureColumnResult - result column in <code>ResultSet</code>
-       </UL>
-   <LI><B>DATA_TYPE</B> short => SQL type from java.sql.Types
- 	<LI><B>TYPE_NAME</B> String => SQL type name, for a UDT type the
-   type name is fully qualified
- 	<LI><B>PRECISION</B> int => precision
- 	<LI><B>LENGTH</B> int => length in bytes of data
- 	<LI><B>SCALE</B> short => scale
- 	<LI><B>RADIX</B> short => radix
- 	<LI><B>NULLABLE</B> short => can it contain NULL?
-       <UL>
-       <LI> procedureNoNulls - does not allow NULL values
-       <LI> procedureNullable - allows NULL values
-       <LI> procedureNullableUnknown - nullability unknown
-       </UL>
- 	<LI><B>REMARKS</B> String => comment describing parameter/column
-   </OL>
-
-  <P><B>Note:</B> Some databases may not return the column
-  descriptions for a procedure. Additional columns beyond
-  REMARKS can be defined by the database.
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schemaPattern a schema name pattern; "" retrieves those
-  without a schema
-  @param procedureNamePattern a procedure name pattern
-  @param columnNamePattern a column name pattern
-  @return <code>ResultSet</code> - each row describes a stored procedure parameter or
-       column
-  @see #getSearchStringEscape
-}
-function TZSQLiteDatabaseMetadata.GetProcedureColumns(const Catalog: string;
-  const SchemaPattern: string; const ProcedureNamePattern: string;
-  const ColumnNamePattern: string): IZResultSet;
-begin
-  Result := inherited GetProcedureColumns(Catalog, SchemaPattern,
-    ProcedureNamePattern, ColumnNamePattern);
-end;
-
-{**
   Gets a description of tables available in a catalog.
 
   <P>Only table descriptions matching the catalog, schema, table
@@ -1233,11 +1126,11 @@ end;
   @return <code>ResultSet</code> - each row is a table description
   @see #getSearchStringEscape
 }
-function TZSQLiteDatabaseMetadata.GetTables(const Catalog: string;
+function TZSQLiteDatabaseMetadata.UncachedGetTables(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const Types: TStringDynArray): IZResultSet;
 var
-  Key, WhereClause, SQL: string;
+  WhereClause, SQL: string;
 
   function IncludedType(TypeName: string): Boolean;
   var I: Integer;
@@ -1249,10 +1142,6 @@ var
   end;
 
 begin
-  Key := GetTablesCacheKey(Catalog, SchemaPattern, TableNamePattern, Types); 
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     WhereClause := '';
     if IncludedType('TABLE') then
       WhereClause := 'TYPE=''table''';
@@ -1274,42 +1163,6 @@ begin
     Result := CopyToVirtualResultSet(
       GetConnection.CreateStatement.ExecuteQuery(SQL),
       ConstructVirtualResultSet(TableColumnsDynArray));
-    AddResultSetToCache(Key, Result);
-  end;
-end;
-
-{**
-  Gets the schema names available in this database.  The results
-  are ordered by schema name.
-
-  <P>The schema column is:
-   <OL>
- 	<LI><B>TABLE_SCHEM</B> String => schema name
-   </OL>
-
-  @return <code>ResultSet</code> - each row has a single String column that is a
-  schema name
-}
-function TZSQLiteDatabaseMetadata.GetSchemas: IZResultSet;
-begin
-  Result := inherited GetSchemas;
-end;
-
-{**
-  Gets the catalog names available in this database.  The results
-  are ordered by catalog name.
-
-  <P>The catalog column is:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => catalog name
-   </OL>
-
-  @return <code>ResultSet</code> - each row has a single String column that is a
-  catalog name
-}
-function TZSQLiteDatabaseMetadata.GetCatalogs: IZResultSet;
-begin
-  Result := inherited GetCatalogs;
 end;
 
 {**
@@ -1326,30 +1179,20 @@ end;
   @return <code>ResultSet</code> - each row has a single String column that is a
   table type
 }
-function TZSQLiteDatabaseMetadata.GetTableTypes: IZResultSet;
+function TZSQLiteDatabaseMetadata.UncachedGetTableTypes: IZResultSet;
 const
   TableTypeCount = 2;
   Types: array [1..TableTypeCount] of string = ('TABLE', 'VIEW');
 var
   I: Integer;
-  Key: string;
 begin
-  Key := GetTableTypesCacheKey; 
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TableTypeColumnsDynArray);
-
     for I := 1 to TableTypeCount do
     begin
       Result.MoveToInsertRow;
       Result.UpdateString(1, Types[I]);
       Result.InsertRow;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1403,19 +1246,13 @@ end;
   @return <code>ResultSet</code> - each row is a column description
   @see #getSearchStringEscape
 }
-function TZSQLiteDatabaseMetadata.GetColumns(const Catalog: string;
+function TZSQLiteDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 var
-  Key, Temp: string;
+  Temp: string;
   Precision, Decimals: Integer;
 begin
-  Key := GetColumnsCacheKey(Catalog, SchemaPattern, TableNamePattern,
-    ColumnNamePattern); 
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TableColColumnsDynArray);
 
     with GetConnection.CreateStatement.ExecuteQuery(
@@ -1476,119 +1313,6 @@ begin
       end;
       Close;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
-end;
-
-{**
-  Gets a description of the access rights for a table's columns.
-
-  <P>Only privileges matching the column name criteria are
-  returned.  They are ordered by COLUMN_NAME and PRIVILEGE.
-
-  <P>Each privilige description has the following columns:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
- 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
- 	<LI><B>TABLE_NAME</B> String => table name
- 	<LI><B>COLUMN_NAME</B> String => column name
- 	<LI><B>GRANTOR</B> => grantor of access (may be null)
- 	<LI><B>GRANTEE</B> String => grantee of access
- 	<LI><B>PRIVILEGE</B> String => name of access (SELECT,
-       INSERT, UPDATE, REFRENCES, ...)
- 	<LI><B>IS_GRANTABLE</B> String => "YES" if grantee is permitted
-       to grant to others; "NO" if not; null if unknown
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those without a schema
-  @param table a table name
-  @param columnNamePattern a column name pattern
-  @return <code>ResultSet</code> - each row is a column privilege description
-  @see #getSearchStringEscape
-}
-function TZSQLiteDatabaseMetadata.GetColumnPrivileges(const Catalog: string;
-  const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
-begin
-  Result := inherited GetColumnPrivileges(Catalog, Schema, Table,
-    ColumnNamePattern);
-end;
-
-{**
-  Gets a description of the access rights for each table available
-  in a catalog. Note that a table privilege applies to one or
-  more columns in the table. It would be wrong to assume that
-  this priviledge applies to all columns (this may be true for
-  some systems but is not true for all.)
-
-  <P>Only privileges matching the schema and table name
-  criteria are returned.  They are ordered by TABLE_SCHEM,
-  TABLE_NAME, and PRIVILEGE.
-
-  <P>Each privilige description has the following columns:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
- 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
- 	<LI><B>TABLE_NAME</B> String => table name
- 	<LI><B>GRANTOR</B> => grantor of access (may be null)
- 	<LI><B>GRANTEE</B> String => grantee of access
- 	<LI><B>PRIVILEGE</B> String => name of access (SELECT,
-       INSERT, UPDATE, REFRENCES, ...)
- 	<LI><B>IS_GRANTABLE</B> String => "YES" if grantee is permitted
-       to grant to others; "NO" if not; null if unknown
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schemaPattern a schema name pattern; "" retrieves those
-  without a schema
-  @param tableNamePattern a table name pattern
-  @return <code>ResultSet</code> - each row is a table privilege description
-  @see #getSearchStringEscape
-}
-function TZSQLiteDatabaseMetadata.GetTablePrivileges(const Catalog: string;
-  const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
-begin
-  Result := inherited GetTablePrivileges(Catalog, SchemaPattern,
-    TableNamePattern);
-end;
-
-{**
-  Gets a description of a table's columns that are automatically
-  updated when any value in a row is updated.  They are
-  unordered.
-
-  <P>Each column description has the following columns:
-   <OL>
- 	<LI><B>SCOPE</B> short => is not used
- 	<LI><B>COLUMN_NAME</B> String => column name
- 	<LI><B>DATA_TYPE</B> short => SQL data type from java.sql.Types
- 	<LI><B>TYPE_NAME</B> String => Data source dependent type name
- 	<LI><B>COLUMN_SIZE</B> int => precision
- 	<LI><B>BUFFER_LENGTH</B> int => length of column value in bytes
- 	<LI><B>DECIMAL_DIGITS</B> short	 => scale
- 	<LI><B>PSEUDO_COLUMN</B> short => is this a pseudo column
-       like an SQLite ROWID
-       <UL>
-       <LI> versionColumnUnknown - may or may not be pseudo column
-       <LI> versionColumnNotPseudo - is NOT a pseudo column
-       <LI> versionColumnPseudo - is a pseudo column
-       </UL>
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those without a schema
-  @param table a table name
-  @return <code>ResultSet</code> - each row is a column description
-  @exception SQLException if a database access error occurs
-}
-function TZSQLiteDatabaseMetadata.GetVersionColumns(const Catalog: string;
-  const Schema: string; const Table: string): IZResultSet;
-begin
-  Result := inherited GetVersionColumns(Catalog, Schema, Table);
 end;
 
 {**
@@ -1613,17 +1337,11 @@ end;
   @return <code>ResultSet</code> - each row is a primary key column description
   @exception SQLException if a database access error occurs
 }
-function TZSQLiteDatabaseMetadata.GetPrimaryKeys(const Catalog: string;
+function TZSQLiteDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
-  Key: string;
   Index: Integer;
 begin
-  Key := GetPrimaryKeysCacheKey(Catalog, Schema, Table); 
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(PrimaryKeyColumnsDynArray);
 
     with GetConnection.CreateStatement.ExecuteQuery(
@@ -1651,238 +1369,6 @@ begin
       end;
       Close;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
-end;
-
-{**
-  Gets a description of the primary key columns that are
-  referenced by a table's foreign key columns (the primary keys
-  imported by a table).  They are ordered by PKTABLE_CAT,
-  PKTABLE_SCHEM, PKTABLE_NAME, and KEY_SEQ.
-
-  <P>Each primary key column description has the following columns:
-   <OL>
- 	<LI><B>PKTABLE_CAT</B> String => primary key table catalog
-       being imported (may be null)
- 	<LI><B>PKTABLE_SCHEM</B> String => primary key table schema
-       being imported (may be null)
- 	<LI><B>PKTABLE_NAME</B> String => primary key table name
-       being imported
- 	<LI><B>PKCOLUMN_NAME</B> String => primary key column name
-       being imported
- 	<LI><B>FKTABLE_CAT</B> String => foreign key table catalog (may be null)
- 	<LI><B>FKTABLE_SCHEM</B> String => foreign key table schema (may be null)
- 	<LI><B>FKTABLE_NAME</B> String => foreign key table name
- 	<LI><B>FKCOLUMN_NAME</B> String => foreign key column name
- 	<LI><B>KEY_SEQ</B> short => sequence number within foreign key
- 	<LI><B>UPDATE_RULE</B> short => What happens to
-        foreign key when primary is updated:
-       <UL>
-       <LI> importedNoAction - do not allow update of primary
-                key if it has been imported
-       <LI> importedKeyCascade - change imported key to agree
-                with primary key update
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been updated
-       <LI> importedKeySetDefault - change imported key to default values
-                if its primary key has been updated
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       </UL>
- 	<LI><B>DELETE_RULE</B> short => What happens to
-       the foreign key when primary is deleted.
-       <UL>
-       <LI> importedKeyNoAction - do not allow delete of primary
-                key if it has been imported
-       <LI> importedKeyCascade - delete rows that import a deleted key
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been deleted
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       <LI> importedKeySetDefault - change imported key to default if
-                its primary key has been deleted
-       </UL>
- 	<LI><B>FK_NAME</B> String => foreign key name (may be null)
- 	<LI><B>PK_NAME</B> String => primary key name (may be null)
- 	<LI><B>DEFERRABILITY</B> short => can the evaluation of foreign key
-       constraints be deferred until commit
-       <UL>
-       <LI> importedKeyInitiallyDeferred - see SQL92 for definition
-       <LI> importedKeyInitiallyImmediate - see SQL92 for definition
-       <LI> importedKeyNotDeferrable - see SQL92 for definition
-       </UL>
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those
-  without a schema
-  @param table a table name
-  @return <code>ResultSet</code> - each row is a primary key column description
-  @see #getExportedKeys
-}
-function TZSQLiteDatabaseMetadata.GetImportedKeys(const Catalog: string;
-  const Schema: string; const Table: string): IZResultSet;
-begin
-  Result := inherited GetImportedKeys(Catalog, Schema, Table);
-end;
-
-{**
-  Gets a description of the foreign key columns that reference a
-  table's primary key columns (the foreign keys exported by a
-  table).  They are ordered by FKTABLE_CAT, FKTABLE_SCHEM,
-  FKTABLE_NAME, and KEY_SEQ.
-
-  <P>Each foreign key column description has the following columns:
-   <OL>
- 	<LI><B>PKTABLE_CAT</B> String => primary key table catalog (may be null)
- 	<LI><B>PKTABLE_SCHEM</B> String => primary key table schema (may be null)
- 	<LI><B>PKTABLE_NAME</B> String => primary key table name
- 	<LI><B>PKCOLUMN_NAME</B> String => primary key column name
- 	<LI><B>FKTABLE_CAT</B> String => foreign key table catalog (may be null)
-       being exported (may be null)
- 	<LI><B>FKTABLE_SCHEM</B> String => foreign key table schema (may be null)
-       being exported (may be null)
- 	<LI><B>FKTABLE_NAME</B> String => foreign key table name
-       being exported
- 	<LI><B>FKCOLUMN_NAME</B> String => foreign key column name
-       being exported
- 	<LI><B>KEY_SEQ</B> short => sequence number within foreign key
- 	<LI><B>UPDATE_RULE</B> short => What happens to
-        foreign key when primary is updated:
-       <UL>
-       <LI> importedNoAction - do not allow update of primary
-                key if it has been imported
-       <LI> importedKeyCascade - change imported key to agree
-                with primary key update
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been updated
-       <LI> importedKeySetDefault - change imported key to default values
-                if its primary key has been updated
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       </UL>
- 	<LI><B>DELETE_RULE</B> short => What happens to
-       the foreign key when primary is deleted.
-       <UL>
-       <LI> importedKeyNoAction - do not allow delete of primary
-                key if it has been imported
-       <LI> importedKeyCascade - delete rows that import a deleted key
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been deleted
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       <LI> importedKeySetDefault - change imported key to default if
-                its primary key has been deleted
-       </UL>
- 	<LI><B>FK_NAME</B> String => foreign key name (may be null)
- 	<LI><B>PK_NAME</B> String => primary key name (may be null)
- 	<LI><B>DEFERRABILITY</B> short => can the evaluation of foreign key
-       constraints be deferred until commit
-       <UL>
-       <LI> importedKeyInitiallyDeferred - see SQL92 for definition
-       <LI> importedKeyInitiallyImmediate - see SQL92 for definition
-       <LI> importedKeyNotDeferrable - see SQL92 for definition
-       </UL>
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those
-  without a schema
-  @param table a table name
-  @return <code>ResultSet</code> - each row is a foreign key column description
-  @see #getImportedKeys
-}
-function TZSQLiteDatabaseMetadata.GetExportedKeys(const Catalog: string;
-  const Schema: string; const Table: string): IZResultSet;
-begin
-  Result := inherited GetExportedKeys(Catalog, Schema, Table);
-end;
-
-{**
-  Gets a description of the foreign key columns in the foreign key
-  table that reference the primary key columns of the primary key
-  table (describe how one table imports another's key.) This
-  should normally return a single foreign key/primary key pair
-  (most tables only import a foreign key from a table once.)  They
-  are ordered by FKTABLE_CAT, FKTABLE_SCHEM, FKTABLE_NAME, and
-  KEY_SEQ.
-
-  <P>Each foreign key column description has the following columns:
-   <OL>
- 	<LI><B>PKTABLE_CAT</B> String => primary key table catalog (may be null)
- 	<LI><B>PKTABLE_SCHEM</B> String => primary key table schema (may be null)
- 	<LI><B>PKTABLE_NAME</B> String => primary key table name
- 	<LI><B>PKCOLUMN_NAME</B> String => primary key column name
- 	<LI><B>FKTABLE_CAT</B> String => foreign key table catalog (may be null)
-       being exported (may be null)
- 	<LI><B>FKTABLE_SCHEM</B> String => foreign key table schema (may be null)
-       being exported (may be null)
- 	<LI><B>FKTABLE_NAME</B> String => foreign key table name
-       being exported
- 	<LI><B>FKCOLUMN_NAME</B> String => foreign key column name
-       being exported
- 	<LI><B>KEY_SEQ</B> short => sequence number within foreign key
- 	<LI><B>UPDATE_RULE</B> short => What happens to
-        foreign key when primary is updated:
-       <UL>
-       <LI> importedNoAction - do not allow update of primary
-                key if it has been imported
-       <LI> importedKeyCascade - change imported key to agree
-                with primary key update
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been updated
-       <LI> importedKeySetDefault - change imported key to default values
-                if its primary key has been updated
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       </UL>
- 	<LI><B>DELETE_RULE</B> short => What happens to
-       the foreign key when primary is deleted.
-       <UL>
-       <LI> importedKeyNoAction - do not allow delete of primary
-                key if it has been imported
-       <LI> importedKeyCascade - delete rows that import a deleted key
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been deleted
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       <LI> importedKeySetDefault - change imported key to default if
-                its primary key has been deleted
-       </UL>
- 	<LI><B>FK_NAME</B> String => foreign key name (may be null)
- 	<LI><B>PK_NAME</B> String => primary key name (may be null)
- 	<LI><B>DEFERRABILITY</B> short => can the evaluation of foreign key
-       constraints be deferred until commit
-       <UL>
-       <LI> importedKeyInitiallyDeferred - see SQL92 for definition
-       <LI> importedKeyInitiallyImmediate - see SQL92 for definition
-       <LI> importedKeyNotDeferrable - see SQL92 for definition
-       </UL>
-   </OL>
-
-  @param primaryCatalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param primarySchema a schema name; "" retrieves those
-  without a schema
-  @param primaryTable the table name that exports the key
-  @param foreignCatalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param foreignSchema a schema name; "" retrieves those
-  without a schema
-  @param foreignTable the table name that imports the key
-  @return <code>ResultSet</code> - each row is a foreign key column description
-  @see #getImportedKeys
-}
-function TZSQLiteDatabaseMetadata.GetCrossReference(const PrimaryCatalog: string;
-  const PrimarySchema: string; const PrimaryTable: string; const ForeignCatalog: string;
-  const ForeignSchema: string; const ForeignTable: string): IZResultSet;
-begin
-  Result := inherited GetCrossReference(PrimaryCatalog, PrimarySchema,
-    PrimaryTable, ForeignCatalog, ForeignSchema, ForeignTable);
 end;
 
 {**
@@ -1930,7 +1416,7 @@ end;
 
   @return <code>ResultSet</code> - each row is an SQL type description
 }
-function TZSQLiteDatabaseMetadata.GetTypeInfo: IZResultSet;
+function TZSQLiteDatabaseMetadata.UncachedGetTypeInfo: IZResultSet;
 const
   MaxTypeCount = 22;
   TypeNames: array[1..MaxTypeCount] of string = (
@@ -1948,15 +1434,7 @@ const
     -1, -1, -1, -1, -1);
 var
   I: Integer;
-  Key: string;
 begin
-  Key := GetTypeInfoCacheKey; 
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
-    Result := ConstructVirtualResultSet(TypeInfoColumnsDynArray);
-
     for I := 1 to MaxTypeCount do
     begin
       Result.MoveToInsertRow;
@@ -1993,9 +1471,6 @@ begin
 
       Result.InsertRow;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -2049,19 +1524,12 @@ end;
       accurate
   @return <code>ResultSet</code> - each row is an index column description
 }
-function TZSQLiteDatabaseMetadata.GetIndexInfo(const Catalog: string;
+function TZSQLiteDatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
   const Schema: string; const Table: string; Unique: Boolean;
   Approximate: Boolean): IZResultSet;
 var
-  Key: string;
   ResultSet: IZResultSet;
 begin
-  Key := GetIndexInfoCacheKey(Catalog, Schema, Table, Unique,
-    Approximate); 
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(IndexInfoColumnsDynArray);
 
     with GetConnection.CreateStatement.ExecuteQuery(
@@ -2101,9 +1569,6 @@ begin
       end;
       Close;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**

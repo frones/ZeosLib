@@ -209,3 +209,5 @@
 20080616 : patch for table.exists - by technobot - See http://zeos.firmos.at/viewtopic.php?t=1879
 
 20080617 : Added GetXxxCacheKey functions - by technobot - See http://zeos.firmos.at/viewtopic.php?t=1881
+
+20080623 : Removed caching code that was identical between all descendent classes of TZAbstractDatabaseMetadata - by technobot/mdaems - See http://zeos.firmos.at/viewtopic.php?t=1881
