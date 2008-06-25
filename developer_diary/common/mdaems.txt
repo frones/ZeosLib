@@ -211,3 +211,5 @@
 20080617 : Added GetXxxCacheKey functions - by technobot - See http://zeos.firmos.at/viewtopic.php?t=1881
 
 20080623 : Removed caching code that was identical between all descendent classes of TZAbstractDatabaseMetadata - by technobot/mdaems - See http://zeos.firmos.at/viewtopic.php?t=1881
+
+20080625 : Don't use ASM call in TZCollection.Error when using FPC. FPC should be able to do this platform independent - by gto - See http://zeos.firmos.at/viewtopic.php?t=1882
