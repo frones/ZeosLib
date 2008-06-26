@@ -177,6 +177,8 @@ type
     function UncachedGetVersionColumns(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet; virtual;
     function UncachedGetTypeInfo: IZResultSet; virtual;
+    function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
+      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; virtual;
 
   public
     constructor Create(ParentConnection: IZConnection;
@@ -341,6 +343,8 @@ type
     function GetVersionColumns(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet;
     function GetTypeInfo: IZResultSet;
+    function GetUDTs(const Catalog: string; const SchemaPattern: string;
+      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet;
 
 
     function SupportsResultSetType(_Type: TZResultSetType): Boolean; virtual;
@@ -348,8 +352,6 @@ type
       Concurrency: TZResultSetConcurrency): Boolean; virtual;
     function SupportsBatchUpdates: Boolean; virtual;
 
-    function GetUDTs(const Catalog: string; const SchemaPattern: string;
-      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; virtual;
 
     function GetConnection: IZConnection; virtual;
 
@@ -3707,9 +3709,51 @@ begin
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
-    Result := ConstructVirtualResultSet(UDTColumnsDynArray);
+    Result := UncachedGetUDTs(Catalog, SchemaPattern, TypeNamePattern, Types);
     AddResultSetToCache(Key, Result);
   end;
+end;
+
+{**
+
+  Gets a description of the user-defined types defined in a particular
+  schema.  Schema-specific UDTs may have type JAVA_OBJECT, STRUCT,
+  or DISTINCT.
+
+  <P>Only types matching the catalog, schema, type name and type
+  criteria are returned.  They are ordered by DATA_TYPE, TYPE_SCHEM
+  and TYPE_NAME.  The type name parameter may be a fully-qualified
+  name.  In this case, the catalog and schemaPattern parameters are
+  ignored.
+
+  <P>Each type description has the following columns:
+   <OL>
+ 	<LI><B>TYPE_CAT</B> String => the type's catalog (may be null)
+ 	<LI><B>TYPE_SCHEM</B> String => type's schema (may be null)
+ 	<LI><B>TYPE_NAME</B> String => type name
+   <LI><B>CLASS_NAME</B> String => Java class name
+ 	<LI><B>DATA_TYPE</B> String => type value defined in java.sql.Types.
+   One of JAVA_OBJECT, STRUCT, or DISTINCT
+ 	<LI><B>REMARKS</B> String => explanatory comment on the type
+   </OL>
+
+  <P><B>Note:</B> If the driver does not support UDTs, an empty
+  result set is returned.
+
+  @param catalog a catalog name; "" retrieves those without a
+  catalog; null means drop catalog name from the selection criteria
+  @param schemaPattern a schema name pattern; "" retrieves those
+  without a schema
+  @param typeNamePattern a type name pattern; may be a fully-qualified name
+  @param types a list of user-named types to include (JAVA_OBJECT,
+  STRUCT, or DISTINCT); null returns all types
+  @return <code>ResultSet</code> - each row is a type description
+}
+function TZAbstractDatabaseMetadata.UnCachedGetUDTs(const Catalog: string;
+  const SchemaPattern: string; const TypeNamePattern: string;
+  const Types: TIntegerDynArray): IZResultSet;
+begin
+    Result := ConstructVirtualResultSet(UDTColumnsDynArray);
 end;
 
 {**

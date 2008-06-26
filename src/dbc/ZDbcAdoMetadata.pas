@@ -112,6 +112,8 @@ type
     function UncachedGetVersionColumns(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
     function UncachedGetTypeInfo: IZResultSet; override;
+    function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
+      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
   public
     constructor Create(Connection: TZAbstractConnection; Url: string;
       Info: TStrings);
@@ -211,8 +213,6 @@ type
     function SupportsResultSetConcurrency(_Type: TZResultSetType;
       Concurrency: TZResultSetConcurrency): Boolean; override;
     
-    function GetUDTs(const Catalog: string; const SchemaPattern: string;
-      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
 //    function GetTokenizer: IZTokenizer; override;
   end;
 
@@ -2452,19 +2452,9 @@ end;
   STRUCT, or DISTINCT); null returns all types
   @return <code>ResultSet</code> - each row is a type description
 }
-function TZAdoDatabaseMetadata.GetUDTs(const Catalog: string; const SchemaPattern: string;
+function TZAdoDatabaseMetadata.UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
   const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet;
-var
-  Key: string;
-//  Restrictions: Variant;
-//  AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := GetUDTsCacheKey(Catalog, SchemaPattern, TypeNamePattern,
-    Types);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(UDTColumnsDynArray);
 
 //  AdoRecordSet := AdoOpenSchema(adSchemaIndexes, Restrictions);
@@ -2487,8 +2477,6 @@ begin
 //      Result.InsertRow;
 //    end;
 
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
