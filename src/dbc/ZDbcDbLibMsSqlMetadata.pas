@@ -93,7 +93,7 @@ type
     function UncachedGetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
       Unique: Boolean; Approximate: Boolean): IZResultSet; override;
 //     function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
-//      const SequenceNamePattern: string): IZResultSet; virtual; -> Not implemented
+//      const SequenceNamePattern: string): IZResultSet; override; -> Not implemented
     function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string): IZResultSet; override;
     function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
@@ -1896,7 +1896,7 @@ end;
 function TZMsSqlDatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 begin
-  Result := GetCrossReference('', '', '', Catalog, Schema, Table);
+  Result := UncachedGetCrossReference('', '', '', Catalog, Schema, Table);
 end;
 
 {**
@@ -1969,7 +1969,7 @@ end;
 function TZMsSqlDatabaseMetadata.UncachedGetExportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 begin
-  Result := GetCrossReference(Catalog, Schema, Table, '', '', '');
+  Result := UncachedGetCrossReference(Catalog, Schema, Table, '', '', '');
 end;
 
 {**
