@@ -9,3 +9,5 @@
 20080130 : Added support for encrypted sqlite databases - by ehoffman - see http://zeos.firmos.at/viewtopic.php?t=1674
 
 20080604 : Improve Sqlite3 Column Affinity - by mdaems - see http://zeos.firmos.at/viewtopic.php?t=1605
+
+20080710 : Completed fix for Mantis Bug 75 - by olivluca - Mantis Bug 119

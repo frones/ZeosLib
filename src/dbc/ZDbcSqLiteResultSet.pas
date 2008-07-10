@@ -763,15 +763,15 @@ begin
   end
   else
   begin
-    //ZPlainSQLLiteDriver.Step : AllocMem(SizeOf(PPChar)*pN+1); // Leak, if not freed ! [HD, 05.10.2007]
+    //ZPlainSQLLiteDriver.Step : AllocMem(SizeOf(PPChar)*(pN+1)); // Leak, if not freed ! [HD, 05.10.2007]
     if FColumnValues <> nil then
-      FreeMem(FColumnValues,Sizeof(PPChar)*fColumnCount+1);
+      FreeMem(FColumnValues,Sizeof(PPChar)*(fColumnCount+1));
     FColumnValues := nil;
     if Assigned(FStmtHandle) then
     begin
-      //ZPlainSQLLiteDriver.Step : AllocMem(SizeOf(PPChar)*pN*2+1); // Leak, if not freed [HD, 05.10.2007]
+      //ZPlainSQLLiteDriver.Step : AllocMem(SizeOf(PPChar)*(pN+1)*2); // Leak, if not freed [HD, 05.10.2007]
       if FColumnNames <> nil then
-        FreeMem(FColumnNames,Sizeof(PPChar)*fColumnCount*2+1);
+        FreeMem(FColumnNames,Sizeof(PPChar)*(fColumnCount+1)*2);
       FColumnNames := nil;
       ErrorCode := FPlainDriver.Step(FStmtHandle, FColumnCount,
         FColumnValues, FColumnNames);
