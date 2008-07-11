@@ -422,7 +422,7 @@ type
 
   function GetTablesMetaDataCacheKey(Const Catalog:String;
       Const SchemaPattern:String;	Const TableNamePattern:String;const Types: TStringDynArray):String;
-      deprecated; // (technobot) use TZAbstractDatabaseMetadata.GetTablesCacheKey instead
+      {$IFNDEF VER130BELOW}deprecated; {$ENDIF}// (technobot) use TZAbstractDatabaseMetadata.GetTablesCacheKey instead
 
 
 var
