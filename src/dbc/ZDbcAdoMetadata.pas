@@ -80,7 +80,41 @@ type
     function BuildRestrictions(SchemaId: Integer; const Args: array of const): Variant;
   protected
     function GetStatement: IZSTatement;
-  public                      
+    function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
+    function UncachedGetSchemas: IZResultSet; override;
+    function UncachedGetCatalogs: IZResultSet; override;
+    function UncachedGetTableTypes: IZResultSet; override;
+    function UncachedGetColumns(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
+    function UncachedGetTablePrivileges(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string): IZResultSet; override;
+    function UncachedGetColumnPrivileges(const Catalog: string; const Schema: string;
+      const Table: string; const ColumnNamePattern: string): IZResultSet; override;
+    function UncachedGetPrimaryKeys(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+    function UncachedGetImportedKeys(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+    function UncachedGetExportedKeys(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+    function UncachedGetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
+      const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
+      const ForeignTable: string): IZResultSet; override;
+    function UncachedGetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
+      Unique: Boolean; Approximate: Boolean): IZResultSet; override;
+//     function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
+//      const SequenceNamePattern: string): IZResultSet; override; -> Not implemented
+    function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
+      const ProcedureNamePattern: string): IZResultSet; override;
+    function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
+      const ProcedureNamePattern: string; const ColumnNamePattern: string):
+      IZResultSet; override;
+    function UncachedGetVersionColumns(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+    function UncachedGetTypeInfo: IZResultSet; override;
+    function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
+      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
+  public
     constructor Create(Connection: TZAbstractConnection; Url: string;
       Info: TStrings);
     destructor Destroy; override;
@@ -175,48 +209,10 @@ type
     function DataDefinitionCausesTransactionCommit: Boolean; override;
     function DataDefinitionIgnoredInTransactions: Boolean; override;
 
-    function GetProcedures(const Catalog: string; const SchemaPattern: string;
-      const ProcedureNamePattern: string): IZResultSet; override;
-    function GetProcedureColumns(const Catalog: string; const SchemaPattern: string;
-      const ProcedureNamePattern: string; const ColumnNamePattern: string):
-      IZResultSet; override;
-
-    function GetTables(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
-    function GetSchemas: IZResultSet; override;
-    function GetCatalogs: IZResultSet; override;
-    function GetTableTypes: IZResultSet; override;
-    function GetColumns(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
-    function GetColumnPrivileges(const Catalog: string; const Schema: string;
-      const Table: string; const ColumnNamePattern: string): IZResultSet; override;
-
-    function GetTablePrivileges(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string): IZResultSet; override;
-    function GetVersionColumns(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-
-    function GetPrimaryKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-    function GetImportedKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-    function GetExportedKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-    function GetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
-      const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
-      const ForeignTable: string): IZResultSet; override;
-
-    function GetTypeInfo: IZResultSet; override;
-
-    function GetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
-      Unique: Boolean; Approximate: Boolean): IZResultSet; override;
-
     function SupportsResultSetType(_Type: TZResultSetType): Boolean; override;
     function SupportsResultSetConcurrency(_Type: TZResultSetType;
       Concurrency: TZResultSetConcurrency): Boolean; override;
     
-    function GetUDTs(const Catalog: string; const SchemaPattern: string;
-      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
 //    function GetTokenizer: IZTokenizer; override;
   end;
 
@@ -1180,18 +1176,11 @@ end;
   @return <code>ResultSet</code> - each row is a procedure description
   @see #getSearchStringEscape
 }
-function TZAdoDatabaseMetadata.GetProcedures(const Catalog: string;
+function TZAdoDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 var
-  Key: string;
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := Format('get-procedures:%s:%s:%s',
-    [Catalog, SchemaPattern, ProcedureNamePattern]);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(ProceduresColumnsDynArray);
 
     AdoRecordSet := AdoOpenSchema(adSchemaProcedures,
@@ -1219,9 +1208,6 @@ begin
         Free;
       end;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1280,19 +1266,12 @@ end;
        column
   @see #getSearchStringEscape
 }
-function TZAdoDatabaseMetadata.GetProcedureColumns(const Catalog: string;
+function TZAdoDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 var
-  Key: string;
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := Format('get-procedure-columns:%s:%s:%s:%s',
-    [Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern]);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(ProceduresColColumnsDynArray);
 
     AdoRecordSet := AdoOpenSchema(adSchemaProcedureParameters,
@@ -1344,48 +1323,6 @@ begin
         Free;
       end;
     end;
-
-//  Restrictions := VarArrayCreate([0, 2], varVariant);
-//  if Catalog = '' then Restrictions[0] := null else Restrictions[0] := Catalog;
-//  if SchemaPattern = '' then Restrictions[1] := null else Restrictions[1] := SchemaPattern;
-//  if ColumnNamePattern = '' then Restrictions[2] := null else Restrictions[2] := ColumnNamePattern;
-//
-//  AdoRecordSet := AdoOpenSchema(adSchemaProcedureColumns, Restrictions);
-//  if Assigned(AdoRecordSet) then
-//    with TZAdoResultSet.Create(GetStatement, '', AdoRecordSet) do
-//    begin
-//      while Next do
-//      begin
-//        Result.MoveToInsertRow;
-//        Result.UpdateStringByName('PROCEDURE_CAT',
-//          GetStringByName('PROCEDURE_CATALOG'));
-//        Result.UpdateStringByName('PROCEDURE_SCHEM',
-//          GetStringByName('PROCEDURE_SCHEMA'));
-//        Result.UpdateStringByName('PROCEDURE_NAME',
-//          GetStringByName('PROCEDURE_NAME'));
-//        Result.UpdateStringByName('COLUMN_NAME',
-//          GetStringByName('COLUMN_NAME'));
-//        Result.UpdateShortByName('COLUMN_TYPE', -1{procedureColumnResult});
-//        Result.UpdateShortByName('DATA_TYPE', Ord(ConvertAdoToSqlType(GetShortByName('DATA_TYPE'))));
-//  //      Result.UpdateStringByName('TYPE_NAME', GetStringByName('TYPE_NAME'));
-//        Result.UpdateIntByName('PRECISION', GetIntByName('NUMERIC_PRECISION'));
-//        Result.UpdateIntByName('LENGTH', GetIntByName('CHARACTER_OCTET_LENGTH'));
-//        Result.UpdateShortByName('SCALE', GetShortByName('NUMERIC_SCALE'));
-//  //      Result.UpdateShortByName('RADIX', GetShortByName('RADIX'));
-//        Result.UpdateShortByName('NULLABLE', 2);
-//        if GetStringByName('IS_NULLABLE') = 'NO' then
-//          Result.UpdateShortByName('NULLABLE', 0);
-//        if GetStringByName('IS_NULLABLE') = 'YES' then
-//          Result.UpdateShortByName('NULLABLE', 1);
-//        Result.UpdateStringByName('REMARKS', GetStringByName('DESCRIPTION'));
-//        Result.InsertRow;
-//      end;
-//      Close;
-//      Free;
-//    end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1418,20 +1355,14 @@ end;
   @return <code>ResultSet</code> - each row is a table description
   @see #getSearchStringEscape
 }
-function TZAdoDatabaseMetadata.GetTables(const Catalog: string;
+function TZAdoDatabaseMetadata.UncachedGetTables(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const Types: TStringDynArray): IZResultSet;
 var
   I: Integer;
-  Key, TableTypes: string;
+  TableTypes: string;
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := GetTablesMetaDataCacheKey(Catalog,SchemaPattern,TableNamePattern,Types);
-  TableTypes := '';
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TableColumnsDynArray);
 
     for I := Low(Types) to High(Types) do
@@ -1466,9 +1397,6 @@ begin
         Free;
       end;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1483,16 +1411,10 @@ end;
   @return <code>ResultSet</code> - each row has a single String column that is a
   schema name
 }
-function TZAdoDatabaseMetadata.GetSchemas: IZResultSet;
+function TZAdoDatabaseMetadata.UncachedGetSchemas: IZResultSet;
 var
-  Key: string;
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := 'get-schemas';
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(SchemaColumnsDynArray);
 
     AdoRecordSet := AdoOpenSchema(adSchemaSchemata, []);
@@ -1511,9 +1433,6 @@ begin
         Free;
       end;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1528,16 +1447,10 @@ end;
   @return <code>ResultSet</code> - each row has a single String column that is a
   catalog name
 }
-function TZAdoDatabaseMetadata.GetCatalogs: IZResultSet;
+function TZAdoDatabaseMetadata.UncachedGetCatalogs: IZResultSet;
 var
-  Key: string;
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := 'get-catalogs';
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(CatalogColumnsDynArray);
 
     AdoRecordSet := AdoOpenSchema(adSchemaCatalogs, []);
@@ -1556,9 +1469,6 @@ begin
         Free;
       end;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1575,7 +1485,7 @@ end;
   @return <code>ResultSet</code> - each row has a single String column that is a
   table type
 }
-function TZAdoDatabaseMetadata.GetTableTypes: IZResultSet;
+function TZAdoDatabaseMetadata.UncachedGetTableTypes: IZResultSet;
 const
   TableTypes: array[0..7] of string = (
     'ALIAS', 'TABLE', 'SYNONYM', 'SYSTEM TABLE', 'VIEW',
@@ -1583,24 +1493,14 @@ const
   );
 var
   I: Integer;
-  Key: string;
 begin
-  Key := 'get-table-types';
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TableTypeColumnsDynArray);
-
     for I := 0 to 7 do
     begin
       Result.MoveToInsertRow;
       Result.UpdateStringByName('TABLE_TYPE', TableTypes[I]);
       Result.InsertRow;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1654,20 +1554,13 @@ end;
   @return <code>ResultSet</code> - each row is a column description
   @see #getSearchStringEscape
 }
-function TZAdoDatabaseMetadata.GetColumns(const Catalog: string;
+function TZAdoDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 var
   AdoRecordSet: ZPlainAdo.RecordSet;
   Flags: Integer;
-  Key: string;
 begin
-  Key := Format('get-columns:%s:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern]);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TableColColumnsDynArray);
 
     AdoRecordSet := AdoOpenSchema(adSchemaColumns,
@@ -1742,9 +1635,6 @@ begin
         Free;
       end;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1775,18 +1665,11 @@ end;
   @return <code>ResultSet</code> - each row is a column privilege description
   @see #getSearchStringEscape
 }
-function TZAdoDatabaseMetadata.GetColumnPrivileges(const Catalog: string;
+function TZAdoDatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: string;
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
 var
-  Key: string;
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := Format('get-column-privileges:%s:%s:%s:%s',
-    [Catalog, Schema, Table, ColumnNamePattern]);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TableColPrivColumnsDynArray);
 
     AdoRecordSet := AdoOpenSchema(adSchemaColumnPrivileges,
@@ -1822,9 +1705,6 @@ begin
         Free;
       end;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1859,18 +1739,11 @@ end;
   @return <code>ResultSet</code> - each row is a table privilege description
   @see #getSearchStringEscape
 }
-function TZAdoDatabaseMetadata.GetTablePrivileges(const Catalog: string;
+function TZAdoDatabaseMetadata.UncachedGetTablePrivileges(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
 var
-  Key: string;
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := Format('get-table-privileges:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern]);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TablePrivColumnsDynArray);
 
     AdoRecordSet := AdoOpenSchema(adSchemaTablePrivileges,
@@ -1903,9 +1776,6 @@ begin
         Free;
       end;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1938,19 +1808,13 @@ end;
   @return <code>ResultSet</code> - each row is a column description
   @exception SQLException if a database access error occurs
 }
-function TZAdoDatabaseMetadata.GetVersionColumns(const Catalog: string;
+function TZAdoDatabaseMetadata.UncachedGetVersionColumns(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 const
   DBCOLUMNFLAGS_ISROWVER = $00000200;
 var
   AdoRecordSet: ZPlainAdo.RecordSet;
-  Key: string;
 begin
-  Key := Format('get-version-columns:%s:%s:%s', [Catalog, Schema, Table]);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TableColVerColumnsDynArray);
 
     AdoRecordSet := AdoOpenSchema(adSchemaColumns, [Catalog, Schema, Table]);
@@ -1984,9 +1848,6 @@ begin
         Free;
       end;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -2011,17 +1872,11 @@ end;
   @return <code>ResultSet</code> - each row is a primary key column description
   @exception SQLException if a database access error occurs
 }
-function TZAdoDatabaseMetadata.GetPrimaryKeys(const Catalog: string;
+function TZAdoDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
   AdoRecordSet: ZPlainAdo.RecordSet;
-  Key: string;
 begin
-  Key := Format('get-primary-keys:%s:%s:%s', [Catalog, Schema, Table]);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(PrimaryKeyColumnsDynArray);
 
     AdoRecordSet := AdoOpenSchema(adSchemaPrimaryKeys,
@@ -2054,9 +1909,6 @@ begin
         Free;
       end;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -2126,10 +1978,10 @@ end;
   @return <code>ResultSet</code> - each row is a primary key column description
   @see #getExportedKeys
 }
-function TZAdoDatabaseMetadata.GetImportedKeys(const Catalog: string;
+function TZAdoDatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 begin
-  Result := GetCrossReference('', '', '', Catalog, Schema, Table);
+  Result := UncachedGetCrossReference('', '', '', Catalog, Schema, Table);
 end;
 
 {**
@@ -2199,10 +2051,10 @@ end;
   @return <code>ResultSet</code> - each row is a foreign key column description
   @see #getImportedKeys
 }
-function TZAdoDatabaseMetadata.GetExportedKeys(const Catalog: string;
+function TZAdoDatabaseMetadata.UncachedGetExportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 begin
-  Result := GetCrossReference(Catalog, Schema, Table, '', '', '');
+  Result := UncachedGetCrossReference(Catalog, Schema, Table, '', '', '');
 end;
 
 {**
@@ -2280,20 +2132,12 @@ end;
   @return <code>ResultSet</code> - each row is a foreign key column description
   @see #getImportedKeys
 }
-function TZAdoDatabaseMetadata.GetCrossReference(const PrimaryCatalog: string;
+function TZAdoDatabaseMetadata.UncachedGetCrossReference(const PrimaryCatalog: string;
   const PrimarySchema: string; const PrimaryTable: string; const ForeignCatalog: string;
   const ForeignSchema: string; const ForeignTable: string): IZResultSet;
 var
-  Key: string;
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := Format('get-cross-reference:%s:%s:%s:%s:%s:%s',
-    [PrimaryCatalog, PrimarySchema, PrimaryTable, ForeignCatalog,
-    ForeignSchema, ForeignTable]);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(CrossRefColumnsDynArray);
 
     AdoRecordSet := AdoOpenSchema(adSchemaForeignKeys,
@@ -2340,9 +2184,6 @@ begin
         Free;
       end;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -2390,16 +2231,10 @@ end;
 
   @return <code>ResultSet</code> - each row is an SQL type description
 }
-function TZAdoDatabaseMetadata.GetTypeInfo: IZResultSet;
+function TZAdoDatabaseMetadata.UncachedGetTypeInfo: IZResultSet;
 var
-  Key: string;
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := 'get-type-info';
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TypeInfoColumnsDynArray);
 
     AdoRecordSet := AdoOpenSchema(adSchemaProviderTypes, []);
@@ -2453,9 +2288,6 @@ begin
         Free;
       end;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -2509,19 +2341,12 @@ end;
       accurate
   @return <code>ResultSet</code> - each row is an index column description
 }
-function TZAdoDatabaseMetadata.GetIndexInfo(const Catalog: string;
+function TZAdoDatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
   const Schema: string; const Table: string; Unique: Boolean;
   Approximate: Boolean): IZResultSet;
 var
-  Key: string;
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := Format('get-index-info:%s:%s:%s:%s:%s',
-    [Catalog, Schema, Table, BoolToStr(Unique), BoolToStr(Approximate)]);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(IndexInfoColumnsDynArray);
 
     AdoRecordSet := AdoOpenSchema(adSchemaIndexes,
@@ -2565,9 +2390,6 @@ begin
         Free;
       end;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -2630,23 +2452,9 @@ end;
   STRUCT, or DISTINCT); null returns all types
   @return <code>ResultSet</code> - each row is a type description
 }
-function TZAdoDatabaseMetadata.GetUDTs(const Catalog: string; const SchemaPattern: string;
+function TZAdoDatabaseMetadata.UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
   const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet;
-var
-  I: Integer;
-  Key: string;
-//  Restrictions: Variant;
-//  AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-  Key := '';
-  for I := Low(Types) to High(Types) do
-    Key := Key + ':' + IntToStr(Types[I]);
-  Key := Format('get-udts:%s:%s:%s%s',
-    [Catalog, SchemaPattern, TypeNamePattern, Key]);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(UDTColumnsDynArray);
 
 //  AdoRecordSet := AdoOpenSchema(adSchemaIndexes, Restrictions);
@@ -2669,8 +2477,6 @@ begin
 //      Result.InsertRow;
 //    end;
 
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -2812,4 +2618,5 @@ begin
 end;
 
 end.
+
 

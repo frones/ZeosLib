@@ -270,13 +270,19 @@ end;
 }
 class procedure TZCollection.Error(const Msg: string; Data: Integer);
 
+{$IFNDEF FPC}
   function ReturnAddr: Pointer;
   asm
           MOV     EAX,[EBP+4]
   end;
+{$ENDIF}
 
 begin
+  {$IFDEF FPC}
+  raise EListError.CreateFmt(Msg,[Data]) at get_caller_addr(get_frame);
+  {$ELSE}
   raise EListError.CreateFmt(Msg, [Data]) at ReturnAddr;
+  {$ENDIF FPC}
 end;
 
 {**

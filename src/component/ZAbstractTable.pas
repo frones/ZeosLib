@@ -70,6 +70,7 @@ type
     FTableName: string;
 
   private
+    function GetExists: Boolean;
     procedure SetTableName(const Value: string);
 
   protected
@@ -81,6 +82,7 @@ type
   {$ENDIF}
 
   protected
+    property Exists: Boolean read GetExists;
     property TableName: string read FTableName write SetTableName;
   end;
 
@@ -88,6 +90,25 @@ implementation
 
 
 { TZAbstractTable }
+
+{**
+  Checks if a table with the corresponding name exists in the database.
+  @return <code>True</code> if the the table exists.
+}
+function TZAbstractTable.GetExists: Boolean;
+var
+  TableList: TStringList;
+begin
+  TableList := TStringList.Create;
+  try
+    CheckConnected;
+    Connection.GetTableNames(TableName, TableList);
+    {$IFNDEF VER130BELOW}TableList.CaseSensitive := False;{$ENDIF}
+    Result := (TableList.IndexOf(TableName) >= 0); // look for an exact match
+  finally
+    TableList.Free;
+  end;
+end;
 
 {**
   Sets a new table name and generates a related SQL statement.

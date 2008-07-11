@@ -9,7 +9,7 @@
       build\ZDatasetUtils.obj build\ZSqlProcessor.obj build\ZSqlStrings.obj 
       build\ZSqlUpdate.obj build\ZAbstractDataset.obj build\ZPropertyEditor.obj 
       build\ZSqlMonitor.obj build\ZStoredProcedure.obj build\ZAbstractTable.obj 
-      build\ZSqlMetadata.obj build\ZSequence.obj"/>
+      build\ZSqlMetadata.obj build\ZSequence.obj build\ZIBEventAlerter.obj"/>
     <RESFILES value="ZComponent.res ..\..\src\component\ZComponent.dcr"/>
     <IDLFILES value=""/>
     <IDLGENFILES value=""/>
@@ -79,6 +79,7 @@
       <FILE FILENAME="..\..\src\component\ZAbstractTable.pas" FORMNAME="" UNITNAME="ZAbstractTable" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\component\ZSqlMetadata.pas" FORMNAME="" UNITNAME="ZSqlMetadata" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\component\ZSequence.pas" FORMNAME="" UNITNAME="ZSequence" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\component\ZIBEventAlerter.pas" FORMNAME="" UNITNAME="ZIBEventAlerter" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
   </FILELIST>
   <BUILDTOOLS>
   </BUILDTOOLS>

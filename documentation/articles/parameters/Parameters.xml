@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN" "file:/c:/docbook/dtd/docbookx.dtd" [
 <!ENTITY % global.entities SYSTEM "file:/c:/docbook/include/global.xml">
 <!-- e-novative DocBook environment --><!-- global entities                --><!-- (c) 2002 e-novative GmbH       --><!-- http://www.e-novative.de       --><!ENTITY global_entity "global entity (can be included in every document)">
@@ -150,7 +150,9 @@ TMYSQL_CLIENT_OPTIONS =
       <listitem><para>codepage=&lt;national language name&gt; - The given language is sent to sqlserver. If language support is installed in the server, error messages are returned in the designated national language.</para></listitem>
       <listitem><para>createNewDatabase=&lt;sql command database creation&gt; - Created new database before open database defined in TZConnection.</para></listitem>
       <listitem><para>dialect=it is parameter of Interbase/Firebird sql dialect. dialect parameter is sinonim of isc_dpb_sql_dialect parameter.</para></listitem>
-      <listitem><para>RoleName=it is sinonim for isc_dpb_sql_role_name parameter Interbase/Firebird. It allow set user role name to work with database and to gain the privileges of that role.</para></listitem></itemizedlist>
+      <listitem><para>RoleName=it is sinonim for isc_dpb_sql_role_name parameter Interbase/Firebird. It allow set user role name to work with database and to gain the privileges of that role.</para></listitem>
+      <listitem><para>hard_commit=[yes,no] - Use hard commits instead of soft commits.</para></listitem>
+      </itemizedlist>
     </sect2>
     <sect2>
       <title>Statement parameters</title>

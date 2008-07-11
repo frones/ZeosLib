@@ -70,6 +70,41 @@ type
   TZOracleDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
     FDatabase: string;
+  protected
+    function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
+    function UncachedGetSchemas: IZResultSet; override;
+//    function UncachedGetCatalogs: IZResultSet; override; -> Not implemented
+    function UncachedGetTableTypes: IZResultSet; override;
+    function UncachedGetColumns(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
+    function UncachedGetTablePrivileges(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string): IZResultSet; override;
+    function UncachedGetColumnPrivileges(const Catalog: string; const Schema: string;
+      const Table: string; const ColumnNamePattern: string): IZResultSet; override;
+    function UncachedGetPrimaryKeys(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+//    function UncachedGetImportedKeys(const Catalog: string; const Schema: string;
+//      const Table: string): IZResultSet; override;
+//    function UncachedGetExportedKeys(const Catalog: string; const Schema: string;
+//      const Table: string): IZResultSet; override;
+//    function UncachedGetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
+//      const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
+//      const ForeignTable: string): IZResultSet; override;
+    function UncachedGetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
+      Unique: Boolean; Approximate: Boolean): IZResultSet; override;
+//     function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
+//      const SequenceNamePattern: string): IZResultSet; override; -> Not implemented
+//    function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
+//      const ProcedureNamePattern: string): IZResultSet; override;
+//    function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
+//      const ProcedureNamePattern: string; const ColumnNamePattern: string):
+//      IZResultSet; override;
+//    function UncachedGetVersionColumns(const Catalog: string; const Schema: string;
+//      const Table: string): IZResultSet; override;
+//    function UncachedGetTypeInfo: IZResultSet; override;
+//    function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
+//      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
   public
     constructor Create(Connection: TZAbstractConnection; Url: string;
       Info: TStrings);
@@ -165,48 +200,9 @@ type
     function DataDefinitionCausesTransactionCommit: Boolean; override;
     function DataDefinitionIgnoredInTransactions: Boolean; override;
 
-    function GetProcedures(const Catalog: string; const SchemaPattern: string;
-      const ProcedureNamePattern: string): IZResultSet; override;
-    function GetProcedureColumns(const Catalog: string; const SchemaPattern: string;
-      const ProcedureNamePattern: string; const ColumnNamePattern: string):
-      IZResultSet; override;
-
-    function GetTables(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
-    function GetSchemas: IZResultSet; override;
-    function GetCatalogs: IZResultSet; override;
-    function GetTableTypes: IZResultSet; override;
-    function GetColumns(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
-    function GetColumnPrivileges(const Catalog: string; const Schema: string;
-      const Table: string; const ColumnNamePattern: string): IZResultSet; override;
-
-    function GetTablePrivileges(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string): IZResultSet; override;
-    function GetVersionColumns(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-
-    function GetPrimaryKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-    function GetImportedKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-    function GetExportedKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-    function GetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
-      const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
-      const ForeignTable: string): IZResultSet; override;
-
-    function GetTypeInfo: IZResultSet; override;
-
-    function GetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
-      Unique: Boolean; Approximate: Boolean): IZResultSet; override;
-
     function SupportsResultSetType(_Type: TZResultSetType): Boolean; override;
     function SupportsResultSetConcurrency(_Type: TZResultSetType;
       Concurrency: TZResultSetConcurrency): Boolean; override;
-
-    function GetUDTs(const Catalog: string; const SchemaPattern: string;
-      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
   end;
 
 implementation
@@ -1096,110 +1092,6 @@ begin
 end;
 
 {**
-  Gets a description of the stored procedures available in a
-  catalog.
-
-  <P>Only procedure descriptions matching the schema and
-  procedure name criteria are returned.  They are ordered by
-  PROCEDURE_SCHEM, and PROCEDURE_NAME.
-
-  <P>Each procedure description has the the following columns:
-   <OL>
- 	<LI><B>PROCEDURE_CAT</B> String => procedure catalog (may be null)
- 	<LI><B>PROCEDURE_SCHEM</B> String => procedure schema (may be null)
- 	<LI><B>PROCEDURE_NAME</B> String => procedure name
-   <LI> reserved for future use
-   <LI> reserved for future use
-   <LI> reserved for future use
- 	<LI><B>REMARKS</B> String => explanatory comment on the procedure
- 	<LI><B>PROCEDURE_TYPE</B> short => kind of procedure:
-       <UL>
-       <LI> procedureResultUnknown - May return a result
-       <LI> procedureNoResult - Does not return a result
-       <LI> procedureReturnsResult - Returns a result
-       </UL>
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schemaPattern a schema name pattern; "" retrieves those
-  without a schema
-  @param procedureNamePattern a procedure name pattern
-  @return <code>ResultSet</code> - each row is a procedure description
-  @see #getSearchStringEscape
-}
-function TZOracleDatabaseMetadata.GetProcedures(const Catalog: string;
-  const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
-begin
-  Result := inherited GetProcedures(
-    Catalog, SchemaPattern, ProcedureNamePattern);
-end;
-
-{**
-  Gets a description of a catalog's stored procedure parameters
-  and result columns.
-
-  <P>Only descriptions matching the schema, procedure and
-  parameter name criteria are returned.  They are ordered by
-  PROCEDURE_SCHEM and PROCEDURE_NAME. Within this, the return value,
-  if any, is first. Next are the parameter descriptions in call
-  order. The column descriptions follow in column number order.
-
-  <P>Each row in the <code>ResultSet</code> is a parameter description or
-  column description with the following fields:
-   <OL>
- 	<LI><B>PROCEDURE_CAT</B> String => procedure catalog (may be null)
- 	<LI><B>PROCEDURE_SCHEM</B> String => procedure schema (may be null)
- 	<LI><B>PROCEDURE_NAME</B> String => procedure name
- 	<LI><B>COLUMN_NAME</B> String => column/parameter name
- 	<LI><B>COLUMN_TYPE</B> Short => kind of column/parameter:
-       <UL>
-       <LI> procedureColumnUnknown - nobody knows
-       <LI> procedureColumnIn - IN parameter
-       <LI> procedureColumnInOut - INOUT parameter
-       <LI> procedureColumnOut - OUT parameter
-       <LI> procedureColumnReturn - procedure return value
-       <LI> procedureColumnResult - result column in <code>ResultSet</code>
-       </UL>
-   <LI><B>DATA_TYPE</B> short => SQL type from java.sql.Types
- 	<LI><B>TYPE_NAME</B> String => SQL type name, for a UDT type the
-   type name is fully qualified
- 	<LI><B>PRECISION</B> int => precision
- 	<LI><B>LENGTH</B> int => length in bytes of data
- 	<LI><B>SCALE</B> short => scale
- 	<LI><B>RADIX</B> short => radix
- 	<LI><B>NULLABLE</B> short => can it contain NULL?
-       <UL>
-       <LI> procedureNoNulls - does not allow NULL values
-       <LI> procedureNullable - allows NULL values
-       <LI> procedureNullableUnknown - nullability unknown
-       </UL>
- 	<LI><B>REMARKS</B> String => comment describing parameter/column
-   </OL>
-
-  <P><B>Note:</B> Some databases may not return the column
-  descriptions for a procedure. Additional columns beyond
-  REMARKS can be defined by the database.
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schemaPattern a schema name pattern; "" retrieves those
-  without a schema
-  @param procedureNamePattern a procedure name pattern
-  @param columnNamePattern a column name pattern
-  @return <code>ResultSet</code> - each row describes a stored procedure parameter or
-       column
-  @see #getSearchStringEscape
-}
-function TZOracleDatabaseMetadata.GetProcedureColumns(const Catalog: string;
-  const SchemaPattern: string; const ProcedureNamePattern: string;
-  const ColumnNamePattern: string): IZResultSet;
-begin
-  Result := inherited GetProcedureColumns(Catalog, SchemaPattern,
-    ProcedureNamePattern, ColumnNamePattern);
-end;
-
-{**
   Gets a description of tables available in a catalog.
 
   <P>Only table descriptions matching the catalog, schema, table
@@ -1229,11 +1121,11 @@ end;
   @return <code>ResultSet</code> - each row is a table description
   @see #getSearchStringEscape
 }
-function TZOracleDatabaseMetadata.GetTables(const Catalog: string;
+function TZOracleDatabaseMetadata.UncachedGetTables(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const Types: TStringDynArray): IZResultSet;
 var
-  Key, PartSQL, SQL: string;
+  PartSQL, SQL: string;
 
   function IncludedType(const TypeName: string): Boolean;
   var I: Integer;
@@ -1245,10 +1137,6 @@ var
   end;
 
 begin
-  Key := GetTablesMetaDataCacheKey(Catalog,SchemaPattern,TableNamePattern,Types);
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     if IncludedType('TABLE') then
     begin
       SQL := 'SELECT NULL AS TABLE_CAT, OWNER AS TABLE_SCHEM, TABLE_NAME,'
@@ -1297,8 +1185,6 @@ begin
     Result := CopyToVirtualResultSet(
       GetConnection.CreateStatement.ExecuteQuery(SQL),
       ConstructVirtualResultSet(TableColumnsDynArray));
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1313,38 +1199,12 @@ end;
   @return <code>ResultSet</code> - each row has a single String column that is a
   schema name
 }
-function TZOracleDatabaseMetadata.GetSchemas: IZResultSet;
-var
-  Key: string;
+function TZOracleDatabaseMetadata.UncachedGetSchemas: IZResultSet;
 begin
-  Key := 'get-schemas';
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := CopyToVirtualResultSet(
       GetConnection.CreateStatement.ExecuteQuery(
         'SELECT USERNAME AS TABLE_SCHEM FROM SYS.ALL_USERS'),
       ConstructVirtualResultSet(SchemaColumnsDynArray));
-    AddResultSetToCache(Key, Result);
-  end;
-end;
-
-{**
-  Gets the catalog names available in this database.  The results
-  are ordered by catalog name.
-
-  <P>The catalog column is:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => catalog name
-   </OL>
-
-  @return <code>ResultSet</code> - each row has a single String column that is a
-  catalog name
-}
-function TZOracleDatabaseMetadata.GetCatalogs: IZResultSet;
-begin
-  Result := inherited GetCatalogs;
 end;
 
 {**
@@ -1361,7 +1221,7 @@ end;
   @return <code>ResultSet</code> - each row has a single String column that is a
   table type
 }
-function TZOracleDatabaseMetadata.GetTableTypes: IZResultSet;
+function TZOracleDatabaseMetadata.UncachedGetTableTypes: IZResultSet;
 const
   TableTypeCount = 4;
   Types: array [1..TableTypeCount] of string = (
@@ -1369,24 +1229,14 @@ const
   );
 var
   I: Integer;
-  Key: string;
 begin
-  Key := 'get-table-types';
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TableTypeColumnsDynArray);
-
     for I := 1 to TableTypeCount do
     begin
       Result.MoveToInsertRow;
       Result.UpdateString(1, Types[I]);
       Result.InsertRow;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1440,18 +1290,12 @@ end;
   @return <code>ResultSet</code> - each row is a column description
   @see #getSearchStringEscape
 }
-function TZOracleDatabaseMetadata.GetColumns(const Catalog: string;
+function TZOracleDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 var
-  Key, SQL: string;
+  SQL: string;
 begin
-  Key := Format('get-columns:%s:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern]);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TableColColumnsDynArray);
 
     SQL := 'SELECT NULL, OWNER, TABLE_NAME, COLUMN_NAME, NULL, DATA_TYPE,'
@@ -1509,9 +1353,6 @@ begin
       end;
       Close;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1542,17 +1383,11 @@ end;
   @return <code>ResultSet</code> - each row is a column privilege description
   @see #getSearchStringEscape
 }
-function TZOracleDatabaseMetadata.GetColumnPrivileges(const Catalog: string;
+function TZOracleDatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: string;
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
 var
-  Key, SQL: string;
+  SQL: string;
 begin
-  Key := Format('get-column-privileges:%s:%s:%s:%s',
-    [Catalog, Schema, Table, ColumnNamePattern]);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     SQL := 'SELECT NULL AS TABLE_CAT, TABLE_SCHEMA AS TABLE_SCHEM, TABLE_NAME,'
       + ' COLUMN_NAME, GRANTOR, GRANTEE, PRIVILEGE, GRANTABLE AS IS_GRANTABLE'
       + ' FROM SYS.ALL_COL_PRIVS WHERE';
@@ -1565,8 +1400,6 @@ begin
     Result := CopyToVirtualResultSet(
       GetConnection.CreateStatement.ExecuteQuery(SQL),
       ConstructVirtualResultSet(TableColPrivColumnsDynArray));
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -1601,17 +1434,11 @@ end;
   @return <code>ResultSet</code> - each row is a table privilege description
   @see #getSearchStringEscape
 }
-function TZOracleDatabaseMetadata.GetTablePrivileges(const Catalog: string;
+function TZOracleDatabaseMetadata.UncachedGetTablePrivileges(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
 var
-  Key, SQL: string;
+  SQL: string;
 begin
-  Key := Format('get-table-privileges:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern]);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     SQL := 'SELECT NULL AS TABLE_CAT, TABLE_SCHEMA AS TABLE_SCHEM, TABLE_NAME,'
       + ' GRANTOR, GRANTEE, PRIVILEGE, GRANTABLE AS IS_GRANTABLE'
       + ' FROM SYS.ALL_TAB_PRIVS WHERE TABLE_SCHEMA LIKE ''' + ToLikeString(SchemaPattern)
@@ -1620,44 +1447,6 @@ begin
     Result := CopyToVirtualResultSet(
       GetConnection.CreateStatement.ExecuteQuery(SQL),
       ConstructVirtualResultSet(TablePrivColumnsDynArray));
-    AddResultSetToCache(Key, Result);
-  end;
-end;
-
-{**
-  Gets a description of a table's columns that are automatically
-  updated when any value in a row is updated.  They are
-  unordered.
-
-  <P>Each column description has the following columns:
-   <OL>
- 	<LI><B>SCOPE</B> short => is not used
- 	<LI><B>COLUMN_NAME</B> String => column name
- 	<LI><B>DATA_TYPE</B> short => SQL data type from java.sql.Types
- 	<LI><B>TYPE_NAME</B> String => Data source dependent type name
- 	<LI><B>COLUMN_SIZE</B> int => precision
- 	<LI><B>BUFFER_LENGTH</B> int => length of column value in bytes
- 	<LI><B>DECIMAL_DIGITS</B> short	 => scale
- 	<LI><B>PSEUDO_COLUMN</B> short => is this a pseudo column
-       like an Oracle ROWID
-       <UL>
-       <LI> versionColumnUnknown - may or may not be pseudo column
-       <LI> versionColumnNotPseudo - is NOT a pseudo column
-       <LI> versionColumnPseudo - is a pseudo column
-       </UL>
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those without a schema
-  @param table a table name
-  @return <code>ResultSet</code> - each row is a column description
-  @exception SQLException if a database access error occurs
-}
-function TZOracleDatabaseMetadata.GetVersionColumns(const Catalog: string;
-  const Schema: string; const Table: string): IZResultSet;
-begin
-  Result := inherited GetVersionColumns(Catalog, Schema, Table);
 end;
 
 {**
@@ -1682,16 +1471,11 @@ end;
   @return <code>ResultSet</code> - each row is a primary key column description
   @exception SQLException if a database access error occurs
 }
-function TZOracleDatabaseMetadata.GetPrimaryKeys(const Catalog: string;
+function TZOracleDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
-  SQL, Key: string;
+  SQL: string;
 begin
-  Key := Format('get-primary-keys:%s:%s:%s', [Catalog, Schema, Table]);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     SQL := 'SELECT NULL AS TABLE_CAT, A.OWNER AS TABLE_SCHEM, A.TABLE_NAME,'
       + ' B.COLUMN_NAME, B.COLUMN_POSITION AS KEY_SEQ, A.INDEX_NAME AS PK_NAME'
       + ' FROM ALL_INDEXES A, ALL_IND_COLUMNS B'
@@ -1708,287 +1492,6 @@ begin
     Result := CopyToVirtualResultSet(
       GetConnection.CreateStatement.ExecuteQuery(SQL),
       ConstructVirtualResultSet(PrimaryKeyColumnsDynArray));
-    AddResultSetToCache(Key, Result);
-  end;
-end;
-
-{**
-  Gets a description of the primary key columns that are
-  referenced by a table's foreign key columns (the primary keys
-  imported by a table).  They are ordered by PKTABLE_CAT,
-  PKTABLE_SCHEM, PKTABLE_NAME, and KEY_SEQ.
-
-  <P>Each primary key column description has the following columns:
-   <OL>
- 	<LI><B>PKTABLE_CAT</B> String => primary key table catalog
-       being imported (may be null)
- 	<LI><B>PKTABLE_SCHEM</B> String => primary key table schema
-       being imported (may be null)
- 	<LI><B>PKTABLE_NAME</B> String => primary key table name
-       being imported
- 	<LI><B>PKCOLUMN_NAME</B> String => primary key column name
-       being imported
- 	<LI><B>FKTABLE_CAT</B> String => foreign key table catalog (may be null)
- 	<LI><B>FKTABLE_SCHEM</B> String => foreign key table schema (may be null)
- 	<LI><B>FKTABLE_NAME</B> String => foreign key table name
- 	<LI><B>FKCOLUMN_NAME</B> String => foreign key column name
- 	<LI><B>KEY_SEQ</B> short => sequence number within foreign key
- 	<LI><B>UPDATE_RULE</B> short => What happens to
-        foreign key when primary is updated:
-       <UL>
-       <LI> importedNoAction - do not allow update of primary
-                key if it has been imported
-       <LI> importedKeyCascade - change imported key to agree
-                with primary key update
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been updated
-       <LI> importedKeySetDefault - change imported key to default values
-                if its primary key has been updated
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       </UL>
- 	<LI><B>DELETE_RULE</B> short => What happens to
-       the foreign key when primary is deleted.
-       <UL>
-       <LI> importedKeyNoAction - do not allow delete of primary
-                key if it has been imported
-       <LI> importedKeyCascade - delete rows that import a deleted key
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been deleted
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       <LI> importedKeySetDefault - change imported key to default if
-                its primary key has been deleted
-       </UL>
- 	<LI><B>FK_NAME</B> String => foreign key name (may be null)
- 	<LI><B>PK_NAME</B> String => primary key name (may be null)
- 	<LI><B>DEFERRABILITY</B> short => can the evaluation of foreign key
-       constraints be deferred until commit
-       <UL>
-       <LI> importedKeyInitiallyDeferred - see SQL92 for definition
-       <LI> importedKeyInitiallyImmediate - see SQL92 for definition
-       <LI> importedKeyNotDeferrable - see SQL92 for definition
-       </UL>
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those
-  without a schema
-  @param table a table name
-  @return <code>ResultSet</code> - each row is a primary key column description
-  @see #getExportedKeys
-}
-function TZOracleDatabaseMetadata.GetImportedKeys(const Catalog: string;
-  const Schema: string; const Table: string): IZResultSet;
-begin
-  Result := inherited GetImportedKeys(Catalog, Schema, Table);
-end;
-
-{**
-  Gets a description of the foreign key columns that reference a
-  table's primary key columns (the foreign keys exported by a
-  table).  They are ordered by FKTABLE_CAT, FKTABLE_SCHEM,
-  FKTABLE_NAME, and KEY_SEQ.
-
-  <P>Each foreign key column description has the following columns:
-   <OL>
- 	<LI><B>PKTABLE_CAT</B> String => primary key table catalog (may be null)
- 	<LI><B>PKTABLE_SCHEM</B> String => primary key table schema (may be null)
- 	<LI><B>PKTABLE_NAME</B> String => primary key table name
- 	<LI><B>PKCOLUMN_NAME</B> String => primary key column name
- 	<LI><B>FKTABLE_CAT</B> String => foreign key table catalog (may be null)
-       being exported (may be null)
- 	<LI><B>FKTABLE_SCHEM</B> String => foreign key table schema (may be null)
-       being exported (may be null)
- 	<LI><B>FKTABLE_NAME</B> String => foreign key table name
-       being exported
- 	<LI><B>FKCOLUMN_NAME</B> String => foreign key column name
-       being exported
- 	<LI><B>KEY_SEQ</B> short => sequence number within foreign key
- 	<LI><B>UPDATE_RULE</B> short => What happens to
-        foreign key when primary is updated:
-       <UL>
-       <LI> importedNoAction - do not allow update of primary
-                key if it has been imported
-       <LI> importedKeyCascade - change imported key to agree
-                with primary key update
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been updated
-       <LI> importedKeySetDefault - change imported key to default values
-                if its primary key has been updated
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       </UL>
- 	<LI><B>DELETE_RULE</B> short => What happens to
-       the foreign key when primary is deleted.
-       <UL>
-       <LI> importedKeyNoAction - do not allow delete of primary
-                key if it has been imported
-       <LI> importedKeyCascade - delete rows that import a deleted key
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been deleted
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       <LI> importedKeySetDefault - change imported key to default if
-                its primary key has been deleted
-       </UL>
- 	<LI><B>FK_NAME</B> String => foreign key name (may be null)
- 	<LI><B>PK_NAME</B> String => primary key name (may be null)
- 	<LI><B>DEFERRABILITY</B> short => can the evaluation of foreign key
-       constraints be deferred until commit
-       <UL>
-       <LI> importedKeyInitiallyDeferred - see SQL92 for definition
-       <LI> importedKeyInitiallyImmediate - see SQL92 for definition
-       <LI> importedKeyNotDeferrable - see SQL92 for definition
-       </UL>
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those
-  without a schema
-  @param table a table name
-  @return <code>ResultSet</code> - each row is a foreign key column description
-  @see #getImportedKeys
-}
-function TZOracleDatabaseMetadata.GetExportedKeys(const Catalog: string;
-  const Schema: string; const Table: string): IZResultSet;
-begin
-  Result := inherited GetExportedKeys(Catalog, Schema, Table);
-end;
-
-{**
-  Gets a description of the foreign key columns in the foreign key
-  table that reference the primary key columns of the primary key
-  table (describe how one table imports another's key.) This
-  should normally return a single foreign key/primary key pair
-  (most tables only import a foreign key from a table once.)  They
-  are ordered by FKTABLE_CAT, FKTABLE_SCHEM, FKTABLE_NAME, and
-  KEY_SEQ.
-
-  <P>Each foreign key column description has the following columns:
-   <OL>
- 	<LI><B>PKTABLE_CAT</B> String => primary key table catalog (may be null)
- 	<LI><B>PKTABLE_SCHEM</B> String => primary key table schema (may be null)
- 	<LI><B>PKTABLE_NAME</B> String => primary key table name
- 	<LI><B>PKCOLUMN_NAME</B> String => primary key column name
- 	<LI><B>FKTABLE_CAT</B> String => foreign key table catalog (may be null)
-       being exported (may be null)
- 	<LI><B>FKTABLE_SCHEM</B> String => foreign key table schema (may be null)
-       being exported (may be null)
- 	<LI><B>FKTABLE_NAME</B> String => foreign key table name
-       being exported
- 	<LI><B>FKCOLUMN_NAME</B> String => foreign key column name
-       being exported
- 	<LI><B>KEY_SEQ</B> short => sequence number within foreign key
- 	<LI><B>UPDATE_RULE</B> short => What happens to
-        foreign key when primary is updated:
-       <UL>
-       <LI> importedNoAction - do not allow update of primary
-                key if it has been imported
-       <LI> importedKeyCascade - change imported key to agree
-                with primary key update
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been updated
-       <LI> importedKeySetDefault - change imported key to default values
-                if its primary key has been updated
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       </UL>
- 	<LI><B>DELETE_RULE</B> short => What happens to
-       the foreign key when primary is deleted.
-       <UL>
-       <LI> importedKeyNoAction - do not allow delete of primary
-                key if it has been imported
-       <LI> importedKeyCascade - delete rows that import a deleted key
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been deleted
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       <LI> importedKeySetDefault - change imported key to default if
-                its primary key has been deleted
-       </UL>
- 	<LI><B>FK_NAME</B> String => foreign key name (may be null)
- 	<LI><B>PK_NAME</B> String => primary key name (may be null)
- 	<LI><B>DEFERRABILITY</B> short => can the evaluation of foreign key
-       constraints be deferred until commit
-       <UL>
-       <LI> importedKeyInitiallyDeferred - see SQL92 for definition
-       <LI> importedKeyInitiallyImmediate - see SQL92 for definition
-       <LI> importedKeyNotDeferrable - see SQL92 for definition
-       </UL>
-   </OL>
-
-  @param primaryCatalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param primarySchema a schema name; "" retrieves those
-  without a schema
-  @param primaryTable the table name that exports the key
-  @param foreignCatalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param foreignSchema a schema name; "" retrieves those
-  without a schema
-  @param foreignTable the table name that imports the key
-  @return <code>ResultSet</code> - each row is a foreign key column description
-  @see #getImportedKeys
-}
-function TZOracleDatabaseMetadata.GetCrossReference(const PrimaryCatalog: string;
-  const PrimarySchema: string; const PrimaryTable: string; const ForeignCatalog: string;
-  const ForeignSchema: string; const ForeignTable: string): IZResultSet;
-begin
-  Result := inherited GetCrossReference(PrimaryCatalog, PrimarySchema,
-    PrimaryTable, ForeignCatalog, ForeignSchema, ForeignTable);
-end;
-
-{**
-  Gets a description of all the standard SQL types supported by
-  this database. They are ordered by DATA_TYPE and then by how
-  closely the data type maps to the corresponding JDBC SQL type.
-
-  <P>Each type description has the following columns:
-   <OL>
- 	<LI><B>TYPE_NAME</B> String => Type name
- 	<LI><B>DATA_TYPE</B> short => SQL data type from java.sql.Types
- 	<LI><B>PRECISION</B> int => maximum precision
- 	<LI><B>LITERAL_PREFIX</B> String => prefix used to quote a literal
-       (may be null)
- 	<LI><B>LITERAL_SUFFIX</B> String => suffix used to quote a literal
-        (may be null)
- 	<LI><B>CREATE_PARAMS</B> String => parameters used in creating
-       the type (may be null)
- 	<LI><B>NULLABLE</B> short => can you use NULL for this type?
-       <UL>
-       <LI> typeNoNulls - does not allow NULL values
-       <LI> typeNullable - allows NULL values
-       <LI> typeNullableUnknown - nullability unknown
-       </UL>
- 	<LI><B>CASE_SENSITIVE</B> Boolean=> is it case sensitive?
- 	<LI><B>SEARCHABLE</B> short => can you use "WHERE" based on this type:
-       <UL>
-       <LI> typePredNone - No support
-       <LI> typePredChar - Only supported with WHERE .. LIKE
-       <LI> typePredBasic - Supported except for WHERE .. LIKE
-       <LI> typeSearchable - Supported for all WHERE ..
-       </UL>
- 	<LI><B>UNSIGNED_ATTRIBUTE</B> Boolean => is it unsigned?
- 	<LI><B>FIXED_PREC_SCALE</B> Boolean => can it be a money value?
- 	<LI><B>AUTO_INCREMENT</B> Boolean => can it be used for an
-       auto-increment value?
- 	<LI><B>LOCAL_TYPE_NAME</B> String => localized version of type name
-       (may be null)
- 	<LI><B>MINIMUM_SCALE</B> short => minimum scale supported
- 	<LI><B>MAXIMUM_SCALE</B> short => maximum scale supported
- 	<LI><B>SQL_DATA_TYPE</B> int => unused
- 	<LI><B>SQL_DATETIME_SUB</B> int => unused
- 	<LI><B>NUM_PREC_RADIX</B> int => usually 2 or 10
-   </OL>
-
-  @return <code>ResultSet</code> - each row is an SQL type description
-}
-function TZOracleDatabaseMetadata.GetTypeInfo: IZResultSet;
-begin
-  Result := inherited GetTypeInfo;
 end;
 
 {**
@@ -2042,18 +1545,12 @@ end;
       accurate
   @return <code>ResultSet</code> - each row is an index column description
 }
-function TZOracleDatabaseMetadata.GetIndexInfo(const Catalog: string;
+function TZOracleDatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
   const Schema: string; const Table: string; Unique: Boolean;
   Approximate: Boolean): IZResultSet;
 var
-  Key, SQL: string;
+  SQL: string;
 begin
-  Key := Format('get-index-info:%s:%s:%s:%s:%s',
-    [Catalog, Schema, Table, BoolToStr(Unique), BoolToStr(Approximate)]);
-
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(IndexInfoColumnsDynArray);
 
     SQL := 'SELECT NULL, A.OWNER, A.TABLE_NAME, A.UNIQUENESS, NULL,'
@@ -2096,9 +1593,6 @@ begin
       end;
       Close;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**
@@ -2124,47 +1618,6 @@ function TZOracleDatabaseMetadata.SupportsResultSetConcurrency(
   _Type: TZResultSetType; Concurrency: TZResultSetConcurrency): Boolean;
 begin
   Result := (_Type = rtForwardOnly) and (Concurrency = rcReadOnly);
-end;
-
-{**
-  Gets a description of the user-defined types defined in a particular
-  schema.  Schema-specific UDTs may have type JAVA_OBJECT, STRUCT,
-  or DISTINCT.
-
-  <P>Only types matching the catalog, schema, type name and type
-  criteria are returned.  They are ordered by DATA_TYPE, TYPE_SCHEM
-  and TYPE_NAME.  The type name parameter may be a fully-qualified
-  name.  In this case, the catalog and schemaPattern parameters are
-  ignored.
-
-  <P>Each type description has the following columns:
-   <OL>
- 	<LI><B>TYPE_CAT</B> String => the type's catalog (may be null)
- 	<LI><B>TYPE_SCHEM</B> String => type's schema (may be null)
- 	<LI><B>TYPE_NAME</B> String => type name
-   <LI><B>CLASS_NAME</B> String => Java class name
- 	<LI><B>DATA_TYPE</B> String => type value defined in java.sql.Types.
-   One of JAVA_OBJECT, STRUCT, or DISTINCT
- 	<LI><B>REMARKS</B> String => explanatory comment on the type
-   </OL>
-
-  <P><B>Note:</B> If the driver does not support UDTs, an empty
-  result set is returned.
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schemaPattern a schema name pattern; "" retrieves those
-  without a schema
-  @param typeNamePattern a type name pattern; may be a fully-qualified name
-  @param types a list of user-named types to include (JAVA_OBJECT,
-  STRUCT, or DISTINCT); null returns all types
-  @return <code>ResultSet</code> - each row is a type description
-}
-function TZOracleDatabaseMetadata.GetUDTs(const Catalog: string;
-  const SchemaPattern: string; const TypeNamePattern: string;
-  const Types: TIntegerDynArray): IZResultSet;
-begin
-  Result := inherited GetUDTs(Catalog, SchemaPattern, TypeNamePattern, Types);
 end;
 
 end.

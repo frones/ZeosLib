@@ -220,7 +220,7 @@ resourcestring
 
   SUnKnownParamDataType = 'Param.DataType é de tipo desconhecido';
   SFieldReadOnly        = 'O campo %d é somente leitura e não pôde receber dados';
-  SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.'; 
+  SInvalidUpdateCount   = '%d registro(s) atualizados. Apenas um registro deveria ter sido atualizado.'; 
 
 {$ELSE}
 

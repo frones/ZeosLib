@@ -196,8 +196,22 @@
 
 20080409 : Quoted Aliases in queries were not recognised - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=1797
 
+20080512 : Added ZIBEventAlerter to the components package - by mdaems
+
 20080513 : Lookup field value disappear on insert and edit and reappear after post or cancel - by mdaems - Mantis Bug 111
 
 20080513 : Duplicated result when using locate, loPartialKey and Filter - by gto - Mantis Bug 108 -See http://zeos.firmos.at/viewtopic.php?t=1831
 
 20080514 : In Delphi 2006 and FPC 2.1 TWideStringField.SetAsWideString() puts a PWideChar into the buffer, so deserializing it as a PWideString is probably wrong. - By HeidiSQL Team - See http://fisheye3.cenqua.com/changelog/heidisql?cs=1383
+
+20080607 : Remove "TextHeight = 13" from UpdateSql Editor in Lazarus - by Edwin - see http://zeos.firmos.at/viewtopic.php?t=1872
+
+20080616 : patch for table.exists - by technobot - See http://zeos.firmos.at/viewtopic.php?t=1879
+
+20080617 : Added GetXxxCacheKey functions - by technobot - See http://zeos.firmos.at/viewtopic.php?t=1881
+
+20080623 : Removed caching code that was identical between all descendent classes of TZAbstractDatabaseMetadata - by technobot/mdaems - See http://zeos.firmos.at/viewtopic.php?t=1881
+
+20080625 : Don't use ASM call in TZCollection.Error when using FPC. FPC should be able to do this platform independent - by gto - See http://zeos.firmos.at/viewtopic.php?t=1882
+
+20080711 : Fixed Delphi5 compilation - by mdaems
