@@ -215,3 +215,5 @@
 20080625 : Don't use ASM call in TZCollection.Error when using FPC. FPC should be able to do this platform independent - by gto - See http://zeos.firmos.at/viewtopic.php?t=1882
 
 20080711 : Fixed Delphi5 compilation - by mdaems
+
+20080711 : After Post of DataSet with Filtered=True, SortedFields defined, Row position was changed unexpectedly - by mangwills - Mantis Bug 106
