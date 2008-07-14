@@ -279,9 +279,16 @@ const
     ttQuoted, ttQuoted, ttWord, ttQuoted);
   TokenValues1: array[0..3] of string = (
     '''aaa''', '''bbb''', 'ccc', '"ddd''eee''"');
+  TokenString2: string = '''aaa''010ccc"ddd''eee''"';
+  TokenTypes2: array[0..2] of TZTokenType = (
+    ttQuoted, ttWord, ttQuoted);
+  TokenValues2: array[0..2] of string = (
+    '''aaa''', '010ccc', '"ddd''eee''"');
 begin
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString1, [toSkipEOF]),
     TokenTypes1, TokenValues1);
+  CheckTokens(Tokenizer.TokenizeBuffer(TokenString2, [toSkipEOF]),
+    TokenTypes2, TokenValues2);
 end;
 
 initialization
