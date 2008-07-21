@@ -473,6 +473,7 @@ begin
       DisableControls;
       InternalSort;
       BookMark:=BM;
+      UpdateCursorPos;
       EnableControls;
     end;
     {end of bangfauzan addition}
