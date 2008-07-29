@@ -1357,6 +1357,170 @@ resourcestring
   SInvalidUpdateCount     = '%d záznam(ù) aktualizováno. Pouze jeden záznam byl zmìnìn.';
 //--- end added by Petr Stasiak - pestasoft.com ------------------------------------
 
+{$ELSE}
+
+//--- added by pawelsel --------------------------------------------------------
+{$IFDEF POLISH}
+
+  SSQLError1 = 'B³¹d SQL: %s';
+  SSQLError2 = 'B³¹d SQL: %s Kod: %d';
+  SSQLError3 = 'B³¹d SQL: %s Kod: %d SQL: %s';
+  SSQLError4 = 'B³¹d SQL: %s Kod: %d Komunikat: %s';
+
+  SListCapacityError = 'Przekroczona pojemnoœæ listy (%d)';
+  SListCountError = 'Licznik listy poza zakresem (%d)';
+  SListIndexError = 'Indeks listy poza zakresem (%d)';
+
+  SClonningIsNotSupported = 'Ta klasa nie obs³uguje klonowania';
+  SImmutableOpIsNotAllowed = 'Niedozwolona operacja na niezmienialnych kolekcjach';
+  SStackIsEmpty = 'Stos jest pusty';
+  SVariableWasNotFound = 'Nie znaleziono zmiennej "%s"';
+  SFunctionWasNotFound = 'Nie znaleziono funkcji "%s"';
+  SInternalError = 'B³¹d wewnêtrzny';
+  SSyntaxErrorNear = 'B³¹d sk³adni przy "%s"';
+  SSyntaxError = 'B³¹d sk³adni';
+  SUnknownSymbol = 'Nieznany symbol "%s"';
+  SUnexpectedExprEnd = 'Nieoczekiwany koniec wyra¿enia';
+  SRightBraceExpected = 'Oczekiwano znaku )';
+  SParametersError = 'Oczekiwana iloœæ parametrów: %d, znaleziono: %d';
+  SExpectedMoreParams = 'Oczekiwano wiêcej ni¿ dwa parametry';
+  SInvalidVarByteArray = 'B³êdna tablica VarByte';
+  SVariableAlreadyExists = 'Zmienna "%s" ju¿ istnieje';
+  STypesMismatch = 'Niezgodnoœæ typów';
+  SUnsupportedVariantType = 'Nieznany typ danych';
+  SUnsupportedOperation = 'Nieznana operacja';
+
+  STokenizerIsNotDefined = 'Nie zdefiniowano tokenizera';
+  SLibraryNotFound = 'Nie znaleziono ¿adnej z bibliotek dynamicznych: %s';
+  SEncodeDateIsNotSupported = 'Ta wersja nie obs³uguje isc_encode_sql_date';
+  SEncodeTimeIsNotSupported = 'Ta wersja nie obs³uguje isc_encode_sql_time';
+  SEncodeTimestampIsNotSupported = 'Ta wersja nie obs³uguje isc_encode_sql_timestamp';
+  SDecodeDateIsNotSupported = 'Ta wersja nie obs³uguje isc_decode_sql_date';
+  SDecodeTimeIsNotSupported = 'Ta wersja nie obs³uguje isc_decode_sql_time';
+  SDecodeTimestampIsNotSupported = 'Ta wersja nie obs³uguje isc_decode_sql_timestamp';
+
+  SCanNotRetrieveResultSetData = 'Nie mo¿na pobraæ danych wynikowych';
+  SRowBufferIsNotAssigned = 'Nie przypisano bufora wiersza';
+  SColumnIsNotAccessable = 'Kolumna o numerze %d jest niedostêpna';
+  SConvertionIsNotPossible = 'Konwersja kolumny o numerze %d z %s na %s jest niemo¿liwa';
+  SCanNotAccessBlobRecord = 'Brak dostêpu do rekordu typu blob w kolumnie %d z typem %s';
+  SRowDataIsNotAvailable = 'Dane wiersza s¹ niedostêpne';
+  SResolverIsNotSpecified = 'Ten ResultSet nie ma okreœlonego Resolver-a';
+  SResultsetIsAlreadyOpened = 'ResultSet jest ju¿ otwarty';
+  SCanNotUpdateEmptyRow = 'Nie mo¿na aktualizowaæ pustego wiersza';
+  SCanNotUpdateDeletedRow = 'Nie mo¿na aktualizowaæ usuniêtego wiersza';
+  SCanNotDeleteEmptyRow = 'Nie mo¿na usun¹æ pustego wiersza';
+  SCannotUseCommit = 'Nie mo¿na u¿yæ COMMIT w trybie AUTOCOMMIT';
+  SCannotUseRollBack = 'Nie mo¿na u¿yæ ROLLBACK w trybie AUTOCOMMIT';
+  SCanNotUpdateComplexQuery = 'Nie mo¿na aktualizowaæ zapytania z³o¿onego z wiêcej ni¿ jednej tabeli';
+  SCanNotUpdateThisQueryType = 'Nie mo¿na aktualizowaæ tego typu zapytania';
+  SDriverWasNotFound = 'Nie znaleziono wymaganego sterownika bazy danych';
+  SCanNotConnectToServer = 'Nie mo¿na po³¹czyæ siê z serwerem SQL';
+  STableIsNotSpecified = 'Nie okreœlono tabeli';
+  SLiveResultSetsAreNotSupported = '"Live query" nie jest obs³ugiwane przez t¹ klasê';
+  SInvalidInputParameterCount = 'Liczba parametrów wejsciowych jest mniejsza ni¿ oczekiwana';
+  SIsolationIsNotSupported = 'Poziom izolacji transakcji nie jest obs³ugiwany';
+  SColumnWasNotFound = 'Nie znaleziono kolumny o nazwie "%s"';
+  SWrongTypeForBlobParameter = 'B³êdny typ parametru Blob';
+  SIncorrectConnectionURL = 'B³êdny URL po³¹czenia: %s';
+  SUnsupportedProtocol = 'Nieobs³ugiwany protokó³: %s';
+  SUnsupportedByDriver    = 'Sterownik nie obs³uguje tej w³aœciwoœci natywnie: [%s]';
+
+  SConnectionIsNotOpened = 'Jeszcze nie nawi¹zano po³¹czenia';
+  SInvalidOpInAutoCommit = 'B³êdna operacja w trybie AutoCommit';
+  SInvalidOpInNonAutoCommit = 'B³êdna operacja przy wy³¹czonym AutoCommit';
+  SInvalidOpPrepare = 'Przygotowanie transakcji mo¿liwe jest tylko przy pierwszym(!) Starttransaction';
+
+  SConnectionIsNotAssigned = 'Nie przypisano komponentu po³¹czenia do bazy danych';
+  SQueryIsEmpty = 'Zapytanie SQL jest puste';
+  SCanNotExecuteMoreQueries = 'Nie mo¿na wykonaæ wiêcej ni¿ jednego zapytania';
+  SOperationIsNotAllowed1 = 'Niedozwolona operacja w trybie FORWARD ONLY';
+  SOperationIsNotAllowed2 = 'Niedozwolona operacja w trybie READ ONLY';
+  SOperationIsNotAllowed3 = 'Niedozwolona operacja w trybie %s';
+  SOperationIsNotAllowed4 = 'Niedozwolona operacja przy zamniêtym Ÿródle danych';
+  SNoMoreRecords = 'Nie ma ju¿ wiêcej rekordów wynikowych';
+  SCanNotOpenResultSet = 'Nie mozna otworzyæ danych wynikowych';
+  SCircularLink = 'Datasource tworzy powi¹zanie cykliczne';
+  SBookmarkWasNotFound = 'Nie znaleziono zak³adki (Bookmark)';
+  SIncorrectSearchFieldsNumber = 'B³êdna liczba pól do wyszukiwania';
+  SInvalidOperationInTrans = 'B³êdna operacja w trybie transakcji';
+  SIncorrectSymbol = 'B³êdny symbol w liœcie pól "%s".';
+  SIncorrectToken = 'B³êdny wyraz za ":"';
+
+  SSelectedTransactionIsolation = 'Wybrany poziom izolacji transakcji nie jest obs³ugiwany';
+  SDriverNotSupported = 'Nie obs³ugiwany sterownik %s';
+  SPattern2Long = 'Wzorzec jest zbyt d³ugi';
+  SDriverNotCapableOutParameters = 'Sterownik nie potrafi obs³u¿yæ parametrów';
+  SStatementIsNotAllowed = 'Niedozwolone wyra¿enie';
+  SStoredProcIsNotAllowed = 'Niedozwolona procedura sk³adowana';
+  SCannotPerformOperation = 'Nie mo¿na wykonaæ operacji na zamkniêtym zbiorze danych';
+  SInvalidState = 'B³êdny stan';
+  SErrorConvertion = 'B³¹d konwersji';
+  SDataTypeDoesNotSupported = 'Nieobs³ugiwany typ dannych';
+  SUnsupportedParameterType = 'Nieobs³ugiwany typ parametru';
+  SUnsupportedDataType = 'Nieobs³ugiwany typ danych';
+  SErrorConvertionField = 'B³¹d konwersji pola "%s" na SQLType "%s"';
+  SBadOCI = 'Z³a wersja OCI [%s]. Wymagana wersja 8.0.3 lub starsza';
+  SConnect2AsUser = 'Po³¹czenie z "%s" jako u¿ytkownik "%s"';
+  SUnknownError = 'Nieznany b³¹d';
+  SFieldNotFound1 = 'Nie znaleziono pola "%s"';
+  SFieldNotFound2 = 'Nie znaleziono pola %d';
+
+  SLoginPromptFailure = 'Nie znaleziono domyœlnego dialogu logowania. Proszê dodaæ DBLogDlg do sekcji uses g³ównego pliku aplikacji.';
+
+  SPropertyQuery = 'Zapytanie mo¿e chwilê potrwaæ na wiêkszej bazie danych!';
+  SPropertyTables = 'Powinieneœ uœciœliæ Katalog i/lub Schemat.';
+  SPropertyColumns = 'Powinieneœ uœciœliæ Katalog, Schemat i/lub NazwêTabeli.';
+  SPropertyProcedures = 'Powinieneœ uœciœliæ Katalog i/lub Schemat.';
+  SPropertySequences = 'Powinieneœ uœciœliæ Katalog i/lub Schemat.';
+  SPropertyExecute = 'Czy mimo to wykonaæ zapytanie?';
+
+  SFormTest = 'Test Edytora SQL ZEOS';
+  SButtonClose = '&Zamknij';
+  SFormEditor = 'Edytor SQL ZEOS';
+  STabSheetSelect = 'Wybór SQL';
+  SMenuLoad = '£aduj';
+  SMenuSave = 'Zapisz';
+  SButtonGenerate = '&Generuj';
+  SButtonCheck = '&SprawdŸ';
+  SButtonTest = '&Test';
+  SButtonOk = '&OK';
+  SButtonCancel = 'A&nuluj';
+  STableAlias = '&Alias tabeli';
+  SReplaceSQL = 'Za&mieñ SQL';
+  SDialogOpenTitle = 'Otwórz plik SQL';
+  SDialogSaveTitle = 'Zapisz plik SQL';
+  SSQLEditor = 'Edytor SQL';
+  SDatabaseDialog = 'Otwórz istniej¹c¹ bazê';
+
+  SUpdateSQLNoResult = 'Update Refresh SQL nie zwróci³o ¿adnych danych';
+  SUpdateSQLRefreshStatementcount ='Wyra¿enie Update Refresh SQL musi zwróciæ 1 rekord danych';
+
+  {$IFDEF FPC}
+  SNotEditing = 'Dataset nie jest w trybie "edit" lub "insert"';
+  SFieldTypeMismatch = 'Niezgodnoœæ typów dla pola ''%s'', oczekiwano: %s otrzymano: %s';
+  SFieldSizeMismatch = 'Niezgodnoœæ rozmiarów pola ''%s'', oczekiwano: %d otrzymano: %d';
+  {$ENDIF}
+  SNeedField               = 'Pole %s jest wymagane.';
+
+  SFailedtoInitPrepStmt   = 'Nie uda³o siê zainicjalizowaæ przygotowanego zapytania';
+  SFailedtoPrepareStmt    = 'B³¹d w wyra¿eniu podczas procesu przygotowania';
+  SFailedToBindAllValues  = 'B³¹d aplikacji podczas przypisywania danych';
+  SAttemptExecOnBadPrep   = 'Próba uruchomienia wyra¿enia przed zakoñczeniem przygotowywania.';
+  SBindingFailure         = 'B³¹d przypisywania zbioru parametrów';
+  SPreparedStmtExecFailure = 'B³¹d wykonania przygotowanego zapytania';
+  SBoundVarStrIndexMissing = 'Nie istnieje zmienna licznikowa "%s"';
+  SBindVarOutOfRange      = 'Wartoœæ zmiennej licznikowej poza zakresem: %d';
+  SFailedToBindResults    = 'B³¹d aplikacji podczas ³¹czenia do wyników zapytania';
+
+//FOS+ 07112006
+  SRefreshRowOnlySupportedWithUpdateObject = 'Metoda refreshrow jest obs³ugiwana tylko przez obiekt typu "update"';
+  SMustBeInBrowseMode = 'Operacja jest dozwolona tylko w stanie dsBROWSE';
+
+  SUnKnownParamDataType = 'Nieznany Param.DataType';
+  SFieldReadOnly        = 'Nie mo¿na przypisaæ do pola tylko do odczytu wartoœci: %d';
+  SInvalidUpdateCount     = 'Liczba zaktualizowanych rekordów: %d. tylko jeden rekord powinien byæ zaktualizowany.';
+
 {$ELSE} // default: ENGLISH
 
 
@@ -1518,6 +1682,8 @@ resourcestring
   SUnKnownParamDataType = 'Unknown Param.DataType';
   SFieldReadOnly        = 'Readonly field can''t be assigned a value: %d';
   SInvalidUpdateCount     = '%d record(s) updated. Only one record should have been updated.';
+
+{$ENDIF} // POLISH
 
 {$ENDIF} // CZECH
 

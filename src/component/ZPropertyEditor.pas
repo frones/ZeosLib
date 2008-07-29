@@ -182,7 +182,7 @@ implementation
 {$IFDEF WITH_PROPERTY_EDITOR}
 
 uses SysUtils, Forms, Dialogs, Controls, DB, TypInfo,
-  ZConnection
+  ZConnection, ZSelectSchema
 {$IFDEF USE_METADATA}
   , ZSqlMetadata
 {$ENDIF}
@@ -321,13 +321,17 @@ var
   Connection: TZConnection;
   Metadata: IZDatabaseMetadata;
   ResultSet: IZResultSet;
-{$IFDEF USE_METADATA}
-  Catalog, Schema: string;
-{$ENDIF}
+  Schema, Tablename:String;
+  IdentifierConvertor: IZIdentifierConvertor;
+  Catalog: string;
 begin
   Connection := GetObjectProp(GetComponent(0), 'Connection') as TZConnection;
   if Assigned(Connection) and Connection.Connected then
   begin
+    Metadata := Connection.DbcConnection.GetMetadata;
+    IdentifierConvertor := Metadata.GetIdentifierConvertor;
+    Catalog := Connection.Catalog;
+    Schema := '';
 {$IFDEF USE_METADATA}
     if GetComponent(0) is TZSqlMetadata then
     begin
@@ -337,26 +341,29 @@ begin
       if not (IsEmpty(Catalog) and IsEmpty(Schema)) or
        (MessageDlg(SPropertyQuery + CRLF + SPropertyTables + CRLF +
         SPropertyExecute, mtWarning, [mbYes,mbNo], 0) = mrYes) then
+        begin
+        // continue
+        end
+      else
+        exit;
 {$ENDIF}
-      try
-        Metadata := Connection.DbcConnection.GetMetadata;
-        // Look for the Tables of the defined Catalog and Schema
-        ResultSet := Metadata.GetTables(Catalog, Schema, '', nil);
-        while ResultSet.Next do
-          List.Add(ResultSet.GetStringByName('TABLE_NAME'));
-      finally
-        ResultSet.Close;
-      end;
-    end
-    else
+    end;
 {$ENDIF}
     begin
       try
-        Metadata := Connection.DbcConnection.GetMetadata;
         // Look for the Tables of the defined Catalog and Schema
-        ResultSet := Metadata.GetTables(Connection.Catalog, '', '', nil);
+        ResultSet := Metadata.GetTables(Catalog, Schema, '', nil);
         while ResultSet.Next do
-          List.Add(ResultSet.GetStringByName('TABLE_NAME'));
+          begin
+            TableName := ResultSet.GetStringByName('TABLE_NAME');
+            TableName := IdentifierConvertor.Quote(TableName);
+            Schema := ResultSet.GetStringByName('TABLE_SCHEM');
+            if Schema <> '' then
+              TableName := IdentifierConvertor.Quote(Schema) + '.' + TableName;
+            if Connection.Catalog <> '' then
+              TableName := IdentifierConvertor.Quote(Connection.Catalog) + '.' + TableName;
+            List.Add(TableName);
+          end;
       finally
         ResultSet.Close;
       end;

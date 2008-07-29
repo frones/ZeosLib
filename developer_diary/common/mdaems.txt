@@ -219,3 +219,8 @@
 20080711 : After Post of DataSet with Filtered=True, SortedFields defined, Row position was changed unexpectedly - by mangwills - Mantis Bug 106
 
 20080714 : Join two tokens if the first is a ttInteger and the next a ttWord - by FrankSL - See http://zeos.firmos.at/viewtopic.php?t=1897
+
+20080722 : Added polish translation - by pawelsel
+
+20080728 : Replaced fix for Mantis Bug 97 by a more correct one - by pawelsel - Mantis Bug 123
+

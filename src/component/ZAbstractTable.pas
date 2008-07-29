@@ -74,7 +74,6 @@ type
     procedure SetTableName(const Value: string);
 
   protected
-    procedure SetActive (Value : Boolean); override;
   {$IFDEF WITH_IPROVIDER}
     function PSIsSQLBased: Boolean; override;
     function PSGetTableName: string; override;
@@ -119,27 +118,10 @@ begin
   if FTableName <> Value then
   begin
     FTableName := Value;
-    SQL.Text := '';
-  end;
-end;
-
-procedure TZAbstractTable.SetActive(Value: boolean);
-var
-  TempSql : string;
-begin
-  if Value then
-    if FTableName <> '' then
-      begin
-        CheckConnected; // we need a connection to decide about proper table name quoting
-        if not Connection.DbcConnection.GetMetaData.GetIdentifierConvertor.IsQuoted(FTableName) then
-          TempSQL := Format('SELECT * FROM %s', [Connection.DbcConnection.GetMetaData.GetIdentifierConvertor.Quote(FTableName)])
-        else  TempSQL := Format('SELECT * FROM %s', [FTableName]);
-        if SQL.Text <> TempSQL then
-          SQL.Text := TempSQL;
-      end
+    if Value <> '' then
+      SQL.Text := Format('SELECT * FROM %s', [FTableName])
     else SQL.Text := '';
-
-  inherited;
+  end;
 end;
 
 {$IFDEF WITH_IPROVIDER}
