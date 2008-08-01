@@ -22,6 +22,148 @@
     <title>ZeosDBO Change Notes</title>
    <corpauthor>ZeosLib Development Group</corpauthor>
   </articleinfo>
+  
+  <sect1>
+    <title>Changes in Release 6.6.3 - stable (08.08.2008)</title>
+    <sect2>
+      <title>Bugs fixed from Mantis Bug Tracker</title>
+      <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
+      <itemizedlist spacing="compact">
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=106">#0000106</ulink> [normal] After Post of DataSet with Filtered=True, SortedFields defined, Row position is changed unexpectedly</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=122">#0000122</ulink> [normal] Problem with quoted fields (PostgreSQL keywords)</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=121">#0000121</ulink> [normal] ZQuery Insert/Update problem with MSSQL/ADO</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=119">#0000119</ulink> [normal] Memory leak in ZDbcSqLiteResultSet.pas</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=113">#0000113</ulink> [high] MYSQL - EZSQLException with message 'Column with name "Extra" was not found'. using latest MySQL 5.1.x</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=108">#0000108</ulink> [normal] Duplicated result when using locate, loPartialKey and Filter</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=111">#0000111</ulink> [normal] Lookup field value disappers on insert and edit and reappears after post or cancel</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=105">#0000105</ulink> [normal] Fields default expresion is determined from the wrong source</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=95">#0000095</ulink> [normal] It is impossible to be connected to base on tcpip</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=99">#0000099</ulink> [normal] Read only fields not really read only</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=94">#0000094</ulink> [normal] Invalid argument to time encode</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=97">#0000097</ulink> [normal] Cannot open table where tablename is similar to database name (Quoting TZTable.tablename)</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=93">#0000093</ulink> [normal] Wrong clearing of allocated data for SQLDA</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=90">#0000090</ulink> [normal] Default values from table are not used / Corrected Null fields handling in combination with autoinc and default values</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=88">#0000088</ulink> [normal] Delphi11 test packages missing in ZEOSLIB_TESTING_REV329</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=86">#0000086</ulink> [normal] Field values truncated</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=87">#0000087</ulink> [normal] Backslash gone in resultset</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=82">#0000082</ulink> [normal] Incorrect catalog name when no schema present and incorrect order</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=80">#0000080</ulink> [high] Naming convention in release build...</simpara>
+        </listitem>
+      </itemizedlist>
+    </sect2>
+    <sect2>
+      <title>Other Bugs fixed</title>
+      <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>[COMMON] Enabled BeforeRefresh and AfterRefresh Dataset properties for FPC2 (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1749">http://zeos.firmos.at/viewtopic.php?t=1749</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] Quoted Aliases in queries were not recognised (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1797">http://zeos.firmos.at/viewtopic.php?t=1797</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] In Delphi 2006 and FPC 2.1 TWideStringField.SetAsWideString() puts a PWideChar into the buffer, so deserializing it as a PWideString is probably wrong. (<ulink url="http://fisheye3.cenqua.com/changelog/heidisql?cs=1383"></ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] Remove "TextHeight = 13" from UpdateSql Editor in Lazarus (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1872">http://zeos.firmos.at/viewtopic.php?t=1872</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] Don't use ASM call in TZCollection.Error when using FPC. FPC should be able to do this platform independent (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1882">http://zeos.firmos.at/viewtopic.php?t=1882</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] Fixed Delphi5 compilation</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] Join two tokens if the first is a ttInteger and the next a ttWord (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1897">http://zeos.firmos.at/viewtopic.php?t=1897</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[IB/FB] Metadata.GetColumns corrected (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1682">http://zeos.firmos.at/viewtopic.php?t=1682</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[IB/FB] Autocommit didn't work for TZStoredProcedure when using Firebird</simpara> 
+        </listitem>
+     </itemizedlist>
+    </sect2>
+    <sect2>
+      <title>Features added</title>
+      <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>[SQLite3] Improve Column Affinity (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1605">http://zeos.firmos.at/viewtopic.php?t=1605</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] Added ZConnection.ExecuteDirect and ZConnection.ExecuteUpdateDirect functions (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1656">http://zeos.firmos.at/viewtopic.php?t=1656</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] Automatically generated updates could update more than 1 row at once or no row at all. Query property ‘ValidateUpdateCount=true/false’ added (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1757">http://zeos.firmos.at/viewtopic.php?t=1757</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] Added ZIBEventAlerter to the components package</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] Added TZTable.exists (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1879)">http://zeos.firmos.at/viewtopic.php?t=1879)</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[IB/FB] Added support for Firebird hard commits. (Very experimental!!!)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[MYSQL] Added libmysql51.dll to list of possible dll's for protocol Mysql-5</simpara>
+        </listitem>
+      </itemizedlist>
+    </sect2>
+    <sect2>
+      <title>Internal Changes</title>
+      <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>[COMMON] ant build support for Linux added</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] Added GetXxxCacheKey functions (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1881">http://zeos.firmos.at/viewtopic.php?t=1881</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] Removed caching code that was identical between all descendent classes of TZAbstractDatabaseMetadata (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1881">http://zeos.firmos.at/viewtopic.php?t=1881</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[MYSQL] Added new constants for mysql 5.1 library</simpara>
+        </listitem>
+      </itemizedlist>
+    </sect2>	
+  </sect1>  
   <sect1>
     <title>Changes in Release 6.6.2 - rc (12.12.2007)</title>
     <sect2>
