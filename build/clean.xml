@@ -181,7 +181,9 @@
 
     <delete>
        <fileset dir="${packages.dir}\${compiler}">
-	<include name="build/**" />
+	<include name="build/*.ppu" />
+	<include name="build/*.o" />
+	<include name="build/*.exe" />
 	<include name="*.~*" />
 	<include name="*.*~" />
 	<include name="*.dcu" />
@@ -207,6 +209,7 @@
 	<exclude name="build/libmysql*.dll" />
 	<exclude name="build/sqlite*.dll" />
 	<exclude name="build/fbclient*.dll" />
+	<exclude name="build/*.dll" />
 	<exclude name="**/dummy.txt" />
       </fileset>
     </delete>
