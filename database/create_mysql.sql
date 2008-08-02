@@ -193,9 +193,9 @@ create index cargo_FK on cargo (c_dep_id);
 /*==============================================================*/
 /* Grant privileges to columns                                  */
 /*==============================================================*/
-grant update(p_resume, p_redundant) on zeoslib.people to root@localhost;
+/*grant update(p_resume, p_redundant) on zeoslib.people to root@localhost;*/
 
 /*==============================================================*/
 /* Grant privileges to table                                    */
 /*==============================================================*/
-grant select on zeoslib.people to root@localhost;
+/*grant select on zeoslib.people to root@localhost;*/

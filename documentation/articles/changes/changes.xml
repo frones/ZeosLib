@@ -30,6 +30,9 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=123">#0000123</ulink> [normal] Can not open TZTable in PostgreSQL (Replaced fix for Mantis Bug 97 (SVN rev. 344) by a more correct one)</simpara>
+        </listitem>
+        <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=106">#0000106</ulink> [normal] After Post of DataSet with Filtered=True, SortedFields defined, Row position is changed unexpectedly</simpara>
         </listitem>
         <listitem>
@@ -123,6 +126,9 @@
     <sect2>
       <title>Features added</title>
       <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>[COMMON] Added polish translation</simpara>
+        </listitem>
         <listitem>
           <simpara>[SQLite3] Improve Column Affinity (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1605">http://zeos.firmos.at/viewtopic.php?t=1605</ulink>)</simpara>
         </listitem>

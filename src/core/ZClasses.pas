@@ -61,7 +61,7 @@ uses
   SysUtils, Classes;
 
 const
-  ZEOS_VERSION = '6.6.3-rc';
+  ZEOS_VERSION = '6.6.3-stable';
 
 type
   { Lazarus/FreePascal Support }

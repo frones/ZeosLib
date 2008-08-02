@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+﻿<?xml version="1.0"?>
 <project name="svn-zeos" basedir="." default="buildTesting">
   
   <!--  all properties are in build.properties --> 
@@ -8,6 +8,8 @@
   <property name="temp.dir" value="${root.dir}/temp"/>
   <property name="checktemp.dir" value="${root.dir}/checktemp"/>
   <property name="release.dir" value="${root.dir}/releases"/>
+  <property name="logs.dir" value="${root.dir}/build/logs"/>
+
 
   <property name="build.majorversion" value="0"/>
   <property name="build.minorversion" value="0"/>
@@ -32,7 +34,18 @@
   <!-- load the svn task -->
   <taskdef resource="svntask.properties" classpathref="project.classpath"/>
     
-  <target name="buildTesting">
+  <target name="prepare">
+    <mkdir dir="${logs.dir}" />
+
+    <tstamp>
+      <format property="tstamp" pattern="yyyyMMdd" />
+    </tstamp>
+
+    <property name="log.file" value="${logs.dir}/packaging-${tstamp}.log"/>
+  </target>
+
+
+  <target name="buildTesting" depends="prepare">
      <antcall target="buildZip">
       <param name="branch" value="TESTING"/>
       <param name="url" value="${url.testing}"/>
@@ -41,7 +54,7 @@
     </antcall>
 </target>
 
-  <target name="buildTrunk">
+  <target name="buildTrunk" depends="prepare">
      <antcall target="buildZip">
       <param name="branch" value="TRUNK"/>
       <param name="url" value="${url.trunk}"/>
@@ -49,10 +62,22 @@
     </antcall>
   </target>
 
-  <target name="buildTagged">
+  <target name="buildTagged" depends="prepare">
      <antcall target="buildTagZip">
       <param name="branch" value="TAG"/>
       <param name="url" value="${url.tag}"/>
+      <param name="fullZip" value="true"/>
+    </antcall>
+  </target>
+
+<!-- target for building a draft release before the version tag is actually made -->
+  <target name="buildTrunkAsTagged" depends="prepare">
+    <echo message="Building Trunk as Tagged release"
+      file="${log.file}" append="true" />
+
+     <antcall target="buildTagZip">
+      <param name="branch" value="TAG"/>
+      <param name="url" value="${url.trunk}"/>
       <param name="fullZip" value="true"/>
     </antcall>
   </target>
@@ -111,17 +136,22 @@
     </svn>
 
      <antcall target="buildVersionZip" />
-     <antcall target="buildDoc" />
+     <antcall target="buildDoxygen" />
 
     <delete dir="${temp.dir}" />
     <echo message="Releasing Zeos DBO Project (Version ${build.productversion})"/>
   </target>
 
   <target name="buildVersionZip">
+
+    <antcall target="buildDoc" />
+
     <delete file="${release.dir}/ZEOSDBO-${build.productversion}.zip" />
     <zip zipfile="${release.dir}/ZEOSDBO-${build.productversion}.zip">
       <fileset dir="${temp.dir}">
          <include name="*.txt"/>
+         <include name="doc/html/**"/>
+         <include name="doc/pdf/**"/>
          <include name="src/**"/>
          <include name="packages/**"/>
          <include name="examples/**"/>
@@ -134,29 +164,71 @@
   <target name="buildDoc">
     <delete dir="${temp.dir}/doc" />
 
-    <copy todir="${temp.dir}/doc/articles" overwrite="true" preservelastmodified="true" includeEmptyDirs="false">
+    <exec osfamily="windows" executable="${ede.home}/bat/docbook_deploy_all.bat" dir="${temp.dir}/documentation" output="${log.file}" append="true" failonerror="true">
+        <env key="ZEOS_DIR" path="${root.dir}/temp"/>
+    </exec>
+    <copy todir="${temp.dir}/doc/html" flatten="true" overwrite="true" preservelastmodified="true" includeEmptyDirs="false">
       <fileset dir="${temp.dir}/documentation/articles_generated/output">
          <include name="*/html/*"/>
       </fileset>
     </copy>
+    <copy todir="${temp.dir}/doc/html/images" flatten="true" overwrite="true" preservelastmodified="true" includeEmptyDirs="false">
+      <fileset dir="${temp.dir}/documentation/articles_generated/output">
+         <include name="*/html/images/*"/>
+      </fileset>
+    </copy>
+    <copy todir="${temp.dir}/doc/pdf" flatten="true" overwrite="true" preservelastmodified="true" includeEmptyDirs="false">
+      <fileset dir="${temp.dir}/documentation/articles_generated/output">
+         <include name="*/pdf/*.pdf"/>
+      </fileset>
+    </copy>
+</target>
 
-    <exec osfamily="windows" executable="${temp.dir}/documentation/doxygen_build.bat" dir="${temp.dir}/documentation" failonerror="true"/>
+<target name="buildDoxygen" depends="prepare">
+    <exec osfamily="windows" executable="${temp.dir}/documentation/doxygen_build.bat" dir="${temp.dir}/documentation" output="${log.file}" append="true" failonerror="true"/>
 
     <copy todir="${temp.dir}/doc/doxygen" overwrite="true" preservelastmodified="true" includeEmptyDirs="false" >
-      <fileset dir="${temp.dir}/doc/html">
+      <fileset dir="${temp.dir}/doc/doxy/html">
          <include name="**"/>
       </fileset>
     </copy>
-    <delete dir="${temp.dir}/doc/html" />
+    <delete dir="${temp.dir}/doc/doxy" />
 
-    <delete file="${release.dir}/ZEOSDBO-${build.productversion}_doc.zip" />
-    <zip zipfile="${release.dir}/ZEOSDBO-${build.productversion}_doc.zip">
-      <fileset dir="${temp.dir}/doc">
+    <delete file="${release.dir}/ZEOSDBO-${build.productversion}_doxygen.zip" />
+    <zip zipfile="${release.dir}/ZEOSDBO-${build.productversion}_doxygen.zip">
+      <fileset dir="${temp.dir}/doc/doxygen">
          <include name="**"/>
       </fileset>
     </zip>
-    <checksum file="${release.dir}/ZEOSDBO-${build.productversion}_doc.zip" forceoverwrite="yes"/>
-    <checksum file="${release.dir}/ZEOSDBO-${build.productversion}_doc.zip" algorithm="SHA" forceoverwrite="yes"/>
+    <checksum file="${release.dir}/ZEOSDBO-${build.productversion}_doxygen.zip" forceoverwrite="yes"/>
+    <checksum file="${release.dir}/ZEOSDBO-${build.productversion}_doxygen.zip" algorithm="SHA" forceoverwrite="yes"/>
   </target>
+  
+<target name="buildDelphiCode2Doc" depends="prepare">
+  <!-- Can't get this working correctly because the output path in the config file is hard coded and doesn't support relative paths (only relative to disk root) -->
+    <copy file="${temp.dir}/documentation/Zeoslibcode2doc.xml" tofile="${temp.dir}/documentation/temp.xml"/>
+    <replaceregexp file="${temp.dir}/documentation/temp.xml" match="&lt;OutputFolder>(.*)&lt;/OutputFolder>" replace="&lt;OutputFolder>${temp.file}/doc/DCTD&lt;/OutputFolder>" byline="true"/>
 
-</project>
+    <exec osfamily="windows" executable="${delphicode2doc.home}/DCTD_cmd" dir="${temp.dir}/documentation" output="${log.file}" append="true" failonerror="true">
+        <!--arg line="Zeoslibcode2doc.xml"/-->
+        <arg line="temp.xml"/>
+    </exec>
+
+    <copy todir="${temp.dir}/doc/DelphiCode2Doc" overwrite="true" preservelastmodified="true" includeEmptyDirs="false" >
+      <fileset dir="${temp.dir}/doc/DCTD/html">
+         <include name="**"/>
+      </fileset>
+    </copy>
+    <delete dir="${temp.dir}/doc/DCTD" />
+
+    <delete file="${release.dir}/ZEOSDBO-${build.productversion}_DelphiCode2Doc.zip" />
+    <zip zipfile="${release.dir}/ZEOSDBO-${build.productversion}_DelphiCode2Doc.zip">
+      <fileset dir="${temp.dir}/doc/DelphiCode2Doc">
+         <include name="**"/>
+      </fileset>
+    </zip>
+    <checksum file="${release.dir}/ZEOSDBO-${build.productversion}_DelphiCode2Doc.zip" forceoverwrite="yes"/>
+    <checksum file="${release.dir}/ZEOSDBO-${build.productversion}_DelphiCode2Doc.zip" algorithm="SHA" forceoverwrite="yes"/>
+  </target>
+  
+  </project>
