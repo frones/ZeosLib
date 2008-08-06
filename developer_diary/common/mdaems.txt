@@ -225,3 +225,5 @@
 20080728 : Replaced fix for Mantis Bug 97 by a more correct one - by pawelsel - Mantis Bug 123
 
 20080806 : New property FetchRow in ZDataSet - by patyi - See http://zeos.firmos.at/viewtopic.php?t=1857 
+
+20080806 : New dataset option doDontSortOnPost - by karpik - See http://zeos.firmos.at/viewtopic.php?t=1931
