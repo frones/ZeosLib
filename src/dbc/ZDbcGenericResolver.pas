@@ -160,6 +160,8 @@ type
       UpdateType: TZRowUpdateType;
       OldRowAccessor, NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver); virtual;
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
+    procedure RefreshCurrentRow(Sender: IZCachedResultSet;RowAccessor: TZRowAccessor); //FOS+ 07112006
+
   end;
 
 implementation
@@ -767,8 +769,9 @@ begin
     begin
       Statement := Connection.PrepareStatement(SQL);
       FillStatement(Statement, SQLParams, OldRowAccessor, NewRowAccessor);
-      lValidateUpdateCount := StrToBoolEx(
-        Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']);
+      // if Property ValidateUpdateCount isn't set : assume it's true
+      lValidateUpdateCount := (Sender.GetStatement.GetParameters.IndexOfName('ValidateUpdateCount') = -1)
+                            or StrToBoolEx(Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']);
 
       lUpdateCount := Statement.ExecuteUpdatePrepared;
       if  (lValidateUpdateCount)
@@ -778,6 +781,11 @@ begin
   finally
     SQLParams.Free;
   end;
+end;
+
+procedure TZGenericCachedResolver.RefreshCurrentRow(Sender: IZCachedResultSet;  RowAccessor: TZRowAccessor);
+begin
+ raise EZSQLException.Create(SRefreshRowOnlySupportedWithUpdateObject);
 end;
 
 {**

@@ -101,6 +101,10 @@ function MySQLTimestampToDateTime(const Value: string): TDateTime;
 }
 procedure CheckMySQLError(PlainDriver: IZMySQLPlainDriver;
   Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; const LogMessage: string);
+{$IFDEF MYSQL_USE_PREPARE}
+procedure CheckMySQLPrepStmtError(PlainDriver: IZMySQLPlainDriver;
+  Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; const LogMessage: string);
+{$ENDIF}
 
 procedure EnterSilentMySQLError;
 procedure LeaveSilentMySQLError;
@@ -138,6 +142,10 @@ function EncodeMySQLVersioning(const MajorVersion: Integer;
   @return Encoded Zeos SQL Version Value.
 }
 function ConvertMySQLVersionToSQLVersion( const MySQLVersion: Integer ): Integer;
+
+{$IFDEF MYSQL_USE_PREPARE}
+function getMySQLFieldSize (field_type: Byte; field_size: LongWord): LongWord;
+{$ENDIF}
 
 implementation
 
@@ -462,6 +470,27 @@ begin
   end;
 end;
 
+{$IFDEF MYSQL_USE_PREPARE}
+procedure CheckMySQLPrepStmtError(PlainDriver: IZMySQLPlainDriver;
+  Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; const LogMessage: string);
+var
+  ErrorMessage: string;
+  ErrorCode: Integer;
+begin
+  ErrorMessage := Trim(PlainDriver.GetLastPreparedError(Handle));
+  ErrorCode := PlainDriver.GetLastPreparedErrorCode(Handle);
+  if (ErrorCode <> 0) and (ErrorMessage <> '') then
+  begin
+    if SilentMySQLError > 0 then
+      raise EZMySQLSilentException.CreateFmt(SSQLError1, [ErrorMessage]);
+
+    DriverManager.LogError(LogCategory,PlainDriver.GetProtocol,LogMessage,ErrorCode, ErrorMessage);
+    raise EZSQLException.CreateWithCode(ErrorCode,
+      Format(SSQLError1, [ErrorMessage]));
+  end;
+end;
+{$ENDIF}
+
 {**
   Decodes a MySQL Version Value encoded with format:
    (major_version * 10,000) + (minor_version * 100) + sub_version
@@ -512,5 +541,53 @@ begin
  DecodeMySQLVersioning(MySQLVersion,MajorVersion,MinorVersion,SubVersion);
  Result := EncodeSQLVersioning(MajorVersion,MinorVersion,SubVersion);
 end;
+
+{$IFDEF MYSQL_USE_PREPARE}
+function getMySQLFieldSize (field_type: Byte; field_size: LongWord): LongWord;
+var
+    MaxBlobSize: LongWord;
+    SmallBLOB: Word;
+Begin
+    MaxBlobSize := 255; // mdaems : temporary solution (See PDO PDOPlainMysqlDriver)
+//    MaxBlobSize := FPlainDriver.GetMaximumBLOBSize;
+    if (MaxBlobSize > 65535) then
+        SmallBLOB := 65535
+    else
+        SmallBLOB := MaxBlobSize;
+
+    case field_type of
+        FIELD_TYPE_TINY:        Result := 1;
+        FIELD_TYPE_SHORT:       Result := 2;
+        FIELD_TYPE_LONG:        Result := 3;
+        FIELD_TYPE_LONGLONG:    Result := 8;
+        FIELD_TYPE_FLOAT:       Result := 4;
+        FIELD_TYPE_DOUBLE:      Result := 8;
+        FIELD_TYPE_TIMESTAMP:   Result := sizeOf(MYSQL_TIME);
+        FIELD_TYPE_DATE:        Result := sizeOf(MYSQL_TIME);
+        FIELD_TYPE_TIME:        Result := sizeOf(MYSQL_TIME);
+        FIELD_TYPE_DATETIME:    Result := sizeOf(MYSQL_TIME);
+        FIELD_TYPE_TINY_BLOB:   Result := 255;
+        FIELD_TYPE_MEDIUM_BLOB: Result := SmallBLOB;
+        FIELD_TYPE_LONG_BLOB:   Result := MaxBlobSize;
+        FIELD_TYPE_BLOB:        Result := MaxBlobSize;
+        FIELD_TYPE_STRING:      Result := MaxBlobSize;
+        FIELD_TYPE_VAR_STRING:  Result := field_size; {mysql 5.0.3 moved limit to 2^16}
+    else
+{  FIELD_TYPE_DECIMAL   = 0;
+  FIELD_TYPE_NULL      = 6;
+  FIELD_TYPE_INT24     = 9;
+  FIELD_TYPE_YEAR      = 13;
+  FIELD_TYPE_NEWDATE   = 14;
+  FIELD_TYPE_VARCHAR   = 15; //<--ADDED by fduenas 20-06-2006
+  FIELD_TYPE_BIT       = 16; //<--ADDED by fduenas 20-06-2006
+  FIELD_TYPE_NEWDECIMAL = 246; //<--ADDED by fduenas 20-06-2006
+  FIELD_TYPE_ENUM      = 247;
+  FIELD_TYPE_SET       = 248;
+  FIELD_TYPE_VAR_STRING = 253;
+  FIELD_TYPE_GEOMETRY  = 255;
+}        Result := 255;  {unknown ??}
+    end;
+end;
+{$ENDIF}
 
 end.
