@@ -1410,13 +1410,13 @@ end;
 }
 procedure TZAbstractRODataset.ExecSQL;
 begin
+  CheckConnected;
   Connection.ShowSQLHourGlass;
   try
     if Active then Close;
 
     CheckSQLQuery;
     CheckInactive;
-    CheckConnected;
 
     if (Statement = nil) or (Statement.GetConnection.IsClosed) then
       Statement := CreateStatement(FSQL.Statements[0].SQL, Properties)

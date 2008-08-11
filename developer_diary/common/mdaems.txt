@@ -227,3 +227,5 @@
 20080806 : New property FetchRow in ZDataSet - by patyi - See http://zeos.firmos.at/viewtopic.php?t=1857 
 
 20080806 : New dataset option doDontSortOnPost - by karpik - See http://zeos.firmos.at/viewtopic.php?t=1931
+
+20080811 : Access Violation due to forget to assign Connection in TZQuery - by pjonard - Mantis Bug 129
