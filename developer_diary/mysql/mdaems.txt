@@ -80,3 +80,5 @@
 20080601 : Removed MYSQL_RES structure - by mdaems - Mantis Bug 113
 
 20080601 : Added libmysql51.dll to list of possible dll's for protocol Mysql-5 - by mdaems
+
+20080812 : Removed support for versions < 4.1 - by mdaems

@@ -258,15 +258,6 @@ begin
   if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
-{$IFDEF ENABLE_MYSQL_DEPRECATED}
-    if FPlainDriver.GetClientVersion < 32200 then
-      begin
-        // ResultSetExists is only useable since mysql 3.22
-        if FPlainDriver.GetStatus(FHandle) = MYSQL_STATUS_READY then
-          raise EZSQLException.Create(SCanNotOpenResultSet);
-      end
-    else
-{$ENDIF ENABLE_MYSQL_DEPRECATED}
     if not FPlainDriver.ResultSetExists(FHandle) then
       raise EZSQLException.Create(SCanNotOpenResultSet);
     Result := CreateResultSet(SQL);
@@ -294,14 +285,7 @@ begin
   if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
-{$IFDEF ENABLE_MYSQL_DEPRECATED}
-    if FPlainDriver.GetClientVersion < 32200 then
-      HasResultSet := FPlainDriver.GetStatus(FHandle) <> MYSQL_STATUS_READY
-    else
-      HasResultSet := FPlainDriver.ResultSetExists(FHandle);
-{$ELSE}
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
-{$ENDIF ENABLE_MYSQL_DEPRECATED}
     { Process queries with result sets }
     if HasResultSet then
     begin
@@ -349,14 +333,7 @@ begin
   if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
-{$IFDEF ENABLE_MYSQL_DEPRECATED}
-    if FPlainDriver.GetClientVersion < 32200 then
-      HasResultSet := FPlainDriver.GetStatus(FHandle) <> MYSQL_STATUS_READY
-    else
-      HasResultSet := FPlainDriver.ResultSetExists(FHandle);
-{$ELSE}
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
-{$ENDIF ENABLE_MYSQL_DEPRECATED}
     { Process queries with result sets }
     if HasResultSet then
     begin

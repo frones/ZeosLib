@@ -182,12 +182,9 @@
 {$DEFINE ENABLE_MYSQL}
 // Enables Mysql 3.x and 4.0 support
 // These versions are deprecated and will not be supported in future versions of zeoslib.
-{.$DEFINE ENABLE_MYSQL_DEPRECATED}
-{$IFNDEF ENABLE_MYSQL_DEPRECATED}
 // Enables Mysql 4.1 and 5 prepared statement support (highly experimental!!)
 // This coding does not support older mysql versions any more
- {.$DEFINE MYSQL_USE_PREPARE}
-{$ENDIF}
+{.$DEFINE MYSQL_USE_PREPARE}
 
 // Enables PostgreSQL support in TZConnection/TZDataset
 {$DEFINE ENABLE_POSTGRESQL}
