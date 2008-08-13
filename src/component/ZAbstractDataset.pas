@@ -761,9 +761,9 @@ var
             end else
               DestField.AsInteger := SrcField.AsInteger;
           end;
-        ftBlob, ftMemo:
+        ftBlob, ftMemo {$IFNDEF VER150BELOW}, ftWideMemo{$ENDIF}:
           begin
-            if SrcField.DataType in [ftBlob, ftMemo] then
+            if SrcField.DataType in [ftBlob, ftMemo {$IFNDEF VER150BELOW}, ftWideMemo{$ENDIF}] then
             begin
               SrcStream := SrcDataset.CreateBlobStream(SrcField, bmRead);
               try

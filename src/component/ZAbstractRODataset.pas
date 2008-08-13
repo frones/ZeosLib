@@ -1011,6 +1011,10 @@ begin
             Statement.SetBigDecimal(I + 1, Param.AsCurrency);
           ftString:
             Statement.SetString(I + 1, Param.AsString);
+          {$IFNDEF VER150BELOW} // not available on Delhi 7 
+          ftWideString:
+            Statement.SetUnicodeString(I + 1, Param.AsWideString);
+          {$ENDIF}
           ftBytes:
             Statement.SetString(I + 1, Param.AsString);
           ftDate:
@@ -1028,6 +1032,17 @@ begin
                 Stream.Free;
               end;
             end;
+          {$IFNDEF VER150BELOW} // not available on Delhi 7 
+          ftWideMemo:
+            begin
+              Stream := WideStringStream(Param.AsWideString);
+              try
+                Statement.SetUnicodeStream(I + 1, Stream);
+              finally
+                Stream.Free;
+              end;
+            end;
+          {$ENDIF}
           ftBlob, ftGraphic:
             begin
               Stream := TStringStream.Create(Param.AsBlob);
@@ -1210,7 +1225,7 @@ begin
             Result := not Result;
           end;
         { Processes blob fields. }
-        ftBlob, ftMemo, ftGraphic, ftFmtMemo:
+        ftBlob, ftMemo, ftGraphic, ftFmtMemo {$IFNDEF VER150BELOW},ftWideMemo{$ENDIF} :
           begin
             Result := not RowAccessor.GetBlob(ColumnIndex, Result).IsEmpty;
           end;
@@ -1234,7 +1249,7 @@ begin
     end
     else
     begin
-      if Field.DataType in [ftBlob, ftMemo, ftGraphic, ftFmtMemo] then
+      if Field.DataType in [ftBlob, ftMemo, ftGraphic, ftFmtMemo {$IFNDEF VER150BELOW},ftWideMemo{$ENDIF}] then
         Result := not RowAccessor.GetBlob(ColumnIndex, Result).IsEmpty
       else Result := not RowAccessor.IsNull(ColumnIndex);
     end;
@@ -2630,7 +2645,7 @@ begin
   CheckActive;
 
   Result := nil;
-  if (Field.DataType in [ftBlob, ftMemo, ftGraphic, ftFmtMemo])
+  if (Field.DataType in [ftBlob, ftMemo, ftGraphic, ftFmtMemo {$IFNDEF VER150BELOW},ftWideMemo{$ENDIF}])
     and GetActiveBuffer(RowBuffer) then
   begin
     ColumnIndex := DefineFieldIndex(FieldsLookupTable, Field);
@@ -2638,9 +2653,16 @@ begin
 
     if Mode = bmRead then
     begin
-      if Field.DataType in [ftMemo, ftFmtMemo] then
-        Result := RowAccessor.GetAsciiStream(ColumnIndex, WasNull)
-      else Result := RowAccessor.GetBinaryStream(ColumnIndex, WasNull);
+      case Field.DataType of
+      ftMemo, ftFmtMemo:
+        Result := RowAccessor.GetAsciiStream(ColumnIndex, WasNull);
+      {$IFNDEF VER150BELOW}
+      ftWideMemo:
+        Result := RowAccessor.GetUnicodeStream(ColumnIndex, WasNull)
+      {$ENDIF}
+      else
+        Result := RowAccessor.GetBinaryStream(ColumnIndex, WasNull);
+      end;
     end
     else
     begin
@@ -3056,6 +3078,17 @@ begin
                   Stream.Free;
                 end;
               end;
+            {$IFNDEF VER150BELOW}
+            ftWideMemo:
+              begin
+                Stream := WideStringStream(ParamValue.AsWideString);
+                try
+                  Statement.SetUnicodeStream(I + 1, Stream);
+                 finally
+                   Stream.Free;
+                 end;
+              end;
+            {$ENDIF}
             ftBlob, ftGraphic:
               begin
                 Stream := TStringStream.Create(ParamValue.AsBlob);

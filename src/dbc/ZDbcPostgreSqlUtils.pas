@@ -278,6 +278,12 @@ begin
     Result := stAsciiStream
   else
     Result := stUnknown;
+
+  if Connection.GetCharactersetCode = csUTF8 then
+    case Result of
+      stString: Result := stUnicodeString;
+      stAsciiStream: Result := stUnicodeStream;
+    end;
 end;
 
 {**

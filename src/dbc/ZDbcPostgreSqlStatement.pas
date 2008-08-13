@@ -352,6 +352,8 @@ begin
         Result := SoftVarManager.GetAsString(Value);
       stString, stBytes:
         Result := EncodeString(FCharactersetCode,SoftVarManager.GetAsString(Value));
+      stUnicodeString:
+        Result := UTF8Encode(EncodeString(FCharactersetCode,SoftVarManager.GetAsUnicodeString(Value)));
       stDate:
         Result := Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]);
@@ -362,7 +364,7 @@ begin
         Result := Format('''%s''::timestamp',
           [FormatDateTime('yyyy-mm-dd hh":"mm":"ss',
             SoftVarManager.GetAsDateTime(Value))]);
-      stAsciiStream, stUnicodeStream:
+      stAsciiStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then begin
@@ -370,6 +372,15 @@ begin
           end else begin
            Result := 'NULL';
           end;
+        end;
+      stUnicodeStream:
+        begin
+          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
+          if not TempBlob.IsEmpty then begin
+            Result := EncodeString(FCharactersetCode, UTF8Encode(TempBlob.GetUnicodeString))
+           end else begin
+            Result := 'NULL';
+           end;
         end;
       stBinaryStream:
         begin

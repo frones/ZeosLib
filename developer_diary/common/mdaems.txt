@@ -233,3 +233,5 @@
 20080813 : Only link TZIBEventAlerter when ENABLE_INTERBASE is defined - by trupka - See http://zeos.firmos.at/viewtopic.php?t=1949
 
 20080813 : Removed packages for Delphi 5 and 6, Kylix 2 and CBuilder 5 - by mdaems
+
+20080813 : PostgreSQL UTF8 Charset Patch - by whitekid - See http://zeos.firmos.at/viewtopic.php?t=1946
