@@ -80,7 +80,7 @@ type
 
   {** Options for dataset. }
   TZDatasetOption = (doOemTranslate, doCalcDefaults, doAlwaysDetailResync,
-    doSmartOpen, doPreferPrepared);
+    doSmartOpen, doPreferPrepared, doDontSortOnPost);
 
   {** Set of dataset options. }
   TZDatasetOptions = set of TZDatasetOption;
@@ -135,6 +135,8 @@ type
     FInitFilterFields: Boolean;
 
     FRequestLive: Boolean;
+    FFetchRow: integer;    // added by Patyi
+
     FSQL: TZSQLStrings;
     FParams: TParams;
     FShowRecordTypes: TUpdateStatusSet;
@@ -244,6 +246,7 @@ type
     { External protected properties. }
     property RequestLive: Boolean read FRequestLive write FRequestLive
       default False;
+    property FetchRow: integer read FFetchRow write FFetchRow default 0;  // added by Patyi
     property SQL: TStrings read GetSQL write SetSQL;
     property ParamCheck: Boolean read GetParamCheck write SetParamCheck
       default True;
@@ -361,6 +364,7 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
+    procedure FetchAll; virtual;  // added by Patyi
     procedure ExecSQL; virtual;
     function RowsAffected: LongInt;
     function ParamByName(const Value: string): TParam;
@@ -505,6 +509,7 @@ begin
   BookmarkSize := SizeOf(Integer);
   FShowRecordTypes := [usModified, usInserted, usUnmodified];
   FRequestLive := False;
+  FFetchRow := 0;                // added by Patyi
   FOptions := [doCalcDefaults];
 
   FFilterEnabled := False;
@@ -1389,17 +1394,29 @@ begin
 end;
 
 {**
+  Fetch all records. Added by Patyi
+}
+procedure TZAbstractRODataset.FetchAll;
+begin
+  Connection.ShowSQLHourGlass;                          
+  FetchRows(0);
+  if Active then
+    UpdateCursorPos;
+  Connection.HideSQLHourGlass;
+end;
+
+{**
   Executes a DML SQL statement.
 }
 procedure TZAbstractRODataset.ExecSQL;
 begin
+  CheckConnected;
   Connection.ShowSQLHourGlass;
   try
     if Active then Close;
 
     CheckSQLQuery;
     CheckInactive;
-    CheckConnected;
 
     if (Statement = nil) or (Statement.GetConnection.IsClosed) then
       Statement := CreateStatement(FSQL.Statements[0].SQL, Properties)
@@ -1694,7 +1711,7 @@ function TZAbstractRODataset.GetRecordCount: LongInt;
 begin
   CheckActive;
   if not IsUniDirectional then
-    FetchRows(0);
+    FetchRows(FFetchRow);     // the orginal code was FetchRows(0); modifyed by Patyi
   Result := CurrentRows.Count;
 end;
 
