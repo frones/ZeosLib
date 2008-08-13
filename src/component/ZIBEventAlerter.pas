@@ -111,9 +111,10 @@ const
   IB_MAX_EVENT_LENGTH = 64;  // maximum event name length
   {$IFDEF LINUX}
   INFINITE = $FFFFFFFF;
-  {$ENDIF}
-  {$IFDEF VER140BELOW}
-  INFINITE = $FFFFFFFF;
+  {$ELSE}
+    {$IFDEF VER140BELOW}
+    INFINITE = $FFFFFFFF;
+    {$ENDIF}
   {$ENDIF}
 threadvar
   FStatusVector: TARRAY_ISC_STATUS;
