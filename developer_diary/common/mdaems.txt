@@ -231,3 +231,5 @@
 20080811 : Access Violation due to forget to assign Connection in TZQuery - by pjonard - Mantis Bug 129
 
 20080813 : Only link TZIBEventAlerter when ENABLE_INTERBASE is defined - by trupka - See http://zeos.firmos.at/viewtopic.php?t=1949
+
+20080813 : Removed packages for Delphi 5 and 6, Kylix 2 and CBuilder 5 - by mdaems

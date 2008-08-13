@@ -137,6 +137,29 @@
   {$DEFINE UNIX}
 {$ENDIF}
 
+{$IFDEF VER140BELOW}
+  {$IFNDEF FPC}
+    {$IFNDEF WIN32}
+      {$if Declared(RTLVersion) and (RTLVersion = 14.5)}  //Kylix 3
+      {$ELSE}
+          "Kylix versions below Kylix3 aren't supported anymore"
+      {$ifend}
+    {$ELSE}
+      {$ifdef BCB}  //Cbuilder
+        {$IFNDEF VER140}
+          "CBuilder versions below CBuilder6 aren't supported anymore"
+        {$ENDIF}
+      {$ELSE}
+        "Delphi versions below Delphi 7 aren't supported anymore"
+      {$ENDIF}
+    {$ENDIF}
+  {$ELSE}
+    {$IFNDEF FPC2_UP}
+    "FPC versions below FPC 2.0 aren't supported anymore"
+    {$ENDIF}
+  {$ENDIF}
+{$ENDIF}
+
 // Debug/release compiler options
 {$D+}
 
