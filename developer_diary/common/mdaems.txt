@@ -224,3 +224,8 @@
 
 20080728 : Replaced fix for Mantis Bug 97 by a more correct one - by pawelsel - Mantis Bug 123
 
+20080811 : Access Violation due to forget to assign Connection in TZQuery - by pjonard - Mantis Bug 129
+
+20080813 : Only link TZIBEventAlerter when ENABLE_INTERBASE is defined - by trupka - See http://zeos.firmos.at/viewtopic.php?t=1949
+
+20080813 : ZIBEventAlerter compile error in Lazarus/Linux ('infinite' defined twice) - by lichtmannls - Mantis bug 131
