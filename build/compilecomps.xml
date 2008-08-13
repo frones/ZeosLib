@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+﻿<?xml version="1.0"?>
 
 <!--
   Project: Zeos Database Objects.
@@ -34,17 +34,7 @@
     <echo message="Compiling Zeos DBO Project..."
       file="${log.file}" append="true" />
 
-    <condition property="delphi5.compile">
-      <istrue value="${delphi5.active}"/>
-    </condition>
-    <antcall target="delphi5_compile"/>
-
-    <condition property="delphi6.compile">
-      <istrue value="${delphi6.active}"/>
-    </condition>
-    <antcall target="delphi6_compile"/>
-
-    <condition property="delphi7.compile">
+     <condition property="delphi7.compile">
       <istrue value="${delphi7.active}"/>
     </condition>
     <antcall target="delphi7_compile"/>
@@ -65,20 +55,10 @@
     </condition>
     <antcall target="delphi11_compile"/>
 
-    <condition property="cbuilder5.compile">
-      <istrue value="${cbuilder5.active}"/>
-    </condition>
-    <antcall target="cbuilder5_compile"/>
-
     <condition property="cbuilder6.compile">
       <istrue value="${cbuilder6.active}"/>
     </condition>
     <antcall target="cbuilder6_compile"/>
-
-    <condition property="kylix2.compile">
-      <istrue value="${kylix2.active}"/>
-    </condition>
-    <antcall target="kylix2_compile"/>
 
     <condition property="kylix3.compile">
       <istrue value="${kylix3.active}"/>
@@ -90,24 +70,6 @@
     </condition>
     <antcall target="lazarus_compile"/>
 
-  </target>
-
-  <target name="delphi5_compile" if="delphi5.compile">
-    <property name="bpl.dir" value="${delphi5.home}\Projects\bpl"/>
-    <antcall target="delphi_compile">
-      <param name="compile" value="${delphi5.compile}"/>
-      <param name="compiler" value="delphi5"/>
-      <param name="compiler.dir" value="${delphi5.home}"/>
-    </antcall>
-  </target>
-
-  <target name="delphi6_compile" if="delphi6.compile">
-    <property name="bpl.dir" value="${compiler.dir}\Projects\bpl"/>
-    <antcall target="delphi_compile">
-      <param name="compile" value="${delphi6.compile}"/>
-      <param name="compiler" value="delphi6"/>
-      <param name="compiler.dir" value="${delphi6.home}"/>
-    </antcall>
   </target>
 
   <target name="delphi7_compile" if="delphi7.compile">
@@ -147,27 +109,11 @@
     </antcall>
   </target>
   
-  <target name="cbuilder5_compile" if="cbuilder5.compile">
-    <antcall target="cbuilder_compile">
-      <param name="compile" value="${cbuilder5.compile}"/>
-      <param name="compiler" value="cbuilder5"/>
-      <param name="compiler.dir" value="${cbuilder5.home}"/>
-    </antcall>
-  </target>
-
-  <target name="cbuilder6_compile" if="cbuilder6.compile">
+ <target name="cbuilder6_compile" if="cbuilder6.compile">
     <antcall target="cbuilder_compile">
       <param name="compile" value="${cbuilder6.compile}"/>
       <param name="compiler" value="cbuilder6"/>
       <param name="compiler.dir" value="${cbuilder6.home}"/>
-    </antcall>
-  </target>
-
-  <target name="kylix2_compile" if="kylix2.compile">
-    <antcall target="kylix_compile">
-      <param name="compile" value="${kylix2.compile}"/>
-      <param name="compiler" value="kylix2"/>
-      <param name="compiler.dir" value="${kylix2.home}"/>
     </antcall>
   </target>
 

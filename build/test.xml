@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+﻿<?xml version="1.0"?>
 
 <!--
   Project: Zeos Database Objects.
@@ -58,17 +58,7 @@
       <istrue value="${test.performance}"/>
     </condition>
 
-    <condition property="delphi5.run">
-      <istrue value="${delphi5.active}"/>
-    </condition>
-    <antcall target="delphi5_run"/>
-
-    <condition property="delphi6.run">
-      <istrue value="${delphi6.active}"/>
-    </condition>
-    <antcall target="delphi6_run"/>
-
-    <condition property="delphi7.run">
+   <condition property="delphi7.run">
       <istrue value="${delphi7.active}"/>
     </condition>
     <antcall target="delphi7_run"/>
@@ -88,20 +78,10 @@
     </condition>
     <antcall target="delphi11_run"/>
 
-    <condition property="cbuilder5.run">
-      <istrue value="${cbuilder5.active}"/>
-    </condition>
-    <antcall target="cbuilder5_run"/>
-
-    <condition property="cbuilder6.run">
+   <condition property="cbuilder6.run">
       <istrue value="${cbuilder6.active}"/>
     </condition>
     <antcall target="cbuilder6_run"/>
-
-    <condition property="kylix2.run">
-      <istrue value="${kylix2.active}"/>
-    </condition>
-    <antcall target="kylix2_run"/>
 
     <condition property="kylix3.run">
       <istrue value="${kylix3.active}"/>
