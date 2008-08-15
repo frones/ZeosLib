@@ -200,8 +200,7 @@ begin
   FConnection := Statement.GetConnection;
   FMetadata := Metadata;
   FDatabaseMetadata := Statement.GetConnection.GetMetadata;
-  FIdentifierConvertor := TZDefaultIdentifierConvertor.Create(
-    FDatabaseMetadata);
+  FIdentifierConvertor := FDatabaseMetadata.GetIdentifierConvertor;
 
   FInsertColumns := TObjectList.Create;
   FWhereColumns := TObjectList.Create;

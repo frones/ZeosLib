@@ -25,3 +25,5 @@
 20080330 : Fields default expresion is determined from the wrong source  - by Wild_Pointer - Mantis Bug 105
 
 20080721 : Updated PostgreSQL keywords list - by pawelsel - Mantis Bug 122
+
+20080816 : Added postgres specific (Metadata) quoting functions - py pawelsel - Mantis Bug 126

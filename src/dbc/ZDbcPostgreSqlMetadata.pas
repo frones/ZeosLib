@@ -63,10 +63,19 @@ uses
   Types,
 {$ENDIF}
   Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
-  ZCompatibility, ZDbcPostgreSqlUtils, ZDbcConnection;
+  ZCompatibility, ZDbcPostgreSqlUtils, ZDbcConnection, ZSelectSchema;
 
 type
-
+  {** Implements a PostgreSQL Case Sensitive/Unsensitive identifier convertor. } 
+  TZPostgreSQLIdentifierConvertor = class (TZDefaultIdentifierConvertor) 
+  protected 
+    function IsSpecialCase(const Value: string): Boolean; override; 
+  public 
+    function IsQuoted(const Value: string): Boolean; override; 
+    function Quote(const Value: string): string; override; 
+    function ExtractQuote(const Value: string): string; override; 
+  end; 
+ 
   {** Implements PostgreSQL Database Metadata. }
   TZPostgreSQLDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
@@ -217,6 +226,7 @@ type
     function SupportsResultSetType(_Type: TZResultSetType): Boolean; override;
     function SupportsResultSetConcurrency(_Type: TZResultSetType;
       Concurrency: TZResultSetConcurrency): Boolean; override;
+    function GetIdentifierConvertor: IZIdentifierConvertor; override;
   end;
 
 implementation
@@ -526,6 +536,11 @@ begin
   Result := '';
 end;
 
+function TZPostgreSQLDatabaseMetadata.GetIdentifierConvertor: IZIdentifierConvertor; 
+begin 
+  Result:=TZPostgreSQLIdentifierConvertor.Create(Self); 
+end; 
+ 
 //--------------------------------------------------------------------
 // Functions describing which features are supported.
 
@@ -2950,4 +2965,68 @@ begin
  end;
 end;
 
+{ TZPostgresIdentifierConvertor } 
+ 
+function TZPostgreSQLIdentifierConvertor.ExtractQuote( 
+  const Value: string): string; 
+var 
+  QuoteDelim: string; 
+begin 
+  QuoteDelim := Metadata.GetIdentifierQuoteString; 
+  Result := Value; 
+  if (QuoteDelim <> '') and (Value <> '') then 
+    if (copy(Value,1,1)=QuoteDelim) and 
+       (copy(Value,length(Value),1)=QuoteDelim) then 
+    begin 
+      Result:=copy(Value,2,length(Value)-2); 
+      Result:=StringReplace(Result,QuoteDelim+QuoteDelim,QuoteDelim,[rfReplaceAll]); 
+    end; 
+ 
+end; 
+ 
+function TZPostgreSQLIdentifierConvertor.IsQuoted(const Value: string): Boolean; 
+var 
+  QuoteDelim: string; 
+begin 
+  QuoteDelim := Metadata.GetIdentifierQuoteString; 
+  Result := (QuoteDelim <> '') and (Value <> '') and 
+            (copy(Value,1,1)=QuoteDelim) and 
+            (copy(Value,length(Value),1)=QuoteDelim); 
+end; 
+ 
+function TZPostgreSQLIdentifierConvertor.IsSpecialCase( 
+  const Value: string): Boolean; 
+var 
+  I: Integer; 
+begin 
+  Result := False; 
+  if not (Value[1] in ['a'..'z','_']) then 
+  begin 
+    Result := True; 
+    Exit; 
+  end; 
+  for I := 1 to Length(Value) do 
+  begin 
+    if not (Value[I] in ['A'..'Z','a'..'z','0'..'9','_']) then 
+    begin 
+      Result := True; 
+      Break; 
+    end; 
+  end; 
+end; 
+ 
+function TZPostgreSQLIdentifierConvertor.Quote(const Value: string): string; 
+var 
+  QuoteDelim: string; 
+begin 
+  Result := Value; 
+  if IsCaseSensitive(Value) then 
+  begin 
+    QuoteDelim := Metadata.GetIdentifierQuoteString; 
+    Result := QuoteDelim + 
+              StringReplace(Result,QuoteDelim,QuoteDelim+QuoteDelim,[rfReplaceAll]) + 
+              QuoteDelim; 
+  end; 
+end; 
+ 
 end.

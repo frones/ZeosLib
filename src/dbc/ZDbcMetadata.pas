@@ -410,14 +410,14 @@ type
 
     function IsLowerCase(const Value: string): Boolean;
     function IsUpperCase(const Value: string): Boolean;
-    function IsSpecialCase(const Value: string): Boolean;
+    function IsSpecialCase(const Value: string): Boolean; virtual;
   public
     constructor Create(Metadata: IZDatabaseMetadata);
 
     function IsCaseSensitive(const Value: string): Boolean;
-    function IsQuoted(const Value: string): Boolean;
-    function Quote(const Value: string): string;
-    function ExtractQuote(const Value: string): string;
+    function IsQuoted(const Value: string): Boolean; virtual;
+    function Quote(const Value: string): string; virtual;
+    function ExtractQuote(const Value: string): string; virtual;
   end;
 
   function GetTablesMetaDataCacheKey(Const Catalog:String;
