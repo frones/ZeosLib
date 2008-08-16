@@ -66,89 +66,58 @@ uses
 
 type
 
-  {** Implements Interbase6 Database Metadata. }
-  TZInterbase6DatabaseMetadata = class(TZAbstractDatabaseMetadata)
+  // technobot 2008-06-25 - methods moved as is from TZInterbase6DatabaseMetadata:
+  {** Implements Interbase6 Database Information. }
+  TZInterbase6DatabaseInfo = class(TZAbstractDatabaseInfo)
   private
     FServerVersion: string;
-    FIBConnection: TZInterbase6Connection;
-    function StripEscape(const Pattern: string): string;
-    function HasNoWildcards(const Pattern: string): boolean;
-    function GetPrivilege(Privilege: string): string;
-    function ConstructNameCondition(Pattern: string; Column: string): string;
-    function GetServerVersion: string;
-  protected
-    function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
-//    function UncachedGetSchemas: IZResultSet; override; -> Not implemented
-//    function UncachedGetCatalogs: IZResultSet; override; -> Not Implemented
-    function UncachedGetTableTypes: IZResultSet; override;
-    function UncachedGetColumns(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
-    function UncachedGetTablePrivileges(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string): IZResultSet; override;
-    function UncachedGetColumnPrivileges(const Catalog: string; const Schema: string;
-      const Table: string; const ColumnNamePattern: string): IZResultSet; override;
-    function UncachedGetPrimaryKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-    function UncachedGetImportedKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-    function UncachedGetExportedKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-//    function UncachedGetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
-//      const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
-//      const ForeignTable: string): IZResultSet; override;  -> not implemented
-    function UncachedGetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
-      Unique: Boolean; Approximate: Boolean): IZResultSet; override;
-    function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
-      const SequenceNamePattern: string): IZResultSet; override;
-    function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
-      const ProcedureNamePattern: string): IZResultSet; override;
-    function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
-      const ProcedureNamePattern: string; const ColumnNamePattern: string):
-      IZResultSet; override;
-    function UncachedGetVersionColumns(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; override;
-    function UncachedGetTypeInfo: IZResultSet; override;
 //    function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
 //      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
   public
-    constructor Create(Connection: TZAbstractConnection; Url: string; Info: TStrings);
+    constructor Create(const Metadata: IZDatabaseMetadata);
     destructor Destroy; override;
 
-    property ServerVersion: string read GetServerVersion write FServerVersion;
-
+    // database/driver/server info:
     function GetDatabaseProductName: string; override;
     function GetDatabaseProductVersion: string; override;
     function GetDriverName: string; override;
+//    function GetDriverVersion: string; override; -> Same as parent
     function GetDriverMajorVersion: Integer; override;
     function GetDriverMinorVersion: Integer; override;
-    function UsesLocalFilePerTable: Boolean; override;
-    function SupportsMixedCaseIdentifiers: Boolean; override;
-    function StoresUpperCaseIdentifiers: Boolean; override;
-    function StoresLowerCaseIdentifiers: Boolean; override;
-    function StoresMixedCaseIdentifiers: Boolean; override;
-    function SupportsMixedCaseQuotedIdentifiers: Boolean; override;
-    function StoresUpperCaseQuotedIdentifiers: Boolean; override;
-    function StoresLowerCaseQuotedIdentifiers: Boolean; override;
-    function StoresMixedCaseQuotedIdentifiers: Boolean; override;
-    function GetSQLKeywords: string; override;
-    function GetNumericFunctions: string; override;
-    function GetStringFunctions: string; override;
-    function GetSystemFunctions: string; override;
-    function GetTimeDateFunctions: string; override;
-    function GetSearchStringEscape: string; override;
-    function GetExtraNameCharacters: string; override;
+    function GetServerVersion: string;
 
+    // capabilities (what it can/cannot do):
+//    function AllProceduresAreCallable: Boolean; override; -> Not implemented
+//    function AllTablesAreSelectable: Boolean; override; -> Not implemented
+    function SupportsMixedCaseIdentifiers: Boolean; override;
+    function SupportsMixedCaseQuotedIdentifiers: Boolean; override;
+//    function SupportsAlterTableWithAddColumn: Boolean; override; -> Not implemented
+//    function SupportsAlterTableWithDropColumn: Boolean; override; -> Not implemented
+//    function SupportsColumnAliasing: Boolean; override; -> Not implemented
+//    function SupportsConvert: Boolean; override; -> Not implemented
+//    function SupportsConvertForTypes(FromType: TZSQLType; ToType: TZSQLType):
+//      Boolean; override; -> Not implemented
+//    function SupportsTableCorrelationNames: Boolean; override; -> Not implemented
+//    function SupportsDifferentTableCorrelationNames: Boolean; override; -> Not implemented
     function SupportsExpressionsInOrderBy: Boolean; override;
     function SupportsOrderByUnrelated: Boolean; override;
     function SupportsGroupBy: Boolean; override;
     function SupportsGroupByUnrelated: Boolean; override;
     function SupportsGroupByBeyondSelect: Boolean; override;
+//    function SupportsLikeEscapeClause: Boolean; override; -> Not implemented
+//    function SupportsMultipleResultSets: Boolean; override; -> Not implemented
+//    function SupportsMultipleTransactions: Boolean; override; -> Not implemented
+//    function SupportsNonNullableColumns: Boolean; override; -> Not implemented
+//    function SupportsMinimumSQLGrammar: Boolean; override; -> Not implemented
+//    function SupportsCoreSQLGrammar: Boolean; override; -> Not implemented
+//    function SupportsExtendedSQLGrammar: Boolean; override; -> Not implemented
+//    function SupportsANSI92EntryLevelSQL: Boolean; override; -> Not implemented
+//    function SupportsANSI92IntermediateSQL: Boolean; override; -> Not implemented
+//    function SupportsANSI92FullSQL: Boolean; override; -> Not implemented
     function SupportsIntegrityEnhancementFacility: Boolean; override;
-    function GetSchemaTerm: string; override;
-    function GetProcedureTerm: string; override;
-    function GetCatalogTerm: string; override;
-    function GetCatalogSeparator: string; override;
+//    function SupportsOuterJoins: Boolean; override; -> Not implemented
+//    function SupportsFullOuterJoins: Boolean; override; -> Not implemented
+//    function SupportsLimitedOuterJoins: Boolean; override; -> Not implemented
     function SupportsSchemasInDataManipulation: Boolean; override;
     function SupportsSchemasInProcedureCalls: Boolean; override;
     function SupportsSchemasInTableDefinitions: Boolean; override;
@@ -169,12 +138,22 @@ type
     function SupportsSubqueriesInQuantifieds: Boolean; override;
     function SupportsCorrelatedSubqueries: Boolean; override;
     function SupportsUnion: Boolean; override;
-    function SupportsUnionAll: Boolean;  override;
+    function SupportsUnionAll: Boolean; override;
     function SupportsOpenCursorsAcrossCommit: Boolean; override;
     function SupportsOpenCursorsAcrossRollback: Boolean; override;
     function SupportsOpenStatementsAcrossCommit: Boolean; override;
     function SupportsOpenStatementsAcrossRollback: Boolean; override;
+    function SupportsTransactions: Boolean; override;
+    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
+      Boolean; override;
+    function SupportsDataDefinitionAndDataManipulationTransactions: Boolean; override;
+    function SupportsDataManipulationTransactionsOnly: Boolean; override;
+    function SupportsResultSetType(_Type: TZResultSetType): Boolean; override;
+    function SupportsResultSetConcurrency(_Type: TZResultSetType;
+      Concurrency: TZResultSetConcurrency): Boolean; override;
+//    function SupportsBatchUpdates: Boolean; override; -> Not implemented
 
+    // maxima:
     function GetMaxBinaryLiteralLength: Integer; override;
     function GetMaxCharLiteralLength: Integer; override;
     function GetMaxColumnNameLength: Integer; override;
@@ -190,52 +169,116 @@ type
     function GetMaxProcedureNameLength: Integer; override;
     function GetMaxCatalogNameLength: Integer; override;
     function GetMaxRowSize: Integer; override;
-    function DoesMaxRowSizeIncludeBlobs: Boolean; override;
     function GetMaxStatementLength: Integer; override;
     function GetMaxStatements: Integer; override;
     function GetMaxTableNameLength: Integer; override;
     function GetMaxTablesInSelect: Integer; override;
     function GetMaxUserNameLength: Integer; override;
 
+    // policies (how are various data and operations handled):
+//    function IsReadOnly: Boolean; override; -> Not implemented
+//    function IsCatalogAtStart: Boolean; override; -> Not implemented
+    function DoesMaxRowSizeIncludeBlobs: Boolean; override;
+//    function NullsAreSortedHigh: Boolean; override; -> Not implemented
+//    function NullsAreSortedLow: Boolean; override; -> Not implemented
+//    function NullsAreSortedAtStart: Boolean; override; -> Not implemented
+//    function NullsAreSortedAtEnd: Boolean; override; -> Not implemented
+//    function NullPlusNonNullIsNull: Boolean; override; -> Not implemented
+//    function UsesLocalFiles: Boolean; override; -> Not implemented
+    function UsesLocalFilePerTable: Boolean; override;
+    function StoresUpperCaseIdentifiers: Boolean; override;
+    function StoresLowerCaseIdentifiers: Boolean; override;
+    function StoresMixedCaseIdentifiers: Boolean; override;
+    function StoresUpperCaseQuotedIdentifiers: Boolean; override;
+    function StoresLowerCaseQuotedIdentifiers: Boolean; override;
+    function StoresMixedCaseQuotedIdentifiers: Boolean; override;
     function GetDefaultTransactionIsolation: TZTransactIsolationLevel; override;
-    function SupportsTransactions: Boolean; override;
-    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
-      Boolean; override;
-    function SupportsDataDefinitionAndDataManipulationTransactions: Boolean; override;
-    function SupportsDataManipulationTransactionsOnly: Boolean; override;
     function DataDefinitionCausesTransactionCommit: Boolean; override;
     function DataDefinitionIgnoredInTransactions: Boolean; override;
 
-    function SupportsResultSetType(_Type: TZResultSetType): Boolean; override;
-    function SupportsResultSetConcurrency(_Type: TZResultSetType;
-      Concurrency: TZResultSetConcurrency): Boolean; override;
+    // interface details (terms, keywords, etc):
+//    function GetIdentifierQuoteString: string; override; -> Not implemented
+    function GetSchemaTerm: string; override;
+    function GetProcedureTerm: string; override;
+    function GetCatalogTerm: string; override;
+    function GetCatalogSeparator: string; override;
+    function GetSQLKeywords: string; override;
+    function GetNumericFunctions: string; override;
+    function GetStringFunctions: string; override;
+    function GetSystemFunctions: string; override;
+    function GetTimeDateFunctions: string; override;
+    function GetSearchStringEscape: string; override;
+    function GetExtraNameCharacters: string; override;
+  end;
+
+  {** Implements Interbase6 Database Metadata. }
+  TZInterbase6DatabaseMetadata = class(TZAbstractDatabaseMetadata)
+  private
+    function StripEscape(const Pattern: string): string;
+    function HasNoWildcards(const Pattern: string): boolean;
+    function GetPrivilege(Privilege: string): string;
+    function ConstructNameCondition(Pattern: string; Column: string): string;
+  protected
+    function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-25
+
+    function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
+//    function UncachedGetSchemas: IZResultSet; override; -> Not implemented
+//    function UncachedGetCatalogs: IZResultSet; override; -> Not Implemented
+    function UncachedGetTableTypes: IZResultSet; override;
+    function UncachedGetColumns(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
+    function UncachedGetTablePrivileges(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string): IZResultSet; override;
+    function UncachedGetColumnPrivileges(const Catalog: string; const Schema: string;
+      const Table: string; const ColumnNamePattern: string): IZResultSet; override;
+    function UncachedGetPrimaryKeys(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+    function UncachedGetImportedKeys(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+    function UncachedGetExportedKeys(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+//    function UncachedGetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
+//      const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
+//      const ForeignTable: string): IZResultSet; override;
+    function UncachedGetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
+      Unique: Boolean; Approximate: Boolean): IZResultSet; override;
+    function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
+      const SequenceNamePattern: string): IZResultSet; override;
+    function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
+      const ProcedureNamePattern: string): IZResultSet; override;
+    function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
+      const ProcedureNamePattern: string; const ColumnNamePattern: string):
+      IZResultSet; override;
+    function UncachedGetVersionColumns(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; override;
+    function UncachedGetTypeInfo: IZResultSet; override;
+  public
+    constructor Create(Connection: TZAbstractConnection; Url: string; Info: TStrings);
+    destructor Destroy; override;
   end;
 
 implementation
 
 uses ZMessages, ZDbcInterbase6Utils;
 
-{ TZInterbase6DatabaseMetadata }
+{ TZInterbase6DatabaseInfo }
 
 {**
-  Constructs this object and assignes the main properties.
-  @param Connection a database connection object.
-  @param Url a database connection url string.
-  @param Info an extra connection properties.
+  Constructs this object.
+  @param Metadata the interface of the correpsonding database metadata object
 }
-constructor TZInterbase6DatabaseMetadata.Create(Connection: TZAbstractConnection;
-  Url: string; Info: TStrings);
+constructor TZInterbase6DatabaseInfo.Create(const Metadata: IZDatabaseMetadata);
 begin
-  inherited Create(Connection, Url, Info);
-  FIBConnection := Connection as TZInterbase6Connection;
+  inherited;
 end;
 
 {**
   Destroys this object and cleanups the memory.
 }
-destructor TZInterbase6DatabaseMetadata.Destroy;
+destructor TZInterbase6DatabaseInfo.Destroy;
 begin
-  inherited Destroy;
+  inherited;
 end;
 
 //----------------------------------------------------------------------
@@ -245,7 +288,7 @@ end;
   What's the name of this database product?
   @return database product name
 }
-function TZInterbase6DatabaseMetadata.GetDatabaseProductName: string;
+function TZInterbase6DatabaseInfo.GetDatabaseProductName: string;
 begin
   Result := 'Interbase/Firebird';
 end;
@@ -254,7 +297,7 @@ end;
   What's the version of this database product?
   @return database version
 }
-function TZInterbase6DatabaseMetadata.GetDatabaseProductVersion: string;
+function TZInterbase6DatabaseInfo.GetDatabaseProductVersion: string;
 begin
   Result := '6.0+';
 end;
@@ -263,7 +306,7 @@ end;
   What's the name of this JDBC driver?
   @return JDBC driver name
 }
-function TZInterbase6DatabaseMetadata.GetDriverName: string;
+function TZInterbase6DatabaseInfo.GetDriverName: string;
 begin
   Result := 'Zeos Database Connectivity Driver for Interbase and Firebird';
 end;
@@ -272,7 +315,7 @@ end;
   What's this JDBC driver's major version number?
   @return JDBC driver major version
 }
-function TZInterbase6DatabaseMetadata.GetDriverMajorVersion: Integer;
+function TZInterbase6DatabaseInfo.GetDriverMajorVersion: Integer;
 begin
   Result := 1;
 end;
@@ -281,16 +324,33 @@ end;
   What's this JDBC driver's minor version number?
   @return JDBC driver minor version number
 }
-function TZInterbase6DatabaseMetadata.GetDriverMinorVersion: Integer;
+function TZInterbase6DatabaseInfo.GetDriverMinorVersion: Integer;
 begin
   Result := 0;
+end;
+
+{**
+  Gets the version of the server.
+  @returns the version of the server.
+}
+function TZInterbase6DatabaseInfo.GetServerVersion: string;
+var
+  FIBConnection: IZInterbase6Connection;
+begin
+  if FServerVersion = '' then
+  begin
+    FIBConnection := Metadata.GetConnection as IZInterbase6Connection;
+    FServerVersion := GetVersion(FIBConnection.GetPlainDriver,
+      FIBConnection.GetDBHandle);
+  end;
+  Result := FServerVersion;
 end;
 
 {**
   Does the database use a file for each table?
   @return true if the database uses a local file for each table
 }
-function TZInterbase6DatabaseMetadata.UsesLocalFilePerTable: Boolean;
+function TZInterbase6DatabaseInfo.UsesLocalFilePerTable: Boolean;
 begin
   Result := False;
 end;
@@ -301,7 +361,7 @@ end;
   A JDBC Compliant<sup><font size=-2>TM</font></sup> driver will always return false.
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsMixedCaseIdentifiers: Boolean;
+function TZInterbase6DatabaseInfo.SupportsMixedCaseIdentifiers: Boolean;
 begin
   Result := True;
 end;
@@ -311,7 +371,7 @@ end;
   case insensitive and store them in upper case?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.StoresUpperCaseIdentifiers: Boolean;
+function TZInterbase6DatabaseInfo.StoresUpperCaseIdentifiers: Boolean;
 begin
   Result := True;
 end;
@@ -321,7 +381,7 @@ end;
   case insensitive and store them in lower case?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.StoresLowerCaseIdentifiers: Boolean;
+function TZInterbase6DatabaseInfo.StoresLowerCaseIdentifiers: Boolean;
 begin
   Result := False;
 end;
@@ -331,7 +391,7 @@ end;
   case insensitive and store them in mixed case?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.StoresMixedCaseIdentifiers: Boolean;
+function TZInterbase6DatabaseInfo.StoresMixedCaseIdentifiers: Boolean;
 begin
   Result := False;
 end;
@@ -342,7 +402,7 @@ end;
   A JDBC Compliant<sup><font size=-2>TM</font></sup> driver will always return true.
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsMixedCaseQuotedIdentifiers: Boolean;
+function TZInterbase6DatabaseInfo.SupportsMixedCaseQuotedIdentifiers: Boolean;
 begin
   Result := True;
 end;
@@ -352,7 +412,7 @@ end;
   case insensitive and store them in upper case?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.StoresUpperCaseQuotedIdentifiers: Boolean;
+function TZInterbase6DatabaseInfo.StoresUpperCaseQuotedIdentifiers: Boolean;
 begin
   Result := False;
 end;
@@ -362,7 +422,7 @@ end;
   case insensitive and store them in lower case?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.StoresLowerCaseQuotedIdentifiers: Boolean;
+function TZInterbase6DatabaseInfo.StoresLowerCaseQuotedIdentifiers: Boolean;
 begin
   Result := False;
 end;
@@ -372,7 +432,7 @@ end;
   case insensitive and store them in mixed case?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.StoresMixedCaseQuotedIdentifiers: Boolean;
+function TZInterbase6DatabaseInfo.StoresMixedCaseQuotedIdentifiers: Boolean;
 begin
   Result := True;
 end;
@@ -382,7 +442,7 @@ end;
   that are NOT also SQL92 keywords.
   @return the list
 }
-function TZInterbase6DatabaseMetadata.GetSQLKeywords: string;
+function TZInterbase6DatabaseInfo.GetSQLKeywords: string;
 begin
   Result := 'ACTIVE,AFTER,ASCENDING,BASE_NAME,BEFORE,BLOB,' +
     'CACHE,CHECK_POINT_LENGTH,COMPUTED,CONDITIONAL,CONTAINING,' +
@@ -404,7 +464,7 @@ end;
   clause.
   @return the list
 }
-function TZInterbase6DatabaseMetadata.GetNumericFunctions: string;
+function TZInterbase6DatabaseInfo.GetNumericFunctions: string;
 begin
   Result := '';
 end;
@@ -415,7 +475,7 @@ end;
   clause.
   @return the list
 }
-function TZInterbase6DatabaseMetadata.GetStringFunctions: string;
+function TZInterbase6DatabaseInfo.GetStringFunctions: string;
 begin
   Result := '';
 end;
@@ -426,7 +486,7 @@ end;
   clause.
   @return the list
 }
-function TZInterbase6DatabaseMetadata.GetSystemFunctions: string;
+function TZInterbase6DatabaseInfo.GetSystemFunctions: string;
 begin
   Result := '';
 end;
@@ -435,7 +495,7 @@ end;
   Gets a comma-separated list of time and date functions.
   @return the list
 }
-function TZInterbase6DatabaseMetadata.GetTimeDateFunctions: string;
+function TZInterbase6DatabaseInfo.GetTimeDateFunctions: string;
 begin
   Result := '';
 end;
@@ -451,7 +511,7 @@ end;
 
   @return the string used to escape wildcard characters
 }
-function TZInterbase6DatabaseMetadata.GetSearchStringEscape: string;
+function TZInterbase6DatabaseInfo.GetSearchStringEscape: string;
 begin
   Result := '\';
 end;
@@ -461,7 +521,7 @@ end;
   identifier names (those beyond a-z, A-Z, 0-9 and _).
   @return the string containing the extra characters
 }
-function TZInterbase6DatabaseMetadata.GetExtraNameCharacters: string;
+function TZInterbase6DatabaseInfo.GetExtraNameCharacters: string;
 begin
   Result := '$';
 end;
@@ -473,7 +533,7 @@ end;
   Are expressions in "ORDER BY" lists supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsExpressionsInOrderBy: Boolean;
+function TZInterbase6DatabaseInfo.SupportsExpressionsInOrderBy: Boolean;
 begin
   Result := False;
 end;
@@ -482,7 +542,7 @@ end;
   Can an "ORDER BY" clause use columns not in the SELECT statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsOrderByUnrelated: Boolean;
+function TZInterbase6DatabaseInfo.SupportsOrderByUnrelated: Boolean;
 begin
   Result := True;
 end;
@@ -491,7 +551,7 @@ end;
   Is some form of "GROUP BY" clause supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsGroupBy: Boolean;
+function TZInterbase6DatabaseInfo.SupportsGroupBy: Boolean;
 begin
   Result := True;
 end;
@@ -500,7 +560,7 @@ end;
   Can a "GROUP BY" clause use columns not in the SELECT?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsGroupByUnrelated: Boolean;
+function TZInterbase6DatabaseInfo.SupportsGroupByUnrelated: Boolean;
 begin
   Result := True;
 end;
@@ -510,7 +570,7 @@ end;
   provided it specifies all the columns in the SELECT?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsGroupByBeyondSelect: Boolean;
+function TZInterbase6DatabaseInfo.SupportsGroupByBeyondSelect: Boolean;
 begin
   Result := True;
 end;
@@ -519,7 +579,7 @@ end;
   Is the SQL Integrity Enhancement Facility supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsIntegrityEnhancementFacility: Boolean;
+function TZInterbase6DatabaseInfo.SupportsIntegrityEnhancementFacility: Boolean;
 begin
   Result := False;
 end;
@@ -528,7 +588,7 @@ end;
   What's the database vendor's preferred term for "schema"?
   @return the vendor term
 }
-function TZInterbase6DatabaseMetadata.GetSchemaTerm: string;
+function TZInterbase6DatabaseInfo.GetSchemaTerm: string;
 begin
   Result := '';
 end;
@@ -537,7 +597,7 @@ end;
   What's the database vendor's preferred term for "procedure"?
   @return the vendor term
 }
-function TZInterbase6DatabaseMetadata.GetProcedureTerm: string;
+function TZInterbase6DatabaseInfo.GetProcedureTerm: string;
 begin
   Result := 'PROCEDURE';
 end;
@@ -546,7 +606,7 @@ end;
   What's the database vendor's preferred term for "catalog"?
   @return the vendor term
 }
-function TZInterbase6DatabaseMetadata.GetCatalogTerm: string;
+function TZInterbase6DatabaseInfo.GetCatalogTerm: string;
 begin
   Result := '';
 end;
@@ -555,7 +615,7 @@ end;
   What's the separator between catalog and table name?
   @return the separator string
 }
-function TZInterbase6DatabaseMetadata.GetCatalogSeparator: string;
+function TZInterbase6DatabaseInfo.GetCatalogSeparator: string;
 begin
   Result := '';
 end;
@@ -564,7 +624,7 @@ end;
   Can a schema name be used in a data manipulation statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsSchemasInDataManipulation: Boolean;
+function TZInterbase6DatabaseInfo.SupportsSchemasInDataManipulation: Boolean;
 begin
   Result := False;
 end;
@@ -573,7 +633,7 @@ end;
   Can a schema name be used in a procedure call statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsSchemasInProcedureCalls: Boolean;
+function TZInterbase6DatabaseInfo.SupportsSchemasInProcedureCalls: Boolean;
 begin
   Result := False;
 end;
@@ -582,7 +642,7 @@ end;
   Can a schema name be used in a table definition statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsSchemasInTableDefinitions: Boolean;
+function TZInterbase6DatabaseInfo.SupportsSchemasInTableDefinitions: Boolean;
 begin
   Result := False;
 end;
@@ -591,7 +651,7 @@ end;
   Can a schema name be used in an index definition statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsSchemasInIndexDefinitions: Boolean;
+function TZInterbase6DatabaseInfo.SupportsSchemasInIndexDefinitions: Boolean;
 begin
   Result := False;
 end;
@@ -600,7 +660,7 @@ end;
   Can a schema name be used in a privilege definition statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsSchemasInPrivilegeDefinitions: Boolean;
+function TZInterbase6DatabaseInfo.SupportsSchemasInPrivilegeDefinitions: Boolean;
 begin
   Result := False;
 end;
@@ -609,7 +669,7 @@ end;
   Can a catalog name be used in a data manipulation statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsCatalogsInDataManipulation: Boolean;
+function TZInterbase6DatabaseInfo.SupportsCatalogsInDataManipulation: Boolean;
 begin
   Result := False;
 end;
@@ -618,7 +678,7 @@ end;
   Can a catalog name be used in a procedure call statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsCatalogsInProcedureCalls: Boolean;
+function TZInterbase6DatabaseInfo.SupportsCatalogsInProcedureCalls: Boolean;
 begin
   Result := False;
 end;
@@ -627,7 +687,7 @@ end;
   Can a catalog name be used in a table definition statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsCatalogsInTableDefinitions: Boolean;
+function TZInterbase6DatabaseInfo.SupportsCatalogsInTableDefinitions: Boolean;
 begin
   Result := False;
 end;
@@ -636,7 +696,7 @@ end;
   Can a catalog name be used in an index definition statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsCatalogsInIndexDefinitions: Boolean;
+function TZInterbase6DatabaseInfo.SupportsCatalogsInIndexDefinitions: Boolean;
 begin
   Result := False;
 end;
@@ -645,7 +705,7 @@ end;
   Can a catalog name be used in a privilege definition statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsCatalogsInPrivilegeDefinitions: Boolean;
+function TZInterbase6DatabaseInfo.SupportsCatalogsInPrivilegeDefinitions: Boolean;
 begin
   Result := False;
 end;
@@ -654,7 +714,7 @@ end;
   Is positioned DELETE supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsPositionedDelete: Boolean;
+function TZInterbase6DatabaseInfo.SupportsPositionedDelete: Boolean;
 begin
   Result := True;
 end;
@@ -663,7 +723,7 @@ end;
   Is positioned UPDATE supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsPositionedUpdate: Boolean;
+function TZInterbase6DatabaseInfo.SupportsPositionedUpdate: Boolean;
 begin
   Result := True;
 end;
@@ -672,7 +732,7 @@ end;
   Is SELECT for UPDATE supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsSelectForUpdate: Boolean;
+function TZInterbase6DatabaseInfo.SupportsSelectForUpdate: Boolean;
 begin
   Result := True;
 end;
@@ -682,7 +742,7 @@ end;
   syntax supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsStoredProcedures: Boolean;
+function TZInterbase6DatabaseInfo.SupportsStoredProcedures: Boolean;
 begin
   Result := True;
 end;
@@ -692,7 +752,7 @@ end;
   A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsSubqueriesInComparisons: Boolean;
+function TZInterbase6DatabaseInfo.SupportsSubqueriesInComparisons: Boolean;
 begin
   Result := True;
 end;
@@ -702,7 +762,7 @@ end;
   A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsSubqueriesInExists: Boolean;
+function TZInterbase6DatabaseInfo.SupportsSubqueriesInExists: Boolean;
 begin
   Result := True;
 end;
@@ -712,7 +772,7 @@ end;
   A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsSubqueriesInIns: Boolean;
+function TZInterbase6DatabaseInfo.SupportsSubqueriesInIns: Boolean;
 begin
   Result := False;
 end;
@@ -722,7 +782,7 @@ end;
   A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsSubqueriesInQuantifieds: Boolean;
+function TZInterbase6DatabaseInfo.SupportsSubqueriesInQuantifieds: Boolean;
 begin
   Result := True;
 end;
@@ -732,7 +792,7 @@ end;
   A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsCorrelatedSubqueries: Boolean;
+function TZInterbase6DatabaseInfo.SupportsCorrelatedSubqueries: Boolean;
 begin
   Result := True;
 end;
@@ -741,7 +801,7 @@ end;
   Is SQL UNION supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsUnion: Boolean;
+function TZInterbase6DatabaseInfo.SupportsUnion: Boolean;
 begin
   Result := True;
 end;
@@ -750,7 +810,7 @@ end;
   Is SQL UNION ALL supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsUnionAll: Boolean;
+function TZInterbase6DatabaseInfo.SupportsUnionAll: Boolean;
 begin
   Result := True;
 end;
@@ -760,7 +820,7 @@ end;
   @return <code>true</code> if cursors always remain open;
         <code>false</code> if they might not remain open
 }
-function TZInterbase6DatabaseMetadata.SupportsOpenCursorsAcrossCommit: Boolean;
+function TZInterbase6DatabaseInfo.SupportsOpenCursorsAcrossCommit: Boolean;
 begin
   Result := False;
 end;
@@ -770,7 +830,7 @@ end;
   @return <code>true</code> if cursors always remain open;
         <code>false</code> if they might not remain open
 }
-function TZInterbase6DatabaseMetadata.SupportsOpenCursorsAcrossRollback: Boolean;
+function TZInterbase6DatabaseInfo.SupportsOpenCursorsAcrossRollback: Boolean;
 begin
   Result := False;
 end;
@@ -780,7 +840,7 @@ end;
   @return <code>true</code> if statements always remain open;
         <code>false</code> if they might not remain open
 }
-function TZInterbase6DatabaseMetadata.SupportsOpenStatementsAcrossCommit: Boolean;
+function TZInterbase6DatabaseInfo.SupportsOpenStatementsAcrossCommit: Boolean;
 begin
   Result := True;
 end;
@@ -790,7 +850,7 @@ end;
   @return <code>true</code> if statements always remain open;
         <code>false</code> if they might not remain open
 }
-function TZInterbase6DatabaseMetadata.SupportsOpenStatementsAcrossRollback: Boolean;
+function TZInterbase6DatabaseInfo.SupportsOpenStatementsAcrossRollback: Boolean;
 begin
   Result := True;
 end;
@@ -806,7 +866,7 @@ end;
   @return max binary literal length in hex characters;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZInterbase6DatabaseMetadata.GetMaxBinaryLiteralLength: Integer;
+function TZInterbase6DatabaseInfo.GetMaxBinaryLiteralLength: Integer;
 begin
   Result := 0;
 end;
@@ -816,7 +876,7 @@ end;
   @return max literal length;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZInterbase6DatabaseMetadata.GetMaxCharLiteralLength: Integer;
+function TZInterbase6DatabaseInfo.GetMaxCharLiteralLength: Integer;
 begin
   Result := 1024;
 end;
@@ -826,7 +886,7 @@ end;
   @return max column name length;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZInterbase6DatabaseMetadata.GetMaxColumnNameLength: Integer;
+function TZInterbase6DatabaseInfo.GetMaxColumnNameLength: Integer;
 begin
   Result := 31;
 end;
@@ -836,7 +896,7 @@ end;
   @return max number of columns;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZInterbase6DatabaseMetadata.GetMaxColumnsInGroupBy: Integer;
+function TZInterbase6DatabaseInfo.GetMaxColumnsInGroupBy: Integer;
 begin
   Result := 16;
 end;
@@ -846,7 +906,7 @@ end;
   @return max number of columns;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZInterbase6DatabaseMetadata.GetMaxColumnsInIndex: Integer;
+function TZInterbase6DatabaseInfo.GetMaxColumnsInIndex: Integer;
 begin
   Result := 16;
 end;
@@ -856,7 +916,7 @@ end;
   @return max number of columns;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZInterbase6DatabaseMetadata.GetMaxColumnsInOrderBy: Integer;
+function TZInterbase6DatabaseInfo.GetMaxColumnsInOrderBy: Integer;
 begin
   Result := 16;
 end;
@@ -866,7 +926,7 @@ end;
   @return max number of columns;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZInterbase6DatabaseMetadata.GetMaxColumnsInSelect: Integer;
+function TZInterbase6DatabaseInfo.GetMaxColumnsInSelect: Integer;
 begin
   Result := 32767;
 end;
@@ -876,7 +936,7 @@ end;
   @return max number of columns;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZInterbase6DatabaseMetadata.GetMaxColumnsInTable: Integer;
+function TZInterbase6DatabaseInfo.GetMaxColumnsInTable: Integer;
 begin
   Result := 32767;
 end;
@@ -886,7 +946,7 @@ end;
   @return max number of active connections;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZInterbase6DatabaseMetadata.GetMaxConnections: Integer;
+function TZInterbase6DatabaseInfo.GetMaxConnections: Integer;
 begin
   Result := 0;
 end;
@@ -896,7 +956,7 @@ end;
   @return max cursor name length in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZInterbase6DatabaseMetadata.GetMaxCursorNameLength: Integer;
+function TZInterbase6DatabaseInfo.GetMaxCursorNameLength: Integer;
 begin
   Result := 31;
 end;
@@ -908,7 +968,7 @@ end;
    the constituent parts of the index;
    a result of zero means that there is no limit or the limit is not known
 }
-function TZInterbase6DatabaseMetadata.GetMaxIndexLength: Integer;
+function TZInterbase6DatabaseInfo.GetMaxIndexLength: Integer;
 begin
   Result := 198;
 end;
@@ -918,7 +978,7 @@ end;
   @return max name length in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZInterbase6DatabaseMetadata.GetMaxSchemaNameLength: Integer;
+function TZInterbase6DatabaseInfo.GetMaxSchemaNameLength: Integer;
 begin
   Result := 0;
 end;
@@ -928,7 +988,7 @@ end;
   @return max name length in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZInterbase6DatabaseMetadata.GetMaxProcedureNameLength: Integer;
+function TZInterbase6DatabaseInfo.GetMaxProcedureNameLength: Integer;
 begin
   Result := 0;
 end;
@@ -938,7 +998,7 @@ end;
   @return max name length in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZInterbase6DatabaseMetadata.GetMaxCatalogNameLength: Integer;
+function TZInterbase6DatabaseInfo.GetMaxCatalogNameLength: Integer;
 begin
   Result := 27;
 end;
@@ -948,7 +1008,7 @@ end;
   @return max row size in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZInterbase6DatabaseMetadata.GetMaxRowSize: Integer;
+function TZInterbase6DatabaseInfo.GetMaxRowSize: Integer;
 begin
   Result := 32664;
 end;
@@ -958,7 +1018,7 @@ end;
   blobs?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.DoesMaxRowSizeIncludeBlobs: Boolean;
+function TZInterbase6DatabaseInfo.DoesMaxRowSizeIncludeBlobs: Boolean;
 begin
   Result := False;
 end;
@@ -968,7 +1028,7 @@ end;
   @return max length in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZInterbase6DatabaseMetadata.GetMaxStatementLength: Integer;
+function TZInterbase6DatabaseInfo.GetMaxStatementLength: Integer;
 begin
   Result := 640;
 end;
@@ -979,7 +1039,7 @@ end;
   @return the maximum number of statements that can be open at one time;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZInterbase6DatabaseMetadata.GetMaxStatements: Integer;
+function TZInterbase6DatabaseInfo.GetMaxStatements: Integer;
 begin
   Result := 0;
 end;
@@ -989,7 +1049,7 @@ end;
   @return max name length in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZInterbase6DatabaseMetadata.GetMaxTableNameLength: Integer;
+function TZInterbase6DatabaseInfo.GetMaxTableNameLength: Integer;
 begin
   Result := 31;
 end;
@@ -999,7 +1059,7 @@ end;
   @return the maximum number of tables allowed in a SELECT statement;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZInterbase6DatabaseMetadata.GetMaxTablesInSelect: Integer;
+function TZInterbase6DatabaseInfo.GetMaxTablesInSelect: Integer;
 begin
   Result := 16;
 end;
@@ -1009,7 +1069,7 @@ end;
   @return max user name length  in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZInterbase6DatabaseMetadata.GetMaxUserNameLength: Integer;
+function TZInterbase6DatabaseInfo.GetMaxUserNameLength: Integer;
 begin
   Result := 31;
 end;
@@ -1022,7 +1082,7 @@ end;
   @return the default isolation level
   @see Connection
 }
-function TZInterbase6DatabaseMetadata.GetDefaultTransactionIsolation:
+function TZInterbase6DatabaseInfo.GetDefaultTransactionIsolation:
   TZTransactIsolationLevel;
 begin
   Result := tiSerializable;
@@ -1033,7 +1093,7 @@ end;
   <code>commit</code> is a noop and the isolation level is TRANSACTION_NONE.
   @return <code>true</code> if transactions are supported; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.SupportsTransactions: Boolean;
+function TZInterbase6DatabaseInfo.SupportsTransactions: Boolean;
 begin
   Result := True;
 end;
@@ -1044,7 +1104,7 @@ end;
   @return <code>true</code> if so; <code>false</code> otherwise
   @see Connection
 }
-function TZInterbase6DatabaseMetadata.SupportsTransactionIsolationLevel(
+function TZInterbase6DatabaseInfo.SupportsTransactionIsolationLevel(
   Level: TZTransactIsolationLevel): Boolean;
 begin
   case Level of
@@ -1061,7 +1121,7 @@ end;
   within a transaction supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.
+function TZInterbase6DatabaseInfo.
   SupportsDataDefinitionAndDataManipulationTransactions: Boolean;
 begin
   Result := True;
@@ -1072,7 +1132,7 @@ end;
   supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.
+function TZInterbase6DatabaseInfo.
   SupportsDataManipulationTransactionsOnly: Boolean;
 begin
   Result := False;
@@ -1083,7 +1143,7 @@ end;
   transaction to commit?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.DataDefinitionCausesTransactionCommit: Boolean;
+function TZInterbase6DatabaseInfo.DataDefinitionCausesTransactionCommit: Boolean;
 begin
   Result := True;
 end;
@@ -1092,9 +1152,68 @@ end;
   Is a data definition statement within a transaction ignored?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZInterbase6DatabaseMetadata.DataDefinitionIgnoredInTransactions: Boolean;
+function TZInterbase6DatabaseInfo.DataDefinitionIgnoredInTransactions: Boolean;
 begin
   Result := False;
+end;
+
+{**
+  Does the database support the given result set type?
+  @param type defined in <code>java.sql.ResultSet</code>
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZInterbase6DatabaseInfo.SupportsResultSetType(
+  _Type: TZResultSetType): Boolean;
+begin
+  Result := _Type = rtScrollInsensitive;
+end;
+
+{**
+  Does the database support the concurrency type in combination
+  with the given result set type?
+
+  @param type defined in <code>java.sql.ResultSet</code>
+  @param concurrency type defined in <code>java.sql.ResultSet</code>
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZInterbase6DatabaseInfo.SupportsResultSetConcurrency(
+  _Type: TZResultSetType; Concurrency: TZResultSetConcurrency): Boolean;
+begin
+  Result := (_Type = rtScrollInsensitive) and (Concurrency = rcReadOnly);
+end;
+
+
+{ TZInterbase6DatabaseMetadata }
+
+
+{**
+  Constructs this object and assignes the main properties.
+  @param Connection a database connection object.
+  @param Url a database connection url string.
+  @param Info an extra connection properties.
+}
+constructor TZInterbase6DatabaseMetadata.Create(Connection: TZAbstractConnection;
+  Url: string; Info: TStrings);
+begin
+  inherited Create(Connection, Url, Info);
+end;
+
+{**
+  Destroys this object and cleanups the memory.
+}
+destructor TZInterbase6DatabaseMetadata.Destroy;
+begin
+  inherited Destroy;
+end;
+
+{**
+  Constructs a database information object and returns the interface to it. Used
+  internally by the constructor.
+  @return the database information object interface
+}
+function TZInterbase6DatabaseMetadata.CreateDatabaseInfo: IZDatabaseInfo;
+begin
+  Result := TZInterbase6DatabaseInfo.Create(Self);
 end;
 
 {**
@@ -1239,7 +1358,7 @@ begin
     LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,
       'PP.RDB$PARAMETER_NAME');
 
-    if StrPos(PChar(ServerVersion), 'Interbase 5') <> nil then
+    if StrPos(PChar(GetDatabaseInfo.GetServerVersion), 'Interbase 5') <> nil then
     begin
       SQL := ' SELECT P.RDB$PROCEDURE_NAME, PP.RDB$PARAMETER_NAME,'
         + ' PP.RDB$PARAMETER_TYPE, F.RDB$FIELD_TYPE, F.RDB$FIELD_SUB_TYPE,'
@@ -1523,7 +1642,7 @@ begin
     LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,
       'a.RDB$FIELD_NAME');
 
-    if StrPos(PChar(ServerVersion), 'Interbase 5') <> nil then
+    if StrPos(PChar(GetDatabaseInfo.GetServerVersion), 'Interbase 5') <> nil then
     begin
       SQL := 'SELECT a.RDB$RELATION_NAME, a.RDB$FIELD_NAME, a.RDB$FIELD_POSITION,'
         + ' a.RDB$NULL_FLAG, b. RDB$FIELD_LENGTH, b.RDB$FIELD_SCALE,'
@@ -2015,7 +2134,7 @@ end;
 function TZInterbase6DatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
-  Key, SQL: string;
+  SQL: string;
   LTable: string;
 begin
     Result := ConstructVirtualResultSet(ImportedKeyColumnsDynArray);
@@ -2448,31 +2567,6 @@ begin
 end;
 
 {**
-  Does the database support the given result set type?
-  @param type defined in <code>java.sql.ResultSet</code>
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZInterbase6DatabaseMetadata.SupportsResultSetType(
-  _Type: TZResultSetType): Boolean;
-begin
-  Result := _Type = rtScrollInsensitive;
-end;
-
-{**
-  Does the database support the concurrency type in combination
-  with the given result set type?
-
-  @param type defined in <code>java.sql.ResultSet</code>
-  @param concurrency type defined in <code>java.sql.ResultSet</code>
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZInterbase6DatabaseMetadata.SupportsResultSetConcurrency(
-  _Type: TZResultSetType; Concurrency: TZResultSetConcurrency): Boolean;
-begin
-  Result := (_Type = rtScrollInsensitive) and (Concurrency = rcReadOnly);
-end;
-
-{**
   Gets a privilege name.
   @param  Interbase privilege name
   @returns a JDBC privilege name.
@@ -2539,7 +2633,7 @@ begin
   Result := False;
   PreviousChar := '';
   PreviousCharWasEscape := False;
-  EscapeChar:=GetSearchStringEscape;
+  EscapeChar := GetDatabaseInfo.GetSearchStringEscape;
   WildcardsSet:=GetWildcardsSet;
   for I := 1 to Length(Pattern) do
   begin
@@ -2568,7 +2662,7 @@ var
   EscapeChar : string;
 begin
   PreviousChar := '';
-  EscapeChar:=GetSearchStringEscape;
+  EscapeChar := GetDatabaseInfo.GetSearchStringEscape;
   for I := 1 to Length(Pattern) do
   begin
     if (Pattern[i]<>EscapeChar) then
@@ -2585,20 +2679,6 @@ begin
         PreviousChar := Pattern[i];
     end;
   end;
-end;
-
-{**
-  Gets the version of the server.
-  @returns the version of the server.
-}
-function TZInterbase6DatabaseMetadata.GetServerVersion: string;
-begin
-  if FServerVersion = '' then
-  begin
-    FServerVersion := GetVersion(FIBConnection.GetPlainDriver,
-      FIBConnection.GetDBHandle);
-  end;
-  Result := FServerVersion;
 end;
 
 end.

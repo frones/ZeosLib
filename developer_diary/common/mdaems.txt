@@ -237,3 +237,5 @@
 20080813 : PostgreSQL UTF8 Charset Patch - by whitekid - See http://zeos.firmos.at/viewtopic.php?t=1946
 
 20080813 : ZIBEventAlerter compile error in Lazarus/Linux ('infinite' defined twice) - by lichtmannls - Mantis bug 131
+
+20080816 : Splitted IZDatabaseMetadata into IZDatabaseMetadata (retrieves info about DB content) and IZDatabaseInfo (retrieves info about server properties) - by technobot

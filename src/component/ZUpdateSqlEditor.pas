@@ -911,7 +911,7 @@ begin
   if Assigned(DataSet) and Assigned(DataSet.Connection)
     and Assigned(DataSet.Connection.DbcConnection)then
   begin
-    QuoteChar := DataSet.Connection.DbcConnection.GetMetadata.
+    QuoteChar := DataSet.Connection.DbcConnection.GetMetadata.GetDatabaseInfo.
       GetIdentifierQuoteString;
     if Length(QuoteChar) = 1 then
       QuoteChar := QuoteChar + QuoteChar;

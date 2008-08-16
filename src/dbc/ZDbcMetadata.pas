@@ -113,15 +113,164 @@ type
     destructor Destroy; override;
   end;
 
+  // technobot 2008-06-24 - methods moved as is from TZAbstractDatabaseMetadata:
+  {** Implements Abstract Database Information. }
+  TZAbstractDatabaseInfo = class(TInterfacedObject, IZDatabaseInfo)
+  private
+    FMetadata: IZDatabaseMetadata;
+  protected
+    property Metadata: IZDatabaseMetadata read FMetadata;
+  public
+    constructor Create(const Metadata: IZDatabaseMetadata);
+    destructor Destroy; override;
+
+    // database/driver/server info:
+    function GetDatabaseProductName: string; virtual;
+    function GetDatabaseProductVersion: string; virtual;
+    function GetDriverName: string; virtual;
+    function GetDriverVersion: string; virtual;
+    function GetDriverMajorVersion: Integer; virtual;
+    function GetDriverMinorVersion: Integer; virtual;
+    function GetServerVersion: string;
+
+    // capabilities (what it can/cannot do):
+    function AllProceduresAreCallable: Boolean; virtual;
+    function AllTablesAreSelectable: Boolean; virtual;
+    function SupportsMixedCaseIdentifiers: Boolean; virtual;
+    function SupportsMixedCaseQuotedIdentifiers: Boolean; virtual;
+    function SupportsAlterTableWithAddColumn: Boolean; virtual;
+    function SupportsAlterTableWithDropColumn: Boolean; virtual;
+    function SupportsColumnAliasing: Boolean; virtual;
+    function SupportsConvert: Boolean; virtual;
+    function SupportsConvertForTypes(FromType: TZSQLType; ToType: TZSQLType):
+      Boolean; virtual;
+    function SupportsTableCorrelationNames: Boolean; virtual;
+    function SupportsDifferentTableCorrelationNames: Boolean; virtual;
+    function SupportsExpressionsInOrderBy: Boolean; virtual;
+    function SupportsOrderByUnrelated: Boolean; virtual;
+    function SupportsGroupBy: Boolean; virtual;
+    function SupportsGroupByUnrelated: Boolean; virtual;
+    function SupportsGroupByBeyondSelect: Boolean; virtual;
+    function SupportsLikeEscapeClause: Boolean; virtual;
+    function SupportsMultipleResultSets: Boolean; virtual;
+    function SupportsMultipleTransactions: Boolean; virtual;
+    function SupportsNonNullableColumns: Boolean; virtual;
+    function SupportsMinimumSQLGrammar: Boolean; virtual;
+    function SupportsCoreSQLGrammar: Boolean; virtual;
+    function SupportsExtendedSQLGrammar: Boolean; virtual;
+    function SupportsANSI92EntryLevelSQL: Boolean; virtual;
+    function SupportsANSI92IntermediateSQL: Boolean; virtual;
+    function SupportsANSI92FullSQL: Boolean; virtual;
+    function SupportsIntegrityEnhancementFacility: Boolean; virtual;
+    function SupportsOuterJoins: Boolean; virtual;
+    function SupportsFullOuterJoins: Boolean; virtual;
+    function SupportsLimitedOuterJoins: Boolean; virtual;
+    function SupportsSchemasInDataManipulation: Boolean; virtual;
+    function SupportsSchemasInProcedureCalls: Boolean; virtual;
+    function SupportsSchemasInTableDefinitions: Boolean; virtual;
+    function SupportsSchemasInIndexDefinitions: Boolean; virtual;
+    function SupportsSchemasInPrivilegeDefinitions: Boolean; virtual;
+    function SupportsCatalogsInDataManipulation: Boolean; virtual;
+    function SupportsCatalogsInProcedureCalls: Boolean; virtual;
+    function SupportsCatalogsInTableDefinitions: Boolean; virtual;
+    function SupportsCatalogsInIndexDefinitions: Boolean; virtual;
+    function SupportsCatalogsInPrivilegeDefinitions: Boolean; virtual;
+    function SupportsPositionedDelete: Boolean; virtual;
+    function SupportsPositionedUpdate: Boolean; virtual;
+    function SupportsSelectForUpdate: Boolean; virtual;
+    function SupportsStoredProcedures: Boolean; virtual;
+    function SupportsSubqueriesInComparisons: Boolean; virtual;
+    function SupportsSubqueriesInExists: Boolean; virtual;
+    function SupportsSubqueriesInIns: Boolean; virtual;
+    function SupportsSubqueriesInQuantifieds: Boolean; virtual;
+    function SupportsCorrelatedSubqueries: Boolean; virtual;
+    function SupportsUnion: Boolean; virtual;
+    function SupportsUnionAll: Boolean; virtual;
+    function SupportsOpenCursorsAcrossCommit: Boolean; virtual;
+    function SupportsOpenCursorsAcrossRollback: Boolean; virtual;
+    function SupportsOpenStatementsAcrossCommit: Boolean; virtual;
+    function SupportsOpenStatementsAcrossRollback: Boolean; virtual;
+    function SupportsTransactions: Boolean; virtual;
+    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
+      Boolean; virtual;
+    function SupportsDataDefinitionAndDataManipulationTransactions: Boolean; virtual;
+    function SupportsDataManipulationTransactionsOnly: Boolean; virtual;
+    function SupportsResultSetType(_Type: TZResultSetType): Boolean; virtual;
+    function SupportsResultSetConcurrency(_Type: TZResultSetType;
+      Concurrency: TZResultSetConcurrency): Boolean; virtual;
+    function SupportsBatchUpdates: Boolean; virtual;
+
+    // maxima:
+    function GetMaxBinaryLiteralLength: Integer; virtual;
+    function GetMaxCharLiteralLength: Integer; virtual;
+    function GetMaxColumnNameLength: Integer; virtual;
+    function GetMaxColumnsInGroupBy: Integer; virtual;
+    function GetMaxColumnsInIndex: Integer; virtual;
+    function GetMaxColumnsInOrderBy: Integer; virtual;
+    function GetMaxColumnsInSelect: Integer; virtual;
+    function GetMaxColumnsInTable: Integer; virtual;
+    function GetMaxConnections: Integer; virtual;
+    function GetMaxCursorNameLength: Integer; virtual;
+    function GetMaxIndexLength: Integer; virtual;
+    function GetMaxSchemaNameLength: Integer; virtual;
+    function GetMaxProcedureNameLength: Integer; virtual;
+    function GetMaxCatalogNameLength: Integer; virtual;
+    function GetMaxRowSize: Integer; virtual;
+    function GetMaxStatementLength: Integer; virtual;
+    function GetMaxStatements: Integer; virtual;
+    function GetMaxTableNameLength: Integer; virtual;
+    function GetMaxTablesInSelect: Integer; virtual;
+    function GetMaxUserNameLength: Integer; virtual;
+
+    // policies (how are various data and operations handled):
+    function IsReadOnly: Boolean; virtual;
+    function IsCatalogAtStart: Boolean; virtual;
+    function DoesMaxRowSizeIncludeBlobs: Boolean; virtual;
+    function NullsAreSortedHigh: Boolean; virtual;
+    function NullsAreSortedLow: Boolean; virtual;
+    function NullsAreSortedAtStart: Boolean; virtual;
+    function NullsAreSortedAtEnd: Boolean; virtual;
+    function NullPlusNonNullIsNull: Boolean; virtual;
+    function UsesLocalFiles: Boolean; virtual;
+    function UsesLocalFilePerTable: Boolean; virtual;
+    function StoresUpperCaseIdentifiers: Boolean; virtual;
+    function StoresLowerCaseIdentifiers: Boolean; virtual;
+    function StoresMixedCaseIdentifiers: Boolean; virtual;
+    function StoresUpperCaseQuotedIdentifiers: Boolean; virtual;
+    function StoresLowerCaseQuotedIdentifiers: Boolean; virtual;
+    function StoresMixedCaseQuotedIdentifiers: Boolean; virtual;
+    function GetDefaultTransactionIsolation: TZTransactIsolationLevel; virtual;
+    function DataDefinitionCausesTransactionCommit: Boolean; virtual;
+    function DataDefinitionIgnoredInTransactions: Boolean; virtual;
+
+    // interface details (terms, keywords, etc):
+    function GetIdentifierQuoteString: string; virtual;
+    function GetSchemaTerm: string; virtual;
+    function GetProcedureTerm: string; virtual;
+    function GetCatalogTerm: string; virtual;
+    function GetCatalogSeparator: string; virtual;
+    function GetSQLKeywords: string; virtual;
+    function GetNumericFunctions: string; virtual;
+    function GetStringFunctions: string; virtual;
+    function GetSystemFunctions: string; virtual;
+    function GetTimeDateFunctions: string; virtual;
+    function GetSearchStringEscape: string; virtual;
+    function GetExtraNameCharacters: string; virtual;
+  end;
+
   {** Implements Abstract Database Metadata. }
-  TZAbstractDatabaseMetadata = class(TContainedObject, IZDatabaseMetadata)
+TZAbstractDatabaseMetadata = class(TContainedObject, IZDatabaseMetadata)
   private
     FConnection: Pointer;
     FUrl: string;
     FInfo: TStrings;
     FCachedResultSets: IZHashMap;
+    FDatabaseInfo: IZDatabaseInfo;
   protected
     WildcardsArray: array of char; //Added by Cipto
+    function CreateDatabaseInfo: IZDatabaseInfo; virtual; // technobot 2008-06-24
+    function GetStatement: IZSTatement; // technobot 2008-06-28 - moved from descendants
+
     { Metadata ResultSets Caching. }
     procedure AddResultSetToCache(const Key: string; ResultSet: IZResultSet);
     function GetResultSetFromCache(const Key: string): IZResultSet;
@@ -179,135 +328,15 @@ type
     function UncachedGetTypeInfo: IZResultSet; virtual;
     function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
       const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; virtual;
-
   public
     constructor Create(ParentConnection: IZConnection;
       const Url: string; Info: TStrings);
     destructor Destroy; override;
 
-    function AllProceduresAreCallable: Boolean; virtual;
-    function AllTablesAreSelectable: Boolean; virtual;
     function GetURL: string; virtual;
     function GetUserName: string; virtual;
-    function IsReadOnly: Boolean; virtual;
-    function NullsAreSortedHigh: Boolean; virtual;
-    function NullsAreSortedLow: Boolean; virtual;
-    function NullsAreSortedAtStart: Boolean; virtual;
-    function NullsAreSortedAtEnd: Boolean; virtual;
-    function GetDatabaseProductName: string; virtual;
-    function GetDatabaseProductVersion: string; virtual;
-    function GetDriverName: string; virtual;
-    function GetDriverVersion: string; virtual;
-    function GetDriverMajorVersion: Integer; virtual;
-    function GetDriverMinorVersion: Integer; virtual;
-    function UsesLocalFiles: Boolean; virtual;
-    function UsesLocalFilePerTable: Boolean; virtual;
-    function SupportsMixedCaseIdentifiers: Boolean; virtual;
-    function StoresUpperCaseIdentifiers: Boolean; virtual;
-    function StoresLowerCaseIdentifiers: Boolean; virtual;
-    function StoresMixedCaseIdentifiers: Boolean; virtual;
-    function SupportsMixedCaseQuotedIdentifiers: Boolean; virtual;
-    function StoresUpperCaseQuotedIdentifiers: Boolean; virtual;
-    function StoresLowerCaseQuotedIdentifiers: Boolean; virtual;
-    function StoresMixedCaseQuotedIdentifiers: Boolean; virtual;
-    function GetIdentifierQuoteString: string; virtual;
-    function GetSQLKeywords: string; virtual;
-    function GetNumericFunctions: string; virtual;
-    function GetStringFunctions: string; virtual;
-    function GetSystemFunctions: string; virtual;
-    function GetTimeDateFunctions: string; virtual;
-    function GetSearchStringEscape: string; virtual;
-    function GetExtraNameCharacters: string; virtual;
 
-    function SupportsAlterTableWithAddColumn: Boolean; virtual;
-    function SupportsAlterTableWithDropColumn: Boolean; virtual;
-    function SupportsColumnAliasing: Boolean; virtual;
-    function NullPlusNonNullIsNull: Boolean; virtual;
-    function SupportsConvert: Boolean; virtual;
-    function SupportsConvertForTypes(FromType: TZSQLType; ToType: TZSQLType):
-      Boolean; virtual;
-    function SupportsTableCorrelationNames: Boolean; virtual;
-    function SupportsDifferentTableCorrelationNames: Boolean; virtual;
-    function SupportsExpressionsInOrderBy: Boolean; virtual;
-    function SupportsOrderByUnrelated: Boolean; virtual;
-    function SupportsGroupBy: Boolean; virtual;
-    function SupportsGroupByUnrelated: Boolean; virtual;
-    function SupportsGroupByBeyondSelect: Boolean; virtual;
-    function SupportsLikeEscapeClause: Boolean; virtual;
-    function SupportsMultipleResultSets: Boolean; virtual;
-    function SupportsMultipleTransactions: Boolean; virtual;
-    function SupportsNonNullableColumns: Boolean; virtual;
-    function SupportsMinimumSQLGrammar: Boolean; virtual;
-    function SupportsCoreSQLGrammar: Boolean; virtual;
-    function SupportsExtendedSQLGrammar: Boolean; virtual;
-    function SupportsANSI92EntryLevelSQL: Boolean; virtual;
-    function SupportsANSI92IntermediateSQL: Boolean; virtual;
-    function SupportsANSI92FullSQL: Boolean; virtual;
-    function SupportsIntegrityEnhancementFacility: Boolean; virtual;
-    function SupportsOuterJoins: Boolean; virtual;
-    function SupportsFullOuterJoins: Boolean; virtual;
-    function SupportsLimitedOuterJoins: Boolean; virtual;
-    function GetSchemaTerm: string; virtual;
-    function GetProcedureTerm: string; virtual;
-    function GetCatalogTerm: string; virtual;
-    function IsCatalogAtStart: Boolean; virtual;
-    function GetCatalogSeparator: string; virtual;
-    function SupportsSchemasInDataManipulation: Boolean; virtual;
-    function SupportsSchemasInProcedureCalls: Boolean; virtual;
-    function SupportsSchemasInTableDefinitions: Boolean; virtual;
-    function SupportsSchemasInIndexDefinitions: Boolean; virtual;
-    function SupportsSchemasInPrivilegeDefinitions: Boolean; virtual;
-    function SupportsCatalogsInDataManipulation: Boolean; virtual;
-    function SupportsCatalogsInProcedureCalls: Boolean; virtual;
-    function SupportsCatalogsInTableDefinitions: Boolean; virtual;
-    function SupportsCatalogsInIndexDefinitions: Boolean; virtual;
-    function SupportsCatalogsInPrivilegeDefinitions: Boolean; virtual;
-    function SupportsPositionedDelete: Boolean; virtual;
-    function SupportsPositionedUpdate: Boolean; virtual;
-    function SupportsSelectForUpdate: Boolean; virtual;
-    function SupportsStoredProcedures: Boolean; virtual;
-    function SupportsSubqueriesInComparisons: Boolean; virtual;
-    function SupportsSubqueriesInExists: Boolean; virtual;
-    function SupportsSubqueriesInIns: Boolean; virtual;
-    function SupportsSubqueriesInQuantifieds: Boolean; virtual;
-    function SupportsCorrelatedSubqueries: Boolean; virtual;
-    function SupportsUnion: Boolean; virtual;
-    function SupportsUnionAll: Boolean;  virtual;
-    function SupportsOpenCursorsAcrossCommit: Boolean; virtual;
-    function SupportsOpenCursorsAcrossRollback: Boolean; virtual;
-    function SupportsOpenStatementsAcrossCommit: Boolean; virtual;
-    function SupportsOpenStatementsAcrossRollback: Boolean; virtual;
-
-    function GetMaxBinaryLiteralLength: Integer; virtual;
-    function GetMaxCharLiteralLength: Integer; virtual;
-    function GetMaxColumnNameLength: Integer; virtual;
-    function GetMaxColumnsInGroupBy: Integer; virtual;
-    function GetMaxColumnsInIndex: Integer; virtual;
-    function GetMaxColumnsInOrderBy: Integer; virtual;
-    function GetMaxColumnsInSelect: Integer; virtual;
-    function GetMaxColumnsInTable: Integer; virtual;
-    function GetMaxConnections: Integer; virtual;
-    function GetMaxCursorNameLength: Integer; virtual;
-    function GetMaxIndexLength: Integer; virtual;
-    function GetMaxSchemaNameLength: Integer; virtual;
-    function GetMaxProcedureNameLength: Integer; virtual;
-    function GetMaxCatalogNameLength: Integer; virtual;
-    function GetMaxRowSize: Integer; virtual;
-    function DoesMaxRowSizeIncludeBlobs: Boolean; virtual;
-    function GetMaxStatementLength: Integer; virtual;
-    function GetMaxStatements: Integer; virtual;
-    function GetMaxTableNameLength: Integer; virtual;
-    function GetMaxTablesInSelect: Integer; virtual;
-    function GetMaxUserNameLength: Integer; virtual;
-
-    function GetDefaultTransactionIsolation: TZTransactIsolationLevel; virtual;
-    function SupportsTransactions: Boolean; virtual;
-    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
-      Boolean; virtual;
-    function SupportsDataDefinitionAndDataManipulationTransactions: Boolean; virtual;
-    function SupportsDataManipulationTransactionsOnly: Boolean; virtual;
-    function DataDefinitionCausesTransactionCommit: Boolean; virtual;
-    function DataDefinitionIgnoredInTransactions: Boolean; virtual;
+    function GetDatabaseInfo: IZDatabaseInfo; // technobot 2008-06-24 - see also CreateDatabaseInfo method.
 
     function GetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet;
@@ -345,12 +374,6 @@ type
     function GetTypeInfo: IZResultSet;
     function GetUDTs(const Catalog: string; const SchemaPattern: string;
       const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet;
-
-
-    function SupportsResultSetType(_Type: TZResultSetType): Boolean; virtual;
-    function SupportsResultSetConcurrency(_Type: TZResultSetType;
-      Concurrency: TZResultSetConcurrency): Boolean; virtual;
-    function SupportsBatchUpdates: Boolean; virtual;
 
 
     function GetConnection: IZConnection; virtual;
@@ -450,7 +473,1227 @@ implementation
 
 uses ZVariant, ZCollections;
 
+{ TZAbstractDatabaseInfo }
+
+{**
+  Constructs this object.
+  @param Metadata the interface of the correpsonding database metadata object
+}
+constructor TZAbstractDatabaseInfo.Create(const Metadata: IZDatabaseMetadata);
+begin
+  inherited Create;
+  FMetadata := Metadata;
+end;
+
+{**
+  Destroys this object and cleanups the memory.
+}
+destructor TZAbstractDatabaseInfo.Destroy;
+begin
+  inherited;
+end;
+
+//----------------------------------------------------------------------
+// First, a variety of minor information about the target database.
+
+{**
+  Can all the procedures returned by getProcedures be called by the
+  current user?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.AllProceduresAreCallable: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Can all the tables returned by getTable be SELECTed by the
+  current user?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.AllTablesAreSelectable: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is the database in read-only mode?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.IsReadOnly: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Are NULL values sorted high?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.NullsAreSortedHigh: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Are NULL values sorted low?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.NullsAreSortedLow: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Are NULL values sorted at the start regardless of sort order?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.NullsAreSortedAtStart: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Are NULL values sorted at the end regardless of sort order?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.NullsAreSortedAtEnd: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  What's the name of this database product?
+  @return database product name
+}
+function TZAbstractDatabaseInfo.GetDatabaseProductName: string;
+begin
+  Result := '';
+end;
+
+{**
+  What's the version of this database product?
+  @return database version
+}
+function TZAbstractDatabaseInfo.GetDatabaseProductVersion: string;
+begin
+  Result := '';
+end;
+
+{**
+  What's the name of this JDBC driver?
+  @return JDBC driver name
+}
+function TZAbstractDatabaseInfo.GetDriverName: string;
+begin
+  Result := 'Zeos Database Connectivity Driver';
+end;
+
+{**
+  What's the version of this JDBC driver?
+  @return JDBC driver version
+}
+function TZAbstractDatabaseInfo.GetDriverVersion: string;
+begin
+  Result := Format('%d.%d', [GetDriverMajorVersion, GetDriverMinorVersion]);
+end;
+
+{**
+  What's this JDBC driver's major version number?
+  @return JDBC driver major version
+}
+function TZAbstractDatabaseInfo.GetDriverMajorVersion: Integer;
+begin
+  Result := 1;
+end;
+
+{**
+  What's this JDBC driver's minor version number?
+  @return JDBC driver minor version number
+}
+function TZAbstractDatabaseInfo.GetDriverMinorVersion: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  Returns the server version
+  @return the server version string
+}
+function TZAbstractDatabaseInfo.GetServerVersion: string;
+begin
+  Result := '';
+end;
+
+{**
+  Does the database store tables in a local file?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.UsesLocalFiles: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Does the database use a file for each table?
+  @return true if the database uses a local file for each table
+}
+function TZAbstractDatabaseInfo.UsesLocalFilePerTable: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Does the database treat mixed case unquoted SQL identifiers as
+  case sensitive and as a result store them in mixed case?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver will always return false.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsMixedCaseIdentifiers: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Does the database treat mixed case unquoted SQL identifiers as
+  case insensitive and store them in upper case?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.StoresUpperCaseIdentifiers: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Does the database treat mixed case unquoted SQL identifiers as
+  case insensitive and store them in lower case?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.StoresLowerCaseIdentifiers: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Does the database treat mixed case unquoted SQL identifiers as
+  case insensitive and store them in mixed case?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.StoresMixedCaseIdentifiers: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Does the database treat mixed case quoted SQL identifiers as
+  case sensitive and as a result store them in mixed case?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver will always return true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsMixedCaseQuotedIdentifiers: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Does the database treat mixed case quoted SQL identifiers as
+  case insensitive and store them in upper case?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.StoresUpperCaseQuotedIdentifiers: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Does the database treat mixed case quoted SQL identifiers as
+  case insensitive and store them in lower case?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.StoresLowerCaseQuotedIdentifiers: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Does the database treat mixed case quoted SQL identifiers as
+  case insensitive and store them in mixed case?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.StoresMixedCaseQuotedIdentifiers: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  What's the string used to quote SQL identifiers?
+  This returns a space " " if identifier quoting isn't supported.
+  A JDBC Compliant<sup><font size=-2>TM</font></sup>
+  driver always uses a double quote character.
+  @return the quoting string
+}
+function TZAbstractDatabaseInfo.GetIdentifierQuoteString: string;
+begin
+  Result := '"';
+end;
+
+{**
+  Gets a comma-separated list of all a database's SQL keywords
+  that are NOT also SQL92 keywords.
+  @return the list
+}
+function TZAbstractDatabaseInfo.GetSQLKeywords: string;
+begin
+  Result := '';
+end;
+
+{**
+  Gets a comma-separated list of math functions.  These are the
+  X/Open CLI math function names used in the JDBC function escape
+  clause.
+  @return the list
+}
+function TZAbstractDatabaseInfo.GetNumericFunctions: string;
+begin
+  Result := '';
+end;
+
+{**
+  Gets a comma-separated list of string functions.  These are the
+  X/Open CLI string function names used in the JDBC function escape
+  clause.
+  @return the list
+}
+function TZAbstractDatabaseInfo.GetStringFunctions: string;
+begin
+  Result := '';
+end;
+
+{**
+  Gets a comma-separated list of system functions.  These are the
+  X/Open CLI system function names used in the JDBC function escape
+  clause.
+  @return the list
+}
+function TZAbstractDatabaseInfo.GetSystemFunctions: string;
+begin
+  Result := '';
+end;
+
+{**
+  Gets a comma-separated list of time and date functions.
+  @return the list
+}
+function TZAbstractDatabaseInfo.GetTimeDateFunctions: string;
+begin
+  Result := '';
+end;
+
+{**
+  Gets the string that can be used to escape wildcard characters.
+  This is the string that can be used to escape '_' or '%' in
+  the string pattern style catalog search parameters.
+
+  <P>The '_' character represents any single character.
+  <P>The '%' character represents any sequence of zero or
+  more characters.
+
+  @return the string used to escape wildcard characters
+}
+function TZAbstractDatabaseInfo.GetSearchStringEscape: string;
+begin
+  Result := '%';
+end;
+
+{**
+  Gets all the "extra" characters that can be used in unquoted
+  identifier names (those beyond a-z, A-Z, 0-9 and _).
+  @return the string containing the extra characters
+}
+function TZAbstractDatabaseInfo.GetExtraNameCharacters: string;
+begin
+  Result := '';
+end;
+
+//--------------------------------------------------------------------
+// Functions describing which features are supported.
+
+{**
+  Is "ALTER TABLE" with add column supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsAlterTableWithAddColumn: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is "ALTER TABLE" with drop column supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsAlterTableWithDropColumn: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is column aliasing supported?
+
+  <P>If so, the SQL AS clause can be used to provide names for
+  computed columns or to provide alias names for columns as
+  required.
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsColumnAliasing: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Are concatenations between NULL and non-NULL values NULL?
+  For SQL-92 compliance, a JDBC technology-enabled driver will
+  return <code>true</code>.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.NullPlusNonNullIsNull: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is the CONVERT function between SQL types supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsConvert: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Is CONVERT between the given SQL types supported?
+  @param fromType the type to convert from
+  @param toType the type to convert to
+  @return <code>true</code> if so; <code>false</code> otherwise
+  @see Types
+}
+function TZAbstractDatabaseInfo.SupportsConvertForTypes(
+  FromType: TZSQLType; ToType: TZSQLType): Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Are table correlation names supported?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsTableCorrelationNames: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  If table correlation names are supported, are they restricted
+  to be different from the names of the tables?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsDifferentTableCorrelationNames: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Are expressions in "ORDER BY" lists supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsExpressionsInOrderBy: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Can an "ORDER BY" clause use columns not in the SELECT statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsOrderByUnrelated: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is some form of "GROUP BY" clause supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsGroupBy: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Can a "GROUP BY" clause use columns not in the SELECT?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsGroupByUnrelated: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Can a "GROUP BY" clause add columns not in the SELECT
+  provided it specifies all the columns in the SELECT?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsGroupByBeyondSelect: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Is the escape character in "LIKE" clauses supported?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsLikeEscapeClause: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Are multiple <code>ResultSet</code> from a single execute supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsMultipleResultSets: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Can we have multiple transactions open at once (on different
+  connections)?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsMultipleTransactions: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Can columns be defined as non-nullable?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsNonNullableColumns: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is the ODBC Minimum SQL grammar supported?
+  All JDBC Compliant<sup><font size=-2>TM</font></sup> drivers must return true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsMinimumSQLGrammar: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is the ODBC Core SQL grammar supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsCoreSQLGrammar: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is the ODBC Extended SQL grammar supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsExtendedSQLGrammar: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is the ANSI92 entry level SQL grammar supported?
+  All JDBC Compliant<sup><font size=-2>TM</font></sup> drivers must return true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsANSI92EntryLevelSQL: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is the ANSI92 intermediate SQL grammar supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsANSI92IntermediateSQL: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is the ANSI92 full SQL grammar supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsANSI92FullSQL: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is the SQL Integrity Enhancement Facility supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsIntegrityEnhancementFacility: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Is some form of outer join supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsOuterJoins: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Are full nested outer joins supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsFullOuterJoins: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is there limited support for outer joins?  (This will be true
+  if supportFullOuterJoins is true.)
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsLimitedOuterJoins: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  What's the database vendor's preferred term for "schema"?
+  @return the vendor term
+}
+function TZAbstractDatabaseInfo.GetSchemaTerm: string;
+begin
+  Result := 'Schema';
+end;
+
+{**
+  What's the database vendor's preferred term for "procedure"?
+  @return the vendor term
+}
+function TZAbstractDatabaseInfo.GetProcedureTerm: string;
+begin
+  Result := 'Procedure';
+end;
+
+{**
+  What's the database vendor's preferred term for "catalog"?
+  @return the vendor term
+}
+function TZAbstractDatabaseInfo.GetCatalogTerm: string;
+begin
+  Result := 'Catalog';
+end;
+
+{**
+  Does a catalog appear at the start of a qualified table name?
+  (Otherwise it appears at the end)
+  @return true if it appears at the start
+}
+function TZAbstractDatabaseInfo.IsCatalogAtStart: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  What's the separator between catalog and table name?
+  @return the separator string
+}
+function TZAbstractDatabaseInfo.GetCatalogSeparator: string;
+begin
+  Result := '.';
+end;
+
+{**
+  Can a schema name be used in a data manipulation statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsSchemasInDataManipulation: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can a schema name be used in a procedure call statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsSchemasInProcedureCalls: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can a schema name be used in a table definition statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsSchemasInTableDefinitions: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can a schema name be used in an index definition statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsSchemasInIndexDefinitions: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can a schema name be used in a privilege definition statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsSchemasInPrivilegeDefinitions: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can a catalog name be used in a data manipulation statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsCatalogsInDataManipulation: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can a catalog name be used in a procedure call statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsCatalogsInProcedureCalls: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can a catalog name be used in a table definition statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsCatalogsInTableDefinitions: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can a catalog name be used in an index definition statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsCatalogsInIndexDefinitions: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can a catalog name be used in a privilege definition statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsCatalogsInPrivilegeDefinitions: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Is positioned DELETE supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsPositionedDelete: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Is positioned UPDATE supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsPositionedUpdate: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Is SELECT for UPDATE supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsSelectForUpdate: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Are stored procedure calls using the stored procedure escape
+  syntax supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsStoredProcedures: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Are subqueries in comparison expressions supported?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsSubqueriesInComparisons: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Are subqueries in 'exists' expressions supported?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsSubqueriesInExists: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Are subqueries in 'in' statements supported?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsSubqueriesInIns: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Are subqueries in quantified expressions supported?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsSubqueriesInQuantifieds: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Are correlated subqueries supported?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsCorrelatedSubqueries: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Is SQL UNION supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsUnion: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Is SQL UNION ALL supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsUnionAll: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can cursors remain open across commits?
+  @return <code>true</code> if cursors always remain open;
+        <code>false</code> if they might not remain open
+}
+function TZAbstractDatabaseInfo.SupportsOpenCursorsAcrossCommit: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can cursors remain open across rollbacks?
+  @return <code>true</code> if cursors always remain open;
+        <code>false</code> if they might not remain open
+}
+function TZAbstractDatabaseInfo.SupportsOpenCursorsAcrossRollback: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can statements remain open across commits?
+  @return <code>true</code> if statements always remain open;
+        <code>false</code> if they might not remain open
+}
+function TZAbstractDatabaseInfo.SupportsOpenStatementsAcrossCommit: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Can statements remain open across rollbacks?
+  @return <code>true</code> if statements always remain open;
+        <code>false</code> if they might not remain open
+}
+function TZAbstractDatabaseInfo.SupportsOpenStatementsAcrossRollback: Boolean;
+begin
+  Result := True;
+end;
+
+//----------------------------------------------------------------------
+// The following group of methods exposes various limitations
+// based on the target database with the current driver.
+// Unless otherwise specified, a result of zero means there is no
+// limit, or the limit is not known.
+
+{**
+  How many hex characters can you have in an inline binary literal?
+  @return max binary literal length in hex characters;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZAbstractDatabaseInfo.GetMaxBinaryLiteralLength: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the max length for a character literal?
+  @return max literal length;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZAbstractDatabaseInfo.GetMaxCharLiteralLength: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the limit on column name length?
+  @return max column name length;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZAbstractDatabaseInfo.GetMaxColumnNameLength: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum number of columns in a "GROUP BY" clause?
+  @return max number of columns;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZAbstractDatabaseInfo.GetMaxColumnsInGroupBy: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum number of columns allowed in an index?
+  @return max number of columns;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZAbstractDatabaseInfo.GetMaxColumnsInIndex: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum number of columns in an "ORDER BY" clause?
+  @return max number of columns;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZAbstractDatabaseInfo.GetMaxColumnsInOrderBy: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum number of columns in a "SELECT" list?
+  @return max number of columns;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZAbstractDatabaseInfo.GetMaxColumnsInSelect: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum number of columns in a table?
+  @return max number of columns;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZAbstractDatabaseInfo.GetMaxColumnsInTable: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  How many active connections can we have at a time to this database?
+  @return max number of active connections;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZAbstractDatabaseInfo.GetMaxConnections: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum cursor name length?
+  @return max cursor name length in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZAbstractDatabaseInfo.GetMaxCursorNameLength: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  Retrieves the maximum number of bytes for an index, including all
+  of the parts of the index.
+  @return max index length in bytes, which includes the composite of all
+   the constituent parts of the index;
+   a result of zero means that there is no limit or the limit is not known
+}
+function TZAbstractDatabaseInfo.GetMaxIndexLength: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum length allowed for a schema name?
+  @return max name length in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZAbstractDatabaseInfo.GetMaxSchemaNameLength: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum length of a procedure name?
+  @return max name length in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZAbstractDatabaseInfo.GetMaxProcedureNameLength: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum length of a catalog name?
+  @return max name length in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZAbstractDatabaseInfo.GetMaxCatalogNameLength: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum length of a single row?
+  @return max row size in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZAbstractDatabaseInfo.GetMaxRowSize: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  Did getMaxRowSize() include LONGVARCHAR and LONGVARBINARY
+  blobs?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.DoesMaxRowSizeIncludeBlobs: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  What's the maximum length of an SQL statement?
+  @return max length in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZAbstractDatabaseInfo.GetMaxStatementLength: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  How many active statements can we have open at one time to this
+  database?
+  @return the maximum number of statements that can be open at one time;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZAbstractDatabaseInfo.GetMaxStatements: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum length of a table name?
+  @return max name length in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZAbstractDatabaseInfo.GetMaxTableNameLength: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum number of tables in a SELECT statement?
+  @return the maximum number of tables allowed in a SELECT statement;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZAbstractDatabaseInfo.GetMaxTablesInSelect: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum length of a user name?
+  @return max user name length  in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZAbstractDatabaseInfo.GetMaxUserNameLength: Integer;
+begin
+  Result := 0;
+end;
+
+//----------------------------------------------------------------------
+
+{**
+  What's the database's default transaction isolation level?  The
+  values are defined in <code>java.sql.Connection</code>.
+  @return the default isolation level
+  @see Connection
+}
+function TZAbstractDatabaseInfo.GetDefaultTransactionIsolation:
+  TZTransactIsolationLevel;
+begin
+  Result := tiReadCommitted;
+end;
+
+{**
+  Are transactions supported? If not, invoking the method
+  <code>commit</code> is a noop and the isolation level is TRANSACTION_NONE.
+  @return <code>true</code> if transactions are supported; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsTransactions: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Does this database support the given transaction isolation level?
+  @param level the values are defined in <code>java.sql.Connection</code>
+  @return <code>true</code> if so; <code>false</code> otherwise
+  @see Connection
+}
+function TZAbstractDatabaseInfo.SupportsTransactionIsolationLevel(
+  Level: TZTransactIsolationLevel): Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Are both data definition and data manipulation statements
+  within a transaction supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.
+  SupportsDataDefinitionAndDataManipulationTransactions: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Are only data manipulation statements within a transaction
+  supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.
+  SupportsDataManipulationTransactionsOnly: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Does a data definition statement within a transaction force the
+  transaction to commit?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.DataDefinitionCausesTransactionCommit: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is a data definition statement within a transaction ignored?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.DataDefinitionIgnoredInTransactions: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Does the database support the given result set type?
+  @param type defined in <code>java.sql.ResultSet</code>
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsResultSetType(
+  _Type: TZResultSetType): Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Does the database support the concurrency type in combination
+  with the given result set type?
+
+  @param type defined in <code>java.sql.ResultSet</code>
+  @param concurrency type defined in <code>java.sql.ResultSet</code>
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsResultSetConcurrency(
+  _Type: TZResultSetType; Concurrency: TZResultSetConcurrency): Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Indicates whether the driver supports batch updates.
+  @return true if the driver supports batch updates; false otherwise
+}
+function TZAbstractDatabaseInfo.SupportsBatchUpdates: Boolean;
+begin
+  Result := True;
+end;
+
+
 { TZAbstractDatabaseMetadata }
+
 
 {**
   Constructs this object and assignes the main properties.
@@ -466,6 +1709,7 @@ begin
   FUrl := Url;
   FInfo := Info;
   FCachedResultSets := TZHashMap.Create;
+  FDatabaseInfo := CreateDatabaseInfo;
   FillWildcards;
 end;
 
@@ -475,8 +1719,27 @@ destructor TZAbstractDatabaseMetadata.Destroy;
 begin
   FCachedResultSets.Clear;
   FCachedResultSets := nil;
-  
+
   inherited Destroy;
+end;
+
+{**
+  Constructs a database information object and returns the interface to it. Used
+  internally by the constructor.
+  @return the database information object interface
+}
+function TZAbstractDatabaseMetadata.CreateDatabaseInfo: IZDatabaseInfo;
+begin
+  Result := TZAbstractDatabaseInfo.Create(Self);
+end;
+
+{**
+  Creates and returns a statement object.
+  @return the statement object
+}
+function TZAbstractDatabaseMetadata.GetStatement: IZStatement;
+begin
+  Result := GetConnection.CreateStatement;
 end;
 
 {**
@@ -681,30 +1944,6 @@ begin
   end;
 end;
 
-
-//----------------------------------------------------------------------
-// First, a variety of minor information about the target database.
-
-{**
-  Can all the procedures returned by getProcedures be called by the
-  current user?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.AllProceduresAreCallable: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Can all the tables returned by getTable be SELECTed by the
-  current user?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.AllTablesAreSelectable: Boolean;
-begin
-  Result := True;
-end;
-
 {**
   What's the url for this database?
   @return the url or null if it cannot be generated
@@ -726,1135 +1965,13 @@ begin
 end;
 
 {**
-  Is the database in read-only mode?
-  @return <code>true</code> if so; <code>false</code> otherwise
+  Returns general information about the database (version, capabilities,
+  policies, etc).
+  @return the database information object interface.
 }
-function TZAbstractDatabaseMetadata.IsReadOnly: Boolean;
+function TZAbstractDatabaseMetadata.GetDatabaseInfo: IZDatabaseInfo;
 begin
-  Result := False;
-end;
-
-{**
-  Are NULL values sorted high?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.NullsAreSortedHigh: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Are NULL values sorted low?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.NullsAreSortedLow: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Are NULL values sorted at the start regardless of sort order?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.NullsAreSortedAtStart: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Are NULL values sorted at the end regardless of sort order?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.NullsAreSortedAtEnd: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  What's the name of this database product?
-  @return database product name
-}
-function TZAbstractDatabaseMetadata.GetDatabaseProductName: string;
-begin
-  Result := '';
-end;
-
-{**
-  What's the version of this database product?
-  @return database version
-}
-function TZAbstractDatabaseMetadata.GetDatabaseProductVersion: string;
-begin
-  Result := '';
-end;
-
-{**
-  What's the name of this JDBC driver?
-  @return JDBC driver name
-}
-function TZAbstractDatabaseMetadata.GetDriverName: string;
-begin
-  Result := 'Zeos Database Connectivity Driver';
-end;
-
-{**
-  What's the version of this JDBC driver?
-  @return JDBC driver version
-}
-function TZAbstractDatabaseMetadata.GetDriverVersion: string;
-begin
-  Result := Format('%d.%d', [GetDriverMajorVersion, GetDriverMinorVersion]);
-end;
-
-{**
-  What's this JDBC driver's major version number?
-  @return JDBC driver major version
-}
-function TZAbstractDatabaseMetadata.GetDriverMajorVersion: Integer;
-begin
-  Result := 1;
-end;
-
-{**
-  What's this JDBC driver's minor version number?
-  @return JDBC driver minor version number
-}
-function TZAbstractDatabaseMetadata.GetDriverMinorVersion: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  Does the database store tables in a local file?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.UsesLocalFiles: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Does the database use a file for each table?
-  @return true if the database uses a local file for each table
-}
-function TZAbstractDatabaseMetadata.UsesLocalFilePerTable: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Does the database treat mixed case unquoted SQL identifiers as
-  case sensitive and as a result store them in mixed case?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver will always return false.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsMixedCaseIdentifiers: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Does the database treat mixed case unquoted SQL identifiers as
-  case insensitive and store them in upper case?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.StoresUpperCaseIdentifiers: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Does the database treat mixed case unquoted SQL identifiers as
-  case insensitive and store them in lower case?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.StoresLowerCaseIdentifiers: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Does the database treat mixed case unquoted SQL identifiers as
-  case insensitive and store them in mixed case?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.StoresMixedCaseIdentifiers: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Does the database treat mixed case quoted SQL identifiers as
-  case sensitive and as a result store them in mixed case?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver will always return true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsMixedCaseQuotedIdentifiers: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Does the database treat mixed case quoted SQL identifiers as
-  case insensitive and store them in upper case?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.StoresUpperCaseQuotedIdentifiers: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Does the database treat mixed case quoted SQL identifiers as
-  case insensitive and store them in lower case?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.StoresLowerCaseQuotedIdentifiers: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Does the database treat mixed case quoted SQL identifiers as
-  case insensitive and store them in mixed case?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.StoresMixedCaseQuotedIdentifiers: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  What's the string used to quote SQL identifiers?
-  This returns a space " " if identifier quoting isn't supported.
-  A JDBC Compliant<sup><font size=-2>TM</font></sup>
-  driver always uses a double quote character.
-  @return the quoting string
-}
-function TZAbstractDatabaseMetadata.GetIdentifierQuoteString: string;
-begin
-  Result := '"';
-end;
-
-{**
-  Gets a comma-separated list of all a database's SQL keywords
-  that are NOT also SQL92 keywords.
-  @return the list
-}
-function TZAbstractDatabaseMetadata.GetSQLKeywords: string;
-begin
-  Result := '';
-end;
-
-{**
-  Gets a comma-separated list of math functions.  These are the
-  X/Open CLI math function names used in the JDBC function escape
-  clause.
-  @return the list
-}
-function TZAbstractDatabaseMetadata.GetNumericFunctions: string;
-begin
-  Result := '';
-end;
-
-{**
-  Gets a comma-separated list of string functions.  These are the
-  X/Open CLI string function names used in the JDBC function escape
-  clause.
-  @return the list
-}
-function TZAbstractDatabaseMetadata.GetStringFunctions: string;
-begin
-  Result := '';
-end;
-
-{**
-  Gets a comma-separated list of system functions.  These are the
-  X/Open CLI system function names used in the JDBC function escape
-  clause.
-  @return the list
-}
-function TZAbstractDatabaseMetadata.GetSystemFunctions: string;
-begin
-  Result := '';
-end;
-
-{**
-  Gets a comma-separated list of time and date functions.
-  @return the list
-}
-function TZAbstractDatabaseMetadata.GetTimeDateFunctions: string;
-begin
-  Result := '';
-end;
-
-{**
-  Gets the string that can be used to escape wildcard characters.
-  This is the string that can be used to escape '_' or '%' in
-  the string pattern style catalog search parameters.
-
-  <P>The '_' character represents any single character.
-  <P>The '%' character represents any sequence of zero or
-  more characters.
-
-  @return the string used to escape wildcard characters
-}
-function TZAbstractDatabaseMetadata.GetSearchStringEscape: string;
-begin
-  Result := '%';
-end;
-
-{**
-  Gets all the "extra" characters that can be used in unquoted
-  identifier names (those beyond a-z, A-Z, 0-9 and _).
-  @return the string containing the extra characters
-}
-function TZAbstractDatabaseMetadata.GetExtraNameCharacters: string;
-begin
-  Result := '';
-end;
-
-//--------------------------------------------------------------------
-// Functions describing which features are supported.
-
-{**
-  Is "ALTER TABLE" with add column supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsAlterTableWithAddColumn: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Is "ALTER TABLE" with drop column supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsAlterTableWithDropColumn: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Is column aliasing supported?
-
-  <P>If so, the SQL AS clause can be used to provide names for
-  computed columns or to provide alias names for columns as
-  required.
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsColumnAliasing: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Are concatenations between NULL and non-NULL values NULL?
-  For SQL-92 compliance, a JDBC technology-enabled driver will
-  return <code>true</code>.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.NullPlusNonNullIsNull: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Is the CONVERT function between SQL types supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsConvert: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Is CONVERT between the given SQL types supported?
-  @param fromType the type to convert from
-  @param toType the type to convert to
-  @return <code>true</code> if so; <code>false</code> otherwise
-  @see Types
-}
-function TZAbstractDatabaseMetadata.SupportsConvertForTypes(
-  FromType: TZSQLType; ToType: TZSQLType): Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Are table correlation names supported?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsTableCorrelationNames: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  If table correlation names are supported, are they restricted
-  to be different from the names of the tables?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsDifferentTableCorrelationNames: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Are expressions in "ORDER BY" lists supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsExpressionsInOrderBy: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Can an "ORDER BY" clause use columns not in the SELECT statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsOrderByUnrelated: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Is some form of "GROUP BY" clause supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsGroupBy: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Can a "GROUP BY" clause use columns not in the SELECT?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsGroupByUnrelated: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Can a "GROUP BY" clause add columns not in the SELECT
-  provided it specifies all the columns in the SELECT?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsGroupByBeyondSelect: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Is the escape character in "LIKE" clauses supported?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsLikeEscapeClause: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Are multiple <code>ResultSet</code> from a single execute supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsMultipleResultSets: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Can we have multiple transactions open at once (on different
-  connections)?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsMultipleTransactions: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Can columns be defined as non-nullable?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsNonNullableColumns: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Is the ODBC Minimum SQL grammar supported?
-  All JDBC Compliant<sup><font size=-2>TM</font></sup> drivers must return true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsMinimumSQLGrammar: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Is the ODBC Core SQL grammar supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsCoreSQLGrammar: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Is the ODBC Extended SQL grammar supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsExtendedSQLGrammar: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Is the ANSI92 entry level SQL grammar supported?
-  All JDBC Compliant<sup><font size=-2>TM</font></sup> drivers must return true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsANSI92EntryLevelSQL: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Is the ANSI92 intermediate SQL grammar supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsANSI92IntermediateSQL: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Is the ANSI92 full SQL grammar supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsANSI92FullSQL: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Is the SQL Integrity Enhancement Facility supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsIntegrityEnhancementFacility: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Is some form of outer join supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsOuterJoins: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Are full nested outer joins supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsFullOuterJoins: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Is there limited support for outer joins?  (This will be true
-  if supportFullOuterJoins is true.)
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsLimitedOuterJoins: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  What's the database vendor's preferred term for "schema"?
-  @return the vendor term
-}
-function TZAbstractDatabaseMetadata.GetSchemaTerm: string;
-begin
-  Result := 'Schema';
-end;
-
-{**
-  What's the database vendor's preferred term for "procedure"?
-  @return the vendor term
-}
-function TZAbstractDatabaseMetadata.GetProcedureTerm: string;
-begin
-  Result := 'Procedure';
-end;
-
-{**
-  What's the database vendor's preferred term for "catalog"?
-  @return the vendor term
-}
-function TZAbstractDatabaseMetadata.GetCatalogTerm: string;
-begin
-  Result := 'Catalog';
-end;
-
-{**
-  Does a catalog appear at the start of a qualified table name?
-  (Otherwise it appears at the end)
-  @return true if it appears at the start
-}
-function TZAbstractDatabaseMetadata.IsCatalogAtStart: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  What's the separator between catalog and table name?
-  @return the separator string
-}
-function TZAbstractDatabaseMetadata.GetCatalogSeparator: string;
-begin
-  Result := '.';
-end;
-
-{**
-  Can a schema name be used in a data manipulation statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsSchemasInDataManipulation: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can a schema name be used in a procedure call statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsSchemasInProcedureCalls: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can a schema name be used in a table definition statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsSchemasInTableDefinitions: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can a schema name be used in an index definition statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsSchemasInIndexDefinitions: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can a schema name be used in a privilege definition statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsSchemasInPrivilegeDefinitions: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can a catalog name be used in a data manipulation statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsCatalogsInDataManipulation: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can a catalog name be used in a procedure call statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsCatalogsInProcedureCalls: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can a catalog name be used in a table definition statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsCatalogsInTableDefinitions: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can a catalog name be used in an index definition statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsCatalogsInIndexDefinitions: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can a catalog name be used in a privilege definition statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsCatalogsInPrivilegeDefinitions: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Is positioned DELETE supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsPositionedDelete: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Is positioned UPDATE supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsPositionedUpdate: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Is SELECT for UPDATE supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsSelectForUpdate: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Are stored procedure calls using the stored procedure escape
-  syntax supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsStoredProcedures: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Are subqueries in comparison expressions supported?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsSubqueriesInComparisons: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Are subqueries in 'exists' expressions supported?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsSubqueriesInExists: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Are subqueries in 'in' statements supported?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsSubqueriesInIns: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Are subqueries in quantified expressions supported?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsSubqueriesInQuantifieds: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Are correlated subqueries supported?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsCorrelatedSubqueries: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Is SQL UNION supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsUnion: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Is SQL UNION ALL supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsUnionAll: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can cursors remain open across commits?
-  @return <code>true</code> if cursors always remain open;
-        <code>false</code> if they might not remain open
-}
-function TZAbstractDatabaseMetadata.SupportsOpenCursorsAcrossCommit: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can cursors remain open across rollbacks?
-  @return <code>true</code> if cursors always remain open;
-        <code>false</code> if they might not remain open
-}
-function TZAbstractDatabaseMetadata.SupportsOpenCursorsAcrossRollback: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can statements remain open across commits?
-  @return <code>true</code> if statements always remain open;
-        <code>false</code> if they might not remain open
-}
-function TZAbstractDatabaseMetadata.SupportsOpenStatementsAcrossCommit: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Can statements remain open across rollbacks?
-  @return <code>true</code> if statements always remain open;
-        <code>false</code> if they might not remain open
-}
-function TZAbstractDatabaseMetadata.SupportsOpenStatementsAcrossRollback: Boolean;
-begin
-  Result := True;
-end;
-
-//----------------------------------------------------------------------
-// The following group of methods exposes various limitations
-// based on the target database with the current driver.
-// Unless otherwise specified, a result of zero means there is no
-// limit, or the limit is not known.
-
-{**
-  How many hex characters can you have in an inline binary literal?
-  @return max binary literal length in hex characters;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZAbstractDatabaseMetadata.GetMaxBinaryLiteralLength: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the max length for a character literal?
-  @return max literal length;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZAbstractDatabaseMetadata.GetMaxCharLiteralLength: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the limit on column name length?
-  @return max column name length;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZAbstractDatabaseMetadata.GetMaxColumnNameLength: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum number of columns in a "GROUP BY" clause?
-  @return max number of columns;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZAbstractDatabaseMetadata.GetMaxColumnsInGroupBy: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum number of columns allowed in an index?
-  @return max number of columns;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZAbstractDatabaseMetadata.GetMaxColumnsInIndex: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum number of columns in an "ORDER BY" clause?
-  @return max number of columns;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZAbstractDatabaseMetadata.GetMaxColumnsInOrderBy: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum number of columns in a "SELECT" list?
-  @return max number of columns;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZAbstractDatabaseMetadata.GetMaxColumnsInSelect: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum number of columns in a table?
-  @return max number of columns;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZAbstractDatabaseMetadata.GetMaxColumnsInTable: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  How many active connections can we have at a time to this database?
-  @return max number of active connections;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZAbstractDatabaseMetadata.GetMaxConnections: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum cursor name length?
-  @return max cursor name length in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZAbstractDatabaseMetadata.GetMaxCursorNameLength: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  Retrieves the maximum number of bytes for an index, including all
-  of the parts of the index.
-  @return max index length in bytes, which includes the composite of all
-   the constituent parts of the index;
-   a result of zero means that there is no limit or the limit is not known
-}
-function TZAbstractDatabaseMetadata.GetMaxIndexLength: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum length allowed for a schema name?
-  @return max name length in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZAbstractDatabaseMetadata.GetMaxSchemaNameLength: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum length of a procedure name?
-  @return max name length in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZAbstractDatabaseMetadata.GetMaxProcedureNameLength: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum length of a catalog name?
-  @return max name length in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZAbstractDatabaseMetadata.GetMaxCatalogNameLength: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum length of a single row?
-  @return max row size in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZAbstractDatabaseMetadata.GetMaxRowSize: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  Did getMaxRowSize() include LONGVARCHAR and LONGVARBINARY
-  blobs?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.DoesMaxRowSizeIncludeBlobs: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  What's the maximum length of an SQL statement?
-  @return max length in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZAbstractDatabaseMetadata.GetMaxStatementLength: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  How many active statements can we have open at one time to this
-  database?
-  @return the maximum number of statements that can be open at one time;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZAbstractDatabaseMetadata.GetMaxStatements: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum length of a table name?
-  @return max name length in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZAbstractDatabaseMetadata.GetMaxTableNameLength: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum number of tables in a SELECT statement?
-  @return the maximum number of tables allowed in a SELECT statement;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZAbstractDatabaseMetadata.GetMaxTablesInSelect: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum length of a user name?
-  @return max user name length  in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZAbstractDatabaseMetadata.GetMaxUserNameLength: Integer;
-begin
-  Result := 0;
-end;
-
-//----------------------------------------------------------------------
-
-{**
-  What's the database's default transaction isolation level?  The
-  values are defined in <code>java.sql.Connection</code>.
-  @return the default isolation level
-  @see Connection
-}
-function TZAbstractDatabaseMetadata.GetDefaultTransactionIsolation:
-  TZTransactIsolationLevel;
-begin
-  Result := tiReadCommitted;
-end;
-
-{**
-  Are transactions supported? If not, invoking the method
-  <code>commit</code> is a noop and the isolation level is TRANSACTION_NONE.
-  @return <code>true</code> if transactions are supported; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsTransactions: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Does this database support the given transaction isolation level?
-  @param level the values are defined in <code>java.sql.Connection</code>
-  @return <code>true</code> if so; <code>false</code> otherwise
-  @see Connection
-}
-function TZAbstractDatabaseMetadata.SupportsTransactionIsolationLevel(
-  Level: TZTransactIsolationLevel): Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Are both data definition and data manipulation statements
-  within a transaction supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.
-  SupportsDataDefinitionAndDataManipulationTransactions: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Are only data manipulation statements within a transaction
-  supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.
-  SupportsDataManipulationTransactionsOnly: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Does a data definition statement within a transaction force the
-  transaction to commit?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.DataDefinitionCausesTransactionCommit: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Is a data definition statement within a transaction ignored?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.DataDefinitionIgnoredInTransactions: Boolean;
-begin
-  Result := False;
+  Result := FDatabaseInfo;
 end;
 
 {**
@@ -2625,8 +2742,6 @@ function TZAbstractDatabaseMetadata.GetBestRowIdentifier(const Catalog: string;
   const Schema: string; const Table: string; Scope: Integer; Nullable: Boolean): IZResultSet;
 var
   Key: string;
-  IndexName: string;
-  ColumnNames: TStrings;
 begin
   Key := GetBestRowIdentifierCacheKey(Catalog, Schema, Table, Scope,
     Nullable);
@@ -3367,8 +3482,6 @@ end;
 function TZAbstractDatabaseMetadata.UncachedGetCrossReference(const PrimaryCatalog: string;
   const PrimarySchema: string; const PrimaryTable: string; const ForeignCatalog: string;
   const ForeignSchema: string; const ForeignTable: string): IZResultSet;
-var
-  Key: string;
 begin
     Result := ConstructVirtualResultSet(CrossRefColumnsDynArray);
 end;
@@ -3629,40 +3742,6 @@ begin
 end;
 
 {**
-  Does the database support the given result set type?
-  @param type defined in <code>java.sql.ResultSet</code>
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsResultSetType(
-  _Type: TZResultSetType): Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Does the database support the concurrency type in combination
-  with the given result set type?
-
-  @param type defined in <code>java.sql.ResultSet</code>
-  @param concurrency type defined in <code>java.sql.ResultSet</code>
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsResultSetConcurrency(
-  _Type: TZResultSetType; Concurrency: TZResultSetConcurrency): Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Indicates whether the driver supports batch updates.
-  @return true if the driver supports batch updates; false otherwise
-}
-function TZAbstractDatabaseMetadata.SupportsBatchUpdates: Boolean;
-begin
-  Result := True;
-end;
-
-{**
 
   Gets a description of the user-defined types defined in a particular
   schema.  Schema-specific UDTs may have type JAVA_OBJECT, STRUCT,
@@ -3776,7 +3855,7 @@ function TZAbstractDatabaseMetadata.AddEscapeCharToWildcards(
 var i:Integer;
     EscapeChar : string;
 begin
-  EscapeChar:=GetSearchStringEscape;
+  EscapeChar:=GetDatabaseInfo.GetSearchStringEscape;
   if WildcardsArray<>nil then
   begin
     Result:=StringReplace(Pattern,EscapeChar,EscapeChar+EscapeChar,[rfReplaceAll]);
@@ -4260,17 +4339,17 @@ begin
   else if IsSpecialCase(Value) then
     Result := True
   else if IsLowerCase(Value) then
-    Result := not Metadata.StoresLowerCaseIdentifiers
+    Result := not Metadata.GetDatabaseInfo.StoresLowerCaseIdentifiers
   else if IsUpperCase(Value) then
-    Result := not Metadata.StoresUpperCaseIdentifiers
+    Result := not Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers
   else
-    Result := not Metadata.StoresMixedCaseIdentifiers;
+    Result := not Metadata.GetDatabaseInfo.StoresMixedCaseIdentifiers;
 
   { Checks for reserved keywords. }
   if not Result then
   begin
     Keywords := ',' + AnsiSQLKeywords + ','
-      + LowerCase(Metadata.GetSQLKeywords) + ',';
+      + LowerCase(Metadata.GetDatabaseInfo.GetSQLKeywords) + ',';
     Result := Pos(',' + LowerCase(Value) + ',', Keywords) > 0;
   end;
 end;
@@ -4283,7 +4362,7 @@ function TZDefaultIdentifierConvertor.IsQuoted(const Value: string): Boolean;
 var
   QuoteDelim: string;
 begin
-  QuoteDelim := Metadata.GetIdentifierQuoteString;
+  QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
   Result := (QuoteDelim <> '') and (Value <> '') and (QuoteDelim[1] = Value[1]);
 end;
 
@@ -4297,22 +4376,22 @@ begin
   if IsQuoted(Value) then
   begin
     Result := Copy(Value, 2, Length(Value) - 2);
-    if not Metadata.StoresMixedCaseQuotedIdentifiers then
+    if not Metadata.GetDatabaseInfo.StoresMixedCaseQuotedIdentifiers then
     begin
-      if Metadata.StoresLowerCaseQuotedIdentifiers then
+      if Metadata.GetDatabaseInfo.StoresLowerCaseQuotedIdentifiers then
         Result := LowerCase(Result)
-      else if Metadata.StoresUpperCaseQuotedIdentifiers then
+      else if Metadata.GetDatabaseInfo.StoresUpperCaseQuotedIdentifiers then
         Result := UpperCase(Result);
     end;
   end
   else
   begin
     Result := Value;
-    if not Metadata.StoresMixedCaseIdentifiers then
+    if not Metadata.GetDatabaseInfo.StoresMixedCaseIdentifiers then
     begin
-      if Metadata.StoresLowerCaseIdentifiers then
+      if Metadata.GetDatabaseInfo.StoresLowerCaseIdentifiers then
         Result := LowerCase(Result)
-      else if Metadata.StoresUpperCaseIdentifiers then
+      else if Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers then
         Result := UpperCase(Result);
     end;
   end;
@@ -4330,7 +4409,7 @@ begin
   Result := Value;
   if IsCaseSensitive(Value) then
   begin
-    QuoteDelim := Metadata.GetIdentifierQuoteString;
+    QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
     if Length(QuoteDelim) > 1 then
       Result := QuoteDelim[1] + Result + QuoteDelim[2]
     else if Length(QuoteDelim) = 1 then
