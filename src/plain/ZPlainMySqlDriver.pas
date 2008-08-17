@@ -270,6 +270,8 @@ type
     function GetFieldCount(Res: PZMySQLResult): Integer;
     function GetFieldName(Field: PZMySQLField): PChar;
     function GetFieldTable(Field: PZMySQLField): PChar;
+    function GetFieldOrigTable(Field: PZMySQLField): PChar;
+    function GetFieldOrigName(Field: PZMySQLField): PChar;
     function GetFieldLength(Field: PZMySQLField): Integer;
     function GetFieldMaxLength(Field: PZMySQLField): Integer;
     function GetFieldDecimals(Field: PZMySQLField): Integer;
@@ -393,6 +395,8 @@ type
     function GetFieldCount(Res: PZMySQLResult): Integer;
     function GetFieldName(Field: PZMySQLField): PChar;
     function GetFieldTable(Field: PZMySQLField): PChar;
+    function GetFieldOrigTable(Field: PZMySQLField): PChar;
+    function GetFieldOrigName(Field: PZMySQLField): PChar;
     function GetFieldLength(Field: PZMySQLField): Integer;
     function GetFieldMaxLength(Field: PZMySQLField): Integer;
     function GetFieldDecimals(Field: PZMySQLField): Integer;
@@ -524,6 +528,8 @@ type
     function GetFieldCount(Res: PZMySQLResult): Integer;
     function GetFieldName(Field: PZMySQLField): PChar;
     function GetFieldTable(Field: PZMySQLField): PChar;
+    function GetFieldOrigTable(Field: PZMySQLField): PChar;
+    function GetFieldOrigName(Field: PZMySQLField): PChar;
     function GetFieldLength(Field: PZMySQLField): Integer;
     function GetFieldMaxLength(Field: PZMySQLField): Integer;
     function GetFieldDecimals(Field: PZMySQLField): Integer;
@@ -1045,6 +1051,16 @@ end;
 function TZMySQL41PlainDriver.GetFieldTable(Field: PZMySQLField): PChar;
 begin
   Result := ZPlainMySql41.PMYSQL_FIELD(Field)^.table;
+end;
+
+function TZMySQL41PlainDriver.GetFieldOrigTable(Field: PZMySQLField): PChar;
+begin
+  Result := ZPlainMySql41.PMYSQL_FIELD(Field)^.org_table;
+end;
+
+function TZMySQL41PlainDriver.GetFieldOrigName(Field: PZMySQLField): PChar;
+begin
+  Result := ZPlainMySql41.PMYSQL_FIELD(Field)^.org_name;
 end;
 
 function TZMySQL41PlainDriver.GetFieldData(Row: PZMySQLRow;
@@ -1575,6 +1591,16 @@ end;
 function TZMySQL5PlainDriver.GetFieldTable(Field: PZMySQLField): PChar;
 begin
   Result := ZPlainMySql5.PMYSQL_FIELD(Field)^.table;
+end;
+
+function TZMySQL5PlainDriver.GetFieldOrigTable(Field: PZMySQLField): PChar;
+begin
+  Result := ZPlainMySql5.PMYSQL_FIELD(Field)^.org_table;
+end;
+
+function TZMySQL5PlainDriver.GetFieldOrigName(Field: PZMySQLField): PChar;
+begin
+  Result := ZPlainMySql5.PMYSQL_FIELD(Field)^.org_name;
 end;
 
 function TZMySQL5PlainDriver.GetFieldData(Row: PZMySQLRow;
