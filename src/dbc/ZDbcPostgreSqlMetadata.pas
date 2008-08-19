@@ -286,11 +286,13 @@ type
     function UncachedGetVersionColumns(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
     function UncachedGetTypeInfo: IZResultSet; override;
+
   public
     constructor Create(Connection: TZAbstractConnection; Url: string;
       Info: TStrings);
     destructor Destroy; override;
-  end;
+    function GetIdentifierConvertor: IZIdentifierConvertor; override; 
+ end;
 
 implementation
 
@@ -3066,6 +3068,11 @@ begin
    else Result := 'UNKNOWN';
  end;
 end;
+
+function TZPostgreSQLDatabaseMetadata.GetIdentifierConvertor: IZIdentifierConvertor;
+begin
+  Result:=TZPostgreSQLIdentifierConvertor.Create(Self);
+end; 
 
 { TZPostgresIdentifierConvertor } 
  

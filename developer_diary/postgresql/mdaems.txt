@@ -26,4 +26,6 @@
 
 20080721 : Updated PostgreSQL keywords list - by pawelsel - Mantis Bug 122
 
-20080816 : Added postgres specific (Metadata) quoting functions - py pawelsel - Mantis Bug 126
+20080816 : Added postgres specific (Metadata) quoting functions - by pawelsel - Mantis Bug 126
+
+20080820 : Part 2 : Added postgres specific (Metadata) quoting functions - by pawelsel - Mantis Bug 126
