@@ -35,3 +35,5 @@
 20080606 : Added support for Firebird hard commits - by hgourvest
 
 20080816 : Detection of calculated columns (set readonly, not writable) - by pjonard - Mantis Bug 133
+
+20080820 : Part 2: Detection of calculated columns (set readonly, not writable) - by pjonard - Mantis Bug 133
