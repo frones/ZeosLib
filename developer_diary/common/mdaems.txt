@@ -243,3 +243,5 @@
 20080817 : Sanity check: assert that row buffer length is not exceeded at a proper time - by HeidiSQL Team (Heidisql SVN Rev.1410)
 
 20080820 : Memory Leak in TZIBEventAlerter - by magnomp - See http://zeos.firmos.at/viewtopic.php?t=1962
+
+20080820 : Added overloaded version of ZConnection.GetTablenNames, allowing the user to specify the table types. - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=1960

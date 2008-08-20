@@ -1740,12 +1740,14 @@ begin
 
     if (Types = nil) or (Length(Types) = 0) then
     begin
-      SetLength(LTypes, 5);
+      SetLength(LTypes, 3);
+      // SetLength(LTypes, 6);
       LTypes[0] := 'TABLE';
       LTypes[1] := 'VIEW';
-      LTypes[2] := 'INDEX';
-      LTypes[3] := 'SEQUENCE';
-      LTypes[4] := 'TEMPORARY TABLE';
+      LTypes[2] := 'TEMPORARY TABLE';
+      // LTypes[3] := 'SYSTEM TABLE';
+      // LTypes[4] := 'SYSTEM TOAST TABLE';
+      // LTypes[5] := 'SYSTEM VIEW';
     end
     else
       LTypes := Types;

@@ -29,3 +29,5 @@
 20080816 : Added postgres specific (Metadata) quoting functions - by pawelsel - Mantis Bug 126
 
 20080820 : Part 2 : Added postgres specific (Metadata) quoting functions - by pawelsel - Mantis Bug 126
+
+20080820 : Limited default output of TZPostgresSQLDatabaseMetadata.GetTables to 'TABLE', 'VIEW' and 'TEMPORARY TABLE' - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=1960

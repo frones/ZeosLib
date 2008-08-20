@@ -211,6 +211,7 @@ type
     procedure GetSchemaNames(List: TStrings);
     procedure GetTableNames(const Pattern: string; List: TStrings);overload;
     procedure GetTableNames(const tablePattern,schemaPattern: string; List: TStrings);overload;
+    procedure GetTableNames(const tablePattern,schemaPattern: string; Types: TStringDynArray; List: TStrings);overload;
     procedure GetColumnNames(const TablePattern, ColumnPattern: string; List: TStrings);
 
     procedure GetStoredProcNames(const Pattern: string; List: TStrings);
@@ -1086,17 +1087,8 @@ end;
   @param List a string list to fill out.
 }
 procedure TZConnection.GetTableNames(const Pattern: string; List: TStrings);
-var
-  Metadata: IZDatabaseMetadata;
-  ResultSet: IZResultSet;
 begin
-  CheckConnected;
-
-  List.Clear;
-  Metadata := DbcConnection.GetMetadata;
-  ResultSet := Metadata.GetTables('', '', Pattern, nil);
-  while ResultSet.Next do
-    List.Add(ResultSet.GetStringByName('TABLE_NAME'));
+  GetTableNames('',Pattern,nil,List);
 end;
 
 {**
@@ -1106,6 +1098,25 @@ end;
   @param List a string list to fill out.
 }
 procedure TZConnection.GetTableNames(const tablePattern,schemaPattern: string; List: TStrings);
+begin
+  GetTableNames(tablePattern,schemaPattern,nil,List);
+end;
+
+{**
+  Fills string list with table names.
+  @param tablePattern a pattern for table names.
+  @param schemaPattern a pattern for schema names.
+  @param types a TStringDynArray specifying the table types to look for.
+    possible values can be found by reading
+     TZConnection.DbcConnection.GetMetadata.GetTableTypes
+     eg. for PostGreSQL this includes :'TABLE', 'VIEW', 'INDEX', 'SEQUENCE',
+                                       'SYSTEM TABLE', 'SYSTEM TOAST TABLE',
+                                       'SYSTEM TOAST INDEX', 'SYSTEM VIEW',
+                                       'SYSTEM INDEX', 'TEMPORARY TABLE',
+                                       'TEMPORARY INDEX'
+  @param List a string list to fill out.
+}
+procedure TZConnection.GetTableNames(const tablePattern,schemaPattern: string; Types: TStringDynArray; List: TStrings);
 var
   Metadata: IZDatabaseMetadata;
   ResultSet: IZResultSet;
@@ -1114,7 +1125,7 @@ begin
 
   List.Clear;
   Metadata := DbcConnection.GetMetadata;
-  ResultSet := Metadata.GetTables('', schemaPattern, tablePattern, nil);
+  ResultSet := Metadata.GetTables('', schemaPattern, tablePattern, types);
   while ResultSet.Next do
     List.Add(ResultSet.GetStringByName('TABLE_NAME'));
 end;
