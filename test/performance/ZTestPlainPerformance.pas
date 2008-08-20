@@ -277,36 +277,17 @@ end;
 }
 procedure TZPlainMySQLPerformanceTestCase.SetUp;
 var
-{$IFDEF ENABLE_MYSQL_DEPRECATED}
-  MySQL320PlainDriver: IZMySQLPlainDriver;
-  MySQL323PlainDriver: IZMySQLPlainDriver;
-  MySQL40PlainDriver: IZMySQLPlainDriver;
-{$ENDIF ENABLE_MYSQL_DEPRECATED}
   MySQL41PlainDriver: IZMySQLPlainDriver;
   MySQL5PlainDriver: IZMySQLPlainDriver;
   MySQLD41PlainDriver: IZMySQLPlainDriver;
   MySQLD5PlainDriver: IZMySQLPlainDriver;
 begin
-{$IFDEF ENABLE_MYSQL_DEPRECATED}
-  MySQL320PlainDriver := TZMySQL320PlainDriver.Create;
-  MySQL323PlainDriver := TZMySQL323PlainDriver.Create;
-  MySQL40PlainDriver := TZMySQL40PlainDriver.Create;
-{$ENDIF ENABLE_MYSQL_DEPRECATED}
   MySQL41PlainDriver := TZMySQL41PlainDriver.Create;
   MySQL5PlainDriver := TZMySQL5PlainDriver.Create;
   MySQLD41PlainDriver := TZMySQLD41PlainDriver.Create;
   MySQLD5PlainDriver := TZMySQLD5PlainDriver.Create;
 
-  if false then
-{$IFDEF ENABLE_MYSQL_DEPRECATED}
-  else if Protocol = MySQL320PlainDriver.GetProtocol then
-    PlainDriver := MySQL320PlainDriver
-  else if Protocol = MySQL323PlainDriver.GetProtocol then
-    PlainDriver := MySQL323PlainDriver
-  else if Protocol = MySQL40PlainDriver.GetProtocol then
-    PlainDriver := MySQL40PlainDriver
-{$ENDIF ENABLE_MYSQL_DEPRECATED}
-  else if Protocol = MySQL41PlainDriver.GetProtocol then
+  if Protocol = MySQL41PlainDriver.GetProtocol then
     PlainDriver := MySQL41PlainDriver
   else if Protocol = MySQL5PlainDriver.GetProtocol then
     PlainDriver := MySQL5PlainDriver

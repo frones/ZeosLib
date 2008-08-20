@@ -270,6 +270,8 @@ function DefineFieldIndices(const FieldsLookupTable: TIntegerDynArray;
 procedure SplitQualifiedObjectName(QualifiedName: string;
   var Catalog, Schema, ObjectName: string);
 
+function WideStringStream(const AString: WideString): TStream;
+
 {** Common variables. }
 var
   CommonTokenizer: IZTokenizer;
@@ -312,8 +314,10 @@ begin
       Result := ftMemo;
     stBinaryStream:
       Result := ftBlob;
-    stUnicodeString, stUnicodeStream:
+    stUnicodeString:
       Result := ftWideString;
+    stUnicodeStream:
+      Result := {$IFDEF VER150BELOW}ftWideString{$ELSE}ftWideMemo{$ENDIF};
     else
       Result := ftUnknown;
   end;
@@ -354,7 +358,11 @@ begin
     ftBlob:
       Result := stBinaryStream;
     ftWideString:
-      Result := stUnicodeString;//!!!I do not know if it is a stUnicodeString or stUnicodeStream
+      Result := stUnicodeString;
+    {$IFNDEF VER150BELOW}
+    ftWideMemo:
+      Result := stUnicodeStream;
+    {$ENDIF}
     else
       Result := stUnknown;
   end;
@@ -445,7 +453,7 @@ begin
         RowAccessor.SetTime(FieldIndex, ResultSet.GetTime(ColumnIndex));
       ftDateTime:
         RowAccessor.SetTimestamp(FieldIndex, ResultSet.GetTimestamp(ColumnIndex));
-      ftMemo, ftBlob:
+      ftMemo, ftBlob {$IFNDEF VER150BELOW}, ftWideMemo{$ENDIF}:
         RowAccessor.SetBlob(FieldIndex, ResultSet.GetBlob(ColumnIndex));
     end;
 
@@ -526,6 +534,17 @@ begin
             Stream.Free;
           end;
         end;
+      {$IFNDEF VER150BELOW}
+      ftWideMemo:
+        begin
+          Stream := RowAccessor.GetUnicodeStream(FieldIndex, WasNull);
+          try
+            ResultSet.UpdateUnicodeStream(ColumnIndex, Stream);
+          finally
+            Stream.Free;
+          end;
+        end;
+      {$ENDIF}
       ftBlob:
         begin
           Stream := RowAccessor.GetBinaryStream(FieldIndex, WasNull);
@@ -1079,7 +1098,7 @@ begin
   for I := 0 to Fields.Count - 1 do
   begin
     if (Fields[I].FieldKind = fkData)
-      and not (Fields[I].DataType in [ftBlob, ftMemo, ftBytes]) then
+      and not (Fields[I].DataType in [ftBlob, ftMemo, ftBytes {$IFNDEF VER150BELOW}, ftWideMemo{$ENDIF}]) then
     begin
       if Result <> '' then
         Result := Result + ',';
@@ -1422,6 +1441,13 @@ begin
   finally
     SL.Free;
   end;
+end;
+
+function WideStringStream(const AString: WideString): TStream;
+begin
+  Result := TMemoryStream.Create;
+  Result.Write(PWideChar(AString)^, Length(AString)*2);
+  Result.Position := 0;
 end;
 
 initialization

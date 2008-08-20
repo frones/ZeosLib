@@ -661,6 +661,17 @@ begin
                 Stream.Free;
               end;
             end;
+          {$IFNDEF VER150BELOW}
+          ftWideMemo:
+            begin
+              Stream := WideStringStream(ParamValue.AsWideString);
+              try
+                Statement.SetUnicodeStream(I + 1, Stream);
+              finally
+                Stream.Free;
+              end;
+            end;
+          {$ENDIF}
           ftBlob, ftGraphic:
             begin
               Stream := TStringStream.Create(ParamValue.AsBlob);

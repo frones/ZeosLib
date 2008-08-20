@@ -83,6 +83,8 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetString(ColumnIndex: Integer): string; override;
+    function GetUnicodeString(ColumnIndex: Integer): WideString; override;
+    function GetUnicodeStream(ColumnIndex: Integer): TStream; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -193,6 +195,12 @@ begin
   end;
 
   SQLType := PostgreSQLToSQLType(Connection, TypeOid);
+
+  if Connection.GetCharactersetCode = csUTF8 then
+    case SQLType of
+      stString: SQLType := stUnicodeString;
+      stAsciiStream: SQLType := stUnicodeStream;
+    end;
 
   if SQLType <> stUnknown then
     ColumnInfo.ColumnType := SQLType
@@ -553,6 +561,22 @@ begin
   else Result := MySQLTimestampToDateTime(Value);
 end;
 
+function TZPostgreSQLResultSet.GetUnicodeStream(ColumnIndex: Integer): TStream;
+var
+  Data: WideString;
+begin
+  Data := GetUnicodeString(ColumnIndex);
+  Result := TMemoryStream.Create;
+  Result.Write(PWideChar(Data)^, Length(Data)*2);
+  Result.Position := 0;
+end;
+
+function TZPostgreSQLResultSet.GetUnicodeString(
+  ColumnIndex: Integer): WideString;
+begin
+  Result := UTF8Decode(GetString(ColumnIndex));
+end;
+
 {**
   Returns the value of the designated column in the current row
   of this <code>ResultSet</code> object as a <code>Blob</code> object
@@ -592,7 +616,11 @@ begin
         if GetMetadata.GetColumnType(ColumnIndex) = stBinaryStream then
           Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)))
         else
-          Stream := TStringStream.Create(GetString(ColumnIndex));
+          begin
+            if ((Statement.GetConnection as IZPostgreSQLConnection).GetCharactersetCode = csUTF8) then
+              Stream := GetUnicodeStream(ColumnIndex) else
+              Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)));
+          end;
         Result := TZAbstractBlob.CreateWithStream(Stream);
       finally
         if Assigned(Stream) then

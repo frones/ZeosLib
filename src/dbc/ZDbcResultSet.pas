@@ -2829,8 +2829,19 @@ end;
   @return a string which contains the stored data.
 }
 function TZAbstractBlob.GetUnicodeString: WideString;
+var
+  Buffer: String;
+  Len: Integer;
 begin
-  Result := GetString;
+  Buffer := GetString;
+  Len := System.Length(Buffer);
+
+  if Len > 0 then
+  begin
+    Assert(Len mod 2 = 0);
+    SetLength(Result, Len div 2);
+    System.Move(PChar(Buffer)^, Pointer(Result)^, Len);
+  end;
 end;
 
 {**

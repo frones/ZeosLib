@@ -376,54 +376,7 @@ type
   PMYSQL_METHODS =  ^MYSQL_METHODS;
   PMYSQL = ^MYSQL;
 
-{$IFDEF ENABLE_MYSQL_DEPRECATED}
- // This Structure Changes from Time to Time, so avoid using it !
- // Used by old GetStatus ,function necessary for mysql3.20
-  MYSQL = record
-    _net:            NET;
-    connector_fd:    Pointer;
-    host:            PChar;
-    user:            PChar;
-    passwd:          PChar;
-    unix_socket:     PChar;
-    server_version:  PChar;
-    host_info:       PChar;
-    info:            PChar;
-    db:              PChar;
-    charset:         PChar;
-    fields:          PMYSQL_FIELD;
-    field_alloc:     MEM_ROOT;
-    affected_rows:   Int64;
-    insert_id:       Int64;
-    extra_info:      Int64;
-    thread_id:       LongInt;
-    packet_length:   LongInt;
-    port:            Cardinal;
-    client_flag:     LongInt;
-    server_capabilities: LongInt;
-    protocol_version: Cardinal;
-    field_count:     Cardinal;
-    server_status:   Cardinal;
-    server_language: Cardinal;
-    warning_count:   Cardinal;
-    options:         _mysql_options;
-    status:          TMySqlStatus;
-    free_me:         Byte;
-    reconnect:       Byte;
-    scramble:   array[1..SCRAMBLE_LENGTH+1] of Char;
-    rpl_pivot:       Byte;
-    master:          PMYSQL;
-    next_slave:      PMYSQL;
-    last_used_slave: PMYSQL;
-    last_used_con:   PMYSQL;
-    stmts:           Pointer; //PLIST;            {list of all statements }
-    methods:         Pointer;  //PMYSQL_METHODS;
-    thd:             Pointer;
-    unbuffered_fetch_owner: PByte;
-  end;
-{$ELSE}
   MYSQL  = pointer;
-{$ENDIF ENABLE_MYSQL_DEPRECATED}
 
   PREP_STMT_STATE=(
     MY_ST_UNKNOWN,

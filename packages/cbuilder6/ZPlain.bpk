@@ -9,7 +9,6 @@
       build\ZPlainDbLibSybaseAse125.obj build\ZPlainDriver.obj 
       build\ZPlainInterbase5.obj build\ZPlainInterbase6.obj 
       build\ZPlainInterbaseDriver.obj build\ZPlainLoader.obj 
-      build\ZPlainMySql320.obj build\ZPlainMySql323.obj build\ZPlainMySql40.obj 
       build\ZPlainMySql41.obj build\ZPlainMySqlDriver.obj 
       build\ZPlainPostgreSql7.obj build\ZPlainPostgreSql8.obj build\ZPlainDb2.obj
       build\ZPlainDb2Driver.obj build\ZPlainFirebird10.obj 
@@ -80,10 +79,7 @@
       <FILE FILENAME="..\..\src\plain\ZPlainInterbase6.pas" FORMNAME="" UNITNAME="ZPlainInterbase6" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\plain\ZPlainInterbaseDriver.pas" FORMNAME="" UNITNAME="ZPlainInterbaseDriver" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\plain\ZPlainLoader.pas" FORMNAME="" UNITNAME="ZPlainLoader" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="..\..\src\plain\ZPlainMySql40.pas" FORMNAME="" UNITNAME="ZPlainMySql40" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\plain\ZPlainMySql41.pas" FORMNAME="" UNITNAME="ZPlainMySql41" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="..\..\src\plain\ZPlainMySql320.pas" FORMNAME="" UNITNAME="ZPlainMySql320" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="..\..\src\plain\ZPlainMySql323.pas" FORMNAME="" UNITNAME="ZPlainMySql323" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\plain\ZPlainMySqlDriver.pas" FORMNAME="" UNITNAME="ZPlainMySqlDriver" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\plain\ZPlainPostgreSql7.pas" FORMNAME="" UNITNAME="ZPlainPostgreSql7" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\plain\ZPlainPostgreSql8.pas" FORMNAME="" UNITNAME="ZPlainPostgreSql8" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>

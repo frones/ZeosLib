@@ -51,11 +51,6 @@ contains
 {$ENDIF}
 
 {$IFDEF ENABLE_MYSQL}
-  {$IFDEF ENABLE_MYSQL_DEPRECATED}
-    ZPlainMySql320 in '..\..\src\plain\ZPlainMySql320.pas',
-    ZPlainMySql323 in '..\..\src\plain\ZPlainMySql323.pas',
-    ZPlainMySql40 in '..\..\src\plain\ZPlainMySql40.pas',
-  {$ENDIF}
   ZPlainMySql41 in '..\..\src\plain\ZPlainMySql41.pas',
   ZPlainMySql5 in '..\..\src\plain\ZPlainMySql5.pas',
   ZPlainMySqlDriver in '..\..\src\plain\ZPlainMySqlDriver.pas',
