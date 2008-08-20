@@ -215,8 +215,7 @@ begin
 }
 
   FThreads.Free;
-  if Assigned(FEvents) then
-    TStringList(FEvents).OnChange := nil;
+  FEvents.Free;
 
   inherited Destroy;
 end;

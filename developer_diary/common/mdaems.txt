@@ -241,3 +241,5 @@
 20080816 : Splitted IZDatabaseMetadata into IZDatabaseMetadata (retrieves info about DB content) and IZDatabaseInfo (retrieves info about server properties) - by technobot
 
 20080817 : Sanity check: assert that row buffer length is not exceeded at a proper time - by HeidiSQL Team (Heidisql SVN Rev.1410)
+
+20080820 : Memory Leak in TZIBEventAlerter - by magnomp - See http://zeos.firmos.at/viewtopic.php?t=1962
