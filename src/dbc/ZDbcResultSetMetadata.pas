@@ -60,7 +60,7 @@ interface
 uses
   Classes, SysUtils, Contnrs, ZDbcIntfs, ZClasses, ZCollections,
   ZGenericSqlAnalyser,
-{$IFDEF VER130BELOW}
+{$IFDEF FPC}
   {$IFDEF WIN32}
     Comobj,
   {$ENDIF}

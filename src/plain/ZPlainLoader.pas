@@ -57,7 +57,7 @@ interface
 
 {$I ZPlain.inc}
 
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
 uses Types;
 {$ELSE}
 uses ZCompatibility;

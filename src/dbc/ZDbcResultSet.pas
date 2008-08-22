@@ -62,10 +62,9 @@ uses
   Windows,
 {$ENDIF MSWINDOWS}
   Classes, SysUtils, Contnrs, ZDbcIntfs, ZClasses, ZCollections, ZSysUtils,
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   Types,
-{$ENDIF}
-{$IFDEF VER130BELOW}
+{$ELSE}
   {$IFDEF WIN32}
     Comobj,
   {$ENDIF}
@@ -2661,11 +2660,7 @@ begin
         vtString:
           Result := AnsiCompareStr(Value1.VString, Value2.VString);
         vtUnicodeString:
-        {$IFNDEF VER130BELOW}
           Result := WideCompareStr(Value1.VUnicodeString, Value2.VUnicodeString);
-        {$ELSE}
-          Result := AnsiCompareStr(Value1.VUnicodeString, Value2.VUnicodeString);
-        {$ENDIF}
       end;
       if Result <> 0 then
       begin

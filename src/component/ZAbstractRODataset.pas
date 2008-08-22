@@ -61,7 +61,7 @@ uses
 {$IFNDEF UNIX}
   Windows,
 {$ENDIF}
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   Types,
   Variants,
 {$ENDIF}
@@ -116,7 +116,7 @@ type
   {** Abstract dataset component optimized for read/only access. }
   TZAbstractRODataset = class(TDataSet)
   private
-{$IFDEF VER130BELOW}
+{$IFDEF FPC}
     FUniDirectional: Boolean;
 {$ENDIF}
     FCurrentRow: Integer;
@@ -254,7 +254,7 @@ type
     property ReadOnly: Boolean read GetReadOnly write SetReadOnly default True;
     property ShowRecordTypes: TUpdateStatusSet read GetShowRecordTypes
       write SetShowRecordTypes default [usUnmodified, usModified, usInserted];
-{$IFDEF VER130BELOW}
+{$IFDEF FPC}
     property IsUniDirectional: Boolean read FUniDirectional
       write FUnidirectional default False;
 {$ENDIF}
@@ -890,11 +890,7 @@ begin
     try
       OnFilterRecord(Self, Result);
     except
-    {$IFNDEF VER130BELOW}
         ApplicationHandleException(Self);
-    {$ELSE}
-        ShowException(ExceptObject, ExceptAddr);
-    {$ENDIF}
     end;
 
     CurrentRow := SavedRow;
@@ -1021,7 +1017,7 @@ begin
             Statement.SetDate(I + 1, Param.AsDate);
           ftTime:
             Statement.SetTime(I + 1, Param.AsTime);
-          ftDateTime{$IFNDEF VER130}, ftTimestamp{$ENDIF}:
+          ftDateTime, ftTimestamp:
             Statement.SetTimestamp(I + 1, Param.AsDateTime);
           ftMemo:
             begin
@@ -2091,18 +2087,7 @@ begin
   if not (Self is TZAbstractDataset) then
     RaiseReadOnlyError;
 
-{$IFNDEF VER130BELOW}
-   // Delphi 5 checks required fields (= not nullable) during post.
-   // For other compilers we have a more elaborate check here
-   // allowing AutoIncrement fields and defaulted fields only to be null at insert.
-   // We override standard Delphi and Fpc code.
-//  inherited;
   Checkrequired;
-{$ELSE}
-  {$IFDEF FPC}
-    Checkrequired;
-  {$ENDIF}
-{$ENDIF}
 end;
 
 {**
@@ -3138,7 +3123,7 @@ const
     ftFloat, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
     ftInteger, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftUnknown,
     ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
-    ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString{$IFNDEF VER130}, ftTimestamp, ftFMTBcd{$ENDIF});
+    ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimestamp, ftFMTBcd);
  {$ENDIF}
 {$ENDIF}
 

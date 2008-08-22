@@ -61,7 +61,7 @@ interface
 {$J+}
 
 uses
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   Types,
 {$ENDIF}
   ZCompatibility, ZPlainLoader, ZPlainFirebirdInterbaseConstants;

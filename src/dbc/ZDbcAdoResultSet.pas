@@ -59,11 +59,11 @@ interface
 
 uses
 {$IFNDEF UNIX}
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   Types,
 {$ENDIF}
 {$ENDIF}
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   DateUtils,
 {$ENDIF}
   Classes, SysUtils, ZClasses, ZSysUtils, ZCollections, ZDbcIntfs,
@@ -123,10 +123,7 @@ type
 implementation
 
 uses
-{$IFNDEF VER130BELOW}
-  Variants,
-{$ENDIF}
-  Math, OleDB, ZMessages, ZDbcUtils, ZDbcAdoUtils;
+  Variants, Math, OleDB, ZMessages, ZDbcUtils, ZDbcAdoUtils;
 
 {**
   Creates this object and assignes the main properties.
@@ -498,11 +495,7 @@ begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then Exit;
   try
-{$IFDEF VER130BELOW}
-    Result := Integer(FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value);
-{$ELSE}
     Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
-{$ENDIF}
   except
     Result := 0;
   end;
@@ -743,12 +736,7 @@ begin
   begin
     Recordset := FHandle.Execute(RA, null, 0);
     if Recordset.RecordCount > 0 then
-    {$IFNDEF VER130BELOW}
       NewRowAccessor.SetLong(FAutoColumnIndex, Recordset.Fields.Item[0].Value);
-    {$ELSE}
-      NewRowAccessor.SetLong(FAutoColumnIndex,
-        Integer(Recordset.Fields.Item[0].Value));
-    {$ENDIF}
   end;
 end;
 

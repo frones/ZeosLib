@@ -59,7 +59,7 @@ interface
 
 uses
 {$IFNDEF UNIX}
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   Types,
 {$ENDIF}
 {$ENDIF}
@@ -139,9 +139,7 @@ var
 implementation
 
 uses
-{$IFNDEF VER130BELOW}
   Variants,
-{$ENDIF}
   SysUtils, ActiveX, ZDbcUtils, ZDbcLogging,
   ZDbcAdoStatement, ZDbcAdoMetaData;
 

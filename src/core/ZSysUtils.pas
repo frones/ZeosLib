@@ -58,14 +58,7 @@ interface
 {$I ZCore.inc}
 
 uses
-{$IFNDEF VER130BELOW}
-  Variants,
-{$ELSE}
-  {$IFDEF FPC}
-    Variants,
-  {$ENDIF}
-{$ENDIF}
-  ZMessages, ZCompatibility, Classes, SysUtils;
+  Variants, ZMessages, ZCompatibility, Classes, SysUtils;
 
 type
   {** Modified comaprison function. }
@@ -79,11 +72,6 @@ type
   public
     procedure Sort(Compare: TZListSortCompare);
   end;
-
-{$IFDEF VER130BELOW}
-const
-  NullAsStringValue: string = '';
-{$ENDIF}
 
 {**
   Determines a position of a first delimiter.
@@ -263,31 +251,6 @@ function BytesToVar(const Value: TByteDynArray): Variant;
   @return a converted array of bytes.
 }
 function VarToBytes(const Value: Variant): TByteDynArray;
-
-{$IFDEF VER130BELOW}
-{**
-  Convert variant value to WideString
-  @value Value a variant to be converted
-  @return a converted WideString value
-}
-function VarToWideStr(const Value: Variant): WideString;
-
-{**
-  Convert variant value to WideString
-  @value Value a variant to be converted
-  @value Default a default value if convertion is not possible
-  @return a converted WideString value
-}
-function VarToWideStrDef(const Value: Variant; const Default: WideString): WideString;
-
-{**
-  Convert string value to float value
-  @value V a string value to be converted
-  @value Default a default value if convertion is not possible
-  @return a converted Extended value
-}
-function StrToFloatDef(const S: string; const Default: Extended): Extended;
-{$ENDIF}
 
 {**
   Converts Ansi SQL Date/Time to TDateTime
@@ -819,45 +782,6 @@ begin
   for I := 0 to VarArrayHighBound(Value, 1) do
     Result[I] := Value[I];
 end;
-
-{$IFDEF VER130BELOW}
-{**
-  Convert variant value to WideString
-  @value V a variant to be converted
-  @return a converted WideString value
-}
-function VarToWideStr(const Value: Variant): WideString;
-begin
-  Result := VarToWideStrDef(Value, NullAsStringValue);
-end;
-
-{**
-  Convert variant value to WideString
-  @value Value a variant to be converted
-  @value Default a default value if convertion is not possible
-  @return a converted WideString value
-}
-function VarToWideStrDef(const Value: Variant; const Default: WideString): WideString;
-begin
-  if not VarIsNull(Value) then
-    Result := Value
-  else
-    Result := Default;
-end;
-
-{**
-  Convert string value to float value
-  @value V a string value to be converted
-  @value Default a default value if convertion is not possible
-  @return a converted Extended value
-}
-function StrToFloatDef(const S: string; const Default: Extended): Extended;
-begin
-  Result := Default;
-  if not TextToFloat(PChar(S), Result, fvExtended) then
-    Result := Default;
-end;
-{$ENDIF}
 
 {**
   Converts Ansi SQL Date/Time to TDateTime

@@ -58,7 +58,7 @@ interface
 {$I ZComponent.inc}
 
 uses
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   Types,
   Variants,
 {$ENDIF}
@@ -447,11 +447,7 @@ begin
   if (FSequenceField <> '') and Assigned(FSequence) then
   begin
     if FieldByName(FSequenceField).IsNull then
-    {$IFDEF VER130} //Delphi5 
-      FieldByName(FSequenceField).AsString := IntToStr(FSequence.GetNextValue);
-    {$ELSE}
       FieldByName(FSequenceField).Value := FSequence.GetNextValue;
-    {$ENDIF}
   end;
 
   inherited;

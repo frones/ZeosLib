@@ -66,7 +66,7 @@ interface
 
 {$J+}
 {$Z4}
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
 {$A8}
 {$ENDIF}
 

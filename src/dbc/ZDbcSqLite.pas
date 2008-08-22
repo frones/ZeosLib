@@ -58,7 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   Types,
 {$ENDIF}
   ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection,
@@ -308,7 +308,6 @@ end;
 function TZSQLiteConnection.Key(const Key: string):Integer;
 var
   ErrorCode: Integer;
-  ErrorMessage: PChar;
 begin
   ErrorCode := FPlainDriver.Key(FHandle, PChar(Key), StrLen(PChar(Key)));
   Result := ErrorCode;
@@ -323,7 +322,6 @@ end;
 function TZSQLiteConnection.ReKey(const Key: string):Integer;
 var
   ErrorCode: Integer;
-  ErrorMessage: PChar;
 begin
   ErrorCode := FPlainDriver.ReKey(FHandle, PChar(Key), StrLen(PChar(Key)));
   Result := ErrorCode;

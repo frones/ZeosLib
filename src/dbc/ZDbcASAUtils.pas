@@ -261,7 +261,7 @@ function RandomString( Len: integer): string;
 
 implementation
 
-uses {$IFDEF FPC}Variants,{$ELSE}{$IFNDEF VER130BELOW}Variants,{$ENDIF}{$ENDIF} ZMessages, ZDbcCachedResultSet, Math;
+uses Variants, ZMessages, ZDbcCachedResultSet, Math;
 
 { TZASASQLDA }
 
@@ -1457,11 +1457,7 @@ begin
       DT_LONGVARCHAR : ReadBlobToString( Index, Result);
       DT_TIMESTAMP_STRUCT : Result := DateToStr( GetTimestamp( Index));
       DT_TINYINT     : Result := IntToStr( PByte(sqldata)^);
-      {$IFDEF VER130BELOW}
-      DT_BIT         : Result := BoolToStr( ( PByte(sqldata)^ = 1));
-      {$ELSE}
       DT_BIT         : Result := BoolToStr( ( PByte(sqldata)^ = 1), True);
-      {$ENDIF}
       DT_BIGINT,
       DT_UNSBIGINT   : Result := IntToStr( PInt64(sqldata)^);
     else

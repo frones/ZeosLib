@@ -58,7 +58,7 @@ interface
 {$I ZComponent.inc}
 
 uses
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   Types,
 {$ENDIF}
 {$IFNDEF UNIX}
@@ -332,11 +332,9 @@ begin
         SetConnected(True);
   except
     if csDesigning in ComponentState then
-    {$IFNDEF VER130BELOW}
       if Assigned(Classes.ApplicationHandleException) then
         Classes.ApplicationHandleException(ExceptObject)
       else
-    {$ENDIF}
         ShowException(ExceptObject, ExceptAddr)
     else
       raise;

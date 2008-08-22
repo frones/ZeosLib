@@ -59,7 +59,7 @@ interface
 
 uses
 {$IFNDEF UNIX}
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   Types,
 {$ENDIF}
 {$ENDIF}
@@ -117,7 +117,7 @@ type
 implementation
 
 uses
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   Variants,
 {$ENDIF}
   OleDB, ActiveX, ComObj,
@@ -494,7 +494,7 @@ begin
         DefVarManager.SetAsString(Result, Temp);
       varSmallInt, varInteger:
         DefVarManager.SetAsInteger(Result, Integer(Temp));
-  {$IFNDEF VER130BELOW}
+  {$IFNDEF FPC}
       varShortInt, varInt64:
         DefVarManager.SetAsInteger(Result, Temp);
   {$ENDIF}

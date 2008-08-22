@@ -175,7 +175,7 @@ type
 implementation
 
 uses
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   Variants,
 {$ENDIF}
   SysUtils, Math, ZdbcLogging;
