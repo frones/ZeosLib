@@ -2876,7 +2876,7 @@ begin
   begin
     if not FConnection.Connected then
       FConnection.Connect;
-    Result := FConnection.DbcConnection.GetMetadata.GetIdentifierQuoteString;
+    Result := FConnection.DbcConnection.GetMetadata.GetDatabaseInfo.GetIdentifierQuoteString;
     if Length(Result) > 1 then
       Result := Copy(Result, 1, 1);
   end

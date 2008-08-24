@@ -152,6 +152,7 @@ type
   IZDriver = interface;
   IZConnection = interface;
   IZDatabaseMetadata = interface;
+  IZDatabaseInfo = interface;
   IZStatement = interface;
   IZPreparedStatement = interface;
   IZCallableStatement = interface;
@@ -270,129 +271,10 @@ type
   IZDatabaseMetadata = interface(IZInterface)
     ['{FE331C2D-0664-464E-A981-B4F65B85D1A8}']
 
-    function AllProceduresAreCallable: Boolean;
-    function AllTablesAreSelectable: Boolean;
     function GetURL: string;
     function GetUserName: string;
-    function IsReadOnly: Boolean;
-    function NullsAreSortedHigh: Boolean;
-    function NullsAreSortedLow: Boolean;
-    function NullsAreSortedAtStart: Boolean;
-    function NullsAreSortedAtEnd: Boolean;
-    function GetDatabaseProductName: string;
-    function GetDatabaseProductVersion: string;
-    function GetDriverName: string;
-    function GetDriverVersion: string;
-    function GetDriverMajorVersion: Integer;
-    function GetDriverMinorVersion: Integer;
-    function UsesLocalFiles: Boolean;
-    function UsesLocalFilePerTable: Boolean;
-    function SupportsMixedCaseIdentifiers: Boolean;
-    function StoresUpperCaseIdentifiers: Boolean;
-    function StoresLowerCaseIdentifiers: Boolean;
-    function StoresMixedCaseIdentifiers: Boolean;
-    function SupportsMixedCaseQuotedIdentifiers: Boolean;
-    function StoresUpperCaseQuotedIdentifiers: Boolean;
-    function StoresLowerCaseQuotedIdentifiers: Boolean;
-    function StoresMixedCaseQuotedIdentifiers: Boolean;
-    function GetIdentifierQuoteString: string;
-    function GetSQLKeywords: string;
-    function GetNumericFunctions: string;
-    function GetStringFunctions: string;
-    function GetSystemFunctions: string;
-    function GetTimeDateFunctions: string;
-    function GetSearchStringEscape: string;
-    function GetExtraNameCharacters: string;
 
-    function SupportsAlterTableWithAddColumn: Boolean;
-    function SupportsAlterTableWithDropColumn: Boolean;
-    function SupportsColumnAliasing: Boolean;
-    function NullPlusNonNullIsNull: Boolean;
-    function SupportsConvert: Boolean;
-    function SupportsConvertForTypes(FromType: TZSQLType; ToType: TZSQLType):
-      Boolean;
-    function SupportsTableCorrelationNames: Boolean;
-    function SupportsDifferentTableCorrelationNames: Boolean;
-    function SupportsExpressionsInOrderBy: Boolean;
-    function SupportsOrderByUnrelated: Boolean;
-    function SupportsGroupBy: Boolean;
-    function SupportsGroupByUnrelated: Boolean;
-    function SupportsGroupByBeyondSelect: Boolean;
-    function SupportsLikeEscapeClause: Boolean;
-    function SupportsMultipleResultSets: Boolean;
-    function SupportsMultipleTransactions: Boolean;
-    function SupportsNonNullableColumns: Boolean;
-    function SupportsMinimumSQLGrammar: Boolean;
-    function SupportsCoreSQLGrammar: Boolean;
-    function SupportsExtendedSQLGrammar: Boolean;
-    function SupportsANSI92EntryLevelSQL: Boolean;
-    function SupportsANSI92IntermediateSQL: Boolean;
-    function SupportsANSI92FullSQL: Boolean;
-    function SupportsIntegrityEnhancementFacility: Boolean;
-    function SupportsOuterJoins: Boolean;
-    function SupportsFullOuterJoins: Boolean;
-    function SupportsLimitedOuterJoins: Boolean;
-    function GetSchemaTerm: string;
-    function GetProcedureTerm: string;
-    function GetCatalogTerm: string;
-    function IsCatalogAtStart: Boolean;
-    function GetCatalogSeparator: string;
-    function SupportsSchemasInDataManipulation: Boolean;
-    function SupportsSchemasInProcedureCalls: Boolean;
-    function SupportsSchemasInTableDefinitions: Boolean;
-    function SupportsSchemasInIndexDefinitions: Boolean;
-    function SupportsSchemasInPrivilegeDefinitions: Boolean;
-    function SupportsCatalogsInDataManipulation: Boolean;
-    function SupportsCatalogsInProcedureCalls: Boolean;
-    function SupportsCatalogsInTableDefinitions: Boolean;
-    function SupportsCatalogsInIndexDefinitions: Boolean;
-    function SupportsCatalogsInPrivilegeDefinitions: Boolean;
-    function SupportsPositionedDelete: Boolean;
-    function SupportsPositionedUpdate: Boolean;
-    function SupportsSelectForUpdate: Boolean;
-    function SupportsStoredProcedures: Boolean;
-    function SupportsSubqueriesInComparisons: Boolean;
-    function SupportsSubqueriesInExists: Boolean;
-    function SupportsSubqueriesInIns: Boolean;
-    function SupportsSubqueriesInQuantifieds: Boolean;
-    function SupportsCorrelatedSubqueries: Boolean;
-    function SupportsUnion: Boolean;
-    function SupportsUnionAll: Boolean;
-    function SupportsOpenCursorsAcrossCommit: Boolean;
-    function SupportsOpenCursorsAcrossRollback: Boolean;
-    function SupportsOpenStatementsAcrossCommit: Boolean;
-    function SupportsOpenStatementsAcrossRollback: Boolean;
-
-    function GetMaxBinaryLiteralLength: Integer;
-    function GetMaxCharLiteralLength: Integer;
-    function GetMaxColumnNameLength: Integer;
-    function GetMaxColumnsInGroupBy: Integer;
-    function GetMaxColumnsInIndex: Integer;
-    function GetMaxColumnsInOrderBy: Integer;
-    function GetMaxColumnsInSelect: Integer;
-    function GetMaxColumnsInTable: Integer;
-    function GetMaxConnections: Integer;
-    function GetMaxCursorNameLength: Integer;
-    function GetMaxIndexLength: Integer;
-    function GetMaxSchemaNameLength: Integer;
-    function GetMaxProcedureNameLength: Integer;
-    function GetMaxCatalogNameLength: Integer;
-    function GetMaxRowSize: Integer;
-    function DoesMaxRowSizeIncludeBlobs: Boolean;
-    function GetMaxStatementLength: Integer;
-    function GetMaxStatements: Integer;
-    function GetMaxTableNameLength: Integer;
-    function GetMaxTablesInSelect: Integer;
-    function GetMaxUserNameLength: Integer;
-
-    function GetDefaultTransactionIsolation: TZTransactIsolationLevel;
-    function SupportsTransactions: Boolean;
-    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
-      Boolean;
-    function SupportsDataDefinitionAndDataManipulationTransactions: Boolean;
-    function SupportsDataManipulationTransactionsOnly: Boolean;
-    function DataDefinitionCausesTransactionCommit: Boolean;
-    function DataDefinitionIgnoredInTransactions: Boolean;
+    function GetDatabaseInfo: IZDatabaseInfo; // technobot 2008-06-24
 
     function GetProcedures(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string): IZResultSet;
@@ -434,11 +316,6 @@ type
     function GetSequences(const Catalog: string; const SchemaPattern: string;
       const SequenceNamePattern: string): IZResultSet;
 
-    function SupportsResultSetType(_Type: TZResultSetType): Boolean;
-    function SupportsResultSetConcurrency(_Type: TZResultSetType;
-      Concurrency: TZResultSetConcurrency): Boolean;
-    function SupportsBatchUpdates: Boolean;
-
     function GetUDTs(const Catalog: string; const SchemaPattern: string;
       const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet;
 
@@ -447,6 +324,147 @@ type
 
     procedure ClearCache;overload;
 		procedure ClearCache(const Key: string);overload;
+  end;
+
+  {**
+    Database information interface. Used to describe the database as a whole
+    (version, capabilities, policies, etc).
+  } // technobot 2008-06-24
+  IZDatabaseInfo = interface(IZInterface)
+    ['{107CA354-F594-48F9-8E08-CD797F151EA0}']
+
+    // database/driver/server info:
+    function GetDatabaseProductName: string;
+    function GetDatabaseProductVersion: string;
+    function GetDriverName: string;
+    function GetDriverVersion: string;
+    function GetDriverMajorVersion: Integer;
+    function GetDriverMinorVersion: Integer;
+    function GetServerVersion: string;
+
+    // capabilities (what it can/cannot do):
+    function AllProceduresAreCallable: Boolean;
+    function AllTablesAreSelectable: Boolean;
+    function SupportsMixedCaseIdentifiers: Boolean;
+    function SupportsMixedCaseQuotedIdentifiers: Boolean;
+    function SupportsAlterTableWithAddColumn: Boolean;
+    function SupportsAlterTableWithDropColumn: Boolean;
+    function SupportsColumnAliasing: Boolean;
+    function SupportsConvert: Boolean;
+    function SupportsConvertForTypes(FromType: TZSQLType; ToType: TZSQLType):
+      Boolean;
+    function SupportsTableCorrelationNames: Boolean;
+    function SupportsDifferentTableCorrelationNames: Boolean;
+    function SupportsExpressionsInOrderBy: Boolean;
+    function SupportsOrderByUnrelated: Boolean;
+    function SupportsGroupBy: Boolean;
+    function SupportsGroupByUnrelated: Boolean;
+    function SupportsGroupByBeyondSelect: Boolean;
+    function SupportsLikeEscapeClause: Boolean;
+    function SupportsMultipleResultSets: Boolean;
+    function SupportsMultipleTransactions: Boolean;
+    function SupportsNonNullableColumns: Boolean;
+    function SupportsMinimumSQLGrammar: Boolean;
+    function SupportsCoreSQLGrammar: Boolean;
+    function SupportsExtendedSQLGrammar: Boolean;
+    function SupportsANSI92EntryLevelSQL: Boolean;
+    function SupportsANSI92IntermediateSQL: Boolean;
+    function SupportsANSI92FullSQL: Boolean;
+    function SupportsIntegrityEnhancementFacility: Boolean;
+    function SupportsOuterJoins: Boolean;
+    function SupportsFullOuterJoins: Boolean;
+    function SupportsLimitedOuterJoins: Boolean;
+    function SupportsSchemasInDataManipulation: Boolean;
+    function SupportsSchemasInProcedureCalls: Boolean;
+    function SupportsSchemasInTableDefinitions: Boolean;
+    function SupportsSchemasInIndexDefinitions: Boolean;
+    function SupportsSchemasInPrivilegeDefinitions: Boolean;
+    function SupportsCatalogsInDataManipulation: Boolean;
+    function SupportsCatalogsInProcedureCalls: Boolean;
+    function SupportsCatalogsInTableDefinitions: Boolean;
+    function SupportsCatalogsInIndexDefinitions: Boolean;
+    function SupportsCatalogsInPrivilegeDefinitions: Boolean;
+    function SupportsPositionedDelete: Boolean;
+    function SupportsPositionedUpdate: Boolean;
+    function SupportsSelectForUpdate: Boolean;
+    function SupportsStoredProcedures: Boolean;
+    function SupportsSubqueriesInComparisons: Boolean;
+    function SupportsSubqueriesInExists: Boolean;
+    function SupportsSubqueriesInIns: Boolean;
+    function SupportsSubqueriesInQuantifieds: Boolean;
+    function SupportsCorrelatedSubqueries: Boolean;
+    function SupportsUnion: Boolean;
+    function SupportsUnionAll: Boolean;
+    function SupportsOpenCursorsAcrossCommit: Boolean;
+    function SupportsOpenCursorsAcrossRollback: Boolean;
+    function SupportsOpenStatementsAcrossCommit: Boolean;
+    function SupportsOpenStatementsAcrossRollback: Boolean;
+    function SupportsTransactions: Boolean;
+    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
+      Boolean;
+    function SupportsDataDefinitionAndDataManipulationTransactions: Boolean;
+    function SupportsDataManipulationTransactionsOnly: Boolean;
+    function SupportsResultSetType(_Type: TZResultSetType): Boolean;
+    function SupportsResultSetConcurrency(_Type: TZResultSetType;
+      Concurrency: TZResultSetConcurrency): Boolean;
+    function SupportsBatchUpdates: Boolean;
+
+    // maxima:
+    function GetMaxBinaryLiteralLength: Integer;
+    function GetMaxCharLiteralLength: Integer;
+    function GetMaxColumnNameLength: Integer;
+    function GetMaxColumnsInGroupBy: Integer;
+    function GetMaxColumnsInIndex: Integer;
+    function GetMaxColumnsInOrderBy: Integer;
+    function GetMaxColumnsInSelect: Integer;
+    function GetMaxColumnsInTable: Integer;
+    function GetMaxConnections: Integer;
+    function GetMaxCursorNameLength: Integer;
+    function GetMaxIndexLength: Integer;
+    function GetMaxSchemaNameLength: Integer;
+    function GetMaxProcedureNameLength: Integer;
+    function GetMaxCatalogNameLength: Integer;
+    function GetMaxRowSize: Integer;
+    function GetMaxStatementLength: Integer;
+    function GetMaxStatements: Integer;
+    function GetMaxTableNameLength: Integer;
+    function GetMaxTablesInSelect: Integer;
+    function GetMaxUserNameLength: Integer;
+
+    // policies (how are various data and operations handled):
+    function IsReadOnly: Boolean;
+    function IsCatalogAtStart: Boolean;
+    function DoesMaxRowSizeIncludeBlobs: Boolean;
+    function NullsAreSortedHigh: Boolean;
+    function NullsAreSortedLow: Boolean;
+    function NullsAreSortedAtStart: Boolean;
+    function NullsAreSortedAtEnd: Boolean;
+    function NullPlusNonNullIsNull: Boolean;
+    function UsesLocalFiles: Boolean;
+    function UsesLocalFilePerTable: Boolean;
+    function StoresUpperCaseIdentifiers: Boolean;
+    function StoresLowerCaseIdentifiers: Boolean;
+    function StoresMixedCaseIdentifiers: Boolean;
+    function StoresUpperCaseQuotedIdentifiers: Boolean;
+    function StoresLowerCaseQuotedIdentifiers: Boolean;
+    function StoresMixedCaseQuotedIdentifiers: Boolean;
+    function GetDefaultTransactionIsolation: TZTransactIsolationLevel;
+    function DataDefinitionCausesTransactionCommit: Boolean;
+    function DataDefinitionIgnoredInTransactions: Boolean;
+
+    // interface details (terms, keywords, etc):
+    function GetIdentifierQuoteString: string;
+    function GetSchemaTerm: string;
+    function GetProcedureTerm: string;
+    function GetCatalogTerm: string;
+    function GetCatalogSeparator: string;
+    function GetSQLKeywords: string;
+    function GetNumericFunctions: string;
+    function GetStringFunctions: string;
+    function GetSystemFunctions: string;
+    function GetTimeDateFunctions: string;
+    function GetSearchStringEscape: string;
+    function GetExtraNameCharacters: string;
   end;
 
   {** Generic SQL statement interface. }

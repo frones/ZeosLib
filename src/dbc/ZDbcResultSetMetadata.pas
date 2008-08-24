@@ -129,6 +129,7 @@ type
     FTableColumns: TZHashMap;
     FIdentifierConvertor: IZIdentifierConvertor;
     FResultSet: TZAbstractResultSet;
+    procedure SetMetadata(const Value: IZDatabaseMetadata);
   protected
     procedure LoadColumn(ColumnIndex: Integer; ColumnInfo: TZColumnInfo;
       SelectSchema: IZSelectSchema); virtual;
@@ -142,7 +143,7 @@ type
     procedure LoadColumns;
     procedure ReplaceStarColumns(SelectSchema: IZSelectSchema);
 
-    property MetaData: IZDatabaseMetadata read FMetadata write FMetadata;
+    property MetaData: IZDatabaseMetadata read FMetadata write SetMetadata;
     property ColumnsLabels: TStrings read FColumnsLabels write FColumnsLabels;
     property SQL: string read FSQL write FSQL;
     property IdentifierConvertor: IZIdentifierConvertor
@@ -234,11 +235,10 @@ constructor TZAbstractResultSetMetadata.Create(Metadata: IZDatabaseMetadata;
 begin
   inherited Create(ParentResultSet);
 
-  FMetadata := Metadata;
+  SetMetadata(Metadata);
   FSQL := SQL;
   FLoaded := not (FMetadata <> nil);
   FTableColumns := TZHashMap.Create;
-  FIdentifierConvertor := TZDefaultIdentifierConvertor.Create(FMetadata);
   FResultSet := ParentResultSet;
 end;
 
@@ -722,6 +722,16 @@ begin
     end;
     Inc(I);
   end;
+end;
+
+procedure TZAbstractResultSetMetadata.SetMetadata(
+  const Value: IZDatabaseMetadata);
+begin
+  FMetadata := Value;
+  if Value<>nil then
+    FIdentifierConvertor := Value.GetIdentifierConvertor
+  else
+    FIdentifierConvertor := TZDefaultIdentifierConvertor.Create(FMetadata);
 end;
 
 {**

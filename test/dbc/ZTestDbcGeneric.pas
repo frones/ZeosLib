@@ -200,7 +200,7 @@ begin
     Exit;
 
   Metadata := Connection.GetMetadata;
-  if Metadata.SupportsMixedCaseIdentifiers then
+  if Metadata.GetDatabaseInfo.SupportsMixedCaseIdentifiers then
     Exit;
 
   Sql := 'DELETE FROM "Case_Sensitive" where cs_id = ' + IntToStr(TEST_ROW_ID);
