@@ -1239,7 +1239,8 @@ begin
     LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,
       'PP.RDB$PARAMETER_NAME');
 
-    if StrPos(PChar(ServerVersion), 'Interbase 5') <> nil then
+    if (StrPos(PChar(ServerVersion), 'Interbase 5') <> nil)
+       or (StrPos(PChar(ServerVersion), 'V5.0')<>nil) then
     begin
       SQL := ' SELECT P.RDB$PROCEDURE_NAME, PP.RDB$PARAMETER_NAME,'
         + ' PP.RDB$PARAMETER_TYPE, F.RDB$FIELD_TYPE, F.RDB$FIELD_SUB_TYPE,'
@@ -1523,14 +1524,16 @@ begin
     LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,
       'a.RDB$FIELD_NAME');
 
-    if StrPos(PChar(ServerVersion), 'Interbase 5') <> nil then
+    if (StrPos(PChar(ServerVersion), 'Interbase 5') <> nil)
+       or (StrPos(PChar(ServerVersion), 'V5.0')<>nil) then
     begin
       SQL := 'SELECT a.RDB$RELATION_NAME, a.RDB$FIELD_NAME, a.RDB$FIELD_POSITION,'
         + ' a.RDB$NULL_FLAG, b. RDB$FIELD_LENGTH, b.RDB$FIELD_SCALE,'
         + ' c.RDB$TYPE_NAME, b.RDB$FIELD_TYPE, b.RDB$FIELD_SUB_TYPE,'
         + ' b.RDB$DESCRIPTION, b.RDB$CHARACTER_LENGTH, b.RDB$FIELD_SCALE'
         + ' as RDB$FIELD_PRECISION, a.RDB$DEFAULT_SOURCE, b.RDB$DEFAULT_SOURCE'
-        + ' as RDB$DEFAULT_SOURCE_DOMAIN FROM RDB$RELATION_FIELDS a'
+        + ' as RDB$DEFAULT_SOURCE_DOMAIN, b.RDB$COMPUTED_SOURCE as RDB$COMPUTED_SOURCE'
+        + ' FROM RDB$RELATION_FIELDS a'
         + ' JOIN RDB$FIELDS b ON (b.RDB$FIELD_NAME = a.RDB$FIELD_SOURCE)'
         + ' LEFT JOIN RDB$TYPES c ON b.RDB$FIELD_TYPE = c.RDB$TYPE'
         + ' and c.RDB$FIELD_NAME = ''RDB$FIELD_TYPE''';
@@ -1554,7 +1557,8 @@ begin
         + ' b.RDB$FIELD_SCALE, c.RDB$TYPE_NAME, b.RDB$FIELD_TYPE,'
         + ' b.RDB$FIELD_SUB_TYPE, b.RDB$DESCRIPTION, b.RDB$CHARACTER_LENGTH,'
         + ' b.RDB$FIELD_PRECISION, a.RDB$DEFAULT_SOURCE, b.RDB$DEFAULT_SOURCE'
-        + ' as RDB$DEFAULT_SOURCE_DOMAIN FROM RDB$RELATION_FIELDS a'
+        + ' as RDB$DEFAULT_SOURCE_DOMAIN,b.RDB$COMPUTED_SOURCE as RDB$COMPUTED_SOURCE'
+        + ' FROM RDB$RELATION_FIELDS a'
         + ' JOIN RDB$FIELDS b ON (b.RDB$FIELD_NAME = a.RDB$FIELD_SOURCE)'
         + ' LEFT JOIN RDB$TYPES c ON (b.RDB$FIELD_TYPE = c.RDB$TYPE'
         + ' and c.RDB$FIELD_NAME = ''RDB$FIELD_TYPE'')';
@@ -1620,7 +1624,7 @@ begin
           16   : Result.UpdateInt(7, GetIntByName('RDB$FIELD_PRECISION'));
           else Result.UpdateInt(7, GetIntByName('RDB$FIELD_LENGTH'));
         end;
-       
+
         Result.UpdateNull(8);    //BUFFER_LENGTH
 
         if FieldScale < 0 then
@@ -1655,10 +1659,18 @@ begin
           Result.UpdateBooleanByName('CASE_SENSITIVE', True);
 
         Result.UpdateBooleanByName('SEARCHABLE', True);
-        Result.UpdateBooleanByName('WRITABLE', True);
-        Result.UpdateBooleanByName('DEFINITELYWRITABLE', True);
-        Result.UpdateBooleanByName('READONLY', False);
-
+        if isNullByName('RDB$COMPUTED_SOURCE') then
+          begin
+            Result.UpdateBooleanByName('WRITABLE', True);
+            Result.UpdateBooleanByName('DEFINITELYWRITABLE', True);
+            Result.UpdateBooleanByName('READONLY', False);
+          end
+        else
+          begin
+            Result.UpdateBooleanByName('WRITABLE', False);
+            Result.UpdateBooleanByName('DEFINITELYWRITABLE', False);
+            Result.UpdateBooleanByName('READONLY', True);
+          end;
         Result.InsertRow;
       end;
       Close;
