@@ -222,6 +222,7 @@ resourcestring
   SFieldReadOnly        = 'O campo %d é somente leitura e não pôde receber dados';
   SInvalidUpdateCount   = '%d registro(s) atualizados. Apenas um registro deveria ter sido atualizado.'; 
 
+  SRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
 {$ELSE}
 
 {$IFDEF DUTCH}
@@ -383,6 +384,7 @@ resourcestring
   SFieldReadOnly        = 'Readonly veld kan geen waarde toegewezen krijgen: %d';
   SInvalidUpdateCount     = '%d record(s) gewijzigd. Slechts 1 record had gewijzigd mogen zijn.'; 
 
+  SRowBufferWidthExceeded ='Rij buffer grootte overschreden. Probeer minder kolommen te gebruiken in je SQL query.';
 {$ELSE}
 // <- ms, 09/05/2005
 
@@ -546,6 +548,7 @@ resourcestring
   SFieldReadOnly          = 'Translate : Readonly field can''t be assigned a value: %d';
   SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.'; 
 
+  SRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
 {$ELSE}
   // -> fduenas, 28/06/2005
 {$IFDEF SPANISH} //Spanish translations
@@ -708,6 +711,7 @@ resourcestring
   SFieldReadOnly          = 'Translate : Readonly field can''t be assigned a value: %d';
   SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.'; 
 
+  SRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
 {$ELSE}
 
 {$IFDEF ROMANA}
@@ -869,6 +873,7 @@ resourcestring
 
   SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
 
+  SRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
   // <-- added by tohenk
   {$ELSE}
   {$IFDEF INDONESIAN}
@@ -1031,6 +1036,7 @@ resourcestring
   SFieldReadOnly          = 'Translate : Readonly field can''t be assigned a value: %d';
   SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.'; 
 
+  SRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
   //--- begin added by ORMADA --------------------------------------------------
 {$ELSE}
 {$IFDEF RUSSIAN}
@@ -1193,6 +1199,7 @@ resourcestring
   SFieldReadOnly          = 'Translate : Readonly field can''t be assigned a value: %d';
   SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.';
 
+  SRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
 {$ELSE}
 
 //--- added by Petr Stasiak - pestasoft.com ------------------------------------
@@ -1355,6 +1362,8 @@ resourcestring
   SUnKnownParamDataType = 'Neznámý parametr.typ dat (Param.DataType)';
   SFieldReadOnly        = 'Sloupec pouze pro ètení nemùže být pøiøazen k hodnotì: %d';
   SInvalidUpdateCount     = '%d záznam(ù) aktualizováno. Pouze jeden záznam byl zmìnìn.';
+
+  SRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
 //--- end added by Petr Stasiak - pestasoft.com ------------------------------------
 
 {$ELSE}
@@ -1521,6 +1530,8 @@ resourcestring
   SFieldReadOnly        = 'Nie mo¿na przypisaæ do pola tylko do odczytu wartoœci: %d';
   SInvalidUpdateCount     = 'Liczba zaktualizowanych rekordów: %d. tylko jeden rekord powinien byæ zaktualizowany.';
 
+  SRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
+
 {$ELSE} // default: ENGLISH
 
 
@@ -1682,6 +1693,8 @@ resourcestring
   SUnKnownParamDataType = 'Unknown Param.DataType';
   SFieldReadOnly        = 'Readonly field can''t be assigned a value: %d';
   SInvalidUpdateCount     = '%d record(s) updated. Only one record should have been updated.';
+
+  SRowBufferWidthExceeded ='Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
 
 {$ENDIF} // POLISH
 

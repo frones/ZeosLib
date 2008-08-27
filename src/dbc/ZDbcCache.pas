@@ -237,6 +237,10 @@ begin
     FColumnLengths[I] := GetColumnSize(Current);
     FColumnOffsets[I] := FColumnsSize;
     Inc(FColumnsSize, FColumnLengths[I] + 1);
+    // 32768 is the length of a TByteArray. (HeidiSQL patch)
+    if FColumnsSize > 32767 then begin
+      raise EZSQLException.Create(SRowBufferWidthExceeded);
+    end;
     FHasBlobs := FHasBlobs
       or (FColumnTypes[I] in [stAsciiStream, stUnicodeStream, stBinaryStream]);
   end;

@@ -82,3 +82,5 @@
 20080601 : Added libmysql51.dll to list of possible dll's for protocol Mysql-5 - by mdaems
 
 20080812 : Removed support for versions < 4.1 - by mdaems
+
+20080817 : Set 'Writable' and 'ColumnName' properties to make the result set metadata usable for creating update statements. - by HeidiSQL Team (Heidisql SVN Rev.1588)

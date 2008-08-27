@@ -605,8 +605,10 @@ begin
       FieldFlags := FPlainDriver.GetFieldFlags(FieldHandle);
 
       ColumnLabel := FPlainDriver.GetFieldName(FieldHandle);
+      ColumnName := FPlainDriver.GetFieldOrigName(FieldHandle);
       TableName := FPlainDriver.GetFieldTable(FieldHandle);
       ReadOnly := (FPlainDriver.GetFieldTable(FieldHandle) = '');
+      Writable := not ReadOnly;
       ColumnType := ConvertMySQLHandleToSQLType(FPlainDriver,
         FieldHandle, FieldFlags);
       ColumnDisplaySize := FPlainDriver.GetFieldLength(FieldHandle);
