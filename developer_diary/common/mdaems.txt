@@ -247,3 +247,5 @@
 20080820 : Added overloaded version of ZConnection.GetTablenNames, allowing the user to specify the table types. - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=1960
 
 20080822 : Removed conditional coding for the compiler versions that are not longer supported - by mdaems
+
+20080829 : Adjusted fix for Mantis Bug 99 - by mdaems/karpik - Mantis Bug 137
