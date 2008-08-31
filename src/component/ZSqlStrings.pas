@@ -121,7 +121,7 @@ type
 
 implementation
 
-uses ZMessages, ZAbstractRODataset, ZDatasetUtils;
+uses ZMessages, ZAbstractRODataset, ZDatasetUtils, ZSQLProcessor;
 
 { TZSQLStatement }
 
@@ -338,6 +338,15 @@ begin
       if Assigned(Driver) then
         Tokenizer := Driver.GetTokenizer;
     end;
+  end
+  else if FDataset is TZSQLProcessor then
+  begin
+    if Assigned(TZSQLProcessor(FDataset).Connection) then
+    begin
+      Driver := TZSQLProcessor(FDataset).Connection.DbcDriver;
+      if Assigned(Driver) then
+        Tokenizer := Driver.GetTokenizer;
+    end;
   end;
 
   Tokens := Tokenizer.TokenizeBufferToList(Text,
@@ -408,7 +417,3 @@ begin
 end;
 
 end.
-
-
-
-
