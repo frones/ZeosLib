@@ -79,4 +79,6 @@
 
 20080601 : Removed MYSQL_RES structure - by mdaems - Mantis Bug 113
 
-20080601 : Added libmysql51.dll to list of possible dll's for protocol Mysql-5 - by mdaems
+
+
+20080831 : Misprint in ZPlainMysqlFunc.inc - by GeorgeKP - See http://zeos.firmos.at/viewtopic.php?t=1979

@@ -231,3 +231,5 @@
 20080813 : ZIBEventAlerter compile error in Lazarus/Linux ('infinite' defined twice) - by lichtmannls - Mantis bug 131
 
 20080820 : Memory Leak in TZIBEventAlerter - by magnomp - See http://zeos.firmos.at/viewtopic.php?t=1962
+
+20080829 : Adjusted fix for Mantis Bug 99 - by mdaems/karpik - Mantis Bug 137
