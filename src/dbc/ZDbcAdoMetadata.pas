@@ -59,7 +59,7 @@ interface
 
 uses
 {$IFNDEF UNIX}
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   Types,
 {$ENDIF}
 {$ENDIF}
@@ -267,7 +267,7 @@ type
 implementation
 
 uses
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   Variants,
 {$ENDIF}
   Math, ZDbcUtils, ZCollections, ZGenericSqlToken, ZDbcAdoUtils, ZDbcAdo,

@@ -102,7 +102,7 @@ begin
   try
     CheckConnected;
     Connection.GetTableNames(TableName, TableList);
-    {$IFNDEF VER130BELOW}TableList.CaseSensitive := False;{$ENDIF}
+    TableList.CaseSensitive := False;
     Result := (TableList.IndexOf(TableName) >= 0); // look for an exact match
   finally
     TableList.Free;

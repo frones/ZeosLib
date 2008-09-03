@@ -59,7 +59,7 @@ interface
 {$I ZComponent.inc}
 
 uses
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   Types,
 {$ENDIF}
   SysUtils, DB, Classes, ZConnection, ZDbcIntfs,
@@ -182,7 +182,7 @@ begin
           Statement.SetDate(I+1, Param.AsDate);
         ftTime:
           Statement.SetTime(I+1, Param.AsTime);
-        ftDateTime{$IFNDEF VER130}, ftTimestamp{$ENDIF}:
+        ftDateTime, ftTimestamp:
           Statement.SetTimestamp(I+1, Param.AsDateTime);
         ftMemo:
           begin
@@ -256,11 +256,7 @@ begin
         ftFloat:
           Param.AsFloat := FCallableStatement.GetDouble(I + 1);
         ftLargeInt:
-  {$IFNDEF VER130BELOW}
           Param.Value := FCallableStatement.GetLong(I + 1);
-  {$ELSE}
-          Param.AsInteger := FCallableStatement.GetLong(I + 1);
-  {$ENDIF}
         ftString:
           Param.AsString := FCallableStatement.GetString(I + 1);
         ftBytes:

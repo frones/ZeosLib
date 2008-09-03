@@ -58,7 +58,7 @@ interface
 {$I ZComponent.inc}
 
 uses
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   Types,
 {$ENDIF}
   Classes, SysUtils, Db, ZSysUtils, ZDbcIntfs, ZDbcCache,
@@ -887,13 +887,8 @@ begin
           end
           else
           begin
-            {$IFNDEF VER130BELOW}
             DecodedKeyValues[I].VUnicodeString :=
               WideUpperCase(DecodedKeyValues[I].VUnicodeString);
-            {$ELSE}
-            DecodedKeyValues[I].VUnicodeString :=
-              AnsiUpperCase(DecodedKeyValues[I].VUnicodeString);
-            {$ENDIF}
           end;
         end;
       end
@@ -931,13 +926,8 @@ begin
               end
               else
               begin
-                {$IFNDEF VER130BELOW}
                 DecodedKeyValues[I].VUnicodeString :=
                   WideUpperCase(DecodedKeyValues[I].VUnicodeString);
-                {$ELSE}
-                DecodedKeyValues[I].VUnicodeString :=
-                  AnsiUpperCase(DecodedKeyValues[I].VUnicodeString);
-                {$ENDIF}
               end;
             end
             else
@@ -1050,13 +1040,8 @@ begin
           begin
             if CaseInsensitive then
             begin
-           {$IFNDEF VER130BELOW}
               Result := KeyValues[I].VUnicodeString =
                 WideUpperCase(ResultSet.GetUnicodeString(ColumnIndex));
-           {$ELSE}
-              Result := AnsiString(KeyValues[I].VUnicodeString) =
-                AnsiUpperCase(ResultSet.GetUnicodeString(ColumnIndex));
-           {$ENDIF}
             end
             else
             begin
@@ -1191,12 +1176,10 @@ begin
         end;
       ftLargeInt:
         begin
-  {$IFNDEF VER130BELOW}
           if Field2 is TLargeIntField then
             Result := ResultSet.GetLong(Field1.FieldNo)
               = TLargeIntField(Field2).AsLargeInt
           else
-  {$ENDIF}
             Result := ResultSet.GetInt(Field1.FieldNo) = Field2.AsInteger;
         end;
       ftCurrency:

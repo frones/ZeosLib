@@ -58,10 +58,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   Types,
-{$ENDIF}
-{$IFDEF VER130BELOW}
+{$ELSE}
   {$IFDEF WIN32}
     Comobj,
   {$ENDIF}

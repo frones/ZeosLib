@@ -58,7 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   Types,
 {$ENDIF}
   Classes, SysUtils, ZDbcIntfs, ZTokenizer, ZCompatibility, ZVariant;

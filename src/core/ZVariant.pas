@@ -286,16 +286,7 @@ var
 implementation
 
 uses
-{$IFNDEF VER130BELOW}
-  Variants,
-{$ELSE}
-  {$IFDEF FPC}
-    Variants,
-  {$ELSE} //delphi5
-    ActiveX, //(for VT_DECIMAL constant) 
-  {$ENDIF}
-{$ENDIF}
-  Math, ZMessages;
+  Variants, Math, ZMessages;
 
 { TZDefaultVariantManager }
 
@@ -494,7 +485,7 @@ begin
     vtString:
       Result := AnsiCompareStr(Value1.VString, GetAsString(Value2));
     vtUnicodeString:
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
       Result := WideCompareStr(Value1.VUnicodeString, GetAsUnicodeString(Value2));
 {$ELSE}
       Result := AnsiCompareStr(Value1.VUnicodeString, GetAsString(Value2));
@@ -1468,16 +1459,9 @@ begin
     varOleStr:
       DefVarManager.SetAsUnicodeString(Result, Value);
     varDate: DefVarManager.SetAsDateTime(Result, Value);
-{$IFNDEF VER130BELOW}
     varShortInt, varWord, varLongWord:
       DefVarManager.SetAsInteger(Result, Value);
     varInt64: DefVarManager.SetAsInteger(Result, Value);
-{$ELSE}
-  {$IFNDEF FPC}
-    VT_DECIMAL {varInt64 in Delphi/C++Builder 5}:
-    DefVarManager.SetAsInteger(Result, Decimal(Value).lo64);
-  {$ENDIF}
-{$ENDIF}
     else DefVarManager.SetNull(Result);
   end;
 end;

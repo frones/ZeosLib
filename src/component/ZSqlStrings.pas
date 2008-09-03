@@ -58,7 +58,7 @@ interface
 {$I ZComponent.inc}
 
 uses
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   Types,
 {$ENDIF}
   Classes, SysUtils, DB, ZSysUtils, ZDbcIntfs, ZTokenizer, ZGenericSqlToken,
@@ -121,7 +121,7 @@ type
 
 implementation
 
-uses ZMessages, ZAbstractRODataset, ZDatasetUtils;
+uses ZMessages, ZAbstractRODataset, ZDatasetUtils, ZSQLProcessor;
 
 { TZSQLStatement }
 
@@ -281,9 +281,7 @@ end;
 }
 function TZSQLStrings.FindParam(const ParamName: string): Integer;
 begin
-{$IFNDEF VER130BELOW}
   FParams.CaseSensitive := False;
-{$ENDIF}  
   Result := FParams.IndexOf(ParamName);
 end;
 
@@ -337,6 +335,15 @@ begin
     if Assigned(TZAbstractRODataset(FDataset).Connection) then
     begin
       Driver := TZAbstractRODataset(FDataset).Connection.DbcDriver;
+      if Assigned(Driver) then
+        Tokenizer := Driver.GetTokenizer;
+    end;
+  end
+  else if FDataset is TZSQLProcessor then
+  begin
+    if Assigned(TZSQLProcessor(FDataset).Connection) then
+    begin
+      Driver := TZSQLProcessor(FDataset).Connection.DbcDriver;
       if Assigned(Driver) then
         Tokenizer := Driver.GetTokenizer;
     end;
@@ -404,15 +411,9 @@ end;
 }
 procedure TZSQLStrings.Changed;
 begin
-{$IFNDEF VER130BELOW}
   if UpdateCount = 0 then
-{$ENDIF}
     RebuildAll;
   inherited Changed;
 end;
 
 end.
-
-
-
-

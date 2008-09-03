@@ -239,14 +239,14 @@ type
   );
 
   TMysqlShutdownLevel = (
-    SHUTDOWN_DEFAULT{$IFNDEF VER130} = 0{$ENDIF},
-    SHUTDOWN_WAIT_CONNECTIONS{$IFNDEF VER130} = MYSQL_SHUTDOWN_KILLABLE_CONNECT{$ENDIF},
-    SHUTDOWN_WAIT_TRANSACTIONS{$IFNDEF VER130} = MYSQL_SHUTDOWN_KILLABLE_TRANS{$ENDIF},
-    SHUTDOWN_WAIT_UPDATES{$IFNDEF VER130} = MYSQL_SHUTDOWN_KILLABLE_UPDATE{$ENDIF},
-    SHUTDOWN_WAIT_ALL_BUFFERS{$IFNDEF VER130} = (MYSQL_SHUTDOWN_KILLABLE_UPDATE shl 1){$ENDIF},
+    SHUTDOWN_DEFAULT = 0,
+    SHUTDOWN_WAIT_CONNECTIONS = MYSQL_SHUTDOWN_KILLABLE_CONNECT,
+    SHUTDOWN_WAIT_TRANSACTIONS = MYSQL_SHUTDOWN_KILLABLE_TRANS,
+    SHUTDOWN_WAIT_UPDATES = MYSQL_SHUTDOWN_KILLABLE_UPDATE,
+    SHUTDOWN_WAIT_ALL_BUFFERS = (MYSQL_SHUTDOWN_KILLABLE_UPDATE shl 1),
     SHUTDOWN_WAIT_CRITICAL_BUFFERS,
-    KILL_QUERY{$IFNDEF VER130} = 254{$ENDIF},
-    KILL_CONNECTION{$IFNDEF VER130} = 255{$ENDIF}
+    KILL_QUERY = 254,
+    KILL_CONNECTION = 255
   );
 
 TMYSQL_CLIENT_OPTIONS =
@@ -328,7 +328,7 @@ TMYSQL_CLIENT_OPTIONS =
   );
 
   TMysqlStmtState = (
-    MYSQL_STMT_INIT_DONE{$IFNDEF VER130} = 1{$ENDIF},
+    MYSQL_STMT_INIT_DONE = 1,
     MYSQL_STMT_PREPARE_DONE,
     MYSQL_STMT_EXECUTE_DONE,
     MYSQL_STMT_FETCH_DONE
@@ -417,28 +417,6 @@ TMYSQL_CLIENT_OPTIONS =
   end;
 
   MYSQL_FIELD_OFFSET = Cardinal;
-
-//  PMYSQL_BIND = ^MYSQL_BIND;
-//  MYSQL_BIND =  record
-//    length:            {$IFNDEF VER130}PLongWord{$ELSE}^Cardinal{$ENDIF};
-//    is_null:           {$IFNDEF VER130}PByte{$ELSE}^Byte{$ENDIF};
-//    buffer:            PChar;
-//    buffer_type:       TMysqlFieldTypes;
-//    buffer_length:     LongWord;
-
-    {all but is_unsigned is used internally by mysql server}
-//    inter_buffer:      {$IFNDEF VER130}PByte{$ELSE}^Byte{$ENDIF};
-//    offset:            LongWord;
-//    internal_length:   LongWord;
-//    param_number:      Cardinal;
-//    pack_length:       Cardinal;
-//    is_unsigned:       Byte;
-//    long_data_used:    Byte;
-//    internal_is_null:  Byte;
-//    store_param_funct: Pointer;  {procedure: (NET *net, struct st_mysql_bind *param)}
-//    fetch_result:      Pointer;  {prcoedure: (struct st_mysql_bind *, unsigned char **row)}
-//    skip_result:       Pointer;  {(struct st_mysql_bind *, MYSQL_FIELD *, unsigned char **row)}
-//  end;
 
   PMYSQL_BIND2 = ^MYSQL_BIND2;
   MYSQL_BIND2 =  record

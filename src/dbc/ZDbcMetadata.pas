@@ -58,10 +58,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   Types,
-{$ENDIF}
-{$IFDEF VER130BELOW}
+{$ELSE}
   {$IFDEF WIN32}
     Comobj,
   {$ENDIF}
@@ -444,8 +443,8 @@ TZAbstractDatabaseMetadata = class(TContainedObject, IZDatabaseMetadata)
   end;
 
   function GetTablesMetaDataCacheKey(Const Catalog:String;
-      Const SchemaPattern:String;	Const TableNamePattern:String;const Types: TStringDynArray):String;
-      {$IFNDEF VER130BELOW}deprecated; {$ENDIF}// (technobot) use TZAbstractDatabaseMetadata.GetTablesCacheKey instead
+      Const SchemaPattern:String;Const TableNamePattern:String;const Types: TStringDynArray):String;
+      deprecated; // (technobot) use TZAbstractDatabaseMetadata.GetTablesCacheKey instead
 
 
 var

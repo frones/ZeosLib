@@ -440,14 +440,7 @@ const
 implementation
 
 uses
-{$IFNDEF VER130BELOW}
-  Variants,
-{$ELSE}
-  {$IFDEF FPC}
-    Variants,
-  {$ENDIF}
-{$ENDIF}
-  ZSysUtils, Math, ZDbcInterbase6;
+  Variants, ZSysUtils, Math, ZDbcInterbase6;
 
 {**
    Generate specific length random string and return it

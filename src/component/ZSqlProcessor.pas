@@ -58,7 +58,7 @@ interface
 {$I ZComponent.inc}
 
 uses ZCompatibility, Classes, SysUtils, DB, ZDbcIntfs, ZConnection,
-  ZScriptParser, ZSqlStrings{$IFNDEF VER130BELOW}, Types{$ENDIF};
+  ZScriptParser, ZSqlStrings{$IFNDEF FPC}, Types{$ENDIF};
 
 type
 
@@ -164,6 +164,7 @@ begin
 
   FParams := TParams.Create(Self);
   FScript := TZSQLStrings.Create;
+  FScript.Dataset := Self;
   FScript.OnChange := UpdateSQLStrings;
   FScriptParser := TZSQLScriptParser.Create;
   FScriptParser.DelimiterType := dtDefault;
@@ -366,6 +367,7 @@ begin
   FConnection.ShowSQLHourGlass;
   try
     SQL := TZSQLStrings.Create;
+    SQL.Dataset := Self;
     SQL.ParamCheck := FScript.ParamCheck;
     SQL.MultiStatements := False;
     Parse;
@@ -495,7 +497,7 @@ begin
             Statement.SetDate(I + 1, Param.AsDate);
           ftTime:
             Statement.SetTime(I + 1, Param.AsTime);
-          ftDateTime{$IFNDEF VER130}, ftTimestamp{$ENDIF}:
+          ftDateTime, ftTimestamp:
             Statement.SetTimestamp(I + 1, Param.AsDateTime);
           ftMemo:
             begin

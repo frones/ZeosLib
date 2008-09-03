@@ -62,7 +62,7 @@ uses
 {$IFDEF MSWINDOWS}
   Windows,
 {$ENDIF MSWINDOWS}
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   Types,
 {$ENDIF}
   ZCompatibility, Classes, SysUtils, Contnrs, ZClasses, ZDbcIntfs,
@@ -594,11 +594,7 @@ begin
       stString:
         Result := AnsiStrComp(PChar(ValuePtr1), PChar(ValuePtr2));
       stUnicodeString:
-      {$IFNDEF VER130BELOW}
         Result := WideCompareStr(PWideChar(ValuePtr1), PWideChar(ValuePtr2));
-      {$ELSE}
-        Result := AnsiCompareStr(PWideChar(ValuePtr1), PWideChar(ValuePtr2));
-      {$ENDIF}
       stBytes:
         begin
           Length1 := PSmallInt(ValuePtr1)^;
@@ -629,11 +625,7 @@ begin
           else if FColumnTypes[ColumnIndex] = stBinaryStream then
             Result := CompareStr(Blob1.GetString, Blob2.GetString)
           else if FColumnTypes[ColumnIndex] = stUnicodeStream then
-          {$IFNDEF VER130BELOW}
             Result := WideCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
-          {$ELSE}
-            Result := AnsiCompareStr(Blob1.GetString, Blob2.GetString);
-          {$ENDIF}
         end;
     end;
     if Result <> 0 then

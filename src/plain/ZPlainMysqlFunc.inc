@@ -187,7 +187,7 @@
     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tmysql_slave_send_query = function(mysql: PMYSQL; const query: PChar;
-    length: Cardinal): Byte;
+	    length: Cardinal): Byte;
     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
   { Enable/disable parsing of all queries to decide
@@ -262,7 +262,7 @@
   Tmysql_rollback               = function(Handle: PMYSQL): Byte;                                      {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_set_character_set      = function(Handle: PMYSQL; csname: PChar): Integer;                    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_set_server_option      = function(Handle: PMYSQL; Option: TMysqlSetOption): Integer;          {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_shutdown               = function(Handle: PMYSQL; shutdown_level: TMysqlShutdownLevel): Integer;
+  Tmysql_shutdown               = function(Handle: PMYSQL; shutdown_level: TMysqlShutdownLevel): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_sqlstate               = function(Handle: PMYSQL): PChar;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_warning_count          = function(Handle: PMYSQL): Cardinal;                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 {BELOW are new PREPARED STATEMENTS}

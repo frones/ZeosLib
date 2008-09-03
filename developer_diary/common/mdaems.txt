@@ -245,3 +245,9 @@
 20080820 : Memory Leak in TZIBEventAlerter - by magnomp - See http://zeos.firmos.at/viewtopic.php?t=1962
 
 20080820 : Added overloaded version of ZConnection.GetTablenNames, allowing the user to specify the table types. - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=1960
+
+20080822 : Removed conditional coding for the compiler versions that are not longer supported - by mdaems
+
+20080829 : Adjusted fix for Mantis Bug 99 - by mdaems/karpik - Mantis Bug 137
+
+20080831 : TZSQLProcessor Tokenizer problem - by GeorgeKP - See http://zeos.firmos.at/viewtopic.php?t=1977

@@ -60,18 +60,14 @@ interface
 {$IFDEF WITH_PROPERTY_EDITOR}
 
 uses
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   Types,
 {$ENDIF}
   Classes, ZClasses, ZCompatibility, ZDbcIntfs,
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   DesignIntf, DesignEditors;
 {$ELSE}
-  {$IFDEF FPC}
     PropEdits;
-  {$ELSE}
-    DsgnIntf;
-  {$ENDIF}
 {$ENDIF}
 
 type
