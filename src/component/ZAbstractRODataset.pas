@@ -1284,7 +1284,11 @@ begin
     raise EZDatabaseError.Create(SOperationIsNotAllowed4);
   if not RequestLive and (Field.FieldKind = fkData) then
     RaiseReadOnlyError;
-  if Field.ReadOnly and not (State in [dsSetKey, dsCalcFields, dsFilter, dsBlockRead, dsInternalCalc, dsOpening]) then
+  // Check for readonly updates
+  // Lookup values are requeried automatically on edit of all fields.
+  // Didn't find a way to avoid this...
+  if Field.ReadOnly and (Field.FieldKind <> fkLookup)
+                    and not (State in [dsSetKey, dsCalcFields, dsFilter, dsBlockRead, dsInternalCalc, dsOpening]) then
     DatabaseErrorFmt(SFieldReadOnly, [Field.DisplayName]);
   if not (State in dsWriteModes) then
     DatabaseError(SNotEditing, Self);
