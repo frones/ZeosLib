@@ -30,7 +30,7 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
-          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=137">#0000137</ulink> [normal] Exception Field '...' cannot be modified (calculated, lookup field) (Adjusted fix for Mantis Bug 99, NOT COMPLETE YET)</simpara>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=137">#0000137</ulink> [normal] Exception Field '...' cannot be modified (calculated, lookup field) (Adjusted fix for Mantis Bug 99)</simpara>
         </listitem>
         <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=133">#0000133</ulink> [normal] Exception class EZSQLException : attempted update of read-only column (calculated)</simpara>
