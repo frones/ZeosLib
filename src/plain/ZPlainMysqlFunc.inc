@@ -45,40 +45,10 @@
 {$IFDEF MYSQL_5_API}
   {$DEFINE MYSQL_5_UP}
   {$DEFINE MYSQL_41_UP}
-  {$DEFINE MYSQL_40_UP}
-  {$DEFINE MYSQL_323_UP}
-  {$DEFINE MYSQL_320_UP}
   {$DEFINE MYSQL_5_DOWN}
 {$ENDIF}
 {$IFDEF MYSQL_41_API}
   {$DEFINE MYSQL_41_UP}
-  {$DEFINE MYSQL_40_UP}
-  {$DEFINE MYSQL_323_UP}
-  {$DEFINE MYSQL_320_UP}
-  {$DEFINE MYSQL_41_DOWN}
-  {$DEFINE MYSQL_5_DOWN}
-{$ENDIF}
-{$IFDEF MYSQL_40_API}
-  {$DEFINE MYSQL_40_UP}
-  {$DEFINE MYSQL_323_UP}
-  {$DEFINE MYSQL_320_UP}
-  {$DEFINE MYSQL_40_DOWN}
-  {$DEFINE MYSQL_41_DOWN}
-  {$DEFINE MYSQL_5_DOWN}
-{$ENDIF}
-{$IFDEF MYSQL_323_API}
-  {$DEFINE MYSQL_323_UP}
-  {$DEFINE MYSQL_320_UP}
-  {$DEFINE MYSQL_323_DOWN}
-  {$DEFINE MYSQL_40_DOWN}
-  {$DEFINE MYSQL_41_DOWN}
-  {$DEFINE MYSQL_5_DOWN}
-{$ENDIF}
-{$IFDEF MYSQL_320_API}
-  {$DEFINE MYSQL_320_UP}
-  {$DEFINE MYSQL_320_DOWN}
-  {$DEFINE MYSQL_323_DOWN}
-  {$DEFINE MYSQL_40_DOWN}
   {$DEFINE MYSQL_41_DOWN}
   {$DEFINE MYSQL_5_DOWN}
 {$ENDIF}
@@ -157,14 +127,12 @@
   Tmysql_server_init            = function(Argc: Integer; Argv, Groups: Pointer): Integer;            {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_server_end             = procedure;                                                          {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  {$IFDEF MYSQL_323_UP}
   Tmysql_change_user            = function(mysql: PMYSQL; const user: PChar; const passwd: PChar; const db: PChar): Byte;
   Tmysql_field_count            = function(Handle: PMYSQL): Cardinal;                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  {$ENDIF}
 
-  {$IFDEF MYSQL_40_UP}
+
   Tmysql_get_client_version     = function: Cardinal;                                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-{BELOW are functions not implemented in PDO}
+
   Tmysql_send_query = function(mysql: PMYSQL; const query: PChar;
     length: Cardinal): Integer;
     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
@@ -246,13 +214,7 @@
   Tmysql_manager_fetch_line = function(con: PMYSQL_MANAGER; res_buf: PChar;
     res_buf_size: Integer): Integer;
     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  {$ENDIF}
 
-  {$IFDEF MYSQL_40_DOWN}
-  Tmysql_shutdown               = function(Handle: PMYSQL): Integer;                                   {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  {$ENDIF}
-
-  {$IFDEF MYSQL_41_UP}
   Tmysql_autocommit             = function(Handle: PMYSQL; const mode: Byte): Byte;                    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_commit                 = function(Handle: PMYSQL): Byte;                                      {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_get_server_version     = function(Handle: PMYSQL): Cardinal;                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
@@ -298,7 +260,6 @@
                                   data: PChar; length: Cardinal): Byte;                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_sqlstate          = function(stmt: PMYSQL_STMT): PChar;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_store_result      = function(stmt: PMYSQL_STMT): Integer;                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  {$ENDIF}
 
   {$IFDEF MYSQL_5_UP}
   Tmysql_get_character_set_info = procedure(Handle: PMYSQL; cs: PMY_CHARSET_INFO);                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
@@ -309,10 +270,4 @@
   {$UNDEF MYSQL_5_DOWN}
   {$UNDEF MYSQL_41_UP}
   {$UNDEF MYSQL_41_DOWN}
-  {$UNDEF MYSQL_40_UP}
-  {$UNDEF MYSQL_40_DOWN}
-  {$UNDEF MYSQL_323_UP}
-  {$UNDEF MYSQL_323_DOWN}
-  {$UNDEF MYSQL_320_UP}
-  {$UNDEF MYSQL_320_DOWN}
 
