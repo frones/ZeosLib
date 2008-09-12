@@ -47,6 +47,9 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[COMMON] TZSQLProcessor Tokenizer problem (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1977">http://zeos.firmos.at/viewtopic.php?t=1977</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[MYSQL] Misprint in ZPlainMysqlFunc.inc (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1979">http://zeos.firmos.at/viewtopic.php?t=1979</ulink>)</simpara>
         </listitem>
         <listitem>

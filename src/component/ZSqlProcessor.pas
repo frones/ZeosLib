@@ -164,6 +164,7 @@ begin
 
   FParams := TParams.Create(Self);
   FScript := TZSQLStrings.Create;
+  FScript.Dataset := Self;
   FScript.OnChange := UpdateSQLStrings;
   FScriptParser := TZSQLScriptParser.Create;
   FScriptParser.DelimiterType := dtDefault;
@@ -366,6 +367,7 @@ begin
   FConnection.ShowSQLHourGlass;
   try
     SQL := TZSQLStrings.Create;
+    SQL.Dataset := Self;
     SQL.ParamCheck := FScript.ParamCheck;
     SQL.MultiStatements := False;
     Parse;
