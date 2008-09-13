@@ -112,9 +112,9 @@ RootDir=
 [Version Info]
 IncludeVerInfo=1
 AutoIncBuild=0
-MajorVer=6
-MinorVer=6
-Release=3
+MajorVer=7
+MinorVer=0
+Release=0
 Build=0
 Debug=0
 PreRelease=0
@@ -132,7 +132,7 @@ LegalCopyright=
 LegalTrademarks=
 OriginalFilename=
 ProductName=
-ProductVersion=6.6.3.0
+ProductVersion=7.0.0.0
 Comments=
 [HistoryLists\hlDebugSourcePath]
 Count=2
