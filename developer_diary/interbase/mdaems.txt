@@ -37,3 +37,7 @@
 20080816 : Detection of calculated columns (set readonly, not writable) - by pjonard - Mantis Bug 133
 
 20080820 : Part 2: Detection of calculated columns (set readonly, not writable) - by pjonard - Mantis Bug 133
+
+20080913 : Added timeout parameter - by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2002
+
+20080913 : ZDbcInterbase6Utils.AffectedRows now also returns a value for select statements - by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2002

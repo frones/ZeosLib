@@ -403,6 +403,7 @@ var
   RoleName: string;
   ClientCodePage: string;
   UserSetDialect: string;
+  ConnectTimeout : integer;
 begin
   inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
     TZInterbase6DatabaseMetadata.Create(Self, Url, Info));
@@ -435,6 +436,11 @@ begin
   RoleName := Trim(Info.Values['rolename']);
   if RoleName <> '' then
     self.Info.Values['isc_dpb_sql_role_name'] := UpperCase(RoleName);
+	
+  ConnectTimeout := StrToIntDef(Info.Values['timeout'], -1); 
+  if ConnectTimeout >= 0 then 
+    self.Info.Values['isc_dpb_connect_timeout'] := IntToStr(ConnectTimeout); 
+
 end;
 
 {**

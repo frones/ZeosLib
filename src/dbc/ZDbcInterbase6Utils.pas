@@ -513,7 +513,8 @@ begin
         Dialect := StrToIntDef(ParamValue, 0);
       isc_dpb_user_name, isc_dpb_password, isc_dpb_password_enc,
       isc_dpb_sys_user_name, isc_dpb_license, isc_dpb_encrypt_key,
-      isc_dpb_lc_messages, isc_dpb_lc_ctype, isc_dpb_sql_role_name:
+      isc_dpb_lc_messages, isc_dpb_lc_ctype, isc_dpb_sql_role_name,
+	  isc_dpb_connect_timeout:
         begin
           DPB := DPB + Char(ParamNo) + Char(Length(ParamValue)) + ParamValue;
           Inc(FDPBLength, 2 + Length(ParamValue));
@@ -960,6 +961,7 @@ begin
     case StatementType of
       stUpdate: Result := PlainDriver.isc_vax_integer(@OutBuffer[6], 4);
       stDelete: Result := PlainDriver.isc_vax_integer(@OutBuffer[13], 4);
+      stSelect: Result := PlainDriver.isc_vax_integer(@OutBuffer[20], 4); 
       stInsert: Result := PlainDriver.isc_vax_integer(@OutBuffer[27], 4);
       else Result := -1;
     end;

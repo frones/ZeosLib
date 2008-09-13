@@ -49,16 +49,42 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[IB/FB] ZDbcInterbase6Utils.AffectedRows now also returns a value for select statements (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2002">http://zeos.firmos.at/viewtopic.php?t=2002</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[IB/FB] Add Connection timeout parameter (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2002">http://zeos.firmos.at/viewtopic.php?t=2002</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[POSTGRES] Limited default output of TZPostgresSQLDatabaseMetadata.GetTables to 'TABLE', 'VIEW' and 'TEMPORARY TABLE' (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1960">http://zeos.firmos.at/viewtopic.php?t=1960</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[COMMON] Sanity check: assert that row buffer length is not exceeded at a proper time - by HeidiSQL Team</simpara>
+        </listitem>
+        <listitem>
           <simpara>[COMMON] Splitted IZDatabaseMetadata into IZDatabaseMetadata (retrieves info about DB content) and IZDatabaseInfo (retrieves info about server properties) (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1946">http://zeos.firmos.at/viewtopic.php?t=1946</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[POSTGRES] PostgreSQL UTF8 Charset Patch</simpara>
+        </listitem>
+        <listitem>
           <simpara>[MYSQL] Removed support for mysql w 4.1</simpara>
+        </listitem>
+        <listitem>
           <simpara>[COMMON] Removed packages for Delphi 5 and 6, Kylix 2 and CBuilder 5</simpara>
+        </listitem>
+        <listitem>
           <simpara>[COMMON] New dataset option doDontSortOnPost (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1931">http://zeos.firmos.at/viewtopic.php?t=1931</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[COMMON] New property FetchRow in ZDataSet (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1857">http://zeos.firmos.at/viewtopic.php?t=1857</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[COMMON] Added ZQuery.RefreshCurrentRow method</simpara>
+        </listitem>
+        <listitem>
           <simpara>[MYSQL] Added Prepared Statements support (Experimental)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[COMMON] ZQuery property ValidateUpdateCount true by default</simpara>
         </listitem>
      </itemizedlist>
