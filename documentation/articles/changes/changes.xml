@@ -93,7 +93,7 @@
       <title>Internal Changes</title>
       <itemizedlist spacing="compact">
         <listitem>
-          <simpara>NONE</simpara>
+          <simpara>[DB2] Removed never used DB2 plain drivers</simpara>
         </listitem>
      </itemizedlist>
     </sect2>	

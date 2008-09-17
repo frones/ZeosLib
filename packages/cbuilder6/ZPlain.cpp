@@ -18,10 +18,6 @@ USEUNIT("..\..\src\plain\ZPlainAdo.pas");
 
 USEUNIT("..\..\src\plain\ZPlainAdoDriver.pas");
 
-USEUNIT("..\..\src\plain\ZPlainDb2.pas");
-
-USEUNIT("..\..\src\plain\ZPlainDb2Driver.pas");
-
 USEUNIT("..\..\src\plain\ZPlainDbLibDriver.pas");
 
 USEUNIT("..\..\src\plain\ZPlainDbLibMsSql7.pas");

@@ -61,12 +61,6 @@ contains
   ZPlainPostgreSql8 in '../../src/plain/ZPlainPostgreSql8.pas',
 {$ENDIF}
 
-{$IFDEF ENABLE_DB2}
-  ZPlainDb2 in '../../src/plain/ZPlainDb2.pas',
-  ZPlainDb2Driver in '../../src/plain/ZPlainDb2Driver.pas',
-{$ENDIF}
-
-
 {$IFDEF ENABLE_ADO}
   ZPlainAdoDriver in '../../src/plain/ZPlainAdoDriver.pas',
   ZPlainAdo in '../../src/plain/ZPlainAdo.pas',

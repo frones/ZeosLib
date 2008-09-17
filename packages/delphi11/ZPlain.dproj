@@ -63,8 +63,6 @@
     <DCCReference Include="..\..\src\plain\ZPlainASA8.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainASA9.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainASADriver.pas" />
-    <DCCReference Include="..\..\src\plain\ZPlainDb2.pas" />
-    <DCCReference Include="..\..\src\plain\ZPlainDb2Driver.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainDbLibDriver.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainDbLibMsSql7.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainDbLibSybaseAse125.pas" />
