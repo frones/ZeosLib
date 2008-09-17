@@ -251,3 +251,5 @@
 20080829 : Adjusted fix for Mantis Bug 99 - by mdaems/karpik - Mantis Bug 137
 
 20080831 : TZSQLProcessor Tokenizer problem - by GeorgeKP - See http://zeos.firmos.at/viewtopic.php?t=1977
+
+20080917 : Removed the unused Db2 plain drivers - by mdaems

@@ -48,8 +48,6 @@ contains
   ZPlainMySqlDriver in '..\..\src\plain\ZPlainMySqlDriver.pas',
   ZPlainPostgreSql7 in '..\..\src\plain\ZPlainPostgreSql7.pas',
   ZPlainPostgreSql8 in '..\..\src\plain\ZPlainPostgreSql8.pas',
-  ZPlainDb2 in '..\..\src\plain\ZPlainDb2.pas',
-  ZPlainDb2Driver in '..\..\src\plain\ZPlainDb2Driver.pas',
   ZPlainFirebird10 in '..\..\src\plain\ZPlainFirebird10.pas',
   ZPlainFirebird15 in '..\..\src\plain\ZPlainFirebird15.pas',
   ZPlainFirebird20 in '..\..\src\plain\ZPlainFirebird20.pas',

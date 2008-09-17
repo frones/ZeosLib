@@ -21,7 +21,7 @@
       </Other>
     </CompilerOptions>
     <Description Value="Zeos SQL Parsing Classes and Interfaces"/>
-    <Version Major="6" Minor="6" Release="3"/>
+    <Version Major="7" Minor="0" Release="0"/>
     <Files Count="16">
       <Item1>
         <Filename Value="../../src/parsesql/ZSybaseToken.pas"/>
