@@ -2668,6 +2668,8 @@ var
   I: Integer;
 begin
   Result := Null;
+  if High(Args) = -1 then
+    Exit; 
   SchemaIndex := FindSchema(SchemaId);
   if SchemaIndex = -1 then
     Exit;
