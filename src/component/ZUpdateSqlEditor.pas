@@ -58,14 +58,10 @@ interface
 {$I ZComponent.inc}
 
 uses
-{$IFNDEF VER130BELOW}
+{$IFNDEF FPC}
   DesignEditors,
 {$ELSE}
-  {$IFDEF FPC}
-    PropEdits, Buttons, ComponentEditors,
-  {$ELSE}
-    DsgnIntf,
-  {$ENDIF}
+  PropEdits, Buttons, ComponentEditors,
 {$ENDIF}
   Forms, DB, ExtCtrls, StdCtrls, Controls, ComCtrls,
   Classes, SysUtils, {$IFNDEF FPC}Windows, {$ELSE}LCLIntf, LResources, {$ENDIF}
