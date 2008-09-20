@@ -2079,9 +2079,10 @@ procedure TZAbstractRODataset.InternalPost;
           if Required and not ReadOnly and (FieldKind=fkData) and IsNull then
             begin
            // allow autoincrement and defaulted fields to be null;
-              columnindex := DefineFieldIndex(FieldsLookupTable,Fields[i]);
-              if not Resultset.GetMetadata.HasDefaultValue(columnIndex) and
-                 not Resultset.GetMetadata.IsAutoIncrement(columnIndex) then
+              columnindex := Resultset.FindColumn(Fields[i].FieldName);
+              if (Columnindex = 0) or
+                 (not Resultset.GetMetadata.HasDefaultValue(columnIndex) and
+                  not Resultset.GetMetadata.IsAutoIncrement(columnIndex)) then
                 raise EZDatabaseError.Create(Format(SNeedField,[DisplayName]));
             end;
         End;

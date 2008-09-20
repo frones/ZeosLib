@@ -253,3 +253,5 @@
 20080831 : TZSQLProcessor Tokenizer problem - by GeorgeKP - See http://zeos.firmos.at/viewtopic.php?t=1977
 
 20080917 : Removed the unused Db2 plain drivers - by mdaems
+
+20080917 : "List out of bounds" in Metadata - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=1995
