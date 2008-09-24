@@ -86,6 +86,7 @@ type
     procedure TestFilterExpression;
     procedure TestDecodingSortedFields;
     procedure TestSmartOpen;
+    procedure TestPrepare;
   end;
 
 implementation
@@ -1152,6 +1153,45 @@ begin
       Fail('Wrong open behaviour with SmartOpen.');
     end;
 //    Check(not Query.Active);
+
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure TZGenericTestDbcResultSet.TestPrepare;
+var
+  Query: TZReadOnlyQuery;
+begin
+  Query := TZReadOnlyQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+    Query.SQL.Text := 'select * from people';
+
+    Query.Prepare;
+    Check(Query.Prepared);
+    Check(Not Query.Active);
+    Query.Open;
+    Check(Query.Active);
+    Check(Query.Prepared);
+    Query.Close;
+    Check(Not Query.Active);
+    Check(Query.Prepared);
+    Query.UnPrepare;
+    Check(Not Query.Prepared);
+
+    Query.Active := True;
+    Check(Query.Active);
+    Check(Query.Prepared);
+    Query.Unprepare;
+    try
+      Query.Prepare;
+      Fail('Wrong prepare behaviour.');
+    except
+      // Ignore.
+    end;
+    Check(Query.Prepared);
+    Query.Active := False;
 
   finally
     Query.Free;

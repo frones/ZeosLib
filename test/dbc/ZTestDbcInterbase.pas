@@ -77,6 +77,7 @@ type
     procedure TestStatement;
     procedure TestRegularResultSet;
     procedure TestBlobs;
+    procedure TestUpdateBlobs;
     procedure TestCaseSensitive;
     procedure TestDefaultValues;
     procedure TestDomainValues;
@@ -231,6 +232,120 @@ begin
   TempStream := ResultSet.GetBinaryStreamByName('B_IMAGE');
   CheckEquals(ImageStream, TempStream);
   TempStream.Free;
+  ResultSet.Close;
+
+  TextStream.Free;
+  ImageStream.Free;
+
+  Statement.Close;
+end;
+
+procedure TZTestDbcInterbaseCase.TestUpdateBlobs;
+var
+  Connection: IZConnection;
+  PreparedStatement: IZPreparedStatement;
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+  TextStream: TStream;
+  ImageStream: TMemoryStream;
+  TempStream: TStream;
+begin
+  Connection := CreateDbcConnection;
+  Statement := Connection.CreateStatement;
+  CheckNotNull(Statement);
+  Statement.SetResultSetType(rtScrollInsensitive);
+  Statement.SetResultSetConcurrency(rcReadOnly);
+
+  Statement.ExecuteUpdate('DELETE FROM BLOB_VALUES WHERE B_ID='
+    + IntToStr(TEST_ROW_ID));
+
+  TextStream := TStringStream.Create('ABCDEFG');
+  ImageStream := TMemoryStream.Create;
+  ImageStream.LoadFromFile('../../../database/images/zapotec.bmp');
+
+  PreparedStatement := Connection.PrepareStatement(
+    'INSERT INTO BLOB_VALUES (B_ID, B_TEXT, B_IMAGE) VALUES(?,?,?)');
+  PreparedStatement.SetInt(1, TEST_ROW_ID);
+  PreparedStatement.SetAsciiStream(2, TextStream);
+  PreparedStatement.SetBinaryStream(3, ImageStream);
+  CheckEquals(1, PreparedStatement.ExecuteUpdatePrepared);
+
+  ResultSet := Statement.ExecuteQuery('SELECT * FROM BLOB_VALUES'
+    + ' WHERE b_id=' + IntToStr(TEST_ROW_ID));
+  CheckNotNull(ResultSet);
+  Check(ResultSet.Next);
+  CheckEquals(TEST_ROW_ID, ResultSet.GetIntByName('B_ID'));
+  TempStream := ResultSet.GetAsciiStreamByName('B_TEXT');
+  CheckEquals(TextStream, TempStream);
+  TempStream.Free;
+  TempStream := ResultSet.GetBinaryStreamByName('B_IMAGE');
+  CheckEquals(ImageStream, TempStream);
+  TempStream.Free;
+
+// Update blob
+  TextStream.Free;
+  ImageStream.Free;
+  TextStream := TStringStream.Create('GFEDCBA');
+  ImageStream := TMemoryStream.Create;
+  ImageStream.LoadFromFile('../../../database/images/dogs.jpg');
+
+  PreparedStatement := Connection.PrepareStatement(
+    'UPDATE BLOB_VALUES SET B_TEXT =?,B_IMAGE=? WHERE B_ID=?');
+  PreparedStatement.SetInt(3, TEST_ROW_ID);
+  PreparedStatement.SetAsciiStream(1, TextStream);
+  PreparedStatement.SetBinaryStream(2, ImageStream);
+  CheckEquals(1, PreparedStatement.ExecuteUpdatePrepared);
+
+  ResultSet := Statement.ExecuteQuery('SELECT * FROM BLOB_VALUES'
+    + ' WHERE b_id=' + IntToStr(TEST_ROW_ID));
+  CheckNotNull(ResultSet);
+  Check(ResultSet.Next);
+  CheckEquals(TEST_ROW_ID, ResultSet.GetIntByName('B_ID'));
+  TempStream := ResultSet.GetAsciiStreamByName('B_TEXT');
+  CheckEquals(TextStream, TempStream);
+  TempStream.Free;
+  TempStream := ResultSet.GetBinaryStreamByName('B_IMAGE');
+  CheckEquals(ImageStream, TempStream);
+  TempStream.Free;
+
+// Update null binary blob
+  TextStream.Free;
+  TextStream := TStringStream.Create('GFEDCBA');
+
+  PreparedStatement := Connection.PrepareStatement(
+    'UPDATE BLOB_VALUES SET B_TEXT =?,B_IMAGE=? WHERE B_ID=?');
+  PreparedStatement.SetInt(3, TEST_ROW_ID);
+  PreparedStatement.SetAsciiStream(1, TextStream);
+  PreparedStatement.SetNull(2,stBinaryStream);
+  CheckEquals(1, PreparedStatement.ExecuteUpdatePrepared);
+
+  ResultSet := Statement.ExecuteQuery('SELECT * FROM BLOB_VALUES'
+    + ' WHERE b_id=' + IntToStr(TEST_ROW_ID));
+  CheckNotNull(ResultSet);
+  Check(ResultSet.Next);
+  CheckEquals(TEST_ROW_ID, ResultSet.GetIntByName('B_ID'));
+  TempStream := ResultSet.GetAsciiStreamByName('B_TEXT');
+  CheckEquals(TextStream, TempStream);
+  CheckNull(ResultSet.GetBinaryStreamByName('B_IMAGE'));
+  TempStream.Free;
+
+// Update null ascii blob
+
+  PreparedStatement := Connection.PrepareStatement(
+    'UPDATE BLOB_VALUES SET B_TEXT =?,B_IMAGE=? WHERE B_ID=?');
+  PreparedStatement.SetInt(3, TEST_ROW_ID);
+  PreparedStatement.SetNull(1,stAsciiStream);
+  PreparedStatement.SetNull(2,stBinaryStream);
+  CheckEquals(1, PreparedStatement.ExecuteUpdatePrepared);
+
+  ResultSet := Statement.ExecuteQuery('SELECT * FROM BLOB_VALUES'
+    + ' WHERE b_id=' + IntToStr(TEST_ROW_ID));
+  CheckNotNull(ResultSet);
+  Check(ResultSet.Next);
+  CheckEquals(TEST_ROW_ID, ResultSet.GetIntByName('B_ID'));
+  CheckNull(ResultSet.GetAsciiStreamByName('B_TEXT'));
+  CheckNull(ResultSet.GetBinaryStreamByName('B_IMAGE'));
+
   ResultSet.Close;
 
   TextStream.Free;
