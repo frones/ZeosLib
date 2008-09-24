@@ -49,6 +49,9 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[Common] Added Prepared property and Prepare/Unprepare methods to TZAbstractRODataset</simpara>
+        </listitem>
+        <listitem>
           <simpara>[IB/FB] ZDbcInterbase6Utils.AffectedRows now also returns a value for select statements (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2002">http://zeos.firmos.at/viewtopic.php?t=2002</ulink>)</simpara>
         </listitem>
         <listitem>
