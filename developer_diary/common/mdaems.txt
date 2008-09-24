@@ -257,3 +257,5 @@
 20080917 : "List out of bounds" in Metadata - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=1995
 
 20080924 : Added Prepared property and Prepare/Unprepare methods to TZAbstractRODataset - by mdaems
+
+20080924 : Integrated various bugfixes from DRD, Willian Jhonnes and Silvio Clecio
