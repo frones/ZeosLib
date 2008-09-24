@@ -1190,7 +1190,7 @@ begin
     except
       // Ignore.
     end;
-    Check(Query.Prepared);
+    Check(Not Query.Prepared);
     Query.Active := False;
 
   finally
