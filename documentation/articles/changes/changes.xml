@@ -47,6 +47,12 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[ADO] method calls (GetSchemaNames() and GetCatalogNames()) ran into an exception (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1774">http://zeos.firmos.at/viewtopic.php?t=1774</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] "List out of bounds" in Metadata (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1995">http://zeos.firmos.at/viewtopic.php?t=1995</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[COMMON] TZSQLProcessor Tokenizer problem (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1977">http://zeos.firmos.at/viewtopic.php?t=1977</ulink>)</simpara>
         </listitem>
         <listitem>
