@@ -101,11 +101,8 @@ function MySQLTimestampToDateTime(const Value: string): TDateTime;
 }
 procedure CheckMySQLError(PlainDriver: IZMySQLPlainDriver;
   Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; const LogMessage: string);
-{$IFDEF MYSQL_USE_PREPARE}
 procedure CheckMySQLPrepStmtError(PlainDriver: IZMySQLPlainDriver;
   Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; const LogMessage: string);
-{$ENDIF}
-
 procedure EnterSilentMySQLError;
 procedure LeaveSilentMySQLError;
 
@@ -143,10 +140,7 @@ function EncodeMySQLVersioning(const MajorVersion: Integer;
 }
 function ConvertMySQLVersionToSQLVersion( const MySQLVersion: Integer ): Integer;
 
-{$IFDEF MYSQL_USE_PREPARE}
 function getMySQLFieldSize (field_type: Byte; field_size: LongWord): LongWord;
-{$ENDIF}
-
 implementation
 
 uses ZMessages, ZPlainMySqlConstants;
@@ -470,7 +464,6 @@ begin
   end;
 end;
 
-{$IFDEF MYSQL_USE_PREPARE}
 procedure CheckMySQLPrepStmtError(PlainDriver: IZMySQLPlainDriver;
   Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; const LogMessage: string);
 var
@@ -489,7 +482,6 @@ begin
       Format(SSQLError1, [ErrorMessage]));
   end;
 end;
-{$ENDIF}
 
 {**
   Decodes a MySQL Version Value encoded with format:
@@ -542,7 +534,6 @@ begin
  Result := EncodeSQLVersioning(MajorVersion,MinorVersion,SubVersion);
 end;
 
-{$IFDEF MYSQL_USE_PREPARE}
 function getMySQLFieldSize (field_type: Byte; field_size: LongWord): LongWord;
 var
     MaxBlobSize: LongWord;
@@ -588,6 +579,5 @@ Begin
 }        Result := 255;  {unknown ??}
     end;
 end;
-{$ENDIF}
 
 end.

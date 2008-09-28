@@ -49,6 +49,9 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[Mysql] Implemented reuse of prepared statements for mysql</simpara>
+        </listitem>
+        <listitem>
           <simpara>[Common] Added Prepared property and Prepare/Unprepare methods to TZAbstractRODataset</simpara>
         </listitem>
         <listitem>

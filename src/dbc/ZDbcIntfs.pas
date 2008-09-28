@@ -523,6 +523,10 @@ type
     function ExecuteQueryPrepared: IZResultSet;
     function ExecuteUpdatePrepared: Integer;
     function ExecutePrepared: Boolean;
+    
+    procedure Prepare;
+    procedure Unprepare;
+    function IsPrepared: Boolean;
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
 

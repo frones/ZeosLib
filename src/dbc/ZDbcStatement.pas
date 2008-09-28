@@ -164,6 +164,9 @@ type
   end;
 
   {** Implements Abstract Prepared SQL Statement. }
+
+  { TZAbstractPreparedStatement }
+
   TZAbstractPreparedStatement = class(TZAbstractStatement, IZPreparedStatement)
   private
     FSQL: string;
@@ -171,10 +174,12 @@ type
     FInParamTypes: TZSQLTypeArray;
     FInParamDefaultValues: TStringDynArray;
     FInParamCount: Integer;
+    FPrepared : Boolean;
   protected
     procedure SetInParamCount(NewParamCount: Integer); virtual;
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
       const Value: TZVariant); virtual;
+    function GetInParamLogValue(Value: TZVariant): String;
 
     property SQL: string read FSQL write FSQL;
     property InParamValues: TZVariantDynArray
@@ -191,6 +196,11 @@ type
     function ExecuteQueryPrepared: IZResultSet; virtual;
     function ExecuteUpdatePrepared: Integer; virtual;
     function ExecutePrepared: Boolean; virtual;
+
+    procedure Prepare; virtual;
+    procedure Unprepare; virtual;
+    function IsPrepared: Boolean; virtual;
+    property Prepared: Boolean read IsPrepared;
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
 
@@ -918,6 +928,7 @@ begin
   FSQL := SQL;
   FInParamCount := 0;
   SetInParamCount(0);
+  FPrepared := False;
 end;
 
 {**
@@ -925,6 +936,7 @@ end;
 }
 destructor TZAbstractPreparedStatement.Destroy;
 begin
+  Unprepare;
   inherited Destroy;
   ClearParameters;
 end;
@@ -964,6 +976,25 @@ begin
 
   FInParamTypes[ParameterIndex - 1] := SQLType;
   FInParamValues[ParameterIndex - 1] := Value;
+end;
+
+function TZAbstractPreparedStatement.GetInParamLogValue(Value: TZVariant): String;
+var
+  i : integer;
+begin
+  With Value do
+    case VType of
+      vtNull : result := '(NULL)';
+      vtBoolean : If VBoolean then result := '(TRUE)' else result := '(FALSE)';
+      vtInteger : result := IntToStr(VInteger);
+      vtFloat : result := FloatToStr(VFloat);
+      vtString : result := '''' + VString + '''';
+      vtUnicodeString : result := '''' + VUnicodeString + '''';
+      vtDateTime : result := DateTimeToStr(VDateTime);
+      vtPointer : result := '(POINTER)';
+      vtInterface : result := '(INTERFACE)';
+    else result := '(UNKNOWN TYPE)'
+    end;
 end;
 
 {**
@@ -1426,6 +1457,21 @@ function TZAbstractPreparedStatement.ExecutePrepared: Boolean;
 begin
   Result := False;
   RaiseUnsupportedException;
+end;
+
+procedure TZAbstractPreparedStatement.Prepare;
+begin
+  FPrepared := True;
+end;
+
+procedure TZAbstractPreparedStatement.Unprepare;
+begin
+  FPrepared := False;
+end;
+
+function TZAbstractPreparedStatement.IsPrepared: Boolean;
+begin
+  Result := FPrepared;
 end;
 
 {**

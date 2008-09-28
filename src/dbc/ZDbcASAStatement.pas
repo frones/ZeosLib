@@ -394,7 +394,7 @@ begin
     FASAConnection.GetDBHandle, CursorName);
   FSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
     FASAConnection.GetDBHandle, CursorName);
-  Prepare( FASAConnection, FSQLData, FParamSQLData, SQL, @FStmtNum, FPrepared,
+  ASAPrepare( FASAConnection, FSQLData, FParamSQLData, SQL, @FStmtNum, FPrepared,
     FMoreResults);
 end;
 
@@ -488,7 +488,7 @@ begin
   begin
     Close;
     Self.SQL := SQL;
-    Prepare( FASAConnection, FSQLData, FParamSQLData, SQL, @FStmtNum, FPrepared,
+    ASAPrepare( FASAConnection, FSQLData, FParamSQLData, SQL, @FStmtNum, FPrepared,
       FMoreResults);
   end;
   Result := ExecutePrepared;
@@ -526,7 +526,7 @@ begin
   begin
     Close;
     Self.SQL := SQL;
-    Prepare( FASAConnection, FSQLData, FParamSQLData, SQL, @FStmtNum, FPrepared,
+    ASAPrepare( FASAConnection, FSQLData, FParamSQLData, SQL, @FStmtNum, FPrepared,
       FMoreResults);
   end;
   Result := ExecuteQueryPrepared;
@@ -600,7 +600,7 @@ begin
   begin
     Close;
     Self.SQL := SQL;
-    Prepare( FASAConnection, FSQLData, FParamSQLData, SQL, @FStmtNum, FPrepared,
+    ASAPrepare( FASAConnection, FSQLData, FParamSQLData, SQL, @FStmtNum, FPrepared,
       FMoreResults);
   end;
   Result := ExecuteUpdatePrepared;
@@ -759,7 +759,7 @@ begin
   begin
     Close;
     Self.SQL := ProcSQL;
-    Prepare( FASAConnection, FSQLData, FParamSQLData, Self.SQL, @FStmtNum,
+    ASAPrepare( FASAConnection, FSQLData, FParamSQLData, Self.SQL, @FStmtNum,
       FPrepared, FMoreResults);
   end;
   Result := ExecutePrepared;
@@ -807,7 +807,7 @@ begin
   begin
     Close;
     Self.SQL := ProcSQL;
-    Prepare( FASAConnection, FSQLData, FParamSQLData, Self.SQL, @FStmtNum,
+    ASAPrepare( FASAConnection, FSQLData, FParamSQLData, Self.SQL, @FStmtNum,
       FPrepared, FMoreResults);
   end;
   Result := ExecuteQueryPrepared;
@@ -889,7 +889,7 @@ begin
   begin
     Close;
     Self.SQL := ProcSQL;
-    Prepare( FASAConnection, FSQLData, FParamSQLData, Self.SQL, @FStmtNum,
+    ASAPrepare( FASAConnection, FSQLData, FParamSQLData, Self.SQL, @FStmtNum,
       FPrepared, FMoreResults);
   end;
   Result := ExecuteUpdatePrepared;

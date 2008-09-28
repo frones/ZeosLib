@@ -76,6 +76,7 @@ type
   published
     procedure TestConnection;
     procedure TestReadOnlyQuery;
+    procedure TestRealPrepReadOnlyQuery;
     procedure TestQuery;
     procedure TestReadOnlyQueryExecSql;
     procedure TestQueryExecSql;
@@ -438,6 +439,25 @@ var
   Query: TZReadOnlyQuery;
 begin
   Query := TZReadOnlyQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+  //  Query.DbcStatement.SetResultSetType(rtScrollInsensitive);
+  //  CheckEquals(ord(rcReadOnly), ord(Query.DbcStatement.GetResultSetConcurrency));
+    TestQueryGeneric(Query);
+  finally
+    Query.Free;
+  end;
+end;
+
+{**
+  Check functionality of TZReadOnlyQuery Using PrefereRealPrepared
+}
+procedure TZGenericTestDbcResultSet.TestRealPrepReadOnlyQuery;
+var
+  Query: TZReadOnlyQuery;
+begin
+  Query := TZReadOnlyQuery.Create(nil);
+  Query.Options:= Query.Options + [doPreferPrepared];
   try
     Query.Connection := Connection;
   //  Query.DbcStatement.SetResultSetType(rtScrollInsensitive);

@@ -250,7 +250,7 @@ function GetCachedResultSet(SQL: string;
 procedure DescribeCursor( FASAConnection: IZASAConnection; FSQLData: IZASASQLDA;
   Cursor, SQL: String);
 
-procedure Prepare( FASAConnection: IZASAConnection; FSQLData, FParamsSQLData: IZASASQLDA;
+procedure ASAPrepare( FASAConnection: IZASAConnection; FSQLData, FParamsSQLData: IZASASQLDA;
    const SQL: String; StmtNum: PSmallInt; var FPrepared, FMoreResults: Boolean);
 
 procedure PrepareParameters( PlainDriver: IZASAPlainDriver;
@@ -1996,7 +1996,7 @@ begin
   end;
 end;
 
-procedure Prepare( FASAConnection: IZASAConnection; FSQLData, FParamsSQLData: IZASASQLDA;
+procedure ASAPrepare( FASAConnection: IZASAConnection; FSQLData, FParamsSQLData: IZASASQLDA;
    const SQL: String; StmtNum: PSmallInt; var FPrepared, FMoreResults: Boolean);
 begin
   with FASAConnection do

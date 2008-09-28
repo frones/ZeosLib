@@ -62,7 +62,7 @@ uses SysUtils, ZClasses;
 type
 
   {** Defines a time or the message. }
-  TZLoggingCategory = (lcConnect, lcDisconnect, lcTransaction, lcExecute, lcOther, lcPrepStmt, lcExecPrepStmt);
+  TZLoggingCategory = (lcConnect, lcDisconnect, lcTransaction, lcExecute, lcOther, lcPrepStmt, lcBindPrepStmt, lcExecPrepStmt);
 
   {** Defines a object for logging event. }
   TZLoggingEvent = class (TObject)
@@ -129,6 +129,7 @@ begin
     lcTransaction: Result := Result + 'Transaction';
     lcExecute: Result := Result + 'Execute';
     lcPrepStmt: Result := Result + 'Prepare';
+    lcBindPrepStmt: Result := Result + 'Bind prepared';
     lcExecPrepStmt: Result := Result + 'Execute prepared';
     else Result := Result + 'Other';
   end;

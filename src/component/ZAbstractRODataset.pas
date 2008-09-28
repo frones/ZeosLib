@@ -66,7 +66,7 @@ uses
   Variants,
 {$ENDIF}
   SysUtils, DB, Classes, ZSysUtils, ZConnection, ZDbcIntfs, ZSqlStrings,
-  Contnrs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility, ZExpression, Dialogs;
+  Contnrs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility, ZExpression;
 
 type
   {$IFDEF FPC}
@@ -1567,7 +1567,6 @@ var
   Temp: TStrings;
 begin
   Temp := TStringList.Create;
-//  ShowMessage(Sql);
   try
     if Assigned(Properties) then
       Temp.AddStrings(Properties);

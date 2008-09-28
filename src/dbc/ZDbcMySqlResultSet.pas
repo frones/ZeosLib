@@ -112,7 +112,6 @@ type
     function Next: Boolean; override;
   end;
 
-{$IFDEF MYSQL_USE_PREPARE}
   {** Implements Prepared MySQL ResultSet. }
   TZMySQLPreparedResultSet = class(TZAbstractResultSet)
   private
@@ -156,7 +155,6 @@ type
     function MoveAbsolute(Row: Integer): Boolean; override;
     function Next: Boolean; override;
   end;
-{$ENDIF}
 
   {** Implements a cached resolver with MySQL specific functionality. }
   TZMySQLCachedResolver = class (TZGenericCachedResolver, IZCachedResolver)
@@ -185,7 +183,6 @@ implementation
 
 uses
   Math, ZMessages, ZDbcMySqlUtils, ZMatchPattern, ZDbcMysql;
-{$IFDEF MYSQL_USE_PREPARE}
 type
     TMysqlResult = class (TInterfacedObject)
         private
@@ -486,7 +483,6 @@ function TMysqlResult.getNull: Boolean;
 Begin
     Result := self.FNull;
 End;
-{$ENDIF}
 
 { TZMySQLResultSetMetadata }
 
@@ -1181,7 +1177,6 @@ begin
   end;
 end;
 
-{$IFDEF MYSQL_USE_PREPARE}
 { TZMySQLPreparedResultSet }
 
 {**
@@ -1336,7 +1331,6 @@ begin
   if FResultMetaData <> nil then
     FPlainDriver.FreeResult(FResultMetaData);
   FResultMetaData := nil;
-  FPrepStmt := FPlainDriver.ClosePrepStmt(FPrepStmt);
 
   inherited Close;
 end;
@@ -1865,7 +1859,6 @@ begin
     Result := False;
   end;
 end;
-{$ENDIF}
 
 { TZMySQLCachedResolver }
 

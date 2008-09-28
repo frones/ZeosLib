@@ -211,8 +211,6 @@
 
 // Enables MySQL support in TZConnection/TZDataset
 {$DEFINE ENABLE_MYSQL}
-// Enables Mysql 4.1 and 5 prepared statement support (highly experimental!!)
-{.$DEFINE MYSQL_USE_PREPARE}
 
 // Enables PostgreSQL support in TZConnection/TZDataset
 {$DEFINE ENABLE_POSTGRESQL}
