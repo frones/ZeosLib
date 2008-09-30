@@ -1,10 +1,10 @@
-ZeosLib 6.51 Lazarus Edition
+ZeosLib 7.0 Lazarus Edition
 
 
 Introduction
 ------------
 
-ZeosLib 6.51 has been tested to work with Lazarus 0.9.14.
+ZeosLib 7.0 has been tested to work with Lazarus 0.9.24.
 
 
 Installation

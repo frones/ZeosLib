@@ -94,6 +94,8 @@
       <itemizedlist spacing="compact">
         <listitem>
           <simpara>[DB2] Removed never used DB2 plain drivers</simpara>
+        </listitem>
+        <listitem>
           <simpara>[COMMON] Reworked component bitmaps</simpara>		  
         </listitem>
      </itemizedlist>
