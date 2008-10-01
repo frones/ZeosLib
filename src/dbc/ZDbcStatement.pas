@@ -197,6 +197,7 @@ type
     function ExecuteUpdatePrepared: Integer; virtual;
     function ExecutePrepared: Boolean; virtual;
 
+    function GetSQL : String;
     procedure Prepare; virtual;
     procedure Unprepare; virtual;
     function IsPrepared: Boolean; virtual;
@@ -1457,6 +1458,11 @@ function TZAbstractPreparedStatement.ExecutePrepared: Boolean;
 begin
   Result := False;
   RaiseUnsupportedException;
+end;
+
+function TZAbstractPreparedStatement.GetSQL: String;
+begin
+  Result := FSQL;
 end;
 
 procedure TZAbstractPreparedStatement.Prepare;

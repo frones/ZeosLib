@@ -524,6 +524,7 @@ type
     function ExecuteUpdatePrepared: Integer;
     function ExecutePrepared: Boolean;
     
+    function GetSQL : String;
     procedure Prepare;
     procedure Unprepare;
     function IsPrepared: Boolean;
