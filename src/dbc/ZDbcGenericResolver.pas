@@ -89,9 +89,13 @@ type
     Implements a generic cached resolver object which generates
     DML SQL statements and posts resultset updates to database.
   }
+
+  { TZGenericCachedResolver }
+
   TZGenericCachedResolver = class (TInterfacedObject, IZCachedResolver)
   private
     FConnection: IZConnection;
+    FStatement : IZStatement;
     FMetadata: IZResultSetMetadata;
     FDatabaseMetadata: IZDatabaseMetadata;
     FIdentifierConvertor: IZIdentifierConvertor;
@@ -104,10 +108,16 @@ type
     FWhereAll: Boolean;
     FUpdateAll: Boolean;
 
+    InsertStatement            : IZPreparedStatement;
+    UpdateStatement            : IZPreparedStatement;
+    DeleteStatement            : IZPreparedStatement;
+
   protected
     procedure CopyResolveParameters(FromList, ToList: TObjectList);
     function ComposeFullTableName(Catalog, Schema, Table: string): string;
     function DefineTableName: string;
+
+    function CreateResolverStatement(SQL : String):IZPreparedStatement;
 
     procedure DefineCalcColumns(Columns: TObjectList;
       RowAccessor: TZRowAccessor);
@@ -197,6 +207,7 @@ end;
 constructor TZGenericCachedResolver.Create(Statement: IZStatement;
   Metadata: IZResultSetMetadata);
 begin
+  FStatement := Statement;
   FConnection := Statement.GetConnection;
   FMetadata := Metadata;
   FDatabaseMetadata := Statement.GetConnection.GetMetadata;
@@ -212,6 +223,11 @@ begin
     'update', 'changed')) = 'ALL';
   FWhereAll := UpperCase(DefineStatementParameter(Statement,
     'where', 'keyonly')) = 'ALL';
+
+  InsertStatement := nil;
+  UpdateStatement := nil;
+  DeleteStatement := nil;
+
 end;
 
 {**
@@ -225,6 +241,10 @@ begin
   FInsertColumns.Free;
   FUpdateColumns.Free;
   FWhereColumns.Free;
+
+  InsertStatement := nil;
+  UpdateStatement := nil;
+  DeleteStatement := nil;
 
   inherited Destroy;
 end;
@@ -290,6 +310,22 @@ begin
   end;
   if Result = '' then
     raise EZSQLException.Create(SCanNotUpdateThisQueryType);
+end;
+
+function TZGenericCachedResolver.CreateResolverStatement(SQL: String): IZPreparedStatement;
+var
+  Temp : TSTrings;
+begin
+  if StrToBoolEx(FStatement.GetParameters.Values['preferpreparedresolver']) then
+    begin
+      Temp := TStringList.Create;
+      Temp.Values['preferprepared'] := 'true';
+      Result := Connection.PrepareStatementWithParams(SQL, Temp);
+      Temp.Free;
+    end
+  else
+    Result := Connection.PrepareStatement(SQL);
+
 end;
 
 {**
@@ -746,6 +782,8 @@ var
   SQLParams            : TObjectList;
   lUpdateCount         : Integer;
   lValidateUpdateCount : Boolean;
+
+  Temp: TStrings;
 begin
   if (UpdateType = utDeleted)
     and (OldRowAccessor.RowBuffer.UpdateType = utInserted) then
@@ -755,18 +793,39 @@ begin
   try
     case UpdateType of
       utInserted:
+          begin
         SQL := FormInsertStatement(SQLParams, NewRowAccessor);
+            If Assigned(InsertStatement) and (SQL <> InsertStatement.GetSQL) then
+              InsertStatement := nil;
+            If not Assigned(InsertStatement) then
+              InsertStatement := CreateResolverStatement(SQL);
+            Statement := InsertStatement;
+          end;
       utDeleted:
+          begin
         SQL := FormDeleteStatement(SQLParams, OldRowAccessor);
+            If Assigned(DeleteStatement) and (SQL <> DeleteStatement.GetSQL) then
+              DeleteStatement := nil;
+            If not Assigned(DeleteStatement) then
+              DeleteStatement := CreateResolverStatement(SQL);
+            Statement := DeleteStatement;
+          end;
       utModified:
+          begin
         SQL := FormUpdateStatement(SQLParams, OldRowAccessor, NewRowAccessor);
+            If Assigned(UpdateStatement) and (SQL <> UpdateStatement.GetSQL) then
+              UpdateStatement := nil;
+            If not Assigned(UpdateStatement) then
+              UpdateStatement := CreateResolverStatement(SQL);
+            Statement := UpdateStatement;
+          end;
       else
         Exit;
     end;
 
     if SQL <> '' then
     begin
-      Statement := Connection.PrepareStatement(SQL);
+
       FillStatement(Statement, SQLParams, OldRowAccessor, NewRowAccessor);
       // if Property ValidateUpdateCount isn't set : assume it's true
       lValidateUpdateCount := (Sender.GetStatement.GetParameters.IndexOfName('ValidateUpdateCount') = -1)
