@@ -11,3 +11,5 @@
 20080604 : Improve Sqlite3 Column Affinity - by mdaems - see http://zeos.firmos.at/viewtopic.php?t=1605
 
 20080710 : Completed fix for Mantis Bug 75 - by olivluca - Mantis Bug 119
+
+20081001 : Fixed updates to tables from attached databases - by mariuszekpl - see http://zeos.firmos.at/viewtopic.php?t=2025
