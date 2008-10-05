@@ -261,3 +261,5 @@
 20080924 : Integrated various bugfixes from DRD, Willian Jhonnes and Silvio Clecio
 
 20081005 : Removed table prefixes in generated insert/update statements in property editor for TZSQLUpdate - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2023
+
+20081005 : Escape underscores from the stored procedure name before looking up it's parameters - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2035
