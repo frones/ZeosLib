@@ -237,3 +237,7 @@
 20080831 : TZSQLProcessor Tokenizer problem - by GeorgeKP - See http://zeos.firmos.at/viewtopic.php?t=1977
 
 20080917 : "List out of bounds" in Metadata - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=1995
+
+20081005 : Removed table prefixes in generated insert/update statements in property editor for TZSQLUpdate - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2023
+
+20081005 : Escape underscores from the stored procedure name before looking up it's parameters - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2035

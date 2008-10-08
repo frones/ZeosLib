@@ -305,6 +305,7 @@ begin
       Connection.ShowSQLHourGlass;
       try
         SplitQualifiedObjectName(Value, Catalog, Schema, ObjectName);
+        ObjectName := Connection.DbcConnection.GetMetadata.AddEscapeCharToWildcards(ObjectName);
         ResultSet := Connection.DbcConnection.GetMetadata.GetProcedureColumns(Catalog, Schema, ObjectName, '');
         OldParams := TParams.Create;
         try

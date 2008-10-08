@@ -697,8 +697,8 @@ procedure TZUpdateSQLEditForm.GenInsertSQL(const TableName: string;
       FieldName := UpdateFields[I];
       if QuoteFields.Checked and (ParamChar = '') then
         FieldName := InternalQuoteIdentifier(FieldName, QuoteChar);
-      L := Format('%s%s%s%s%s',
-        [L, TabName, ParamChar, FieldName, Comma]);
+      L := Format('%s%s%s',
+        [L, FieldName, Comma]);
       if (Length(L) > 70) and (I <> UpdateFields.Count - 1) then
       begin
         SQL.Add(L);
@@ -732,8 +732,8 @@ begin
     FieldName := UpdateFields[I];
     if QuoteFields.Checked then
       FieldName := InternalQuoteIdentifier(FieldName, QuoteChar);
-    SQL.Add(Format('  %s%s = :%s%s',
-      [TableRef, FieldName, UpdateFields[I], Comma]));
+    SQL.Add(Format('  %s = :%s%s',
+      [FieldName, UpdateFields[I], Comma]));
   end;
   GenWhereClause(TableRef, KeyFields, SQL);
 end;

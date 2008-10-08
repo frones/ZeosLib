@@ -1251,17 +1251,22 @@ function TZSQLiteDatabaseMetadata.UncachedGetColumns(const Catalog: string;
 var
   Temp: string;
   Precision, Decimals: Integer;
+  Temp_scheme: string;
 begin
     Result := ConstructVirtualResultSet(TableColColumnsDynArray);
+    if SchemaPattern = '' then
+      Temp_scheme := '' // OR  'main.'
+    else
+      Temp_scheme := SchemaPattern +'.';
 
     with GetConnection.CreateStatement.ExecuteQuery(
-      Format('PRAGMA table_info(''%s'')', [TableNamePattern])) do
+      Format('PRAGMA %s table_info(''%s'')', [Temp_scheme, TableNamePattern])) do
     begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        if Catalog <> '' then
-          Result.UpdateString(1, Catalog)
+        if SchemaPattern <> '' then
+          Result.UpdateString(1, SchemaPattern)
         else Result.UpdateNull(1);
         Result.UpdateNull(2);
         Result.UpdateString(3, TableNamePattern);
@@ -1340,11 +1345,17 @@ function TZSQLiteDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
   Index: Integer;
+  Temp_scheme: string;
 begin
     Result := ConstructVirtualResultSet(PrimaryKeyColumnsDynArray);
 
+    if Schema = '' then
+      Temp_scheme := '' // OR  'main.'
+    else
+      Temp_scheme := Schema +'.';
+
     with GetConnection.CreateStatement.ExecuteQuery(
-      Format('PRAGMA table_info(''%s'')', [Table])) do
+      Format('PRAGMA %s table_info(''%s'')', [Temp_scheme,Table])) do
     begin
       Index := 1;
       while Next do
@@ -1353,8 +1364,8 @@ begin
           Continue;
 
         Result.MoveToInsertRow;
-        if Catalog <> '' then
-          Result.UpdateString(1, Catalog)
+        if Schema <> '' then
+          Result.UpdateString(1, Schema)
         else Result.UpdateNull(1);
         Result.UpdateNull(2);
         Result.UpdateString(3, Table);
@@ -1528,11 +1539,17 @@ function TZSQLiteDatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
   Approximate: Boolean): IZResultSet;
 var
   ResultSet: IZResultSet;
+  Temp_scheme: string;
 begin
     Result := ConstructVirtualResultSet(IndexInfoColumnsDynArray);
 
+    if Schema = '' then
+      Temp_scheme := '' // OR  'main.'
+    else
+      Temp_scheme := Schema +'.';
+
     with GetConnection.CreateStatement.ExecuteQuery(
-      Format('PRAGMA index_list(''%s'')', [Table])) do
+      Format('PRAGMA %s index_list(''%s'')', [Temp_scheme, Table])) do
     begin
       while Next do
       begin
@@ -1540,13 +1557,13 @@ begin
           and ((Unique = False) or (GetInt(3) = 0)) then
         begin
           ResultSet := GetConnection.CreateStatement.ExecuteQuery(
-            Format('PRAGMA index_info(''%s'')', [GetString(2)]));
+            Format('PRAGMA %s index_info(''%s'')', [Temp_scheme,GetString(2)]));
           while ResultSet.Next do
           begin
             Result.MoveToInsertRow;
 
-            if Catalog <> '' then
-              Result.UpdateString(1, Catalog)
+            if Schema <> '' then
+              Result.UpdateString(1, Schema)
             else Result.UpdateNull(1);
             Result.UpdateNull(2);
             Result.UpdateString(3, Table);

@@ -446,8 +446,10 @@ type
     function GetIdentifierConvertor: IZIdentifierConvertor;
 
     procedure ClearCache;overload;
-		procedure ClearCache(const Key: string);overload;
-  end;
+	procedure ClearCache(const Key: string);overload;
+
+    function AddEscapeCharToWildcards(const Pattern:string): string;
+	end;
 
   {** Generic SQL statement interface. }
   IZStatement = interface(IZInterface)
