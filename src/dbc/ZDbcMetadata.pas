@@ -292,7 +292,7 @@ TZAbstractDatabaseMetadata = class(TContainedObject, IZDatabaseMetadata)
   protected
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; virtual;
-    function UnCachedGetSchemas: IZResultSet; virtual;
+    function UncachedGetSchemas: IZResultSet; virtual;
     function UncachedGetCatalogs: IZResultSet; virtual;
     function UncachedGetTableTypes: IZResultSet; virtual;
     function UncachedGetColumns(const Catalog: string; const SchemaPattern: string;

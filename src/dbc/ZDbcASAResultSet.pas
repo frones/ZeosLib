@@ -798,7 +798,7 @@ end;
 procedure TZASAResultSet.UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString);
 begin
   PrepareUpdateSQLData;
-  FUpdateSqlData.UpdatePChar( ColumnIndex, PChar( Value));
+  FUpdateSqlData.UpdatePChar( ColumnIndex, PChar(string(Value)));
 end;
 
 procedure TZASAResultSet.UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray);

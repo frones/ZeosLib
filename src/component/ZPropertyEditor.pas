@@ -64,6 +64,9 @@ uses
   Types,
 {$ENDIF}
   Classes, ZClasses, ZCompatibility, ZDbcIntfs,
+{$IFDEF BDS4_UP}
+  WideStrings,
+{$ENDIF}
 {$IFNDEF FPC}
   DesignIntf, DesignEditors;
 {$ELSE}
@@ -303,7 +306,11 @@ var
 begin
   DataSource := GetObjectProp(GetComponent(0), 'MasterSource') as TDataSource;
   if (DataSource <> nil) and (DataSource.DataSet <> nil) then
+    {$IFDEF BDS4_UP}
+    DataSource.DataSet.GetFieldNames(TWideStrings(List));
+    {$ELSE}
     DataSource.DataSet.GetFieldNames(List);
+    {$ENDIF}
 end;
 
 { TZTableNamePropertyEditor }

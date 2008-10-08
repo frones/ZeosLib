@@ -595,19 +595,22 @@ begin
 end;
 
 procedure TIBEventThread.SQueEvents;
-var Status: ISC_STATUS;
+var
+  Status: ISC_STATUS;
 begin
+  Status := -999999;
   try
-    Status:=Parent.PlainDriver.isc_que_events(StatusVector, Parent.FNativeHandle,
-      @EventID, EventBufferLen, EventBuffer, TISC_CALLBACK(@EventCallback),
-      PVoid(Self));
+    Status := Parent.PlainDriver.isc_que_events(StatusVector,
+      @Parent.FNativeHandle, @EventID, EventBufferLen,
+      EventBuffer, TISC_CALLBACK(@EventCallback), PVoid(Self));
   except
     on E: Exception do
-      if Assigned(Parent.OnError) then
-        if E is EZSQLException then
-          Parent.OnError(Parent, EZSQLException(E).ErrorCode)
-      else
-        Parent.OnError(Parent, 0);
+      if Status <> -999999 then
+        if Assigned(Parent.OnError) then
+          if E is EZSQLException then
+            Parent.OnError(Parent, EZSQLException(E).ErrorCode)
+          else
+            Parent.OnError(Parent, 0);
   end;
 end;
 

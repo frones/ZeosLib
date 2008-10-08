@@ -66,7 +66,7 @@ uses
   Variants,
 {$ENDIF}
   SysUtils, DB, Classes, ZSysUtils, ZConnection, ZDbcIntfs, ZSqlStrings,
-  Contnrs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility, ZExpression;
+  Contnrs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility, ZExpression, Dialogs;
 
 type
   {$IFDEF FPC}
@@ -165,6 +165,8 @@ type
     FSortedOnlyDataFields: Boolean;
     FSortRowBuffer1: PZRowBuffer;
     FSortRowBuffer2: PZRowBuffer;
+    
+    FPrepared: Boolean;
   private
     function GetReadOnly: Boolean;
     procedure SetReadOnly(Value: Boolean);
@@ -195,6 +197,8 @@ type
     procedure UpdateSQLStrings(Sender: TObject);
     procedure ReadParamData(Reader: TReader);
     procedure WriteParamData(Writer: TWriter);
+
+    procedure SetPrepared(Value : Boolean);
 
   protected
     procedure CheckOpened;
@@ -337,12 +341,24 @@ type
 
     procedure RefreshParams;virtual;
 
+    procedure InternalPrepare; virtual;
+    procedure InternalUnPrepare; virtual;
   protected
   {$IFDEF WITH_IPROVIDER}
     procedure PSStartTransaction; override;
     procedure PSEndTransaction(Commit: Boolean); override;
+    // Silvio Clécio
+    {$IFDEF BDS4_UP}
+    function PSGetTableNameW: WideString; override;
+    {$ELSE}
     function PSGetTableName: string; override;
+    {$ENDIF}
+    // Silvio Clécio
+    {$IFDEF BDS4_UP}
+    function PSGetQuoteCharW: WideString; override;
+    {$ELSE}
     function PSGetQuoteChar: string; override;
+    {$ENDIF}
     function PSGetUpdateException(E: Exception;
       Prev: EUpdateError): EUpdateError; override;
     function PSIsSQLBased: Boolean; override;
@@ -351,7 +367,12 @@ type
     function PSUpdateRecord(UpdateKind: TUpdateKind;
       Delta: TDataSet): Boolean; override;
     procedure PSExecute; override;
+    // Silvio Clécio
+    {$IFDEF BDS4_UP}
+    function PSGetKeyFieldsW: WideString; override;
+    {$ELSE}
     function PSGetKeyFields: string; override;
+    {$ENDIF}
     function PSGetParams: TParams; override;
     procedure PSSetParams(AParams: TParams); override;
     function PSExecuteStatement(const ASQL: string; AParams: TParams;
@@ -386,9 +407,12 @@ type
       override;
     function UpdateStatus: TUpdateStatus; override;
     function Translate(Src, Dest: PChar; ToOem: Boolean): Integer; override;
+    procedure Prepare;
+    procedure Unprepare;
 
   public
     property Active;
+    property Prepared: Boolean read FPrepared write SetPrepared;
     property FieldDefs stored False;
     property DbcStatement: IZPreparedStatement read FStatement;
     property DbcResultSet: IZResultSet read FResultSet;
@@ -530,6 +554,7 @@ end;
 }
 destructor TZAbstractRODataset.Destroy;
 begin
+  Unprepare;
   if Assigned(Connection) then
   begin
     try
@@ -676,6 +701,8 @@ begin
   if Active then
     Close
   else Statement := nil;
+
+  UnPrepare;
 
   OldParams := TParams.Create;
   OldParams.Assign(FParams);
@@ -1425,20 +1452,20 @@ end;
 }
 procedure TZAbstractRODataset.ExecSQL;
 begin
-  CheckConnected;
+  if Active then
+    begin
+      Connection.ShowSQLHourGlass;
+      try
+        Close;
+      finally
+        Connection.HideSQLHourGlass;
+      end;
+    end;
+
+  Prepare;
+
   Connection.ShowSQLHourGlass;
   try
-    if Active then Close;
-
-    CheckSQLQuery;
-    CheckInactive;
-
-    if (Statement = nil) or (Statement.GetConnection.IsClosed) then
-      Statement := CreateStatement(FSQL.Statements[0].SQL, Properties)
-    else
-      if (Assigned(Statement)) then
-         Statement.ClearParameters;
-
     SetStatementParams(Statement, FSQL.Statements[0].ParamNamesArray,
       FParams, FDataLink);
 
@@ -1470,6 +1497,7 @@ begin
     begin
       CheckSQLQuery;
       CheckConnected;
+      Prepare;
       ResultSet := CreateResultSet(FSQL.Statements[0].SQL, 0);
     end;
     if not Assigned(ResultSet) then
@@ -1522,11 +1550,7 @@ begin
         ResultSet.Close;
         ResultSet := nil;
       end;
-      if Statement <> nil then
-      begin
-        Statement.Close;
-        Statement := nil;
-      end;
+      UnPrepare;
     end;
   end;
 end;
@@ -1543,6 +1567,7 @@ var
   Temp: TStrings;
 begin
   Temp := TStringList.Create;
+//  ShowMessage(Sql);
   try
     if Assigned(Properties) then
       Temp.AddStrings(Properties);
@@ -1571,10 +1596,6 @@ function TZAbstractRODataset.CreateResultSet(const SQL: string;
 begin
   Connection.ShowSQLHourGlass;
   try
-    if not Assigned(Statement) then
-      Statement := CreateStatement(FSQL.Statements[0].SQL, Properties)
-    else
-      Statement.ClearParameters;
     SetStatementParams(Statement, FSQL.Statements[0].ParamNamesArray,
       FParams, FDataLink);
     if RequestLive then
@@ -1606,8 +1627,7 @@ procedure TZAbstractRODataset.InternalOpen;
 var
   ColumnList: TObjectList;
 begin
-  CheckSQLQuery;
-  CheckConnected;
+  Prepare;
 
   CurrentRow := 0;
   FetchCount := 0;
@@ -1666,9 +1686,6 @@ begin
   if ResultSet <> nil then
     ResultSet.Close;
   ResultSet := nil;
-  if Statement <> nil then
-    Statement.Close;
-  Statement := nil;
 
   if FOldRowBuffer <> nil then
     FreeRecordBuffer(PChar(FOldRowBuffer));
@@ -1798,6 +1815,23 @@ end;
 function TZAbstractRODataset.GetDataSource: TDataSource;
 begin
   Result := DataLink.DataSource;
+end;
+
+{**
+  Sets the value of the Prepared property.
+  Setting to <code>True</code> prepares the query. Setting to <code>False</code> unprepares.
+  @param Value a new value for the Prepared property.
+}
+procedure TZAbstractRODataset.SetPrepared(Value: Boolean);
+begin
+  If Value <> FPrepared then
+    begin
+      If Value then
+        InternalPrepare
+      else
+        InternalUnprepare;
+      FPrepared := Value;
+    end;
 end;
 
 {**
@@ -2010,6 +2044,39 @@ begin
   finally
     EnableControls;
   end;
+end;
+
+{**
+  Performs the internal preparation of the query.
+}
+procedure TZAbstractRODataset.InternalPrepare;
+begin
+  CheckSQLQuery;
+  CheckInactive;
+  CheckConnected;
+
+  Connection.ShowSQLHourGlass;
+  try
+    if (FSQL.StatementCount > 0) and((Statement = nil) or (Statement.GetConnection.IsClosed)) then
+      Statement := CreateStatement(FSQL.Statements[0].SQL, Properties)
+    else
+      if (Assigned(Statement)) then
+         Statement.ClearParameters;
+  finally
+    Connection.HideSQLHourGlass;
+  end;
+end;
+
+{**
+  Rolls back the internal preparation of the query.
+}
+procedure TZAbstractRODataset.InternalUnPrepare;
+begin
+  if Statement <> nil then
+    begin
+      Statement.Close;
+      Statement := nil;
+    end;
 end;
 
 {**
@@ -2618,6 +2685,25 @@ begin
 end;
 
 {**
+  Prepares the query.
+  If this actually does happen at the database connection level depends on the
+  specific implementation.
+}
+procedure TZAbstractRODataset.Prepare;
+begin
+  Prepared := True;
+end;
+
+{**
+  Unprepares the query.
+  Before the query gets executed it must be prepared again.
+}
+procedure TZAbstractRODataset.Unprepare;
+begin
+  Prepared := False;
+end;
+
+{**
   Creates a stream object for specified blob field.
   @param Field an interested field object.
   @param Mode a blob open mode.
@@ -2860,7 +2946,11 @@ end;
   Returns a string quote character.
   @retuns a quote character.
 }
+{$IFDEF BDS4_UP}
+function TZAbstractRODataset.PSGetQuoteCharW: WideString;
+{$ELSE}
 function TZAbstractRODataset.PSGetQuoteChar: string;
+{$ENDIF}
 begin
   if Assigned(FConnection) then
   begin
@@ -2981,7 +3071,11 @@ end;
   @returns a table name or an empty string is SQL query is complex SELECT
     or not SELECT statement.
 }
+{$IFDEF BDS4_UP}
+function TZAbstractRODataset.PSGetTableNameW: WideString;
+{$ELSE}
 function TZAbstractRODataset.PSGetTableName: string;
+{$ENDIF}
 var
   Driver: IZDriver;
   Tokenizer: IZTokenizer;
@@ -3005,10 +3099,18 @@ end;
   Defines a list of query primary key fields.
   @returns a semicolon delimited list of query key fields.
 }
+// Silvio Clécio
+{$IFDEF BDS4_UP}
+function TZAbstractRODataset.PSGetKeyFieldsW: WideString;
+begin
+  Result := inherited PSGetKeyFieldsW;
+end;
+{$ELSE}
 function TZAbstractRODataset.PSGetKeyFields: string;
 begin
   Result := inherited PSGetKeyFields;
 end;
+{$ENDIF}
 
 {**
   Executes a SQL statement with parameters.

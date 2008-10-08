@@ -1434,7 +1434,7 @@ var
   Query: TZQuery;
   UpdateSQL: TZUpdateSQL;
 begin
-//  if SkipClosed then Exit;
+  if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
   Query := TZQuery.Create(nil);
@@ -1657,7 +1657,7 @@ procedure ZTestCompCoreBugReport.Test1004534;
 var
   Query: TZReadOnlyQuery;
 begin
-//  if SkipClosed then Exit;
+  if SkipClosed then Exit;
 
   Query := TZReadOnlyQuery.Create(nil);
   Query.Connection := Connection;

@@ -120,7 +120,11 @@ TMYSQL_CLIENT_OPTIONS =
       <listitem><para>beginreq=[yes,no] - Is BEGIN required at the transaction start or not.</para></listitem>
       <listitem><para>oidasblob=[yes,no] - Is Oid type treated as Large Object handle (blob) or as a regular integer.</para></listitem>
       <listitem><para>timeout=&lt;seconds&gt; - Connection timeout in seconds.</para></listitem>
-      <listitem><para>codepage=&lt;client codepage&gt; - Sets a client codepage. It executes a SET CLIENT_ENCODING '&lt;client codepage&gt;' statement righ after connect.</para></listitem></itemizedlist>
+      <listitem><para>codepage=&lt;client codepage&gt; - Sets a client codepage. It executes a SET CLIENT_ENCODING '&lt;client codepage&gt;' statement righ after connect.</para></listitem>
+      <listitem><para>sslmode=[disable, allow, prefer, require] - (From PostgreSQL docs:) This option determines whether or with what priority an SSL connection will be negotiated with the server. There are four modes: disable will attempt only an unencrypted SSL connection; allow will negotiate, trying first a non-SSL connection, then if that fails, trying an SSL connection; prefer (the default) will negotiate, trying first an SSL connection, then if that fails, trying a regular non-SSL connection; require will try only an SSL connection.
+If PostgreSQL is compiled without SSL support, using option require will cause an error, while options allow and prefer will be accepted but libpq will not in fact attempt an SSL connection.</para></listitem>
+      <listitem><para>requiressl=[0,1] - This option is deprecated in favor of the sslmode setting.</para></listitem>
+      </itemizedlist>
     </sect2>
     <sect2>
       <title>Statement parameters</title>

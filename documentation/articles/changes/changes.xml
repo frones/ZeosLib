@@ -49,6 +49,9 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[Common] Added Prepared property and Prepare/Unprepare methods to TZAbstractRODataset</simpara>
+        </listitem>
+        <listitem>
           <simpara>[IB/FB] ZDbcInterbase6Utils.AffectedRows now also returns a value for select statements (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2002">http://zeos.firmos.at/viewtopic.php?t=2002</ulink>)</simpara>
         </listitem>
         <listitem>
@@ -96,7 +99,7 @@
           <simpara>[DB2] Removed never used DB2 plain drivers</simpara>
         </listitem>
         <listitem>
-          <simpara>[COMMON] Reworked component bitmaps</simpara>		  
+          <simpara>[COMMON] Reworked component bitmaps</simpara>
         </listitem>
      </itemizedlist>
     </sect2>	
@@ -125,7 +128,16 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
-          <simpara>[ADO] method calls (GetSchemaNames() and GetCatalogNames()) ran into an exception (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1774">http://zeos.firmos.at/viewtopic.php?t=1774</ulink>)</simpara>
+          <simpara>[COMMON] Escape underscores from the stored procedure name before looking up it's parameters (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2035">http://zeos.firmos.at/viewtopic.php?t=2035</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] Removed table prefixes in generated insert/update statements in property editor for TZSQLUpdate (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2023">http://zeos.firmos.at/viewtopic.php?t=2023</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[SQLITE] Fixed updates to tables from attached databases (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2025">http://zeos.firmos.at/viewtopic.php?t=2025</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[ADO] Method calls (GetSchemaNames() and GetCatalogNames()) ran into an exception (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1774">http://zeos.firmos.at/viewtopic.php?t=1774</ulink>)</simpara>
         </listitem>
         <listitem>
           <simpara>[COMMON] "List out of bounds" in Metadata (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1995">http://zeos.firmos.at/viewtopic.php?t=1995</ulink>)</simpara>
