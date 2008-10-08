@@ -480,7 +480,7 @@ var
     begin
       GotAdigit := True;
       Result := Result + FirstChar;
-      ReadNum := Stream.Read(FirstChar, 1);
+      ReadNum := Stream.Read(FirstChar, 1 * SizeOf(Char));
       if ReadNum = 0 then
         Break;
     end;
@@ -499,7 +499,7 @@ begin
   { Parses left part of the number. }
   if FirstChar = '-' then
   begin
-    ReadNum := Stream.Read(FirstChar, 1);
+    ReadNum := Stream.Read(FirstChar, 1 * SizeOf(Char));
     Result.Value := '-';
     AbsorbedLeadingMinus := True;
   end;
@@ -510,7 +510,7 @@ begin
   begin
     AbsorbedDot := True;
     Result.Value := Result.Value + '.';
-    ReadNum := Stream.Read(FirstChar, 1);
+    ReadNum := Stream.Read(FirstChar, 1 * SizeOf(Char));
     if ReadNum > 0 then
       Result.Value := Result.Value + AbsorbDigits;
   end;
@@ -523,7 +523,7 @@ begin
   begin
     if AbsorbedLeadingMinus and AbsorbedDot then
     begin
-      Stream.Seek(-1, soFromCurrent);
+      Stream.Seek(-(1 * SizeOf(Char)), soFromCurrent);
       if Tokenizer.SymbolState <> nil then
         Result := Tokenizer.SymbolState.NextToken(Stream, '-', Tokenizer);
     end
@@ -563,7 +563,7 @@ var
 begin
   TempStr := FirstChar;
   repeat
-    if Stream.Read(TempChar, 1) = 0 then
+    if Stream.Read(TempChar, 1 * SizeOf(Char)) = 0 then
       TempChar := FirstChar;
     TempStr := TempStr + TempChar;
   until TempChar = FirstChar;
@@ -613,11 +613,11 @@ var
   ReadStr: string;
 begin
   ReadStr := FirstChar;
-  while (Stream.Read(ReadChar, 1) > 0) and not (ReadChar in [#10, #13]) do
+  while (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) and not (ReadChar in [#10, #13]) do
     ReadStr := ReadStr + ReadChar;
 
   if ReadChar in [#10, #13] then
-    Stream.Seek(-1, soFromCurrent);
+    Stream.Seek(-(1 * SizeOf(Char)), soFromCurrent);
 
   Result.TokenType := ttComment;
   Result.Value := ReadStr;
@@ -636,7 +636,7 @@ var
 begin
   LastChar := #0;
   Result := '';
-  while Stream.Read(ReadChar, 1) > 0 do
+  while Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0 do
   begin
     Result := Result + ReadChar;
     if (LastChar = '*') and (ReadChar = '/') then
@@ -654,7 +654,7 @@ var
   ReadChar: Char;
 begin
   Result := '';
-  while (Stream.Read(ReadChar, 1) > 0) and not (ReadChar in [#10, #13]) do
+  while (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) and not (ReadChar in [#10, #13]) do
     Result := Result + ReadChar;
 
   // mdaems : for single line comments the line ending must be included
@@ -662,11 +662,11 @@ begin
   if ReadChar in [#10, #13] then
     begin
       Result := Result + ReadChar;
-      if (Stream.Read(ReadChar, 1) > 0) then
+      if (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) then
         if (ReadChar in [#10, #13]) then
           Result := Result + ReadChar
         else
-          Stream.Seek(-1, soFromCurrent);
+          Stream.Seek(-(1 * SizeOf(Char)), soFromCurrent);
     end;
 end;
 
@@ -686,7 +686,7 @@ begin
   Result.TokenType := ttUnknown;
   Result.Value := FirstChar;
 
-  ReadNum := Stream.Read(ReadChar, 1);
+  ReadNum := Stream.Read(ReadChar, 1 * SizeOf(Char));
   if (ReadNum > 0) and (ReadChar = '*') then
   begin
     Result.TokenType := ttComment;
@@ -700,7 +700,7 @@ begin
   else
   begin
     if ReadNum > 0 then
-      Stream.Seek(-1, soFromCurrent);
+      Stream.Seek(-(1 * SizeOf(Char)), soFromCurrent);
     if Tokenizer.SymbolState <> nil then
       Result := Tokenizer.SymbolState.NextToken(Stream, FirstChar, Tokenizer);
   end;
@@ -724,7 +724,7 @@ begin
 
   if FirstChar = '/' then
   begin
-    ReadNum := Stream.Read(ReadChar, 1);
+    ReadNum := Stream.Read(ReadChar, 1 * SizeOf(Char));
     if (ReadNum > 0) and (ReadChar = '*') then
     begin
       Result.TokenType := ttComment;
@@ -733,7 +733,7 @@ begin
     else
     begin
       if ReadNum > 0 then
-        Stream.Seek(-1, soFromCurrent);
+        Stream.Seek(-(1 * SizeOf(Char)), soFromCurrent);
     end;
   end;
 
@@ -806,7 +806,7 @@ var
   Node: TZSymbolNode;
   ReadNum: Integer;
 begin
-  ReadNum := Stream.Read(TempChar, 1);
+  ReadNum := Stream.Read(TempChar, 1 * SizeOf(Char));
   if ReadNum > 0 then
     Node := FindChildWithChar(TempChar)
   else Node := nil;
@@ -884,7 +884,7 @@ function TZSymbolNode.UnreadToValid(Stream: TStream): TZSymbolNode;
 begin
   if not FValid then
   begin
-    Stream.Seek(-1, soFromCurrent);
+    Stream.Seek(-(1 * SizeOf(Char)), soFromCurrent);
     Result := FParent.UnreadToValid(Stream);
   end else
     Result := Self;
@@ -1029,14 +1029,14 @@ begin
   ReadNum := 0;
   while True do
   begin
-    ReadNum := Stream.Read(ReadChar, 1);
+    ReadNum := Stream.Read(ReadChar, 1 * SizeOf(Char));
     if (ReadNum = 0) or not FWhitespaceChars[Ord(ReadChar)] then
       Break;
     ReadStr := ReadStr + ReadChar;
   end;
 
   if ReadNum > 0 then
-    Stream.Seek(-1, soFromCurrent);
+    Stream.Seek(-(1 * SizeOf(Char)), soFromCurrent);
   Result.TokenType := ttWhitespace;
   Result.Value := ReadStr;
 end;
@@ -1070,8 +1070,8 @@ begin
   SetWordChars('0', '9', True);
   SetWordChars('-', '-', True);
   SetWordChars('_', '_', True);
-  SetWordChars(#39, #39, True);
-  SetWordChars(Char($c0), Char($ff), True);
+  SetWordChars('''', '''', True);
+  SetWordChars(Char($c0), Char($ff), True); //chars from #192 (À) ~ 255 (ÿ)
 end;
 
 {**
@@ -1087,14 +1087,14 @@ var
 begin
   Value := FirstChar;
   repeat
-    ReadNum := Stream.Read(TempChar, 1);
+    ReadNum := Stream.Read(TempChar, 1 * SizeOf(Char));
     if (ReadNum = 0) or not FWordChars[Ord(TempChar)] then
       Break;
     Value := Value + TempChar;
   until False;
 
   if ReadNum > 0 then
-    Stream.Seek(-1, soFromCurrent);
+    Stream.Seek(-(1 * SizeOf(Char)), soFromCurrent);
   Result.TokenType := ttWord;
   Result.Value := Value;
 end;
@@ -1143,12 +1143,12 @@ begin
   SetCharacterState(#0, ' ', FWhitespaceState);
   SetCharacterState('a', 'z', FWordState);
   SetCharacterState('A', 'Z', FWordState);
-  SetCharacterState(Chr($c0),  Chr($ff), FWordState);
+  SetCharacterState(Chr($c0),  Chr($ff), FWordState); //chars from #192 (À) ~ 255 (ÿ)
   SetCharacterState('0', '9', FNumberState);
   SetCharacterState('-', '-', FNumberState);
   SetCharacterState('.', '.', FNumberState);
   SetCharacterState('"', '"', FQuoteState);
-  SetCharacterState(#39, #39, FQuoteState);
+  SetCharacterState('''', '''', FQuoteState);
   SetCharacterState('/', '/', FCommentState);
 end;
 
@@ -1283,7 +1283,7 @@ begin
   Result := TStringList.Create;
   LastTokenType := ttUnknown;
 
-  while Stream.Read(FirstChar, 1) > 0 do
+  while Stream.Read(FirstChar, 1 * SizeOf(Char)) > 0 do
   begin
     State := FCharacterStates[Ord(FirstChar)];
     if State <> nil then

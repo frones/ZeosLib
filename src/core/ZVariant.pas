@@ -79,7 +79,11 @@ type
     VInteger: Int64;
     VFloat: Extended;
     VString: AnsiString;
+    {$IFDEF ZEOS_FULL_UNICODE}
+    VUnicodeString: String;
+    {$ELSE}
     VUnicodeString: WideString;
+    {$ENDIF}
     VDateTime: TDateTime;
     VPointer: Pointer;
     VInterface: IZInterface;
@@ -108,7 +112,11 @@ type
     function GetAsInteger(const Value: TZVariant): Int64;
     function GetAsFloat(const Value: TZVariant): Extended;
     function GetAsString(const Value: TZVariant): AnsiString;
+    {$IFDEF ZEOS_FULL_UNICODE}
+    function GetAsUnicodeString(const Value: TZVariant): String;
+    {$ELSE}
     function GetAsUnicodeString(const Value: TZVariant): WideString;
+    {$ENDIF}
     function GetAsDateTime(const Value: TZVariant): TDateTime;
     function GetAsPointer(const Value: TZVariant): Pointer;
     function GetAsInterface(const Value: TZVariant): IZInterface;
@@ -117,7 +125,11 @@ type
     procedure SetAsInteger(var Value: TZVariant; Data: Int64);
     procedure SetAsFloat(var Value: TZVariant; Data: Extended);
     procedure SetAsString(var Value: TZVariant; const Data: AnsiString);
+    {$IFDEF ZEOS_FULL_UNICODE}
+    procedure SetAsUnicodeString(var Value: TZVariant; const Data: String);
+    {$ELSE}
     procedure SetAsUnicodeString(var Value: TZVariant; const Data: WideString);
+    {$ENDIF}
     procedure SetAsDateTime(var Value: TZVariant; Data: TDateTime);
     procedure SetAsPointer(var Value: TZVariant; Data: Pointer);
     procedure SetAsInterface(var Value: TZVariant; Data: IZInterface);
@@ -160,7 +172,11 @@ type
     function GetAsInteger(const Value: TZVariant): Int64;
     function GetAsFloat(const Value: TZVariant): Extended;
     function GetAsString(const Value: TZVariant): AnsiString;
+    {$IFDEF ZEOS_FULL_UNICODE}
+    function GetAsUnicodeString(const Value: TZVariant): String;
+    {$ELSE}
     function GetAsUnicodeString(const Value: TZVariant): WideString;
+    {$ENDIF}
     function GetAsDateTime(const Value: TZVariant): TDateTime;
     function GetAsPointer(const Value: TZVariant): Pointer;
     function GetAsInterface(const Value: TZVariant): IZInterface;
@@ -169,7 +185,11 @@ type
     procedure SetAsInteger(var Value: TZVariant; Data: Int64);
     procedure SetAsFloat(var Value: TZVariant; Data: Extended);
     procedure SetAsString(var Value: TZVariant; const Data: AnsiString);
+    {$IFDEF ZEOS_FULL_UNICODE}
+    procedure SetAsUnicodeString(var Value: TZVariant; const Data: String);
+    {$ELSE}
     procedure SetAsUnicodeString(var Value: TZVariant; const Data: WideString);
+    {$ENDIF}
     procedure SetAsDateTime(var Value: TZVariant; Data: TDateTime);
     procedure SetAsPointer(var Value: TZVariant; Data: Pointer);
     procedure SetAsInterface(var Value: TZVariant; Data: IZInterface);
@@ -213,7 +233,11 @@ type
     function GetInteger: Int64;
     function GetFloat: Extended;
     function GetString: AnsiString;
+    {$IFDEF ZEOS_FULL_UNICODE}
+    function GetUnicodeString: String;
+    {$ELSE}
     function GetUnicodeString: WideString;
+    {$ENDIF}
     function GetDateTime: TDateTime;
   end;
 
@@ -227,7 +251,11 @@ type
     constructor CreateWithInteger(Value: Int64);
     constructor CreateWithFloat(Value: Extended);
     constructor CreateWithString(const Value: AnsiString);
+    {$IFDEF ZEOS_FULL_UNICODE}
+    constructor CreateWithUnicodeString(const Value: String);
+    {$ELSE}
     constructor CreateWithUnicodeString(const Value: WideString);
+    {$ENDIF}
     constructor CreateWithDateTime(Value: TDateTime);
 
     function IsNull: Boolean;
@@ -237,7 +265,11 @@ type
     function GetInteger: Int64;
     function GetFloat: Extended;
     function GetString: AnsiString;
+    {$IFDEF ZEOS_FULL_UNICODE}
+    function GetUnicodeString: String;
+    {$ELSE}
     function GetUnicodeString: WideString;
+    {$ENDIF}
     function GetDateTime: TDateTime;
 
     function Equals(const Value: IZInterface): Boolean; override;
@@ -392,7 +424,12 @@ begin
         vtString:
           Result.VString := Value.VString;
         vtUnicodeString:
-          Result.VString := Value.VUnicodeString;
+          RaiseTypeMismatchError;
+          { gto: If running on a full unicode IDE, like Delphi 2009, converting
+                 from a UnicodeString to a AnsiString can lead to data loss.
+
+                 I've choose to raise the error instead of convert it. This
+                 behavior can be changed when we find a secure choice. }
         else
           RaiseTypeMismatchError;
       end;
@@ -486,7 +523,11 @@ begin
       Result := AnsiCompareStr(Value1.VString, GetAsString(Value2));
     vtUnicodeString:
 {$IFNDEF FPC}
+   {$IFDEF ZEOS_FULL_UNICODE}
+      Result := AnsiCompareStr(Value1.VUnicodeString, GetAsUnicodeString(Value2));
+   {$ELSE}
       Result := WideCompareStr(Value1.VUnicodeString, GetAsUnicodeString(Value2));
+   {$ENDIF}
 {$ELSE}
       Result := AnsiCompareStr(Value1.VUnicodeString, GetAsString(Value2));
 {$ENDIF}
@@ -574,8 +615,13 @@ end;
   @param Value a variant to be converted.
   @param a result value.
 }
+{$IFDEF ZEOS_FULL_UNICODE}
+function TZDefaultVariantManager.GetAsUnicodeString(
+  const Value: TZVariant): String;
+{$ELSE}
 function TZDefaultVariantManager.GetAsUnicodeString(
   const Value: TZVariant): WideString;
+{$ENDIF}
 begin
   Result := Convert(Value, vtUnicodeString).VUnicodeString;
 end;
@@ -666,8 +712,13 @@ end;
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
+{$IFDEF ZEOS_FULL_UNICODE}
+procedure TZDefaultVariantManager.SetAsUnicodeString(var Value: TZVariant;
+  const Data: String);
+{$ELSE}
 procedure TZDefaultVariantManager.SetAsUnicodeString(var Value: TZVariant;
   const Data: WideString);
+{$ENDIF}
 begin
   Value.VType := vtUnicodeString;
   Value.VUnicodeString := Data;
@@ -1125,14 +1176,22 @@ begin
           else Result.VString := 'FALSE';
         vtInteger:
           Result.VString := IntToStr(Value.VInteger);
+          // gto: Not a real threat, as it's converting numbers (unicode safe)
         vtFloat:
           Result.VString := FloatToSqlStr(Value.VFloat);
+          // gto: Not a real threat, as it's converting numbers (unicode safe)
         vtString:
           Result.VString := Value.VString;
         vtUnicodeString:
-          Result.VString := Value.VUnicodeString;
+          RaiseTypeMismatchError;
+          { gto: If running on a full unicode IDE, like Delphi 2009, converting
+                 from a UnicodeString to a AnsiString can lead to data loss.
+
+                 I've choose to raise the error instead of convert it. This
+                 behavior can be changed when we find a secure choice. }
         vtDateTime:
           Result.VString := DateTimeToAnsiSQLDate(Value.VDateTime);
+          // gto: Not a real threat, as it's converting dates (unicode safe)
         vtPointer:
           RaiseTypeMismatchError;
         vtInterface:
@@ -1287,7 +1346,11 @@ end;
   Constructs this object and assignes the main properties.
   @param Value a unicode string value.
 }
+{$IFDEF ZEOS_FULL_UNICODE}
+constructor TZAnyValue.CreateWithUnicodeString(const Value: String);
+{$ELSE}
 constructor TZAnyValue.CreateWithUnicodeString(const Value: WideString);
+{$ENDIF}
 begin
   DefVarManager.SetAsUnicodeString(FValue, Value);
 end;
@@ -1388,7 +1451,11 @@ end;
   Gets a stored value converted to unicode string.
   @return a stored value converted to unicode string.
 }
+{$IFDEF ZEOS_FULL_UNICODE}
+function TZAnyValue.GetUnicodeString: String;
+{$ELSE}
 function TZAnyValue.GetUnicodeString: WideString;
+{$ENDIF}
 begin
   Result := SoftVarManager.GetAsUnicodeString(FValue);
 end;
@@ -1453,6 +1520,10 @@ begin
     varBoolean: DefVarManager.SetAsBoolean(Result, Value);
     varString:
       DefVarManager.SetAsString(Result, Value);
+   {$IFDEF ZEOS_FULL_UNICODE}
+   varUString:
+      DefVarManager.SetAsUnicodeString(Result, Value);
+   {$ENDIF}
     varSingle, varDouble, varCurrency:
       DefVarManager.SetAsFloat(Result, Value);
     varUnknown: DefVarManager.SetAsInterface(Result, Value);

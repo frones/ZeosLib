@@ -1,0 +1,1 @@
+20081008: Make core layer unicode/D2009 compatible

@@ -89,13 +89,24 @@ function FirstDelimiter(const Delimiters, Str: string): Integer;
 }
 function LastDelimiter(const Delimiters, Str: string): Integer;
 
+
+{$IFDEF ZEOS_FULL_UNICODE}
 {**
-  Compares two PChars without stopping at #0
-  @param P1 first PChar
-  @param P2 seconds PChar
-  @return <code>True</code> if the memory at P1 and P2 are equal 
+  Compares two PWideChars without stopping at #0 (Unicode Version)
+  @param P1 first PWideChars
+  @param P2 seconds PWideChars
+  @return <code>True</code> if the memory at P1 and P2 are equal
 }
-function MemLComp(P1, P2: PChar; Len: Integer): Boolean;
+function MemLCompUnicode(P1, P2: PChar; Len: Integer): Boolean;
+{$ENDIF}
+
+{**
+  Compares two PAnsiChars without stopping at #0
+  @param P1 first PAnsiChar
+  @param P2 seconds PAnsiChar
+  @return <code>True</code> if the memory at P1 and P2 are equal
+}
+function MemLCompAnsi(P1, P2: PAnsiChar; Len: Integer): Boolean;
 
 {**
   Checks is the string starts with substring.
@@ -225,18 +236,18 @@ function SplitStringEx(const Str, Delimiter: string): TStrings;
 procedure AppendSplitStringEx(List: TStrings; const Str, Delimiter: string);
 
 {**
-  Converts bytes into a string representation.
+  Converts bytes into a AnsiString representation.
   @param Value an array of bytes to be converted.
-  @return a converted string.
+  @return a converted AnsiString.
 }
-function BytesToStr(const Value: TByteDynArray): string;
+function BytesToStr(const Value: TByteDynArray): AnsiString;
 
 {**
-  Converts string into an array of bytes.
-  @param Value a string to be converted.
+  Converts AnsiString into an array of bytes.
+  @param Value a AnsiString to be converted.
   @return a converted array of bytes.
 }
-function StrToBytes(const Value: string): TByteDynArray;
+function StrToBytes(const Value: AnsiString): TByteDynArray;
 
 {**
   Converts bytes into a variant representation.
@@ -377,13 +388,33 @@ begin
   end;
 end;
 
+
+{$IFDEF ZEOS_FULL_UNICODE}
 {**
-  Compares two PChars without stopping at #0
-  @param P1 first PChar
-  @param P2 seconds PChar
+  Compares two PWideChars without stopping at #0 (Unicode Version)
+  @param P1 first PWideChar
+  @param P2 seconds PWideChar
   @return <code>True</code> if the memory at P1 and P2 are equal
 }
-function MemLComp(P1, P2: PChar; Len: Integer): Boolean;
+function MemLCompUnicode(P1, P2: PWideChar; Len: Integer): Boolean;
+begin
+  while (Len > 0) and (P1^ = P2^) do
+  begin
+    Inc(P1);
+    Inc(P2);
+    Dec(Len);
+  end;
+  Result := Len = 0;
+end;
+{$ENDIF}
+
+{**
+  Compares two PAnsiChars without stopping at #0
+  @param P1 first PAnsiChar
+  @param P2 seconds PAnsiChar
+  @return <code>True</code> if the memory at P1 and P2 are equal
+}
+function MemLCompAnsi(P1, P2: PAnsiChar; Len: Integer): Boolean;
 begin
   while (Len > 0) and (P1^ = P2^) do
   begin
@@ -410,7 +441,11 @@ begin
   else
   if LenSubStr <= Length(Str) then
     //Result := Copy(Str, 1, Length(SubStr)) = SubStr;
-    Result := MemLComp(PChar(Str), PChar(SubStr), LenSubStr)
+   {$IFDEF ZEOS_FULL_UNICODE}
+   Result := MemLCompUnicode(PChar(Str), PChar(SubStr), LenSubStr)
+   {$ELSE}
+   Result := MemLCompAnsi(PChar(Str), PChar(SubStr), LenSubStr)
+   {$ENDIF}
   else
     Result := False;
 end;
@@ -434,7 +469,13 @@ begin
     LenStr := Length(Str);
     if LenSubStr <= LenStr then
       //Result := Copy(Str, LenStr - LenSubStr + 1, LenSubStr) = SubStr
-      Result := MemLComp(PChar(Pointer(Str)) + LenStr - LenSubStr, Pointer(SubStr), LenSubStr)
+    {$IFDEF ZEOS_FULL_UNICODE}
+      Result := MemLCompUnicode(PChar(Pointer(Str)) + LenStr - LenSubStr,
+         Pointer(SubStr), LenSubStr)
+    {$ELSE}
+      Result := MemLCompAnsi(PChar(Pointer(Str)) + LenStr - LenSubStr,
+         Pointer(SubStr), LenSubStr)
+    {$ENDIF}
     else
       Result := False;
   end;
@@ -448,7 +489,11 @@ end;
 }
 function SQLStrToFloatDef(Str: string; Def: Extended): Extended;
 var
+  {$IFDEF ZEOS_FULL_UNICODE}
+  OldDecimalSeparator: WideChar;
+  {$ELSE}
   OldDecimalSeparator: Char;
+  {$ENDIF}
 begin
   OldDecimalSeparator := DecimalSeparator;
   DecimalSeparator := '.';
@@ -480,7 +525,11 @@ end;
 }
 function SQLStrToFloat(const Str: string): Extended;
 var
+  {$IFDEF ZEOS_FULL_UNICODE}
+  OldDecimalSeparator: WideChar;
+  {$ELSE}
   OldDecimalSeparator: Char;
+  {$ENDIF}
 begin
   OldDecimalSeparator := DecimalSeparator;
   DecimalSeparator := '.';
@@ -662,7 +711,11 @@ end;
 }
 function FloatToSQLStr(Value: Extended): string;
 var
+  {$IFDEF ZEOS_FULL_UNICODE}
+  OldDecimalSeparator: WideChar;
+  {$ELSE}
   OldDecimalSeparator: Char;
+  {$ENDIF}
 begin
   OldDecimalSeparator := DecimalSeparator;
   DecimalSeparator := '.';
@@ -673,19 +726,25 @@ begin
   end;
 end;
 
+{**
+  Split a single string using the delimiter, appending the resulting strings
+  to the List. (gto: New version, now unicode safe and without the bug which
+  adds a blank line before the last found string)
+  @param List a list to append the result.
+  @param Str the source string
+  @param Delimiters the delimiter string
+}
 procedure SplitToStringListEx(List: TStrings; const Str, Delimiter: string);
 var
-  Pos: integer;
-  Temp: string;
+   temp: string;
+   i: integer;
 begin
-  Temp := Str;
-  repeat
-    Pos := AnsiPos(Delimiter, Temp);
-    List.Add(Copy(Temp, 1, Pos - 1));
-    Delete(Temp, 1, Pos + Length(Delimiter) - 1);
-  until Pos = 0;
-  if Temp <> '' then
-    List.Add(Temp);
+   temp := Str + Delimiter;
+   repeat
+      i := List.Add(Copy(temp, 0, AnsiPos(Delimiter, temp) - 1));
+      Delete(temp, 1, Length(List[i] + Delimiter));
+   until
+      temp = '';
 end;
 
 {**
@@ -730,21 +789,21 @@ begin
 end;
 
 {**
-  Converts bytes into a string representation.
+  Converts bytes into a AnsiString representation.
   @param Value an array of bytes to be converted.
-  @return a converted string.
+  @return a converted AnsiString.
 }
-function BytesToStr(const Value: TByteDynArray): string;
+function BytesToStr(const Value: TByteDynArray): AnsiString;
 begin
-  SetString(Result, PChar(@Value[0]), Length(Value))
+  SetString(Result, PAnsiChar(@Value[0]), Length(Value))
 end;
 
 {**
-  Converts string into an array of bytes.
-  @param Value a string to be converted.
+  Converts AnsiString into an array of bytes.
+  @param Value a AnsiString to be converted.
   @return a converted array of bytes.
 }
-function StrToBytes(const Value: string): TByteDynArray;
+function StrToBytes(const Value: AnsiString): TByteDynArray;
 begin
   SetLength(Result, Length(Value));
   if Value <> '' then
@@ -784,7 +843,7 @@ begin
 end;
 
 {**
-  Converts Ansi SQL Date/Time to TDateTime
+  Converts Ansi SQL Date/Time (yyyy-mm-dd hh:nn:ss) to TDateTime
   @param Value a date and time string.
   @return a decoded TDateTime value.
 }
