@@ -43,8 +43,10 @@ contains
   ZPostgreSqlAnalyser in '..\..\src\parsesql\ZPostgreSqlAnalyser.pas',
   ZPostgreSqlToken in '..\..\src\parsesql\ZPostgreSqlToken.pas',
 {$ENDIF}
+{$IFDEF ENABLE_DBLIB}
   ZSybaseAnalyser in '..\..\src\parsesql\ZSybaseAnalyser.pas',
   ZSybaseToken in '..\..\src\parsesql\ZSybaseToken.pas',
+{$ENDIF}
 {$IFDEF ENABLE_ORACLE}
   ZOracleToken in '..\..\src\parsesql\ZOracleToken.pas',
   ZOracleAnalyser in '..\..\src\parsesql\ZOracleAnalyser.pas',

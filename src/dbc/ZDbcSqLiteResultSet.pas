@@ -135,7 +135,7 @@ implementation
 
 uses
   ZMessages, ZDbcSQLiteUtils, ZMatchPattern,
-  ZDbcLogging, ZDbcMySqlUtils;
+  ZDbcLogging;
 
 { TZSQLiteResultSetMetadata }
 
@@ -550,7 +550,7 @@ begin
   Value := GetPChar(ColumnIndex);
   if IsMatch('????-??-??*', Value) then
     Result := Trunc(AnsiSQLDateToDateTime(Value))
-  else Result := Trunc(MySQLTimestampToDateTime(Value));
+  else Result := Trunc(TimestampStrToDateTime(Value));
   LastWasNull := Result = 0;
 end;
 
@@ -573,7 +573,7 @@ begin
   Value := GetPChar(ColumnIndex);
   if IsMatch('*??:??:??*', Value) then
     Result := Frac(AnsiSQLDateToDateTime(Value))
-  else Result := Frac(MySQLTimestampToDateTime(Value));
+  else Result := Frac(TimestampStrToDateTime(Value));
 end;
 
 {**
@@ -596,7 +596,7 @@ begin
   Temp := GetPChar(ColumnIndex);
   if IsMatch('????-??-??*', Temp) then
     Result := AnsiSQLDateToDateTime(Temp)
-  else Result := MySQLTimestampToDateTime(Temp);
+  else Result := TimestampStrToDateTime(Temp);
   LastWasNull := Result = 0;
 end;
 

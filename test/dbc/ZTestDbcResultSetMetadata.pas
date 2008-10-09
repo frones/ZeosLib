@@ -56,8 +56,7 @@ unit ZTestDbcResultSetMetadata;
 interface
 
 uses TestFramework, Classes, SysUtils, ZTestDefinitions, ZDbcIntfs, ZClasses,
-  ZCollections, ZDbcResultSet, ZDbcResultSetMetadata, ZDbcPostgreSql,
-  ZDbcMySql;
+  ZCollections, ZDbcResultSet, ZDbcResultSetMetadata;
 
 type
 

@@ -56,8 +56,7 @@ unit ZTestDbcResolver;
 interface
 
 uses TestFramework, Classes, SysUtils, ZDbcIntfs, ZClasses, ZCompatibility,
-  ZCollections, ZDbcPostgreSql, ZDbcMySql, ZDbcMySqlStatement,
-  ZDbcMySqlResultSet, ZDbcGenericResolver, ZTestDefinitions;
+  ZCollections, ZDbcGenericResolver, ZTestDefinitions;
 
 type
 
@@ -72,13 +71,15 @@ type
     property Connection: IZConnection read FConnection write FConnection;
   published
     procedure TestGenericResolver;
-    procedure TestInterbaseResolver;
-    procedure TestMySqlResolverPosts;
+    {$IFDEF ENABLE_INTERBASE}procedure TestInterbaseResolver;{$ENDIF}
+    {$IFDEF ENABLE_MYSQL}procedure TestMySqlResolverPosts;{$ENDIF}
   end;
 
 implementation
 
-uses ZSysUtils, ZTestConsts;
+uses ZSysUtils, ZTestConsts
+     {$IFDEF ENABLE_POSTGRESQL}, ZDbcPostgreSql{$ENDIF}
+     {$IFDEF ENABLE_MYSQL}, ZDbcMySql, ZDbcMySqlStatement, ZDbcMySqlResultSet{$ENDIF};
 
 { TZTestCachedResolverCase }
 
@@ -149,6 +150,7 @@ begin
 *)
 end;
 
+{$IFDEF ENABLE_INTERBASE}
 {**
   Runs a test for posts of Interbase CachedResolver class.
 }
@@ -197,7 +199,9 @@ begin
   end;
 *)
 end;
+{$ENDIF}
 
+{$IFDEF ENABLE_MYSQL}
 {**
   Runs a test for MySQL Resolver.
 }
@@ -245,6 +249,7 @@ begin
   ResultSet := Statement.ExecuteQuery('SELECT * FROM department ' + WhereClause);
   CheckEquals(False, ResultSet.Next);
 end;
+{$ENDIF}
 
 initialization
   TestFramework.RegisterTest(TZTestCachedResolverCase.Suite);
