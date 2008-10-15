@@ -25,3 +25,7 @@
 20080330 : Fields default expresion is determined from the wrong source  - by Wild_Pointer - Mantis Bug 105
 
 20080721 : Updated PostgreSQL keywords list - by pawelsel - Mantis Bug 122
+
+20081008 : Wrote a replacement for the default notice processor which printed to stderr in console applications (and the test suite) - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2021
+
+20081015 : Fixed memory leak when connection failed - by mdaems - Mantis Bug 136

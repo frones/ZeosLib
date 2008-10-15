@@ -60,7 +60,7 @@ uses
   Types,
 {$ENDIF}
   Classes, DB, TestFramework, ZDataset, ZConnection, SysUtils, ZDbcIntfs,
-  ZTestDefinitions, ZDbcMySql, ZCompatibility, ZDbcPostgreSql;
+  ZTestDefinitions, ZCompatibility;
 
 type
   {** Implements a test case for . }

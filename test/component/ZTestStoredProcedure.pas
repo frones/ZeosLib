@@ -57,8 +57,7 @@ interface
 
 uses
   TestFramework, Db, ZSqlStrings, SysUtils, ZTokenizer, ZGenericSqlToken,
-  ZConnection, ZDataset, ZTestDefinitions, ZDbcMySql, ZDbcPostgreSql,
-  ZDbcDbLib, ZStoredProcedure;
+  ZConnection, ZDataset, ZTestDefinitions, ZStoredProcedure;
 
 type
 

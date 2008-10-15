@@ -328,7 +328,7 @@ begin
     GetColumnType(ColumnIndex) in [stDate, stTimestamp]) then
   begin
     Result := (AnsiSQLDateToDateTime(Temp) = 0)
-      and (MySQLTimestampToDateTime(Temp) = 0);
+      and (TimestampStrToDateTime(Temp) = 0);
   end;
 end;
 
@@ -572,7 +572,7 @@ begin
 
   if IsMatch('????-??-??*', Value) then
     Result := Trunc(AnsiSQLDateToDateTime(Value))
-  else Result := Trunc(MySQLTimestampToDateTime(Value));
+  else Result := Trunc(TimestampStrToDateTime(Value));
   LastWasNull := Result = 0;
 end;
 
@@ -603,7 +603,7 @@ begin
 
   if IsMatch('*??:??:??*', Value) then
     Result := Frac(AnsiSQLDateToDateTime(Value))
-  else Result := Frac(MySQLTimestampToDateTime(Value));
+  else Result := Frac(TimestampStrToDateTime(Value));
 end;
 
 {**
@@ -633,7 +633,7 @@ begin
 
   if IsMatch('????-??-??*', Temp) then
     Result := AnsiSQLDateToDateTime(Temp)
-  else Result := MySQLTimestampToDateTime(Temp);
+  else Result := TimestampStrToDateTime(Temp);
   LastWasNull := Result = 0;
 end;
 

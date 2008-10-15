@@ -56,8 +56,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, TestFramework, SysUtils, ZDbcIntfs, ZTestDefinitions, ZDbcMySql,
-  ZCompatibility, ZDbcPostgreSql, ZDbcInterbase6;
+  Classes, TestFramework, SysUtils, ZDbcIntfs, ZTestDefinitions,
+  ZCompatibility;
 
 type
   {** Implements a test case for . }

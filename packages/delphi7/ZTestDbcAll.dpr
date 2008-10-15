@@ -85,7 +85,9 @@ uses
   ZTestDbcPostgreSqlMetadata in '..\..\test\dbc\ZTestDbcPostgreSqlMetadata.pas',
   ZTestDbcPostgreSql in '..\..\test\dbc\ZTestDbcPostgreSql.pas',
 {$ENDIF}
+{$IFDEF ENABLE_DBLIB}
   ZTestDbcMsSql in '..\..\test\dbc\ZTestDbcMsSql.pas',
+{$ENDIF}
 {$IFDEF ENABLE_ORACLE}
   ZTestDbcOracle in '..\..\test\dbc\ZTestDbcOracle.pas',
 {$ENDIF}

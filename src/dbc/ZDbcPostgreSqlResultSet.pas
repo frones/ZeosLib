@@ -133,7 +133,7 @@ implementation
 
 uses
   Math, ZMessages, ZMatchPattern, ZDbcPostgreSql,
-  ZDbcPostgreSqlUtils, ZDbcMySqlUtils;
+  ZDbcPostgreSqlUtils;
 
 { TZPostgreSQLResultSet }
 
@@ -505,7 +505,7 @@ begin
   Value := GetString(ColumnIndex);
   if IsMatch('????-??-??*', Value) then
     Result := Trunc(AnsiSQLDateToDateTime(Value))
-  else Result := Trunc(MySQLTimestampToDateTime(Value));
+  else Result := Trunc(TimestampStrToDateTime(Value));
 end;
 
 {**
@@ -527,7 +527,7 @@ begin
   Value := GetString(ColumnIndex);
   if IsMatch('*??:??:??*', Value) then
     Result := Frac(AnsiSQLDateToDateTime(Value))
-  else Result := Frac(MySQLTimestampToDateTime(Value));
+  else Result := Frac(TimestampStrToDateTime(Value));
 end;
 
 {**
@@ -550,7 +550,7 @@ begin
   Value := GetString(ColumnIndex);
   if IsMatch('????-??-??*', Value) then
     Result := AnsiSQLDateToDateTime(Value)
-  else Result := MySQLTimestampToDateTime(Value);
+  else Result := TimestampStrToDateTime(Value);
 end;
 
 {**

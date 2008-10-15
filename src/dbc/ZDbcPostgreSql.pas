@@ -153,6 +153,7 @@ TZPgCharactersetType = (
     FCharactersetCode: TZPgCharactersetType;
     FServerMajorVersion: Integer;
     FServerMinorVersion: Integer;
+    FNoticeProcessor: TZPostgreSQLNoticeProcessor;
   protected
     function BuildConnectStr: string;
     procedure StartTransactionSupport;
@@ -214,6 +215,10 @@ uses
   ZDbcPostgreSqlUtils, ZDbcPostgreSqlMetadata, ZPostgreSqlToken,
   ZPostgreSqlAnalyser;
 
+procedure DefaultNoticeProcessor(arg: Pointer; message: PChar); cdecl;
+begin
+DriverManager.LogMessage(lcOther,'Postgres NOTICE',message);
+end;
 { TZPostgreSQLDriver }
 
 {**
@@ -377,6 +382,7 @@ begin
   FClientCodePage := Trim(Info.Values['codepage']);
   FCharactersetCode := pg_CS_code(FClientCodePage);
 //  DriverManager.LogError(lcOther,'','Create',Integer(FCharactersetCode),'');
+  FNoticeProcessor := DefaultNoticeProcessor;
 end;
 
 {**
@@ -495,6 +501,10 @@ begin
     CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcConnect, LogMessage,nil)
   else
     DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
+
+  { Set the notice processor (default = nil)}
+
+  FPlainDriver.SetNoticeProcessor(FHandle,FNoticeProcessor,nil);
 
   { Sets a client codepage. }
   if FClientCodePage <> '' then

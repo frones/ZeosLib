@@ -774,6 +774,11 @@ begin
 
     DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,      0, ErrorMessage);
     if ResultHandle <> nil then PlainDriver.Clear(ResultHandle);
+    if PlainDriver.GetStatus(Handle) = CONNECTION_BAD then
+      begin
+        PlainDriver.Finish(Handle);
+        Handle := nil;
+      end;
     raise EZSQLException.CreateWithStatus(StatusCode,Format(SSQLError1, [ErrorMessage]));
   end;
 end;

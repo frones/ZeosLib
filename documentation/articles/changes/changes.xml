@@ -30,6 +30,12 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=136">#0000136</ulink> [normal] Memory leaking on failed Postgres connection</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=139">#0000139</ulink> [normal] Some MySQL units are still being compiled when only the SQLite protocol is enabled</simpara>
+        </listitem>
+        <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=137">#0000137</ulink> [normal] Exception Field '...' cannot be modified (calculated, lookup field) (Adjusted fix for Mantis Bug 99)</simpara>
         </listitem>
         <listitem>
@@ -46,6 +52,9 @@
     <sect2>
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>[Postgresql] Replaced the default notice processor which printed to stderr in console applications (and the test suite) (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2021">http://zeos.firmos.at/viewtopic.php?t=2021</ulink>)</simpara>
+        </listitem>
         <listitem>
           <simpara>[COMMON] Escape underscores from the stored procedure name before looking up it's parameters (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2035">http://zeos.firmos.at/viewtopic.php?t=2035</ulink>)</simpara>
         </listitem>

@@ -58,24 +58,35 @@ interface
 {$I ZParseSql.inc}
 
 uses
-  Classes, ZTokenizer, ZGenericSqlToken, ZPostgreSqlToken,
-  ZSybaseToken;
+  Classes, ZTokenizer, ZGenericSqlToken;
 
 type
 
   {** Implements a SQLite-specific number state object. }
-  TZSQLiteNumberState = class (TZPostgreSQLNumberState)
+  TZSQLiteNumberState = class (TZNumberState)
+  public
+    function NextToken(Stream: TStream; FirstChar: Char;
+      Tokenizer: TZTokenizer): TZToken; override;
   end;
 
   {** Implements a SQLite-specific quote string state object. }
-  TZSQLiteQuoteState = class (TZSybaseQuoteState)
+  TZSQLiteQuoteState = class (TZQuoteState)
+  public
+    function NextToken(Stream: TStream; FirstChar: Char;
+      Tokenizer: TZTokenizer): TZToken; override;
+
+    function EncodeString(const Value: string; QuoteChar: Char): string; override;
+    function DecodeString(const Value: string; QuoteChar: Char): string; override;
   end;
 
   {**
     This state will either delegate to a comment-handling
     state, or return a token with just a slash in it.
   }
-  TZSQLiteCommentState = class (TZSybaseCommentState)
+  TZSQLiteCommentState = class (TZCppCommentState)
+  public
+    function NextToken(Stream: TStream; FirstChar: Char;
+      Tokenizer: TZTokenizer): TZToken; override;
   end;
 
   {** Implements a symbol state object. }
@@ -97,6 +108,217 @@ type
   end;
 
 implementation
+
+uses SysUtils, ZCompatibility;
+
+{ TZSQLiteNumberState }
+
+{**
+  Return a number token from a reader.
+  @return a number token from a reader
+}
+function TZSQLiteNumberState.NextToken(Stream: TStream; FirstChar: Char;
+  Tokenizer: TZTokenizer): TZToken;
+var
+  TempChar: Char;
+  FloatPoint: Boolean;
+  LastChar: Char;
+
+  function ReadDecDigits: string;
+  begin
+    Result := '';
+    LastChar := #0;
+    while Stream.Read(LastChar, 1) > 0 do
+    begin
+      if LastChar in ['0'..'9'] then
+      begin
+        Result := Result + LastChar;
+        LastChar := #0;
+      end
+      else
+      begin
+        Stream.Seek(-1, soFromCurrent);
+        Break;
+      end;
+    end;
+  end;
+
+begin
+  FloatPoint := FirstChar = '.';
+  Result.Value := FirstChar;
+  Result.TokenType := ttUnknown;
+  LastChar := #0;
+
+  { Reads the first part of the number before decimal point }
+  if not FloatPoint then
+  begin
+    Result.Value := Result.Value + ReadDecDigits;
+    FloatPoint := LastChar = '.';
+    if FloatPoint then
+    begin
+      Stream.Read(TempChar, 1);
+      Result.Value := Result.Value + TempChar;
+    end;
+  end;
+
+  { Reads the second part of the number after decimal point }
+  if FloatPoint then
+    Result.Value := Result.Value + ReadDecDigits;
+
+  { Reads a power part of the number }
+  if LastChar in ['e','E'] then
+  begin
+    Stream.Read(TempChar, 1);
+    Result.Value := Result.Value + TempChar;
+    FloatPoint := True;
+
+    Stream.Read(TempChar, 1);
+    if TempChar in ['0'..'9','-','+'] then
+      Result.Value := Result.Value + TempChar + ReadDecDigits
+    else
+    begin
+      Result.Value := Copy(Result.Value, 1, Length(Result.Value) - 1);
+      Stream.Seek(-2, soFromCurrent);
+    end;
+  end;
+
+  { Prepare the result }
+  if Result.Value = '.' then
+  begin
+    if Tokenizer.SymbolState <> nil then
+      Result := Tokenizer.SymbolState.NextToken(Stream, FirstChar, Tokenizer);
+  end
+  else
+  begin
+    if FloatPoint then
+      Result.TokenType := ttFloat
+    else Result.TokenType := ttInteger;
+  end;
+end;
+
+{ TZSQLiteQuoteState }
+
+{**
+  Return a quoted string token from a reader. This method
+  will collect characters until it sees a match to the
+  character that the tokenizer used to switch to this state.
+
+  @return a quoted string token from a reader
+}
+function TZSQLiteQuoteState.NextToken(Stream: TStream; FirstChar: Char;
+  Tokenizer: TZTokenizer): TZToken;
+var
+  ReadChar: Char;
+  LastChar: Char;
+begin
+  Result.Value := FirstChar;
+  LastChar := #0;
+  while Stream.Read(ReadChar, 1) > 0 do
+  begin
+    if ((LastChar = FirstChar) and (ReadChar <> FirstChar)
+      and (FirstChar <> '[')) or ((FirstChar = '[') and (LastChar = ']')) then
+    begin
+      Stream.Seek(-1, soFromCurrent);
+      Break;
+    end;
+    Result.Value := Result.Value + ReadChar;
+    if (LastChar = FirstChar) and (ReadChar = FirstChar) then
+      LastChar := #0
+    else LastChar := ReadChar;
+  end;
+
+  if FirstChar in ['"', '['] then
+    Result.TokenType := ttWord
+  else Result.TokenType := ttQuoted;
+end;
+
+{**
+  Encodes a string value.
+  @param Value a string value to be encoded.
+  @param QuoteChar a string quote character.
+  @returns an encoded string.
+}
+function TZSQLiteQuoteState.EncodeString(const Value: string; QuoteChar: Char): string;
+begin
+  if QuoteChar = '[' then
+    Result := '[' + Value + ']'
+  else if QuoteChar in [#39, '"'] then
+    Result := QuoteChar + Value + QuoteChar
+  else Result := Value;
+end;
+
+{**
+  Decodes a string value.
+  @param Value a string value to be decoded.
+  @param QuoteChar a string quote character.
+  @returns an decoded string.
+}
+function TZSQLiteQuoteState.DecodeString(const Value: string; QuoteChar: Char): string;
+begin
+  Result := Value;
+  if Length(Value) >= 2 then
+  begin
+    if (QuoteChar in [#39, '"']) and (Value[1] = QuoteChar)
+      and (Value[Length(Value)] = QuoteChar) then
+    begin
+      if Length(Value) > 2 then
+        Result := AnsiDequotedStr(Value, QuoteChar)
+      else Result := '';
+    end
+    else if (QuoteChar = '[') and (Value[1] = QuoteChar)
+      and (Value[Length(Value)] = ']') then
+      Result := Copy(Value, 2, Length(Value) - 2)
+  end;
+end;
+
+{ TZSQLiteCommentState }
+
+{**
+  Gets a SQLite specific comments like # or /* */.
+  @return either just a slash token, or the results of
+    delegating to a comment-handling state
+}
+function TZSQLiteCommentState.NextToken(Stream: TStream; FirstChar: Char;
+  Tokenizer: TZTokenizer): TZToken;
+var
+  ReadChar: Char;
+  ReadNum: Integer;
+begin
+  Result.Value := FirstChar;
+  Result.TokenType := ttUnknown;
+
+  if FirstChar = '-' then
+  begin
+    ReadNum := Stream.Read(ReadChar, 1);
+    if (ReadNum > 0) and (ReadChar = '-') then
+    begin
+      Result.TokenType := ttComment;
+      Result.Value := '--' + GetSingleLineComment(Stream);
+    end
+    else
+    begin
+      if ReadNum > 0 then
+        Stream.Seek(-1, soFromCurrent);
+    end;
+  end
+  else if FirstChar = '/' then
+  begin
+    ReadNum := Stream.Read(ReadChar, 1);
+    if (ReadNum > 0) and (ReadChar = '*') then
+    begin
+      Result.TokenType := ttComment;
+      Result.Value := '/*' + GetMultiLineComment(Stream);
+    end
+    else
+    begin
+      if ReadNum > 0 then
+        Stream.Seek(-1, soFromCurrent);
+    end;
+  end;
+
+  if (Result.TokenType = ttUnknown) and (Tokenizer.SymbolState <> nil) then
+    Result := Tokenizer.SymbolState.NextToken(Stream, FirstChar, Tokenizer);
+end;
 
 { TZSQLiteSymbolState }
 

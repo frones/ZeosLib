@@ -181,6 +181,7 @@
 
     <delete>
        <fileset dir="${packages.dir}\${compiler}">
+	<include name="build/*.dcu" />
 	<include name="build/*.ppu" />
 	<include name="build/*.o" />
 	<include name="build/*.exe" />

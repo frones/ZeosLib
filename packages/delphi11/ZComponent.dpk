@@ -25,7 +25,7 @@ package ZComponent;
 {$LIBSUFFIX '110'}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
-
+{$I ZPackages.inc}
 requires
   rtl,
   dbrtl,
@@ -50,7 +50,7 @@ contains
   ZStoredProcedure in '..\..\src\component\ZStoredProcedure.pas',
   ZAbstractTable in '..\..\src\component\ZAbstractTable.pas',
   ZSqlMetadata in '..\..\src\component\ZSqlMetadata.pas',
-  ZSequence in '..\..\src\component\ZSequence.pas',
-  ZIBEventAlerter in '..\..\src\component\ZIBEventAlerter.pas';
+  ZSequence in '..\..\src\component\ZSequence.pas'
+  {$IFDEF ENABLE_INTERBASE}, ZIBEventAlerter in '..\..\src\component\ZIBEventAlerter.pas' {$ENDIF ENABLE_INTERBASE};
 
 end.
