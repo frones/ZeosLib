@@ -94,6 +94,9 @@
       <title>Internal Changes</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[COMMON] Added function debug_get_memorydiff to ZSysUtils</simpara>
+        </listitem>
+        <listitem>
           <simpara>[DB2] Removed never used DB2 plain drivers</simpara>
         </listitem>
         <listitem>
