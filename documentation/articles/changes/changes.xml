@@ -109,6 +109,9 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=136">#0000136</ulink> [normal] Memory leaking on failed Postgres connection</simpara>
+        </listitem>
+        <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=139">#0000139</ulink> [normal] Some MySQL units are still being compiled when only the SQLite protocol is enabled</simpara>
         </listitem>
         <listitem>
