@@ -56,7 +56,7 @@ unit ZTestScriptParser;
 interface
 
 uses
-  TestFramework, SysUtils, ZTokenizer, ZPostgreSqlToken, ZScriptParser,
+  TestFramework, SysUtils, ZTokenizer, ZScriptParser,
   ZTestDefinitions;
 
 type
@@ -78,7 +78,7 @@ type
 
 implementation
 
-uses Classes, ZDbcUtils, ZSysUtils;
+uses Classes, ZDbcUtils, ZSysUtils, ZGenericSqlToken;
 
 { TZTestSQLScriptParserCase }
 
@@ -88,7 +88,7 @@ uses Classes, ZDbcUtils, ZSysUtils;
 procedure TZTestSQLScriptParserCase.SetUp;
 begin
   FParser := TZSQLScriptParser.Create;
-  FParser.Tokenizer := TZPostgreSQLTokenizer.Create;
+  FParser.Tokenizer := TZGenericSQLTokenizer.Create;
 end;
 
 {**

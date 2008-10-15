@@ -263,3 +263,5 @@
 20081005 : Removed table prefixes in generated insert/update statements in property editor for TZSQLUpdate - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2023
 
 20081005 : Escape underscores from the stored procedure name before looking up it's parameters - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2035
+
+20081010 : Some MySQL units are still being compiled when only the SQLite protocol is enabled- by mdaems - Mantis Bug 139

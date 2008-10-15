@@ -66,7 +66,9 @@ uses
 {$ENDIF}
   ZTestConfig,
   ZSqlTestCase,
+{$IFDEF ENABLE_DBLIB}
   ZTestSybaseToken in '..\..\test\parsesql\ZTestSybaseToken.pas',
+{$ENDIF}
 {$IFDEF ENABLE_MYSQL}
   ZTestMySqlToken in '..\..\test\parsesql\ZTestMySqlToken.pas',
 {$ENDIF}

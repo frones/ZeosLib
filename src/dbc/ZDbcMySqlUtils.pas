@@ -86,13 +86,6 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
 function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull: string): TZSQLType;
 
 {**
-  Converts MySQL Timestamp to TDateTime
-  @param Value a timestamp string.
-  @return a decoded TDateTime value.
-}
-function MySQLTimestampToDateTime(const Value: string): TDateTime;
-
-{**
   Checks for possible sql errors.
   @param PlainDriver a MySQL plain driver.
   @param Handle a MySQL connection handle.
@@ -379,68 +372,6 @@ begin
   else for i := 0 to Length(GeoTypes)-1 do if GeoTypes[i] = TypeName then Result := stBinaryStream;
 
   if Result = stUnknown then raise Exception.Create('Unknown MySQL data type!');
-end;
-
-{**
-  Converts MySQL Timestamp to TDateTime
-  @param Value a timestamp string.
-  @return a decoded TDateTime value.
-}
-function MySQLTimestampToDateTime(const Value: string): TDateTime;
-var
-  Year, Month, Day, Hour, Min, Sec: Integer;
-  StrLength, StrPos: Integer;
-begin
-  Month := 0;
-  Day := 0;
-  Hour := 0;
-  Min := 0;
-  Sec := 0;
-  Result := 0;
-
-  StrLength := Length(Value);
-  if (StrLength = 14) or (StrLength = 8) then
-  begin
-    StrPos := 5;
-    Year := StrToIntDef(Copy(Value, 1, 4), 0);
-  end
-  else
-  begin
-    StrPos := 3;
-    Year := StrToIntDef(Copy(Value, 1, 2), 0);
-  end;
-
-  if StrLength > 2 then  {Add Month}
-  begin
-    Month := StrToIntDef(Copy(Value, StrPos, 2), 0);
-    if StrLength > 4 then {Add Day}
-    begin
-      Day := StrToIntDef(Copy(Value, StrPos + 2, 2), 0);
-      if StrLength > 6 then {Add Hour}
-      begin
-        Hour := StrToIntDef(Copy(Value, StrPos + 4, 2), 0);
-        if StrLength > 8 then {Add Minute}
-        begin
-          Min := StrToIntDef(Copy(Value, StrPos + 6, 2), 0);
-          if StrLength > 10 then {Add Second}
-            Sec := StrToIntDef(Copy(Value, StrPos + 8, 2), 0);
-       end;
-     end;
-   end;
-  end;
-
-  if (Year <> 0) and (Month <> 0) and (Day <> 0) then
-  begin
-    try
-      Result := EncodeDate(Year, Month, Day)
-    except
-    end;
-  end;
-
-  try
-    Result := Result + EncodeTime(Hour, Min, Sec, 0);
-  except
-  end;
 end;
 
 {**

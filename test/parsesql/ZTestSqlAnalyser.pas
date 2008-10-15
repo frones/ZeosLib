@@ -85,23 +85,27 @@ type
     procedure TestPerformance1;
   end;
 
+{$IFDEF ENABLE_DBLIB}
   {** Implements a test case for Sybase SQL analyser classes. }
   TZTestSybaseStatementAnalyser = class(TZTestStatementAnalyser)
   protected
     procedure SetUp; override;
   end;
-
+{$ENDIF}
+{$IFDEF ENABLE_INTERBASE}
   {** Implements a test case for Interbase SQL analyser classes. }
   TZTestInterbaseStatementAnalyser = class(TZTestStatementAnalyser)
   protected
     procedure SetUp; override;
   end;
+{$ENDIF}
 
 implementation
 
 uses Classes, SysUtils, ZCollections, ZGenericSqlToken,
-  ZSybaseToken, ZSybaseAnalyser, ZInterbaseToken, ZCompatibility,
-  ZInterbaseAnalyser;
+{$IFDEF ENABLE_DBLIB}ZSybaseToken, ZSybaseAnalyser, {$ENDIF}
+{$IFDEF ENABLE_INTERBASE}ZInterbaseToken, ZInterbaseAnalyser, {$ENDIF}
+ZCompatibility;
 
 { TZTestStatementAnalyser }
 
@@ -510,6 +514,7 @@ begin
     [GetTickCount - StartTicks]));
 end;
 
+{$IFDEF ENABLE_DBLIB}
 { TZTestSybaseStatementAnalyser }
 
 {**
@@ -520,7 +525,9 @@ begin
   FAnalyser := TZSybaseStatementAnalyser.Create;
   FTokenizer := TZSybaseTokenizer.Create;
 end;
+{$ENDIF}
 
+{$IFDEF ENABLE_INTERBASE}
 { TZTestInterbaseStatementAnalyser }
 
 {**
@@ -531,10 +538,15 @@ begin
   FAnalyser := TZInterbaseStatementAnalyser.Create;
   FTokenizer := TZInterbaseTokenizer.Create;
 end;
+{$ENDIF}
 
 initialization
   TestFramework.RegisterTest(TZTestGenericStatementAnalyser.Suite);
+{$IFDEF ENABLE_DBLIB}
   TestFramework.RegisterTest(TZTestSybaseStatementAnalyser.Suite);
+{$ENDIF}
+{$IFDEF ENABLE_INTERBASE}
   TestFramework.RegisterTest(TZTestInterbaseStatementAnalyser.Suite);
+{$ENDIF}
 end.
 

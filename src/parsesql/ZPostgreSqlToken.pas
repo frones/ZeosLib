@@ -63,7 +63,7 @@ uses
 type
 
   {** Implements a PostgreSQL-specific number state object. }
-  TZPostgreSQLNumberState = class (TZMySQLNumberState)
+  TZPostgreSQLNumberState = class (TZNumberState)
   public
     function NextToken(Stream: TStream; FirstChar: Char;
       Tokenizer: TZTokenizer): TZToken; override;

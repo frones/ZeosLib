@@ -289,7 +289,7 @@ Begin
     else if rsLen = 10 then
         Result := self.asDate
     else if rsLen = 14 then
-        Result := MySQLTimestampToDateTime(self.FRawString)
+        Result := TimestampStrToDateTime(self.FRawString)
     else
         Result := encodeDate(1970, 1, 1) + encodeTime(0,0,0,0);
 End;
@@ -316,7 +316,7 @@ Begin
         end;
       end
     else if rsLen = 14 then
-        Result := frac(MySQLTimestampToDateTime(self.FRawString))
+        Result := frac(TimestampStrToDateTime(self.FRawString))
     else
         Result :=  encodeTime(0,0,0,0);
 End;
@@ -343,7 +343,7 @@ Begin
 
       end
     else if rsLen = 14 then
-        Result := trunc(MySQLTimestampToDateTime(self.FRawString))
+        Result := trunc(TimestampStrToDateTime(self.FRawString))
     else
         Result := encodeDate(1970, 1, 1);
 End;
@@ -655,7 +655,7 @@ begin
     GetColumnType(ColumnIndex) in [stDate, stTimestamp]) then
   begin
     Result := (AnsiSQLDateToDateTime(Temp) = 0)
-      and (MySQLTimestampToDateTime(Temp) = 0);
+      and (TimestampStrToDateTime(Temp) = 0);
   end;
 end;
 
@@ -899,7 +899,7 @@ begin
 
   if IsMatch('????-??-??*', Value) then
     Result := Trunc(AnsiSQLDateToDateTime(Value))
-  else Result := Trunc(MySQLTimestampToDateTime(Value));
+  else Result := Trunc(TimestampStrToDateTime(Value));
   LastWasNull := Result = 0;
 end;
 
@@ -930,7 +930,7 @@ begin
 
   if IsMatch('*??:??:??*', Value) then
     Result := Frac(AnsiSQLDateToDateTime(Value))
-  else Result := Frac(MySQLTimestampToDateTime(Value));
+  else Result := Frac(TimestampStrToDateTime(Value));
 end;
 
 {**
@@ -960,7 +960,7 @@ begin
 
   if IsMatch('????-??-??*', Temp) then
     Result := AnsiSQLDateToDateTime(Temp)
-  else Result := MySQLTimestampToDateTime(Temp);
+  else Result := TimestampStrToDateTime(Temp);
   LastWasNull := Result = 0;
 end;
 
