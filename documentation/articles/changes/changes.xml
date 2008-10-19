@@ -30,6 +30,9 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=140">#0000140</ulink> [normal] ZUpdateSQL set null as default datetime field value (Firebird)</simpara>
+        </listitem>
+        <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=126">#0000126</ulink> [normal] Quoting specific to PostgreSQL</simpara>
         </listitem>
     </itemizedlist>
