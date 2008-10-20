@@ -1713,7 +1713,7 @@ begin
             [rfIgnoreCase]));
         end;
 
-        IF UpperCase(DefaultValue)= '''NOW''' then
+        IF (UpperCase(DefaultValue)= '''NOW''') or (UpperCase(DefaultValue)= '"NOW"')then
           case TypeName of
           12: DefaultValue := 'CURRENT_DATE';
           13: DefaultValue := 'CURRENT_TIME';
