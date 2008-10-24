@@ -267,3 +267,5 @@
 20081010 : Some MySQL units are still being compiled when only the SQLite protocol is enabled- by mdaems - Mantis Bug 139
 
 20081015 : Added function debug_get_memorydiff to ZSysUtils - by mdaems
+
+20081024 : Column mapping problem with TZUpdateSql and Refreshing data - by jay - Mantis Bug 147
