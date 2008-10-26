@@ -1713,6 +1713,14 @@ begin
             [rfIgnoreCase]));
         end;
 
+        IF (UpperCase(DefaultValue)= '''NOW''') or (UpperCase(DefaultValue)= '"NOW"')then
+          case TypeName of
+          12: DefaultValue := 'CURRENT_DATE';
+          13: DefaultValue := 'CURRENT_TIME';
+          35: DefaultValue := 'CURRENT_TIMESTAMP';
+          else begin end;
+          end;
+
         Result.MoveToInsertRow;
         Result.UpdateNull(1);    //TABLE_CAT
         Result.UpdateNull(2);    //TABLE_SCHEM

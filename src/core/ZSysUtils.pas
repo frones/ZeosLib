@@ -339,9 +339,25 @@ function EncodeSQLVersioning(const MajorVersion: Integer;
 }
 function FormatSQLVersion( const SQLVersion: Integer ): String;
 
+{$IFOPT D+}
+{$IFNDEF FPC}
+{**
+  Calculates the amount of allocated/deallocated memory since last call of this function
+  @return Amount of allocated/deallocated memory since last call of this function
+}
+function debug_get_memorydiff: Integer;
+{$ENDIF}
+{$ENDIF}
+
 implementation
 
 uses ZMatchPattern;
+{$IFOPT D+}
+{$IFNDEF FPC}
+var
+  debug_last_used_memory : integer;
+{$ENDIF}
+{$ENDIF}
 
 {**
   Determines a position of a first delimiter.
@@ -1138,5 +1154,19 @@ begin
  DecodeSQLVersioning(SQLVersion, MajorVersion, MinorVersion, SubVersion);
  Result := IntToStr(MajorVersion)+'.'+IntToStr(MinorVersion)+'.'+IntToStr(SubVersion);
 end;
+
+{$IFOPT D+}
+{$IFNDEF FPC}
+{**
+  Calculates the amount of allocated/deallocated memory since last call of this function
+  @return Amount of allocated/deallocated memory since last call of this function
+}
+function debug_get_memorydiff: Integer;
+begin
+  result := AllocMemsize - debug_last_used_memory;
+  debug_last_used_memory := AllocMemsize;
+end;
+{$ENDIF}
+{$ENDIF}
 
 end.

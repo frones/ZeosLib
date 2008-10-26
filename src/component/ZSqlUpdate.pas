@@ -707,7 +707,7 @@ begin
         raise EZDatabaseError.Create(SUpdateSQLNoResult);
       end;
       for I := 1 to RefreshResultSet.GetMetadata.GetColumnCount do begin
-        RefreshColumnName:=RefreshResultSet.GetMetadata.GetColumnName(I); // What Column from Resultset should be updated
+        RefreshColumnName:=RefreshResultSet.GetMetadata.GetColumnLabel(I); // What Column from Resultset should be updated
         RefreshColumnIndex := Sender.FindColumn(RefreshColumnName); // Is the Column available in the select ?
         if RefreshColumnIndex=0 then begin
           continue; // Column not found in Select from Dataset
