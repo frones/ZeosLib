@@ -243,3 +243,5 @@
 20081005 : Escape underscores from the stored procedure name before looking up it's parameters - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2035
 
 20081010 : Some MySQL units are still being compiled when only the SQLite protocol is enabled- by mdaems - Mantis Bug 139
+
+20081024 : Column mapping problem with TZUpdateSql and Refreshing data - by jay - Mantis Bug 147

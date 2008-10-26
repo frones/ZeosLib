@@ -37,3 +37,5 @@
 20080816 : Detection of calculated columns (set readonly, not writable) - by pjonard - Mantis Bug 133
 
 20080820 : Part 2: Detection of calculated columns (set readonly, not writable) - by pjonard - Mantis Bug 133
+
+20081019 : Special default value 'NOW' for timestap, time and date fields was interpreted wrongly - by mdaems - Mantis Bug 140
