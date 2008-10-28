@@ -64,8 +64,8 @@ uses
     dl,
   {$ELSE}
     libc,
-  {$ENDIF FPC}
-{$ENDIF UNIX}
+  {$ENDIF}
+{$ENDIF}
   Classes, SysUtils;
 
 type
@@ -121,8 +121,8 @@ type
 function LoadLibrary(ModuleName: PChar): HMODULE;
 function FreeLibrary(Module: HMODULE): LongBool;
 function GetProcAddress(Module: HMODULE; Proc: PChar): Pointer;
-  {$ENDIF FPC}
-{$ENDIF UNIX}
+  {$ENDIF}
+{$ENDIF}
 
 implementation
 
@@ -142,8 +142,8 @@ function GetProcAddress(Module: HMODULE; Proc: PChar): Pointer;
 begin
   Result := dlsym(pointer(Module), Proc);
 end;
-  {$ENDIF FPC}
-{$ENDIF UNIX}
+  {$ENDIF}
+{$ENDIF}
 
 end.
 
