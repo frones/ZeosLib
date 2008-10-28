@@ -61,7 +61,7 @@ interface
 uses
 {$IFDEF MSWINDOWS}
   Windows,
-{$ENDIF MSWINDOWS}
+{$ENDIF}
 {$IFNDEF FPC}
   Types,
 {$ENDIF}

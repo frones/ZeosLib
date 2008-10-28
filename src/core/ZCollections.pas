@@ -282,7 +282,7 @@ begin
   raise EListError.CreateFmt(Msg,[Data]) at get_caller_addr(get_frame);
   {$ELSE}
   raise EListError.CreateFmt(Msg, [Data]) at ReturnAddr;
-  {$ENDIF FPC}
+  {$ENDIF}
 end;
 
 {**

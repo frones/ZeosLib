@@ -50,6 +50,6 @@ contains
   ZAbstractTable in '..\..\src\component\ZAbstractTable.pas',
   ZSqlMetadata in '..\..\src\component\ZSqlMetadata.pas',
   ZSequence in '..\..\src\component\ZSequence.pas'
-  {$IFDEF ENABLE_INTERBASE}, ZIBEventAlerter in '..\..\src\component\ZIBEventAlerter.pas' {$ENDIF ENABLE_INTERBASE};
+  {$IFDEF ENABLE_INTERBASE}, ZIBEventAlerter in '..\..\src\component\ZIBEventAlerter.pas' {$ENDIF};
 
 end.
