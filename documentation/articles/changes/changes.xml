@@ -37,7 +37,9 @@
     <sect2>
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
-        <listitem><simpara></simpara></listitem>
+        <listitem>
+          <simpara>[Common] TZTable and TZQuery Filter property do not work correctly with datetime fields (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2002">http://zeos.firmos.at/viewtopic.php?t=2055</ulink>)</simpara>
+        </listitem>
       </itemizedlist>
     </sect2>
     <sect2>

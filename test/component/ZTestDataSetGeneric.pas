@@ -88,6 +88,10 @@ type
     procedure TestDecodingSortedFields;
     procedure TestSmartOpen;
     procedure TestPrepare;
+    procedure TestTimeFilterExpression;
+    procedure TestDateTimeFilterExpression;
+    procedure TestTimeLocateExpression;
+    procedure TestDateTimeLocateExpression;
   end;
 
 implementation
@@ -96,7 +100,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  ZSysUtils, ZTestConsts, ZTestCase, ZAbstractRODataset, ZDatasetUtils;
+  DateUtils, ZSysUtils, ZTestConsts, ZTestCase, ZAbstractRODataset, ZDatasetUtils;
 
 { TZGenericTestDbcResultSet }
 
@@ -1217,6 +1221,123 @@ begin
     Query.Free;
   end;
 end;
+
+
+{**
+Runs a test for time filter expressions.
+}
+procedure TZGenericTestDbcResultSet.TestTimeFilterExpression;
+var
+  Query: TZQuery;
+begin
+  Query := TZQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+    Query.SQL.Text := 'SELECT * FROM people';
+
+    Query.Filter := 'p_begin_work >= "'+TimeToStr(EncodeTime(8,30,0,50))+'"';
+    Query.Filtered := True;
+    Query.Open;
+    CheckEquals(4, Query.RecordCount);
+    Query.Last;
+    CheckEquals(EncodeTime(8,30,0,0), Query.FieldByName('p_begin_work').AsDateTime);
+    Query.Close;
+    Query.Filter := '(p_begin_work > "'+TimeToStr(EncodeTime(8,0,0,0))+ '") AND (p_end_work < "'+TimeToStr(EncodeTime(18,0,0,0))+'")';
+    Query.Open;
+    CheckEquals(2, Query.RecordCount);
+    Query.Last;
+    CheckEquals(EncodeTime(8,30,0,0), Query.FieldByName('p_begin_work').AsDateTime);
+    CheckEquals(EncodeTime(17,30,0,0), Query.FieldByName('p_end_work').AsDateTime);
+    Query.Close;
+  finally
+    Query.Free;
+  end;
+end;
+
+{**
+Runs a test for Datetime filter expressions.
+}
+procedure TZGenericTestDbcResultSet.TestDateTimeFilterExpression;
+var
+  Query: TZQuery;
+  Date_came,Date_out : TDateTime;
+begin
+  Query := TZQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+    Query.SQL.Text := 'SELECT * FROM cargo';
+    Date_came := EncodeDateTime(2002,12,19,18,30,0,0);
+    Query.Filter := 'c_date_came >= "'+DateTimeToStr(Date_came)+'"';
+    Query.Filtered := True;
+    Query.Open;
+    CheckEquals(3, Query.RecordCount);
+    Query.Last;
+    Date_came := EncodeDateTime(2002,12,21,10,20,0,0);
+    CheckEquals(Date_Came, Query.FieldByName('c_date_came').AsDateTime);
+    Query.Close;
+    Date_came := EncodeDateTime(2002,12,19,14,30,0,0);
+    Date_out := EncodeDateTime(2002,12,23,2,0,0,0);
+    Query.Filter := '(c_date_came > "'+DateTimeToStr(Date_came)+ '") AND (c_date_out < "'+DateTimeToStr(Date_out)+'")';
+    Query.Open;
+    CheckEquals(2, Query.RecordCount);
+    Query.First;
+    Date_came := EncodeDateTime(2002,12,20,2,0,0,0);
+    Date_out := EncodeDateTime(2002,12,20,2,0,0,0);
+    CheckEquals(Date_came, Query.FieldByName('c_date_came').AsDateTime);
+    CheckEquals(Date_out, Query.FieldByName('c_date_out').AsDateTime);
+    Query.Close;
+  finally 
+    Query.Free;
+  end;
+end;
+
+{**
+Runs a test for time locate expressions.
+}
+procedure TZGenericTestDbcResultSet.TestTimeLocateExpression;
+var
+  Query: TZQuery;
+begin
+  Query := TZQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+    Query.SQL.Text := 'SELECT * FROM people';
+    Query.Open;
+    CheckEquals(true, Query.Locate('p_begin_work',EncodeTime(8,30,0,0),[]));
+    CheckEquals(EncodeTime(8,30,0,0), Query.FieldByName('p_begin_work').AsDateTime);
+    CheckEquals(EncodeTime(17,30,0,0), Query.FieldByName('p_end_work').AsDateTime);
+    Query.Close;
+    Query.Open;
+    CheckEquals(false, Query.Locate('p_begin_work',EncodeTime(8,31,0,0),[]));
+    Query.Close;
+  finally
+    Query.Free;
+  end;
+end;
+
+{**
+Runs a test for Datetime locate expressions.
+}
+procedure TZGenericTestDbcResultSet.TestDateTimeLocateExpression;
+var
+  Query: TZQuery;
+begin
+  Query := TZQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+    Query.SQL.Text := 'SELECT * FROM cargo';
+    Query.Open;
+    CheckEquals(true, Query.Locate('c_date_came',EncodeDateTime(2002,12,19,14,0,0,0),[]));
+    CheckEquals(EncodeDateTime(2002,12,19,14,0,0,0), Query.FieldByName('c_date_came').AsDateTime);
+    CheckEquals(EncodeDateTime(2002,12,23,0,0,0,0), Query.FieldByName('c_date_out').AsDateTime);
+    Query.Close;
+    Query.Open;
+    CheckEquals(false, Query.Locate('c_date_came',EncodeDateTime(2002,12,19,0,0,0,0),[]));
+    Query.Close;
+  finally
+    Query.Free;
+  end;
+end; 
 
 initialization
   TestFramework.RegisterTest(TZGenericTestDbcResultSet.Suite);
