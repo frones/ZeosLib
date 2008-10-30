@@ -72,8 +72,8 @@ uses
   //, SynCompletion
   //{$ELSE}
   //, SynCompletionProposal
-  //{$ENDIF FPC}
-  //{$ENDIF USE_SYNEDIT};
+  //{$ENDIF}
+  //{$ENDIF};
 
 type
 
@@ -110,10 +110,10 @@ type
     //SynCompletion:TSynCompletion;
     //{$ELSE}
     //SynCompletion:TSynCompletionProposal;
-    //{$ENDIF FPC}
+    //{$ENDIF}
     //{$ELSE}
     //edtSelect: TMemo;
-    //{$ENDIF USE_SYNEDIT}
+    //{$ENDIF}
     FDS: TZReadOnlyQuery;
     FSaveConnected: Boolean;
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
@@ -138,8 +138,8 @@ type
       //Shift: TShiftState; Index: Integer; EndToken: Char);
     //procedure ccExecute(Kind: SynCompletionType; Sender: TObject;
       //var CurrentInput: string; var x, y: Integer; var CanExecute: Boolean);
-    //{$ENDIF FPC}
-    //{$ENDIF USE_SYNEDIT}
+    //{$ENDIF}
+    //{$ENDIF}
   public
     PageControl1: TPageControl;
     constructor CreateEditor(ADS:TZReadOnlyQuery);
@@ -491,14 +491,14 @@ begin
   //SynCompletion:=TSynCompletion.Create(Self);
   //{$ELSE}
   //SynCompletion:=TSynCompletionProposal.Create(Self);
-  //{$ENDIF FPC}
+  //{$ENDIF}
   //with SynCompletion do begin
     //AddEditor(edtSelect);
     //ItemList.Clear;
     //OnCodeCompletion:=ccComplete;
     //OnExecute:=ccExecute;
   //end;
-  //{$ENDIF USE_SYNEDIT}
+  //{$ENDIF}
   FSaveConnected := True;
   FDS:=ADS;
   if Assigned(FDS) then

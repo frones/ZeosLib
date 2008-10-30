@@ -60,7 +60,7 @@ interface
 uses
   {$IFDEF MSWINDOWS}
   Windows,
-  {$ENDIF MSWINDOWS}
+  {$ENDIF}
   Classes, SysUtils, ZCompatibility, ZClasses, ZSysUtils;
 
 const

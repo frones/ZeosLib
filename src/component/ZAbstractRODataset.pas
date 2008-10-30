@@ -1215,7 +1215,7 @@ begin
               WStrCopy(Buffer, PWideChar(RowAccessor.GetUnicodeString(ColumnIndex, Result)));
             {$ELSE}
               PWideString(Buffer)^ := RowAccessor.GetUnicodeString(ColumnIndex, Result);
-            {$ENDIF ~BDS4_UP}
+            {$ENDIF}
             Result := not Result;
           end;
         { Processes all other fields. }
@@ -1314,8 +1314,8 @@ begin
               RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(Buffer));
           {$ELSE}
               RowAccessor.SetUnicodeString(ColumnIndex, PWideString(Buffer)^);
-          {$ENDIF ~FPC2_1UP}
-        {$ENDIF ~BDS4_UP}
+          {$ENDIF}
+        {$ENDIF}
 
       end
       { Processes all other fields. }

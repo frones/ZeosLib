@@ -66,8 +66,8 @@ uses
     dl,
   {$ELSE}
     libc,
-  {$ENDIF FPC}
-{$ENDIF UNIX}
+  {$ENDIF}
+{$ENDIF}
   Classes, SysUtils;
 
 type
@@ -155,8 +155,8 @@ function FreeLibrary(Module: HMODULE): LongBool;
 function GetProcAddress(Module: HMODULE; Proc: PChar): Pointer;
 //function GetModuleFileName(Module: HMODULE; Buffer: PChar; BufLen: Integer): Integer;
 //function GetModuleHandle(Location: Pchar): HMODULE;
-  {$ENDIF FPC}
-{$ENDIF UNIX}
+  {$ENDIF}
+{$ENDIF}
 
 implementation
 
@@ -228,8 +228,8 @@ begin
   Result := 0;
 end;
 }
-  {$ENDIF FPC}
-{$ENDIF UNIX}
+  {$ENDIF}
+{$ENDIF}
 
 end.
 

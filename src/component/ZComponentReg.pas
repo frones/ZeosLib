@@ -87,7 +87,7 @@ uses
 {$ENDIF}
 {$ENDIF}
   Classes, ZConnection, ZDataset, ZSqlUpdate, ZSqlProcessor, ZStoredProcedure,
-  ZSqlMonitor, ZSqlMetadata, ZSequence{$IFDEF ENABLE_INTERBASE}, ZIBEventAlerter {$ENDIF ENABLE_INTERBASE};
+  ZSqlMonitor, ZSqlMetadata, ZSequence{$IFDEF ENABLE_INTERBASE}, ZIBEventAlerter {$ENDIF};
 
 {**
   Registers components in a component palette.
@@ -96,7 +96,7 @@ procedure Register;
 begin
   RegisterComponents(ZEOS_DB_PALETTE, [
     TZConnection, TZReadOnlyQuery, TZQuery, TZTable, TZUpdateSQL,
-    TZStoredProc, TZSQLMetadata, TZSQLProcessor, TZSQLMonitor, TZSequence {$IFDEF ENABLE_INTERBASE}, TZIBEventAlerter {$ENDIF ENABLE_INTERBASE}]);
+    TZStoredProc, TZSQLMetadata, TZSQLProcessor, TZSQLMonitor, TZSequence {$IFDEF ENABLE_INTERBASE}, TZIBEventAlerter {$ENDIF}]);
 
 {$IFDEF WITH_PROPERTY_EDITOR}
   RegisterPropertyEditor(TypeInfo(string), TZConnection, 'Protocol',

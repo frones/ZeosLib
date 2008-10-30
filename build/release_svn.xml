@@ -23,6 +23,7 @@
 <!-- default SVN dirs-->
   <property name="url.testing" value="svn://www.firmos.at/zeos/branches/testing"/>
   <property name="url.trunk" value="svn://www.firmos.at/zeos/trunk"/>
+  <property name="url.stable" value="svn://www.firmos.at/zeos/trunk"/>
   <property name="url.tag" value="svn://www.firmos.at/zeos/tags/${build.productversion}"/>
  
   <!-- path to the svnant libraries. Usually they will be located in ANT_HOME/lib -->
@@ -78,6 +79,18 @@
      <antcall target="buildTagZip">
       <param name="branch" value="TAG"/>
       <param name="url" value="${url.trunk}"/>
+      <param name="fullZip" value="true"/>
+    </antcall>
+  </target>
+
+<!-- target for building a stable draft release before the version tag is actually made -->
+  <target name="buildStableAsTagged" depends="prepare">
+    <echo message="Building Trunk as Tagged release"
+      file="${log.file}" append="true" />
+
+     <antcall target="buildTagZip">
+      <param name="branch" value="TAG"/>
+      <param name="url" value="${url.stable}"/>
       <param name="fullZip" value="true"/>
     </antcall>
   </target>

@@ -79,7 +79,7 @@ IncludeVerInfo=1
 AutoIncBuild=0
 MajorVer=6
 MinorVer=6
-Release=3
+Release=4
 Build=0
 Debug=0
 PreRelease=0
@@ -98,7 +98,7 @@ LegalCopyright=
 LegalTrademarks=
 OriginalFilename=
 ProductName=
-ProductVersion=6.6.3.0
+ProductVersion=6.6.4.0
 Comments=
 
 [HistoryLists\hlIncludePath]
