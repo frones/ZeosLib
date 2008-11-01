@@ -59,6 +59,9 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[COMMON] Bad letter case for unit ZSqlProcessor in ZSqlStrings.pas (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2067">http://zeos.firmos.at/viewtopic.php?t=2067</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[Postgresql] Replaced the default notice processor which printed to stderr in console applications (and the test suite) (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2021">http://zeos.firmos.at/viewtopic.php?t=2021</ulink>)</simpara>
         </listitem>
         <listitem>
