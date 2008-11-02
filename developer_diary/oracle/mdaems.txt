@@ -1,3 +1,5 @@
 20060531 : Bad tiReadCommited corrected - See http://zeos.firmos.at/viewtopic.php?t=570
 
 20061024 : Applied Oracle BLOB and Sequence patch - written by martinrame - See http://zeos.firmos.at/viewtopic.php?t=850
+
+20081102 : Added TZOracleCachedResolver class because oracle doesn't support queries without FROM clause - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2080

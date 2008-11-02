@@ -685,7 +685,7 @@ begin
   begin
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil);
     CachedResultSet.SetConcurrency(rcUpdatable);
-    CachedResultSet.SetResolver(TZGenericCachedResolver.Create(
+    CachedResultSet.SetResolver(TZOracleCachedResolver.Create(
       Statement, NativeResultSet.GetMetadata));
     Result := CachedResultSet;
   end else
