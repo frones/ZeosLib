@@ -1228,7 +1228,6 @@ function TZConnection.ExecuteDirect(SQL:string; var RowsAffected:integer):boolea
 var
   stmt : IZStatement;
 begin
-  result := False;
   CheckConnected;
   stmt := DbcConnection.CreateStatement;
   RowsAffected:= stmt.ExecuteUpdate(SQL);

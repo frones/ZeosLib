@@ -271,3 +271,5 @@
 20081024 : Column mapping problem with TZUpdateSql and Refreshing data - by jay - Mantis Bug 147
 
 20081030 : TZTable and TZQuery Filter property do not work correctly with datetime fields - by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2055
+
+20081102 : Removed some compiler warnings - by Faceker - See http://zeos.firmos.at/viewtopic.php?t=2081
