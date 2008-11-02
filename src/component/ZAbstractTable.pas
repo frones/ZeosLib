@@ -76,7 +76,11 @@ type
   protected
   {$IFDEF WITH_IPROVIDER}
     function PSIsSQLBased: Boolean; override;
+    {$IFDEF BDS4_UP}
+    function PSGetTableNameW: WideString; override;
+    {$ELSE}
     function PSGetTableName: string; override;
+    {$ENDIF}
     procedure PSSetCommandText(const ACommandText: string); override;
   {$ENDIF}
 
@@ -139,7 +143,11 @@ end;
   Gets the name of the table.
   @returns the name of this table.
 }
+{$IFDEF BDS4_UP}
+function TZAbstractTable.PSGetTableNameW: WideString;
+{$ELSE}
 function TZAbstractTable.PSGetTableName: string;
+{$ENDIF}
 begin
   Result := TableName;
 end;

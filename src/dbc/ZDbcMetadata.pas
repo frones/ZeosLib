@@ -2625,8 +2625,6 @@ function TZAbstractDatabaseMetadata.GetBestRowIdentifier(const Catalog: string;
   const Schema: string; const Table: string; Scope: Integer; Nullable: Boolean): IZResultSet;
 var
   Key: string;
-  IndexName: string;
-  ColumnNames: TStrings;
 begin
   Key := GetBestRowIdentifierCacheKey(Catalog, Schema, Table, Scope,
     Nullable);
@@ -3367,8 +3365,6 @@ end;
 function TZAbstractDatabaseMetadata.UncachedGetCrossReference(const PrimaryCatalog: string;
   const PrimarySchema: string; const PrimaryTable: string; const ForeignCatalog: string;
   const ForeignSchema: string; const ForeignTable: string): IZResultSet;
-var
-  Key: string;
 begin
     Result := ConstructVirtualResultSet(CrossRefColumnsDynArray);
 end;

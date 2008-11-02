@@ -634,8 +634,8 @@ begin
       begin
         CurrentValue := FromTokens[TokenIndex];
         CurrentUpper := AnsiUpperCase(CurrentValue);
-        CurrentType := TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
-        FromTokens.Objects[TokenIndex]{$IFDEF FPC}){$ENDIF});
+        //CurrentType := TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
+        //FromTokens.Objects[TokenIndex]{$IFDEF FPC}){$ENDIF});
         if CurrentUpper = '(' then
           SkipBracketTokens(FromTokens, TokenIndex)
         else Inc(TokenIndex);

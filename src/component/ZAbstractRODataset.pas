@@ -338,8 +338,13 @@ type
   {$IFDEF WITH_IPROVIDER}
     procedure PSStartTransaction; override;
     procedure PSEndTransaction(Commit: Boolean); override;
+    {$IFDEF BDS4_UP}
+    function PSGetTableNameW: WideString; override;
+    function PSGetQuoteCharW: WideString; override;
+    {$ELSE}
     function PSGetTableName: string; override;
     function PSGetQuoteChar: string; override;
+    {$ENDIF}
     function PSGetUpdateException(E: Exception;
       Prev: EUpdateError): EUpdateError; override;
     function PSIsSQLBased: Boolean; override;
@@ -348,7 +353,11 @@ type
     function PSUpdateRecord(UpdateKind: TUpdateKind;
       Delta: TDataSet): Boolean; override;
     procedure PSExecute; override;
+    {$IFDEF BDS4_UP}
+    function PSGetKeyFieldsW: WideString; override;
+    {$ELSE}
     function PSGetKeyFields: string; override;
+    {$ENDIF}
     function PSGetParams: TParams; override;
     procedure PSSetParams(AParams: TParams); override;
     function PSExecuteStatement(const ASQL: string; AParams: TParams;
@@ -2833,7 +2842,11 @@ end;
   Returns a string quote character.
   @retuns a quote character.
 }
+{$IFDEF BDS4_UP}
+function TZAbstractRODataset.PSGetQuoteCharW: WideString;
+{$ELSE}
 function TZAbstractRODataset.PSGetQuoteChar: string;
+{$ENDIF}
 begin
   if Assigned(FConnection) then
   begin
@@ -2954,7 +2967,11 @@ end;
   @returns a table name or an empty string is SQL query is complex SELECT
     or not SELECT statement.
 }
+{$IFDEF BDS4_UP}
+function TZAbstractRODataset.PSGetTableNameW: WideString;
+{$ELSE}
 function TZAbstractRODataset.PSGetTableName: string;
+{$ENDIF}
 var
   Driver: IZDriver;
   Tokenizer: IZTokenizer;
@@ -2978,10 +2995,17 @@ end;
   Defines a list of query primary key fields.
   @returns a semicolon delimited list of query key fields.
 }
+{$IFDEF BDS4_UP}
+function TZAbstractRODataset.PSGetKeyFieldsW: WideString;
+begin
+  Result := inherited PSGetKeyFieldsW;
+end;
+{$ELSE}
 function TZAbstractRODataset.PSGetKeyFields: string;
 begin
   Result := inherited PSGetKeyFields;
 end;
+{$ENDIF}
 
 {**
   Executes a SQL statement with parameters.
