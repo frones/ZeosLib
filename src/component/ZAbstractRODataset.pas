@@ -1629,6 +1629,10 @@ procedure TZAbstractRODataset.InternalOpen;
 var
   ColumnList: TObjectList;
 begin
+  {$IFNDEF FPC}
+  If (csDestroying in Componentstate) then
+    raise Exception.Create(SCanNotOpenDataSetWhenDestroying);
+  {$ENDIF}
   Prepare;
 
   CurrentRow := 0;

@@ -46,6 +46,9 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[COMMON] (Delphi only issue) Added a test to avoid opening a dataset when ComponentState=csDestroying</simpara>
+        </listitem>
+        <listitem>
           <simpara>[Mysql] Implemented reuse of prepared statements for mysql</simpara>
         </listitem>
         <listitem>
