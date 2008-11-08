@@ -91,6 +91,7 @@ type
     FWritable: Boolean;
     FDefinitelyWritable: Boolean;
     FDefaultValue: string;
+    FDefaultExpression : string;
   public
     constructor Create;
     function GetColumnTypeName: string;
@@ -117,6 +118,7 @@ type
     property DefinitelyWritable: Boolean read FDefinitelyWritable
       write FDefinitelyWritable;
     property DefaultValue: string read FDefaultValue write FDefaultValue;
+    property DefaultExpression: string read FDefaultExpression write FDefaultExpression;
   end;
 
   {** Implements Abstract ResultSet Metadata. }

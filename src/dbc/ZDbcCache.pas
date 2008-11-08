@@ -94,6 +94,7 @@ type
     FColumnTypes: array of TZSQLType;
     FColumnLengths: array of Integer;
     FColumnOffsets: array of Integer;
+    FColumnDefaultExpressions: array of string;
     FBuffer: PZRowBuffer;
     FHasBlobs: Boolean;
     FTemp: string;
@@ -141,6 +142,8 @@ type
     function GetColumnType(ColumnIndex: Integer): TZSQLType;
     function GetColumnLength(ColumnIndex: Integer): Integer;
     function GetColumnOffSet(ColumnIndex: Integer): Integer;
+    function GetColumnDefaultExpression(ColumnIndex: Integer): string;
+    procedure SetColumnDefaultExpression(ColumnIndex: Integer; Value: string);
 
     //======================================================================
     // Methods for accessing results by column index
@@ -226,6 +229,7 @@ begin
   SetLength(FColumnTypes, FColumnCount);
   SetLength(FColumnLengths, FColumnCount);
   SetLength(FColumnOffsets, FColumnCount);
+  SetLength(FColumnDefaultExpressions, FColumnCount);
   FHasBlobs := False;
 
   for I := 0 to FColumnCount - 1 do
@@ -236,6 +240,7 @@ begin
     FColumnTypes[I] := Current.ColumnType;
     FColumnLengths[I] := GetColumnSize(Current);
     FColumnOffsets[I] := FColumnsSize;
+    FColumnDefaultExpressions[I] := Current.DefaultExpression;
     Inc(FColumnsSize, FColumnLengths[I] + 1);
     // 32768 is the length of a TByteArray. (HeidiSQL patch)
     if FColumnsSize > 32767 then begin
@@ -833,6 +838,19 @@ function TZRowAccessor.GetColumnType(ColumnIndex: Integer): TZSQLType;
 begin
  CheckColumnIndex(ColumnIndex);
  Result := FColumnTypes[ColumnIndex-1];
+end;
+
+function TZRowAccessor.GetColumnDefaultExpression(
+  ColumnIndex: Integer): string;
+begin
+ CheckColumnIndex(ColumnIndex);
+ Result := FColumnDefaultExpressions[ColumnIndex-1];
+end;
+
+procedure TZRowAccessor.SetColumnDefaultExpression(ColumnIndex: Integer;
+  Value: string);
+begin
+ FColumnDefaultExpressions[ColumnIndex-1] := Value;
 end;
 
 //

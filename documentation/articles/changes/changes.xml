@@ -46,6 +46,9 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[COMMON] Added support for DefaultExpression TField property (<ulink url="http://zeosbugs.firmos.at/view.php?id=146">#0000146</ulink> </simpara>
+        </listitem>
+        <listitem>
           <simpara>[COMMON] (Delphi only issue) Added a test to avoid opening a dataset when ComponentState=csDestroying</simpara>
         </listitem>
         <listitem>
