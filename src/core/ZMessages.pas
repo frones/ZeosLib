@@ -142,6 +142,7 @@ resourcestring
   SOperationIsNotAllowed4 = 'Operação não permitida para DataSet fechado';
   SNoMoreRecords = 'Nenhum registro no ResultSet';
   SCanNotOpenResultSet = 'Não foi possível abrir o ResultSet';
+  SCanNotOpenDataSetWhenDestroying ='Translate : Cannot open a dataset when the componentstate is dsDestroying';
   SCircularLink = 'DataSource possui um link circular';
   SBookmarkWasNotFound = 'Bookmark não foi encontrado';
   SIncorrectSearchFieldsNumber = 'Número incorreto de valores de campos de procura';
@@ -304,6 +305,7 @@ resourcestring
   SOperationIsNotAllowed4 = 'Bewerking is niet toegestaan voor gesloten dataset';
   SNoMoreRecords = 'Geen records meer aanwezig in ResultSet';
   SCanNotOpenResultSet = 'Kan een ResultSet niet openen';
+  SCanNotOpenDataSetWhenDestroying ='Kan een Dataset niet openen wanneer de componentstate=dsDestroying';
   SCircularLink = 'Databron maakt een oneindige verbindingslus';
   SBookmarkWasNotFound = 'Bookmark niet gevonden';
   SIncorrectSearchFieldsNumber = 'Incorrect aantal zoekvelden';
@@ -468,6 +470,7 @@ resourcestring
   SOperationIsNotAllowed4 = 'Die Operation ist bei einem geschlossenen DataSet nicht erlaubt';
   SNoMoreRecords = 'Es gibt keine weiteren Datensätze in der Ergebnismenge';
   SCanNotOpenResultSet = 'Die Ergebnismenge kann nicht geöffnet werden';
+  SCanNotOpenDataSetWhenDestroying ='Translate : Cannot open a dataset when the componentstate is dsDestroying';
   SCircularLink = 'Die DataSource hat einen zirkulären Verweis';
   SBookmarkWasNotFound = 'Das Lesezeichen (Bookmark) wurde nicht gefunden';
   SIncorrectSearchFieldsNumber = 'Die Anzahl der Suchfeldwerte ist nicht korrekt';
@@ -630,6 +633,7 @@ resourcestring
   SOperationIsNotAllowed4 = 'Operación no permitida en un dataset cerrado';
   SNoMoreRecords = 'No hay más registros en el Resultset';
   SCanNotOpenResultSet = 'No se puede abrir el Resultset';
+  SCanNotOpenDataSetWhenDestroying ='Translate : Cannot open a dataset when the componentstate is dsDestroying';
   SCircularLink = 'Datasource hace una referencia cíclica';
   SBookmarkWasNotFound = 'Bookmark no encontrado';
   SIncorrectSearchFieldsNumber = 'Número incorrecto de valores de búsqueda';
@@ -795,6 +799,7 @@ resourcestring
   SOperationIsNotAllowed4 = 'Operaşia nu este permisã pentru în dataset închis';
   SNoMoreRecords = 'Nu mai sunt înregistrãri în Resultset';
   SCanNotOpenResultSet = 'Nu pot deschide Resultset';
+  SCanNotOpenDataSetWhenDestroying ='Translate : Cannot open a dataset when the componentstate is dsDestroying';
   SCircularLink = 'Datasource makes a circular link';
   SBookmarkWasNotFound = 'Bookmark nu a fost gãsit';
   SIncorrectSearchFieldsNumber = 'Numãr incorect of search field values';
@@ -955,6 +960,7 @@ resourcestring
   SOperationIsNotAllowed4 = 'Operasi tidak diperkenankan pada dataset tertutup';
   SNoMoreRecords = 'Tidak ada rekord lagi pada Resultset';
   SCanNotOpenResultSet = 'Tidak dapat membuka Resultset';
+  SCanNotOpenDataSetWhenDestroying ='Translate : Cannot open a dataset when the componentstate is dsDestroying';
   SCircularLink = 'Terjadi hubungan Datasource circular';
   SBookmarkWasNotFound = 'Bookmark tidak ada';
   SIncorrectSearchFieldsNumber = 'Salah jumlah nilai field pada pencarian';
@@ -1118,6 +1124,7 @@ resourcestring
   SOperationIsNotAllowed4                  = 'Îïåğàöèÿ íå ïîääåğæèâàåòñÿ íà çàêğûòîì íàáîğå äàííûõ';
   SNoMoreRecords                           = 'Â íàáîğå äàííûõ (Resultset) íåò çàïèñåé';
   SCanNotOpenResultSet                     = 'Íåâîçìîæíî îòêğûòü íàáîğ äàííûõ (Resultset)';
+  SCanNotOpenDataSetWhenDestroying ='Translate : Cannot open a dataset when the componentstate is dsDestroying';
   SCircularLink                            = 'Èñòî÷íèê äàííûõ (Datasource) èìååò öèêëèöåñêèå ññûëêè';
   SBookmarkWasNotFound                     = 'Çàìåòêà (Bookmark) íå íàéäåíà';
   SIncorrectSearchFieldsNumber             = 'Íåêîğğåêòíîå ÷èñëî  Incorrect number of search field values';
@@ -1282,6 +1289,7 @@ resourcestring
   SOperationIsNotAllowed4 = 'Operace není povolena pro zavøenı zdroj dat (dataset)';
   SNoMoreRecords = 'Nejsou další záznamy';
   SCanNotOpenResultSet = 'Nelze otevøít vısledek dotazu';
+  SCanNotOpenDataSetWhenDestroying ='Translate : Cannot open a dataset when the componentstate is dsDestroying';
   SCircularLink = 'Datasource vytváøí cyklickı dotaz';
   SBookmarkWasNotFound = 'Záloka neexistuje';
   SIncorrectSearchFieldsNumber = 'Nesprávnı poèet vyhledávanıch poloek';
@@ -1449,6 +1457,7 @@ resourcestring
   SOperationIsNotAllowed4 = 'Niedozwolona operacja przy zamniêtym Ÿródle danych';
   SNoMoreRecords = 'Nie ma ju¿ wiêcej rekordów wynikowych';
   SCanNotOpenResultSet = 'Nie mozna otworzyæ danych wynikowych';
+  SCanNotOpenDataSetWhenDestroying ='Translate : Cannot open a dataset when the componentstate is dsDestroying';
   SCircularLink = 'Datasource tworzy powi¹zanie cykliczne';
   SBookmarkWasNotFound = 'Nie znaleziono zak³adki (Bookmark)';
   SIncorrectSearchFieldsNumber = 'B³êdna liczba pól do wyszukiwania';
@@ -1613,6 +1622,7 @@ resourcestring
   SOperationIsNotAllowed4 = 'Operation is not allowed for closed dataset';
   SNoMoreRecords = 'No more records in the Resultset';
   SCanNotOpenResultSet = 'Can not open a Resultset';
+  SCanNotOpenDataSetWhenDestroying ='Cannot open a dataset when the componentstate is dsDestroying';
   SCircularLink = 'Datasource makes a circular link';
   SBookmarkWasNotFound = 'Bookmark was not found';
   SIncorrectSearchFieldsNumber = 'Incorrect number of search field values';
