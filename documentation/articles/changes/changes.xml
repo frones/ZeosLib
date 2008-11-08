@@ -38,6 +38,9 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[Oracle] Added TZOracleCachedResolver class because oracle doesn't support queries without FROM clause (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2080">http://zeos.firmos.at/viewtopic.php?t=2080</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[COMMON] Removed some compiler warnings (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2081">http://zeos.firmos.at/viewtopic.php?t=2081</ulink>)</simpara>
         </listitem>
      </itemizedlist>

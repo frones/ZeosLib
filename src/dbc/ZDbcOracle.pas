@@ -61,8 +61,9 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection,
-  ZPlainOracleDriver, ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser;
+  ZCompatibility, Classes, SysUtils, Contnrs, ZDbcIntfs, ZDbcConnection,
+  ZPlainOracleDriver, ZDbcLogging, ZTokenizer, ZDbcGenericResolver,
+  ZGenericSqlAnalyser;
 
 type
 
@@ -150,6 +151,12 @@ type
     function GetCurrentValueSQL: String; override;
     function GetNextValue: Int64; override;
     function GetNextValueSQL: String; override;
+  end;
+
+  {** Implements a specialized cached resolver for Oracle. }
+  TZOracleCachedResolver = class(TZGenericCachedResolver)
+  public
+    function FormCalculateStatement(Columns: TObjectList): string; override;
   end;
 
 var
@@ -790,6 +797,28 @@ begin
  result:=Format('SELECT %s.NEXTVAL FROM DUAL', [Name]);
 end;
 
+{ TZOracleCachedResolver }
+
+{**
+  Forms a where clause for SELECT statements to calculate default values.
+  @param Columns a collection of key columns.
+  @param OldRowAccessor an accessor object to old column values.
+}
+function TZOracleCachedResolver.FormCalculateStatement(
+  Columns: TObjectList): string;
+var iPos: Integer;
+begin
+  Result := inherited FormCalculateStatement(Columns);
+  if Result <> '' then begin
+    iPos := pos('FROM', uppercase(Result));
+    if iPos > 0 then begin
+      Result := copy(Result, 1, iPos+3) + ' DUAL';
+    end
+    else begin
+      Result := Result + ' FROM DUAL';
+    end;
+  end;
+end;
 
 initialization
   OracleDriver := TZOracleDriver.Create;
