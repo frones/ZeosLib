@@ -2,7 +2,7 @@
 {                                                         }
 {                 Zeos Database Objects                   }
 {             Delphi interface to gds32.dll               }
-{                     Version 5.0+                        }
+{                     from Firebird                       }
 {                                                         }
 {        Originally written by Sergey Seroukhov           }
 {                                                         }
@@ -52,7 +52,7 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit ZPlainInterbase5;
+unit ZPlainFirebird21;
 
 interface
 
@@ -60,14 +60,22 @@ interface
 
 {$J+}
 
-uses SysUtils, ZCompatibility, ZPlainLoader,
-		 ZPlainFirebirdInterbaseConstants;
+uses
+{$IFNDEF FPC}
+  Types,
+{$ENDIF}
+  ZCompatibility, ZPlainLoader, ZPlainFirebirdInterbaseConstants,
+  ZPlainFirebirdDriver;
 
 { ***************** Plain API Constants definition **************** }
 
 const
-  WINDOWS_DLL_LOCATION   = 'gds32.dll';
-  LINUX_DLL_LOCATION   = 'libgds.so';
+  WINDOWS1_DLL_LOCATION   = 'fbclient21.dll';
+  WINDOWS1_DLL_LOCATION_EMBEDDED = 'fbclientd21.dll';
+
+  LINUX1_DLL_LOCATION   = 'libfbclient.so.21';
+  LINUX1_DLL_LOCATION_EMBEDDED = 'libfbembed.so.21';
+  LINUX1_IB_CRYPT_LOCATION = 'libcrypt.so.21';
 
 type
 
@@ -93,6 +101,7 @@ type
     item_list_buffer: PChar; result_buffer_length: Short;
     result_buffer: PChar): ISC_STATUS;
     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+
 
   { Array processing routines }
   Tisc_array_gen_sdl = function(status_vector: PISC_STATUS;
@@ -140,6 +149,9 @@ type
     buffer_length: Short); {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_interprete = function(buffer: PChar; status_vector: PPISC_STATUS):
+    ISC_STATUS; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+
+  Tfb_interpret = function(buffer: PChar;  bufsize: integer; status_vector: PPISC_STATUS):
     ISC_STATUS; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
   { Transaction support routines }
@@ -295,27 +307,28 @@ type
   Tisc_encode_date = procedure(tm_date: PCTimeStructure; ib_date: PISC_QUAD);
     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  Tisc_vax_integer = function(buffer: PChar; length: Short): ISC_LONG;
+  { Interbase Version 6 routines }
+  Tisc_decode_sql_date = procedure(ib_date: PISC_DATE;
+    tm_date: PCTimeStructure); {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+
+  Tisc_decode_sql_time = procedure(ib_time: PISC_TIME;
+    tm_date: PCTimeStructure); {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+
+  Tisc_decode_timestamp = procedure(ib_timestamp: PISC_TIMESTAMP;
+    tm_date: PCTimeStructure); {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+
+  Tisc_encode_sql_date = procedure(tm_date: PCTimeStructure;
+    ib_date: PISC_DATE); {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+
+  Tisc_encode_sql_time = procedure(tm_date: PCTimeStructure;
+    ib_time: PISC_TIME); {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+
+  Tisc_encode_timestamp = procedure(tm_date: PCTimeStructure;
+    ib_timestamp: PISC_TIMESTAMP);
     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  procedure isc_encode_sql_date_stub(tm_date: PCTimeStructure; ib_date: PISC_DATE);
-    {$IFDEF MSWINDOWS} stdcall; {$ENDIF} {$IFDEF UNIX} cdecl; {$ENDIF}
-
-  procedure isc_encode_sql_time_stub(tm_date: PCTimeStructure; ib_time: PISC_TIME);
-    {$IFDEF MSWINDOWS} stdcall; {$ENDIF} {$IFDEF UNIX} cdecl; {$ENDIF}
-
-  procedure isc_encode_timestamp_stub(tm_date: PCTimeStructure; ib_timestamp: PISC_TIMESTAMP);
-    {$IFDEF MSWINDOWS} stdcall; {$ENDIF} {$IFDEF UNIX} cdecl; {$ENDIF}
-
-  procedure isc_decode_sql_date_stub(ib_date: PISC_DATE; tm_date: PCTimeStructure);
-    {$IFDEF MSWINDOWS} stdcall; {$ENDIF} {$IFDEF UNIX} cdecl; {$ENDIF}
-
-  procedure isc_decode_sql_time_stub(ib_time: PISC_TIME; tm_date: PCTimeStructure);
-    {$IFDEF MSWINDOWS} stdcall; {$ENDIF} {$IFDEF UNIX} cdecl; {$ENDIF}
-
-  procedure isc_decode_timestamp_stub(ib_timestamp: PISC_TIMESTAMP; tm_date: PCTimeStructure);
-    {$IFDEF MSWINDOWS} stdcall; {$ENDIF} {$IFDEF UNIX} cdecl; {$ENDIF}
-
+  Tisc_vax_integer = function(buffer: PChar; length: Short): ISC_LONG;
+    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
 { ************* Plain API Function variables definition ************ }
 
@@ -329,6 +342,7 @@ var
   isc_sqlcode:          Tisc_sqlcode;
   isc_sql_interprete:   Tisc_sql_interprete;
   isc_interprete:       Tisc_interprete;
+  fb_interpret:         Tfb_interpret;
 
   { Transaction support routines }
   isc_start_transaction: Tisc_start_transaction;
@@ -381,70 +395,104 @@ var
   isc_decode_date:      Tisc_decode_date;
   isc_vax_integer:      Tisc_vax_integer;
 
+  isc_encode_sql_date:  Tisc_encode_sql_date;
+  isc_decode_sql_date:  Tisc_decode_sql_date;
+
+  isc_encode_sql_time:  Tisc_encode_sql_time;
+  isc_decode_sql_time:  Tisc_decode_sql_time;
+
+  isc_encode_timestamp: Tisc_encode_timestamp;
+  isc_decode_timestamp: Tisc_decode_timestamp;
+
 var
   LibraryLoader: TZNativeLibraryLoader;
+  LibraryLoaderEmbedded: TZNativeLibraryLoader;
 
 implementation
 
-uses ZMessages;
+uses SysUtils, ZMessages,
+{$IFNDEF UNIX}
+  Windows;
+{$ELSE}
+  libc;
+{$ENDIF}
+
+{$IFDEF UNIX}
+{$IFDEF INTERBASE_CRYPT}
+{$DEFINE ENABLE_INTERBASE_CRYPT}
+{$ENDIF}
+{$ENDIF}
 
 type
-  {** Implements a loader for Interbase native library. }
-  TZInterbaseNativeLibraryLoader = class (TZNativeLibraryLoader)
+  {** Implements a loader for Firebird native library. }
+  TZFirebirdNativeLibraryLoader = class (TZNativeLibraryLoader)
+{$IFDEF ENABLE_INTERBASE_CRYPT}
+  private
+    FPreLocations: TStringDynArray;
+    FPreHandle: LongWord;
+    FPreLoaded: Boolean;
+    FPreRequared: boolean;
+  protected
+    function LoadNativeLibrary: Boolean; override;
+    procedure FreeNativeLibrary; override;
+
+  public
+    constructor Create(PreLocations, Locations: array of string;
+      PreRequared: boolean = False); overload;
+
+    property PreHandle: LongWord read FPreHandle write FPreHandle;
+    property PreLoaded: Boolean read FPreLoaded write FPreLoaded;
+{$ENDIF}
   public
     function Load: Boolean; override;
   end;
 
-  procedure isc_encode_sql_date_stub(tm_date: PCTimeStructure; ib_date: PISC_DATE);
-   {$IFDEF MSWINDOWS} stdcall; {$ENDIF} {$IFDEF UNIX} cdecl; {$ENDIF}
-  begin
-    raise Exception.Create(SEncodeDateIsNotSupported);
-  end;
+{ TZFirebirdNativeLibraryLoader }
 
-  procedure isc_encode_sql_time_stub(tm_date: PCTimeStructure; ib_time: PISC_TIME);
-    {$IFDEF MSWINDOWS} stdcall; {$ENDIF} {$IFDEF UNIX} cdecl; {$ENDIF}
-  begin
-    raise Exception.Create(SEncodeTimeIsNotSupported);
-  end;
+{**
+  Creates this loader class and assignes main properties.
+  @param Locations locations of native library on windows platform.
+}
+{$IFDEF ENABLE_INTERBASE_CRYPT}
+constructor TZFirebirdNativeLibraryLoader.Create(PreLocations,
+  Locations: array of string; PreRequared: boolean);
+var
+  I: Integer;
+begin
+  inherited Create(Locations);
+  SetLength(FPreLocations, Length(PreLocations));
+  for I := 0 to High(PreLocations) do
+    FPreLocations[I] := PreLocations[I];
+  FPreRequared := PreRequared;
+end;
+{$ENDIF}
 
-  procedure isc_encode_timestamp_stub(tm_date: PCTimeStructure; ib_timestamp: PISC_TIMESTAMP);
-    {$IFDEF MSWINDOWS} stdcall; {$ENDIF} {$IFDEF UNIX} cdecl; {$ENDIF}
-  begin
-    raise Exception.Create(SEncodeTimestampIsNotSupported);
-  end;
-
-  procedure isc_decode_sql_date_stub(ib_date: PISC_DATE; tm_date: PCTimeStructure);
-    {$IFDEF MSWINDOWS} stdcall; {$ENDIF} {$IFDEF UNIX} cdecl; {$ENDIF}
-  begin
-    raise Exception.Create(SDecodeDateIsNotSupported);
-  end;
-
-  procedure isc_decode_sql_time_stub(ib_time: PISC_TIME; tm_date: PCTimeStructure);
-    {$IFDEF MSWINDOWS} stdcall; {$ENDIF} {$IFDEF UNIX} cdecl; {$ENDIF}
-  begin
-    raise Exception.Create(SDecodeTimeIsNotSupported);
-  end;
-
-  procedure isc_decode_timestamp_stub(ib_timestamp: PISC_TIMESTAMP; tm_date: PCTimeStructure);
-    {$IFDEF MSWINDOWS} stdcall; {$ENDIF} {$IFDEF UNIX} cdecl; {$ENDIF}
-  begin
-    raise Exception.Create(SDecodeTimestampIsNotSupported);
-  end;
-
-
-{ TZInterbaseNativeLibraryLoader }
+{**
+  Frees a previously loaded library.
+}
+{$IFDEF ENABLE_INTERBASE_CRYPT}
+procedure TZFirebirdNativeLibraryLoader.FreeNativeLibrary;
+begin
+  inherited FreeNativeLibrary;
+  if (PreHandle <> 0) and Loaded then
+    FreeLibrary(PreHandle);
+  PreHandle := 0;
+  PreLoaded := False;
+end;
+{$ENDIF}
 
 {**
   Loads a library module.
   @return <code>True</code> if library was successfully loaded.
 }
-function TZInterbaseNativeLibraryLoader.Load: Boolean;
+function TZFirebirdNativeLibraryLoader.Load: Boolean;
 begin
   Result := inherited Load;
 
   isc_sqlcode         := GetAddress('isc_sqlcode');
   isc_sql_interprete  := GetAddress('isc_sql_interprete');
   isc_interprete      := GetAddress('isc_interprete');
+  fb_interpret        := GetAddress('fb_interpret');
   isc_vax_integer     := GetAddress('isc_vax_integer');
 
   isc_array_gen_sdl   := GetAddress( 'isc_array_gen_sdl');
@@ -491,17 +539,126 @@ begin
   isc_event_counts    := GetAddress('isc_event_counts');
   isc_event_block     := GetAddress('isc_event_block');
   isc_free            := GetAddress('isc_free');
+
+  isc_rollback_retaining := GetAddress( 'isc_rollback_retaining');
+  isc_decode_sql_date := GetAddress('isc_decode_sql_date');
+  isc_decode_sql_time := GetAddress('isc_decode_sql_time');
+  isc_decode_timestamp := GetAddress('isc_decode_timestamp');
+  isc_encode_sql_date := GetAddress('isc_encode_sql_date');
+  isc_encode_sql_time := GetAddress('isc_encode_sql_time');
+  isc_encode_timestamp := GetAddress('isc_encode_timestamp');
 end;
+
+{**
+  Loads a library module and initializes the handle.
+  @return <code>True</code> is library was successfully loaded.
+}
+{$IFDEF ENABLE_INTERBASE_CRYPT}
+function TZFirebirdNativeLibraryLoader.LoadNativeLibrary: Boolean;
+var
+  I: Integer;
+  Location: string;
+  TriedLocations: string;
+begin
+  if Length(FPreLocations) <> 0 then
+  begin
+    PreLoaded := False;
+    Location := '';
+    TriedLocations := '';
+    if PreHandle = 0 then
+    begin
+      for I := 0 to High(FPreLocations) do
+      begin
+        Location := FPreLocations[I];
+//        PreHandle := GetModuleHandle(PChar(Location));
+//        if PreHandle = 0 then
+//        begin
+{$IFDEF UNIX}
+  {$IFDEF FPC}
+          PreHandle := ZCompatibility.LoadLibrary(PChar(Location));
+  {$ELSE}
+          PreHandle := HMODULE(dlopen(PChar(Location), RTLD_GLOBAL));
+  {$ENDIF}
+{$ELSE}
+          PreHandle := LoadLibrary(PChar(Location));
+{$ENDIF}
+//        end;
+        if PreHandle <> 0 then
+        begin
+          PreLoaded := True;
+          Break;
+        end;
+        if TriedLocations <> '' then
+          TriedLocations := TriedLocations + ', ';
+        TriedLocations := TriedLocations + Location;
+      end;
+    end;
+
+    if (not PreLoaded) and (FPreRequared) then
+      raise Exception.Create(Format(SLibraryNotFound, [TriedLocations]));
+  end;
+
+  Result := inherited LoadNativeLibrary;
+end;
+{$ENDIF}
 
 initialization
 {$IFNDEF UNIX}
-  LibraryLoader := TZInterbaseNativeLibraryLoader.Create(
-    [WINDOWS_DLL_LOCATION]);
+  LibraryLoader := TZFirebirdNativeLibraryLoader.Create(
+    [WINDOWS1_DLL_LOCATION
+		{$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
+    	, WINDOWS2_DLL_LOCATION
+		{$ENDIF}
+    ]);
+  LibraryLoaderEmbedded := TZFirebirdNativeLibraryLoader.Create(
+    [WINDOWS1_DLL_LOCATION_EMBEDDED
+		{$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
+    	,WINDOWS2_DLL_LOCATION_EMBEDDED
+		{$ENDIF}
+    ]);
+
 {$ELSE}
-  LibraryLoader := TZInterbaseNativeLibraryLoader.Create(
-    [LINUX_DLL_LOCATION]);
+  {$IFDEF ENABLE_INTERBASE_CRYPT}
+  	LibraryLoader := TZFirebirdNativeLibraryLoader.Create(
+  	[LINUX1_IB_CRYPT_LOCATION
+		{$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
+	  	, LINUX2_IB_CRYPT_LOCATION
+		{$ENDIF}
+	  ],[LINUX1_DLL_LOCATION
+
+		{$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
+	  	,LINUX2_DLL_LOCATION
+		{$ENDIF}
+	  ]);
+
+ 		LibraryLoaderEmbedded := TZFirebirdNativeLibraryLoader.Create(
+    [LINUX1_IB_CRYPT_LOCATION
+		{$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
+    	,LINUX2_IB_CRYPT_LOCATION
+		{$ENDIF}
+    ], [LINUX1_DLL_LOCATION_EMBEDDED
+		{$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
+    	,LINUX2_DLL_LOCATION_EMBEDDED
+		{$ENDIF}
+    ]);
+  {$ELSE}
+  	LibraryLoader := TZFirebirdNativeLibraryLoader.Create(
+    [LINUX1_DLL_LOCATION
+		{$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
+    	,LINUX2_DLL_LOCATION
+		{$ENDIF}
+    ]);
+  	LibraryLoaderEmbedded := TZFirebirdNativeLibraryLoader.Create(
+    [LINUX1_DLL_LOCATION_EMBEDDED
+		{$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
+    	,LINUX2_DLL_LOCATION_EMBEDDED
+		{$ENDIF}
+    ]);
+ 	{$ENDIF}
 {$ENDIF}
 finalization
   if Assigned(LibraryLoader) then
     LibraryLoader.Free;
+  if Assigned(LibraryLoaderEmbedded) then
+    LibraryLoaderEmbedded.Free;
 end.
