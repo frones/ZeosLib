@@ -491,17 +491,16 @@ begin
 end;
 
 function getMySQLFieldSize (field_type: Byte; field_size: LongWord): LongWord;
+const
+    MaxBlobSize = 65535;
+
 var
-   MaxBlobSize: LongWord;
-   SmallBLOB: Word;
-begin
-   MaxBlobSize := 255;
-      // mdaems : temporary solution (See PDO PDOPlainMysqlDriver)
-   //    MaxBlobSize := FPlainDriver.GetMaximumBLOBSize;
-   if (MaxBlobSize > 65535) then
-      SmallBLOB := 65535
+    FieldSize: LongWord;
+Begin
+    If field_size > MaxBlobsize then
+      FieldSize := MaxBlobSize
     else
-      SmallBLOB := MaxBlobSize;
+      FieldSize := field_size;
 
     case field_type of
         FIELD_TYPE_TINY:        Result := 1;
@@ -513,8 +512,8 @@ begin
         FIELD_TYPE_DATE:        Result := sizeOf(MYSQL_TIME);
         FIELD_TYPE_TIME:        Result := sizeOf(MYSQL_TIME);
         FIELD_TYPE_DATETIME:    Result := sizeOf(MYSQL_TIME);
-        FIELD_TYPE_BLOB:        Result := Field_Size;
-        FIELD_TYPE_STRING:      Result := Field_Size;
+        FIELD_TYPE_BLOB:        Result := FieldSize;
+        FIELD_TYPE_STRING:      Result := FieldSize;
     else
         Result := 255;  {unknown ??}
     end;

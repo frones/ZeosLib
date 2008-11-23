@@ -184,13 +184,19 @@ implementation
 uses
   Math, ZMessages, ZDbcMySqlUtils, ZMatchPattern, ZDbcMysql;
 type
+
+    { TMysqlResult }
+
     TMysqlResult = class (TInterfacedObject)
         private
+            FBufferType:              Byte;
+            FBuffer:                  Pointer;
             FValue:                   Variant;
-            FRawString:               AnsiString;
             FNull:                    Boolean;
             function getValue:        Variant;
             function getNull:         Boolean;
+            function bufferasint64:   Int64;
+            function bufferasextended:Extended;
         public
             property value:           Variant READ FValue;
             property null:            Boolean READ FNull;
@@ -215,14 +221,15 @@ type
             function asTimestamp:     TDateTime;
             function asAsciiStream:   TStream;
             function asBytes:         TByteDynArray;
-            constructor create (nativeType: TZSQLType; stringRep: Ansistring;
-                nullValue: Boolean{; decFormatting: TFormatSettings});
+            constructor create (nativeType: TZSQLType; buffer: Pointer;
+                nullValue: Boolean; buffer_type: Byte);
         end;
 
-constructor TMysqlResult.create(nativeType: TZSQLType; stringRep: Ansistring;
-                nullValue: Boolean);
+constructor TMysqlResult.create(nativeType: TZSQLType; buffer: Pointer;
+                nullValue: Boolean; buffer_type: Byte);
 begin
-    self.FRawString := stringRep;
+    self.FBufferType := buffer_type;
+    self.Fbuffer := buffer;
     self.FNull := nullValue;
     case nativeType of
         stString:        self.FValue := self.asString;
@@ -250,238 +257,182 @@ begin
  end;
 
 function TMysqlResult.asBytes: TByteDynArray;
-begin
-    Result := StrToBytes(self.FRawString);
-end;
+Begin
+    Result := StrToBytes(asString);
+End;
 
 function TMysqlResult.asAsciiStream: TStream;
-begin
-    Result := TStringStream.Create (self.FRawString);
-end;
+Begin
+    Result := TStringStream.Create(asString);
+End;
 
 function TMysqlResult.asTimestamp: TDateTime;
-var
-    myhour, mymin, mysec, myyear, mymonth, myday: Integer;
-    rsLen: byte;
-begin
-    // expecting YYYY-MM-DD HH:MM:SS
-    //        or YYYYMMDDHHMMSS
-    //        or YYYY-MM-DD
-
-    rsLen := length(self.FRawString);
-    if rsLen = 19 then
-      begin
-        myhour := strToInt(copy(self.FRawString,12,2));
-        mymin  := strToInt(copy(self.FRawString,15,2));
-        mysec  := strToInt(copy(self.FRawString,18,2));
-        myyear  := strToInt(copy(self.FRawString,1,4));
-        mymonth := strToInt(copy(self.FRawString,6,2));
-        myday   := strToInt(copy(self.FRawString,9,2));
-        try
-            Result := encodeTime(myhour, mymin, mysec,0) + encodeDate(myyear, mymonth, myday);
-        except
-            Result := 0;
-        end;
-      end
-    else if rsLen = 10 then
-        Result := self.asDate
-    else if rsLen = 14 then
-        Result := TimestampStrToDateTime(self.FRawString)
-    else
-        Result := encodeDate(1970, 1, 1) + encodeTime(0,0,0,0);
-end;
+Begin
+    Result := asDate + asTime;
+End;
 
 function TMysqlResult.asTime: TDateTime;
-var
-    myhour, mymin, mysec: Integer;
-    rsLen: byte;
-begin
-    // expecting YYYY-MM-DD HH:MM:SS
-    //        or YYYYMMDDHHMMSS
-    //        or YYYY-MM-DD (defaults to 00:00:00)
-
-    rsLen := length(self.FRawString);
-    if rsLen = 19 then
-      begin
-        myhour := strToInt(copy(self.FRawString,12,2));
-        mymin  := strToInt(copy(self.FRawString,15,2));
-        mysec  := strToInt(copy(self.FRawString,18,2));
-        try
-            Result := encodeTime(myhour, mymin, mysec,0);
-        except
-            Result := 0;
-        end;
-      end
-    else if rsLen = 14 then
-        Result := frac(TimestampStrToDateTime(self.FRawString))
-    else
+Begin
+    if not sysUtils.TryEncodeTime(PMYSQL_TIME(FBuffer)^.Hour, PMYSQL_TIME(FBuffer)^.Minute, PMYSQL_TIME(FBuffer)^.Second,0, Result) then
         Result :=  encodeTime(0,0,0,0);
-end;
+End;
 
 function TMysqlResult.asDate: TDateTime;
-var
-    myyear, mymonth, myday: Integer;
-    rsLen: byte;
-begin
-    // expecting YYYY-MM-DD HH:MM:SS
-    //        or YYYYMMDDHHMMSS
-    //        or YYYY-MM-DD
-
-    rsLen := length(self.FRawString);
-    if (rsLen = 19) or (rsLen = 10) then
-      begin
-        myyear  := strToInt(copy(self.FRawString,1,4));
-        mymonth := strToInt(copy(self.FRawString,6,2));
-        myday   := strToInt(copy(self.FRawString,9,2));
-        if not sysUtils.TryEncodeDate(myYear, myMonth, myDay, Result) then
+Begin
+    if not sysUtils.TryEncodeDate(PMYSQL_TIME(FBuffer)^.Year, PMYSQL_TIME(FBuffer)^.Month, PMYSQL_TIME(FBuffer)^.Day, Result) then
             Result := encodeDate(1900, 1, 1);
-
-
-
-      end
-    else if rsLen = 14 then
-        Result := trunc(TimestampStrToDateTime(self.FRawString))
-    else
-        Result := encodeDate(1970, 1, 1);
-end;
+End;
 
 function TMysqlResult.asBoolean: Boolean;
-var
-    full64: Int64;
-begin
-    full64 := strToInt64Def(self.FRawString, 0);
-    Result := (full64 <> 0);
-end;
+Begin
+    Result := (bufferasInt64 <> 0);
+End;
 
 function TMysqlResult.asExtended: Extended;
-begin
-    Result := StrToFloatDef(self.FRawString,0);
-end;
+Begin
+    Result := bufferasExtended;
+End;
 
 function TMysqlResult.asDouble: Double;
-var
-    full64: Extended;
-begin
-    full64 := StrToFloatDef(self.FRawString,0);
-    Result := full64;       {overflow problem/typecast doesn't work?}
-end;
+Begin
+    Result := bufferasExtended;
+End;
 
 function TMysqlResult.asSingle: Single;
-var
-    full64: Extended;
-begin
-    full64 := StrToFloatDef(self.FRawString,0);
-    Result := full64;       {overflow problem/typecast doesn't work?}
-end;
+Begin
+    Result := bufferasExtended;
+End;
 
 function TMysqlResult.asByte: Byte;
 var
     full64: Int64;
     bitmask: Int64;
-begin
-    full64 := strToInt64Def(self.FRawString, 0);
+Begin
+    full64 := bufferasInt64;
     bitmask := $FF;
     Result := Byte(full64 and bitmask);
-end;
+End;
 
 function TMysqlResult.asShortInt: ShortInt;
 var
     full64: Int64;
     bitmask: Int64;
-begin
-    full64 := strToInt64Def(self.FRawString, 0);
+Begin
+    full64 := bufferasInt64;
     bitmask := $FF;
     Result := ShortInt(full64 and bitmask);
-end;
+End;
 
 function TMysqlResult.asWord: Word;
 var
     full64: Int64;
     bitmask: Int64;
-begin
-    full64 := strToInt64Def(self.FRawString, 0);
+Begin
+    full64 := bufferasInt64;
     bitmask := $FFFF;
     Result := Word(full64 and bitmask);
-end;
+End;
 
 function TMysqlResult.asSmallInt: SmallInt;
 var
     full64: Int64;
     bitmask: Int64;
-begin
-    full64 := strToInt64Def(self.FRawString, 0);
+Begin
+    full64 := bufferasInt64;
     bitmask := $FFFF;
     Result := smallInt(full64 and bitmask);
-end;
+End;
 
 function TMysqlResult.asLongWord: LongWord;
 var
     full64: Int64;
     bitmask: Int64;
-begin
-    full64 := strToInt64Def(self.FRawString, 0);
+Begin
+    full64 := bufferasInt64;
     bitmask := $FFFFFFFF;
     Result := LongWord(full64 and bitmask);
-end;
+End;
 
 function TMysqlResult.asCardinal: Cardinal;
 var
     full64: Int64;
     bitmask: Int64;
-begin
-    full64 := strToInt64Def(self.FRawString, 0);
+Begin
+    full64 := bufferasInt64;
     bitmask := $FFFFFFFF;
     Result := Cardinal(full64 and bitmask);
-end;
+End;
 
 function TMysqlResult.asLongInt: LongInt;
 var
     full64: Int64;
     bitmask: Int64;
-begin
-    full64 := strToInt64Def(self.FRawString, 0);
+Begin
+    full64 := bufferasInt64;
     bitmask := $FFFFFFFF;
     Result := LongInt(full64 and bitmask);
-end;
+End;
 
 function TMysqlResult.asInteger: Integer;
 var
     full64: Int64;
     bitmask: Int64;
-begin
-    full64 := strToInt64Def(self.FRawString, 0);
+Begin
+    full64 := bufferasInt64;
     bitmask := $FFFFFFFF;
     Result := Integer(full64 and bitmask);
-end;
+End;
 
 function TMysqlResult.asInt64: Int64;
-begin
-    Result := strToInt64Def(self.FRawString, 0);
-end;
+Begin
+    Result := bufferasInt64;
+End;
 
-function TMysqlResult.asPChar: PAnsiChar;
-begin
-   Result := PAnsiChar(self.FRawString);
-end;
+function TMysqlResult.asPChar: PChar;
+Begin
+    Result := PChar(asString);
+End;
 
 function TMysqlResult.asUnicodeString: WideString;
-begin
-    Result := self.FRawString;
-end;
+Begin
+    Result := asString;
+End;
 
 function TMysqlResult.asString: AnsiString;
-begin
-    Result := self.FRawString;
-end;
+Begin
+    Result := PAnsiString(FBuffer)^;
+End;
 
 function TMysqlResult.getValue: Variant;
-begin
+Begin
     Result := self.FValue;
-end;
+End;
 
 function TMysqlResult.getNull: Boolean;
-begin
+Begin
     Result := self.FNull;
+End;
+
+function TMysqlResult.bufferasint64: Int64;
+begin
+   Case getMySQLFieldSize(FBufferType,0) of
+   1: Result := pshortint(FBuffer)^;
+   2: Result := psmallint(FBuffer)^;
+   4: Result := plongint(FBuffer)^;
+   8: Result := pint64(FBuffer)^;
+   else
+    Result := 0;
+   End
+end;
+
+function TMysqlResult.bufferasextended: Extended;
+begin
+   Case getMySQLFieldSize(FBufferType,0) of
+   4: Result := psingle(FBuffer)^;
+   8: Result := pdouble(FBuffer)^;
+   else
+    Result := 0;
+   End
 end;
 
 { TZMySQLResultSetMetadata }
@@ -1307,12 +1258,11 @@ begin
     SetLength(FColumnArray[I].buffer,FColumnArray[I].length);
     with FBindArray[I] do begin
         buffer_type   := FPlainDriver.GetFieldType(FieldHandle);
-        buffer_type := 0;
-        buffer_length := System.Length(FColumnArray[I].buffer);
+//        buffer_type   := 0;
+        buffer_length := FColumnArray[I].length;
         is_unsigned   := 0;
         buffer        := @FColumnArray[I].buffer[0];
         length        := @FColumnArray[I].length;
-         FColumnArray[I].length := 0;
         is_null       := @FColumnArray[I].is_null;
         FColumnArray[I].is_null := 0;
      end;
@@ -1447,7 +1397,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  temp:=TMysqlResult.create(stByte,AnsiString(FColumnArray[ColumnIndex-1].buffer),FColumnArray[ColumnIndex-1].is_null =1);
+  temp:=TMysqlResult.create(stByte,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindArray[ColumnIndex-1].buffer_type);
   Result := Temp.asByte;
   temp.Free;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
@@ -1469,7 +1419,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
- temp:=TMysqlResult.create(stShort,AnsiString(FColumnArray[ColumnIndex-1].buffer),FColumnArray[ColumnIndex-1].is_null =1);
+ temp:=TMysqlResult.create(stShort,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindArray[ColumnIndex-1].buffer_type);
  Result := Temp.asInteger;
  temp.Free;
  LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
@@ -1491,7 +1441,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
-  temp:=TMysqlResult.create(stInteger,AnsiString(FColumnArray[ColumnIndex-1].buffer),FColumnArray[ColumnIndex-1].is_null =1);
+  temp:=TMysqlResult.create(stInteger,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindArray[ColumnIndex-1].buffer_type);
   Result := Temp.asInt64;
   temp.Free;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
@@ -1513,7 +1463,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
- temp:=TMysqlResult.create(stlong,AnsiString(FColumnArray[ColumnIndex-1].buffer),FColumnArray[ColumnIndex-1].is_null =1);
+ temp:=TMysqlResult.create(stlong,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindArray[ColumnIndex-1].buffer_type);
  Result := Temp.asInteger;
  temp.Free;
  LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
@@ -1535,7 +1485,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
-  temp:=TMysqlResult.create(stFloat,AnsiString(FColumnArray[ColumnIndex-1].buffer),FColumnArray[ColumnIndex-1].is_null =1);
+  temp:=TMysqlResult.create(stFloat,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindArray[ColumnIndex-1].buffer_type);
   Result := Temp.asSingle;
   temp.Free;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
@@ -1557,7 +1507,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
-  temp:=TMysqlResult.create(stDouble,AnsiString(FColumnArray[ColumnIndex-1].buffer),FColumnArray[ColumnIndex-1].is_null =1);
+  temp:=TMysqlResult.create(stDouble,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindArray[ColumnIndex-1].buffer_type);
   Result := Temp.asDouble;
   temp.Free;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
@@ -1580,7 +1530,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
-  temp:=TMysqlResult.create(stBigDecimal,AnsiString(FColumnArray[ColumnIndex-1].buffer),FColumnArray[ColumnIndex-1].is_null =1);
+  temp:=TMysqlResult.create(stBigDecimal,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindArray[ColumnIndex-1].buffer_type);
   Result := Temp.asExtended;
   temp.Free;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
@@ -1603,7 +1553,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
 {$ENDIF}
-  temp:=TMysqlResult.create(stBytes,AnsiString(FColumnArray[ColumnIndex-1].buffer),FColumnArray[ColumnIndex-1].is_null =1);
+  temp:=TMysqlResult.create(stBytes,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindArray[ColumnIndex-1].buffer_type);
   Result := Temp.asBytes;
   temp.Free;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
@@ -1625,7 +1575,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
-  temp:=TMysqlResult.create(stDate,AnsiString(FColumnArray[ColumnIndex-1].buffer),FColumnArray[ColumnIndex-1].is_null =1);
+  temp:=TMysqlResult.create(stDate,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindArray[ColumnIndex-1].buffer_type);
   Result := Temp.asDate;
   temp.Free;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
@@ -1647,7 +1597,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-  temp:=TMysqlResult.create(stTime,AnsiString(FColumnArray[ColumnIndex-1].buffer),FColumnArray[ColumnIndex-1].is_null =1);
+  temp:=TMysqlResult.create(stTime,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindArray[ColumnIndex-1].buffer_type);
   Result := Temp.asTime;
   temp.Free;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
@@ -1670,7 +1620,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
 {$ENDIF}
-  temp:=TMysqlResult.create(stTimeStamp,AnsiString(FColumnArray[ColumnIndex-1].buffer),FColumnArray[ColumnIndex-1].is_null =1);
+  temp:=TMysqlResult.create(stTimeStamp,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindArray[ColumnIndex-1].buffer_type);
   Result := Temp.asTimeStamp;
   temp.Free;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;

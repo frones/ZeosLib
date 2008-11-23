@@ -531,23 +531,27 @@ begin
   DecimalSeparator := '.';
   if Pos('$', Str) = 1 then
     Str := Copy(Str, 2, Pred(Length(Str)));
-{$IFDEF FPC}
-  if OldDecimalSeparator = ',' then
-    try
-      DecimalSeparator := OldDecimalSeparator;
-      Result := StrToFloat(Str);
-    except
-      Result := 0;
-    end
+  If Str = '' then
+    Result := Def
   else
+  begin
+    {$IFDEF FPC}
+    if OldDecimalSeparator = ',' then
+      try
+        DecimalSeparator := OldDecimalSeparator;
+        Result := StrToFloat(Str);
+      except
+        Result := 0;
+      end
+    else
     begin
-    Result := StrToFloatDef(Str, Def);
-    DecimalSeparator := OldDecimalSeparator;
+      Result := StrToFloatDef(Str, Def);
     end;
-{$ELSE}
-  Result := StrToFloatDef(Str, Def);
+    {$ELSE}
+    Result := StrToFloatDef(Str, Def);
+    {$ENDIF}
+  end;
   DecimalSeparator := OldDecimalSeparator;
-{$ENDIF}
 end;
 
 {**

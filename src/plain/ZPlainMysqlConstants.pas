@@ -344,7 +344,7 @@ TMYSQL_CLIENT_OPTIONS =
     neg:                 Byte;
     second_part:         Int64;
   end;
-
+  PMYSQL_TIME = ^MYSQL_TIME;
 {  PUSED_MEM=^USED_MEM;
   USED_MEM = packed record
     next:       PUSED_MEM;
