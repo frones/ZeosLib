@@ -793,7 +793,7 @@ type
     function dbRpcExec(dbProc: PDBPROCESS): RETCODE;
     function dbRetStatus(dbProc: PDBPROCESS): Integer;
     function dbHasRetStat(dbProc: PDBPROCESS): Boolean;
-    function dbRetName(dbProc: PDBPROCESS; RetNum: Integer): PChar;
+    function dbRetName(dbProc: PDBPROCESS; RetNum: Integer): PAnsiChar;
     function dbRetData(dbProc: PDBPROCESS; RetNum: Integer): Pointer;
     function dbRetLen(dbProc: PDBPROCESS; RetNum: Integer): Integer;
     function dbRetType(dbProc: PDBPROCESS; RetNum: Integer): Integer;
@@ -945,37 +945,37 @@ begin
   Result := ZPlainDBLibSybaseASE125.dbsetlogintime(Seconds);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbsetlname(Login: PLOGINREC; Value: PChar; Item: Integer): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbsetlname(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE;
 begin
   Result := ZPlainDBLibSybaseASE125.dbsetlname(Login, Value, Item);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbSetLHost(Login: PLOGINREC; HostName: PChar): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
 begin
   Result := ZPlainDBLibSybaseASE125.DBSETLHOST(Login, HostName);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbsetluser(Login: PLOGINREC; UserName: PChar): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbsetluser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
 begin
   Result := ZPlainDBLibSybaseASE125.dbsetluser(Login, UserName);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbsetlpwd(Login: PLOGINREC; Password: PChar): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbsetlpwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE;
 begin
   Result := ZPlainDBLibSybaseASE125.dbsetlpwd(Login, Password);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbSetLApp(Login: PLOGINREC; AppName: PChar): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE;
 begin
   Result := ZPlainDBLibSybaseASE125.DBSETLAPP(Login, AppName);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbSetLNatLang(Login: PLOGINREC; NatLangName: PChar): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): RETCODE;
 begin
   Result := ZPlainDBLibSybaseASE125.DBSETLNATLANG(Login, NatLangName);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbSetLCharSet(Login: PLOGINREC; CharsetName: PChar): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE;
 begin
   Result := ZPlainDBLibSybaseASE125.DBSETLCHARSET(Login, CharsetName);
 end;
@@ -991,7 +991,7 @@ begin
   Result := ZPlainDBLibSybaseASE125.dbsetmaxprocs(MaxProcs);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbOpen(Login: PLOGINREC; Host: PChar): PDBPROCESS;
+function TZDBLibSybaseASE125PlainDriver.dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;
 begin
   Result := ZPlainDBLibSybaseASE125.dbOpen(Login, Host);
 end;
@@ -1001,7 +1001,7 @@ begin
   Result := ZPlainDBLibSybaseASE125.dbcancel(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbCmd(dbProc: PDBPROCESS; Cmd: PChar): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): RETCODE;
 begin
   Result := ZPlainDBLibSybaseASE125.dbcmd(dbProc, Cmd);
 end;
@@ -1026,12 +1026,12 @@ begin
   Result := ZPlainDBLibSybaseASE125.dbMoreCmds(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbUse(dbProc: PDBPROCESS; dbName: PChar): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE;
 begin
   Result := ZPlainDBLibSybaseASE125.dbUse(dbProc, dbName);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbSetOpt(dbProc: PDBPROCESS; Option: Integer; Char_Param: PChar = nil; Int_Param: Integer = -1): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSetOpt(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar = nil; Int_Param: Integer = -1): RETCODE;
 begin
   Result := ZPlainDBLibSybaseASE125.dbSetOpt(dbProc, Option, Char_Param, Int_Param);
 end;
@@ -1102,12 +1102,12 @@ begin
   Result := ZPlainDBLibSybaseASE125.dbCount(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbRpcInit(dbProc: PDBPROCESS; RpcName: PChar; Options: SmallInt): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): RETCODE;
 begin
   Result := ZPlainDBLibSybaseASE125.dbRpcInit(dbProc, RpcName, Options);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbRpcParam(dbProc: PDBPROCESS; ParamName: PChar; Status: Byte;
+function TZDBLibSybaseASE125PlainDriver.dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
   Type_: Integer; MaxLen: Integer; DataLen: Integer; Value: Pointer): RETCODE;
 begin
   Result := ZPlainDBLibSybaseASE125.dbRpcParam(dbProc, ParamName, Status, Type_, MaxLen, DataLen, Value);
@@ -1135,7 +1135,7 @@ begin
   Result := ZPlainDBLibSybaseASE125.dbHasRetStat(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbRetName(dbProc: PDBPROCESS; RetNum: Integer): PChar;
+function TZDBLibSybaseASE125PlainDriver.dbRetName(dbProc: PDBPROCESS; RetNum: Integer): PAnsiChar;
 begin
   Result := ZPlainDBLibSybaseASE125.dbRetName(dbProc, RetNum);
 end;
@@ -1235,27 +1235,27 @@ begin
   Result := ZPlainDBLibMSSql7.dbSetLoginTime(Seconds);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbsetlname(Login: PLOGINREC; Value: PChar; Item: Integer): RETCODE;
+function TZDBLibMSSQL7PlainDriver.dbsetlname(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE;
 begin
   Result := ZPlainDBLibMSSql7.dbsetlname(Login, Value, Item);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbSetLHost(Login: PLOGINREC; HostName: PChar): RETCODE;
+function TZDBLibMSSQL7PlainDriver.dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
 begin
   Result := ZPlainDBLibMSSql7.DBSETLHOST(Login, HostName);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbsetluser(Login: PLOGINREC; UserName: PChar): RETCODE;
+function TZDBLibMSSQL7PlainDriver.dbsetluser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
 begin
   Result := ZPlainDBLibMSSql7.dbsetluser(Login, UserName);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbsetlpwd(Login: PLOGINREC; Password: PChar): RETCODE;
+function TZDBLibMSSQL7PlainDriver.dbsetlpwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE;
 begin
   Result := ZPlainDBLibMSSql7.dbsetlpwd(Login, Password);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbSetLApp(Login: PLOGINREC; AppName: PChar): RETCODE;
+function TZDBLibMSSQL7PlainDriver.dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE;
 begin
   Result := ZPlainDBLibMSSql7.DBSETLAPP(Login, AppName);
 end;
@@ -1399,7 +1399,7 @@ begin
   Result := ZPlainDBLibMSSql7.dbCount(dbProc);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbRpcInit(dbProc: PDBPROCESS; RpcName: PChar; Options: SmallInt): RETCODE;
+function TZDBLibMSSQL7PlainDriver.dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): RETCODE;
 begin
   Result := ZPlainDBLibMSSql7.dbRpcInit(dbProc, RpcName, Options);
 end;
@@ -1430,8 +1430,7 @@ begin
   Result := ZPlainDBLibMSSql7.dbHasRetStat(dbProc);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbRetName(dbProc: PDBPROCESS; RetNum:
-   Integer): PAnsiChar;
+function TZDBLibMSSQL7PlainDriver.dbRetName(dbProc: PDBPROCESS; RetNum: Integer): PAnsiChar;
 begin
   Result := ZPlainDBLibMSSql7.dbRetName(dbProc, RetNum);
 end;

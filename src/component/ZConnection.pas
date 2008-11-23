@@ -90,10 +90,10 @@ uses
  {$IFDEF FPC}
   SysUtils, Classes, ZDbcIntfs, DB,ZCompatibility;
  {$ELSE}
-  {$IFNDEF VER180}
+  {$IFNDEF BDS4_UP}
    SysUtils, Classes, ZDbcIntfs, DB,ZCompatibility;
   {$ELSE}
-   SysUtils, Classes, ZDbcIntfs, DB,ZCompatibility,dbcommontypes;
+   SysUtils, Classes, ZDbcIntfs, DB,ZCompatibility,DBCommonTypes;
   {$ENDIF}
  {$ENDIF}
 

@@ -388,9 +388,9 @@ Begin
     Result := bufferasInt64;
 End;
 
-function TMysqlResult.asPChar: PChar;
+function TMysqlResult.asPChar: PAnsiChar;
 Begin
-    Result := PChar(asString);
+    Result := PAnsiChar(asString);
 End;
 
 function TMysqlResult.asUnicodeString: WideString;

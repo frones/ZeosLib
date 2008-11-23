@@ -852,7 +852,7 @@ type
     procedure db_open(sqlca: PZASASQLCA; CursorName: PAnsiChar;
      ProgName: PAnsiChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
      BlockSize, IsolationLvl: SmallInt; CursorOptions: Word);
-    procedure db_close( sqlca: PZASASQLCA; CursorName: PChar);
+    procedure db_close( sqlca: PZASASQLCA; CursorName: PAnsiChar);
 
     procedure db_fetch(sqlca: PZASASQLCA; CursorName: PAnsiChar; Offset: Word;
       RelPositon: Integer; Descriptor: PASASQLDA; BlockSize: SmallInt;
