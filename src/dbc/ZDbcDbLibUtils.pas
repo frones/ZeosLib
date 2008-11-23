@@ -260,12 +260,14 @@ begin
 
   if DefVarManager.IsNull(Value) then
     Result := 'NULL'
-  else begin
+  else
+  begin
     case ParamType of
       stBoolean:
         if SoftVarManager.GetAsBoolean(Value) then
           Result := '1'
-        else Result := '0';
+        else
+          Result := '0';
       stByte, stShort, stInteger, stLong, stFloat, stDouble, stBigDecimal:
         Result := SoftVarManager.GetAsString(Value);
       stString:
@@ -278,7 +280,7 @@ begin
           else
           begin
             SetLength(Result, (2 * Length(TempBytes)));
-            BinToHex(PChar(TempBytes), PChar(Result), Length(TempBytes));
+            BinToHex(PAnsiChar(TempBytes), PAnsiChar(Result), Length(TempBytes));
             Result := '0x' + Result;
           end;
         end;
@@ -295,10 +297,8 @@ begin
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
-          begin
-            Result := AnsiQuotedStr(
-              StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), '''')
-          end else
+            Result := AnsiQuotedStr(StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), '''')
+          else
             Result := 'NULL';
         end;
       stBinaryStream:
@@ -308,7 +308,7 @@ begin
           begin
             TempString := TempBlob.GetString;
             SetLength(Result, (2 * Length(TempString)));
-            BinToHex(PChar(TempString), PChar(Result), Length(TempString));
+            BinToHex(PAnsiChar(TempString), PAnsiChar(Result), Length(TempString));
             Result := '0x' + Result;
           end
           else

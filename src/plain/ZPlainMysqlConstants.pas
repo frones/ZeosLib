@@ -375,22 +375,22 @@ TMYSQL_CLIENT_OPTIONS =
     port:                     Cardinal;
     protocol:                 Cardinal;
     client_flag:              LongInt;
-    host:                     PChar;
-    user:                     PChar;
-    password:                 PChar;
-    unix_socket:              PChar;
-    db:                       PChar;
+    host:                     PAnsiChar;
+    user:                     PAnsiChar;
+    password:                 PAnsiChar;
+    unix_socket:              PAnsiChar;
+    db:                       PAnsiChar;
     init_commands:            Pointer;
-    my_cnf_file:              PChar;
-    my_cnf_group:             PChar;
-    charset_dir:              PChar;
-    charset_name:             PChar;
-    ssl_key:                  PChar;
-    ssl_cert:                 PChar;
-    ssl_ca:                   PChar;
-    ssl_capath:               PChar;
-    ssl_cipher:               PChar;
-    shared_memory_base_name:  PChar;
+    my_cnf_file:              PAnsiChar;
+    my_cnf_group:             PAnsiChar;
+    charset_dir:              PAnsiChar;
+    charset_name:             PAnsiChar;
+    ssl_key:                  PAnsiChar;
+    ssl_cert:                 PAnsiChar;
+    ssl_ca:                   PAnsiChar;
+    ssl_capath:               PAnsiChar;
+    ssl_cipher:               PAnsiChar;
+    shared_memory_base_name:  PAnsiChar;
     max_allowed_packet:       LongInt;
     use_ssl:                  Byte;
     compress:                 Byte;
@@ -400,7 +400,7 @@ TMYSQL_CLIENT_OPTIONS =
     no_master_reads:          Byte;
     separate_thread:          Byte;
     methods_to_use:           TMySqlOption;
-    client_ip:                PChar;
+    client_ip:                PAnsiChar;
     secure_auth:              Byte;
     local_infile_init:        Pointer;
     local_infile_read:        Pointer;
@@ -422,7 +422,7 @@ TMYSQL_CLIENT_OPTIONS =
   MYSQL_BIND2 =  record
     length:            PLongInt;
     is_null:           PByte;
-    buffer:            PChar;
+    buffer:            PAnsiChar;
     error:             PByte;
     buffer_type:       Byte;
     buffer_length:     LongInt;
@@ -458,9 +458,9 @@ const
                               {$ELSE} './data/'
                               {$ENDIF};
   SERVER_ARGUMENTS_KEY_PREFIX = 'ServerArgument';
-  SERVER_GROUPS : array [0..2] of PChar = ('embedded'#0, 'server'#0, nil);
+  SERVER_GROUPS : array [0..2] of PAnsiChar = ('embedded'#0, 'server'#0, nil);
 
-  DEFAULT_PARAMS : array [0..2] of PChar = ('not_used'#0,
+  DEFAULT_PARAMS : array [0..2] of PAnsiChar = ('not_used'#0,
                                             '--datadir='+EMBEDDED_DEFAULT_DATA_DIR+#0,
                                             '--set-variable=key_buffer_size=32M'#0);
 

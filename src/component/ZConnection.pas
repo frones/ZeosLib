@@ -364,8 +364,10 @@ begin
   begin
     if Value <> GetConnected then
     begin
-      if Value then Connect
-      else Disconnect;
+         if Value then
+            Connect
+         else
+            Disconnect;
     end;
   end;
 end;
@@ -378,7 +380,8 @@ procedure TZConnection.SetProperties(Value: TStrings);
 begin
   if Value <> nil then
     FProperties.Text := Value.Text
-  else FProperties.Clear;
+  else
+    FProperties.Clear;
 end;
 
 {**
@@ -430,7 +433,8 @@ function TZConnection.GetDbcDriver: IZDriver;
 begin
   if FConnection <> nil then
     Result := FConnection.GetDriver
-  else Result := DriverManager.GetDriver(ConstructURL('', ''));
+  else
+    Result := DriverManager.GetDriver(ConstructURL('', ''));
 end;
 
 {**
@@ -897,7 +901,8 @@ procedure TZConnection.PrepareTransaction(const transactionid: string);
 begin
   CheckConnected;
   CheckNonAutoCommitMode;
-  if FExplicitTransactionCounter<>1 then begin
+  if FExplicitTransactionCounter <> 1 then
+  begin
     raise EZDatabaseError.Create(SInvalidOpPrepare);
   end;
     ShowSQLHourGlass;

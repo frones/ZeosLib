@@ -84,6 +84,7 @@ type
     procedure TestPreparedStatement;
     procedure TestReadOnlyQueryFilter;
     procedure TestQueryFilter;
+    procedure TestQueryLocate;
     procedure TestFilterExpression;
     procedure TestDecodingSortedFields;
     procedure TestSmartOpen;
@@ -1031,6 +1032,30 @@ begin
     Close;
   end;
 end;
+
+{**
+  Test for locating recods in TZReadOnlyQuery
+}
+procedure TZGenericTestDbcResultSet.TestQueryLocate; 
+var
+  Query: TZReadOnlyQuery;
+  ResData : boolean; 
+begin
+  Query := TZReadOnlyQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+    Query.SQL.Add('select * from cargo'); 
+    Query.ExecSQL; 
+    Query.Open; 
+    Check(Query.RecordCount > 0, 'Query return no records'); 
+    ResData := Query.Locate('C_DEP_ID;C_WIDTH;C_SEAL',VarArrayOf(['1','10','2']),[loCaseInsensitive]); 
+    CheckEquals(true,ResData); 
+    ResData := Query.Locate('C_DEP_ID,C_WIDTH,C_SEAL',VarArrayOf(['2',Null,'1']),[loCaseInsensitive]); 
+    CheckEquals(true,ResData); 
+  finally 
+    Query.Free; 
+  end; 
+end; 
 
 {**
   Test for filtering recods in TZReadOnlyQuery

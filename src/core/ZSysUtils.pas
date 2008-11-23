@@ -145,7 +145,8 @@ function SQLStrToFloat(const Str: string): Extended;
   @param Length a buffer length.
   @return a string retrived from the buffer.
 }
-function BufferToStr(Buffer: PChar; Length: LongInt): string;
+function BufferToStr(Buffer: PWideChar; Length: LongInt): string; overload;
+function BufferToStr(Buffer: PAnsiChar; Length: LongInt): string; overload;
 
 {**
   Converts a string into boolean value.
@@ -350,6 +351,15 @@ function EncodeSQLVersioning(const MajorVersion: Integer;
 }
 function FormatSQLVersion( const SQLVersion: Integer ): String;
 
+{$IFDEF ZEOS_FULL_UNICODE}
+{**
+  Converts Unicode strings to Ansi (Delphi 2009 Up)
+  @param UnicodeString a unicode string
+  @return a Ansi string
+}
+function UnicodeToAnsi(const UnicodeString: string): AnsiString;
+{$ENDIF}
+
 {$IFOPT D+}
 {$IFNDEF FPC}
 {**
@@ -461,8 +471,7 @@ begin
   LenSubStr := Length(SubStr);
   if SubStr = '' then
     Result := True
-  else
-  if LenSubStr <= Length(Str) then
+   else if LenSubStr <= Length(Str) then
     //Result := Copy(Str, 1, Length(SubStr)) = SubStr;
    {$IFDEF ZEOS_FULL_UNICODE}
    Result := MemLCompUnicode(PChar(Str), PChar(SubStr), LenSubStr)
@@ -564,7 +573,21 @@ begin
 end;
 
 { Convert string buffer into pascal string }
-function BufferToStr(Buffer: PChar; Length: LongInt): string;
+
+function BufferToStr(Buffer: PWideChar; Length: LongInt): string;
+var s : Widestring;
+begin
+   Result := '';
+   if Assigned(Buffer) then
+   begin
+      SetString(s, Buffer, Length);
+      Result := s;
+   end;
+end;
+
+{ Convert string buffer into pascal string }
+
+function BufferToStr(Buffer: PAnsiChar; Length: LongInt): string;
 begin
   Result := '';
   if Assigned(Buffer) then
@@ -615,16 +638,25 @@ begin
     begin
       if I - Pos > 3 then
         Break;
-      if Str[I] = '.' then begin
+      if Str[I] = '.' then
+      begin
        if StrToInt(Copy(Str, Pos, I - Pos)) > 255 then
          Break;
        Inc(N);
        Pos := I + 1;
       end;
-      if Str[I] in ['0'..'9'] then Inc(M);
+{$IFDEF ZEOS_FULL_UNICODE}
+      if CharInSet(Str[I], ['0'..'9']) then
+        Inc(M);
+{$ELSE}
+      if Str[I] in ['0'..'9'] then
+        Inc(M);
+{$ENDIF}
+
     end;
     Result := (M + N = Length(Str)) and (N = 3);
-  end else
+  end
+  else
     Result := False;
 end;
 
@@ -639,7 +671,8 @@ begin
       if DelimPos > 1 then
         List.Add(Copy(Str, 1, DelimPos - 1));
       Str := Copy(Str, DelimPos + 1, Length(Str) - DelimPos);
-    end else
+      end
+      else
       Break;
   until DelimPos <= 0;
   if Str <> '' then
@@ -900,7 +933,8 @@ begin
     try
       if Result >= 0 then
         Result := Result + EncodeTime(Hour, Min, Sec, 0)
-      else Result := Result - EncodeTime(Hour, Min, Sec, 0)
+         else
+            Result := Result - EncodeTime(Hour, Min, Sec, 0)
     except
     end;
   end;
@@ -922,35 +956,51 @@ var
     StrPosPrev:= StrPos; 
     Result:= false; 
     while StrPos<=StrLength do 
-      if pos(Value[StrPos],matchchars)>0 then begin inc(StrPos); Result:= true; end 
-      else break; 
+       if pos(Value[StrPos], matchchars) > 0 then
+         begin
+            inc(StrPos);
+            Result := true;
+         end
+       else
+         break;
   end; 
 begin 
   Result := 0; 
   StrPos:= 1; 
   StrLength := Length(Value); 
 
-  if not CharMatch('1234567890') then exit;                         // year 
+  if not CharMatch('1234567890') then
+     exit; // year
   Year := StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
-  if not CharMatch('-/\') then exit; 
-  if not CharMatch('1234567890') then exit;                         // month 
+  if not CharMatch('-/\') then
+     exit;
+  if not CharMatch('1234567890') then
+     exit; // month
   Month:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
-  if not CharMatch('-/\') then exit; 
-  if not CharMatch('1234567890') then exit;                         // day 
+  if not CharMatch('-/\') then
+     exit;
+  if not CharMatch('1234567890') then
+     exit; // day
   Day:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
   try
     Result := EncodeDate(Year, Month, Day); 
   except
   end;
   // 
-  if not CharMatch(' ') then exit; 
-  if not CharMatch('1234567890') then exit;                         // hour 
+  if not CharMatch(' ') then
+     exit;
+  if not CharMatch('1234567890') then
+     exit; // hour
   Hour := StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
-  if not CharMatch('-/\') then exit; 
-  if not CharMatch('1234567890') then exit;                         // minute 
+  if not CharMatch('-/\') then
+     exit;
+  if not CharMatch('1234567890') then
+     exit; // minute
   Min:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
-  if not CharMatch('-/\') then exit; 
-  if not CharMatch('1234567890') then exit;                         // second 
+  if not CharMatch('-/\') then
+     exit;
+  if not CharMatch('1234567890') then
+     exit; // second
   Sec:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
   try
     Result := REsult + EncodeTime(Hour, Min, Sec,0); 
@@ -1031,11 +1081,19 @@ begin
   DestLength := 0;
   for I := 1 to SrcLength do
   begin
+{$IFDEF ZEOS_FULL_UNICODE}
+    if CharInSet(SrcBuffer^, [#0]) then
+       Inc(DestLength, 4)
+    else if CharInSet(SrcBuffer^, ['"', '''', '\']) then
+       Inc(DestLength, 2)
+{$ELSE}
     if SrcBuffer^ in [#0] then
       Inc(DestLength, 4)
     else if SrcBuffer^ in ['"', '''', '\'] then
       Inc(DestLength, 2)
-    else Inc(DestLength);
+{$ENDIF}
+    else
+       Inc(DestLength);
     Inc(SrcBuffer);
   end;
 
@@ -1045,7 +1103,11 @@ begin
 
   for I := 1 to SrcLength do
   begin
+{$IFDEF ZEOS_FULL_UNICODE}
+    if CharInSet(SrcBuffer^, [#0]) then
+{$ELSE}
     if SrcBuffer^ in [#0] then
+{$ENDIF}
     begin
       DestBuffer[0] := '\';
       DestBuffer[1] := Chr(Ord('0') + (Byte(SrcBuffer^) shr 6));
@@ -1053,7 +1115,11 @@ begin
       DestBuffer[3] := Chr(Ord('0') + (Byte(SrcBuffer^) and $07));
       Inc(DestBuffer, 4);
     end
+{$IFDEF ZEOS_FULL_UNICODE}
+    else if CharInSet(SrcBuffer^, ['"', '''', '\']) then
+{$ELSE}
     else if SrcBuffer^ in ['"', '''', '\'] then
+{$ENDIF}
     begin
       DestBuffer[0] := '\';
       DestBuffer[1] := SrcBuffer^;
@@ -1089,7 +1155,11 @@ begin
     if SrcBuffer^ = '\' then
     begin
       Inc(SrcBuffer);
+{$IFDEF ZEOS_FULL_UNICODE}
+      if CharInSet(SrcBuffer^, ['0'..'9']) then
+{$ELSE}
       if SrcBuffer^ in ['0'..'9'] then
+{$ENDIF}
       begin
         DestBuffer^ := Chr(((Byte(SrcBuffer[0]) - Ord('0')) shl 6)
           or ((Byte(SrcBuffer[1]) - Ord('0')) shl 3)
@@ -1103,7 +1173,8 @@ begin
           'r': DestBuffer^ := #13;
           'n': DestBuffer^ := #10;
           't': DestBuffer^ := #9;
-          else DestBuffer^ := SrcBuffer^;
+        else
+               DestBuffer^ := SrcBuffer^;
         end;
         Inc(SrcBuffer);
         Dec(SrcLength, 2);
@@ -1171,8 +1242,8 @@ procedure DecodeSQLVersioning(const FullVersion: Integer;
  out MajorVersion: Integer; out MinorVersion: Integer;
  out SubVersion: Integer);
 begin
- MajorVersion := FullVersion DIV 1000000;
- MinorVersion := (FullVersion-(MajorVersion*1000000)) DIV 1000;
+ MajorVersion := FullVersion div 1000000;
+ MinorVersion := (FullVersion - (MajorVersion * 1000000)) div 1000;
  SubVersion   := FullVersion-(MajorVersion*1000000)-(MinorVersion*1000);
 end;
 
@@ -1199,8 +1270,10 @@ end;
   @param SQLVersion an integer
   @return Formated Zeos SQL Version Value.
 }
-function FormatSQLVersion( const SQLVersion: Integer ): String;
-var MajorVersion, MinorVersion, SubVersion: Integer;
+
+function FormatSQLVersion(const SQLVersion: Integer): string;
+var
+   MajorVersion, MinorVersion, SubVersion: Integer;
 begin
  DecodeSQLVersioning(SQLVersion, MajorVersion, MinorVersion, SubVersion);
  Result := IntToStr(MajorVersion)+'.'+IntToStr(MinorVersion)+'.'+IntToStr(SubVersion);
@@ -1218,6 +1291,16 @@ begin
   debug_last_used_memory := AllocMemsize;
 end;
 {$ENDIF}
+{$ENDIF}
+
+{$IFDEF ZEOS_FULL_UNICODE}
+{**
+  Converts Unicode strings to Ansi (Delphi 2009 Up)
+}
+function UnicodeToAnsi(const UnicodeString: string): AnsiString;
+begin
+   result := UnicodeString;
+end;
 {$ENDIF}
 
 end.

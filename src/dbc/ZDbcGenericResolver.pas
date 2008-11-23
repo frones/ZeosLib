@@ -286,7 +286,8 @@ begin
       Result := IdentifierConvertor.Quote(Schema) + '.' + Result;
     if Catalog <> '' then
       Result := IdentifierConvertor.Quote(Catalog) + '.' + Result;
-  end else
+  end
+  else
     Result := '';
 end;
 
@@ -469,7 +470,8 @@ begin
 
   if WhereColumns.Count > 0 then
     CopyResolveParameters(WhereColumns, Columns)
-  else DefineWhereAllColumns(Columns);
+  else
+    DefineWhereAllColumns(Columns);
 end;
 
 {**
@@ -566,7 +568,8 @@ begin
     Current := TZResolverParameter(Params[I]);
     if Current.NewValue then
       RowAccessor := NewRowAccessor
-    else RowAccessor := OldRowAccessor;
+    else
+      RowAccessor := OldRowAccessor;
     ColumnIndex := Current.ColumnIndex;
 
     if FCalcDefaults then
@@ -758,7 +761,8 @@ var
   Current: TZResolverParameter;
 begin
   Result := '';
-  if Columns.Count = 0 then Exit;
+  if Columns.Count = 0 then
+     Exit;
 
   for I := 0 to Columns.Count - 1 do
   begin
@@ -767,7 +771,8 @@ begin
       Result := Result + ',';
     if Current.DefaultValue <> '' then
       Result := Result + Current.DefaultValue
-    else Result := Result + 'NULL';
+    else
+      Result := Result + 'NULL';
   end;
   // Result := 'SELECT ' + Result + ' FROM ' + DefineTableName;
   Result := 'SELECT ' + Result;
@@ -868,13 +873,15 @@ var
   Metadata: IZResultSetMetadata;
   Current: TZResolverParameter;
 begin
-  if not FCalcDefaults then Exit;
+  if not FCalcDefaults then
+     Exit;
 
   SQLParams := TObjectList.Create;
   try
     DefineCalcColumns(SQLParams, RowAccessor);
     SQL := FormCalculateStatement(SQLParams);
-    if SQL = '' then Exit;
+    if SQL = '' then
+       Exit;
 
     { Executes statement and fills default fields. }
     Statement := Connection.CreateStatement;

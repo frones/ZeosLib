@@ -182,8 +182,11 @@ procedure TZASAStatement.Close;
 begin
   if not Closed then
   begin
-    FASAConnection.GetPlainDriver.db_close( FASAConnection.GetDBHandle,
-      PChar( CursorName));
+    {$IFDEF ZEOS_FULL_UNICODE}
+    FASAConnection.GetPlainDriver.db_close(FASAConnection.GetDBHandle, PAnsiChar(UnicodeToAnsi(CursorName)));
+    {$ELSE}
+    FASAConnection.GetPlainDriver.db_close(FASAConnection.GetDBHandle, PAnsiChar(CursorName));		 
+    {$ENDIF}
     Closed := false;
   end;
   if FStmtNum <> 0 then
@@ -223,11 +226,16 @@ begin
   begin
     with FASAConnection do
     begin
-      GetPlainDriver.db_resume( GetDBHandle, PChar( CursorName));
+      {$IFDEF ZEOS_FULL_UNICODE}
+      GetPlainDriver.db_resume(GetDBHandle, PAnsiChar(UnicodeToAnsi(CursorName)));
+      {$ELSE}
+      GetPlainDriver.db_resume(GetDBHandle, PAnsiChar(CursorName));		 
+      {$ENDIF}
       ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute);
       if GetDBHandle.sqlcode = SQLE_PROCEDURE_COMPLETE then
         Result := false
-      else begin
+      else
+      begin
         SQLData := TZASAResultSet( LastResultSet).SQLData;
         DescribeCursor( FASAConnection, TZASASQLDA( SQLData), CursorName, '');
       end;
@@ -252,10 +260,16 @@ begin
   with FASAConnection do
   begin
     try
+      {$IFDEF ZEOS_FULL_UNICODE}
+      GetPlainDriver.db_prepare_describe(GetDBHandle, nil, @FStmtNum,
+            PAnsiChar(UnicodeToAnsi(SQL)), FSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
+            SQL_PREPARE_DESCRIBE_OUTPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);
+      {$ELSE}
       GetPlainDriver.db_prepare_describe( GetDBHandle, nil, @FStmtNum,
-        PChar( SQL), FSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
-        SQL_PREPARE_DESCRIBE_OUTPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);
-      ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, SQL);
+            PAnsiChar(SQL), FSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
+            SQL_PREPARE_DESCRIBE_OUTPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);
+      {$ENDIF}
+      ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, SQL);
 
       FMoreResults := GetDBHandle.sqlerrd[2] = 0;
       if not FMoreResults then
@@ -279,8 +293,13 @@ begin
       if ResultSetType = rtScrollInsensitive then
         CursorOptions := CursorOptions + CUR_INSENSITIVE;
       Cursor := CursorName;
-      GetPlainDriver.db_open( GetDBHandle, PChar( Cursor), nil, @FStmtNum,
-        nil, FetchSize, 0, CursorOptions);
+      {$IFDEF ZEOS_FULL_UNICODE}
+      GetPlainDriver.db_open(GetDBHandle, PAnsiChar(UnicodeToAnsi(Cursor)), nil, @FStmtNum,
+            nil, FetchSize, 0, CursorOptions);
+      {$ELSE}
+       GetPlainDriver.db_open(GetDBHandle, PAnsiChar(Cursor), nil, @FStmtNum,
+            nil, FetchSize, 0, CursorOptions);
+      {$ENDIF}
       ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute,
         SQL);
       Closed := false;
@@ -323,8 +342,11 @@ begin
   Result := -1;
   with FASAConnection do
   begin
-
-    GetPlainDriver.db_execute_imm( GetDBHandle, PChar( SQL));
+    {$IFDEF ZEOS_FULL_UNICODE}
+    GetPlainDriver.db_execute_imm(GetDBHandle, PAnsiChar(UnicodeToAnsi(SQL)));
+    {$ELSE}
+    GetPlainDriver.db_execute_imm(GetDBHandle, PAnsiChar(SQL)); 
+    {$ENDIF}      
     ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, SQL);
 
     Result := GetDBHandle.sqlErrd[2];
@@ -409,8 +431,11 @@ procedure TZASAPreparedStatement.Close;
 begin
   if not Closed then
   begin
-    FASAConnection.GetPlainDriver.db_close( FASAConnection.GetDBHandle,
-      PChar( CursorName));
+    {$IFDEF ZEOS_FULL_UNICODE}
+    FASAConnection.GetPlainDriver.db_close(FASAConnection.GetDBHandle, PAnsiChar(UnicodeToAnsi(CursorName)));
+    {$ELSE}
+    FASAConnection.GetPlainDriver.db_close( FASAConnection.GetDBHandle, PChar( CursorName));
+    {$ENDIF}
     Closed := false;
   end;
   if FStmtNum <> 0 then
@@ -448,7 +473,11 @@ begin
   begin
     with FASAConnection do
     begin
-      GetPlainDriver.db_resume( GetDBHandle, PChar( CursorName));
+      {$IFDEF ZEOS_FULL_UNICODE}
+      GetPlainDriver.db_resume(GetDBHandle, PAnsiChar(UnicodeToAnsi(CursorName)));
+      {$ELSE}
+      GetPlainDriver.db_resume(GetDBHandle, PAnsiChar(CursorName));
+      {$ENDIF}         
       ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute);
       if GetDBHandle.sqlcode = SQLE_PROCEDURE_COMPLETE then
         Result := false
@@ -508,7 +537,9 @@ begin
   begin
     LastResultSet := ExecuteQueryPrepared;
     Result := true;
-  end else begin
+  end
+  else
+  begin
     ExecuteUpdatePrepared;
     Result := false;
   end;
@@ -556,8 +587,11 @@ begin
     if ResultSetType = rtScrollInsensitive then
       CursorOptions := CursorOptions + CUR_INSENSITIVE;
     Cursor := CursorName;
-    GetPlainDriver.db_open( GetDBHandle, PChar( Cursor), nil, @FStmtNum,
-      FParamSQLData.GetData, FetchSize, 0, CursorOptions);
+    {$IFDEF ZEOS_FULL_UNICODE}
+    GetPlainDriver.db_open(GetDBHandle, PAnsiChar(UnicodeToAnsi(Cursor)), nil, @FStmtNum, FParamSQLData.GetData, FetchSize, 0, CursorOptions);
+    {$ELSE}
+    GetPlainDriver.db_open(GetDBHandle, PAnsiChar(Cursor), nil, @FStmtNum, FParamSQLData.GetData, FetchSize, 0, CursorOptions);
+    {$ENDIF}        
     ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute,
       SQL);
     Closed := false;
@@ -676,8 +710,11 @@ procedure TZASACallableStatement.Close;
 begin
   if not Closed then
   begin
-    FASAConnection.GetPlainDriver.db_close( FASAConnection.GetDBHandle,
-      PChar( CursorName));
+    {$IFDEF ZEOS_FULL_UNICODE}
+    FASAConnection.GetPlainDriver.db_close( FASAConnection.GetDBHandle, PAnsiChar(UnicodeToAnsi(CursorName)));
+    {$ELSE}
+    FASAConnection.GetPlainDriver.db_close(FASAConnection.GetDBHandle, PAnsiChar(CursorName));
+    {$ENDIF}
     Closed := false;
   end;
   if FStmtNum <> 0 then
@@ -715,7 +752,11 @@ begin
   begin
     with FASAConnection do
     begin
-      GetPlainDriver.db_resume( GetDBHandle, PChar( CursorName));
+      {$IFDEF ZEOS_FULL_UNICODE}
+      GetPlainDriver.db_resume(GetDBHandle, PAnsiChar(UnicodeToAnsi(CursorName)));
+      {$ELSE}
+      GetPlainDriver.db_resume(GetDBHandle, PAnsiChar(CursorName));
+      {$ENDIF}            
       ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute);
       if GetDBHandle.sqlcode = SQLE_PROCEDURE_COMPLETE then
         Result := false
@@ -777,13 +818,16 @@ function TZASACallableStatement.ExecutePrepared: Boolean;
 begin
   if not FPrepared then
     Result := Execute( SQL)
-  else begin
+  else
+  begin
     if FMoreResults or ( ( FSQLData.GetData.sqld > 0) and
       ( FSQLData.GetData.sqlVar[0].sqlInd^ and DT_PROCEDURE_OUT = 0)) then
     begin
       LastResultSet := ExecuteQueryPrepared;
       Result := true;
-    end else begin
+    end
+    else
+    begin
       ExecuteUpdatePrepared;
       Result := false;
     end;
@@ -828,7 +872,8 @@ var
 begin
   if not FPrepared then
     Result := ExecuteQuery( SQL)
-  else begin
+  else
+  begin
     with FASAConnection do
     begin
       PrepareParameters( GetPlainDriver, InParamValues, InParamTypes,
@@ -840,8 +885,11 @@ begin
       if ResultSetType = rtScrollInsensitive then
         CursorOptions := CursorOptions + CUR_INSENSITIVE;
       Cursor := CursorName;
-      GetPlainDriver.db_open( GetDBHandle, PChar( Cursor), nil, @FStmtNum,
-        FParamSQLData.GetData, FetchSize, 0, CursorOptions);
+      {$IFDEF ZEOS_FULL_UNICODE}
+      GetPlainDriver.db_open(GetDBHandle, PAnsiChar(UnicodeToAnsi(Cursor)), nil, @FStmtNum, FParamSQLData.GetData, FetchSize, 0, CursorOptions);
+      {$ELSE}
+      GetPlainDriver.db_open(GetDBHandle, PAnsiChar(Cursor), nil, @FStmtNum, FParamSQLData.GetData, FetchSize, 0, CursorOptions);
+      {$ENDIF} 
       ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute,
         SQL);
       Closed := false;
@@ -909,7 +957,8 @@ function TZASACallableStatement.ExecuteUpdatePrepared: Integer;
 begin
   if not FPrepared then
     Result := ExecuteUpdate( SQL)
-  else begin
+  else
+  begin
 //    Result := -1;
     with FASAConnection do
     begin

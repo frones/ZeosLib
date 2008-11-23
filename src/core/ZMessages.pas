@@ -1,6 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
+{             Constant messages used by Zeos              }
 {                                                         }
 { This unit contains all the messages that are output by  }
 { ZEOS methods. One of the given language can be activated}

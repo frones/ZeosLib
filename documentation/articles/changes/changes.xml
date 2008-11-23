@@ -49,6 +49,9 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[COMMON] Added Delphi 2009 to the supported compilers. Big thanks to gto for his work!!</simpara>
+        </listitem>
+        <listitem>
           <simpara>[IB/FB] Added Firebird 2.1 driver (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2099">http://zeos.firmos.at/viewtopic.php?t=2099</ulink>)</simpara>
         </listitem>
         <listitem>

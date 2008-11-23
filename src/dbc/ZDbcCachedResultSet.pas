@@ -171,8 +171,8 @@ type
     //======================================================================
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPChar(ColumnIndex: Integer): PChar; override;
-    function GetString(ColumnIndex: Integer): string; override;
+    function GetPChar(ColumnIndex: Integer): PAnsiChar; override;
+    function GetString(ColumnIndex: Integer): AnsiString; override;
     function GetUnicodeString(ColumnIndex: Integer): Widestring; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
@@ -212,8 +212,8 @@ type
     procedure UpdateFloat(ColumnIndex: Integer; Value: Single); override;
     procedure UpdateDouble(ColumnIndex: Integer; Value: Double); override;
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended); override;
-    procedure UpdatePChar(ColumnIndex: Integer; Value: PChar); override;
-    procedure UpdateString(ColumnIndex: Integer; const Value: string); override;
+    procedure UpdatePChar(ColumnIndex: Integer; Value: PAnsiChar); override;
+    procedure UpdateString(ColumnIndex: Integer; const Value: AnsiString); override;
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString); override;
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray); override;
     procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime); override;
@@ -394,7 +394,8 @@ begin
     FRowAccessor.CopyBuffer(Row, Result);
     FInitialRowsList.Add(Result);
     FCurrentRowsList.Add(Row);
-  end else
+  end
+  else
     Result := nil;
 end;
 
@@ -522,7 +523,8 @@ begin
       FSelectedRow := FInitialRowsList[Index];
       FRowAccessor.RowBuffer := FSelectedRow;
     end;
-  end else
+  end
+  else
     FRowAccessor.RowBuffer := nil;
 end;
 
@@ -726,13 +728,13 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>PChar</code> in the Delphi programming language.
+  a <code>PAnsiChar</code> in the Delphi programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractCachedResultSet.GetPChar(ColumnIndex: Integer): PChar;
+function TZAbstractCachedResultSet.GetPChar(ColumnIndex: Integer): PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckAvailable;
@@ -749,7 +751,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractCachedResultSet.GetString(ColumnIndex: Integer): string;
+function TZAbstractCachedResultSet.GetString(ColumnIndex: Integer): AnsiString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckAvailable;
@@ -1208,7 +1210,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdatePChar(ColumnIndex: Integer;
-  Value: PChar);
+  Value: PAnsiChar);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1228,7 +1230,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateString(ColumnIndex: Integer;
-  const Value: string);
+  const Value: AnsiString);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1465,7 +1467,8 @@ begin
       FSelectedRow := nil;
       RowAccessor.RowBuffer := FSelectedRow;
     end;
-  end else
+  end
+  else
     Result := False;
 end;
 
@@ -1484,7 +1487,8 @@ begin
   begin
     CurrentRow := PZRowBuffer(FRowsList[RowNo - 1]);
     Result := CurrentRow^.UpdateType = utModified;
-  end else
+  end
+  else
     Result := False;
 end;
 
@@ -1504,7 +1508,8 @@ begin
   begin
     CurrentRow := PZRowBuffer(FRowsList[RowNo - 1]);
     Result := CurrentRow^.UpdateType = utInserted;
-  end else
+  end
+  else
     Result := False;
 end;
 
@@ -1525,7 +1530,8 @@ begin
   begin
     UpdateType := PZRowBuffer(FRowsList[RowNo - 1])^.UpdateType;
     Result := UpdateType = utDeleted;
-  end else
+  end
+  else
     Result := False;
 end;
 
@@ -1589,7 +1595,8 @@ begin
   if PZRowBuffer(FRowsList[RowNo - 1]).UpdateType = utDeleted then
     raise EZSQLException.Create(SCanNotUpdateDeletedRow);
 
-  if FSelectedRow <> FUpdatedRow then Exit;
+  if FSelectedRow <> FUpdatedRow then
+      Exit;
 
   AppendRow(FRowsList[RowNo - 1]);
 
@@ -1636,7 +1643,8 @@ begin
 
   if FSelectedRow^.UpdateType = utInserted then
     RevertRecord
-  else begin
+  else
+  begin
     AppendRow(FRowsList[RowNo - 1]);
 
     FSelectedRow^.UpdateType := utDeleted;
@@ -1714,7 +1722,8 @@ begin
   CheckClosed;
   if (RowNo >= 1) and (RowNo <= LastRowNo) then
     FRowAccessor.RowBuffer := FSelectedRow
-  else FRowAccessor.RowBuffer := nil;
+  else
+    FRowAccessor.RowBuffer := nil;
 end;
 
 {**
@@ -1797,8 +1806,11 @@ begin
         stFloat: RowAccessor.SetFloat(I, ResultSet.GetFloat(I));
         stDouble: RowAccessor.SetDouble(I, ResultSet.GetDouble(I));
         stBigDecimal: RowAccessor.SetBigDecimal(I, ResultSet.GetBigDecimal(I));
-        stString: RowAccessor.SetPChar(I, ResultSet.GetPChar(I));
-        stUnicodeString: RowAccessor.SetUnicodeString(I, ResultSet.GetUnicodeString(I));
+        //stString: RowAccessor.SetPChar(I, ResultSet.GetPChar(I));
+        // gto: do we need PChar here? (Unicode problems)
+        stString: RowAccessor.SetString(I, ResultSet.GetString(I));
+        stUnicodeString: RowAccessor.SetUnicodeString(I,
+                  ResultSet.GetUnicodeString(I));
         stBytes: RowAccessor.SetBytes(I, ResultSet.GetBytes(I));
         stDate: RowAccessor.SetDate(I, ResultSet.GetDate(I));
         stTime: RowAccessor.SetTime(I, ResultSet.GetTime(I));
@@ -1977,8 +1989,10 @@ begin
   begin
     FetchAll;
     Row := LastRowNo - Row + 1;
-    if Row < 0 then Row := 0;
-  end else
+    if Row < 0 then
+       Row := 0;
+  end
+  else
   { Processes moving after last row }
     while (LastRowNo < Row) and Fetch do;
 

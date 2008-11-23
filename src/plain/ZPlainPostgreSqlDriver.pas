@@ -118,7 +118,7 @@ type
   whereas in earlier versions it was always your own backend's PID.
 }
   TZPostgreSQLNotify = packed record
-    relname: PChar;   { name of relation containing data }
+    relname: PAnsiChar;   { name of relation containing data }
     be_pid:  Integer; { process id of backend }
   end;
 
@@ -126,17 +126,17 @@ type
 
 { PQnoticeProcessor is the function type for the notice-message callback. }
 
-  TZPostgreSQLNoticeProcessor = procedure(arg: Pointer; message: PChar); cdecl;
+  TZPostgreSQLNoticeProcessor = procedure(arg: Pointer; message: PAnsiChar); cdecl;
 
 { Structure for the conninfo parameter definitions returned by PQconndefaults }
 
   TZPostgreSQLConnectInfoOption = packed record
-    keyword:  PChar;	{ The keyword of the option }
-    envvar:   PChar;	{ Fallback environment variable name }
-    compiled: PChar;	{ Fallback compiled in default value  }
-    val:      PChar;	{ Options value	}
-    lab:      PChar;	{ Label for field in connect dialog }
-    dispchar: PChar;	{ Character to display for this field
+    keyword:  PAnsiChar;	{ The keyword of the option }
+    envvar:   PAnsiChar;	{ Fallback environment variable name }
+    compiled: PAnsiChar;	{ Fallback compiled in default value  }
+    val:      PAnsiChar;	{ Options value	}
+    lab:      PAnsiChar;	{ Label for field in connect dialog }
+    disPAnsiChar: PAnsiChar;	{ Character to display for this field
 			  in a connect dialog. Values are:
 			  ""	Display entered value as is
 			  "*"	Password field - hide value
@@ -172,45 +172,45 @@ type
     function  EncodeBYTEA(Value: string;Handle: PZPostgreSQLConnect): string;
     function  DecodeBYTEA(value: string): string;
 
-    function ConnectDatabase(ConnInfo: PChar): PZPostgreSQLConnect;
-    function SetDatabaseLogin(Host, Port, Options, TTY, Db, User,Passwd: PChar): PZPostgreSQLConnect;
+    function ConnectDatabase(ConnInfo: PAnsiChar): PZPostgreSQLConnect;
+    function SetDatabaseLogin(Host, Port, Options, TTY, Db, User,Passwd: PAnsiChar): PZPostgreSQLConnect;
     function GetConnectDefaults: PZPostgreSQLConnectInfoOption;
 
     procedure Finish(Handle: PZPostgreSQLConnect);
     procedure Reset(Handle: PZPostgreSQLConnect);
     function RequestCancel(Handle: PZPostgreSQLConnect): Integer;
-    function GetDatabase(Handle: PZPostgreSQLConnect): PChar;
-    function GetUser(Handle: PZPostgreSQLConnect): PChar;
-    function GetPassword(Handle: PZPostgreSQLConnect): PChar;
-    function GetHost(Handle: PZPostgreSQLConnect): PChar;
-    function GetPort(Handle: PZPostgreSQLConnect): PChar;
-    function GetTTY(Handle: PZPostgreSQLConnect): PChar; cdecl;
-    function GetOptions(Handle: PZPostgreSQLConnect): PChar;
+    function GetDatabase(Handle: PZPostgreSQLConnect): PAnsiChar;
+    function GetUser(Handle: PZPostgreSQLConnect): PAnsiChar;
+    function GetPassword(Handle: PZPostgreSQLConnect): PAnsiChar;
+    function GetHost(Handle: PZPostgreSQLConnect): PAnsiChar;
+    function GetPort(Handle: PZPostgreSQLConnect): PAnsiChar;
+    function GetTTY(Handle: PZPostgreSQLConnect): PAnsiChar; cdecl;
+    function GetOptions(Handle: PZPostgreSQLConnect): PAnsiChar;
     function GetStatus(Handle: PZPostgreSQLConnect):TZPostgreSQLConnectStatusType;
 
-    function GetErrorMessage(Handle: PZPostgreSQLConnect): PChar;
+    function GetErrorMessage(Handle: PZPostgreSQLConnect): PAnsiChar;
     function GetSocket(Handle: PZPostgreSQLConnect): Integer;
     function GetBackendPID(Handle: PZPostgreSQLConnect): Integer;
     procedure Trace(Handle: PZPostgreSQLConnect; DebugPort: Pointer);
     procedure Untrace(Handle: PZPostgreSQLConnect);
     procedure SetNoticeProcessor(Handle: PZPostgreSQLConnect;Proc: TZPostgreSQLNoticeProcessor; Arg: Pointer);
 
-    function ExecuteQuery(Handle: PZPostgreSQLConnect;Query: PChar): PZPostgreSQLResult;
+    function ExecuteQuery(Handle: PZPostgreSQLConnect;Query: PAnsiChar): PZPostgreSQLResult;
 
     function Notifies(Handle: PZPostgreSQLConnect): PZPostgreSQLNotify;
     procedure FreeNotify(Handle: PZPostgreSQLNotify);
 
-    function SendQuery(Handle: PZPostgreSQLConnect; Query: PChar): Integer;
+    function SendQuery(Handle: PZPostgreSQLConnect; Query: PAnsiChar): Integer;
     function GetResult(Handle: PZPostgreSQLConnect): PZPostgreSQLResult;
     function IsBusy(Handle: PZPostgreSQLConnect): Integer;
     function ConsumeInput(Handle: PZPostgreSQLConnect): Integer;
-    function GetLine(Handle: PZPostgreSQLConnect; Str: PChar;
+    function GetLine(Handle: PZPostgreSQLConnect; Str: PAnsiChar;
       Length: Integer): Integer;
-    function PutLine(Handle: PZPostgreSQLConnect; Str: PChar): Integer;
-    function GetLineAsync(Handle: PZPostgreSQLConnect; Buffer: PChar;
+    function PutLine(Handle: PZPostgreSQLConnect; Str: PAnsiChar): Integer;
+    function GetLineAsync(Handle: PZPostgreSQLConnect; Buffer: PAnsiChar;
       Length: Integer): Integer;
 
-    function PutBytes(Handle: PZPostgreSQLConnect; Buffer: PChar;
+    function PutBytes(Handle: PZPostgreSQLConnect; Buffer: PAnsiChar;
       Length: Integer): Integer;
     function EndCopy(Handle: PZPostgreSQLConnect): Integer;
     function ExecuteFunction(Handle: PZPostgreSQLConnect; fnid: Integer;
@@ -219,30 +219,30 @@ type
     function GetResultStatus(Res: PZPostgreSQLResult):
       TZPostgreSQLExecStatusType;
 
-    function GetResultErrorMessage(Res: PZPostgreSQLResult): PChar;
-    function GetResultErrorField(Res: PZPostgreSQLResult;FieldCode:TZPostgreSQLFieldCode):Pchar;
+    function GetResultErrorMessage(Res: PZPostgreSQLResult): PAnsiChar;
+    function GetResultErrorField(Res: PZPostgreSQLResult;FieldCode:TZPostgreSQLFieldCode):PAnsiChar;
 
     function GetRowCount(Res: PZPostgreSQLResult): Integer;
     function GetFieldCount(Res: PZPostgreSQLResult): Integer;
 
     function GetBinaryTuples(Res: PZPostgreSQLResult): Integer;
     function GetFieldName(Res: PZPostgreSQLResult;
-      FieldNum: Integer): PChar;
+      FieldNum: Integer): PAnsiChar;
     function GetFieldNumber(Res: PZPostgreSQLResult;
-      FieldName: PChar): Integer;
+      FieldName: PAnsiChar): Integer;
     function GetFieldType(Res: PZPostgreSQLResult;
       FieldNum: Integer): Oid;
     function GetFieldSize(Res: PZPostgreSQLResult;
       FieldNum: Integer): Integer;
     function GetFieldMode(Res: PZPostgreSQLResult;
       FieldNum: Integer): Integer;
-    function GetCommandStatus(Res: PZPostgreSQLResult): PChar;
+    function GetCommandStatus(Res: PZPostgreSQLResult): PAnsiChar;
     function GetOidValue(Res: PZPostgreSQLResult): Oid;
-    function GetOidStatus(Res: PZPostgreSQLResult): PChar;
-    function GetCommandTuples(Res: PZPostgreSQLResult): PChar;
+    function GetOidStatus(Res: PZPostgreSQLResult): PAnsiChar;
+    function GetCommandTuples(Res: PZPostgreSQLResult): PAnsiChar;
 
     function GetValue(Res: PZPostgreSQLResult;
-      TupNum, FieldNum: Integer): PChar;
+      TupNum, FieldNum: Integer): PAnsiChar;
     function GetLength(Res: PZPostgreSQLResult;
       TupNum, FieldNum: Integer): Integer;
     function GetIsNull(Res: PZPostgreSQLResult;
@@ -257,9 +257,9 @@ type
     function CloseLargeObject(Handle: PZPostgreSQLConnect;
       Fd: Integer): Integer;
     function ReadLargeObject(Handle: PZPostgreSQLConnect; Fd: Integer;
-      Buffer: PChar; Length: Integer): Integer;
+      Buffer: PAnsiChar; Length: Integer): Integer;
     function WriteLargeObject(Handle: PZPostgreSQLConnect; Fd: Integer;
-      Buffer: PChar; Length: Integer): Integer;
+      Buffer: PAnsiChar; Length: Integer): Integer;
     function SeekLargeObject(Handle: PZPostgreSQLConnect;
       Fd, Offset, Whence: Integer): Integer;
     function CreateLargeObject(Handle: PZPostgreSQLConnect;
@@ -269,9 +269,9 @@ type
     function UnlinkLargeObject(Handle: PZPostgreSQLConnect;
       ObjId: Oid): Integer;
     function ImportLargeObject(Handle: PZPostgreSQLConnect;
-      FileName: PChar): Oid;
+      FileName: PAnsiChar): Oid;
     function ExportLargeObject(Handle: PZPostgreSQLConnect; ObjId: Oid;
-      FileName: PChar): Integer;
+      FileName: PAnsiChar): Integer;
   end;
 
 
@@ -288,25 +288,25 @@ type
     function  EncodeBYTEA(Value: string;Handle: PZPostgreSQLConnect): string;
     function  DecodeBYTEA(value: string): string;
 
-    function ConnectDatabase(ConnInfo: PChar): PZPostgreSQLConnect;
+    function ConnectDatabase(ConnInfo: PAnsiChar): PZPostgreSQLConnect;
     function SetDatabaseLogin(Host, Port, Options, TTY, Db, User,
-      Passwd: PChar): PZPostgreSQLConnect;
+      Passwd: PAnsiChar): PZPostgreSQLConnect;
     function GetConnectDefaults: PZPostgreSQLConnectInfoOption;
 
     procedure Finish(Handle: PZPostgreSQLConnect);
     procedure Reset(Handle: PZPostgreSQLConnect);
     function RequestCancel(Handle: PZPostgreSQLConnect): Integer;
-    function GetDatabase(Handle: PZPostgreSQLConnect): PChar;
-    function GetUser(Handle: PZPostgreSQLConnect): PChar;
-    function GetPassword(Handle: PZPostgreSQLConnect): PChar;
-    function GetHost(Handle: PZPostgreSQLConnect): PChar;
-    function GetPort(Handle: PZPostgreSQLConnect): PChar;
-    function GetTTY(Handle: PZPostgreSQLConnect): PChar; cdecl;
-    function GetOptions(Handle: PZPostgreSQLConnect): PChar;
+    function GetDatabase(Handle: PZPostgreSQLConnect): PAnsiChar;
+    function GetUser(Handle: PZPostgreSQLConnect): PAnsiChar;
+    function GetPassword(Handle: PZPostgreSQLConnect): PAnsiChar;
+    function GetHost(Handle: PZPostgreSQLConnect): PAnsiChar;
+    function GetPort(Handle: PZPostgreSQLConnect): PAnsiChar;
+    function GetTTY(Handle: PZPostgreSQLConnect): PAnsiChar; cdecl;
+    function GetOptions(Handle: PZPostgreSQLConnect): PAnsiChar;
     function GetStatus(Handle: PZPostgreSQLConnect):
       TZPostgreSQLConnectStatusType;
 
-    function GetErrorMessage(Handle: PZPostgreSQLConnect): PChar;
+    function GetErrorMessage(Handle: PZPostgreSQLConnect): PAnsiChar;
     function GetSocket(Handle: PZPostgreSQLConnect): Integer;
     function GetBackendPID(Handle: PZPostgreSQLConnect): Integer;
     procedure Trace(Handle: PZPostgreSQLConnect; DebugPort: Pointer);
@@ -315,22 +315,22 @@ type
       Proc: TZPostgreSQLNoticeProcessor; Arg: Pointer);
 
     function ExecuteQuery(Handle: PZPostgreSQLConnect;
-      Query: PChar): PZPostgreSQLResult;
+      Query: PAnsiChar): PZPostgreSQLResult;
 
     function Notifies(Handle: PZPostgreSQLConnect): PZPostgreSQLNotify;
     procedure FreeNotify(Handle: PZPostgreSQLNotify);
 
-    function SendQuery(Handle: PZPostgreSQLConnect; Query: PChar): Integer;
+    function SendQuery(Handle: PZPostgreSQLConnect; Query: PAnsiChar): Integer;
     function GetResult(Handle: PZPostgreSQLConnect): PZPostgreSQLResult;
     function IsBusy(Handle: PZPostgreSQLConnect): Integer;
     function ConsumeInput(Handle: PZPostgreSQLConnect): Integer;
-    function GetLine(Handle: PZPostgreSQLConnect; Buffer: PChar;
+    function GetLine(Handle: PZPostgreSQLConnect; Buffer: PAnsiChar;
       Length: Integer): Integer;
-    function PutLine(Handle: PZPostgreSQLConnect; Buffer: PChar): Integer;
-    function GetLineAsync(Handle: PZPostgreSQLConnect; Buffer: PChar;
+    function PutLine(Handle: PZPostgreSQLConnect; Buffer: PAnsiChar): Integer;
+    function GetLineAsync(Handle: PZPostgreSQLConnect; Buffer: PAnsiChar;
       Length: Integer): Integer;
 
-    function PutBytes(Handle: PZPostgreSQLConnect; Buffer: PChar;
+    function PutBytes(Handle: PZPostgreSQLConnect; Buffer: PAnsiChar;
       Length: Integer): Integer;
     function EndCopy(Handle: PZPostgreSQLConnect): Integer;
     function ExecuteFunction(Handle: PZPostgreSQLConnect; fnid: Integer;
@@ -338,30 +338,30 @@ type
       args: PZPostgreSQLArgBlock; nargs: Integer): PZPostgreSQLResult;
     function GetResultStatus(Res: PZPostgreSQLResult):
       TZPostgreSQLExecStatusType;
-    function GetResultErrorMessage(Res: PZPostgreSQLResult): PChar;
-    function GetResultErrorField(Res: PZPostgreSQLResult;FieldCode:TZPostgreSQLFieldCode):PChar;
+    function GetResultErrorMessage(Res: PZPostgreSQLResult): PAnsiChar;
+    function GetResultErrorField(Res: PZPostgreSQLResult;FieldCode:TZPostgreSQLFieldCode):PAnsiChar;
 
     function GetRowCount(Res: PZPostgreSQLResult): Integer;
     function GetFieldCount(Res: PZPostgreSQLResult): Integer;
 
     function GetBinaryTuples(Res: PZPostgreSQLResult): Integer;
     function GetFieldName(Res: PZPostgreSQLResult;
-      FieldNum: Integer): PChar;
+      FieldNum: Integer): PAnsiChar;
     function GetFieldNumber(Res: PZPostgreSQLResult;
-      FieldName: PChar): Integer;
+      FieldName: PAnsiChar): Integer;
     function GetFieldType(Res: PZPostgreSQLResult;
       FieldNum: Integer): Oid;
     function GetFieldSize(Res: PZPostgreSQLResult;
       FieldNum: Integer): Integer;
     function GetFieldMode(Res: PZPostgreSQLResult;
       FieldNum: Integer): Integer;
-    function GetCommandStatus(Res: PZPostgreSQLResult): PChar;
+    function GetCommandStatus(Res: PZPostgreSQLResult): PAnsiChar;
     function GetOidValue(Res: PZPostgreSQLResult): Oid;
-    function GetOidStatus(Res: PZPostgreSQLResult): PChar;
-    function GetCommandTuples(Res: PZPostgreSQLResult): PChar;
+    function GetOidStatus(Res: PZPostgreSQLResult): PAnsiChar;
+    function GetCommandTuples(Res: PZPostgreSQLResult): PAnsiChar;
 
     function GetValue(Res: PZPostgreSQLResult;
-      TupNum, FieldNum: Integer): PChar;
+      TupNum, FieldNum: Integer): PAnsiChar;
     function GetLength(Res: PZPostgreSQLResult;
       TupNum, FieldNum: Integer): Integer;
     function GetIsNull(Res: PZPostgreSQLResult;
@@ -376,9 +376,9 @@ type
     function CloseLargeObject(Handle: PZPostgreSQLConnect;
       Fd: Integer): Integer;
     function ReadLargeObject(Handle: PZPostgreSQLConnect; Fd: Integer;
-      Buffer: PChar; Length: Integer): Integer;
+      Buffer: PAnsiChar; Length: Integer): Integer;
     function WriteLargeObject(Handle: PZPostgreSQLConnect; Fd: Integer;
-      Buffer: PChar; Length: Integer): Integer;
+      Buffer: PAnsiChar; Length: Integer): Integer;
     function SeekLargeObject(Handle: PZPostgreSQLConnect;
       Fd, Offset, Whence: Integer): Integer;
     function CreateLargeObject(Handle: PZPostgreSQLConnect;
@@ -388,9 +388,9 @@ type
     function UnlinkLargeObject(Handle: PZPostgreSQLConnect;
       ObjId: Oid): Integer;
     function ImportLargeObject(Handle: PZPostgreSQLConnect;
-      FileName: PChar): Oid;
+      FileName: PAnsiChar): Oid;
     function ExportLargeObject(Handle: PZPostgreSQLConnect; ObjId: Oid;
-      FileName: PChar): Integer;
+      FileName: PAnsiChar): Integer;
   end;
 
 
@@ -403,9 +403,9 @@ type
     function GetDescription: string;
     procedure Initialize;
 
-    function ConnectDatabase(ConnInfo: PChar): PZPostgreSQLConnect;
+    function ConnectDatabase(ConnInfo: PAnsiChar): PZPostgreSQLConnect;
     function SetDatabaseLogin(Host, Port, Options, TTY, Db, User,
-      Passwd: PChar): PZPostgreSQLConnect;
+      Passwd: PAnsiChar): PZPostgreSQLConnect;
     function GetConnectDefaults: PZPostgreSQLConnectInfoOption;
 
     function  EncodeBYTEA(Value: string;Handle: PZPostgreSQLConnect): string;
@@ -414,17 +414,17 @@ type
     procedure Finish(Handle: PZPostgreSQLConnect);
     procedure Reset(Handle: PZPostgreSQLConnect);
     function RequestCancel(Handle: PZPostgreSQLConnect): Integer;
-    function GetDatabase(Handle: PZPostgreSQLConnect): PChar;
-    function GetUser(Handle: PZPostgreSQLConnect): PChar;
-    function GetPassword(Handle: PZPostgreSQLConnect): PChar;
-    function GetHost(Handle: PZPostgreSQLConnect): PChar;
-    function GetPort(Handle: PZPostgreSQLConnect): PChar;
-    function GetTTY(Handle: PZPostgreSQLConnect): PChar; cdecl;
-    function GetOptions(Handle: PZPostgreSQLConnect): PChar;
+    function GetDatabase(Handle: PZPostgreSQLConnect): PAnsiChar;
+    function GetUser(Handle: PZPostgreSQLConnect): PAnsiChar;
+    function GetPassword(Handle: PZPostgreSQLConnect): PAnsiChar;
+    function GetHost(Handle: PZPostgreSQLConnect): PAnsiChar;
+    function GetPort(Handle: PZPostgreSQLConnect): PAnsiChar;
+    function GetTTY(Handle: PZPostgreSQLConnect): PAnsiChar; cdecl;
+    function GetOptions(Handle: PZPostgreSQLConnect): PAnsiChar;
     function GetStatus(Handle: PZPostgreSQLConnect):
       TZPostgreSQLConnectStatusType;
 
-    function GetErrorMessage(Handle: PZPostgreSQLConnect): PChar;
+    function GetErrorMessage(Handle: PZPostgreSQLConnect): PAnsiChar;
     function GetSocket(Handle: PZPostgreSQLConnect): Integer;
     function GetBackendPID(Handle: PZPostgreSQLConnect): Integer;
     procedure Trace(Handle: PZPostgreSQLConnect; DebugPort: Pointer);
@@ -433,22 +433,22 @@ type
       Proc: TZPostgreSQLNoticeProcessor; Arg: Pointer);
 
     function ExecuteQuery(Handle: PZPostgreSQLConnect;
-      Query: PChar): PZPostgreSQLResult;
+      Query: PAnsiChar): PZPostgreSQLResult;
 
     function Notifies(Handle: PZPostgreSQLConnect): PZPostgreSQLNotify;
     procedure FreeNotify(Handle: PZPostgreSQLNotify);
 
-    function SendQuery(Handle: PZPostgreSQLConnect; Query: PChar): Integer;
+    function SendQuery(Handle: PZPostgreSQLConnect; Query: PAnsiChar): Integer;
     function GetResult(Handle: PZPostgreSQLConnect): PZPostgreSQLResult;
     function IsBusy(Handle: PZPostgreSQLConnect): Integer;
     function ConsumeInput(Handle: PZPostgreSQLConnect): Integer;
-    function GetLine(Handle: PZPostgreSQLConnect; Buffer: PChar;
+    function GetLine(Handle: PZPostgreSQLConnect; Buffer: PAnsiChar;
       Length: Integer): Integer;
-    function PutLine(Handle: PZPostgreSQLConnect; Buffer: PChar): Integer;
-    function GetLineAsync(Handle: PZPostgreSQLConnect; Buffer: PChar;
+    function PutLine(Handle: PZPostgreSQLConnect; Buffer: PAnsiChar): Integer;
+    function GetLineAsync(Handle: PZPostgreSQLConnect; Buffer: PAnsiChar;
       Length: Integer): Integer;
 
-    function PutBytes(Handle: PZPostgreSQLConnect; Buffer: PChar;
+    function PutBytes(Handle: PZPostgreSQLConnect; Buffer: PAnsiChar;
       Length: Integer): Integer;
     function EndCopy(Handle: PZPostgreSQLConnect): Integer;
     function ExecuteFunction(Handle: PZPostgreSQLConnect; fnid: Integer;
@@ -457,30 +457,30 @@ type
     function GetResultStatus(Res: PZPostgreSQLResult):
       TZPostgreSQLExecStatusType;
 
-    function GetResultErrorMessage(Res: PZPostgreSQLResult): PChar;
-    function GetResultErrorField(Res: PZPostgreSQLResult;FieldCode:TZPostgreSQLFieldCode):PChar;
+    function GetResultErrorMessage(Res: PZPostgreSQLResult): PAnsiChar;
+    function GetResultErrorField(Res: PZPostgreSQLResult;FieldCode:TZPostgreSQLFieldCode):PAnsiChar;
 
     function GetRowCount(Res: PZPostgreSQLResult): Integer;
     function GetFieldCount(Res: PZPostgreSQLResult): Integer;
 
     function GetBinaryTuples(Res: PZPostgreSQLResult): Integer;
     function GetFieldName(Res: PZPostgreSQLResult;
-      FieldNum: Integer): PChar;
+      FieldNum: Integer): PAnsiChar;
     function GetFieldNumber(Res: PZPostgreSQLResult;
-      FieldName: PChar): Integer;
+      FieldName: PAnsiChar): Integer;
     function GetFieldType(Res: PZPostgreSQLResult;
       FieldNum: Integer): Oid;
     function GetFieldSize(Res: PZPostgreSQLResult;
       FieldNum: Integer): Integer;
     function GetFieldMode(Res: PZPostgreSQLResult;
       FieldNum: Integer): Integer;
-    function GetCommandStatus(Res: PZPostgreSQLResult): PChar;
+    function GetCommandStatus(Res: PZPostgreSQLResult): PAnsiChar;
     function GetOidValue(Res: PZPostgreSQLResult): Oid;
-    function GetOidStatus(Res: PZPostgreSQLResult): PChar;
-    function GetCommandTuples(Res: PZPostgreSQLResult): PChar;
+    function GetOidStatus(Res: PZPostgreSQLResult): PAnsiChar;
+    function GetCommandTuples(Res: PZPostgreSQLResult): PAnsiChar;
 
     function GetValue(Res: PZPostgreSQLResult;
-      TupNum, FieldNum: Integer): PChar;
+      TupNum, FieldNum: Integer): PAnsiChar;
     function GetLength(Res: PZPostgreSQLResult;
       TupNum, FieldNum: Integer): Integer;
     function GetIsNull(Res: PZPostgreSQLResult;
@@ -495,9 +495,9 @@ type
     function CloseLargeObject(Handle: PZPostgreSQLConnect;
       Fd: Integer): Integer;
     function ReadLargeObject(Handle: PZPostgreSQLConnect; Fd: Integer;
-      Buffer: PChar; Length: Integer): Integer;
+      Buffer: PAnsiChar; Length: Integer): Integer;
     function WriteLargeObject(Handle: PZPostgreSQLConnect; Fd: Integer;
-      Buffer: PChar; Length: Integer): Integer;
+      Buffer: PAnsiChar; Length: Integer): Integer;
     function SeekLargeObject(Handle: PZPostgreSQLConnect;
       Fd, Offset, Whence: Integer): Integer;
     function CreateLargeObject(Handle: PZPostgreSQLConnect;
@@ -507,9 +507,9 @@ type
     function UnlinkLargeObject(Handle: PZPostgreSQLConnect;
       ObjId: Oid): Integer;
     function ImportLargeObject(Handle: PZPostgreSQLConnect;
-      FileName: PChar): Oid;
+      FileName: PAnsiChar): Oid;
     function ExportLargeObject(Handle: PZPostgreSQLConnect; ObjId: Oid;
-      FileName: PChar): Integer;
+      FileName: PAnsiChar): Integer;
   end;
 
 
@@ -552,7 +552,7 @@ begin
 end;
 
 function TZPostgreSQL7PlainDriver.ConnectDatabase(
-  ConnInfo: PChar): PZPostgreSQLConnect;
+  ConnInfo: PAnsiChar): PZPostgreSQLConnect;
 begin
   Result := ZPlainPostgreSql7.PQconnectdb(ConnInfo);
 end;
@@ -595,13 +595,13 @@ begin
 end;
 
 function TZPostgreSQL7PlainDriver.ExecuteQuery(
-  Handle: PZPostgreSQLConnect; Query: PChar): PZPostgreSQLResult;
+  Handle: PZPostgreSQLConnect; Query: PAnsiChar): PZPostgreSQLResult;
 begin
   Result := ZPlainPostgreSql7.PQexec(Handle, Query);
 end;
 
 function TZPostgreSQL7PlainDriver.ExportLargeObject(
-  Handle: PZPostgreSQLConnect; ObjId: Oid; FileName: PChar): Integer;
+  Handle: PZPostgreSQLConnect; ObjId: Oid; FileName: PAnsiChar): Integer;
 begin
   Result := ZPlainPostgreSql7.lo_export(Handle, ObjId, FileName);
 end;
@@ -629,13 +629,13 @@ begin
 end;
 
 function TZPostgreSQL7PlainDriver.GetCommandStatus(
-  Res: PZPostgreSQLResult): PChar;
+  Res: PZPostgreSQLResult): PAnsiChar;
 begin
   Result := ZPlainPostgreSql7.PQcmdStatus(Res);
 end;
 
 function TZPostgreSQL7PlainDriver.GetCommandTuples(
-  Res: PZPostgreSQLResult): PChar;
+  Res: PZPostgreSQLResult): PAnsiChar;
 begin
   Result := ZPlainPostgreSql7.PQcmdTuples(Res);
 end;
@@ -647,13 +647,13 @@ begin
 end;
 
 function TZPostgreSQL7PlainDriver.GetDatabase(
-  Handle: PZPostgreSQLConnect): PChar;
+  Handle: PZPostgreSQLConnect): PAnsiChar;
 begin
   Result := ZPlainPostgreSql7.PQdb(Handle);
 end;
 
 function TZPostgreSQL7PlainDriver.GetErrorMessage(
-  Handle: PZPostgreSQLConnect): PChar;
+  Handle: PZPostgreSQLConnect): PAnsiChar;
 begin
   Result := ZPlainPostgreSql7.PQerrorMessage(Handle);
 end;
@@ -671,13 +671,13 @@ begin
 end;
 
 function TZPostgreSQL7PlainDriver.GetFieldName(Res: PZPostgreSQLResult;
-  FieldNum: Integer): PChar;
+  FieldNum: Integer): PAnsiChar;
 begin
   Result := ZPlainPostgreSql7.PQfname(Res, FieldNum);
 end;
 
 function TZPostgreSQL7PlainDriver.GetFieldNumber(
-  Res: PZPostgreSQLResult; FieldName: PChar): Integer;
+  Res: PZPostgreSQLResult; FieldName: PAnsiChar): Integer;
 begin
   Result := ZPlainPostgreSql7.PQfnumber(Res, FieldName);
 end;
@@ -695,7 +695,7 @@ begin
 end;
 
 function TZPostgreSQL7PlainDriver.GetHost(
-  Handle: PZPostgreSQLConnect): PChar;
+  Handle: PZPostgreSQLConnect): PAnsiChar;
 begin
   Result := ZPlainPostgreSql7.PQhost(Handle);
 end;
@@ -713,19 +713,19 @@ begin
 end;
 
 function TZPostgreSQL7PlainDriver.GetLine(Handle: PZPostgreSQLConnect;
-  Buffer: PChar; Length: Integer): Integer;
+  Buffer: PAnsiChar; Length: Integer): Integer;
 begin
   Result := ZPlainPostgreSql7.PQgetline(Handle, Buffer, Length);
 end;
 
 function TZPostgreSQL7PlainDriver.GetLineAsync(
-  Handle: PZPostgreSQLConnect; Buffer: PChar; Length: Integer): Integer;
+  Handle: PZPostgreSQLConnect; Buffer: PAnsiChar; Length: Integer): Integer;
 begin
   Result := ZPlainPostgreSql7.PQgetlineAsync(Handle, Buffer, Length);
 end;
 
 function TZPostgreSQL7PlainDriver.GetOidStatus(
-  Res: PZPostgreSQLResult): PChar;
+  Res: PZPostgreSQLResult): PAnsiChar;
 begin
   Result := ZPlainPostgreSql7.PQoidStatus(Res);
 end;
@@ -737,19 +737,19 @@ begin
 end;
 
 function TZPostgreSQL7PlainDriver.GetOptions(
-  Handle: PZPostgreSQLConnect): PChar;
+  Handle: PZPostgreSQLConnect): PAnsiChar;
 begin
   Result := ZPlainPostgreSql7.PQoptions(Handle);
 end;
 
 function TZPostgreSQL7PlainDriver.GetPassword(
-  Handle: PZPostgreSQLConnect): PChar;
+  Handle: PZPostgreSQLConnect): PAnsiChar;
 begin
   Result := ZPlainPostgreSql7.PQpass(Handle);
 end;
 
 function TZPostgreSQL7PlainDriver.GetPort(
-  Handle: PZPostgreSQLConnect): PChar;
+  Handle: PZPostgreSQLConnect): PAnsiChar;
 begin
   Result := ZPlainPostgreSql7.PQport(Handle);
 end;
@@ -760,14 +760,14 @@ begin
   Result := ZPlainPostgreSql7.PQgetResult(Handle);
 end;
 
-function TZPostgreSQL7PlainDriver.GetResultErrorField(Res: PZPostgreSQLResult;  FieldCode: TZPostgreSQLFieldCode): PChar;
+function TZPostgreSQL7PlainDriver.GetResultErrorField(Res: PZPostgreSQLResult;  FieldCode: TZPostgreSQLFieldCode): PAnsiChar;
 begin
  // Not implemented for 7
  result:='';
 end;
 
 function TZPostgreSQL7PlainDriver.GetResultErrorMessage(
-  Res: PZPostgreSQLResult): PChar;
+  Res: PZPostgreSQLResult): PAnsiChar;
 begin
   Result := ZPlainPostgreSql7.PQresultErrorMessage(Res);
 end;
@@ -797,25 +797,25 @@ begin
 end;
 
 function TZPostgreSQL7PlainDriver.GetTTY(
-  Handle: PZPostgreSQLConnect): PChar;
+  Handle: PZPostgreSQLConnect): PAnsiChar;
 begin
   Result := ZPlainPostgreSql7.PQtty(Handle);
 end;
 
 function TZPostgreSQL7PlainDriver.GetUser(
-  Handle: PZPostgreSQLConnect): PChar;
+  Handle: PZPostgreSQLConnect): PAnsiChar;
 begin
   Result := ZPlainPostgreSql7.PQuser(Handle);
 end;
 
 function TZPostgreSQL7PlainDriver.GetValue(Res: PZPostgreSQLResult;
-  TupNum, FieldNum: Integer): PChar;
+  TupNum, FieldNum: Integer): PAnsiChar;
 begin
   Result := ZPlainPostgreSql7.PQgetvalue(Res, TupNum, FieldNum);
 end;
 
 function TZPostgreSQL7PlainDriver.ImportLargeObject(
-  Handle: PZPostgreSQLConnect; FileName: PChar): Oid;
+  Handle: PZPostgreSQLConnect; FileName: PAnsiChar): Oid;
 begin
   Result := ZPlainPostgreSql7.lo_import(Handle, FileName);
 end;
@@ -847,19 +847,19 @@ begin
 end;
 
 function TZPostgreSQL7PlainDriver.PutBytes(Handle: PZPostgreSQLConnect;
-  Buffer: PChar; Length: Integer): Integer;
+  Buffer: PAnsiChar; Length: Integer): Integer;
 begin
   Result := ZPlainPostgreSql7.PQputnbytes(Handle, Buffer, Length);
 end;
 
 function TZPostgreSQL7PlainDriver.PutLine(Handle: PZPostgreSQLConnect;
-  Buffer: PChar): Integer;
+  Buffer: PAnsiChar): Integer;
 begin
   Result := ZPlainPostgreSql7.PQputline(Handle, Buffer);
 end;
 
 function TZPostgreSQL7PlainDriver.ReadLargeObject(
-  Handle: PZPostgreSQLConnect; Fd: Integer; Buffer: PChar;
+  Handle: PZPostgreSQLConnect; Fd: Integer; Buffer: PAnsiChar;
   Length: Integer): Integer;
 begin
   Result := ZPlainPostgreSql7.lo_read(Handle, Fd, Buffer, Length);
@@ -883,13 +883,13 @@ begin
 end;
 
 function TZPostgreSQL7PlainDriver.SendQuery(Handle: PZPostgreSQLConnect;
-  Query: PChar): Integer;
+  Query: PAnsiChar): Integer;
 begin
   Result := ZPlainPostgreSql7.PQsendQuery(Handle, Query);
 end;
 
 function TZPostgreSQL7PlainDriver.SetDatabaseLogin(Host, Port, Options,
-  TTY, Db, User, Passwd: PChar): PZPostgreSQLConnect;
+  TTY, Db, User, Passwd: PAnsiChar): PZPostgreSQLConnect;
 begin
   Result := ZPlainPostgreSql7.PQsetdbLogin(Host, Port, Options, TTY, Db,
     User, Passwd);
@@ -926,7 +926,7 @@ begin
 end;
 
 function TZPostgreSQL7PlainDriver.WriteLargeObject(
-  Handle: PZPostgreSQLConnect; Fd: Integer; Buffer: PChar;
+  Handle: PZPostgreSQLConnect; Fd: Integer; Buffer: PAnsiChar;
   Length: Integer): Integer;
 begin
   Result := ZPlainPostgreSql7.lo_write(Handle, Fd, Buffer, Length);
@@ -966,7 +966,7 @@ begin
 end;
 
 function TZPostgreSQL8PlainDriver.ConnectDatabase(
-  ConnInfo: PChar): PZPostgreSQLConnect;
+  ConnInfo: PAnsiChar): PZPostgreSQLConnect;
 begin
   Result := ZPlainPostgreSql8.PQconnectdb(ConnInfo);
 end;
@@ -984,7 +984,7 @@ begin
 end;
 
 function TZPostgreSQL8PlainDriver.DecodeBYTEA(value: string): string;
-var decoded:pchar;
+var decoded:PAnsiChar;
     len:Longword;
 begin
   decoded:=ZPlainPostgreSql8.PQUnescapeBytea(pansichar(value),@len);
@@ -994,16 +994,15 @@ begin
 end;
 
 function TZPostgreSQL8PlainDriver.EncodeBYTEA(Value: string;Handle: PZPostgreSQLConnect): string;
-var encoded:pchar;
+var encoded:PAnsiChar;
     len:Longword;
     leng:cardinal;
 begin
  leng:=Length(Value);
- if assigned(ZPlainPostgreSql8.PQescapeByteaConn) then begin
-  encoded:=ZPlainPostgreSql8.PQescapeByteaConn(Handle,pansichar(value),leng,@len);
- end else begin
-  encoded:=ZPlainPostgreSql8.PQescapeBytea(pansichar(value),leng,@len);
- end;
+ if assigned(ZPlainPostgreSql8.PQescapeByteaConn) then
+   encoded := ZPlainPostgreSql8.PQescapeByteaConn(Handle, pansichar(value), leng, @len)
+ else
+   encoded:=ZPlainPostgreSql8.PQescapeBytea(pansichar(value),leng,@len);
  setlength(result,len-1);
  StrCopy(pansichar(result),encoded);
  ZPlainPostgreSql8.PQFreemem(encoded);
@@ -1025,13 +1024,13 @@ begin
 end;
 
 function TZPostgreSQL8PlainDriver.ExecuteQuery(
-  Handle: PZPostgreSQLConnect; Query: PChar): PZPostgreSQLResult;
+  Handle: PZPostgreSQLConnect; Query: PAnsiChar): PZPostgreSQLResult;
 begin
   Result := ZPlainPostgreSql8.PQexec(Handle, Query);
 end;
 
 function TZPostgreSQL8PlainDriver.ExportLargeObject(
-  Handle: PZPostgreSQLConnect; ObjId: Oid; FileName: PChar): Integer;
+  Handle: PZPostgreSQLConnect; ObjId: Oid; FileName: PAnsiChar): Integer;
 begin
   Result := ZPlainPostgreSql8.lo_export(Handle, ObjId, FileName);
 end;
@@ -1059,13 +1058,13 @@ begin
 end;
 
 function TZPostgreSQL8PlainDriver.GetCommandStatus(
-  Res: PZPostgreSQLResult): PChar;
+  Res: PZPostgreSQLResult): PAnsiChar;
 begin
   Result := ZPlainPostgreSql8.PQcmdStatus(Res);
 end;
 
 function TZPostgreSQL8PlainDriver.GetCommandTuples(
-  Res: PZPostgreSQLResult): PChar;
+  Res: PZPostgreSQLResult): PAnsiChar;
 begin
   Result := ZPlainPostgreSql8.PQcmdTuples(Res);
 end;
@@ -1077,13 +1076,13 @@ begin
 end;
 
 function TZPostgreSQL8PlainDriver.GetDatabase(
-  Handle: PZPostgreSQLConnect): PChar;
+  Handle: PZPostgreSQLConnect): PAnsiChar;
 begin
   Result := ZPlainPostgreSql8.PQdb(Handle);
 end;
 
 function TZPostgreSQL8PlainDriver.GetErrorMessage(
-  Handle: PZPostgreSQLConnect): PChar;
+  Handle: PZPostgreSQLConnect): PAnsiChar;
 begin
   Result := ZPlainPostgreSql8.PQerrorMessage(Handle);
 end;
@@ -1101,13 +1100,13 @@ begin
 end;
 
 function TZPostgreSQL8PlainDriver.GetFieldName(Res: PZPostgreSQLResult;
-  FieldNum: Integer): PChar;
+  FieldNum: Integer): PAnsiChar;
 begin
   Result := ZPlainPostgreSql8.PQfname(Res, FieldNum);
 end;
 
 function TZPostgreSQL8PlainDriver.GetFieldNumber(
-  Res: PZPostgreSQLResult; FieldName: PChar): Integer;
+  Res: PZPostgreSQLResult; FieldName: PAnsiChar): Integer;
 begin
   Result := ZPlainPostgreSql8.PQfnumber(Res, FieldName);
 end;
@@ -1125,7 +1124,7 @@ begin
 end;
 
 function TZPostgreSQL8PlainDriver.GetHost(
-  Handle: PZPostgreSQLConnect): PChar;
+  Handle: PZPostgreSQLConnect): PAnsiChar;
 begin
   Result := ZPlainPostgreSql8.PQhost(Handle);
 end;
@@ -1143,19 +1142,19 @@ begin
 end;
 
 function TZPostgreSQL8PlainDriver.GetLine(Handle: PZPostgreSQLConnect;
-  Buffer: PChar; Length: Integer): Integer;
+  Buffer: PAnsiChar; Length: Integer): Integer;
 begin
   Result := ZPlainPostgreSql8.PQgetline(Handle, Buffer, Length);
 end;
 
 function TZPostgreSQL8PlainDriver.GetLineAsync(
-  Handle: PZPostgreSQLConnect; Buffer: PChar; Length: Integer): Integer;
+  Handle: PZPostgreSQLConnect; Buffer: PAnsiChar; Length: Integer): Integer;
 begin
   Result := ZPlainPostgreSql8.PQgetlineAsync(Handle, Buffer, Length);
 end;
 
 function TZPostgreSQL8PlainDriver.GetOidStatus(
-  Res: PZPostgreSQLResult): PChar;
+  Res: PZPostgreSQLResult): PAnsiChar;
 begin
   Result := ZPlainPostgreSql8.PQoidStatus(Res);
 end;
@@ -1167,19 +1166,19 @@ begin
 end;
 
 function TZPostgreSQL8PlainDriver.GetOptions(
-  Handle: PZPostgreSQLConnect): PChar;
+  Handle: PZPostgreSQLConnect): PAnsiChar;
 begin
   Result := ZPlainPostgreSql8.PQoptions(Handle);
 end;
 
 function TZPostgreSQL8PlainDriver.GetPassword(
-  Handle: PZPostgreSQLConnect): PChar;
+  Handle: PZPostgreSQLConnect): PAnsiChar;
 begin
   Result := ZPlainPostgreSql8.PQpass(Handle);
 end;
 
 function TZPostgreSQL8PlainDriver.GetPort(
-  Handle: PZPostgreSQLConnect): PChar;
+  Handle: PZPostgreSQLConnect): PAnsiChar;
 begin
   Result := ZPlainPostgreSql8.PQport(Handle);
 end;
@@ -1190,12 +1189,12 @@ begin
   Result := ZPlainPostgreSql8.PQgetResult(Handle);
 end;
 
-function TZPostgreSQL8PlainDriver.GetResultErrorField(Res: PZPostgreSQLResult;  FieldCode: TZPostgreSQLFieldCode): PChar;
+function TZPostgreSQL8PlainDriver.GetResultErrorField(Res: PZPostgreSQLResult;  FieldCode: TZPostgreSQLFieldCode): PAnsiChar;
 begin
   Result := ZPlainPostgreSql8.PQresultErrorField(Res,ord(FieldCode));
 end;
 
-function TZPostgreSQL8PlainDriver.GetResultErrorMessage(Res: PZPostgreSQLResult): PChar;
+function TZPostgreSQL8PlainDriver.GetResultErrorMessage(Res: PZPostgreSQLResult): PAnsiChar;
 begin
   Result := ZPlainPostgreSql8.PQresultErrorMessage(Res);
 end;
@@ -1225,25 +1224,25 @@ begin
 end;
 
 function TZPostgreSQL8PlainDriver.GetTTY(
-  Handle: PZPostgreSQLConnect): PChar;
+  Handle: PZPostgreSQLConnect): PAnsiChar;
 begin
   Result := ZPlainPostgreSql8.PQtty(Handle);
 end;
 
 function TZPostgreSQL8PlainDriver.GetUser(
-  Handle: PZPostgreSQLConnect): PChar;
+  Handle: PZPostgreSQLConnect): PAnsiChar;
 begin
   Result := ZPlainPostgreSql8.PQuser(Handle);
 end;
 
 function TZPostgreSQL8PlainDriver.GetValue(Res: PZPostgreSQLResult;
-  TupNum, FieldNum: Integer): PChar;
+  TupNum, FieldNum: Integer): PAnsiChar;
 begin
   Result := ZPlainPostgreSql8.PQgetvalue(Res, TupNum, FieldNum);
 end;
 
 function TZPostgreSQL8PlainDriver.ImportLargeObject(
-  Handle: PZPostgreSQLConnect; FileName: PChar): Oid;
+  Handle: PZPostgreSQLConnect; FileName: PAnsiChar): Oid;
 begin
   Result := ZPlainPostgreSql8.lo_import(Handle, FileName);
 end;
@@ -1275,19 +1274,19 @@ begin
 end;
 
 function TZPostgreSQL8PlainDriver.PutBytes(Handle: PZPostgreSQLConnect;
-  Buffer: PChar; Length: Integer): Integer;
+  Buffer: PAnsiChar; Length: Integer): Integer;
 begin
   Result := ZPlainPostgreSql8.PQputnbytes(Handle, Buffer, Length);
 end;
 
 function TZPostgreSQL8PlainDriver.PutLine(Handle: PZPostgreSQLConnect;
-  Buffer: PChar): Integer;
+  Buffer: PAnsiChar): Integer;
 begin
   Result := ZPlainPostgreSql8.PQputline(Handle, Buffer);
 end;
 
 function TZPostgreSQL8PlainDriver.ReadLargeObject(
-  Handle: PZPostgreSQLConnect; Fd: Integer; Buffer: PChar;
+  Handle: PZPostgreSQLConnect; Fd: Integer; Buffer: PAnsiChar;
   Length: Integer): Integer;
 begin
   Result := ZPlainPostgreSql8.lo_read(Handle, Fd, Buffer, Length);
@@ -1311,13 +1310,13 @@ begin
 end;
 
 function TZPostgreSQL8PlainDriver.SendQuery(Handle: PZPostgreSQLConnect;
-  Query: PChar): Integer;
+  Query: PAnsiChar): Integer;
 begin
   Result := ZPlainPostgreSql8.PQsendQuery(Handle, Query);
 end;
 
 function TZPostgreSQL8PlainDriver.SetDatabaseLogin(Host, Port, Options,
-  TTY, Db, User, Passwd: PChar): PZPostgreSQLConnect;
+  TTY, Db, User, Passwd: PAnsiChar): PZPostgreSQLConnect;
 begin
   Result := ZPlainPostgreSql8.PQsetdbLogin(Host, Port, Options, TTY, Db,
     User, Passwd);
@@ -1354,7 +1353,7 @@ begin
 end;
 
 function TZPostgreSQL8PlainDriver.WriteLargeObject(
-  Handle: PZPostgreSQLConnect; Fd: Integer; Buffer: PChar;
+  Handle: PZPostgreSQLConnect; Fd: Integer; Buffer: PAnsiChar;
   Length: Integer): Integer;
 begin
   Result := ZPlainPostgreSql8.lo_write(Handle, Fd, Buffer, Length);

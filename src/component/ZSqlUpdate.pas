@@ -286,7 +286,8 @@ begin
   case UpdateKind of
     ukModify: Result := FModifySQL;
     ukInsert: Result := FInsertSQL;
-    else Result := FDeleteSQL;
+  else
+    Result := FDeleteSQL;
   end;
 end;
 
@@ -379,7 +380,8 @@ procedure TZUpdateSQL.DefineProperties(Filer: TFiler);
   begin
     if Filer.Ancestor <> nil then
       Result := not FParams.IsEqual(TZUpdateSQL(Filer.Ancestor).FParams)
-    else Result := FParams.Count > 0;
+    else
+      Result := FParams.Count > 0;
   end;
 
 begin
@@ -508,12 +510,14 @@ begin
 end;
 
 procedure TZUpdateSQL.RefreshCurrentRow(Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);
-var Config: TZSQLStrings;
+var
+    Config: TZSQLStrings;
     Statement: IZPreparedStatement;
     RefreshResultSet: IZResultSet;
 begin
  Config:=FRefreshSQL;
- if CONFIG.StatementCount=1 then begin
+ if CONFIG.StatementCount=1 then
+ begin
   Statement := Sender.GetStatement.GetConnection.PrepareStatement(Config.Statements[0].SQL);
   FillStatement(Sender, Statement, Config.Statements[0],RowAccessor, RowAccessor);
   RefreshResultSet:=Statement.ExecuteQueryPrepared;
@@ -544,23 +548,28 @@ var
   TempBlob: IZBlob;
 begin
   WasNull := False;
-  for I := 0 to Config.ParamCount - 1 do begin
+  for I := 0 to Config.ParamCount - 1 do
+  begin
     ParamValue := Params.FindParam(Config.ParamNames[I]);
     ParamName := Config.ParamNames[I];
     OldParam := False;{Seqparam:=False;}
-    if StrLIComp(PChar(ParamName), 'NEW_', 4) = 0 then begin
+    if StrLIComp(PChar(ParamName), 'NEW_', 4) = 0 then
+    begin
       ParamName := Copy(ParamName, 5, Length(ParamName) - 4)
-    end else
-    if StrLIComp(PChar(ParamName), 'OLD_', 4) = 0 then begin
+    end
+    else if StrLIComp(PChar(ParamName), 'OLD_', 4) = 0 then
+    begin
       ParamName := Copy(ParamName, 5, Length(ParamName) - 4);
       OldParam := True;
     end;
 
     ColumnIndex := ResultSet.FindColumn(ParamName);
-    if ColumnIndex > 0 then begin
+    if ColumnIndex > 0 then
+    begin
       if OldParam then
         RowAccessor := OldRowAccessor
-      else RowAccessor := NewRowAccessor;
+      else
+        RowAccessor := NewRowAccessor;
 
       if StrToBoolEx(DefineStatementParameter(
         ResultSet.GetStatement, 'defaults', 'true')) then
@@ -627,10 +636,13 @@ begin
         Statement.SetNull(I + 1,
           ResultSet.GetMetadata.GetColumnType(ColumnIndex))
       end;
-    end else begin
+    end
+    else
+    begin
       if ParamValue.IsNull then
         Statement.SetNull(I + 1, ConvertDatasetToDbcType(ParamValue.DataType))
-      else begin
+      else
+      begin
         case ParamValue.DataType of
           ftBoolean:
             Statement.SetBoolean(I + 1, ParamValue.AsBoolean);
@@ -724,8 +736,12 @@ begin
             stLong: RefreshRowAccessor.SetLong(RefreshColumnIndex, RefreshResultSet.GetLong(I));
             stFloat: RefreshRowAccessor.SetFloat(RefreshColumnIndex, RefreshResultSet.GetFloat(I));
             stDouble: RefreshRowAccessor.SetDouble(RefreshColumnIndex, RefreshResultSet.GetDouble(I));
-            stBigDecimal: RefreshRowAccessor.SetBigDecimal(RefreshColumnIndex, RefreshResultSet.GetBigDecimal(I));
-            stString: RefreshRowAccessor.SetPChar(RefreshColumnIndex, RefreshResultSet.GetPChar(I));
+               stBigDecimal:
+                  RefreshRowAccessor.SetBigDecimal(RefreshColumnIndex,
+                  RefreshResultSet.GetBigDecimal(I));
+               // gto: do we need PChar here?
+			   //stString: RefreshRowAccessor.SetPChar(RefreshColumnIndex, RefreshResultSet.GetPChar(I));
+			   stString: RefreshRowAccessor.SetString(RefreshColumnIndex, RefreshResultSet.GetString(I));
             stUnicodeString: RefreshRowAccessor.SetUnicodeString(RefreshColumnIndex, RefreshResultSet.GetUnicodeString(I));
             stBytes: RefreshRowAccessor.SetBytes(RefreshColumnIndex, RefreshResultSet.GetBytes(I));
             stDate: RefreshRowAccessor.SetDate(RefreshColumnIndex, RefreshResultSet.GetDate(I));
@@ -760,7 +776,8 @@ end;
 }
 procedure TZUpdateSQL.PostUpdates(Sender: IZCachedResultSet;
  UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
-var I: Integer;
+var
+    I: Integer;
     Statement: IZPreparedStatement;
     Config: TZSQLStrings;
     CalcDefaultValues,

@@ -89,7 +89,7 @@ type
     function GetCursorName: string; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetString(ColumnIndex: Integer): string; override;
+    function GetString(ColumnIndex: Integer): AnsiString; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -123,7 +123,7 @@ type
     function IsEmpty: Boolean; override;
     function Clone: IZBlob; override;
     function GetStream: TStream; override;
-    function GetString: string; override;
+    function GetString: AnsiString; override;
     function GetUnicodeString: WideString; override;
     function GetBytes: TByteDynArray; override;
   end;
@@ -252,7 +252,8 @@ begin
   CheckBlobColumn(ColumnIndex);
 
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then Exit;
+  if LastWasNull then
+      Exit;
 
   if FCachedBlob then
   begin
@@ -266,7 +267,8 @@ begin
       FreeMem(Buffer, Size);
     end;
   end
-  else begin
+  else
+  begin
     BlobId := FSqlData.GetQuad(ColumnIndex - 1);
     Result := TZInterbase6Blob.Create(FIBConnection, BlobId);
   end;
@@ -436,7 +438,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZInterbase6ResultSet.GetString(ColumnIndex: Integer): string;
+function TZInterbase6ResultSet.GetString(ColumnIndex: Integer): AnsiString;
 begin
   CheckClosed;
   CheckColumnConvertion(ColumnIndex, stString);
@@ -604,7 +606,8 @@ begin
 
       if IsNullable(I) then
         Nullable := ntNullable
-      else Nullable := ntNoNulls;
+      else
+        Nullable := ntNoNulls;
 
       Scale := GetFieldScale(I);
       AutoIncrement := False;
@@ -653,7 +656,7 @@ begin
   Result := inherited GetStream;
 end;
 
-function TZInterbase6Blob.GetString: string;
+function TZInterbase6Blob.GetString: AnsiString;
 begin
   ReadBlob;
   Result := inherited GetString;

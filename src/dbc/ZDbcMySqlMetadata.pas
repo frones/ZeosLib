@@ -64,7 +64,7 @@ uses
 {$ENDIF}
   Classes, SysUtils, ZClasses, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
   ZDbcResultSet, ZDbcCachedResultSet, ZDbcResultSetMetadata,
-  ZCompatibility, ZDbcConnection;
+   ZCompatibility, ZDbcConnection{$IFDEF MS_WINDOWS}, Windows{$ENDIF};
 
 type
 
@@ -870,7 +870,8 @@ begin
     tiReadCommitted: Result := True;
     tiRepeatableRead: Result := True;
     tiSerializable: Result := True;
-    else Result := False;
+  else
+    Result := False;
   end;
 end;
 
@@ -1222,7 +1223,8 @@ begin
               PutSplitString(TypeInfoList, TypeInfo, '()');
               TypeInfoFirst := TypeInfoList.Strings[0];
               TypeInfoSecond := TypeInfoList.Strings[1];
-            end else
+            end
+            else
               TypeInfoFirst := TypeInfo;
 
             TypeInfoFirst := LowerCase(TypeInfoFirst);
@@ -1339,17 +1341,22 @@ begin
             end;
             Result.UpdateString(12, GetStringByName('Extra'));
             // MySQL is a bit bizarre.
-            if IsNullByName('Default') then begin
+            if IsNullByName('Default') then
+            begin
               // MySQL bizarity 1:
               // NULL actually means that the default is NULL.
               // Superfluous, since there's a NULL / NOT NULL flag to control whether the field may have no value.
               // So we just ignore this, the field gets set to NULL if nothing was specified...
               HasDefaultValue := false;
               DefaultValue := '';
-            end else begin
+            end
+            else
+            begin
               DefaultValue := GetStringByName('Default');
-              if not (DefaultValue = '') then HasDefaultValue := true
-              else begin
+              if not (DefaultValue = '') then
+                 HasDefaultValue := true
+              else
+              begin
                 // MySQL bizarity 2:
                 // For CHAR, BLOB, TEXT and SET types, '' either means: default value is '' or: no default value
                 // There's absolutely no way of telling when using SHOW COLUMNS FROM,
@@ -1362,24 +1369,27 @@ begin
                 if Pos('text', TypeInfoFirst) > 0 then HasDefaultValue := true;
                 if Pos('char', TypeInfoFirst) > 0 then HasDefaultValue := true;
                 if 'set' = TypeInfoFirst then HasDefaultValue := true;
-                if 'enum' =  TypeInfoFirst then begin
-                  HasDefaultValue := true;
-                  DefaultValue := Copy(TypeInfoSecond, 2,length(TypeInfoSecond)-1);
-                  DefaultValue := Copy(DefaultValue, 1, Pos('''', DefaultValue) - 1);
-                end;
+                if 'enum' =  TypeInfoFirst then
+                  begin
+                    HasDefaultValue := true;
+                    DefaultValue := Copy(TypeInfoSecond, 2,length(TypeInfoSecond)-1);
+                    DefaultValue := Copy(DefaultValue, 1, Pos('''', DefaultValue) - 1);
+                  end;
               end;
             end;
             if HasDefaultValue then
             begin
               // String values in the 'Default value' field are not escaped with apostrophes.
               // Guess this makes it impossible to specify a function call or similar via default values.
-              if (MySQLType in [stString, stUnicodeString, stBinaryStream, stAsciiStream]) then begin
+              if (MySQLType in [stString, stUnicodeString, stBinaryStream, stAsciiStream]) then
+              begin
                 // Since we changed date/time-related columntypes to be presented
                 // as strings, we need to move the CURRENT_TIMESTAMP-check to here.
                 // Also left the other line in order to minimize the changes in ZeosLib
                 if DefaultValue <> 'CURRENT_TIMESTAMP' then
                 DefaultValue := '''' + DefaultValue + ''''
-              end else if (MySQLType in [stDate, stTime, stTimestamp]) then
+              end
+              else if (MySQLType in [stDate, stTime, stTimestamp]) then
               begin
                 if DefaultValue <> 'CURRENT_TIMESTAMP' then
                   DefaultValue := '''' + DefaultValue + ''''
@@ -1388,7 +1398,8 @@ begin
               begin
                 if (DefaultValue = 'y') or (DefaultValue = 'Y') then
                   DefaultValue := '1'
-                else DefaultValue := '0';
+                else
+                  DefaultValue := '0';
               end;
             end;
               Result.UpdateString(13, DefaultValue);
@@ -2077,17 +2088,20 @@ begin
                   Result.UpdateString(5, LForeignCatalog);
                   if ForeignSchema = '' then
                     Result.UpdateNull(6) // FKTABLE_SCHEM
-                  else Result.UpdateString(6, ForeignSchema);
+                  else
+                    Result.UpdateString(6, ForeignSchema);
                   if ForeignTable <> GetStringByName('Name') then
                     Continue
-                  else Result.UpdateString(7, GetStringByName('Name')); // FKTABLE_NAME
+                  else
+                    Result.UpdateString(7, GetStringByName('Name')); // FKTABLE_NAME
 
                   Result.UpdateString(8, KeyList.Strings[0]); // PKTABLE_CAT
 
                   Result.UpdateString(1, KeyList.Strings[2]); // PKTABLE_CAT
                   if PrimarySchema = '' then
                     Result.UpdateNull(2) // PKTABLE_SCHEM
-                  else Result.UpdateString(2, PrimarySchema); // PKTABLE_SCHEM
+                  else
+                    Result.UpdateString(2, PrimarySchema); // PKTABLE_SCHEM
 
                   if PrimaryTable = KeyList.Strings[3] then
                     Continue;
@@ -2199,7 +2213,8 @@ begin
       Result.UpdateInt(2, Ord(TypeCodes[I]));
       if TypePrecision[I] >= 0 then
         Result.UpdateInt(3, TypePrecision[I])
-      else Result.UpdateNull(3);
+      else
+        Result.UpdateNull(3);
       if TypeCodes[I] in [stString, stBytes, stDate, stTime,
         stTimeStamp, stBinaryStream, stAsciiStream] then
       begin
@@ -2316,7 +2331,8 @@ begin
         Result.UpdateString(3, GetStringByName('Table'));
         if GetIntByName('Non_unique') = 0 then
           Result.UpdateString(4, 'true')
-        else Result.UpdateString(4, 'false');
+        else
+          Result.UpdateString(4, 'false');
         Result.UpdateNull(5);
         Result.UpdateString(6, GetStringByName('Key_name'));
         Result.UpdateInt(7, Ord(tiOther));

@@ -396,7 +396,8 @@ begin
         vtBoolean:
           if Value.VBoolean then
             Result.VInteger := 1
-          else Result.VInteger := 0;
+          else
+            Result.VInteger := 0;
         vtInteger:
           Result.VInteger := Value.VInteger;
         else
@@ -409,7 +410,8 @@ begin
         vtBoolean:
           if Value.VBoolean then
             Result.VFloat := 1
-          else Result.VFloat := 0;
+          else
+            Result.VFloat := 0;
         vtInteger:
           Result.VFloat := Value.VInteger;
         vtFloat:
@@ -491,7 +493,8 @@ begin
       begin
         if IsNull(Value2) then
           Result := 0
-        else Result := -1;
+        else
+          Result := -1;
       end;
     vtBoolean:
       begin
@@ -499,13 +502,15 @@ begin
         begin
           if Value1.VBoolean then
             Result := 0
-          else Result := -1;
+          else
+            Result := -1;
         end
         else
         begin
           if Value1.VBoolean then
             Result := 1
-          else Result := 0;
+          else
+            Result := 0;
         end;
       end;
     vtInteger:
@@ -517,7 +522,8 @@ begin
           Result := -1
         else if Value1.VFloat - TempFloat > FLOAT_COMPARE_PRECISION then
           Result := 1
-        else Result := 0;
+        else
+          Result := 0;
       end;
     vtString:
       Result := AnsiCompareStr(Value1.VString, GetAsString(Value2));
@@ -538,7 +544,8 @@ begin
           Result := -1
         else if Value1.VDateTime > TempDateTime then
           Result := 1
-        else Result := 0;
+        else
+          Result := 0;
       end;
     vtPointer:
       Result := LongInt(Value1.VPointer) - GetAsInteger(Value2);
@@ -1127,7 +1134,8 @@ begin
         vtBoolean:
           if Value.VBoolean then
             Result.VInteger := 1
-          else Result.VInteger := 0;
+          else
+            Result.VInteger := 0;
         vtInteger:
           Result.VInteger := Value.VInteger;
         vtFloat:
@@ -1150,7 +1158,8 @@ begin
         vtBoolean:
           if Value.VBoolean then
             Result.VFloat := 1
-          else Result.VFloat := 0;
+          else
+            Result.VFloat := 0;
         vtInteger:
           Result.VFloat := Value.VInteger;
         vtFloat:
@@ -1173,7 +1182,8 @@ begin
         vtBoolean:
           if Value.VBoolean then
             Result.VString := 'TRUE'
-          else Result.VString := 'FALSE';
+          else
+            Result.VString := 'FALSE';
         vtInteger:
           Result.VString := IntToStr(Value.VInteger);
           // gto: Not a real threat, as it's converting numbers (unicode safe)
@@ -1204,7 +1214,8 @@ begin
         vtBoolean:
           if Value.VBoolean then
             Result.VUnicodeString := 'True'
-          else Result.VUnicodeString := 'False';
+          else
+            Result.VUnicodeString := 'False';
         vtInteger:
           Result.VUnicodeString := IntToStr(Value.VInteger);
         vtFloat:
@@ -1378,9 +1389,11 @@ begin
     begin
       Result := SoftVarManager.Compare(FValue, Temp.GetValue) = 0;
       Temp := nil;
-    end else
+    end
+    else
       Result := inherited Equals(Value);
-  end else
+  end
+  else
     Result := False;
 end;
 
@@ -1481,14 +1494,16 @@ begin
     vtInteger:
       if (Value.VInteger > -MaxInt) and (Value.VInteger < MaxInt) then
         Result := Integer(Value.VInteger)
-      else Result := IntToStr(Value.VInteger);
+      else
+        Result := IntToStr(Value.VInteger);
     vtFloat: Result := Value.VFloat;
     vtString: Result := Value.VString;
     vtUnicodeString: Result := Value.VUnicodeString;
     vtDateTime: Result := Value.VDateTime;
     vtPointer: Result := LongInt(Value.VPointer);
     vtInterface: Result := Value.VInterface;
-    else Result := Null;
+  else
+    Result := Null;
   end;
 end;
 
@@ -1533,7 +1548,8 @@ begin
     varShortInt, varWord, varLongWord:
       DefVarManager.SetAsInteger(Result, Value);
     varInt64: DefVarManager.SetAsInteger(Result, Value);
-    else DefVarManager.SetNull(Result);
+  else
+    DefVarManager.SetNull(Result);
   end;
 end;
 

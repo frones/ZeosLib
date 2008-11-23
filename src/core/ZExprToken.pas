@@ -145,7 +145,11 @@ var
     LastChar := #0;
     while Stream.Read(LastChar, 1 * SizeOf(Char)) > 0 do
     begin
+{$IFDEF ZEOS_FULL_UNICODE}
+         if CharInSet(LastChar, ['0'..'9']) then
+{$ELSE}
       if LastChar in ['0'..'9'] then
+{$ENDIF}
       begin
         Result := Result + LastChar;
         LastChar := #0;
@@ -181,14 +185,22 @@ begin
     Result.Value := Result.Value + ReadDecDigits;
 
   { Reads a power part of the number }
+{$IFDEF ZEOS_FULL_UNICODE}
+   if CharInSet(LastChar, ['e', 'E']) then
+{$ELSE}
   if LastChar in ['e','E'] then
+{$ENDIF}
   begin
     Stream.Read(TempChar, 1 * SizeOf(Char));
     Result.Value := Result.Value + TempChar;
     FloatPoint := True;
 
     Stream.Read(TempChar, 1 * SizeOf(Char));
+{$IFDEF ZEOS_FULL_UNICODE}
+      if CharInSet(TempChar, ['0'..'9', '-', '+']) then
+{$ELSE}
     if TempChar in ['0'..'9','-','+'] then
+{$ENDIF}
       Result.Value := Result.Value + TempChar + ReadDecDigits
     else
     begin
@@ -207,7 +219,8 @@ begin
   begin
     if FloatPoint then
       Result.TokenType := ttFloat
-    else Result.TokenType := ttInteger;
+      else
+         Result.TokenType := ttInteger;
   end;
 end;
 
@@ -228,7 +241,8 @@ var
 begin
   if FirstChar = '"' then
     Result.TokenType := ttWord
-  else Result.TokenType := ttQuoted;
+   else
+      Result.TokenType := ttQuoted;
   Result.Value := FirstChar;
   LastChar := #0;
 
@@ -244,7 +258,8 @@ begin
       LastChar := #0
     else if (LastChar = FirstChar) and (ReadChar = FirstChar) then
       LastChar := #0
-    else LastChar := ReadChar;
+      else
+         LastChar := ReadChar;
   end;
 end;
 
@@ -257,9 +272,14 @@ end;
 function TZExpressionQuoteState.EncodeString(const Value: string;
   QuoteChar: Char): string;
 begin
+{$IFDEF ZEOS_FULL_UNICODE}
+   if CharInSet(QuoteChar, ['''', '"']) then
+{$ELSE}
   if QuoteChar in ['''', '"'] then
+{$ENDIF}
     Result := QuoteChar + EncodeCString(Value) + QuoteChar
-  else Result := Value;
+   else
+      Result := Value;
 end;
 
 {**
@@ -271,10 +291,16 @@ end;
 function TZExpressionQuoteState.DecodeString(const Value: string;
   QuoteChar: Char): string;
 begin
+{$IFDEF ZEOS_FULL_UNICODE}
+   if (Length(Value) >= 2) and CharInSet(QuoteChar, ['''', '"'])
+      and (Value[1] = QuoteChar) and (Value[Length(Value)] = QuoteChar) then
+{$ELSE}
   if (Length(Value) >= 2) and (QuoteChar in ['''', '"'])
     and (Value[1] = QuoteChar) and (Value[Length(Value)] = QuoteChar) then
+{$ENDIF}
     Result := DecodeCString(Copy(Value, 2, Length(Value) - 2))
-  else Result := Value;
+   else
+      Result := Value;
 end;
 
 { TZExpressionCommentState }

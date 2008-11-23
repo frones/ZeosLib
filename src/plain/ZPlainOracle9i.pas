@@ -85,7 +85,7 @@ type
   sb1     = ShortInt;
   ub1     = Byte;
   dvoid   = Pointer;
-  text    = PChar;
+  text    = PAnsiChar;
   size_T  = Integer;
 
   pub1 = ^ub1;

@@ -59,6 +59,9 @@ interface
 {$I ZComponent.inc}
 
 uses
+{$IFDEF MSWINDOWS}
+  Windows,
+{$ENDIF}
 {$IFNDEF FPC}
   Types,
 {$ENDIF}

@@ -1358,8 +1358,8 @@ begin
     LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,
       'PP.RDB$PARAMETER_NAME');
 
-    if (StrPos(PChar(GetDatabaseInfo.GetServerVersion), 'Interbase 5') <> nil)
-       or (StrPos(PChar(GetDatabaseInfo.GetServerVersion), 'V5.0')<>nil) then
+  if (StrPos(PAnsiChar(GetDatabaseInfo.GetServerVersion), 'Interbase 5') <> nil)
+     or (StrPos(PAnsiChar(GetDatabaseInfo.GetServerVersion), 'V5.0') <> nil) then
     begin
       SQL := ' SELECT P.RDB$PROCEDURE_NAME, PP.RDB$PARAMETER_NAME,'
         + ' PP.RDB$PARAMETER_TYPE, F.RDB$FIELD_TYPE, F.RDB$FIELD_SUB_TYPE,'
@@ -1375,7 +1375,8 @@ begin
       begin
         if Where = '' then
           Where := LColumnNamePattern
-        else Where := Where + ' AND ' + LColumnNamePattern;
+        else
+          Where := Where + ' AND ' + LColumnNamePattern;
       end;
       if Where <> '' then
         Where := ' WHERE ' + Where;
@@ -1398,7 +1399,8 @@ begin
       begin
         if Where = '' then
           Where := LColumnNamePattern
-        else Where := Where + ' AND ' + LColumnNamePattern;
+        else
+          Where := Where + ' AND ' + LColumnNamePattern;
       end;
       if Where <> '' then
         Where := ' WHERE ' + Where;
@@ -1425,7 +1427,8 @@ begin
         case GetIntByName('RDB$PARAMETER_TYPE') of
           0: Result.UpdateInt(5, 1);//ptInput
           1: Result.UpdateInt(5, 4);//ptResult
-          else Result.UpdateInt(5, 0);//ptUnknown
+        else
+            Result.UpdateInt(5, 0); //ptUnknown
         end;
 
         Result.UpdateInt(6,
@@ -1512,8 +1515,10 @@ begin
           BLR := GetBlobByName('RDB$VIEW_SOURCE');
           if BLR.IsEmpty then
             TableType := 'TABLE'
-          else TableType := 'VIEW';
-        end else
+          else
+            TableType := 'VIEW';
+        end
+        else
           TableType := 'SYSTEM TABLE';
 
         if Length(Types) = 0 then
@@ -1526,7 +1531,8 @@ begin
           Result.UpdateString(5, Copy(GetStringByName('RDB$DESCRIPTION'),1,255));
           Result.InsertRow;
         end
-        else begin
+        else
+        begin
           for I := 0 to High(Types) do
           begin
             if Types[I] = TableType then
@@ -1643,8 +1649,8 @@ begin
     LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,
       'a.RDB$FIELD_NAME');
 
-    if (StrPos(PChar(GetDatabaseInfo.GetServerVersion), 'Interbase 5') <> nil)
-       or (StrPos(PChar(GetDatabaseInfo.GetServerVersion), 'V5.0')<>nil) then
+  if (StrPos(PAnsiChar(GetDatabaseInfo.GetServerVersion), 'Interbase 5') <> nil)
+     or (StrPos(PAnsiChar(GetDatabaseInfo.GetServerVersion), 'V5.0') <> nil) then
     begin
       SQL := 'SELECT a.RDB$RELATION_NAME, a.RDB$FIELD_NAME, a.RDB$FIELD_POSITION,'
         + ' a.RDB$NULL_FLAG, b. RDB$FIELD_LENGTH, b.RDB$FIELD_SCALE,'
@@ -1662,7 +1668,8 @@ begin
       begin
         if Where = '' then
           Where := LColumnNamePattern
-        else Where := Where + ' AND ' + LColumnNamePattern;
+        else
+          Where := Where + ' AND ' + LColumnNamePattern;
       end;
       if Where <> '' then
         Where := ' WHERE ' + Where;
@@ -1687,7 +1694,8 @@ begin
       begin
         if Where = '' then
           Where := LColumnNamePattern
-        else Where := Where + ' AND ' + LColumnNamePattern;
+        else
+          Where := Where + ' AND ' + LColumnNamePattern;
       end;
       if Where <> '' then
         Where := ' WHERE ' + Where;
@@ -1743,26 +1751,30 @@ begin
                 Result.UpdateString(6, 'DECIMAL');
             end;
           37 : Result.UpdateString(6, 'VARCHAR'); // Instead of VARYING
-          else Result.UpdateString(6, GetStringByName('RDB$TYPE_NAME'));
+        else
+            Result.UpdateString(6, GetStringByName('RDB$TYPE_NAME'));
         end;
         // COLUMN_SIZE.
         case TypeName of
           7, 8 : Result.UpdateInt(7, 0);
           16   : Result.UpdateInt(7, GetIntByName('RDB$FIELD_PRECISION'));
-          else Result.UpdateInt(7, GetIntByName('RDB$FIELD_LENGTH'));
+        else
+            Result.UpdateInt(7, GetIntByName('RDB$FIELD_LENGTH'));
         end;
 
         Result.UpdateNull(8);    //BUFFER_LENGTH
 
         if FieldScale < 0 then
           Result.UpdateInt(9, -1 * FieldScale)    //DECIMAL_DIGITS
-        else Result.UpdateInt(9, 0);    //DECIMAL_DIGITS
+        else
+          Result.UpdateInt(9, 0); //DECIMAL_DIGITS
 
         Result.UpdateInt(10, 10);   //NUM_PREC_RADIX
 
         if GetIntByName('RDB$NULL_FLAG') <> 0 then
           Result.UpdateInt(11, Ord(ntNoNulls))   //NULLABLE
-        else Result.UpdateInt(11, Ord(ntNullable));
+        else
+          Result.UpdateInt(11, Ord(ntNullable));
 
         Result.UpdateString(12,
           Copy(GetStringByName('RDB$DESCRIPTION'),1,255));   //REMARKS
@@ -1776,7 +1788,8 @@ begin
 
         if IsNullByName('RDB$NULL_FLAG') then
           Result.UpdateString(18, 'YES')   //IS_NULLABLE
-        else Result.UpdateString(18, 'NO');   //IS_NULLABLE
+        else
+          Result.UpdateString(18, 'NO'); //IS_NULLABLE
 
         Result.UpdateNullByName('AUTO_INCREMENT');
 
@@ -1870,7 +1883,8 @@ begin
 
         if Grantor = Grantee then
           Grantable := 'YES'
-        else Grantable := 'NO';
+        else
+          Grantable := 'NO';
         if FieldName = '' then
         begin
           SQL := 'SELECT RDB$FIELD_NAME FROM RDB$RELATION_FIELDS '
@@ -1977,7 +1991,8 @@ begin
 
         if Grantor = Grantee then
           Grantable := 'YES'
-        else Grantable := 'NO';
+        else
+          Grantable := 'NO';
 
         Result.MoveToInsertRow;
         Result.UpdateNull(1);
@@ -2603,7 +2618,8 @@ begin
     Result := 'DELETE'
   else if Privilege = 'R' then
     Result := 'REFERENCE'
-  else Result := '';
+  else
+    Result := '';
 end;
 
 {**
@@ -2622,7 +2638,8 @@ begin
   if (Length(Pattern) > 2 * 31) then
     raise EZSQLException.Create(SPattern2Long);
 
-  if (Pattern = '%') or (Pattern = '') then Exit;
+  if (Pattern = '%') or (Pattern = '') then
+     Exit;
 
   if HasNoWildcards(Pattern) then
   begin
@@ -2689,13 +2706,15 @@ begin
     begin
       Result := Result + Pattern[I];
       PreviousChar := Pattern[I];
-    end else
+    end
+    else
     begin
       if (PreviousChar = EscapeChar) then
       begin
         Result := Result + Pattern[I];
         PreviousChar := '';
-      end else
+      end
+      else
         PreviousChar := Pattern[i];
     end;
   end;

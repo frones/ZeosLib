@@ -162,7 +162,7 @@ function ConvertOracleTypeToSQLType(TypeName: string;
   @param Value a pointer to Oracle internal date.
   @return a decoded TDateTime value.
 }
-function OraDateToDateTime(Value: PChar): TDateTime;
+function OraDateToDateTime(Value: PAnsiChar): TDateTime;
 
 {**
   Checks for possible SQL errors.
@@ -356,11 +356,14 @@ begin
         begin
           if Variable.ColType = stAsciiStream then
             Variable.TypeCode := SQLT_LVC
-          else Variable.TypeCode := SQLT_LVB;
+          else
+            Variable.TypeCode := SQLT_LVB;
           if Variable.DataSize = 0 then
             Length := 128 * 1024 + SizeOf(Integer)
-          else Length := Variable.DataSize + SizeOf(Integer);
-        end else
+          else
+            Length := Variable.DataSize + SizeOf(Integer);
+        end
+        else
           Length := SizeOf(POCILobLocator);
       end;
     stUnknown:
@@ -428,8 +431,8 @@ begin
           end;
         SQLT_STR:
           begin
-            StrLCopy(PChar(CurrentVar.Data),
-              PChar(DefVarManager.GetAsString(Values[I])), 1024);
+            StrLCopy(PAnsiChar(CurrentVar.Data),
+                PAnsiChar(DefVarManager.GetAsString(Values[I])), 1024);
           end;
         SQLT_TIMESTAMP:
           begin
@@ -592,8 +595,10 @@ begin
         Result := stShort
       else if Size <= 9 then
         Result := stInteger
-      else Result := stLong
-    end else
+      else
+        Result := stLong
+    end
+    else
       Result := stDouble;
   end;
 end;
@@ -603,7 +608,7 @@ end;
   @param Value a pointer to Oracle internal date.
   @return a decoded TDateTime value.
 }
-function OraDateToDateTime(Value: PChar): TDateTime;
+function OraDateToDateTime(Value: PAnsiChar): TDateTime;
 type
   TOraDate = array[1..7] of Byte;
   POraDate = ^TOraDate;
@@ -628,7 +633,7 @@ procedure CheckOracleError(PlainDriver: IZOraclePlainDriver;
   LogMessage: string);
 var
   ErrorMessage: string;
-  ErrorBuffer: array[0..255] of Char;
+  ErrorBuffer: array[0..255] of AnsiChar;
   ErrorCode: SB4;
 begin
   ErrorMessage := '';
@@ -688,7 +693,8 @@ begin
     CachedResultSet.SetResolver(TZOracleCachedResolver.Create(
       Statement, NativeResultSet.GetMetadata));
     Result := CachedResultSet;
-  end else
+  end
+  else
     Result := NativeResultSet;
 end;
 
@@ -746,7 +752,7 @@ procedure PrepareOracleStatement(PlainDriver: IZOraclePlainDriver;
 var
   Status: Integer;
 begin
-  Status := PlainDriver.StmtPrepare(Handle, ErrorHandle, PChar(SQL),
+  Status := PlainDriver.StmtPrepare(Handle, ErrorHandle, PAnsiChar(SQL),
     Length(SQL), OCI_NTV_SYNTAX, OCI_DEFAULT);
   CheckOracleError(PlainDriver, ErrorHandle, Status, lcExecute, SQL);
 end;

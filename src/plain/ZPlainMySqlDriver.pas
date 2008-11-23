@@ -158,16 +158,16 @@ type
     function GetAffectedRows(Handle: PZMySQLConnect): Int64;
     // char_set_name
     procedure Close(Handle: PZMySQLConnect);
-    function Connect(Handle: PZMySQLConnect; const Host, User, Password: PChar): PZMySQLConnect;
-    function CreateDatabase(Handle: PZMySQLConnect; const Database: PChar): Integer;
+    function Connect(Handle: PZMySQLConnect; const Host, User, Password: PAnsiChar): PZMySQLConnect;
+    function CreateDatabase(Handle: PZMySQLConnect; const Database: PAnsiChar): Integer;
     procedure SeekData(Res: PZMySQLResult; Offset: Cardinal);
-    procedure Debug(Debug: PChar);
-    function DropDatabase(Handle: PZMySQLConnect; const Database: PChar): Integer;
+    procedure Debug(Debug: PAnsiChar);
+    function DropDatabase(Handle: PZMySQLConnect; const Database: PAnsiChar): Integer;
     function DumpDebugInfo(Handle: PZMySQLConnect): Integer;
     // eof
     function GetLastErrorCode(Handle: PZMySQLConnect): Integer;
-    function GetLastError(Handle: PZMySQLConnect): PChar;
-    function GetEscapeString(StrTo, StrFrom: PChar; Length: Cardinal): Cardinal;
+    function GetLastError(Handle: PZMySQLConnect): PAnsiChar;
+    function GetEscapeString(StrTo, StrFrom: PAnsiChar; Length: Cardinal): Cardinal;
     function FetchField(Res: PZMySQLResult): PZMySQLField;
     // fetch_field_direct
     // fetch_fields
@@ -176,32 +176,32 @@ type
     function SeekField(Res: PZMySQLResult; Offset: Cardinal): Cardinal;
     // field_tell
     procedure FreeResult(Res: PZMySQLResult);
-    function GetClientInfo: PChar;
-    function GetHostInfo(Handle: PZMySQLConnect): PChar;
+    function GetClientInfo: PAnsiChar;
+    function GetHostInfo(Handle: PZMySQLConnect): PAnsiChar;
     function GetProtoInfo(Handle: PZMySQLConnect): Cardinal;
-    function GetServerInfo(Handle: PZMySQLConnect): PChar;
+    function GetServerInfo(Handle: PZMySQLConnect): PAnsiChar;
     // info
     function Init(var Handle: PZMySQLConnect): PZMySQLConnect;
     function GetLastInsertID (Handle: PZMySQLConnect): Int64;
     function Kill(Handle: PZMySQLConnect; Pid: LongInt): Integer;
-    function GetListDatabases(Handle: PZMySQLConnect; Wild: PChar): PZMySQLResult;
-    function GetListFields(Handle: PZMySQLConnect; const Table, Wild: PChar): PZMySQLResult;
+    function GetListDatabases(Handle: PZMySQLConnect; Wild: PAnsiChar): PZMySQLResult;
+    function GetListFields(Handle: PZMySQLConnect; const Table, Wild: PAnsiChar): PZMySQLResult;
     function GetListProcesses(Handle: PZMySQLConnect): PZMySQLResult;
-    function GetListTables(Handle: PZMySQLConnect; const Wild: PChar): PZMySQLResult;
+    function GetListTables(Handle: PZMySQLConnect; const Wild: PAnsiChar): PZMySQLResult;
     // num_fields
     function GetNumRows(Res: PZMySQLResult): Int64;
-    function SetOptions(Handle: PZMySQLConnect; Option: TZMySQLOption; const Arg: PChar): Integer;
+    function SetOptions(Handle: PZMySQLConnect; Option: TZMySQLOption; const Arg: PAnsiChar): Integer;
     function Ping(Handle: PZMySQLConnect): Integer;
-    function ExecQuery(Handle: PZMySQLConnect; const Query: PChar): Integer;
-    function RealConnect(Handle: PZMySQLConnect; const Host, User, Password, Db: PChar; Port: Cardinal; UnixSocket: PChar; ClientFlag: Cardinal): PZMySQLConnect;
-    function GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PChar; Length: Cardinal): Cardinal;
-    function ExecRealQuery(Handle: PZMySQLConnect; const Query: PChar; Length: Integer): Integer;
+    function ExecQuery(Handle: PZMySQLConnect; const Query: PAnsiChar): Integer;
+    function RealConnect(Handle: PZMySQLConnect; const Host, User, Password, Db: PAnsiChar; Port: Cardinal; UnixSocket: PAnsiChar; ClientFlag: Cardinal): PZMySQLConnect;
+    function GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PAnsiChar; Length: Cardinal): Cardinal;
+    function ExecRealQuery(Handle: PZMySQLConnect; const Query: PAnsiChar; Length: Integer): Integer;
     function Refresh(Handle: PZMySQLConnect; Options: Cardinal): Integer;
     function SeekRow(Res: PZMySQLResult; Row: PZMySQLRowOffset): PZMySQLRowOffset;
     // row_tell
-    function SelectDatabase(Handle: PZMySQLConnect; const Database: PChar): Integer;
-    function SslSet(Handle: PZMySQLConnect; const Key, Cert, Ca, Capath, Cipher: PChar): Integer;
-    function GetStatInfo(Handle: PZMySQLConnect): PChar;
+    function SelectDatabase(Handle: PZMySQLConnect; const Database: PAnsiChar): Integer;
+    function SslSet(Handle: PZMySQLConnect; const Key, Cert, Ca, Capath, Cipher: PAnsiChar): Integer;
+    function GetStatInfo(Handle: PZMySQLConnect): PAnsiChar;
     function StoreResult(Handle: PZMySQLConnect): PZMySQLResult;
     function GetThreadId(Handle: PZMySQLConnect): Cardinal;
     function UseResult(Handle: PZMySQLConnect): PZMySQLResult;
@@ -251,13 +251,13 @@ type
     function GetPreparedNumRows (Handle: PZMySqlPrepStmt): Int64;
     function GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal; // param_count
     // stmt_param_metadata
-    function PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PChar; Length: Integer): Integer;
+    function PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PAnsiChar; Length: Integer): Integer;
     // stmt_reset
     function GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
     function SeekPreparedRow(Handle: PZMySqlPrepStmt; Row: PZMySQLRowOffset): PZMySQLRowOffset;
     // stmt_row_tell
     // stmt_send_long_data
-    function GetPreparedSQLState (Handle: PZMySqlPrepStmt): PChar;
+    function GetPreparedSQLState (Handle: PZMySqlPrepStmt): PAnsiChar;
     function StorePreparedResult (Handle: PZMySqlPrepStmt): Integer;
 
     // get_character_set_info
@@ -268,14 +268,14 @@ type
     function ResultSetExists(Handle: PZMySQLConnect):Boolean;
     function GetRowCount(Res: PZMySQLResult): Int64;
     function GetFieldCount(Res: PZMySQLResult): Integer;
-    function GetFieldName(Field: PZMySQLField): PChar;
-    function GetFieldTable(Field: PZMySQLField): PChar;
-    function GetFieldOrigTable(Field: PZMySQLField): PChar;
-    function GetFieldOrigName(Field: PZMySQLField): PChar;
+    function GetFieldName(Field: PZMySQLField): PAnsiChar;
+    function GetFieldTable(Field: PZMySQLField): PAnsiChar;
+    function GetFieldOrigTable(Field: PZMySQLField): PAnsiChar;
+    function GetFieldOrigName(Field: PZMySQLField): PAnsiChar;
     function GetFieldLength(Field: PZMySQLField): Integer;
     function GetFieldMaxLength(Field: PZMySQLField): Integer;
     function GetFieldDecimals(Field: PZMySQLField): Integer;
-    function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PChar;
+    function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PAnsiChar;
     procedure BuildArguments(Options: TStrings);
   end;
 
@@ -291,33 +291,33 @@ type
     function GetDescription: string; virtual;
     procedure Initialize; virtual;
 
-    procedure Debug(Debug: PChar);
+    procedure Debug(Debug: PAnsiChar);
     function DumpDebugInfo(Handle: PZMySQLConnect): Integer;
-    function GetLastError(Handle: PZMySQLConnect): PChar;
+    function GetLastError(Handle: PZMySQLConnect): PAnsiChar;
     function GetLastErrorCode(Handle: PZMySQLConnect): Integer;
     function Init(var Handle: PZMySQLConnect): PZMySQLConnect; virtual;
     function GetLastInsertID (Handle: PZMySQLConnect): Int64;
     procedure Despose(var Handle: PZMySQLConnect);
 
     function Connect(Handle: PZMySQLConnect;
-      const Host, User, Password: PChar): PZMySQLConnect;
+      const Host, User, Password: PAnsiChar): PZMySQLConnect;
     function RealConnect(Handle: PZMySQLConnect;
-      const Host, User, Password, Db: PChar; Port: Cardinal;
-      UnixSocket: PChar; ClientFlag: Cardinal): PZMySQLConnect;
-    function GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PChar; Length: Cardinal): Cardinal;
+      const Host, User, Password, Db: PAnsiChar; Port: Cardinal;
+      UnixSocket: PAnsiChar; ClientFlag: Cardinal): PZMySQLConnect;
+    function GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PAnsiChar; Length: Cardinal): Cardinal;
     procedure Close(Handle: PZMySQLConnect);
 
-    function ExecQuery(Handle: PZMySQLConnect; const Query: PChar): Integer;
-    function ExecRealQuery(Handle: PZMySQLConnect; const Query: PChar;
+    function ExecQuery(Handle: PZMySQLConnect; const Query: PAnsiChar): Integer;
+    function ExecRealQuery(Handle: PZMySQLConnect; const Query: PAnsiChar;
       Length: Integer): Integer;
 
     function SelectDatabase(Handle: PZMySQLConnect;
-      const Database: PChar): Integer;
-    function SslSet(Handle: PZMySQLConnect; const Key, Cert, Ca, Capath, Cipher: PChar): Integer;
+      const Database: PAnsiChar): Integer;
+    function SslSet(Handle: PZMySQLConnect; const Key, Cert, Ca, Capath, Cipher: PAnsiChar): Integer;
     function CreateDatabase(Handle: PZMySQLConnect;
-      const Database: PChar): Integer;
+      const Database: PAnsiChar): Integer;
     function DropDatabase(Handle: PZMySQLConnect;
-      const Database: PChar): Integer;
+      const Database: PAnsiChar): Integer;
 
     function Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMysqlConstants.SHUTDOWN_DEFAULT): Integer; // 2 versions!!
     function SetAutocommit (Handle: PZMySQLConnect; mode: Boolean): Boolean;
@@ -341,24 +341,24 @@ type
     function GetPreparedInsertID (Handle: PZMySqlPrepStmt): Int64;
     function GetPreparedNumRows (Handle: PZMySqlPrepStmt): Int64;
     function GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal; // param_count
-    function PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PChar; Length: Integer): Integer;
+    function PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PAnsiChar; Length: Integer): Integer;
     function GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
     function SeekPreparedRow(Handle: PZMySqlPrepStmt; Row: PZMySQLRowOffset): PZMySQLRowOffset;
-    function GetPreparedSQLState (Handle: PZMySqlPrepStmt): PChar;
+    function GetPreparedSQLState (Handle: PZMySqlPrepStmt): PAnsiChar;
     function StorePreparedResult (Handle: PZMySqlPrepStmt): Integer;
 
     function Refresh(Handle: PZMySQLConnect; Options: Cardinal): Integer;
     function Kill(Handle: PZMySQLConnect; Pid: LongInt): Integer;
     function Ping(Handle: PZMySQLConnect): Integer;
 
-    function GetStatInfo(Handle: PZMySQLConnect): PChar;
+    function GetStatInfo(Handle: PZMySQLConnect): PAnsiChar;
     function SetOptions(Handle: PZMySQLConnect; Option: TZMySQLOption;
-      const Arg: PChar): Integer;
-    function GetEscapeString(StrTo, StrFrom: PChar; Length: Cardinal): Cardinal;
+      const Arg: PAnsiChar): Integer;
+    function GetEscapeString(StrTo, StrFrom: PAnsiChar; Length: Cardinal): Cardinal;
 
-    function GetServerInfo(Handle: PZMySQLConnect): PChar;
-    function GetClientInfo: PChar;
-    function GetHostInfo(Handle: PZMySQLConnect): PChar;
+    function GetServerInfo(Handle: PZMySQLConnect): PAnsiChar;
+    function GetClientInfo: PAnsiChar;
+    function GetHostInfo(Handle: PZMySQLConnect): PAnsiChar;
     function GetProtoInfo(Handle: PZMySQLConnect): Cardinal;
     function GetThreadId(Handle: PZMySQLConnect): Cardinal;
     {ADDED by fduenas 15-06-2006}
@@ -366,12 +366,12 @@ type
     function GetServerVersion(Handle: PZMySQLConnect): Integer;
     {END ADDED by fduenas 15-06-2006}
     function GetListDatabases(Handle: PZMySQLConnect;
-      Wild: PChar): PZMySQLResult;
+      Wild: PAnsiChar): PZMySQLResult;
     function GetListTables(Handle: PZMySQLConnect;
-      const Wild: PChar): PZMySQLResult;
+      const Wild: PAnsiChar): PZMySQLResult;
     function GetNumRows(Res: PZMySQLResult): Int64;
     function GetListFields(Handle: PZMySQLConnect;
-      const Table, Wild: PChar): PZMySQLResult;
+      const Table, Wild: PAnsiChar): PZMySQLResult;
     function GetListProcesses(Handle: PZMySQLConnect): PZMySQLResult;
 
     function StoreResult(Handle: PZMySQLConnect): PZMySQLResult;
@@ -393,14 +393,14 @@ type
     function ResultSetExists(Handle: PZMySQLConnect):Boolean;
     function GetRowCount(Res: PZMySQLResult): Int64;
     function GetFieldCount(Res: PZMySQLResult): Integer;
-    function GetFieldName(Field: PZMySQLField): PChar;
-    function GetFieldTable(Field: PZMySQLField): PChar;
-    function GetFieldOrigTable(Field: PZMySQLField): PChar;
-    function GetFieldOrigName(Field: PZMySQLField): PChar;
+    function GetFieldName(Field: PZMySQLField): PAnsiChar;
+    function GetFieldTable(Field: PZMySQLField): PAnsiChar;
+    function GetFieldOrigTable(Field: PZMySQLField): PAnsiChar;
+    function GetFieldOrigName(Field: PZMySQLField): PAnsiChar;
     function GetFieldLength(Field: PZMySQLField): Integer;
     function GetFieldMaxLength(Field: PZMySQLField): Integer;
     function GetFieldDecimals(Field: PZMySQLField): Integer;
-    function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PChar;
+    function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PAnsiChar;
     procedure BuildArguments(Options: TStrings); virtual;
   end;
 
@@ -425,33 +425,33 @@ type
     function GetDescription: string; virtual;
     procedure Initialize; virtual;
 
-    procedure Debug(Debug: PChar);
+    procedure Debug(Debug: PAnsiChar);
     function DumpDebugInfo(Handle: PZMySQLConnect): Integer;
-    function GetLastError(Handle: PZMySQLConnect): PChar;
+    function GetLastError(Handle: PZMySQLConnect): PAnsiChar;
     function GetLastErrorCode(Handle: PZMySQLConnect): Integer;
     function Init(var Handle: PZMySQLConnect): PZMySQLConnect; virtual;
     function GetLastInsertID (Handle: PZMySQLConnect): Int64;
     procedure Despose(var Handle: PZMySQLConnect);
 
     function Connect(Handle: PZMySQLConnect;
-      const Host, User, Password: PChar): PZMySQLConnect;
+      const Host, User, Password: PAnsiChar): PZMySQLConnect;
     function RealConnect(Handle: PZMySQLConnect;
-      const Host, User, Password, Db: PChar; Port: Cardinal;
-      UnixSocket: PChar; ClientFlag: Cardinal): PZMySQLConnect;
-    function GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PChar; Length: Cardinal): Cardinal;
+      const Host, User, Password, Db: PAnsiChar; Port: Cardinal;
+      UnixSocket: PAnsiChar; ClientFlag: Cardinal): PZMySQLConnect;
+    function GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PAnsiChar; Length: Cardinal): Cardinal;
     procedure Close(Handle: PZMySQLConnect);
 
-    function ExecQuery(Handle: PZMySQLConnect; const Query: PChar): Integer;
-    function ExecRealQuery(Handle: PZMySQLConnect; const Query: PChar;
+    function ExecQuery(Handle: PZMySQLConnect; const Query: PAnsiChar): Integer;
+    function ExecRealQuery(Handle: PZMySQLConnect; const Query: PAnsiChar;
       Length: Integer): Integer;
 
     function SelectDatabase(Handle: PZMySQLConnect;
-      const Database: PChar): Integer;
-    function SslSet(Handle: PZMySQLConnect; const Key, Cert, Ca, Capath, Cipher: PChar): Integer;
+      const Database: PAnsiChar): Integer;
+    function SslSet(Handle: PZMySQLConnect; const Key, Cert, Ca, Capath, Cipher: PAnsiChar): Integer;
     function CreateDatabase(Handle: PZMySQLConnect;
-      const Database: PChar): Integer;
+      const Database: PAnsiChar): Integer;
     function DropDatabase(Handle: PZMySQLConnect;
-      const Database: PChar): Integer;
+      const Database: PAnsiChar): Integer;
 
     function Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMysqlConstants.SHUTDOWN_DEFAULT): Integer; // 2 versions!!
     function SetAutocommit (Handle: PZMySQLConnect; mode: Boolean): Boolean;
@@ -475,24 +475,24 @@ type
     function GetPreparedInsertID (Handle: PZMySqlPrepStmt): Int64;
     function GetPreparedNumRows (Handle: PZMySqlPrepStmt): Int64;
     function GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal; // param_count
-    function PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PChar; Length: Integer): Integer;
+    function PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PAnsiChar; Length: Integer): Integer;
     function GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
     function SeekPreparedRow(Handle: PZMySqlPrepStmt; Row: PZMySQLRowOffset): PZMySQLRowOffset;
-    function GetPreparedSQLState (Handle: PZMySqlPrepStmt): PChar;
+    function GetPreparedSQLState (Handle: PZMySqlPrepStmt): PAnsiChar;
     function StorePreparedResult (Handle: PZMySqlPrepStmt): Integer;
 
     function Refresh(Handle: PZMySQLConnect; Options: Cardinal): Integer;
     function Kill(Handle: PZMySQLConnect; Pid: LongInt): Integer;
     function Ping(Handle: PZMySQLConnect): Integer;
 
-    function GetStatInfo(Handle: PZMySQLConnect): PChar;
+    function GetStatInfo(Handle: PZMySQLConnect): PAnsiChar;
     function SetOptions(Handle: PZMySQLConnect; Option: TZMySQLOption;
-      const Arg: PChar): Integer;
-    function GetEscapeString(StrTo, StrFrom: PChar; Length: Cardinal): Cardinal;
+      const Arg: PAnsiChar): Integer;
+    function GetEscapeString(StrTo, StrFrom: PAnsiChar; Length: Cardinal): Cardinal;
 
-    function GetServerInfo(Handle: PZMySQLConnect): PChar;
-    function GetClientInfo: PChar;
-    function GetHostInfo(Handle: PZMySQLConnect): PChar;
+    function GetServerInfo(Handle: PZMySQLConnect): PAnsiChar;
+    function GetClientInfo: PAnsiChar;
+    function GetHostInfo(Handle: PZMySQLConnect): PAnsiChar;
     function GetProtoInfo(Handle: PZMySQLConnect): Cardinal;
     function GetThreadId(Handle: PZMySQLConnect): Cardinal;
     {ADDED by fduenas 15-06-2006}
@@ -500,12 +500,12 @@ type
     function GetServerVersion(Handle: PZMySQLConnect): Integer;
     {END ADDED by fduenas 15-06-2006}
     function GetListDatabases(Handle: PZMySQLConnect;
-      Wild: PChar): PZMySQLResult;
+      Wild: PAnsiChar): PZMySQLResult;
     function GetListTables(Handle: PZMySQLConnect;
-      const Wild: PChar): PZMySQLResult;
+      const Wild: PAnsiChar): PZMySQLResult;
     function GetNumRows(Res: PZMySQLResult): Int64;
     function GetListFields(Handle: PZMySQLConnect;
-      const Table, Wild: PChar): PZMySQLResult;
+      const Table, Wild: PAnsiChar): PZMySQLResult;
     function GetListProcesses(Handle: PZMySQLConnect): PZMySQLResult;
 
     function StoreResult(Handle: PZMySQLConnect): PZMySQLResult;
@@ -526,14 +526,14 @@ type
     function ResultSetExists(Handle: PZMySQLConnect):Boolean;
     function GetRowCount(Res: PZMySQLResult): Int64;
     function GetFieldCount(Res: PZMySQLResult): Integer;
-    function GetFieldName(Field: PZMySQLField): PChar;
-    function GetFieldTable(Field: PZMySQLField): PChar;
-    function GetFieldOrigTable(Field: PZMySQLField): PChar;
-    function GetFieldOrigName(Field: PZMySQLField): PChar;
+    function GetFieldName(Field: PZMySQLField): PAnsiChar;
+    function GetFieldTable(Field: PZMySQLField): PAnsiChar;
+    function GetFieldOrigTable(Field: PZMySQLField): PAnsiChar;
+    function GetFieldOrigName(Field: PZMySQLField): PAnsiChar;
     function GetFieldLength(Field: PZMySQLField): Integer;
     function GetFieldMaxLength(Field: PZMySQLField): Integer;
     function GetFieldDecimals(Field: PZMySQLField): Integer;
-    function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PChar;
+    function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PAnsiChar;
     procedure BuildArguments(Options: TStrings); virtual;
   end;
 
@@ -547,10 +547,10 @@ type
   end;
 
 implementation
-uses SysUtils;
+uses SysUtils, ZSysUtils;
 
 var
-  ServerArgs: array of PChar;
+  ServerArgs: array of PAnsiChar;
   ServerArgsLen: Integer;
 
 procedure BuildServerArguments(Options: TStrings);
@@ -571,12 +571,16 @@ begin
         TmpList.Add(Options.ValueFromIndex[i]);
 {$ENDIF}
     //Check if DataDir is specified, if not, then add it to the Arguments List
-    If TmpList.Values['--datadir'] = '' then
+    if TmpList.Values['--datadir'] = '' then
        TmpList.Add('--datadir='+EMBEDDED_DEFAULT_DATA_DIR);
     ServerArgsLen := TmpList.Count;
     SetLength(ServerArgs, ServerArgsLen);
     for i := 0 to ServerArgsLen - 1 do
-      ServerArgs[i] := StrNew(PChar(TmpList[i]));
+      {$IFDEF ZEOS_FULL_UNICODE}
+      ServerArgs[i] := StrNew(PAnsiChar(UnicodeToAnsi(TmpList[i])));
+      {$ELSE}
+      ServerArgs[i] := StrNew(PAnsiChar(TmpList[i]));
+      {$ENDIF}
   finally
     TmpList.Free;
   end;
@@ -610,30 +614,30 @@ begin
 end;
 
 function TZMySQL41PlainDriver.Connect(Handle: PZMySQLConnect; const Host,
-  User, Password: PChar): PZMySQLConnect;
+  User, Password: PAnsiChar): PZMySQLConnect;
 begin
   Result := MYSQL_API.mysql_connect(Handle, Host, User, Password);
 end;
 
 function TZMySQL41PlainDriver.SslSet(Handle: PZMySQLConnect;
-  const Key, Cert, Ca, Capath, Cipher: PChar): Integer;
+  const Key, Cert, Ca, Capath, Cipher: PAnsiChar): Integer;
 begin
   Result := MYSQL_API.mysql_ssl_set(Handle, Key, Cert, Ca, Capath, Cipher);
 end;
 
 function TZMySQL41PlainDriver.CreateDatabase(Handle: PZMySQLConnect;
-  const Database: PChar): Integer;
+  const Database: PAnsiChar): Integer;
 begin
   Result := MYSQL_API.mysql_create_db(Handle, Database);
 end;
 
-procedure TZMySQL41PlainDriver.Debug(Debug: PChar);
+procedure TZMySQL41PlainDriver.Debug(Debug: PAnsiChar);
 begin
   MYSQL_API.mysql_debug(Debug);
 end;
 
 function TZMySQL41PlainDriver.DropDatabase(Handle: PZMySQLConnect;
-  const Database: PChar): Integer;
+  const Database: PAnsiChar): Integer;
 begin
   Result := MYSQL_API.mysql_drop_db(Handle, Database);
 end;
@@ -644,13 +648,13 @@ begin
 end;
 
 function TZMySQL41PlainDriver.ExecQuery(Handle: PZMySQLConnect;
-  const Query: PChar): Integer;
+  const Query: PAnsiChar): Integer;
 begin
   Result := MYSQL_API.mysql_query(Handle, Query);
 end;
 
 function TZMySQL41PlainDriver.ExecRealQuery(Handle: PZMySQLConnect;
-  const Query: PChar; Length: Integer): Integer;
+  const Query: PAnsiChar; Length: Integer): Integer;
 begin
   Result := MYSQL_API.mysql_real_query(Handle, Query, Length);
 end;
@@ -680,30 +684,30 @@ begin
   Result := MYSQL_API.mysql_affected_rows(Handle);
 end;
 
-function TZMySQL41PlainDriver.GetClientInfo: PChar;
+function TZMySQL41PlainDriver.GetClientInfo: PAnsiChar;
 begin
   Result := MYSQL_API.mysql_get_client_info;
 end;
 
-function TZMySQL41PlainDriver.GetEscapeString(StrTo, StrFrom: PChar;
+function TZMySQL41PlainDriver.GetEscapeString(StrTo, StrFrom: PAnsiChar;
   Length: Cardinal): Cardinal;
 begin
   Result := MYSQL_API.mysql_escape_string(StrTo, StrFrom, Length);
 end;
 
-function TZMySQL41PlainDriver.GetHostInfo(Handle: PZMySQLConnect): PChar;
+function TZMySQL41PlainDriver.GetHostInfo(Handle: PZMySQLConnect): PAnsiChar;
 begin
   Result := MYSQL_API.mysql_get_host_info(Handle);
 end;
 
 function TZMySQL41PlainDriver.GetListDatabases(Handle: PZMySQLConnect;
-  Wild: PChar): PZMySQLResult;
+  Wild: PAnsiChar): PZMySQLResult;
 begin
   Result := MYSQL_API.mysql_list_dbs(Handle, Wild);
 end;
 
 function TZMySQL41PlainDriver.GetListFields(Handle: PZMySQLConnect;
-  const Table, Wild: PChar): PZMySQLResult;
+  const Table, Wild: PAnsiChar): PZMySQLResult;
 begin
   Result := MYSQL_API.mysql_list_fields(Handle, Table, Wild);
 end;
@@ -715,30 +719,30 @@ begin
 end;
 
 function TZMySQL41PlainDriver.GetListTables(Handle: PZMySQLConnect;
-  const Wild: PChar): PZMySQLResult;
+  const Wild: PAnsiChar): PZMySQLResult;
 begin
   Result := MYSQL_API.mysql_list_tables(Handle, Wild);
 end;
 
 function TZMySQL41PlainDriver.GetNumRows(Res: PZMySQLResult): Int64;
-Begin
+begin
     if (Res = nil) then
         Result := 0
     else
         Result :=  MYSQL_API.mysql_num_rows (Res);
-End;
+end;
 
 function TZMySQL41PlainDriver.GetProtoInfo(Handle: PZMySQLConnect): Cardinal;
 begin
   Result := MYSQL_API.mysql_get_proto_info(Handle);
 end;
 
-function TZMySQL41PlainDriver.GetServerInfo(Handle: PZMySQLConnect): PChar;
+function TZMySQL41PlainDriver.GetServerInfo(Handle: PZMySQLConnect): PAnsiChar;
 begin
   Result := MYSQL_API.mysql_get_server_info(Handle);
 end;
 
-function TZMySQL41PlainDriver.GetStatInfo(Handle: PZMySQLConnect): PChar;
+function TZMySQL41PlainDriver.GetStatInfo(Handle: PZMySQLConnect): PAnsiChar;
 begin
   Result := MYSQL_API.mysql_stat(Handle);
 end;
@@ -778,14 +782,14 @@ begin
 end;
 
 function TZMySQL41PlainDriver.RealConnect(Handle: PZMySQLConnect;
-  const Host, User, Password, Db: PChar; Port: Cardinal; UnixSocket: PChar;
+  const Host, User, Password, Db: PAnsiChar; Port: Cardinal; UnixSocket: PAnsiChar;
   ClientFlag: Cardinal): PZMySQLConnect;
 begin
   Result := MYSQL_API.mysql_real_connect(Handle, Host, User, Password, Db,
     Port, UnixSocket, ClientFlag);
 end;
 
-function TZMySQL41PlainDriver.GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PChar;
+function TZMySQL41PlainDriver.GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PAnsiChar;
   Length: Cardinal): Cardinal;
 begin
   Result := MYSQL_API.mysql_real_escape_string(Handle, StrTo, StrFrom, Length);
@@ -816,13 +820,13 @@ begin
 end;
 
 function TZMySQL41PlainDriver.SelectDatabase(Handle: PZMySQLConnect;
-  const Database: PChar): Integer;
+  const Database: PAnsiChar): Integer;
 begin
   Result := MYSQL_API.mysql_select_db(Handle, Database);
 end;
 
 function TZMySQL41PlainDriver.SetOptions(Handle: PZMySQLConnect;
-  Option: TZMySQLOption; const Arg: PChar): Integer;
+  Option: TZMySQLOption; const Arg: PAnsiChar): Integer;
 begin
   Result := MYSQL_API.mysql_options(Handle,
     ZPlainMySql41.TMySqlOption(Option), Arg);
@@ -856,18 +860,18 @@ end;
 function TZMySQL41PlainDriver.CheckAnotherRowset(Handle: PZMySQLConnect): Boolean;
 var
     my_bool: Byte;
-Begin
+begin
     my_bool :=  MYSQL_API.mysql_more_results (ZPlainMySql41.PMYSQL(Handle));
     if (my_bool = 0) then
         Result := False
     else
         Result := True;
-End;
+end;
 
 function TZMySQL41PlainDriver.RetrieveNextRowset(Handle: PZMySQLConnect): Integer;
-Begin
+begin
     Result := MYSQL_API.mysql_next_result (ZPlainMySql41.PMYSQL(Handle));
-End;
+end;
 
 function TZMySQL41PlainDriver.Rollback (Handle: PZMySQLConnect): Boolean;
 var
@@ -883,19 +887,19 @@ begin
 end;
 
 function TZMySQL41PlainDriver.GetPreparedAffectedRows(Handle: PZMySqlPrepStmt): Int64;
-Begin
+begin
     Result :=  MYSQL_API.mysql_stmt_affected_rows (ZPlainMySql41.PMYSQL_STMT(Handle));
-End;
+end;
 
 function TZMySQL41PlainDriver.BindParameters(Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
-Begin
+begin
     Result := MYSQL_API.mysql_stmt_bind_param (ZPlainMySql41.PMYSQL_STMT(Handle), PMYSQL_BIND2(bindArray));
-End;
+end;
 
 function TZMySQL41PlainDriver.BindResult(Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
-Begin
+begin
     Result := MYSQL_API.mysql_stmt_bind_result (ZPlainMySql41.PMYSQL_STMT(Handle), PMYSQL_BIND2(bindArray));
-End;
+end;
 
 function TZMySQL41PlainDriver.ClosePrepStmt (PrepStmtHandle: PZMySqlPrepStmt): PZMySqlPrepStmt;
 var
@@ -914,9 +918,9 @@ begin
 end;
 
 function TZMySQL41PlainDriver.GetLastPreparedErrorCode(Handle: PZMySqlPrepStmt):Integer;
-Begin
+begin
     Result := MYSQL_API.mysql_stmt_errno(ZPlainMySql41.PMYSQL_STMT(Handle));
-End;
+end;
 
 function TZMySQL41PlainDriver.GetLastPreparedError(Handle: PZMySqlPrepStmt):AnsiString;
 begin
@@ -924,19 +928,19 @@ begin
 end;
 
 function TZMySQL41PlainDriver.ExecuteStmt(Handle: PZMySqlPrepStmt): Integer;
-Begin
+begin
     Result := MYSQL_API.mysql_stmt_execute (ZPlainMySql41.PMYSQL_STMT(Handle));
-End;
+end;
 
 function TZMySQL41PlainDriver.FetchBoundResults(Handle: PZMySqlPrepStmt): Integer;
-Begin
+begin
     Result := MYSQL_API.mysql_stmt_fetch (ZPlainMySql41.PMYSQL_STMT(Handle));
-End;
+end;
 
 function TZMySQL41PlainDriver.GetPreparedFieldCount(Handle: PZMySqlPrepStmt): Integer;
-Begin
+begin
     Result := MYSQL_API.mysql_stmt_field_count(ZPlainMySql41.PMYSQL_STMT(Handle));
-End;
+end;
 
 function TZMySQL41PlainDriver.InitializePrepStmt (Handle: PZMySQLConnect): PZMySqlPrepStmt;
 begin
@@ -944,47 +948,47 @@ begin
 end;
 
 function TZMySQL41PlainDriver.GetPreparedInsertID(Handle: PZMySqlPrepStmt): Int64;
-Begin
+begin
     Result := MYSQL_API.mysql_stmt_insert_id (ZPlainMySql41.PMYSQL_STMT(Handle));
-End;
+end;
 
 function TZMySQL41PlainDriver.GetPreparedNumRows(Handle: PZMySqlPrepStmt): Int64;
-Begin
+begin
     if (Handle = nil) then
         Result := 0
     else
         Result :=  MYSQL_API.mysql_stmt_num_rows (ZPlainMySql41.PMYSQL_STMT(Handle));
-End;
+end;
 
 function TZMySQL41PlainDriver.GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal;
-Begin
+begin
     Result := MYSQL_API.mysql_stmt_param_count (ZPlainMySql41.PMYSQL_STMT(Handle));
-End;
+end;
 
-function TZMySQL41PlainDriver.PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PChar; Length: Integer): Integer;
+function TZMySQL41PlainDriver.PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PAnsiChar; Length: Integer): Integer;
 begin
     Result := MYSQL_API.mysql_stmt_prepare(ZPlainMySql41.PMYSQL_STMT(PrepStmtHandle), Query, Length);
 end;
 
 function TZMySQL41PlainDriver.GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
-Begin
+begin
     Result := MYSQL_API.mysql_stmt_result_metadata (ZPlainMySql41.PMYSQL_STMT(Handle));
-End;
+end;
 
 function TZMySQL41PlainDriver.SeekPreparedRow(Handle: PZMySqlPrepStmt; Row: PZMySQLRowOffset): PZMySQLRowOffset;
-Begin
+begin
     Result := MYSQL_API.mysql_stmt_row_seek (ZPlainMySql41.PMYSQL_STMT(Handle), Row);
-End;
+end;
 
-function TZMySQL41PlainDriver.GetPreparedSQLState(Handle: PZMySqlPrepStmt): PChar;
+function TZMySQL41PlainDriver.GetPreparedSQLState(Handle: PZMySqlPrepStmt): PAnsiChar;
 begin
     Result := MYSQL_API.mysql_stmt_sqlstate (ZPlainMySql41.PMYSQL_STMT(Handle));
 end;
 
 function TZMySQL41PlainDriver.StorePreparedResult (Handle: PZMySqlPrepStmt): Integer;
-Begin
+begin
     Result := MYSQL_API.mysql_stmt_store_result (ZPlainMySql41.PMYSQL_STMT(Handle));
-End;
+end;
 
 function TZMySQL41PlainDriver.StoreResult(
   Handle: PZMySQLConnect): PZMySQLResult;
@@ -997,7 +1001,7 @@ begin
   Result := MYSQL_API.mysql_use_result(Handle);
 end;
 
-function TZMySQL41PlainDriver.GetLastError(Handle: PZMySQLConnect): PChar;
+function TZMySQL41PlainDriver.GetLastError(Handle: PZMySQLConnect): PAnsiChar;
 begin
   Result := MYSQL_API.mysql_error(Handle);
 end;
@@ -1043,28 +1047,28 @@ begin
   Result := ZPlainMySql41.PMYSQL_FIELD(Field)^.max_length;
 end;
 
-function TZMySQL41PlainDriver.GetFieldName(Field: PZMySQLField): PChar;
+function TZMySQL41PlainDriver.GetFieldName(Field: PZMySQLField): PAnsiChar;
 begin
   Result := ZPlainMySql41.PMYSQL_FIELD(Field)^.name;
 end;
 
-function TZMySQL41PlainDriver.GetFieldTable(Field: PZMySQLField): PChar;
+function TZMySQL41PlainDriver.GetFieldTable(Field: PZMySQLField): PAnsiChar;
 begin
   Result := ZPlainMySql41.PMYSQL_FIELD(Field)^.table;
 end;
 
-function TZMySQL41PlainDriver.GetFieldOrigTable(Field: PZMySQLField): PChar;
+function TZMySQL41PlainDriver.GetFieldOrigTable(Field: PZMySQLField): PAnsiChar;
 begin
   Result := ZPlainMySql41.PMYSQL_FIELD(Field)^.org_table;
 end;
 
-function TZMySQL41PlainDriver.GetFieldOrigName(Field: PZMySQLField): PChar;
+function TZMySQL41PlainDriver.GetFieldOrigName(Field: PZMySQLField): PAnsiChar;
 begin
   Result := ZPlainMySql41.PMYSQL_FIELD(Field)^.org_name;
 end;
 
 function TZMySQL41PlainDriver.GetFieldData(Row: PZMySQLRow;
-  Offset: Cardinal): PChar;
+  Offset: Cardinal): PAnsiChar;
 begin
   Result := ZPlainMySql41.PMYSQL_ROW(ROW)[Offset];
 end;
@@ -1150,30 +1154,30 @@ begin
 end;
 
 function TZMySQL5PlainDriver.Connect(Handle: PZMySQLConnect; const Host,
-  User, Password: PChar): PZMySQLConnect;
+  User, Password: PAnsiChar): PZMySQLConnect;
 begin
   Result := MYSQL_API.mysql_connect(Handle, Host, User, Password);
 end;
 
 function TZMySQL5PlainDriver.SslSet(Handle: PZMySQLConnect;
-  Const Key, Cert, Ca, Capath, Cipher: PChar): Integer;
+  Const Key, Cert, Ca, Capath, Cipher: PAnsiChar): Integer;
 begin
   Result := MYSQL_API.mysql_ssl_set(Handle, Key, Cert, Ca, Capath, Cipher);
 end;
 
 function TZMySQL5PlainDriver.CreateDatabase(Handle: PZMySQLConnect;
-  const Database: PChar): Integer;
+  const Database: PAnsiChar): Integer;
 begin
   Result := MYSQL_API.mysql_create_db(Handle, Database);
 end;
 
-procedure TZMySQL5PlainDriver.Debug(Debug: PChar);
+procedure TZMySQL5PlainDriver.Debug(Debug: PAnsiChar);
 begin
   MYSQL_API.mysql_debug(Debug);
 end;
 
 function TZMySQL5PlainDriver.DropDatabase(Handle: PZMySQLConnect;
-  const Database: PChar): Integer;
+  const Database: PAnsiChar): Integer;
 begin
   Result := MYSQL_API.mysql_drop_db(Handle, Database);
 end;
@@ -1184,13 +1188,13 @@ begin
 end;
 
 function TZMySQL5PlainDriver.ExecQuery(Handle: PZMySQLConnect;
-  const Query: PChar): Integer;
+  const Query: PAnsiChar): Integer;
 begin
   Result := MYSQL_API.mysql_query(Handle, Query);
 end;
 
 function TZMySQL5PlainDriver.ExecRealQuery(Handle: PZMySQLConnect;
-  const Query: PChar; Length: Integer): Integer;
+  const Query: PAnsiChar; Length: Integer): Integer;
 begin
   Result := MYSQL_API.mysql_real_query(Handle, Query, Length);
 end;
@@ -1220,30 +1224,30 @@ begin
   Result := MYSQL_API.mysql_affected_rows(Handle);
 end;
 
-function TZMySQL5PlainDriver.GetClientInfo: PChar;
+function TZMySQL5PlainDriver.GetClientInfo: PAnsiChar;
 begin
   Result := MYSQL_API.mysql_get_client_info;
 end;
 
-function TZMySQL5PlainDriver.GetEscapeString(StrTo, StrFrom: PChar;
+function TZMySQL5PlainDriver.GetEscapeString(StrTo, StrFrom: PAnsiChar;
   Length: Cardinal): Cardinal;
 begin
   Result := MYSQL_API.mysql_escape_string(StrTo, StrFrom, Length);
 end;
 
-function TZMySQL5PlainDriver.GetHostInfo(Handle: PZMySQLConnect): PChar;
+function TZMySQL5PlainDriver.GetHostInfo(Handle: PZMySQLConnect): PAnsiChar;
 begin
   Result := MYSQL_API.mysql_get_host_info(Handle);
 end;
 
 function TZMySQL5PlainDriver.GetListDatabases(Handle: PZMySQLConnect;
-  Wild: PChar): PZMySQLResult;
+  Wild: PAnsiChar): PZMySQLResult;
 begin
   Result := MYSQL_API.mysql_list_dbs(Handle, Wild);
 end;
 
 function TZMySQL5PlainDriver.GetListFields(Handle: PZMySQLConnect;
-  const Table, Wild: PChar): PZMySQLResult;
+  const Table, Wild: PAnsiChar): PZMySQLResult;
 begin
   Result := MYSQL_API.mysql_list_fields(Handle, Table, Wild);
 end;
@@ -1255,30 +1259,30 @@ begin
 end;
 
 function TZMySQL5PlainDriver.GetListTables(Handle: PZMySQLConnect;
-  const Wild: PChar): PZMySQLResult;
+  const Wild: PAnsiChar): PZMySQLResult;
 begin
   Result := MYSQL_API.mysql_list_tables(Handle, Wild);
 end;
 
 function TZMySQL5PlainDriver.GetNumRows(Res: PZMySQLResult): Int64;
-Begin
+begin
     if (Res = nil) then
         Result := 0
     else
         Result :=  MYSQL_API.mysql_num_rows (Res);
-End;
+end;
 
 function TZMySQL5PlainDriver.GetProtoInfo(Handle: PZMySQLConnect): Cardinal;
 begin
   Result := MYSQL_API.mysql_get_proto_info(Handle);
 end;
 
-function TZMySQL5PlainDriver.GetServerInfo(Handle: PZMySQLConnect): PChar;
+function TZMySQL5PlainDriver.GetServerInfo(Handle: PZMySQLConnect): PAnsiChar;
 begin
   Result := MYSQL_API.mysql_get_server_info(Handle);
 end;
 
-function TZMySQL5PlainDriver.GetStatInfo(Handle: PZMySQLConnect): PChar;
+function TZMySQL5PlainDriver.GetStatInfo(Handle: PZMySQLConnect): PAnsiChar;
 begin
   Result := MYSQL_API.mysql_stat(Handle);
 end;
@@ -1318,14 +1322,14 @@ begin
 end;
 
 function TZMySQL5PlainDriver.RealConnect(Handle: PZMySQLConnect;
-  const Host, User, Password, Db: PChar; Port: Cardinal; UnixSocket: PChar;
+  const Host, User, Password, Db: PAnsiChar; Port: Cardinal; UnixSocket: PAnsiChar;
   ClientFlag: Cardinal): PZMySQLConnect;
 begin
   Result := MYSQL_API.mysql_real_connect(Handle, Host, User, Password, Db,
     Port, UnixSocket, ClientFlag);
 end;
 
-function TZMySQL5PlainDriver.GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PChar;
+function TZMySQL5PlainDriver.GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PAnsiChar;
   Length: Cardinal): Cardinal;
 begin
   Result := MYSQL_API.mysql_real_escape_string(Handle, StrTo, StrFrom, Length);
@@ -1356,13 +1360,13 @@ begin
 end;
 
 function TZMySQL5PlainDriver.SelectDatabase(Handle: PZMySQLConnect;
-  const Database: PChar): Integer;
+  const Database: PAnsiChar): Integer;
 begin
   Result := MYSQL_API.mysql_select_db(Handle, Database);
 end;
 
 function TZMySQL5PlainDriver.SetOptions(Handle: PZMySQLConnect;
-  Option: TZMySQLOption; const Arg: PChar): Integer;
+  Option: TZMySQLOption; const Arg: PAnsiChar): Integer;
 begin
   Result := MYSQL_API.mysql_options(Handle,
     ZPlainMySql5.TMySqlOption(Option), Arg);
@@ -1396,18 +1400,18 @@ end;
 function TZMySQL5PlainDriver.CheckAnotherRowset(Handle: PZMySQLConnect): Boolean;
 var
     my_bool: Byte;
-Begin
+begin
     my_bool :=  MYSQL_API.mysql_more_results (ZPlainMySql5.PMYSQL(Handle));
     if (my_bool = 0) then
         Result := False
     else
         Result := True;
-End;
+end;
 
 function TZMySQL5PlainDriver.RetrieveNextRowset(Handle: PZMySQLConnect): Integer;
-Begin
+begin
     Result := MYSQL_API.mysql_next_result (ZPlainMySql5.PMYSQL(Handle));
-End;
+end;
 
 function TZMySQL5PlainDriver.Rollback (Handle: PZMySQLConnect): Boolean;
 var
@@ -1423,19 +1427,19 @@ begin
 end;
 
 function TZMySQL5PlainDriver.GetPreparedAffectedRows(Handle: PZMySqlPrepStmt): Int64;
-Begin
+begin
     Result :=  MYSQL_API.mysql_stmt_affected_rows (ZPlainMySql5.PMYSQL_STMT(Handle));
-End;
+end;
 
 function TZMySQL5PlainDriver.BindParameters(Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
-Begin
+begin
     Result := MYSQL_API.mysql_stmt_bind_param (ZPlainMySql5.PMYSQL_STMT(Handle), PMYSQL_BIND2(bindArray));
-End;
+end;
 
 function TZMySQL5PlainDriver.BindResult(Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
-Begin
+begin
     Result := MYSQL_API.mysql_stmt_bind_result (ZPlainMySql5.PMYSQL_STMT(Handle), PMYSQL_BIND2(bindArray));
-End;
+end;
 
 function TZMySQL5PlainDriver.ClosePrepStmt (PrepStmtHandle: PZMySqlPrepStmt): PZMySqlPrepStmt;
 var
@@ -1454,9 +1458,9 @@ begin
 end;
 
 function TZMySQL5PlainDriver.GetLastPreparedErrorCode(Handle: PZMySqlPrepStmt):Integer;
-Begin
+begin
     Result := MYSQL_API.mysql_stmt_errno(ZPlainMySql5.PMYSQL_STMT(Handle));
-End;
+end;
 
 function TZMySQL5PlainDriver.GetLastPreparedError(Handle: PZMySqlPrepStmt):AnsiString;
 begin
@@ -1464,19 +1468,19 @@ begin
 end;
 
 function TZMySQL5PlainDriver.ExecuteStmt(Handle: PZMySqlPrepStmt): Integer;
-Begin
+begin
     Result := MYSQL_API.mysql_stmt_execute (ZPlainMySql5.PMYSQL_STMT(Handle));
-End;
+end;
 
 function TZMySQL5PlainDriver.FetchBoundResults(Handle: PZMySqlPrepStmt): Integer;
-Begin
+begin
     Result := MYSQL_API.mysql_stmt_fetch (ZPlainMySql5.PMYSQL_STMT(Handle));
-End;
+end;
 
 function TZMySQL5PlainDriver.GetPreparedFieldCount(Handle: PZMySqlPrepStmt): Integer;
-Begin
+begin
     Result := MYSQL_API.mysql_stmt_field_count(ZPlainMySql5.PMYSQL_STMT(Handle));
-End;
+end;
 
 function TZMySQL5PlainDriver.InitializePrepStmt (Handle: PZMySQLConnect): PZMySqlPrepStmt;
 begin
@@ -1484,47 +1488,47 @@ begin
 end;
 
 function TZMySQL5PlainDriver.GetPreparedInsertID(Handle: PZMySqlPrepStmt): Int64;
-Begin
+begin
     Result := MYSQL_API.mysql_stmt_insert_id (ZPlainMySql5.PMYSQL_STMT(Handle));
-End;
+end;
 
 function TZMySQL5PlainDriver.GetPreparedNumRows(Handle: PZMySqlPrepStmt): Int64;
-Begin
+begin
     if (Handle = nil) then
         Result := 0
     else
         Result :=  MYSQL_API.mysql_stmt_num_rows (ZPlainMySql5.PMYSQL_STMT(Handle));
-End;
+end;
 
 function TZMySQL5PlainDriver.GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal;
-Begin
+begin
     Result := MYSQL_API.mysql_stmt_param_count (ZPlainMySql5.PMYSQL_STMT(Handle));
-End;
+end;
 
-function TZMySQL5PlainDriver.PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PChar; Length: Integer): Integer;
+function TZMySQL5PlainDriver.PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PAnsiChar; Length: Integer): Integer;
 begin
     Result := MYSQL_API.mysql_stmt_prepare(ZPlainMySql5.PMYSQL_STMT(PrepStmtHandle), Query, Length);
 end;
 
 function TZMySQL5PlainDriver.GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
-Begin
+begin
     Result := MYSQL_API.mysql_stmt_result_metadata (ZPlainMySql5.PMYSQL_STMT(Handle));
-End;
+end;
 
 function TZMySQL5PlainDriver.SeekPreparedRow(Handle: PZMySqlPrepStmt; Row: PZMySQLRowOffset): PZMySQLRowOffset;
-Begin
+begin
     Result := MYSQL_API.mysql_stmt_row_seek (ZPlainMySql5.PMYSQL_STMT(Handle), Row);
-End;
+end;
 
-function TZMySQL5PlainDriver.GetPreparedSQLState(Handle: PZMySqlPrepStmt): PChar;
+function TZMySQL5PlainDriver.GetPreparedSQLState(Handle: PZMySqlPrepStmt): PAnsiChar;
 begin
     Result := MYSQL_API.mysql_stmt_sqlstate (ZPlainMySql5.PMYSQL_STMT(Handle));
 end;
 
 function TZMySQL5PlainDriver.StorePreparedResult (Handle: PZMySqlPrepStmt): Integer;
-Begin
+begin
     Result := MYSQL_API.mysql_stmt_store_result (ZPlainMySql5.PMYSQL_STMT(Handle));
-End;
+end;
 
 function TZMySQL5PlainDriver.StoreResult(
   Handle: PZMySQLConnect): PZMySQLResult;
@@ -1537,7 +1541,7 @@ begin
   Result := MYSQL_API.mysql_use_result(Handle);
 end;
 
-function TZMySQL5PlainDriver.GetLastError(Handle: PZMySQLConnect): PChar;
+function TZMySQL5PlainDriver.GetLastError(Handle: PZMySQLConnect): PAnsiChar;
 begin
   Result := MYSQL_API.mysql_error(Handle);
 end;
@@ -1583,28 +1587,28 @@ begin
   Result := ZPlainMySql5.PMYSQL_FIELD(Field)^.max_length;
 end;
 
-function TZMySQL5PlainDriver.GetFieldName(Field: PZMySQLField): PChar;
+function TZMySQL5PlainDriver.GetFieldName(Field: PZMySQLField): PAnsiChar;
 begin
   Result := ZPlainMySql5.PMYSQL_FIELD(Field)^.name;
 end;
 
-function TZMySQL5PlainDriver.GetFieldTable(Field: PZMySQLField): PChar;
+function TZMySQL5PlainDriver.GetFieldTable(Field: PZMySQLField): PAnsiChar;
 begin
   Result := ZPlainMySql5.PMYSQL_FIELD(Field)^.table;
 end;
 
-function TZMySQL5PlainDriver.GetFieldOrigTable(Field: PZMySQLField): PChar;
+function TZMySQL5PlainDriver.GetFieldOrigTable(Field: PZMySQLField): PAnsiChar;
 begin
   Result := ZPlainMySql5.PMYSQL_FIELD(Field)^.org_table;
 end;
 
-function TZMySQL5PlainDriver.GetFieldOrigName(Field: PZMySQLField): PChar;
+function TZMySQL5PlainDriver.GetFieldOrigName(Field: PZMySQLField): PAnsiChar;
 begin
   Result := ZPlainMySql5.PMYSQL_FIELD(Field)^.org_name;
 end;
 
 function TZMySQL5PlainDriver.GetFieldData(Row: PZMySQLRow;
-  Offset: Cardinal): PChar;
+  Offset: Cardinal): PAnsiChar;
 begin
   Result := ZPlainMySql5.PMYSQL_ROW(ROW)[Offset];
 end;

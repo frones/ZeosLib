@@ -58,7 +58,7 @@ interface
 {$I ZCore.inc}
 
 uses
-  Classes, SysUtils, ZClasses;
+   Classes, SysUtils, ZClasses {$IFDEF WINDOWS}, Windows{$ENDIF};
 
 type
 
@@ -476,7 +476,11 @@ var
   function AbsorbDigits: string;
   begin
     Result := '';
+{$IFDEF ZEOS_FULL_UNICODE}
+    while CharInSet(FirstChar, ['0'..'9']) do
+{$ELSE}
     while FirstChar in ['0'..'9'] do
+{$ENDIF}
     begin
       GotAdigit := True;
       Result := Result + FirstChar;
@@ -542,7 +546,8 @@ begin
   begin
     if AbsorbedDot then
       Result.TokenType := ttFloat
-    else Result.TokenType := ttInteger;
+    else
+      Result.TokenType := ttInteger;
   end;
 end;
 
@@ -594,7 +599,8 @@ begin
   if (Length(Value) >= 2) and (Value[1] = QuoteChar)
     and (Value[Length(Value)] = Value[1]) then
     Result := Copy(Value, 2, Length(Value) - 2)
-  else Result := Value;
+  else
+    Result := Value;
 end;
 
 { TZBasicCommentState }
@@ -613,10 +619,16 @@ var
   ReadStr: string;
 begin
   ReadStr := FirstChar;
-  while (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) and not (ReadChar in [#10, #13]) do
-    ReadStr := ReadStr + ReadChar;
+{$IFDEF ZEOS_FULL_UNICODE}
+  while (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) and not CharInSet(ReadChar, [#10, #13]) do
+      ReadStr := ReadStr + ReadChar;
+   if CharInSet(ReadChar, [#10, #13]) then
+{$ELSE}
+   while (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) and not (ReadChar in [#10, #13]) do
+      ReadStr := ReadStr + ReadChar;
+   if ReadChar in [#10, #13] then
+{$ENDIF}
 
-  if ReadChar in [#10, #13] then
     Stream.Seek(-(1 * SizeOf(Char)), soFromCurrent);
 
   Result.TokenType := ttComment;
@@ -654,16 +666,29 @@ var
   ReadChar: Char;
 begin
   Result := '';
+{$IFDEF ZEOS_FULL_UNICODE}
+  while (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) and not CharInSet(ReadChar, [#10, #13]) do
+      Result := Result + ReadChar;
+{$ELSE}
   while (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) and not (ReadChar in [#10, #13]) do
     Result := Result + ReadChar;
+{$ENDIF}
 
   // mdaems : for single line comments the line ending must be included
   // as it should never be stripped off or unified with other whitespace characters
+{$IFDEF ZEOS_FULL_UNICODE}
+  if CharInSet(ReadChar, [#10, #13]) then
+{$ELSE}
   if ReadChar in [#10, #13] then
+{$ENDIF}
     begin
       Result := Result + ReadChar;
       if (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) then
+{$IFDEF ZEOS_FULL_UNICODE}
+        if CharInSet(ReadChar, [#10, #13]) then
+{$ELSE}
         if (ReadChar in [#10, #13]) then
+{$ENDIF}
           Result := Result + ReadChar
         else
           Stream.Seek(-(1 * SizeOf(Char)), soFromCurrent);
@@ -768,7 +793,8 @@ begin
   begin
     if FChildren[I] <> nil then
       FChildren[I].Free
-    else Break;
+    else
+         Break;
   end;
 
   inherited Destroy;
@@ -809,13 +835,15 @@ begin
   ReadNum := Stream.Read(TempChar, 1 * SizeOf(Char));
   if ReadNum > 0 then
     Node := FindChildWithChar(TempChar)
-  else Node := nil;
+  else
+    Node := nil;
 
   if Node = nil then
   begin
     Stream.Seek(-ReadNum, soFromCurrent);
     Result := Self;
-  end else
+  end
+  else
     Result := Node.DeepestRead(Stream);
 end;
 
@@ -869,7 +897,8 @@ var
 begin
   if Length(Value) > 0 then
     TempChar := Value[1]
-  else TempChar := #0;
+  else
+    TempChar := #0;
   Result := FindChildWithChar(TempChar);
   if (Length(Value) > 1) and (Result <> nil) then
     Result := Result.FindDescendant(Copy(Value, 2, Length(Value) - 1));
@@ -886,7 +915,8 @@ begin
   begin
     Stream.Seek(-(1 * SizeOf(Char)), soFromCurrent);
     Result := FParent.UnreadToValid(Stream);
-  end else
+  end
+  else
     Result := Self;
 end;
 
@@ -919,7 +949,8 @@ var
 begin
   if Length(Value) > 0 then
     TempChar := Value[1]
-  else TempChar := #0;
+  else
+     TempChar := #0;
   Node := EnsureChildWithChar(TempChar);
   Node.AddDescendantLine(Copy(Value, 2, Length(Value) - 1));
   FindDescendant(Value).Valid := True;
@@ -1211,7 +1242,11 @@ function TZTokenizer.TokenizeBuffer(const Buffer: string;
 var
   Stream: TStream;
 begin
+  {$IFDEF ZEOS_FULL_UNICODE}
+  Stream := TStringStream.Create(Buffer, TEncoding.Unicode);
+  {$ELSE}
   Stream := TStringStream.Create(Buffer);
+  {$ENDIF}
   try
     Result := TokenizeStream(Stream, Options);
   finally
@@ -1231,7 +1266,11 @@ function TZTokenizer.TokenizeBufferToList(const Buffer: string;
 var
   Stream: TStream;
 begin
+  {$IFDEF ZEOS_FULL_UNICODE}
+  Stream := TStringStream.Create(Buffer, TEncoding.Unicode);
+  {$ELSE}
   Stream := TStringStream.Create(Buffer);
+  {$ENDIF}
   try
     Result := TokenizeStreamToList(Stream, Options);
   finally

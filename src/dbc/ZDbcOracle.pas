@@ -284,7 +284,8 @@ begin
   Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
   if Protocol = FOracle9iPlainDriver.GetProtocol then
     Result := FOracle9iPlainDriver
-  else Result := FOracle9iPlainDriver;
+  else
+    Result := FOracle9iPlainDriver;
   Result.Initialize;
 end;
 
@@ -311,7 +312,8 @@ begin
   { Sets a default properties }
   FPlainDriver := PlainDriver;
   FHandle := nil;
-  if Self.Port = 0 then Self.Port := 1521;
+  if Self.Port = 0 then
+      Self.Port := 1521;
   AutoCommit := True;
   TransactIsolationLevel := tiNone;
 
@@ -343,7 +345,7 @@ var
   Status: Integer;
   LogMessage: string;
 //  ConnectTimeout: Integer;
-//  SQL: PChar;
+//  SQL: PAnsiChar;
 
   procedure CleanupOnFail;
   begin
@@ -356,12 +358,14 @@ var
   end;
 
 begin
-  if not Closed then Exit;
+  if not Closed then
+     Exit;
 
   LogMessage := Format('CONNECT TO "%s" AS USER "%s"', [Database, User]);
 
   { Sets a default port number. }
-  if Port = 0 then Port := 1521;
+  if Port = 0 then
+     Port := 1521;
   { Sets connection timeout. }
 //  ConnectTimeout := StrToIntDef(Info.Values['timeout'], 0);
 
@@ -376,7 +380,7 @@ begin
   FPlainDriver.HandleAlloc(FHandle, FContextHandle, OCI_HTYPE_SVCCTX, 0, nil);
 
   Status := FPlainDriver.ServerAttach(FServerHandle, FErrorHandle,
-    PChar(string(Database)), Length(Database), 0);
+      PAnsiChar(string(Database)), Length(Database), 0);
   try
     CheckOracleError(FPlainDriver, FErrorHandle, Status, lcConnect, LogMessage);
   except
@@ -387,9 +391,9 @@ begin
   FPlainDriver.AttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FServerHandle, 0,
     OCI_ATTR_SERVER, FErrorHandle);
   FPlainDriver.HandleAlloc(FHandle, FSessionHandle, OCI_HTYPE_SESSION, 0, nil);
-  FPlainDriver.AttrSet(FSessionHandle, OCI_HTYPE_SESSION, PChar(string(User)),
+  FPlainDriver.AttrSet(FSessionHandle, OCI_HTYPE_SESSION, PAnsiChar(string(User)),
     Length(User), OCI_ATTR_USERNAME, FErrorHandle);
-  FPlainDriver.AttrSet(FSessionHandle, OCI_HTYPE_SESSION, PChar(string(Password)),
+  FPlainDriver.AttrSet(FSessionHandle, OCI_HTYPE_SESSION, PAnsiChar(string(Password)),
     Length(Password), OCI_ATTR_PASSWORD, FErrorHandle);
   Status := FPlainDriver.SessionBegin(FContextHandle, FErrorHandle,
     FSessionHandle, OCI_CRED_RDBMS, OCI_DEFAULT);
@@ -408,7 +412,7 @@ begin
   { Sets a client codepage. }
   if FClientCodePage <> '' then
   begin
-    SQL := PChar(Format('SET CHARACTER SET %s', [FClientCodePage]));
+    SQL := PAnsiChar(Format('SET CHARACTER SET %s', [FClientCodePage]));
     FPlainDriver.ExecQuery(FHandle, SQL);
     CheckOracleError(FPlainDriver, FHandle, lcExecute, SQL);
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
@@ -424,7 +428,7 @@ end;
 }
 procedure TZOracleConnection.StartTransactionSupport;
 var
-  SQL: PChar;
+  SQL: PAnsiChar;
   Status: Integer;
   Isolation: Integer;
 begin
@@ -484,7 +488,8 @@ end;
 function TZOracleConnection.CreateRegularStatement(Info: TStrings):
   IZStatement;
 begin
-  if IsClosed then Open;
+  if IsClosed then
+     Open;
   Result := TZOracleStatement.Create(FPlainDriver, Self, Info);
 end;
 
@@ -519,7 +524,8 @@ end;
 function TZOracleConnection.CreatePreparedStatement(const SQL: string;
   Info: TStrings): IZPreparedStatement;
 begin
-  if IsClosed then Open;
+  if IsClosed then
+     Open;
   Result := TZOraclePreparedStatement.Create(FPlainDriver, Self, SQL, Info);
 end;
 
@@ -533,7 +539,7 @@ end;
 procedure TZOracleConnection.Commit;
 var
   Status: Integer;
-  SQL: PChar;
+  SQL: PAnsiChar;
 begin
   if not Closed then
   begin
@@ -557,7 +563,7 @@ end;
 procedure TZOracleConnection.Rollback;
 var
   Status: Integer;
-  SQL: PChar;
+  SQL: PAnsiChar;
 begin
   if not Closed then
   begin
@@ -650,7 +656,7 @@ procedure TZOracleConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);
 var
   Status: Integer;
-  SQL: PChar;
+  SQL: PAnsiChar;
 begin
   if TransactIsolationLevel <> Level then
   begin
@@ -806,15 +812,19 @@ end;
 }
 function TZOracleCachedResolver.FormCalculateStatement(
   Columns: TObjectList): string;
-var iPos: Integer;
+var
+   iPos: Integer;
 begin
   Result := inherited FormCalculateStatement(Columns);
-  if Result <> '' then begin
+  if Result <> '' then
+  begin
     iPos := pos('FROM', uppercase(Result));
-    if iPos > 0 then begin
+    if iPos > 0 then
+    begin
       Result := copy(Result, 1, iPos+3) + ' DUAL';
     end
-    else begin
+    else
+    begin
       Result := Result + ' FROM DUAL';
     end;
   end;

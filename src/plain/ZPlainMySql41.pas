@@ -241,10 +241,10 @@ type
 
   NET = record
     vio:              Pointer;
-    buff:             PChar;
-    buff_end:         PChar;
-    write_pos:        PChar;
-    read_pos:         PChar;
+    buff: PAnsiChar;
+    buff_end: PAnsiChar;
+    write_pos: PAnsiChar;
+    read_pos: PAnsiChar;
     fd:               Integer;
     max_packet:       Cardinal;
     max_packet_size:  Cardinal;
@@ -260,13 +260,13 @@ type
     buf_length:       LongInt;
     where_b:          LongInt;
     return_status:    Pointer;
-    reading_or_writing: Char;
-    save_char:        Char;
+    reading_or_writing: AnsiChar;
+    save_char: AnsiChar;
     no_send_ok:       Byte;
-    last_error:       array[1..MYSQL_ERRMSG_SIZE] of Char;
-    sqlstate:         array[1..SQLSTATE_LENGTH + 1] of Char;
+    last_error: array[1..MYSQL_ERRMSG_SIZE] of AnsiChar;
+    sqlstate: array[1..SQLSTATE_LENGTH + 1] of AnsiChar;
     last_errno:       Cardinal;
-    error:            Char;
+    error: AnsiChar;
     query_cache_query: Pointer;
     report_error:     Byte;
     return_errno:     Byte;
@@ -274,13 +274,13 @@ type
 
   PMYSQL_FIELD = ^MYSQL_FIELD;
   MYSQL_FIELD = record
-    name:             PChar;   // Name of column
-    org_name:         PChar;   // Original column name, if an alias
-    table:            PChar;   // Table of column if column was a field
-    org_table:        PChar;   // Org table name if table was an alias
-    db:               PChar;   // Database for table
-    catalog:	      PChar;   // Catalog for table
-    def:              PChar;   // Default value (set by mysql_list_fields)
+    name:             PAnsiChar;   // Name of column
+    org_name:         PAnsiChar;   // Original column name, if an alias
+    table:            PAnsiChar;   // Table of column if column was a field
+    org_table:        PAnsiChar;   // Org table name if table was an alias
+    db:               PAnsiChar;   // Database for table
+    catalog:	      PAnsiChar;   // Catalog for table
+    def:              PAnsiChar;   // Default value (set by mysql_list_fields)
     length:           LongInt; // Width of column
     max_length:       LongInt; // Max width of selected set
     name_length:      Cardinal;
@@ -298,7 +298,7 @@ type
 
   MYSQL_FIELD_OFFSET = Cardinal;
 
-  MYSQL_ROW = array[00..$ff] of PChar;
+  MYSQL_ROW = array[00..$ff] of PAnsiChar;
   PMYSQL_ROW = ^MYSQL_ROW;
 
   PMYSQL_ROWS = ^MYSQL_ROWS;
@@ -325,22 +325,22 @@ type
     port:                     Cardinal;
     protocol:                 Cardinal;
     client_flag:              LongInt;
-    host:                     PChar;
-    user:                     PChar;
-    password:                 PChar;
-    unix_socket:              PChar;
-    db:                       PChar;
+    host:                     PAnsiChar;
+    user:                     PAnsiChar;
+    password:                 PAnsiChar;
+    unix_socket:              PAnsiChar;
+    db:                       PAnsiChar;
     init_commands:            Pointer;
-    my_cnf_file:              PChar;
-    my_cnf_group:             PChar;
-    charset_dir:              PChar;
-    charset_name:             PChar;
-    ssl_key:                  PChar;
-    ssl_cert:                 PChar;
-    ssl_ca:                   PChar;
-    ssl_capath:               PChar;
-    ssl_cipher:               PChar;
-    shared_memory_base_name:  PChar;
+    my_cnf_file:              PAnsiChar;
+    my_cnf_group:             PAnsiChar;
+    charset_dir:              PAnsiChar;
+    charset_name:             PAnsiChar;
+    ssl_key:                  PAnsiChar;
+    ssl_cert:                 PAnsiChar;
+    ssl_ca:                   PAnsiChar;
+    ssl_capath:               PAnsiChar;
+    ssl_cipher:               PAnsiChar;
+    shared_memory_base_name:  PAnsiChar;
     max_allowed_packet:       LongInt;
     use_ssl:                  Byte;
     compress:                 Byte;
@@ -350,7 +350,7 @@ type
     no_master_reads:          Byte;
     separate_thread:          Byte;
     methods_to_use:           TMySqlOption;
-    client_ip:                PChar;
+    client_ip:                PAnsiChar;
     secure_auth:              Byte;
     local_infile_init:        Pointer;
     local_infile_read:        Pointer;
@@ -379,7 +379,7 @@ type
   MYSQL_BIND = record
     length:           PLongInt;
     is_null:          PByte;
-    buffer:           PChar;
+    buffer:           PAnsiChar;
     buffer_type:      Cardinal;
     buffer_length:    LongInt;
     inter_buffer:     PByte;
@@ -404,7 +404,7 @@ type
     list:                 LIST;
     current_row:          PByte;
     last_fetched_buffer:  PByte;
-    query:                PChar;
+    query:                PAnsiChar;
     mem_root:             MEM_ROOT;
     last_fetched_column:  Int64;
     stmt_id:              LongInt;
@@ -412,8 +412,8 @@ type
     param_count:          Cardinal;
     field_count:          Cardinal;
     state:                PREP_STMT_STATE;
-    last_error:           array[1..MYSQL_ERRMSG_SIZE] of Char;
-    sqlstate:             array[1..SQLSTATE_LENGTH + 1] of Char;
+    last_error:           array[1..MYSQL_ERRMSG_SIZE] of AnsiChar;
+    sqlstate:             array[1..SQLSTATE_LENGTH + 1] of AnsiChar;
     long_alloced:         Byte;
     send_types_to_server: Byte;
     param_buffers:        Byte;
@@ -424,7 +424,7 @@ type
   MYSQL_METHODS = record
     read_query_result: function(handle: PMYSQL): Byte;
     advanced_command:  function(handle: PMYSQL; command: TMySqlServerCommand;
-      header: PChar; header_length: LongInt; const arg: PChar;
+      header: PAnsiChar; header_length: LongInt; const arg: PAnsiChar;
       arg_length: LongInt; skip_check: Byte): Byte;
     read_rows: function( handle: PMYSQL; mysql_fields: PMYSQL_FIELD;
       fields: Cardinal): PMYSQL_DATA;
@@ -437,7 +437,7 @@ type
     read_binary_rows: function(stmt: PMYSQL_STMT): PMYSQL_DATA;
     unbuffered_fetch: function(handle: PMYSQL; row: PMYSQL_ROW): Integer;
     free_embedded_thd: procedure(handle: PMYSQL);
-    read_statisticd: function(handle: PMYSQL): PChar;
+    read_statisticd: function(handle: PMYSQL): PAnsiChar;
   end;
 
   TModifyType = (MODIFY_INSERT, MODIFY_UPDATE, MODIFY_DELETE);
@@ -447,19 +447,19 @@ type
   PMYSQL_MANAGER = ^MYSQL_MANAGER;
   MYSQL_MANAGER = record
     _net:               NET;
-    host:               PChar;
-    user:               PChar;
-    passwd:             PChar;
+    host:               PAnsiChar;
+    user:               PAnsiChar;
+    passwd:             PAnsiChar;
     port:               Cardinal;
     free_me:            Byte;
     eof:                Byte;
     cmd_status:         Integer;
     last_errno:         Integer;
-    net_buf:            PChar;
-    net_buf_pos:        PChar;
-    net_data_end:       PChar;
+    net_buf:            PAnsiChar;
+    net_buf_pos:        PAnsiChar;
+    net_data_end:       PAnsiChar;
     net_buf_size:       Integer;
-    last_error:         array[1..MAX_MYSQL_MANAGER_ERR] of Char;
+    last_error:         array[1..MAX_MYSQL_MANAGER_ERR] of AnsiChar;
   end;
 
   { Options for mysql_set_option }
@@ -474,7 +474,7 @@ type
 { ************** Collection of Plain API Function types definition ************* }
 MYSQL41_API = record
 {$I ZPlainMysqlVar.inc}
-END;
+end;
 
 type
   {** Implements a loader for MySQL native library. }

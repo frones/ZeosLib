@@ -77,8 +77,8 @@ type
     FHandle: Psqlite;
     FStmtHandle: Psqlite_vm;
     FColumnCount: Integer;
-    FColumnNames: PPChar;
-    FColumnValues: PPChar;
+    FColumnNames: PPAnsiChar;
+    FColumnValues: PPAnsiChar;
     FPlainDriver: IZSQLitePlainDriver;
   protected
     procedure Open; override;
@@ -86,14 +86,14 @@ type
   public
     constructor Create(PlainDriver: IZSQLitePlainDriver; Statement: IZStatement;
       SQL: string; Handle: Psqlite; StmtHandle: Psqlite_vm;
-      ColumnCount: Integer; ColumnNames: PPChar; ColumnValues: PPChar);
+      ColumnCount: Integer; ColumnNames: PPAnsiChar; ColumnValues: PPAnsiChar);
     destructor Destroy; override;
 
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPChar(ColumnIndex: Integer): PChar; override;
-    function GetString(ColumnIndex: Integer): string; override;
+    function GetPChar(ColumnIndex: Integer): PAnsiChar; override;
+    function GetString(ColumnIndex: Integer): AnsiString; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -162,7 +162,8 @@ function TZSQLiteResultSetMetadata.IsNullable(Column: Integer):
 begin
   if IsAutoIncrement(Column) then
     Result := ntNullable
-  else Result := inherited IsNullable(Column);
+  else
+    Result := inherited IsNullable(Column);
 end;
 
 { TZSQLiteResultSet }
@@ -178,8 +179,8 @@ end;
 }
 constructor TZSQLiteResultSet.Create(PlainDriver: IZSQLitePlainDriver;
   Statement: IZStatement; SQL: string; Handle: Psqlite;
-  StmtHandle: Psqlite_vm; ColumnCount: Integer; ColumnNames: PPChar;
-  ColumnValues: PPChar);
+  StmtHandle: Psqlite_vm; ColumnCount: Integer; ColumnNames: PPAnsiChar;
+  ColumnValues: PPAnsiChar);
 begin
   inherited Create(Statement, SQL, TZSQLiteResultSetMetadata.Create(
     Statement.GetConnection.GetMetadata, SQL, Self));
@@ -200,14 +201,14 @@ end;
 }
 destructor TZSQLiteResultSet.Destroy;
 begin
-  //ZPlainSQLLiteDriver.Step : AllocMem(SizeOf(PPChar)*(pN+1)); // Leak, if not freed ! [HD, 05.10.2007]
+  //ZPlainSQLLiteDriver.Step : AllocMem(SizeOf(PPAnsiChar)*(pN+1)); // Leak, if not freed ! [HD, 05.10.2007]
   if FColumnValues <> nil then
-    FreeMem(FColumnValues,Sizeof(PPChar)*(fColumnCount+1));
+    FreeMem(FColumnValues, Sizeof(PPAnsiChar) * (fColumnCount + 1));
   FColumnValues := nil;
 
-  //ZPlainSQLLiteDriver.Step : AllocMem(SizeOf(PPChar)*(pN+1)*2); // Leak, if not freed ! [HD, 05.10.2007]
+   //ZPlainSQLLiteDriver.Step : AllocMem(SizeOf(PPAnsiChar)*(pN+1)*2); // Leak, if not freed ! [HD, 05.10.2007]
   if FColumnNames <> nil then
-    FreeMem(FColumnNames,Sizeof(PPChar)*(fColumnCount+1)*2);
+    FreeMem(FColumnNames, Sizeof(PPAnsiChar) * (fColumnCount + 1) * 2);
   FColumnNames := nil;
 
   inherited Destroy;
@@ -220,10 +221,10 @@ procedure TZSQLiteResultSet.Open;
 var
   I: Integer;
   ColumnInfo: TZColumnInfo;
-  FieldName: PPChar;
+  FieldName: PPAnsiChar;
   FieldPrecision: Integer;
   FieldDecimals: Integer;
-  TypeName: PPChar;
+  TypeName: PPAnsiChar;
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
@@ -275,12 +276,13 @@ end;
 procedure TZSQLiteResultSet.FreeHandle;
 var
   ErrorCode: Integer;
-  ErrorMessage: PChar;
+  ErrorMessage: PAnsiChar;
 begin
   ErrorMessage := nil;
   if Assigned(FStmtHandle) then
     ErrorCode := FPlainDriver.Finalize(FStmtHandle, ErrorMessage)
-  else ErrorCode := SQLITE_OK;
+  else
+    ErrorCode := SQLITE_OK;
   FStmtHandle := nil;
   CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage,
     lcOther, 'FINALIZE SQLite VM');
@@ -315,7 +317,7 @@ end;
 }
 function TZSQLiteResultSet.IsNull(ColumnIndex: Integer): Boolean;
 var
-  Temp: PPChar;
+  Temp: PPAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
@@ -331,15 +333,15 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>PChar</code> in the Delphi programming language.
+  a <code>PAnsiChar</code> in the Delphi programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZSQLiteResultSet.GetPChar(ColumnIndex: Integer): PChar;
+function TZSQLiteResultSet.GetPChar(ColumnIndex: Integer): PAnsiChar;
 var
-  Temp: PPChar;
+  Temp: PPAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
@@ -362,14 +364,15 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZSQLiteResultSet.GetString(ColumnIndex: Integer): string;
+function TZSQLiteResultSet.GetString(ColumnIndex: Integer): AnsiString;
 var
-  Buffer: PChar;
+  Buffer: PAnsiChar;
 begin
   Buffer := GetPChar(ColumnIndex);
   if Buffer <> nil then
     Result := StrPas(Buffer)
-  else Result := '';
+  else
+    Result := '';
 end;
 
 {**
@@ -388,7 +391,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-  Temp := UpperCase(GetPChar(ColumnIndex));
+  Temp := UpperCase(GetString(ColumnIndex));
   Result := (Temp = 'Y') or (Temp = 'YES') or (Temp = 'T') or
     (Temp = 'TRUE') or (StrToIntDef(Temp, 0) <> 0);
 end;
@@ -407,7 +410,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  Result := ShortInt(StrToIntDef(GetPChar(ColumnIndex), 0));
+  Result := ShortInt(StrToIntDef(GetString(ColumnIndex), 0));
 end;
 
 {**
@@ -424,7 +427,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
-  Result := SmallInt(StrToIntDef(GetPChar(ColumnIndex), 0));
+  Result := SmallInt(StrToIntDef(GetString(ColumnIndex), 0));
 end;
 
 {**
@@ -441,7 +444,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
-  Result := StrToIntDef(GetPChar(ColumnIndex), 0);
+  Result := StrToIntDef(GetString(ColumnIndex), 0);
 end;
 
 {**
@@ -458,7 +461,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-  Result := StrToInt64Def(GetPChar(ColumnIndex), 0);
+  Result := StrToInt64Def(GetString(ColumnIndex), 0);
 end;
 
 {**
@@ -475,7 +478,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
-  Result := SQLStrToFloatDef(GetPChar(ColumnIndex), 0);
+  Result := SQLStrToFloatDef(GetString(ColumnIndex), 0);
 end;
 
 {**
@@ -492,7 +495,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
-  Result := SQLStrToFloatDef(GetPChar(ColumnIndex), 0);
+  Result := SQLStrToFloatDef(GetString(ColumnIndex), 0);
 end;
 
 {**
@@ -510,7 +513,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
-  Result := SQLStrToFloatDef(GetPChar(ColumnIndex), 0);
+  Result := SQLStrToFloatDef(GetString(ColumnIndex), 0);
 end;
 
 {**
@@ -547,10 +550,11 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
-  Value := GetPChar(ColumnIndex);
+  Value := GetString(ColumnIndex);
   if IsMatch('????-??-??*', Value) then
     Result := Trunc(AnsiSQLDateToDateTime(Value))
-  else Result := Trunc(TimestampStrToDateTime(Value));
+  else
+    Result := Trunc(TimestampStrToDateTime(Value));
   LastWasNull := Result = 0;
 end;
 
@@ -570,10 +574,11 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-  Value := GetPChar(ColumnIndex);
+  Value := GetString(ColumnIndex);
   if IsMatch('*??:??:??*', Value) then
     Result := Frac(AnsiSQLDateToDateTime(Value))
-  else Result := Frac(TimestampStrToDateTime(Value));
+  else
+    Result := Frac(TimestampStrToDateTime(Value));
 end;
 
 {**
@@ -593,10 +598,11 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
 {$ENDIF}
-  Temp := GetPChar(ColumnIndex);
+  Temp := GetString(ColumnIndex);
   if IsMatch('????-??-??*', Temp) then
     Result := AnsiSQLDateToDateTime(Temp)
-  else Result := TimestampStrToDateTime(Temp);
+  else
+    Result := TimestampStrToDateTime(Temp);
   LastWasNull := Result = 0;
 end;
 
@@ -712,9 +718,11 @@ begin
       if TZAbstractResultSetMetadata(Metadata).GetColumnType(ColumnIndex)
         <> stBinaryStream then
         Stream := TStringStream.Create(GetString(ColumnIndex))
-      else Stream := TStringStream.Create(DecodeString(GetString(ColumnIndex)));
+      else
+        Stream := TStringStream.Create(DecodeString(GetString(ColumnIndex)));
       Result := TZAbstractBlob.CreateWithStream(Stream)
-    end else
+    end
+    else
       Result := TZAbstractBlob.CreateWithStream(nil);
   finally
     if Assigned(Stream) then
@@ -763,15 +771,15 @@ begin
   end
   else
   begin
-    //ZPlainSQLLiteDriver.Step : AllocMem(SizeOf(PPChar)*(pN+1)); // Leak, if not freed ! [HD, 05.10.2007]
+      //ZPlainSQLLiteDriver.Step : AllocMem(SizeOf(PPAnsiChar)*(pN+1)); // Leak, if not freed ! [HD, 05.10.2007]
     if FColumnValues <> nil then
-      FreeMem(FColumnValues,Sizeof(PPChar)*(fColumnCount+1));
+      FreeMem(FColumnValues, Sizeof(PPAnsiChar) * (fColumnCount + 1));
     FColumnValues := nil;
     if Assigned(FStmtHandle) then
     begin
-      //ZPlainSQLLiteDriver.Step : AllocMem(SizeOf(PPChar)*(pN+1)*2); // Leak, if not freed [HD, 05.10.2007]
+     //ZPlainSQLLiteDriver.Step : AllocMem(SizeOf(PPAnsiChar)*(pN+1)*2); // Leak, if not freed [HD, 05.10.2007]
       if FColumnNames <> nil then
-        FreeMem(FColumnNames,Sizeof(PPChar)*(fColumnCount+1)*2);
+        FreeMem(FColumnNames, Sizeof(PPAnsiChar) * (fColumnCount + 1) * 2);
       FColumnNames := nil;
       ErrorCode := FPlainDriver.Step(FStmtHandle, FColumnCount,
         FColumnValues, FColumnNames);
@@ -872,7 +880,8 @@ var
   Current: TZResolverParameter;
 begin
   Result := '';
-  if Columns.Count = 0 then Exit;
+  if Columns.Count = 0 then
+     Exit;
 
   for I := 0 to Columns.Count - 1 do
   begin
@@ -881,7 +890,8 @@ begin
       Result := Result + ',';
     if Current.DefaultValue <> '' then
       Result := Result + Current.DefaultValue
-    else Result := Result + 'NULL';
+    else
+      Result := Result + 'NULL';
   end;
   Result := 'SELECT ' + Result;
 end;

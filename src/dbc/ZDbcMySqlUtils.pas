@@ -170,23 +170,31 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
     case PlainDriver.GetFieldType(FieldHandle) of
     FIELD_TYPE_TINY:
       begin
-        if Signed then Result := stByte
-        else Result := stShort;
+            if Signed then
+               Result := stByte
+            else
+               Result := stShort;
       end;
     FIELD_TYPE_YEAR, FIELD_TYPE_SHORT:
       begin
-        if Signed then Result := stShort
-        else Result := stInteger;
+            if Signed then
+               Result := stShort
+            else
+               Result := stInteger;
       end;
     FIELD_TYPE_INT24, FIELD_TYPE_LONG:
       begin
-        if Signed then Result := stInteger
-        else Result := stLong;
+            if Signed then
+               Result := stInteger
+            else
+               Result := stLong;
       end;
     FIELD_TYPE_LONGLONG:
       begin
-        if Signed then Result := stLong
-        else Result := stBigDecimal;
+            if Signed then
+               Result := stLong
+            else
+               Result := stBigDecimal;
       end;
     FIELD_TYPE_FLOAT:
       Result := stDouble;
@@ -196,8 +204,10 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
         begin
           if PlainDriver.GetFieldLength(FieldHandle) < 11 then
             Result := stInteger
-          else Result := stLong;
-        end else
+          else
+            Result := stLong;
+          end
+        else
           Result := stDouble;
       end;
     FIELD_TYPE_DOUBLE:
@@ -212,7 +222,8 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
     FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB:
       if (FieldFlags and BINARY_FLAG) = 0 then
         Result := stAsciiStream
-      else Result := stBinaryStream;
+      else
+        Result := stBinaryStream;
     FIELD_TYPE_BIT:
       Result := stBinaryStream;
     FIELD_TYPE_VARCHAR:
@@ -236,7 +247,8 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
    end;
   { Fix by the HeidiSql team. - See their SVN repository rev.775 and 900}
   { SHOW FULL PROCESSLIST on 4.x servers can return veeery long FIELD_TYPE_VAR_STRINGs. The following helps avoid excessive row buffer allocation later on. }
-  if (Result = stString) and (PlainDriver.GetFieldLength(FieldHandle) > 8192) then Result := stAsciiStream;
+  if (Result = stString) and (PlainDriver.GetFieldLength(FieldHandle) > 8192) then
+     Result := stAsciiStream;
 end;
 
 {**
@@ -274,7 +286,8 @@ begin
   begin
     if IsUnsigned then
       Result := stShort
-    else Result := stByte;
+    else
+      Result := stByte;
   end
   else if TypeName = 'YEAR' then
     Result := stShort
@@ -282,14 +295,17 @@ begin
   begin
     if IsUnsigned then
       Result := stInteger
-    else Result := stShort;
+    else
+      Result := stShort;
   end
   else if TypeName = 'MEDIUMINT' then
     Result := stInteger
   else if (TypeName = 'INT') or (TypeName = 'INTEGER') then
   begin
-    if IsUnsigned then Result := stLong
-    else Result := stInteger
+      if IsUnsigned then
+         Result := stLong
+      else
+         Result := stInteger
   end
   else if TypeName = 'BIGINT' then
     Result := stLong
@@ -299,7 +315,8 @@ begin
   begin
     if IsUnsigned then
       Result := stDouble
-    else Result := stFloat;
+    else
+      Result := stFloat;
   end
   else if TypeName = 'FLOAT' then
   begin
@@ -314,8 +331,10 @@ begin
       Len := StrToInt(Copy(TypeNameFull, 9, Length(TypeNameFull) - 11));
       if Len < 10 then
         Result := stInteger
-      else Result := stLong;
-    end else
+      else
+        Result := stLong;
+    end
+    else
       Result := stDouble;
   end
   else if TypeName = 'DOUBLE' then
@@ -357,15 +376,20 @@ begin
     if (TypeNameFull = 'ENUM(''Y'',''N'')')
       or (TypeNameFull = 'ENUM(''N'',''Y'')') then
       Result := stBoolean
-    else Result := stString;
+    else
+      Result := stString;
   end
   else if TypeName = 'SET' then
     Result := stString
   else if TypeName = 'BIT' then
     Result := stBinaryStream
-  else for i := 0 to Length(GeoTypes)-1 do if GeoTypes[i] = TypeName then Result := stBinaryStream;
+  else
+      for i := 0 to Length(GeoTypes) - 1 do
+         if GeoTypes[i] = TypeName then
+            Result := stBinaryStream;
 
-  if Result = stUnknown then raise Exception.Create('Unknown MySQL data type!');
+  if Result = stUnknown then
+     raise Exception.Create('Unknown MySQL data type!');
 end;
 
 {**
@@ -427,9 +451,9 @@ procedure DecodeMySQLVersioning(const MySQLVersion: Integer;
  out MajorVersion: Integer; out MinorVersion: Integer;
  out SubVersion: Integer);
 begin
- MajorVersion := MySQLVersion DIV 10000;
- MinorVersion := (MySQLVersion-(MajorVersion*10000)) DIV 100;
- SubVersion   := MySQLVersion-(MajorVersion*10000)-(MinorVersion*100);
+  MajorVersion := MySQLVersion div 10000;
+  MinorVersion := (MySQLVersion - (MajorVersion * 10000)) div 100;
+  SubVersion   := MySQLVersion-(MajorVersion*10000)-(MinorVersion*100);
 end;
 
 {**
@@ -459,7 +483,8 @@ end;
   @return Encoded Zeos SQL Version Value.
 }
 function ConvertMySQLVersionToSQLVersion( const MySQLVersion: Integer ): integer;
-var MajorVersion, MinorVersion, SubVersion: Integer;
+var
+   MajorVersion, MinorVersion, SubVersion: Integer;
 begin
  DecodeMySQLVersioning(MySQLVersion,MajorVersion,MinorVersion,SubVersion);
  Result := EncodeSQLVersioning(MajorVersion,MinorVersion,SubVersion);
@@ -467,47 +492,31 @@ end;
 
 function getMySQLFieldSize (field_type: Byte; field_size: LongWord): LongWord;
 var
-    MaxBlobSize: LongWord;
-    SmallBLOB: Word;
-Begin
-    MaxBlobSize := 255; // mdaems : temporary solution (See PDO PDOPlainMysqlDriver)
-//    MaxBlobSize := FPlainDriver.GetMaximumBLOBSize;
-    if (MaxBlobSize > 65535) then
-        SmallBLOB := 65535
+   MaxBlobSize: LongWord;
+   SmallBLOB: Word;
+begin
+   MaxBlobSize := 255;
+      // mdaems : temporary solution (See PDO PDOPlainMysqlDriver)
+   //    MaxBlobSize := FPlainDriver.GetMaximumBLOBSize;
+   if (MaxBlobSize > 65535) then
+      SmallBLOB := 65535
     else
-        SmallBLOB := MaxBlobSize;
+      SmallBLOB := MaxBlobSize;
 
     case field_type of
         FIELD_TYPE_TINY:        Result := 1;
         FIELD_TYPE_SHORT:       Result := 2;
-        FIELD_TYPE_LONG:        Result := 3;
+        FIELD_TYPE_LONG:        Result := 4;
         FIELD_TYPE_LONGLONG:    Result := 8;
         FIELD_TYPE_FLOAT:       Result := 4;
         FIELD_TYPE_DOUBLE:      Result := 8;
-        FIELD_TYPE_TIMESTAMP:   Result := sizeOf(MYSQL_TIME);
         FIELD_TYPE_DATE:        Result := sizeOf(MYSQL_TIME);
         FIELD_TYPE_TIME:        Result := sizeOf(MYSQL_TIME);
         FIELD_TYPE_DATETIME:    Result := sizeOf(MYSQL_TIME);
-        FIELD_TYPE_TINY_BLOB:   Result := 255;
-        FIELD_TYPE_MEDIUM_BLOB: Result := SmallBLOB;
-        FIELD_TYPE_LONG_BLOB:   Result := MaxBlobSize;
-        FIELD_TYPE_BLOB:        Result := MaxBlobSize;
-        FIELD_TYPE_STRING:      Result := MaxBlobSize;
-        FIELD_TYPE_VAR_STRING:  Result := field_size; {mysql 5.0.3 moved limit to 2^16}
+        FIELD_TYPE_BLOB:        Result := Field_Size;
+        FIELD_TYPE_STRING:      Result := Field_Size;
     else
-{  FIELD_TYPE_DECIMAL   = 0;
-  FIELD_TYPE_NULL      = 6;
-  FIELD_TYPE_INT24     = 9;
-  FIELD_TYPE_YEAR      = 13;
-  FIELD_TYPE_NEWDATE   = 14;
-  FIELD_TYPE_VARCHAR   = 15; //<--ADDED by fduenas 20-06-2006
-  FIELD_TYPE_BIT       = 16; //<--ADDED by fduenas 20-06-2006
-  FIELD_TYPE_NEWDECIMAL = 246; //<--ADDED by fduenas 20-06-2006
-  FIELD_TYPE_ENUM      = 247;
-  FIELD_TYPE_SET       = 248;
-  FIELD_TYPE_VAR_STRING = 253;
-  FIELD_TYPE_GEOMETRY  = 255;
-}        Result := 255;  {unknown ??}
+        Result := 255;  {unknown ??}
     end;
 end;
 

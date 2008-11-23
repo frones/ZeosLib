@@ -531,7 +531,7 @@ type
   STATUS                = Integer;
 
 { DB-Library datatypes }
-  DBCHAR                = Char;
+  DBCHAR                = AnsiChar;
   DBBINARY              = Byte;
   DBTINYINT             = Byte;
   DBSMALLINT            = SmallInt;
@@ -607,9 +607,9 @@ Strange but I had to insert X1 and X2 into the structure to make it work.
 I have not find any reason for this yet. }
   DBCOL = packed record
     SizeOfStruct: DBINT;
-    Name:       array[0..MAXCOLNAMELEN] of Char;
-    ActualName: array[0..MAXCOLNAMELEN] of Char;
-    TableName:  array[0..MAXTABLENAME] of Char;
+    Name:       array[0..MAXCOLNAMELEN] of AnsiChar;
+    ActualName: array[0..MAXCOLNAMELEN] of AnsiChar;
+    TableName:  array[0..MAXTABLENAME] of AnsiChar;
     X1:         Byte;
     Typ:        SmallInt;
     UserType:   DBINT;
@@ -633,9 +633,9 @@ type
     ServerMajor:        Word;
     ServerMinor:        Word;
     ServerRevision:     Word;
-    ServerName:         array[0..MAXSERVERNAME] of Char;
-    NetLibName:         array[0..MAXNETLIBNAME] of Char;
-    NetLibConnStr:      array[0..MAXNETLIBCONNSTR] of Char;
+    ServerName:         array[0..MAXSERVERNAME] of AnsiChar;
+    NetLibName:         array[0..MAXNETLIBNAME] of AnsiChar;
+    NetLibConnStr:      array[0..MAXNETLIBCONNSTR] of AnsiChar;
   end;
   PDBPROCINFO = ^DBPROC_INFO;
 
@@ -689,30 +689,30 @@ type
     function dbLogin: PLOGINREC;
     procedure dbLoginFree(Login: PLOGINREC);
     function dbSetLoginTime(Seconds: Integer): RETCODE;
-    function dbsetLName(Login: PLOGINREC; Value: PChar; Item: Integer): RETCODE;
-    function dbSetLHost(Login: PLOGINREC; HostName: PChar): RETCODE;
-    function dbSetLUser(Login: PLOGINREC; UserName: PChar): RETCODE;
-    function dbSetLPwd(Login: PLOGINREC; Password: PChar): RETCODE;
-    function dbSetLApp(Login: PLOGINREC; AppName: PChar): RETCODE;
-    function dbSetLNatLang(Login: PLOGINREC; NatLangName: PChar): RETCODE;
-    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PChar): RETCODE;
+    function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE;
+    function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
+    function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
+    function dbSetLPwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE;
+    function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE;
+    function dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): RETCODE;
+    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE;
     function dbSetLSecure(Login: PLOGINREC): RETCODE;
     function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE;
-    function dbOpen(Login: PLOGINREC; Host: PChar): PDBPROCESS;
+    function dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;
     function dbCancel(dbProc: PDBPROCESS): RETCODE;
-    function dbCmd(dbProc: PDBPROCESS; Cmd: PChar): RETCODE;
+    function dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): RETCODE;
     function dbSqlExec(dbProc: PDBPROCESS): RETCODE;
     function dbResults(dbProc: PDBPROCESS): RETCODE;
     function dbCanQuery(dbProc: PDBPROCESS): RETCODE;
     function dbMoreCmds(dbProc: PDBPROCESS): RETCODE;
-    function dbUse(dbProc: PDBPROCESS; dbName: PChar): RETCODE;
+    function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE;
     function dbSetOpt(dbProc: PDBPROCESS; Option: Integer;
-      Char_Param: PChar = nil; Int_Param: Integer = -1): RETCODE;
+      Char_Param: PAnsiChar = nil; Int_Param: Integer = -1): RETCODE;
     function dbClose(dbProc: PDBPROCESS): RETCODE;
-    function dbName(dbProc: PDBPROCESS): PChar;
+    function dbName(dbProc: PDBPROCESS): PAnsiChar;
     function dbCmdRow(dbProc: PDBPROCESS): RETCODE;
     function dbNumCols(dbProc: PDBPROCESS): Integer;
-    function dbColName(dbProc: PDBPROCESS; Column: Integer): PChar;
+    function dbColName(dbProc: PDBPROCESS; Column: Integer): PAnsiChar;
     function dbColType(dbProc: PDBPROCESS; Column: Integer): Integer;
     function dbColLen(dbProc: PDBPROCESS; Column: Integer): DBInt;
     function dbData(dbProc: PDBPROCESS; Column: Integer): PByte;
@@ -723,14 +723,14 @@ type
     function dbGetRow(dbProc: PDBPROCESS; Row: Integer): STATUS;
     function dbCount(dbProc: PDBPROCESS): Integer;
 
-    function dbRpcInit(dbProc: PDBPROCESS; RpcName: PChar; Options: SmallInt): RETCODE;
-    function dbRpcParam(dbProc: PDBPROCESS; ParamName: PChar; Status: Byte;
+    function dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): RETCODE;
+    function dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
       Type_: Integer; MaxLen: Integer; DataLen: Integer; Value: Pointer): RETCODE;
     function dbRpcSend(dbProc: PDBPROCESS): RETCODE;
     function dbRpcExec(dbProc: PDBPROCESS): RETCODE;
     function dbRetStatus(dbProc: PDBPROCESS): Integer;
     function dbHasRetStat(dbProc: PDBPROCESS): Boolean;
-    function dbRetName(dbProc: PDBPROCESS; RetNum: Integer): PChar;
+    function dbRetName(dbProc: PDBPROCESS; RetNum: Integer): PAnsiChar;
     function dbRetData(dbProc: PDBPROCESS; RetNum: Integer): Pointer;
     function dbRetLen(dbProc: PDBPROCESS; RetNum: Integer): Integer;
     function dbRetType(dbProc: PDBPROCESS; RetNum: Integer): Integer;
@@ -753,41 +753,41 @@ type
     function dbLogin: PLOGINREC;
     procedure dbLoginFree(Login: PLOGINREC);
     function dbSetLoginTime(Seconds: Integer): RETCODE;
-    function dbsetLName(Login: PLOGINREC; Value: PChar; Item: Integer): RETCODE;
-    function dbSetLHost(Login: PLOGINREC; HostName: PChar): RETCODE;
-    function dbSetLUser(Login: PLOGINREC; UserName: PChar): RETCODE;
-    function dbSetLPwd(Login: PLOGINREC; Password: PChar): RETCODE;
-    function dbSetLApp(Login: PLOGINREC; AppName: PChar): RETCODE;
-    function dbSetLNatLang(Login: PLOGINREC; NatLangName: PChar): RETCODE;
-    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PChar): RETCODE;
+    function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE;
+    function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
+    function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
+    function dbSetLPwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE;
+    function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE;
+    function dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): RETCODE;
+    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE;
     function dbSetLSecure(Login: PLOGINREC): RETCODE;
     function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE;
-    function dbOpen(Login: PLOGINREC; Host: PChar): PDBPROCESS;
+    function dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;
     function dbCancel(dbProc: PDBPROCESS): RETCODE;
-    function dbCmd(dbProc: PDBPROCESS; Cmd: PChar): RETCODE;
+    function dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): RETCODE;
     function dbSqlExec(dbProc: PDBPROCESS): RETCODE;
     function dbResults(dbProc: PDBPROCESS): RETCODE;
     function dbCanQuery(dbProc: PDBPROCESS): RETCODE;
     function dbMoreCmds(dbProc: PDBPROCESS): RETCODE;
-    function dbUse(dbProc: PDBPROCESS; dbName: PChar): RETCODE;
-    function dbSetOpt(dbProc: PDBPROCESS; Option: Integer; Char_Param: PChar = nil; Int_Param: Integer = -1): RETCODE;
+    function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE;
+    function dbSetOpt(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar = nil; Int_Param: Integer = -1): RETCODE;
     function dbClose(dbProc: PDBPROCESS): RETCODE;
-    function dbName(dbProc: PDBPROCESS): PChar;
+    function dbName(dbProc: PDBPROCESS): PAnsiChar;
     function dbCmdRow(dbProc: PDBPROCESS): RETCODE;
     function dbNumCols(dbProc: PDBPROCESS): Integer;
-    function dbColName(dbProc: PDBPROCESS; Column: Integer): PChar;
+    function dbColName(dbProc: PDBPROCESS; Column: Integer): PAnsiChar;
     function dbColType(dbProc: PDBPROCESS; Column: Integer): Integer;
     function dbColLen(dbProc: PDBPROCESS; Column: Integer): DBInt;
     function dbData(dbProc: PDBPROCESS; Column: Integer): PByte;
     function dbDatLen(dbProc: PDBPROCESS; Column: Integer): Integer;
     function dbConvert(dbProc: PDBPROCESS; SrcType: Integer; Src: PByte;
-      SrcLen: DBINT; DestType: Integer; Dest: PByte; DestLen: DBINT): Integer;
+             SrcLen: DBINT; DestType: Integer; Dest: PByte; DestLen: DBINT): Integer;
     function dbNextRow(dbProc: PDBPROCESS): STATUS;
     function dbGetRow(dbProc: PDBPROCESS; Row: Integer): STATUS;
     function dbCount(dbProc: PDBPROCESS): Integer;
 
-    function dbRpcInit(dbProc: PDBPROCESS; RpcName: PChar; Options: SmallInt): RETCODE;
-    function dbRpcParam(dbProc: PDBPROCESS; ParamName: PChar; Status: Byte;
+    function dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): RETCODE;
+    function dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
       Type_: Integer; MaxLen: Integer; DataLen: Integer; Value: Pointer): RETCODE;
     function dbRpcSend(dbProc: PDBPROCESS): RETCODE;
     function dbRpcExec(dbProc: PDBPROCESS): RETCODE;
@@ -815,29 +815,29 @@ type
     function dbLogin: PLOGINREC;
     procedure dbLoginFree(Login: PLOGINREC);
     function dbSetLoginTime(Seconds: Integer): RETCODE;
-    function dbsetLName(Login: PLOGINREC; Value: PChar; Item: Integer): RETCODE;
-    function dbSetLHost(Login: PLOGINREC; HostName: PChar): RETCODE;
-    function dbSetLUser(Login: PLOGINREC; UserName: PChar): RETCODE;
-    function dbSetLPwd(Login: PLOGINREC; Password: PChar): RETCODE;
-    function dbSetLApp(Login: PLOGINREC; AppName: PChar): RETCODE;
-    function dbSetLNatLang(Login: PLOGINREC; NatLangName: PChar): RETCODE;
-    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PChar): RETCODE;
+    function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE;
+    function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
+    function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
+    function dbSetLPwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE;
+    function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE;
+    function dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): RETCODE;
+    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE;
     function dbSetLSecure(Login: PLOGINREC): RETCODE;
     function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE;
-    function dbOpen(Login: PLOGINREC; Host: PChar): PDBPROCESS;
+    function dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;
     function dbCancel(dbProc: PDBPROCESS): RETCODE;
-    function dbCmd(dbProc: PDBPROCESS; Cmd: PChar): RETCODE;
+    function dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): RETCODE;
     function dbSqlExec(dbProc: PDBPROCESS): RETCODE;
     function dbResults(dbProc: PDBPROCESS): RETCODE;
     function dbCanQuery(dbProc: PDBPROCESS): RETCODE;
     function dbMoreCmds(dbProc: PDBPROCESS): RETCODE;
-    function dbUse(dbProc: PDBPROCESS; dbName: PChar): RETCODE;
-    function dbSetOpt(dbProc: PDBPROCESS; Option: Integer; Char_Param: PChar = nil; Int_Param: Integer = -1): RETCODE;
+    function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE;
+    function dbSetOpt(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar = nil; Int_Param: Integer = -1): RETCODE;
     function dbClose(dbProc: PDBPROCESS): RETCODE;
-    function dbName(dbProc: PDBPROCESS): PChar;
+    function dbName(dbProc: PDBPROCESS): PAnsiChar;
     function dbCmdRow(dbProc: PDBPROCESS): RETCODE;
     function dbNumCols(dbProc: PDBPROCESS): Integer;
-    function dbColName(dbProc: PDBPROCESS; Column: Integer): PChar;
+    function dbColName(dbProc: PDBPROCESS; Column: Integer): PAnsiChar;
     function dbColType(dbProc: PDBPROCESS; Column: Integer): Integer;
     function dbColLen(dbProc: PDBPROCESS; Column: Integer): DBInt;
     function dbData(dbProc: PDBPROCESS; Column: Integer): PByte;
@@ -848,14 +848,14 @@ type
     function dbGetRow(dbProc: PDBPROCESS; Row: Integer): STATUS;
     function dbCount(dbProc: PDBPROCESS): Integer;
 
-    function dbRpcInit(dbProc: PDBPROCESS; RpcName: PChar; Options: SmallInt): RETCODE;
-    function dbRpcParam(dbProc: PDBPROCESS; ParamName: PChar; Status: Byte;
+    function dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): RETCODE;
+    function dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
       Type_: Integer; MaxLen: Integer; DataLen: Integer; Value: Pointer): RETCODE;
     function dbRpcSend(dbProc: PDBPROCESS): RETCODE;
     function dbRpcExec(dbProc: PDBPROCESS): RETCODE;
     function dbRetStatus(dbProc: PDBPROCESS): Integer;
     function dbHasRetStat(dbProc: PDBPROCESS): Boolean;
-    function dbRetName(dbProc: PDBPROCESS; RetNum: Integer): PChar;
+    function dbRetName(dbProc: PDBPROCESS; RetNum: Integer): PAnsiChar;
     function dbRetData(dbProc: PDBPROCESS; RetNum: Integer): Pointer;
     function dbRetLen(dbProc: PDBPROCESS; RetNum: Integer): Integer;
     function dbRetType(dbProc: PDBPROCESS; RetNum: Integer): Integer;
@@ -1041,7 +1041,7 @@ begin
   Result := ZPlainDBLibSybaseASE125.dbClose(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbName(dbProc: PDBPROCESS): PChar;
+function TZDBLibSybaseASE125PlainDriver.dbName(dbProc: PDBPROCESS): PAnsiChar;
 begin
   Result := ZPlainDBLibSybaseASE125.dbName(dbProc);
 end;
@@ -1056,7 +1056,7 @@ begin
   Result := ZPlainDBLibSybaseASE125.dbNumCols(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbColName(dbProc: PDBPROCESS; Column: Integer): PChar;
+function TZDBLibSybaseASE125PlainDriver.dbColName(dbProc: PDBPROCESS; Column: Integer): PAnsiChar;
 begin
   Result := ZPlainDBLibSybaseASE125.dbColName(dbProc, Column);
 end;
@@ -1260,12 +1260,13 @@ begin
   Result := ZPlainDBLibMSSql7.DBSETLAPP(Login, AppName);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbSetLNatLang(Login: PLOGINREC; NatLangName: PChar): RETCODE;
+function TZDBLibMSSQL7PlainDriver.dbSetLNatLang(Login: PLOGINREC; NatLangName:
+   PAnsiChar): RETCODE;
 begin
   Result := ZPlainDBLibMSSql7.DBSETLNATLANG(Login, NatLangName);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbSetLCharSet(Login: PLOGINREC; CharsetName: PChar): RETCODE;
+function TZDBLibMSSQL7PlainDriver.dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE;
 begin
   Result := 0;
 end;
@@ -1281,7 +1282,7 @@ begin
   Result := ZPlainDBLibSybaseASE125.dbsetmaxprocs(MaxProcs);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbOpen(Login: PLOGINREC; Host: PChar): PDBPROCESS;
+function TZDBLibMSSQL7PlainDriver.dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;
 begin
   Result := ZPlainDBLibMSSql7.dbOpen(Login, Host);
 end;
@@ -1292,7 +1293,7 @@ begin
   Result := ZPlainDBLibMSSql7.dbcancel(dbProc);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbCmd(dbProc: PDBPROCESS; Cmd: PChar): RETCODE;
+function TZDBLibMSSQL7PlainDriver.dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): RETCODE;
 begin
   Result := ZPlainDBLibMSSql7.dbcmd(dbProc, Cmd);
 end;
@@ -1317,12 +1318,12 @@ begin
   Result := ZPlainDBLibMSSql7.dbMoreCmds(dbProc);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbUse(dbProc: PDBPROCESS; dbName: PChar): RETCODE;
+function TZDBLibMSSQL7PlainDriver.dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE;
 begin
   Result := ZPlainDBLibMSSql7.dbUse(dbProc, dbName);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbSetOpt(dbProc: PDBPROCESS; Option: Integer; Char_Param: PChar = nil; Int_Param: Integer = -1): RETCODE;
+function TZDBLibMSSQL7PlainDriver.dbSetOpt(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar = nil; Int_Param: Integer = -1): RETCODE;
 begin
   Result := ZPlainDBLibMSSql7.dbSetOpt(dbProc, Option, Char_Param);
 end;
@@ -1332,7 +1333,7 @@ begin
   Result := ZPlainDBLibMSSql7.dbClose(dbProc);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbName(dbProc: PDBPROCESS): PChar;
+function TZDBLibMSSQL7PlainDriver.dbName(dbProc: PDBPROCESS): PAnsiChar;
 begin
   Result := ZPlainDBLibMSSql7.dbName(dbProc);
 end;
@@ -1347,22 +1348,26 @@ begin
   Result := ZPlainDBLibMSSql7.dbNumCols(dbProc);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbColName(dbProc: PDBPROCESS; Column: Integer): PChar;
+function TZDBLibMSSQL7PlainDriver.dbColName(dbProc: PDBPROCESS; Column:
+   Integer): PAnsiChar;
 begin
   Result := ZPlainDBLibMSSql7.dbColName(dbProc, Column);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbColType(dbProc: PDBPROCESS; Column: Integer): Integer;
+function TZDBLibMSSQL7PlainDriver.dbColType(dbProc: PDBPROCESS; Column:
+   Integer): Integer;
 begin
   Result := ZPlainDBLibMSSql7.dbColType(dbProc, Column);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbColLen(dbProc: PDBPROCESS; Column: Integer): DBInt;
+function TZDBLibMSSQL7PlainDriver.dbColLen(dbProc: PDBPROCESS; Column: Integer):
+   DBInt;
 begin
   Result := ZPlainDBLibMSSql7.dbColLen(dbProc, Column);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbData(dbProc: PDBPROCESS; Column: Integer): PByte;
+function TZDBLibMSSQL7PlainDriver.dbData(dbProc: PDBPROCESS; Column: Integer):
+   PByte;
 begin
   Result := ZPlainDBLibMSSql7.dbData(dbProc, Column);
 end;
@@ -1383,7 +1388,8 @@ begin
   Result := ZPlainDBLibMSSql7.dbNextRow(dbProc);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbGetRow(dbProc: PDBPROCESS; Row: Integer): STATUS;
+function TZDBLibMSSQL7PlainDriver.dbGetRow(dbProc: PDBPROCESS; Row: Integer):
+   STATUS;
 begin
   Result := ZPlainDBLibMSSql7.dbGetRow(dbProc, Row);
 end;
@@ -1398,7 +1404,7 @@ begin
   Result := ZPlainDBLibMSSql7.dbRpcInit(dbProc, RpcName, Options);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbRpcParam(dbProc: PDBPROCESS; ParamName: PChar; Status: Byte;
+function TZDBLibMSSQL7PlainDriver.dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
   Type_: Integer; MaxLen: Integer; DataLen: Integer; Value: Pointer): RETCODE;
 begin
   Result := ZPlainDBLibMSSql7.dbRpcParam(dbProc, ParamName, Status, Type_, MaxLen, DataLen, Value);
@@ -1424,7 +1430,8 @@ begin
   Result := ZPlainDBLibMSSql7.dbHasRetStat(dbProc);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbRetName(dbProc: PDBPROCESS; RetNum: Integer): PChar;
+function TZDBLibMSSQL7PlainDriver.dbRetName(dbProc: PDBPROCESS; RetNum:
+   Integer): PAnsiChar;
 begin
   Result := ZPlainDBLibMSSql7.dbRetName(dbProc, RetNum);
 end;

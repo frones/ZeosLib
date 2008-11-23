@@ -230,7 +230,8 @@ begin
       CachedResolver);
     CachedResultSet.SetConcurrency(GetResultSetConcurrency);
     Result := CachedResultSet;
-  end else
+  end
+  else
     Result := NativeResultSet;
 end;
 
@@ -244,13 +245,18 @@ end;
 function TZMySQLStatement.ExecuteQuery(const SQL: string): IZResultSet;
 begin
   Result := nil;
-  if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then
+  {$IFDEF ZEOS_FULL_UNICODE}
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(UnicodeToAnsi(SQL))) = 0 then
+  {$ELSE}
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
+  {$ENDIF}
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
     if not FPlainDriver.ResultSetExists(FHandle) then
       raise EZSQLException.Create(SCanNotOpenResultSet);
     Result := CreateResultSet(SQL);
-  end else
+  end
+  else
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
 end;
 
@@ -271,7 +277,11 @@ var
   HasResultset : Boolean;
 begin
   Result := -1;
-  if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then
+  {$IFDEF ZEOS_FULL_UNICODE}
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(UnicodeToAnsi(SQL))) = 0 then
+  {$ELSE}
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
+  {$ENDIF}
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
@@ -283,12 +293,15 @@ begin
       begin
         Result := FPlainDriver.GetRowCount(QueryHandle);
         FPlainDriver.FreeResult(QueryHandle);
-      end else
+      end
+      else
         Result := FPlainDriver.GetAffectedRows(FHandle);
     end
     { Process regular query }
-    else Result := FPlainDriver.GetAffectedRows(FHandle);
-  end else
+    else
+      Result := FPlainDriver.GetAffectedRows(FHandle);
+  end
+  else
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
   LastUpdateCount := Result;
 end;
@@ -319,7 +332,11 @@ var
 begin
   Result := False;
   FSQL := SQL;
-  if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then
+  {$IFDEF ZEOS_FULL_UNICODE}
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(UnicodeToAnsi(SQL))) = 0 then
+  {$ELSE}
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
+  {$ENDIF}
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
@@ -335,7 +352,8 @@ begin
       Result := False;
       LastUpdateCount := FPlainDriver.GetAffectedRows(FHandle);
     end;
-  end else
+  end
+  else
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
 end;
 
@@ -414,14 +432,20 @@ end;
 function TZMySQLEmulatedPreparedStatement.GetEscapeString(const Value: string): string;
 var
   BufferLen: Integer;
-  Buffer: PChar;
+  Buffer: PAnsiChar;
 begin
   BufferLen := Length(Value) * 2 + 1;
   GetMem(Buffer, BufferLen);
-  If FHandle = nil then
-    BufferLen := FPlainDriver.GetEscapeString(Buffer, PChar(Value), Length(Value))
+  if FHandle = nil then
+  {$IFDEF ZEOS_FULL_UNICODE}
+    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(UnicodeToAnsi(Value)), Length(Value))
   else
-    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PChar(Value), Length(Value));
+    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(UnicodeToAnsi(Value)), Length(Value));   
+  {$ELSE}
+    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(Value), Length(Value))
+   else
+    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(Value), Length(Value));   
+  {$ENDIF}        
   Result := '''' + BufferToStr(Buffer, BufferLen) + '''';
   FreeMem(Buffer);
 end;
@@ -450,11 +474,14 @@ begin
       Result := InParamDefaultValues[ParamIndex]
     else
       Result := 'NULL'
-  else begin
+  else
+  begin
     case InParamTypes[ParamIndex] of
       stBoolean:
-        if SoftVarManager.GetAsBoolean(Value) then Result := '''Y'''
-        else Result := '''N''';
+            if SoftVarManager.GetAsBoolean(Value) then
+               Result := '''Y'''
+            else
+               Result := '''N''';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
       stString, stBytes:
@@ -485,7 +512,8 @@ begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
             Result := GetEscapeString(TempBlob.GetString)
-          else Result := 'NULL';
+          else
+            Result := 'NULL';
         end;
     end;
   end;
@@ -532,7 +560,11 @@ begin
       CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoInitPrepStmt);
       exit;
     end;
-  if (FPlainDriver.PrepareStmt(FStmtHandle, PChar(SQL),length(SQL)) <> 0) then
+  {$IFDEF ZEOS_FULL_UNICODE}
+  if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(UnicodeToAnsi(SQL)), length(SQL)) <> 0) then
+  {$ELSE}
+  if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(SQL), length(SQL)) <> 0) then
+  {$ENDIF}
     begin
       CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoPrepareStmt);
       exit;
@@ -582,7 +614,8 @@ begin
       CachedResolver);
     CachedResultSet.SetConcurrency(GetResultSetConcurrency);
     Result := CachedResultSet;
-  end else
+  end
+  else
     Result := NativeResultSet;
 end;
 
@@ -595,7 +628,8 @@ var
   I,J : integer;
   LogString : String;
 begin
-  If InParamCount = 0 then exit;
+  if InParamCount = 0 then
+     exit;
     { Prepare Log Output}
   For I := 0 to InParamCount - 1 do
   begin
@@ -616,11 +650,13 @@ begin
 //        field_size_twin := field_size + 1;
         field_size_twin := field_size;
       end
-    else field_size_twin := field_size;
+    else
+      field_size_twin := field_size;
 
     SetLength(FParamArray[I].buffer, field_size_twin);
     PBuffer := @FParamArray[I].buffer[0];
-    with FParamBindArray[I] do begin
+    with FParamBindArray[I] do
+    begin
         buffer_type   := field_type;
         buffer_length := System.Length(FParamArray[I].buffer);
         is_unsigned   := 0;
@@ -639,10 +675,10 @@ begin
                   CastString := InParamValues[I].VString;
                   for J := 1 to system.length(CastString) do
                     begin
-                      PChar(PBuffer)^ := CastString[J];
-                      inc(PChar(PBuffer));
+                      PAnsiChar(PBuffer)^ := CastString[J];
+                      inc(PAnsiChar(PBuffer));
                     end;
-                  PChar(PBuffer)^ := chr(0);
+                  PAnsiChar(PBuffer)^ := chr(0);
                 end;
               FIELD_TYPE_LONGLONG: Int64(PBuffer^) := InParamValues[I].VInteger;
             end;
@@ -740,7 +776,7 @@ begin
      begin
         checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
         exit;
-     End;
+     end;
   DriverManager.LogMessage(lcExecPrepStmt, FPlainDriver.GetProtocol, '');
 
   if FPlainDriver.GetPreparedFieldCount(FStmtHandle) = 0 then
@@ -769,7 +805,7 @@ begin
      begin
         checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
         exit;
-     End;
+     end;
   DriverManager.LogMessage(lcExecPrepStmt, FPlainDriver.GetProtocol, '');
     { Process queries with result sets }
   if FPlainDriver.GetPreparedFieldCount(FStmtHandle) > 0 then
@@ -801,7 +837,7 @@ begin
      begin
         checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
         exit;
-     End;
+     end;
   DriverManager.LogMessage(lcExecPrepStmt, FPlainDriver.GetProtocol, '');
 
   if FPlainDriver.GetPreparedFieldCount(FStmtHandle) > 0 then

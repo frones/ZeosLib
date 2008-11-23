@@ -643,8 +643,9 @@ function TZIIFFunction.Execute(Stack: TZExecutionStack;
 begin
   CheckParamsCount(Stack, 3);
   if VariantManager.GetAsBoolean(Stack.GetParameter(3)) then
-    Result := Stack.GetParameter(2)
-  else Result := Stack.GetParameter(1);
+     Result := Stack.GetParameter(2)
+   else
+     Result := Stack.GetParameter(1);
 end;
 
 { TZSumFunction }

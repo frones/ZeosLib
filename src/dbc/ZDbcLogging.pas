@@ -131,7 +131,8 @@ begin
     lcPrepStmt: Result := Result + 'Prepare';
     lcBindPrepStmt: Result := Result + 'Bind prepared';
     lcExecPrepStmt: Result := Result + 'Execute prepared';
-    else Result := Result + 'Other';
+  else
+    Result := Result + 'Other';
   end;
   if Protocol <> '' then
     Result := Result + ', proto: ' + FProtocol;
