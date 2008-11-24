@@ -336,7 +336,7 @@ var
   ErrorCode: Integer;
   ErrorMessage: PAnsiChar;
   LogMessage: string;
-  SQL: string;
+  SQL: AnsiString;
 begin
   if not Closed then
     Exit;
@@ -344,7 +344,12 @@ begin
 
   LogMessage := Format('CONNECT TO "%s" AS USER "%s"', [Database, User]);
 
+{$IFDEF ZEOS_FULL_UNICODE}
+  FHandle := FPlainDriver.Open(PAnsiChar(Utf8String(Database)), 0, ErrorMessage);
+{$ELSE}
   FHandle := FPlainDriver.Open(PAnsiChar(Database), 0, ErrorMessage);
+{$ENDIF}
+
   if FHandle = nil then
   begin
     CheckSQLiteError(FPlainDriver, SQLITE_ERROR, ErrorMessage,

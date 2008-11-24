@@ -171,8 +171,13 @@ begin
   ErrorMessage := '';
   SQLTail := '';
   ColumnCount := 0;
+  {$IFDEF ZEOS_FULL_UNICODE}
+  ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(Utf8String(SQL)), Length(SQL), SQLTail,
+    StmtHandle, ErrorMessage);
+  {$ELSE}
   ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(SQL), Length(SQL), SQLTail,
     StmtHandle, ErrorMessage);
+  {$ENDIF}
   CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
 
