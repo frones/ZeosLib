@@ -360,7 +360,7 @@ begin
   { Turn on encryption if requested }
   if StrToBoolEx(Info.Values['encrypted']) then
   begin
-    ErrorCode := FPlainDriver.Key(FHandle, PAnsiChar(Password), StrLen(PChar(Password)));
+    ErrorCode := FPlainDriver.Key(FHandle, PAnsiChar(Password), StrLen(PAnsiChar(Password)));
     CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcConnect, 'SQLite.Key');
   end;
 

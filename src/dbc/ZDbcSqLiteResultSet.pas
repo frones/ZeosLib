@@ -241,7 +241,11 @@ begin
     ColumnInfo := TZColumnInfo.Create;
     with ColumnInfo do
     begin
-      ColumnLabel := StrPas(FieldName^);
+  {$IFDEF ZEOS_FULL_UNICODE} 
+      ColumnLabel := UTF8ToUnicodeString(StrPas(FieldName^)); 
+  {$ELSE} 
+      ColumnLabel := StrPas(FieldName^); 
+  {$ENDIF}
       Inc(FieldName);
       TableName := '';
       ReadOnly := False;

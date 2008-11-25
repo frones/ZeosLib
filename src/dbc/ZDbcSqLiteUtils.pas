@@ -217,8 +217,12 @@ var
 begin
   if ErrorMessage <> nil then
   begin
-    Error := Trim(StrPas(ErrorMessage));
-    PlainDriver.FreeMem(ErrorMessage);
+  {$IFDEF ZEOS_FULL_UNICODE} 
+    Error := trim(UTF8ToUnicodeString(ErrorMessage)); 
+  {$ELSE} 
+    Error := Trim(StrPas(ErrorMessage)); 
+  {$ENDIF} 
+    PlainDriver.FreeMem(ErrorMessage); 
   end
   else
     Error := '';
