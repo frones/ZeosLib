@@ -484,7 +484,7 @@ type
     function GetQueryTimeout: Integer;
     procedure SetQueryTimeout(Value: Integer);
     procedure Cancel;
-    procedure SetCursorName(const Value: string);
+    procedure SetCursorName(const Value: AnsiString);
 
     function Execute(const SQL: string): Boolean;
     function GetResultSet: IZResultSet;
@@ -655,7 +655,7 @@ type
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;
 
-    function GetCursorName: string;
+    function GetCursorName: AnsiString;
     function GetMetadata: IZResultSetMetadata;
     function FindColumn(const ColumnName: string): Integer;
     

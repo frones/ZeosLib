@@ -81,7 +81,7 @@ type
     FResultSetType: TZResultSetType;
     FPostUpdates: TZPostUpdatesMode;
     FLocateUpdates: TZLocateUpdatesMode;
-    FCursorName: string;
+    FCursorName: AnsiString;
     FBatchQueries: TStrings;
     FConnection: IZConnection;
     FInfo: TStrings;
@@ -108,7 +108,7 @@ type
       read FResultSetConcurrency write FResultSetConcurrency;
     property ResultSetType: TZResultSetType
       read FResultSetType write FResultSetType;
-    property CursorName: string read FCursorName write FCursorName;
+    property CursorName: AnsiString read FCursorName write FCursorName;
     property BatchQueries: TStrings read FBatchQueries;
     property Connection: IZConnection read FConnection;
     property Info: TStrings read FInfo;
@@ -130,7 +130,7 @@ type
     function GetQueryTimeout: Integer; virtual;
     procedure SetQueryTimeout(Value: Integer); virtual;
     procedure Cancel; virtual;
-    procedure SetCursorName(const Value: string); virtual;
+    procedure SetCursorName(const Value: AnsiString); virtual;
 
     function Execute(const SQL: string): Boolean; virtual;
     function GetResultSet: IZResultSet; virtual;
@@ -589,7 +589,7 @@ end;
 
   @param name the new cursor name, which must be unique within a connection
 }
-procedure TZAbstractStatement.SetCursorName(const Value: string);
+procedure TZAbstractStatement.SetCursorName(const Value: AnsiString);
 begin
   FCursorName := Value;
 end;
@@ -1934,8 +1934,7 @@ begin
     FCachedQuery := TStringList.Create;
     if Pos('?', SQL) > 0 then
     begin
-      Tokens := Connection.GetDriver.GetTokenizer.
-        TokenizeBufferToList(SQL, [toUnifyWhitespaces]);
+      Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toUnifyWhitespaces]);
       try
         Temp := '';
         for I := 0 to Tokens.Count - 1 do

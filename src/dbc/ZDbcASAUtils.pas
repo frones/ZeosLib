@@ -143,7 +143,7 @@ type
     FSQLDA: PASASQLDA;
     FPlainDriver: IZASAPlainDriver;
     FHandle: PZASASQLCA;
-    FCursorName: String;
+    FCursorName: AnsiString;
     procedure CreateException( Msg: string);
     procedure CheckIndex(const Index: Word);
     procedure CheckRange(const Index: Word);
@@ -154,7 +154,7 @@ type
     procedure ReadBlob(const Index: Word; Buffer: Pointer; Length: LongWord);
   public
     constructor Create(PlainDriver: IZASAPlainDriver; Handle: PZASASQLCA;
-      CursorName: String; NumVars: Word = StdVars);
+      CursorName: AnsiString; NumVars: Word = StdVars);
     destructor Destroy; override;
 
     procedure AllocateSQLDA( NumVars: Word);
@@ -248,7 +248,7 @@ function GetCachedResultSet(SQL: string;
   Statement: IZStatement; NativeResultSet: IZResultSet): IZResultSet;
 
 procedure DescribeCursor( FASAConnection: IZASAConnection; FSQLData: IZASASQLDA;
-  Cursor, SQL: String);
+  Cursor: AnsiString; SQL: String);
 
 procedure ASAPrepare( FASAConnection: IZASAConnection; FSQLData, FParamsSQLData: IZASASQLDA;
    const SQL: String; StmtNum: PSmallInt; var FPrepared, FMoreResults: Boolean);
@@ -331,7 +331,7 @@ begin
 end;
 
 constructor TZASASQLDA.Create(PlainDriver: IZASAPlainDriver; Handle: PZASASQLCA;
-      CursorName: String; NumVars: Word = StdVars);
+      CursorName: AnsiString; NumVars: Word = StdVars);
 begin
   FPlainDriver := PlainDriver;
   FHandle := Handle;
@@ -1686,11 +1686,7 @@ begin
 
           while True do
           begin
-            {$IFDEF ZEOS_FULL_UNICODE}
-            FPlainDriver.db_get_data(FHandle, PAnsiChar(UnicodeToAnsi(FCursorName)), Index +1, Offs, TempSQLDA);
-            {$ELSE}
             FPlainDriver.db_get_data(FHandle, PAnsiChar(FCursorName), Index + 1, Offs, TempSQLDA);
-            {$ENDIF}
             CheckASAError( FPlainDriver, FHandle, lcOther);
             if sqlind^ < 0 then
               break;
@@ -2045,27 +2041,19 @@ begin
 end;
 
 procedure DescribeCursor( FASAConnection: IZASAConnection; FSQLData: IZASASQLDA;
-  Cursor, SQL: String);
+  Cursor: AnsiString; SQL: String);
 begin
   FSQLData.AllocateSQLDA( StdVars);
   with FASAConnection do
   begin
-    {$IFDEF ZEOS_FULL_UNICODE}
-    GetPlainDriver.db_describe_cursor(GetDBHandle, PAnsiChar(UnicodeToAnsi(Cursor)), FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
-    {$ELSE}
     GetPlainDriver.db_describe_cursor(GetDBHandle, PAnsiChar(Cursor), FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
-    {$ENDIF}       
     ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, SQL);
     if FSQLData.GetData^.sqld <= 0 then
       raise EZSQLException.Create( SCanNotRetrieveResultSetData)
     else if ( FSQLData.GetData^.sqld > FSQLData.GetData^.sqln) then
     begin
       FSQLData.AllocateSQLDA( FSQLData.GetData^.sqld);
-      {$IFDEF ZEOS_FULL_UNICODE}
-      GetPlainDriver.db_describe_cursor(GetDBHandle, PAnsiChar(UnicodeToAnsi(Cursor)), FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
-      {$ELSE}
       GetPlainDriver.db_describe_cursor(GetDBHandle, PAnsiChar(Cursor), FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
-      {$ENDIF}          
        ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, SQL);
     end;
     FSQLData.InitFields;

@@ -155,7 +155,7 @@ TZPgCharactersetType = (
     FServerMinorVersion: Integer;
     FNoticeProcessor: TZPostgreSQLNoticeProcessor;
   protected
-    function BuildConnectStr: string;
+    function BuildConnectStr: AnsiString;
     procedure StartTransactionSupport;
     procedure LoadServerVersion;
   public
@@ -402,7 +402,7 @@ end;
   Builds a connection string for PostgreSQL.
   @return a built connection string.
 }
-function TZPostgreSQLConnection.BuildConnectStr: string;
+function TZPostgreSQLConnection.BuildConnectStr: AnsiString;
 var
   ConnectTimeout: Integer;
 begin

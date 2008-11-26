@@ -58,7 +58,7 @@ interface
 {$I ZCore.inc}
 
 uses
-   Classes, SysUtils, ZClasses {$IFDEF WINDOWS}, Windows{$ENDIF};
+   Classes, SysUtils, ZClasses;
 
 type
 

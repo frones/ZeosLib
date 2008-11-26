@@ -69,7 +69,7 @@ type
   private
     FCachedBlob: boolean;
     FFetchStat: Integer;
-    FCursorName: string;
+    FCursorName: AnsiString;
     FStmtHandle: TISC_STMT_HANDLE;
     FSqlData: IZResultSQLDA;
     FParamsSqlData: IZParamsSQLDA;
@@ -79,14 +79,14 @@ type
     function GetFieldValue(ColumnIndex: Integer): Variant;
   public
     constructor Create(Statement: IZStatement; SQL: string;
-      var StatementHandle: TISC_STMT_HANDLE; CursorName: string;
+      var StatementHandle: TISC_STMT_HANDLE; CursorName: AnsiString;
       SqlData: IZResultSQLDA; ParamsSqlData: IZParamsSQLDA;
       CachedBlob: boolean);
     destructor Destroy; override;
 
     procedure Close; override;
 
-    function GetCursorName: string; override;
+    function GetCursorName: AnsiString; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetString(ColumnIndex: Integer): AnsiString; override;
@@ -174,7 +174,7 @@ end;
   @param the Interbase sql dialect
 }
 constructor TZInterbase6ResultSet.Create(Statement: IZStatement; SQL: string;
-  var StatementHandle: TISC_STMT_HANDLE; CursorName: string;
+  var StatementHandle: TISC_STMT_HANDLE; CursorName: AnsiString;
   SqlData: IZResultSQLDA; ParamsSqlData: IZParamsSQLDA; CachedBlob: boolean);
 begin
   inherited Create(Statement, SQL, nil);
@@ -318,8 +318,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZInterbase6ResultSet.GetBytes(
-  ColumnIndex: Integer): TByteDynArray;
+function TZInterbase6ResultSet.GetBytes(ColumnIndex: Integer): TByteDynArray;
 begin
   CheckClosed;
   CheckColumnConvertion(ColumnIndex, stBytes);
@@ -601,8 +600,7 @@ begin
       end;
 
       ReadOnly := (GetFieldRelationName(I) = '') or (GetFieldSqlName(I) = '')
-        or (GetFieldSqlName(I) = 'RDB$DB_KEY')
-        or (FieldSqlType = ZDbcIntfs.stUnknown);
+        or (GetFieldSqlName(I) = 'RDB$DB_KEY') or (FieldSqlType = ZDbcIntfs.stUnknown);
 
       if IsNullable(I) then
         Nullable := ntNullable
@@ -619,7 +617,7 @@ begin
   inherited Open;
 end;
 
-function TZInterbase6ResultSet.GetCursorName: string;
+function TZInterbase6ResultSet.GetCursorName: AnsiString;
 begin
   Result := FCursorName;
 end;
@@ -683,8 +681,7 @@ begin
    Exit;
    
   with FIBConnection do
-    ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle,
-      FBlobId, Size, Buffer);
+    ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle, FBlobId, Size, Buffer);
   BlobSize := Size;
   BlobData := Buffer;
   FBlobRead := True;

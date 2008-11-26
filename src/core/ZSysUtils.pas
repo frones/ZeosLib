@@ -1303,7 +1303,7 @@ end;
 }
 function UnicodeToAnsi(const UnicodeString: string): AnsiString;
 begin
-   result := UnicodeString;
+   result := AnsiString(UnicodeString);
 end;
 {$ENDIF}
 

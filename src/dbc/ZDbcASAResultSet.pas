@@ -69,7 +69,7 @@ type
   private
     FCachedBlob: boolean;
     FFetchStat: Integer;
-    FCursorName: string;
+    FCursorName: AnsiString;
     FStmtNum: SmallInt;
     FSqlData: IZASASQLDA;
     FParamsSqlData: IZASASQLDA;
@@ -84,11 +84,11 @@ type
     function GetFieldValue(ColumnIndex: Integer): Variant;
   public
     constructor Create(Statement: IZStatement; SQL: string;
-      var StmtNum: SmallInt; CursorName: string;
+      var StmtNum: SmallInt; CursorName: AnsiString;
       SqlData: IZASASQLDA; ParamsSqlData: IZASASQLDA;
       CachedBlob: boolean);
 
-    function GetCursorName: string; override;
+    function GetCursorName: AnsiString; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetString(ColumnIndex: Integer): AnsiString; override;
@@ -191,7 +191,7 @@ uses
   @param the Interbase sql dialect
 }
 constructor TZASAResultSet.Create(Statement: IZStatement; SQL: string;
-      var StmtNum: SmallInt; CursorName: string;
+      var StmtNum: SmallInt; CursorName: AnsiString;
       SqlData: IZASASQLDA; ParamsSqlData: IZASASQLDA;
       CachedBlob: boolean);
 begin
@@ -702,7 +702,7 @@ begin
   inherited Open;
 end;
 
-function TZASAResultSet.GetCursorName: string;
+function TZASAResultSet.GetCursorName: AnsiString;
 begin
   Result := FCursorName;
 end;

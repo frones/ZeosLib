@@ -1271,8 +1271,7 @@ begin
         Result.MoveToInsertRow;
         Result.UpdateNull(1);
         Result.UpdateNull(2);
-        Result.UpdateString(3,
-          GetStringByName('RDB$PROCEDURE_NAME'));
+        Result.UpdateString(3, GetStringByName('RDB$PROCEDURE_NAME'));
         Result.UpdateNull(4);
         Result.UpdateNull(5);
         Result.UpdateNull(6);
@@ -1358,8 +1357,8 @@ begin
     LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,
       'PP.RDB$PARAMETER_NAME');
 
-  if (StrPos(PAnsiChar(GetDatabaseInfo.GetServerVersion), 'Interbase 5') <> nil)
-     or (StrPos(PAnsiChar(GetDatabaseInfo.GetServerVersion), 'V5.0') <> nil) then
+  if (StrPos(PChar(GetDatabaseInfo.GetServerVersion), 'Interbase 5') <> nil)
+     or (StrPos(PChar(GetDatabaseInfo.GetServerVersion), 'V5.0') <> nil) then
     begin
       SQL := ' SELECT P.RDB$PROCEDURE_NAME, PP.RDB$PARAMETER_NAME,'
         + ' PP.RDB$PARAMETER_TYPE, F.RDB$FIELD_TYPE, F.RDB$FIELD_SUB_TYPE,'
@@ -1420,10 +1419,8 @@ begin
         Result.MoveToInsertRow;
         Result.UpdateNull(1);    //PROCEDURE_CAT
         Result.UpdateNull(2);    //PROCEDURE_SCHEM
-        Result.UpdateString(3,
-          GetStringByName('RDB$PROCEDURE_NAME'));    //TABLE_NAME
-        Result.UpdateString(4,
-          GetStringByName('RDB$PARAMETER_NAME'));    //COLUMN_NAME
+        Result.UpdateString(3, GetStringByName('RDB$PROCEDURE_NAME'));    //TABLE_NAME
+        Result.UpdateString(4, GetStringByName('RDB$PARAMETER_NAME'));    //COLUMN_NAME
         case GetIntByName('RDB$PARAMETER_TYPE') of
           0: Result.UpdateInt(5, 1);//ptInput
           1: Result.UpdateInt(5, 4);//ptResult
@@ -1433,18 +1430,13 @@ begin
 
         Result.UpdateInt(6,
           Ord(ConvertInterbase6ToSqlType(TypeName, SubTypeName))); //DATA_TYPE
-        Result.UpdateString(7,
-          GetStringByName('RDB$FIELD_TYPE'));    //TYPE_NAME
-        Result.UpdateInt(10,
-          GetIntByName('RDB$FIELD_PRECISION'));
+        Result.UpdateString(7,GetStringByName('RDB$FIELD_TYPE'));    //TYPE_NAME
+        Result.UpdateInt(10, GetIntByName('RDB$FIELD_PRECISION'));
         Result.UpdateNull(9);    //BUFFER_LENGTH
-        Result.UpdateInt(10,
-          GetIntByName('RDB$FIELD_SCALE'));
+        Result.UpdateInt(10, GetIntByName('RDB$FIELD_SCALE'));
         Result.UpdateInt(11, 10);
-        Result.UpdateInt(12,
-          GetIntByName('RDB$NULL_FLAG'));
-        Result.UpdateString(12,
-          GetStringByName('RDB$FIELD_PRECISION'));
+        Result.UpdateInt(12, GetIntByName('RDB$NULL_FLAG'));
+        Result.UpdateString(12, GetStringByName('RDB$FIELD_PRECISION'));
         Result.InsertRow;
       end;
       Close;
@@ -1649,8 +1641,8 @@ begin
     LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,
       'a.RDB$FIELD_NAME');
 
-  if (StrPos(PAnsiChar(GetDatabaseInfo.GetServerVersion), 'Interbase 5') <> nil)
-     or (StrPos(PAnsiChar(GetDatabaseInfo.GetServerVersion), 'V5.0') <> nil) then
+  if (StrPos(PChar(GetDatabaseInfo.GetServerVersion), 'Interbase 5') <> nil)
+     or (StrPos(PChar(GetDatabaseInfo.GetServerVersion), 'V5.0') <> nil) then
     begin
       SQL := 'SELECT a.RDB$RELATION_NAME, a.RDB$FIELD_NAME, a.RDB$FIELD_POSITION,'
         + ' a.RDB$NULL_FLAG, b. RDB$FIELD_LENGTH, b.RDB$FIELD_SCALE,'
@@ -1735,8 +1727,7 @@ begin
         Result.UpdateString(3,
           GetStringByName('RDB$RELATION_NAME'));    //TABLE_NAME
         Result.UpdateString(4, ColumnName);    //COLUMN_NAME
-        Result.UpdateInt(5,
-          Ord(ConvertInterbase6ToSqlType(TypeName, SubTypeName))); //DATA_TYPE
+        Result.UpdateInt(5, Ord(ConvertInterbase6ToSqlType(TypeName, SubTypeName))); //DATA_TYPE
         // TYPE_NAME
         case TypeName of
           7  : Result.UpdateString(6, 'SMALLINT');
@@ -1783,8 +1774,7 @@ begin
         Result.UpdateNull(15);   //SQL_DATETIME_SUB
         Result.UpdateInt(16,
           GetInt(7));   //CHAR_OCTET_LENGTH
-        Result.UpdateInt(17,
-          GetIntByName('RDB$FIELD_POSITION') + 1);   //ORDINAL_POSITION
+        Result.UpdateInt(17, GetIntByName('RDB$FIELD_POSITION') + 1);   //ORDINAL_POSITION
 
         if IsNullByName('RDB$NULL_FLAG') then
           Result.UpdateString(18, 'YES')   //IS_NULLABLE
@@ -1968,8 +1958,7 @@ var
 begin
     Result := ConstructVirtualResultSet(TablePrivColumnsDynArray);
 
-    LTableNamePattern := ConstructNameCondition(TableNamePattern,
-      'a.RDB$RELATION_NAME');
+    LTableNamePattern := ConstructNameCondition(TableNamePattern, 'a.RDB$RELATION_NAME');
 
     SQL := 'SELECT a.RDB$USER, a.RDB$GRANTOR, a.RDB$PRIVILEGE,'
       + ' a.RDB$GRANT_OPTION, a.RDB$RELATION_NAME FROM RDB$USER_PRIVILEGES a,'
@@ -2628,8 +2617,7 @@ end;
     @parma Column a sql column name
     @return processed string for query
 }
-function TZInterbase6DatabaseMetadata.ConstructNameCondition(
-  Pattern, Column: string): string;
+function TZInterbase6DatabaseMetadata.ConstructNameCondition(Pattern, Column: string): string;
 const
   Spaces = '';
 var
@@ -2665,20 +2653,20 @@ var
   PreviousChar: string[1];
   PreviousCharWasEscape: Boolean;
   EscapeChar : string;
-  WildcardsSet:TZWildcardsSet;
+  WildcardsSet: TZWildcardsSet;
 begin
   Result := False;
   PreviousChar := '';
   PreviousCharWasEscape := False;
   EscapeChar := GetDatabaseInfo.GetSearchStringEscape;
-  WildcardsSet:=GetWildcardsSet;
+  WildcardsSet := GetWildcardsSet;
   for I := 1 to Length(Pattern) do
   begin
     if (not PreviousCharWasEscape) and (Pattern[I] in WildcardsSet) then
      Exit;
 
     PreviousCharWasEscape := (Pattern[I] = EscapeChar) and (PreviousChar <> EscapeChar);
-    if (PreviousCharWasEscape) and (Pattern[I]=EscapeChar) then
+    if (PreviousCharWasEscape) and (Pattern[I] = EscapeChar) then
       PreviousChar := ''
     else
       PreviousChar := Pattern[I];
@@ -2696,13 +2684,13 @@ function TZInterbase6DatabaseMetadata.StripEscape(
 var
   I: Integer;
   PreviousChar: string[1];
-  EscapeChar : string;
+  EscapeChar: string;
 begin
   PreviousChar := '';
   EscapeChar := GetDatabaseInfo.GetSearchStringEscape;
   for I := 1 to Length(Pattern) do
   begin
-    if (Pattern[i]<>EscapeChar) then
+    if (Pattern[i] <> EscapeChar) then
     begin
       Result := Result + Pattern[I];
       PreviousChar := Pattern[I];

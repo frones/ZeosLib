@@ -1185,22 +1185,21 @@ begin
           else
             Result.VString := 'FALSE';
         vtInteger:
-          Result.VString := IntToStr(Value.VInteger);
+          Result.VString := AnsiString(IntToStr(Value.VInteger));
           // gto: Not a real threat, as it's converting numbers (unicode safe)
         vtFloat:
-          Result.VString := FloatToSqlStr(Value.VFloat);
+          Result.VString := AnsiString(FloatToSqlStr(Value.VFloat));
           // gto: Not a real threat, as it's converting numbers (unicode safe)
         vtString:
           Result.VString := Value.VString;
         vtUnicodeString:
-          RaiseTypeMismatchError;
-          { gto: If running on a full unicode IDE, like Delphi 2009, converting
-                 from a UnicodeString to a AnsiString can lead to data loss.
-
-                 I've choose to raise the error instead of convert it. This
-                 behavior can be changed when we find a secure choice. }
+          {$IFDEF ZEOS_FULL_UNICODE}
+          Result.VString := UnicodeToAnsi(Value.VUnicodeString);
+          {$ELSE}
+          Result.VString := Value.VUnicodeString;
+          {$ENDIF}
         vtDateTime:
-          Result.VString := DateTimeToAnsiSQLDate(Value.VDateTime);
+          Result.VString := AnsiString(DateTimeToAnsiSQLDate(Value.VDateTime));
           // gto: Not a real threat, as it's converting dates (unicode safe)
         vtPointer:
           RaiseTypeMismatchError;

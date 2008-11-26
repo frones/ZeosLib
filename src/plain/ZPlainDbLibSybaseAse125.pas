@@ -496,8 +496,7 @@ end;
 { Handle sql server messages }
 
 function MessageHandle(Proc: PDBPROCESS; MsgNo: DBINT; MsgState, Severity:
-  Integer;
-  MsgText, SrvName, ProcName: PAnsiChar; Line: DBUSMALLINT): Integer;
+  Integer; MsgText, SrvName, ProcName: PAnsiChar; Line: DBUSMALLINT): Integer;
 {$IFNDEF UNIX} stdcall{$ELSE} cdecl{$ENDIF};
 var
   SybaseMessage: PDBLibMessage;
@@ -726,11 +725,9 @@ initialization
   SybaseMessages := TList.Create;
 
 {$IFNDEF UNIX}
-  LibraryLoader := TZSybaseNativeLibraryLoader.Create(
-    [WINDOWS_DLL_LOCATION]);
+  LibraryLoader := TZSybaseNativeLibraryLoader.Create([WINDOWS_DLL_LOCATION]);
 {$ELSE}
-  LibraryLoader := TZSybaseNativeLibraryLoader.Create(
-    [LINUX_DLL_LOCATION]);
+  LibraryLoader := TZSybaseNativeLibraryLoader.Create([LINUX_DLL_LOCATION]);
 {$ENDIF}
 
 finalization

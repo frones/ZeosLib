@@ -170,7 +170,7 @@ end;
 {$HINTS OFF}
 function TZInterbase6Statement.ExecuteQuery(const SQL: string): IZResultSet;
 var
-  Cursor: string;
+  Cursor: AnsiString;
   SQLData: IZResultSQLDA;
   StmtHandle: TISC_STMT_HANDLE;
   StatementType: TZIbSqlStatementType;
@@ -304,7 +304,7 @@ end;
 {$HINTS OFF}
 function TZInterbase6Statement.Execute(const SQL: string): Boolean;
 var
-  Cursor: string;
+  Cursor: AnsiString;
   SQLData: IZResultSQLDA;
   StmtHandle: TISC_STMT_HANDLE;
   StatementType: TZIbSqlStatementType;
@@ -452,7 +452,7 @@ end;
 {$HINTS OFF}
 function TZInterbase6PreparedStatement.ExecutePrepared: Boolean;
 var
-  Cursor: string;
+  Cursor: AnsiString;
   SQLData: IZResultSQLDA;
   StmtHandle: TISC_STMT_HANDLE;
   StatementType: TZIbSqlStatementType;
@@ -543,7 +543,7 @@ end;
 {$HINTS OFF}
 function TZInterbase6PreparedStatement.ExecuteQueryPrepared: IZResultSet;
 var
-  Cursor: string;
+  Cursor: AnsiString;
   SQLData: IZResultSQLDA;
   StmtHandle: TISC_STMT_HANDLE;
   StatementType: TZIbSqlStatementType;
@@ -743,7 +743,7 @@ end;
 {$HINTS OFF}
 function TZInterbase6CallableStatement.ExecutePrepared: Boolean;
 var
-  Cursor, ProcSql: string;
+  Cursor, ProcSql: AnsiString;
   SQLData: IZResultSQLDA;
   StmtHandle: TISC_STMT_HANDLE;
   StatementType: TZIbSqlStatementType;
@@ -782,8 +782,7 @@ begin
       begin
         Cursor := RandomString(12);
         LastResultSet := GetCachedResultSet(SQL, Self,
-          TZInterbase6ResultSet.Create(Self, SQL, StmtHandle, Cursor,
-            SQLData, nil, FCachedBlob));
+           TZInterbase6ResultSet.Create(Self, SQL, StmtHandle, Cursor, SQLData, nil, FCachedBlob));
       end
       else
       begin
@@ -815,8 +814,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZInterbase6CallableStatement.ExecuteQuery(
-  const SQL: string): IZResultSet;
+function TZInterbase6CallableStatement.ExecuteQuery(const SQL: string): IZResultSet;
 begin
   Self.SQL := SQL;
   Result := ExecuteQueryPrepared;
@@ -832,8 +830,8 @@ end;
 {$HINTS OFF}
 function TZInterbase6CallableStatement.ExecuteQueryPrepared: IZResultSet;
 var
-  Cursor: string;
-  ProcSql: string;
+  Cursor: AnsiString;
+  ProcSql: AnsiString;
   SQLData: IZResultSQLDA;
   StmtHandle: TISC_STMT_HANDLE;
   StatementType: TZIbSqlStatementType;
@@ -867,8 +865,7 @@ begin
         if CursorName <> '' then
         begin
           Cursor := CursorName;
-          GetPlainDriver.isc_dsql_set_cursor_name(@FStatusVector,
-                  @StmtHandle, PAnsiChar(Cursor), 0);
+          GetPlainDriver.isc_dsql_set_cursor_name(@FStatusVector, @StmtHandle, PAnsiChar(Cursor), 0);
           CheckInterbase6Error(ProcSql);
         end;  
 
@@ -918,7 +915,7 @@ end;
 }
 function TZInterbase6CallableStatement.ExecuteUpdatePrepared: Integer;
 var
-  ProcSql: string;
+  ProcSql: AnsiString;
   SQLData: IZResultSQLDA;
   StmtHandle: TISC_STMT_HANDLE;
   StatementType: TZIbSqlStatementType;
@@ -1021,8 +1018,7 @@ end;
     <b>SELECT</b> staement
    @return a Stored Procedure SQL string 
 }
-function TZInterbase6CallableStatement.GetProcedureSql(
-  SelectProc: boolean): string;
+function TZInterbase6CallableStatement.GetProcedureSql(SelectProc: boolean): string;
 
   function GenerateParamsStr(Count: integer): string;
   var

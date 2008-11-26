@@ -58,7 +58,7 @@ interface
 {$I ZParseSql.inc}
 
 uses
-  Classes, ZTokenizer, ZGenericSqlToken, ZMySqlToken;
+  Classes, ZTokenizer, ZGenericSqlToken, ZMySqlToken, SysUtils;
 
 type
 
@@ -125,7 +125,11 @@ var
     LastChar := #0;
     while Stream.Read(LastChar, 1) > 0 do
     begin
+{$IFDEF ZEOS_FULL_UNICODE}
+      if CharInSet(LastChar, ['0'..'9']) then
+{$ELSE}
       if LastChar in ['0'..'9'] then
+{$ENDIF}
       begin
         Result := Result + LastChar;
         LastChar := #0;
@@ -161,14 +165,22 @@ begin
     Result.Value := Result.Value + ReadDecDigits;
 
   { Reads a power part of the number }
+{$IFDEF ZEOS_FULL_UNICODE}
+  if CharInSet(LastChar, ['e','E']) then
+{$ELSE}
   if LastChar in ['e','E'] then
+{$ENDIF}
   begin
     Stream.Read(TempChar, 1);
     Result.Value := Result.Value + TempChar;
     FloatPoint := True;
 
     Stream.Read(TempChar, 1);
+{$IFDEF ZEOS_FULL_UNICODE}
+    if CharInSet(TempChar, ['0'..'9','-','+']) then
+{$ELSE}
     if TempChar in ['0'..'9','-','+'] then
+{$ENDIF}
       Result.Value := Result.Value + TempChar + ReadDecDigits
     else
     begin

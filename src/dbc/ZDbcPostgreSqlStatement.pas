@@ -195,7 +195,11 @@ var
   QueryHandle: PZPostgreSQLResult;
 begin
   Result := nil;
+  {$IFDEF ZEOS_FULL_UNICODE}
+  QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(UnicodeToAnsi(SQL)));
+  {$ELSE}
   QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));
+  {$ENDIF}
   CheckPostgreSQLError(Connection, FPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
   if QueryHandle <> nil then
@@ -220,7 +224,11 @@ var
   QueryHandle: PZPostgreSQLResult;
 begin
   Result := -1;
+  {$IFDEF ZEOS_FULL_UNICODE}
+  QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(UnicodeToAnsi(SQL)));
+  {$ELSE}
   QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));
+  {$ENDIF}
   CheckPostgreSQLError(Connection, FPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
 
@@ -260,7 +268,11 @@ var
   QueryHandle: PZPostgreSQLResult;
   ResultStatus: TZPostgreSQLExecStatusType;
 begin
+  {$IFDEF ZEOS_FULL_UNICODE}
+  QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(UnicodeToAnsi(SQL)));
+  {$ELSE}
   QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));
+  {$ENDIF}
   CheckPostgreSQLError(Connection, FPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
 

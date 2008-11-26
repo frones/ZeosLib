@@ -662,8 +662,8 @@ type
     Severity: Integer;
     DbErr: Integer;
     OsErr: Integer;
-    DbErrStr: string;
-    OsErrStr: string;
+    DbErrStr: AnsiString;
+    OsErrStr: AnsiString;
   end;
 
   PDBLibMessage = ^TDBLibMessage;
@@ -672,9 +672,9 @@ type
     MsgNo: DBINT;
     MsgState: Integer;
     Severity: Integer;
-    MsgText: string;
-    SrvName: string;
-    ProcName: string;
+    MsgText: AnsiString;
+    SrvName: AnsiString;
+    ProcName: AnsiString;
     Line: DBUSMALLINT;
   end;
 
@@ -891,7 +891,7 @@ end;
 procedure TZDBLibSybaseASE125PlainDriver.CheckError;
 var
   I: Integer;
-  S: string;
+  S: AnsiString;
   lErrorEntry: PDBLibError;
   lMesageEntry: PDBLibMessage;
 begin
@@ -901,8 +901,7 @@ begin
     Exit;
   S := '';
   for I := 0 to SybaseErrors.Count - 1 do
-    S := S + PDBLibError(SybaseErrors.Items[I]).DbErrStr + ' '
-      + PDBLibError(SybaseErrors.Items[I]).OsErrStr + ' '#13;
+    S := S + PDBLibError(SybaseErrors.Items[I]).DbErrStr + ' ' + PDBLibError(SybaseErrors.Items[I]).OsErrStr + ' '#13;
   for I := 0 to SybaseMessages.Count - 1 do
     if PDBLibMessage(SybaseMessages.Items[I]).Severity > EXINFO then
       S := S + PDBLibMessage(SybaseMessages.Items[I]).MsgText + ' '#13;
@@ -1181,7 +1180,7 @@ end;
 procedure TZDBLibMSSQL7PlainDriver.CheckError;
 var
   I: Integer;
-  S: string;
+  S: AnsiString;
   lErrorEntry: PDBLibError;
   lMesageEntry: PDBLibMessage;
 begin
@@ -1191,8 +1190,7 @@ begin
     Exit;
   S := '';
   for I := 0 to MSSqlErrors.Count - 1 do
-    S := S + PDBLibError(MSSqlErrors.Items[I]).DbErrStr + ' '
-      + PDBLibError(MSSqlErrors.Items[I]).OsErrStr + ' '#13;
+    S := S + PDBLibError(MSSqlErrors.Items[I]).DbErrStr + ' ' + PDBLibError(MSSqlErrors.Items[I]).OsErrStr + ' '#13;
   for I := 0 to MSSqlMessages.Count - 1 do
     if PDBLibMessage(MSSqlMessages.Items[I]).Severity > EXINFO then
       S := S + PDBLibMessage(MSSqlMessages.Items[I]).MsgText + ' '#13;
@@ -1450,6 +1448,4 @@ begin
   Result := ZPlainDBLibMSSql7.dbRetType(dbProc, RetNum);
 end;
 
-
-initialization
 end.

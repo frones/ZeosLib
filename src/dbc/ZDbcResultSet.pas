@@ -186,7 +186,7 @@ type
     function GetWarnings: EZSQLWarning; virtual;
     procedure ClearWarnings; virtual;
 
-    function GetCursorName: string; virtual;
+    function GetCursorName: AnsiString; virtual;
     function GetMetaData: IZResultSetMetaData; virtual;
     function FindColumn(const ColumnName: string): Integer; virtual;
 
@@ -1449,7 +1449,7 @@ end;
 
   @return the SQL name for this <code>ResultSet</code> object's cursor
 }
-function TZAbstractResultSet.GetCursorName: string;
+function TZAbstractResultSet.GetCursorName: AnsiString;
 begin
   Result := '';
 end;

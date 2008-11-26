@@ -1104,11 +1104,9 @@ end;
 
 initialization
 {$IFNDEF UNIX}
-  LibraryLoader := TZOracleNativeLibraryLoader.Create(
-    [WINDOWS_DLL_LOCATION]);
+  LibraryLoader := TZOracleNativeLibraryLoader.Create([WINDOWS_DLL_LOCATION]);
 {$ELSE}
-  LibraryLoader := TZOracleNativeLibraryLoader.Create(
-    [LINUX_DLL_LOCATION]);
+  LibraryLoader := TZOracleNativeLibraryLoader.Create([LINUX_DLL_LOCATION]);
 {$ENDIF}
 finalization
   if Assigned(LibraryLoader) then

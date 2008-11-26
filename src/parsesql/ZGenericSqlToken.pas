@@ -171,7 +171,6 @@ var
   ReadChar: Char;
   LastChar: Char;
   CountDoublePoint,CountSlash : integer;
-  isDateTime : TDateTime;
 begin
   Result.Value := FirstChar;
   LastChar := #0;
@@ -203,7 +202,6 @@ begin
   if (CountDoublePoint = 2) and (CountSlash = 0) then
     begin
       try
-        isDateTime := StrToTime(DecodeString(Result.Value,'"'));
         Result.Value := DecodeString(Result.Value,'"');
         Result.TokenType := ttTime;
       except
@@ -213,7 +211,6 @@ begin
   if (CountDoublePoint = 0) and (CountSlash = 2) then
     begin
       try
-        isDateTime := StrToDate(DecodeString(Result.Value,'"'));
         Result.Value := DecodeString(Result.Value,'"');
         Result.TokenType := ttDate;
       except
@@ -224,7 +221,6 @@ begin
   if (CountDoublePoint = 2) and (CountSlash = 2) then
     begin
       try
-        isDateTime := StrToDateTime(DecodeString(Result.Value,'"'));
         Result.Value := DecodeString(Result.Value,'"');
         Result.TokenType := ttDateTime;
       except
@@ -242,7 +238,11 @@ end;
 function TZGenericSQLQuoteState.EncodeString(const Value: string;
   QuoteChar: Char): string;
 begin
+{$IFDEF ZEOS_FULL_UNICODE}
+  if CharInSet(QuoteChar, [#39, '"', '`']) then
+{$ELSE}
   if QuoteChar in [#39, '"', '`'] then
+{$ENDIF}
     Result := AnsiQuotedStr(Value, QuoteChar)
   else Result := Value;
 end;
@@ -259,7 +259,11 @@ var
   Len: Integer;
 begin
   Len := Length(Value);
+{$IFDEF ZEOS_FULL_UNICODE}
+  if (Len >= 2) and CharInSet(QuoteChar, [#39, '"', '`'])
+{$ELSE}
   if (Len >= 2) and (QuoteChar in [#39, '"', '`'])
+{$ENDIF}
     and (Value[1] = QuoteChar) and (Value[Len] = QuoteChar) then
   begin
     if Len > 2 then

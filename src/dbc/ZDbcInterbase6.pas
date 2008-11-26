@@ -196,8 +196,7 @@ uses ZDbcInterbase6Statement, ZDbcInterbase6Metadata,
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
-function TZInterbase6Driver.Connect(const Url: string;
-  Info: TStrings): IZConnection;
+function TZInterbase6Driver.Connect(const Url: string; Info: TStrings): IZConnection;
 var
   TempInfo: TStrings;
   HostName, Database, UserName, Password: string;
@@ -206,8 +205,7 @@ var
 begin
  TempInfo := TStringList.Create;
  try
-   ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
-      UserName, Password, TempInfo);
+   ResolveDatabaseUrl(Url, Info, HostName, Port, Database, UserName, Password, TempInfo);
    PlainDriver := GetPlainDriver(Url);
    Result := TZInterbase6Connection.Create(Self, Url, PlainDriver, HostName,
      Port, Database, UserName, Password, TempInfo);
@@ -689,8 +687,7 @@ begin
     else
       FPlainDriver.isc_rollback_retaining(@FStatusVector, @FTrHandle);
     CheckInterbase6Error(FPlainDriver, FStatusVector);
-    DriverManager.LogMessage(lcTransaction,
-      FPlainDriver.GetProtocol, 'TRANSACTION ROLLBACK');
+    DriverManager.LogMessage(lcTransaction, FPlainDriver.GetProtocol, 'TRANSACTION ROLLBACK');
   end;
 end;
 
@@ -758,8 +755,8 @@ begin
   Close;
   DbHandle := nil;
   TrHandle := nil;
-  FPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @DbHandle, @TrHandle, 0, PAnsiChar(sql),
-                                          FDialect, nil);
+  FPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @DbHandle, @TrHandle,
+    0, PAnsiChar(sql), FDialect, nil);
   CheckInterbase6Error(FPlainDriver, FStatusVector, lcExecute, SQL);
   FPlainDriver.isc_detach_database(@FStatusVector, @DbHandle);
   CheckInterbase6Error(FPlainDriver, FStatusVector, lcExecute, SQL);
