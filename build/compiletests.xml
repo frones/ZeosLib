@@ -59,6 +59,11 @@
     </condition>
     <antcall target="delphi11_compile"/>
 
+    <condition property="delphi12.compile">
+      <istrue value="${delphi12.active}"/>
+    </condition>
+    <antcall target="delphi12_compile"/>
+
     <condition property="cbuilder6.compile">
       <istrue value="${cbuilder6.active}"/>
     </condition>
@@ -109,6 +114,15 @@
       <param name="compile" value="${delphi11.compile}"/>
       <param name="compiler" value="delphi11"/>
       <param name="compiler.dir" value="${delphi11.home}"/>
+    </antcall>
+  </target>
+
+ <target name="delphi12_compile" if="delphi12.compile">
+    <property name="bpl.dir" value="${delphi12.bpl.dir}"/>
+    <antcall target="delphi_compile">
+      <param name="compile" value="${delphi12.compile}"/>
+      <param name="compiler" value="delphi12"/>
+      <param name="compiler.dir" value="${delphi12.home}"/>
     </antcall>
   </target>
 

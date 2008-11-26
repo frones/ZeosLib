@@ -279,3 +279,5 @@
 20081108 : Added support for DefaultExpression TField property - by mdaems - Mantis Bug 146
 
 20081112 : Some dates of form 2008-1-1 seem not to work good with function TimestampStrToDateTime - by niek - See http://zeos.firmos.at/viewtopic.php?t=2093
+
+20081126 : Added Delphi2009 to the automated build scripts and test suite - by mdaems

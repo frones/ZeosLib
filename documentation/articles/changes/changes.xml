@@ -108,6 +108,9 @@
       <title>Internal Changes</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[COMMON] Added Delphi2009 to the automated build scripts and test suite</simpara>
+        </listitem>
+        <listitem>
           <simpara>[COMMON] Added function debug_get_memorydiff to ZSysUtils</simpara>
         </listitem>
         <listitem>
