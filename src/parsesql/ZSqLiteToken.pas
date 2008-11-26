@@ -128,7 +128,7 @@ var
   begin
     Result := '';
     LastChar := #0;
-    while Stream.Read(LastChar, 1) > 0 do
+    while Stream.Read(LastChar, SizeOf(Char)) > 0 do
     begin
 {$IFDEF ZEOS_FULL_UNICODE}
       if CharInSet(LastChar, ['0'..'9']) then
@@ -141,7 +141,7 @@ var
       end
       else
       begin
-        Stream.Seek(-1, soFromCurrent);
+        Stream.Seek(-SizeOf(Char), soFromCurrent);
         Break;
       end;
     end;
@@ -160,7 +160,7 @@ begin
     FloatPoint := LastChar = '.';
     if FloatPoint then
     begin
-      Stream.Read(TempChar, 1);
+      Stream.Read(TempChar, SizeOf(Char));
       Result.Value := Result.Value + TempChar;
     end;
   end;
@@ -176,11 +176,11 @@ begin
   if LastChar in ['e','E'] then
 {$ENDIF}
   begin
-    Stream.Read(TempChar, 1);
+    Stream.Read(TempChar, SizeOf(Char));
     Result.Value := Result.Value + TempChar;
     FloatPoint := True;
 
-    Stream.Read(TempChar, 1);
+    Stream.Read(TempChar, SizeOf(Char));
 {$IFDEF ZEOS_FULL_UNICODE}
     if CharInSet(TempChar, ['0'..'9','-','+']) then
 {$ELSE}
@@ -190,7 +190,7 @@ begin
     else
     begin
       Result.Value := Copy(Result.Value, 1, Length(Result.Value) - 1);
-      Stream.Seek(-2, soFromCurrent);
+      Stream.Seek(-2*SizeOf(Char), soFromCurrent);
     end;
   end;
 
@@ -225,12 +225,12 @@ var
 begin
   Result.Value := FirstChar;
   LastChar := #0;
-  while Stream.Read(ReadChar, 1) > 0 do
+  while Stream.Read(ReadChar, SizeOf(Char)) > 0 do
   begin
     if ((LastChar = FirstChar) and (ReadChar <> FirstChar)
       and (FirstChar <> '[')) or ((FirstChar = '[') and (LastChar = ']')) then
     begin
-      Stream.Seek(-1, soFromCurrent);
+      Stream.Seek(-SizeOf(Char), soFromCurrent);
       Break;
     end;
     Result.Value := Result.Value + ReadChar;
@@ -313,7 +313,7 @@ begin
 
   if FirstChar = '-' then
   begin
-    ReadNum := Stream.Read(ReadChar, 1);
+    ReadNum := Stream.Read(ReadChar, SizeOf(Char));
     if (ReadNum > 0) and (ReadChar = '-') then
     begin
       Result.TokenType := ttComment;
@@ -322,12 +322,12 @@ begin
     else
     begin
       if ReadNum > 0 then
-        Stream.Seek(-1, soFromCurrent);
+        Stream.Seek(-SizeOf(Char), soFromCurrent);
     end;
   end
   else if FirstChar = '/' then
   begin
-    ReadNum := Stream.Read(ReadChar, 1);
+    ReadNum := Stream.Read(ReadChar, SizeOf(Char));
     if (ReadNum > 0) and (ReadChar = '*') then
     begin
       Result.TokenType := ttComment;
@@ -336,7 +336,7 @@ begin
     else
     begin
       if ReadNum > 0 then
-        Stream.Seek(-1, soFromCurrent);
+        Stream.Seek(-SizeOf(Char), soFromCurrent);
     end;
   end;
 

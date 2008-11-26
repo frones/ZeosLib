@@ -177,11 +177,11 @@ begin
   CountDoublePoint := 0; 
   CountSlash := 0;
 
-  while Stream.Read(ReadChar, 1) > 0 do
+  while Stream.Read(ReadChar, SizeOf(Char)) > 0 do
   begin
     if (LastChar = FirstChar) and (ReadChar <> FirstChar) then
     begin
-      Stream.Seek(-1, soFromCurrent);
+      Stream.Seek(-SizeOf(Char), soFromCurrent);
       Break;
     end;
     if ReadChar = TimeSeparator then
