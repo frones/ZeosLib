@@ -492,11 +492,17 @@ begin
   for I := 1 to Metadata.GetColumnCount do
   begin
     if RowAccessor.IsNull(I) and (Metadata.GetTableName(I) <> '')
-      and (Metadata.GetDefaultValue(I) <> '') then
+      and ((Metadata.GetDefaultValue(I) <> '') or (RowAccessor.GetColumnDefaultExpression(I) <> '')) then
     begin
-      Columns.Add(TZResolverParameter.Create(I,
-        Metadata.GetColumnName(I), Metadata.GetColumnType(I),
-        True, Metadata.GetDefaultValue(I)));
+      // DefaultExpression takes takes precedence on database default value
+      if RowAccessor.GetColumnDefaultExpression(I) <> '' then
+        Columns.Add(TZResolverParameter.Create(I,
+          Metadata.GetColumnName(I), Metadata.GetColumnType(I),
+          True, RowAccessor.GetColumnDefaultExpression(I)))
+      else
+        Columns.Add(TZResolverParameter.Create(I,
+          Metadata.GetColumnName(I), Metadata.GetColumnType(I),
+          True, Metadata.GetDefaultValue(I)));
     end;
   end;
 end;

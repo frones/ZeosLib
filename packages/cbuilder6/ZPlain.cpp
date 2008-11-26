@@ -32,6 +32,8 @@ USEUNIT("..\..\src\plain\ZPlainFirebird15.pas");
 
 USEUNIT("..\..\src\plain\ZPlainFirebird20.pas");
 
+USEUNIT("..\..\src\plain\ZPlainFirebird21.pas");
+
 USEUNIT("..\..\src\plain\ZPlainInterbase5.pas");
 
 USEUNIT("..\..\src\plain\ZPlainInterbase6.pas");

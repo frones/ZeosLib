@@ -394,6 +394,7 @@ begin
         ColumnInfo.ColumnType := stUnicodeStream;
     ColumnInfo.Scale := 0;
     ColumnInfo.ColumnLabel := Current.DisplayName;
+    ColumnInfo.DefaultExpression := Current.DefaultExpression;
 
     Result.Add(ColumnInfo);
   end;
@@ -496,7 +497,6 @@ begin
 
 //    if (Current.Required = True) and (WasNull = True) then
 //      raise EZDatabaseError.Create(Format(SFieldCanNotBeNull, [Current.FieldName]));
-
     case Current.DataType of
       ftBoolean:
         ResultSet.UpdateBoolean(ColumnIndex, RowAccessor.GetBoolean(FieldIndex, WasNull));
@@ -557,7 +557,12 @@ begin
     end;
 
     if WasNull then
-      ResultSet.UpdateNull(ColumnIndex);
+      begin
+        // Performance thing :
+        // The default expression will only be set when necessary : if the value really IS null
+        Resultset.UpdateDefaultExpression(ColumnIndex, RowAccessor.GetColumnDefaultExpression(FieldIndex));
+        ResultSet.UpdateNull(ColumnIndex);
+      end;
   end;
 end;
 

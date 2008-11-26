@@ -187,6 +187,7 @@ type
     function GetTime(ColumnIndex: Integer): TDateTime; override;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
+    function GetDefaultExpression(ColumnIndex: Integer): string; override;
 
     //---------------------------------------------------------------------
     // Traversal/Positioning
@@ -221,6 +222,7 @@ type
     procedure UpdateAsciiStream(ColumnIndex: Integer; Value: TStream); override;
     procedure UpdateUnicodeStream(ColumnIndex: Integer; Value: TStream); override;
     procedure UpdateBinaryStream(ColumnIndex: Integer; Value: TStream); override;
+    procedure UpdateDefaultExpression(ColumnIndex: Integer; const Value: string); override;
 
     procedure InsertRow; override;
     procedure UpdateRow; override;
@@ -996,6 +998,22 @@ begin
   Result := FRowAccessor.GetBlob(ColumnIndex, LastWasNull);
 end;
 
+{**
+  Gets the DefaultExpression value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>String</code>.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the DefaultExpression value
+}
+function TZAbstractCachedResultSet.GetDefaultExpression(ColumnIndex: Integer): string;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckAvailable;
+{$ENDIF}
+  Result := FRowAccessor.GetColumnDefaultExpression(ColumnIndex);
+end;
+
 //---------------------------------------------------------------------
 // Updates
 //---------------------------------------------------------------------
@@ -1379,6 +1397,18 @@ begin
 {$ENDIF}
   PrepareRowForUpdates;
   FRowAccessor.SetUnicodeStream(ColumnIndex, Value);
+end;
+
+{**
+  Updates the DefaultExpression of the designated column with a <code>String</code> value.
+  This changes the behaviour of the RowAccessor used by the Resultset
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new DefaultExpression value for the column
+}
+procedure TZAbstractCachedResultSet.UpdateDefaultExpression(ColumnIndex: Integer;
+  const Value: string);
+begin
+  FNewRowAccessor.SetColumnDefaultExpression(ColumnIndex, Value);
 end;
 
 //---------------------------------------------------------------------

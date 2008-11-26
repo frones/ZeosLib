@@ -151,6 +151,7 @@ type
     function GetBinaryStream(ColumnIndex: Integer): TStream; virtual;
     function GetBlob(ColumnIndex: Integer): IZBlob; virtual;
     function GetValue(ColumnIndex: Integer): TZVariant; virtual;
+    function GetDefaultExpression(ColumnIndex: Integer): String; virtual;
 
     //======================================================================
     // Methods for accessing results by column name
@@ -251,6 +252,7 @@ type
     procedure UpdateUnicodeStream(ColumnIndex: Integer; Value: TStream); virtual;
     procedure UpdateBinaryStream(ColumnIndex: Integer; Value: TStream); virtual;
     procedure UpdateValue(ColumnIndex: Integer; const Value: TZVariant); virtual;
+    procedure UpdateDefaultExpression(ColumnIndex: Integer; const Value: string); virtual;
 
     //======================================================================
     // Methods for accessing results by column name
@@ -1034,6 +1036,22 @@ begin
 
   if WasNull then
     Result.VType := vtNull;
+end;
+
+{**
+  Gets the DefaultExpression value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>String</code>.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the DefaultExpression value
+}
+function TZAbstractResultSet.GetDefaultExpression(ColumnIndex: Integer): string;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stString);
+{$ENDIF}
+  Result := '';
 end;
 
 //======================================================================
@@ -2158,6 +2176,17 @@ begin
     vtUnicodeString: UpdateUnicodeString(ColumnIndex, Value.VUnicodeString);
     else UpdateNull(ColumnIndex);
   end;
+end;
+
+{**
+  Updates the DefaultExpression of the designated column with a <code>String</code> value.
+  This changes the behaviour of the RowAccessor used by the Resultset
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new DefaultExpression value for the column
+}
+procedure TZAbstractResultSet.UpdateDefaultExpression(ColumnIndex: Integer; const Value: string);
+begin
+  RaiseReadOnlyException;
 end;
 
 {**

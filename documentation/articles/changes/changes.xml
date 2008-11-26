@@ -38,6 +38,9 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[Common] Some dates of form 2008-1-1 seem not to work good with function TimestampStrToDateTime (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2093">http://zeos.firmos.at/viewtopic.php?t=2093</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[Common] TZTable and TZQuery Filter property do not work correctly with datetime fields (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2055">http://zeos.firmos.at/viewtopic.php?t=2055</ulink>)</simpara>
         </listitem>
       </itemizedlist>
@@ -45,6 +48,12 @@
     <sect2>
       <title>Features added</title>
       <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>[IB/FB] Added Firebird 2.1 driver (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2099">http://zeos.firmos.at/viewtopic.php?t=2099</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] Added support for DefaultExpression TField property (<ulink url="http://zeosbugs.firmos.at/view.php?id=146">#0000146</ulink>)</simpara>
+        </listitem>
         <listitem>
           <simpara>[COMMON] (Delphi only issue) Added a test to avoid opening a dataset when ComponentState=csDestroying</simpara>
         </listitem>
@@ -124,6 +133,9 @@
     <sect2>
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>[Lazarus] Updated ZUpdateSqlEditor.lrs to be compatible with the newest Lazarus release (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2095">http://zeos.firmos.at/viewtopic.php?t=2095</ulink>)</simpara>
+        </listitem>
         <listitem>
           <simpara>[Oracle] Added TZOracleCachedResolver class because oracle doesn't support queries without FROM clause (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2080">http://zeos.firmos.at/viewtopic.php?t=2080</ulink>)</simpara>
         </listitem>

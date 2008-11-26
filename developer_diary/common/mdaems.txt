@@ -275,3 +275,7 @@
 20081102 : Removed some compiler warnings - by Faceker - See http://zeos.firmos.at/viewtopic.php?t=2081
 
 20081105 : (Delphi only issue) Added a test to avoid opening a dataset when ComponentState=csDestroying - by mdaems
+
+20081108 : Added support for DefaultExpression TField property - by mdaems - Mantis Bug 146
+
+20081112 : Some dates of form 2008-1-1 seem not to work good with function TimestampStrToDateTime - by niek - See http://zeos.firmos.at/viewtopic.php?t=2093

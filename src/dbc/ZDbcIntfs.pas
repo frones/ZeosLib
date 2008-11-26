@@ -616,6 +616,7 @@ type
     function GetBinaryStream(ColumnIndex: Integer): TStream;
     function GetBlob(ColumnIndex: Integer): IZBlob;
     function GetValue(ColumnIndex: Integer): TZVariant;
+    function GetDefaultExpression(ColumnIndex: Integer): string;
 
     //======================================================================
     // Methods for accessing results by column name
@@ -715,6 +716,7 @@ type
     procedure UpdateUnicodeStream(ColumnIndex: Integer; Value: TStream);
     procedure UpdateBinaryStream(ColumnIndex: Integer; Value: TStream);
     procedure UpdateValue(ColumnIndex: Integer; const Value: TZVariant);
+    procedure UpdateDefaultExpression(ColumnIndex: Integer; const Value: string);
 
     //======================================================================
     // Methods for accessing results by column name

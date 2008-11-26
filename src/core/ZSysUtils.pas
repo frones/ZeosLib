@@ -847,67 +847,59 @@ begin
   end;
 end;
 
-{**
-  Converts Timestamp String to TDateTime
-  @param Value a timestamp string.
-  @return a decoded TDateTime value.
-}
-function TimestampStrToDateTime(const Value: string): TDateTime;
-var
-  Year, Month, Day, Hour, Min, Sec: Integer;
-  StrLength, StrPos: Integer;
-begin
-  Month := 0;
-  Day := 0;
-  Hour := 0;
-  Min := 0;
-  Sec := 0;
-  Result := 0;
+{** 
+  Converts Timestamp String to TDateTime 
+  @param Value a timestamp string. 
+  @return a decoded TDateTime value. 
+} 
+function TimestampStrToDateTime(const Value: string): TDateTime; 
+var 
+  Year, Month, Day, Hour, Min, Sec: Integer; 
+  StrLength, StrPos, StrPosPrev: Integer; 
+  // 
+  function CharMatch( matchchars: string ): boolean; 
+  // try to match as much characters as possible 
+  begin 
+    StrPosPrev:= StrPos; 
+    Result:= false; 
+    while StrPos<=StrLength do 
+      if pos(Value[StrPos],matchchars)>0 then begin inc(StrPos); Result:= true; end 
+      else break; 
+  end; 
+begin 
+  Result := 0; 
+  StrPos:= 1; 
+  StrLength := Length(Value); 
 
-  StrLength := Length(Value);
-  if (StrLength = 14) or (StrLength = 8) then
-  begin
-    StrPos := 5;
-    Year := StrToIntDef(Copy(Value, 1, 4), 0);
-  end
-  else
-  begin
-    StrPos := 3;
-    Year := StrToIntDef(Copy(Value, 1, 2), 0);
-  end;
-
-  if StrLength > 2 then  {Add Month}
-  begin
-    Month := StrToIntDef(Copy(Value, StrPos, 2), 0);
-    if StrLength > 4 then {Add Day}
-    begin
-      Day := StrToIntDef(Copy(Value, StrPos + 2, 2), 0);
-      if StrLength > 6 then {Add Hour}
-      begin
-        Hour := StrToIntDef(Copy(Value, StrPos + 4, 2), 0);
-        if StrLength > 8 then {Add Minute}
-        begin
-          Min := StrToIntDef(Copy(Value, StrPos + 6, 2), 0);
-          if StrLength > 10 then {Add Second}
-            Sec := StrToIntDef(Copy(Value, StrPos + 8, 2), 0);
-       end;
-     end;
-   end;
-  end;
-
-  if (Year <> 0) and (Month <> 0) and (Day <> 0) then
-  begin
-    try
-      Result := EncodeDate(Year, Month, Day)
-    except
-    end;
-  end;
-
+  if not CharMatch('1234567890') then exit;                         // year 
+  Year := StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
+  if not CharMatch('-/\') then exit; 
+  if not CharMatch('1234567890') then exit;                         // month 
+  Month:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
+  if not CharMatch('-/\') then exit; 
+  if not CharMatch('1234567890') then exit;                         // day 
+  Day:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
   try
-    Result := Result + EncodeTime(Hour, Min, Sec, 0);
+    Result := EncodeDate(Year, Month, Day); 
   except
   end;
-end;
+  // 
+  if not CharMatch(' ') then exit; 
+  if not CharMatch('1234567890') then exit;                         // hour 
+  Hour := StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
+  if not CharMatch('-/\') then exit; 
+  if not CharMatch('1234567890') then exit;                         // minute 
+  Min:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
+  if not CharMatch('-/\') then exit; 
+  if not CharMatch('1234567890') then exit;                         // second 
+  Sec:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
+  try
+    Result := REsult + EncodeTime(Hour, Min, Sec,0); 
+  except
+  end;
+
+end; 
+
 
 {**
   Converts TDateTime to Ansi SQL Date/Time

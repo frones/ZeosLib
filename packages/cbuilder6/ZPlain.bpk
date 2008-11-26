@@ -11,7 +11,7 @@
       build\ZPlainInterbaseDriver.obj build\ZPlainLoader.obj 
       build\ZPlainMySql41.obj build\ZPlainMySqlDriver.obj 
       build\ZPlainPostgreSql7.obj build\ZPlainPostgreSql8.obj build\ZPlainFirebird10.obj 
-      build\ZPlainFirebird15.obj build\ZPlainFirebird20.obj build\ZPlainAdo.obj
+      build\ZPlainFirebird15.obj build\ZPlainFirebird20.obj build\ZPlainFirebird21.obj build\ZPlainAdo.obj
       build\ZPlainAdoDriver.obj build\ZPlainSqLiteDriver.obj 
       build\ZPlainOracle9i.obj build\ZPlainOracleDriver.obj
       build\ZPlainASADriver.obj build\ZPlainASA9.obj
@@ -72,6 +72,7 @@
       <FILE FILENAME="..\..\src\plain\ZPlainFirebird10.pas" FORMNAME="" UNITNAME="ZPlainFirebird10" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\plain\ZPlainFirebird15.pas" FORMNAME="" UNITNAME="ZPlainFirebird15" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\plain\ZPlainFirebird20.pas" FORMNAME="" UNITNAME="ZPlainFirebird20" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\plain\ZPlainFirebird21.pas" FORMNAME="" UNITNAME="ZPlainFirebird21" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\plain\ZPlainInterbase5.pas" FORMNAME="" UNITNAME="ZPlainInterbase5" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\plain\ZPlainInterbase6.pas" FORMNAME="" UNITNAME="ZPlainInterbase6" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\plain\ZPlainInterbaseDriver.pas" FORMNAME="" UNITNAME="ZPlainInterbaseDriver" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
