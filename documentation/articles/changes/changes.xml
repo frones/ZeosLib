@@ -52,9 +52,6 @@
           <simpara>[COMMON] Added Delphi 2009 to the supported compilers. Big thanks to gto for his work!!</simpara>
         </listitem>
         <listitem>
-          <simpara>[IB/FB] Added Firebird 2.1 driver (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2099">http://zeos.firmos.at/viewtopic.php?t=2099</ulink>)</simpara>
-        </listitem>
-        <listitem>
           <simpara>[COMMON] Added support for DefaultExpression TField property (<ulink url="http://zeosbugs.firmos.at/view.php?id=146">#0000146</ulink>)</simpara>
         </listitem>
         <listitem>
@@ -151,7 +148,10 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
-          <simpara>NONE. Zeoslib 6.6 is in it's stable phase. No features, except for eventual translations and docs, will be added.</simpara>
+          <simpara>Zeoslib 6.6 is in it's stable phase. No features, except for eventual translations and docs, will (should) be added.</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[IB/FB] Added Firebird 2.1 driver (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2099">http://zeos.firmos.at/viewtopic.php?t=2099</ulink>)</simpara>
         </listitem>
      </itemizedlist>
     </sect2>
