@@ -53,6 +53,7 @@ contains
   ZPlainFirebird10 in '../../src/plain/ZPlainFirebird10.pas',
   ZPlainFirebird15 in '../../src/plain/ZPlainFirebird15.pas',
   ZPlainFirebird20 in '../../src/plain/ZPlainFirebird20.pas',
+  ZPlainFirebird21 in '../../src/plain/ZPlainFirebird21.pas',
   ZPlainFirebirdDriver in '../../src/plain/ZPlainFirebirdDriver.pas',
   ZPlainFirebirdInterbaseConstants in '../../src/plain/ZPlainFirebirdInterbaseConstants.pas',
   ZPlainOracleDriver in '../../src/plain/ZPlainOracleDriver.pas',

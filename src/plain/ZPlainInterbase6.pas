@@ -170,6 +170,12 @@ type
     tran_handle: PISC_TR_HANDLE): ISC_STATUS;
     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
+  Tisc_transaction_info = function(status_vector: PISC_STATUS;
+    tr_handle: PISC_TR_HANDLE; item_list_buffer_length: Short;
+    item_list_buffer: PChar; result_buffer_length: Short;
+    result_buffer: PChar): ISC_STATUS;
+    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+
   { Dynamic SQL routines }
 
   Tisc_dsql_allocate_statement = function(status_vector: PISC_STATUS;
@@ -332,6 +338,7 @@ var
   isc_rollback_retaining: Tisc_rollback_retaining;
   isc_commit_transaction: Tisc_commit_transaction;
   isc_commit_retaining: Tisc_commit_retaining;
+  isc_transaction_info: Tisc_transaction_info;
 
   { Dynamic SQL routines }
   isc_dsql_allocate_statement: Tisc_dsql_allocate_statement;
@@ -443,6 +450,7 @@ begin
   isc_detach_database := GetAddress('isc_detach_database');
   isc_attach_database := GetAddress('isc_attach_database');
   isc_database_info   := GetAddress('isc_database_info');
+  isc_transaction_info   := GetAddress('isc_transaction_info');
   isc_start_multiple  := GetAddress('isc_start_multiple');
   isc_start_transaction := GetAddress('isc_start_transaction');
   isc_commit_transaction := GetAddress('isc_commit_transaction');

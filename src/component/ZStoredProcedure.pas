@@ -59,6 +59,9 @@ interface
 {$I ZComponent.inc}
 
 uses
+{$IFDEF MSWINDOWS}
+  Windows,
+{$ENDIF}
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
@@ -91,7 +94,11 @@ type
   {$IFDEF WITH_IPROVIDER}
     function PSIsSQLBased: Boolean; override;
     procedure PSExecute; override;
+    {$IFDEF BDS4_UP}
+    function PSGetTableNameW: WideString; override;
+    {$ELSE}
     function PSGetTableName: string; override;
+    {$ENDIF}
     procedure PSSetCommandText(const ACommandText: string); override;
   {$ENDIF}
 
@@ -354,7 +361,11 @@ end;
   Gets the name of the stored procedure.
   @returns the name of this stored procedure.
 }
+{$IFDEF BDS4_UP}
+function TZStoredProc.PSGetTableNameW: WideString;
+{$ELSE}
 function TZStoredProc.PSGetTableName: string;
+{$ENDIF}
 begin
   Result := StoredProcName;
 end;

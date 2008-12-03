@@ -9,7 +9,7 @@
       build\ZPlainDbLibDriver.obj build\ZPlainDbLibMsSql7.obj
       build\ZPlainDbLibSybaseAse125.obj build\ZPlainDriver.obj
       build\ZPlainFirebird10.obj build\ZPlainFirebird15.obj build\ZPlainFirebird20.obj
-      build\ZPlainInterbase5.obj build\ZPlainInterbase6.obj
+      build\ZPlainFirebird21.obj build\ZPlainInterbase5.obj build\ZPlainInterbase6.obj
       build\ZPlainInterbaseDriver.obj build\ZPlainLoader.obj
       build\ZPlainMySql40.obj build\ZPlainMySql41.obj build\ZPlainMySql320.obj
       build\ZPlainMySql323.obj build\ZPlainMySqlDriver.obj

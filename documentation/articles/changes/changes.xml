@@ -38,6 +38,9 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[Lazarus] Updated ZUpdateSqlEditor.lrs to be compatible with the newest Lazarus release (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2095">http://zeos.firmos.at/viewtopic.php?t=2095</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[Oracle] Added TZOracleCachedResolver class because oracle doesn't support queries without FROM clause (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2080">http://zeos.firmos.at/viewtopic.php?t=2080</ulink>)</simpara>
         </listitem>
         <listitem>
@@ -49,7 +52,10 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
-          <simpara>NONE. Zeoslib 6.6 is in it's stable phase. No features, except for eventual translations and docs, will be added.</simpara>
+          <simpara>Zeoslib 6.6 is in it's stable phase. No features, except for eventual translations and docs, will (should) be added.</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[IB/FB] Added Firebird 2.1 driver (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2099">http://zeos.firmos.at/viewtopic.php?t=2099</ulink>)</simpara>
         </listitem>
      </itemizedlist>
     </sect2>

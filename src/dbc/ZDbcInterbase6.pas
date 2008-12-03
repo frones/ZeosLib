@@ -76,9 +76,11 @@ type
     FFirebird10PlainDriver: IZFirebird10PlainDriver;
     FFirebird15PlainDriver: IZFirebird15PlainDriver;
     FFirebird20PlainDriver: IZFirebird20PlainDriver;
+    FFirebird21PlainDriver: IZFirebird21PlainDriver;
     // embedded drivers
     FFirebirdD15PlainDriver: IZFirebird15PlainDriver;
     FFirebirdD20PlainDriver: IZFirebird20PlainDriver;
+    FFirebirdD21PlainDriver: IZFirebird21PlainDriver;
 
   protected
     function GetPlainDriver(const Url: string): IZInterbasePlainDriver;
@@ -224,9 +226,11 @@ begin
   FFirebird10PlainDriver := TZFirebird10PlainDriver.Create;
   FFirebird15PlainDriver := TZFirebird15PlainDriver.Create;
   FFirebird20PlainDriver := TZFirebird20PlainDriver.Create;
+  FFirebird21PlainDriver := TZFirebird21PlainDriver.Create;
   // embedded drivers
   FFirebirdD15PlainDriver := TZFirebirdD15PlainDriver.Create;
   FFirebirdD20PlainDriver := TZFirebirdD20PlainDriver.Create;
+  FFirebirdD21PlainDriver := TZFirebirdD21PlainDriver.Create;
 
 end;
 
@@ -292,11 +296,15 @@ begin
     Result := FFirebird15PlainDriver
   else if Protocol = FFirebird20PlainDriver.GetProtocol then
     Result := FFirebird20PlainDriver
+  else if Protocol = FFirebird21PlainDriver.GetProtocol then
+    Result := FFirebird21PlainDriver
   // embedded drivers
   else if Protocol = FFirebirdD15PlainDriver.GetProtocol then
     Result := FFirebirdD15PlainDriver
   else if Protocol = FFirebirdD20PlainDriver.GetProtocol then
     Result := FFirebirdD20PlainDriver
+  else if Protocol = FFirebirdD21PlainDriver.GetProtocol then
+    Result := FFirebirdD21PlainDriver
   // Generic driver
   else Result := FInterbase6PlainDriver;
   Result.Initialize;
@@ -308,15 +316,17 @@ end;
 }
 function TZInterbase6Driver.GetSupportedProtocols: TStringDynArray;
 begin
-  SetLength(Result, 7);
+  SetLength(Result, 9);
   Result[0] := 'interbase-5';
   Result[1] := 'interbase-6';
   Result[2] := 'firebird-1.0';
   Result[3] := 'firebird-1.5';
   Result[4] := 'firebird-2.0';
+  Result[5] := 'firebird-2.1';
   // embedded drivers
-  Result[5] := 'firebirdd-1.5';
-  Result[6] := 'firebirdd-2.0';
+  Result[6] := 'firebirdd-1.5';
+  Result[7] := 'firebirdd-2.0';
+  Result[8] := 'firebirdd-2.1';
 
 end;
 
