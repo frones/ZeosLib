@@ -3340,7 +3340,7 @@ begin
             ftInteger, ftAutoInc:
               Statement.SetInt(I + 1, ParamValue.AsInteger);
             ftFloat:
-              Statement.SetFloat(I + 1, ParamValue.AsFloat);
+              Statement.SetDouble(I + 1, ParamValue.AsFloat);
             ftLargeInt:
               Statement.SetInt(I + 1, ParamValue.AsInteger);
             ftString:

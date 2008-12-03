@@ -129,7 +129,7 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
-          <simpara>NONE</simpara>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=162">#0000162</ulink> [normal] Precision issue when recording values from TClientDataSet</simpara>
         </listitem>
      </itemizedlist>
     </sect2>
