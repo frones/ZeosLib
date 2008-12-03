@@ -237,7 +237,11 @@ begin
     begin
       ColumnName := '';
       TableName := '';
+    {$IFDEF ZEOS_FULL_UNICODE}
+      ColumnLabel := UTF8ToUnicodeString(StrPas(FPlainDriver.GetFieldName(FQueryHandle, I)));
+    {$ELSE}
       ColumnLabel := StrPas(FPlainDriver.GetFieldName(FQueryHandle, I));
+    {$ENDIF} 
       ColumnDisplaySize := 0;
       Scale := 0;
       Precision := 0;

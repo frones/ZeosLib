@@ -510,15 +510,19 @@ begin
 
   FPlainDriver.SetNoticeProcessor(FHandle,FNoticeProcessor,nil);
 
-  { Sets a client codepage. }
-  if FClientCodePage <> '' then
-  begin
-    SQL := PAnsiChar(Format('SET CLIENT_ENCODING TO ''%s''', [FClientCodePage]));
-    QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL);
-    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
-    FPlainDriver.Clear(QueryHandle);
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
-  end;
+  { Sets a client codepage. } 
+  if FClientCodePage <> '' then 
+  begin 
+  {$IFDEF ZEOS_FULL_UNICODE} 
+    SQL := PAnsiChar(utf8string(Format('SET CLIENT_ENCODING TO ''%s''', [FClientCodePage]))); 
+  {$ELSE} 
+    SQL := PAnsiChar(Format('SET CLIENT_ENCODING TO ''%s''', [FClientCodePage])); 
+  {$ENDIF} 
+    QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL); 
+    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle); 
+    FPlainDriver.Clear(QueryHandle); 
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL); 
+  end; 
 
   { Turn on transaction mode }
   StartTransactionSupport;

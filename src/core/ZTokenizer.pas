@@ -338,7 +338,11 @@ type
   }
   TZWordState = class (TZTokenizerState)
   private
+  {$IFDEF ZEOS_FULL_UNICODE}
+    FWordChars: array[0..ord(high(char))] of Boolean;
+  {$ELSE}
     FWordChars: array[0..255] of Boolean;
+  {$ENDIF}
   public
     constructor Create;
 
@@ -414,7 +418,11 @@ type
   {** Implements a default tokenizer object. }
   TZTokenizer = class (TZAbstractObject, IZTokenizer)
   private
+    {$IFDEF ZEOS_FULL_UNICODE}
+    FCharacterStates: array[0..ord(high(char))] of TZTokenizerState;
+    {$ELSE}
     FCharacterStates: array[0..255] of TZTokenizerState;
+    {$ENDIF}
     FCommentState: TZCommentState;
     FNumberState: TZNumberState;
     FQuoteState: TZQuoteState;
@@ -1095,7 +1103,11 @@ end;
 }
 constructor TZWordState.Create;
 begin
+  {$IFDEF ZEOS_FULL_UNICODE}
+  SetWordChars(#0, high(char), False);
+  {$ELSE}
   SetWordChars(#0, #255, False);
+  {$ENDIF}
   SetWordChars('a', 'z', True);
   SetWordChars('A', 'Z', True);
   SetWordChars('0', '9', True);
@@ -1143,7 +1155,11 @@ procedure TZWordState.SetWordChars(FromChar, ToChar: Char; Enable: Boolean);
 var
   I: Integer;
 begin
+  {$IFDEF ZEOS_FULL_UNICODE}
+  for I := Ord(FromChar) to MinIntValue([Ord(ToChar), Ord(high(char)) ]) do
+  {$ELSE}
   for I := Ord(FromChar) to MinIntValue([Ord(ToChar), 255]) do
+  {$ENDIF}
     FWordChars[I] := Enable;
 end;
 
@@ -1169,7 +1185,11 @@ begin
   FWordState := TZWordState.Create;
   FCommentState := TZCppCommentState.Create;
 
+  {$IFDEF ZEOS_FULL_UNICODE}
+  SetCharacterState(#0, high(char), FSymbolState);
+  {$ELSE}
   SetCharacterState(#0, #255, FSymbolState);
+  {$ENDIF}
 
   SetCharacterState(#0, ' ', FWhitespaceState);
   SetCharacterState('a', 'z', FWordState);
@@ -1227,7 +1247,11 @@ procedure TZTokenizer.SetCharacterState(FromChar, ToChar: Char;
 var
   I: Integer;
 begin
+  {$IFDEF ZEOS_FULL_UNICODE}
+  for I := Ord(FromChar) to MinIntValue([Ord(ToChar), ord(high(char))]) do
+  {$ELSE}
   for I := Ord(FromChar) to MinIntValue([Ord(ToChar), 255]) do
+  {$ENDIF}
     FCharacterStates[I] := State;
 end;
 
