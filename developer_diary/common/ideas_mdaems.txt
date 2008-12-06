@@ -1,3 +1,5 @@
 - Caching of CalculateRowDefaults in CachedResultset - See http://zeos.firmos.at/viewtopic.php?t=1086
 
 - Implementation of ServerVersion and ClientVersion for all database drivers (Mysql done)
+
+- Review the database dependent tokenizers to remove inheritance between different database tokenizers - See http://zeos.firmos.at/viewtopic.php?t=2138

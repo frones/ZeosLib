@@ -283,3 +283,5 @@
 20081126 : Added Delphi2009 to the automated build scripts and test suite - by mdaems
 
 20081203 : Precision issue when recording values from TClientDataSet - by magnomp - Mantis Bug 162
+
+20081206 : Removed conditional compilation of database dependent Tokenizers - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2138
