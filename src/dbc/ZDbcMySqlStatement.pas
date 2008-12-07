@@ -246,7 +246,7 @@ function TZMySQLStatement.ExecuteQuery(const SQL: string): IZResultSet;
 begin
   Result := nil;
   {$IFDEF ZEOS_FULL_UNICODE}
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(UnicodeToAnsi(SQL))) = 0 then
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(UTF8String(SQL))) = 0 then
   {$ELSE}
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
   {$ENDIF}
@@ -278,7 +278,7 @@ var
 begin
   Result := -1;
   {$IFDEF ZEOS_FULL_UNICODE}
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(UnicodeToAnsi(SQL))) = 0 then
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(UTF8String(SQL))) = 0 then
   {$ELSE}
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
   {$ENDIF}
@@ -333,7 +333,7 @@ begin
   Result := False;
   FSQL := SQL;
   {$IFDEF ZEOS_FULL_UNICODE}
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(UnicodeToAnsi(SQL))) = 0 then
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(UTF8String(SQL))) = 0 then
   {$ELSE}
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
   {$ENDIF}
@@ -438,9 +438,9 @@ begin
   GetMem(Buffer, BufferLen);
   if FHandle = nil then
   {$IFDEF ZEOS_FULL_UNICODE}
-    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(UnicodeToAnsi(Value)), Length(Value))
+    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(UTF8String(Value)), Length(Value))
   else
-    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(UnicodeToAnsi(Value)), Length(Value));   
+    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(UTF8String(Value)), Length(Value));   
   {$ELSE}
     BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(Value), Length(Value))
    else
@@ -561,7 +561,7 @@ begin
       exit;
     end;
   {$IFDEF ZEOS_FULL_UNICODE}
-  if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(UnicodeToAnsi(SQL)), length(SQL)) <> 0) then
+  if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(UTF8String(SQL)), length(SQL)) <> 0) then
   {$ELSE}
   if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(SQL), length(SQL)) <> 0) then
   {$ENDIF}

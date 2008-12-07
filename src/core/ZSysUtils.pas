@@ -351,15 +351,6 @@ function EncodeSQLVersioning(const MajorVersion: Integer;
 }
 function FormatSQLVersion( const SQLVersion: Integer ): String;
 
-{$IFDEF ZEOS_FULL_UNICODE}
-{**
-  Converts Unicode strings to Ansi (Delphi 2009 Up)
-  @param UnicodeString a unicode string
-  @return a Ansi string
-}
-function UnicodeToAnsi(const UnicodeString: string): AnsiString;
-{$ENDIF}
-
 {$IFOPT D+}
 {$IFNDEF FPC}
 {**
@@ -1295,16 +1286,6 @@ begin
   debug_last_used_memory := AllocMemsize;
 end;
 {$ENDIF}
-{$ENDIF}
-
-{$IFDEF ZEOS_FULL_UNICODE}
-{**
-  Converts Unicode strings to Ansi (Delphi 2009 Up)
-}
-function UnicodeToAnsi(const UnicodeString: string): AnsiString;
-begin
-   result := AnsiString(UnicodeString);
-end;
 {$ENDIF}
 
 end.

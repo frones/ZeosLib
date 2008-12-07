@@ -1194,7 +1194,7 @@ begin
           Result.VString := Value.VString;
         vtUnicodeString:
           {$IFDEF ZEOS_FULL_UNICODE}
-          Result.VString := UnicodeToAnsi(Value.VUnicodeString);
+          Result.VString := UTF8String(Value.VUnicodeString);
           {$ELSE}
           Result.VString := Value.VUnicodeString;
           {$ENDIF}

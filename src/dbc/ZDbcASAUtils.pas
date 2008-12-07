@@ -500,7 +500,7 @@ begin
   for Result := 0 to FSQLDA.sqld - 1 do
     if FSQLDA.sqlvar[Result].sqlname.length = Length(name) then
       {$IFDEF ZEOS_FULL_UNICODE}
-      if StrLIComp(@FSQLDA.sqlvar[Result].sqlname.data, PAnsiChar(UnicodeToAnsi(Name)), Length(name)) = 0 then
+      if StrLIComp(@FSQLDA.sqlvar[Result].sqlname.data, PAnsiChar(UTF8String(Name)), Length(name)) = 0 then
       {$ELSE}
       if StrLIComp(@FSQLDA.sqlvar[Result].sqlname.data, PAnsiChar(Name), Length(name)) = 0 then
       {$ENDIF} 
@@ -2078,7 +2078,7 @@ begin
     try
       {$IFDEF ZEOS_FULL_UNICODE}
       GetPlainDriver.db_prepare_describe(GetDBHandle, nil, StmtNum,
-            PAnsiChar(UnicodeToAnsi(SQL)), FParamsSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
+            PAnsiChar(UTF8String(SQL)), FParamsSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
             SQL_PREPARE_DESCRIBE_INPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);
       {$ELSE}
       GetPlainDriver.db_prepare_describe( GetDBHandle, nil, StmtNum,

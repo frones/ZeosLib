@@ -1332,7 +1332,7 @@ begin
   CheckClosed;
 {$ENDIF}
    {$IFDEF ZEOS_FULL_UNICODE}
-   Result := PAnsiChar(UnicodeToAnsi(PAnsiChar(FColumnArray[ColumnIndex - 1].buffer)));
+   Result := PAnsiChar(UTF8String(PAnsiChar(FColumnArray[ColumnIndex - 1].buffer)));
    {$ELSE}
    Result := PAnsiChar(FColumnArray[ColumnIndex - 1].buffer);
    {$ENDIF}

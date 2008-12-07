@@ -850,7 +850,7 @@ begin
   { Prepare an sql statement }
   {$IFDEF ZEOS_FULL_UNICODE}
   PlainDriver.isc_dsql_prepare(@StatusVector, TrHandle, @StmtHandle,
-     0, PAnsiChar(UnicodeToAnsi(SQL)), Dialect, nil);
+     0, PAnsiChar(UTF8String(SQL)), Dialect, nil);
   {$ELSE}
   PlainDriver.isc_dsql_prepare(@StatusVector, TrHandle, @StmtHandle,
      0, PAnsiChar(SQL), Dialect, nil);

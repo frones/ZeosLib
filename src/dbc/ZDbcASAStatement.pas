@@ -324,7 +324,7 @@ begin
   with FASAConnection do
   begin
     {$IFDEF ZEOS_FULL_UNICODE}
-    GetPlainDriver.db_execute_imm(GetDBHandle, PAnsiChar(UnicodeToAnsi(SQL)));
+    GetPlainDriver.db_execute_imm(GetDBHandle, PAnsiChar(UTF8String(SQL)));
     {$ELSE}
     GetPlainDriver.db_execute_imm(GetDBHandle, PAnsiChar(SQL)); 
     {$ENDIF}      

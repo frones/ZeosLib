@@ -415,31 +415,31 @@ begin
       begin
          if Info.Values['MYSQL_SSL_KEY'] <> '' then
             {$IFDEF ZEOS_FULL_UNICODE}
-            SslKey := PAnsiChar(UnicodeToAnsi(Info.Values['MYSQL_SSL_KEY']));
+            SslKey := PAnsiChar(UTF8String(Info.Values['MYSQL_SSL_KEY']));
             {$ELSE}
             SslKey := PAnsiChar(Info.Values['MYSQL_SSL_KEY']);
             {$ENDIF}
          if Info.Values['MYSQL_SSL_CERT'] <> '' then
             {$IFDEF ZEOS_FULL_UNICODE}
-            SslCert := PAnsiChar(UnicodeToAnsi(Info.Values['MYSQL_SSL_CERT']));
+            SslCert := PAnsiChar(UTF8String(Info.Values['MYSQL_SSL_CERT']));
             {$ELSE}
             SslCert := PAnsiChar(Info.Values['MYSQL_SSL_CERT']);
             {$ENDIF}
          if Info.Values['MYSQL_SSL_CA'] <> '' then
             {$IFDEF ZEOS_FULL_UNICODE}
-            SslCa := PAnsiChar(UnicodeToAnsi(Info.Values['MYSQL_SSL_CA']));
+            SslCa := PAnsiChar(UTF8String(Info.Values['MYSQL_SSL_CA']));
             {$ELSE}
             SslCa := PAnsiChar(Info.Values['MYSQL_SSL_CA']);
             {$ENDIF}
          if Info.Values['MYSQL_SSL_CAPATH'] <> '' then
             {$IFDEF ZEOS_FULL_UNICODE}
-            SslCaPath := PAnsiChar(UnicodeToAnsi(Info.Values['MYSQL_SSL_CAPATH']));
+            SslCaPath := PAnsiChar(UTF8String(Info.Values['MYSQL_SSL_CAPATH']));
             {$ELSE}
             SslCaPath := PAnsiChar(Info.Values['MYSQL_SSL_CAPATH']);
             {$ENDIF}
          if Info.Values['MYSQL_SSL_CYPHER'] <> '' then
             {$IFDEF ZEOS_FULL_UNICODE}
-            SslCypher := PAnsiChar(UnicodeToAnsi(Info.Values['MYSQL_SSL_CYPHER']));
+            SslCypher := PAnsiChar(UTF8String(Info.Values['MYSQL_SSL_CYPHER']));
             {$ELSE}
             SslCypher := PAnsiChar(Info.Values['MYSQL_SSL_CYPHER']);
             {$ENDIF}
@@ -451,9 +451,9 @@ begin
 
     { Connect to MySQL database. }
     {$IFDEF ZEOS_FULL_UNICODE}
-    if FPlainDriver.RealConnect(FHandle, PAnsiChar(UnicodeToAnsi(HostName)),
-                                PAnsiChar(UnicodeToAnsi(User)), PAnsiChar(UnicodeToAnsi(Password)),
-                                PAnsiChar(UnicodeToAnsi(Database)), Port, nil,
+    if FPlainDriver.RealConnect(FHandle, PAnsiChar(UTF8String(HostName)),
+                                PAnsiChar(UTF8String(User)), PAnsiChar(UTF8String(Password)),
+                                PAnsiChar(UTF8String(Database)), Port, nil,
                                 ClientFlag) = nil then
     {$ELSE}
     if FPlainDriver.RealConnect(FHandle, PAnsiChar(HostName), PAnsiChar(User),
@@ -472,7 +472,7 @@ begin
     if FClientCodePage <> '' then
     begin
       {$IFDEF ZEOS_FULL_UNICODE}
-      SQL := PAnsiChar(UnicodeToAnsi(Format('SET CHARACTER SET %s', [FClientCodePage])));
+      SQL := PAnsiChar(UTF8String(Format('SET CHARACTER SET %s', [FClientCodePage])));
       {$ELSE}
       SQL := PAnsiChar(Format('SET CHARACTER SET %s', [FClientCodePage]));
       {$ENDIF}
