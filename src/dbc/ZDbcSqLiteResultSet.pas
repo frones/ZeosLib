@@ -241,7 +241,7 @@ begin
     ColumnInfo := TZColumnInfo.Create;
     with ColumnInfo do
     begin
-  {$IFDEF ZEOS_FULL_UNICODE} 
+  {$IFDEF DELPHI12_UP} 
       ColumnLabel := UTF8ToUnicodeString(StrPas(FieldName^)); 
   {$ELSE} 
       ColumnLabel := StrPas(FieldName^); 

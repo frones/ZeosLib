@@ -237,7 +237,7 @@ begin
     begin
       ColumnName := '';
       TableName := '';
-    {$IFDEF ZEOS_FULL_UNICODE}
+    {$IFDEF DELPHI12_UP}
       ColumnLabel := UTF8ToUnicodeString(StrPas(FPlainDriver.GetFieldName(FQueryHandle, I)));
     {$ELSE}
       ColumnLabel := StrPas(FPlainDriver.GetFieldName(FQueryHandle, I));

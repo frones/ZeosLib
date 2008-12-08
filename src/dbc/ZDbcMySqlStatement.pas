@@ -245,7 +245,7 @@ end;
 function TZMySQLStatement.ExecuteQuery(const SQL: string): IZResultSet;
 begin
   Result := nil;
-  {$IFDEF ZEOS_FULL_UNICODE}
+  {$IFDEF DELPHI12_UP}
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(UTF8String(SQL))) = 0 then
   {$ELSE}
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
@@ -277,7 +277,7 @@ var
   HasResultset : Boolean;
 begin
   Result := -1;
-  {$IFDEF ZEOS_FULL_UNICODE}
+  {$IFDEF DELPHI12_UP}
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(UTF8String(SQL))) = 0 then
   {$ELSE}
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
@@ -332,7 +332,7 @@ var
 begin
   Result := False;
   FSQL := SQL;
-  {$IFDEF ZEOS_FULL_UNICODE}
+  {$IFDEF DELPHI12_UP}
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(UTF8String(SQL))) = 0 then
   {$ELSE}
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
@@ -437,7 +437,7 @@ begin
   BufferLen := Length(Value) * 2 + 1;
   GetMem(Buffer, BufferLen);
   if FHandle = nil then
-  {$IFDEF ZEOS_FULL_UNICODE}
+  {$IFDEF DELPHI12_UP}
     BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(UTF8String(Value)), Length(Value))
   else
     BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(UTF8String(Value)), Length(Value));   
@@ -560,7 +560,7 @@ begin
       CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoInitPrepStmt);
       exit;
     end;
-  {$IFDEF ZEOS_FULL_UNICODE}
+  {$IFDEF DELPHI12_UP}
   if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(UTF8String(SQL)), length(SQL)) <> 0) then
   {$ELSE}
   if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(SQL), length(SQL)) <> 0) then

@@ -1331,7 +1331,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
 {$ENDIF}
-   {$IFDEF ZEOS_FULL_UNICODE}
+   {$IFDEF DELPHI12_UP}
    Result := PAnsiChar(UTF8String(PAnsiChar(FColumnArray[ColumnIndex - 1].buffer)));
    {$ELSE}
    Result := PAnsiChar(FColumnArray[ColumnIndex - 1].buffer);

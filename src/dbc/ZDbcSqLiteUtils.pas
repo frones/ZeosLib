@@ -217,7 +217,7 @@ var
 begin
   if ErrorMessage <> nil then
   begin
-  {$IFDEF ZEOS_FULL_UNICODE} 
+  {$IFDEF DELPHI12_UP} 
     Error := trim(UTF8ToUnicodeString(ErrorMessage)); 
   {$ELSE} 
     Error := Trim(StrPas(ErrorMessage)); 

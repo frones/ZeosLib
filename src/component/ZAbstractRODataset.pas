@@ -286,7 +286,7 @@ type
     procedure SetFieldData(Field: TField; Buffer: Pointer); override;
     procedure DefineProperties(Filer: TFiler); override;
 
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
     function GetRecord(Buffer: TRecordBuffer; GetMode: TGetMode; DoCheck: Boolean):
       TGetResult; override;
 {$ELSE}
@@ -295,7 +295,7 @@ type
 {$ENDIF}
     function GetRecordSize: Word; override;
     function GetActiveBuffer(var RowBuffer: PZRowBuffer): Boolean;
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
     function AllocRecordBuffer: TRecordBuffer; override;
     procedure FreeRecordBuffer(var Buffer: TRecordBuffer); override;
 {$ELSE}
@@ -310,7 +310,7 @@ type
 
     procedure CheckFieldCompatibility(Field: TField; FieldDef: TFieldDef);
 {$IFNDEF FPC} override;{$ENDIF}
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
     procedure ClearCalcFields(Buffer: TRecordBuffer); override;
 {$ELSE}
     procedure ClearCalcFields(Buffer: PChar); override;
@@ -321,7 +321,7 @@ type
     procedure InternalClose; override;
     procedure InternalFirst; override;
     procedure InternalLast; override;
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
     procedure InternalInitRecord(Buffer: TRecordBuffer); override;
 {$ELSE}
     procedure InternalInitRecord(Buffer: PChar); override;
@@ -329,7 +329,7 @@ type
     procedure InternalGotoBookmark(Bookmark: Pointer); override;
     procedure InternalRefresh; override;
     procedure InternalHandleException; override;
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
     procedure InternalSetToRecord(Buffer: TRecordBuffer); override;
 
     procedure GetBookmarkData(Buffer: TRecordBuffer; Data: Pointer); override;
@@ -1136,7 +1136,7 @@ end;
   @return a location result.
 }
 
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
 
 function TZAbstractRODataset.GetRecord(Buffer: TRecordBuffer; GetMode: TGetMode;
   DoCheck: Boolean): TGetResult;
@@ -1483,7 +1483,7 @@ end;
   @return an allocated record buffer.
 }
 
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
 
 function TZAbstractRODataset.AllocRecordBuffer: TRecordBuffer;
 begin
@@ -1502,7 +1502,7 @@ end;
   @param Buffer a previously allocated buffer.
 }
 
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
 
 procedure TZAbstractRODataset.FreeRecordBuffer(var Buffer: TRecordBuffer);
 {$ELSE}
@@ -1782,14 +1782,14 @@ begin
   ResultSet := nil;
 
   if FOldRowBuffer <> nil then
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
     FreeRecordBuffer(PByte(FOldRowBuffer));
 {$ELSE}
     FreeRecordBuffer(PChar(FOldRowBuffer));
 {$ENDIF}
   FOldRowBuffer := nil;
   if FNewRowBuffer <> nil then
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
     FreeRecordBuffer(PByte(FNewRowBuffer));
 {$ELSE}
     FreeRecordBuffer(PChar(FNewRowBuffer));
@@ -2209,7 +2209,7 @@ end;
   @param Buffer the specified row buffer.
 }
 
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
 
 procedure TZAbstractRODataset.InternalSetToRecord(Buffer: TRecordBuffer);
 {$ELSE}
@@ -2283,7 +2283,7 @@ end;
   @return a bookmark flag from the specified record.
 }
 
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
 
 function TZAbstractRODataset.GetBookmarkFlag(Buffer: TRecordBuffer): TBookmarkFlag;
 {$ELSE}
@@ -2300,7 +2300,7 @@ end;
   @param Value a new bookmark flag to the specified record.
 }
 
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
 
 procedure TZAbstractRODataset.SetBookmarkFlag(Buffer: TRecordBuffer;
   Value: TBookmarkFlag);
@@ -2319,7 +2319,7 @@ end;
   @param Data a pointer to the bookmark value.
 }
 
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
 
 procedure TZAbstractRODataset.GetBookmarkData(Buffer: TRecordBuffer; Data: Pointer);
 {$ELSE}
@@ -2336,7 +2336,7 @@ end;
   @param Data a pointer to the bookmark value.
 }
 
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
 
 procedure TZAbstractRODataset.SetBookmarkData(Buffer: TRecordBuffer; Data: Pointer);
 {$ELSE}
@@ -2392,7 +2392,7 @@ end;
   @param Buffer a record buffer for initialization.
 }
 
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
 
 procedure TZAbstractRODataset.InternalInitRecord(Buffer: TRecordBuffer);
 {$ELSE}
@@ -2669,7 +2669,7 @@ begin
         RowAccessor.RowBuffer := SearchRowBuffer;
         RowAccessor.RowBuffer^.Index := RowNo;
         FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
         GetCalcFields(PByte(SearchRowBuffer));
 {$ELSE}
         GetCalcFields(PChar(SearchRowBuffer));
@@ -2688,7 +2688,7 @@ begin
       end;
     finally
       if SearchRowBuffer <> nil then
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
         FreeRecordBuffer(PByte(SearchRowBuffer));
 {$ELSE}
         FreeRecordBuffer(PChar(SearchRowBuffer));
@@ -2788,7 +2788,7 @@ begin
     RowAccessor.RowBuffer := SearchRowBuffer;
     RowAccessor.RowBuffer^.Index := RowNo;
     FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
     GetCalcFields(PByte(SearchRowBuffer));
 {$ELSE}
     GetCalcFields(PChar(SearchRowBuffer));
@@ -2796,7 +2796,7 @@ begin
     RetrieveDataFieldsFromRowAccessor(
       FieldRefs, FieldIndices, RowAccessor, ResultValues);
   finally
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
     FreeRecordBuffer(PByte(SearchRowBuffer));
 {$ELSE}
     FreeRecordBuffer(PChar(SearchRowBuffer));
@@ -3042,7 +3042,7 @@ begin
   RowAccessor.RowBuffer^.Index := RowNo;
   FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
   FRowAccessor.RowBuffer^.BookmarkFlag := Ord(bfCurrent);
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
   GetCalcFields(PByte(FSortRowBuffer1));
 {$ELSE}
   GetCalcFields(PChar(FSortRowBuffer1));
@@ -3055,7 +3055,7 @@ begin
   RowAccessor.RowBuffer^.Index := RowNo;
   FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
   FRowAccessor.RowBuffer^.BookmarkFlag := Ord(bfCurrent);
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
   GetCalcFields(PByte(FSortRowBuffer2));
 {$ELSE}
   GetCalcFields(PChar(FSortRowBuffer2));
@@ -3461,7 +3461,7 @@ end;
   @param Buffer
 }
 
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
 
 procedure TZAbstractRODataset.ClearCalcFields(Buffer: TRecordBuffer);
 {$ELSE}

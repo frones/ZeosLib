@@ -576,7 +576,7 @@ begin
     ServerArgsLen := TmpList.Count;
     SetLength(ServerArgs, ServerArgsLen);
     for i := 0 to ServerArgsLen - 1 do
-      {$IFDEF ZEOS_FULL_UNICODE}
+      {$IFDEF DELPHI12_UP}
       ServerArgs[i] := StrNew(PAnsiChar(UTF8String(TmpList[i])));
       {$ELSE}
       ServerArgs[i] := StrNew(PAnsiChar(TmpList[i]));

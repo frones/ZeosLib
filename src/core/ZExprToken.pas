@@ -145,7 +145,7 @@ var
     LastChar := #0;
     while Stream.Read(LastChar, 1 * SizeOf(Char)) > 0 do
     begin
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
          if CharInSet(LastChar, ['0'..'9']) then
 {$ELSE}
       if LastChar in ['0'..'9'] then
@@ -185,7 +185,7 @@ begin
     Result.Value := Result.Value + ReadDecDigits;
 
   { Reads a power part of the number }
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
    if CharInSet(LastChar, ['e', 'E']) then
 {$ELSE}
   if LastChar in ['e','E'] then
@@ -196,7 +196,7 @@ begin
     FloatPoint := True;
 
     Stream.Read(TempChar, 1 * SizeOf(Char));
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
       if CharInSet(TempChar, ['0'..'9', '-', '+']) then
 {$ELSE}
     if TempChar in ['0'..'9','-','+'] then
@@ -272,7 +272,7 @@ end;
 function TZExpressionQuoteState.EncodeString(const Value: string;
   QuoteChar: Char): string;
 begin
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
    if CharInSet(QuoteChar, ['''', '"']) then
 {$ELSE}
   if QuoteChar in ['''', '"'] then
@@ -291,7 +291,7 @@ end;
 function TZExpressionQuoteState.DecodeString(const Value: string;
   QuoteChar: Char): string;
 begin
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
    if (Length(Value) >= 2) and CharInSet(QuoteChar, ['''', '"'])
       and (Value[1] = QuoteChar) and (Value[Length(Value)] = QuoteChar) then
 {$ELSE}

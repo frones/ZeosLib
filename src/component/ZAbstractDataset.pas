@@ -445,7 +445,7 @@ end;
 procedure TZAbstractDataset.InternalPost;
 var
   RowBuffer: PZRowBuffer;
-  {$IFDEF ZEOS_FULL_UNICODE}
+  {$IFDEF DELPHI12_UP}
   BM: TBookMark;
   {$ELSE}
   BM:TBookMarkStr;

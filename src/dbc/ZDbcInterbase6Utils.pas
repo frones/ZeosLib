@@ -544,7 +544,7 @@ begin
     end;
   end;
 
-  {$IFDEF ZEOS_FULL_UNICODE}
+  {$IFDEF DELPHI12_UP}
   Result := AnsiStrAlloc(FDPBLength + 1);
   {$ELSE}
   Result := StrAlloc(FDPBLength + 1);
@@ -607,7 +607,7 @@ begin
     default database transaction}
   if (TPBLength > 0) and (IsolationLevel) then
   begin
-    {$IFDEF ZEOS_FULL_UNICODE}
+    {$IFDEF DELPHI12_UP}
     TPB := AnsiStrAlloc(TPBLength + 1);
     {$ELSE}
     TPB := StrAlloc(TPBLength + 1);
@@ -848,7 +848,7 @@ begin
   CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, Sql);
 
   { Prepare an sql statement }
-  {$IFDEF ZEOS_FULL_UNICODE}
+  {$IFDEF DELPHI12_UP}
   PlainDriver.isc_dsql_prepare(@StatusVector, TrHandle, @StmtHandle,
      0, PAnsiChar(UTF8String(SQL)), Dialect, nil);
   {$ELSE}

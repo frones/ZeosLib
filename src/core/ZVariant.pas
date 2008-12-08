@@ -79,7 +79,7 @@ type
     VInteger: Int64;
     VFloat: Extended;
     VString: AnsiString;
-    {$IFDEF ZEOS_FULL_UNICODE}
+    {$IFDEF DELPHI12_UP}
     VUnicodeString: String;
     {$ELSE}
     VUnicodeString: WideString;
@@ -112,7 +112,7 @@ type
     function GetAsInteger(const Value: TZVariant): Int64;
     function GetAsFloat(const Value: TZVariant): Extended;
     function GetAsString(const Value: TZVariant): AnsiString;
-    {$IFDEF ZEOS_FULL_UNICODE}
+    {$IFDEF DELPHI12_UP}
     function GetAsUnicodeString(const Value: TZVariant): String;
     {$ELSE}
     function GetAsUnicodeString(const Value: TZVariant): WideString;
@@ -125,7 +125,7 @@ type
     procedure SetAsInteger(var Value: TZVariant; Data: Int64);
     procedure SetAsFloat(var Value: TZVariant; Data: Extended);
     procedure SetAsString(var Value: TZVariant; const Data: AnsiString);
-    {$IFDEF ZEOS_FULL_UNICODE}
+    {$IFDEF DELPHI12_UP}
     procedure SetAsUnicodeString(var Value: TZVariant; const Data: String);
     {$ELSE}
     procedure SetAsUnicodeString(var Value: TZVariant; const Data: WideString);
@@ -172,7 +172,7 @@ type
     function GetAsInteger(const Value: TZVariant): Int64;
     function GetAsFloat(const Value: TZVariant): Extended;
     function GetAsString(const Value: TZVariant): AnsiString;
-    {$IFDEF ZEOS_FULL_UNICODE}
+    {$IFDEF DELPHI12_UP}
     function GetAsUnicodeString(const Value: TZVariant): String;
     {$ELSE}
     function GetAsUnicodeString(const Value: TZVariant): WideString;
@@ -185,7 +185,7 @@ type
     procedure SetAsInteger(var Value: TZVariant; Data: Int64);
     procedure SetAsFloat(var Value: TZVariant; Data: Extended);
     procedure SetAsString(var Value: TZVariant; const Data: AnsiString);
-    {$IFDEF ZEOS_FULL_UNICODE}
+    {$IFDEF DELPHI12_UP}
     procedure SetAsUnicodeString(var Value: TZVariant; const Data: String);
     {$ELSE}
     procedure SetAsUnicodeString(var Value: TZVariant; const Data: WideString);
@@ -233,7 +233,7 @@ type
     function GetInteger: Int64;
     function GetFloat: Extended;
     function GetString: AnsiString;
-    {$IFDEF ZEOS_FULL_UNICODE}
+    {$IFDEF DELPHI12_UP}
     function GetUnicodeString: String;
     {$ELSE}
     function GetUnicodeString: WideString;
@@ -251,7 +251,7 @@ type
     constructor CreateWithInteger(Value: Int64);
     constructor CreateWithFloat(Value: Extended);
     constructor CreateWithString(const Value: AnsiString);
-    {$IFDEF ZEOS_FULL_UNICODE}
+    {$IFDEF DELPHI12_UP}
     constructor CreateWithUnicodeString(const Value: String);
     {$ELSE}
     constructor CreateWithUnicodeString(const Value: WideString);
@@ -265,7 +265,7 @@ type
     function GetInteger: Int64;
     function GetFloat: Extended;
     function GetString: AnsiString;
-    {$IFDEF ZEOS_FULL_UNICODE}
+    {$IFDEF DELPHI12_UP}
     function GetUnicodeString: String;
     {$ELSE}
     function GetUnicodeString: WideString;
@@ -529,7 +529,7 @@ begin
       Result := AnsiCompareStr(Value1.VString, GetAsString(Value2));
     vtUnicodeString:
 {$IFNDEF FPC}
-   {$IFDEF ZEOS_FULL_UNICODE}
+   {$IFDEF DELPHI12_UP}
       Result := AnsiCompareStr(Value1.VUnicodeString, GetAsUnicodeString(Value2));
    {$ELSE}
       Result := WideCompareStr(Value1.VUnicodeString, GetAsUnicodeString(Value2));
@@ -622,7 +622,7 @@ end;
   @param Value a variant to be converted.
   @param a result value.
 }
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
 function TZDefaultVariantManager.GetAsUnicodeString(
   const Value: TZVariant): String;
 {$ELSE}
@@ -719,7 +719,7 @@ end;
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
 procedure TZDefaultVariantManager.SetAsUnicodeString(var Value: TZVariant;
   const Data: String);
 {$ELSE}
@@ -1193,7 +1193,7 @@ begin
         vtString:
           Result.VString := Value.VString;
         vtUnicodeString:
-          {$IFDEF ZEOS_FULL_UNICODE}
+          {$IFDEF DELPHI12_UP}
           Result.VString := UTF8String(Value.VUnicodeString);
           {$ELSE}
           Result.VString := Value.VUnicodeString;
@@ -1356,7 +1356,7 @@ end;
   Constructs this object and assignes the main properties.
   @param Value a unicode string value.
 }
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
 constructor TZAnyValue.CreateWithUnicodeString(const Value: String);
 {$ELSE}
 constructor TZAnyValue.CreateWithUnicodeString(const Value: WideString);
@@ -1463,7 +1463,7 @@ end;
   Gets a stored value converted to unicode string.
   @return a stored value converted to unicode string.
 }
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
 function TZAnyValue.GetUnicodeString: String;
 {$ELSE}
 function TZAnyValue.GetUnicodeString: WideString;
@@ -1534,7 +1534,7 @@ begin
     varBoolean: DefVarManager.SetAsBoolean(Result, Value);
     varString:
       DefVarManager.SetAsString(Result, Value);
-   {$IFDEF ZEOS_FULL_UNICODE}
+   {$IFDEF DELPHI12_UP}
    varUString:
       DefVarManager.SetAsUnicodeString(Result, Value);
    {$ENDIF}

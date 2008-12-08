@@ -90,7 +90,7 @@ function FirstDelimiter(const Delimiters, Str: string): Integer;
 function LastDelimiter(const Delimiters, Str: string): Integer;
 
 
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
 {**
   Compares two PWideChars without stopping at #0 (Unicode Version)
   @param P1 first PWideChars
@@ -413,7 +413,7 @@ begin
 end;
 
 
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
 {**
   Compares two PWideChars without stopping at #0 (Unicode Version)
   @param P1 first PWideChar
@@ -464,7 +464,7 @@ begin
     Result := True
    else if LenSubStr <= Length(Str) then
     //Result := Copy(Str, 1, Length(SubStr)) = SubStr;
-   {$IFDEF ZEOS_FULL_UNICODE}
+   {$IFDEF DELPHI12_UP}
    Result := MemLCompUnicode(PChar(Str), PChar(SubStr), LenSubStr)
    {$ELSE}
    Result := MemLCompAnsi(PChar(Str), PChar(SubStr), LenSubStr)
@@ -492,7 +492,7 @@ begin
     LenStr := Length(Str);
     if LenSubStr <= LenStr then
       //Result := Copy(Str, LenStr - LenSubStr + 1, LenSubStr) = SubStr
-    {$IFDEF ZEOS_FULL_UNICODE}
+    {$IFDEF DELPHI12_UP}
       Result := MemLCompUnicode(PChar(Pointer(Str)) + LenStr - LenSubStr,
          Pointer(SubStr), LenSubStr)
     {$ELSE}
@@ -512,7 +512,7 @@ end;
 }
 function SQLStrToFloatDef(Str: string; Def: Extended): Extended;
 var
-  {$IFDEF ZEOS_FULL_UNICODE}
+  {$IFDEF DELPHI12_UP}
   OldDecimalSeparator: WideChar;
   {$ELSE}
   OldDecimalSeparator: Char;
@@ -552,7 +552,7 @@ end;
 }
 function SQLStrToFloat(const Str: string): Extended;
 var
-  {$IFDEF ZEOS_FULL_UNICODE}
+  {$IFDEF DELPHI12_UP}
   OldDecimalSeparator: WideChar;
   {$ELSE}
   OldDecimalSeparator: Char;
@@ -640,7 +640,7 @@ begin
        Inc(N);
        Pos := I + 1;
       end;
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
       if CharInSet(Str[I], ['0'..'9']) then
         Inc(M);
 {$ELSE}
@@ -762,7 +762,7 @@ end;
 }
 function FloatToSQLStr(Value: Extended): string;
 var
-  {$IFDEF ZEOS_FULL_UNICODE}
+  {$IFDEF DELPHI12_UP}
   OldDecimalSeparator: WideChar;
   {$ELSE}
   OldDecimalSeparator: Char;
@@ -1076,7 +1076,7 @@ begin
   DestLength := 0;
   for I := 1 to SrcLength do
   begin
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
     if CharInSet(SrcBuffer^, [#0]) then
        Inc(DestLength, 4)
     else if CharInSet(SrcBuffer^, ['"', '''', '\']) then
@@ -1098,7 +1098,7 @@ begin
 
   for I := 1 to SrcLength do
   begin
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
     if CharInSet(SrcBuffer^, [#0]) then
 {$ELSE}
     if SrcBuffer^ in [#0] then
@@ -1110,7 +1110,7 @@ begin
       DestBuffer[3] := Chr(Ord('0') + (Byte(SrcBuffer^) and $07));
       Inc(DestBuffer, 4);
     end
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
     else if CharInSet(SrcBuffer^, ['"', '''', '\']) then
 {$ELSE}
     else if SrcBuffer^ in ['"', '''', '\'] then
@@ -1150,7 +1150,7 @@ begin
     if SrcBuffer^ = '\' then
     begin
       Inc(SrcBuffer);
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
       if CharInSet(SrcBuffer^, ['0'..'9']) then
 {$ELSE}
       if SrcBuffer^ in ['0'..'9'] then

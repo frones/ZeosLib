@@ -128,14 +128,14 @@ var
     LastChar := #0;
     while Stream.Read(LastChar, SizeOf(Char)) > 0 do
     begin
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
       if CharInSet(LastChar, ['0'..'9','a'..'f','A'..'F']) then
 {$ELSE}
       if LastChar in ['0'..'9','a'..'f','A'..'F'] then
 {$ENDIF}
       begin
         Result := Result + LastChar;
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
         HexDecimal := HexDecimal or CharInSet(LastChar, ['a'..'f','A'..'F']);
 {$ELSE}
         HexDecimal := HexDecimal or (LastChar in ['a'..'f','A'..'F']);
@@ -156,7 +156,7 @@ var
     LastChar := #0;
     while Stream.Read(LastChar, SizeOf(Char)) > 0 do
     begin
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
       if CharInSet(LastChar, ['0'..'9']) then
 {$ELSE}
       if LastChar in ['0'..'9'] then
@@ -198,7 +198,7 @@ begin
     Result.Value := Result.Value + ReadDecDigits;
 
   { Reads a power part of the number }
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
   if not HexDecimal and CharInSet(LastChar, ['e','E']) then
 {$ELSE}
   if not HexDecimal and (LastChar in ['e','E']) then
@@ -209,7 +209,7 @@ begin
     FloatPoint := True;
 
     Stream.Read(LastChar, SizeOf(Char));
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
     if CharInSet(LastChar, ['0'..'9','-','+']) then
 {$ELSE}
     if LastChar in ['0'..'9','-','+'] then
@@ -223,7 +223,7 @@ begin
   end;
 
   { Reads the nexdecimal number }
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
   if (Result.Value = '0') and CharInSet(LastChar, ['x','X']) then
 {$ELSE}
   if (Result.Value = '0') and (LastChar in ['x','X']) then
@@ -281,7 +281,7 @@ begin
     else LastChar := ReadChar;
   end;
 
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
   if CharInSet(FirstChar, ['"', '[']) then
 {$ELSE}
   if FirstChar in ['"', '['] then
@@ -300,7 +300,7 @@ function TZSybaseQuoteState.EncodeString(const Value: string; QuoteChar: Char): 
 begin
   if QuoteChar = '[' then
     Result := '[' + Value + ']'
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
   else if CharInSet(QuoteChar, [#39, '"']) then
 {$ELSE}
   else if QuoteChar in [#39, '"'] then
@@ -320,7 +320,7 @@ begin
   Result := Value;
   if Length(Value) >= 2 then
   begin
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
     if CharInSet(QuoteChar, [#39, '"']) and (Value[1] = QuoteChar)
 {$ELSE}
     if (QuoteChar in [#39, '"']) and (Value[1] = QuoteChar)

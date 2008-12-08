@@ -171,7 +171,7 @@ begin
   ErrorMessage := '';
   SQLTail := '';
   ColumnCount := 0;
-  {$IFDEF ZEOS_FULL_UNICODE}
+  {$IFDEF DELPHI12_UP}
   ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(Utf8String(SQL)), Length(SQL), SQLTail,
     StmtHandle, ErrorMessage);
   {$ELSE}

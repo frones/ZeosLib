@@ -338,7 +338,7 @@ type
   }
   TZWordState = class (TZTokenizerState)
   private
-  {$IFDEF ZEOS_FULL_UNICODE}
+  {$IFDEF DELPHI12_UP}
     FWordChars: array[0..ord(high(char))] of Boolean;
   {$ELSE}
     FWordChars: array[0..255] of Boolean;
@@ -418,7 +418,7 @@ type
   {** Implements a default tokenizer object. }
   TZTokenizer = class (TZAbstractObject, IZTokenizer)
   private
-    {$IFDEF ZEOS_FULL_UNICODE}
+    {$IFDEF DELPHI12_UP}
     FCharacterStates: array[0..ord(high(char))] of TZTokenizerState;
     {$ELSE}
     FCharacterStates: array[0..255] of TZTokenizerState;
@@ -484,7 +484,7 @@ var
   function AbsorbDigits: string;
   begin
     Result := '';
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
     while CharInSet(FirstChar, ['0'..'9']) do
 {$ELSE}
     while FirstChar in ['0'..'9'] do
@@ -627,7 +627,7 @@ var
   ReadStr: string;
 begin
   ReadStr := FirstChar;
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
   while (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) and not CharInSet(ReadChar, [#10, #13]) do
       ReadStr := ReadStr + ReadChar;
    if CharInSet(ReadChar, [#10, #13]) then
@@ -674,7 +674,7 @@ var
   ReadChar: Char;
 begin
   Result := '';
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
   while (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) and not CharInSet(ReadChar, [#10, #13]) do
       Result := Result + ReadChar;
 {$ELSE}
@@ -684,7 +684,7 @@ begin
 
   // mdaems : for single line comments the line ending must be included
   // as it should never be stripped off or unified with other whitespace characters
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
   if CharInSet(ReadChar, [#10, #13]) then
 {$ELSE}
   if ReadChar in [#10, #13] then
@@ -692,7 +692,7 @@ begin
     begin
       Result := Result + ReadChar;
       if (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) then
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
         if CharInSet(ReadChar, [#10, #13]) then
 {$ELSE}
         if (ReadChar in [#10, #13]) then
@@ -1103,7 +1103,7 @@ end;
 }
 constructor TZWordState.Create;
 begin
-  {$IFDEF ZEOS_FULL_UNICODE}
+  {$IFDEF DELPHI12_UP}
   SetWordChars(#0, high(char), False);
   {$ELSE}
   SetWordChars(#0, #255, False);
@@ -1155,7 +1155,7 @@ procedure TZWordState.SetWordChars(FromChar, ToChar: Char; Enable: Boolean);
 var
   I: Integer;
 begin
-  {$IFDEF ZEOS_FULL_UNICODE}
+  {$IFDEF DELPHI12_UP}
   for I := Ord(FromChar) to MinIntValue([Ord(ToChar), Ord(high(char)) ]) do
   {$ELSE}
   for I := Ord(FromChar) to MinIntValue([Ord(ToChar), 255]) do
@@ -1185,7 +1185,7 @@ begin
   FWordState := TZWordState.Create;
   FCommentState := TZCppCommentState.Create;
 
-  {$IFDEF ZEOS_FULL_UNICODE}
+  {$IFDEF DELPHI12_UP}
   SetCharacterState(#0, high(char), FSymbolState);
   {$ELSE}
   SetCharacterState(#0, #255, FSymbolState);
@@ -1247,7 +1247,7 @@ procedure TZTokenizer.SetCharacterState(FromChar, ToChar: Char;
 var
   I: Integer;
 begin
-  {$IFDEF ZEOS_FULL_UNICODE}
+  {$IFDEF DELPHI12_UP}
   for I := Ord(FromChar) to MinIntValue([Ord(ToChar), ord(high(char))]) do
   {$ELSE}
   for I := Ord(FromChar) to MinIntValue([Ord(ToChar), 255]) do
@@ -1266,7 +1266,7 @@ function TZTokenizer.TokenizeBuffer(const Buffer: string;
 var
   Stream: TStream;
 begin
-  {$IFDEF ZEOS_FULL_UNICODE}
+  {$IFDEF DELPHI12_UP}
   Stream := TStringStream.Create(Buffer, TEncoding.Unicode);
   {$ELSE}
   Stream := TStringStream.Create(Buffer);
@@ -1290,7 +1290,7 @@ function TZTokenizer.TokenizeBufferToList(const Buffer: string;
 var
   Stream: TStream;
 begin
-  {$IFDEF ZEOS_FULL_UNICODE}
+  {$IFDEF DELPHI12_UP}
   Stream := TStringStream.Create(Buffer, TEncoding.Unicode);
   {$ELSE}
   Stream := TStringStream.Create(Buffer);

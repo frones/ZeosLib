@@ -130,7 +130,7 @@ var
     LastChar := #0;
     while Stream.Read(LastChar, SizeOf(Char)) > 0 do
     begin
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
       if CharInSet(LastChar, ['0'..'9']) then
 {$ELSE}
       if LastChar in ['0'..'9'] then
@@ -170,7 +170,7 @@ begin
     Result.Value := Result.Value + ReadDecDigits;
 
   { Reads a power part of the number }
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
   if CharInSet(LastChar, ['e','E']) then
 {$ELSE}
   if LastChar in ['e','E'] then
@@ -181,7 +181,7 @@ begin
     FloatPoint := True;
 
     Stream.Read(TempChar, SizeOf(Char));
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
     if CharInSet(TempChar, ['0'..'9','-','+']) then
 {$ELSE}
     if TempChar in ['0'..'9','-','+'] then
@@ -239,7 +239,7 @@ begin
     else LastChar := ReadChar;
   end;
 
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
   if CharInSet(FirstChar, ['"', '[']) then
 {$ELSE}
   if FirstChar in ['"', '['] then
@@ -258,7 +258,7 @@ function TZSQLiteQuoteState.EncodeString(const Value: string; QuoteChar: Char): 
 begin
   if QuoteChar = '[' then
     Result := '[' + Value + ']'
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
   else if CharInSet(QuoteChar, [#39, '"']) then
 {$ELSE}
   else if QuoteChar in [#39, '"'] then
@@ -278,7 +278,7 @@ begin
   Result := Value;
   if Length(Value) >= 2 then
   begin
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
     if CharInSet(QuoteChar, [#39, '"']) and (Value[1] = QuoteChar)
 {$ELSE}
     if (QuoteChar in [#39, '"']) and (Value[1] = QuoteChar)

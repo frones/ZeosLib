@@ -195,7 +195,7 @@ var
   QueryHandle: PZPostgreSQLResult;
 begin
   Result := nil;
-  {$IFDEF ZEOS_FULL_UNICODE}
+  {$IFDEF DELPHI12_UP}
   QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(UTF8String(SQL)));
   {$ELSE}
   QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));
@@ -224,7 +224,7 @@ var
   QueryHandle: PZPostgreSQLResult;
 begin
   Result := -1;
-  {$IFDEF ZEOS_FULL_UNICODE}
+  {$IFDEF DELPHI12_UP}
   QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(UTF8String(SQL)));
   {$ELSE}
   QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));
@@ -268,7 +268,7 @@ var
   QueryHandle: PZPostgreSQLResult;
   ResultStatus: TZPostgreSQLExecStatusType;
 begin
-  {$IFDEF ZEOS_FULL_UNICODE}
+  {$IFDEF DELPHI12_UP}
   QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(UTF8String(SQL)));
   {$ELSE}
   QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));

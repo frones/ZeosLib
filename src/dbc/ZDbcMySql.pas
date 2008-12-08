@@ -414,31 +414,31 @@ begin
     if StrToBoolEx(Info.Values['MYSQL_SSL']) then
       begin
          if Info.Values['MYSQL_SSL_KEY'] <> '' then
-            {$IFDEF ZEOS_FULL_UNICODE}
+            {$IFDEF DELPHI12_UP}
             SslKey := PAnsiChar(UTF8String(Info.Values['MYSQL_SSL_KEY']));
             {$ELSE}
             SslKey := PAnsiChar(Info.Values['MYSQL_SSL_KEY']);
             {$ENDIF}
          if Info.Values['MYSQL_SSL_CERT'] <> '' then
-            {$IFDEF ZEOS_FULL_UNICODE}
+            {$IFDEF DELPHI12_UP}
             SslCert := PAnsiChar(UTF8String(Info.Values['MYSQL_SSL_CERT']));
             {$ELSE}
             SslCert := PAnsiChar(Info.Values['MYSQL_SSL_CERT']);
             {$ENDIF}
          if Info.Values['MYSQL_SSL_CA'] <> '' then
-            {$IFDEF ZEOS_FULL_UNICODE}
+            {$IFDEF DELPHI12_UP}
             SslCa := PAnsiChar(UTF8String(Info.Values['MYSQL_SSL_CA']));
             {$ELSE}
             SslCa := PAnsiChar(Info.Values['MYSQL_SSL_CA']);
             {$ENDIF}
          if Info.Values['MYSQL_SSL_CAPATH'] <> '' then
-            {$IFDEF ZEOS_FULL_UNICODE}
+            {$IFDEF DELPHI12_UP}
             SslCaPath := PAnsiChar(UTF8String(Info.Values['MYSQL_SSL_CAPATH']));
             {$ELSE}
             SslCaPath := PAnsiChar(Info.Values['MYSQL_SSL_CAPATH']);
             {$ENDIF}
          if Info.Values['MYSQL_SSL_CYPHER'] <> '' then
-            {$IFDEF ZEOS_FULL_UNICODE}
+            {$IFDEF DELPHI12_UP}
             SslCypher := PAnsiChar(UTF8String(Info.Values['MYSQL_SSL_CYPHER']));
             {$ELSE}
             SslCypher := PAnsiChar(Info.Values['MYSQL_SSL_CYPHER']);
@@ -450,7 +450,7 @@ begin
       end;
 
     { Connect to MySQL database. }
-    {$IFDEF ZEOS_FULL_UNICODE}
+    {$IFDEF DELPHI12_UP}
     if FPlainDriver.RealConnect(FHandle, PAnsiChar(UTF8String(HostName)),
                                 PAnsiChar(UTF8String(User)), PAnsiChar(UTF8String(Password)),
                                 PAnsiChar(UTF8String(Database)), Port, nil,
@@ -471,7 +471,7 @@ begin
     { Sets a client codepage. }
     if FClientCodePage <> '' then
     begin
-      {$IFDEF ZEOS_FULL_UNICODE}
+      {$IFDEF DELPHI12_UP}
       SQL := PAnsiChar(UTF8String(Format('SET CHARACTER SET %s', [FClientCodePage])));
       {$ELSE}
       SQL := PAnsiChar(Format('SET CHARACTER SET %s', [FClientCodePage]));

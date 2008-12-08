@@ -344,7 +344,7 @@ begin
 
   LogMessage := Format('CONNECT TO "%s" AS USER "%s"', [Database, User]);
 
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
   FHandle := FPlainDriver.Open(PAnsiChar(Utf8String(Database)), 0, ErrorMessage);
 {$ELSE}
   FHandle := FPlainDriver.Open(PAnsiChar(Database), 0, ErrorMessage);

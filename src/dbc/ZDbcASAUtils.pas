@@ -499,7 +499,7 @@ function TZASASQLDA.GetFieldIndex(const Name: String): Word;
 begin
   for Result := 0 to FSQLDA.sqld - 1 do
     if FSQLDA.sqlvar[Result].sqlname.length = Length(name) then
-      {$IFDEF ZEOS_FULL_UNICODE}
+      {$IFDEF DELPHI12_UP}
       if StrLIComp(@FSQLDA.sqlvar[Result].sqlname.data, PAnsiChar(UTF8String(Name)), Length(name)) = 0 then
       {$ELSE}
       if StrLIComp(@FSQLDA.sqlvar[Result].sqlname.data, PAnsiChar(Name), Length(name)) = 0 then
@@ -2076,7 +2076,7 @@ begin
       end;
     end;
     try
-      {$IFDEF ZEOS_FULL_UNICODE}
+      {$IFDEF DELPHI12_UP}
       GetPlainDriver.db_prepare_describe(GetDBHandle, nil, StmtNum,
             PAnsiChar(UTF8String(SQL)), FParamsSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
             SQL_PREPARE_DESCRIBE_INPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);

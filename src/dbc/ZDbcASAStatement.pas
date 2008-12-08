@@ -323,7 +323,7 @@ begin
   Result := -1;
   with FASAConnection do
   begin
-    {$IFDEF ZEOS_FULL_UNICODE}
+    {$IFDEF DELPHI12_UP}
     GetPlainDriver.db_execute_imm(GetDBHandle, PAnsiChar(UTF8String(SQL)));
     {$ELSE}
     GetPlainDriver.db_execute_imm(GetDBHandle, PAnsiChar(SQL)); 

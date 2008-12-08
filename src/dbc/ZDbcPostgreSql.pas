@@ -513,7 +513,7 @@ begin
   { Sets a client codepage. } 
   if FClientCodePage <> '' then 
   begin 
-  {$IFDEF ZEOS_FULL_UNICODE} 
+  {$IFDEF DELPHI12_UP} 
     SQL := PAnsiChar(utf8string(Format('SET CLIENT_ENCODING TO ''%s''', [FClientCodePage]))); 
   {$ELSE} 
     SQL := PAnsiChar(Format('SET CLIENT_ENCODING TO ''%s''', [FClientCodePage])); 

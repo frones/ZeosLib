@@ -238,7 +238,7 @@ end;
 function TZGenericSQLQuoteState.EncodeString(const Value: string;
   QuoteChar: Char): string;
 begin
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
   if CharInSet(QuoteChar, [#39, '"', '`']) then
 {$ELSE}
   if QuoteChar in [#39, '"', '`'] then
@@ -259,7 +259,7 @@ var
   Len: Integer;
 begin
   Len := Length(Value);
-{$IFDEF ZEOS_FULL_UNICODE}
+{$IFDEF DELPHI12_UP}
   if (Len >= 2) and CharInSet(QuoteChar, [#39, '"', '`'])
 {$ELSE}
   if (Len >= 2) and (QuoteChar in [#39, '"', '`'])

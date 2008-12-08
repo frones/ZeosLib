@@ -358,13 +358,13 @@ begin
         ResultSet := Metadata.GetTables(Catalog, Schema, '', nil);
         while ResultSet.Next do
           begin
-            {$IFDEF ZEOS_FULL_UNICODE}
+            {$IFDEF DELPHI12_UP}
             TableName := UTF8ToUnicodeString(ResultSet.GetStringByName('TABLE_NAME'));
             {$ELSE}
             TableName := ResultSet.GetStringByName('TABLE_NAME');
             {$ENDIF}
             TableName := IdentifierConvertor.Quote(TableName);
-            {$IFDEF ZEOS_FULL_UNICODE}
+            {$IFDEF DELPHI12_UP}
             Schema := UTF8ToUnicodeString(ResultSet.GetStringByName('TABLE_SCHEM'));
             {$ELSE}
             Schema := ResultSet.GetStringByName('TABLE_SCHEM');

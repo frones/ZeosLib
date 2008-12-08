@@ -757,7 +757,7 @@ var
    StatusCode: string;
 begin
   if Assigned(Handle) then
- {$IFDEF ZEOS_FULL_UNICODE} 
+ {$IFDEF DELPHI12_UP} 
     ErrorMessage := Trim(UTF8ToUnicodeString(StrPas(PlainDriver.GetErrorMessage(Handle)))) 
  {$ELSE} 
     ErrorMessage := Trim(StrPas(PlainDriver.GetErrorMessage(Handle))) 
