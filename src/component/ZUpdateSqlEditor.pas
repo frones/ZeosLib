@@ -697,8 +697,7 @@ procedure TZUpdateSQLEditForm.GenInsertSQL(const TableName: string;
       FieldName := UpdateFields[I];
       if QuoteFields.Checked and (ParamChar = '') then
         FieldName := InternalQuoteIdentifier(FieldName, QuoteChar);
-      L := Format('%s%s%s',
-        [L, FieldName, Comma]);
+      L := Format('%s%s%s%s',[L, ParamChar, FieldName, Comma]);
       if (Length(L) > 70) and (I <> UpdateFields.Count - 1) then
       begin
         SQL.Add(L);

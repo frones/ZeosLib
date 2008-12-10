@@ -247,3 +247,9 @@
 20081024 : Column mapping problem with TZUpdateSql and Refreshing data - by jay - Mantis Bug 147
 
 20081102 : Removed some compiler warnings - by Faceker - See http://zeos.firmos.at/viewtopic.php?t=2081
+
+20081203 : Precision issue when recording values from TClientDataSet - by magnomp - Mantis Bug 162
+
+20081206 : Removed conditional compilation of database dependent Tokenizers - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2138
+
+20081208 : Fixed bug in UpdateSQLeditor that resulted from commit 481 - by mdaems - Mantis Bug 165
