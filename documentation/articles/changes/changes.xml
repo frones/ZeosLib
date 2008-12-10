@@ -123,13 +123,19 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
-          <simpara>NONE</simpara>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=165">#0000165</ulink> [normal] Incorrect autogeneration of INSERT statement</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=162">#0000162</ulink> [normal] Precision issue when recording values from TClientDataSet</simpara>
         </listitem>
      </itemizedlist>
     </sect2>
     <sect2>
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>[DELPHI] Removed conditional compilation of database dependent Tokenizers (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2138">http://zeos.firmos.at/viewtopic.php?t=2138</ulink>)</simpara>
+        </listitem>
         <listitem>
           <simpara>[Lazarus] Updated ZUpdateSqlEditor.lrs to be compatible with the newest Lazarus release (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2095">http://zeos.firmos.at/viewtopic.php?t=2095</ulink>)</simpara>
         </listitem>

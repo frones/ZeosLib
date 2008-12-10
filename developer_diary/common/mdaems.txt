@@ -279,3 +279,9 @@
 20081108 : Added support for DefaultExpression TField property - by mdaems - Mantis Bug 146
 
 20081112 : Some dates of form 2008-1-1 seem not to work good with function TimestampStrToDateTime - by niek - See http://zeos.firmos.at/viewtopic.php?t=2093
+
+20081203 : Precision issue when recording values from TClientDataSet - by magnomp - Mantis Bug 162
+
+20081206 : Removed conditional compilation of database dependent Tokenizers - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2138
+
+20081208 : Fixed bug in UpdateSQLeditor that resulted from commit 481 - by mdaems - Mantis Bug 165
