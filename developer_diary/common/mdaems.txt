@@ -287,3 +287,5 @@
 20081206 : Removed conditional compilation of database dependent Tokenizers - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2138
 
 20081208 : Fixed bug in UpdateSQLeditor that resulted from commit 481 - by mdaems - Mantis Bug 165
+
+20081210 : Removed debug_get_memorydiff from ZSysUtils again - by mdaems

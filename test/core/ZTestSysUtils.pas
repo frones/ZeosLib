@@ -73,9 +73,6 @@ type
     procedure TestObjectComparison;
     procedure TestReplaceChar;
     procedure TestMatch;
-    {$IFOPT D+}
-    procedure TestDebug;
-    {$ENDIF}
   end;
 
 implementation
@@ -246,24 +243,6 @@ begin
   CheckEquals(False, IsMatch('*qwe*', 'xyz'));
   CheckEquals(True, IsMatch('*qwe*', 'xyzqweabc'));
 end;
-
-{$IFOPT D+}
-procedure TZTestSysUtilsCase.TestDebug;
-var
-  temp:Pointer;
-begin
-   CheckEquals(True, debug_get_memorydiff>0);
-   CheckEquals(0, debug_get_memorydiff);
-   GetMem(Temp,5);
-   FreeMem(Temp,5);
-   CheckEquals(0, debug_get_memorydiff);
-   GetMem(Temp,4);
-   { Seems like GetMem allocates using blocks of 8 bytes}
-   CheckEquals(8, debug_get_memorydiff);
-   FreeMem(Temp,4);
-   CheckEquals(-8, debug_get_memorydiff);
-end;
-{$ENDIF}
 
 initialization
   TestFramework.RegisterTest(TZTestSysUtilsCase.Suite);
