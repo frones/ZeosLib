@@ -1685,19 +1685,16 @@ begin
             GetStringByName('TABLE_NAME'));
           Result.UpdateStringByName('COLUMN_NAME',
             GetStringByName('COLUMN_NAME'));
-  //Datatype will come from the adorecordset
-  //        Result.UpdateShortByName('DATA_TYPE',
-  //          Ord(ConvertAdoToSqlType(GetShortByName('DATA_TYPE'))));
+          Result.UpdateShortByName('DATA_TYPE',
+            Ord(ConvertAdoToSqlType(GetShortByName('DATA_TYPE'))));
           Flags := GetIntByName('COLUMN_FLAGS');
   //!!!If the field type is long then this is the only way to know it because it just returns string type
-  //        if ConvertAdoToSqlType(GetShortByName('DATA_TYPE')) = stString then
-  //          if (GetIntByName('COLUMN_FLAGS')
-  //            and DBCOLUMNFLAGS_ISLONG) <> 0 then
-  //            Result.UpdateShortByName('DATA_TYPE', Ord(stAsciiStream));
-  //        if ConvertAdoToSqlType(GetShortByName('DATA_TYPE'))
-  //          = stUnicodeString then
-  //          if (GetIntByName('COLUMN_FLAGS') and DBCOLUMNFLAGS_ISLONG) <> 0 then
-  //            Result.UpdateShortByName('DATA_TYPE', Ord(stUnicodeStream));
+          if ConvertAdoToSqlType(GetShortByName('DATA_TYPE')) = stString then
+            if (GetIntByName('COLUMN_FLAGS') and DBCOLUMNFLAGS_ISLONG) <> 0 then
+              Result.UpdateShortByName('DATA_TYPE', Ord(stAsciiStream));
+          if ConvertAdoToSqlType(GetShortByName('DATA_TYPE')) = stUnicodeString then
+            if (GetIntByName('COLUMN_FLAGS') and DBCOLUMNFLAGS_ISLONG) <> 0 then
+              Result.UpdateShortByName('DATA_TYPE', Ord(stUnicodeStream));
           Result.UpdateIntByName('COLUMN_SIZE',
             GetIntByName('CHARACTER_MAXIMUM_LENGTH'));
           Result.UpdateIntByName('BUFFER_LENGTH',

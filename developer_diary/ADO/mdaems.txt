@@ -9,3 +9,5 @@
 20080325 : ADO and MsAccess Post() problem - by FrankSL - See http://zeos.firmos.at/viewtopic.php?t=1769
 
 20080920 : method calls (GetSchemaNames() and GetCatalogNames()) ran into an exception - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=1774
+
+20081213 : Column type metadata request for MSSQL returns no type - by cytrinox - See http://zeos.firmos.at/viewtopic.php?t=2155
