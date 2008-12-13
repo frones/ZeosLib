@@ -153,6 +153,7 @@ TZPgCharactersetType = (
     FCharactersetCode: TZPgCharactersetType;
     FServerMajorVersion: Integer;
     FServerMinorVersion: Integer;
+    FServerSubVersion: Integer;
     FNoticeProcessor: TZPostgreSQLNoticeProcessor;
   protected
     function BuildConnectStr: AnsiString;
@@ -188,8 +189,10 @@ TZPgCharactersetType = (
     function GetPlainDriver: IZPostgreSQLPlainDriver;
     function GetConnectionHandle: PZPostgreSQLConnect;
 
+    function GetHostVersion: Integer; override;
     function GetServerMajorVersion: Integer;
     function GetServerMinorVersion: Integer;
+    function GetServerSubVersion: Integer;
 
     function PingServer: Integer; override;
     function GetCharactersetCode: TZPgCharactersetType;
@@ -831,6 +834,20 @@ begin
   else
     Result := '';
 end;
+
+{**
+  Gets the host's full version number. Initially this should be 0.
+  The format of the version returned must be XYYYZZZ where
+   X   = Major version
+   YYY = Minor version
+   ZZZ = Sub version
+  @return this server's full version number
+}
+function TZPostgreSQLConnection.GetHostVersion: Integer;
+begin
+ Result := GetServerMajorVersion*1000000+GetServerMinorversion*1000+GetServerSubversion;
+end;
+
 {**
   Gets a server major version.
   @return a server major version number.
@@ -854,6 +871,17 @@ begin
 end;
 
 {**
+  Gets a server sub version.
+  @return a server sub version number.
+}
+function TZPostgreSQLConnection.GetServerSubVersion: Integer;
+begin
+  if (FServerMajorVersion = 0) and (FServerMinorVersion = 0) then
+    LoadServerVersion;
+  Result := FServerSubVersion;
+end;
+
+{**
   Loads a server major and minor version numbers.
 }
 procedure TZPostgreSQLConnection.LoadServerVersion;
@@ -865,7 +893,6 @@ var
 begin
   if Closed then
     Open;
-
   SQL := 'SELECT version()';
   QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL);
   CheckPostgreSQLError(Self, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
@@ -888,6 +915,10 @@ begin
       FServerMinorVersion := GetMinorVersion(List.Strings[1])
     else
       FServerMinorVersion := 0;
+    if List.Count > 2 then
+      FServerSubVersion := GetMinorVersion(List.Strings[2])
+    else
+      FServerSubVersion := 0;
   finally
     List.Free;
   end;

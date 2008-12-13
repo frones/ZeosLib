@@ -37,3 +37,5 @@
 20081015 : Fixed memory leak when connection failed - by mdaems - Mantis Bug 136
 
 20081213 : Implemented Pingserver for Postgres - by seawolf/mdaems - See http://zeos.firmos.at/viewtopic.php?t=2156
+
+20081213 : Implemented ZConnection.ServerVersion for Postgres - by mdaems
