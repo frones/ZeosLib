@@ -191,6 +191,7 @@ TZPgCharactersetType = (
     function GetServerMajorVersion: Integer;
     function GetServerMinorVersion: Integer;
 
+    function PingServer: Integer; override;
     function GetCharactersetCode: TZPgCharactersetType;
   end;
 
@@ -891,6 +892,35 @@ begin
     List.Free;
   end;
 end;
+
+{** 
+Ping Current Connection's server, if client was disconnected, 
+the connection is resumed. 
+@return 0 if succesfull or error code if any error occurs 
+} 
+function TZPostgreSQLConnection.PingServer: Integer; 
+  const 
+    PING_ERROR_ZEOSCONNCLOSED = -1; 
+  var 
+    Closing: boolean; 
+begin 
+  Closing := FHandle = nil; 
+  if Closed or Closing then
+    Result := PING_ERROR_ZEOSCONNCLOSED 
+  else 
+  begin 
+    if FPlainDriver.GetStatus(FHandle) = CONNECTION_OK then
+      Result := 0
+    else
+      try
+        FPlainDriver.Reset(FHandle);
+        if FPlainDriver.GetStatus(FHandle) = CONNECTION_OK then
+          Result := 0;
+      except
+        Result := 1;
+      end;
+  end; 
+end; 
 
 {**
   Creates a sequence generator object.
