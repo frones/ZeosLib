@@ -151,7 +151,7 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean;
     function GetPChar(ColumnIndex: Integer; var IsNull: Boolean): PAnsiChar;
-    function GetString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
+    function GetString(ColumnIndex: Integer; var IsNull: Boolean): String;
     function GetUnicodeString(ColumnIndex: Integer; var IsNull: Boolean): WideString;
     function GetBoolean(ColumnIndex: Integer; var IsNull: Boolean): Boolean;
     function GetByte(ColumnIndex: Integer; var IsNull: Boolean): ShortInt;
@@ -186,7 +186,7 @@ type
     procedure SetDouble(ColumnIndex: Integer; Value: Double);
     procedure SetBigDecimal(ColumnIndex: Integer; Value: Extended);
     procedure SetPChar(ColumnIndex: Integer; Value: PAnsiChar);
-    procedure SetString(ColumnIndex: Integer; Value: AnsiString);
+    procedure SetString(ColumnIndex: Integer; Value: String);
     procedure SetUnicodeString(ColumnIndex: Integer; Value: WideString);
     procedure SetBytes(ColumnIndex: Integer; Value: TByteDynArray);
     procedure SetDate(ColumnIndex: Integer; Value: TDateTime);
@@ -330,7 +330,7 @@ begin
     stBigDecimal:
       Result := SizeOf(Extended);
     stString:
-      Result := ColumnInfo.Precision + 1;
+      Result := SizeOf(Char)*ColumnInfo.Precision + 1;
     stUnicodeString:
       Result := 2 * ColumnInfo.Precision + 2;
     stBytes:
@@ -601,10 +601,15 @@ begin
         Result := CompareBool(PWordBool(ValuePtr1)^, PWordBool(ValuePtr2)^);
       stDate, stTime, stTimestamp:
         Result := CompareFloat(PDateTime(ValuePtr1)^, PDateTime(ValuePtr2)^);
+      {$IFDEF DELPHI12_UP}
+      stUnicodeString,stString:
+        Result := WideCompareStr(PWideChar(ValuePtr1), PWideChar(ValuePtr2));
+      {$ELSE}
       stString:
         Result := AnsiStrComp(PAnsiChar(ValuePtr1), PAnsiChar(ValuePtr2));
       stUnicodeString:
         Result := WideCompareStr(PWideChar(ValuePtr1), PWideChar(ValuePtr2));
+      {$ENDIF}
       stBytes:
         begin
           Length1 := PSmallInt(ValuePtr1)^;
@@ -925,7 +930,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
+function TZRowAccessor.GetString(ColumnIndex: Integer; var IsNull: Boolean): String;
 var
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
@@ -950,8 +955,12 @@ begin
       stFloat: Result := FloatToSQLStr(GetFloat(ColumnIndex, IsNull));
       stDouble: Result := FloatToSQLStr(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := FloatToSQLStr(GetBigDecimal(ColumnIndex, IsNull));
+      {$IFDEF DELPHI12_UP}
+      stString, stUnicodeString, stUnicodeStream: Result := GetUnicodeString(ColumnIndex, IsNull);
+      {$ELSE}
       stString: Result := PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
       stUnicodeString, stUnicodeStream: Result := GetUnicodeString(ColumnIndex, IsNull);
+      {$ENDIF}
       stBytes: Result := BytesToStr(GetBytes(ColumnIndex, IsNull));
       stDate: Result := FormatDateTime('yyyy-mm-dd', GetDate(ColumnIndex, IsNull));
       stTime: Result := FormatDateTime('hh:mm:ss', GetTime(ColumnIndex, IsNull));
@@ -991,7 +1000,7 @@ begin
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     case FColumnTypes[ColumnIndex - 1] of
-      stUnicodeString:
+      stUnicodeString{$IFDEF DELPHI12_UP},stString{$ENDIF}:
         Result := PWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
       stUnicodeStream:
         begin
@@ -2053,7 +2062,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetString(ColumnIndex: Integer; Value: AnsiString);
+procedure TZRowAccessor.SetString(ColumnIndex: Integer; Value: String);
 var
   TempStr: string;
   IsNull: Boolean;
@@ -2076,6 +2085,9 @@ begin
     stFloat: SetFloat(ColumnIndex, SQLStrToFloatDef(Value, 0));
     stDouble: SetDouble(ColumnIndex, SQLStrToFloatDef(Value, 0));
     stBigDecimal: SetBigDecimal(ColumnIndex, SQLStrToFloatDef(Value, 0));
+    {$IFDEF DELPHI12_UP}
+    stString, stUnicodeString: SetUnicodeString(ColumnIndex, Value);
+    {$ELSE}
     stString:
       begin
         FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
@@ -2083,6 +2095,7 @@ begin
           FColumnLengths[ColumnIndex - 1] - 1);
       end;
     stUnicodeString: SetUnicodeString(ColumnIndex, Value);
+    {$ENDIF}
     stBytes: SetBytes(ColumnIndex, StrToBytes(Value));
     stDate: SetDate(ColumnIndex, AnsiSQLDateToDateTime(Value));
     stTime: SetTime(ColumnIndex, AnsiSQLDateToDateTime(Value));
@@ -2108,7 +2121,7 @@ begin
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
   case FColumnTypes[ColumnIndex - 1] of
-    stUnicodeString:
+    stUnicodeString{$IFDEF DELPHI12_UP},stString{$ENDIF}:
       begin
         FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
         Value := System.Copy(Value, 1, FColumnLengths[ColumnIndex - 1] div 2 - 1);

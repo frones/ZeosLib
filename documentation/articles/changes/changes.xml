@@ -49,7 +49,10 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
-          <simpara>[COMMON] Added Delphi 2009 to the supported compilers. Big thanks to gto for his work!!</simpara>
+          <simpara>[COMMON] Default strings to TWideString fields on Delphi 2009  (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2119">http://zeos.firmos.at/viewtopic.php?t=2119</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] Added Delphi 2009 to the supported compilers. Big thanks to gto and mariuszekpl for this work!!</simpara>
         </listitem>
         <listitem>
           <simpara>[COMMON] Added support for DefaultExpression TField property (<ulink url="http://zeosbugs.firmos.at/view.php?id=146">#0000146</ulink>)</simpara>

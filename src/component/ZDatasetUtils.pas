@@ -301,7 +301,7 @@ begin
     stFloat, stDouble, stBigDecimal:
       Result := ftFloat;
     stString:
-      Result := ftString;
+      Result := {$IFDEF DELPHI12_UP}ftWideString{$ELSE}ftString{$ENDIF}; 
     stBytes:
       Result := ftBytes;
     stDate:

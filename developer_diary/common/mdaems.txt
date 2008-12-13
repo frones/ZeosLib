@@ -289,3 +289,5 @@
 20081208 : Fixed bug in UpdateSQLeditor that resulted from commit 481 - by mdaems - Mantis Bug 165
 
 20081210 : Removed debug_get_memorydiff from ZSysUtils again - by mdaems
+
+20081213 : Default strings to TWideString fields on Delphi 2009 - by mariuszekpl/mdaems - See http://zeos.firmos.at/viewtopic.php?t=2119
