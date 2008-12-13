@@ -78,7 +78,7 @@ type
     VBoolean: Boolean;
     VInteger: Int64;
     VFloat: Extended;
-    VString: AnsiString;
+    VString: String;
     {$IFDEF DELPHI12_UP}
     VUnicodeString: String;
     {$ELSE}
@@ -111,7 +111,7 @@ type
     function GetAsBoolean(const Value: TZVariant): Boolean;
     function GetAsInteger(const Value: TZVariant): Int64;
     function GetAsFloat(const Value: TZVariant): Extended;
-    function GetAsString(const Value: TZVariant): AnsiString;
+    function GetAsString(const Value: TZVariant): String;
     {$IFDEF DELPHI12_UP}
     function GetAsUnicodeString(const Value: TZVariant): String;
     {$ELSE}
@@ -124,7 +124,7 @@ type
     procedure SetAsBoolean(var Value: TZVariant; Data: Boolean);
     procedure SetAsInteger(var Value: TZVariant; Data: Int64);
     procedure SetAsFloat(var Value: TZVariant; Data: Extended);
-    procedure SetAsString(var Value: TZVariant; const Data: AnsiString);
+    procedure SetAsString(var Value: TZVariant; const Data: String);
     {$IFDEF DELPHI12_UP}
     procedure SetAsUnicodeString(var Value: TZVariant; const Data: String);
     {$ELSE}
@@ -171,7 +171,7 @@ type
     function GetAsBoolean(const Value: TZVariant): Boolean;
     function GetAsInteger(const Value: TZVariant): Int64;
     function GetAsFloat(const Value: TZVariant): Extended;
-    function GetAsString(const Value: TZVariant): AnsiString;
+    function GetAsString(const Value: TZVariant): String;
     {$IFDEF DELPHI12_UP}
     function GetAsUnicodeString(const Value: TZVariant): String;
     {$ELSE}
@@ -184,7 +184,7 @@ type
     procedure SetAsBoolean(var Value: TZVariant; Data: Boolean);
     procedure SetAsInteger(var Value: TZVariant; Data: Int64);
     procedure SetAsFloat(var Value: TZVariant; Data: Extended);
-    procedure SetAsString(var Value: TZVariant; const Data: AnsiString);
+    procedure SetAsString(var Value: TZVariant; const Data: String);
     {$IFDEF DELPHI12_UP}
     procedure SetAsUnicodeString(var Value: TZVariant; const Data: String);
     {$ELSE}
@@ -232,7 +232,7 @@ type
     function GetBoolean: Boolean;
     function GetInteger: Int64;
     function GetFloat: Extended;
-    function GetString: AnsiString;
+    function GetString: String;
     {$IFDEF DELPHI12_UP}
     function GetUnicodeString: String;
     {$ELSE}
@@ -250,7 +250,7 @@ type
     constructor CreateWithBoolean(Value: Boolean);
     constructor CreateWithInteger(Value: Int64);
     constructor CreateWithFloat(Value: Extended);
-    constructor CreateWithString(const Value: AnsiString);
+    constructor CreateWithString(const Value: String);
     {$IFDEF DELPHI12_UP}
     constructor CreateWithUnicodeString(const Value: String);
     {$ELSE}
@@ -264,7 +264,7 @@ type
     function GetBoolean: Boolean;
     function GetInteger: Int64;
     function GetFloat: Extended;
-    function GetString: AnsiString;
+    function GetString: String;
     {$IFDEF DELPHI12_UP}
     function GetUnicodeString: String;
     {$ELSE}
@@ -612,7 +612,7 @@ end;
   @param a result value.
 }
 function TZDefaultVariantManager.GetAsString(
-  const Value: TZVariant): AnsiString;
+  const Value: TZVariant): String;
 begin
   Result := Convert(Value, vtString).VString;
 end;
@@ -708,7 +708,7 @@ end;
   @param Data a value to be assigned.
 }
 procedure TZDefaultVariantManager.SetAsString(var Value: TZVariant;
-  const Data: AnsiString);
+  const Data: String);
 begin
   Value.VType := vtString;
   Value.VString := Data;
@@ -1185,10 +1185,10 @@ begin
           else
             Result.VString := 'FALSE';
         vtInteger:
-          Result.VString := AnsiString(IntToStr(Value.VInteger));
+          Result.VString := IntToStr(Value.VInteger);
           // gto: Not a real threat, as it's converting numbers (unicode safe)
         vtFloat:
-          Result.VString := AnsiString(FloatToSqlStr(Value.VFloat));
+          Result.VString := FloatToSqlStr(Value.VFloat);
           // gto: Not a real threat, as it's converting numbers (unicode safe)
         vtString:
           Result.VString := Value.VString;
@@ -1199,7 +1199,7 @@ begin
           Result.VString := Value.VUnicodeString;
           {$ENDIF}
         vtDateTime:
-          Result.VString := AnsiString(DateTimeToAnsiSQLDate(Value.VDateTime));
+          Result.VString := DateTimeToAnsiSQLDate(Value.VDateTime);
           // gto: Not a real threat, as it's converting dates (unicode safe)
         vtPointer:
           RaiseTypeMismatchError;
@@ -1347,7 +1347,7 @@ end;
   Constructs this object and assignes the main properties.
   @param Value a string value.
 }
-constructor TZAnyValue.CreateWithString(const Value: AnsiString);
+constructor TZAnyValue.CreateWithString(const Value: String);
 begin
   DefVarManager.SetAsString(FValue, Value);
 end;
@@ -1445,7 +1445,7 @@ end;
   Gets a stored value converted to string.
   @return a stored value converted to string.
 }
-function TZAnyValue.GetString: AnsiString;
+function TZAnyValue.GetString: String;
 begin
   Result := SoftVarManager.GetAsString(FValue);
 end;
