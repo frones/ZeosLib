@@ -559,7 +559,7 @@ begin
    Result := '';
    if Assigned(Buffer) then
    begin
-      SetString(s, Buffer, Length);
+      SetString(s, Buffer, Length div SizeOf(Char));
       Result := s;
    end;
 end;
