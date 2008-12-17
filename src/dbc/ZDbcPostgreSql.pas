@@ -939,12 +939,14 @@ begin
   if Closed or Closing then
     Result := PING_ERROR_ZEOSCONNCLOSED 
   else 
-  begin 
+  begin
+    FPlainDriver.Clear(FPlainDriver.ExecuteQuery(FHandle,''));
     if FPlainDriver.GetStatus(FHandle) = CONNECTION_OK then
       Result := 0
     else
       try
         FPlainDriver.Reset(FHandle);
+        FPlainDriver.Clear(FPlainDriver.ExecuteQuery(FHandle,''));
         if FPlainDriver.GetStatus(FHandle) = CONNECTION_OK then
           Result := 0;
       except
