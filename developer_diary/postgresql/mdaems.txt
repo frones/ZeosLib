@@ -35,3 +35,7 @@
 20081008 : Wrote a replacement for the default notice processor which printed to stderr in console applications (and the test suite) - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2021
 
 20081015 : Fixed memory leak when connection failed - by mdaems - Mantis Bug 136
+
+20081213 : Implemented Pingserver for Postgres - by seawolf/mdaems - See http://zeos.firmos.at/viewtopic.php?t=2156
+
+20081213 : Implemented ZConnection.ServerVersion for Postgres - by mdaems
