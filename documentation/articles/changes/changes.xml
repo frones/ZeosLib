@@ -61,6 +61,12 @@
           <simpara>Zeoslib 6.6 is in it's stable phase. No features, except for eventual translations and docs, will (should) be added.</simpara>
         </listitem>
         <listitem>
+          <simpara>[POSTGRES] Implemented ZConnection.ServerVersion for Postgres</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[POSTGRES] Implemented Pingserver for Postgres (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2156">http://zeos.firmos.at/viewtopic.php?t=2156</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[IB/FB] Added Firebird 2.1 driver (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2099">http://zeos.firmos.at/viewtopic.php?t=2099</ulink>)</simpara>
         </listitem>
      </itemizedlist>
