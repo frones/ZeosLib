@@ -128,7 +128,7 @@ type
     FPlainDriver: IZMySQLPlainDriver;
     FUseResult: Boolean;
 
-    FParamBindArray: Array of MYSQL_BIND2;
+    FParamBindArray: Array of MYSQL_BIND50;
     FParamArray: Array of PDOBindRecord2;
     function CreateResultSet(const SQL: string): IZResultSet;
 

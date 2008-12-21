@@ -140,80 +140,6 @@
   Tmysql_read_query_result = function(mysql: PMYSQL): Integer;
     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  { Perform query on master }
-  Tmysql_master_query = function(mysql: PMYSQL; const query: PAnsiChar;
-    length: Cardinal): Byte;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_master_send_query = function(mysql: PMYSQL; const query: PAnsiChar;
-    length: Cardinal): Byte;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  { Perform query on slave }
-  Tmysql_slave_query = function(mysql: PMYSQL; const query: PAnsiChar;
-    length: Cardinal): Byte;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_slave_send_query = function(mysql: PMYSQL; const query: PAnsiChar;
-	    length: Cardinal): Byte;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  { Enable/disable parsing of all queries to decide
-    if they go on master or slave }
-  Tmysql_enable_rpl_parse = procedure(mysql: PMYSQL);
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_disable_rpl_parse = procedure(mysql: PMYSQL);
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  { Get the value of the parse flag }
-  Tmysql_rpl_parse_enabled = function(mysql: PMYSQL): Integer;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  { Enable/disable reads from master }
-  Tmysql_enable_reads_from_master = procedure(mysql: PMYSQL);
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_disable_reads_from_master = procedure(mysql: PMYSQL);
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  { Get the value of the master read flag }
-  Tmysql_reads_from_master_enabled = function(mysql: PMYSQL): Byte;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_rpl_query_type = function(const query: PAnsiChar; len: Integer):
-    TMySqlRplType; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  { Discover the master and its slaves }
-  Tmysql_rpl_probe = function(mysql: PMYSQL): Byte;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  { Set the master, close/free the old one, if it is not a pivot }
-  Tmysql_set_master = function(mysql: PMYSQL; const host: PAnsiChar;
-    port: Cardinal; const user: PAnsiChar; const passwd: PAnsiChar): Integer;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_add_slave = function(mysql: PMYSQL; const host: PAnsiChar;
-    port: Cardinal; const user: PAnsiChar; const passwd: PAnsiChar): Integer;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_manager_init = function(con: PMYSQL_MANAGER): PMYSQL_MANAGER;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_manager_connect = function(con: PMYSQL_MANAGER; const host: PAnsiChar;
-    const user: PAnsiChar; const passwd: PAnsiChar; port: Cardinal): PMYSQL_MANAGER;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_manager_close = procedure(con: PMYSQL_MANAGER);
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_manager_command = function(con: PMYSQL_MANAGER; const cmd: PAnsiChar;
-    cmd_len: Integer): Integer;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-
-  Tmysql_manager_fetch_line = function(con: PMYSQL_MANAGER; res_buf: PAnsiChar;
-    res_buf_size: Integer): Integer;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tmysql_autocommit             = function(Handle: PMYSQL; const mode: Byte): Byte;                    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_commit                 = function(Handle: PMYSQL): Byte;                                      {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
@@ -233,15 +159,15 @@
                                   arg: PAnsiChar): Integer;                                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_attr_set          = function(stmt: PMYSQL_STMT; option: TMysqlStmtAttrType;
                                   const arg: PAnsiChar): Integer;                                        {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_stmt_bind_param        = function(stmt: PMYSQL_STMT; bind: PMYSQL_BIND2): Byte;              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_stmt_bind_result       = function(stmt: PMYSQL_STMT; bind: PMYSQL_BIND2): Byte;              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_bind_param        = function(stmt: PMYSQL_STMT; bind: Pointer{BIND record}): Byte;              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_bind_result       = function(stmt: PMYSQL_STMT; bind: Pointer{BIND record}): Byte;              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_close             = function(stmt: PMYSQL_STMT): Byte;                                 {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_data_seek         = procedure(stmt: PMYSQL_STMT; offset: Int64);                       {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_errno             = function(stmt: PMYSQL_STMT): Cardinal;                             {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_error             = function(stmt: PMYSQL_STMT): PAnsiChar;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_execute           = function(stmt: PMYSQL_STMT): Integer;                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_fetch             = function(stmt: PMYSQL_STMT): Integer;                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_stmt_fetch_column      = function(stmt: PMYSQL_STMT; bind: PMYSQL_BIND2; column: Cardinal;
+  Tmysql_stmt_fetch_column      = function(stmt: PMYSQL_STMT; bind: Pointer{BIND record}; column: Cardinal;
                                   offset: Cardinal): Integer;                                        {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_field_count       = function(stmt: PMYSQL_STMT): Cardinal;                             {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_free_result       = function(stmt: PMYSQL_STMT): Byte;                                 {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};

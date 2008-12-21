@@ -120,7 +120,7 @@ type
     FResultMetaData : PZMySQLResult;
     FPlainDriver: IZMySQLPlainDriver;
     FUseResult: Boolean;
-    FBindArray: Array of MYSQL_BIND2;
+    FBindArray: Array of MYSQL_BIND50;
     FColumnArray: Array of PDOBindRecord2;
 
   protected
@@ -1268,12 +1268,11 @@ begin
      end;
   end;
 
+  FPlainDriver.FreeResult(FResultMetaData);
+  FResultMetaData := nil;
 
   if (FPlainDriver.BindResult(FPrepStmt,@FBindArray[0])<>0) then
     raise EZSQLException.Create(SFailedToBindResults);
-
-  FPlainDriver.FreeResult(FResultMetaData);
-  FResultMetaData := nil;
 
   inherited Open;
 end;

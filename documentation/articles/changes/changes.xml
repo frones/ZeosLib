@@ -114,6 +114,12 @@
       <title>Internal Changes</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[MYSQL] Cleanup of type/constant definitions in mysql plain drivers</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[MYSQL] Updated libmysql versions in SVN repository</simpara>
+        </listitem>
+        <listitem>
           <simpara>[COMMON] Added Delphi2009 to the automated build scripts and test suite</simpara>
         </listitem>
         <listitem>

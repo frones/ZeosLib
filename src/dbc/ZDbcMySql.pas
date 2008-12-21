@@ -359,7 +359,7 @@ var
   SQL: PAnsiChar;
   ClientFlag : Cardinal;
   SslCa, SslCaPath, SslKey, SslCert, SslCypher: PAnsiChar;
-  myopt: TZMySQLOption;
+  myopt: TMySQLOption;
   sMyOpt: string;
   my_client_Opt:TMYSQL_CLIENT_OPTIONS;
   sMy_client_Opt:String;
@@ -384,9 +384,9 @@ begin
       FPlainDriver.SetOptions(FHandle, MYSQL_OPT_CONNECT_TIMEOUT, PAnsiChar(@ConnectTimeout));
 
    (*Added lines to handle option parameters 21 november 2007 marco cotroneo*)
-    for myopt := low(TZMySQLOption) to high(TZMySQLOption) do
+    for myopt := low(TMySQLOption) to high(TMySQLOption) do
     begin
-      sMyOpt:= GetEnumName(typeInfo(TZMySQLOption), integer(myOpt));
+      sMyOpt:= GetEnumName(typeInfo(TMySQLOption), integer(myOpt));
       if Info.Values[sMyOpt] <> '' then
       begin
         FPlainDriver.SetOptions(FHandle, myopt, PAnsiChar(Info.Values[sMyOpt]));

@@ -123,25 +123,6 @@
 
   mysql_send_query:     Tmysql_send_query;
   mysql_read_query_result: Tmysql_read_query_result;
-  mysql_master_query:   Tmysql_master_query;
-  mysql_master_send_query: Tmysql_master_send_query;
-  mysql_slave_query:    Tmysql_slave_query;
-  mysql_slave_send_query: Tmysql_slave_send_query;
-  mysql_enable_rpl_parse: Tmysql_enable_rpl_parse;
-  mysql_disable_rpl_parse: Tmysql_disable_rpl_parse;
-  mysql_rpl_parse_enabled: Tmysql_rpl_parse_enabled;
-  mysql_enable_reads_from_master: Tmysql_enable_reads_from_master;
-  mysql_disable_reads_from_master: Tmysql_disable_reads_from_master;
-  mysql_reads_from_master_enabled: Tmysql_reads_from_master_enabled;
-  mysql_rpl_query_type: Tmysql_rpl_query_type;
-  mysql_rpl_probe:      Tmysql_rpl_probe;
-  mysql_set_master:     Tmysql_set_master;
-  mysql_add_slave:      Tmysql_add_slave;
-  mysql_manager_init:   Tmysql_manager_init;
-  mysql_manager_connect: Tmysql_manager_connect;
-  mysql_manager_close:  Tmysql_manager_close;
-  mysql_manager_command: Tmysql_manager_command;
-  mysql_manager_fetch_line: Tmysql_manager_fetch_line;
 
   mysql_autocommit:             Tmysql_autocommit;              {mysql 4.1}
   mysql_commit:                 Tmysql_commit;                  {mysql 4.1}
