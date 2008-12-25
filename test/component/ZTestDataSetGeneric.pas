@@ -299,7 +299,7 @@ begin
       StrStream := TMemoryStream.Create;
       StrStream.LoadFromFile('../../../database/text/lgpl.txt');
       StrStream.Size := 1024;
-      Params[6].LoadFromStream(StrStream, ftMemo);
+      Params[6].LoadFromStream(StrStream, {$IFDEF DELPHI12_UP}ftWideMemo{$ELSE}ftMemo{$ENDIF});
 
       Params[7].Value := Null;
       ExecSql;
@@ -527,7 +527,7 @@ begin
 
       Edit;
       CheckEquals(Ord(dsEdit), Ord(State));
-      FieldByName('eq_name').AsString := 'The some thing';
+      FieldByName('eq_name').AsString := 'The some thing5678901234567890';
       FieldByName('eq_type').AsInteger := 1;
       FieldByName('eq_cost').AsFloat := 12345.678;
       FieldByName('eq_date').AsDateTime := EncodeDate(1989, 07, 07);
@@ -544,7 +544,7 @@ begin
 
       CheckEquals(True, Bof);
       CheckEquals(Ord(dsBrowse), Ord(State));
-      CheckEquals('The some thing', FieldByName('eq_name').AsString);
+      CheckEquals('The some thing5678901234567890', FieldByName('eq_name').AsString);
       CheckEquals(1, FieldByName('eq_type').AsInteger);
       CheckEquals(12345.678, FieldByName('eq_cost').AsFloat, 0.01);
       CheckEquals(EncodeDate(1989, 07, 07), FieldByName('eq_date').AsDateTime);

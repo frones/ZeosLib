@@ -291,3 +291,5 @@
 20081210 : Removed debug_get_memorydiff from ZSysUtils again - by mdaems
 
 20081213 : Default strings to TWideString fields on Delphi 2009 - by mariuszekpl/mdaems - See http://zeos.firmos.at/viewtopic.php?t=2119
+
+20081225 : VarChar / Char fields last character chopped off - by TheEdge - See http://zeos.firmos.at/viewtopic.php?t=2165

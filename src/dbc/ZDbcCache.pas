@@ -2124,7 +2124,7 @@ begin
     stUnicodeString{$IFDEF DELPHI12_UP},stString{$ENDIF}:
       begin
         FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
-        Value := System.Copy(Value, 1, FColumnLengths[ColumnIndex - 1] div 2 - 1);
+        Value := System.Copy(Value, 1, FColumnLengths[ColumnIndex - 1] div 2);
         
         if Length(Value) > 0 then
                System.Move(PWideString(Value)^,
