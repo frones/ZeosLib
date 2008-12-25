@@ -52,7 +52,10 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
-          <simpara>[COMMON] Default strings to TWideString fields on Delphi 2009  (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2119">http://zeos.firmos.at/viewtopic.php?t=2119</ulink>)</simpara>
+          <simpara>[COMMON] Renamed IZObject.Hash to IZObject.GetHashCode after the new Delphi 2009 version (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2131">http://zeos.firmos.at/viewtopic.php?t=2131</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] Default strings to TWideString fields on Delphi 2009 (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2119">http://zeos.firmos.at/viewtopic.php?t=2119</ulink>)</simpara>
         </listitem>
         <listitem>
           <simpara>[COMMON] Added Delphi 2009 to the supported compilers. Big thanks to gto and mariuszekpl for this work!!</simpara>
