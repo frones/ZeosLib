@@ -330,7 +330,7 @@ begin
     stBigDecimal:
       Result := SizeOf(Extended);
     stString:
-      Result := SizeOf(Char)*ColumnInfo.Precision + 1;
+      Result := SizeOf(Char)*ColumnInfo.Precision + SizeOf(Char);
     stUnicodeString:
       Result := 2 * ColumnInfo.Precision + 2;
     stBytes:
@@ -422,6 +422,8 @@ end;
   @param Buffer a pointer to row buffer.
 }
 procedure TZRowAccessor.InitBuffer(Buffer: PZRowBuffer);
+var
+  I : Integer;
 begin
   if Assigned(Buffer) then
     with Buffer^ do
@@ -429,7 +431,8 @@ begin
       Index := 0;
       BookmarkFlag := 0;//bfCurrent;
       UpdateType := utUnmodified;
-      FillChar(Columns, FColumnsSize, 1);
+      FillChar(Columns, FColumnsSize, 0);
+      for I := 0 to FColumnCount - 1 do Columns[FColumnOffsets[I]] := 1;
     end;
 end;
 
@@ -673,7 +676,8 @@ begin
           and (Columns[FColumnOffsets[I]] = 0) then
           SetBlobObject(Buffer, I + 1, nil);
       end;
-    FillChar(Columns, FColumnsSize, 1);
+    FillChar(Columns, FColumnsSize, 0);
+    for I := 0 to FColumnCount - 1 do Columns[FColumnOffsets[I]] := 1;
   end;
 end;
 
