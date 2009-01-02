@@ -52,6 +52,15 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[COMMON] Renamed IZObject.Hash to IZObject.GetHashCode after the new Delphi 2009 version (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2131">http://zeos.firmos.at/viewtopic.php?t=2131</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] Default strings to TWideString fields on Delphi 2009 (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2119">http://zeos.firmos.at/viewtopic.php?t=2119</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] Added Delphi 2009 to the supported compilers. Big thanks to gto and mariuszekpl for this work!!</simpara>
+        </listitem>
+        <listitem>
           <simpara>[COMMON] Added support for DefaultExpression TField property (<ulink url="http://zeosbugs.firmos.at/view.php?id=146">#0000146</ulink>)</simpara>
         </listitem>
         <listitem>
@@ -107,6 +116,15 @@
     <sect2>
       <title>Internal Changes</title>
       <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>[MYSQL] Cleanup of type/constant definitions in mysql plain drivers</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[MYSQL] Updated libmysql versions in SVN repository</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] Added Delphi2009 to the automated build scripts and test suite</simpara>
+        </listitem>
         <listitem>
           <simpara>[DB2] Removed never used DB2 plain drivers</simpara>
         </listitem>

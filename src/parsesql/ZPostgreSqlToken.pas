@@ -58,7 +58,7 @@ interface
 {$I ZParseSql.inc}
 
 uses
-  Classes, ZTokenizer, ZGenericSqlToken, ZMySqlToken;
+  Classes, ZTokenizer, ZGenericSqlToken, ZMySqlToken, SysUtils;
 
 type
 
@@ -123,16 +123,20 @@ var
   begin
     Result := '';
     LastChar := #0;
-    while Stream.Read(LastChar, 1) > 0 do
+    while Stream.Read(LastChar, SizeOf(Char)) > 0 do
     begin
+{$IFDEF DELPHI12_UP}
+      if CharInSet(LastChar, ['0'..'9']) then
+{$ELSE}
       if LastChar in ['0'..'9'] then
+{$ENDIF}
       begin
         Result := Result + LastChar;
         LastChar := #0;
       end
       else
       begin
-        Stream.Seek(-1, soFromCurrent);
+        Stream.Seek(-SizeOf(Char), soFromCurrent);
         Break;
       end;
     end;
@@ -151,7 +155,7 @@ begin
     FloatPoint := LastChar = '.';
     if FloatPoint then
     begin
-      Stream.Read(TempChar, 1);
+      Stream.Read(TempChar, SizeOf(Char));
       Result.Value := Result.Value + TempChar;
     end;
   end;
@@ -161,19 +165,27 @@ begin
     Result.Value := Result.Value + ReadDecDigits;
 
   { Reads a power part of the number }
+{$IFDEF DELPHI12_UP}
+  if CharInSet(LastChar, ['e','E']) then
+{$ELSE}
   if LastChar in ['e','E'] then
+{$ENDIF}
   begin
-    Stream.Read(TempChar, 1);
+    Stream.Read(TempChar, SizeOf(Char));
     Result.Value := Result.Value + TempChar;
     FloatPoint := True;
 
-    Stream.Read(TempChar, 1);
+    Stream.Read(TempChar, SizeOf(Char));
+{$IFDEF DELPHI12_UP}
+    if CharInSet(TempChar, ['0'..'9','-','+']) then
+{$ELSE}
     if TempChar in ['0'..'9','-','+'] then
+{$ENDIF}
       Result.Value := Result.Value + TempChar + ReadDecDigits
     else
     begin
       Result.Value := Copy(Result.Value, 1, Length(Result.Value) - 1);
-      Stream.Seek(-2, soFromCurrent);
+      Stream.Seek(-2*SizeOf(Char), soFromCurrent);
     end;
   end;
 
@@ -226,7 +238,7 @@ begin
 
   if FirstChar = '-' then
   begin
-    ReadNum := Stream.Read(ReadChar, 1);
+    ReadNum := Stream.Read(ReadChar, SizeOf(Char));
     if (ReadNum > 0) and (ReadChar = '-') then
     begin
       Result.TokenType := ttComment;
@@ -235,12 +247,12 @@ begin
     else
     begin
       if ReadNum > 0 then
-        Stream.Seek(-1, soFromCurrent);
+        Stream.Seek(-SizeOf(Char), soFromCurrent);
     end;
   end
   else if FirstChar = '/' then
   begin
-    ReadNum := Stream.Read(ReadChar, 1);
+    ReadNum := Stream.Read(ReadChar, SizeOf(Char));
     if (ReadNum > 0) and (ReadChar = '*') then
     begin
       Result.TokenType := ttComment;
@@ -249,7 +261,7 @@ begin
     else
     begin
       if ReadNum > 0 then
-        Stream.Seek(-1, soFromCurrent);
+        Stream.Seek(-SizeOf(Char), soFromCurrent);
     end;
   end;
 

@@ -117,7 +117,7 @@ type
     procedure Rollback; override;
 
     function PingServer: Integer; override;
-    function EscapeString(Value : String) : String; override;
+    function EscapeString(Value: AnsiString): AnsiString; override;
 
     procedure Open; override;
     procedure Close; override;
@@ -251,7 +251,8 @@ end;
   For example: mysql, oracle8 or postgresql72
 }
 function TZMySQLDriver.GetSupportedProtocols: TStringDynArray;
-var i : smallint;
+var
+   i: smallint;
 begin
   SetLength(Result, 5);
   i := 0;
@@ -327,7 +328,8 @@ begin
 
   { Sets a default properties }
   FPlainDriver := PlainDriver;
-  if Self.Port = 0 then Self.Port := MYSQL_PORT;
+  if Self.Port = 0 then
+     Self.Port := MYSQL_PORT;
   AutoCommit := True;
   TransactIsolationLevel := tiNone;
 
@@ -354,22 +356,24 @@ var
   OldLevel: TZTransactIsolationLevel;
   OldAutoCommit: Boolean;
   ConnectTimeout: Integer;
-  SQL: PChar;
+  SQL: PAnsiChar;
   ClientFlag : Cardinal;
-  SslCa, SslCaPath, SslKey, SslCert, SslCypher : PChar;
-  myopt: TZMySQLOption;
+  SslCa, SslCaPath, SslKey, SslCert, SslCypher: PAnsiChar;
+  myopt: TMySQLOption;
   sMyOpt: string;
   my_client_Opt:TMYSQL_CLIENT_OPTIONS;
   sMy_client_Opt:String;
 begin
-  if not Closed then Exit;
+   if not Closed then
+      Exit;
 
   LogMessage := Format('CONNECT TO "%s" AS USER "%s"', [Database, User]);
 
   FPlainDriver.Init(FHandle);
   try
     { Sets a default port number. }
-    if Port = 0 then Port := MYSQL_PORT;
+    if Port = 0 then
+       Port := MYSQL_PORT;
 
     { Turn on compression protocol. }
     if StrToBoolEx(Info.Values['compress']) then
@@ -377,19 +381,15 @@ begin
     { Sets connection timeout. }
     ConnectTimeout := StrToIntDef(Info.Values['timeout'], 0);
     if ConnectTimeout >= 0 then
-    begin
-      FPlainDriver.SetOptions(FHandle, MYSQL_OPT_CONNECT_TIMEOUT,
-        PChar(@ConnectTimeout));
-    end;
+      FPlainDriver.SetOptions(FHandle, MYSQL_OPT_CONNECT_TIMEOUT, PAnsiChar(@ConnectTimeout));
 
    (*Added lines to handle option parameters 21 november 2007 marco cotroneo*)
-    for myopt := low(TZMySQLOption) to high(TZMySQLOption) do
+    for myopt := low(TMySQLOption) to high(TMySQLOption) do
     begin
-      sMyOpt:= GetEnumName(typeInfo(TZMySQLOption), integer(myOpt));
+      sMyOpt:= GetEnumName(typeInfo(TMySQLOption), integer(myOpt));
       if Info.Values[sMyOpt] <> '' then
       begin
-        FPlainDriver.SetOptions(FHandle, myopt,
-          PChar(Info.Values[sMyOpt]));
+        FPlainDriver.SetOptions(FHandle, myopt, PAnsiChar(Info.Values[sMyOpt]));
       end;
     end;
 
@@ -413,19 +413,53 @@ begin
     SslCypher := nil;
     if StrToBoolEx(Info.Values['MYSQL_SSL']) then
       begin
-        If Info.Values['MYSQL_SSL_KEY'] <> '' then SslKey := PChar(Info.Values['MYSQL_SSL_KEY']);
-        If Info.Values['MYSQL_SSL_CERT'] <> '' then SslCert := PChar(Info.Values['MYSQL_SSL_CERT']);
-        If Info.Values['MYSQL_SSL_CA'] <> '' then SslCa := PChar(Info.Values['MYSQL_SSL_CA']);
-        If Info.Values['MYSQL_SSL_CAPATH'] <> '' then SslCaPath := PChar(Info.Values['MYSQL_SSL_CAPATH']);
-        If Info.Values['MYSQL_SSL_CYPHER'] <> '' then SslCypher := PChar(Info.Values['MYSQL_SSL_CYPHER']);
-        FPlainDriver.SslSet(FHandle, SslKey, SslCert, SslCa, SslCaPath, SslCypher);
-        DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, 'SSL options set');
+         if Info.Values['MYSQL_SSL_KEY'] <> '' then
+            {$IFDEF DELPHI12_UP}
+            SslKey := PAnsiChar(UTF8String(Info.Values['MYSQL_SSL_KEY']));
+            {$ELSE}
+            SslKey := PAnsiChar(Info.Values['MYSQL_SSL_KEY']);
+            {$ENDIF}
+         if Info.Values['MYSQL_SSL_CERT'] <> '' then
+            {$IFDEF DELPHI12_UP}
+            SslCert := PAnsiChar(UTF8String(Info.Values['MYSQL_SSL_CERT']));
+            {$ELSE}
+            SslCert := PAnsiChar(Info.Values['MYSQL_SSL_CERT']);
+            {$ENDIF}
+         if Info.Values['MYSQL_SSL_CA'] <> '' then
+            {$IFDEF DELPHI12_UP}
+            SslCa := PAnsiChar(UTF8String(Info.Values['MYSQL_SSL_CA']));
+            {$ELSE}
+            SslCa := PAnsiChar(Info.Values['MYSQL_SSL_CA']);
+            {$ENDIF}
+         if Info.Values['MYSQL_SSL_CAPATH'] <> '' then
+            {$IFDEF DELPHI12_UP}
+            SslCaPath := PAnsiChar(UTF8String(Info.Values['MYSQL_SSL_CAPATH']));
+            {$ELSE}
+            SslCaPath := PAnsiChar(Info.Values['MYSQL_SSL_CAPATH']);
+            {$ENDIF}
+         if Info.Values['MYSQL_SSL_CYPHER'] <> '' then
+            {$IFDEF DELPHI12_UP}
+            SslCypher := PAnsiChar(UTF8String(Info.Values['MYSQL_SSL_CYPHER']));
+            {$ELSE}
+            SslCypher := PAnsiChar(Info.Values['MYSQL_SSL_CYPHER']);
+            {$ENDIF}
+         FPlainDriver.SslSet(FHandle, SslKey, SslCert, SslCa, SslCaPath,
+            SslCypher);
+         DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol,
+            'SSL options set');
       end;
 
     { Connect to MySQL database. }
-    if FPlainDriver.RealConnect(FHandle, PChar(HostName), PChar(User),
-      PChar(Password), PChar(Database), Port, nil,
-      ClientFlag) = nil then
+    {$IFDEF DELPHI12_UP}
+    if FPlainDriver.RealConnect(FHandle, PAnsiChar(UTF8String(HostName)),
+                                PAnsiChar(UTF8String(User)), PAnsiChar(UTF8String(Password)),
+                                PAnsiChar(UTF8String(Database)), Port, nil,
+                                ClientFlag) = nil then
+    {$ELSE}
+    if FPlainDriver.RealConnect(FHandle, PAnsiChar(HostName), PAnsiChar(User),
+                                PAnsiChar(Password), PAnsiChar(Database), Port, nil,
+                                ClientFlag) = nil then
+    {$ENDIF}
     begin
       CheckMySQLError(FPlainDriver, FHandle, lcConnect, LogMessage);
       DriverManager.LogError(lcConnect, FPlainDriver.GetProtocol, LogMessage,
@@ -437,7 +471,11 @@ begin
     { Sets a client codepage. }
     if FClientCodePage <> '' then
     begin
-      SQL := PChar(Format('SET CHARACTER SET %s', [FClientCodePage]));
+      {$IFDEF DELPHI12_UP}
+      SQL := PAnsiChar(UTF8String(Format('SET CHARACTER SET %s', [FClientCodePage])));
+      {$ELSE}
+      SQL := PAnsiChar(Format('SET CHARACTER SET %s', [FClientCodePage]));
+      {$ENDIF}
       FPlainDriver.ExecQuery(FHandle, SQL);
       CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
       DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
@@ -474,8 +512,10 @@ var
    Closing: boolean;
 begin
    Closing := FHandle = nil;
-   if Closed or Closing then Result := PING_ERROR_ZEOSCONNCLOSED
-   else Result := FPlainDriver.Ping(FHandle);
+   if Closed or Closing then
+      Result := PING_ERROR_ZEOSCONNCLOSED
+   else
+      Result := FPlainDriver.Ping(FHandle);
 end;
 
 {**
@@ -483,11 +523,11 @@ end;
   @param value string that should be escaped
   @return Escaped string
 }
-function TZMySQLConnection.EscapeString(Value : String) : String;
+function TZMySQLConnection.EscapeString(Value: AnsiString): AnsiString;
 var
    Closing: boolean;
    Inlength, outlength: integer;
-   Outbuffer: String;
+   Outbuffer: AnsiString;
 begin
    InLength := Length(Value);
 //   OutLength := 0;
@@ -519,7 +559,8 @@ end;
 function TZMySQLConnection.CreateRegularStatement(Info: TStrings):
   IZStatement;
 begin
-  if IsClosed then Open;
+  if IsClosed then
+     Open;
   Result := TZMySQLStatement.Create(FPlainDriver, Self, Info, FHandle);
 end;
 
@@ -554,10 +595,11 @@ end;
 function TZMySQLConnection.CreatePreparedStatement(const SQL: string;
   Info: TStrings): IZPreparedStatement;
 begin
-  if IsClosed then Open;
+  if IsClosed then
+     Open;
   if Assigned(Info) then
     if StrToBoolEx(Info.Values['preferprepared']) then
-      Result := TZMySQLPreparedStatement.Create(FPlainDriver, Self, SQL, Info{$IFNDEF MYSQL_USE_PREPARE},FHandle{$ENDIF})
+      Result := TZMySQLPreparedStatement.Create(FPlainDriver, Self, SQL, Info)
     else
       Result := TZMySQLEmulatedPreparedStatement.Create(FPlainDriver, Self, SQL, Info, FHandle)
   else
@@ -649,7 +691,7 @@ end;
 procedure TZMySQLConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);
 var
-  SQL: PChar;
+  SQL: PAnsiChar;
   testResult: Integer;
 begin
   if TransactIsolationLevel <> Level then
@@ -768,7 +810,7 @@ end;
 function TZMySQLConnection.GetPlainDriver: IZMySQLPlainDriver;
 begin
   Result := FPlainDriver;
-End;
+end;
 
 function TZMySQLConnection.GetDescription: AnsiString;
 begin

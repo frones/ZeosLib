@@ -58,7 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZDbcIntfs, ZDbcStatement, ZPlainMySqlDriver, ZPlainMySqlConstants,
+  Classes, SysUtils, ZDbcIntfs, ZDbcStatement, ZDbcMySql, ZPlainMySqlDriver, ZPlainMySqlConstants,
   ZCompatibility, ZDbcLogging, ZVariant;
 
 type
@@ -68,18 +68,14 @@ type
     ['{A05DB91F-1E40-46C7-BF2E-25D74978AC83}']
 
     function IsUseResult: Boolean;
-{$IFDEF MYSQL_USE_PREPARE}
     function IsPreparedStatement: Boolean;
     function GetStmtHandle: PZMySqlPrepStmt;
-{$ENDIF}
   end;
 
-{$IFDEF MYSQL_USE_PREPARE}
   {** Represents a MYSQL prepared Statement specific connection interface. }
   IZMySQLPreparedStatement = interface (IZMySQLStatement)
     ['{A05DB91F-1E40-46C7-BF2E-25D74978AC83}']
   end;
-{$ENDIF}
 
   {** Implements Generic MySQL Statement. }
   TZMySQLStatement = class(TZAbstractStatement, IZMySQLStatement)
@@ -90,9 +86,7 @@ type
     FSQL: string;
 
     function CreateResultSet(const SQL: string): IZResultSet;
-{$IFDEF MYSQL_USE_PREPARE}
     function GetStmtHandle : PZMySqlPrepStmt;
-{$ENDIF}
   public
     constructor Create(PlainDriver: IZMySQLPlainDriver;
       Connection: IZConnection; Info: TStrings; Handle: PZMySQLConnect);
@@ -104,9 +98,7 @@ type
     function GetMoreResults: Boolean; override;
 
     function IsUseResult: Boolean;
-{$IFDEF MYSQL_USE_PREPARE}
     function IsPreparedStatement: Boolean;
-{$ENDIF}
   end;
 
   {** Implements Prepared SQL Statement. }
@@ -124,33 +116,33 @@ type
       Handle: PZMySQLConnect);
   end;
 
-{$IFNDEF MYSQL_USE_PREPARE}
-  TZMySQLPreparedStatement = class(TZMySQLEmulatedPreparedStatement)
-  end;
-{$ELSE}
   {** Implements Prepared SQL Statement. }
+
+  { TZMySQLPreparedStatement }
+
   TZMySQLPreparedStatement = class(TZAbstractPreparedStatement,IZMySQLPreparedStatement)
   private
-    FPrepared: Boolean;
     FHandle: PZMySQLConnect;
+    FMySQLConnection: IZMySQLConnection;
     FStmtHandle: PZMySqlPrepStmt;
     FPlainDriver: IZMySQLPlainDriver;
     FUseResult: Boolean;
 
-    FParamBindArray: Array of MYSQL_BIND2;
+    FParamBindArray: Array of MYSQL_BIND50;
     FParamArray: Array of PDOBindRecord2;
     function CreateResultSet(const SQL: string): IZResultSet;
 
     procedure PrepareParameters;
     function getFieldType (testVariant: TZVariant): Byte;
   protected
-    property Prepared: Boolean read FPrepared write FPrepared;
     function GetStmtHandle : PZMySqlPrepStmt;
   public
     property StmtHandle: PZMySqlPrepStmt read GetStmtHandle;
     constructor Create(PlainDriver: IZMysqlPlainDriver; Connection: IZConnection; const SQL: string; Info: TStrings);
     destructor Destroy; override;
 
+    procedure Prepare; override;
+    
     function ExecuteQuery(const SQL: string): IZResultSet; override;
     function ExecuteUpdate(const SQL: string): Integer; override;
     function Execute(const SQL: string): Boolean; override;
@@ -162,12 +154,11 @@ type
     function IsUseResult: Boolean;
     function IsPreparedStatement: Boolean;
   end;
-{$ENDIF MYSQL_USE_PREPARE}
 
 implementation
 
 uses
-  ZDbcMySql, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZSysUtils,
+  ZDbcMySqlUtils, ZDbcMySqlResultSet, ZSysUtils,
   ZMessages, ZDbcCachedResultSet, ZDbcUtils, DateUtils;
 
 { TZMySQLStatement }
@@ -203,7 +194,6 @@ begin
   Result := FUseResult;
 end;
 
-{$IFDEF MYSQL_USE_PREPARE}
 {**
   Checks if this is a prepared mysql statement.
   @return <code>False</code> This is not a prepared mysql statement.
@@ -217,7 +207,6 @@ function TZMySQLStatement.GetStmtHandle: PZMySqlPrepStmt;
 begin
   Result := nil;
 end;
-{$ENDIF}
 
 {**
   Creates a result set based on the current settings.
@@ -241,7 +230,8 @@ begin
       CachedResolver);
     CachedResultSet.SetConcurrency(GetResultSetConcurrency);
     Result := CachedResultSet;
-  end else
+  end
+  else
     Result := NativeResultSet;
 end;
 
@@ -255,13 +245,18 @@ end;
 function TZMySQLStatement.ExecuteQuery(const SQL: string): IZResultSet;
 begin
   Result := nil;
-  if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then
+  {$IFDEF DELPHI12_UP}
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(UTF8String(SQL))) = 0 then
+  {$ELSE}
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
+  {$ENDIF}
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
     if not FPlainDriver.ResultSetExists(FHandle) then
       raise EZSQLException.Create(SCanNotOpenResultSet);
     Result := CreateResultSet(SQL);
-  end else
+  end
+  else
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
 end;
 
@@ -282,7 +277,11 @@ var
   HasResultset : Boolean;
 begin
   Result := -1;
-  if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then
+  {$IFDEF DELPHI12_UP}
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(UTF8String(SQL))) = 0 then
+  {$ELSE}
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
+  {$ENDIF}
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
@@ -294,12 +293,15 @@ begin
       begin
         Result := FPlainDriver.GetRowCount(QueryHandle);
         FPlainDriver.FreeResult(QueryHandle);
-      end else
+      end
+      else
         Result := FPlainDriver.GetAffectedRows(FHandle);
     end
     { Process regular query }
-    else Result := FPlainDriver.GetAffectedRows(FHandle);
-  end else
+    else
+      Result := FPlainDriver.GetAffectedRows(FHandle);
+  end
+  else
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
   LastUpdateCount := Result;
 end;
@@ -330,7 +332,11 @@ var
 begin
   Result := False;
   FSQL := SQL;
-  if FPlainDriver.ExecQuery(FHandle, PChar(SQL)) = 0 then
+  {$IFDEF DELPHI12_UP}
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(UTF8String(SQL))) = 0 then
+  {$ELSE}
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
+  {$ENDIF}
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
@@ -346,7 +352,8 @@ begin
       Result := False;
       LastUpdateCount := FPlainDriver.GetAffectedRows(FHandle);
     end;
-  end else
+  end
+  else
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
 end;
 
@@ -355,6 +362,7 @@ end;
   <code>true</code> if this result is a <code>ResultSet</code> object.
   This method also implicitly closes any current <code>ResultSet</code>
   object obtained with the method <code>getResultSet</code>.
+
   <P>There are no more results when the following is true:
   <PRE>
         <code>(!getMoreResults() && (getUpdateCount() == -1)</code>
@@ -424,14 +432,20 @@ end;
 function TZMySQLEmulatedPreparedStatement.GetEscapeString(const Value: string): string;
 var
   BufferLen: Integer;
-  Buffer: PChar;
+  Buffer: PAnsiChar;
 begin
   BufferLen := Length(Value) * 2 + 1;
   GetMem(Buffer, BufferLen);
-  If FHandle = nil then
-    BufferLen := FPlainDriver.GetEscapeString(Buffer, PChar(Value), Length(Value))
+  if FHandle = nil then
+  {$IFDEF DELPHI12_UP}
+    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(UTF8String(Value)), Length(Value))
   else
-    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PChar(Value), Length(Value));
+    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(UTF8String(Value)), Length(Value));   
+  {$ELSE}
+    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(Value), Length(Value))
+   else
+    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(Value), Length(Value));   
+  {$ENDIF}        
   Result := '''' + BufferToStr(Buffer, BufferLen) + '''';
   FreeMem(Buffer);
 end;
@@ -460,11 +474,14 @@ begin
       Result := InParamDefaultValues[ParamIndex]
     else
       Result := 'NULL'
-  else begin
+  else
+  begin
     case InParamTypes[ParamIndex] of
       stBoolean:
-        if SoftVarManager.GetAsBoolean(Value) then Result := '''Y'''
-        else Result := '''N''';
+            if SoftVarManager.GetAsBoolean(Value) then
+               Result := '''Y'''
+            else
+               Result := '''N''';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
       stString, stBytes:
@@ -495,13 +512,13 @@ begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
             Result := GetEscapeString(TempBlob.GetString)
-          else Result := 'NULL';
+          else
+            Result := 'NULL';
         end;
     end;
   end;
 end;
 
-{$IFDEF MYSQL_USE_PREPARE}
 { TZMySQLPreparedStatement }
 
 {**
@@ -514,32 +531,16 @@ end;
 constructor TZMySQLPreparedStatement.Create(
   PlainDriver: IZMySQLPlainDriver; Connection: IZConnection;
   const SQL: string; Info: TStrings);
-var
-  MySQLConnection: IZMySQLConnection;
 begin
   inherited Create(Connection, SQL, Info);
-  MySQLConnection := Connection as IZMySQLConnection;
-  FHandle := MysqlConnection.GetConnectionHandle;
+  FMySQLConnection := Connection as IZMySQLConnection;
+  FHandle := FMysqlConnection.GetConnectionHandle;
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
 
-  MySQLConnection := Connection as IZMySQLConnection;
   FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
-  FPrepared := False;
 
-  FStmtHandle := FPlainDriver.InitializePrepStmt(FHandle);
-  if (FStmtHandle = nil) then
-    begin
-      CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoInitPrepStmt);
-      exit;
-    end;
-  if (FPlainDriver.PrepareStmt(FStmtHandle, PChar(SQL),length(SQL)) <> 0) then
-    begin
-      CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoPrepareStmt);
-      exit;
-    end;
-  FPrepared := true;
-  DriverManager.LogMessage(lcPrepStmt, FPlainDriver.GetProtocol, SQL);
+  Prepare;
 end;
 
 {**
@@ -547,7 +548,29 @@ end;
 }
 destructor TZMySQLPreparedStatement.Destroy;
 begin
+  FStmtHandle := FPlainDriver.ClosePrepStmt(FStmtHandle);
   inherited Destroy;
+end;
+
+procedure TZMySQLPreparedStatement.Prepare;
+begin
+  FStmtHandle := FPlainDriver.InitializePrepStmt(FHandle);
+  if (FStmtHandle = nil) then
+    begin
+      CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoInitPrepStmt);
+      exit;
+    end;
+  {$IFDEF DELPHI12_UP}
+  if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(UTF8String(SQL)), length(SQL)) <> 0) then
+  {$ELSE}
+  if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(SQL), length(SQL)) <> 0) then
+  {$ENDIF}
+    begin
+      CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoPrepareStmt);
+      exit;
+    end;
+  DriverManager.LogMessage(lcPrepStmt, FPlainDriver.GetProtocol, SQL);
+  inherited Prepare;
 end;
 
 {**
@@ -591,7 +614,8 @@ begin
       CachedResolver);
     CachedResultSet.SetConcurrency(GetResultSetConcurrency);
     Result := CachedResultSet;
-  end else
+  end
+  else
     Result := NativeResultSet;
 end;
 
@@ -602,8 +626,15 @@ var
     caststring : AnsiString;
     PBuffer: Pointer;
   I,J : integer;
+  LogString : String;
 begin
-  If InParamCount = 0 then exit;
+  if InParamCount = 0 then
+     exit;
+    { Prepare Log Output}
+  For I := 0 to InParamCount - 1 do
+  begin
+    LogString := LogString + GetInParamLogValue(InParamValues[I])+',';
+  end;
     { Initialize Bind Array and Column Array }
   SetLength(FParamBindArray, InParamCount);
   SetLength(FParamArray, InParamCount);
@@ -619,11 +650,13 @@ begin
 //        field_size_twin := field_size + 1;
         field_size_twin := field_size;
       end
-    else field_size_twin := field_size;
+    else
+      field_size_twin := field_size;
 
     SetLength(FParamArray[I].buffer, field_size_twin);
     PBuffer := @FParamArray[I].buffer[0];
-    with FParamBindArray[I] do begin
+    with FParamBindArray[I] do
+    begin
         buffer_type   := field_type;
         buffer_length := System.Length(FParamArray[I].buffer);
         is_unsigned   := 0;
@@ -642,10 +675,10 @@ begin
                   CastString := InParamValues[I].VString;
                   for J := 1 to system.length(CastString) do
                     begin
-                      PChar(PBuffer)^ := CastString[J];
-                      inc(PChar(PBuffer));
+                      PAnsiChar(PBuffer)^ := CastString[J];
+                      inc(PAnsiChar(PBuffer));
                     end;
-                  PChar(PBuffer)^ := chr(0);
+                  PAnsiChar(PBuffer)^ := chr(0);
                 end;
               FIELD_TYPE_LONGLONG: Int64(PBuffer^) := InParamValues[I].VInteger;
             end;
@@ -657,7 +690,7 @@ begin
           checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, SBindingFailure);
           exit;
         end;
-
+  DriverManager.LogMessage(lcBindPrepStmt, FPlainDriver.GetProtocol, LogString);
 end;
 
 function TZMysqlPreparedStatement.getFieldType (testVariant: TZVariant): Byte;
@@ -743,8 +776,8 @@ begin
      begin
         checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
         exit;
-     End;
-  DriverManager.LogMessage(lcExecPrepStmt, FPlainDriver.GetProtocol, SQL);
+     end;
+  DriverManager.LogMessage(lcExecPrepStmt, FPlainDriver.GetProtocol, '');
 
   if FPlainDriver.GetPreparedFieldCount(FStmtHandle) = 0 then
       raise EZSQLException.Create(SCanNotOpenResultSet);
@@ -772,8 +805,8 @@ begin
      begin
         checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
         exit;
-     End;
-  DriverManager.LogMessage(lcExecPrepStmt, FPlainDriver.GetProtocol, SQL);
+     end;
+  DriverManager.LogMessage(lcExecPrepStmt, FPlainDriver.GetProtocol, '');
     { Process queries with result sets }
   if FPlainDriver.GetPreparedFieldCount(FStmtHandle) > 0 then
     begin
@@ -804,8 +837,8 @@ begin
      begin
         checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
         exit;
-     End;
-  DriverManager.LogMessage(lcExecPrepStmt, FPlainDriver.GetProtocol, SQL);
+     end;
+  DriverManager.LogMessage(lcExecPrepStmt, FPlainDriver.GetProtocol, '');
 
   if FPlainDriver.GetPreparedFieldCount(FStmtHandle) > 0 then
     begin
@@ -824,6 +857,5 @@ function TZMySQLPreparedStatement.GetStmtHandle: PZMySqlPrepStmt;
 begin
   Result := FStmtHandle;
 end;
-{$ENDIF MYSQL_USE_PREPARE}
 
 end.

@@ -73,7 +73,7 @@ type
   protected
     function LoadNativeLibrary: Boolean; virtual;
     procedure FreeNativeLibrary; virtual;
-    function GetAddress(ProcName: PChar): Pointer;
+    function GetAddress(ProcName: PAnsiChar): Pointer;
   public
     constructor Create(Locations: array of string);
     destructor Destroy; override;
@@ -159,14 +159,14 @@ begin
     for I := 0 to High(FLocations) do
     begin
       Location := FLocations[I];
-//      Handle := GetModuleHandle(PChar(Location));
+//      Handle := GetModuleHandle(PAnsiChar(Location));
 //      if Handle = 0 then
 //      begin
 {$IFDEF UNIX}
   {$IFDEF FPC}
-        Handle := LoadLibrary(PChar(Location));
+        Handle := LoadLibrary(PAnsiChar(Location));
   {$ELSE}
-        Handle := HMODULE(dlopen(PChar(Location), RTLD_GLOBAL));
+        Handle := HMODULE(dlopen(PAnsiChar(Location), RTLD_GLOBAL));
   {$ENDIF}
 {$ELSE}
         Handle := LoadLibrary(PChar(Location));
@@ -204,7 +204,7 @@ end;
   @param ProcName a name of the procedure.
   @return a procedure address.
 }
-function TZNativeLibraryLoader.GetAddress(ProcName: PChar): Pointer;
+function TZNativeLibraryLoader.GetAddress(ProcName: PAnsiChar): Pointer;
 begin
   Result := GetProcAddress(Handle, ProcName);
 end;

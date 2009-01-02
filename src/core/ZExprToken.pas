@@ -119,6 +119,15 @@ const
 
 { TZExpressionNumberState }
 
+
+//gto: all operations on Streams should be done without presuming the size
+//     of the read var, like Stream.Read(LastChar, 1), to read 1 char
+//
+//     Instead, operations should use SizeOf(Type), like this:
+//     Stream.Read(LastChar, 1 * SizeOf(Char))
+//
+//     This is unicode safe and ansi (Delphi under 2009) compatible
+
 {**
   Return a number token from a reader.
   @return a number token from a reader
@@ -134,16 +143,20 @@ var
   begin
     Result := '';
     LastChar := #0;
-    while Stream.Read(LastChar, 1) > 0 do
+    while Stream.Read(LastChar, 1 * SizeOf(Char)) > 0 do
     begin
+{$IFDEF DELPHI12_UP}
+         if CharInSet(LastChar, ['0'..'9']) then
+{$ELSE}
       if LastChar in ['0'..'9'] then
+{$ENDIF}
       begin
         Result := Result + LastChar;
         LastChar := #0;
       end
       else
       begin
-        Stream.Seek(-1, soFromCurrent);
+        Stream.Seek(-(1 * SizeOf(Char)), soFromCurrent);
         Break;
       end;
     end;
@@ -162,7 +175,7 @@ begin
     FloatPoint := LastChar = '.';
     if FloatPoint then
     begin
-      Stream.Read(TempChar, 1);
+      Stream.Read(TempChar, 1 * SizeOf(Char));
       Result.Value := Result.Value + TempChar;
     end;
   end;
@@ -172,19 +185,27 @@ begin
     Result.Value := Result.Value + ReadDecDigits;
 
   { Reads a power part of the number }
+{$IFDEF DELPHI12_UP}
+   if CharInSet(LastChar, ['e', 'E']) then
+{$ELSE}
   if LastChar in ['e','E'] then
+{$ENDIF}
   begin
-    Stream.Read(TempChar, 1);
+    Stream.Read(TempChar, 1 * SizeOf(Char));
     Result.Value := Result.Value + TempChar;
     FloatPoint := True;
 
-    Stream.Read(TempChar, 1);
+    Stream.Read(TempChar, 1 * SizeOf(Char));
+{$IFDEF DELPHI12_UP}
+      if CharInSet(TempChar, ['0'..'9', '-', '+']) then
+{$ELSE}
     if TempChar in ['0'..'9','-','+'] then
+{$ENDIF}
       Result.Value := Result.Value + TempChar + ReadDecDigits
     else
     begin
       Result.Value := Copy(Result.Value, 1, Length(Result.Value) - 1);
-      Stream.Seek(-2, soFromCurrent);
+      Stream.Seek(-(2 * SizeOf(Char)), soFromCurrent);
     end;
   end;
 
@@ -198,7 +219,8 @@ begin
   begin
     if FloatPoint then
       Result.TokenType := ttFloat
-    else Result.TokenType := ttInteger;
+      else
+         Result.TokenType := ttInteger;
   end;
 end;
 
@@ -219,15 +241,16 @@ var
 begin
   if FirstChar = '"' then
     Result.TokenType := ttWord
-  else Result.TokenType := ttQuoted;
+   else
+      Result.TokenType := ttQuoted;
   Result.Value := FirstChar;
   LastChar := #0;
 
-  while Stream.Read(ReadChar, 1) > 0 do
+  while Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0 do
   begin
     if (LastChar = FirstChar) and (ReadChar <> FirstChar) then
     begin
-      Stream.Seek(-1, soFromCurrent);
+      Stream.Seek(-(1 * SizeOf(Char)), soFromCurrent);
       Break;
     end;
     Result.Value := Result.Value + ReadChar;
@@ -235,7 +258,8 @@ begin
       LastChar := #0
     else if (LastChar = FirstChar) and (ReadChar = FirstChar) then
       LastChar := #0
-    else LastChar := ReadChar;
+      else
+         LastChar := ReadChar;
   end;
 end;
 
@@ -248,9 +272,14 @@ end;
 function TZExpressionQuoteState.EncodeString(const Value: string;
   QuoteChar: Char): string;
 begin
-  if QuoteChar in [#39, '"'] then
+{$IFDEF DELPHI12_UP}
+   if CharInSet(QuoteChar, ['''', '"']) then
+{$ELSE}
+  if QuoteChar in ['''', '"'] then
+{$ENDIF}
     Result := QuoteChar + EncodeCString(Value) + QuoteChar
-  else Result := Value;
+   else
+      Result := Value;
 end;
 
 {**
@@ -262,10 +291,16 @@ end;
 function TZExpressionQuoteState.DecodeString(const Value: string;
   QuoteChar: Char): string;
 begin
-  if (Length(Value) >= 2) and (QuoteChar in [#39, '"'])
+{$IFDEF DELPHI12_UP}
+   if (Length(Value) >= 2) and CharInSet(QuoteChar, ['''', '"'])
+      and (Value[1] = QuoteChar) and (Value[Length(Value)] = QuoteChar) then
+{$ELSE}
+  if (Length(Value) >= 2) and (QuoteChar in ['''', '"'])
     and (Value[1] = QuoteChar) and (Value[Length(Value)] = QuoteChar) then
+{$ENDIF}
     Result := DecodeCString(Copy(Value, 2, Length(Value) - 2))
-  else Result := Value;
+   else
+      Result := Value;
 end;
 
 { TZExpressionCommentState }
@@ -286,7 +321,7 @@ begin
 
   if FirstChar = '/' then
   begin
-    ReadNum := Stream.Read(ReadChar, 1);
+    ReadNum := Stream.Read(ReadChar, 1 * SizeOf(Char));
     if (ReadNum > 0) and (ReadChar = '*') then
     begin
       Result.TokenType := ttComment;
@@ -295,7 +330,7 @@ begin
     else
     begin
       if ReadNum > 0 then
-        Stream.Seek(-1, soFromCurrent);
+        Stream.Seek(-(1 * SizeOf(Char)), soFromCurrent);
     end;
   end;
 
@@ -329,7 +364,7 @@ begin
   SetWordChars('A', 'Z', True);
   SetWordChars('0', '9', True);
   SetWordChars('_', '_', True);
-  SetWordChars(Char($c0), Char($ff), True);
+  SetWordChars(Char($c0), Char($ff), True); //chars from #192 (À) ~ 255 (ÿ)
 end;
 
 {**
@@ -376,14 +411,14 @@ begin
 
   SetCharacterState('a', 'z', WordState);
   SetCharacterState('A', 'Z', WordState);
-  SetCharacterState(Chr($c0),  Chr($ff), WordState);
+  SetCharacterState(Chr($c0),  Chr($ff), WordState); //chars from #192 (À) ~ 255 (ÿ)
   SetCharacterState('_', '_', WordState);
 
   SetCharacterState('0', '9', NumberState);
   SetCharacterState('.', '.', NumberState);
 
   SetCharacterState('"', '"', QuoteState);
-  SetCharacterState(#39, #39, QuoteState);
+  SetCharacterState('''', '''', QuoteState);
 
   SetCharacterState('/', '/', CommentState);
 end;

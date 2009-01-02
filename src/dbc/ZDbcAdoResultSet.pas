@@ -90,7 +90,7 @@ type
     function MoveAbsolute(Row: Integer): Boolean; override;
     function GetRow: Integer; override;
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetString(ColumnIndex: Integer): string; override;
+    function GetString(ColumnIndex: Integer): AnsiString; override;
     function GetUnicodeString(ColumnIndex: Integer): WideString; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
@@ -317,7 +317,8 @@ end;
 }
 function TZAdoResultSet.MoveAbsolute(Row: Integer): Boolean;
 begin
-  if FAdoRecordSet.EOF or FAdoRecordSet.BOF then FAdoRecordSet.MoveFirst;
+  if FAdoRecordSet.EOF or FAdoRecordSet.BOF then
+     FAdoRecordSet.MoveFirst;
   if Row > 0 then
     FAdoRecordSet.Move(Row - 1, adBookmarkFirst)
   else
@@ -361,16 +362,18 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAdoResultSet.GetString(ColumnIndex: Integer): string;
+function TZAdoResultSet.GetString(ColumnIndex: Integer): AnsiString;
 var
   NL: Integer;
 begin
   Result := '';
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then Exit;
+  if LastWasNull then
+     Exit;
   Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
   NL := Length(Result);
-  while (NL > 0) and (Result[NL] = ' ') do Dec(NL);
+  while (NL > 0) and (Result[NL] = ' ') do
+     Dec(NL);
   SetLength(Result, NL);
 end;
 
@@ -389,10 +392,12 @@ var
 begin
   Result := '';
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then Exit;
+  if LastWasNull then
+     Exit;
   Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
   NL := Length(Result);
-  while (NL > 0) and (Result[NL] = ' ') do Dec(NL);
+  while (NL > 0) and (Result[NL] = ' ') do
+     Dec(NL);
   SetLength(Result, NL);
 end;
 
@@ -409,7 +414,8 @@ function TZAdoResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
 begin
   Result := False;
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then Exit;
+  if LastWasNull then
+     Exit;
   try
     Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
   except
@@ -430,7 +436,8 @@ function TZAdoResultSet.GetByte(ColumnIndex: Integer): ShortInt;
 begin
   Result := 0;
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then Exit;
+  if LastWasNull then
+     Exit;
   try
     Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
   except
@@ -451,7 +458,8 @@ function TZAdoResultSet.GetShort(ColumnIndex: Integer): SmallInt;
 begin
   Result := 0;
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then Exit;
+  if LastWasNull then
+     Exit;
   try
     Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
   except
@@ -472,7 +480,8 @@ function TZAdoResultSet.GetInt(ColumnIndex: Integer): Integer;
 begin
   Result := 0;
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then Exit;
+  if LastWasNull then
+     Exit;
   try
     Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
   except
@@ -493,7 +502,8 @@ function TZAdoResultSet.GetLong(ColumnIndex: Integer): Int64;
 begin
   Result := 0;
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then Exit;
+  if LastWasNull then
+     Exit;
   try
     Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
   except
@@ -514,7 +524,8 @@ function TZAdoResultSet.GetFloat(ColumnIndex: Integer): Single;
 begin
   Result := 0;
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then Exit;
+  if LastWasNull then
+     Exit;
   try
     Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
   except
@@ -535,7 +546,8 @@ function TZAdoResultSet.GetDouble(ColumnIndex: Integer): Double;
 begin
   Result := 0;
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then Exit;
+  if LastWasNull then
+     Exit;
   try
     Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
   except
@@ -557,7 +569,8 @@ function TZAdoResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 begin
   Result := 0;
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then Exit;
+  if LastWasNull then
+     Exit;
   try
     Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
   except
@@ -579,7 +592,8 @@ function TZAdoResultSet.GetBytes(ColumnIndex: Integer): TByteDynArray;
 begin
   SetLength(Result, 0);
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then Exit;
+  if LastWasNull then
+     Exit;
   Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
 end;
 
@@ -596,7 +610,8 @@ function TZAdoResultSet.GetDate(ColumnIndex: Integer): TDateTime;
 begin
   Result := 0;
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then Exit;
+  if LastWasNull then
+     Exit;
   try
     Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
   except
@@ -617,7 +632,8 @@ function TZAdoResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 begin
   Result := 0;
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then Exit;
+  if LastWasNull then
+     Exit;
   try
     Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
   except
@@ -639,7 +655,8 @@ function TZAdoResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
 begin
   Result := 0;
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then Exit;
+  if LastWasNull then
+     Exit;
   try
     Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
   except
@@ -663,7 +680,8 @@ var
 begin
   Result := nil;
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then Exit;
+  if LastWasNull then
+     Exit;
 
   V := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
   if VarIsStr(V) then

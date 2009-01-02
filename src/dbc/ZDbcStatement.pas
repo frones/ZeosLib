@@ -81,7 +81,7 @@ type
     FResultSetType: TZResultSetType;
     FPostUpdates: TZPostUpdatesMode;
     FLocateUpdates: TZLocateUpdatesMode;
-    FCursorName: string;
+    FCursorName: AnsiString;
     FBatchQueries: TStrings;
     FConnection: IZConnection;
     FInfo: TStrings;
@@ -108,7 +108,7 @@ type
       read FResultSetConcurrency write FResultSetConcurrency;
     property ResultSetType: TZResultSetType
       read FResultSetType write FResultSetType;
-    property CursorName: string read FCursorName write FCursorName;
+    property CursorName: AnsiString read FCursorName write FCursorName;
     property BatchQueries: TStrings read FBatchQueries;
     property Connection: IZConnection read FConnection;
     property Info: TStrings read FInfo;
@@ -130,7 +130,7 @@ type
     function GetQueryTimeout: Integer; virtual;
     procedure SetQueryTimeout(Value: Integer); virtual;
     procedure Cancel; virtual;
-    procedure SetCursorName(const Value: string); virtual;
+    procedure SetCursorName(const Value: AnsiString); virtual;
 
     function Execute(const SQL: string): Boolean; virtual;
     function GetResultSet: IZResultSet; virtual;
@@ -164,6 +164,9 @@ type
   end;
 
   {** Implements Abstract Prepared SQL Statement. }
+
+  { TZAbstractPreparedStatement }
+
   TZAbstractPreparedStatement = class(TZAbstractStatement, IZPreparedStatement)
   private
     FSQL: string;
@@ -171,10 +174,12 @@ type
     FInParamTypes: TZSQLTypeArray;
     FInParamDefaultValues: TStringDynArray;
     FInParamCount: Integer;
+    FPrepared : Boolean;
   protected
     procedure SetInParamCount(NewParamCount: Integer); virtual;
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
       const Value: TZVariant); virtual;
+    function GetInParamLogValue(Value: TZVariant): String;
 
     property SQL: string read FSQL write FSQL;
     property InParamValues: TZVariantDynArray
@@ -192,6 +197,12 @@ type
     function ExecuteUpdatePrepared: Integer; virtual;
     function ExecutePrepared: Boolean; virtual;
 
+    function GetSQL : String;
+    procedure Prepare; virtual;
+    procedure Unprepare; virtual;
+    function IsPrepared: Boolean; virtual;
+    property Prepared: Boolean read IsPrepared;
+
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
 
     procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType); virtual;
@@ -203,8 +214,8 @@ type
     procedure SetFloat(ParameterIndex: Integer; Value: Single); virtual;
     procedure SetDouble(ParameterIndex: Integer; Value: Double); virtual;
     procedure SetBigDecimal(ParameterIndex: Integer; Value: Extended); virtual;
-    procedure SetPChar(ParameterIndex: Integer; Value: PChar); virtual;
-    procedure SetString(ParameterIndex: Integer; const Value: string); virtual;
+    procedure SetPChar(ParameterIndex: Integer; Value: PAnsiChar); virtual;
+    procedure SetString(ParameterIndex: Integer; const Value: Ansistring); virtual;
     procedure SetUnicodeString(ParameterIndex: Integer;
       const Value: WideString); virtual;
     procedure SetBytes(ParameterIndex: Integer; const Value: TByteDynArray); virtual;
@@ -214,8 +225,7 @@ type
     procedure SetAsciiStream(ParameterIndex: Integer; Value: TStream); virtual;
     procedure SetUnicodeStream(ParameterIndex: Integer; Value: TStream); virtual;
     procedure SetBinaryStream(ParameterIndex: Integer; Value: TStream); virtual;
-    procedure SetBlob(ParameterIndex: Integer; SQLType: TZSQLType;
-      Value: IZBlob); virtual;
+    procedure SetBlob(ParameterIndex: Integer; SQLType: TZSQLType; Value: IZBlob); virtual;
     procedure SetValue(ParameterIndex: Integer; const Value: TZVariant); virtual;
 
     procedure ClearParameters; virtual;
@@ -251,8 +261,8 @@ type
     function WasNull: Boolean; virtual;
 
     function IsNull(ParameterIndex: Integer): Boolean; virtual;
-    function GetPChar(ParameterIndex: Integer): PChar; virtual;
-    function GetString(ParameterIndex: Integer): string; virtual;
+    function GetPChar(ParameterIndex: Integer): PAnsiChar; virtual;
+    function GetString(ParameterIndex: Integer): AnsiString; virtual;
     function GetUnicodeString(ParameterIndex: Integer): WideString; virtual;
     function GetBoolean(ParameterIndex: Integer): Boolean; virtual;
     function GetByte(ParameterIndex: Integer): ShortInt; virtual;
@@ -579,7 +589,7 @@ end;
 
   @param name the new cursor name, which must be unique within a connection
 }
-procedure TZAbstractStatement.SetCursorName(const Value: string);
+procedure TZAbstractStatement.SetCursorName(const Value: AnsiString);
 begin
   FCursorName := Value;
 end;
@@ -918,6 +928,7 @@ begin
   FSQL := SQL;
   FInParamCount := 0;
   SetInParamCount(0);
+  FPrepared := False;
 end;
 
 {**
@@ -925,6 +936,7 @@ end;
 }
 destructor TZAbstractPreparedStatement.Destroy;
 begin
+  Unprepare;
   inherited Destroy;
   ClearParameters;
 end;
@@ -964,6 +976,26 @@ begin
 
   FInParamTypes[ParameterIndex - 1] := SQLType;
   FInParamValues[ParameterIndex - 1] := Value;
+end;
+
+function TZAbstractPreparedStatement.GetInParamLogValue(Value: TZVariant): String;
+var
+  i : integer;
+begin
+  With Value do
+    case VType of
+      vtNull : result := '(NULL)';
+      vtBoolean : If VBoolean then result := '(TRUE)' else result := '(FALSE)';
+      vtInteger : result := IntToStr(VInteger);
+      vtFloat : result := FloatToStr(VFloat);
+      vtString : result := '''' + VString + '''';
+      vtUnicodeString : result := '''' + VUnicodeString + '''';
+      vtDateTime : result := DateTimeToStr(VDateTime);
+      vtPointer : result := '(POINTER)';
+      vtInterface : result := '(INTERFACE)';
+    else
+      result := '(UNKNOWN TYPE)'
+    end;
 end;
 
 {**
@@ -1172,7 +1204,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetPChar(ParameterIndex: Integer;
-  Value: PChar);
+   Value: PAnsiChar);
 var
   Temp: TZVariant;
 begin
@@ -1192,7 +1224,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetString(ParameterIndex: Integer;
-  const Value: string);
+   const Value: AnsiString);
 var
   Temp: TZVariant;
 begin
@@ -1389,7 +1421,8 @@ begin
     vtFloat: SQLType := stBigDecimal;
     vtUnicodeString: SQLType := stUnicodeString;
     vtDateTime: SQLType := stTimestamp;
-    else SQLType := stString;
+  else
+    SQLType := stString;
   end;
   SetInParam(ParameterIndex, SQLType, Value);
 end;
@@ -1426,6 +1459,26 @@ function TZAbstractPreparedStatement.ExecutePrepared: Boolean;
 begin
   Result := False;
   RaiseUnsupportedException;
+end;
+
+function TZAbstractPreparedStatement.GetSQL: String;
+begin
+  Result := FSQL;
+end;
+
+procedure TZAbstractPreparedStatement.Prepare;
+begin
+  FPrepared := True;
+end;
+
+procedure TZAbstractPreparedStatement.Unprepare;
+begin
+  FPrepared := False;
+end;
+
+function TZAbstractPreparedStatement.IsPrepared: Boolean;
+begin
+  Result := FPrepared;
 end;
 
 {**
@@ -1543,7 +1596,8 @@ begin
   begin
     Result := OutParamValues[ParameterIndex - 1];
     FLastWasNull := DefVarManager.IsNull(Result);
-  end else
+  end
+  else
   begin
     Result:=NullVariant;
     FLastWasNull:=True;
@@ -1591,10 +1645,10 @@ end;
   is <code>null</code>.
   @exception SQLException if a database access error occurs
 }
-function TZAbstractCallableStatement.GetPChar(ParameterIndex: Integer): PChar;
+function TZAbstractCallableStatement.GetPChar(ParameterIndex: Integer): PAnsiChar;
 begin
   FTemp := GetString(ParameterIndex);
-  Result := PChar(FTemp);
+  Result := PAnsiChar(FTemp);
 end;
 
 {**
@@ -1613,7 +1667,7 @@ end;
   is <code>null</code>.
   @exception SQLException if a database access error occurs
 }
-function TZAbstractCallableStatement.GetString(ParameterIndex: Integer): string;
+function TZAbstractCallableStatement.GetString(ParameterIndex: Integer): AnsiString;
 begin
   Result := SoftVarManager.GetAsString(GetOutParam(ParameterIndex));
 end;
@@ -1880,8 +1934,7 @@ begin
     FCachedQuery := TStringList.Create;
     if Pos('?', SQL) > 0 then
     begin
-      Tokens := Connection.GetDriver.GetTokenizer.
-        TokenizeBufferToList(SQL, [toUnifyWhitespaces]);
+      Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toUnifyWhitespaces]);
       try
         Temp := '';
         for I := 0 to Tokens.Count - 1 do
@@ -1891,7 +1944,8 @@ begin
             FCachedQuery.Add(Temp);
             FCachedQuery.AddObject('?', Self);
             Temp := '';
-          end else
+          end
+          else
             Temp := Temp + Tokens[I];
         end;
         if Temp <> '' then
@@ -1899,7 +1953,8 @@ begin
       finally
         Tokens.Free;
       end;
-    end else
+    end
+    else
       FCachedQuery.Add(SQL);
   end;
   Result := FCachedQuery;
@@ -1925,7 +1980,8 @@ begin
     begin
       Result := Result + PrepareSQLParam(ParamIndex);
       Inc(ParamIndex);
-    end else
+    end
+    else
       Result := Result + Tokens[I];
   end;
 end;

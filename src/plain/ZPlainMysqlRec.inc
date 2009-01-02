@@ -121,25 +121,6 @@
 
   @api_rec.mysql_send_query      := GetAddress('mysql_send_query');
   @api_rec.mysql_read_query_result := GetAddress('mysql_read_query_result');
-  @api_rec.mysql_master_query    := GetAddress('mysql_master_query');
-  @api_rec.mysql_master_send_query := GetAddress('mysql_master_send_query');
-  @api_rec.mysql_slave_query     := GetAddress('mysql_slave_query');
-  @api_rec.mysql_slave_send_query := GetAddress('mysql_slave_send_query');
-  @api_rec.mysql_enable_rpl_parse := GetAddress('mysql_enable_rpl_parse');
-  @api_rec.mysql_disable_rpl_parse := GetAddress('mysql_disable_rpl_parse');
-  @api_rec.mysql_rpl_parse_enabled := GetAddress('mysql_rpl_parse_enabled');
-  @api_rec.mysql_enable_reads_from_master := GetAddress('mysql_enable_reads_from_master');
-  @api_rec.mysql_disable_reads_from_master := GetAddress('mysql_disable_reads_from_master');
-  @api_rec.mysql_reads_from_master_enabled := GetAddress('mysql_reads_from_master_enabled');
-  @api_rec.mysql_rpl_query_type  := GetAddress('mysql_rpl_query_type');
-  @api_rec.mysql_rpl_probe       := GetAddress('mysql_rpl_probe');
-  @api_rec.mysql_set_master      := GetAddress('mysql_set_master');
-  @api_rec.mysql_add_slave       := GetAddress('mysql_add_slave');
-  @api_rec.mysql_manager_init    := GetAddress('mysql_manager_init');
-  @api_rec.mysql_manager_connect := GetAddress('mysql_manager_connect');
-  @api_rec.mysql_manager_close   := GetAddress('mysql_manager_close');
-  @api_rec.mysql_manager_command := GetAddress('mysql_manager_command');
-  @api_rec.mysql_manager_fetch_line := GetAddress('mysql_manager_fetch_line');
 
   @api_rec.mysql_autocommit             := GetAddress('mysql_autocommit');
   @api_rec.mysql_commit                 := GetAddress('mysql_commit');

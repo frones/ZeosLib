@@ -643,8 +643,9 @@ function TZIIFFunction.Execute(Stack: TZExecutionStack;
 begin
   CheckParamsCount(Stack, 3);
   if VariantManager.GetAsBoolean(Stack.GetParameter(3)) then
-    Result := Stack.GetParameter(2)
-  else Result := Stack.GetParameter(1);
+     Result := Stack.GetParameter(2)
+   else
+     Result := Stack.GetParameter(1);
 end;
 
 { TZSumFunction }
@@ -1133,8 +1134,7 @@ function TZUpperFunction.Execute(Stack: TZExecutionStack;
   VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
-  VariantManager.SetAsString(Result, AnsiUpperCase(
-    VariantManager.GetAsString(Stack.GetParameter(1))));
+  VariantManager.SetAsString(Result, AnsiUpperCase(VariantManager.GetAsString(Stack.GetParameter(1))));
 end;
 
 { TZSubStrFunction }
@@ -1208,7 +1208,7 @@ function TZConcatFunction.Execute(Stack: TZExecutionStack;
   VariantManager: IZVariantManager): TZVariant;
 var
   I, ParamsCount: Integer;
-  Temp: string;
+  Temp: AnsiString;
 begin
   ParamsCount := VariantManager.GetAsInteger(Stack.GetParameter(0));
   if ParamsCount < 2 then

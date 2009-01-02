@@ -1,6 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
+{             Constant messages used by Zeos              }
 {                                                         }
 { This unit contains all the messages that are output by  }
 { ZEOS methods. One of the given language can be activated}
@@ -223,7 +224,7 @@ resourcestring
   SFieldReadOnly        = 'O campo %d é somente leitura e não pôde receber dados';
   SInvalidUpdateCount   = '%d registro(s) atualizados. Apenas um registro deveria ter sido atualizado.'; 
 
-  SRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
+  SRowBufferWidthExceeded ='O tamanho do buffer para linhas (Rows) foi excedido. Tente usar menos ou mais colunas na query SQL';
 {$ELSE}
 
 {$IFDEF DUTCH}

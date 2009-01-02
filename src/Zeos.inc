@@ -137,6 +137,16 @@
   {$ENDIF}
 {$ENDIF}
 
+// Compilation directives for Delphi 2009
+{$IFDEF VER200}
+  {$DEFINE VER200BELOW}
+  {$DEFINE DELPHI12}
+  {$DEFINE DELPHI12_UP}
+  {$DEFINE BDS}
+  {$DEFINE BDS5}
+  {$DEFINE BDS4_UP}
+{$ENDIF}
+
 {$IFDEF FREEBSD}
   {$DEFINE UNIX}
 {$ENDIF}
@@ -211,8 +221,6 @@
 
 // Enables MySQL support in TZConnection/TZDataset
 {$DEFINE ENABLE_MYSQL}
-// Enables Mysql 4.1 and 5 prepared statement support (highly experimental!!)
-{.$DEFINE MYSQL_USE_PREPARE}
 
 // Enables PostgreSQL support in TZConnection/TZDataset
 {$DEFINE ENABLE_POSTGRESQL}

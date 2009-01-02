@@ -79,7 +79,7 @@ function ConvertSQLiteTypeToSQLType(TypeName: string; var Precision: Integer;
   @param LogMessage a logging message.
 }
 procedure CheckSQLiteError(PlainDriver: IZSQLitePlainDriver;
-  ErrorCode: Integer; ErrorMessage: PChar;
+  ErrorCode: Integer; ErrorMessage: PAnsiChar;
   LogCategory: TZLoggingCategory; LogMessage: string);
 
 {**
@@ -129,7 +129,8 @@ begin
     begin
       Precision := StrToIntDef(Copy(Temp, 1, P1 - 1), 0);
       Decimals := StrToIntDef(Copy(Temp, P1 + 1, Length(Temp) - P1), 0);
-    end else
+    end
+    else
       Precision := StrToIntDef(Temp, 0);
   end;
 
@@ -192,7 +193,8 @@ begin
       Result := stShort
     else if Precision <= 9 then
       Result := stInteger
-    else Result := stLong;
+    else
+      Result := stLong;
   end;
 
   if (Result = stString) and (Precision = 0) then
@@ -208,16 +210,21 @@ end;
   @param LogMessage a logging message.
 }
 procedure CheckSQLiteError(PlainDriver: IZSQLitePlainDriver;
-  ErrorCode: Integer; ErrorMessage: PChar;
+  ErrorCode: Integer; ErrorMessage: PAnsiChar;
   LogCategory: TZLoggingCategory; LogMessage: string);
 var
   Error: string;
 begin
   if ErrorMessage <> nil then
   begin
-    Error := Trim(StrPas(ErrorMessage));
-    PlainDriver.FreeMem(ErrorMessage);
-  end else
+  {$IFDEF DELPHI12_UP} 
+    Error := trim(UTF8ToUnicodeString(ErrorMessage)); 
+  {$ELSE} 
+    Error := Trim(StrPas(ErrorMessage)); 
+  {$ENDIF} 
+    PlainDriver.FreeMem(ErrorMessage); 
+  end
+  else
     Error := '';
   if not (ErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then
   begin
@@ -239,22 +246,23 @@ function EncodeString(Value: string): string;
 var
   I: Integer;
   SrcLength, DestLength: Integer;
-  SrcBuffer, DestBuffer: PChar;
+  SrcBuffer, DestBuffer: PAnsiChar;
 begin
   SrcLength := Length(Value);
-  SrcBuffer := PChar(Value);
+  SrcBuffer := PAnsiChar(Value);
   DestLength := 2;
   for I := 1 to SrcLength do
   begin
     if SrcBuffer^ in [#0, '''', '%'] then
       Inc(DestLength, 2)
-    else Inc(DestLength);
+    else
+      Inc(DestLength);
     Inc(SrcBuffer);
   end;
 
-  SrcBuffer := PChar(Value);
+  SrcBuffer := PAnsiChar(Value);
   SetLength(Result, DestLength);
-  DestBuffer := PChar(Result);
+  DestBuffer := PAnsiChar(Result);
   DestBuffer^ := '''';
   Inc(DestBuffer);
 
@@ -296,13 +304,13 @@ end;
 function DecodeString(Value: string): string;
 var
   SrcLength, DestLength: Integer;
-  SrcBuffer, DestBuffer: PChar;
+  SrcBuffer, DestBuffer: PAnsiChar;
 begin
   SrcLength := Length(Value);
-  SrcBuffer := PChar(Value);
+  SrcBuffer := PAnsiChar(Value);
   SetLength(Result, SrcLength);
   DestLength := 0;
-  DestBuffer := PChar(Result);
+  DestBuffer := PAnsiChar(Result);
 
   while SrcLength > 0 do
   begin
@@ -311,7 +319,8 @@ begin
       Inc(SrcBuffer);
       if SrcBuffer^ <> '0' then
         DestBuffer^ := SrcBuffer^
-      else DestBuffer^ := #0;
+      else
+        DestBuffer^ := #0;
       Inc(SrcBuffer);
       Dec(SrcLength, 2);
     end

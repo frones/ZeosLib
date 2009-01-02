@@ -278,7 +278,8 @@ end;
 }
 function TZAbstractResultSetMetadata.IsAutoIncrement(Column: Integer): Boolean;
 begin
-  if not Loaded then LoadColumns;
+  if not Loaded then
+     LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).AutoIncrement;
 end;
 
@@ -289,7 +290,8 @@ end;
 }
 function TZAbstractResultSetMetadata.IsCaseSensitive(Column: Integer): Boolean;
 begin
-  if not Loaded then LoadColumns;
+  if not Loaded then
+     LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).CaseSensitive;
 end;
 
@@ -300,7 +302,8 @@ end;
 }
 function TZAbstractResultSetMetadata.IsSearchable(Column: Integer): Boolean;
 begin
-  if not Loaded then LoadColumns;
+  if not Loaded then
+     LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).Searchable;
 end;
 
@@ -323,7 +326,8 @@ end;
 function TZAbstractResultSetMetadata.IsNullable(
   Column: Integer): TZColumnNullableType;
 begin
-  if not Loaded then LoadColumns;
+  if not Loaded then
+     LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).Nullable;
 end;
 
@@ -394,7 +398,8 @@ end;
 function TZAbstractResultSetMetadata.GetColumnName(
   Column: Integer): string;
 begin
-  if not Loaded then LoadColumns;
+  if not Loaded then
+     LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).ColumnName;
 end;
 
@@ -406,7 +411,8 @@ end;
 function TZAbstractResultSetMetadata.GetSchemaName(
   Column: Integer): string;
 begin
-  if not Loaded then LoadColumns;
+  if not Loaded then
+     LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).SchemaName;
 end;
 
@@ -437,7 +443,8 @@ end;
 }
 function TZAbstractResultSetMetadata.GetTableName(Column: Integer): string;
 begin
-  if not Loaded then LoadColumns;
+  if not Loaded then
+     LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).TableName;
 end;
 
@@ -448,7 +455,8 @@ end;
 }
 function TZAbstractResultSetMetadata.GetCatalogName(Column: Integer): string;
 begin
-  if not Loaded then LoadColumns;
+  if not Loaded then
+     LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).CatalogName;
 end;
 
@@ -481,7 +489,8 @@ end;
 }
 function TZAbstractResultSetMetadata.IsReadOnly(Column: Integer): Boolean;
 begin
-  if not Loaded then LoadColumns;
+  if not Loaded then
+     LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).ReadOnly;
 end;
 
@@ -492,7 +501,8 @@ end;
 }
 function TZAbstractResultSetMetadata.IsWritable(Column: Integer): Boolean;
 begin
-  if not Loaded then LoadColumns;
+  if not Loaded then
+     LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).Writable;
 end;
 
@@ -504,7 +514,8 @@ end;
 function TZAbstractResultSetMetadata.IsDefinitelyWritable(
   Column: Integer): Boolean;
 begin
-  if not Loaded then LoadColumns;
+  if not Loaded then
+     LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).DefinitelyWritable;
 end;
 
@@ -516,7 +527,8 @@ end;
 function TZAbstractResultSetMetadata.GetDefaultValue(
   Column: Integer): string;
 begin
-  if not Loaded then LoadColumns;
+  if not Loaded then
+     LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).DefaultValue;
 end;
 
@@ -528,7 +540,8 @@ end;
 function TZAbstractResultSetMetadata.HasDefaultValue(
   Column: Integer): Boolean;
 begin
-  if not Loaded then LoadColumns;
+  if not Loaded then
+     LoadColumns;
   // '' = NULL / no default value, '''''' = empty string (''), etc.
   Result := not(TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).DefaultValue = '');
 end;
@@ -549,7 +562,8 @@ begin
     Result := Metadata.GetColumns(TableRef.Catalog,
       TableRef.Schema, TableRef.Table, '');
     FTableColumns.Put(TableKey, Result);
-  end else
+  end
+  else
     Result := FTableColumns.Get(TableKey) as IZResultSet;
 end;
 

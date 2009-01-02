@@ -301,7 +301,7 @@ begin
     stFloat, stDouble, stBigDecimal:
       Result := ftFloat;
     stString:
-      Result := ftString;
+      Result := {$IFDEF DELPHI12_UP}ftWideString{$ELSE}ftString{$ENDIF}; 
     stBytes:
       Result := ftBytes;
     stDate:
@@ -443,7 +443,9 @@ begin
       ftCurrency:
         RowAccessor.SetBigDecimal(FieldIndex, ResultSet.GetBigDecimal(ColumnIndex));
       ftString:
-        RowAccessor.SetPChar(FieldIndex, ResultSet.GetPChar(ColumnIndex));
+        // gto: do we need PChar here?
+        //RowAccessor.SetPChar(FieldIndex, ResultSet.GetPChar(ColumnIndex));
+        RowAccessor.SetString(FieldIndex, ResultSet.GetString(ColumnIndex));
       ftWidestring:
         RowAccessor.SetUnicodeString(FieldIndex, ResultSet.GetUnicodeString(ColumnIndex));
       ftBytes:
@@ -512,7 +514,9 @@ begin
         ResultSet.UpdateBigDecimal(ColumnIndex,
           RowAccessor.GetBigDecimal(FieldIndex, WasNull));
       ftString:
-        ResultSet.UpdatePChar(ColumnIndex, RowAccessor.GetPChar(FieldIndex, WasNull));
+        // gto: do we need PChar here?
+        //ResultSet.UpdatePChar(ColumnIndex, RowAccessor.GetPChar(FieldIndex, WasNull));
+        ResultSet.UpdateString(ColumnIndex, RowAccessor.GetString(FieldIndex, WasNull));			
       ftWidestring:
         ResultSet.UpdateUnicodeString(ColumnIndex,
           RowAccessor.GetUnicodeString(FieldIndex, WasNull));
@@ -646,9 +650,11 @@ begin
       Current := DataSet.FindField(Expression.DefaultVariables.Names[I]);
       if Current <> nil then
         Result[I] := Current
-      else Result[I] := nil;
+      else
+        Result[I] := nil;
     end;
-  end else
+  end
+  else
     SetLength(Result, 0);
 end;
 
@@ -769,7 +775,8 @@ var
 begin
   for I := 0 to Length(Fields) - 1 do
   begin
-    if Fields[I] = nil then Continue;
+    if Fields[I] = nil then
+      Continue;
 
     ColumnIndex := TField(Fields[I]).FieldNo;
     if not ResultSet.IsNull(ColumnIndex) then
@@ -832,7 +839,8 @@ begin
       if PartialKey then
       begin
         Result := AnsiStrLComp(PChar(Value2), PChar(Value1), Length(Value1)) = 0;
-      end else
+      end
+      else
         Result := Value1 = Value2;
     end
     else
@@ -842,7 +850,8 @@ begin
         Value1 := SoftVarManager.GetAsString(KeyValues[I]);
         Value2 := SoftVarManager.GetAsString(RowValues[I]);
         Result := AnsiStrLComp(PChar(Value2), PChar(Value1), Length(Value1)) = 0;
-      end else
+      end
+      else
         Result := SoftVarManager.Compare(KeyValues[I], RowValues[I]) = 0;
     end;
 
@@ -988,7 +997,8 @@ begin
     if KeyValues[I].VType = vtNull then
     begin
       Result := ResultSet.IsNull(ColumnIndex);
-      if not Result then Break;
+      if not Result then
+         Break;
       Continue;
     end;
 
@@ -1353,27 +1363,33 @@ var
   Item: string;
 begin
   Result := 0;
-  if (Content = nil) or (Content^=#0) or (Strings = nil) then Exit;
+  if (Content = nil) or (Content^ = #0) or (Strings = nil) then
+     Exit;
   Tail := Content;
   InQuote := False;
   QuoteChar := #0;
   Strings.BeginUpdate;
   try
     repeat
-      while Tail^ in WhiteSpace + [#13, #10] do Inc(Tail);
+      while Tail^ in WhiteSpace + [#13, #10] do
+        Inc(Tail);
       Head := Tail;
       while True do
       begin
         while (InQuote and not (Tail^ in [QuoteChar, #0])) or
-          not (Tail^ in Separators + [#0, #13, #10, '''', '"']) do Inc(Tail);
+               not (Tail^ in Separators + [#0, #13, #10, '''', '"']) do
+           Inc(Tail);
         if Tail^ in ['''', '"'] then
         begin
           if (QuoteChar <> #0) and (QuoteChar = Tail^) then
             QuoteChar := #0
-          else QuoteChar := Tail^;
+          else
+            QuoteChar := Tail^;
           InQuote := QuoteChar <> #0;
           Inc(Tail);
-        end else Break;
+        end
+        else
+          Break;
       end;
       EOS := Tail^ = #0;
       if (Head <> Tail) and (Head^ <> #0) then

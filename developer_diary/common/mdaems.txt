@@ -280,6 +280,8 @@
 
 20081112 : Some dates of form 2008-1-1 seem not to work good with function TimestampStrToDateTime - by niek - See http://zeos.firmos.at/viewtopic.php?t=2093
 
+20081126 : Added Delphi2009 to the automated build scripts and test suite - by mdaems
+
 20081203 : Precision issue when recording values from TClientDataSet - by magnomp - Mantis Bug 162
 
 20081206 : Removed conditional compilation of database dependent Tokenizers - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2138
@@ -287,3 +289,9 @@
 20081208 : Fixed bug in UpdateSQLeditor that resulted from commit 481 - by mdaems - Mantis Bug 165
 
 20081210 : Removed debug_get_memorydiff from ZSysUtils again - by mdaems
+
+20081213 : Default strings to TWideString fields on Delphi 2009 - by mariuszekpl/mdaems - See http://zeos.firmos.at/viewtopic.php?t=2119
+
+20081225 : VarChar / Char fields last character chopped off - by TheEdge - See http://zeos.firmos.at/viewtopic.php?t=2165
+
+20081225 : New TObject Methods in D2009 (Tostring, GetHashCode and Equals) - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2131

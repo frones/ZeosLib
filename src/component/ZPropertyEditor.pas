@@ -358,9 +358,17 @@ begin
         ResultSet := Metadata.GetTables(Catalog, Schema, '', nil);
         while ResultSet.Next do
           begin
+            {$IFDEF DELPHI12_UP}
+            TableName := UTF8ToUnicodeString(ResultSet.GetStringByName('TABLE_NAME'));
+            {$ELSE}
             TableName := ResultSet.GetStringByName('TABLE_NAME');
+            {$ENDIF}
             TableName := IdentifierConvertor.Quote(TableName);
+            {$IFDEF DELPHI12_UP}
+            Schema := UTF8ToUnicodeString(ResultSet.GetStringByName('TABLE_SCHEM'));
+            {$ELSE}
             Schema := ResultSet.GetStringByName('TABLE_SCHEM');
+            {$ENDIF}
             if Schema <> '' then
               TableName := IdentifierConvertor.Quote(Schema) + '.' + TableName;
             if Connection.Catalog <> '' then

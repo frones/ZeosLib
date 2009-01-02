@@ -247,7 +247,7 @@ begin
     begin
       Temp := TZLoggingEvent(FTraceList[I]).AsString + #13#10;
       Buffer := PChar(Temp);
-      Stream.Write(Buffer^, StrLen(Buffer));
+      Stream.Write(Buffer^, StrLen(Buffer) * sizeof(char));
     end;
   finally
     Stream.Free;
@@ -289,7 +289,7 @@ begin
       Stream.Seek(0, soFromEnd);
       Temp := Event.AsString + #13#10;
       Buffer := PChar(Temp);
-      Stream.Write(Buffer^, StrLen(Buffer));
+      Stream.Write(Buffer^, StrLen(Buffer)*sizeof(char));
     finally
       Stream.Free;
     end;

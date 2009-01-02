@@ -69,7 +69,7 @@ type
   private
     FCachedBlob: boolean;
     FFetchStat: Integer;
-    FCursorName: string;
+    FCursorName: AnsiString;
     FStmtHandle: TISC_STMT_HANDLE;
     FSqlData: IZResultSQLDA;
     FParamsSqlData: IZParamsSQLDA;
@@ -79,17 +79,17 @@ type
     function GetFieldValue(ColumnIndex: Integer): Variant;
   public
     constructor Create(Statement: IZStatement; SQL: string;
-      var StatementHandle: TISC_STMT_HANDLE; CursorName: string;
+      var StatementHandle: TISC_STMT_HANDLE; CursorName: AnsiString;
       SqlData: IZResultSQLDA; ParamsSqlData: IZParamsSQLDA;
       CachedBlob: boolean);
     destructor Destroy; override;
 
     procedure Close; override;
 
-    function GetCursorName: string; override;
+    function GetCursorName: AnsiString; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetString(ColumnIndex: Integer): string; override;
+    function GetString(ColumnIndex: Integer): AnsiString; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -123,7 +123,7 @@ type
     function IsEmpty: Boolean; override;
     function Clone: IZBlob; override;
     function GetStream: TStream; override;
-    function GetString: string; override;
+    function GetString: AnsiString; override;
     function GetUnicodeString: WideString; override;
     function GetBytes: TByteDynArray; override;
   end;
@@ -174,7 +174,7 @@ end;
   @param the Interbase sql dialect
 }
 constructor TZInterbase6ResultSet.Create(Statement: IZStatement; SQL: string;
-  var StatementHandle: TISC_STMT_HANDLE; CursorName: string;
+  var StatementHandle: TISC_STMT_HANDLE; CursorName: AnsiString;
   SqlData: IZResultSQLDA; ParamsSqlData: IZParamsSQLDA; CachedBlob: boolean);
 begin
   inherited Create(Statement, SQL, nil);
@@ -252,7 +252,8 @@ begin
   CheckBlobColumn(ColumnIndex);
 
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then Exit;
+  if LastWasNull then
+      Exit;
 
   if FCachedBlob then
   begin
@@ -266,7 +267,8 @@ begin
       FreeMem(Buffer, Size);
     end;
   end
-  else begin
+  else
+  begin
     BlobId := FSqlData.GetQuad(ColumnIndex - 1);
     Result := TZInterbase6Blob.Create(FIBConnection, BlobId);
   end;
@@ -316,8 +318,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZInterbase6ResultSet.GetBytes(
-  ColumnIndex: Integer): TByteDynArray;
+function TZInterbase6ResultSet.GetBytes(ColumnIndex: Integer): TByteDynArray;
 begin
   CheckClosed;
   CheckColumnConvertion(ColumnIndex, stBytes);
@@ -436,7 +437,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZInterbase6ResultSet.GetString(ColumnIndex: Integer): string;
+function TZInterbase6ResultSet.GetString(ColumnIndex: Integer): AnsiString;
 begin
   CheckClosed;
   CheckColumnConvertion(ColumnIndex, stString);
@@ -599,12 +600,12 @@ begin
       end;
 
       ReadOnly := (GetFieldRelationName(I) = '') or (GetFieldSqlName(I) = '')
-        or (GetFieldSqlName(I) = 'RDB$DB_KEY')
-        or (FieldSqlType = ZDbcIntfs.stUnknown);
+        or (GetFieldSqlName(I) = 'RDB$DB_KEY') or (FieldSqlType = ZDbcIntfs.stUnknown);
 
       if IsNullable(I) then
         Nullable := ntNullable
-      else Nullable := ntNoNulls;
+      else
+        Nullable := ntNoNulls;
 
       Scale := GetFieldScale(I);
       AutoIncrement := False;
@@ -616,7 +617,7 @@ begin
   inherited Open;
 end;
 
-function TZInterbase6ResultSet.GetCursorName: string;
+function TZInterbase6ResultSet.GetCursorName: AnsiString;
 begin
   Result := FCursorName;
 end;
@@ -653,7 +654,7 @@ begin
   Result := inherited GetStream;
 end;
 
-function TZInterbase6Blob.GetString: string;
+function TZInterbase6Blob.GetString: AnsiString;
 begin
   ReadBlob;
   Result := inherited GetString;
@@ -680,8 +681,7 @@ begin
    Exit;
    
   with FIBConnection do
-    ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle,
-      FBlobId, Size, Buffer);
+    ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle, FBlobId, Size, Buffer);
   BlobSize := Size;
   BlobData := Buffer;
   FBlobRead := True;

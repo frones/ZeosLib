@@ -85,7 +85,7 @@ type
   sb1     = ShortInt;
   ub1     = Byte;
   dvoid   = Pointer;
-  text    = PChar;
+  text    = PAnsiChar;
   size_T  = Integer;
 
   pub1 = ^ub1;
@@ -1104,11 +1104,9 @@ end;
 
 initialization
 {$IFNDEF UNIX}
-  LibraryLoader := TZOracleNativeLibraryLoader.Create(
-    [WINDOWS_DLL_LOCATION]);
+  LibraryLoader := TZOracleNativeLibraryLoader.Create([WINDOWS_DLL_LOCATION]);
 {$ELSE}
-  LibraryLoader := TZOracleNativeLibraryLoader.Create(
-    [LINUX_DLL_LOCATION]);
+  LibraryLoader := TZOracleNativeLibraryLoader.Create([LINUX_DLL_LOCATION]);
 {$ENDIF}
 finalization
   if Assigned(LibraryLoader) then

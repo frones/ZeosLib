@@ -82,7 +82,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetString(ColumnIndex: Integer): string; override;
+    function GetString(ColumnIndex: Integer): AnsiString; override;
     function GetUnicodeString(ColumnIndex: Integer): WideString; override;
     function GetUnicodeStream(ColumnIndex: Integer): TStream; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
@@ -237,7 +237,11 @@ begin
     begin
       ColumnName := '';
       TableName := '';
+    {$IFDEF DELPHI12_UP}
+      ColumnLabel := UTF8ToUnicodeString(StrPas(FPlainDriver.GetFieldName(FQueryHandle, I)));
+    {$ELSE}
       ColumnLabel := StrPas(FPlainDriver.GetFieldName(FQueryHandle, I));
+    {$ENDIF} 
       ColumnDisplaySize := 0;
       Scale := 0;
       Precision := 0;
@@ -317,7 +321,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZPostgreSQLResultSet.GetString(ColumnIndex: Integer): string;
+function TZPostgreSQLResultSet.GetString(ColumnIndex: Integer): AnsiString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
@@ -513,7 +517,8 @@ begin
   Value := GetString(ColumnIndex);
   if IsMatch('????-??-??*', Value) then
     Result := Trunc(AnsiSQLDateToDateTime(Value))
-  else Result := Trunc(TimestampStrToDateTime(Value));
+  else
+    Result := Trunc(TimestampStrToDateTime(Value));
 end;
 
 {**
@@ -535,7 +540,8 @@ begin
   Value := GetString(ColumnIndex);
   if IsMatch('*??:??:??*', Value) then
     Result := Frac(AnsiSQLDateToDateTime(Value))
-  else Result := Frac(TimestampStrToDateTime(Value));
+  else
+    Result := Frac(TimestampStrToDateTime(Value));
 end;
 
 {**
@@ -558,7 +564,8 @@ begin
   Value := GetString(ColumnIndex);
   if IsMatch('????-??-??*', Value) then
     Result := AnsiSQLDateToDateTime(Value)
-  else Result := TimestampStrToDateTime(Value);
+  else
+    Result := TimestampStrToDateTime(Value);
 end;
 
 function TZPostgreSQLResultSet.GetUnicodeStream(ColumnIndex: Integer): TStream;
@@ -603,7 +610,8 @@ begin
   begin
     if FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1, ColumnIndex - 1) = 0 then
       BlobOid := StrToIntDef(GetString(ColumnIndex), 0)
-    else BlobOid := 0;
+    else
+      BlobOid := 0;
 
     Result := TZPostgreSQLBlob.Create(FPlainDriver, nil, 0, FHandle, BlobOid);
   end
@@ -626,7 +634,8 @@ begin
         if Assigned(Stream) then
           Stream.Free;
       end;
-    end else
+    end
+    else
       Result := TZAbstractBlob.CreateWithStream(nil);
   end;
 end;
@@ -673,7 +682,8 @@ begin
   if Row < 0 then
   begin
     Row := LastRowNo - Row + 1;
-    if Row < 0 then Row := 0;
+    if Row < 0 then
+       Row := 0;
   end;
 
   if ResultSetType <> rtForwardOnly then
@@ -682,9 +692,11 @@ begin
     begin
       RowNo := Row;
       Result := (Row >= 1) and (Row <= LastRowNo);
-    end else
+    end
+    else
       Result := False;
-  end else
+  end
+  else
     RaiseForwardOnlyException;
 end;
 
@@ -729,7 +741,7 @@ end;
 procedure TZPostgreSQLBlob.ReadBlob;
 var
   BlobHandle: Integer;
-  Buffer: array[0..1024] of Char;
+  Buffer: array[0..1024] of AnsiChar;
   ReadNum: Integer;
   ReadStream: TMemoryStream;
 begin
@@ -751,7 +763,8 @@ begin
       until ReadNum < 1024;
       FPlainDriver.CloseLargeObject(FHandle, BlobHandle);
       ReadStream.Position := 0;
-    end else
+    end
+    else
       ReadStream := nil;
     SetStream(ReadStream);
   end;
@@ -789,7 +802,8 @@ begin
   begin
     if (BlobSize - Position) < 1024 then
       Size := BlobSize - Position
-    else Size := 1024;
+    else
+      Size := 1024;
     FPlainDriver.WriteLargeObject(FHandle, BlobHandle,
       Pointer(LongInt(BlobData) + Position), Size);
     CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Write Large Object',nil);

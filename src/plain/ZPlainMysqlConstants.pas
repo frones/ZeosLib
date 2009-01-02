@@ -63,9 +63,9 @@ interface
 
 {$I ZPlain.inc}
 
-uses 
-   ZCompatibility; 
- 
+uses
+   ZCompatibility;
+
 const
 {$IFNDEF MYSQL_STRICT_DLL_LOADING}
   WINDOWS2_DLL_LOCATION = 'libmysql.dll';
@@ -77,15 +77,43 @@ const
 { General Declarations }
   MYSQL_ERRMSG_SIZE    = 512;
   SQLSTATE_LENGTH      = 5;
-  SCRAMBLE_LENGTH      = 20;
 
   MYSQL_PORT           = 3306;
   LOCAL_HOST           = 'localhost';
-  NAME_LEN             = 64;
-  PROTOCOL_VERSION     = 10;
-  FRM_VER              = 6;
 
-{ Field's flags }
+{ Enum Field Types }
+  FIELD_TYPE_DECIMAL   = 0;
+  FIELD_TYPE_TINY      = 1;
+  FIELD_TYPE_SHORT     = 2;
+  FIELD_TYPE_LONG      = 3;
+  FIELD_TYPE_FLOAT     = 4;
+  FIELD_TYPE_DOUBLE    = 5;
+  FIELD_TYPE_NULL      = 6;
+  FIELD_TYPE_TIMESTAMP = 7;
+  FIELD_TYPE_LONGLONG  = 8;
+  FIELD_TYPE_INT24     = 9;
+  FIELD_TYPE_DATE      = 10;
+  FIELD_TYPE_TIME      = 11;
+  FIELD_TYPE_DATETIME  = 12;
+  FIELD_TYPE_YEAR      = 13;
+  FIELD_TYPE_NEWDATE   = 14;
+  FIELD_TYPE_VARCHAR   = 15; //<--ADDED by fduenas 20-06-2006
+  FIELD_TYPE_BIT       = 16; //<--ADDED by fduenas 20-06-2006
+  FIELD_TYPE_NEWDECIMAL = 246; //<--ADDED by fduenas 20-06-2006
+  FIELD_TYPE_ENUM      = 247;
+  FIELD_TYPE_SET       = 248;
+  FIELD_TYPE_TINY_BLOB = 249;
+  FIELD_TYPE_MEDIUM_BLOB = 250;
+  FIELD_TYPE_LONG_BLOB = 251;
+  FIELD_TYPE_BLOB      = 252;
+  FIELD_TYPE_VAR_STRING = 253;
+  FIELD_TYPE_STRING    = 254;
+  FIELD_TYPE_GEOMETRY  = 255;
+{ For Compatibility }
+  FIELD_TYPE_CHAR      = FIELD_TYPE_TINY;
+  FIELD_TYPE_INTERVAL  = FIELD_TYPE_ENUM;
+
+  { Field's flags }
   NOT_NULL_FLAG          = 1;     { Field can't be NULL }
   PRI_KEY_FLAG           = 2;     { Field is part of a primary key }
   UNIQUE_KEY_FLAG        = 4;     { Field is part of a unique key }
@@ -108,39 +136,26 @@ const
   FIELD_IN_ADD_INDEX     = $100000; { Intern: Field used in ADD INDEX }
   FIELD_IS_RENAMED       = $200000; { Intern: Field is being renamed}
 
-{ Server Administration Refresh Options }
-  REFRESH_GRANT	           = 1;     { Refresh grant tables }
-  REFRESH_LOG		           = 2;     { Start on new log file }
-  REFRESH_TABLES	         = 4;     { close all tables }
-  REFRESH_HOSTS	           = 8;     { Flush host cache }
-  REFRESH_STATUS           = 16;    { Flush status variables }
-  REFRESH_THREADS          = 32;    { Flush status variables }
-  REFRESH_SLAVE            = 64;    { Reset master info abd restat slave thread }
-  REFRESH_MASTER           = 128;   { Remove all bin logs in the index and truncate the index }
-  REFRESH_READ_LOCK        = 16384; { Lock tables for read }
-  REFRESH_FAST		         = 32768; { Intern flag }
-  REFRESH_QUERY_CACHE	     = 65536;
-  REFRESH_QUERY_CACHE_FREE = $20000; { Pack query cache }
-  REFRESH_DES_KEY_FILE	   = $40000;
-  REFRESH_USER_RESOURCES   = $80000;
-
-
-  SERVER_STATUS_IN_TRANS          = 1;   {Transaction has started}
-  SERVER_STATUS_AUTOCOMMIT        = 2;   {Server in Autocommit Mode}
-  SERVER_STATUS_MORE_RESULTS      = 4;   {More results on server}
-  SERVER_MORE_RESULTS_EXISTS      = 8;   {Multiple query, next query exists}
-  SERVER_QUERY_NO_GOOD_INDEX_USED = 16;
-  SERVER_QUERY_NO_INDEX_USED      = 32;
-  SERVER_STATUS_DB_DROPPED        = 256; {A database was dropped}
-
-  NET_READ_TIMEOUT          = 30;        {timeout on read}
-  NET_WRITE_TIMEOUT         = 60;        {timeout on write}
-  NET_WAIT_TIMEOUT          = 28800;     {wait for new query}
-
-{ Net type }
-  NET_TYPE_TCPIP     = 0;
-  NET_TYPE_SOCKET    = 1;
-  NET_TYPE_NAMEDPIPE = 2;
+{ Client Connection Options }
+  _CLIENT_LONG_PASSWORD	  = 1;	  { new more secure passwords }
+  _CLIENT_FOUND_ROWS	  = 2;	  { Found instead of affected rows }
+  _CLIENT_LONG_FLAG	  = 4;	  { Get all column flags }
+  _CLIENT_CONNECT_WITH_DB = 8;	  { One can specify db on connect }
+  _CLIENT_NO_SCHEMA	  = 16;	  { Don't allow database.table.column }
+  _CLIENT_COMPRESS	  = 32;	  { Can use compression protcol }
+  _CLIENT_ODBC		  = 64;	  { Odbc client }
+  _CLIENT_LOCAL_FILES	  = 128;  { Can use LOAD DATA LOCAL }
+  _CLIENT_IGNORE_SPACE	  = 256;  { Ignore spaces before '(' }
+  _CLIENT_CHANGE_USER     = 512;  { Support the mysql_change_user() }
+  _CLIENT_INTERACTIVE     = 1024; { This is an interactive client }
+  _CLIENT_SSL             = 2048; { Switch to SSL after handshake }
+  _CLIENT_IGNORE_SIGPIPE  = 4096; { IGNORE sigpipes }
+  _CLIENT_TRANSACTIONS    = 8196; { Client knows about transactions }
+  _CLIENT_RESERVED        = 16384; { Old flag for 4.1 protocol  }
+  _CLIENT_SECURE_CONNECTION = 32768; { New 4.1 authentication }
+  _CLIENT_MULTI_STATEMENTS = 65536; { Enable/disable multi-stmt support }
+  _CLIENT_MULTI_RESULTS   = 131072; { Enable/disable multi-results }
+  _CLIENT_REMEMBER_OPTIONS = 2147483648; {Enable/disable multi-results }
 
 {THD: Killable}
   MYSQL_SHUTDOWN_KILLABLE_CONNECT    = 1;
@@ -155,6 +170,113 @@ const
   STMT_FETCH_DATA_TRUNC = 101;
 
 type
+  TMySqlOption = (
+    MYSQL_OPT_CONNECT_TIMEOUT,
+    MYSQL_OPT_COMPRESS,
+    MYSQL_OPT_NAMED_PIPE,
+    MYSQL_INIT_COMMAND,
+    MYSQL_READ_DEFAULT_FILE,
+    MYSQL_READ_DEFAULT_GROUP,
+    MYSQL_SET_CHARSET_DIR,
+    MYSQL_SET_CHARSET_NAME,
+    MYSQL_OPT_LOCAL_INFILE,
+    MYSQL_OPT_PROTOCOL,
+    MYSQL_SHARED_MEMORY_BASE_NAME,
+    MYSQL_OPT_READ_TIMEOUT,
+    MYSQL_OPT_WRITE_TIMEOUT,
+    MYSQL_OPT_USE_RESULT,
+    MYSQL_OPT_USE_REMOTE_CONNECTION,
+    MYSQL_OPT_USE_EMBEDDED_CONNECTION,
+    MYSQL_OPT_GUESS_CONNECTION,
+    MYSQL_SET_CLIENT_IP,
+    MYSQL_SECURE_AUTH
+  );
+
+  PUSED_MEM=^USED_MEM;
+  USED_MEM = packed record
+    next:       PUSED_MEM;
+    left:       Integer;
+    size:       Integer;
+  end;
+
+  PERR_PROC = ^ERR_PROC;
+  ERR_PROC = procedure;
+
+  PMEM_ROOT = ^MEM_ROOT;
+  MEM_ROOT = packed record
+    free:          PUSED_MEM;
+    used:          PUSED_MEM;
+    pre_alloc:     PUSED_MEM;
+    min_malloc:    Integer;
+    block_size:    Integer;
+    block_num:     Integer;
+    first_block_usage: Integer;
+    error_handler: PERR_PROC;
+  end;
+
+  MYSQL_ROW = array[00..$ff] of PAnsiChar;
+  PMYSQL_ROW = ^MYSQL_ROW;
+
+  PMYSQL_ROWS = ^MYSQL_ROWS;
+  MYSQL_ROWS = record
+    next:       PMYSQL_ROWS;
+    data:       PMYSQL_ROW;
+  end;
+
+  MYSQL_ROW_OFFSET = PMYSQL_ROWS;
+
+  MYSQL_DATA = record
+    Rows:       Int64;
+    Fields:     Cardinal;
+    Data:       PMYSQL_ROWS;
+    Alloc:      MEM_ROOT;
+  end;
+  PMYSQL_DATA = ^MYSQL_DATA;
+
+  MYSQL_FIELD_OFFSET = Cardinal;
+
+  PMYSQL_OPTIONS = ^_MYSQL_OPTIONS;
+  _MYSQL_OPTIONS = record
+    connect_timeout:          Cardinal;
+    read_timeout:             Cardinal;
+    write_timeout:            Cardinal;
+    port:                     Cardinal;
+    protocol:                 Cardinal;
+    client_flag:              LongInt;
+    host:                     PAnsiChar;
+    user:                     PAnsiChar;
+    password:                 PAnsiChar;
+    unix_socket:              PAnsiChar;
+    db:                       PAnsiChar;
+    init_commands:            Pointer;
+    my_cnf_file:              PAnsiChar;
+    my_cnf_group:             PAnsiChar;
+    charset_dir:              PAnsiChar;
+    charset_name:             PAnsiChar;
+    ssl_key:                  PAnsiChar;
+    ssl_cert:                 PAnsiChar;
+    ssl_ca:                   PAnsiChar;
+    ssl_capath:               PAnsiChar;
+    ssl_cipher:               PAnsiChar;
+    shared_memory_base_name:  PAnsiChar;
+    max_allowed_packet:       LongInt;
+    use_ssl:                  Byte;
+    compress:                 Byte;
+    named_pipe:               Byte;
+    rpl_probe:                Byte;
+    rpl_parse:                Byte;
+    no_master_reads:          Byte;
+    separate_thread:          Byte;
+    methods_to_use:           TMySqlOption;
+    client_ip:                PAnsiChar;
+    secure_auth:              Byte;
+    local_infile_init:        Pointer;
+    local_infile_read:        Pointer;
+    local_infile_end:         Pointer;
+    local_infile_error:       Pointer;
+    local_infile_userdata:    Pointer;
+  end;
+
     PZMySQLConnect = Pointer;
     PZMySQLResult = Pointer;
     PZMySQLRow = Pointer;
@@ -163,41 +285,8 @@ type
     PZMySqlPrepStmt = Pointer;
     PZMysqlBindArray = Pointer;
 
-{    TMySqlServerCommand = (
-    COM_SLEEP,
-    COM_QUIT,
-    COM_INIT_DB,
-    COM_QUERY,
-    COM_FIELD_LIST,
-    COM_CREATE_DB,
-    COM_DROP_DB,
-    COM_REFRESH,
-    COM_SHUTDOWN,
-    COM_STATISTICS,
-    COM_PROCESS_INFO,
-    COM_CONNECT,
-    COM_PROCESS_KILL,
-    COM_DEBUG,
-    COM_PING,
-    COM_TIME,
-    COM_DELAYED_INSERT,
-    COM_CHANGE_USER,
-    COM_BINLOG_DUMP,
-    COM_TABLE_DUMP,
-    COM_CONNECT_OUT,
-    COM_REGISTER_SLAVE,
-    COM_PREPARE,
-    COM_EXECUTE,
-    COM_LONG_DATA,
-    COM_CLOSE_STMT,
-    COM_RESET_STMT,
-    COM_SET_OPTION,
-    COM_STMT_FETCH,
-    COM_END
-  );
-}
 { Enum Field Types }
-    TMysqlFieldTypes = (
+      TMysqlFieldTypes = (
         MYSQL_TYPE_DECIMAL,
         MYSQL_TYPE_TINY,         {BIND}
         MYSQL_TYPE_SHORT,        {BIND}
@@ -215,7 +304,7 @@ type
         MYSQL_TYPE_NEWDATE,
         MYSQL_TYPE_VARCHAR, //<--ADDED by fduenas 20-06-2006
         MYSQL_TYPE_BIT,     //<--ADDED by fduenas 20-06-2006
-        MYSQL_TYPE_NEWDECIMAL, 
+        MYSQL_TYPE_NEWDECIMAL,
         MYSQL_TYPE_ENUM,
         MYSQL_TYPE_SET,
         MYSQL_TYPE_TINY_BLOB,    {BIND}
@@ -227,7 +316,8 @@ type
         MYSQL_TYPE_GEOMETRY
     );
 
-  TMysqlSetOption = (
+  { Options for mysql_set_option }
+  TMySqlSetOption = (
     MYSQL_OPTION_MULTI_STATEMENTS_ON,
     MYSQL_OPTION_MULTI_STATEMENTS_OFF
   );
@@ -250,24 +340,24 @@ type
   );
 
 TMYSQL_CLIENT_OPTIONS =
-( CLIENT_LONG_PASSWORD,	{  = 1;	  { new more secure passwords }
-  CLIENT_FOUND_ROWS ,	{	  = 2;	  { Found instead of affected rows }
-  CLIENT_LONG_FLAG	 ,	{ = 4;	  { Get all column flags }
-  CLIENT_CONNECT_WITH_DB ,	{ = 8;	  { One can specify db on connect }
-  CLIENT_NO_SCHEMA	 ,	{  = 16;	  { Don't allow database.table.column }
-  CLIENT_COMPRESS	 ,	{  = 32;	  { Can use compression protcol }
-  CLIENT_ODBC		 ,	{  = 64;	  { Odbc client }
-  CLIENT_LOCAL_FILES	  ,	{ = 128;  { Can use LOAD DATA LOCAL }
-  CLIENT_IGNORE_SPACE	 ,	{  = 256;  { Ignore spaces before '(' }
-  CLIENT_CHANGE_USER    ,	{  = 512;  { Support the mysql_change_user() }
-  CLIENT_INTERACTIVE    ,	{  = 1024; { This is an interactive client }
-  CLIENT_SSL     ,	{         = 2048; { Switch to SSL after handshake }
-  CLIENT_IGNORE_SIGPIPE  ,	{ = 4096; { IGNORE sigpipes }
-  CLIENT_TRANSACTIONS    ,	{ = 8196; { Client knows about transactions }
-  CLIENT_RESERVED     ,	{    = 16384; { Old flag for 4.1 protocol  }
-  CLIENT_SECURE_CONNECTION  ,	{= 32768; { New 4.1 authentication }
-  CLIENT_MULTI_STATEMENTS  ,	{= 65536; { Enable/disable multi-stmt support }
-  CLIENT_MULTI_RESULTS  ,	{  = 131072; { Enable/disable multi-results }
+( CLIENT_LONG_PASSWORD,	{  = 1;	   new more secure passwords }
+  CLIENT_FOUND_ROWS ,	{	  = 2;	   Found instead of affected rows }
+  CLIENT_LONG_FLAG	 ,	{ = 4;	   Get all column flags }
+  CLIENT_CONNECT_WITH_DB ,	{ = 8;	   One can specify db on connect }
+  CLIENT_NO_SCHEMA	 ,	{  = 16;	   Don't allow database.table.column }
+  CLIENT_COMPRESS	 ,	{  = 32;	   Can use compression protcol }
+  CLIENT_ODBC		 ,	{  = 64;	   Odbc client }
+  CLIENT_LOCAL_FILES	  ,	{ = 128;   Can use LOAD DATA LOCAL }
+  CLIENT_IGNORE_SPACE	 ,	{  = 256;   Ignore spaces before '(' }
+  CLIENT_CHANGE_USER    ,	{  = 512;   Support the mysql_change_user() }
+  CLIENT_INTERACTIVE    ,	{  = 1024;  This is an interactive client }
+  CLIENT_SSL     ,	{         = 2048;  Switch to SSL after handshake }
+  CLIENT_IGNORE_SIGPIPE  ,	{ = 4096;  IGNORE sigpipes }
+  CLIENT_TRANSACTIONS    ,	{ = 8196;  Client knows about transactions }
+  CLIENT_RESERVED     ,	{    = 16384;  Old flag for 4.1 protocol  }
+  CLIENT_SECURE_CONNECTION  ,	{= 32768;  New 4.1 authentication }
+  CLIENT_MULTI_STATEMENTS  ,	{= 65536;  Enable/disable multi-stmt support }
+  CLIENT_MULTI_RESULTS  ,	{  = 131072;  Enable/disable multi-results }
   CLIENT_OPT_18,  {2^18 = 262144}
   CLIENT_OPT_19,{2^19 = 524288}
   CLIENT_OPT_20,  {2^20 = 1048576}
@@ -281,51 +371,7 @@ TMYSQL_CLIENT_OPTIONS =
   CLIENT_OPT_28,    {2^28 = 268435456}
   CLIENT_OPT_29,    {2^29 = 536870912}
   CLIENT_OPT_30,    {2^30 = 1073741824}
-  CLIENT_REMEMBER_OPTIONS	{ = 2147483648; {Enable/disable multi-results });
-
-  {  TMySqlOption = (
-    MYSQL_OPT_CONNECT_TIMEOUT,
-    MYSQL_OPT_COMPRESS,
-    MYSQL_OPT_NAMED_PIPE,
-    MYSQL_INIT_COMMAND,
-    MYSQL_READ_DEFAULT_FILE,
-    MYSQL_READ_DEFAULT_GROUP,
-    MYSQL_SET_CHARSET_DIR,
-    MYSQL_SET_CHARSET_NAME,
-    MYSQL_OPT_LOCAL_INFILE,
-    MYSQL_OPT_PROTOCOL,
-    MYSQL_SHARED_MEMORY_BASE_NAME,
-    MYSQL_OPT_READ_TIMEOUT,
-    MYSQL_OPT_WRITE_TIMEOUT,
-    MYSQL_OPT_USE_RESULT,
-    MYSQL_OPT_USE_REMOTE_CONNECTION,
-    MYSQL_OPT_USE_EMBEDDED_CONNECTION,
-    MYSQL_OPT_GUESS_CONNECTION,
-    MYSQL_SET_CLIENT_IP,
-    MYSQL_SECURE_AUTH,
-    MYSQL_REPORT_DATA_TRUNCATION,
-    MYSQL_OPT_RECONNECT
-  );
-
-  TMySqlStatus = (
-    MYSQL_STATUS_READY,
-    MYSQL_STATUS_GET_RESULT,
-    MYSQL_STATUS_USE_RESULT
-  );
-
-  TMySqlRplType = (
-    MYSQL_RPL_MASTER,
-    MYSQL_RPL_SLAVE,
-    MYSQL_RPL_ADMIN
-  );
-}
-  TMySqlProtocolType = (
-    MYSQL_PROTOCOL_DEFAULT,
-    MYSQL_PROTOCOL_TCP,
-    MYSQL_PROTOCOL_SOCKET,
-    MYSQL_PROTOCOL_PIPE,
-    MYSQL_PROTOCOL_MEMORY
-  );
+  CLIENT_REMEMBER_OPTIONS	{ = 2147483648; Enable/disable multi-results });
 
   TMysqlStmtState = (
     MYSQL_STMT_INIT_DONE = 1,
@@ -344,71 +390,8 @@ TMYSQL_CLIENT_OPTIONS =
     neg:                 Byte;
     second_part:         Int64;
   end;
+  PMYSQL_TIME = ^MYSQL_TIME;
 
-{  PUSED_MEM=^USED_MEM;
-  USED_MEM = packed record
-    next:       PUSED_MEM;
-    left:       Integer;
-    size:       Integer;
-  end;
-
-  PERR_PROC = ^ERR_PROC;
-  ERR_PROC = procedure;
-
-  PMEM_ROOT = ^MEM_ROOT;
-  MEM_ROOT = packed record
-    free:              PUSED_MEM;
-    used:              PUSED_MEM;
-    pre_alloc:         PUSED_MEM;
-    min_malloc:        Integer;
-    block_size:        Integer;
-    block_num:         Integer;
-    first_block_usage: Integer;
-    error_handler:     PERR_PROC;
-  end;
-
-  PMYSQL_OPTIONS = ^ST_MYSQL_OPTIONS;
-  ST_MYSQL_OPTIONS = record
-    connect_timeout:          Cardinal;
-    read_timeout:             Cardinal;
-    write_timeout:            Cardinal;
-    port:                     Cardinal;
-    protocol:                 Cardinal;
-    client_flag:              LongInt;
-    host:                     PChar;
-    user:                     PChar;
-    password:                 PChar;
-    unix_socket:              PChar;
-    db:                       PChar;
-    init_commands:            Pointer;
-    my_cnf_file:              PChar;
-    my_cnf_group:             PChar;
-    charset_dir:              PChar;
-    charset_name:             PChar;
-    ssl_key:                  PChar;
-    ssl_cert:                 PChar;
-    ssl_ca:                   PChar;
-    ssl_capath:               PChar;
-    ssl_cipher:               PChar;
-    shared_memory_base_name:  PChar;
-    max_allowed_packet:       LongInt;
-    use_ssl:                  Byte;
-    compress:                 Byte;
-    named_pipe:               Byte;
-    rpl_probe:                Byte;
-    rpl_parse:                Byte;
-    no_master_reads:          Byte;
-    separate_thread:          Byte;
-    methods_to_use:           TMySqlOption;
-    client_ip:                PChar;
-    secure_auth:              Byte;
-    local_infile_init:        Pointer;
-    local_infile_read:        Pointer;
-    local_infile_end:         Pointer;
-    local_infile_error:       Pointer;
-    local_infile_userdata:    Pointer;
-  end;
-}
   PLIST = ^LIST;
   LIST = record
     prev:       PLIST;
@@ -416,13 +399,54 @@ TMYSQL_CLIENT_OPTIONS =
     data:       Pointer;
   end;
 
-  MYSQL_FIELD_OFFSET = Cardinal;
+  PMYSQL_FIELD = ^MYSQL_FIELD;
+  MYSQL_FIELD = record
+    name:             PAnsiChar;   // Name of column
+    org_name:         PAnsiChar;   // Original column name, if an alias
+    table:            PAnsiChar;   // Table of column if column was a field
+    org_table:        PAnsiChar;   // Org table name if table was an alias
+    db:               PAnsiChar;   // Database for table
+    catalog:	      PAnsiChar;   // Catalog for table
+    def:              PAnsiChar;   // Default value (set by mysql_list_fields)
+    length:           LongInt; // Width of column
+    max_length:       LongInt; // Max width of selected set
+    name_length:      Cardinal;
+    org_name_length:  Cardinal;
+    table_length:     Cardinal;
+    org_table_length: Cardinal;
+    db_length:        Cardinal;
+    catalog_length:   Cardinal;
+    def_length:       Cardinal;
+    flags:            Cardinal; // Div flags
+    decimals:         Cardinal; // Number of decimals in field
+    charsetnr:        Cardinal; // Character set
+    _type:            Cardinal; // Type of field. Se mysql_com.h for types
+  end;
 
-  PMYSQL_BIND2 = ^MYSQL_BIND2;
-  MYSQL_BIND2 =  record
+  PMYSQL_BIND41 = ^MYSQL_BIND41;
+  MYSQL_BIND41 =  record
+      length:           PLongInt;
+    is_null:          PByte;
+    buffer:           PAnsiChar;
+    buffer_type:      Cardinal;
+    buffer_length:    LongInt;
+    inter_buffer:     PByte;
+    offset:           LongInt;
+    internal_length:  LongInt;
+    param_number:     Cardinal;
+    long_data_used:   Byte;
+    binary_data:      Byte;
+    null_field:       Byte;
+    internal_is_null: Byte;
+    store_param_func: Pointer; {procedure(_net: NET41; param: PMYSQL_BIND41);}
+    fetch_result:     Pointer; {procedure(param: PMYSQL_BIND41; row: PMYSQL_ROW41);}
+  end;
+
+  PMYSQL_BIND50 = ^MYSQL_BIND50;
+  MYSQL_BIND50 =  record
     length:            PLongInt;
     is_null:           PByte;
-    buffer:            PChar;
+    buffer:            PAnsiChar;
     error:             PByte;
     buffer_type:       Byte;
     buffer_length:     LongInt;
@@ -446,11 +470,32 @@ TMYSQL_CLIENT_OPTIONS =
       is_null:   Byte;
   end;
 
-// Structure of the MYSQL_RES record isn't used anymore.
+  PMYSQL = ^MYSQL;
+
+  MYSQL  = pointer;
+
+  PMY_CHARSET_INFO = ^MY_CHARSET_INFO;
+  MY_CHARSET_INFO = record
+    number:         Cardinal;
+    state:          Cardinal;
+    csname:         PAnsiChar;
+    name:           PAnsiChar;
+    comment:        PAnsiChar;
+    dir:            PAnsiChar;
+    mbminlen:       Cardinal;
+    mbmaxlen:       Cardinal;
+  end;
+  // Structure of the MYSQL_RES record isn't used anymore.
   // Access to the fields should be done using library functions
   // Reason : the structure of these records tend to change now and then.
-  MYSQL_RES = pointer;
-  PMYSQL_RES = ^MYSQL_RES;
+  PMYSQL_RES = Pointer;
+
+  PREP_STMT_STATE=(
+    MY_ST_UNKNOWN,
+    MY_ST_PREPARE,
+    MY_ST_EXECUTE);
+
+  PMYSQL_STMT = Pointer;
 
 const
   EMBEDDED_DEFAULT_DATA_DIR = {$IFDEF WIN32}
@@ -458,9 +503,9 @@ const
                               {$ELSE} './data/'
                               {$ENDIF};
   SERVER_ARGUMENTS_KEY_PREFIX = 'ServerArgument';
-  SERVER_GROUPS : array [0..2] of PChar = ('embedded'#0, 'server'#0, nil);
+  SERVER_GROUPS : array [0..2] of PAnsiChar = ('embedded'#0, 'server'#0, nil);
 
-  DEFAULT_PARAMS : array [0..2] of PChar = ('not_used'#0,
+  DEFAULT_PARAMS : array [0..2] of PAnsiChar = ('not_used'#0,
                                             '--datadir='+EMBEDDED_DEFAULT_DATA_DIR+#0,
                                             '--set-variable=key_buffer_size=32M'#0);
 

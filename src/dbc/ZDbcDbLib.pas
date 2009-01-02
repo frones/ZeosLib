@@ -266,7 +266,8 @@ begin
     Metadata := TZMsSqlDatabaseMetadata.Create(Self, Url, Info)
   else if FPlainDriver.GetProtocol = 'sybase' then
     Metadata := TZSybaseDatabaseMetadata.Create(Self, Url, Info)
-  else Metadata := nil;
+  else
+    Metadata := nil;
 
   inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
     Metadata);
@@ -297,7 +298,7 @@ begin
     LSQL := StringReplace(Sql, '\'#13, '\\'#13, [rfReplaceAll])
   else
     LSQL := SQL;
-  if FPlainDriver.dbcmd(FHandle, PChar(LSql)) <> DBSUCCEED then
+  if FPlainDriver.dbcmd(FHandle, PAnsiChar(LSql)) <> DBSUCCEED then
     CheckDBLibError(lcExecute, LSQL);
   if FPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED then
     CheckDBLibError(lcExecute, LSQL);
@@ -324,15 +325,15 @@ begin
 //Common parameters
     S := Info.Values['workstation'];
     if S <> '' then
-      FPlainDriver.dbSetLHost(LoginRec, PChar(S));
+         FPlainDriver.dbSetLHost(LoginRec, PAnsiChar(S));
 
     S := Info.Values['appname'];
     if S <> '' then
-      FPlainDriver.dbSetLApp(LoginRec, PChar(S));
+         FPlainDriver.dbSetLApp(LoginRec, PAnsiChar(S));
 
     S := Info.Values['language'];
     if S <> '' then
-      FPlainDriver.dbSetLNatLang(LoginRec, PChar(S));
+         FPlainDriver.dbSetLNatLang(LoginRec, PAnsiChar(S));
 
     S := Info.Values['timeout'];
     if S <> '' then
@@ -349,8 +350,8 @@ begin
       end
       else
       begin
-        FPLainDriver.dbsetluser(LoginRec, PChar(User));
-        FPLainDriver.dbsetlpwd(LoginRec, PChar(Password));
+        FPLainDriver.dbsetluser(LoginRec, PAnsiChar(User));
+        FPLainDriver.dbsetlpwd(LoginRec, PAnsiChar(Password));
         LogMessage := LogMessage + Format(' AS USER "%s"', [User]);
       end;
     end;
@@ -360,16 +361,16 @@ begin
     begin
       S := Info.Values['codepage'];
       if S <> '' then
-        FPlainDriver.dbSetLCharSet(LoginRec, PChar(S));
+            FPlainDriver.dbSetLCharSet(LoginRec, PAnsiChar(S));
 
-      FPLainDriver.dbsetluser(LoginRec, PChar(User));
-      FPLainDriver.dbsetlpwd(LoginRec, PChar(Password));
+      FPLainDriver.dbsetluser(LoginRec, PAnsiChar(User));
+      FPLainDriver.dbsetlpwd(LoginRec, PAnsiChar(Password));
       LogMessage := LogMessage + Format(' AS USER "%s"', [User]);
     end;
 
     CheckDBLibError(lcConnect, LogMessage);
 
-    FHandle := FPLainDriver.dbOpen(LoginRec, PChar(HostName));
+    FHandle := FPLainDriver.dbOpen(LoginRec, PAnsiChar(HostName));
     CheckDBLibError(lcConnect, LogMessage);
     DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
   finally
@@ -412,7 +413,8 @@ end;
 }
 procedure TZDBLibConnection.ReStartTransactionSupport;
 begin
-  if Closed then Exit;
+  if Closed then
+    Exit;
 
   if not (AutoCommit or (GetTransactionIsolation = tiNone)) then
     StartTransaction;
@@ -425,12 +427,13 @@ procedure TZDBLibConnection.Open;
 var
   LogMessage: string;
 begin
-  if not Closed then Exit;
+   if not Closed then
+      Exit;
 
   InternalLogin;
 
   LogMessage := Format('USE %s', [Database]);
-  if FPlainDriver.dbUse(FHandle, PChar(Database)) <> DBSUCCEED then
+  if FPlainDriver.dbUse(FHandle, PAnsiChar(Database)) <> DBSUCCEED then
     CheckDBLibError(lcConnect, LogMessage);
   DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
 
@@ -463,7 +466,8 @@ end;
 function TZDBLibConnection.CreateRegularStatement(Info: TStrings):
   IZStatement;
 begin
-  if IsClosed then Open;
+  if IsClosed then
+     Open;
   Result := TZDBLibStatement.Create(Self, Info);
 end;
 
@@ -498,7 +502,8 @@ end;
 function TZDBLibConnection.CreatePreparedStatement(
   const SQL: string; Info: TStrings): IZPreparedStatement;
 begin
-  if IsClosed then Open;
+  if IsClosed then
+     Open;
   Result := TZDBLibPreparedStatementEmulated.Create(Self, SQL, Info);
 end;
 
@@ -531,7 +536,8 @@ end;
 function TZDBLibConnection.CreateCallableStatement(
   const SQL: string; Info: TStrings): IZCallableStatement;
 begin
-  if IsClosed then Open;
+  if IsClosed then
+     Open;
   Result := TZDBLibCallableStatement.Create(Self, SQL, Info);
 end;
 
@@ -608,7 +614,8 @@ end;
 procedure TZDBLibConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);
 begin
-  if GetTransactionIsolation = Level then Exit;
+  if GetTransactionIsolation = Level then
+    Exit;
 
   if not Closed and not AutoCommit and (GetTransactionIsolation <> tiNone) then
     InternalExecuteStatement('commit');
@@ -672,7 +679,8 @@ procedure TZDBLibConnection.Close;
 var
   LogMessage: string;
 begin
-  if Closed then Exit;
+  if Closed then
+    Exit;
 
   if not FPlainDriver.dbDead(FHandle) then
     InternalExecuteStatement('if @@trancount > 0 rollback');
@@ -715,7 +723,7 @@ begin
   if (Catalog <> '') and not Closed then
   begin
     LogMessage := Format('SET CATALOG %s', [Catalog]);
-    if FPLainDriver.dbUse(FHandle, PChar(Catalog)) <> DBSUCCEED then
+    if FPLainDriver.dbUse(FHandle, PAnsiChar(Catalog)) <> DBSUCCEED then
       CheckDBLibError(lcOther, LogMessage);
     DriverManager.LogMessage(lcOther, FPLainDriver.GetProtocol, LogMessage);
   end;

@@ -179,7 +179,8 @@ begin
     CachedResultSet.SetResolver(TZPostgreSQLCachedResolver.Create(
       Self,  NativeResultSet.GetMetadata));
     Result := CachedResultSet;
-  end else
+  end
+  else
     Result := NativeResultSet;
 end;
 
@@ -194,12 +195,17 @@ var
   QueryHandle: PZPostgreSQLResult;
 begin
   Result := nil;
-  QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PChar(SQL));
-  CheckPostgreSQLError(Connection, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
+  {$IFDEF DELPHI12_UP}
+  QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(UTF8String(SQL)));
+  {$ELSE}
+  QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));
+  {$ENDIF}
+  CheckPostgreSQLError(Connection, FPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
   if QueryHandle <> nil then
     Result := CreateResultSet(SQL, QueryHandle)
-  else Result := nil;
+  else
+    Result := nil;
 end;
 
 {**
@@ -218,8 +224,12 @@ var
   QueryHandle: PZPostgreSQLResult;
 begin
   Result := -1;
-  QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PChar(SQL));
-  CheckPostgreSQLError(Connection, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
+  {$IFDEF DELPHI12_UP}
+  QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(UTF8String(SQL)));
+  {$ELSE}
+  QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));
+  {$ENDIF}
+  CheckPostgreSQLError(Connection, FPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
 
   if QueryHandle <> nil then
@@ -258,8 +268,12 @@ var
   QueryHandle: PZPostgreSQLResult;
   ResultStatus: TZPostgreSQLExecStatusType;
 begin
-  QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PChar(SQL));
-  CheckPostgreSQLError(Connection, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
+  {$IFDEF DELPHI12_UP}
+  QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(UTF8String(SQL)));
+  {$ELSE}
+  QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));
+  {$ENDIF}
+  CheckPostgreSQLError(Connection, FPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
 
   { Process queries with result sets }
@@ -342,12 +356,14 @@ begin
   Value := InParamValues[ParamIndex];
   if DefVarManager.IsNull(Value)  then
     Result := 'NULL'
-  else begin
+  else
+  begin
     case InParamTypes[ParamIndex] of
       stBoolean:
         if SoftVarManager.GetAsBoolean(Value) then
           Result := 'TRUE'
-        else Result := 'FALSE';
+        else
+          Result := 'FALSE';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
       stString, stBytes:
@@ -367,20 +383,26 @@ begin
       stAsciiStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
-          if not TempBlob.IsEmpty then begin
+          if not TempBlob.IsEmpty then
+          begin
             Result := EncodeString(TempBlob.GetString)
-          end else begin
-           Result := 'NULL';
+          end
+          else
+          begin
+            Result := 'NULL';
           end;
         end;
       stUnicodeStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
-          if not TempBlob.IsEmpty then begin
+          if not TempBlob.IsEmpty then
+          begin
             Result := EncodeString(FCharactersetCode, UTF8Encode(TempBlob.GetUnicodeString))
-           end else begin
+          end
+          else
+          begin
             Result := 'NULL';
-           end;
+          end;
         end;
       stBinaryStream:
         begin
@@ -400,7 +422,9 @@ begin
                 WriteTempBlob := nil;
                 TempStream.Free;
               end;
-            end else begin
+            end
+            else
+            begin
               result:= FPlainDriver.EncodeBYTEA(TempBlob.GetString,FHandle); // FirmOS
               {
                Result := EncodeString(TempBlob.GetString);
@@ -408,7 +432,8 @@ begin
                Result := EncodeString(Result);
               }
             end;
-          end else
+          end
+          else
             Result := 'NULL';
         end;
     end;

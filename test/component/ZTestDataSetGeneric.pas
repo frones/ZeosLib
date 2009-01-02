@@ -76,6 +76,7 @@ type
   published
     procedure TestConnection;
     procedure TestReadOnlyQuery;
+    procedure TestRealPrepReadOnlyQuery;
     procedure TestQuery;
     procedure TestReadOnlyQueryExecSql;
     procedure TestQueryExecSql;
@@ -83,6 +84,7 @@ type
     procedure TestPreparedStatement;
     procedure TestReadOnlyQueryFilter;
     procedure TestQueryFilter;
+    procedure TestQueryLocate;
     procedure TestFilterExpression;
     procedure TestDecodingSortedFields;
     procedure TestSmartOpen;
@@ -297,7 +299,7 @@ begin
       StrStream := TMemoryStream.Create;
       StrStream.LoadFromFile('../../../database/text/lgpl.txt');
       StrStream.Size := 1024;
-      Params[6].LoadFromStream(StrStream, ftMemo);
+      Params[6].LoadFromStream(StrStream, {$IFDEF DELPHI12_UP}ftWideMemo{$ELSE}ftMemo{$ENDIF});
 
       Params[7].Value := Null;
       ExecSql;
@@ -452,6 +454,25 @@ begin
   end;
 end;
 
+{**
+  Check functionality of TZReadOnlyQuery Using PrefereRealPrepared
+}
+procedure TZGenericTestDbcResultSet.TestRealPrepReadOnlyQuery;
+var
+  Query: TZReadOnlyQuery;
+begin
+  Query := TZReadOnlyQuery.Create(nil);
+  Query.Options:= Query.Options + [doPreferPrepared];
+  try
+    Query.Connection := Connection;
+  //  Query.DbcStatement.SetResultSetType(rtScrollInsensitive);
+  //  CheckEquals(ord(rcReadOnly), ord(Query.DbcStatement.GetResultSetConcurrency));
+    TestQueryGeneric(Query);
+  finally
+    Query.Free;
+  end;
+end;
+
 procedure TZGenericTestDbcResultSet.TestQueryUpdate;
 var
   Sql_: string;
@@ -506,7 +527,7 @@ begin
 
       Edit;
       CheckEquals(Ord(dsEdit), Ord(State));
-      FieldByName('eq_name').AsString := 'The some thing';
+      FieldByName('eq_name').AsString := 'The some thing5678901234567890';
       FieldByName('eq_type').AsInteger := 1;
       FieldByName('eq_cost').AsFloat := 12345.678;
       FieldByName('eq_date').AsDateTime := EncodeDate(1989, 07, 07);
@@ -523,7 +544,7 @@ begin
 
       CheckEquals(True, Bof);
       CheckEquals(Ord(dsBrowse), Ord(State));
-      CheckEquals('The some thing', FieldByName('eq_name').AsString);
+      CheckEquals('The some thing5678901234567890', FieldByName('eq_name').AsString);
       CheckEquals(1, FieldByName('eq_type').AsInteger);
       CheckEquals(12345.678, FieldByName('eq_cost').AsFloat, 0.01);
       CheckEquals(EncodeDate(1989, 07, 07), FieldByName('eq_date').AsDateTime);
@@ -1011,6 +1032,30 @@ begin
     Close;
   end;
 end;
+
+{**
+  Test for locating recods in TZReadOnlyQuery
+}
+procedure TZGenericTestDbcResultSet.TestQueryLocate; 
+var
+  Query: TZReadOnlyQuery;
+  ResData : boolean; 
+begin
+  Query := TZReadOnlyQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+    Query.SQL.Add('select * from cargo'); 
+    Query.ExecSQL; 
+    Query.Open; 
+    Check(Query.RecordCount > 0, 'Query return no records'); 
+    ResData := Query.Locate('C_DEP_ID;C_WIDTH;C_SEAL',VarArrayOf(['1','10','2']),[loCaseInsensitive]); 
+    CheckEquals(true,ResData); 
+    ResData := Query.Locate('C_DEP_ID,C_WIDTH,C_SEAL',VarArrayOf(['2',Null,'1']),[loCaseInsensitive]); 
+    CheckEquals(true,ResData); 
+  finally 
+    Query.Free; 
+  end; 
+end; 
 
 {**
   Test for filtering recods in TZReadOnlyQuery

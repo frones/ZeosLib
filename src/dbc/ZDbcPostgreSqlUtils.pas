@@ -229,7 +229,8 @@ begin
   begin
     if Connection.IsOidAsBlob() then
       Result := stBinaryStream
-    else Result := stInteger;
+    else
+      Result := stInteger;
   end
   else if TypeName = 'name' then
     Result := stString
@@ -267,7 +268,8 @@ begin
   begin
     if Connection.IsOidAsBlob then
       Result := stBytes
-    else Result := stBinaryStream;
+    else
+      Result := stBinaryStream;
   end
   else if TypeName = 'bpchar' then
     Result := stString
@@ -304,7 +306,8 @@ begin
       begin
         if Connection.IsOidAsBlob() then
           Result := stBinaryStream
-        else Result := stInteger;
+        else
+          Result := stInteger;
       end;
     19: Result := stString; { name }
     21: Result := stShort; { int2 }
@@ -322,7 +325,8 @@ begin
       begin
         if Connection.IsOidAsBlob then
           Result := stBytes
-        else Result := stBinaryStream;
+        else
+          Result := stBinaryStream;
       end;
     1042: Result := stString; { bpchar }
     22,30: Result := stAsciiStream; { int2vector/oidvector. no '_aclitem' }
@@ -352,22 +356,23 @@ function EncodeString(Value: string): string;
 var
   I: Integer;
   SrcLength, DestLength: Integer;
-  SrcBuffer, DestBuffer: PChar;
+  SrcBuffer, DestBuffer: PAnsiChar;
 begin
   SrcLength := Length(Value);
-  SrcBuffer := PChar(Value);
+  SrcBuffer := PAnsiChar(Value);
   DestLength := 2;
   for I := 1 to SrcLength do
   begin
     if SrcBuffer^ in [#0, '''', '\'] then
       Inc(DestLength, 4)
-    else Inc(DestLength);
+    else
+      Inc(DestLength);
     Inc(SrcBuffer);
   end;
 
-  SrcBuffer := PChar(Value);
+  SrcBuffer := PAnsiChar(Value);
   SetLength(Result, DestLength);
-  DestBuffer := PChar(Result);
+  DestBuffer := PAnsiChar(Result);
   DestBuffer^ := '''';
   Inc(DestBuffer);
 
@@ -376,9 +381,9 @@ begin
     if SrcBuffer^ in [#0, '''', '\'] then
     begin
       DestBuffer[0] := '\';
-      DestBuffer[1] := Chr(Ord('0') + (Byte(SrcBuffer^) shr 6));
-      DestBuffer[2] := Chr(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
-      DestBuffer[3] := Chr(Ord('0') + (Byte(SrcBuffer^) and $07));
+      DestBuffer[1] := AnsiChar(Ord('0') + (Byte(SrcBuffer^) shr 6));
+      DestBuffer[2] := AnsiChar(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
+      DestBuffer[3] := AnsiChar(Ord('0') + (Byte(SrcBuffer^) and $07));
       Inc(DestBuffer, 4);
     end
     else
@@ -581,10 +586,10 @@ function EncodeString(CharactersetCode: TZPgCharactersetType; Value: string): st
 var
   I, LastState: Integer;
   SrcLength, DestLength: Integer;
-  SrcBuffer, DestBuffer: PChar;
+  SrcBuffer, DestBuffer: PAnsiChar;
 begin
   SrcLength := Length(Value);
-  SrcBuffer := PChar(Value);
+  SrcBuffer := PAnsiChar(Value);
   DestLength := 2;
   LastState := 0;
   for I := 1 to SrcLength do
@@ -592,13 +597,14 @@ begin
     LastState := pg_CS_stat(LastState,integer(SrcBuffer^),CharactersetCode);
     if (SrcBuffer^ in [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
       Inc(DestLength, 4)
-    else Inc(DestLength);
+    else
+      Inc(DestLength);
     Inc(SrcBuffer);
   end;
 
-  SrcBuffer := PChar(Value);
+  SrcBuffer := PAnsiChar(Value);
   SetLength(Result, DestLength);
-  DestBuffer := PChar(Result);
+  DestBuffer := PAnsiChar(Result);
   DestBuffer^ := '''';
   Inc(DestBuffer);
 
@@ -609,9 +615,9 @@ begin
     if (SrcBuffer^ in [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
       begin
         DestBuffer[0] := '\';
-        DestBuffer[1] := Chr(Ord('0') + (Byte(SrcBuffer^) shr 6));
-        DestBuffer[2] := Chr(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
-        DestBuffer[3] := Chr(Ord('0') + (Byte(SrcBuffer^) and $07));
+        DestBuffer[1] := AnsiChar(Ord('0') + (Byte(SrcBuffer^) shr 6));
+        DestBuffer[2] := AnsiChar(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
+        DestBuffer[3] := AnsiChar(Ord('0') + (Byte(SrcBuffer^) and $07));
         Inc(DestBuffer, 4);
       end
     else
@@ -638,23 +644,24 @@ function EncodeBinaryString(Value: string): string;
 var
   I: Integer;
   SrcLength, DestLength: Integer;
-  SrcBuffer, DestBuffer: PChar;
+  SrcBuffer, DestBuffer: PAnsiChar;
 begin
   SrcLength := Length(Value);
-  SrcBuffer := PChar(Value);
+  SrcBuffer := PAnsiChar(Value);
   DestLength := 2;
   for I := 1 to SrcLength do
   begin
     if (Byte(SrcBuffer^) < 32) or (Byte(SrcBuffer^) > 126)
     or (SrcBuffer^ in ['''', '\']) then
       Inc(DestLength, 5)
-    else Inc(DestLength);
+    else
+      Inc(DestLength);
     Inc(SrcBuffer);
   end;
 
-  SrcBuffer := PChar(Value);
+  SrcBuffer := PAnsiChar(Value);
   SetLength(Result, DestLength);
-  DestBuffer := PChar(Result);
+  DestBuffer := PAnsiChar(Result);
   DestBuffer^ := '''';
   Inc(DestBuffer);
 
@@ -665,9 +672,9 @@ begin
     begin
       DestBuffer[0] := '\';
       DestBuffer[1] := '\';
-      DestBuffer[2] := Chr(Ord('0') + (Byte(SrcBuffer^) shr 6));
-      DestBuffer[3] := Chr(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
-      DestBuffer[4] := Chr(Ord('0') + (Byte(SrcBuffer^) and $07));
+      DestBuffer[2] := AnsiChar(Ord('0') + (Byte(SrcBuffer^) shr 6));
+      DestBuffer[3] := AnsiChar(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
+      DestBuffer[4] := AnsiChar(Ord('0') + (Byte(SrcBuffer^) and $07));
       Inc(DestBuffer, 5);
     end
     else
@@ -688,13 +695,13 @@ end;
 function DecodeString(Value: string): string;
 var
   SrcLength, DestLength: Integer;
-  SrcBuffer, DestBuffer: PChar;
+  SrcBuffer, DestBuffer: PAnsiChar;
 begin
   SrcLength := Length(Value);
-  SrcBuffer := PChar(Value);
+  SrcBuffer := PAnsiChar(Value);
   SetLength(Result, SrcLength);
   DestLength := 0;
-  DestBuffer := PChar(Result);
+  DestBuffer := PAnsiChar(Result);
 
   while SrcLength > 0 do
   begin
@@ -709,7 +716,7 @@ begin
       end
       else
       begin
-        DestBuffer^ := Chr(((Byte(SrcBuffer[0]) - Ord('0')) shl 6)
+        DestBuffer^ := AnsiChar(((Byte(SrcBuffer[0]) - Ord('0')) shl 6)
           or ((Byte(SrcBuffer[1]) - Ord('0')) shl 3)
           or ((Byte(SrcBuffer[2]) - Ord('0'))));
         Inc(SrcBuffer, 3);
@@ -744,15 +751,23 @@ procedure CheckPostgreSQLError(Connection: IZConnection;
   LogMessage: string;
   ResultHandle: PZPostgreSQLResult);
 
-var ErrorMessage: string;
+var
+   ErrorMessage: string;
 //FirmOS
-    StatusCode:String;
+   StatusCode: string;
 begin
   if Assigned(Handle) then
-    ErrorMessage := Trim(StrPas(PlainDriver.GetErrorMessage(Handle)))
-  else ErrorMessage := '';
-  if ErrorMessage<>'' then begin
-    if Assigned(ResultHandle) then begin
+ {$IFDEF DELPHI12_UP} 
+    ErrorMessage := Trim(UTF8ToUnicodeString(StrPas(PlainDriver.GetErrorMessage(Handle)))) 
+ {$ELSE} 
+    ErrorMessage := Trim(StrPas(PlainDriver.GetErrorMessage(Handle))) 
+ {$ENDIF} 
+  else
+    ErrorMessage := '';
+  if ErrorMessage <> '' then
+  begin
+    if Assigned(ResultHandle) then
+    begin
 {     StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SEVERITY)));
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_MESSAGE_PRIMARY)));
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_MESSAGE_DETAIL)));
@@ -766,7 +781,9 @@ begin
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SOURCE_FUNCTION)));
 }     
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SQLSTATE)));
-    end else begin
+    end
+    else
+    begin
      StatusCode:='';
     end;
   end;

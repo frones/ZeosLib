@@ -208,7 +208,7 @@ begin
 //This one is to avoid sybase error: Invalid operator for datatype op: is null type: VOID TYPE
   if FPlainDriver.GetProtocol = 'sybase' then
     SQL := StringReplace(Sql, ' AND NULL IS NULL', '', [rfReplaceAll]);
-  if FPlainDriver.dbcmd(FHandle, PChar(SQL)) <> DBSUCCEED then
+  if FPlainDriver.dbcmd(FHandle, PAnsiChar(SQL)) <> DBSUCCEED then
     FDBLibConnection.CheckDBLibError(lcExecute, SQL);
   if FPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED then
     FDBLibConnection.CheckDBLibError(lcExecute, SQL);
@@ -608,7 +608,7 @@ var
 begin
   FHandle := FDBLibConnection.GetConnectionHandle;
   S := Trim(Sql);
-  if FPLainDriver.dbRPCInit(FHandle, PChar(S), 0) <> DBSUCCEED then
+  if FPLainDriver.dbRPCInit(FHandle, PAnsiChar(S), 0) <> DBSUCCEED then
     FDBLibConnection.CheckDBLibError(lcOther, 'EXECUTEPREPARED:dbRPCInit');
 
   for I := 1 to InParamCount - 1 do//The 0 parameter is the return value
@@ -673,28 +673,28 @@ begin
             else
               DatLen := Length(DatString);
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
-              SQLCHAR, MaxInt, DatLen, PChar(DatString));
+                     SQLCHAR, MaxInt, DatLen, PAnsiChar(DatString));
           end;
         stDate:
           begin
             DatString := FormatDateTime('yyyymmdd',
               SoftVarManager.GetAsDateTime(InParamValues[I]));
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
-              SQLCHAR, MaxInt, Length(DatString), PChar(DatString));
+                     SQLCHAR, MaxInt, Length(DatString), PAnsiChar(DatString));
           end;
         stTime:
           begin
             DatString := FormatDateTime('hh":"mm":"ss":"zzz',
               SoftVarManager.GetAsDateTime(InParamValues[I]));
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
-              SQLCHAR, MaxInt, Length(DatString), PChar(DatString));
+                     SQLCHAR, MaxInt, Length(DatString), PAnsiChar(DatString));
           end;
         stTimeStamp:
           begin
             DatString := FormatDateTime('yyyymmdd hh":"mm":"ss":"zzz',
               SoftVarManager.GetAsDateTime(InParamValues[I]));
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
-              SQLCHAR, MaxInt, Length(DatString), PChar(DatString));
+                     SQLCHAR, MaxInt, Length(DatString), PAnsiChar(DatString));
           end;
   //      stBytes,
   //      stUnicodeString,
@@ -714,7 +714,8 @@ begin
 
   if FPLainDriver.dbHasRetStat(FHandle) then
     DefVarManager.SetAsInteger(Temp, FPlainDriver.dbRetStatus(FHandle))
-  else Temp := NullVariant;
+  else
+    Temp := NullVariant;
   OutParamValues[0] := Temp; //set function RETURN_VALUE
 
   ParamIndex := 1;
@@ -731,7 +732,7 @@ begin
           begin
             DatLen := FPLainDriver.dbRetLen(FHandle, ParamIndex);
             SetLength(DatBytes, DatLen);
-            Move(PChar(FPLainDriver.dbRetData(FHandle, ParamIndex))^,
+            Move(PAnsiChar(FPLainDriver.dbRetData(FHandle, ParamIndex))^,
               DatBytes[0], Length(DatBytes));
             DefVarManager.SetAsString(Temp, BytesToStr(DatBytes));
           end;

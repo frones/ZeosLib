@@ -70,8 +70,8 @@ type
     FPlainDriver: IZSQLitePlainDriver;
 
     function CreateResultSet(const SQL: string; StmtHandle: Psqlite_vm;
-      ColumnCount: Integer; ColumnNames: PPChar;
-      ColumnValues: PPChar): IZResultSet;
+       ColumnCount: Integer; ColumnNames: PPAnsiChar;
+       ColumnValues: PPAnsiChar): IZResultSet;
   public
     constructor Create(PlainDriver: IZSQLitePlainDriver;
       Connection: IZConnection; Info: TStrings; Handle: Psqlite);
@@ -124,8 +124,9 @@ end;
   Creates a result set based on the current settings.
   @return a created result set object.
 }
+
 function TZSQLiteStatement.CreateResultSet(const SQL: string; StmtHandle: Psqlite_vm;
-  ColumnCount: Integer; ColumnNames: PPChar; ColumnValues: PPChar): IZResultSet;
+   ColumnCount: Integer; ColumnNames: PPAnsiChar; ColumnValues: PPAnsiChar): IZResultSet;
 var
   CachedResolver: TZSQLiteCachedResolver;
   NativeResultSet: TZSQLiteResultSet;
@@ -160,18 +161,23 @@ end;
 function TZSQLiteStatement.ExecuteQuery(const SQL: string): IZResultSet;
 var
   ErrorCode: Integer;
-  ErrorMessage: PChar;
-  SQLTail: PChar;
+  ErrorMessage: PAnsiChar;
+  SQLTail: PAnsiChar;
   StmtHandle: Psqlite_vm;
   ColumnCount: Integer;
-  ColumnValues: PPChar;
-  ColumnNames: PPChar;
+  ColumnValues: PPAnsiChar;
+  ColumnNames: PPAnsiChar;
 begin
   ErrorMessage := '';
   SQLTail := '';
   ColumnCount := 0;
-  ErrorCode := FPlainDriver.Compile(FHandle, PChar(SQL), Length(SQL), SQLTail,
+  {$IFDEF DELPHI12_UP}
+  ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(Utf8String(SQL)), Length(SQL), SQLTail,
     StmtHandle, ErrorMessage);
+  {$ELSE}
+  ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(SQL), Length(SQL), SQLTail,
+    StmtHandle, ErrorMessage);
+  {$ENDIF}
   CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
 
@@ -202,10 +208,10 @@ end;
 function TZSQLiteStatement.ExecuteUpdate(const SQL: string): Integer;
 var
   ErrorCode: Integer;
-  ErrorMessage: PChar;
+  ErrorMessage: PAnsiChar;
 begin
   ErrorMessage := '';
-  ErrorCode := FPlainDriver.Execute(FHandle, PChar(SQL), nil, nil,
+  ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
     ErrorMessage);
   CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
@@ -236,17 +242,17 @@ end;
 function TZSQLiteStatement.Execute(const SQL: string): Boolean;
 var
   ErrorCode: Integer;
-  ErrorMessage: PChar;
-  SQLTail: PChar;
+  ErrorMessage: PAnsiChar;
+  SQLTail: PAnsiChar;
   StmtHandle: Psqlite_vm;
   ColumnCount: Integer;
-  ColumnValues: PPChar;
-  ColumnNames: PPChar;
+  ColumnValues: PPAnsiChar;
+  ColumnNames: PPAnsiChar;
 begin
   ErrorMessage := '';
   SQLTail := '';
   ColumnCount := 0;
-  ErrorCode := FPlainDriver.Compile(FHandle, PChar(SQL), Length(SQL), SQLTail,
+  ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(SQL), Length(SQL), SQLTail,
     StmtHandle, ErrorMessage);
   CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
@@ -334,11 +340,14 @@ begin
   Value := InParamValues[ParamIndex];
   if DefVarManager.IsNull(Value)  then
     Result := 'NULL'
-  else begin
+  else
+  begin
     case InParamTypes[ParamIndex] of
       stBoolean:
-        if SoftVarManager.GetAsBoolean(Value) then Result := '''Y'''
-        else Result := '''N''';
+            if SoftVarManager.GetAsBoolean(Value) then
+               Result := '''Y'''
+            else
+               Result := '''N''';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
       stString, stBytes:
@@ -359,8 +368,10 @@ begin
           begin
             if InParamTypes[ParamIndex] = stBinaryStream then
               Result := EncodeString(TempBlob.GetString)
-            else Result := GetEscapeString(TempBlob.GetString);
-          end else
+            else
+              Result := GetEscapeString(TempBlob.GetString);
+          end
+          else
             Result := 'NULL';
         end;
     end;

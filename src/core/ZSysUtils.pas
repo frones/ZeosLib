@@ -89,13 +89,24 @@ function FirstDelimiter(const Delimiters, Str: string): Integer;
 }
 function LastDelimiter(const Delimiters, Str: string): Integer;
 
+
+{$IFDEF DELPHI12_UP}
 {**
-  Compares two PChars without stopping at #0
-  @param P1 first PChar
-  @param P2 seconds PChar
-  @return <code>True</code> if the memory at P1 and P2 are equal 
+  Compares two PWideChars without stopping at #0 (Unicode Version)
+  @param P1 first PWideChars
+  @param P2 seconds PWideChars
+  @return <code>True</code> if the memory at P1 and P2 are equal
 }
-function MemLComp(P1, P2: PChar; Len: Integer): Boolean;
+function MemLCompUnicode(P1, P2: PChar; Len: Integer): Boolean;
+{$ENDIF}
+
+{**
+  Compares two PAnsiChars without stopping at #0
+  @param P1 first PAnsiChar
+  @param P2 seconds PAnsiChar
+  @return <code>True</code> if the memory at P1 and P2 are equal
+}
+function MemLCompAnsi(P1, P2: PAnsiChar; Len: Integer): Boolean;
 
 {**
   Checks is the string starts with substring.
@@ -134,7 +145,8 @@ function SQLStrToFloat(const Str: string): Extended;
   @param Length a buffer length.
   @return a string retrived from the buffer.
 }
-function BufferToStr(Buffer: PChar; Length: LongInt): string;
+function BufferToStr(Buffer: PWideChar; Length: LongInt): string; overload;
+function BufferToStr(Buffer: PAnsiChar; Length: LongInt): string; overload;
 
 {**
   Converts a string into boolean value.
@@ -225,18 +237,18 @@ function SplitStringEx(const Str, Delimiter: string): TStrings;
 procedure AppendSplitStringEx(List: TStrings; const Str, Delimiter: string);
 
 {**
-  Converts bytes into a string representation.
+  Converts bytes into a AnsiString representation.
   @param Value an array of bytes to be converted.
-  @return a converted string.
+  @return a converted AnsiString.
 }
-function BytesToStr(const Value: TByteDynArray): string;
+function BytesToStr(const Value: TByteDynArray): AnsiString;
 
 {**
-  Converts string into an array of bytes.
-  @param Value a string to be converted.
+  Converts AnsiString into an array of bytes.
+  @param Value a AnsiString to be converted.
   @return a converted array of bytes.
 }
-function StrToBytes(const Value: string): TByteDynArray;
+function StrToBytes(const Value: AnsiString): TByteDynArray;
 
 {**
   Converts bytes into a variant representation.
@@ -384,13 +396,33 @@ begin
   end;
 end;
 
+
+{$IFDEF DELPHI12_UP}
 {**
-  Compares two PChars without stopping at #0
-  @param P1 first PChar
-  @param P2 seconds PChar
+  Compares two PWideChars without stopping at #0 (Unicode Version)
+  @param P1 first PWideChar
+  @param P2 seconds PWideChar
   @return <code>True</code> if the memory at P1 and P2 are equal
 }
-function MemLComp(P1, P2: PChar; Len: Integer): Boolean;
+function MemLCompUnicode(P1, P2: PWideChar; Len: Integer): Boolean;
+begin
+  while (Len > 0) and (P1^ = P2^) do
+  begin
+    Inc(P1);
+    Inc(P2);
+    Dec(Len);
+  end;
+  Result := Len = 0;
+end;
+{$ENDIF}
+
+{**
+  Compares two PAnsiChars without stopping at #0
+  @param P1 first PAnsiChar
+  @param P2 seconds PAnsiChar
+  @return <code>True</code> if the memory at P1 and P2 are equal
+}
+function MemLCompAnsi(P1, P2: PAnsiChar; Len: Integer): Boolean;
 begin
   while (Len > 0) and (P1^ = P2^) do
   begin
@@ -414,10 +446,13 @@ begin
   LenSubStr := Length(SubStr);
   if SubStr = '' then
     Result := True
-  else
-  if LenSubStr <= Length(Str) then
+   else if LenSubStr <= Length(Str) then
     //Result := Copy(Str, 1, Length(SubStr)) = SubStr;
-    Result := MemLComp(PChar(Str), PChar(SubStr), LenSubStr)
+   {$IFDEF DELPHI12_UP}
+   Result := MemLCompUnicode(PChar(Str), PChar(SubStr), LenSubStr)
+   {$ELSE}
+   Result := MemLCompAnsi(PChar(Str), PChar(SubStr), LenSubStr)
+   {$ENDIF}
   else
     Result := False;
 end;
@@ -441,7 +476,13 @@ begin
     LenStr := Length(Str);
     if LenSubStr <= LenStr then
       //Result := Copy(Str, LenStr - LenSubStr + 1, LenSubStr) = SubStr
-      Result := MemLComp(PChar(Pointer(Str)) + LenStr - LenSubStr, Pointer(SubStr), LenSubStr)
+    {$IFDEF DELPHI12_UP}
+      Result := MemLCompUnicode(PChar(Pointer(Str)) + LenStr - LenSubStr,
+         Pointer(SubStr), LenSubStr)
+    {$ELSE}
+      Result := MemLCompAnsi(PChar(Pointer(Str)) + LenStr - LenSubStr,
+         Pointer(SubStr), LenSubStr)
+    {$ENDIF}
     else
       Result := False;
   end;
@@ -455,29 +496,37 @@ end;
 }
 function SQLStrToFloatDef(Str: string; Def: Extended): Extended;
 var
+  {$IFDEF DELPHI12_UP}
+  OldDecimalSeparator: WideChar;
+  {$ELSE}
   OldDecimalSeparator: Char;
+  {$ENDIF}
 begin
   OldDecimalSeparator := DecimalSeparator;
   DecimalSeparator := '.';
   if Pos('$', Str) = 1 then
     Str := Copy(Str, 2, Pred(Length(Str)));
-{$IFDEF FPC}
-  if OldDecimalSeparator = ',' then
-    try
-      DecimalSeparator := OldDecimalSeparator;
-      Result := StrToFloat(Str);
-    except
-      Result := 0;
-    end
+  If Str = '' then
+    Result := Def
   else
+  begin
+    {$IFDEF FPC}
+    if OldDecimalSeparator = ',' then
+      try
+        DecimalSeparator := OldDecimalSeparator;
+        Result := StrToFloat(Str);
+      except
+        Result := 0;
+      end
+    else
     begin
-    Result := StrToFloatDef(Str, Def);
-    DecimalSeparator := OldDecimalSeparator;
+      Result := StrToFloatDef(Str, Def);
     end;
-{$ELSE}
-  Result := StrToFloatDef(Str, Def);
+    {$ELSE}
+    Result := StrToFloatDef(Str, Def);
+    {$ENDIF}
+  end;
   DecimalSeparator := OldDecimalSeparator;
-{$ENDIF}
 end;
 
 {**
@@ -487,7 +536,11 @@ end;
 }
 function SQLStrToFloat(const Str: string): Extended;
 var
+  {$IFDEF DELPHI12_UP}
+  OldDecimalSeparator: WideChar;
+  {$ELSE}
   OldDecimalSeparator: Char;
+  {$ENDIF}
 begin
   OldDecimalSeparator := DecimalSeparator;
   DecimalSeparator := '.';
@@ -499,7 +552,21 @@ begin
 end;
 
 { Convert string buffer into pascal string }
-function BufferToStr(Buffer: PChar; Length: LongInt): string;
+
+function BufferToStr(Buffer: PWideChar; Length: LongInt): string;
+var s : Widestring;
+begin
+   Result := '';
+   if Assigned(Buffer) then
+   begin
+      SetString(s, Buffer, Length div SizeOf(Char));
+      Result := s;
+   end;
+end;
+
+{ Convert string buffer into pascal string }
+
+function BufferToStr(Buffer: PAnsiChar; Length: LongInt): string;
 begin
   Result := '';
   if Assigned(Buffer) then
@@ -550,16 +617,25 @@ begin
     begin
       if I - Pos > 3 then
         Break;
-      if Str[I] = '.' then begin
+      if Str[I] = '.' then
+      begin
        if StrToInt(Copy(Str, Pos, I - Pos)) > 255 then
          Break;
        Inc(N);
        Pos := I + 1;
       end;
-      if Str[I] in ['0'..'9'] then Inc(M);
+{$IFDEF DELPHI12_UP}
+      if CharInSet(Str[I], ['0'..'9']) then
+        Inc(M);
+{$ELSE}
+      if Str[I] in ['0'..'9'] then
+        Inc(M);
+{$ENDIF}
+
     end;
     Result := (M + N = Length(Str)) and (N = 3);
-  end else
+  end
+  else
     Result := False;
 end;
 
@@ -574,7 +650,8 @@ begin
       if DelimPos > 1 then
         List.Add(Copy(Str, 1, DelimPos - 1));
       Str := Copy(Str, DelimPos + 1, Length(Str) - DelimPos);
-    end else
+      end
+      else
       Break;
   until DelimPos <= 0;
   if Str <> '' then
@@ -669,7 +746,11 @@ end;
 }
 function FloatToSQLStr(Value: Extended): string;
 var
+  {$IFDEF DELPHI12_UP}
+  OldDecimalSeparator: WideChar;
+  {$ELSE}
   OldDecimalSeparator: Char;
+  {$ENDIF}
 begin
   OldDecimalSeparator := DecimalSeparator;
   DecimalSeparator := '.';
@@ -680,19 +761,25 @@ begin
   end;
 end;
 
+{**
+  Split a single string using the delimiter, appending the resulting strings
+  to the List. (gto: New version, now unicode safe and without the bug which
+  adds a blank line before the last found string)
+  @param List a list to append the result.
+  @param Str the source string
+  @param Delimiters the delimiter string
+}
 procedure SplitToStringListEx(List: TStrings; const Str, Delimiter: string);
 var
-  Pos: integer;
-  Temp: string;
+   temp: string;
+   i: integer;
 begin
-  Temp := Str;
-  repeat
-    Pos := AnsiPos(Delimiter, Temp);
-    List.Add(Copy(Temp, 1, Pos - 1));
-    Delete(Temp, 1, Pos + Length(Delimiter) - 1);
-  until Pos = 0;
-  if Temp <> '' then
-    List.Add(Temp);
+   temp := Str + Delimiter;
+   repeat
+      i := List.Add(Copy(temp, 0, AnsiPos(Delimiter, temp) - 1));
+      Delete(temp, 1, Length(List[i] + Delimiter));
+   until
+      temp = '';
 end;
 
 {**
@@ -737,21 +824,21 @@ begin
 end;
 
 {**
-  Converts bytes into a string representation.
+  Converts bytes into a AnsiString representation.
   @param Value an array of bytes to be converted.
-  @return a converted string.
+  @return a converted AnsiString.
 }
-function BytesToStr(const Value: TByteDynArray): string;
+function BytesToStr(const Value: TByteDynArray): AnsiString;
 begin
-  SetString(Result, PChar(@Value[0]), Length(Value))
+  SetString(Result, PAnsiChar(@Value[0]), Length(Value))
 end;
 
 {**
-  Converts string into an array of bytes.
-  @param Value a string to be converted.
+  Converts AnsiString into an array of bytes.
+  @param Value a AnsiString to be converted.
   @return a converted array of bytes.
 }
-function StrToBytes(const Value: string): TByteDynArray;
+function StrToBytes(const Value: AnsiString): TByteDynArray;
 begin
   SetLength(Result, Length(Value));
   if Value <> '' then
@@ -791,7 +878,7 @@ begin
 end;
 
 {**
-  Converts Ansi SQL Date/Time to TDateTime
+  Converts Ansi SQL Date/Time (yyyy-mm-dd hh:nn:ss) to TDateTime
   @param Value a date and time string.
   @return a decoded TDateTime value.
 }
@@ -825,7 +912,8 @@ begin
     try
       if Result >= 0 then
         Result := Result + EncodeTime(Hour, Min, Sec, 0)
-      else Result := Result - EncodeTime(Hour, Min, Sec, 0)
+         else
+            Result := Result - EncodeTime(Hour, Min, Sec, 0)
     except
     end;
   end;
@@ -847,35 +935,51 @@ var
     StrPosPrev:= StrPos; 
     Result:= false; 
     while StrPos<=StrLength do 
-      if pos(Value[StrPos],matchchars)>0 then begin inc(StrPos); Result:= true; end 
-      else break; 
+       if pos(Value[StrPos], matchchars) > 0 then
+         begin
+            inc(StrPos);
+            Result := true;
+         end
+       else
+         break;
   end; 
 begin 
   Result := 0; 
   StrPos:= 1; 
   StrLength := Length(Value); 
 
-  if not CharMatch('1234567890') then exit;                         // year 
+  if not CharMatch('1234567890') then
+     exit; // year
   Year := StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
-  if not CharMatch('-/\') then exit; 
-  if not CharMatch('1234567890') then exit;                         // month 
+  if not CharMatch('-/\') then
+     exit;
+  if not CharMatch('1234567890') then
+     exit; // month
   Month:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
-  if not CharMatch('-/\') then exit; 
-  if not CharMatch('1234567890') then exit;                         // day 
+  if not CharMatch('-/\') then
+     exit;
+  if not CharMatch('1234567890') then
+     exit; // day
   Day:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
   try
     Result := EncodeDate(Year, Month, Day); 
   except
   end;
   // 
-  if not CharMatch(' ') then exit; 
-  if not CharMatch('1234567890') then exit;                         // hour 
+  if not CharMatch(' ') then
+     exit;
+  if not CharMatch('1234567890') then
+     exit; // hour
   Hour := StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
-  if not CharMatch('-/\') then exit; 
-  if not CharMatch('1234567890') then exit;                         // minute 
+  if not CharMatch('-/\') then
+     exit;
+  if not CharMatch('1234567890') then
+     exit; // minute
   Min:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
-  if not CharMatch('-/\') then exit; 
-  if not CharMatch('1234567890') then exit;                         // second 
+  if not CharMatch('-/\') then
+     exit;
+  if not CharMatch('1234567890') then
+     exit; // second
   Sec:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
   try
     Result := REsult + EncodeTime(Hour, Min, Sec,0); 
@@ -956,11 +1060,19 @@ begin
   DestLength := 0;
   for I := 1 to SrcLength do
   begin
+{$IFDEF DELPHI12_UP}
+    if CharInSet(SrcBuffer^, [#0]) then
+       Inc(DestLength, 4)
+    else if CharInSet(SrcBuffer^, ['"', '''', '\']) then
+       Inc(DestLength, 2)
+{$ELSE}
     if SrcBuffer^ in [#0] then
       Inc(DestLength, 4)
     else if SrcBuffer^ in ['"', '''', '\'] then
       Inc(DestLength, 2)
-    else Inc(DestLength);
+{$ENDIF}
+    else
+       Inc(DestLength);
     Inc(SrcBuffer);
   end;
 
@@ -970,7 +1082,11 @@ begin
 
   for I := 1 to SrcLength do
   begin
+{$IFDEF DELPHI12_UP}
+    if CharInSet(SrcBuffer^, [#0]) then
+{$ELSE}
     if SrcBuffer^ in [#0] then
+{$ENDIF}
     begin
       DestBuffer[0] := '\';
       DestBuffer[1] := Chr(Ord('0') + (Byte(SrcBuffer^) shr 6));
@@ -978,7 +1094,11 @@ begin
       DestBuffer[3] := Chr(Ord('0') + (Byte(SrcBuffer^) and $07));
       Inc(DestBuffer, 4);
     end
+{$IFDEF DELPHI12_UP}
+    else if CharInSet(SrcBuffer^, ['"', '''', '\']) then
+{$ELSE}
     else if SrcBuffer^ in ['"', '''', '\'] then
+{$ENDIF}
     begin
       DestBuffer[0] := '\';
       DestBuffer[1] := SrcBuffer^;
@@ -1014,7 +1134,11 @@ begin
     if SrcBuffer^ = '\' then
     begin
       Inc(SrcBuffer);
+{$IFDEF DELPHI12_UP}
+      if CharInSet(SrcBuffer^, ['0'..'9']) then
+{$ELSE}
       if SrcBuffer^ in ['0'..'9'] then
+{$ENDIF}
       begin
         DestBuffer^ := Chr(((Byte(SrcBuffer[0]) - Ord('0')) shl 6)
           or ((Byte(SrcBuffer[1]) - Ord('0')) shl 3)
@@ -1028,7 +1152,8 @@ begin
           'r': DestBuffer^ := #13;
           'n': DestBuffer^ := #10;
           't': DestBuffer^ := #9;
-          else DestBuffer^ := SrcBuffer^;
+        else
+               DestBuffer^ := SrcBuffer^;
         end;
         Inc(SrcBuffer);
         Dec(SrcLength, 2);
@@ -1096,8 +1221,8 @@ procedure DecodeSQLVersioning(const FullVersion: Integer;
  out MajorVersion: Integer; out MinorVersion: Integer;
  out SubVersion: Integer);
 begin
- MajorVersion := FullVersion DIV 1000000;
- MinorVersion := (FullVersion-(MajorVersion*1000000)) DIV 1000;
+ MajorVersion := FullVersion div 1000000;
+ MinorVersion := (FullVersion - (MajorVersion * 1000000)) div 1000;
  SubVersion   := FullVersion-(MajorVersion*1000000)-(MinorVersion*1000);
 end;
 
@@ -1124,8 +1249,10 @@ end;
   @param SQLVersion an integer
   @return Formated Zeos SQL Version Value.
 }
-function FormatSQLVersion( const SQLVersion: Integer ): String;
-var MajorVersion, MinorVersion, SubVersion: Integer;
+
+function FormatSQLVersion(const SQLVersion: Integer): string;
+var
+   MajorVersion, MinorVersion, SubVersion: Integer;
 begin
  DecodeSQLVersioning(SQLVersion, MajorVersion, MinorVersion, SubVersion);
  Result := IntToStr(MajorVersion)+'.'+IntToStr(MinorVersion)+'.'+IntToStr(SubVersion);

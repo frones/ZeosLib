@@ -241,8 +241,7 @@ type
     //Ping Server Support (firmos) 27032006
 
     function PingServer: Integer;
-    function EscapeString(Value : String) : String;
-
+    function EscapeString(Value: AnsiString): AnsiString;
 
     procedure Open;
     procedure Close;
@@ -485,7 +484,7 @@ type
     function GetQueryTimeout: Integer;
     procedure SetQueryTimeout(Value: Integer);
     procedure Cancel;
-    procedure SetCursorName(const Value: string);
+    procedure SetCursorName(const Value: AnsiString);
 
     function Execute(const SQL: string): Boolean;
     function GetResultSet: IZResultSet;
@@ -525,6 +524,11 @@ type
     function ExecuteQueryPrepared: IZResultSet;
     function ExecuteUpdatePrepared: Integer;
     function ExecutePrepared: Boolean;
+    
+    function GetSQL : String;
+    procedure Prepare;
+    procedure Unprepare;
+    function IsPrepared: Boolean;
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
 
@@ -537,8 +541,8 @@ type
     procedure SetFloat(ParameterIndex: Integer; Value: Single);
     procedure SetDouble(ParameterIndex: Integer; Value: Double);
     procedure SetBigDecimal(ParameterIndex: Integer; Value: Extended);
-    procedure SetPChar(ParameterIndex: Integer; Value: PChar);
-    procedure SetString(ParameterIndex: Integer; const Value: string);
+    procedure SetPChar(ParameterIndex: Integer; Value: PAnsiChar);
+    procedure SetString(ParameterIndex: Integer; const Value: AnsiString);
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: WideString);
     procedure SetBytes(ParameterIndex: Integer; const Value: TByteDynArray);
     procedure SetDate(ParameterIndex: Integer; Value: TDateTime);
@@ -565,8 +569,8 @@ type
     function WasNull: Boolean;
 
     function IsNull(ParameterIndex: Integer): Boolean;
-    function GetPChar(ParameterIndex: Integer): PChar;
-    function GetString(ParameterIndex: Integer): string;
+    function GetPChar(ParameterIndex: Integer): PAnsiChar;
+    function GetString(ParameterIndex: Integer): AnsiString;
     function GetUnicodeString(ParameterIndex: Integer): WideString;
     function GetBoolean(ParameterIndex: Integer): Boolean;
     function GetByte(ParameterIndex: Integer): ShortInt;
@@ -596,8 +600,8 @@ type
     //======================================================================
 
     function IsNull(ColumnIndex: Integer): Boolean;
-    function GetPChar(ColumnIndex: Integer): PChar;
-    function GetString(ColumnIndex: Integer): string;
+    function GetPChar(ColumnIndex: Integer): PAnsiChar;
+    function GetString(ColumnIndex: Integer): AnsiString;
     function GetUnicodeString(ColumnIndex: Integer): WideString;
     function GetBoolean(ColumnIndex: Integer): Boolean;
     function GetByte(ColumnIndex: Integer): ShortInt;
@@ -623,8 +627,8 @@ type
     //======================================================================
 
     function IsNullByName(const ColumnName: string): Boolean;
-    function GetPCharByName(const ColumnName: string): PChar;
-    function GetStringByName(const ColumnName: string): string;
+    function GetPCharByName(const ColumnName: string): PAnsiChar;
+    function GetStringByName(const ColumnName: string): AnsiString;
     function GetUnicodeStringByName(const ColumnName: string): WideString;
     function GetBooleanByName(const ColumnName: string): Boolean;
     function GetByteByName(const ColumnName: string): ShortInt;
@@ -651,7 +655,7 @@ type
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;
 
-    function GetCursorName: string;
+    function GetCursorName: AnsiString;
     function GetMetadata: IZResultSetMetadata;
     function FindColumn(const ColumnName: string): Integer;
     
@@ -705,8 +709,8 @@ type
     procedure UpdateFloat(ColumnIndex: Integer; Value: Single);
     procedure UpdateDouble(ColumnIndex: Integer; Value: Double);
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended);
-    procedure UpdatePChar(ColumnIndex: Integer; Value: PChar);
-    procedure UpdateString(ColumnIndex: Integer; const Value: string);
+    procedure UpdatePChar(ColumnIndex: Integer; Value: PAnsiChar);
+    procedure UpdateString(ColumnIndex: Integer; const Value: AnsiString);
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString);
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray);
     procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime);
@@ -731,8 +735,8 @@ type
     procedure UpdateFloatByName(const ColumnName: string; Value: Single);
     procedure UpdateDoubleByName(const ColumnName: string; Value: Double);
     procedure UpdateBigDecimalByName(const ColumnName: string; Value: Extended);
-    procedure UpdatePCharByName(const ColumnName: string; Value: PChar);
-    procedure UpdateStringByName(const ColumnName: string; const Value: string);
+    procedure UpdatePCharByName(const ColumnName: string; Value: PAnsiChar);
+    procedure UpdateStringByName(const ColumnName: string; const Value: AnsiString);
     procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: WideString);
     procedure UpdateBytesByName(const ColumnName: string; const Value: TByteDynArray);
     procedure UpdateDateByName(const ColumnName: string; Value: TDateTime);
@@ -799,8 +803,8 @@ type
     function IsUpdated: Boolean;
     function Length: LongInt;
 
-    function GetString: string;
-    procedure SetString(const Value: string);
+    function GetString: AnsiString;
+    procedure SetString(const Value: AnsiString);
     function GetUnicodeString: WideString;
     procedure SetUnicodeString(const Value: WideString);
     function GetBytes: TByteDynArray;
@@ -1070,7 +1074,8 @@ var
   Listener: IZLoggingListener;
   Event: TZLoggingEvent;
 begin
-  if FLoggingListeners.Count = 0 then Exit;
+  if FLoggingListeners.Count = 0 then
+    Exit;
   Event := TZLoggingEvent.Create(Category, Protocol, Msg, ErrorCode, Error);
   try
     for I := 0 to FLoggingListeners.Count - 1 do
@@ -1095,7 +1100,8 @@ end;
 procedure TZDriverManager.LogMessage(Category: TZLoggingCategory;
   const Protocol: string; const Msg: string);
 begin
-  if FLoggingListeners.Count = 0 then Exit;
+  if FLoggingListeners.Count = 0 then
+      Exit;
   LogError(Category, Protocol, Msg, 0, '');
 end;
 

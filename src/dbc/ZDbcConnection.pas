@@ -169,7 +169,7 @@ type
 
     //Ping Support initially for MySQL 27032006 (firmos)
     function PingServer: Integer; virtual;
-    function EscapeString(Value : String) : String; virtual;
+    function EscapeString(Value: AnsiString): AnsiString; virtual;
 
     procedure Open; virtual;
     procedure Close; virtual;
@@ -423,10 +423,12 @@ begin
 
   if User <> '' then
     FUser := User
-  else FUser := FInfo.Values['username'];
+  else
+    FUser := FInfo.Values['username'];
   if Password <> '' then
     FPassword := Password
-  else FPassword := FInfo.Values['password'];
+  else
+    FPassword := FInfo.Values['password'];
 
   FAutoCommit := True;
   FClosed := True;
@@ -439,7 +441,8 @@ end;
 }
 destructor TZAbstractConnection.Destroy;
 begin
-  if not FClosed then Close;
+  if not FClosed then
+    Close;
   FInfo.Free;
   FMetadata.Free;
   inherited Destroy;
@@ -767,7 +770,7 @@ end;
   @param value string that should be escaped
   @return Escaped string
 }
-function TZAbstractConnection.EscapeString(Value : String) : String;
+function TZAbstractConnection.EscapeString(Value : AnsiString) : AnsiString;
 begin
   Result := EncodeCString(Value);
 end;
