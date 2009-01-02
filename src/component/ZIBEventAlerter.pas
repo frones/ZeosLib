@@ -426,6 +426,10 @@ begin
     sib_event_block := Tsib_event_block(ZPlainFirebird20.isc_event_block)
   else if Parent.Connection.Protocol='firebirdd-2.0' then
     sib_event_block := Tsib_event_block(ZPlainFirebird20.isc_event_block)
+  else if Parent.Connection.Protocol='firebird-2.1' then 
+    sib_event_block := Tsib_event_block(ZPlainFirebird21.isc_event_block) 
+  else if Parent.Connection.Protocol='firebirdd-2.1' then 
+    sib_event_block := Tsib_event_block(ZPlainFirebird21.isc_event_block) 
   else
     sib_event_block := Tsib_event_block(ZPlainInterbase6.isc_event_block);
 
