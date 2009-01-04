@@ -341,6 +341,11 @@ end;
   Opens a connection to database server with specified parameters.
 }
 procedure TZOracleConnection.Open;
+{$IFDEF FPC}
+const OCI_CLIENT_CHARSET_ID=871; // UTF8 because Lazarus DB components use UTF8 encoding
+{$ELSE}
+const OCI_CLIENT_CHARSET_ID=0;  // Default encoding used by OCI (usually the standard windows/delphi encoding)
+{$ENDIF}
 var
   Status: Integer;
   LogMessage: string;
@@ -371,7 +376,7 @@ begin
 
   { Connect to Oracle database. }
   if FHandle = nil then
-    FPlainDriver.EnvInit(FHandle, OCI_DEFAULT, 0, nil);
+    FPlainDriver.EnvNlsCreate(FHandle, OCI_DEFAULT, nil, nil, nil, nil, 0, nil,OCI_CLIENT_CHARSET_ID,OCI_CLIENT_CHARSET_ID);
   FErrorHandle := nil;
   FPlainDriver.HandleAlloc(FHandle, FErrorHandle, OCI_HTYPE_ERROR, 0, nil);
   FServerHandle := nil;
