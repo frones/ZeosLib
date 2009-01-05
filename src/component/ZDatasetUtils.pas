@@ -838,7 +838,7 @@ begin
 
       if PartialKey then
       begin
-        Result := AnsiStrLComp(PChar(Value2), PChar(Value1), Length(Value1)) = 0;
+        Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
       end
       else
         Result := Value1 = Value2;
@@ -849,7 +849,7 @@ begin
       begin
         Value1 := SoftVarManager.GetAsString(KeyValues[I]);
         Value2 := SoftVarManager.GetAsString(RowValues[I]);
-        Result := AnsiStrLComp(PChar(Value2), PChar(Value1), Length(Value1)) = 0;
+        Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
       end
       else
         Result := SoftVarManager.Compare(KeyValues[I], RowValues[I]) = 0;
@@ -1019,7 +1019,7 @@ begin
 
       if CaseInsensitive then
         Value2 := AnsiUpperCase(Value2);
-      Result := AnsiStrLComp(PChar(Value2), PChar(Value1), Length(Value1)) = 0;
+      Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
     end
     else
     begin
