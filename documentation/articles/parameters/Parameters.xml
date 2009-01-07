@@ -165,4 +165,13 @@ If PostgreSQL is compiled without SSL support, using option require will cause a
       <listitem><para>cashedblob=[yes,no] - This means that blob data fetch immediate if [yes] or used interbase blob if [no].</para></listitem></itemizedlist>
     </sect2>
   </sect1>
+  <sect1>
+    <title>Oracle Driver Parameters</title>
+    <sect2>
+      <title>Connection parameters</title>
+      <itemizedlist>
+      <listitem><para>codepage=[utf8,UTF8,0..max word value] - The codepage used by the oracle OCI to interprete strings sent to the server. For Lazarus this should be set to UTF8.</para></listitem>
+      </itemizedlist>
+    </sect2>
+  </sect1>
 </article>

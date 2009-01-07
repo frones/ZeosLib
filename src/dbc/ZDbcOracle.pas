@@ -341,16 +341,10 @@ end;
   Opens a connection to database server with specified parameters.
 }
 procedure TZOracleConnection.Open;
-{$IFDEF FPC}
-const OCI_CLIENT_CHARSET_ID=871; // UTF8 because Lazarus DB components use UTF8 encoding
-{$ELSE}
-const OCI_CLIENT_CHARSET_ID=0;  // Default encoding used by OCI (usually the standard windows/delphi encoding)
-{$ENDIF}
 var
   Status: Integer;
   LogMessage: string;
-//  ConnectTimeout: Integer;
-//  SQL: PAnsiChar;
+  OCI_CLIENT_CHARSET_ID: ub2;
 
   procedure CleanupOnFail;
   begin
@@ -371,9 +365,12 @@ begin
   { Sets a default port number. }
   if Port = 0 then
      Port := 1521;
-  { Sets connection timeout. }
-//  ConnectTimeout := StrToIntDef(Info.Values['timeout'], 0);
 
+  { Sets a client codepage. }
+  if UpperCase(FClientCodePage) = 'UTF8' then
+    OCI_CLIENT_CHARSET_ID:=871  // UTF8 because Lazarus DB components use UTF8 encoding
+  else
+    OCI_CLIENT_CHARSET_ID := StrToIntDef(FClientCodePage,0);
   { Connect to Oracle database. }
   if FHandle = nil then
     FPlainDriver.EnvNlsCreate(FHandle, OCI_DEFAULT, nil, nil, nil, nil, 0, nil,OCI_CLIENT_CHARSET_ID,OCI_CLIENT_CHARSET_ID);
@@ -413,16 +410,6 @@ begin
 
   DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
 
-(*
-  { Sets a client codepage. }
-  if FClientCodePage <> '' then
-  begin
-    SQL := PAnsiChar(Format('SET CHARACTER SET %s', [FClientCodePage]));
-    FPlainDriver.ExecQuery(FHandle, SQL);
-    CheckOracleError(FPlainDriver, FHandle, lcExecute, SQL);
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
-  end;
-*)
   StartTransactionSupport;
 
   inherited Open;

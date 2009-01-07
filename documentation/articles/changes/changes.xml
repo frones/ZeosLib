@@ -52,7 +52,7 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
-          <simpara>[Oracle] Connections are now made using the OCIEnvNlsCreate method instead of OCIEnvInit and use UTF8 client charset id on FPC/Lazarus (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2172">http://zeos.firmos.at/viewtopic.php?t=2172</ulink>)</simpara>
+          <simpara>[Oracle] Connections are now made using the OCIEnvNlsCreate method instead of OCIEnvInit and use property 'codepage=[UTF8,0..max Word value]' (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2172">http://zeos.firmos.at/viewtopic.php?t=2172</ulink>)</simpara>
         </listitem>
         <listitem>
           <simpara>[COMMON] Renamed IZObject.Hash to IZObject.GetHashCode after the new Delphi 2009 version (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2131">http://zeos.firmos.at/viewtopic.php?t=2131</ulink>)</simpara>
