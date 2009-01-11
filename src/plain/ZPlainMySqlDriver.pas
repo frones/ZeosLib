@@ -62,7 +62,7 @@ interface
 
 {$I ZPlain.inc}
 
-uses Classes, ZClasses, ZPlainDriver, ZCompatibility, ZPlainMysqlConstants,
+uses Classes, ZClasses, ZPlainDriver, ZCompatibility, ZPlainMySqlConstants,
      {$IFDEF ENABLE_MYSQL_DEPRECATED} ZPlainMySql320, ZPlainMySql323, ZPlainMySql40, ZMessages,{$ENDIF}
      ZPlainMySql41, ZPlainMySql5;
 
@@ -219,7 +219,7 @@ type
     // field_count
     // function GetClientVersion: AnsiString;
 
-    function Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMysqlConstants.SHUTDOWN_DEFAULT): Integer; // 2 versions!!
+    function Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMySqlConstants.SHUTDOWN_DEFAULT): Integer; // 2 versions!!
 
     function SetAutocommit (Handle: PZMySQLConnect; mode: Boolean): Boolean;
     function Commit (Handle: PZMySQLConnect): Boolean;
@@ -295,7 +295,7 @@ type
   TZMySQL320PlainDriver = class (TZAbstractObject, IZPlainDriver,
     IZMySQLPlainDriver)
   protected
-    MYSQL_API : ZPlainMysql320.mysql320_API;
+    MYSQL_API : ZPlainMySql320.mysql320_API;
   public
     constructor Create;
 
@@ -331,7 +331,7 @@ type
     function DropDatabase(Handle: PZMySQLConnect;
       const Database: PChar): Integer;
 
-    function Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMysqlConstants.SHUTDOWN_DEFAULT): Integer;
+    function Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMySqlConstants.SHUTDOWN_DEFAULT): Integer;
 
     function SetAutocommit (Handle: PZMySQLConnect; mode: Boolean): Boolean;
     function Commit (Handle: PZMySQLConnect): Boolean;
@@ -420,7 +420,7 @@ type
   TZMySQL323PlainDriver = class (TZAbstractObject, IZPlainDriver,
     IZMySQLPlainDriver)
   protected
-    MYSQL_API : ZPlainMysql323.mysql323_API;
+    MYSQL_API : ZPlainMySql323.mysql323_API;
   public
     constructor Create;
 
@@ -456,7 +456,7 @@ type
     function DropDatabase(Handle: PZMySQLConnect;
       const Database: PChar): Integer;
 
-    function Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMysqlConstants.SHUTDOWN_DEFAULT): Integer; // 2 versions!!
+    function Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMySqlConstants.SHUTDOWN_DEFAULT): Integer; // 2 versions!!
     function SetAutocommit (Handle: PZMySQLConnect; mode: Boolean): Boolean;
     function Commit (Handle: PZMySQLConnect): Boolean;
     function CheckAnotherRowset   (Handle: PZMySQLConnect): Boolean;
@@ -544,7 +544,7 @@ type
   TZMySQL40PlainDriver = class (TZAbstractObject, IZPlainDriver,
     IZMySQLPlainDriver)
   protected
-    MYSQL_API : ZPlainMysql40.mysql40_API;
+    MYSQL_API : ZPlainMySql40.mysql40_API;
   public
     constructor Create;
 
@@ -580,7 +580,7 @@ type
     function DropDatabase(Handle: PZMySQLConnect;
       const Database: PChar): Integer;
 
-    function Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMysqlConstants.SHUTDOWN_DEFAULT): Integer; // 2 versions!!
+    function Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMySqlConstants.SHUTDOWN_DEFAULT): Integer; // 2 versions!!
     function SetAutocommit (Handle: PZMySQLConnect; mode: Boolean): Boolean;
     function Commit (Handle: PZMySQLConnect): Boolean;
     function CheckAnotherRowset   (Handle: PZMySQLConnect): Boolean;
@@ -678,7 +678,7 @@ type
   TZMySQL41PlainDriver = class (TZAbstractObject, IZPlainDriver,
     IZMySQLPlainDriver)
   protected
-    MYSQL_API : ZPlainMysql41.mysql41_API;
+    MYSQL_API : ZPlainMySql41.mysql41_API;
   public
     constructor Create;
 
@@ -714,7 +714,7 @@ type
     function DropDatabase(Handle: PZMySQLConnect;
       const Database: PChar): Integer;
 
-    function Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMysqlConstants.SHUTDOWN_DEFAULT): Integer; // 2 versions!!
+    function Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMySqlConstants.SHUTDOWN_DEFAULT): Integer; // 2 versions!!
     function SetAutocommit (Handle: PZMySQLConnect; mode: Boolean): Boolean;
     function Commit (Handle: PZMySQLConnect): Boolean;
     function CheckAnotherRowset   (Handle: PZMySQLConnect): Boolean;
@@ -813,7 +813,7 @@ type
   TZMySQL5PlainDriver = class (TZAbstractObject, IZPlainDriver,
     IZMySQLPlainDriver)
   protected
-    MYSQL_API : ZPlainMysql5.mysql5_API;
+    MYSQL_API : ZPlainMySql5.mysql5_API;
   public
     constructor Create;
 
@@ -849,7 +849,7 @@ type
     function DropDatabase(Handle: PZMySQLConnect;
       const Database: PChar): Integer;
 
-    function Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMysqlConstants.SHUTDOWN_DEFAULT): Integer; // 2 versions!!
+    function Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMySqlConstants.SHUTDOWN_DEFAULT): Integer; // 2 versions!!
     function SetAutocommit (Handle: PZMySQLConnect; mode: Boolean): Boolean;
     function Commit (Handle: PZMySQLConnect): Boolean;
     function CheckAnotherRowset   (Handle: PZMySQLConnect): Boolean;
@@ -1229,7 +1229,7 @@ begin
     ZPlainMySql320.Tmysqloption(Option), Arg);
 end;
 
-function TZMySQL320PlainDriver.Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMysqlConstants.SHUTDOWN_DEFAULT): Integer;
+function TZMySQL320PlainDriver.Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMySqlConstants.SHUTDOWN_DEFAULT): Integer;
 begin
   Result := MYSQL_API.mysql_shutdown(Handle);
 end;
@@ -1744,7 +1744,7 @@ begin
     ZPlainMySql323.Tmysqloption(Option), Arg);
 end;
 
-function TZMySQL323PlainDriver.Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMysqlConstants.SHUTDOWN_DEFAULT): Integer;
+function TZMySQL323PlainDriver.Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMySqlConstants.SHUTDOWN_DEFAULT): Integer;
 begin
   Result := MYSQL_API.mysql_shutdown(Handle);
 end;
@@ -2257,7 +2257,7 @@ begin
     ZPlainMySql40.TMySqlOption(Option), Arg);
 end;
 
-function TZMySQL40PlainDriver.Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMysqlConstants.SHUTDOWN_DEFAULT): Integer;
+function TZMySQL40PlainDriver.Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMySqlConstants.SHUTDOWN_DEFAULT): Integer;
 begin
   Result := MYSQL_API.mysql_shutdown(Handle);
 end;
@@ -2801,7 +2801,7 @@ begin
     ZPlainMySql41.TMySqlOption(Option), Arg);
 end;
 
-function TZMySQL41PlainDriver.Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMysqlConstants.SHUTDOWN_DEFAULT): Integer;
+function TZMySQL41PlainDriver.Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMySqlConstants.SHUTDOWN_DEFAULT): Integer;
 begin
   Result := MYSQL_API.mysql_shutdown(Handle,shutdown_level);
 end;
@@ -3338,7 +3338,7 @@ begin
     ZPlainMySql5.TMySqlOption(Option), Arg);
 end;
 
-function TZMySQL5PlainDriver.Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMysqlConstants.SHUTDOWN_DEFAULT): Integer;
+function TZMySQL5PlainDriver.Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMySqlConstants.SHUTDOWN_DEFAULT): Integer;
 begin
   Result := MYSQL_API.mysql_shutdown(Handle,shutdown_level);
 end;

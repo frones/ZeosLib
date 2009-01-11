@@ -62,7 +62,7 @@ uses
   Types,
 {$ENDIF}
   ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection, ZPlainMySqlDriver,
-  ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser, ZPlainMysqlConstants;
+  ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser, ZPlainMySqlConstants;
 
 type
 

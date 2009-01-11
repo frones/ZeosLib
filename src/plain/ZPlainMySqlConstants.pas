@@ -57,7 +57,7 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit ZPlainMysqlConstants;
+unit ZPlainMySqlConstants;
 
 interface
 

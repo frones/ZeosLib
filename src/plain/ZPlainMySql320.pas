@@ -66,7 +66,7 @@ interface
 
 {$J+}
 
-uses Classes, ZPlainLoader, ZCompatibility, ZPlainMysqlConstants;
+uses Classes, ZPlainLoader, ZCompatibility, ZPlainMySqlConstants;
 
 { ***************** Plain API Constants definition **************** }
 

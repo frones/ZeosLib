@@ -61,7 +61,7 @@ uses
   Classes, SysUtils, ZSysUtils, ZDbcIntfs,
   Contnrs, ZDbcResultSet, ZDbcResultSetMetadata,
   ZCompatibility, ZDbcCache, ZDbcCachedResultSet, ZDbcGenericResolver,
-  ZDbcMysqlStatement, ZPlainMysqlDriver, ZPlainMysqlConstants;
+  ZDbcMysqlStatement, ZPlainMySqlDriver, ZPlainMySqlConstants;
 
 type
 
