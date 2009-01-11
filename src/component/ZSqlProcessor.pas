@@ -58,7 +58,7 @@ interface
 {$I ZComponent.inc}
 
 uses ZCompatibility, Classes, SysUtils, DB, ZDbcIntfs, ZConnection,
-  ZScriptParser, ZSqlStrings{$IFNDEF FPC}, Types{$ENDIF};
+  ZScriptParser, ZSqlStrings, Types;
 
 type
 

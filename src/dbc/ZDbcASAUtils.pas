@@ -59,7 +59,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZPlainASADriver, ZDbcLogging,
+  Classes, SysUtils, Types, ZSysUtils, ZDbcIntfs, ZPlainASADriver, ZDbcLogging,
   ZCompatibility, ZDbcASA, ZDbcStatement, ZVariant;   // SQLTimSt, FmtBCD,
 
 const

@@ -58,7 +58,7 @@ interface
 {$I ZCore.inc}
 
 uses
-  Variants, ZMessages, ZCompatibility, Classes, SysUtils;
+  Variants, ZMessages, ZCompatibility, Classes, SysUtils, Types;
 
 type
   {** Modified comaprison function. }

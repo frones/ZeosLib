@@ -62,10 +62,9 @@ uses
   Windows,
 {$ENDIF}
 {$IFNDEF FPC}
-  Types,
   Variants,
 {$ENDIF}
-  SysUtils, DB, Classes, ZSysUtils, ZConnection, ZDbcIntfs, ZSqlStrings,
+  Types, SysUtils, DB, Classes, ZSysUtils, ZConnection, ZDbcIntfs, ZSqlStrings,
   Contnrs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility, ZExpression;
 
 type

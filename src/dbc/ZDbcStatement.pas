@@ -58,10 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-{$IFNDEF FPC}
-  Types,
-{$ENDIF}
-  Classes, SysUtils, ZDbcIntfs, ZTokenizer, ZCompatibility, ZVariant;
+  Types, Classes, SysUtils, ZDbcIntfs, ZTokenizer, ZCompatibility, ZVariant;
 
 type
   TZSQLTypeArray = array of TZSQLType;

@@ -92,3 +92,5 @@
 20081221 : Cleanup of old libmysql versions and added/updated the new versions - by mdaems
 
 20081221 : Cleanup of the type/constant definitions in the mysql plain driver files - by mdaems
+
+20090111 : Fixed case of some *MySql* unit names - by mdaems - Mantis Bug 159

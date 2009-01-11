@@ -58,14 +58,12 @@ interface
 {$I ZDbc.inc}
 
 uses
-{$IFNDEF FPC}
-  Types,
-{$ELSE}
+{$IFDEF FPC}
   {$IFDEF WIN32}
     Comobj,
   {$ENDIF}
 {$ENDIF}
-  Classes, SysUtils, Contnrs, ZSysUtils, ZClasses, ZDbcIntfs,
+  Types, Classes, SysUtils, Contnrs, ZSysUtils, ZClasses, ZDbcIntfs,
   ZDbcResultSetMetadata, ZDbcCachedResultSet, ZDbcCache, ZCompatibility,
   ZSelectSchema;
 

@@ -58,10 +58,7 @@ interface
 {$I ZComponent.inc}
 
 uses
-{$IFNDEF FPC}
-  Types,
-{$ENDIF}
-  Classes, SysUtils, Db, ZSysUtils, ZDbcIntfs, ZDbcCache,
+  Types, Classes, SysUtils, Db, ZSysUtils, ZDbcIntfs, ZDbcCache,
   Contnrs, ZCompatibility, ZExpression, ZVariant, ZTokenizer;
 
 {**

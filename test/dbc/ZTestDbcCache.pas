@@ -59,7 +59,7 @@ uses
 {$IFDEF VER120BELOW}
   DateUtils,
 {$ENDIF}
-  TestFramework, ZDbcCache, ZClasses, ZSysUtils, ZCollections, ZDbcResultSet,
+  Types, TestFramework, ZDbcCache, ZClasses, ZSysUtils, ZCollections, ZDbcResultSet,
   ZDbcIntfs, ZDbcUtils, SysUtils, Classes, ZDbcResultSetMetadata,
   Contnrs, ZCompatibility, ZTestDefinitions;
 

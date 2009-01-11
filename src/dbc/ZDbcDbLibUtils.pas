@@ -110,7 +110,7 @@ function PrepareSQLParameter(Value: TZVariant; ParamType: TZSQLType): string;
 
 implementation
 
-uses ZCompatibility, ZSysUtils, ZPlainDBLibDriver;
+uses Types, ZCompatibility, ZSysUtils, ZPlainDBLibDriver;
 
 {**
   Converts an ODBC native types into ZDBC SQL types.

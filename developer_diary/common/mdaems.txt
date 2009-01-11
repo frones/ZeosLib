@@ -295,3 +295,5 @@
 20081225 : VarChar / Char fields last character chopped off - by TheEdge - See http://zeos.firmos.at/viewtopic.php?t=2165
 
 20081225 : New TObject Methods in D2009 (Tostring, GetHashCode and Equals) - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2131
+
+20090111 : Removed T***IntDynArray types from ZCompatibility as FPC 2 and higher also defines these - by mdaems

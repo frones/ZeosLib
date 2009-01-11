@@ -58,7 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcASA,
+  Classes, Types, ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcASA,
   ZPlainASADriver, ZCompatibility, ZDbcResultSetMetadata,
   ZDbcASAUtils, ZMessages, ZVariant;
 

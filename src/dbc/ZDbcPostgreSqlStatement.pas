@@ -116,7 +116,7 @@ type
 implementation
 
 uses
-  ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils;
+  Types, ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils;
 
 { TZPostgreSQLStatement }
 

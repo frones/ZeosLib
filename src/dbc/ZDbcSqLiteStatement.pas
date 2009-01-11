@@ -99,7 +99,7 @@ type
 implementation
 
 uses
-  ZDbcSqLiteUtils, ZDbcSqLiteResultSet, ZSysUtils,
+  Types, ZDbcSqLiteUtils, ZDbcSqLiteResultSet, ZSysUtils,
   ZMessages, ZDbcCachedResultSet;
 
 { TZSQLiteStatement }

@@ -146,7 +146,7 @@ type
 implementation
 
 uses
-  ZDbcLogging, ZDbcCachedResultSet, ZDbcDbLibUtils, ZDbcDbLibResultSet,
+  Types, ZDbcLogging, ZDbcCachedResultSet, ZDbcDbLibUtils, ZDbcDbLibResultSet,
   ZVariant;
 
 constructor TZUpdateCount.Create(ACount: Integer);

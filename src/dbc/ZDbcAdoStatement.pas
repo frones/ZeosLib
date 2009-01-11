@@ -58,12 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-{$IFNDEF UNIX}
-{$IFNDEF FPC}
-  Types,
-{$ENDIF}
-{$ENDIF}
-  Classes, SysUtils, ZCompatibility, ZClasses, ZSysUtils, ZCollections,
+  Types, Classes, SysUtils, ZCompatibility, ZClasses, ZSysUtils, ZCollections,
   ZDbcIntfs, ZPlainDriver, ZDbcStatement, ZDbcAdo, ZPlainAdoDriver, ZPlainAdo,
   ZVariant;
 

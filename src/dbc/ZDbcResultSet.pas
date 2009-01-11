@@ -61,10 +61,8 @@ uses
 {$IFDEF MSWINDOWS}
   Windows,
 {$ENDIF}
-  Classes, SysUtils, Contnrs, ZDbcIntfs, ZClasses, ZCollections, ZSysUtils,
-{$IFNDEF FPC}
-  Types,
-{$ELSE}
+  Types, Classes, SysUtils, Contnrs, ZDbcIntfs, ZClasses, ZCollections, ZSysUtils,
+{$IFDEF FPC}
   {$IFDEF WIN32}
     Comobj,
   {$ENDIF}
