@@ -211,8 +211,11 @@ var
   ErrorMessage: PAnsiChar;
 begin
   ErrorMessage := '';
-  ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
-    ErrorMessage);
+  {$IFDEF DELPHI12_UP}
+  ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(UTF8String(SQL)), nil, nil,ErrorMessage);
+  {$ELSE}
+  ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,ErrorMessage);
+  {$ENDIF}
   CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
   Result := FPlainDriver.Changes(FHandle);
@@ -252,8 +255,13 @@ begin
   ErrorMessage := '';
   SQLTail := '';
   ColumnCount := 0;
+  {$IFDEF DELPHI12_UP}
+  ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(Utf8String(SQL)), Length(SQL), SQLTail,
+    StmtHandle, ErrorMessage);
+  {$ELSE}
   ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(SQL), Length(SQL), SQLTail,
     StmtHandle, ErrorMessage);
+  {$ENDIF}
   CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
 
