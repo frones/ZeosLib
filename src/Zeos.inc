@@ -220,35 +220,51 @@
 
 
 // Enables MySQL support in TZConnection/TZDataset
+{$IFNDEF ZEOS_DISABLE_MYSQL}
 {$DEFINE ENABLE_MYSQL}
+{$ENDIF}
 
 // Enables PostgreSQL support in TZConnection/TZDataset
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL}
 {$DEFINE ENABLE_POSTGRESQL}
+{$ENDIF}
 
 // Enables Sybase/MSSQL support in TZConnection/TZDataset
+{$IFNDEF ZEOS_DISABLE_DBLIB}
 {$DEFINE ENABLE_DBLIB}
+{$ENDIF}
 
 // Enables ADO support in TZConnection/TZDataset
+{$IFNDEF ZEOS_DISABLE_ADO}
 {$IFNDEF FPC}
  {$IFNDEF UNIX}
   {$DEFINE ENABLE_ADO}
  {$ENDIF}
 {$ENDIF}
+{$ENDIF}
 
 // Enables Interbase/Firebird support in TZConnection/TZDataset
+{$IFNDEF ZEOS_DISABLE_INTERBASE}
 {$DEFINE ENABLE_INTERBASE}
+{$ENDIF}
 
 // Enables SQLite support in TZConnection/TZDataset
+{$IFNDEF ZEOS_DISABLE_SQLITE}
 {$DEFINE ENABLE_SQLITE}
+{$ENDIF}
 
 // Enables Oracle support in TZConnection/TZDataset
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 {$DEFINE ENABLE_ORACLE}
+{$ENDIF}
 
 // Enables ASA support in TZConnection/TZDataset
+{$IFNDEF ZEOS_DISABLE_ASA}
 {$DEFINE ENABLE_ASA}
+{$ENDIF}
 
 // Supported language. Now available languages:
-// ENGLISH, GERMAN, PORTUGUESE, DUTCH, SPANISH, ROMANA, INDONESIAN, RUSSIAN, CZECH, POLISH 
+// ENGLISH, GERMAN, PORTUGUESE, DUTCH, SPANISH, ROMANA, INDONESIAN, RUSSIAN, CZECH, POLISH
 {$DEFINE ENGLISH}
 
 // Prevents loading default libmysql.dll

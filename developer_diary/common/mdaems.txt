@@ -297,3 +297,5 @@
 20081225 : New TObject Methods in D2009 (Tostring, GetHashCode and Equals) - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2131
 
 20090111 : Removed T***IntDynArray types from ZCompatibility as FPC 2 and higher also defines these - by mdaems
+
+20090114 : Added ZEOS_DISABLE_XXXXX 'Conditional Defines' to Zeos.inc to allow compiling out database support on a per project basis - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2195

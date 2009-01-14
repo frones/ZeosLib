@@ -181,6 +181,9 @@
           <simpara>Zeoslib 6.6 is in it's stable phase. No features, except for eventual translations and docs, will (should) be added.</simpara>
         </listitem>
         <listitem>
+          <simpara>[GENERAL] Added ZEOS_DISABLE_XXXXX 'Conditional Defines' to Zeos.inc to allow compiling out database support on a per project basis(<ulink url="http://zeos.firmos.at/viewtopic.php?t=2195">http://zeos.firmos.at/viewtopic.php?t=2195</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[POSTGRES] Implemented ZConnection.ServerVersion for Postgres</simpara>
         </listitem>
         <listitem>
