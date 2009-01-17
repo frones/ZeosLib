@@ -299,3 +299,5 @@
 20090111 : Removed T***IntDynArray types from ZCompatibility as FPC 2 and higher also defines these - by mdaems
 
 20090114 : Added ZEOS_DISABLE_XXXXX 'Conditional Defines' to Zeos.inc to allow compiling out database support on a per project basis - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2195
+
+20090117 : Second JOIN in from clause was stripped by the SQL parser after ON or USING clause - by mdaems/DarthWombat - Mantis Bug 150
