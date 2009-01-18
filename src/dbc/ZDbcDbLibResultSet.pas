@@ -59,10 +59,9 @@ interface
 
 uses
 {$IFNDEF FPC}
-  Types,
   DateUtils,
 {$ENDIF}
-  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcResultSet,
+  Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcResultSet,
   ZCompatibility, ZDbcResultsetMetadata, ZDbcGenericResolver, ZDbcCachedResultSet,
   ZDbcCache, ZDbcDBLib, ZPlainDBLibDriver;
 

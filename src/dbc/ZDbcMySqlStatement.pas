@@ -158,7 +158,7 @@ type
 implementation
 
 uses
-  ZDbcMySqlUtils, ZDbcMySqlResultSet, ZSysUtils,
+  Types, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZSysUtils,
   ZMessages, ZDbcCachedResultSet, ZDbcUtils, DateUtils;
 
 { TZMySQLStatement }

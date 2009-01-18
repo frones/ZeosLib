@@ -58,10 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-{$IFNDEF FPC}
-  Types,
-{$ENDIF}
-  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
+  Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
   ZCompatibility, ZDbcOracleUtils, ZDbcConnection;
 
 type

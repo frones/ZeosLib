@@ -58,10 +58,10 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZSysUtils, ZDbcIntfs,
+  Classes, SysUtils, Types, ZSysUtils, ZDbcIntfs,
   Contnrs, ZDbcResultSet, ZDbcResultSetMetadata,
   ZCompatibility, ZDbcCache, ZDbcCachedResultSet, ZDbcGenericResolver,
-  ZDbcMysqlStatement, ZPlainMysqlDriver, ZPlainMysqlConstants;
+  ZDbcMySqlStatement, ZPlainMySqlDriver, ZPlainMySqlConstants;
 
 type
 

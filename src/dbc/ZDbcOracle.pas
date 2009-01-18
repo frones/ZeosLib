@@ -58,10 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-{$IFNDEF FPC}
-  Types,
-{$ENDIF}
-  ZCompatibility, Classes, SysUtils, Contnrs, ZDbcIntfs, ZDbcConnection,
+  Types, ZCompatibility, Classes, SysUtils, Contnrs, ZDbcIntfs, ZDbcConnection,
   ZPlainOracleDriver, ZDbcLogging, ZTokenizer, ZDbcGenericResolver,
   ZGenericSqlAnalyser;
 
@@ -344,8 +341,7 @@ procedure TZOracleConnection.Open;
 var
   Status: Integer;
   LogMessage: string;
-//  ConnectTimeout: Integer;
-//  SQL: PAnsiChar;
+  OCI_CLIENT_CHARSET_ID: ub2;
 
   procedure CleanupOnFail;
   begin
@@ -366,12 +362,15 @@ begin
   { Sets a default port number. }
   if Port = 0 then
      Port := 1521;
-  { Sets connection timeout. }
-//  ConnectTimeout := StrToIntDef(Info.Values['timeout'], 0);
 
+  { Sets a client codepage. }
+  if UpperCase(FClientCodePage) = 'UTF8' then
+    OCI_CLIENT_CHARSET_ID:=871  // UTF8 because Lazarus DB components use UTF8 encoding
+  else
+    OCI_CLIENT_CHARSET_ID := StrToIntDef(FClientCodePage,0);
   { Connect to Oracle database. }
   if FHandle = nil then
-    FPlainDriver.EnvInit(FHandle, OCI_DEFAULT, 0, nil);
+    FPlainDriver.EnvNlsCreate(FHandle, OCI_DEFAULT, nil, nil, nil, nil, 0, nil,OCI_CLIENT_CHARSET_ID,OCI_CLIENT_CHARSET_ID);
   FErrorHandle := nil;
   FPlainDriver.HandleAlloc(FHandle, FErrorHandle, OCI_HTYPE_ERROR, 0, nil);
   FServerHandle := nil;
@@ -408,16 +407,6 @@ begin
 
   DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
 
-(*
-  { Sets a client codepage. }
-  if FClientCodePage <> '' then
-  begin
-    SQL := PAnsiChar(Format('SET CHARACTER SET %s', [FClientCodePage]));
-    FPlainDriver.ExecQuery(FHandle, SQL);
-    CheckOracleError(FPlainDriver, FHandle, lcExecute, SQL);
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
-  end;
-*)
   StartTransactionSupport;
 
   inherited Open;

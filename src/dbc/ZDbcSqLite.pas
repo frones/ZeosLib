@@ -58,10 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-{$IFNDEF FPC}
-  Types,
-{$ENDIF}
-  ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection,
+  Types, ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection,
   ZPlainSqLiteDriver, ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser;
 
 type
@@ -310,7 +307,11 @@ function TZSQLiteConnection.Key(const Key: string):Integer;
 var
   ErrorCode: Integer;
 begin
+  {$IFDEF DELPHI12_UP}
+  ErrorCode := FPlainDriver.Key(FHandle, PAnsiChar(UTF8String(Key)), StrLen(PAnsiChar(UTF8String(Key))));
+  {$ELSE}
   ErrorCode := FPlainDriver.Key(FHandle, PAnsiChar(Key), StrLen(PAnsiChar(Key)));
+  {$ENDIF}
   Result := ErrorCode;
 end;
 
@@ -324,7 +325,11 @@ function TZSQLiteConnection.ReKey(const Key: string):Integer;
 var
   ErrorCode: Integer;
 begin
+  {$IFDEF DELPHI12_UP}
+  ErrorCode := FPlainDriver.ReKey(FHandle, PAnsiChar(UTF8String(Key)), StrLen(PAnsiChar(UTF8String(Key))));
+  {$ELSE}
   ErrorCode := FPlainDriver.ReKey(FHandle, PAnsiChar(Key), StrLen(PAnsiChar(Key)));
+  {$ENDIF}
   Result := ErrorCode;
 end;
 
@@ -360,7 +365,11 @@ begin
   { Turn on encryption if requested }
   if StrToBoolEx(Info.Values['encrypted']) then
   begin
+    {$IFDEF DELPHI12_UP}
+    ErrorCode := FPlainDriver.Key(FHandle, PAnsiChar(UTF8String(Password)), StrLen(PAnsiChar(UTF8String(Password))));
+    {$ELSE}
     ErrorCode := FPlainDriver.Key(FHandle, PAnsiChar(Password), StrLen(PAnsiChar(Password)));
+    {$ENDIF}
     CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcConnect, 'SQLite.Key');
   end;
 

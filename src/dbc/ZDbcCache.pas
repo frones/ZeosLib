@@ -62,10 +62,7 @@ uses
 {$IFDEF MSWINDOWS}
   Windows,
 {$ENDIF}
-{$IFNDEF FPC}
-  Types,
-{$ENDIF}
-  ZCompatibility, Classes, SysUtils, Contnrs, ZClasses, ZDbcIntfs,
+  Types, ZCompatibility, Classes, SysUtils, Contnrs, ZClasses, ZDbcIntfs,
   ZDbcResultSet, ZDbcResultSetMetadata, ZVariant;
 
 type

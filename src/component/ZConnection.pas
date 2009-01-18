@@ -58,9 +58,7 @@ interface
 {$I ZComponent.inc}
 
 uses
-{$IFNDEF FPC}
   Types,
-{$ENDIF}
 {$IFNDEF UNIX}
 {$IFDEF ENABLE_ADO}
   ZDbcAdo,

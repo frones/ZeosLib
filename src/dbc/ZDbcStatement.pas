@@ -58,10 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-{$IFNDEF FPC}
-  Types,
-{$ENDIF}
-  Classes, SysUtils, ZDbcIntfs, ZTokenizer, ZCompatibility, ZVariant;
+  Types, Classes, SysUtils, ZDbcIntfs, ZTokenizer, ZCompatibility, ZVariant;
 
 type
   TZSQLTypeArray = array of TZSQLType;
@@ -1648,7 +1645,11 @@ end;
 function TZAbstractCallableStatement.GetPChar(ParameterIndex: Integer): PAnsiChar;
 begin
   FTemp := GetString(ParameterIndex);
+  {$IFDEF DELPHI12_UP}
+  Result := PAnsiChar(UTF8String(FTemp));
+  {$ELSE}
   Result := PAnsiChar(FTemp);
+  {$ENDIF}
 end;
 
 {**

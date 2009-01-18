@@ -71,26 +71,10 @@ uses
 type
 
 {$IFDEF FPC}
-  TIntegerDynArray      = array of Integer;
-  TCardinalDynArray     = array of Cardinal;
-  TWordDynArray         = array of Word;
-  TSmallIntDynArray     = array of SmallInt;
-
-  TShortIntDynArray     = array of ShortInt;
-  TInt64DynArray        = array of Int64;
-  TLongWordDynArray     = array of LongWord;
-  TSingleDynArray       = array of Single;
-  TDoubleDynArray       = array of Double;
-  TBooleanDynArray      = array of Boolean;
-  TStringDynArray       = array of string;
-  TWideStringDynArray   = array of WideString;
   TVariantDynArray      = array of Variant;
 {$ENDIF}
 
-  TByteDynArray         = array of Byte;
   TObjectDynArray       = array of TObject;
-
-  PWord                 = ^Word;
 
 {$IFDEF FPC}
 type

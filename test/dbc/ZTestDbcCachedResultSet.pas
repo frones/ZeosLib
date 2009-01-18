@@ -54,7 +54,7 @@ unit ZTestDbcCachedResultSet;
 interface
 
 uses
-  TestFramework, ZDbcCachedResultSet, ZClasses, ZCollections, ZDbcIntfs,
+  Types, TestFramework, ZDbcCachedResultSet, ZClasses, ZCollections, ZDbcIntfs,
   ZSysUtils, ZDbcResultSet, ZDbcCache, Classes, ZDbcResultSetMetadata,
   Contnrs, ZCompatibility, ZTestConsts, ZDbcMetadata, ZTestDefinitions;
 

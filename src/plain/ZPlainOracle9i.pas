@@ -689,6 +689,10 @@ type
     malocfp: Pointer; ralocfp: Pointer; mfreefp: Pointer; xtramemsz: size_T;
     usrmempp: PPointer): sword; cdecl;
 
+  TOCIEnvNlsCreate = function(var envhpp: POCIEnv; mode: ub4; ctxp: Pointer;
+    malocfp: Pointer; ralocfp: Pointer; mfreefp: Pointer; xtramemsz: size_T;
+    usrmempp: PPointer; charset, ncharset: ub2): sword; cdecl;
+
   TOCIHandleAlloc = function(parenth: POCIHandle; var hndlpp: POCIHandle;
     atype: ub4; xtramem_sz: size_T; usrmempp: PPointer): sword; cdecl;
 
@@ -920,6 +924,7 @@ var
   OCIInitialize:          TOCIInitialize;
   OCIEnvInit:             TOCIEnvInit;
   OCIEnvCreate:           TOCIEnvCreate;
+  OCIEnvNlsCreate:        TOCIEnvNlsCreate;
   OCIHandleAlloc:         TOCIHandleAlloc;
   OCIServerAttach:        TOCIServerAttach;
   OCIAttrSet:             TOCIAttrSet;
@@ -1011,6 +1016,7 @@ begin
   Result := inherited Load;
 
   @OCIEnvCreate       := GetAddress('OCIEnvCreate');
+  @OCIEnvNlsCreate    := GetAddress('OCIEnvNlsCreate');
   @OCIInitialize      := GetAddress('OCIInitialize');
   @OCIEnvInit         := GetAddress('OCIEnvInit');
 

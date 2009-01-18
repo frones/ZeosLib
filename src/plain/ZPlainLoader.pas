@@ -57,11 +57,7 @@ interface
 
 {$I ZPlain.inc}
 
-{$IFNDEF FPC}
-uses Types;
-{$ELSE}
-uses ZCompatibility;
-{$ENDIF}
+uses Types, ZCompatibility;
 
 type
   {** Implements a loader for native library. }

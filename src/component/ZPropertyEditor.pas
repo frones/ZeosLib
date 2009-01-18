@@ -60,10 +60,7 @@ interface
 {$IFDEF WITH_PROPERTY_EDITOR}
 
 uses
-{$IFNDEF FPC}
-  Types,
-{$ENDIF}
-  Classes, ZClasses, ZCompatibility, ZDbcIntfs,
+  Types, Classes, ZClasses, ZCompatibility, ZDbcIntfs,
 {$IFDEF BDS4_UP}
   WideStrings,
 {$ENDIF}
