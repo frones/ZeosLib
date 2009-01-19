@@ -253,3 +253,5 @@
 20081206 : Removed conditional compilation of database dependent Tokenizers - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2138
 
 20081208 : Fixed bug in UpdateSQLeditor that resulted from commit 481 - by mdaems - Mantis Bug 165
+
+20090117 : Second JOIN in from clause was stripped by the SQL parser after ON or USING clause - by mdaems/DarthWombat - Mantis Bug 150

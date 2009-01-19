@@ -629,17 +629,30 @@ begin
     else if FromClauses.IndexOf(CurrentUpper) >= 0 then
     begin
       Inc(TokenIndex);
+      CurrentValue := FromTokens[TokenIndex];
+      CurrentUpper := AnsiUpperCase(CurrentValue);
       while (TokenIndex < FromTokens.Count)
         and (FromJoins.IndexOf(CurrentUpper) < 0) and (CurrentUpper <> ',') do
       begin
-        CurrentValue := FromTokens[TokenIndex];
-        CurrentUpper := AnsiUpperCase(CurrentValue);
-        //CurrentType := TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
-        //FromTokens.Objects[TokenIndex]{$IFDEF FPC}){$ENDIF});
         if CurrentUpper = '(' then
-          SkipBracketTokens(FromTokens, TokenIndex)
+            SkipBracketTokens(FromTokens, TokenIndex)
         else Inc(TokenIndex);
+        if TokenIndex < FromTokens.Count then
+          begin
+            CurrentValue := FromTokens[TokenIndex];
+            CurrentUpper := AnsiUpperCase(CurrentValue);
+            CurrentType := TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
+              FromTokens.Objects[TokenIndex]{$IFDEF FPC}){$ENDIF});
+          end;
       end;
+      // We must jump 1 tokens back now when we stopped on a Join clause.
+      // Otherwise the next table is skipped
+      if FromJoins.IndexOf(CurrentUpper) >= 0 then
+        begin
+          Dec(TokenIndex);
+          CurrentValue := FromTokens[TokenIndex];
+          CurrentUpper := AnsiUpperCase(CurrentValue);
+        end;
     end
     { Switches to alias part. }
     else if (CurrentType = ttWhitespace) or (CurrentUpper = 'AS') then
