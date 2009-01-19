@@ -147,6 +147,9 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=150">#0000150</ulink> [normal] Second JOIN in from clause was stripped by the SQL parser after ON or USING clause</simpara>
+        </listitem>
+        <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=159">#0000159</ulink> [normal] Fixed case of some *MySql* unit names</simpara>
         </listitem>
         <listitem>

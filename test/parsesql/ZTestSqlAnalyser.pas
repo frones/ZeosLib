@@ -363,6 +363,12 @@ begin
     SchemaToString(SelectSchema));
 
   SelectSchema := FAnalyser.DefineSelectSchemaFromQuery(FTokenizer,
+    'SELECT * FROM D1.A1 AS T1 LEFT OUTER JOIN A2 AS T2 ON A1.K=T2.K JOIN T3 ON T2.K=T3.K');
+  CheckNotNull(SelectSchema);
+  CheckEquals('SS:[FR:*][TR:D1.A1/T1,TR:A2/T2,TR:T3]',
+    SchemaToString(SelectSchema));
+
+  SelectSchema := FAnalyser.DefineSelectSchemaFromQuery(FTokenizer,
     'SELECT D1.T1.A1 AS A, T2.A1 AS B, MAX(Sum) AS C'
     + ' FROM D1.A1 AS T1 LEFT OUTER JOIN A2 AS T2 ON A1.K=T2.K'
     + ' WHERE 0<>0 FOR UPDATE');
