@@ -133,7 +133,7 @@ type
     function CreateResultSet(const SQL: string): IZResultSet;
 
     procedure PrepareParameters;
-    function getFieldType (testVariant: TZVariant): Byte;
+    function getFieldType (testVariant: TZVariant): TMysqlFieldTypes;
   protected
     function GetStmtHandle : PZMySqlPrepStmt;
   public
@@ -622,7 +622,7 @@ end;
 procedure TZMysqlPreparedStatement.PrepareParameters;
 var
     field_size, field_size_twin: LongWord;
-    field_type: Byte;
+    field_type: TMysqlFieldTypes;
     caststring : AnsiString;
     PBuffer: Pointer;
   I,J : integer;
@@ -693,7 +693,7 @@ begin
   DriverManager.LogMessage(lcBindPrepStmt, FPlainDriver.GetProtocol, LogString);
 end;
 
-function TZMysqlPreparedStatement.getFieldType (testVariant: TZVariant): Byte;
+function TZMysqlPreparedStatement.getFieldType (testVariant: TZVariant): TMysqlFieldTypes;
 begin
     case testVariant.vType of
         vtNull:      Result := FIELD_TYPE_TINY;

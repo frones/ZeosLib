@@ -58,12 +58,32 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, Types, ZSysUtils, ZDbcIntfs,
+  Classes, SysUtils, Types, ZClasses, ZSysUtils, ZDbcIntfs,
   Contnrs, ZDbcResultSet, ZDbcResultSetMetadata,
   ZCompatibility, ZDbcCache, ZDbcCachedResultSet, ZDbcGenericResolver,
   ZDbcMySqlStatement, ZPlainMySqlDriver, ZPlainMySqlConstants;
 
 type
+  TZMysqlColumnBuffer = Array of PDOBindRecord2;
+  { TZMySQLBindBuffer }
+  {** Encapsulates a MySQL bind buffer. }
+  TZMySQLBindBuffer = class(TZAbstractObject)
+  protected
+    FDriverVersion : Integer;
+    FAddedColumnCount : Integer;
+    FBindArray41: Array of MYSQL_BIND41;
+    FBindArray50: Array of MYSQL_BIND50;
+    FBindArray51: Array of MYSQL_BIND51;
+    FBindArray60: Array of MYSQL_BIND60;
+    FPColumnArray: ^TZMysqlColumnBuffer;
+  public
+    constructor Create(PlainDriver:IZMysqlPlainDriver; NumColumns : Integer; var ColumnArray:TZMysqlColumnBuffer);
+    destructor Destroy; override;
+    procedure AddColumn(buffertype:TMysqlFieldTypes; display_length:integer);
+    function GetColumnArray : TZMysqlColumnBuffer;
+    function GetBufferAddress : Pointer;
+    function GetBufferType(ColumnIndex: Integer) : TMysqlFieldTypes;
+  end;
 
   {** Implements MySQL ResultSet Metadata. }
   TZMySQLResultSetMetadata = class(TZAbstractResultSetMetadata)
@@ -120,8 +140,8 @@ type
     FResultMetaData : PZMySQLResult;
     FPlainDriver: IZMySQLPlainDriver;
     FUseResult: Boolean;
-    FBindArray: Array of MYSQL_BIND50;
-    FColumnArray: Array of PDOBindRecord2;
+    FColumnArray: TZMysqlColumnBuffer;
+    FBindBuffer: TZMysqlBindBuffer;
 
   protected
     procedure Open; override;
@@ -189,7 +209,7 @@ type
 
     TMysqlResult = class (TInterfacedObject)
         private
-            FBufferType:              Byte;
+            FBufferType:              TMysqlFieldTypes;
             FBuffer:                  Pointer;
             FValue:                   Variant;
             FNull:                    Boolean;
@@ -222,11 +242,11 @@ type
             function asAsciiStream:   TStream;
             function asBytes:         TByteDynArray;
             constructor create (nativeType: TZSQLType; buffer: Pointer;
-                nullValue: Boolean; buffer_type: Byte);
+                nullValue: Boolean; buffer_type: TMysqlFieldTypes);
         end;
 
 constructor TMysqlResult.create(nativeType: TZSQLType; buffer: Pointer;
-                nullValue: Boolean; buffer_type: Byte);
+                nullValue: Boolean; buffer_type: TMysqlFieldTypes);
 begin
     self.FBufferType := buffer_type;
     self.Fbuffer := buffer;
@@ -1212,8 +1232,7 @@ begin
   end;
 
     { Initialize Bind Array and Column Array }
-  SetLength(FBindArray, FieldCount);
-  SetLength(FColumnArray, FieldCount);
+  FBindBuffer := TZMysqlBindBuffer.Create(FPlainDriver,FieldCount,FColumnArray);
 
   { Fills the column info. }
   ColumnsInfo.Clear;
@@ -1254,24 +1273,12 @@ begin
 
     ColumnsInfo.Add(ColumnInfo);
 
-    FColumnArray[I].length := getMySQLFieldSize(FPlainDriver.GetFieldType(FieldHandle),ColumnInfo.ColumnDisplaySize);
-    SetLength(FColumnArray[I].buffer,FColumnArray[I].length);
-    with FBindArray[I] do begin
-        buffer_type   := FPlainDriver.GetFieldType(FieldHandle);
-//        buffer_type   := 0;
-        buffer_length := FColumnArray[I].length;
-        is_unsigned   := 0;
-        buffer        := @FColumnArray[I].buffer[0];
-        length        := @FColumnArray[I].length;
-        is_null       := @FColumnArray[I].is_null;
-        FColumnArray[I].is_null := 0;
-     end;
-  end;
-
+    FBindBuffer.AddColumn(FPlainDriver.GetFieldType(FieldHandle),ColumnInfo.ColumnDisplaySize);
+    end;
   FPlainDriver.FreeResult(FResultMetaData);
   FResultMetaData := nil;
 
-  if (FPlainDriver.BindResult(FPrepStmt,@FBindArray[0])<>0) then
+  if (FPlainDriver.BindResult(FPrepStmt,FBindBuffer.GetBufferAddress)<>0) then
     raise EZSQLException.Create(SFailedToBindResults);
 
   inherited Open;
@@ -1295,6 +1302,7 @@ begin
   if FResultMetaData <> nil then
     FPlainDriver.FreeResult(FResultMetaData);
   FResultMetaData := nil;
+  FBindBuffer.Free;
 
   inherited Close;
 end;
@@ -1396,7 +1404,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  temp:=TMysqlResult.create(stByte,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindArray[ColumnIndex-1].buffer_type);
+  temp:=TMysqlResult.create(stByte,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindBuffer.GetBufferType(ColumnIndex));
   Result := Temp.asByte;
   temp.Free;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
@@ -1418,7 +1426,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
- temp:=TMysqlResult.create(stShort,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindArray[ColumnIndex-1].buffer_type);
+ temp:=TMysqlResult.create(stShort,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindBuffer.GetBufferType(ColumnIndex));
  Result := Temp.asInteger;
  temp.Free;
  LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
@@ -1440,7 +1448,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
-  temp:=TMysqlResult.create(stInteger,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindArray[ColumnIndex-1].buffer_type);
+  temp:=TMysqlResult.create(stInteger,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindBuffer.GetBufferType(ColumnIndex));
   Result := Temp.asInt64;
   temp.Free;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
@@ -1462,7 +1470,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
- temp:=TMysqlResult.create(stlong,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindArray[ColumnIndex-1].buffer_type);
+ temp:=TMysqlResult.create(stlong,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindBuffer.GetBufferType(ColumnIndex));
  Result := Temp.asInteger;
  temp.Free;
  LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
@@ -1484,7 +1492,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
-  temp:=TMysqlResult.create(stFloat,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindArray[ColumnIndex-1].buffer_type);
+  temp:=TMysqlResult.create(stFloat,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindBuffer.GetBufferType(ColumnIndex));
   Result := Temp.asSingle;
   temp.Free;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
@@ -1506,7 +1514,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
-  temp:=TMysqlResult.create(stDouble,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindArray[ColumnIndex-1].buffer_type);
+  temp:=TMysqlResult.create(stDouble,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindBuffer.GetBufferType(ColumnIndex));
   Result := Temp.asDouble;
   temp.Free;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
@@ -1529,7 +1537,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
-  temp:=TMysqlResult.create(stBigDecimal,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindArray[ColumnIndex-1].buffer_type);
+  temp:=TMysqlResult.create(stBigDecimal,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindBuffer.GetBufferType(ColumnIndex));
   Result := Temp.asExtended;
   temp.Free;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
@@ -1552,7 +1560,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
 {$ENDIF}
-  temp:=TMysqlResult.create(stBytes,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindArray[ColumnIndex-1].buffer_type);
+  temp:=TMysqlResult.create(stBytes,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindBuffer.GetBufferType(ColumnIndex));
   Result := Temp.asBytes;
   temp.Free;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
@@ -1574,7 +1582,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
-  temp:=TMysqlResult.create(stDate,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindArray[ColumnIndex-1].buffer_type);
+  temp:=TMysqlResult.create(stDate,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindBuffer.GetBufferType(ColumnIndex));
   Result := Temp.asDate;
   temp.Free;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
@@ -1596,7 +1604,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-  temp:=TMysqlResult.create(stTime,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindArray[ColumnIndex-1].buffer_type);
+  temp:=TMysqlResult.create(stTime,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindBuffer.GetBufferType(ColumnIndex));
   Result := Temp.asTime;
   temp.Free;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
@@ -1619,7 +1627,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
 {$ENDIF}
-  temp:=TMysqlResult.create(stTimeStamp,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindArray[ColumnIndex-1].buffer_type);
+  temp:=TMysqlResult.create(stTimeStamp,FColumnArray[ColumnIndex-1].buffer,FColumnArray[ColumnIndex-1].is_null =1,FBindBuffer.GetBufferType(ColumnIndex));
   Result := Temp.asTimeStamp;
   temp.Free;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
@@ -1944,6 +1952,117 @@ begin
       Result := Result + 'NULL';
   end;
   Result := 'SELECT ' + Result;
+end;
+
+{ TZMySQLBindBuffer }
+
+constructor TZMySQLBindBuffer.Create(PlainDriver: IZMysqlPlainDriver; NumColumns: Integer; var ColumnArray:TZMysqlColumnBuffer);
+begin
+  inherited Create;
+  FDriverVersion := PlainDriver.GetClientVersion;
+  FPColumnArray := @ColumnArray;
+  setlength(FBindArray41,0);
+  setlength(FBindArray50,0);
+  setlength(FBindArray51,0);
+  setlength(FBindArray60,0);
+  setlength(ColumnArray,NumColumns);
+  Case FDriverVersion of
+    40100..40199 : setlength(FBindArray41,NumColumns);
+    50000..50099 : setlength(FBindArray50,NumColumns);
+    50100..50199 : setlength(FBindArray51,NumColumns);
+    60000..60099 : setlength(FBindArray60,NumColumns);
+  else
+    raise EZSQLException.Create('Unknown dll version : '+IntToStr(FDriverVersion));
+  End
+end;
+
+destructor TZMySQLBindBuffer.Destroy;
+begin
+  inherited Destroy;
+end;
+
+procedure TZMySQLBindBuffer.AddColumn(buffertype: TMysqlFieldTypes;
+  display_length: integer);
+begin
+  Inc(FAddedColumnCount);
+  With FPColumnArray^[FAddedColumnCount-1] do
+    begin
+      length := getMySQLFieldSize(buffertype,display_length);
+      SetLength(buffer,length);
+      is_null := 0;
+    end;
+  Case FDriverVersion of
+    40100..40199 : With FBindArray41[FAddedColumnCount-1] do
+                     begin
+                       buffer_type   := buffertype;
+                       buffer_length := FPColumnArray^[FAddedColumnCount-1].length;
+                       is_unsigned   := 0;
+                       buffer        := @FPColumnArray^[FAddedColumnCount-1].buffer[0];
+                       length        := @FPColumnArray^[FAddedColumnCount-1].length;
+                       is_null       := @FPColumnArray^[FAddedColumnCount-1].is_null;
+                     end;
+    50000..50099 : With FBindArray50[FAddedColumnCount-1] do
+                     begin
+                       buffer_type   := buffertype;
+                       buffer_length := FPColumnArray^[FAddedColumnCount-1].length;
+                       is_unsigned   := 0;
+                       buffer        := @FPColumnArray^[FAddedColumnCount-1].buffer[0];
+                       length        := @FPColumnArray^[FAddedColumnCount-1].length;
+                       is_null       := @FPColumnArray^[FAddedColumnCount-1].is_null;
+                     end;
+    50100..50199 : With FBindArray51[FAddedColumnCount-1] do
+                     begin
+                       buffer_type   := buffertype;
+                       buffer_length := FPColumnArray^[FAddedColumnCount-1].length;
+                       is_unsigned   := 0;
+                       buffer        := @FPColumnArray^[FAddedColumnCount-1].buffer[0];
+                       length        := @FPColumnArray^[FAddedColumnCount-1].length;
+                       is_null       := @FPColumnArray^[FAddedColumnCount-1].is_null;
+                     end;
+    60000..60099 : With FBindArray60[FAddedColumnCount-1] do
+                     begin
+                       buffer_type   := buffertype;
+                       buffer_length := FPColumnArray^[FAddedColumnCount-1].length;
+                       is_unsigned   := 0;
+                       buffer        := @FPColumnArray^[FAddedColumnCount-1].buffer[0];
+                       length        := @FPColumnArray^[FAddedColumnCount-1].length;
+                       is_null       := @FPColumnArray^[FAddedColumnCount-1].is_null;
+                     end;
+  else
+    raise EZSQLException.Create('Unknown dll version : '+IntToStr(FDriverVersion));
+  End
+end;
+
+function TZMySQLBindBuffer.GetColumnArray: TZMysqlColumnBuffer;
+begin
+  result := FPColumnArray^;
+end;
+
+function TZMySQLBindBuffer.GetBufferAddress: Pointer;
+begin
+  Case FDriverVersion of
+    40100..40199 : result := @FBindArray41[0];
+    50000..50099 : result := @FBindArray50[0];
+    50100..50199 : result := @FBindArray51[0];
+    60000..60099 : result := @FBindArray60[0];
+  else
+    result := nil;
+    raise EZSQLException.Create('Unknown dll version : '+IntToStr(FDriverVersion));
+  End
+end;
+
+function TZMySQLBindBuffer.GetBufferType(ColumnIndex: Integer): TMysqlFieldTypes;
+begin
+  Case FDriverVersion of
+    40100..40199 : result := FBindArray41[ColumnIndex-1].buffer_type;
+    50000..50099 : result := FBindArray50[ColumnIndex-1].buffer_type;
+    50100..50199 : result := FBindArray51[ColumnIndex-1].buffer_type;
+    60000..60099 : result := FBindArray60[ColumnIndex-1].buffer_type;
+  else
+    result := TMysqlFieldTypes(0);
+    raise EZSQLException.Create('Unknown dll version : '+IntToStr(FDriverVersion));
+  End
+
 end;
 
 end.
