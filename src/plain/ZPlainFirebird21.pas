@@ -410,12 +410,15 @@ var
 
 implementation
 
-uses SysUtils, ZMessages,
-{$IFNDEF UNIX}
-  Windows;
-{$ELSE}
-  libc;
+uses SysUtils, 
+{$IFNDEF UNIX} 
+  Windows, 
+{$ELSE} 
+  {$IFNDEF FPC} 
+    libc, 
+  {$ENDIF} 
 {$ENDIF}
+  ZMessages;
 
 {$IFDEF UNIX}
 {$IFDEF INTERBASE_CRYPT}

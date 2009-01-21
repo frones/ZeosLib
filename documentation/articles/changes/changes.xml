@@ -164,6 +164,9 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[Lazarus] Removed libc from uses clauses when using fpc (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2196">http://zeos.firmos.at/viewtopic.php?t=2196</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[DELPHI] Removed conditional compilation of database dependent Tokenizers (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2138">http://zeos.firmos.at/viewtopic.php?t=2138</ulink>)</simpara>
         </listitem>
         <listitem>

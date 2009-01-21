@@ -84,13 +84,15 @@ type
 
 implementation
 
-uses
-{$IFNDEF UNIX}
-  Windows,
-{$ELSE}
-  libc,
+uses SysUtils, 
+{$IFNDEF UNIX} 
+  Windows, 
+{$ELSE} 
+  {$IFNDEF FPC} 
+    libc, 
+  {$ENDIF} 
 {$ENDIF}
-  ZMessages, SysUtils;
+  ZMessages;
 
 { TZNativeLibraryLoader }
 
