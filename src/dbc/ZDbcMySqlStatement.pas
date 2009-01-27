@@ -646,7 +646,7 @@ var
     caststring : AnsiString;
     PBuffer: Pointer;
     year, month, day, hour, minute, second, millisecond: word;
-  I : integer;
+  I,J : integer;
   LogString : String;
 begin
   if InParamCount = 0 then
