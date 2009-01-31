@@ -512,16 +512,12 @@ begin
   begin
     {$IFDEF FPC}
     if OldDecimalSeparator = ',' then
-      try
+      begin
         DecimalSeparator := OldDecimalSeparator;
-        Result := StrToFloat(Str);
-      except
-        Result := 0;
+        Result := StrToFloatDef(Str, Def);
       end
     else
-    begin
-      Result := StrToFloatDef(Str, Def);
-    end;
+        Result := StrToFloatDef(Str, Def);
     {$ELSE}
     Result := StrToFloatDef(Str, Def);
     {$ENDIF}
