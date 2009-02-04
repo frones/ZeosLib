@@ -197,7 +197,7 @@ type
     // get_character_set_info
 
     {non API functions}
-    function GetFieldType(Field: PZMySQLField): Byte;
+    function GetFieldType(Field: PZMySQLField): TMysqlFieldTypes;
     function GetFieldFlags(Field: PZMySQLField): Integer;
     function ResultSetExists(Handle: PZMySQLConnect):Boolean;
     function GetRowCount(Res: PZMySQLResult): Int64;
@@ -322,7 +322,7 @@ type
       PZMySQLRowOffset;
     function SeekField(Res: PZMySQLResult; Offset: Cardinal): Cardinal;
 
-    function GetFieldType(Field: PZMySQLField): Byte;
+    function GetFieldType(Field: PZMySQLField): TMysqlFieldTypes;
     function GetFieldFlags(Field: PZMySQLField): Integer;
     function ResultSetExists(Handle: PZMySQLConnect):Boolean;
     function GetRowCount(Res: PZMySQLResult): Int64;
@@ -455,7 +455,7 @@ type
     function SeekRow(Res: PZMySQLResult; Row: PZMySQLRowOffset): PZMySQLRowOffset;
     function SeekField(Res: PZMySQLResult; Offset: Cardinal): Cardinal;
 
-    function GetFieldType(Field: PZMySQLField): Byte;
+    function GetFieldType(Field: PZMySQLField): TMysqlFieldTypes;
     function GetFieldFlags(Field: PZMySQLField): Integer;
     function ResultSetExists(Handle: PZMySQLConnect):Boolean;
     function GetRowCount(Res: PZMySQLResult): Int64;
@@ -939,7 +939,7 @@ begin
   Result := MYSQL_API.mysql_error(Handle);
 end;
 
-function TZMySQL41PlainDriver.GetFieldType(Field: PZMySQLField): Byte;
+function TZMySQL41PlainDriver.GetFieldType(Field: PZMySQLField): TMysqlFieldTypes;
 begin
   Result := PMYSQL_FIELD(Field)^._type;
 end;
@@ -1478,7 +1478,7 @@ begin
   Result := MYSQL_API.mysql_error(Handle);
 end;
 
-function TZMySQL5PlainDriver.GetFieldType(Field: PZMySQLField): Byte;
+function TZMySQL5PlainDriver.GetFieldType(Field: PZMySQLField): TMysqlFieldTypes;
 begin
   Result := PMYSQL_FIELD(Field)^._type;
 end;

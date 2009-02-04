@@ -147,6 +147,12 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=124">#0000124</ulink> [normal] TZSQLMonitor access violation when destroying</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=117">#0000117</ulink> [normal] FPC - Float Fields with null values produce many exceptions</simpara>
+        </listitem>
+        <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=150">#0000150</ulink> [normal] Second JOIN in from clause was stripped by the SQL parser after ON or USING clause</simpara>
         </listitem>
         <listitem>
@@ -163,6 +169,9 @@
     <sect2>
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>[Lazarus] Removed libc from uses clauses when using fpc (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2196">http://zeos.firmos.at/viewtopic.php?t=2196</ulink>)</simpara>
+        </listitem>
         <listitem>
           <simpara>[DELPHI] Removed conditional compilation of database dependent Tokenizers (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2138">http://zeos.firmos.at/viewtopic.php?t=2138</ulink>)</simpara>
         </listitem>

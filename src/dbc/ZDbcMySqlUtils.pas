@@ -59,7 +59,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZPlainMySqlDriver, ZDbcLogging;
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZPlainMySqlDriver, ZPlainMySqlConstants, ZDbcLogging;
 
 const
   MAXBUF = 65535;
@@ -133,10 +133,10 @@ function EncodeMySQLVersioning(const MajorVersion: Integer;
 }
 function ConvertMySQLVersionToSQLVersion( const MySQLVersion: Integer ): Integer;
 
-function getMySQLFieldSize (field_type: Byte; field_size: LongWord): LongWord;
+function getMySQLFieldSize (field_type: TMysqlFieldTypes; field_size: LongWord): LongWord;
 implementation
 
-uses ZMessages, ZPlainMySqlConstants;
+uses ZMessages;
 
 threadvar
   SilentMySQLError: Integer;
@@ -490,7 +490,7 @@ begin
  Result := EncodeSQLVersioning(MajorVersion,MinorVersion,SubVersion);
 end;
 
-function getMySQLFieldSize (field_type: Byte; field_size: LongWord): LongWord;
+function getMySQLFieldSize (field_type: TMysqlFieldTypes; field_size: LongWord): LongWord;
 const
     MaxBlobSize = 65535;
 

@@ -43,12 +43,13 @@ interface
 
 uses
   SysUtils, Classes, Math,
-  {$IFDEF MSWINDOWS}
-  Windows,
-  {$ENDIF}
-  {$IFDEF LINUX}
-  Libc,
-  {$ENDIF}
+{$IFNDEF UNIX} 
+  Windows, 
+{$ELSE} 
+  {$IFNDEF FPC} 
+    libc, 
+  {$ENDIF} 
+{$ENDIF} 
   ZDbcInterbase6, ZPlainInterbaseDriver, ZConnection, ZDbcIntfs,
   ZPlainInterbase5, ZPlainInterbase6, ZPlainFirebird10, ZPlainFirebird15,
   ZPlainFirebird20, ZPlainFirebird21, ZPlainFirebirdInterbaseConstants;

@@ -82,7 +82,7 @@ const
   LOCAL_HOST           = 'localhost';
 
 { Enum Field Types }
-  FIELD_TYPE_DECIMAL   = 0;
+{  FIELD_TYPE_DECIMAL   = 0;
   FIELD_TYPE_TINY      = 1;
   FIELD_TYPE_SHORT     = 2;
   FIELD_TYPE_LONG      = 3;
@@ -108,10 +108,10 @@ const
   FIELD_TYPE_BLOB      = 252;
   FIELD_TYPE_VAR_STRING = 253;
   FIELD_TYPE_STRING    = 254;
-  FIELD_TYPE_GEOMETRY  = 255;
+  FIELD_TYPE_GEOMETRY  = 255; }
 { For Compatibility }
-  FIELD_TYPE_CHAR      = FIELD_TYPE_TINY;
-  FIELD_TYPE_INTERVAL  = FIELD_TYPE_ENUM;
+{  FIELD_TYPE_CHAR      = FIELD_TYPE_TINY;
+  FIELD_TYPE_INTERVAL  = FIELD_TYPE_ENUM; }
 
   { Field's flags }
   NOT_NULL_FLAG          = 1;     { Field can't be NULL }
@@ -287,33 +287,33 @@ type
 
 { Enum Field Types }
       TMysqlFieldTypes = (
-        MYSQL_TYPE_DECIMAL,
-        MYSQL_TYPE_TINY,         {BIND}
-        MYSQL_TYPE_SHORT,        {BIND}
-        MYSQL_TYPE_LONG,         {BIND}
-        MYSQL_TYPE_FLOAT,        {BIND}
-        MYSQL_TYPE_DOUBLE,       {BIND}
-        MYSQL_TYPE_NULL,
-        MYSQL_TYPE_TIMESTAMP,    {BIND}
-        MYSQL_TYPE_LONGLONG,     {BIND}
-        MYSQL_TYPE_INT24,
-        MYSQL_TYPE_DATE,         {BIND}
-        MYSQL_TYPE_TIME,         {BIND}
-        MYSQL_TYPE_DATETIME,     {BIND}
-        MYSQL_TYPE_YEAR,
-        MYSQL_TYPE_NEWDATE,
-        MYSQL_TYPE_VARCHAR, //<--ADDED by fduenas 20-06-2006
-        MYSQL_TYPE_BIT,     //<--ADDED by fduenas 20-06-2006
-        MYSQL_TYPE_NEWDECIMAL,
-        MYSQL_TYPE_ENUM,
-        MYSQL_TYPE_SET,
-        MYSQL_TYPE_TINY_BLOB,    {BIND}
-        MYSQL_TYPE_MEDIUM_BLOB,  {BIND}
-        MYSQL_TYPE_LONG_BLOB,    {BIND}
-        MYSQL_TYPE_BLOB,         {BIND}
-        MYSQL_TYPE_VAR_STRING,   {BIND}
-        MYSQL_TYPE_STRING,       {BIND}
-        MYSQL_TYPE_GEOMETRY
+  FIELD_TYPE_DECIMAL   = 0,
+  FIELD_TYPE_TINY      = 1,
+  FIELD_TYPE_SHORT     = 2,
+  FIELD_TYPE_LONG      = 3,
+  FIELD_TYPE_FLOAT     = 4,
+  FIELD_TYPE_DOUBLE    = 5,
+  FIELD_TYPE_NULL      = 6,
+  FIELD_TYPE_TIMESTAMP = 7,
+  FIELD_TYPE_LONGLONG  = 8,
+  FIELD_TYPE_INT24     = 9,
+  FIELD_TYPE_DATE      = 10,
+  FIELD_TYPE_TIME      = 11,
+  FIELD_TYPE_DATETIME  = 12,
+  FIELD_TYPE_YEAR      = 13,
+  FIELD_TYPE_NEWDATE   = 14,
+  FIELD_TYPE_VARCHAR   = 15, //<--ADDED by fduenas 20-06-2006
+  FIELD_TYPE_BIT       = 16, //<--ADDED by fduenas 20-06-2006
+  FIELD_TYPE_NEWDECIMAL = 246, //<--ADDED by fduenas 20-06-2006
+  FIELD_TYPE_ENUM      = 247,
+  FIELD_TYPE_SET       = 248,
+  FIELD_TYPE_TINY_BLOB = 249,
+  FIELD_TYPE_MEDIUM_BLOB = 250,
+  FIELD_TYPE_LONG_BLOB = 251,
+  FIELD_TYPE_BLOB      = 252,
+  FIELD_TYPE_VAR_STRING = 253,
+  FIELD_TYPE_STRING    = 254,
+  FIELD_TYPE_GEOMETRY  = 255
     );
 
   { Options for mysql_set_option }
@@ -420,35 +420,39 @@ TMYSQL_CLIENT_OPTIONS =
     flags:            Cardinal; // Div flags
     decimals:         Cardinal; // Number of decimals in field
     charsetnr:        Cardinal; // Character set
-    _type:            Cardinal; // Type of field. Se mysql_com.h for types
+    _type:            TMysqlFieldTypes; // Type of field. Se mysql_com.h for types
   end;
 
   PMYSQL_BIND41 = ^MYSQL_BIND41;
   MYSQL_BIND41 =  record
-      length:           PLongInt;
+    // 4.1.22 definition
+    length:           PLongInt;
     is_null:          PByte;
     buffer:           PAnsiChar;
-    buffer_type:      Cardinal;
+    buffer_type:      TMysqlFieldTypes;
     buffer_length:    LongInt;
+    //internal fields
     inter_buffer:     PByte;
     offset:           LongInt;
     internal_length:  LongInt;
     param_number:     Cardinal;
+    pack_length:      Cardinal;
+    is_unsigned:      Byte;
     long_data_used:   Byte;
-    binary_data:      Byte;
-    null_field:       Byte;
     internal_is_null: Byte;
-    store_param_func: Pointer; {procedure(_net: NET41; param: PMYSQL_BIND41);}
-    fetch_result:     Pointer; {procedure(param: PMYSQL_BIND41; row: PMYSQL_ROW41);}
+    store_param_func: Pointer;
+    fetch_result:     Pointer;
+    skip_result:      Pointer;
   end;
 
   PMYSQL_BIND50 = ^MYSQL_BIND50;
   MYSQL_BIND50 =  record
+    // 5.0.67 definition
     length:            PLongInt;
     is_null:           PByte;
     buffer:            PAnsiChar;
     error:             PByte;
-    buffer_type:       Byte;
+    buffer_type:       TMysqlFieldTypes;
     buffer_length:     LongInt;
     row_ptr:           PByte;
     offset:            LongInt;
@@ -462,6 +466,54 @@ TMYSQL_CLIENT_OPTIONS =
     store_param_funct: Pointer;
     fetch_result:      Pointer;
     skip_result:       Pointer;
+  end;
+
+  PMYSQL_BIND51 = ^MYSQL_BIND51;
+  MYSQL_BIND51 =  record
+    // 5.1.30 definition
+    length:            PLongInt;
+    is_null:           PByte;
+    buffer:            PAnsiChar;
+    error:             PByte;
+    row_ptr:           PByte;
+    store_param_funct: Pointer;
+    fetch_result:      Pointer;
+    skip_result:       Pointer;
+    buffer_length:     LongInt;
+    offset:            LongInt;
+    length_value:      LongInt;
+    param_number:      Cardinal;
+    pack_length:       Cardinal;
+    buffer_type:       TMysqlFieldTypes;
+    error_value:       Byte;
+    is_unsigned:       Byte;
+    long_data_used:    Byte;
+    is_null_value:     Byte;
+    extension:         Pointer;
+  end;
+
+  PMYSQL_BIND60 = ^MYSQL_BIND60;
+  MYSQL_BIND60 =  record
+    // 6.0.8 definition
+    length:            PLongInt;
+    is_null:           PByte;
+    buffer:            PAnsiChar;
+    error:             PByte;
+    row_ptr:           PByte;
+    store_param_funct: Pointer;
+    fetch_result:      Pointer;
+    skip_result:       Pointer;
+    buffer_length:     LongInt;
+    offset:            LongInt;
+    length_value:      LongInt;
+    param_number:      Cardinal;
+    pack_length:       Cardinal;
+    buffer_type:       TMysqlFieldTypes;
+    error_value:       Byte;
+    is_unsigned:       Byte;
+    long_data_used:    Byte;
+    is_null_value:     Byte;
+    extension:         Pointer;
   end;
 
   PDOBindRecord2 = record
