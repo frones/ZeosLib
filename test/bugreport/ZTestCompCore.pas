@@ -811,6 +811,10 @@ var
 begin
   if SkipClosed then Exit;
 
+  // mdaems: This doesn't work with prepared statements !!
+  // we must add code to unprepare the Query before closing the connection 
+  Fail('Closing and reopening a connection while the statement is open can''t work');
+
   Connection := Self.CreateDatasetConnection;
   Query := TZQuery.Create(nil);
   Query.Connection := Connection;
