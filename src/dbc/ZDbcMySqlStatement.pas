@@ -154,7 +154,9 @@ type
 
     function CreateResultSet(const SQL: string): IZResultSet;
 
-    procedure PrepareParameters;
+    procedure PrepareInParameters; override;
+    procedure BindInParameters; override;
+    procedure UnPrepareInParameters; override;
     function getFieldType (testVariant: TZVariant): TMysqlFieldTypes;
   protected
     function GetStmtHandle : PZMySqlPrepStmt;
@@ -641,7 +643,14 @@ begin
     Result := NativeResultSet;
 end;
 
-procedure TZMysqlPreparedStatement.PrepareParameters;
+procedure TZMySQLPreparedStatement.PrepareInParameters;
+begin
+  // Empty : Mysql can't prepare datastructures before the actual parameters are known, because the
+  // number/datatype of parameters isn't returned by the server.
+  inherited PrepareInParameters;
+end;
+
+procedure TZMysqlPreparedStatement.BindInParameters;
 var
     caststring : AnsiString;
     PBuffer: Pointer;
@@ -700,7 +709,14 @@ begin
       checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, SBindingFailure);
       exit;
     end;
-  DriverManager.LogMessage(lcBindPrepStmt, FPlainDriver.GetProtocol, LogString);
+   inherited BindInParameters;
+end;
+
+procedure TZMySQLPreparedStatement.UnPrepareInParameters;
+begin
+  // Empty : Mysql can't prepare datastructures before the actual parameters are known, because the
+  // number/datatype of parameters isn't returned by the server.
+  inherited UnPrepareInParameters;
 end;
 
 function TZMysqlPreparedStatement.getFieldType (testVariant: TZVariant): TMysqlFieldTypes;
@@ -782,7 +798,7 @@ end;
 function TZMySQLPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   Result := nil;
-  PrepareParameters;
+  BindInParameters;
   if (self.FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
      begin
         checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
@@ -813,7 +829,7 @@ var
   HasResultset : Boolean;
 begin
   Result := -1;
-  PrepareParameters;
+  BindInParameters;
   if (self.FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
      begin
         checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
@@ -848,7 +864,7 @@ var
   HasResultset : Boolean;
 begin
   Result := False;
-  PrepareParameters;
+  BindInParameters;
   if (FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
      begin
         checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);

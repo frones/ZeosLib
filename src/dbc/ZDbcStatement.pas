@@ -173,6 +173,10 @@ type
     FInParamCount: Integer;
     FPrepared : Boolean;
   protected
+    procedure PrepareInParameters; virtual;
+    procedure BindInParameters; virtual;
+    procedure UnPrepareInParameters; virtual;
+
     procedure SetInParamCount(NewParamCount: Integer); virtual;
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
       const Value: TZVariant); virtual;
@@ -312,7 +316,7 @@ type
 
 implementation
 
-uses ZSysUtils, ZMessages, ZDbcResultSet;
+uses ZSysUtils, ZMessages, ZDbcResultSet, ZDbcLogging;
 
 { TZAbstractStatement }
 
@@ -939,6 +943,38 @@ begin
 end;
 
 {**
+  Prepares eventual structures for binding input parameters.
+}
+procedure TZAbstractPreparedStatement.PrepareInParameters;
+begin
+end;
+
+{**
+  Binds the input parameters
+}
+procedure TZAbstractPreparedStatement.BindInParameters;
+var
+  I : integer;
+  LogString : String;
+begin
+  if InParamCount = 0 then
+     exit;
+    { Prepare Log Output}
+  For I := 0 to InParamCount - 1 do
+  begin
+    LogString := LogString + GetInParamLogValue(InParamValues[I])+',';
+  end;
+  DriverManager.LogMessage(lcBindPrepStmt, '', LogString);
+end;
+
+{**
+  Removes eventual structures for binding input parameters.
+}
+procedure TZAbstractPreparedStatement.UnPrepareInParameters;
+begin
+end;
+
+{**
   Sets a new parameter count and initializes the buffers.
   @param NewParamCount a new parameters count.
 }
@@ -1112,7 +1148,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
-procedure TZAbstractPreparedStatement.SetInt(ParameterIndex,
+procedure TZAbstractPreparedStatement.SetInt(ParameterIndex: Integer;
   Value: Integer);
 var
   Temp: TZVariant;
@@ -1465,11 +1501,13 @@ end;
 
 procedure TZAbstractPreparedStatement.Prepare;
 begin
+  PrepareInParameters;
   FPrepared := True;
 end;
 
 procedure TZAbstractPreparedStatement.Unprepare;
 begin
+  UnPrepareInParameters;
   FPrepared := False;
 end;
 
