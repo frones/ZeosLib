@@ -255,3 +255,4 @@
 20081208 : Fixed bug in UpdateSQLeditor that resulted from commit 481 - by mdaems - Mantis Bug 165
 
 20090117 : Second JOIN in from clause was stripped by the SQL parser after ON or USING clause - by mdaems/DarthWombat - Mantis Bug 150
+20090121 : Removed libc from uses clauses when using fpc - by mdaems/piper62 - See http://zeos.firmos.at/viewtopic.php?t=219620090131 : FPC - Float Fields with null values produce many exceptions - by papelhigienico - Mantis Bug 11720090131 : TZSQLMonitor access violation when destroying - by mturecki - Mantis Bug 124

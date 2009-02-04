@@ -166,10 +166,12 @@ procedure TZSQLMonitor.SetActive(const Value: Boolean);
 begin
   if FActive <> Value then
   begin
-    FActive := Value;
     if Value then
       DriverManager.AddLoggingListener(Self)
-    else DriverManager.RemoveLoggingListener(Self);
+    else
+      if Assigned(DriverManager) then
+         DriverManager.RemoveLoggingListener(Self);
+    FActive := Value;
   end;
 end;
 

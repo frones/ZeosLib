@@ -500,21 +500,16 @@ begin
     Str := Copy(Str, 2, Pred(Length(Str)));
 {$IFDEF FPC}
   if OldDecimalSeparator = ',' then
-    try
+    begin
       DecimalSeparator := OldDecimalSeparator;
-      Result := StrToFloat(Str);
-    except
-      Result := 0;
+        Result := StrToFloatDef(Str, Def);
     end
   else
-    begin
     Result := StrToFloatDef(Str, Def);
-    DecimalSeparator := OldDecimalSeparator;
-    end;
 {$ELSE}
   Result := StrToFloatDef(Str, Def);
-  DecimalSeparator := OldDecimalSeparator;
 {$ENDIF}
+  DecimalSeparator := OldDecimalSeparator;
 end;
 
 {**

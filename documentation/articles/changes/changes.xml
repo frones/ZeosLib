@@ -30,6 +30,12 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=124">#0000124</ulink> [normal] TZSQLMonitor access violation when destroying</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=117">#0000117</ulink> [normal] FPC - Float Fields with null values produce many exceptions</simpara>
+        </listitem>
+        <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=150">#0000150</ulink> [normal] Second JOIN in from clause was stripped by the SQL parser after ON or USING clause</simpara>
         </listitem>
         <listitem>
