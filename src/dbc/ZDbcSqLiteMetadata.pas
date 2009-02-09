@@ -1547,6 +1547,8 @@ const
 var
   I: Integer;
 begin
+    Result := ConstructVirtualResultSet(TypeInfoColumnsDynArray);
+
     for I := 1 to MaxTypeCount do
     begin
       Result.MoveToInsertRow;
