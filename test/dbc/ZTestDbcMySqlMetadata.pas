@@ -191,7 +191,7 @@ begin
   CheckEquals(7, ResultSet.FindColumn('PRIVILEGE'));
   CheckEquals(8, ResultSet.FindColumn('IS_GRANTABLE'));
 
-  ResultSet.Next;
+  CheckEquals(True, ResultSet.Next);
   CheckEquals('zeoslib', ResultSet.GetStringByName('TABLE_CAT'));
   CheckEquals('', ResultSet.GetStringByName('TABLE_SCHEM'));
   CheckEquals('people', ResultSet.GetStringByName('TABLE_NAME'));
@@ -201,7 +201,7 @@ begin
   CheckEquals('Update', ResultSet.GetStringByName('PRIVILEGE'));
   CheckEquals('', ResultSet.GetStringByName('IS_GRANTABLE'));
 
-  ResultSet.Next;
+  CheckEquals(True, ResultSet.Next);
   CheckEquals('zeoslib', ResultSet.GetStringByName('TABLE_CAT'));
   CheckEquals('', ResultSet.GetStringByName('TABLE_SCHEM'));
   CheckEquals('people', ResultSet.GetStringByName('TABLE_NAME'));
