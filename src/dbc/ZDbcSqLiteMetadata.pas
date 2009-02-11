@@ -1298,7 +1298,7 @@ begin
 
         Result.UpdateNull(12);
         if Trim(GetString(5)) <> '' then
-          Result.UpdateString(13, '''' + GetString(5) + '''')
+          Result.UpdateString(13, GetString(5))
         else Result.UpdateNull(13);
         Result.UpdateNull(14);
         Result.UpdateNull(15);

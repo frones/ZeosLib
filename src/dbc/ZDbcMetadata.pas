@@ -860,7 +860,7 @@ end;
 }
 function TZAbstractDatabaseMetadata.StoresUpperCaseIdentifiers: Boolean;
 begin
-  Result := True;
+  Result := False;
 end;
 
 {**
@@ -870,7 +870,7 @@ end;
 }
 function TZAbstractDatabaseMetadata.StoresLowerCaseIdentifiers: Boolean;
 begin
-  Result := True;
+  Result := False;
 end;
 
 {**
@@ -4256,9 +4256,9 @@ begin
   else if IsSpecialCase(Value) then
     Result := True
   else if IsLowerCase(Value) then
-    Result := not Metadata.StoresLowerCaseIdentifiers
+    Result := Metadata.StoresUpperCaseIdentifiers
   else if IsUpperCase(Value) then
-    Result := not Metadata.StoresUpperCaseIdentifiers
+    Result := Metadata.StoresLowerCaseIdentifiers
   else
     Result := not Metadata.StoresMixedCaseIdentifiers;
 

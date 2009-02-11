@@ -101,7 +101,7 @@ procedure TZTestConnectionCase.TestExecuteDirect;
 var
   l_bool : boolean;
 begin
-  l_bool := Connection.ExecuteDirect('insert into department (dep_id,dep_name) Values (89,"Dept89")');
+  l_bool := Connection.ExecuteDirect('insert into department (dep_id,dep_name) Values (89,''Dept89'')');
   CheckEquals(true, l_bool);
   l_bool := Connection.ExecuteDirect('delete from department where dep_id = 89');
   CheckEquals(true, l_bool);
@@ -115,10 +115,10 @@ var
   l_int  : integer;
   l_bool : boolean;
 begin
-  l_bool := Connection.ExecuteDirect('insert into department (dep_id,dep_name) Values (87,"Dept87")',l_int);
+  l_bool := Connection.ExecuteDirect('insert into department (dep_id,dep_name) Values (87,''Dept87'')',l_int);
   CheckEquals(true, l_bool);
   CheckEquals(1, l_int);
-  l_bool := Connection.ExecuteDirect('insert into department (dep_id,dep_name) Values (88,"Dept88")',l_int);
+  l_bool := Connection.ExecuteDirect('insert into department (dep_id,dep_name) Values (88,''Dept88'')',l_int);
   CheckEquals(true, l_bool);
   CheckEquals(1, l_int);
   l_bool := Connection.ExecuteDirect('delete from department where dep_id between 87 and 88',l_int);

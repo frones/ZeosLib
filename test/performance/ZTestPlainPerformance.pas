@@ -250,7 +250,7 @@ type
 
 implementation
 
-uses ZSqlTestCase;
+uses ZSqlTestCase, ZPlainMysqlConstants;
 
 {$IFDEF ENABLE_MYSQL}
  { TZPlainMySQLPerformanceTestCase }
@@ -855,7 +855,7 @@ procedure TZPlainInterbase6SQLPerformanceTestCase.Disconnect;
 begin
   if FStmtHandle <> nil then
   begin
-    FreeStatement(FPlainDriver, FStmtHandle);
+    FreeStatement(FPlainDriver, FStmtHandle, DSQL_Drop);
     FStmtHandle := nil;
   end;
 
@@ -901,7 +901,7 @@ begin
 
     Result := SQLData;
   except
-    FreeStatement(FPlainDriver, FStmtHandle);
+    FreeStatement(FPlainDriver, FStmtHandle, DSQL_Drop);
   end;
 end;
 
@@ -920,7 +920,7 @@ begin
       @StmtHandle, FDialect, nil, nil);
     CheckInterbase6Error(SQL);
   finally
-    FreeStatement(FPlainDriver, StmtHandle);
+    FreeStatement(FPlainDriver, StmtHandle, DSQL_Drop);
   end;
 end;
 
