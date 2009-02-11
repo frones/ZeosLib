@@ -2196,10 +2196,6 @@ var
   I: Integer;
   Key: string; // modified by technbot (2008-06-14) for uniformity with other GetTypeInfo mehtods
 begin
-  Key := GetTypeInfoCacheKey;
-  Result := GetResultSetFromCache(Key);
-  if Result = nil then
-  begin
     Result := ConstructVirtualResultSet(TypeInfoColumnsDynArray);
 
     for I := 1 to MaxTypeCount do
@@ -2239,9 +2235,6 @@ begin
 
       Result.InsertRow;
     end;
-
-    AddResultSetToCache(Key, Result);
-  end;
 end;
 
 {**

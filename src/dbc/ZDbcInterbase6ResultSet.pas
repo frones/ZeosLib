@@ -159,7 +159,7 @@ begin
     FSqlData := nil;
     FParamsSqlData := nil;
     { Free allocate sql statement }
-    FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle);
+    FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_close);
   end;
 inherited Close;
 end;

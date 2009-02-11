@@ -81,16 +81,30 @@ type
   end;
 
   {** Implements Prepared SQL Statement. }
+
+  { TZInterbase6PreparedStatement }
+
   TZInterbase6PreparedStatement = class(TZAbstractPreparedStatement)
   private
     FCachedBlob: boolean;
     FParamSQLData: IZParamsSQLDA;
     FStatusVector: TARRAY_ISC_STATUS;
     FIBConnection: IZInterbase6Connection;
+
+    Cursor: AnsiString;
+    SQLData: IZResultSQLDA;
+    StmtHandle: TISC_STMT_HANDLE;
+    StatementType: TZIbSqlStatementType;
   protected
+    procedure PrepareInParameters; override;
+    procedure BindInParameters; override;
+    procedure UnPrepareInParameters; override;
     procedure CheckInterbase6Error(const Sql: string = '');
   public
     constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
+    destructor Destroy; override;
+
+    procedure Prepare; override;
 
     function ExecuteQuery(const SQL: string): IZResultSet; override;
     function ExecuteUpdate(const SQL: string): Integer; override;
@@ -217,7 +231,7 @@ begin
     except
       on E: Exception do
       begin
-       FreeStatement(GetPlainDriver, StmtHandle);
+       FreeStatement(GetPlainDriver, StmtHandle, DSQL_drop);
        raise;
       end;
     end;
@@ -272,7 +286,7 @@ begin
       { Logging SQL Command }
       DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SQL);
     finally
-      FreeStatement(GetPlainDriver, StmtHandle);
+      FreeStatement(GetPlainDriver, StmtHandle, DSQL_drop);
     end;
   end;
 end;
@@ -361,7 +375,7 @@ begin
       else
       begin
         LastResultSet := nil;
-        FreeStatement(GetPlainDriver, StmtHandle);
+        FreeStatement(GetPlainDriver, StmtHandle, DSQL_drop);
       end;
 
       { Autocommit statement. }
@@ -372,7 +386,7 @@ begin
     except
       on E: Exception do
       begin
-       FreeStatement(GetPlainDriver, StmtHandle);
+       FreeStatement(GetPlainDriver, StmtHandle, DSQL_drop);
        raise;
       end;
     end;
@@ -381,6 +395,123 @@ end;
 {$HINTS ON}
 
 { TZInterbase6PreparedStatement }
+
+procedure TZInterbase6PreparedStatement.PrepareInParameters;
+var
+  StatusVector: TARRAY_ISC_STATUS;
+begin
+  With FIBConnection do
+    begin
+      {create the parameter bind structure}
+      FParamSQLData := TZParamsSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle);
+      {check dynamic sql}
+      GetPlainDriver.isc_dsql_describe_bind(@StatusVector, @StmtHandle, GetDialect,
+        FParamSQLData.GetData);
+      ZDbcInterbase6Utils.CheckInterbase6Error(GetPlainDriver, StatusVector, lcExecute, SQL);
+
+      { Resize XSQLDA structure if needed }
+      if FParamSQLData.GetData^.sqld > FParamSQLData.GetData^.sqln then
+      begin
+        FParamSQLData.AllocateSQLDA;
+        GetPlainDriver.isc_dsql_describe_bind(@StatusVector, @StmtHandle, GetDialect,FParamSQLData.GetData);
+        ZDbcInterbase6Utils.CheckInterbase6Error(GetPlainDriver, StatusVector, lcExecute, SQL);
+      end;
+
+      FParamSQLData.InitFields(True);
+    end;
+  inherited PrepareInParameters;
+end;
+
+procedure TZInterbase6PreparedStatement.BindInParameters;
+var
+  I: Integer;
+  TempBlob: IZBlob;
+  TempStream: TStream;
+begin
+  if InParamCount <> FParamSQLData.GetFieldCount then
+    raise EZSQLException.Create(SInvalidInputParameterCount);
+
+  {$R-}
+  for I := 0 to FParamSQLData.GetFieldCount - 1 do
+  begin
+    if DefVarManager.IsNull(InParamValues[I])then
+    begin
+      FParamSQLData.UpdateNull(I, True);
+      Continue;
+    end;
+    case InParamTypes[I] of
+      stBoolean:
+        FParamSQLData.UpdateBoolean(I,
+          SoftVarManager.GetAsBoolean(InParamValues[I]));
+      stByte:
+        FParamSQLData.UpdateByte(I,
+          SoftVarManager.GetAsInteger(InParamValues[I]));
+      stShort:
+        FParamSQLData.UpdateShort(I,
+          SoftVarManager.GetAsInteger(InParamValues[I]));
+      stInteger:
+        FParamSQLData.UpdateInt(I,
+          SoftVarManager.GetAsInteger(InParamValues[I]));
+      stLong:
+        FParamSQLData.UpdateLong(I,
+          SoftVarManager.GetAsInteger(InParamValues[I]));
+      stFloat:
+        FParamSQLData.UpdateFloat(I,
+          SoftVarManager.GetAsFloat(InParamValues[I]));
+      stDouble:
+        FParamSQLData.UpdateDouble(I,
+          SoftVarManager.GetAsFloat(InParamValues[I]));
+      stBigDecimal:
+        FParamSQLData.UpdateBigDecimal(I,
+          SoftVarManager.GetAsFloat(InParamValues[I]));
+      stString:
+        FParamSQLData.UpdateString(I,
+          SoftVarManager.GetAsString(InParamValues[I]));
+      stUnicodeString:
+        FParamSQLData.UpdateString(I,
+          SoftVarManager.GetAsUnicodeString(InParamValues[I]));
+      stBytes:
+        FParamSQLData.UpdateBytes(I,
+          StrToBytes(SoftVarManager.GetAsString(InParamValues[I])));
+      stDate:
+        FParamSQLData.UpdateDate(I,
+          SoftVarManager.GetAsDateTime(InParamValues[I]));
+      stTime:
+        FParamSQLData.UpdateTime(I,
+          SoftVarManager.GetAsDateTime(InParamValues[I]));
+      stTimestamp:
+        FParamSQLData.UpdateTimestamp(I,
+          SoftVarManager.GetAsDateTime(InParamValues[I]));
+      stAsciiStream,
+      stUnicodeStream,
+      stBinaryStream:
+        begin
+          TempBlob := DefVarManager.GetAsInterface(InParamValues[I]) as IZBlob;
+          if not TempBlob.IsEmpty then
+          begin
+            TempStream := TempBlob.GetStream;
+            try
+              FParamSQLData.WriteBlob(I, TempStream);
+            finally
+              TempStream.Free;
+            end;
+          end;
+        end;
+      else
+        raise EZIBConvertError.Create(SUnsupportedParameterType);
+    end;
+  end;
+ {$IFOPT D+}
+{$R+}
+{$ENDIF}
+  inherited BindInParameters;
+end;
+
+procedure TZInterbase6PreparedStatement.UnPrepareInParameters;
+begin
+  FParamSQLData.FreeParamtersValues;
+  inherited UnPrepareInParameters;
+end;
 
 {**
    Check interbase error status
@@ -407,8 +538,37 @@ begin
   FIBConnection := Connection as IZInterbase6Connection;
   ResultSetType := rtScrollInsensitive;
   FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cashedblob', 'true'));
+
+  Prepare;
+end;
+
+destructor TZInterbase6PreparedStatement.Destroy;  
+var
+  StatusVector: TARRAY_ISC_STATUS;
+begin
+    FreeStatement(FIBConnection.GetPlainDriver, StmtHandle, DSQL_drop);
+
+  inherited Destroy;
+end;
+
+procedure TZInterbase6PreparedStatement.Prepare;
+begin
+  StmtHandle := nil;
   with FIBConnection do
-    FParamSQLData := TZParamsSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle);
+  begin
+    StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
+        GetDBHandle, GetTrHandle, GetDialect, SQL, StmtHandle);
+
+    if StatementType in [stSelect, stExecProc] then
+      begin
+        SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle);
+        PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
+          SQL, StmtHandle, SQLData);
+      end;
+  end;
+  CheckInterbase6Error(SQL);
+  DriverManager.LogMessage(lcPrepStmt, FIBConnection.GetPlainDriver.GetProtocol, SQL);
+  inherited Prepare;
 end;
 
 {**
@@ -451,32 +611,12 @@ end;
 }
 {$HINTS OFF}
 function TZInterbase6PreparedStatement.ExecutePrepared: Boolean;
-var
-  Cursor: AnsiString;
-  SQLData: IZResultSQLDA;
-  StmtHandle: TISC_STMT_HANDLE;
-  StatementType: TZIbSqlStatementType;
 begin
   Result := False;
-  StmtHandle := nil;
   with FIBConnection do
   begin
     try
-      StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-        GetDBHandle, GetTrHandle, GetDialect, SQL, StmtHandle);
-
-//      if not (StatementType in [stExecProc]) then
-//        raise EZSQLException.Create(SStatementIsNotAllowed);
-
-      if StatementType in [stSelect, stExecProc] then
-      begin
-        SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle);
-        PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
-          SQL, StmtHandle, SQLData);
-      end;
-
-      PrepareParameters(GetPlainDriver, SQL, InParamValues, InParamTypes,
-        InParamCount, GetDialect, StmtHandle, FParamSQLData);
+      BindInParameters;
 
       GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
             GetDialect, FParamSQLData.GetData, nil);
@@ -490,7 +630,7 @@ begin
         Result := True;
       end;
 
-      { Create ResultSet if possible else free Stateent Handle }
+      { Create ResultSet if possible else free Statement Handle }
       if (StatementType in [stSelect, stExecProc])
         and (SQLData.GetFieldCount <> 0) then
       begin
@@ -502,18 +642,17 @@ begin
       else
       begin
         LastResultSet := nil;
-        FreeStatement(GetPlainDriver, StmtHandle);
       end;
 
       { Autocommit statement. }
       if Connection.GetAutoCommit then
         Connection.Commit;
       { Logging SQL Command }
-      DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SQL);
+      DriverManager.LogMessage(lcExecPrepStmt, GetPlainDriver.GetProtocol, SQL);
     except
       on E: Exception do
       begin
-       FreeStatement(GetPlainDriver, StmtHandle);
+       FreeStatement(GetPlainDriver, StmtHandle, DSQL_close);
        raise;
       end;
     end;
@@ -542,27 +681,11 @@ end;
 }
 {$HINTS OFF}
 function TZInterbase6PreparedStatement.ExecuteQueryPrepared: IZResultSet;
-var
-  Cursor: AnsiString;
-  SQLData: IZResultSQLDA;
-  StmtHandle: TISC_STMT_HANDLE;
-  StatementType: TZIbSqlStatementType;
 begin
-  StmtHandle := nil;
   with FIBConnection do
   begin
-    SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle);
     try
-      StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-        GetDBHandle, GetTrHandle, GetDialect, SQL, StmtHandle);
-
-//      if not(StatementType in [stSelect, stSelectForUpdate]) then
-//        raise EZSQLException.Create(SStatementIsNotAllowed);
-
-      PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
-        SQL, StmtHandle, SQLData);
-      PrepareParameters(GetPlainDriver, SQL, InParamValues, InParamTypes,
-        InParamCount, GetDialect, StmtHandle, FParamSQLData);
+      BindInParameters;
 
       GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
         GetDialect, FParamSQLData.GetData, nil);
@@ -577,7 +700,7 @@ begin
           GetPlainDriver.isc_dsql_set_cursor_name(@FStatusVector,
                   @StmtHandle, PAnsiChar(Cursor), 0);
           CheckInterbase6Error(SQL);
-        end;  
+        end;
 
         Result := GetCachedResultSet(SQL, Self,
           TZInterbase6ResultSet.Create(Self, SQL, StmtHandle, Cursor, SQLData, nil, FCachedBlob));
@@ -587,11 +710,11 @@ begin
 
      LastResultSet := Result;
      { Logging SQL Command }
-     DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SQL);
+     DriverManager.LogMessage(lcExecPrepStmt, GetPlainDriver.GetProtocol, SQL);
     except
       on E: Exception do
       begin
-        FreeStatement(GetPlainDriver, StmtHandle);
+       FreeStatement(GetPlainDriver, StmtHandle, DSQL_close);
         raise;
       end;
     end;
@@ -628,24 +751,12 @@ end;
 }
 {$HINTS OFF}
 function TZInterbase6PreparedStatement.ExecuteUpdatePrepared: Integer;
-var
-  StmtHandle: TISC_STMT_HANDLE;
-  StatementType: TZIbSqlStatementType;
 begin
   Result := -1;
-  StmtHandle := nil;
 
   with FIBConnection do
   begin
-    try
-      StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver, GetDBHandle,
-        GetTrHandle, GetDialect, SQL, StmtHandle);
-
-//      if StatementType in [stExecProc, stSelect, stSelectForUpdate] then
-//        raise EZSQLException.Create(SStatementIsNotAllowed);
-
-      PrepareParameters(GetPlainDriver, SQL, InParamValues, InParamTypes,
-        InParamCount, GetDialect, StmtHandle, FParamSQLData);
+      BindInParameters;
 
       GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle,
         @StmtHandle, GetDialect, FParamSQLData.GetData);
@@ -656,16 +767,14 @@ begin
 
       case StatementType of
         stCommit, stRollback, stUnknown: Result := -1;
+        stSelect : FreeStatement(GetPlainDriver, StmtHandle, DSQL_close);
       end;
 
       { Autocommit statement. }
       if Connection.GetAutoCommit then
         Connection.Commit;
       { Logging SQL Command }
-      DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SQL);
-    finally
-      FreeStatement(GetPlainDriver, StmtHandle);
-    end;
+      DriverManager.LogMessage(lcExecPrepStmt, GetPlainDriver.GetProtocol, SQL);
   end;
 end;
 {$HINTS ON}
@@ -788,7 +897,7 @@ begin
       begin
         { Fetch data and fill Output params }
         FetchOutParams(SQLData);
-        FreeStatement(GetPlainDriver, StmtHandle);
+        FreeStatement(GetPlainDriver, StmtHandle, DSQL_close);
         LastResultSet := nil;
       end;
 
@@ -800,7 +909,7 @@ begin
     except
       on E: Exception do
       begin
-       FreeStatement(GetPlainDriver, StmtHandle);
+       FreeStatement(GetPlainDriver, StmtHandle, DSQL_close);
        raise;
       end;
     end;
@@ -878,7 +987,7 @@ begin
     except
       on E: Exception do
       begin
-        FreeStatement(GetPlainDriver, StmtHandle);
+        FreeStatement(GetPlainDriver, StmtHandle, DSQL_close);
         raise;
       end;
     end;
@@ -956,7 +1065,7 @@ begin
     except
       on E: Exception do
       begin
-        FreeStatement(GetPlainDriver, StmtHandle);
+        FreeStatement(GetPlainDriver, StmtHandle, DSQL_close);
         raise;
       end;
     end;

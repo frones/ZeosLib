@@ -1879,6 +1879,8 @@ procedure TZCachedResultSet.Close;
 begin
   inherited Close;
   ColumnsInfo.Clear;
+  If Assigned(FResultset) then
+    FResultset.Close;
   FResultSet := nil;
 end;
 

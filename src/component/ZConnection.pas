@@ -933,12 +933,13 @@ end;
 procedure TZConnection.CloseAllDataSets;
 var
   I: Integer;
-  Current: TDataset;
+  Current: TZAbstractRODataset;
 begin
   for I := 0 to FDatasets.Count - 1 do
   begin
-    Current := TDataset(FDatasets[I]);
+    Current := TZAbstractRODataset(FDatasets[I]);
     try
+      Current.UnPrepare;
       Current.Close;
     except
       // Ignore.

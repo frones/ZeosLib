@@ -142,16 +142,16 @@ begin
     True, True);
   CheckColumnMetadata(Metadata, 2, 'name', 'dep_name', 'department',
     False, True);
-  if StartsWith(Protocol, 'sqlite') then
+{  if StartsWith(Protocol, 'sqlite') then
   begin
     CheckColumnMetadata(Metadata, 3, 't.dep_shname', 'dep_shname', 'department',
       False, True);
   end
   else
-  begin
+  begin}
     CheckColumnMetadata(Metadata, 3, 'dep_shname', 'dep_shname', 'department',
       False, True);
-  end;
+{  end;}
   CheckColumnMetadata(Metadata, 4, 'dep_address', '', '',
     False, False);
 

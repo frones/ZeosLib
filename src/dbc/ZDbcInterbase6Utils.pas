@@ -300,7 +300,7 @@ type
   function GetDBSQLDialect(PlainDriver: IZInterbasePlainDriver;
     Handle: PISC_DB_HANDLE): Integer;
 
-  { Interbase satatement functions}
+  { Interbase statement functions}
   function PrepareStatement(PlainDriver: IZInterbasePlainDriver;
     Handle: PISC_DB_HANDLE; TrHandle: PISC_TR_HANDLE; Dialect: Word; SQL: string;
     var StmtHandle: TISC_STMT_HANDLE): TZIbSqlStatementType;
@@ -311,7 +311,7 @@ type
     InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray; InParamCount: Integer;
     Dialect: Word; var StmtHandle: TISC_STMT_HANDLE; ParamSqlData: IZParamsSQLDA);
   procedure FreeStatement(PlainDriver: IZInterbasePlainDriver;
-    StatementHandle: TISC_STMT_HANDLE);
+    StatementHandle: TISC_STMT_HANDLE; Options : Word);
   function GetStatementType(PlainDriver: IZInterbasePlainDriver;
     StmtHandle: TISC_STMT_HANDLE): TZIbSqlStatementType;
   function GetAffectedRows(PlainDriver: IZInterbasePlainDriver;
@@ -862,7 +862,7 @@ begin
 
   if Result in [stUnknown, stGetSegment, stPutSegment, stStartTrans] then
   begin
-    FreeStatement(PlainDriver, StmtHandle);
+    FreeStatement(PlainDriver, StmtHandle, DSQL_close);
     raise EZSQLException.Create(SStatementIsNotAllowed);
   end;
 end;
@@ -933,14 +933,13 @@ end;
    @param  the interbase plain driver
    @param  the interbse statement handle
 }
-procedure FreeStatement(PlainDriver: IZInterbasePlainDriver; StatementHandle: TISC_STMT_HANDLE);
+procedure FreeStatement(PlainDriver: IZInterbasePlainDriver; StatementHandle: TISC_STMT_HANDLE; Options: Word);
 var
   StatusVector: TARRAY_ISC_STATUS;
 begin
   if StatementHandle <> nil then
   begin
-    PlainDriver.isc_dsql_free_statement(@StatusVector, @StatementHandle,
-      DSQL_drop);
+    PlainDriver.isc_dsql_free_statement(@StatusVector, @StatementHandle, Options);
     CheckInterbase6Error(PlainDriver, StatusVector);
   end;
 end;
