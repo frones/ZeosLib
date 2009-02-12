@@ -284,6 +284,7 @@ begin
 
   { Sets a default properties }
   FPlainDriver := PlainDriver;
+  Self.PlainDriver := PlainDriver;
   AutoCommit := True;
   TransactIsolationLevel := tiNone;
 

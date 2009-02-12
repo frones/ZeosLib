@@ -58,12 +58,15 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, ZDbcIntfs, ZTokenizer, ZCompatibility, ZVariant;
+  Types, Classes, SysUtils, ZDbcIntfs, ZTokenizer, ZCompatibility, ZVariant, ZDbcLogging;
 
 type
   TZSQLTypeArray = array of TZSQLType;
 
   {** Implements Abstract Generic SQL Statement. }
+
+  { TZAbstractStatement }
+
   TZAbstractStatement = class(TInterfacedObject, IZStatement)
   private
     FMaxFieldSize: Integer;
@@ -87,6 +90,7 @@ type
     procedure SetLastResultSet(ResultSet: IZResultSet); virtual;
 
   protected
+    class function GetNextStatementId : integer;
     procedure RaiseUnsupportedException;
 
     property MaxFieldSize: Integer read FMaxFieldSize write FMaxFieldSize;
@@ -173,6 +177,7 @@ type
     FInParamCount: Integer;
     FPrepared : Boolean;
   protected
+    FStatementId : Integer;
     procedure PrepareInParameters; virtual;
     procedure BindInParameters; virtual;
     procedure UnPrepareInParameters; virtual;
@@ -180,6 +185,7 @@ type
     procedure SetInParamCount(NewParamCount: Integer); virtual;
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
       const Value: TZVariant); virtual;
+    procedure LogPrepStmtMessage(Category: TZLoggingCategory; const Msg: string = '');
     function GetInParamLogValue(Value: TZVariant): String;
 
     property SQL: string read FSQL write FSQL;
@@ -316,7 +322,14 @@ type
 
 implementation
 
-uses ZSysUtils, ZMessages, ZDbcResultSet, ZDbcLogging;
+uses ZSysUtils, ZMessages, ZDbcResultSet;
+
+var
+{**
+  Holds the value of the last assigned statement ID.
+  Only Accessible using TZAbstractStatement.GetNextStatementId.
+}
+  GlobalStatementIdCounter : integer;
 
 { TZAbstractStatement }
 
@@ -381,6 +394,12 @@ begin
     FLastResultSet.Close;
 
   FLastResultSet := ResultSet;
+end;
+
+class function TZAbstractStatement.GetNextStatementId: integer;
+begin
+  Inc(GlobalStatementIdCounter);
+  Result := GlobalStatementIdCounter;
 end;
 
 {**
@@ -930,6 +949,8 @@ begin
   FInParamCount := 0;
   SetInParamCount(0);
   FPrepared := False;
+  FStatementId := Self.GetNextStatementId;
+
 end;
 
 {**
@@ -964,7 +985,7 @@ begin
   begin
     LogString := LogString + GetInParamLogValue(InParamValues[I])+',';
   end;
-  DriverManager.LogMessage(lcBindPrepStmt, '', LogString);
+  LogPrepStmtMessage(lcBindPrepStmt, LogString);
 end;
 
 {**
@@ -1011,6 +1032,22 @@ begin
   FInParamValues[ParameterIndex - 1] := Value;
 end;
 
+{**
+  Logs a message about prepared statement event with normal result code.
+  @param Category a category of the message.
+  @param Protocol a name of the protocol.
+  @param Msg a description message.
+}
+procedure TZAbstractPreparedStatement.LogPrepStmtMessage(Category: TZLoggingCategory;
+  const Msg: string = '');
+begin
+  if msg <> '' then
+    DriverManager.LogMessage(Category, Connection.GetIZPlainDriver.GetProtocol, Format('Statement %d : %s', [FStatementId, Msg]))
+  else
+    DriverManager.LogMessage(Category, Connection.GetIZPlainDriver.GetProtocol, Format('Statement %d', [FStatementId]));
+end;
+
+
 function TZAbstractPreparedStatement.GetInParamLogValue(Value: TZVariant): String;
 var
   i : integer;
@@ -1040,8 +1077,8 @@ end;
 }
 function TZAbstractPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
-  Result := nil;
-  RaiseUnsupportedException;
+  { Logging Execution }
+  LogPrepStmtMessage(lcExecPrepStmt);
 end;
 
 {**
@@ -1056,8 +1093,8 @@ end;
 }
 function TZAbstractPreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
-  Result := -1;
-  RaiseUnsupportedException;
+  { Logging Execution }
+  LogPrepStmtMessage(lcExecPrepStmt);
 end;
 
 {**
@@ -1490,8 +1527,8 @@ end;
 }
 function TZAbstractPreparedStatement.ExecutePrepared: Boolean;
 begin
-  Result := False;
-  RaiseUnsupportedException;
+  { Logging Execution }
+  LogPrepStmtMessage(lcExecPrepStmt, '');
 end;
 
 function TZAbstractPreparedStatement.GetSQL: String;

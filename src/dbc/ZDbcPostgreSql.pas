@@ -376,6 +376,7 @@ begin
     FBeginRequired := True;
 
   FPlainDriver := PlainDriver;
+  Self.PlainDriver := PlainDriver;
   TransactIsolationLevel := tiNone;
 
   { Processes connection properties. }

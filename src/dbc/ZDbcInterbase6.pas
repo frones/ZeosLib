@@ -421,6 +421,7 @@ begin
   FHardCommit := StrToBoolEx(Info.Values['hard_commit']);
 
   FPlainDriver := PlainDriver;
+  Self.PlainDriver := PlainDriver;
 
   { Sets a default Interbase port }
   if Self.Port = 0 then

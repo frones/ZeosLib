@@ -593,7 +593,7 @@ begin
       CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoPrepareStmt);
       exit;
     end;
-  DriverManager.LogMessage(lcPrepStmt, FPlainDriver.GetProtocol, SQL);
+  LogPrepStmtMessage(lcPrepStmt, SQL);
   inherited Prepare;
 end;
 
@@ -656,15 +656,9 @@ var
     PBuffer: Pointer;
     year, month, day, hour, minute, second, millisecond: word;
   I,J : integer;
-  LogString : String;
 begin
   if InParamCount = 0 then
      exit;
-    { Prepare Log Output}
-  For I := 0 to InParamCount - 1 do
-  begin
-    LogString := LogString + GetInParamLogValue(InParamValues[I])+',';
-  end;
   { Initialize Bind Array and Column Array }
   FBindBuffer := TZMysqlBindBuffer.Create(FPlainDriver,InParamCount,FColumnArray);
 
@@ -804,13 +798,13 @@ begin
         checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
         exit;
      end;
-  DriverManager.LogMessage(lcExecPrepStmt, FPlainDriver.GetProtocol, '');
 
   FBindBuffer.Free;
 
   if FPlainDriver.GetPreparedFieldCount(FStmtHandle) = 0 then
       raise EZSQLException.Create(SCanNotOpenResultSet);
   Result := CreateResultSet(SQL);
+  inherited ExecuteQueryPrepared;
 end;
 
 {**
@@ -835,7 +829,6 @@ begin
         checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
         exit;
      end;
-  DriverManager.LogMessage(lcExecPrepStmt, FPlainDriver.GetProtocol, '');
 
   FBindBuffer.Free;
 
@@ -848,7 +841,8 @@ begin
     { Process regular query }
   else
     Result := FPlainDriver.GetPreparedAffectedRows(FStmtHandle);
- LastUpdateCount := Result;
+  LastUpdateCount := Result;
+  Inherited ExecuteUpdatePrepared;
 end;
 
 {**
@@ -870,7 +864,6 @@ begin
         checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
         exit;
      end;
-  DriverManager.LogMessage(lcExecPrepStmt, FPlainDriver.GetProtocol, '');
 
   FBindBuffer.Free;
 
@@ -885,6 +878,7 @@ begin
       Result := False;
       LastUpdateCount := FPlainDriver.GetPreparedAffectedRows(FStmtHandle);
     end;
+  inherited ExecutePrepared;
 end;
 
 function TZMySQLPreparedStatement.GetStmtHandle: PZMySqlPrepStmt;

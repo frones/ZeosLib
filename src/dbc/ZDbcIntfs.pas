@@ -59,7 +59,7 @@ interface
 
 uses
   Types, Classes, SysUtils, ZClasses, ZCollections, ZSysUtils, ZCompatibility,
-  ZTokenizer, ZSelectSchema, ZGenericSqlAnalyser, ZDbcLogging, ZVariant;
+  ZTokenizer, ZSelectSchema, ZGenericSqlAnalyser, ZDbcLogging, ZVariant, ZPlainDriver;
 
 const
   { Constants from JDBC DatabaseMetadata }
@@ -245,6 +245,7 @@ type
     function IsClosed: Boolean;
 
     function GetDriver: IZDriver;
+    function GetIZPlainDriver: IZPlainDriver;
     function GetMetadata: IZDatabaseMetadata;
     function GetParameters: TStrings;
     function GetClientVersion: Integer;

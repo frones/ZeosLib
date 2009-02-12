@@ -308,6 +308,7 @@ begin
 
   { Sets a default properties }
   FPlainDriver := PlainDriver;
+  Self.PlainDriver := PlainDriver;
   FHandle := nil;
   if Self.Port = 0 then
       Self.Port := 1521;

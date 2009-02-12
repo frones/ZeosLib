@@ -343,6 +343,7 @@ begin
     TZASADatabaseMetadata.Create(Self, Url, Info));
 
   FPlainDriver := PlainDriver;
+  Self.PlainDriver := PlainDriver;
 end;
 
 {**
