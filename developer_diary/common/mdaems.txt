@@ -309,3 +309,5 @@
 20090131 : TZSQLMonitor access violation when destroying - by mturecki - Mantis Bug 124
 
 20090213 : Added BCB2009 packages (cbuilder12) - by bulktrasher
+
+20090218 : Fixed a big memory leak introduced by the DatabaseMetadata object split - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2177

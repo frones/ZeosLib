@@ -71,7 +71,7 @@ type
   protected
     procedure GetVersion(var MajorVersion, MinorVersion: integer);
   public
-    constructor Create(const Metadata: IZDatabaseMetadata);
+    constructor Create(const Metadata: TZAbstractDatabaseMetadata);
     destructor Destroy; override;
 
     // database/driver/server info:
@@ -268,7 +268,7 @@ uses
   Constructs this object.
   @param Metadata the interface of the correpsonding database metadata object
 }
-constructor TZMySQLDatabaseInfo.Create(const Metadata: IZDatabaseMetadata);
+constructor TZMySQLDatabaseInfo.Create(const Metadata: TZAbstractDatabaseMetadata);
 begin
   inherited;
 end;

@@ -67,7 +67,7 @@ type
   {** Implements ASA Database Information. }
   TZASADatabaseInfo = class(TZAbstractDatabaseInfo)
   public
-    constructor Create(const Metadata: IZDatabaseMetadata);
+    constructor Create(const Metadata: TZAbstractDatabaseMetadata);
     destructor Destroy; override;
 
     // database/driver/server info:
@@ -260,7 +260,7 @@ uses ZDbcASAUtils, ZDbcUtils;
   Constructs this object.
   @param Metadata the interface of the correpsonding database metadata object
 }
-constructor TZASADatabaseInfo.Create(const Metadata: IZDatabaseMetadata);
+constructor TZASADatabaseInfo.Create(const Metadata: TZAbstractDatabaseMetadata);
 begin
   inherited;
 end;

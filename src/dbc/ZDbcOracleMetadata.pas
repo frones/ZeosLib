@@ -69,7 +69,7 @@ type
 //    function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
 //      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
   public
-    constructor Create(const Metadata: IZDatabaseMetadata);
+    constructor Create(const Metadata: TZAbstractDatabaseMetadata);
     destructor Destroy; override;
 
     // database/driver/server info:
@@ -262,7 +262,7 @@ uses
   Constructs this object.
   @param Metadata the interface of the correpsonding database metadata object
 }
-constructor TZOracleDatabaseInfo.Create(const Metadata: IZDatabaseMetadata);
+constructor TZOracleDatabaseInfo.Create(const Metadata: TZAbstractDatabaseMetadata);
 begin
   inherited;
 end;
