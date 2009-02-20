@@ -1841,20 +1841,22 @@ procedure TZCachedResultSet.Open;
 var
   I: Integer;
   ColumnInfo: TZColumnInfo;
+  MetaData : IZResultSetMetaData;
 begin
   ColumnsInfo.Clear;
-  for I := 1 to FResultSet.GetMetadata.GetColumnCount do
+  MetaData := FResultSet.GetMetadata;
+  for I := 1 to Metadata.GetColumnCount do
   begin
     ColumnInfo := TZColumnInfo.Create;
     with ColumnInfo do
     begin
-      Currency := FResultSet.GetMetadata.IsCurrency(I);
-      Signed := FResultSet.GetMetadata.IsSigned(I);
-      ColumnDisplaySize := FResultSet.GetMetadata.GetColumnDisplaySize(I);
-      ColumnLabel := FResultSet.GetMetadata.GetColumnLabel(I);
-      Precision := FResultSet.GetMetadata.GetPrecision(I);
-      Scale := FResultSet.GetMetadata.GetScale(I);
-      ColumnType := FResultSet.GetMetadata.GetColumnType(I);
+      Currency := Metadata.IsCurrency(I);
+      Signed := Metadata.IsSigned(I);
+      ColumnDisplaySize := Metadata.GetColumnDisplaySize(I);
+      ColumnLabel := Metadata.GetColumnLabel(I);
+      Precision := Metadata.GetPrecision(I);
+      Scale := Metadata.GetScale(I);
+      ColumnType := Metadata.GetColumnType(I);
     end;
     ColumnsInfo.Add(ColumnInfo);
   end;

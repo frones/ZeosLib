@@ -1443,13 +1443,13 @@ begin
         Result.UpdateNull(16);
         Result.UpdateInt(17, GetInt(17));
 
-        Result.UpdateNullByName('AUTO_INCREMENT');
-        Result.UpdateBooleanByName('CASE_SENSITIVE',
+        Result.UpdateNull(19);   //AUTO_INCREMENT
+        Result.UpdateBoolean(20, //CASE_SENSITIVE
           GetIdentifierConvertor.IsCaseSensitive(GetString(4)));
-        Result.UpdateBooleanByName('SEARCHABLE', True);
-        Result.UpdateBooleanByName('WRITABLE', True);
-        Result.UpdateBooleanByName('DEFINITELYWRITABLE', True);
-        Result.UpdateBooleanByName('READONLY', False);
+        Result.UpdateBoolean(21, True);  //SEARCHABLE
+        Result.UpdateBoolean(22, True);  //WRITABLE
+        Result.UpdateBoolean(23, True);  //DEFINITELYWRITABLE
+        Result.UpdateBoolean(24, False); //READONLY
 
         Result.InsertRow;
       end;
