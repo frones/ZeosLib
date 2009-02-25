@@ -1477,77 +1477,73 @@ end;
   @return <code>ResultSet</code> - each row is a table description
   @see #getSearchStringEscape
 }
-function TZInterbase6DatabaseMetadata.UncachedGetTables(const Catalog: string;
-  const SchemaPattern: string; const TableNamePattern: string;
-  const Types: TStringDynArray): IZResultSet;
-var
-  SQL, TableType: string;
-  LTableNamePattern: string;
-  BLR: IZBlob;
-  I, SystemFlag, ViewContext: Integer;
-begin
-    Result := ConstructVirtualResultSet(TableColumnsDynArray);
 
-    LTableNamePattern := ConstructNameCondition(TableNamePattern,
-      'a.RDB$RELATION_NAME');
-    SQL := 'SELECT DISTINCT a.RDB$RELATION_NAME, b.RDB$SYSTEM_FLAG,'
-      + ' b.RDB$VIEW_CONTEXT, a.RDB$VIEW_SOURCE, a.RDB$DESCRIPTION FROM RDB$RELATIONS a'
-      + ' JOIN RDB$RELATION_FIELDS b ON a.RDB$RELATION_NAME'
-      + '=b.RDB$RELATION_NAME';
+function TZInterbase6DatabaseMetadata.UncachedGetTables(const Catalog: string; 
+  const SchemaPattern: string; const TableNamePattern: string; 
+  const Types: TStringDynArray): IZResultSet; 
+var 
+  SQL, TableType: string; 
+  LTableNamePattern: string; 
+  BLR: IZBlob; 
+  I, SystemFlag, ViewContext: Integer; 
+begin 
+    Result := ConstructVirtualResultSet(TableColumnsDynArray); 
 
-    if LTableNamePattern <> '' then
-      SQL := SQL + ' WHERE ' + LTableNamePattern;
+    LTableNamePattern := ConstructNameCondition(TableNamePattern, 
+      'a.RDB$RELATION_NAME'); 
+    SQL := 'SELECT DISTINCT a.RDB$RELATION_NAME, a.RDB$SYSTEM_FLAG, ' 
+      + ' a.RDB$VIEW_SOURCE, a.RDB$DESCRIPTION FROM RDB$RELATIONS a'; 
 
-    with GetConnection.CreateStatement.ExecuteQuery(SQL) do
-    begin
-      while Next do
-      begin
+    if LTableNamePattern <> '' then 
+      SQL := SQL + ' WHERE ' + LTableNamePattern; 
+
+    with GetConnection.CreateStatement.ExecuteQuery(SQL) do 
+    begin    
+       while Next do 
+      begin 
         SystemFlag := GetInt(2); //RDB$SYSTEM_FLAG
-        ViewContext := GetInt(3); //RDB$VIEW_CONTEXT
 
-        if SystemFlag = 0 then
-        begin
-          if ViewContext = 0 then
-          BLR := GetBlob(4); //RDB$VIEW_SOURCE
-          if BLR.IsEmpty then
-            TableType := 'TABLE'
-          else
-            TableType := 'VIEW';
+        if SystemFlag = 0 then 
+        begin 
+          if IsNull(3) then //RDB$VIEW_SOURCE
+            TableType := 'TABLE' 
+          else 
+            TableType := 'VIEW'; 
         end
         else
-          TableType := 'SYSTEM TABLE';
+          TableType := 'SYSTEM TABLE'; 
 
-        if Length(Types) = 0 then
-        begin
-          Result.MoveToInsertRow;
-          Result.UpdateNull(1);
-          Result.UpdateNull(2);
+        if Length(Types) = 0 then 
+        begin 
+          Result.MoveToInsertRow; 
+          Result.UpdateNull(1); 
+          Result.UpdateNull(2); 
           Result.UpdateString(3, GetString(1)); //RDB$RELATION_NAME
-          Result.UpdateString(4, TableType);
-          Result.UpdateString(5, Copy(GetString(5),1,255)); //RDB$DESCRIPTION
-          Result.InsertRow;
-        end
+          Result.UpdateString(4, TableType); 
+          Result.UpdateString(5, Copy(GetString(4),1,255)); //RDB$DESCRIPTION
+          Result.InsertRow; 
+        end 
         else
         begin
-          for I := 0 to High(Types) do
-          begin
-            if Types[I] = TableType then
-            begin
-              Result.MoveToInsertRow;
-              Result.UpdateNull(1);
-              Result.UpdateNull(2);
+          for I := 0 to High(Types) do 
+          begin 
+            if Types[I] = TableType then 
+            begin 
+              Result.MoveToInsertRow; 
+              Result.UpdateNull(1); 
+              Result.UpdateNull(2); 
               Result.UpdateString(3, GetString(1)); //RDB$RELATION_NAME
-              Result.UpdateString(4, TableType);
-              Result.UpdateString(5, Copy(GetString(5),1,255)); //RDB$DESCRIPTION 
-              Result.InsertRow;
-            end;
-          end;
-        end;
+              Result.UpdateString(4, TableType); 
+              Result.UpdateString(5, Copy(GetString(4),1,255)); //RDB$DESCRIPTION 
+              Result.InsertRow; 
+            end; 
+          end; 
+        end; 
             
-      end;
-      Close;
-    end;
-end;
+      end; 
+      Close; 
+    end; 
+end; 
 
 {**
   Gets the table types available in this database.  The results
