@@ -785,7 +785,8 @@ var
     UpdateAutoIncFields: Boolean;
     Refresh_OldSQL:String;
     RefreshResultSet: IZResultSet;
-
+    lValidateUpdateCount : Boolean;
+    lUpdateCount : Integer;
 begin
   if (UpdateType = utDeleted)
     and (OldRowAccessor.RowBuffer.UpdateType = utInserted) then
@@ -838,7 +839,12 @@ begin
       end;
       if ExecuteStatement then
       begin
-       Statement.ExecutePrepared;
+        lValidateUpdateCount := StrToBoolEx( 
+          Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']); 
+
+        lUpdateCount := Statement.ExecuteUpdatePrepared; 
+        if  (lValidateUpdateCount) and (lUpdateCount <> 1) then 
+          raise EZSQLException.Create(Format(SInvalidUpdateCount, [lUpdateCount]));
 
        case UpdateType of
             utDeleted:
