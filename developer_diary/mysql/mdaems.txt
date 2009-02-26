@@ -94,3 +94,5 @@
 20081221 : Cleanup of the type/constant definitions in the mysql plain driver files - by mdaems
 
 20090111 : Fixed case of some *MySql* unit names - by mdaems - Mantis Bug 159
+
+20090226 : Removed the helper TMysqlResult class. Using this class didn't give any added value and could only reduce speed - by mdaems
