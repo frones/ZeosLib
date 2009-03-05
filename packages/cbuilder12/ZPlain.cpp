@@ -42,8 +42,6 @@ USEUNIT("..\..\src\plain\ZPlainInterbaseDriver.pas");
 
 USEUNIT("..\..\src\plain\ZPlainLoader.pas");
 
-USEUNIT("..\..\src\plain\ZPlainMySql41.pas");
-
 USEUNIT("..\..\src\plain\ZPlainMySqlDriver.pas");
 
 USEUNIT("..\..\src\plain\ZPlainPostgreSql7.pas");

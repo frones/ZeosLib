@@ -12,7 +12,7 @@ package ZPlain;
 {$OPENSTRINGS ON}
 {$OPTIMIZATION OFF}
 {$OVERFLOWCHECKS ON}
-{$RANGECHECKS ON}
+{$RANGECHECKS OFF}
 {$REFERENCEINFO ON}
 {$SAFEDIVIDE OFF}
 {$STACKFRAMES ON}
@@ -52,8 +52,6 @@ contains
 {$ENDIF}
 
 {$IFDEF ENABLE_MYSQL}
-  ZPlainMySql41 in '..\..\src\plain\ZPlainMySql41.pas',
-  ZPlainMySql5 in '..\..\src\plain\ZPlainMySql5.pas',
   ZPlainMySqlDriver in '..\..\src\plain\ZPlainMySqlDriver.pas',
   ZPlainMysqlConstants in '..\..\src\plain\ZPlainMysqlConstants.pas',
 {$ENDIF}
@@ -89,4 +87,5 @@ contains
 
   ZPlainDriver in '..\..\src\plain\ZPlainDriver.pas',
   ZPlainLoader in '..\..\src\plain\ZPlainLoader.pas';
+
 end.

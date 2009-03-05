@@ -52,8 +52,6 @@ contains
 {$ENDIF}
 
 {$IFDEF ENABLE_MYSQL}
-  ZPlainMySql41 in '..\..\src\plain\ZPlainMySql41.pas',
-  ZPlainMySql5 in '..\..\src\plain\ZPlainMySql5.pas',
   ZPlainMySqlDriver in '..\..\src\plain\ZPlainMySqlDriver.pas',
   ZPlainMysqlConstants in '..\..\src\plain\ZPlainMysqlConstants.pas',
 {$ENDIF}

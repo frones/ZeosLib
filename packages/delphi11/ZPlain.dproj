@@ -77,8 +77,6 @@
     <DCCReference Include="..\..\src\plain\ZPlainInterbase6.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainInterbaseDriver.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainLoader.pas" />
-    <DCCReference Include="..\..\src\plain\ZPlainMySql41.pas" />
-    <DCCReference Include="..\..\src\plain\ZPlainMySql5.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainMySqlConstants.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainMySqlDriver.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainOracle9i.pas" />
