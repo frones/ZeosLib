@@ -57,7 +57,7 @@ interface
 
 {$I ZPlain.inc}
 
-uses ZClasses;
+uses ZClasses, ZPlainLoader;
 
 type
 
@@ -79,7 +79,16 @@ type
 
   {ADDED by fduenas 15-06-2006}
   {** Base class of a generic plain driver. }
+
+  { TZAbstractPlainDriver }
+
   TZAbstractPlainDriver = class(TZAbstractObject, IZPlainDriver)
+   protected
+      FLoader: TZNativeLibraryLoader;
+      procedure LoadApi; virtual;
+   public
+    constructor CreateWithLibrary(LibName : String);
+    property Loader: TZNativeLibraryLoader read FLoader;
     function GetProtocol: string; virtual; abstract;
     function GetDescription: string; virtual; abstract;
     {
@@ -90,7 +99,8 @@ type
     procedure GetServerVersionEx(out MajorVersion: Integer;
      out MinorVersion: Integer; out SubVersion: Integer); virtual;
     }
-    procedure Initialize; virtual; abstract;
+    procedure Initialize; virtual;
+    destructor Destroy; override;
   end;
   {END ADDED by fduenas 15-06-2006}
 implementation
@@ -166,5 +176,31 @@ begin
                          MajorVersion, MinorVersion, SubVersion);
 end;
 }
+
+procedure TZAbstractPlainDriver.LoadApi;
+begin
+
+end;
+
+constructor TZAbstractPlainDriver.CreateWithLibrary(LibName: String);
+begin
+  Inherited Create;
+  Loader.ClearLocations;
+  Loader.AddLocation(LibName);
+end;
+
+procedure TZAbstractPlainDriver.Initialize;
+begin
+  If Assigned(Loader) and not Loader.Loaded then
+    If Loader.LoadNativeLibrary then
+      LoadApi;
+end;
+
+destructor TZAbstractPlainDriver.Destroy;
+begin
+  FLoader.Free;
+  inherited Destroy;
+end;
+
 end.
 
