@@ -63,6 +63,7 @@ type
   {** Represents a generic interface to Interbase native API. }
   IZInterbasePlainDriver = interface (IZPlainDriver)
     ['{AE2C4379-4E47-4752-BC01-D405ACC337F5}']
+    function GetFirebirdAPI: TZFirebird_API;
     function isc_attach_database (status_vector: PISC_STATUS;
       db_name_length: Short; db_name: PAnsiChar; db_handle: PISC_DB_HANDLE;
       parm_buffer_length: Short; parm_buffer: PAnsiChar): ISC_STATUS;
@@ -206,6 +207,7 @@ type
     function GetDescription: string;
     procedure Initialize;
 
+    function GetFirebirdAPI: TZFirebird_API;
     function isc_attach_database (status_vector: PISC_STATUS;
       db_name_length: Short; db_name: PAnsiChar; db_handle: PISC_DB_HANDLE;
       parm_buffer_length: Short; parm_buffer: PAnsiChar): ISC_STATUS;
@@ -349,6 +351,7 @@ type
     function GetDescription: string;
     procedure Initialize;
 
+    function GetFirebirdAPI: TZFirebird_API;
     function isc_attach_database (status_vector: PISC_STATUS;
       db_name_length: Short; db_name: PAnsiChar; db_handle: PISC_DB_HANDLE;
       parm_buffer_length: Short; parm_buffer: PAnsiChar): ISC_STATUS;
@@ -508,6 +511,13 @@ end;
 procedure TZInterbase6PlainDriver.Initialize;
 begin
   ZPlainInterbase6.LibraryLoader.LoadIfNeeded;
+end;
+
+function TZInterbase6PlainDriver.GetFirebirdAPI: TZFirebird_API;
+var
+  a : TZFirebird_API;
+begin
+  result := a;
 end;
 
 function TZInterbase6PlainDriver.isc_array_gen_sdl(status_vector: PISC_STATUS;
@@ -917,6 +927,13 @@ end;
 procedure TZInterbase5PlainDriver.Initialize;
 begin
   ZPlainInterbase5.LibraryLoader.LoadIfNeeded;
+end;
+
+function TZInterbase5PlainDriver.GetFirebirdAPI: TZFirebird_API;
+var
+  a : TZFirebird_API;
+begin
+  result := a;
 end;
 
 function TZInterbase5PlainDriver.isc_array_gen_sdl(status_vector: PISC_STATUS;

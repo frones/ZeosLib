@@ -41,10 +41,6 @@ contains
   ZPlainInterbase5 in '../../src/plain/ZPlainInterbase5.pas',
   ZPlainInterbase6 in '../../src/plain/ZPlainInterbase6.pas',
   ZPlainInterbaseDriver in '../../src/plain/ZPlainInterbaseDriver.pas',
-  ZPlainFirebird10 in '../../src/plain/ZPlainFirebird10.pas',
-  ZPlainFirebird15 in '../../src/plain/ZPlainFirebird15.pas',
-  ZPlainFirebird20 in '../../src/plain/ZPlainFirebird20.pas',
-  ZPlainFirebird21 in '../../src/plain/ZPlainFirebird21.pas',
   ZPlainFirebirdDriver in '../../src/plain/ZPlainFirebirdDriver.pas',
   ZPlainFirebirdInterbaseConstants in '../../src/plain/ZPlainFirebirdInterbaseConstants.pas',
 {$ENDIF}
