@@ -28,12 +28,6 @@ USEUNIT("..\..\src\plain\ZPlainDriver.pas");
 
 USEUNIT("..\..\src\plain\ZPlainFirebirdDriver.pas");
 
-USEUNIT("..\..\src\plain\ZPlainInterbase5.pas");
-
-USEUNIT("..\..\src\plain\ZPlainInterbase6.pas");
-
-USEUNIT("..\..\src\plain\ZPlainInterbaseDriver.pas");
-
 USEUNIT("..\..\src\plain\ZPlainLoader.pas");
 
 USEUNIT("..\..\src\plain\ZPlainMySqlDriver.pas");

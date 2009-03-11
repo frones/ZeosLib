@@ -7,9 +7,7 @@
     <OBJFILES value="build\ZPlain.obj build\ZPlainPostgreSqlDriver.obj 
       build\ZPlainDbLibDriver.obj build\ZPlainDbLibMsSql7.obj 
       build\ZPlainDbLibSybaseAse125.obj build\ZPlainDriver.obj 
-      build\ZPlainInterbase5.obj build\ZPlainInterbase6.obj 
-      build\ZPlainInterbaseDriver.obj build\ZPlainLoader.obj 
-      build\ZPlainMySql41.obj build\ZPlainMySqlDriver.obj 
+      build\ZPlainLoader.obj build\ZPlainMySqlDriver.obj 
       build\ZPlainPostgreSql7.obj build\ZPlainPostgreSql8.obj
       build\ZPlainFirebirdDriver.obj build\ZPlainAdo.obj
       build\ZPlainAdoDriver.obj build\ZPlainSqLiteDriver.obj 
@@ -73,9 +71,6 @@
       <FILE FILENAME="..\..\src\plain\ZPlainFirebird15.pas" FORMNAME="" UNITNAME="ZPlainFirebird15" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\plain\ZPlainFirebird20.pas" FORMNAME="" UNITNAME="ZPlainFirebird20" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\plain\ZPlainFirebird21.pas" FORMNAME="" UNITNAME="ZPlainFirebird21" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="..\..\src\plain\ZPlainInterbase5.pas" FORMNAME="" UNITNAME="ZPlainInterbase5" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="..\..\src\plain\ZPlainInterbase6.pas" FORMNAME="" UNITNAME="ZPlainInterbase6" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="..\..\src\plain\ZPlainInterbaseDriver.pas" FORMNAME="" UNITNAME="ZPlainInterbaseDriver" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\plain\ZPlainLoader.pas" FORMNAME="" UNITNAME="ZPlainLoader" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\plain\ZPlainMySqlDriver.pas" FORMNAME="" UNITNAME="ZPlainMySqlDriver" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\plain\ZPlainPostgreSql7.pas" FORMNAME="" UNITNAME="ZPlainPostgreSql7" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>

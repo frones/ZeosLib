@@ -69,9 +69,6 @@
     <DCCReference Include="..\..\src\plain\ZPlainDriver.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainFirebirdDriver.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainFirebirdInterbaseConstants.pas" />
-    <DCCReference Include="..\..\src\plain\ZPlainInterbase5.pas" />
-    <DCCReference Include="..\..\src\plain\ZPlainInterbase6.pas" />
-    <DCCReference Include="..\..\src\plain\ZPlainInterbaseDriver.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainLoader.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainMySqlConstants.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainMySqlDriver.pas" />

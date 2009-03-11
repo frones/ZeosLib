@@ -59,7 +59,7 @@ interface
 
 uses
   Types, ZCompatibility, Classes, SysUtils, ZDbcUtils, ZDbcIntfs, ZDbcConnection,
-  Contnrs, ZPlainInterbaseDriver, ZPlainFirebirdDriver,
+  Contnrs, ZPlainFirebirdDriver,
   ZPlainFirebirdInterbaseConstants, ZSysUtils, ZDbcInterbase6Utils, ZDbcLogging,
   ZDbcGenericResolver, ZTokenizer, ZGenericSqlAnalyser;
 
@@ -206,17 +206,16 @@ end;
 }
 constructor TZInterbase6Driver.Create;
 begin
-  SetLength(FPlainDrivers,9);
-  FPlainDrivers[0] := TZInterbase5PlainDriver.Create;
-  FPlainDrivers[1] := TZInterbase6PlainDriver.Create;
-  FPlainDrivers[2] := TZFirebird10PlainDriver.Create;
-  FPlainDrivers[3] := TZFirebird15PlainDriver.Create;
-  FPlainDrivers[4] := TZFirebird20PlainDriver.Create;
-  FPlainDrivers[5] := TZFirebird21PlainDriver.Create;
+  SetLength(FPlainDrivers,8);
+  FPlainDrivers[0] := TZInterbase6PlainDriver.Create;
+  FPlainDrivers[1] := TZFirebird10PlainDriver.Create;
+  FPlainDrivers[2] := TZFirebird15PlainDriver.Create;
+  FPlainDrivers[3] := TZFirebird20PlainDriver.Create;
+  FPlainDrivers[4] := TZFirebird21PlainDriver.Create;
   // embedded drivers
-  FPlainDrivers[6] := TZFirebirdD15PlainDriver.Create;
-  FPlainDrivers[7] := TZFirebirdD20PlainDriver.Create;
-  FPlainDrivers[8] := TZFirebirdD21PlainDriver.Create;
+  FPlainDrivers[5] := TZFirebirdD15PlainDriver.Create;
+  FPlainDrivers[6] := TZFirebirdD20PlainDriver.Create;
+  FPlainDrivers[7] := TZFirebirdD21PlainDriver.Create;
 
 end;
 
