@@ -725,7 +725,7 @@ begin
   DbHandle := nil;
   TrHandle := nil;
   FPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @DbHandle, @TrHandle,
-    0, PAnsiChar(sql), FDialect, nil);
+    0, PAnsiChar(AnsiString(sql)), FDialect, nil);
   CheckInterbase6Error(FPlainDriver, FStatusVector, lcExecute, SQL);
   FPlainDriver.isc_detach_database(@FStatusVector, @DbHandle);
   CheckInterbase6Error(FPlainDriver, FStatusVector, lcExecute, SQL);
