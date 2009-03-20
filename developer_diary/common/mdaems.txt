@@ -319,3 +319,5 @@
 20090225 : Query property ‘ValidateUpdateCount=true/false’ was not added for TZUpdateSQL - by ddantoni - See http://zeos.firmos.at/viewtopic.php?t=2249
 
 20090305 : Reworked the PlainLoader and AbstractPlainDriver classes to make the loader class part of the plaindriver - by mdaems/gto
+
+20090320 : Moved setting FConnection to nil in the finally past of TZConnection.Disconnect - by MerijnB - See http://zeos.firmos.at/viewtopic.php?t=2275
