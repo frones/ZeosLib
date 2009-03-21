@@ -730,7 +730,7 @@ var
       begin
         if (SrcField.DataType = ftLargeInt)
           and not VarIsNull(SrcField.OldValue) then
-          Temp[I] := Integer(SrcField.OldValue)
+          Temp[I] := string(SrcField.OldValue)
         else
           Temp[I] := SrcField.OldValue;
       end

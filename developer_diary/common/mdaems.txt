@@ -321,3 +321,5 @@
 20090305 : Reworked the PlainLoader and AbstractPlainDriver classes to make the loader class part of the plaindriver - by mdaems/gto
 
 20090320 : Moved setting FConnection to nil in the finally past of TZConnection.Disconnect - by MerijnB - See http://zeos.firmos.at/viewtopic.php?t=2275
+
+20090321 : Overflow while converting variant of type (Int64) into type (Integer) when deleting a record - by alquimista - See http://zeos.firmos.at/viewtopic.php?t=2286
