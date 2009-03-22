@@ -323,3 +323,5 @@
 20090320 : Moved setting FConnection to nil in the finally past of TZConnection.Disconnect - by MerijnB - See http://zeos.firmos.at/viewtopic.php?t=2275
 
 20090321 : Overflow while converting variant of type (Int64) into type (Integer) when deleting a record - by alquimista - See http://zeos.firmos.at/viewtopic.php?t=2286
+
+20090322 : Removed some new methods from the IZPreparedStatement interface to stay as jdbc compliant as possible - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2234
