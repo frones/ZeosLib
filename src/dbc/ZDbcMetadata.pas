@@ -110,151 +110,6 @@ type
     destructor Destroy; override;
   end;
 
-  // technobot 2008-06-24 - methods moved as is from TZAbstractDatabaseMetadata:
-  {** Implements Abstract Database Information. }
-  TZAbstractDatabaseInfo = class(TInterfacedObject, IZDatabaseInfo)
-  private
-    FMetadata: IZDatabaseMetadata;
-  protected
-    property Metadata: IZDatabaseMetadata read FMetadata;
-  public
-    constructor Create(const Metadata: IZDatabaseMetadata);
-    destructor Destroy; override;
-
-    // database/driver/server info:
-    function GetDatabaseProductName: string; virtual;
-    function GetDatabaseProductVersion: string; virtual;
-    function GetDriverName: string; virtual;
-    function GetDriverVersion: string; virtual;
-    function GetDriverMajorVersion: Integer; virtual;
-    function GetDriverMinorVersion: Integer; virtual;
-    function GetServerVersion: string;
-
-    // capabilities (what it can/cannot do):
-    function AllProceduresAreCallable: Boolean; virtual;
-    function AllTablesAreSelectable: Boolean; virtual;
-    function SupportsMixedCaseIdentifiers: Boolean; virtual;
-    function SupportsMixedCaseQuotedIdentifiers: Boolean; virtual;
-    function SupportsAlterTableWithAddColumn: Boolean; virtual;
-    function SupportsAlterTableWithDropColumn: Boolean; virtual;
-    function SupportsColumnAliasing: Boolean; virtual;
-    function SupportsConvert: Boolean; virtual;
-    function SupportsConvertForTypes(FromType: TZSQLType; ToType: TZSQLType):
-      Boolean; virtual;
-    function SupportsTableCorrelationNames: Boolean; virtual;
-    function SupportsDifferentTableCorrelationNames: Boolean; virtual;
-    function SupportsExpressionsInOrderBy: Boolean; virtual;
-    function SupportsOrderByUnrelated: Boolean; virtual;
-    function SupportsGroupBy: Boolean; virtual;
-    function SupportsGroupByUnrelated: Boolean; virtual;
-    function SupportsGroupByBeyondSelect: Boolean; virtual;
-    function SupportsLikeEscapeClause: Boolean; virtual;
-    function SupportsMultipleResultSets: Boolean; virtual;
-    function SupportsMultipleTransactions: Boolean; virtual;
-    function SupportsNonNullableColumns: Boolean; virtual;
-    function SupportsMinimumSQLGrammar: Boolean; virtual;
-    function SupportsCoreSQLGrammar: Boolean; virtual;
-    function SupportsExtendedSQLGrammar: Boolean; virtual;
-    function SupportsANSI92EntryLevelSQL: Boolean; virtual;
-    function SupportsANSI92IntermediateSQL: Boolean; virtual;
-    function SupportsANSI92FullSQL: Boolean; virtual;
-    function SupportsIntegrityEnhancementFacility: Boolean; virtual;
-    function SupportsOuterJoins: Boolean; virtual;
-    function SupportsFullOuterJoins: Boolean; virtual;
-    function SupportsLimitedOuterJoins: Boolean; virtual;
-    function SupportsSchemasInDataManipulation: Boolean; virtual;
-    function SupportsSchemasInProcedureCalls: Boolean; virtual;
-    function SupportsSchemasInTableDefinitions: Boolean; virtual;
-    function SupportsSchemasInIndexDefinitions: Boolean; virtual;
-    function SupportsSchemasInPrivilegeDefinitions: Boolean; virtual;
-    function SupportsCatalogsInDataManipulation: Boolean; virtual;
-    function SupportsCatalogsInProcedureCalls: Boolean; virtual;
-    function SupportsCatalogsInTableDefinitions: Boolean; virtual;
-    function SupportsCatalogsInIndexDefinitions: Boolean; virtual;
-    function SupportsCatalogsInPrivilegeDefinitions: Boolean; virtual;
-    function SupportsPositionedDelete: Boolean; virtual;
-    function SupportsPositionedUpdate: Boolean; virtual;
-    function SupportsSelectForUpdate: Boolean; virtual;
-    function SupportsStoredProcedures: Boolean; virtual;
-    function SupportsSubqueriesInComparisons: Boolean; virtual;
-    function SupportsSubqueriesInExists: Boolean; virtual;
-    function SupportsSubqueriesInIns: Boolean; virtual;
-    function SupportsSubqueriesInQuantifieds: Boolean; virtual;
-    function SupportsCorrelatedSubqueries: Boolean; virtual;
-    function SupportsUnion: Boolean; virtual;
-    function SupportsUnionAll: Boolean; virtual;
-    function SupportsOpenCursorsAcrossCommit: Boolean; virtual;
-    function SupportsOpenCursorsAcrossRollback: Boolean; virtual;
-    function SupportsOpenStatementsAcrossCommit: Boolean; virtual;
-    function SupportsOpenStatementsAcrossRollback: Boolean; virtual;
-    function SupportsTransactions: Boolean; virtual;
-    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
-      Boolean; virtual;
-    function SupportsDataDefinitionAndDataManipulationTransactions: Boolean; virtual;
-    function SupportsDataManipulationTransactionsOnly: Boolean; virtual;
-    function SupportsResultSetType(_Type: TZResultSetType): Boolean; virtual;
-    function SupportsResultSetConcurrency(_Type: TZResultSetType;
-      Concurrency: TZResultSetConcurrency): Boolean; virtual;
-    function SupportsBatchUpdates: Boolean; virtual;
-
-    // maxima:
-    function GetMaxBinaryLiteralLength: Integer; virtual;
-    function GetMaxCharLiteralLength: Integer; virtual;
-    function GetMaxColumnNameLength: Integer; virtual;
-    function GetMaxColumnsInGroupBy: Integer; virtual;
-    function GetMaxColumnsInIndex: Integer; virtual;
-    function GetMaxColumnsInOrderBy: Integer; virtual;
-    function GetMaxColumnsInSelect: Integer; virtual;
-    function GetMaxColumnsInTable: Integer; virtual;
-    function GetMaxConnections: Integer; virtual;
-    function GetMaxCursorNameLength: Integer; virtual;
-    function GetMaxIndexLength: Integer; virtual;
-    function GetMaxSchemaNameLength: Integer; virtual;
-    function GetMaxProcedureNameLength: Integer; virtual;
-    function GetMaxCatalogNameLength: Integer; virtual;
-    function GetMaxRowSize: Integer; virtual;
-    function GetMaxStatementLength: Integer; virtual;
-    function GetMaxStatements: Integer; virtual;
-    function GetMaxTableNameLength: Integer; virtual;
-    function GetMaxTablesInSelect: Integer; virtual;
-    function GetMaxUserNameLength: Integer; virtual;
-
-    // policies (how are various data and operations handled):
-    function IsReadOnly: Boolean; virtual;
-    function IsCatalogAtStart: Boolean; virtual;
-    function DoesMaxRowSizeIncludeBlobs: Boolean; virtual;
-    function NullsAreSortedHigh: Boolean; virtual;
-    function NullsAreSortedLow: Boolean; virtual;
-    function NullsAreSortedAtStart: Boolean; virtual;
-    function NullsAreSortedAtEnd: Boolean; virtual;
-    function NullPlusNonNullIsNull: Boolean; virtual;
-    function UsesLocalFiles: Boolean; virtual;
-    function UsesLocalFilePerTable: Boolean; virtual;
-    function StoresUpperCaseIdentifiers: Boolean; virtual;
-    function StoresLowerCaseIdentifiers: Boolean; virtual;
-    function StoresMixedCaseIdentifiers: Boolean; virtual;
-    function StoresUpperCaseQuotedIdentifiers: Boolean; virtual;
-    function StoresLowerCaseQuotedIdentifiers: Boolean; virtual;
-    function StoresMixedCaseQuotedIdentifiers: Boolean; virtual;
-    function GetDefaultTransactionIsolation: TZTransactIsolationLevel; virtual;
-    function DataDefinitionCausesTransactionCommit: Boolean; virtual;
-    function DataDefinitionIgnoredInTransactions: Boolean; virtual;
-
-    // interface details (terms, keywords, etc):
-    function GetIdentifierQuoteString: string; virtual;
-    function GetSchemaTerm: string; virtual;
-    function GetProcedureTerm: string; virtual;
-    function GetCatalogTerm: string; virtual;
-    function GetCatalogSeparator: string; virtual;
-    function GetSQLKeywords: string; virtual;
-    function GetNumericFunctions: string; virtual;
-    function GetStringFunctions: string; virtual;
-    function GetSystemFunctions: string; virtual;
-    function GetTimeDateFunctions: string; virtual;
-    function GetSearchStringEscape: string; virtual;
-    function GetExtraNameCharacters: string; virtual;
-  end;
-
   {** Implements Abstract Database Metadata. }
 TZAbstractDatabaseMetadata = class(TContainedObject, IZDatabaseMetadata)
   private
@@ -420,6 +275,151 @@ TZAbstractDatabaseMetadata = class(TContainedObject, IZDatabaseMetadata)
     // <-- technobot 2008-06-14
   end;
 
+  // technobot 2008-06-24 - methods moved as is from TZAbstractDatabaseMetadata:
+  {** Implements Abstract Database Information. }
+  TZAbstractDatabaseInfo = class(TInterfacedObject, IZDatabaseInfo)
+  private
+    FMetadata: TZAbstractDatabaseMetadata;
+  protected
+    property Metadata: TZAbstractDatabaseMetadata read FMetadata;
+  public
+    constructor Create(const Metadata: TZAbstractDatabaseMetadata);
+    destructor Destroy; override;
+
+    // database/driver/server info:
+    function GetDatabaseProductName: string; virtual;
+    function GetDatabaseProductVersion: string; virtual;
+    function GetDriverName: string; virtual;
+    function GetDriverVersion: string; virtual;
+    function GetDriverMajorVersion: Integer; virtual;
+    function GetDriverMinorVersion: Integer; virtual;
+    function GetServerVersion: string;
+
+    // capabilities (what it can/cannot do):
+    function AllProceduresAreCallable: Boolean; virtual;
+    function AllTablesAreSelectable: Boolean; virtual;
+    function SupportsMixedCaseIdentifiers: Boolean; virtual;
+    function SupportsMixedCaseQuotedIdentifiers: Boolean; virtual;
+    function SupportsAlterTableWithAddColumn: Boolean; virtual;
+    function SupportsAlterTableWithDropColumn: Boolean; virtual;
+    function SupportsColumnAliasing: Boolean; virtual;
+    function SupportsConvert: Boolean; virtual;
+    function SupportsConvertForTypes(FromType: TZSQLType; ToType: TZSQLType):
+      Boolean; virtual;
+    function SupportsTableCorrelationNames: Boolean; virtual;
+    function SupportsDifferentTableCorrelationNames: Boolean; virtual;
+    function SupportsExpressionsInOrderBy: Boolean; virtual;
+    function SupportsOrderByUnrelated: Boolean; virtual;
+    function SupportsGroupBy: Boolean; virtual;
+    function SupportsGroupByUnrelated: Boolean; virtual;
+    function SupportsGroupByBeyondSelect: Boolean; virtual;
+    function SupportsLikeEscapeClause: Boolean; virtual;
+    function SupportsMultipleResultSets: Boolean; virtual;
+    function SupportsMultipleTransactions: Boolean; virtual;
+    function SupportsNonNullableColumns: Boolean; virtual;
+    function SupportsMinimumSQLGrammar: Boolean; virtual;
+    function SupportsCoreSQLGrammar: Boolean; virtual;
+    function SupportsExtendedSQLGrammar: Boolean; virtual;
+    function SupportsANSI92EntryLevelSQL: Boolean; virtual;
+    function SupportsANSI92IntermediateSQL: Boolean; virtual;
+    function SupportsANSI92FullSQL: Boolean; virtual;
+    function SupportsIntegrityEnhancementFacility: Boolean; virtual;
+    function SupportsOuterJoins: Boolean; virtual;
+    function SupportsFullOuterJoins: Boolean; virtual;
+    function SupportsLimitedOuterJoins: Boolean; virtual;
+    function SupportsSchemasInDataManipulation: Boolean; virtual;
+    function SupportsSchemasInProcedureCalls: Boolean; virtual;
+    function SupportsSchemasInTableDefinitions: Boolean; virtual;
+    function SupportsSchemasInIndexDefinitions: Boolean; virtual;
+    function SupportsSchemasInPrivilegeDefinitions: Boolean; virtual;
+    function SupportsCatalogsInDataManipulation: Boolean; virtual;
+    function SupportsCatalogsInProcedureCalls: Boolean; virtual;
+    function SupportsCatalogsInTableDefinitions: Boolean; virtual;
+    function SupportsCatalogsInIndexDefinitions: Boolean; virtual;
+    function SupportsCatalogsInPrivilegeDefinitions: Boolean; virtual;
+    function SupportsPositionedDelete: Boolean; virtual;
+    function SupportsPositionedUpdate: Boolean; virtual;
+    function SupportsSelectForUpdate: Boolean; virtual;
+    function SupportsStoredProcedures: Boolean; virtual;
+    function SupportsSubqueriesInComparisons: Boolean; virtual;
+    function SupportsSubqueriesInExists: Boolean; virtual;
+    function SupportsSubqueriesInIns: Boolean; virtual;
+    function SupportsSubqueriesInQuantifieds: Boolean; virtual;
+    function SupportsCorrelatedSubqueries: Boolean; virtual;
+    function SupportsUnion: Boolean; virtual;
+    function SupportsUnionAll: Boolean; virtual;
+    function SupportsOpenCursorsAcrossCommit: Boolean; virtual;
+    function SupportsOpenCursorsAcrossRollback: Boolean; virtual;
+    function SupportsOpenStatementsAcrossCommit: Boolean; virtual;
+    function SupportsOpenStatementsAcrossRollback: Boolean; virtual;
+    function SupportsTransactions: Boolean; virtual;
+    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
+      Boolean; virtual;
+    function SupportsDataDefinitionAndDataManipulationTransactions: Boolean; virtual;
+    function SupportsDataManipulationTransactionsOnly: Boolean; virtual;
+    function SupportsResultSetType(_Type: TZResultSetType): Boolean; virtual;
+    function SupportsResultSetConcurrency(_Type: TZResultSetType;
+      Concurrency: TZResultSetConcurrency): Boolean; virtual;
+    function SupportsBatchUpdates: Boolean; virtual;
+
+    // maxima:
+    function GetMaxBinaryLiteralLength: Integer; virtual;
+    function GetMaxCharLiteralLength: Integer; virtual;
+    function GetMaxColumnNameLength: Integer; virtual;
+    function GetMaxColumnsInGroupBy: Integer; virtual;
+    function GetMaxColumnsInIndex: Integer; virtual;
+    function GetMaxColumnsInOrderBy: Integer; virtual;
+    function GetMaxColumnsInSelect: Integer; virtual;
+    function GetMaxColumnsInTable: Integer; virtual;
+    function GetMaxConnections: Integer; virtual;
+    function GetMaxCursorNameLength: Integer; virtual;
+    function GetMaxIndexLength: Integer; virtual;
+    function GetMaxSchemaNameLength: Integer; virtual;
+    function GetMaxProcedureNameLength: Integer; virtual;
+    function GetMaxCatalogNameLength: Integer; virtual;
+    function GetMaxRowSize: Integer; virtual;
+    function GetMaxStatementLength: Integer; virtual;
+    function GetMaxStatements: Integer; virtual;
+    function GetMaxTableNameLength: Integer; virtual;
+    function GetMaxTablesInSelect: Integer; virtual;
+    function GetMaxUserNameLength: Integer; virtual;
+
+    // policies (how are various data and operations handled):
+    function IsReadOnly: Boolean; virtual;
+    function IsCatalogAtStart: Boolean; virtual;
+    function DoesMaxRowSizeIncludeBlobs: Boolean; virtual;
+    function NullsAreSortedHigh: Boolean; virtual;
+    function NullsAreSortedLow: Boolean; virtual;
+    function NullsAreSortedAtStart: Boolean; virtual;
+    function NullsAreSortedAtEnd: Boolean; virtual;
+    function NullPlusNonNullIsNull: Boolean; virtual;
+    function UsesLocalFiles: Boolean; virtual;
+    function UsesLocalFilePerTable: Boolean; virtual;
+    function StoresUpperCaseIdentifiers: Boolean; virtual;
+    function StoresLowerCaseIdentifiers: Boolean; virtual;
+    function StoresMixedCaseIdentifiers: Boolean; virtual;
+    function StoresUpperCaseQuotedIdentifiers: Boolean; virtual;
+    function StoresLowerCaseQuotedIdentifiers: Boolean; virtual;
+    function StoresMixedCaseQuotedIdentifiers: Boolean; virtual;
+    function GetDefaultTransactionIsolation: TZTransactIsolationLevel; virtual;
+    function DataDefinitionCausesTransactionCommit: Boolean; virtual;
+    function DataDefinitionIgnoredInTransactions: Boolean; virtual;
+
+    // interface details (terms, keywords, etc):
+    function GetIdentifierQuoteString: string; virtual;
+    function GetSchemaTerm: string; virtual;
+    function GetProcedureTerm: string; virtual;
+    function GetCatalogTerm: string; virtual;
+    function GetCatalogSeparator: string; virtual;
+    function GetSQLKeywords: string; virtual;
+    function GetNumericFunctions: string; virtual;
+    function GetStringFunctions: string; virtual;
+    function GetSystemFunctions: string; virtual;
+    function GetTimeDateFunctions: string; virtual;
+    function GetSearchStringEscape: string; virtual;
+    function GetExtraNameCharacters: string; virtual;
+  end;
+
   {** Implements a default Case Sensitive/Unsensitive identifier convertor. }
   TZDefaultIdentifierConvertor = class (TZAbstractObject,
     IZIdentifierConvertor)
@@ -476,7 +476,7 @@ uses ZVariant, ZCollections;
   Constructs this object.
   @param Metadata the interface of the correpsonding database metadata object
 }
-constructor TZAbstractDatabaseInfo.Create(const Metadata: IZDatabaseMetadata);
+constructor TZAbstractDatabaseInfo.Create(const Metadata: TZAbstractDatabaseMetadata);
 begin
   inherited Create;
   FMetadata := Metadata;
@@ -487,6 +487,7 @@ end;
 }
 destructor TZAbstractDatabaseInfo.Destroy;
 begin
+  FMetadata := nil;
   inherited;
 end;
 
@@ -1716,6 +1717,7 @@ destructor TZAbstractDatabaseMetadata.Destroy;
 begin
   FCachedResultSets.Clear;
   FCachedResultSets := nil;
+  FDatabaseInfo := nil;
 
   inherited Destroy;
 end;

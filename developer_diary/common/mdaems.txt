@@ -307,3 +307,13 @@
 20090131 : FPC - Float Fields with null values produce many exceptions - by papelhigienico - Mantis Bug 117
 
 20090131 : TZSQLMonitor access violation when destroying - by mturecki - Mantis Bug 124
+
+20090213 : Added BCB2009 packages (cbuilder12) - by bulktrasher
+
+20090218 : Fixed a big memory leak introduced by the DatabaseMetadata object split - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2177
+
+20090220 : Replaced some GetXXXByName and UpdateXXXByName calls in the Metadata classes to avoid repeated name lookups - by mdaems
+
+20090220 : Get reference to ResultsetMetadata only once in TZCachedResultSet.Open - by mdaems
+
+20090225 : Query property ‘ValidateUpdateCount=true/false’ was not added for TZUpdateSQL - by ddantoni - See http://zeos.firmos.at/viewtopic.php?t=2249

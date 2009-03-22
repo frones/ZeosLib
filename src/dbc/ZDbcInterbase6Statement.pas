@@ -567,7 +567,7 @@ begin
       end;
   end;
   CheckInterbase6Error(SQL);
-  DriverManager.LogMessage(lcPrepStmt, FIBConnection.GetPlainDriver.GetProtocol, SQL);
+  LogPrepStmtMessage(lcPrepStmt, SQL);
   inherited Prepare;
 end;
 
@@ -647,8 +647,6 @@ begin
       { Autocommit statement. }
       if Connection.GetAutoCommit then
         Connection.Commit;
-      { Logging SQL Command }
-      DriverManager.LogMessage(lcExecPrepStmt, GetPlainDriver.GetProtocol, SQL);
     except
       on E: Exception do
       begin
@@ -657,6 +655,7 @@ begin
       end;
     end;
   end;
+  inherited ExecutePrepared;
 end;
 {$HINTS ON}
 
@@ -709,8 +708,6 @@ begin
         raise EZSQLException.Create(SCanNotRetrieveResultSetData);
 
      LastResultSet := Result;
-     { Logging SQL Command }
-     DriverManager.LogMessage(lcExecPrepStmt, GetPlainDriver.GetProtocol, SQL);
     except
       on E: Exception do
       begin
@@ -719,6 +716,7 @@ begin
       end;
     end;
   end;
+  inherited ExecuteQueryPrepared;
 end;
 {$HINTS ON}
 
@@ -773,9 +771,8 @@ begin
       { Autocommit statement. }
       if Connection.GetAutoCommit then
         Connection.Commit;
-      { Logging SQL Command }
-      DriverManager.LogMessage(lcExecPrepStmt, GetPlainDriver.GetProtocol, SQL);
   end;
+  inherited ExecuteUpdatePrepared;
 end;
 {$HINTS ON}
 

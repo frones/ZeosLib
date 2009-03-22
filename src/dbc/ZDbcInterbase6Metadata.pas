@@ -71,7 +71,7 @@ type
 //    function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
 //      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
   public
-    constructor Create(const Metadata: IZDatabaseMetadata);
+    constructor Create(const Metadata: TZAbstractDatabaseMetadata);
     destructor Destroy; override;
 
     // database/driver/server info:
@@ -265,7 +265,7 @@ uses ZMessages, ZDbcInterbase6Utils;
   Constructs this object.
   @param Metadata the interface of the correpsonding database metadata object
 }
-constructor TZInterbase6DatabaseInfo.Create(const Metadata: IZDatabaseMetadata);
+constructor TZInterbase6DatabaseInfo.Create(const Metadata: TZAbstractDatabaseMetadata);
 begin
   inherited;
 end;
@@ -1268,13 +1268,12 @@ begin
         Result.MoveToInsertRow;
         Result.UpdateNull(1);
         Result.UpdateNull(2);
-        Result.UpdateString(3, GetStringByName('RDB$PROCEDURE_NAME'));
+        Result.UpdateString(3, GetString(1)); //RDB$PROCEDURE_NAME
         Result.UpdateNull(4);
         Result.UpdateNull(5);
         Result.UpdateNull(6);
-        Result.UpdateString(7,
-          GetStringByName('RDB$DESCRIPTION'));
-        if IsNullByName('RDB$PROCEDURE_OUTPUTS') then
+        Result.UpdateString(7, GetString(3)); //RDB$DESCRIPTION
+        if IsNull(2) then //RDB$PROCEDURE_OUTPUTS
           Result.UpdateInt(8, Ord(prtNoResult))
         else Result.UpdateInt(8, Ord(prtReturnsResult));
         Result.InsertRow;
@@ -1346,6 +1345,7 @@ var
   SQL, Where: string;
   LProcedureNamePattern, LColumnNamePattern: string;
   TypeName, SubTypeName: Integer;
+  ColumnIndexes : Array[1..8] of integer;
 begin
     Result := ConstructVirtualResultSet(ProceduresColColumnsDynArray);
 
@@ -1407,18 +1407,25 @@ begin
 
     with GetConnection.CreateStatement.ExecuteQuery(SQL) do
     begin
+      ColumnIndexes[1] := FindColumn('RDB$PROCEDURE_NAME');
+      ColumnIndexes[2] := FindColumn('RDB$PARAMETER_NAME');
+      ColumnIndexes[3] := FindColumn('RDB$PARAMETER_TYPE');
+      ColumnIndexes[4] := FindColumn('RDB$FIELD_TYPE');
+      ColumnIndexes[5] := FindColumn('RDB$FIELD_SUB_TYPE');
+      ColumnIndexes[6] := FindColumn('RDB$FIELD_PRECISION');
+      ColumnIndexes[7] := FindColumn('RDB$FIELD_SCALE');
+      ColumnIndexes[8] := FindColumn('RDB$NULL_FLAG');
       while Next do
       begin
-        TypeName := GetIntByName('RDB$FIELD_TYPE');
-        SubTypeName := GetIntByName('RDB$FIELD_SUB_TYPE');
-        //FieldScale := GetIntByName('RDB$FIELD_SCALE');
+        TypeName := GetInt(ColumnIndexes[4]);
+        SubTypeName := GetInt(ColumnIndexes[5]);
 
         Result.MoveToInsertRow;
         Result.UpdateNull(1);    //PROCEDURE_CAT
         Result.UpdateNull(2);    //PROCEDURE_SCHEM
-        Result.UpdateString(3, GetStringByName('RDB$PROCEDURE_NAME'));    //TABLE_NAME
-        Result.UpdateString(4, GetStringByName('RDB$PARAMETER_NAME'));    //COLUMN_NAME
-        case GetIntByName('RDB$PARAMETER_TYPE') of
+        Result.UpdateString(3, GetString(ColumnIndexes[1]));    //TABLE_NAME
+        Result.UpdateString(4, GetString(ColumnIndexes[2]));    //COLUMN_NAME
+        case GetInt(ColumnIndexes[3]) of
           0: Result.UpdateInt(5, 1);//ptInput
           1: Result.UpdateInt(5, 4);//ptResult
         else
@@ -1427,13 +1434,13 @@ begin
 
         Result.UpdateInt(6,
           Ord(ConvertInterbase6ToSqlType(TypeName, SubTypeName))); //DATA_TYPE
-        Result.UpdateString(7,GetStringByName('RDB$FIELD_TYPE'));    //TYPE_NAME
-        Result.UpdateInt(10, GetIntByName('RDB$FIELD_PRECISION'));
+        Result.UpdateString(7,GetString(ColumnIndexes[4]));    //TYPE_NAME
+        Result.UpdateInt(10, GetInt(ColumnIndexes[6]));
         Result.UpdateNull(9);    //BUFFER_LENGTH
-        Result.UpdateInt(10, GetIntByName('RDB$FIELD_SCALE'));
+        Result.UpdateInt(10, GetInt(ColumnIndexes[7]));
         Result.UpdateInt(11, 10);
-        Result.UpdateInt(12, GetIntByName('RDB$NULL_FLAG'));
-        Result.UpdateString(12, GetStringByName('RDB$FIELD_PRECISION'));
+        Result.UpdateInt(12, GetInt(ColumnIndexes[8]));
+        Result.UpdateString(12, GetString(ColumnIndexes[6]));
         Result.InsertRow;
       end;
       Close;
@@ -1470,77 +1477,73 @@ end;
   @return <code>ResultSet</code> - each row is a table description
   @see #getSearchStringEscape
 }
-function TZInterbase6DatabaseMetadata.UncachedGetTables(const Catalog: string;
-  const SchemaPattern: string; const TableNamePattern: string;
-  const Types: TStringDynArray): IZResultSet;
-var
-  SQL, TableType: string;
-  LTableNamePattern: string;
-  BLR: IZBlob;
-  I, SystemFlag, ViewContext: Integer;
-begin
-    Result := ConstructVirtualResultSet(TableColumnsDynArray);
 
-    LTableNamePattern := ConstructNameCondition(TableNamePattern,
-      'a.RDB$RELATION_NAME');
-    SQL := 'SELECT DISTINCT a.RDB$RELATION_NAME, b.RDB$SYSTEM_FLAG,'
-      + ' b.RDB$VIEW_CONTEXT, a.RDB$VIEW_SOURCE, a.RDB$DESCRIPTION FROM RDB$RELATIONS a'
-      + ' JOIN RDB$RELATION_FIELDS b ON a.RDB$RELATION_NAME'
-      + '=b.RDB$RELATION_NAME';
+function TZInterbase6DatabaseMetadata.UncachedGetTables(const Catalog: string; 
+  const SchemaPattern: string; const TableNamePattern: string; 
+  const Types: TStringDynArray): IZResultSet; 
+var 
+  SQL, TableType: string; 
+  LTableNamePattern: string; 
+  BLR: IZBlob; 
+  I, SystemFlag, ViewContext: Integer; 
+begin 
+    Result := ConstructVirtualResultSet(TableColumnsDynArray); 
 
-    if LTableNamePattern <> '' then
-      SQL := SQL + ' WHERE ' + LTableNamePattern;
+    LTableNamePattern := ConstructNameCondition(TableNamePattern, 
+      'a.RDB$RELATION_NAME'); 
+    SQL := 'SELECT DISTINCT a.RDB$RELATION_NAME, a.RDB$SYSTEM_FLAG, ' 
+      + ' a.RDB$VIEW_SOURCE, a.RDB$DESCRIPTION FROM RDB$RELATIONS a'; 
 
-    with GetConnection.CreateStatement.ExecuteQuery(SQL) do
-    begin
-      while Next do
-      begin
-        SystemFlag := GetIntByName('RDB$SYSTEM_FLAG');
-        ViewContext := GetIntByName('RDB$VIEW_CONTEXT');
+    if LTableNamePattern <> '' then 
+      SQL := SQL + ' WHERE ' + LTableNamePattern; 
 
-        if SystemFlag = 0 then
-        begin
-          if ViewContext = 0 then
-          BLR := GetBlobByName('RDB$VIEW_SOURCE');
-          if BLR.IsEmpty then
-            TableType := 'TABLE'
-          else
-            TableType := 'VIEW';
+    with GetConnection.CreateStatement.ExecuteQuery(SQL) do 
+    begin    
+       while Next do 
+      begin 
+        SystemFlag := GetInt(2); //RDB$SYSTEM_FLAG
+
+        if SystemFlag = 0 then 
+        begin 
+          if IsNull(3) then //RDB$VIEW_SOURCE
+            TableType := 'TABLE' 
+          else 
+            TableType := 'VIEW'; 
         end
         else
-          TableType := 'SYSTEM TABLE';
+          TableType := 'SYSTEM TABLE'; 
 
-        if Length(Types) = 0 then
-        begin
-          Result.MoveToInsertRow;
-          Result.UpdateNull(1);
-          Result.UpdateNull(2);
-          Result.UpdateString(3, GetStringByName('RDB$RELATION_NAME'));
-          Result.UpdateString(4, TableType);
-          Result.UpdateString(5, Copy(GetStringByName('RDB$DESCRIPTION'),1,255));
-          Result.InsertRow;
-        end
+        if Length(Types) = 0 then 
+        begin 
+          Result.MoveToInsertRow; 
+          Result.UpdateNull(1); 
+          Result.UpdateNull(2); 
+          Result.UpdateString(3, GetString(1)); //RDB$RELATION_NAME
+          Result.UpdateString(4, TableType); 
+          Result.UpdateString(5, Copy(GetString(4),1,255)); //RDB$DESCRIPTION
+          Result.InsertRow; 
+        end 
         else
         begin
-          for I := 0 to High(Types) do
-          begin
-            if Types[I] = TableType then
-            begin
-              Result.MoveToInsertRow;
-              Result.UpdateNull(1);
-              Result.UpdateNull(2);
-              Result.UpdateString(3, GetStringByName('RDB$RELATION_NAME'));
-              Result.UpdateString(4, TableType);
-              Result.UpdateString(5, Copy(GetStringByName('RDB$DESCRIPTION'),1,255)); 
-              Result.InsertRow;
-            end;
-          end;
-        end;
+          for I := 0 to High(Types) do 
+          begin 
+            if Types[I] = TableType then 
+            begin 
+              Result.MoveToInsertRow; 
+              Result.UpdateNull(1); 
+              Result.UpdateNull(2); 
+              Result.UpdateString(3, GetString(1)); //RDB$RELATION_NAME
+              Result.UpdateString(4, TableType); 
+              Result.UpdateString(5, Copy(GetString(4),1,255)); //RDB$DESCRIPTION 
+              Result.InsertRow; 
+            end; 
+          end; 
+        end; 
             
-      end;
-      Close;
-    end;
-end;
+      end; 
+      Close; 
+    end; 
+end; 
 
 {**
   Gets the table types available in this database.  The results
@@ -1630,6 +1633,7 @@ var
   SQL, Where, ColumnName, DefaultValue: string;
   TypeName, SubTypeName, FieldScale: integer;
   LTableNamePattern, LColumnNamePattern: string;
+  ColumnIndexes : Array[1..14] of integer;
 begin
     Result := ConstructVirtualResultSet(TableColColumnsDynArray);
 
@@ -1694,16 +1698,30 @@ begin
 
     with GetConnection.CreateStatement.ExecuteQuery(SQL) do
     begin
+      ColumnIndexes[1] := FindColumn('RDB$FIELD_TYPE');
+      ColumnIndexes[2] := FindColumn('RDB$FIELD_SUB_TYPE');
+      ColumnIndexes[3] := FindColumn('RDB$FIELD_SCALE');
+      ColumnIndexes[4] := FindColumn('RDB$FIELD_NAME');
+      ColumnIndexes[5] := FindColumn('RDB$DEFAULT_SOURCE');
+      ColumnIndexes[6] := FindColumn('RDB$DEFAULT_SOURCE_DOMAIN');
+      ColumnIndexes[7] := FindColumn('RDB$RELATION_NAME');
+      ColumnIndexes[8] := FindColumn('RDB$TYPE_NAME');
+      ColumnIndexes[9] := FindColumn('RDB$FIELD_PRECISION');
+      ColumnIndexes[10] := FindColumn('RDB$FIELD_LENGTH');
+      ColumnIndexes[11] := FindColumn('RDB$NULL_FLAG');
+      ColumnIndexes[12] := FindColumn('RDB$DESCRIPTION');
+      ColumnIndexes[13] := FindColumn('RDB$FIELD_POSITION');
+      ColumnIndexes[14] := FindColumn('RDB$COMPUTED_SOURCE');
       while Next do
       begin
-        TypeName := GetIntByName('RDB$FIELD_TYPE');
-        SubTypeName := GetIntByName('RDB$FIELD_SUB_TYPE');
-        FieldScale := GetIntByName('RDB$FIELD_SCALE');
-        ColumnName := GetStringByName('RDB$FIELD_NAME');
+        TypeName := GetInt(ColumnIndexes[1]);
+        SubTypeName := GetInt(ColumnIndexes[2]);
+        FieldScale := GetInt(ColumnIndexes[3]);
+        ColumnName := GetString(ColumnIndexes[4]);
 
-        DefaultValue := GetStringByName('RDB$DEFAULT_SOURCE');
+        DefaultValue := GetString(ColumnIndexes[5]);
         if DefaultValue = '' then
-          DefaultValue := GetStringByName('RDB$DEFAULT_SOURCE_DOMAIN');
+          DefaultValue := GetString(ColumnIndexes[6]);
         if StartsWith(Trim(UpperCase(DefaultValue)), 'DEFAULT') then
         begin
           DefaultValue := Trim(StringReplace(DefaultValue, 'DEFAULT ', '',
@@ -1721,8 +1739,7 @@ begin
         Result.MoveToInsertRow;
         Result.UpdateNull(1);    //TABLE_CAT
         Result.UpdateNull(2);    //TABLE_SCHEM
-        Result.UpdateString(3,
-          GetStringByName('RDB$RELATION_NAME'));    //TABLE_NAME
+        Result.UpdateString(3, GetString(ColumnIndexes[7]));    //TABLE_NAME
         Result.UpdateString(4, ColumnName);    //COLUMN_NAME
         Result.UpdateInt(5, Ord(ConvertInterbase6ToSqlType(TypeName, SubTypeName))); //DATA_TYPE
         // TYPE_NAME
@@ -1732,7 +1749,7 @@ begin
           16 :
             begin
               if (SubTypeName = 0) then
-                Result.UpdateString(6, GetStringByName('RDB$TYPE_NAME'));
+                Result.UpdateString(6, GetString(ColumnIndexes[8]));
               if (SubTypeName = 1) then
                 Result.UpdateString(6, 'NUMERIC');
               if (SubTypeName = 2) then
@@ -1740,14 +1757,14 @@ begin
             end;
           37 : Result.UpdateString(6, 'VARCHAR'); // Instead of VARYING
         else
-            Result.UpdateString(6, GetStringByName('RDB$TYPE_NAME'));
+            Result.UpdateString(6, GetString(ColumnIndexes[8]));
         end;
         // COLUMN_SIZE.
         case TypeName of
           7, 8 : Result.UpdateInt(7, 0);
-          16   : Result.UpdateInt(7, GetIntByName('RDB$FIELD_PRECISION'));
+          16   : Result.UpdateInt(7, GetInt(ColumnIndexes[9]));
         else
-            Result.UpdateInt(7, GetIntByName('RDB$FIELD_LENGTH'));
+            Result.UpdateInt(7, GetInt(ColumnIndexes[10]));
         end;
 
         Result.UpdateNull(8);    //BUFFER_LENGTH
@@ -1759,44 +1776,43 @@ begin
 
         Result.UpdateInt(10, 10);   //NUM_PREC_RADIX
 
-        if GetIntByName('RDB$NULL_FLAG') <> 0 then
+        if GetInt(ColumnIndexes[11]) <> 0 then
           Result.UpdateInt(11, Ord(ntNoNulls))   //NULLABLE
         else
           Result.UpdateInt(11, Ord(ntNullable));
 
-        Result.UpdateString(12,
-          Copy(GetStringByName('RDB$DESCRIPTION'),1,255));   //REMARKS
+        Result.UpdateString(12, Copy(GetString(ColumnIndexes[12]),1,255));   //REMARKS
         Result.UpdateString(13, DefaultValue);   //COLUMN_DEF
         Result.UpdateNull(14);   //SQL_DATA_TYPE
         Result.UpdateNull(15);   //SQL_DATETIME_SUB
         Result.UpdateInt(16,
           GetInt(7));   //CHAR_OCTET_LENGTH
-        Result.UpdateInt(17, GetIntByName('RDB$FIELD_POSITION') + 1);   //ORDINAL_POSITION
+        Result.UpdateInt(17, GetInt(ColumnIndexes[13]) + 1);   //ORDINAL_POSITION
 
-        if IsNullByName('RDB$NULL_FLAG') then
+        if IsNull(ColumnIndexes[11]) then
           Result.UpdateString(18, 'YES')   //IS_NULLABLE
         else
           Result.UpdateString(18, 'NO'); //IS_NULLABLE
 
-        Result.UpdateNullByName('AUTO_INCREMENT');
+        Result.UpdateNull(19); //AUTO_INCREMENT
 
         if CompareStr(ColumnName, UpperCase(ColumnName)) = 0 then
-          Result.UpdateBooleanByName('CASE_SENSITIVE', False)
+          Result.UpdateBoolean(20, False) //CASE_SENSITIVE
         else
-          Result.UpdateBooleanByName('CASE_SENSITIVE', True);
+          Result.UpdateBoolean(20, True); //CASE_SENSITIVE
 
-        Result.UpdateBooleanByName('SEARCHABLE', True);
-        if isNullByName('RDB$COMPUTED_SOURCE') then
+        Result.UpdateBoolean(21, True); //SEARCHABLE
+        if isNull(ColumnIndexes[14]) then
           begin
-            Result.UpdateBooleanByName('WRITABLE', True);
-            Result.UpdateBooleanByName('DEFINITELYWRITABLE', True);
-            Result.UpdateBooleanByName('READONLY', False);
+            Result.UpdateBoolean(22, True); //WRITABLE
+            Result.UpdateBoolean(23, True); //DEFINITELYWRITABLE
+            Result.UpdateBoolean(24, False); //READONLY
           end
         else
           begin
-            Result.UpdateBooleanByName('WRITABLE', False);
-            Result.UpdateBooleanByName('DEFINITELYWRITABLE', False);
-            Result.UpdateBooleanByName('READONLY', True);
+            Result.UpdateBoolean(22, False); //WRITABLE
+            Result.UpdateBoolean(23, False); //DEFINITELYWRITABLE
+            Result.UpdateBoolean(24, True); //READONLY
           end;
         Result.InsertRow;
       end;
@@ -1862,11 +1878,11 @@ begin
     begin
       while Next do
       begin
-        TableName := GetStringByName('RDB$RELATION_NAME');
-        FieldName := GetStringByName('RDB$FIELD_NAME');
-        Privilege := GetPrivilege(GetStringByName('RDB$PRIVILEGE'));
-        Grantor := GetStringByName('RDB$GRANTOR');
-        Grantee := GetStringByName('RDB$USER');
+        TableName := GetString(5); //RDB$RELATION_NAME
+        FieldName := GetString(6); //RDB$FIELD_NAME
+        Privilege := GetPrivilege(GetString(3)); //RDB$PRIVILEGE
+        Grantor := GetString(2); //RDB$GRANTOR
+        Grantee := GetString(1); //RDB$USER
 
         if Grantor = Grantee then
           Grantable := 'YES'
@@ -1970,10 +1986,10 @@ begin
     begin
       while Next do
       begin
-        TableName := GetStringByName('RDB$RELATION_NAME');
-        Privilege := GetPrivilege(GetStringByName('RDB$PRIVILEGE'));
-        Grantor := GetStringByName('RDB$GRANTOR');
-        Grantee := GetStringByName('RDB$USER');
+        TableName := GetString(5); //RDB$RELATION_NAME
+        Privilege := GetPrivilege(GetString(3)); //RDB$PRIVILEGE
+        Grantor := GetString(2); //RDB$GRANTOR
+        Grantee := GetString(1); //RDB$USER
 
         if Grantor = Grantee then
           Grantable := 'YES'
@@ -2190,42 +2206,41 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdateNullByName('PKTABLE_CAT');
-        Result.UpdateNullByName('PKTABLE_SCHEM');
-        Result.UpdateStringByName('PKTABLE_NAME', GetString(1));
-        Result.UpdateStringByName('PKCOLUMN_NAME', GetString(2));
-        Result.UpdateNullByName('FKTABLE_CAT');
-        Result.UpdateNullByName('FKTABLE_SCHEM');
-        Result.UpdateStringByName('FKTABLE_NAME', GetString(3));
-        Result.UpdateStringByName('FKCOLUMN_NAME', GetString(4));
-        Result.UpdateIntByName('KEY_SEQ', GetInt(5) + 1);
+        Result.UpdateNull(1); //PKTABLE_CAT
+        Result.UpdateNull(2); //PKTABLE_SCHEM
+        Result.UpdateString(3, GetString(1)); //PKTABLE_NAME
+        Result.UpdateString(4, GetString(2)); //PKCOLUMN_NAME
+        Result.UpdateNull(5); //FKTABLE_CAT
+        Result.UpdateNull(6); //FKTABLE_SCHEM
+        Result.UpdateString(7, GetString(3)); //FKTABLE_NAME
+        Result.UpdateString(8, GetString(4)); //FKCOLUMN_NAME
+        Result.UpdateInt(9, GetInt(5) + 1); //KEY_SEQ
 
-        if GetString(6) = 'RESTRICT' then
-          Result.UpdateIntByName('UPDATE_RULE', Ord(ikRestrict))
+        if GetString(6) = 'RESTRICT' then  //UPDATE_RULE
+          Result.UpdateInt(10, Ord(ikRestrict))
         else if GetString(6) = 'NO ACTION' then
-          Result.UpdateIntByName('UPDATE_RULE', Ord(ikNoAction))
+          Result.UpdateInt(10, Ord(ikNoAction))
         else if GetString(6) = 'SET DEFAULT' then
-          Result.UpdateIntByName('UPDATE_RULE', Ord(ikSetDefault))
+          Result.UpdateInt(10, Ord(ikSetDefault))
         else if GetString(6) = 'CASCADE' then
-          Result.UpdateIntByName('UPDATE_RULE', Ord(ikCascade))
+          Result.UpdateInt(10, Ord(ikCascade))
         else if GetString(6) = 'SET NULL' then
-          Result.UpdateIntByName('UPDATE_RULE', Ord(ikSetNull));
+          Result.UpdateInt(10, Ord(ikSetNull));
 
-        if GetString(7) = 'RESTRICT' then
-          Result.UpdateIntByName('DELETE_RULE', Ord(ikRestrict))
+        if GetString(7) = 'RESTRICT' then //DELETE_RULE
+          Result.UpdateInt(11, Ord(ikRestrict))
         else if GetString(7) = 'NO ACTION' then
-          Result.UpdateIntByName('DELETE_RULE', Ord(ikNoAction))
+          Result.UpdateInt(11, Ord(ikNoAction))
         else if GetString(7) = 'SET DEFAULT' then
-          Result.UpdateIntByName('DELETE_RULE', Ord(ikSetDefault))
+          Result.UpdateInt(11, Ord(ikSetDefault))
         else if GetString(7) = 'CASCADE' then
-          Result.UpdateIntByName('DELETE_RULE', Ord(ikCascade))
+          Result.UpdateInt(11, Ord(ikCascade))
         else if GetString(7) = 'SET NULL' then
-          Result.UpdateIntByName('DELETE_RULE', Ord(ikSetNull));
+          Result.UpdateInt(11, Ord(ikSetNull));
 
-        Result.UpdateString(3, GetString(1));
-        Result.UpdateStringByName('FK_NAME', GetString(8));
-        Result.UpdateStringByName('PK_NAME', GetString(9));
-        Result.UpdateNullByName('DEFERRABILITY');
+        Result.UpdateString(12, GetString(8)); //FK_NAME
+        Result.UpdateString(13, GetString(9)); //PK_NAME
+        Result.UpdateNull(14); //DEFERABILITY
         Result.InsertRow;
       end;
       Close;
@@ -2337,42 +2352,41 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdateNullByName('PKTABLE_CAT');
-        Result.UpdateNullByName('PKTABLE_SCHEM');
-        Result.UpdateStringByName('PKTABLE_NAME', GetString(1));
-        Result.UpdateStringByName('PKCOLUMN_NAME', GetString(2));
-        Result.UpdateNullByName('FKTABLE_CAT');
-        Result.UpdateNullByName('FKTABLE_SCHEM');
-        Result.UpdateStringByName('FKTABLE_NAME', GetString(3));
-        Result.UpdateStringByName('FKCOLUMN_NAME', GetString(4));
-        Result.UpdateIntByName('KEY_SEQ', GetInt(5) + 1);
+        Result.UpdateNull(1); //PKTABLE_CAT
+        Result.UpdateNull(2); //PKTABLE_SCHEM
+        Result.UpdateString(3, GetString(1)); //PKTABLE_NAME
+        Result.UpdateString(4, GetString(2)); //PKCOLUMN_NAME
+        Result.UpdateNull(5); //FKTABLE_CAT
+        Result.UpdateNull(6); //FKTABLE_SCHEM'
+        Result.UpdateString(7, GetString(3)); //FKTABLE_NAME
+        Result.UpdateString(8, GetString(4)); //FKCOLUMN_NAME
+        Result.UpdateInt(9, GetInt(5) + 1); //KEY_SEQ
 
-        if GetString(6) = 'RESTRICT' then
-          Result.UpdateIntByName('UPDATE_RULE', Ord(ikRestrict))
+        if GetString(6) = 'RESTRICT' then //UPDATE_RULE
+          Result.UpdateInt(10, Ord(ikRestrict))
         else if GetString(6) = 'NO ACTION' then
-          Result.UpdateIntByName('UPDATE_RULE', Ord(ikNoAction))
+          Result.UpdateInt(10, Ord(ikNoAction))
         else if GetString(6) = 'SET DEFAULT' then
-          Result.UpdateIntByName('UPDATE_RULE', Ord(ikSetDefault))
+          Result.UpdateInt(10, Ord(ikSetDefault))
         else if GetString(6) = 'CASCADE' then
-          Result.UpdateIntByName('UPDATE_RULE', Ord(ikCascade))
+          Result.UpdateInt(10, Ord(ikCascade))
         else if GetString(6) = 'SET NULL' then
-          Result.UpdateIntByName('UPDATE_RULE', Ord(ikSetNull));
+          Result.UpdateInt(10, Ord(ikSetNull));
 
-        if GetString(7) = 'RESTRICT' then
-          Result.UpdateIntByName('DELETE_RULE', Ord(ikRestrict))
+        if GetString(7) = 'RESTRICT' then //DELETE_RULE
+          Result.UpdateInt(11, Ord(ikRestrict))
         else if GetString(7) = 'NO ACTION' then
-          Result.UpdateIntByName('DELETE_RULE', Ord(ikNoAction))
+          Result.UpdateInt(11, Ord(ikNoAction))
         else if GetString(7) = 'SET DEFAULT' then
-          Result.UpdateIntByName('DELETE_RULE', Ord(ikSetDefault))
+          Result.UpdateInt(11, Ord(ikSetDefault))
         else if GetString(7) = 'CASCADE' then
-          Result.UpdateIntByName('DELETE_RULE', Ord(ikCascade))
+          Result.UpdateInt(11, Ord(ikCascade))
         else if GetString(7) = 'SET NULL' then
-          Result.UpdateIntByName('DELETE_RULE', Ord(ikSetNull));
+          Result.UpdateInt(11, Ord(ikSetNull));
 
-        Result.UpdateString(3, GetString(1));
-        Result.UpdateStringByName('FK_NAME', GetString(8));
-        Result.UpdateStringByName('PK_NAME', GetString(9));
-        Result.UpdateNullByName('DEFERRABILITY');
+        Result.UpdateString(12, GetString(8)); //FK_NAME
+        Result.UpdateString(13, GetString(9)); //PK_NAME
+        Result.UpdateNull(14); //DEFERABILITY
         Result.InsertRow;
       end;
       Close;
@@ -2531,25 +2545,19 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdateNullByName('TABLE_CAT');
-        Result.UpdateNullByName('TABLE_SCHEM');
-        Result.UpdateStringByName('TABLE_NAME',
-          GetStringByName('RDB$RELATION_NAME'));
-        Result.UpdateBooleanByName('NON_UNIQUE',
-          not GetBooleanByName('RDB$UNIQUE_FLAG'));
-        Result.UpdateNullByName('INDEX_QUALIFIER');
-        Result.UpdateStringByName('INDEX_NAME',
-          GetStringByName('RDB$INDEX_NAME'));
-        Result.UpdateIntByName('TYPE', Ord(ntNoNulls));
-        Result.UpdateIntByName('ORDINAL_POSITION',
-          GetIntByName('RDB$FIELD_POSITION') + 1);
-        Result.UpdateStringByName('COLUMN_NAME',
-          GetStringByName('RDB$FIELD_NAME'));
-        Result.UpdateNullByName('ASC_OR_DESC');
-        Result.UpdateNullByName('CARDINALITY');
-        Result.UpdateIntByName('PAGES',
-          GetIntByName('RDB$SEGMENT_COUNT'));
-        Result.UpdateNullByName('FILTER_CONDITION');
+        Result.UpdateNull(1); //TABLE_CAT
+        Result.UpdateNull(2); //TABLE_SCHEM
+        Result.UpdateString(3, GetString(1)); //TABLE_NAME, RDB$RELATION_NAME
+        Result.UpdateBoolean(4, not GetBoolean(2)); //NON_UNIQUE, RDB$UNIQUE_FLAG
+        Result.UpdateNull(5); //INDEX_QUALIFIER
+        Result.UpdateString(6, GetString(3)); //INDEX_NAME, RDB$INDEX_NAME
+        Result.UpdateInt(7, Ord(ntNoNulls)); //TYPE
+        Result.UpdateInt(8, GetInt(4) + 1); //ORDINAL_POSITION, RDB$FIELD_POSITION
+        Result.UpdateString(9, GetString(5)); //COLUMN_NAME, RDB$FIELD_NAME
+        Result.UpdateNull(10); //ASC_OR_DESC
+        Result.UpdateNull(11); //CARDINALITY
+        Result.UpdateInt(12, GetInt(7)); //PAGES, RDB$SEGMENT_COUNT
+        Result.UpdateNull(13); //FILTER_CONDITION
         Result.InsertRow;
       end;
       Close;
@@ -2580,7 +2588,7 @@ begin
         Result.MoveToInsertRow;
         Result.UpdateNull(1);
         Result.UpdateNull(2);
-        Result.UpdateString(3, GetStringByName('RDB$GENERATOR_NAME'));
+        Result.UpdateString(3, GetString(1)); //RDB$GENERATOR_NAME
         Result.InsertRow;
       end;
       Close;
@@ -2684,6 +2692,7 @@ var
   EscapeChar: string;
 begin
   PreviousChar := '';
+  Result := '';
   EscapeChar := GetDatabaseInfo.GetSearchStringEscape;
   for I := 1 to Length(Pattern) do
   begin
@@ -2706,5 +2715,3 @@ begin
 end;
 
 end.
-
-

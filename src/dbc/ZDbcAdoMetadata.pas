@@ -67,7 +67,7 @@ type
   {** Implements Ado Database Information. }
   TZAdoDatabaseInfo = class(TZAbstractDatabaseInfo)
   public
-    constructor Create(const Metadata: IZDatabaseMetadata);
+    constructor Create(const Metadata: TZAbstractDatabaseMetadata);
     destructor Destroy; override;
 
     // database/driver/server info:
@@ -301,7 +301,7 @@ var
   Constructs this object.
   @param Metadata the interface of the correpsonding database metadata object
 }
-constructor TZAdoDatabaseInfo.Create(const Metadata: IZDatabaseMetadata);
+constructor TZAdoDatabaseInfo.Create(const Metadata: TZAbstractDatabaseMetadata);
 begin
   inherited;
 end;

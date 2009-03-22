@@ -39,9 +39,11 @@
       <listitem><para>defaults=[yes,no] - Calculate default values for NULL fields.</para></listitem></itemizedlist>
     </sect2>
     <sect2>
-      <title>Statement parameters</title>
+      <title>ZQuery parameters</title>
       <itemizedlist>
-      <listitem><para>defaults=[yes,no] - Calculate default values for NULL fields.</para></listitem></itemizedlist>
+      <listitem><para>defaults=[yes,no] - Calculate default values for NULL fields.</para></listitem>
+      <listitem><para>ValidateUpdateCount=[true,false] - Check if automatically generated updates of ZUpdateSQL updates only affect 1 record.</para></listitem>
+      </itemizedlist>
     </sect2>
   </sect1>
   <sect1>

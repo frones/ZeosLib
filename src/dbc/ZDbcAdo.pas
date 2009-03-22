@@ -222,6 +222,7 @@ constructor TZAdoConnection.Create(Driver: IZDriver; const Url: string;
 begin
   FAdoConnection := CoConnection.Create;
   FPLainDriver := PlainDriver;
+  Self.PlainDriver := PlainDriver;
   inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
     TZAdoDatabaseMetadata.Create(Self, Url, Info));
 end;

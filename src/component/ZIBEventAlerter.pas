@@ -608,7 +608,7 @@ begin
   Status := -999999;
   try
     Status := Parent.PlainDriver.isc_que_events(StatusVector,
-      @Parent.FNativeHandle, @EventID, EventBufferLen,
+      Parent.FNativeHandle, @EventID, EventBufferLen,
       EventBuffer, TISC_CALLBACK(@EventCallback), PVoid(Self));
   except
     on E: Exception do

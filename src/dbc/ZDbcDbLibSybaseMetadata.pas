@@ -67,7 +67,7 @@ type
   {** Implements Sybase Database Information. }
   TZSybaseDatabaseInfo = class(TZAbstractDatabaseInfo)
   public
-    constructor Create(const Metadata: IZDatabaseMetadata);
+    constructor Create(const Metadata: TZAbstractDatabaseMetadata);
     destructor Destroy; override;
 
     // database/driver/server info:
@@ -259,7 +259,7 @@ uses ZDbcUtils, ZDbcDbLibUtils;
   Constructs this object.
   @param Metadata the interface of the correpsonding database metadata object
 }
-constructor TZSybaseDatabaseInfo.Create(const Metadata: IZDatabaseMetadata);
+constructor TZSybaseDatabaseInfo.Create(const Metadata: TZAbstractDatabaseMetadata);
 begin
   inherited;
 end;

@@ -61,6 +61,9 @@
           <simpara>[COMMON] Default strings to TWideString fields on Delphi 2009 (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2119">http://zeos.firmos.at/viewtopic.php?t=2119</ulink>)</simpara>
         </listitem>
         <listitem>
+          <simpara>[COMMON] Added BCB 2009 packages.</simpara>
+        </listitem>
+        <listitem>
           <simpara>[COMMON] Added Delphi 2009 to the supported compilers. Big thanks to gto and mariuszekpl for this work!!</simpara>
         </listitem>
         <listitem>
@@ -169,6 +172,12 @@
     <sect2>
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>[COMMON] Query property ‘ValidateUpdateCount=true/false’ was not added for TZUpdateSQL(<ulink url="http://zeos.firmos.at/viewtopic.php?t=2249">http://zeos.firmos.at/viewtopic.php?t=2249</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[IB/FB] TZInterbase6DatabaseMetadata.UncachedGetTables: Access Violation and duplicated rows (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2236">http://zeos.firmos.at/viewtopic.php?t=2236</ulink>)</simpara>
+        </listitem>
         <listitem>
           <simpara>[Lazarus] Removed libc from uses clauses when using fpc (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2196">http://zeos.firmos.at/viewtopic.php?t=2196</ulink>)</simpara>
         </listitem>

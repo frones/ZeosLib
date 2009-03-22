@@ -325,6 +325,7 @@ begin
 
   { Sets a default properties }
   FPlainDriver := PlainDriver;
+  Self.PlainDriver := PlainDriver;
   if Self.Port = 0 then
      Self.Port := MYSQL_PORT;
   AutoCommit := True;

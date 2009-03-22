@@ -64,7 +64,7 @@ uses
   {$ENDIF}
 {$ENDIF}
   Types, Classes, SysUtils, ZClasses, ZDbcIntfs, ZTokenizer, ZCompatibility,
-  ZGenericSqlToken, ZGenericSqlAnalyser;
+  ZGenericSqlToken, ZGenericSqlAnalyser, ZPlainDriver;
 
 type
 
@@ -96,9 +96,13 @@ type
   end;
 
   {** Implements Abstract Database Connection. }
+
+  { TZAbstractConnection }
+
   TZAbstractConnection = class(TInterfacedObject, IZConnection)
   private
     FDriver: IZDriver;
+    FIZPlainDriver: IZPlainDriver;
     FHostName: string;
     FPort: Integer;
     FDatabase: string;
@@ -121,6 +125,7 @@ type
       IZCallableStatement; virtual;
 
     property Driver: IZDriver read FDriver write FDriver;
+    property PlainDriver: IZPlainDriver read FIZPlainDriver write FIZPlainDriver;
     property HostName: string read FHostName write FHostName;
     property Port: Integer read FPort write FPort;
     property Database: string read FDatabase write FDatabase;
@@ -174,6 +179,7 @@ type
     function IsClosed: Boolean; virtual;
 
     function GetDriver: IZDriver;
+    function GetIZPlainDriver: IZPlainDriver;
     function GetMetadata: IZDatabaseMetadata;
     function GetParameters: TStrings;
     {ADDED by fduenas 15-06-2006}
@@ -804,6 +810,15 @@ end;
 function TZAbstractConnection.GetDriver: IZDriver;
 begin
   Result := FDriver;
+end;
+
+{**
+  Gets the plain driver.
+  @returns the plain driver interface.
+}
+function TZAbstractConnection.GetIZPlainDriver: IZPlainDriver;
+begin
+  result := FIZPlainDriver;
 end;
 
 {**

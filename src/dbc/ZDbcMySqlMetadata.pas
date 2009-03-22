@@ -71,7 +71,7 @@ type
   protected
     procedure GetVersion(var MajorVersion, MinorVersion: integer);
   public
-    constructor Create(const Metadata: IZDatabaseMetadata);
+    constructor Create(const Metadata: TZAbstractDatabaseMetadata);
     destructor Destroy; override;
 
     // database/driver/server info:
@@ -268,7 +268,7 @@ uses
   Constructs this object.
   @param Metadata the interface of the correpsonding database metadata object
 }
-constructor TZMySQLDatabaseInfo.Create(const Metadata: IZDatabaseMetadata);
+constructor TZMySQLDatabaseInfo.Create(const Metadata: TZAbstractDatabaseMetadata);
 begin
   inherited;
 end;
@@ -1170,6 +1170,8 @@ var
 
   TableNameList: TStrings;
   TableNameLength: Integer;
+  ColumnIndexes : Array[1..5] of integer;
+
 begin
     Result := ConstructVirtualResultSet(TableColColumnsDynArray);
 
@@ -1184,7 +1186,7 @@ begin
       begin
         while Next do
         begin
-          TableNameList.Add(GetStringByName('TABLE_NAME'));
+          TableNameList.Add(GetString(3)); //TABLE_NAME
           TableNameLength := Max(TableNameLength, Length(TableNameList[TableNameList.Count - 1]));
         end;
         Close;
@@ -1201,6 +1203,11 @@ begin
           GetIdentifierConvertor.Quote(TempTableNamePattern),
           TempColumnNamePattern])) do
         begin
+          ColumnIndexes[1] := FindColumn('Field');
+          ColumnIndexes[2] := FindColumn('Type');
+          ColumnIndexes[3] := FindColumn('Null');
+          ColumnIndexes[4] := FindColumn('Extra');
+          ColumnIndexes[5] := FindColumn('Default');
           while Next do
           begin
             {initialise some variables}
@@ -1212,9 +1219,9 @@ begin
             Result.UpdateString(1, TempCatalog);
             Result.UpdateString(2, '');
             Result.UpdateString(3, TempTableNamePattern);
-            Result.UpdateString(4, GetStringByName('Field'));
+            Result.UpdateString(4, GetString(ColumnIndexes[1]));
 
-            TypeInfo := GetStringByName('Type');
+            TypeInfo := GetString(ColumnIndexes[2]);
             if StrPos(PChar(TypeInfo), '(') <> nil then
             begin
               PutSplitString(TypeInfoList, TypeInfo, '()');
@@ -1319,7 +1326,7 @@ begin
             Result.UpdateNull(10);
 
             { Sets nullable fields. }
-            Nullable := GetStringByName('Null');
+            Nullable := GetString(ColumnIndexes[3]);
             if Nullable <> '' then
               if Nullable = 'YES' then
               begin
@@ -1336,9 +1343,9 @@ begin
               Result.UpdateInt(11, 0);
               Result.UpdateString(18, 'NO');
             end;
-            Result.UpdateString(12, GetStringByName('Extra'));
+            Result.UpdateString(12, GetString(ColumnIndexes[4]));
             // MySQL is a bit bizarre.
-            if IsNullByName('Default') then
+            if IsNull(ColumnIndexes[5]) then
             begin
               // MySQL bizarity 1:
               // NULL actually means that the default is NULL.
@@ -1349,7 +1356,7 @@ begin
             end
             else
             begin
-              DefaultValue := GetStringByName('Default');
+              DefaultValue := GetString(ColumnIndexes[5]);
               if not (DefaultValue = '') then
                  HasDefaultValue := true
               else
@@ -1402,18 +1409,17 @@ begin
               Result.UpdateString(13, DefaultValue);
             Result.UpdateNull(14);
             Result.UpdateNull(15);
-      //!!      Result.UpdateInt(16, GetInt(7));
             Result.UpdateInt(17, OrdPosition);
 
-            Result.UpdateBooleanByName('AUTO_INCREMENT',
-              Trim(LowerCase(GetStringByName('Extra'))) = 'auto_increment');
-            Result.UpdateBooleanByName('CASE_SENSITIVE',
+            Result.UpdateBoolean(19, //AUTO_INCREMENT
+              Trim(LowerCase(GetString(ColumnIndexes[4]))) = 'auto_increment'); //Extra
+            Result.UpdateBoolean(20, //CASE_SENSITIVE
               GetIdentifierConvertor.IsCaseSensitive(
-              GetStringByName('Field')));
-            Result.UpdateBooleanByName('SEARCHABLE', True);
-            Result.UpdateBooleanByName('WRITABLE', True);
-            Result.UpdateBooleanByName('DEFINITELYWRITABLE', True);
-            Result.UpdateBooleanByName('READONLY', False);
+              GetString(ColumnIndexes[1]))); //Field
+            Result.UpdateBoolean(21, True);  //SEARCHABLE
+            Result.UpdateBoolean(22, True);  //WRITABLE
+            Result.UpdateBoolean(23, True);  //DEFINITELYWRITABLE
+            Result.UpdateBoolean(24, False); //READONLY
 
             Inc(OrdPosition);
             Result.InsertRow;
@@ -1632,6 +1638,7 @@ function TZMySQLDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
 var
   KeyType: string;
   LCatalog: string;
+  ColumnIndexes : Array[1..3] of integer;
 begin
     if Table = '' then
       raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
@@ -1652,9 +1659,12 @@ begin
       [GetIdentifierConvertor.Quote(LCatalog),
       GetIdentifierConvertor.Quote(Table)])) do
     begin
+      ColumnIndexes[1] := FindColumn('Key_name');
+      ColumnIndexes[2] := FindColumn('Column_name');
+      ColumnIndexes[3] := FindColumn('Seq_in_index');
       while Next do
       begin
-        KeyType := UpperCase(GetStringByName('Key_name'));
+        KeyType := UpperCase(GetString(ColumnIndexes[1]));
         KeyType := Copy(KeyType, 1, 3);
         if KeyType = 'PRI' then
         begin
@@ -1662,8 +1672,8 @@ begin
           Result.UpdateString(1, LCatalog);
           Result.UpdateString(2, '');
           Result.UpdateString(3, Table);
-          Result.UpdateString(4, GetStringByName('Column_name'));
-          Result.UpdateString(5, GetStringByName('Seq_in_index'));
+          Result.UpdateString(4, GetString(ColumnIndexes[2]));
+          Result.UpdateString(5, GetString(ColumnIndexes[3]));
           Result.UpdateNull(6);
           Result.InsertRow;
         end;
@@ -1747,6 +1757,7 @@ var
   LCatalog: string;
   TableType, Comment, Keys: string;
   CommentList, KeyList: TStrings;
+  ColumnIndexes : Array[1..2] of integer;
 begin
     if Table = '' then
       raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
@@ -1769,12 +1780,14 @@ begin
         Format('SHOW TABLE STATUS FROM %s LIKE ''%s''',
         [GetIdentifierConvertor.Quote(LCatalog), Table])) do
       begin
+        ColumnIndexes[1] := FindColumn('Type');
+        ColumnIndexes[2] := FindColumn('Comment');
         while Next do
         begin
-          TableType := GetStringByName('Type');
+          TableType := GetString(ColumnIndexes[1]);
           if (TableType <> '') and (LowerCase(TableType) = 'innodb') then
           begin
-            Comment := GetStringByName('Comment');
+            Comment := GetString(ColumnIndexes[2]);
             if Comment <> '' then
             begin
               PutSplitString(CommentList, Comment, ';');
@@ -1893,6 +1906,7 @@ var
   LCatalog: string;
   TableType, Comment, Keys: string;
   CommentList, KeyList: TStrings;
+  ColumnIndexes : Array[1..3] of integer;
 begin
     if Table = '' then
       raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
@@ -1915,12 +1929,15 @@ begin
         Format('SHOW TABLE STATUS FROM %s',
         [GetIdentifierConvertor.Quote(LCatalog)])) do
       begin
+        ColumnIndexes[1] := FindColumn('Type');
+        ColumnIndexes[2] := FindColumn('Comment');
+        ColumnIndexes[3] := FindColumn('Name');
         while Next do
         begin
-          TableType := GetStringByName('Type');
+          TableType := GetString(ColumnIndexes[1]);
           if (TableType <> '') and (LowerCase(TableType) = 'innodb') then
           begin
-            Comment := GetStringByName('Comment');
+            Comment := GetString(ColumnIndexes[2]);
             if Comment <> '' then
             begin
               PutSplitString(CommentList, Comment, ';');
@@ -1935,7 +1952,7 @@ begin
 
                   Result.UpdateString(5, LCatalog);
                   Result.UpdateNull(6);// FKTABLE_SCHEM
-                  Result.UpdateString(7, GetStringByName('Name')); // FKTABLE_NAME
+                  Result.UpdateString(7, GetString(ColumnIndexes[3])); // FKTABLE_NAME
                   Result.UpdateString(8, KeyList.Strings[0]); // PKTABLE_CAT
 
                   Result.UpdateString(1, KeyList.Strings[2]); // PKTABLE_CAT
@@ -2047,6 +2064,7 @@ var
   LForeignCatalog: string;
   TableType, Comment, Keys: string;
   CommentList, KeyList: TStrings;
+  ColumnIndexes : Array[1..3] of integer;
 begin
     if PrimaryTable = '' then
       raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
@@ -2064,12 +2082,15 @@ begin
         Format('SHOW TABLE STATUS FROM %s',
         [GetIdentifierConvertor.Quote(LForeignCatalog)])) do
       begin
+        ColumnIndexes[1] := FindColumn('Type');
+        ColumnIndexes[2] := FindColumn('Comment');
+        ColumnIndexes[3] := FindColumn('Name');
         while Next do
         begin
-          TableType := GetStringByName('Type');
+          TableType := GetString(ColumnIndexes[1]);
           if (TableType <> '') and (LowerCase(TableType) = 'innodb') then
           begin
-            Comment := GetStringByName('Comment');
+            Comment := GetString(ColumnIndexes[2]);
             if Comment = '' then
             begin
               PutSplitString(CommentList, Comment, ';');
@@ -2087,10 +2108,10 @@ begin
                     Result.UpdateNull(6) // FKTABLE_SCHEM
                   else
                     Result.UpdateString(6, ForeignSchema);
-                  if ForeignTable <> GetStringByName('Name') then
+                  if ForeignTable <> GetString(ColumnIndexes[3]) then
                     Continue
                   else
-                    Result.UpdateString(7, GetStringByName('Name')); // FKTABLE_NAME
+                    Result.UpdateString(7, GetString(ColumnIndexes[3])); // FKTABLE_NAME
 
                   Result.UpdateString(8, KeyList.Strings[0]); // PKTABLE_CAT
 
@@ -2293,6 +2314,7 @@ function TZMySQLDatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
   Approximate: Boolean): IZResultSet;
 var
   LCatalog: string;
+  ColumnIndexes : Array[1..7] of integer;
 begin
     if Table = '' then
       raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
@@ -2313,23 +2335,30 @@ begin
       [GetIdentifierConvertor.Quote(LCatalog),
       GetIdentifierConvertor.Quote(Table)])) do
     begin
+      ColumnIndexes[1] := FindColumn('Table');
+      ColumnIndexes[2] := FindColumn('Non_unique');
+      ColumnIndexes[3] := FindColumn('Key_name');
+      ColumnIndexes[4] := FindColumn('Seq_in_index');
+      ColumnIndexes[5] := FindColumn('Column_name');
+      ColumnIndexes[6] := FindColumn('Collation');
+      ColumnIndexes[7] := FindColumn('Cardinality');
       while Next do
       begin
         Result.MoveToInsertRow;
         Result.UpdateString(1, LCatalog);
         Result.UpdateNull(2);
-        Result.UpdateString(3, GetStringByName('Table'));
-        if GetIntByName('Non_unique') = 0 then
+        Result.UpdateString(3, GetString(ColumnIndexes[1]));
+        if GetInt(ColumnIndexes[2]) = 0 then
           Result.UpdateString(4, 'true')
         else
           Result.UpdateString(4, 'false');
         Result.UpdateNull(5);
-        Result.UpdateString(6, GetStringByName('Key_name'));
+        Result.UpdateString(6, GetString(ColumnIndexes[3]));
         Result.UpdateInt(7, Ord(tiOther));
-        Result.UpdateInt(8, GetIntByName('Seq_in_index'));
-        Result.UpdateString(9, GetStringByName('Column_name'));
-        Result.UpdateString(10, GetStringByName('Collation'));
-        Result.UpdateString(11, GetStringByName('Cardinality'));
+        Result.UpdateInt(8, GetInt(ColumnIndexes[4]));
+        Result.UpdateString(9, GetString(ColumnIndexes[5]));
+        Result.UpdateString(10, GetString(ColumnIndexes[6]));
+        Result.UpdateString(11, GetString(ColumnIndexes[7]));
         Result.UpdateInt(12, 0);
         Result.UpdateNull(13);
         Result.InsertRow;
