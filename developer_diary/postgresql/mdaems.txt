@@ -41,3 +41,5 @@
 20081213 : Implemented ZConnection.ServerVersion for Postgres - by mdaems
 
 20090220 : PostgresSQL EncodeString Bug Delphi 2009 - by cyberal77 - See http://zeos.firmos.at/viewtopic.php?t=2290
+
+20090222 : Postgres Bit type fields were not found - by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2260

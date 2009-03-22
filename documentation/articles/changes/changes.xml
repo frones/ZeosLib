@@ -176,6 +176,9 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[PostgreSQL] Bit type fields were not found (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2260">http://zeos.firmos.at/viewtopic.php?t=2260</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[COMMON] Query property ‘ValidateUpdateCount=true/false’ was not added for TZUpdateSQL(<ulink url="http://zeos.firmos.at/viewtopic.php?t=2249">http://zeos.firmos.at/viewtopic.php?t=2249</ulink>)</simpara>
         </listitem>
         <listitem>

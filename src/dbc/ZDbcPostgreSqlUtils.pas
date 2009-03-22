@@ -221,7 +221,7 @@ function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
 begin
   TypeName := LowerCase(TypeName);
   if (TypeName = 'interval') or (TypeName = 'char')
-    or (TypeName = 'varchar') then
+    or (TypeName = 'varchar') or (TypeName = 'bit') or (TypeName = 'varbit') then
     Result := stString
   else if TypeName = 'text' then
     Result := stAsciiStream
@@ -320,6 +320,7 @@ begin
     1082: Result := stDate; { date }
     1083: Result := stTime; { time }
     1114,1184,702: Result := stTimestamp; { timestamp,timestamptz/abstime. no 'datetime' any more}
+    1560,1562: Result := stString; {bit/ bit varying string}
     24: Result := stString; { regproc }
     17: { bytea }
       begin
