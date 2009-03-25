@@ -728,10 +728,6 @@ var
       SrcField := Delta.FieldByName(TField(FieldRefs[I]).FieldName);
       if SrcField <> nil then
       begin
-        if (SrcField.DataType = ftLargeInt)
-          and not VarIsNull(SrcField.OldValue) then
-          Temp[I] := string(SrcField.OldValue)
-        else
           Temp[I] := SrcField.OldValue;
       end
       else
