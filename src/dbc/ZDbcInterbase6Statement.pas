@@ -706,8 +706,6 @@ begin
       end
       else
         raise EZSQLException.Create(SCanNotRetrieveResultSetData);
-
-     LastResultSet := Result;
     except
       on E: Exception do
       begin
