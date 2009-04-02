@@ -179,6 +179,9 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[ADO] SQLServer default GUID fieldlength incorrect (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2300">http://zeos.firmos.at/viewtopic.php?t=2300</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[PostgreSQL] Bit type fields were not found (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2260">http://zeos.firmos.at/viewtopic.php?t=2260</ulink>)</simpara>
         </listitem>
         <listitem>
