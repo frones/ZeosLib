@@ -327,3 +327,5 @@
 20090322 : Removed some new methods from the IZPreparedStatement interface to stay as jdbc compliant as possible - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2234
 
 20090330 : Bug in conditional directive SHOW_WARNING - by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2312
+
+20090402 : TZConnection.Pingserver now resets the ZConnection state when failing -by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2293
