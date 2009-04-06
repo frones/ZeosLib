@@ -68,18 +68,10 @@
         <Filename Value="../../src/plain/ZPlainPostgreSqlDriver.pas"/>
         <UnitName Value="ZPlainPostgreSqlDriver"/>
       </Item12>
-      <Item13>
-        <Filename Value="../../src/plain/ZPlainSqLite28.pas"/>
-        <UnitName Value="ZPlainSqLite28"/>
-      </Item13>
       <Item14>
         <Filename Value="../../src/plain/ZPlainSqLiteDriver.pas"/>
         <UnitName Value="ZPlainSqLiteDriver"/>
       </Item14>
-      <Item15>
-        <Filename Value="../../src/plain/ZPlainSqLite3.pas"/>
-        <UnitName Value="ZPlainSqLite3"/>
-      </Item15>
       <Item16>
         <Filename Value="../../src/plain/ZPlainASADriver.pas"/>
         <UnitName Value="ZPlainASADriver"/>

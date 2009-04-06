@@ -40,9 +40,6 @@ contains
 {$ENDIF}
 
 {$IFDEF ENABLE_INTERBASE}
-  ZPlainInterbase5 in '..\..\src\plain\ZPlainInterbase5.pas',
-  ZPlainInterbase6 in '..\..\src\plain\ZPlainInterbase6.pas',
-  ZPlainInterbaseDriver in '..\..\src\plain\ZPlainInterbaseDriver.pas',
   ZPlainFirebirdDriver in '..\..\src\plain\ZPlainFirebirdDriver.pas',
   ZPlainFirebirdInterbaseConstants in '..\..\src\plain\ZPlainFirebirdInterbaseConstants.pas',
 {$ENDIF}
@@ -69,8 +66,6 @@ contains
 {$ENDIF}
 
 {$IFDEF ENABLE_SQLITE}
-  ZPlainSqLite28 in '..\..\src\plain\ZPlainSqLite28.pas',
-  ZPlainSqLite3 in '..\..\src\plain\ZPlainSqLite3.pas',
   ZPlainSqLiteDriver in '..\..\src\plain\ZPlainSqLiteDriver.pas',
 {$ENDIF}
 

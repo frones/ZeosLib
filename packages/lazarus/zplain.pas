@@ -10,7 +10,7 @@ uses
     ZPlainDbLibDriver, ZPlainDbLibMsSql7, ZPlainDbLibSybaseAse125, 
   ZPlainDriver, ZPlainLoader, ZPlainMysqlConstants, ZPlainMySqlDriver, 
   ZPlainOracle9i, ZPlainOracleDriver, ZPlainPostgreSql7, ZPlainPostgreSql8, 
-  ZPlainPostgreSqlDriver, ZPlainSqLite28, ZPlainSqLiteDriver, ZPlainSqLite3, 
+  ZPlainPostgreSqlDriver, ZPlainSqLiteDriver, 
   ZPlainASADriver, ZPlainASA9, ZPlainASA8, ZPlainASA7, ZPlainFirebirdDriver, 
   ZPlainFirebirdInterbaseConstants;
 

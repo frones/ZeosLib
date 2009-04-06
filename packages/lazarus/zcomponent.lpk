@@ -4,7 +4,7 @@
     <PathDelim Value="\"/>
     <Name Value="zcomponent"/>
     <CompilerOptions>
-      <Version Value="5"/>
+      <Version Value="8"/>
       <PathDelim Value="\"/>
       <SearchPaths>
         <OtherUnitFiles Value="..\..\src\component\;build\"/>
@@ -12,19 +12,19 @@
       </SearchPaths>
       <Parsing>
         <SyntaxOptions>
-          <DelphiCompat Value="True"/>
+          <SyntaxMode Value="Delphi"/>
+          <CStyleOperator Value="False"/>
         </SyntaxOptions>
       </Parsing>
-      <CodeGeneration>
-        <Generate Value="Faster"/>
-      </CodeGeneration>
       <Other>
+        <CustomOptions Value="-dZEOSDEBUG
+"/>
         <CompilerPath Value="$(CompPath)"/>
       </Other>
     </CompilerOptions>
     <Description Value="Zeos Database Components
 "/>
-    <Version Major="7" Minor="0" Release="0"/>
+    <Version Major="7"/>
     <Files Count="4">
       <Item1>
         <Filename Value="..\..\src\component\ZComponentReg.pas"/>

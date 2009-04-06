@@ -55,6 +55,9 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[SQLite] removed support for SQLite2</simpara>
+        </listitem>
+        <listitem>
           <simpara>[COMMON] TZConnection.Pingserver now resets the ZConnection state when failing (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2293">http://zeos.firmos.at/viewtopic.php?t=2293</ulink>)</simpara>
         </listitem>
         <listitem>
@@ -103,7 +106,7 @@
           <simpara>[POSTGRES] PostgreSQL UTF8 Charset Patch</simpara>
         </listitem>
         <listitem>
-          <simpara>[MYSQL] Removed support for mysql w 4.1</simpara>
+          <simpara>[MYSQL] Removed support for mysql &lt; 4.1</simpara>
         </listitem>
         <listitem>
           <simpara>[COMMON] Removed packages for Delphi 5 and 6, Kylix 2 and CBuilder 5</simpara>

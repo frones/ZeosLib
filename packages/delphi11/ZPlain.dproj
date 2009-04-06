@@ -77,8 +77,6 @@
     <DCCReference Include="..\..\src\plain\ZPlainPostgreSql7.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainPostgreSql8.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainPostgreSqlDriver.pas" />
-    <DCCReference Include="..\..\src\plain\ZPlainSqLite28.pas" />
-    <DCCReference Include="..\..\src\plain\ZPlainSqLite3.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainSqLiteDriver.pas" />
     <DCCReference Include="rtl.dcp" />
     <DCCReference Include="vcl.dcp" />

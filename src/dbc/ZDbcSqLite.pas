@@ -66,8 +66,7 @@ type
   {** Implements SQLite Database Driver. }
   TZSQLiteDriver = class(TZAbstractDriver)
   private
-    FSQLite28PlainDriver: IZSQLitePlainDriver;
-    FSQLite3PlainDriver: IZSQLitePlainDriver;
+    FPlainDrivers: Array of IZSQLitePlainDriver;
   protected
     function GetPlainDriver(const Url: string): IZSQLitePlainDriver;
   public
@@ -145,8 +144,8 @@ uses
 }
 constructor TZSQLiteDriver.Create;
 begin
-  FSQLite28PlainDriver := TZSQLite28PlainDriver.Create;
-  FSQLite3PlainDriver := TZSQLite3PlainDriver.Create;
+  SetLength(FPlainDrivers,1);
+  FPlainDrivers[0]  := TZSQLite3PlainDriver.Create;
 end;
 
 {**
@@ -236,11 +235,14 @@ end;
   For example: mysql, oracle8 or postgresql72
 }
 function TZSQLiteDriver.GetSupportedProtocols: TStringDynArray;
+var
+   i: smallint;
 begin
-  SetLength(Result, 3);
+  SetLength(Result, high(FPlainDrivers)+2);
+  // Generic driver
   Result[0] := 'sqlite';
-  Result[1] := FSQLite28PlainDriver.GetProtocol;
-  Result[2] := FSQLite3PlainDriver.GetProtocol;
+  For i := 0 to high(FPlainDrivers) do
+    Result[i+1] := FPlainDrivers[i].GetProtocol;
 end;
 
 {**
@@ -251,14 +253,18 @@ end;
 function TZSQLiteDriver.GetPlainDriver(const Url: string): IZSQLitePlainDriver;
 var
   Protocol: string;
+  i: smallint;
 begin
   Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
-  if Protocol = FSQLite28PlainDriver.GetProtocol then
-    Result := FSQLite28PlainDriver
-  else if Protocol = FSQLite3PlainDriver.GetProtocol then
-    Result := FSQLite3PlainDriver
-  else
-    Result := FSQLite28PlainDriver;
+  For i := 0 to high(FPlainDrivers) do
+    if Protocol = FPlainDrivers[i].GetProtocol then
+      begin
+        Result := FPlainDrivers[i];
+        break;
+      end;
+  // Generic driver
+  If result = nil then
+    Result := FPlainDrivers[0];    // sqlite3
   Result.Initialize;
 end;
 

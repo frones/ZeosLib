@@ -67,8 +67,6 @@ contains
 {$ENDIF}
 
 {$IFDEF ENABLE_SQLITE}
-  ZPlainSqLite28 in '..\..\src\plain\ZPlainSqLite28.pas',
-  ZPlainSqLite3 in '..\..\src\plain\ZPlainSqLite3.pas',
   ZPlainSqLiteDriver in '..\..\src\plain\ZPlainSqLiteDriver.pas',
 {$ENDIF}
 

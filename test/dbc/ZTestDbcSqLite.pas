@@ -89,7 +89,7 @@ type
 
 implementation
 
-uses ZSysUtils, ZTestConsts, ZPlainSqLite28;
+uses ZSysUtils, ZTestConsts;
 
 { TZTestDbcSQLiteCase }
 
@@ -99,7 +99,7 @@ uses ZSysUtils, ZTestConsts, ZPlainSqLite28;
 }
 function TZTestDbcSQLiteCase.GetSupportedProtocols: string;
 begin
-  Result := 'sqlite,sqlite-2.8,sqlite-3';
+  Result := 'sqlite,sqlite-3';
 end;
 
 {**

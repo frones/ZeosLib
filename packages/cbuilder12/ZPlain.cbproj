@@ -134,14 +134,6 @@
 				<BuildOrder>74</BuildOrder>
 				<BuildOrder>13</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\plain\ZPlainSqLite3.pas">
-				<BuildOrder>83</BuildOrder>
-				<BuildOrder>14</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\plain\ZPlainSqLite28.pas">
-				<BuildOrder>80</BuildOrder>
-				<BuildOrder>15</BuildOrder>
-			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\plain\ZPlainAdo.pas">
 				<BuildOrder>17</BuildOrder>
 				<BuildOrder>16</BuildOrder>

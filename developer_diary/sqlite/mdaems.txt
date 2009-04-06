@@ -15,3 +15,5 @@
 20081001 : Fixed updates to tables from attached databases - by mariuszekpl - see http://zeos.firmos.at/viewtopic.php?t=2025
 
 20081124 : Unicode fix - by mariuszekpl - see http://zeos.firmos.at/viewtopic.php?t=2113
+
+20090406 : Removed SQLite 2 driver - by mdaems

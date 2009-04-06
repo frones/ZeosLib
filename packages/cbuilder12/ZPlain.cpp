@@ -42,10 +42,6 @@ USEUNIT("..\..\src\plain\ZPlainOracle9i.pas");
 
 USEUNIT("..\..\src\plain\ZPlainOracleDriver.pas");
 
-USEUNIT("..\..\src\plain\ZPlainSqLite28.pas");
-
-USEUNIT("..\..\src\plain\ZPlainSqLite3.pas");
-
 USEUNIT("..\..\src\plain\ZPlainASADriver.pas");
 
 USEUNIT("..\..\src\plain\ZPlainASA9.pas");
