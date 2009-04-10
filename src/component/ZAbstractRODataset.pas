@@ -3341,7 +3341,7 @@ begin
             ftFloat:
               Statement.SetDouble(I + 1, ParamValue.AsFloat);
             ftLargeInt:
-              Statement.SetInt(I + 1, ParamValue.AsInteger);
+              Statement.SetLong(I + 1, StrToInt64(ParamValue.AsString));
             ftString:
               Statement.SetString(I + 1, ParamValue.AsString);
             ftBytes:

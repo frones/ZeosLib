@@ -695,8 +695,8 @@ begin
       // Modified by cipto 8/2/2007 10:11:02 AM
       CloseAllSequences;
       FConnection.Close;
-      FConnection := nil;
     finally
+      FConnection := nil;
       HideSqlHourGlass;
     end;
 
@@ -888,9 +888,24 @@ begin
   end;
 end;
 
-function TZConnection.PingServer: Boolean;
+Function TZConnection.PingServer: Boolean;
+var
+  LastState : boolean;
 begin
- Result := (FConnection.PingServer=0);
+  // Check connection status
+  LastState := GetConnected;
+  If FConnection <> Nil Then
+    Begin
+      Result := (FConnection.PingServer=0);
+      // Connection now is false but was true
+      If (Not Result) And (LastState) Then
+        // Generate OnDisconnect event
+        SetConnected(Result);
+    End
+  Else
+    // Connection now is false but was true
+    If LastState Then
+      SetConnected(false);
 end;
 
 procedure TZConnection.PrepareTransaction(const transactionid: string);

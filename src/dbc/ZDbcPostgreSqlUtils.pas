@@ -221,7 +221,7 @@ function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
 begin
   TypeName := LowerCase(TypeName);
   if (TypeName = 'interval') or (TypeName = 'char')
-    or (TypeName = 'varchar') then
+    or (TypeName = 'varchar') or (TypeName = 'bit') or (TypeName = 'varbit') then
     Result := stString
   else if TypeName = 'text' then
     Result := stAsciiStream
@@ -320,6 +320,7 @@ begin
     1082: Result := stDate; { date }
     1083: Result := stTime; { time }
     1114,1184,702: Result := stTimestamp; { timestamp,timestamptz/abstime. no 'datetime' any more}
+    1560,1562: Result := stString; {bit/ bit varying string}
     24: Result := stString; { regproc }
     17: { bytea }
       begin
@@ -356,10 +357,10 @@ function EncodeString(Value: string): string;
 var
   I: Integer;
   SrcLength, DestLength: Integer;
-  SrcBuffer, DestBuffer: PAnsiChar;
+  SrcBuffer, DestBuffer: PChar;
 begin
   SrcLength := Length(Value);
-  SrcBuffer := PAnsiChar(Value);
+  SrcBuffer := PChar(Value);
   DestLength := 2;
   for I := 1 to SrcLength do
   begin
@@ -370,9 +371,9 @@ begin
     Inc(SrcBuffer);
   end;
 
-  SrcBuffer := PAnsiChar(Value);
+  SrcBuffer := PChar(Value);
   SetLength(Result, DestLength);
-  DestBuffer := PAnsiChar(Result);
+  DestBuffer := PChar(Result);
   DestBuffer^ := '''';
   Inc(DestBuffer);
 
@@ -381,9 +382,9 @@ begin
     if SrcBuffer^ in [#0, '''', '\'] then
     begin
       DestBuffer[0] := '\';
-      DestBuffer[1] := AnsiChar(Ord('0') + (Byte(SrcBuffer^) shr 6));
-      DestBuffer[2] := AnsiChar(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
-      DestBuffer[3] := AnsiChar(Ord('0') + (Byte(SrcBuffer^) and $07));
+      DestBuffer[1] := Char(Ord('0') + (Byte(SrcBuffer^) shr 6));
+      DestBuffer[2] := Char(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
+      DestBuffer[3] := Char(Ord('0') + (Byte(SrcBuffer^) and $07));
       Inc(DestBuffer, 4);
     end
     else

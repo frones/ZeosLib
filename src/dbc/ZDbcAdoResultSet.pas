@@ -200,8 +200,11 @@ begin
     ColumnInfo.ColumnLabel := ColName;
     ColumnInfo.ColumnName := ColName;
     ColumnInfo.ColumnType := ConvertAdoToSqlType(ColType);
-    FieldSize := F.DefinedSize;
-    if FieldSize < 0 then
+    if F.Type_ = adGuid then 
+        FieldSize := 38 
+      else 
+        FieldSize := F.DefinedSize;
+      if FieldSize < 0 then
       FieldSize := 0;
     ColumnInfo.ColumnDisplaySize := FieldSize;
     ColumnInfo.Precision := FieldSize;

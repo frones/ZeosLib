@@ -38,6 +38,9 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[Common] Overflow while converting variant of type (Int64) into type (Integer) when deleting a record (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2286">http://zeos.firmos.at/viewtopic.php?t=2286</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[ADO] Column type metadata request for MSSQL returns no type (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2155">http://zeos.firmos.at/viewtopic.php?t=2155</ulink>)</simpara>
         </listitem>
         <listitem>
@@ -51,6 +54,9 @@
     <sect2>
       <title>Features added</title>
       <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>[COMMON] TZConnection.Pingserver now resets the ZConnection state when failing (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2293">http://zeos.firmos.at/viewtopic.php?t=2293</ulink>)</simpara>
+        </listitem>
         <listitem>
           <simpara>[Oracle] Connections are now made using the OCIEnvNlsCreate method instead of OCIEnvInit and use property 'codepage=[UTF8,0..max Word value]' (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2172">http://zeos.firmos.at/viewtopic.php?t=2172</ulink>)</simpara>
         </listitem>
@@ -172,6 +178,15 @@
     <sect2>
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>[COMMON] Compilation error with SHOW_WARNING directive (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2312">http://zeos.firmos.at/viewtopic.php?t=2312</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[ADO] SQLServer default GUID fieldlength incorrect (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2300">http://zeos.firmos.at/viewtopic.php?t=2300</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[PostgreSQL] Bit type fields were not found (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2260">http://zeos.firmos.at/viewtopic.php?t=2260</ulink>)</simpara>
+        </listitem>
         <listitem>
           <simpara>[COMMON] Query property ‘ValidateUpdateCount=true/false’ was not added for TZUpdateSQL(<ulink url="http://zeos.firmos.at/viewtopic.php?t=2249">http://zeos.firmos.at/viewtopic.php?t=2249</ulink>)</simpara>
         </listitem>
