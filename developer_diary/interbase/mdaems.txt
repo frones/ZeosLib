@@ -45,3 +45,5 @@
 20090102 : Added Firebird 2.1 to ZIBEventAlerter component - by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2171
 
 20090225 : TZInterbase6DatabaseMetadata.UncachedGetTables: Access Violation and duplicated rows - by cytrinox - See http://zeos.firmos.at/viewtopic.php?t=2236
+
+20090320 : Workaround FB bug - For numeric computed fields subtype is 0 for a computed decimal field and not 1 as in all the other cases - by andrevanzuydam - See http://zeos.firmos.at/viewtopic.php?t=2278

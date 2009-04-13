@@ -1597,6 +1597,11 @@ begin
         FieldScale := GetInt(ColumnIndexes[3]);
         ColumnName := GetString(ColumnIndexes[4]);
 
+        if not isNull(14) then 
+        begin //Computed by Source 
+          if ((TypeName = 16) and (FieldScale < 0)) then SubTypeName := 1; // Fix for 0 subtype which removes decimals 
+        end; 
+
         DefaultValue := GetString(ColumnIndexes[5]);
         if DefaultValue = '' then
           DefaultValue := GetString(ColumnIndexes[6]);

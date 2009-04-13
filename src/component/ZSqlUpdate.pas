@@ -692,6 +692,8 @@ var I: Integer;
     Refresh_OldSQL:String;
     RefreshColumnType:TZSQLType;
 
+    lValidateUpdateCount : Boolean;
+    lUpdateCount : Integer;
   procedure Apply_RefreshResultSet;
   var
     I: Integer;
@@ -785,6 +787,12 @@ begin
       if ExecuteStatement then
       begin
        Statement.ExecutePrepared;
+       lValidateUpdateCount := StrToBoolEx( 
+          Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']); 
+
+       lUpdateCount := Statement.ExecuteUpdatePrepared; 
+       if  (lValidateUpdateCount) and (lUpdateCount <> 1) then 
+         raise EZSQLException.Create(Format(SInvalidUpdateCount, [lUpdateCount]));
 
        case UpdateType of
             utDeleted:

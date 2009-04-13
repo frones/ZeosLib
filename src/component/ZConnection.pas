@@ -694,8 +694,8 @@ begin
       // Modified by cipto 8/2/2007 10:11:02 AM
       CloseAllSequences;
       FConnection.Close;
-      FConnection := nil;
     finally
+      FConnection := nil;
       HideSqlHourGlass;
     end;
 
