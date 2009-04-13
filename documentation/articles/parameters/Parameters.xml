@@ -12,6 +12,26 @@
     <corpauthor>ZeosLib Development Group</corpauthor>
   </articleinfo>
   <sect1>
+    <title>Project options</title>
+    <sect2>
+      <title>Conditional Defines</title>
+      <para>It is possible to avoid databasedrivers are compiled into your program executable if you're not planning to support the use of them. You can do this by commenting out the ENABLE_XXXX DEFINES in zeos.inc before compiling and installing zeoslib.</para>
+      <para>A more flexible way is to install zeoslib using the standard zeos.inc file and add some conditional DEFINE's to your project options. Supported values are:
+      <itemizedlist>
+      <listitem><simpara>ZEOS_DISABLE_MYSQL</simpara></listitem>
+      <listitem><simpara>ZEOS_DISABLE_ORACLE</simpara></listitem>
+      <listitem><simpara>ZEOS_DISABLE_SQLITE</simpara></listitem>
+      <listitem><simpara>ZEOS_DISABLE_ASA</simpara></listitem>
+      <listitem><simpara>ZEOS_DISABLE_INTERBASE</simpara></listitem>
+      <listitem><simpara>ZEOS_DISABLE_DBLIB</simpara></listitem>
+      <listitem><simpara>ZEOS_DISABLE_POSTGRESQL</simpara></listitem>
+      <listitem><simpara>ZEOS_DISABLE_ADO</simpara></listitem>
+      </itemizedlist>
+      To use this feature you must add the zeoslib source dir's to the search path of your project. So only the required features will be compiled in your project executable. (Make sure the zeoslib units are recompiled as well)
+      </para>
+   </sect2>
+ </sect1>
+  <sect1>
     <title>Generic Parameters</title>
     <sect2>
       <title>Connection parameters</title>

@@ -33,3 +33,5 @@
 20081213 : Implemented Pingserver for Postgres - by seawolf/mdaems - See http://zeos.firmos.at/viewtopic.php?t=2156
 
 20081213 : Implemented ZConnection.ServerVersion for Postgres - by mdaems
+
+20090222 : Postgres Bit type fields were not found - by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2260

@@ -254,6 +254,8 @@
 
 20081208 : Fixed bug in UpdateSQLeditor that resulted from commit 481 - by mdaems - Mantis Bug 165
 
+20090114 : Added ZEOS_DISABLE_XXXXX 'Conditional Defines' to Zeos.inc to allow compiling out database support on a per project basis - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2195
+
 20090117 : Second JOIN in from clause was stripped by the SQL parser after ON or USING clause - by mdaems/DarthWombat - Mantis Bug 150
 
 20090121 : Removed libc from uses clauses when using fpc - by mdaems/piper62 - See http://zeos.firmos.at/viewtopic.php?t=2196

@@ -107,6 +107,9 @@ type
   end;
 
   {** Implements Interbase6 Database Connection. }
+
+  { TZInterbase6Connection }
+
   TZInterbase6Connection = class(TZAbstractConnection, IZInterbase6Connection)
   private
     FDialect: Word;
@@ -141,6 +144,8 @@ type
 
     procedure Commit; override;
     procedure Rollback; override;
+
+    function PingServer: Integer; override;
 
     procedure Open; override;
     procedure Close; override;
@@ -408,7 +413,8 @@ end;
 }
 constructor TZInterbase6Connection.Create(Driver: IZDriver; const Url: string;
   PlainDriver: IZInterbasePlainDriver; const HostName: string; Port: Integer;
-  const Database, User, Password: string; Info: TStrings);
+  const Database: string; const User: string; const Password: string;
+  Info: TStrings);
 var
   RoleName: string;
   ClientCodePage: string;
@@ -674,6 +680,32 @@ begin
     DriverManager.LogMessage(lcTransaction,
       FPlainDriver.GetProtocol, 'TRANSACTION ROLLBACK');
   end;
+end;
+
+{**
+  Checks if a connection is still alive by doing a call to isc_database_info
+  It does not matter what info we request, we are not looking at it, as long
+  as it is something which should _always_ work if the connection is there.
+  We check if the error returned is one of the net_* errors described in the
+  firebird client documentation (335544721 .. 335544727).
+  Returns 0 if the connection is OK
+  Returns non zeor if the connection is not OK
+}
+function TZInterbase6Connection.PingServer: integer;
+var
+  DatabaseInfoCommand: Char;
+  Buffer: array[0..IBBigLocalBufferLength - 1] of AnsiChar;
+  ErrorCode: ISC_STATUS;
+begin
+  DatabaseInfoCommand := Char(isc_info_reads);
+
+  ErrorCode := FPlainDriver.isc_database_info(@FStatusVector, @FHandle, 1, @DatabaseInfoCommand,
+                           IBLocalBufferLength, Buffer);
+
+  if (ErrorCode >= 335544721) and (ErrorCode <= 335544727) then
+   result := -1
+  else
+   result := 0;
 end;
 
 {**
