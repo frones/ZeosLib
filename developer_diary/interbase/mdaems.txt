@@ -41,3 +41,7 @@
 20081019 : Special default value 'NOW' for timestap, time and date fields was interpreted wrongly - by mdaems - Mantis Bug 140
 
 20081118 : Added Firebird 2.1 driver - by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2099
+
+20090102 : Added Firebird 2.1 to ZIBEventAlerter component - by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2171
+
+20090225 : TZInterbase6DatabaseMetadata.UncachedGetTables: Access Violation and duplicated rows - by cytrinox - See http://zeos.firmos.at/viewtopic.php?t=2236
