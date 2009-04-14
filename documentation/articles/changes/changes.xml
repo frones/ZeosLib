@@ -53,6 +53,15 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[IB/FB] Interbase/Firebid holding connection on shutdown (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2309">http://zeos.firmos.at/viewtopic.php?t=2309</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] Compilation error with SHOW_WARNING directive (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2312">http://zeos.firmos.at/viewtopic.php?t=2312</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[ADO] SQLServer default GUID fieldlength incorrect (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2300">http://zeos.firmos.at/viewtopic.php?t=2300</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[PostgreSQL] Bit type fields were not found (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2260">http://zeos.firmos.at/viewtopic.php?t=2260</ulink>)</simpara>
         </listitem>
         <listitem>
@@ -89,6 +98,9 @@
       <itemizedlist spacing="compact">
         <listitem>
           <simpara>Zeoslib 6.6 is in it's stable phase. No features, except for eventual translations and docs, will (should) be added.</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] TZConnection.Pingserver now resets the ZConnection state when failing (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2293">http://zeos.firmos.at/viewtopic.php?t=2293</ulink>)</simpara>
         </listitem>
         <listitem>
           <simpara>[GENERAL] Added ZEOS_DISABLE_XXXXX 'Conditional Defines' to Zeos.inc to allow compiling out database support on a per project basis(<ulink url="http://zeos.firmos.at/viewtopic.php?t=2195">http://zeos.firmos.at/viewtopic.php?t=2195</ulink>)</simpara>

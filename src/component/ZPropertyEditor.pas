@@ -193,6 +193,9 @@ uses SysUtils, Forms, Dialogs, Controls, DB, TypInfo,
   {$ENDIF}
   {$ENDIF}
 {$ENDIF}
+{$IFDEF SHOW_WARNING} 
+,ZMessages 
+{$ENDIF SHOW_WARNING} 
 ;
 
 {$IFDEF FPC}

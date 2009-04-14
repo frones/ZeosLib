@@ -577,8 +577,6 @@ begin
       end
       else
         raise EZSQLException.Create(SCanNotRetrieveResultSetData);
-
-     LastResultSet := Result;
      { Logging SQL Command }
      DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SQL);
     except
