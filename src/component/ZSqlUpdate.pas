@@ -786,7 +786,6 @@ begin
       end;
       if ExecuteStatement then
       begin
-       Statement.ExecutePrepared;
        lValidateUpdateCount := StrToBoolEx( 
           Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']); 
 
