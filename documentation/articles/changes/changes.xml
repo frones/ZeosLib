@@ -58,9 +58,6 @@
           <simpara>[SQLite] removed support for SQLite2</simpara>
         </listitem>
         <listitem>
-          <simpara>[COMMON] TZConnection.Pingserver now resets the ZConnection state when failing (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2293">http://zeos.firmos.at/viewtopic.php?t=2293</ulink>)</simpara>
-        </listitem>
-        <listitem>
           <simpara>[Oracle] Connections are now made using the OCIEnvNlsCreate method instead of OCIEnvInit and use property 'codepage=[UTF8,0..max Word value]' (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2172">http://zeos.firmos.at/viewtopic.php?t=2172</ulink>)</simpara>
         </listitem>
         <listitem>
@@ -182,6 +179,9 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[IB/FB] Interbase/Firebid holding connection on shutdown (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2309">http://zeos.firmos.at/viewtopic.php?t=2309</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[COMMON] Compilation error with SHOW_WARNING directive (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2312">http://zeos.firmos.at/viewtopic.php?t=2312</ulink>)</simpara>
         </listitem>
         <listitem>
@@ -189,6 +189,12 @@
         </listitem>
         <listitem>
           <simpara>[PostgreSQL] Bit type fields were not found (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2260">http://zeos.firmos.at/viewtopic.php?t=2260</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[IB/FB] Subtype is 0 for a computed decimal field and not 1 as in all the other cases (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2278">http://zeos.firmos.at/viewtopic.php?t=2278</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] Make sure dbc connection is nil after ZConnection.Close, even when an exception occurs (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2275">http://zeos.firmos.at/viewtopic.php?t=2275</ulink>)</simpara>
         </listitem>
         <listitem>
           <simpara>[COMMON] Query property ‘ValidateUpdateCount=true/false’ was not added for TZUpdateSQL(<ulink url="http://zeos.firmos.at/viewtopic.php?t=2249">http://zeos.firmos.at/viewtopic.php?t=2249</ulink>)</simpara>
@@ -220,6 +226,9 @@
           <simpara>Zeoslib 6.6 is in it's stable phase. No features, except for eventual translations and docs, will (should) be added.</simpara>
         </listitem>
         <listitem>
+          <simpara>[COMMON] TZConnection.Pingserver now resets the ZConnection state when failing (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2293">http://zeos.firmos.at/viewtopic.php?t=2293</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[GENERAL] Added ZEOS_DISABLE_XXXXX 'Conditional Defines' to Zeos.inc to allow compiling out database support on a per project basis(<ulink url="http://zeos.firmos.at/viewtopic.php?t=2195">http://zeos.firmos.at/viewtopic.php?t=2195</ulink>)</simpara>
         </listitem>
         <listitem>
@@ -227,6 +236,9 @@
         </listitem>
         <listitem>
           <simpara>[POSTGRES] Implemented Pingserver for Postgres (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2156">http://zeos.firmos.at/viewtopic.php?t=2156</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[IB/FB] Implemented Pingserver for IB/FB (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2274">http://zeos.firmos.at/viewtopic.php?t=2274</ulink>)</simpara>
         </listitem>
         <listitem>
           <simpara>[IB/FB] Added Firebird 2.1 driver (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2099">http://zeos.firmos.at/viewtopic.php?t=2099</ulink>)</simpara>
