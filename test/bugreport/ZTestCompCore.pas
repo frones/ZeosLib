@@ -1559,7 +1559,7 @@ begin
   Query.ExecSQL;
 
   try
-    Query.SQL.Text := 'select n_money from number_values';
+    Query.SQL.Text := 'select n_money from number_values where n_id=999999';
     Query.Open;
     // uses format to avoid local separator differences 
     CheckEquals(trim(Format('%8.2f', [643.11])),Query.Fields[0].AsString);
