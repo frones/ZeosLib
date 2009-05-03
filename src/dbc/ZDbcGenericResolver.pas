@@ -805,27 +805,30 @@ begin
         SQL := FormInsertStatement(SQLParams, NewRowAccessor);
             If Assigned(InsertStatement) and (SQL <> InsertStatement.GetSQL) then
               InsertStatement := nil;
-            If not Assigned(InsertStatement) then
-              InsertStatement := CreateResolverStatement(SQL);
-            Statement := InsertStatement;
+            If (not Assigned(InsertStatement)) and (Trim(SQL) <> '') then 
+              InsertStatement := CreateResolverStatement(SQL); 
+            If Assigned(InsertStatement) then 
+              Statement := InsertStatement;
           end;
       utDeleted:
           begin
         SQL := FormDeleteStatement(SQLParams, OldRowAccessor);
             If Assigned(DeleteStatement) and (SQL <> DeleteStatement.GetSQL) then
               DeleteStatement := nil;
-            If not Assigned(DeleteStatement) then
-              DeleteStatement := CreateResolverStatement(SQL);
-            Statement := DeleteStatement;
+            If (not Assigned(DeleteStatement)) and (Trim(SQL) <> '') then 
+              DeleteStatement := CreateResolverStatement(SQL); 
+            If Assigned(DeleteStatement) then 
+              Statement := DeleteStatement; 
           end;
       utModified:
           begin
         SQL := FormUpdateStatement(SQLParams, OldRowAccessor, NewRowAccessor);
             If Assigned(UpdateStatement) and (SQL <> UpdateStatement.GetSQL) then
               UpdateStatement := nil;
-            If not Assigned(UpdateStatement) then
-              UpdateStatement := CreateResolverStatement(SQL);
-            Statement := UpdateStatement;
+            If (not Assigned(UpdateStatement)) and (Trim(SQL) <> '') then 
+              UpdateStatement := CreateResolverStatement(SQL); 
+            If Assigned(UpdateStatement) then 
+              Statement := UpdateStatement; 
           end;
       else
         Exit;
