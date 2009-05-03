@@ -32,10 +32,6 @@ USEUNIT("..\..\src\plain\ZPlainLoader.pas");
 
 USEUNIT("..\..\src\plain\ZPlainMySqlDriver.pas");
 
-USEUNIT("..\..\src\plain\ZPlainPostgreSql7.pas");
-
-USEUNIT("..\..\src\plain\ZPlainPostgreSql8.pas");
-
 USEUNIT("..\..\src\plain\ZPlainSqLiteDriver.pas");
 
 USEUNIT("..\..\src\plain\ZPlainOracle9i.pas");

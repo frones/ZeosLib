@@ -82,10 +82,6 @@
 			<BCC_InlineFunctionExpansion>true</BCC_InlineFunctionExpansion>
 		</PropertyGroup>
 		<ItemGroup>
-			<DelphiCompile Include="..\..\src\plain\ZPlainPostgreSql7.pas">
-				<BuildOrder>65</BuildOrder>
-				<BuildOrder>0</BuildOrder>
-			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\plain\ZPlainMySqlDriver.pas">
 				<BuildOrder>62</BuildOrder>
 				<BuildOrder>1</BuildOrder>
@@ -93,10 +89,6 @@
 			<DelphiCompile Include="..\..\src\plain\ZPlainSqLiteDriver.pas">
 				<BuildOrder>71</BuildOrder>
 				<BuildOrder>2</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\plain\ZPlainPostgreSql8.pas">
-				<BuildOrder>68</BuildOrder>
-				<BuildOrder>3</BuildOrder>
 			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\plain\ZPlainFirebirdDriver.pas">
 				<BuildOrder>53</BuildOrder>

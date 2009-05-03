@@ -74,8 +74,6 @@
     <DCCReference Include="..\..\src\plain\ZPlainMySqlDriver.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainOracle9i.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainOracleDriver.pas" />
-    <DCCReference Include="..\..\src\plain\ZPlainPostgreSql7.pas" />
-    <DCCReference Include="..\..\src\plain\ZPlainPostgreSql8.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainPostgreSqlDriver.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainSqLiteDriver.pas" />
     <DCCReference Include="rtl.dcp" />

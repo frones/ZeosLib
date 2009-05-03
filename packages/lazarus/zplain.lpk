@@ -19,7 +19,7 @@
     </CompilerOptions>
     <Description Value="Zeos Plain Database API"/>
     <Version Major="7"/>
-    <Files Count="21">
+    <Files Count="19">
       <Item1>
         <Filename Value="../../src/plain/ZPlainDbLibDriver.pas"/>
         <UnitName Value="ZPlainDbLibDriver"/>
@@ -57,45 +57,37 @@
         <UnitName Value="ZPlainOracleDriver"/>
       </Item9>
       <Item10>
-        <Filename Value="../../src/plain/ZPlainPostgreSql7.pas"/>
-        <UnitName Value="ZPlainPostgreSql7"/>
-      </Item10>
-      <Item11>
-        <Filename Value="../../src/plain/ZPlainPostgreSql8.pas"/>
-        <UnitName Value="ZPlainPostgreSql8"/>
-      </Item11>
-      <Item12>
         <Filename Value="../../src/plain/ZPlainPostgreSqlDriver.pas"/>
         <UnitName Value="ZPlainPostgreSqlDriver"/>
-      </Item12>
-      <Item14>
+      </Item10>
+      <Item12>
         <Filename Value="../../src/plain/ZPlainSqLiteDriver.pas"/>
         <UnitName Value="ZPlainSqLiteDriver"/>
-      </Item14>
-      <Item16>
+      </Item12>
+      <Item14>
         <Filename Value="../../src/plain/ZPlainASADriver.pas"/>
         <UnitName Value="ZPlainASADriver"/>
-      </Item16>
-      <Item17>
+      </Item14>
+      <Item15>
         <Filename Value="../../src/plain/ZPlainASA9.pas"/>
         <UnitName Value="ZPlainASA9"/>
-      </Item17>
-      <Item18>
+      </Item15>
+      <Item16>
         <Filename Value="../../src/plain/ZPlainASA8.pas"/>
         <UnitName Value="ZPlainASA8"/>
-      </Item18>
-      <Item19>
+      </Item16>
+      <Item17>
         <Filename Value="../../src/plain/ZPlainASA7.pas"/>
         <UnitName Value="ZPlainASA7"/>
-      </Item19>
-      <Item20>
+      </Item17>
+      <Item18>
         <Filename Value="../../src/plain/ZPlainFirebirdDriver.pas"/>
         <UnitName Value="ZPlainFirebirdDriver"/>
-      </Item20>
-      <Item21>
+      </Item18>
+      <Item19>
         <Filename Value="../../src/plain/ZPlainFirebirdInterbaseConstants.pas"/>
         <UnitName Value="ZPlainFirebirdInterbaseConstants"/>
-      </Item21>
+      </Item19>
     </Files>
     <RequiredPkgs Count="3">
       <Item1>

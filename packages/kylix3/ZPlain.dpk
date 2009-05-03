@@ -49,8 +49,6 @@ contains
 
 {$IFDEF ENABLE_POSTGRESQL}
   ZPlainPostgreSqlDriver in '../../src/plain/ZPlainPostgreSqlDriver.pas',
-  ZPlainPostgreSql7 in '../../src/plain/ZPlainPostgreSql7.pas',
-  ZPlainPostgreSql8 in '../../src/plain/ZPlainPostgreSql8.pas',
 {$ENDIF}
 
 {$IFDEF ENABLE_ADO}

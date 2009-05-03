@@ -9,10 +9,9 @@ interface
 uses
     ZPlainDbLibDriver, ZPlainDbLibMsSql7, ZPlainDbLibSybaseAse125, 
   ZPlainDriver, ZPlainLoader, ZPlainMysqlConstants, ZPlainMySqlDriver, 
-  ZPlainOracle9i, ZPlainOracleDriver, ZPlainPostgreSql7, ZPlainPostgreSql8, 
-  ZPlainPostgreSqlDriver, ZPlainSqLiteDriver, 
-  ZPlainASADriver, ZPlainASA9, ZPlainASA8, ZPlainASA7, ZPlainFirebirdDriver, 
-  ZPlainFirebirdInterbaseConstants;
+  ZPlainOracle9i, ZPlainOracleDriver, ZPlainPostgreSqlDriver, 
+  ZPlainSqLiteDriver, ZPlainASADriver, ZPlainASA9, ZPlainASA8, ZPlainASA7, 
+  ZPlainFirebirdDriver, ZPlainFirebirdInterbaseConstants;
 
 implementation
 
