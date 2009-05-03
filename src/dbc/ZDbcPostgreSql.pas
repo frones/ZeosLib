@@ -63,53 +63,10 @@ uses
 
 type
 
-TZPgCharactersetType = (
-	csSQL_ASCII,	{ SQL/ASCII }
-	csEUC_JP,	{ EUC for Japanese }
-	csEUC_CN,	{ EUC for Chinese }
-	csEUC_KR,	{ EUC for Korean }
-	csEUC_TW,	{ EUC for Taiwan }
-	csJOHAB,
-	csUTF8,		{ Unicode UTF-8 }
-	csMULE_INTERNAL,	{ Mule internal code }
-	csLATIN1,	{ ISO-8859 Latin 1 }
-	csLATIN2,	{ ISO-8859 Latin 2 }
-	csLATIN3,	{ ISO-8859 Latin 3 }
-	csLATIN4,	{ ISO-8859 Latin 4 }
-	csLATIN5,	{ ISO-8859 Latin 5 }
-	csLATIN6,	{ ISO-8859 Latin 6 }
-	csLATIN7,	{ ISO-8859 Latin 7 }
-	csLATIN8,	{ ISO-8859 Latin 8 }
-	csLATIN9,	{ ISO-8859 Latin 9 }
-	csLATIN10,	{ ISO-8859 Latin 10 }
-	csWIN1256,	{ Arabic Windows }
-	csWIN1258,	{ Vietnamese Windows }
-	csWIN874,	{ Thai Windows }
-	csKOI8R,	{ KOI8-R/U }
-	csWIN1251,	{ windows-1251 }
-	csWIN866,	{ Alternativny Variant (MS-DOS CP866) }
-	csISO_8859_5,	{ ISO-8859-5 }
-	csISO_8859_6,	{ ISO-8859-6 }
-	csISO_8859_7,	{ ISO-8859-7 }
-	csISO_8859_8,	{ ISO-8859-8 }
-	csSJIS,		{ Shift JIS }
-	csBIG5,		{ Big5 }
-	csGBK,		{ GBK }
-	csUHC,		{ UHC }
-	csWIN1250,	{ windows-1250 }
-	csGB18030,	{ GB18030 }
-	csUNICODE_PODBC,{ UNICODE ( < Ver8.1). Can't call it UNICODE as that's already used }
-	csTCVN,		{ TCVN ( < Ver8.1) }
-	csALT,		{ ALT ( < Var8.1) }
-	csWIN,		{ WIN ( < Ver8.1) }
-	csOTHER
-);
-
   {** Implements PostgreSQL Database Driver. }
   TZPostgreSQLDriver = class(TZAbstractDriver)
   private
-    FPostgreSQL7PlainDriver: IZPostgreSQLPlainDriver;
-    FPostgreSQL8PlainDriver: IZPostgreSQLPlainDriver;
+    FPlainDrivers: Array of IZPostgreSQLPlainDriver;
   protected
     function GetPlainDriver(const Url: string): IZPostgreSQLPlainDriver;
   public
@@ -227,8 +184,9 @@ end;
 }
 constructor TZPostgreSQLDriver.Create;
 begin
-  FPostgreSQL7PlainDriver := TZPostgreSQL7PlainDriver.Create;
-  FPostgreSQL8PlainDriver := TZPostgreSQL8PlainDriver.Create;
+  SetLength(FPlainDrivers,2);
+  FPlainDrivers[0]  := TZPostgreSQL7PlainDriver.Create;
+  FPlainDrivers[1]  := TZPostgreSQL8PlainDriver.Create;
 end;
 
 {**
@@ -318,11 +276,14 @@ end;
   For example: postgresql74 or postgresql81
 }
 function TZPostgreSQLDriver.GetSupportedProtocols: TStringDynArray;
+var
+   i: smallint;
 begin
-  SetLength(Result, 3);
+  SetLength(Result, high(FPlainDrivers)+2);
+  // Generic driver
   Result[0] := 'postgresql';
-  Result[1] := FPostgreSQL7PlainDriver.GetProtocol;
-  Result[2] := FPostgreSQL8PlainDriver.GetProtocol;
+  For i := 0 to high(FPlainDrivers) do
+    Result[i+1] := FPlainDrivers[i].GetProtocol;
 end;
 
 {**
@@ -333,17 +294,21 @@ end;
 function TZPostgreSQLDriver.GetPlainDriver(const Url: string): IZPostgreSQLPlainDriver;
 var
   Protocol: string;
+  i: smallint;
 begin
   Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
-
-  if Protocol = FPostgreSQL7PlainDriver.GetProtocol then
-    Result := FPostgreSQL7PlainDriver
-  else if Protocol = FPostgreSQL8PlainDriver.GetProtocol then
-    Result := FPostgreSQL8PlainDriver
-  else
-    Result := FPostgreSQL8PlainDriver;
+  For i := 0 to high(FPlainDrivers) do
+    if Protocol = FPlainDrivers[i].GetProtocol then
+      begin
+        Result := FPlainDrivers[i];
+        break;
+      end;
+  // Generic driver
+  If result = nil then
+    Result := FPlainDrivers[1];    // Postgresql 8
   Result.Initialize;
 end;
+
 
 { TZPostgreSQLConnection }
 

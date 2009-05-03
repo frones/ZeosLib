@@ -228,9 +228,6 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    function GetProtocol: string; virtual; abstract;
-    function GetDescription: string; virtual; abstract;
-
     procedure Debug(Debug: PAnsiChar);
     function DumpDebugInfo(Handle: PZMySQLConnect): Integer;
     function GetLastError(Handle: PZMySQLConnect): PAnsiChar;
@@ -436,7 +433,7 @@ procedure TZMySQLBaseDriver.LoadApi;
 begin
 { ************** Load adresses of API Functions ************* }
   with Loader do
-begin
+  begin
   @MYSQL_API.mysql_affected_rows          := GetAddress('mysql_affected_rows');
   @MYSQL_API.mysql_character_set_name     := GetAddress('mysql_character_set_name');
   @MYSQL_API.mysql_close                  := GetAddress('mysql_close');
@@ -1118,9 +1115,9 @@ begin
   inherited LoadApi;
 
   with Loader do
-begin
+  begin
   @MYSQL_API.mysql_get_character_set_info := GetAddress('mysql_get_character_set_info');
-end;
+  end;
 end;
 
 constructor TZMySQL5PlainDriver.Create;

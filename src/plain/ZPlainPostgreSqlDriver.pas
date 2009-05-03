@@ -576,9 +576,6 @@ type
   public
     constructor Create;
 
-    function GetProtocol: string; virtual; abstract;
-    function GetDescription: string; virtual; abstract;
-
     function EncodeBYTEA(Value: AnsiString; Handle: PZPostgreSQLConnect): AnsiString; virtual;
     function DecodeBYTEA(value: AnsiString): AnsiString; virtual;
 
@@ -725,75 +722,75 @@ procedure TZPostgreSQLBaseDriver.LoadApi;
 begin
 { ************** Load adresses of API Functions ************* }
   with Loader do
-begin
-{ ===	in fe-connect.c === }
-  @POSTGRESQL_API.PQconnectdb    := GetAddress('PQconnectdb');
-  @POSTGRESQL_API.PQsetdbLogin   := GetAddress('PQsetdbLogin');
-  @POSTGRESQL_API.PQconndefaults := GetAddress('PQconndefaults');
-  @POSTGRESQL_API.PQfinish       := GetAddress('PQfinish');
-  @POSTGRESQL_API.PQreset        := GetAddress('PQreset');
-  @POSTGRESQL_API.PQrequestCancel := GetAddress('PQrequestCancel');
-  @POSTGRESQL_API.PQdb           := GetAddress('PQdb');
-  @POSTGRESQL_API.PQuser         := GetAddress('PQuser');
-  @POSTGRESQL_API.PQpass         := GetAddress('PQpass');
-  @POSTGRESQL_API.PQhost         := GetAddress('PQhost');
-  @POSTGRESQL_API.PQport         := GetAddress('PQport');
-  @POSTGRESQL_API.PQtty          := GetAddress('PQtty');
-  @POSTGRESQL_API.PQoptions      := GetAddress('PQoptions');
-  @POSTGRESQL_API.PQstatus       := GetAddress('PQstatus');
-  @POSTGRESQL_API.PQerrorMessage := GetAddress('PQerrorMessage');
-  @POSTGRESQL_API.PQsocket       := GetAddress('PQsocket');
-  @POSTGRESQL_API.PQbackendPID   := GetAddress('PQbackendPID');
-  @POSTGRESQL_API.PQtrace        := GetAddress('PQtrace');
-  @POSTGRESQL_API.PQuntrace      := GetAddress('PQuntrace');
-  @POSTGRESQL_API.PQsetNoticeProcessor := GetAddress('PQsetNoticeProcessor');
+  begin
+  { ===	in fe-connect.c === }
+    @POSTGRESQL_API.PQconnectdb    := GetAddress('PQconnectdb');
+    @POSTGRESQL_API.PQsetdbLogin   := GetAddress('PQsetdbLogin');
+    @POSTGRESQL_API.PQconndefaults := GetAddress('PQconndefaults');
+    @POSTGRESQL_API.PQfinish       := GetAddress('PQfinish');
+    @POSTGRESQL_API.PQreset        := GetAddress('PQreset');
+    @POSTGRESQL_API.PQrequestCancel := GetAddress('PQrequestCancel');
+    @POSTGRESQL_API.PQdb           := GetAddress('PQdb');
+    @POSTGRESQL_API.PQuser         := GetAddress('PQuser');
+    @POSTGRESQL_API.PQpass         := GetAddress('PQpass');
+    @POSTGRESQL_API.PQhost         := GetAddress('PQhost');
+    @POSTGRESQL_API.PQport         := GetAddress('PQport');
+    @POSTGRESQL_API.PQtty          := GetAddress('PQtty');
+    @POSTGRESQL_API.PQoptions      := GetAddress('PQoptions');
+    @POSTGRESQL_API.PQstatus       := GetAddress('PQstatus');
+    @POSTGRESQL_API.PQerrorMessage := GetAddress('PQerrorMessage');
+    @POSTGRESQL_API.PQsocket       := GetAddress('PQsocket');
+    @POSTGRESQL_API.PQbackendPID   := GetAddress('PQbackendPID');
+    @POSTGRESQL_API.PQtrace        := GetAddress('PQtrace');
+    @POSTGRESQL_API.PQuntrace      := GetAddress('PQuntrace');
+    @POSTGRESQL_API.PQsetNoticeProcessor := GetAddress('PQsetNoticeProcessor');
 
-{ === in fe-exec.c === }
-  @POSTGRESQL_API.PQexec         := GetAddress('PQexec');
-  @POSTGRESQL_API.PQnotifies     := GetAddress('PQnotifies');
-  @POSTGRESQL_API.PQfreeNotify   := GetAddress('PQfreeNotify');
-  @POSTGRESQL_API.PQsendQuery    := GetAddress('PQsendQuery');
-  @POSTGRESQL_API.PQgetResult    := GetAddress('PQgetResult');
-  @POSTGRESQL_API.PQisBusy       := GetAddress('PQisBusy');
-  @POSTGRESQL_API.PQconsumeInput := GetAddress('PQconsumeInput');
-  @POSTGRESQL_API.PQgetline      := GetAddress('PQgetline');
-  @POSTGRESQL_API.PQputline      := GetAddress('PQputline');
-  @POSTGRESQL_API.PQgetlineAsync := GetAddress('PQgetlineAsync');
-  @POSTGRESQL_API.PQputnbytes    := GetAddress('PQputnbytes');
-  @POSTGRESQL_API.PQendcopy      := GetAddress('PQendcopy');
-  @POSTGRESQL_API.PQfn           := GetAddress('PQfn');
-  @POSTGRESQL_API.PQresultStatus := GetAddress('PQresultStatus');
-  @POSTGRESQL_API.PQresultErrorMessage := GetAddress('PQresultErrorMessage');
-  @POSTGRESQL_API.PQntuples      := GetAddress('PQntuples');
-  @POSTGRESQL_API.PQnfields      := GetAddress('PQnfields');
-  @POSTGRESQL_API.PQbinaryTuples := GetAddress('PQbinaryTuples');
-  @POSTGRESQL_API.PQfname        := GetAddress('PQfname');
-  @POSTGRESQL_API.PQfnumber      := GetAddress('PQfnumber');
-  @POSTGRESQL_API.PQftype        := GetAddress('PQftype');
-  @POSTGRESQL_API.PQfsize        := GetAddress('PQfsize');
-  @POSTGRESQL_API.PQfmod         := GetAddress('PQfmod');
-  @POSTGRESQL_API.PQcmdStatus    := GetAddress('PQcmdStatus');
-  @POSTGRESQL_API.PQoidValue     := GetAddress('PQoidValue');
-  @POSTGRESQL_API.PQoidStatus    := GetAddress('PQoidStatus');
-  @POSTGRESQL_API.PQcmdTuples    := GetAddress('PQcmdTuples');
-  @POSTGRESQL_API.PQgetvalue     := GetAddress('PQgetvalue');
-  @POSTGRESQL_API.PQgetlength    := GetAddress('PQgetlength');
-  @POSTGRESQL_API.PQgetisnull    := GetAddress('PQgetisnull');
-  @POSTGRESQL_API.PQclear        := GetAddress('PQclear');
-  @POSTGRESQL_API.PQmakeEmptyPGresult := GetAddress('PQmakeEmptyPGresult');
+  { === in fe-exec.c === }
+    @POSTGRESQL_API.PQexec         := GetAddress('PQexec');
+    @POSTGRESQL_API.PQnotifies     := GetAddress('PQnotifies');
+    @POSTGRESQL_API.PQfreeNotify   := GetAddress('PQfreeNotify');
+    @POSTGRESQL_API.PQsendQuery    := GetAddress('PQsendQuery');
+    @POSTGRESQL_API.PQgetResult    := GetAddress('PQgetResult');
+    @POSTGRESQL_API.PQisBusy       := GetAddress('PQisBusy');
+    @POSTGRESQL_API.PQconsumeInput := GetAddress('PQconsumeInput');
+    @POSTGRESQL_API.PQgetline      := GetAddress('PQgetline');
+    @POSTGRESQL_API.PQputline      := GetAddress('PQputline');
+    @POSTGRESQL_API.PQgetlineAsync := GetAddress('PQgetlineAsync');
+    @POSTGRESQL_API.PQputnbytes    := GetAddress('PQputnbytes');
+    @POSTGRESQL_API.PQendcopy      := GetAddress('PQendcopy');
+    @POSTGRESQL_API.PQfn           := GetAddress('PQfn');
+    @POSTGRESQL_API.PQresultStatus := GetAddress('PQresultStatus');
+    @POSTGRESQL_API.PQresultErrorMessage := GetAddress('PQresultErrorMessage');
+    @POSTGRESQL_API.PQntuples      := GetAddress('PQntuples');
+    @POSTGRESQL_API.PQnfields      := GetAddress('PQnfields');
+    @POSTGRESQL_API.PQbinaryTuples := GetAddress('PQbinaryTuples');
+    @POSTGRESQL_API.PQfname        := GetAddress('PQfname');
+    @POSTGRESQL_API.PQfnumber      := GetAddress('PQfnumber');
+    @POSTGRESQL_API.PQftype        := GetAddress('PQftype');
+    @POSTGRESQL_API.PQfsize        := GetAddress('PQfsize');
+    @POSTGRESQL_API.PQfmod         := GetAddress('PQfmod');
+    @POSTGRESQL_API.PQcmdStatus    := GetAddress('PQcmdStatus');
+    @POSTGRESQL_API.PQoidValue     := GetAddress('PQoidValue');
+    @POSTGRESQL_API.PQoidStatus    := GetAddress('PQoidStatus');
+    @POSTGRESQL_API.PQcmdTuples    := GetAddress('PQcmdTuples');
+    @POSTGRESQL_API.PQgetvalue     := GetAddress('PQgetvalue');
+    @POSTGRESQL_API.PQgetlength    := GetAddress('PQgetlength');
+    @POSTGRESQL_API.PQgetisnull    := GetAddress('PQgetisnull');
+    @POSTGRESQL_API.PQclear        := GetAddress('PQclear');
+    @POSTGRESQL_API.PQmakeEmptyPGresult := GetAddress('PQmakeEmptyPGresult');
 
-{ === in fe-lobj.c === }
-  @POSTGRESQL_API.lo_open        := GetAddress('lo_open');
-  @POSTGRESQL_API.lo_close       := GetAddress('lo_close');
-  @POSTGRESQL_API.lo_read        := GetAddress('lo_read');
-  @POSTGRESQL_API.lo_write       := GetAddress('lo_write');
-  @POSTGRESQL_API.lo_lseek       := GetAddress('lo_lseek');
-  @POSTGRESQL_API.lo_creat       := GetAddress('lo_creat');
-  @POSTGRESQL_API.lo_tell        := GetAddress('lo_tell');
-  @POSTGRESQL_API.lo_unlink      := GetAddress('lo_unlink');
-  @POSTGRESQL_API.lo_import      := GetAddress('lo_import');
-  @POSTGRESQL_API.lo_export      := GetAddress('lo_export');
-end;
+  { === in fe-lobj.c === }
+    @POSTGRESQL_API.lo_open        := GetAddress('lo_open');
+    @POSTGRESQL_API.lo_close       := GetAddress('lo_close');
+    @POSTGRESQL_API.lo_read        := GetAddress('lo_read');
+    @POSTGRESQL_API.lo_write       := GetAddress('lo_write');
+    @POSTGRESQL_API.lo_lseek       := GetAddress('lo_lseek');
+    @POSTGRESQL_API.lo_creat       := GetAddress('lo_creat');
+    @POSTGRESQL_API.lo_tell        := GetAddress('lo_tell');
+    @POSTGRESQL_API.lo_unlink      := GetAddress('lo_unlink');
+    @POSTGRESQL_API.lo_import      := GetAddress('lo_import');
+    @POSTGRESQL_API.lo_export      := GetAddress('lo_export');
+  end;
 end;
 
 constructor TZPostgreSQLBaseDriver.Create;
@@ -1223,6 +1220,10 @@ end;
 
 constructor TZPostgreSQL7PlainDriver.Create;
 begin
+  inherited Create;
+  {$IFNDEF UNIX}
+    FLoader.AddLocation(WINDOWS_DLL7_LOCATION);
+  {$ENDIF}
 end;
 
 function TZPostgreSQL7PlainDriver.GetProtocol: string;
