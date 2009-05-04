@@ -587,10 +587,10 @@ function EncodeString(CharactersetCode: TZPgCharactersetType; Value: string): st
 var
   I, LastState: Integer;
   SrcLength, DestLength: Integer;
-  SrcBuffer, DestBuffer: PAnsiChar;
-begin
+  SrcBuffer, DestBuffer: PChar; 
+ begin
   SrcLength := Length(Value);
-  SrcBuffer := PAnsiChar(Value);
+  SrcBuffer := PChar(Value);
   DestLength := 2;
   LastState := 0;
   for I := 1 to SrcLength do
@@ -603,9 +603,9 @@ begin
     Inc(SrcBuffer);
   end;
 
-  SrcBuffer := PAnsiChar(Value);
+  SrcBuffer := PChar(Value);
   SetLength(Result, DestLength);
-  DestBuffer := PAnsiChar(Result);
+  DestBuffer := PChar(Result);
   DestBuffer^ := '''';
   Inc(DestBuffer);
 
@@ -616,9 +616,9 @@ begin
     if (SrcBuffer^ in [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
       begin
         DestBuffer[0] := '\';
-        DestBuffer[1] := AnsiChar(Ord('0') + (Byte(SrcBuffer^) shr 6));
-        DestBuffer[2] := AnsiChar(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
-        DestBuffer[3] := AnsiChar(Ord('0') + (Byte(SrcBuffer^) and $07));
+        DestBuffer[1] := Char(Ord('0') + (Byte(SrcBuffer^) shr 6));
+        DestBuffer[2] := Char(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
+        DestBuffer[3] := Char(Ord('0') + (Byte(SrcBuffer^) and $07));
         Inc(DestBuffer, 4);
       end
     else
