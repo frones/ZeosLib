@@ -1189,7 +1189,7 @@ function TZFirebird21PlainDriver.isc_interprete(buffer: PAnsiChar;
 var
    bufsize : integer;
 begin
-  bufsize := 0;
+  bufsize := 1024;
   Result := FIREBIRD_API.fb_interpret(buffer, bufsize, status_vector);
 end;
 

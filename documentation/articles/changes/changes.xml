@@ -182,6 +182,9 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[IB/FB] Buffer problem with FB2.1 isc_interprete implementation (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2099">http://zeos.firmos.at/viewtopic.php?t=2099</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[IB/FB] Interbase/Firebid holding connection on shutdown (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2309">http://zeos.firmos.at/viewtopic.php?t=2309</ulink>)</simpara>
         </listitem>
         <listitem>
