@@ -702,7 +702,7 @@ begin
       end;
     RDB_D_FLOAT: Result := stDouble;
     RDB_DOUBLE: Result := stDouble;
-    RDB_FLOAT: Result := stFloat;
+    RDB_FLOAT: Result := stDouble;
     RDB_BLOB_ID, RDB_QUAD: Result := stLong;
     RDB_INT64:
       begin
@@ -724,7 +724,7 @@ begin
       begin
         case SqlSubType of
           RDB_NUMBERS_NONE: Result := stShort;
-          RDB_NUMBERS_NUMERIC: Result := stFloat;
+          RDB_NUMBERS_NUMERIC: Result := stDouble;
           RDB_NUMBERS_DECIMAL: Result := stDouble;
         end;
       end;
@@ -1506,8 +1506,6 @@ begin
       begin
         if SqlScale = 0 then
           Result := stInteger
-        else if Abs(SqlScale) <= 4 then
-          Result := stFloat
         else
           Result := stDouble;
       end;
@@ -1515,10 +1513,10 @@ begin
       begin
         if SqlScale = 0 then
           Result := stShort
-        else Result := stFloat;
+        else
+          Result := stdouble;
       end;
-    SQL_FLOAT: Result := stFloat;
-    SQL_DOUBLE: Result := stDouble;
+    SQL_FLOAT, SQL_DOUBLE: Result := stDouble;
     SQL_DATE: Result := stTimestamp;
     SQL_TYPE_TIME: Result := stTime;
     SQL_TYPE_DATE: Result := stDate;

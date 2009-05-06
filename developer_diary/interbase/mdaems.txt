@@ -51,3 +51,7 @@
 20090320 : Implemented Pingserver for Firebird - by MerijnB - See http://zeos.firmos.at/viewtopic.php?t=2274
 
 20090330 : Holding connection on shutdown - by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2309
+
+20090417 : FIREBIRD and NUMERIC/DECIMAL precision problem - by mdaems - Mantis Bug 2
+
+20090505 : Buffer problem with FB2.1 isc_interprete implementation - by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2099

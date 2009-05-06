@@ -2327,7 +2327,9 @@ function TZFirebird21PlainDriver.isc_interprete(buffer: PChar;
 var
    bufsize : integer;
 begin
+  bufsize := 1024;
   Result := ZPlainFirebird21.fb_interpret(buffer, bufsize, status_vector);
+
 end;
 
 function TZFirebird21PlainDriver.isc_open_blob2(status_vector: PISC_STATUS;
