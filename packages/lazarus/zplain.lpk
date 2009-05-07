@@ -41,8 +41,8 @@
         <UnitName Value="ZPlainLoader"/>
       </Item5>
       <Item6>
-        <Filename Value="../../src/plain/ZPlainMysqlConstants.pas"/>
-        <UnitName Value="ZPlainMysqlConstants"/>
+        <Filename Value="../../src/plain/ZPlainMySqlConstants.pas"/>
+        <UnitName Value="ZPlainMySqlConstants"/>
       </Item6>
       <Item7>
         <Filename Value="../../src/plain/ZPlainMySqlDriver.pas"/>

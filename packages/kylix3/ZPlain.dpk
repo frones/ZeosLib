@@ -44,7 +44,7 @@ contains
 
 {$IFDEF ENABLE_MYSQL}
   ZPlainMySqlDriver in '../../src/plain/ZPlainMySqlDriver.pas',
-  ZPlainMysqlConstants in '../../src/plain/ZPlainMysqlConstants.pas',
+  ZPlainMySqlConstants in '../../src/plain/ZPlainMySqlConstants.pas',
 {$ENDIF}
 
 {$IFDEF ENABLE_POSTGRESQL}

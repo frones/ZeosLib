@@ -8,7 +8,7 @@ interface
 
 uses
     ZPlainDbLibDriver, ZPlainDbLibMsSql7, ZPlainDbLibSybaseAse125, 
-  ZPlainDriver, ZPlainLoader, ZPlainMysqlConstants, ZPlainMySqlDriver, 
+  ZPlainDriver, ZPlainLoader, ZPlainMySqlConstants, ZPlainMySqlDriver, 
   ZPlainOracle9i, ZPlainOracleDriver, ZPlainPostgreSqlDriver, 
   ZPlainSqLiteDriver, ZPlainASADriver, ZPlainASA9, ZPlainASA8, ZPlainASA7, 
   ZPlainFirebirdDriver, ZPlainFirebirdInterbaseConstants;

@@ -156,6 +156,9 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=179">#0000179</ulink> [normal] Case problem for unit ZPlainMySqlConstants on linux</simpara>
+        </listitem>
+        <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=2">#0000002</ulink> [normal] FIREBIRD and NUMERIC/DECIMAL precision problem</simpara>
         </listitem>
         <listitem>
