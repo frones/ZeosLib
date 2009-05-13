@@ -509,7 +509,8 @@ end;
 
 procedure TZInterbase6PreparedStatement.UnPrepareInParameters;
 begin
-  FParamSQLData.FreeParamtersValues;
+  if assigned(FParamSQLData) then 
+    FParamSQLData.FreeParamtersValues;
   inherited UnPrepareInParameters;
 end;
 

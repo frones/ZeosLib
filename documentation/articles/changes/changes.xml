@@ -38,6 +38,9 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[IB/FB] AV in TZInterbase6PreparedStatement.UnPrepareInParameters when opening an invalid sql command (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2361">http://zeos.firmos.at/viewtopic.php?t=2361</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[Common] Overflow while converting variant of type (Int64) into type (Integer) when deleting a record (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2286">http://zeos.firmos.at/viewtopic.php?t=2286</ulink>)</simpara>
         </listitem>
         <listitem>
