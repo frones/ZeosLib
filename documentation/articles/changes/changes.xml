@@ -58,6 +58,9 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[IB/FB] Added support for milliseconds (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2354">http://zeos.firmos.at/viewtopic.php?t=2354</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[SQLite] removed support for SQLite2</simpara>
         </listitem>
         <listitem>

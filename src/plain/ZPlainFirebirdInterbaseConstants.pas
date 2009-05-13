@@ -485,8 +485,8 @@ type
   PISC_TIME = ^ISC_TIME;
 
   TISC_TIMESTAMP = record
-    timestamp_time:     ISC_TIME;
-    timestamp_date:     ISC_DATE;
+    timestamp_date: ISC_DATE; 
+    timestamp_time: ISC_TIME;
   end;
   PISC_TIMESTAMP = ^TISC_TIMESTAMP;
 
