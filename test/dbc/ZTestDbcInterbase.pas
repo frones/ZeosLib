@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, TestFramework, ZDbcIntfs, ZDbcInterbase6, ZTestDefinitions,
-  ZCompatibility;
+  ZCompatibility, DateUtils, Math;
 
 type
 
@@ -82,6 +82,7 @@ type
     procedure TestDefaultValues;
     procedure TestDomainValues;
     procedure TestStoredprocedures;
+    procedure TestMsec;
   end;
 
 implementation
@@ -96,7 +97,7 @@ uses SysUtils, ZSysUtils, ZTestConsts, ZTestCase;
 }
 function TZTestDbcInterbaseCase.GetSupportedProtocols: string;
 begin
-  Result := 'interbase,interbase-6.5,interbase-7.2,firebird-1.0,firebird-1.5';
+  Result := 'interbase,interbase-6.5,interbase-7.2,firebird-1.0,firebird-1.5,firebird-2.0,firebird-2.1,firebirdd-1.5,firebirdd-2.0,firebirdd-2.1';
 end;
 
 {**
@@ -509,6 +510,42 @@ begin
     Close;
   end;
   CallableStatement.Close;
+end;
+
+procedure TZTestDbcInterbaseCase.TestMsec; 
+var 
+    Statement: IZStatement; 
+    ResultSet: IZResultSet; 
+    ThisTime : TDateTime; 
+    oldTimeFormat: string; 
+begin 
+    Statement := Connection.CreateStatement; 
+    CheckNotNull(Statement); 
+    Statement.SetResultSetType(rtScrollInsensitive); 
+    Statement.SetResultSetConcurrency(rcUpdatable); 
+    Statement.ExecuteUpdate('delete from DATE_VALUES where D_ID=4'); 
+    ResultSet := Statement.ExecuteQuery('select D_ID, D_DATE, D_TIME, D_DATETIME, D_TIMESTAMP from DATE_VALUES'); 
+    CheckNotNull(ResultSet); 
+    OldTimeFormat := LongTimeFormat; 
+    LongTimeFormat := 'hh:mm:ss.zzz'; 
+    ThisTime := Now; 
+    ResultSet.MoveToInsertRow; 
+    ResultSet.UpdateInt(1, 4); 
+    ResultSet.UpdateDate(2,ThisTime); 
+    ResultSet.UpdateTime(3,ThisTime); 
+    ResultSet.UpdateTimestamp(4,ThisTime); 
+    ResultSet.UpdateTimestamp(5,ThisTime); 
+    ResultSet.InsertRow; 
+    ResultSet.Last; 
+    Check(ResultSet.GetInt(1) <> 0); 
+    CheckEquals(Trunc(ThisTime), ResultSet.GetDate(2)); 
+    CheckEquals(RoundTo(Frac(ThisTime),-11), RoundTo(ResultSet.GetTime(3),-11)); 
+    CheckEquals(ThisTime, ResultSet.GetTimeStamp(4)); 
+    CheckEquals(ThisTime, ResultSet.GetTimeStamp(5)); 
+    ResultSet.DeleteRow; 
+    LongTimeFormat := OldTimeFormat; 
+    ResultSet.Close; 
+    Statement.Close; 
 end;
 
 initialization
