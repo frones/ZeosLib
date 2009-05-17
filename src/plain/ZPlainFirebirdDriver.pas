@@ -63,7 +63,7 @@ interface
 {$ENDIF}
 {$ENDIF}
 
-uses ZClasses, ZCompatibility, ZPlainDriver, ZPlainFirebirdInterbaseConstants;
+uses ZClasses, ZCompatibility, ZPlainDriver, ZPlainLoader, ZPlainFirebirdInterbaseConstants;
 
 const
 
@@ -465,7 +465,7 @@ type
 
 implementation
 
-uses SysUtils, ZPlainLoader;
+uses SysUtils;
 
 function XSQLDA_LENGTH(Value: LongInt): LongInt;
 begin
@@ -477,8 +477,8 @@ end;
 {$IFDEF ENABLE_INTERBASE_CRYPT}
 procedure TZFirebirdBaseDriver.Initialize;
 begin
-  If Assigned(PreLoader) and not PreLoader.Loaded then
-    PreLoader.LoadNativeLibrary;
+  If Assigned(FPreLoader) and not FPreLoader.Loaded then
+    FPreLoader.LoadNativeLibrary;
   inherited Initialize;
 end;
 {$ENDIF}
