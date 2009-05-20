@@ -2051,7 +2051,7 @@ end;
 function TZInterbase6DatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
-  Key, SQL: string;
+  SQL: string;
   LTable: string;
 begin
     Result := ConstructVirtualResultSet(ImportedKeyColumnsDynArray);
