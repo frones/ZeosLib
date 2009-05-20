@@ -938,8 +938,6 @@ procedure TZMySQLCachedResolver.UpdateAutoIncrementFields(
   Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
   NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver);
 var
-  Statement: IZStatement;
-  ResultSet: IZResultSet;
   Plaindriver : IZMysqlPlainDriver;
 begin
   inherited UpdateAutoIncrementFields(Sender, UpdateType, OldRowAccessor, NewRowAccessor, Resolver);
@@ -948,16 +946,6 @@ begin
      exit;
   Plaindriver := (Connection as IZMysqlConnection).GetPlainDriver;
   NewRowAccessor.SetLong(FAutoColumnIndex, PlainDriver.GetLastInsertID(FHandle));
-{  Statement := Connection.CreateStatement;
-  ResultSet := Statement.ExecuteQuery('SELECT LAST_INSERT_ID()');
-  try
-    if ResultSet.Next then
-      NewRowAccessor.SetLong(FAutoColumnIndex, ResultSet.GetLong(1));
-  finally
-    ResultSet.Close;
-    Statement.Close;
-  end;
-}
 end;
 {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 

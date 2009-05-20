@@ -79,7 +79,7 @@ type
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
 //    function UncachedGetSchemas: IZResultSet; override; -> Not implemented
-    function UnCachedGetCatalogs: IZResultSet; override;
+    function UncachedGetCatalogs: IZResultSet; override;
     function UncachedGetTableTypes: IZResultSet; override;
     function UncachedGetColumns(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
@@ -913,7 +913,7 @@ end;
   @return <code>ResultSet</code> - each row has a single String column that is a
   catalog name
 }
-function TZMySQLDatabaseMetadata.UnCachedGetCatalogs: IZResultSet;
+function TZMySQLDatabaseMetadata.UncachedGetCatalogs: IZResultSet;
 begin
     Result := ConstructVirtualResultSet(CatalogColumnsDynArray);
 
