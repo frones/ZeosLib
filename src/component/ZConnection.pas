@@ -892,6 +892,7 @@ Function TZConnection.PingServer: Boolean;
 var
   LastState : boolean;
 begin
+  Result := false;
   // Check connection status
   LastState := GetConnected;
   If FConnection <> Nil Then

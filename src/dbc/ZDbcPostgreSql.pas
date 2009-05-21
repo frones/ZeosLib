@@ -897,11 +897,10 @@ function TZPostgreSQLConnection.PingServer: Integer;
     PING_ERROR_ZEOSCONNCLOSED = -1; 
   var 
     Closing: boolean; 
-begin 
+begin
+  Result := PING_ERROR_ZEOSCONNCLOSED; 
   Closing := FHandle = nil; 
-  if Closed or Closing then
-    Result := PING_ERROR_ZEOSCONNCLOSED 
-  else 
+  if Not(Closed or Closing) then
   begin
     FPlainDriver.Clear(FPlainDriver.ExecuteQuery(FHandle,''));
     if FPlainDriver.GetStatus(FHandle) = CONNECTION_OK then
