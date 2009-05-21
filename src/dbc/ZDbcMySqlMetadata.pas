@@ -220,7 +220,7 @@ type
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
 //    function UncachedGetSchemas: IZResultSet; override; -> Not implemented
-    function UnCachedGetCatalogs: IZResultSet; override;
+    function UncachedGetCatalogs: IZResultSet; override;
     function UncachedGetTableTypes: IZResultSet; override;
     function UncachedGetColumns(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
@@ -1060,7 +1060,7 @@ end;
   @return <code>ResultSet</code> - each row has a single String column that is a
   catalog name
 }
-function TZMySQLDatabaseMetadata.UnCachedGetCatalogs: IZResultSet;
+function TZMySQLDatabaseMetadata.UncachedGetCatalogs: IZResultSet;
 begin
     Result := ConstructVirtualResultSet(CatalogColumnsDynArray);
 
@@ -1171,9 +1171,10 @@ var
   TableNameList: TStrings;
   TableNameLength: Integer;
   ColumnIndexes : Array[1..5] of integer;
+  Res : IZResultset;
 
 begin
-    Result := ConstructVirtualResultSet(TableColColumnsDynArray);
+    Res := ConstructVirtualResultSet(TableColColumnsDynArray);
 
     GetCatalogAndNamePattern(Catalog, SchemaPattern, ColumnNamePattern,
       TempCatalog, TempColumnNamePattern);
@@ -1215,11 +1216,11 @@ begin
             TypeInfoFirst := '';
             TypeInfoSecond := '';
 
-            Result.MoveToInsertRow;
-            Result.UpdateString(1, TempCatalog);
-            Result.UpdateString(2, '');
-            Result.UpdateString(3, TempTableNamePattern);
-            Result.UpdateString(4, GetString(ColumnIndexes[1]));
+            Res.MoveToInsertRow;
+            Res.UpdateString(1, TempCatalog);
+            Res.UpdateString(2, '');
+            Res.UpdateString(3, TempTableNamePattern);
+            Res.UpdateString(4, GetString(ColumnIndexes[1]));
 
             TypeInfo := GetString(ColumnIndexes[2]);
             if StrPos(PChar(TypeInfo), '(') <> nil then
@@ -1233,11 +1234,11 @@ begin
 
             TypeInfoFirst := LowerCase(TypeInfoFirst);
             MySQLType := ConvertMySQLTypeToSQLType(TypeInfoFirst, TypeInfo);
-            Result.UpdateInt(5, Ord(MySQLType));
-            Result.UpdateString(6, TypeInfoFirst);
+            Res.UpdateInt(5, Ord(MySQLType));
+            Res.UpdateString(6, TypeInfoFirst);
 
-            Result.UpdateInt(7, 0);
-            Result.UpdateInt(9, 0);
+            Res.UpdateInt(7, 0);
+            Res.UpdateInt(9, 0);
             { the column type is ENUM}
             if TypeInfoFirst = 'enum' then
             begin
@@ -1245,8 +1246,8 @@ begin
               for J := 0 to TypeInfoList.Count-1 do
                 ColumnSize := Max(ColumnSize, Length(TypeInfoList.Strings[J]));
 
-              Result.UpdateInt(7, ColumnSize);
-              Result.UpdateInt(9, 0);
+              Res.UpdateInt(7, ColumnSize);
+              Res.UpdateInt(9, 0);
             end
             else
               { the column type is decimal }
@@ -1256,8 +1257,8 @@ begin
                 ColumnSize := StrToIntDef(Copy(TypeInfoSecond, 1, TempPos - 1), 0);
                 ColumnDecimals := StrToIntDef(Copy(TypeInfoSecond, TempPos + 1,
                   Length(TempStr) - TempPos), 0);
-                Result.UpdateInt(7, ColumnSize);
-                Result.UpdateInt(9, ColumnDecimals);
+                Res.UpdateInt(7, ColumnSize);
+                Res.UpdateInt(9, ColumnDecimals);
               end
               else
               begin
@@ -1318,32 +1319,32 @@ begin
                     ColumnSize := 255
                  else if TypeInfoFirst = 'set' then
                     ColumnSize := 255;
-                Result.UpdateInt(7, ColumnSize);
-                Result.UpdateInt(9, 0);
+                Res.UpdateInt(7, ColumnSize);
+                Res.UpdateInt(9, 0);
               end;
 
-            Result.UpdateInt(8, MAXBUF);
-            Result.UpdateNull(10);
+            Res.UpdateInt(8, MAXBUF);
+            Res.UpdateNull(10);
 
             { Sets nullable fields. }
             Nullable := GetString(ColumnIndexes[3]);
             if Nullable <> '' then
               if Nullable = 'YES' then
               begin
-                Result.UpdateInt(11, Ord(ntNullable));
-                Result.UpdateString(18, 'YES');
+                Res.UpdateInt(11, Ord(ntNullable));
+                Res.UpdateString(18, 'YES');
               end
               else
               begin
-                Result.UpdateInt(11, Ord(ntNoNulls));
-                Result.UpdateString(18, 'NO');
+                Res.UpdateInt(11, Ord(ntNoNulls));
+                Res.UpdateString(18, 'NO');
               end
             else
             begin
-              Result.UpdateInt(11, 0);
-              Result.UpdateString(18, 'NO');
+              Res.UpdateInt(11, 0);
+              Res.UpdateString(18, 'NO');
             end;
-            Result.UpdateString(12, GetString(ColumnIndexes[4]));
+            Res.UpdateString(12, GetString(ColumnIndexes[4]));
             // MySQL is a bit bizarre.
             if IsNull(ColumnIndexes[5]) then
             begin
@@ -1406,23 +1407,23 @@ begin
                   DefaultValue := '0';
               end;
             end;
-              Result.UpdateString(13, DefaultValue);
-            Result.UpdateNull(14);
-            Result.UpdateNull(15);
-            Result.UpdateInt(17, OrdPosition);
+              Res.UpdateString(13, DefaultValue);
+            Res.UpdateNull(14);
+            Res.UpdateNull(15);
+            Res.UpdateInt(17, OrdPosition);
 
-            Result.UpdateBoolean(19, //AUTO_INCREMENT
+            Res.UpdateBoolean(19, //AUTO_INCREMENT
               Trim(LowerCase(GetString(ColumnIndexes[4]))) = 'auto_increment'); //Extra
-            Result.UpdateBoolean(20, //CASE_SENSITIVE
+            Res.UpdateBoolean(20, //CASE_SENSITIVE
               GetIdentifierConvertor.IsCaseSensitive(
               GetString(ColumnIndexes[1]))); //Field
-            Result.UpdateBoolean(21, True);  //SEARCHABLE
-            Result.UpdateBoolean(22, True);  //WRITABLE
-            Result.UpdateBoolean(23, True);  //DEFINITELYWRITABLE
-            Result.UpdateBoolean(24, False); //READONLY
+            Res.UpdateBoolean(21, True);  //SEARCHABLE
+            Res.UpdateBoolean(22, True);  //WRITABLE
+            Res.UpdateBoolean(23, True);  //DEFINITELYWRITABLE
+            Res.UpdateBoolean(24, False); //READONLY
 
             Inc(OrdPosition);
-            Result.InsertRow;
+            Res.InsertRow;
           end;
           Close;
         end;
@@ -1431,6 +1432,7 @@ begin
       TableNameList.Free;
       TypeInfoList.Free;
     end;
+    Result := Res;
 end;
 
 {**
@@ -2215,7 +2217,6 @@ const
     7, 4, 17, 10, 10, 65535, 64, -1, -1, -1, -1);
 var
   I: Integer;
-  Key: string; // modified by technbot (2008-06-14) for uniformity with other GetTypeInfo mehtods
 begin
     Result := ConstructVirtualResultSet(TypeInfoColumnsDynArray);
 

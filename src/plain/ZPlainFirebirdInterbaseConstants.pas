@@ -76,7 +76,7 @@ const
   SQLDA_VERSION1                = 1;
   SQLDA_VERSION2                = 2;
   SQL_DIALECT_V5                = 1;
-  SQL_DIALECT_V6                = 2;
+  SQL_DIALECT_V6                = 3;
   SQL_DIALECT_CURRENT = SQL_DIALECT_V6; (* latest IB DIALECT *)
 
   { SQL definitions }
@@ -485,8 +485,8 @@ type
   PISC_TIME = ^ISC_TIME;
 
   TISC_TIMESTAMP = record
-    timestamp_time:     ISC_TIME;
-    timestamp_date:     ISC_DATE;
+    timestamp_date: ISC_DATE; 
+    timestamp_time: ISC_TIME;
   end;
   PISC_TIMESTAMP = ^TISC_TIMESTAMP;
 

@@ -38,6 +38,9 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[IB/FB] AV in TZInterbase6PreparedStatement.UnPrepareInParameters when opening an invalid sql command (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2361">http://zeos.firmos.at/viewtopic.php?t=2361</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[Common] Overflow while converting variant of type (Int64) into type (Integer) when deleting a record (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2286">http://zeos.firmos.at/viewtopic.php?t=2286</ulink>)</simpara>
         </listitem>
         <listitem>
@@ -55,8 +58,10 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
-          <simpara>[Oracle] Connections are now made using the OCIEnvNlsCreate method instead of OCIEnvInit and use property 'codepage=[UTF8,0..max Word value]' (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2172">http://zeos.firmos.at/viewtopic.php?t=2172</ulink>)</simpara>
+          <simpara>[IB/FB] Added support for milliseconds (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2354">http://zeos.firmos.at/viewtopic.php?t=2354</ulink>)</simpara>
         </listitem>
+        <listitem>
+          <simpara>[Oracle] Connections are now made using the OCIEnvNlsCreate method instead of OCIEnvInit and use property 'codepage=[UTF8,0..max Word value]' (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2172">http://zeos.firmos.at/viewtopic.php?t=2172</ulink>)</simpara>        </listitem>
         <listitem>
           <simpara>[COMMON] Renamed IZObject.Hash to IZObject.GetHashCode after the new Delphi 2009 version (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2131">http://zeos.firmos.at/viewtopic.php?t=2131</ulink>)</simpara>
         </listitem>
@@ -153,6 +158,9 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=179">#0000179</ulink> [normal] Case problem for unit ZPlainMySqlConstants on linux</simpara>
+        </listitem>
+        <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=2">#0000002</ulink> [normal] FIREBIRD and NUMERIC/DECIMAL precision problem</simpara>
         </listitem>
         <listitem>
@@ -178,6 +186,12 @@
     <sect2>
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>[COMMON] Delphi compiler throws a hint that the assigned return value for ExecuteDirect is never used. (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2369">http://zeos.firmos.at/viewtopic.php?t=2369</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[IB/FB] Memory leak in TZInterbase6CallableStatement.ExecuteUpdatePrepared (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2250">http://zeos.firmos.at/viewtopic.php?t=2250</ulink>)</simpara>
+        </listitem>
         <listitem>
           <simpara>[IB/FB] Buffer problem with FB2.1 isc_interprete implementation (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2099">http://zeos.firmos.at/viewtopic.php?t=2099</ulink>)</simpara>
         </listitem>

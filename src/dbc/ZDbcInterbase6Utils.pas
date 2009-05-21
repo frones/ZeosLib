@@ -2006,9 +2006,14 @@ begin
 
     case SQLCode of
       SQL_TYPE_DATE : FPlainDriver.isc_encode_sql_date(@TmpDate, PISC_DATE(sqldata));
-      SQL_TYPE_TIME : FPlainDriver.isc_encode_sql_time(@TmpDate, PISC_TIME(sqldata));
-      SQL_TIMESTAMP :
-        FPlainDriver.isc_encode_date(@TmpDate, PISC_QUAD(sqldata));
+      SQL_TYPE_TIME : begin 
+                        FPlainDriver.isc_encode_sql_time(@TmpDate, PISC_TIME(sqldata)); 
+                        PISC_TIME(sqldata)^ := PISC_TIME(sqldata)^ + msec*10; 
+                      end; 
+      SQL_TIMESTAMP : begin 
+                        FPlainDriver.isc_encode_timestamp(@TmpDate,PISC_TIMESTAMP(sqldata)); 
+                        PISC_TIMESTAMP(sqldata).timestamp_time :=PISC_TIMESTAMP(sqldata).timestamp_time + msec*10; 
+                      end; 
       else
         raise EZIBConvertError.Create(SInvalidState);
     end;
@@ -2981,10 +2986,10 @@ begin
 
     case (sqltype and not(1)) of
         SQL_TIMESTAMP : begin
-                          FPlainDriver.isc_decode_date(PISC_QUAD(sqldata), @TempDate);
+                          FPlainDriver.isc_decode_timestamp(PISC_TIMESTAMP(sqldata), @TempDate); 
                           Result := SysUtils.EncodeDate(TempDate.tm_year + 1900,
                             TempDate.tm_mon + 1, TempDate.tm_mday) + EncodeTime(TempDate.tm_hour,
-                            TempDate.tm_min, TempDate.tm_sec, 0);
+                          TempDate.tm_min, TempDate.tm_sec, Word((PISC_TIMESTAMP(sqldata).timestamp_time mod 10000) div 10)); 
                         end;
         SQL_TYPE_DATE : begin
                           FPlainDriver.isc_decode_sql_date(PISC_DATE(sqldata), @TempDate);
@@ -2994,7 +2999,7 @@ begin
         SQL_TYPE_TIME : begin
                           FPlainDriver.isc_decode_sql_time(PISC_TIME(sqldata), @TempDate);
                           Result := SysUtils.EncodeTime(Word(TempDate.tm_hour), Word(TempDate.tm_min),
-                            Word(TempDate.tm_sec), 0);
+                            Word(TempDate.tm_sec),  Word((PISC_TIME(sqldata)^ mod 10000) div 10));
                         end;
         else
           Result := Trunc(GetDouble(Index));

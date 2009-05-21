@@ -82,7 +82,6 @@ type
   {** Represents a generic interface to MySQL native API. }
   IZMySQLPlainDriver = interface (IZPlainDriver)
     ['{D1CB3F6C-72A1-4125-873F-791202ACC5F0}']
-    function GetDescription: string;
     {ADDED by fduenas 15-06-2006}
     function GetClientVersion: Integer;
     function GetServerVersion(Handle: PZMySQLConnect): Integer;

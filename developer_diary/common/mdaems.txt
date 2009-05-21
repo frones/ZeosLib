@@ -318,6 +318,8 @@
 
 20090225 : Query property ‘ValidateUpdateCount=true/false’ was not added for TZUpdateSQL - by ddantoni - See http://zeos.firmos.at/viewtopic.php?t=2249
 
+20090305 : Reworked the PlainLoader and AbstractPlainDriver classes to make the loader class part of the plaindriver - by mdaems/gto
+
 20090320 : Moved setting FConnection to nil in the finally past of TZConnection.Disconnect - by MerijnB - See http://zeos.firmos.at/viewtopic.php?t=2275
 
 20090321 : Overflow while converting variant of type (Int64) into type (Integer) when deleting a record - by alquimista - See http://zeos.firmos.at/viewtopic.php?t=2286
@@ -329,3 +331,5 @@
 20090402 : TZConnection.Pingserver now resets the ZConnection state when failing - by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2293
 
 20090402 : Compilation error with SHOW_WARNING directive - by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2312
+
+20090507 : Fixed case of ZPlainMySqlConstants unit name on Linux - by mdaems - Mantis Bug 179

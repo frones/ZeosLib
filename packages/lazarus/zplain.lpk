@@ -72,7 +72,7 @@
         <UnitName Value="ZPlainLoader"/>
       </Item12>
       <Item13>
-        <Filename Value="../../src/plain/ZPlainMysqlConstants.pas"/>
+        <Filename Value="../../src/plain/ZPlainMySqlConstants.pas"/>
         <UnitName Value="ZPlainMysqlConstants"/>
       </Item13>
       <Item14>
