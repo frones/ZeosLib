@@ -55,3 +55,5 @@
 20090417 : FIREBIRD and NUMERIC/DECIMAL precision problem - by mdaems - Mantis Bug 2
 
 20090505 : Buffer problem with FB2.1 isc_interprete implementation - by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2099
+
+20090513 : Memory leak in TZInterbase6CallableStatement.ExecuteUpdatePrepared - by trupka - See http://zeos.firmos.at/viewtopic.php?t=2250

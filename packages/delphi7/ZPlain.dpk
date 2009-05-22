@@ -12,7 +12,6 @@ package ZPlain;
 {$OPENSTRINGS ON}
 {$OPTIMIZATION OFF}
 {$OVERFLOWCHECKS ON}
-{$RANGECHECKS ON}
 {$REFERENCEINFO ON}
 {$SAFEDIVIDE OFF}
 {$STACKFRAMES ON}
@@ -60,7 +59,7 @@ contains
   ZPlainMySql41 in '..\..\src\plain\ZPlainMySql41.pas',
   ZPlainMySql5 in '..\..\src\plain\ZPlainMySql5.pas',
   ZPlainMySqlDriver in '..\..\src\plain\ZPlainMySqlDriver.pas',
-  ZPlainMysqlConstants in '..\..\src\plain\ZPlainMysqlConstants.pas',
+  ZPlainMySqlConstants in '..\..\src\plain\ZPlainMySqlConstants.pas',
 {$ENDIF}
 
 {$IFDEF ENABLE_POSTGRESQL}

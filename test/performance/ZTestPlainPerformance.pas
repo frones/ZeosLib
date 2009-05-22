@@ -250,7 +250,7 @@ type
 
 implementation
 
-uses ZSqlTestCase, ZPlainMysqlConstants;
+uses ZSqlTestCase, ZPlainMySqlConstants;
 
 {$IFDEF ENABLE_MYSQL}
  { TZPlainMySQLPerformanceTestCase }

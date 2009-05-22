@@ -265,6 +265,7 @@ end;
 function TZAbstractObject.Clone: IZInterface;
 begin
   raise Exception.Create(SClonningIsNotSupported);
+  result := nil;
 end;
 
 {**

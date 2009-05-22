@@ -30,6 +30,9 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=179">#0000179</ulink> [normal] Case problem for unit ZPlainMySqlConstants on linux</simpara>
+        </listitem>
+        <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=2">#0000002</ulink> [normal] FIREBIRD and NUMERIC/DECIMAL precision problem</simpara>
         </listitem>
         <listitem>
@@ -55,6 +58,12 @@
     <sect2>
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>[COMMON] Delphi compiler throws a hint that the assigned return value for ExecuteDirect is never used. (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2369">http://zeos.firmos.at/viewtopic.php?t=2369</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[IB/FB] Memory leak in TZInterbase6CallableStatement.ExecuteUpdatePrepared (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2250">http://zeos.firmos.at/viewtopic.php?t=2250</ulink>)</simpara>
+        </listitem>
         <listitem>
           <simpara>[IB/FB] Buffer problem with FB2.1 isc_interprete implementation (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2099">http://zeos.firmos.at/viewtopic.php?t=2099</ulink>)</simpara>
         </listitem>

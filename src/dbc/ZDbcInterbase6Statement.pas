@@ -942,11 +942,8 @@ begin
         Connection.Commit;
       { Logging SQL Command }
       DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SQL);
-    except
-      on E: Exception do begin
+    finally
         FreeStatement(GetPlainDriver, StmtHandle);
-        raise;
-      end;
     end;
   end;
 end;

@@ -274,4 +274,6 @@
 
 20090330 : Bug in conditional directive SHOW_WARNING - by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2312
 
-20090402 : TZConnection.Pingserver now resets the ZConnection state when failing -by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2293
+20090402 : TZConnection.Pingserver now resets the ZConnection state when failing - by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2293
+
+20090507 : Fixed case of ZPlainMySqlConstants unit name on Linux - by mdaems - Mantis Bug 179

@@ -891,6 +891,7 @@ Function TZConnection.PingServer: Boolean;
 var
   LastState : boolean;
 begin
+  Result := false;
   // Check connection status
   LastState := GetConnected;
   If FConnection <> Nil Then
@@ -1234,11 +1235,19 @@ function TZConnection.ExecuteDirect(SQL:string; var RowsAffected:integer):boolea
 var
   stmt : IZStatement;
 begin
-  CheckConnected;
-  stmt := DbcConnection.CreateStatement;
-  RowsAffected:= stmt.ExecuteUpdate(SQL);
-  result := (RowsAffected <> -1);
-  stmt:=nil;
+  try 
+    try 
+      CheckConnected; 
+      stmt := DbcConnection.CreateStatement; 
+      RowsAffected:= stmt.ExecuteUpdate(SQL); 
+      result := (RowsAffected <> -1); 
+    except 
+      RowsAffected := -1; 
+      result := False; 
+    end; 
+  finally 
+    stmt:=nil; 
+  end;
 end;
 
 initialization

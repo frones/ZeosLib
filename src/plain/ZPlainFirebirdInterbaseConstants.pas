@@ -76,7 +76,7 @@ const
   SQLDA_VERSION1                = 1;
   SQLDA_VERSION2                = 2;
   SQL_DIALECT_V5                = 1;
-  SQL_DIALECT_V6                = 2;
+  SQL_DIALECT_V6                = 3;
   SQL_DIALECT_CURRENT = SQL_DIALECT_V6; (* latest IB DIALECT *)
 
   { SQL definitions }
