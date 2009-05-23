@@ -198,7 +198,8 @@ var
   Metadata: IZResultSetMetadata;
 begin
   if not StartsWith(Protocol, 'interbase')
-    and not StartsWith(Protocol, 'oracle') then
+     and not StartsWith(Protocol,'firebird') 
+     and not StartsWith(Protocol, 'oracle') then
     Exit;
 
   Statement := Connection.CreateStatement;
