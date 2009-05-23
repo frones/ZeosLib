@@ -13,13 +13,14 @@
   <property name="root.dir" value="${project.home}"/>
   <property name="packages.dir" value="${root.dir}/packages"/>
   <property name="src.dir" value="${root.dir}/src"/>
-  <property name="test.dir" value="${root.dir}/test"/>
+  <property name="test.dir" value="${root.dir}/build/testenv/binaries"/>
   <property name="examples.dir" value="${root.dir}/examples"/>
 
   <property name="logs.dir" value="${root.dir}/build/logs"/>
 
   <target name="prepare">
     <mkdir dir="${logs.dir}" />
+    <mkdir dir="${test.dir}" />
 
     <tstamp>
       <format property="tstamp" pattern="yyyyMMdd" />
@@ -218,6 +219,19 @@
     <property name="package.dir" value="${packages.dir}/${compiler}"/>
     <property name="build.dir" value="${package.dir}/build"/>
 
+      <delete>
+       <fileset dir="${test.dir}" includes="ZTest*"/>
+      </delete>
+
+    <copy todir="${test.dir}">
+      <fileset dir="${build.dir}">
+        <include name="ZTest*"/>
+        <exclude name="ZTest*.dcu"/>
+        <exclude name="ZTest*.ppu"/>
+        <exclude name="ZTest*.o"/>
+      </fileset>
+    </copy>
+
     <antcall target="test_core_run" inheritAll="true"/>
     <antcall target="test_parsesql_run" inheritAll="true"/>
     <antcall target="test_dbc_run" inheritAll="true"/>
@@ -225,6 +239,11 @@
     <antcall target="test_bugreport_run" inheritAll="true"/>
     <antcall target="test_performance_run" inheritAll="true"/>
     <echo/>
+
+      <delete>
+       <fileset dir="${test.dir}" includes="ZTest*"/>
+      </delete>
+
   </target>
 
   <target name="test_core_run" if="core.run">
@@ -265,7 +284,7 @@
 
   <target name="test_element_run">
     <echo message="Testing ... ${test.exec} ..."/>
-    <exec dir="${build.dir}" executable="${build.dir}/${test.exec}"
+    <exec dir="${test.dir}" executable="${test.dir}/${test.exec}"
        output="${log.file}" append="true">
        <!--
        BCB5 needs CC3250MT.DLL + some of the BPL's (which must be in path)

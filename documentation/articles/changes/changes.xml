@@ -24,7 +24,7 @@
   </articleinfo>
   
   <sect1>
-    <title>Changes in Release 6.6.5 - stable (NOT RELEASED YET)</title>
+    <title>Changes in Release 6.6.5 - stable (25.05.2009)</title>
     <sect2>
       <title>Bugs fixed from Mantis Bug Tracker</title>
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
@@ -89,16 +89,10 @@
           <simpara>[COMMON] Query property ‘ValidateUpdateCount=true/false’ was not added for TZUpdateSQL(<ulink url="http://zeos.firmos.at/viewtopic.php?t=2249">http://zeos.firmos.at/viewtopic.php?t=2249</ulink>)</simpara>
         </listitem>
         <listitem>
-          <simpara>[IB/FB] Subtype is 0 for a computed decimal field and not 1 as in all the other cases (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2278">http://zeos.firmos.at/viewtopic.php?t=2278</ulink>)</simpara>
-        </listitem>
-        <listitem>
-          <simpara>[COMMON] Make sure dbc connection is nil after ZConnection.Close, even when an exception occurs (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2275">http://zeos.firmos.at/viewtopic.php?t=2275</ulink>)</simpara>
-        </listitem>
-        <listitem>
-          <simpara>[COMMON] Query property ‘ValidateUpdateCount=true/false’ was not added for TZUpdateSQL(<ulink url="http://zeos.firmos.at/viewtopic.php?t=2249">http://zeos.firmos.at/viewtopic.php?t=2249</ulink>)</simpara>
-        </listitem>
-        <listitem>
           <simpara>[IB/FB] TZInterbase6DatabaseMetadata.UncachedGetTables: Access Violation and duplicated rows (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2236">http://zeos.firmos.at/viewtopic.php?t=2236</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[Lazarus] Removed libc from uses clauses when using fpc (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2196">http://zeos.firmos.at/viewtopic.php?t=2196</ulink>)</simpara>
         </listitem>
         <listitem>
           <simpara>[DELPHI] Removed conditional compilation of database dependent Tokenizers (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2138">http://zeos.firmos.at/viewtopic.php?t=2138</ulink>)</simpara>
@@ -128,9 +122,6 @@
         </listitem>
         <listitem>
           <simpara>[POSTGRES] Implemented ZConnection.ServerVersion for Postgres</simpara>
-        </listitem>
-        <listitem>
-          <simpara>[IB/FB] Implemented Pingserver for IB/FB (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2274">http://zeos.firmos.at/viewtopic.php?t=2274</ulink>)</simpara>
         </listitem>
         <listitem>
           <simpara>[POSTGRES] Implemented Pingserver for Postgres (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2156">http://zeos.firmos.at/viewtopic.php?t=2156</ulink>)</simpara>
