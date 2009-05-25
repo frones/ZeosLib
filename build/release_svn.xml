@@ -150,6 +150,7 @@
 
      <antcall target="buildVersionZip" />
      <antcall target="buildDoxygen" />
+     <antcall target="buildDelphiCode2Doc" />
 
     <delete dir="${temp.dir}" />
     <echo message="Releasing Zeos DBO Project (Version ${build.productversion})"/>
@@ -218,25 +219,13 @@
   </target>
   
 <target name="buildDelphiCode2Doc" depends="prepare">
-  <!-- Can't get this working correctly because the output path in the config file is hard coded and doesn't support relative paths (only relative to disk root) -->
-    <copy file="${temp.dir}/documentation/Zeoslibcode2doc.xml" tofile="${temp.dir}/documentation/temp.xml"/>
-    <replaceregexp file="${temp.dir}/documentation/temp.xml" match="&lt;OutputFolder>(.*)&lt;/OutputFolder>" replace="&lt;OutputFolder>${temp.file}/doc/DCTD&lt;/OutputFolder>" byline="true"/>
-
     <exec osfamily="windows" executable="${delphicode2doc.home}/DCTD_cmd" dir="${temp.dir}/documentation" output="${log.file}" append="true" failonerror="true">
-        <!--arg line="Zeoslibcode2doc.xml"/-->
-        <arg line="temp.xml"/>
-    </exec>
-
-    <copy todir="${temp.dir}/doc/DelphiCode2Doc" overwrite="true" preservelastmodified="true" includeEmptyDirs="false" >
-      <fileset dir="${temp.dir}/doc/DCTD/html">
-         <include name="**"/>
-      </fileset>
-    </copy>
-    <delete dir="${temp.dir}/doc/DCTD" />
+        <arg line="Zeoslibcode2doc.xml"/>
+       </exec>
 
     <delete file="${release.dir}/ZEOSDBO-${build.productversion}_DelphiCode2Doc.zip" />
     <zip zipfile="${release.dir}/ZEOSDBO-${build.productversion}_DelphiCode2Doc.zip">
-      <fileset dir="${temp.dir}/doc/DelphiCode2Doc">
+      <fileset dir="${temp.dir}/documentation/ZeosDelphiCode2Doc">
          <include name="**"/>
       </fileset>
     </zip>
