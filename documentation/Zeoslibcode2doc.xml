@@ -6,14 +6,14 @@
     <BoolsAsChecks>TRUE</BoolsAsChecks>
     <LaunchBrowser>TRUE</LaunchBrowser>
     <Name>Zeoslib</Name>
-    <Title>Insert your project's title here</Title>
+    <Title>Insert your project&apos;s title here</Title>
     <Summary>A set of Delphi/Fpc multiprotocol database connectivity components</Summary>
     <Description>
       <Count>0</Count>
     </Description>
     <Author>Zeoslib Development Team</Author>
     <HTMLlink>http://dephicodetodoc.sf.net (Replace by your webpage for example)</HTMLlink>
-    <Copyright>&lt;A href="http://zeos.firmos.at/portal.php"&gt;Zeoslib&lt;/A&gt;</Copyright>
+    <Copyright>&lt;A href=&quot;http://zeos.firmos.at/portal.php&quot;&gt;Zeoslib&lt;/A&gt;</Copyright>
     <RecurseDirectory>TRUE</RecurseDirectory>
     <ConditionalDefines>
       <Count>3</Count>
@@ -26,9 +26,9 @@
     <CustomFooter>UNDER CONSTRUCTION</CustomFooter>
     <Language>lEnglish</Language>
     <OutputFormat>ofCHM</OutputFormat>
-    <OutputFolder>\ZeosDelphiCode2Doc</OutputFolder>
+    <OutputFolder>..\doc\ZeosDelphiCode2Doc</OutputFolder>
     <VisibilitySet>
-      <mvPrivate>TRUE</mvPrivate>
+      <mvPrivate>FALSE</mvPrivate>
       <mvProtected>TRUE</mvProtected>
       <mvPublic>TRUE</mvPublic>
       <mvPublished>TRUE</mvPublished>
@@ -41,7 +41,7 @@
       <tcXMLDoc>FALSE</tcXMLDoc>
     </TagCommentSet>
     <AlphaSort>TRUE</AlphaSort>
-    <WarnEmptyTAG>TRUE</WarnEmptyTAG>
+    <WarnEmptyTAG>FALSE</WarnEmptyTAG>
     <HideEmptyTAGSection>FALSE</HideEmptyTAGSection>
     <HideEmptyOutputBlock>TRUE</HideEmptyOutputBlock>
     <OutputFilteringCategory>
@@ -56,6 +56,7 @@
       <ocMethods>TRUE</ocMethods>
       <ocProperties>TRUE</ocProperties>
       <ocEvents>TRUE</ocEvents>
+      <ocResourcestrings>FALSE</ocResourcestrings>
     </OutputFilteringCategory>
     <SkipFirstTAGLine>TRUE</SkipFirstTAGLine>
     <SkipLastTAGLine>TRUE</SkipLastTAGLine>
@@ -72,7 +73,9 @@
     </FilesExcludeList>
     <AllowHtmlInDescription>TRUE</AllowHtmlInDescription>
     <PropertyCommentFromAssessors>TRUE</PropertyCommentFromAssessors>
-    <DisplayHiddenItems>TRUE</DisplayHiddenItems>
+    <DisplayHiddenItems>FALSE</DisplayHiddenItems>
     <MethodCommentFromAncestor>TRUE</MethodCommentFromAncestor>
+    <CssConfiguration>ccInternal</CssConfiguration>
+    <CssCustomFile/>
   </TDOCOptions>
 </DelphiCodeToDoc_Project>
