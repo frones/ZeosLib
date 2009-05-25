@@ -59,7 +59,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZPlainMySqlDriver, ZPlainMySqlConstants, ZDbcLogging;
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZPlainMySqlDriver, ZDbcLogging;
 
 const
   MAXBUF = 65535;
@@ -94,8 +94,7 @@ function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull: string): TZSQLType;
 }
 procedure CheckMySQLError(PlainDriver: IZMySQLPlainDriver;
   Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; const LogMessage: string);
-procedure CheckMySQLPrepStmtError(PlainDriver: IZMySQLPlainDriver;
-  Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; const LogMessage: string);
+
 procedure EnterSilentMySQLError;
 procedure LeaveSilentMySQLError;
 
@@ -133,10 +132,9 @@ function EncodeMySQLVersioning(const MajorVersion: Integer;
 }
 function ConvertMySQLVersionToSQLVersion( const MySQLVersion: Integer ): Integer;
 
-function getMySQLFieldSize (field_type: TMysqlFieldTypes; field_size: LongWord): LongWord;
 implementation
 
-uses ZMessages;
+uses ZMessages, ZPlainMySqlConstants;
 
 threadvar
   SilentMySQLError: Integer;
@@ -170,31 +168,23 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
     case PlainDriver.GetFieldType(FieldHandle) of
     FIELD_TYPE_TINY:
       begin
-            if Signed then
-               Result := stByte
-            else
-               Result := stShort;
+        if Signed then Result := stByte
+        else Result := stShort;
       end;
     FIELD_TYPE_YEAR, FIELD_TYPE_SHORT:
       begin
-            if Signed then
-               Result := stShort
-            else
-               Result := stInteger;
+        if Signed then Result := stShort
+        else Result := stInteger;
       end;
     FIELD_TYPE_INT24, FIELD_TYPE_LONG:
       begin
-            if Signed then
-               Result := stInteger
-            else
-               Result := stLong;
+        if Signed then Result := stInteger
+        else Result := stLong;
       end;
     FIELD_TYPE_LONGLONG:
       begin
-            if Signed then
-               Result := stLong
-            else
-               Result := stBigDecimal;
+        if Signed then Result := stLong
+        else Result := stBigDecimal;
       end;
     FIELD_TYPE_FLOAT:
       Result := stDouble;
@@ -204,10 +194,8 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
         begin
           if PlainDriver.GetFieldLength(FieldHandle) < 11 then
             Result := stInteger
-          else
-            Result := stLong;
-          end
-        else
+          else Result := stLong;
+        end else
           Result := stDouble;
       end;
     FIELD_TYPE_DOUBLE:
@@ -222,8 +210,7 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
     FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB:
       if (FieldFlags and BINARY_FLAG) = 0 then
         Result := stAsciiStream
-      else
-        Result := stBinaryStream;
+      else Result := stBinaryStream;
     FIELD_TYPE_BIT:
       Result := stBinaryStream;
     FIELD_TYPE_VARCHAR:
@@ -247,8 +234,7 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
    end;
   { Fix by the HeidiSql team. - See their SVN repository rev.775 and 900}
   { SHOW FULL PROCESSLIST on 4.x servers can return veeery long FIELD_TYPE_VAR_STRINGs. The following helps avoid excessive row buffer allocation later on. }
-  if (Result = stString) and (PlainDriver.GetFieldLength(FieldHandle) > 8192) then
-     Result := stAsciiStream;
+  if (Result = stString) and (PlainDriver.GetFieldLength(FieldHandle) > 8192) then Result := stAsciiStream;
 end;
 
 {**
@@ -286,8 +272,7 @@ begin
   begin
     if IsUnsigned then
       Result := stShort
-    else
-      Result := stByte;
+    else Result := stByte;
   end
   else if TypeName = 'YEAR' then
     Result := stShort
@@ -295,17 +280,14 @@ begin
   begin
     if IsUnsigned then
       Result := stInteger
-    else
-      Result := stShort;
+    else Result := stShort;
   end
   else if TypeName = 'MEDIUMINT' then
     Result := stInteger
   else if (TypeName = 'INT') or (TypeName = 'INTEGER') then
   begin
-      if IsUnsigned then
-         Result := stLong
-      else
-         Result := stInteger
+    if IsUnsigned then Result := stLong
+    else Result := stInteger
   end
   else if TypeName = 'BIGINT' then
     Result := stLong
@@ -315,8 +297,7 @@ begin
   begin
     if IsUnsigned then
       Result := stDouble
-    else
-      Result := stFloat;
+    else Result := stFloat;
   end
   else if TypeName = 'FLOAT' then
   begin
@@ -331,10 +312,8 @@ begin
       Len := StrToInt(Copy(TypeNameFull, 9, Length(TypeNameFull) - 11));
       if Len < 10 then
         Result := stInteger
-      else
-        Result := stLong;
-    end
-    else
+      else Result := stLong;
+    end else
       Result := stDouble;
   end
   else if TypeName = 'DOUBLE' then
@@ -376,20 +355,15 @@ begin
     if (TypeNameFull = 'ENUM(''Y'',''N'')')
       or (TypeNameFull = 'ENUM(''N'',''Y'')') then
       Result := stBoolean
-    else
-      Result := stString;
+    else Result := stString;
   end
   else if TypeName = 'SET' then
     Result := stString
   else if TypeName = 'BIT' then
     Result := stBinaryStream
-  else
-      for i := 0 to Length(GeoTypes) - 1 do
-         if GeoTypes[i] = TypeName then
-            Result := stBinaryStream;
+  else for i := 0 to Length(GeoTypes)-1 do if GeoTypes[i] = TypeName then Result := stBinaryStream;
 
-  if Result = stUnknown then
-     raise Exception.Create('Unknown MySQL data type!');
+  if Result = stUnknown then raise Exception.Create('Unknown MySQL data type!');
 end;
 
 {**
@@ -419,25 +393,6 @@ begin
   end;
 end;
 
-procedure CheckMySQLPrepStmtError(PlainDriver: IZMySQLPlainDriver;
-  Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; const LogMessage: string);
-var
-  ErrorMessage: string;
-  ErrorCode: Integer;
-begin
-  ErrorMessage := Trim(PlainDriver.GetLastPreparedError(Handle));
-  ErrorCode := PlainDriver.GetLastPreparedErrorCode(Handle);
-  if (ErrorCode <> 0) and (ErrorMessage <> '') then
-  begin
-    if SilentMySQLError > 0 then
-      raise EZMySQLSilentException.CreateFmt(SSQLError1, [ErrorMessage]);
-
-    DriverManager.LogError(LogCategory,PlainDriver.GetProtocol,LogMessage,ErrorCode, ErrorMessage);
-    raise EZSQLException.CreateWithCode(ErrorCode,
-      Format(SSQLError1, [ErrorMessage]));
-  end;
-end;
-
 {**
   Decodes a MySQL Version Value encoded with format:
    (major_version * 10,000) + (minor_version * 100) + sub_version
@@ -451,9 +406,9 @@ procedure DecodeMySQLVersioning(const MySQLVersion: Integer;
  out MajorVersion: Integer; out MinorVersion: Integer;
  out SubVersion: Integer);
 begin
-  MajorVersion := MySQLVersion div 10000;
-  MinorVersion := (MySQLVersion - (MajorVersion * 10000)) div 100;
-  SubVersion   := MySQLVersion-(MajorVersion*10000)-(MinorVersion*100);
+ MajorVersion := MySQLVersion DIV 10000;
+ MinorVersion := (MySQLVersion-(MajorVersion*10000)) DIV 100;
+ SubVersion   := MySQLVersion-(MajorVersion*10000)-(MinorVersion*100);
 end;
 
 {**
@@ -483,40 +438,10 @@ end;
   @return Encoded Zeos SQL Version Value.
 }
 function ConvertMySQLVersionToSQLVersion( const MySQLVersion: Integer ): integer;
-var
-   MajorVersion, MinorVersion, SubVersion: Integer;
+var MajorVersion, MinorVersion, SubVersion: Integer;
 begin
  DecodeMySQLVersioning(MySQLVersion,MajorVersion,MinorVersion,SubVersion);
  Result := EncodeSQLVersioning(MajorVersion,MinorVersion,SubVersion);
-end;
-
-function getMySQLFieldSize (field_type: TMysqlFieldTypes; field_size: LongWord): LongWord;
-const
-    MaxBlobSize = 65535;
-
-var
-    FieldSize: LongWord;
-Begin
-    If field_size > MaxBlobsize then
-      FieldSize := MaxBlobSize
-    else
-      FieldSize := field_size;
-
-    case field_type of
-        FIELD_TYPE_TINY:        Result := 1;
-        FIELD_TYPE_SHORT:       Result := 2;
-        FIELD_TYPE_LONG:        Result := 4;
-        FIELD_TYPE_LONGLONG:    Result := 8;
-        FIELD_TYPE_FLOAT:       Result := 4;
-        FIELD_TYPE_DOUBLE:      Result := 8;
-        FIELD_TYPE_DATE:        Result := sizeOf(MYSQL_TIME);
-        FIELD_TYPE_TIME:        Result := sizeOf(MYSQL_TIME);
-        FIELD_TYPE_DATETIME:    Result := sizeOf(MYSQL_TIME);
-        FIELD_TYPE_BLOB:        Result := FieldSize;
-        FIELD_TYPE_STRING:      Result := FieldSize;
-    else
-        Result := 255;  {unknown ??}
-    end;
 end;
 
 end.

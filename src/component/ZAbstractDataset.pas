@@ -58,7 +58,7 @@ interface
 {$I ZComponent.inc}
 
 uses
-{$IFNDEF FPC}
+{$IFNDEF VER130BELOW}
   Types,
   Variants,
 {$ENDIF}
@@ -150,7 +150,6 @@ type
     procedure CommitUpdates;
     procedure CancelUpdates;
     procedure RevertRecord;
-    procedure RefreshCurrentRow(const RefreshDetails:Boolean); //FOS+ 07112006
 
     procedure EmptyDataSet; {bangfauzan addition}
 
@@ -268,8 +267,7 @@ begin
   if FUpdateMode <> Value then
   begin
     FUpdateMode := Value;
-    if Active then
-      Close;
+    if Active then Close;
   end;
 end;
 
@@ -282,8 +280,7 @@ begin
   if FWhereMode <> Value then
   begin
     FWhereMode := Value;
-    if Active then
-      Close;
+    if Active then Close;
   end;
 end;
 
@@ -406,8 +403,7 @@ begin
   if not GetActiveBuffer(RowBuffer) or (RowBuffer <> Buffer) then
     raise EZDatabaseError.Create(SInternalError);
 
-  if Append then
-    FetchRows(0);
+  if Append then FetchRows(0);
 
   if CachedResultSet <> nil then
   begin
@@ -445,16 +441,16 @@ end;
 procedure TZAbstractDataset.InternalPost;
 var
   RowBuffer: PZRowBuffer;
-  {$IFDEF DELPHI12_UP}
-  BM: TBookMark;
-  {$ELSE}
   BM:TBookMarkStr;
-  {$ENDIF}
 begin
   if (FSequenceField <> '') and Assigned(FSequence) then
   begin
     if FieldByName(FSequenceField).IsNull then
+    {$IFDEF VER130} //Delphi5 
+      FieldByName(FSequenceField).AsString := IntToStr(FSequence.GetNextValue);
+    {$ELSE}
       FieldByName(FSequenceField).Value := FSequence.GetNextValue;
+    {$ENDIF}
   end;
 
   inherited;
@@ -466,12 +462,10 @@ begin
   try
     if State = dsInsert then
       InternalAddRecord(RowBuffer, False)
-    else
-      InternalUpdate;
+    else InternalUpdate;
 
     {BUG-FIX: bangfauzan addition}
-    if (SortedFields <> '') and not (doDontSortOnPost in Options) then
-    begin
+    if (SortedFields<>'') then begin
       FreeFieldBuffers;
       SetState(dsBrowse);
       Resync([]);
@@ -535,8 +529,7 @@ begin
     RowNo := Integer(CurrentRows[CurrentRow - 1]);
     CachedResultSet.MoveAbsolute(RowNo);
     RowAccessor.RowBuffer := RowBuffer;
-    FetchFromResultSet(CachedResultSet, FieldsLookupTable, Fields,
-         RowAccessor);
+    FetchFromResultSet(CachedResultSet, FieldsLookupTable, Fields, RowAccessor);
   end;
 end;
 
@@ -569,13 +562,11 @@ end;
 }
 procedure TZAbstractDataset.ApplyUpdates;
 begin
-  if not Active then
-    Exit;
+  if not Active then Exit;
 
   Connection.ShowSQLHourGlass;
   try
-    if State in [dsEdit, dsInsert] then
-       Post;
+    if State in [dsEdit, dsInsert] then Post;
 
     DoBeforeApplyUpdates; {bangfauzan addition}
 
@@ -608,8 +599,7 @@ end;
 }
 procedure TZAbstractDataset.CancelUpdates;
 begin
-  if State in [dsEdit, dsInsert] then
-    Cancel;
+  if State in [dsEdit, dsInsert] then Cancel;
 
   if CachedResultSet <> nil then
     CachedResultSet.CancelUpdates;
@@ -621,42 +611,6 @@ end;
 {**
   Reverts the previous status for the current row.
 }
-procedure TZAbstractDataset.RefreshCurrentRow(const RefreshDetails:Boolean);
-var
-    RowNo: integer;
-    i: Integer;
-    ostate:TDataSetState;
-begin
-  if State=dsBrowse then begin
-   if CachedResultSet <> nil then begin
-    RowNo := Integer(CurrentRows[CurrentRow - 1]);
-    CachedResultSet.MoveAbsolute(RowNo);
-    CachedResultSet.RefreshRow;
-    if not (State in [dsInactive]) then begin
-     if RefreshDetails then begin
-      Resync([]);
-     end else begin
-      FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
-      ostate:=State;
-      SetTempState(dsInternalCalc);
-      try
-       for I := 0 to Fields.Count - 1 do begin
-        DataEvent(deFieldChange,longint(Fields[i]));
-       end;
-      finally
-       RestoreState(ostate);
-      end;
-     end;
-    end;
-   end;
-  end
-  else
-  begin
-    raise EZDatabaseError.Create(SInternalError);
-  end;
-end;
-
-
 procedure TZAbstractDataset.RevertRecord;
 begin
   if State in [dsInsert] then
@@ -664,14 +618,12 @@ begin
     Cancel;
     Exit;
   end;
-  if State in [dsEdit] then
-    Cancel;
+  if State in [dsEdit] then Cancel;
 
   if CachedResultSet <> nil then
     CachedResultSet.RevertRecord;
 
-  if not (State in [dsInactive]) then
-    Resync([]);
+  if not (State in [dsInactive]) then Resync([]);
 end;
 
 {**
@@ -686,8 +638,7 @@ begin
     Result := True
   else if (State in [dsInsert, dsEdit]) then
     Result := Modified
-  else
-    Result := False;
+  else Result := False;
 end;
 
 {$IFDEF WITH_IPROVIDER}
@@ -728,21 +679,21 @@ var
       SrcField := Delta.FieldByName(TField(FieldRefs[I]).FieldName);
       if SrcField <> nil then
       begin
-          Temp[I] := SrcField.OldValue;
-      end
-      else
+        if (SrcField.DataType = ftLargeInt)
+          and not VarIsNull(SrcField.OldValue) then
+          Temp[I] := Integer(SrcField.OldValue)
+        else Temp[I] := SrcField.OldValue;
+      end else
         Temp[I] := Null;
     end;
 
     if Length(FieldRefs) = 1 then
       KeyValues := Temp[0]
-    else
-      KeyValues := Temp;
+    else KeyValues := Temp;
 
     if KeyFields <> '' then
       Result := Locate(KeyFields, KeyValues, [])
-    else
-      Result := False;
+    else Result := False;
   end;
 
   procedure CopyRecord(SrcDataset: TDataset; DestDataset: TDataset);
@@ -773,13 +724,12 @@ var
             begin
               TLargeIntField(DestField).AsLargeInt :=
                 TLargeIntField(SrcField).AsLargeInt;
-            end
-            else
+            end else
               DestField.AsInteger := SrcField.AsInteger;
           end;
-        ftBlob, ftMemo {$IFNDEF VER150BELOW}, ftWideMemo{$ENDIF}:
+        ftBlob, ftMemo:
           begin
-            if SrcField.DataType in [ftBlob, ftMemo {$IFNDEF VER150BELOW}, ftWideMemo{$ENDIF}] then
+            if SrcField.DataType in [ftBlob, ftMemo] then
             begin
               SrcStream := SrcDataset.CreateBlobStream(SrcField, bmRead);
               try
@@ -792,8 +742,7 @@ var
               finally
                 SrcStream.Free;
               end;
-            end
-            else
+            end else
               DestField.AsVariant := SrcField.AsVariant;
           end;
         else
@@ -896,5 +845,5 @@ end;
 
 {========================end of bangfauzan addition================}
 
-end.
 
+end.

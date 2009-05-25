@@ -74,12 +74,16 @@ uses
   ComponentEditors,
   LResources,
 {$ELSE}
+{$IFNDEF VER130BELOW}
 {$IFNDEF UNIX}
 {$IFNDEF FPC}
   ZUpdateSqlEditor,
 {$ENDIF}
 {$ENDIF}
   DesignIntf,
+{$ELSE}
+  DsgnIntf,
+{$ENDIF}
 {$ENDIF}
 {$ENDIF}
   Classes, ZConnection, ZDataset, ZSqlUpdate, ZSqlProcessor, ZStoredProcedure,
@@ -168,9 +172,11 @@ begin
 {$IFDEF FPC}
   RegisterComponentEditor(TZUpdateSQL, TZUpdateSQLEditor);
 {$ELSE}
+  {$IFNDEF VER130BELOW}
     {$IFNDEF UNIX}
   RegisterComponentEditor(TZUpdateSQL, TZUpdateSQLEditor);
     {$ENDIF}
+  {$ENDIF}
 {$ENDIF}
 {$ENDIF}
 end;

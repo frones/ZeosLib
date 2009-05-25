@@ -142,8 +142,7 @@ begin
       else
         Result := MATCH_ABORT;
       Exit;
-    end
-    else
+    end else
       case (Pattern[P]) of
         MATCH_CHAR_KLEENE_CLOSURE:
           Result := MatchAfterStar(Copy(Pattern,P,PLen),Copy(Text,T,TLen));
@@ -260,8 +259,7 @@ begin
   while ((T <= TLen) and (P < PLen)) and ((Pattern[P] = MATCH_CHAR_SINGLE) or
     (Pattern[P] = MATCH_CHAR_KLEENE_CLOSURE)) do
   begin
-    if Pattern[P] = MATCH_CHAR_SINGLE then
-      Inc(T);
+    if Pattern[P] = MATCH_CHAR_SINGLE then Inc(T);
     Inc(P);
   end;
   if T >= TLen then

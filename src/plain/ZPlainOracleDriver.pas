@@ -71,7 +71,7 @@ type
   sb1     = ShortInt;
   ub1     = Byte;
   dvoid   = Pointer;
-  text    = PAnsiChar;
+  text    = PChar;
   size_T  = Integer;
 
   pub1 = ^ub1;
@@ -685,9 +685,6 @@ type
     function EnvCreate(var envhpp: POCIEnv; mode: ub4; ctxp: Pointer;
       malocfp: Pointer; ralocfp: Pointer; mfreefp: Pointer; xtramemsz: size_T;
       usrmempp: PPointer): sword;
-    function EnvNlsCreate(var envhpp: POCIEnv; mode: ub4; ctxp: Pointer;
-      malocfp: Pointer; ralocfp: Pointer; mfreefp: Pointer; xtramemsz: size_T;
-      usrmempp: PPointer; charset, ncharset: ub2): sword;
 
     function HandleAlloc(parenth: POCIHandle; var hndlpp: POCIHandle;
       atype: ub4; xtramem_sz: size_T; usrmempp: PPointer): sword;
@@ -873,9 +870,6 @@ type
     function EnvCreate(var envhpp: POCIEnv; mode: ub4; ctxp: Pointer;
       malocfp: Pointer; ralocfp: Pointer; mfreefp: Pointer; xtramemsz: size_T;
       usrmempp: PPointer): sword;
-    function EnvNlsCreate(var envhpp: POCIEnv; mode: ub4; ctxp: Pointer;
-      malocfp: Pointer; ralocfp: Pointer; mfreefp: Pointer; xtramemsz: size_T;
-      usrmempp: PPointer; charset, ncharset: ub2): sword;
 
     function HandleAlloc(parenth: POCIHandle; var hndlpp: POCIHandle;
       atype: ub4; xtramem_sz: size_T; usrmempp: PPointer): sword;
@@ -1162,14 +1156,6 @@ function TZOracle9iPlainDriver.EnvCreate(var envhpp: POCIEnv; mode: ub4;
 begin
   Result := ZPlainOracle9i.OCIEnvCreate(envhpp, mode, ctxp, malocfp, ralocfp,
     mfreefp, xtramemsz, usrmempp);
-end;
-
-function TZOracle9iPlainDriver.EnvNlsCreate(var envhpp: POCIEnv; mode: ub4;
-  ctxp: Pointer; malocfp: Pointer; ralocfp: Pointer; mfreefp: Pointer;
-  xtramemsz: size_T; usrmempp: PPointer; charset, ncharset: ub2): sword;
-begin
-  Result := ZPlainOracle9i.OCIEnvNlsCreate(envhpp, mode, ctxp, malocfp, ralocfp,
-    mfreefp, xtramemsz, usrmempp, charset, ncharset);
 end;
 
 function TZOracle9iPlainDriver.EnvInit(var envhpp: POCIEnv; mode: ub4;

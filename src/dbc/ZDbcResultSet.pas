@@ -61,8 +61,11 @@ uses
 {$IFDEF MSWINDOWS}
   Windows,
 {$ENDIF}
-  Types, Classes, SysUtils, Contnrs, ZDbcIntfs, ZClasses, ZCollections, ZSysUtils,
-{$IFDEF FPC}
+  Classes, SysUtils, Contnrs, ZDbcIntfs, ZClasses, ZCollections, ZSysUtils,
+{$IFNDEF VER130BELOW}
+  Types,
+{$ENDIF}
+{$IFDEF VER130BELOW}
   {$IFDEF WIN32}
     Comobj,
   {$ENDIF}
@@ -73,7 +76,7 @@ type
   {** Implements Abstract ResultSet. }
   TZAbstractResultSet = class(TInterfacedObject, IZResultSet)
   private
-    FTemp: Ansistring;
+    FTemp: string;
     FRowNo: Integer;
     FLastRowNo: Integer;
     FMaxRows: Integer;
@@ -129,8 +132,8 @@ type
     //======================================================================
 
     function IsNull(ColumnIndex: Integer): Boolean; virtual;
-    function GetPChar(ColumnIndex: Integer): PAnsiChar; virtual;
-    function GetString(ColumnIndex: Integer): Ansistring; virtual;
+    function GetPChar(ColumnIndex: Integer): PChar; virtual;
+    function GetString(ColumnIndex: Integer): string; virtual;
     function GetUnicodeString(ColumnIndex: Integer): WideString; virtual;
     function GetBoolean(ColumnIndex: Integer): Boolean; virtual;
     function GetByte(ColumnIndex: Integer): ShortInt; virtual;
@@ -149,15 +152,14 @@ type
     function GetBinaryStream(ColumnIndex: Integer): TStream; virtual;
     function GetBlob(ColumnIndex: Integer): IZBlob; virtual;
     function GetValue(ColumnIndex: Integer): TZVariant; virtual;
-    function GetDefaultExpression(ColumnIndex: Integer): String; virtual;
 
     //======================================================================
     // Methods for accessing results by column name
     //======================================================================
 
     function IsNullByName(const ColumnName: string): Boolean; virtual;
-    function GetPCharByName(const ColumnName: string): PAnsiChar; virtual;
-    function GetStringByName(const ColumnName: string): Ansistring; virtual;
+    function GetPCharByName(const ColumnName: string): PChar; virtual;
+    function GetStringByName(const ColumnName: string): string; virtual;
     function GetUnicodeStringByName(const ColumnName: string): WideString; virtual;
     function GetBooleanByName(const ColumnName: string): Boolean; virtual;
     function GetByteByName(const ColumnName: string): ShortInt; virtual;
@@ -184,7 +186,7 @@ type
     function GetWarnings: EZSQLWarning; virtual;
     procedure ClearWarnings; virtual;
 
-    function GetCursorName: AnsiString; virtual;
+    function GetCursorName: string; virtual;
     function GetMetaData: IZResultSetMetaData; virtual;
     function FindColumn(const ColumnName: string): Integer; virtual;
 
@@ -238,9 +240,10 @@ type
     procedure UpdateFloat(ColumnIndex: Integer; Value: Single); virtual;
     procedure UpdateDouble(ColumnIndex: Integer; Value: Double); virtual;
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended); virtual;
-    procedure UpdatePChar(ColumnIndex: Integer; Value: PAnsiChar); virtual;
-    procedure UpdateString(ColumnIndex: Integer; const Value: Ansistring); virtual;
-    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString); virtual;
+    procedure UpdatePChar(ColumnIndex: Integer; Value: PChar); virtual;
+    procedure UpdateString(ColumnIndex: Integer; const Value: string); virtual;
+    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString);
+      virtual;
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray); virtual;
     procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime); virtual;
     procedure UpdateTime(ColumnIndex: Integer; Value: TDateTime); virtual;
@@ -249,7 +252,6 @@ type
     procedure UpdateUnicodeStream(ColumnIndex: Integer; Value: TStream); virtual;
     procedure UpdateBinaryStream(ColumnIndex: Integer; Value: TStream); virtual;
     procedure UpdateValue(ColumnIndex: Integer; const Value: TZVariant); virtual;
-    procedure UpdateDefaultExpression(ColumnIndex: Integer; const Value: string); virtual;
 
     //======================================================================
     // Methods for accessing results by column name
@@ -264,9 +266,10 @@ type
     procedure UpdateFloatByName(const ColumnName: string; Value: Single); virtual;
     procedure UpdateDoubleByName(const ColumnName: string; Value: Double); virtual;
     procedure UpdateBigDecimalByName(const ColumnName: string; Value: Extended); virtual;
-    procedure UpdatePCharByName(const ColumnName: string; Value: PAnsiChar); virtual;
-    procedure UpdateStringByName(const ColumnName: string; const Value: AnsiString); virtual;
-    procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: WideString); virtual;
+    procedure UpdatePCharByName(const ColumnName: string; Value: PChar); virtual;
+    procedure UpdateStringByName(const ColumnName: string; const Value: string); virtual;
+    procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: WideString);
+      virtual;
     procedure UpdateBytesByName(const ColumnName: string; const Value: TByteDynArray); virtual;
     procedure UpdateDateByName(const ColumnName: string; Value: TDateTime); virtual;
     procedure UpdateTimeByName(const ColumnName: string; Value: TDateTime); virtual;
@@ -311,8 +314,8 @@ type
     function IsUpdated: Boolean; virtual;
     function Length: LongInt; virtual;
 
-    function GetString: AnsiString; virtual;
-    procedure SetString(const Value: AnsiString); virtual;
+    function GetString: string; virtual;
+    procedure SetString(const Value: string); virtual;
     function GetUnicodeString: WideString; virtual;
     procedure SetUnicodeString(const Value: WideString); virtual;
     function GetBytes: TByteDynArray; virtual;
@@ -370,11 +373,9 @@ begin
   begin
     if Statement <> nil then
       DatabaseMetadata := GetStatement.GetConnection.GetMetadata
-    else
-      DatabaseMetadata := nil;
+    else DatabaseMetadata := nil;
     FMetadata := TZAbstractResultSetMetadata.Create(DatabaseMetadata, SQL, Self);
-   end
-   else
+  end else
     FMetadata := Metadata;
 
   FColumnsInfo := TObjectList.Create;
@@ -385,8 +386,7 @@ end;
 }
 destructor TZAbstractResultSet.Destroy;
 begin
-  if not FClosed then
-      Close;
+  if not FClosed then Close;
 
   if FMetadata <> nil then
     FMetadata.Free;
@@ -453,8 +453,10 @@ begin
   InitialType := Metadata.GetColumnType(ColumnIndex);
   if not CheckConvertion(InitialType, ResultType) then
   begin
-      raise EZSQLException.Create(Format(SConvertionIsNotPossible, [ColumnIndex,
-         DefineColumnTypeName(InitialType), DefineColumnTypeName(ResultType)]));
+    raise EZSQLException.Create(
+      Format(SConvertionIsNotPossible,
+      [ColumnIndex, DefineColumnTypeName(InitialType),
+      DefineColumnTypeName(ResultType)]));
   end;
 end;
 
@@ -534,16 +536,14 @@ end;
   is also automatically closed when it is garbage collected.
 }
 procedure TZAbstractResultSet.Close;
-var
-   I: integer;
-   FColumnInfo: TZColumnInfo;
+  var I : integer;
+  var FColumnInfo : TZColumnInfo;
 begin
   LastWasNull := True;
   FRowNo := 0;
   FLastRowNo := 0;
   FClosed := True;
-  for I := FColumnsInfo.Count - 1 downto 0 do
-  begin
+  for I := FColumnsInfo.Count-1 downto 0 do begin
     FColumnInfo:=TZColumnInfo(FColumnsInfo.Extract(FColumnsInfo.Items[I]));
     FColumnInfo.Free;
   end;
@@ -587,17 +587,16 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>PAnsiChar</code> in the Delphi programming language.
+  a <code>PChar</code> in the Delphi programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-
-function TZAbstractResultSet.GetPChar(ColumnIndex: Integer): PAnsiChar;
+function TZAbstractResultSet.GetPChar(ColumnIndex: Integer): PChar;
 begin
   FTemp := GetString(ColumnIndex);
-  Result := PAnsiChar(FTemp);
+  Result := PChar(FTemp);
 end;
 
 {**
@@ -609,7 +608,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetString(ColumnIndex: Integer): AnsiString;
+function TZAbstractResultSet.GetString(ColumnIndex: Integer): string;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -631,11 +630,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeString);
 {$ENDIF}
-{$IFDEF DELPHI12_UP}
-  Result := GetString(ColumnIndex);
-{$ELSE}
   Result := '';
-{$ENDIF}
 end;
 
 {**
@@ -1042,22 +1037,6 @@ begin
     Result.VType := vtNull;
 end;
 
-{**
-  Gets the DefaultExpression value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>String</code>.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the DefaultExpression value
-}
-function TZAbstractResultSet.GetDefaultExpression(ColumnIndex: Integer): string;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stString);
-{$ENDIF}
-  Result := '';
-end;
-
 //======================================================================
 // Methods for accessing results by column name
 //======================================================================
@@ -1078,13 +1057,13 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>PAnsiChar</code> in the Delphi programming language.
+  a <code>PChar</code> in the Delphi programming language.
 
   @param columnName the SQL name of the column
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetPCharByName(const ColumnName: string): PAnsiChar;
+function TZAbstractResultSet.GetPCharByName(const ColumnName: string): PChar;
 begin
   Result := GetPChar(GetColumnIndex(ColumnName));
 end;
@@ -1098,7 +1077,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetStringByName(const ColumnName: string): AnsiString;
+function TZAbstractResultSet.GetStringByName(const ColumnName: string): string;
 begin
   Result := GetString(GetColumnIndex(ColumnName));
 end;
@@ -1451,7 +1430,7 @@ end;
 
   @return the SQL name for this <code>ResultSet</code> object's cursor
 }
-function TZAbstractResultSet.GetCursorName: AnsiString;
+function TZAbstractResultSet.GetCursorName: string;
 begin
   Result := '';
 end;
@@ -2010,7 +1989,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdatePChar(ColumnIndex: Integer; Value: PAnsiChar);
+procedure TZAbstractResultSet.UpdatePChar(ColumnIndex: Integer; Value: PChar);
 begin
   UpdateString(ColumnIndex, Value);
 end;
@@ -2025,7 +2004,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateString(ColumnIndex: Integer; const Value: AnsiString);
+procedure TZAbstractResultSet.UpdateString(ColumnIndex: Integer; const Value: string);
 begin
   RaiseReadOnlyException;
 end;
@@ -2178,20 +2157,8 @@ begin
     vtString: UpdateString(ColumnIndex, Value.VString);
     vtDateTime: UpdateTimestamp(ColumnIndex, Value.VDateTime);
     vtUnicodeString: UpdateUnicodeString(ColumnIndex, Value.VUnicodeString);
-  else
-    UpdateNull(ColumnIndex);
+    else UpdateNull(ColumnIndex);
   end;
-end;
-
-{**
-  Updates the DefaultExpression of the designated column with a <code>String</code> value.
-  This changes the behaviour of the RowAccessor used by the Resultset
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param x the new DefaultExpression value for the column
-}
-procedure TZAbstractResultSet.UpdateDefaultExpression(ColumnIndex: Integer; const Value: string);
-begin
-  RaiseReadOnlyException;
 end;
 
 {**
@@ -2348,7 +2315,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractResultSet.UpdatePCharByName(const ColumnName: string;
-   Value: PAnsiChar);
+  Value: PChar);
 begin
   UpdatePChar(GetColumnIndex(ColumnName), Value);
 end;
@@ -2364,7 +2331,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractResultSet.UpdateStringByName(const ColumnName: string;
-   const Value: AnsiString);
+  const Value: string);
 begin
   UpdateString(GetColumnIndex(ColumnName), Value);
 end;
@@ -2647,8 +2614,7 @@ var
       Result := 1
     else if Value1 < 0 then
       Result := -1
-    else
-      Result := 0;
+    else Result := 0;
   end;
 
 begin
@@ -2672,8 +2638,7 @@ begin
       begin
         if Value1.VType <> vtNull then
           Result := 1
-        else
-          Result := -1;
+        else Result := -1;
         if not ColumnDirs[I] then
           Result := -Result;
         Break;
@@ -2685,8 +2650,7 @@ begin
               Result := 0
             else if Value1.VBoolean = True then
               Result := 1
-            else
-              Result := -1;
+            else Result := -1;
           end;
         vtInteger:
           Result := Value1.VInteger - Value2.VInteger;
@@ -2697,7 +2661,11 @@ begin
         vtString:
           Result := AnsiCompareStr(Value1.VString, Value2.VString);
         vtUnicodeString:
+        {$IFNDEF VER130BELOW}
           Result := WideCompareStr(Value1.VUnicodeString, Value2.VUnicodeString);
+        {$ELSE}
+          Result := AnsiCompareStr(Value1.VUnicodeString, Value2.VUnicodeString);
+        {$ENDIF}
       end;
       if Result <> 0 then
       begin
@@ -2833,26 +2801,25 @@ end;
   Gets the string from the stored data.
   @return a string which contains the stored data.
 }
-function TZAbstractBlob.GetString: AnsiString;
+function TZAbstractBlob.GetString: string;
 begin
   if (FBlobSize > 0) and Assigned(FBlobData) then
-    System.SetString(Result, PAnsiChar(FBlobData), FBlobSize)
-  else
-    Result := '';
+    System.SetString(Result, PChar(FBlobData), FBlobSize)
+  else Result := '';
 end;
 
 {**
   Sets a new string data to this blob content.
   @param Value a new string data.
 }
-procedure TZAbstractBlob.SetString(const Value: AnsiString);
+procedure TZAbstractBlob.SetString(const Value: string);
 begin
   Clear;
   FBlobSize := System.Length(Value);
   if FBlobSize > 0 then
   begin
     GetMem(FBlobData, FBlobSize);
-    System.Move(PAnsiChar(Value)^, FBlobData^, FBlobSize);
+    System.Move(PChar(Value)^, FBlobData^, FBlobSize);
   end;
   FUpdated := True;
 end;
@@ -2861,22 +2828,9 @@ end;
   Gets the wide string from the stored data.
   @return a string which contains the stored data.
 }
-
-// gto: this must be tested!
 function TZAbstractBlob.GetUnicodeString: WideString;
-var
-  Buffer: AnsiString;
-  Len: Integer;
 begin
-  Buffer := GetString;
-  Len := System.Length(Buffer);
-
-  if Len > 0 then
-  begin
-    Assert(Len mod 2 = 0);
-    SetLength(Result, Len div 2);
-    System.Move(PAnsiChar(Buffer)^, Pointer(Result)^, Len);
-  end;
+  Result := GetString;
 end;
 
 {**
@@ -2899,15 +2853,11 @@ var
 begin
   if not IsEmpty then
   begin
-    if (FBlobSize > 0) and Assigned(FBlobData) then
-       System.SetString(TempString, PAnsiChar(FBlobData), FBlobSize)
-    else
-       TempString := '';
+    TempString := GetString;
     SetLength(Result, System.Length(TempString));
     for I := 0 to System.Length(TempString) - 1 do
       Result[I] := Ord(TempString[I + 1]);
-  end
-  else
+  end else
     Result := nil;
 end;
 
@@ -2924,16 +2874,9 @@ begin
   begin
     SetLength(TempString, High(Value) + 1);
     for I := 0 to High(Value) do
-       TempString[I + 1] := AnsiChar(Value[I]);
-    Clear;
-    FBlobSize := System.Length(TempString);
-    if FBlobSize > 0 then
-    begin
-       GetMem(FBlobData, FBlobSize);
-       System.Move(PAnsiChar(TempString)^, FBlobData^, FBlobSize);
-    end;
-  end
-  else
+      TempString[I + 1] := Chr(Value[I]);
+    SetString(TempString);
+  end else
     Clear;
   FUpdated := True;
 end;

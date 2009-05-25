@@ -50,6 +50,11 @@ contains
 {$ENDIF}
 
 {$IFDEF ENABLE_MYSQL}
+  {$IFDEF ENABLE_MYSQL_DEPRECATED}
+  ZPlainMySql320 in '../../src/plain/ZPlainMySql320.pas',
+  ZPlainMySql323 in '../../src/plain/ZPlainMySql323.pas',
+  ZPlainMySql40 in '../../src/plain/ZPlainMySql40.pas',
+  {$ENDIF}
   ZPlainMySql41 in '../../src/plain/ZPlainMySql41.pas',
   ZPlainMySql5 in '../../src/plain/ZPlainMySql5.pas',
   ZPlainMySqlDriver in '../../src/plain/ZPlainMySqlDriver.pas',
@@ -61,6 +66,12 @@ contains
   ZPlainPostgreSql7 in '../../src/plain/ZPlainPostgreSql7.pas',
   ZPlainPostgreSql8 in '../../src/plain/ZPlainPostgreSql8.pas',
 {$ENDIF}
+
+{$IFDEF ENABLE_DB2}
+  ZPlainDb2 in '../../src/plain/ZPlainDb2.pas',
+  ZPlainDb2Driver in '../../src/plain/ZPlainDb2Driver.pas',
+{$ENDIF}
+
 
 {$IFDEF ENABLE_ADO}
   ZPlainAdoDriver in '../../src/plain/ZPlainAdoDriver.pas',

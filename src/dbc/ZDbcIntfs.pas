@@ -58,8 +58,11 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, ZClasses, ZCollections, ZSysUtils, ZCompatibility,
-  ZTokenizer, ZSelectSchema, ZGenericSqlAnalyser, ZDbcLogging, ZVariant, ZPlainDriver;
+{$IFNDEF VER130BELOW}
+  Types,
+{$ENDIF}
+  Classes, SysUtils, ZClasses, ZCollections, ZSysUtils, ZCompatibility,
+  ZTokenizer, ZSelectSchema, ZGenericSqlAnalyser, ZDbcLogging, ZVariant;
 
 const
   { Constants from JDBC DatabaseMetadata }
@@ -149,7 +152,6 @@ type
   IZDriver = interface;
   IZConnection = interface;
   IZDatabaseMetadata = interface;
-  IZDatabaseInfo = interface;
   IZStatement = interface;
   IZPreparedStatement = interface;
   IZCallableStatement = interface;
@@ -238,14 +240,14 @@ type
     //Ping Server Support (firmos) 27032006
 
     function PingServer: Integer;
-    function EscapeString(Value: AnsiString): AnsiString;
+    function EscapeString(Value : String) : String;
+
 
     procedure Open;
     procedure Close;
     function IsClosed: Boolean;
 
     function GetDriver: IZDriver;
-    function GetIZPlainDriver: IZPlainDriver;
     function GetMetadata: IZDatabaseMetadata;
     function GetParameters: TStrings;
     function GetClientVersion: Integer;
@@ -268,10 +270,129 @@ type
   IZDatabaseMetadata = interface(IZInterface)
     ['{FE331C2D-0664-464E-A981-B4F65B85D1A8}']
 
+    function AllProceduresAreCallable: Boolean;
+    function AllTablesAreSelectable: Boolean;
     function GetURL: string;
     function GetUserName: string;
+    function IsReadOnly: Boolean;
+    function NullsAreSortedHigh: Boolean;
+    function NullsAreSortedLow: Boolean;
+    function NullsAreSortedAtStart: Boolean;
+    function NullsAreSortedAtEnd: Boolean;
+    function GetDatabaseProductName: string;
+    function GetDatabaseProductVersion: string;
+    function GetDriverName: string;
+    function GetDriverVersion: string;
+    function GetDriverMajorVersion: Integer;
+    function GetDriverMinorVersion: Integer;
+    function UsesLocalFiles: Boolean;
+    function UsesLocalFilePerTable: Boolean;
+    function SupportsMixedCaseIdentifiers: Boolean;
+    function StoresUpperCaseIdentifiers: Boolean;
+    function StoresLowerCaseIdentifiers: Boolean;
+    function StoresMixedCaseIdentifiers: Boolean;
+    function SupportsMixedCaseQuotedIdentifiers: Boolean;
+    function StoresUpperCaseQuotedIdentifiers: Boolean;
+    function StoresLowerCaseQuotedIdentifiers: Boolean;
+    function StoresMixedCaseQuotedIdentifiers: Boolean;
+    function GetIdentifierQuoteString: string;
+    function GetSQLKeywords: string;
+    function GetNumericFunctions: string;
+    function GetStringFunctions: string;
+    function GetSystemFunctions: string;
+    function GetTimeDateFunctions: string;
+    function GetSearchStringEscape: string;
+    function GetExtraNameCharacters: string;
 
-    function GetDatabaseInfo: IZDatabaseInfo; // technobot 2008-06-24
+    function SupportsAlterTableWithAddColumn: Boolean;
+    function SupportsAlterTableWithDropColumn: Boolean;
+    function SupportsColumnAliasing: Boolean;
+    function NullPlusNonNullIsNull: Boolean;
+    function SupportsConvert: Boolean;
+    function SupportsConvertForTypes(FromType: TZSQLType; ToType: TZSQLType):
+      Boolean;
+    function SupportsTableCorrelationNames: Boolean;
+    function SupportsDifferentTableCorrelationNames: Boolean;
+    function SupportsExpressionsInOrderBy: Boolean;
+    function SupportsOrderByUnrelated: Boolean;
+    function SupportsGroupBy: Boolean;
+    function SupportsGroupByUnrelated: Boolean;
+    function SupportsGroupByBeyondSelect: Boolean;
+    function SupportsLikeEscapeClause: Boolean;
+    function SupportsMultipleResultSets: Boolean;
+    function SupportsMultipleTransactions: Boolean;
+    function SupportsNonNullableColumns: Boolean;
+    function SupportsMinimumSQLGrammar: Boolean;
+    function SupportsCoreSQLGrammar: Boolean;
+    function SupportsExtendedSQLGrammar: Boolean;
+    function SupportsANSI92EntryLevelSQL: Boolean;
+    function SupportsANSI92IntermediateSQL: Boolean;
+    function SupportsANSI92FullSQL: Boolean;
+    function SupportsIntegrityEnhancementFacility: Boolean;
+    function SupportsOuterJoins: Boolean;
+    function SupportsFullOuterJoins: Boolean;
+    function SupportsLimitedOuterJoins: Boolean;
+    function GetSchemaTerm: string;
+    function GetProcedureTerm: string;
+    function GetCatalogTerm: string;
+    function IsCatalogAtStart: Boolean;
+    function GetCatalogSeparator: string;
+    function SupportsSchemasInDataManipulation: Boolean;
+    function SupportsSchemasInProcedureCalls: Boolean;
+    function SupportsSchemasInTableDefinitions: Boolean;
+    function SupportsSchemasInIndexDefinitions: Boolean;
+    function SupportsSchemasInPrivilegeDefinitions: Boolean;
+    function SupportsCatalogsInDataManipulation: Boolean;
+    function SupportsCatalogsInProcedureCalls: Boolean;
+    function SupportsCatalogsInTableDefinitions: Boolean;
+    function SupportsCatalogsInIndexDefinitions: Boolean;
+    function SupportsCatalogsInPrivilegeDefinitions: Boolean;
+    function SupportsPositionedDelete: Boolean;
+    function SupportsPositionedUpdate: Boolean;
+    function SupportsSelectForUpdate: Boolean;
+    function SupportsStoredProcedures: Boolean;
+    function SupportsSubqueriesInComparisons: Boolean;
+    function SupportsSubqueriesInExists: Boolean;
+    function SupportsSubqueriesInIns: Boolean;
+    function SupportsSubqueriesInQuantifieds: Boolean;
+    function SupportsCorrelatedSubqueries: Boolean;
+    function SupportsUnion: Boolean;
+    function SupportsUnionAll: Boolean;
+    function SupportsOpenCursorsAcrossCommit: Boolean;
+    function SupportsOpenCursorsAcrossRollback: Boolean;
+    function SupportsOpenStatementsAcrossCommit: Boolean;
+    function SupportsOpenStatementsAcrossRollback: Boolean;
+
+    function GetMaxBinaryLiteralLength: Integer;
+    function GetMaxCharLiteralLength: Integer;
+    function GetMaxColumnNameLength: Integer;
+    function GetMaxColumnsInGroupBy: Integer;
+    function GetMaxColumnsInIndex: Integer;
+    function GetMaxColumnsInOrderBy: Integer;
+    function GetMaxColumnsInSelect: Integer;
+    function GetMaxColumnsInTable: Integer;
+    function GetMaxConnections: Integer;
+    function GetMaxCursorNameLength: Integer;
+    function GetMaxIndexLength: Integer;
+    function GetMaxSchemaNameLength: Integer;
+    function GetMaxProcedureNameLength: Integer;
+    function GetMaxCatalogNameLength: Integer;
+    function GetMaxRowSize: Integer;
+    function DoesMaxRowSizeIncludeBlobs: Boolean;
+    function GetMaxStatementLength: Integer;
+    function GetMaxStatements: Integer;
+    function GetMaxTableNameLength: Integer;
+    function GetMaxTablesInSelect: Integer;
+    function GetMaxUserNameLength: Integer;
+
+    function GetDefaultTransactionIsolation: TZTransactIsolationLevel;
+    function SupportsTransactions: Boolean;
+    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
+      Boolean;
+    function SupportsDataDefinitionAndDataManipulationTransactions: Boolean;
+    function SupportsDataManipulationTransactionsOnly: Boolean;
+    function DataDefinitionCausesTransactionCommit: Boolean;
+    function DataDefinitionIgnoredInTransactions: Boolean;
 
     function GetProcedures(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string): IZResultSet;
@@ -313,6 +434,11 @@ type
     function GetSequences(const Catalog: string; const SchemaPattern: string;
       const SequenceNamePattern: string): IZResultSet;
 
+    function SupportsResultSetType(_Type: TZResultSetType): Boolean;
+    function SupportsResultSetConcurrency(_Type: TZResultSetType;
+      Concurrency: TZResultSetConcurrency): Boolean;
+    function SupportsBatchUpdates: Boolean;
+
     function GetUDTs(const Catalog: string; const SchemaPattern: string;
       const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet;
 
@@ -320,151 +446,10 @@ type
     function GetIdentifierConvertor: IZIdentifierConvertor;
 
     procedure ClearCache;overload;
-		procedure ClearCache(const Key: string);overload;
+	procedure ClearCache(const Key: string);overload;
 
     function AddEscapeCharToWildcards(const Pattern:string): string;
-  end;
-
-  {**
-    Database information interface. Used to describe the database as a whole
-    (version, capabilities, policies, etc).
-  } // technobot 2008-06-24
-  IZDatabaseInfo = interface(IZInterface)
-    ['{107CA354-F594-48F9-8E08-CD797F151EA0}']
-
-    // database/driver/server info:
-    function GetDatabaseProductName: string;
-    function GetDatabaseProductVersion: string;
-    function GetDriverName: string;
-    function GetDriverVersion: string;
-    function GetDriverMajorVersion: Integer;
-    function GetDriverMinorVersion: Integer;
-    function GetServerVersion: string;
-
-    // capabilities (what it can/cannot do):
-    function AllProceduresAreCallable: Boolean;
-    function AllTablesAreSelectable: Boolean;
-    function SupportsMixedCaseIdentifiers: Boolean;
-    function SupportsMixedCaseQuotedIdentifiers: Boolean;
-    function SupportsAlterTableWithAddColumn: Boolean;
-    function SupportsAlterTableWithDropColumn: Boolean;
-    function SupportsColumnAliasing: Boolean;
-    function SupportsConvert: Boolean;
-    function SupportsConvertForTypes(FromType: TZSQLType; ToType: TZSQLType):
-      Boolean;
-    function SupportsTableCorrelationNames: Boolean;
-    function SupportsDifferentTableCorrelationNames: Boolean;
-    function SupportsExpressionsInOrderBy: Boolean;
-    function SupportsOrderByUnrelated: Boolean;
-    function SupportsGroupBy: Boolean;
-    function SupportsGroupByUnrelated: Boolean;
-    function SupportsGroupByBeyondSelect: Boolean;
-    function SupportsLikeEscapeClause: Boolean;
-    function SupportsMultipleResultSets: Boolean;
-    function SupportsMultipleTransactions: Boolean;
-    function SupportsNonNullableColumns: Boolean;
-    function SupportsMinimumSQLGrammar: Boolean;
-    function SupportsCoreSQLGrammar: Boolean;
-    function SupportsExtendedSQLGrammar: Boolean;
-    function SupportsANSI92EntryLevelSQL: Boolean;
-    function SupportsANSI92IntermediateSQL: Boolean;
-    function SupportsANSI92FullSQL: Boolean;
-    function SupportsIntegrityEnhancementFacility: Boolean;
-    function SupportsOuterJoins: Boolean;
-    function SupportsFullOuterJoins: Boolean;
-    function SupportsLimitedOuterJoins: Boolean;
-    function SupportsSchemasInDataManipulation: Boolean;
-    function SupportsSchemasInProcedureCalls: Boolean;
-    function SupportsSchemasInTableDefinitions: Boolean;
-    function SupportsSchemasInIndexDefinitions: Boolean;
-    function SupportsSchemasInPrivilegeDefinitions: Boolean;
-    function SupportsCatalogsInDataManipulation: Boolean;
-    function SupportsCatalogsInProcedureCalls: Boolean;
-    function SupportsCatalogsInTableDefinitions: Boolean;
-    function SupportsCatalogsInIndexDefinitions: Boolean;
-    function SupportsCatalogsInPrivilegeDefinitions: Boolean;
-    function SupportsPositionedDelete: Boolean;
-    function SupportsPositionedUpdate: Boolean;
-    function SupportsSelectForUpdate: Boolean;
-    function SupportsStoredProcedures: Boolean;
-    function SupportsSubqueriesInComparisons: Boolean;
-    function SupportsSubqueriesInExists: Boolean;
-    function SupportsSubqueriesInIns: Boolean;
-    function SupportsSubqueriesInQuantifieds: Boolean;
-    function SupportsCorrelatedSubqueries: Boolean;
-    function SupportsUnion: Boolean;
-    function SupportsUnionAll: Boolean;
-    function SupportsOpenCursorsAcrossCommit: Boolean;
-    function SupportsOpenCursorsAcrossRollback: Boolean;
-    function SupportsOpenStatementsAcrossCommit: Boolean;
-    function SupportsOpenStatementsAcrossRollback: Boolean;
-    function SupportsTransactions: Boolean;
-    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
-      Boolean;
-    function SupportsDataDefinitionAndDataManipulationTransactions: Boolean;
-    function SupportsDataManipulationTransactionsOnly: Boolean;
-    function SupportsResultSetType(_Type: TZResultSetType): Boolean;
-    function SupportsResultSetConcurrency(_Type: TZResultSetType;
-      Concurrency: TZResultSetConcurrency): Boolean;
-    function SupportsBatchUpdates: Boolean;
-
-    // maxima:
-    function GetMaxBinaryLiteralLength: Integer;
-    function GetMaxCharLiteralLength: Integer;
-    function GetMaxColumnNameLength: Integer;
-    function GetMaxColumnsInGroupBy: Integer;
-    function GetMaxColumnsInIndex: Integer;
-    function GetMaxColumnsInOrderBy: Integer;
-    function GetMaxColumnsInSelect: Integer;
-    function GetMaxColumnsInTable: Integer;
-    function GetMaxConnections: Integer;
-    function GetMaxCursorNameLength: Integer;
-    function GetMaxIndexLength: Integer;
-    function GetMaxSchemaNameLength: Integer;
-    function GetMaxProcedureNameLength: Integer;
-    function GetMaxCatalogNameLength: Integer;
-    function GetMaxRowSize: Integer;
-    function GetMaxStatementLength: Integer;
-    function GetMaxStatements: Integer;
-    function GetMaxTableNameLength: Integer;
-    function GetMaxTablesInSelect: Integer;
-    function GetMaxUserNameLength: Integer;
-
-    // policies (how are various data and operations handled):
-    function IsReadOnly: Boolean;
-    function IsCatalogAtStart: Boolean;
-    function DoesMaxRowSizeIncludeBlobs: Boolean;
-    function NullsAreSortedHigh: Boolean;
-    function NullsAreSortedLow: Boolean;
-    function NullsAreSortedAtStart: Boolean;
-    function NullsAreSortedAtEnd: Boolean;
-    function NullPlusNonNullIsNull: Boolean;
-    function UsesLocalFiles: Boolean;
-    function UsesLocalFilePerTable: Boolean;
-    function StoresUpperCaseIdentifiers: Boolean;
-    function StoresLowerCaseIdentifiers: Boolean;
-    function StoresMixedCaseIdentifiers: Boolean;
-    function StoresUpperCaseQuotedIdentifiers: Boolean;
-    function StoresLowerCaseQuotedIdentifiers: Boolean;
-    function StoresMixedCaseQuotedIdentifiers: Boolean;
-    function GetDefaultTransactionIsolation: TZTransactIsolationLevel;
-    function DataDefinitionCausesTransactionCommit: Boolean;
-    function DataDefinitionIgnoredInTransactions: Boolean;
-
-    // interface details (terms, keywords, etc):
-    function GetIdentifierQuoteString: string;
-    function GetSchemaTerm: string;
-    function GetProcedureTerm: string;
-    function GetCatalogTerm: string;
-    function GetCatalogSeparator: string;
-    function GetSQLKeywords: string;
-    function GetNumericFunctions: string;
-    function GetStringFunctions: string;
-    function GetSystemFunctions: string;
-    function GetTimeDateFunctions: string;
-    function GetSearchStringEscape: string;
-    function GetExtraNameCharacters: string;
-  end;
+	end;
 
   {** Generic SQL statement interface. }
   IZStatement = interface(IZInterface)
@@ -482,7 +467,7 @@ type
     function GetQueryTimeout: Integer;
     procedure SetQueryTimeout(Value: Integer);
     procedure Cancel;
-    procedure SetCursorName(const Value: AnsiString);
+    procedure SetCursorName(const Value: string);
 
     function Execute(const SQL: string): Boolean;
     function GetResultSet: IZResultSet;
@@ -522,11 +507,6 @@ type
     function ExecuteQueryPrepared: IZResultSet;
     function ExecuteUpdatePrepared: Integer;
     function ExecutePrepared: Boolean;
-    
-    function GetSQL : String;
-//    procedure Prepare;
-//    procedure Unprepare;
-//    function IsPrepared: Boolean;
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
 
@@ -539,8 +519,8 @@ type
     procedure SetFloat(ParameterIndex: Integer; Value: Single);
     procedure SetDouble(ParameterIndex: Integer; Value: Double);
     procedure SetBigDecimal(ParameterIndex: Integer; Value: Extended);
-    procedure SetPChar(ParameterIndex: Integer; Value: PAnsiChar);
-    procedure SetString(ParameterIndex: Integer; const Value: AnsiString);
+    procedure SetPChar(ParameterIndex: Integer; Value: PChar);
+    procedure SetString(ParameterIndex: Integer; const Value: string);
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: WideString);
     procedure SetBytes(ParameterIndex: Integer; const Value: TByteDynArray);
     procedure SetDate(ParameterIndex: Integer; Value: TDateTime);
@@ -567,8 +547,8 @@ type
     function WasNull: Boolean;
 
     function IsNull(ParameterIndex: Integer): Boolean;
-    function GetPChar(ParameterIndex: Integer): PAnsiChar;
-    function GetString(ParameterIndex: Integer): AnsiString;
+    function GetPChar(ParameterIndex: Integer): PChar;
+    function GetString(ParameterIndex: Integer): string;
     function GetUnicodeString(ParameterIndex: Integer): WideString;
     function GetBoolean(ParameterIndex: Integer): Boolean;
     function GetByte(ParameterIndex: Integer): ShortInt;
@@ -598,8 +578,8 @@ type
     //======================================================================
 
     function IsNull(ColumnIndex: Integer): Boolean;
-    function GetPChar(ColumnIndex: Integer): PAnsiChar;
-    function GetString(ColumnIndex: Integer): AnsiString;
+    function GetPChar(ColumnIndex: Integer): PChar;
+    function GetString(ColumnIndex: Integer): string;
     function GetUnicodeString(ColumnIndex: Integer): WideString;
     function GetBoolean(ColumnIndex: Integer): Boolean;
     function GetByte(ColumnIndex: Integer): ShortInt;
@@ -618,15 +598,14 @@ type
     function GetBinaryStream(ColumnIndex: Integer): TStream;
     function GetBlob(ColumnIndex: Integer): IZBlob;
     function GetValue(ColumnIndex: Integer): TZVariant;
-    function GetDefaultExpression(ColumnIndex: Integer): string;
 
     //======================================================================
     // Methods for accessing results by column name
     //======================================================================
 
     function IsNullByName(const ColumnName: string): Boolean;
-    function GetPCharByName(const ColumnName: string): PAnsiChar;
-    function GetStringByName(const ColumnName: string): AnsiString;
+    function GetPCharByName(const ColumnName: string): PChar;
+    function GetStringByName(const ColumnName: string): string;
     function GetUnicodeStringByName(const ColumnName: string): WideString;
     function GetBooleanByName(const ColumnName: string): Boolean;
     function GetByteByName(const ColumnName: string): ShortInt;
@@ -653,7 +632,7 @@ type
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;
 
-    function GetCursorName: AnsiString;
+    function GetCursorName: string;
     function GetMetadata: IZResultSetMetadata;
     function FindColumn(const ColumnName: string): Integer;
     
@@ -707,8 +686,8 @@ type
     procedure UpdateFloat(ColumnIndex: Integer; Value: Single);
     procedure UpdateDouble(ColumnIndex: Integer; Value: Double);
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended);
-    procedure UpdatePChar(ColumnIndex: Integer; Value: PAnsiChar);
-    procedure UpdateString(ColumnIndex: Integer; const Value: AnsiString);
+    procedure UpdatePChar(ColumnIndex: Integer; Value: PChar);
+    procedure UpdateString(ColumnIndex: Integer; const Value: string);
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString);
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray);
     procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime);
@@ -718,7 +697,6 @@ type
     procedure UpdateUnicodeStream(ColumnIndex: Integer; Value: TStream);
     procedure UpdateBinaryStream(ColumnIndex: Integer; Value: TStream);
     procedure UpdateValue(ColumnIndex: Integer; const Value: TZVariant);
-    procedure UpdateDefaultExpression(ColumnIndex: Integer; const Value: string);
 
     //======================================================================
     // Methods for accessing results by column name
@@ -733,8 +711,8 @@ type
     procedure UpdateFloatByName(const ColumnName: string; Value: Single);
     procedure UpdateDoubleByName(const ColumnName: string; Value: Double);
     procedure UpdateBigDecimalByName(const ColumnName: string; Value: Extended);
-    procedure UpdatePCharByName(const ColumnName: string; Value: PAnsiChar);
-    procedure UpdateStringByName(const ColumnName: string; const Value: AnsiString);
+    procedure UpdatePCharByName(const ColumnName: string; Value: PChar);
+    procedure UpdateStringByName(const ColumnName: string; const Value: string);
     procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: WideString);
     procedure UpdateBytesByName(const ColumnName: string; const Value: TByteDynArray);
     procedure UpdateDateByName(const ColumnName: string; Value: TDateTime);
@@ -801,8 +779,8 @@ type
     function IsUpdated: Boolean;
     function Length: LongInt;
 
-    function GetString: AnsiString;
-    procedure SetString(const Value: AnsiString);
+    function GetString: string;
+    procedure SetString(const Value: string);
     function GetUnicodeString: WideString;
     procedure SetUnicodeString(const Value: WideString);
     function GetBytes: TByteDynArray;
@@ -1072,8 +1050,7 @@ var
   Listener: IZLoggingListener;
   Event: TZLoggingEvent;
 begin
-  if FLoggingListeners.Count = 0 then
-    Exit;
+  if FLoggingListeners.Count = 0 then Exit;
   Event := TZLoggingEvent.Create(Category, Protocol, Msg, ErrorCode, Error);
   try
     for I := 0 to FLoggingListeners.Count - 1 do
@@ -1098,8 +1075,7 @@ end;
 procedure TZDriverManager.LogMessage(Category: TZLoggingCategory;
   const Protocol: string; const Msg: string);
 begin
-  if FLoggingListeners.Count = 0 then
-      Exit;
+  if FLoggingListeners.Count = 0 then Exit;
   LogError(Category, Protocol, Msg, 0, '');
 end;
 

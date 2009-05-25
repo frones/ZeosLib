@@ -776,8 +776,8 @@ end;
 
 procedure TZTestPostgreSqlMetadataCase.TestIdentifierQuoting;
 begin
-      Check(Metadata.GetIdentifierConvertor.Quote('A9A')=Metadata.GetDatabaseInfo.GetIdentifierQuoteString[1]+'A9A'+Metadata.GetDatabaseInfo.GetIdentifierQuoteString[length(Metadata.GetDatabaseInfo.GetIdentifierQuoteString)]);
-      Check(Metadata.GetIdentifierConvertor.Quote('a9A')=Metadata.GetDatabaseInfo.GetIdentifierQuoteString[1]+'a9A'+Metadata.GetDatabaseInfo.GetIdentifierQuoteString[length(Metadata.GetDatabaseInfo.GetIdentifierQuoteString)]);
+      Check(Metadata.GetIdentifierConvertor.Quote('A9A')=Metadata.GetIdentifierQuoteString[1]+'A9A'+Metadata.GetIdentifierQuoteString[length(Metadata.GetIdentifierQuoteString)]);
+      Check(Metadata.GetIdentifierConvertor.Quote('a9A')=Metadata.GetIdentifierQuoteString[1]+'a9A'+Metadata.GetIdentifierQuoteString[length(Metadata.GetIdentifierQuoteString)]);
 end;
 
 initialization

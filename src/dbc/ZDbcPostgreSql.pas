@@ -58,7 +58,10 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection,
+{$IFNDEF VER130BELOW}
+  Types,
+{$ENDIF}
+  ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection,
   ZPlainPostgreSqlDriver, ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser;
 
 type
@@ -153,7 +156,7 @@ TZPgCharactersetType = (
     FServerSubVersion: Integer;
     FNoticeProcessor: TZPostgreSQLNoticeProcessor;
   protected
-    function BuildConnectStr: AnsiString;
+    function BuildConnectStr: string;
     procedure StartTransactionSupport;
     procedure LoadServerVersion;
   public
@@ -216,7 +219,7 @@ uses
   ZDbcPostgreSqlUtils, ZDbcPostgreSqlMetadata, ZPostgreSqlToken,
   ZPostgreSqlAnalyser;
 
-procedure DefaultNoticeProcessor(arg: Pointer; message: PAnsiChar); cdecl;
+procedure DefaultNoticeProcessor(arg: Pointer; message: PChar); cdecl;
 begin
 DriverManager.LogMessage(lcOther,'Postgres NOTICE',message);
 end;
@@ -366,24 +369,20 @@ begin
     TZPostgreSQLDatabaseMetadata.Create(Self, Url, Info));
 
   { Sets a default PostgreSQL port }
-  if Self.Port = 0 then
-     Self.Port := 5432;
+  if Self.Port = 0 then Self.Port := 5432;
 
   { Define connect options. }
   if Info.Values['beginreq'] <> '' then
     FBeginRequired := StrToBoolEx(Info.Values['beginreq'])
-  else
-    FBeginRequired := True;
+  else FBeginRequired := True;
 
   FPlainDriver := PlainDriver;
-  Self.PlainDriver := PlainDriver;
   TransactIsolationLevel := tiNone;
 
   { Processes connection properties. }
   if Info.Values['oidasblob'] <> '' then
     FOidAsBlob := StrToBoolEx(Info.Values['oidasblob'])
-  else
-    FOidAsBlob := False;
+  else FOidAsBlob := False;
   FClientCodePage := Trim(Info.Values['codepage']);
   FCharactersetCode := pg_CS_code(FClientCodePage);
 //  DriverManager.LogError(lcOther,'','Create',Integer(FCharactersetCode),'');
@@ -404,7 +403,7 @@ end;
   Builds a connection string for PostgreSQL.
   @return a built connection string.
 }
-function TZPostgreSQLConnection.BuildConnectStr: AnsiString;
+function TZPostgreSQLConnection.BuildConnectStr: string;
 var
   ConnectTimeout: Integer;
 begin
@@ -453,7 +452,7 @@ end;
 procedure TZPostgreSQLConnection.StartTransactionSupport;
 var
   QueryHandle: PZPostgreSQLResult;
-   SQL: PAnsiChar;
+  SQL: PChar;
 begin
   if TransactIsolationLevel <> tiNone then
   begin
@@ -494,15 +493,14 @@ procedure TZPostgreSQLConnection.Open;
 var
   LogMessage: string;
   QueryHandle: PZPostgreSQLResult;
-  SQL: PAnsiChar;
+  SQL: PChar;
 begin
-  if not Closed then
-    Exit;
+  if not Closed then Exit;
 
   LogMessage := Format('CONNECT TO "%s" AS USER "%s"', [Database, User]);
 
   { Connect to PostgreSQL database. }
-  FHandle := FPlainDriver.ConnectDatabase(PAnsiChar(BuildConnectStr));
+  FHandle := FPlainDriver.ConnectDatabase(PChar(BuildConnectStr));
   if FPlainDriver.GetStatus(FHandle) = CONNECTION_BAD then
     CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcConnect, LogMessage,nil)
   else
@@ -512,19 +510,15 @@ begin
 
   FPlainDriver.SetNoticeProcessor(FHandle,FNoticeProcessor,nil);
 
-  { Sets a client codepage. } 
-  if FClientCodePage <> '' then 
-  begin 
-  {$IFDEF DELPHI12_UP} 
-    SQL := PAnsiChar(utf8string(Format('SET CLIENT_ENCODING TO ''%s''', [FClientCodePage]))); 
-  {$ELSE} 
-    SQL := PAnsiChar(Format('SET CLIENT_ENCODING TO ''%s''', [FClientCodePage])); 
-  {$ENDIF} 
-    QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL); 
-    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle); 
-    FPlainDriver.Clear(QueryHandle); 
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL); 
-  end; 
+  { Sets a client codepage. }
+  if FClientCodePage <> '' then
+  begin
+    SQL := PChar(Format('SET CLIENT_ENCODING TO ''%s''', [FClientCodePage]));
+    QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL);
+    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
+    FPlainDriver.Clear(QueryHandle);
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+  end;
 
   { Turn on transaction mode }
   StartTransactionSupport;
@@ -535,15 +529,14 @@ begin
 end;
 
 procedure TZPostgreSQLConnection.PrepareTransaction(const transactionid: string);
-var
-   QueryHandle: PZPostgreSQLResult;
-   SQL: PAnsiChar;
-   Temp: string;
+var  QueryHandle: PZPostgreSQLResult;
+     SQL: PChar;
+     Temp: string;
 begin
   if (TransactIsolationLevel <> tiNone) and not Closed then
   begin
     Temp:='PREPARE TRANSACTION '''+copy(transactionid,1,200)+'''';
-    SQL := PAnsiChar(Temp);
+    SQL := PChar(Temp);
     QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL);
     CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
     FPlainDriver.Clear(QueryHandle);
@@ -569,8 +562,7 @@ end;
 function TZPostgreSQLConnection.CreateRegularStatement(Info: TStrings):
   IZStatement;
 begin
-  if IsClosed then
-    Open;
+  if IsClosed then Open;
   Result := TZPostgreSQLStatement.Create(FPlainDriver, Self, Info, FHandle);
 end;
 
@@ -605,8 +597,7 @@ end;
 function TZPostgreSQLConnection.CreatePreparedStatement(
   const SQL: string; Info: TStrings): IZPreparedStatement;
 begin
-  if IsClosed then
-     Open;
+  if IsClosed then Open;
   Result := TZPostgreSQLPreparedStatement.Create(FPlainDriver,
     Self, SQL, Info, FHandle);
 end;
@@ -621,7 +612,7 @@ end;
 procedure TZPostgreSQLConnection.Commit;
 var
   QueryHandle: PZPostgreSQLResult;
-  SQL: PAnsiChar;
+  SQL: PChar;
 begin
   if (TransactIsolationLevel <> tiNone) and not Closed then
   begin
@@ -636,15 +627,14 @@ begin
 end;
 
 procedure TZPostgreSQLConnection.CommitPrepared(const transactionid: string);
-var
-     QueryHandle: PZPostgreSQLResult;
-     SQL: PAnsiChar;
+var  QueryHandle: PZPostgreSQLResult;
+     SQL: PChar;
      Temp: string;
 begin
   if (TransactIsolationLevel = tiNone) and not Closed then
   begin
     Temp:='COMMIT PREPARED '''+copy(transactionid,1,200)+'''';
-    SQL := PAnsiChar(Temp);
+    SQL := PChar(Temp);
     QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL);
     CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
     FPlainDriver.Clear(QueryHandle);
@@ -663,7 +653,7 @@ end;
 procedure TZPostgreSQLConnection.Rollback;
 var
   QueryHandle: PZPostgreSQLResult;
-  SQL: PAnsiChar;
+  SQL: PChar;
 begin
   if (TransactIsolationLevel <> tiNone) and not Closed then
   begin
@@ -678,15 +668,14 @@ begin
 end;
 
 procedure TZPostgreSQLConnection.RollbackPrepared(const transactionid: string);
-var
-   QueryHandle: PZPostgreSQLResult;
-   SQL: PAnsiChar;
-   Temp: string;
+var  QueryHandle: PZPostgreSQLResult;
+     SQL: PChar;
+     Temp: string;
 begin
   if (TransactIsolationLevel = tiNone) and not Closed then
   begin
     Temp:='ROLLBACK PREPARED '''+copy(transactionid,1,200)+'''';
-    SQL := PAnsiChar(Temp);
+    SQL := PChar(Temp);
     QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL);
     CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
     FPlainDriver.Clear(QueryHandle);
@@ -726,7 +715,7 @@ procedure TZPostgreSQLConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);
 var
   QueryHandle: PZPostgreSQLResult;
-  SQL: PAnsiChar;
+  SQL: PChar;
 begin
   if not (Level in [tiNone, tiReadCommitted, tiSerializable]) then
     raise EZSQLException.Create(SIsolationIsNotSupported);
@@ -773,13 +762,12 @@ function TZPostgreSQLConnection.GetTypeNameByOid(Id: Oid): string;
 var
   I, Index: Integer;
   QueryHandle: PZPostgreSQLResult;
-  SQL: PAnsiChar;
+  SQL: PChar;
   TypeCode, BaseTypeCode: Integer;
   TypeName: string;
   LastVersion: boolean;
 begin
-  if Closed then
-     Open;
+  if Closed then Open;
 
   if (GetServerMajorVersion < 7 ) or
     ((GetServerMajorVersion = 7) and (GetServerMinorVersion < 3)) then
@@ -818,8 +806,7 @@ begin
         Index := FTypeList.IndexOfObject(TObject(BaseTypeCode));
         if Index >= 0 then
           TypeName := FTypeList[Index]
-        else
-          TypeName := '';
+        else TypeName := '';
       end;
       FTypeList.AddObject(TypeName, TObject(TypeCode));
     end;
@@ -829,8 +816,7 @@ begin
   I := FTypeList.IndexOfObject(TObject(Id));
   if I >= 0 then
     Result := FTypeList[I]
-  else
-    Result := '';
+  else Result := '';
 end;
 
 {**
@@ -887,10 +873,9 @@ var
   Temp: string;
   List: TStrings;
   QueryHandle: PZPostgreSQLResult;
-  SQL: PAnsiChar;
+  SQL: PChar;
 begin
-  if Closed then
-    Open;
+  if Closed then Open;
   SQL := 'SELECT version()';
   QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL);
   CheckPostgreSQLError(Self, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);

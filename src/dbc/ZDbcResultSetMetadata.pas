@@ -60,7 +60,7 @@ interface
 uses
   Classes, SysUtils, Contnrs, ZDbcIntfs, ZClasses, ZCollections,
   ZGenericSqlAnalyser,
-{$IFDEF FPC}
+{$IFDEF VER130BELOW}
   {$IFDEF WIN32}
     Comobj,
   {$ENDIF}
@@ -91,7 +91,6 @@ type
     FWritable: Boolean;
     FDefinitelyWritable: Boolean;
     FDefaultValue: string;
-    FDefaultExpression : string;
   public
     constructor Create;
     function GetColumnTypeName: string;
@@ -118,7 +117,6 @@ type
     property DefinitelyWritable: Boolean read FDefinitelyWritable
       write FDefinitelyWritable;
     property DefaultValue: string read FDefaultValue write FDefaultValue;
-    property DefaultExpression: string read FDefaultExpression write FDefaultExpression;
   end;
 
   {** Implements Abstract ResultSet Metadata. }
@@ -131,7 +129,6 @@ type
     FTableColumns: TZHashMap;
     FIdentifierConvertor: IZIdentifierConvertor;
     FResultSet: TZAbstractResultSet;
-    procedure SetMetadata(const Value: IZDatabaseMetadata);
   protected
     procedure LoadColumn(ColumnIndex: Integer; ColumnInfo: TZColumnInfo;
       SelectSchema: IZSelectSchema); virtual;
@@ -145,7 +142,7 @@ type
     procedure LoadColumns;
     procedure ReplaceStarColumns(SelectSchema: IZSelectSchema);
 
-    property MetaData: IZDatabaseMetadata read FMetadata write SetMetadata;
+    property MetaData: IZDatabaseMetadata read FMetadata write FMetadata;
     property ColumnsLabels: TStrings read FColumnsLabels write FColumnsLabels;
     property SQL: string read FSQL write FSQL;
     property IdentifierConvertor: IZIdentifierConvertor
@@ -237,10 +234,11 @@ constructor TZAbstractResultSetMetadata.Create(Metadata: IZDatabaseMetadata;
 begin
   inherited Create(ParentResultSet);
 
-  SetMetadata(Metadata);
+  FMetadata := Metadata;
   FSQL := SQL;
   FLoaded := not (FMetadata <> nil);
   FTableColumns := TZHashMap.Create;
+  FIdentifierConvertor := TZDefaultIdentifierConvertor.Create(FMetadata);
   FResultSet := ParentResultSet;
 end;
 
@@ -278,8 +276,7 @@ end;
 }
 function TZAbstractResultSetMetadata.IsAutoIncrement(Column: Integer): Boolean;
 begin
-  if not Loaded then
-     LoadColumns;
+  if not Loaded then LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).AutoIncrement;
 end;
 
@@ -290,8 +287,7 @@ end;
 }
 function TZAbstractResultSetMetadata.IsCaseSensitive(Column: Integer): Boolean;
 begin
-  if not Loaded then
-     LoadColumns;
+  if not Loaded then LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).CaseSensitive;
 end;
 
@@ -302,8 +298,7 @@ end;
 }
 function TZAbstractResultSetMetadata.IsSearchable(Column: Integer): Boolean;
 begin
-  if not Loaded then
-     LoadColumns;
+  if not Loaded then LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).Searchable;
 end;
 
@@ -326,8 +321,7 @@ end;
 function TZAbstractResultSetMetadata.IsNullable(
   Column: Integer): TZColumnNullableType;
 begin
-  if not Loaded then
-     LoadColumns;
+  if not Loaded then LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).Nullable;
 end;
 
@@ -398,8 +392,7 @@ end;
 function TZAbstractResultSetMetadata.GetColumnName(
   Column: Integer): string;
 begin
-  if not Loaded then
-     LoadColumns;
+  if not Loaded then LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).ColumnName;
 end;
 
@@ -411,8 +404,7 @@ end;
 function TZAbstractResultSetMetadata.GetSchemaName(
   Column: Integer): string;
 begin
-  if not Loaded then
-     LoadColumns;
+  if not Loaded then LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).SchemaName;
 end;
 
@@ -443,8 +435,7 @@ end;
 }
 function TZAbstractResultSetMetadata.GetTableName(Column: Integer): string;
 begin
-  if not Loaded then
-     LoadColumns;
+  if not Loaded then LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).TableName;
 end;
 
@@ -455,8 +446,7 @@ end;
 }
 function TZAbstractResultSetMetadata.GetCatalogName(Column: Integer): string;
 begin
-  if not Loaded then
-     LoadColumns;
+  if not Loaded then LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).CatalogName;
 end;
 
@@ -489,8 +479,7 @@ end;
 }
 function TZAbstractResultSetMetadata.IsReadOnly(Column: Integer): Boolean;
 begin
-  if not Loaded then
-     LoadColumns;
+  if not Loaded then LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).ReadOnly;
 end;
 
@@ -501,8 +490,7 @@ end;
 }
 function TZAbstractResultSetMetadata.IsWritable(Column: Integer): Boolean;
 begin
-  if not Loaded then
-     LoadColumns;
+  if not Loaded then LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).Writable;
 end;
 
@@ -514,8 +502,7 @@ end;
 function TZAbstractResultSetMetadata.IsDefinitelyWritable(
   Column: Integer): Boolean;
 begin
-  if not Loaded then
-     LoadColumns;
+  if not Loaded then LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).DefinitelyWritable;
 end;
 
@@ -527,8 +514,7 @@ end;
 function TZAbstractResultSetMetadata.GetDefaultValue(
   Column: Integer): string;
 begin
-  if not Loaded then
-     LoadColumns;
+  if not Loaded then LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).DefaultValue;
 end;
 
@@ -540,8 +526,7 @@ end;
 function TZAbstractResultSetMetadata.HasDefaultValue(
   Column: Integer): Boolean;
 begin
-  if not Loaded then
-     LoadColumns;
+  if not Loaded then LoadColumns;
   // '' = NULL / no default value, '''''' = empty string (''), etc.
   Result := not(TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).DefaultValue = '');
 end;
@@ -562,8 +547,7 @@ begin
     Result := Metadata.GetColumns(TableRef.Catalog,
       TableRef.Schema, TableRef.Table, '');
     FTableColumns.Put(TableKey, Result);
-  end
-  else
+  end else
     Result := FTableColumns.Get(TableKey) as IZResultSet;
 end;
 
@@ -738,16 +722,6 @@ begin
     end;
     Inc(I);
   end;
-end;
-
-procedure TZAbstractResultSetMetadata.SetMetadata(
-  const Value: IZDatabaseMetadata);
-begin
-  FMetadata := Value;
-  if Value<>nil then
-    FIdentifierConvertor := Value.GetIdentifierConvertor
-  else
-    FIdentifierConvertor := TZDefaultIdentifierConvertor.Create(FMetadata);
 end;
 
 {**

@@ -149,61 +149,61 @@ type
 
 { ************** Plain API Function types definition ************* }
 
-  Tsqlite_callback = function(p1: Pointer; p2: Integer; var p3: PAnsiChar;
-    var p4: PAnsiChar): Integer; cdecl;
+  Tsqlite_callback = function(p1: Pointer; p2: Integer; var p3: PChar;
+    var p4: PChar): Integer; cdecl;
   Tsqlite_simple_callback = function(p1: Pointer): Integer; cdecl;
   Tsqlite_simple_callback0 = function(p1: Pointer): Pointer; cdecl;
-  Tsqlite_busy_callback = function(p1: Pointer; const p2: PAnsiChar;
+  Tsqlite_busy_callback = function(p1: Pointer; const p2: PChar;
     p3: Integer): Integer; cdecl;
 
   Tsqlite_function_callback = procedure(p1: Psqlite_func; p2: Integer;
-    const p3: PPAnsiChar); cdecl;
+    const p3: PPChar); cdecl;
   Tsqlite_finalize_callback = procedure(p1: Psqlite_func); cdecl;
-  Tsqlite_auth_callback = function(p1: Pointer; p2: Integer; const p3: PAnsiChar;
-    const p4: PAnsiChar; const p5: PAnsiChar; const p6: PAnsiChar): Integer; cdecl;
-  Tsqlite_trace_callback = procedure(p1: Pointer; const p2: PAnsiChar); cdecl;
+  Tsqlite_auth_callback = function(p1: Pointer; p2: Integer; const p3: PChar;
+    const p4: PChar; const p5: PChar; const p6: PChar): Integer; cdecl;
+  Tsqlite_trace_callback = procedure(p1: Pointer; const p2: PChar); cdecl;
 
-  Tsqlite_open = function(const filename: PAnsiChar;var Qsqlite: Psqlite):
+  Tsqlite_open = function(const filename: PChar;var Qsqlite: Psqlite):
     Integer; cdecl;
   Tsqlite_close = procedure(db: Psqlite); cdecl;
   Tsqlite_column_count = function(db: Psqlite): Integer; cdecl;
-  Tsqlite_column_bytes = function(db: Psqlite; iCol: Integer): PAnsiChar; cdecl;
-  Tsqlite_column_name = function(db: Psqlite; iCol: Integer): PAnsiChar; cdecl;
-  Tsqlite_column_decltype = function(db: Psqlite; iCol: Integer): PAnsiChar; cdecl;
-  Tsqlite_exec = function(db: Psqlite; const sql: PAnsiChar;
+  Tsqlite_column_bytes = function(db: Psqlite; iCol: Integer): Pchar; cdecl;
+  Tsqlite_column_name = function(db: Psqlite; iCol: Integer): Pchar; cdecl;
+  Tsqlite_column_decltype = function(db: Psqlite; iCol: Integer): Pchar; cdecl;
+  Tsqlite_exec = function(db: Psqlite; const sql: PChar;
     sqlite_callback: Tsqlite_callback; arg: Pointer;
-    var errmsg: PAnsiChar): Integer; cdecl;
-  Tsqlite_errmsg = function(db: Psqlite): PAnsiChar; cdecl;
+    var errmsg: PChar): Integer; cdecl;
+  Tsqlite_errmsg = function(db: Psqlite): PChar; cdecl;
   Tsqlite_last_insert_rowid = function(db: Psqlite): Integer; cdecl;
   Tsqlite_changes = function(db: Psqlite): Integer; cdecl;
   Tsqlite_last_statement_changes = function(db: Psqlite): Integer; cdecl;
-  Tsqlite_error_string = function(code: Integer): PAnsiChar; cdecl;
+  Tsqlite_error_string = function(code: Integer): PChar; cdecl;
   Tsqlite_interrupt = procedure(db: Psqlite); cdecl;
-  Tsqlite_complete = function(const sql: PAnsiChar): Integer; cdecl;
+  Tsqlite_complete = function(const sql: PChar): Integer; cdecl;
   Tsqlite_busy_handler = procedure(db: Psqlite;
     callback: Tsqlite_busy_callback; ptr: Pointer); cdecl;
   Tsqlite_busy_timeout = procedure(db: Psqlite; ms: Integer); cdecl;
-  Tsqlite_get_table = function(db: Psqlite; const sql: PAnsiChar;
-    var resultp: PPAnsiChar; var nrow: Integer; var ncolumn: Integer;
-    var errmsg: PAnsiChar): Integer; cdecl;
-  Tsqlite_free_table = procedure(var result: PAnsiChar); cdecl;
+  Tsqlite_get_table = function(db: Psqlite; const sql: PChar;
+    var resultp: PPChar; var nrow: Integer; var ncolumn: Integer;
+    var errmsg: PChar): Integer; cdecl;
+  Tsqlite_free_table = procedure(var result: PChar); cdecl;
   Tsqlite_freemem = procedure(ptr: Pointer); cdecl;
-  Tsqlite_libversion = function: PAnsiChar; cdecl;
-  Tsqlite_libencoding = function: PAnsiChar; cdecl;
+  Tsqlite_libversion = function: PChar; cdecl;
+  Tsqlite_libencoding = function: PChar; cdecl;
 
-  Tsqlite_create_function = function(db: Psqlite; const zName: PAnsiChar;
+  Tsqlite_create_function = function(db: Psqlite; const zName: PChar;
     nArg: Integer; callback: Tsqlite_function_callback;
     pUserData: Pointer): Integer; cdecl;
-  Tsqlite_create_aggregate = function(db: Psqlite; const zName: PAnsiChar;
+  Tsqlite_create_aggregate = function(db: Psqlite; const zName: PChar;
     nArg: Integer; callback: Tsqlite_function_callback;
     finalize: Tsqlite_finalize_callback; pUserData: Pointer): Integer; cdecl;
-  Tsqlite_function_type = function(db: Psqlite; const zName: PAnsiChar;
+  Tsqlite_function_type = function(db: Psqlite; const zName: PChar;
     datatype: Integer): Integer; cdecl;
-  Tsqlite_set_result_string = function(func: Psqlite_func; const arg: PAnsiChar;
-    len: Integer; UN: Tsqlite_simple_callback): PAnsiChar; cdecl;
+  Tsqlite_set_result_string = function(func: Psqlite_func; const arg: PChar;
+    len: Integer; UN: Tsqlite_simple_callback): PChar; cdecl;
   Tsqlite_set_result_int = procedure(func: Psqlite_func; arg: Integer); cdecl;
   Tsqlite_set_result_double = procedure(func: Psqlite_func; arg: Double); cdecl;
-  Tsqlite_set_result_error = procedure(func: Psqlite_func; const arg: PAnsiChar;
+  Tsqlite_set_result_error = procedure(func: Psqlite_func; const arg: PChar;
     len: Integer); cdecl;
   Tsqlite_user_data = function(func: Psqlite_func): Pointer; cdecl;
   Tsqlite_aggregate_context = function(func: Psqlite_func;
@@ -215,22 +215,22 @@ type
   Tsqlite_trace = function(db: Psqlite; callback: Tsqlite_trace_callback;
     ptr: Pointer): Pointer; cdecl;
 
-  Tsqlite_compile = function(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
-     var ppVm: Psqlite_vm; pzTail: PAnsiChar): Integer; cdecl;
+  Tsqlite_compile = function(db: Psqlite; const zSql: PChar; nBytes: Integer;
+     var ppVm: Psqlite_vm; pzTail: PChar): Integer; cdecl;
   Tsqlite_step = function(pVm: Psqlite_vm): Integer; cdecl;
   Tsqlite_finalize = function(vm: Psqlite_vm): Integer; cdecl;
   Tsqlite_reset = function(vm: Psqlite_vm): Integer; cdecl;
-  Tsqlite_bind = function(vm: Psqlite_vm; idx: Integer; const value: PAnsiChar;
+  Tsqlite_bind = function(vm: Psqlite_vm; idx: Integer; const value: PChar;
     len: Integer; copy: Integer): Integer; cdecl;
-{  Tsqlite_bind_double = function(vm: Psqlite_vm; idx: Integer; const value: PAnsiChar;
+{  Tsqlite_bind_double = function(vm: Psqlite_vm; idx: Integer; const value: PChar;
     len: Integer; copy: Integer): Integer; cdecl;
-  Tsqlite_bind_int = function(vm: Psqlite_vm; idx: Integer; const value: PAnsiChar;
+  Tsqlite_bind_int = function(vm: Psqlite_vm; idx: Integer; const value: PChar;
     len: Integer; copy: Integer): Integer; cdecl;
-  Tsqlite_bind_int64 = function(vm: Psqlite_vm; idx: Integer; const value: PAnsiChar;
+  Tsqlite_bind_int64 = function(vm: Psqlite_vm; idx: Integer; const value: PChar;
     len: Integer; copy: Integer): Integer; cdecl;
-  Tsqlite_bind_null = function(vm: Psqlite_vm; idx: Integer; const value: PAnsiChar;
+  Tsqlite_bind_null = function(vm: Psqlite_vm; idx: Integer; const value: PChar;
     len: Integer; copy: Integer): Integer; cdecl;
-  Tsqlite_bind_text = function(vm: Psqlite_vm; idx: Integer; const value: PAnsiChar;
+  Tsqlite_bind_text = function(vm: Psqlite_vm; idx: Integer; const value: PChar;
     len: Integer; copy: Integer): Integer; cdecl;}
 
   Tsqlite_progress_handler = procedure(db: Psqlite; p1: Integer;
@@ -238,9 +238,9 @@ type
   Tsqlite_commit_hook = function(db: Psqlite; callback: Tsqlite_simple_callback;
     ptr: Pointer): Pointer; cdecl;
 
-  Tsqlite_open_encrypted = function(const zFilename: PAnsiChar;
-    const pKey: PAnsiChar; nKey: Integer; var pErrcode: Integer;
-    var pzErrmsg: PAnsiChar): Psqlite; cdecl;
+  Tsqlite_open_encrypted = function(const zFilename: PChar;
+    const pKey: PChar; nKey: Integer; var pErrcode: Integer;
+    var pzErrmsg: PChar): Psqlite; cdecl;
   Tsqlite_rekey = function(db: Psqlite; const pKey: Pointer;
     nKey: Integer): Integer; cdecl;
   Tsqlite_key = function(db: Psqlite; const pKey: Pointer;

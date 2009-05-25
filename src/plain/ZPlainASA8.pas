@@ -64,10 +64,10 @@ type
   TASABasic = function( sqlca: PZASASQLCA): Integer;
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASABasicWithParam = function(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
+  TASABasicWithParam = function( sqlca: PZASASQLCA; Params: PChar): LongWord;
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASAfind_engine = function(sqlca: PZASASQLCA; Params: PAnsiChar): Word;
+  TASAfind_engine = function( sqlca: PZASASQLCA; Params: PChar): Word;
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
   TASAAlloc_sqlda = function( NumVar: LongWord): PASASQLDA;
@@ -76,82 +76,80 @@ type
   TASAfill_sqlda = function( Parameter: PASASQLDA): PASASQLDA;
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASAfill_s_sqlda = function(Parameter: PASASQLDA; MaxLength: Integer):
-    PASASQLDA;
+  TASAfill_s_sqlda = function( Parameter: PASASQLDA; MaxLength: Integer): PASASQLDA;
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
   TASAProc_sqlda = procedure( Parameter: PASASQLDA);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASAdbpp_setConnect = procedure(sqlca: PZASASQLCA; ConnName: PAnsiChar);
+  TASAdbpp_setConnect = procedure( sqlca: PZASASQLCA; ConnName: PChar);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASAdbpp_describe_cursor = procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+  TASAdbpp_describe_cursor = procedure( sqlca: PZASASQLCA; CursorName: PChar;
     Descriptor: PASASQLDA; SomeNumber: LongWord);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASAdbpp_prepare_into = procedure(sqlca: PZASASQLCA; UnKnown: PAnsiChar;
-    ProgName: PAnsiChar; RecordStatementNum: PSmallInt; SqlStatement: PAnsiChar;
+  TASAdbpp_prepare_into = procedure( sqlca: PZASASQLCA; UnKnown: PChar;
+    ProgName: PChar; RecordStatementNum: PSmallInt; SqlStatement: PChar;
     Descriptor1: PASASQLDA; Descriptor2: PASASQLDA; SomeNumber: LongWord);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASAdbpp_prepare_describe = procedure(sqlca: PZASASQLCA; UnKnown: PAnsiChar;
-    ProgName: PAnsiChar; RecordStatementNum: PSmallInt; SqlStatement: PAnsiChar;
+  TASAdbpp_prepare_describe = procedure( sqlca: PZASASQLCA; UnKnown: PChar;
+    ProgName: PChar; RecordStatementNum: PSmallInt; SqlStatement: PChar;
     Descriptor1: PASASQLDA; Descriptor2: PASASQLDA; WhatToDesc: LongWord;
     LongNames: Word);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASAdbpp_select = procedure(sqlca: PZASASQLCA; UnKnown: PAnsiChar;
-    ProgName: PAnsiChar; RecordStatementNum: PSmallInt; Descriptor1,
+  TASAdbpp_select = procedure( sqlca: PZASASQLCA; UnKnown: PChar;
+    ProgName: PChar; RecordStatementNum: PSmallInt; Descriptor1,
     Descriptor2: PASASQLDA);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASAdbpp_open = procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;
-    UnKnown: PAnsiChar; ProgName: PAnsiChar; RecordStatementNum: PSmallInt;
+  TASAdbpp_open = procedure( sqlca: PZASASQLCA; CursorName: PChar;
+    UnKnown: PChar; ProgName: PChar; RecordStatementNum: PSmallInt;
     Descriptor1: PASASQLDA; BlockSize: SmallInt; IsolationLvl: SmallInt;
     Options : Word);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASAdbpp_close = procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar);
+  TASAdbpp_close = procedure( sqlca: PZASASQLCA; CursorName: PChar);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASAdbpp_fetch = procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+  TASAdbpp_fetch = procedure( sqlca: PZASASQLCA; CursorName: PChar;
     Offset: Word; RelPositon: LongInt; Descriptor1: PASASQLDA;
     BlockSize: SmallInt; Options: Word);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
- TASAdbpp_declare = procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;
-    UnKnown: PAnsiChar; ProgName: PAnsiChar; RecordStatementNum: PSmallInt;
+  TASAdbpp_declare = procedure( sqlca: PZASASQLCA; CursorName: PChar;
+    UnKnown: PChar; ProgName: PChar; RecordStatementNum: PSmallInt;
     Options: Word);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASAdbpp_dropstmt = procedure(sqlca: PZASASQLCA; UnKnown: PAnsiChar;
-     ProgName: PAnsiChar; RecordStatementNum: PSmallInt);
+  TASAdbpp_dropstmt = procedure( sqlca: PZASASQLCA; UnKnown: PChar;
+    ProgName: PChar; RecordStatementNum: PSmallInt);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASAdbpp_describe = procedure(sqlca: PZASASQLCA; UnKnown: PAnsiChar;
-    ProgName: PAnsiChar; RecordStatementNum: PSmallInt; Descriptor: PASASQLDA;
+  TASAdbpp_describe = procedure( sqlca: PZASASQLCA; UnKnown: PChar;
+    ProgName: PChar; RecordStatementNum: PSmallInt; Descriptor: PASASQLDA;
     WhatToDesc: Word);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASAdbpp_delete = procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;
-    UnKnown1: PAnsiChar; UnKnown2: PAnsiChar);
+  TASAdbpp_delete = procedure( sqlca: PZASASQLCA; CursorName: PChar;
+    UnKnown1: PChar; UnKnown2: PChar);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASAdbpp_update = procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+  TASAdbpp_update = procedure( sqlca: PZASASQLCA; CursorName: PChar;
     Descriptor: PASASQLDA);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASAdbpp_execute_imm = procedure(sqlca: PZASASQLCA; SqlRecordStatement:
-    PAnsiChar;
+  TASAdbpp_execute_imm = procedure( sqlca: PZASASQLCA; SqlRecordStatement: PChar;
     UnKnown1: Word);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASAdbpp_put_into = procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+  TASAdbpp_put_into = procedure( sqlca: PZASASQLCA; CursorName: PChar;
     Descriptor: PASASQLDA; UnKnown1: PASASQLDA);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASAdbpp_put_array = procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+  TASAdbpp_put_array = procedure( sqlca: PZASASQLCA; CursorName: PChar;
     Descriptor: PASASQLDA; Into_sqlda: PASASQLDA; Rows: Word);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
@@ -161,17 +159,17 @@ type
   TASAdbpp_rollback = procedure( sqlca: PZASASQLCA; SomeNumber: LongWord);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASAdbpp_execute_into = procedure(sqlca: PZASASQLCA; UnKnown: PAnsiChar;
-    ProgName: PAnsiChar; RecordStatementNum: PSmallInt; Descriptor1: PASASQLDA;
+  TASAdbpp_execute_into = procedure( sqlca: PZASASQLCA; UnKnown: PChar;
+    ProgName: PChar; RecordStatementNum: PSmallInt; Descriptor1: PASASQLDA;
     Descriptor2: PASASQLDA);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASAdbpp_get_data = procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+  TASAdbpp_get_data = procedure( sqlca: PZASASQLCA; CursorName: PChar;
     ColumnNumber: Word; Offset: LongInt; Descriptor1: PASASQLDA;
     Unknown: Word);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASAdbpp_explain = procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+  TASAdbpp_explain = procedure( sqlca: PZASASQLCA; CursorName: PChar;
     SomeNumber1: Word; Descriptor1: PASASQLDA);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
@@ -182,19 +180,19 @@ type
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
   TASAdbpp_setoption = procedure( sqlca: PZASASQLCA; Temporary: LongInt;
-    User: PAnsiChar; Option: PAnsiChar; Descriptor: PASASQLDA);
+    User: PChar; Option: PChar; Descriptor: PASASQLDA);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASAdbpp_fetch_array = procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+  TASAdbpp_fetch_array = procedure( sqlca: PZASASQLCA; CursorName: PChar;
     Offset: Word; RelPositon: LongInt; Descriptor1: PASASQLDA;
     BlockSize: SmallInt; Options: Word; ArrayWidth: Word);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASAerror_message = function(sqlca: PZASASQLCA; Buffer: PAnsiChar;
-    MaxSize: Integer): PAnsiChar;
+  TASAerror_message = function( sqlca: PZASASQLCA; Buffer: PChar;
+    MaxSize: Integer): PChar;
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  TASAdbpp_resume = procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar);
+  TASAdbpp_resume = procedure( sqlca: PZASASQLCA; CursorName: PChar);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
   TASAdb_cancel_request = function( sqlca: PZASASQLCA): Integer;

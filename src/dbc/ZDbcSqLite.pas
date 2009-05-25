@@ -58,7 +58,10 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection,
+{$IFNDEF VER130BELOW}
+  Types,
+{$ENDIF}
+  ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection,
   ZPlainSqLiteDriver, ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser;
 
 type
@@ -257,8 +260,7 @@ begin
     Result := FSQLite28PlainDriver
   else if Protocol = FSQLite3PlainDriver.GetProtocol then
     Result := FSQLite3PlainDriver
-  else
-    Result := FSQLite28PlainDriver;
+  else Result := FSQLite28PlainDriver;
   Result.Initialize;
 end;
 
@@ -284,7 +286,6 @@ begin
 
   { Sets a default properties }
   FPlainDriver := PlainDriver;
-  Self.PlainDriver := PlainDriver;
   AutoCommit := True;
   TransactIsolationLevel := tiNone;
 
@@ -308,11 +309,7 @@ function TZSQLiteConnection.Key(const Key: string):Integer;
 var
   ErrorCode: Integer;
 begin
-  {$IFDEF DELPHI12_UP}
-  ErrorCode := FPlainDriver.Key(FHandle, PAnsiChar(UTF8String(Key)), StrLen(PAnsiChar(UTF8String(Key))));
-  {$ELSE}
-  ErrorCode := FPlainDriver.Key(FHandle, PAnsiChar(Key), StrLen(PAnsiChar(Key)));
-  {$ENDIF}
+  ErrorCode := FPlainDriver.Key(FHandle, PChar(Key), StrLen(PChar(Key)));
   Result := ErrorCode;
 end;
 
@@ -326,11 +323,7 @@ function TZSQLiteConnection.ReKey(const Key: string):Integer;
 var
   ErrorCode: Integer;
 begin
-  {$IFDEF DELPHI12_UP}
-  ErrorCode := FPlainDriver.ReKey(FHandle, PAnsiChar(UTF8String(Key)), StrLen(PAnsiChar(UTF8String(Key))));
-  {$ELSE}
-  ErrorCode := FPlainDriver.ReKey(FHandle, PAnsiChar(Key), StrLen(PAnsiChar(Key)));
-  {$ENDIF}
+  ErrorCode := FPlainDriver.ReKey(FHandle, PChar(Key), StrLen(PChar(Key)));
   Result := ErrorCode;
 end;
 
@@ -340,22 +333,16 @@ end;
 procedure TZSQLiteConnection.Open;
 var
   ErrorCode: Integer;
-  ErrorMessage: PAnsiChar;
+  ErrorMessage: PChar;
   LogMessage: string;
-  SQL: AnsiString;
+  SQL: string;
 begin
-  if not Closed then
-    Exit;
+  if not Closed then Exit;
   ErrorMessage := '';
 
   LogMessage := Format('CONNECT TO "%s" AS USER "%s"', [Database, User]);
 
-{$IFDEF DELPHI12_UP}
-  FHandle := FPlainDriver.Open(PAnsiChar(Utf8String(Database)), 0, ErrorMessage);
-{$ELSE}
-  FHandle := FPlainDriver.Open(PAnsiChar(Database), 0, ErrorMessage);
-{$ENDIF}
-
+  FHandle := FPlainDriver.Open(PChar(Database), 0, ErrorMessage);
   if FHandle = nil then
   begin
     CheckSQLiteError(FPlainDriver, SQLITE_ERROR, ErrorMessage,
@@ -366,22 +353,18 @@ begin
   { Turn on encryption if requested }
   if StrToBoolEx(Info.Values['encrypted']) then
   begin
-    {$IFDEF DELPHI12_UP}
-    ErrorCode := FPlainDriver.Key(FHandle, PAnsiChar(UTF8String(Password)), StrLen(PAnsiChar(UTF8String(Password))));
-    {$ELSE}
-    ErrorCode := FPlainDriver.Key(FHandle, PAnsiChar(Password), StrLen(PAnsiChar(Password)));
-    {$ENDIF}
+    ErrorCode := FPlainDriver.Key(FHandle, PChar(Password), StrLen(PChar(Password)));
     CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcConnect, 'SQLite.Key');
   end;
 
   try
     SQL := 'PRAGMA show_datatypes = ON';
-    ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(SQL),
+    ErrorCode := FPlainDriver.Execute(FHandle, PChar(SQL),
       nil, nil, ErrorMessage);
     CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
 {
     SQL := 'PRAGMA empty_result_callbacks = ON';
-    ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(SQL),
+    ErrorCode := FPlainDriver.Execute(FHandle, PChar(SQL),
       nil, nil, ErrorMessage);
     CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
 }
@@ -412,8 +395,7 @@ end;
 function TZSQLiteConnection.CreateRegularStatement(Info: TStrings):
   IZStatement;
 begin
-  if IsClosed then
-    Open;
+  if IsClosed then Open;
   Result := TZSQLiteStatement.Create(FPlainDriver, Self, Info, FHandle);
 end;
 
@@ -448,8 +430,7 @@ end;
 function TZSQLiteConnection.CreatePreparedStatement(const SQL: string;
   Info: TStrings): IZPreparedStatement;
 begin
-  if IsClosed then
-    Open;
+  if IsClosed then Open;
   Result := TZSQLitePreparedStatement.Create(FPlainDriver, Self, SQL,
     Info, FHandle);
 end;
@@ -460,14 +441,14 @@ end;
 procedure TZSQLiteConnection.StartTransactionSupport;
 var
   ErrorCode: Integer;
-  ErrorMessage: PAnsiChar;
-  SQL: PAnsiChar;
+  ErrorMessage: PChar;
+  SQL: PChar;
 begin
   if TransactIsolationLevel <> tiNone then
   begin
     ErrorMessage := '';
     SQL := 'BEGIN TRANSACTION';
-    ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
+    ErrorCode := FPlainDriver.Execute(FHandle, PChar(SQL), nil, nil,
       ErrorMessage);
     CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
@@ -484,14 +465,14 @@ end;
 procedure TZSQLiteConnection.Commit;
 var
   ErrorCode: Integer;
-  ErrorMessage: PAnsiChar;
-  SQL: PAnsiChar;
+  ErrorMessage: PChar;
+  SQL: PChar;
 begin
   if (TransactIsolationLevel <> tiNone) and not Closed then
   begin
     ErrorMessage := '';
     SQL := 'COMMIT TRANSACTION';
-    ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
+    ErrorCode := FPlainDriver.Execute(FHandle, PChar(SQL), nil, nil,
       ErrorMessage);
     CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
@@ -510,14 +491,14 @@ end;
 procedure TZSQLiteConnection.Rollback;
 var
   ErrorCode: Integer;
-  ErrorMessage: PAnsiChar;
-  SQL: PAnsiChar;
+  ErrorMessage: PChar;
+  SQL: PChar;
 begin
   if (TransactIsolationLevel <> tiNone) and not Closed then
   begin
     ErrorMessage := '';
     SQL := 'ROLLBACK TRANSACTION';
-    ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
+    ErrorCode := FPlainDriver.Execute(FHandle, PChar(SQL), nil, nil,
       ErrorMessage);
     CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
@@ -575,14 +556,14 @@ procedure TZSQLiteConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);
 var
   ErrorCode: Integer;
-  ErrorMessage: PAnsiChar;
-  SQL: PAnsiChar;
+  ErrorMessage: PChar;
+  SQL: PChar;
 begin
   if (TransactIsolationLevel <> tiNone) and not Closed then
   begin
     ErrorMessage := '';
     SQL := 'ROLLBACK TRANSACTION';
-    ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
+    ErrorCode := FPlainDriver.Execute(FHandle, PChar(SQL), nil, nil,
       ErrorMessage);
     CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);

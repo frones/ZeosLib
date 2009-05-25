@@ -58,7 +58,12 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, ZCompatibility, ZClasses, ZSysUtils, ZCollections,
+{$IFNDEF UNIX}
+{$IFNDEF VER130BELOW}
+  Types,
+{$ENDIF}
+{$ENDIF}
+  Classes, SysUtils, ZCompatibility, ZClasses, ZSysUtils, ZCollections,
   ZDbcIntfs, ZPlainDriver, ZDbcStatement, ZDbcAdo, ZPlainAdoDriver, ZPlainAdo,
   ZVariant;
 
@@ -112,7 +117,7 @@ type
 implementation
 
 uses
-{$IFNDEF FPC}
+{$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
   OleDB, ActiveX, ComObj,
@@ -489,7 +494,7 @@ begin
         DefVarManager.SetAsString(Result, Temp);
       varSmallInt, varInteger:
         DefVarManager.SetAsInteger(Result, Integer(Temp));
-  {$IFNDEF FPC}
+  {$IFNDEF VER130BELOW}
       varShortInt, varInt64:
         DefVarManager.SetAsInteger(Result, Temp);
   {$ENDIF}

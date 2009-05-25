@@ -85,7 +85,7 @@ function ConvertSqlTypeToAdo(FieldType: TZSQLType): Integer;
   @param VT Variant datatype.
   @return a ADO datatype.
 }
-{$IFDEF FPC}
+{$IFDEF VER130BELOW}
 function ConvertVariantToAdo(VT: Integer): Integer;
 {$ELSE}
 function ConvertVariantToAdo(VT: TVarType): Integer;
@@ -254,7 +254,7 @@ end;
   @param VT Variant datatype.
   @return a ADO datatype.
 }
-{$IFDEF FPC}
+{$IFDEF VER130BELOW}
 function ConvertVariantToAdo(VT: Integer): Integer;
 {$ELSE}
 function ConvertVariantToAdo(VT: TVarType): Integer;
@@ -275,11 +275,11 @@ begin
     varBoolean: Result := adBoolean;
     varVariant: Result := adVariant;
     varUnknown: Result := adIUnknown;
-{$IFNDEF FPC}
+{$IFNDEF VER130BELOW}
     varShortInt: Result := adTinyInt;
 {$ENDIF}
     varByte: if (VT and varArray) <> 0 then Result := adLongVarBinary else Result := adUnsignedTinyInt;
-{$IFNDEF FPC}
+{$IFNDEF VER130BELOW}
     varWord: Result := adUnsignedSmallInt;
     varLongWord: Result := adUnsignedInt;
     varInt64: Result := adBigInt;

@@ -126,25 +126,17 @@ var
   begin
     Result := '';
     LastChar := #0;
-    while Stream.Read(LastChar, SizeOf(Char)) > 0 do
+    while Stream.Read(LastChar, 1) > 0 do
     begin
-{$IFDEF DELPHI12_UP}
-      if CharInSet(LastChar, ['0'..'9','a'..'f','A'..'F']) then
-{$ELSE}
       if LastChar in ['0'..'9','a'..'f','A'..'F'] then
-{$ENDIF}
       begin
         Result := Result + LastChar;
-{$IFDEF DELPHI12_UP}
-        HexDecimal := HexDecimal or CharInSet(LastChar, ['a'..'f','A'..'F']);
-{$ELSE}
         HexDecimal := HexDecimal or (LastChar in ['a'..'f','A'..'F']);
-{$ENDIF}
         LastChar := #0;
       end
       else
       begin
-        Stream.Seek(-SizeOf(Char), soFromCurrent);
+        Stream.Seek(-1, soFromCurrent);
         Break;
       end;
     end;
@@ -154,20 +146,16 @@ var
   begin
     Result := '';
     LastChar := #0;
-    while Stream.Read(LastChar, SizeOf(Char)) > 0 do
+    while Stream.Read(LastChar, 1) > 0 do
     begin
-{$IFDEF DELPHI12_UP}
-      if CharInSet(LastChar, ['0'..'9']) then
-{$ELSE}
       if LastChar in ['0'..'9'] then
-{$ENDIF}
       begin
         Result := Result + LastChar;
         LastChar := #0;
       end
       else
       begin
-        Stream.Seek(-SizeOf(Char), soFromCurrent);
+        Stream.Seek(-1, soFromCurrent);
         Break;
       end;
     end;
@@ -188,7 +176,7 @@ begin
     FloatPoint := (LastChar = '.') and not HexDecimal;
     if FloatPoint then
     begin
-      Stream.Read(LastChar, SizeOf(Char));
+      Stream.Read(LastChar, 1);
       Result.Value := Result.Value + LastChar;
     end;
   end;
@@ -198,38 +186,26 @@ begin
     Result.Value := Result.Value + ReadDecDigits;
 
   { Reads a power part of the number }
-{$IFDEF DELPHI12_UP}
-  if not HexDecimal and CharInSet(LastChar, ['e','E']) then
-{$ELSE}
   if not HexDecimal and (LastChar in ['e','E']) then
-{$ENDIF}
   begin
-    Stream.Read(LastChar, SizeOf(Char));
+    Stream.Read(LastChar, 1);
     Result.Value := Result.Value + LastChar;
     FloatPoint := True;
 
-    Stream.Read(LastChar, SizeOf(Char));
-{$IFDEF DELPHI12_UP}
-    if CharInSet(LastChar, ['0'..'9','-','+']) then
-{$ELSE}
+    Stream.Read(LastChar, 1);
     if LastChar in ['0'..'9','-','+'] then
-{$ENDIF}
       Result.Value := Result.Value + LastChar + ReadDecDigits
     else
     begin
       Result.Value := Copy(Result.Value, 1, Length(Result.Value) - 1);
-      Stream.Seek(-SizeOf(Char), soFromCurrent);
+      Stream.Seek(-2, soFromCurrent);
     end;
   end;
 
   { Reads the nexdecimal number }
-{$IFDEF DELPHI12_UP}
-  if (Result.Value = '0') and CharInSet(LastChar, ['x','X']) then
-{$ELSE}
   if (Result.Value = '0') and (LastChar in ['x','X']) then
-{$ENDIF}
   begin
-    Stream.Read(LastChar, SizeOf(Char));
+    Stream.Read(LastChar, 1);
     Result.Value := Result.Value + LastChar + ReadHexDigits;
     HexDecimal := True;
   end;
@@ -267,12 +243,12 @@ var
 begin
   Result.Value := FirstChar;
   LastChar := #0;
-  while Stream.Read(ReadChar, SizeOf(Char)) > 0 do
+  while Stream.Read(ReadChar, 1) > 0 do
   begin
     if ((LastChar = FirstChar) and (ReadChar <> FirstChar)
       and (FirstChar <> '[')) or ((FirstChar = '[') and (LastChar = ']')) then
     begin
-      Stream.Seek(-SizeOf(Char), soFromCurrent);
+      Stream.Seek(-1, soFromCurrent);
       Break;
     end;
     Result.Value := Result.Value + ReadChar;
@@ -281,11 +257,7 @@ begin
     else LastChar := ReadChar;
   end;
 
-{$IFDEF DELPHI12_UP}
-  if CharInSet(FirstChar, ['"', '[']) then
-{$ELSE}
   if FirstChar in ['"', '['] then
-{$ENDIF}
     Result.TokenType := ttWord
   else Result.TokenType := ttQuoted;
 end;
@@ -300,11 +272,7 @@ function TZSybaseQuoteState.EncodeString(const Value: string; QuoteChar: Char): 
 begin
   if QuoteChar = '[' then
     Result := '[' + Value + ']'
-{$IFDEF DELPHI12_UP}
-  else if CharInSet(QuoteChar, [#39, '"']) then
-{$ELSE}
   else if QuoteChar in [#39, '"'] then
-{$ENDIF}
     Result := QuoteChar + Value + QuoteChar
   else Result := Value;
 end;
@@ -320,11 +288,7 @@ begin
   Result := Value;
   if Length(Value) >= 2 then
   begin
-{$IFDEF DELPHI12_UP}
-    if CharInSet(QuoteChar, [#39, '"']) and (Value[1] = QuoteChar)
-{$ELSE}
     if (QuoteChar in [#39, '"']) and (Value[1] = QuoteChar)
-{$ENDIF}
       and (Value[Length(Value)] = QuoteChar) then
     begin
       if Length(Value) > 2 then
@@ -355,7 +319,7 @@ begin
 
   if FirstChar = '-' then
   begin
-    ReadNum := Stream.Read(ReadChar, SizeOf(Char));
+    ReadNum := Stream.Read(ReadChar, 1);
     if (ReadNum > 0) and (ReadChar = '-') then
     begin
       Result.TokenType := ttComment;
@@ -364,12 +328,12 @@ begin
     else
     begin
       if ReadNum > 0 then
-        Stream.Seek(-SizeOf(Char), soFromCurrent);
+        Stream.Seek(-1, soFromCurrent);
     end;
   end
   else if FirstChar = '/' then
   begin
-    ReadNum := Stream.Read(ReadChar, SizeOf(Char));
+    ReadNum := Stream.Read(ReadChar, 1);
     if (ReadNum > 0) and (ReadChar = '*') then
     begin
       Result.TokenType := ttComment;
@@ -378,7 +342,7 @@ begin
     else
     begin
       if ReadNum > 0 then
-        Stream.Seek(-SizeOf(Char), soFromCurrent);
+        Stream.Seek(-1, soFromCurrent);
     end;
   end;
 

@@ -58,7 +58,10 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, Contnrs, ZCompatibility, ZDbcIntfs, ZDbcResultSetMetadata;
+{$IFNDEF VER130BELOW}
+  Types,
+{$ENDIF}
+  Classes, SysUtils, Contnrs, ZCompatibility, ZDbcIntfs, ZDbcResultSetMetadata;
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -168,13 +171,11 @@ begin
   Index := FirstDelimiter(':', Url);
   if Index > 0 then
     Protocol := Copy(Url, Index + 1, Length(Url) - Index)
-  else
-    Protocol := '';
+  else Protocol := '';
   Index := FirstDelimiter(':', Protocol);
   if Index > 1 then
     Protocol := Copy(Protocol, 1, Index - 1)
-  else
-    Protocol := '';
+  else Protocol := '';
 
   if Protocol = '' then
     raise EZSQLException.Create(Format(SIncorrectConnectionURL, [Url]));
@@ -266,8 +267,7 @@ begin
     Database := Copy(Temp, 1, Index - 1);
     Delete(Temp, 1, Index);
     PutSplitString(ResultInfo, Temp, ';');
-  end
-  else
+  end else
     Database := Temp;
 
   if Info <> nil then
@@ -367,12 +367,9 @@ end;
 }
 procedure RaiseSQLException(E: Exception);
 begin
-  if E is EZSQLException then
-  begin
+  if E is EZSQLException then begin
     raise EZSQLException.CreateClone(EZSQLException(E));
-  end
-  else
-  begin
+  end else begin
     raise EZSQLException.Create(E.Message);
   end;
 end;

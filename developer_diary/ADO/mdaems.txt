@@ -10,6 +10,4 @@
 
 20080920 : method calls (GetSchemaNames() and GetCatalogNames()) ran into an exception - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=1774
 
-20081213 : Column type metadata request for MSSQL returns no type - by cytrinox - See http://zeos.firmos.at/viewtopic.php?t=2155
-
 20090402 : SQLServer default GUID fieldlength incorrect - by JWBokx - See http://zeos.firmos.at/viewtopic.php?t=2300

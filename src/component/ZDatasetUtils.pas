@@ -58,7 +58,10 @@ interface
 {$I ZComponent.inc}
 
 uses
-  Types, Classes, SysUtils, Db, ZSysUtils, ZDbcIntfs, ZDbcCache,
+{$IFNDEF VER130BELOW}
+  Types,
+{$ENDIF}
+  Classes, SysUtils, Db, ZSysUtils, ZDbcIntfs, ZDbcCache,
   Contnrs, ZCompatibility, ZExpression, ZVariant, ZTokenizer;
 
 {**
@@ -267,8 +270,6 @@ function DefineFieldIndices(const FieldsLookupTable: TIntegerDynArray;
 procedure SplitQualifiedObjectName(QualifiedName: string;
   var Catalog, Schema, ObjectName: string);
 
-function WideStringStream(const AString: WideString): TStream;
-
 {** Common variables. }
 var
   CommonTokenizer: IZTokenizer;
@@ -298,7 +299,7 @@ begin
     stFloat, stDouble, stBigDecimal:
       Result := ftFloat;
     stString:
-      Result := {$IFDEF DELPHI12_UP}ftWideString{$ELSE}ftString{$ENDIF}; 
+      Result := ftString;
     stBytes:
       Result := ftBytes;
     stDate:
@@ -311,10 +312,8 @@ begin
       Result := ftMemo;
     stBinaryStream:
       Result := ftBlob;
-    stUnicodeString:
+    stUnicodeString, stUnicodeStream:
       Result := ftWideString;
-    stUnicodeStream:
-      Result := {$IFDEF VER150BELOW}ftWideString{$ELSE}ftWideMemo{$ENDIF};
     else
       Result := ftUnknown;
   end;
@@ -355,11 +354,7 @@ begin
     ftBlob:
       Result := stBinaryStream;
     ftWideString:
-      Result := stUnicodeString;
-    {$IFNDEF VER150BELOW}
-    ftWideMemo:
-      Result := stUnicodeStream;
-    {$ENDIF}
+      Result := stUnicodeString;//!!!I do not know if it is a stUnicodeString or stUnicodeStream
     else
       Result := stUnknown;
   end;
@@ -391,7 +386,6 @@ begin
         ColumnInfo.ColumnType := stUnicodeStream;
     ColumnInfo.Scale := 0;
     ColumnInfo.ColumnLabel := Current.DisplayName;
-    ColumnInfo.DefaultExpression := Current.DefaultExpression;
 
     Result.Add(ColumnInfo);
   end;
@@ -440,9 +434,7 @@ begin
       ftCurrency:
         RowAccessor.SetBigDecimal(FieldIndex, ResultSet.GetBigDecimal(ColumnIndex));
       ftString:
-        // gto: do we need PChar here?
-        //RowAccessor.SetPChar(FieldIndex, ResultSet.GetPChar(ColumnIndex));
-        RowAccessor.SetString(FieldIndex, ResultSet.GetString(ColumnIndex));
+        RowAccessor.SetPChar(FieldIndex, ResultSet.GetPChar(ColumnIndex));
       ftWidestring:
         RowAccessor.SetUnicodeString(FieldIndex, ResultSet.GetUnicodeString(ColumnIndex));
       ftBytes:
@@ -453,7 +445,7 @@ begin
         RowAccessor.SetTime(FieldIndex, ResultSet.GetTime(ColumnIndex));
       ftDateTime:
         RowAccessor.SetTimestamp(FieldIndex, ResultSet.GetTimestamp(ColumnIndex));
-      ftMemo, ftBlob {$IFNDEF VER150BELOW}, ftWideMemo{$ENDIF}:
+      ftMemo, ftBlob:
         RowAccessor.SetBlob(FieldIndex, ResultSet.GetBlob(ColumnIndex));
     end;
 
@@ -496,6 +488,7 @@ begin
 
 //    if (Current.Required = True) and (WasNull = True) then
 //      raise EZDatabaseError.Create(Format(SFieldCanNotBeNull, [Current.FieldName]));
+
     case Current.DataType of
       ftBoolean:
         ResultSet.UpdateBoolean(ColumnIndex, RowAccessor.GetBoolean(FieldIndex, WasNull));
@@ -511,9 +504,7 @@ begin
         ResultSet.UpdateBigDecimal(ColumnIndex,
           RowAccessor.GetBigDecimal(FieldIndex, WasNull));
       ftString:
-        // gto: do we need PChar here?
-        //ResultSet.UpdatePChar(ColumnIndex, RowAccessor.GetPChar(FieldIndex, WasNull));
-        ResultSet.UpdateString(ColumnIndex, RowAccessor.GetString(FieldIndex, WasNull));			
+        ResultSet.UpdatePChar(ColumnIndex, RowAccessor.GetPChar(FieldIndex, WasNull));
       ftWidestring:
         ResultSet.UpdateUnicodeString(ColumnIndex,
           RowAccessor.GetUnicodeString(FieldIndex, WasNull));
@@ -535,17 +526,6 @@ begin
             Stream.Free;
           end;
         end;
-      {$IFNDEF VER150BELOW}
-      ftWideMemo:
-        begin
-          Stream := RowAccessor.GetUnicodeStream(FieldIndex, WasNull);
-          try
-            ResultSet.UpdateUnicodeStream(ColumnIndex, Stream);
-          finally
-            Stream.Free;
-          end;
-        end;
-      {$ENDIF}
       ftBlob:
         begin
           Stream := RowAccessor.GetBinaryStream(FieldIndex, WasNull);
@@ -558,12 +538,7 @@ begin
     end;
 
     if WasNull then
-      begin
-        // Performance thing :
-        // The default expression will only be set when necessary : if the value really IS null
-        Resultset.UpdateDefaultExpression(ColumnIndex, RowAccessor.GetColumnDefaultExpression(FieldIndex));
-        ResultSet.UpdateNull(ColumnIndex);
-      end;
+      ResultSet.UpdateNull(ColumnIndex);
   end;
 end;
 
@@ -647,11 +622,9 @@ begin
       Current := DataSet.FindField(Expression.DefaultVariables.Names[I]);
       if Current <> nil then
         Result[I] := Current
-      else
-        Result[I] := nil;
+      else Result[I] := nil;
     end;
-  end
-  else
+  end else
     SetLength(Result, 0);
 end;
 
@@ -772,8 +745,7 @@ var
 begin
   for I := 0 to Length(Fields) - 1 do
   begin
-    if Fields[I] = nil then
-      Continue;
+    if Fields[I] = nil then Continue;
 
     ColumnIndex := TField(Fields[I]).FieldNo;
     if not ResultSet.IsNull(ColumnIndex) then
@@ -835,9 +807,8 @@ begin
 
       if PartialKey then
       begin
-        Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
-      end
-      else
+        Result := AnsiStrLComp(PChar(Value2), PChar(Value1), Length(Value1)) = 0;
+      end else
         Result := Value1 = Value2;
     end
     else
@@ -846,9 +817,8 @@ begin
       begin
         Value1 := SoftVarManager.GetAsString(KeyValues[I]);
         Value2 := SoftVarManager.GetAsString(RowValues[I]);
-        Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
-      end
-      else
+        Result := AnsiStrLComp(PChar(Value2), PChar(Value1), Length(Value1)) = 0;
+      end else
         Result := SoftVarManager.Compare(KeyValues[I], RowValues[I]) = 0;
     end;
 
@@ -898,8 +868,13 @@ begin
           end
           else
           begin
+            {$IFNDEF VER130BELOW}
             DecodedKeyValues[I].VUnicodeString :=
               WideUpperCase(DecodedKeyValues[I].VUnicodeString);
+            {$ELSE}
+            DecodedKeyValues[I].VUnicodeString :=
+              AnsiUpperCase(DecodedKeyValues[I].VUnicodeString);
+            {$ENDIF}
           end;
         end;
       end
@@ -937,8 +912,13 @@ begin
               end
               else
               begin
+                {$IFNDEF VER130BELOW}
                 DecodedKeyValues[I].VUnicodeString :=
                   WideUpperCase(DecodedKeyValues[I].VUnicodeString);
+                {$ELSE}
+                DecodedKeyValues[I].VUnicodeString :=
+                  AnsiUpperCase(DecodedKeyValues[I].VUnicodeString);
+                {$ENDIF}
               end;
             end
             else
@@ -994,8 +974,7 @@ begin
     if KeyValues[I].VType = vtNull then
     begin
       Result := ResultSet.IsNull(ColumnIndex);
-      if not Result then
-         Break;
+      if not Result then Break;
       Continue;
     end;
 
@@ -1016,7 +995,7 @@ begin
 
       if CaseInsensitive then
         Value2 := AnsiUpperCase(Value2);
-      Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
+      Result := AnsiStrLComp(PChar(Value2), PChar(Value1), Length(Value1)) = 0;
     end
     else
     begin
@@ -1052,8 +1031,13 @@ begin
           begin
             if CaseInsensitive then
             begin
+           {$IFNDEF VER130BELOW}
               Result := KeyValues[I].VUnicodeString =
                 WideUpperCase(ResultSet.GetUnicodeString(ColumnIndex));
+           {$ELSE}
+              Result := AnsiString(KeyValues[I].VUnicodeString) =
+                AnsiUpperCase(ResultSet.GetUnicodeString(ColumnIndex));
+           {$ENDIF}
             end
             else
             begin
@@ -1095,7 +1079,7 @@ begin
   for I := 0 to Fields.Count - 1 do
   begin
     if (Fields[I].FieldKind = fkData)
-      and not (Fields[I].DataType in [ftBlob, ftMemo, ftBytes {$IFNDEF VER150BELOW}, ftWideMemo{$ENDIF}]) then
+      and not (Fields[I].DataType in [ftBlob, ftMemo, ftBytes]) then
     begin
       if Result <> '' then
         Result := Result + ',';
@@ -1188,10 +1172,12 @@ begin
         end;
       ftLargeInt:
         begin
+  {$IFNDEF VER130BELOW}
           if Field2 is TLargeIntField then
             Result := ResultSet.GetLong(Field1.FieldNo)
               = TLargeIntField(Field2).AsLargeInt
           else
+  {$ENDIF}
             Result := ResultSet.GetInt(Field1.FieldNo) = Field2.AsInteger;
         end;
       ftCurrency:
@@ -1360,33 +1346,27 @@ var
   Item: string;
 begin
   Result := 0;
-  if (Content = nil) or (Content^ = #0) or (Strings = nil) then
-     Exit;
+  if (Content = nil) or (Content^=#0) or (Strings = nil) then Exit;
   Tail := Content;
   InQuote := False;
   QuoteChar := #0;
   Strings.BeginUpdate;
   try
     repeat
-      while Tail^ in WhiteSpace + [#13, #10] do
-        Inc(Tail);
+      while Tail^ in WhiteSpace + [#13, #10] do Inc(Tail);
       Head := Tail;
       while True do
       begin
         while (InQuote and not (Tail^ in [QuoteChar, #0])) or
-               not (Tail^ in Separators + [#0, #13, #10, '''', '"']) do
-           Inc(Tail);
+          not (Tail^ in Separators + [#0, #13, #10, '''', '"']) do Inc(Tail);
         if Tail^ in ['''', '"'] then
         begin
           if (QuoteChar <> #0) and (QuoteChar = Tail^) then
             QuoteChar := #0
-          else
-            QuoteChar := Tail^;
+          else QuoteChar := Tail^;
           InQuote := QuoteChar <> #0;
           Inc(Tail);
-        end
-        else
-          Break;
+        end else Break;
       end;
       EOS := Tail^ = #0;
       if (Head <> Tail) and (Head^ <> #0) then
@@ -1442,13 +1422,6 @@ begin
   finally
     SL.Free;
   end;
-end;
-
-function WideStringStream(const AString: WideString): TStream;
-begin
-  Result := TMemoryStream.Create;
-  Result.Write(PWideChar(AString)^, Length(AString)*2);
-  Result.Position := 0;
 end;
 
 initialization

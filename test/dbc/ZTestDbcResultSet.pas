@@ -54,7 +54,7 @@ unit ZTestDbcResultSet;
 interface
 
 uses
-  TestFramework, Classes, SysUtils, Types, ZDbcIntfs, ZClasses, ZCollections,
+  TestFramework, Classes, SysUtils, ZDbcIntfs, ZClasses, ZCollections,
   ZSysUtils, ZDbcResultSet, ZCompatibility, ZTestConsts, ZTestDefinitions;
 
 type

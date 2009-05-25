@@ -57,7 +57,11 @@ interface
 
 {$I ZPlain.inc}
 
-uses Types, ZCompatibility;
+{$IFNDEF VER130BELOW}
+uses Types;
+{$ELSE}
+uses ZCompatibility;
+{$ENDIF}
 
 type
   {** Implements a loader for native library. }
@@ -69,7 +73,7 @@ type
   protected
     function LoadNativeLibrary: Boolean; virtual;
     procedure FreeNativeLibrary; virtual;
-    function GetAddress(ProcName: PAnsiChar): Pointer;
+    function GetAddress(ProcName: PChar): Pointer;
   public
     constructor Create(Locations: array of string);
     destructor Destroy; override;
@@ -157,14 +161,14 @@ begin
     for I := 0 to High(FLocations) do
     begin
       Location := FLocations[I];
-//      Handle := GetModuleHandle(PAnsiChar(Location));
+//      Handle := GetModuleHandle(PChar(Location));
 //      if Handle = 0 then
 //      begin
 {$IFDEF UNIX}
   {$IFDEF FPC}
-        Handle := LoadLibrary(PAnsiChar(Location));
+        Handle := LoadLibrary(PChar(Location));
   {$ELSE}
-        Handle := HMODULE(dlopen(PAnsiChar(Location), RTLD_GLOBAL));
+        Handle := HMODULE(dlopen(PChar(Location), RTLD_GLOBAL));
   {$ENDIF}
 {$ELSE}
         Handle := LoadLibrary(PChar(Location));
@@ -202,7 +206,7 @@ end;
   @param ProcName a name of the procedure.
   @return a procedure address.
 }
-function TZNativeLibraryLoader.GetAddress(ProcName: PAnsiChar): Pointer;
+function TZNativeLibraryLoader.GetAddress(ProcName: PChar): Pointer;
 begin
   Result := GetProcAddress(Handle, ProcName);
 end;

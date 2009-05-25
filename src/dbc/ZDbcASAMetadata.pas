@@ -58,159 +58,20 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
+{$IFNDEF VER130BELOW}
+  Types,
+{$ENDIF}
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
   ZDbcConnection, ZDbcASA;
 
 type
-
-  // technobot 2008-06-28 - methods moved as is from TZASADatabaseMetadata:
-  {** Implements ASA Database Information. }
-  TZASADatabaseInfo = class(TZAbstractDatabaseInfo)
-  public
-    constructor Create(const Metadata: TZAbstractDatabaseMetadata);
-    destructor Destroy; override;
-
-    // database/driver/server info:
-    function GetDatabaseProductName: string; override;
-    function GetDatabaseProductVersion: string; override;
-    function GetDriverName: string; override;
-//    function GetDriverVersion: string; override; -> Same as parent
-    function GetDriverMajorVersion: Integer; override;
-    function GetDriverMinorVersion: Integer; override;
-//    function GetServerVersion: string; -> Not implemented
-
-    // capabilities (what it can/cannot do):
-//    function AllProceduresAreCallable: Boolean; override; -> Not implemented
-//    function AllTablesAreSelectable: Boolean; override; -> Not implemented
-    function SupportsMixedCaseIdentifiers: Boolean; override;
-    function SupportsMixedCaseQuotedIdentifiers: Boolean; override;
-//    function SupportsAlterTableWithAddColumn: Boolean; override; -> Not implemented
-//    function SupportsAlterTableWithDropColumn: Boolean; override; -> Not implemented
-//    function SupportsColumnAliasing: Boolean; override; -> Not implemented
-//    function SupportsConvert: Boolean; override; -> Not implemented
-//    function SupportsConvertForTypes(FromType: TZSQLType; ToType: TZSQLType):
-//      Boolean; override; -> Not implemented
-//    function SupportsTableCorrelationNames: Boolean; override; -> Not implemented
-//    function SupportsDifferentTableCorrelationNames: Boolean; override; -> Not implemented
-    function SupportsExpressionsInOrderBy: Boolean; override;
-    function SupportsOrderByUnrelated: Boolean; override;
-    function SupportsGroupBy: Boolean; override;
-    function SupportsGroupByUnrelated: Boolean; override;
-    function SupportsGroupByBeyondSelect: Boolean; override;
-//    function SupportsLikeEscapeClause: Boolean; override; -> Not implemented
-//    function SupportsMultipleResultSets: Boolean; override; -> Not implemented
-//    function SupportsMultipleTransactions: Boolean; override; -> Not implemented
-//    function SupportsNonNullableColumns: Boolean; override; -> Not implemented
-//    function SupportsMinimumSQLGrammar: Boolean; override; -> Not implemented
-//    function SupportsCoreSQLGrammar: Boolean; override; -> Not implemented
-//    function SupportsExtendedSQLGrammar: Boolean; override; -> Not implemented
-//    function SupportsANSI92EntryLevelSQL: Boolean; override; -> Not implemented
-//    function SupportsANSI92IntermediateSQL: Boolean; override; -> Not implemented
-//    function SupportsANSI92FullSQL: Boolean; override; -> Not implemented
-    function SupportsIntegrityEnhancementFacility: Boolean; override;
-//    function SupportsOuterJoins: Boolean; override; -> Not implemented
-//    function SupportsFullOuterJoins: Boolean; override; -> Not implemented
-//    function SupportsLimitedOuterJoins: Boolean; override; -> Not implemented
-    function SupportsSchemasInDataManipulation: Boolean; override;
-    function SupportsSchemasInProcedureCalls: Boolean; override;
-    function SupportsSchemasInTableDefinitions: Boolean; override;
-    function SupportsSchemasInIndexDefinitions: Boolean; override;
-    function SupportsSchemasInPrivilegeDefinitions: Boolean; override;
-    function SupportsCatalogsInDataManipulation: Boolean; override;
-    function SupportsCatalogsInProcedureCalls: Boolean; override;
-    function SupportsCatalogsInTableDefinitions: Boolean; override;
-    function SupportsCatalogsInIndexDefinitions: Boolean; override;
-    function SupportsCatalogsInPrivilegeDefinitions: Boolean; override;
-    function SupportsPositionedDelete: Boolean; override;
-    function SupportsPositionedUpdate: Boolean; override;
-    function SupportsSelectForUpdate: Boolean; override;
-    function SupportsStoredProcedures: Boolean; override;
-    function SupportsSubqueriesInComparisons: Boolean; override;
-    function SupportsSubqueriesInExists: Boolean; override;
-    function SupportsSubqueriesInIns: Boolean; override;
-    function SupportsSubqueriesInQuantifieds: Boolean; override;
-    function SupportsCorrelatedSubqueries: Boolean; override;
-    function SupportsUnion: Boolean; override;
-    function SupportsUnionAll: Boolean; override;
-    function SupportsOpenCursorsAcrossCommit: Boolean; override;
-    function SupportsOpenCursorsAcrossRollback: Boolean; override;
-    function SupportsOpenStatementsAcrossCommit: Boolean; override;
-    function SupportsOpenStatementsAcrossRollback: Boolean; override;
-    function SupportsTransactions: Boolean; override;
-    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
-      Boolean; override;
-    function SupportsDataDefinitionAndDataManipulationTransactions: Boolean; override;
-    function SupportsDataManipulationTransactionsOnly: Boolean; override;
-    function SupportsResultSetType(_Type: TZResultSetType): Boolean; override;
-    function SupportsResultSetConcurrency(_Type: TZResultSetType;
-      Concurrency: TZResultSetConcurrency): Boolean; override;
-//    function SupportsBatchUpdates: Boolean; override; -> Not implemented
-
-    // maxima:
-    function GetMaxBinaryLiteralLength: Integer; override;
-    function GetMaxCharLiteralLength: Integer; override;
-    function GetMaxColumnNameLength: Integer; override;
-    function GetMaxColumnsInGroupBy: Integer; override;
-    function GetMaxColumnsInIndex: Integer; override;
-    function GetMaxColumnsInOrderBy: Integer; override;
-    function GetMaxColumnsInSelect: Integer; override;
-    function GetMaxColumnsInTable: Integer; override;
-    function GetMaxConnections: Integer; override;
-    function GetMaxCursorNameLength: Integer; override;
-    function GetMaxIndexLength: Integer; override;
-    function GetMaxSchemaNameLength: Integer; override;
-    function GetMaxProcedureNameLength: Integer; override;
-    function GetMaxCatalogNameLength: Integer; override;
-    function GetMaxRowSize: Integer; override;
-    function GetMaxStatementLength: Integer; override;
-    function GetMaxStatements: Integer; override;
-    function GetMaxTableNameLength: Integer; override;
-    function GetMaxTablesInSelect: Integer; override;
-    function GetMaxUserNameLength: Integer; override;
-
-    // policies (how are various data and operations handled):
-//    function IsReadOnly: Boolean; override; -> Not implemented
-//    function IsCatalogAtStart: Boolean; override; -> Not implemented
-    function DoesMaxRowSizeIncludeBlobs: Boolean; override;
-//    function NullsAreSortedHigh: Boolean; override; -> Not implemented
-//    function NullsAreSortedLow: Boolean; override; -> Not implemented
-    function NullsAreSortedAtStart: Boolean; override;
-//    function NullsAreSortedAtEnd: Boolean; override; -> Not implemented
-//    function NullPlusNonNullIsNull: Boolean; override; -> Not implemented
-    function UsesLocalFiles: Boolean; override;
-    function UsesLocalFilePerTable: Boolean; override;
-    function StoresUpperCaseIdentifiers: Boolean; override;
-    function StoresLowerCaseIdentifiers: Boolean; override;
-    function StoresMixedCaseIdentifiers: Boolean; override;
-    function StoresUpperCaseQuotedIdentifiers: Boolean; override;
-    function StoresLowerCaseQuotedIdentifiers: Boolean; override;
-    function StoresMixedCaseQuotedIdentifiers: Boolean; override;
-    function GetDefaultTransactionIsolation: TZTransactIsolationLevel; override;
-    function DataDefinitionCausesTransactionCommit: Boolean; override;
-    function DataDefinitionIgnoredInTransactions: Boolean; override;
-
-    // interface details (terms, keywords, etc):
-//    function GetIdentifierQuoteString: string; override; -> Not implemented
-    function GetSchemaTerm: string; override;
-    function GetProcedureTerm: string; override;
-    function GetCatalogTerm: string; override;
-    function GetCatalogSeparator: string; override;
-    function GetSQLKeywords: string; override;
-    function GetNumericFunctions: string; override;
-    function GetStringFunctions: string; override;
-    function GetSystemFunctions: string; override;
-    function GetTimeDateFunctions: string; override;
-    function GetSearchStringEscape: string; override;
-    function GetExtraNameCharacters: string; override;
-  end;
 
   {** Implements ASA Database Metadata. }
   TZASADatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
     FASAConnection: TZASAConnection;
   protected
-    function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-28
-
+    function GetStatement: IZStatement;
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
     function UncachedGetSchemas: IZResultSet; override;
@@ -234,7 +95,7 @@ type
     function UncachedGetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
       Unique: Boolean; Approximate: Boolean): IZResultSet; override;
 //     function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
-//      const SequenceNamePattern: string): IZResultSet; virtual; -> Not implemented
+//      const SequenceNamePattern: string): IZResultSet; override; -> Not implemented
     function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string): IZResultSet; override;
     function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
@@ -248,29 +109,128 @@ type
   public
     constructor Create(Connection: TZAbstractConnection; Url: string; Info: TStrings);
     destructor Destroy; override;
+
+    function NullsAreSortedAtStart: Boolean; override;
+    function GetDatabaseProductName: string; override;
+    function GetDatabaseProductVersion: string; override;
+    function GetDriverName: string; override;
+    function GetDriverMajorVersion: Integer; override;
+    function GetDriverMinorVersion: Integer; override;
+    function UsesLocalFiles: Boolean; override;
+    function UsesLocalFilePerTable: Boolean; override;
+    function SupportsMixedCaseIdentifiers: Boolean; override;
+    function StoresUpperCaseIdentifiers: Boolean; override;
+    function StoresLowerCaseIdentifiers: Boolean; override;
+    function StoresMixedCaseIdentifiers: Boolean; override;
+    function SupportsMixedCaseQuotedIdentifiers: Boolean; override;
+    function StoresUpperCaseQuotedIdentifiers: Boolean; override;
+    function StoresLowerCaseQuotedIdentifiers: Boolean; override;
+    function StoresMixedCaseQuotedIdentifiers: Boolean; override;
+    function GetSQLKeywords: string; override;
+    function GetNumericFunctions: string; override;
+    function GetStringFunctions: string; override;
+    function GetSystemFunctions: string; override;
+    function GetTimeDateFunctions: string; override;
+    function GetSearchStringEscape: string; override;
+    function GetExtraNameCharacters: string; override;
+
+    function SupportsExpressionsInOrderBy: Boolean; override;
+    function SupportsOrderByUnrelated: Boolean; override;
+    function SupportsGroupBy: Boolean; override;
+    function SupportsGroupByUnrelated: Boolean; override;
+    function SupportsGroupByBeyondSelect: Boolean; override;
+    function SupportsIntegrityEnhancementFacility: Boolean; override;
+    function GetSchemaTerm: string; override;
+    function GetProcedureTerm: string; override;
+    function GetCatalogTerm: string; override;
+    function GetCatalogSeparator: string; override;
+    function SupportsSchemasInDataManipulation: Boolean; override;
+    function SupportsSchemasInProcedureCalls: Boolean; override;
+    function SupportsSchemasInTableDefinitions: Boolean; override;
+    function SupportsSchemasInIndexDefinitions: Boolean; override;
+    function SupportsSchemasInPrivilegeDefinitions: Boolean; override;
+    function SupportsCatalogsInDataManipulation: Boolean; override;
+    function SupportsCatalogsInProcedureCalls: Boolean; override;
+    function SupportsCatalogsInTableDefinitions: Boolean; override;
+    function SupportsCatalogsInIndexDefinitions: Boolean; override;
+    function SupportsCatalogsInPrivilegeDefinitions: Boolean; override;
+    function SupportsPositionedDelete: Boolean; override;
+    function SupportsPositionedUpdate: Boolean; override;
+    function SupportsSelectForUpdate: Boolean; override;
+    function SupportsStoredProcedures: Boolean; override;
+    function SupportsSubqueriesInComparisons: Boolean; override;
+    function SupportsSubqueriesInExists: Boolean; override;
+    function SupportsSubqueriesInIns: Boolean; override;
+    function SupportsSubqueriesInQuantifieds: Boolean; override;
+    function SupportsCorrelatedSubqueries: Boolean; override;
+    function SupportsUnion: Boolean; override;
+    function SupportsUnionAll: Boolean;  override;
+    function SupportsOpenCursorsAcrossCommit: Boolean; override;
+    function SupportsOpenCursorsAcrossRollback: Boolean; override;
+    function SupportsOpenStatementsAcrossCommit: Boolean; override;
+    function SupportsOpenStatementsAcrossRollback: Boolean; override;
+
+    function GetMaxBinaryLiteralLength: Integer; override;
+    function GetMaxCharLiteralLength: Integer; override;
+    function GetMaxColumnNameLength: Integer; override;
+    function GetMaxColumnsInGroupBy: Integer; override;
+    function GetMaxColumnsInIndex: Integer; override;
+    function GetMaxColumnsInOrderBy: Integer; override;
+    function GetMaxColumnsInSelect: Integer; override;
+    function GetMaxColumnsInTable: Integer; override;
+    function GetMaxConnections: Integer; override;
+    function GetMaxCursorNameLength: Integer; override;
+    function GetMaxIndexLength: Integer; override;
+    function GetMaxSchemaNameLength: Integer; override;
+    function GetMaxProcedureNameLength: Integer; override;
+    function GetMaxCatalogNameLength: Integer; override;
+    function GetMaxRowSize: Integer; override;
+    function DoesMaxRowSizeIncludeBlobs: Boolean; override;
+    function GetMaxStatementLength: Integer; override;
+    function GetMaxStatements: Integer; override;
+    function GetMaxTableNameLength: Integer; override;
+    function GetMaxTablesInSelect: Integer; override;
+    function GetMaxUserNameLength: Integer; override;
+
+    function GetDefaultTransactionIsolation: TZTransactIsolationLevel; override;
+    function SupportsTransactions: Boolean; override;
+    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
+      Boolean; override;
+    function SupportsDataDefinitionAndDataManipulationTransactions: Boolean; override;
+    function SupportsDataManipulationTransactionsOnly: Boolean; override;
+    function DataDefinitionCausesTransactionCommit: Boolean; override;
+    function DataDefinitionIgnoredInTransactions: Boolean; override;
+
+    function SupportsResultSetType(_Type: TZResultSetType): Boolean; override;
+    function SupportsResultSetConcurrency(_Type: TZResultSetType;
+      Concurrency: TZResultSetConcurrency): Boolean; override;
   end;
 
 implementation
 
 uses ZDbcASAUtils, ZDbcUtils;
 
-{ TZASADatabaseInfo }
+{ TZASADatabaseMetadata }
 
 {**
-  Constructs this object.
-  @param Metadata the interface of the correpsonding database metadata object
+  Constructs this object and assignes the main properties.
+  @param Connection a database connection object.
+  @param Url a database connection url string.
+  @param Info an extra connection properties.
 }
-constructor TZASADatabaseInfo.Create(const Metadata: TZAbstractDatabaseMetadata);
+constructor TZASADatabaseMetadata.Create(Connection: TZAbstractConnection;
+  Url: string; Info: TStrings);
 begin
-  inherited;
+  inherited Create(Connection, Url, Info);
+  FASAConnection := Connection as TZASAConnection;
 end;
 
 {**
   Destroys this object and cleanups the memory.
 }
-destructor TZASADatabaseInfo.Destroy;
+destructor TZASADatabaseMetadata.Destroy;
 begin
-  inherited;
+  inherited Destroy;
 end;
 
 //----------------------------------------------------------------------
@@ -280,7 +240,7 @@ end;
   Are NULL values sorted at the start regardless of sort order?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.NullsAreSortedAtStart: Boolean;
+function TZASADatabaseMetadata.NullsAreSortedAtStart: Boolean;
 begin
   Result := True;
 end;
@@ -289,7 +249,7 @@ end;
   What's the name of this database product?
   @return database product name
 }
-function TZASADatabaseInfo.GetDatabaseProductName: string;
+function TZASADatabaseMetadata.GetDatabaseProductName: string;
 begin
   Result := 'Sybase ASA';
 end;
@@ -298,7 +258,7 @@ end;
   What's the version of this database product?
   @return database version
 }
-function TZASADatabaseInfo.GetDatabaseProductVersion: string;
+function TZASADatabaseMetadata.GetDatabaseProductVersion: string;
 begin
   Result := '7.0+';
 end;
@@ -307,7 +267,7 @@ end;
   What's the name of this JDBC driver?
   @return JDBC driver name
 }
-function TZASADatabaseInfo.GetDriverName: string;
+function TZASADatabaseMetadata.GetDriverName: string;
 begin
   Result := 'Zeos Database Connectivity Driver for Sybase ASA';
 end;
@@ -316,7 +276,7 @@ end;
   What's this JDBC driver's major version number?
   @return JDBC driver major version
 }
-function TZASADatabaseInfo.GetDriverMajorVersion: Integer;
+function TZASADatabaseMetadata.GetDriverMajorVersion: Integer;
 begin
   Result := 1;
 end;
@@ -325,7 +285,7 @@ end;
   What's this JDBC driver's minor version number?
   @return JDBC driver minor version number
 }
-function TZASADatabaseInfo.GetDriverMinorVersion: Integer;
+function TZASADatabaseMetadata.GetDriverMinorVersion: Integer;
 begin
   Result := 0;
 end;
@@ -334,7 +294,7 @@ end;
   Does the database store tables in a local file?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.UsesLocalFiles: Boolean;
+function TZASADatabaseMetadata.UsesLocalFiles: Boolean;
 begin
   Result := False;
 end;
@@ -343,7 +303,7 @@ end;
   Does the database use a file for each table?
   @return true if the database uses a local file for each table
 }
-function TZASADatabaseInfo.UsesLocalFilePerTable: Boolean;
+function TZASADatabaseMetadata.UsesLocalFilePerTable: Boolean;
 begin
   Result := False;
 end;
@@ -354,7 +314,7 @@ end;
   A JDBC Compliant<sup><font size=-2>TM</font></sup> driver will always return false.
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsMixedCaseIdentifiers: Boolean;
+function TZASADatabaseMetadata.SupportsMixedCaseIdentifiers: Boolean;
 begin
   Result := False;
 end;
@@ -364,7 +324,7 @@ end;
   case insensitive and store them in upper case?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.StoresUpperCaseIdentifiers: Boolean;
+function TZASADatabaseMetadata.StoresUpperCaseIdentifiers: Boolean;
 begin
   Result := False;
 end;
@@ -374,7 +334,7 @@ end;
   case insensitive and store them in lower case?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.StoresLowerCaseIdentifiers: Boolean;
+function TZASADatabaseMetadata.StoresLowerCaseIdentifiers: Boolean;
 begin
   Result := False;
 end;
@@ -384,7 +344,7 @@ end;
   case insensitive and store them in mixed case?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.StoresMixedCaseIdentifiers: Boolean;
+function TZASADatabaseMetadata.StoresMixedCaseIdentifiers: Boolean;
 begin
   Result := True;
 end;
@@ -395,7 +355,7 @@ end;
   A JDBC Compliant<sup><font size=-2>TM</font></sup> driver will always return true.
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsMixedCaseQuotedIdentifiers: Boolean;
+function TZASADatabaseMetadata.SupportsMixedCaseQuotedIdentifiers: Boolean;
 begin
   Result := False;
 end;
@@ -405,7 +365,7 @@ end;
   case insensitive and store them in upper case?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.StoresUpperCaseQuotedIdentifiers: Boolean;
+function TZASADatabaseMetadata.StoresUpperCaseQuotedIdentifiers: Boolean;
 begin
   Result := False;
 end;
@@ -415,7 +375,7 @@ end;
   case insensitive and store them in lower case?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.StoresLowerCaseQuotedIdentifiers: Boolean;
+function TZASADatabaseMetadata.StoresLowerCaseQuotedIdentifiers: Boolean;
 begin
   Result := False;
 end;
@@ -425,7 +385,7 @@ end;
   case insensitive and store them in mixed case?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.StoresMixedCaseQuotedIdentifiers: Boolean;
+function TZASADatabaseMetadata.StoresMixedCaseQuotedIdentifiers: Boolean;
 begin
   Result := True;
 end;
@@ -435,7 +395,7 @@ end;
   that are NOT also SQL92 keywords.
   @return the list
 }
-function TZASADatabaseInfo.GetSQLKeywords: string;
+function TZASADatabaseMetadata.GetSQLKeywords: string;
 begin
   Result := 'add,all,alter,and,any,as,asc,backup,begin,between,bigint,binary,'+
             'bit,bottom,break,by,call,capability,cascade,case,cast,char,'+
@@ -470,7 +430,7 @@ end;
   clause.
   @return the list
 }
-function TZASADatabaseInfo.GetNumericFunctions: string;
+function TZASADatabaseMetadata.GetNumericFunctions: string;
 begin
   Result := 'ABS,ACOS,ASIN,ATAN,ATN2,CEILING,COS,COT,DEGREES,EXP,FLOOR,LOG,'+
             'LOG10,MOD,PI,POWER,RADIANS,RAND,REMAINDER,ROUND,SIGN,SIN,SQRT,'+
@@ -483,7 +443,7 @@ end;
   clause.
   @return the list
 }
-function TZASADatabaseInfo.GetStringFunctions: string;
+function TZASADatabaseMetadata.GetStringFunctions: string;
 begin
   Result := 'ASCII,BYTE_LENGTH,BYTE_SUBSTR,CHAR,CHARINDEX,CHAR_LENGTH,COMPARE,'+
             'CSCONVERT,DIFFERENCE,INSERTSTR,LCASE,LEFT,LENGTH,LOCATE,LOWER,'+
@@ -498,7 +458,7 @@ end;
   clause.
   @return the list
 }
-function TZASADatabaseInfo.GetSystemFunctions: string;
+function TZASADatabaseMetadata.GetSystemFunctions: string;
 begin
   Result := 'CONNECTION_PROPERTY,DATALENGTH,DB_ID,DB_NAME,DB_PROPERTY,'+
             'EVENT_CONDITION,EVENT_CONDITION_NAME,EVENT_PARAMETER,'+
@@ -516,7 +476,7 @@ end;
   Gets a comma-separated list of time and date functions.
   @return the list
 }
-function TZASADatabaseInfo.GetTimeDateFunctions: string;
+function TZASADatabaseMetadata.GetTimeDateFunctions: string;
 begin
   Result := 'DATE,DATEADD,DATEDIFF,DATEFORMAT,DATENAME,DATEPART,DATETIME,DAY,'+
             'DAYNAME,DAYS,DOW,GETDATE,HOUR,HOURS,MINUTE,MINUTES,MONTH,'+
@@ -534,7 +494,7 @@ end;
 
   @return the string used to escape wildcard characters
 }
-function TZASADatabaseInfo.GetSearchStringEscape: string;
+function TZASADatabaseMetadata.GetSearchStringEscape: string;
 begin
   Result := '\';
 end;
@@ -544,7 +504,7 @@ end;
   identifier names (those beyond a-z, A-Z, 0-9 and _).
   @return the string containing the extra characters
 }
-function TZASADatabaseInfo.GetExtraNameCharacters: string;
+function TZASADatabaseMetadata.GetExtraNameCharacters: string;
 begin
   Result := '@#$';
 end;
@@ -556,7 +516,7 @@ end;
   Are expressions in "ORDER BY" lists supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsExpressionsInOrderBy: Boolean;
+function TZASADatabaseMetadata.SupportsExpressionsInOrderBy: Boolean;
 begin
   Result := True;
 end;
@@ -565,7 +525,7 @@ end;
   Can an "ORDER BY" clause use columns not in the SELECT statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsOrderByUnrelated: Boolean;
+function TZASADatabaseMetadata.SupportsOrderByUnrelated: Boolean;
 begin
   Result := True;
 end;
@@ -574,7 +534,7 @@ end;
   Is some form of "GROUP BY" clause supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsGroupBy: Boolean;
+function TZASADatabaseMetadata.SupportsGroupBy: Boolean;
 begin
   Result := True;
 end;
@@ -583,7 +543,7 @@ end;
   Can a "GROUP BY" clause use columns not in the SELECT?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsGroupByUnrelated: Boolean;
+function TZASADatabaseMetadata.SupportsGroupByUnrelated: Boolean;
 begin
   Result := True;
 end;
@@ -593,7 +553,7 @@ end;
   provided it specifies all the columns in the SELECT?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsGroupByBeyondSelect: Boolean;
+function TZASADatabaseMetadata.SupportsGroupByBeyondSelect: Boolean;
 begin
   Result := False;
 end;
@@ -602,7 +562,7 @@ end;
   Is the SQL Integrity Enhancement Facility supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsIntegrityEnhancementFacility: Boolean;
+function TZASADatabaseMetadata.SupportsIntegrityEnhancementFacility: Boolean;
 begin
   Result := True;
 end;
@@ -611,7 +571,7 @@ end;
   What's the database vendor's preferred term for "schema"?
   @return the vendor term
 }
-function TZASADatabaseInfo.GetSchemaTerm: string;
+function TZASADatabaseMetadata.GetSchemaTerm: string;
 begin
   Result := 'OWNER';
 end;
@@ -620,7 +580,7 @@ end;
   What's the database vendor's preferred term for "procedure"?
   @return the vendor term
 }
-function TZASADatabaseInfo.GetProcedureTerm: string;
+function TZASADatabaseMetadata.GetProcedureTerm: string;
 begin
   Result := 'PROCEDURE';
 end;
@@ -629,7 +589,7 @@ end;
   What's the database vendor's preferred term for "catalog"?
   @return the vendor term
 }
-function TZASADatabaseInfo.GetCatalogTerm: string;
+function TZASADatabaseMetadata.GetCatalogTerm: string;
 begin
   Result := '';
 end;
@@ -638,7 +598,7 @@ end;
   What's the separator between catalog and table name?
   @return the separator string
 }
-function TZASADatabaseInfo.GetCatalogSeparator: string;
+function TZASADatabaseMetadata.GetCatalogSeparator: string;
 begin
   Result := '';
 end;
@@ -647,7 +607,7 @@ end;
   Can a schema name be used in a data manipulation statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsSchemasInDataManipulation: Boolean;
+function TZASADatabaseMetadata.SupportsSchemasInDataManipulation: Boolean;
 begin
   Result := True;
 end;
@@ -656,7 +616,7 @@ end;
   Can a schema name be used in a procedure call statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsSchemasInProcedureCalls: Boolean;
+function TZASADatabaseMetadata.SupportsSchemasInProcedureCalls: Boolean;
 begin
   Result := True;
 end;
@@ -665,7 +625,7 @@ end;
   Can a schema name be used in a table definition statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsSchemasInTableDefinitions: Boolean;
+function TZASADatabaseMetadata.SupportsSchemasInTableDefinitions: Boolean;
 begin
   Result := True;
 end;
@@ -674,7 +634,7 @@ end;
   Can a schema name be used in an index definition statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsSchemasInIndexDefinitions: Boolean;
+function TZASADatabaseMetadata.SupportsSchemasInIndexDefinitions: Boolean;
 begin
   Result := False;
 end;
@@ -683,7 +643,7 @@ end;
   Can a schema name be used in a privilege definition statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsSchemasInPrivilegeDefinitions: Boolean;
+function TZASADatabaseMetadata.SupportsSchemasInPrivilegeDefinitions: Boolean;
 begin
   Result := False;
 end;
@@ -692,7 +652,7 @@ end;
   Can a catalog name be used in a data manipulation statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsCatalogsInDataManipulation: Boolean;
+function TZASADatabaseMetadata.SupportsCatalogsInDataManipulation: Boolean;
 begin
   Result := False;
 end;
@@ -701,7 +661,7 @@ end;
   Can a catalog name be used in a procedure call statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsCatalogsInProcedureCalls: Boolean;
+function TZASADatabaseMetadata.SupportsCatalogsInProcedureCalls: Boolean;
 begin
   Result := False;
 end;
@@ -710,7 +670,7 @@ end;
   Can a catalog name be used in a table definition statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsCatalogsInTableDefinitions: Boolean;
+function TZASADatabaseMetadata.SupportsCatalogsInTableDefinitions: Boolean;
 begin
   Result := False;
 end;
@@ -719,7 +679,7 @@ end;
   Can a catalog name be used in an index definition statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsCatalogsInIndexDefinitions: Boolean;
+function TZASADatabaseMetadata.SupportsCatalogsInIndexDefinitions: Boolean;
 begin
   Result := False;
 end;
@@ -728,7 +688,7 @@ end;
   Can a catalog name be used in a privilege definition statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsCatalogsInPrivilegeDefinitions: Boolean;
+function TZASADatabaseMetadata.SupportsCatalogsInPrivilegeDefinitions: Boolean;
 begin
   Result := False;
 end;
@@ -737,7 +697,7 @@ end;
   Is positioned DELETE supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsPositionedDelete: Boolean;
+function TZASADatabaseMetadata.SupportsPositionedDelete: Boolean;
 begin
   Result := True;
 end;
@@ -746,7 +706,7 @@ end;
   Is positioned UPDATE supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsPositionedUpdate: Boolean;
+function TZASADatabaseMetadata.SupportsPositionedUpdate: Boolean;
 begin
   Result := True;
 end;
@@ -755,7 +715,7 @@ end;
   Is SELECT for UPDATE supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsSelectForUpdate: Boolean;
+function TZASADatabaseMetadata.SupportsSelectForUpdate: Boolean;
 begin
   Result := True;
 end;
@@ -765,7 +725,7 @@ end;
   syntax supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsStoredProcedures: Boolean;
+function TZASADatabaseMetadata.SupportsStoredProcedures: Boolean;
 begin
   Result := True;
 end;
@@ -775,7 +735,7 @@ end;
   A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsSubqueriesInComparisons: Boolean;
+function TZASADatabaseMetadata.SupportsSubqueriesInComparisons: Boolean;
 begin
   Result := True;
 end;
@@ -785,7 +745,7 @@ end;
   A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsSubqueriesInExists: Boolean;
+function TZASADatabaseMetadata.SupportsSubqueriesInExists: Boolean;
 begin
   Result := True;
 end;
@@ -795,7 +755,7 @@ end;
   A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsSubqueriesInIns: Boolean;
+function TZASADatabaseMetadata.SupportsSubqueriesInIns: Boolean;
 begin
   Result := True;
 end;
@@ -805,7 +765,7 @@ end;
   A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsSubqueriesInQuantifieds: Boolean;
+function TZASADatabaseMetadata.SupportsSubqueriesInQuantifieds: Boolean;
 begin
   Result := True;
 end;
@@ -815,7 +775,7 @@ end;
   A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsCorrelatedSubqueries: Boolean;
+function TZASADatabaseMetadata.SupportsCorrelatedSubqueries: Boolean;
 begin
   Result := True;
 end;
@@ -824,7 +784,7 @@ end;
   Is SQL UNION supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsUnion: Boolean;
+function TZASADatabaseMetadata.SupportsUnion: Boolean;
 begin
   Result := True;
 end;
@@ -833,7 +793,7 @@ end;
   Is SQL UNION ALL supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsUnionAll: Boolean;
+function TZASADatabaseMetadata.SupportsUnionAll: Boolean;
 begin
   Result := True;
 end;
@@ -843,7 +803,7 @@ end;
   @return <code>true</code> if cursors always remain open;
         <code>false</code> if they might not remain open
 }
-function TZASADatabaseInfo.SupportsOpenCursorsAcrossCommit: Boolean;
+function TZASADatabaseMetadata.SupportsOpenCursorsAcrossCommit: Boolean;
 begin
   Result := True;
 end;
@@ -853,7 +813,7 @@ end;
   @return <code>true</code> if cursors always remain open;
         <code>false</code> if they might not remain open
 }
-function TZASADatabaseInfo.SupportsOpenCursorsAcrossRollback: Boolean;
+function TZASADatabaseMetadata.SupportsOpenCursorsAcrossRollback: Boolean;
 begin
   Result := True;
 end;
@@ -863,7 +823,7 @@ end;
   @return <code>true</code> if statements always remain open;
         <code>false</code> if they might not remain open
 }
-function TZASADatabaseInfo.SupportsOpenStatementsAcrossCommit: Boolean;
+function TZASADatabaseMetadata.SupportsOpenStatementsAcrossCommit: Boolean;
 begin
   Result := True;
 end;
@@ -873,7 +833,7 @@ end;
   @return <code>true</code> if statements always remain open;
         <code>false</code> if they might not remain open
 }
-function TZASADatabaseInfo.SupportsOpenStatementsAcrossRollback: Boolean;
+function TZASADatabaseMetadata.SupportsOpenStatementsAcrossRollback: Boolean;
 begin
   Result := True;
 end;
@@ -889,7 +849,7 @@ end;
   @return max binary literal length in hex characters;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZASADatabaseInfo.GetMaxBinaryLiteralLength: Integer;
+function TZASADatabaseMetadata.GetMaxBinaryLiteralLength: Integer;
 begin
   Result := 0;
 end;
@@ -899,7 +859,7 @@ end;
   @return max literal length;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZASADatabaseInfo.GetMaxCharLiteralLength: Integer;
+function TZASADatabaseMetadata.GetMaxCharLiteralLength: Integer;
 begin
   Result := 32768;
 end;
@@ -909,7 +869,7 @@ end;
   @return max column name length;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZASADatabaseInfo.GetMaxColumnNameLength: Integer;
+function TZASADatabaseMetadata.GetMaxColumnNameLength: Integer;
 begin
   Result := 128;
 end;
@@ -919,7 +879,7 @@ end;
   @return max number of columns;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZASADatabaseInfo.GetMaxColumnsInGroupBy: Integer;
+function TZASADatabaseMetadata.GetMaxColumnsInGroupBy: Integer;
 begin
   Result := 0;
 end;
@@ -929,7 +889,7 @@ end;
   @return max number of columns;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZASADatabaseInfo.GetMaxColumnsInIndex: Integer;
+function TZASADatabaseMetadata.GetMaxColumnsInIndex: Integer;
 begin
   Result := 1000000;
 end;
@@ -939,7 +899,7 @@ end;
   @return max number of columns;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZASADatabaseInfo.GetMaxColumnsInOrderBy: Integer;
+function TZASADatabaseMetadata.GetMaxColumnsInOrderBy: Integer;
 begin
   Result := 1000000;
 end;
@@ -949,7 +909,7 @@ end;
   @return max number of columns;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZASADatabaseInfo.GetMaxColumnsInSelect: Integer;
+function TZASADatabaseMetadata.GetMaxColumnsInSelect: Integer;
 begin
   Result := 1000000;
 end;
@@ -959,7 +919,7 @@ end;
   @return max number of columns;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZASADatabaseInfo.GetMaxColumnsInTable: Integer;
+function TZASADatabaseMetadata.GetMaxColumnsInTable: Integer;
 begin
   Result := 1000000;
 end;
@@ -969,7 +929,7 @@ end;
   @return max number of active connections;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZASADatabaseInfo.GetMaxConnections: Integer;
+function TZASADatabaseMetadata.GetMaxConnections: Integer;
 begin
   Result := 0;
 end;
@@ -979,7 +939,7 @@ end;
   @return max cursor name length in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZASADatabaseInfo.GetMaxCursorNameLength: Integer;
+function TZASADatabaseMetadata.GetMaxCursorNameLength: Integer;
 begin
   Result := 128;
 end;
@@ -991,7 +951,7 @@ end;
    the constituent parts of the index;
    a result of zero means that there is no limit or the limit is not known
 }
-function TZASADatabaseInfo.GetMaxIndexLength: Integer;
+function TZASADatabaseMetadata.GetMaxIndexLength: Integer;
 begin
   Result := 0;
 end;
@@ -1001,7 +961,7 @@ end;
   @return max name length in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZASADatabaseInfo.GetMaxSchemaNameLength: Integer;
+function TZASADatabaseMetadata.GetMaxSchemaNameLength: Integer;
 begin
   Result := 128;
 end;
@@ -1011,7 +971,7 @@ end;
   @return max name length in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZASADatabaseInfo.GetMaxProcedureNameLength: Integer;
+function TZASADatabaseMetadata.GetMaxProcedureNameLength: Integer;
 begin
   Result := 128;
 end;
@@ -1021,7 +981,7 @@ end;
   @return max name length in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZASADatabaseInfo.GetMaxCatalogNameLength: Integer;
+function TZASADatabaseMetadata.GetMaxCatalogNameLength: Integer;
 begin
   Result := 0;
 end;
@@ -1031,7 +991,7 @@ end;
   @return max row size in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZASADatabaseInfo.GetMaxRowSize: Integer;
+function TZASADatabaseMetadata.GetMaxRowSize: Integer;
 begin
   Result := 0;
 end;
@@ -1041,7 +1001,7 @@ end;
   blobs?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.DoesMaxRowSizeIncludeBlobs: Boolean;
+function TZASADatabaseMetadata.DoesMaxRowSizeIncludeBlobs: Boolean;
 begin
   Result := False;
 end;
@@ -1051,7 +1011,7 @@ end;
   @return max length in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZASADatabaseInfo.GetMaxStatementLength: Integer;
+function TZASADatabaseMetadata.GetMaxStatementLength: Integer;
 begin
   Result := 0;
 end;
@@ -1062,7 +1022,7 @@ end;
   @return the maximum number of statements that can be open at one time;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZASADatabaseInfo.GetMaxStatements: Integer;
+function TZASADatabaseMetadata.GetMaxStatements: Integer;
 begin
   Result := 0;
 end;
@@ -1072,7 +1032,7 @@ end;
   @return max name length in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZASADatabaseInfo.GetMaxTableNameLength: Integer;
+function TZASADatabaseMetadata.GetMaxTableNameLength: Integer;
 begin
   Result := 128;
 end;
@@ -1082,7 +1042,7 @@ end;
   @return the maximum number of tables allowed in a SELECT statement;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZASADatabaseInfo.GetMaxTablesInSelect: Integer;
+function TZASADatabaseMetadata.GetMaxTablesInSelect: Integer;
 begin
   Result := 0;
 end;
@@ -1092,7 +1052,7 @@ end;
   @return max user name length  in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZASADatabaseInfo.GetMaxUserNameLength: Integer;
+function TZASADatabaseMetadata.GetMaxUserNameLength: Integer;
 begin
   Result := 30;
 end;
@@ -1105,7 +1065,7 @@ end;
   @return the default isolation level
   @see Connection
 }
-function TZASADatabaseInfo.GetDefaultTransactionIsolation:
+function TZASADatabaseMetadata.GetDefaultTransactionIsolation:
   TZTransactIsolationLevel;
 begin
   Result := tiReadUncommitted;
@@ -1116,7 +1076,7 @@ end;
   <code>commit</code> is a noop and the isolation level is TRANSACTION_NONE.
   @return <code>true</code> if transactions are supported; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.SupportsTransactions: Boolean;
+function TZASADatabaseMetadata.SupportsTransactions: Boolean;
 begin
   Result := True;
 end;
@@ -1127,7 +1087,7 @@ end;
   @return <code>true</code> if so; <code>false</code> otherwise
   @see Connection
 }
-function TZASADatabaseInfo.SupportsTransactionIsolationLevel(
+function TZASADatabaseMetadata.SupportsTransactionIsolationLevel(
   Level: TZTransactIsolationLevel): Boolean;
 begin
   Result := True;
@@ -1138,7 +1098,7 @@ end;
   within a transaction supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.
+function TZASADatabaseMetadata.
   SupportsDataDefinitionAndDataManipulationTransactions: Boolean;
 begin
   Result := True;
@@ -1149,7 +1109,7 @@ end;
   supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.
+function TZASADatabaseMetadata.
   SupportsDataManipulationTransactionsOnly: Boolean;
 begin
   Result := False;
@@ -1160,7 +1120,7 @@ end;
   transaction to commit?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.DataDefinitionCausesTransactionCommit: Boolean;
+function TZASADatabaseMetadata.DataDefinitionCausesTransactionCommit: Boolean;
 begin
   Result := True;
 end;
@@ -1169,69 +1129,9 @@ end;
   Is a data definition statement within a transaction ignored?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZASADatabaseInfo.DataDefinitionIgnoredInTransactions: Boolean;
+function TZASADatabaseMetadata.DataDefinitionIgnoredInTransactions: Boolean;
 begin
   Result := False;
-end;
-
-{**
-  Does the database support the given result set type?
-  @param type defined in <code>java.sql.ResultSet</code>
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZASADatabaseInfo.SupportsResultSetType(
-  _Type: TZResultSetType): Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Does the database support the concurrency type in combination
-  with the given result set type?
-
-  @param type defined in <code>java.sql.ResultSet</code>
-  @param concurrency type defined in <code>java.sql.ResultSet</code>
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZASADatabaseInfo.SupportsResultSetConcurrency(
-  _Type: TZResultSetType; Concurrency: TZResultSetConcurrency): Boolean;
-begin
-  Result := True;
-end;
-
-
-{ TZASADatabaseMetadata }
-
-
-{**
-  Constructs this object and assignes the main properties.
-  @param Connection a database connection object.
-  @param Url a database connection url string.
-  @param Info an extra connection properties.
-}
-constructor TZASADatabaseMetadata.Create(Connection: TZAbstractConnection;
-  Url: string; Info: TStrings);
-begin
-  inherited Create(Connection, Url, Info);
-  FASAConnection := Connection as TZASAConnection;
-end;
-
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZASADatabaseMetadata.Destroy;
-begin
-  inherited Destroy;
-end;
-
-{**
-  Constructs a database information object and returns the interface to it. Used
-  internally by the constructor.
-  @return the database information object interface
-}
-function TZASADatabaseMetadata.CreateDatabaseInfo: IZDatabaseInfo;
-begin
-  Result := TZASADatabaseInfo.Create(Self);
 end;
 
 {**
@@ -2471,6 +2371,31 @@ begin
 end;
 
 {**
+  Does the database support the given result set type?
+  @param type defined in <code>java.sql.ResultSet</code>
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZASADatabaseMetadata.SupportsResultSetType(
+  _Type: TZResultSetType): Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Does the database support the concurrency type in combination
+  with the given result set type?
+
+  @param type defined in <code>java.sql.ResultSet</code>
+  @param concurrency type defined in <code>java.sql.ResultSet</code>
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZASADatabaseMetadata.SupportsResultSetConcurrency(
+  _Type: TZResultSetType; Concurrency: TZResultSetConcurrency): Boolean;
+begin
+  Result := True;
+end;
+
+{**
   Gets a description of the user-defined types defined in a particular
   schema.  Schema-specific UDTs may have type JAVA_OBJECT, STRUCT,
   or DISTINCT.
@@ -2545,6 +2470,16 @@ begin
       end;
       Close;
     end;
+end;
+
+{**
+  Create a statement for use
+
+  @return TZDBLibStatement
+}
+function TZASADatabaseMetadata.GetStatement: IZStatement;
+begin
+  Result := GetConnection.CreateStatement;
 end;
 
 end.

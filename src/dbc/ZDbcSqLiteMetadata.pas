@@ -58,161 +58,19 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
+{$IFNDEF VER130BELOW}
+  Types,
+{$ENDIF}
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
   ZCompatibility, ZDbcSQLiteUtils, ZDbcConnection;
 
 type
-
-  // technobot 2008-06-28 - methods moved as is from TZSQLiteDatabaseMetadata:
-  {** Implements SQLite Database Information. }
-  TZSQLiteDatabaseInfo = class(TZAbstractDatabaseInfo)
-//    function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
-//      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
-  public
-    constructor Create(const Metadata: TZAbstractDatabaseMetadata);
-    destructor Destroy; override;
-
-    // database/driver/server info:
-    function GetDatabaseProductName: string; override;
-    function GetDatabaseProductVersion: string; override;
-    function GetDriverName: string; override;
-//    function GetDriverVersion: string; override; -> Same as parent
-    function GetDriverMajorVersion: Integer; override;
-    function GetDriverMinorVersion: Integer; override;
-//    function GetServerVersion: string; -> Not implemented
-
-    // capabilities (what it can/cannot do):
-//    function AllProceduresAreCallable: Boolean; override; -> Not implemented
-//    function AllTablesAreSelectable: Boolean; override; -> Not implemented
-    function SupportsMixedCaseIdentifiers: Boolean; override;
-    function SupportsMixedCaseQuotedIdentifiers: Boolean; override;
-//    function SupportsAlterTableWithAddColumn: Boolean; override; -> Not implemented
-//    function SupportsAlterTableWithDropColumn: Boolean; override; -> Not implemented
-//    function SupportsColumnAliasing: Boolean; override; -> Not implemented
-//    function SupportsConvert: Boolean; override; -> Not implemented
-//    function SupportsConvertForTypes(FromType: TZSQLType; ToType: TZSQLType):
-//      Boolean; override; -> Not implemented
-//    function SupportsTableCorrelationNames: Boolean; override; -> Not implemented
-//    function SupportsDifferentTableCorrelationNames: Boolean; override; -> Not implemented
-    function SupportsExpressionsInOrderBy: Boolean; override;
-    function SupportsOrderByUnrelated: Boolean; override;
-    function SupportsGroupBy: Boolean; override;
-    function SupportsGroupByUnrelated: Boolean; override;
-    function SupportsGroupByBeyondSelect: Boolean; override;
-//    function SupportsLikeEscapeClause: Boolean; override; -> Not implemented
-//    function SupportsMultipleResultSets: Boolean; override; -> Not implemented
-//    function SupportsMultipleTransactions: Boolean; override; -> Not implemented
-//    function SupportsNonNullableColumns: Boolean; override; -> Not implemented
-//    function SupportsMinimumSQLGrammar: Boolean; override; -> Not implemented
-//    function SupportsCoreSQLGrammar: Boolean; override; -> Not implemented
-//    function SupportsExtendedSQLGrammar: Boolean; override; -> Not implemented
-//    function SupportsANSI92EntryLevelSQL: Boolean; override; -> Not implemented
-//    function SupportsANSI92IntermediateSQL: Boolean; override; -> Not implemented
-//    function SupportsANSI92FullSQL: Boolean; override; -> Not implemented
-    function SupportsIntegrityEnhancementFacility: Boolean; override;
-//    function SupportsOuterJoins: Boolean; override; -> Not implemented
-//    function SupportsFullOuterJoins: Boolean; override; -> Not implemented
-//    function SupportsLimitedOuterJoins: Boolean; override; -> Not implemented
-    function SupportsSchemasInDataManipulation: Boolean; override;
-    function SupportsSchemasInProcedureCalls: Boolean; override;
-    function SupportsSchemasInTableDefinitions: Boolean; override;
-    function SupportsSchemasInIndexDefinitions: Boolean; override;
-    function SupportsSchemasInPrivilegeDefinitions: Boolean; override;
-    function SupportsCatalogsInDataManipulation: Boolean; override;
-    function SupportsCatalogsInProcedureCalls: Boolean; override;
-    function SupportsCatalogsInTableDefinitions: Boolean; override;
-    function SupportsCatalogsInIndexDefinitions: Boolean; override;
-    function SupportsCatalogsInPrivilegeDefinitions: Boolean; override;
-    function SupportsPositionedDelete: Boolean; override;
-    function SupportsPositionedUpdate: Boolean; override;
-    function SupportsSelectForUpdate: Boolean; override;
-    function SupportsStoredProcedures: Boolean; override;
-    function SupportsSubqueriesInComparisons: Boolean; override;
-    function SupportsSubqueriesInExists: Boolean; override;
-    function SupportsSubqueriesInIns: Boolean; override;
-    function SupportsSubqueriesInQuantifieds: Boolean; override;
-    function SupportsCorrelatedSubqueries: Boolean; override;
-    function SupportsUnion: Boolean; override;
-    function SupportsUnionAll: Boolean; override;
-    function SupportsOpenCursorsAcrossCommit: Boolean; override;
-    function SupportsOpenCursorsAcrossRollback: Boolean; override;
-    function SupportsOpenStatementsAcrossCommit: Boolean; override;
-    function SupportsOpenStatementsAcrossRollback: Boolean; override;
-    function SupportsTransactions: Boolean; override;
-    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
-      Boolean; override;
-    function SupportsDataDefinitionAndDataManipulationTransactions: Boolean; override;
-    function SupportsDataManipulationTransactionsOnly: Boolean; override;
-    function SupportsResultSetType(_Type: TZResultSetType): Boolean; override;
-    function SupportsResultSetConcurrency(_Type: TZResultSetType;
-      Concurrency: TZResultSetConcurrency): Boolean; override;
-//    function SupportsBatchUpdates: Boolean; override; -> Not implemented
-
-    // maxima:
-    function GetMaxBinaryLiteralLength: Integer; override;
-    function GetMaxCharLiteralLength: Integer; override;
-    function GetMaxColumnNameLength: Integer; override;
-    function GetMaxColumnsInGroupBy: Integer; override;
-    function GetMaxColumnsInIndex: Integer; override;
-    function GetMaxColumnsInOrderBy: Integer; override;
-    function GetMaxColumnsInSelect: Integer; override;
-    function GetMaxColumnsInTable: Integer; override;
-    function GetMaxConnections: Integer; override;
-    function GetMaxCursorNameLength: Integer; override;
-    function GetMaxIndexLength: Integer; override;
-    function GetMaxSchemaNameLength: Integer; override;
-    function GetMaxProcedureNameLength: Integer; override;
-    function GetMaxCatalogNameLength: Integer; override;
-    function GetMaxRowSize: Integer; override;
-    function GetMaxStatementLength: Integer; override;
-    function GetMaxStatements: Integer; override;
-    function GetMaxTableNameLength: Integer; override;
-    function GetMaxTablesInSelect: Integer; override;
-    function GetMaxUserNameLength: Integer; override;
-
-    // policies (how are various data and operations handled):
-//    function IsReadOnly: Boolean; override; -> Not implemented
-//    function IsCatalogAtStart: Boolean; override; -> Not implemented
-    function DoesMaxRowSizeIncludeBlobs: Boolean; override;
-//    function NullsAreSortedHigh: Boolean; override; -> Not implemented
-//    function NullsAreSortedLow: Boolean; override; -> Not implemented
-//    function NullsAreSortedAtStart: Boolean; override; -> Not implemented
-//    function NullsAreSortedAtEnd: Boolean; override; -> Not implemented
-//    function NullPlusNonNullIsNull: Boolean; override; -> Not implemented
-//    function UsesLocalFiles: Boolean; override; -> Not implemented
-    function UsesLocalFilePerTable: Boolean; override;
-    function StoresUpperCaseIdentifiers: Boolean; override;
-    function StoresLowerCaseIdentifiers: Boolean; override;
-    function StoresMixedCaseIdentifiers: Boolean; override;
-    function StoresUpperCaseQuotedIdentifiers: Boolean; override;
-    function StoresLowerCaseQuotedIdentifiers: Boolean; override;
-    function StoresMixedCaseQuotedIdentifiers: Boolean; override;
-    function GetDefaultTransactionIsolation: TZTransactIsolationLevel; override;
-    function DataDefinitionCausesTransactionCommit: Boolean; override;
-    function DataDefinitionIgnoredInTransactions: Boolean; override;
-
-    // interface details (terms, keywords, etc):
-//    function GetIdentifierQuoteString: string; override; -> Not implemented
-    function GetSchemaTerm: string; override;
-    function GetProcedureTerm: string; override;
-    function GetCatalogTerm: string; override;
-    function GetCatalogSeparator: string; override;
-    function GetSQLKeywords: string; override;
-    function GetNumericFunctions: string; override;
-    function GetStringFunctions: string; override;
-    function GetSystemFunctions: string; override;
-    function GetTimeDateFunctions: string; override;
-    function GetSearchStringEscape: string; override;
-    function GetExtraNameCharacters: string; override;
-  end;
 
   {** Implements SQLite Database Metadata. }
   TZSQLiteDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
     FDatabase: string;
   protected
-    function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-28
-
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
 //    function UncachedGetSchemas: IZResultSet; override;  -> not implemented
@@ -236,7 +94,7 @@ type
     function UncachedGetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
       Unique: Boolean; Approximate: Boolean): IZResultSet; override;
 //     function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
-//      const SequenceNamePattern: string): IZResultSet; virtual; -> Not implemented
+//      const SequenceNamePattern: string): IZResultSet; override; -> Not implemented
 //    function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
 //      const ProcedureNamePattern: string): IZResultSet; override;
 //    function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
@@ -245,10 +103,106 @@ type
 //    function UncachedGetVersionColumns(const Catalog: string; const Schema: string;
 //      const Table: string): IZResultSet; override;
     function UncachedGetTypeInfo: IZResultSet; override;
+//    function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
+//      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
   public
     constructor Create(Connection: TZAbstractConnection; Url: string;
       Info: TStrings);
     destructor Destroy; override;
+
+    function GetDatabaseProductName: string; override;
+    function GetDatabaseProductVersion: string; override;
+    function GetDriverName: string; override;
+    function GetDriverMajorVersion: Integer; override;
+    function GetDriverMinorVersion: Integer; override;
+    function UsesLocalFilePerTable: Boolean; override;
+    function SupportsMixedCaseIdentifiers: Boolean; override;
+    function StoresUpperCaseIdentifiers: Boolean; override;
+    function StoresLowerCaseIdentifiers: Boolean; override;
+    function StoresMixedCaseIdentifiers: Boolean; override;
+    function SupportsMixedCaseQuotedIdentifiers: Boolean; override;
+    function StoresUpperCaseQuotedIdentifiers: Boolean; override;
+    function StoresLowerCaseQuotedIdentifiers: Boolean; override;
+    function StoresMixedCaseQuotedIdentifiers: Boolean; override;
+    function GetSQLKeywords: string; override;
+    function GetNumericFunctions: string; override;
+    function GetStringFunctions: string; override;
+    function GetSystemFunctions: string; override;
+    function GetTimeDateFunctions: string; override;
+    function GetSearchStringEscape: string; override;
+    function GetExtraNameCharacters: string; override;
+
+    function SupportsExpressionsInOrderBy: Boolean; override;
+    function SupportsOrderByUnrelated: Boolean; override;
+    function SupportsGroupBy: Boolean; override;
+    function SupportsGroupByUnrelated: Boolean; override;
+    function SupportsGroupByBeyondSelect: Boolean; override;
+    function SupportsIntegrityEnhancementFacility: Boolean; override;
+    function GetSchemaTerm: string; override;
+    function GetProcedureTerm: string; override;
+    function GetCatalogTerm: string; override;
+    function GetCatalogSeparator: string; override;
+    function SupportsSchemasInDataManipulation: Boolean; override;
+    function SupportsSchemasInProcedureCalls: Boolean; override;
+    function SupportsSchemasInTableDefinitions: Boolean; override;
+    function SupportsSchemasInIndexDefinitions: Boolean; override;
+    function SupportsSchemasInPrivilegeDefinitions: Boolean; override;
+    function SupportsCatalogsInDataManipulation: Boolean; override;
+    function SupportsCatalogsInProcedureCalls: Boolean; override;
+    function SupportsCatalogsInTableDefinitions: Boolean; override;
+    function SupportsCatalogsInIndexDefinitions: Boolean; override;
+    function SupportsCatalogsInPrivilegeDefinitions: Boolean; override;
+    function SupportsPositionedDelete: Boolean; override;
+    function SupportsPositionedUpdate: Boolean; override;
+    function SupportsSelectForUpdate: Boolean; override;
+    function SupportsStoredProcedures: Boolean; override;
+    function SupportsSubqueriesInComparisons: Boolean; override;
+    function SupportsSubqueriesInExists: Boolean; override;
+    function SupportsSubqueriesInIns: Boolean; override;
+    function SupportsSubqueriesInQuantifieds: Boolean; override;
+    function SupportsCorrelatedSubqueries: Boolean; override;
+    function SupportsUnion: Boolean; override;
+    function SupportsUnionAll: Boolean;  override;
+    function SupportsOpenCursorsAcrossCommit: Boolean; override;
+    function SupportsOpenCursorsAcrossRollback: Boolean; override;
+    function SupportsOpenStatementsAcrossCommit: Boolean; override;
+    function SupportsOpenStatementsAcrossRollback: Boolean; override;
+
+    function GetMaxBinaryLiteralLength: Integer; override;
+    function GetMaxCharLiteralLength: Integer; override;
+    function GetMaxColumnNameLength: Integer; override;
+    function GetMaxColumnsInGroupBy: Integer; override;
+    function GetMaxColumnsInIndex: Integer; override;
+    function GetMaxColumnsInOrderBy: Integer; override;
+    function GetMaxColumnsInSelect: Integer; override;
+    function GetMaxColumnsInTable: Integer; override;
+    function GetMaxConnections: Integer; override;
+    function GetMaxCursorNameLength: Integer; override;
+    function GetMaxIndexLength: Integer; override;
+    function GetMaxSchemaNameLength: Integer; override;
+    function GetMaxProcedureNameLength: Integer; override;
+    function GetMaxCatalogNameLength: Integer; override;
+    function GetMaxRowSize: Integer; override;
+    function DoesMaxRowSizeIncludeBlobs: Boolean; override;
+    function GetMaxStatementLength: Integer; override;
+    function GetMaxStatements: Integer; override;
+    function GetMaxTableNameLength: Integer; override;
+    function GetMaxTablesInSelect: Integer; override;
+    function GetMaxUserNameLength: Integer; override;
+
+    function GetDefaultTransactionIsolation: TZTransactIsolationLevel; override;
+    function SupportsTransactions: Boolean; override;
+    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
+      Boolean; override;
+    function SupportsDataDefinitionAndDataManipulationTransactions: Boolean;
+      override;
+    function SupportsDataManipulationTransactionsOnly: Boolean; override;
+    function DataDefinitionCausesTransactionCommit: Boolean; override;
+    function DataDefinitionIgnoredInTransactions: Boolean; override;
+
+    function SupportsResultSetType(_Type: TZResultSetType): Boolean; override;
+    function SupportsResultSetConcurrency(_Type: TZResultSetType;
+      Concurrency: TZResultSetConcurrency): Boolean; override;
   end;
 
 implementation
@@ -256,904 +210,7 @@ implementation
 uses
   ZDbcUtils;
 
-{ TZSQLiteDatabaseInfo }
-
-{**
-  Constructs this object.
-  @param Metadata the interface of the correpsonding database metadata object
-}
-constructor TZSQLiteDatabaseInfo.Create(const Metadata: TZAbstractDatabaseMetadata);
-begin
-  inherited;
-end;
-
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZSQLiteDatabaseInfo.Destroy;
-begin
-  inherited;
-end;
-
-//----------------------------------------------------------------------
-// First, a variety of minor information about the target database.
-
-{**
-  What's the name of this database product?
-  @return database product name
-}
-function TZSQLiteDatabaseInfo.GetDatabaseProductName: string;
-begin
-  Result := 'SQLite';
-end;
-
-{**
-  What's the version of this database product?
-  @return database version
-}
-function TZSQLiteDatabaseInfo.GetDatabaseProductVersion: string;
-begin
-  Result := '';
-end;
-
-{**
-  What's the name of this JDBC driver?
-  @return JDBC driver name
-}
-function TZSQLiteDatabaseInfo.GetDriverName: string;
-begin
-  Result := 'Zeos Database Connectivity Driver for SQLite';
-end;
-
-{**
-  What's this JDBC driver's major version number?
-  @return JDBC driver major version
-}
-function TZSQLiteDatabaseInfo.GetDriverMajorVersion: Integer;
-begin
-  Result := 1;
-end;
-
-{**
-  What's this JDBC driver's minor version number?
-  @return JDBC driver minor version number
-}
-function TZSQLiteDatabaseInfo.GetDriverMinorVersion: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  Does the database use a file for each table?
-  @return true if the database uses a local file for each table
-}
-function TZSQLiteDatabaseInfo.UsesLocalFilePerTable: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Does the database treat mixed case unquoted SQL identifiers as
-  case sensitive and as a result store them in mixed case?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver will always return false.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsMixedCaseIdentifiers: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Does the database treat mixed case unquoted SQL identifiers as
-  case insensitive and store them in upper case?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.StoresUpperCaseIdentifiers: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Does the database treat mixed case unquoted SQL identifiers as
-  case insensitive and store them in lower case?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.StoresLowerCaseIdentifiers: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Does the database treat mixed case unquoted SQL identifiers as
-  case insensitive and store them in mixed case?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.StoresMixedCaseIdentifiers: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Does the database treat mixed case quoted SQL identifiers as
-  case sensitive and as a result store them in mixed case?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver will always return true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsMixedCaseQuotedIdentifiers: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Does the database treat mixed case quoted SQL identifiers as
-  case insensitive and store them in upper case?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.StoresUpperCaseQuotedIdentifiers: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Does the database treat mixed case quoted SQL identifiers as
-  case insensitive and store them in lower case?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.StoresLowerCaseQuotedIdentifiers: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Does the database treat mixed case quoted SQL identifiers as
-  case insensitive and store them in mixed case?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.StoresMixedCaseQuotedIdentifiers: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Gets a comma-separated list of all a database's SQL keywords
-  that are NOT also SQL92 keywords.
-  @return the list
-}
-function TZSQLiteDatabaseInfo.GetSQLKeywords: string;
-begin
-  Result := 'ALL,AND,AS,BETWEEN,BY,CASE,CHECK,COLLATE,COMMIT,CONSTRAINT,CREATE,'
-    + 'DEFAULT,DEFERRABLE,DELETE,DISTINCT,DROP,ELSE,EXCEPT,FOREIGN,FROM,GLOB,'
-    + 'GROUP,HAVING,IN,INDEX,INSERT,INTERSECT,INTO,IS,ISNULL,JOIN,LIKE,LIMIT,'
-    + 'NOT,NOTNULL,NULL,ON,OR,ORDER,PRIMARY,REFERENCES,ROLLBACK,SELECT,SET,'
-    + 'TABLE,THEN,TRANSACTION,UNION,UNIQUE,UPDATE,USING,VALUES,WHEN,WHERE,'
-    + 'ABORT,AFTER,ASC,ATTACH,BEFORE,BEGIN,DEFERRED,CASCADE,CLUSTER,CONFLICT,'
-    + 'COPY,CROSS,DATABASE,DELIMITERS,DESC,DETACH,EACH,END,EXPLAIN,FAIL,FOR,'
-    + 'FULL,IGNORE,IMMEDIATE,INITIALLY,INNER,INSTEAD,KEY,LEFT,MATCH,NATURAL,'
-    + 'OF,OFFSET,OUTER,PRAGMA,RAISE,REPLACE,RESTRICT,RIGHT,ROW,STATEMENT,'
-    + 'TEMP,TEMPORARY,TRIGGER,VACUUM,VIEW';
-end;
-
-{**
-  Gets a comma-separated list of math functions.  These are the
-  X/Open CLI math function names used in the JDBC function escape
-  clause.
-  @return the list
-}
-function TZSQLiteDatabaseInfo.GetNumericFunctions: string;
-begin
-  Result := 'ABS,MAX,MIN,RANDOM,ROUND';
-end;
-
-{**
-  Gets a comma-separated list of string functions.  These are the
-  X/Open CLI string function names used in the JDBC function escape
-  clause.
-  @return the list
-}
-function TZSQLiteDatabaseInfo.GetStringFunctions: string;
-begin
-  Result := 'LENGTH,LIKE,LOWER,SOUNDEX,SUBSTRING,UPPER';
-end;
-
-{**
-  Gets a comma-separated list of system functions.  These are the
-  X/Open CLI system function names used in the JDBC function escape
-  clause.
-  @return the list
-}
-function TZSQLiteDatabaseInfo.GetSystemFunctions: string;
-begin
-  Result := 'LAST_INSERT_ROWID,SQLITE_VERSION,TYPEOF';
-end;
-
-{**
-  Gets a comma-separated list of time and date functions.
-  @return the list
-}
-function TZSQLiteDatabaseInfo.GetTimeDateFunctions: string;
-begin
-  Result := '';
-end;
-
-{**
-  Gets the string that can be used to escape wildcard characters.
-  This is the string that can be used to escape '_' or '%' in
-  the string pattern style catalog search parameters.
-
-  <P>The '_' character represents any single character.
-  <P>The '%' character represents any sequence of zero or
-  more characters.
-
-  @return the string used to escape wildcard characters
-}
-function TZSQLiteDatabaseInfo.GetSearchStringEscape: string;
-begin
-  Result := '//';
-end;
-
-{**
-  Gets all the "extra" characters that can be used in unquoted
-  identifier names (those beyond a-z, A-Z, 0-9 and _).
-  @return the string containing the extra characters
-}
-function TZSQLiteDatabaseInfo.GetExtraNameCharacters: string;
-begin
-  Result := '';
-end;
-
-//--------------------------------------------------------------------
-// Functions describing which features are supported.
-
-{**
-  Are expressions in "ORDER BY" lists supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsExpressionsInOrderBy: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can an "ORDER BY" clause use columns not in the SELECT statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsOrderByUnrelated: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Is some form of "GROUP BY" clause supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsGroupBy: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Can a "GROUP BY" clause use columns not in the SELECT?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsGroupByUnrelated: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Can a "GROUP BY" clause add columns not in the SELECT
-  provided it specifies all the columns in the SELECT?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsGroupByBeyondSelect: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Is the SQL Integrity Enhancement Facility supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsIntegrityEnhancementFacility: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  What's the database vendor's preferred term for "schema"?
-  @return the vendor term
-}
-function TZSQLiteDatabaseInfo.GetSchemaTerm: string;
-begin
-  Result := '';
-end;
-
-{**
-  What's the database vendor's preferred term for "procedure"?
-  @return the vendor term
-}
-function TZSQLiteDatabaseInfo.GetProcedureTerm: string;
-begin
-  Result := '';
-end;
-
-{**
-  What's the database vendor's preferred term for "catalog"?
-  @return the vendor term
-}
-function TZSQLiteDatabaseInfo.GetCatalogTerm: string;
-begin
-  Result := 'database';
-end;
-
-{**
-  What's the separator between catalog and table name?
-  @return the separator string
-}
-function TZSQLiteDatabaseInfo.GetCatalogSeparator: string;
-begin
-  Result := '.';
-end;
-
-{**
-  Can a schema name be used in a data manipulation statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsSchemasInDataManipulation: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Can a schema name be used in a procedure call statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsSchemasInProcedureCalls: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can a schema name be used in a table definition statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsSchemasInTableDefinitions: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can a schema name be used in an index definition statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsSchemasInIndexDefinitions: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can a schema name be used in a privilege definition statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsSchemasInPrivilegeDefinitions: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can a catalog name be used in a data manipulation statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsCatalogsInDataManipulation: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Can a catalog name be used in a procedure call statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsCatalogsInProcedureCalls: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can a catalog name be used in a table definition statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsCatalogsInTableDefinitions: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can a catalog name be used in an index definition statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsCatalogsInIndexDefinitions: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can a catalog name be used in a privilege definition statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsCatalogsInPrivilegeDefinitions: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Is positioned DELETE supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsPositionedDelete: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Is positioned UPDATE supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsPositionedUpdate: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Is SELECT for UPDATE supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsSelectForUpdate: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Are stored procedure calls using the stored procedure escape
-  syntax supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsStoredProcedures: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Are subqueries in comparison expressions supported?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsSubqueriesInComparisons: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Are subqueries in 'exists' expressions supported?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsSubqueriesInExists: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Are subqueries in 'in' statements supported?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsSubqueriesInIns: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Are subqueries in quantified expressions supported?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsSubqueriesInQuantifieds: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Are correlated subqueries supported?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsCorrelatedSubqueries: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Is SQL UNION supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsUnion: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Is SQL UNION ALL supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsUnionAll: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Can cursors remain open across commits?
-  @return <code>true</code> if cursors always remain open;
-        <code>false</code> if they might not remain open
-}
-function TZSQLiteDatabaseInfo.SupportsOpenCursorsAcrossCommit: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can cursors remain open across rollbacks?
-  @return <code>true</code> if cursors always remain open;
-        <code>false</code> if they might not remain open
-}
-function TZSQLiteDatabaseInfo.SupportsOpenCursorsAcrossRollback: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can statements remain open across commits?
-  @return <code>true</code> if statements always remain open;
-        <code>false</code> if they might not remain open
-}
-function TZSQLiteDatabaseInfo.SupportsOpenStatementsAcrossCommit: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can statements remain open across rollbacks?
-  @return <code>true</code> if statements always remain open;
-        <code>false</code> if they might not remain open
-}
-function TZSQLiteDatabaseInfo.SupportsOpenStatementsAcrossRollback: Boolean;
-begin
-  Result := False;
-end;
-
-//----------------------------------------------------------------------
-// The following group of methods exposes various limitations
-// based on the target database with the current driver.
-// Unless otherwise specified, a result of zero means there is no
-// limit, or the limit is not known.
-
-{**
-  How many hex characters can you have in an inline binary literal?
-  @return max binary literal length in hex characters;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZSQLiteDatabaseInfo.GetMaxBinaryLiteralLength: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the max length for a character literal?
-  @return max literal length;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZSQLiteDatabaseInfo.GetMaxCharLiteralLength: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the limit on column name length?
-  @return max column name length;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZSQLiteDatabaseInfo.GetMaxColumnNameLength: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum number of columns in a "GROUP BY" clause?
-  @return max number of columns;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZSQLiteDatabaseInfo.GetMaxColumnsInGroupBy: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum number of columns allowed in an index?
-  @return max number of columns;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZSQLiteDatabaseInfo.GetMaxColumnsInIndex: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum number of columns in an "ORDER BY" clause?
-  @return max number of columns;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZSQLiteDatabaseInfo.GetMaxColumnsInOrderBy: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum number of columns in a "SELECT" list?
-  @return max number of columns;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZSQLiteDatabaseInfo.GetMaxColumnsInSelect: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum number of columns in a table?
-  @return max number of columns;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZSQLiteDatabaseInfo.GetMaxColumnsInTable: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  How many active connections can we have at a time to this database?
-  @return max number of active connections;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZSQLiteDatabaseInfo.GetMaxConnections: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum cursor name length?
-  @return max cursor name length in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZSQLiteDatabaseInfo.GetMaxCursorNameLength: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  Retrieves the maximum number of bytes for an index, including all
-  of the parts of the index.
-  @return max index length in bytes, which includes the composite of all
-   the constituent parts of the index;
-   a result of zero means that there is no limit or the limit is not known
-}
-function TZSQLiteDatabaseInfo.GetMaxIndexLength: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum length allowed for a schema name?
-  @return max name length in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZSQLiteDatabaseInfo.GetMaxSchemaNameLength: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum length of a procedure name?
-  @return max name length in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZSQLiteDatabaseInfo.GetMaxProcedureNameLength: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum length of a catalog name?
-  @return max name length in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZSQLiteDatabaseInfo.GetMaxCatalogNameLength: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum length of a single row?
-  @return max row size in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZSQLiteDatabaseInfo.GetMaxRowSize: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  Did getMaxRowSize() include LONGVARCHAR and LONGVARBINARY
-  blobs?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.DoesMaxRowSizeIncludeBlobs: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  What's the maximum length of an SQL statement?
-  @return max length in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZSQLiteDatabaseInfo.GetMaxStatementLength: Integer;
-begin
-  Result := 65535;
-end;
-
-{**
-  How many active statements can we have open at one time to this
-  database?
-  @return the maximum number of statements that can be open at one time;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZSQLiteDatabaseInfo.GetMaxStatements: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum length of a table name?
-  @return max name length in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZSQLiteDatabaseInfo.GetMaxTableNameLength: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum number of tables in a SELECT statement?
-  @return the maximum number of tables allowed in a SELECT statement;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZSQLiteDatabaseInfo.GetMaxTablesInSelect: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum length of a user name?
-  @return max user name length  in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZSQLiteDatabaseInfo.GetMaxUserNameLength: Integer;
-begin
-  Result := 0;
-end;
-
-//----------------------------------------------------------------------
-
-{**
-  What's the database's default transaction isolation level?  The
-  values are defined in <code>java.sql.Connection</code>.
-  @return the default isolation level
-  @see Connection
-}
-function TZSQLiteDatabaseInfo.GetDefaultTransactionIsolation:
-  TZTransactIsolationLevel;
-begin
-  Result := tiNone;
-end;
-
-{**
-  Are transactions supported? If not, invoking the method
-  <code>commit</code> is a noop and the isolation level is TRANSACTION_NONE.
-  @return <code>true</code> if transactions are supported; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsTransactions: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Does this database support the given transaction isolation level?
-  @param level the values are defined in <code>java.sql.Connection</code>
-  @return <code>true</code> if so; <code>false</code> otherwise
-  @see Connection
-}
-function TZSQLiteDatabaseInfo.SupportsTransactionIsolationLevel(
-  Level: TZTransactIsolationLevel): Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Are both data definition and data manipulation statements
-  within a transaction supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.
-  SupportsDataDefinitionAndDataManipulationTransactions: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Are only data manipulation statements within a transaction
-  supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.
-  SupportsDataManipulationTransactionsOnly: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Does a data definition statement within a transaction force the
-  transaction to commit?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.DataDefinitionCausesTransactionCommit: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Is a data definition statement within a transaction ignored?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.DataDefinitionIgnoredInTransactions: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Does the database support the given result set type?
-  @param type defined in <code>java.sql.ResultSet</code>
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsResultSetType(
-  _Type: TZResultSetType): Boolean;
-begin
-  Result := _Type = rtForwardOnly;
-end;
-
-{**
-  Does the database support the concurrency type in combination
-  with the given result set type?
-
-  @param type defined in <code>java.sql.ResultSet</code>
-  @param concurrency type defined in <code>java.sql.ResultSet</code>
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZSQLiteDatabaseInfo.SupportsResultSetConcurrency(
-  _Type: TZResultSetType; Concurrency: TZResultSetConcurrency): Boolean;
-begin
-  Result := (_Type = rtForwardOnly) and (Concurrency = rcReadOnly);
-end;
-
-
 { TZSQLiteDatabaseMetadata }
-
 
 {**
   Constructs this object and assignes the main properties.
@@ -1187,14 +244,855 @@ begin
   inherited Destroy;
 end;
 
+//----------------------------------------------------------------------
+// First, a variety of minor information about the target database.
+
 {**
-  Constructs a database information object and returns the interface to it. Used
-  internally by the constructor.
-  @return the database information object interface
+  What's the name of this database product?
+  @return database product name
 }
-function TZSQLiteDatabaseMetadata.CreateDatabaseInfo: IZDatabaseInfo;
+function TZSQLiteDatabaseMetadata.GetDatabaseProductName: string;
 begin
-  Result := TZSQLiteDatabaseInfo.Create(Self);
+  Result := 'SQLite';
+end;
+
+{**
+  What's the version of this database product?
+  @return database version
+}
+function TZSQLiteDatabaseMetadata.GetDatabaseProductVersion: string;
+begin
+  Result := '';
+end;
+
+{**
+  What's the name of this JDBC driver?
+  @return JDBC driver name
+}
+function TZSQLiteDatabaseMetadata.GetDriverName: string;
+begin
+  Result := 'Zeos Database Connectivity Driver for SQLite';
+end;
+
+{**
+  What's this JDBC driver's major version number?
+  @return JDBC driver major version
+}
+function TZSQLiteDatabaseMetadata.GetDriverMajorVersion: Integer;
+begin
+  Result := 1;
+end;
+
+{**
+  What's this JDBC driver's minor version number?
+  @return JDBC driver minor version number
+}
+function TZSQLiteDatabaseMetadata.GetDriverMinorVersion: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  Does the database use a file for each table?
+  @return true if the database uses a local file for each table
+}
+function TZSQLiteDatabaseMetadata.UsesLocalFilePerTable: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Does the database treat mixed case unquoted SQL identifiers as
+  case sensitive and as a result store them in mixed case?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver will always return false.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsMixedCaseIdentifiers: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Does the database treat mixed case unquoted SQL identifiers as
+  case insensitive and store them in upper case?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.StoresUpperCaseIdentifiers: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Does the database treat mixed case unquoted SQL identifiers as
+  case insensitive and store them in lower case?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.StoresLowerCaseIdentifiers: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Does the database treat mixed case unquoted SQL identifiers as
+  case insensitive and store them in mixed case?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.StoresMixedCaseIdentifiers: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Does the database treat mixed case quoted SQL identifiers as
+  case sensitive and as a result store them in mixed case?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver will always return true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsMixedCaseQuotedIdentifiers: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Does the database treat mixed case quoted SQL identifiers as
+  case insensitive and store them in upper case?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.StoresUpperCaseQuotedIdentifiers: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Does the database treat mixed case quoted SQL identifiers as
+  case insensitive and store them in lower case?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.StoresLowerCaseQuotedIdentifiers: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Does the database treat mixed case quoted SQL identifiers as
+  case insensitive and store them in mixed case?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.StoresMixedCaseQuotedIdentifiers: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Gets a comma-separated list of all a database's SQL keywords
+  that are NOT also SQL92 keywords.
+  @return the list
+}
+function TZSQLiteDatabaseMetadata.GetSQLKeywords: string;
+begin
+  Result := 'ALL,AND,AS,BETWEEN,BY,CASE,CHECK,COLLATE,COMMIT,CONSTRAINT,CREATE,'
+    + 'DEFAULT,DEFERRABLE,DELETE,DISTINCT,DROP,ELSE,EXCEPT,FOREIGN,FROM,GLOB,'
+    + 'GROUP,HAVING,IN,INDEX,INSERT,INTERSECT,INTO,IS,ISNULL,JOIN,LIKE,LIMIT,'
+    + 'NOT,NOTNULL,NULL,ON,OR,ORDER,PRIMARY,REFERENCES,ROLLBACK,SELECT,SET,'
+    + 'TABLE,THEN,TRANSACTION,UNION,UNIQUE,UPDATE,USING,VALUES,WHEN,WHERE,'
+    + 'ABORT,AFTER,ASC,ATTACH,BEFORE,BEGIN,DEFERRED,CASCADE,CLUSTER,CONFLICT,'
+    + 'COPY,CROSS,DATABASE,DELIMITERS,DESC,DETACH,EACH,END,EXPLAIN,FAIL,FOR,'
+    + 'FULL,IGNORE,IMMEDIATE,INITIALLY,INNER,INSTEAD,KEY,LEFT,MATCH,NATURAL,'
+    + 'OF,OFFSET,OUTER,PRAGMA,RAISE,REPLACE,RESTRICT,RIGHT,ROW,STATEMENT,'
+    + 'TEMP,TEMPORARY,TRIGGER,VACUUM,VIEW';
+end;
+
+{**
+  Gets a comma-separated list of math functions.  These are the
+  X/Open CLI math function names used in the JDBC function escape
+  clause.
+  @return the list
+}
+function TZSQLiteDatabaseMetadata.GetNumericFunctions: string;
+begin
+  Result := 'ABS,MAX,MIN,RANDOM,ROUND';
+end;
+
+{**
+  Gets a comma-separated list of string functions.  These are the
+  X/Open CLI string function names used in the JDBC function escape
+  clause.
+  @return the list
+}
+function TZSQLiteDatabaseMetadata.GetStringFunctions: string;
+begin
+  Result := 'LENGTH,LIKE,LOWER,SOUNDEX,SUBSTRING,UPPER';
+end;
+
+{**
+  Gets a comma-separated list of system functions.  These are the
+  X/Open CLI system function names used in the JDBC function escape
+  clause.
+  @return the list
+}
+function TZSQLiteDatabaseMetadata.GetSystemFunctions: string;
+begin
+  Result := 'LAST_INSERT_ROWID,SQLITE_VERSION,TYPEOF';
+end;
+
+{**
+  Gets a comma-separated list of time and date functions.
+  @return the list
+}
+function TZSQLiteDatabaseMetadata.GetTimeDateFunctions: string;
+begin
+  Result := '';
+end;
+
+{**
+  Gets the string that can be used to escape wildcard characters.
+  This is the string that can be used to escape '_' or '%' in
+  the string pattern style catalog search parameters.
+
+  <P>The '_' character represents any single character.
+  <P>The '%' character represents any sequence of zero or
+  more characters.
+
+  @return the string used to escape wildcard characters
+}
+function TZSQLiteDatabaseMetadata.GetSearchStringEscape: string;
+begin
+  Result := '//';
+end;
+
+{**
+  Gets all the "extra" characters that can be used in unquoted
+  identifier names (those beyond a-z, A-Z, 0-9 and _).
+  @return the string containing the extra characters
+}
+function TZSQLiteDatabaseMetadata.GetExtraNameCharacters: string;
+begin
+  Result := '';
+end;
+
+//--------------------------------------------------------------------
+// Functions describing which features are supported.
+
+{**
+  Are expressions in "ORDER BY" lists supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsExpressionsInOrderBy: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can an "ORDER BY" clause use columns not in the SELECT statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsOrderByUnrelated: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Is some form of "GROUP BY" clause supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsGroupBy: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Can a "GROUP BY" clause use columns not in the SELECT?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsGroupByUnrelated: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Can a "GROUP BY" clause add columns not in the SELECT
+  provided it specifies all the columns in the SELECT?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsGroupByBeyondSelect: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is the SQL Integrity Enhancement Facility supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsIntegrityEnhancementFacility: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  What's the database vendor's preferred term for "schema"?
+  @return the vendor term
+}
+function TZSQLiteDatabaseMetadata.GetSchemaTerm: string;
+begin
+  Result := '';
+end;
+
+{**
+  What's the database vendor's preferred term for "procedure"?
+  @return the vendor term
+}
+function TZSQLiteDatabaseMetadata.GetProcedureTerm: string;
+begin
+  Result := '';
+end;
+
+{**
+  What's the database vendor's preferred term for "catalog"?
+  @return the vendor term
+}
+function TZSQLiteDatabaseMetadata.GetCatalogTerm: string;
+begin
+  Result := 'database';
+end;
+
+{**
+  What's the separator between catalog and table name?
+  @return the separator string
+}
+function TZSQLiteDatabaseMetadata.GetCatalogSeparator: string;
+begin
+  Result := '.';
+end;
+
+{**
+  Can a schema name be used in a data manipulation statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsSchemasInDataManipulation: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Can a schema name be used in a procedure call statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsSchemasInProcedureCalls: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can a schema name be used in a table definition statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsSchemasInTableDefinitions: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can a schema name be used in an index definition statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsSchemasInIndexDefinitions: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can a schema name be used in a privilege definition statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsSchemasInPrivilegeDefinitions: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can a catalog name be used in a data manipulation statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsCatalogsInDataManipulation: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Can a catalog name be used in a procedure call statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsCatalogsInProcedureCalls: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can a catalog name be used in a table definition statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsCatalogsInTableDefinitions: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can a catalog name be used in an index definition statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsCatalogsInIndexDefinitions: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can a catalog name be used in a privilege definition statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsCatalogsInPrivilegeDefinitions: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is positioned DELETE supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsPositionedDelete: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Is positioned UPDATE supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsPositionedUpdate: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Is SELECT for UPDATE supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsSelectForUpdate: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Are stored procedure calls using the stored procedure escape
+  syntax supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsStoredProcedures: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Are subqueries in comparison expressions supported?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsSubqueriesInComparisons: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Are subqueries in 'exists' expressions supported?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsSubqueriesInExists: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Are subqueries in 'in' statements supported?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsSubqueriesInIns: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Are subqueries in quantified expressions supported?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsSubqueriesInQuantifieds: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Are correlated subqueries supported?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsCorrelatedSubqueries: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is SQL UNION supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsUnion: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is SQL UNION ALL supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsUnionAll: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Can cursors remain open across commits?
+  @return <code>true</code> if cursors always remain open;
+        <code>false</code> if they might not remain open
+}
+function TZSQLiteDatabaseMetadata.SupportsOpenCursorsAcrossCommit: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can cursors remain open across rollbacks?
+  @return <code>true</code> if cursors always remain open;
+        <code>false</code> if they might not remain open
+}
+function TZSQLiteDatabaseMetadata.SupportsOpenCursorsAcrossRollback: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can statements remain open across commits?
+  @return <code>true</code> if statements always remain open;
+        <code>false</code> if they might not remain open
+}
+function TZSQLiteDatabaseMetadata.SupportsOpenStatementsAcrossCommit: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can statements remain open across rollbacks?
+  @return <code>true</code> if statements always remain open;
+        <code>false</code> if they might not remain open
+}
+function TZSQLiteDatabaseMetadata.SupportsOpenStatementsAcrossRollback: Boolean;
+begin
+  Result := False;
+end;
+
+//----------------------------------------------------------------------
+// The following group of methods exposes various limitations
+// based on the target database with the current driver.
+// Unless otherwise specified, a result of zero means there is no
+// limit, or the limit is not known.
+
+{**
+  How many hex characters can you have in an inline binary literal?
+  @return max binary literal length in hex characters;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZSQLiteDatabaseMetadata.GetMaxBinaryLiteralLength: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the max length for a character literal?
+  @return max literal length;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZSQLiteDatabaseMetadata.GetMaxCharLiteralLength: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the limit on column name length?
+  @return max column name length;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZSQLiteDatabaseMetadata.GetMaxColumnNameLength: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum number of columns in a "GROUP BY" clause?
+  @return max number of columns;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZSQLiteDatabaseMetadata.GetMaxColumnsInGroupBy: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum number of columns allowed in an index?
+  @return max number of columns;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZSQLiteDatabaseMetadata.GetMaxColumnsInIndex: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum number of columns in an "ORDER BY" clause?
+  @return max number of columns;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZSQLiteDatabaseMetadata.GetMaxColumnsInOrderBy: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum number of columns in a "SELECT" list?
+  @return max number of columns;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZSQLiteDatabaseMetadata.GetMaxColumnsInSelect: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum number of columns in a table?
+  @return max number of columns;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZSQLiteDatabaseMetadata.GetMaxColumnsInTable: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  How many active connections can we have at a time to this database?
+  @return max number of active connections;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZSQLiteDatabaseMetadata.GetMaxConnections: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum cursor name length?
+  @return max cursor name length in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZSQLiteDatabaseMetadata.GetMaxCursorNameLength: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  Retrieves the maximum number of bytes for an index, including all
+  of the parts of the index.
+  @return max index length in bytes, which includes the composite of all
+   the constituent parts of the index;
+   a result of zero means that there is no limit or the limit is not known
+}
+function TZSQLiteDatabaseMetadata.GetMaxIndexLength: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum length allowed for a schema name?
+  @return max name length in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZSQLiteDatabaseMetadata.GetMaxSchemaNameLength: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum length of a procedure name?
+  @return max name length in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZSQLiteDatabaseMetadata.GetMaxProcedureNameLength: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum length of a catalog name?
+  @return max name length in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZSQLiteDatabaseMetadata.GetMaxCatalogNameLength: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum length of a single row?
+  @return max row size in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZSQLiteDatabaseMetadata.GetMaxRowSize: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  Did getMaxRowSize() include LONGVARCHAR and LONGVARBINARY
+  blobs?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.DoesMaxRowSizeIncludeBlobs: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  What's the maximum length of an SQL statement?
+  @return max length in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZSQLiteDatabaseMetadata.GetMaxStatementLength: Integer;
+begin
+  Result := 65535;
+end;
+
+{**
+  How many active statements can we have open at one time to this
+  database?
+  @return the maximum number of statements that can be open at one time;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZSQLiteDatabaseMetadata.GetMaxStatements: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum length of a table name?
+  @return max name length in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZSQLiteDatabaseMetadata.GetMaxTableNameLength: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum number of tables in a SELECT statement?
+  @return the maximum number of tables allowed in a SELECT statement;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZSQLiteDatabaseMetadata.GetMaxTablesInSelect: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum length of a user name?
+  @return max user name length  in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZSQLiteDatabaseMetadata.GetMaxUserNameLength: Integer;
+begin
+  Result := 0;
+end;
+
+//----------------------------------------------------------------------
+
+{**
+  What's the database's default transaction isolation level?  The
+  values are defined in <code>java.sql.Connection</code>.
+  @return the default isolation level
+  @see Connection
+}
+function TZSQLiteDatabaseMetadata.GetDefaultTransactionIsolation:
+  TZTransactIsolationLevel;
+begin
+  Result := tiNone;
+end;
+
+{**
+  Are transactions supported? If not, invoking the method
+  <code>commit</code> is a noop and the isolation level is TRANSACTION_NONE.
+  @return <code>true</code> if transactions are supported; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsTransactions: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Does this database support the given transaction isolation level?
+  @param level the values are defined in <code>java.sql.Connection</code>
+  @return <code>true</code> if so; <code>false</code> otherwise
+  @see Connection
+}
+function TZSQLiteDatabaseMetadata.SupportsTransactionIsolationLevel(
+  Level: TZTransactIsolationLevel): Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Are both data definition and data manipulation statements
+  within a transaction supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.
+  SupportsDataDefinitionAndDataManipulationTransactions: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Are only data manipulation statements within a transaction
+  supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.
+  SupportsDataManipulationTransactionsOnly: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Does a data definition statement within a transaction force the
+  transaction to commit?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.DataDefinitionCausesTransactionCommit: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is a data definition statement within a transaction ignored?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.DataDefinitionIgnoredInTransactions: Boolean;
+begin
+  Result := False;
 end;
 
 {**
@@ -1401,7 +1299,6 @@ begin
         Result.UpdateNull(12);
         if Trim(GetString(5)) <> '' then
           Result.UpdateString(13, GetString(5))
-//          Result.UpdateString(13, '''' + GetString(5) + '''')
         else Result.UpdateNull(13);
         Result.UpdateNull(14);
         Result.UpdateNull(15);
@@ -1548,8 +1445,6 @@ const
 var
   I: Integer;
 begin
-    Result := ConstructVirtualResultSet(TypeInfoColumnsDynArray);
-
     for I := 1 to MaxTypeCount do
     begin
       Result.MoveToInsertRow;
@@ -1690,6 +1585,31 @@ begin
       end;
       Close;
     end;
+end;
+
+{**
+  Does the database support the given result set type?
+  @param type defined in <code>java.sql.ResultSet</code>
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsResultSetType(
+  _Type: TZResultSetType): Boolean;
+begin
+  Result := _Type = rtForwardOnly;
+end;
+
+{**
+  Does the database support the concurrency type in combination
+  with the given result set type?
+
+  @param type defined in <code>java.sql.ResultSet</code>
+  @param concurrency type defined in <code>java.sql.ResultSet</code>
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZSQLiteDatabaseMetadata.SupportsResultSetConcurrency(
+  _Type: TZResultSetType; Concurrency: TZResultSetConcurrency): Boolean;
+begin
+  Result := (_Type = rtForwardOnly) and (Concurrency = rcReadOnly);
 end;
 
 end.

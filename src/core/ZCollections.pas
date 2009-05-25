@@ -318,8 +318,7 @@ begin
   begin
     ReallocMem(FList, NewCapacity * SizeOf(IZInterface));
     if NewCapacity > FCapacity then
-         FillChar(FList^[FCount], (NewCapacity - FCapacity) *
-            SizeOf(IZInterface), 0);
+      FillChar(FList^[FCount], (NewCapacity - FCapacity) * SizeOf(IZInterface), 0);
     FCapacity := NewCapacity;
   end;
 end;
@@ -361,8 +360,7 @@ begin
   begin
     if FList^[I].QueryInterface(IZClonnable, Clonnable) = 0 then
       Collection.Add(Clonnable.Clone)
-      else
-         Collection.Add(FList^[I]);
+    else Collection.Add(FList^[I]);
   end;
   Result := Collection;
 end;
@@ -646,8 +644,7 @@ begin
       Result := Result + ',';
     if FList^[I].QueryInterface(IZObject, TempObject) = 0 then
       Result := Result + TempObject.ToString
-      else
-         Result := Result + Format('<%p>', [Pointer(FList^[I])]);
+    else Result := Result + Format('<%p>', [Pointer(FList^[I])]);
   end;
   Result := '[' + Result + ']';
 end;
@@ -917,8 +914,7 @@ begin
   Index := FKeys.IndexOf(Key);
   if Index >= 0 then
     Result := FValues[Index]
-   else
-      Result := nil;
+  else Result := nil;
 end;
 
 {**
@@ -982,8 +978,7 @@ begin
     FKeys.Delete(Index);
     FValues.Delete(Index);
     Result := True;
-   end
-   else
+  end else
     Result := False;
 end;
 
@@ -1045,8 +1040,7 @@ function TZStack.Peek: IZInterface;
 begin
   if FValues.Count > 0 then
     Result := FValues[FValues.Count - 1]
-   else
-      Result := nil;
+  else Result := nil;
 end;
 
 {**
@@ -1059,8 +1053,7 @@ begin
   begin
     Result := FValues[FValues.Count - 1];
     FValues.Delete(FValues.Count - 1);
-   end
-   else
+  end else
     Result := nil;
 end;
 

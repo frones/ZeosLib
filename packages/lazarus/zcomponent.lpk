@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <CONFIG>
-  <Package Version="3">
+  <Package Version="2">
     <PathDelim Value="\"/>
     <Name Value="zcomponent"/>
     <CompilerOptions>
@@ -22,9 +22,8 @@
         <CompilerPath Value="$(CompPath)"/>
       </Other>
     </CompilerOptions>
-    <Description Value="Zeos Database Components
-"/>
-    <Version Major="7" Minor="0" Release="0"/>
+    <Description Value="Zeos Database Components"/>
+    <Version Major="6" Minor="6" Release="5"/>
     <Files Count="4">
       <Item1>
         <Filename Value="..\..\src\component\ZComponentReg.pas"/>

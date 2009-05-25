@@ -262,8 +262,7 @@ function TZExecutionStack.Peek: TZVariant;
 begin
   if FCount > 0 then
     Result := FValues[FCount - 1]
-   else
-      Result := NullVariant;
+  else Result := NullVariant;
 end;
 
 {**

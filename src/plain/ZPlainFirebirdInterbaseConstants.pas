@@ -1,7 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{         Interbase and Firebird Common constants         }
+{           MySQL Database Connectivity Classes           }
 {                                                         }
 {        Originally written by Sergey Seroukhov           }
 {                                                         }
@@ -412,22 +412,9 @@ const
   isc_info_db_read_only          =         63;
   isc_info_db_size_in_pages      =         64;
 
-  frb_info_att_charset           = 101;
-  isc_info_db_class              = 102;
-  isc_info_firebird_version      = 103;
-  isc_info_oldest_transaction    = 104;
-  isc_info_oldest_active         = 105;
-  isc_info_oldest_snapshot       = 106;
-  isc_info_next_transaction      = 107;
-  isc_info_db_provider           = 108;
-  isc_info_active_transactions   = 109;
-  isc_info_active_tran_count     = 110;
-  isc_info_creation_date         = 111;
-  isc_info_db_file_size          = 112;
-
 type
   ULong                = Cardinal;
-  UChar                = AnsiChar;
+  UChar                = Char;
   Short                = SmallInt;
 
   ISC_LONG             = LongInt;
@@ -441,7 +428,7 @@ type
   PPISC_STATUS         = ^PISC_STATUS;
   PUISC_STATUS         = ^UISC_STATUS;
   PShort               = ^Short;
-  PPAnsiChar               = ^PAnsiChar;
+  PPChar               = ^PChar;
   UShort               = Word;
   PVoid                = Pointer;
 
@@ -463,7 +450,7 @@ type
 
   TISC_VARYING = record
     strlen:       Short;
-    str:          array[0..0] of AnsiChar;
+    str:          array[0..0] of Char;
   end;
   PISC_VARYING = ^TISC_VARYING;
 
@@ -485,8 +472,8 @@ type
   PISC_TIME = ^ISC_TIME;
 
   TISC_TIMESTAMP = record
-    timestamp_date: ISC_DATE; 
-    timestamp_time: ISC_TIME;
+    timestamp_time:     ISC_TIME;
+    timestamp_date:     ISC_DATE;
   end;
   PISC_TIMESTAMP = ^TISC_TIMESTAMP;
 
@@ -508,10 +495,10 @@ type
 
   TISC_ARRAY_DESC = record
     array_desc_dtype:   UChar;
-    array_desc_scale:   AnsiChar;
+    array_desc_scale:   Char;
     array_desc_length:  Short;
-    array_desc_field_name: array[0..31] of AnsiChar;
-    array_desc_relation_name: array[0..31] of AnsiChar;
+    array_desc_field_name: array[0..31] of Char;
+    array_desc_relation_name: array[0..31] of Char;
     array_desc_dimensions: Short;
     array_desc_flags: Short;
     array_desc_bounds: array[0..15] of TISC_ARRAY_BOUND;
@@ -534,28 +521,28 @@ type
     sqlsubtype:         Short;     { datatype subtype - BLOBs }
 			           { & text types only }
     sqllen:             Short;     { length of data area }
-    sqldata:            PAnsiChar;     { address of data }
+    sqldata:            PChar;     { address of data }
     sqlind:             PSmallInt;  { address of indicator } 
                                    { variable }
     sqlname_length:     Short;     { length of sqlname field }
     { name of field, name length + space for NULL }
-    sqlname:            array[0..31] of AnsiChar;
+    sqlname:            array[0..31] of Char;
     relname_length:     Short;     { length of relation name }
     { field's relation name + space for NULL }
-    relname:            array[0..31] of AnsiChar;
+    relname:            array[0..31] of Char;
     ownname_length:     Short;     { length of owner name }
     { relation's owner name + space for NULL }
-    ownname:            array[0..31] of AnsiChar;
+    ownname:            array[0..31] of Char;
     aliasname_length:   Short;     { length of alias name }
     { relation's alias name + space for NULL }
-    aliasname:          array[0..31] of AnsiChar;
+    aliasname:          array[0..31] of Char;
   end;
   PXSQLVAR = ^TXSQLVAR;
 
   TXSQLDA = record
     version:            Short;     { version of this XSQLDA }
     { XSQLDA name field }
-    sqldaid:            array[0..7] of AnsiChar;
+    sqldaid:            array[0..7] of Char;
     sqldabc:            ISC_LONG;  { length in bytes of SQLDA }
     sqln:               Short;     { number of fields allocated }
     sqld:               Short;     { actual number of fields }
@@ -571,7 +558,7 @@ type
   TISC_START_TRANS = record
     db_handle:          PISC_DB_HANDLE;
     tpb_length:         Word;
-    tpb_address:        PAnsiChar;
+    tpb_address:        PChar;
   end;
 
  {****************************************************}
@@ -581,7 +568,7 @@ type
   TISC_TEB = record
     db_handle:          PISC_DB_HANDLE;
     tpb_length:         LongInt;
-    tpb_address:        PAnsiChar;
+    tpb_address:        PChar;
   end;
   PISC_TEB = ^TISC_TEB;
   TISC_TEB_ARRAY = array[0..0] of TISC_TEB;

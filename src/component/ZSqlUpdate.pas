@@ -127,10 +127,7 @@ type
     procedure ReadParamData(Reader: TReader);
     procedure WriteParamData(Writer: TWriter);
 
-
   protected
-    procedure Apply_RefreshResultSet(const Sender:IZCachedResultSet;const RefreshResultSet: IZResultSet;const RefreshRowAccessor:TZRowAccessor);
-
     procedure DefineProperties(Filer: TFiler); override;
     procedure CalculateDefaults(Sender: IZCachedResultSet;
       RowAccessor: TZRowAccessor);
@@ -140,9 +137,6 @@ type
     procedure UpdateAutoIncrementFields(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       OldRowAccessor, NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver);
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
-
-    procedure RefreshCurrentRow(Sender: IZCachedResultSet;RowAccessor: TZRowAccessor);//FOS+ 07112006
-
     procedure Rebuild(SQLStrings: TZSQLStrings);
     procedure RebuildAll;
     procedure FillStatement(ResultSet: IZCachedResultSet;
@@ -286,8 +280,7 @@ begin
   case UpdateKind of
     ukModify: Result := FModifySQL;
     ukInsert: Result := FInsertSQL;
-  else
-    Result := FDeleteSQL;
+    else Result := FDeleteSQL;
   end;
 end;
 
@@ -380,8 +373,7 @@ procedure TZUpdateSQL.DefineProperties(Filer: TFiler);
   begin
     if Filer.Ancestor <> nil then
       Result := not FParams.IsEqual(TZUpdateSQL(Filer.Ancestor).FParams)
-    else
-      Result := FParams.Count > 0;
+    else Result := FParams.Count > 0;
   end;
 
 begin
@@ -509,22 +501,6 @@ begin
   end;
 end;
 
-procedure TZUpdateSQL.RefreshCurrentRow(Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);
-var
-    Config: TZSQLStrings;
-    Statement: IZPreparedStatement;
-    RefreshResultSet: IZResultSet;
-begin
- Config:=FRefreshSQL;
- if CONFIG.StatementCount=1 then
- begin
-  Statement := Sender.GetStatement.GetConnection.PrepareStatement(Config.Statements[0].SQL);
-  FillStatement(Sender, Statement, Config.Statements[0],RowAccessor, RowAccessor);
-  RefreshResultSet:=Statement.ExecuteQueryPrepared;
-  Apply_RefreshResultSet(Sender,RefreshResultSet,RowAccessor);
- end;
-end;
-
 {**
   Fills the specified statement with stored or given parameters.
   @param ResultSet a source result set object.
@@ -548,28 +524,23 @@ var
   TempBlob: IZBlob;
 begin
   WasNull := False;
-  for I := 0 to Config.ParamCount - 1 do
-  begin
+  for I := 0 to Config.ParamCount - 1 do begin
     ParamValue := Params.FindParam(Config.ParamNames[I]);
     ParamName := Config.ParamNames[I];
     OldParam := False;{Seqparam:=False;}
-    if StrLIComp(PChar(ParamName), 'NEW_', 4) = 0 then
-    begin
+    if StrLIComp(PChar(ParamName), 'NEW_', 4) = 0 then begin
       ParamName := Copy(ParamName, 5, Length(ParamName) - 4)
-    end
-    else if StrLIComp(PChar(ParamName), 'OLD_', 4) = 0 then
-    begin
+    end else
+    if StrLIComp(PChar(ParamName), 'OLD_', 4) = 0 then begin
       ParamName := Copy(ParamName, 5, Length(ParamName) - 4);
       OldParam := True;
     end;
 
     ColumnIndex := ResultSet.FindColumn(ParamName);
-    if ColumnIndex > 0 then
-    begin
+    if ColumnIndex > 0 then begin
       if OldParam then
         RowAccessor := OldRowAccessor
-      else
-        RowAccessor := NewRowAccessor;
+      else RowAccessor := NewRowAccessor;
 
       if StrToBoolEx(DefineStatementParameter(
         ResultSet.GetStatement, 'defaults', 'true')) then
@@ -636,13 +607,10 @@ begin
         Statement.SetNull(I + 1,
           ResultSet.GetMetadata.GetColumnType(ColumnIndex))
       end;
-    end
-    else
-    begin
+    end else begin
       if ParamValue.IsNull then
         Statement.SetNull(I + 1, ConvertDatasetToDbcType(ParamValue.DataType))
-      else
-      begin
+      else begin
         case ParamValue.DataType of
           ftBoolean:
             Statement.SetBoolean(I + 1, ParamValue.AsBoolean);
@@ -673,17 +641,6 @@ begin
                 Stream.Free;
               end;
             end;
-          {$IFNDEF VER150BELOW}
-          ftWideMemo:
-            begin
-              Stream := WideStringStream(ParamValue.AsWideString);
-              try
-                Statement.SetUnicodeStream(I + 1, Stream);
-              finally
-                Stream.Free;
-              end;
-            end;
-          {$ENDIF}
           ftBlob, ftGraphic:
             begin
               Stream := TStringStream.Create(ParamValue.AsBlob);
@@ -700,20 +657,47 @@ begin
 end;
 
 {**
-  Apply the Refreshed values.
-  @param RefreshResultSet a result set object.
-  @param RefreshRowAccessor an accessor object to column values.
+  Calculate default values for the fields.
+  @param Sender a cached result set object.
+  @param RowAccessor an accessor object to column values.
 }
+procedure TZUpdateSQL.CalculateDefaults(Sender: IZCachedResultSet;
+  RowAccessor: TZRowAccessor);
+begin
+ {BEGIN PATCH [1214009] TZUpdateSQL - implemented feature to Calculate default values}
+ Sender.GetNativeResolver.CalculateDefaults(Sender, RowAccessor);
+ {END PATCH [1214009] TZUpdateSQL - implemented feature to Calculate default values}
+end;
 
-procedure TZUpdateSQL.Apply_RefreshResultSet(const Sender:IZCachedResultSet;
-  const RefreshResultSet: IZResultSet; const RefreshRowAccessor: TZRowAccessor);
-var
-    I: Integer;
+{**
+  Posts updates to database.
+  @param Sender a cached result set object.
+  @param UpdateType a type of updates.
+  @param OldRowAccessor an accessor object to old column values.
+  @param NewRowAccessor an accessor object to new column values.
+}
+procedure TZUpdateSQL.PostUpdates(Sender: IZCachedResultSet;
+ UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
+var I: Integer;
+    Statement: IZPreparedStatement;
+    Config: TZSQLStrings;
+    CalcDefaultValues,
+    ExecuteStatement,
+    UpdateAutoIncFields: Boolean;
+
+    RefreshResultSet: IZResultSet;
+    RefreshRowAccessor: TZRowAccessor;
     RefreshColumnIndex:integer;
     RefreshColumnName:String;
+    Refresh_OldSQL:String;
     RefreshColumnType:TZSQLType;
 
-begin
+    lValidateUpdateCount : Boolean;
+    lUpdateCount : Integer;
+  procedure Apply_RefreshResultSet;
+  var
+    I: Integer;
+  begin
     if Assigned(RefreshResultSet) then begin
       if not RefreshResultSet.First then begin
         raise EZDatabaseError.Create(SUpdateSQLNoResult);
@@ -736,12 +720,8 @@ begin
             stLong: RefreshRowAccessor.SetLong(RefreshColumnIndex, RefreshResultSet.GetLong(I));
             stFloat: RefreshRowAccessor.SetFloat(RefreshColumnIndex, RefreshResultSet.GetFloat(I));
             stDouble: RefreshRowAccessor.SetDouble(RefreshColumnIndex, RefreshResultSet.GetDouble(I));
-               stBigDecimal:
-                  RefreshRowAccessor.SetBigDecimal(RefreshColumnIndex,
-                  RefreshResultSet.GetBigDecimal(I));
-               // gto: do we need PChar here?
-			   //stString: RefreshRowAccessor.SetPChar(RefreshColumnIndex, RefreshResultSet.GetPChar(I));
-			   stString: RefreshRowAccessor.SetString(RefreshColumnIndex, RefreshResultSet.GetString(I));
+            stBigDecimal: RefreshRowAccessor.SetBigDecimal(RefreshColumnIndex, RefreshResultSet.GetBigDecimal(I));
+            stString: RefreshRowAccessor.SetPChar(RefreshColumnIndex, RefreshResultSet.GetPChar(I));
             stUnicodeString: RefreshRowAccessor.SetUnicodeString(RefreshColumnIndex, RefreshResultSet.GetUnicodeString(I));
             stBytes: RefreshRowAccessor.SetBytes(RefreshColumnIndex, RefreshResultSet.GetBytes(I));
             stDate: RefreshRowAccessor.SetDate(RefreshColumnIndex, RefreshResultSet.GetDate(I));
@@ -752,41 +732,8 @@ begin
         end;
       end;
     end;
-end;
-{**
-  Calculate default values for the fields.
-  @param Sender a cached result set object.
-  @param RowAccessor an accessor object to column values.
-}
+  end;
 
-procedure TZUpdateSQL.CalculateDefaults(Sender: IZCachedResultSet;
-  RowAccessor: TZRowAccessor);
-begin
- {BEGIN PATCH [1214009] TZUpdateSQL - implemented feature to Calculate default values}
- Sender.GetNativeResolver.CalculateDefaults(Sender, RowAccessor);
- {END PATCH [1214009] TZUpdateSQL - implemented feature to Calculate default values}
-end;
-
-{**
-  Posts updates to database.
-  @param Sender a cached result set object.
-  @param UpdateType a type of updates.
-  @param OldRowAccessor an accessor object to old column values.
-  @param NewRowAccessor an accessor object to new column values.
-}
-procedure TZUpdateSQL.PostUpdates(Sender: IZCachedResultSet;
- UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
-var
-    I: Integer;
-    Statement: IZPreparedStatement;
-    Config: TZSQLStrings;
-    CalcDefaultValues,
-    ExecuteStatement,
-    UpdateAutoIncFields: Boolean;
-    Refresh_OldSQL:String;
-    RefreshResultSet: IZResultSet;
-    lValidateUpdateCount : Boolean;
-    lUpdateCount : Integer;
 begin
   if (UpdateType = utDeleted)
     and (OldRowAccessor.RowBuffer.UpdateType = utInserted) then
@@ -839,12 +786,12 @@ begin
       end;
       if ExecuteStatement then
       begin
-        lValidateUpdateCount := StrToBoolEx( 
+       lValidateUpdateCount := StrToBoolEx( 
           Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']); 
 
-        lUpdateCount := Statement.ExecuteUpdatePrepared; 
-        if  (lValidateUpdateCount) and (lUpdateCount <> 1) then 
-          raise EZSQLException.Create(Format(SInvalidUpdateCount, [lUpdateCount]));
+       lUpdateCount := Statement.ExecuteUpdatePrepared; 
+       if  (lValidateUpdateCount) and (lUpdateCount <> 1) then 
+         raise EZSQLException.Create(Format(SInvalidUpdateCount, [lUpdateCount]));
 
        case UpdateType of
             utDeleted:
@@ -862,7 +809,8 @@ begin
       end;
       {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     end;
-//FOSPATCH
+
+    RefreshRowAccessor := NewRowAccessor;
     case UpdateType of
       utInserted,utModified: begin
        if FRefreshSql.Text<>'' then begin
@@ -881,15 +829,16 @@ begin
            end;
           end;
          end;
-         if CONFIG.StatementCount=1 then begin
+         if CONFIG.StatementCount=1 then
+         begin
           Statement := Sender.GetStatement.GetConnection.PrepareStatement(Config.Statements[0].SQL);
-          FillStatement(Sender, Statement, Config.Statements[0],OldRowAccessor, NewRowAccessor);
+            FillStatement(Sender, Statement, Config.Statements[0],OldRowAccessor, NewRowAccessor);
           RefreshResultSet:=Statement.ExecuteQueryPrepared;
-          Apply_RefreshResultSet(Sender,RefreshResultSet,NewRowAccessor);
+          Apply_RefreshResultSet;
          end;
-        finally
-         FRefreshSQL.Text:=Refresh_OldSQL;
-        end;
+       finally
+        FRefreshSQL.Text:=Refresh_OldSQL;
+       end;
       end;
     end;
   end;

@@ -51,8 +51,7 @@ uses
   {$ENDIF} 
 {$ENDIF} 
   ZDbcInterbase6, ZPlainInterbaseDriver, ZConnection, ZDbcIntfs,
-  ZPlainInterbase5, ZPlainInterbase6, ZPlainFirebird10, ZPlainFirebird15,
-  ZPlainFirebird20, ZPlainFirebird21, ZPlainFirebirdInterbaseConstants;
+  ZPlainInterbase5, ZPlainInterbase6, ZPlainFirebird10, ZPlainFirebird15, ZPlainFirebird20, ZPlainFirebirdInterbaseConstants;
 
 type
 
@@ -129,9 +128,9 @@ type
     // IB API call parameters
     WhichEvent: integer;
     EventID: ISC_LONG;
-    EventBuffer: PAnsiChar;
+    EventBuffer: PChar;
     EventBufferLen: Short;
-    ResultBuffer: PAnsiChar;
+    ResultBuffer: PChar;
     // Local use variables
     Signal: TSimpleEvent;
     EventsReceived,
@@ -154,16 +153,16 @@ type
     procedure DoEvent;
     procedure DoHandleException;
     function HandleException: boolean; virtual;
-    procedure UpdateResultBuffer(Length: UShort; Updated: PAnsiChar);
+    procedure UpdateResultBuffer(Length: UShort; Updated: PChar);
   public
     constructor Create(Owner: TZIBEventAlerter; EventGrp: integer;
       TermEvent: TNotifyEvent); virtual;
     destructor Destroy; override;
   end;
 
-  Tsib_event_block = function(EventBuffer, ResultBuffer: PPAnsiChar; IDCount: UShort;
+  Tsib_event_block = function(EventBuffer, ResultBuffer: PPChar; IDCount: UShort;
     Event1, Event2, Event3, Event4, Event5, Event6, Event7, Event8, Event9,
-    Event10, Event11, Event12, Event13, Event14, Event15: PAnsiChar): ISC_LONG;
+    Event10, Event11, Event12, Event13, Event14, Event15: PChar): ISC_LONG; 
   cdecl;
 
 function TZIBEventAlerter.GetNativeHandle: PISC_DB_HANDLE;
@@ -335,7 +334,7 @@ end;
 
 { TIBEventThread }
 
-procedure EventCallback(P: Pointer; Length: Short; Updated: PAnsiChar); cdecl;
+procedure EventCallback(P: Pointer; Length: Short; Updated: PChar); cdecl;
 begin
   if (Assigned(P) and Assigned(Updated)) then
   begin
@@ -350,7 +349,7 @@ begin
     StatusVectorArray[WhichEvent], FCancelAlerts)
 end;
 
-procedure TIBEventThread.UpdateResultBuffer(Length: UShort; Updated: PAnsiChar);
+procedure TIBEventThread.UpdateResultBuffer(Length: UShort; Updated: PChar);
 begin
   Move(Updated[0], ResultBuffer[0], Length);
 end;
@@ -393,16 +392,15 @@ begin
 end;
 
 procedure TIBEventThread.RegisterEvents;
-var
-  sib_event_block: Tsib_event_block;
+var sib_event_block: Tsib_event_block;
 
-  function EBP(Index: integer): PAnsiChar;
+  function EBP(Index: integer): PChar;
   begin
     Inc(Index, (EventGroup * IB_MAX_EVENT_BLOCK));
     if (Index > Parent.FEvents.Count) then
       Result := nil
     else
-      Result := PAnsiChar(Parent.FEvents[Index - 1]);
+      Result := PChar(Parent.FEvents[Index -1]);
   end;
 begin
   EventBuffer := nil;
@@ -427,10 +425,6 @@ begin
     sib_event_block := Tsib_event_block(ZPlainFirebird20.isc_event_block)
   else if Parent.Connection.Protocol='firebirdd-2.0' then
     sib_event_block := Tsib_event_block(ZPlainFirebird20.isc_event_block)
-  else if Parent.Connection.Protocol='firebird-2.1' then 
-    sib_event_block := Tsib_event_block(ZPlainFirebird21.isc_event_block) 
-  else if Parent.Connection.Protocol='firebirdd-2.1' then 
-    sib_event_block := Tsib_event_block(ZPlainFirebird21.isc_event_block) 
   else
     sib_event_block := Tsib_event_block(ZPlainInterbase6.isc_event_block);
 
@@ -602,22 +596,19 @@ begin
 end;
 
 procedure TIBEventThread.SQueEvents;
-var
-  Status: ISC_STATUS;
+var Status: ISC_STATUS;
 begin
-  Status := -999999;
   try
-    Status := Parent.PlainDriver.isc_que_events(StatusVector,
-      Parent.FNativeHandle, @EventID, EventBufferLen,
-      EventBuffer, TISC_CALLBACK(@EventCallback), PVoid(Self));
+    Status:=Parent.PlainDriver.isc_que_events(StatusVector, Parent.FNativeHandle,
+      @EventID, EventBufferLen, EventBuffer, TISC_CALLBACK(@EventCallback),
+      PVoid(Self));
   except
     on E: Exception do
-      if Status <> -999999 then
-        if Assigned(Parent.OnError) then
-          if E is EZSQLException then
-            Parent.OnError(Parent, EZSQLException(E).ErrorCode)
-          else
-            Parent.OnError(Parent, 0);
+      if Assigned(Parent.OnError) then
+        if E is EZSQLException then
+          Parent.OnError(Parent, EZSQLException(E).ErrorCode)
+      else
+        Parent.OnError(Parent, 0);
   end;
 end;
 

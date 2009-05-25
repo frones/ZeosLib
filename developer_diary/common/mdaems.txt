@@ -224,41 +224,19 @@
 
 20080728 : Replaced fix for Mantis Bug 97 by a more correct one - by pawelsel - Mantis Bug 123
 
-20080806 : New property FetchRow in ZDataSet - by patyi - See http://zeos.firmos.at/viewtopic.php?t=1857 
-
-20080806 : New dataset option doDontSortOnPost - by karpik - See http://zeos.firmos.at/viewtopic.php?t=1931
-
 20080811 : Access Violation due to forget to assign Connection in TZQuery - by pjonard - Mantis Bug 129
 
 20080813 : Only link TZIBEventAlerter when ENABLE_INTERBASE is defined - by trupka - See http://zeos.firmos.at/viewtopic.php?t=1949
 
-20080813 : Removed packages for Delphi 5 and 6, Kylix 2 and CBuilder 5 - by mdaems
-
-20080813 : PostgreSQL UTF8 Charset Patch - by whitekid - See http://zeos.firmos.at/viewtopic.php?t=1946
-
 20080813 : ZIBEventAlerter compile error in Lazarus/Linux ('infinite' defined twice) - by lichtmannls - Mantis bug 131
 
-20080816 : Splitted IZDatabaseMetadata into IZDatabaseMetadata (retrieves info about DB content) and IZDatabaseInfo (retrieves info about server properties) - by technobot
-
-20080817 : Sanity check: assert that row buffer length is not exceeded at a proper time - by HeidiSQL Team (Heidisql SVN Rev.1410)
-
 20080820 : Memory Leak in TZIBEventAlerter - by magnomp - See http://zeos.firmos.at/viewtopic.php?t=1962
-
-20080820 : Added overloaded version of ZConnection.GetTablenNames, allowing the user to specify the table types. - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=1960
-
-20080822 : Removed conditional coding for the compiler versions that are not longer supported - by mdaems
 
 20080829 : Adjusted fix for Mantis Bug 99 - by mdaems/karpik - Mantis Bug 137
 
 20080831 : TZSQLProcessor Tokenizer problem - by GeorgeKP - See http://zeos.firmos.at/viewtopic.php?t=1977
 
-20080917 : Removed the unused Db2 plain drivers - by mdaems
-
 20080917 : "List out of bounds" in Metadata - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=1995
-
-20080924 : Added Prepared property and Prepare/Unprepare methods to TZAbstractRODataset - by mdaems
-
-20080924 : Integrated various bugfixes from DRD, Willian Jhonnes and Silvio Clecio
 
 20081005 : Removed table prefixes in generated insert/update statements in property editor for TZSQLUpdate - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2023
 
@@ -266,37 +244,15 @@
 
 20081010 : Some MySQL units are still being compiled when only the SQLite protocol is enabled- by mdaems - Mantis Bug 139
 
-20081015 : Added function debug_get_memorydiff to ZSysUtils - by mdaems
-
 20081024 : Column mapping problem with TZUpdateSql and Refreshing data - by jay - Mantis Bug 147
 
-20081030 : TZTable and TZQuery Filter property do not work correctly with datetime fields - by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2055
-
 20081102 : Removed some compiler warnings - by Faceker - See http://zeos.firmos.at/viewtopic.php?t=2081
-
-20081105 : (Delphi only issue) Added a test to avoid opening a dataset when ComponentState=csDestroying - by mdaems
-
-20081108 : Added support for DefaultExpression TField property - by mdaems - Mantis Bug 146
-
-20081112 : Some dates of form 2008-1-1 seem not to work good with function TimestampStrToDateTime - by niek - See http://zeos.firmos.at/viewtopic.php?t=2093
-
-20081126 : Added Delphi2009 to the automated build scripts and test suite - by mdaems
 
 20081203 : Precision issue when recording values from TClientDataSet - by magnomp - Mantis Bug 162
 
 20081206 : Removed conditional compilation of database dependent Tokenizers - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2138
 
 20081208 : Fixed bug in UpdateSQLeditor that resulted from commit 481 - by mdaems - Mantis Bug 165
-
-20081210 : Removed debug_get_memorydiff from ZSysUtils again - by mdaems
-
-20081213 : Default strings to TWideString fields on Delphi 2009 - by mariuszekpl/mdaems - See http://zeos.firmos.at/viewtopic.php?t=2119
-
-20081225 : VarChar / Char fields last character chopped off - by TheEdge - See http://zeos.firmos.at/viewtopic.php?t=2165
-
-20081225 : New TObject Methods in D2009 (Tostring, GetHashCode and Equals) - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2131
-
-20090111 : Removed T***IntDynArray types from ZCompatibility as FPC 2 and higher also defines these - by mdaems
 
 20090114 : Added ZEOS_DISABLE_XXXXX 'Conditional Defines' to Zeos.inc to allow compiling out database support on a per project basis - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2195
 
@@ -308,28 +264,20 @@
 
 20090131 : TZSQLMonitor access violation when destroying - by mturecki - Mantis Bug 124
 
-20090213 : Added BCB2009 packages (cbuilder12) - by bulktrasher
-
-20090218 : Fixed a big memory leak introduced by the DatabaseMetadata object split - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2177
-
 20090220 : Replaced some GetXXXByName and UpdateXXXByName calls in the Metadata classes to avoid repeated name lookups - by mdaems
 
 20090220 : Get reference to ResultsetMetadata only once in TZCachedResultSet.Open - by mdaems
 
 20090225 : Query property ‘ValidateUpdateCount=true/false’ was not added for TZUpdateSQL - by ddantoni - See http://zeos.firmos.at/viewtopic.php?t=2249
 
-20090305 : Reworked the PlainLoader and AbstractPlainDriver classes to make the loader class part of the plaindriver - by mdaems/gto
-
 20090320 : Moved setting FConnection to nil in the finally past of TZConnection.Disconnect - by MerijnB - See http://zeos.firmos.at/viewtopic.php?t=2275
-
-20090321 : Overflow while converting variant of type (Int64) into type (Integer) when deleting a record - by alquimista - See http://zeos.firmos.at/viewtopic.php?t=2286
-
-20090322 : Removed some new methods from the IZPreparedStatement interface to stay as jdbc compliant as possible - by mdaems - See http://zeos.firmos.at/viewtopic.php?t=2234
 
 20090330 : Bug in conditional directive SHOW_WARNING - by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2312
 
-20090402 : TZConnection.Pingserver now resets the ZConnection state when failing - by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2293
+20090117 : Second JOIN in from clause was stripped by the SQL parser after ON or USING clause - by mdaems/DarthWombat - Mantis Bug 150
 
-20090402 : Compilation error with SHOW_WARNING directive - by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2312
+20090121 : Removed libc from uses clauses when using fpc - by mdaems/piper62 - See http://zeos.firmos.at/viewtopic.php?t=2196
+
+20090402 : TZConnection.Pingserver now resets the ZConnection state when failing - by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2293
 
 20090507 : Fixed case of ZPlainMySqlConstants unit name on Linux - by mdaems - Mantis Bug 179

@@ -58,7 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, Types, ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcASA,
+  Classes, ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcASA,
   ZPlainASADriver, ZCompatibility, ZDbcResultSetMetadata,
   ZDbcASAUtils, ZMessages, ZVariant;
 
@@ -69,7 +69,7 @@ type
   private
     FCachedBlob: boolean;
     FFetchStat: Integer;
-    FCursorName: AnsiString;
+    FCursorName: string;
     FStmtNum: SmallInt;
     FSqlData: IZASASQLDA;
     FParamsSqlData: IZASASQLDA;
@@ -84,14 +84,14 @@ type
     function GetFieldValue(ColumnIndex: Integer): Variant;
   public
     constructor Create(Statement: IZStatement; SQL: string;
-      var StmtNum: SmallInt; CursorName: AnsiString;
+      var StmtNum: SmallInt; CursorName: string;
       SqlData: IZASASQLDA; ParamsSqlData: IZASASQLDA;
       CachedBlob: boolean);
 
-    function GetCursorName: AnsiString; override;
+    function GetCursorName: string; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetString(ColumnIndex: Integer): AnsiString; override;
+    function GetString(ColumnIndex: Integer): string; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -125,9 +125,10 @@ type
     procedure UpdateFloat(ColumnIndex: Integer; Value: Single); override;
     procedure UpdateDouble(ColumnIndex: Integer; Value: Double); override;
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended); override;
-    procedure UpdatePChar(ColumnIndex: Integer; Value: PAnsiChar); override;
-    procedure UpdateString(ColumnIndex: Integer; const Value: AnsiString); override;
-    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString); override;
+    procedure UpdatePChar(ColumnIndex: Integer; Value: PChar); override;
+    procedure UpdateString(ColumnIndex: Integer; const Value: string); override;
+    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString);
+      override;
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray); override;
     procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime); override;
     procedure UpdateTime(ColumnIndex: Integer; Value: TDateTime); override;
@@ -164,7 +165,7 @@ type
     function IsEmpty: Boolean; override;
     function Clone: IZBlob; override;
     function GetStream: TStream; override;
-    function GetString: AnsiString; override;
+    function GetString: string; override;
     function GetUnicodeString: WideString; override;
     function GetBytes: TByteDynArray; override;
     property BlobSize;
@@ -174,7 +175,7 @@ type
 implementation
 
 uses
-{$IFNDEF FPC}
+{$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
   SysUtils, Math, ZdbcLogging;
@@ -191,7 +192,7 @@ uses
   @param the Interbase sql dialect
 }
 constructor TZASAResultSet.Create(Statement: IZStatement; SQL: string;
-      var StmtNum: SmallInt; CursorName: AnsiString;
+      var StmtNum: SmallInt; CursorName: string;
       SqlData: IZASASQLDA; ParamsSqlData: IZASASQLDA;
       CachedBlob: boolean);
 begin
@@ -268,8 +269,7 @@ begin
   CheckBlobColumn(ColumnIndex);
 
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then
-     Exit;
+  if LastWasNull then Exit;
 
   Blob := TZASABlob.Create( Self, ColumnIndex - 1);
   if FCachedBlob then
@@ -468,7 +468,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZASAResultSet.GetString(ColumnIndex: Integer): AnsiString;
+function TZASAResultSet.GetString(ColumnIndex: Integer): string;
 begin
   CheckClosed;
   CheckColumnConvertion( ColumnIndex, stString);
@@ -579,7 +579,7 @@ begin
     Exit;
 
   FASAConnection.GetPlainDriver.db_fetch( FASAConnection.GetDBHandle,
-    PAnsiChar(FCursorName), CUR_ABSOLUTE, Row, FSqlData.GetData, BlockSize, CUR_FORREGULAR);
+    PChar( FCursorName), CUR_ABSOLUTE, Row, FSqlData.GetData, BlockSize, CUR_FORREGULAR);
   ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
     FASAConnection.GetDBHandle, lcOther);
 
@@ -591,9 +591,7 @@ begin
     FDelete := False;
     FInsert := False;
     FUpdate := False;
-  end
-  else
-  begin
+  end else begin
     FFetchStat := FASAConnection.GetDBHandle.sqlerrd[2];
     if FFetchStat > 0 then
       LastRowNo := Max( Row - FFetchStat, 0);
@@ -607,7 +605,7 @@ begin
     Exit;
 
   FASAConnection.GetPlainDriver.db_fetch( FASAConnection.GetDBHandle,
-    PAnsiChar( FCursorName), CUR_RELATIVE, Rows, FSqlData.GetData, BlockSize, CUR_FORREGULAR);
+    PChar( FCursorName), CUR_RELATIVE, Rows, FSqlData.GetData, BlockSize, CUR_FORREGULAR);
   ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
     FASAConnection.GetDBHandle, lcOther);
 
@@ -620,9 +618,7 @@ begin
     FDelete := False;
     FInsert := False;
     FUpdate := False;
-  end
-  else
-  begin
+  end else begin
     FFetchStat := FASAConnection.GetDBHandle.sqlerrd[2];
     if ( FFetchStat > 0) and ( RowNo > 0) then
       LastRowNo := Max( RowNo + Rows - FFetchStat, 0);
@@ -702,7 +698,7 @@ begin
   inherited Open;
 end;
 
-function TZASAResultSet.GetCursorName: AnsiString;
+function TZASAResultSet.GetCursorName: string;
 begin
   Result := FCursorName;
 end;
@@ -729,8 +725,7 @@ begin
   begin
     FUpdateSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
       FASAConnection.GetDBHandle, FCursorName, FSQLData.GetFieldCount);
-  end
-  else if FUpdateSQLData.GetFieldCount = 0 then
+  end else if FUpdateSQLData.GetFieldCount = 0 then
     FUpdateSQLData.AllocateSQLDA( FSQLData.GetFieldCount);
 end;
 
@@ -788,13 +783,13 @@ begin
   FUpdateSqlData.UpdateBigDecimal( ColumnIndex, Value);
 end;
 
-procedure TZASAResultSet.UpdatePChar(ColumnIndex: Integer; Value: PAnsiChar);
+procedure TZASAResultSet.UpdatePChar(ColumnIndex: Integer; Value: PChar);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.UpdatePChar( ColumnIndex, Value);
 end;
 
-procedure TZASAResultSet.UpdateString(ColumnIndex: Integer; const Value: Ansistring);
+procedure TZASAResultSet.UpdateString(ColumnIndex: Integer; const Value: string);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.UpdateString( ColumnIndex, Value);
@@ -803,7 +798,7 @@ end;
 procedure TZASAResultSet.UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString);
 begin
   PrepareUpdateSQLData;
-  FUpdateSqlData.UpdatePChar(ColumnIndex, PAnsiChar(string(Value)));
+  FUpdateSqlData.UpdatePChar( ColumnIndex, PChar( Value));
 end;
 
 procedure TZASAResultSet.UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray);
@@ -859,7 +854,7 @@ begin
   if Assigned( FUpdateSQLData) and FInsert then
   begin
     FASAConnection.GetPlainDriver.db_put_into( FASAConnection.GetDBHandle,
-      PAnsiChar(FCursorName), FUpdateSQLData.GetData, FSQLData.GetData);
+      PChar( FCursorName), FUpdateSQLData.GetData, FSQLData.GetData);
     ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
       FASAConnection.GetDBHandle, lcOther, 'Insert row');
 
@@ -873,7 +868,7 @@ begin
   if Assigned( FUpdateSQLData) and FUpdate then
   begin
     FASAConnection.GetPlainDriver.db_update( FASAConnection.GetDBHandle,
-      PAnsiChar(FCursorName), FUpdateSQLData.GetData);
+      PChar( FCursorName), FUpdateSQLData.GetData);
     ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
       FASAConnection.GetDBHandle, lcOther, 'Update row:' + IntToStr( RowNo));
 
@@ -885,7 +880,7 @@ end;
 procedure TZASAResultSet.DeleteRow;
 begin
   FASAConnection.GetPlainDriver.db_delete( FASAConnection.GetDBHandle,
-    PAnsiChar(FCursorName));
+    PChar( FCursorName));
   ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
     FASAConnection.GetDBHandle, lcOther, 'Delete row:' + IntToStr( RowNo));
 
@@ -973,7 +968,7 @@ begin
   Result := inherited GetStream;
 end;
 
-function TZASABlob.GetString: AnsiString;
+function TZASABlob.GetString: string;
 begin
   ReadBlob;
   Result := inherited GetString;

@@ -58,10 +58,11 @@ interface
 {$I ZDbc.inc}
 
 uses
-{$IFNDEF FPC}
+{$IFNDEF VER130BELOW}
+  Types,
   DateUtils,
 {$ENDIF}
-  Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcResultSet,
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcResultSet,
   ZCompatibility, ZDbcResultsetMetadata, ZDbcGenericResolver, ZDbcCachedResultSet,
   ZDbcCache, ZDbcDBLib, ZPlainDBLibDriver;
 
@@ -85,7 +86,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetString(ColumnIndex: Integer): AnsiString; override;
+    function GetString(ColumnIndex: Integer): string; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -254,7 +255,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZDBLibResultSet.GetString(ColumnIndex: Integer): AnsiString;
+function TZDBLibResultSet.GetString(ColumnIndex: Integer): string;
 var
   DL: Integer;
   Data: Pointer;
@@ -273,25 +274,23 @@ begin
     case DT of
       SQLCHAR, SQLTEXT:
         begin
-          while (DL > 0) and (PAnsiChar(Integer(Data) + DL - 1)^ = ' ') do
-                  Dec(DL);
+          while (DL > 0) and (PChar(Integer(Data) + DL - 1)^ = ' ') do Dec(DL);
           if DL > 0 then
           begin
             SetLength(Result, DL);
-            Move(Data^, PAnsiChar(Result)^, DL);
+            Move(Data^, PChar(Result)^, DL);
           end;
         end;
       SQLIMAGE:
         begin
           SetLength(Result, DL);
-          Move(Data^, PAnsiChar(Result)^, DL);
+          Move(Data^, PChar(Result)^, DL);
         end;
     else
       begin
         SetLength(Result, 4001);
-        DL := FPlainDriver.dbconvert(FHandle, DT, Data, DL, SQLCHAR, Pointer(PAnsiChar(Result)), Length(Result));
-        while (DL > 0) and (Result[DL] = ' ') do
-            Dec(DL);
+        DL := FPlainDriver.dbconvert(FHandle, DT, Data, DL, SQLCHAR, Pointer(PChar(Result)), Length(Result));
+        while (DL > 0) and (Result[DL] = ' ') do Dec(DL);
         SetLength(Result, DL);
       end;
     end;
@@ -577,7 +576,7 @@ begin
 
   SetLength(Result, DL);
   if Assigned(Data) then
-      Move(PAnsiChar(Data)^, Result[0], DL);
+    Move(PChar(Data)^, Result[0], DL);
 end;
 
 {**
@@ -803,5 +802,6 @@ begin
   end;
 end;
 
-end.
 
+
+end.

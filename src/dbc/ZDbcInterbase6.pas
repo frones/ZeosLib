@@ -58,7 +58,10 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, ZCompatibility, Classes, SysUtils, ZDbcUtils, ZDbcIntfs, ZDbcConnection,
+{$IFNDEF VER130BELOW}
+  Types,
+{$ENDIF}
+  ZCompatibility, Classes, SysUtils, ZDbcUtils, ZDbcIntfs, ZDbcConnection,
   Contnrs, ZPlainInterbaseDriver, ZPlainFirebirdDriver,
   ZPlainFirebirdInterbaseConstants, ZSysUtils, ZDbcInterbase6Utils, ZDbcLogging,
   ZDbcGenericResolver, ZTokenizer, ZGenericSqlAnalyser;
@@ -198,7 +201,8 @@ uses ZDbcInterbase6Statement, ZDbcInterbase6Metadata,
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
-function TZInterbase6Driver.Connect(const Url: string; Info: TStrings): IZConnection;
+function TZInterbase6Driver.Connect(const Url: string;
+  Info: TStrings): IZConnection;
 var
   TempInfo: TStrings;
   HostName, Database, UserName, Password: string;
@@ -207,7 +211,8 @@ var
 begin
  TempInfo := TStringList.Create;
  try
-   ResolveDatabaseUrl(Url, Info, HostName, Port, Database, UserName, Password, TempInfo);
+   ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
+      UserName, Password, TempInfo);
    PlainDriver := GetPlainDriver(Url);
    Result := TZInterbase6Connection.Create(Self, Url, PlainDriver, HostName,
      Port, Database, UserName, Password, TempInfo);
@@ -343,8 +348,7 @@ end;
 }
 procedure TZInterbase6Connection.Close;
 begin
-  if Closed then
-     Exit;
+  if Closed then Exit;
 
   if FTrHandle <> nil then
   begin
@@ -353,9 +357,7 @@ begin
       FPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
       DriverManager.LogMessage(lcTransaction, FPlainDriver.GetProtocol,
         Format('COMMITT TRANSACTION "%s"', [Database]));
-    end
-    else
-    begin
+    end else begin
       FPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle);
       DriverManager.LogMessage(lcTransaction, FPlainDriver.GetProtocol,
         Format('ROLLBACK TRANSACTION "%s"', [Database]));
@@ -382,8 +384,7 @@ end;
 }
 procedure TZInterbase6Connection.Commit;
 begin
-  if Closed then
-     Exit;
+  if Closed then Exit;
 
   if FTrHandle <> nil then
   begin
@@ -391,8 +392,7 @@ begin
     begin
       FPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
       FTrHandle := nil;
-    end
-    else
+    end else
       FPlainDriver.isc_commit_retaining(@FStatusVector, @FTrHandle);
 
     CheckInterbase6Error(FPlainDriver, FStatusVector, lcTransaction);
@@ -419,7 +419,6 @@ var
   RoleName: string;
   ClientCodePage: string;
   UserSetDialect: string;
-  ConnectTimeout : integer;
 begin
   inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
     TZInterbase6DatabaseMetadata.Create(Self, Url, Info));
@@ -427,7 +426,6 @@ begin
   FHardCommit := StrToBoolEx(Info.Values['hard_commit']);
 
   FPlainDriver := PlainDriver;
-  Self.PlainDriver := PlainDriver;
 
   { Sets a default Interbase port }
   if Self.Port = 0 then
@@ -436,8 +434,7 @@ begin
   { set default sql dialect it can be overriden }
   if FPlainDriver.GetProtocol = 'interbase-5' then
     FDialect := 1
-  else
-    FDialect := 3;
+  else FDialect := 3;
 
   UserSetDialect := Trim(Info.Values['dialect']);
   if UserSetDialect <> '' then
@@ -454,11 +451,6 @@ begin
   RoleName := Trim(Info.Values['rolename']);
   if RoleName <> '' then
     self.Info.Values['isc_dpb_sql_role_name'] := UpperCase(RoleName);
-	
-  ConnectTimeout := StrToIntDef(Info.Values['timeout'], -1); 
-  if ConnectTimeout >= 0 then 
-    self.Info.Values['isc_dpb_connect_timeout'] := IntToStr(ConnectTimeout); 
-
 end;
 
 {**
@@ -478,8 +470,7 @@ end;
 function TZInterbase6Connection.CreateRegularStatement(Info: TStrings):
   IZStatement;
 begin
-  if IsClosed then
-     Open;
+  if IsClosed then Open;
   Result := TZInterbase6Statement.Create(Self, Info);
 end;
 
@@ -538,12 +529,11 @@ end;
 }
 procedure TZInterbase6Connection.Open;
 var
-  DPB: PAnsiChar;
+  DPB: PChar;
   FDPBLength: Word;
-  DBName: array[0..512] of AnsiChar;
+  DBName: array[0..512] of Char;
 begin
-  if not Closed then
-     Exit;
+  if not Closed then Exit;
 
   if TransactIsolationLevel = tiReadUncommitted then
     raise EZSQLException.Create('Isolation level do not capable');
@@ -556,9 +546,8 @@ begin
       StrPCopy(DBName, HostName + '/' + IntToStr(Port) + ':' + Database)
     else
       StrPCopy(DBName, HostName + ':' + Database)
-  end
-  else
-    StrPCopy(DBName, Database);
+  end else
+  StrPCopy(DBName, Database);
 
   try
     { Create new db if needed }
@@ -622,8 +611,7 @@ end;
 function TZInterbase6Connection.CreatePreparedStatement(
   const SQL: string; Info: TStrings): IZPreparedStatement;
 begin
-  if IsClosed then
-     Open;
+  if IsClosed then Open;
   Result := TZInterbase6PreparedStatement.Create(Self, SQL, Info);
 end;
 
@@ -656,9 +644,8 @@ end;
 function TZInterbase6Connection.CreateCallableStatement(const SQL: string;
   Info: TStrings): IZCallableStatement;
 begin
-  if IsClosed then
-     Open;
-  Result := TZInterbase6CallableStatement.Create(Self, SQL, Info);
+ if IsClosed then Open;
+ Result := TZInterbase6CallableStatement.Create(Self, SQL, Info);
 end;
 
 {**
@@ -687,11 +674,11 @@ begin
     begin
       FPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle);
       FTrHandle := nil;
-    end
-    else
+    end else
       FPlainDriver.isc_rollback_retaining(@FStatusVector, @FTrHandle);
     CheckInterbase6Error(FPlainDriver, FStatusVector);
-    DriverManager.LogMessage(lcTransaction, FPlainDriver.GetProtocol, 'TRANSACTION ROLLBACK');
+    DriverManager.LogMessage(lcTransaction,
+      FPlainDriver.GetProtocol, 'TRANSACTION ROLLBACK');
   end;
 end;
 
@@ -785,8 +772,8 @@ begin
   Close;
   DbHandle := nil;
   TrHandle := nil;
-  FPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @DbHandle, @TrHandle,
-    0, PAnsiChar(AnsiString(sql)), FDialect, nil);
+  FPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @DbHandle, @TrHandle, 0, PChar(sql),
+                                          FDialect, nil);
   CheckInterbase6Error(FPlainDriver, FStatusVector, lcExecute, SQL);
   FPlainDriver.isc_detach_database(@FStatusVector, @DbHandle);
   CheckInterbase6Error(FPlainDriver, FStatusVector, lcExecute, SQL);
@@ -814,19 +801,15 @@ end;
 function TZInterbase6CachedResolver.FormCalculateStatement(
   Columns: TObjectList): string;
 // --> ms, 30/10/2005
-var
-   iPos: Integer;
+var iPos: Integer;
 begin
   Result := inherited FormCalculateStatement(Columns);
-  if Result <> '' then
-  begin
+  if Result <> '' then begin
     iPos := pos('FROM', uppercase(Result));
-    if iPos > 0 then
-    begin
+    if iPos > 0 then begin
       Result := copy(Result, 1, iPos+3) + ' RDB$DATABASE';
     end
-    else
-    begin
+    else begin
       Result := Result + ' FROM RDB$DATABASE';
     end;
   end;

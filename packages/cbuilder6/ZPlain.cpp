@@ -18,6 +18,10 @@ USEUNIT("..\..\src\plain\ZPlainAdo.pas");
 
 USEUNIT("..\..\src\plain\ZPlainAdoDriver.pas");
 
+USEUNIT("..\..\src\plain\ZPlainDb2.pas");
+
+USEUNIT("..\..\src\plain\ZPlainDb2Driver.pas");
+
 USEUNIT("..\..\src\plain\ZPlainDbLibDriver.pas");
 
 USEUNIT("..\..\src\plain\ZPlainDbLibMsSql7.pas");
@@ -42,7 +46,13 @@ USEUNIT("..\..\src\plain\ZPlainInterbaseDriver.pas");
 
 USEUNIT("..\..\src\plain\ZPlainLoader.pas");
 
+USEUNIT("..\..\src\plain\ZPlainMySql40.pas");
+
 USEUNIT("..\..\src\plain\ZPlainMySql41.pas");
+
+USEUNIT("..\..\src\plain\ZPlainMySql320.pas");
+
+USEUNIT("..\..\src\plain\ZPlainMySql323.pas");
 
 USEUNIT("..\..\src\plain\ZPlainMySqlDriver.pas");
 

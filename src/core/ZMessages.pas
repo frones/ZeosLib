@@ -1,7 +1,6 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{             Constant messages used by Zeos              }
 {                                                         }
 { This unit contains all the messages that are output by  }
 { ZEOS methods. One of the given language can be activated}
@@ -143,7 +142,6 @@ resourcestring
   SOperationIsNotAllowed4 = 'Operação não permitida para DataSet fechado';
   SNoMoreRecords = 'Nenhum registro no ResultSet';
   SCanNotOpenResultSet = 'Não foi possível abrir o ResultSet';
-  SCanNotOpenDataSetWhenDestroying ='Translate : Cannot open a dataset when the componentstate is dsDestroying';
   SCircularLink = 'DataSource possui um link circular';
   SBookmarkWasNotFound = 'Bookmark não foi encontrado';
   SIncorrectSearchFieldsNumber = 'Número incorreto de valores de campos de procura';
@@ -224,7 +222,6 @@ resourcestring
   SFieldReadOnly        = 'O campo %d é somente leitura e não pôde receber dados';
   SInvalidUpdateCount   = '%d registro(s) atualizados. Apenas um registro deveria ter sido atualizado.'; 
 
-  SRowBufferWidthExceeded ='O tamanho do buffer para linhas (Rows) foi excedido. Tente usar menos ou mais colunas na query SQL';
 {$ELSE}
 
 {$IFDEF DUTCH}
@@ -306,7 +303,6 @@ resourcestring
   SOperationIsNotAllowed4 = 'Bewerking is niet toegestaan voor gesloten dataset';
   SNoMoreRecords = 'Geen records meer aanwezig in ResultSet';
   SCanNotOpenResultSet = 'Kan een ResultSet niet openen';
-  SCanNotOpenDataSetWhenDestroying ='Kan een Dataset niet openen wanneer de componentstate=dsDestroying';
   SCircularLink = 'Databron maakt een oneindige verbindingslus';
   SBookmarkWasNotFound = 'Bookmark niet gevonden';
   SIncorrectSearchFieldsNumber = 'Incorrect aantal zoekvelden';
@@ -387,7 +383,6 @@ resourcestring
   SFieldReadOnly        = 'Readonly veld kan geen waarde toegewezen krijgen: %d';
   SInvalidUpdateCount     = '%d record(s) gewijzigd. Slechts 1 record had gewijzigd mogen zijn.'; 
 
-  SRowBufferWidthExceeded ='Rij buffer grootte overschreden. Probeer minder kolommen te gebruiken in je SQL query.';
 {$ELSE}
 // <- ms, 09/05/2005
 
@@ -471,7 +466,6 @@ resourcestring
   SOperationIsNotAllowed4 = 'Die Operation ist bei einem geschlossenen DataSet nicht erlaubt';
   SNoMoreRecords = 'Es gibt keine weiteren Datensätze in der Ergebnismenge';
   SCanNotOpenResultSet = 'Die Ergebnismenge kann nicht geöffnet werden';
-  SCanNotOpenDataSetWhenDestroying ='Translate : Cannot open a dataset when the componentstate is dsDestroying';
   SCircularLink = 'Die DataSource hat einen zirkulären Verweis';
   SBookmarkWasNotFound = 'Das Lesezeichen (Bookmark) wurde nicht gefunden';
   SIncorrectSearchFieldsNumber = 'Die Anzahl der Suchfeldwerte ist nicht korrekt';
@@ -552,7 +546,6 @@ resourcestring
   SFieldReadOnly          = 'Translate : Readonly field can''t be assigned a value: %d';
   SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.'; 
 
-  SRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
 {$ELSE}
   // -> fduenas, 28/06/2005
 {$IFDEF SPANISH} //Spanish translations
@@ -634,7 +627,6 @@ resourcestring
   SOperationIsNotAllowed4 = 'Operación no permitida en un dataset cerrado';
   SNoMoreRecords = 'No hay más registros en el Resultset';
   SCanNotOpenResultSet = 'No se puede abrir el Resultset';
-  SCanNotOpenDataSetWhenDestroying ='Translate : Cannot open a dataset when the componentstate is dsDestroying';
   SCircularLink = 'Datasource hace una referencia cíclica';
   SBookmarkWasNotFound = 'Bookmark no encontrado';
   SIncorrectSearchFieldsNumber = 'Número incorrecto de valores de búsqueda';
@@ -716,7 +708,6 @@ resourcestring
   SFieldReadOnly          = 'Translate : Readonly field can''t be assigned a value: %d';
   SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.'; 
 
-  SRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
 {$ELSE}
 
 {$IFDEF ROMANA}
@@ -800,7 +791,6 @@ resourcestring
   SOperationIsNotAllowed4 = 'Operaþia nu este permisã pentru în dataset închis';
   SNoMoreRecords = 'Nu mai sunt înregistrãri în Resultset';
   SCanNotOpenResultSet = 'Nu pot deschide Resultset';
-  SCanNotOpenDataSetWhenDestroying ='Translate : Cannot open a dataset when the componentstate is dsDestroying';
   SCircularLink = 'Datasource makes a circular link';
   SBookmarkWasNotFound = 'Bookmark nu a fost gãsit';
   SIncorrectSearchFieldsNumber = 'Numãr incorect of search field values';
@@ -879,7 +869,6 @@ resourcestring
 
   SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
 
-  SRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
   // <-- added by tohenk
   {$ELSE}
   {$IFDEF INDONESIAN}
@@ -961,7 +950,6 @@ resourcestring
   SOperationIsNotAllowed4 = 'Operasi tidak diperkenankan pada dataset tertutup';
   SNoMoreRecords = 'Tidak ada rekord lagi pada Resultset';
   SCanNotOpenResultSet = 'Tidak dapat membuka Resultset';
-  SCanNotOpenDataSetWhenDestroying ='Translate : Cannot open a dataset when the componentstate is dsDestroying';
   SCircularLink = 'Terjadi hubungan Datasource circular';
   SBookmarkWasNotFound = 'Bookmark tidak ada';
   SIncorrectSearchFieldsNumber = 'Salah jumlah nilai field pada pencarian';
@@ -1043,7 +1031,6 @@ resourcestring
   SFieldReadOnly          = 'Translate : Readonly field can''t be assigned a value: %d';
   SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.'; 
 
-  SRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
   //--- begin added by ORMADA --------------------------------------------------
 {$ELSE}
 {$IFDEF RUSSIAN}
@@ -1125,7 +1112,6 @@ resourcestring
   SOperationIsNotAllowed4                  = 'Îïåðàöèÿ íå ïîääåðæèâàåòñÿ íà çàêðûòîì íàáîðå äàííûõ';
   SNoMoreRecords                           = 'Â íàáîðå äàííûõ (Resultset) íåò çàïèñåé';
   SCanNotOpenResultSet                     = 'Íåâîçìîæíî îòêðûòü íàáîð äàííûõ (Resultset)';
-  SCanNotOpenDataSetWhenDestroying ='Translate : Cannot open a dataset when the componentstate is dsDestroying';
   SCircularLink                            = 'Èñòî÷íèê äàííûõ (Datasource) èìååò öèêëèöåñêèå ññûëêè';
   SBookmarkWasNotFound                     = 'Çàìåòêà (Bookmark) íå íàéäåíà';
   SIncorrectSearchFieldsNumber             = 'Íåêîððåêòíîå ÷èñëî  Incorrect number of search field values';
@@ -1207,7 +1193,6 @@ resourcestring
   SFieldReadOnly          = 'Translate : Readonly field can''t be assigned a value: %d';
   SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.';
 
-  SRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
 {$ELSE}
 
 //--- added by Petr Stasiak - pestasoft.com ------------------------------------
@@ -1290,7 +1275,6 @@ resourcestring
   SOperationIsNotAllowed4 = 'Operace není povolena pro zavøený zdroj dat (dataset)';
   SNoMoreRecords = 'Nejsou další záznamy';
   SCanNotOpenResultSet = 'Nelze otevøít výsledek dotazu';
-  SCanNotOpenDataSetWhenDestroying ='Translate : Cannot open a dataset when the componentstate is dsDestroying';
   SCircularLink = 'Datasource vytváøí cyklický dotaz';
   SBookmarkWasNotFound = 'Záložka neexistuje';
   SIncorrectSearchFieldsNumber = 'Nesprávný poèet vyhledávaných položek';
@@ -1371,8 +1355,6 @@ resourcestring
   SUnKnownParamDataType = 'Neznámý parametr.typ dat (Param.DataType)';
   SFieldReadOnly        = 'Sloupec pouze pro ètení nemùže být pøiøazen k hodnotì: %d';
   SInvalidUpdateCount     = '%d záznam(ù) aktualizováno. Pouze jeden záznam byl zmìnìn.';
-
-  SRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
 //--- end added by Petr Stasiak - pestasoft.com ------------------------------------
 
 {$ELSE}
@@ -1458,7 +1440,6 @@ resourcestring
   SOperationIsNotAllowed4 = 'Niedozwolona operacja przy zamniêtym Ÿródle danych';
   SNoMoreRecords = 'Nie ma ju¿ wiêcej rekordów wynikowych';
   SCanNotOpenResultSet = 'Nie mozna otworzyæ danych wynikowych';
-  SCanNotOpenDataSetWhenDestroying ='Translate : Cannot open a dataset when the componentstate is dsDestroying';
   SCircularLink = 'Datasource tworzy powi¹zanie cykliczne';
   SBookmarkWasNotFound = 'Nie znaleziono zak³adki (Bookmark)';
   SIncorrectSearchFieldsNumber = 'B³êdna liczba pól do wyszukiwania';
@@ -1539,8 +1520,6 @@ resourcestring
   SUnKnownParamDataType = 'Nieznany Param.DataType';
   SFieldReadOnly        = 'Nie mo¿na przypisaæ do pola tylko do odczytu wartoœci: %d';
   SInvalidUpdateCount     = 'Liczba zaktualizowanych rekordów: %d. tylko jeden rekord powinien byæ zaktualizowany.';
-
-  SRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
 
 {$ELSE} // default: ENGLISH
 
@@ -1623,7 +1602,6 @@ resourcestring
   SOperationIsNotAllowed4 = 'Operation is not allowed for closed dataset';
   SNoMoreRecords = 'No more records in the Resultset';
   SCanNotOpenResultSet = 'Can not open a Resultset';
-  SCanNotOpenDataSetWhenDestroying ='Cannot open a dataset when the componentstate is dsDestroying';
   SCircularLink = 'Datasource makes a circular link';
   SBookmarkWasNotFound = 'Bookmark was not found';
   SIncorrectSearchFieldsNumber = 'Incorrect number of search field values';
@@ -1704,8 +1682,6 @@ resourcestring
   SUnKnownParamDataType = 'Unknown Param.DataType';
   SFieldReadOnly        = 'Readonly field can''t be assigned a value: %d';
   SInvalidUpdateCount     = '%d record(s) updated. Only one record should have been updated.';
-
-  SRowBufferWidthExceeded ='Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
 
 {$ENDIF} // POLISH
 

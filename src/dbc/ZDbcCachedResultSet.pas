@@ -58,7 +58,10 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, Contnrs, ZClasses, ZSysUtils, ZDbcIntfs, ZDbcResultSet,
+{$IFNDEF VER130BELOW}
+  Types,
+{$ENDIF}
+  Classes, SysUtils, Contnrs, ZClasses, ZSysUtils, ZDbcIntfs, ZDbcResultSet,
   ZDbcCache, ZCompatibility;
 
 type
@@ -77,7 +80,6 @@ type
     procedure UpdateAutoIncrementFields(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       OldRowAccessor, NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver);
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
-    procedure RefreshCurrentRow(Sender: IZCachedResultSet;RowAccessor: TZRowAccessor); //FOS+ 07112006
   end;
 
   {** Represents a cached result set. }
@@ -103,7 +105,6 @@ type
     procedure CancelUpdates;
     procedure RevertRecord;
     procedure MoveToInitialRow;
-    procedure RefreshRow; // FOS+ 071106
   end;
 
   {** Implements cached ResultSet. }
@@ -168,8 +169,8 @@ type
     //======================================================================
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPChar(ColumnIndex: Integer): PAnsiChar; override;
-    function GetString(ColumnIndex: Integer): AnsiString; override;
+    function GetPChar(ColumnIndex: Integer): PChar; override;
+    function GetString(ColumnIndex: Integer): string; override;
     function GetUnicodeString(ColumnIndex: Integer): Widestring; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
@@ -184,7 +185,6 @@ type
     function GetTime(ColumnIndex: Integer): TDateTime; override;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
-    function GetDefaultExpression(ColumnIndex: Integer): string; override;
 
     //---------------------------------------------------------------------
     // Traversal/Positioning
@@ -209,8 +209,8 @@ type
     procedure UpdateFloat(ColumnIndex: Integer; Value: Single); override;
     procedure UpdateDouble(ColumnIndex: Integer; Value: Double); override;
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended); override;
-    procedure UpdatePChar(ColumnIndex: Integer; Value: PAnsiChar); override;
-    procedure UpdateString(ColumnIndex: Integer; const Value: AnsiString); override;
+    procedure UpdatePChar(ColumnIndex: Integer; Value: PChar); override;
+    procedure UpdateString(ColumnIndex: Integer; const Value: string); override;
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString); override;
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray); override;
     procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime); override;
@@ -219,15 +219,11 @@ type
     procedure UpdateAsciiStream(ColumnIndex: Integer; Value: TStream); override;
     procedure UpdateUnicodeStream(ColumnIndex: Integer; Value: TStream); override;
     procedure UpdateBinaryStream(ColumnIndex: Integer; Value: TStream); override;
-    procedure UpdateDefaultExpression(ColumnIndex: Integer; const Value: string); override;
 
     procedure InsertRow; override;
     procedure UpdateRow; override;
     procedure DeleteRow; override;
     procedure CancelRowUpdates; override;
-    procedure RefreshRow;override;// FOS+ 071106
-
-
     procedure MoveToInsertRow; override;
     procedure MoveToCurrentRow; override;
 
@@ -391,8 +387,7 @@ begin
     FRowAccessor.CopyBuffer(Row, Result);
     FInitialRowsList.Add(Result);
     FCurrentRowsList.Add(Row);
-  end
-  else
+  end else
     Result := nil;
 end;
 
@@ -520,8 +515,7 @@ begin
       FSelectedRow := FInitialRowsList[Index];
       FRowAccessor.RowBuffer := FSelectedRow;
     end;
-  end
-  else
+  end else
     FRowAccessor.RowBuffer := nil;
 end;
 
@@ -592,13 +586,6 @@ end;
 {**
   Cancels updates for the current row.
 }
-procedure TZAbstractCachedResultSet.RefreshRow;
-begin
-  if Resolver = nil then
-    raise EZSQLException.Create(SResolverIsNotSpecified);
-  Resolver.RefreshCurrentRow(Self,RowAccessor);
-end;
-
 procedure TZAbstractCachedResultSet.RevertRecord;
 var
   Index: Integer;
@@ -725,13 +712,13 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>PAnsiChar</code> in the Delphi programming language.
+  a <code>PChar</code> in the Delphi programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractCachedResultSet.GetPChar(ColumnIndex: Integer): PAnsiChar;
+function TZAbstractCachedResultSet.GetPChar(ColumnIndex: Integer): PChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckAvailable;
@@ -748,7 +735,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractCachedResultSet.GetString(ColumnIndex: Integer): AnsiString;
+function TZAbstractCachedResultSet.GetString(ColumnIndex: Integer): string;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckAvailable;
@@ -997,22 +984,6 @@ begin
   Result := FRowAccessor.GetBlob(ColumnIndex, LastWasNull);
 end;
 
-{**
-  Gets the DefaultExpression value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>String</code>.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the DefaultExpression value
-}
-function TZAbstractCachedResultSet.GetDefaultExpression(ColumnIndex: Integer): string;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckAvailable;
-{$ENDIF}
-  Result := FRowAccessor.GetColumnDefaultExpression(ColumnIndex);
-end;
-
 //---------------------------------------------------------------------
 // Updates
 //---------------------------------------------------------------------
@@ -1207,7 +1178,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdatePChar(ColumnIndex: Integer;
-  Value: PAnsiChar);
+  Value: PChar);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1227,7 +1198,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateString(ColumnIndex: Integer;
-  const Value: AnsiString);
+  const Value: string);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1398,18 +1369,6 @@ begin
   FRowAccessor.SetUnicodeStream(ColumnIndex, Value);
 end;
 
-{**
-  Updates the DefaultExpression of the designated column with a <code>String</code> value.
-  This changes the behaviour of the RowAccessor used by the Resultset
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param x the new DefaultExpression value for the column
-}
-procedure TZAbstractCachedResultSet.UpdateDefaultExpression(ColumnIndex: Integer;
-  const Value: string);
-begin
-  FNewRowAccessor.SetColumnDefaultExpression(ColumnIndex, Value);
-end;
-
 //---------------------------------------------------------------------
 // Processing methods
 //---------------------------------------------------------------------
@@ -1464,8 +1423,7 @@ begin
       FSelectedRow := nil;
       RowAccessor.RowBuffer := FSelectedRow;
     end;
-  end
-  else
+  end else
     Result := False;
 end;
 
@@ -1484,8 +1442,7 @@ begin
   begin
     CurrentRow := PZRowBuffer(FRowsList[RowNo - 1]);
     Result := CurrentRow^.UpdateType = utModified;
-  end
-  else
+  end else
     Result := False;
 end;
 
@@ -1505,8 +1462,7 @@ begin
   begin
     CurrentRow := PZRowBuffer(FRowsList[RowNo - 1]);
     Result := CurrentRow^.UpdateType = utInserted;
-  end
-  else
+  end else
     Result := False;
 end;
 
@@ -1527,8 +1483,7 @@ begin
   begin
     UpdateType := PZRowBuffer(FRowsList[RowNo - 1])^.UpdateType;
     Result := UpdateType = utDeleted;
-  end
-  else
+  end else
     Result := False;
 end;
 
@@ -1592,8 +1547,7 @@ begin
   if PZRowBuffer(FRowsList[RowNo - 1]).UpdateType = utDeleted then
     raise EZSQLException.Create(SCanNotUpdateDeletedRow);
 
-  if FSelectedRow <> FUpdatedRow then
-      Exit;
+  if FSelectedRow <> FUpdatedRow then Exit;
 
   AppendRow(FRowsList[RowNo - 1]);
 
@@ -1640,8 +1594,7 @@ begin
 
   if FSelectedRow^.UpdateType = utInserted then
     RevertRecord
-  else
-  begin
+  else begin
     AppendRow(FRowsList[RowNo - 1]);
 
     FSelectedRow^.UpdateType := utDeleted;
@@ -1719,8 +1672,7 @@ begin
   CheckClosed;
   if (RowNo >= 1) and (RowNo <= LastRowNo) then
     FRowAccessor.RowBuffer := FSelectedRow
-  else
-    FRowAccessor.RowBuffer := nil;
+  else FRowAccessor.RowBuffer := nil;
 end;
 
 {**
@@ -1803,11 +1755,8 @@ begin
         stFloat: RowAccessor.SetFloat(I, ResultSet.GetFloat(I));
         stDouble: RowAccessor.SetDouble(I, ResultSet.GetDouble(I));
         stBigDecimal: RowAccessor.SetBigDecimal(I, ResultSet.GetBigDecimal(I));
-        //stString: RowAccessor.SetPChar(I, ResultSet.GetPChar(I));
-        // gto: do we need PChar here? (Unicode problems)
-        stString: RowAccessor.SetString(I, ResultSet.GetString(I));
-        stUnicodeString: RowAccessor.SetUnicodeString(I,
-                  ResultSet.GetUnicodeString(I));
+        stString: RowAccessor.SetPChar(I, ResultSet.GetPChar(I));
+        stUnicodeString: RowAccessor.SetUnicodeString(I, ResultSet.GetUnicodeString(I));
         stBytes: RowAccessor.SetBytes(I, ResultSet.GetBytes(I));
         stDate: RowAccessor.SetDate(I, ResultSet.GetDate(I));
         stTime: RowAccessor.SetTime(I, ResultSet.GetTime(I));
@@ -1881,8 +1830,6 @@ procedure TZCachedResultSet.Close;
 begin
   inherited Close;
   ColumnsInfo.Clear;
-  If Assigned(FResultset) then
-    FResultset.Close;
   FResultSet := nil;
 end;
 
@@ -1990,10 +1937,8 @@ begin
   begin
     FetchAll;
     Row := LastRowNo - Row + 1;
-    if Row < 0 then
-       Row := 0;
-  end
-  else
+    if Row < 0 then Row := 0;
+  end else
   { Processes moving after last row }
     while (LastRowNo < Row) and Fetch do;
 

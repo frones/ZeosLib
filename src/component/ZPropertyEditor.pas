@@ -60,14 +60,18 @@ interface
 {$IFDEF WITH_PROPERTY_EDITOR}
 
 uses
-  Types, Classes, ZClasses, ZCompatibility, ZDbcIntfs,
-{$IFDEF BDS4_UP}
-  WideStrings,
+{$IFNDEF VER130BELOW}
+  Types,
 {$ENDIF}
-{$IFNDEF FPC}
+  Classes, ZClasses, ZCompatibility, ZDbcIntfs,
+{$IFNDEF VER130BELOW}
   DesignIntf, DesignEditors;
 {$ELSE}
+  {$IFDEF FPC}
     PropEdits;
+  {$ELSE}
+    DsgnIntf;
+  {$ENDIF}
 {$ENDIF}
 
 type
@@ -306,11 +310,7 @@ var
 begin
   DataSource := GetObjectProp(GetComponent(0), 'MasterSource') as TDataSource;
   if (DataSource <> nil) and (DataSource.DataSet <> nil) then
-    {$IFDEF BDS4_UP}
-    DataSource.DataSet.GetFieldNames(TWideStrings(List));
-    {$ELSE}
     DataSource.DataSet.GetFieldNames(List);
-    {$ENDIF}
 end;
 
 { TZTableNamePropertyEditor }
@@ -358,17 +358,9 @@ begin
         ResultSet := Metadata.GetTables(Catalog, Schema, '', nil);
         while ResultSet.Next do
           begin
-            {$IFDEF DELPHI12_UP}
-            TableName := UTF8ToUnicodeString(ResultSet.GetStringByName('TABLE_NAME'));
-            {$ELSE}
             TableName := ResultSet.GetStringByName('TABLE_NAME');
-            {$ENDIF}
             TableName := IdentifierConvertor.Quote(TableName);
-            {$IFDEF DELPHI12_UP}
-            Schema := UTF8ToUnicodeString(ResultSet.GetStringByName('TABLE_SCHEM'));
-            {$ELSE}
             Schema := ResultSet.GetStringByName('TABLE_SCHEM');
-            {$ENDIF}
             if Schema <> '' then
               TableName := IdentifierConvertor.Quote(Schema) + '.' + TableName;
             if Connection.Catalog <> '' then

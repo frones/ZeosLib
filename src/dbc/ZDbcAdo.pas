@@ -58,7 +58,12 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, ZDbcConnection, ZDbcIntfs, ZCompatibility, ZPlainDriver,
+{$IFNDEF UNIX}
+{$IFNDEF VER130BELOW}
+  Types,
+{$ENDIF}
+{$ENDIF}
+  Classes, ZDbcConnection, ZDbcIntfs, ZCompatibility, ZPlainDriver,
   ZPlainAdoDriver, ZPlainAdo;
 
 type
@@ -134,7 +139,9 @@ var
 implementation
 
 uses
+{$IFNDEF VER130BELOW}
   Variants,
+{$ENDIF}
   SysUtils, ActiveX, ZDbcUtils, ZDbcLogging,
   ZDbcAdoStatement, ZDbcAdoMetaData;
 
@@ -222,7 +229,6 @@ constructor TZAdoConnection.Create(Driver: IZDriver; const Url: string;
 begin
   FAdoConnection := CoConnection.Create;
   FPLainDriver := PlainDriver;
-  Self.PlainDriver := PlainDriver;
   inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
     TZAdoDatabaseMetadata.Create(Self, Url, Info));
 end;

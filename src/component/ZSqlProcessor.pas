@@ -58,7 +58,7 @@ interface
 {$I ZComponent.inc}
 
 uses ZCompatibility, Classes, SysUtils, DB, ZDbcIntfs, ZConnection,
-  ZScriptParser, ZSqlStrings, Types;
+  ZScriptParser, ZSqlStrings{$IFNDEF VER130BELOW}, Types{$ENDIF};
 
 type
 
@@ -497,7 +497,7 @@ begin
             Statement.SetDate(I + 1, Param.AsDate);
           ftTime:
             Statement.SetTime(I + 1, Param.AsTime);
-          ftDateTime, ftTimestamp:
+          ftDateTime{$IFNDEF VER130}, ftTimestamp{$ENDIF}:
             Statement.SetTimestamp(I + 1, Param.AsDateTime);
           ftMemo:
             begin
@@ -508,17 +508,6 @@ begin
                 Stream.Free;
               end;
             end;
-          {$IFNDEF VER150BELOW}
-          ftWideMemo:
-            begin
-              Stream := WideStringStream(Param.AsWideString);
-              try
-                Statement.SetUnicodeStream(I + 1, Stream);
-              finally
-                Stream.Free;
-              end;
-            end;
-          {$ENDIF}
           ftBlob, ftGraphic:
             begin
               Stream := TStringStream.Create(Param.AsBlob);

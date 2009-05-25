@@ -713,41 +713,41 @@ const
 
 type
   TZASASQLWARN = record
-      sqlWarn0: array[0..0] of AnsiChar;
-      sqlWarn1: array[0..0] of AnsiChar;
-      sqlWarn2: array[0..0] of AnsiChar;
-      sqlWarn3: array[0..0] of AnsiChar;
-      sqlWarn4: array[0..0] of AnsiChar;
-      sqlWarn5: array[0..0] of AnsiChar;
-      sqlWarn6: array[0..0] of AnsiChar;
-      sqlWarn7: array[0..0] of AnsiChar;
-      sqlWarn8: array[0..0] of AnsiChar;
-      sqlWarn9: array[0..0] of AnsiChar;
+    sqlWarn0 : array [0..0] of char;
+    sqlWarn1 : array [0..0] of char;
+    sqlWarn2 : array [0..0] of char;
+    sqlWarn3 : array [0..0] of char;
+    sqlWarn4 : array [0..0] of char;
+    sqlWarn5 : array [0..0] of char;
+    sqlWarn6 : array [0..0] of char;
+    sqlWarn7 : array [0..0] of char;
+    sqlWarn8 : array [0..0] of char;
+    sqlWarn9 : array [0..0] of char;
   end;
 
   PZASASQLCA = ^TZASASQLCA;
   TZASASQLCA = record
-    sqlcaID: array[0..7] of AnsiChar;
+    sqlcaID   : array[0..7] of char;
     sqlcAbc   : LongWord;
     sqlCode   : LongInt;
     sqlErrml  : SmallInt;
-    sqlErrmc: array[0..69] of AnsiChar;
-    sqlErrp: array[0..7] of AnsiChar;
+    sqlErrmc  : array[0..69] of char;
+    sqlErrp   : array[0..7] of char;
     sqlErrd   : array[0..5] of LongInt;
     sqlWarn   : TZASASQLWARN;
-    sqlState: array[0..5] of AnsiChar;
+    sqlState  : array[0..5] of char;
   end;
 
   PZASASQLNAME = ^TZASASQLNAME;
   TZASASQLNAME = record
     length : Word;
-    data: array[0..29] of AnsiChar;
+    data : array[0..29] of char;
   end;
 
   PZASASQLSTRING = ^TZASASQLSTRING;
   TZASASQLSTRING = record
     length : Word;
-    data: array[0..0] of AnsiChar;
+    data : array[0..0] of char;
   end;
 
   PZASASQLVAR = ^TZASASQLVAR;
@@ -761,7 +761,7 @@ type
 
   PASASQLDA = ^TASASQLDA;
   TASASQLDA = record
-    sqldaid: array[0..7] of AnsiChar;
+    sqldaid : array[0..7] of char;
     sqldabc : LongWord;
     sqln    : Word;
     sqld    : Word;
@@ -786,7 +786,7 @@ type
     array_len        : Longword;
     stored_len       : Longword;
     untrunc_len      : Longword;
-    arr: array[0..0] of AnsiChar;
+    arr              : array[0..0] of char;
   end;
 
   ZASA_db_callback_index = (             //Markus
@@ -809,17 +809,17 @@ type
   IZASAPlainDriver = interface (IZPlainDriver)
     ['{86AFDDD6-D401-4A30-B3BE-4AC5095E13F0}']
 
-    function sqlerror_message(sqlca: PZASASQLCA; Buffer: PAnsiChar;
-       MaxSize: Integer): PAnsiChar;
+    function sqlerror_message( sqlca: PZASASQLCA; Buffer: PChar;
+      MaxSize: Integer): PChar;
     function db_init( sqlca: PZASASQLCA): Integer;
     function db_fini( sqlca: PZASASQLCA): Integer;
-    function db_string_connect(sqlca: PZASASQLCA; Params: PAnsiChar): Integer;
-    function db_string_disconnect(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
-    function db_find_engine(sqlca: PZASASQLCA; Params: PAnsiChar): Word;
-    function db_start_engine(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
-    function db_stop_engine(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
-    function db_start_database(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
-    function db_stop_database(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
+    function db_string_connect( sqlca: PZASASQLCA; Params: PChar): Integer;
+    function db_string_disconnect( sqlca: PZASASQLCA; Params: PChar): LongWord;
+    function db_find_engine( sqlca: PZASASQLCA; Params: PChar): Word;
+    function db_start_engine( sqlca: PZASASQLCA; Params: PChar): LongWord;
+    function db_stop_engine( sqlca: PZASASQLCA; Params: PChar): LongWord;
+    function db_start_database( sqlca: PZASASQLCA; Params: PChar): LongWord;
+    function db_stop_database( sqlca: PZASASQLCA; Params: PChar): LongWord;
 
     function db_alloc_sqlda( NumVar: LongWord): PASASQLDA;
     function db_fill_sqlda( Parameter: PASASQLDA): PASASQLDA;
@@ -829,61 +829,61 @@ type
     procedure db_free_sqlda_noind( Parameter: PASASQLDA);
     procedure db_free_filled_sqlda( Parameter: PASASQLDA);
 
-    procedure db_setconnect(sqlca: PZASASQLCA; ConnStr: PAnsiChar);
-    procedure db_disconnect(sqlca: PZASASQLCA; ConnStr: PAnsiChar);
+    procedure db_setconnect( sqlca: PZASASQLCA; ConnStr: PChar);
+    procedure db_disconnect( sqlca: PZASASQLCA; ConnStr: PChar);
     procedure db_setoption( sqlca: PZASASQLCA; Temporary: LongInt;
-      User: PAnsiChar; Option: PAnsiChar; Descriptor: PASASQLDA);
+      User: PChar; Option: PChar; Descriptor: PASASQLDA);
 
-    procedure db_describe_cursor(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_describe_cursor( sqlca: PZASASQLCA; CursorName: PChar;
       Descriptor: PASASQLDA; WhatToDesc: LongWord);
-    procedure db_prepare_into(sqlca: PZASASQLCA; ProgName: PAnsiChar;
-      StatementNum: PSmallInt; SqlStatement: PAnsiChar;
+    procedure db_prepare_into( sqlca: PZASASQLCA; ProgName: PChar;
+      StatementNum: PSmallInt; SqlStatement: PChar;
       Descriptor1: PASASQLDA; Descriptor2: PASASQLDA; WhatToDesc: LongWord);
-    procedure db_prepare_describe(sqlca: PZASASQLCA; ProgName: PAnsiChar;
-      StatementNum: PSmallInt; SqlStatement: PAnsiChar; Descriptor: PASASQLDA;
+    procedure db_prepare_describe( sqlca: PZASASQLCA; ProgName: PChar;
+      StatementNum: PSmallInt; SqlStatement: PChar; Descriptor: PASASQLDA;
       WhatToDesc: LongWord; LongNames: Word);
-    procedure db_declare(sqlca: PZASASQLCA; CursorName: PAnsiChar;
-      StatementName: PAnsiChar; ProgName: PAnsiChar; StatementNum: PSmallInt;
+    procedure db_declare( sqlca: PZASASQLCA; CursorName: PChar;
+      StatementName: PChar; ProgName: PChar; StatementNum: PSmallInt;
       Options: Word);
-    procedure db_describe(sqlca: PZASASQLCA; ProgName: PAnsiChar;
+    procedure db_describe( sqlca: PZASASQLCA; ProgName: PChar;
       StatementNum: PSmallInt; Descriptor: PASASQLDA; WhatToDesc: Word);
-    procedure db_dropstmt(sqlca: PZASASQLCA; StatementName: PAnsiChar;
-      ProgName: PAnsiChar; StatementNum: PSmallInt);
-    procedure db_open(sqlca: PZASASQLCA; CursorName: PAnsiChar;
-     ProgName: PAnsiChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
-     BlockSize, IsolationLvl: SmallInt; CursorOptions: Word);
-    procedure db_close( sqlca: PZASASQLCA; CursorName: PAnsiChar);
+    procedure db_dropstmt( sqlca: PZASASQLCA; StatementName: PChar;
+      ProgName: PChar; StatementNum: PSmallInt);
+    procedure db_open( sqlca: PZASASQLCA; CursorName: PChar;
+      ProgName: PChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
+      BlockSize, IsolationLvl: SmallInt; CursorOptions: Word);
+    procedure db_close( sqlca: PZASASQLCA; CursorName: PChar);
 
-    procedure db_fetch(sqlca: PZASASQLCA; CursorName: PAnsiChar; Offset: Word;
+    procedure db_fetch( sqlca: PZASASQLCA; CursorName: PChar; Offset: Word;
       RelPositon: Integer; Descriptor: PASASQLDA; BlockSize: SmallInt;
       Options: Word);
-    procedure db_fetch_array(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_fetch_array( sqlca: PZASASQLCA; CursorName: PChar;
       Offset: Word; RelPositon: Integer; Descriptor: PASASQLDA;
       BlockSize: SmallInt; Options, ArrayWidth: Word);
-    procedure db_get_data(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_get_data( sqlca: PZASASQLCA; CursorName: PChar;
       ColumnNumber: Word; Offset: Integer; Descriptor: PASASQLDA);
-    procedure db_delete(sqlca: PZASASQLCA; CursorName: PAnsiChar);
-    procedure db_update(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_delete( sqlca: PZASASQLCA; CursorName: PChar);
+    procedure db_update( sqlca: PZASASQLCA; CursorName: PChar;
       Descriptor: PASASQLDA);
-    procedure db_put_into(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_put_into( sqlca: PZASASQLCA; CursorName: PChar;
       Descriptor: PASASQLDA; ResultDescriptor: PASASQLDA);
-    procedure db_put_array(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_put_array( sqlca: PZASASQLCA; CursorName: PChar;
       Descriptor: PASASQLDA; ResultDescriptor: PASASQLDA; Rows: Word);
 
-    procedure db_select(sqlca: PZASASQLCA; ProgName: PAnsiChar;
+    procedure db_select( sqlca: PZASASQLCA; ProgName: PChar;
       StatementNum: PSmallInt; SQLDescriptor, ResultDescriptor: PASASQLDA);
-    procedure db_execute_into(sqlca: PZASASQLCA; Statement: PAnsiChar;
-      ProgName: PAnsiChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
+    procedure db_execute_into( sqlca: PZASASQLCA; Statement: PChar;
+      ProgName: PChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
       ResultDescriptor: PASASQLDA);
-    procedure db_execute_imm(sqlca: PZASASQLCA; Statement: PAnsiChar);
+    procedure db_execute_imm( sqlca: PZASASQLCA; Statement: PChar);
 
     procedure db_commit( sqlca: PZASASQLCA; TransLevel: LongWord);
     procedure db_rollback( sqlca: PZASASQLCA; TransLevel: LongWord);
-    procedure db_explain(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_explain( sqlca: PZASASQLCA; CursorName: PChar;
       Descriptor: PASASQLDA);
     procedure db_register_callback( sqlca: PZASASQLCA;
       CBIdx: ZASA_db_callback_index; Proc: TZASASQLCallback);
-    procedure db_resume(sqlca: PZASASQLCA; CursorName: PAnsiChar);
+    procedure db_resume( sqlca: PZASASQLCA; CursorName: PChar);
     function db_cancel_request( sqlca: PZASASQLCA): Integer;
   end;
 
@@ -902,17 +902,17 @@ type
     function GetDescription: string;
     procedure Initialize;
 
-    function sqlerror_message(sqlca: PZASASQLCA; Buffer: PAnsiChar;
-       MaxSize: Integer): PAnsiChar;
+    function sqlerror_message( sqlca: PZASASQLCA; Buffer: PChar;
+      MaxSize: Integer): PChar;
     function db_init( sqlca: PZASASQLCA): Integer;
     function db_fini( sqlca: PZASASQLCA): Integer;
-    function db_string_connect(sqlca: PZASASQLCA; Params: PAnsiChar): Integer;
-    function db_string_disconnect(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
-    function db_find_engine(sqlca: PZASASQLCA; Params: PAnsiChar): Word;
-    function db_start_engine(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
-    function db_stop_engine(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
-    function db_start_database(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
-    function db_stop_database(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
+    function db_string_connect( sqlca: PZASASQLCA; Params: PChar): Integer;
+    function db_string_disconnect( sqlca: PZASASQLCA; Params: PChar): LongWord;
+    function db_find_engine( sqlca: PZASASQLCA; Params: PChar): Word;
+    function db_start_engine( sqlca: PZASASQLCA; Params: PChar): LongWord;
+    function db_stop_engine( sqlca: PZASASQLCA; Params: PChar): LongWord;
+    function db_start_database( sqlca: PZASASQLCA; Params: PChar): LongWord;
+    function db_stop_database( sqlca: PZASASQLCA; Params: PChar): LongWord;
 
     function db_alloc_sqlda( NumVar: LongWord): PASASQLDA;
     function db_fill_sqlda( Parameter: PASASQLDA): PASASQLDA;
@@ -922,61 +922,61 @@ type
     procedure db_free_sqlda_noind( Parameter: PASASQLDA);
     procedure db_free_filled_sqlda( Parameter: PASASQLDA);
 
-    procedure db_setconnect(sqlca: PZASASQLCA; ConnStr: PAnsiChar);
-    procedure db_disconnect(sqlca: PZASASQLCA; ConnStr: PAnsiChar);
+    procedure db_setconnect( sqlca: PZASASQLCA; ConnStr: PChar);
+    procedure db_disconnect( sqlca: PZASASQLCA; ConnStr: PChar);
     procedure db_setoption( sqlca: PZASASQLCA; Temporary: LongInt;
-      User: PAnsiChar; Option: PAnsiChar; Descriptor: PASASQLDA);
+      User: PChar; Option: PChar; Descriptor: PASASQLDA);
 
-    procedure db_describe_cursor(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_describe_cursor( sqlca: PZASASQLCA; CursorName: PChar;
       Descriptor: PASASQLDA; WhatToDesc: LongWord);
-    procedure db_prepare_into(sqlca: PZASASQLCA; ProgName: PAnsiChar;
-      StatementNum: PSmallInt; SqlStatement: PAnsiChar;
+    procedure db_prepare_into( sqlca: PZASASQLCA; ProgName: PChar;
+      StatementNum: PSmallInt; SqlStatement: PChar;
       Descriptor1: PASASQLDA; Descriptor2: PASASQLDA; WhatToDesc: LongWord);
-    procedure db_prepare_describe(sqlca: PZASASQLCA; ProgName: PAnsiChar;
-      StatementNum: PSmallInt; SqlStatement: PAnsiChar; Descriptor: PASASQLDA;
+    procedure db_prepare_describe( sqlca: PZASASQLCA; ProgName: PChar;
+      StatementNum: PSmallInt; SqlStatement: PChar; Descriptor: PASASQLDA;
       WhatToDesc: LongWord; LongNames: Word);
-    procedure db_declare(sqlca: PZASASQLCA; CursorName: PAnsiChar;
-      StatementName: PAnsiChar; ProgName: PAnsiChar; StatementNum: PSmallInt;
+    procedure db_declare( sqlca: PZASASQLCA; CursorName: PChar;
+      StatementName: PChar; ProgName: PChar; StatementNum: PSmallInt;
       Options: Word);
-    procedure db_describe(sqlca: PZASASQLCA; ProgName: PAnsiChar;
+    procedure db_describe( sqlca: PZASASQLCA; ProgName: PChar;
       StatementNum: PSmallInt; Descriptor: PASASQLDA; WhatToDesc: Word);
-    procedure db_dropstmt(sqlca: PZASASQLCA; StatementName: PAnsiChar;
-      ProgName: PAnsiChar; StatementNum: PSmallInt);
-    procedure db_open(sqlca: PZASASQLCA; CursorName: PAnsiChar;
-      ProgName: PAnsiChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
+    procedure db_dropstmt( sqlca: PZASASQLCA; StatementName: PChar;
+      ProgName: PChar; StatementNum: PSmallInt);
+    procedure db_open( sqlca: PZASASQLCA; CursorName: PChar;
+      ProgName: PChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
       BlockSize, IsolationLvl: SmallInt; CursorOptions: Word);
-    procedure db_close(sqlca: PZASASQLCA; CursorName: PAnsiChar);
+    procedure db_close( sqlca: PZASASQLCA; CursorName: PChar);
 
-    procedure db_fetch(sqlca: PZASASQLCA; CursorName: PAnsiChar; Offset: Word;
+    procedure db_fetch( sqlca: PZASASQLCA; CursorName: PChar; Offset: Word;
       RelPositon: Integer; Descriptor: PASASQLDA; BlockSize: SmallInt;
       Options: Word);
-    procedure db_fetch_array(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_fetch_array( sqlca: PZASASQLCA; CursorName: PChar;
       Offset: Word; RelPositon: Integer; Descriptor: PASASQLDA;
       BlockSize: SmallInt; Options, ArrayWidth: Word);
-    procedure db_get_data(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_get_data( sqlca: PZASASQLCA; CursorName: PChar;
       ColumnNumber: Word; Offset: Integer; Descriptor: PASASQLDA);
-    procedure db_delete(sqlca: PZASASQLCA; CursorName: PAnsiChar);
-    procedure db_update(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_delete( sqlca: PZASASQLCA; CursorName: PChar);
+    procedure db_update( sqlca: PZASASQLCA; CursorName: PChar;
       Descriptor: PASASQLDA);
-    procedure db_put_into(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_put_into( sqlca: PZASASQLCA; CursorName: PChar;
       Descriptor: PASASQLDA; ResultDescriptor: PASASQLDA);
-    procedure db_put_array(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_put_array( sqlca: PZASASQLCA; CursorName: PChar;
       Descriptor: PASASQLDA; ResultDescriptor: PASASQLDA; Rows: Word);
 
-    procedure db_select(sqlca: PZASASQLCA; ProgName: PAnsiChar;
+    procedure db_select( sqlca: PZASASQLCA; ProgName: PChar;
       StatementNum: PSmallInt; Descriptor, ResultDescriptor: PASASQLDA);
-    procedure db_execute_into(sqlca: PZASASQLCA; Statement: PAnsiChar;
-      ProgName: PAnsiChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
+    procedure db_execute_into( sqlca: PZASASQLCA; Statement: PChar;
+      ProgName: PChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
       ResultDescriptor: PASASQLDA);
-    procedure db_execute_imm(sqlca: PZASASQLCA; Statement: PAnsiChar);
+    procedure db_execute_imm( sqlca: PZASASQLCA; Statement: PChar);
 
     procedure db_commit( sqlca: PZASASQLCA; TransLevel: LongWord);
     procedure db_rollback( sqlca: PZASASQLCA; TransLevel: LongWord);
-    procedure db_explain(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_explain( sqlca: PZASASQLCA; CursorName: PChar;
       Descriptor: PASASQLDA);
     procedure db_register_callback( sqlca: PZASASQLCA;
       CBIdx: ZASA_db_callback_index; Proc: TZASASQLCallback);
-    procedure db_resume(sqlca: PZASASQLCA; CursorName: PAnsiChar);
+    procedure db_resume( sqlca: PZASASQLCA; CursorName: PChar);
     function db_cancel_request( sqlca: PZASASQLCA): Integer;
   end;
 
@@ -995,17 +995,17 @@ type
     function GetDescription: string;
     procedure Initialize;
 
-    function sqlerror_message(sqlca: PZASASQLCA; Buffer: PAnsiChar;
-      MaxSize: Integer): PAnsiChar;
+    function sqlerror_message( sqlca: PZASASQLCA; Buffer: PChar;
+      MaxSize: Integer): PChar;
     function db_init( sqlca: PZASASQLCA): Integer;
     function db_fini( sqlca: PZASASQLCA): Integer;
-    function db_string_connect(sqlca: PZASASQLCA; Params: PAnsiChar): Integer;
-    function db_string_disconnect(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
-    function db_find_engine(sqlca: PZASASQLCA; Params: PAnsiChar): Word;
-    function db_start_engine(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
-    function db_stop_engine(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
-    function db_start_database(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
-    function db_stop_database(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
+    function db_string_connect( sqlca: PZASASQLCA; Params: PChar): Integer;
+    function db_string_disconnect( sqlca: PZASASQLCA; Params: PChar): LongWord;
+    function db_find_engine( sqlca: PZASASQLCA; Params: PChar): Word;
+    function db_start_engine( sqlca: PZASASQLCA; Params: PChar): LongWord;
+    function db_stop_engine( sqlca: PZASASQLCA; Params: PChar): LongWord;
+    function db_start_database( sqlca: PZASASQLCA; Params: PChar): LongWord;
+    function db_stop_database( sqlca: PZASASQLCA; Params: PChar): LongWord;
 
     function db_alloc_sqlda( NumVar: LongWord): PASASQLDA;
     function db_fill_sqlda( Parameter: PASASQLDA): PASASQLDA;
@@ -1015,61 +1015,61 @@ type
     procedure db_free_sqlda_noind( Parameter: PASASQLDA);
     procedure db_free_filled_sqlda( Parameter: PASASQLDA);
 
-    procedure db_setconnect(sqlca: PZASASQLCA; ConnStr: PAnsiChar);
-    procedure db_disconnect(sqlca: PZASASQLCA; ConnStr: PAnsiChar);
+    procedure db_setconnect( sqlca: PZASASQLCA; ConnStr: PChar);
+    procedure db_disconnect( sqlca: PZASASQLCA; ConnStr: PChar);
     procedure db_setoption( sqlca: PZASASQLCA; Temporary: LongInt;
-      User: PAnsiChar; Option: PAnsiChar; Descriptor: PASASQLDA);
+      User: PChar; Option: PChar; Descriptor: PASASQLDA);
 
-    procedure db_describe_cursor(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_describe_cursor( sqlca: PZASASQLCA; CursorName: PChar;
       Descriptor: PASASQLDA; WhatToDesc: LongWord);
-    procedure db_prepare_into(sqlca: PZASASQLCA; ProgName: PAnsiChar;
-      StatementNum: PSmallInt; SqlStatement: PAnsiChar;
+    procedure db_prepare_into( sqlca: PZASASQLCA; ProgName: PChar;
+      StatementNum: PSmallInt; SqlStatement: PChar;
       Descriptor1: PASASQLDA; Descriptor2: PASASQLDA; WhatToDesc: LongWord);
-    procedure db_prepare_describe(sqlca: PZASASQLCA; ProgName: PAnsiChar;
-      StatementNum: PSmallInt; SqlStatement: PAnsiChar; Descriptor: PASASQLDA;
+    procedure db_prepare_describe( sqlca: PZASASQLCA; ProgName: PChar;
+      StatementNum: PSmallInt; SqlStatement: PChar; Descriptor: PASASQLDA;
       WhatToDesc: LongWord; LongNames: Word);
-    procedure db_declare(sqlca: PZASASQLCA; CursorName: PAnsiChar;
-      StatementName: PAnsiChar; ProgName: PAnsiChar; StatementNum: PSmallInt;
+    procedure db_declare( sqlca: PZASASQLCA; CursorName: PChar;
+      StatementName: PChar; ProgName: PChar; StatementNum: PSmallInt;
       Options: Word);
-    procedure db_describe(sqlca: PZASASQLCA; ProgName: PAnsiChar;
+    procedure db_describe( sqlca: PZASASQLCA; ProgName: PChar;
       StatementNum: PSmallInt; Descriptor: PASASQLDA; WhatToDesc: Word);
-    procedure db_dropstmt(sqlca: PZASASQLCA; StatementName: PAnsiChar;
-      ProgName: PAnsiChar; StatementNum: PSmallInt);
-    procedure db_open(sqlca: PZASASQLCA; CursorName: PAnsiChar;
-      ProgName: PAnsiChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
+    procedure db_dropstmt( sqlca: PZASASQLCA; StatementName: PChar;
+      ProgName: PChar; StatementNum: PSmallInt);
+    procedure db_open( sqlca: PZASASQLCA; CursorName: PChar;
+      ProgName: PChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
       BlockSize, IsolationLvl: SmallInt; CursorOptions: Word);
-    procedure db_close(sqlca: PZASASQLCA; CursorName: PAnsiChar);
+    procedure db_close( sqlca: PZASASQLCA; CursorName: PChar);
 
-    procedure db_fetch(sqlca: PZASASQLCA; CursorName: PAnsiChar; Offset: Word;
+    procedure db_fetch( sqlca: PZASASQLCA; CursorName: PChar; Offset: Word;
       RelPositon: Integer; Descriptor: PASASQLDA; BlockSize: SmallInt;
       Options: Word);
-    procedure db_fetch_array(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_fetch_array( sqlca: PZASASQLCA; CursorName: PChar;
       Offset: Word; RelPositon: Integer; Descriptor: PASASQLDA;
       BlockSize: SmallInt; Options, ArrayWidth: Word);
-    procedure db_get_data(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_get_data( sqlca: PZASASQLCA; CursorName: PChar;
       ColumnNumber: Word; Offset: Integer; Descriptor: PASASQLDA);
-    procedure db_delete(sqlca: PZASASQLCA; CursorName: PAnsiChar);
-    procedure db_update(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_delete( sqlca: PZASASQLCA; CursorName: PChar);
+    procedure db_update( sqlca: PZASASQLCA; CursorName: PChar;
       Descriptor: PASASQLDA);
-    procedure db_put_into(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_put_into( sqlca: PZASASQLCA; CursorName: PChar;
       Descriptor: PASASQLDA; ResultDescriptor: PASASQLDA);
-    procedure db_put_array(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_put_array( sqlca: PZASASQLCA; CursorName: PChar;
       Descriptor: PASASQLDA; ResultDescriptor: PASASQLDA; Rows: Word);
 
-    procedure db_select(sqlca: PZASASQLCA; ProgName: PAnsiChar;
+    procedure db_select( sqlca: PZASASQLCA; ProgName: PChar;
       StatementNum: PSmallInt; Descriptor, ResultDescriptor: PASASQLDA);
-    procedure db_execute_into(sqlca: PZASASQLCA; Statement: PAnsiChar;
-      ProgName: PAnsiChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
+    procedure db_execute_into( sqlca: PZASASQLCA; Statement: PChar;
+      ProgName: PChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
       ResultDescriptor: PASASQLDA);
-    procedure db_execute_imm(sqlca: PZASASQLCA; Statement: PAnsiChar);
+    procedure db_execute_imm( sqlca: PZASASQLCA; Statement: PChar);
 
     procedure db_commit( sqlca: PZASASQLCA; TransLevel: LongWord);
     procedure db_rollback( sqlca: PZASASQLCA; TransLevel: LongWord);
-    procedure db_explain(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_explain( sqlca: PZASASQLCA; CursorName: PChar;
       Descriptor: PASASQLDA);
     procedure db_register_callback( sqlca: PZASASQLCA;
       CBIdx: ZASA_db_callback_index; Proc: TZASASQLCallback);
-    procedure db_resume(sqlca: PZASASQLCA; CursorName: PAnsiChar);
+    procedure db_resume( sqlca: PZASASQLCA; CursorName: PChar);
     function db_cancel_request( sqlca: PZASASQLCA): Integer;
   end;
 
@@ -1088,17 +1088,17 @@ type
     function GetDescription: string;
     procedure Initialize;
 
-    function sqlerror_message(sqlca: PZASASQLCA; Buffer: PAnsiChar;
-      MaxSize: Integer): PAnsiChar;
+    function sqlerror_message( sqlca: PZASASQLCA; Buffer: PChar;
+      MaxSize: Integer): PChar;
     function db_init( sqlca: PZASASQLCA): Integer;
     function db_fini( sqlca: PZASASQLCA): Integer;
-    function db_string_connect(sqlca: PZASASQLCA; Params: PAnsiChar): Integer;
-    function db_string_disconnect(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
-    function db_find_engine(sqlca: PZASASQLCA; Params: PAnsiChar): Word;
-    function db_start_engine(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
-    function db_stop_engine(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
-    function db_start_database(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
-    function db_stop_database(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
+    function db_string_connect( sqlca: PZASASQLCA; Params: PChar): Integer;
+    function db_string_disconnect( sqlca: PZASASQLCA; Params: PChar): LongWord;
+    function db_find_engine( sqlca: PZASASQLCA; Params: PChar): Word;
+    function db_start_engine( sqlca: PZASASQLCA; Params: PChar): LongWord;
+    function db_stop_engine( sqlca: PZASASQLCA; Params: PChar): LongWord;
+    function db_start_database( sqlca: PZASASQLCA; Params: PChar): LongWord;
+    function db_stop_database( sqlca: PZASASQLCA; Params: PChar): LongWord;
 
     function db_alloc_sqlda( NumVar: LongWord): PASASQLDA;
     function db_fill_sqlda( Parameter: PASASQLDA): PASASQLDA;
@@ -1108,61 +1108,61 @@ type
     procedure db_free_sqlda_noind( Parameter: PASASQLDA);
     procedure db_free_filled_sqlda( Parameter: PASASQLDA);
 
-    procedure db_setconnect(sqlca: PZASASQLCA; ConnStr: PAnsiChar);
-    procedure db_disconnect(sqlca: PZASASQLCA; ConnStr: PAnsiChar);
+    procedure db_setconnect( sqlca: PZASASQLCA; ConnStr: PChar);
+    procedure db_disconnect( sqlca: PZASASQLCA; ConnStr: PChar);
     procedure db_setoption( sqlca: PZASASQLCA; Temporary: LongInt;
-      User: PAnsiChar; Option: PAnsiChar; Descriptor: PASASQLDA);
+      User: PChar; Option: PChar; Descriptor: PASASQLDA);
 
-    procedure db_describe_cursor(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_describe_cursor( sqlca: PZASASQLCA; CursorName: PChar;
       Descriptor: PASASQLDA; WhatToDesc: LongWord);
-    procedure db_prepare_into(sqlca: PZASASQLCA; ProgName: PAnsiChar;
-      StatementNum: PSmallInt; SqlStatement: PAnsiChar;
+    procedure db_prepare_into( sqlca: PZASASQLCA; ProgName: PChar;
+      StatementNum: PSmallInt; SqlStatement: PChar;
       Descriptor1: PASASQLDA; Descriptor2: PASASQLDA; WhatToDesc: LongWord);
-    procedure db_prepare_describe(sqlca: PZASASQLCA; ProgName: PAnsiChar;
-      StatementNum: PSmallInt; SqlStatement: PAnsiChar; Descriptor: PASASQLDA;
+    procedure db_prepare_describe( sqlca: PZASASQLCA; ProgName: PChar;
+      StatementNum: PSmallInt; SqlStatement: PChar; Descriptor: PASASQLDA;
       WhatToDesc: LongWord; LongNames: Word);
-    procedure db_declare(sqlca: PZASASQLCA; CursorName: PAnsiChar;
-      StatementName: PAnsiChar; ProgName: PAnsiChar; StatementNum: PSmallInt;
+    procedure db_declare( sqlca: PZASASQLCA; CursorName: PChar;
+      StatementName: PChar; ProgName: PChar; StatementNum: PSmallInt;
       Options: Word);
-    procedure db_describe(sqlca: PZASASQLCA; ProgName: PAnsiChar;
+    procedure db_describe( sqlca: PZASASQLCA; ProgName: PChar;
       StatementNum: PSmallInt; Descriptor: PASASQLDA; WhatToDesc: Word);
-    procedure db_dropstmt(sqlca: PZASASQLCA; StatementName: PAnsiChar;
-      ProgName: PAnsiChar; StatementNum: PSmallInt);
-    procedure db_open(sqlca: PZASASQLCA; CursorName: PAnsiChar;
-      ProgName: PAnsiChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
+    procedure db_dropstmt( sqlca: PZASASQLCA; StatementName: PChar;
+      ProgName: PChar; StatementNum: PSmallInt);
+    procedure db_open( sqlca: PZASASQLCA; CursorName: PChar;
+      ProgName: PChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
       BlockSize, IsolationLvl: SmallInt; CursorOptions: Word);
-    procedure db_close(sqlca: PZASASQLCA; CursorName: PAnsiChar);
+    procedure db_close( sqlca: PZASASQLCA; CursorName: PChar);
 
-    procedure db_fetch(sqlca: PZASASQLCA; CursorName: PAnsiChar; Offset: Word;
+    procedure db_fetch( sqlca: PZASASQLCA; CursorName: PChar; Offset: Word;
       RelPositon: Integer; Descriptor: PASASQLDA; BlockSize: SmallInt;
       Options: Word);
-    procedure db_fetch_array(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_fetch_array( sqlca: PZASASQLCA; CursorName: PChar;
       Offset: Word; RelPositon: Integer; Descriptor: PASASQLDA;
       BlockSize: SmallInt; Options, ArrayWidth: Word);
-    procedure db_get_data(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_get_data( sqlca: PZASASQLCA; CursorName: PChar;
       ColumnNumber: Word; Offset: Integer; Descriptor: PASASQLDA);
-    procedure db_delete(sqlca: PZASASQLCA; CursorName: PAnsiChar);
-    procedure db_update(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_delete( sqlca: PZASASQLCA; CursorName: PChar);
+    procedure db_update( sqlca: PZASASQLCA; CursorName: PChar;
       Descriptor: PASASQLDA);
-    procedure db_put_into(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_put_into( sqlca: PZASASQLCA; CursorName: PChar;
       Descriptor: PASASQLDA; ResultDescriptor: PASASQLDA);
-    procedure db_put_array(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_put_array( sqlca: PZASASQLCA; CursorName: PChar;
       Descriptor: PASASQLDA; ResultDescriptor: PASASQLDA; Rows: Word);
 
-    procedure db_select(sqlca: PZASASQLCA; ProgName: PAnsiChar;
+    procedure db_select( sqlca: PZASASQLCA; ProgName: PChar;
       StatementNum: PSmallInt; Descriptor, ResultDescriptor: PASASQLDA);
-    procedure db_execute_into(sqlca: PZASASQLCA; Statement: PAnsiChar;
-      ProgName: PAnsiChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
+    procedure db_execute_into( sqlca: PZASASQLCA; Statement: PChar;
+      ProgName: PChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
       ResultDescriptor: PASASQLDA);
-    procedure db_execute_imm(sqlca: PZASASQLCA; Statement: PAnsiChar);
+    procedure db_execute_imm( sqlca: PZASASQLCA; Statement: PChar);
 
     procedure db_commit( sqlca: PZASASQLCA; TransLevel: LongWord);
     procedure db_rollback( sqlca: PZASASQLCA; TransLevel: LongWord);
-    procedure db_explain(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+    procedure db_explain( sqlca: PZASASQLCA; CursorName: PChar;
       Descriptor: PASASQLDA);
     procedure db_register_callback( sqlca: PZASASQLCA;
       CBIdx: ZASA_db_callback_index; Proc: TZASASQLCallback);
-    procedure db_resume(sqlca: PZASASQLCA; CursorName: PAnsiChar);
+    procedure db_resume( sqlca: PZASASQLCA; CursorName: PChar);
     function db_cancel_request( sqlca: PZASASQLCA): Integer;
   end;
 
@@ -1189,8 +1189,8 @@ begin
   ZPlainASA7.LibraryLoader.LoadIfNeeded;
 end;
 
-function TZASA7PlainDriver.sqlerror_message(sqlca: PZASASQLCA; Buffer: PAnsiChar;
-  MaxSize: Integer): PAnsiChar;
+function TZASA7PlainDriver.sqlerror_message( sqlca: PZASASQLCA; Buffer: PChar;
+  MaxSize: Integer): PChar;
 begin
   Result := ZPlainASA7.sqlerror_message( sqlca, Buffer, MaxSize);
 end;
@@ -1205,43 +1205,43 @@ begin
   Result := ZPlainASA7.db_fini( sqlca);
 end;
 
-function TZASA7PlainDriver.db_string_connect(sqlca: PZASASQLCA; Params: PAnsiChar):
+function TZASA7PlainDriver.db_string_connect( sqlca: PZASASQLCA; Params: PChar):
   Integer;
 begin
   Result := ZPlainASA7.db_string_connect( sqlca, Params);
 end;
 
 function TZASA7PlainDriver.db_string_disconnect( sqlca: PZASASQLCA;
-  Params: PAnsiChar): LongWord;
+  Params: PChar): LongWord;
 begin
   Result := ZPlainASA7.db_string_disconnect( sqlca, Params)
 end;
 
-function TZASA7PlainDriver.db_find_engine(sqlca: PZASASQLCA; Params: PAnsiChar):
+function TZASA7PlainDriver.db_find_engine( sqlca: PZASASQLCA; Params: PChar):
   Word;
 begin
   Result := ZPlainASA7.db_find_engine( sqlca, Params);
 end;
 
-function TZASA7PlainDriver.db_start_engine(sqlca: PZASASQLCA; Params: PAnsiChar):
+function TZASA7PlainDriver.db_start_engine( sqlca: PZASASQLCA; Params: PChar):
   LongWord;
 begin
   Result := ZPlainASA7.db_start_engine( sqlca, Params);
 end;
 
-function TZASA7PlainDriver.db_stop_engine(sqlca: PZASASQLCA; Params: PAnsiChar):
+function TZASA7PlainDriver.db_stop_engine( sqlca: PZASASQLCA; Params: PChar):
   LongWord;
 begin
   Result := ZPlainASA7.db_stop_engine( sqlca, Params);
 end;
 
-function TZASA7PlainDriver.db_start_database(sqlca: PZASASQLCA; Params: PAnsiChar):
+function TZASA7PlainDriver.db_start_database( sqlca: PZASASQLCA; Params: PChar):
   LongWord;
 begin
   Result := ZPlainASA7.db_start_database( sqlca, Params);
 end;
 
-function TZASA7PlainDriver.db_stop_database(sqlca: PZASASQLCA; Params: PAnsiChar):
+function TZASA7PlainDriver.db_stop_database( sqlca: PZASASQLCA; Params: PChar):
   LongWord;
 begin
   Result := ZPlainASA7.db_stop_database( sqlca, Params);
@@ -1278,30 +1278,30 @@ begin
   ZPlainASA7.free_filled_sqlda( Parameter);
 end;
 
-procedure TZASA7PlainDriver.db_setconnect(sqlca: PZASASQLCA; ConnStr: PAnsiChar);
+procedure TZASA7PlainDriver.db_setconnect( sqlca: PZASASQLCA; ConnStr: PChar);
 begin
   ZPlainASA7.dbpp_setconnect( sqlca, ConnStr);
 end;
 
-procedure TZASA7PlainDriver.db_disconnect(sqlca: PZASASQLCA; ConnStr: PAnsiChar);
+procedure TZASA7PlainDriver.db_disconnect( sqlca: PZASASQLCA; ConnStr: PChar);
 begin
   ZPlainASA7.dbpp_disconnect( sqlca, ConnStr);
 end;
 
 procedure TZASA7PlainDriver.db_setoption( sqlca: PZASASQLCA; Temporary: Integer;
-   User: PAnsiChar; Option: PAnsiChar; Descriptor: PASASQLDA);
+  User: PChar; Option: PChar; Descriptor: PASASQLDA);
 begin
   ZPlainASA7.dbpp_setoption( sqlca, Temporary, User, Option, Descriptor);
 end;
 
 procedure TZASA7PlainDriver.db_describe_cursor( sqlca: PZASASQLCA;
-  CursorName: PAnsiChar; Descriptor: PASASQLDA; WhatToDesc: LongWord);
+  CursorName: PChar; Descriptor: PASASQLDA; WhatToDesc: LongWord);
 begin
   ZPlainASA7.dbpp_describe_cursor( sqlca, CursorName, Descriptor, WhatToDesc);
 end;
 
 procedure TZASA7PlainDriver.db_prepare_into( sqlca: PZASASQLCA;
-  ProgName: PAnsiChar; StatementNum: PSmallInt; SqlStatement: PAnsiChar;
+  ProgName: PChar; StatementNum: PSmallInt; SqlStatement: PChar;
   Descriptor1: PASASQLDA; Descriptor2: PASASQLDA; WhatToDesc: LongWord);
 begin
   ZPlainASA7.dbpp_prepare_into( sqlca, nil, ProgName, StatementNum, SqlStatement,
@@ -1309,22 +1309,22 @@ begin
 end;
 
 procedure TZASA7PlainDriver.db_prepare_describe( sqlca: PZASASQLCA;
-   ProgName: PAnsiChar; StatementNum: PSmallInt; SqlStatement: PAnsiChar;
+  ProgName: PChar; StatementNum: PSmallInt; SqlStatement: PChar;
   Descriptor: PASASQLDA; WhatToDesc: LongWord; LongNames: Word);
 begin
   ZPlainASA7.dbpp_prepare_describe( sqlca, nil, ProgName, StatementNum,
     SqlStatement, nil, Descriptor, WhatToDesc, LongNames);
 end;
 
-procedure TZASA7PlainDriver.db_declare(sqlca: PZASASQLCA; CursorName: PAnsiChar;
-  StatementName: PAnsiChar; ProgName: PAnsiChar; StatementNum: PSmallInt;
+procedure TZASA7PlainDriver.db_declare( sqlca: PZASASQLCA; CursorName: PChar;
+  StatementName: PChar; ProgName: PChar; StatementNum: PSmallInt;
   Options: Word);
 begin
   ZPlainASA7.dbpp_declare( sqlca, CursorName, StatementName, ProgName,
     StatementNum, Options);
 end;
 
-procedure TZASA7PlainDriver.db_describe(sqlca: PZASASQLCA; ProgName: PAnsiChar;
+procedure TZASA7PlainDriver.db_describe( sqlca: PZASASQLCA; ProgName: PChar;
       StatementNum: PSmallInt; Descriptor: PASASQLDA; WhatToDesc: Word);
 begin
   ZPlainASA7.dbpp_describe( sqlca, nil, ProgName, StatementNum, Descriptor,
@@ -1332,25 +1332,25 @@ begin
 end;
 
 procedure TZASA7PlainDriver.db_dropstmt( sqlca: PZASASQLCA;
-  StatementName: PAnsiChar; ProgName: PAnsiChar; StatementNum: PSmallInt);
+  StatementName: PChar; ProgName: PChar; StatementNum: PSmallInt);
 begin
   ZPlainASA7.dbpp_dropstmt( sqlca, StatementName, ProgName, StatementNum);
 end;
 
-procedure TZASA7PlainDriver.db_open(sqlca: PZASASQLCA; CursorName: PAnsiChar;
-  ProgName: PAnsiChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
+procedure TZASA7PlainDriver.db_open( sqlca: PZASASQLCA; CursorName: PChar;
+  ProgName: PChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
   BlockSize, IsolationLvl: SmallInt; CursorOptions: Word);
 begin
   ZPlainASA7.dbpp_open( sqlca, CursorName, nil, ProgName, StatementNum,
     Descriptor, BlockSize, IsolationLvl, CursorOptions);
 end;
 
-procedure TZASA7PlainDriver.db_close(sqlca: PZASASQLCA; CursorName: PAnsiChar);
+procedure TZASA7PlainDriver.db_close( sqlca: PZASASQLCA; CursorName: PChar);
 begin
   ZPlainASA7.dbpp_close( sqlca, CursorName);
 end;
 
-procedure TZASA7PlainDriver.db_fetch(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+procedure TZASA7PlainDriver.db_fetch( sqlca: PZASASQLCA; CursorName: PChar;
   Offset: Word; RelPositon: Integer; Descriptor: PASASQLDA;
   BlockSize: SmallInt; Options: Word);
 begin
@@ -1359,45 +1359,45 @@ begin
 end;
 
 procedure TZASA7PlainDriver.db_fetch_array( sqlca: PZASASQLCA;
-  CursorName: PAnsiChar; Offset: Word; RelPositon: Integer;
+  CursorName: PChar; Offset: Word; RelPositon: Integer;
   Descriptor: PASASQLDA; BlockSize: SmallInt; Options, ArrayWidth: Word);
 begin
   ZPlainASA7.dbpp_fetch_array( sqlca, CursorName, Offset, RelPositon, Descriptor,
     BlockSize, Options, ArrayWidth);
 end;
 
-procedure TZASA7PlainDriver.db_get_data(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+procedure TZASA7PlainDriver.db_get_data( sqlca: PZASASQLCA; CursorName: PChar;
   ColumnNumber: Word; Offset: Integer; Descriptor: PASASQLDA);
 begin
   ZPlainASA7.dbpp_get_data( sqlca, CursorName, ColumnNumber, Offset, Descriptor,
     0);
 end;
 
-procedure TZASA7PlainDriver.db_delete(sqlca: PZASASQLCA; CursorName: PAnsiChar);
+procedure TZASA7PlainDriver.db_delete( sqlca: PZASASQLCA; CursorName: PChar);
 begin
   ZPlainASA7.dbpp_delete( sqlca, CursorName, nil, nil);
 end;
 
-procedure TZASA7PlainDriver.db_update(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+procedure TZASA7PlainDriver.db_update( sqlca: PZASASQLCA; CursorName: PChar;
   Descriptor: PASASQLDA);
 begin
   ZPlainASA7.dbpp_update( sqlca, CursorName, Descriptor);
 end;
 
-procedure TZASA7PlainDriver.db_put_into(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+procedure TZASA7PlainDriver.db_put_into( sqlca: PZASASQLCA; CursorName: PChar;
   Descriptor: PASASQLDA; ResultDescriptor: PASASQLDA);
 begin
   ZPlainASA7.dbpp_put_into( sqlca, CursorName, Descriptor, ResultDescriptor);
 end;
 
-procedure TZASA7PlainDriver.db_put_array(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+procedure TZASA7PlainDriver.db_put_array( sqlca: PZASASQLCA; CursorName: PChar;
   Descriptor: PASASQLDA; ResultDescriptor: PASASQLDA; Rows: Word);
 begin
   ZPlainASA7.dbpp_put_array( sqlca, CursorName, Descriptor, ResultDescriptor,
     Rows);
 end;
 
-procedure TZASA7PlainDriver.db_select(sqlca: PZASASQLCA; ProgName: PAnsiChar;
+procedure TZASA7PlainDriver.db_select( sqlca: PZASASQLCA; ProgName: PChar;
   StatementNum: PSmallInt; Descriptor, ResultDescriptor: PASASQLDA);
 begin
   ZPlainASA7.dbpp_select( sqlca, nil, ProgName, StatementNum, Descriptor,
@@ -1405,7 +1405,7 @@ begin
 end;
 
 procedure TZASA7PlainDriver.db_execute_into( sqlca: PZASASQLCA;
-  Statement: PAnsiChar; ProgName: PAnsiChar; StatementNum: PSmallInt;
+  Statement: PChar; ProgName: PChar; StatementNum: PSmallInt;
   Descriptor: PASASQLDA; ResultDescriptor: PASASQLDA);
 begin
   ZPlainASA7.dbpp_execute_into( sqlca, Statement, ProgName, StatementNum,
@@ -1413,7 +1413,7 @@ begin
 end;
 
 procedure TZASA7PlainDriver.db_execute_imm( sqlca: PZASASQLCA;
-  Statement: PAnsiChar);
+  Statement: PChar);
 begin
   ZPlainASA7.dbpp_execute_imm( sqlca, Statement, 2);
 end;
@@ -1429,7 +1429,7 @@ begin
   ZPlainASA7.dbpp_rollback( sqlca, TransLevel);
 end;
 
-procedure TZASA7PlainDriver.db_explain(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+procedure TZASA7PlainDriver.db_explain( sqlca: PZASASQLCA; CursorName: PChar;
   Descriptor: PASASQLDA);
 begin
   ZPlainASA7.dbpp_explain( sqlca, CursorName, 0, Descriptor);
@@ -1441,7 +1441,7 @@ begin
   ZPlainASA7.db_register_a_callback( sqlca, Integer( CBIdx), Proc);
 end;
 
-procedure TZASA7PlainDriver.db_resume(sqlca: PZASASQLCA; CursorName: PAnsiChar);
+procedure TZASA7PlainDriver.db_resume( sqlca: PZASASQLCA; CursorName: PChar);
 begin
   ZPlainASA7.dbpp_resume( sqlca, CursorName);
 end;
@@ -1470,8 +1470,8 @@ begin
   ZPlainASA8.LibraryLoader.LoadIfNeeded;
 end;
 
-function TZASA8PlainDriver.sqlerror_message(sqlca: PZASASQLCA; Buffer: PAnsiChar;
-  MaxSize: Integer): PAnsiChar;
+function TZASA8PlainDriver.sqlerror_message( sqlca: PZASASQLCA; Buffer: PChar;
+  MaxSize: Integer): PChar;
 begin
   Result := ZPlainASA8.sqlerror_message( sqlca, Buffer, MaxSize);
 end;
@@ -1486,43 +1486,43 @@ begin
   Result := ZPlainASA8.db_fini( sqlca);
 end;
 
-function TZASA8PlainDriver.db_string_connect(sqlca: PZASASQLCA; Params: PAnsiChar):
+function TZASA8PlainDriver.db_string_connect( sqlca: PZASASQLCA; Params: PChar):
   Integer;
 begin
   Result := ZPlainASA8.db_string_connect( sqlca, Params);
 end;
 
 function TZASA8PlainDriver.db_string_disconnect( sqlca: PZASASQLCA;
-  Params: PAnsiChar): LongWord;
+  Params: PChar): LongWord;
 begin
   Result := ZPlainASA8.db_string_disconnect( sqlca, Params)
 end;
 
-function TZASA8PlainDriver.db_find_engine(sqlca: PZASASQLCA; Params: PAnsiChar):
+function TZASA8PlainDriver.db_find_engine( sqlca: PZASASQLCA; Params: PChar):
   Word;
 begin
   Result := ZPlainASA8.db_find_engine( sqlca, Params);
 end;
 
-function TZASA8PlainDriver.db_start_engine(sqlca: PZASASQLCA; Params: PAnsiChar):
+function TZASA8PlainDriver.db_start_engine( sqlca: PZASASQLCA; Params: PChar):
   LongWord;
 begin
   Result := ZPlainASA8.db_start_engine( sqlca, Params);
 end;
 
-function TZASA8PlainDriver.db_stop_engine(sqlca: PZASASQLCA; Params: PAnsiChar):
+function TZASA8PlainDriver.db_stop_engine( sqlca: PZASASQLCA; Params: PChar):
   LongWord;
 begin
   Result := ZPlainASA8.db_stop_engine( sqlca, Params);
 end;
 
-function TZASA8PlainDriver.db_start_database(sqlca: PZASASQLCA; Params: PAnsiChar):
+function TZASA8PlainDriver.db_start_database( sqlca: PZASASQLCA; Params: PChar):
   LongWord;
 begin
   Result := ZPlainASA8.db_start_database( sqlca, Params);
 end;
 
-function TZASA8PlainDriver.db_stop_database(sqlca: PZASASQLCA; Params: PAnsiChar):
+function TZASA8PlainDriver.db_stop_database( sqlca: PZASASQLCA; Params: PChar):
   LongWord;
 begin
   Result := ZPlainASA8.db_stop_database( sqlca, Params);
@@ -1559,30 +1559,30 @@ begin
   ZPlainASA8.free_filled_sqlda( Parameter);
 end;
 
-procedure TZASA8PlainDriver.db_setconnect(sqlca: PZASASQLCA; ConnStr: PAnsiChar);
+procedure TZASA8PlainDriver.db_setconnect( sqlca: PZASASQLCA; ConnStr: PChar);
 begin
   ZPlainASA8.dbpp_setconnect( sqlca, ConnStr);
 end;
 
-procedure TZASA8PlainDriver.db_disconnect(sqlca: PZASASQLCA; ConnStr: PAnsiChar);
+procedure TZASA8PlainDriver.db_disconnect( sqlca: PZASASQLCA; ConnStr: PChar);
 begin
   ZPlainASA8.dbpp_disconnect( sqlca, ConnStr);
 end;
 
 procedure TZASA8PlainDriver.db_setoption( sqlca: PZASASQLCA; Temporary: Integer;
-  User: PAnsiChar; Option: PAnsiChar; Descriptor: PASASQLDA);
+  User: PChar; Option: PChar; Descriptor: PASASQLDA);
 begin
   ZPlainASA8.dbpp_setoption( sqlca, Temporary, User, Option, Descriptor);
 end;
 
 procedure TZASA8PlainDriver.db_describe_cursor( sqlca: PZASASQLCA;
-  CursorName: PAnsiChar; Descriptor: PASASQLDA; WhatToDesc: LongWord);
+  CursorName: PChar; Descriptor: PASASQLDA; WhatToDesc: LongWord);
 begin
   ZPlainASA8.dbpp_describe_cursor( sqlca, CursorName, Descriptor, WhatToDesc);
 end;
 
 procedure TZASA8PlainDriver.db_prepare_into( sqlca: PZASASQLCA;
-  ProgName: PAnsiChar; StatementNum: PSmallInt; SqlStatement: PAnsiChar;
+  ProgName: PChar; StatementNum: PSmallInt; SqlStatement: PChar;
   Descriptor1: PASASQLDA; Descriptor2: PASASQLDA; WhatToDesc: LongWord);
 begin
   ZPlainASA8.dbpp_prepare_into( sqlca, nil, ProgName, StatementNum, SqlStatement,
@@ -1590,22 +1590,22 @@ begin
 end;
 
 procedure TZASA8PlainDriver.db_prepare_describe( sqlca: PZASASQLCA;
-  ProgName: PAnsiChar; StatementNum: PSmallInt; SqlStatement: PAnsiChar;
+  ProgName: PChar; StatementNum: PSmallInt; SqlStatement: PChar;
   Descriptor: PASASQLDA; WhatToDesc: LongWord; LongNames: Word);
 begin
   ZPlainASA8.dbpp_prepare_describe( sqlca, nil, ProgName, StatementNum,
     SqlStatement, nil, Descriptor, WhatToDesc, LongNames);
 end;
 
-procedure TZASA8PlainDriver.db_declare(sqlca: PZASASQLCA; CursorName: PAnsiChar;
-  StatementName: PAnsiChar; ProgName: PAnsiChar; StatementNum: PSmallInt;
+procedure TZASA8PlainDriver.db_declare( sqlca: PZASASQLCA; CursorName: PChar;
+  StatementName: PChar; ProgName: PChar; StatementNum: PSmallInt;
   Options: Word);
 begin
   ZPlainASA8.dbpp_declare( sqlca, CursorName, StatementName, ProgName,
     StatementNum, Options);
 end;
 
-procedure TZASA8PlainDriver.db_describe(sqlca: PZASASQLCA; ProgName: PAnsiChar;
+procedure TZASA8PlainDriver.db_describe( sqlca: PZASASQLCA; ProgName: PChar;
       StatementNum: PSmallInt; Descriptor: PASASQLDA; WhatToDesc: Word);
 begin
   ZPlainASA8.dbpp_describe( sqlca, nil, ProgName, StatementNum, Descriptor,
@@ -1613,25 +1613,25 @@ begin
 end;
 
 procedure TZASA8PlainDriver.db_dropstmt( sqlca: PZASASQLCA;
-  StatementName: PAnsiChar; ProgName: PAnsiChar; StatementNum: PSmallInt);
+  StatementName: PChar; ProgName: PChar; StatementNum: PSmallInt);
 begin
   ZPlainASA8.dbpp_dropstmt( sqlca, StatementName, ProgName, StatementNum);
 end;
 
-procedure TZASA8PlainDriver.db_open(sqlca: PZASASQLCA; CursorName: PAnsiChar;
-  ProgName: PAnsiChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
+procedure TZASA8PlainDriver.db_open( sqlca: PZASASQLCA; CursorName: PChar;
+  ProgName: PChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
   BlockSize, IsolationLvl: SmallInt; CursorOptions: Word);
 begin
   ZPlainASA8.dbpp_open( sqlca, CursorName, nil, ProgName, StatementNum,
     Descriptor, BlockSize, IsolationLvl, CursorOptions);
 end;
 
-procedure TZASA8PlainDriver.db_close(sqlca: PZASASQLCA; CursorName: PAnsiChar);
+procedure TZASA8PlainDriver.db_close( sqlca: PZASASQLCA; CursorName: PChar);
 begin
   ZPlainASA8.dbpp_close( sqlca, CursorName);
 end;
 
-procedure TZASA8PlainDriver.db_fetch(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+procedure TZASA8PlainDriver.db_fetch( sqlca: PZASASQLCA; CursorName: PChar;
   Offset: Word; RelPositon: Integer; Descriptor: PASASQLDA;
   BlockSize: SmallInt; Options: Word);
 begin
@@ -1640,45 +1640,45 @@ begin
 end;
 
 procedure TZASA8PlainDriver.db_fetch_array( sqlca: PZASASQLCA;
-  CursorName: PAnsiChar; Offset: Word; RelPositon: Integer;
+  CursorName: PChar; Offset: Word; RelPositon: Integer;
   Descriptor: PASASQLDA; BlockSize: SmallInt; Options, ArrayWidth: Word);
 begin
   ZPlainASA8.dbpp_fetch_array( sqlca, CursorName, Offset, RelPositon, Descriptor,
     BlockSize, Options, ArrayWidth);
 end;
 
-procedure TZASA8PlainDriver.db_get_data(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+procedure TZASA8PlainDriver.db_get_data( sqlca: PZASASQLCA; CursorName: PChar;
   ColumnNumber: Word; Offset: Integer; Descriptor: PASASQLDA);
 begin
   ZPlainASA8.dbpp_get_data( sqlca, CursorName, ColumnNumber, Offset, Descriptor,
     0);
 end;
 
-procedure TZASA8PlainDriver.db_delete(sqlca: PZASASQLCA; CursorName: PAnsiChar);
+procedure TZASA8PlainDriver.db_delete( sqlca: PZASASQLCA; CursorName: PChar);
 begin
   ZPlainASA8.dbpp_delete( sqlca, CursorName, nil, nil);
 end;
 
-procedure TZASA8PlainDriver.db_update(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+procedure TZASA8PlainDriver.db_update( sqlca: PZASASQLCA; CursorName: PChar;
   Descriptor: PASASQLDA);
 begin
   ZPlainASA8.dbpp_update( sqlca, CursorName, Descriptor);
 end;
 
-procedure TZASA8PlainDriver.db_put_into(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+procedure TZASA8PlainDriver.db_put_into( sqlca: PZASASQLCA; CursorName: PChar;
   Descriptor: PASASQLDA; ResultDescriptor: PASASQLDA);
 begin
   ZPlainASA8.dbpp_put_into( sqlca, CursorName, Descriptor, ResultDescriptor);
 end;
 
-procedure TZASA8PlainDriver.db_put_array(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+procedure TZASA8PlainDriver.db_put_array( sqlca: PZASASQLCA; CursorName: PChar;
   Descriptor: PASASQLDA; ResultDescriptor: PASASQLDA; Rows: Word);
 begin
   ZPlainASA8.dbpp_put_array( sqlca, CursorName, Descriptor, ResultDescriptor,
     Rows);
 end;
 
-procedure TZASA8PlainDriver.db_select(sqlca: PZASASQLCA; ProgName: PAnsiChar;
+procedure TZASA8PlainDriver.db_select( sqlca: PZASASQLCA; ProgName: PChar;
   StatementNum: PSmallInt; Descriptor, ResultDescriptor: PASASQLDA);
 begin
   ZPlainASA8.dbpp_select( sqlca, nil, ProgName, StatementNum, Descriptor,
@@ -1686,7 +1686,7 @@ begin
 end;
 
 procedure TZASA8PlainDriver.db_execute_into( sqlca: PZASASQLCA;
-  Statement: PAnsiChar; ProgName: PAnsiChar; StatementNum: PSmallInt;
+  Statement: PChar; ProgName: PChar; StatementNum: PSmallInt;
   Descriptor: PASASQLDA; ResultDescriptor: PASASQLDA);
 begin
   ZPlainASA8.dbpp_execute_into( sqlca, Statement, ProgName, StatementNum,
@@ -1694,7 +1694,7 @@ begin
 end;
 
 procedure TZASA8PlainDriver.db_execute_imm( sqlca: PZASASQLCA;
-  Statement: PAnsiChar);
+  Statement: PChar);
 begin
   ZPlainASA8.dbpp_execute_imm( sqlca, Statement, 2);
 end;
@@ -1710,7 +1710,7 @@ begin
   ZPlainASA8.dbpp_rollback( sqlca, TransLevel);
 end;
 
-procedure TZASA8PlainDriver.db_explain(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+procedure TZASA8PlainDriver.db_explain( sqlca: PZASASQLCA; CursorName: PChar;
   Descriptor: PASASQLDA);
 begin
   ZPlainASA8.dbpp_explain( sqlca, CursorName, 0, Descriptor);
@@ -1722,7 +1722,7 @@ begin
   ZPlainASA8.db_register_a_callback( sqlca, Integer( CBIdx), Proc);
 end;
 
-procedure TZASA8PlainDriver.db_resume(sqlca: PZASASQLCA; CursorName: PAnsiChar);
+procedure TZASA8PlainDriver.db_resume( sqlca: PZASASQLCA; CursorName: PChar);
 begin
   ZPlainASA8.dbpp_resume( sqlca, CursorName);
 end;
@@ -1751,8 +1751,8 @@ begin
   ZPlainASA9.LibraryLoader.LoadIfNeeded;
 end;
 
-function TZASA9PlainDriver.sqlerror_message(sqlca: PZASASQLCA; Buffer: PAnsiChar;
-  MaxSize: Integer): PAnsiChar;
+function TZASA9PlainDriver.sqlerror_message( sqlca: PZASASQLCA; Buffer: PChar;
+  MaxSize: Integer): PChar;
 begin
   Result := ZPlainASA9.sqlerror_message( sqlca, Buffer, MaxSize);
 end;
@@ -1767,43 +1767,43 @@ begin
   Result := ZPlainASA9.db_fini( sqlca);
 end;
 
-function TZASA9PlainDriver.db_string_connect(sqlca: PZASASQLCA; Params: PAnsiChar):
+function TZASA9PlainDriver.db_string_connect( sqlca: PZASASQLCA; Params: PChar):
   Integer;
 begin
   Result := ZPlainASA9.db_string_connect( sqlca, Params);
 end;
 
 function TZASA9PlainDriver.db_string_disconnect( sqlca: PZASASQLCA;
-  Params: PAnsiChar): LongWord;
+  Params: PChar): LongWord;
 begin
   Result := ZPlainASA9.db_string_disconnect( sqlca, Params)
 end;
 
-function TZASA9PlainDriver.db_find_engine(sqlca: PZASASQLCA; Params: PAnsiChar):
+function TZASA9PlainDriver.db_find_engine( sqlca: PZASASQLCA; Params: PChar):
   Word;
 begin
   Result := ZPlainASA9.db_find_engine( sqlca, Params);
 end;
 
-function TZASA9PlainDriver.db_start_engine(sqlca: PZASASQLCA; Params: PAnsiChar):
+function TZASA9PlainDriver.db_start_engine( sqlca: PZASASQLCA; Params: PChar):
   LongWord;
 begin
   Result := ZPlainASA9.db_start_engine( sqlca, Params);
 end;
 
-function TZASA9PlainDriver.db_stop_engine(sqlca: PZASASQLCA; Params: PAnsiChar):
+function TZASA9PlainDriver.db_stop_engine( sqlca: PZASASQLCA; Params: PChar):
   LongWord;
 begin
   Result := ZPlainASA9.db_stop_engine( sqlca, Params);
 end;
 
-function TZASA9PlainDriver.db_start_database(sqlca: PZASASQLCA; Params: PAnsiChar):
+function TZASA9PlainDriver.db_start_database( sqlca: PZASASQLCA; Params: PChar):
   LongWord;
 begin
   Result := ZPlainASA9.db_start_database( sqlca, Params);
 end;
 
-function TZASA9PlainDriver.db_stop_database(sqlca: PZASASQLCA; Params: PAnsiChar):
+function TZASA9PlainDriver.db_stop_database( sqlca: PZASASQLCA; Params: PChar):
   LongWord;
 begin
   Result := ZPlainASA9.db_stop_database( sqlca, Params);
@@ -1840,30 +1840,30 @@ begin
   ZPlainASA9.free_filled_sqlda( Parameter);
 end;
 
-procedure TZASA9PlainDriver.db_setconnect(sqlca: PZASASQLCA; ConnStr: PAnsiChar);
+procedure TZASA9PlainDriver.db_setconnect( sqlca: PZASASQLCA; ConnStr: PChar);
 begin
   ZPlainASA9.dbpp_setconnect( sqlca, ConnStr);
 end;
 
-procedure TZASA9PlainDriver.db_disconnect(sqlca: PZASASQLCA; ConnStr: PAnsiChar);
+procedure TZASA9PlainDriver.db_disconnect( sqlca: PZASASQLCA; ConnStr: PChar);
 begin
   ZPlainASA9.dbpp_disconnect( sqlca, ConnStr);
 end;
 
 procedure TZASA9PlainDriver.db_setoption( sqlca: PZASASQLCA; Temporary: Integer;
-  User: PAnsiChar; Option: PAnsiChar; Descriptor: PASASQLDA);
+  User: PChar; Option: PChar; Descriptor: PASASQLDA);
 begin
   ZPlainASA9.dbpp_setoption( sqlca, Temporary, User, Option, Descriptor);
 end;
 
 procedure TZASA9PlainDriver.db_describe_cursor( sqlca: PZASASQLCA;
-  CursorName: PAnsiChar; Descriptor: PASASQLDA; WhatToDesc: LongWord);
+  CursorName: PChar; Descriptor: PASASQLDA; WhatToDesc: LongWord);
 begin
   ZPlainASA9.dbpp_describe_cursor( sqlca, CursorName, Descriptor, WhatToDesc);
 end;
 
 procedure TZASA9PlainDriver.db_prepare_into( sqlca: PZASASQLCA;
-  ProgName: PAnsiChar; StatementNum: PSmallInt; SqlStatement: PAnsiChar;
+  ProgName: PChar; StatementNum: PSmallInt; SqlStatement: PChar;
   Descriptor1: PASASQLDA; Descriptor2: PASASQLDA; WhatToDesc: LongWord);
 begin
   ZPlainASA9.dbpp_prepare_into( sqlca, nil, ProgName, StatementNum, SqlStatement,
@@ -1871,22 +1871,22 @@ begin
 end;
 
 procedure TZASA9PlainDriver.db_prepare_describe( sqlca: PZASASQLCA;
-  ProgName: PAnsiChar; StatementNum: PSmallInt; SqlStatement: PAnsiChar;
+  ProgName: PChar; StatementNum: PSmallInt; SqlStatement: PChar;
   Descriptor: PASASQLDA; WhatToDesc: LongWord; LongNames: Word);
 begin
   ZPlainASA9.dbpp_prepare_describe( sqlca, nil, ProgName, StatementNum,
     SqlStatement, nil, Descriptor, WhatToDesc, LongNames);
 end;
 
-procedure TZASA9PlainDriver.db_declare(sqlca: PZASASQLCA; CursorName: PAnsiChar;
-  StatementName: PAnsiChar; ProgName: PAnsiChar; StatementNum: PSmallInt;
+procedure TZASA9PlainDriver.db_declare( sqlca: PZASASQLCA; CursorName: PChar;
+  StatementName: PChar; ProgName: PChar; StatementNum: PSmallInt;
   Options: Word);
 begin
   ZPlainASA9.dbpp_declare( sqlca, CursorName, StatementName, ProgName,
     StatementNum, Options);
 end;
 
-procedure TZASA9PlainDriver.db_describe(sqlca: PZASASQLCA; ProgName: PAnsiChar;
+procedure TZASA9PlainDriver.db_describe( sqlca: PZASASQLCA; ProgName: PChar;
       StatementNum: PSmallInt; Descriptor: PASASQLDA; WhatToDesc: Word);
 begin
   ZPlainASA9.dbpp_describe( sqlca, nil, ProgName, StatementNum, Descriptor,
@@ -1894,25 +1894,25 @@ begin
 end;
 
 procedure TZASA9PlainDriver.db_dropstmt( sqlca: PZASASQLCA;
-  StatementName: PAnsiChar; ProgName: PAnsiChar; StatementNum: PSmallInt);
+  StatementName: PChar; ProgName: PChar; StatementNum: PSmallInt);
 begin
   ZPlainASA9.dbpp_dropstmt( sqlca, StatementName, ProgName, StatementNum);
 end;
 
-procedure TZASA9PlainDriver.db_open(sqlca: PZASASQLCA; CursorName: PAnsiChar;
-  ProgName: PAnsiChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
+procedure TZASA9PlainDriver.db_open( sqlca: PZASASQLCA; CursorName: PChar;
+  ProgName: PChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
   BlockSize, IsolationLvl: SmallInt; CursorOptions: Word);
 begin
   ZPlainASA9.dbpp_open( sqlca, CursorName, nil, ProgName, StatementNum,
     Descriptor, BlockSize, IsolationLvl, CursorOptions);
 end;
 
-procedure TZASA9PlainDriver.db_close(sqlca: PZASASQLCA; CursorName: PAnsiChar);
+procedure TZASA9PlainDriver.db_close( sqlca: PZASASQLCA; CursorName: PChar);
 begin
   ZPlainASA9.dbpp_close( sqlca, CursorName);
 end;
 
-procedure TZASA9PlainDriver.db_fetch(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+procedure TZASA9PlainDriver.db_fetch( sqlca: PZASASQLCA; CursorName: PChar;
   Offset: Word; RelPositon: Integer; Descriptor: PASASQLDA;
   BlockSize: SmallInt; Options: Word);
 begin
@@ -1921,45 +1921,45 @@ begin
 end;
 
 procedure TZASA9PlainDriver.db_fetch_array( sqlca: PZASASQLCA;
-  CursorName: PAnsiChar; Offset: Word; RelPositon: Integer;
+  CursorName: PChar; Offset: Word; RelPositon: Integer;
   Descriptor: PASASQLDA; BlockSize: SmallInt; Options, ArrayWidth: Word);
 begin
   ZPlainASA9.dbpp_fetch_array( sqlca, CursorName, Offset, RelPositon, Descriptor,
     BlockSize, Options, ArrayWidth);
 end;
 
-procedure TZASA9PlainDriver.db_get_data(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+procedure TZASA9PlainDriver.db_get_data( sqlca: PZASASQLCA; CursorName: PChar;
   ColumnNumber: Word; Offset: Integer; Descriptor: PASASQLDA);
 begin
   ZPlainASA9.dbpp_get_data( sqlca, CursorName, ColumnNumber, Offset, Descriptor,
     0);
 end;
 
-procedure TZASA9PlainDriver.db_delete(sqlca: PZASASQLCA; CursorName: PAnsiChar);
+procedure TZASA9PlainDriver.db_delete( sqlca: PZASASQLCA; CursorName: PChar);
 begin
   ZPlainASA9.dbpp_delete( sqlca, CursorName, nil, nil);
 end;
 
-procedure TZASA9PlainDriver.db_update(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+procedure TZASA9PlainDriver.db_update( sqlca: PZASASQLCA; CursorName: PChar;
   Descriptor: PASASQLDA);
 begin
   ZPlainASA9.dbpp_update( sqlca, CursorName, Descriptor);
 end;
 
-procedure TZASA9PlainDriver.db_put_into(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+procedure TZASA9PlainDriver.db_put_into( sqlca: PZASASQLCA; CursorName: PChar;
   Descriptor: PASASQLDA; ResultDescriptor: PASASQLDA);
 begin
   ZPlainASA9.dbpp_put_into( sqlca, CursorName, Descriptor, ResultDescriptor);
 end;
 
-procedure TZASA9PlainDriver.db_put_array(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+procedure TZASA9PlainDriver.db_put_array( sqlca: PZASASQLCA; CursorName: PChar;
   Descriptor: PASASQLDA; ResultDescriptor: PASASQLDA; Rows: Word);
 begin
   ZPlainASA9.dbpp_put_array( sqlca, CursorName, Descriptor, ResultDescriptor,
     Rows);
 end;
 
-procedure TZASA9PlainDriver.db_select(sqlca: PZASASQLCA; ProgName: PAnsiChar;
+procedure TZASA9PlainDriver.db_select( sqlca: PZASASQLCA; ProgName: PChar;
   StatementNum: PSmallInt; Descriptor, ResultDescriptor: PASASQLDA);
 begin
   ZPlainASA9.dbpp_select( sqlca, nil, ProgName, StatementNum, Descriptor,
@@ -1967,7 +1967,7 @@ begin
 end;
 
 procedure TZASA9PlainDriver.db_execute_into( sqlca: PZASASQLCA;
-  Statement: PAnsiChar; ProgName: PAnsiChar; StatementNum: PSmallInt;
+  Statement: PChar; ProgName: PChar; StatementNum: PSmallInt;
   Descriptor: PASASQLDA; ResultDescriptor: PASASQLDA);
 begin
   ZPlainASA9.dbpp_execute_into( sqlca, Statement, ProgName, StatementNum,
@@ -1975,7 +1975,7 @@ begin
 end;
 
 procedure TZASA9PlainDriver.db_execute_imm( sqlca: PZASASQLCA;
-  Statement: PAnsiChar);
+  Statement: PChar);
 begin
   ZPlainASA9.dbpp_execute_imm( sqlca, Statement, 2);
 end;
@@ -1991,7 +1991,7 @@ begin
   ZPlainASA9.dbpp_rollback( sqlca, TransLevel);
 end;
 
-procedure TZASA9PlainDriver.db_explain(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+procedure TZASA9PlainDriver.db_explain( sqlca: PZASASQLCA; CursorName: PChar;
   Descriptor: PASASQLDA);
 begin
   ZPlainASA9.dbpp_explain( sqlca, CursorName, 0, Descriptor);
@@ -2003,7 +2003,7 @@ begin
   ZPlainASA9.db_register_a_callback( sqlca, Integer( CBIdx), Proc);
 end;
 
-procedure TZASA9PlainDriver.db_resume(sqlca: PZASASQLCA; CursorName: PAnsiChar);
+procedure TZASA9PlainDriver.db_resume( sqlca: PZASASQLCA; CursorName: PChar);
 begin
   ZPlainASA9.dbpp_resume( sqlca, CursorName);
 end;

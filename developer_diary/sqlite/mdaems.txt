@@ -13,5 +13,3 @@
 20080710 : Completed fix for Mantis Bug 75 - by olivluca - Mantis Bug 119
 
 20081001 : Fixed updates to tables from attached databases - by mariuszekpl - see http://zeos.firmos.at/viewtopic.php?t=2025
-
-20081124 : Unicode fix - by mariuszekpl - see http://zeos.firmos.at/viewtopic.php?t=2113

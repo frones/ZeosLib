@@ -58,10 +58,14 @@ interface
 {$I ZComponent.inc}
 
 uses
-{$IFNDEF FPC}
+{$IFNDEF VER130BELOW}
   DesignEditors,
 {$ELSE}
-  PropEdits, Buttons, ComponentEditors,
+  {$IFDEF FPC}
+    PropEdits, Buttons, ComponentEditors,
+  {$ELSE}
+    DsgnIntf,
+  {$ENDIF}
 {$ENDIF}
   Forms, DB, ExtCtrls, StdCtrls, Controls, ComCtrls,
   Classes, SysUtils, {$IFNDEF FPC}Windows, {$ELSE}LCLIntf, LResources, {$ENDIF}
@@ -906,7 +910,7 @@ begin
   if Assigned(DataSet) and Assigned(DataSet.Connection)
     and Assigned(DataSet.Connection.DbcConnection)then
   begin
-    QuoteChar := DataSet.Connection.DbcConnection.GetMetadata.GetDatabaseInfo.
+    QuoteChar := DataSet.Connection.DbcConnection.GetMetadata.
       GetIdentifierQuoteString;
     if Length(QuoteChar) = 1 then
       QuoteChar := QuoteChar + QuoteChar;

@@ -59,164 +59,23 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, ZClasses, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
+{$IFNDEF VER130BELOW}
+  Types,
+{$ENDIF}
+  Classes, SysUtils, ZClasses, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
   ZDbcResultSet, ZDbcCachedResultSet, ZDbcResultSetMetadata,
-   ZCompatibility, ZDbcConnection{$IFDEF MS_WINDOWS}, Windows{$ENDIF};
+  ZCompatibility, ZDbcConnection;
 
 type
-
-  // technobot 2008-06-26 - methods moved as is from TZMySQLDatabaseMetadata:
-  {** Implements MySQL Database Information. }
-  TZMySQLDatabaseInfo = class(TZAbstractDatabaseInfo)
-  protected
-    procedure GetVersion(var MajorVersion, MinorVersion: integer);
-  public
-    constructor Create(const Metadata: TZAbstractDatabaseMetadata);
-    destructor Destroy; override;
-
-    // database/driver/server info:
-    function GetDatabaseProductName: string; override;
-    function GetDatabaseProductVersion: string; override;
-    function GetDriverName: string; override;
-//    function GetDriverVersion: string; override; -> Same as parent
-    function GetDriverMajorVersion: Integer; override;
-    function GetDriverMinorVersion: Integer; override;
-//    function GetServerVersion: string; -> Not implemented
-
-    // capabilities (what it can/cannot do):
-//    function AllProceduresAreCallable: Boolean; override; -> Not implemented
-//    function AllTablesAreSelectable: Boolean; override; -> Not implemented
-//    function SupportsMixedCaseIdentifiers: Boolean; override; -> Not implemented
-//    function SupportsMixedCaseQuotedIdentifiers: Boolean; override; -> Not implemented
-//    function SupportsAlterTableWithAddColumn: Boolean; override; -> Not implemented
-//    function SupportsAlterTableWithDropColumn: Boolean; override; -> Not implemented
-//    function SupportsColumnAliasing: Boolean; override; -> Not implemented
-//    function SupportsConvert: Boolean; override; -> Not implemented
-//    function SupportsConvertForTypes(FromType: TZSQLType; ToType: TZSQLType):
-//      Boolean; override; -> Not implemented
-//    function SupportsTableCorrelationNames: Boolean; override; -> Not implemented
-//    function SupportsDifferentTableCorrelationNames: Boolean; override; -> Not implemented
-//    function SupportsExpressionsInOrderBy: Boolean; override; -> Not implemented
-    function SupportsOrderByUnrelated: Boolean; override;
-//    function SupportsGroupBy: Boolean; override; -> Not implemented
-    function SupportsGroupByUnrelated: Boolean; override;
-    function SupportsGroupByBeyondSelect: Boolean; override;
-//    function SupportsLikeEscapeClause: Boolean; override; -> Not implemented
-//    function SupportsMultipleResultSets: Boolean; override; -> Not implemented
-//    function SupportsMultipleTransactions: Boolean; override; -> Not implemented
-//    function SupportsNonNullableColumns: Boolean; override; -> Not implemented
-//    function SupportsMinimumSQLGrammar: Boolean; override; -> Not implemented
-//    function SupportsCoreSQLGrammar: Boolean; override; -> Not implemented
-//    function SupportsExtendedSQLGrammar: Boolean; override; -> Not implemented
-//    function SupportsANSI92EntryLevelSQL: Boolean; override; -> Not implemented
-//    function SupportsANSI92IntermediateSQL: Boolean; override; -> Not implemented
-//    function SupportsANSI92FullSQL: Boolean; override; -> Not implemented
-    function SupportsIntegrityEnhancementFacility: Boolean; override;
-//    function SupportsOuterJoins: Boolean; override; -> Not implemented
-//    function SupportsFullOuterJoins: Boolean; override; -> Not implemented
-//    function SupportsLimitedOuterJoins: Boolean; override; -> Not implemented
-//    function SupportsSchemasInDataManipulation: Boolean; override; -> Not implemented
-//    function SupportsSchemasInProcedureCalls: Boolean; override; -> Not implemented
-//    function SupportsSchemasInTableDefinitions: Boolean; override; -> Not implemented
-//    function SupportsSchemasInIndexDefinitions: Boolean; override; -> Not implemented
-//    function SupportsSchemasInPrivilegeDefinitions: Boolean; override; -> Not implemented
-    function SupportsCatalogsInDataManipulation: Boolean; override;
-//    function SupportsCatalogsInProcedureCalls: Boolean; override; -> Not implemented
-    function SupportsCatalogsInTableDefinitions: Boolean; override;
-//    function SupportsCatalogsInIndexDefinitions: Boolean; override; -> Not implemented
-//    function SupportsCatalogsInPrivilegeDefinitions: Boolean; override; -> Not implemented
-//    function SupportsPositionedDelete: Boolean; override; -> Not implemented
-//    function SupportsPositionedUpdate: Boolean; override; -> Not implemented
-//    function SupportsSelectForUpdate: Boolean; override; -> Not implemented
-//    function SupportsStoredProcedures: Boolean; override; -> Not implemented
-    function SupportsSubqueriesInComparisons: Boolean; override;
-//    function SupportsSubqueriesInExists: Boolean; override; -> Not implemented
-//    function SupportsSubqueriesInIns: Boolean; override; -> Not implemented
-//    function SupportsSubqueriesInQuantifieds: Boolean; override; -> Not implemented
-//    function SupportsCorrelatedSubqueries: Boolean; override; -> Not implemented
-//    function SupportsUnion: Boolean; override; -> Not implemented
-    function SupportsUnionAll: Boolean; override;
-//    function SupportsOpenCursorsAcrossCommit: Boolean; override; -> Not implemented
-//    function SupportsOpenCursorsAcrossRollback: Boolean; override; -> Not implemented
-    function SupportsOpenStatementsAcrossCommit: Boolean; override;
-    function SupportsOpenStatementsAcrossRollback: Boolean; override;
-//    function SupportsTransactions: Boolean; override; -> Not implemented
-//    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
-//      Boolean; override; -> Not implemented
-    function SupportsDataDefinitionAndDataManipulationTransactions: Boolean; override;
-    function SupportsDataManipulationTransactionsOnly: Boolean; override;
-//    function SupportsResultSetType(_Type: TZResultSetType): Boolean; override; -> Not implemented
-//    function SupportsResultSetConcurrency(_Type: TZResultSetType;
-//      Concurrency: TZResultSetConcurrency): Boolean; override; -> Not implemented
-//    function SupportsBatchUpdates: Boolean; override; -> Not implemented
-
-    // maxima:
-    function GetMaxBinaryLiteralLength: Integer; override;
-    function GetMaxCharLiteralLength: Integer; override;
-    function GetMaxColumnNameLength: Integer; override;
-    function GetMaxColumnsInGroupBy: Integer; override;
-    function GetMaxColumnsInIndex: Integer; override;
-    function GetMaxColumnsInOrderBy: Integer; override;
-    function GetMaxColumnsInSelect: Integer; override;
-    function GetMaxColumnsInTable: Integer; override;
-    function GetMaxConnections: Integer; override;
-    function GetMaxCursorNameLength: Integer; override;
-    function GetMaxIndexLength: Integer; override;
-//    function GetMaxSchemaNameLength: Integer; override; -> Not implemented
-//    function GetMaxProcedureNameLength: Integer; override; -> Not implemented
-    function GetMaxCatalogNameLength: Integer; override;
-    function GetMaxRowSize: Integer; override;
-    function GetMaxStatementLength: Integer; override;
-    function GetMaxStatements: Integer; override;
-    function GetMaxTableNameLength: Integer; override;
-    function GetMaxTablesInSelect: Integer; override;
-    function GetMaxUserNameLength: Integer; override;
-
-    // policies (how are various data and operations handled):
-//    function IsReadOnly: Boolean; override; -> Not implemented
-//    function IsCatalogAtStart: Boolean; override; -> Not implemented
-    function DoesMaxRowSizeIncludeBlobs: Boolean; override;
-//    function NullsAreSortedHigh: Boolean; override; -> Not implemented
-//    function NullsAreSortedLow: Boolean; override; -> Not implemented
-//    function NullsAreSortedAtStart: Boolean; override; -> Not implemented
-//    function NullsAreSortedAtEnd: Boolean; override; -> Not implemented
-//    function NullPlusNonNullIsNull: Boolean; override; -> Not implemented
-//    function UsesLocalFiles: Boolean; override; -> Not implemented
-    function UsesLocalFilePerTable: Boolean; override;
-//    function StoresUpperCaseIdentifiers: Boolean; override; -> Not implemented
-//    function StoresLowerCaseIdentifiers: Boolean; override; -> Not implemented
-    function StoresMixedCaseIdentifiers: Boolean; override;
-//    function StoresUpperCaseQuotedIdentifiers: Boolean; override; -> Not implemented
-//    function StoresLowerCaseQuotedIdentifiers: Boolean; override; -> Not implemented
-//    function StoresMixedCaseQuotedIdentifiers: Boolean; override; -> Not implemented
-    function GetDefaultTransactionIsolation: TZTransactIsolationLevel; override;
-//    function DataDefinitionCausesTransactionCommit: Boolean; override; -> Not implemented
-//    function DataDefinitionIgnoredInTransactions: Boolean; override; -> Not implemented
-
-    // interface details (terms, keywords, etc):
-    function GetIdentifierQuoteString: string; override;
-    function GetSchemaTerm: string; override;
-    function GetProcedureTerm: string; override;
-    function GetCatalogTerm: string; override;
-//    function GetCatalogSeparator: string; override; -> Not implemented
-    function GetSQLKeywords: string; override;
-    function GetNumericFunctions: string; override;
-    function GetStringFunctions: string; override;
-    function GetSystemFunctions: string; override;
-    function GetTimeDateFunctions: string; override;
-    function GetSearchStringEscape: string; override;
-    function GetExtraNameCharacters: string; override;
-  end;
 
   {** Implements MySQL Database Metadata. }
   TZMySQLDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
     FDatabase: string;
   protected
-    function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-26
-
     procedure GetCatalogAndNamePattern(const Catalog, SchemaPattern,
       NamePattern: string; out OutCatalog, OutNamePattern: string);
+    procedure GetVersion(var MajorVersion, MinorVersion: integer);
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
 //    function UncachedGetSchemas: IZResultSet; override; -> Not implemented
@@ -255,6 +114,60 @@ type
   public
     constructor Create(Connection: TZAbstractConnection; Url: string; Info: TStrings);
     destructor Destroy; override;
+
+    function GetDatabaseProductName: string; override;
+    function GetDatabaseProductVersion: string; override;
+    function GetDriverName: string; override;
+    function GetDriverMajorVersion: Integer; override;
+    function GetDriverMinorVersion: Integer; override;
+    function UsesLocalFilePerTable: Boolean; override;
+    function StoresMixedCaseIdentifiers: Boolean; override;
+    function GetIdentifierQuoteString: string; override;
+    function GetSQLKeywords: string; override;
+    function GetNumericFunctions: string; override;
+    function GetStringFunctions: string; override;
+    function GetSystemFunctions: string; override;
+    function GetTimeDateFunctions: string; override;
+    function GetSearchStringEscape: string; override;
+    function GetExtraNameCharacters: string; override;
+
+    function SupportsOrderByUnrelated: Boolean; override;
+    function SupportsGroupByUnrelated: Boolean; override;
+    function SupportsGroupByBeyondSelect: Boolean; override;
+    function SupportsIntegrityEnhancementFacility: Boolean; override;
+    function GetSchemaTerm: string; override;
+    function GetProcedureTerm: string; override;
+    function GetCatalogTerm: string; override;
+    function SupportsCatalogsInDataManipulation: Boolean; override;
+    function SupportsCatalogsInTableDefinitions: Boolean; override;
+    function SupportsSubqueriesInComparisons: Boolean; override;
+    function SupportsUnionAll: Boolean;  override;
+    function SupportsOpenStatementsAcrossCommit: Boolean; override;
+    function SupportsOpenStatementsAcrossRollback: Boolean; override;
+
+    function GetMaxBinaryLiteralLength: Integer; override;
+    function GetMaxCharLiteralLength: Integer; override;
+    function GetMaxColumnNameLength: Integer; override;
+    function GetMaxColumnsInGroupBy: Integer; override;
+    function GetMaxColumnsInIndex: Integer; override;
+    function GetMaxColumnsInOrderBy: Integer; override;
+    function GetMaxColumnsInSelect: Integer; override;
+    function GetMaxColumnsInTable: Integer; override;
+    function GetMaxConnections: Integer; override;
+    function GetMaxCursorNameLength: Integer; override;
+    function GetMaxIndexLength: Integer; override;
+    function GetMaxCatalogNameLength: Integer; override;
+    function GetMaxRowSize: Integer; override;
+    function DoesMaxRowSizeIncludeBlobs: Boolean; override;
+    function GetMaxStatementLength: Integer; override;
+    function GetMaxStatements: Integer; override;
+    function GetMaxTableNameLength: Integer; override;
+    function GetMaxTablesInSelect: Integer; override;
+    function GetMaxUserNameLength: Integer; override;
+
+    function GetDefaultTransactionIsolation: TZTransactIsolationLevel; override;
+    function SupportsDataDefinitionAndDataManipulationTransactions: Boolean; override;
+    function SupportsDataManipulationTransactionsOnly: Boolean; override;
   end;
 
 implementation
@@ -262,23 +175,38 @@ implementation
 uses
   Math, ZMessages, ZDbcUtils, ZCollections, ZDbcMySqlUtils;
 
-{ TZMySQLDatabaseInfo }
+{ TZMySQLDatabaseMetadata }
 
 {**
-  Constructs this object.
-  @param Metadata the interface of the correpsonding database metadata object
+  Constructs this object and assignes the main properties.
+  @param Connection a database connection object.
+  @param Url a database connection url string.
+  @param Info an extra connection properties.
 }
-constructor TZMySQLDatabaseInfo.Create(const Metadata: TZAbstractDatabaseMetadata);
+constructor TZMySQLDatabaseMetadata.Create(Connection: TZAbstractConnection;
+  Url: string; Info: TStrings);
+var
+  TempInfo: TStrings;
+  Hostname, UserName, Password: string;
+  Port: Integer;
 begin
-  inherited;
+  inherited Create(Connection, Url, Info);
+
+  TempInfo := TStringList.Create;
+  try
+    ResolveDatabaseUrl(Url, Info, HostName, Port, FDatabase,
+      UserName, Password, TempInfo);
+  finally
+    TempInfo.Free;
+  end;
 end;
 
 {**
   Destroys this object and cleanups the memory.
 }
-destructor TZMySQLDatabaseInfo.Destroy;
+destructor TZMySQLDatabaseMetadata.Destroy;
 begin
-  inherited;
+  inherited Destroy;
 end;
 
 //----------------------------------------------------------------------
@@ -288,7 +216,7 @@ end;
   What's the name of this database product?
   @return database product name
 }
-function TZMySQLDatabaseInfo.GetDatabaseProductName: string;
+function TZMySQLDatabaseMetadata.GetDatabaseProductName: string;
 begin
   Result := 'MySQL';
 end;
@@ -297,7 +225,7 @@ end;
   What's the version of this database product?
   @return database version
 }
-function TZMySQLDatabaseInfo.GetDatabaseProductVersion: string;
+function TZMySQLDatabaseMetadata.GetDatabaseProductVersion: string;
 begin
   Result := '3+';
 end;
@@ -306,7 +234,7 @@ end;
   What's the name of this JDBC driver?
   @return JDBC driver name
 }
-function TZMySQLDatabaseInfo.GetDriverName: string;
+function TZMySQLDatabaseMetadata.GetDriverName: string;
 begin
   Result := 'Zeos Database Connectivity Driver for MySQL';
 end;
@@ -315,7 +243,7 @@ end;
   What's this JDBC driver's major version number?
   @return JDBC driver major version
 }
-function TZMySQLDatabaseInfo.GetDriverMajorVersion: Integer;
+function TZMySQLDatabaseMetadata.GetDriverMajorVersion: Integer;
 begin
   Result := 1;
 end;
@@ -324,7 +252,7 @@ end;
   What's this JDBC driver's minor version number?
   @return JDBC driver minor version number
 }
-function TZMySQLDatabaseInfo.GetDriverMinorVersion: Integer;
+function TZMySQLDatabaseMetadata.GetDriverMinorVersion: Integer;
 begin
   Result := 1;
 end;
@@ -333,7 +261,7 @@ end;
   Does the database use a file for each table?
   @return true if the database uses a local file for each table
 }
-function TZMySQLDatabaseInfo.UsesLocalFilePerTable: Boolean;
+function TZMySQLDatabaseMetadata.UsesLocalFilePerTable: Boolean;
 begin
   Result := True;
 end;
@@ -343,7 +271,7 @@ end;
   case insensitive and store them in mixed case?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZMySQLDatabaseInfo.StoresMixedCaseIdentifiers: Boolean;
+function TZMySQLDatabaseMetadata.StoresMixedCaseIdentifiers: Boolean;
 begin
   Result := True;
 end;
@@ -355,7 +283,7 @@ end;
   driver always uses a double quote character.
   @return the quoting string
 }
-function TZMySQLDatabaseInfo.GetIdentifierQuoteString: string;
+function TZMySQLDatabaseMetadata.GetIdentifierQuoteString: string;
 begin
   Result := '`';
 end;
@@ -365,7 +293,7 @@ end;
   that are NOT also SQL92 keywords.
   @return the list
 }
-function TZMySQLDatabaseInfo.GetSQLKeywords: string;
+function TZMySQLDatabaseMetadata.GetSQLKeywords: string;
 begin
   Result := 'AUTO_INCREMENT,BINARY,BLOB,ENUM,INFILE,LOAD,MEDIUMINT,OPTION,'
     + 'OUTFILE,REPLACE,SET,TEXT,UNSIGNED,ZEROFILL';
@@ -404,7 +332,7 @@ end;
   clause.
   @return the list
 }
-function TZMySQLDatabaseInfo.GetNumericFunctions: string;
+function TZMySQLDatabaseMetadata.GetNumericFunctions: string;
 begin
   Result := 'ABS,ACOS,ASIN,ATAN,ATAN2,BIT_COUNT,CEILING,COS,COT,DEGREES,EXP,'
     + 'FLOOR,LOG,LOG10,MAX,MIN,MOD,PI,POW,POWER,RADIANS,RAND,ROUND,SIN,SQRT,'
@@ -419,7 +347,7 @@ end;
   clause.
   @return the list
 }
-function TZMySQLDatabaseInfo.GetStringFunctions: string;
+function TZMySQLDatabaseMetadata.GetStringFunctions: string;
 begin
   Result := 'ASCII,CHAR,CHAR_LENGTH,CHARACTER_LENGTH,CONCAT,ELT,FIELD,'
     + 'FIND_IN_SET,INSERT,INSTR,INTERVAL,LCASE,LEFT,LENGTH,LOCATE,LOWER,LTRIM,'
@@ -439,7 +367,7 @@ end;
   clause.
   @return the list
 }
-function TZMySQLDatabaseInfo.GetSystemFunctions: string;
+function TZMySQLDatabaseMetadata.GetSystemFunctions: string;
 begin
   Result := 'DATABASE,USER,SYSTEM_USER,SESSION_USER,PASSWORD,ENCRYPT,'
     + 'LAST_INSERT_ID,VERSION';
@@ -453,7 +381,7 @@ end;
   Gets a comma-separated list of time and date functions.
   @return the list
 }
-function TZMySQLDatabaseInfo.GetTimeDateFunctions: string;
+function TZMySQLDatabaseMetadata.GetTimeDateFunctions: string;
 begin
   Result := 'DAYOFWEEK,WEEKDAY,DAYOFMONTH,DAYOFYEAR,MONTH,DAYNAME,MONTHNAME,'
     + 'QUARTER,WEEK,YEAR,HOUR,MINUTE,SECOND,PERIOD_ADD,PERIOD_DIFF,TO_DAYS,'
@@ -479,7 +407,7 @@ end;
 
   @return the string used to escape wildcard characters
 }
-function TZMySQLDatabaseInfo.GetSearchStringEscape: string;
+function TZMySQLDatabaseMetadata.GetSearchStringEscape: string;
 begin
   Result := '\';
 end;
@@ -489,7 +417,7 @@ end;
   identifier names (those beyond a-z, A-Z, 0-9 and _).
   @return the string containing the extra characters
 }
-function TZMySQLDatabaseInfo.GetExtraNameCharacters: string;
+function TZMySQLDatabaseMetadata.GetExtraNameCharacters: string;
 begin
   Result := '';
 end;
@@ -501,7 +429,7 @@ end;
   Can an "ORDER BY" clause use columns not in the SELECT statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZMySQLDatabaseInfo.SupportsOrderByUnrelated: Boolean;
+function TZMySQLDatabaseMetadata.SupportsOrderByUnrelated: Boolean;
 var
   MajorVersion: Integer;
   MinorVersion: Integer;
@@ -515,7 +443,7 @@ end;
   Can a "GROUP BY" clause use columns not in the SELECT?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZMySQLDatabaseInfo.SupportsGroupByUnrelated: Boolean;
+function TZMySQLDatabaseMetadata.SupportsGroupByUnrelated: Boolean;
 begin
   Result := False;
 end;
@@ -525,7 +453,7 @@ end;
   provided it specifies all the columns in the SELECT?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZMySQLDatabaseInfo.SupportsGroupByBeyondSelect: Boolean;
+function TZMySQLDatabaseMetadata.SupportsGroupByBeyondSelect: Boolean;
 begin
   Result := True;
 end;
@@ -534,7 +462,7 @@ end;
   Is the SQL Integrity Enhancement Facility supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZMySQLDatabaseInfo.SupportsIntegrityEnhancementFacility: Boolean;
+function TZMySQLDatabaseMetadata.SupportsIntegrityEnhancementFacility: Boolean;
 begin
   Result := False;
 end;
@@ -543,7 +471,7 @@ end;
   What's the database vendor's preferred term for "schema"?
   @return the vendor term
 }
-function TZMySQLDatabaseInfo.GetSchemaTerm: string;
+function TZMySQLDatabaseMetadata.GetSchemaTerm: string;
 begin
   Result := '';
 end;
@@ -552,7 +480,7 @@ end;
   What's the database vendor's preferred term for "procedure"?
   @return the vendor term
 }
-function TZMySQLDatabaseInfo.GetProcedureTerm: string;
+function TZMySQLDatabaseMetadata.GetProcedureTerm: string;
 begin
   Result := '';
 end;
@@ -561,7 +489,7 @@ end;
   What's the database vendor's preferred term for "catalog"?
   @return the vendor term
 }
-function TZMySQLDatabaseInfo.GetCatalogTerm: string;
+function TZMySQLDatabaseMetadata.GetCatalogTerm: string;
 begin
   Result := 'Database';
 end;
@@ -570,7 +498,7 @@ end;
   Can a catalog name be used in a data manipulation statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZMySQLDatabaseInfo.SupportsCatalogsInDataManipulation: Boolean;
+function TZMySQLDatabaseMetadata.SupportsCatalogsInDataManipulation: Boolean;
 var
   MajorVersion: Integer;
   MinorVersion: Integer;
@@ -583,7 +511,7 @@ end;
   Can a catalog name be used in a table definition statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZMySQLDatabaseInfo.SupportsCatalogsInTableDefinitions: Boolean;
+function TZMySQLDatabaseMetadata.SupportsCatalogsInTableDefinitions: Boolean;
 begin
   Result := False;
 end;
@@ -593,7 +521,7 @@ end;
   A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZMySQLDatabaseInfo.SupportsSubqueriesInComparisons: Boolean;
+function TZMySQLDatabaseMetadata.SupportsSubqueriesInComparisons: Boolean;
 begin
   Result := True;
 end;
@@ -602,7 +530,7 @@ end;
   Is SQL UNION ALL supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZMySQLDatabaseInfo.SupportsUnionAll: Boolean;
+function TZMySQLDatabaseMetadata.SupportsUnionAll: Boolean;
 var
   MajorVersion: Integer;
   MinorVersion: Integer;
@@ -616,7 +544,7 @@ end;
   @return <code>true</code> if statements always remain open;
         <code>false</code> if they might not remain open
 }
-function TZMySQLDatabaseInfo.SupportsOpenStatementsAcrossCommit: Boolean;
+function TZMySQLDatabaseMetadata.SupportsOpenStatementsAcrossCommit: Boolean;
 begin
   Result := False;
 end;
@@ -626,7 +554,7 @@ end;
   @return <code>true</code> if statements always remain open;
         <code>false</code> if they might not remain open
 }
-function TZMySQLDatabaseInfo.SupportsOpenStatementsAcrossRollback: Boolean;
+function TZMySQLDatabaseMetadata.SupportsOpenStatementsAcrossRollback: Boolean;
 begin
   Result := False;
 end;
@@ -642,7 +570,7 @@ end;
   @return max binary literal length in hex characters;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZMySQLDatabaseInfo.GetMaxBinaryLiteralLength: Integer;
+function TZMySQLDatabaseMetadata.GetMaxBinaryLiteralLength: Integer;
 begin
   Result := 16777208;
 end;
@@ -652,7 +580,7 @@ end;
   @return max literal length;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZMySQLDatabaseInfo.GetMaxCharLiteralLength: Integer;
+function TZMySQLDatabaseMetadata.GetMaxCharLiteralLength: Integer;
 begin
   Result := 16777208;
 end;
@@ -662,7 +590,7 @@ end;
   @return max column name length;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZMySQLDatabaseInfo.GetMaxColumnNameLength: Integer;
+function TZMySQLDatabaseMetadata.GetMaxColumnNameLength: Integer;
 begin
   Result := 64;
 end;
@@ -672,7 +600,7 @@ end;
   @return max number of columns;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZMySQLDatabaseInfo.GetMaxColumnsInGroupBy: Integer;
+function TZMySQLDatabaseMetadata.GetMaxColumnsInGroupBy: Integer;
 begin
   Result := 16;
 end;
@@ -682,7 +610,7 @@ end;
   @return max number of columns;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZMySQLDatabaseInfo.GetMaxColumnsInIndex: Integer;
+function TZMySQLDatabaseMetadata.GetMaxColumnsInIndex: Integer;
 begin
   Result := 16;
 end;
@@ -692,7 +620,7 @@ end;
   @return max number of columns;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZMySQLDatabaseInfo.GetMaxColumnsInOrderBy: Integer;
+function TZMySQLDatabaseMetadata.GetMaxColumnsInOrderBy: Integer;
 begin
   Result := 16;
 end;
@@ -702,7 +630,7 @@ end;
   @return max number of columns;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZMySQLDatabaseInfo.GetMaxColumnsInSelect: Integer;
+function TZMySQLDatabaseMetadata.GetMaxColumnsInSelect: Integer;
 begin
   Result := 256;
 end;
@@ -712,7 +640,7 @@ end;
   @return max number of columns;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZMySQLDatabaseInfo.GetMaxColumnsInTable: Integer;
+function TZMySQLDatabaseMetadata.GetMaxColumnsInTable: Integer;
 begin
   Result := 512;
 end;
@@ -722,7 +650,7 @@ end;
   @return max number of active connections;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZMySQLDatabaseInfo.GetMaxConnections: Integer;
+function TZMySQLDatabaseMetadata.GetMaxConnections: Integer;
 begin
   Result := 0;
 end;
@@ -732,7 +660,7 @@ end;
   @return max cursor name length in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZMySQLDatabaseInfo.GetMaxCursorNameLength: Integer;
+function TZMySQLDatabaseMetadata.GetMaxCursorNameLength: Integer;
 begin
   Result := 64;
 end;
@@ -744,7 +672,7 @@ end;
    the constituent parts of the index;
    a result of zero means that there is no limit or the limit is not known
 }
-function TZMySQLDatabaseInfo.GetMaxIndexLength: Integer;
+function TZMySQLDatabaseMetadata.GetMaxIndexLength: Integer;
 begin
   Result := 128;
 end;
@@ -754,7 +682,7 @@ end;
   @return max name length in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZMySQLDatabaseInfo.GetMaxCatalogNameLength: Integer;
+function TZMySQLDatabaseMetadata.GetMaxCatalogNameLength: Integer;
 begin
   Result := 32;
 end;
@@ -764,7 +692,7 @@ end;
   @return max row size in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZMySQLDatabaseInfo.GetMaxRowSize: Integer;
+function TZMySQLDatabaseMetadata.GetMaxRowSize: Integer;
 begin
   Result := 2147483639;
 end;
@@ -774,7 +702,7 @@ end;
   blobs?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZMySQLDatabaseInfo.DoesMaxRowSizeIncludeBlobs: Boolean;
+function TZMySQLDatabaseMetadata.DoesMaxRowSizeIncludeBlobs: Boolean;
 begin
   Result := True;
 end;
@@ -784,7 +712,7 @@ end;
   @return max length in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZMySQLDatabaseInfo.GetMaxStatementLength: Integer;
+function TZMySQLDatabaseMetadata.GetMaxStatementLength: Integer;
 begin
   Result := 65531;
 end;
@@ -795,7 +723,7 @@ end;
   @return the maximum number of statements that can be open at one time;
     a result of zero means that there is no limit or the limit is not known
 }
-function TZMySQLDatabaseInfo.GetMaxStatements: Integer;
+function TZMySQLDatabaseMetadata.GetMaxStatements: Integer;
 begin
   Result := 0;
 end;
@@ -805,7 +733,7 @@ end;
   @return max name length in bytes;
     a result of zero means that there is no limit or the limit is not known
 }
-function TZMySQLDatabaseInfo.GetMaxTableNameLength: Integer;
+function TZMySQLDatabaseMetadata.GetMaxTableNameLength: Integer;
 begin
   Result := 64;
 end;
@@ -815,7 +743,7 @@ end;
   @return the maximum number of tables allowed in a SELECT statement;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZMySQLDatabaseInfo.GetMaxTablesInSelect: Integer;
+function TZMySQLDatabaseMetadata.GetMaxTablesInSelect: Integer;
 begin
   Result := 256;
 end;
@@ -825,7 +753,7 @@ end;
   @return max user name length  in bytes;
     a result of zero means that there is no limit or the limit is not known
 }
-function TZMySQLDatabaseInfo.GetMaxUserNameLength: Integer;
+function TZMySQLDatabaseMetadata.GetMaxUserNameLength: Integer;
 begin
   Result := 16;
 end;
@@ -838,7 +766,7 @@ end;
   @return the default isolation level
   @see Connection
 }
-function TZMySQLDatabaseInfo.GetDefaultTransactionIsolation:
+function TZMySQLDatabaseMetadata.GetDefaultTransactionIsolation:
   TZTransactIsolationLevel;
 begin
   Result := tiNone;
@@ -849,7 +777,7 @@ end;
   within a transaction supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZMySQLDatabaseInfo.
+function TZMySQLDatabaseMetadata.
   SupportsDataDefinitionAndDataManipulationTransactions: Boolean;
 begin
   Result := True;
@@ -860,90 +788,15 @@ end;
   supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZMySQLDatabaseInfo.SupportsDataManipulationTransactionsOnly: Boolean;
+function TZMySQLDatabaseMetadata.SupportsDataManipulationTransactionsOnly: Boolean;
 begin
-  case Metadata.GetConnection.GetTransactionIsolation of
+  case GetConnection.GetTransactionIsolation of
     tiReadUncommitted: Result := True;
     tiReadCommitted: Result := True;
     tiRepeatableRead: Result := True;
     tiSerializable: Result := True;
-  else
-    Result := False;
+    else Result := False;
   end;
-end;
-
-{**
-  Gets the MySQL version info.
-  @param MajorVesion the major version of MySQL server.
-  @param MinorVersion the minor version of MySQL server.
-}
-procedure TZMySQLDatabaseInfo.GetVersion(var MajorVersion,
-  MinorVersion: Integer);
-var
-  VersionList: TStrings;
-  Subversion : integer;
-begin
-  DecodeSqlVersioning(Metadata.GetConnection.GetHostVersion,
-    MajorVersion,MinorVersion, Subversion);
-  if (Majorversion < 4) or ((majorversion=4) and (Minorversion = 0)) then
-   with Metadata.GetConnection.CreateStatement.ExecuteQuery('SELECT VERSION()') do
-    begin
-      VersionList := SplitString(GetString(1), '.-');
-      try
-        if VersionList.Count >= 2 then
-        begin
-          MajorVersion := StrToIntDef(VersionList.Strings[0], 0);
-          MinorVersion := StrToIntDef(VersionList.Strings[1], 0);
-        end;
-      finally
-        VersionList.Free;
-      end;
-      Close;
-    end;
-end;
-
-{ TZMySQLDatabaseMetadata }
-
-{**
-  Constructs this object and assignes the main properties.
-  @param Connection a database connection object.
-  @param Url a database connection url string.
-  @param Info an extra connection properties.
-}
-constructor TZMySQLDatabaseMetadata.Create(Connection: TZAbstractConnection;
-  Url: string; Info: TStrings);
-var
-  TempInfo: TStrings;
-  Hostname, UserName, Password: string;
-  Port: Integer;
-begin
-  inherited Create(Connection, Url, Info);
-
-  TempInfo := TStringList.Create;
-  try
-    ResolveDatabaseUrl(Url, Info, HostName, Port, FDatabase,
-      UserName, Password, TempInfo);
-  finally
-    TempInfo.Free;
-  end;
-end;
-
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZMySQLDatabaseMetadata.Destroy;
-begin
-  inherited Destroy;
-end;
-
-{**
-  Constructs a database information object and returns the interface to it. Used
-  internally by the constructor.
-  @return the database information object interface
-}
-function TZMySQLDatabaseMetadata.CreateDatabaseInfo: IZDatabaseInfo;
-begin
-  Result := TZMySQLDatabaseInfo.Create(Self);
 end;
 
 procedure TZMySQLDatabaseMetadata.GetCatalogAndNamePattern(const Catalog,
@@ -1228,8 +1081,7 @@ begin
               PutSplitString(TypeInfoList, TypeInfo, '()');
               TypeInfoFirst := TypeInfoList.Strings[0];
               TypeInfoSecond := TypeInfoList.Strings[1];
-            end
-            else
+            end else
               TypeInfoFirst := TypeInfo;
 
             TypeInfoFirst := LowerCase(TypeInfoFirst);
@@ -1354,14 +1206,10 @@ begin
               // So we just ignore this, the field gets set to NULL if nothing was specified...
               HasDefaultValue := false;
               DefaultValue := '';
-            end
-            else
-            begin
+            end else begin
               DefaultValue := GetString(ColumnIndexes[5]);
-              if not (DefaultValue = '') then
-                 HasDefaultValue := true
-              else
-              begin
+              if not (DefaultValue = '') then HasDefaultValue := true
+              else begin
                 // MySQL bizarity 2:
                 // For CHAR, BLOB, TEXT and SET types, '' either means: default value is '' or: no default value
                 // There's absolutely no way of telling when using SHOW COLUMNS FROM,
@@ -1374,27 +1222,24 @@ begin
                 if Pos('text', TypeInfoFirst) > 0 then HasDefaultValue := true;
                 if Pos('char', TypeInfoFirst) > 0 then HasDefaultValue := true;
                 if 'set' = TypeInfoFirst then HasDefaultValue := true;
-                if 'enum' =  TypeInfoFirst then
-                  begin
-                    HasDefaultValue := true;
-                    DefaultValue := Copy(TypeInfoSecond, 2,length(TypeInfoSecond)-1);
-                    DefaultValue := Copy(DefaultValue, 1, Pos('''', DefaultValue) - 1);
-                  end;
+                if 'enum' =  TypeInfoFirst then begin
+                  HasDefaultValue := true;
+                  DefaultValue := Copy(TypeInfoSecond, 2,length(TypeInfoSecond)-1);
+                  DefaultValue := Copy(DefaultValue, 1, Pos('''', DefaultValue) - 1);
+                end;
               end;
             end;
             if HasDefaultValue then
             begin
               // String values in the 'Default value' field are not escaped with apostrophes.
               // Guess this makes it impossible to specify a function call or similar via default values.
-              if (MySQLType in [stString, stUnicodeString, stBinaryStream, stAsciiStream]) then
-              begin
+              if (MySQLType in [stString, stUnicodeString, stBinaryStream, stAsciiStream]) then begin
                 // Since we changed date/time-related columntypes to be presented
                 // as strings, we need to move the CURRENT_TIMESTAMP-check to here.
                 // Also left the other line in order to minimize the changes in ZeosLib
                 if DefaultValue <> 'CURRENT_TIMESTAMP' then
                 DefaultValue := '''' + DefaultValue + ''''
-              end
-              else if (MySQLType in [stDate, stTime, stTimestamp]) then
+              end else if (MySQLType in [stDate, stTime, stTimestamp]) then
               begin
                 if DefaultValue <> 'CURRENT_TIMESTAMP' then
                   DefaultValue := '''' + DefaultValue + ''''
@@ -1403,8 +1248,7 @@ begin
               begin
                 if (DefaultValue = 'y') or (DefaultValue = 'Y') then
                   DefaultValue := '1'
-                else
-                  DefaultValue := '0';
+                else DefaultValue := '0';
               end;
             end;
               Res.UpdateString(13, DefaultValue);
@@ -2108,8 +1952,7 @@ begin
                   Result.UpdateString(5, LForeignCatalog);
                   if ForeignSchema = '' then
                     Result.UpdateNull(6) // FKTABLE_SCHEM
-                  else
-                    Result.UpdateString(6, ForeignSchema);
+                  else Result.UpdateString(6, ForeignSchema);
                   if ForeignTable <> GetString(ColumnIndexes[3]) then
                     Continue
                   else
@@ -2120,8 +1963,7 @@ begin
                   Result.UpdateString(1, KeyList.Strings[2]); // PKTABLE_CAT
                   if PrimarySchema = '' then
                     Result.UpdateNull(2) // PKTABLE_SCHEM
-                  else
-                    Result.UpdateString(2, PrimarySchema); // PKTABLE_SCHEM
+                  else Result.UpdateString(2, PrimarySchema); // PKTABLE_SCHEM
 
                   if PrimaryTable = KeyList.Strings[3] then
                     Continue;
@@ -2217,7 +2059,12 @@ const
     7, 4, 17, 10, 10, 65535, 64, -1, -1, -1, -1);
 var
   I: Integer;
+  Key: string; // modified by technbot (2008-06-14) for uniformity with other GetTypeInfo mehtods
 begin
+  Key := GetTypeInfoCacheKey;
+  Result := GetResultSetFromCache(Key);
+  if Result = nil then
+  begin
     Result := ConstructVirtualResultSet(TypeInfoColumnsDynArray);
 
     for I := 1 to MaxTypeCount do
@@ -2228,8 +2075,7 @@ begin
       Result.UpdateInt(2, Ord(TypeCodes[I]));
       if TypePrecision[I] >= 0 then
         Result.UpdateInt(3, TypePrecision[I])
-      else
-        Result.UpdateNull(3);
+      else Result.UpdateNull(3);
       if TypeCodes[I] in [stString, stBytes, stDate, stTime,
         stTimeStamp, stBinaryStream, stAsciiStream] then
       begin
@@ -2257,6 +2103,9 @@ begin
 
       Result.InsertRow;
     end;
+
+    AddResultSetToCache(Key, Result);
+  end;
 end;
 
 {**
@@ -2351,8 +2200,7 @@ begin
         Result.UpdateString(3, GetString(ColumnIndexes[1]));
         if GetInt(ColumnIndexes[2]) = 0 then
           Result.UpdateString(4, 'true')
-        else
-          Result.UpdateString(4, 'false');
+        else Result.UpdateString(4, 'false');
         Result.UpdateNull(5);
         Result.UpdateString(6, GetString(ColumnIndexes[3]));
         Result.UpdateInt(7, Ord(tiOther));
@@ -2363,6 +2211,35 @@ begin
         Result.UpdateInt(12, 0);
         Result.UpdateNull(13);
         Result.InsertRow;
+      end;
+      Close;
+    end;
+end;
+
+{**
+  Gets the MySQL version info.
+  @param MajorVesion the major version of MySQL server.
+  @param MinorVersion the minor version of MySQL server.
+}
+procedure TZMySQLDatabaseMetadata.GetVersion(var MajorVersion,
+  MinorVersion: Integer);
+var
+  VersionList: TStrings;
+  Subversion : integer;
+begin
+  DecodeSqlVersioning(GetConnection.GetHostVersion,MajorVersion,MinorVersion, Subversion);
+  if (Majorversion < 4) or ((majorversion=4) and (Minorversion = 0)) then
+   with GetConnection.CreateStatement.ExecuteQuery('SELECT VERSION()') do
+    begin
+      VersionList := SplitString(GetString(1), '.-');
+      try
+        if VersionList.Count >= 2 then
+        begin
+          MajorVersion := StrToIntDef(VersionList.Strings[0], 0);
+          MinorVersion := StrToIntDef(VersionList.Strings[1], 0);
+        end;
+      finally
+        VersionList.Free;
       end;
       Close;
     end;

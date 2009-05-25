@@ -62,7 +62,10 @@ uses
 {$IFDEF MSWINDOWS}
   Windows,
 {$ENDIF}
-  Types, SysUtils, DB, Classes, ZConnection, ZDbcIntfs,
+{$IFNDEF VER130BELOW}
+  Types,
+{$ENDIF}
+  SysUtils, DB, Classes, ZConnection, ZDbcIntfs,
   ZAbstractDataset, ZCompatibility;
 
 type
@@ -186,7 +189,7 @@ begin
           Statement.SetDate(I+1, Param.AsDate);
         ftTime:
           Statement.SetTime(I+1, Param.AsTime);
-        ftDateTime, ftTimestamp:
+        ftDateTime{$IFNDEF VER130}, ftTimestamp{$ENDIF}:
           Statement.SetTimestamp(I+1, Param.AsDateTime);
         ftMemo:
           begin
@@ -197,17 +200,6 @@ begin
               Stream.Free;
             end;
           end;
-        {$IFNDEF VER150BELOW}
-        ftWideMemo:
-          begin
-            Stream := WideStringStream(Param.AsWideString);
-            try
-              Statement.SetUnicodeStream(I+1, Stream);
-            finally
-              Stream.Free;
-            end;
-          end;
-        {$ENDIF}
         ftBlob:
           begin
             Stream := TStringStream.Create(Param.AsBlob);
@@ -260,7 +252,11 @@ begin
         ftFloat:
           Param.AsFloat := FCallableStatement.GetDouble(I + 1);
         ftLargeInt:
+  {$IFNDEF VER130BELOW}
           Param.Value := FCallableStatement.GetLong(I + 1);
+  {$ELSE}
+          Param.AsInteger := FCallableStatement.GetLong(I + 1);
+  {$ENDIF}
         ftString:
           Param.AsString := FCallableStatement.GetString(I + 1);
         ftBytes:

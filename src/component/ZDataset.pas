@@ -65,13 +65,12 @@ type
   TZReadOnlyQuery = class (TZAbstractRODataSet)
   published
     property Active;
-  {$IFDEF FPC}
+  {$IFDEF VER130BELOW}
     property IsUniDirectional;
   {$ENDIF}
     property SQL;
     property ParamCheck;
     property Params;
-    property FetchRow;     // added by Patyi
     property Properties;
     property DataSource;
     property MasterFields;
@@ -89,7 +88,6 @@ type
     property SQL;
     property ParamCheck;
     property Params;
-    property FetchRow;      // added by Patyi
     property ShowRecordTypes;
     property Properties;
     property DataSource;
@@ -114,7 +112,6 @@ type
     property TableName;
     property ShowRecordTypes;
     property Properties;
-    property FetchRow;      // added by Patyi
     property MasterFields;
     property MasterSource;
     property LinkedFields; {renamed by bangfauzan}

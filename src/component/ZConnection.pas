@@ -58,7 +58,9 @@ interface
 {$I ZComponent.inc}
 
 uses
+{$IFNDEF VER130BELOW}
   Types,
+{$ENDIF}
 {$IFNDEF UNIX}
 {$IFDEF ENABLE_ADO}
   ZDbcAdo,
@@ -88,10 +90,10 @@ uses
  {$IFDEF FPC}
   SysUtils, Classes, ZDbcIntfs, DB,ZCompatibility;
  {$ELSE}
-  {$IFNDEF BDS4_UP}
+  {$IFNDEF VER180}
    SysUtils, Classes, ZDbcIntfs, DB,ZCompatibility;
   {$ELSE}
-   SysUtils, Classes, ZDbcIntfs, DB,ZCompatibility,DBCommonTypes;
+   SysUtils, Classes, ZDbcIntfs, DB,ZCompatibility,dbcommontypes;
   {$ENDIF}
  {$ENDIF}
 
@@ -209,7 +211,6 @@ type
     procedure GetSchemaNames(List: TStrings);
     procedure GetTableNames(const Pattern: string; List: TStrings);overload;
     procedure GetTableNames(const tablePattern,schemaPattern: string; List: TStrings);overload;
-    procedure GetTableNames(const tablePattern,schemaPattern: string; Types: TStringDynArray; List: TStrings);overload;
     procedure GetColumnNames(const TablePattern, ColumnPattern: string; List: TStrings);
 
     procedure GetStoredProcNames(const Pattern: string; List: TStrings);
@@ -330,9 +331,11 @@ begin
         SetConnected(True);
   except
     if csDesigning in ComponentState then
+    {$IFNDEF VER130BELOW}
       if Assigned(Classes.ApplicationHandleException) then
         Classes.ApplicationHandleException(ExceptObject)
       else
+    {$ENDIF}
         ShowException(ExceptObject, ExceptAddr)
     else
       raise;
@@ -362,10 +365,8 @@ begin
   begin
     if Value <> GetConnected then
     begin
-         if Value then
-            Connect
-         else
-            Disconnect;
+      if Value then Connect
+      else Disconnect;
     end;
   end;
 end;
@@ -378,8 +379,7 @@ procedure TZConnection.SetProperties(Value: TStrings);
 begin
   if Value <> nil then
     FProperties.Text := Value.Text
-  else
-    FProperties.Clear;
+  else FProperties.Clear;
 end;
 
 {**
@@ -431,8 +431,7 @@ function TZConnection.GetDbcDriver: IZDriver;
 begin
   if FConnection <> nil then
     Result := FConnection.GetDriver
-  else
-    Result := DriverManager.GetDriver(ConstructURL('', ''));
+  else Result := DriverManager.GetDriver(ConstructURL('', ''));
 end;
 
 {**
@@ -915,8 +914,7 @@ procedure TZConnection.PrepareTransaction(const transactionid: string);
 begin
   CheckConnected;
   CheckNonAutoCommitMode;
-  if FExplicitTransactionCounter <> 1 then
-  begin
+  if FExplicitTransactionCounter<>1 then begin
     raise EZDatabaseError.Create(SInvalidOpPrepare);
   end;
     ShowSQLHourGlass;
@@ -949,13 +947,12 @@ end;
 procedure TZConnection.CloseAllDataSets;
 var
   I: Integer;
-  Current: TZAbstractRODataset;
+  Current: TDataset;
 begin
   for I := 0 to FDatasets.Count - 1 do
   begin
-    Current := TZAbstractRODataset(FDatasets[I]);
+    Current := TDataset(FDatasets[I]);
     try
-      Current.UnPrepare;
       Current.Close;
     except
       // Ignore.
@@ -1105,8 +1102,17 @@ end;
   @param List a string list to fill out.
 }
 procedure TZConnection.GetTableNames(const Pattern: string; List: TStrings);
+var
+  Metadata: IZDatabaseMetadata;
+  ResultSet: IZResultSet;
 begin
-  GetTableNames('',Pattern,nil,List);
+  CheckConnected;
+
+  List.Clear;
+  Metadata := DbcConnection.GetMetadata;
+  ResultSet := Metadata.GetTables('', '', Pattern, nil);
+  while ResultSet.Next do
+    List.Add(ResultSet.GetStringByName('TABLE_NAME'));
 end;
 
 {**
@@ -1116,25 +1122,6 @@ end;
   @param List a string list to fill out.
 }
 procedure TZConnection.GetTableNames(const tablePattern,schemaPattern: string; List: TStrings);
-begin
-  GetTableNames(tablePattern,schemaPattern,nil,List);
-end;
-
-{**
-  Fills string list with table names.
-  @param tablePattern a pattern for table names.
-  @param schemaPattern a pattern for schema names.
-  @param types a TStringDynArray specifying the table types to look for.
-    possible values can be found by reading
-     TZConnection.DbcConnection.GetMetadata.GetTableTypes
-     eg. for PostGreSQL this includes :'TABLE', 'VIEW', 'INDEX', 'SEQUENCE',
-                                       'SYSTEM TABLE', 'SYSTEM TOAST TABLE',
-                                       'SYSTEM TOAST INDEX', 'SYSTEM VIEW',
-                                       'SYSTEM INDEX', 'TEMPORARY TABLE',
-                                       'TEMPORARY INDEX'
-  @param List a string list to fill out.
-}
-procedure TZConnection.GetTableNames(const tablePattern,schemaPattern: string; Types: TStringDynArray; List: TStrings);
 var
   Metadata: IZDatabaseMetadata;
   ResultSet: IZResultSet;
@@ -1143,7 +1130,7 @@ begin
 
   List.Clear;
   Metadata := DbcConnection.GetMetadata;
-  ResultSet := Metadata.GetTables('', schemaPattern, tablePattern, types);
+  ResultSet := Metadata.GetTables('', schemaPattern, tablePattern, nil);
   while ResultSet.Next do
     List.Add(ResultSet.GetStringByName('TABLE_NAME'));
 end;

@@ -58,161 +58,19 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
+{$IFNDEF VER130BELOW}
+  Types,
+{$ENDIF}
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
   ZCompatibility, ZDbcOracleUtils, ZDbcConnection;
 
 type
-
-  // technobot 2008-06-28 - methods moved as is from TZOracleDatabaseMetadata:
-  {** Implements Oracle Database Information. }
-  TZOracleDatabaseInfo = class(TZAbstractDatabaseInfo)
-//    function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
-//      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
-  public
-    constructor Create(const Metadata: TZAbstractDatabaseMetadata);
-    destructor Destroy; override;
-
-    // database/driver/server info:
-    function GetDatabaseProductName: string; override;
-    function GetDatabaseProductVersion: string; override;
-    function GetDriverName: string; override;
-//    function GetDriverVersion: string; override; -> Same as parent
-    function GetDriverMajorVersion: Integer; override;
-    function GetDriverMinorVersion: Integer; override;
-//    function GetServerVersion: string; -> Not implemented
-
-    // capabilities (what it can/cannot do):
-//    function AllProceduresAreCallable: Boolean; override; -> Not implemented
-//    function AllTablesAreSelectable: Boolean; override; -> Not implemented
-    function SupportsMixedCaseIdentifiers: Boolean; override;
-    function SupportsMixedCaseQuotedIdentifiers: Boolean; override;
-//    function SupportsAlterTableWithAddColumn: Boolean; override; -> Not implemented
-//    function SupportsAlterTableWithDropColumn: Boolean; override; -> Not implemented
-//    function SupportsColumnAliasing: Boolean; override; -> Not implemented
-//    function SupportsConvert: Boolean; override; -> Not implemented
-//    function SupportsConvertForTypes(FromType: TZSQLType; ToType: TZSQLType):
-//      Boolean; override; -> Not implemented
-//    function SupportsTableCorrelationNames: Boolean; override; -> Not implemented
-//    function SupportsDifferentTableCorrelationNames: Boolean; override; -> Not implemented
-    function SupportsExpressionsInOrderBy: Boolean; override;
-    function SupportsOrderByUnrelated: Boolean; override;
-    function SupportsGroupBy: Boolean; override;
-    function SupportsGroupByUnrelated: Boolean; override;
-    function SupportsGroupByBeyondSelect: Boolean; override;
-//    function SupportsLikeEscapeClause: Boolean; override; -> Not implemented
-//    function SupportsMultipleResultSets: Boolean; override; -> Not implemented
-//    function SupportsMultipleTransactions: Boolean; override; -> Not implemented
-//    function SupportsNonNullableColumns: Boolean; override; -> Not implemented
-//    function SupportsMinimumSQLGrammar: Boolean; override; -> Not implemented
-//    function SupportsCoreSQLGrammar: Boolean; override; -> Not implemented
-//    function SupportsExtendedSQLGrammar: Boolean; override; -> Not implemented
-//    function SupportsANSI92EntryLevelSQL: Boolean; override; -> Not implemented
-//    function SupportsANSI92IntermediateSQL: Boolean; override; -> Not implemented
-//    function SupportsANSI92FullSQL: Boolean; override; -> Not implemented
-    function SupportsIntegrityEnhancementFacility: Boolean; override;
-//    function SupportsOuterJoins: Boolean; override; -> Not implemented
-//    function SupportsFullOuterJoins: Boolean; override; -> Not implemented
-//    function SupportsLimitedOuterJoins: Boolean; override; -> Not implemented
-    function SupportsSchemasInDataManipulation: Boolean; override;
-    function SupportsSchemasInProcedureCalls: Boolean; override;
-    function SupportsSchemasInTableDefinitions: Boolean; override;
-    function SupportsSchemasInIndexDefinitions: Boolean; override;
-    function SupportsSchemasInPrivilegeDefinitions: Boolean; override;
-    function SupportsCatalogsInDataManipulation: Boolean; override;
-    function SupportsCatalogsInProcedureCalls: Boolean; override;
-    function SupportsCatalogsInTableDefinitions: Boolean; override;
-    function SupportsCatalogsInIndexDefinitions: Boolean; override;
-    function SupportsCatalogsInPrivilegeDefinitions: Boolean; override;
-    function SupportsPositionedDelete: Boolean; override;
-    function SupportsPositionedUpdate: Boolean; override;
-    function SupportsSelectForUpdate: Boolean; override;
-    function SupportsStoredProcedures: Boolean; override;
-    function SupportsSubqueriesInComparisons: Boolean; override;
-    function SupportsSubqueriesInExists: Boolean; override;
-    function SupportsSubqueriesInIns: Boolean; override;
-    function SupportsSubqueriesInQuantifieds: Boolean; override;
-    function SupportsCorrelatedSubqueries: Boolean; override;
-    function SupportsUnion: Boolean; override;
-    function SupportsUnionAll: Boolean; override;
-    function SupportsOpenCursorsAcrossCommit: Boolean; override;
-    function SupportsOpenCursorsAcrossRollback: Boolean; override;
-    function SupportsOpenStatementsAcrossCommit: Boolean; override;
-    function SupportsOpenStatementsAcrossRollback: Boolean; override;
-    function SupportsTransactions: Boolean; override;
-    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
-      Boolean; override;
-    function SupportsDataDefinitionAndDataManipulationTransactions: Boolean; override;
-    function SupportsDataManipulationTransactionsOnly: Boolean; override;
-    function SupportsResultSetType(_Type: TZResultSetType): Boolean; override;
-    function SupportsResultSetConcurrency(_Type: TZResultSetType;
-      Concurrency: TZResultSetConcurrency): Boolean; override;
-//    function SupportsBatchUpdates: Boolean; override; -> Not implemented
-
-    // maxima:
-    function GetMaxBinaryLiteralLength: Integer; override;
-    function GetMaxCharLiteralLength: Integer; override;
-    function GetMaxColumnNameLength: Integer; override;
-    function GetMaxColumnsInGroupBy: Integer; override;
-    function GetMaxColumnsInIndex: Integer; override;
-    function GetMaxColumnsInOrderBy: Integer; override;
-    function GetMaxColumnsInSelect: Integer; override;
-    function GetMaxColumnsInTable: Integer; override;
-    function GetMaxConnections: Integer; override;
-    function GetMaxCursorNameLength: Integer; override;
-    function GetMaxIndexLength: Integer; override;
-    function GetMaxSchemaNameLength: Integer; override;
-    function GetMaxProcedureNameLength: Integer; override;
-    function GetMaxCatalogNameLength: Integer; override;
-    function GetMaxRowSize: Integer; override;
-    function GetMaxStatementLength: Integer; override;
-    function GetMaxStatements: Integer; override;
-    function GetMaxTableNameLength: Integer; override;
-    function GetMaxTablesInSelect: Integer; override;
-    function GetMaxUserNameLength: Integer; override;
-
-    // policies (how are various data and operations handled):
-//    function IsReadOnly: Boolean; override; -> Not implemented
-//    function IsCatalogAtStart: Boolean; override; -> Not implemented
-    function DoesMaxRowSizeIncludeBlobs: Boolean; override;
-//    function NullsAreSortedHigh: Boolean; override; -> Not implemented
-//    function NullsAreSortedLow: Boolean; override; -> Not implemented
-//    function NullsAreSortedAtStart: Boolean; override; -> Not implemented
-//    function NullsAreSortedAtEnd: Boolean; override; -> Not implemented
-//    function NullPlusNonNullIsNull: Boolean; override; -> Not implemented
-//    function UsesLocalFiles: Boolean; override; -> Not implemented
-    function UsesLocalFilePerTable: Boolean; override;
-    function StoresUpperCaseIdentifiers: Boolean; override;
-    function StoresLowerCaseIdentifiers: Boolean; override;
-    function StoresMixedCaseIdentifiers: Boolean; override;
-    function StoresUpperCaseQuotedIdentifiers: Boolean; override;
-    function StoresLowerCaseQuotedIdentifiers: Boolean; override;
-    function StoresMixedCaseQuotedIdentifiers: Boolean; override;
-    function GetDefaultTransactionIsolation: TZTransactIsolationLevel; override;
-    function DataDefinitionCausesTransactionCommit: Boolean; override;
-    function DataDefinitionIgnoredInTransactions: Boolean; override;
-
-    // interface details (terms, keywords, etc):
-//    function GetIdentifierQuoteString: string; override; -> Not implemented
-    function GetSchemaTerm: string; override;
-    function GetProcedureTerm: string; override;
-    function GetCatalogTerm: string; override;
-    function GetCatalogSeparator: string; override;
-    function GetSQLKeywords: string; override;
-    function GetNumericFunctions: string; override;
-    function GetStringFunctions: string; override;
-    function GetSystemFunctions: string; override;
-    function GetTimeDateFunctions: string; override;
-    function GetSearchStringEscape: string; override;
-    function GetExtraNameCharacters: string; override;
-  end;
 
   {** Implements Oracle Database Metadata. }
   TZOracleDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
     FDatabase: string;
   protected
-    function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-28
-
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
     function UncachedGetSchemas: IZResultSet; override;
@@ -236,7 +94,7 @@ type
     function UncachedGetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
       Unique: Boolean; Approximate: Boolean): IZResultSet; override;
 //     function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
-//      const SequenceNamePattern: string): IZResultSet; virtual; -> Not implemented
+//      const SequenceNamePattern: string): IZResultSet; override; -> Not implemented
 //    function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
 //      const ProcedureNamePattern: string): IZResultSet; override;
 //    function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
@@ -245,10 +103,106 @@ type
 //    function UncachedGetVersionColumns(const Catalog: string; const Schema: string;
 //      const Table: string): IZResultSet; override;
 //    function UncachedGetTypeInfo: IZResultSet; override;
+//    function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
+//      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
   public
     constructor Create(Connection: TZAbstractConnection; Url: string;
       Info: TStrings);
     destructor Destroy; override;
+
+    function GetDatabaseProductName: string; override;
+    function GetDatabaseProductVersion: string; override;
+    function GetDriverName: string; override;
+    function GetDriverMajorVersion: Integer; override;
+    function GetDriverMinorVersion: Integer; override;
+    function UsesLocalFilePerTable: Boolean; override;
+    function SupportsMixedCaseIdentifiers: Boolean; override;
+    function StoresUpperCaseIdentifiers: Boolean; override;
+    function StoresLowerCaseIdentifiers: Boolean; override;
+    function StoresMixedCaseIdentifiers: Boolean; override;
+    function SupportsMixedCaseQuotedIdentifiers: Boolean; override;
+    function StoresUpperCaseQuotedIdentifiers: Boolean; override;
+    function StoresLowerCaseQuotedIdentifiers: Boolean; override;
+    function StoresMixedCaseQuotedIdentifiers: Boolean; override;
+    function GetSQLKeywords: string; override;
+    function GetNumericFunctions: string; override;
+    function GetStringFunctions: string; override;
+    function GetSystemFunctions: string; override;
+    function GetTimeDateFunctions: string; override;
+    function GetSearchStringEscape: string; override;
+    function GetExtraNameCharacters: string; override;
+
+    function SupportsExpressionsInOrderBy: Boolean; override;
+    function SupportsOrderByUnrelated: Boolean; override;
+    function SupportsGroupBy: Boolean; override;
+    function SupportsGroupByUnrelated: Boolean; override;
+    function SupportsGroupByBeyondSelect: Boolean; override;
+    function SupportsIntegrityEnhancementFacility: Boolean; override;
+    function GetSchemaTerm: string; override;
+    function GetProcedureTerm: string; override;
+    function GetCatalogTerm: string; override;
+    function GetCatalogSeparator: string; override;
+    function SupportsSchemasInDataManipulation: Boolean; override;
+    function SupportsSchemasInProcedureCalls: Boolean; override;
+    function SupportsSchemasInTableDefinitions: Boolean; override;
+    function SupportsSchemasInIndexDefinitions: Boolean; override;
+    function SupportsSchemasInPrivilegeDefinitions: Boolean; override;
+    function SupportsCatalogsInDataManipulation: Boolean; override;
+    function SupportsCatalogsInProcedureCalls: Boolean; override;
+    function SupportsCatalogsInTableDefinitions: Boolean; override;
+    function SupportsCatalogsInIndexDefinitions: Boolean; override;
+    function SupportsCatalogsInPrivilegeDefinitions: Boolean; override;
+    function SupportsPositionedDelete: Boolean; override;
+    function SupportsPositionedUpdate: Boolean; override;
+    function SupportsSelectForUpdate: Boolean; override;
+    function SupportsStoredProcedures: Boolean; override;
+    function SupportsSubqueriesInComparisons: Boolean; override;
+    function SupportsSubqueriesInExists: Boolean; override;
+    function SupportsSubqueriesInIns: Boolean; override;
+    function SupportsSubqueriesInQuantifieds: Boolean; override;
+    function SupportsCorrelatedSubqueries: Boolean; override;
+    function SupportsUnion: Boolean; override;
+    function SupportsUnionAll: Boolean;  override;
+    function SupportsOpenCursorsAcrossCommit: Boolean; override;
+    function SupportsOpenCursorsAcrossRollback: Boolean; override;
+    function SupportsOpenStatementsAcrossCommit: Boolean; override;
+    function SupportsOpenStatementsAcrossRollback: Boolean; override;
+
+    function GetMaxBinaryLiteralLength: Integer; override;
+    function GetMaxCharLiteralLength: Integer; override;
+    function GetMaxColumnNameLength: Integer; override;
+    function GetMaxColumnsInGroupBy: Integer; override;
+    function GetMaxColumnsInIndex: Integer; override;
+    function GetMaxColumnsInOrderBy: Integer; override;
+    function GetMaxColumnsInSelect: Integer; override;
+    function GetMaxColumnsInTable: Integer; override;
+    function GetMaxConnections: Integer; override;
+    function GetMaxCursorNameLength: Integer; override;
+    function GetMaxIndexLength: Integer; override;
+    function GetMaxSchemaNameLength: Integer; override;
+    function GetMaxProcedureNameLength: Integer; override;
+    function GetMaxCatalogNameLength: Integer; override;
+    function GetMaxRowSize: Integer; override;
+    function DoesMaxRowSizeIncludeBlobs: Boolean; override;
+    function GetMaxStatementLength: Integer; override;
+    function GetMaxStatements: Integer; override;
+    function GetMaxTableNameLength: Integer; override;
+    function GetMaxTablesInSelect: Integer; override;
+    function GetMaxUserNameLength: Integer; override;
+
+    function GetDefaultTransactionIsolation: TZTransactIsolationLevel; override;
+    function SupportsTransactions: Boolean; override;
+    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
+      Boolean; override;
+    function SupportsDataDefinitionAndDataManipulationTransactions: Boolean;
+      override;
+    function SupportsDataManipulationTransactionsOnly: Boolean; override;
+    function DataDefinitionCausesTransactionCommit: Boolean; override;
+    function DataDefinitionIgnoredInTransactions: Boolean; override;
+
+    function SupportsResultSetType(_Type: TZResultSetType): Boolean; override;
+    function SupportsResultSetConcurrency(_Type: TZResultSetType;
+      Concurrency: TZResultSetConcurrency): Boolean; override;
   end;
 
 implementation
@@ -256,900 +210,7 @@ implementation
 uses
   ZDbcUtils;
 
-{ TZOracleDatabaseInfo }
-
-{**
-  Constructs this object.
-  @param Metadata the interface of the correpsonding database metadata object
-}
-constructor TZOracleDatabaseInfo.Create(const Metadata: TZAbstractDatabaseMetadata);
-begin
-  inherited;
-end;
-
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZOracleDatabaseInfo.Destroy;
-begin
-  inherited;
-end;
-
-//----------------------------------------------------------------------
-// First, a variety of minor information about the target database.
-
-{**
-  What's the name of this database product?
-  @return database product name
-}
-function TZOracleDatabaseInfo.GetDatabaseProductName: string;
-begin
-  Result := 'Oracle';
-end;
-
-{**
-  What's the version of this database product?
-  @return database version
-}
-function TZOracleDatabaseInfo.GetDatabaseProductVersion: string;
-begin
-  Result := '';
-end;
-
-{**
-  What's the name of this JDBC driver?
-  @return JDBC driver name
-}
-function TZOracleDatabaseInfo.GetDriverName: string;
-begin
-  Result := 'Zeos Database Connectivity Driver for Oracle';
-end;
-
-{**
-  What's this JDBC driver's major version number?
-  @return JDBC driver major version
-}
-function TZOracleDatabaseInfo.GetDriverMajorVersion: Integer;
-begin
-  Result := 1;
-end;
-
-{**
-  What's this JDBC driver's minor version number?
-  @return JDBC driver minor version number
-}
-function TZOracleDatabaseInfo.GetDriverMinorVersion: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  Does the database use a file for each table?
-  @return true if the database uses a local file for each table
-}
-function TZOracleDatabaseInfo.UsesLocalFilePerTable: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Does the database treat mixed case unquoted SQL identifiers as
-  case sensitive and as a result store them in mixed case?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver will always return false.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsMixedCaseIdentifiers: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Does the database treat mixed case unquoted SQL identifiers as
-  case insensitive and store them in upper case?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.StoresUpperCaseIdentifiers: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Does the database treat mixed case unquoted SQL identifiers as
-  case insensitive and store them in lower case?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.StoresLowerCaseIdentifiers: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Does the database treat mixed case unquoted SQL identifiers as
-  case insensitive and store them in mixed case?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.StoresMixedCaseIdentifiers: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Does the database treat mixed case quoted SQL identifiers as
-  case sensitive and as a result store them in mixed case?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver will always return true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsMixedCaseQuotedIdentifiers: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Does the database treat mixed case quoted SQL identifiers as
-  case insensitive and store them in upper case?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.StoresUpperCaseQuotedIdentifiers: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Does the database treat mixed case quoted SQL identifiers as
-  case insensitive and store them in lower case?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.StoresLowerCaseQuotedIdentifiers: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Does the database treat mixed case quoted SQL identifiers as
-  case insensitive and store them in mixed case?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.StoresMixedCaseQuotedIdentifiers: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Gets a comma-separated list of all a database's SQL keywords
-  that are NOT also SQL92 keywords.
-  @return the list
-}
-function TZOracleDatabaseInfo.GetSQLKeywords: string;
-begin
-  Result := 'ACCESS,ADD,ALTER,AUDIT,CLUSTER,COLUMN,COMMENT,COMPRESS,CONNECT,'
-    + 'DATE,DROP,EXCLUSIVE,FILE,IDENTIFIED,IMMEDIATE,INCREMENT,INDEX,INITIAL,'
-    + 'INTERSECT,LEVEL,LOCK,LONG,MAXEXTENTS,MINUS,MODE,NOAUDIT,NOCOMPRESS,'
-    + 'NOWAIT,NUMBER,OFFLINE,ONLINE,PCTFREE,PRIOR';
-end;
-
-{**
-  Gets a comma-separated list of math functions.  These are the
-  X/Open CLI math function names used in the JDBC function escape
-  clause.
-  @return the list
-}
-function TZOracleDatabaseInfo.GetNumericFunctions: string;
-begin
-  Result := 'ABS,ACOS,ASIN,ATAN,ATAN2,CEILING,COS,EXP,FLOOR,LOG,LOG10,MOD,PI,'
-    + 'POWER,ROUND,SIGN,SIN,SQRT,TAN,TRUNCATE';
-end;
-
-{**
-  Gets a comma-separated list of string functions.  These are the
-  X/Open CLI string function names used in the JDBC function escape
-  clause.
-  @return the list
-}
-function TZOracleDatabaseInfo.GetStringFunctions: string;
-begin
-  Result := 'ASCII,CHAR,CONCAT,LCASE,LENGTH,LTRIM,REPLACE,RTRIM,SOUNDEX,'
-    + 'SUBSTRING,UCASE';
-end;
-
-{**
-  Gets a comma-separated list of system functions.  These are the
-  X/Open CLI system function names used in the JDBC function escape
-  clause.
-  @return the list
-}
-function TZOracleDatabaseInfo.GetSystemFunctions: string;
-begin
-  Result := 'USER';
-end;
-
-{**
-  Gets a comma-separated list of time and date functions.
-  @return the list
-}
-function TZOracleDatabaseInfo.GetTimeDateFunctions: string;
-begin
-  Result := 'CURDATE,CURTIME,DAYOFMONTH,HOUR,MINUTE,MONTH,NOW,SECOND,YEAR';
-end;
-
-{**
-  Gets the string that can be used to escape wildcard characters.
-  This is the string that can be used to escape '_' or '%' in
-  the string pattern style catalog search parameters.
-
-  <P>The '_' character represents any single character.
-  <P>The '%' character represents any sequence of zero or
-  more characters.
-
-  @return the string used to escape wildcard characters
-}
-function TZOracleDatabaseInfo.GetSearchStringEscape: string;
-begin
-  Result := '//';
-end;
-
-{**
-  Gets all the "extra" characters that can be used in unquoted
-  identifier names (those beyond a-z, A-Z, 0-9 and _).
-  @return the string containing the extra characters
-}
-function TZOracleDatabaseInfo.GetExtraNameCharacters: string;
-begin
-  Result := '$#';
-end;
-
-//--------------------------------------------------------------------
-// Functions describing which features are supported.
-
-{**
-  Are expressions in "ORDER BY" lists supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsExpressionsInOrderBy: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Can an "ORDER BY" clause use columns not in the SELECT statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsOrderByUnrelated: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Is some form of "GROUP BY" clause supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsGroupBy: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Can a "GROUP BY" clause use columns not in the SELECT?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsGroupByUnrelated: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Can a "GROUP BY" clause add columns not in the SELECT
-  provided it specifies all the columns in the SELECT?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsGroupByBeyondSelect: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Is the SQL Integrity Enhancement Facility supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsIntegrityEnhancementFacility: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  What's the database vendor's preferred term for "schema"?
-  @return the vendor term
-}
-function TZOracleDatabaseInfo.GetSchemaTerm: string;
-begin
-  Result := 'schema';
-end;
-
-{**
-  What's the database vendor's preferred term for "procedure"?
-  @return the vendor term
-}
-function TZOracleDatabaseInfo.GetProcedureTerm: string;
-begin
-  Result := 'procedure';
-end;
-
-{**
-  What's the database vendor's preferred term for "catalog"?
-  @return the vendor term
-}
-function TZOracleDatabaseInfo.GetCatalogTerm: string;
-begin
-  Result := '';
-end;
-
-{**
-  What's the separator between catalog and table name?
-  @return the separator string
-}
-function TZOracleDatabaseInfo.GetCatalogSeparator: string;
-begin
-  Result := '';
-end;
-
-{**
-  Can a schema name be used in a data manipulation statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsSchemasInDataManipulation: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Can a schema name be used in a procedure call statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsSchemasInProcedureCalls: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Can a schema name be used in a table definition statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsSchemasInTableDefinitions: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Can a schema name be used in an index definition statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsSchemasInIndexDefinitions: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Can a schema name be used in a privilege definition statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsSchemasInPrivilegeDefinitions: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Can a catalog name be used in a data manipulation statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsCatalogsInDataManipulation: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can a catalog name be used in a procedure call statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsCatalogsInProcedureCalls: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can a catalog name be used in a table definition statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsCatalogsInTableDefinitions: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can a catalog name be used in an index definition statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsCatalogsInIndexDefinitions: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can a catalog name be used in a privilege definition statement?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsCatalogsInPrivilegeDefinitions: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Is positioned DELETE supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsPositionedDelete: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Is positioned UPDATE supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsPositionedUpdate: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Is SELECT for UPDATE supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsSelectForUpdate: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Are stored procedure calls using the stored procedure escape
-  syntax supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsStoredProcedures: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Are subqueries in comparison expressions supported?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsSubqueriesInComparisons: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Are subqueries in 'exists' expressions supported?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsSubqueriesInExists: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Are subqueries in 'in' statements supported?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsSubqueriesInIns: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Are subqueries in quantified expressions supported?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsSubqueriesInQuantifieds: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Are correlated subqueries supported?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsCorrelatedSubqueries: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Is SQL UNION supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsUnion: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Is SQL UNION ALL supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsUnionAll: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Can cursors remain open across commits?
-  @return <code>true</code> if cursors always remain open;
-        <code>false</code> if they might not remain open
-}
-function TZOracleDatabaseInfo.SupportsOpenCursorsAcrossCommit: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can cursors remain open across rollbacks?
-  @return <code>true</code> if cursors always remain open;
-        <code>false</code> if they might not remain open
-}
-function TZOracleDatabaseInfo.SupportsOpenCursorsAcrossRollback: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can statements remain open across commits?
-  @return <code>true</code> if statements always remain open;
-        <code>false</code> if they might not remain open
-}
-function TZOracleDatabaseInfo.SupportsOpenStatementsAcrossCommit: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Can statements remain open across rollbacks?
-  @return <code>true</code> if statements always remain open;
-        <code>false</code> if they might not remain open
-}
-function TZOracleDatabaseInfo.SupportsOpenStatementsAcrossRollback: Boolean;
-begin
-  Result := False;
-end;
-
-//----------------------------------------------------------------------
-// The following group of methods exposes various limitations
-// based on the target database with the current driver.
-// Unless otherwise specified, a result of zero means there is no
-// limit, or the limit is not known.
-
-{**
-  How many hex characters can you have in an inline binary literal?
-  @return max binary literal length in hex characters;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZOracleDatabaseInfo.GetMaxBinaryLiteralLength: Integer;
-begin
-  Result := 1000;
-end;
-
-{**
-  What's the max length for a character literal?
-  @return max literal length;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZOracleDatabaseInfo.GetMaxCharLiteralLength: Integer;
-begin
-  Result := 2000;
-end;
-
-{**
-  What's the limit on column name length?
-  @return max column name length;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZOracleDatabaseInfo.GetMaxColumnNameLength: Integer;
-begin
-  Result := 30;
-end;
-
-{**
-  What's the maximum number of columns in a "GROUP BY" clause?
-  @return max number of columns;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZOracleDatabaseInfo.GetMaxColumnsInGroupBy: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum number of columns allowed in an index?
-  @return max number of columns;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZOracleDatabaseInfo.GetMaxColumnsInIndex: Integer;
-begin
-  Result := 32;
-end;
-
-{**
-  What's the maximum number of columns in an "ORDER BY" clause?
-  @return max number of columns;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZOracleDatabaseInfo.GetMaxColumnsInOrderBy: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum number of columns in a "SELECT" list?
-  @return max number of columns;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZOracleDatabaseInfo.GetMaxColumnsInSelect: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum number of columns in a table?
-  @return max number of columns;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZOracleDatabaseInfo.GetMaxColumnsInTable: Integer;
-begin
-  Result := 1000;
-end;
-
-{**
-  How many active connections can we have at a time to this database?
-  @return max number of active connections;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZOracleDatabaseInfo.GetMaxConnections: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum cursor name length?
-  @return max cursor name length in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZOracleDatabaseInfo.GetMaxCursorNameLength: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  Retrieves the maximum number of bytes for an index, including all
-  of the parts of the index.
-  @return max index length in bytes, which includes the composite of all
-   the constituent parts of the index;
-   a result of zero means that there is no limit or the limit is not known
-}
-function TZOracleDatabaseInfo.GetMaxIndexLength: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum length allowed for a schema name?
-  @return max name length in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZOracleDatabaseInfo.GetMaxSchemaNameLength: Integer;
-begin
-  Result := 30;
-end;
-
-{**
-  What's the maximum length of a procedure name?
-  @return max name length in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZOracleDatabaseInfo.GetMaxProcedureNameLength: Integer;
-begin
-  Result := 30;
-end;
-
-{**
-  What's the maximum length of a catalog name?
-  @return max name length in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZOracleDatabaseInfo.GetMaxCatalogNameLength: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum length of a single row?
-  @return max row size in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZOracleDatabaseInfo.GetMaxRowSize: Integer;
-begin
-  Result := 2000;
-end;
-
-{**
-  Did getMaxRowSize() include LONGVARCHAR and LONGVARBINARY
-  blobs?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.DoesMaxRowSizeIncludeBlobs: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  What's the maximum length of an SQL statement?
-  @return max length in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZOracleDatabaseInfo.GetMaxStatementLength: Integer;
-begin
-  Result := 65535;
-end;
-
-{**
-  How many active statements can we have open at one time to this
-  database?
-  @return the maximum number of statements that can be open at one time;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZOracleDatabaseInfo.GetMaxStatements: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum length of a table name?
-  @return max name length in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZOracleDatabaseInfo.GetMaxTableNameLength: Integer;
-begin
-  Result := 30;
-end;
-
-{**
-  What's the maximum number of tables in a SELECT statement?
-  @return the maximum number of tables allowed in a SELECT statement;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZOracleDatabaseInfo.GetMaxTablesInSelect: Integer;
-begin
-  Result := 0;
-end;
-
-{**
-  What's the maximum length of a user name?
-  @return max user name length  in bytes;
-       a result of zero means that there is no limit or the limit is not known
-}
-function TZOracleDatabaseInfo.GetMaxUserNameLength: Integer;
-begin
-  Result := 30;
-end;
-
-//----------------------------------------------------------------------
-
-{**
-  What's the database's default transaction isolation level?  The
-  values are defined in <code>java.sql.Connection</code>.
-  @return the default isolation level
-  @see Connection
-}
-function TZOracleDatabaseInfo.GetDefaultTransactionIsolation:
-  TZTransactIsolationLevel;
-begin
-  Result := tiReadCommitted;
-end;
-
-{**
-  Are transactions supported? If not, invoking the method
-  <code>commit</code> is a noop and the isolation level is TRANSACTION_NONE.
-  @return <code>true</code> if transactions are supported; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsTransactions: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Does this database support the given transaction isolation level?
-  @param level the values are defined in <code>java.sql.Connection</code>
-  @return <code>true</code> if so; <code>false</code> otherwise
-  @see Connection
-}
-function TZOracleDatabaseInfo.SupportsTransactionIsolationLevel(
-  Level: TZTransactIsolationLevel): Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Are both data definition and data manipulation statements
-  within a transaction supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.
-  SupportsDataDefinitionAndDataManipulationTransactions: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Are only data manipulation statements within a transaction
-  supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.
-  SupportsDataManipulationTransactionsOnly: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Does a data definition statement within a transaction force the
-  transaction to commit?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.DataDefinitionCausesTransactionCommit: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Is a data definition statement within a transaction ignored?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.DataDefinitionIgnoredInTransactions: Boolean;
-begin
-  Result := False;
-end;
-
-{**
-  Does the database support the given result set type?
-  @param type defined in <code>java.sql.ResultSet</code>
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsResultSetType(
-  _Type: TZResultSetType): Boolean;
-begin
-  Result := _Type = rtForwardOnly;
-end;
-
-{**
-  Does the database support the concurrency type in combination
-  with the given result set type?
-
-  @param type defined in <code>java.sql.ResultSet</code>
-  @param concurrency type defined in <code>java.sql.ResultSet</code>
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZOracleDatabaseInfo.SupportsResultSetConcurrency(
-  _Type: TZResultSetType; Concurrency: TZResultSetConcurrency): Boolean;
-begin
-  Result := (_Type = rtForwardOnly) and (Concurrency = rcReadOnly);
-end;
-
-
 { TZOracleDatabaseMetadata }
-
 
 {**
   Constructs this object and assignes the main properties.
@@ -1183,14 +244,851 @@ begin
   inherited Destroy;
 end;
 
+//----------------------------------------------------------------------
+// First, a variety of minor information about the target database.
+
 {**
-  Constructs a database information object and returns the interface to it. Used
-  internally by the constructor.
-  @return the database information object interface
+  What's the name of this database product?
+  @return database product name
 }
-function TZOracleDatabaseMetadata.CreateDatabaseInfo: IZDatabaseInfo;
+function TZOracleDatabaseMetadata.GetDatabaseProductName: string;
 begin
-  Result := TZOracleDatabaseInfo.Create(Self);
+  Result := 'Oracle';
+end;
+
+{**
+  What's the version of this database product?
+  @return database version
+}
+function TZOracleDatabaseMetadata.GetDatabaseProductVersion: string;
+begin
+  Result := '';
+end;
+
+{**
+  What's the name of this JDBC driver?
+  @return JDBC driver name
+}
+function TZOracleDatabaseMetadata.GetDriverName: string;
+begin
+  Result := 'Zeos Database Connectivity Driver for Oracle';
+end;
+
+{**
+  What's this JDBC driver's major version number?
+  @return JDBC driver major version
+}
+function TZOracleDatabaseMetadata.GetDriverMajorVersion: Integer;
+begin
+  Result := 1;
+end;
+
+{**
+  What's this JDBC driver's minor version number?
+  @return JDBC driver minor version number
+}
+function TZOracleDatabaseMetadata.GetDriverMinorVersion: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  Does the database use a file for each table?
+  @return true if the database uses a local file for each table
+}
+function TZOracleDatabaseMetadata.UsesLocalFilePerTable: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Does the database treat mixed case unquoted SQL identifiers as
+  case sensitive and as a result store them in mixed case?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver will always return false.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsMixedCaseIdentifiers: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Does the database treat mixed case unquoted SQL identifiers as
+  case insensitive and store them in upper case?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.StoresUpperCaseIdentifiers: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Does the database treat mixed case unquoted SQL identifiers as
+  case insensitive and store them in lower case?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.StoresLowerCaseIdentifiers: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Does the database treat mixed case unquoted SQL identifiers as
+  case insensitive and store them in mixed case?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.StoresMixedCaseIdentifiers: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Does the database treat mixed case quoted SQL identifiers as
+  case sensitive and as a result store them in mixed case?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver will always return true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsMixedCaseQuotedIdentifiers: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Does the database treat mixed case quoted SQL identifiers as
+  case insensitive and store them in upper case?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.StoresUpperCaseQuotedIdentifiers: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Does the database treat mixed case quoted SQL identifiers as
+  case insensitive and store them in lower case?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.StoresLowerCaseQuotedIdentifiers: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Does the database treat mixed case quoted SQL identifiers as
+  case insensitive and store them in mixed case?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.StoresMixedCaseQuotedIdentifiers: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Gets a comma-separated list of all a database's SQL keywords
+  that are NOT also SQL92 keywords.
+  @return the list
+}
+function TZOracleDatabaseMetadata.GetSQLKeywords: string;
+begin
+  Result := 'ACCESS,ADD,ALTER,AUDIT,CLUSTER,COLUMN,COMMENT,COMPRESS,CONNECT,'
+    + 'DATE,DROP,EXCLUSIVE,FILE,IDENTIFIED,IMMEDIATE,INCREMENT,INDEX,INITIAL,'
+    + 'INTERSECT,LEVEL,LOCK,LONG,MAXEXTENTS,MINUS,MODE,NOAUDIT,NOCOMPRESS,'
+    + 'NOWAIT,NUMBER,OFFLINE,ONLINE,PCTFREE,PRIOR';
+end;
+
+{**
+  Gets a comma-separated list of math functions.  These are the
+  X/Open CLI math function names used in the JDBC function escape
+  clause.
+  @return the list
+}
+function TZOracleDatabaseMetadata.GetNumericFunctions: string;
+begin
+  Result := 'ABS,ACOS,ASIN,ATAN,ATAN2,CEILING,COS,EXP,FLOOR,LOG,LOG10,MOD,PI,'
+    + 'POWER,ROUND,SIGN,SIN,SQRT,TAN,TRUNCATE';
+end;
+
+{**
+  Gets a comma-separated list of string functions.  These are the
+  X/Open CLI string function names used in the JDBC function escape
+  clause.
+  @return the list
+}
+function TZOracleDatabaseMetadata.GetStringFunctions: string;
+begin
+  Result := 'ASCII,CHAR,CONCAT,LCASE,LENGTH,LTRIM,REPLACE,RTRIM,SOUNDEX,'
+    + 'SUBSTRING,UCASE';
+end;
+
+{**
+  Gets a comma-separated list of system functions.  These are the
+  X/Open CLI system function names used in the JDBC function escape
+  clause.
+  @return the list
+}
+function TZOracleDatabaseMetadata.GetSystemFunctions: string;
+begin
+  Result := 'USER';
+end;
+
+{**
+  Gets a comma-separated list of time and date functions.
+  @return the list
+}
+function TZOracleDatabaseMetadata.GetTimeDateFunctions: string;
+begin
+  Result := 'CURDATE,CURTIME,DAYOFMONTH,HOUR,MINUTE,MONTH,NOW,SECOND,YEAR';
+end;
+
+{**
+  Gets the string that can be used to escape wildcard characters.
+  This is the string that can be used to escape '_' or '%' in
+  the string pattern style catalog search parameters.
+
+  <P>The '_' character represents any single character.
+  <P>The '%' character represents any sequence of zero or
+  more characters.
+
+  @return the string used to escape wildcard characters
+}
+function TZOracleDatabaseMetadata.GetSearchStringEscape: string;
+begin
+  Result := '//';
+end;
+
+{**
+  Gets all the "extra" characters that can be used in unquoted
+  identifier names (those beyond a-z, A-Z, 0-9 and _).
+  @return the string containing the extra characters
+}
+function TZOracleDatabaseMetadata.GetExtraNameCharacters: string;
+begin
+  Result := '$#';
+end;
+
+//--------------------------------------------------------------------
+// Functions describing which features are supported.
+
+{**
+  Are expressions in "ORDER BY" lists supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsExpressionsInOrderBy: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Can an "ORDER BY" clause use columns not in the SELECT statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsOrderByUnrelated: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is some form of "GROUP BY" clause supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsGroupBy: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Can a "GROUP BY" clause use columns not in the SELECT?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsGroupByUnrelated: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Can a "GROUP BY" clause add columns not in the SELECT
+  provided it specifies all the columns in the SELECT?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsGroupByBeyondSelect: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is the SQL Integrity Enhancement Facility supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsIntegrityEnhancementFacility: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  What's the database vendor's preferred term for "schema"?
+  @return the vendor term
+}
+function TZOracleDatabaseMetadata.GetSchemaTerm: string;
+begin
+  Result := 'schema';
+end;
+
+{**
+  What's the database vendor's preferred term for "procedure"?
+  @return the vendor term
+}
+function TZOracleDatabaseMetadata.GetProcedureTerm: string;
+begin
+  Result := 'procedure';
+end;
+
+{**
+  What's the database vendor's preferred term for "catalog"?
+  @return the vendor term
+}
+function TZOracleDatabaseMetadata.GetCatalogTerm: string;
+begin
+  Result := '';
+end;
+
+{**
+  What's the separator between catalog and table name?
+  @return the separator string
+}
+function TZOracleDatabaseMetadata.GetCatalogSeparator: string;
+begin
+  Result := '';
+end;
+
+{**
+  Can a schema name be used in a data manipulation statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsSchemasInDataManipulation: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Can a schema name be used in a procedure call statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsSchemasInProcedureCalls: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Can a schema name be used in a table definition statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsSchemasInTableDefinitions: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Can a schema name be used in an index definition statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsSchemasInIndexDefinitions: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Can a schema name be used in a privilege definition statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsSchemasInPrivilegeDefinitions: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Can a catalog name be used in a data manipulation statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsCatalogsInDataManipulation: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can a catalog name be used in a procedure call statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsCatalogsInProcedureCalls: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can a catalog name be used in a table definition statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsCatalogsInTableDefinitions: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can a catalog name be used in an index definition statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsCatalogsInIndexDefinitions: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can a catalog name be used in a privilege definition statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsCatalogsInPrivilegeDefinitions: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Is positioned DELETE supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsPositionedDelete: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Is positioned UPDATE supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsPositionedUpdate: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Is SELECT for UPDATE supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsSelectForUpdate: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Are stored procedure calls using the stored procedure escape
+  syntax supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsStoredProcedures: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Are subqueries in comparison expressions supported?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsSubqueriesInComparisons: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Are subqueries in 'exists' expressions supported?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsSubqueriesInExists: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Are subqueries in 'in' statements supported?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsSubqueriesInIns: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Are subqueries in quantified expressions supported?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsSubqueriesInQuantifieds: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Are correlated subqueries supported?
+  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsCorrelatedSubqueries: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is SQL UNION supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsUnion: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is SQL UNION ALL supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsUnionAll: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Can cursors remain open across commits?
+  @return <code>true</code> if cursors always remain open;
+        <code>false</code> if they might not remain open
+}
+function TZOracleDatabaseMetadata.SupportsOpenCursorsAcrossCommit: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can cursors remain open across rollbacks?
+  @return <code>true</code> if cursors always remain open;
+        <code>false</code> if they might not remain open
+}
+function TZOracleDatabaseMetadata.SupportsOpenCursorsAcrossRollback: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can statements remain open across commits?
+  @return <code>true</code> if statements always remain open;
+        <code>false</code> if they might not remain open
+}
+function TZOracleDatabaseMetadata.SupportsOpenStatementsAcrossCommit: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can statements remain open across rollbacks?
+  @return <code>true</code> if statements always remain open;
+        <code>false</code> if they might not remain open
+}
+function TZOracleDatabaseMetadata.SupportsOpenStatementsAcrossRollback: Boolean;
+begin
+  Result := False;
+end;
+
+//----------------------------------------------------------------------
+// The following group of methods exposes various limitations
+// based on the target database with the current driver.
+// Unless otherwise specified, a result of zero means there is no
+// limit, or the limit is not known.
+
+{**
+  How many hex characters can you have in an inline binary literal?
+  @return max binary literal length in hex characters;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZOracleDatabaseMetadata.GetMaxBinaryLiteralLength: Integer;
+begin
+  Result := 1000;
+end;
+
+{**
+  What's the max length for a character literal?
+  @return max literal length;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZOracleDatabaseMetadata.GetMaxCharLiteralLength: Integer;
+begin
+  Result := 2000;
+end;
+
+{**
+  What's the limit on column name length?
+  @return max column name length;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZOracleDatabaseMetadata.GetMaxColumnNameLength: Integer;
+begin
+  Result := 30;
+end;
+
+{**
+  What's the maximum number of columns in a "GROUP BY" clause?
+  @return max number of columns;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZOracleDatabaseMetadata.GetMaxColumnsInGroupBy: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum number of columns allowed in an index?
+  @return max number of columns;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZOracleDatabaseMetadata.GetMaxColumnsInIndex: Integer;
+begin
+  Result := 32;
+end;
+
+{**
+  What's the maximum number of columns in an "ORDER BY" clause?
+  @return max number of columns;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZOracleDatabaseMetadata.GetMaxColumnsInOrderBy: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum number of columns in a "SELECT" list?
+  @return max number of columns;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZOracleDatabaseMetadata.GetMaxColumnsInSelect: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum number of columns in a table?
+  @return max number of columns;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZOracleDatabaseMetadata.GetMaxColumnsInTable: Integer;
+begin
+  Result := 1000;
+end;
+
+{**
+  How many active connections can we have at a time to this database?
+  @return max number of active connections;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZOracleDatabaseMetadata.GetMaxConnections: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum cursor name length?
+  @return max cursor name length in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZOracleDatabaseMetadata.GetMaxCursorNameLength: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  Retrieves the maximum number of bytes for an index, including all
+  of the parts of the index.
+  @return max index length in bytes, which includes the composite of all
+   the constituent parts of the index;
+   a result of zero means that there is no limit or the limit is not known
+}
+function TZOracleDatabaseMetadata.GetMaxIndexLength: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum length allowed for a schema name?
+  @return max name length in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZOracleDatabaseMetadata.GetMaxSchemaNameLength: Integer;
+begin
+  Result := 30;
+end;
+
+{**
+  What's the maximum length of a procedure name?
+  @return max name length in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZOracleDatabaseMetadata.GetMaxProcedureNameLength: Integer;
+begin
+  Result := 30;
+end;
+
+{**
+  What's the maximum length of a catalog name?
+  @return max name length in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZOracleDatabaseMetadata.GetMaxCatalogNameLength: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum length of a single row?
+  @return max row size in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZOracleDatabaseMetadata.GetMaxRowSize: Integer;
+begin
+  Result := 2000;
+end;
+
+{**
+  Did getMaxRowSize() include LONGVARCHAR and LONGVARBINARY
+  blobs?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.DoesMaxRowSizeIncludeBlobs: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  What's the maximum length of an SQL statement?
+  @return max length in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZOracleDatabaseMetadata.GetMaxStatementLength: Integer;
+begin
+  Result := 65535;
+end;
+
+{**
+  How many active statements can we have open at one time to this
+  database?
+  @return the maximum number of statements that can be open at one time;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZOracleDatabaseMetadata.GetMaxStatements: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum length of a table name?
+  @return max name length in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZOracleDatabaseMetadata.GetMaxTableNameLength: Integer;
+begin
+  Result := 30;
+end;
+
+{**
+  What's the maximum number of tables in a SELECT statement?
+  @return the maximum number of tables allowed in a SELECT statement;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZOracleDatabaseMetadata.GetMaxTablesInSelect: Integer;
+begin
+  Result := 0;
+end;
+
+{**
+  What's the maximum length of a user name?
+  @return max user name length  in bytes;
+       a result of zero means that there is no limit or the limit is not known
+}
+function TZOracleDatabaseMetadata.GetMaxUserNameLength: Integer;
+begin
+  Result := 30;
+end;
+
+//----------------------------------------------------------------------
+
+{**
+  What's the database's default transaction isolation level?  The
+  values are defined in <code>java.sql.Connection</code>.
+  @return the default isolation level
+  @see Connection
+}
+function TZOracleDatabaseMetadata.GetDefaultTransactionIsolation:
+  TZTransactIsolationLevel;
+begin
+  Result := tiReadCommitted;
+end;
+
+{**
+  Are transactions supported? If not, invoking the method
+  <code>commit</code> is a noop and the isolation level is TRANSACTION_NONE.
+  @return <code>true</code> if transactions are supported; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsTransactions: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Does this database support the given transaction isolation level?
+  @param level the values are defined in <code>java.sql.Connection</code>
+  @return <code>true</code> if so; <code>false</code> otherwise
+  @see Connection
+}
+function TZOracleDatabaseMetadata.SupportsTransactionIsolationLevel(
+  Level: TZTransactIsolationLevel): Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Are both data definition and data manipulation statements
+  within a transaction supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.
+  SupportsDataDefinitionAndDataManipulationTransactions: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Are only data manipulation statements within a transaction
+  supported?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.
+  SupportsDataManipulationTransactionsOnly: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Does a data definition statement within a transaction force the
+  transaction to commit?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.DataDefinitionCausesTransactionCommit: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Is a data definition statement within a transaction ignored?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.DataDefinitionIgnoredInTransactions: Boolean;
+begin
+  Result := False;
 end;
 
 {**
@@ -1695,6 +1593,31 @@ begin
       end;
       Close;
     end;
+end;
+
+{**
+  Does the database support the given result set type?
+  @param type defined in <code>java.sql.ResultSet</code>
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsResultSetType(
+  _Type: TZResultSetType): Boolean;
+begin
+  Result := _Type = rtForwardOnly;
+end;
+
+{**
+  Does the database support the concurrency type in combination
+  with the given result set type?
+
+  @param type defined in <code>java.sql.ResultSet</code>
+  @param concurrency type defined in <code>java.sql.ResultSet</code>
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZOracleDatabaseMetadata.SupportsResultSetConcurrency(
+  _Type: TZResultSetType; Concurrency: TZResultSetConcurrency): Boolean;
+begin
+  Result := (_Type = rtForwardOnly) and (Concurrency = rcReadOnly);
 end;
 
 end.

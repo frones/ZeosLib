@@ -1,0 +1,14 @@
+USEUNIT("ZTestCoreAll.cpp");
+USEUNIT("..\..\test\external\TestFrameWork.pas");
+USEUNIT("..\..\test\external\TextTestRunner.pas");
+USEUNIT("..\..\test\core\ZTestVariant.pas");
+USEUNIT("..\..\test\core\ZTestExpression.pas");
+USEUNIT("..\..\test\core\ZTestExprToken.pas");
+USEUNIT("..\..\test\core\ZTestFramework.pas");
+USEUNIT("..\..\test\core\ZTestList.pas");
+USEUNIT("..\..\test\core\ZTestSysUtils.pas");
+USEUNIT("..\..\test\core\ZTestTokenizer.pas");
+//---------------------------------------------------------------------------
+This file is used by the project manager only and should be treated like the project file
+
+main

@@ -2377,7 +2377,7 @@ begin
 		DeleteFile(MemCheckLogFileName);
 	Rename(OutputFile, MemCheckLogFileName);
 	if ShowLogFileWhenUseful and (LeaksList.Count > 0) or CollectStatsAboutObjectAllocation or ComputeMemoryUsageStats or KeepMaxMemoryUsage then
-		WinExec(PAnsiChar(NotepadApp + ' ' + MemCheckLogFileName), sw_Show);
+		WinExec(PChar(NotepadApp + ' ' + MemCheckLogFileName), sw_Show);
 
 	//Release the memory
 	for i := 0 to LeaksList.Count - 1 do

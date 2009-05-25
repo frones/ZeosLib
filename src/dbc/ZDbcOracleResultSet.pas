@@ -58,7 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, Types, ZSysUtils, ZDbcIntfs,
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs,
   ZDbcResultSet, ZPlainOracleDriver, ZDbcResultSetMetadata, ZDbcLogging,
   ZCompatibility, ZDbcOracleUtils;
 
@@ -92,7 +92,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetString(ColumnIndex: Integer): AnsiString; override;
+    function GetString(ColumnIndex: Integer): string; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -193,7 +193,7 @@ var
   Connection: IZOracleConnection;
   CurrentVar: PZSQLVar;
   ColumnCount: ub4;
-  TempColumnName: PAnsiChar;
+  TempColumnName: PChar;
   TempColumnNameLen: Integer;
 begin
   if ResultSetConcurrency = rcUpdatable then
@@ -251,10 +251,8 @@ begin
               CurrentVar.ColType := stShort
             else if CurrentVar.Precision <= 9 then
               CurrentVar.ColType := stInteger
-            else
-              CurrentVar.ColType := stLong;
-          end
-          else
+            else CurrentVar.ColType := stLong;
+          end else
             CurrentVar.ColType := stDouble;
         end;
       SQLT_INT, _SQLT_PLI:
@@ -324,8 +322,7 @@ begin
       Scale := CurrentVar.Scale;
       if (ColumnType = stString) or (ColumnType = stUnicodeString) then
         Precision := CurrentVar.DataSize
-      else
-        Precision := CurrentVar.Precision;
+      else Precision := CurrentVar.Precision;
     end;
 
     ColumnsInfo.Add(ColumnInfo);
@@ -431,10 +428,10 @@ begin
           DecimalSeparator := OldSeparator;
         end;
       SQLT_STR:
-        Result := StrPas(PAnsiChar(SQLVarHolder.Data));
+        Result := StrPas(SQLVarHolder.Data);
       SQLT_LVB, SQLT_LVC:
         begin
-          Result := BufferToStr(PAnsiChar(SQLVarHolder.Data) + SizeOf(Integer),
+          Result := BufferToStr(PChar(SQLVarHolder.Data) + SizeOf(Integer),
             PInteger(SQLVarHolder.Data)^);
         end;
       SQLT_DAT, SQLT_TIMESTAMP:
@@ -448,8 +445,7 @@ begin
           Result := Blob.GetString;
         end;
     end;
-  end
-  else
+  end else
     Result := '';
 end;
 
@@ -481,8 +477,7 @@ begin
           GetAsStringValue(ColumnIndex, SQLVarHolder), 0));
       end;
     end;
-  end
-  else
+  end else
     Result := 0;
 end;
 
@@ -514,8 +509,7 @@ begin
           GetAsStringValue(ColumnIndex, SQLVarHolder), 0);
       end;
     end;
-  end
-  else
+  end else
     Result := 0;
 end;
 
@@ -558,10 +552,8 @@ begin
 //            CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, '');
             if Status = OCI_SUCCESS then
               Result := EncodeDate(Year, Month, Day)
-            else
-              Result := 0;
-          end
-          else
+            else Result := 0;
+          end else
             Result := 0;
           if SQLVarHolder.ColType in [stTime, stTimestamp] then
           begin
@@ -591,8 +583,7 @@ begin
           GetAsStringValue(ColumnIndex, SQLVarHolder));
       end;
     end;
-  end
-  else
+  end else
     Result := 0;
 end;
 
@@ -605,7 +596,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZOracleResultSet.GetString(ColumnIndex: Integer): AnsiString;
+function TZOracleResultSet.GetString(ColumnIndex: Integer): string;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -849,8 +840,7 @@ begin
   begin
     if CurrentVar.Indicator >= 0 then
       LobLocator := PPOCIDescriptor(CurrentVar.Data)^
-    else
-      LobLocator := nil;
+    else LobLocator := nil;
 
     Connection := GetStatement.GetConnection as IZOracleConnection;
     Result := TZOracleBlob.Create(FPlainDriver, nil, 0, Connection, LobLocator,
@@ -869,8 +859,7 @@ begin
         if Assigned(Stream) then
           Stream.Free;
       end;
-    end
-    else
+    end else
       Result := TZAbstractBlob.CreateWithStream(nil);
   end;
 end;
@@ -991,8 +980,7 @@ begin
 
   if FBlobType = stBinaryStream then
     TempBlobType := OCI_TEMP_BLOB
-  else
-    TempBlobType := OCI_TEMP_CLOB;
+  else TempBlobType := OCI_TEMP_CLOB;
 
   Status := FPlainDriver.LobCreateTemporary(Connection.GetContextHandle,
     Connection.GetErrorHandle, FLobLocator, OCI_DEFAULT, OCI_DEFAULT,
@@ -1009,7 +997,7 @@ end;
 procedure TZOracleBlob.ReadBlob;
 var
   Status: Integer;
-  Buffer: array[0..1024] of AnsiChar;
+  Buffer: array[0..1024] of Char;
   ReadNum, Offset: ub4;
   ReadStream: TMemoryStream;
   Connection: IZOracleConnection;

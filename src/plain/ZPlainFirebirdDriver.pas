@@ -1,7 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{           Native Plain Drivers for Firebird             }
+{           Native Plain Drivers for Interbase            }
 {                                                         }
 {        Originally written by Sergey Seroukhov           }
 {                                                         }
@@ -87,51 +87,51 @@ type
     procedure Initialize;
 
     function isc_attach_database (status_vector: PISC_STATUS;
-      db_name_length: Short; db_name: PAnsiChar; db_handle: PISC_DB_HANDLE;
-      parm_buffer_length: Short; parm_buffer: PAnsiChar): ISC_STATUS;
+      db_name_length: Short; db_name: PChar; db_handle: PISC_DB_HANDLE;
+      parm_buffer_length: Short; parm_buffer: PChar): ISC_STATUS;
     function isc_detach_database(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE): ISC_STATUS;
     function isc_drop_database(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE): ISC_STATUS;
     function isc_database_info(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; item_list_buffer_length: Short;
-      item_list_buffer: PAnsiChar; result_buffer_length: Short;
-      result_buffer: PAnsiChar): ISC_STATUS;
+      item_list_buffer: PChar; result_buffer_length: Short;
+      result_buffer: PChar): ISC_STATUS;
     function isc_transaction_info(status_vector: PISC_STATUS;
       tr_handle: PISC_TR_HANDLE; item_list_buffer_length: Short;
-      item_list_buffer: PAnsiChar; result_buffer_length: Short;
-      result_buffer: PAnsiChar): ISC_STATUS;
+      item_list_buffer: PChar; result_buffer_length: Short;
+      result_buffer: PChar): ISC_STATUS;
   function isc_array_gen_sdl(status_vector: PISC_STATUS;
       isc_array_desc: PISC_ARRAY_DESC; isc_arg3: PShort;
-      isc_arg4: PAnsiChar; isc_arg5: PShort): ISC_STATUS;
+      isc_arg4: PChar; isc_arg5: PShort): ISC_STATUS;
     function isc_array_get_slice(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
       array_id: PISC_QUAD; descriptor: PISC_ARRAY_DESC;
       dest_array: PVoid; slice_length: ISC_LONG): ISC_STATUS;
     function isc_array_lookup_bounds(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
-      table_name, column_name: PAnsiChar;
+      table_name, column_name: PChar;
       descriptor: PISC_ARRAY_DESC): ISC_STATUS;
     function isc_array_lookup_desc(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
-      table_name, column_name: PAnsiChar;
+      table_name, column_name: PChar;
       descriptor: PISC_ARRAY_DESC): ISC_STATUS;
     function isc_array_set_desc(status_vector: PISC_STATUS;
-      table_name: PAnsiChar; column_name: PAnsiChar;
+      table_name: PChar; column_name: PChar;
       sql_dtype, sql_length, sql_dimensions: PShort;
       descriptor: PISC_ARRAY_DESC): ISC_STATUS;
     function isc_array_put_slice(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
       array_id: PISC_QUAD; descriptor: PISC_ARRAY_DESC;
       source_array: PVoid; slice_length: PISC_LONG): ISC_STATUS;
-    function isc_free(isc_arg1: PAnsiChar): ISC_LONG;
+    function isc_free(isc_arg1: PChar): ISC_LONG;
     function isc_sqlcode(status_vector: PISC_STATUS): ISC_LONG;
-    procedure isc_sql_interprete(sqlcode: Short; buffer: PAnsiChar;
+    procedure isc_sql_interprete(sqlcode: Short; buffer: PChar;
       buffer_length: Short);
-    function isc_interprete(buffer: PAnsiChar; status_vector: PPISC_STATUS): ISC_STATUS;
+    function isc_interprete(buffer: PChar; status_vector: PPISC_STATUS): ISC_STATUS;
     function isc_start_transaction(status_vector: PISC_STATUS;
       tran_handle: PISC_TR_HANDLE; db_handle_count: Short;
-      db_handle: PISC_DB_HANDLE; tpb_length: Word; tpb_address: PAnsiChar): ISC_STATUS;
+      db_handle: PISC_DB_HANDLE; tpb_length: Word; tpb_address: PChar): ISC_STATUS;
     function isc_start_multiple(status_vector: PISC_STATUS;
       tran_handle: PISC_TR_HANDLE; db_handle_count: Short;
       teb_vector_address: PISC_TEB): ISC_STATUS;
@@ -159,48 +159,48 @@ type
       in_xsqlda, out_xsqlda: PXSQLDA): ISC_STATUS;
     function isc_dsql_execute_immediate(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE; length: Word;
-      statement: PAnsiChar; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
+      statement: PChar; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
     function isc_dsql_fetch(status_vector: PISC_STATUS;
       stmt_handle: PISC_STMT_HANDLE; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
     function isc_dsql_free_statement(status_vector: PISC_STATUS;
       stmt_handle: PISC_STMT_HANDLE; options: Word): ISC_STATUS;
     function isc_dsql_prepare(status_vector: PISC_STATUS;
       tran_handle: PISC_TR_HANDLE; stmt_handle: PISC_STMT_HANDLE;
-      length: Word; statement: PAnsiChar; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
+      length: Word; statement: PChar; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
     function isc_dsql_set_cursor_name(status_vector: PISC_STATUS;
-      stmt_handle: PISC_STMT_HANDLE; cursor_name: PAnsiChar; _type: Word): ISC_STATUS;
+      stmt_handle: PISC_STMT_HANDLE; cursor_name: PChar; _type: Word): ISC_STATUS;
     function isc_dsql_sql_info(status_vector: PISC_STATUS;
-      stmt_handle: PISC_STMT_HANDLE; item_length: Short; items: PAnsiChar;
-      buffer_length: Short; buffer: PAnsiChar): ISC_STATUS;
+      stmt_handle: PISC_STMT_HANDLE; item_length: Short; items: PChar;
+      buffer_length: Short; buffer: PChar): ISC_STATUS;
     function isc_open_blob2(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
       blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
-      bpb_buffer: PAnsiChar): ISC_STATUS;
+      bpb_buffer: PChar): ISC_STATUS;
     function isc_create_blob2(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
       blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
-      bpb_address: PAnsiChar): ISC_STATUS;
+      bpb_address: PChar): ISC_STATUS;
     function isc_blob_info(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE; item_list_buffer_length: Short;
-      item_list_buffer: PAnsiChar; result_buffer_length: Short; result_buffer: PAnsiChar): PISC_STATUS;
+      item_list_buffer: PChar; result_buffer_length: Short; result_buffer: PChar): PISC_STATUS;
     function isc_close_blob(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE): ISC_STATUS;
     function isc_cancel_blob(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE): ISC_STATUS;
     function isc_get_segment(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE; actual_seg_length: PWord;
-      seg_buffer_length: Word; seg_buffer: PAnsiChar): ISC_STATUS;
+      seg_buffer_length: Word; seg_buffer: PChar): ISC_STATUS;
     function isc_put_segment(status_vector: PISC_STATUS;
-      blob_handle: PISC_BLOB_HANDLE; seg_buffer_len: Word; seg_buffer: PAnsiChar): ISC_STATUS;
-    function isc_event_block(event_buffer: PPAnsiChar; result_buffer: PPAnsiChar;
-      id_count: Word; event_list: array of PAnsiChar): ISC_LONG;
+      blob_handle: PISC_BLOB_HANDLE; seg_buffer_len: Word; seg_buffer: PChar): ISC_STATUS;
+    function isc_event_block(event_buffer: PPChar; result_buffer: PPChar;
+      id_count: Word; event_list: array of PChar): ISC_LONG;
     procedure isc_event_counts(status_vector: PISC_STATUS;
-      buffer_length: Short; event_buffer: PAnsiChar; result_buffer: PAnsiChar);
+      buffer_length: Short; event_buffer: PChar; result_buffer: PChar);
     function isc_cancel_events(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; event_id: PISC_LONG): ISC_STATUS;
     function isc_que_events(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; event_id: PISC_LONG; length: Short;
-      event_buffer: PAnsiChar; event_function: TISC_CALLBACK;
+      event_buffer: PChar; event_function: TISC_CALLBACK;
       event_function_arg: PVoid): ISC_STATUS;
     procedure isc_decode_date(ib_date: PISC_QUAD; tm_date: PCTimeStructure);
     procedure isc_encode_date(tm_date: PCTimeStructure; ib_date: PISC_QUAD);
@@ -215,7 +215,7 @@ type
       ib_time: PISC_TIME);
     procedure isc_encode_timestamp(tm_date: PCTimeStructure;
       ib_timestamp: PISC_TIMESTAMP);
-    function isc_vax_integer(buffer: PAnsiChar; length: Short): ISC_LONG;
+    function isc_vax_integer(buffer: PChar; length: Short): ISC_LONG;
   end;
 
   {** Represents an interface to Interbase 6+ native API. }
@@ -234,51 +234,51 @@ type
     procedure Initialize;virtual;
 
     function isc_attach_database (status_vector: PISC_STATUS;
-      db_name_length: Short; db_name: PAnsiChar; db_handle: PISC_DB_HANDLE;
-      parm_buffer_length: Short; parm_buffer: PAnsiChar): ISC_STATUS;
+      db_name_length: Short; db_name: PChar; db_handle: PISC_DB_HANDLE;
+      parm_buffer_length: Short; parm_buffer: PChar): ISC_STATUS;
     function isc_detach_database(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE): ISC_STATUS;
     function isc_drop_database(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE): ISC_STATUS;
     function isc_database_info(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; item_list_buffer_length: Short;
-      item_list_buffer: PAnsiChar; result_buffer_length: Short;
-      result_buffer: PAnsiChar): ISC_STATUS;
+      item_list_buffer: PChar; result_buffer_length: Short;
+      result_buffer: PChar): ISC_STATUS;
     function isc_transaction_info(status_vector: PISC_STATUS;
       tr_handle: PISC_TR_HANDLE; item_list_buffer_length: Short;
-      item_list_buffer: PAnsiChar; result_buffer_length: Short;
-      result_buffer: PAnsiChar): ISC_STATUS;
+      item_list_buffer: PChar; result_buffer_length: Short;
+      result_buffer: PChar): ISC_STATUS;
     function isc_array_gen_sdl(status_vector: PISC_STATUS;
       isc_array_desc: PISC_ARRAY_DESC; isc_arg3: PShort;
-      isc_arg4: PAnsiChar; isc_arg5: PShort): ISC_STATUS;
+      isc_arg4: PChar; isc_arg5: PShort): ISC_STATUS;
     function isc_array_get_slice(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
       array_id: PISC_QUAD; descriptor: PISC_ARRAY_DESC;
       dest_array: PVoid; slice_length: ISC_LONG): ISC_STATUS;
     function isc_array_lookup_bounds(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
-      table_name, column_name: PAnsiChar;
+      table_name, column_name: PChar;
       descriptor: PISC_ARRAY_DESC): ISC_STATUS;
     function isc_array_lookup_desc(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
-      table_name, column_name: PAnsiChar;
+      table_name, column_name: PChar;
       descriptor: PISC_ARRAY_DESC): ISC_STATUS;
     function isc_array_set_desc(status_vector: PISC_STATUS;
-      table_name: PAnsiChar; column_name: PAnsiChar;
+      table_name: PChar; column_name: PChar;
       sql_dtype, sql_length, sql_dimensions: PShort;
       descriptor: PISC_ARRAY_DESC): ISC_STATUS;
     function isc_array_put_slice(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
       array_id: PISC_QUAD; descriptor: PISC_ARRAY_DESC;
       source_array: PVoid; slice_length: PISC_LONG): ISC_STATUS;
-    function isc_free(isc_arg1: PAnsiChar): ISC_LONG;
+    function isc_free(isc_arg1: PChar): ISC_LONG;
     function isc_sqlcode(status_vector: PISC_STATUS): ISC_LONG;
-    procedure isc_sql_interprete(sqlcode: Short; buffer: PAnsiChar;
+    procedure isc_sql_interprete(sqlcode: Short; buffer: PChar;
       buffer_length: Short);
-    function isc_interprete(buffer: PAnsiChar; status_vector: PPISC_STATUS): ISC_STATUS;
+    function isc_interprete(buffer: PChar; status_vector: PPISC_STATUS): ISC_STATUS;
     function isc_start_transaction(status_vector: PISC_STATUS;
       tran_handle: PISC_TR_HANDLE; db_handle_count: Short;
-      db_handle: PISC_DB_HANDLE; tpb_length: Word; tpb_address: PAnsiChar): ISC_STATUS;
+      db_handle: PISC_DB_HANDLE; tpb_length: Word; tpb_address: PChar): ISC_STATUS;
     function isc_start_multiple(status_vector: PISC_STATUS;
       tran_handle: PISC_TR_HANDLE; db_handle_count: Short;
       teb_vector_address: PISC_TEB): ISC_STATUS;
@@ -306,48 +306,48 @@ type
       in_xsqlda, out_xsqlda: PXSQLDA): ISC_STATUS;
     function isc_dsql_execute_immediate(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE; length: Word;
-      statement: PAnsiChar; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
+      statement: PChar; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
     function isc_dsql_fetch(status_vector: PISC_STATUS;
       stmt_handle: PISC_STMT_HANDLE; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
     function isc_dsql_free_statement(status_vector: PISC_STATUS;
       stmt_handle: PISC_STMT_HANDLE; options: Word): ISC_STATUS;
     function isc_dsql_prepare(status_vector: PISC_STATUS;
       tran_handle: PISC_TR_HANDLE; stmt_handle: PISC_STMT_HANDLE;
-      length: Word; statement: PAnsiChar; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
+      length: Word; statement: PChar; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
     function isc_dsql_set_cursor_name(status_vector: PISC_STATUS;
-      stmt_handle: PISC_STMT_HANDLE; cursor_name: PAnsiChar; _type: Word): ISC_STATUS;
+      stmt_handle: PISC_STMT_HANDLE; cursor_name: PChar; _type: Word): ISC_STATUS;
     function isc_dsql_sql_info(status_vector: PISC_STATUS;
-      stmt_handle: PISC_STMT_HANDLE; item_length: Short; items: PAnsiChar;
-      buffer_length: Short; buffer: PAnsiChar): ISC_STATUS;
+      stmt_handle: PISC_STMT_HANDLE; item_length: Short; items: PChar;
+      buffer_length: Short; buffer: PChar): ISC_STATUS;
     function isc_open_blob2(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
       blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
-      bpb_buffer: PAnsiChar): ISC_STATUS;
+      bpb_buffer: PChar): ISC_STATUS;
     function isc_create_blob2(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
       blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
-      bpb_address: PAnsiChar): ISC_STATUS;
+      bpb_address: PChar): ISC_STATUS;
     function isc_blob_info(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE; item_list_buffer_length: Short;
-      item_list_buffer: PAnsiChar; result_buffer_length: Short; result_buffer: PAnsiChar): PISC_STATUS;
+      item_list_buffer: PChar; result_buffer_length: Short; result_buffer: PChar): PISC_STATUS;
     function isc_close_blob(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE): ISC_STATUS;
     function isc_cancel_blob(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE): ISC_STATUS;
     function isc_get_segment(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE; actual_seg_length: PWord;
-      seg_buffer_length: Word; seg_buffer: PAnsiChar): ISC_STATUS;
+      seg_buffer_length: Word; seg_buffer: PChar): ISC_STATUS;
     function isc_put_segment(status_vector: PISC_STATUS;
-      blob_handle: PISC_BLOB_HANDLE; seg_buffer_len: Word; seg_buffer: PAnsiChar): ISC_STATUS;
-    function isc_event_block(event_buffer: PPAnsiChar; result_buffer: PPAnsiChar;
-      id_count: Word; event_list: array of PAnsiChar): ISC_LONG;
+      blob_handle: PISC_BLOB_HANDLE; seg_buffer_len: Word; seg_buffer: PChar): ISC_STATUS;
+    function isc_event_block(event_buffer: PPChar; result_buffer: PPChar;
+      id_count: Word; event_list: array of PChar): ISC_LONG;
     procedure isc_event_counts(status_vector: PISC_STATUS;
-      buffer_length: Short; event_buffer: PAnsiChar; result_buffer: PAnsiChar);
+      buffer_length: Short; event_buffer: PChar; result_buffer: PChar);
     function isc_cancel_events(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; event_id: PISC_LONG): ISC_STATUS;
     function isc_que_events(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; event_id: PISC_LONG; length: Short;
-      event_buffer: PAnsiChar; event_function: TISC_CALLBACK;
+      event_buffer: PChar; event_function: TISC_CALLBACK;
       event_function_arg: PVoid): ISC_STATUS;
     procedure isc_decode_date(ib_date: PISC_QUAD; tm_date: PCTimeStructure);
     procedure isc_encode_date(tm_date: PCTimeStructure; ib_date: PISC_QUAD);
@@ -362,7 +362,7 @@ type
       ib_time: PISC_TIME);
     procedure isc_encode_timestamp(tm_date: PCTimeStructure;
       ib_timestamp: PISC_TIMESTAMP);
-    function isc_vax_integer(buffer: PAnsiChar; length: Short): ISC_LONG;
+    function isc_vax_integer(buffer: PChar; length: Short): ISC_LONG;
   end;
 
   TZFirebirdD15PlainDriver = class (TZFirebird15PlainDriver)
@@ -389,51 +389,51 @@ type
     procedure Initialize;virtual;
 
     function isc_attach_database (status_vector: PISC_STATUS;
-      db_name_length: Short; db_name: PAnsiChar; db_handle: PISC_DB_HANDLE;
-      parm_buffer_length: Short; parm_buffer: PAnsiChar): ISC_STATUS;
+      db_name_length: Short; db_name: PChar; db_handle: PISC_DB_HANDLE;
+      parm_buffer_length: Short; parm_buffer: PChar): ISC_STATUS;
     function isc_detach_database(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE): ISC_STATUS;
     function isc_drop_database(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE): ISC_STATUS;
     function isc_database_info(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; item_list_buffer_length: Short;
-      item_list_buffer: PAnsiChar; result_buffer_length: Short;
-      result_buffer: PAnsiChar): ISC_STATUS;
+      item_list_buffer: PChar; result_buffer_length: Short;
+      result_buffer: PChar): ISC_STATUS;
     function isc_transaction_info(status_vector: PISC_STATUS;
       tr_handle: PISC_TR_HANDLE; item_list_buffer_length: Short;
-      item_list_buffer: PAnsiChar; result_buffer_length: Short;
-      result_buffer: PAnsiChar): ISC_STATUS;
+      item_list_buffer: PChar; result_buffer_length: Short;
+      result_buffer: PChar): ISC_STATUS;
     function isc_array_gen_sdl(status_vector: PISC_STATUS;
       isc_array_desc: PISC_ARRAY_DESC; isc_arg3: PShort;
-      isc_arg4: PAnsiChar; isc_arg5: PShort): ISC_STATUS;
+      isc_arg4: PChar; isc_arg5: PShort): ISC_STATUS;
     function isc_array_get_slice(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
       array_id: PISC_QUAD; descriptor: PISC_ARRAY_DESC;
       dest_array: PVoid; slice_length: ISC_LONG): ISC_STATUS;
     function isc_array_lookup_bounds(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
-      table_name, column_name: PAnsiChar;
+      table_name, column_name: PChar;
       descriptor: PISC_ARRAY_DESC): ISC_STATUS;
     function isc_array_lookup_desc(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
-      table_name, column_name: PAnsiChar;
+      table_name, column_name: PChar;
       descriptor: PISC_ARRAY_DESC): ISC_STATUS;
     function isc_array_set_desc(status_vector: PISC_STATUS;
-      table_name: PAnsiChar; column_name: PAnsiChar;
+      table_name: PChar; column_name: PChar;
       sql_dtype, sql_length, sql_dimensions: PShort;
       descriptor: PISC_ARRAY_DESC): ISC_STATUS;
     function isc_array_put_slice(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
       array_id: PISC_QUAD; descriptor: PISC_ARRAY_DESC;
       source_array: PVoid; slice_length: PISC_LONG): ISC_STATUS;
-    function isc_free(isc_arg1: PAnsiChar): ISC_LONG;
+    function isc_free(isc_arg1: PChar): ISC_LONG;
     function isc_sqlcode(status_vector: PISC_STATUS): ISC_LONG;
-    procedure isc_sql_interprete(sqlcode: Short; buffer: PAnsiChar;
+    procedure isc_sql_interprete(sqlcode: Short; buffer: PChar;
       buffer_length: Short);
-    function isc_interprete(buffer: PAnsiChar; status_vector: PPISC_STATUS): ISC_STATUS;
+    function isc_interprete(buffer: PChar; status_vector: PPISC_STATUS): ISC_STATUS;
     function isc_start_transaction(status_vector: PISC_STATUS;
       tran_handle: PISC_TR_HANDLE; db_handle_count: Short;
-      db_handle: PISC_DB_HANDLE; tpb_length: Word; tpb_address: PAnsiChar): ISC_STATUS;
+      db_handle: PISC_DB_HANDLE; tpb_length: Word; tpb_address: PChar): ISC_STATUS;
     function isc_start_multiple(status_vector: PISC_STATUS;
       tran_handle: PISC_TR_HANDLE; db_handle_count: Short;
       teb_vector_address: PISC_TEB): ISC_STATUS;
@@ -461,48 +461,48 @@ type
       in_xsqlda, out_xsqlda: PXSQLDA): ISC_STATUS;
     function isc_dsql_execute_immediate(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE; length: Word;
-      statement: PAnsiChar; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
+      statement: PChar; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
     function isc_dsql_fetch(status_vector: PISC_STATUS;
       stmt_handle: PISC_STMT_HANDLE; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
     function isc_dsql_free_statement(status_vector: PISC_STATUS;
       stmt_handle: PISC_STMT_HANDLE; options: Word): ISC_STATUS;
     function isc_dsql_prepare(status_vector: PISC_STATUS;
       tran_handle: PISC_TR_HANDLE; stmt_handle: PISC_STMT_HANDLE;
-      length: Word; statement: PAnsiChar; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
+      length: Word; statement: PChar; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
     function isc_dsql_set_cursor_name(status_vector: PISC_STATUS;
-      stmt_handle: PISC_STMT_HANDLE; cursor_name: PAnsiChar; _type: Word): ISC_STATUS;
+      stmt_handle: PISC_STMT_HANDLE; cursor_name: PChar; _type: Word): ISC_STATUS;
     function isc_dsql_sql_info(status_vector: PISC_STATUS;
-      stmt_handle: PISC_STMT_HANDLE; item_length: Short; items: PAnsiChar;
-      buffer_length: Short; buffer: PAnsiChar): ISC_STATUS;
+      stmt_handle: PISC_STMT_HANDLE; item_length: Short; items: PChar;
+      buffer_length: Short; buffer: PChar): ISC_STATUS;
     function isc_open_blob2(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
       blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
-      bpb_buffer: PAnsiChar): ISC_STATUS;
+      bpb_buffer: PChar): ISC_STATUS;
     function isc_create_blob2(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
       blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
-      bpb_address: PAnsiChar): ISC_STATUS;
+      bpb_address: PChar): ISC_STATUS;
     function isc_blob_info(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE; item_list_buffer_length: Short;
-      item_list_buffer: PAnsiChar; result_buffer_length: Short; result_buffer: PAnsiChar): PISC_STATUS;
+      item_list_buffer: PChar; result_buffer_length: Short; result_buffer: PChar): PISC_STATUS;
     function isc_close_blob(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE): ISC_STATUS;
     function isc_cancel_blob(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE): ISC_STATUS;
     function isc_get_segment(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE; actual_seg_length: PWord;
-      seg_buffer_length: Word; seg_buffer: PAnsiChar): ISC_STATUS;
+      seg_buffer_length: Word; seg_buffer: PChar): ISC_STATUS;
     function isc_put_segment(status_vector: PISC_STATUS;
-      blob_handle: PISC_BLOB_HANDLE; seg_buffer_len: Word; seg_buffer: PAnsiChar): ISC_STATUS;
-    function isc_event_block(event_buffer: PPAnsiChar; result_buffer: PPAnsiChar;
-      id_count: Word; event_list: array of PAnsiChar): ISC_LONG;
+      blob_handle: PISC_BLOB_HANDLE; seg_buffer_len: Word; seg_buffer: PChar): ISC_STATUS;
+    function isc_event_block(event_buffer: PPChar; result_buffer: PPChar;
+      id_count: Word; event_list: array of PChar): ISC_LONG;
     procedure isc_event_counts(status_vector: PISC_STATUS;
-      buffer_length: Short; event_buffer: PAnsiChar; result_buffer: PAnsiChar);
+      buffer_length: Short; event_buffer: PChar; result_buffer: PChar);
     function isc_cancel_events(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; event_id: PISC_LONG): ISC_STATUS;
     function isc_que_events(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; event_id: PISC_LONG; length: Short;
-      event_buffer: PAnsiChar; event_function: TISC_CALLBACK;
+      event_buffer: PChar; event_function: TISC_CALLBACK;
       event_function_arg: PVoid): ISC_STATUS;
     procedure isc_decode_date(ib_date: PISC_QUAD; tm_date: PCTimeStructure);
     procedure isc_encode_date(tm_date: PCTimeStructure; ib_date: PISC_QUAD);
@@ -517,7 +517,7 @@ type
       ib_time: PISC_TIME);
     procedure isc_encode_timestamp(tm_date: PCTimeStructure;
       ib_timestamp: PISC_TIMESTAMP);
-    function isc_vax_integer(buffer: PAnsiChar; length: Short): ISC_LONG;
+    function isc_vax_integer(buffer: PChar; length: Short): ISC_LONG;
   end;
 
   TZFirebirdD20PlainDriver = class (TZFirebird20PlainDriver)
@@ -543,51 +543,51 @@ type
     procedure Initialize;virtual;
 
     function isc_attach_database (status_vector: PISC_STATUS;
-      db_name_length: Short; db_name: PAnsiChar; db_handle: PISC_DB_HANDLE;
-      parm_buffer_length: Short; parm_buffer: PAnsiChar): ISC_STATUS;
+      db_name_length: Short; db_name: PChar; db_handle: PISC_DB_HANDLE;
+      parm_buffer_length: Short; parm_buffer: PChar): ISC_STATUS;
     function isc_detach_database(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE): ISC_STATUS;
     function isc_drop_database(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE): ISC_STATUS;
     function isc_database_info(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; item_list_buffer_length: Short;
-      item_list_buffer: PAnsiChar; result_buffer_length: Short;
-      result_buffer: PAnsiChar): ISC_STATUS;
+      item_list_buffer: PChar; result_buffer_length: Short;
+      result_buffer: PChar): ISC_STATUS;
     function isc_transaction_info(status_vector: PISC_STATUS;
       tr_handle: PISC_TR_HANDLE; item_list_buffer_length: Short;
-      item_list_buffer: PAnsiChar; result_buffer_length: Short;
-      result_buffer: PAnsiChar): ISC_STATUS;
+      item_list_buffer: PChar; result_buffer_length: Short;
+      result_buffer: PChar): ISC_STATUS;
     function isc_array_gen_sdl(status_vector: PISC_STATUS;
       isc_array_desc: PISC_ARRAY_DESC; isc_arg3: PShort;
-      isc_arg4: PAnsiChar; isc_arg5: PShort): ISC_STATUS;
+      isc_arg4: PChar; isc_arg5: PShort): ISC_STATUS;
     function isc_array_get_slice(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
       array_id: PISC_QUAD; descriptor: PISC_ARRAY_DESC;
       dest_array: PVoid; slice_length: ISC_LONG): ISC_STATUS;
     function isc_array_lookup_bounds(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
-      table_name, column_name: PAnsiChar;
+      table_name, column_name: PChar;
       descriptor: PISC_ARRAY_DESC): ISC_STATUS;
     function isc_array_lookup_desc(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
-      table_name, column_name: PAnsiChar;
+      table_name, column_name: PChar;
       descriptor: PISC_ARRAY_DESC): ISC_STATUS;
     function isc_array_set_desc(status_vector: PISC_STATUS;
-      table_name: PAnsiChar; column_name: PAnsiChar;
+      table_name: PChar; column_name: PChar;
       sql_dtype, sql_length, sql_dimensions: PShort;
       descriptor: PISC_ARRAY_DESC): ISC_STATUS;
     function isc_array_put_slice(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
       array_id: PISC_QUAD; descriptor: PISC_ARRAY_DESC;
       source_array: PVoid; slice_length: PISC_LONG): ISC_STATUS;
-    function isc_free(isc_arg1: PAnsiChar): ISC_LONG;
+    function isc_free(isc_arg1: PChar): ISC_LONG;
     function isc_sqlcode(status_vector: PISC_STATUS): ISC_LONG;
-    procedure isc_sql_interprete(sqlcode: Short; buffer: PAnsiChar;
+    procedure isc_sql_interprete(sqlcode: Short; buffer: PChar;
       buffer_length: Short);
-    function isc_interprete(buffer: PAnsiChar; status_vector: PPISC_STATUS): ISC_STATUS;
+    function isc_interprete(buffer: PChar; status_vector: PPISC_STATUS): ISC_STATUS;
     function isc_start_transaction(status_vector: PISC_STATUS;
       tran_handle: PISC_TR_HANDLE; db_handle_count: Short;
-      db_handle: PISC_DB_HANDLE; tpb_length: Word; tpb_address: PAnsiChar): ISC_STATUS;
+      db_handle: PISC_DB_HANDLE; tpb_length: Word; tpb_address: PChar): ISC_STATUS;
     function isc_start_multiple(status_vector: PISC_STATUS;
       tran_handle: PISC_TR_HANDLE; db_handle_count: Short;
       teb_vector_address: PISC_TEB): ISC_STATUS;
@@ -615,48 +615,48 @@ type
       in_xsqlda, out_xsqlda: PXSQLDA): ISC_STATUS;
     function isc_dsql_execute_immediate(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE; length: Word;
-      statement: PAnsiChar; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
+      statement: PChar; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
     function isc_dsql_fetch(status_vector: PISC_STATUS;
       stmt_handle: PISC_STMT_HANDLE; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
     function isc_dsql_free_statement(status_vector: PISC_STATUS;
       stmt_handle: PISC_STMT_HANDLE; options: Word): ISC_STATUS;
     function isc_dsql_prepare(status_vector: PISC_STATUS;
       tran_handle: PISC_TR_HANDLE; stmt_handle: PISC_STMT_HANDLE;
-      length: Word; statement: PAnsiChar; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
+      length: Word; statement: PChar; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
     function isc_dsql_set_cursor_name(status_vector: PISC_STATUS;
-      stmt_handle: PISC_STMT_HANDLE; cursor_name: PAnsiChar; _type: Word): ISC_STATUS;
+      stmt_handle: PISC_STMT_HANDLE; cursor_name: PChar; _type: Word): ISC_STATUS;
     function isc_dsql_sql_info(status_vector: PISC_STATUS;
-      stmt_handle: PISC_STMT_HANDLE; item_length: Short; items: PAnsiChar;
-      buffer_length: Short; buffer: PAnsiChar): ISC_STATUS;
+      stmt_handle: PISC_STMT_HANDLE; item_length: Short; items: PChar;
+      buffer_length: Short; buffer: PChar): ISC_STATUS;
     function isc_open_blob2(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
       blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
-      bpb_buffer: PAnsiChar): ISC_STATUS;
+      bpb_buffer: PChar): ISC_STATUS;
     function isc_create_blob2(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
       blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
-      bpb_address: PAnsiChar): ISC_STATUS;
+      bpb_address: PChar): ISC_STATUS;
     function isc_blob_info(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE; item_list_buffer_length: Short;
-      item_list_buffer: PAnsiChar; result_buffer_length: Short; result_buffer: PAnsiChar): PISC_STATUS;
+      item_list_buffer: PChar; result_buffer_length: Short; result_buffer: PChar): PISC_STATUS;
     function isc_close_blob(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE): ISC_STATUS;
     function isc_cancel_blob(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE): ISC_STATUS;
     function isc_get_segment(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE; actual_seg_length: PWord;
-      seg_buffer_length: Word; seg_buffer: PAnsiChar): ISC_STATUS;
+      seg_buffer_length: Word; seg_buffer: PChar): ISC_STATUS;
     function isc_put_segment(status_vector: PISC_STATUS;
-      blob_handle: PISC_BLOB_HANDLE; seg_buffer_len: Word; seg_buffer: PAnsiChar): ISC_STATUS;
-    function isc_event_block(event_buffer: PPAnsiChar; result_buffer: PPAnsiChar;
-      id_count: Word; event_list: array of PAnsiChar): ISC_LONG;
+      blob_handle: PISC_BLOB_HANDLE; seg_buffer_len: Word; seg_buffer: PChar): ISC_STATUS;
+    function isc_event_block(event_buffer: PPChar; result_buffer: PPChar;
+      id_count: Word; event_list: array of PChar): ISC_LONG;
     procedure isc_event_counts(status_vector: PISC_STATUS;
-      buffer_length: Short; event_buffer: PAnsiChar; result_buffer: PAnsiChar);
+      buffer_length: Short; event_buffer: PChar; result_buffer: PChar);
     function isc_cancel_events(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; event_id: PISC_LONG): ISC_STATUS;
     function isc_que_events(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; event_id: PISC_LONG; length: Short;
-      event_buffer: PAnsiChar; event_function: TISC_CALLBACK;
+      event_buffer: PChar; event_function: TISC_CALLBACK;
       event_function_arg: PVoid): ISC_STATUS;
     procedure isc_decode_date(ib_date: PISC_QUAD; tm_date: PCTimeStructure);
     procedure isc_encode_date(tm_date: PCTimeStructure; ib_date: PISC_QUAD);
@@ -671,7 +671,7 @@ type
       ib_time: PISC_TIME);
     procedure isc_encode_timestamp(tm_date: PCTimeStructure;
       ib_timestamp: PISC_TIMESTAMP);
-    function isc_vax_integer(buffer: PAnsiChar; length: Short): ISC_LONG;
+    function isc_vax_integer(buffer: PChar; length: Short): ISC_LONG;
   end;
 
   TZFirebirdD21PlainDriver = class (TZFirebird21PlainDriver)
@@ -709,7 +709,7 @@ end;
 
 function TZFirebird10PlainDriver.isc_array_gen_sdl(status_vector: PISC_STATUS;
   isc_array_desc: PISC_ARRAY_DESC; isc_arg3: PShort;
-  isc_arg4: PAnsiChar; isc_arg5: PShort): ISC_STATUS;
+  isc_arg4: PChar; isc_arg5: PShort): ISC_STATUS;
 begin
   Result := ZPlainFirebird10.isc_array_gen_sdl(status_vector, isc_array_desc,
     isc_arg3, isc_arg4, isc_arg5);
@@ -726,7 +726,7 @@ end;
 
 function TZFirebird10PlainDriver.isc_array_lookup_bounds(
   status_vector: PISC_STATUS; db_handle: PISC_DB_HANDLE;
-  trans_handle: PISC_TR_HANDLE; table_name, column_name: PAnsiChar;
+  trans_handle: PISC_TR_HANDLE; table_name, column_name: PChar;
   descriptor: PISC_ARRAY_DESC): ISC_STATUS;
 begin
   Result := ZPlainFirebird10.isc_array_lookup_bounds(status_vector, db_handle,
@@ -735,7 +735,7 @@ end;
 
 function TZFirebird10PlainDriver.isc_array_lookup_desc(
   status_vector: PISC_STATUS; db_handle: PISC_DB_HANDLE;
-  trans_handle: PISC_TR_HANDLE; table_name, column_name: PAnsiChar;
+  trans_handle: PISC_TR_HANDLE; table_name, column_name: PChar;
   descriptor: PISC_ARRAY_DESC): ISC_STATUS;
 begin
   Result := ZPlainFirebird10.isc_array_lookup_desc(status_vector, db_handle,
@@ -752,7 +752,7 @@ begin
 end;
 
 function TZFirebird10PlainDriver.isc_array_set_desc(status_vector: PISC_STATUS;
-  table_name, column_name: PAnsiChar; sql_dtype, sql_length, sql_dimensions: PShort;
+  table_name, column_name: PChar; sql_dtype, sql_length, sql_dimensions: PShort;
   descriptor: PISC_ARRAY_DESC): ISC_STATUS;
 begin
   Result := ZPlainFirebird10.isc_array_set_desc(status_vector, table_name,
@@ -760,8 +760,8 @@ begin
 end;
 
 function TZFirebird10PlainDriver.isc_attach_database(status_vector: PISC_STATUS;
-  db_name_length: Short; db_name: PAnsiChar; db_handle: PISC_DB_HANDLE;
-  parm_buffer_length: Short; parm_buffer: PAnsiChar): ISC_STATUS;
+  db_name_length: Short; db_name: PChar; db_handle: PISC_DB_HANDLE;
+  parm_buffer_length: Short; parm_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird10.isc_attach_database(status_vector, db_name_length,
     db_name, db_handle, parm_buffer_length, parm_buffer);
@@ -769,8 +769,8 @@ end;
 
 function TZFirebird10PlainDriver.isc_blob_info(status_vector: PISC_STATUS;
   blob_handle: PISC_BLOB_HANDLE; item_list_buffer_length: Short;
-  item_list_buffer: PAnsiChar; result_buffer_length: Short;
-  result_buffer: PAnsiChar): PISC_STATUS;
+  item_list_buffer: PChar; result_buffer_length: Short;
+  result_buffer: PChar): PISC_STATUS;
 begin
   Result := PISC_STATUS(ZPlainFirebird10.isc_blob_info(status_vector, blob_handle,
     item_list_buffer_length, item_list_buffer, result_buffer_length,
@@ -811,7 +811,7 @@ end;
 function TZFirebird10PlainDriver.isc_create_blob2(status_vector: PISC_STATUS;
   db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
   blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
-  bpb_address: PAnsiChar): ISC_STATUS;
+  bpb_address: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird10.isc_create_blob2(status_vector, db_handle,
     tran_handle, blob_handle, blob_id, bpb_length, bpb_address);
@@ -819,8 +819,8 @@ end;
 
 function TZFirebird10PlainDriver.isc_database_info(status_vector: PISC_STATUS;
   db_handle: PISC_DB_HANDLE; item_list_buffer_length: Short;
-  item_list_buffer: PAnsiChar; result_buffer_length: Short;
-  result_buffer: PAnsiChar): ISC_STATUS;
+  item_list_buffer: PChar; result_buffer_length: Short;
+  result_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird10.isc_database_info(status_vector, db_handle,
     item_list_buffer_length, item_list_buffer, result_buffer_length,
@@ -829,8 +829,8 @@ end;
 
 function TZFirebird10PlainDriver.isc_transaction_info(status_vector: PISC_STATUS;
   tr_handle: PISC_TR_HANDLE; item_list_buffer_length: Short;
-  item_list_buffer: PAnsiChar; result_buffer_length: Short;
-  result_buffer: PAnsiChar): ISC_STATUS;
+  item_list_buffer: PChar; result_buffer_length: Short;
+  result_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird10.isc_transaction_info(status_vector, tr_handle,
     item_list_buffer_length, item_list_buffer, result_buffer_length,
@@ -914,7 +914,7 @@ end;
 
 function TZFirebird10PlainDriver.isc_dsql_execute_immediate(
   status_vector: PISC_STATUS; db_handle: PISC_DB_HANDLE;
-  tran_handle: PISC_TR_HANDLE; length: Word; statement: PAnsiChar;
+  tran_handle: PISC_TR_HANDLE; length: Word; statement: PChar;
   dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
 begin
   Result := ZPlainFirebird10.isc_dsql_execute_immediate(status_vector,
@@ -947,7 +947,7 @@ end;
 
 function TZFirebird10PlainDriver.isc_dsql_prepare(
   status_vector: PISC_STATUS; tran_handle: PISC_TR_HANDLE;
-  stmt_handle: PISC_STMT_HANDLE; length: Word; statement: PAnsiChar;
+  stmt_handle: PISC_STMT_HANDLE; length: Word; statement: PChar;
   dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
 begin
   Result := ZPlainFirebird10.isc_dsql_prepare(status_vector, tran_handle,
@@ -956,7 +956,7 @@ end;
 
 function TZFirebird10PlainDriver.isc_dsql_set_cursor_name(
   status_vector: PISC_STATUS; stmt_handle: PISC_STMT_HANDLE;
-  cursor_name: PAnsiChar; _type: Word): ISC_STATUS;
+  cursor_name: PChar; _type: Word): ISC_STATUS;
 begin
   Result := ZPlainFirebird10.isc_dsql_set_cursor_name(status_vector,
     stmt_handle, cursor_name, _type);
@@ -964,8 +964,8 @@ end;
 
 function TZFirebird10PlainDriver.isc_dsql_sql_info(
   status_vector: PISC_STATUS; stmt_handle: PISC_STMT_HANDLE;
-  item_length: Short; items: PAnsiChar; buffer_length: Short;
-  buffer: PAnsiChar): ISC_STATUS;
+  item_length: Short; items: PChar; buffer_length: Short;
+  buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird10.isc_dsql_sql_info(status_vector, stmt_handle,
     item_length, items, buffer_length, buffer);
@@ -996,8 +996,8 @@ begin
 end;
 
 function TZFirebird10PlainDriver.isc_event_block(event_buffer,
-  result_buffer: PPAnsiChar; id_count: Word;
-  event_list: array of PAnsiChar): ISC_LONG;
+  result_buffer: PPChar; id_count: Word;
+  event_list: array of PChar): ISC_LONG;
 begin
   Result := ZPlainFirebird10.isc_event_block(event_buffer, result_buffer,
     id_count, event_list);
@@ -1005,13 +1005,13 @@ end;
 
 procedure TZFirebird10PlainDriver.isc_event_counts(
   status_vector: PISC_STATUS; buffer_length: Short; event_buffer,
-  result_buffer: PAnsiChar);
+  result_buffer: PChar);
 begin
   ZPlainFirebird10.isc_event_counts(status_vector, buffer_length,
     event_buffer, result_buffer);
 end;
 
-function TZFirebird10PlainDriver.isc_free(isc_arg1: PAnsiChar): ISC_LONG;
+function TZFirebird10PlainDriver.isc_free(isc_arg1: PChar): ISC_LONG;
 begin
   Result := ZPlainFirebird10.isc_free(isc_arg1);
 end;
@@ -1019,13 +1019,13 @@ end;
 function TZFirebird10PlainDriver.isc_get_segment(
   status_vector: PISC_STATUS; blob_handle: PISC_BLOB_HANDLE;
   actual_seg_length: PWord; seg_buffer_length: Word;
-  seg_buffer: PAnsiChar): ISC_STATUS;
+  seg_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird10.isc_get_segment(status_vector, blob_handle,
     actual_seg_length, seg_buffer_length, seg_buffer);
 end;
 
-function TZFirebird10PlainDriver.isc_interprete(buffer: PAnsiChar;
+function TZFirebird10PlainDriver.isc_interprete(buffer: PChar;
   status_vector: PPISC_STATUS): ISC_STATUS;
 begin
   Result := ZPlainFirebird10.isc_interprete(buffer, status_vector);
@@ -1034,7 +1034,7 @@ end;
 function TZFirebird10PlainDriver.isc_open_blob2(status_vector: PISC_STATUS;
   db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
   blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
-  bpb_buffer: PAnsiChar): ISC_STATUS;
+  bpb_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird10.isc_open_blob2(status_vector, db_handle,
     tran_handle, blob_handle, blob_id, bpb_length, bpb_buffer);
@@ -1042,7 +1042,7 @@ end;
 
 function TZFirebird10PlainDriver.isc_put_segment(
   status_vector: PISC_STATUS; blob_handle: PISC_BLOB_HANDLE;
-  seg_buffer_len: Word; seg_buffer: PAnsiChar): ISC_STATUS;
+  seg_buffer_len: Word; seg_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird10.isc_put_segment(status_vector, blob_handle,
     seg_buffer_len, seg_buffer);
@@ -1050,7 +1050,7 @@ end;
 
 function TZFirebird10PlainDriver.isc_que_events(status_vector: PISC_STATUS;
   db_handle: PISC_DB_HANDLE; event_id: PISC_LONG; length: Short;
-  event_buffer: PAnsiChar; event_function: TISC_CALLBACK;
+  event_buffer: PChar; event_function: TISC_CALLBACK;
   event_function_arg: PVoid): ISC_STATUS;
 begin
   Result := ZPlainFirebird10.isc_que_events(status_vector, db_handle,
@@ -1064,7 +1064,7 @@ begin
 end;
 
 procedure TZFirebird10PlainDriver.isc_sql_interprete(sqlcode: Short;
-  buffer: PAnsiChar; buffer_length: Short);
+  buffer: PChar; buffer_length: Short);
 begin
   ZPlainFirebird10.isc_sql_interprete(sqlcode, buffer, buffer_length);
 end;
@@ -1092,13 +1092,13 @@ end;
 function TZFirebird10PlainDriver.isc_start_transaction(
   status_vector: PISC_STATUS; tran_handle: PISC_TR_HANDLE;
   db_handle_count: Short; db_handle: PISC_DB_HANDLE; tpb_length: Word;
-  tpb_address: PAnsiChar): ISC_STATUS;
+  tpb_address: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird10.isc_start_transaction(status_vector, tran_handle,
     db_handle_count, db_handle, tpb_length, tpb_address);
 end;
 
-function TZFirebird10PlainDriver.isc_vax_integer(buffer: PAnsiChar;
+function TZFirebird10PlainDriver.isc_vax_integer(buffer: PChar;
   length: Short): ISC_LONG;
 begin
   Result := ZPlainFirebird10.isc_vax_integer(buffer, length);
@@ -1129,7 +1129,7 @@ end;
 
 function TZFirebird15PlainDriver.isc_array_gen_sdl(status_vector: PISC_STATUS;
   isc_array_desc: PISC_ARRAY_DESC; isc_arg3: PShort;
-  isc_arg4: PAnsiChar; isc_arg5: PShort): ISC_STATUS;
+  isc_arg4: PChar; isc_arg5: PShort): ISC_STATUS;
 begin
   Result := ZPlainFirebird15.isc_array_gen_sdl(status_vector, isc_array_desc,
     isc_arg3, isc_arg4, isc_arg5);
@@ -1146,7 +1146,7 @@ end;
 
 function TZFirebird15PlainDriver.isc_array_lookup_bounds(
   status_vector: PISC_STATUS; db_handle: PISC_DB_HANDLE;
-  trans_handle: PISC_TR_HANDLE; table_name, column_name: PAnsiChar;
+  trans_handle: PISC_TR_HANDLE; table_name, column_name: PChar;
   descriptor: PISC_ARRAY_DESC): ISC_STATUS;
 begin
   Result := ZPlainFirebird15.isc_array_lookup_bounds(status_vector, db_handle,
@@ -1155,7 +1155,7 @@ end;
 
 function TZFirebird15PlainDriver.isc_array_lookup_desc(
   status_vector: PISC_STATUS; db_handle: PISC_DB_HANDLE;
-  trans_handle: PISC_TR_HANDLE; table_name, column_name: PAnsiChar;
+  trans_handle: PISC_TR_HANDLE; table_name, column_name: PChar;
   descriptor: PISC_ARRAY_DESC): ISC_STATUS;
 begin
   Result := ZPlainFirebird15.isc_array_lookup_desc(status_vector, db_handle,
@@ -1172,7 +1172,7 @@ begin
 end;
 
 function TZFirebird15PlainDriver.isc_array_set_desc(status_vector: PISC_STATUS;
-  table_name, column_name: PAnsiChar; sql_dtype, sql_length, sql_dimensions: PShort;
+  table_name, column_name: PChar; sql_dtype, sql_length, sql_dimensions: PShort;
   descriptor: PISC_ARRAY_DESC): ISC_STATUS;
 begin
   Result := ZPlainFirebird15.isc_array_set_desc(status_vector, table_name,
@@ -1180,8 +1180,8 @@ begin
 end;
 
 function TZFirebird15PlainDriver.isc_attach_database(status_vector: PISC_STATUS;
-  db_name_length: Short; db_name: PAnsiChar; db_handle: PISC_DB_HANDLE;
-  parm_buffer_length: Short; parm_buffer: PAnsiChar): ISC_STATUS;
+  db_name_length: Short; db_name: PChar; db_handle: PISC_DB_HANDLE;
+  parm_buffer_length: Short; parm_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird15.isc_attach_database(status_vector, db_name_length,
     db_name, db_handle, parm_buffer_length, parm_buffer);
@@ -1189,8 +1189,8 @@ end;
 
 function TZFirebird15PlainDriver.isc_blob_info(status_vector: PISC_STATUS;
   blob_handle: PISC_BLOB_HANDLE; item_list_buffer_length: Short;
-  item_list_buffer: PAnsiChar; result_buffer_length: Short;
-  result_buffer: PAnsiChar): PISC_STATUS;
+  item_list_buffer: PChar; result_buffer_length: Short;
+  result_buffer: PChar): PISC_STATUS;
 begin
   Result := PISC_STATUS(ZPlainFirebird15.isc_blob_info(status_vector, blob_handle,
     item_list_buffer_length, item_list_buffer, result_buffer_length,
@@ -1231,7 +1231,7 @@ end;
 function TZFirebird15PlainDriver.isc_create_blob2(status_vector: PISC_STATUS;
   db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
   blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
-  bpb_address: PAnsiChar): ISC_STATUS;
+  bpb_address: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird15.isc_create_blob2(status_vector, db_handle,
     tran_handle, blob_handle, blob_id, bpb_length, bpb_address);
@@ -1239,8 +1239,8 @@ end;
 
 function TZFirebird15PlainDriver.isc_database_info(status_vector: PISC_STATUS;
   db_handle: PISC_DB_HANDLE; item_list_buffer_length: Short;
-  item_list_buffer: PAnsiChar; result_buffer_length: Short;
-  result_buffer: PAnsiChar): ISC_STATUS;
+  item_list_buffer: PChar; result_buffer_length: Short;
+  result_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird15.isc_database_info(status_vector, db_handle,
     item_list_buffer_length, item_list_buffer, result_buffer_length,
@@ -1249,8 +1249,8 @@ end;
 
 function TZFirebird15PlainDriver.isc_transaction_info(status_vector: PISC_STATUS;
   tr_handle: PISC_TR_HANDLE; item_list_buffer_length: Short;
-  item_list_buffer: PAnsiChar; result_buffer_length: Short;
-  result_buffer: PAnsiChar): ISC_STATUS;
+  item_list_buffer: PChar; result_buffer_length: Short;
+  result_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird15.isc_transaction_info(status_vector, tr_handle,
     item_list_buffer_length, item_list_buffer, result_buffer_length,
@@ -1334,7 +1334,7 @@ end;
 
 function TZFirebird15PlainDriver.isc_dsql_execute_immediate(
   status_vector: PISC_STATUS; db_handle: PISC_DB_HANDLE;
-  tran_handle: PISC_TR_HANDLE; length: Word; statement: PAnsiChar;
+  tran_handle: PISC_TR_HANDLE; length: Word; statement: PChar;
   dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
 begin
   Result := ZPlainFirebird15.isc_dsql_execute_immediate(status_vector,
@@ -1367,7 +1367,7 @@ end;
 
 function TZFirebird15PlainDriver.isc_dsql_prepare(
   status_vector: PISC_STATUS; tran_handle: PISC_TR_HANDLE;
-  stmt_handle: PISC_STMT_HANDLE; length: Word; statement: PAnsiChar;
+  stmt_handle: PISC_STMT_HANDLE; length: Word; statement: PChar;
   dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
 begin
   Result := ZPlainFirebird15.isc_dsql_prepare(status_vector, tran_handle,
@@ -1376,7 +1376,7 @@ end;
 
 function TZFirebird15PlainDriver.isc_dsql_set_cursor_name(
   status_vector: PISC_STATUS; stmt_handle: PISC_STMT_HANDLE;
-  cursor_name: PAnsiChar; _type: Word): ISC_STATUS;
+  cursor_name: PChar; _type: Word): ISC_STATUS;
 begin
   Result := ZPlainFirebird15.isc_dsql_set_cursor_name(status_vector,
     stmt_handle, cursor_name, _type);
@@ -1384,8 +1384,8 @@ end;
 
 function TZFirebird15PlainDriver.isc_dsql_sql_info(
   status_vector: PISC_STATUS; stmt_handle: PISC_STMT_HANDLE;
-  item_length: Short; items: PAnsiChar; buffer_length: Short;
-  buffer: PAnsiChar): ISC_STATUS;
+  item_length: Short; items: PChar; buffer_length: Short;
+  buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird15.isc_dsql_sql_info(status_vector, stmt_handle,
     item_length, items, buffer_length, buffer);
@@ -1416,8 +1416,8 @@ begin
 end;
 
 function TZFirebird15PlainDriver.isc_event_block(event_buffer,
-  result_buffer: PPAnsiChar; id_count: Word;
-  event_list: array of PAnsiChar): ISC_LONG;
+  result_buffer: PPChar; id_count: Word;
+  event_list: array of PChar): ISC_LONG;
 begin
   Result := ZPlainFirebird15.isc_event_block(event_buffer, result_buffer,
     id_count, event_list);
@@ -1425,13 +1425,13 @@ end;
 
 procedure TZFirebird15PlainDriver.isc_event_counts(
   status_vector: PISC_STATUS; buffer_length: Short; event_buffer,
-  result_buffer: PAnsiChar);
+  result_buffer: PChar);
 begin
   ZPlainFirebird15.isc_event_counts(status_vector, buffer_length,
     event_buffer, result_buffer);
 end;
 
-function TZFirebird15PlainDriver.isc_free(isc_arg1: PAnsiChar): ISC_LONG;
+function TZFirebird15PlainDriver.isc_free(isc_arg1: PChar): ISC_LONG;
 begin
   Result := ZPlainFirebird15.isc_free(isc_arg1);
 end;
@@ -1439,13 +1439,13 @@ end;
 function TZFirebird15PlainDriver.isc_get_segment(
   status_vector: PISC_STATUS; blob_handle: PISC_BLOB_HANDLE;
   actual_seg_length: PWord; seg_buffer_length: Word;
-  seg_buffer: PAnsiChar): ISC_STATUS;
+  seg_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird15.isc_get_segment(status_vector, blob_handle,
     actual_seg_length, seg_buffer_length, seg_buffer);
 end;
 
-function TZFirebird15PlainDriver.isc_interprete(buffer: PAnsiChar;
+function TZFirebird15PlainDriver.isc_interprete(buffer: PChar;
   status_vector: PPISC_STATUS): ISC_STATUS;
 begin
   Result := ZPlainFirebird15.isc_interprete(buffer, status_vector);
@@ -1454,7 +1454,7 @@ end;
 function TZFirebird15PlainDriver.isc_open_blob2(status_vector: PISC_STATUS;
   db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
   blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
-  bpb_buffer: PAnsiChar): ISC_STATUS;
+  bpb_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird15.isc_open_blob2(status_vector, db_handle,
     tran_handle, blob_handle, blob_id, bpb_length, bpb_buffer);
@@ -1462,7 +1462,7 @@ end;
 
 function TZFirebird15PlainDriver.isc_put_segment(
   status_vector: PISC_STATUS; blob_handle: PISC_BLOB_HANDLE;
-  seg_buffer_len: Word; seg_buffer: PAnsiChar): ISC_STATUS;
+  seg_buffer_len: Word; seg_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird15.isc_put_segment(status_vector, blob_handle,
     seg_buffer_len, seg_buffer);
@@ -1470,7 +1470,7 @@ end;
 
 function TZFirebird15PlainDriver.isc_que_events(status_vector: PISC_STATUS;
   db_handle: PISC_DB_HANDLE; event_id: PISC_LONG; length: Short;
-  event_buffer: PAnsiChar; event_function: TISC_CALLBACK;
+  event_buffer: PChar; event_function: TISC_CALLBACK;
   event_function_arg: PVoid): ISC_STATUS;
 begin
   Result := ZPlainFirebird15.isc_que_events(status_vector, db_handle,
@@ -1484,7 +1484,7 @@ begin
 end;
 
 procedure TZFirebird15PlainDriver.isc_sql_interprete(sqlcode: Short;
-  buffer: PAnsiChar; buffer_length: Short);
+  buffer: PChar; buffer_length: Short);
 begin
   ZPlainFirebird15.isc_sql_interprete(sqlcode, buffer, buffer_length);
 end;
@@ -1512,13 +1512,13 @@ end;
 function TZFirebird15PlainDriver.isc_start_transaction(
   status_vector: PISC_STATUS; tran_handle: PISC_TR_HANDLE;
   db_handle_count: Short; db_handle: PISC_DB_HANDLE; tpb_length: Word;
-  tpb_address: PAnsiChar): ISC_STATUS;
+  tpb_address: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird15.isc_start_transaction(status_vector, tran_handle,
     db_handle_count, db_handle, tpb_length, tpb_address);
 end;
 
-function TZFirebird15PlainDriver.isc_vax_integer(buffer: PAnsiChar;
+function TZFirebird15PlainDriver.isc_vax_integer(buffer: PChar;
   length: Short): ISC_LONG;
 begin
   Result := ZPlainFirebird15.isc_vax_integer(buffer, length);
@@ -1568,7 +1568,7 @@ end;
 
 function TZFirebird20PlainDriver.isc_array_gen_sdl(status_vector: PISC_STATUS;
   isc_array_desc: PISC_ARRAY_DESC; isc_arg3: PShort;
-  isc_arg4: PAnsiChar; isc_arg5: PShort): ISC_STATUS;
+  isc_arg4: PChar; isc_arg5: PShort): ISC_STATUS;
 begin
   Result := ZPlainFirebird20.isc_array_gen_sdl(status_vector, isc_array_desc,
     isc_arg3, isc_arg4, isc_arg5);
@@ -1585,7 +1585,7 @@ end;
 
 function TZFirebird20PlainDriver.isc_array_lookup_bounds(
   status_vector: PISC_STATUS; db_handle: PISC_DB_HANDLE;
-  trans_handle: PISC_TR_HANDLE; table_name, column_name: PAnsiChar;
+  trans_handle: PISC_TR_HANDLE; table_name, column_name: PChar;
   descriptor: PISC_ARRAY_DESC): ISC_STATUS;
 begin
   Result := ZPlainFirebird20.isc_array_lookup_bounds(status_vector, db_handle,
@@ -1594,7 +1594,7 @@ end;
 
 function TZFirebird20PlainDriver.isc_array_lookup_desc(
   status_vector: PISC_STATUS; db_handle: PISC_DB_HANDLE;
-  trans_handle: PISC_TR_HANDLE; table_name, column_name: PAnsiChar;
+  trans_handle: PISC_TR_HANDLE; table_name, column_name: PChar;
   descriptor: PISC_ARRAY_DESC): ISC_STATUS;
 begin
   Result := ZPlainFirebird20.isc_array_lookup_desc(status_vector, db_handle,
@@ -1611,7 +1611,7 @@ begin
 end;
 
 function TZFirebird20PlainDriver.isc_array_set_desc(status_vector: PISC_STATUS;
-  table_name, column_name: PAnsiChar; sql_dtype, sql_length, sql_dimensions: PShort;
+  table_name, column_name: PChar; sql_dtype, sql_length, sql_dimensions: PShort;
   descriptor: PISC_ARRAY_DESC): ISC_STATUS;
 begin
   Result := ZPlainFirebird20.isc_array_set_desc(status_vector, table_name,
@@ -1619,8 +1619,8 @@ begin
 end;
 
 function TZFirebird20PlainDriver.isc_attach_database(status_vector: PISC_STATUS;
-  db_name_length: Short; db_name: PAnsiChar; db_handle: PISC_DB_HANDLE;
-  parm_buffer_length: Short; parm_buffer: PAnsiChar): ISC_STATUS;
+  db_name_length: Short; db_name: PChar; db_handle: PISC_DB_HANDLE;
+  parm_buffer_length: Short; parm_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird20.isc_attach_database(status_vector, db_name_length,
     db_name, db_handle, parm_buffer_length, parm_buffer);
@@ -1628,8 +1628,8 @@ end;
 
 function TZFirebird20PlainDriver.isc_blob_info(status_vector: PISC_STATUS;
   blob_handle: PISC_BLOB_HANDLE; item_list_buffer_length: Short;
-  item_list_buffer: PAnsiChar; result_buffer_length: Short;
-  result_buffer: PAnsiChar): PISC_STATUS;
+  item_list_buffer: PChar; result_buffer_length: Short;
+  result_buffer: PChar): PISC_STATUS;
 begin
   Result := PISC_STATUS(ZPlainFirebird20.isc_blob_info(status_vector, blob_handle,
     item_list_buffer_length, item_list_buffer, result_buffer_length,
@@ -1670,7 +1670,7 @@ end;
 function TZFirebird20PlainDriver.isc_create_blob2(status_vector: PISC_STATUS;
   db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
   blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
-  bpb_address: PAnsiChar): ISC_STATUS;
+  bpb_address: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird20.isc_create_blob2(status_vector, db_handle,
     tran_handle, blob_handle, blob_id, bpb_length, bpb_address);
@@ -1678,8 +1678,8 @@ end;
 
 function TZFirebird20PlainDriver.isc_database_info(status_vector: PISC_STATUS;
   db_handle: PISC_DB_HANDLE; item_list_buffer_length: Short;
-  item_list_buffer: PAnsiChar; result_buffer_length: Short;
-  result_buffer: PAnsiChar): ISC_STATUS;
+  item_list_buffer: PChar; result_buffer_length: Short;
+  result_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird20.isc_database_info(status_vector, db_handle,
     item_list_buffer_length, item_list_buffer, result_buffer_length,
@@ -1688,8 +1688,8 @@ end;
 
 function TZFirebird20PlainDriver.isc_transaction_info(status_vector: PISC_STATUS;
   tr_handle: PISC_TR_HANDLE; item_list_buffer_length: Short;
-  item_list_buffer: PAnsiChar; result_buffer_length: Short;
-  result_buffer: PAnsiChar): ISC_STATUS;
+  item_list_buffer: PChar; result_buffer_length: Short;
+  result_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird20.isc_transaction_info(status_vector, tr_handle,
     item_list_buffer_length, item_list_buffer, result_buffer_length,
@@ -1773,7 +1773,7 @@ end;
 
 function TZFirebird20PlainDriver.isc_dsql_execute_immediate(
   status_vector: PISC_STATUS; db_handle: PISC_DB_HANDLE;
-  tran_handle: PISC_TR_HANDLE; length: Word; statement: PAnsiChar;
+  tran_handle: PISC_TR_HANDLE; length: Word; statement: PChar;
   dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
 begin
   Result := ZPlainFirebird20.isc_dsql_execute_immediate(status_vector,
@@ -1806,7 +1806,7 @@ end;
 
 function TZFirebird20PlainDriver.isc_dsql_prepare(
   status_vector: PISC_STATUS; tran_handle: PISC_TR_HANDLE;
-  stmt_handle: PISC_STMT_HANDLE; length: Word; statement: PAnsiChar;
+  stmt_handle: PISC_STMT_HANDLE; length: Word; statement: PChar;
   dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
 begin
   Result := ZPlainFirebird20.isc_dsql_prepare(status_vector, tran_handle,
@@ -1815,7 +1815,7 @@ end;
 
 function TZFirebird20PlainDriver.isc_dsql_set_cursor_name(
   status_vector: PISC_STATUS; stmt_handle: PISC_STMT_HANDLE;
-  cursor_name: PAnsiChar; _type: Word): ISC_STATUS;
+  cursor_name: PChar; _type: Word): ISC_STATUS;
 begin
   Result := ZPlainFirebird20.isc_dsql_set_cursor_name(status_vector,
     stmt_handle, cursor_name, _type);
@@ -1823,8 +1823,8 @@ end;
 
 function TZFirebird20PlainDriver.isc_dsql_sql_info(
   status_vector: PISC_STATUS; stmt_handle: PISC_STMT_HANDLE;
-  item_length: Short; items: PAnsiChar; buffer_length: Short;
-  buffer: PAnsiChar): ISC_STATUS;
+  item_length: Short; items: PChar; buffer_length: Short;
+  buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird20.isc_dsql_sql_info(status_vector, stmt_handle,
     item_length, items, buffer_length, buffer);
@@ -1855,8 +1855,8 @@ begin
 end;
 
 function TZFirebird20PlainDriver.isc_event_block(event_buffer,
-  result_buffer: PPAnsiChar; id_count: Word;
-  event_list: array of PAnsiChar): ISC_LONG;
+  result_buffer: PPChar; id_count: Word;
+  event_list: array of PChar): ISC_LONG;
 begin
   Result := ZPlainFirebird20.isc_event_block(event_buffer, result_buffer,
     id_count, event_list);
@@ -1864,13 +1864,13 @@ end;
 
 procedure TZFirebird20PlainDriver.isc_event_counts(
   status_vector: PISC_STATUS; buffer_length: Short; event_buffer,
-  result_buffer: PAnsiChar);
+  result_buffer: PChar);
 begin
   ZPlainFirebird20.isc_event_counts(status_vector, buffer_length,
     event_buffer, result_buffer);
 end;
 
-function TZFirebird20PlainDriver.isc_free(isc_arg1: PAnsiChar): ISC_LONG;
+function TZFirebird20PlainDriver.isc_free(isc_arg1: PChar): ISC_LONG;
 begin
   Result := ZPlainFirebird20.isc_free(isc_arg1);
 end;
@@ -1878,13 +1878,13 @@ end;
 function TZFirebird20PlainDriver.isc_get_segment(
   status_vector: PISC_STATUS; blob_handle: PISC_BLOB_HANDLE;
   actual_seg_length: PWord; seg_buffer_length: Word;
-  seg_buffer: PAnsiChar): ISC_STATUS;
+  seg_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird20.isc_get_segment(status_vector, blob_handle,
     actual_seg_length, seg_buffer_length, seg_buffer);
 end;
 
-function TZFirebird20PlainDriver.isc_interprete(buffer: PAnsiChar;
+function TZFirebird20PlainDriver.isc_interprete(buffer: PChar;
   status_vector: PPISC_STATUS): ISC_STATUS;
 begin
   Result := ZPlainFirebird20.isc_interprete(buffer, status_vector);
@@ -1893,7 +1893,7 @@ end;
 function TZFirebird20PlainDriver.isc_open_blob2(status_vector: PISC_STATUS;
   db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
   blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
-  bpb_buffer: PAnsiChar): ISC_STATUS;
+  bpb_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird20.isc_open_blob2(status_vector, db_handle,
     tran_handle, blob_handle, blob_id, bpb_length, bpb_buffer);
@@ -1901,7 +1901,7 @@ end;
 
 function TZFirebird20PlainDriver.isc_put_segment(
   status_vector: PISC_STATUS; blob_handle: PISC_BLOB_HANDLE;
-  seg_buffer_len: Word; seg_buffer: PAnsiChar): ISC_STATUS;
+  seg_buffer_len: Word; seg_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird20.isc_put_segment(status_vector, blob_handle,
     seg_buffer_len, seg_buffer);
@@ -1909,7 +1909,7 @@ end;
 
 function TZFirebird20PlainDriver.isc_que_events(status_vector: PISC_STATUS;
   db_handle: PISC_DB_HANDLE; event_id: PISC_LONG; length: Short;
-  event_buffer: PAnsiChar; event_function: TISC_CALLBACK;
+  event_buffer: PChar; event_function: TISC_CALLBACK;
   event_function_arg: PVoid): ISC_STATUS;
 begin
   Result := ZPlainFirebird20.isc_que_events(status_vector, db_handle,
@@ -1923,7 +1923,7 @@ begin
 end;
 
 procedure TZFirebird20PlainDriver.isc_sql_interprete(sqlcode: Short;
-  buffer: PAnsiChar; buffer_length: Short);
+  buffer: PChar; buffer_length: Short);
 begin
   ZPlainFirebird20.isc_sql_interprete(sqlcode, buffer, buffer_length);
 end;
@@ -1951,13 +1951,13 @@ end;
 function TZFirebird20PlainDriver.isc_start_transaction(
   status_vector: PISC_STATUS; tran_handle: PISC_TR_HANDLE;
   db_handle_count: Short; db_handle: PISC_DB_HANDLE; tpb_length: Word;
-  tpb_address: PAnsiChar): ISC_STATUS;
+  tpb_address: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird20.isc_start_transaction(status_vector, tran_handle,
     db_handle_count, db_handle, tpb_length, tpb_address);
 end;
 
-function TZFirebird20PlainDriver.isc_vax_integer(buffer: PAnsiChar;
+function TZFirebird20PlainDriver.isc_vax_integer(buffer: PChar;
   length: Short): ISC_LONG;
 begin
   Result := ZPlainFirebird20.isc_vax_integer(buffer, length);
@@ -2006,7 +2006,7 @@ end;
 
 function TZFirebird21PlainDriver.isc_array_gen_sdl(status_vector: PISC_STATUS;
   isc_array_desc: PISC_ARRAY_DESC; isc_arg3: PShort;
-  isc_arg4: PAnsiChar; isc_arg5: PShort): ISC_STATUS;
+  isc_arg4: PChar; isc_arg5: PShort): ISC_STATUS;
 begin
   Result := ZPlainFirebird21.isc_array_gen_sdl(status_vector, isc_array_desc,
     isc_arg3, isc_arg4, isc_arg5);
@@ -2023,7 +2023,7 @@ end;
 
 function TZFirebird21PlainDriver.isc_array_lookup_bounds(
   status_vector: PISC_STATUS; db_handle: PISC_DB_HANDLE;
-  trans_handle: PISC_TR_HANDLE; table_name, column_name: PAnsiChar;
+  trans_handle: PISC_TR_HANDLE; table_name, column_name: PChar;
   descriptor: PISC_ARRAY_DESC): ISC_STATUS;
 begin
   Result := ZPlainFirebird21.isc_array_lookup_bounds(status_vector, db_handle,
@@ -2032,7 +2032,7 @@ end;
 
 function TZFirebird21PlainDriver.isc_array_lookup_desc(
   status_vector: PISC_STATUS; db_handle: PISC_DB_HANDLE;
-  trans_handle: PISC_TR_HANDLE; table_name, column_name: PAnsiChar;
+  trans_handle: PISC_TR_HANDLE; table_name, column_name: PChar;
   descriptor: PISC_ARRAY_DESC): ISC_STATUS;
 begin
   Result := ZPlainFirebird21.isc_array_lookup_desc(status_vector, db_handle,
@@ -2049,7 +2049,7 @@ begin
 end;
 
 function TZFirebird21PlainDriver.isc_array_set_desc(status_vector: PISC_STATUS;
-  table_name, column_name: PAnsiChar; sql_dtype, sql_length, sql_dimensions: PShort;
+  table_name, column_name: PChar; sql_dtype, sql_length, sql_dimensions: PShort;
   descriptor: PISC_ARRAY_DESC): ISC_STATUS;
 begin
   Result := ZPlainFirebird21.isc_array_set_desc(status_vector, table_name,
@@ -2057,8 +2057,8 @@ begin
 end;
 
 function TZFirebird21PlainDriver.isc_attach_database(status_vector: PISC_STATUS;
-  db_name_length: Short; db_name: PAnsiChar; db_handle: PISC_DB_HANDLE;
-  parm_buffer_length: Short; parm_buffer: PAnsiChar): ISC_STATUS;
+  db_name_length: Short; db_name: PChar; db_handle: PISC_DB_HANDLE;
+  parm_buffer_length: Short; parm_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird21.isc_attach_database(status_vector, db_name_length,
     db_name, db_handle, parm_buffer_length, parm_buffer);
@@ -2066,8 +2066,8 @@ end;
 
 function TZFirebird21PlainDriver.isc_blob_info(status_vector: PISC_STATUS;
   blob_handle: PISC_BLOB_HANDLE; item_list_buffer_length: Short;
-  item_list_buffer: PAnsiChar; result_buffer_length: Short;
-  result_buffer: PAnsiChar): PISC_STATUS;
+  item_list_buffer: PChar; result_buffer_length: Short;
+  result_buffer: PChar): PISC_STATUS;
 begin
   Result := PISC_STATUS(ZPlainFirebird21.isc_blob_info(status_vector, blob_handle,
     item_list_buffer_length, item_list_buffer, result_buffer_length,
@@ -2108,7 +2108,7 @@ end;
 function TZFirebird21PlainDriver.isc_create_blob2(status_vector: PISC_STATUS;
   db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
   blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
-  bpb_address: PAnsiChar): ISC_STATUS;
+  bpb_address: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird21.isc_create_blob2(status_vector, db_handle,
     tran_handle, blob_handle, blob_id, bpb_length, bpb_address);
@@ -2116,8 +2116,8 @@ end;
 
 function TZFirebird21PlainDriver.isc_database_info(status_vector: PISC_STATUS;
   db_handle: PISC_DB_HANDLE; item_list_buffer_length: Short;
-  item_list_buffer: PAnsiChar; result_buffer_length: Short;
-  result_buffer: PAnsiChar): ISC_STATUS;
+  item_list_buffer: PChar; result_buffer_length: Short;
+  result_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird21.isc_database_info(status_vector, db_handle,
     item_list_buffer_length, item_list_buffer, result_buffer_length,
@@ -2126,8 +2126,8 @@ end;
 
 function TZFirebird21PlainDriver.isc_transaction_info(status_vector: PISC_STATUS;
   tr_handle: PISC_TR_HANDLE; item_list_buffer_length: Short;
-  item_list_buffer: PAnsiChar; result_buffer_length: Short;
-  result_buffer: PAnsiChar): ISC_STATUS;
+  item_list_buffer: PChar; result_buffer_length: Short;
+  result_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird21.isc_transaction_info(status_vector, tr_handle,
     item_list_buffer_length, item_list_buffer, result_buffer_length,
@@ -2211,7 +2211,7 @@ end;
 
 function TZFirebird21PlainDriver.isc_dsql_execute_immediate(
   status_vector: PISC_STATUS; db_handle: PISC_DB_HANDLE;
-  tran_handle: PISC_TR_HANDLE; length: Word; statement: PAnsiChar;
+  tran_handle: PISC_TR_HANDLE; length: Word; statement: PChar;
   dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
 begin
   Result := ZPlainFirebird21.isc_dsql_execute_immediate(status_vector,
@@ -2244,7 +2244,7 @@ end;
 
 function TZFirebird21PlainDriver.isc_dsql_prepare(
   status_vector: PISC_STATUS; tran_handle: PISC_TR_HANDLE;
-  stmt_handle: PISC_STMT_HANDLE; length: Word; statement: PAnsiChar;
+  stmt_handle: PISC_STMT_HANDLE; length: Word; statement: PChar;
   dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
 begin
   Result := ZPlainFirebird21.isc_dsql_prepare(status_vector, tran_handle,
@@ -2253,7 +2253,7 @@ end;
 
 function TZFirebird21PlainDriver.isc_dsql_set_cursor_name(
   status_vector: PISC_STATUS; stmt_handle: PISC_STMT_HANDLE;
-  cursor_name: PAnsiChar; _type: Word): ISC_STATUS;
+  cursor_name: PChar; _type: Word): ISC_STATUS;
 begin
   Result := ZPlainFirebird21.isc_dsql_set_cursor_name(status_vector,
     stmt_handle, cursor_name, _type);
@@ -2261,8 +2261,8 @@ end;
 
 function TZFirebird21PlainDriver.isc_dsql_sql_info(
   status_vector: PISC_STATUS; stmt_handle: PISC_STMT_HANDLE;
-  item_length: Short; items: PAnsiChar; buffer_length: Short;
-  buffer: PAnsiChar): ISC_STATUS;
+  item_length: Short; items: PChar; buffer_length: Short;
+  buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird21.isc_dsql_sql_info(status_vector, stmt_handle,
     item_length, items, buffer_length, buffer);
@@ -2293,8 +2293,8 @@ begin
 end;
 
 function TZFirebird21PlainDriver.isc_event_block(event_buffer,
-  result_buffer: PPAnsiChar; id_count: Word;
-  event_list: array of PAnsiChar): ISC_LONG;
+  result_buffer: PPChar; id_count: Word;
+  event_list: array of PChar): ISC_LONG;
 begin
   Result := ZPlainFirebird21.isc_event_block(event_buffer, result_buffer,
     id_count, event_list);
@@ -2302,13 +2302,13 @@ end;
 
 procedure TZFirebird21PlainDriver.isc_event_counts(
   status_vector: PISC_STATUS; buffer_length: Short; event_buffer,
-  result_buffer: PAnsiChar);
+  result_buffer: PChar);
 begin
   ZPlainFirebird21.isc_event_counts(status_vector, buffer_length,
     event_buffer, result_buffer);
 end;
 
-function TZFirebird21PlainDriver.isc_free(isc_arg1: PAnsiChar): ISC_LONG;
+function TZFirebird21PlainDriver.isc_free(isc_arg1: PChar): ISC_LONG;
 begin
   Result := ZPlainFirebird21.isc_free(isc_arg1);
 end;
@@ -2316,25 +2316,26 @@ end;
 function TZFirebird21PlainDriver.isc_get_segment(
   status_vector: PISC_STATUS; blob_handle: PISC_BLOB_HANDLE;
   actual_seg_length: PWord; seg_buffer_length: Word;
-  seg_buffer: PAnsiChar): ISC_STATUS;
+  seg_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird21.isc_get_segment(status_vector, blob_handle,
     actual_seg_length, seg_buffer_length, seg_buffer);
 end;
 
-function TZFirebird21PlainDriver.isc_interprete(buffer: PAnsiChar;
+function TZFirebird21PlainDriver.isc_interprete(buffer: PChar;
   status_vector: PPISC_STATUS): ISC_STATUS;
 var
    bufsize : integer;
 begin
   bufsize := 1024;
   Result := ZPlainFirebird21.fb_interpret(buffer, bufsize, status_vector);
+
 end;
 
 function TZFirebird21PlainDriver.isc_open_blob2(status_vector: PISC_STATUS;
   db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
   blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
-  bpb_buffer: PAnsiChar): ISC_STATUS;
+  bpb_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird21.isc_open_blob2(status_vector, db_handle,
     tran_handle, blob_handle, blob_id, bpb_length, bpb_buffer);
@@ -2342,7 +2343,7 @@ end;
 
 function TZFirebird21PlainDriver.isc_put_segment(
   status_vector: PISC_STATUS; blob_handle: PISC_BLOB_HANDLE;
-  seg_buffer_len: Word; seg_buffer: PAnsiChar): ISC_STATUS;
+  seg_buffer_len: Word; seg_buffer: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird21.isc_put_segment(status_vector, blob_handle,
     seg_buffer_len, seg_buffer);
@@ -2350,7 +2351,7 @@ end;
 
 function TZFirebird21PlainDriver.isc_que_events(status_vector: PISC_STATUS;
   db_handle: PISC_DB_HANDLE; event_id: PISC_LONG; length: Short;
-  event_buffer: PAnsiChar; event_function: TISC_CALLBACK;
+  event_buffer: PChar; event_function: TISC_CALLBACK;
   event_function_arg: PVoid): ISC_STATUS;
 begin
   Result := ZPlainFirebird21.isc_que_events(status_vector, db_handle,
@@ -2364,7 +2365,7 @@ begin
 end;
 
 procedure TZFirebird21PlainDriver.isc_sql_interprete(sqlcode: Short;
-  buffer: PAnsiChar; buffer_length: Short);
+  buffer: PChar; buffer_length: Short);
 begin
   ZPlainFirebird21.isc_sql_interprete(sqlcode, buffer, buffer_length);
 end;
@@ -2392,13 +2393,13 @@ end;
 function TZFirebird21PlainDriver.isc_start_transaction(
   status_vector: PISC_STATUS; tran_handle: PISC_TR_HANDLE;
   db_handle_count: Short; db_handle: PISC_DB_HANDLE; tpb_length: Word;
-  tpb_address: PAnsiChar): ISC_STATUS;
+  tpb_address: PChar): ISC_STATUS;
 begin
   Result := ZPlainFirebird21.isc_start_transaction(status_vector, tran_handle,
     db_handle_count, db_handle, tpb_length, tpb_address);
 end;
 
-function TZFirebird21PlainDriver.isc_vax_integer(buffer: PAnsiChar;
+function TZFirebird21PlainDriver.isc_vax_integer(buffer: PChar;
   length: Short): ISC_LONG;
 begin
   Result := ZPlainFirebird21.isc_vax_integer(buffer, length);

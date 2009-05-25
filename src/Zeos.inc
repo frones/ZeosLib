@@ -46,6 +46,7 @@
 {$IFDEF FPC}
   {$MODE DELPHI}
   {$INTERFACES COM}
+  {$DEFINE VER130BELOW}
   {$DEFINE VER140BELOW}
   // We assume 2 levels is sufficient.
   // The higher the third number in a version, the better... (we hope)
@@ -71,46 +72,37 @@
 
 
 // Compilation directives for Delphi4
-// Not supported since Zeoslib 7.X
 {$IFDEF VER120}
+{$DEFINE VER125BELOW}
+{$DEFINE VER130BELOW}
+{$DEFINE VER130KBELOW}
 {$DEFINE VER140BELOW}
 {$ENDIF}
 
 // Compilation directives for Delphi 5
-// Not supported since Zeoslib 7.X
 {$IFDEF VER130}
+{$DEFINE VER130BELOW}
 {$DEFINE VER140BELOW}
 {$ENDIF}
 
 // Compilation directives for Delphi 6
-// Not supported since Zeoslib 7.X
 {$IFDEF VER140}
-  {$DEFINE VER140BELOW}
-  {$DEFINE VER150BELOW}
-  {$DEFINE VER160BELOW}
-  {$DEFINE VER170BELOW}
-  {$DEFINE VER180BELOW}
+{$DEFINE VER140BELOW}
 {$ENDIF}
 
 // Compilation directives for Delphi 7
 {$IFDEF VER150}
   {$DEFINE VER150BELOW}
-  {$DEFINE VER160BELOW}
-  {$DEFINE VER170BELOW}
-  {$DEFINE VER180BELOW}
 {$ENDIF}
 
 // Compilation directives for Delphi 8
 {$IFDEF VER160}
   {$DEFINE VER160BELOW}
-  {$DEFINE VER170BELOW}
-  {$DEFINE VER180BELOW}
 {$ENDIF}
 
 // Compilation directives for Delphi 9 (DELPHI 2005)
 {$IFDEF VER170}
   {$DEFINE VER170BELOW}
-  {$DEFINE VER180BELOW}
   {$DEFINE BDS}
   {$DEFINE BDS3}
   {$DEFINE BDS3_UP}
@@ -137,45 +129,12 @@
   {$ENDIF}
 {$ENDIF}
 
-// Compilation directives for Delphi 2009
-{$IFDEF VER200}
-  {$DEFINE VER200BELOW}
-  {$DEFINE DELPHI12}
-  {$DEFINE DELPHI12_UP}
-  {$DEFINE BDS}
-  {$DEFINE BDS5}
-  {$DEFINE BDS4_UP}
-{$ENDIF}
-
 {$IFDEF FREEBSD}
   {$DEFINE UNIX}
 {$ENDIF}
 
 {$IFDEF LINUX}
   {$DEFINE UNIX}
-{$ENDIF}
-
-{$IFDEF VER140BELOW}
-  {$IFNDEF FPC}
-    {$IFNDEF WIN32}
-      {$if Declared(RTLVersion) and (RTLVersion = 14.5)}  //Kylix 3
-      {$ELSE}
-          "Kylix versions below Kylix3 aren't supported anymore"
-      {$ifend}
-    {$ELSE}
-      {$ifdef BCB}  //Cbuilder
-        {$IFNDEF VER140}
-          "CBuilder versions below CBuilder6 aren't supported anymore"
-        {$ENDIF}
-      {$ELSE}
-        "Delphi versions below Delphi 7 aren't supported anymore"
-      {$ENDIF}
-    {$ENDIF}
-  {$ELSE}
-    {$IFNDEF FPC2_UP}
-    "FPC versions below FPC 2.0 aren't supported anymore"
-    {$ENDIF}
-  {$ENDIF}
 {$ENDIF}
 
 // Debug/release compiler options
@@ -222,6 +181,9 @@
 // Enables MySQL support in TZConnection/TZDataset
 {$IFNDEF ZEOS_DISABLE_MYSQL}
 {$DEFINE ENABLE_MYSQL}
+// Enables Mysql 3.x and 4.0 support
+// These versions are deprecated and will not be supported in future versions of zeoslib.
+{.$DEFINE ENABLE_MYSQL_DEPRECATED}
 {$ENDIF}
 
 // Enables PostgreSQL support in TZConnection/TZDataset
@@ -300,7 +262,9 @@
 
 // Turn on IProviderSupport interface
 {$IFNDEF FPC}
+{$IFNDEF VER125BELOW}
 {$DEFINE WITH_IPROVIDER}
+{$ENDIF}
 {$ENDIF}
 
 // Turn on multithreading

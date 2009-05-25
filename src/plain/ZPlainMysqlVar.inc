@@ -45,10 +45,40 @@
 {$IFDEF MYSQL_5_API}
   {$DEFINE MYSQL_5_UP}
   {$DEFINE MYSQL_41_UP}
+  {$DEFINE MYSQL_40_UP}
+  {$DEFINE MYSQL_323_UP}
+  {$DEFINE MYSQL_320_UP}
   {$DEFINE MYSQL_5_DOWN}
 {$ENDIF}
 {$IFDEF MYSQL_41_API}
   {$DEFINE MYSQL_41_UP}
+  {$DEFINE MYSQL_40_UP}
+  {$DEFINE MYSQL_323_UP}
+  {$DEFINE MYSQL_320_UP}
+  {$DEFINE MYSQL_41_DOWN}
+  {$DEFINE MYSQL_5_DOWN}
+{$ENDIF}
+{$IFDEF MYSQL_40_API}
+  {$DEFINE MYSQL_40_UP}
+  {$DEFINE MYSQL_323_UP}
+  {$DEFINE MYSQL_320_UP}
+  {$DEFINE MYSQL_40_DOWN}
+  {$DEFINE MYSQL_41_DOWN}
+  {$DEFINE MYSQL_5_DOWN}
+{$ENDIF}
+{$IFDEF MYSQL_323_API}
+  {$DEFINE MYSQL_323_UP}
+  {$DEFINE MYSQL_320_UP}
+  {$DEFINE MYSQL_323_DOWN}
+  {$DEFINE MYSQL_40_DOWN}
+  {$DEFINE MYSQL_41_DOWN}
+  {$DEFINE MYSQL_5_DOWN}
+{$ENDIF}
+{$IFDEF MYSQL_320_API}
+  {$DEFINE MYSQL_320_UP}
+  {$DEFINE MYSQL_320_DOWN}
+  {$DEFINE MYSQL_323_DOWN}
+  {$DEFINE MYSQL_40_DOWN}
   {$DEFINE MYSQL_41_DOWN}
   {$DEFINE MYSQL_5_DOWN}
 {$ENDIF}
@@ -116,14 +146,38 @@
   mysql_server_init:            Tmysql_server_init;             {mysql 3.2}
   mysql_server_end:             Tmysql_server_end;              {mysql 3.2}
 
+  {$IFDEF MYSQL_323_UP}
   mysql_change_user:            Tmysql_change_user;             {mysql 3.23}
   mysql_field_count:            Tmysql_field_count;             {mysql 3.22}
+  {$ENDIF}
 
+  {$IFDEF MYSQL_40_UP}
   mysql_get_client_version:     Tmysql_get_client_version;      {mysql 4.0}
-
+  {BELOW are functions not implemented in PDO}
   mysql_send_query:     Tmysql_send_query;
   mysql_read_query_result: Tmysql_read_query_result;
+  mysql_master_query:   Tmysql_master_query;
+  mysql_master_send_query: Tmysql_master_send_query;
+  mysql_slave_query:    Tmysql_slave_query;
+  mysql_slave_send_query: Tmysql_slave_send_query;
+  mysql_enable_rpl_parse: Tmysql_enable_rpl_parse;
+  mysql_disable_rpl_parse: Tmysql_disable_rpl_parse;
+  mysql_rpl_parse_enabled: Tmysql_rpl_parse_enabled;
+  mysql_enable_reads_from_master: Tmysql_enable_reads_from_master;
+  mysql_disable_reads_from_master: Tmysql_disable_reads_from_master;
+  mysql_reads_from_master_enabled: Tmysql_reads_from_master_enabled;
+  mysql_rpl_query_type: Tmysql_rpl_query_type;
+  mysql_rpl_probe:      Tmysql_rpl_probe;
+  mysql_set_master:     Tmysql_set_master;
+  mysql_add_slave:      Tmysql_add_slave;
+  mysql_manager_init:   Tmysql_manager_init;
+  mysql_manager_connect: Tmysql_manager_connect;
+  mysql_manager_close:  Tmysql_manager_close;
+  mysql_manager_command: Tmysql_manager_command;
+  mysql_manager_fetch_line: Tmysql_manager_fetch_line;
+  {$ENDIF}
 
+  {$IFDEF MYSQL_41_UP}
   mysql_autocommit:             Tmysql_autocommit;              {mysql 4.1}
   mysql_commit:                 Tmysql_commit;                  {mysql 4.1}
   mysql_get_server_version:     Tmysql_get_server_version;      {mysql 4.1}
@@ -163,6 +217,7 @@
   mysql_stmt_send_long_data:    Tmysql_stmt_send_long_data;     {mysql 4.1.2}
   mysql_stmt_sqlstate:          Tmysql_stmt_sqlstate;           {mysql 4.1.1}
   mysql_stmt_store_result:      Tmysql_stmt_store_result;       {mysql 4.1.0}
+  {$ENDIF}
 
   {$IFDEF MYSQL_5_UP}
   mysql_get_character_set_info: Tmysql_get_character_set_info;  {mysql 5.0.10}
@@ -173,3 +228,10 @@
   {$UNDEF MYSQL_5_DOWN}
   {$UNDEF MYSQL_41_UP}
   {$UNDEF MYSQL_41_DOWN}
+  {$UNDEF MYSQL_40_UP}
+  {$UNDEF MYSQL_40_DOWN}
+  {$UNDEF MYSQL_323_UP}
+  {$UNDEF MYSQL_323_DOWN}
+  {$UNDEF MYSQL_320_UP}
+  {$UNDEF MYSQL_320_DOWN}
+

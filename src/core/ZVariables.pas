@@ -240,8 +240,7 @@ begin
   Index := FindByName(Name);
   if Index >= 0 then
     Result := TZVariable(FVariables[Index]).Value
-  else
-    Result := NullVariant;
+  else Result := NullVariant;
 end;
 
 {**
@@ -266,8 +265,7 @@ begin
   Index := FindByName(Name);
   if Index >= 0 then
     TZVariable(FVariables[Index]).Value := Value
-  else
-    Add(Name, Value);
+  else Add(Name, Value);
 end;
 
 end.

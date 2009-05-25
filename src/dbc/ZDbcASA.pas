@@ -58,7 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  ZCompatibility, Types,
+  ZCompatibility, {$IFNDEF VER130BELOW}Types,{$ENDIF}
   Classes, Contnrs, SysUtils, ZDbcIntfs,
   ZDbcConnection, ZPlainASADriver, ZSysUtils, ZTokenizer,
   ZDbcGenericResolver, ZGenericSqlAnalyser;
@@ -118,7 +118,7 @@ type
 
     procedure Commit; override;
     procedure Rollback; override;
-    procedure SetOption(Temporary: Integer; User: PAnsiChar; const Option: string;
+    procedure SetOption(Temporary: Integer; User: PChar; const Option: string;
       const Value: string);
 
     procedure Open; override;
@@ -282,8 +282,7 @@ end;
 }
 procedure TZASAConnection.Close;
 begin
-  if Closed then
-     Exit;
+  if Closed then Exit;
 
   if AutoCommit then
     Commit
@@ -313,8 +312,7 @@ end;
 }
 procedure TZASAConnection.Commit;
 begin
-  if Closed or AutoCommit then
-     Exit;
+  if Closed or AutoCommit then Exit;
 
   if FHandle <> nil then
   begin
@@ -343,7 +341,6 @@ begin
     TZASADatabaseMetadata.Create(Self, Url, Info));
 
   FPlainDriver := PlainDriver;
-  Self.PlainDriver := PlainDriver;
 end;
 
 {**
@@ -375,8 +372,7 @@ end;
 function TZASAConnection.CreateCallableStatement(const SQL: string;
   Info: TStrings): IZCallableStatement;
 begin
-  if IsClosed then
-     Open;
+  if IsClosed then Open;
   Result := TZASACallableStatement.Create(Self, SQL, Info);
 end;
 
@@ -410,8 +406,7 @@ end;
 function TZASAConnection.CreatePreparedStatement(const SQL: string;
   Info: TStrings): IZPreparedStatement;
 begin
-  if IsClosed then
-     Open;
+  if IsClosed then Open;
   Result := TZASAPreparedStatement.Create(Self, SQL, Info);
 end;
 
@@ -432,8 +427,7 @@ end;
 function TZASAConnection.CreateRegularStatement(
   Info: TStrings): IZStatement;
 begin
-  if IsClosed then
-     Open;
+  if IsClosed then Open;
   Result := TZASAStatement.Create(Self, Info);
 end;
 
@@ -473,8 +467,7 @@ procedure TZASAConnection.Open;
 var
   ConnectionString, Links: string;
 begin
-  if not Closed then
-     Exit;
+  if not Closed then Exit;
 
   FHandle := nil;
   ConnectionString := '';
@@ -523,7 +516,7 @@ begin
     if Links <> ''
       then ConnectionString := ConnectionString + Links + '; ';
 
-    FPlainDriver.db_string_connect(FHandle, PAnsiChar(ConnectionString));
+    FPlainDriver.db_string_connect( FHandle, PChar( ConnectionString));
     CheckASAError( FPlainDriver, FHandle, lcConnect);
 
     DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol,
@@ -534,8 +527,7 @@ begin
     //SetConnOptions     RowCount;
 
   except
-    on E: Exception do
-    begin
+    on E: Exception do begin
       if Assigned( FHandle) then
         FPlainDriver.db_fini( FHandle);
       FHandle := nil;
@@ -555,8 +547,7 @@ end;
 }
 procedure TZASAConnection.Rollback;
 begin
-  if Closed or AutoCommit then
-     Exit;
+  if Closed or AutoCommit then Exit;
 
   if Assigned( FHandle) then
   begin
@@ -567,7 +558,7 @@ begin
   end;
 end;
 
-procedure TZASAConnection.SetOption(Temporary: Integer; User: PAnsiChar;
+procedure TZASAConnection.SetOption(Temporary: Integer; User: PChar;
   const Option: string; const Value: string);
 var
   SQLDA: PASASQLDA;
@@ -585,8 +576,9 @@ begin
       SQLDA.sqld := 1;
       SQLDA.sqlVar[0].sqlType := DT_STRING;
       SQLDA.sqlVar[0].sqlLen := Length( Value)+1;
-      SQLDA.sqlVar[0].sqlData := PAnsiChar(Value);
-      FPlainDriver.db_setoption(FHandle, Temporary, User, PAnsiChar(Option), SQLDA);
+      SQLDA.sqlVar[0].sqlData := PChar( Value);
+      FPlainDriver.db_setoption( FHandle, Temporary, User, PChar( Option),
+        SQLDA);
 
       CheckASAError( FPlainDriver, FHandle, lcOther);
       S := User;
@@ -607,8 +599,10 @@ var
 begin
   if AutoCommit then
     SetOption( 1, nil, 'CHAINED', 'OFF')
-  else
+  else begin
     SetOption( 1, nil, 'CHAINED', 'ON');
+
+  end;
   ASATL := Ord( TransactIsolationLevel);
   if ASATL > 1 then
     ASATL := ASATL - 1;
@@ -629,8 +623,7 @@ var
   Current: TZResolverParameter;
 begin
   Result := '';
-  if Columns.Count = 0 then
-     Exit;
+  if Columns.Count = 0 then Exit;
 
   for I := 0 to Columns.Count - 1 do
   begin
@@ -639,8 +632,7 @@ begin
       Result := Result + ',';
     if Current.DefaultValue <> '' then
       Result := Result + Current.DefaultValue
-    else
-      Result := Result + 'NULL';
+    else Result := Result + 'NULL';
   end;
   Result := 'SELECT ' + Result;
 end;

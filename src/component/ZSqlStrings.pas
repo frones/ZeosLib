@@ -58,7 +58,10 @@ interface
 {$I ZComponent.inc}
 
 uses
-  Types, Classes, SysUtils, DB, ZSysUtils, ZDbcIntfs, ZTokenizer, ZGenericSqlToken,
+{$IFNDEF VER130BELOW}
+  Types,
+{$ENDIF}
+  Classes, SysUtils, DB, ZSysUtils, ZDbcIntfs, ZTokenizer, ZGenericSqlToken,
   Contnrs, ZCompatibility;
 
 type
@@ -278,7 +281,9 @@ end;
 }
 function TZSQLStrings.FindParam(const ParamName: string): Integer;
 begin
+{$IFNDEF VER130BELOW}
   FParams.CaseSensitive := False;
+{$ENDIF}  
   Result := FParams.IndexOf(ParamName);
 end;
 
@@ -408,7 +413,9 @@ end;
 }
 procedure TZSQLStrings.Changed;
 begin
+{$IFNDEF VER130BELOW}
   if UpdateCount = 0 then
+{$ENDIF}
     RebuildAll;
   inherited Changed;
 end;

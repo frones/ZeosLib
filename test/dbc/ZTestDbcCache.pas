@@ -59,7 +59,7 @@ uses
 {$IFDEF VER120BELOW}
   DateUtils,
 {$ENDIF}
-  Types, TestFramework, ZDbcCache, ZClasses, ZSysUtils, ZCollections, ZDbcResultSet,
+  TestFramework, ZDbcCache, ZClasses, ZSysUtils, ZCollections, ZDbcResultSet,
   ZDbcIntfs, ZDbcUtils, SysUtils, Classes, ZDbcResultSetMetadata,
   Contnrs, ZCompatibility, ZTestDefinitions;
 
@@ -241,7 +241,7 @@ begin
   FAsciiStreamData := 'Test Ascii Stream Data';
   FAsciiStream := TMemoryStream.Create;
   BufferChar := PChar(FAsciiStreamData);
-  FAsciiStream.Write(BufferChar^, Length(FAsciiStreamData)* SizeOf(Char));
+  FAsciiStream.Write(BufferChar^, Length(FAsciiStreamData));
 
   FUnicodeStreamData := 'Test Unicode Stream Data';
   FUnicodeStream := TMemoryStream.Create;
@@ -573,7 +573,7 @@ begin
       CheckNotNull(Stream, 'AsciiStream');
       Check(CompareStreams(Stream, FAsciiStream), 'AsciiStream');
       Stream.Position := 0;
-      ReadNum := Stream.Read(BufferChar, 101*SizeOf(Char));
+      ReadNum := Stream.Read(BufferChar, 100);
       Stream.Free;
       CheckEquals(FAsciiStreamData, BufferToStr(BufferChar, ReadNum));
     except

@@ -235,8 +235,7 @@ function TZExpressionParser.GetToken: TZExpressionToken;
 begin
   if FTokenIndex < FInitialTokens.Count then
     Result := TZExpressionToken(FInitialTokens[FTokenIndex])
-   else
-      Result := nil;
+  else Result := nil;
 end;
 
 {**
@@ -248,8 +247,7 @@ function TZExpressionParser.GetNextToken: TZExpressionToken;
 begin
   if (FTokenIndex + 1) < FInitialTokens.Count then
     Result := TZExpressionToken(FInitialTokens[FTokenIndex + 1])
-   else
-      Result := nil;
+  else Result := nil;
 end;
 
 {**
@@ -279,8 +277,7 @@ begin
     begin
       Temp := TZExpressionToken(FInitialTokens[FTokenIndex + I]);
       Result := Temp.TokenType = TokenTypes[I];
-      end
-      else
+    end else
       Result := False;
 
     if not Result then
@@ -373,11 +370,6 @@ begin
               end;
             end;
           end;
-        ttTime,ttDate,ttDateTime:
-          begin
-            TokenType := ttConstant;
-            DefVarManager.SetAsDateTime(TokenValue, StrToDateTime(Tokens[TokenIndex]));
-          end;
       end;
 
       if TokenType = ttUnknown then
@@ -429,8 +421,7 @@ begin
     ShiftToken;
     SyntaxAnalyse2;
     FResultTokens.Add(TZExpressionToken.Create(Token.TokenType, NullVariant));
-   end
-   else
+  end else
     SyntaxAnalyse2;
 end;
 
@@ -489,8 +480,7 @@ begin
     else if CheckTokenTypes([ttIs, ttNot, ttNull]) then
     begin
       FResultTokens.Add(TZExpressionToken.Create(ttIsNotNull, NullVariant));
-      end
-      else
+    end else
       Break;
   end;
 end;
@@ -562,8 +552,7 @@ begin
   begin
     Unary.TokenType := ttUnary;
     ShiftToken;
-   end
-   else
+  end else
     Unary := nil;
 
   if not HasMoreTokens then
@@ -619,8 +608,7 @@ begin
     FResultTokens.Add(TZExpressionToken.Create(ttConstant, Temp));
     FResultTokens.Add(TZExpressionToken.Create(Primitive.TokenType,
       Primitive.Value));
-   end
-   else
+  end else
     raise TZParseError.Create(SSyntaxError);
 
   if Unary <> nil then

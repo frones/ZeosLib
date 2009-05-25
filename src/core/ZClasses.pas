@@ -61,7 +61,7 @@ uses
   SysUtils, Classes;
 
 const
-  ZEOS_VERSION = '7.0.0-dev';
+  ZEOS_VERSION = '6.6.5-stable';
 
 type
   { Lazarus/FreePascal Support }
@@ -94,7 +94,7 @@ type
   IZObject = interface(IZInterface)
     ['{EF46E5F7-00CF-4DDA-BED0-057D6686AEE0}']
     function Equals(const Value: IZInterface): Boolean;
-    function GetHashCode: LongInt;
+    function Hash: LongInt;
     function Clone: IZInterface;
     function ToString: string;
     function InstanceOf(const IId: TGUID): Boolean;
@@ -180,10 +180,10 @@ type
   {** Implements an abstract interfaced object. }
   TZAbstractObject = class(TInterfacedObject, IZObject)
   public
-    function Equals(const Value: IZInterface): Boolean; {$IFDEF DELPHI12_UP}overload;{$ENDIF} virtual;
-    {$IFNDEF DELPHI12_UP}function GetHashCode: LongInt;{$ENDIF}
+    function Equals(const Value: IZInterface): Boolean; virtual;
+    function Hash: LongInt;
     function Clone: IZInterface; virtual;
-    function ToString: string;{$IFDEF DELPHI12_UP}override{$ELSE} virtual{$ENDIF} ;
+    function ToString: string; virtual;
     function InstanceOf(const IId: TGUID): Boolean;
   end;
 
@@ -253,12 +253,10 @@ end;
   Gets a unique hash for this object.
   @return a unique hash for this object.
 }
-{$IFNDEF DELPHI12_UP}
-function TZAbstractObject.GetHashCode: LongInt;
+function TZAbstractObject.Hash: LongInt;
 begin
   Result := LongInt(Self);
 end;
-{$ENDIF}
 
 {**
   Clones an object instance.

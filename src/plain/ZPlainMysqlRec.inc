@@ -45,10 +45,40 @@
 {$IFDEF MYSQL_5_API}
   {$DEFINE MYSQL_5_UP}
   {$DEFINE MYSQL_41_UP}
+  {$DEFINE MYSQL_40_UP}
+  {$DEFINE MYSQL_323_UP}
+  {$DEFINE MYSQL_320_UP}
   {$DEFINE MYSQL_5_DOWN}
 {$ENDIF}
 {$IFDEF MYSQL_41_API}
   {$DEFINE MYSQL_41_UP}
+  {$DEFINE MYSQL_40_UP}
+  {$DEFINE MYSQL_323_UP}
+  {$DEFINE MYSQL_320_UP}
+  {$DEFINE MYSQL_41_DOWN}
+  {$DEFINE MYSQL_5_DOWN}
+{$ENDIF}
+{$IFDEF MYSQL_40_API}
+  {$DEFINE MYSQL_40_UP}
+  {$DEFINE MYSQL_323_UP}
+  {$DEFINE MYSQL_320_UP}
+  {$DEFINE MYSQL_40_DOWN}
+  {$DEFINE MYSQL_41_DOWN}
+  {$DEFINE MYSQL_5_DOWN}
+{$ENDIF}
+{$IFDEF MYSQL_323_API}
+  {$DEFINE MYSQL_323_UP}
+  {$DEFINE MYSQL_320_UP}
+  {$DEFINE MYSQL_323_DOWN}
+  {$DEFINE MYSQL_40_DOWN}
+  {$DEFINE MYSQL_41_DOWN}
+  {$DEFINE MYSQL_5_DOWN}
+{$ENDIF}
+{$IFDEF MYSQL_320_API}
+  {$DEFINE MYSQL_320_UP}
+  {$DEFINE MYSQL_320_DOWN}
+  {$DEFINE MYSQL_323_DOWN}
+  {$DEFINE MYSQL_40_DOWN}
   {$DEFINE MYSQL_41_DOWN}
   {$DEFINE MYSQL_5_DOWN}
 {$ENDIF}
@@ -114,14 +144,38 @@
   @api_rec.mysql_server_init            := GetAddress('mysql_server_init');
   @api_rec.mysql_server_end             := GetAddress('mysql_server_end');
 
+  {$IFDEF MYSQL_323_UP}
   @api_rec.mysql_change_user            := GetAddress('mysql_change_user');
   @api_rec.mysql_field_count            := GetAddress('mysql_field_count');
+  {$ENDIF}
 
+  {$IFDEF MYSQL_40_UP}
   @api_rec.mysql_get_client_version     := GetAddress('mysql_get_client_version');
-
+  {BELOW are functions not implemented in PDO}
   @api_rec.mysql_send_query      := GetAddress('mysql_send_query');
   @api_rec.mysql_read_query_result := GetAddress('mysql_read_query_result');
+  @api_rec.mysql_master_query    := GetAddress('mysql_master_query');
+  @api_rec.mysql_master_send_query := GetAddress('mysql_master_send_query');
+  @api_rec.mysql_slave_query     := GetAddress('mysql_slave_query');
+  @api_rec.mysql_slave_send_query := GetAddress('mysql_slave_send_query');
+  @api_rec.mysql_enable_rpl_parse := GetAddress('mysql_enable_rpl_parse');
+  @api_rec.mysql_disable_rpl_parse := GetAddress('mysql_disable_rpl_parse');
+  @api_rec.mysql_rpl_parse_enabled := GetAddress('mysql_rpl_parse_enabled');
+  @api_rec.mysql_enable_reads_from_master := GetAddress('mysql_enable_reads_from_master');
+  @api_rec.mysql_disable_reads_from_master := GetAddress('mysql_disable_reads_from_master');
+  @api_rec.mysql_reads_from_master_enabled := GetAddress('mysql_reads_from_master_enabled');
+  @api_rec.mysql_rpl_query_type  := GetAddress('mysql_rpl_query_type');
+  @api_rec.mysql_rpl_probe       := GetAddress('mysql_rpl_probe');
+  @api_rec.mysql_set_master      := GetAddress('mysql_set_master');
+  @api_rec.mysql_add_slave       := GetAddress('mysql_add_slave');
+  @api_rec.mysql_manager_init    := GetAddress('mysql_manager_init');
+  @api_rec.mysql_manager_connect := GetAddress('mysql_manager_connect');
+  @api_rec.mysql_manager_close   := GetAddress('mysql_manager_close');
+  @api_rec.mysql_manager_command := GetAddress('mysql_manager_command');
+  @api_rec.mysql_manager_fetch_line := GetAddress('mysql_manager_fetch_line');
+  {$ENDIF}
 
+  {$IFDEF MYSQL_41_UP}
   @api_rec.mysql_autocommit             := GetAddress('mysql_autocommit');
   @api_rec.mysql_commit                 := GetAddress('mysql_commit');
   @api_rec.mysql_get_server_version     := GetAddress('mysql_get_server_version');
@@ -161,6 +215,7 @@
   @api_rec.mysql_stmt_send_long_data    := GetAddress('mysql_stmt_send_long_data');
   @api_rec.mysql_stmt_sqlstate          := GetAddress('mysql_stmt_sqlstate');
   @api_rec.mysql_stmt_store_result      := GetAddress('mysql_stmt_store_result');
+  {$ENDIF}
 
   {$IFDEF MYSQL_5_UP}
   @api_rec.mysql_get_character_set_info := GetAddress('mysql_get_character_set_info');
@@ -171,3 +226,10 @@
   {$UNDEF MYSQL_5_DOWN}
   {$UNDEF MYSQL_41_UP}
   {$UNDEF MYSQL_41_DOWN}
+  {$UNDEF MYSQL_40_UP}
+  {$UNDEF MYSQL_40_DOWN}
+  {$UNDEF MYSQL_323_UP}
+  {$UNDEF MYSQL_323_DOWN}
+  {$UNDEF MYSQL_320_UP}
+  {$UNDEF MYSQL_320_DOWN}
+

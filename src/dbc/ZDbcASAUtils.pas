@@ -59,7 +59,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, Types, ZSysUtils, ZDbcIntfs, ZPlainASADriver, ZDbcLogging,
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZPlainASADriver, ZDbcLogging,
   ZCompatibility, ZDbcASA, ZDbcStatement, ZVariant;   // SQLTimSt, FmtBCD,
 
 const
@@ -103,7 +103,7 @@ type
     procedure UpdateFloat(const Index: Integer; Value: Single);
     procedure UpdateDouble(const Index: Integer; Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
-    procedure UpdatePChar(const Index: Integer; Value: PAnsiChar);
+    procedure UpdatePChar(const Index: Integer; Value: PChar);
     procedure UpdateString(const Index: Integer; Value: string);
     procedure UpdateBytes(const Index: Integer; Value: TByteDynArray);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
@@ -122,7 +122,7 @@ type
     function GetFloat(const Index: Integer): Single;
     function GetDouble(const Index: Integer): Double;
     function GetBigDecimal(const Index: Integer): Extended;
-    function GetPChar(const Index: Integer): PAnsiChar;
+    function GetPChar(const Index: Integer): PChar;
     function GetString(const Index: Integer): string;
     function GetBytes(const Index: Integer): TByteDynArray;
     function GetDate(const Index: Integer): TDateTime;
@@ -143,7 +143,7 @@ type
     FSQLDA: PASASQLDA;
     FPlainDriver: IZASAPlainDriver;
     FHandle: PZASASQLCA;
-    FCursorName: AnsiString;
+    FCursorName: String;
     procedure CreateException( Msg: string);
     procedure CheckIndex(const Index: Word);
     procedure CheckRange(const Index: Word);
@@ -154,7 +154,7 @@ type
     procedure ReadBlob(const Index: Word; Buffer: Pointer; Length: LongWord);
   public
     constructor Create(PlainDriver: IZASAPlainDriver; Handle: PZASASQLCA;
-      CursorName: AnsiString; NumVars: Word = StdVars);
+      CursorName: String; NumVars: Word = StdVars);
     destructor Destroy; override;
 
     procedure AllocateSQLDA( NumVars: Word);
@@ -181,7 +181,7 @@ type
     procedure UpdateFloat(const Index: Integer; Value: Single);
     procedure UpdateDouble(const Index: Integer; Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
-    procedure UpdatePChar(const Index: Integer; Value: PAnsiChar);
+    procedure UpdatePChar(const Index: Integer; Value: PChar);
     procedure UpdateString(const Index: Integer; Value: string);
     procedure UpdateBytes(const Index: Integer; Value: TByteDynArray);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
@@ -201,7 +201,7 @@ type
     function GetFloat(const Index: Integer): Single;
     function GetDouble(const Index: Integer): Double;
     function GetBigDecimal(const Index: Integer): Extended;
-    function GetPChar(const Index: Integer): PAnsiChar;
+    function GetPChar(const Index: Integer): PChar;
     function GetString(const Index: Integer): string;
     function GetBytes(const Index: Integer): TByteDynArray;
     function GetDate(const Index: Integer): TDateTime;
@@ -248,9 +248,9 @@ function GetCachedResultSet(SQL: string;
   Statement: IZStatement; NativeResultSet: IZResultSet): IZResultSet;
 
 procedure DescribeCursor( FASAConnection: IZASAConnection; FSQLData: IZASASQLDA;
-  Cursor: AnsiString; SQL: String);
+  Cursor, SQL: String);
 
-procedure ASAPrepare( FASAConnection: IZASAConnection; FSQLData, FParamsSQLData: IZASASQLDA;
+procedure Prepare( FASAConnection: IZASAConnection; FSQLData, FParamsSQLData: IZASASQLDA;
    const SQL: String; StmtNum: PSmallInt; var FPrepared, FMoreResults: Boolean);
 
 procedure PrepareParameters( PlainDriver: IZASAPlainDriver;
@@ -261,7 +261,7 @@ function RandomString( Len: integer): string;
 
 implementation
 
-uses Variants, ZMessages, ZDbcCachedResultSet, Math;
+uses {$IFDEF FPC}Variants,{$ELSE}{$IFNDEF VER130BELOW}Variants,{$ENDIF}{$ENDIF} ZMessages, ZDbcCachedResultSet, Math;
 
 { TZASASQLDA }
 
@@ -306,9 +306,7 @@ begin
       PZASABlobStruct( sqlData).untrunc_len := 0;
       PZASABlobStruct( sqlData).arr[0] := #0;
       Inc( Len, SizeOf( TZASABlobStruct));
-    end
-    else
-    begin
+    end else begin
       if ( ASAType and $FFFE = DT_BINARY) or
          ( ASAType and $FFFE = DT_VARCHAR) then
         Inc( Len, SizeOf( TZASASQLSTRING));
@@ -331,7 +329,7 @@ begin
 end;
 
 constructor TZASASQLDA.Create(PlainDriver: IZASAPlainDriver; Handle: PZASASQLCA;
-      CursorName: AnsiString; NumVars: Word = StdVars);
+      CursorName: String; NumVars: Word = StdVars);
 begin
   FPlainDriver := PlainDriver;
   FHandle := Handle;
@@ -376,14 +374,12 @@ begin
       case FSQLDA.sqlVar[i].sqlType and $FFFE of
         DT_DATE,
         DT_TIME,
-        DT_TIMESTAMP:
-                        begin
+        DT_TIMESTAMP  : begin
                           FSQLDA.sqlVar[i].sqlType := DT_TIMESTAMP_STRUCT +
                             ( FSQLDA.sqlVar[i].sqlType and $0001);
                           FSQLDA.sqlVar[i].sqlLen := SizeOf( TZASASQLDateTime);
                         end;
-        DT_DECIMAL:
-                        begin
+        DT_DECIMAL    : begin
                           FSQLDA.sqlVar[i].sqlType := DT_DOUBLE +
                             ( FSQLDA.sqlVar[i].sqlType and $0001);
                           FSQLDA.sqlVar[i].sqlLen := SizeOf( Double);
@@ -394,8 +390,7 @@ begin
         DT_LONGVARCHAR: if FSQLDA.sqlVar[i].sqlLen < MinBLOBSize then
                           FSQLDA.sqlVar[i].sqlType := DT_VARCHAR +
                             ( FSQLDA.sqlVar[i].sqlType and $0001)
-                        else
-                        begin
+                        else begin
                           FSQLDA.sqlVar[i].sqlType := DT_LONGVARCHAR +
                             ( FSQLDA.sqlVar[i].sqlType and $0001);
                           FSQLDA.sqlVar[i].sqlLen := 0;
@@ -404,8 +399,7 @@ begin
         DT_LONGBINARY:  if FSQLDA.sqlVar[i].sqlLen < MinBLOBSize then
                           FSQLDA.sqlVar[i].sqlType := DT_BINARY +
                             ( FSQLDA.sqlVar[i].sqlType and $0001)
-                        else
-                        begin
+                        else begin
                           FSQLDA.sqlVar[i].sqlType := DT_LONGBINARY +
                             ( FSQLDA.sqlVar[i].sqlType and $0001);
                           FSQLDA.sqlVar[i].sqlLen := 0;
@@ -499,12 +493,8 @@ function TZASASQLDA.GetFieldIndex(const Name: String): Word;
 begin
   for Result := 0 to FSQLDA.sqld - 1 do
     if FSQLDA.sqlvar[Result].sqlname.length = Length(name) then
-      {$IFDEF DELPHI12_UP}
-      if StrLIComp(@FSQLDA.sqlvar[Result].sqlname.data, PAnsiChar(UTF8String(Name)), Length(name)) = 0 then
-      {$ELSE}
-      if StrLIComp(@FSQLDA.sqlvar[Result].sqlname.data, PAnsiChar(Name), Length(name)) = 0 then
-      {$ENDIF} 
-            Exit;
+      if StrLIComp( @FSQLDA.sqlvar[ Result].sqlname.data, PChar(Name),
+        Length(name)) = 0 then Exit;
   CreateException( Format( SFieldNotFound1, [name]));
   Result := 0; // satisfy compiler
 end;
@@ -588,8 +578,7 @@ begin
       DT_UNSINT           : PInteger(sqldata)^ := ord(Value);
       DT_FLOAT            : PSingle(sqldata)^ := ord(Value);
       DT_DOUBLE           : PDouble(sqldata)^ := ord(Value);
-      DT_VARCHAR:
-                            begin
+      DT_VARCHAR          : begin
                               PZASASQLSTRING( sqlData).length := 1;
                               StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
                                 IntToStr( ord( Value)), sqllen-3);
@@ -601,8 +590,7 @@ begin
     else
       CreateException( SUnsupportedParameterType);
     end;
-    if (sqlind <> nil) then
-       sqlind^ := 0; // not null
+    if (sqlind <> nil) then sqlind^ := 0; // not null
   end;
 end;
 
@@ -624,8 +612,7 @@ begin
       DT_UNSINT           : PInteger(sqldata)^ := Value;
       DT_FLOAT            : PSingle(sqldata)^ := Value;
       DT_DOUBLE           : PDouble(sqldata)^ := Value;
-      DT_VARCHAR:
-                            begin
+      DT_VARCHAR          : begin
                               PZASASQLSTRING( sqlData).length :=
                                 Length( IntToStr( Value));
                               StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
@@ -638,8 +625,7 @@ begin
     else
       CreateException( SUnsupportedParameterType);
     end;
-    if (sqlind <> nil) then
-       sqlind^ := 0; // not null
+    if (sqlind <> nil) then sqlind^ := 0; // not null
   end;
 end;
 
@@ -661,8 +647,7 @@ begin
       DT_UNSINT           : PInteger(sqldata)^ := Value;
       DT_FLOAT            : PSingle(sqldata)^ := Value;
       DT_DOUBLE           : PDouble(sqldata)^ := Value;
-      DT_VARCHAR:
-                            begin
+      DT_VARCHAR          : begin
                               PZASASQLSTRING( sqlData).length :=
                                 Length( IntToStr( Value));
                               StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
@@ -675,8 +660,7 @@ begin
     else
       CreateException( SUnsupportedParameterType);
     end;
-    if (sqlind <> nil) then
-       sqlind^ := 0; // not null
+    if (sqlind <> nil) then sqlind^ := 0; // not null
   end;
 end;
 
@@ -698,8 +682,7 @@ begin
       DT_UNSINT           : PInteger(sqldata)^ := Value;
       DT_FLOAT            : PSingle(sqldata)^ := Value;
       DT_DOUBLE           : PDouble(sqldata)^ := Value;
-      DT_VARCHAR:
-                            begin
+      DT_VARCHAR          : begin
                               PZASASQLSTRING( sqlData).length :=
                                 Length( IntToStr( Value));
                               StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
@@ -712,8 +695,7 @@ begin
     else
       CreateException( SUnsupportedParameterType);
     end;
-    if (sqlind <> nil) then
-       sqlind^ := 0; // not null
+    if (sqlind <> nil) then sqlind^ := 0; // not null
   end;
 end;
 
@@ -735,8 +717,7 @@ begin
       DT_UNSINT           : PInteger(sqldata)^ := Value;
       DT_FLOAT            : PSingle(sqldata)^ := Value;
       DT_DOUBLE           : PDouble(sqldata)^ := Value;
-      DT_VARCHAR:
-                            begin
+      DT_VARCHAR          : begin
                               PZASASQLSTRING( sqlData).length :=
                                 Length( IntToStr( Value));
                               StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
@@ -749,8 +730,7 @@ begin
     else
       CreateException( SUnsupportedParameterType);
     end;
-    if (sqlind <> nil) then
-       sqlind^ := 0; // not null
+    if (sqlind <> nil) then sqlind^ := 0; // not null
   end;
 end;
 
@@ -772,8 +752,7 @@ begin
       DT_UNSINT           : PInteger(sqldata)^ := Trunc( Value);
       DT_FLOAT            : PSingle(sqldata)^ := Value;
       DT_DOUBLE           : PDouble(sqldata)^ := Value;
-      DT_VARCHAR:
-                            begin
+      DT_VARCHAR          : begin
                               PZASASQLSTRING( sqlData).length :=
                                 Length( FloatToStr( Value));
                               StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
@@ -786,8 +765,7 @@ begin
     else
       CreateException( SUnsupportedParameterType);
     end;
-    if (sqlind <> nil) then
-       sqlind^ := 0; // not null
+    if (sqlind <> nil) then sqlind^ := 0; // not null
   end;
 end;
 
@@ -809,8 +787,7 @@ begin
       DT_UNSINT           : PInteger(sqldata)^ := Trunc( Value);
       DT_FLOAT            : PSingle(sqldata)^ := Value;
       DT_DOUBLE           : PDouble(sqldata)^ := Value;
-      DT_VARCHAR:
-                            begin
+      DT_VARCHAR          : begin
                               PZASASQLSTRING( sqlData).length :=
                                 Length( FloatToStr( Value));
                               StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
@@ -823,8 +800,7 @@ begin
     else
       CreateException( SUnsupportedParameterType);
     end;
-    if (sqlind <> nil) then
-       sqlind^ := 0; // not null
+    if (sqlind <> nil) then sqlind^ := 0; // not null
   end;
 end;
 
@@ -846,8 +822,7 @@ begin
       DT_UNSINT           : PInteger(sqldata)^ := Trunc( Value);
       DT_FLOAT            : PSingle(sqldata)^ := Value;
       DT_DOUBLE           : PDouble(sqldata)^ := Value;
-      DT_VARCHAR:
-                            begin
+      DT_VARCHAR          : begin
                               PZASASQLSTRING( sqlData).length :=
                                 Length( FloatToStr( Value));
                               StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
@@ -860,17 +835,16 @@ begin
     else
       CreateException( SUnsupportedParameterType);
     end;
-    if (sqlind <> nil) then
-       sqlind^ := 0; // not null
+    if (sqlind <> nil) then sqlind^ := 0; // not null
   end;
 end;
 
 {**
-   Set up parameter PAnsiChar value
+   Set up parameter PChar value
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZASASQLDA.UpdatePChar(const Index: Integer; Value: PAnsiChar);
+procedure TZASASQLDA.UpdatePChar(const Index: Integer; Value: PChar);
 var
   BlobSize: Integer;
 begin
@@ -883,14 +857,12 @@ begin
   with FSQLDA.sqlvar[Index] do
   begin
     case sqlType and $FFFE of
-         DT_VARCHAR:
-                            begin
+      DT_VARCHAR          : begin
                               PZASASQLSTRING( sqlData).length := BlobSize;
                               StrLCopy( @PZASASQLSTRING( sqlData).data[0],
                                 Value, BlobSize);
                             end;
-         DT_LONGVARCHAR:
-                            begin
+      DT_LONGVARCHAR      : begin
                               StrLCopy( @PZASABlobStruct( sqlData).arr[0], Value,
                                 BlobSize);
                               PZASABlobStruct( sqlData).stored_len := BlobSize;
@@ -899,8 +871,7 @@ begin
     else
       CreateException( SUnsupportedParameterType);
     end;
-    if (sqlind <> nil) then
-       sqlind^ := 0; // not null
+    if (sqlind <> nil) then sqlind^ := 0; // not null
   end;
 end;
 
@@ -922,14 +893,12 @@ begin
   with FSQLDA.sqlvar[Index] do
   begin
     case sqlType and $FFFE of
-         DT_VARCHAR:
-                            begin
+      DT_VARCHAR          : begin
                               PZASASQLSTRING( sqlData).length := BlobSize;
                               StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
                                 Value, BlobSize);
                             end;
-         DT_LONGVARCHAR:
-                            begin
+      DT_LONGVARCHAR      : begin
                               StrPLCopy( @PZASABlobStruct( sqlData).arr[0], Value,
                                 BlobSize);
                               PZASABlobStruct( sqlData).stored_len := BlobSize;
@@ -938,8 +907,7 @@ begin
     else
       CreateException( SUnsupportedParameterType);
     end;
-    if (sqlind <> nil) then
-       sqlind^ := 0; // not null
+    if (sqlind <> nil) then sqlind^ := 0; // not null
   end;
 end;
 
@@ -961,13 +929,11 @@ begin
   with FSQLDA.sqlvar[Index] do
   begin
     case sqlType and $FFFE of
-         DT_BINARY:
-                            begin
+      DT_BINARY           : begin
                               PZASASQLSTRING( sqlData).length := BlobSize;
                               Move( Value[0], PZASASQLSTRING( sqlData).data[0], BlobSize);
                             end;
-         DT_LONGBINARY:
-                            begin
+      DT_LONGBINARY       : begin
                               Move( Value[0], PZASABlobStruct( sqlData).arr[0], BlobSize);
                               PZASABlobStruct( sqlData).stored_len := BlobSize;
                               PZASABlobStruct( sqlData).untrunc_len := BlobSize;
@@ -975,8 +941,7 @@ begin
     else
       CreateException( SUnsupportedParameterType);
     end;
-    if (sqlind <> nil) then
-       sqlind^ := 0; // not null
+    if (sqlind <> nil) then sqlind^ := 0; // not null
   end;
 end;
 
@@ -1018,8 +983,7 @@ begin
   with FSQLDA.sqlvar[Index] do
   begin
     case sqlType and $FFFE of
-         DT_TIMESTAMP_STRUCT:
-                            begin
+      DT_TIMESTAMP_STRUCT : begin
                               DecodeDate( Value, y, m, d);
                               DecodeTime( Value, hr, min, sec, msec);
                               PZASASQLDateTime( sqlData).Year := y;
@@ -1036,8 +1000,7 @@ begin
     else
       CreateException( SUnsupportedParameterType);
     end;
-    if (sqlind <> nil) then
-       sqlind^ := 0; // not null
+    if (sqlind <> nil) then sqlind^ := 0; // not null
   end;
   FDeclType[Index].sqlType := DT_TIMESTAMP;
 end;
@@ -1084,8 +1047,7 @@ begin
     begin
       UpdateBytes( Index, VarArrayLock( Value));
       VarArrayUnlock( Value);
-    end
-    else
+    end else
       CreateException( SUnsupportedParameterType);
   end;
 end;
@@ -1107,8 +1069,7 @@ begin
   begin
     case sqlType and $FFFE of
       DT_LONGVARCHAR,
-      DT_LONGBINARY:
-                      begin
+      DT_LONGBINARY : begin
                         Stream.ReadBuffer( PZASABlobStruct( sqlData).arr[0], BlobSize);
                         Stream.Position := 0;
                         PZASABlobStruct( sqlData).stored_len := BlobSize;
@@ -1117,8 +1078,7 @@ begin
     else
       CreateException( SUnsupportedParameterType);
     end;
-    if (sqlind <> nil) then
-       sqlind^ := 0; // not null
+    if (sqlind <> nil) then sqlind^ := 0; // not null
   end;
 end;
 
@@ -1159,8 +1119,7 @@ begin
   with FSQLDA.sqlvar[Index] do
   begin
     Result := 0;
-    if (sqlind^ < 0) then
-       Exit;
+    if (sqlind^ < 0) then Exit;
 
     case sqlType and $FFFE of
       DT_SMALLINT    : Result := PSmallint(sqldata)^;
@@ -1169,9 +1128,9 @@ begin
       DT_UNSINT      : Result := PLongWord(sqldata)^;
       DT_FLOAT       : Result := PSingle(sqldata)^;
       DT_DOUBLE      : Result := PDouble(sqldata)^;
-      DT_VARCHAR:
-                       begin
-                         SetString(s, PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length);
+      DT_VARCHAR     : begin
+                         SetString( s, PChar( @PZASASQLSTRING( sqlData).data[0]),
+                           PZASASQLSTRING( sqlData).length);
                          Result := StrToFloat( s);
                        end;
       DT_TINYINT,
@@ -1198,8 +1157,7 @@ begin
   with FSQLDA.sqlvar[Index] do
   begin
     Result := False;
-    if (sqlind^ < 0) then
-       Exit;
+    if (sqlind^ < 0) then Exit;
 
     case sqlType and $FFFE of
       DT_SMALLINT    : Result := PSmallint(sqldata)^ <> 0;
@@ -1208,9 +1166,9 @@ begin
       DT_UNSINT      : Result := PLongWord(sqldata)^ <> 0;
       DT_FLOAT       : Result := PSingle(sqldata)^ <> 0;
       DT_DOUBLE      : Result := PDouble(sqldata)^ <> 0;
-      DT_VARCHAR:
-                       begin
-                         SetString(s, PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length);
+      DT_VARCHAR     : begin
+                         SetString( s, PChar( @PZASASQLSTRING( sqlData).data[0]),
+                           PZASASQLSTRING( sqlData).length);
                          Result := StrToInt( s) = 1;
                        end;
       DT_TINYINT,
@@ -1237,8 +1195,7 @@ begin
   with FSQLDA.sqlvar[Index] do
   begin
     Result := 0;
-    if (sqlind^ < 0) then
-       Exit;
+    if (sqlind^ < 0) then Exit;
 
     case sqlType and $FFFE of
       DT_SMALLINT    : Result := PSmallint(sqldata)^;
@@ -1247,9 +1204,9 @@ begin
       DT_UNSINT      : Result := PLongWord(sqldata)^;
       DT_FLOAT       : Result := Trunc( PSingle(sqldata)^);
       DT_DOUBLE      : Result := Trunc( PDouble(sqldata)^);
-      DT_VARCHAR:
-                       begin
-                         SetString(s, PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length);
+      DT_VARCHAR     : begin
+                         SetString( s, PChar( @PZASASQLSTRING( sqlData).data[0]),
+                           PZASASQLSTRING( sqlData).length);
                          Result := StrToInt( s);
                        end;
       DT_TINYINT,
@@ -1274,14 +1231,12 @@ begin
   with FSQLDA.sqlvar[Index] do
   begin
     Result := nil;
-    if (sqlind^ < 0) then
-       Exit;
+    if (sqlind^ < 0) then Exit;
 
     case sqlType and $FFFE of
-         DT_BINARY:
-                            begin
+      DT_BINARY           : begin
                               SetLength( Result, PZASASQLSTRING( sqlData).length);
-                              Move(PZASASQLSTRING(sqlData).data[0], Result[0], PZASASQLSTRING(sqlData).length);
+                              Move( PZASASQLSTRING( sqlData).data[0], Result[0], PZASASQLSTRING( sqlData).length);
                             end;
     else
       CreateException( Format( SErrorConvertionField,
@@ -1313,8 +1268,7 @@ begin
   with FSQLDA.sqlvar[Index] do
   begin
     Result := 0;
-    if (sqlind^ < 0) then
-       Exit;
+    if (sqlind^ < 0) then Exit;
 
     case sqlType and $FFFE of
       DT_SMALLINT    : Result := PSmallint(sqldata)^;
@@ -1323,9 +1277,9 @@ begin
       DT_UNSINT      : Result := PLongWord(sqldata)^;
       DT_FLOAT       : Result := PSingle(sqldata)^;
       DT_DOUBLE      : Result := PDouble(sqldata)^;
-      DT_VARCHAR:
-                       begin
-                         SetString(s, PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length);
+      DT_VARCHAR     : begin
+                         SetString( s, PChar( @PZASASQLSTRING( sqlData).data[0]),
+                           PZASASQLSTRING( sqlData).length);
                          Result := StrToFloat( s);
                        end;
       DT_TINYINT,
@@ -1352,8 +1306,7 @@ begin
   with FSQLDA.sqlvar[Index] do
   begin
     Result := 0;
-    if (sqlind^ < 0) then
-       Exit;
+    if (sqlind^ < 0) then Exit;
 
     case sqlType and $FFFE of
       DT_SMALLINT    : Result := PSmallint(sqldata)^;
@@ -1362,9 +1315,9 @@ begin
       DT_UNSINT      : Result := PLongWord(sqldata)^;
       DT_FLOAT       : Result := PSingle(sqldata)^;
       DT_DOUBLE      : Result := PDouble(sqldata)^;
-      DT_VARCHAR:
-                       begin
-                         SetString(s, PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length);
+      DT_VARCHAR     : begin
+                         SetString( s, PChar( @PZASASQLSTRING( sqlData).data[0]),
+                           PZASASQLSTRING( sqlData).length);
                          Result := StrToFloat( s);
                        end;
       DT_TINYINT,
@@ -1391,8 +1344,7 @@ begin
   with FSQLDA.sqlvar[Index] do
   begin
     Result := 0;
-    if (sqlind^ < 0) then
-       Exit;
+    if (sqlind^ < 0) then Exit;
 
     case sqlType and $FFFE of
       DT_SMALLINT    : Result := PSmallint(sqldata)^;
@@ -1401,9 +1353,9 @@ begin
       DT_UNSINT      : Result := PLongWord(sqldata)^;
       DT_FLOAT       : Result := Trunc( PSingle(sqldata)^);
       DT_DOUBLE      : Result := Trunc( PDouble(sqldata)^);
-      DT_VARCHAR:
-                       begin
-                         SetString(s, PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length);
+      DT_VARCHAR     : begin
+                         SetString( s, PChar( @PZASASQLSTRING( sqlData).data[0]),
+                           PZASASQLSTRING( sqlData).length);
                          Result := StrToInt( s);
                        end;
       DT_TINYINT,
@@ -1430,8 +1382,7 @@ begin
   with FSQLDA.sqlvar[Index] do
   begin
     Result := 0;
-    if (sqlind^ < 0) then
-       Exit;
+    if (sqlind^ < 0) then Exit;
 
     case sqlType and $FFFE of
       DT_SMALLINT    : Result := PSmallint(sqldata)^;
@@ -1440,9 +1391,9 @@ begin
       DT_UNSINT      : Result := PLongWord(sqldata)^;
       DT_FLOAT       : Result := Trunc( PSingle(sqldata)^);
       DT_DOUBLE      : Result := Trunc( PDouble(sqldata)^);
-      DT_VARCHAR:
-                       begin
-                         SetString(s, PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length);
+      DT_VARCHAR     : begin
+                         SetString( s, PChar( @PZASASQLSTRING( sqlData).data[0]),
+                           PZASASQLSTRING( sqlData).length);
                          Result := StrToInt64( s);
                        end;
       DT_TINYINT,
@@ -1457,27 +1408,26 @@ begin
 end;
 
 {**
-   Return PAnsiChar field value
+   Return Pchar field value
    @param Index the field index
-   @return the field PAnsiChar value
+   @return the field PChar value
 }
-function TZASASQLDA.GetPChar(const Index: Integer): PAnsiChar;
+function TZASASQLDA.GetPChar(const Index: Integer): PChar;
 begin
   CheckRange(Index);
   with FSQLDA.sqlvar[Index] do
   begin
     Result := nil;
-    if (sqlind^ < 0) then
-       Exit;
+    if (sqlind^ < 0) then Exit;
 
     case sqlType and $FFFE of
-         DT_VARCHAR:
-            begin
-              GetMem( Result, PZASASQLSTRING( sqlData).length + 1);
-              StrLCopy( Result, @PZASASQLSTRING( sqlData).data[0], PZASASQLSTRING( sqlData).length);
-            end;
+      DT_VARCHAR          : begin
+                              GetMem( Result, PZASASQLSTRING( sqlData).length + 1);
+                              StrLCopy( Result, @PZASASQLSTRING( sqlData).data[0],
+                                PZASASQLSTRING( sqlData).length);
+                            end;
     else
-      Result := PAnsiChar(GetString(Index));
+      Result := PChar( GetString( Index));
     end;
   end;
 end;
@@ -1493,8 +1443,7 @@ begin
   with FSQLDA.sqlvar[Index] do
   begin
     Result := '';
-    if (sqlind^ < 0) then
-       Exit;
+    if (sqlind^ < 0) then Exit;
 
     case sqlType and $FFFE of
       DT_SMALLINT    : Result := IntToStr( PSmallint(sqldata)^);
@@ -1503,12 +1452,16 @@ begin
       DT_UNSINT      : Result := IntToStr( PLongWord(sqldata)^);
       DT_FLOAT       : Result := FloatToStr( PSingle(sqldata)^);
       DT_DOUBLE      : Result := FloatToStr( PDouble(sqldata)^);
-      DT_VARCHAR     : SetString(Result, PAnsiChar(@PZASASQLSTRING(sqlData).data[0]),
+      DT_VARCHAR     : SetString( Result, PChar( @PZASASQLSTRING( sqlData).data[0]),
                          PZASASQLSTRING( sqlData).length);
       DT_LONGVARCHAR : ReadBlobToString( Index, Result);
       DT_TIMESTAMP_STRUCT : Result := DateToStr( GetTimestamp( Index));
       DT_TINYINT     : Result := IntToStr( PByte(sqldata)^);
+      {$IFDEF VER130BELOW}
+      DT_BIT         : Result := BoolToStr( ( PByte(sqldata)^ = 1));
+      {$ELSE}
       DT_BIT         : Result := BoolToStr( ( PByte(sqldata)^ = 1), True);
+      {$ENDIF}
       DT_BIGINT,
       DT_UNSBIGINT   : Result := IntToStr( PInt64(sqldata)^);
     else
@@ -1531,8 +1484,7 @@ begin
   with FSQLDA.sqlvar[Index] do
   begin
     Result := 0;
-    if (sqlind^ < 0) then
-       Exit;
+    if (sqlind^ < 0) then Exit;
 
     case sqlType and $FFFE of
       DT_SMALLINT    : Result := PSmallint(sqldata)^;
@@ -1541,9 +1493,9 @@ begin
 //      DT_UNSINT      : Result := PLongWord(sqldata)^;
       DT_FLOAT       : Result := Trunc( PSingle(sqldata)^);
       DT_DOUBLE      : Result := Trunc( PDouble(sqldata)^);
-      DT_VARCHAR:
-                       begin
-                         SetString(s, PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length);
+      DT_VARCHAR     : begin
+                         SetString( s, PChar( @PZASASQLSTRING( sqlData).data[0]),
+                           PZASASQLSTRING( sqlData).length);
                          Result := StrToInt( s);
                        end;
       DT_TINYINT,
@@ -1578,20 +1530,18 @@ begin
   with FSQLDA.sqlvar[Index] do
   begin
     Result := 0;
-    if (sqlind^ < 0) then
-       Exit;
+    if (sqlind^ < 0) then Exit;
 
     case sqlType and $FFFE of
-         DT_TIMESTAMP_STRUCT:
-            begin
-              Result := EncodeDate( PZASASQLDateTime( sqlData).Year,
-                                    PZASASQLDateTime( sqlData).Month + 1,
-                                    PZASASQLDateTime( sqlData).Day) +
-                                    EncodeTime( PZASASQLDateTime( sqlData).Hour,
-                                    PZASASQLDateTime( sqlData).Minute,
-                                    PZASASQLDateTime( sqlData).Second,
-                                    PZASASQLDateTime( sqlData).MicroSecond div 1000);
-            end;
+      DT_TIMESTAMP_STRUCT : begin
+                              Result := EncodeDate( PZASASQLDateTime( sqlData).Year,
+                              PZASASQLDateTime( sqlData).Month + 1,
+                              PZASASQLDateTime( sqlData).Day) +
+                              EncodeTime( PZASASQLDateTime( sqlData).Hour,
+                              PZASASQLDateTime( sqlData).Minute,
+                              PZASASQLDateTime( sqlData).Second,
+                              PZASASQLDateTime( sqlData).MicroSecond div 1000);
+                            end;
     else
       CreateException( Format( SErrorConvertionField,
         [ GetFieldName(Index), ConvertASATypeToString( sqlType)]));
@@ -1612,8 +1562,7 @@ begin
   with FSQLDA.sqlvar[Index] do
   begin
     VarClear(Result);
-    if (sqlind^ < 0) then
-       Exit;
+    if (sqlind^ < 0) then Exit;
 
     case sqlType and $FFFE of
       DT_SMALLINT    : Result := PSmallint(sqldata)^;
@@ -1622,9 +1571,9 @@ begin
 //      DT_UNSINT      : Result := PLongWord(sqldata)^;
       DT_FLOAT       : Result := PSingle(sqldata)^;
       DT_DOUBLE      : Result := PDouble(sqldata)^;
-      DT_VARCHAR:
-                       begin
-                         SetString(s, PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length);
+      DT_VARCHAR     : begin
+                         SetString( s, PChar( @PZASASQLSTRING( sqlData).data[0]),
+                           PZASASQLSTRING( sqlData).length);
                          Result := s;
                        end;
       DT_LONGVARCHAR,
@@ -1665,9 +1614,7 @@ begin
       if PZASABlobStruct( sqlData).array_len <> Length then
         CreateException( 'Could''nt complete BLOB-Read');
       move( PZASABlobStruct( sqlData).arr[0], PChar( Buffer)[0], PZASABlobStruct( sqlData).array_len);
-    end
-    else
-    begin
+    end else begin
       TempSQLDA := FPlainDriver.db_alloc_sqlda( 1);
       if not Assigned( TempSQLDA) then
         CreateException( 'Not enough memory for SQLDA');
@@ -1686,7 +1633,7 @@ begin
 
           while True do
           begin
-            FPlainDriver.db_get_data(FHandle, PAnsiChar(FCursorName), Index + 1, Offs, TempSQLDA);
+            FPlainDriver.db_get_data( FHandle, PChar( FCursorName), Index + 1, Offs, TempSQLDA);
             CheckASAError( FPlainDriver, FHandle, lcOther);
             if sqlind^ < 0 then
               break;
@@ -1694,7 +1641,7 @@ begin
             if sqlind^ = 0 then
               break;
             Inc( Offs, sqllen);
-            Inc(PAnsiChar(sqlData), sqllen);
+            Inc( PChar( sqlData), sqllen);
             sqllen := Min( BlockSize, Length-Rd);
           end;
           if Rd <> Length then
@@ -1728,8 +1675,7 @@ begin
   begin
     Buffer := nil;
     Length := 0;
-    if (sqlind^ < 0) then
-       Exit;
+    if (sqlind^ < 0) then Exit;
 
     if ( ( sqlType and $FFFE = DT_LONGVARCHAR) or
          ( sqlType and $FFFE = DT_LONGBINARY)) then
@@ -1737,8 +1683,7 @@ begin
       Length := PZASABlobStruct( sqlData).untrunc_len;
       GetMem( Buffer, Length);
       ReadBlob( Index, Buffer, Length);
-    end
-    else
+    end else
       CreateException( Format( SErrorConvertionField,
         [ GetFieldName(Index), ConvertASATypeToString( sqlType)]));
   end;
@@ -1755,15 +1700,13 @@ begin
   with FSQLDA.sqlvar[Index] do
   begin
     Str := '';
-    if (sqlind^ < 0) then
-       Exit;
+    if (sqlind^ < 0) then Exit;
 
     if sqlType and $FFFE = DT_LONGVARCHAR then
     begin
       SetLength( Str, PZASABlobStruct( sqlData).untrunc_len);
-      ReadBlob(Index, PAnsiChar(Str), Length(Str));
-    end
-    else
+      ReadBlob( Index, PChar( Str), Length( Str));
+    end else
       CreateException( Format( SErrorConvertionField,
         [ GetFieldName(Index), ConvertASATypeToString( sqlType)]));
   end;
@@ -1780,8 +1723,7 @@ begin
   with FSQLDA.sqlvar[Index] do
   begin
     Stream.Size := 0;
-    if (sqlind^ < 0) then
-       Exit;
+    if (sqlind^ < 0) then Exit;
 
     if ( ( sqlType and $FFFE = DT_LONGVARCHAR) or
          ( sqlType and $FFFE = DT_LONGBINARY)) and
@@ -1789,8 +1731,7 @@ begin
     begin
       Stream.Size := PZASABlobStruct( sqlData).untrunc_len;
       ReadBlob( Index, TMemoryStream( Stream).Memory, Stream.Size);
-    end
-    else
+    end else
       CreateException( Format( SErrorConvertionField,
         [ GetFieldName(Index), ConvertASATypeToString( sqlType)]));
   end;
@@ -1810,8 +1751,7 @@ begin
   with FSQLDA.sqlvar[Index] do
   begin
     Value := Null;
-    if (sqlind^ < 0) then
-       Exit;
+    if (sqlind^ < 0) then Exit;
 
     if ( ( sqlType and $FFFE = DT_LONGVARCHAR) or
          ( sqlType and $FFFE = DT_LONGBINARY)) then
@@ -1823,8 +1763,7 @@ begin
       finally
         VarArrayUnlock( Value);
       end;
-    end
-    else
+    end else
       CreateException( Format( SErrorConvertionField,
         [ GetFieldName(Index), ConvertASATypeToString( sqlType)]));
   end;
@@ -2001,7 +1940,7 @@ end;
 procedure CheckASAError( PlainDriver: IZASAPlainDriver;
   Handle: PZASASQLCA; LogCategory: TZLoggingCategory; LogMessage: string = '');
 var
-  ErrorBuf: array[0..1024] of AnsiChar;
+  ErrorBuf: array[0..1024] of Char;
   ErrorMessage: string;
 begin
   if Handle.SqlCode < SQLE_NOERROR then
@@ -2035,32 +1974,33 @@ begin
       Statement, NativeResultSet.GetMetadata));
     CachedResultSet.SetConcurrency( Statement.GetResultSetConcurrency);
     Result := CachedResultSet;
-  end
-  else
+  end else
     Result := NativeResultSet;
 end;
 
 procedure DescribeCursor( FASAConnection: IZASAConnection; FSQLData: IZASASQLDA;
-  Cursor: AnsiString; SQL: String);
+  Cursor, SQL: String);
 begin
   FSQLData.AllocateSQLDA( StdVars);
   with FASAConnection do
   begin
-    GetPlainDriver.db_describe_cursor(GetDBHandle, PAnsiChar(Cursor), FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
+    GetPlainDriver.db_describe_cursor( GetDBHandle, PChar( Cursor),
+      FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
     ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, SQL);
     if FSQLData.GetData^.sqld <= 0 then
       raise EZSQLException.Create( SCanNotRetrieveResultSetData)
     else if ( FSQLData.GetData^.sqld > FSQLData.GetData^.sqln) then
     begin
       FSQLData.AllocateSQLDA( FSQLData.GetData^.sqld);
-      GetPlainDriver.db_describe_cursor(GetDBHandle, PAnsiChar(Cursor), FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
-       ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, SQL);
+      GetPlainDriver.db_describe_cursor( GetDBHandle, PChar( Cursor),
+        FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
+      ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, SQL);
     end;
     FSQLData.InitFields;
   end;
 end;
 
-procedure ASAPrepare( FASAConnection: IZASAConnection; FSQLData, FParamsSQLData: IZASASQLDA;
+procedure Prepare( FASAConnection: IZASAConnection; FSQLData, FParamsSQLData: IZASASQLDA;
    const SQL: String; StmtNum: PSmallInt; var FPrepared, FMoreResults: Boolean);
 begin
   with FASAConnection do
@@ -2076,16 +2016,10 @@ begin
       end;
     end;
     try
-      {$IFDEF DELPHI12_UP}
-      GetPlainDriver.db_prepare_describe(GetDBHandle, nil, StmtNum,
-            PAnsiChar(UTF8String(SQL)), FParamsSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
-            SQL_PREPARE_DESCRIBE_INPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);
-      {$ELSE}
       GetPlainDriver.db_prepare_describe( GetDBHandle, nil, StmtNum,
-            PAnsiChar(SQL), FParamsSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
-            SQL_PREPARE_DESCRIBE_INPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);
-      {$ENDIF} 
-      ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, SQL);
+        PChar( SQL), FParamsSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
+        SQL_PREPARE_DESCRIBE_INPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);
+      ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, SQL);
 
       FMoreResults := GetDBHandle.sqlerrd[2] = 0;
 

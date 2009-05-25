@@ -155,43 +155,43 @@ type
   IZSQLitePlainDriver = interface (IZPlainDriver)
     ['{B931C952-3076-4ECB-9630-D900E8DB9869}']
 
-    function Open(const filename: PAnsiChar; mode: Integer;
-      var errmsg: PAnsiChar): Psqlite;
+    function Open(const filename: PChar; mode: Integer;
+      var errmsg: PChar): Psqlite;
     procedure Close(db: Psqlite);
-    function Execute(db: Psqlite; const sql: PAnsiChar;
+    function Execute(db: Psqlite; const sql: PChar;
       sqlite_callback: Tsqlite_callback; arg: Pointer;
-      var errmsg: PAnsiChar): Integer;
+      var errmsg: PChar): Integer;
     function LastInsertRowId(db: Psqlite): Integer;
     function Changes(db: Psqlite): Integer;
     function LastStatementChanges(db: Psqlite): Integer;
-    function ErrorString(code: Integer): PAnsiChar;
+    function ErrorString(code: Integer): PChar;
     procedure Interrupt(db: Psqlite);
-    function Complete(const sql: PAnsiChar): Integer;
+    function Complete(const sql: PChar): Integer;
 
     procedure BusyHandler(db: Psqlite; callback: Tsqlite_busy_callback;
       ptr: Pointer);
     procedure BusyTimeout(db: Psqlite; ms: Integer);
 
-    function GetTable(db: Psqlite; const sql: PAnsiChar; var resultp: PPAnsiChar;
-      var nrow: Integer; var ncolumn: Integer; var errmsg: PAnsiChar): Integer;
-    procedure FreeTable(var result: PAnsiChar);
+    function GetTable(db: Psqlite; const sql: PChar; var resultp: PPChar;
+      var nrow: Integer; var ncolumn: Integer; var errmsg: PChar): Integer;
+    procedure FreeTable(var result: PChar);
     procedure FreeMem(ptr: Pointer);
-    function LibVersion: PAnsiChar;
-    function LibEncoding: PAnsiChar;
+    function LibVersion: PChar;
+    function LibEncoding: PChar;
 
-    function CreateFunction(db: Psqlite; const zName: PAnsiChar;
+    function CreateFunction(db: Psqlite; const zName: PChar;
       nArg: Integer; callback: Tsqlite_function_callback;
       pUserData: Pointer): Integer;
-    function CreateAggregate(db: Psqlite; const zName: PAnsiChar;
+    function CreateAggregate(db: Psqlite; const zName: PChar;
       nArg: Integer; callback: Tsqlite_function_callback;
       finalize: Tsqlite_finalize_callback; pUserData: Pointer): Integer;
-    function FunctionType(db: Psqlite; const zName: PAnsiChar;
+    function FunctionType(db: Psqlite; const zName: PChar;
       datatype: Integer): Integer;
-    function SetResultString(func: Psqlite_func; const arg: PAnsiChar;
-      len: Integer): PAnsiChar;
+    function SetResultString(func: Psqlite_func; const arg: PChar;
+      len: Integer): PChar;
     procedure SetResultInt(func: Psqlite_func; arg: Integer);
     procedure SetResultDouble(func: Psqlite_func; arg: Double);
-    procedure SetResultError(func: Psqlite_func; const arg: PAnsiChar; len: Integer);
+    procedure SetResultError(func: Psqlite_func; const arg: PChar; len: Integer);
     function UserData(func: Psqlite_func): Pointer;
     function AggregateContext(func: Psqlite_func; nBytes: Integer): Pointer;
     function AggregateCount(func: Psqlite_func): Integer;
@@ -201,13 +201,13 @@ type
     function Trace(db: Psqlite; callback: Tsqlite_trace_callback;
       ptr: Pointer): Pointer;
 
-    function Compile(db: Psqlite; const zSql: PAnsiChar;nBytes: Integer;
-      var pzTail: PAnsiChar; var ppVm: Psqlite_vm; var pzErrmsg: PAnsiChar): Integer;
-    function Step(pVm: Psqlite_vm; var pN: Integer; var pazValue: PPAnsiChar;
-      var pazColName: PPAnsiChar): Integer;
-    function Finalize(vm: Psqlite_vm; var pzErrMsg: PAnsiChar): Integer;
-    function Reset(vm: Psqlite_vm; var pzErrMsg: PAnsiChar): Integer;
-    function Bind(vm: Psqlite_vm; idx: Integer; const value: PAnsiChar;
+    function Compile(db: Psqlite; const zSql: PChar;nBytes: Integer;
+      var pzTail: PChar; var ppVm: Psqlite_vm; var pzErrmsg: PChar): Integer;
+    function Step(pVm: Psqlite_vm; var pN: Integer; var pazValue: PPChar;
+      var pazColName: PPChar): Integer;
+    function Finalize(vm: Psqlite_vm; var pzErrMsg: PChar): Integer;
+    function Reset(vm: Psqlite_vm; var pzErrMsg: PChar): Integer;
+    function Bind(vm: Psqlite_vm; idx: Integer; const value: PChar;
       len: Integer; copy: Integer): Integer;
 
     procedure ProgressHandler(db: Psqlite; p1: Integer;
@@ -215,8 +215,8 @@ type
     function CommitHook(db: Psqlite; callback: Tsqlite_simple_callback;
       ptr: Pointer): Pointer;
 
-    function OpenEncrypted(const zFilename: PAnsiChar; const pKey: PAnsiChar;
-      nKey: Integer; var pErrcode: Integer; var pzErrmsg: PAnsiChar): Psqlite;
+    function OpenEncrypted(const zFilename: PChar; const pKey: PChar;
+      nKey: Integer; var pErrcode: Integer; var pzErrmsg: PChar): Psqlite;
     function ReKey(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
     function Key(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
   end;
@@ -231,43 +231,43 @@ type
     function GetDescription: string;
     procedure Initialize;
 
-    function Open(const filename: PAnsiChar; mode: Integer;
-      var errmsg: PAnsiChar): Psqlite;
+    function Open(const filename: PChar; mode: Integer;
+      var errmsg: PChar): Psqlite;
     procedure Close(db: Psqlite);
-    function Execute(db: Psqlite; const sql: PAnsiChar;
+    function Execute(db: Psqlite; const sql: PChar;
       sqlite_callback: Tsqlite_callback; arg: Pointer;
-      var errmsg: PAnsiChar): Integer;
+      var errmsg: PChar): Integer;
     function LastInsertRowId(db: Psqlite): Integer;
     function Changes(db: Psqlite): Integer;
     function LastStatementChanges(db: Psqlite): Integer;
-    function ErrorString(code: Integer): PAnsiChar;
+    function ErrorString(code: Integer): PChar;
     procedure Interrupt(db: Psqlite);
-    function Complete(const sql: PAnsiChar): Integer;
+    function Complete(const sql: PChar): Integer;
 
     procedure BusyHandler(db: Psqlite; callback: Tsqlite_busy_callback;
       ptr: Pointer);
     procedure BusyTimeout(db: Psqlite; ms: Integer);
 
-    function GetTable(db: Psqlite; const sql: PAnsiChar; var resultp: PPAnsiChar;
-      var nrow: Integer; var ncolumn: Integer; var errmsg: PAnsiChar): Integer;
-    procedure FreeTable(var result: PAnsiChar);
+    function GetTable(db: Psqlite; const sql: PChar; var resultp: PPChar;
+      var nrow: Integer; var ncolumn: Integer; var errmsg: PChar): Integer;
+    procedure FreeTable(var result: PChar);
     procedure FreeMem(ptr: Pointer);
-    function LibVersion: PAnsiChar;
-    function LibEncoding: PAnsiChar;
+    function LibVersion: PChar;
+    function LibEncoding: PChar;
 
-    function CreateFunction(db: Psqlite; const zName: PAnsiChar;
+    function CreateFunction(db: Psqlite; const zName: PChar;
       nArg: Integer; callback: Tsqlite_function_callback;
       pUserData: Pointer): Integer;
-    function CreateAggregate(db: Psqlite; const zName: PAnsiChar;
+    function CreateAggregate(db: Psqlite; const zName: PChar;
       nArg: Integer; callback: Tsqlite_function_callback;
       finalize: Tsqlite_finalize_callback; pUserData: Pointer): Integer;
-    function FunctionType(db: Psqlite; const zName: PAnsiChar;
+    function FunctionType(db: Psqlite; const zName: PChar;
       datatype: Integer): Integer;
-    function SetResultString(func: Psqlite_func; const arg: PAnsiChar;
-      len: Integer): PAnsiChar;
+    function SetResultString(func: Psqlite_func; const arg: PChar;
+      len: Integer): PChar;
     procedure SetResultInt(func: Psqlite_func; arg: Integer);
     procedure SetResultDouble(func: Psqlite_func; arg: Double);
-    procedure SetResultError(func: Psqlite_func; const arg: PAnsiChar; len: Integer);
+    procedure SetResultError(func: Psqlite_func; const arg: PChar; len: Integer);
     function UserData(func: Psqlite_func): Pointer;
     function AggregateContext(func: Psqlite_func; nBytes: Integer): Pointer;
     function AggregateCount(func: Psqlite_func): Integer;
@@ -277,14 +277,14 @@ type
     function Trace(db: Psqlite; callback: Tsqlite_trace_callback;
       ptr: Pointer): Pointer;
 
-    function Compile(db: Psqlite; const zSql: PAnsiChar;
-      nBytes: Integer;var pzTail: PAnsiChar;
-      var ppVm: Psqlite_vm; var pzErrmsg: PAnsiChar): Integer;
-    function Step(pVm: Psqlite_vm; var pN: Integer; var pazValue: PPAnsiChar;
-      var pazColName: PPAnsiChar): Integer;
-    function Finalize(vm: Psqlite_vm; var pzErrMsg: PAnsiChar): Integer;
-    function Reset(vm: Psqlite_vm; var pzErrMsg: PAnsiChar): Integer;
-    function Bind(vm: Psqlite_vm; idx: Integer; const value: PAnsiChar;
+    function Compile(db: Psqlite; const zSql: PChar;
+      nBytes: Integer;var pzTail: PChar;
+      var ppVm: Psqlite_vm; var pzErrmsg: PChar): Integer;
+    function Step(pVm: Psqlite_vm; var pN: Integer; var pazValue: PPChar;
+      var pazColName: PPChar): Integer;
+    function Finalize(vm: Psqlite_vm; var pzErrMsg: PChar): Integer;
+    function Reset(vm: Psqlite_vm; var pzErrMsg: PChar): Integer;
+    function Bind(vm: Psqlite_vm; idx: Integer; const value: PChar;
       len: Integer; copy: Integer): Integer;
 
     procedure ProgressHandler(db: Psqlite; p1: Integer;
@@ -292,8 +292,8 @@ type
     function CommitHook(db: Psqlite; callback: Tsqlite_simple_callback;
       ptr: Pointer): Pointer;
 
-    function OpenEncrypted(const zFilename: PAnsiChar; const pKey: PAnsiChar;
-      nKey: Integer; var pErrcode: Integer; var pzErrmsg: PAnsiChar): Psqlite;
+    function OpenEncrypted(const zFilename: PChar; const pKey: PChar;
+      nKey: Integer; var pErrcode: Integer; var pzErrmsg: PChar): Psqlite;
     function ReKey(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
     function Key(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
   end;
@@ -308,43 +308,43 @@ type
     function GetDescription: string;
     procedure Initialize;
 
-    function Open(const filename: PAnsiChar; mode: Integer;
-      var errmsg: PAnsiChar): Psqlite;
+    function Open(const filename: PChar; mode: Integer;
+      var errmsg: PChar): Psqlite;
     procedure Close(db: Psqlite);
-    function Execute(db: Psqlite; const sql: PAnsiChar;
+    function Execute(db: Psqlite; const sql: PChar;
       sqlite_callback: Tsqlite_callback; arg: Pointer;
-      var errmsg: PAnsiChar): Integer;
+      var errmsg: PChar): Integer;
     function LastInsertRowId(db: Psqlite): Integer;
     function Changes(db: Psqlite): Integer;
     function LastStatementChanges(db: Psqlite): Integer;
-    function ErrorString(code: Integer): PAnsiChar;
+    function ErrorString(code: Integer): PChar;
     procedure Interrupt(db: Psqlite);
-    function Complete(const sql: PAnsiChar): Integer;
+    function Complete(const sql: PChar): Integer;
 
     procedure BusyHandler(db: Psqlite; callback: Tsqlite_busy_callback;
       ptr: Pointer);
     procedure BusyTimeout(db: Psqlite; ms: Integer);
 
-    function GetTable(db: Psqlite; const sql: PAnsiChar; var resultp: PPAnsiChar;
-      var nrow: Integer; var ncolumn: Integer; var errmsg: PAnsiChar): Integer;
-    procedure FreeTable(var result: PAnsiChar);
+    function GetTable(db: Psqlite; const sql: PChar; var resultp: PPChar;
+      var nrow: Integer; var ncolumn: Integer; var errmsg: PChar): Integer;
+    procedure FreeTable(var result: PChar);
     procedure FreeMem(ptr: Pointer);
-    function LibVersion: PAnsiChar;
-    function LibEncoding: PAnsiChar;
+    function LibVersion: PChar;
+    function LibEncoding: PChar;
 
-    function CreateFunction(db: Psqlite; const zName: PAnsiChar;
+    function CreateFunction(db: Psqlite; const zName: PChar;
       nArg: Integer; callback: Tsqlite_function_callback;
       pUserData: Pointer): Integer;
-    function CreateAggregate(db: Psqlite; const zName: PAnsiChar;
+    function CreateAggregate(db: Psqlite; const zName: PChar;
       nArg: Integer; callback: Tsqlite_function_callback;
       finalize: Tsqlite_finalize_callback; pUserData: Pointer): Integer;
-    function FunctionType(db: Psqlite; const zName: PAnsiChar;
+    function FunctionType(db: Psqlite; const zName: PChar;
       datatype: Integer): Integer;
-    function SetResultString(func: Psqlite_func; const arg: PAnsiChar;
-      len: Integer): PAnsiChar;
+    function SetResultString(func: Psqlite_func; const arg: PChar;
+      len: Integer): PChar;
     procedure SetResultInt(func: Psqlite_func; arg: Integer);
     procedure SetResultDouble(func: Psqlite_func; arg: Double);
-    procedure SetResultError(func: Psqlite_func; const arg: PAnsiChar; len: Integer);
+    procedure SetResultError(func: Psqlite_func; const arg: PChar; len: Integer);
     function UserData(func: Psqlite_func): Pointer;
     function AggregateContext(func: Psqlite_func; nBytes: Integer): Pointer;
     function AggregateCount(func: Psqlite_func): Integer;
@@ -354,14 +354,14 @@ type
     function Trace(db: Psqlite; callback: Tsqlite_trace_callback;
       ptr: Pointer): Pointer;
 
-    function Compile(db: Psqlite; const zSql: PAnsiChar;
-      nBytes: Integer;var pzTail: PAnsiChar; var ppVm: Psqlite_vm;
-      var pzErrmsg: PAnsiChar): Integer;
-    function Step(pVm: Psqlite_vm; var pN: Integer; var pazValue: PPAnsiChar;
-      var pazColName: PPAnsiChar): Integer;
-    function Finalize(vm: Psqlite_vm; var pzErrMsg: PAnsiChar): Integer;
-    function Reset(vm: Psqlite_vm; var pzErrMsg: PAnsiChar): Integer;
-    function Bind(vm: Psqlite_vm; idx: Integer; const value: PAnsiChar;
+    function Compile(db: Psqlite; const zSql: PChar;
+      nBytes: Integer;var pzTail: PChar; var ppVm: Psqlite_vm;
+      var pzErrmsg: PChar): Integer;
+    function Step(pVm: Psqlite_vm; var pN: Integer; var pazValue: PPChar;
+      var pazColName: PPChar): Integer;
+    function Finalize(vm: Psqlite_vm; var pzErrMsg: PChar): Integer;
+    function Reset(vm: Psqlite_vm; var pzErrMsg: PChar): Integer;
+    function Bind(vm: Psqlite_vm; idx: Integer; const value: PChar;
       len: Integer; copy: Integer): Integer;
 
     procedure ProgressHandler(db: Psqlite; p1: Integer;
@@ -369,8 +369,8 @@ type
     function CommitHook(db: Psqlite; callback: Tsqlite_simple_callback;
       ptr: Pointer): Pointer;
 
-    function OpenEncrypted(const zFilename: PAnsiChar; const pKey: PAnsiChar;
-      nKey: Integer; var pErrcode: Integer; var pzErrmsg: PAnsiChar): Psqlite;
+    function OpenEncrypted(const zFilename: PChar; const pKey: PChar;
+      nKey: Integer; var pErrcode: Integer; var pzErrmsg: PChar): Psqlite;
     function ReKey(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
     function Key(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
   end;
@@ -410,7 +410,7 @@ begin
 end;
 
 function TZSQLite28PlainDriver.Bind(vm: Psqlite_vm; idx: Integer;
-  const value: PAnsiChar; len, copy: Integer): Integer;
+  const value: PChar; len, copy: Integer): Integer;
 begin
   Result := ZPlainSqLite28.sqlite_bind(vm, idx, value, len, copy);
 end;
@@ -437,20 +437,20 @@ begin
   Result := ZPlainSqLite28.sqlite_commit_hook(db, callback, ptr);
 end;
 
-function TZSQLite28PlainDriver.Compile(db: Psqlite; const zSql: PAnsiChar;
-      nBytes: Integer;var pzTail: PAnsiChar;
-      var ppVm: Psqlite_vm; var pzErrmsg: PAnsiChar): Integer;
+function TZSQLite28PlainDriver.Compile(db: Psqlite; const zSql: PChar;
+      nBytes: Integer;var pzTail: PChar;
+      var ppVm: Psqlite_vm; var pzErrmsg: PChar): Integer;
 begin
   Result := ZPlainSqLite28.sqlite_compile(db, zSql, pzTail, ppVm, pzErrmsg);
 end;
 
-function TZSQLite28PlainDriver.Complete(const sql: PAnsiChar): Integer;
+function TZSQLite28PlainDriver.Complete(const sql: PChar): Integer;
 begin
   Result := ZPlainSqLite28.sqlite_complete(sql);
 end;
 
 function TZSQLite28PlainDriver.CreateAggregate(db: Psqlite;
-  const zName: PAnsiChar; nArg: Integer; callback: Tsqlite_function_callback;
+  const zName: PChar; nArg: Integer; callback: Tsqlite_function_callback;
   finalize: Tsqlite_finalize_callback; pUserData: Pointer): Integer;
 begin
   Result := ZPlainSqLite28.sqlite_create_aggregate(db, zName, nArg, callback,
@@ -458,27 +458,27 @@ begin
 end;
 
 function TZSQLite28PlainDriver.CreateFunction(db: Psqlite;
-  const zName: PAnsiChar; nArg: Integer; callback: Tsqlite_function_callback;
+  const zName: PChar; nArg: Integer; callback: Tsqlite_function_callback;
   pUserData: Pointer): Integer;
 begin
   Result := ZPlainSqLite28.sqlite_create_function(db, zName, nArg, callback,
     pUserData);
 end;
 
-function TZSQLite28PlainDriver.ErrorString(code: Integer): PAnsiChar;
+function TZSQLite28PlainDriver.ErrorString(code: Integer): PChar;
 begin
   Result := ZPlainSqLite28.sqlite_error_string(code);
 end;
 
-function TZSQLite28PlainDriver.Execute(db: Psqlite; const sql: PAnsiChar;
+function TZSQLite28PlainDriver.Execute(db: Psqlite; const sql: PChar;
   sqlite_callback: Tsqlite_callback; arg: Pointer;
-  var errmsg: PAnsiChar): Integer;
+  var errmsg: PChar): Integer;
 begin
   Result := ZPlainSqLite28.sqlite_exec(db, sql, sqlite_callback, arg, errmsg);
 end;
 
 function TZSQLite28PlainDriver.Finalize(vm: Psqlite_vm;
-  var pzErrMsg: PAnsiChar): Integer;
+  var pzErrMsg: PChar): Integer;
 begin
   Result := ZPlainSqLite28.sqlite_finalize(vm, pzErrMsg);
 end;
@@ -488,20 +488,20 @@ begin
   ZPlainSqLite28.sqlite_freemem(ptr);
 end;
 
-procedure TZSQLite28PlainDriver.FreeTable(var result: PAnsiChar);
+procedure TZSQLite28PlainDriver.FreeTable(var result: PChar);
 begin
   ZPlainSqLite28.sqlite_free_table(result);
 end;
 
 function TZSQLite28PlainDriver.FunctionType(db: Psqlite;
-  const zName: PAnsiChar; datatype: Integer): Integer;
+  const zName: PChar; datatype: Integer): Integer;
 begin
   Result := ZPlainSqLite28.sqlite_function_type(db, zName, datatype);
 end;
 
-function TZSQLite28PlainDriver.GetTable(db: Psqlite; const sql: PAnsiChar;
-  var resultp: PPAnsiChar; var nrow, ncolumn: Integer;
-  var errmsg: PAnsiChar): Integer;
+function TZSQLite28PlainDriver.GetTable(db: Psqlite; const sql: PChar;
+  var resultp: PPChar; var nrow, ncolumn: Integer;
+  var errmsg: PChar): Integer;
 begin
   Result := ZPlainSqLite28.sqlite_get_table(db, sql, resultp, nrow, ncolumn,
     errmsg);
@@ -522,31 +522,30 @@ begin
   Result := ZPlainSqLite28.sqlite_last_statement_changes(db);
 end;
 
-function TZSQLite28PlainDriver.LibEncoding: PAnsiChar;
+function TZSQLite28PlainDriver.LibEncoding: PChar;
 begin
   Result := ZPlainSqLite28.sqlite_libencoding;
 end;
 
-function TZSQLite28PlainDriver.LibVersion: PAnsiChar;
+function TZSQLite28PlainDriver.LibVersion: PChar;
 begin
   Result := ZPlainSqLite28.sqlite_libversion;
 end;
 
-function TZSQLite28PlainDriver.Open(const filename: PAnsiChar; mode: Integer;
-  var errmsg: PAnsiChar): Psqlite;
+function TZSQLite28PlainDriver.Open(const filename: PChar; mode: Integer;
+  var errmsg: PChar): Psqlite;
 begin
   Result := ZPlainSqLite28.sqlite_open(filename, mode, errmsg);
 end;
 
-function TZSQLite28PlainDriver.OpenEncrypted(const zFilename, pKey: PAnsiChar;
-  nKey: Integer; var pErrcode: Integer; var pzErrmsg: PAnsiChar): Psqlite;
+function TZSQLite28PlainDriver.OpenEncrypted(const zFilename, pKey: PChar;
+  nKey: Integer; var pErrcode: Integer; var pzErrmsg: PChar): Psqlite;
 begin
   if @ZPlainSqLite28.sqlite_open_encrypted = nil then
   begin
     Result := nil;
   end
-  else
-  begin
+  else begin
     Result := ZPlainSqLite28.sqlite_open_encrypted(zFilename, pKey, nKey,
       pErrcode, pzErrmsg);
   end;
@@ -565,8 +564,7 @@ begin
   begin
     Result := SQLITE_OK;
   end
-  else
-  begin
+  else begin
     Result := ZPlainSqLite28.sqlite_rekey(db, pKey, nKey);
   end;
 end;
@@ -578,14 +576,13 @@ begin
   begin
     Result := SQLITE_OK;
   end
-  else
-  begin
+  else begin
     Result := ZPlainSqLite28.sqlite_key(db, pKey, nKey);
   end;
 end;
 
 function TZSQLite28PlainDriver.Reset(vm: Psqlite_vm;
-  var pzErrMsg: PAnsiChar): Integer;
+  var pzErrMsg: PChar): Integer;
 begin
   Result := ZPlainSqLite28.sqlite_reset(vm, pzErrMsg);
 end;
@@ -603,7 +600,7 @@ begin
 end;
 
 procedure TZSQLite28PlainDriver.SetResultError(func: Psqlite_func;
-  const arg: PAnsiChar; len: Integer);
+  const arg: PChar; len: Integer);
 begin
   ZPlainSqLite28.sqlite_set_result_error(func, arg, len);
 end;
@@ -615,13 +612,13 @@ begin
 end;
 
 function TZSQLite28PlainDriver.SetResultString(func: Psqlite_func;
-  const arg: PAnsiChar; len: Integer): PAnsiChar;
+  const arg: PChar; len: Integer): PChar;
 begin
   Result := ZPlainSqLite28.sqlite_set_result_string(func, arg, len);
 end;
 
 function TZSQLite28PlainDriver.Step(pVm: Psqlite_vm; var pN: Integer;
-  var pazValue, pazColName: PPAnsiChar): Integer;
+  var pazValue, pazColName: PPChar): Integer;
 begin
   Result := ZPlainSqLite28.sqlite_step(pVm, pN, pazValue, pazColName);
 end;
@@ -675,7 +672,7 @@ begin
 end;
 
 function TZSQLite3PlainDriver.Bind(vm: Psqlite_vm; idx: Integer;
-  const value: PAnsiChar; len, copy: Integer): Integer;
+  const value: PChar; len, copy: Integer): Integer;
 begin
   Result := ZPlainSqLite3.sqlite_bind(vm, idx, value, len, copy);
 end;
@@ -702,37 +699,37 @@ begin
   Result := ZPlainSqLite3.sqlite_commit_hook(db, callback, ptr);
 end;
 
-function TZSQLite3PlainDriver.Compile(db: Psqlite; const zSql: PAnsiChar;
-  nBytes: Integer;var pzTail: PAnsiChar;
-  var ppVm: Psqlite_vm; var pzErrmsg: PAnsiChar): Integer;
+function TZSQLite3PlainDriver.Compile(db: Psqlite; const zSql: PChar;
+  nBytes: Integer;var pzTail: PChar;
+  var ppVm: Psqlite_vm; var pzErrmsg: PChar): Integer;
 
 begin
   Result := ZPlainSqLite3.sqlite_compile(db, zSql, -1, ppVm, nil);
   pzErrmsg := nil;
 end;
 
-function TZSQLite3PlainDriver.Complete(const sql: PAnsiChar): Integer;
+function TZSQLite3PlainDriver.Complete(const sql: PChar): Integer;
 begin
   Result := ZPlainSqLite3.sqlite_complete(sql);
 end;
 
 function TZSQLite3PlainDriver.CreateAggregate(db: Psqlite;
-  const zName: PAnsiChar; nArg: Integer; callback: Tsqlite_function_callback;
+  const zName: PChar; nArg: Integer; callback: Tsqlite_function_callback;
   finalize: Tsqlite_finalize_callback; pUserData: Pointer): Integer;
 begin
   Result := SQLITE_MISUSE;
 end;
 
 function TZSQLite3PlainDriver.CreateFunction(db: Psqlite;
-  const zName: PAnsiChar; nArg: Integer; callback: Tsqlite_function_callback;
+  const zName: PChar; nArg: Integer; callback: Tsqlite_function_callback;
   pUserData: Pointer): Integer;
 begin
   Result := SQLITE_MISUSE;
 end;
 
-function TZSQLite3PlainDriver.ErrorString(code: Integer): PAnsiChar;
+function TZSQLite3PlainDriver.ErrorString(code: Integer): PChar;
 begin
-   case code of
+  Case code of
     SQLITE_OK:         Result := 'not an error';
     SQLITE_ERROR:      Result := 'SQL logic error or missing database';
     SQLITE_INTERNAL:   Result := 'internal SQLite implementation flaw';
@@ -760,24 +757,22 @@ begin
     SQLITE_FORMAT:     Result := 'auxiliary database format error';
     SQLITE_RANGE:      Result := 'bind index out of range';
     SQLITE_NOTADB:     Result := 'file is encrypted or is not a database';
-   else
-      Result := 'unknown error';
+    else                    Result := 'unknown error';
   end;
 end;
 
-function TZSQLite3PlainDriver.Execute(db: Psqlite; const sql: PAnsiChar;
+function TZSQLite3PlainDriver.Execute(db: Psqlite; const sql: PChar;
   sqlite_callback: Tsqlite_callback; arg: Pointer;
-  var errmsg: PAnsiChar): Integer;
+  var errmsg: PChar): Integer;
 begin
   errmsg:= nil;
   Result := ZPlainSqLite3.sqlite_exec(db, sql, sqlite_callback, arg, errmsg);
 end;
 
 function TZSQLite3PlainDriver.Finalize(vm: Psqlite_vm;
-  var pzErrMsg: PAnsiChar): Integer;
+  var pzErrMsg: PChar): Integer;
 begin
-   Result := ZPlainSqLite3.sqlite_finalize(vm);
-   pzErrMsg := nil;
+  Result:= ZPlainSqLite3.sqlite_finalize(vm); pzErrMsg:=nil;
 end;
 
 procedure TZSQLite3PlainDriver.FreeMem(ptr: Pointer);
@@ -785,20 +780,20 @@ begin
   ZPlainSqLite3.sqlite_freemem(ptr);
 end;
 
-procedure TZSQLite3PlainDriver.FreeTable(var result: PAnsiChar);
+procedure TZSQLite3PlainDriver.FreeTable(var result: PChar);
 begin
   ZPlainSqLite3.sqlite_free_table(result);
 end;
 
 function TZSQLite3PlainDriver.FunctionType(db: Psqlite;
-  const zName: PAnsiChar; datatype: Integer): Integer;
+  const zName: PChar; datatype: Integer): Integer;
 begin
   Result := SQLITE_MISUSE;
 end;
 
-function TZSQLite3PlainDriver.GetTable(db: Psqlite; const sql: PAnsiChar;
-  var resultp: PPAnsiChar; var nrow, ncolumn: Integer;
-  var errmsg: PAnsiChar): Integer;
+function TZSQLite3PlainDriver.GetTable(db: Psqlite; const sql: PChar;
+  var resultp: PPChar; var nrow, ncolumn: Integer;
+  var errmsg: PChar): Integer;
 begin
   Result := ZPlainSqLite3.sqlite_get_table(db, sql, resultp, nrow, ncolumn,
     errmsg);
@@ -819,18 +814,18 @@ begin
   Result := SQLITE_MISUSE;
 end;
 
-function TZSQLite3PlainDriver.LibEncoding: PAnsiChar;
+function TZSQLite3PlainDriver.LibEncoding: PChar;
 begin
   Result := nil;
 end;
 
-function TZSQLite3PlainDriver.LibVersion: PAnsiChar;
+function TZSQLite3PlainDriver.LibVersion: PChar;
 begin
   Result := ZPlainSqLite3.sqlite_libversion;
 end;
 
-function TZSQLite3PlainDriver.Open(const filename: PAnsiChar; mode: Integer;
-  var errmsg: PAnsiChar): Psqlite;
+function TZSQLite3PlainDriver.Open(const filename: PChar; mode: Integer;
+  var errmsg: PChar): Psqlite;
 var
   Result0: Psqlite;
   Version: string;
@@ -839,15 +834,17 @@ begin
   Result0:= nil;
   Version := LibVersion;
   FileNameString := filename;
+  {$IFNDEF VER130}
   if (Version > '3.2.5') then
     ZPlainSqLite3.sqlite_open(PAnsiChar(AnsiToUTF8(FileNameString)), Result0)
   else
+  {$ENDIF}
     ZPlainSqLite3.sqlite_open(filename, Result0);
   Result := Result0;
 end;
 
-function TZSQLite3PlainDriver.OpenEncrypted(const zFilename, pKey: PAnsiChar;
-  nKey: Integer; var pErrcode: Integer; var pzErrmsg: PAnsiChar): Psqlite;
+function TZSQLite3PlainDriver.OpenEncrypted(const zFilename, pKey: PChar;
+  nKey: Integer; var pErrcode: Integer; var pzErrmsg: PChar): Psqlite;
 begin
   pErrcode := SQLITE_MISUSE;
   pzErrmsg := 'function is not used in the current version of the library';
@@ -867,8 +864,7 @@ begin
   begin
     Result := SQLITE_OK;
   end
-  else
-  begin
+  else begin
     Result := ZPlainSqLite3.sqlite_rekey(db, pKey, nKey);
   end;
 end;
@@ -880,14 +876,13 @@ begin
   begin
     Result := SQLITE_OK;
   end
-  else
-  begin
+  else begin
     Result := ZPlainSqLite3.sqlite_key(db, pKey, nKey);
   end;
 end;
 
 function TZSQLite3PlainDriver.Reset(vm: Psqlite_vm;
-  var pzErrMsg: PAnsiChar): Integer;
+  var pzErrMsg: PChar): Integer;
 begin
   Result := ZPlainSqLite3.sqlite_reset(vm);
   pzErrMsg := nil;
@@ -906,7 +901,7 @@ begin
 end;
 
 procedure TZSQLite3PlainDriver.SetResultError(func: Psqlite_func;
-  const arg: PAnsiChar; len: Integer);
+  const arg: PChar; len: Integer);
 begin
   ZPlainSqLite3.sqlite_set_result_error(func, arg, len);
 end;
@@ -918,44 +913,39 @@ begin
 end;
 
 function TZSQLite3PlainDriver.SetResultString(func: Psqlite_func;
-  const arg: PAnsiChar; len: Integer): PAnsiChar;
+  const arg: PChar; len: Integer): PChar;
 begin
   Result := ZPlainSqLite3.sqlite_set_result_string(func, arg, len, nil);
 end;
 
 function TZSQLite3PlainDriver.Step(pVm: Psqlite_vm; var pN: Integer;
-  var pazValue, pazColName: PPAnsiChar): Integer;
-var
-    i: Integer;
-    val,cname,ctype: PAnsiChar;
-    pazValue0, pazColName0, pazColType: PPAnsiChar;
+  var pazValue, pazColName: PPChar): Integer;
+var i: Integer;
+    val,cname,ctype: PChar;
+    pazValue0, pazColName0, pazColType: PPChar;
 begin
   pazValue0 := nil; // satisfy compiler
   Result := ZPlainSqLite3.sqlite_step(pVm);
-  if (Result = SQLITE_ROW) or (Result = SQLITE_DONE) then
-  begin
+  if (Result=SQLITE_ROW) or (Result=SQLITE_DONE) then begin
     pN:= ZPlainSqLite3.sqlite_column_count(pVm);
-    if Result = SQLITE_ROW then
-    begin
-      pazValue:= AllocMem(SizeOf(PPAnsiChar)*(pN+1));
+    if  Result=SQLITE_ROW then begin
+      pazValue:= AllocMem(SizeOf(PPChar)*(pN+1));
       pazValue0:= pazValue;
     end;
-    pazColName:= AllocMem(SizeOf(PPAnsiChar)*(pN+1)*2);
+    pazColName:= AllocMem(SizeOf(PPChar)*(pN+1)*2);
     pazColName0:= pazColName;
     pazColType:= pazColName;
 
     Inc(pazColType, pN);
 //    for i:=1 to pN do
 //      inc(pazColType);
-    for i := 0 to pN - 1 do
-    begin
+    for i:=0 to pN-1 do begin
       if Result = SQLITE_ROW then
       begin
         val  := ZPlainSqLite3.sqlite_column_bytes(pVm, i);
         cname:= ZPlainSqLite3.sqlite_column_name(pVm, i);
         ctype:= ZPlainSqLite3.sqlite_column_decltype(pVm, i);
-        pazValue0^ := val;
-        inc(pazValue0);
+        pazValue0^  := val; inc(pazValue0);
       end
       else
       begin
@@ -964,14 +954,11 @@ begin
       end;
       pazColName0^:= cname;
       pazColType^ := ctype;
-      inc(pazColName0);
-      inc(pazColType);
+      inc(pazColName0);inc(pazColType);
     end;
-    if Result = SQLITE_ROW then
-         pazValue0^ := nil;
+    if  Result=SQLITE_ROW then pazValue0^:= nil;
     pazColType^:= nil;
-    if Result = SQLITE_DONE then
-         pazValue := nil;
+    if Result=SQLITE_DONE then pazValue:= nil;
   end;
 end;
 

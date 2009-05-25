@@ -59,179 +59,13 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
-  ZCompatibility, ZDbcPostgreSqlUtils, ZDbcConnection, ZSelectSchema;
+{$IFNDEF VER130BELOW}
+  Types,
+{$ENDIF}
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
+  ZCompatibility, ZDbcPostgreSqlUtils, ZDbcConnection;
 
 type
-  {** Implements a PostgreSQL Case Sensitive/Unsensitive identifier convertor. } 
-  TZPostgreSQLIdentifierConvertor = class (TZDefaultIdentifierConvertor) 
-  protected 
-    function IsSpecialCase(const Value: string): Boolean; override; 
-  public 
-    function IsQuoted(const Value: string): Boolean; override; 
-    function Quote(const Value: string): string; override; 
-    function ExtractQuote(const Value: string): string; override; 
-  end; 
- 
-  {**
-    Database information interface for PostgreSQL. Adds some PostgreSQL-specific
-     methods to IZDatabaseInfo.
-  } // technobot 2008-06-27
-  IZPostgreSQLDatabaseInfo = interface(IZDatabaseInfo)
-    ['{7D48BBAA-FAE2-48EA-8B9E-663CCA5690EC}']
-    // database and driver info:
-    function HasMinimumServerVersion(MajorVersion: Integer;
-      MinorVersion: Integer): Boolean;
-  end;
-  IZPostgreDBInfo = IZPostgreSQLDatabaseInfo; // shorthand alias
-
-  // technobot 2008-06-27 - methods moved as is from TZPostgreSQLDatabaseMetadata:
-  {** Implements PostgreSQL Database Information. }
-  TZPostgreSQLDatabaseInfo = class(TZAbstractDatabaseInfo, IZPostgreSQLDatabaseInfo)
-  protected
-    function GetMaxIndexKeys: Integer;
-    function GetMaxNameLength: Integer;
-//    function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
-//      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
-  public
-    constructor Create(const Metadata: TZAbstractDatabaseMetadata);
-    destructor Destroy; override;
-
-    // database/driver/server info:
-    function GetDatabaseProductName: string; override;
-    function GetDatabaseProductVersion: string; override;
-    function GetDriverName: string; override;
-//    function GetDriverVersion: string; override; -> Same as parent
-    function GetDriverMajorVersion: Integer; override;
-    function GetDriverMinorVersion: Integer; override;
-    function GetServerVersion: string;
-    function HasMinimumServerVersion(MajorVersion: Integer;
-      MinorVersion: Integer): Boolean; // was TZPostgreSQLDatabaseMetadata.HaveMinimumServerVersion
-
-    // capabilities (what it can/cannot do):
-//    function AllProceduresAreCallable: Boolean; override; -> Not implemented
-//    function AllTablesAreSelectable: Boolean; override; -> Not implemented
-    function SupportsMixedCaseIdentifiers: Boolean; override;
-    function SupportsMixedCaseQuotedIdentifiers: Boolean; override;
-//    function SupportsAlterTableWithAddColumn: Boolean; override; -> Not implemented
-//    function SupportsAlterTableWithDropColumn: Boolean; override; -> Not implemented
-//    function SupportsColumnAliasing: Boolean; override; -> Not implemented
-//    function SupportsConvert: Boolean; override; -> Not implemented
-//    function SupportsConvertForTypes(FromType: TZSQLType; ToType: TZSQLType):
-//      Boolean; override; -> Not implemented
-//    function SupportsTableCorrelationNames: Boolean; override; -> Not implemented
-//    function SupportsDifferentTableCorrelationNames: Boolean; override; -> Not implemented
-    function SupportsExpressionsInOrderBy: Boolean; override;
-    function SupportsOrderByUnrelated: Boolean; override;
-    function SupportsGroupBy: Boolean; override;
-    function SupportsGroupByUnrelated: Boolean; override;
-    function SupportsGroupByBeyondSelect: Boolean; override;
-//    function SupportsLikeEscapeClause: Boolean; override; -> Not implemented
-//    function SupportsMultipleResultSets: Boolean; override; -> Not implemented
-//    function SupportsMultipleTransactions: Boolean; override; -> Not implemented
-//    function SupportsNonNullableColumns: Boolean; override; -> Not implemented
-//    function SupportsMinimumSQLGrammar: Boolean; override; -> Not implemented
-//    function SupportsCoreSQLGrammar: Boolean; override; -> Not implemented
-//    function SupportsExtendedSQLGrammar: Boolean; override; -> Not implemented
-//    function SupportsANSI92EntryLevelSQL: Boolean; override; -> Not implemented
-//    function SupportsANSI92IntermediateSQL: Boolean; override; -> Not implemented
-//    function SupportsANSI92FullSQL: Boolean; override; -> Not implemented
-    function SupportsIntegrityEnhancementFacility: Boolean; override;
-//    function SupportsOuterJoins: Boolean; override; -> Not implemented
-//    function SupportsFullOuterJoins: Boolean; override; -> Not implemented
-//    function SupportsLimitedOuterJoins: Boolean; override; -> Not implemented
-    function SupportsSchemasInDataManipulation: Boolean; override;
-    function SupportsSchemasInProcedureCalls: Boolean; override;
-    function SupportsSchemasInTableDefinitions: Boolean; override;
-    function SupportsSchemasInIndexDefinitions: Boolean; override;
-    function SupportsSchemasInPrivilegeDefinitions: Boolean; override;
-    function SupportsCatalogsInDataManipulation: Boolean; override;
-    function SupportsCatalogsInProcedureCalls: Boolean; override;
-    function SupportsCatalogsInTableDefinitions: Boolean; override;
-    function SupportsCatalogsInIndexDefinitions: Boolean; override;
-    function SupportsCatalogsInPrivilegeDefinitions: Boolean; override;
-    function SupportsPositionedDelete: Boolean; override;
-    function SupportsPositionedUpdate: Boolean; override;
-    function SupportsSelectForUpdate: Boolean; override;
-    function SupportsStoredProcedures: Boolean; override;
-    function SupportsSubqueriesInComparisons: Boolean; override;
-    function SupportsSubqueriesInExists: Boolean; override;
-    function SupportsSubqueriesInIns: Boolean; override;
-    function SupportsSubqueriesInQuantifieds: Boolean; override;
-    function SupportsCorrelatedSubqueries: Boolean; override;
-    function SupportsUnion: Boolean; override;
-    function SupportsUnionAll: Boolean; override;
-    function SupportsOpenCursorsAcrossCommit: Boolean; override;
-    function SupportsOpenCursorsAcrossRollback: Boolean; override;
-    function SupportsOpenStatementsAcrossCommit: Boolean; override;
-    function SupportsOpenStatementsAcrossRollback: Boolean; override;
-    function SupportsTransactions: Boolean; override;
-    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
-      Boolean; override;
-    function SupportsDataDefinitionAndDataManipulationTransactions: Boolean; override;
-    function SupportsDataManipulationTransactionsOnly: Boolean; override;
-    function SupportsResultSetType(_Type: TZResultSetType): Boolean; override;
-    function SupportsResultSetConcurrency(_Type: TZResultSetType;
-      Concurrency: TZResultSetConcurrency): Boolean; override;
-//    function SupportsBatchUpdates: Boolean; override; -> Not implemented
-
-    // maxima:
-    function GetMaxBinaryLiteralLength: Integer; override;
-    function GetMaxCharLiteralLength: Integer; override;
-    function GetMaxColumnNameLength: Integer; override;
-    function GetMaxColumnsInGroupBy: Integer; override;
-    function GetMaxColumnsInIndex: Integer; override;
-    function GetMaxColumnsInOrderBy: Integer; override;
-    function GetMaxColumnsInSelect: Integer; override;
-    function GetMaxColumnsInTable: Integer; override;
-    function GetMaxConnections: Integer; override;
-    function GetMaxCursorNameLength: Integer; override;
-    function GetMaxIndexLength: Integer; override;
-    function GetMaxSchemaNameLength: Integer; override;
-    function GetMaxProcedureNameLength: Integer; override;
-    function GetMaxCatalogNameLength: Integer; override;
-    function GetMaxRowSize: Integer; override;
-    function GetMaxStatementLength: Integer; override;
-    function GetMaxStatements: Integer; override;
-    function GetMaxTableNameLength: Integer; override;
-    function GetMaxTablesInSelect: Integer; override;
-    function GetMaxUserNameLength: Integer; override;
-
-    // policies (how are various data and operations handled):
-//    function IsReadOnly: Boolean; override; -> Not implemented
-//    function IsCatalogAtStart: Boolean; override; -> Not implemented
-    function DoesMaxRowSizeIncludeBlobs: Boolean; override;
-//    function NullsAreSortedHigh: Boolean; override; -> Not implemented
-//    function NullsAreSortedLow: Boolean; override; -> Not implemented
-//    function NullsAreSortedAtStart: Boolean; override; -> Not implemented
-//    function NullsAreSortedAtEnd: Boolean; override; -> Not implemented
-//    function NullPlusNonNullIsNull: Boolean; override; -> Not implemented
-//    function UsesLocalFiles: Boolean; override; -> Not implemented
-    function UsesLocalFilePerTable: Boolean; override;
-    function StoresUpperCaseIdentifiers: Boolean; override;
-    function StoresLowerCaseIdentifiers: Boolean; override;
-    function StoresMixedCaseIdentifiers: Boolean; override;
-    function StoresUpperCaseQuotedIdentifiers: Boolean; override;
-    function StoresLowerCaseQuotedIdentifiers: Boolean; override;
-    function StoresMixedCaseQuotedIdentifiers: Boolean; override;
-    function GetDefaultTransactionIsolation: TZTransactIsolationLevel; override;
-    function DataDefinitionCausesTransactionCommit: Boolean; override;
-    function DataDefinitionIgnoredInTransactions: Boolean; override;
-
-    // interface details (terms, keywords, etc):
-//    function GetIdentifierQuoteString: string; override; -> Not implemented
-    function GetSchemaTerm: string; override;
-    function GetProcedureTerm: string; override;
-    function GetCatalogTerm: string; override;
-    function GetCatalogSeparator: string; override;
-    function GetSQLKeywords: string; override;
-    function GetNumericFunctions: string; override;
-    function GetStringFunctions: string; override;
-    function GetSystemFunctions: string; override;
-    function GetTimeDateFunctions: string; override;
-    function GetSearchStringEscape: string; override;
-    function GetExtraNameCharacters: string; override;
-  end;
 
   {** Implements PostgreSQL Database Metadata. }
   TZPostgreSQLDatabaseMetadata = class(TZAbstractDatabaseMetadata)
@@ -239,9 +73,10 @@ type
     FDatabase: string;
     function EscapeString(const S: string): string;
   protected
-    function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-27
-
-    // (technobot) should any of these be moved to TZPostgreSQLDatabaseInfo?:
+    function HaveMinimumServerVersion(MajorVersion: Integer;
+      MinorVersion: Integer): Boolean;
+    function GetMaxIndexKeys: Integer;
+    function GetMaxNameLength: Integer;
     function GetPostgreSQLType(Oid: Integer): string;
     function GetSQLTypeByOid(Oid: Integer): TZSQLType;
     function GetSQLTypeByName(TypeName: string): TZSQLType;
@@ -249,7 +84,6 @@ type
       string;
     procedure ParseACLArray(List: TStrings; AclString: string);
     function GetPrivilegeName(Permission: char): string;
-    // (technobot) end of questioned section
 
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
@@ -283,36 +117,162 @@ type
     function UncachedGetVersionColumns(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
     function UncachedGetTypeInfo: IZResultSet; override;
-
+//    function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
+//      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
   public
     constructor Create(Connection: TZAbstractConnection; Url: string;
       Info: TStrings);
     destructor Destroy; override;
-    function GetIdentifierConvertor: IZIdentifierConvertor; override; 
- end;
+
+    function GetDatabaseProductName: string; override;
+    function GetDatabaseProductVersion: string; override;
+    function GetDriverName: string; override;
+    function GetDriverMajorVersion: Integer; override;
+    function GetDriverMinorVersion: Integer; override;
+    function UsesLocalFilePerTable: Boolean; override;
+    function SupportsMixedCaseIdentifiers: Boolean; override;
+    function StoresUpperCaseIdentifiers: Boolean; override;
+    function StoresLowerCaseIdentifiers: Boolean; override;
+    function StoresMixedCaseIdentifiers: Boolean; override;
+    function SupportsMixedCaseQuotedIdentifiers: Boolean; override;
+    function StoresUpperCaseQuotedIdentifiers: Boolean; override;
+    function StoresLowerCaseQuotedIdentifiers: Boolean; override;
+    function StoresMixedCaseQuotedIdentifiers: Boolean; override;
+    function GetSQLKeywords: string; override;
+    function GetNumericFunctions: string; override;
+    function GetStringFunctions: string; override;
+    function GetSystemFunctions: string; override;
+    function GetTimeDateFunctions: string; override;
+    function GetSearchStringEscape: string; override;
+    function GetExtraNameCharacters: string; override;
+
+    function SupportsExpressionsInOrderBy: Boolean; override;
+    function SupportsOrderByUnrelated: Boolean; override;
+    function SupportsGroupBy: Boolean; override;
+    function SupportsGroupByUnrelated: Boolean; override;
+    function SupportsGroupByBeyondSelect: Boolean; override;
+    function SupportsIntegrityEnhancementFacility: Boolean; override;
+    function GetSchemaTerm: string; override;
+    function GetProcedureTerm: string; override;
+    function GetCatalogTerm: string; override;
+    function GetCatalogSeparator: string; override;
+    function SupportsSchemasInDataManipulation: Boolean; override;
+    function SupportsSchemasInProcedureCalls: Boolean; override;
+    function SupportsSchemasInTableDefinitions: Boolean; override;
+    function SupportsSchemasInIndexDefinitions: Boolean; override;
+    function SupportsSchemasInPrivilegeDefinitions: Boolean; override;
+    function SupportsCatalogsInDataManipulation: Boolean; override;
+    function SupportsCatalogsInProcedureCalls: Boolean; override;
+    function SupportsCatalogsInTableDefinitions: Boolean; override;
+    function SupportsCatalogsInIndexDefinitions: Boolean; override;
+    function SupportsCatalogsInPrivilegeDefinitions: Boolean; override;
+    function SupportsPositionedDelete: Boolean; override;
+    function SupportsPositionedUpdate: Boolean; override;
+    function SupportsSelectForUpdate: Boolean; override;
+    function SupportsStoredProcedures: Boolean; override;
+    function SupportsSubqueriesInComparisons: Boolean; override;
+    function SupportsSubqueriesInExists: Boolean; override;
+    function SupportsSubqueriesInIns: Boolean; override;
+    function SupportsSubqueriesInQuantifieds: Boolean; override;
+    function SupportsCorrelatedSubqueries: Boolean; override;
+    function SupportsUnion: Boolean; override;
+    function SupportsUnionAll: Boolean;  override;
+    function SupportsOpenCursorsAcrossCommit: Boolean; override;
+    function SupportsOpenCursorsAcrossRollback: Boolean; override;
+    function SupportsOpenStatementsAcrossCommit: Boolean; override;
+    function SupportsOpenStatementsAcrossRollback: Boolean; override;
+
+    function GetMaxBinaryLiteralLength: Integer; override;
+    function GetMaxCharLiteralLength: Integer; override;
+    function GetMaxColumnNameLength: Integer; override;
+    function GetMaxColumnsInGroupBy: Integer; override;
+    function GetMaxColumnsInIndex: Integer; override;
+    function GetMaxColumnsInOrderBy: Integer; override;
+    function GetMaxColumnsInSelect: Integer; override;
+    function GetMaxColumnsInTable: Integer; override;
+    function GetMaxConnections: Integer; override;
+    function GetMaxCursorNameLength: Integer; override;
+    function GetMaxIndexLength: Integer; override;
+    function GetMaxSchemaNameLength: Integer; override;
+    function GetMaxProcedureNameLength: Integer; override;
+    function GetMaxCatalogNameLength: Integer; override;
+    function GetMaxRowSize: Integer; override;
+    function DoesMaxRowSizeIncludeBlobs: Boolean; override;
+    function GetMaxStatementLength: Integer; override;
+    function GetMaxStatements: Integer; override;
+    function GetMaxTableNameLength: Integer; override;
+    function GetMaxTablesInSelect: Integer; override;
+    function GetMaxUserNameLength: Integer; override;
+
+    function GetDefaultTransactionIsolation: TZTransactIsolationLevel; override;
+    function SupportsTransactions: Boolean; override;
+    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
+      Boolean; override;
+    function SupportsDataDefinitionAndDataManipulationTransactions: Boolean;
+      override;
+    function SupportsDataManipulationTransactionsOnly: Boolean; override;
+    function DataDefinitionCausesTransactionCommit: Boolean; override;
+    function DataDefinitionIgnoredInTransactions: Boolean; override;
+
+    function SupportsResultSetType(_Type: TZResultSetType): Boolean; override;
+    function SupportsResultSetConcurrency(_Type: TZResultSetType;
+      Concurrency: TZResultSetConcurrency): Boolean; override;
+  end;
 
 implementation
 
 uses
   ZMessages, ZDbcUtils, ZDbcPostgreSql;
 
-{ TZPostgreSQLDatabaseInfo }
+{ TZMySQLDatabaseMetadata }
 
 {**
-  Constructs this object.
-  @param Metadata the interface of the correpsonding database metadata object
+  @param S a string.
+  @return escaped string
 }
-constructor TZPostgreSQLDatabaseInfo.Create(const Metadata: TZAbstractDatabaseMetadata);
+function TZPostgreSQLDatabaseMetadata.EscapeString(const S: string): string;
+var
+  I: Integer;
 begin
-  inherited;
+  Result := S;
+  for I := Length(Result) downto 1 do
+    if (Result[I] = '''') or (Result[I] = '\') then
+      Insert('\', Result, I);
+  Result := '''' + Result + '''';
+  if HaveMinimumServerVersion(8, 1) then
+    Result := 'E' + Result;
+end;
+
+{**
+  Constructs this object and assignes the main properties.
+  @param Connection a database connection object.
+  @param Url a database connection url string.
+  @param Info an extra connection properties.
+}
+constructor TZPostgreSQLDatabaseMetadata.Create(
+  Connection: TZAbstractConnection; Url: string; Info: TStrings);
+var
+  TempInfo: TStrings;
+  Hostname, UserName, Password: string;
+  Port: Integer;
+begin
+  inherited Create(Connection, Url, Info);
+
+  TempInfo := TStringList.Create;
+  try
+    ResolveDatabaseUrl(Url, Info, HostName, Port, FDatabase,
+      UserName, Password, TempInfo);
+  finally
+    TempInfo.Free;
+  end;
 end;
 
 {**
   Destroys this object and cleanups the memory.
 }
-destructor TZPostgreSQLDatabaseInfo.Destroy;
+destructor TZPostgreSQLDatabaseMetadata.Destroy;
 begin
-  inherited;
+  inherited Destroy;
 end;
 
 //----------------------------------------------------------------------
@@ -322,7 +282,7 @@ end;
   What's the name of this database product?
   @return database product name
 }
-function TZPostgreSQLDatabaseInfo.GetDatabaseProductName: string;
+function TZPostgreSQLDatabaseMetadata.GetDatabaseProductName: string;
 begin
   Result := 'PostgreSQL';
 end;
@@ -331,7 +291,7 @@ end;
   What's the version of this database product?
   @return database version
 }
-function TZPostgreSQLDatabaseInfo.GetDatabaseProductVersion: string;
+function TZPostgreSQLDatabaseMetadata.GetDatabaseProductVersion: string;
 begin
   Result := '';
 end;
@@ -340,7 +300,7 @@ end;
   What's the name of this JDBC driver?
   @return JDBC driver name
 }
-function TZPostgreSQLDatabaseInfo.GetDriverName: string;
+function TZPostgreSQLDatabaseMetadata.GetDriverName: string;
 begin
   Result := 'Zeos Database Connectivity Driver for PostgreSQL';
 end;
@@ -349,7 +309,7 @@ end;
   What's this JDBC driver's major version number?
   @return JDBC driver major version
 }
-function TZPostgreSQLDatabaseInfo.GetDriverMajorVersion: Integer;
+function TZPostgreSQLDatabaseMetadata.GetDriverMajorVersion: Integer;
 begin
   Result := 1;
 end;
@@ -358,26 +318,16 @@ end;
   What's this JDBC driver's minor version number?
   @return JDBC driver minor version number
 }
-function TZPostgreSQLDatabaseInfo.GetDriverMinorVersion: Integer;
+function TZPostgreSQLDatabaseMetadata.GetDriverMinorVersion: Integer;
 begin
   Result := 1;
-end;
-
-{**
-  Returns the server version
-  @return the server version string
-}
-function TZPostgreSQLDatabaseInfo.GetServerVersion: string;
-begin
-  with Metadata.GetConnection as IZPostgreSQLConnection do
-    Result := Format('%s.%s', [GetServerMajorVersion, GetServerMinorVersion]);
 end;
 
 {**
   Does the database use a file for each table?
   @return true if the database uses a local file for each table
 }
-function TZPostgreSQLDatabaseInfo.UsesLocalFilePerTable: Boolean;
+function TZPostgreSQLDatabaseMetadata.UsesLocalFilePerTable: Boolean;
 begin
   Result := False;
 end;
@@ -388,7 +338,7 @@ end;
   A JDBC Compliant<sup><font size=-2>TM</font></sup> driver will always return false.
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsMixedCaseIdentifiers: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsMixedCaseIdentifiers: Boolean;
 begin
   Result := False;
 end;
@@ -398,7 +348,7 @@ end;
   case insensitive and store them in upper case?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.StoresUpperCaseIdentifiers: Boolean;
+function TZPostgreSQLDatabaseMetadata.StoresUpperCaseIdentifiers: Boolean;
 begin
   Result := False;
 end;
@@ -408,7 +358,7 @@ end;
   case insensitive and store them in lower case?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.StoresLowerCaseIdentifiers: Boolean;
+function TZPostgreSQLDatabaseMetadata.StoresLowerCaseIdentifiers: Boolean;
 begin
   Result := True;
 end;
@@ -418,7 +368,7 @@ end;
   case insensitive and store them in mixed case?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.StoresMixedCaseIdentifiers: Boolean;
+function TZPostgreSQLDatabaseMetadata.StoresMixedCaseIdentifiers: Boolean;
 begin
   Result := False;
 end;
@@ -429,7 +379,7 @@ end;
   A JDBC Compliant<sup><font size=-2>TM</font></sup> driver will always return true.
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsMixedCaseQuotedIdentifiers: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsMixedCaseQuotedIdentifiers: Boolean;
 begin
   Result := True;
 end;
@@ -439,7 +389,7 @@ end;
   case insensitive and store them in upper case?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.StoresUpperCaseQuotedIdentifiers: Boolean;
+function TZPostgreSQLDatabaseMetadata.StoresUpperCaseQuotedIdentifiers: Boolean;
 begin
   Result := False;
 end;
@@ -449,7 +399,7 @@ end;
   case insensitive and store them in lower case?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.StoresLowerCaseQuotedIdentifiers: Boolean;
+function TZPostgreSQLDatabaseMetadata.StoresLowerCaseQuotedIdentifiers: Boolean;
 begin
   Result := False;
 end;
@@ -459,7 +409,7 @@ end;
   case insensitive and store them in mixed case?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.StoresMixedCaseQuotedIdentifiers: Boolean;
+function TZPostgreSQLDatabaseMetadata.StoresMixedCaseQuotedIdentifiers: Boolean;
 begin
   Result := True;
 end;
@@ -469,7 +419,7 @@ end;
   that are NOT also SQL92 keywords.
   @return the list
 }
-function TZPostgreSQLDatabaseInfo.GetSQLKeywords: string;
+function TZPostgreSQLDatabaseMetadata.GetSQLKeywords: string;
 begin
   Result := 'abort,absolute,access,action,add,admin,after,aggregate,all,also,alter,'+
             'always,analyse,analyze,and,any,array,asc,assertion,assignment,asymmetric,'+
@@ -514,7 +464,7 @@ end;
   clause.
   @return the list
 }
-function TZPostgreSQLDatabaseInfo.GetNumericFunctions: string;
+function TZPostgreSQLDatabaseMetadata.GetNumericFunctions: string;
 begin
   Result := '';
 end;
@@ -525,7 +475,7 @@ end;
   clause.
   @return the list
 }
-function TZPostgreSQLDatabaseInfo.GetStringFunctions: string;
+function TZPostgreSQLDatabaseMetadata.GetStringFunctions: string;
 begin
   Result := '';
 end;
@@ -536,7 +486,7 @@ end;
   clause.
   @return the list
 }
-function TZPostgreSQLDatabaseInfo.GetSystemFunctions: string;
+function TZPostgreSQLDatabaseMetadata.GetSystemFunctions: string;
 begin
   Result := '';
 end;
@@ -545,7 +495,7 @@ end;
   Gets a comma-separated list of time and date functions.
   @return the list
 }
-function TZPostgreSQLDatabaseInfo.GetTimeDateFunctions: string;
+function TZPostgreSQLDatabaseMetadata.GetTimeDateFunctions: string;
 begin
   Result := '';
 end;
@@ -561,7 +511,7 @@ end;
 
   @return the string used to escape wildcard characters
 }
-function TZPostgreSQLDatabaseInfo.GetSearchStringEscape: string;
+function TZPostgreSQLDatabaseMetadata.GetSearchStringEscape: string;
 begin
   Result := '\';
 end;
@@ -571,7 +521,7 @@ end;
   identifier names (those beyond a-z, A-Z, 0-9 and _).
   @return the string containing the extra characters
 }
-function TZPostgreSQLDatabaseInfo.GetExtraNameCharacters: string;
+function TZPostgreSQLDatabaseMetadata.GetExtraNameCharacters: string;
 begin
   Result := '';
 end;
@@ -583,7 +533,7 @@ end;
   Are expressions in "ORDER BY" lists supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsExpressionsInOrderBy: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsExpressionsInOrderBy: Boolean;
 begin
   Result := True;
 end;
@@ -592,16 +542,16 @@ end;
   Can an "ORDER BY" clause use columns not in the SELECT statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsOrderByUnrelated: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsOrderByUnrelated: Boolean;
 begin
-  Result := HasMinimumServerVersion(6, 4);
+  Result := HaveMinimumServerVersion(6, 4);
 end;
 
 {**
   Is some form of "GROUP BY" clause supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsGroupBy: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsGroupBy: Boolean;
 begin
   Result := True;
 end;
@@ -610,9 +560,9 @@ end;
   Can a "GROUP BY" clause use columns not in the SELECT?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsGroupByUnrelated: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsGroupByUnrelated: Boolean;
 begin
-  Result := HasMinimumServerVersion(6, 4);
+  Result := HaveMinimumServerVersion(6, 4);
 end;
 
 {**
@@ -620,16 +570,16 @@ end;
   provided it specifies all the columns in the SELECT?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsGroupByBeyondSelect: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsGroupByBeyondSelect: Boolean;
 begin
-  Result := HasMinimumServerVersion(6, 4);
+  Result := HaveMinimumServerVersion(6, 4);
 end;
 
 {**
   Is the SQL Integrity Enhancement Facility supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsIntegrityEnhancementFacility: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsIntegrityEnhancementFacility: Boolean;
 begin
   Result := False;
 end;
@@ -638,7 +588,7 @@ end;
   What's the database vendor's preferred term for "schema"?
   @return the vendor term
 }
-function TZPostgreSQLDatabaseInfo.GetSchemaTerm: string;
+function TZPostgreSQLDatabaseMetadata.GetSchemaTerm: string;
 begin
   Result := 'schema';
 end;
@@ -647,7 +597,7 @@ end;
   What's the database vendor's preferred term for "procedure"?
   @return the vendor term
 }
-function TZPostgreSQLDatabaseInfo.GetProcedureTerm: string;
+function TZPostgreSQLDatabaseMetadata.GetProcedureTerm: string;
 begin
   Result := 'function';
 end;
@@ -656,7 +606,7 @@ end;
   What's the database vendor's preferred term for "catalog"?
   @return the vendor term
 }
-function TZPostgreSQLDatabaseInfo.GetCatalogTerm: string;
+function TZPostgreSQLDatabaseMetadata.GetCatalogTerm: string;
 begin
   Result := 'database';
 end;
@@ -665,7 +615,7 @@ end;
   What's the separator between catalog and table name?
   @return the separator string
 }
-function TZPostgreSQLDatabaseInfo.GetCatalogSeparator: string;
+function TZPostgreSQLDatabaseMetadata.GetCatalogSeparator: string;
 begin
   Result := '.';
 end;
@@ -674,52 +624,52 @@ end;
   Can a schema name be used in a data manipulation statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsSchemasInDataManipulation: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsSchemasInDataManipulation: Boolean;
 begin
-  Result := HasMinimumServerVersion(7, 3);
+  Result := HaveMinimumServerVersion(7, 3);
 end;
 
 {**
   Can a schema name be used in a procedure call statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsSchemasInProcedureCalls: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsSchemasInProcedureCalls: Boolean;
 begin
-  Result := HasMinimumServerVersion(7, 3);
+  Result := HaveMinimumServerVersion(7, 3);
 end;
 
 {**
   Can a schema name be used in a table definition statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsSchemasInTableDefinitions: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsSchemasInTableDefinitions: Boolean;
 begin
-  Result := HasMinimumServerVersion(7, 3);
+  Result := HaveMinimumServerVersion(7, 3);
 end;
 
 {**
   Can a schema name be used in an index definition statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsSchemasInIndexDefinitions: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsSchemasInIndexDefinitions: Boolean;
 begin
-  Result := HasMinimumServerVersion(7, 3);
+  Result := HaveMinimumServerVersion(7, 3);
 end;
 
 {**
   Can a schema name be used in a privilege definition statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsSchemasInPrivilegeDefinitions: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsSchemasInPrivilegeDefinitions: Boolean;
 begin
-  Result := HasMinimumServerVersion(7, 3);
+  Result := HaveMinimumServerVersion(7, 3);
 end;
 
 {**
   Can a catalog name be used in a data manipulation statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsCatalogsInDataManipulation: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsCatalogsInDataManipulation: Boolean;
 begin
   Result := False;
 end;
@@ -728,7 +678,7 @@ end;
   Can a catalog name be used in a procedure call statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsCatalogsInProcedureCalls: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsCatalogsInProcedureCalls: Boolean;
 begin
   Result := False;
 end;
@@ -737,7 +687,7 @@ end;
   Can a catalog name be used in a table definition statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsCatalogsInTableDefinitions: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsCatalogsInTableDefinitions: Boolean;
 begin
   Result := False;
 end;
@@ -746,7 +696,7 @@ end;
   Can a catalog name be used in an index definition statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsCatalogsInIndexDefinitions: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsCatalogsInIndexDefinitions: Boolean;
 begin
   Result := False;
 end;
@@ -755,7 +705,7 @@ end;
   Can a catalog name be used in a privilege definition statement?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsCatalogsInPrivilegeDefinitions: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsCatalogsInPrivilegeDefinitions: Boolean;
 begin
   Result := False;
 end;
@@ -764,7 +714,7 @@ end;
   Is positioned DELETE supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsPositionedDelete: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsPositionedDelete: Boolean;
 begin
   Result := False;
 end;
@@ -773,7 +723,7 @@ end;
   Is positioned UPDATE supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsPositionedUpdate: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsPositionedUpdate: Boolean;
 begin
   Result := False;
 end;
@@ -782,9 +732,9 @@ end;
   Is SELECT for UPDATE supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsSelectForUpdate: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsSelectForUpdate: Boolean;
 begin
-  Result := HasMinimumServerVersion(6, 5);
+  Result := HaveMinimumServerVersion(6, 5);
 end;
 
 {**
@@ -792,7 +742,7 @@ end;
   syntax supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsStoredProcedures: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsStoredProcedures: Boolean;
 begin
   Result := False;
 end;
@@ -802,7 +752,7 @@ end;
   A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsSubqueriesInComparisons: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsSubqueriesInComparisons: Boolean;
 begin
   Result := True;
 end;
@@ -812,7 +762,7 @@ end;
   A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsSubqueriesInExists: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsSubqueriesInExists: Boolean;
 begin
   Result := True;
 end;
@@ -822,7 +772,7 @@ end;
   A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsSubqueriesInIns: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsSubqueriesInIns: Boolean;
 begin
   Result := True;
 end;
@@ -832,7 +782,7 @@ end;
   A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsSubqueriesInQuantifieds: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsSubqueriesInQuantifieds: Boolean;
 begin
   Result := True;
 end;
@@ -842,16 +792,16 @@ end;
   A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsCorrelatedSubqueries: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsCorrelatedSubqueries: Boolean;
 begin
-  Result := HasMinimumServerVersion(7, 1);
+  Result := HaveMinimumServerVersion(7, 1);
 end;
 
 {**
   Is SQL UNION supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsUnion: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsUnion: Boolean;
 begin
   Result := True;
 end;
@@ -860,9 +810,9 @@ end;
   Is SQL UNION ALL supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsUnionAll: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsUnionAll: Boolean;
 begin
-  Result := HasMinimumServerVersion(7, 1);
+  Result := HaveMinimumServerVersion(7, 1);
 end;
 
 {**
@@ -870,7 +820,7 @@ end;
   @return <code>true</code> if cursors always remain open;
         <code>false</code> if they might not remain open
 }
-function TZPostgreSQLDatabaseInfo.SupportsOpenCursorsAcrossCommit: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsOpenCursorsAcrossCommit: Boolean;
 begin
   Result := False;
 end;
@@ -880,7 +830,7 @@ end;
   @return <code>true</code> if cursors always remain open;
         <code>false</code> if they might not remain open
 }
-function TZPostgreSQLDatabaseInfo.SupportsOpenCursorsAcrossRollback: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsOpenCursorsAcrossRollback: Boolean;
 begin
   Result := False;
 end;
@@ -890,7 +840,7 @@ end;
   @return <code>true</code> if statements always remain open;
         <code>false</code> if they might not remain open
 }
-function TZPostgreSQLDatabaseInfo.SupportsOpenStatementsAcrossCommit: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsOpenStatementsAcrossCommit: Boolean;
 begin
   Result := True;
 end;
@@ -900,7 +850,7 @@ end;
   @return <code>true</code> if statements always remain open;
         <code>false</code> if they might not remain open
 }
-function TZPostgreSQLDatabaseInfo.SupportsOpenStatementsAcrossRollback: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsOpenStatementsAcrossRollback: Boolean;
 begin
   Result := True;
 end;
@@ -916,7 +866,7 @@ end;
   @return max binary literal length in hex characters;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZPostgreSQLDatabaseInfo.GetMaxBinaryLiteralLength: Integer;
+function TZPostgreSQLDatabaseMetadata.GetMaxBinaryLiteralLength: Integer;
 begin
   Result := 0;
 end;
@@ -926,7 +876,7 @@ end;
   @return max literal length;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZPostgreSQLDatabaseInfo.GetMaxCharLiteralLength: Integer;
+function TZPostgreSQLDatabaseMetadata.GetMaxCharLiteralLength: Integer;
 begin
   Result := 0;
 end;
@@ -936,9 +886,9 @@ end;
   @return max column name length;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZPostgreSQLDatabaseInfo.GetMaxColumnNameLength: Integer;
+function TZPostgreSQLDatabaseMetadata.GetMaxColumnNameLength: Integer;
 begin
-  Result := GetMaxNameLength;
+  Result := getMaxNameLength;
 end;
 
 {**
@@ -946,7 +896,7 @@ end;
   @return max number of columns;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZPostgreSQLDatabaseInfo.GetMaxColumnsInGroupBy: Integer;
+function TZPostgreSQLDatabaseMetadata.GetMaxColumnsInGroupBy: Integer;
 begin
   Result := 0;
 end;
@@ -956,7 +906,7 @@ end;
   @return max number of columns;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZPostgreSQLDatabaseInfo.GetMaxColumnsInIndex: Integer;
+function TZPostgreSQLDatabaseMetadata.GetMaxColumnsInIndex: Integer;
 begin
   Result := GetMaxIndexKeys;
 end;
@@ -966,7 +916,7 @@ end;
   @return max number of columns;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZPostgreSQLDatabaseInfo.GetMaxColumnsInOrderBy: Integer;
+function TZPostgreSQLDatabaseMetadata.GetMaxColumnsInOrderBy: Integer;
 begin
   Result := 0;
 end;
@@ -976,7 +926,7 @@ end;
   @return max number of columns;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZPostgreSQLDatabaseInfo.GetMaxColumnsInSelect: Integer;
+function TZPostgreSQLDatabaseMetadata.GetMaxColumnsInSelect: Integer;
 begin
   Result := 0;
 end;
@@ -986,7 +936,7 @@ end;
   @return max number of columns;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZPostgreSQLDatabaseInfo.GetMaxColumnsInTable: Integer;
+function TZPostgreSQLDatabaseMetadata.GetMaxColumnsInTable: Integer;
 begin
   Result := 1600;
 end;
@@ -996,7 +946,7 @@ end;
   @return max number of active connections;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZPostgreSQLDatabaseInfo.GetMaxConnections: Integer;
+function TZPostgreSQLDatabaseMetadata.GetMaxConnections: Integer;
 begin
   Result := 8192;
 end;
@@ -1006,7 +956,7 @@ end;
   @return max cursor name length in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZPostgreSQLDatabaseInfo.GetMaxCursorNameLength: Integer;
+function TZPostgreSQLDatabaseMetadata.GetMaxCursorNameLength: Integer;
 begin
   Result := GetMaxNameLength;
 end;
@@ -1018,7 +968,7 @@ end;
    the constituent parts of the index;
    a result of zero means that there is no limit or the limit is not known
 }
-function TZPostgreSQLDatabaseInfo.GetMaxIndexLength: Integer;
+function TZPostgreSQLDatabaseMetadata.GetMaxIndexLength: Integer;
 begin
   Result := 0;
 end;
@@ -1028,7 +978,7 @@ end;
   @return max name length in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZPostgreSQLDatabaseInfo.GetMaxSchemaNameLength: Integer;
+function TZPostgreSQLDatabaseMetadata.GetMaxSchemaNameLength: Integer;
 begin
   Result := GetMaxNameLength;
 end;
@@ -1038,7 +988,7 @@ end;
   @return max name length in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZPostgreSQLDatabaseInfo.GetMaxProcedureNameLength: Integer;
+function TZPostgreSQLDatabaseMetadata.GetMaxProcedureNameLength: Integer;
 begin
   Result := GetMaxNameLength;
 end;
@@ -1048,7 +998,7 @@ end;
   @return max name length in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZPostgreSQLDatabaseInfo.GetMaxCatalogNameLength: Integer;
+function TZPostgreSQLDatabaseMetadata.GetMaxCatalogNameLength: Integer;
 begin
   Result := GetMaxNameLength;
 end;
@@ -1058,9 +1008,9 @@ end;
   @return max row size in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZPostgreSQLDatabaseInfo.GetMaxRowSize: Integer;
+function TZPostgreSQLDatabaseMetadata.GetMaxRowSize: Integer;
 begin
-  if HasMinimumServerVersion(7, 1) then
+  if HaveMinimumServerVersion(7, 1) then
     Result := 1073741824
   else Result := 8192;
 end;
@@ -1070,7 +1020,7 @@ end;
   blobs?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.DoesMaxRowSizeIncludeBlobs: Boolean;
+function TZPostgreSQLDatabaseMetadata.DoesMaxRowSizeIncludeBlobs: Boolean;
 begin
   Result := True;
 end;
@@ -1080,9 +1030,9 @@ end;
   @return max length in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZPostgreSQLDatabaseInfo.GetMaxStatementLength: Integer;
+function TZPostgreSQLDatabaseMetadata.GetMaxStatementLength: Integer;
 begin
-  if HasMinimumServerVersion(7, 0) then
+  if HaveMinimumServerVersion(7, 0) then
     Result := 0
   else Result := 16348
 end;
@@ -1093,7 +1043,7 @@ end;
   @return the maximum number of statements that can be open at one time;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZPostgreSQLDatabaseInfo.GetMaxStatements: Integer;
+function TZPostgreSQLDatabaseMetadata.GetMaxStatements: Integer;
 begin
   Result := 1;
 end;
@@ -1103,7 +1053,7 @@ end;
   @return max name length in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZPostgreSQLDatabaseInfo.GetMaxTableNameLength: Integer;
+function TZPostgreSQLDatabaseMetadata.GetMaxTableNameLength: Integer;
 begin
   Result := GetMaxNameLength;
 end;
@@ -1113,7 +1063,7 @@ end;
   @return the maximum number of tables allowed in a SELECT statement;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZPostgreSQLDatabaseInfo.GetMaxTablesInSelect: Integer;
+function TZPostgreSQLDatabaseMetadata.GetMaxTablesInSelect: Integer;
 begin
   Result := 0;
 end;
@@ -1123,7 +1073,7 @@ end;
   @return max user name length  in bytes;
        a result of zero means that there is no limit or the limit is not known
 }
-function TZPostgreSQLDatabaseInfo.GetMaxUserNameLength: Integer;
+function TZPostgreSQLDatabaseMetadata.GetMaxUserNameLength: Integer;
 begin
   Result := GetMaxNameLength;
 end;
@@ -1136,7 +1086,7 @@ end;
   @return the default isolation level
   @see Connection
 }
-function TZPostgreSQLDatabaseInfo.GetDefaultTransactionIsolation:
+function TZPostgreSQLDatabaseMetadata.GetDefaultTransactionIsolation:
   TZTransactIsolationLevel;
 begin
   Result := tiReadCommitted;
@@ -1147,7 +1097,7 @@ end;
   <code>commit</code> is a noop and the isolation level is TRANSACTION_NONE.
   @return <code>true</code> if transactions are supported; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.SupportsTransactions: Boolean;
+function TZPostgreSQLDatabaseMetadata.SupportsTransactions: Boolean;
 begin
   Result := True;
 end;
@@ -1158,7 +1108,7 @@ end;
   @return <code>true</code> if so; <code>false</code> otherwise
   @see Connection
 }
-function TZPostgreSQLDatabaseInfo.SupportsTransactionIsolationLevel(
+function TZPostgreSQLDatabaseMetadata.SupportsTransactionIsolationLevel(
   Level: TZTransactIsolationLevel): Boolean;
 begin
   Result := (Level = tiSerializable) or (Level = tiReadCommitted);
@@ -1169,7 +1119,7 @@ end;
   within a transaction supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.
+function TZPostgreSQLDatabaseMetadata.
   SupportsDataDefinitionAndDataManipulationTransactions: Boolean;
 begin
   Result := True;
@@ -1180,7 +1130,7 @@ end;
   supported?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.
+function TZPostgreSQLDatabaseMetadata.
   SupportsDataManipulationTransactionsOnly: Boolean;
 begin
   Result := False;
@@ -1191,7 +1141,7 @@ end;
   transaction to commit?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.DataDefinitionCausesTransactionCommit: Boolean;
+function TZPostgreSQLDatabaseMetadata.DataDefinitionCausesTransactionCommit: Boolean;
 begin
   Result := False;
 end;
@@ -1200,155 +1150,9 @@ end;
   Is a data definition statement within a transaction ignored?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
-function TZPostgreSQLDatabaseInfo.DataDefinitionIgnoredInTransactions: Boolean;
+function TZPostgreSQLDatabaseMetadata.DataDefinitionIgnoredInTransactions: Boolean;
 begin
   Result := False;
-end;
-
-{**
-  Does the database support the given result set type?
-  @param type defined in <code>java.sql.ResultSet</code>
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZPostgreSQLDatabaseInfo.SupportsResultSetType(
-  _Type: TZResultSetType): Boolean;
-begin
-  Result := _Type = rtScrollInsensitive;
-end;
-
-{**
-  Does the database support the concurrency type in combination
-  with the given result set type?
-
-  @param type defined in <code>java.sql.ResultSet</code>
-  @param concurrency type defined in <code>java.sql.ResultSet</code>
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZPostgreSQLDatabaseInfo.SupportsResultSetConcurrency(
-  _Type: TZResultSetType; Concurrency: TZResultSetConcurrency): Boolean;
-begin
-  Result := (_Type = rtScrollInsensitive) and (Concurrency = rcReadOnly);
-end;
-
-//----------------------------------------------------------------------
-// Additional functions.
-
-function TZPostgreSQLDatabaseInfo.HasMinimumServerVersion(
-  MajorVersion: Integer; MinorVersion: Integer): Boolean;
-var
-  PostgreSQLConnection: IZPostgreSQLConnection;
-begin
-  PostgreSQLConnection := Metadata.GetConnection as IZPostgreSQLConnection;
-  Result := (MajorVersion < PostgreSQLConnection.GetServerMajorVersion)
-    or ((MajorVersion = PostgreSQLConnection.GetServerMajorVersion)
-    and (MinorVersion <= PostgreSQLConnection.GetServerMinorVersion));
-end;
-
-function TZPostgreSQLDatabaseInfo.GetMaxIndexKeys: Integer;
-var
-  SQL, From: string;
-begin
-  if HasMinimumServerVersion(7, 3) then
-  begin
-    From := ' pg_catalog.pg_namespace n, pg_catalog.pg_type t1,'
-      + ' pg_catalog.pg_type t2 WHERE t1.typnamespace=n.oid'
-      + ' AND n.nspname=''pg_catalog'' AND ';
-  end else
-    From := ' pg_type t1, pg_type t2 WHERE ';
-  SQL := ' SELECT t1.typlen/t2.typlen FROM ' + From
-    + ' t1.typelem=t2.oid AND t1.typname=''oidvector'' ';
-
-  with Metadata.GetConnection.CreateStatement.ExecuteQuery(SQL) do
-  begin
-    if not Next then
-      raise Exception.Create(SUnknownError); //CHANGE IT!
-    Result := GetInt(1);
-    Close;
-  end;
-end;
-
-function TZPostgreSQLDatabaseInfo.GetMaxNameLength: Integer;
-var
-  SQL: string;
-begin
-  if HasMinimumServerVersion(7, 3) then
-  begin
-    SQL := ' SELECT t.typlen FROM pg_catalog.pg_type t,'
-      + ' pg_catalog.pg_namespace n WHERE t.typnamespace=n.oid'
-      + ' AND t.typname=''name'' AND n.nspname=''pg_catalog'' ';
-  end else
-    SQL := ' SELECT typlen FROM pg_type WHERE typname=''name'' ';
-
-  with Metadata.GetConnection.CreateStatement.ExecuteQuery(SQL) do
-  begin
-    if not Next then
-      raise Exception.Create(SUnknownError); //CHANGE IT!
-    Result := GetIntByName('typlen');
-    Close;
-  end;
-end;
-
-
-{ TZPostgreSQLDatabaseMetadata }
-
-
-{**
-  Constructs this object and assignes the main properties.
-  @param Connection a database connection object.
-  @param Url a database connection url string.
-  @param Info an extra connection properties.
-}
-constructor TZPostgreSQLDatabaseMetadata.Create(
-  Connection: TZAbstractConnection; Url: string; Info: TStrings);
-var
-  TempInfo: TStrings;
-  Hostname, UserName, Password: string;
-  Port: Integer;
-begin
-  inherited Create(Connection, Url, Info);
-
-  TempInfo := TStringList.Create;
-  try
-    ResolveDatabaseUrl(Url, Info, HostName, Port, FDatabase,
-      UserName, Password, TempInfo);
-  finally
-    TempInfo.Free;
-  end;
-end;
-
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZPostgreSQLDatabaseMetadata.Destroy;
-begin
-  inherited Destroy;
-end;
-
-{**
-  Constructs a database information object and returns the interface to it. Used
-  internally by the constructor.
-  @return the database information object interface
-}
-function TZPostgreSQLDatabaseMetadata.CreateDatabaseInfo: IZDatabaseInfo;
-begin
-  Result := TZPostgreSQLDatabaseInfo.Create(Self);
-end;
-
-{**
-  @param S a string.
-  @return escaped string
-}
-function TZPostgreSQLDatabaseMetadata.EscapeString(const S: string): string;
-var
-  I: Integer;
-begin
-  Result := S;
-  for I := Length(Result) downto 1 do
-    if (Result[I] = '''') or (Result[I] = '\') then
-      Insert('\', Result, I);
-  Result := '''' + Result + '''';
-  if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(8, 1) then
-    Result := 'E' + Result;
 end;
 
 {**
@@ -1394,7 +1198,7 @@ begin
     else
       LProcedureNamePattern := ProcedureNamePattern;
 
-    if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+    if HaveMinimumServerVersion(7, 3) then
     begin
       SQL := 'SELECT NULL AS PROCEDURE_CAT, n.nspname AS PROCEDURE_SCHEM,'
         + ' p.proname AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2,'
@@ -1495,7 +1299,7 @@ var
 begin
     Result := ConstructVirtualResultSet(ProceduresColColumnsDynArray);
 
-    if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+    if HaveMinimumServerVersion(7, 3) then
     begin
       SQL := 'SELECT n.nspname,p.proname,p.prorettype,p.proargtypes,t.typtype,'
         + 't.typrelid FROM pg_catalog.pg_proc p, pg_catalog.pg_namespace n,'
@@ -1640,7 +1444,7 @@ var
 begin
     UseSchemas := True;
 
-    if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+    if HaveMinimumServerVersion(7, 3) then
     begin
       SQL := ' SELECT NULL AS TABLE_CAT, n.nspname AS TABLE_SCHEM,'
         + ' c.relname AS TABLE_NAME,  '
@@ -1737,14 +1541,12 @@ begin
 
     if (Types = nil) or (Length(Types) = 0) then
     begin
-      SetLength(LTypes, 3);
-      // SetLength(LTypes, 6);
+      SetLength(LTypes, 5);
       LTypes[0] := 'TABLE';
       LTypes[1] := 'VIEW';
-      LTypes[2] := 'TEMPORARY TABLE';
-      // LTypes[3] := 'SYSTEM TABLE';
-      // LTypes[4] := 'SYSTEM TOAST TABLE';
-      // LTypes[5] := 'SYSTEM VIEW';
+      LTypes[2] := 'INDEX';
+      LTypes[3] := 'SEQUENCE';
+      LTypes[4] := 'TEMPORARY TABLE';
     end
     else
       LTypes := Types;
@@ -1776,7 +1578,7 @@ function TZPostgreSQLDatabaseMetadata.UncachedGetSchemas: IZResultSet;
 var
   SQL: string;
 begin
-    if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+    if HaveMinimumServerVersion(7, 3) then
     begin
       SQL := 'SELECT nspname AS TABLE_SCHEM FROM pg_catalog.pg_namespace'
         + ' WHERE nspname <> ''pg_toast'' AND nspname NOT'
@@ -1805,7 +1607,7 @@ function TZPostgreSQLDatabaseMetadata.UncachedGetCatalogs: IZResultSet;
 var
   SQL: string;
 begin
-    if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+    if HaveMinimumServerVersion(7, 3) then
     begin
       SQL := 'SELECT datname AS TABLE_CAT FROM pg_catalog.pg_database'
         + ' ORDER BY TABLE_CAT';
@@ -1911,7 +1713,7 @@ function TZPostgreSQLDatabaseMetadata.UncachedGetColumns(const Catalog: string;
 begin
     Result := ConstructVirtualResultSet(TableColColumnsDynArray);
 
-    if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+    if HaveMinimumServerVersion(7, 3) then
     begin
       SQL := 'SELECT n.nspname,c.relname,a.attname,a.atttypid,a.attnotnull,'
         + 'a.atttypmod,a.attlen,a.attnum,pg_get_expr(def.adbin, def.adrelid) as adsrc,dsc.description '
@@ -2055,7 +1857,7 @@ var
 begin
     Result := ConstructVirtualResultSet(TableColPrivColumnsDynArray);
 
-    if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+    if HaveMinimumServerVersion(7, 3) then
     begin
       SQL := 'SELECT n.nspname,c.relname,u.usename,c.relacl,a.attname '
         + ' FROM pg_catalog.pg_namespace n, pg_catalog.pg_class c,'
@@ -2168,7 +1970,7 @@ var
 begin
     Result := ConstructVirtualResultSet(TablePrivColumnsDynArray);
 
-    if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+    if HaveMinimumServerVersion(7, 3) then
     begin
       SQL := 'SELECT n.nspname,c.relname,u.usename,c.relacl '
         + ' FROM pg_catalog.pg_namespace n, pg_catalog.pg_class c,'
@@ -2309,7 +2111,7 @@ function TZPostgreSQLDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: stri
 var
   SQL, Select, From, Where: string;
 begin
-    if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+    if HaveMinimumServerVersion(7, 3) then
     begin
       Select := 'SELECT NULL AS TABLE_CAT, n.nspname AS TABLE_SCHEM,';
       From := ' FROM pg_catalog.pg_namespace n, pg_catalog.pg_class ct,'
@@ -2573,7 +2375,7 @@ var
 begin
     Result := ConstructVirtualResultSet(CrossRefColumnsDynArray);
 
-    if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+    if HaveMinimumServerVersion(7, 3) then
     begin
       Select := 'SELECT DISTINCT n1.nspname as pnspname,n2.nspname as fnspname,';
       From := ' FROM pg_catalog.pg_namespace n1 JOIN pg_catalog.pg_class c1'
@@ -2628,13 +2430,13 @@ begin
 
     if PrimaryTable <> '' then
     begin
-      if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+      if HaveMinimumServerVersion(7, 3) then
         SQL := SQL + 'fnspname, ';
       SQL := SQL + 'frelname';
     end
     else
     begin
-      if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+      if HaveMinimumServerVersion(7, 3) then
         SQL := SQL + 'pnspname, ';
       SQL := SQL + 'prelname';
     end;
@@ -2783,7 +2585,7 @@ var
 begin
     Result := ConstructVirtualResultSet(TypeInfoColumnsDynArray);
 
-    if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+    if HaveMinimumServerVersion(7, 3) then
       SQL := ' SELECT typname FROM pg_catalog.pg_type '
     else SQL := ' SELECT typname FROM pg_type ';
 
@@ -2864,7 +2666,7 @@ function TZPostgreSQLDatabaseMetadata.UncachedGetIndexInfo(const Catalog: string
 var
   SQL, Select, From, Where: string;
 begin
-    if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+    if HaveMinimumServerVersion(7, 3) then
     begin
       Select := 'SELECT NULL AS TABLE_CAT, n.nspname AS TABLE_SCHEM,';
       From := ' FROM pg_catalog.pg_namespace n, pg_catalog.pg_class ct,'
@@ -2932,6 +2734,86 @@ begin
       end;
       Close;
     end;
+end;
+
+{**
+  Does the database support the given result set type?
+  @param type defined in <code>java.sql.ResultSet</code>
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZPostgreSQLDatabaseMetadata.SupportsResultSetType(
+  _Type: TZResultSetType): Boolean;
+begin
+  Result := _Type = rtScrollInsensitive;
+end;
+
+{**
+  Does the database support the concurrency type in combination
+  with the given result set type?
+
+  @param type defined in <code>java.sql.ResultSet</code>
+  @param concurrency type defined in <code>java.sql.ResultSet</code>
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZPostgreSQLDatabaseMetadata.SupportsResultSetConcurrency(
+  _Type: TZResultSetType; Concurrency: TZResultSetConcurrency): Boolean;
+begin
+  Result := (_Type = rtScrollInsensitive) and (Concurrency = rcReadOnly);
+end;
+
+function TZPostgreSQLDatabaseMetadata.HaveMinimumServerVersion(
+  MajorVersion: Integer; MinorVersion: Integer): Boolean;
+var
+  PostgreSQLConnection: IZPostgreSQLConnection;
+begin
+  PostgreSQLConnection := GetConnection as IZPostgreSQLConnection;
+  Result := (MajorVersion < PostgreSQLConnection.GetServerMajorVersion)
+    or ((MajorVersion = PostgreSQLConnection.GetServerMajorVersion)
+    and (MinorVersion <= PostgreSQLConnection.GetServerMinorVersion));
+end;
+
+function TZPostgreSQLDatabaseMetadata.GetMaxIndexKeys: Integer;
+var
+  SQL, From: string;
+begin
+  if HaveMinimumServerVersion(7, 3) then
+  begin
+    From := ' pg_catalog.pg_namespace n, pg_catalog.pg_type t1,'
+      + ' pg_catalog.pg_type t2 WHERE t1.typnamespace=n.oid'
+      + ' AND n.nspname=''pg_catalog'' AND ';
+  end else
+    From := ' pg_type t1, pg_type t2 WHERE ';
+  SQL := ' SELECT t1.typlen/t2.typlen FROM ' + From
+    + ' t1.typelem=t2.oid AND t1.typname=''oidvector'' ';
+
+  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+  begin
+    if not Next then
+      raise Exception.Create(SUnknownError); //CHANGE IT!
+    Result := GetInt(1);
+    Close;
+  end;
+end;
+
+function TZPostgreSQLDatabaseMetadata.GetMaxNameLength: Integer;
+var
+  SQL: string;
+begin
+  if HaveMinimumServerVersion(7, 3) then
+  begin
+    SQL := ' SELECT t.typlen FROM pg_catalog.pg_type t,'
+      + ' pg_catalog.pg_namespace n WHERE t.typnamespace=n.oid'
+      + ' AND t.typname=''name'' AND n.nspname=''pg_catalog'' ';
+  end else
+    SQL := ' SELECT typlen FROM pg_type WHERE typname=''name'' ';
+
+  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+  begin
+    if not Next then
+      raise Exception.Create(SUnknownError); //CHANGE IT!
+    Result := GetIntByName('typlen');
+    Close;
+  end;
 end;
 
 function TZPostgreSQLDatabaseMetadata.GetPostgreSQLType(Oid: Integer): string;
@@ -3068,73 +2950,4 @@ begin
  end;
 end;
 
-function TZPostgreSQLDatabaseMetadata.GetIdentifierConvertor: IZIdentifierConvertor;
-begin
-  Result:=TZPostgreSQLIdentifierConvertor.Create(Self);
-end; 
-
-{ TZPostgresIdentifierConvertor } 
- 
-function TZPostgreSQLIdentifierConvertor.ExtractQuote( 
-  const Value: string): string; 
-var 
-  QuoteDelim: string; 
-begin 
-  QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
-  Result := Value; 
-  if (QuoteDelim <> '') and (Value <> '') then 
-    if (copy(Value,1,1)=QuoteDelim) and 
-       (copy(Value,length(Value),1)=QuoteDelim) then 
-    begin 
-      Result:=copy(Value,2,length(Value)-2); 
-      Result:=StringReplace(Result,QuoteDelim+QuoteDelim,QuoteDelim,[rfReplaceAll]); 
-    end; 
- 
-end; 
- 
-function TZPostgreSQLIdentifierConvertor.IsQuoted(const Value: string): Boolean; 
-var 
-  QuoteDelim: string; 
-begin 
-  QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
-  Result := (QuoteDelim <> '') and (Value <> '') and 
-            (copy(Value,1,1)=QuoteDelim) and 
-            (copy(Value,length(Value),1)=QuoteDelim); 
-end; 
- 
-function TZPostgreSQLIdentifierConvertor.IsSpecialCase( 
-  const Value: string): Boolean; 
-var 
-  I: Integer; 
-begin 
-  Result := False; 
-  if not (Value[1] in ['a'..'z','_']) then 
-  begin 
-    Result := True; 
-    Exit; 
-  end; 
-  for I := 1 to Length(Value) do 
-  begin 
-    if not (Value[I] in ['A'..'Z','a'..'z','0'..'9','_']) then 
-    begin 
-      Result := True; 
-      Break; 
-    end; 
-  end; 
-end; 
- 
-function TZPostgreSQLIdentifierConvertor.Quote(const Value: string): string; 
-var 
-  QuoteDelim: string; 
-begin 
-  Result := Value; 
-  if IsCaseSensitive(Value) then 
-  begin 
-    QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
-    Result := QuoteDelim + 
-              StringReplace(Result,QuoteDelim,QuoteDelim+QuoteDelim,[rfReplaceAll]) + 
-              QuoteDelim; 
-  end; 
-end; 
- 
 end.
