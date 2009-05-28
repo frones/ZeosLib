@@ -6,7 +6,7 @@
     <PROJECT value="build\ZTestCoreAll.exe"/>
     <OBJFILES value="build\ZTestCoreAll.obj build\TestFrameWork.obj build\TextTestRunner.obj 
       build\ZTestSysUtils.obj build\ZTestList.obj build\ZTestFramework.obj 
-      build\ZTestVariant.obj build\ZTestExpression.obj build\ZTestExprToken.obj 
+      build\ZTestVariant.obj build\ZTestExpression.obj build\ZTestExprToken.obj build\ZTestURL
       build\ZTestTokenizer.obj"/>
     <RESFILES value=""/>
     <IDLFILES value=""/>
@@ -60,6 +60,7 @@
       <FILE FILENAME="..\..\test\core\ZTestExpression.pas" FORMNAME="" UNITNAME="ZTestExpression.pas" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\test\core\ZTestExprToken.pas" FORMNAME="" UNITNAME="ZTestExprToken.pas" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\test\core\ZTestTokenizer.pas" FORMNAME="" UNITNAME="ZTestTokenizer.pas" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\test\core\ZTestURL.pas" FORMNAME="" UNITNAME="ZTestURL.pas" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
   </FILELIST>
   <BUILDTOOLS>
   </BUILDTOOLS>

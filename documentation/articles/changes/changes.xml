@@ -64,6 +64,9 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[Common] Added ZURL unit to the core package. This unit provides splitting and composing routines for connect strings.</simpara>
+        </listitem>
+        <listitem>
           <simpara>[IB/FB] Added support for milliseconds (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2354">http://zeos.firmos.at/viewtopic.php?t=2354</ulink>)</simpara>
         </listitem>
         <listitem>

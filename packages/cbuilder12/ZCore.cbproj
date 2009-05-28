@@ -154,6 +154,10 @@
 				<BuildOrder>20</BuildOrder>
 				<BuildOrder>17</BuildOrder>
 			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\core\ZURL.pas">
+				<BuildOrder>20</BuildOrder>
+				<BuildOrder>18</BuildOrder>
+			</DelphiCompile>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>

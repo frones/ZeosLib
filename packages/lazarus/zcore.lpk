@@ -1,28 +1,25 @@
 <?xml version="1.0"?>
 <CONFIG>
-  <Package Version="2">
+  <Package Version="3">
     <Name Value="zcore"/>
     <CompilerOptions>
-      <Version Value="5"/>
+      <Version Value="8"/>
       <SearchPaths>
         <OtherUnitFiles Value="../../src/core/"/>
         <UnitOutputDirectory Value="build"/>
       </SearchPaths>
       <Parsing>
         <SyntaxOptions>
-          <DelphiCompat Value="True"/>
+          <SyntaxMode Value="Delphi"/>
         </SyntaxOptions>
       </Parsing>
-      <CodeGeneration>
-        <Generate Value="Faster"/>
-      </CodeGeneration>
       <Other>
         <CompilerPath Value="$(CompPath)"/>
       </Other>
     </CompilerOptions>
     <Description Value="Zeos Core Classes and Interfaces"/>
-    <Version Major="7" Minor="0" Release="0"/>
-    <Files Count="13">
+    <Version Major="7"/>
+    <Files Count="14">
       <Item1>
         <Filename Value="../../src/core/ZClasses.pas"/>
         <UnitName Value="ZClasses"/>
@@ -75,6 +72,10 @@
         <Filename Value="../../src/core/ZVariant.pas"/>
         <UnitName Value="ZVariant"/>
       </Item13>
+      <Item14>
+        <Filename Value="../../src/core/ZURL.pas"/>
+        <UnitName Value="ZURL"/>
+      </Item14>
     </Files>
     <RequiredPkgs Count="2">
       <Item1>

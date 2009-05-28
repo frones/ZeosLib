@@ -42,6 +42,7 @@ contains
   ZTokenizer in '..\..\src\core\ZTokenizer.pas',
   ZVariables in '..\..\src\core\ZVariables.pas',
   ZClasses in '..\..\src\core\ZClasses.pas',
-  ZMessages in '..\..\src\core\ZMessages.pas';
+  ZMessages in '..\..\src\core\ZMessages.pas',
+  ZURL in '..\..\src\core\ZURL.pas';
 
 end.
