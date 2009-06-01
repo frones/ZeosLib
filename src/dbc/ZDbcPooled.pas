@@ -12,13 +12,11 @@ uses
   Types,
   Windows,
   SyncObjs,
+  ZClasses,
   ZURL,
   ZDbcConnection,
   ZDbcIntfs,
   ZPlainDriver;
-
-const
-  Protocol: string = 'pooled.';
 
 type
   TConnectionPool = class;
@@ -570,7 +568,7 @@ end;
 
 function TZDbcPooledConnectionDriver.AcceptsURL(const URL: string): Boolean;
 begin
-  Result := Copy(URL, 1, 5 + Length(Protocol)) = 'zdbc:' + Protocol;
+  Result := Copy(URL, 1, 5 + Length(PooledPrefix)) = 'zdbc:' + PooledPrefix;
 end;
 
 function TZDbcPooledConnectionDriver.Connect(const URL: string; Info: TStrings): IZConnection;
@@ -659,15 +657,15 @@ end;
 function TZDbcPooledConnectionDriver.GetSupportedProtocols: TStringDynArray;
 begin
   SetLength(Result, 1);
-  Result[0] := Protocol + '*';
+  Result[0] := PooledPrefix + '*';
 end;
 
 function TZDbcPooledConnectionDriver.GetEmbeddedURL(const URL: AnsiString): AnsiString;
 begin
-  if Copy(URL, 1, 5 + Length(Protocol)) = 'zdbc:' + Protocol then
-    Result := 'zdbc:' + Copy(URL, 5 + Length(Protocol) + 1, Length(URL))
+  if Copy(URL, 1, 5 + Length(PooledPrefix)) = 'zdbc:' + PooledPrefix then
+    Result := 'zdbc:' + Copy(URL, 5 + Length(PooledPrefix) + 1, Length(URL))
   else
-    raise Exception.Create('TZDbcPooledConnectionDriver.GetRealURL - URL must start with ''zdbc:' + Protocol + '''');
+    raise Exception.Create('TZDbcPooledConnectionDriver.GetRealURL - URL must start with ''zdbc:' + PooledPrefix+ '''');
 end;
 
 var

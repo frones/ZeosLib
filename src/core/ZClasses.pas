@@ -63,6 +63,12 @@ uses
 const
   ZEOS_VERSION = '7.0.0-dev';
 
+{$IFDEF ENABLE_POOLED}
+  {Pooled Protocol Prefix, including final dot}
+  PooledPrefix = 'pooled.';
+{$ENDIF}
+
+
 type
   { Lazarus/FreePascal Support }
   {$IFDEF FPC}

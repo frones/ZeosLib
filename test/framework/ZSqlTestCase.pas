@@ -61,8 +61,8 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  TestFrameWork, Classes, SysUtils, ZCompatibility, ZDbcIntfs, ZConnection,
-  Contnrs, ZTestCase, ZScriptParser, ZDbcLogging;
+  TestFrameWork, Classes, SysUtils, {$IFDEF ENABLE_POOLED}ZClasses,{$ENDIF}
+  ZCompatibility, ZDbcIntfs, ZConnection, Contnrs, ZTestCase, ZScriptParser, ZDbcLogging;
 
 type
   {** Represents a SQL test database configuration. }
@@ -121,7 +121,7 @@ type
     FCreateScripts: TStringDynArray;
     FDropScripts: TStringDynArray;
     FProperties: TStringDynArray;
-
+    function GetProtocol : string;
   protected
     property Connections: TObjectList read FConnections write FConnections;
     property TraceList: TStrings read FTraceList write FTraceList;
@@ -151,7 +151,7 @@ type
     { Properties to access active connection settings. }
     property ConnectionName: string read FConnectionName;
     property Alias: string read FAlias;
-    property Protocol: string read FProtocol;
+    property Protocol: string read GetProtocol;
     property HostName: string read FHostName;
     property Port: Integer read FPort;
     property Database: string read FDatabase;
@@ -200,6 +200,16 @@ begin
     FTraceList.Free;
 
   inherited Destroy;
+end;
+
+function TZAbstractSQLTestCase.GetProtocol: string;
+begin
+  {$IFDEF ENABLE_POOLED}
+  If StartsWith(FProtocol,pooledprefix) then
+    Result := Copy(FProtocol,Length(PooledPrefix)+1,Length(FProtocol))
+  else
+  {$ENDIF}
+    Result := FProtocol;
 end;
 
 {**
@@ -299,12 +309,18 @@ end;
 function TZAbstractSQLTestCase.IsProtocolValid(Name: string): Boolean;
 var
   Temp: TStrings;
+  TempName : string;
 begin
   if GetSupportedProtocols <> '' then
   begin
     Temp := SplitString(GetSupportedProtocols, LIST_DELIMITERS);
+    TempName := Name;
     try
-      Result := (Temp.IndexOf(Name) >= 0);
+      {$IFDEF ENABLE_POOLED}
+      If StartsWith(TempName,pooledprefix) then
+        TempName := Copy(TempName,Length(PooledPrefix)+1,Length(TempName));
+      {$ENDIF}
+      Result := (Temp.IndexOf(TempName) >= 0);
     finally
       Temp.Free;
     end;
