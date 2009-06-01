@@ -318,6 +318,10 @@
 				<BuildOrder>59</BuildOrder>
 				<BuildOrder>58</BuildOrder>
 			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcPooled.pas">
+				<BuildOrder>59</BuildOrder>
+				<BuildOrder>59</BuildOrder>
+			</DelphiCompile>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>

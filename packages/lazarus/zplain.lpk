@@ -19,7 +19,7 @@
     </CompilerOptions>
     <Description Value="Zeos Plain Database API"/>
     <Version Major="7"/>
-    <Files Count="19">
+    <Files Count="17">
       <Item1>
         <Filename Value="../../src/plain/ZPlainDbLibDriver.pas"/>
         <UnitName Value="ZPlainDbLibDriver"/>
@@ -60,34 +60,34 @@
         <Filename Value="../../src/plain/ZPlainPostgreSqlDriver.pas"/>
         <UnitName Value="ZPlainPostgreSqlDriver"/>
       </Item10>
-      <Item12>
+      <Item11>
         <Filename Value="../../src/plain/ZPlainSqLiteDriver.pas"/>
         <UnitName Value="ZPlainSqLiteDriver"/>
-      </Item12>
-      <Item14>
+      </Item11>
+      <Item12>
         <Filename Value="../../src/plain/ZPlainASADriver.pas"/>
         <UnitName Value="ZPlainASADriver"/>
-      </Item14>
-      <Item15>
+      </Item12>
+      <Item13>
         <Filename Value="../../src/plain/ZPlainASA9.pas"/>
         <UnitName Value="ZPlainASA9"/>
-      </Item15>
-      <Item16>
+      </Item13>
+      <Item14>
         <Filename Value="../../src/plain/ZPlainASA8.pas"/>
         <UnitName Value="ZPlainASA8"/>
-      </Item16>
-      <Item17>
+      </Item14>
+      <Item15>
         <Filename Value="../../src/plain/ZPlainASA7.pas"/>
         <UnitName Value="ZPlainASA7"/>
-      </Item17>
-      <Item18>
+      </Item15>
+      <Item16>
         <Filename Value="../../src/plain/ZPlainFirebirdDriver.pas"/>
         <UnitName Value="ZPlainFirebirdDriver"/>
-      </Item18>
-      <Item19>
+      </Item16>
+      <Item17>
         <Filename Value="../../src/plain/ZPlainFirebirdInterbaseConstants.pas"/>
         <UnitName Value="ZPlainFirebirdInterbaseConstants"/>
-      </Item19>
+      </Item17>
     </Files>
     <RequiredPkgs Count="3">
       <Item1>

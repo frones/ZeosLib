@@ -1,5 +1,5 @@
 { Dit bestand is automatisch aangemaakt door Lazarus. Niet wijzigen!
-Deze broncode is alleen gebruikt voor compilatie en installatie.
+  Deze broncode is alleen gebruikt voor compilatie en installatie.
  }
 
 unit zdbc; 
@@ -7,8 +7,8 @@ unit zdbc;
 interface
 
 uses
-  ZDbcDbLib, ZDbcInterbase6, ZDbcIntfs, ZDbcMetadata, ZDbcMySql, ZDbcOracle, 
-    ZDbcPostgreSql, ZDbcPostgreSqlUtils, ZDbcSqLite, ZDbcASA; 
+    ZDbcDbLib, ZDbcInterbase6, ZDbcIntfs, ZDbcMetadata, ZDbcMySql, ZDbcOracle, 
+  ZDbcPostgreSql, ZDbcSqLite, ZDbcASA, ZDbcPooled;
 
 implementation
 
