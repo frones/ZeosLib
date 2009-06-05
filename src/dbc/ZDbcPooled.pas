@@ -5,12 +5,14 @@ interface
 implementation
 
 uses
+{$IFNDEF UNIX}
+  Windows,
+{$ENDIF}
   Classes,
   Contnrs,
   DateUtils,
   SysUtils,
   Types,
-  Windows,
   SyncObjs,
   ZClasses,
   ZURL,
