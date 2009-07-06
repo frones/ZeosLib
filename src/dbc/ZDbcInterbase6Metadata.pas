@@ -1239,7 +1239,7 @@ begin
       'PP.RDB$PARAMETER_NAME');
 
     if (StrPos(PChar(ServerVersion), 'Interbase 5') <> nil)
-       or (StrPos(PChar(ServerVersion), 'V5.0')<>nil) then
+       or (StrPos(PChar(ServerVersion), 'V5.')<>nil) then
     begin
       SQL := ' SELECT P.RDB$PROCEDURE_NAME, PP.RDB$PARAMETER_NAME,'
         + ' PP.RDB$PARAMETER_TYPE, F.RDB$FIELD_TYPE, F.RDB$FIELD_SUB_TYPE,'
@@ -1523,7 +1523,7 @@ begin
       'a.RDB$FIELD_NAME');
 
     if (StrPos(PChar(ServerVersion), 'Interbase 5') <> nil)
-       or (StrPos(PChar(ServerVersion), 'V5.0')<>nil) then
+       or (StrPos(PChar(ServerVersion), 'V5.')<>nil) then
     begin
       SQL := 'SELECT a.RDB$RELATION_NAME, a.RDB$FIELD_NAME, a.RDB$FIELD_POSITION,'
         + ' a.RDB$NULL_FLAG, b. RDB$FIELD_LENGTH, b.RDB$FIELD_SCALE,'
