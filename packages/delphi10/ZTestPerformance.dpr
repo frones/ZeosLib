@@ -51,13 +51,19 @@
 
 program ZTestPerformance;
 
-{$APPTYPE CONSOLE}
-
 {$I ..\..\test\performance\ZPerformance.inc}
+
+{$IFNDEF TESTGUI} 
+{$APPTYPE CONSOLE} 
+{$ENDIF} 
 
 uses
   TestFramework,
-  TextTestRunner,
+  {$IFDEF TESTGUI} 
+  GUITestRunner, 
+  {$ELSE} 
+  TextTestRunner, 
+  {$ENDIF}
   ZTestConfig,
   ZSqlTestCase,
   ZPerformanceTestCase,
@@ -72,7 +78,11 @@ uses
 begin
   TestGroup := PERFORMANCE_TEST_GROUP;
   RebuildTestDatabases;
-  TextTestRunner.RunRegisteredTests;
+  {$IFDEF TESTGUI} 
+  GUITestRunner.RunRegisteredTests; 
+  {$ELSE} 
+  TextTestRunner.RunRegisteredTests; 
+  {$ENDIF} 
   PerformanceResultProcessor.ProcessResults;
   PerformanceResultProcessor.PrintResults;
 end.

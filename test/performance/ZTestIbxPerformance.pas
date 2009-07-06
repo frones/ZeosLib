@@ -159,7 +159,10 @@ end;
 function TZIBXPerformanceTestCase.IsProtocolValid(Value: string): boolean;
 begin
   if (Value = 'interbase-5') or (Value = 'interbase-6') or
-     (Value = 'firebird-1.0') or (Value = 'firebird-1.5') then
+     (Value = 'firebird-1.0') or (Value = 'firebird-1.5') or 
+     (Value = 'firebird-2.0') or (Value = 'firebird-2.1') or 
+     (Value = 'firebirdd-1.5') or (Value = 'firebirdd-2.0') or 
+     (Value = 'firebirdd-2.1') then
     Result := True
   else
     Result := False;

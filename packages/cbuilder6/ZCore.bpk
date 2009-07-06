@@ -8,7 +8,7 @@
       build\ZCollections.obj build\ZCompatibility.obj build\ZMatchPattern.obj 
       build\ZSysUtils.obj build\ZExpression.obj build\ZExprParser.obj 
       build\ZExprToken.obj build\ZFunctions.obj build\ZTokenizer.obj 
-      build\ZVariables.obj build\ZMessages.obj"/>
+      build\ZVariables.obj build\ZMessages.obj build\ZURL.obj"/>
     <RESFILES value="ZCore.res"/>
     <IDLFILES value=""/>
     <IDLGENFILES value=""/>
@@ -69,6 +69,7 @@
       <FILE FILENAME="..\..\src\core\ZTokenizer.pas" FORMNAME="" UNITNAME="ZTokenizer" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\core\ZVariables.pas" FORMNAME="" UNITNAME="ZVariables" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\core\ZMessages.pas" FORMNAME="" UNITNAME="ZMessages" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\core\ZURL.pas" FORMNAME="" UNITNAME="ZURL" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
   </FILELIST>
   <BUILDTOOLS>
   </BUILDTOOLS>

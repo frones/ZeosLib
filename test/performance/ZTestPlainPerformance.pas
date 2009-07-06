@@ -58,13 +58,13 @@ uses TestFramework, SysUtils, Classes, ZPerformanceTestCase,
  {$IFDEF ENABLE_DBLIB}
  {$ENDIF}
  {$IFDEF ENABLE_INTERBASE}
-   ZPlainInterbaseDriver,
    ZDbcInterbase6Utils,
    ZPlainFirebirdDriver,
    ZPlainFirebirdInterbaseConstants,
  {$ENDIF}
  {$IFDEF ENABLE_MYSQL}
    ZPlainMySqlDriver,
+   ZPlainMySqlConstants,
  {$ENDIF}
  {$IFDEF ENABLE_POSTGRESQL}
    ZPlainPostgreSqlDriver,
@@ -250,7 +250,7 @@ type
 
 implementation
 
-uses ZSqlTestCase, ZPlainMySqlConstants;
+uses ZSqlTestCase;
 
 {$IFDEF ENABLE_MYSQL}
  { TZPlainMySQLPerformanceTestCase }
@@ -260,7 +260,7 @@ uses ZSqlTestCase, ZPlainMySqlConstants;
 }
 function TZPlainMySQLPerformanceTestCase.GetSupportedProtocols: string;
 begin
-  Result := 'mysql,mysql-3.20,mysql-3.23,mysql-4.0';
+  Result := 'mysql,mysql-4.1,mysql-5,mysqld-4.1,mysqld-5';
 end;
 
 {**
@@ -912,7 +912,7 @@ end;
 
 function TZPlainInterbase6SQLPerformanceTestCase.GetSupportedProtocols: string;
 begin
-  Result := 'interbase-5,interbase-6,firebird-1.0,firebird-1.5';
+  Result := 'interbase-5,interbase-6,firebird-1.0,firebird-1.5,firebird-2.0,firebird-2.1,firebirdd-1.5,firebirdd-2.0,firebirdd-2.1';
 end;
 
 procedure TZPlainInterbase6SQLPerformanceTestCase.RunTestConnect;
@@ -979,28 +979,38 @@ end;
 
 procedure TZPlainInterbase6SQLPerformanceTestCase.SetUp;
 var
-  FFirebird10PlainDriver: IZFirebird10PlainDriver;
-  FFirebird15PlainDriver: IZFirebird15PlainDriver;
-  FInterbse5PlainDriver: IZInterbase5PlainDriver;
-  FInterbse6PlainDriver: IZInterbase6PlainDriver;
+  FFirebird10PlainDriver: IZInterbasePlainDriver;
+  FFirebird15PlainDriver: IZInterbasePlainDriver;
+  FFirebird20PlainDriver: IZInterbasePlainDriver;
+  FFirebird21PlainDriver: IZInterbasePlainDriver;
+  FFirebirdd15PlainDriver: IZInterbasePlainDriver;
+  FFirebirdd20PlainDriver: IZInterbasePlainDriver;
+  FFirebirdd21PlainDriver: IZInterbasePlainDriver;
 begin
   if Protocol = 'interbase-5' then
     FDialect := 1
   else FDialect := 3;
   FFirebird10PlainDriver := TZFirebird10PlainDriver.Create;
   FFirebird15PlainDriver := TZFirebird15PlainDriver.Create;
-  FInterbse5PlainDriver := TZInterbase5PlainDriver.Create;
-  FInterbse6PlainDriver := TZInterbase6PlainDriver.Create;
+  FFirebird20PlainDriver := TZFirebird20PlainDriver.Create; 
+  FFirebird21PlainDriver := TZFirebird21PlainDriver.Create; 
+  FFirebirdd15PlainDriver := TZFirebird15PlainDriver.Create; 
+  FFirebirdd20PlainDriver := TZFirebirdd20PlainDriver.Create;
+  FFirebirdd21PlainDriver := TZFirebirdd21PlainDriver.Create;
 
   if Protocol = FFirebird10PlainDriver.GetProtocol then
-    PlainDriver := FFirebird10PlainDriver
-  else if Protocol = FFirebird15PlainDriver.GetProtocol then
-    PlainDriver := FFirebird15PlainDriver
-  else  if Protocol = FInterbse5PlainDriver.GetProtocol then
-    PlainDriver := FInterbse5PlainDriver
-  else if Protocol = FInterbse6PlainDriver.GetProtocol then
-    PlainDriver := FInterbse6PlainDriver
-  else PlainDriver := FInterbse6PlainDriver;
+    PlainDriver := FFirebird10PlainDriver 
+  else if Protocol = FFirebird15PlainDriver.GetProtocol then 
+    PlainDriver := FFirebird15PlainDriver 
+  else if Protocol = FFirebird20PlainDriver.GetProtocol then 
+    PlainDriver := FFirebird20PlainDriver 
+  else if Protocol = FFirebird21PlainDriver.GetProtocol then 
+    PlainDriver := FFirebird21PlainDriver 
+  else if Protocol = FFirebirdd15PlainDriver.GetProtocol then 
+    PlainDriver := FFirebirdd15PlainDriver 
+  else if Protocol = FFirebirdd21PlainDriver.GetProtocol then 
+    PlainDriver := FFirebird21PlainDriver
+  else PlainDriver := FFirebird10PlainDriver;
 
   PlainDriver.Initialize;
 end;

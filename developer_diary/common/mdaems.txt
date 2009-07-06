@@ -333,3 +333,5 @@
 20090402 : Compilation error with SHOW_WARNING directive - by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2312
 
 20090507 : Fixed case of ZPlainMySqlConstants unit name on Linux - by mdaems - Mantis Bug 179
+
+20090529 : Added ZURL unit to core package - by fabiano_bonin

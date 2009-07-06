@@ -72,7 +72,8 @@ uses
   ZTestVariant in '..\..\test\core\ZTestVariant.pas',
   ZTestExprToken in '..\..\test\core\ZTestExprToken.pas',
   ZTestTokenizer in '..\..\test\core\ZTestTokenizer.pas',
-  ZTestExpression in '..\..\test\core\ZTestExpression.pas';
+  ZTestExpression in '..\..\test\core\ZTestExpression.pas',
+  ZTestURL in '..\..\test\core\ZTestURL.pas';
 
 begin
   TestGroup := CORE_TEST_GROUP;

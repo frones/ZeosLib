@@ -58,6 +58,9 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[Common] Added ZURL unit to the core package. This unit provides splitting and composing routines for connect strings.</simpara>
+        </listitem>
+        <listitem>
           <simpara>[IB/FB] Added support for milliseconds (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2354">http://zeos.firmos.at/viewtopic.php?t=2354</ulink>)</simpara>
         </listitem>
         <listitem>
@@ -152,7 +155,43 @@
     </sect2>	
   </sect1>  
   <sect1>
-    <title>Changes in Release 6.6.5 - stable (NOT RELEASED YET)</title>
+    <title>Changes in Release 6.6.6 - stable (NOT RELEASED YET)</title>
+    <sect2>
+      <title>Bugs fixed from Mantis Bug Tracker</title>
+      <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
+      <itemizedlist spacing="compact">
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=184">#0000184</ulink> [Interbase 5] Can't get fields' list of dataset from Interbase 5.5 server</simpara>
+        </listitem>
+    </itemizedlist>
+    </sect2>
+    <sect2>
+      <title>Other Bugs fixed</title>
+      <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>[XXX] (<ulink url="http://zeos.firmos.at/viewtopic.php?t=xxxx">http://zeos.firmos.at/viewtopic.php?t=xxx</ulink>)</simpara>
+        </listitem>
+    </itemizedlist>
+    </sect2>
+    <sect2>
+      <title>Features added</title>
+      <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>Zeoslib 6.6 is in it's stable phase. No features, except for eventual translations and docs, will (should) be added.</simpara>
+        </listitem>
+     </itemizedlist>
+    </sect2>
+    <sect2>
+      <title>Internal Changes</title>
+      <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>NONE</simpara>
+        </listitem>
+     </itemizedlist>
+    </sect2>	
+  </sect1>  
+  <sect1>
+    <title>Changes in Release 6.6.5 - stable (25.05.2009)</title>
     <sect2>
       <title>Bugs fixed from Mantis Bug Tracker</title>
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
