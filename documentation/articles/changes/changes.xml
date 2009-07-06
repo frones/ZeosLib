@@ -173,6 +173,9 @@
         <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=184">#0000184</ulink> [Interbase 5] Can't get fields' list of dataset from Interbase 5.5 server</simpara>
         </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=183">#0000183</ulink> [Lazarus] Icon for TZIBEventAlerter added</simpara>
+        </listitem>
     </itemizedlist>
     </sect2>
     <sect2>
