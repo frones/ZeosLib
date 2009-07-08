@@ -237,8 +237,8 @@ procedure TZSQLMonitor.SaveToFile(const FileName: string);
 var
   I: Integer;
   Stream: TFileStream;
-  Temp: string;
-  Buffer: PChar;
+Temp: Ansistring; 
+Buffer: PAnsiChar; 
 begin
   if not FileExists(FileName) then
     Stream := TFileStream.Create(FileName, fmCreate)
@@ -248,8 +248,8 @@ begin
     for I := 0 to FTraceList.Count - 1 do
     begin
       Temp := TZLoggingEvent(FTraceList[I]).AsString + #13#10;
-      Buffer := PChar(Temp);
-      Stream.Write(Buffer^, StrLen(Buffer) * sizeof(char));
+Buffer := PAnsiChar(Temp); 
+Stream.Write(Buffer^, StrLen(Buffer) * sizeof(Ansichar)); 
     end;
   finally
     Stream.Free;
@@ -264,8 +264,8 @@ procedure TZSQLMonitor.LogEvent(Event: TZLoggingEvent);
 var
   LogTrace: Boolean;
   Stream: TFileStream;
-  Temp: string;
-  Buffer: PChar;
+Temp: Ansistring; 
+Buffer: PAnsiChar; 
 begin
   LogTrace := True;
   DoTrace(Event, LogTrace);
@@ -290,8 +290,8 @@ begin
     try
       Stream.Seek(0, soFromEnd);
       Temp := Event.AsString + #13#10;
-      Buffer := PChar(Temp);
-      Stream.Write(Buffer^, StrLen(Buffer)*sizeof(char));
+Buffer := PAnsiChar(Temp); 
+Stream.Write(Buffer^, StrLen(Buffer)*sizeof(Ansichar)); 
     finally
       Stream.Free;
     end;
