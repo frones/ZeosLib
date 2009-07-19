@@ -852,6 +852,7 @@ var
    encoded: PAnsiChar;
    len: Longword;
    leng: cardinal;
+   a : String;
 begin
  leng := Length(Value);
  if assigned(POSTGRESQL_API.PQescapeByteaConn) then
@@ -861,7 +862,7 @@ begin
  SetLength(result, len - 1);
  StrCopy(PAnsiChar(result), encoded);
  POSTGRESQL_API.PQFreemem(encoded);
- result := QuotedStr(result);
+ result := ''''+result+'''';
 end;
 
 function TZPostgreSQLBaseDriver.EndCopy( Handle: PZPostgreSQLConnect): Integer;
