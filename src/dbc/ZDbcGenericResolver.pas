@@ -662,36 +662,46 @@ end;
   @param Columns a collection of key columns.
   @param NewRowAccessor an accessor object to new column values.
 }
-function TZGenericCachedResolver.FormInsertStatement(Columns: TObjectList;
-  NewRowAccessor: TZRowAccessor): string;
-var
-  I: Integer;
-  Current: TZResolverParameter;
-  TableName: string;
-  Temp1, Temp2: string;
-begin
-  TableName := DefineTableName;
-  DefineInsertColumns(Columns);
-  if Columns.Count = 0 then
-  begin
-    Result := '';
-    Exit;
-  end;
+function TZGenericCachedResolver.FormInsertStatement(Columns: TObjectList; 
+  NewRowAccessor: TZRowAccessor): string; 
+var 
+  I: Integer; 
+  Current: TZResolverParameter; 
+  TableName: string; 
+  Temp1, Temp2: string; 
+  l1: Integer; 
 
-  Temp1 := '';
-  Temp2 := '';
-  for I := 0 to Columns.Count - 1 do
-  begin
-    Current := TZResolverParameter(Columns[I]);
-    if Temp1 <> '' then
-      Temp1 := Temp1 + ',';
-    Temp1 := Temp1 + IdentifierConvertor.Quote(Current.ColumnName);
-    if Temp2 <> '' then
-      Temp2 := Temp2 + ',';
-    Temp2 := Temp2 + '?';
-  end;
+  procedure Append(const app: String); 
+  begin 
+    if Length(Temp1) < l1 + length(app) then 
+      SetLength(Temp1, 2 * (length(app) + l1)); 
+    Move(app[1], Temp1[l1+1], length(app)); 
+    Inc(l1, length(app)); 
+  end; 
 
-  Result := Format('INSERT INTO %s (%s) VALUES (%s)', [TableName, Temp1, Temp2]);
+begin 
+  TableName := DefineTableName; 
+  DefineInsertColumns(Columns); 
+  if Columns.Count = 0 then 
+  begin 
+    Result := ''; 
+    Exit; 
+  end; 
+
+  Temp1 := '';    l1 := 0; 
+  SetLength(Temp2, 2 * Columns.Count - 1); 
+  for I := 0 to Columns.Count - 1 do 
+  begin 
+    Current := TZResolverParameter(Columns[I]); 
+    if Temp1 <> '' then 
+      Append(','); 
+    Append(IdentifierConvertor.Quote(Current.ColumnName)); 
+    if I > 0 then 
+      Temp2[I*2] := ','; 
+    Temp2[I*2+1] := '?'; 
+  end; 
+  SetLength(Temp1, l1); 
+  Result := Format('INSERT INTO %s (%s) VALUES (%s)', [TableName, Temp1, Temp2]); 
 end;
 
 {**
