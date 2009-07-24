@@ -1311,7 +1311,18 @@ begin
     CheckEquals(Date_came, Query.FieldByName('c_date_came').AsDateTime);
     CheckEquals(Date_out, Query.FieldByName('c_date_out').AsDateTime);
     Query.Close;
-  finally 
+    Date_came := EncodeDateTime(2002,12,21,14,30,0,0); 
+    Date_out := EncodeDateTime(2002,12,25,2,0,0,0); 
+    Query.Filter := '(c_date_came < "'+DateTimeToStr(Date_came)+ '") AND (c_date_out > "'+DateTimeToStr(Date_out)+'")'; 
+    Query.Open; 
+    CheckEquals(1, Query.RecordCount); 
+    Query.First; 
+    Date_came := EncodeDateTime(2002,12,21,10,20,0,0); 
+    Date_out := EncodeDateTime(2002,12,26,0,0,0,0); 
+    CheckEquals(Date_came, Query.FieldByName('c_date_came').AsDateTime); 
+    CheckEquals(Date_out, Query.FieldByName('c_date_out').AsDateTime); 
+    Query.Close;
+   finally 
     Query.Free;
   end;
 end;
