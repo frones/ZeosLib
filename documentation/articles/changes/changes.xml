@@ -192,6 +192,9 @@
         <listitem>
           <simpara>Zeoslib 6.6 is in it's stable phase. No features, except for eventual translations and docs, will (should) be added.</simpara>
         </listitem>
+        <listitem>
+          <simpara>[COMMON] Added functions TRIM, VAL, CTOD, DTOS, LEFT and RIGHT.</simpara>
+        </listitem>
      </itemizedlist>
     </sect2>
     <sect2>
