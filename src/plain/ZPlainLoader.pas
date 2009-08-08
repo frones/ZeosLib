@@ -61,25 +61,33 @@ uses Types, ZCompatibility;
 
 type
   {** Implements a loader for native library. }
+
+  { TZNativeLibraryLoader }
+
   TZNativeLibraryLoader = class (TObject)
   private
     FLocations: TStringDynArray;
     FHandle: LongWord;
     FLoaded: Boolean;
+    FCurrentLocation: String;
+    function ZLoadLibrary(Location: String): Boolean;
   protected
-    function LoadNativeLibrary: Boolean; virtual;
     procedure FreeNativeLibrary; virtual;
-    function GetAddress(ProcName: PAnsiChar): Pointer;
   public
     constructor Create(Locations: array of string);
     destructor Destroy; override;
 
+    procedure ClearLocations;
+    procedure AddLocation(Location: String);
     function Load: Boolean; virtual;
+    function LoadNativeLibrary: Boolean; virtual;
+    function LoadNativeLibraryStrict(Location: String): Boolean;
     procedure LoadIfNeeded; virtual;
 
-//    property Locations: TStringDynArray read FLocations write FLocations;
-    property Handle: LongWord read FHandle write FHandle;
     property Loaded: Boolean read FLoaded write FLoaded;
+    property Handle: LongWord read FHandle write FHandle;
+    property CurrentLocation: String read FCurrentLocation write FCurrentLocation;
+    function GetAddress(ProcName: PAnsiChar): Pointer;
   end;
 
 implementation
@@ -107,7 +115,8 @@ begin
   SetLength(FLocations, Length(Locations));
   for I := 0 to High(Locations) do
     FLocations[I] := Locations[I]; 
-  FHandle := 0;
+  FHandle := INVALID_HANDLE_VALUE;
+  FCurrentLocation := '';
   FLoaded := False;
 end;
 
@@ -119,6 +128,21 @@ begin
   if Loaded then
     FreeNativeLibrary;
   inherited Destroy;
+end;
+
+procedure TZNativeLibraryLoader.ClearLocations;
+begin
+  SetLength(FLocations,0);
+end;
+
+procedure TZNativeLibraryLoader.AddLocation(Location: String);
+var
+   i: integer;
+begin
+   SetLength(FLocations, Length(FLocations) + 1);
+   for i := High(FLocations) downto 1 do
+      FLocations[i] := FLocations[i - 1];
+   FLocations[0] := Location;
 end;
 
 {**
@@ -139,6 +163,30 @@ begin
     Load;
 end;
 
+function TZNativeLibraryLoader.ZLoadLibrary(Location: String): Boolean;
+begin
+   if FLoaded then
+      Self.FreeNativeLibrary;
+   FLoaded := False;
+   Result := False;
+
+{$IFDEF UNIX}
+  {$IFDEF FPC}
+        FHandle := LoadLibrary(PAnsiChar(Location));
+  {$ELSE}
+        FHandle := HMODULE(dlopen(PAnsiChar(Location), RTLD_GLOBAL));
+  {$ENDIF}
+{$ELSE}
+        FHandle := LoadLibrary(PChar(Location));
+{$ENDIF}
+
+   if (FHandle <> INVALID_HANDLE_VALUE) and (FHandle <> 0) then
+   begin
+      FLoaded := True;
+      FCurrentLocation := Location;
+      Result := True;
+   end;
+end;
 {**
   Loads a library module and initializes the handle.
   @return <code>True</code> is library was successfully loaded.
@@ -146,44 +194,32 @@ end;
 function TZNativeLibraryLoader.LoadNativeLibrary: Boolean;
 var
   I: Integer;
-  Location: string;
   TriedLocations: string;
 begin
-  Loaded := False;
-  Location := '';
+  Result := False;
   TriedLocations := '';
-  if Handle = 0 then
-  begin
-    for I := 0 to High(FLocations) do
+  for I := 0 to High(FLocations) do
     begin
-      Location := FLocations[I];
-//      Handle := GetModuleHandle(PAnsiChar(Location));
-//      if Handle = 0 then
-//      begin
-{$IFDEF UNIX}
-  {$IFDEF FPC}
-        Handle := LoadLibrary(PAnsiChar(Location));
-  {$ELSE}
-        Handle := HMODULE(dlopen(PAnsiChar(Location), RTLD_GLOBAL));
-  {$ENDIF}
-{$ELSE}
-        Handle := LoadLibrary(PChar(Location));
-{$ENDIF}
-//      end;
-      if Handle <> 0 then
-      begin
-        Loaded := True;
-        Break;
-      end;
-      if TriedLocations <> '' then
-        TriedLocations := TriedLocations + ', ';
-      TriedLocations := TriedLocations + Location;
+      if ZLoadLibrary(FLocations[I]) then
+        Break
+      else
+        if TriedLocations <> '' then
+          TriedLocations := TriedLocations + ', ' + FLocations[I]
+        else
+          TriedLocations := FLocations[I];
     end;
-  end;
 
   if not Loaded then
     raise Exception.Create(Format(SLibraryNotFound, [TriedLocations]));
   Result := True;
+end;
+
+function TZNativeLibraryLoader.LoadNativeLibraryStrict(Location: String): Boolean;
+var
+   i: integer;
+begin
+  If not ZLoadLibrary(Location) then
+      raise Exception.Create(Format(SLibraryNotFound, [Location]));
 end;
 
 {**
@@ -191,10 +227,11 @@ end;
 }
 procedure TZNativeLibraryLoader.FreeNativeLibrary;
 begin
-  if (Handle <> 0) and Loaded then
+  if (FHandle <> INVALID_HANDLE_VALUE) and (FHandle <> 0) and Loaded then
     FreeLibrary(Handle);
-  Handle := 0;
-  Loaded := False;
+  FHandle := INVALID_HANDLE_VALUE;
+  FLoaded := False;
+  FCurrentLocation := '';
 end;
 
 {**

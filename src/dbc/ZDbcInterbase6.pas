@@ -59,7 +59,7 @@ interface
 
 uses
   Types, ZCompatibility, Classes, SysUtils, ZDbcUtils, ZDbcIntfs, ZDbcConnection,
-  Contnrs, ZPlainInterbaseDriver, ZPlainFirebirdDriver,
+  Contnrs, ZPlainFirebirdDriver,
   ZPlainFirebirdInterbaseConstants, ZSysUtils, ZDbcInterbase6Utils, ZDbcLogging,
   ZDbcGenericResolver, ZTokenizer, ZGenericSqlAnalyser;
 
@@ -68,17 +68,7 @@ type
   {** Implements Interbase6 Database Driver. }
   TZInterbase6Driver = class(TZAbstractDriver)
   private
-    FInterbase6PlainDriver: IZInterbase6PlainDriver;
-    FInterbase5PlainDriver: IZInterbase5PlainDriver;
-    FFirebird10PlainDriver: IZFirebird10PlainDriver;
-    FFirebird15PlainDriver: IZFirebird15PlainDriver;
-    FFirebird20PlainDriver: IZFirebird20PlainDriver;
-    FFirebird21PlainDriver: IZFirebird21PlainDriver;
-    // embedded drivers
-    FFirebirdD15PlainDriver: IZFirebird15PlainDriver;
-    FFirebirdD20PlainDriver: IZFirebird20PlainDriver;
-    FFirebirdD21PlainDriver: IZFirebird21PlainDriver;
-
+    FPlainDrivers: Array of IZInterbasePlainDriver;
   protected
     function GetPlainDriver(const Url: string): IZInterbasePlainDriver;
   public
@@ -221,16 +211,16 @@ end;
 }
 constructor TZInterbase6Driver.Create;
 begin
-  FInterbase6PlainDriver := TZInterbase6PlainDriver.Create;
-  FInterbase5PlainDriver := TZInterbase5PlainDriver.Create;
-  FFirebird10PlainDriver := TZFirebird10PlainDriver.Create;
-  FFirebird15PlainDriver := TZFirebird15PlainDriver.Create;
-  FFirebird20PlainDriver := TZFirebird20PlainDriver.Create;
-  FFirebird21PlainDriver := TZFirebird21PlainDriver.Create;
+  SetLength(FPlainDrivers,8);
+  FPlainDrivers[0] := TZInterbase6PlainDriver.Create;
+  FPlainDrivers[1] := TZFirebird10PlainDriver.Create;
+  FPlainDrivers[2] := TZFirebird15PlainDriver.Create;
+  FPlainDrivers[3] := TZFirebird20PlainDriver.Create;
+  FPlainDrivers[4] := TZFirebird21PlainDriver.Create;
   // embedded drivers
-  FFirebirdD15PlainDriver := TZFirebirdD15PlainDriver.Create;
-  FFirebirdD20PlainDriver := TZFirebirdD20PlainDriver.Create;
-  FFirebirdD21PlainDriver := TZFirebirdD21PlainDriver.Create;
+  FPlainDrivers[5] := TZFirebirdD15PlainDriver.Create;
+  FPlainDrivers[6] := TZFirebirdD20PlainDriver.Create;
+  FPlainDrivers[7] := TZFirebirdD21PlainDriver.Create;
 
 end;
 
@@ -283,30 +273,18 @@ function TZInterbase6Driver.GetPlainDriver(
   const Url: string): IZInterbasePlainDriver;
 var
   Protocol: string;
+  i: smallint;
 begin
   Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
-
-  if Protocol = FInterbase5PlainDriver.GetProtocol then
-    Result := FInterbase5PlainDriver
-  else if Protocol = FInterbase6PlainDriver.GetProtocol then
-    Result := FInterbase6PlainDriver
-  else if Protocol = FFirebird10PlainDriver.GetProtocol then
-    Result := FFirebird10PlainDriver
-  else if Protocol = FFirebird15PlainDriver.GetProtocol then
-    Result := FFirebird15PlainDriver
-  else if Protocol = FFirebird20PlainDriver.GetProtocol then
-    Result := FFirebird20PlainDriver
-  else if Protocol = FFirebird21PlainDriver.GetProtocol then
-    Result := FFirebird21PlainDriver
-  // embedded drivers
-  else if Protocol = FFirebirdD15PlainDriver.GetProtocol then
-    Result := FFirebirdD15PlainDriver
-  else if Protocol = FFirebirdD20PlainDriver.GetProtocol then
-    Result := FFirebirdD20PlainDriver
-  else if Protocol = FFirebirdD21PlainDriver.GetProtocol then
-    Result := FFirebirdD21PlainDriver
+  For i := 0 to high(FPlainDrivers) do
+    if Protocol = FPlainDrivers[i].GetProtocol then
+      begin
+        Result := FPlainDrivers[i];
+        break;
+      end;
   // Generic driver
-  else Result := FInterbase6PlainDriver;
+  If result = nil then
+    Result := FPlainDrivers[1];    // interbase-6
   Result.Initialize;
 end;
 
@@ -315,19 +293,12 @@ end;
   For example: mysql, oracle8 or postgresql72
 }
 function TZInterbase6Driver.GetSupportedProtocols: TStringDynArray;
+var
+   i: smallint;
 begin
-  SetLength(Result, 9);
-  Result[0] := 'interbase-5';
-  Result[1] := 'interbase-6';
-  Result[2] := 'firebird-1.0';
-  Result[3] := 'firebird-1.5';
-  Result[4] := 'firebird-2.0';
-  Result[5] := 'firebird-2.1';
-  // embedded drivers
-  Result[6] := 'firebirdd-1.5';
-  Result[7] := 'firebirdd-2.0';
-  Result[8] := 'firebirdd-2.1';
-
+  SetLength(Result, high(FPlainDrivers)+1);
+  For i := 0 to high(FPlainDrivers) do
+    Result[i] := FPlainDrivers[i].GetProtocol;
 end;
 
 { TZInterbase6Connection }

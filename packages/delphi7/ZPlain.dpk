@@ -12,7 +12,7 @@ package ZPlain;
 {$OPENSTRINGS ON}
 {$OPTIMIZATION OFF}
 {$OVERFLOWCHECKS ON}
-{$RANGECHECKS ON}
+{$RANGECHECKS OFF}
 {$REFERENCEINFO ON}
 {$SAFEDIVIDE OFF}
 {$STACKFRAMES ON}
@@ -40,28 +40,17 @@ contains
 {$ENDIF}
 
 {$IFDEF ENABLE_INTERBASE}
-  ZPlainInterbase5 in '..\..\src\plain\ZPlainInterbase5.pas',
-  ZPlainInterbase6 in '..\..\src\plain\ZPlainInterbase6.pas',
-  ZPlainInterbaseDriver in '..\..\src\plain\ZPlainInterbaseDriver.pas',
-  ZPlainFirebird10 in '..\..\src\plain\ZPlainFirebird10.pas',
-  ZPlainFirebird15 in '..\..\src\plain\ZPlainFirebird15.pas',
-  ZPlainFirebird20 in '..\..\src\plain\ZPlainFirebird20.pas',
-  ZPlainFirebird21 in '..\..\src\plain\ZPlainFirebird21.pas',
   ZPlainFirebirdDriver in '..\..\src\plain\ZPlainFirebirdDriver.pas',
   ZPlainFirebirdInterbaseConstants in '..\..\src\plain\ZPlainFirebirdInterbaseConstants.pas',
 {$ENDIF}
 
 {$IFDEF ENABLE_MYSQL}
-  ZPlainMySql41 in '..\..\src\plain\ZPlainMySql41.pas',
-  ZPlainMySql5 in '..\..\src\plain\ZPlainMySql5.pas',
   ZPlainMySqlDriver in '..\..\src\plain\ZPlainMySqlDriver.pas',
   ZPlainMySqlConstants in '..\..\src\plain\ZPlainMySqlConstants.pas',
 {$ENDIF}
 
 {$IFDEF ENABLE_POSTGRESQL}
   ZPlainPostgreSqlDriver in '..\..\src\plain\ZPlainPostgreSqlDriver.pas',
-  ZPlainPostgreSql7 in '..\..\src\plain\ZPlainPostgreSql7.pas',
-  ZPlainPostgreSql8 in '..\..\src\plain\ZPlainPostgreSql8.pas',
 {$ENDIF}
 
 {$IFDEF ENABLE_ADO}
@@ -75,8 +64,6 @@ contains
 {$ENDIF}
 
 {$IFDEF ENABLE_SQLITE}
-  ZPlainSqLite28 in '..\..\src\plain\ZPlainSqLite28.pas',
-  ZPlainSqLite3 in '..\..\src\plain\ZPlainSqLite3.pas',
   ZPlainSqLiteDriver in '..\..\src\plain\ZPlainSqLiteDriver.pas',
 {$ENDIF}
 
@@ -89,4 +76,5 @@ contains
 
   ZPlainDriver in '..\..\src\plain\ZPlainDriver.pas',
   ZPlainLoader in '..\..\src\plain\ZPlainLoader.pas';
+
 end.

@@ -26,39 +26,17 @@ USEUNIT("..\..\src\plain\ZPlainDbLibSybaseAse125.pas");
 
 USEUNIT("..\..\src\plain\ZPlainDriver.pas");
 
-USEUNIT("..\..\src\plain\ZPlainFirebird10.pas");
-
-USEUNIT("..\..\src\plain\ZPlainFirebird15.pas");
-
-USEUNIT("..\..\src\plain\ZPlainFirebird20.pas");
-
-USEUNIT("..\..\src\plain\ZPlainFirebird21.pas");
-
-USEUNIT("..\..\src\plain\ZPlainInterbase5.pas");
-
-USEUNIT("..\..\src\plain\ZPlainInterbase6.pas");
-
-USEUNIT("..\..\src\plain\ZPlainInterbaseDriver.pas");
+USEUNIT("..\..\src\plain\ZPlainFirebirdDriver.pas");
 
 USEUNIT("..\..\src\plain\ZPlainLoader.pas");
 
-USEUNIT("..\..\src\plain\ZPlainMySql41.pas");
-
 USEUNIT("..\..\src\plain\ZPlainMySqlDriver.pas");
-
-USEUNIT("..\..\src\plain\ZPlainPostgreSql7.pas");
-
-USEUNIT("..\..\src\plain\ZPlainPostgreSql8.pas");
 
 USEUNIT("..\..\src\plain\ZPlainSqLiteDriver.pas");
 
 USEUNIT("..\..\src\plain\ZPlainOracle9i.pas");
 
 USEUNIT("..\..\src\plain\ZPlainOracleDriver.pas");
-
-USEUNIT("..\..\src\plain\ZPlainSqLite28.pas");
-
-USEUNIT("..\..\src\plain\ZPlainSqLite3.pas");
 
 USEUNIT("..\..\src\plain\ZPlainASADriver.pas");
 
@@ -93,4 +71,3 @@ int WINAPI DllEntryPoint(HINSTANCE hinst, unsigned long reason, void*)
 }
 
 //---------------------------------------------------------------------------
-

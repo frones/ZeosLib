@@ -30,6 +30,12 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=179">#0000178</ulink> [normal] Error compiling Zeos under Linux.</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=178">#0000178</ulink> [normal] INVALID_HANDLE_VALUE is undefined</simpara>
+        </listitem>
+        <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=126">#0000126</ulink> [normal] Quoting specific to PostgreSQL</simpara>
         </listitem>
     </itemizedlist>
@@ -57,6 +63,12 @@
     <sect2>
       <title>Features added</title>
       <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>[SQLite] removed support for SQLite2</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[COMMON] TZConnection.Pingserver now resets the ZConnection state when failing (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2293">http://zeos.firmos.at/viewtopic.php?t=2293</ulink>)</simpara>
+        </listitem>
         <listitem>
           <simpara>[Common] Added ZURL unit to the core package. This unit provides splitting and composing routines for connect strings.</simpara>
         </listitem>
@@ -108,7 +120,7 @@
           <simpara>[POSTGRES] PostgreSQL UTF8 Charset Patch</simpara>
         </listitem>
         <listitem>
-          <simpara>[MYSQL] Removed support for mysql w 4.1</simpara>
+          <simpara>[MYSQL] Removed support for mysql &lt; 4.1</simpara>
         </listitem>
         <listitem>
           <simpara>[COMMON] Removed packages for Delphi 5 and 6, Kylix 2 and CBuilder 5</simpara>

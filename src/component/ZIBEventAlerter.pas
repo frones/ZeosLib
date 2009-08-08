@@ -37,7 +37,7 @@
 
 unit ZIBEventAlerter;
 
-{$I ..\dbc\ZDbc.inc}
+{$I ZComponent.inc}
 
 interface
 
@@ -50,9 +50,8 @@ uses
     libc, 
   {$ENDIF} 
 {$ENDIF} 
-  ZDbcInterbase6, ZPlainInterbaseDriver, ZConnection, ZDbcIntfs,
-  ZPlainInterbase5, ZPlainInterbase6, ZPlainFirebird10, ZPlainFirebird15,
-  ZPlainFirebird20, ZPlainFirebird21, ZPlainFirebirdInterbaseConstants;
+  ZDbcInterbase6, ZConnection, ZDbcIntfs,
+  ZPlainFirebirdDriver, ZPlainFirebirdInterbaseConstants;
 
 type
 
@@ -413,31 +412,33 @@ begin
   if (EventCount > IB_MAX_EVENT_BLOCK) then
     EventCount := IB_MAX_EVENT_BLOCK;
 
-  if Parent.Connection.Protocol='interbase-5' then
-    sib_event_block := Tsib_event_block(ZPlainInterbase5.isc_event_block)
-  else if Parent.Connection.Protocol='interbase-6' then
+{
+  if Parent.Connection.Protocol='interbase-6' then
     sib_event_block := Tsib_event_block(ZPlainInterbase6.isc_event_block)
-  else if Parent.Connection.Protocol='firebird-1.0' then
-    sib_event_block := Tsib_event_block(ZPlainFirebird10.isc_event_block)
-  else if Parent.Connection.Protocol='firebird-1.5' then
-    sib_event_block := Tsib_event_block(ZPlainFirebird15.isc_event_block)
-  else if Parent.Connection.Protocol='firebirdd-1.5' then
-    sib_event_block := Tsib_event_block(ZPlainFirebird15.isc_event_block)
-  else if Parent.Connection.Protocol='firebird-2.0' then
-    sib_event_block := Tsib_event_block(ZPlainFirebird20.isc_event_block)
-  else if Parent.Connection.Protocol='firebirdd-2.0' then
-    sib_event_block := Tsib_event_block(ZPlainFirebird20.isc_event_block)
-  else if Parent.Connection.Protocol='firebird-2.1' then 
-    sib_event_block := Tsib_event_block(ZPlainFirebird21.isc_event_block) 
-  else if Parent.Connection.Protocol='firebirdd-2.1' then 
-    sib_event_block := Tsib_event_block(ZPlainFirebird21.isc_event_block) 
+    else if Parent.Connection.Protocol='firebird-1.0' then
+      sib_event_block := Tsib_event_block(ZPlainFirebird10.isc_event_block)
+    else if Parent.Connection.Protocol='firebird-1.5' then
+      sib_event_block := Tsib_event_block(ZPlainFirebird15.isc_event_block)
+    else if Parent.Connection.Protocol='firebirdd-1.5' then
+      sib_event_block := Tsib_event_block(ZPlainFirebird15.isc_event_block)
+    else if Parent.Connection.Protocol='firebird-2.0' then
+      sib_event_block := Tsib_event_block(ZPlainFirebird20.isc_event_block)
+    else if Parent.Connection.Protocol='firebirdd-2.0' then
+      sib_event_block := Tsib_event_block(ZPlainFirebird20.isc_event_block)
+    else if Parent.Connection.Protocol='firebird-2.1' then
+      sib_event_block := Tsib_event_block(ZPlainFirebird21.isc_event_block)
+    else if Parent.Connection.Protocol='firebirdd-2.1' then
+      sib_event_block := Tsib_event_block(ZPlainFirebird21.isc_event_block)
+
   else
     sib_event_block := Tsib_event_block(ZPlainInterbase6.isc_event_block);
-
+  }
+  sib_event_block := Tsib_event_block(Parent.GetPlainDriver.GetFirebirdAPI.isc_event_block);
   EventBufferLen := sib_event_block(@EventBuffer,
     @ResultBuffer, EventCount,
     EBP(1), EBP(2),  EBP(3),  EBP(4),  EBP(5),  EBP(6),  EBP(7), EBP(8),
     EBP(9), EBP(10), EBP(11), EBP(12), EBP(13), EBP(14), EBP(15));
+
 
 end;
 

@@ -64,13 +64,12 @@ uses
 type
 
   {** Implements MySQL Database Driver. }
+
+  { TZMySQLDriver }
+
   TZMySQLDriver = class(TZAbstractDriver)
   private
-    FMySQL41PlainDriver: IZMySQLPlainDriver;
-    FMySQL5PlainDriver: IZMySQLPlainDriver;
-    // embedded drivers
-    FMySQLD41PlainDriver: IZMySQLPlainDriver;
-    FMySQLD5PlainDriver: IZMySQLPlainDriver;
+    FPlainDrivers: Array of IZMySQLPlainDriver;
   protected
     function GetPlainDriver(const Url: string): IZMySQLPlainDriver;
   public
@@ -151,11 +150,12 @@ uses
 }
 constructor TZMySQLDriver.Create;
 begin
-  FMySQL41PlainDriver  := TZMySQL41PlainDriver.Create;
-  FMySQL5PlainDriver   := TZMySQL5PlainDriver.Create;
+  SetLength(FPlainDrivers,4);
+  FPlainDrivers[0]  := TZMySQL41PlainDriver.Create;
+  FPlainDrivers[1]   := TZMySQL5PlainDriver.Create;
   // embedded drivers
-  FMySQLD41PlainDriver  := TZMySQLD41PlainDriver.Create;
-  FMySQLD5PlainDriver   := TZMySQLD5PlainDriver.Create;
+  FPlainDrivers[2]  := TZMySQLD41PlainDriver.Create;
+  FPlainDrivers[3]   := TZMySQLD5PlainDriver.Create;
 end;
 
 {**
@@ -251,20 +251,11 @@ function TZMySQLDriver.GetSupportedProtocols: TStringDynArray;
 var
    i: smallint;
 begin
-  SetLength(Result, 5);
-  i := 0;
+  SetLength(Result, high(FPlainDrivers)+2);
   // Generic driver
-  Result[i] := 'mysql';
-  inc(i);
-
-  Result[i] := FMySQL41PlainDriver.GetProtocol;
-  inc(i);
-  Result[i] := FMySQL5PlainDriver.GetProtocol;
-  inc(i);
-  // embedded drivers
-  Result[i] := FMySQLD41PlainDriver.GetProtocol;
-  inc(i);
-  Result[i] := FMySQLD5PlainDriver.GetProtocol;
+  Result[0] := 'mysql';
+  For i := 0 to high(FPlainDrivers) do
+    Result[i+1] := FPlainDrivers[i].GetProtocol;
 end;
 
 {**
@@ -275,20 +266,18 @@ end;
 function TZMySQLDriver.GetPlainDriver(const Url: string): IZMySQLPlainDriver;
 var
   Protocol: string;
+  i: smallint;
 begin
   Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
-  if Protocol = FMySQL41PlainDriver.GetProtocol then
-    Result := FMySQL41PlainDriver
-  else if Protocol = FMySQL5PlainDriver.GetProtocol then
-    Result := FMySQL5PlainDriver
-  // embedded drivers
-  else if Protocol = FMySQLD41PlainDriver.GetProtocol then
-    Result := FMySQLD41PlainDriver
-  else if Protocol = FMySQLD5PlainDriver.GetProtocol then
-    Result := FMySQLD5PlainDriver
+  For i := 0 to high(FPlainDrivers) do
+    if Protocol = FPlainDrivers[i].GetProtocol then
+      begin
+        Result := FPlainDrivers[i];
+        break;
+      end;
   // Generic driver
-  else
-    Result := FMySQL5PlainDriver;
+  If result = nil then
+    Result := FPlainDrivers[1];    // mysql-5
   Result.Initialize;
 end;
 

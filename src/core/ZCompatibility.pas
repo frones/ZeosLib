@@ -98,6 +98,7 @@ var
   {$IFDEF FPC}
 const
   RTLD_GLOBAL = $101;
+  INVALID_HANDLE_VALUE = 0;
 
 type
   HMODULE = LongWord;

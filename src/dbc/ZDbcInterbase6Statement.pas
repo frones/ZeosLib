@@ -58,7 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses Classes, SysUtils, ZDbcIntfs, ZDbcStatement, ZDbcInterbase6,
-  ZPlainInterbase6, ZDbcInterbase6Utils, ZDbcInterbase6ResultSet,
+  ZDbcInterbase6Utils, ZDbcInterbase6ResultSet,
   ZPlainFirebirdInterbaseConstants,
   ZCompatibility, ZDbcLogging, ZVariant, ZMessages;
 
