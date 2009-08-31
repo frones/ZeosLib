@@ -57,7 +57,7 @@ interface
 
 {$I ZCore.inc}
 
-uses SysUtils, Classes, ZClasses, ZCollections, ZCompatibility, ZVariant,
+uses SysUtils, StrUtils, Classes, ZClasses, ZCollections, ZCompatibility, ZVariant,
   ZExpression;
 
 type
@@ -108,6 +108,38 @@ type
 
   {** Implements a EMPTY function. }
   TZEmptyFunction = class (TZAbstractFunction)
+  public
+    constructor Create;
+    function Execute(Stack: TZExecutionStack;
+      VariantManager: IZVariantManager): TZVariant; override;
+  end;
+
+  {** Implements a TRIM function. }
+  TZTrimFunction = class (TZAbstractFunction)
+  public
+    constructor Create;
+    function Execute(Stack: TZExecutionStack;
+      VariantManager: IZVariantManager): TZVariant; override;
+  end;
+
+  {** Implements a VAL function. }
+  TZValFunction = class (TZAbstractFunction)
+  public
+    constructor Create;
+    function Execute(Stack: TZExecutionStack;
+      VariantManager: IZVariantManager): TZVariant; override;
+  end;
+
+  {** Implements a CTOD function. }
+  TZCtodFunction = class (TZAbstractFunction)
+  public
+    constructor Create;
+    function Execute(Stack: TZExecutionStack;
+      VariantManager: IZVariantManager): TZVariant; override;
+  end;
+
+  {** Implements a DTOS function. }
+  TZDtosFunction = class (TZAbstractFunction)
   public
     constructor Create;
     function Execute(Stack: TZExecutionStack;
@@ -322,6 +354,22 @@ type
       VariantManager: IZVariantManager): TZVariant; override;
   end;
 
+  {** Implements a LEFT function. }
+  TZLeftFunction = class (TZAbstractFunction)
+  public
+    constructor Create;
+    function Execute(Stack: TZExecutionStack;
+      VariantManager: IZVariantManager): TZVariant; override;
+  end;
+
+  {** Implements a RIGHT function. }
+  TZRightFunction = class (TZAbstractFunction)
+  public
+    constructor Create;
+    function Execute(Stack: TZExecutionStack;
+      VariantManager: IZVariantManager): TZVariant; override;
+  end;
+
   {** Implements a default function list. }
   TZDefaultFunctionsList = class (TZFunctionsList)
   public
@@ -473,6 +521,12 @@ begin
   Functions.Add(TZConcatFunction.Create);
   Functions.Add(TZSubStrFunction.Create);
   Functions.Add(TZStrPosFunction.Create);
+  Functions.Add(TZTrimFunction.Create);
+  Functions.Add(TZValFunction.Create);
+  Functions.Add(TZDtosFunction.Create);
+  Functions.Add(TZCtodFunction.Create);
+  Functions.Add(TZLeftFunction.Create);
+  Functions.Add(TZRightFunction.Create);
 end;
 
 { TZAbstractFunction }
@@ -1134,7 +1188,8 @@ function TZUpperFunction.Execute(Stack: TZExecutionStack;
   VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
-  VariantManager.SetAsString(Result, AnsiUpperCase(VariantManager.GetAsString(Stack.GetParameter(1))));
+  VariantManager.SetAsString(Result, AnsiUpperCase(
+    VariantManager.GetAsString(Stack.GetParameter(1))));
 end;
 
 { TZSubStrFunction }
@@ -1208,7 +1263,7 @@ function TZConcatFunction.Execute(Stack: TZExecutionStack;
   VariantManager: IZVariantManager): TZVariant;
 var
   I, ParamsCount: Integer;
-  Temp: AnsiString;
+  Temp: string;
 begin
   ParamsCount := VariantManager.GetAsInteger(Stack.GetParameter(0));
   if ParamsCount < 2 then
@@ -1218,6 +1273,110 @@ begin
   for I := ParamsCount - 1 downto 1 do
     Temp := Temp + VariantManager.GetAsString(Stack.GetParameter(I));
   VariantManager.SetAsString(Result, Temp);
+end;
+
+{ TZTrimFunction }
+
+constructor TZTrimFunction.Create;
+begin
+  FName := 'TRIM';
+end;
+
+function TZTrimFunction.Execute(Stack: TZExecutionStack;
+  VariantManager: IZVariantManager): TZVariant;
+var
+  Value: TZVariant;
+begin
+  CheckParamsCount(Stack, 1);
+  Value := Stack.GetParameter(1);
+  VariantManager.SetAsString(Result, Trim(Value.VString));
+end;
+
+{ TZValFunction }
+
+constructor TZValFunction.Create;
+begin
+  FName := 'VAL';
+end;
+
+function TZValFunction.Execute(Stack: TZExecutionStack;
+  VariantManager: IZVariantManager): TZVariant;
+var
+  Value: TZVariant;
+begin
+  CheckParamsCount(Stack, 1);
+  Value := Stack.GetParameter(1);
+  VariantManager.SetAsInteger(Result, StrToInt64Def(Value.VString, 0));
+end;
+
+{ TZDtosFunction }
+
+constructor TZDtosFunction.Create;
+begin
+  FName := 'DTOS';
+end;
+
+function TZDtosFunction.Execute(Stack: TZExecutionStack;
+  VariantManager: IZVariantManager): TZVariant;
+var
+  Value: TZVariant;
+begin
+  CheckParamsCount(Stack, 1);
+  Value := Stack.GetParameter(1);
+  VariantManager.SetAsString(Result, FormatDateTime('yyyymmdd', Value.VDateTime));
+end;
+
+{ TZCtodFunction }
+
+constructor TZCtodFunction.Create;
+begin
+  FName := 'CTOD';
+end;
+
+function TZCtodFunction.Execute(Stack: TZExecutionStack;
+  VariantManager: IZVariantManager): TZVariant;
+var
+  Value: TZVariant;
+begin
+  CheckParamsCount(Stack, 1);
+  Value := Stack.GetParameter(1);
+  VariantManager.SetAsDateTime(Result, StrToDateDef(Value.VString, 0));
+end;
+
+{ TZLeftFunction }
+
+constructor TZLeftFunction.Create;
+begin
+  FName := 'LEFT';
+end;
+
+function TZLeftFunction.Execute(Stack: TZExecutionStack;
+  VariantManager: IZVariantManager): TZVariant;
+var
+  Value1, Value2: TZVariant;
+begin
+  CheckParamsCount(Stack, 2);
+  Value1 := Stack.GetParameter(2);
+  Value2 := Stack.GetParameter(1);
+  VariantManager.SetAsString(Result, LeftStr(Value1.VString, Value2.VInteger));
+end;
+
+{ TZRightFunction }
+
+constructor TZRightFunction.Create;
+begin
+  FName := 'RIGHT';
+end;
+
+function TZRightFunction.Execute(Stack: TZExecutionStack;
+  VariantManager: IZVariantManager): TZVariant;
+var
+  Value1, Value2: TZVariant;
+begin
+  CheckParamsCount(Stack, 2);
+  Value1 := Stack.GetParameter(2);
+  Value2 := Stack.GetParameter(1);
+  VariantManager.SetAsString(Result, RightStr(Value1.VString, Value2.VInteger));
 end;
 
 end.

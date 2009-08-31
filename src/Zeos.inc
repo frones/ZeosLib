@@ -49,6 +49,19 @@
   {$DEFINE VER140BELOW}
   // We assume 2 levels is sufficient.
   // The higher the third number in a version, the better... (we hope)
+  {$IFDEF VER2_5}
+    {$DEFINE FPC2_5UP}
+    {$DEFINE FPC2_4UP}
+    {$DEFINE FPC2_3UP}
+    {$DEFINE FPC2_2UP}
+    {$DEFINE FPC2_1UP}
+  {$ENDIF}
+  {$IFDEF VER2_4}
+    {$DEFINE FPC2_4UP}
+    {$DEFINE FPC2_3UP}
+    {$DEFINE FPC2_2UP}
+    {$DEFINE FPC2_1UP}
+  {$ENDIF}
   {$IFDEF VER2_3}
     {$DEFINE FPC2_3UP}
     {$DEFINE FPC2_2UP}
