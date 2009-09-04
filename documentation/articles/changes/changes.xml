@@ -185,7 +185,7 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
-          <simpara>[XXX] (<ulink url="http://zeos.firmos.at/viewtopic.php?t=xxxx">http://zeos.firmos.at/viewtopic.php?t=xxx</ulink>)</simpara>
+          <simpara>[Oracle] Memory leak when reading BLOB values(<ulink url="http://zeos.firmos.at/viewtopic.php?t=2504">http://zeos.firmos.at/viewtopic.php?t=2504</ulink>)</simpara>
         </listitem>
     </itemizedlist>
     </sect2>

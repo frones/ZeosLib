@@ -1052,6 +1052,7 @@ begin
     { Assigns a retrieved data stream. }
     ReadStream.Position := 0;
     SetStream(ReadStream);
+    ReadStream.Free;
   end;
 end;
 
