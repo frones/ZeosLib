@@ -57,7 +57,7 @@ interface
 
 {$I ZCore.inc}
 
-uses TestFramework, ZSysUtils, SysUtils, ZTestDefinitions, ZCompatibility;
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZSysUtils, SysUtils, ZTestDefinitions, ZCompatibility;
 
 type
 
@@ -192,6 +192,6 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestPortableSQLTestCase.Suite);
-  TestFramework.RegisterTest(TZTestSpecificSQLTestCase.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestPortableSQLTestCase.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestSpecificSQLTestCase.Suite);
 end.

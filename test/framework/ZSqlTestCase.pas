@@ -61,7 +61,7 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  TestFrameWork, Classes, SysUtils, {$IFDEF ENABLE_POOLED}ZClasses,{$ENDIF}
+  {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils, {$IFDEF ENABLE_POOLED}ZClasses,{$ENDIF}
   ZCompatibility, ZDbcIntfs, ZConnection, Contnrs, ZTestCase, ZScriptParser, ZDbcLogging;
 
 type
@@ -128,7 +128,9 @@ type
 
     procedure LoadConfiguration; override;
     procedure SetActiveConnection(Connection: TZConnectionConfig);
+    {$IFNDEF FPC}
     procedure RunWithFixture(TestResult: TTestResult); override;
+    {$ENDIF}
 
     function IsProtocolValid(Name: string): Boolean; virtual;
     function GetSupportedProtocols: string; virtual; abstract;
@@ -139,7 +141,7 @@ type
   public
     destructor Destroy; override;
 
-    procedure Fail(Msg: string; ErrorAddr: Pointer = nil); override;
+    procedure Fail(Msg: string; ErrorAddr: Pointer = nil);{$IFNDEF FPC}  override; {$ENDIF}
     procedure LogEvent(Event: TZLoggingEvent);
 
     { Difference convinience methods. }
@@ -232,7 +234,7 @@ procedure TZAbstractSQLTestCase.LoadConfiguration;
 
 var
   I: Integer;
-  ConnectionName, Temp: string;
+  _ConnectionName, Temp: string;
   ActiveConnections: TStringDynArray;
   Current: TZConnectionConfig;
 begin
@@ -252,29 +254,29 @@ begin
   for I := 0 to High(ActiveConnections) do
   begin
     Current := TZConnectionConfig.Create;
-    ConnectionName := ActiveConnections[I];
+    _ConnectionName := ActiveConnections[I];
 
-    Current.Name := ConnectionName;
-    Current.Alias := ReadProperty(ConnectionName, DATABASE_ALIAS_KEY, '');
-    Current.Protocol := ReadProperty(ConnectionName, DATABASE_PROTOCOL_KEY, '');
-    Current.HostName := ReadProperty(ConnectionName, DATABASE_HOST_KEY,
+    Current.Name := _ConnectionName;
+    Current.Alias := ReadProperty(_ConnectionName, DATABASE_ALIAS_KEY, '');
+    Current.Protocol := ReadProperty(_ConnectionName, DATABASE_PROTOCOL_KEY, '');
+    Current.HostName := ReadProperty(_ConnectionName, DATABASE_HOST_KEY,
       DEFAULT_HOST_VALUE);
-    Current.Port := StrToIntDef(ReadProperty(ConnectionName,
+    Current.Port := StrToIntDef(ReadProperty(_ConnectionName,
       DATABASE_PORT_KEY, ''), DEFAULT_PORT_VALUE);
-    Current.Database := ReadProperty(ConnectionName, DATABASE_NAME_KEY, '');
-    Current.UserName := ReadProperty(ConnectionName, DATABASE_USER_KEY, '');
-    Current.Password := ReadProperty(ConnectionName, DATABASE_PASSWORD_KEY, '');
-    Current.Rebuild := StrToBoolEx(ReadProperty(ConnectionName,
+    Current.Database := ReadProperty(_ConnectionName, DATABASE_NAME_KEY, '');
+    Current.UserName := ReadProperty(_ConnectionName, DATABASE_USER_KEY, '');
+    Current.Password := ReadProperty(_ConnectionName, DATABASE_PASSWORD_KEY, '');
+    Current.Rebuild := StrToBoolEx(ReadProperty(_ConnectionName,
       DATABASE_REBUILD_KEY, FALSE_VALUE));
     Current.DelimiterType := DefineDelimiterType(
-      ReadProperty(ConnectionName, DATABASE_DELIMITER_TYPE_KEY, ''));
-    Current.Delimiter := ReadProperty(ConnectionName,
+      ReadProperty(_ConnectionName, DATABASE_DELIMITER_TYPE_KEY, ''));
+    Current.Delimiter := ReadProperty(_ConnectionName,
       DATABASE_DELIMITER_KEY, '');
-    Current.CreateScripts := SplitStringToArray(ReadProperty(ConnectionName,
+    Current.CreateScripts := SplitStringToArray(ReadProperty(_ConnectionName,
       DATABASE_CREATE_SCRIPTS_KEY, ''), LIST_DELIMITERS);
-    Current.DropScripts := SplitStringToArray(ReadProperty(ConnectionName,
+    Current.DropScripts := SplitStringToArray(ReadProperty(_ConnectionName,
       DATABASE_DROP_SCRIPTS_KEY, ''), LIST_DELIMITERS);
-    Current.Properties := SplitStringToArray(ReadProperty(ConnectionName,
+    Current.Properties := SplitStringToArray(ReadProperty(_ConnectionName,
       DATABASE_PROPERTIES_KEY, ''), LIST_DELIMITERS);
     FConnections.Add(Current);
   end;
@@ -368,6 +370,7 @@ begin
   DriverManager.RemoveLoggingListener(Self);
 end;
 
+{$IFNDEF FPC}
 {**
    Function configure test paramters and start test case
    <b>Note:</b> Configuration file ZSqlConfig.ini should exist and contain
@@ -392,6 +395,7 @@ begin
     inherited RunWithFixture(TestResult);
   end;
 end;
+{$ENDIF}
 
 {**
   Creates a database ZDBC connection object.
