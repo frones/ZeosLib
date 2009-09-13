@@ -240,7 +240,7 @@ end;
 function TZTestConfiguration.GetConfigFileName: string;
 var
   I: Integer;
-  _Path: string;
+  Path: string;
 begin
   Result := '';
 
@@ -259,22 +259,22 @@ begin
   { Searches for default configuration file. }
   if Result = '' then
   begin
-    _Path := '.' + PATH_DELIMITER + DEFAULT_CONFIG_DIR
+    Path := '.' + PATH_DELIMITER + DEFAULT_CONFIG_DIR
       + PATH_DELIMITER + DEFAULT_CONFIG_FILE;
     for I := 1 to 4 do
     begin
-      if FileExists(_Path) then
+      if FileExists(Path) then
       begin
-        Result := _Path;
+        Result := Path;
         Break;
       end;
-      _Path := '.' + PATH_DELIMITER + '.' + _Path;
+      Path := '.' + PATH_DELIMITER + '.' + Path;
     end;
   end;
 
   { If config file still is not defined set it by default. }
   if Result = '' then
-    Result := ExtractFileDir(ParamStr(0)) + PATH_DELIMITER + _Path;
+    Result := ExtractFileDir(ParamStr(0)) + PATH_DELIMITER + Path;
 
   FConfigFileName := Result;
 end;
@@ -298,7 +298,7 @@ begin
   { Reads a configuration file from the disk. }
   if Assigned(FConfigFile) then
     FConfigFile.Free;
-  FConfigFile := TIniFile.Create({GetConfigFileName}'..\..\..\database\test.properties');
+  FConfigFile := TIniFile.Create(GetConfigFileName);
 
   { Reads default properties. }
   FEnableMemCheck := StrToBoolEx(ReadProperty(COMMON_GROUP,
