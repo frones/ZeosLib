@@ -54,6 +54,7 @@
 unit ZBugReport;
 
 interface
+{$I ZBugReport.inc}
 
 uses ZCompatibility, ZSqlTestCase;
 

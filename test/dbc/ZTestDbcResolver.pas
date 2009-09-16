@@ -54,8 +54,8 @@
 unit ZTestDbcResolver;
 
 interface
-
-uses TestFramework, Classes, SysUtils, ZDbcIntfs, ZClasses, ZCompatibility,
+{$I ZDbc.inc}
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils, ZDbcIntfs, ZClasses, ZCompatibility,
   ZCollections, ZDbcGenericResolver, ZTestDefinitions;
 
 type
@@ -252,5 +252,5 @@ end;
 {$ENDIF}
 
 initialization
-  TestFramework.RegisterTest(TZTestCachedResolverCase.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestCachedResolverCase.Suite);
 end.

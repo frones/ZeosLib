@@ -61,7 +61,7 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  Classes, SysUtils, TestFramework, ZDbcIntfs, ZTestDefinitions, ZDbcSQLite,
+  Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZTestDefinitions, ZDbcSQLite,
   ZCompatibility;
 
 type
@@ -318,5 +318,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestDbcSQLiteCase.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestDbcSQLiteCase.Suite);
 end.

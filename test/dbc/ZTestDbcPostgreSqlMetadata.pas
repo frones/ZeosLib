@@ -54,9 +54,9 @@
 unit ZTestDbcPostgreSqlMetadata;
 
 interface
-
+{$I ZDbc.inc}
 uses
-  SysUtils, TestFramework, ZDbcIntfs, ZClasses, ZCompatibility,
+  SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZClasses, ZCompatibility,
   ZTestDefinitions, ZDbcResultSet, ZDbcResultSetMetadata, ZDbcPostgreSql;
 
 type
@@ -781,5 +781,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestPostgreSqlMetadataCase.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestPostgreSqlMetadataCase.Suite);
 end.

@@ -54,9 +54,10 @@
 unit ZTestSqlMetadata;
 
 interface
+{$I ZComponent.inc}
 
 uses
-  TestFramework, Db, SysUtils, ZConnection, ZSqlMetadata, ZTestDefinitions;
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, SysUtils, ZConnection, ZSqlMetadata, ZTestDefinitions;
 
 type
 
@@ -131,5 +132,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestSQLMetadataCase.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestSQLMetadataCase.Suite);
 end.

@@ -54,9 +54,10 @@
 unit ZTestSqlProcessor;
 
 interface
+{$I ZComponent.inc}
 
 uses
-  TestFramework, ZSqlStrings, SysUtils, ZTokenizer, ZConnection, ZSqlProcessor,
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZSqlStrings, SysUtils, ZTokenizer, ZConnection, ZSqlProcessor,
   ZTestDefinitions, ZScriptParser;
 
 type
@@ -415,6 +416,6 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestSQLProcessorCase.Suite);
-  TestFramework.RegisterTest(TZTestSQLProcessorMysqlCase.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestSQLProcessorCase.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestSQLProcessorMysqlCase.Suite);
 end.

@@ -80,19 +80,15 @@ type
   protected
     {$IFDEF FPC}
     frefcount : longint;
-    {$ENDIF}
-    property DecimalSeparator: Char read FDecimalSeparator
-      write FDecimalSeparator;
-    property SuppressTestOutput: Boolean read FSuppressTestOutput
-      write FSuppressTestOutput;
-
-    {$IFDEF FPC}
-    procedure Fail(msg: string; errorAddr: Pointer = nil);
     { implement methods of IUnknown }
     function QueryInterface(const iid : tguid;out obj) : longint;stdcall;
     function _AddRef : longint;stdcall;
     function _Release : longint;stdcall;
     {$ENDIF}
+    property DecimalSeparator: Char read FDecimalSeparator
+      write FDecimalSeparator;
+    property SuppressTestOutput: Boolean read FSuppressTestOutput
+      write FSuppressTestOutput;
 
     { Test configuration methods. }
     procedure LoadConfiguration; virtual;
@@ -116,9 +112,11 @@ type
     function GetTickCount: Cardinal;
 
   public
-    constructor Create(_MethodName: string); {$IFNDEF FPC} override; {$ENDIF}
+    constructor Create(MethodName: string); {$IFNDEF FPC} override; {$ENDIF}
     destructor Destroy; override;
     {$IFDEF FPC}
+    function GetName: string;
+    procedure Fail(msg: string; errorAddr: Pointer = nil);
     procedure CheckNotNull(obj: IUnknown; msg: string = ''); overload; virtual;
     procedure CheckNull(obj: IUnknown; msg: string = ''); overload; virtual;
     class function Suite : CTZAbstractTestCase;
@@ -184,58 +182,7 @@ end;
 
 { TZAbstractTestCase }
 
-{**
-  Creates the abstract test case and initialize global parameters.
-  @param MethodName a name of the test case.
-}
-constructor TZAbstractTestCase.Create(_MethodName: string);
-begin
-  {$IFNDEF FPC}
-  inherited Create(_MethodName);
-  {$ELSE}
-  inherited CreateWithName(_MethodName);
-  {$ENDIF}
-  LoadConfiguration;
-end;
-
-{**
-  Destroys this test case and cleanups the memory.
-}
-destructor TZAbstractTestCase.Destroy;
-begin
-  inherited Destroy;
-end;
-
 {$IFDEF FPC}
-
-procedure TZAbstractTestCase.CheckNotNull(obj: IUnknown; msg: string);
-begin
-    if obj = nil then
-      Fail(msg, CallerAddr);
-end;
-
-procedure TZAbstractTestCase.CheckNull(obj: IUnknown; msg: string);
-begin
-    if obj <>  nil then
-      Fail(msg, CallerAddr);
-end;
-
-procedure TZAbstractTestCase.Fail(msg: string; errorAddr: Pointer);
-begin
-{$IFDEF CLR}
-  raise ETestFailure.Create(msg);
-{$ELSE}
-  if errorAddr = nil then
-    raise EAssertionFailedError.Create(msg) at CallerAddr
-  else
-    raise EAssertionFailedError.Create(msg) at errorAddr;
-{$ENDIF}
-end;
-
-class function TZAbstractTestCase.Suite: CTZAbstractTestCase;
-begin
-  result := Self;
-end;
 function TZAbstractTestCase.QueryInterface(const iid: tguid; out obj): longint;
   stdcall;
 begin
@@ -255,7 +202,63 @@ begin
   _Release:=interlockeddecrement(frefcount);
   if _Release=0 then self.destroy;
 end;
+
+function TZAbstractTestCase.GetName: string;
+begin
+   Result := GetTestName;
+end;
+
+procedure TZAbstractTestCase.Fail(msg: string; errorAddr: Pointer = nil);
+begin
+{$IFDEF CLR}
+  raise ETestFailure.Create(msg);
+{$ELSE}
+  if errorAddr = nil then
+    raise EAssertionFailedError.Create(msg) at CallerAddr
+  else
+    raise EAssertionFailedError.Create(msg) at errorAddr;
 {$ENDIF}
+end;
+
+class function TZAbstractTestCase.Suite: CTZAbstractTestCase;
+begin
+  result := Self;
+end;
+
+procedure TZAbstractTestCase.CheckNotNull(obj: IUnknown; msg: string);
+begin
+    if obj = nil then
+      Fail(msg, CallerAddr);
+end;
+
+procedure TZAbstractTestCase.CheckNull(obj: IUnknown; msg: string);
+begin
+    if obj <>  nil then
+      Fail(msg, CallerAddr);
+end;
+{$ENDIF}
+
+{**
+  Creates the abstract test case and initialize global parameters.
+  @param MethodName a name of the test case.
+}
+constructor TZAbstractTestCase.Create(MethodName: string);
+begin
+  {$IFNDEF FPC}
+  inherited Create(MethodName);
+  {$ELSE}
+  inherited CreateWithName(MethodName);
+  {$ENDIF}
+  LoadConfiguration;
+end;
+
+{**
+  Destroys this test case and cleanups the memory.
+}
+destructor TZAbstractTestCase.Destroy;
+begin
+  inherited Destroy;
+end;
 
 {**
   Loads a configuration from the configuration file.

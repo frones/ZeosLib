@@ -54,9 +54,10 @@
 unit ZTestDbcMySqlMetadata;
 
 interface
+{$I ZDbc.inc}
 
-uses TestFramework, SysUtils, ZDbcIntfs, ZClasses, ZCompatibility,
-  ZTestDefinitions, ZDbcResultSet, ZDbcResultSetMetadata, ZDbcMySql;
+uses SysUtils, ZDbcIntfs, ZClasses, ZCompatibility,
+  ZTestDefinitions, ZDbcResultSet, ZDbcResultSetMetadata, ZDbcMySql,{$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF};
 
 type
 
@@ -418,5 +419,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestMySqlMetadataCase.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestMySqlMetadataCase.Suite);
 end.

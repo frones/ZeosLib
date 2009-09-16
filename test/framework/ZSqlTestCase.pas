@@ -130,6 +130,8 @@ type
     procedure SetActiveConnection(Connection: TZConnectionConfig);
     {$IFNDEF FPC}
     procedure RunWithFixture(TestResult: TTestResult); override;
+    {$ELSE}
+    procedure Run(TestResult: TTestResult); override;
     {$ENDIF}
 
     function IsProtocolValid(Name: string): Boolean; virtual;
@@ -393,6 +395,31 @@ begin
     SetActiveConnection(Current);
 
     inherited RunWithFixture(TestResult);
+  end;
+end;
+{$ELSE}
+{**
+   Function configure test paramters and start test case
+   <b>Note:</b> Configuration file ZSqlConfig.ini should exist and contain
+    the appropriate section with settings of the protocol
+}
+procedure TZAbstractSQLTestCase.Run(TestResult: TTestResult);
+var
+  I: Integer;
+  Current: TZConnectionConfig;
+begin
+  if not Assigned(FConnections) or (FConnections.Count = 0) then
+    LoadConfiguration;
+
+  for I := 0 to FConnections.Count - 1 do
+  begin
+    Current := TZConnectionConfig(FConnections[I]);
+    if not IsProtocolValid(Current.Protocol) then
+      Continue;
+
+    SetActiveConnection(Current);
+
+    inherited Run(TestResult);
   end;
 end;
 {$ENDIF}
