@@ -1,0 +1,528 @@
+<?xml version="1.0"?>
+<CONFIG>
+  <ProjectOptions>
+    <PathDelim Value="\"/>
+    <Version Value="7"/>
+    <General>
+      <MainUnit Value="0"/>
+      <TargetFileExt Value=".exe"/>
+      <UseXPManifest Value="True"/>
+      <ActiveEditorIndexAtStart Value="1"/>
+    </General>
+    <VersionInfo>
+      <ProjectVersion Value=""/>
+      <Language Value=""/>
+      <CharSet Value=""/>
+    </VersionInfo>
+    <PublishOptions>
+      <Version Value="2"/>
+      <IgnoreBinaries Value="False"/>
+      <IncludeFileFilter Value="*.(pas|pp|inc|lfm|lpr|lrs|lpi|lpk|sh|xml)"/>
+      <ExcludeFileFilter Value="*.(bak|ppu|ppw|o|so);*~;backup"/>
+    </PublishOptions>
+    <RunParams>
+      <local>
+        <FormatVersion Value="1"/>
+        <CommandLineParams Value="-p -a --format=plain"/>
+        <LaunchingApplication PathPlusParams="/usr/X11R6/bin/xterm -T 'Lazarus Run Output' -e $(LazarusDir)/tools/runwait.sh $(TargetCmdLine)"/>
+      </local>
+    </RunParams>
+    <RequiredPackages Count="2">
+      <Item1>
+        <PackageName Value="FPCUnitConsoleRunner"/>
+      </Item1>
+      <Item2>
+        <PackageName Value="FCL"/>
+      </Item2>
+    </RequiredPackages>
+    <Units Count="49">
+      <Unit0>
+        <Filename Value="ztestcomponentall.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ztestcomponentall"/>
+        <CursorPos X="46" Y="1"/>
+        <TopLine Value="1"/>
+        <EditorIndex Value="0"/>
+        <UsageCount Value="37"/>
+        <Loaded Value="True"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="consoletestrunner.pas"/>
+        <UnitName Value="consoletestrunner"/>
+        <CursorPos X="1" Y="268"/>
+        <TopLine Value="251"/>
+        <UsageCount Value="10"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="..\..\test\dbc\ZTestDbcASA.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestDbcASA"/>
+        <CursorPos X="1" Y="58"/>
+        <TopLine Value="43"/>
+        <UsageCount Value="29"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="..\..\test\dbc\ZTestDbcASAMetadata.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestDbcASAMetadata"/>
+        <CursorPos X="38" Y="458"/>
+        <TopLine Value="425"/>
+        <UsageCount Value="29"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="..\..\test\dbc\ZTestDbcCache.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestDbcCache"/>
+        <CursorPos X="1" Y="35"/>
+        <TopLine Value="35"/>
+        <UsageCount Value="29"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="..\..\test\dbc\ZTestDbcCachedResultSet.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestDbcCachedResultSet"/>
+        <CursorPos X="5" Y="1048"/>
+        <TopLine Value="1015"/>
+        <UsageCount Value="29"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="..\..\test\dbc\ZTestDbcGeneric.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestDbcGeneric"/>
+        <CursorPos X="1" Y="35"/>
+        <TopLine Value="35"/>
+        <UsageCount Value="34"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="..\..\test\dbc\ZTestDbcInterbase.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestDbcInterbase"/>
+        <CursorPos X="1" Y="58"/>
+        <TopLine Value="35"/>
+        <UsageCount Value="30"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="..\..\test\dbc\ZTestDbcInterbaseMetadata.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestDbcInterbaseMetadata"/>
+        <CursorPos X="5" Y="456"/>
+        <TopLine Value="425"/>
+        <UsageCount Value="30"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="..\..\test\dbc\ZTestDbcMetadata.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestDbcMetadata"/>
+        <CursorPos X="73" Y="485"/>
+        <TopLine Value="456"/>
+        <UsageCount Value="29"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="..\..\test\dbc\ZTestDbcMsSql.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestDbcMsSql"/>
+        <CursorPos X="14" Y="71"/>
+        <TopLine Value="54"/>
+        <UsageCount Value="30"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="..\..\test\dbc\ZTestDbcMySql.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestDbcMySql"/>
+        <CursorPos X="7" Y="57"/>
+        <TopLine Value="40"/>
+        <UsageCount Value="30"/>
+      </Unit11>
+      <Unit12>
+        <Filename Value="..\..\test\dbc\ZTestDbcMySqlMetadata.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestDbcMySqlMetadata"/>
+        <CursorPos X="1" Y="58"/>
+        <TopLine Value="54"/>
+        <UsageCount Value="30"/>
+      </Unit12>
+      <Unit13>
+        <Filename Value="..\..\test\dbc\ZTestDbcOracle.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestDbcOracle"/>
+        <CursorPos X="1" Y="58"/>
+        <TopLine Value="34"/>
+        <UsageCount Value="30"/>
+      </Unit13>
+      <Unit14>
+        <Filename Value="..\..\test\dbc\ZTestDbcPostgreSql.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestDbcPostgreSql"/>
+        <CursorPos X="1" Y="58"/>
+        <TopLine Value="54"/>
+        <UsageCount Value="30"/>
+      </Unit14>
+      <Unit15>
+        <Filename Value="..\..\test\dbc\ZTestDbcPostgreSqlMetadata.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestDbcPostgreSqlMetadata"/>
+        <CursorPos X="1" Y="58"/>
+        <TopLine Value="43"/>
+        <UsageCount Value="30"/>
+      </Unit15>
+      <Unit16>
+        <Filename Value="..\..\test\dbc\ZTestDbcResolver.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestDbcResolver"/>
+        <CursorPos X="38" Y="255"/>
+        <TopLine Value="222"/>
+        <UsageCount Value="30"/>
+      </Unit16>
+      <Unit17>
+        <Filename Value="..\..\test\dbc\ZTestDbcResultSet.pas"/>
+        <UnitName Value="ZTestDbcResultSet"/>
+        <CursorPos X="38" Y="363"/>
+        <TopLine Value="332"/>
+        <UsageCount Value="12"/>
+      </Unit17>
+      <Unit18>
+        <Filename Value="..\..\test\dbc\ZTestDbcResultSetMetadata.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestDbcResultSetMetadata"/>
+        <CursorPos X="38" Y="254"/>
+        <TopLine Value="221"/>
+        <UsageCount Value="30"/>
+      </Unit18>
+      <Unit19>
+        <Filename Value="..\..\test\dbc\ZTestDbcSqLite.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestDbcSqLite"/>
+        <CursorPos X="43" Y="300"/>
+        <TopLine Value="288"/>
+        <UsageCount Value="30"/>
+      </Unit19>
+      <Unit20>
+        <Filename Value="..\..\test\dbc\ZTestDbcUtils.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestDbcUtils"/>
+        <CursorPos X="96" Y="502"/>
+        <TopLine Value="470"/>
+        <UsageCount Value="30"/>
+      </Unit20>
+      <Unit21>
+        <Filename Value="..\..\test\framework\ZSqlTestCase.pas"/>
+        <UnitName Value="ZSqlTestCase"/>
+        <CursorPos X="43" Y="107"/>
+        <TopLine Value="74"/>
+        <EditorIndex Value="2"/>
+        <UsageCount Value="17"/>
+        <Loaded Value="True"/>
+      </Unit21>
+      <Unit22>
+        <Filename Value="..\..\test\framework\ZTestCase.pas"/>
+        <UnitName Value="ZTestCase"/>
+        <CursorPos X="64" Y="125"/>
+        <TopLine Value="115"/>
+        <EditorIndex Value="3"/>
+        <UsageCount Value="16"/>
+        <Loaded Value="True"/>
+      </Unit22>
+      <Unit23>
+        <Filename Value="..\..\test\framework\ZTestConfig.pas"/>
+        <UnitName Value="ZTestConfig"/>
+        <CursorPos X="6" Y="58"/>
+        <TopLine Value="41"/>
+        <UsageCount Value="16"/>
+      </Unit23>
+      <Unit24>
+        <Filename Value="..\..\test\bugreport\ZTestCompASA.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestCompASA"/>
+        <CursorPos X="1" Y="57"/>
+        <TopLine Value="35"/>
+        <UsageCount Value="30"/>
+      </Unit24>
+      <Unit25>
+        <Filename Value="..\..\test\framework\ZTestDefinitions.pas"/>
+        <UnitName Value="ZTestDefinitions"/>
+        <CursorPos X="53" Y="101"/>
+        <TopLine Value="68"/>
+        <UsageCount Value="11"/>
+      </Unit25>
+      <Unit26>
+        <Filename Value="..\..\test\bugreport\ZTestCompCore.pas"/>
+        <UnitName Value="ZTestCompCore"/>
+        <CursorPos X="50" Y="1848"/>
+        <TopLine Value="1816"/>
+        <UsageCount Value="10"/>
+      </Unit26>
+      <Unit27>
+        <Filename Value="C:\lazarus\fpc\2.5.1\source\packages\fcl-fpcunit\src\fpcunit.pp"/>
+        <UnitName Value="fpcunit"/>
+        <CursorPos X="3" Y="180"/>
+        <TopLine Value="163"/>
+        <UsageCount Value="10"/>
+      </Unit27>
+      <Unit28>
+        <Filename Value="C:\lazarus\components\fpcunit\console\consoletestrunner.pas"/>
+        <UnitName Value="consoletestrunner"/>
+        <CursorPos X="31" Y="27"/>
+        <TopLine Value="10"/>
+        <UsageCount Value="10"/>
+      </Unit28>
+      <Unit29>
+        <Filename Value="..\..\src\core\ZClasses.pas"/>
+        <UnitName Value="ZClasses"/>
+        <CursorPos X="28" Y="214"/>
+        <TopLine Value="197"/>
+        <UsageCount Value="10"/>
+      </Unit29>
+      <Unit30>
+        <Filename Value="..\..\src\component\ZConnection.pas"/>
+        <UnitName Value="ZConnection"/>
+        <CursorPos X="63" Y="647"/>
+        <TopLine Value="630"/>
+        <UsageCount Value="10"/>
+      </Unit30>
+      <Unit31>
+        <Filename Value="..\..\src\dbc\ZDbcIntfs.pas"/>
+        <UnitName Value="ZDbcIntfs"/>
+        <CursorPos X="1" Y="992"/>
+        <TopLine Value="975"/>
+        <UsageCount Value="10"/>
+      </Unit31>
+      <Unit32>
+        <Filename Value="..\..\test\framework\ZMidasTestCase.pas"/>
+        <UnitName Value="ZMidasTestCase"/>
+        <CursorPos X="6" Y="56"/>
+        <TopLine Value="39"/>
+        <UsageCount Value="10"/>
+      </Unit32>
+      <Unit33>
+        <Filename Value="..\..\test\framework\ZMidasTestServer_TLB.pas"/>
+        <UnitName Value="ZMidasTestServer_TLB"/>
+        <CursorPos X="6" Y="30"/>
+        <TopLine Value="13"/>
+        <UsageCount Value="10"/>
+      </Unit33>
+      <Unit34>
+        <Filename Value="..\..\test\framework\ZPerformanceTestCase.pas"/>
+        <UnitName Value="ZPerformanceTestCase"/>
+        <CursorPos X="6" Y="58"/>
+        <TopLine Value="41"/>
+        <UsageCount Value="10"/>
+      </Unit34>
+      <Unit35>
+        <Filename Value="..\..\test\framework\ZTestFramework.inc"/>
+        <CursorPos X="1" Y="7"/>
+        <TopLine Value="1"/>
+        <UsageCount Value="11"/>
+      </Unit35>
+      <Unit36>
+        <Filename Value="..\..\test\dbc\ZDbc.inc"/>
+        <CursorPos X="1" Y="1"/>
+        <TopLine Value="1"/>
+        <UsageCount Value="10"/>
+      </Unit36>
+      <Unit37>
+        <Filename Value="..\..\test\component\ZTestStoredProcedure.pas"/>
+        <UnitName Value="ZTestStoredProcedure"/>
+        <CursorPos X="55" Y="60"/>
+        <TopLine Value="34"/>
+        <EditorIndex Value="1"/>
+        <UsageCount Value="11"/>
+        <Loaded Value="True"/>
+      </Unit37>
+      <Unit38>
+        <Filename Value="..\..\test\component\ZTestConnection.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestConnection"/>
+        <CursorPos X="1" Y="56"/>
+        <TopLine Value="35"/>
+        <UsageCount Value="20"/>
+      </Unit38>
+      <Unit39>
+        <Filename Value="..\..\test\component\ZTestData.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestData"/>
+        <CursorPos X="1" Y="680"/>
+        <TopLine Value="647"/>
+        <UsageCount Value="21"/>
+      </Unit39>
+      <Unit40>
+        <Filename Value="..\..\test\component\ZTestDataSetGeneric.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestDataSetGeneric"/>
+        <CursorPos X="55" Y="66"/>
+        <TopLine Value="60"/>
+        <UsageCount Value="21"/>
+      </Unit40>
+      <Unit41>
+        <Filename Value="..\..\test\component\ZTestExecuteSql.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestExecuteSql"/>
+        <CursorPos X="55" Y="60"/>
+        <TopLine Value="37"/>
+        <UsageCount Value="21"/>
+      </Unit41>
+      <Unit42>
+        <Filename Value="..\..\test\component\ZTestMasterDetail.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestMasterDetail"/>
+        <CursorPos X="1" Y="58"/>
+        <TopLine Value="34"/>
+        <UsageCount Value="21"/>
+      </Unit42>
+      <Unit43>
+        <Filename Value="..\..\test\component\ZTestMidas.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestMidas"/>
+        <CursorPos X="1" Y="1"/>
+        <TopLine Value="1"/>
+        <UsageCount Value="21"/>
+      </Unit43>
+      <Unit44>
+        <Filename Value="..\..\test\component\ZTestSorting.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestSorting"/>
+        <CursorPos X="55" Y="60"/>
+        <TopLine Value="37"/>
+        <EditorIndex Value="4"/>
+        <UsageCount Value="21"/>
+        <Loaded Value="True"/>
+      </Unit44>
+      <Unit45>
+        <Filename Value="..\..\test\component\ZTestSqlMetadata.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestSqlMetadata"/>
+        <CursorPos X="55" Y="60"/>
+        <TopLine Value="37"/>
+        <UsageCount Value="21"/>
+      </Unit45>
+      <Unit46>
+        <Filename Value="..\..\test\component\ZTestSqlProcessor.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestSqlProcessor"/>
+        <CursorPos X="1" Y="58"/>
+        <TopLine Value="50"/>
+        <UsageCount Value="22"/>
+      </Unit46>
+      <Unit47>
+        <Filename Value="..\..\test\component\ZTestSqlStrings.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestSqlStrings"/>
+        <CursorPos X="15" Y="57"/>
+        <TopLine Value="31"/>
+        <UsageCount Value="22"/>
+      </Unit47>
+      <Unit48>
+        <Filename Value="..\..\test\component\ZTestSqlTypes.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestSqlTypes"/>
+        <CursorPos X="15" Y="57"/>
+        <TopLine Value="37"/>
+        <UsageCount Value="22"/>
+      </Unit48>
+    </Units>
+    <JumpHistory Count="10" HistoryIndex="9">
+      <Position1>
+        <Filename Value="ztestcomponentall.lpr"/>
+        <Caret Line="6" Column="29" TopLine="1"/>
+      </Position1>
+      <Position2>
+        <Filename Value="ztestcomponentall.lpr"/>
+        <Caret Line="6" Column="38" TopLine="1"/>
+      </Position2>
+      <Position3>
+        <Filename Value="..\..\test\component\ZTestSorting.pas"/>
+        <Caret Line="57" Column="15" TopLine="37"/>
+      </Position3>
+      <Position4>
+        <Filename Value="..\..\test\framework\ZSqlTestCase.pas"/>
+        <Caret Line="107" Column="43" TopLine="91"/>
+      </Position4>
+      <Position5>
+        <Filename Value="..\..\test\framework\ZTestCase.pas"/>
+        <Caret Line="75" Column="35" TopLine="58"/>
+      </Position5>
+      <Position6>
+        <Filename Value="..\..\test\framework\ZTestCase.pas"/>
+        <Caret Line="261" Column="5" TopLine="228"/>
+      </Position6>
+      <Position7>
+        <Filename Value="..\..\test\framework\ZTestCase.pas"/>
+        <Caret Line="208" Column="14" TopLine="195"/>
+      </Position7>
+      <Position8>
+        <Filename Value="..\..\test\framework\ZTestCase.pas"/>
+        <Caret Line="208" Column="14" TopLine="195"/>
+      </Position8>
+      <Position9>
+        <Filename Value="..\..\test\framework\ZTestCase.pas"/>
+        <Caret Line="245" Column="20" TopLine="228"/>
+      </Position9>
+      <Position10>
+        <Filename Value="..\..\test\framework\ZTestCase.pas"/>
+        <Caret Line="125" Column="64" TopLine="115"/>
+      </Position10>
+    </JumpHistory>
+  </ProjectOptions>
+  <CompilerOptions>
+    <Version Value="8"/>
+    <PathDelim Value="\"/>
+    <SearchPaths>
+      <IncludeFiles Value="$(ProjOutDir)\"/>
+      <OtherUnitFiles Value="..\..\test\component\;..\..\test\framework\;..\..\src\core\;..\..\src\parsesql\;..\..\src\plain\;..\..\src\dbc\;..\..\src\component\"/>
+      <UnitOutputDirectory Value="build"/>
+    </SearchPaths>
+    <Other>
+      <CompilerPath Value="$(CompPath)"/>
+    </Other>
+  </CompilerOptions>
+  <Debugging>
+    <BreakPoints Count="1">
+      <Item1>
+        <Source Value="ztestcomponentall.lpr"/>
+        <Line Value="29"/>
+      </Item1>
+    </BreakPoints>
+    <Watches Count="1">
+      <Item1>
+        <Expression Value="Pchar(Result)^"/>
+      </Item1>
+    </Watches>
+    <Exceptions Count="12">
+      <Item1>
+        <Name Value="EAbort"/>
+      </Item1>
+      <Item2>
+        <Name Value="ECodetoolError"/>
+      </Item2>
+      <Item3>
+        <Name Value="EFOpenError"/>
+      </Item3>
+      <Item4>
+        <Name Value="Unknown"/>
+      </Item4>
+      <Item5>
+        <Name Value="TZExpressionError"/>
+      </Item5>
+      <Item6>
+        <Name Value="EAssertionFailedError"/>
+      </Item6>
+      <Item7>
+        <Name Value="EZVariantException"/>
+      </Item7>
+      <Item8>
+        <Name Value="EZSQLException"/>
+      </Item8>
+      <Item9>
+        <Name Value="EConvertError"/>
+      </Item9>
+      <Item10>
+        <Name Value="EAbstractError"/>
+      </Item10>
+      <Item11>
+        <Name Value="EZDatabaseError"/>
+      </Item11>
+      <Item12>
+        <Name Value="EDatabaseError"/>
+      </Item12>
+    </Exceptions>
+  </Debugging>
+</CONFIG>

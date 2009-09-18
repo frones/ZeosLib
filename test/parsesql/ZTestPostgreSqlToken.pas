@@ -54,8 +54,8 @@
 unit ZTestPostgreSqlToken;
 
 interface
-
-uses TestFramework, ZClasses, ZTokenizer, ZPostgreSqlToken,
+{$I ZParseSql.inc}
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZClasses, ZTokenizer, ZPostgreSqlToken,
   ZTestTokenizer;
 
 type
@@ -176,6 +176,6 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestPostgreSQLTokenizer.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestPostgreSQLTokenizer.Suite);
 end.
 

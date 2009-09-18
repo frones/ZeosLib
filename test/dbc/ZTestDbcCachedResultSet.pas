@@ -52,9 +52,9 @@
 unit ZTestDbcCachedResultSet;
 
 interface
-
+{$I ZDbc.inc}
 uses
-  Types, TestFramework, ZDbcCachedResultSet, ZClasses, ZCollections, ZDbcIntfs,
+  Types, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcCachedResultSet, ZClasses, ZCollections, ZDbcIntfs,
   ZSysUtils, ZDbcResultSet, ZDbcCache, Classes, ZDbcResultSetMetadata,
   Contnrs, ZCompatibility, ZTestConsts, ZDbcMetadata, ZTestDefinitions;
 
@@ -1044,5 +1044,5 @@ end;
 
 
 initialization
-  TestFramework.RegisterTest(TZTestCachedResultSetCase.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestCachedResultSetCase.Suite);
 end.

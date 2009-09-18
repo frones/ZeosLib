@@ -61,22 +61,26 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  TestFramework, ZDataset, ZConnection, Classes, SysUtils;
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestCase,ZDataset, ZConnection, Classes, SysUtils;
 
 type
   {** Implements a abstract test case for TZDataset. }
-  TZAbstractQueryCase = class(TTestCase)
+  TZAbstractQueryCase = class(TZAbstractTestCase)
   private
     FQuery: TZQuery;
 
     {procedures for test modify data}
     procedure SetIntegerValues;
     procedure SetStringValues;
+    {$IFNDEF FPC}
     procedure SetBlobValues;
+    {$ENDIF}
 
     procedure CheckIntegerValuesEx;
     procedure CheckStringValuesEx;
+    {$IFNDEF FPC}
     procedure CheckBlobValuesEx;
+    {$ENDIF}
 
     function CompareStreams(Stream1, Stream2: TStream): boolean;
   protected
@@ -84,7 +88,9 @@ type
     procedure TestQuery; virtual;
     procedure CheckIntegerValues; virtual;
     procedure CheckStringValues; virtual;
+    {$IFNDEF FPC}
     procedure CheckBlobValues; virtual;
+    {$ENDIF}
 
     {procedures for test select data}
     procedure TestAddEditDeleteRecords; virtual;
@@ -109,7 +115,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  Db, DbTables, ZAbstractRODataset;
+  Db, {$IFNDEF FPC} DbTables, {$ENDIF} ZAbstractRODataset;
 
 
 { TZAbstractQueryCase }
@@ -157,10 +163,13 @@ begin
   begin
     CheckIntegerValues;
     CheckStringValues;
+    {$IFNDEF FPC}
     CheckBlobValues;
+    {$ENDIF}
   end;
 end;
 
+{$IFNDEF FPC}
 {**
    Test for select data from table with blob values and test what returned
    data correct
@@ -193,6 +202,7 @@ begin
   AsciiStream.Free;
   BinaryStream.Free;
 end;
+{$ENDIF}
 
 {**
    Test for select data from table with integer values and test what returned
@@ -377,6 +387,7 @@ end;
 // Methods for test add edit delete records
 //======================================================================
 
+{$IFNDEF FPC}
 {**
    Test added or updated blob values
 }
@@ -404,6 +415,7 @@ begin
   AsciiStream.Free;
   BinaryStream.Free;
 end;
+{$ENDIF}
 
 {**
    Test added or updated Integer values
@@ -446,6 +458,7 @@ begin
  end;
 end;
 
+{$IFNDEF FPC}
 procedure TZAbstractQueryCase.SetBlobValues;
 var
   Stream: TFileStream;
@@ -466,6 +479,7 @@ begin
     BlobStream.CopyFrom(Stream, Stream.Size);
  end;
 end;
+{$ENDIF}
 
 {**
    Set the integer values for added or edited record
@@ -537,7 +551,9 @@ begin
   FQuery.SQL.Text := 'SELECT * FROM string_values';
   FQuery.Open;
   FQuery.Append;
+  {$IFNDEF FPC}
   SetBlobValues;
+  {$ENDIF}
   CheckStringValuesEx;
   FQuery.Post;
   FQuery.Close;
@@ -545,8 +561,10 @@ begin
   FQuery.SQL.Text := 'SELECT * FROM blob_values';
   FQuery.Open;
   FQuery.Append;
+  {$IFNDEF FPC}
   SetBlobValues;
   CheckBlobValuesEx;
+  {$ENDIF}
   FQuery.Post;
   FQuery.Close;
 
@@ -560,10 +578,12 @@ begin
   CheckStringValuesEx;
   FQuery.Close;
 
+  {$IFNDEF FPC}
   FQuery.SQL.Text := 'SELECT * FROM blob_values WHERE b_id = 100';
   FQuery.Open;
   CheckBlobValuesEx;
   FQuery.Close;
+  {$ENDIF}
 end;
 
 {**
@@ -632,12 +652,14 @@ begin
     Post;
     Close;
 
+    {$IFNDEF FPC}
     SQL.Text := 'SELECT * FROM blob_values b_id = 50';
     Open;
     Edit;
     SetBlobValues;
     Post;
     Close;
+    {$ENDIF}
 
     SQL.Text := 'SELECT * FROM number_values n_id = 50';
     Open;
@@ -649,10 +671,12 @@ begin
     CheckStringValuesEx;
     Close;
 
+    {$IFNDEF FPC}
     SQL.Text := 'SELECT * FROM blob_values b_id = 50';
     Open;
     CheckBlobValuesEx;
     Close;
+    {$ENDIF}
   end;
 end;
 

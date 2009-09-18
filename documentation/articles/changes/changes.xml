@@ -173,6 +173,9 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=173">#0000173</ulink> [normal] unable to activate login dialog</simpara>
+        </listitem>
+        <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=184">#0000184</ulink> [Interbase 5] Can't get fields' list of dataset from Interbase 5.5 server</simpara>
         </listitem>
         <listitem>
@@ -184,7 +187,7 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
-          <simpara>[XXX] (<ulink url="http://zeos.firmos.at/viewtopic.php?t=xxxx">http://zeos.firmos.at/viewtopic.php?t=xxx</ulink>)</simpara>
+          <simpara>[Oracle] Memory leak when reading BLOB values(<ulink url="http://zeos.firmos.at/viewtopic.php?t=2504">http://zeos.firmos.at/viewtopic.php?t=2504</ulink>)</simpara>
         </listitem>
     </itemizedlist>
     </sect2>
@@ -203,7 +206,7 @@
       <title>Internal Changes</title>
       <itemizedlist spacing="compact">
         <listitem>
-          <simpara>NONE</simpara>
+          <simpara>[Lazarus/FPC] Test suite for Lazarus/FPC added.</simpara>
         </listitem>
      </itemizedlist>
     </sect2>	

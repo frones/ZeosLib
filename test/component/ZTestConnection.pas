@@ -52,22 +52,26 @@
 unit ZTestConnection;
 
 interface
+{$I ZComponent.inc}
 
 uses
-  TestFramework, Db, ZSqlStrings, SysUtils, ZConnection, ZTestDefinitions;
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, ZSqlStrings, SysUtils, ZConnection, ZTestDefinitions;
 
 type
 
   {** Implements a test case for class TZReadOnlyQuery. }
   TZTestConnectionCase = class(TZComponentPortableSQLTestCase)
   private
+    gloUserName,gloPassword : string;
     Connection: TZConnection;
   protected
     procedure SetUp; override;
     procedure TearDown; override;
+    procedure ConnLogin(Sender: TObject; var Username:string ; var Password: string);
   published
     procedure TestExecuteDirect;
     procedure TestExecuteDirect2;
+    procedure TestLoginPromptConnection;
   end;
 
 implementation
@@ -129,6 +133,36 @@ begin
   CheckEquals(0, l_int);
 end;
 
+procedure TZTestConnectionCase.TestLoginPromptConnection;
+var
+    locUserName,locPassword : string;
+begin
+   locUserName := Connection.User;
+   locPassword := Connection.Password;
+   Connection.Disconnect;
+   Connection.LoginPrompt := true;
+   Connection.User := '';
+   Connection.Password := '';
+   gloUserName := '';
+   gloPassword := '';
+   Connection.OnLogin := ConnLogin;
+   try
+      Connection.Connect;
+   except
+      CheckEquals(false,Connection.Connected);
+   end;
+   gloUserName := locUserName;
+   gloPassword := locPassword;
+   Connection.Connect;
+   CheckEquals(true,Connection.Connected);
+end;
+
+procedure TZTestConnectionCase.ConnLogin(Sender: TObject; var Username:string ; var Password: string);
+begin
+   UserName := gloUserName;
+   Password := gloPassword;
+end;
+
 initialization
-  TestFramework.RegisterTest(TZTestConnectionCase.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestConnectionCase.Suite);
 end.

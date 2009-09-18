@@ -52,14 +52,13 @@
 unit ZTestDataSetGeneric;
 
 interface
-
 {$I ZComponent.inc}
 
 uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  Classes, DB, TestFramework, ZDataset, ZConnection, SysUtils, ZDbcIntfs,
+  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, SysUtils, ZDbcIntfs,
   ZTestDefinitions, ZCompatibility;
 
 type
@@ -1376,6 +1375,6 @@ begin
 end; 
 
 initialization
-  TestFramework.RegisterTest(TZGenericTestDbcResultSet.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZGenericTestDbcResultSet.Suite);
 end.
 

@@ -57,7 +57,7 @@ interface
 
 {$I ZCore.inc}
 
-uses TestFramework, ZClasses, ZTokenizer, ZExprToken, ZTestTokenizer;
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZClasses, ZTokenizer, ZExprToken, ZTestTokenizer;
 
 type
 
@@ -177,6 +177,6 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestExpressionTokenizer.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestExpressionTokenizer.Suite);
 end.
 

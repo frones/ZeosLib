@@ -54,8 +54,8 @@
 unit ZTestMySqlToken;
 
 interface
-
-uses TestFramework, ZTestCase, ZClasses, ZTokenizer, ZMySqlToken,
+{$I ZParseSql.inc}
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestCase, ZClasses, ZTokenizer, ZMySqlToken,
   ZTestTokenizer;
 
 type
@@ -180,6 +180,6 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestMySQLTokenizer.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestMySQLTokenizer.Suite);
 end.
 

@@ -56,7 +56,7 @@ interface
 {$I ZBugReport.inc}
 
 uses
-  Classes, SysUtils, DB, TestFramework, ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
+  Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
   {$IFNDEF LINUX}
     DBCtrls,
   {$ENDIF}
@@ -220,14 +220,18 @@ begin
     CheckEquals(1, Query.FieldByName('p_dep_id').AsInteger);
     CheckEquals('Vasia Pupkin', Query.FieldByName('p_name').AsString);
     CheckEquals('Line agency', LookUp.Text);
+    {$IFNDEF FPC}
     CheckEquals(1, LookUp.KeyValue);
+    {$ENDIF}
 
     Query.Next;
     CheckEquals(2, Query.FieldByName('p_id').AsInteger);
     CheckEquals(2, Query.FieldByName('p_dep_id').AsInteger);
     CheckEquals('Andy Karto', Query.FieldByName('p_name').AsString);
     CheckEquals('Container agency', LookUp.Text);
+    {$IFNDEF FPC}
     CheckEquals(2, LookUp.KeyValue);
+    {$ENDIF}
   finally
     LookUp.Free;
     Query.Free;
@@ -553,5 +557,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(ZTestCompInterbaseBugReport.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(ZTestCompInterbaseBugReport.Suite);
 end.

@@ -102,6 +102,7 @@
   </target>
 
   <target name="delphi5_run" if="delphi5.run">
+    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="delphi5"/>
       <param name="compiler.dir" value="${delphi5.home}"/>
@@ -109,6 +110,7 @@
   </target>
 
   <target name="delphi6_run" if="delphi6.run">
+    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="delphi6"/>
       <param name="compiler.dir" value="${delphi6.home}"/>
@@ -116,6 +118,7 @@
   </target>
 
   <target name="delphi7_run" if="delphi7.run">
+    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="delphi7"/>
       <param name="compiler.dir" value="${delphi7.home}"/>
@@ -123,6 +126,7 @@
   </target>
 
   <target name="delphi9_run" if="delphi9.run">
+    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="delphi9"/>
       <param name="compiler.dir" value="${delphi9.home}"/>
@@ -130,6 +134,7 @@
   </target>
 
   <target name="delphi10_run" if="delphi10.run">
+    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="delphi10"/>
       <param name="compiler.dir" value="${delphi10.home}"/>
@@ -137,6 +142,7 @@
   </target>
 
   <target name="delphi11_run" if="delphi11.run">
+    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="delphi11"/>
       <param name="compiler.dir" value="${delphi11.home}"/>
@@ -144,6 +150,7 @@
   </target>
 
   <target name="delphi12_run" if="delphi12.run">
+    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="delphi12"/>
       <param name="compiler.dir" value="${delphi12.home}"/>
@@ -151,6 +158,7 @@
   </target>
 
   <target name="cbuilder5_run" if="cbuilder5.run">
+    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="cbuilder5"/>
       <param name="compiler.dir" value="${cbuilder5.home}"/>
@@ -158,6 +166,7 @@
   </target>
 
   <target name="cbuilder6_run" if="cbuilder6.run">
+    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="cbuilder6"/>
       <param name="compiler.dir" value="${cbuilder6.home}"/>
@@ -165,6 +174,7 @@
   </target>
 
   <target name="kylix2_run" if="kylix2.run">
+    <property name="runparams" value=""/>
     <antcall target="test_run_none">
       <param name="compiler" value="kylix2"/>
       <param name="compiler.dir" value="${kylix2.home}"/>
@@ -172,6 +182,7 @@
   </target>
 
   <target name="kylix3_run" if="kylix3.run">
+    <property name="runparams" value=""/>
     <antcall target="test_run_none">
       <param name="compiler" value="kylix3"/>
       <param name="compiler.dir" value="${kylix3.home}"/>
@@ -179,7 +190,8 @@
   </target>
 
   <target name="lazarus_run" if="lazarus.run">
-    <antcall target="test_run_none">
+    <property name="runparams" value="-a --format=plain"/>
+    <antcall target="test_run_all">
       <param name="compiler" value="lazarus"/>
       <param name="compiler.dir" value="${lazarus.home}"/>
     </antcall>
@@ -284,6 +296,7 @@
 	<env key="PATH" path="${compiler.dir}/bin;${package.dir};${root.dir}/lib/mysql;${root.dir}/lib/postgresql"/>
        -->
 	<env key="Path" path="${compiler.dir}/bin;${package.dir}"/>
+   <arg line="${runparams}"/>
     </exec>
   </target>
 

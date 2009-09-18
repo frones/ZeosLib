@@ -58,7 +58,7 @@ interface
 {$I ZCore.inc}
 
 uses
-  TestFramework, ZTestDefinitions,ZURL;
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestDefinitions,ZURL;
 
 type
   TZURLTest = class (TZCoreGenericTestCase)
@@ -257,6 +257,6 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZURLTest.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZURLTest.Suite);
 
 end.

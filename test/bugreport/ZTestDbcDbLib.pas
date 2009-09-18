@@ -56,7 +56,7 @@ interface
 {$I ZBugReport.inc}
 
 uses
-  Classes, TestFramework, ZDbcIntfs, ZBugReport, ZCompatibility, ZDbcDbLib;
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZBugReport, ZCompatibility, ZDbcDbLib;
 
 type
 
@@ -94,5 +94,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(ZTestDbcDbLibBugReport.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(ZTestDbcDbLibBugReport.Suite);
 end.

@@ -54,9 +54,9 @@
 unit ZTestScriptParser;
 
 interface
-
+{$I ZParseSql.inc}
 uses
-  TestFramework, SysUtils, ZTokenizer, ZScriptParser,
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZTokenizer, ZScriptParser,
   ZTestDefinitions;
 
 type
@@ -259,5 +259,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestSQLScriptParserCase.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestSQLScriptParserCase.Suite);
 end.

@@ -1,0 +1,334 @@
+<?xml version="1.0"?>
+<CONFIG>
+  <ProjectOptions>
+    <PathDelim Value="\"/>
+    <Version Value="7"/>
+    <General>
+      <MainUnit Value="0"/>
+      <TargetFileExt Value=".exe"/>
+      <UseXPManifest Value="True"/>
+      <ActiveEditorIndexAtStart Value="5"/>
+    </General>
+    <VersionInfo>
+      <ProjectVersion Value=""/>
+      <Language Value=""/>
+      <CharSet Value=""/>
+    </VersionInfo>
+    <PublishOptions>
+      <Version Value="2"/>
+      <IgnoreBinaries Value="False"/>
+      <IncludeFileFilter Value="*.(pas|pp|inc|lfm|lpr|lrs|lpi|lpk|sh|xml)"/>
+      <ExcludeFileFilter Value="*.(bak|ppu|ppw|o|so);*~;backup"/>
+    </PublishOptions>
+    <RunParams>
+      <local>
+        <FormatVersion Value="1"/>
+        <CommandLineParams Value="-p -a --format=plain"/>
+        <LaunchingApplication PathPlusParams="/usr/X11R6/bin/xterm -T 'Lazarus Run Output' -e $(LazarusDir)/tools/runwait.sh $(TargetCmdLine)"/>
+      </local>
+    </RunParams>
+    <RequiredPackages Count="2">
+      <Item1>
+        <PackageName Value="FPCUnitConsoleRunner"/>
+      </Item1>
+      <Item2>
+        <PackageName Value="FCL"/>
+      </Item2>
+    </RequiredPackages>
+    <Units Count="14">
+      <Unit0>
+        <Filename Value="ztestparsesqlall.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ztestparsesqlall"/>
+        <CursorPos X="26" Y="8"/>
+        <TopLine Value="1"/>
+        <EditorIndex Value="0"/>
+        <UsageCount Value="23"/>
+        <Loaded Value="True"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="consoletestrunner.pas"/>
+        <UnitName Value="consoletestrunner"/>
+        <CursorPos X="1" Y="268"/>
+        <TopLine Value="251"/>
+        <UsageCount Value="10"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="..\..\test\parsesql\ZTestMySqlToken.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestMySqlToken"/>
+        <CursorPos X="1" Y="1"/>
+        <TopLine Value="1"/>
+        <EditorIndex Value="2"/>
+        <UsageCount Value="21"/>
+        <Loaded Value="True"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="..\..\test\parsesql\ZTestOracleToken.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestOracleToken"/>
+        <CursorPos X="1" Y="1"/>
+        <TopLine Value="1"/>
+        <EditorIndex Value="3"/>
+        <UsageCount Value="21"/>
+        <Loaded Value="True"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="..\..\test\parsesql\ZTestPostgreSqlToken.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestPostgreSqlToken"/>
+        <CursorPos X="1" Y="1"/>
+        <TopLine Value="1"/>
+        <EditorIndex Value="4"/>
+        <UsageCount Value="21"/>
+        <Loaded Value="True"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="..\..\test\parsesql\ZTestScriptParser.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestScriptParser"/>
+        <CursorPos X="1" Y="58"/>
+        <TopLine Value="44"/>
+        <EditorIndex Value="5"/>
+        <UsageCount Value="21"/>
+        <Loaded Value="True"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="..\..\test\parsesql\ZTestSqlAnalyser.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestSqlAnalyser"/>
+        <CursorPos X="1" Y="1"/>
+        <TopLine Value="1"/>
+        <EditorIndex Value="6"/>
+        <UsageCount Value="21"/>
+        <Loaded Value="True"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="..\..\test\parsesql\ZTestSqLiteToken.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestSqLiteToken"/>
+        <CursorPos X="1" Y="1"/>
+        <TopLine Value="1"/>
+        <EditorIndex Value="7"/>
+        <UsageCount Value="21"/>
+        <Loaded Value="True"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="..\..\test\parsesql\ZTestSybaseToken.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestSybaseToken"/>
+        <CursorPos X="1" Y="1"/>
+        <TopLine Value="1"/>
+        <EditorIndex Value="9"/>
+        <UsageCount Value="21"/>
+        <Loaded Value="True"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="..\..\test\parsesql\ZTestInterbaseToken.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZTestInterbaseToken"/>
+        <CursorPos X="1" Y="1"/>
+        <TopLine Value="1"/>
+        <EditorIndex Value="1"/>
+        <UsageCount Value="21"/>
+        <Loaded Value="True"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="..\..\test\core\ZTestURL.pas"/>
+        <UnitName Value="ZTestURL"/>
+        <CursorPos X="38" Y="260"/>
+        <TopLine Value="229"/>
+        <EditorIndex Value="10"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="C:\lazarus\fpc\2.5.1\source\packages\fcl-fpcunit\src\DUnitCompatibleInterface.inc"/>
+        <CursorPos X="26" Y="18"/>
+        <TopLine Value="1"/>
+        <UsageCount Value="10"/>
+      </Unit11>
+      <Unit12>
+        <Filename Value="..\..\test\framework\ZTestDefinitions.pas"/>
+        <UnitName Value="ZTestDefinitions"/>
+        <CursorPos X="3" Y="74"/>
+        <TopLine Value="57"/>
+        <UsageCount Value="10"/>
+      </Unit12>
+      <Unit13>
+        <Filename Value="..\..\test\framework\ZTestCase.pas"/>
+        <UnitName Value="ZTestCase"/>
+        <CursorPos X="1" Y="213"/>
+        <TopLine Value="209"/>
+        <EditorIndex Value="8"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit13>
+    </Units>
+    <JumpHistory Count="30" HistoryIndex="29">
+      <Position1>
+        <Filename Value="..\..\test\parsesql\ZTestSybaseToken.pas"/>
+        <Caret Line="156" Column="36" TopLine="143"/>
+      </Position1>
+      <Position2>
+        <Filename Value="..\..\test\parsesql\ZTestSqLiteToken.pas"/>
+        <Caret Line="58" Column="58" TopLine="28"/>
+      </Position2>
+      <Position3>
+        <Filename Value="..\..\test\parsesql\ZTestSqLiteToken.pas"/>
+        <Caret Line="96" Column="36" TopLine="83"/>
+      </Position3>
+      <Position4>
+        <Filename Value="..\..\test\parsesql\ZTestSqLiteToken.pas"/>
+        <Caret Line="111" Column="36" TopLine="98"/>
+      </Position4>
+      <Position5>
+        <Filename Value="..\..\test\parsesql\ZTestSqLiteToken.pas"/>
+        <Caret Line="127" Column="36" TopLine="114"/>
+      </Position5>
+      <Position6>
+        <Filename Value="..\..\test\parsesql\ZTestSqLiteToken.pas"/>
+        <Caret Line="142" Column="36" TopLine="129"/>
+      </Position6>
+      <Position7>
+        <Filename Value="..\..\test\parsesql\ZTestSqLiteToken.pas"/>
+        <Caret Line="157" Column="36" TopLine="144"/>
+      </Position7>
+      <Position8>
+        <Filename Value="..\..\test\parsesql\ZTestSqlAnalyser.pas"/>
+        <Caret Line="58" Column="77" TopLine="48"/>
+      </Position8>
+      <Position9>
+        <Filename Value="..\..\test\parsesql\ZTestPostgreSqlToken.pas"/>
+        <Caret Line="58" Column="58" TopLine="33"/>
+      </Position9>
+      <Position10>
+        <Filename Value="..\..\test\parsesql\ZTestPostgreSqlToken.pas"/>
+        <Caret Line="96" Column="36" TopLine="83"/>
+      </Position10>
+      <Position11>
+        <Filename Value="..\..\test\parsesql\ZTestPostgreSqlToken.pas"/>
+        <Caret Line="111" Column="36" TopLine="98"/>
+      </Position11>
+      <Position12>
+        <Filename Value="..\..\test\parsesql\ZTestPostgreSqlToken.pas"/>
+        <Caret Line="126" Column="36" TopLine="113"/>
+      </Position12>
+      <Position13>
+        <Filename Value="..\..\test\parsesql\ZTestPostgreSqlToken.pas"/>
+        <Caret Line="141" Column="36" TopLine="128"/>
+      </Position13>
+      <Position14>
+        <Filename Value="..\..\test\parsesql\ZTestPostgreSqlToken.pas"/>
+        <Caret Line="156" Column="36" TopLine="143"/>
+      </Position14>
+      <Position15>
+        <Filename Value="..\..\test\parsesql\ZTestOracleToken.pas"/>
+        <Caret Line="58" Column="58" TopLine="40"/>
+      </Position15>
+      <Position16>
+        <Filename Value="..\..\test\parsesql\ZTestOracleToken.pas"/>
+        <Caret Line="96" Column="36" TopLine="83"/>
+      </Position16>
+      <Position17>
+        <Filename Value="..\..\test\parsesql\ZTestOracleToken.pas"/>
+        <Caret Line="111" Column="36" TopLine="98"/>
+      </Position17>
+      <Position18>
+        <Filename Value="..\..\test\parsesql\ZTestOracleToken.pas"/>
+        <Caret Line="126" Column="36" TopLine="113"/>
+      </Position18>
+      <Position19>
+        <Filename Value="..\..\test\parsesql\ZTestOracleToken.pas"/>
+        <Caret Line="141" Column="36" TopLine="128"/>
+      </Position19>
+      <Position20>
+        <Filename Value="..\..\test\parsesql\ZTestMySqlToken.pas"/>
+        <Caret Line="58" Column="58" TopLine="35"/>
+      </Position20>
+      <Position21>
+        <Filename Value="..\..\test\parsesql\ZTestMySqlToken.pas"/>
+        <Caret Line="185" Column="37" TopLine="152"/>
+      </Position21>
+      <Position22>
+        <Filename Value="..\..\test\parsesql\ZTestInterbaseToken.pas"/>
+        <Caret Line="58" Column="58" TopLine="40"/>
+      </Position22>
+      <Position23>
+        <Filename Value="..\..\test\parsesql\ZTestInterbaseToken.pas"/>
+        <Caret Line="181" Column="36" TopLine="148"/>
+      </Position23>
+      <Position24>
+        <Filename Value="..\..\test\parsesql\ZTestSqlAnalyser.pas"/>
+        <Caret Line="281" Column="6" TopLine="264"/>
+      </Position24>
+      <Position25>
+        <Filename Value="..\..\test\parsesql\ZTestSqlAnalyser.pas"/>
+        <Caret Line="261" Column="26" TopLine="261"/>
+      </Position25>
+      <Position26>
+        <Filename Value="..\..\test\parsesql\ZTestSqlAnalyser.pas"/>
+        <Caret Line="64" Column="47" TopLine="47"/>
+      </Position26>
+      <Position27>
+        <Filename Value="..\..\test\framework\ZTestCase.pas"/>
+        <Caret Line="211" Column="5" TopLine="178"/>
+      </Position27>
+      <Position28>
+        <Filename Value="..\..\test\framework\ZTestCase.pas"/>
+        <Caret Line="212" Column="1" TopLine="208"/>
+      </Position28>
+      <Position29>
+        <Filename Value="..\..\test\parsesql\ZTestSqlAnalyser.pas"/>
+        <Caret Line="64" Column="47" TopLine="47"/>
+      </Position29>
+      <Position30>
+        <Filename Value="..\..\test\framework\ZTestCase.pas"/>
+        <Caret Line="212" Column="5" TopLine="179"/>
+      </Position30>
+    </JumpHistory>
+  </ProjectOptions>
+  <CompilerOptions>
+    <Version Value="8"/>
+    <PathDelim Value="\"/>
+    <SearchPaths>
+      <IncludeFiles Value="$(ProjOutDir)\"/>
+      <OtherUnitFiles Value="..\..\test\core\;..\..\test\parsesql\;..\..\test\framework\;..\..\src\core\;..\..\src\parsesql\;..\..\src\plain\;..\..\src\dbc\;..\..\src\component\"/>
+      <UnitOutputDirectory Value="build"/>
+    </SearchPaths>
+    <Other>
+      <CompilerPath Value="$(CompPath)"/>
+    </Other>
+  </CompilerOptions>
+  <Debugging>
+    <BreakPoints Count="1">
+      <Item1>
+        <Source Value="ztestparsesqlall.lpr"/>
+        <Line Value="29"/>
+      </Item1>
+    </BreakPoints>
+    <Exceptions Count="7">
+      <Item1>
+        <Name Value="EAbort"/>
+      </Item1>
+      <Item2>
+        <Name Value="ECodetoolError"/>
+      </Item2>
+      <Item3>
+        <Name Value="EFOpenError"/>
+      </Item3>
+      <Item4>
+        <Name Value="Unknown"/>
+      </Item4>
+      <Item5>
+        <Name Value="TZExpressionError"/>
+      </Item5>
+      <Item6>
+        <Name Value="EAssertionFailedError"/>
+      </Item6>
+      <Item7>
+        <Name Value="EZVariantException"/>
+      </Item7>
+    </Exceptions>
+  </Debugging>
+</CONFIG>

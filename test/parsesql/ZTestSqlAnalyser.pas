@@ -54,8 +54,8 @@
 unit ZTestSqlAnalyser;
 
 interface
-
-uses Contnrs, ZClasses, TestFramework, ZTokenizer, ZGenericSqlAnalyser,
+{$I ZParseSql.inc}
+uses Contnrs, ZClasses, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTokenizer, ZGenericSqlAnalyser,
   ZSelectSchema, ZTestDefinitions;
 
 type
@@ -547,12 +547,12 @@ end;
 {$ENDIF}
 
 initialization
-  TestFramework.RegisterTest(TZTestGenericStatementAnalyser.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestGenericStatementAnalyser.Suite);
 {$IFDEF ENABLE_DBLIB}
-  TestFramework.RegisterTest(TZTestSybaseStatementAnalyser.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestSybaseStatementAnalyser.Suite);
 {$ENDIF}
 {$IFDEF ENABLE_INTERBASE}
-  TestFramework.RegisterTest(TZTestInterbaseStatementAnalyser.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestInterbaseStatementAnalyser.Suite);
 {$ENDIF}
 end.
 

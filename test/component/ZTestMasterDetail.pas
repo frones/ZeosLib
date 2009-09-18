@@ -54,9 +54,10 @@
 unit ZTestMasterDetail;
 
 interface
+{$I ZComponent.inc}
 
 uses
-  TestFramework, Db, ZSqlStrings, SysUtils, ZTokenizer, ZGenericSqlToken,
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, ZSqlStrings, SysUtils, ZTokenizer, ZGenericSqlToken,
   ZConnection, ZDataset, ZTestDefinitions, ZDbcMySql, ZDbcPostgreSql, ZDbcDbLib;
 
 type
@@ -165,5 +166,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestMasterDetailCase.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestMasterDetailCase.Suite);
 end.
