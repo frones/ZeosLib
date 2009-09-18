@@ -59,7 +59,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  Classes, DB, TestFramework, ZDataset, ZConnection,
+  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection,
   ZDbcIntfs, ZBugReport,ZCompatibility;
 
 type
@@ -219,5 +219,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestCompMSSqlBugReport.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestCompMSSqlBugReport.Suite);
 end.

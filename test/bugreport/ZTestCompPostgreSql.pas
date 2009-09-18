@@ -59,7 +59,7 @@ uses
 {$IFNDEF LINUX}
   DBCtrls,
 {$ENDIF}
-  Classes, DB, TestFramework, ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
+  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
   ZCompatibility, SysUtils, ZTestConsts, ZSqlProcessor, ZSqlMetadata;
 
 type
@@ -691,5 +691,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestCompPostgreSQLBugReport.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestCompPostgreSQLBugReport.Suite);
 end.
