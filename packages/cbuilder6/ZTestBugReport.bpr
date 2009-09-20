@@ -5,11 +5,11 @@
     <VERSION value="BCB.06.00"/>
     <PROJECT value="build\ZTestBugReport.exe"/>
     <OBJFILES value="build\ZTestBugReport.obj build\TestFrameWork.obj build\TextTestRunner.obj 
-      build\ZTestDbcPostgreSql.obj build\ZTestCompDbLib.obj 
-      build\ZTestCompInterbase.obj build\ZTestCompMSSql.obj 
-      build\ZTestCompMySql.obj build\ZTestCompPostgreSql.obj 
-      build\ZTestDbcCore.obj build\ZTestDbcDbLib.obj build\ZTestDbcInterbase.obj 
-      build\ZTestDbcMySql.obj build\ZTestCompCore.obj"/>
+      build\ZTestBugDbcBugPostgreSql.obj build\ZTestBugCompDbLib.obj 
+      build\ZTestBugCompBugInterbase.obj build\ZTestBugCompMSSql.obj 
+      build\ZTestBugCompMySql.obj build\ZTestBugCompBugPostgreSql.obj 
+      build\ZTestBugDbcCore.obj build\ZTestBugDbcDbLib.obj build\ZTestBugDbcInterbase.obj 
+      build\ZTestBugDbcMySql.obj build\ZTestBugCompCore.obj"/>
     <RESFILES value=""/>
     <IDLFILES value=""/>
     <IDLGENFILES value=""/>
@@ -56,17 +56,17 @@
       <FILE FILENAME="ZTestBugReport.cpp" FORMNAME="" UNITNAME="ZTestBugReport" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\test\external\TestFrameWork.pas" FORMNAME="" UNITNAME="TestFrameWork" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\test\external\TextTestRunner.pas" FORMNAME="" UNITNAME="TextTestRunner" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="..\..\test\bugreport\ZTestDbcPostgreSql.pas" FORMNAME="" UNITNAME="ZTestDbcPostgreSql" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="..\..\test\bugreport\ZTestCompDbLib.pas" FORMNAME="" UNITNAME="ZTestCompDbLib" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="..\..\test\bugreport\ZTestCompInterbase.pas" FORMNAME="" UNITNAME="ZTestCompInterbase" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="..\..\test\bugreport\ZTestCompMSSql.pas" FORMNAME="" UNITNAME="ZTestCompMSSql" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="..\..\test\bugreport\ZTestCompMySql.pas" FORMNAME="" UNITNAME="ZTestCompMySql" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="..\..\test\bugreport\ZTestCompPostgreSql.pas" FORMNAME="" UNITNAME="ZTestCompPostgreSql" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="..\..\test\bugreport\ZTestDbcCore.pas" FORMNAME="" UNITNAME="ZTestDbcCore" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="..\..\test\bugreport\ZTestDbcDbLib.pas" FORMNAME="" UNITNAME="ZTestDbcDbLib" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="..\..\test\bugreport\ZTestDbcInterbase.pas" FORMNAME="" UNITNAME="ZTestDbcInterbase" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="..\..\test\bugreport\ZTestDbcMySql.pas" FORMNAME="" UNITNAME="ZTestDbcMySql" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="..\..\test\bugreport\ZTestCompCore.pas" FORMNAME="" UNITNAME="ZTestCompCore" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\test\bugreport\ZTestBugDbcPostgreSql.pas" FORMNAME="" UNITNAME="ZTestBugDbcPostgreSql" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\test\bugreport\ZTestBugCompDbLib.pas" FORMNAME="" UNITNAME="ZTestBugCompDbLib" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\test\bugreport\ZTestBugCompInterbase.pas" FORMNAME="" UNITNAME="ZTestBugCompInterbase" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\test\bugreport\ZTestBugCompMSSql.pas" FORMNAME="" UNITNAME="ZTestBugCompMSSql" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\test\bugreport\ZTestBugCompMySql.pas" FORMNAME="" UNITNAME="ZTestBugCompMySql" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\test\bugreport\ZTestBugCompPostgreSql.pas" FORMNAME="" UNITNAME="ZTestBugCompPostgreSql" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\test\bugreport\ZTestBugDbcCore.pas" FORMNAME="" UNITNAME="ZTestBugDbcCore" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\test\bugreport\ZTestBugDbcDbLib.pas" FORMNAME="" UNITNAME="ZTestBugDbcDbLib" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\test\bugreport\ZTestBugDbcInterbase.pas" FORMNAME="" UNITNAME="ZTestBugDbcInterbase" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\test\bugreport\ZTestBugDbcMySql.pas" FORMNAME="" UNITNAME="ZTestBugDbcMySql" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\test\bugreport\ZTestBugCompCore.pas" FORMNAME="" UNITNAME="ZTestBugCompCore" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
   </FILELIST>
   <BUILDTOOLS>
   </BUILDTOOLS>

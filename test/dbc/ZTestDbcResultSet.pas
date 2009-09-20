@@ -360,6 +360,6 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestAbstractBlobCase.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('dbc',TZTestAbstractBlobCase.Suite);
 
 end.

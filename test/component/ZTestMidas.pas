@@ -708,5 +708,5 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZMidasTestCase.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('component',TZMidasTestCase.Suite);
 end.

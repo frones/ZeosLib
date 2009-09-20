@@ -180,6 +180,6 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestMySQLTokenizer.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('parsesql',TZTestMySQLTokenizer.Suite);
 end.
 

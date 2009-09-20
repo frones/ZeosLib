@@ -1062,5 +1062,5 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestRowAccessorCase.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('dbc',TZTestRowAccessorCase.Suite);
 end.

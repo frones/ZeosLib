@@ -1,7 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{         Test Cases for Generic DBC Bug Reports          }
+{         Test Cases for DBC DbLib Bug Reports            }
 {                                                         }
 {*********************************************************}
 
@@ -49,24 +49,25 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit ZTestDbcCore;
+unit ZTestBugDbcDbLib;
 
 interface
 
 {$I ZBugReport.inc}
 
 uses
-  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZDbcIntfs, ZCompatibility, ZBugReport;
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZBugReport, ZCompatibility, ZDbcDbLib;
 
 type
 
-  {** Implements a DBC bug report test case for core functionality. }
-  TZTestDbcCoreBugReport = class(TZPortableSQLBugReportTestCase)
+  {** Implements a DBC bug report test case for DB Lib. }
+  ZTestDbcDbLibBugReport = class(TZSpecificSQLBugReportTestCase)
   private
     FConnection: IZConnection;
   protected
     procedure SetUp; override;
     procedure TearDown; override;
+    function GetSupportedProtocols: string; override;
 
     property Connection: IZConnection read FConnection write FConnection;
   published
@@ -74,19 +75,24 @@ type
 
 implementation
 
-{ TZTestDbcCoreBugReport }
+{ ZTestDbcDbLibBugReport }
 
-procedure TZTestDbcCoreBugReport.SetUp;
+function ZTestDbcDbLibBugReport.GetSupportedProtocols: string;
+begin
+  Result := 'mssql,sybase';
+end;
+
+procedure ZTestDbcDbLibBugReport.SetUp;
 begin
   Connection := CreateDbcConnection;
 end;
 
-procedure TZTestDbcCoreBugReport.TearDown;
+procedure ZTestDbcDbLibBugReport.TearDown;
 begin
   Connection.Close;
   Connection := nil;
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestDbcCoreBugReport.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('bugreport',ZTestDbcDbLibBugReport.Suite);
 end.

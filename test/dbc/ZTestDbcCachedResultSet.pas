@@ -1044,5 +1044,5 @@ end;
 
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestCachedResultSetCase.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('dbc',TZTestCachedResultSetCase.Suite);
 end.

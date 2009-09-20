@@ -49,7 +49,7 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit ZTestCompMSSql;
+unit ZTestBugCompMSSql;
 
 interface
 
@@ -219,5 +219,5 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestCompMSSqlBugReport.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('bugreport',TZTestCompMSSqlBugReport.Suite);
 end.

@@ -257,6 +257,6 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZURLTest.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('core',TZURLTest.Suite);
 
 end.

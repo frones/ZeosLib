@@ -1375,6 +1375,6 @@ begin
 end; 
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZGenericTestDbcResultSet.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('component',TZGenericTestDbcResultSet.Suite);
 end.
 

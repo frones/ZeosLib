@@ -49,7 +49,7 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit ZTestCompMySql;
+unit ZTestBugCompMySql;
 
 interface
 
@@ -1612,5 +1612,5 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestCompMySQLBugReport.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('bugreport',TZTestCompMySQLBugReport.Suite);
 end.

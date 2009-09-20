@@ -1,7 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{       Test Cases for DbLib Component Bug Reports        }
+{       Test Cases for ASA Component Bug Reports          }
 {                                                         }
 {*********************************************************}
 
@@ -49,20 +49,22 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit ZTestCompDbLib;
+unit ZTestBugCompASA;
 
 interface
 
 {$I ZBugReport.inc}
 
 uses
-  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
+  Classes, SysUtils, DB, TestFramework, ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
+  {$IFNDEF LINUX}
+    DBCtrls,
+  {$ENDIF}
   ZCompatibility;
-
 type
 
-  {** Implements a bug report test case for DbLib components. }
-  ZTestCompDbLibBugReport = class(TZSpecificSQLBugReportTestCase)
+  {** Implements a bug report test case for ASA components. }
+  ZTestCompASABugReport = class(TZSpecificSQLBugReportTestCase)
   private
     FConnection: TZConnection;
   protected
@@ -71,29 +73,37 @@ type
     function GetSupportedProtocols: string; override;
 
     property Connection: TZConnection read FConnection write FConnection;
+
   published
   end;
 
 implementation
 
-{ ZTestCompDbLibBugReport }
+uses
+{$IFNDEF VER130BELOW}
+  Variants,
+{$ENDIF}
+  ZTestCase, ZTestConsts, ZSqlUpdate, ZSqlTestCase;
 
-function ZTestCompDbLibBugReport.GetSupportedProtocols: string;
+{ ZTestCompASABugReport }
+
+function ZTestCompASABugReport.GetSupportedProtocols: string;
 begin
-  Result := 'mssql,sybase';
+  Result := 'ASA7,ASA8,ASA9';
 end;
 
-procedure ZTestCompDbLibBugReport.SetUp;
+procedure ZTestCompASABugReport.SetUp;
 begin
   Connection := CreateDatasetConnection;
 end;
 
-procedure ZTestCompDbLibBugReport.TearDown;
+procedure ZTestCompASABugReport.TearDown;
 begin
   Connection.Disconnect;
   Connection.Free;
 end;
 
+
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(ZTestCompDbLibBugReport.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('bugreport',ZTestCompASABugReport.Suite);
 end.

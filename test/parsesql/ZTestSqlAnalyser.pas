@@ -547,12 +547,12 @@ end;
 {$ENDIF}
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestGenericStatementAnalyser.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('parsesql',TZTestGenericStatementAnalyser.Suite);
 {$IFDEF ENABLE_DBLIB}
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestSybaseStatementAnalyser.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('parsesql',TZTestSybaseStatementAnalyser.Suite);
 {$ENDIF}
 {$IFDEF ENABLE_INTERBASE}
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestInterbaseStatementAnalyser.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('parsesql',TZTestInterbaseStatementAnalyser.Suite);
 {$ENDIF}
 end.
 

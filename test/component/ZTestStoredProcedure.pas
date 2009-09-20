@@ -226,6 +226,6 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestInterbaseStoredProcedure.Suite);
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestDbLibStoredProcedure.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('component',TZTestInterbaseStoredProcedure.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('component',TZTestDbLibStoredProcedure.Suite);
 end.

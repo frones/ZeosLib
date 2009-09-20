@@ -1,7 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{        Test Cases for ASA DBC Bug Reports         }
+{         Test Cases for Generic DBC Bug Reports          }
 {                                                         }
 {*********************************************************}
 
@@ -49,26 +49,24 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit ZTestDbcASA;
+unit ZTestBugDbcCore;
 
 interface
 
 {$I ZBugReport.inc}
 
 uses
-  Classes, SysUtils, TestFramework, ZDbcIntfs, ZBugReport, ZCompatibility,
-  ZDbcASA;
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZDbcIntfs, ZCompatibility, ZBugReport;
 
 type
 
-  {** Implements a DBC bug report test case for ASA. }
-  TZTestDbcASABugReport = class(TZSpecificSQLBugReportTestCase)
+  {** Implements a DBC bug report test case for core functionality. }
+  TZTestDbcCoreBugReport = class(TZPortableSQLBugReportTestCase)
   private
     FConnection: IZConnection;
   protected
     procedure SetUp; override;
     procedure TearDown; override;
-    function GetSupportedProtocols: string; override;
 
     property Connection: IZConnection read FConnection write FConnection;
   published
@@ -76,27 +74,19 @@ type
 
 implementation
 
-uses ZTestCase, ZTestConsts;
+{ TZTestDbcCoreBugReport }
 
-{ TZTestDbcASABugReport }
-
-function TZTestDbcASABugReport.GetSupportedProtocols: string;
-begin
-  Result := 'ASA7,ASA8,ASA9';
-end;
-
-procedure TZTestDbcASABugReport.SetUp;
+procedure TZTestDbcCoreBugReport.SetUp;
 begin
   Connection := CreateDbcConnection;
 end;
 
-procedure TZTestDbcASABugReport.TearDown;
+procedure TZTestDbcCoreBugReport.TearDown;
 begin
   Connection.Close;
   Connection := nil;
 end;
 
-
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestDbcASABugReport.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('bugreport',TZTestDbcCoreBugReport.Suite);
 end.

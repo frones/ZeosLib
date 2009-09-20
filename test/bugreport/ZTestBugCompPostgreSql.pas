@@ -49,7 +49,7 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit ZTestCompPostgreSql;
+unit ZTestBugCompPostgreSql;
 
 interface
 
@@ -691,5 +691,5 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestCompPostgreSQLBugReport.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('bugreport',TZTestCompPostgreSQLBugReport.Suite);
 end.

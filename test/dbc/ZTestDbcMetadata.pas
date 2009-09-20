@@ -485,5 +485,5 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZGenericTestDbcMetadata.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('dbc',TZGenericTestDbcMetadata.Suite);
 end.

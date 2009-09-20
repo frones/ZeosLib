@@ -192,6 +192,6 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestPortableSQLTestCase.Suite);
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestSpecificSQLTestCase.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('core',TZTestPortableSQLTestCase.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('core',TZTestSpecificSQLTestCase.Suite);
 end.

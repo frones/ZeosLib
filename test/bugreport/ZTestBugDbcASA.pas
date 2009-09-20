@@ -1,7 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{         Test Cases for DBC DbLib Bug Reports            }
+{        Test Cases for ASA DBC Bug Reports         }
 {                                                         }
 {*********************************************************}
 
@@ -49,19 +49,20 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit ZTestDbcDbLib;
+unit ZTestBugDbcASA;
 
 interface
 
 {$I ZBugReport.inc}
 
 uses
-  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZBugReport, ZCompatibility, ZDbcDbLib;
+  Classes, SysUtils, TestFramework, ZDbcIntfs, ZBugReport, ZCompatibility,
+  ZDbcASA;
 
 type
 
-  {** Implements a DBC bug report test case for DB Lib. }
-  ZTestDbcDbLibBugReport = class(TZSpecificSQLBugReportTestCase)
+  {** Implements a DBC bug report test case for ASA. }
+  TZTestDbcASABugReport = class(TZSpecificSQLBugReportTestCase)
   private
     FConnection: IZConnection;
   protected
@@ -75,24 +76,27 @@ type
 
 implementation
 
-{ ZTestDbcDbLibBugReport }
+uses ZTestCase, ZTestConsts;
 
-function ZTestDbcDbLibBugReport.GetSupportedProtocols: string;
+{ TZTestDbcASABugReport }
+
+function TZTestDbcASABugReport.GetSupportedProtocols: string;
 begin
-  Result := 'mssql,sybase';
+  Result := 'ASA7,ASA8,ASA9';
 end;
 
-procedure ZTestDbcDbLibBugReport.SetUp;
+procedure TZTestDbcASABugReport.SetUp;
 begin
   Connection := CreateDbcConnection;
 end;
 
-procedure ZTestDbcDbLibBugReport.TearDown;
+procedure TZTestDbcASABugReport.TearDown;
 begin
   Connection.Close;
   Connection := nil;
 end;
 
+
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(ZTestDbcDbLibBugReport.Suite);
+  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('bugreport',TZTestDbcASABugReport.Suite);
 end.
