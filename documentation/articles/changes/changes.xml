@@ -64,6 +64,9 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[POSTGRES] Added new Postgres 8.4 SQL keywords (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2523">http://zeos.firmos.at/viewtopic.php?t=2523</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[Common] Added ZURL unit to the core package. This unit provides splitting and composing routines for connect strings.</simpara>
         </listitem>
         <listitem>
