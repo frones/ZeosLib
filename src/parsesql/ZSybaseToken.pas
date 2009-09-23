@@ -218,7 +218,7 @@ begin
     else
     begin
       Result.Value := Copy(Result.Value, 1, Length(Result.Value) - 1);
-      Stream.Seek(-SizeOf(Char), soFromCurrent);
+      Stream.Seek(-2*SizeOf(Char), soFromCurrent);
     end;
   end;
 
