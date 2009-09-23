@@ -509,19 +509,7 @@ begin
   If Str = '' then
     Result := Def
   else
-  begin
-    {$IFDEF FPC}
-    if OldDecimalSeparator = ',' then
-      begin
-        DecimalSeparator := OldDecimalSeparator;
-        Result := StrToFloatDef(Str, Def);
-      end
-    else
-        Result := StrToFloatDef(Str, Def);
-    {$ELSE}
     Result := StrToFloatDef(Str, Def);
-    {$ENDIF}
-  end;
   DecimalSeparator := OldDecimalSeparator;
 end;
 
