@@ -137,47 +137,10 @@ uses
   SysUtils, ZSysUtils, ZTestConfig;
 
 {$IFDEF FPC}
-{$asmmode intel}
-{$inline on}
-function CallerAddr: Pointer; {$IFNDEF CLR} assembler; {$ENDIF}
-{$IFDEF CLR}
+function CallerAddr: Pointer;
 begin
   Result := nil;
 end;
-{$ELSE}
-function IsBadPointer(P: Pointer):boolean; {$IFNDEF CLR} register; {$ENDIF}
-begin
-  try
-    Result  := (p = nil)
-{$IFNDEF CLR}
-              or ((Pointer(P^) <> P) and (Pointer(P^) = P));
-{$ENDIF}
-  except
-    Result := true;
-  end
-end;
-const
-  CallerIP = $4;
-asm
-   mov   eax, ebp
-   call  IsBadPointer
-   test  eax,eax
-   jne   @@Error
-
-   mov   eax, [ebp].CallerIP
-   sub   eax, 5   // 5 bytes for call
-
-   push  eax
-   call  IsBadPointer
-   test  eax,eax
-   pop   eax
-   je    @@Finish
-
-@@Error:
-   xor eax, eax
-@@Finish:
-end;
-{$ENDIF}
 {$ENDIF}
 
 { TZAbstractTestCase }
@@ -210,14 +173,10 @@ end;
 
 procedure TZAbstractTestCase.Fail(msg: string; errorAddr: Pointer = nil);
 begin
-{$IFDEF CLR}
-  raise ETestFailure.Create(msg);
-{$ELSE}
   if errorAddr = nil then
     raise EAssertionFailedError.Create(msg) at CallerAddr
   else
     raise EAssertionFailedError.Create(msg) at errorAddr;
-{$ENDIF}
 end;
 
 class function TZAbstractTestCase.Suite: CTZAbstractTestCase;
