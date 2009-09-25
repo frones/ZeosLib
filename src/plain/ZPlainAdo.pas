@@ -1144,11 +1144,11 @@ type
     procedure Find(const Criteria: WideString; SkipRecords: ADO_LONGPTR; 
                    SearchDirection: SearchDirectionEnum; Start: OleVariant); safecall;
     property AbsolutePosition: PositionEnum_Param read Get_AbsolutePosition write Set_AbsolutePosition;
-    property BOF: WordBool read Get_BOF;
+    property Bof: WordBool read Get_BOF;
     property Bookmark: OleVariant read Get_Bookmark write Set_Bookmark;
     property CacheSize: Integer read Get_CacheSize write Set_CacheSize;
     property CursorType: CursorTypeEnum read Get_CursorType write Set_CursorType;
-    property EOF: WordBool read Get_EOF;
+    property Eof: WordBool read Get_EOF;
     property Fields: Fields15 read Get_Fields;
     property LockType: LockTypeEnum read Get_LockType write Set_LockType;
     property MaxRecords: ADO_LONGPTR read Get_MaxRecords write Set_MaxRecords;

@@ -1715,8 +1715,16 @@ begin
 
     if HaveMinimumServerVersion(7, 3) then
     begin
-      SQL := 'SELECT n.nspname,c.relname,a.attname,a.atttypid,a.attnotnull,'
-        + 'a.atttypmod,a.attlen,a.attnum,pg_get_expr(def.adbin, def.adrelid) as adsrc,dsc.description '
+      SQL := 'SELECT n.nspname,' {1}
+        + 'c.relname,' {2}
+        + 'a.attname,' {3}
+        + 'a.atttypid,' {4}
+        + 'a.attnotnull,' {5}
+        + 'a.atttypmod,' {6}
+        + 'a.attlen,' {7}
+        + 'a.attnum,' {8}
+        + 'pg_get_expr(def.adbin, def.adrelid) as adsrc,' {9}
+        + 'dsc.description ' {10}
         + ' FROM pg_catalog.pg_namespace n '
         + ' JOIN pg_catalog.pg_class c ON (c.relnamespace = n.oid) '
         + ' JOIN pg_catalog.pg_attribute a ON (a.attrelid=c.oid) '
@@ -1735,9 +1743,17 @@ begin
     end
     else
     begin
-      SQL := 'SELECT NULL::text AS nspname,c.relname,a.attname,a.atttypid,'
-        + 'a.attnotnull,a.atttypmod,a.attlen,a.attnum,NULL AS adsrc,'
-        + 'NULL AS description FROM pg_class c, pg_attribute a '
+      SQL := 'SELECT NULL::text AS nspname,' {1}
+        + 'c.relname,' {2}
+        + 'a.attname,' {3}
+        + 'a.atttypid,' {4}
+        + 'a.attnotnull,' {5}
+        + 'a.atttypmod,' {6}
+        + 'a.attlen,' {7}
+        + 'a.attnum,' {8}
+        + 'NULL AS adsrc,' {9}
+        + 'NULL AS description' {10}
+        + 'FROM pg_class c, pg_attribute a '
         + ' WHERE a.attrelid=c.oid AND a.attnum > 0 ';
     end;
 
@@ -1749,15 +1765,16 @@ begin
     begin
       while Next do
       begin
-        AttTypMod := GetIntByName('atttypmod');
-        TypeOid := StrToInt(GetStringByName('atttypid'));
+        AttTypMod := GetInt(6 {atttypmod});
+
+        TypeOid := GetInt(4 {atttypid});
         PgType := GetPostgreSQLType(TypeOid);
 
         Result.MoveToInsertRow;
         Result.UpdateNull(1);
-        Result.UpdateString(2, GetStringByName('nspname'));
-        Result.UpdateString(3, GetStringByName('relname'));
-        Result.UpdateString(4, GetStringByName('attname'));
+        Result.UpdateString(2, GetString(1 {nspname}));
+        Result.UpdateString(3, GetString(2 {relname}));
+        Result.UpdateString(4, GetString(3 {attname})); 
         Result.UpdateInt(5, Ord(GetSQLTypeByOid(TypeOid)));
         Result.UpdateString(6, PgType);
         Result.UpdateInt(8, 0);
@@ -1770,10 +1787,9 @@ begin
         end
         else if (PgType = 'numeric') or (PgType = 'decimal') then
         begin
-          AttTypMod := GetInt(8) - 4;
-          Result.UpdateInt(7, (AttTypMod shr 16) and $FFFF);
-          Result.UpdateInt(9, AttTypMod and $FFFF);
-          Result.UpdateInt(10, 10);
+          Result.UpdateInt(7, ((AttTypMod - 4) div 65536)); //precision
+          Result.UpdateInt(9, ((AttTypMod -4) mod 65536)); //scale
+          Result.UpdateInt(10, 10); //base? ten as default
         end
         else if (PgType = 'bit') or (PgType = 'varbit') then
         begin
@@ -1782,12 +1798,12 @@ begin
         end
         else
         begin
-          Result.UpdateInt(7, GetIntByName('attlen'));
+          Result.UpdateInt(7, GetInt(7 {attlen}));
           Result.UpdateInt(10, 2);
         end;
 
         Result.UpdateNull(8);
-        if GetBooleanByName('attnotnull') then
+        if GetBoolean(5 {attnotnull}) then
         begin
           Result.UpdateString(18, 'NO');
           Result.UpdateInt(11, Ord(ntNoNulls));
@@ -1797,17 +1813,17 @@ begin
           Result.UpdateString(18, 'YES');
           Result.UpdateInt(11, Ord(ntNullable));
         end;
-        Result.UpdateString(12, GetStringByName('description'));
-        Result.UpdateString(13, GetStringByName('adsrc'));
+
+        Result.UpdateString(12, GetString(10 {description}));
+        Result.UpdateString(13, GetString(9 {adsrc}));
         Result.UpdateNull(14);
         Result.UpdateNull(15);
         Result.UpdateInt(16, Result.GetInt(7));
-        Result.UpdateInt(17, GetIntByName('attnum'));
+        Result.UpdateInt(17, GetInt(8 {attnum}));
 
         Result.UpdateNullByName('AUTO_INCREMENT');
         Result.UpdateBooleanByName('CASE_SENSITIVE',
-          GetIdentifierConvertor.IsCaseSensitive(
-          GetStringByName('attname')));
+          GetIdentifierConvertor.IsCaseSensitive(GetString(3 {attname})));
         Result.UpdateBooleanByName('SEARCHABLE', True);
         Result.UpdateBooleanByName('WRITABLE', True);
         Result.UpdateBooleanByName('DEFINITELYWRITABLE', True);

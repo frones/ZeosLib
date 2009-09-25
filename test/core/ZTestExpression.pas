@@ -184,6 +184,26 @@ var
 begin
   Expression := TZExpression.Create;
 
+  Expression.Expression := 'DTOS(40007.0)';
+//  CheckEquals('20090713', DefVarManager.GetAsString(Expression.Evaluate));
+
+  Expression.Expression := 'TRIM('' more spaces  '')';
+  CheckEquals('more spaces', DefVarManager.GetAsString(Expression.Evaluate));
+
+  Expression.Expression := 'VAL(''  -011'')';
+  CheckEquals(-11, DefVarManager.GetAsFloat(Expression.Evaluate));
+
+{$IFNDEF VER130}
+  Expression.Expression := 'CTOD(''' + DateToStr(Date) + ''')';
+  CheckEquals(Date, DefVarManager.GetAsDateTime(Expression.Evaluate));
+
+  Expression.Expression := 'LEFT(''ABCDEFGH'',3)';
+  CheckEquals('ABC', DefVarManager.GetAsString(Expression.Evaluate));
+
+  Expression.Expression := 'RIGHT(''ABCDEFGH'',3)';
+  CheckEquals('FGH', DefVarManager.GetAsString(Expression.Evaluate));
+{$ENDIF}
+
   Expression.Expression := 'Sum(''A'',''B'',3)';
   CheckEquals('AB3', DefVarManager.GetAsString(Expression.Evaluate));
 
