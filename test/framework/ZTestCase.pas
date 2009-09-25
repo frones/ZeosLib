@@ -129,8 +129,8 @@ type
 implementation
 
 uses
-{$IFDEF LINUX}
-  IdGlobal,
+{$IFDEF FPC}
+  LCLIntf,
 {$ELSE}
   Windows,
 {$ENDIF}
@@ -380,8 +380,8 @@ end;
 }
 function TZAbstractTestCase.GetTickCount: Cardinal;
 begin
-{$IFDEF LINUX}
-  Result := IdGlobal.GetTickCount;
+{$IFDEF FPC}
+  Result := LCLIntf.GetTickCount;
 {$ELSE}
   Result := Windows.GetTickCount;
 {$ENDIF}
