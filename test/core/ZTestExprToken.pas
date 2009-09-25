@@ -177,6 +177,6 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('core',TZTestExpressionTokenizer.Suite);
+  RegisterTest('core',TZTestExpressionTokenizer.Suite);
 end.
 

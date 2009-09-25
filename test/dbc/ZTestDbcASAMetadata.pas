@@ -455,5 +455,5 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('dbc',TZASATestDbcMetadata.Suite);
+  RegisterTest('dbc',TZASATestDbcMetadata.Suite);
 end.

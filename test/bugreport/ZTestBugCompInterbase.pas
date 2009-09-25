@@ -557,5 +557,5 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('bugreport',ZTestCompInterbaseBugReport.Suite);
+  RegisterTest('bugreport',ZTestCompInterbaseBugReport.Suite);
 end.

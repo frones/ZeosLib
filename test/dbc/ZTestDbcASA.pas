@@ -390,5 +390,5 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('dbc',TZTestDbcASACase.Suite);
+  RegisterTest('dbc',TZTestDbcASACase.Suite);
 end.

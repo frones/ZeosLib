@@ -88,5 +88,5 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('bugreport',TZTestDbcCoreBugReport.Suite);
+  RegisterTest('bugreport',TZTestDbcCoreBugReport.Suite);
 end.

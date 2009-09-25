@@ -292,5 +292,5 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('parsesql',TZTestSQLScriptParserCase.Suite);
+  RegisterTest('parsesql',TZTestSQLScriptParserCase.Suite);
 end.

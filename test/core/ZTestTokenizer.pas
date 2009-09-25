@@ -292,6 +292,6 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('core',TZTestTokenizer.Suite);
+  RegisterTest('core',TZTestTokenizer.Suite);
 end.
 

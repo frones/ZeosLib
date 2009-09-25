@@ -177,6 +177,6 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('parsesql',TZTestSQLiteTokenizer.Suite);
+  RegisterTest('parsesql',TZTestSQLiteTokenizer.Suite);
 end.
 

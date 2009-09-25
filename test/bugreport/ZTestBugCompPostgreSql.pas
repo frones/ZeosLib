@@ -691,5 +691,5 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('bugreport',TZTestCompPostgreSQLBugReport.Suite);
+  RegisterTest('bugreport',TZTestCompPostgreSQLBugReport.Suite);
 end.

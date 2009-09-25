@@ -316,5 +316,5 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('dbc',TZTestDbcPostgreSQLCase.Suite);
+  RegisterTest('dbc',TZTestDbcPostgreSQLCase.Suite);
 end.

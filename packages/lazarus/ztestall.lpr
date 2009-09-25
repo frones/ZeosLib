@@ -14,7 +14,7 @@ uses
   ZTestSqlAnalyser, ZTestScriptParser, ZTestPostgreSqlToken, ZTestOracleToken,
   ZTestMySqlToken, ZTestInterbaseToken,
   //dbc
-  ZTestDbcResultset, ZTestDbcUtils, ZTestDbcCache,
+  ZTestDbcResultSet, ZTestDbcUtils, ZTestDbcCache,
   ZTestDbcCachedResultSet, ZTestDbcMetadata,ZTestDbcResultSetMetadata, ZTestDbcResolver,
   ZTestDbcSqLite, ZTestDbcPostgreSqlMetadata,  ZTestDbcPostgreSql, ZTestDbcOracle,
   ZTestDbcMySqlMetadata, ZTestDbcMySql, ZTestDbcMsSql, ZTestDbcInterbaseMetadata,

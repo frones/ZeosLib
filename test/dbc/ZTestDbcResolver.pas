@@ -252,5 +252,5 @@ end;
 {$ENDIF}
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('dbc',TZTestCachedResolverCase.Suite);
+  RegisterTest('dbc',TZTestCachedResolverCase.Suite);
 end.

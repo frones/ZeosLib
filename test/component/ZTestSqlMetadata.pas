@@ -132,5 +132,5 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('component',TZTestSQLMetadataCase.Suite);
+  RegisterTest('component',TZTestSQLMetadataCase.Suite);
 end.

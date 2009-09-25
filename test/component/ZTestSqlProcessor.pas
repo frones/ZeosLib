@@ -416,6 +416,6 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('component',TZTestSQLProcessorCase.Suite);
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('component',TZTestSQLProcessorMysqlCase.Suite);
+  RegisterTest('component',TZTestSQLProcessorCase.Suite);
+  RegisterTest('component',TZTestSQLProcessorMysqlCase.Suite);
 end.

@@ -245,5 +245,5 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('core',TZTestSysUtilsCase.Suite);
+  RegisterTest('core',TZTestSysUtilsCase.Suite);
 end.

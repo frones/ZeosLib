@@ -317,7 +317,7 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('dbc',TZTestDbcMSSqlCase.Suite);
+  RegisterTest('dbc',TZTestDbcMSSqlCase.Suite);
 end.
 
 

@@ -419,5 +419,5 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('dbc',TZTestMySqlMetadataCase.Suite);
+  RegisterTest('dbc',TZTestMySqlMetadataCase.Suite);
 end.

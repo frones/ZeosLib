@@ -219,5 +219,5 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('bugreport',TZTestCompMSSqlBugReport.Suite);
+  RegisterTest('bugreport',TZTestCompMSSqlBugReport.Suite);
 end.

@@ -1612,5 +1612,5 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest('bugreport',TZTestCompMySQLBugReport.Suite);
+  RegisterTest('bugreport',TZTestCompMySQLBugReport.Suite);
 end.
