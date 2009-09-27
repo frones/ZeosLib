@@ -1,7 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{         Test Cases for Generic DBC Bug Reports          }
+{       Test Cases for DbLib Component Bug Reports        }
 {                                                         }
 {*********************************************************}
 
@@ -49,44 +49,51 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit ZTestDbcCore;
+unit ZTestBugCompDbLib;
 
 interface
 
 {$I ZBugReport.inc}
 
 uses
-  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZDbcIntfs, ZCompatibility, ZBugReport;
+  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
+  ZCompatibility;
 
 type
 
-  {** Implements a DBC bug report test case for core functionality. }
-  TZTestDbcCoreBugReport = class(TZPortableSQLBugReportTestCase)
+  {** Implements a bug report test case for DbLib components. }
+  ZTestCompDbLibBugReport = class(TZSpecificSQLBugReportTestCase)
   private
-    FConnection: IZConnection;
+    FConnection: TZConnection;
   protected
     procedure SetUp; override;
     procedure TearDown; override;
+    function GetSupportedProtocols: string; override;
 
-    property Connection: IZConnection read FConnection write FConnection;
+    property Connection: TZConnection read FConnection write FConnection;
   published
   end;
 
 implementation
 
-{ TZTestDbcCoreBugReport }
+{ ZTestCompDbLibBugReport }
 
-procedure TZTestDbcCoreBugReport.SetUp;
+function ZTestCompDbLibBugReport.GetSupportedProtocols: string;
 begin
-  Connection := CreateDbcConnection;
+  Result := 'mssql,sybase';
 end;
 
-procedure TZTestDbcCoreBugReport.TearDown;
+procedure ZTestCompDbLibBugReport.SetUp;
 begin
-  Connection.Close;
-  Connection := nil;
+  Connection := CreateDatasetConnection;
+end;
+
+procedure ZTestCompDbLibBugReport.TearDown;
+begin
+  Connection.Disconnect;
+  Connection.Free;
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestDbcCoreBugReport.Suite);
+  RegisterTest('bugreport',ZTestCompDbLibBugReport.Suite);
 end.

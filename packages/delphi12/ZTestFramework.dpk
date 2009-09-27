@@ -33,7 +33,6 @@ requires
   ZParseSql,
   ZCore,
   rtl,
-  dbrtl,
   dsnap,
   dsnapcon,
   vcl,

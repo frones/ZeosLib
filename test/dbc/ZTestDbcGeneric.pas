@@ -989,6 +989,6 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZGenericTestDbcResultSet.Suite);
+  RegisterTest('dbc',TZGenericTestDbcResultSet.Suite);
 end.
 

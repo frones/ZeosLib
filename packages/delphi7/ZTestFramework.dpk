@@ -13,6 +13,7 @@ package ZTestFramework;
 {$OPENSTRINGS ON}
 {$OPTIMIZATION ON}
 {$OVERFLOWCHECKS ON}
+{$RANGECHECKS OFF}
 {$REFERENCEINFO ON}
 {$SAFEDIVIDE OFF}
 {$STACKFRAMES ON}
@@ -43,15 +44,13 @@ contains
   ZTestCase in '..\..\test\framework\ZTestCase.pas',
   ZBugReport in '..\..\test\framework\ZBugReport.pas',
   ZPerformanceTestCase in '..\..\test\framework\ZPerformanceTestCase.pas',
-
   MemCheck in '..\..\test\external\MemCheck.pas',
-
   TestFrameWork in '..\..\test\external\TestFrameWork.pas',
   TextTestRunner in '..\..\test\external\TextTestRunner.pas',
   GUITestRunner in '..\..\test\external\GUITestRunner.pas',
   ZMidasTestServer_TLB in '..\..\test\framework\ZMidasTestServer_TLB.pas',
   ZMidasTestCase in '..\..\test\framework\ZMidasTestCase.pas';
 
-  {ZRemoteDM: TRemoteDataModule;}
+{ZRemoteDM: TRemoteDataModule;}
 
 end.

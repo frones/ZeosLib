@@ -49,7 +49,7 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit ZTestDbcASA;
+unit ZTestBugDbcASA;
 
 interface
 
@@ -98,5 +98,5 @@ end;
 
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestDbcASABugReport.Suite);
+  RegisterTest('bugreport',TZTestDbcASABugReport.Suite);
 end.

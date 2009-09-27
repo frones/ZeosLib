@@ -166,5 +166,5 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestMasterDetailCase.Suite);
+  RegisterTest('component',TZTestMasterDetailCase.Suite);
 end.

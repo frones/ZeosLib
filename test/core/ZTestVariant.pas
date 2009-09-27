@@ -276,5 +276,5 @@ end;
 {$ENDIF}
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestVariantCase.Suite);
+  RegisterTest('core',TZTestVariantCase.Suite);
 end.

@@ -61,7 +61,6 @@
 			<DCCReference Include="ZParseSql.dcp"/>
 			<DCCReference Include="ZCore.dcp"/>
 			<DCCReference Include="rtl.dcp"/>
-			<DCCReference Include="dbrtl.dcp"/>
 			<DCCReference Include="dsnap.dcp"/>
 			<DCCReference Include="dsnapcon.dcp"/>
 			<DCCReference Include="vcl.dcp"/>

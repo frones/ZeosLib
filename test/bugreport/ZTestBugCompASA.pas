@@ -49,7 +49,7 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit ZTestCompASA;
+unit ZTestBugCompASA;
 
 interface
 
@@ -105,5 +105,5 @@ end;
 
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(ZTestCompASABugReport.Suite);
+  RegisterTest('bugreport',ZTestCompASABugReport.Suite);
 end.

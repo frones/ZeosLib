@@ -113,6 +113,7 @@
 						<VersionInfoKeys Name="Comments"/>
 					</VersionInfoKeys>
 					<Excluded_Packages>
+						<Excluded_Packages Name="$(BDS)\bin\dclsoap120.bpl">CodeGear SOAP Components</Excluded_Packages>
 						<Excluded_Packages Name="$(BDS)\bin\dclnet120.bpl">CodeGear Internet Components</Excluded_Packages>
 						<Excluded_Packages Name="$(BDS)\bin\dclwebsnap120.bpl">CodeGear WebSnap Components</Excluded_Packages>
 						<Excluded_Packages Name="$(BDS)\bin\bcboffice2k120.bpl">CodeGear C++Builder Office 2000 Servers Package</Excluded_Packages>

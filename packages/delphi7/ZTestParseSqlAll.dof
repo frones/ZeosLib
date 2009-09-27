@@ -18,7 +18,7 @@ N=1
 O=0
 P=1
 Q=1
-R=1
+R=0
 S=0
 T=0
 U=0
@@ -82,7 +82,7 @@ UnsafeCast=0
 [Linker]
 MapFile=0
 OutputObjs=0
-ConsoleApp=0
+ConsoleApp=1
 DebugInfo=1
 RemoteSymbols=0
 MinStackSize=16384

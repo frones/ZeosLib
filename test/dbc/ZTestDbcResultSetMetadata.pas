@@ -251,5 +251,5 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestResultSetMetadataCase.Suite);
+  RegisterTest('dbc',TZTestResultSetMetadataCase.Suite);
 end.

@@ -1,7 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{         Test Cases for DBC DbLib Bug Reports            }
+{         Test Cases for Generic DBC Bug Reports          }
 {                                                         }
 {*********************************************************}
 
@@ -49,25 +49,24 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit ZTestDbcDbLib;
+unit ZTestBugDbcCore;
 
 interface
 
 {$I ZBugReport.inc}
 
 uses
-  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZBugReport, ZCompatibility, ZDbcDbLib;
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZDbcIntfs, ZCompatibility, ZBugReport;
 
 type
 
-  {** Implements a DBC bug report test case for DB Lib. }
-  ZTestDbcDbLibBugReport = class(TZSpecificSQLBugReportTestCase)
+  {** Implements a DBC bug report test case for core functionality. }
+  TZTestDbcCoreBugReport = class(TZPortableSQLBugReportTestCase)
   private
     FConnection: IZConnection;
   protected
     procedure SetUp; override;
     procedure TearDown; override;
-    function GetSupportedProtocols: string; override;
 
     property Connection: IZConnection read FConnection write FConnection;
   published
@@ -75,24 +74,19 @@ type
 
 implementation
 
-{ ZTestDbcDbLibBugReport }
+{ TZTestDbcCoreBugReport }
 
-function ZTestDbcDbLibBugReport.GetSupportedProtocols: string;
-begin
-  Result := 'mssql,sybase';
-end;
-
-procedure ZTestDbcDbLibBugReport.SetUp;
+procedure TZTestDbcCoreBugReport.SetUp;
 begin
   Connection := CreateDbcConnection;
 end;
 
-procedure ZTestDbcDbLibBugReport.TearDown;
+procedure TZTestDbcCoreBugReport.TearDown;
 begin
   Connection.Close;
   Connection := nil;
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(ZTestDbcDbLibBugReport.Suite);
+  RegisterTest('bugreport',TZTestDbcCoreBugReport.Suite);
 end.

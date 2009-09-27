@@ -441,5 +441,5 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestDbcOracleCase.Suite);
+  RegisterTest('dbc',TZTestDbcOracleCase.Suite);
 end.

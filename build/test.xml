@@ -190,8 +190,7 @@
   </target>
 
   <target name="lazarus_run" if="lazarus.run">
-    <property name="runparams" value="-a --format=plain"/>
-    <antcall target="test_run_all">
+    <antcall target="test_run_all_laz">
       <param name="compiler" value="lazarus"/>
       <param name="compiler.dir" value="${lazarus.home}"/>
     </antcall>
@@ -300,4 +299,76 @@
     </exec>
   </target>
 
-</project>
+<target name="test_run_all_laz">
+    <echo message="Testing packages for ${compiler}..."
+      file="${log.file}" append="true" />
+
+    <echo/>
+    <echo message="Testing packages for ${compiler} "/>
+    <echo/>
+
+    <property name="package.dir" value="${packages.dir}/${compiler}"/>
+    <property name="build.dir" value="${package.dir}/build"/>
+
+      <delete>
+       <fileset dir="${test.dir}" includes="ZTest*"/>
+      </delete>
+
+    <copy todir="${test.dir}">
+      <fileset dir="${build.dir}">
+        <include name="ZTestAll.exe*"/>
+        <include name="ZTestAll*"/>
+      </fileset>
+    </copy>
+
+    <antcall target="test_core_run_laz" inheritAll="true"/>
+    <antcall target="test_parsesql_run_laz" inheritAll="true"/>
+    <antcall target="test_dbc_run_laz" inheritAll="true"/>
+    <antcall target="test_component_run_laz" inheritAll="true"/>
+    <antcall target="test_bugreport_run_laz" inheritAll="true"/>
+    <echo/>
+
+      <delete>
+       <fileset dir="${test.dir}" includes="ZTestAll*"/>
+      </delete>
+  </target>
+
+  <target name="test_core_run_laz" if="core.run">
+    <antcall target="test_element_run_laz" inheritAll="true">
+      <param name="test.suite" value="core"/>
+    </antcall>
+  </target>
+
+  <target name="test_parsesql_run_laz" if="parsesql.run">
+    <antcall target="test_element_run_laz" inheritAll="true">
+      <param name="test.suite" value="parsesql"/>
+    </antcall>
+  </target>
+
+  <target name="test_dbc_run_laz" if="dbc.run">
+    <antcall target="test_element_run_laz" inheritAll="true">
+      <param name="test.suite" value="dbc"/>
+    </antcall>
+  </target>
+
+  <target name="test_component_run_laz" if="component.run">
+    <antcall target="test_element_run_laz" inheritAll="true">
+      <param name="test.suite" value="component"/>
+    </antcall>
+  </target>
+
+  <target name="test_bugreport_run_laz" if="bugreport.run">
+    <antcall target="test_element_run_laz" inheritAll="true">
+      <param name="test.suite" value="bugreport"/>
+    </antcall>
+  </target>
+
+ <target name="test_element_run_laz">
+    <echo message="Testing ... ${test.suite} ..."/>
+    <exec dir="${test.dir}" executable="${test.dir}/ZTestAll"
+       output="${log.file}" append="true">
+   <arg line="--batch -all --format=plain --suite=${test.suite}"/>
+    </exec>
+  </target>
+
+  </project>

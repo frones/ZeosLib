@@ -62,6 +62,9 @@ uses
 type
 
   {** Implements a test case for class TZSQLScriptParser. }
+
+  { TZTestSQLScriptParserCase }
+
   TZTestSQLScriptParserCase = class(TZParseSQLGenericTestCase)
   private
     FParser: TZSQLScriptParser;
@@ -256,8 +259,38 @@ begin
   CheckEquals(Line, FParser.Statements[0]);
   CheckEquals(Line, FParser.Statements[1]);
   CheckEquals(Line, FParser.Statements[2]);
+
+  FParser.Clear;
+  CheckEquals(0, FParser.StatementCount);
+  CheckEquals('', FParser.UncompletedStatement);
+  CheckEquals(';', FParser.Delimiter);
+
+  Text := ' Set Term !! ;'#10#13 + Comment + Line + Delimiter + '   '#10#13
+    + Line + Comment + Delimiter;
+  FParser.ParseText(Text);
+  CheckEquals(2, FParser.StatementCount);
+  CheckEquals(Line, FParser.Statements[0]);
+  CheckEquals(Line, FParser.Statements[1]);
+  CheckEquals('!!', FParser.Delimiter);
+
+  FParser.Clear;
+  FParser.Delimiter:= '!!';
+  Text := Comment + Line + Delimiter + '   '#10#13
+    + Line + Comment + Delimiter;
+  FParser.ParseText(Text);
+  CheckEquals(2, FParser.StatementCount);
+  CheckEquals(Line, FParser.Statements[0]);
+  CheckEquals(Line, FParser.Statements[1]);
+  CheckEquals('!!', FParser.Delimiter);
+
+  FParser.Clear;
+  FParser.Delimiter:= '!!';
+  FParser.ParseText('9!!');
+  CheckEquals(1, FParser.StatementCount,'1pos');
+  CheckEquals('9', FParser.Statements[0]);
+  CheckEquals('!!', FParser.Delimiter);
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestSQLScriptParserCase.Suite);
+  RegisterTest('parsesql',TZTestSQLScriptParserCase.Suite);
 end.

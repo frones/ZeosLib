@@ -279,8 +279,9 @@ begin
             begin
               Temp := TokenValue;
               Extract := True;
-              while (Length(Delimiter) > Length(Temp))
-                and not (TokenType in [ttWhitespace, ttEOF]) do
+              while (Delimiter[1]=Temp[1]) and
+                    (Length(Delimiter) > Length(Temp))
+                     and not (TokenType in [ttWhitespace, ttEOF]) do
               begin
                 TokenValue := Tokens[TokenIndex];
                 TokenType := TZTokenType({$IFDEF FPC}Pointer({$ENDIF}

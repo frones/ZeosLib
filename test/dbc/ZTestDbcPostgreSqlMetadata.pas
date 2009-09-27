@@ -781,5 +781,5 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestPostgreSqlMetadataCase.Suite);
+  RegisterTest('dbc',TZTestPostgreSqlMetadataCase.Suite);
 end.

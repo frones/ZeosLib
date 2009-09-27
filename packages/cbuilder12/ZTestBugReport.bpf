@@ -1,17 +1,17 @@
 USEUNIT("ZTestBugReport.cpp");
 USEUNIT("..\..\test\external\TestFrameWork.pas");
 USEUNIT("..\..\test\external\TextTestRunner.pas");
-USEUNIT("..\..\test\bugreport\ZTestDbcPostgreSql.pas");
-USEUNIT("..\..\test\bugreport\ZTestCompDbLib.pas");
-USEUNIT("..\..\test\bugreport\ZTestCompInterbase.pas");
-USEUNIT("..\..\test\bugreport\ZTestCompMSSql.pas");
-USEUNIT("..\..\test\bugreport\ZTestCompMySql.pas");
-USEUNIT("..\..\test\bugreport\ZTestCompPostgreSql.pas");
-USEUNIT("..\..\test\bugreport\ZTestDbcCore.pas");
-USEUNIT("..\..\test\bugreport\ZTestDbcDbLib.pas");
-USEUNIT("..\..\test\bugreport\ZTestDbcInterbase.pas");
-USEUNIT("..\..\test\bugreport\ZTestDbcMySql.pas");
-USEUNIT("..\..\test\bugreport\ZTestCompCore.pas");
+USEUNIT("..\..\test\bugreport\ZTestBugDbcPostgreSql.pas");
+USEUNIT("..\..\test\bugreport\ZTestBugCompDbLib.pas");
+USEUNIT("..\..\test\bugreport\ZTestBugCompInterbase.pas");
+USEUNIT("..\..\test\bugreport\ZTestBugCompMSSql.pas");
+USEUNIT("..\..\test\bugreport\ZTestBugCompMySql.pas");
+USEUNIT("..\..\test\bugreport\ZTestBugCompPostgreSql.pas");
+USEUNIT("..\..\test\bugreport\ZTestBugDbcCore.pas");
+USEUNIT("..\..\test\bugreport\ZTestBugDbcDbLib.pas");
+USEUNIT("..\..\test\bugreport\ZTestBugDbcInterbase.pas");
+USEUNIT("..\..\test\bugreport\ZTestBugDbcMySql.pas");
+USEUNIT("..\..\test\bugreport\ZTestBugCompCore.pas");
 //---------------------------------------------------------------------------
 This file is used by the project manager only and should be treated like the project file
 

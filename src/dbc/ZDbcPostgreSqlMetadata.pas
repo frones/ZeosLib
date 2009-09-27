@@ -471,41 +471,62 @@ end;
 }
 function TZPostgreSQLDatabaseInfo.GetSQLKeywords: string;
 begin
-  Result := 'abort,absolute,access,action,add,admin,after,aggregate,all,also,alter,'+
-            'always,analyse,analyze,and,any,array,asc,assertion,assignment,asymmetric,'+
-            'at,authorization,backward,before,begin,between,bigint,binary,bit,boolean,'+
-            'both,cache,called,cascade,cascaded,case,cast,chain,character,characteristics,'+
-            'check,checkpoint,class,close,cluster,coalesce,collate,column,comment,commit,'+
-            'committed,concurrently,configuration,connect,connection,constraint,constraints,'+
-            'content,conversion,convert,copy,cost,createdb,createrole,createuser,cross,csv,'+
-            'current,current_date,current_role,current_time,current_timestamp,current_user,'+
-            'cursor,cycle,database,day,deallocate,dec,decimal,declare,default,defaults,'+
-            'deferrable,deferred,definer,delimiter,delimiters,desc,dictionary,disable,'+
-            'discard,distinct,do,document,domain,double,each,else,enable,encoding,encrypted,'+
-            'end,end-exec,enum,escape,except,excluding,exclusive,exec,execute,exists,explain,'+
-            'external,extract,false,family,fetch,first,float,for,force,foreign,forward,'+
-            'freeze,full,function,global,grant,granted,greatest,handler,header,hold,hour,'+
-            'if,ilike,immediate,immutable,implicit,in,including,increment,indexes,inherit,'+
-            'inherits,initially,inner,inout,input,insensitive,instead,int,intersect,interval,'+
-            'invoker,isnull,isolation,join,lancompiler,language,large,last,leading,least,left,'+
-            'level,like,limit,listen,load,local,localtime,localtimestamp,location,lock,'+
-            'login,mapping,match,maxvalue,minute,minvalue,mode,month,move,name,names,national,'+
-            'natural,nchar,new,next,no,nocreatedb,nocreaterole,nocreateuser,noinherit,nologin,'+
-            'none,nosuperuser,not,nothing,notify,notnull,nowait,nullif,nulls,numeric,object,'+
-            'of,off,offset,oids,old,only,operator,option,or,out,outer,overlaps,overlay,owned,'+
-            'owner,parser,partial,password,placing,plans,position,precision,prepare,prepared,'+
-            'preserve,prior,privileges,procedural,procedure,quote,read,real,reassign,recheck,'+
-            'references,reindex,relative,release,rename,repeatable,replace,replica,reset,'+
-            'restart,restrict,return,returning,returns,revoke,right,role,rollback,row,rows,'+
-            'rule,savepoint,schema,scroll,search,second,security,sequence,serializable,session,'+
-            'session_user,setof,share,show,similar,simple,smallint,some,stable,standalone,'+
-            'start,statement,statistics,stdin,stdout,storage,strict,strip,substring,'+
-            'superuser,symmetric,sysid,system,tablespace,temp,template,temporary,text,'+
-            'then,time,timestamp,to,trailing,transaction,treat,trigger,trim,true,truncate,'+
-            'trusted,type,uncommitted,unencrypted,union,unique,unknown,unlisten,until,user,'+
-            'using,vacuum,valid,validator,value,varying,verbose,version,view,volatile,when,'+
-            'whitespace,with,without,work,write,xml,xmlattributes,xmlconcat,xmlelement,'+
-            'xmlforest,xmlparse,xmlpi,xmlroot,xmlserialize,year,yes,zone';
+  Result := 'abort,absolute,access,action,add,admin,after,aggregate,all,also,'+
+  			'alter,always,analyse,analyze,and,any,array,asc,assertion,assignment,'+
+            'asymmetric,at,authorization,'+
+            'backward,before,begin,between,bigint,binary,bit,boolean,both,'+
+            'cache,called,cascade,cascaded,case,cast,catalog,chain,character,'+
+            'characteristics,check,checkpoint,class,close,cluster,coalesce,'+
+            'collate,column,comment,commit,committed,concurrently,configuration,'+
+            'connect,connection,constraint,constraints,content,continue,'+
+            'conversion,convert,copy,cost,createdb,createrole,createuser,cross,'+
+            'csv,current,current_catalog,current_date,current_role,current_schema,'+
+            'current_time,current_timestamp,current_user,cursor,cycle,'+
+            'data,database,day,deallocate,dec,decimal,declare,default,defaults,'+
+            'deferrable,deferred,definer,delimiter,delimiters,desc,dictionary,'+
+            'disable,discard,distinct,do,document,domain,double,'+
+            'each,else,enable,encoding,encrypted,end,end-exec,enum,escape,except,'+
+            'excluding,exclusive,exec,execute,exists,explain,external,extract,'+
+            'false,family,fetch,first,float,following,for,force,foreign,forward,'+
+            'freeze,full,function,'+
+            'global,grant,granted,greatest,'+
+            'handler,header,hold,hour,'+
+            'identity,if,ilike,immediate,immutable,implicit,in,including,'+
+            'increment,indexes,inherit,inherits,initially,inner,inout,input,'+
+            'insensitive,instead,int,intersect,interval,invoker,isnull,isolation,'+
+            'join,'+
+            'lancompiler,language,large,last,lc_collate,lc_ctype,leading,least,'+
+            'left,level,like,limit,listen,load,local,localtime,localtimestamp,'+
+            'location,lock,login,'+
+            'mapping,match,maxvalue,minute,minvalue,mode,month,move,'+
+            'name,names,national,natural,nchar,new,next,no,nocreatedb,nocreaterole,'+
+            'nocreateuser,noinherit,nologin,none,nosuperuser,not,nothing,notify,'+
+            'notnull,nowait,nullif,nulls,numeric,'+
+            'object,of,off,offset,oids,old,only,operator,option,options,or,out,'+
+            'outer,over,overlaps,overlay,owned,owner,'+
+            'parser,partial,partition,password,placing,plans,position,preceding,'+
+            'precision,prepare,prepared,preserve,prior,privileges,procedural,'+
+            'procedure,'+
+            'quote,'+
+            'range,read,real,reassign,recheck,recursive,references,reindex,'+
+            'relative,release,rename,repeatable,replace,replica,reset,restart,'+
+            'restrict,return,returning,returns,revoke,right,role,rollback,row,'+
+            'rows,rule,'+
+            'savepoint,schema,scroll,search,second,security,sequence,serializable,'+
+            'server,session,session_user,setof,share,show,similar,simple,smallint,'+
+            'some,stable,standalone,start,statement,statistics,stdin,stdout,'+
+            'storage,strict,strip,substring,superuser,symmetric,sysid,system,'+
+            'tablespace,temp,template,temporary,text,then,time,timestamp,to,'+
+            'trailing,transaction,treat,trigger,trim,true,truncate,trusted,type,'+
+            'unbounded,uncommitted,unencrypted,union,unique,unknown,unlisten,'+
+            'until,user,using,'+
+            'vacuum,valid,validator,value,variadic,varying,verbose,version,view,'+
+            'volatile,'+
+            'when,whitespace,window,with,without,work,wrapper,write,'+
+            'xml,xmlattributes,xmlconcat,xmlelement,xmlforest,xmlparse,xmlpi,'+
+            'xmlroot,xmlserialize,'+
+            'year,yes,'+
+            'zone';
 end;
 
 {**

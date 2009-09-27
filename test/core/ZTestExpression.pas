@@ -380,5 +380,5 @@ begin
 end;
 
 initialization
-  {$IFNDEF FPC}TestFramework.{$ENDIF}RegisterTest(TZTestExpressionCase.Suite);
+  RegisterTest('core',TZTestExpressionCase.Suite);
 end.
