@@ -62,16 +62,16 @@ uses
   TextTestRunner,
   ZTestConfig,
   ZSqlTestCase,
-  ZTestDbcCore in '../../test/bugreport/ZTestDbcCore.pas',
-  ZTestDbcMySql in '../../test/bugreport/ZTestDbcMySql.pas',
-  ZTestDbcPostgreSql in '../../test/bugreport/ZTestDbcPostgreSql.pas',
-  ZTestDbcInterbase in '../../test/bugreport/ZTestDbcInterbase.pas',
-  ZTestDbcDbLib in '../../test/bugreport/ZTestDbcDbLib.pas',
-  ZTestCompCore in '../../test/bugreport/ZTestCompCore.pas',
-  ZTestCompMySql in '../../test/bugreport/ZTestCompMySql.pas',
-  ZTestCompPostgreSql in '../../test/bugreport/ZTestCompPostgreSql.pas',
-  ZTestCompInterbase in '../../test/bugreport/ZTestCompInterbase.pas',
-  ZTestCompDbLib in '../../test/bugreport/ZTestCompDbLib.pas';
+  ZTestDbcCore in '../../test/bugreport/ZTestBugDbcCore.pas',
+  ZTestDbcMySql in '../../test/bugreport/ZTestBugDbcMySql.pas',
+  ZTestDbcPostgreSql in '../../test/bugreport/ZTestBugDbcPostgreSql.pas',
+  ZTestDbcInterbase in '../../test/bugreport/ZTestBugDbcInterbase.pas',
+  ZTestDbcDbLib in '../../test/bugreport/ZTestBugDbcDbLib.pas',
+  ZTestCompCore in '../../test/bugreport/ZTestBugCompCore.pas',
+  ZTestCompMySql in '../../test/bugreport/ZTestBugCompMySql.pas',
+  ZTestCompPostgreSql in '../../test/bugreport/ZTestBugCompPostgreSql.pas',
+  ZTestCompInterbase in '../../test/bugreport/ZTestBugCompInterbase.pas',
+  ZTestCompDbLib in '../../test/bugreport/ZTestBugCompDbLib.pas';
 
 begin
   TestGroup := BUGREPORT_TEST_GROUP;

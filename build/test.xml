@@ -117,6 +117,7 @@
   </target>
 
   <target name="delphi5_run" if="delphi5.run">
+    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="delphi5"/>
       <param name="compiler.dir" value="${delphi5.home}"/>
@@ -124,6 +125,7 @@
   </target>
 
   <target name="delphi6_run" if="delphi6.run">
+    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="delphi6"/>
       <param name="compiler.dir" value="${delphi6.home}"/>
@@ -131,6 +133,7 @@
   </target>
 
   <target name="delphi7_run" if="delphi7.run">
+    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="delphi7"/>
       <param name="compiler.dir" value="${delphi7.home}"/>
@@ -138,6 +141,7 @@
   </target>
 
   <target name="delphi9_run" if="delphi9.run">
+    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="delphi9"/>
       <param name="compiler.dir" value="${delphi9.home}"/>
@@ -145,6 +149,7 @@
   </target>
 
   <target name="delphi10_run" if="delphi10.run">
+    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="delphi10"/>
       <param name="compiler.dir" value="${delphi10.home}"/>
@@ -152,15 +157,24 @@
   </target>
 
   <target name="delphi11_run" if="delphi11.run">
+    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="delphi11"/>
       <param name="compiler.dir" value="${delphi11.home}"/>
     </antcall>
   </target>
 
+  <target name="delphi12_run" if="delphi12.run">
+    <property name="runparams" value=""/>
+    <antcall target="test_run_all">
+      <param name="compiler" value="delphi12"/>
+      <param name="compiler.dir" value="${delphi12.home}"/>
+    </antcall>
+  </target>
 
 
   <target name="cbuilder5_run" if="cbuilder5.run">
+    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="cbuilder5"/>
       <param name="compiler.dir" value="${cbuilder5.home}"/>
@@ -168,6 +182,7 @@
   </target>
 
   <target name="cbuilder6_run" if="cbuilder6.run">
+    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="cbuilder6"/>
       <param name="compiler.dir" value="${cbuilder6.home}"/>
@@ -175,6 +190,7 @@
   </target>
 
   <target name="kylix2_run" if="kylix2.run">
+    <property name="runparams" value=""/>
     <antcall target="test_run_none">
       <param name="compiler" value="kylix2"/>
       <param name="compiler.dir" value="${kylix2.home}"/>
@@ -182,6 +198,7 @@
   </target>
 
   <target name="kylix3_run" if="kylix3.run">
+    <property name="runparams" value=""/>
     <antcall target="test_run_none">
       <param name="compiler" value="kylix3"/>
       <param name="compiler.dir" value="${kylix3.home}"/>
@@ -189,7 +206,7 @@
   </target>
 
   <target name="lazarus_run" if="lazarus.run">
-    <antcall target="test_run_none">
+    <antcall target="test_run_all_laz">
       <param name="compiler" value="lazarus"/>
       <param name="compiler.dir" value="${lazarus.home}"/>
     </antcall>
@@ -294,7 +311,80 @@
 	<env key="PATH" path="${compiler.dir}/bin;${package.dir};${root.dir}/lib/mysql;${root.dir}/lib/postgresql"/>
        -->
 	<env key="Path" path="${compiler.dir}/bin;${package.dir}"/>
+   <arg line="${runparams}"/>
     </exec>
   </target>
 
-</project>
+<target name="test_run_all_laz">
+    <echo message="Testing packages for ${compiler}..."
+      file="${log.file}" append="true" />
+
+    <echo/>
+    <echo message="Testing packages for ${compiler} "/>
+    <echo/>
+
+    <property name="package.dir" value="${packages.dir}/${compiler}"/>
+    <property name="build.dir" value="${package.dir}/build"/>
+
+      <delete>
+       <fileset dir="${test.dir}" includes="ZTest*"/>
+      </delete>
+
+    <copy todir="${test.dir}">
+      <fileset dir="${build.dir}">
+        <include name="ZTestAll.exe*"/>
+        <include name="ZTestAll*"/>
+      </fileset>
+    </copy>
+
+    <antcall target="test_core_run_laz" inheritAll="true"/>
+    <antcall target="test_parsesql_run_laz" inheritAll="true"/>
+    <antcall target="test_dbc_run_laz" inheritAll="true"/>
+    <antcall target="test_component_run_laz" inheritAll="true"/>
+    <antcall target="test_bugreport_run_laz" inheritAll="true"/>
+    <echo/>
+
+      <delete>
+       <fileset dir="${test.dir}" includes="ZTestAll*"/>
+      </delete>
+  </target>
+
+  <target name="test_core_run_laz" if="core.run">
+    <antcall target="test_element_run_laz" inheritAll="true">
+      <param name="test.suite" value="core"/>
+    </antcall>
+  </target>
+
+  <target name="test_parsesql_run_laz" if="parsesql.run">
+    <antcall target="test_element_run_laz" inheritAll="true">
+      <param name="test.suite" value="parsesql"/>
+    </antcall>
+  </target>
+
+  <target name="test_dbc_run_laz" if="dbc.run">
+    <antcall target="test_element_run_laz" inheritAll="true">
+      <param name="test.suite" value="dbc"/>
+    </antcall>
+  </target>
+
+  <target name="test_component_run_laz" if="component.run">
+    <antcall target="test_element_run_laz" inheritAll="true">
+      <param name="test.suite" value="component"/>
+    </antcall>
+  </target>
+
+  <target name="test_bugreport_run_laz" if="bugreport.run">
+    <antcall target="test_element_run_laz" inheritAll="true">
+      <param name="test.suite" value="bugreport"/>
+    </antcall>
+  </target>
+
+ <target name="test_element_run_laz">
+    <echo message="Testing ... ${test.suite} ..."/>
+    <exec dir="${test.dir}" executable="${test.dir}/ZTestAll"
+       output="${log.file}" append="true">
+   <arg line="--batch -all --format=plain --suite=${test.suite}"/>
+    </exec>
+  </target>
+
+  </project>

@@ -49,14 +49,14 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit ZTestCompCore;
+unit ZTestBugCompCore;
 
 interface
 
 {$I ZBugReport.inc}
 
 uses
-  Classes, DB, TestFramework, ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
+  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
   ZCompatibility, ZSqlUpdate, ZSqlProcessor, ZSqlMetadata;
 
 type
@@ -1434,7 +1434,7 @@ var
   Query: TZQuery;
   UpdateSQL: TZUpdateSQL;
 begin
-//  if SkipClosed then Exit;
+  if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
   Query := TZQuery.Create(nil);
@@ -1657,7 +1657,7 @@ procedure ZTestCompCoreBugReport.Test1004534;
 var
   Query: TZReadOnlyQuery;
 begin
-//  if SkipClosed then Exit;
+  if SkipClosed then Exit;
 
   Query := TZReadOnlyQuery.Create(nil);
   Query.Connection := Connection;
@@ -1845,5 +1845,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(ZTestCompCoreBugReport.Suite);
+  RegisterTest('bugreport',ZTestCompCoreBugReport.Suite);
 end.

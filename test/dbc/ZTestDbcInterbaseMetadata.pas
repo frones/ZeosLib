@@ -54,14 +54,12 @@
 unit ZTestDbcInterbaseMetadata;
 
 interface
-
 {$I ZDbc.inc}
-
 uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  Classes, TestFramework, SysUtils, ZDbcIntfs, ZTestDefinitions, ZCompatibility,
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZDbcIntfs, ZTestDefinitions, ZCompatibility,
   ZDbcMySql, ZDbcPostgreSql, ZDbcDbLib, ZDbcInterbase6;
 
 type
@@ -456,5 +454,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZInterbaseTestDbcMetadata.Suite);
+  RegisterTest('dbc',TZInterbaseTestDbcMetadata.Suite);
 end.

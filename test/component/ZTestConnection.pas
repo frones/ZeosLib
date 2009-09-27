@@ -52,9 +52,10 @@
 unit ZTestConnection;
 
 interface
+{$I ZComponent.inc}
 
 uses
-  TestFramework, Db, ZSqlStrings, SysUtils, ZConnection, ZTestDefinitions;
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, ZSqlStrings, SysUtils, ZConnection, ZTestDefinitions;
 
 type
 
@@ -130,5 +131,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestConnectionCase.Suite);
+  RegisterTest('component',TZTestConnectionCase.Suite);
 end.

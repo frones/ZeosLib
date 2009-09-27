@@ -54,8 +54,8 @@
 unit ZTestSqLiteToken;
 
 interface
-
-uses TestFramework, ZClasses, ZTokenizer, ZSqLiteToken,
+{$I ZParseSql.inc}
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZClasses, ZTokenizer, ZSqLiteToken,
   ZTestTokenizer;
 
 type
@@ -177,6 +177,6 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestSQLiteTokenizer.Suite);
+  RegisterTest('parsesql',TZTestSQLiteTokenizer.Suite);
 end.
 

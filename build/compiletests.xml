@@ -195,7 +195,7 @@
    <antcall target="fpc_compile">
       <param name="compile" value="${lazarus.compile}"/>
       <param name="compiler" value="fpc"/>
-      <param name="compiler.dir" value="${lazarus.fpc.home}"/>
+      <param name="compiler.path" value="${lazarus.fpc.compiler}"/>
     </antcall>
   </target>
 
@@ -337,13 +337,13 @@
   </target>
 
 <target name = "fpc_compile">
-    <echo message="There are no Test packages for ${compiler}..."
-      file="${log.file}" append="true" />
+    <property name="package.dir" value="${packages.dir}\lazarus"/>
+    <property name="build.dir" value="${package.dir}\build"/>
 
-    <echo/>
-    <echo message="There are no Test packages for ${compiler}..."/>
-    <echo/>
-
+    <antcall target="fpc_compile_project" inheritAll="true">
+      <param name="project.name" value="TestAll"/>
+      <param name="extra_unit_path" value=" -Fu..\..\test\core\ -Fu..\..\test\plain\ -Fu..\..\test\parsesql\ -Fu..\..\test\dbc\ -Fu..\..\test\component\ -Fu..\..\test\bugreport\"/>
+    </antcall>
 </target>
 
 
@@ -395,4 +395,25 @@
     </exec>
   </target>
 
+  <target name="fpc_compile_project">
+    <echo message="Compiling Z${project.name} ..." />
+    <exec dir="${package.dir}" executable="${compiler.path}"
+      output="${log.file}" append="true" failonerror="true">
+      <arg value="-S2cdgi"/>
+      <arg value="-OG1"/>
+      <arg value="-gl"/>
+      <arg value="-vewnhi"/>
+      <arg value="-l"/>
+      <arg line=" -Fu${lazarus.path}\lcl\units\${lazarus.processor}-${lazarus.os}\ -Fu${lazarus.path}\lcl\units\${lazarus.processor}-${lazarus.os}\${lazarus.os}\"/>
+      <arg line=" -Fu${lazarus.path}\components\fpcunit\console\lib\${lazarus.processor}-${lazarus.os}\ -Fu${lazarus.path}\components\synedit\units\${lazarus.processor}-${lazarus.os}\ "/>
+      <arg line=" -Fu${lazarus.path}\components\fpcunit\lib\${lazarus.processor}-${lazarus.os}\${lazarus.os}\  -Fu${lazarus.path}\components\fpcunit\lib\${lazarus.processor}-${lazarus.os}\ "/>
+      <arg line=" -Fu..\..\test\framework\ ${extra_unit_path}"/>
+      <arg value="-B"/>
+        <arg value="-obuild\Z${project.name}.exe"/>
+      <arg value="-FUbuild\"/>
+
+      <arg value="Z${project.name}.lpr"/>
+    </exec>
+  </target>
+  
 </project>

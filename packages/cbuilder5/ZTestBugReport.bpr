@@ -5,12 +5,12 @@
     <VERSION value="BCB.05.03"/>
     <PROJECT value="build\ZTestBugReport.exe"/>
     <OBJFILES value="build\TestFrameWork.obj build\TextTestRunner.obj 
-      build\ZTestDbcPostgreSql.obj build\ZTestCompCore.obj 
-      build\ZTestCompDbLib.obj build\ZTestCompInterbase.obj 
-      build\ZTestCompMSSql.obj build\ZTestCompMySql.obj 
-      build\ZTestCompPostgreSql.obj build\ZTestDbcCore.obj 
-      build\ZTestDbcDbLib.obj build\ZTestDbcInterbase.obj 
-      build\ZTestDbcMySql.obj build\ZTestBugReport.obj"/>
+      build\ZTestBugDbcPostgreSql.obj build\ZTestBugCompCore.obj 
+      build\ZTestBugCompDbLib.obj build\ZTestBugCompInterbase.obj 
+      build\ZTestBugCompMSSql.obj build\ZTestBugCompMySql.obj 
+      build\ZTestBugCompPostgreSql.obj build\ZTestBugDbcCore.obj 
+      build\ZTestBugDbcDbLib.obj build\ZTestBugDbcInterbase.obj 
+      build\ZTestBugDbcMySql.obj build\ZTestBugReport.obj"/>
     <RESFILES value=""/>
     <IDLFILES value=""/>
     <IDLGENFILES value=""/>

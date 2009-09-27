@@ -61,7 +61,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  TestFramework, ZTestDefinitions, SysUtils, Classes, ZExpression, ZVariables;
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestDefinitions, SysUtils, Classes, ZExpression, ZVariables;
 
 type
 
@@ -382,5 +382,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestExpressionCase.Suite);
+  RegisterTest('core',TZTestExpressionCase.Suite);
 end.

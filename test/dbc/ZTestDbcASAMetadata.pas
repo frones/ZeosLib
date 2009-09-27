@@ -61,7 +61,7 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  Classes, TestFramework, SysUtils, ZDbcIntfs, ZTestDefinitions, ZCompatibility,
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZDbcIntfs, ZTestDefinitions, ZCompatibility,
   ZDbcMySql, ZDbcPostgreSql, ZDbcDbLib, ZDbcASA;
 
 type
@@ -455,5 +455,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZASATestDbcMetadata.Suite);
+  RegisterTest('dbc',TZASATestDbcMetadata.Suite);
 end.

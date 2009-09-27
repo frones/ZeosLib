@@ -52,9 +52,9 @@
 unit ZTestDbcCachedResultSet;
 
 interface
-
+{$I ZDbc.inc}
 uses
-  TestFramework, ZDbcCachedResultSet, ZClasses, ZCollections, ZDbcIntfs,
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcCachedResultSet, ZClasses, ZCollections, ZDbcIntfs,
   ZSysUtils, ZDbcResultSet, ZDbcCache, Classes, ZDbcResultSetMetadata,
   Contnrs, ZCompatibility, ZTestConsts, ZDbcMetadata, ZTestDefinitions;
 
@@ -1037,5 +1037,5 @@ end;
 {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 
 initialization
-  TestFramework.RegisterTest(TZTestCachedResultSetCase.Suite);
+  RegisterTest('dbc',TZTestCachedResultSetCase.Suite);
 end.

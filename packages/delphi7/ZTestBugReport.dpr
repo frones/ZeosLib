@@ -66,25 +66,25 @@ uses
 {$ENDIF}
   ZTestConfig,
   ZSqlTestCase,
-  ZTestDbcCore in '..\..\test\bugreport\ZTestDbcCore.pas',
-  ZTestCompCore in '..\..\test\bugreport\ZTestCompCore.pas',
+  ZTestBugDbcCore in '..\..\test\bugreport\ZTestBugDbcCore.pas',
+  ZTestBugCompCore in '..\..\test\bugreport\ZTestBugCompCore.pas',
 {$IFDEF ENABLE_MYSQL}
-  ZTestDbcMySql in '..\..\test\bugreport\ZTestDbcMySql.pas',
-  ZTestCompMySql in '..\..\test\bugreport\ZTestCompMySql.pas',
+  ZTestBugDbcMySql in '..\..\test\bugreport\ZTestBugDbcMySql.pas',
+  ZTestBugCompMySql in '..\..\test\bugreport\ZTestBugCompMySql.pas',
 {$ENDIF}
 {$IFDEF ENABLE_POSTGRESQL}
-  ZTestDbcPostgreSql in '..\..\test\bugreport\ZTestDbcPostgreSql.pas',
-  ZTestCompPostgreSql in '..\..\test\bugreport\ZTestCompPostgreSql.pas',
+  ZTestBugDbcPostgreSql in '..\..\test\bugreport\ZTestBugDbcPostgreSql.pas',
+  ZTestBugCompPostgreSql in '..\..\test\bugreport\ZTestBugCompPostgreSql.pas',
 {$ENDIF}
 {$IFDEF ENABLE_INTERBASE}
-  ZTestDbcInterbase in '..\..\test\bugreport\ZTestDbcInterbase.pas',
-  ZTestCompInterbase in '..\..\test\bugreport\ZTestCompInterbase.pas',
+  ZTestBugDbcInterbase in '..\..\test\bugreport\ZTestBugDbcInterbase.pas',
+  ZTestBugCompInterbase in '..\..\test\bugreport\ZTestBugCompInterbase.pas',
 {$ENDIF}
 {$IFDEF ENABLE_DBLIB}
-  ZTestDbcDbLib in '..\..\test\bugreport\ZTestDbcDbLib.pas',
-  ZTestCompDbLib in '..\..\test\bugreport\ZTestCompDbLib.pas',
+  ZTestBugDbcDbLib in '..\..\test\bugreport\ZTestBugDbcDbLib.pas',
+  ZTestBugCompDbLib in '..\..\test\bugreport\ZTestBugCompDbLib.pas',
 {$ENDIF}
-  ZTestCompMSSql in '..\..\test\bugreport\ZTestCompMSSql.pas';
+  ZTestBugCompMSSql in '..\..\test\bugreport\ZTestBugCompMSSql.pas';
 
 begin
   TestGroup := BUGREPORT_TEST_GROUP;

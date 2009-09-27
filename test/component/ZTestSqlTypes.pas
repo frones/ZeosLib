@@ -54,9 +54,10 @@
 unit ZTestSqlTypes;
 
 interface
+{$I ZComponent.inc}
 
 uses
-  TestFramework, Db, ZSqlStrings, SysUtils, ZTokenizer, ZGenericSqlToken,
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, ZSqlStrings, SysUtils, ZTokenizer, ZGenericSqlToken,
   ZConnection, ZDataset, ZTestDefinitions;
 
 type
@@ -198,5 +199,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestSQLTypesCase.Suite);
+  RegisterTest('component',TZTestSQLTypesCase.Suite);
 end.

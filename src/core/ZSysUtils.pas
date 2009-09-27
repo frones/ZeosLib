@@ -498,17 +498,10 @@ begin
   DecimalSeparator := '.';
   if Pos('$', Str) = 1 then
     Str := Copy(Str, 2, Pred(Length(Str)));
-{$IFDEF FPC}
-  if OldDecimalSeparator = ',' then
-    begin
-      DecimalSeparator := OldDecimalSeparator;
-        Result := StrToFloatDef(Str, Def);
-    end
+  If Str = '' then
+    Result := Def
   else
     Result := StrToFloatDef(Str, Def);
-{$ELSE}
-  Result := StrToFloatDef(Str, Def);
-{$ENDIF}
   DecimalSeparator := OldDecimalSeparator;
 end;
 

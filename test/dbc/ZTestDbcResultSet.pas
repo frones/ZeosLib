@@ -52,10 +52,10 @@
 unit ZTestDbcResultSet;
 
 interface
-
+{.$I ZDbc.inc}
 uses
-  TestFramework, Classes, SysUtils, ZDbcIntfs, ZClasses, ZCollections,
-  ZSysUtils, ZDbcResultSet, ZCompatibility, ZTestConsts, ZTestDefinitions;
+  Classes, SysUtils, ZDbcIntfs, ZClasses, ZCollections,
+  ZSysUtils, ZDbcResultSet, ZCompatibility, ZTestConsts, ZTestDefinitions,{$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF};
 
 type
 
@@ -360,6 +360,6 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestAbstractBlobCase.Suite);
+  RegisterTest('dbc',TZTestAbstractBlobCase.Suite);
 
 end.

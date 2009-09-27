@@ -58,7 +58,7 @@ interface
 {$I ZCore.inc}
 
 uses
-  TestFramework, ZClasses, ZCollections, SysUtils, Classes,
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZClasses, ZCollections, SysUtils, Classes,
   ZCompatibility, ZTokenizer, ZTestDefinitions;
 
 type
@@ -292,6 +292,6 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestTokenizer.Suite);
+  RegisterTest('core',TZTestTokenizer.Suite);
 end.
 

@@ -58,7 +58,7 @@ interface
 {$I ZComponent.inc}
 
 uses
-  Classes, SysUtils, DB, TestFramework, ZConnection, ZDataset, DBClient,
+  Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZConnection, ZDataset, DBClient,
   ComServ, ZMidasTestCase;
 
 type
@@ -708,5 +708,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZMidasTestCase.Suite);
+  RegisterTest('component',TZMidasTestCase.Suite);
 end.

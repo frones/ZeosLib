@@ -54,9 +54,9 @@
 unit ZTestDbcResultSetMetadata;
 
 interface
-
-uses TestFramework, Classes, SysUtils, ZTestDefinitions, ZDbcIntfs, ZClasses,
-  ZCollections, ZDbcResultSet, ZDbcResultSetMetadata;
+{.$I ZDbc.inc}
+uses Classes, SysUtils, ZTestDefinitions, ZDbcIntfs, ZClasses,
+  ZCollections, ZDbcResultSet, ZDbcResultSetMetadata,{$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF};
 
 type
 
@@ -251,5 +251,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestResultSetMetadataCase.Suite);
+  RegisterTest('dbc',TZTestResultSetMetadataCase.Suite);
 end.

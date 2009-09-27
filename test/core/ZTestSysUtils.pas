@@ -57,7 +57,7 @@ interface
 
 {$I ZCore.inc}
 
-uses TestFramework, ZTestDefinitions, ZSysUtils, SysUtils, ZClasses, ZVariant,
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestDefinitions, ZSysUtils, SysUtils, ZClasses, ZVariant,
   ZMatchPattern;
 
 type
@@ -245,5 +245,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestSysUtilsCase.Suite);
+  RegisterTest('core',TZTestSysUtilsCase.Suite);
 end.

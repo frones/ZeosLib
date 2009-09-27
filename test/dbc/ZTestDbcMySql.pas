@@ -54,9 +54,10 @@
 unit ZTestDbcMySql;
 
 interface
+{$I ZDbc.inc}
 
-uses Classes, SysUtils, TestFramework, ZDbcIntfs, ZTestDefinitions, ZDbcMySql,
-  ZCompatibility;
+uses Classes, SysUtils, ZDbcIntfs, ZTestDefinitions, ZDbcMySql,
+  ZCompatibility, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF};
 
 type
 
@@ -318,5 +319,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestDbcMySQLCase.Suite);
+  RegisterTest('dbc',TZTestDbcMySQLCase.Suite);
 end.

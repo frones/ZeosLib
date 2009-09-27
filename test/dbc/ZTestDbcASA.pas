@@ -54,9 +54,9 @@
 unit ZTestDbcASA;
 
 interface
-
+{$I ZDbc.inc}
 uses
-  Classes, TestFramework, ZDbcIntfs, ZDbcASA, ZTestDefinitions,
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZDbcASA, ZTestDefinitions,
   ZCompatibility;
 
 type
@@ -390,5 +390,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestDbcASACase.Suite);
+  RegisterTest('dbc',TZTestDbcASACase.Suite);
 end.

@@ -49,14 +49,14 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit ZTestDbcInterbase;
+unit ZTestBugDbcInterbase;
 
 interface
 
 {$I ZBugReport.inc}
 
 uses
-  Classes, SysUtils, TestFramework, ZDbcIntfs, ZBugReport, ZCompatibility,
+  Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZBugReport, ZCompatibility,
   ZDbcInterbase6;
 
 type
@@ -435,5 +435,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestDbcInterbaseBugReport.Suite);
+  RegisterTest('bugreport',TZTestDbcInterbaseBugReport.Suite);
 end.

@@ -49,7 +49,7 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit ZTestCompMySql;
+unit ZTestBugCompMySql;
 
 interface
 
@@ -59,7 +59,10 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  Classes, SysUtils, DB, TestFramework, ZDataset, ZConnection, ZDbcIntfs,
+{$IFDEF FPC}
+  Variants,
+{$ENDIF}
+  Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs,
   ZBugReport, ZCompatibility, ZTestConsts, ZSqlUpdate, ZSqlProcessor,
   ZAbstractRODataset;
 
@@ -1612,5 +1615,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestCompMySQLBugReport.Suite);
+  RegisterTest('bugreport',TZTestCompMySQLBugReport.Suite);
 end.

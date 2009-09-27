@@ -54,9 +54,10 @@
 unit ZTestSorting;
 
 interface
+{$I ZComponent.inc}
 
 uses
-  TestFramework, Db, ZSqlStrings, SysUtils, ZTokenizer, ZGenericSqlToken,
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, ZSqlStrings, SysUtils, ZTokenizer, ZGenericSqlToken,
   ZConnection, ZDataset, ZTestDefinitions, ZDbcMySql, ZDbcPostgreSql, ZDbcDbLib,
   ZCompatibility;
 
@@ -196,5 +197,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestSortingCase.Suite);
+  RegisterTest('component',TZTestSortingCase.Suite);
 end.

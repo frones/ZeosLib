@@ -54,9 +54,10 @@
 unit ZTestDbcPostgreSql;
 
 interface
+{$I ZDbc.inc}
 
 uses
-  Classes, TestFramework, ZDbcIntfs, ZDbcPostgreSql, ZTestDefinitions,
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZDbcPostgreSql, ZTestDefinitions,
   ZCompatibility;
 
 type
@@ -315,5 +316,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestDbcPostgreSQLCase.Suite);
+  RegisterTest('dbc',TZTestDbcPostgreSQLCase.Suite);
 end.

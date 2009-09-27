@@ -54,8 +54,8 @@
 unit ZTestDbcUtils;
 
 interface
-
-uses TestFramework, ZDbcIntfs, ZDbcConnection, SysUtils, ZCompatibility;
+{$I ZDbc.inc}
+uses {$IFDEF FPC}testregistry,fpcunit{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZDbcConnection, SysUtils, ZCompatibility;
 
 type
 
@@ -499,5 +499,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestDbcUtilsCase.Suite);
+  RegisterTest('dbc',TZTestDbcUtilsCase.Suite);
 end.

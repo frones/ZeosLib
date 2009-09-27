@@ -54,8 +54,8 @@
 unit ZTestOracleToken;
 
 interface
-
-uses TestFramework, ZClasses, ZTokenizer, ZOracleToken,
+{$I ZParseSql.inc}
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZClasses, ZTokenizer, ZOracleToken,
   ZTestTokenizer;
 
 type
@@ -176,6 +176,6 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestOracleTokenizer.Suite);
+  RegisterTest('parsesql',TZTestOracleTokenizer.Suite);
 end.
 

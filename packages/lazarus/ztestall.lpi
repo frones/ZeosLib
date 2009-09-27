@@ -1,0 +1,217 @@
+<?xml version="1.0"?>
+<CONFIG>
+  <ProjectOptions>
+    <PathDelim Value="\"/>
+    <Version Value="7"/>
+    <General>
+      <MainUnit Value="0"/>
+      <TargetFileExt Value=".exe"/>
+      <Icon Value="0"/>
+      <UseXPManifest Value="True"/>
+      <ActiveEditorIndexAtStart Value="0"/>
+    </General>
+    <VersionInfo>
+      <ProjectVersion Value=""/>
+    </VersionInfo>
+    <PublishOptions>
+      <Version Value="2"/>
+      <IgnoreBinaries Value="False"/>
+      <IncludeFileFilter Value="*.(pas|pp|inc|lfm|lpr|lrs|lpi|lpk|sh|xml)"/>
+      <ExcludeFileFilter Value="*.(bak|ppu|ppw|o|so);*~;backup"/>
+    </PublishOptions>
+    <RunParams>
+      <local>
+        <FormatVersion Value="1"/>
+        <CommandLineParams Value="-b -a --format=plain --suite=core"/>
+        <LaunchingApplication PathPlusParams="/usr/X11R6/bin/xterm -T 'Lazarus Run Output' -e $(LazarusDir)/tools/runwait.sh $(TargetCmdLine)"/>
+      </local>
+    </RunParams>
+    <RequiredPackages Count="4">
+      <Item1>
+        <PackageName Value="FPCUnitTestRunner"/>
+      </Item1>
+      <Item2>
+        <PackageName Value="LCL"/>
+      </Item2>
+      <Item3>
+        <PackageName Value="FPCUnitConsoleRunner"/>
+      </Item3>
+      <Item4>
+        <PackageName Value="FCL"/>
+      </Item4>
+    </RequiredPackages>
+    <Units Count="3">
+      <Unit0>
+        <Filename Value="ztestall.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ztestall"/>
+        <CursorPos X="61" Y="68"/>
+        <TopLine Value="49"/>
+        <EditorIndex Value="0"/>
+        <UsageCount Value="21"/>
+        <Loaded Value="True"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="C:\lazarus\fpc\2.5.1\source\packages\fcl-base\src\custapp.pp"/>
+        <UnitName Value="CustApp"/>
+        <CursorPos X="3" Y="323"/>
+        <TopLine Value="323"/>
+        <EditorIndex Value="2"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="C:\lazarus\components\fpcunit\console\consoletestrunner.pas"/>
+        <UnitName Value="consoletestrunner"/>
+        <CursorPos X="1" Y="68"/>
+        <TopLine Value="38"/>
+        <EditorIndex Value="1"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit2>
+    </Units>
+    <JumpHistory Count="29" HistoryIndex="28">
+      <Position1>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="7" Column="1" TopLine="1"/>
+      </Position1>
+      <Position2>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="6" Column="26" TopLine="1"/>
+      </Position2>
+      <Position3>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="53" Column="1" TopLine="21"/>
+      </Position3>
+      <Position4>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="52" Column="1" TopLine="24"/>
+      </Position4>
+      <Position5>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="51" Column="19" TopLine="24"/>
+      </Position5>
+      <Position6>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="50" Column="35" TopLine="24"/>
+      </Position6>
+      <Position7>
+        <Filename Value="C:\lazarus\components\fpcunit\console\consoletestrunner.pas"/>
+        <Caret Line="263" Column="15" TopLine="259"/>
+      </Position7>
+      <Position8>
+        <Filename Value="C:\lazarus\components\fpcunit\console\consoletestrunner.pas"/>
+        <Caret Line="204" Column="13" TopLine="189"/>
+      </Position8>
+      <Position9>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="50" Column="27" TopLine="30"/>
+      </Position9>
+      <Position10>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="6" Column="11" TopLine="1"/>
+      </Position10>
+      <Position11>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="51" Column="25" TopLine="31"/>
+      </Position11>
+      <Position12>
+        <Filename Value="C:\lazarus\fpc\2.5.1\source\packages\fcl-base\src\custapp.pp"/>
+        <Caret Line="58" Column="20" TopLine="33"/>
+      </Position12>
+      <Position13>
+        <Filename Value="C:\lazarus\components\fpcunit\console\consoletestrunner.pas"/>
+        <Caret Line="204" Column="28" TopLine="39"/>
+      </Position13>
+      <Position14>
+        <Filename Value="C:\lazarus\components\fpcunit\console\consoletestrunner.pas"/>
+        <Caret Line="308" Column="27" TopLine="291"/>
+      </Position14>
+      <Position15>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="46" Column="15" TopLine="31"/>
+      </Position15>
+      <Position16>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="41" Column="3" TopLine="24"/>
+      </Position16>
+      <Position17>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="59" Column="5" TopLine="26"/>
+      </Position17>
+      <Position18>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="58" Column="23" TopLine="48"/>
+      </Position18>
+      <Position19>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="71" Column="1" TopLine="49"/>
+      </Position19>
+      <Position20>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="57" Column="1" TopLine="40"/>
+      </Position20>
+      <Position21>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="60" Column="1" TopLine="41"/>
+      </Position21>
+      <Position22>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="71" Column="1" TopLine="49"/>
+      </Position22>
+      <Position23>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="57" Column="1" TopLine="40"/>
+      </Position23>
+      <Position24>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="58" Column="1" TopLine="41"/>
+      </Position24>
+      <Position25>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="59" Column="1" TopLine="42"/>
+      </Position25>
+      <Position26>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="60" Column="1" TopLine="43"/>
+      </Position26>
+      <Position27>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="72" Column="1" TopLine="49"/>
+      </Position27>
+      <Position28>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="73" Column="1" TopLine="49"/>
+      </Position28>
+      <Position29>
+        <Filename Value="ztestall.lpr"/>
+        <Caret Line="71" Column="1" TopLine="49"/>
+      </Position29>
+    </JumpHistory>
+  </ProjectOptions>
+  <CompilerOptions>
+    <Version Value="8"/>
+    <PathDelim Value="\"/>
+    <SearchPaths>
+      <IncludeFiles Value="$(ProjOutDir)\"/>
+      <OtherUnitFiles Value="..\..\src\core\;..\..\src\parsesql\;..\..\src\plain\;..\..\src\dbc\;..\..\src\component\;..\..\test\framework\;..\..\test\core\;..\..\test\parsesql\;..\..\test\plain\;..\..\test\dbc\;..\..\test\component\;..\..\test\bugreport\"/>
+      <UnitOutputDirectory Value="build"/>
+    </SearchPaths>
+    <Other>
+      <CompilerPath Value="$(CompPath)"/>
+    </Other>
+  </CompilerOptions>
+  <Debugging>
+    <Exceptions Count="3">
+      <Item1>
+        <Name Value="EAbort"/>
+      </Item1>
+      <Item2>
+        <Name Value="ECodetoolError"/>
+      </Item2>
+      <Item3>
+        <Name Value="EFOpenError"/>
+      </Item3>
+    </Exceptions>
+  </Debugging>
+</CONFIG>

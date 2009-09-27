@@ -54,9 +54,9 @@
 unit ZTestDbcMsSql;
 
 interface
-
+{$I ZDbc.inc}
 uses
-  Classes, SysUtils, TestFramework, ZDbcIntfs, ZDbcDbLib, ZDbcDbLibResultSet,
+  Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZDbcDbLib, ZDbcDbLibResultSet,
   ZTestDefinitions, ZCompatibility, ZDbcDbLibMsSqlMetadata;
 
 type
@@ -317,7 +317,7 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestDbcMSSqlCase.Suite);
+  RegisterTest('dbc',TZTestDbcMSSqlCase.Suite);
 end.
 
 

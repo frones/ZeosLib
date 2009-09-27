@@ -1,7 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{        Test Cases for ASA DBC Bug Reports         }
+{       Test Cases for ASA Component Bug Reports          }
 {                                                         }
 {*********************************************************}
 
@@ -49,54 +49,61 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit ZTestDbcASA;
+unit ZTestBugCompASA;
 
 interface
 
 {$I ZBugReport.inc}
 
 uses
-  Classes, SysUtils, TestFramework, ZDbcIntfs, ZBugReport, ZCompatibility,
-  ZDbcASA;
-
+  Classes, SysUtils, DB, TestFramework, ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
+  {$IFNDEF LINUX}
+    DBCtrls,
+  {$ENDIF}
+  ZCompatibility;
 type
 
-  {** Implements a DBC bug report test case for ASA. }
-  TZTestDbcASABugReport = class(TZSpecificSQLBugReportTestCase)
+  {** Implements a bug report test case for ASA components. }
+  ZTestCompASABugReport = class(TZSpecificSQLBugReportTestCase)
   private
-    FConnection: IZConnection;
+    FConnection: TZConnection;
   protected
     procedure SetUp; override;
     procedure TearDown; override;
     function GetSupportedProtocols: string; override;
 
-    property Connection: IZConnection read FConnection write FConnection;
+    property Connection: TZConnection read FConnection write FConnection;
+
   published
   end;
 
 implementation
 
-uses ZTestCase, ZTestConsts;
+uses
+{$IFNDEF VER130BELOW}
+  Variants,
+{$ENDIF}
+  ZTestCase, ZTestConsts, ZSqlUpdate, ZSqlTestCase;
 
-{ TZTestDbcASABugReport }
+{ ZTestCompASABugReport }
 
-function TZTestDbcASABugReport.GetSupportedProtocols: string;
+function ZTestCompASABugReport.GetSupportedProtocols: string;
 begin
   Result := 'ASA7,ASA8,ASA9';
 end;
 
-procedure TZTestDbcASABugReport.SetUp;
+procedure ZTestCompASABugReport.SetUp;
 begin
-  Connection := CreateDbcConnection;
+  Connection := CreateDatasetConnection;
 end;
 
-procedure TZTestDbcASABugReport.TearDown;
+procedure ZTestCompASABugReport.TearDown;
 begin
-  Connection.Close;
-  Connection := nil;
+  Connection.Disconnect;
+  Connection.Free;
 end;
 
 
 initialization
-  TestFramework.RegisterTest(TZTestDbcASABugReport.Suite);
+  RegisterTest('bugreport',ZTestCompASABugReport.Suite);
 end.

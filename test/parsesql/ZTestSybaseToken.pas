@@ -54,8 +54,8 @@
 unit ZTestSybaseToken;
 
 interface
-
-uses TestFramework, ZClasses, ZTokenizer, ZSybaseToken, ZTestTokenizer;
+{$I ZParseSql.inc}
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZClasses, ZTokenizer, ZSybaseToken, ZTestTokenizer;
 
 type
 
@@ -179,6 +179,6 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestSybaseTokenizer.Suite);
+  RegisterTest('parsesql',TZTestSybaseTokenizer.Suite);
 end.
 

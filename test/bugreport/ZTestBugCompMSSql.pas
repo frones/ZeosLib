@@ -49,7 +49,7 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit ZTestCompMSSql;
+unit ZTestBugCompMSSql;
 
 interface
 
@@ -59,7 +59,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  Classes, DB, TestFramework, ZDataset, ZConnection,
+  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection,
   ZDbcIntfs, ZBugReport,ZCompatibility;
 
 type
@@ -219,5 +219,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestCompMSSqlBugReport.Suite);
+  RegisterTest('bugreport',TZTestCompMSSqlBugReport.Suite);
 end.

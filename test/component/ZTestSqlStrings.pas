@@ -54,13 +54,14 @@
 unit ZTestSqlStrings;
 
 interface
+{$I ZComponent.inc}
 
-uses TestFramework, ZSqlStrings, SysUtils, ZTokenizer, ZGenericSqlToken;
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestCase, ZSqlStrings, SysUtils, ZTokenizer, ZGenericSqlToken;
 
 type
 
   {** Implements a test case for class TZSqlStrings. }
-  TZTestSQLStringsCase = class(TTestCase)
+  TZTestSQLStringsCase = class(TZAbstractTestCase)
   private
     SQLStrings: TZSQLStrings;
   protected
@@ -70,7 +71,7 @@ type
     procedure TestStatements;
     procedure TestParams;
     procedure TestUncompleted;
-  end;
+ end;
 
 implementation
 
@@ -169,5 +170,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestSQLStringsCase.Suite);
+  RegisterTest('component',TZTestSQLStringsCase.Suite);
 end.

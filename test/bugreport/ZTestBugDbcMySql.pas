@@ -49,14 +49,14 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit ZTestDbcMySql;
+unit ZTestBugDbcMySql;
 
 interface
 
 {$I ZBugReport.inc}
 
 uses
-  Classes, TestFramework, ZDbcIntfs, ZBugReport, ZCompatibility, ZDbcMySql,
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZBugReport, ZCompatibility, ZDbcMySql,
   ZDbcMySqlResultSet;
 
 type
@@ -346,5 +346,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestDbcMySQLBugReport.Suite);
+  RegisterTest('bugreport',TZTestDbcMySQLBugReport.Suite);
 end.

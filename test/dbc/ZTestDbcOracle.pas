@@ -54,8 +54,9 @@
 unit ZTestDbcOracle;
 
 interface
+{$I ZDbc.inc}
 
-uses Classes, SysUtils, TestFramework, ZDbcIntfs, ZTestDefinitions, ZDbcOracle,
+uses Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZTestDefinitions, ZDbcOracle,
   ZCompatibility;
 
 type
@@ -440,5 +441,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestDbcOracleCase.Suite);
+  RegisterTest('dbc',TZTestDbcOracleCase.Suite);
 end.

@@ -59,7 +59,7 @@ uses
 {$IFDEF VER120BELOW}
   DateUtils,
 {$ENDIF}
-  TestFramework, ZDbcCache, ZClasses, ZSysUtils, ZCollections, ZDbcResultSet,
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcCache, ZClasses, ZSysUtils, ZCollections, ZDbcResultSet,
   ZDbcIntfs, ZDbcUtils, SysUtils, Classes, ZDbcResultSetMetadata,
   Contnrs, ZCompatibility, ZTestDefinitions;
 
@@ -1062,5 +1062,5 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestRowAccessorCase.Suite);
+  RegisterTest('dbc',TZTestRowAccessorCase.Suite);
 end.

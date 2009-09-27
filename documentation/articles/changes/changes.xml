@@ -41,7 +41,10 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
-          <simpara>[XXX] (<ulink url="http://zeos.firmos.at/viewtopic.php?t=xxxx">http://zeos.firmos.at/viewtopic.php?t=xxx</ulink>)</simpara>
+          <simpara>[COMMON] Scriptparser error finding a multicharacter delimiter(<ulink url="http://zeos.firmos.at/viewtopic.php?t=2517">http://zeos.firmos.at/viewtopic.php?t=2517</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[Oracle] Memory leak when reading BLOB values (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2504">http://zeos.firmos.at/viewtopic.php?t=2504</ulink>)</simpara>
         </listitem>
     </itemizedlist>
     </sect2>
@@ -60,7 +63,7 @@
       <title>Internal Changes</title>
       <itemizedlist spacing="compact">
         <listitem>
-          <simpara>NONE</simpara>
+          <simpara>[Lazarus/FPC] Test suite for Lazarus/FPC added.</simpara>
         </listitem>
      </itemizedlist>
     </sect2>	

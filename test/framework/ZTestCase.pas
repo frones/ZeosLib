@@ -61,17 +61,30 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  Classes, TestFramework, ZCompatibility;
+  Classes, {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF}, ZCompatibility;
 
 type
+  {$IFDEF FPC}
+  CTZAbstractTestCase=Class of TZAbstractTestCase;
+  {$ENDIF}
 
   {** Implements an abstract class for all test cases. }
+
+  { TZAbstractTestCase }
+
   TZAbstractTestCase = class(TTestCase)
   private
     FDecimalSeparator: Char;
     FSuppressTestOutput: Boolean;
 
   protected
+    {$IFDEF FPC}
+    frefcount : longint;
+    { implement methods of IUnknown }
+    function QueryInterface(const iid : tguid;out obj) : longint;stdcall;
+    function _AddRef : longint;stdcall;
+    function _Release : longint;stdcall;
+    {$ENDIF}
     property DecimalSeparator: Char read FDecimalSeparator
       write FDecimalSeparator;
     property SuppressTestOutput: Boolean read FSuppressTestOutput
@@ -99,8 +112,15 @@ type
     function GetTickCount: Cardinal;
 
   public
-    constructor Create(MethodName: string); override;
+    constructor Create(MethodName: string); {$IFNDEF FPC} override; {$ENDIF}
     destructor Destroy; override;
+    {$IFDEF FPC}
+    function GetName: string;
+    procedure Fail(msg: string; errorAddr: Pointer = nil);
+    procedure CheckNotNull(obj: IUnknown; msg: string = ''); overload; virtual;
+    procedure CheckNull(obj: IUnknown; msg: string = ''); overload; virtual;
+    class function Suite : CTZAbstractTestCase;
+    {$ENDIF}
   end;
 
   {** Implements a generic test case. }
@@ -109,14 +129,73 @@ type
 implementation
 
 uses
-{$IFDEF LINUX}
-  IdGlobal,
+{$IFDEF FPC}
+  LCLIntf,
 {$ELSE}
   Windows,
 {$ENDIF}
   SysUtils, ZSysUtils, ZTestConfig;
 
+{$IFDEF FPC}
+function CallerAddr: Pointer;
+begin
+  Result := nil;
+end;
+{$ENDIF}
+
 { TZAbstractTestCase }
+
+{$IFDEF FPC}
+function TZAbstractTestCase.QueryInterface(const iid: tguid; out obj): longint;
+  stdcall;
+begin
+  if getinterface(iid,obj) then
+   result:=0
+  else
+   result:=longint(E_NOINTERFACE);
+end;
+
+function TZAbstractTestCase._AddRef: longint; stdcall;
+begin
+  _addref:=interlockedincrement(frefcount);
+end;
+
+function TZAbstractTestCase._Release: longint; stdcall;
+begin
+  _Release:=interlockeddecrement(frefcount);
+  if _Release=0 then self.destroy;
+end;
+
+function TZAbstractTestCase.GetName: string;
+begin
+   Result := GetTestName;
+end;
+
+procedure TZAbstractTestCase.Fail(msg: string; errorAddr: Pointer = nil);
+begin
+  if errorAddr = nil then
+    raise EAssertionFailedError.Create(msg) at CallerAddr
+  else
+    raise EAssertionFailedError.Create(msg) at errorAddr;
+end;
+
+class function TZAbstractTestCase.Suite: CTZAbstractTestCase;
+begin
+  result := Self;
+end;
+
+procedure TZAbstractTestCase.CheckNotNull(obj: IUnknown; msg: string);
+begin
+    if obj = nil then
+      Fail(msg, CallerAddr);
+end;
+
+procedure TZAbstractTestCase.CheckNull(obj: IUnknown; msg: string);
+begin
+    if obj <>  nil then
+      Fail(msg, CallerAddr);
+end;
+{$ENDIF}
 
 {**
   Creates the abstract test case and initialize global parameters.
@@ -124,7 +203,11 @@ uses
 }
 constructor TZAbstractTestCase.Create(MethodName: string);
 begin
+  {$IFNDEF FPC}
   inherited Create(MethodName);
+  {$ELSE}
+  inherited CreateWithName(MethodName);
+  {$ENDIF}
   LoadConfiguration;
 end;
 
@@ -297,8 +380,8 @@ end;
 }
 function TZAbstractTestCase.GetTickCount: Cardinal;
 begin
-{$IFDEF LINUX}
-  Result := IdGlobal.GetTickCount;
+{$IFDEF FPC}
+  Result := LCLIntf.GetTickCount;
 {$ELSE}
   Result := Windows.GetTickCount;
 {$ENDIF}

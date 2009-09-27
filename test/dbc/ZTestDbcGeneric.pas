@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, TestFramework, SysUtils, ZDbcIntfs, ZTestDefinitions,
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZDbcIntfs, ZTestDefinitions,
   ZCompatibility;
 
 type
@@ -989,6 +989,6 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZGenericTestDbcResultSet.Suite);
+  RegisterTest('dbc',TZGenericTestDbcResultSet.Suite);
 end.
 

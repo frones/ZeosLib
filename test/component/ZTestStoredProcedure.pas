@@ -54,9 +54,10 @@
 unit ZTestStoredProcedure;
 
 interface
+{$I ZComponent.inc}
 
 uses
-  TestFramework, Db, ZSqlStrings, SysUtils, ZTokenizer, ZGenericSqlToken,
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, ZSqlStrings, SysUtils, ZTokenizer, ZGenericSqlToken,
   ZConnection, ZDataset, ZTestDefinitions, ZStoredProcedure;
 
 type
@@ -225,6 +226,6 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZTestInterbaseStoredProcedure.Suite);
-  TestFramework.RegisterTest(TZTestDbLibStoredProcedure.Suite);
+  RegisterTest('component',TZTestInterbaseStoredProcedure.Suite);
+  RegisterTest('component',TZTestDbLibStoredProcedure.Suite);
 end.
