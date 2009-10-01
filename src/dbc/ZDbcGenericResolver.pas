@@ -675,7 +675,7 @@ var
   begin 
     if Length(Temp1) < l1 + length(app) then 
       SetLength(Temp1, 2 * (length(app) + l1)); 
-    Move(app[1], Temp1[l1+1], length(app)); 
+    Move(app[1], Temp1[l1+1], length(app)*SizeOf(Char)); 
     Inc(l1, length(app)); 
   end; 
 
