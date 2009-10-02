@@ -3,7 +3,7 @@ program ztestall;
 {$mode objfpc}{$H+}
 
 uses
-  custapp,
+  custapp, sysutils, comctrls,
   Interfaces, Forms, GuiTestRunner, LResources,
   Classes, consoletestrunner, fpcunit, fpcunitreport, plaintestreport,
   //core
@@ -34,6 +34,8 @@ uses
 
 type
 
+  TTreeNodeState=(tsUnChecked, tsChecked);
+
   { TLazTestRunner }
 
   { TMyResultsWriter }
@@ -60,6 +62,90 @@ type
   public
     constructor Create(AOwner: TComponent); override;
   end;
+
+  { TMyGUITestRunner }
+
+  TMyGUITestRunner = class(TGUITestRunner)
+  protected
+  // override the protected methods of TGUITestRunner to customize its behavior
+  public
+    constructor Create(TheOwner: TComponent); override;
+    function FindNode(NodeText : String):TTreeNode;
+  end;
+
+constructor TMyGUITestRunner.Create(TheOwner: TComponent);
+var
+  Suite : String;
+  SuiteNode : TTreeNode;
+  procedure ChangeCheck(aNode: TTreeNode; aCheck: TTreeNodeState);
+  var
+    i: integer;
+    n: TTreeNode;
+  begin
+    if Assigned(aNode) then
+    begin
+      aNode.StateIndex := ord(aCheck);
+      if (TTest(aNode.Data) is TTestSuite) then
+        for i := 0 to aNode.Count - 1 do
+        begin
+          n := aNode.Items[i];
+          ChangeCheck(n, aCheck);
+        end;
+    end;
+  end;
+begin
+  inherited Create(TheOwner);
+  if Application.HasOption('suite') then
+    begin
+      Suite := Application.GetOptionValue('suite');
+      ActUncheckAllExecute(Self);
+      SuiteNode := FindNode(suite);
+      If SuiteNode <> nil then
+        begin
+          SuiteNode.selected := true;
+          ChangeCheck(SuiteNode,tsChecked);
+        end;
+    end;
+end;
+
+function TMyGUITestRunner.FindNode(NodeText: String): TTreeNode;
+var
+  i: integer;
+  Function CheckNodes (node:TTreeNode; ATestName:string):TTreeNode;
+  var s, c, nodetext : string;
+      I, p : integer;
+  begin
+    result := nil;
+    nodetext := node.text;
+      begin
+      p := pos ('.', ATestName);
+      if p > 0 then
+        begin
+        s := copy (ATestName, 1, p-1);
+        c := copy (ATestName, p+1, maxint);
+        end
+      else
+        begin
+        s := '';
+        c := ATestName;
+        end;
+      if comparetext(c, node.Text) = 0 then
+        result := node
+      else if (CompareText( s, node.Text) = 0) or (s = '') then
+        for I := 0 to node.Count - 1 do
+          begin
+            result := CheckNodes(node.items[I], c);
+            if result <> nil then exit;
+          end;
+      end
+  end;
+begin
+  for i := 0 to TestTree.Items.Count -1 do
+    begin
+      Result := CheckNodes(TestTree.Items[i],NodeText);
+      if result <> nil then exit;
+    end;
+end;
 
 procedure TMyResultsWriter.WriteTestFooter(ATest: TTest; ALevel: integer;
   ATiming: TDateTime);
@@ -130,7 +216,7 @@ begin
   else
   begin
     Application.Initialize;
-    Application.CreateForm(TGuiTestRunner, TestRunner);
+    Application.CreateForm(TMyGuiTestRunner, TestRunner);
     Application.Run;
   end;
 end.

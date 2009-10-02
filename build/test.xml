@@ -367,7 +367,7 @@
     <echo message="Testing ... ${test.suite} ..."/>
     <exec dir="${test.dir}" executable="${test.dir}/ZTestAll"
        output="${log.file}" append="true">
-   <arg line="--batch -all --format=plain --suite=${test.suite}"/>
+   <arg line="--batch -p --format=plain --suite=${test.suite}"/>
     </exec>
   </target>
 
