@@ -29,10 +29,10 @@
 			<DCC_DcpOutput>build</DCC_DcpOutput>
 			<DCC_ImageBase>00400000</DCC_ImageBase>
 			<DesignOnlyPackage>false</DesignOnlyPackage>
-			<DllSuffix>120</DllSuffix>
+			<DllSuffix>140</DllSuffix>
 			<DCC_Description>Zeos Low Level Database API</DCC_Description>
 			<RuntimeOnlyPackage>true</RuntimeOnlyPackage>
-			<DCC_DependencyCheckOutputName>build\ZDbc120.bpl</DCC_DependencyCheckOutputName>
+			<DCC_DependencyCheckOutputName>build\ZDbc140.bpl</DCC_DependencyCheckOutputName>
 			<DCC_IntegerOverflowCheck>true</DCC_IntegerOverflowCheck>
 			<DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>
 			<GenDll>true</GenDll>
@@ -41,6 +41,8 @@
 			<GenPackage>true</GenPackage>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_1)'!=''">
+			<DCC_BplOutput>$(BDSCOMMONDIR)\Bpl</DCC_BplOutput>
+			<DCC_DcpOutput>$(BDSCOMMONDIR)\Bpl</DCC_DcpOutput>
 			<Version>7.0</Version>
 			<DCC_DebugInformation>False</DCC_DebugInformation>
 			<DCC_LocalDebugSymbols>False</DCC_LocalDebugSymbols>
@@ -56,6 +58,8 @@
 			<DCC_IncludePath>$(BDSCOMMONDIR)\Bpl;$(DCC_IncludePath)</DCC_IncludePath>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
+			<DCC_BplOutput>$(BDSCOMMONDIR)\Bpl</DCC_BplOutput>
+			<DCC_DcpOutput>$(BDSCOMMONDIR)\Bpl</DCC_DcpOutput>
 			<Version>7.0</Version>
 			<DCC_IntegerOverflowCheck>True</DCC_IntegerOverflowCheck>
 			<DCC_GenerateStackFrames>True</DCC_GenerateStackFrames>
@@ -101,6 +105,7 @@
 			<DCCReference Include="..\..\src\dbc\ZDbcPostgreSqlResultSet.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcPostgreSqlStatement.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcPostgreSqlUtils.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcPooled.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcResultSet.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcResultSetMetadata.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcStatement.pas"/>

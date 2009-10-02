@@ -27,7 +27,7 @@
 			<DCC_DcuOutput>build</DCC_DcuOutput>
 			<DCC_UnitSearchPath>build;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_DcpOutput>build</DCC_DcpOutput>
-			<DCC_DependencyCheckOutputName>build\ZPlain120.bpl</DCC_DependencyCheckOutputName>
+			<DCC_DependencyCheckOutputName>build\ZPlain140.bpl</DCC_DependencyCheckOutputName>
 			<DCC_ImageBase>00400000</DCC_ImageBase>
 			<DesignOnlyPackage>false</DesignOnlyPackage>
 			<RuntimeOnlyPackage>true</RuntimeOnlyPackage>
@@ -38,11 +38,13 @@
 			<DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>
 			<GenDll>true</GenDll>
 			<GenPackage>true</GenPackage>
-			<DllSuffix>120</DllSuffix>
+			<DllSuffix>140</DllSuffix>
 			<DCC_GenerateStackFrames>true</DCC_GenerateStackFrames>
 			<DCC_SymbolReferenceInfo>1</DCC_SymbolReferenceInfo>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_1)'!=''">
+			<DCC_BplOutput>$(BDSCOMMONDIR)\Bpl</DCC_BplOutput>
+			<DCC_DcpOutput>$(BDSCOMMONDIR)\Bpl</DCC_DcpOutput>
 			<Version>7.0</Version>
 			<DCC_DebugInformation>False</DCC_DebugInformation>
 			<DCC_LocalDebugSymbols>False</DCC_LocalDebugSymbols>
@@ -61,6 +63,8 @@
 			<DCC_IncludePath>$(BDSCOMMONDIR)\Bpl;$(DCC_IncludePath)</DCC_IncludePath>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
+			<DCC_BplOutput>$(BDSCOMMONDIR)\Bpl</DCC_BplOutput>
+			<DCC_DcpOutput>$(BDSCOMMONDIR)\Bpl</DCC_DcpOutput>
 			<Version>7.0</Version>
 			<DCC_Optimize>False</DCC_Optimize>
 			<DCC_IntegerOverflowCheck>True</DCC_IntegerOverflowCheck>
@@ -136,7 +140,7 @@
 						<Source Name="MainSource">ZPlain.dpk</Source>
 					</Source>
 					<Language>
-						<Language Name="RootDir">D:\Data\Delphi\ZEOSTesting\packages\delphi12\</Language>
+						<Language Name="RootDir">D:\Data\Delphi\ZEOSTesting\packages\delphi14\</Language>
 					</Language>
 				</Delphi.Personality>
 			</BorlandProject>
