@@ -316,10 +316,11 @@
 
     <copy todir="${test.dir}">
       <fileset dir="${build.dir}">
-        <include name="ZTestAll.exe*"/>
-        <include name="ZTestAll*"/>
+        <include name="ztestall.exe*"/>
+        <include name="ztestall*"/>
       </fileset>
     </copy>
+    <chmod dir="${test.dir}" perm="ugo+rx" includes="ztestall.exe"/>
 
     <antcall target="test_core_run_laz" inheritAll="true"/>
     <antcall target="test_parsesql_run_laz" inheritAll="true"/>
@@ -365,7 +366,7 @@
 
  <target name="test_element_run_laz">
     <echo message="Testing ... ${test.suite} ..."/>
-    <exec dir="${test.dir}" executable="${test.dir}/ZTestAll"
+    <exec dir="${test.dir}" executable="${test.dir}/ztestall.exe"
        output="${log.file}" append="true">
    <arg line="--batch -p --format=plain --suite=${test.suite}"/>
     </exec>
