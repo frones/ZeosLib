@@ -298,10 +298,14 @@ begin
       APassword := AProperties.Values['password'];
 
     // AProperties
-    AProperties.Values['UID'] := '';
-    AProperties.Values['PWD'] := '';
-    AProperties.Values['username'] := '';
-    AProperties.Values['password'] := '';
+    if AProperties.IndexOfName('UID') <> -1 then
+      AProperties.Delete(AProperties.IndexOfName('UID'));
+    if AProperties.IndexOfName('PWD') <> -1 then
+      AProperties.Delete(AProperties.IndexOfName('PWD'));
+    if AProperties.IndexOfName('username') <> -1 then
+      AProperties.Delete(AProperties.IndexOfName('username'));
+    if AProperties.IndexOfName('password') <> -1 then
+      AProperties.Delete(AProperties.IndexOfName('password'));
 
     FPrefix := APrefix;
     FProtocol := AProtocol;
@@ -323,25 +327,25 @@ begin
     if FProperties.Values['UID'] <> '' then
     begin
       UserName := FProperties.Values['UID'];
-      FProperties.Values['UID'] := '';
+      FProperties.Delete(FProperties.IndexOfName('UID'));
     end;
 
     if FProperties.Values['PWD'] <> '' then
     begin
       Password := FProperties.Values['PWD'];
-      FProperties.Values['PWD'] := '';
+      FProperties.Delete(FProperties.IndexOfName('PWD'));
     end;
 
     if FProperties.Values['username'] <> '' then
     begin
       UserName := FProperties.Values['username'];
-      FProperties.Values['username'] := '';
+      FProperties.Delete(FProperties.IndexOfName('username'));
     end;
 
     if FProperties.Values['password'] <> '' then
     begin
       Password := FProperties.Values['password'];
-      FProperties.Values['password'] := '';
+      FProperties.Delete(FProperties.IndexOfName('password'));
     end;
   finally
     FProperties.OnChange := OnPropertiesChange;
