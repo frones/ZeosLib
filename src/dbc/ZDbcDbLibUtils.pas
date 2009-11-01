@@ -274,7 +274,11 @@ begin
         Result := AnsiQuotedStr(SoftVarManager.GetAsString(Value), '''');
       stBytes:
         begin
+          {$IFDEF DELPHI12_UP}
+          TempBytes := StrToBytes(UTF8String(SoftVarManager.GetAsString(Value)));
+          {$ELSE}
           TempBytes := StrToBytes(SoftVarManager.GetAsString(Value));
+          {$ENDIF}
           if Length(TempBytes) = 0 then
             Result := 'NULL'
           else

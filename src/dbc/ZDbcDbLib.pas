@@ -297,7 +297,11 @@ begin
     LSQL := StringReplace(Sql, '\'#13, '\\'#13, [rfReplaceAll])
   else
     LSQL := SQL;
+  {$IFDEF DELPHI12_UP}
+    if FPlainDriver.dbcmd(FHandle, PAnsiChar(UTF8String(LSql))) <> DBSUCCEED then
+  {$ELSE}
   if FPlainDriver.dbcmd(FHandle, PAnsiChar(LSql)) <> DBSUCCEED then
+  {$ENDIF}
     CheckDBLibError(lcExecute, LSQL);
   if FPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED then
     CheckDBLibError(lcExecute, LSQL);
@@ -324,16 +328,25 @@ begin
 //Common parameters
     S := Info.Values['workstation'];
     if S <> '' then
+         {$IFDEF DELPHI12_UP}
+         FPlainDriver.dbSetLHost(LoginRec, PAnsiChar(UTF8String(S)));
+         {$ELSE}
          FPlainDriver.dbSetLHost(LoginRec, PAnsiChar(S));
-
+         {$ENDIF}
     S := Info.Values['appname'];
     if S <> '' then
+         {$IFDEF DELPHI12_UP}
+         FPlainDriver.dbSetLApp(LoginRec, PAnsiChar(UTF8String(S)));
+         {$ELSE}
          FPlainDriver.dbSetLApp(LoginRec, PAnsiChar(S));
-
+          {$ENDIF}
     S := Info.Values['language'];
     if S <> '' then
+         {$IFDEF DELPHI12_UP}
+         FPlainDriver.dbSetLNatLang(LoginRec, PAnsiChar(UTF8String(S)));
+         {$ELSE}
          FPlainDriver.dbSetLNatLang(LoginRec, PAnsiChar(S));
-
+         {$ENDIF}
     S := Info.Values['timeout'];
     if S <> '' then
       FPlainDriver.dbSetLoginTime(StrToIntDef(S, 60));
@@ -349,8 +362,13 @@ begin
       end
       else
       begin
+        {$IFDEF DELPHI12_UP}
+        FPLainDriver.dbsetluser(LoginRec, PAnsiChar(UTF8String(User)));
+        FPLainDriver.dbsetlpwd(LoginRec, PAnsiChar(UTF8String(Password)));
+        {$ELSE}
         FPLainDriver.dbsetluser(LoginRec, PAnsiChar(User));
         FPLainDriver.dbsetlpwd(LoginRec, PAnsiChar(Password));
+        {$ENDIF}
         LogMessage := LogMessage + Format(' AS USER "%s"', [User]);
       end;
     end;
@@ -360,16 +378,27 @@ begin
     begin
       S := Info.Values['codepage'];
       if S <> '' then
+            {$IFDEF DELPHI12_UP}
+            FPlainDriver.dbSetLCharSet(LoginRec, PAnsiChar(UTF8String(S)));
+            {$ELSE}
             FPlainDriver.dbSetLCharSet(LoginRec, PAnsiChar(S));
-
+            {$ENDIF}
+      {$IFDEF DELPHI12_UP}
+      FPLainDriver.dbsetluser(LoginRec, PAnsiChar(UTF8String(User)));
+      FPLainDriver.dbsetlpwd(LoginRec, PAnsiChar(UTF8String(Password)));
+      {$ELSE}
       FPLainDriver.dbsetluser(LoginRec, PAnsiChar(User));
       FPLainDriver.dbsetlpwd(LoginRec, PAnsiChar(Password));
+      {$ENDIF}
       LogMessage := LogMessage + Format(' AS USER "%s"', [User]);
     end;
 
     CheckDBLibError(lcConnect, LogMessage);
-
+    {$IFDEF DELPHI12_UP}
+    FHandle := FPLainDriver.dbOpen(LoginRec, PAnsiChar(UTF8String(HostName)));
+    {$ELSE}
     FHandle := FPLainDriver.dbOpen(LoginRec, PAnsiChar(HostName));
+    {$ENDIF}
     CheckDBLibError(lcConnect, LogMessage);
     DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
   finally
@@ -432,7 +461,11 @@ begin
   InternalLogin;
 
   LogMessage := Format('USE %s', [Database]);
+  {$IFDEF DELPHI12_UP}
+  if FPlainDriver.dbUse(FHandle, PAnsiChar(UTF8String(Database))) <> DBSUCCEED then
+  {$ELSE}
   if FPlainDriver.dbUse(FHandle, PAnsiChar(Database)) <> DBSUCCEED then
+  {$ENDIF}
     CheckDBLibError(lcConnect, LogMessage);
   DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
 
@@ -722,7 +755,11 @@ begin
   if (Catalog <> '') and not Closed then
   begin
     LogMessage := Format('SET CATALOG %s', [Catalog]);
+    {$IFDEF DELPHI12_UP}
+    if FPLainDriver.dbUse(FHandle, PAnsiChar(UTF8String(Catalog))) <> DBSUCCEED then
+    {$ELSE}
     if FPLainDriver.dbUse(FHandle, PAnsiChar(Catalog)) <> DBSUCCEED then
+    {$ENDIF}
       CheckDBLibError(lcOther, LogMessage);
     DriverManager.LogMessage(lcOther, FPLainDriver.GetProtocol, LogMessage);
   end;
