@@ -170,27 +170,6 @@ const
   STMT_FETCH_DATA_TRUNC = 101;
 
 type
-  {$IFDEF CPU64}
-  ULong                 = QWord;
-  {$ELSE}
-  ULong                 = LongWord;
-  {$ENDIF}
-
-  {$IFDEF FPC}
-  ULongLong             = QWord;
-  {$ELSE}
-  {$IFDEF VER150BELOW}
-  ULongLong             = INT64;
-  {$ELSE}
-  ULongLong             = UINT64;  
-  {$ENDIF}
-  {$ENDIF}
-  UInt                  = LongWord;
-
-  PULong                = ^ULong;
-  PULongLong            = ^ULongLong;
-  PUInt                 = ^UInt;
-
   TMySqlOption = (
     MYSQL_OPT_CONNECT_TIMEOUT,
     MYSQL_OPT_COMPRESS,

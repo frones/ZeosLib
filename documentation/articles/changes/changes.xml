@@ -30,6 +30,9 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=190">#0000190</ulink> [normal] 64-bit support : first step (comon + mysql driver)</simpara>
+        </listitem>
+        <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=179">#0000178</ulink> [normal] Error compiling Zeos under Linux.</simpara>
         </listitem>
         <listitem>
