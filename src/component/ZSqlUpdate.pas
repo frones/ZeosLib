@@ -595,8 +595,10 @@ begin
         stBigDecimal:
           Statement.SetBigDecimal(I + 1,
             RowAccessor.GetBigDecimal(ColumnIndex, WasNull));
-        stString, stUnicodeString:
+        stString:
           Statement.SetString(I + 1, RowAccessor.GetString(ColumnIndex, WasNull));
+        stUnicodeString:
+          Statement.SetUnicodeString(I + 1, RowAccessor.GetUnicodeString(ColumnIndex, WasNull));
         stBytes:
           Statement.SetBytes(I + 1, RowAccessor.GetBytes(ColumnIndex, WasNull));
         stDate:
