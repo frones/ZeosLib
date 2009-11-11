@@ -30,6 +30,9 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=201">#0000201</ulink> [normal] Patch to solve some lib problems with SQLite3 under Linux.</simpara>
+        </listitem>
+        <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=190">#0000190</ulink> [normal] 64-bit support : first step (comon + mysql driver)</simpara>
         </listitem>
         <listitem>

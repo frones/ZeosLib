@@ -63,6 +63,7 @@ const
   WINDOWS_DLL_LOCATION = 'sqlite.dll';
   WINDOWS_DLL3_LOCATION = 'sqlite3.dll';
   LINUX_DLL_LOCATION = 'libsqlite.so';
+  LINUX_DLL3_LOCATION = 'libsqlite3.so';
 
   SQLITE_ISO8859   = 1;
   MASTER_NAME      = 'sqlite_master';
@@ -808,7 +809,7 @@ begin
 { ************** Load adresses of API Functions ************* }
   with Loader do
   begin
-  @SQLite_API.sqlite_open                  := GetAddress('sqlite3_open');
+  @SQLite_API.sqlite_open                   := GetAddress('sqlite3_open');
   @SQLite_API.sqlite_close                  := GetAddress('sqlite3_close');
   @SQLite_API.sqlite_column_count           := GetAddress('sqlite3_column_count');
   @SQLite_API.sqlite_column_bytes           := GetAddress('sqlite3_column_text');
@@ -831,7 +832,7 @@ begin
 //  @SQLite_API.sqlite_create_function        := GetAddress('sqlite3_create_function');
 //  @SQLite_API.sqlite_create_aggregate       := GetAddress('sqlite3_create_aggregate');
 //  @SQLite_API.sqlite_function_type          := GetAddress('sqlite3_function_type');
-  @SQLite_API.sqlite_set_result_string     := GetAddress('sqlite3_result_string');
+  @SQLite_API.sqlite_set_result_string      := GetAddress('sqlite3_result_string');
   @SQLite_API.sqlite_set_result_int         := GetAddress('sqlite3_result_int');
   @SQLite_API.sqlite_set_result_double      := GetAddress('sqlite3_result_double');
   @SQLite_API.sqlite_set_result_error       := GetAddress('sqlite3_result_error');
@@ -840,10 +841,10 @@ begin
   @SQLite_API.sqlite_aggregate_count        := GetAddress('sqlite3_aggregate_count');
   @SQLite_API.sqlite_set_authorizer         := GetAddress('sqlite3_set_authorizer');
   @SQLite_API.sqlite_trace                  := GetAddress('sqlite3_trace');
-  @SQLite_API.sqlite_compile               := GetAddress('sqlite3_prepare');
-  @SQLite_API.sqlite_step                  := GetAddress('sqlite3_step');
-  @SQLite_API.sqlite_finalize              := GetAddress('sqlite3_finalize');
-  @SQLite_API.sqlite_reset                 := GetAddress('sqlite3_reset');
+  @SQLite_API.sqlite_compile                := GetAddress('sqlite3_prepare');
+  @SQLite_API.sqlite_step                   := GetAddress('sqlite3_step');
+  @SQLite_API.sqlite_finalize               := GetAddress('sqlite3_finalize');
+  @SQLite_API.sqlite_reset                  := GetAddress('sqlite3_reset');
 //  @SQLite_API.sqlite_bind                   := GetAddress('sqlite3_bind');
   @SQLite_API.sqlite_progress_handler       := GetAddress('sqlite3_progress_handler');
   @SQLite_API.sqlite_commit_hook            := GetAddress('sqlite3_commit_hook');
@@ -858,6 +859,8 @@ begin
   inherited Create;
   {$IFNDEF UNIX}
     FLoader.AddLocation(WINDOWS_DLL3_LOCATION);
+  {$ELSE}
+    FLoader.AddLocation(LINUX_DLL3_LOCATION);
   {$ENDIF}
 end;
 
