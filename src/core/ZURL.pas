@@ -93,7 +93,7 @@ type
   end;
 
 implementation
-
+uses ZCompatibility;
 { TZURL }
 
 constructor TZURL.Create;
@@ -282,7 +282,7 @@ begin
     begin
       ADatabase := Copy(AValue, 1, I - 1);
       Delete(AValue, 1, I);
-      AProperties.Text := StringReplace(AValue, ';', #13#10, [rfReplaceAll]);
+      AProperties.Text := StringReplace(AValue, ';', LineEnding, [rfReplaceAll]);
     end
     else
       ADatabase := AValue;

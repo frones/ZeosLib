@@ -247,7 +247,7 @@ begin
   try
     for I := 0 to FTraceList.Count - 1 do
     begin
-      Temp := TZLoggingEvent(FTraceList[I]).AsString + #13#10;
+      Temp := TZLoggingEvent(FTraceList[I]).AsString + LineEnding;
 Buffer := PAnsiChar(Temp); 
 Stream.Write(Buffer^, StrLen(Buffer) * sizeof(Ansichar)); 
     end;
@@ -289,7 +289,7 @@ begin
       Stream := TFileStream.Create(FFileName, fmOpenReadWrite or fmShareDenyWrite);
     try
       Stream.Seek(0, soFromEnd);
-      Temp := Event.AsString + #13#10;
+      Temp := Event.AsString + LineEnding;
 Buffer := PAnsiChar(Temp); 
 Stream.Write(Buffer^, StrLen(Buffer)*sizeof(Ansichar)); 
     finally

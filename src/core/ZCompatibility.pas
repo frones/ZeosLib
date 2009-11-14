@@ -108,6 +108,11 @@ var
   DBScreen: IDBScreen;
 {$ENDIF}
 
+{$IFNDEF FPC} //delphi and windows
+const
+   LineEnding = #13#10;
+{$ENDIF}
+
 {$IFDEF UNIX}
   {$IFDEF FPC}
 const

@@ -96,7 +96,7 @@ type
 
 implementation
 
-uses Classes, ZDbcUtils, ZSysUtils;
+uses Classes, ZCompatibility, ZDbcUtils, ZSysUtils;
 
 { TZTestSQLProcessorCase }
 
@@ -133,7 +133,7 @@ begin
   CheckNotNull(FProcessor);
 //  FProcessor.DelimiterType = sdDefault;
 
-  NewLine := #13#10;
+  NewLine := LineEnding;
   Line := '/AAA/ BBB CCC';
   Comment := '/* Comment... */';
   Delimiter := ';';
@@ -163,7 +163,7 @@ begin
   CheckNotNull(FProcessor);
   FProcessor.DelimiterType := dtEmptyLine;
 
-  NewLine := #13#10;
+  NewLine := LineEnding;
   Line := '/AAA/ BBB CCC';
   Comment := '/* Comment... */';
   Delimiter := NewLine + '  ';
@@ -193,7 +193,7 @@ begin
   CheckNotNull(FProcessor);
   FProcessor.DelimiterType := dtGo;
 
-  NewLine := #13#10;
+  NewLine := LineEnding;
   Line := '/AAA/ BBB CCC';
   if StartsWith(Protocol, 'mysql') then
     Comment := '# Comment...'
@@ -226,7 +226,7 @@ begin
   FProcessor.DelimiterType := dtSetTerm;
 
   Line := '/AAA/ BBB CCC';
-  NewLine := #13#10;
+  NewLine := LineEnding;
   Comment := '/* Comment... */';
   Delimiter := '^';
 
@@ -342,7 +342,7 @@ var
 begin
   CheckNotNull(FProcessor);
 
-  NewLine := #13#10;
+  NewLine := LineEnding;
   Line := '/AAA/ BBB CCC';
   Comment := '# Comment...';
   Delimiter := ';';
@@ -371,7 +371,7 @@ begin
   CheckNotNull(FProcessor);
   FProcessor.DelimiterType := dtEmptyLine;
 
-  NewLine := #13#10;
+  NewLine := LineEnding;
   Line := '/AAA/ BBB CCC';
 
   Comment := '# Comment...'+NewLine;
@@ -399,7 +399,7 @@ begin
   FProcessor.DelimiterType := dtSetTerm;
 
   Line := '/AAA/ BBB CCC';
-  NewLine := #13#10;
+  NewLine := LineEnding;
   Comment := '# Comment...'+NewLine;
   Delimiter := '^';
 
