@@ -4,6 +4,8 @@ interface
 
 implementation
 
+{$I ZDbc.inc}
+
 uses
 {$IFNDEF UNIX}
   Windows,
@@ -14,6 +16,7 @@ uses
   SysUtils,
   Types,
   SyncObjs,
+  ZCompatibility,
   ZClasses,
   ZURL,
   ZDbcConnection,
@@ -262,7 +265,7 @@ begin
     if FWait then
       Sleep(100)
     else
-      raise Exception.Create(ClassName + '.Acquire'#13#10'O pool de conexões atingiu o limite máximo');
+      raise Exception.Create(ClassName + '.Acquire'+LineEnding+'O pool de conexões atingiu o limite máximo');
   end;
 
   //
@@ -295,7 +298,7 @@ begin
           FConnections[I] := nil;
         finally
           FCriticalSection.Leave;
-          raise Exception.Create(ClassName + '.Acquire'#13#10'Error while trying to acquire a new connection'#13#10#13#10 + E.Message);
+          raise Exception.Create(ClassName + '.Acquire'+LineEnding+'Error while trying to acquire a new connection'+LineEnding+LineEnding+E.Message);
         end;
       end;
     end;
