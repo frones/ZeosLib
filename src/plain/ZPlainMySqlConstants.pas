@@ -170,6 +170,27 @@ const
   STMT_FETCH_DATA_TRUNC = 101;
 
 type
+  {$IFDEF CPU64}
+  ULong                 = QWord;
+  {$ELSE}
+  ULong                 = LongWord;
+  {$ENDIF}
+
+  {$IFDEF FPC}
+  ULongLong             = QWord;
+  {$ELSE}
+  {$IFDEF VER150BELOW}
+  ULongLong             = INT64;
+  {$ELSE}
+  ULongLong             = UINT64;  
+  {$ENDIF}
+  {$ENDIF}
+  UInt                  = LongWord;
+
+  PULong                = ^ULong;
+  PULongLong            = ^ULongLong;
+  PUInt                 = ^UInt;
+
   TMySqlOption = (
     MYSQL_OPT_CONNECT_TIMEOUT,
     MYSQL_OPT_COMPRESS,
@@ -233,16 +254,16 @@ type
   end;
   PMYSQL_DATA = ^MYSQL_DATA;
 
-  MYSQL_FIELD_OFFSET = Cardinal;
+  MYSQL_FIELD_OFFSET = UInt;
 
   PMYSQL_OPTIONS = ^_MYSQL_OPTIONS;
   _MYSQL_OPTIONS = record
-    connect_timeout:          Cardinal;
-    read_timeout:             Cardinal;
-    write_timeout:            Cardinal;
-    port:                     Cardinal;
-    protocol:                 Cardinal;
-    client_flag:              LongInt;
+    connect_timeout:          UInt;
+    read_timeout:             UInt;
+    write_timeout:            UInt;
+    port:                     UInt;
+    protocol:                 UInt;
+    client_flag:              ULong;
     host:                     PAnsiChar;
     user:                     PAnsiChar;
     password:                 PAnsiChar;
@@ -259,7 +280,7 @@ type
     ssl_capath:               PAnsiChar;
     ssl_cipher:               PAnsiChar;
     shared_memory_base_name:  PAnsiChar;
-    max_allowed_packet:       LongInt;
+    max_allowed_packet:       ULong;
     use_ssl:                  Byte;
     compress:                 Byte;
     named_pipe:               Byte;
@@ -381,14 +402,14 @@ TMYSQL_CLIENT_OPTIONS =
   );
 
   MYSQL_TIME = record
-    year:                Cardinal;
-    month:               Cardinal;
-    day:                 Cardinal;
-    hour:                Cardinal;
-    minute:              Cardinal;
-    second:              Cardinal;
+    year:                UInt;
+    month:               UInt;
+    day:                 UInt;
+    hour:                UInt;
+    minute:              UInt;
+    second:              UInt;
+    second_part:         ULong;
     neg:                 Byte;
-    second_part:         Int64;
   end;
   PMYSQL_TIME = ^MYSQL_TIME;
 
@@ -406,37 +427,37 @@ TMYSQL_CLIENT_OPTIONS =
     table:            PAnsiChar;   // Table of column if column was a field
     org_table:        PAnsiChar;   // Org table name if table was an alias
     db:               PAnsiChar;   // Database for table
-    catalog:	      PAnsiChar;   // Catalog for table
+    catalog:	       PAnsiChar;   // Catalog for table
     def:              PAnsiChar;   // Default value (set by mysql_list_fields)
-    length:           LongInt; // Width of column
-    max_length:       LongInt; // Max width of selected set
-    name_length:      Cardinal;
-    org_name_length:  Cardinal;
-    table_length:     Cardinal;
-    org_table_length: Cardinal;
-    db_length:        Cardinal;
-    catalog_length:   Cardinal;
-    def_length:       Cardinal;
-    flags:            Cardinal; // Div flags
-    decimals:         Cardinal; // Number of decimals in field
-    charsetnr:        Cardinal; // Character set
+    length:           ULong; // Width of column
+    max_length:       ULong; // Max width of selected set
+    name_length:      UInt;
+    org_name_length:  UInt;
+    table_length:     UInt;
+    org_table_length: UInt;
+    db_length:        UInt;
+    catalog_length:   UInt;
+    def_length:       UInt;
+    flags:            UInt; // Div flags
+    decimals:         UInt; // Number of decimals in field
+    charsetnr:        UInt; // Character set
     _type:            TMysqlFieldTypes; // Type of field. Se mysql_com.h for types
   end;
 
   PMYSQL_BIND41 = ^MYSQL_BIND41;
   MYSQL_BIND41 =  record
     // 4.1.22 definition
-    length:           PLongInt;
+    length:           PULong;
     is_null:          PByte;
     buffer:           PAnsiChar;
     buffer_type:      TMysqlFieldTypes;
-    buffer_length:    LongInt;
+    buffer_length:    ULong;
     //internal fields
     inter_buffer:     PByte;
-    offset:           LongInt;
-    internal_length:  LongInt;
-    param_number:     Cardinal;
-    pack_length:      Cardinal;
+    offset:           ULong;
+    internal_length:  ULong;
+    param_number:     UInt;
+    pack_length:      UInt;
     is_unsigned:      Byte;
     long_data_used:   Byte;
     internal_is_null: Byte;
@@ -448,17 +469,17 @@ TMYSQL_CLIENT_OPTIONS =
   PMYSQL_BIND50 = ^MYSQL_BIND50;
   MYSQL_BIND50 =  record
     // 5.0.67 definition
-    length:            PLongInt;
+    length:            PULong;
     is_null:           PByte;
     buffer:            PAnsiChar;
     error:             PByte;
     buffer_type:       TMysqlFieldTypes;
-    buffer_length:     LongInt;
+    buffer_length:     ULong;
     row_ptr:           PByte;
-    offset:            LongInt;
-    length_value:      LongInt;
-    param_number:      Cardinal;
-    pack_length:       Cardinal;
+    offset:            ULong;
+    length_value:      ULong;
+    param_number:      UInt;
+    pack_length:       UInt;
     error_value:       Byte;
     is_unsigned:       Byte;
     long_data_used:    Byte;
@@ -471,7 +492,7 @@ TMYSQL_CLIENT_OPTIONS =
   PMYSQL_BIND51 = ^MYSQL_BIND51;
   MYSQL_BIND51 =  record
     // 5.1.30 definition
-    length:            PLongInt;
+    length:            PULong;
     is_null:           PByte;
     buffer:            PAnsiChar;
     error:             PByte;
@@ -479,11 +500,11 @@ TMYSQL_CLIENT_OPTIONS =
     store_param_funct: Pointer;
     fetch_result:      Pointer;
     skip_result:       Pointer;
-    buffer_length:     LongInt;
-    offset:            LongInt;
-    length_value:      LongInt;
-    param_number:      Cardinal;
-    pack_length:       Cardinal;
+    buffer_length:     ULong;
+    offset:            ULong;
+    length_value:      ULong;
+    param_number:      UInt;
+    pack_length:       UInt;
     buffer_type:       TMysqlFieldTypes;
     error_value:       Byte;
     is_unsigned:       Byte;
@@ -495,7 +516,7 @@ TMYSQL_CLIENT_OPTIONS =
   PMYSQL_BIND60 = ^MYSQL_BIND60;
   MYSQL_BIND60 =  record
     // 6.0.8 definition
-    length:            PLongInt;
+    length:            PULong;
     is_null:           PByte;
     buffer:            PAnsiChar;
     error:             PByte;
@@ -503,11 +524,11 @@ TMYSQL_CLIENT_OPTIONS =
     store_param_funct: Pointer;
     fetch_result:      Pointer;
     skip_result:       Pointer;
-    buffer_length:     LongInt;
-    offset:            LongInt;
-    length_value:      LongInt;
-    param_number:      Cardinal;
-    pack_length:       Cardinal;
+    buffer_length:     ULong;
+    offset:            ULong;
+    length_value:      ULong;
+    param_number:      UInt;
+    pack_length:       UInt;
     buffer_type:       TMysqlFieldTypes;
     error_value:       Byte;
     is_unsigned:       Byte;
@@ -518,7 +539,7 @@ TMYSQL_CLIENT_OPTIONS =
 
   PDOBindRecord2 = record
       buffer:    Array of Byte;
-      length:    LongWord;
+      length:    ULong;
       is_null:   Byte;
   end;
 
@@ -528,14 +549,14 @@ TMYSQL_CLIENT_OPTIONS =
 
   PMY_CHARSET_INFO = ^MY_CHARSET_INFO;
   MY_CHARSET_INFO = record
-    number:         Cardinal;
-    state:          Cardinal;
+    number:         UInt;
+    state:          UInt;
     csname:         PAnsiChar;
     name:           PAnsiChar;
     comment:        PAnsiChar;
     dir:            PAnsiChar;
-    mbminlen:       Cardinal;
-    mbmaxlen:       Cardinal;
+    mbminlen:       UInt;
+    mbmaxlen:       UInt;
   end;
   // Structure of the MYSQL_RES record isn't used anymore.
   // Access to the fields should be done using library functions
@@ -557,23 +578,23 @@ type
 
   { Functions to get information from the MYSQL and MYSQL_RES structures
     Should definitely be used if one uses shared libraries. }
-  Tmysql_affected_rows          = function(Handle: PMYSQL): Int64;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_affected_rows          = function(Handle: PMYSQL): ULongLong;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_character_set_name     = function(Handle: PMYSQL): PAnsiChar;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_close                  = procedure(Handle: PMYSQL);                                           {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_connect                = function(Handle: PMYSQL; const Host, User, Passwd: PAnsiChar): PMYSQL;   {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_create_db              = function(Handle: PMYSQL; const Db: PAnsiChar): Integer;                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_data_seek              = procedure(Result: PMYSQL_RES; Offset: Int64);                        {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_data_seek              = procedure(Result: PMYSQL_RES; Offset: ULongLong);                        {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_debug                  = procedure(Debug: PAnsiChar);                                             {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_drop_db                = function(Handle: PMYSQL; const Db: PAnsiChar): Integer;                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_dump_debug_info        = function(Handle: PMYSQL): Integer;                                   {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_eof                    = function(Result: PMYSQL_RES): Byte;                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_errno                  = function(Handle: PMYSQL): Cardinal;                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_errno                  = function(Handle: PMYSQL): UInt;                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_error                  = function(Handle: PMYSQL): PAnsiChar;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_escape_string          = function(PTo, PFrom: PAnsiChar; Len: Cardinal): Cardinal;                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_escape_string          = function(PTo, PFrom: PAnsiChar; Len: ULong): ULong;                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_fetch_field            = function(Result: PMYSQL_RES): PMYSQL_FIELD;                          {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_fetch_field_direct     = function(Result: PMYSQL_RES; FieldNo: Cardinal): PMYSQL_FIELD;       {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_fetch_field_direct     = function(Result: PMYSQL_RES; FieldNo: UInt): PMYSQL_FIELD;       {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_fetch_fields           = function(Result: PMYSQL_RES): PMYSQL_FIELD;                          {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_fetch_lengths          = function(Result: PMYSQL_RES): PLongInt;                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_fetch_lengths          = function(Result: PMYSQL_RES): PULong;                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_fetch_row              = function(Result: PMYSQL_RES): PMYSQL_ROW;                            {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_field_seek             = function(Result: PMYSQL_RES; Offset: MYSQL_FIELD_OFFSET): MYSQL_FIELD_OFFSET;
                                                                                                        {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
@@ -581,30 +602,30 @@ type
   Tmysql_free_result            = procedure(Result: PMYSQL_RES);                                       {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_get_client_info        = function: PAnsiChar;                                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_get_host_info          = function(Handle: PMYSQL): PAnsiChar;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_get_proto_info         = function(Handle: PMYSQL): Cardinal;                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_get_proto_info         = function(Handle: PMYSQL): UInt;                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_get_server_info        = function(Handle: PMYSQL): PAnsiChar;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_info                   = function(Handle: PMYSQL): PAnsiChar;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_init                   = function(Handle: PMYSQL): PMYSQL;                                    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_insert_id              = function(Handle: PMYSQL): Int64;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_kill                   = function(Handle: PMYSQL; Pid: LongInt): Integer;                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_insert_id              = function(Handle: PMYSQL): ULongLong;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_kill                   = function(Handle: PMYSQL; Pid: ULong): Integer;                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_list_dbs               = function(Handle: PMYSQL; Wild: PAnsiChar): PMYSQL_RES;                   {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_list_fields            = function(Handle: PMYSQL; const Table, Wild: PAnsiChar): PMYSQL_RES;      {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_list_processes         = function(Handle: PMYSQL): PMYSQL_RES;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_list_tables            = function(Handle: PMYSQL; const Wild: PAnsiChar): PMYSQL_RES;             {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_num_fields             = function(Result: PMYSQL_RES): Cardinal;                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_num_rows               = function(Result: PMYSQL_RES): Int64;                                 {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_num_fields             = function(Result: PMYSQL_RES): UInt;                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_num_rows               = function(Result: PMYSQL_RES): ULongLong;                                 {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_options                = function(Handle: PMYSQL; Option: TMySqlOption; const Arg: PAnsiChar): Integer;
                                                                                                        {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_ping                   = function(Handle: PMYSQL): Integer;                                   {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_query                  = function(Handle: PMYSQL; const Query: PAnsiChar): Integer;               {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_real_connect           = function(Handle: PMYSQL; const Host, User, Passwd, Db: PAnsiChar;
-                                           Port: Cardinal; const UnixSocket: PAnsiChar; ClientFlag: Cardinal): PMYSQL;
+                                           Port: UInt; const UnixSocket: PAnsiChar; ClientFlag: ULong): PMYSQL;
                                                                                                        {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_real_escape_string     = function(Handle: PMYSQL; PTo: PAnsiChar; const PFrom: PAnsiChar; length: Cardinal): Cardinal;
+  Tmysql_real_escape_string     = function(Handle: PMYSQL; PTo: PAnsiChar; const PFrom: PAnsiChar; length: ULong): ULong;
                                                                                                        {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_real_query             = function(Handle: PMYSQL; const Query: PAnsiChar; Length: Cardinal): Integer;
+  Tmysql_real_query             = function(Handle: PMYSQL; const Query: PAnsiChar; Length: ULong): Integer;
                                                                                                        {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_refresh                = function(Handle: PMYSQL; Options: Cardinal): Integer;                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_refresh                = function(Handle: PMYSQL; Options: UInt): Integer;                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_row_seek               = function(Result: PMYSQL_RES; Offset: PMYSQL_ROWS): PMYSQL_ROWS;      {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_row_tell               = function(Result: PMYSQL_RES): PMYSQL_ROWS;                           {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_select_db              = function(Handle: PMYSQL; const Db: PAnsiChar): Integer;                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
@@ -612,7 +633,7 @@ type
                                   PAnsiChar): Byte;                                                        {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stat                   = function(Handle: PMYSQL): PAnsiChar;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_store_result           = function(Handle: PMYSQL): PMYSQL_RES;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_thread_id              = function(Handle: PMYSQL): Cardinal;                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_thread_id              = function(Handle: PMYSQL): ULong;                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_use_result             = function(Handle: PMYSQL): PMYSQL_RES;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
   { Set up and bring down a thread; these function should be called for each thread in an application which
@@ -620,7 +641,7 @@ type
   Tmy_init                      = procedure;                                                          {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_thread_init            = function: Byte;                                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_thread_end             = procedure;                                                          {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_thread_safe            = function: Cardinal;                                                 {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_thread_safe            = function: UInt;                                                 {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
   { Set up and bring down the server; to ensure that applications will work when linked against either the
     standard client library or the embedded server library, these functions should be called. }
@@ -628,23 +649,23 @@ type
   Tmysql_server_end             = procedure;                                                          {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tmysql_change_user            = function(mysql: PMYSQL; const user: PAnsiChar; const passwd: PAnsiChar; const db: PAnsiChar): Byte;
-  Tmysql_field_count            = function(Handle: PMYSQL): Cardinal;                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_field_count            = function(Handle: PMYSQL): UInt;                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
 
-  Tmysql_get_client_version     = function: Cardinal;                                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_get_client_version     = function: ULong;                                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tmysql_send_query = function(mysql: PMYSQL; const query: PAnsiChar;
-    length: Cardinal): Integer;
+    length: ULong): Integer;
     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  Tmysql_read_query_result = function(mysql: PMYSQL): Integer;
+  Tmysql_read_query_result = function(mysql: PMYSQL): Byte;
     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
 
   Tmysql_autocommit             = function(Handle: PMYSQL; const mode: Byte): Byte;                    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_commit                 = function(Handle: PMYSQL): Byte;                                      {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_get_server_version     = function(Handle: PMYSQL): Cardinal;                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_hex_string             = function(PTo, PFrom: PAnsiChar; Len: Cardinal): Cardinal;                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_get_server_version     = function(Handle: PMYSQL): ULong;                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_hex_string             = function(PTo, PFrom: PAnsiChar; Len: ULong): ULong;                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_more_results           = function(Handle: PMYSQL): Byte;                                      {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_next_result            = function(Handle: PMYSQL): Integer;                                   {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_rollback               = function(Handle: PMYSQL): Byte;                                      {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
@@ -652,38 +673,38 @@ type
   Tmysql_set_server_option      = function(Handle: PMYSQL; Option: TMysqlSetOption): Integer;          {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_shutdown               = function(Handle: PMYSQL; shutdown_level: TMysqlShutdownLevel): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_sqlstate               = function(Handle: PMYSQL): PAnsiChar;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_warning_count          = function(Handle: PMYSQL): Cardinal;                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_warning_count          = function(Handle: PMYSQL): UInt;                                  {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 {BELOW are new PREPARED STATEMENTS}
-  Tmysql_stmt_affected_rows     = function(stmt: PMYSQL_STMT): Int64;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_affected_rows     = function(stmt: PMYSQL_STMT): ULongLong;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_attr_get          = function(stmt: PMYSQL_STMT; option: TMysqlStmtAttrType;
-                                  arg: PAnsiChar): Integer;                                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+                                  arg: PAnsiChar): Byte;                                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_attr_set          = function(stmt: PMYSQL_STMT; option: TMysqlStmtAttrType;
-                                  const arg: PAnsiChar): Integer;                                        {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+                                  const arg: PAnsiChar): Byte;                                        {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_bind_param        = function(stmt: PMYSQL_STMT; bind: Pointer{BIND record}): Byte;              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_bind_result       = function(stmt: PMYSQL_STMT; bind: Pointer{BIND record}): Byte;              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_close             = function(stmt: PMYSQL_STMT): Byte;                                 {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_stmt_data_seek         = procedure(stmt: PMYSQL_STMT; offset: Int64);                       {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_stmt_errno             = function(stmt: PMYSQL_STMT): Cardinal;                             {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_data_seek         = procedure(stmt: PMYSQL_STMT; offset: ULongLong);                       {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_errno             = function(stmt: PMYSQL_STMT): UInt;                             {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_error             = function(stmt: PMYSQL_STMT): PAnsiChar;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_execute           = function(stmt: PMYSQL_STMT): Integer;                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_fetch             = function(stmt: PMYSQL_STMT): Integer;                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_stmt_fetch_column      = function(stmt: PMYSQL_STMT; bind: Pointer{BIND record}; column: Cardinal;
-                                  offset: Cardinal): Integer;                                        {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_stmt_field_count       = function(stmt: PMYSQL_STMT): Cardinal;                             {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_fetch_column      = function(stmt: PMYSQL_STMT; bind: Pointer{BIND record}; column: UInt;
+                                  offset: ULong): Integer;                                        {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_field_count       = function(stmt: PMYSQL_STMT): UInt;                             {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_free_result       = function(stmt: PMYSQL_STMT): Byte;                                 {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_init              = function(Handle: PMYSQL): PMYSQL_STMT;                             {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_stmt_insert_id         = function(stmt: PMYSQL_STMT): Int64;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_stmt_num_rows          = function(stmt: PMYSQL_STMT): Int64;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_stmt_param_count       = function(stmt: PMYSQL_STMT): Cardinal;                             {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_insert_id         = function(stmt: PMYSQL_STMT): ULongLong;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_num_rows          = function(stmt: PMYSQL_STMT): ULongLong;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_param_count       = function(stmt: PMYSQL_STMT): ULong;                             {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_param_metadata    = function(stmt: PMYSQL_STMT): PMYSQL_RES;                           {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_stmt_prepare           = function(stmt: PMYSQL_STMT; const query: PAnsiChar; length: Cardinal):
+  Tmysql_stmt_prepare           = function(stmt: PMYSQL_STMT; const query: PAnsiChar; length: ULong):
                                   Integer;                                                           {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_reset             = function(stmt: PMYSQL_STMT): Byte;                                 {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_result_metadata   = function(stmt: PMYSQL_STMT): PMYSQL_RES;                           {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_row_seek          = function(stmt: PMYSQL_STMT; offset: PMYSQL_ROWS): PMYSQL_ROWS;     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_row_tell          = function(stmt: PMYSQL_STMT): PMYSQL_ROWS;                          {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_stmt_send_long_data    = function(stmt: PMYSQL_STMT; parameter_number: Cardinal; const
-                                  data: PAnsiChar; length: Cardinal): Byte;                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_send_long_data    = function(stmt: PMYSQL_STMT; parameter_number: UInt; const
+                                  data: PAnsiChar; length: ULong): Byte;                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_sqlstate          = function(stmt: PMYSQL_STMT): PAnsiChar;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_store_result      = function(stmt: PMYSQL_STMT): Integer;                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 

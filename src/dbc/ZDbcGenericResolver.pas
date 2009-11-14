@@ -669,6 +669,16 @@ var
   Current: TZResolverParameter;
   TableName: string;
   Temp1, Temp2: string;
+  l1: Integer; 
+
+  procedure Append(const app: String); 
+  begin 
+    if Length(Temp1) < l1 + length(app) then 
+      SetLength(Temp1, 2 * (length(app) + l1)); 
+    Move(app[1], Temp1[l1+1], length(app)*SizeOf(Char)); 
+    Inc(l1, length(app)); 
+  end; 
+
 begin
   TableName := DefineTableName;
   DefineInsertColumns(Columns);
@@ -678,19 +688,19 @@ begin
     Exit;
   end;
 
-  Temp1 := '';
-  Temp2 := '';
-  for I := 0 to Columns.Count - 1 do
-  begin
-    Current := TZResolverParameter(Columns[I]);
-    if Temp1 <> '' then
-      Temp1 := Temp1 + ',';
-    Temp1 := Temp1 + IdentifierConvertor.Quote(Current.ColumnName);
-    if Temp2 <> '' then
-      Temp2 := Temp2 + ',';
-    Temp2 := Temp2 + '?';
-  end;
-
+  Temp1 := '';    l1 := 0; 
+  SetLength(Temp2, 2 * Columns.Count - 1); 
+  for I := 0 to Columns.Count - 1 do 
+  begin 
+    Current := TZResolverParameter(Columns[I]); 
+    if Temp1 <> '' then 
+      Append(','); 
+    Append(IdentifierConvertor.Quote(Current.ColumnName)); 
+    if I > 0 then 
+      Temp2[I*2] := ','; 
+    Temp2[I*2+1] := '?'; 
+  end; 
+  SetLength(Temp1, l1); 
   Result := Format('INSERT INTO %s (%s) VALUES (%s)', [TableName, Temp1, Temp2]);
 end;
 

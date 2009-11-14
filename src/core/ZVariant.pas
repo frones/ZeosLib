@@ -252,7 +252,13 @@ type
     constructor CreateWithFloat(Value: Extended);
     constructor CreateWithString(const Value: String);
     {$IFDEF DELPHI12_UP}
-    constructor CreateWithUnicodeString(const Value: String);
+    // unicodeType is a (dummy) default parameter to avoid
+    // the problem described in https://forums.codegear.com/thread.jspa?messageID=65681
+    // when dcc creates header (.hpp)-files for c++ builder. Both 'String' and
+    // 'UnicodeString' translate into 'UnicodeString' in C++ builder 2009/2010, and
+    // CreateWithString and CreateWithUnicodeString would result in duplicate
+    // C++ constructors.
+    constructor CreateWithUnicodeString(const Value: String; unicodeType: Boolean=true);
     {$ELSE}
     constructor CreateWithUnicodeString(const Value: WideString);
     {$ENDIF}
@@ -1357,7 +1363,7 @@ end;
   @param Value a unicode string value.
 }
 {$IFDEF DELPHI12_UP}
-constructor TZAnyValue.CreateWithUnicodeString(const Value: String);
+constructor TZAnyValue.CreateWithUnicodeString(const Value: String; unicodeType : Boolean = true);
 {$ELSE}
 constructor TZAnyValue.CreateWithUnicodeString(const Value: WideString);
 {$ENDIF}

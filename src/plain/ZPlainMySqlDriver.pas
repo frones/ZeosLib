@@ -107,7 +107,7 @@ type
     function FetchField(Res: PZMySQLResult): PZMySQLField;
     // fetch_field_direct
     // fetch_fields
-    function FetchLengths(Res: PZMySQLResult): PLongInt;
+    function FetchLengths(Res: PZMySQLResult): PULong;
     function FetchRow(Res: PZMySQLResult): PZMySQLRow;
     function SeekField(Res: PZMySQLResult; Offset: Cardinal): Cardinal;
     // field_tell
@@ -208,7 +208,7 @@ type
     function GetFieldTable(Field: PZMySQLField): PAnsiChar;
     function GetFieldOrigTable(Field: PZMySQLField): PAnsiChar;
     function GetFieldOrigName(Field: PZMySQLField): PAnsiChar;
-    function GetFieldLength(Field: PZMySQLField): Integer;
+    function GetFieldLength(Field: PZMySQLField): ULong;
     function GetFieldMaxLength(Field: PZMySQLField): Integer;
     function GetFieldDecimals(Field: PZMySQLField): Integer;
     function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PAnsiChar;
@@ -316,7 +316,7 @@ type
     function GetAffectedRows(Handle: PZMySQLConnect): Int64;
 
     function FetchRow(Res: PZMySQLResult): PZMySQLRow;
-    function FetchLengths(Res: PZMySQLResult): PLongInt;
+    function FetchLengths(Res: PZMySQLResult): PULong;
     function FetchField(Res: PZMySQLResult): PZMySQLField;
 
     procedure SeekData(Res: PZMySQLResult; Offset: Cardinal);
@@ -333,7 +333,7 @@ type
     function GetFieldTable(Field: PZMySQLField): PAnsiChar;
     function GetFieldOrigTable(Field: PZMySQLField): PAnsiChar;
     function GetFieldOrigName(Field: PZMySQLField): PAnsiChar;
-    function GetFieldLength(Field: PZMySQLField): Integer;
+    function GetFieldLength(Field: PZMySQLField): ULong;
     function GetFieldMaxLength(Field: PZMySQLField): Integer;
     function GetFieldDecimals(Field: PZMySQLField): Integer;
     function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PAnsiChar;
@@ -620,7 +620,7 @@ begin
   Result := MYSQL_API.mysql_fetch_field(Res);
 end;
 
-function TZMySQLBaseDriver.FetchLengths(Res: PZMySQLResult): PLongInt;
+function TZMySQLBaseDriver.FetchLengths(Res: PZMySQLResult): PULong;
 begin
   Result := MYSQL_API.mysql_fetch_lengths(Res);
 end;
@@ -991,9 +991,9 @@ begin
   Result := PMYSQL_FIELD(Field)^.decimals;
 end;
 
-function TZMySQLBaseDriver.GetFieldLength(Field: PZMySQLField): Integer;
+function TZMySQLBaseDriver.GetFieldLength(Field: PZMySQLField): ULong;
 begin
-  Result := PMYSQL_FIELD(Field)^.length;
+    Result := PMYSQL_FIELD(Field)^.length;
 end;
 
 function TZMySQLBaseDriver.GetFieldMaxLength(Field: PZMySQLField): Integer;

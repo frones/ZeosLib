@@ -392,8 +392,8 @@ end;
 }
 function TZMySQLResultSet.GetString(ColumnIndex: Integer): AnsiString;
 var
-  LengthPointer: PLongInt;
-  Length: LongInt;
+  LengthPointer: PULong;
+  Length: ULong;
   Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -405,7 +405,7 @@ begin
   ColumnIndex := ColumnIndex - 1;
   LengthPointer := FPlainDriver.FetchLengths(FQueryHandle);
   if LengthPointer <> nil then
-    Length  := PLongInt(LongInt(LengthPointer) + ColumnIndex * SizeOf(LongInt))^
+    Length  := PULong(ULong(LengthPointer) + ColumnIndex * SizeOf(ULOng))^
   else
     Length := 0;
   Buffer := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);
