@@ -112,9 +112,10 @@ type
     function GetTickCount: Cardinal;
 
   public
-    constructor Create(MethodName: string); {$IFNDEF FPC} override; {$ENDIF}
+    constructor Create(MethodName: string); {$IFNDEF FPC} override; {$ELSE} overload;{$ENDIF}
     destructor Destroy; override;
     {$IFDEF FPC}
+    constructor Create; override; overload;
     function GetName: string;
     procedure Fail(msg: string; errorAddr: Pointer = nil);
     procedure CheckNotNull(obj: IUnknown; msg: string = ''); overload; virtual;
@@ -195,6 +196,12 @@ begin
     if obj <>  nil then
       Fail(msg, CallerAddr);
 end;
+
+constructor TZAbstractTestCase.Create;
+begin
+  inherited Create;
+  LoadConfiguration;
+end;
 {$ENDIF}
 
 {**
@@ -205,10 +212,10 @@ constructor TZAbstractTestCase.Create(MethodName: string);
 begin
   {$IFNDEF FPC}
   inherited Create(MethodName);
+  LoadConfiguration;
   {$ELSE}
   inherited CreateWithName(MethodName);
   {$ENDIF}
-  LoadConfiguration;
 end;
 
 {**

@@ -341,8 +341,8 @@
     <property name="build.dir" value="${package.dir}\build"/>
 
     <antcall target="fpc_compile_project" inheritAll="true">
-      <param name="project.name" value="TestAll"/>
-      <param name="extra_unit_path" value=" -Fu..\..\test\core\ -Fu..\..\test\plain\ -Fu..\..\test\parsesql\ -Fu..\..\test\dbc\ -Fu..\..\test\component\ -Fu..\..\test\bugreport\"/>
+      <param name="project.name" value="testall"/>
+      <param name="extra_unit_path" value=" -Fu../../test/core/ -Fu../../test/plain/ -Fu../../test/parsesql/ -Fu../../test/dbc/ -Fu../../test/component/ -Fu../../test/bugreport/"/>
     </antcall>
 </target>
 
@@ -404,16 +404,17 @@
       <arg value="-gl"/>
       <arg value="-vewnhi"/>
       <arg value="-l"/>
-      <arg line=" -Fu${lazarus.path}\lcl\units\${lazarus.processor}-${lazarus.os}\ -Fu${lazarus.path}\lcl\units\${lazarus.processor}-${lazarus.os}\${lazarus.os}\"/>
-      <arg line=" -Fu${lazarus.path}\components\fpcunit\console\lib\${lazarus.processor}-${lazarus.os}\ -Fu${lazarus.path}\components\synedit\units\${lazarus.processor}-${lazarus.os}\ "/>
-      <arg line=" -Fu${lazarus.path}\components\fpcunit\lib\${lazarus.processor}-${lazarus.os}\${lazarus.os}\  -Fu${lazarus.path}\components\fpcunit\lib\${lazarus.processor}-${lazarus.os}\ "/>
-      <arg line=" -Fu..\..\test\framework\ ${extra_unit_path}"/>
+      <arg line=" -Fu${lazarus.path}/lcl/units/${lazarus.processor}-${lazarus.os}/ -Fu${lazarus.path}/lcl/units/${lazarus.processor}-${lazarus.os}/${lazarus.interface}/"/>
+      <arg line=" -Fu${lazarus.path}/components/fpcunit/console/lib/${lazarus.processor}-${lazarus.os}/ -Fu${lazarus.path}/components/synedit/units/${lazarus.processor}-${lazarus.os}/ "/>
+      <arg line=" -Fu${lazarus.path}/components/fpcunit/lib/${lazarus.processor}-${lazarus.os}/${lazarus.interface}/  -Fu${lazarus.path}/components/fpcunit/lib/${lazarus.processor}-${lazarus.os}/ "/>
+      <arg line=" -Fu../../test/framework/ ${extra_unit_path}"/>
       <arg value="-B"/>
-        <arg value="-obuild\Z${project.name}.exe"/>
-      <arg value="-FUbuild\"/>
+        <arg value="-obuild/z${project.name}.exe"/>
+      <arg value="-FUbuild"/>
 
-      <arg value="Z${project.name}.lpr"/>
+      <arg value="z${project.name}.lpr"/>
     </exec>
-  </target>
+   <chmod dir="${package.dir}/build/" perm="ugo+rx" includes="z${project.name}.exe"/>
+</target>
   
 </project>
