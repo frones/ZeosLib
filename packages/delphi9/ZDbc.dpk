@@ -31,7 +31,8 @@ package ZDbc;
 requires
   ZParseSql,
   ZPlain,
-  rtl;
+  rtl,
+  dbrtl;
 
 contains
 
@@ -98,6 +99,10 @@ contains
   ZDbcASAResultSet in '..\..\src\dbc\ZDbcASAResultSet.pas',
   ZDbcASAStatement in '..\..\src\dbc\ZDbcASAStatement.pas',
   ZDbcASA in '..\..\src\dbc\ZDbcASA.pas',
+{$ENDIF}
+
+{$IFDEF ENABLE_POOLED}
+  ZDbcPooled in '..\..\src\dbc\ZDbcPooled.pas',
 {$ENDIF}
 
   ZDbcUtils in '..\..\src\dbc\ZDbcUtils.pas',
