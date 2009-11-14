@@ -208,7 +208,11 @@ begin
 //This one is to avoid sybase error: Invalid operator for datatype op: is null type: VOID TYPE
   if FPlainDriver.GetProtocol = 'sybase' then
     SQL := StringReplace(Sql, ' AND NULL IS NULL', '', [rfReplaceAll]);
+  {$IFDEF DELPHI12_UP}
+  if FPlainDriver.dbcmd(FHandle, PAnsiChar(UTF8String(SQL))) <> DBSUCCEED then
+  {$ELSE}
   if FPlainDriver.dbcmd(FHandle, PAnsiChar(SQL)) <> DBSUCCEED then
+  {$ENDIF}
     FDBLibConnection.CheckDBLibError(lcExecute, SQL);
   if FPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED then
     FDBLibConnection.CheckDBLibError(lcExecute, SQL);

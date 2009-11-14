@@ -76,6 +76,8 @@ type
 
 implementation
 
+uses ZCompatibility;
+
 { TZBlobStream }
 
 {**
@@ -118,7 +120,7 @@ begin
     else Blob.SetStream(nil);
     try
       if Assigned(FField.Dataset) then
-        THackedDataset(FField.DataSet).DataEvent(deFieldChange, LongInt(FField));
+        THackedDataset(FField.DataSet).DataEvent(deFieldChange, ULong(FField));
     except
         ApplicationHandleException(Self);
     end;

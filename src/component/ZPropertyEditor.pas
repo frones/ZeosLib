@@ -169,7 +169,7 @@ type
 {$ENDIF}
 
 const
-  CRLF = #13#10;
+  CRLF = LineEnding;
 
 {$ENDIF}
 

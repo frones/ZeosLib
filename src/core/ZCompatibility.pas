@@ -72,7 +72,21 @@ type
 
 {$IFDEF FPC}
   TVariantDynArray      = array of Variant;
+  {$IFDEF CPU64}
+  ULong                 = QWord;
+  {$ELSE}
+  ULong                 = LongWord;
+  {$ENDIF}
+  ULongLong             = QWord;
+{$ELSE}
+  ULong                 = LongWord;
+  ULongLong             = Int64; //delphi don´t have Unsigned Int64 type
 {$ENDIF}
+  PULong                = ^ULong;
+  PULongLong            = ^ULongLong;
+
+  UInt                  = LongWord;
+  PUInt                 = ^UInt;
 
   TObjectDynArray       = array of TObject;
 
@@ -92,6 +106,11 @@ var
   LoginDialogProc: function (const ADatabaseName: string; var AUserName,
     APassword: string): Boolean;
   DBScreen: IDBScreen;
+{$ENDIF}
+
+{$IFNDEF FPC} //delphi and windows
+const
+   LineEnding = #13#10;
 {$ENDIF}
 
 {$IFDEF UNIX}

@@ -343,6 +343,7 @@ type
     procedure SetBookmarkFlag(Buffer: PChar; Value: TBookmarkFlag); override;
     procedure SetBookmarkData(Buffer: PChar; Data: Pointer); override;
 {$ENDIF}
+    procedure SetBookmarkStr(const Value: TBookmarkStr); override;
 
     function InternalLocate(const KeyFields: string; const KeyValues: Variant;
       Options: TLocateOptions): LongInt;
@@ -373,13 +374,13 @@ type
   {$IFDEF WITH_IPROVIDER}
     procedure PSStartTransaction; override;
     procedure PSEndTransaction(Commit: Boolean); override;
-    // Silvio ClÃ©cio
+    // Silvio Clécio
     {$IFDEF BDS4_UP}
     function PSGetTableNameW: WideString; override;
     {$ELSE}
     function PSGetTableName: string; override;
     {$ENDIF}
-    // Silvio ClÃ©cio
+    // Silvio Clécio
     {$IFDEF BDS4_UP}
     function PSGetQuoteCharW: WideString; override;
     {$ELSE}
@@ -393,7 +394,7 @@ type
     function PSUpdateRecord(UpdateKind: TUpdateKind;
       Delta: TDataSet): Boolean; override;
     procedure PSExecute; override;
-    // Silvio ClÃ©cio
+    // Silvio Clécio
     {$IFDEF BDS4_UP}
     function PSGetKeyFieldsW: WideString; override;
     {$ELSE}
@@ -556,7 +557,7 @@ begin
   FSQL.OnChange := UpdateSQLStrings;
   FParams := TParams.Create(Self);
   FCurrentRows := TZSortedList.Create;
-  BookmarkSize := SizeOf(Integer);
+  BookmarkSize := SizeOf(Pointer);
   FShowRecordTypes := [usModified, usInserted, usUnmodified];
   FRequestLive := False;
   FFetchRow := 0;                // added by Patyi
@@ -1438,7 +1439,7 @@ begin
       RowAccessor.SetNull(ColumnIndex);
 
     if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, LongInt(Field));
+      DataEvent(deFieldChange, ULong(Field));
   end
   else
     raise EZDatabaseError.Create(SRowDataIsNotAvailable);
@@ -2193,7 +2194,7 @@ procedure TZAbstractRODataset.InternalGotoBookmark(Bookmark: Pointer);
 var
   Index: Integer;
 begin
-  Index := CurrentRows.IndexOf(PPointer(Bookmark)^);
+  Index := CurrentRows.IndexOf(Bookmark);
 
   if Index < 0 then
     raise EZDatabaseError.Create(SBookmarkWasNotFound);
@@ -2216,7 +2217,7 @@ procedure TZAbstractRODataset.InternalSetToRecord(Buffer: TRecordBuffer);
 procedure TZAbstractRODataset.InternalSetToRecord(Buffer: PChar);
 {$ENDIF}
 begin
-  InternalGotoBookmark(@PZRowBuffer(Buffer)^.Index);
+  InternalGotoBookmark(Pointer(PZRowBuffer(Buffer)^.Index));
 end;
 
 {**
@@ -2346,6 +2347,11 @@ begin
   PZRowBuffer(Buffer)^.Index := PInteger(Data)^;
 end;
 
+procedure TZAbstractRODataset.SetBookmarkStr(const Value: TBookmarkStr);
+begin
+  InternalGotoBookmark(Pointer(PInteger(Value)^));
+end;
+
 {**
   Compare two specified bookmarks.
   @param Bookmark1 the first bookmark object.
@@ -2361,8 +2367,8 @@ begin
   Result := 0;
   if not Assigned(Bookmark1) or not Assigned(Bookmark2) then
     Exit;
-  Index1 := CurrentRows.IndexOf(PPointer(Bookmark1)^);
-  Index2 := CurrentRows.IndexOf(PPointer(Bookmark2)^);
+  Index1 := CurrentRows.IndexOf(Bookmark1);
+  Index2 := CurrentRows.IndexOf(Bookmark2);
   if Index1 < Index2 then Result := -1
   else if Index1 > Index2 then Result := 1;
 end;
@@ -2379,7 +2385,7 @@ begin
   Result := False;
   if Active and Assigned(Bookmark) and (FResultSet <> nil) then
     try
-      Index := CurrentRows.IndexOf(PPointer(Bookmark)^);
+      Index := CurrentRows.IndexOf(Bookmark);
       Result := Index >= 0;
     except
       Result := False;
@@ -3289,7 +3295,7 @@ end;
   Defines a list of query primary key fields.
   @returns a semicolon delimited list of query key fields.
 }
-// Silvio ClÃ©cio
+// Silvio Clécio
 {$IFDEF BDS4_UP}
 function TZAbstractRODataset.PSGetKeyFieldsW: WideString;
 begin
