@@ -57,7 +57,7 @@ uses Classes, ZPlainLoader, ZCompatibility;
 
 const
   WINDOWS_DLL_LOCATION = 'sqlite3.dll';
-  LINUX_DLL_LOCATION = 'libsqlite.so';
+  LINUX_DLL_LOCATION = 'libsqlite3.so';
 
   SQLITE_ISO8859   = 1;
   MASTER_NAME      = 'sqlite_master';

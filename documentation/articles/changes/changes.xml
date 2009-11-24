@@ -41,6 +41,9 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[Linux] Sqlite3 library name fix for Linux (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2600">http://zeos.firmos.at/viewtopic.php?t=2600</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[COMMON] Scriptparser error finding a multicharacter delimiter(<ulink url="http://zeos.firmos.at/viewtopic.php?t=2517">http://zeos.firmos.at/viewtopic.php?t=2517</ulink>)</simpara>
         </listitem>
         <listitem>
