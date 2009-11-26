@@ -65,21 +65,27 @@ interface
 uses Classes, ZClasses, ZPlainDriver, ZCompatibility, ZPlainMySqlConstants;
 
 const
+{$IFNDEF UNIX}
+  {$IFNDEF MYSQL_STRICT_DLL_LOADING}
   WINDOWS_DLL_LOCATION = 'libmysql.dll';
   WINDOWS_DLL_LOCATION_EMBEDDED = 'libmysqld.dll';
+  {$ENDIF}
   WINDOWS_DLL41_LOCATION = 'libmysql41.dll';
   WINDOWS_DLL41_LOCATION_EMBEDDED = 'libmysqld41.dll';
   WINDOWS_DLL50_LOCATION = 'libmysql50.dll';
   WINDOWS_DLL50_LOCATION_EMBEDDED = 'libmysqld50.dll';
   WINDOWS_DLL51_LOCATION = 'libmysql51.dll';
   WINDOWS_DLL51_LOCATION_EMBEDDED = 'libmysqld51.dll';
-
+{$ELSE}
+  {$IFNDEF MYSQL_STRICT_DLL_LOADING}
   LINUX_DLL_LOCATION = 'libmysqlclient.so';
   LINUX_DLL_LOCATION_EMBEDDED = 'libmysqld.so';
+  {$ENDIF}
   LINUX_DLL41_LOCATION = 'libmysqlclient.so.14';
   LINUX_DLL41_LOCATION_EMBEDDED = 'libmysqld.so.14';
   LINUX_DLL50_LOCATION = 'libmysqlclient.so.15';
   LINUX_DLL50_LOCATION_EMBEDDED = 'libmysqld.so.15';
+{$ENDIF}
 
 type
   {** Represents a generic interface to MySQL native API. }
@@ -212,7 +218,7 @@ type
     function GetFieldMaxLength(Field: PZMySQLField): Integer;
     function GetFieldDecimals(Field: PZMySQLField): Integer;
     function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PAnsiChar;
-    procedure BuildArguments(Options: TStrings);
+    procedure SetDriverOptions(Options: TStrings); // changed by tohenk, 2009-10-11
   end;
 
   {** Implements a base driver for MySQL}
@@ -222,7 +228,11 @@ type
   TZMySQLBaseDriver = class (TZAbstractPlainDriver, IZPlainDriver, IZMySQLPlainDriver)
   protected
     MYSQL_API : TZMYSQL_API;
+    ServerArgs: array of PAnsiChar;
+    ServerArgsLen: Integer;
+    IsEmbeddedDriver: Boolean;
     procedure LoadApi; override;
+    procedure BuildServerArguments(Options: TStrings);
   public
     constructor Create;
     destructor Destroy; override;
@@ -337,14 +347,14 @@ type
     function GetFieldMaxLength(Field: PZMySQLField): Integer;
     function GetFieldDecimals(Field: PZMySQLField): Integer;
     function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PAnsiChar;
-    procedure BuildArguments(Options: TStrings); virtual;
+    procedure SetDriverOptions(Options: TStrings); virtual; // changed by tohenk, 2009-10-11
   end;
 
   {** Implements a driver for MySQL 4.1 }
 
   { TZNewMySQL41PlainDriver }
 
-  TZMySQL41PlainDriver = class (TZMysqlBaseDriver, IZPlainDriver, IZMySQLPlainDriver)
+  TZMySQL41PlainDriver = class (TZMysqlBaseDriver)
   public
     constructor Create;
     function GetProtocol: string; override;
@@ -360,13 +370,11 @@ type
     constructor Create;
     function GetProtocol: string; override;
     function GetDescription: string; override;
-    function Init(var Handle: PZMySQLConnect): PZMySQLConnect; override;
-    procedure BuildArguments(Options: TStrings); override;
   end;
 
   { TZNewMySQL5PlainDriver }
 
-  TZMySQL5PlainDriver = class (TZMysqlBaseDriver, IZPlainDriver, IZMySQLPlainDriver)
+  TZMySQL5PlainDriver = class (TZMysqlBaseDriver)
   protected
     procedure LoadApi; override;
   public
@@ -382,49 +390,10 @@ type
     constructor Create;
     function GetProtocol: string; override;
     function GetDescription: string; override;
-    function Init(var Handle: PZMySQLConnect): PZMySQLConnect; override;
-    procedure BuildArguments(Options: TStrings); override;
   end;
 
 implementation
 uses SysUtils, ZSysUtils, ZPlainLoader;
-
-var
-  ServerArgs: array of PAnsiChar;
-  ServerArgsLen: Integer;
-
-procedure BuildServerArguments(Options: TStrings);
-var
-  TmpList: TStringList;
-  i: Integer;
-begin
-  TmpList := TStringList.Create;
-  try
-    TmpList.Add(ParamStr(0));
-    for i := 0 to Options.Count - 1 do
-      if SameText(SERVER_ARGUMENTS_KEY_PREFIX,
-                  Copy(Options.Names[i], 1,
-                       Length(SERVER_ARGUMENTS_KEY_PREFIX))) then
-{$IFDEF VER140}
-        TmpList.Add(Options.Values[Options.Names[i]]);
-{$ELSE}
-        TmpList.Add(Options.ValueFromIndex[i]);
-{$ENDIF}
-    //Check if DataDir is specified, if not, then add it to the Arguments List
-    if TmpList.Values['--datadir'] = '' then
-       TmpList.Add('--datadir='+EMBEDDED_DEFAULT_DATA_DIR);
-    ServerArgsLen := TmpList.Count;
-    SetLength(ServerArgs, ServerArgsLen);
-    for i := 0 to ServerArgsLen - 1 do
-      {$IFDEF DELPHI12_UP}
-      ServerArgs[i] := StrNew(PAnsiChar(UTF8String(TmpList[i])));
-      {$ELSE}
-      ServerArgs[i] := StrNew(PAnsiChar(TmpList[i]));
-      {$ENDIF}
-  finally
-    TmpList.Free;
-  end;
-end;
 
 { TZMySQLPlainBaseDriver }
 
@@ -543,17 +512,53 @@ begin
   end;
 end;
 
+procedure TZMySQLBaseDriver.BuildServerArguments(Options: TStrings);
+var
+  TmpList: TStringList;
+  i: Integer;
+begin
+  TmpList := TStringList.Create;
+  try
+    TmpList.Add(ParamStr(0));
+    for i := 0 to Options.Count - 1 do
+      if SameText(SERVER_ARGUMENTS_KEY_PREFIX,
+                  Copy(Options.Names[i], 1,
+                       Length(SERVER_ARGUMENTS_KEY_PREFIX))) then
+{$IFDEF VER140}
+        TmpList.Add(Options.Values[Options.Names[i]]);
+{$ELSE}
+        TmpList.Add(Options.ValueFromIndex[i]);
+{$ENDIF}
+    //Check if DataDir is specified, if not, then add it to the Arguments List
+    if TmpList.Values['--datadir'] = '' then
+       TmpList.Add('--datadir='+EMBEDDED_DEFAULT_DATA_DIR);
+    ServerArgsLen := TmpList.Count;
+    SetLength(ServerArgs, ServerArgsLen);
+    for i := 0 to ServerArgsLen - 1 do
+      {$IFDEF DELPHI12_UP}
+      ServerArgs[i] := StrNew(PAnsiChar(UTF8String(TmpList[i])));
+      {$ELSE}
+      ServerArgs[i] := StrNew(PAnsiChar(TmpList[i]));
+      {$ENDIF}
+  finally
+    TmpList.Free;
+  end;
+end;
+
 constructor TZMySQLBaseDriver.Create;
 begin
    inherited create;
    FLoader := TZNativeLibraryLoader.Create([]);
 {$IFNDEF MYSQL_STRICT_DLL_LOADING}
   {$IFNDEF UNIX}
-    FLoader.AddLocation(WINDOWS2_DLL_LOCATION);
+    FLoader.AddLocation(WINDOWS_DLL_LOCATION);
   {$ELSE}
-    FLoader.AddLocation(LINUX2_DLL_LOCATION);
+    FLoader.AddLocation(LINUX_DLL_LOCATION);
   {$ENDIF}
 {$ENDIF}
+  ServerArgsLen := 0;
+  SetLength(ServerArgs, ServerArgsLen);
+  IsEmbeddedDriver := False;
 end;
 
 destructor TZMySQLBaseDriver.Destroy;
@@ -711,7 +716,9 @@ end;
 function TZMySQLBaseDriver.Init(var Handle: PZMySQLConnect): PZMySQLConnect;
 begin
   if @MYSQL_API.mysql_server_init <> nil then
-    MYSQL_API.mysql_server_init(1, nil, nil);
+  begin
+    MYSQL_API.mysql_server_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS);
+  end;
   Handle := MYSQL_API.mysql_init(nil);
   Result := Handle;
 end;
@@ -1043,9 +1050,16 @@ begin
  Result := MYSQL_API.mysql_get_server_version(Handle);
 end;
 
-procedure TZMySQLBaseDriver.BuildArguments(Options: TStrings);
-begin
+procedure TZMySQLBaseDriver.SetDriverOptions(Options: TStrings);
+var
+  PreferedLibrary: String;
 
+begin
+  PreferedLibrary := Options.Values['Library'];
+  if PreferedLibrary <> '' then
+    Loader.AddLocation(PreferedLibrary);
+  if IsEmbeddedDriver then
+    BuildServerArguments(Options);
 end;
 
 { TZMySQL41PlainDriver }
@@ -1053,7 +1067,6 @@ end;
 constructor TZMySQL41PlainDriver.Create;
 begin
   inherited Create;
-
   {$IFNDEF UNIX}
     FLoader.AddLocation(WINDOWS_DLL41_LOCATION);
   {$ELSE}
@@ -1076,11 +1089,21 @@ end;
 constructor TZMySQLD41PlainDriver.Create;
 begin
   inherited Create;
+  // only include embedded library
+  FLoader.ClearLocations;
+  {$IFNDEF MYSQL_STRICT_DLL_LOADING}
+  {$IFNDEF UNIX}
+    FLoader.AddLocation(WINDOWS_DLL_LOCATION_EMBEDDED);
+  {$ELSE}
+    FLoader.AddLocation(LINUX_DLL_LOCATION_EMBEDDED);
+  {$ENDIF}
+  {$ENDIF}
   {$IFNDEF UNIX}
     FLoader.AddLocation(WINDOWS_DLL41_LOCATION_EMBEDDED);
   {$ELSE}
     FLoader.AddLocation(LINUX_DLL41_LOCATION_EMBEDDED);
   {$ENDIF}
+  IsEmbeddedDriver := True;
 end;
 
 function TZMySQLD41PlainDriver.GetProtocol: string;
@@ -1091,20 +1114,6 @@ end;
 function TZMySQLD41PlainDriver.GetDescription: string;
 begin
   Result := 'Native Plain Driver for Embedded MySQL 4.1+';
-end;
-
-function TZMySQLD41PlainDriver.Init(var Handle: PZMySQLConnect): PZMySQLConnect;
-begin
-  if @MYSQL_API.mysql_server_init <> nil then
-    MYSQL_API.mysql_server_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS);
-//    MYSQL_API.mysql_server_init(3, @DEFAULT_PARAMS, @SERVER_GROUPS);
-  Handle := MYSQL_API.mysql_init(nil);
-  Result := Handle;
-end;
-
-procedure TZMySQLD41PlainDriver.BuildArguments(Options: TStrings);
-begin
-  BuildServerArguments(Options);
 end;
 
 { TZMySQL5PlainDriver }
@@ -1145,12 +1154,22 @@ end;
 constructor TZMySQLD5PlainDriver.Create;
 begin
   inherited Create;
+  // only include embedded library
+  FLoader.ClearLocations;
+  {$IFNDEF MYSQL_STRICT_DLL_LOADING}
+  {$IFNDEF UNIX}
+    FLoader.AddLocation(WINDOWS_DLL_LOCATION_EMBEDDED);
+  {$ELSE}
+    FLoader.AddLocation(LINUX_DLL_LOCATION_EMBEDDED);
+  {$ENDIF}
+  {$ENDIF}
   {$IFNDEF UNIX}
     FLoader.AddLocation(WINDOWS_DLL50_LOCATION_EMBEDDED);
     FLoader.AddLocation(WINDOWS_DLL51_LOCATION_EMBEDDED);
   {$ELSE}
     FLoader.AddLocation(LINUX_DLL50_LOCATION_EMBEDDED);
   {$ENDIF}
+  IsEmbeddedDriver := True;
 end;
 
 function TZMySQLD5PlainDriver.GetProtocol: string;
@@ -1161,20 +1180,6 @@ end;
 function TZMySQLD5PlainDriver.GetDescription: string;
 begin
   Result := 'Native Plain Driver for Embedded MySQL 5+';
-end;
-
-function TZMySQLD5PlainDriver.Init(var Handle: PZMySQLConnect): PZMySQLConnect;
-begin
-  if @MYSQL_API.mysql_server_init <> nil then
-    MYSQL_API.mysql_server_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS);
-//    MYSQL_API.mysql_server_init(3, @DEFAULT_PARAMS, @SERVER_GROUPS);
-  Handle := MYSQL_API.mysql_init(nil);
-  Result := Handle;
-end;
-
-procedure TZMySQLD5PlainDriver.BuildArguments(Options: TStrings);
-begin
-  BuildServerArguments(Options);
 end;
 
 end.
