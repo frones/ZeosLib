@@ -180,6 +180,9 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=207">#0000207</ulink> [PostgreSQL] BlobRead Memory Leak</simpara>
+        </listitem>
+        <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=194">#0000194</ulink> [IB/FB] ZEOS is replicating NULL values on UPDATE statement </simpara>
         </listitem>
         <listitem>

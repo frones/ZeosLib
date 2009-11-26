@@ -749,6 +749,7 @@ begin
   begin
     BlobHandle := FPlainDriver.OpenLargeObject(FHandle, FBlobOid, INV_READ);
     CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Read Large Object',nil);
+    ReadStream := nil;
     if BlobHandle >= 0 then
     begin
       ReadStream := TMemoryStream.Create;
@@ -763,10 +764,10 @@ begin
       until ReadNum < 1024;
       FPlainDriver.CloseLargeObject(FHandle, BlobHandle);
       ReadStream.Position := 0;
-    end
-    else
-      ReadStream := nil;
+    end;
     SetStream(ReadStream);
+    if ReadStream <> nil then
+      ReadStream.free;
   end;
 end;
 
