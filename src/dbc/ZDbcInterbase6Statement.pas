@@ -434,11 +434,10 @@ begin
   {$R-}
   for I := 0 to FParamSQLData.GetFieldCount - 1 do
   begin
+    FParamSQLData.UpdateNull(I, DefVarManager.IsNull(InParamValues[I])); 
     if DefVarManager.IsNull(InParamValues[I])then
-    begin
-      FParamSQLData.UpdateNull(I, True);
-      Continue;
-    end;
+      Continue 
+    else
     case InParamTypes[I] of
       stBoolean:
         FParamSQLData.UpdateBoolean(I,

@@ -36,6 +36,9 @@
 			<Projects Include="ZTestComponentAll.dproj">
 				<Dependencies/>
 			</Projects>
+			<Projects Include="ZTestBugReport.dproj">
+				<Dependencies/>
+			</Projects>
 		</ItemGroup>
 		<ProjectExtensions>
 			<Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -144,6 +147,15 @@
 		</Target>
 		<Target Name="ZTestComponentAll:Make">
 			<MSBuild Targets="Make" Projects="ZTestComponentAll.dproj"/>
+		</Target>
+		<Target Name="ZTestBugReport">
+			<MSBuild Projects="ZTestBugReport.dproj"/>
+		</Target>
+		<Target Name="ZTestBugReport:Clean">
+			<MSBuild Targets="Clean" Projects="ZTestBugReport.dproj"/>
+		</Target>
+		<Target Name="ZTestBugReport:Make">
+			<MSBuild Targets="Make" Projects="ZTestBugReport.dproj"/>
 		</Target>
 		<Target Name="Build">
 			<CallTarget Targets="ZCore;ZParseSql;ZPlain;ZDbc;ZComponent;ZComponentDesign;ZTestFramework;ZTestCoreAll;ZTestParseSqlAll;ZTestDbcAll;ZTestComponentAll"/>

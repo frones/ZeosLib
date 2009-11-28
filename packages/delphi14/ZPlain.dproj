@@ -43,8 +43,6 @@
 			<DCC_SymbolReferenceInfo>1</DCC_SymbolReferenceInfo>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_1)'!=''">
-			<DCC_BplOutput>$(BDSCOMMONDIR)\Bpl</DCC_BplOutput>
-			<DCC_DcpOutput>$(BDSCOMMONDIR)\Bpl</DCC_DcpOutput>
 			<Version>7.0</Version>
 			<DCC_DebugInformation>False</DCC_DebugInformation>
 			<DCC_LocalDebugSymbols>False</DCC_LocalDebugSymbols>
@@ -63,8 +61,6 @@
 			<DCC_IncludePath>$(BDSCOMMONDIR)\Bpl;$(DCC_IncludePath)</DCC_IncludePath>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
-			<DCC_BplOutput>$(BDSCOMMONDIR)\Bpl</DCC_BplOutput>
-			<DCC_DcpOutput>$(BDSCOMMONDIR)\Bpl</DCC_DcpOutput>
 			<Version>7.0</Version>
 			<DCC_Optimize>False</DCC_Optimize>
 			<DCC_IntegerOverflowCheck>True</DCC_IntegerOverflowCheck>
