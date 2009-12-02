@@ -60,7 +60,6 @@ contains
   ZDbcPostgreSqlResultSet in '..\..\src\dbc\ZDbcPostgreSqlResultSet.pas',
   ZDbcPostgreSqlStatement in '..\..\src\dbc\ZDbcPostgreSqlStatement.pas',
   ZDbcPostgreSqlUtils in '..\..\src\dbc\ZDbcPostgreSqlUtils.pas',
-  ZDbcPooled in '..\..\src\dbc\ZDbcPooled.pas',
   ZDbcResultSet in '..\..\src\dbc\ZDbcResultSet.pas',
   ZDbcResultSetMetadata in '..\..\src\dbc\ZDbcResultSetMetadata.pas',
   ZDbcStatement in '..\..\src\dbc\ZDbcStatement.pas',

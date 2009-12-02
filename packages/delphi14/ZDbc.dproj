@@ -101,7 +101,6 @@
 			<DCCReference Include="..\..\src\dbc\ZDbcPostgreSqlResultSet.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcPostgreSqlStatement.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcPostgreSqlUtils.pas"/>
-			<DCCReference Include="..\..\src\dbc\ZDbcPooled.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcResultSet.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcResultSetMetadata.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcStatement.pas"/>
