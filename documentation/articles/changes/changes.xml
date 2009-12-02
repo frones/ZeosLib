@@ -142,9 +142,6 @@
           <simpara>[COMMON] New dataset option doDontSortOnPost (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1931">http://zeos.firmos.at/viewtopic.php?t=1931</ulink>)</simpara>
         </listitem>
         <listitem>
-          <simpara>[COMMON] New property FetchRow in ZDataSet (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1857">http://zeos.firmos.at/viewtopic.php?t=1857</ulink>)</simpara>
-        </listitem>
-        <listitem>
           <simpara>[COMMON] Added ZQuery.RefreshCurrentRow method</simpara>
         </listitem>
         <listitem>
@@ -228,7 +225,10 @@
         <listitem>
           <simpara>[COMMON] Added functions TRIM, VAL, CTOD, DTOS, LEFT and RIGHT.</simpara>
         </listitem>
-     </itemizedlist>
+         <listitem>
+          <simpara>[COMMON] New property FetchRow in ZDataSet (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1857">http://zeos.firmos.at/viewtopic.php?t=1857</ulink>)</simpara>
+        </listitem>
+    </itemizedlist>
     </sect2>
     <sect2>
       <title>Internal Changes</title>
