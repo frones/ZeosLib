@@ -319,12 +319,12 @@ begin
             if Temp = 'TRUE' then
             begin
               TokenType := ttConstant;
-              DefVarManager.SetAsBoolean(TokenValue, True);
+              TokenValue:= EncodeBoolean(True);
             end
             else if Temp = 'FALSE' then
             begin
               TokenType := ttConstant;
-              DefVarManager.SetAsBoolean(TokenValue, False);
+              TokenValue:= EncodeBoolean(False);
             end
             else
             begin
@@ -344,22 +344,22 @@ begin
             Temp := Tokens[TokenIndex];
             if FVariables.IndexOf(Temp) < 0 then
               FVariables.Add(Temp);
-            DefVarManager.SetAsString(TokenValue, Temp);
+            TokenValue:= EncodeString(Temp);
           end;
         ttInteger:
           begin
             TokenType := ttConstant;
-            DefVarManager.SetAsInteger(TokenValue, StrToInt(Tokens[TokenIndex]));
+            TokenValue:= EncodeInteger(StrToInt(Tokens[TokenIndex]));
           end;
         ttFloat:
           begin
             TokenType := ttConstant;
-            DefVarManager.SetAsFloat(TokenValue, SqlStrToFloat(Tokens[TokenIndex]));
+            TokenValue:= EncodeFloat(SqlStrToFloat(Tokens[TokenIndex]));
           end;
         ttQuoted:
           begin
             TokenType := ttConstant;
-            DefVarManager.SetAsString(TokenValue, Tokens[TokenIndex]);
+            TokenValue:= EncodeString(Tokens[TokenIndex]);
           end;
         ttSymbol:
           begin
@@ -376,7 +376,7 @@ begin
         ttTime,ttDate,ttDateTime:
           begin
             TokenType := ttConstant;
-            DefVarManager.SetAsDateTime(TokenValue, StrToDateTime(Tokens[TokenIndex]));
+            TokenValue:= EncodeDateTime(StrToDateTime(Tokens[TokenIndex]));
           end;
       end;
 
@@ -615,7 +615,7 @@ begin
       raise TZParseError.Create(SRightBraceExpected);
     ShiftToken;
 
-    DefVarManager.SetAsInteger(Temp, ParamsCount);
+    Temp:= EncodeInteger(ParamsCount);
     FResultTokens.Add(TZExpressionToken.Create(ttConstant, Temp));
     FResultTokens.Add(TZExpressionToken.Create(Primitive.TokenType,
       Primitive.Value));

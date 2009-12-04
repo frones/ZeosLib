@@ -213,9 +213,9 @@ begin
     CheckEquals('1899-12-30 13:07:03', SoftVarManager.GetAsString(Evaluate),Expression+' failed, ');
 
     Expression := 'ISLEAPYEAR(2008)';
-    CheckTrue(DefVarManager.GetAsBoolean(Evaluate),Expression+' failed, ');
+    CheckEquals(True,DefVarManager.GetAsBoolean(Evaluate),Expression+' failed, ');
     Expression := 'ISLEAPYEAR(2009)';
-    CheckFalse(DefVarManager.GetAsBoolean(Evaluate),Expression+' failed, ');
+    CheckEquals(False,DefVarManager.GetAsBoolean(Evaluate),Expression+' failed, ');
 
     Expression := 'YEAROF(V3)';
     CheckEquals(2009, SoftVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
@@ -646,59 +646,96 @@ var
   Stack: TZExecutionStack;
   Temp: TZVariant;
   OldDecimalSeparator: Char;
+
+  procedure EvaluateExpression(const s : string);
+  var
+    i : integer;
+    Diff : double;
+  begin
+    With Expression do
+    begin
+      Expression := s;
+      try
+        StartTicks := GetTickCount;
+        for I := 0 to RUN_COUNT - 1 do
+          Evaluate4(DefaultVariables, DefaultFunctions, Stack);
+        Diff := (GetTickCount - StartTicks) / 1000;
+        System.WriteLn(Format('Evaluating '+Expression+' %d times, Time: %0.3f [s]',
+          [RUN_COUNT,Diff]));
+      finally
+      end;
+      Stack.Clear;
+    end;
+  end;
+
 begin
   { Tests speed of repeatable calculations with variables. }
-  Expression := TZExpression.CreateWithExpression('A-100>100');
+  Expression := TZExpression.Create;
   Stack := TZExecutionStack.Create;
+  with Expression do
+  begin
+    Expression := 'A-100>100';
   try
     StartTicks := GetTickCount;
     for I := 0 to RUN_COUNT - 1 do
     begin
-      DefVarManager.SetAsInteger(Temp, I);
-      Expression.DefaultVariables.Values[0] := Temp;
-      Expression.Evaluate4(Expression.DefaultVariables,
-        Expression.DefaultFunctions, Stack);
+        DefaultVariables.Values[0] := EncodeInteger(I);
+        Evaluate4(DefaultVariables, DefaultFunctions, Stack);
     end;
     PrintLn(Format('Evaluating expression, Time: %d',
       [GetTickCount - StartTicks]));
   finally
-    Stack.Free;
   end;
+    Stack.Clear;
 
   { Tests comparison of float values. }
   OldDecimalSeparator := DecimalSeparator;
   DecimalSeparator := ',';
-  Expression := TZExpression.CreateWithExpression('A=123.4567890123456');
-  Stack := TZExecutionStack.Create;
+    Expression := 'A=123.4567890123456';
   try
-    DefVarManager.SetAsFloat(Temp, 123.4567890123456);
-    Expression.DefaultVariables.Values[0] := Temp;
-    Temp := Expression.Evaluate4(Expression.DefaultVariables,
-      Expression.DefaultFunctions, Stack);
+      DefaultVariables.Values[0] := EncodeFloat(123.4567890123456);
+      Temp := Evaluate4(DefaultVariables, DefaultFunctions, Stack);
     CheckEquals(Ord(vtBoolean), Ord(Temp.VType));
     CheckEquals(True, Temp.VBoolean);
   finally
     DecimalSeparator := OldDecimalSeparator;
-    Stack.Free;
   end;
+    Stack.Clear;
 
   { Tests alternative comparison of float values. }
   OldDecimalSeparator := DecimalSeparator;
   DecimalSeparator := ',';
-  Expression := TZExpression.CreateWithExpression(
-    'Abs(A - 123.4567890123456)<0.001');
-  Stack := TZExecutionStack.Create;
+    Expression := 'Abs(A - 123.4567890123456)<0.001';
   try
-    DefVarManager.SetAsFloat(Temp, 123.4567890123456);
-    Expression.DefaultVariables.Values[0] := Temp;
-    Temp := Expression.Evaluate4(Expression.DefaultVariables,
-      Expression.DefaultFunctions, Stack);
+      DefaultVariables.Values[0] := EncodeFloat(123.4567890123456);
+      Temp := Evaluate4(DefaultVariables, DefaultFunctions, Stack);
     CheckEquals(Ord(vtBoolean), Ord(Temp.VType));
     CheckEquals(True, Temp.VBoolean);
   finally
     DecimalSeparator := OldDecimalSeparator;
-    Stack.Free;
   end;
+    Stack.Clear;
+
+    DefaultVariables.Clear;
+    DefaultVariables.Add('A',EncodeDateTime(EncodeDate(1999,10,3)+EncodeTime(22,4,35,88)));
+    DefaultVariables.Add('B',EncodeDateTime(Now));
+    DefaultVariables.Add('I',EncodeInteger(-1));
+    DefaultVariables.Add('F',EncodeFloat(-3.4532));
+    EvaluateExpression('-I');
+    EvaluateExpression('-F');
+    EvaluateExpression('ABS(I)');
+    EvaluateExpression('ABS(-1)');
+    EvaluateExpression('ABS(F)');
+    EvaluateExpression('ABS(-3.4532)');
+    EvaluateExpression('ABS(F)-ABS(I)');
+    EvaluateExpression('ABS(-3.4532)-ABS(-1)');
+    EvaluateExpression('ABS(ABS(F)-ABS(I))');
+    EvaluateExpression('ABS(ABS(-3.4532)-ABS(-1))');
+    EvaluateExpression('MILLISECONDSBETWEEN(A,b)');
+    EvaluateExpression('MILLISECONDSBETWEEN(A,b)-SECONDSBETWEEN(B,A)-MINUTESBETWEEN(A,B)');
+    Stack.Clear;
+  end;
+  Stack.Free;
 end;
 
 initialization
