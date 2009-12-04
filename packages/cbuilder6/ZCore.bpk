@@ -65,11 +65,16 @@
       <FILE FILENAME="..\..\src\core\ZExpression.pas" FORMNAME="" UNITNAME="ZExpression" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\core\ZExprParser.pas" FORMNAME="" UNITNAME="ZExprParser" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\core\ZExprToken.pas" FORMNAME="" UNITNAME="ZExprToken" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="..\..\src\core\ZFunctions.pas" FORMNAME="" UNITNAME="ZFunctions" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\core\ZTokenizer.pas" FORMNAME="" UNITNAME="ZTokenizer" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\core\ZVariables.pas" FORMNAME="" UNITNAME="ZVariables" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\core\ZMessages.pas" FORMNAME="" UNITNAME="ZMessages" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\core\ZURL.pas" FORMNAME="" UNITNAME="ZURL" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\core\ZFunctions.pas" FORMNAME="" UNITNAME="ZFunctions" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\core\ZFunctionsConvert.pas" FORMNAME="" UNITNAME="ZFunctions" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\core\ZFunctionsDateTime.pas" FORMNAME="" UNITNAME="ZFunctions" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\core\ZFunctionsMath.pas" FORMNAME="" UNITNAME="ZFunctions" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\core\ZFunctionsOther.pas" FORMNAME="" UNITNAME="ZFunctions" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\core\ZFunctionsStrings.pas" FORMNAME="" UNITNAME="ZFunctions" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
   </FILELIST>
   <BUILDTOOLS>
   </BUILDTOOLS>
