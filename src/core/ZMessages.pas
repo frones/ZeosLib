@@ -1023,7 +1023,7 @@ resourcestring
   SFieldTypeMismatch = 'Tipe tidak sesuai pada field ''%s'', seharusnya: %s aktual: %s';
   SFieldSizeMismatch = 'Ukuran tidak sesuai pada field ''%s'', seharusnya: %d aktual: %d';
   {$ENDIF}
-  SNeedField               = 'Translate: Field %s is required, but not supplied.';
+  SNeedField               = 'Field %s diperlukan, namun tidak disediakan.';
 
   SFailedtoInitPrepStmt   = 'Gagal inisialisasi Prepared statement';
   SFailedtoPrepareStmt    = 'Statemen gagal sewaktu proses persiapan';
@@ -1039,11 +1039,11 @@ resourcestring
   SMustBeInBrowseMode = 'Operasi hanya diperbolehkan pada status dsBrowse';
 
   SUnKnownParamDataType = 'Param.DataType tidak dikenal';
-  // <--- end added by tohenk
-  SFieldReadOnly          = 'Translate : Readonly field can''t be assigned a value: %d';
-  SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.'; 
+  SFieldReadOnly          = 'Field readonly tidak dapat diberikan nilai: %d';
+  SInvalidUpdateCount     = '%d rekord terupdate. Seharusnya hanya satu rekord yang terupdate.';
 
-  SRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
+  SRowBufferWidthExceeded = 'Lebar buffer baris terlampaui. Coba kurangi atau gunakan kolom yang lebih panjang dalam query SQL.';
+  // <--- end added by tohenk
   //--- begin added by ORMADA --------------------------------------------------
 {$ELSE}
 {$IFDEF RUSSIAN}

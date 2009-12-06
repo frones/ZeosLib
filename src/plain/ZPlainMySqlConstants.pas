@@ -67,13 +67,6 @@ uses
    ZCompatibility;
 
 const
-{$IFNDEF MYSQL_STRICT_DLL_LOADING}
-  WINDOWS2_DLL_LOCATION = 'libmysql.dll';
-  WINDOWS2_DLL_LOCATION_EMBEDDED = 'libmysqld.dll';
-{$ENDIF}
-  LINUX2_DLL_LOCATION = 'libmysqlclient.so';
-  LINUX_DLL_LOCATION_EMBEDDED = 'libmysqld.so';
-
 { General Declarations }
   MYSQL_ERRMSG_SIZE    = 512;
   SQLSTATE_LENGTH      = 5;

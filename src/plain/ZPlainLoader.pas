@@ -215,11 +215,10 @@ begin
 end;
 
 function TZNativeLibraryLoader.LoadNativeLibraryStrict(Location: String): Boolean;
-var
-   i: integer;
 begin
   If not ZLoadLibrary(Location) then
       raise Exception.Create(Format(SLibraryNotFound, [Location]));
+  Result := True;
 end;
 
 {**

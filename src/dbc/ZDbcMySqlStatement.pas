@@ -154,12 +154,12 @@ type
 
     function CreateResultSet(const SQL: string): IZResultSet;
 
-    procedure PrepareInParameters; override;
-    procedure BindInParameters; override;
-    procedure UnPrepareInParameters; override;
     function getFieldType (testVariant: TZVariant): TMysqlFieldTypes;
   protected
     function GetStmtHandle : PZMySqlPrepStmt;
+    procedure PrepareInParameters; override;
+    procedure BindInParameters; override;
+    procedure UnPrepareInParameters; override;
   public
     property StmtHandle: PZMySqlPrepStmt read GetStmtHandle;
     constructor Create(PlainDriver: IZMysqlPlainDriver; Connection: IZConnection; const SQL: string; Info: TStrings);

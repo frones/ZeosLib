@@ -71,7 +71,7 @@ type
   private
     FPlainDrivers: Array of IZMySQLPlainDriver;
   protected
-    function GetPlainDriver(const Url: string): IZMySQLPlainDriver;
+    function GetPlainDriver(const Url: string; Info: TStrings = nil): IZMySQLPlainDriver; // changed by tohenk, 2009-10-11
   public
     constructor Create;
     function Connect(const Url: string; Info: TStrings): IZConnection; override;
@@ -190,12 +190,13 @@ var
 begin
   TempInfo := TStringList.Create;
   try
-    PlainDriver := GetPlainDriver(Url);
+    PlainDriver := GetPlainDriver(Url, Info); // changed by tohenk, 2009-10-11
     ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
       UserName, Password, TempInfo);
+    // changed by tohenk, 2009-10-11
     // PATCH ADDED BY tohenk
-    if PlainDriver <> nil then
-      PlainDriver.BuildArguments(TempInfo);
+    //if PlainDriver <> nil then
+    //  PlainDriver.BuildArguments(TempInfo);
     Result := TZMySQLConnection.Create(Self, Url, PlainDriver, HostName, Port,
       Database, UserName, Password, TempInfo);
   finally
@@ -263,7 +264,7 @@ end;
   @param Url a database connection URL.
   @return a selected protocol.
 }
-function TZMySQLDriver.GetPlainDriver(const Url: string): IZMySQLPlainDriver;
+function TZMySQLDriver.GetPlainDriver(const Url: string; Info: TStrings = nil): IZMySQLPlainDriver; // changed by tohenk, 2009-10-11
 var
   Protocol: string;
   i: smallint;
@@ -278,6 +279,11 @@ begin
   // Generic driver
   If result = nil then
     Result := FPlainDrivers[1];    // mysql-5
+  // added by tohenk, 2009-10-11
+  // before PlainDriver is initialized, we can perform pre-library loading
+  // requirement check here, e.g. Embedded server argument params
+  if Info <> nil then Result.SetDriverOptions(Info);
+  // end added by tohenk, 2009-10-11
   Result.Initialize;
 end;
 

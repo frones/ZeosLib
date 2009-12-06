@@ -30,6 +30,12 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=203">#0000203</ulink> [normal] MySQL Driver Fix and Optimatization</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=202">#0000202</ulink> [normal] Indonesian Translation Update</simpara>
+        </listitem>
+        <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=201">#0000201</ulink> [normal] Patch to solve some lib problems with SQLite3 under Linux.</simpara>
         </listitem>
         <listitem>
@@ -138,9 +144,6 @@
           <simpara>[COMMON] New dataset option doDontSortOnPost (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1931">http://zeos.firmos.at/viewtopic.php?t=1931</ulink>)</simpara>
         </listitem>
         <listitem>
-          <simpara>[COMMON] New property FetchRow in ZDataSet (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1857">http://zeos.firmos.at/viewtopic.php?t=1857</ulink>)</simpara>
-        </listitem>
-        <listitem>
           <simpara>[COMMON] Added ZQuery.RefreshCurrentRow method</simpara>
         </listitem>
         <listitem>
@@ -182,6 +185,9 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=187">#0000187</ulink> [PostgreSQL] PingServer does (still) not detect lost connections</simpara>
+        </listitem>
+        <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=207">#0000207</ulink> [PostgreSQL] BlobRead Memory Leak</simpara>
         </listitem>
         <listitem>
@@ -221,7 +227,10 @@
         <listitem>
           <simpara>[COMMON] Added functions TRIM, VAL, CTOD, DTOS, LEFT and RIGHT.</simpara>
         </listitem>
-     </itemizedlist>
+         <listitem>
+          <simpara>[COMMON] New property FetchRow in ZDataSet (<ulink url="http://zeos.firmos.at/viewtopic.php?t=1857">http://zeos.firmos.at/viewtopic.php?t=1857</ulink>)</simpara>
+        </listitem>
+    </itemizedlist>
     </sect2>
     <sect2>
       <title>Internal Changes</title>

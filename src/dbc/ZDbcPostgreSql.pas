@@ -896,20 +896,26 @@ function TZPostgreSQLConnection.PingServer: Integer;
   const 
     PING_ERROR_ZEOSCONNCLOSED = -1; 
   var 
-    Closing: boolean; 
+    Closing: boolean;
+    res: PZPostgreSQLResult;
+    isset: boolean;
 begin
-  Result := PING_ERROR_ZEOSCONNCLOSED; 
-  Closing := FHandle = nil; 
+  Result := PING_ERROR_ZEOSCONNCLOSED;
+  Closing := FHandle = nil;
   if Not(Closed or Closing) then
   begin
-    FPlainDriver.Clear(FPlainDriver.ExecuteQuery(FHandle,''));
-    if FPlainDriver.GetStatus(FHandle) = CONNECTION_OK then
+    res := FPlainDriver.ExecuteQuery(FHandle,'');
+    isset := assigned(res);
+    FPlainDriver.Clear(res);
+    if isset and (FPlainDriver.GetStatus(FHandle) = CONNECTION_OK) then
       Result := 0
     else
       try
         FPlainDriver.Reset(FHandle);
-        FPlainDriver.Clear(FPlainDriver.ExecuteQuery(FHandle,''));
-        if FPlainDriver.GetStatus(FHandle) = CONNECTION_OK then
+        res := FPlainDriver.ExecuteQuery(FHandle,'');
+        isset := assigned(res);
+        FPlainDriver.Clear(res);
+        if isset and (FPlainDriver.GetStatus(FHandle) = CONNECTION_OK) then
           Result := 0;
       except
         Result := 1;
