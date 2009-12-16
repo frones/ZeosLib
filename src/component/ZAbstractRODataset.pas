@@ -209,6 +209,7 @@ type
     function FetchOneRow: Boolean;
     function FetchRows(RowCount: Integer): Boolean;
     function FilterRow(RowNo: Integer): Boolean;
+    function GotoRow(RowNo: Integer): Boolean; // added by tohenk
     procedure RereadRows;
     procedure SetStatementParams(Statement: IZPreparedStatement;
       ParamNames: TStringDynArray; Params: TParams;
@@ -557,7 +558,7 @@ begin
   FSQL.OnChange := UpdateSQLStrings;
   FParams := TParams.Create(Self);
   FCurrentRows := TZSortedList.Create;
-  BookmarkSize := SizeOf(Pointer);
+  BookmarkSize := SizeOf(Integer);
   FShowRecordTypes := [usModified, usInserted, usUnmodified];
   FRequestLive := False;
   FFetchRow := 0;                // added by Patyi
@@ -981,6 +982,26 @@ begin
   end;
   if not Result then
      Exit;
+end;
+
+{**
+  Go to specified row.
+  @param RowNo a number of the row.
+  @return <code>True</code> if the row successfully located.
+}
+function TZAbstractRODataset.GotoRow(RowNo: Integer): Boolean;
+var
+  Index: Integer;
+begin
+  Result := False;
+  Index := CurrentRows.IndexOf(Pointer(RowNo));
+  if Index >= 0 then
+  begin
+    if Index < CurrentRow then
+      CheckBiDirectional;
+    CurrentRow := Index + 1;
+    Result := True;
+  end;
 end;
 
 {**
@@ -2191,17 +2212,9 @@ end;
   @param Bookmark a specified bookmark.
 }
 procedure TZAbstractRODataset.InternalGotoBookmark(Bookmark: Pointer);
-var
-  Index: Integer;
 begin
-  Index := CurrentRows.IndexOf(Bookmark);
-
-  if Index < 0 then
+  if not GotoRow(PInteger(Bookmark)^) then
     raise EZDatabaseError.Create(SBookmarkWasNotFound);
-  if Index < CurrentRow then
-    CheckBiDirectional;
-
-  CurrentRow := Index + 1;
 end;
 
 {**
@@ -2217,7 +2230,7 @@ procedure TZAbstractRODataset.InternalSetToRecord(Buffer: TRecordBuffer);
 procedure TZAbstractRODataset.InternalSetToRecord(Buffer: PChar);
 {$ENDIF}
 begin
-  InternalGotoBookmark(Pointer(PZRowBuffer(Buffer)^.Index));
+  GotoRow(PZRowBuffer(Buffer)^.Index);
 end;
 
 {**
@@ -2349,7 +2362,7 @@ end;
 
 procedure TZAbstractRODataset.SetBookmarkStr(const Value: TBookmarkStr);
 begin
-  InternalGotoBookmark(Pointer(PInteger(Value)^));
+  InternalGotoBookmark(Pointer(Value));
 end;
 
 {**
