@@ -189,6 +189,12 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=177">#0000177</ulink> [normal] Type mismatch error on runtime</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=210">#0000210</ulink> [Oracle] Bug inserting blob with length = 0</simpara>
+        </listitem>
+        <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=187">#0000187</ulink> [PostgreSQL] PingServer does (still) not detect lost connections</simpara>
         </listitem>
         <listitem>

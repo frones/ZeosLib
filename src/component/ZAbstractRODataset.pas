@@ -1763,7 +1763,8 @@ begin
     end;
 
     { Initializes field and index defs. }
-    InternalInitFieldDefs;
+    if not FRefreshInProgress then
+      InternalInitFieldDefs;
 
     if DefaultFields and not FRefreshInProgress then
       CreateFields;
