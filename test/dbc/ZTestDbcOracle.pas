@@ -79,6 +79,7 @@ type
     procedure TestLongObjects;
     procedure TestPreparedStatement;
     procedure TestConcurrecy;
+    procedure TestEmptyBlob;
 (*
     procedure TestDefaultValues;
 *)
@@ -298,6 +299,46 @@ begin
     Statement.Close;
   end;
 end;
+
+{**
+  Special blob case: blob is not null, but its empty by length
+}
+
+procedure TZTestDbcOracleCase.TestEmptyBlob;
+var
+  Statement: IZPreparedStatement;
+  Statement1: IZPreparedStatement;
+  ResultSet: IZResultSet;
+  Stream: TStream;
+begin
+  Statement := Connection.PrepareStatement(
+    'update blob_values set b_blob=? where b_id = 1');
+  CheckNotNull(Statement);
+  Stream := TMemoryStream.Create; // empty stream
+  try
+    Statement.SetBinaryStream(1, Stream);
+    CheckEquals(1, Statement.ExecuteUpdatePrepared);
+
+    Statement1 := Connection.PrepareStatement(
+      'select b_blob from blob_values where b_id = 1');
+    CheckNotNull(Statement1);
+    try
+      ResultSet := Statement1.ExecuteQueryPrepared;
+      try
+        Check(not (ResultSet.IsFirst and ResultSet.IsLast));
+        CheckEquals(0, ResultSet.GetBlob(1).Length);
+      finally
+        ResultSet.Close;
+      end;
+    finally
+      Statement1.Close;
+    end;
+  finally
+    Statement.Close;
+  end;
+end;
+
+
 
 (*
 {**
