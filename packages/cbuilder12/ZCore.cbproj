@@ -158,6 +158,26 @@
 				<BuildOrder>20</BuildOrder>
 				<BuildOrder>18</BuildOrder>
 			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\core\ZFunctionsConvert.pas">
+				<BuildOrder>44</BuildOrder>
+				<BuildOrder>7</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\core\ZFunctionsDateTime.pas">
+				<BuildOrder>44</BuildOrder>
+				<BuildOrder>7</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\core\ZFunctionsMath.pas">
+				<BuildOrder>44</BuildOrder>
+				<BuildOrder>7</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\core\ZFunctionsOther.pas">
+				<BuildOrder>44</BuildOrder>
+				<BuildOrder>7</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\core\ZFunctionsStrings.pas">
+				<BuildOrder>44</BuildOrder>
+				<BuildOrder>7</BuildOrder>
+			</DelphiCompile>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>

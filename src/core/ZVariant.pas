@@ -89,6 +89,8 @@ type
     VInterface: IZInterface;
   end;
 
+  PZVariant = ^TZVariant;
+
   {** Defines an array of variants. }
   TZVariantDynArray = array of TZVariant;
 
@@ -310,6 +312,64 @@ function DecodeVariant(const Value: Variant): TZVariant;
   @returns an decoded array of custom variants.
 }
 function DecodeVariantArray(const Value: Variant): TZVariantDynArray;
+
+{**
+  Encodes null into a custom variant.
+  @returns an decoded custom variant.
+}
+function EncodeNull : TZVariant;
+{**
+  Encodes a boolean into a custom variant.
+  @param Value a boolean value to be encoded.
+  @returns an encoded custom variant.
+}
+function EncodeBoolean(const Value: Boolean): TZVariant;
+{**
+  Encodes an integer into a custom variant.
+  @param Value an intger value to be encoded.
+  @returns an encoded custom variant.
+}
+function EncodeInteger(const Value: Int64): TZVariant;
+{**
+  Encodes a float into a custom variant.
+  @param Value a float value to be encoded.
+  @returns an encoded custom variant.
+}
+function EncodeFloat(const Value: Extended): TZVariant;
+{**
+  Encodes a string into a custom variant.
+  @param Value a string value to be encoded.
+  @returns an encoded custom variant.
+}
+function EncodeString(const Value: String): TZVariant;
+{**
+  Encodes a unicodestring into a custom variant.
+  @param Value a unicodestring value to be encoded.
+  @returns an encoded custom variant.
+}
+{$IFDEF DELPHI12_UP}
+function EncodeUnicodeString(const Value: String): TZVariant;
+{$ELSE}
+function EncodeUnicodeString(const Value: WideString): TZVariant;
+{$ENDIF}
+{**
+  Encodes a TDateTime into a custom variant.
+  @param Value a TDateTime value to be encoded.
+  @returns an encoded custom variant.
+}
+function EncodeDateTime(const Value: TDateTime): TZVariant;
+{**
+  Encodes a pointer into a custom variant.
+  @param Value a pointer value to be encoded.
+  @returns an encoded custom variant.
+}
+function EncodePointer(const Value: Pointer): TZVariant;
+{**
+  Encodes an interface into a custom variant.
+  @param Value an interface value to be encoded.
+  @returns an encoded custom variant.
+}
+function EncodeInterface(const Value: IZInterface): TZVariant;
 
 var
   {** Declares a default variant manager with strict convertion rules. }
@@ -576,7 +636,7 @@ end;
 }
 procedure TZDefaultVariantManager.SetNull(var Value: TZVariant);
 begin
-  Value.VType := vtNull;
+  Value := EncodeNull;
 end;
 
 {**
@@ -680,8 +740,7 @@ end;
 procedure TZDefaultVariantManager.SetAsBoolean(var Value: TZVariant;
   Data: Boolean);
 begin
-  Value.VType := vtBoolean;
-  Value.VBoolean := Data;
+  Value := EncodeBoolean(Data);
 end;
 
 {**
@@ -692,8 +751,7 @@ end;
 procedure TZDefaultVariantManager.SetAsInteger(var Value: TZVariant;
   Data: Int64);
 begin
-  Value.VType := vtInteger;
-  Value.VInteger := Data;
+  Value := EncodeInteger(Data);
 end;
 
 {**
@@ -704,8 +762,7 @@ end;
 procedure TZDefaultVariantManager.SetAsFloat(var Value: TZVariant;
   Data: Extended);
 begin
-  Value.VType := vtFloat;
-  Value.VFloat := Data;
+  Value := EncodeFloat(Data);
 end;
 
 {**
@@ -716,8 +773,7 @@ end;
 procedure TZDefaultVariantManager.SetAsString(var Value: TZVariant;
   const Data: String);
 begin
-  Value.VType := vtString;
-  Value.VString := Data;
+  Value := EncodeString(Data);
 end;
 
 {**
@@ -733,8 +789,7 @@ procedure TZDefaultVariantManager.SetAsUnicodeString(var Value: TZVariant;
   const Data: WideString);
 {$ENDIF}
 begin
-  Value.VType := vtUnicodeString;
-  Value.VUnicodeString := Data;
+  Value := EncodeUnicodeString(Data);
 end;
 
 {**
@@ -745,8 +800,7 @@ end;
 procedure TZDefaultVariantManager.SetAsDateTime(var Value: TZVariant;
   Data: TDateTime);
 begin
-  Value.VType := vtDateTime;
-  Value.VDateTime := Data;
+  Value := EncodeDateTime(Data);
 end;
 
 {**
@@ -757,8 +811,7 @@ end;
 procedure TZDefaultVariantManager.SetAsPointer(var Value: TZVariant;
   Data: Pointer);
 begin
-  Value.VType := vtPointer;
-  Value.VPointer := Data;
+  Value := EncodePointer(Data);
 end;
 
 {**
@@ -769,8 +822,7 @@ end;
 procedure TZDefaultVariantManager.SetAsInterface(var Value: TZVariant;
   Data: IZInterface);
 begin
-  Value.VType := vtInterface;
-  Value.VInterface := Data;
+  Value := EncodeInterface(Data);
 end;
 
 {**
@@ -783,14 +835,14 @@ function TZDefaultVariantManager.OpAdd(const Value1,
   Value2: TZVariant): TZVariant;
 begin
   case Value1.VType of
-    vtNull: SetNull(Result);
+    vtNull: Result := EncodeNull;
     vtBoolean: RaiseUnsupportedOperation;
-    vtInteger: SetAsInteger(Result, Value1.VInteger + GetAsInteger(Value2));
-    vtFloat: SetAsFloat(Result, Value1.VFloat + GetAsFloat(Value2));
-    vtString: SetAsString(Result, Value1.VString + GetAsString(Value2));
-    vtUnicodeString: SetAsUnicodeString(Result,
-      Value1.VUnicodeString + GetAsUnicodeString(Value2));
-    vtDateTime: SetAsDateTime(Result, Value1.VDateTime + GetAsDateTime(Value2));
+    vtInteger: Result := EncodeInteger(Value1.VInteger + GetAsInteger(Value2));
+    vtFloat: Result := EncodeFloat(Value1.VFloat + GetAsFloat(Value2));
+    vtString: Result := EncodeString(Value1.VString + GetAsString(Value2));
+    vtUnicodeString: Result := EncodeUnicodeString(
+                       Value1.VUnicodeString + GetAsUnicodeString(Value2));
+    vtDateTime: Result := EncodeDateTime(Value1.VDateTime + GetAsDateTime(Value2));
     vtPointer: RaiseUnsupportedOperation;
     vtInterface: RaiseUnsupportedOperation;
   end;
@@ -806,9 +858,9 @@ function TZDefaultVariantManager.OpAnd(const Value1,
   Value2: TZVariant): TZVariant;
 begin
   case Value1.VType of
-    vtNull: SetNull(Result);
-    vtBoolean: SetAsBoolean(Result, Value1.VBoolean and GetAsBoolean(Value2));
-    vtInteger: SetAsInteger(Result, Value1.VInteger and GetAsInteger(Value2));
+    vtNull: Result := EncodeNull;
+    vtBoolean: Result := EncodeBoolean(Value1.VBoolean and GetAsBoolean(Value2));
+    vtInteger: Result := EncodeInteger(Value1.VInteger and GetAsInteger(Value2));
     vtFloat: RaiseUnsupportedOperation;
     vtString: RaiseUnsupportedOperation;
     vtUnicodeString: RaiseUnsupportedOperation;
@@ -828,10 +880,10 @@ function TZDefaultVariantManager.OpDiv(const Value1,
   Value2: TZVariant): TZVariant;
 begin
   case Value1.VType of
-    vtNull: SetNull(Result);
+    vtNull: Result := EncodeNull;
     vtBoolean: RaiseUnsupportedOperation;
-    vtInteger: SetAsInteger(Result, Value1.VInteger div GetAsInteger(Value2));
-    vtFloat: SetAsFloat(Result, Value1.VFloat / GetAsFloat(Value2));
+    vtInteger: Result := EncodeInteger(Value1.VInteger div GetAsInteger(Value2));
+    vtFloat: Result := EncodeFloat(Value1.VFloat / GetAsFloat(Value2));
     vtString: RaiseUnsupportedOperation;
     vtUnicodeString: RaiseUnsupportedOperation;
     vtDateTime: RaiseUnsupportedOperation;
@@ -849,7 +901,7 @@ end;
 function TZDefaultVariantManager.OpEqual(const Value1,
   Value2: TZVariant): TZVariant;
 begin
-  SetAsBoolean(Result, Compare(Value1, Value2) = 0);
+  Result := EncodeBoolean(Compare(Value1, Value2) = 0);
 end;
 
 {**
@@ -861,7 +913,7 @@ end;
 function TZDefaultVariantManager.OpLess(const Value1,
   Value2: TZVariant): TZVariant;
 begin
-  SetAsBoolean(Result, Compare(Value1, Value2) < 0);
+  Result := EncodeBoolean(Compare(Value1, Value2) < 0);
 end;
 
 {**
@@ -873,7 +925,7 @@ end;
 function TZDefaultVariantManager.OpLessEqual(const Value1,
   Value2: TZVariant): TZVariant;
 begin
-  SetAsBoolean(Result, Compare(Value1, Value2) <= 0);
+  Result := EncodeBoolean(Compare(Value1, Value2) <= 0);
 end;
 
 {**
@@ -886,9 +938,9 @@ function TZDefaultVariantManager.OpMod(const Value1,
   Value2: TZVariant): TZVariant;
 begin
   case Value1.VType of
-    vtNull: SetNull(Result);
+    vtNull: Result := EncodeNull;
     vtBoolean: RaiseUnsupportedOperation;
-    vtInteger: SetAsInteger(Result, Value1.VInteger mod GetAsInteger(Value2));
+    vtInteger: Result := EncodeInteger(Value1.VInteger mod GetAsInteger(Value2));
     vtFloat: RaiseUnsupportedOperation;
     vtString: RaiseUnsupportedOperation;
     vtUnicodeString: RaiseUnsupportedOperation;
@@ -907,7 +959,7 @@ end;
 function TZDefaultVariantManager.OpMore(const Value1,
   Value2: TZVariant): TZVariant;
 begin
-  SetAsBoolean(Result, Compare(Value1, Value2) > 0);
+  Result := EncodeBoolean(Compare(Value1, Value2) > 0);
 end;
 
 {**
@@ -919,7 +971,7 @@ end;
 function TZDefaultVariantManager.OpMoreEqual(const Value1,
   Value2: TZVariant): TZVariant;
 begin
-  SetAsBoolean(Result, Compare(Value1, Value2) >= 0);
+  Result := EncodeBoolean(Compare(Value1, Value2) >= 0);
 end;
 
 {**
@@ -932,10 +984,10 @@ function TZDefaultVariantManager.OpMul(const Value1,
   Value2: TZVariant): TZVariant;
 begin
   case Value1.VType of
-    vtNull: SetNull(Result);
+    vtNull: Result := EncodeNull;
     vtBoolean: RaiseUnsupportedOperation;
-    vtInteger: SetAsInteger(Result, Value1.VInteger * GetAsInteger(Value2));
-    vtFloat: SetAsFloat(Result, Value1.VFloat * GetAsFloat(Value2));
+    vtInteger: Result := EncodeInteger(Value1.VInteger * GetAsInteger(Value2));
+    vtFloat: Result := EncodeFloat(Value1.VFloat * GetAsFloat(Value2));
     vtString: RaiseUnsupportedOperation;
     vtUnicodeString: RaiseUnsupportedOperation;
     vtDateTime: RaiseUnsupportedOperation;
@@ -952,10 +1004,10 @@ end;
 function TZDefaultVariantManager.OpNegative(const Value: TZVariant): TZVariant;
 begin
   case Value.VType of
-    vtNull: SetNull(Result);
+    vtNull: Result := EncodeNull;
     vtBoolean: RaiseUnsupportedOperation;
-    vtInteger: SetAsInteger(Result, -Value.VInteger);
-    vtFloat: SetAsFloat(Result, -Value.VFloat);
+    vtInteger: Result := EncodeInteger(-Value.VInteger);
+    vtFloat: Result := EncodeFloat(-Value.VFloat);
     vtString: RaiseUnsupportedOperation;
     vtUnicodeString: RaiseUnsupportedOperation;
     vtDateTime: RaiseUnsupportedOperation;
@@ -972,9 +1024,9 @@ end;
 function TZDefaultVariantManager.OpNot(const Value: TZVariant): TZVariant;
 begin
   case Value.VType of
-    vtNull: SetNull(Result);
-    vtBoolean: SetAsBoolean(Result, not Value.VBoolean);
-    vtInteger: SetAsInteger(Result, not Value.VInteger);
+    vtNull: Result := EncodeNull;
+    vtBoolean: Result := EncodeBoolean(not Value.VBoolean);
+    vtInteger: Result := EncodeInteger(not Value.VInteger);
     vtFloat: RaiseUnsupportedOperation;
     vtString: RaiseUnsupportedOperation;
     vtUnicodeString: RaiseUnsupportedOperation;
@@ -993,7 +1045,7 @@ end;
 function TZDefaultVariantManager.OpNotEqual(const Value1,
   Value2: TZVariant): TZVariant;
 begin
-  SetAsBoolean(Result, Compare(Value1, Value2) <> 0);
+  Result := EncodeBoolean(Compare(Value1, Value2) <> 0);
 end;
 
 {**
@@ -1007,8 +1059,8 @@ function TZDefaultVariantManager.OpOr(const Value1,
 begin
   case Value1.VType of
     vtNull: SetNull(Result);
-    vtBoolean: SetAsBoolean(Result, Value1.VBoolean or GetAsBoolean(Value2));
-    vtInteger: SetAsInteger(Result, Value1.VInteger or GetAsInteger(Value2));
+    vtBoolean: Result := EncodeBoolean(Value1.VBoolean or GetAsBoolean(Value2));
+    vtInteger: Result := EncodeInteger(Value1.VInteger or GetAsInteger(Value2));
     vtFloat: RaiseUnsupportedOperation;
     vtString: RaiseUnsupportedOperation;
     vtUnicodeString: RaiseUnsupportedOperation;
@@ -1028,10 +1080,10 @@ function TZDefaultVariantManager.OpPow(const Value1,
   Value2: TZVariant): TZVariant;
 begin
   case Value1.VType of
-    vtNull: SetNull(Result);
+    vtNull: Result := EncodeNull;
     vtBoolean: RaiseUnsupportedOperation;
-    vtInteger: SetAsFloat(Result, Power(Value1.VInteger, GetAsInteger(Value2)));
-    vtFloat: SetAsFloat(Result, Power(Value1.VFloat, GetAsFloat(Value2)));
+    vtInteger: Result := EncodeFloat(Power(Value1.VInteger, GetAsInteger(Value2)));
+    vtFloat: Result := EncodeFloat(Power(Value1.VFloat, GetAsFloat(Value2)));
     vtString: RaiseUnsupportedOperation;
     vtUnicodeString: RaiseUnsupportedOperation;
     vtDateTime: RaiseUnsupportedOperation;
@@ -1050,10 +1102,10 @@ function TZDefaultVariantManager.OpSub(const Value1,
   Value2: TZVariant): TZVariant;
 begin
   case Value1.VType of
-    vtNull: SetNull(Result);
+    vtNull: Result := EncodeNull;
     vtBoolean: RaiseUnsupportedOperation;
-    vtInteger: SetAsInteger(Result, Value1.VInteger - GetAsInteger(Value2));
-    vtFloat: SetAsFloat(Result, Value1.VFloat - GetAsFloat(Value2));
+    vtInteger: Result := EncodeInteger(Value1.VInteger - GetAsInteger(Value2));
+    vtFloat: Result := EncodeFloat(Value1.VFloat - GetAsFloat(Value2));
     vtString: RaiseUnsupportedOperation;
     vtUnicodeString: RaiseUnsupportedOperation;
     vtDateTime: RaiseUnsupportedOperation;
@@ -1075,19 +1127,19 @@ var
   TempInteger1, TempInteger2: Int64;
 begin
   case Value1.VType of
-    vtNull: SetNull(Result);
+    vtNull: Result := EncodeNull;
     vtBoolean:
       begin
         TempBool1 := Value1.VBoolean;
         TempBool2 := GetAsBoolean(Value2);
-        SetAsBoolean(Result, (TempBool1 and not TempBool2)
+        Result := EncodeBoolean((TempBool1 and not TempBool2)
           or (not TempBool1 and TempBool2));
       end;
     vtInteger:
       begin
         TempInteger1 := Value1.VInteger;
         TempInteger2 := GetAsInteger(Value2);
-        SetAsInteger(Result, (TempInteger1 and not TempInteger2)
+        Result := EncodeInteger((TempInteger1 and not TempInteger2)
           or (not TempInteger1 and TempInteger2));
       end;
     vtFloat: RaiseUnsupportedOperation;
@@ -1319,7 +1371,7 @@ end;
 }
 constructor TZAnyValue.CreateWithBoolean(Value: Boolean);
 begin
-  DefVarManager.SetAsBoolean(FValue, Value);
+  FValue := EncodeBoolean(Value);
 end;
 
 {**
@@ -1328,7 +1380,7 @@ end;
 }
 constructor TZAnyValue.CreateWithDateTime(Value: TDateTime);
 begin
-  DefVarManager.SetAsDateTime(FValue, Value);
+  FValue := EncodeDateTime(Value);
 end;
 
 {**
@@ -1337,7 +1389,7 @@ end;
 }
 constructor TZAnyValue.CreateWithFloat(Value: Extended);
 begin
-  DefVarManager.SetAsFloat(FValue, Value);
+  FValue := EncodeFloat(Value);
 end;
 
 {**
@@ -1346,7 +1398,7 @@ end;
 }
 constructor TZAnyValue.CreateWithInteger(Value: Int64);
 begin
-  DefVarManager.SetAsInteger(FValue, Value);
+  FValue := EncodeInteger(Value);
 end;
 
 {**
@@ -1355,7 +1407,7 @@ end;
 }
 constructor TZAnyValue.CreateWithString(const Value: String);
 begin
-  DefVarManager.SetAsString(FValue, Value);
+  FValue := EncodeString(Value);
 end;
 
 {**
@@ -1368,7 +1420,7 @@ constructor TZAnyValue.CreateWithUnicodeString(const Value: String; unicodeType 
 constructor TZAnyValue.CreateWithUnicodeString(const Value: WideString);
 {$ENDIF}
 begin
-  DefVarManager.SetAsUnicodeString(FValue, Value);
+  FValue := EncodeUnicodeString(Value);
 end;
 
 {**
@@ -1536,25 +1588,23 @@ function DecodeVariant(const Value: Variant): TZVariant;
 begin
   case VarType(Value) of
     varSmallint, varInteger, varByte:
-      DefVarManager.SetAsInteger(Result, Integer(Value));
-    varBoolean: DefVarManager.SetAsBoolean(Result, Value);
-    varString:
-      DefVarManager.SetAsString(Result, Value);
+      Result := EncodeInteger(Integer(Value));
+    varBoolean: Result := EncodeBoolean(Value);
+    varString: Result := EncodeString(Value);
    {$IFDEF DELPHI12_UP}
-   varUString:
-      DefVarManager.SetAsUnicodeString(Result, Value);
+   varUString: Result := EncodeUnicodeString(Value);
    {$ENDIF}
     varSingle, varDouble, varCurrency:
-      DefVarManager.SetAsFloat(Result, Value);
-    varUnknown: DefVarManager.SetAsInterface(Result, Value);
+      Result := EncodeFloat(Value);
+    varUnknown: Result := EncodeInterface(Value);
     varOleStr:
-      DefVarManager.SetAsUnicodeString(Result, Value);
-    varDate: DefVarManager.SetAsDateTime(Result, Value);
+      Result := EncodeUnicodeString(Value);
+    varDate: Result := EncodeDateTime(Value);
     varShortInt, varWord, varLongWord:
-      DefVarManager.SetAsInteger(Result, Value);
-    varInt64: DefVarManager.SetAsInteger(Result, Value);
+      Result := EncodeInteger(Value);
+    varInt64: Result := EncodeInteger(Value);
   else
-    DefVarManager.SetNull(Result);
+    Result := EncodeNull;
   end;
 end;
 
@@ -1582,12 +1632,104 @@ begin
   end;
 end;
 
+{**
+  Creates a null variant.
+}
+function EncodeNull: TZVariant;
+begin
+  Result.VType := vtNull;
+end;
+
+{**
+  Creates a boolean variant.
+  @param Value a value to be assigned.
+}
+function EncodeBoolean(const Value: Boolean): TZVariant;
+begin
+  Result.VType := vtBoolean;
+  Result.VBoolean := Value;
+end;
+
+{**
+  Creates a integer variant.
+  @param Value a value to be assigned.
+}
+function EncodeInteger(const Value: Int64): TZVariant;
+begin
+  Result.VType := vtInteger;
+  Result.VInteger := Value;
+end;
+
+{**
+  Creates a float variant.
+  @param Value a value to be assigned.
+}
+function EncodeFloat(const Value: Extended): TZVariant;
+begin
+  Result.VType := vtFloat;
+  Result.VFloat := Value;
+end;
+
+{**
+  Creates a string variant.
+  @param Value a value to be assigned.
+}
+function EncodeString(const Value: String): TZVariant;
+begin
+  Result.VType := vtString;
+  Result.VString := Value;
+end;
+
+{**
+  Creates a UnicodeString variant.
+  @param Value a value to be assigned.
+}
+{$IFDEF DELPHI12_UP}
+function EncodeUnicodeString(const Value: String): TZVariant;
+{$ELSE}
+function EncodeUnicodeString(const Value: WideString): TZVariant;
+{$ENDIF}
+begin
+  Result.VType := vtUnicodeString;
+  Result.VUnicodeString := Value;
+end;
+
+{**
+  Creates a TDateTime variant.
+  @param Value a value to be assigned.
+}
+function EncodeDateTime(const Value: TDateTime): TZVariant;
+begin
+  Result.VType := vtDateTime;
+  Result.VDateTime := Value;
+end;
+
+{**
+  Creates a pointer variant.
+  @param Value a value to be assigned.
+}
+function EncodePointer(const Value: Pointer): TZVariant;
+begin
+  Result.VType := vtPointer;
+  Result.VPointer := Value;
+end;
+
+{**
+  Creates an Interface variant.
+  @param Value a value to be assigned.
+}
+function EncodeInterface(const Value: IZInterface): TZVariant;
+begin
+  Result.VType := vtInterface;
+  Result.VInterface := Value;
+end;
+
 initialization
-  DefVarManager := TZDefaultVariantManager.Create;
+  DefVarManager  := TZDefaultVariantManager.Create;
   SoftVarManager := TZSoftVariantManager.Create;
-  DefVarManager.SetNull(NullVariant);
+  NullVariant    := EncodeNull;
 finalization
-  DefVarManager := nil;
+  DefVarManager  := nil;
   SoftVarManager := nil;
 end.
 

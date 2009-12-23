@@ -110,7 +110,13 @@ var
 
 {$IFNDEF FPC} //delphi and windows
 const
-   LineEnding = #13#10;
+  LineEnding = #13#10;
+  Brackets = ['(',')','[',']','{','}'];
+  StdWordDelims = [#0..' ',',','.',';','/','\',':','''','"','`'] + Brackets;
+
+function Hash(S : AnsiString) : LongWord;
+function AnsiProperCase(const S: string; const WordDelims: TSysCharSet): string;
+
 {$ENDIF}
 
 {$IFDEF UNIX}
@@ -147,6 +153,50 @@ begin
   Result := dlsym(pointer(Module), Proc);
 end;
   {$ENDIF}
+{$ENDIF}
+
+{$IFNDEF FPC}
+function Hash(S : AnsiString) : LongWord;
+Var
+  thehash,g,I : LongWord;
+begin
+   thehash:=0;
+   For I:=1 to Length(S) do { 0 terminated }
+     begin
+     thehash:=thehash shl 4;
+     inc(theHash,Ord(S[i]));
+     g:=thehash and LongWord($f shl 28);
+     if g<>0 then
+       begin
+       thehash:=thehash xor (g shr 24);
+       thehash:=thehash xor g;
+       end;
+     end;
+   If theHash=0 then
+     Hash:=$ffffffff
+   else
+     Hash:=TheHash;
+end;
+
+function AnsiProperCase(const S: string; const WordDelims: TSysCharSet): string;
+
+var
+  P,PE : PChar;
+
+begin
+  Result:=AnsiLowerCase(S);
+  P:=PChar(pointer(Result));
+  PE:=P+Length(Result);
+  while (P<PE) do
+    begin
+    while (P<PE) and (P^ in WordDelims) do
+      inc(P);
+    if (P<PE) then
+      P^:=UpCase(P^);
+    while (P<PE) and not (P^ in WordDelims) do
+      inc(P);
+    end;
+end;
 {$ENDIF}
 
 end.

@@ -34,13 +34,18 @@ contains
   ZExpression in '../../src/core/ZExpression.pas',
   ZExprParser in '../../src/core/ZExprParser.pas',
   ZExprToken in '../../src/core/ZExprToken.pas',
-  ZFunctions in '../../src/core/ZFunctions.pas',
   ZMatchPattern in '../../src/core/ZMatchPattern.pas',
   ZSysUtils in '../../src/core/ZSysUtils.pas',
   ZTokenizer in '../../src/core/ZTokenizer.pas',
   ZVariables in '../../src/core/ZVariables.pas',
   ZClasses in '../../src/core/ZClasses.pas',
   ZMessages in '../../src/core/ZMessages.pas',
-  ZURL in '..\..\src\core\ZURL.pas';
+  ZURL in '../../src/core/ZURL.pas',
+  ZFunctions in '../../src/core/ZFunctions.pas',
+  ZFunctionsConvert in '../../src/core/ZFunctionsConvert.pas',
+  ZFunctionsDateTime in '../../src/core/ZFunctionsDateTime.pas',
+  ZFunctionsMath in '../../src/core/ZFunctionsMath.pas',
+  ZFunctionsOther in '../../src/core/ZFunctionsOther.pas',
+  ZFunctionsStrings in '../../src/core/ZFunctionsStrings.pas';
 
 end.

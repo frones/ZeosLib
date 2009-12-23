@@ -27,6 +27,7 @@ package ZComponent;
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
 {$I ZPackages.inc}
+
 requires
   rtl,
   dbrtl,
