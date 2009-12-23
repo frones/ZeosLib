@@ -1246,12 +1246,10 @@ procedure TZTokenizer.SetCharacterState(FromChar, ToChar: Char;
   State: TZTokenizerState);
 var
   I: Integer;
+const
+  ORDMAXCHAR = ord(high(char));
 begin
-  {$IFDEF DELPHI12_UP}
-  for I := Ord(FromChar) to MinIntValue([Ord(ToChar), ord(high(char))]) do
-  {$ELSE}
-  for I := Ord(FromChar) to MinIntValue([Ord(ToChar), 255]) do
-  {$ENDIF}
+  for I := Ord(FromChar) to MinIntValue([Ord(ToChar), ORDMAXCHAR]) do
     FCharacterStates[I] := State;
 end;
 

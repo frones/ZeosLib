@@ -71,6 +71,7 @@ type
     procedure TestPreparedStatement;
     procedure TestUpdate;
     procedure TestMasterDetail;
+    procedure TestIProviderSupport;
   end;
 
 implementation
@@ -79,7 +80,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  ZTestConsts;
+  ZTestConsts, ZSqlTestCase, ZTestCase;
 
 { TZMidasTestCase }
 
@@ -273,8 +274,35 @@ begin
 end;
 
 {**
+  Runs a test of IProviderSupport, used by MIDAS before BDS4
+}
+
+procedure TZMidasTestCase.TestIProviderSupport;
+const
+  TestSql = 'SELECT * FROM department';
+var
+  Con: TZConnection;
+  Q: TZQuery;
+  ps: IProviderSupport;
+begin
+  Con := CreateDatasetConnection;
+  try
+    Q := TZQuery.Create(Con);
+    Q.Connection := Con;
+    Check(Supports(Q, IProviderSupport, ps), 'IProviderSupport not supported');
+    ps.PSSetCommandText(TestSql);
+    CheckEqualsString(TestSql, Trim(Q.SQL.Text), 'PSSetCommandText wrong');
+    CheckEqualsString('department', ps.PSGetTableName, 'PSGetTableName wrong');
+    ps := nil;
+  finally
+    Con.Free;
+  end;
+end;
+
+{**
   Runs a test for master-detail relationships.
 }
+
 procedure TZMidasTestCase.TestMasterDetail;
 (*
 var

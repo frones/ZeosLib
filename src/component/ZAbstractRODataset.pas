@@ -113,7 +113,11 @@ type
   end;
 
   {** Abstract dataset component optimized for read/only access. }
+  {$IFDEF BDS4_UP}
+  TZAbstractRODataset = class(TWideDataSet)
+  {$ELSE}
   TZAbstractRODataset = class(TDataSet)
+  {$ENDIF}
   private
 {$IFDEF FPC}
     FUniDirectional: Boolean;
@@ -198,6 +202,7 @@ type
     procedure WriteParamData(Writer: TWriter);
 
     procedure SetPrepared(Value : Boolean);
+    function  GetUniDirectional: boolean;
 
   protected
     procedure CheckOpened;
@@ -261,6 +266,9 @@ type
 {$IFDEF FPC}
     property IsUniDirectional: Boolean read FUniDirectional
       write FUnidirectional default False;
+{$ELSE}
+    property IsUniDirectional: Boolean read GetUniDirectional
+      write SetUniDirectional default False;
 {$ENDIF}
     property Properties: TStrings read FProperties write SetProperties;
     property Options: TZDatasetOptions read FOptions write SetOptions
@@ -378,14 +386,20 @@ type
     // Silvio Clécio
     {$IFDEF BDS4_UP}
     function PSGetTableNameW: WideString; override;
+    function PSGetQuoteCharW: WideString; override;
+    function PSGetKeyFieldsW: WideString; override;
+    procedure PSSetCommandText(const CommandText: WideString); overload; override;
+    procedure PSSetCommandText(const CommandText: string); overload; override;
+    //??     function PSGetCommandTextW: WideString; override;
+    function PSExecuteStatement(const ASQL: WideString; AParams: TParams;
+      ResultSet: Pointer = nil): Integer; override;
     {$ELSE}
     function PSGetTableName: string; override;
-    {$ENDIF}
-    // Silvio Clécio
-    {$IFDEF BDS4_UP}
-    function PSGetQuoteCharW: WideString; override;
-    {$ELSE}
     function PSGetQuoteChar: string; override;
+    function PSGetKeyFields: string; override;
+    function PSExecuteStatement(const ASQL: string; AParams: TParams;
+      ResultSet: Pointer = nil): Integer; override;
+    procedure PSSetCommandText(const CommandText: string); override;
     {$ENDIF}
     function PSGetUpdateException(E: Exception;
       Prev: EUpdateError): EUpdateError; override;
@@ -395,18 +409,9 @@ type
     function PSUpdateRecord(UpdateKind: TUpdateKind;
       Delta: TDataSet): Boolean; override;
     procedure PSExecute; override;
-    // Silvio Clécio
-    {$IFDEF BDS4_UP}
-    function PSGetKeyFieldsW: WideString; override;
-    {$ELSE}
-    function PSGetKeyFields: string; override;
-    {$ENDIF}
     function PSGetParams: TParams; override;
     procedure PSSetParams(AParams: TParams); override;
-    function PSExecuteStatement(const ASQL: string; AParams: TParams;
-      ResultSet: Pointer = nil): Integer; override;
     function PSInTransaction: Boolean; override;
-    procedure PSSetCommandText(const CommandText: string); override;
   {$ENDIF}
 
   public
@@ -631,6 +636,16 @@ end;
 function TZAbstractRODataset.GetSQL: TStrings;
 begin
   Result := FSQL;
+end;
+
+{**
+  Gets unidirectional state of dataset.
+  @return the unidirectional flag (delphi).
+}
+
+function TZAbstractRODataset.GetUniDirectional: boolean;
+begin
+  Result := inherited IsUniDirectional;
 end;
 
 {**
@@ -1169,6 +1184,12 @@ function TZAbstractRODataset.GetRecord(Buffer: PChar; GetMode: TGetMode;
 var
   RowNo: Integer;
 begin
+  // mad stub for unidirectional (problem in TDataSet.MoveBuffer) - dont know about FPC
+  // we always use same TDataSet-level buffer, because we can see only one row
+  {$IFNDEF FPC}
+  if IsUniDirectional then
+    Buffer := Buffers[0];
+  {$ENDIF}
   Result := grOK;
   case GetMode of
     gmNext:
@@ -3235,7 +3256,17 @@ end;
   Sets a command text for this query to execute.
   @param CommandText a command text for this query.
 }
+
+{$IFDEF BDS4_UP}
 procedure TZAbstractRODataset.PSSetCommandText(const CommandText: string);
+begin
+  SQL.Text := CommandText;
+end;
+
+procedure TZAbstractRODataset.PSSetCommandText(const CommandText: WideString);
+{$ELSE}
+procedure TZAbstractRODataset.PSSetCommandText(const CommandText: string);
+{$ENDIF}
 begin
   SQL.Text := CommandText;
 end;
@@ -3329,8 +3360,14 @@ end;
   @param ResultSet a supplied result set reference (just ignored).
   @returns a number of updated rows.
 }
+
+{$IFDEF BDS4_UP}
+function TZAbstractRODataset.PSExecuteStatement(const ASQL: WideString; AParams: TParams;
+  ResultSet: Pointer = nil): Integer;
+{$ELSE}
 function TZAbstractRODataset.PSExecuteStatement(const ASQL: string;
   AParams: TParams; ResultSet: Pointer): Integer;
+{$ENDIF}
 var
   I: Integer;
   Statement: IZPreparedStatement;

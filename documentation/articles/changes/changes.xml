@@ -30,6 +30,9 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=208">#0000208</ulink> [normal] TZAbstractRODataset bug and improvement (MIDAS IProviderSupport and IsUniDirectional)</simpara>
+        </listitem>
+        <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=209">#0000209</ulink> [normal] honor compiler conditional defines for all packages</simpara>
         </listitem>
         <listitem>

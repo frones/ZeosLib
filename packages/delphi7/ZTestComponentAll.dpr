@@ -73,8 +73,8 @@ uses
   ZTestExecuteSql in '..\..\test\component\ZTestExecuteSql.pas',
   ZTestSqlTypes in '..\..\test\component\ZTestSqlTypes.pas',
   ZTestDataSetGeneric in '..\..\test\component\ZTestDataSetGeneric.pas',
-  ZTestData in '..\..\test\component\ZTestData.pas' {,
-  ZTestMidas in '..\..\test\component\ZTestMidas.pas'};
+  ZTestData in '..\..\test\component\ZTestData.pas',
+  ZTestMidas in '..\..\test\component\ZTestMidas.pas';
 
 begin
   TestGroup := COMPONENT_TEST_GROUP;
