@@ -62,13 +62,16 @@ type
   {** Implements a test case for class TZReadOnlyQuery. }
   TZTestConnectionCase = class(TZComponentPortableSQLTestCase)
   private
+    gloUserName,gloPassword : string;
     Connection: TZConnection;
   protected
     procedure SetUp; override;
     procedure TearDown; override;
+    procedure ConnLogin(Sender: TObject; var Username:string ; var Password: string);
   published
     procedure TestExecuteDirect;
     procedure TestExecuteDirect2;
+    procedure TestLoginPromptConnection;
   end;
 
 implementation
@@ -128,6 +131,36 @@ begin
   l_bool := Connection.ExecuteDirect('delete from department where dep_id between 87 and 88',l_int);
   CheckEquals(true, l_bool);
   CheckEquals(0, l_int);
+end;
+
+procedure TZTestConnectionCase.TestLoginPromptConnection;
+var
+    locUserName,locPassword : string;
+begin
+   locUserName := Connection.User;
+   locPassword := Connection.Password;
+   Connection.Disconnect;
+   Connection.LoginPrompt := true;
+   Connection.User := '';
+   Connection.Password := '';
+   gloUserName := '';
+   gloPassword := '';
+   Connection.OnLogin := ConnLogin;
+   try
+      Connection.Connect;
+   except
+      CheckEquals(false,Connection.Connected);
+   end;
+   gloUserName := locUserName;
+   gloPassword := locPassword;
+   Connection.Connect;
+   CheckEquals(true,Connection.Connected);
+end;
+
+procedure TZTestConnectionCase.ConnLogin(Sender: TObject; var Username:string ; var Password: string);
+begin
+   UserName := gloUserName;
+   Password := gloPassword;
 end;
 
 initialization

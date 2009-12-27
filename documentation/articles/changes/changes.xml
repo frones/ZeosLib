@@ -30,6 +30,24 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=177">#0000177</ulink> [normal] Type mismatch error on runtime</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=210">#0000210</ulink> [Oracle] Bug inserting blob with length = 0</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=187">#0000187</ulink> [PostgreSQL] PingServer does (still) not detect lost connections</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=207">#0000207</ulink> [PostgreSQL] BlobRead Memory Leak</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=194">#0000194</ulink> [IB/FB] ZEOS is replicating NULL values on UPDATE statement </simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=173">#0000173</ulink> [normal] unable to activate login dialog</simpara>
+        </listitem>
+        <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=184">#0000184</ulink> [Interbase 5] Can't get fields' list of dataset from Interbase 5.5 server</simpara>
         </listitem>
         <listitem>
@@ -40,6 +58,9 @@
     <sect2>
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>[PostgreSQL] Connection string optimization for postgresql (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2636">http://zeos.firmos.at/viewtopic.php?t=2636</ulink>)</simpara>
+        </listitem>
         <listitem>
           <simpara>[Linux] Sqlite3 library name fix for Linux (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2600">http://zeos.firmos.at/viewtopic.php?t=2600</ulink>)</simpara>
         </listitem>

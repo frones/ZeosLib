@@ -109,6 +109,7 @@ type
   PCardinal             = ^Cardinal;
   PInt64                = ^Int64;
   PPChar                = ^PChar;
+  PPAnsiChar            = ^PAnsiChar;
   PLongWord             = ^LongWord;
 {$ENDIF}
   PWord                 = ^Word;
@@ -140,6 +141,11 @@ function StrToFloatDef(const Str: string; Def: Extended): Extended;
 function AnsiDequotedStr(const S: string; AQuote: Char): string;
 function BoolToStr(Value: Boolean): string;
 function VarIsStr(const V: Variant): Boolean;
+{$ENDIF}
+
+{$IFNDEF FPC} //delphi and windows
+const
+   LineEnding = #13#10;
 {$ENDIF}
 
 {$IFDEF UNIX}

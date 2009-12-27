@@ -406,35 +406,52 @@ end;
 function TZPostgreSQLConnection.BuildConnectStr: string;
 var
   ConnectTimeout: Integer;
-begin
-  if IsIpAddr(HostName) then
+  // backslashes and single quotes must be escaped with backslashes
+  function EscapeValue(AValue: AnsiString):AnsiString;
   begin
-    Result := Format('hostaddr=%s port=%d dbname=%s user=%s password=%s',
-     [HostName, Port, Database, User, Password]);
-  end
-  else
-  begin
-    Result := Format('host=%s port=%d dbname=%s user=%s password=%s',
-     [HostName, Port, Database, User, Password]);
+    Result := StringReplace(AValue, '\', '\\', [rfReplaceAll]);
+    Result := StringReplace(Result, '''', '\''', [rfReplaceAll]);
   end;
+
+  //parameters should be separated by whitespace
+  procedure AddParamToResult(AParam, AValue: AnsiString);
+  begin
+    if Result <> '' then
+      Result := Result + ' ';
+
+    Result := Result + AParam+'='+QuotedStr(EscapeValue(AValue));
+  end;
+begin
+  //Init the result to empty string.
+  Result := '';
+  //Entering parameters from the ZConnection
+  If IsIpAddr(HostName) then
+    AddParamToResult('hostaddr', HostName)
+  else
+    AddParamToResult('host', HostName);
+
+  AddParamToResult('port', IntToStr(Port));
+  AddParamToResult('dbname', Database);
+  AddParamToResult('user', User);
+  AddParamToResult('password', Password);
 
   If Info.Values['sslmode'] <> '' then
   begin
     // the client (>= 7.3) sets the ssl mode for this connection
     // (possible values are: require, prefer, allow, disable)
-    Result := Result + ' sslmode='+Info.Values['sslmode'];
+    AddParamToResult('sslmode', Info.Values['sslmode']);
   end
   else if Info.Values['requiressl'] <> '' then
   begin
     // the client (< 7.3) sets the ssl encription for this connection
     // (possible values are: 0,1)
-    Result := Result + ' requiressl='+Info.Values['requiressl'];
+    AddParamToResult('requiressl', Info.Values['requiressl']);
   end;
 
   { Sets a connection timeout. }
   ConnectTimeout := StrToIntDef(Info.Values['timeout'], -1);
   if ConnectTimeout >= 0 then
-    Result := Result + Format(' connect_timeout=%d', [ConnectTimeout]);
+    AddParamToResult('connect_timeout', IntToStr(ConnectTimeout));
 end;
 
 {**
@@ -916,20 +933,26 @@ function TZPostgreSQLConnection.PingServer: Integer;
   const 
     PING_ERROR_ZEOSCONNCLOSED = -1; 
   var 
-    Closing: boolean; 
+    Closing: boolean;
+    res: PZPostgreSQLResult;
+    isset: boolean;
 begin
-  Result := PING_ERROR_ZEOSCONNCLOSED; 
-  Closing := FHandle = nil; 
+  Result := PING_ERROR_ZEOSCONNCLOSED;
+  Closing := FHandle = nil;
   if Not(Closed or Closing) then
   begin
-    FPlainDriver.Clear(FPlainDriver.ExecuteQuery(FHandle,''));
-    if FPlainDriver.GetStatus(FHandle) = CONNECTION_OK then
+    res := FPlainDriver.ExecuteQuery(FHandle,'');
+    isset := assigned(res);
+    FPlainDriver.Clear(res);
+    if isset and (FPlainDriver.GetStatus(FHandle) = CONNECTION_OK) then
       Result := 0
     else
       try
         FPlainDriver.Reset(FHandle);
-        FPlainDriver.Clear(FPlainDriver.ExecuteQuery(FHandle,''));
-        if FPlainDriver.GetStatus(FHandle) = CONNECTION_OK then
+        res := FPlainDriver.ExecuteQuery(FHandle,'');
+        isset := assigned(res);
+        FPlainDriver.Clear(res);
+        if isset and (FPlainDriver.GetStatus(FHandle) = CONNECTION_OK) then
           Result := 0;
       except
         Result := 1;

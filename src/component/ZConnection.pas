@@ -99,6 +99,8 @@ uses
 
 
 type
+  //HA 090811 New Type TZLoginEvent to make Username and Password persistent
+  TZLoginEvent = procedure(Sender: TObject; var Username:string ; var Password: string) of object;
 
   {** Represents a component which wraps a connection to database. }
   TZConnection = class(TComponent)
@@ -137,7 +139,9 @@ type
     FOnCommit: TNotifyEvent;
     FOnRollback: TNotifyEvent;
     FOnStartTransaction: TNotifyEvent;
-    FOnLogin: TLoginEvent;
+    //HA 090811 Change Type of FOnLogin to new TZLoginEvent
+    //FOnLogin: TLoginEvent;
+    FOnLogin: TZLoginEvent;
 
     function GetConnected: Boolean;
     procedure SetConnected(Value: Boolean);
@@ -266,7 +270,9 @@ type
       default False;
     property OnCommit: TNotifyEvent read FOnCommit write FOnCommit;
     property OnRollback: TNotifyEvent read FOnRollback write FOnRollback;
-    property OnLogin: TLoginEvent read FOnLogin write FOnLogin;
+    //HA 090811 Change Type of FOnLogin to new TZLoginEvent
+    //property OnLogin: TLoginEvent read FOnLogin write FOnLogin;
+    property OnLogin: TZLoginEvent read FOnLogin write FOnLogin;
     property OnStartTransaction: TNotifyEvent
       read FOnStartTransaction write FOnStartTransaction;
   end;

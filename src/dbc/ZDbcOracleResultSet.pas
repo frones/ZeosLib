@@ -1061,8 +1061,9 @@ begin
   CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
     Status, lcOther, 'Open Large Object');
 
-  { Checks for empty blob. }
-  if not IsEmpty then
+  { Checks for empty blob.}
+  { This test doesn't use IsEmpty because that function does allow for zero length blobs}
+  if (BlobSize > 0) then
   begin
     ContentSize := BlobSize;
     Status := FPlainDriver.LobWrite(Connection.GetContextHandle,

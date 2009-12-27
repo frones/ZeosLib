@@ -1014,11 +1014,10 @@ begin
   {$R-}
   for I := 0 to ParamSqlData.GetFieldCount-1 do
   begin
+    ParamSQLData.UpdateNull(I, DefVarManager.IsNull(InParamValues[I])); 
     if DefVarManager.IsNull(InParamValues[I])then
-    begin
-      ParamSqlData.UpdateNull(I, True);
-      Continue;
-    end;
+      Continue
+    else
     case InParamTypes[I] of
       stBoolean:
         ParamSqlData.UpdateBoolean(I,
