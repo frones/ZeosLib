@@ -65,7 +65,7 @@ IncludeVerInfo=1
 AutoIncBuild=0
 MajorVer=6
 MinorVer=6
-Release=5
+Release=6
 Build=0
 Debug=0
 PreRelease=0
@@ -83,7 +83,7 @@ LegalCopyright=
 LegalTrademarks=
 OriginalFilename=
 ProductName=
-ProductVersion=6.6.5.0
+ProductVersion=6.6.6.0
 Comments=
 [Excluded Packages]
 c:\development\borland\delphi6\Projects\Bpl\ZParse.bpl=Zeos Parsing Classes and Intefaces
