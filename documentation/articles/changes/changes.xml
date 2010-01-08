@@ -205,6 +205,9 @@
         <listitem>
           <simpara>[POSTGRES] AccessViolation when PostgreSQL server connection lost (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2599">http://zeos.firmos.at/viewtopic.php?t=2599</ulink>)</simpara>
         </listitem>
+        <listitem>
+          <simpara>[SQLITE] Replaced 'SELECT LAST_INSERT_ROWID()' by LastRowId API call</simpara>
+        </listitem>
       </itemizedlist>
     </sect2>
     <sect2>
