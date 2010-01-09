@@ -87,14 +87,14 @@ procedure CheckSQLiteError(PlainDriver: IZSQLitePlainDriver;
   @param Value a regular string.
   @return a string in PostgreSQL escape format.
 }
-function EncodeString(Value: string): string;
+function EncodeString(Value: ansistring): ansistring;
 
 {**
   Converts an string from escape PostgreSQL format.
   @param Value a string in PostgreSQL escape format.
   @return a regular string.
 }
-function DecodeString(Value: string): string;
+function DecodeString(Value: ansistring): ansistring;
 
 implementation
 
@@ -242,7 +242,7 @@ end;
   @param Value a regular string.
   @return a string in PostgreSQL escape format.
 }
-function EncodeString(Value: string): string;
+function EncodeString(Value: ansistring): ansistring;
 var
   I: Integer;
   SrcLength, DestLength: Integer;
@@ -301,11 +301,14 @@ end;
   @param Value a string in PostgreSQL escape format.
   @return a regular string.
 }
-function DecodeString(Value: string): string;
+function DecodeString(Value: ansistring): ansistring;
 var
   SrcLength, DestLength: Integer;
   SrcBuffer, DestBuffer: PAnsiChar;
 begin
+  {$IFDEF DELPHI12_UP} 
+  value := utf8decode(value);
+  {$ENDIF}
   SrcLength := Length(Value);
   SrcBuffer := PAnsiChar(Value);
   SetLength(Result, SrcLength);
