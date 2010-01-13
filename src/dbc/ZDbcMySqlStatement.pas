@@ -901,7 +901,7 @@ begin
   Case FDriverVersion of
     40100..40199 : setlength(FBindArray41,NumColumns);
     50000..50099 : setlength(FBindArray50,NumColumns);
-    50100..50199 : setlength(FBindArray51,NumColumns);
+    50100..59999 : setlength(FBindArray51,NumColumns);
     60000..60099 : setlength(FBindArray60,NumColumns);
   else
     raise EZSQLException.Create('Unknown dll version : '+IntToStr(FDriverVersion));
@@ -949,7 +949,7 @@ begin
                        length        := @FPColumnArray^[FAddedColumnCount-1].length;
                        is_null       := @FPColumnArray^[FAddedColumnCount-1].is_null;
                      end;
-    50100..50199 : With FBindArray51[FAddedColumnCount-1] do
+    50100..59999 : With FBindArray51[FAddedColumnCount-1] do
                      begin
                        buffer_type   := tempbuffertype;
                        buffer_length := FPColumnArray^[FAddedColumnCount-1].length;
@@ -982,7 +982,7 @@ begin
   Case FDriverVersion of
     40100..40199 : result := @FBindArray41[0];
     50000..50099 : result := @FBindArray50[0];
-    50100..50199 : result := @FBindArray51[0];
+    50100..59999 : result := @FBindArray51[0];
     60000..60099 : result := @FBindArray60[0];
   else
     result := nil;
@@ -995,7 +995,7 @@ begin
   Case FDriverVersion of
     40100..40199 : result := FBindArray41[ColumnIndex-1].buffer_type;
     50000..50099 : result := FBindArray50[ColumnIndex-1].buffer_type;
-    50100..50199 : result := FBindArray51[ColumnIndex-1].buffer_type;
+    50100..59999 : result := FBindArray51[ColumnIndex-1].buffer_type;
     60000..60099 : result := FBindArray60[ColumnIndex-1].buffer_type;
   else
     result := TMysqlFieldTypes(0);
