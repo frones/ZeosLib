@@ -30,6 +30,9 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=212">#0000212</ulink> [normal] Oracle Dbc bugs</simpara>
+        </listitem>
+        <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=211">#0000211</ulink> [normal] Save blob with sqlite and Delphi 2009/2010</simpara>
         </listitem>
    </itemizedlist>
