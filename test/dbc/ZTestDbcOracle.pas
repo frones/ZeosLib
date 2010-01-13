@@ -69,7 +69,6 @@ type
     procedure SetUp; override;
     procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-
     property Connection: IZConnection read FConnection write FConnection;
 
   published
@@ -80,6 +79,10 @@ type
     procedure TestPreparedStatement;
     procedure TestConcurrecy;
     procedure TestEmptyBlob;
+    procedure TestNumbers;
+    procedure TestLargeBlob;
+    procedure TestDateWithTime;
+    procedure TestFKError;
 (*
     procedure TestDefaultValues;
 *)
@@ -88,7 +91,7 @@ type
 
 implementation
 
-uses ZSysUtils, ZTestConsts;
+uses Types, ZSysUtils, ZTestConsts, ZTestCase, ZSqlTestCase;
 
 { TZTestDbcOracleCase }
 
@@ -320,13 +323,16 @@ begin
     CheckEquals(1, Statement.ExecuteUpdatePrepared);
 
     Statement1 := Connection.PrepareStatement(
-      'select b_blob from blob_values where b_id = 1');
+      'select b_id, b_blob from blob_values order by b_id');
     CheckNotNull(Statement1);
     try
       ResultSet := Statement1.ExecuteQueryPrepared;
       try
-        Check(not (ResultSet.IsFirst and ResultSet.IsLast));
-        CheckEquals(0, ResultSet.GetBlob(1).Length);
+        Check(ResultSet.Next);
+        Check(not ResultSet.IsNull(2));
+        CheckEquals(0, ResultSet.GetBlob(2).Length, 'Wrong blob length');
+        Check(ResultSet.Next);
+        CheckEquals(20, ResultSet.GetBlob(2).Length, 'Wrong blob length (2)');
       finally
         ResultSet.Close;
       end;
@@ -335,6 +341,7 @@ begin
     end;
   finally
     Statement.Close;
+    Stream.Free;
   end;
 end;
 
@@ -449,6 +456,180 @@ begin
   Statement.Close;
   Connection.Close;
 end;
+
+{**
+  Test number datatype reading
+}
+
+procedure TZTestDbcOracleCase.TestNumbers;
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+begin
+  Statement := Connection.CreateStatement;
+  CheckNotNull(Statement);
+
+  ResultSet := Statement.ExecuteQuery(
+    'SELECT * FROM number_values where n_id = 1 ');
+  CheckNotNull(ResultSet);
+
+  Check(ResultSet.Next);
+
+  // 1, -128,-32768,-2147483648,-9223372036854775808, -99999.9999
+  CheckEquals(1, ResultSet.GetInt(1));
+  CheckEquals(-128, ResultSet.GetInt(2));
+  CheckEquals(-32768, ResultSet.GetInt(3));
+{$IFDEF FPC}
+  CheckEquals(-2147483648, ResultSet.GetInt(4));
+  // !! in oracle we can only use double precission numbers now
+  CheckEquals(-9223372036854775808, ResultSet.GetBigDecimal(5), 10000);
+{$ENDIF}
+  CheckEquals(-99999.9999, ResultSet.GetDouble(6), 0.00001);
+end;
+
+{**
+  Test the large amount data in blob
+}
+
+procedure TZTestDbcOracleCase.TestLargeBlob;
+var
+  InStm: TMemoryStream;
+  OutBytes: TByteDynArray;
+  OutStr: AnsiString;
+  i, TestSize: Integer;
+  Statement: IZStatement;
+  PStatement: IZPreparedStatement;
+  ResultSet: IZResultSet;
+begin
+  InStm := TMemoryStream.Create;
+  try
+    TestSize := 1050 * 1024 + Random(100000); // relative big random size
+    InStm.SetSize(TestSize);
+    // randomizing content
+    i := 0;
+    while i < TestSize do begin
+      PByteArray(InStm.Memory)[i] := Random(256);
+      Inc(i, Random(1000));
+    end;
+    // inserting
+    PStatement := Connection.PrepareStatement(
+      Format('insert into blob_values(b_id, b_blob) values (%d, ?)', [TEST_ROW_ID]));
+    CheckNotNull(PStatement);
+    PStatement.SetBinaryStream(1, InStm);
+    CheckEquals(1, PStatement.ExecuteUpdatePrepared, 'Row insert');
+    PStatement.Close;
+
+    // selectiong
+    Statement := Connection.CreateStatement;
+    CheckNotNull(Statement);
+
+    ResultSet := Statement.ExecuteQuery(
+      'SELECT b_id, b_blob FROM blob_values where b_id = ' + IntToStr(TEST_ROW_ID));
+    CheckNotNull(ResultSet);
+    Check(ResultSet.Next);
+
+    // checking value
+    CheckEquals(TestSize, ResultSet.GetBlob(2).Length, 'Wrong blob length');
+    OutBytes := ResultSet.GetBytes(2);
+    CheckEquals(TestSize, Length(OutBytes), 'Wrong blob bytes length');
+    CheckEqualsMem(InStm.Memory, @OutBytes[0], TestSize, 'Wrong blob content (byte array)');
+    OutStr := ResultSet.GetString(2);
+    CheckEquals(TestSize, Length(OutStr), 'Wrong blob string length');
+    CheckEqualsMem(InStm.Memory, Pointer(OutStr), TestSize, 'Wrong blob content (string)');
+  finally
+    InStm.Free;
+
+    PStatement := Connection.PrepareStatement(
+    'DELETE FROM blob_values WHERE b_id=' + IntToStr(TEST_ROW_ID));
+    PStatement.ExecuteUpdatePrepared;
+  end;
+end;
+
+{**
+  Test oracle DATE type precission is 1 second
+}
+
+procedure TZTestDbcOracleCase.TestDateWithTime;
+var
+  TestDate: TDateTime;
+  Statement: IZStatement;
+  PStatement: IZPreparedStatement;
+  ResultSet: IZResultSet;
+begin
+  TestDate := EncodeDate(2009, 12, 20) + EncodeTime(20, 09, 11, 0);
+  try
+    // inserting
+    PStatement := Connection.PrepareStatement(
+      Format('insert into date_values(d_id, d_date) values(%d, ?)', [TEST_ROW_ID]));
+    CheckNotNull(PStatement);
+    PStatement.SetTimestamp(1, TestDate);
+    CheckEquals(1, PStatement.ExecuteUpdatePrepared, 'Row insert');
+    PStatement.Close;
+
+    // selectiong
+    Statement := Connection.CreateStatement;
+    CheckNotNull(Statement);
+    ResultSet := Statement.ExecuteQuery(
+      'SELECT d_id, d_date FROM date_values where d_id = ' + IntToStr(TEST_ROW_ID));
+    CheckNotNull(ResultSet);
+    Check(ResultSet.Next);
+
+    // checking value
+    CheckEqualsDate(TestDate, ResultSet.GetTimestamp(2), [dpYear..dpSec], 'DATE type must have 1 sec precission');
+  finally
+    PStatement := Connection.PrepareStatement(
+    'DELETE FROM date_values WHERE d_id=' + IntToStr(TEST_ROW_ID));
+    PStatement.ExecuteUpdatePrepared;
+  end;
+end;
+
+{**
+  Test PK-error and possible prepared statement corruption after it
+}
+
+procedure TZTestDbcOracleCase.TestFKError;
+const
+  TestStr = 'The source code of the ZEOS Libraries and packages are distributed under the Library GNU General Public License';
+var
+  Statement: IZStatement;
+  PStatement: IZPreparedStatement;
+  ResultSet: IZResultSet;
+begin
+  // inserting
+  PStatement := Connection.PrepareStatement(
+  'insert into string_values(s_id, s_varchar) values(?, ?)');
+  CheckNotNull(PStatement);
+  // making PK error
+  PStatement.SetInt(1, 1);
+  PStatement.SetNull(2, stString);  // null clears variable memory ref
+  try
+    PStatement.ExecuteUpdatePrepared;
+    Fail('Primary key violation expected');
+  except
+  end;
+  // rerun with new value (and check, that prev error dont corrupt PStatement)
+  try
+    PStatement.SetInt(1, TEST_ROW_ID);
+    PStatement.SetString(2, TestStr);
+    CheckEquals(1, PStatement.ExecuteUpdatePrepared, 'Row insert');
+
+    // selectiong
+    Statement := Connection.CreateStatement;
+    CheckNotNull(Statement);
+    ResultSet := Statement.ExecuteQuery(
+      'SELECT s_id, s_varchar FROM string_values where s_id = ' + IntToStr(TEST_ROW_ID));
+    CheckNotNull(ResultSet);
+    Check(ResultSet.Next);
+
+    // checking value
+    CheckEquals(TestStr, ResultSet.GetString(2));
+  finally
+    PStatement := Connection.PrepareStatement(
+    'DELETE FROM string_values WHERE s_id=' + IntToStr(TEST_ROW_ID));
+    PStatement.ExecuteUpdatePrepared;
+  end;
+end;
+
 
 {**
   Runs a test for concurrent data read.

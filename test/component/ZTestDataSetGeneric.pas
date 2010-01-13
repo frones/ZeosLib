@@ -1258,7 +1258,7 @@ begin
   try
     Query.Connection := Connection;
     Query.SQL.Text := 'SELECT * FROM people';
-
+    //!! Oracle: depend from local settings
     Query.Filter := 'p_begin_work >= "'+TimeToStr(EncodeTime(8,30,0,50))+'"';
     Query.Filtered := True;
     Query.Open;
@@ -1338,12 +1338,22 @@ begin
     Query.Connection := Connection;
     Query.SQL.Text := 'SELECT * FROM people';
     Query.Open;
-    CheckEquals(true, Query.Locate('p_begin_work',EncodeTime(8,30,0,0),[]));
-    CheckEquals(EncodeTime(8,30,0,0), Query.FieldByName('p_begin_work').AsDateTime);
-    CheckEquals(EncodeTime(17,30,0,0), Query.FieldByName('p_end_work').AsDateTime);
+    if StartsWith(Protocol, 'oracle') then begin
+      Check(Query.Locate('p_begin_work',EncodeDate(1, 1, 1) - EncodeTime(8,30,0,0),[]));
+      CheckEqualsDate(EncodeDate(1, 1, 1) - EncodeTime(8,30,0,0), Query.FieldByName('p_begin_work').AsDateTime);
+      CheckEqualsDate(EncodeDate(1, 1, 1) - EncodeTime(17,30,0,0), Query.FieldByName('p_end_work').AsDateTime);
+    end else begin
+      CheckEquals(true, Query.Locate('p_begin_work',EncodeTime(8,30,0,0),[]));
+      CheckEqualsDate(EncodeTime(8,30,0,0), Query.FieldByName('p_begin_work').AsDateTime);
+      CheckEqualsDate(EncodeTime(17,30,0,0), Query.FieldByName('p_end_work').AsDateTime);
+    end;
     Query.Close;
     Query.Open;
-    CheckEquals(false, Query.Locate('p_begin_work',EncodeTime(8,31,0,0),[]));
+    if StartsWith(Protocol, 'oracle') then begin
+      CheckEquals(false, Query.Locate('p_begin_work',EncodeDate(1, 1, 1) - EncodeTime(8,31,0,0),[]));
+    end else begin
+      CheckEquals(false, Query.Locate('p_begin_work',EncodeTime(8,31,0,0),[]));
+    end;
     Query.Close;
   finally
     Query.Free;

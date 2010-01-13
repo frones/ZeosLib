@@ -68,6 +68,9 @@ type
   CTZAbstractTestCase=Class of TZAbstractTestCase;
   {$ENDIF}
 
+  TDatePart = (dpYear, dpMonth, dpDay, dpHour, dpMin, dpSec, dpMSec);
+  TDateParts = set of TDatePart;
+
   {** Implements an abstract class for all test cases. }
 
   { TZAbstractTestCase }
@@ -84,6 +87,7 @@ type
     function QueryInterface(const iid : tguid;out obj) : longint;stdcall;
     function _AddRef : longint;stdcall;
     function _Release : longint;stdcall;
+    procedure CheckEqualsMem(expected, actual: pointer; size:longword; msg:string='');
     {$ENDIF}
     property DecimalSeparator: Char read FDecimalSeparator
       write FDecimalSeparator;
@@ -105,8 +109,10 @@ type
     { Additional checking methods. }
     procedure CheckEquals(Array1, Array2: TByteDynArray;
       _Message: string = ''); overload;
-    procedure CheckEquals(Stream1, Stream2: TStream;
-      _Message: string = ''); overload;
+    procedure CheckEquals(Expected, Actual: TStream;
+      const Msg: string = ''); overload;
+    procedure CheckEqualsDate(const Expected, Actual: TDateTime;
+      Parts: TDateParts = []; const Msg: string = '');
 
     { Measurement methods. }
     function GetTickCount: Cardinal;
@@ -142,11 +148,44 @@ function CallerAddr: Pointer;
 begin
   Result := nil;
 end;
+function ByteAt(p: pointer; const Offset: integer): byte;
+begin
+  Result:=pByte(integer(p)+Offset)^;
+end;
+
+function FirstByteDiff(p1, p2: pointer; size: longword; out b1, b2: byte): integer;
+// Returns offset of first byte pair (left to right, incrementing address) that is unequal
+// Returns -1 if no difference found, or if size=0
+var
+  i: integer;
+begin
+  Result:=-1;
+  if size>0 then
+  for i:=0 to size-1 do // Subject to optimisation for sure:
+    if ByteAt(p1,i)<>ByteAt(p2,i) then
+    begin
+      Result:=i;
+      b1:=ByteAt(p1,i);
+      b2:=ByteAt(p2,i);
+      break;
+    end;
+end;
+
+function GetMemDiffStr(expected, actual: pointer; size:longword; msg:string):string;
+var
+  db1, db2: byte;
+  Offset: integer;
+begin
+  Offset:=FirstByteDiff(expected,actual,size,db1,db2);
+  Result:=Format('%s expected: <%s> but was: <%s>',[msg,IntToHex(db1,2),IntToHex(db2,2)]);
+  Result:=Result+' at Offset = '+IntToHex(Offset,4)+'h';
+end;
 {$ENDIF}
 
 { TZAbstractTestCase }
 
 {$IFDEF FPC}
+
 function TZAbstractTestCase.QueryInterface(const iid: tguid; out obj): longint;
   stdcall;
 begin
@@ -195,6 +234,12 @@ procedure TZAbstractTestCase.CheckNull(obj: IUnknown; msg: string);
 begin
     if obj <>  nil then
       Fail(msg, CallerAddr);
+end;
+
+procedure TZAbstractTestCase.CheckEqualsMem(expected, actual: pointer; size:longword; msg:string='');
+begin
+  if not CompareMem(expected, actual, size) then
+    Fail(GetMemDiffStr(expected, actual, size, msg), CallerAddr);
 end;
 
 constructor TZAbstractTestCase.Create;
@@ -317,49 +362,64 @@ end;
 
 {**
    Function compare two streams. If streams not equals raise exception.
-   @param the first array for compare
-   @param the secon array for compare
+   @param Expected the first stream for compare
+   @param Actual the second stream for compare
 }
-procedure TZAbstractTestCase.CheckEquals(Stream1, Stream2: TStream;
-  _Message: string = '');
+procedure TZAbstractTestCase.CheckEquals(Expected, Actual: TStream;
+  const Msg: string = '');
 var
-  Buffer1, Buffer2: Pointer;
-  Size1, Size2: Integer;
-  ReadNum1, ReadNum2: Integer;
-  ResultCompareMem: Boolean;
+  EBuf, ABuf: PByteArray;
+  Size, ERead, ARead: Integer;
 begin
-  ResultCompareMem := False;
-
-  CheckNotNull(Stream1, 'Stream #1 is null. ' + _Message);
-  CheckNotNull(Stream2, 'Stream #2 is null. ' + _Message);
-{$IFNDEF LINUX}
-  CheckEquals(Stream1.Size, Stream2.Size, 'Stream sizes are not equal. '
-    + _Message);
-{$ELSE}
-  if Stream1.Size <> Stream2.Size then
-   Fail('Stream sizes are not equal. ' + _Message);
-{$ENDIF}
-
-  Size1 := Stream1.Size;
-  Size2 := Stream1.Size;
-  Buffer1 := AllocMem(Size1);
-  Buffer2 := AllocMem(Size2);
-  Stream1.Position := 0;
-  Stream2.Position := 0;
-
+  if Expected = Actual then Exit;
+  if not Assigned(Actual) and Assigned(Expected) then
+    Fail('Expected stream, but NIL receved.' + Msg);
+  if Assigned(Actual) and not Assigned(Expected) then
+    Fail('Expected NIL stream, but real stream receved.' + Msg);
+  Size := Expected.Size;
+  if Size <> Actual.Size then
+    Fail(Format('Different stream size. Expected: %d. Actual: %d.', [Size, Actual.Size]) + Msg);
+  GetMem(EBuf, Size);
+  GetMem(ABuf, Size);
   try
-    ReadNum1 := Stream1.Read(Buffer1^, Size1);
-    ReadNum2 := Stream2.Read(Buffer2^, Size2);
-    if ReadNum1 = ReadNum2 then
-      ResultCompareMem := CompareMem(Buffer1, Buffer2, ReadNum1);
+    Expected.Position := 0;
+    Actual.Position := 0;
+    ERead := Expected.Read(EBuf^, Size);
+    ARead := Actual.Read(ABuf^, Size);
+    CheckEquals(ERead, ARead, Format('Stream read different. Expected: %d. Actual: %d.', [ERead, ARead]) + Msg);
+    CheckEqualsMem(EBuf, ABuf, Size, 'Stream data different.' + Msg);
   finally
-    FreeMem(Buffer1, Size1);
-    FreeMem(Buffer2, Size2);
+    FreeMem(EBuf);
+    FreeMem(ABuf);
   end;
-
-  CheckEquals(ReadNum1, ReadNum2, 'Read sizes are not equal.' + _Message);
-  Check(ResultCompareMem, 'Read sizes are not equal.' + _Message);
 end;
+
+procedure TZAbstractTestCase.CheckEqualsDate(const Expected, Actual: TDateTime;
+  Parts: TDateParts; const Msg: string);
+const
+  fmt = 'YYYY-MM-DD HH:NN:SS.ZZZ';
+var
+  EYear, EMonth, EDay, EHour, EMin, ESec, EMSec: Word;
+  AYear, AMonth, ADay, AHour, AMin, ASec, AMSec: Word;
+  s: string;
+begin
+  if Parts = [] then
+    Parts := [dpYear..dpMSec];
+  s := Msg + Format(' DateTime: Expected: %s, Actual: %s - ',
+    [FormatDateTime(fmt, Expected), FormatDateTime(fmt, Actual)]);
+  DecodeDate(Expected, EYear, EMonth, EDay);
+  DecodeTime(Expected, EHour, EMin, ESec, EMSec);
+  DecodeDate(Actual, AYear, AMonth, ADay);
+  DecodeTime(Actual, AHour, AMin, ASec, AMSec);
+  if dpYear in Parts then CheckEquals(EYear, AYear, s + '(DateTime.Year)');
+  if dpMonth in Parts then CheckEquals(EMonth, AMonth, s + '(DateTime.Month)');
+  if dpDay in Parts then CheckEquals(EDay, ADay, s + '(DateTime.Day)');
+  if dpHour in Parts then CheckEquals(EHour, AHour, s + '(DateTime.Hour)');
+  if dpMin in Parts then CheckEquals(EMin, AMin, s + '(DateTime.Min)');
+  if dpSec in Parts then CheckEquals(ESec, ASec, s + '(DateTime.Sec)');
+  if dpMSec in Parts then CheckEquals(EMSec, AMSec, s + '(DateTime.MSec)');
+end;
+
 
 {**
   Prints a debug message to standard output.
