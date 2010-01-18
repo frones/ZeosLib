@@ -81,6 +81,7 @@ type
     procedure TestBlobs;
     procedure TestCaseSensitive;
     procedure TestDefaultValues;
+    procedure TestEnumValues;
   end;
 
 implementation
@@ -314,6 +315,54 @@ begin
   ResultSet.Close;
   Statement.Close;
 end;
+
+procedure TZTestDbcPostgreSQLCase.TestEnumValues; 
+var 
+  Statement: IZStatement; 
+  ResultSet: IZResultSet; 
+begin 
+    Statement := Connection.CreateStatement; 
+    CheckNotNull(Statement); 
+    Statement.SetResultSetType(rtScrollInsensitive); 
+    Statement.SetResultSetConcurrency(rcUpdatable); 
+
+    // Select case 
+    ResultSet := Statement.ExecuteQuery('SELECT * FROM extension where ext_id = 1'); 
+    CheckNotNull(ResultSet); 
+    ResultSet.First; 
+    Check(ResultSet.GetInt(1) = 1); 
+    CheckEquals('Car', ResultSet.GetString(2)); 
+    ResultSet.Close; 
+    Statement.Close; 
+
+    // Update case 
+    ResultSet := Statement.ExecuteQuery('UPDATE extension set ext_enum = ''House'' where ext_id = 1'); 
+    ResultSet.Close; 
+
+    ResultSet := Statement.ExecuteQuery('SELECT * FROM extension where ext_id = 1'); 
+    CheckNotNull(ResultSet); 
+    ResultSet.First; 
+    Check(ResultSet.GetInt(1) = 1); 
+    CheckEquals('House', ResultSet.GetString(2)); 
+    ResultSet.Close; 
+    Statement.Close; 
+
+    // Insert case 
+    ResultSet := Statement.ExecuteQuery('DELETE FROM extension where ext_id = 1'); 
+    ResultSet.Close; 
+
+    ResultSet := Statement.ExecuteQuery('INSERT INTO extension VALUES(1,''Car'')'); 
+    ResultSet.Close; 
+
+    ResultSet := Statement.ExecuteQuery('SELECT * FROM extension where ext_id = 1'); 
+    CheckNotNull(ResultSet); 
+    ResultSet.First; 
+    Check(ResultSet.GetInt(1) = 1); 
+    CheckEquals('Car', ResultSet.GetString(2)); 
+    ResultSet.Close; 
+    Statement.Close; 
+
+end; 
 
 initialization
   RegisterTest('dbc',TZTestDbcPostgreSQLCase.Suite);
