@@ -370,6 +370,11 @@ begin
               end;
             end;
           end;
+        ttTime,ttDate,ttDateTime:
+          begin
+            TokenType := ttConstant;
+            DefVarManager.SetAsDateTime(TokenValue, StrToDateTime(Tokens[TokenIndex]));
+          end;
       end;
 
       if TokenType = ttUnknown then

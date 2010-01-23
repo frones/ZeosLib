@@ -266,6 +266,8 @@
 
 20090131 : TZSQLMonitor access violation when destroying - by mturecki - Mantis Bug 124
 
+20081030 : TZTable and TZQuery Filter property do not work correctly with datetime fields - by seawolf - See http://zeos.firmos.at/viewtopic.php?t=2055
+
 20090220 : Replaced some GetXXXByName and UpdateXXXByName calls in the Metadata classes to avoid repeated name lookups - by mdaems
 
 20090220 : Get reference to ResultsetMetadata only once in TZCachedResultSet.Open - by mdaems

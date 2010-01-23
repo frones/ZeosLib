@@ -412,6 +412,19 @@ const
   isc_info_db_read_only          =         63;
   isc_info_db_size_in_pages      =         64;
 
+  frb_info_att_charset           = 101;
+  isc_info_db_class              = 102;
+  isc_info_firebird_version      = 103;
+  isc_info_oldest_transaction    = 104;
+  isc_info_oldest_active         = 105;
+  isc_info_oldest_snapshot       = 106;
+  isc_info_next_transaction      = 107;
+  isc_info_db_provider           = 108;
+  isc_info_active_transactions   = 109;
+  isc_info_active_tran_count     = 110;
+  isc_info_creation_date         = 111;
+  isc_info_db_file_size          = 112;
+
 type
   ULong                = Cardinal;
   UChar                = Char;

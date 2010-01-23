@@ -68,7 +68,7 @@ type
   }
   TZTokenType = (ttUnknown, ttEOF, ttFloat, ttInteger, ttHexDecimal,
     ttNumber, ttSymbol, ttQuoted, ttQuotedIdentifier, ttWord, ttKeyword, ttWhitespace,
-    ttComment, ttSpecial);
+    ttComment, ttSpecial, ttTime, ttDate, ttDateTime);
 
   {**
     Defines options for tokenizing strings.

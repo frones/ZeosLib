@@ -170,9 +170,14 @@ function TZGenericSQLQuoteState.NextToken(Stream: TStream;
 var
   ReadChar: Char;
   LastChar: Char;
+  CountDoublePoint,CountSlash : integer;
+  isDateTime : TDateTime;
 begin
   Result.Value := FirstChar;
   LastChar := #0;
+  CountDoublePoint := 0; 
+  CountSlash := 0;
+
   while Stream.Read(ReadChar, 1) > 0 do
   begin
     if (LastChar = FirstChar) and (ReadChar <> FirstChar) then
@@ -180,6 +185,10 @@ begin
       Stream.Seek(-1, soFromCurrent);
       Break;
     end;
+    if ReadChar = TimeSeparator then
+      inc(CountDoublePoint);
+    if ReadChar = DateSeparator then
+      inc(CountSlash);
     Result.Value := Result.Value + ReadChar;
     if (LastChar = FirstChar) and (ReadChar = FirstChar) then
       LastChar := #0
@@ -189,6 +198,39 @@ begin
   if FirstChar = '"' then
     Result.TokenType := ttWord
   else Result.TokenType := ttQuoted;
+
+  // Time constant
+  if (CountDoublePoint = 2) and (CountSlash = 0) then
+    begin
+      try
+        isDateTime := StrToTime(DecodeString(Result.Value,'"'));
+        Result.Value := DecodeString(Result.Value,'"');
+        Result.TokenType := ttTime;
+      except
+    end;
+  end;
+  // Date constant
+  if (CountDoublePoint = 0) and (CountSlash = 2) then
+    begin
+      try
+        isDateTime := StrToDate(DecodeString(Result.Value,'"'));
+        Result.Value := DecodeString(Result.Value,'"');
+        Result.TokenType := ttDate;
+      except
+    end;
+  end;
+
+  // DateTime constant
+  if (CountDoublePoint = 2) and (CountSlash = 2) then
+    begin
+      try
+        isDateTime := StrToDateTime(DecodeString(Result.Value,'"'));
+        Result.Value := DecodeString(Result.Value,'"');
+        Result.TokenType := ttDateTime;
+      except
+    end;
+  end;
+
 end;
 
 {**
