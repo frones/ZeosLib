@@ -261,7 +261,7 @@
       <title>Internal Changes</title>
       <itemizedlist spacing="compact">
         <listitem>
-          <simpara>NONE</simpara>
+          <simpara>[Lazarus/FPC] Test database rebuild for Lazarus/FPC added.</simpara>
         </listitem>
     </itemizedlist>
     </sect2>	

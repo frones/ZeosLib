@@ -6,6 +6,8 @@ uses
   custapp, sysutils, comctrls,
   Interfaces, Forms, GuiTestRunner, LResources,
   Classes, consoletestrunner, fpcunit, fpcunitreport, plaintestreport,
+  ZTestConfig,
+  ZSqlTestCase,
   //core
   ZTestSysUtils, ZTestVariant, ZTestTokenizer,
   ZTestList, ZTestFramework, ZTestExprToken, ZTestExpression, ZTestURL,
@@ -206,6 +208,8 @@ var
 
 begin
   {$I ztestall.lrs}
+  TestGroup := COMMON_GROUP;
+  RebuildTestDatabases;
   If Application.HasOption('b', 'batch') or Application.HasOption('h', 'help')then
   begin
     Applicationc := TMyTestRunner.Create(nil);
