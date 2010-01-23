@@ -247,6 +247,9 @@
         <listitem>
           <simpara>[SQLITE] Replaced 'SELECT LAST_INSERT_ROWID()' by LastRowId API call</simpara>
         </listitem>
+        <listitem>
+          <simpara>[Common] TZTable and TZQuery Filter property do not work correctly with datetime fields (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2055">http://zeos.firmos.at/viewtopic.php?t=2055</ulink>)</simpara>
+        </listitem>
       </itemizedlist>
     </sect2>
     <sect2>
