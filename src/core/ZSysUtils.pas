@@ -493,9 +493,12 @@ end;
 function SQLStrToFloatDef(Str: string; Def: Extended): Extended;
 var
   OldDecimalSeparator: Char;
+  OldThousandSeparator: Char;
 begin
   OldDecimalSeparator := DecimalSeparator;
+  OldThousandSeparator := ThousandSeparator;
   DecimalSeparator := '.';
+  ThousandSeparator := ',';
   if Pos('$', Str) = 1 then
     Str := Copy(Str, 2, Pred(Length(Str)));
   If Str = '' then
@@ -503,6 +506,7 @@ begin
   else
     Result := StrToFloatDef(Str, Def);
   DecimalSeparator := OldDecimalSeparator;
+  ThousandSeparator := OldThousandSeparator;
 end;
 
 {**

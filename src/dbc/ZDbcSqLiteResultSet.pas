@@ -129,12 +129,14 @@ type
 
     function FormCalculateStatement(Columns: TObjectList): string; override;
 
+    procedure UpdateAutoIncrementFields(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
+      OldRowAccessor, NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver); override;
   end;
 
 implementation
 
 uses
-  ZMessages, ZDbcSQLiteUtils, ZMatchPattern,
+  ZMessages, ZDbcSqLite, ZDbcSQLiteUtils, ZMatchPattern,
   ZDbcLogging;
 
 { TZSQLiteResultSetMetadata }
@@ -844,18 +846,31 @@ var
 begin
   inherited PostUpdates(Sender, UpdateType, OldRowAccessor, NewRowAccessor);
 
-  if (UpdateType = utInserted) and (FAutoColumnIndex > 0)
-    and OldRowAccessor.IsNull(FAutoColumnIndex) then
+  if (UpdateType = utInserted) then
+    UpdateAutoIncrementFields(Sender, UpdateType, OldRowAccessor, NewRowAccessor, Self);
+end;
+
+{**
+ Do Tasks after Post updates to database.
+  @param Sender a cached result set object.
+  @param UpdateType a type of updates.
+  @param OldRowAccessor an accessor object to old column values.
+  @param NewRowAccessor an accessor object to new column values.
+}
+procedure TZSQLiteCachedResolver.UpdateAutoIncrementFields(
+  Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
+  NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver);
+var
+  PlainDriver: IZSQLitePlainDriver;
+begin
+  inherited;
+
+  if (FAutoColumnIndex > 0) and
+     (OldRowAccessor.IsNull(FAutoColumnIndex) or (OldRowAccessor.GetValue(FAutoColumnIndex).VInteger = 0)) then
   begin
-    Statement := Connection.CreateStatement;
-    ResultSet := Statement.ExecuteQuery('SELECT LAST_INSERT_ROWID()');
-    try
-      if ResultSet.Next then
-        NewRowAccessor.SetLong(FAutoColumnIndex, ResultSet.GetLong(1));
-    finally
-      ResultSet.Close;
-      Statement.Close;
-    end;
+    PlainDriver := (Connection as IZSQLiteConnection).GetPlainDriver;
+
+    NewRowAccessor.SetLong(FAutoColumnIndex, PlainDriver.LastInsertRowId(FHandle));
   end;
 end;
 
