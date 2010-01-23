@@ -1998,7 +1998,7 @@ begin
         Result.UpdateString(6, PgType);
         Result.UpdateInt(8, 0);
 
-        if (PgType = 'bpchar') or (PgType = 'varchar') then
+        if (PgType = 'bpchar') or (PgType = 'varchar') or (PgType = 'enum') then
         begin
           if AttTypMod <> -1 then
             Result.UpdateInt(7, AttTypMod - 4)
