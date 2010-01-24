@@ -2847,16 +2847,14 @@ end;
   @return a byte buffer which contains the stored data.
 }
 function TZAbstractBlob.GetBytes: TByteDynArray;
-var
-  I: Integer;
-  TempString: AnsiString;
 begin
   if not IsEmpty then
   begin
-    TempString := GetString;
-    SetLength(Result, System.Length(TempString));
-    for I := 0 to System.Length(TempString) - 1 do
-      Result[I] := Ord(TempString[I + 1]);
+    if (FBlobSize > 0) and Assigned(FBlobData) then begin
+      SetLength(Result, FBlobSize);
+      Move(FBlobData^, Result[0], FBlobSize);
+    end else
+      Result := nil;
   end else
     Result := nil;
 end;
@@ -2866,18 +2864,17 @@ end;
   @param Value a new byte buffer.
 }
 procedure TZAbstractBlob.SetBytes(const Value: TByteDynArray);
-var
-  I: Integer;
-  TempString: AnsiString;
 begin
+  Clear;
   if Value <> nil then
   begin
-    SetLength(TempString, High(Value) + 1);
-    for I := 0 to High(Value) do
-      TempString[I + 1] := Chr(Value[I]);
-    SetString(TempString);
-  end else
-    Clear;
+    FBlobSize := System.Length(Value);
+    if FBlobSize > 0 then
+    begin
+      GetMem(FBlobData, FBlobSize);
+      System.Move(Value[0], FBlobData^, FBlobSize);
+    end;
+  end;
   FUpdated := True;
 end;
 

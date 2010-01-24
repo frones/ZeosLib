@@ -76,7 +76,7 @@ type
 
 implementation
 
-uses Classes, ZTestConsts, ZSysUtils, ZDbcUtils;
+uses Classes, ZTestConsts, ZSysUtils, ZDbcUtils, ZTestCase;
 
 { TZTestSQLTypesCase }
 
@@ -132,12 +132,7 @@ begin
 
   Query.FieldByName('d_id').AsInteger := TEST_ROW_ID;
 
-  if StartsWith(Protocol, 'oracle') then
-  begin
-    CheckEquals(Ord(ftDate), Ord(Query.FieldByName('d_date').DataType));
-    CheckEquals(Ord(ftDateTime), Ord(Query.FieldByName('d_time').DataType))
-  end
-  else if (Protocol = 'mssql') or (Protocol = 'sybase') then
+  if StartsWith(Protocol, 'oracle') or (Protocol = 'mssql') or (Protocol = 'sybase') then
   begin
     CheckEquals(Ord(ftDateTime), Ord(Query.FieldByName('d_date').DataType));
     CheckEquals(Ord(ftDateTime), Ord(Query.FieldByName('d_time').DataType))
@@ -155,7 +150,7 @@ begin
   Query.FieldByName('d_datetime').AsDateTime := NowDate;
   Query.FieldByName('d_timestamp').AsDateTime := NowDate;
 
-  if (Protocol = 'mssql') or (Protocol = 'sybase') then
+  if StartsWith(Protocol, 'oracle') or (Protocol = 'mssql') or (Protocol = 'sybase') then
   begin
     CheckEquals(NowDate, Query.FieldByName('d_date').AsDateTime, 1e-10);
     CheckEquals(NowDate, Query.FieldByName('d_time').AsDateTime, 1e-10);
@@ -176,9 +171,9 @@ begin
   Query.Open;
 
   CheckEquals(1, Query.RecordCount);
-  if (Protocol = 'mssql') or (Protocol = 'sybase') then
+  if StartsWith(Protocol, 'oracle') or (Protocol = 'mssql') or (Protocol = 'sybase') then
   begin
-    CheckEquals(NowDate, Query.FieldByName('d_date').AsDateTime, 1e-4);
+    CheckEqualsDate(NowDate, Query.FieldByName('d_date').AsDateTime, [dpYear..dpSec]);
     CheckEquals(NowDate, Query.FieldByName('d_time').AsDateTime, 1e-4);
   end
   else
@@ -188,8 +183,8 @@ begin
     CheckEquals(Frac(NowDate),
       Frac(Abs(Query.FieldByName('d_time').AsDateTime)), 1e-4);
   end;
-  CheckEquals(NowDate, Query.FieldByName('d_datetime').AsDateTime, 1e-4);
-  CheckEquals(NowDate, Query.FieldByName('d_timestamp').AsDateTime, 1e-4);
+  CheckEqualsDate(NowDate, Query.FieldByName('d_datetime').AsDateTime, [dpYear..dpSec]);
+  CheckEqualsDate(NowDate, Query.FieldByName('d_timestamp').AsDateTime, [dpYear..dpSec]);
 
   Query.SQL.Text := 'DELETE FROM date_values WHERE d_id=:Id';
   Query.Params[0].DataType := ftInteger;
