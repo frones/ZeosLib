@@ -2397,8 +2397,8 @@ begin
   if not Assigned(Bookmark1) or not Assigned(Bookmark2) then
     Exit;
 
-  Index1 := CurrentRows.IndexOf(PPointer(Bookmark1)^);
-  Index2 := CurrentRows.IndexOf(PPointer(Bookmark2)^);
+  Index1 := CurrentRows.IndexOf(Pointer(PInteger(Bookmark1)^));
+  Index2 := CurrentRows.IndexOf(Pointer(PInteger(Bookmark2)^));
   
   if Index1 < Index2 then Result := -1
   else if Index1 > Index2 then Result := 1;
@@ -2414,7 +2414,7 @@ begin
   Result := False;
   if Active and Assigned(Bookmark) and (FResultSet <> nil) then
     try
-      Result := CurrentRows.IndexOf(PPointer(Bookmark)^) >= 0;
+      Result := CurrentRows.IndexOf(Pointer(PInteger(Bookmark)^)) >= 0;
     except
       Result := False;
     end;
