@@ -28,6 +28,7 @@ uses
   //bugreport
   ZTestBugDbcCore,
   ZTestBugDbcMySql, ZTestBugCompMySql,
+  ZTestBugDbcOracle, ZTestBugCompOracle,
   ZTestBugDbcPostgreSql, //ZTestBugCompPostgreSql,
   //ZTestBugDbcInterbase, //ZTestBugCompInterbase,
   ZTestBugDbcDbLib, ZTestBugCompDbLib,
