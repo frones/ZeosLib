@@ -74,15 +74,15 @@ type
   {** Implements Generic PostgreSQL Statement. }
   TZPostgreSQLStatement = class(TZAbstractStatement, IZPostgreSQLStatement)
   private
-    FHandle: PZPostgreSQLConnect;
     FPlainDriver: IZPostgreSQLPlainDriver;
     FOidAsBlob: Boolean;
   protected
     function CreateResultSet(const SQL: string;
       QueryHandle: PZPostgreSQLResult): IZResultSet;
+    function GetConnectionHandle():PZPostgreSQLConnect;
   public
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
-      Connection: IZConnection; Info: TStrings; Handle: PZPostgreSQLConnect);
+      Connection: IZConnection; Info: TStrings);
     destructor Destroy; override;
 
     function ExecuteQuery(const SQL: string): IZResultSet; override;
@@ -95,16 +95,15 @@ type
   {** Implements Prepared SQL Statement. }
   TZPostgreSQLPreparedStatement = class(TZEmulatedPreparedStatement)
   private
-    FHandle: PZPostgreSQLConnect;
     FPlainDriver: IZPostgreSQLPlainDriver;
     FCharactersetCode : TZPgCharactersetType;
   protected
     function CreateExecStatement: IZStatement; override;
     function PrepareSQLParam(ParamIndex: Integer): string; override;
+    function GetConnectionHandle():PZPostgreSQLConnect;
   public
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
-      Connection: IZConnection; const SQL: string; Info: TStrings;
-      Handle: PZPostgreSQLConnect);
+      Connection: IZConnection; const SQL: string; Info: TStrings);
   end;
 
   {** Implements a specialized cached resolver for PostgreSQL. }
@@ -128,10 +127,9 @@ uses
   @param Handle a connection handle pointer.
 }
 constructor TZPostgreSQLStatement.Create(PlainDriver: IZPostgreSQLPlainDriver;
-  Connection: IZConnection; Info: TStrings; Handle: PZPostgreSQLConnect);
+  Connection: IZConnection; Info: TStrings);
 begin
   inherited Create(Connection, Info);
-  FHandle := Handle;
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
 
@@ -168,9 +166,11 @@ function TZPostgreSQLStatement.CreateResultSet(const SQL: string;
 var
   NativeResultSet: TZPostgreSQLResultSet;
   CachedResultSet: TZCachedResultSet;
+  ConnectionHandle: PZPostgreSQLConnect;
 begin
+  ConnectionHandle := GetConnectionHandle();
   NativeResultSet := TZPostgreSQLResultSet.Create(FPlainDriver, Self, SQL,
-    FHandle, QueryHandle);
+    ConnectionHandle, QueryHandle);
   NativeResultSet.SetConcurrency(rcReadOnly);
   if GetResultSetConcurrency = rcUpdatable then
   begin
@@ -193,14 +193,18 @@ end;
 function TZPostgreSQLStatement.ExecuteQuery(const SQL: string): IZResultSet;
 var
   QueryHandle: PZPostgreSQLResult;
+  ConnectionHandle: PZPostgreSQLConnect;
 begin
   Result := nil;
+  ConnectionHandle := GetConnectionHandle();
   {$IFDEF DELPHI12_UP}
-  QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(UTF8String(SQL)));
+  QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
+    PAnsiChar(UTF8String(SQL)));
   {$ELSE}
-  QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));
+  QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
   {$ENDIF}
-  CheckPostgreSQLError(Connection, FPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
+  CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
+    SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
   if QueryHandle <> nil then
     Result := CreateResultSet(SQL, QueryHandle)
@@ -222,14 +226,18 @@ end;
 function TZPostgreSQLStatement.ExecuteUpdate(const SQL: string): Integer;
 var
   QueryHandle: PZPostgreSQLResult;
+  ConnectionHandle: PZPostgreSQLConnect;
 begin
   Result := -1;
+  ConnectionHandle := GetConnectionHandle();
   {$IFDEF DELPHI12_UP}
-  QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(UTF8String(SQL)));
+  QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
+    PAnsiChar(UTF8String(SQL)));
   {$ELSE}
-  QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));
+  QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
   {$ENDIF}
-  CheckPostgreSQLError(Connection, FPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
+  CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
+    SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
 
   if QueryHandle <> nil then
@@ -267,13 +275,17 @@ function TZPostgreSQLStatement.Execute(const SQL: string): Boolean;
 var
   QueryHandle: PZPostgreSQLResult;
   ResultStatus: TZPostgreSQLExecStatusType;
+  ConnectionHandle: PZPostgreSQLConnect;
 begin
+  ConnectionHandle := GetConnectionHandle();
   {$IFDEF DELPHI12_UP}
-  QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(UTF8String(SQL)));
+  QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
+    PAnsiChar(UTF8String(SQL)));
   {$ELSE}
-  QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));
+  QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
   {$ENDIF}
-  CheckPostgreSQLError(Connection, FPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
+  CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
+    SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
 
   { Process queries with result sets }
@@ -305,6 +317,17 @@ begin
     Connection.Commit;
 end;
 
+{**
+  Provides connection handle from the associated IConnection
+}
+function TZPostgreSQLStatement.GetConnectionHandle():PZPostgreSQLConnect;
+begin
+  if Self.Connection = nil then
+    Result := nil
+  else
+    Result := (self.Connection as IZPostgreSQLConnection).GetConnectionHandle;
+end;
+
 { TZPostgreSQLPreparedStatement }
 
 {**
@@ -316,10 +339,9 @@ end;
 }
 constructor TZPostgreSQLPreparedStatement.Create(
   PlainDriver: IZPostgreSQLPlainDriver; Connection: IZConnection;
-  const SQL: string; Info: TStrings; Handle: PZPostgreSQLConnect);
+  const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
-  FHandle := Handle;
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
   FCharactersetCode := (Connection as IZPostgreSQLConnection).GetCharactersetCode;
@@ -332,7 +354,7 @@ end;
 }
 function TZPostgreSQLPreparedStatement.CreateExecStatement: IZStatement;
 begin
-  Result := TZPostgreSQLStatement.Create(FPlainDriver, Connection, Info, FHandle);
+  Result := TZPostgreSQLStatement.Create(FPlainDriver, Connection, Info);
 end;
 
 {**
@@ -413,8 +435,8 @@ begin
             begin
               TempStream := TempBlob.GetStream;
               try
-                WriteTempBlob := TZPostgreSQLBlob.Create(FPlainDriver,
-                  nil, 0, FHandle, 0);
+                WriteTempBlob := TZPostgreSQLBlob.Create(FPlainDriver, nil, 0,
+                  Self.GetConnectionHandle, 0);
                 WriteTempBlob.SetStream(TempStream);
                 WriteTempBlob.WriteBlob;
                 Result := IntToStr(WriteTempBlob.GetBlobOid);
@@ -425,7 +447,8 @@ begin
             end
             else
             begin
-              result:= FPlainDriver.EncodeBYTEA(TempBlob.GetString,FHandle); // FirmOS
+              result:= FPlainDriver.EncodeBYTEA(TempBlob.GetString,
+                Self.GetConnectionHandle); // FirmOS
               {
                Result := EncodeString(TempBlob.GetString);
                Result := Copy(Result, 2, Length(Result) - 2);
@@ -439,6 +462,18 @@ begin
     end;
   end;
 end;
+
+{**
+  Provides connection handle from the associated IConnection
+}
+function TZPostgreSQLPreparedStatement.GetConnectionHandle():PZPostgreSQLConnect;
+begin
+  if Self.Connection = nil then
+    Result := nil
+  else
+    Result := (self.Connection as IZPostgreSQLConnection).GetConnectionHandle;
+end;
+
 
 { TZPostgreSQLCachedResolver }
 
@@ -455,5 +490,7 @@ begin
     and not (Metadata.GetColumnType(ColumnIndex)
     in [stUnknown, stBinaryStream, stUnicodeStream]);
 end;
+
+
 
 end.

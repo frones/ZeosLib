@@ -63,7 +63,7 @@
       <title>Internal Changes</title>
       <itemizedlist spacing="compact">
         <listitem>
-          <simpara>NONE</simpara>
+          <simpara>[POSTGRES] Statements no longer keep a pointer to the connection handle but get it directly from the associated connection object (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2599">http://zeos.firmos.at/viewtopic.php?t=2599</ulink>)</simpara>
         </listitem>
     </itemizedlist>
     </sect2>	
