@@ -28,7 +28,7 @@
 			<DllSuffix>120</DllSuffix>
 			<DCC_Description>Zeos Core Classes and Interfaces</DCC_Description>
 			<RuntimeOnlyPackage>true</RuntimeOnlyPackage>
-			<DCC_DependencyCheckOutputName>C:\Users\Public\Documents\RAD Studio\6.0\Bpl\ZCore120.bpl</DCC_DependencyCheckOutputName>
+			<DCC_DependencyCheckOutputName>build\ZCore120.bpl</DCC_DependencyCheckOutputName>
 			<DCC_IntegerOverflowCheck>true</DCC_IntegerOverflowCheck>
 			<DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>
 			<GenDll>true</GenDll>
