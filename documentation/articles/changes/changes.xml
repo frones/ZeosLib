@@ -245,6 +245,9 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[MySql] Added support for mysql 5.1 library on LINUX (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2693">http://zeos.firmos.at/viewtopic.php?t=2693</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[Common] TZAbstractDataset.InternalPost sets unused bookmarks (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2666">http://zeos.firmos.at/viewtopic.php?t=2666</ulink>)</simpara>
         </listitem>
         <listitem>
