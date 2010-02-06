@@ -352,8 +352,6 @@ type
     procedure SetBookmarkFlag(Buffer: PChar; Value: TBookmarkFlag); override;
     procedure SetBookmarkData(Buffer: PChar; Data: Pointer); override;
 {$ENDIF}
-    procedure SetBookmarkStr(const Value: TBookmarkStr); override;
-
     function InternalLocate(const KeyFields: string; const KeyValues: Variant;
       Options: TLocateOptions): LongInt;
     function FindRecord(Restart, GoForward: Boolean): Boolean; override;
@@ -969,7 +967,8 @@ begin
     try
       OnFilterRecord(Self, Result);
     except
-        ApplicationHandleException(Self);
+      if Assigned(ApplicationHandleException)
+      then ApplicationHandleException(Self);
     end;
 
     CurrentRow := SavedRow;
@@ -2382,11 +2381,6 @@ begin
   PZRowBuffer(Buffer)^.Index := PInteger(Data)^;
 end;
 
-procedure TZAbstractRODataset.SetBookmarkStr(const Value: TBookmarkStr);
-begin
-  InternalGotoBookmark(Pointer(Value));
-end;
-
 {**
   Compare two specified bookmarks.
   @param Bookmark1 the first bookmark object.
@@ -2402,8 +2396,10 @@ begin
   Result := 0;
   if not Assigned(Bookmark1) or not Assigned(Bookmark2) then
     Exit;
-  Index1 := CurrentRows.IndexOf(Bookmark1);
-  Index2 := CurrentRows.IndexOf(Bookmark2);
+
+  Index1 := CurrentRows.IndexOf(Pointer(PInteger(Bookmark1)^));
+  Index2 := CurrentRows.IndexOf(Pointer(PInteger(Bookmark2)^));
+  
   if Index1 < Index2 then Result := -1
   else if Index1 > Index2 then Result := 1;
 end;
@@ -2414,14 +2410,11 @@ end;
   @return <code>True</code> if the bookmark is valid.
 }
 function TZAbstractRODataset.BookmarkValid(Bookmark: TBookmark): Boolean;
-var
-  Index: Integer;
 begin
   Result := False;
   if Active and Assigned(Bookmark) and (FResultSet <> nil) then
     try
-      Index := CurrentRows.IndexOf(Bookmark);
-      Result := Index >= 0;
+      Result := CurrentRows.IndexOf(Pointer(PInteger(Bookmark)^)) >= 0;
     except
       Result := False;
     end;
