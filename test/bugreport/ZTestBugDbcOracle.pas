@@ -1,7 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{              Test Suite for Bug Reports                 }
+{        Test Cases for Interbase DBC Bug Reports         }
 {                                                         }
 {*********************************************************}
 
@@ -49,44 +49,83 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-program ZTestBugReport;
+unit ZTestBugDbcOracle;
 
-{$IFNDEF TESTGUI}
-{$APPTYPE CONSOLE}
-{$ENDIF}
+interface
 
-{$I ..\..\test\bugreport\ZBugReport.inc}
+{$I ZBugReport.inc}
 
 uses
-  TestFrameWork,
-  TextTestRunner,
-  GUITestRunner,
-  ZTestConfig,
-  ZSqlTestCase,
-  ZTestDbcCore in '..\..\test\bugreport\ZTestDbcCore.pas',
-//  ZTestDbcMySql in '..\..\test\bugreport\ZTestDbcMySql.pas',
-  ZTestDbcPostgreSql in '..\..\test\bugreport\ZTestDbcPostgreSql.pas',
-//  ZTestDbcASA in '..\..\test\bugreport\ZTestDbcASA.pas',
-  ZTestDbcDbLib in '..\..\test\bugreport\ZTestDbcDbLib.pas',
-  ZTestCompCore in '..\..\test\bugreport\ZTestCompCore.pas',
-//  ZTestCompMySql in '..\..\test\bugreport\ZTestCompMySql.pas',
-//  ZTestCompMSSql in '..\..\test\bugreport\ZTestCompMSSql.pas',
-{$IFDEF ENABLE_ORACLE}
-  ZTestBugDbcOracle in '..\..\test\bugreport\ZTestBugDbcOracle.pas',
-  ZTestBugCompOracle in '..\..\test\bugreport\ZTestBugCompOracle.pas',
-{$ENDIF}
-  ZTestCompPostgreSql in '..\..\test\bugreport\ZTestCompPostgreSql.pas';
-//  ZTestCompASA in '..\..\test\bugreport\ZTestCompASA.pas',
-//  ZTestCompDbLib in '..\..\test\bugreport\ZTestCompDbLib.pas',
-//  ZTestDbcInterbase in '..\..\test\bugreport\ZTestDbcInterbase.pas',
-//  ZTestCompInterbase in '..\..\test\bugreport\ZTestCompInterbase.pas';
+  Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZBugReport, ZCompatibility,
+  ZDbcOracle;
 
+type
+
+  {** Implements a DBC bug report test case for Oracle }
+  TZTestDbcOracleBugReport = class(TZSpecificSQLBugReportTestCase)
+  private
+    FConnection: IZConnection;
+  protected
+    procedure SetUp; override;
+    procedure TearDown; override;
+    function GetSupportedProtocols: string; override;
+
+    property Connection: IZConnection read FConnection write FConnection;
+  published
+    procedure TestNum1;
+  end;
+
+implementation
+
+uses ZTestCase, ZTestConsts;
+
+{ TZTestDbcOracleBugReport }
+
+function TZTestDbcOracleBugReport.GetSupportedProtocols: string;
 begin
-  TestGroup := BUGREPORT_TEST_GROUP;
-  RebuildTestDatabases;
-{$IFDEF TESTGUI}
-  GUITestRunner.RunRegisteredTests;
-{$ELSE}
-  TextTestRunner.RunRegisteredTests;
-{$ENDIF}
+  Result := 'oracle-9i';
+end;
+
+procedure TZTestDbcOracleBugReport.SetUp;
+begin
+  Connection := CreateDbcConnection;
+end;
+
+procedure TZTestDbcOracleBugReport.TearDown;
+begin
+  Connection.Close;
+  Connection := nil;
+end;
+
+{**
+  NUMBER must be froat
+}
+procedure TZTestDbcOracleBugReport.TestNum1;
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+begin
+  if SkipClosed then Exit;
+
+  Statement := Connection.CreateStatement;
+  Statement.SetResultSetType(rtScrollInsensitive);
+  Statement.SetResultSetConcurrency(rcUpdatable);
+
+  ResultSet := Statement.ExecuteQuery('SELECT * FROM Table_Num1');
+  with ResultSet do
+  begin
+    with GetMetadata do
+    begin
+      CheckEquals(ord(stInteger), Ord(GetColumnType(1)), 'id column type');
+      CheckEquals(ord(stDouble), Ord(GetColumnType(2)), 'Num column type');
+    end;
+    CheckEquals(True, Next, 'ResultSet.Next');
+    CheckEquals(1, GetInt(1), 'id value');
+    CheckEquals(54321.0123456789, GetDouble(2), 1E-11, 'Num value');
+    Close;
+  end;
+end;
+
+initialization
+  RegisterTest('bugreport',TZTestDbcOracleBugReport.Suite);
 end.

@@ -553,7 +553,7 @@ function TZPostgreSQLConnection.CreateRegularStatement(Info: TStrings):
 begin
   if IsClosed then
     Open;
-  Result := TZPostgreSQLStatement.Create(FPlainDriver, Self, Info, FHandle);
+  Result := TZPostgreSQLStatement.Create(FPlainDriver, Self, Info);
 end;
 
 {**
@@ -590,7 +590,7 @@ begin
   if IsClosed then
      Open;
   Result := TZPostgreSQLPreparedStatement.Create(FPlainDriver,
-    Self, SQL, Info, FHandle);
+    Self, SQL, Info);
 end;
 
 {**

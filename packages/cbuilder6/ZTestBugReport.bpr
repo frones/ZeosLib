@@ -57,10 +57,12 @@
       <FILE FILENAME="..\..\test\external\TestFrameWork.pas" FORMNAME="" UNITNAME="TestFrameWork" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\test\external\TextTestRunner.pas" FORMNAME="" UNITNAME="TextTestRunner" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\test\bugreport\ZTestBugDbcPostgreSql.pas" FORMNAME="" UNITNAME="ZTestBugDbcPostgreSql" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\test\bugreport\ZTestBugDbcOracle.pas" FORMNAME="" UNITNAME="ZTestBugDbcOracle" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\test\bugreport\ZTestBugCompDbLib.pas" FORMNAME="" UNITNAME="ZTestBugCompDbLib" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\test\bugreport\ZTestBugCompInterbase.pas" FORMNAME="" UNITNAME="ZTestBugCompInterbase" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\test\bugreport\ZTestBugCompMSSql.pas" FORMNAME="" UNITNAME="ZTestBugCompMSSql" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\test\bugreport\ZTestBugCompMySql.pas" FORMNAME="" UNITNAME="ZTestBugCompMySql" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\test\bugreport\ZTestBugCompOracle.pas" FORMNAME="" UNITNAME="ZTestBugCompOracle" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\test\bugreport\ZTestBugCompPostgreSql.pas" FORMNAME="" UNITNAME="ZTestBugCompPostgreSql" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\test\bugreport\ZTestBugDbcCore.pas" FORMNAME="" UNITNAME="ZTestBugDbcCore" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\test\bugreport\ZTestBugDbcDbLib.pas" FORMNAME="" UNITNAME="ZTestBugDbcDbLib" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>

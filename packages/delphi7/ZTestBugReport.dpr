@@ -72,6 +72,10 @@ uses
   ZTestBugDbcMySql in '..\..\test\bugreport\ZTestBugDbcMySql.pas',
   ZTestBugCompMySql in '..\..\test\bugreport\ZTestBugCompMySql.pas',
 {$ENDIF}
+{$IFDEF ENABLE_ORACLE}
+  ZTestBugDbcOracle in '..\..\test\bugreport\ZTestBugDbcOracle.pas',
+  ZTestBugCompOracle in '..\..\test\bugreport\ZTestBugCompOracle.pas',
+{$ENDIF}
 {$IFDEF ENABLE_POSTGRESQL}
   ZTestBugDbcPostgreSql in '..\..\test\bugreport\ZTestBugDbcPostgreSql.pas',
   ZTestBugCompPostgreSql in '..\..\test\bugreport\ZTestBugCompPostgreSql.pas',

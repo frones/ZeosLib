@@ -30,6 +30,9 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=218">#0000218</ulink> [normal] Oracle NUMBER wrong conversion - New Oracle tests</simpara>
+        </listitem>
+        <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=216">#0000216</ulink> [normal] Multiselect in TDbGrid wont work</simpara>
         </listitem>
         <listitem>
@@ -60,7 +63,7 @@
       <title>Internal Changes</title>
       <itemizedlist spacing="compact">
         <listitem>
-          <simpara>NONE</simpara>
+          <simpara>[POSTGRES] Statements no longer keep a pointer to the connection handle but get it directly from the associated connection object (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2599">http://zeos.firmos.at/viewtopic.php?t=2599</ulink>)</simpara>
         </listitem>
     </itemizedlist>
     </sect2>	
@@ -243,6 +246,9 @@
     <sect2>
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>[Common] TZAbstractDataset.InternalPost sets unused bookmarks (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2666">http://zeos.firmos.at/viewtopic.php?t=2666</ulink>)</simpara>
+        </listitem>
         <listitem>
           <simpara>[FPC/Lazarus] Locale problems for decimal fields and fpc &lt; 2.3.1 (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2643">http://zeos.firmos.at/viewtopic.php?t=2643</ulink>)</simpara>
         </listitem>
