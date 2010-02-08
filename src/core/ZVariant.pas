@@ -75,17 +75,12 @@ type
   {** Defines a variant structure. }
   TZVariant = packed record
     VType: TZVariantType;
-//    VBoolean: Boolean;
-//    VInteger: Int64;
-//    VFloat: Extended;
     VString: String;
     {$IFDEF DELPHI12_UP}
     VUnicodeString: String;
     {$ELSE}
     VUnicodeString: WideString;
     {$ENDIF}
-//    VDateTime: TDateTime;
-//    VPointer: Pointer;
     VInterface: IZInterface;
     case TZVariantType of 
       vtBoolean: (VBoolean: Boolean); 
