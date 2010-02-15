@@ -55,6 +55,9 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[SQLite] Blobdata is now stored as original bytes, without conversion</simpara>
+        </listitem>
+        <listitem>
           <simpara>[POSTGRES] Added new Postgres 8.3 Enum support (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2625">http://zeos.firmos.at/viewtopic.php?t=2625</ulink>)</simpara>
         </listitem>
      </itemizedlist>
