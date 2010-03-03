@@ -1603,7 +1603,8 @@ begin
     varDate: Result := EncodeDateTime(Value);
     varShortInt, varWord, varLongWord:
       Result := EncodeInteger(Value);
-    varInt64: Result := EncodeInteger(Value);
+    varInt64{$IFDEF BDS5_UP},varUInt64{$ENDIF}:
+      Result := EncodeInteger(Value);
   else
     Result := EncodeNull;
   end;

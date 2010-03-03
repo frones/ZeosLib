@@ -55,6 +55,9 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>Added varUInt64 support to DecodeVariant function for D11+ (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2736">http://zeos.firmos.at/viewtopic.php?t=2736</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[SQLite] Blobdata is now stored as original bytes, without conversion</simpara>
         </listitem>
         <listitem>
