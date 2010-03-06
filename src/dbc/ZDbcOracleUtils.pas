@@ -750,8 +750,8 @@ procedure PrepareOracleStatement(PlainDriver: IZOraclePlainDriver;
 var
   Status: Integer;
 begin
-  Status := PlainDriver.StmtPrepare(Handle, ErrorHandle, PAnsiChar(SQL),
-    Length(SQL), OCI_NTV_SYNTAX, OCI_DEFAULT);
+  Status := PlainDriver.StmtPrepare(Handle, ErrorHandle, PAnsiChar(AnsiString(SQL)),
+    Length(AnsiString(SQL)), OCI_NTV_SYNTAX, OCI_DEFAULT);
   CheckOracleError(PlainDriver, ErrorHandle, Status, lcExecute, SQL);
 end;
 
