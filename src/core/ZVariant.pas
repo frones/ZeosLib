@@ -75,18 +75,19 @@ type
   {** Defines a variant structure. }
   TZVariant = packed record
     VType: TZVariantType;
-    VBoolean: Boolean;
-    VInteger: Int64;
-    VFloat: Extended;
     VString: String;
     {$IFDEF DELPHI12_UP}
     VUnicodeString: String;
     {$ELSE}
     VUnicodeString: WideString;
     {$ENDIF}
-    VDateTime: TDateTime;
-    VPointer: Pointer;
     VInterface: IZInterface;
+    case TZVariantType of 
+      vtBoolean: (VBoolean: Boolean); 
+      vtInteger: (VInteger: Int64); 
+      vtFloat: (VFloat: Extended); 
+      VtDateTime: (VDateTime: TDateTime); 
+      VtPointer: (VPointer: Pointer); 
   end;
 
   PZVariant = ^TZVariant;
@@ -1602,7 +1603,8 @@ begin
     varDate: Result := EncodeDateTime(Value);
     varShortInt, varWord, varLongWord:
       Result := EncodeInteger(Value);
-    varInt64: Result := EncodeInteger(Value);
+    varInt64{$IFDEF BDS5_UP},varUInt64{$ENDIF}:
+      Result := EncodeInteger(Value);
   else
     Result := EncodeNull;
   end;

@@ -237,6 +237,43 @@ begin
   end;
 end;
 
+
+function NewEncodeString(Value: ansistring): ansistring;
+var
+  I: Integer;
+  SrcLength, DestLength: Integer;
+  SrcBuffer, DestBuffer: PAnsiChar;
+  IH : integer;
+begin
+
+  SrcLength := Length(Value);
+  SrcBuffer := PAnsiChar(Value);
+  DestLength := 2+ 2*SrcLength;  // Hex-value double
+
+  SrcBuffer := PAnsiChar(Value);
+  result := '';
+  for I := 1 to SrcLength do
+  begin
+    IH := ord(SrcBuffer^);
+    result := result + IntToHex(IH,2);
+    Inc(SrcBuffer,1);
+  end;
+  result := 'x'+QuotedStr(result);
+end;
+
+
+function NewDecodeString(Value:ansistring):ansistring;
+var iH, i : integer;
+    srcbuffer, destbuffer : PAnsichar;
+begin
+  value := copy(value,3,length(value)-4);
+  value := AnsiLowercase(value);
+  i := length(value) div 2;
+  srcbuffer := PAnsiChar(value);
+  setlength(result,i);
+  HexToBin(PAnsiChar(srcbuffer),PAnsiChar(result),i);
+end;
+
 {**
   Converts an string into escape PostgreSQL format.
   @param Value a regular string.
@@ -248,6 +285,9 @@ var
   SrcLength, DestLength: Integer;
   SrcBuffer, DestBuffer: PAnsiChar;
 begin
+
+  result := NewEncodeString(Value);
+exit;
   SrcLength := Length(Value);
   SrcBuffer := PAnsiChar(Value);
   DestLength := 2;
@@ -309,6 +349,11 @@ begin
   {$IFDEF DELPHI12_UP} 
   value := utf8decode(value);
   {$ENDIF}
+  if pos('x''',value)= 1 then
+    result := NewDecodeString(value)
+  else result := value;
+  exit;
+
   SrcLength := Length(Value);
   SrcBuffer := PAnsiChar(Value);
   SetLength(Result, SrcLength);

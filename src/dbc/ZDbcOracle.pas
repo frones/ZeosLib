@@ -380,7 +380,7 @@ begin
   FPlainDriver.HandleAlloc(FHandle, FContextHandle, OCI_HTYPE_SVCCTX, 0, nil);
 
   Status := FPlainDriver.ServerAttach(FServerHandle, FErrorHandle,
-      PAnsiChar(string(Database)), Length(Database), 0);
+      PAnsiChar(ansistring(Database)), Length(AnsiString(Database)), 0);
   try
     CheckOracleError(FPlainDriver, FErrorHandle, Status, lcConnect, LogMessage);
   except
@@ -391,9 +391,9 @@ begin
   FPlainDriver.AttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FServerHandle, 0,
     OCI_ATTR_SERVER, FErrorHandle);
   FPlainDriver.HandleAlloc(FHandle, FSessionHandle, OCI_HTYPE_SESSION, 0, nil);
-  FPlainDriver.AttrSet(FSessionHandle, OCI_HTYPE_SESSION, PAnsiChar(string(User)),
+  FPlainDriver.AttrSet(FSessionHandle, OCI_HTYPE_SESSION, PAnsiChar(AnsiString(User)),
     Length(User), OCI_ATTR_USERNAME, FErrorHandle);
-  FPlainDriver.AttrSet(FSessionHandle, OCI_HTYPE_SESSION, PAnsiChar(string(Password)),
+  FPlainDriver.AttrSet(FSessionHandle, OCI_HTYPE_SESSION, PAnsiChar(AnsiString(Password)),
     Length(Password), OCI_ATTR_PASSWORD, FErrorHandle);
   Status := FPlainDriver.SessionBegin(FContextHandle, FErrorHandle,
     FSessionHandle, OCI_CRED_RDBMS, OCI_DEFAULT);

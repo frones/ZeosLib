@@ -57,7 +57,7 @@ interface
 
 {$I ZPlain.inc}
 
-uses ZClasses, ZCompatibility, ZPlainDriver, SysUtils;
+uses ZClasses, ZCompatibility, ZPlainDriver, SysUtils, classes;
 
 const
   WINDOWS_DLL_LOCATION = 'sqlite.dll';
@@ -175,6 +175,11 @@ type
   Tsqlite_close = procedure(db: Psqlite); cdecl;
   Tsqlite_column_count = function(db: Psqlite): Integer; cdecl;
   Tsqlite_column_bytes = function(db: Psqlite; iCol: Integer): PAnsiChar; cdecl;
+
+  //  NEW : FST  100214
+  Tsqlite_column_rawbytes = function(db: Psqlite; iCol: Integer): integer; cdecl;
+  Tsqlite_column_blob = function(db:PSqlite;iCol:integer):PAnsiChar; cdecl;
+
   Tsqlite_column_name = function(db: Psqlite; iCol: Integer): PAnsiChar; cdecl;
   Tsqlite_column_decltype = function(db: Psqlite; iCol: Integer): PAnsiChar; cdecl;
   Tsqlite_exec = function(db: Psqlite; const sql: PAnsiChar;
@@ -261,6 +266,11 @@ TZSQLite_API = record
   sqlite_close: Tsqlite_close;
   sqlite_column_count: Tsqlite_column_count;
   sqlite_column_bytes: Tsqlite_column_bytes;
+
+//  NEW : FST  100214
+  sqlite_column_rawbytes: Tsqlite_column_rawbytes;
+  sqlite_column_blob:TSqlite_column_blob;
+
   sqlite_column_name: Tsqlite_column_name;
   sqlite_column_decltype: Tsqlite_column_decltype;
   sqlite_exec: Tsqlite_exec;
@@ -372,6 +382,9 @@ type
       nKey: Integer; var pErrcode: Integer; var pzErrmsg: PAnsiChar): Psqlite;
     function ReKey(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
     function Key(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
+
+//  NEW : FST  100214
+    function getBlob(pVm: Psqlite_vm; columnID: integer): TMemoryStream;
   end;
 
   {** Implements a base driver for SQLite}
@@ -447,6 +460,9 @@ type
       nKey: Integer; var pErrcode: Integer; var pzErrmsg: PAnsiChar): Psqlite;
     function ReKey(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
     function Key(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
+
+//  NEW : FST  100214
+    function getBlob(pVm: Psqlite_vm; columnID: integer): TMemoryStream;
   end;
 
   {** Implements a driver for SQLite 3 }
@@ -736,6 +752,18 @@ begin
   Result := SQLite_API.sqlite_set_result_string(func, arg, len, nil);
 end;
 
+
+//  NEW : FST  100214
+function TZSQLiteBaseDriver.getBlob(pVm:Psqlite_vm;columnID:integer):TMemoryStream;
+var P : Pointer;
+    len : integer;
+begin
+   result := TMemoryStream.Create;
+   P := SQLite_API.sqlite_column_blob(pVm,columnID-1);
+   len := SQLite_API.sqlite_column_rawbytes(pVm,ColumnID-1);
+   result.WriteBuffer(P^,len);
+end;
+
 function TZSQLiteBaseDriver.Step(pVm: Psqlite_vm; var pN: Integer;
   var pazValue, pazColName: PPAnsiChar): Integer;
 var
@@ -762,9 +790,9 @@ begin
     begin
       if Result = SQLITE_ROW then
       begin
-        val  := SQLite_API.sqlite_column_bytes(pVm, i);
         cname:= SQLite_API.sqlite_column_name(pVm, i);
         ctype:= SQLite_API.sqlite_column_decltype(pVm, i);
+        val  := SQLite_API.sqlite_column_bytes(pVm, i);
         pazValue0^ := val;
         inc(pazValue0);
       end
@@ -813,6 +841,11 @@ begin
   @SQLite_API.sqlite_close                  := GetAddress('sqlite3_close');
   @SQLite_API.sqlite_column_count           := GetAddress('sqlite3_column_count');
   @SQLite_API.sqlite_column_bytes           := GetAddress('sqlite3_column_text');
+
+//  NEW : FST  100214
+  @SQLite_API.sqlite_column_rawbytes        := GetAddress('sqlite3_column_bytes');
+  @SQLite_API.sqlite_Column_blob            := GetAddress('sqlite3_column_blob');
+
   @SQLite_API.sqlite_column_name            := GetAddress('sqlite3_column_name');
   @SQLite_API.sqlite_column_decltype        := GetAddress('sqlite3_column_decltype');
   @SQLite_API.sqlite_exec                   := GetAddress('sqlite3_exec');

@@ -724,8 +724,11 @@ begin
       if TZAbstractResultSetMetadata(Metadata).GetColumnType(ColumnIndex)
         <> stBinaryStream then
         Stream := TStringStream.Create(GetString(ColumnIndex))
-      else
-        Stream := TStringStream.Create(DecodeString(GetString(ColumnIndex)));
+      else begin
+//  NEW : FST  100214
+          Stream := FPlaindriver.getblob(FStmtHandle,columnIndex);
+  //        Stream := TStringStream.Create(DecodeString(GetString(ColumnIndex)));
+      end;
       Result := TZAbstractBlob.CreateWithStream(Stream)
     end
     else

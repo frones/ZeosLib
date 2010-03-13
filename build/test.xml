@@ -284,6 +284,8 @@
   </target>
 
   <target name="test_element_run">
+	<property environment="env"/>
+    <echo/>
     <echo message="Testing ... ${test.exec} ..."/>
     <exec dir="${test.dir}" executable="${test.dir}/${test.exec}"
        output="${log.file}" append="true">
@@ -294,7 +296,7 @@
 	<env key="Path" path="${compiler.dir}/bin;${package.dir};${root.dir}/lib/mysql;${root.dir}/lib/postgresql"/>
 	<env key="PATH" path="${compiler.dir}/bin;${package.dir};${root.dir}/lib/mysql;${root.dir}/lib/postgresql"/>
        -->
-	<env key="Path" path="${compiler.dir}/bin;${package.dir}"/>
+	<env key="Path" path="${env.Path};${compiler.dir}/bin;${package.dir}"/>
    <arg line="${runparams}"/>
     </exec>
   </target>
