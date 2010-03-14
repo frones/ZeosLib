@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <CONFIG>
-  <Package Version="2">
+  <Package Version="3">
     <PathDelim Value="\"/>
     <Name Value="zdbc"/>
     <CompilerOptions>
-      <Version Value="5"/>
+      <Version Value="8"/>
       <PathDelim Value="\"/>
       <SearchPaths>
         <OtherUnitFiles Value="..\..\src\dbc\;build\"/>
@@ -12,18 +12,15 @@
       </SearchPaths>
       <Parsing>
         <SyntaxOptions>
-          <DelphiCompat Value="True"/>
+          <SyntaxMode Value="Delphi"/>
         </SyntaxOptions>
       </Parsing>
-      <CodeGeneration>
-        <Generate Value="Faster"/>
-      </CodeGeneration>
       <Other>
         <CompilerPath Value="$(CompPath)"/>
       </Other>
     </CompilerOptions>
     <Description Value="Zeos Low Level Database API"/>
-    <Version Major="7" Minor="0" Release="0"/>
+    <Version Major="7"/>
     <Files Count="10">
       <Item1>
         <Filename Value="..\..\src\dbc\ZDbcDbLib.pas"/>
@@ -54,16 +51,16 @@
         <UnitName Value="ZDbcPostgreSql"/>
       </Item7>
       <Item8>
-        <Filename Value="..\..\src\dbc\ZDbcPostgreSqlUtils.pas"/>
-        <UnitName Value="ZDbcPostgreSqlUtils"/>
-      </Item8>
-      <Item9>
         <Filename Value="..\..\src\dbc\ZDbcSqLite.pas"/>
         <UnitName Value="ZDbcSqLite"/>
-      </Item9>
-      <Item10>
+      </Item8>
+      <Item9>
         <Filename Value="..\..\src\dbc\ZDbcASA.pas"/>
         <UnitName Value="ZDbcASA"/>
+      </Item9>
+      <Item10>
+        <Filename Value="..\..\src\dbc\ZDbcPooled.pas"/>
+        <UnitName Value="ZDbcPooled"/>
       </Item10>
     </Files>
     <RequiredPkgs Count="5">

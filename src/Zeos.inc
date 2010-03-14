@@ -296,6 +296,11 @@
 {$DEFINE ENABLE_ASA}
 {$ENDIF}
 
+// Enables Pooled connection support for all enabled db drivers in TZConnection/TZDataset
+{$IFNDEF ZEOS_DISABLE_POOLED}
+{$DEFINE ENABLE_POOLED}
+{$ENDIF}
+
 // Supported language. Now available languages:
 // ENGLISH, GERMAN, PORTUGUESE, DUTCH, SPANISH, ROMANA, INDONESIAN, RUSSIAN, CZECH, POLISH
 {$DEFINE ENGLISH}

@@ -27,7 +27,7 @@
       build\ZDbcSqLite.obj build\ZDbcSqLiteMetadata.obj 
       build\ZDbcSqLiteResultSet.obj build\ZDbcSqLiteStatement.obj
       build\ZDbcASA.obj build\ZDbcASAUtils.obj build\ZDbcASAResultSet.obj 
-      build\ZDbcASAStatement.obj build\ZDbcASAMetadata.obj"/>
+      build\ZDbcASAStatement.obj build\ZDbcASAMetadata.obj build\ZDbcPooled.obj"/>
     <RESFILES value="ZDbc.res"/>
     <IDLFILES value=""/>
     <IDLGENFILES value=""/>
@@ -128,6 +128,7 @@
       <FILE FILENAME="..\..\src\dbc\ZDbcASAResultSet.pas" FORMNAME="" UNITNAME="ZDbcASAResultSet" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\dbc\ZDbcASAStatement.pas" FORMNAME="" UNITNAME="ZDbcASAStatement" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\dbc\ZDbcASAMetadata.pas" FORMNAME="" UNITNAME="ZDbcASAMetadata" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\dbc\ZDbcPooled.pas" FORMNAME="" UNITNAME="ZDbcPooled" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
   </FILELIST>
   <BUILDTOOLS>
   </BUILDTOOLS>

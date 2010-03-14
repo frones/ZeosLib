@@ -98,6 +98,10 @@ contains
   ZDbcASA in '../../src/dbc/ZDbcASA.pas',
 {$ENDIF}
 
+{$IFDEF ENABLE_POOLED}
+  ZDbcPooled in '..\..\src\dbc\ZDbcPooled.pas',
+{$ENDIF}
+
   ZDbcUtils in '../../src/dbc/ZDbcUtils.pas',
   ZDbcCachedResultSet in '../../src/dbc/ZDbcCachedResultSet.pas',
   ZDbcConnection in '../../src/dbc/ZDbcConnection.pas',
