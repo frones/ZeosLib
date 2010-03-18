@@ -47,7 +47,7 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
-          <simpara>NONE</simpara>
+          <simpara> Error Param.DataType in TZStoredProcedure (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2742">http://zeos.firmos.at/viewtopic.php?t=2742</ulink>)</simpara>
         </listitem>
       </itemizedlist>
     </sect2>
