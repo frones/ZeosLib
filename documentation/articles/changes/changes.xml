@@ -47,6 +47,9 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara> SQLite3 Connect Error (D2010) (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2766">http://zeos.firmos.at/viewtopic.php?t=2766</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara> Error Param.DataType in TZStoredProcedure (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2742">http://zeos.firmos.at/viewtopic.php?t=2742</ulink>)</simpara>
         </listitem>
       </itemizedlist>

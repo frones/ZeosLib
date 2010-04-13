@@ -662,16 +662,22 @@ function TZSQLiteBaseDriver.Open(const filename: PAnsiChar; mode: Integer;
   var errmsg: PAnsiChar): Psqlite;
 var
   Result0: Psqlite;
+{$IFNDEF DELPHI12_UP}
   Version: string;
   FileNameString: String;
+{$ENDIF}
 begin
   Result0:= nil;
+{$IFDEF DELPHI12_UP}
+    SQLite_API.sqlite_open(filename, Result0);
+{$ELSE}
   Version := LibVersion;
   FileNameString := filename;
   if (Version > '3.2.5') then
     SQLite_API.sqlite_open(PAnsiChar(AnsiToUTF8(FileNameString)), Result0)
   else
     SQLite_API.sqlite_open(filename, Result0);
+{$ENDIF}
   Result := Result0;
 end;
 
