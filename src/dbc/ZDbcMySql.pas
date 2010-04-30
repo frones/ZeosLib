@@ -465,9 +465,9 @@ begin
     if FClientCodePage <> '' then
     begin
       {$IFDEF DELPHI12_UP}
-      SQL := PAnsiChar(UTF8String(Format('SET CHARACTER SET %s', [FClientCodePage])));
+      SQL := PAnsiChar(UTF8String(Format('SET NAMES %s', [FClientCodePage])));
       {$ELSE}
-      SQL := PAnsiChar(Format('SET CHARACTER SET %s', [FClientCodePage]));
+      SQL := PAnsiChar(Format('SET NAMES %s', [FClientCodePage]));
       {$ENDIF}
       FPlainDriver.ExecQuery(FHandle, SQL);
       CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);

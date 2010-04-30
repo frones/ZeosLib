@@ -358,7 +358,7 @@ begin
                Result := '''N''';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
-      stString, stBytes:
+      stString, stUnicodeString, stBytes:
         Result := GetEscapeString(SoftVarManager.GetAsString(Value));
       stDate:
         Result := '''' + FormatDateTime('yyyy-mm-dd',
