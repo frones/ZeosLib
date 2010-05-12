@@ -376,7 +376,11 @@ var
 begin
   Buffer := GetPChar(ColumnIndex);
   if Buffer <> nil then
+    {$IFDEF DELPHI12_UP} 
+    Result := UTF8ToUnicodeString(StrPas(Buffer)) 
+    {$ELSE} 
     Result := StrPas(Buffer)
+    {$ENDIF}
   else
     Result := '';
 end;
