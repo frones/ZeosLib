@@ -126,7 +126,7 @@ const
   INVALID_HANDLE_VALUE = 0;
 
 type
-  HMODULE = LongWord;
+  HMODULE = PtrInt;
 
 function LoadLibrary(ModuleName: PChar): HMODULE;
 function FreeLibrary(Module: HMODULE): LongBool;

@@ -67,7 +67,11 @@ type
   TZNativeLibraryLoader = class (TObject)
   private
     FLocations: TStringDynArray;
+  {$IFDEF FPC}
+    FHandle: PtrInt;
+  {$ELSE}
     FHandle: LongWord;
+  {$ENDIF}
     FLoaded: Boolean;
     FCurrentLocation: String;
     function ZLoadLibrary(Location: String): Boolean;
@@ -85,7 +89,11 @@ type
     procedure LoadIfNeeded; virtual;
 
     property Loaded: Boolean read FLoaded write FLoaded;
+  {$IFDEF FPC}
+    property Handle: PtrInt read FHandle write FHandle;
+  {$ELSE}
     property Handle: LongWord read FHandle write FHandle;
+  {$ENDIF}
     property CurrentLocation: String read FCurrentLocation write FCurrentLocation;
     function GetAddress(ProcName: PAnsiChar): Pointer;
   end;
