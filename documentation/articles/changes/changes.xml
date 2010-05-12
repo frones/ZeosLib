@@ -58,6 +58,9 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[POSTGRES] Added support for new libpq.so.5 filename on Linux(<ulink url="http://zeos.firmos.at/viewtopic.php?t=2803">http://zeos.firmos.at/viewtopic.php?t=2803</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>Added varUInt64 support to DecodeVariant function for D11+ (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2736">http://zeos.firmos.at/viewtopic.php?t=2736</ulink>)</simpara>
         </listitem>
         <listitem>
