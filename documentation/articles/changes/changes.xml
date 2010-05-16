@@ -61,6 +61,9 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[POSTGRES] Added TZPgEventAlerter component for asynchronous notifying(<ulink url="http://zeos.firmos.at/viewtopic.php?t=2757">http://zeos.firmos.at/viewtopic.php?t=2757</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[POSTGRES] Added support for new libpq.so.5 filename on Linux(<ulink url="http://zeos.firmos.at/viewtopic.php?t=2803">http://zeos.firmos.at/viewtopic.php?t=2803</ulink>)</simpara>
         </listitem>
         <listitem>

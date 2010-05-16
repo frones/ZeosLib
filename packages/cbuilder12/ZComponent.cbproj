@@ -190,6 +190,10 @@
 				<BuildOrder>9</BuildOrder>
 				<BuildOrder>83</BuildOrder>
 			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\component\ZPgEventAlerter.pas">
+				<BuildOrder>9</BuildOrder>
+				<BuildOrder>83</BuildOrder>
+			</DelphiCompile>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>
