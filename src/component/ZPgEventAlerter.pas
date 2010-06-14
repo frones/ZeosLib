@@ -1,8 +1,49 @@
-//-- Ivan Rog - 2010
-//-- Tested only for 8.3.10 PostgreSQL!
-//-- MUST work with all version ??? Can`t test this! Sory
-//-- Ported to Lazarus by Silvio Clecio - http://silvioprog.com.br
-//-- Tested on FPC-2.4.0-2/Lazarus-0.9.29(Win32/Linux)
+{*********************************************************}
+{                                                         }
+{                 Zeos Database Objects                   }
+{         Interbase Database Connectivity Classes         }
+{                                                         }
+{    Copyright (c) 1999-2003 Zeos Development Group       }
+{            Written by Sergey Merkuriev                  }
+{                                                         }
+{*********************************************************}
+
+{@********************************************************}
+{ License Agreement:                                      }
+{                                                         }
+{ This library is free software; you can redistribute     }
+{ it and/or modify it under the terms of the GNU Lesser   }
+{ General Public License as published by the Free         }
+{ Software Foundation; either version 2.1 of the License, }
+{ or (at your option) any later version.                  }
+{                                                         }
+{ This library is distributed in the hope that it will be }
+{ useful, but WITHOUT ANY WARRANTY; without even the      }
+{ implied warranty of MERCHANTABILITY or FITNESS FOR      }
+{ A PARTICULAR PURPOSE.  See the GNU Lesser General       }
+{ Public License for more details.                        }
+{                                                         }
+{ You should have received a copy of the GNU Lesser       }
+{ General Public License along with this library; if not, }
+{ write to the Free Software Foundation, Inc.,            }
+{ 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA }
+{                                                         }
+{ The project web site is located on:                     }
+{   http://www.sourceforge.net/projects/zeoslib.          }
+{   http://www.zeoslib.sourceforge.net                    }
+{                                                         }
+{                                 Zeos Development Group. }
+{********************************************************@}
+
+{*********************************************************}
+{                                                         }
+{ TZPgEventAlerter, Asynchronous notifying.               }
+{   By Ivan Rog - 2010                                    }
+{                                                         }
+{ Contributors:                                           }
+{   Silvio Clecio - http://silvioprog.com.br              }
+{                                                         }
+{*********************************************************}
 
 unit ZPgEventAlerter;
 
@@ -17,22 +58,22 @@ uses
     libc, Math,
   {$ENDIF} 
 {$ENDIF}
-  ZDbcPostgreSql, ZPlainPostgreSqlDriver, ZConnection;
+  ZDbcPostgreSql, ZPlainPostgreSqlDriver, ZConnection, ZAbstractRODataset,
+  ZDataset;
 
-//****************************************************************************//
-//                  TZPgEventAlerter Object                                   //
-//                  Asynchronous notifying                                    //
-//****************************************************************************//
 type
+  TZPgNotifyEvent = procedure(Sender: TObject; Event: string;
+    ProcessID: Integer) of object;
 
-  TZPgNotifyEvent = procedure (Sender: TObject; Event: string; ProcessID : Integer) of object;
+  { TZPgEventAlerter }
 
   TZPgEventAlerter = class (TComponent)
   private
     FActive      : Boolean;
     FEvents      : TStrings;
     FTimer       : TTimer;
-    FConnection  : TZConnection;   //-- соединение
+    FQueryRefresh: TZReadOnlyQuery;
+    FConnection: TZConnection;
     FNotifyFired : TZPgNotifyEvent;
   protected
     procedure SetActive     (Value: Boolean);
@@ -57,15 +98,17 @@ type
 
 implementation
 
+{ TZPgEventAlerter }
+
 constructor TZPgEventAlerter.Create(AOwner: TComponent);
-var I: integer;
+var
+  I: Integer;
 begin
   inherited Create(AOwner);
+  FQueryRefresh := TZReadOnlyQuery.Create(nil);
   FEvents := TStringList.Create;
   with TStringList(FEvents) do
-  begin
     Duplicates := dupIgnore;
-  end;
   FTimer         := TTimer.Create(Self);
   FTimer.Enabled := False;
   SetInterval(250);
@@ -75,7 +118,7 @@ begin
    for I := AOwner.ComponentCount - 1 downto 0 do
     if AOwner.Components[I] is TZConnection then
      begin
-      Connection := AOwner.Components[I] as TZConnection;
+        FConnection := AOwner.Components[I] as TZConnection;
       Break;
      end;
 end;
@@ -85,6 +128,7 @@ begin
   CloseNotify;
   FEvents.Free;
   FTimer.Free;
+  FQueryRefresh.Free;
   inherited Destroy;
 end;
 
@@ -93,7 +137,7 @@ begin
   FTimer.Interval := Value;
 end;
 
-function TZPgEventAlerter.GetInterval;
+function TZPgEventAlerter.GetInterval: Cardinal;
 begin
   Result := FTimer.Interval;
 end;
@@ -111,31 +155,20 @@ procedure TZPgEventAlerter.SetActive(Value: Boolean);
 begin
   if FActive <> Value then
   begin
-    if Value then OpenNotify
-    else CloseNotify;
+    if Value then
+      OpenNotify
+    else
+      CloseNotify;
   end;
 end;
 
 procedure TZPgEventAlerter.SetConnection(Value: TZConnection);
 begin
-//  if Value=nil then
-//  begin
-//   if FConnection <>nil then
-//   Begin
-//    CloseNotify;
-//    FConnection := Value;
-//   End;
-//   exit;
-//  end;
-//  if (FConnection.Protocol<>'postgresql-8') or (FConnection.Protocol<>'postgresql-7') then
-//  begin
-//   raise EZDatabaseError.Create('Ivalid connection protocol! Need <postgres>, get'+FConnection.Protocol);
-//   Exit;
-//  end;
   if FConnection <> Value then
   begin
     CloseNotify;
     FConnection := Value;
+    FQueryRefresh.Connection := Value;
   end;
 end;
 
@@ -150,37 +183,42 @@ end;
 procedure TZPgEventAlerter.OpenNotify;
 var
   I        : Integer;
-  tmp      : array [0..255] of AnsiChar;
+  Tmp      : array [0..255] of AnsiChar;
   Handle   : PZPostgreSQLConnect;
   ICon     : IZPostgreSQLConnection;
   PlainDRV : IZPostgreSQLPlainDriver;
-  res      : PGresult; //-- результат выполнения команд сервера
+  Res: PGresult;
 begin
-  if FActive then Exit;
-  if not Assigned(FConnection) then Exit;
-  if ((csLoading in ComponentState) or (csDesigning in ComponentState)) then Exit;
-  if not FConnection.Connected then Exit;
+  if not Boolean(Pos('postgresql', FConnection.Protocol)) then
+    raise EZDatabaseError.Create('Ivalid connection protocol. Need <postgres>, get ' +
+      FConnection.Protocol + '.');
+  if FActive then
+    Exit;
+  if not Assigned(FConnection) then
+    Exit;
+  if ((csLoading in ComponentState) or (csDesigning in ComponentState)) then
+    Exit;
+  if not FConnection.Connected then
+    Exit;
   ICon     := (FConnection.DbcConnection as IZPostgreSQLConnection);
   Handle   := ICon.GetConnectionHandle;
   PlainDRV := ICon.GetPlainDriver;
-  if Handle=nil then Exit;
-
+  if Handle = nil then
+    Exit;
   for I := 0 to FEvents.Count-1 do
   begin
-   StrPCopy(tmp, 'listen '+FEvents.Strings[i]);
-   res:=PlainDRV.ExecuteQuery(Handle,tmp);
-   if (PlainDRV.GetResultStatus(res) <> TZPostgreSQLExecStatusType(PGRES_COMMAND_OK))
-   then
+    StrPCopy(Tmp, 'listen ' + FEvents.Strings[I]);
+    Res := PlainDRV.ExecuteQuery(Handle, Tmp);
+    if (PlainDRV.GetResultStatus(Res) <> TZPostgreSQLExecStatusType(
+      PGRES_COMMAND_OK)) then
    begin
-    //-- произошла ошибка! Как обрабатывать, пока не понятно....
-//    raise EZDatabaseError.Create('LISTEN command failed: '+PlainDRV.GetErrorMessage(Handle));
-    PlainDRV.Clear(res);
+      PlainDRV.Clear(Res);
     Exit;
    end;
-   PlainDRV.Clear(res);
+    PlainDRV.Clear(Res);
   end;
  FActive        := True;
- FTimer.Enabled := True; //-- запуск таймера опроса
+  FTimer.Enabled := True;
 end;
 
 procedure TZPgEventAlerter.CloseNotify;
@@ -190,36 +228,34 @@ var
   Handle   : PZPostgreSQLConnect;
   ICon     : IZPostgreSQLConnection;
   PlainDRV : IZPostgreSQLPlainDriver;
-  res      : PGresult; //-- результат выполнения команд сервера
-
+  Res: PGresult;
 begin
-  if not FActive then Exit;
+  if not FActive then
+    Exit;
   FActive        := False;
   FTimer.Enabled := False;
   ICon           := (FConnection.DbcConnection as IZPostgreSQLConnection);
   Handle         := ICon.GetConnectionHandle;
   PlainDRV       := ICon.GetPlainDriver;
-
-  if Handle=nil then Exit;
+  if Handle = nil then
+    Exit;
   for I := 0 to FEvents.Count-1 do
   begin
-   StrPCopy(tmp, 'unlisten '+FEvents.Strings[i]);
-   res:=PlainDRV.ExecuteQuery(Handle,tmp);
-   if (PlainDRV.GetResultStatus(res) <> TZPostgreSQLExecStatusType(PGRES_COMMAND_OK))
-   then
+    StrPCopy(Tmp, 'unlisten ' + FEvents.Strings[i]);
+    Res := PlainDRV.ExecuteQuery(Handle, Tmp);
+    if (PlainDRV.GetResultStatus(Res) <> TZPostgreSQLExecStatusType(
+      PGRES_COMMAND_OK)) then
    begin
-    //-- произошла ошибка! Как обрабатывать, пока не понятно....
-//    raise EZDatabaseError.Create('UNLISTEN command failed: '+PlainDRV.GetErrorMessage(Handle));
-    PlainDRV.Clear(res);
+      PlainDRV.Clear(Res);
     Exit;
    end;
-   PlainDRV.Clear(res);
+    PlainDRV.Clear(Res);
   end;
 end;
 
 procedure TZPgEventAlerter.CheckEvents;
 var
-  notify   : PZPostgreSQLNotify;
+  Notify: PZPostgreSQLNotify;
   Handle   : PZPostgreSQLConnect;
   ICon     : IZPostgreSQLConnection;
   PlainDRV : IZPostgreSQLPlainDriver;
@@ -229,9 +265,8 @@ begin
  Handle    := ICon.GetConnectionHandle;
  if Handle=nil then
  begin
-  //-- произошло внезапное отсоединение от БД
-  FTimer.Enabled := false;
-  FActive        := false;
+    FTimer.Enabled := False;
+    FActive := False;
   Exit;
  end;
  if not FConnection.Connected then
@@ -243,12 +278,22 @@ begin
 
  if PlainDRV.ConsumeInput(Handle)=1 then
  begin
-  while true do
+    while True do
   begin
-   notify:=PlainDRV.Notifies(Handle);
-   if notify=nil then break;
-   if Assigned(FNotifyFired) then FNotifyFired(Self, Notify.relname, Notify.be_pid);
-   PlainDRV.FreeNotify(notify);
+      Notify := PlainDRV.Notifies(Handle);
+      if Notify = nil then
+        Break;
+      if Assigned(FNotifyFired) then
+        FNotifyFired(Self, Notify
+{$IFDEF FPC}
+          ^
+{$ENDIF}
+          .relname, Notify
+{$IFDEF FPC}
+          ^
+{$ENDIF}
+          .be_pid);
+      PlainDRV.FreeNotify(Notify);
   end;
  end;
 end;
