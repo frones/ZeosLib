@@ -122,6 +122,8 @@ type
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
+    function CreateCallableStatement(const SQL: string; Info: TStrings):
+      IZCallableStatement; override;
 
     function CreateSequence(const Sequence: string; BlockSize: Integer): IZSequence; override;
 
@@ -605,6 +607,41 @@ begin
      Open;
   Result := TZPostgreSQLPreparedStatement.Create(FPlainDriver,
     Self, SQL, Info);
+end;
+
+
+{**
+  Creates a <code>CallableStatement</code> object for calling
+  database stored procedures (functions in PostgreSql).
+  The <code>CallableStatement</code> object provides
+  methods for setting up its IN and OUT parameters, and
+  methods for executing the call to a stored procedure.
+
+  <P><B>Note:</B> This method is optimized for handling stored
+  procedure call statements. Some drivers may send the call
+  statement to the database when the method <code>prepareCall</code>
+  is done; others
+  may wait until the <code>CallableStatement</code> object
+  is executed. This has no
+  direct effect on users; however, it does affect which method
+  throws certain SQLExceptions.
+
+  Result sets created using the returned CallableStatement will have
+  forward-only type and read-only concurrency, by default.
+
+  @param sql a SQL statement that may contain one or more '?'
+    parameter placeholders. Typically this  statement is a JDBC
+    function call escape string.
+  @param Info a statement parameters.
+  @return a new CallableStatement object containing the
+    pre-compiled SQL statement
+}
+function TZPostgreSQLConnection.CreateCallableStatement(
+  const SQL: string; Info: TStrings): IZCallableStatement;
+begin
+  if IsClosed then
+     Open;
+  Result := TZPostgreSQLCallableStatement.Create(Self, SQL, Info);
 end;
 
 {**

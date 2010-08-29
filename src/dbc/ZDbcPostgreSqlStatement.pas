@@ -106,6 +106,38 @@ type
       Connection: IZConnection; const SQL: string; Info: TStrings);
   end;
 
+  {** Implements callable Postgresql Statement. }
+  TZPostgreSQLCallableStatement = class(TZAbstractCallableStatement)
+  private
+    FOidAsBlob: Boolean;
+    function GetProcedureSql(): string;
+    function FillParams(ASql:String):String;
+    function PrepareSQLParam(ParamIndex: Integer): string;
+  protected
+    function GetConnectionHandle():PZPostgreSQLConnect;
+    function GetPlainDriver():IZPostgreSQLPlainDriver;
+    {procedure CheckInterbase6Error(const Sql: string = '');
+    procedure FetchOutParams(Value: IZResultSQLDA);
+    function GetProcedureSql(SelectProc: boolean): string;
+    procedure TrimInParameters;}
+    function CreateResultSet(const SQL: string;
+      QueryHandle: PZPostgreSQLResult): IZResultSet;
+  public
+    constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
+
+    function ExecuteQuery(const SQL: string): IZResultSet; override;
+    function ExecuteUpdate(const SQL: string): Integer; override;
+
+    function ExecuteQueryPrepared: IZResultSet; override;
+    function ExecuteUpdatePrepared: Integer; override;
+    {function ExecuteUpdate(const SQL: string): Integer; override;
+    function Execute(const SQL: string): Boolean; override;
+
+
+
+    function ExecutePrepared: Boolean; override; }
+  end;
+
   {** Implements a specialized cached resolver for PostgreSQL. }
   TZPostgreSQLCachedResolver = class(TZGenericCachedResolver, IZCachedResolver)
   protected
@@ -115,7 +147,7 @@ type
 implementation
 
 uses
-  Types, ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils;
+  Types, ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils, ZTokenizer;
 
 { TZPostgreSQLStatement }
 
@@ -474,6 +506,333 @@ begin
     Result := (self.Connection as IZPostgreSQLConnection).GetConnectionHandle;
 end;
 
+{ TZPostgreSQLCallableStatement }
+
+{**
+  Constructs this object and assignes the main properties.
+  @param Connection a database connection object.
+  @param Info a statement parameters.
+  @param Handle a connection handle pointer.
+}
+constructor TZPostgreSQLCallableStatement.Create(
+  Connection: IZConnection; const SQL: string; Info: TStrings);
+begin
+  inherited Create(Connection, SQL, Info);
+
+  { Processes connection properties. }
+  if Self.Info.Values['oidasblob'] <> '' then
+    FOidAsBlob := StrToBoolEx(Self.Info.Values['oidasblob'])
+  else
+    FOidAsBlob := (Connection as IZPostgreSQLConnection).IsOidAsBlob;
+end;
+
+{**
+  Provides connection handle from the associated IConnection
+  @return a PostgreSQL connection handle.
+}
+function TZPostgreSQLCallableStatement.GetConnectionHandle():PZPostgreSQLConnect;
+begin
+  if Self.Connection = nil then
+    Result := nil
+  else
+    Result := (self.Connection as IZPostgreSQLConnection).GetConnectionHandle;
+end;
+
+{**
+  Creates a result set based on the current settings.
+  @return a created result set object.
+}
+function TZPostgreSQLCallableStatement.CreateResultSet(const SQL: string;
+      QueryHandle: PZPostgreSQLResult): IZResultSet;
+var
+  NativeResultSet: TZPostgreSQLResultSet;
+  CachedResultSet: TZCachedResultSet;
+  ConnectionHandle: PZPostgreSQLConnect;
+begin
+  ConnectionHandle := GetConnectionHandle();
+  NativeResultSet := TZPostgreSQLResultSet.Create(GetPlainDriver, Self, SQL,
+    ConnectionHandle, QueryHandle);
+  NativeResultSet.SetConcurrency(rcReadOnly);
+  if GetResultSetConcurrency = rcUpdatable then
+  begin
+    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil);
+    CachedResultSet.SetConcurrency(rcUpdatable);
+    CachedResultSet.SetResolver(TZPostgreSQLCachedResolver.Create(
+      Self,  NativeResultSet.GetMetadata));
+    Result := CachedResultSet;
+  end
+  else
+    Result := NativeResultSet;
+end;
+
+{**
+   Returns plain draiver from connection object
+   @return a PlainDriver object
+}
+function TZPostgreSQLCallableStatement.GetPlainDriver():IZPostgreSQLPlainDriver;
+begin
+  if self.Connection <> nil then
+    Result := (self.Connection as IZPostgreSQLConnection).GetPlainDriver
+  else
+    Result := nil;
+end;
+
+{**
+  Prepares an SQL parameter for the query.
+  @param ParameterIndex the first parameter is 1, the second is 2, ...
+  @return a string representation of the parameter.
+}
+function TZPostgreSQLCallableStatement.PrepareSQLParam(
+  ParamIndex: Integer): string;
+var
+  Value: TZVariant;
+  TempBytes: TByteDynArray;
+  TempBlob: IZBlob;
+  TempStream: TStream;
+  WriteTempBlob: IZPostgreSQLBlob;
+begin
+  TempBytes := nil;
+  if InParamCount <= ParamIndex then
+    raise EZSQLException.Create(SInvalidInputParameterCount);
+
+  Value := InParamValues[ParamIndex];
+  if DefVarManager.IsNull(Value)  then
+    Result := 'NULL'
+  else
+  begin
+    case InParamTypes[ParamIndex] of
+      stBoolean:
+        if SoftVarManager.GetAsBoolean(Value) then
+          Result := 'TRUE'
+        else
+          Result := 'FALSE';
+      stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
+        Result := SoftVarManager.GetAsString(Value);
+      stString, stBytes:
+        Result := EncodeString(SoftVarManager.GetAsString(Value));
+      stUnicodeString:
+        Result := UTF8Encode(EncodeString(SoftVarManager.GetAsUnicodeString(Value)));
+      stDate:
+        Result := Format('''%s''::date',
+          [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]);
+      stTime:
+        Result := Format('''%s''::time',
+          [FormatDateTime('hh":"mm":"ss', SoftVarManager.GetAsDateTime(Value))]);
+      stTimestamp:
+        Result := Format('''%s''::timestamp',
+          [FormatDateTime('yyyy-mm-dd hh":"mm":"ss',
+            SoftVarManager.GetAsDateTime(Value))]);
+      stAsciiStream:
+        begin
+          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
+          if not TempBlob.IsEmpty then
+          begin
+            Result := EncodeString(TempBlob.GetString)
+          end
+          else
+          begin
+            Result := 'NULL';
+          end;
+        end;
+      stUnicodeStream:
+        begin
+          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
+          if not TempBlob.IsEmpty then
+          begin
+            Result := EncodeString( UTF8Encode(TempBlob.GetUnicodeString))
+          end
+          else
+          begin
+            Result := 'NULL';
+          end;
+        end;
+      stBinaryStream:
+        begin
+          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
+          if not TempBlob.IsEmpty then
+          begin
+            if (GetConnection as IZPostgreSQLConnection).IsOidAsBlob then
+            begin
+              TempStream := TempBlob.GetStream;
+              try
+                WriteTempBlob := TZPostgreSQLBlob.Create(GetPlainDriver, nil, 0,
+                  Self.GetConnectionHandle, 0);
+                WriteTempBlob.SetStream(TempStream);
+                WriteTempBlob.WriteBlob;
+                Result := IntToStr(WriteTempBlob.GetBlobOid);
+              finally
+                WriteTempBlob := nil;
+                TempStream.Free;
+              end;
+            end
+            else
+            begin
+              result:= GetPlainDriver.EncodeBYTEA(TempBlob.GetString,
+                Self.GetConnectionHandle); // FirmOS
+              {
+               Result := EncodeString(TempBlob.GetString);
+               Result := Copy(Result, 2, Length(Result) - 2);
+               Result := EncodeString(Result);
+              }
+            end;
+          end
+          else
+            Result := 'NULL';
+        end;
+    end;
+  end;
+end;
+
+{**
+  Executes an SQL statement that returns a single <code>ResultSet</code> object.
+  @param sql typically this is a static SQL <code>SELECT</code> statement
+  @return a <code>ResultSet</code> object that contains the data produced by the
+    given query; never <code>null</code>
+}
+function TZPostgreSQLCallableStatement.ExecuteQuery(
+  const SQL: string): IZResultSet;
+var
+  QueryHandle: PZPostgreSQLResult;
+  ConnectionHandle: PZPostgreSQLConnect;
+begin
+  Result := nil;
+  ConnectionHandle := GetConnectionHandle();
+  {$IFDEF DELPHI12_UP}
+  QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(UTF8String(SQL)));
+  {$ELSE}
+  QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
+  {$ENDIF}
+  CheckPostgreSQLError(Connection, GetPlainDriver, ConnectionHandle, lcExecute,
+    SQL, QueryHandle);
+  DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SQL);
+  if QueryHandle <> nil then
+    Result := CreateResultSet(SQL, QueryHandle)
+  else
+    Result := nil;
+end;
+
+{**
+  Prepares and executes an SQL statement that returns a single <code>ResultSet</code> object.
+  @return a <code>ResultSet</code> object that contains the data produced by the
+    given query; never <code>null</code>
+}
+function TZPostgreSQLCallableStatement.ExecuteQueryPrepared: IZResultSet;
+Var SQL: String;
+begin
+  SQL := GetProcedureSql();
+  SQL := FillParams(SQL);
+  Result := self.ExecuteQuery(SQL);
+
+end;
+
+{**
+   Create sql string for calling stored procedure.
+   @return a Stored Procedure SQL string
+}
+function TZPostgreSQLCallableStatement.GetProcedureSql(): string;
+
+  function GenerateParamsStr(Count: integer): string;
+  var
+    I: integer;
+  begin
+    for I := 0 to Count - 1 do
+    begin
+      if Result <> '' then
+        Result := Result + ',';
+      Result := Result + '?';
+    end;
+  end;
+
+var
+  InParams: string;
+begin
+
+  InParams := GenerateParamsStr(High(InParamValues));
+  InParams := '(' + InParams + ')';
+
+  Result := 'SELECT * FROM ' + SQL + InParams
+end;
+
+{**
+   Fills the parameter (?) tokens with corresponding parameter value
+   @return a prepared SQL query for execution
+}
+function TZPostgreSQLCallableStatement.FillParams(ASql:String):String;
+var I: Integer;
+  Tokens: TStrings;
+  ParamIndex: Integer;
+begin
+  if Pos('?', ASql) > 0 then
+  begin
+    Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(ASql, [toUnifyWhitespaces]);
+    try
+      ParamIndex := 0;
+      for I := 0 to Tokens.Count - 1 do
+      begin
+        if Tokens[I] = '?' then
+        begin
+          Inc(ParamIndex);
+          Tokens[I] := PrepareSQLParam(ParamIndex);
+        end
+      end;
+      Result := StringReplace(Tokens.Text, #13#10, ' ', [rfReplaceAll]);
+    finally
+      Tokens.Free;
+    end;
+  end
+  else
+    Result := ASql;
+
+end;
+
+{**
+  Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
+  <code>DELETE</code> statement. In addition,
+  SQL statements that return nothing, such as SQL DDL statements,
+  can be executed.
+
+  @param sql an SQL <code>INSERT</code>, <code>UPDATE</code> or
+    <code>DELETE</code> statement or an SQL statement that returns nothing
+  @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
+    or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
+}
+function TZPostgreSQLCallableStatement.ExecuteUpdate(const SQL: string): Integer;
+var
+  QueryHandle: PZPostgreSQLResult;
+  ConnectionHandle: PZPostgreSQLConnect;
+begin
+  Result := -1;
+  ConnectionHandle := GetConnectionHandle();
+  {$IFDEF DELPHI12_UP}
+  QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle,
+    PAnsiChar(UTF8String(SQL)));
+  {$ELSE}
+  QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
+  {$ENDIF}
+  CheckPostgreSQLError(Connection, GetPlainDriver, ConnectionHandle, lcExecute,
+    SQL, QueryHandle);
+  DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SQL);
+
+  if QueryHandle <> nil then
+  begin
+    Result := StrToIntDef(StrPas(GetPlainDriver.GetCommandTuples(QueryHandle)), 0);
+    GetPlainDriver.Clear(QueryHandle);
+  end;
+
+  { Autocommit statement. }
+  if Connection.GetAutoCommit then
+    Connection.Commit;
+end;
+
+
+function TZPostgreSQLCallableStatement.ExecuteUpdatePrepared: Integer;
+Var SQL: String;
+begin
+  SQL := GetProcedureSql();
+  SQL := FillParams(SQL);
+  Result := self.ExecuteUpdate(SQL);
+
+end;
 
 { TZPostgreSQLCachedResolver }
 
