@@ -61,6 +61,9 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[Delphi XE] Compiles on Delphi XE (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2956">http://zeos.firmos.at/viewtopic.php?t=2956</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>[ORACLE] Handle OCI_SUCCESS_WITH_INFO as a warning (<ulink url="http://zeos.firmos.at/viewtopic.php?t=773">http://zeos.firmos.at/viewtopic.php?t=773</ulink>)</simpara>
         </listitem>
         <listitem>
