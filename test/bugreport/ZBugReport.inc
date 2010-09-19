@@ -42,7 +42,10 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-{$IFNDEF LINUX}
+{$ifdef Linux}
+ {$define Unix}
+{$endif}
+{$IFNDEF Unix}
 
 {$I ..\..\src\Zeos.inc}
 

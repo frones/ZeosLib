@@ -1,4 +1,7 @@
-{$IFNDEF LINUX}
+{$IFDEF LINUX} 
+  {$DEFINE UNIX}
+{$ENDIF}
+{$IFNDEF UNIX}
 
 {$I ..\..\src\Zeos.inc}
 
