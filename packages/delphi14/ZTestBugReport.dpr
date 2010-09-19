@@ -61,21 +61,21 @@ uses
   TestFrameWork,
   TextTestRunner,
   GUITestRunner,
-  ZTestConfig,
-  ZSqlTestCase,
-  ZTestDbcCore in '..\..\test\bugreport\ZTestDbcCore.pas',
+  ZTestConfig in '..\..\test\framework\ZTestConfig.pas',
+  ZSqlTestCase  in '..\..\test\framework\ZSqlTestCase.pas',
+  ZTestBugDbcCore in '..\..\test\bugreport\ZTestDbcCore.pas',
 //  ZTestDbcMySql in '..\..\test\bugreport\ZTestDbcMySql.pas',
-  ZTestDbcPostgreSql in '..\..\test\bugreport\ZTestDbcPostgreSql.pas',
+  ZTestBugDbcPostgreSql in '..\..\test\bugreport\ZTestDbcPostgreSql.pas',
 //  ZTestDbcASA in '..\..\test\bugreport\ZTestDbcASA.pas',
-  ZTestDbcDbLib in '..\..\test\bugreport\ZTestDbcDbLib.pas',
-  ZTestCompCore in '..\..\test\bugreport\ZTestCompCore.pas',
+  ZTestBugDbcDbLib in '..\..\test\bugreport\ZTestBugDbcDbLib.pas',
+  ZTestBugCompCore in '..\..\test\bugreport\ZTestBugCompCore.pas',
 //  ZTestCompMySql in '..\..\test\bugreport\ZTestCompMySql.pas',
 //  ZTestCompMSSql in '..\..\test\bugreport\ZTestCompMSSql.pas',
 {$IFDEF ENABLE_ORACLE}
   ZTestBugDbcOracle in '..\..\test\bugreport\ZTestBugDbcOracle.pas',
   ZTestBugCompOracle in '..\..\test\bugreport\ZTestBugCompOracle.pas',
 {$ENDIF}
-  ZTestCompPostgreSql in '..\..\test\bugreport\ZTestCompPostgreSql.pas';
+  ZTestBugCompPostgreSql in '..\..\test\bugreport\ZTestBugCompPostgreSql.pas';
 //  ZTestCompASA in '..\..\test\bugreport\ZTestCompASA.pas',
 //  ZTestCompDbLib in '..\..\test\bugreport\ZTestCompDbLib.pas',
 //  ZTestDbcInterbase in '..\..\test\bugreport\ZTestDbcInterbase.pas',

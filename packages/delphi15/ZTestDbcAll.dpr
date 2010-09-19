@@ -1,7 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{              Test Suite for Core Classes                }
+{      Test Suite for Database Connectivity Classes       }
 {                                                         }
 {*********************************************************}
 
@@ -49,13 +49,13 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-program ZTestCoreAll;
+program ZTestDbcAll;
+
+{$I ..\..\test\dbc\ZDbc.inc}
 
 {$IFNDEF TESTGUI}
 {$APPTYPE CONSOLE}
 {$ENDIF}
-
-{$I ..\..\test\core\ZCore.inc}
 
 uses
   TestFrameWork,
@@ -64,19 +64,32 @@ uses
 {$ELSE}
   TextTestRunner,
 {$ENDIF}
-  ZTestConfig in '..\..\test\framework\ZTestConfig.pas',
-  ZSqlTestCase in '..\..\test\framework\ZSqlTestCase.pas',
-  ZTestSysUtils in '..\..\test\core\ZTestSysUtils.pas',
-  ZTestList in '..\..\test\core\ZTestList.pas',
-  ZTestFramework in '..\..\test\core\ZTestFramework.pas',
-  ZTestVariant in '..\..\test\core\ZTestVariant.pas',
-  ZTestExprToken in '..\..\test\core\ZTestExprToken.pas',
-  ZTestTokenizer in '..\..\test\core\ZTestTokenizer.pas',
-  ZTestExpression in '..\..\test\core\ZTestExpression.pas',
-  ZTestURL in '..\..\test\core\ZTestURL.pas';
+  ZTestConfig,
+  ZSqlTestCase,
+  ZTestDbcUtils in '..\..\test\dbc\ZTestDbcUtils.pas',
+  ZTestDbcCache in '..\..\test\dbc\ZTestDbcCache.pas',
+  ZTestDbcCachedResultSet in '..\..\test\dbc\ZTestDbcCachedResultSet.pas',
+  ZTestDbcResultSet in '..\..\test\dbc\ZTestDbcResultSet.pas',
+  ZTestDbcResultSetMetadata in '..\..\test\dbc\ZTestDbcResultSetMetadata.pas',
+  ZTestDbcResolver in '..\..\test\dbc\ZTestDbcResolver.pas',
+  ZTestDbcMetadata in '..\..\test\dbc\ZTestDbcMetadata.pas',
+  ZTestDbcGeneric in '..\..\test\dbc\ZTestDbcGeneric.pas',
+//  ZTestDbcASAMetadata in '..\..\test\dbc\ZTestDbcASAMetadata.pas',
+//  ZTestDbcASA in '..\..\test\dbc\ZTestDbcASA.pas',
+
+  ZTestDbcMySqlMetadata in '..\..\test\dbc\ZTestDbcMySqlMetadata.pas',
+  ZTestDbcMySql in '..\..\test\dbc\ZTestDbcMySql.pas',
+  ZTestDbcPostgreSqlMetadata in '..\..\test\dbc\ZTestDbcPostgreSqlMetadata.pas',
+  ZTestDbcPostgreSql in '..\..\test\dbc\ZTestDbcPostgreSql.pas',
+//  ZTestDbcMsSql in '..\..\test\dbc\ZTestDbcMsSql.pas',
+//  ZTestDbcOracle in '..\..\test\dbc\ZTestDbcOracle.pas',
+  ZTestDbcSqLite in '..\..\test\dbc\ZTestDbcSqLite.pas'
+//  ZTestDbcInterbaseMetadata in '..\..\test\dbc\ZTestDbcInterbaseMetadata.pas',
+//  ZTestDbcInterbase in '..\..\test\dbc\ZTestDbcInterbase.pas';
+;
 
 begin
-  TestGroup := CORE_TEST_GROUP;
+  TestGroup := DBC_TEST_GROUP;
   RebuildTestDatabases;
 {$IFDEF TESTGUI}
   GUITestRunner.RunRegisteredTests;

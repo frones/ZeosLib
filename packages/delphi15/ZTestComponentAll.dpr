@@ -1,7 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{              Test Suite for Core Classes                }
+{           Test Suite for Database Components            }
 {                                                         }
 {*********************************************************}
 
@@ -49,13 +49,14 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-program ZTestCoreAll;
+program ZTestComponentAll;
 
 {$IFNDEF TESTGUI}
 {$APPTYPE CONSOLE}
 {$ENDIF}
 
-{$I ..\..\test\core\ZCore.inc}
+
+{$I ..\..\test\component\ZComponent.inc}
 
 uses
   TestFrameWork,
@@ -64,19 +65,20 @@ uses
 {$ELSE}
   TextTestRunner,
 {$ENDIF}
-  ZTestConfig in '..\..\test\framework\ZTestConfig.pas',
-  ZSqlTestCase in '..\..\test\framework\ZSqlTestCase.pas',
-  ZTestSysUtils in '..\..\test\core\ZTestSysUtils.pas',
-  ZTestList in '..\..\test\core\ZTestList.pas',
-  ZTestFramework in '..\..\test\core\ZTestFramework.pas',
-  ZTestVariant in '..\..\test\core\ZTestVariant.pas',
-  ZTestExprToken in '..\..\test\core\ZTestExprToken.pas',
-  ZTestTokenizer in '..\..\test\core\ZTestTokenizer.pas',
-  ZTestExpression in '..\..\test\core\ZTestExpression.pas',
-  ZTestURL in '..\..\test\core\ZTestURL.pas';
+  ZTestConfig,
+  ZSqlTestCase,
+  ZTestSqlStrings in '..\..\test\component\ZTestSqlStrings.pas',
+  ZTestSqlProcessor in '..\..\test\component\ZTestSqlProcessor.pas',
+  ZTestStoredProcedure in '..\..\test\component\ZTestStoredProcedure.pas',
+  ZTestConnection in '..\..\test\component\ZTestConnection.pas',
+  ZTestExecuteSql in '..\..\test\component\ZTestExecuteSql.pas',
+  ZTestSqlTypes in '..\..\test\component\ZTestSqlTypes.pas',
+  ZTestDataSetGeneric in '..\..\test\component\ZTestDataSetGeneric.pas',
+  ZTestData in '..\..\test\component\ZTestData.pas'{,
+  ZTestMidas in '..\..\test\component\ZTestMidas.pas'} {ZRemoteDM: TRemoteDataModule};
 
 begin
-  TestGroup := CORE_TEST_GROUP;
+  TestGroup := COMPONENT_TEST_GROUP;
   RebuildTestDatabases;
 {$IFDEF TESTGUI}
   GUITestRunner.RunRegisteredTests;
@@ -84,3 +86,4 @@ begin
   TextTestRunner.RunRegisteredTests;
 {$ENDIF}
 end.
+

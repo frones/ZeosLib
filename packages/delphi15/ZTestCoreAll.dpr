@@ -64,8 +64,9 @@ uses
 {$ELSE}
   TextTestRunner,
 {$ENDIF}
-  ZTestConfig in '..\..\test\framework\ZTestConfig.pas',
-  ZSqlTestCase in '..\..\test\framework\ZSqlTestCase.pas',
+  ZTestConfig  in '..\..\test\framework\ZTestConfig.pas',
+  ZTestDefinitions in '..\..\test\framework\ZTestDefinitions.pas',
+  ZSqlTestCase in   '..\..\test\framework\ZSqlTestCase.pas',
   ZTestSysUtils in '..\..\test\core\ZTestSysUtils.pas',
   ZTestList in '..\..\test\core\ZTestList.pas',
   ZTestFramework in '..\..\test\core\ZTestFramework.pas',

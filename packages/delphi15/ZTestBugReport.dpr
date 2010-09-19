@@ -1,7 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{              Test Suite for Core Classes                }
+{              Test Suite for Bug Reports                 }
 {                                                         }
 {*********************************************************}
 
@@ -49,34 +49,40 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-program ZTestCoreAll;
+program ZTestBugReport;
 
 {$IFNDEF TESTGUI}
 {$APPTYPE CONSOLE}
 {$ENDIF}
 
-{$I ..\..\test\core\ZCore.inc}
+{$I ..\..\test\bugreport\ZBugReport.inc}
 
 uses
   TestFrameWork,
-{$IFDEF TESTGUI}
-  GUITestRunner,
-{$ELSE}
   TextTestRunner,
-{$ENDIF}
+  GUITestRunner,
   ZTestConfig in '..\..\test\framework\ZTestConfig.pas',
-  ZSqlTestCase in '..\..\test\framework\ZSqlTestCase.pas',
-  ZTestSysUtils in '..\..\test\core\ZTestSysUtils.pas',
-  ZTestList in '..\..\test\core\ZTestList.pas',
-  ZTestFramework in '..\..\test\core\ZTestFramework.pas',
-  ZTestVariant in '..\..\test\core\ZTestVariant.pas',
-  ZTestExprToken in '..\..\test\core\ZTestExprToken.pas',
-  ZTestTokenizer in '..\..\test\core\ZTestTokenizer.pas',
-  ZTestExpression in '..\..\test\core\ZTestExpression.pas',
-  ZTestURL in '..\..\test\core\ZTestURL.pas';
+  ZSqlTestCase in   '..\..\test\framework\ZSqlTestCase.pas',
+  ZTestBugDbcCore in '..\..\test\bugreport\ZTestbugDbcCore.pas',
+//  ZTestDbcMySql in '..\..\test\bugreport\ZTestDbcMySql.pas',
+  ZTestBugDbcPostgreSql in '..\..\test\bugreport\ZTestbugDbcPostgreSql.pas',
+//  ZTestDbcASA in '..\..\test\bugreport\ZTestDbcASA.pas',
+  ZTestBugDbcDbLib in '..\..\test\bugreport\ZTestBugDbcDbLib.pas',
+  ZTestBugCompCore in '..\..\test\bugreport\ZTestBugCompCore.pas',
+//  ZTestCompMySql in '..\..\test\bugreport\ZTestCompMySql.pas',
+//  ZTestCompMSSql in '..\..\test\bugreport\ZTestCompMSSql.pas',
+{$IFDEF ENABLE_ORACLE}
+  ZTestBugDbcOracle in '..\..\test\bugreport\ZTestBugDbcOracle.pas',
+  ZTestBugCompOracle in '..\..\test\bugreport\ZTestBugCompOracle.pas',
+{$ENDIF}
+  ZTestBugCompPostgreSql in '..\..\test\bugreport\ZTestBugCompPostgreSql.pas';
+//  ZTestCompASA in '..\..\test\bugreport\ZTestCompASA.pas',
+//  ZTestCompDbLib in '..\..\test\bugreport\ZTestCompDbLib.pas',
+//  ZTestDbcInterbase in '..\..\test\bugreport\ZTestDbcInterbase.pas',
+//  ZTestCompInterbase in '..\..\test\bugreport\ZTestCompInterbase.pas';
 
 begin
-  TestGroup := CORE_TEST_GROUP;
+  TestGroup := BUGREPORT_TEST_GROUP;
   RebuildTestDatabases;
 {$IFDEF TESTGUI}
   GUITestRunner.RunRegisteredTests;

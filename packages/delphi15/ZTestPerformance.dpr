@@ -1,7 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{              Test Suite for Core Classes                }
+{            Test Suite for Performance Tests             }
 {                                                         }
 {*********************************************************}
 
@@ -49,38 +49,41 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-program ZTestCoreAll;
+program ZTestPerformance;
 
-{$IFNDEF TESTGUI}
+{$I ..\..\test\performance\ZPerformance.inc}
+
+{$IFNDEF TESTGUI} 
 {$APPTYPE CONSOLE}
-{$ENDIF}
-
-{$I ..\..\test\core\ZCore.inc}
+{$ENDIF} 
 
 uses
-  TestFrameWork,
-{$IFDEF TESTGUI}
-  GUITestRunner,
-{$ELSE}
+  TestFramework,
+  {$IFDEF TESTGUI} 
+  GUITestRunner, 
+  {$ELSE} 
   TextTestRunner,
-{$ENDIF}
-  ZTestConfig in '..\..\test\framework\ZTestConfig.pas',
-  ZSqlTestCase in '..\..\test\framework\ZSqlTestCase.pas',
-  ZTestSysUtils in '..\..\test\core\ZTestSysUtils.pas',
-  ZTestList in '..\..\test\core\ZTestList.pas',
-  ZTestFramework in '..\..\test\core\ZTestFramework.pas',
-  ZTestVariant in '..\..\test\core\ZTestVariant.pas',
-  ZTestExprToken in '..\..\test\core\ZTestExprToken.pas',
-  ZTestTokenizer in '..\..\test\core\ZTestTokenizer.pas',
-  ZTestExpression in '..\..\test\core\ZTestExpression.pas',
-  ZTestURL in '..\..\test\core\ZTestURL.pas';
+  {$ENDIF}
+  ZTestConfig,
+  ZSqlTestCase,
+  ZPerformanceTestCase,
+  ZTestBdePerformance in '..\..\test\performance\ZTestBdePerformance.pas',
+  ZTestPlainPerformance in '..\..\test\performance\ZTestPlainPerformance.pas',
+  ZTestDbcPerformance in '..\..\test\performance\ZTestDbcPerformance.pas',
+  ZTestDatasetPerformance in '..\..\test\performance\ZTestDatasetPerformance.pas',
+  ZTestOldZeosPerformance in '..\..\test\performance\ZTestOldZeosPerformance.pas',
+  ZTestDbxPerformance in '..\..\test\performance\ZTestDbxPerformance.pas',
+  ZTestIBXPerformance in '..\..\test\performance\ZTestIbxPerformance.pas';
 
 begin
-  TestGroup := CORE_TEST_GROUP;
+  TestGroup := PERFORMANCE_TEST_GROUP;
   RebuildTestDatabases;
-{$IFDEF TESTGUI}
-  GUITestRunner.RunRegisteredTests;
-{$ELSE}
+  {$IFDEF TESTGUI} 
+  GUITestRunner.RunRegisteredTests; 
+  {$ELSE} 
   TextTestRunner.RunRegisteredTests;
-{$ENDIF}
+  {$ENDIF} 
+  PerformanceResultProcessor.ProcessResults;
+  PerformanceResultProcessor.PrintResults;
 end.
+

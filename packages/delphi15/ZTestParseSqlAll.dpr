@@ -1,7 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{              Test Suite for Core Classes                }
+{          Test Suite for Parsing SQL Classes             }
 {                                                         }
 {*********************************************************}
 
@@ -49,13 +49,13 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-program ZTestCoreAll;
+program ZTestParseSqlAll;
 
 {$IFNDEF TESTGUI}
 {$APPTYPE CONSOLE}
 {$ENDIF}
 
-{$I ..\..\test\core\ZCore.inc}
+{$I ..\..\test\parsesql\ZParseSql.inc}
 
 uses
   TestFrameWork,
@@ -64,19 +64,19 @@ uses
 {$ELSE}
   TextTestRunner,
 {$ENDIF}
-  ZTestConfig in '..\..\test\framework\ZTestConfig.pas',
-  ZSqlTestCase in '..\..\test\framework\ZSqlTestCase.pas',
-  ZTestSysUtils in '..\..\test\core\ZTestSysUtils.pas',
-  ZTestList in '..\..\test\core\ZTestList.pas',
-  ZTestFramework in '..\..\test\core\ZTestFramework.pas',
-  ZTestVariant in '..\..\test\core\ZTestVariant.pas',
-  ZTestExprToken in '..\..\test\core\ZTestExprToken.pas',
-  ZTestTokenizer in '..\..\test\core\ZTestTokenizer.pas',
-  ZTestExpression in '..\..\test\core\ZTestExpression.pas',
-  ZTestURL in '..\..\test\core\ZTestURL.pas';
+  ZTestConfig,
+  ZSqlTestCase,
+  ZTestSqlAnalyser in '..\..\test\parsesql\ZTestSqlAnalyser.pas',
+  ZTestSybaseToken in '..\..\test\parsesql\ZTestSybaseToken.pas',
+  ZTestMySqlToken in '..\..\test\parsesql\ZTestMySqlToken.pas',
+  ZTestPostgreSqlToken in '..\..\test\parsesql\ZTestPostgreSqlToken.pas',
+  ZTestScriptParser in '..\..\test\parsesql\ZTestScriptParser.pas',
+  ZTestInterbaseToken in '..\..\test\parsesql\ZTestInterbaseToken.pas',
+  ZTestOracleToken in '..\..\test\parsesql\ZTestOracleToken.pas',
+  ZTestSqLiteToken in '..\..\test\parsesql\ZTestSqLiteToken.pas';
 
 begin
-  TestGroup := CORE_TEST_GROUP;
+  TestGroup := PARSESQL_TEST_GROUP;
   RebuildTestDatabases;
 {$IFDEF TESTGUI}
   GUITestRunner.RunRegisteredTests;
