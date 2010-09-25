@@ -60,7 +60,7 @@ interface
 uses Classes, SysUtils, ZDbcIntfs, ZDbcStatement, ZDbcInterbase6,
   ZDbcInterbase6Utils, ZDbcInterbase6ResultSet,
   ZPlainFirebirdInterbaseConstants,
-  ZCompatibility, ZDbcLogging, ZVariant, ZMessages, Dialogs;
+  ZCompatibility, ZDbcLogging, ZVariant, ZMessages;
 
 type
 
