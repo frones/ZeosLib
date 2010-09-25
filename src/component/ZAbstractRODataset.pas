@@ -2771,16 +2771,24 @@ var
   Index: Integer;
 begin
   DoBeforeScroll;
-  Index := InternalLocate(KeyFields, KeyValues, Options);
-  if Index > 0 then
+  if (Active) then //AVZ Check if the dataset is active before performing locate - return false otherwise
   begin
-    MoveRecNo(Index);
-    DoAfterScroll;
-    Result := True;
+    Index := InternalLocate(KeyFields, KeyValues, Options);
+    if Index > 0 then
+    begin
+      MoveRecNo(Index);
+      DoAfterScroll;
+      Result := True;
+    end
+    else
+      Result := False;
+    SetFound(Result);
+
   end
-  else
+    else
+  begin
     Result := False;
-  SetFound(Result);
+  end;
 end;
 
 {**

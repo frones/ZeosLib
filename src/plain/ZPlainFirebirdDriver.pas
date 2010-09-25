@@ -99,6 +99,12 @@ const
   LINUX21_DLL_LOCATION_EMBEDDED = 'libfbembed.so.21';
   LINUX21_IB_CRYPT_LOCATION = 'libcrypt.so.21';
 
+  WINDOWS25_DLL_LOCATION   = 'fbclient25.dll';
+  WINDOWS25_DLL_LOCATION_EMBEDDED = 'fbclientd25.dll';
+  LINUX25_DLL_LOCATION   = 'libfbclient.so.25';
+  LINUX25_DLL_LOCATION_EMBEDDED = 'libfbembed.so.25';
+  LINUX25_IB_CRYPT_LOCATION = 'libcrypt.so.25';
+
 type
 
   {** Represents a generic interface to Interbase native API. }
@@ -460,6 +466,31 @@ type
     function GetProtocol: string; override;
     function GetDescription: string; override;
   end;
+
+  { TZFirebird25PlainDriver }
+
+  TZFirebird25PlainDriver = class (TZFirebirdBaseDriver)
+  protected
+    procedure LoadApi; override;
+  public
+    constructor Create;
+
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+
+    function isc_interprete(buffer: PAnsiChar; status_vector: PPISC_STATUS): ISC_STATUS; override;
+  end;
+
+  { TZFirebirdD25PlainDriver }
+
+  TZFirebirdD25PlainDriver = class (TZFirebird25PlainDriver)
+  public
+    constructor Create;
+
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+  end;
+
 
   function XSQLDA_LENGTH(Value: LongInt): LongInt;
 
@@ -1219,6 +1250,84 @@ end;
 function TZFirebirdD21PlainDriver.GetDescription: string;
 begin
   Result := 'Native Plain Driver for Firebird Embedded 2.1';
+end;
+
+{ TZFirebird25PlainDriver }
+
+procedure TZFirebird25PlainDriver.LoadApi;
+begin
+  inherited LoadApi;
+
+  with Loader do
+  begin
+    @FIREBIRD_API.fb_interpret        := GetAddress('fb_interpret');
+  end;
+end;
+
+constructor TZFirebird25PlainDriver.Create;
+begin
+  inherited create;
+  {$IFNDEF UNIX}
+    {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
+      FLoader.AddLocation(WINDOWS2_DLL_LOCATION);
+    {$ENDIF}
+    FLoader.AddLocation(WINDOWS25_DLL_LOCATION);
+  {$ELSE}
+    {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
+      FLoader.AddLocation(LINUX2_DLL_LOCATION);
+    {$ENDIF}
+    FLoader.AddLocation(LINUX25_DLL_LOCATION);
+    {$IFDEF ENABLE_INTERBASE_CRYPT}
+      {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
+        FPreLoader.AddLocation(LINUX2_IB_CRYPT_LOCATION);
+      {$ENDIF}
+      FPreLoader.AddLocation(LINUX25_IB_CRYPT_LOCATION);
+    {$ENDIF}
+  {$ENDIF}
+end;
+
+function TZFirebird25PlainDriver.GetProtocol: string;
+begin
+  Result := 'firebird-2.5';
+end;
+
+function TZFirebird25PlainDriver.GetDescription: string;
+begin
+  Result := 'Native Plain Driver for Firebird 2.5';
+end;
+
+function TZFirebird25PlainDriver.isc_interprete(buffer: PAnsiChar;
+  status_vector: PPISC_STATUS): ISC_STATUS;
+begin
+  Result:=inherited isc_interprete(buffer, status_vector);
+end;
+
+{ TZFirebirdD25PlainDriver }
+
+constructor TZFirebirdD25PlainDriver.Create;
+begin
+   inherited create;
+  {$IFNDEF UNIX}
+    {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
+      FLoader.AddLocation(WINDOWS2_DLL_LOCATION_EMBEDDED);
+    {$ENDIF}
+    FLoader.AddLocation(WINDOWS25_DLL_LOCATION_EMBEDDED);
+  {$ELSE}
+    {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
+      FLoader.AddLocation(LINUX2_DLL_LOCATION_EMBEDDED);
+    {$ENDIF}
+    FLoader.AddLocation(LINUX25_DLL_LOCATION_EMBEDDED);
+    {$ENDIF}
+end;
+
+function TZFirebirdD25PlainDriver.GetProtocol: string;
+begin
+  Result := 'firebirdd-2.5';
+end;
+
+function TZFirebirdD25PlainDriver.GetDescription: string;
+begin
+  Result := 'Native Plain Driver for Firebird Embedded 2.5';
 end;
 
 end.

@@ -686,12 +686,21 @@ begin
     try
       BindInParameters;
 
-      GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
-        GetDialect, FParamSQLData.GetData, nil);
+      if (StatementType = stSelect) then     //AVZ Get many rows - only need to use execute not execute2
+      begin
+        GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle, @StmtHandle,
+          GetDialect, FParamSQLData.GetData);
+      end
+        else
+      begin
+        CursorName := 'ExecProc'; //AVZ - Need a way to return one row so we give the cursor a name
+        GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
+          GetDialect, FParamSQLData.GetData, SQLData.GetData);
+      end;
+
       CheckInterbase6Error(SQL);
 
-      if (StatementType in [stSelect, stExecProc])
-        and (SQLData.GetFieldCount <> 0) then
+      if (StatementType in [stSelect, stExecProc]) and (SQLData.GetFieldCount <> 0) then
       begin
         if CursorName <> '' then
         begin
@@ -701,8 +710,7 @@ begin
           CheckInterbase6Error(SQL);
         end;
 
-        Result := GetCachedResultSet(SQL, Self,
-          TZInterbase6ResultSet.Create(Self, SQL, StmtHandle, Cursor, SQLData, nil, FCachedBlob));
+        Result := GetCachedResultSet(SQL, Self, TZInterbase6ResultSet.Create(Self, SQL, StmtHandle, Cursor, SQLData, nil, FCachedBlob));
       end
       else
         raise EZSQLException.Create(SCanNotRetrieveResultSetData);
@@ -959,12 +967,10 @@ begin
       PrepareParameters(GetPlainDriver, ProcSql, InParamValues, InParamTypes,
         InParamCount, GetDialect, StmtHandle, FParamSQLData);
 
-      GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
-        GetDialect, FParamSQLData.GetData, nil);
+      GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle, GetDialect, FParamSQLData.GetData, nil);
       CheckInterbase6Error(ProcSql);
 
-      if (StatementType in [stSelect, stExecProc])
-        and (SQLData.GetFieldCount <> 0) then
+      if (StatementType in [stSelect, stExecProc]) and (SQLData.GetFieldCount <> 0) then
       begin
         if CursorName <> '' then
         begin
@@ -973,8 +979,7 @@ begin
           CheckInterbase6Error(ProcSql);
         end;  
 
-        Result := GetCachedResultSet(ProcSql, Self,
-          TZInterbase6ResultSet.Create(Self, ProcSql, StmtHandle, Cursor, SQLData, nil, FCachedBlob));
+        Result := GetCachedResultSet(ProcSql, Self, TZInterbase6ResultSet.Create(Self, ProcSql, StmtHandle, Cursor, SQLData, nil, FCachedBlob));
       end;
           
       { Logging SQL Command }

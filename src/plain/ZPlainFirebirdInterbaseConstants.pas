@@ -72,6 +72,8 @@ const
   ISC_FALSE                     = 0;
   DSQL_CLOSE                    = 1;
   DSQL_DROP                     = 2;
+  DSQL_UNPREPARE                = 4;
+
 
   SQLDA_VERSION1                = 1;
   SQLDA_VERSION2                = 2;
