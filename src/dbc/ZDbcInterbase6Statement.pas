@@ -60,7 +60,7 @@ interface
 uses Classes, SysUtils, ZDbcIntfs, ZDbcStatement, ZDbcInterbase6,
   ZDbcInterbase6Utils, ZDbcInterbase6ResultSet,
   ZPlainFirebirdInterbaseConstants,
-  ZCompatibility, ZDbcLogging, ZVariant, ZMessages;
+  ZCompatibility, ZDbcLogging, ZVariant, ZMessages, Dialogs;
 
 type
 
@@ -967,7 +967,18 @@ begin
       PrepareParameters(GetPlainDriver, ProcSql, InParamValues, InParamTypes,
         InParamCount, GetDialect, StmtHandle, FParamSQLData);
 
-      GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle, GetDialect, FParamSQLData.GetData, nil);
+      if (StatementType = stSelect) then     //AVZ Get many rows - only need to use execute not execute2
+      begin
+        GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle, @StmtHandle,
+          GetDialect, FParamSQLData.GetData);
+      end
+        else
+      begin
+        CursorName := 'ExecProc'; //AVZ - Need a way to return one row so we give the cursor a name
+        GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
+          GetDialect, FParamSQLData.GetData, SQLData.GetData);
+      end;
+
       CheckInterbase6Error(ProcSql);
 
       if (StatementType in [stSelect, stExecProc]) and (SQLData.GetFieldCount <> 0) then
@@ -1034,7 +1045,9 @@ begin
 
   with FIBConnection do
   begin
+
     TrimInParameters;
+
     ProcSql := GetProcedureSql(False);
     SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle);
     try
@@ -1063,7 +1076,8 @@ begin
       { Logging SQL Command }
       DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SQL);
     finally
-        FreeStatement(GetPlainDriver, StmtHandle, DSQL_close);
+        FreeStatement(GetPlainDriver, StmtHandle, DSQL_unprepare); //AVZ -- unprepare the statement - not close it
+
     end;
   end;
 end;
@@ -1177,7 +1191,7 @@ begin
     Exit;
   InParamTypes := ParamTypes;
   InParamValues := ParamValues;
-  SetInParamCount(ParamCount);
+  SetInParamCount(ParamCount); //AVZ
 end;
 
 end.

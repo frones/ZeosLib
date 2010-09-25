@@ -1971,14 +1971,17 @@ end;
 }
 procedure TZAbstractRODataset.SetPrepared(Value: Boolean);
 begin
-  If Value <> FPrepared then
-    begin
+ //AVZ - always prepare - this is not a fix, but on the second call of
+ //  stored procedure the params get confused, I am working on whats going on
+ //  will enable this code as soon as I find the problem
+ // If Value <> FPrepared then
+ // begin
       If Value then
         InternalPrepare
       else
         InternalUnprepare;
       FPrepared := Value;
-    end;
+//  end;
 end;
 
 {**
