@@ -3491,7 +3491,18 @@ const
       ftLongWord, ftShortint, ftByte, ftExtended, ftConnection, ftParams, ftStream,
       ftTimeStampOffset, ftObject, ftSingle);
 {$ELSE}
-
+{$IFDEF VER220}
+const
+  BaseFieldTypes: array[TFieldType] of TFieldType = (
+    ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,  // 0..6
+    ftFloat, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes, // 7..13
+    ftInteger, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftUnknown, // 14..22
+    ftString, ftWideString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet, // 23..29
+    ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp, ftFMTBcd, // 30..37
+    ftWideString, ftBlob, ftOraTimeStamp, ftOraInterval, //38..41
+    ftLongWord, ftInteger, ftInteger, ftExtended, ftConnection, ftParams, ftStream, //42..48
+    ftTimeStampOffset, ftObject, ftSingle); // 49..51
+{$ELSE}
  const
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,
@@ -3500,6 +3511,7 @@ const
     ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
     ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimestamp, ftFMTBcd);
  {$ENDIF}
+{$ENDIF}
 {$ENDIF}
 {$ENDIF}
 {$ENDIF}

@@ -42,10 +42,6 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-{$IFDEF FREEBSD}
-  {$DEFINE UNIX}
-{$ENDIF}
-
 {$IFDEF LINUX}
   {$DEFINE UNIX}
 {$ENDIF}

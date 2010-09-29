@@ -65,6 +65,7 @@ const
   WINDOWS_DLL8_LOCATION   = 'libpq81.dll';
   LINUX_DLL_LOCATION   = 'libpq.so';
   LINUX_DLL8_LOCATION  = 'libpq.so.4';
+  LINUX_DLL82_LOCATION = 'libpq.so.5';
 
 { Type Lengths }
   NAMEDATALEN  = 32;
@@ -1275,6 +1276,7 @@ begin
   {$IFNDEF UNIX}
     FLoader.AddLocation(WINDOWS_DLL8_LOCATION);
   {$ELSE}
+    FLoader.AddLocation(LINUX_DLL82_LOCATION);
     FLoader.AddLocation(LINUX_DLL8_LOCATION);
   {$ENDIF}
 end;

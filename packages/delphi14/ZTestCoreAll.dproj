@@ -20,6 +20,7 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
+			<DCC_UnitSearchPath>build;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_ExeOutput>build</DCC_ExeOutput>
 			<DCC_DcuOutput>build</DCC_DcuOutput>
 			<DCC_DcpOutput>build</DCC_DcpOutput>
@@ -46,6 +47,8 @@
 			<DelphiCompile Include="ZTestCoreAll.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
+			<DCCReference Include="..\..\test\framework\ZTestConfig.pas"/>
+			<DCCReference Include="..\..\test\framework\ZSqlTestCase.pas"/>
 			<DCCReference Include="..\..\test\core\ZTestSysUtils.pas"/>
 			<DCCReference Include="..\..\test\core\ZTestList.pas"/>
 			<DCCReference Include="..\..\test\core\ZTestFramework.pas"/>
@@ -53,6 +56,7 @@
 			<DCCReference Include="..\..\test\core\ZTestExprToken.pas"/>
 			<DCCReference Include="..\..\test\core\ZTestTokenizer.pas"/>
 			<DCCReference Include="..\..\test\core\ZTestExpression.pas"/>
+			<DCCReference Include="..\..\test\core\ZTestURL.pas"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>

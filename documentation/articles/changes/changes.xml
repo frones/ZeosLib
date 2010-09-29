@@ -47,6 +47,9 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara> SQLite strange characters on retrieval (D2010)</simpara>
+        </listitem>
+        <listitem>
           <simpara> SQLite3 Connect Error (D2010) (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2766">http://zeos.firmos.at/viewtopic.php?t=2766</ulink>)</simpara>
         </listitem>
         <listitem>
@@ -57,6 +60,21 @@
     <sect2>
       <title>Features added</title>
       <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>[Delphi XE] Compiles on Delphi XE (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2956">http://zeos.firmos.at/viewtopic.php?t=2956</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[ORACLE] Handle OCI_SUCCESS_WITH_INFO as a warning (<ulink url="http://zeos.firmos.at/viewtopic.php?t=773">http://zeos.firmos.at/viewtopic.php?t=773</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[POSTGRES] Added support for TZStoredProc component(<ulink url="http://zeos.firmos.at/viewtopic.php?t=2905">http://zeos.firmos.at/viewtopic.php?t=2905</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[POSTGRES] Added TZPgEventAlerter component for asynchronous notifying(<ulink url="http://zeos.firmos.at/viewtopic.php?t=2757">http://zeos.firmos.at/viewtopic.php?t=2757</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[POSTGRES] Added support for new libpq.so.5 filename on Linux(<ulink url="http://zeos.firmos.at/viewtopic.php?t=2803">http://zeos.firmos.at/viewtopic.php?t=2803</ulink>)</simpara>
+        </listitem>
         <listitem>
           <simpara>Added varUInt64 support to DecodeVariant function for D11+ (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2736">http://zeos.firmos.at/viewtopic.php?t=2736</ulink>)</simpara>
         </listitem>

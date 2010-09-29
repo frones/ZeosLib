@@ -660,12 +660,16 @@ begin
       ErrorMessage := 'OCI_CONTINUE';
   end;
 
-  if (ErrorCode <> OCI_SUCCESS) and (ErrorMessage <> '') then
+  if (ErrorCode <> OCI_SUCCESS) and (ErrorCode <> OCI_SUCCESS_WITH_INFO) and (ErrorMessage <> '') then
   begin
     DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,
       ErrorCode, ErrorMessage);
     raise EZSQLException.CreateWithCode(ErrorCode,
       Format(SSQLError1, [ErrorMessage]));
+  end;
+  if (ErrorCode = OCI_SUCCESS_WITH_INFO) and (ErrorMessage <> '') then
+  begin
+    DriverManager.LogMessage(LogCategory, PlainDriver.GetProtocol, ErrorMessage);
   end;
 end;
 

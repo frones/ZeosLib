@@ -241,26 +241,26 @@ end;
 function NewEncodeString(Value: ansistring): ansistring;
 var
   I: Integer;
-  SrcLength, DestLength: Integer;
-  SrcBuffer, DestBuffer: PAnsiChar;
-  IH : integer;
+  SrcLength: Integer;
+  SrcBuffer: PAnsiChar;
+  ihx : integer;
+  shx : ansistring;
 begin
-
   SrcLength := Length(Value);
   SrcBuffer := PAnsiChar(Value);
-  DestLength := 2+ 2*SrcLength;  // Hex-value double
-
-  SrcBuffer := PAnsiChar(Value);
-  result := '';
+  SetLength( Result,3 + SrcLength * 2 );
+  Result[1] := 'x'; // set x
+  Result[2] := ''''; // set Open Quote
+  ihx := 3; // set 1st hex location
   for I := 1 to SrcLength do
   begin
-    IH := ord(SrcBuffer^);
-    result := result + IntToHex(IH,2);
-    Inc(SrcBuffer,1);
+    shx := IntToHex( ord(SrcBuffer^),2 ); // eg. '3E'
+    result[ihx] := shx[1]; Inc( ihx,1 ); // copy '3'
+    result[ihx] := shx[2]; Inc( ihx,1 ); // copy 'E'
+    Inc( SrcBuffer,1 ); // next byte source location
   end;
-  result := 'x'+QuotedStr(result);
+  result[ihx] := ''''; // set Close Quote
 end;
-
 
 function NewDecodeString(Value:ansistring):ansistring;
 var iH, i : integer;

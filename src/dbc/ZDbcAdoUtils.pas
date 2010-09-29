@@ -286,6 +286,9 @@ begin
 {$ENDIF}
     varStrArg: Result := adWChar;
     varString: Result := adVarChar;
+{$IFDEF DELPHI12_UP}
+    varUString: Result := adVarChar;
+{$ENDIF}
     varAny: Result := adEmpty;
   else
     Result := adEmpty;
