@@ -80,6 +80,9 @@ type
   {**
     Implements a unidatabase component which parses and executes SQL Scripts.
   }
+
+  { TZSQLProcessor }
+
   TZSQLProcessor = class (TComponent)
   private
     FParams: TParams;
@@ -105,6 +108,8 @@ type
 
     function GetParamCheck: Boolean;
     procedure SetParamCheck(Value: Boolean);
+    function GetParamChar: Char;
+    procedure SetParamChar(Value: Char);
     procedure UpdateSQLStrings(Sender: TObject);
   protected
     procedure CheckConnected;
@@ -135,6 +140,8 @@ type
   published
     property ParamCheck: Boolean read GetParamCheck write SetParamCheck
       default True;
+    property ParamChar: Char read GetParamChar write SetParamChar
+      default ':';
     property Params: TParams read FParams write SetParams;
     property Script: TStrings read GetScript write SetScript;
     property Connection: TZConnection read FConnection write SetConnection;
@@ -379,10 +386,14 @@ begin
       repeat
         try
           SQL.Text := GetStatement(I);
-          Statement := CreateStatement(SQL.Statements[0].SQL, nil);
-          SetStatementParams(Statement, SQL.Statements[0].ParamNamesArray,
-            FParams);
-          Statement.ExecuteUpdatePrepared;
+{http://zeos.firmos.at/viewtopic.php?t=2885&start=0&postdays=0&postorder=asc&highlight=}
+          if SQL.StatementCount > 0 then
+            begin
+              Statement := CreateStatement(SQL.Statements[0].SQL, nil);
+              SetStatementParams(Statement, SQL.Statements[0].ParamNamesArray,
+                FParams);
+              Statement.ExecuteUpdatePrepared;
+            end;
           Statement := nil;
         except
           on E: Exception do
@@ -583,6 +594,25 @@ end;
 procedure TZSQLProcessor.SetParamCheck(Value: Boolean);
 begin
   FScript.ParamCheck := Value;
+  UpdateSQLStrings(Self);
+end;
+
+{**
+  Gets a parameters marker.
+  @return a parameter marker.
+}
+function TZSQLProcessor.GetParamChar: Char;
+begin
+  Result := FScript.ParamChar;
+end;
+
+{**
+  Sets a new parameter marker.
+  @param Value a parameter marker.
+}
+procedure TZSQLProcessor.SetParamChar(Value: Char);
+begin
+  FScript.ParamChar := Value;
   UpdateSQLStrings(Self);
 end;
 

@@ -83,6 +83,9 @@ type
   end;
 
   {** Imlements a string list with SQL statements. }
+
+  { TZSQLStrings }
+
   TZSQLStrings = class (TStringList)
   private
     FDataset: TObject;
@@ -90,13 +93,16 @@ type
     FStatements: TObjectList;
     FParams: TStringList;
     FMultiStatements: Boolean;
+    FParamChar: Char;
 
     function GetParamCount: Integer;
     function GetParamName(Index: Integer): string;
     function GetStatement(Index: Integer): TZSQLStatement;
     function GetStatementCount: Integer;
+    function GetTokenizer: IZTokenizer;
     procedure SetDataset(Value: TObject);
     procedure SetParamCheck(Value: Boolean);
+    procedure SetParamChar(Value: Char);
     procedure SetMultiStatements(Value: Boolean);
   protected
     procedure Changed; override;
@@ -109,6 +115,7 @@ type
     property Dataset: TObject read FDataset write SetDataset;
     property ParamCheck: Boolean read FParamCheck write SetParamCheck;
     property ParamCount: Integer read GetParamCount;
+    property ParamChar: Char read FParamChar write SetParamChar;
     property ParamNames[Index: Integer]: string read GetParamName;
     property StatementCount: Integer read GetStatementCount;
     property Statements[Index: Integer]: TZSQLStatement read GetStatement;
@@ -182,6 +189,7 @@ begin
   FParamCheck := True;
   FStatements := TObjectList.Create;
   FMultiStatements := True;
+  FParamChar :=':';
 end;
 
 {**
@@ -222,6 +230,34 @@ begin
   Result := FStatements.Count;
 end;
 
+function TZSQLStrings.GetTokenizer: IZTokenizer;
+var
+  Tokenizer: IZTokenizer;
+  Driver: IZDriver;
+begin
+  { Defines a SQL specific tokenizer object. }
+  Tokenizer := CommonTokenizer;
+  if FDataset is TZAbstractRODataset then
+  begin
+    if Assigned(TZAbstractRODataset(FDataset).Connection) then
+    begin
+      Driver := TZAbstractRODataset(FDataset).Connection.DbcDriver;
+      if Assigned(Driver) then
+        Tokenizer := Driver.GetTokenizer;
+    end;
+  end
+  else if FDataset is TZSQLProcessor then
+  begin
+    if Assigned(TZSQLProcessor(FDataset).Connection) then
+    begin
+      Driver := TZSQLProcessor(FDataset).Connection.DbcDriver;
+      if Assigned(Driver) then
+        Tokenizer := Driver.GetTokenizer;
+    end;
+  end;
+  Result:=Tokenizer;
+end;
+
 {**
   Gets a SQL statement by it's index.
   @param Index a SQL statement index.
@@ -241,6 +277,21 @@ begin
   if FParamCheck <> Value then
   begin
     FParamCheck := Value;
+    RebuildAll;
+  end;
+end;
+
+{**
+  Sets a new ParamChar value.
+  @param Value a new ParamCheck value.
+}
+procedure TZSQLStrings.SetParamChar(Value: Char);
+begin
+  if FParamChar <> Value then
+  begin
+    If not(GetTokenizer.GetCharacterState(Value) is TZSymbolstate) Then
+      raise EZDatabaseError.Create('Ongeldige ParamChar waarde : '+Value);
+    FParamChar := Value;
     RebuildAll;
   end;
 end;
@@ -295,7 +346,6 @@ var
   ParamIndices: TIntegerDynArray;
   ParamIndexCount: Integer;
   ParamName, SQL: string;
-  Driver: IZDriver;
   Tokenizer: IZTokenizer;
 
   procedure NextToken;
@@ -318,34 +368,14 @@ begin
     Exit;
 
   { Optimization for single query without parameters. }
-  if (not FParamCheck or (Pos(':', Text) = 0))
+  if (not FParamCheck or (Pos(FParamChar, Text) = 0))
     and (not FMultiStatements or (Pos(';', Text) = 0)) then
   begin
     FStatements.Add(TZSQLStatement.Create(Text, ParamIndices, FParams));
     Exit;
   end;
 
-  { Defines a SQL specific tokenizer object. }
-  Tokenizer := CommonTokenizer;
-  if FDataset is TZAbstractRODataset then
-  begin
-    if Assigned(TZAbstractRODataset(FDataset).Connection) then
-    begin
-      Driver := TZAbstractRODataset(FDataset).Connection.DbcDriver;
-      if Assigned(Driver) then
-        Tokenizer := Driver.GetTokenizer;
-    end;
-  end
-  else if FDataset is TZSQLProcessor then
-  begin
-    if Assigned(TZSQLProcessor(FDataset).Connection) then
-    begin
-      Driver := TZSQLProcessor(FDataset).Connection.DbcDriver;
-      if Assigned(Driver) then
-        Tokenizer := Driver.GetTokenizer;
-    end;
-  end;
-
+  Tokenizer:=GetTokenizer;
   Tokens := Tokenizer.TokenizeBufferToList(Text,
     [toSkipComments, toUnifyWhitespaces]);
   try
@@ -353,10 +383,10 @@ begin
     repeat
       NextToken;
       { Processes parameters. }
-      if ParamCheck and (TokenValue = ':') then
+      if ParamCheck and (TokenValue = FParamChar) then
       begin
         NextToken;
-        if (TokenType <> ttEOF) and (TokenValue <> ':') then
+        if (TokenType <> ttEOF) and (TokenValue <> FParamChar) then
         begin
           { Check for correct parameter type. }
           if not (TokenType in [ttWord, ttQuoted]) then

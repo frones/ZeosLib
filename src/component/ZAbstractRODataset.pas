@@ -177,6 +177,8 @@ type
     procedure SetSQL(Value: TStrings);
     function GetParamCheck: Boolean;
     procedure SetParamCheck(Value: Boolean);
+    function GetParamChar: Char;
+    procedure SetParamChar(Value: Char);
     procedure SetParams(Value: TParams);
     function GetShowRecordTypes: TUpdateStatusSet;
     procedure SetShowRecordTypes(Value: TUpdateStatusSet);
@@ -259,6 +261,8 @@ type
     property SQL: TStrings read GetSQL write SetSQL;
     property ParamCheck: Boolean read GetParamCheck write SetParamCheck
       default True;
+    property ParamChar: Char read GetParamChar write SetParamChar
+      default ':';
     property Params: TParams read FParams write SetParams;
     property ReadOnly: Boolean read GetReadOnly write SetReadOnly default True;
     property ShowRecordTypes: TUpdateStatusSet read GetShowRecordTypes
@@ -671,6 +675,25 @@ end;
 procedure TZAbstractRODataset.SetParamCheck(Value: Boolean);
 begin
   FSQL.ParamCheck := Value;
+  UpdateSQLStrings(Self);
+end;
+
+{**
+  Gets a parameters marker.
+  @return a parameter marker.
+}
+function TZAbstractRODataset.GetParamChar: Char;
+begin
+  Result := FSQL.ParamChar;
+end;
+
+{**
+  Sets a new parameter marker.
+  @param Value a parameter marker.
+}
+procedure TZAbstractRODataset.SetParamChar(Value: Char);
+begin
+  FSQL.ParamChar := Value;
   UpdateSQLStrings(Self);
 end;
 

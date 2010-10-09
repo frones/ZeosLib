@@ -81,6 +81,7 @@ type
     procedure TestQueryExecSql;
     procedure TestQueryUpdate;
     procedure TestPreparedStatement;
+    procedure TestParamChar;
     procedure TestReadOnlyQueryFilter;
     procedure TestQueryFilter;
     procedure TestQueryLocate;
@@ -351,6 +352,92 @@ begin
       ExecSQL;
       CheckEquals(1, RowsAffected);
     end;
+  finally
+    Query.Free;
+  end;
+end;
+
+{**
+  Check functionality ParamChar
+}
+procedure TZGenericTestDbcResultSet.TestParamChar;
+var
+  Query: TZQuery;
+  s:string;
+begin
+  Query := TZQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+
+    with Query do
+    begin
+      SQL.Text := 'DELETE FROM equipment where eq_id = ' + IntToStr(TEST_ROW_ID);
+      ExecSQL;
+    end;
+
+    {
+      The test for equipment table
+    }
+    with Query do
+    begin
+      { Create prepared statement for equipment table }
+      ParamChar := '&';
+      Sql.Text := 'INSERT INTO equipment (eq_id, eq_name, eq_type, eq_cost, eq_date, '
+          + ' woff_date) VALUES(:q_id, :eq_name, :eq_type, :eq_cost, :eq_date, :woff_date)';
+      CheckEquals(0, Params.Count);
+
+      Sql.Text := 'INSERT INTO equipment (eq_id, eq_name, eq_type, eq_cost, eq_date, '
+          + ' woff_date) VALUES(&q_id, &eq_name, &eq_type, &eq_cost, &eq_date, &woff_date)';
+      CheckEquals(6, Params.Count);
+
+      Params[0].DataType := ftInteger;
+      Params[1].DataType := ftString;
+      Params[2].DataType := ftSmallint;
+      Params[3].DataType := ftFloat;
+      Params[4].DataType := ftDate;
+      Params[5].DataType := ftDate;
+
+      Params[0].AsInteger := TEST_ROW_ID;
+      Params[1].AsString := '\xyz\'+#13;
+      Params[2].AsInteger := 7;
+      Params[3].AsFloat := 1234.567;
+      Params[4].AsDateTime := EncodeDate(1999, 8, 5);
+      Params[5].Value := Null;
+      ExecSQL;
+
+      CheckEquals(1, RowsAffected);
+
+      { check inserted row from equipment table }
+      SQL.Text := 'SELECT * FROM equipment WHERE eq_id = &eq_id';
+      CheckEquals(1, Query.Params.Count);
+      Params[0].DataType := ftInteger;
+      Params[0].AsInteger := TEST_ROW_ID;
+
+      Open;
+      CheckEquals(1, RecordCount);
+      CheckEquals(False, IsEmpty);
+      CheckEquals(TEST_ROW_ID, FieldByName('eq_id').AsInteger);
+      s:=FieldByName('eq_name').AsString;
+      CheckEquals('\xyz\'#13, s);
+      CheckEquals(7, FieldByName('eq_type').AsInteger);
+      CheckEquals(1234.567, FieldByName('eq_cost').AsFloat, 0.001);
+      CheckEquals(EncodeDate(1999, 8, 5), FieldByName('eq_date').AsDateTime);
+      CheckEquals(True, FieldByName('woff_date').IsNull);
+      Close;
+
+      { delete inserted row from equipment table }
+      SQL.TEXT := ''; // cleanup beacuse otherwise the previous select would be parsed
+                      // resulting in an error because there's a space immediately after the '*' symbol
+      ParamChar := '*';
+      SQL.Text := 'DELETE FROM equipment WHERE eq_id = *eq_id';
+
+      CheckEquals(1, Params.Count);
+      Params[0].DataType := ftInteger;
+      Params[0].AsInteger := TEST_ROW_ID;
+      ExecSQL;
+      CheckEquals(1, RowsAffected);
+    end;
+
   finally
     Query.Free;
   end;

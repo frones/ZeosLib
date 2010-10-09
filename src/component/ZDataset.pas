@@ -88,6 +88,7 @@ type
     property ReadOnly default False;
     property SQL;
     property ParamCheck;
+    property ParamChar;
     property Params;
     property FetchRow;      // added by Patyi
     property ShowRecordTypes;

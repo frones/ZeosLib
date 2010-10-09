@@ -63,7 +63,7 @@ uses
   Windows,
 {$ENDIF}
   Types, ZCompatibility, Classes, SysUtils, Contnrs, ZClasses, ZDbcIntfs,
-  ZDbcResultSet, ZDbcResultSetMetadata, ZVariant;
+  ZDbcResultSet, ZDbcResultSetMetadata, ZVariant, FmtBcd;
 
 type
 
@@ -158,6 +158,7 @@ type
     function GetFloat(ColumnIndex: Integer; var IsNull: Boolean): Single;
     function GetDouble(ColumnIndex: Integer; var IsNull: Boolean): Double;
     function GetBigDecimal(ColumnIndex: Integer; var IsNull: Boolean): Extended;
+    function GetBcd(ColumnIndex: Integer; var IsNull: Boolean): TBcd;
     function GetBytes(ColumnIndex: Integer; var IsNull: Boolean): TByteDynArray;
     function GetDate(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
     function GetTime(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
@@ -182,6 +183,7 @@ type
     procedure SetFloat(ColumnIndex: Integer; Value: Single);
     procedure SetDouble(ColumnIndex: Integer; Value: Double);
     procedure SetBigDecimal(ColumnIndex: Integer; Value: Extended);
+    procedure SetBcd(ColumnIndex: Integer; Value: TBcd);
     procedure SetPChar(ColumnIndex: Integer; Value: PAnsiChar);
     procedure SetString(ColumnIndex: Integer; Value: String);
     procedure SetUnicodeString(ColumnIndex: Integer; Value: WideString);
@@ -324,6 +326,8 @@ begin
       Result := SizeOf(Single);
     stDouble:
       Result := SizeOf(Double);
+    stBcd:
+      Result := SizeOf(TBcd);
     stBigDecimal:
       Result := SizeOf(Extended);
     stString:
@@ -956,6 +960,7 @@ begin
       stFloat: Result := FloatToSQLStr(GetFloat(ColumnIndex, IsNull));
       stDouble: Result := FloatToSQLStr(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := FloatToSQLStr(GetBigDecimal(ColumnIndex, IsNull));
+      stBcd : Result := BcdToStr(GetBcd(ColumnIndex, Isnull));
       {$IFDEF DELPHI12_UP}
       stString, stUnicodeString, stUnicodeStream: Result := GetUnicodeString(ColumnIndex, IsNull);
       {$ELSE}
@@ -1047,6 +1052,7 @@ begin
       stFloat: Result := GetFloat(ColumnIndex, IsNull) <> 0;
       stDouble: Result := GetDouble(ColumnIndex, IsNull) <> 0;
       stBigDecimal: Result := GetBigDecimal(ColumnIndex, IsNull) <> 0;
+      stBcd : Result := BcdToInteger(GetBcd(ColumnIndex, Isnull))<> 0;
       stString, stUnicodeString:
         begin
           TempStr := UpperCase(GetString(ColumnIndex, IsNull));
@@ -1090,6 +1096,7 @@ begin
       stFloat: Result := Trunc(GetFloat(ColumnIndex, IsNull));
       stDouble: Result := Trunc(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := Trunc(GetBigDecimal(ColumnIndex, IsNull));
+      stBcd : Result := BcdToInteger(GetBcd(ColumnIndex, Isnull),True);
       stString, stUnicodeString: Result := StrToIntDef(GetString(ColumnIndex, IsNull), 0);
     end;
     IsNull := False;
@@ -1128,6 +1135,7 @@ begin
       stFloat: Result := Trunc(GetFloat(ColumnIndex, IsNull));
       stDouble: Result := Trunc(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := Trunc(GetBigDecimal(ColumnIndex, IsNull));
+      stBcd : Result := BcdToInteger(GetBcd(ColumnIndex, Isnull),True);
       stString, stUnicodeString: Result := StrToIntDef(GetString(ColumnIndex, IsNull), 0);
     end;
     IsNull := False;
@@ -1167,6 +1175,7 @@ begin
       stFloat: Result := Trunc(GetFloat(ColumnIndex, IsNull));
       stDouble: Result := Trunc(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := Trunc(GetBigDecimal(ColumnIndex, IsNull));
+      stBcd : Result := BcdToInteger(GetBcd(ColumnIndex, Isnull),True);
       stString, stUnicodeString:
         Result := StrToIntDef(GetString(ColumnIndex, IsNull), 0);
     end;
@@ -1207,6 +1216,7 @@ begin
       stFloat: Result := Trunc(GetFloat(ColumnIndex, IsNull));
       stDouble: Result := Trunc(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := Trunc(GetBigDecimal(ColumnIndex, IsNull));
+      stBcd : Result := BcdToInteger(GetBcd(ColumnIndex, Isnull),True);
       stString, stUnicodeString:
         Result := StrToIntDef(GetString(ColumnIndex, IsNull), 0);
     end;
@@ -1247,6 +1257,7 @@ begin
         Result := PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stDouble: Result := GetDouble(ColumnIndex, IsNull);
       stBigDecimal: Result := GetBigDecimal(ColumnIndex, IsNull);
+      stBcd : Result := BcdToDouble(GetBcd(ColumnIndex, Isnull));
       stString, stUnicodeString:
         Result := SQLStrToFloatDef(GetString(ColumnIndex, IsNull), 0);
     end;
@@ -1284,11 +1295,11 @@ begin
       stInteger: Result := GetInt(ColumnIndex, IsNull);
       stLong: Result := GetLong(ColumnIndex, IsNull);
       stFloat: Result := GetFloat(ColumnIndex, IsNull);
-      stDouble:
-        Result := PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stDouble: Result :=
+        PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stBigDecimal: Result := GetBigDecimal(ColumnIndex, IsNull);
-      stString, stUnicodeString:
-        Result := SQLStrToFloatDef(GetString(ColumnIndex, IsNull), 0);
+      stBcd : Result := BcdToDouble(GetBcd(ColumnIndex, Isnull));
+      stString, stUnicodeString: Result := SQLStrToFloatDef(GetString(ColumnIndex, IsNull), 0);
     end;
     IsNull := False;
   end
@@ -1328,8 +1339,53 @@ begin
       stDouble: Result := GetDouble(ColumnIndex, IsNull);
       stBigDecimal:
         Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stBcd : Result := BcdToDouble(GetBcd(ColumnIndex, Isnull));
       stString, stUnicodeString:
         Result := SQLStrToFloatDef(GetString(ColumnIndex, IsNull), 0);
+    end;
+    IsNull := False;
+  end
+  else
+    IsNull := True;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>TBcd</code>.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZRowAccessor.GetBcd(ColumnIndex: Integer;
+  var IsNull: Boolean): TBcd;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stBcd);
+{$ENDIF}
+  Result := NullBcd;
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
+  begin
+    case FColumnTypes[ColumnIndex - 1] of
+      stBoolean:
+        if GetBoolean(ColumnIndex, IsNull) then
+          Result := IntegerToBcd(1)
+        else
+          Result := IntegerToBcd(0);
+      stByte: Result := IntegerToBcd(GetByte(ColumnIndex, IsNull));
+      stShort: Result := IntegerToBcd(GetShort(ColumnIndex, IsNull));
+      stInteger: Result := IntegerToBcd(GetInt(ColumnIndex, IsNull));
+      stLong: Result := IntegerToBcd(GetLong(ColumnIndex, IsNull));
+      stFloat: Result := DoubleToBcd(GetFloat(ColumnIndex, IsNull));
+      stDouble: Result := DoubleToBcd(GetDouble(ColumnIndex, IsNull));
+      stBigDecimal:
+        Result := DoubleToBcd(GetBigDecimal(ColumnIndex, IsNull));
+      stBcd:
+        Result := PBcd(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stString, stUnicodeString:
+        if not TryStrToBcd(GetString(ColumnIndex, IsNull),Result) then
+          Result := NullBcd;
     end;
     IsNull := False;
   end
@@ -1984,6 +2040,7 @@ begin
         PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
       end;
     stBigDecimal: SetBigDecimal(ColumnIndex, Value);
+    stBcd: SetBcd(ColumnIndex, DoubleToBcd(Value));
     stString, stUnicodeString: SetString(ColumnIndex, FloatToSQLStr(Value));
   end;
 end;
@@ -2018,6 +2075,39 @@ begin
         PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
       end;
     stString, stUnicodeString: SetString(ColumnIndex, FloatToSQLStr(Value));
+  end;
+end;
+
+{**
+  Sets the designated column with a <code>double</code> value.
+  The <code>SetXXX</code> methods are used to Set column values in the
+  current row or the insert row.  The <code>SetXXX</code> methods do not
+  Set the underlying database; instead the <code>SetRow</code> or
+  <code>insertRow</code> methods are called to Set the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZRowAccessor.SetBcd(ColumnIndex: Integer; Value: TBcd);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stBcd);
+{$ENDIF}
+  case FColumnTypes[ColumnIndex - 1] of
+    stBoolean: SetBoolean(ColumnIndex, BcdToInteger(Value) <> 0);
+    stByte: SetByte(ColumnIndex, BcdToInteger(Value,True));
+    stShort: SetShort(ColumnIndex, BcdToInteger(Value,True));
+    stInteger: SetInt(ColumnIndex, BcdToInteger(Value,True));
+    stLong: SetLong(ColumnIndex, BcdToInteger(Value,True));
+    stFloat: SetFloat(ColumnIndex, BcdToDouble(Value));
+    stDouble: SetDouble(ColumnIndex, BcdToDouble(Value));
+    stBcd:
+      begin
+        FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
+        PBcd(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+      end;
+    stBigDecimal: SetBigDecimal(ColumnIndex, BcdToDouble(Value));
+    stString, stUnicodeString: SetString(ColumnIndex, BcdToStr(Value));
   end;
 end;
 

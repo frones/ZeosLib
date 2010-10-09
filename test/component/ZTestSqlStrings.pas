@@ -70,6 +70,7 @@ type
   published
     procedure TestStatements;
     procedure TestParams;
+    procedure TestParamChar;
     procedure TestUncompleted;
  end;
 
@@ -116,6 +117,41 @@ begin
 
   SQLStrings.Clear;
   CheckEquals(0, SQLStrings.ParamCount);
+end;
+
+{**
+  Runs a test for SQL parameters delimited by non standard parameter marker.
+}
+procedure TZTestSQLStringsCase.TestParamChar;
+var
+  SQLScript: string;
+begin
+  SQLScript := 'INSERT INTO department VALUES (:ID, :NAME, :NEW_ADDRESS);'
+    + #10 + 'UPDATE department SET dep_name=:NEW_NAME, dep_address=:NEW_ADDRESS'
+    + ' WHERE id_dep=:Id AND dep_name=:Name;';
+  SQLStrings.Text := SQLScript;
+  CheckEquals(4, SQLStrings.ParamCount);
+  SQLStrings.ParamChar := '&';
+  CheckEquals(0, SQLStrings.ParamCount);
+
+  SQLScript := 'INSERT INTO department VALUES (&ID, &NAME, &NEW_ADDRESS);'
+    + #10 + 'UPDATE department SET dep_name=&NEW_NAME, dep_address=&NEW_ADDRESS'
+    + ' WHERE id_dep=&Id AND dep_name=&Name;';
+  SQLStrings.Text := SQLScript;
+  CheckEquals(4, SQLStrings.ParamCount);
+  CheckEquals('ID', SQLStrings.ParamNames[0]);
+  CheckEquals('NAME', SQLStrings.ParamNames[1]);
+  CheckEquals('NEW_ADDRESS', SQLStrings.ParamNames[2]);
+  CheckEquals('NEW_NAME', SQLStrings.ParamNames[3]);
+
+  Try
+    // Failure expected when ParamChar isn't seen as a Symbol by the Tokenizer
+    // U is interpreted as the start of a normal word by all tokenizers
+    SQLStrings.ParamChar := 'U';
+    Fail('Wrong behaviour when setting ParamChar to U');
+    except
+      // Ignore.
+  end;
 end;
 
 {**
