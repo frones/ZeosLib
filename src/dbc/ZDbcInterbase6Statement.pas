@@ -616,10 +616,20 @@ begin
   with FIBConnection do
   begin
     try
-      BindInParameters;
+      BindInParameters;     
 
-      GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
-            GetDialect, FParamSQLData.GetData, nil);
+      if (StatementType = stSelect) then     //AVZ Get many rows - only need to use execute not execute2
+      begin
+        GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle, @StmtHandle,
+          GetDialect, FParamSQLData.GetData);
+      end
+        else
+      begin
+        CursorName := 'ExecProc'; //AVZ - Need a way to return one row so we give the cursor a name
+        GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
+          GetDialect, FParamSQLData.GetData, nil); //AVZ - Must check this nil value on last param - may be needed to return data
+      end;
+
       CheckInterbase6Error(SQL);
 
       LastUpdateCount := GetAffectedRows(GetPlainDriver, StmtHandle, StatementType);
@@ -634,12 +644,11 @@ begin
       if (StatementType in [stSelect, stExecProc])
         and (SQLData.GetFieldCount <> 0) then
       begin
-        Cursor := RandomString(12);
         LastResultSet := GetCachedResultSet(SQL, Self,
-          TZInterbase6ResultSet.Create(Self, SQL, StmtHandle, Cursor,
-            SQLData, nil, FCachedBlob));
+        TZInterbase6ResultSet.Create(Self, SQL, StmtHandle, Cursor,
+        SQLData, nil, FCachedBlob));
       end
-      else
+        else
       begin
         LastResultSet := nil;
       end;
@@ -650,6 +659,10 @@ begin
     except
       on E: Exception do
       begin
+       if (CursorName <> '') then
+       begin
+         StmtHandle := nil;
+       end;
        FreeStatement(GetPlainDriver, StmtHandle, DSQL_close);
        raise;
       end;
@@ -717,7 +730,12 @@ begin
     except
       on E: Exception do
       begin
-       FreeStatement(GetPlainDriver, StmtHandle, DSQL_close);
+        //The cursor will be already closed for exec2
+        if (CursorName = 'ExecProc') then
+        begin
+          StmtHandle := nil;
+        end;
+        FreeStatement(GetPlainDriver, StmtHandle, DSQL_close);
         raise;
       end;
     end;
@@ -998,7 +1016,7 @@ begin
     except
       on E: Exception do
       begin
-        FreeStatement(GetPlainDriver, StmtHandle, DSQL_close);
+        FreeStatement(GetPlainDriver, StmtHandle, DSQL_unprepare);
         raise;
       end;
     end;

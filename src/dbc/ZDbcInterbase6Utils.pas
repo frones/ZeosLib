@@ -937,7 +937,7 @@ procedure FreeStatement(PlainDriver: IZInterbasePlainDriver; StatementHandle: TI
 var
   StatusVector: TARRAY_ISC_STATUS;
 begin
-  if StatementHandle <> nil then
+  if StatementHandle <> nil  then
   begin
     PlainDriver.isc_dsql_free_statement(@StatusVector, @StatementHandle, Options);
     CheckInterbase6Error(PlainDriver, StatusVector);
