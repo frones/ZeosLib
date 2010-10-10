@@ -2224,7 +2224,7 @@ end;
 procedure TZAbstractRODataset.InternalPrepare;
 begin
   CheckSQLQuery;
-  CheckInactive;
+  //CheckInactive;  AVZ - Need to check this
   CheckConnected;
 
   Connection.ShowSQLHourGlass;

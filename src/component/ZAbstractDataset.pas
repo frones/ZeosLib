@@ -457,7 +457,7 @@ begin
       FieldByName(FSequenceField).Value := FSequence.GetNextValue;
   end;
 
-  inherited;  //AVZ - Firebird defaults come through when this is commented out
+  //inherited;  //AVZ - Firebird defaults come through when this is commented out
 
   if not GetActiveBuffer(RowBuffer) then
     raise EZDatabaseError.Create(SInternalError);

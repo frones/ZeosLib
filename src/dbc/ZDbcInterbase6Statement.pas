@@ -626,8 +626,16 @@ begin
         else
       begin
         CursorName := 'ExecProc'; //AVZ - Need a way to return one row so we give the cursor a name
-        GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
-          GetDialect, FParamSQLData.GetData, nil); //AVZ - Must check this nil value on last param - may be needed to return data
+        if (SQLData = nil) then
+        begin
+          GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
+            GetDialect, FParamSQLData.GetData, nil); //not expecting a result
+        end
+          else
+        begin
+          GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
+            GetDialect, FParamSQLData.GetData, SQLData.GetData); //expecting a result
+        end;  
       end;
 
       CheckInterbase6Error(SQL);
@@ -707,8 +715,16 @@ begin
         else
       begin
         CursorName := 'ExecProc'; //AVZ - Need a way to return one row so we give the cursor a name
-        GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
-          GetDialect, FParamSQLData.GetData, SQLData.GetData);
+        if (SQLData = nil) then
+        begin
+          GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
+            GetDialect, FParamSQLData.GetData, nil); //not expecting a result
+        end
+          else
+        begin
+          GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
+            GetDialect, FParamSQLData.GetData, SQLData.GetData); //expecting a result
+        end;  
       end;
 
       CheckInterbase6Error(SQL);
