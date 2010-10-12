@@ -616,10 +616,28 @@ begin
   with FIBConnection do
   begin
     try
-      BindInParameters;
+      BindInParameters;     
 
-      GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
-            GetDialect, FParamSQLData.GetData, nil);
+      if (StatementType = stSelect) then     //AVZ Get many rows - only need to use execute not execute2
+      begin
+        GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle, @StmtHandle,
+          GetDialect, FParamSQLData.GetData);
+      end
+        else
+      begin
+        CursorName := 'ExecProc'; //AVZ - Need a way to return one row so we give the cursor a name
+        if (SQLData = nil) then
+        begin
+          GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
+            GetDialect, FParamSQLData.GetData, nil); //not expecting a result
+        end
+          else
+        begin
+          GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
+            GetDialect, FParamSQLData.GetData, SQLData.GetData); //expecting a result
+        end;  
+      end;
+
       CheckInterbase6Error(SQL);
 
       LastUpdateCount := GetAffectedRows(GetPlainDriver, StmtHandle, StatementType);
@@ -634,12 +652,11 @@ begin
       if (StatementType in [stSelect, stExecProc])
         and (SQLData.GetFieldCount <> 0) then
       begin
-        Cursor := RandomString(12);
         LastResultSet := GetCachedResultSet(SQL, Self,
-          TZInterbase6ResultSet.Create(Self, SQL, StmtHandle, Cursor,
-            SQLData, nil, FCachedBlob));
+        TZInterbase6ResultSet.Create(Self, SQL, StmtHandle, Cursor,
+        SQLData, nil, FCachedBlob));
       end
-      else
+        else
       begin
         LastResultSet := nil;
       end;
@@ -650,6 +667,10 @@ begin
     except
       on E: Exception do
       begin
+       if (CursorName <> '') then
+       begin
+         StmtHandle := nil;
+       end;
        FreeStatement(GetPlainDriver, StmtHandle, DSQL_close);
        raise;
       end;
@@ -686,12 +707,29 @@ begin
     try
       BindInParameters;
 
-      GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
-        GetDialect, FParamSQLData.GetData, nil);
+      if (StatementType = stSelect) then     //AVZ Get many rows - only need to use execute not execute2
+      begin
+        GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle, @StmtHandle,
+          GetDialect, FParamSQLData.GetData);
+      end
+        else
+      begin
+        CursorName := 'ExecProc'; //AVZ - Need a way to return one row so we give the cursor a name
+        if (SQLData = nil) then
+        begin
+          GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
+            GetDialect, FParamSQLData.GetData, nil); //not expecting a result
+        end
+          else
+        begin
+          GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
+            GetDialect, FParamSQLData.GetData, SQLData.GetData); //expecting a result
+        end;  
+      end;
+
       CheckInterbase6Error(SQL);
 
-      if (StatementType in [stSelect, stExecProc])
-        and (SQLData.GetFieldCount <> 0) then
+      if (StatementType in [stSelect, stExecProc]) and (SQLData.GetFieldCount <> 0) then
       begin
         if CursorName <> '' then
         begin
@@ -701,15 +739,19 @@ begin
           CheckInterbase6Error(SQL);
         end;
 
-        Result := GetCachedResultSet(SQL, Self,
-          TZInterbase6ResultSet.Create(Self, SQL, StmtHandle, Cursor, SQLData, nil, FCachedBlob));
+        Result := GetCachedResultSet(SQL, Self, TZInterbase6ResultSet.Create(Self, SQL, StmtHandle, Cursor, SQLData, nil, FCachedBlob));
       end
       else
         raise EZSQLException.Create(SCanNotRetrieveResultSetData);
     except
       on E: Exception do
       begin
-       FreeStatement(GetPlainDriver, StmtHandle, DSQL_close);
+        //The cursor will be already closed for exec2
+        if (CursorName = 'ExecProc') then
+        begin
+          StmtHandle := nil;
+        end;
+        FreeStatement(GetPlainDriver, StmtHandle, DSQL_close);
         raise;
       end;
     end;
@@ -959,12 +1001,21 @@ begin
       PrepareParameters(GetPlainDriver, ProcSql, InParamValues, InParamTypes,
         InParamCount, GetDialect, StmtHandle, FParamSQLData);
 
-      GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
-        GetDialect, FParamSQLData.GetData, nil);
+      if (StatementType = stSelect) then     //AVZ Get many rows - only need to use execute not execute2
+      begin
+        GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle, @StmtHandle,
+          GetDialect, FParamSQLData.GetData);
+      end
+        else
+      begin
+        CursorName := 'ExecProc'; //AVZ - Need a way to return one row so we give the cursor a name
+        GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
+          GetDialect, FParamSQLData.GetData, SQLData.GetData);
+      end;
+
       CheckInterbase6Error(ProcSql);
 
-      if (StatementType in [stSelect, stExecProc])
-        and (SQLData.GetFieldCount <> 0) then
+      if (StatementType in [stSelect, stExecProc]) and (SQLData.GetFieldCount <> 0) then
       begin
         if CursorName <> '' then
         begin
@@ -973,8 +1024,7 @@ begin
           CheckInterbase6Error(ProcSql);
         end;  
 
-        Result := GetCachedResultSet(ProcSql, Self,
-          TZInterbase6ResultSet.Create(Self, ProcSql, StmtHandle, Cursor, SQLData, nil, FCachedBlob));
+        Result := GetCachedResultSet(ProcSql, Self, TZInterbase6ResultSet.Create(Self, ProcSql, StmtHandle, Cursor, SQLData, nil, FCachedBlob));
       end;
           
       { Logging SQL Command }
@@ -982,7 +1032,7 @@ begin
     except
       on E: Exception do
       begin
-        FreeStatement(GetPlainDriver, StmtHandle, DSQL_close);
+        FreeStatement(GetPlainDriver, StmtHandle, DSQL_unprepare);
         raise;
       end;
     end;
@@ -1029,7 +1079,9 @@ begin
 
   with FIBConnection do
   begin
+
     TrimInParameters;
+
     ProcSql := GetProcedureSql(False);
     SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle);
     try
@@ -1058,7 +1110,8 @@ begin
       { Logging SQL Command }
       DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SQL);
     finally
-        FreeStatement(GetPlainDriver, StmtHandle, DSQL_close);
+        FreeStatement(GetPlainDriver, StmtHandle, DSQL_unprepare); //AVZ -- unprepare the statement - not close it
+
     end;
   end;
 end;
@@ -1172,7 +1225,7 @@ begin
     Exit;
   InParamTypes := ParamTypes;
   InParamValues := ParamValues;
-  SetInParamCount(ParamCount);
+  SetInParamCount(ParamCount); //AVZ
 end;
 
 end.

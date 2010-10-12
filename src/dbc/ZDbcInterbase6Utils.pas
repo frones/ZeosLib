@@ -469,7 +469,7 @@ var
   CachedResultSet: TZCachedResultSet;
 begin
   if (Statement.GetResultSetConcurrency <> rcReadOnly)
-    or (Statement.GetResultSetType <> rtForwardOnly) then
+     or (Statement.GetResultSetType <> rtForwardOnly) then
   begin
     CachedResolver  := TZInterbase6CachedResolver.Create(Statement,  NativeResultSet.GetMetadata);
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, CachedResolver);
@@ -937,7 +937,7 @@ procedure FreeStatement(PlainDriver: IZInterbasePlainDriver; StatementHandle: TI
 var
   StatusVector: TARRAY_ISC_STATUS;
 begin
-  if StatementHandle <> nil then
+  if StatementHandle <> nil  then
   begin
     PlainDriver.isc_dsql_free_statement(@StatusVector, @StatementHandle, Options);
     CheckInterbase6Error(PlainDriver, StatusVector);
@@ -2370,7 +2370,8 @@ begin
       SQL_TEXT      : EncodeString(SQL_TEXT, Index, Value);
       SQL_VARYING   : EncodeString(SQL_VARYING, Index, Value);
       SQL_LONG: PInteger(sqldata)^ := StrToInt(Value);
-      SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, Value); 
+      SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, Value);
+      SQL_INT64     :  PInt64(sqldata)^ := StrToInt(Value); //AVZ - INT64 value was not recognized
       SQL_BLOB:
         begin
           Stream := TStringStream.Create(Value);

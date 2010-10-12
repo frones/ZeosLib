@@ -413,6 +413,7 @@ type
     function GetSymbolState: TZSymbolState;
     function GetWhitespaceState: TZWhitespaceState;
     function GetWordState: TZWordState;
+    function GetCharacterState(StartChar: Char): TZTokenizerState;
   end;
 
   {** Implements a default tokenizer object. }

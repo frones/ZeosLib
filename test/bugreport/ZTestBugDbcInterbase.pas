@@ -90,7 +90,7 @@ uses ZTestCase, ZTestConsts;
 
 function TZTestDbcInterbaseBugReport.GetSupportedProtocols: string;
 begin
-  Result := 'interbase-5,interbase-6,firebird-1.0,firebird-1.5,firebird-2.0,firebird-2.1,firebirdd-1.5,firebirdd-2.0,firebirdd-2.1';
+  Result := 'interbase-5,interbase-6,firebird-1.0,firebird-1.5,firebird-2.0,firebird-2.1,firebird-2.5,firebirdd-1.5,firebirdd-2.0,firebirdd-2.1,firebirdd-2.5';
 end;
 
 procedure TZTestDbcInterbaseBugReport.SetUp;

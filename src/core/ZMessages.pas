@@ -150,6 +150,7 @@ resourcestring
   SInvalidOperationInTrans = 'Operação inválida no modo de transação explícita';
   SIncorrectSymbol = 'Símbolo incorreto na lista de campos "%s".';
   SIncorrectToken = 'Sinal incorreto seguido por ":"';
+  SIncorrectParamChar = 'TRANSLATE : Invalid value for ParamChar';
 
   SSelectedTransactionIsolation = 'O nível selecionado do isolamento da transação não é suportado';
   SDriverNotSupported = 'Driver não suportado %s';
@@ -313,6 +314,7 @@ resourcestring
   SInvalidOperationInTrans = 'Ongeldige operatie in explicit transaction mode';
   SIncorrectSymbol = 'Ongeldig symbool in veld lijst "%s".';
   SIncorrectToken = 'Ongeldig teken gevolgd door ":"';
+  SIncorrectParamChar = 'TRANSLATE : Invalid value for ParamChar';
 
   SSelectedTransactionIsolation = 'Geselecteerd transactie isolatie niveau niet ondersteund';
   SDriverNotSupported = 'Driver niet ondersteund %s';
@@ -478,6 +480,7 @@ resourcestring
   SInvalidOperationInTrans = 'Ungültige Operatio im Zustand einer expliziten Transaktion';
   SIncorrectSymbol = 'Falsches Symbol in der Feldliste "%s".';
   SIncorrectToken = 'Falsches Token gefolgt von ":"';
+  SIncorrectParamChar = 'TRANSLATE : Invalid value for ParamChar';
 
   SSelectedTransactionIsolation = 'Der gewählte Transaktions-Isolationslevel wird nicht unterstützt';
   SDriverNotSupported = 'Der Treiber wird nicht unterstützt: %s';
@@ -641,6 +644,7 @@ resourcestring
   SInvalidOperationInTrans = 'Operación inválida en modo de transacción explícita';
   SIncorrectSymbol = 'Símbolo incorrecto en la lista de campos "%s".';
   SIncorrectToken = 'Token incorrecto seguido de ":"';
+  SIncorrectParamChar = 'TRANSLATE : Invalid value for ParamChar';
 
   SSelectedTransactionIsolation = 'El Nivel seleccionado de aislamiento de transacción no está soportado';
   SDriverNotSupported = 'Controlador %s no soportado';
@@ -807,6 +811,7 @@ resourcestring
   SInvalidOperationInTrans = 'Operaşie invalidã în modul explicit transaction';
   SIncorrectSymbol = 'Simbol incorect în lista de câmpuri  "%s".';
   SIncorrectToken = 'Incorect token dupã ":"';
+  SIncorrectParamChar = 'TRANSLATE : Invalid value for ParamChar';
 
   SSelectedTransactionIsolation = 'Selected transaction isolation level is not supported';
   SDriverNotSupported = 'Driver nesuportat %s';
@@ -968,6 +973,7 @@ resourcestring
   SInvalidOperationInTrans = 'Operasi tidak valid pada mode explicit transaction';
   SIncorrectSymbol = 'Simbol salah pada daftar field "%s".';
   SIncorrectToken = 'Token salah setelah ":"';
+  SIncorrectParamChar = 'TRANSLATE : Invalid value for ParamChar';
 
   SSelectedTransactionIsolation = 'Level Isolasi Transaksi terpilih tidak didukung';
   SDriverNotSupported = 'Driver tidak mendukung %s';
@@ -1132,6 +1138,7 @@ resourcestring
   SInvalidOperationInTrans                 = 'Íåâåğíàÿ îïåğàöèÿ â ğàìêàõ òğàíçàíêöèè';
   SIncorrectSymbol                         = 'Íåâåğíûé ñèìâîë â ñïèñêå ïîëåé "%s".';
   SIncorrectToken                          = 'Íåâåğíûé çíàê ïîñëå ":"';
+  SIncorrectParamChar = 'TRANSLATE : Invalid value for ParamChar';
 
   SSelectedTransactionIsolation            = 'Âûáğàííûé óğîâåíü èçîëÿöèè òğàíçàíêöèè íå ïîääåğæèâàåòñÿ';
   SDriverNotSupported                      = 'Äğàéâåğ íå ïîääåğæèâàåòñÿ %s';
@@ -1297,6 +1304,7 @@ resourcestring
   SInvalidOperationInTrans = 'Nesprávná operace v explicitním transakèním módu';
   SIncorrectSymbol = 'Nesprávnı symbol v seznamu poloek "%s".';
   SIncorrectToken = 'Za ":" následuje nesprávnı znak';
+  SIncorrectParamChar = 'TRANSLATE : Invalid value for ParamChar';
 
   SSelectedTransactionIsolation = 'Vybraná míra izolace transakcí není podporována';
   SDriverNotSupported = 'Ovladaè %s není podporován';
@@ -1465,6 +1473,7 @@ resourcestring
   SInvalidOperationInTrans = 'B³êdna operacja w trybie transakcji';
   SIncorrectSymbol = 'B³êdny symbol w liœcie pól "%s".';
   SIncorrectToken = 'B³êdny wyraz za ":"';
+  SIncorrectParamChar = 'TRANSLATE : Invalid value for ParamChar';
 
   SSelectedTransactionIsolation = 'Wybrany poziom izolacji transakcji nie jest obs³ugiwany';
   SDriverNotSupported = 'Nie obs³ugiwany sterownik %s';
@@ -1630,6 +1639,7 @@ resourcestring
   SInvalidOperationInTrans = 'Invalid operation in explicit transaction mode';
   SIncorrectSymbol = 'Incorrect symbol in field list "%s".';
   SIncorrectToken = 'Incorrect token followed by ":"';
+  SIncorrectParamChar = 'Invalid value for ParamChar';
 
   SSelectedTransactionIsolation = 'Selected transaction isolation level is not supported';
   SDriverNotSupported = 'Driver not supported %s';
@@ -1728,4 +1738,7 @@ resourcestring
 implementation
 
 end.
+
+
+
 

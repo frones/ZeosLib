@@ -178,7 +178,7 @@ constructor TZInterbase6ResultSet.Create(Statement: IZStatement; SQL: string;
   SqlData: IZResultSQLDA; ParamsSqlData: IZParamsSQLDA; CachedBlob: boolean);
 begin
   inherited Create(Statement, SQL, nil);
-
+  
   FFetchStat := 0;
   FSqlData := SqlData;
   FCursorName := CursorName;
@@ -556,9 +556,17 @@ begin
   begin
     with FIBConnection do
     begin
-      FFetchStat := GetPlainDriver.isc_dsql_fetch(@StatusVector,
-        @FStmtHandle, GetDialect, FSqlData.GetData);
-      CheckInterbase6Error(GetPlainDriver, StatusVector);
+      if (FCursorName = '') then  //AVZ - Test for ExecProc - this is for multiple rows
+      begin
+        FFetchStat := GetPlainDriver.isc_dsql_fetch(@StatusVector,
+          @FStmtHandle, GetDialect, FSqlData.GetData);
+      end
+        else
+      begin     //AVZ - Cursor name has a value therefore the result set already exists
+        FFetchStat := 1;
+        Result := True;
+        FStmtHandle := nil;
+      end;
     end;
 
     if FFetchStat = 0 then

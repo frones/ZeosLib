@@ -63,6 +63,9 @@ uses
 type
 
   {** Implements a test case for class TZSqlProcessor. }
+
+  { TZTestSQLProcessorCase }
+
   TZTestSQLProcessorCase = class(TZComponentPortableSQLTestCase)
   private
     FConnection: TZConnection;
@@ -76,6 +79,7 @@ type
     procedure TestEmptyLineProcessor;
     procedure TestSetTermProcessor;
     procedure TestUncompleted;
+    procedure TestParamChar;
   end;
 
   {** Implements a test case for class TZSqlProcessor. }
@@ -264,6 +268,58 @@ begin
   CheckEquals(2, FProcessor.StatementCount);
   CheckEquals('SELECT * FROM people', FProcessor.Statements[0]);
   CheckEquals('SELECT * FROM cargo', FProcessor.Statements[1]);
+end;
+
+procedure TZTestSQLProcessorCase.TestParamChar;
+var
+  Line: string;
+  Delimiter: string;
+  ParamChar: string;
+  Comment: string;
+  Text: string;
+  NewLine: string;
+begin
+  CheckNotNull(FProcessor);
+//  FProcessor.DelimiterType = sdDefault;
+
+  NewLine := LineEnding;
+  Line := '/AAA/ BBB CCC';
+  Comment := '/* Comment... */';
+  Delimiter := ';';
+  ParamChar := ':';
+
+  Text := Comment + NewLine + Line + Delimiter + Line;
+  FProcessor.Script.Text := Text;
+  FProcessor.ParamCheck := true;
+  FProcessor.Parse;
+
+  CheckEquals(2, FProcessor.StatementCount);
+  CheckEquals(Comment + NewLine + Line, FProcessor.Statements[0]);
+  CheckEquals(Line, FProcessor.Statements[1]);
+  CheckEquals(0, FProcessor.Params.Count);
+
+  Text := Comment + NewLine + Line + ' :a' + Delimiter + Line;
+  FProcessor.Script.Text := Text;
+  FProcessor.Parse;
+  CheckEquals(2, FProcessor.StatementCount);
+  CheckEquals(Comment + NewLine + Line + ' :a', FProcessor.Statements[0]);
+  CheckEquals(Line, FProcessor.Statements[1]);
+  CheckEquals(1, FProcessor.Params.Count);
+  CheckEquals('a', FProcessor.Params[0].Name);;
+
+  FProcessor.ParamChar := '&';
+  FProcessor.Parse;
+  CheckEquals(2, FProcessor.StatementCount);
+  CheckEquals(0, FProcessor.Params.Count);
+
+  Text := Comment + NewLine + Line + ' &b' + Delimiter + Line;
+  FProcessor.Script.Text := Text;
+  FProcessor.Parse;
+  CheckEquals(2, FProcessor.StatementCount);
+  CheckEquals(Comment + NewLine + Line + ' &b', FProcessor.Statements[0]);
+  CheckEquals(Line, FProcessor.Statements[1]);
+  CheckEquals(1, FProcessor.Params.Count);
+  CheckEquals('b', FProcessor.Params[0].Name);;
 end;
 
 { TZTestSQLProcessorMysqlCase }

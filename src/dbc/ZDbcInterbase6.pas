@@ -211,17 +211,18 @@ end;
 }
 constructor TZInterbase6Driver.Create;
 begin
-  SetLength(FPlainDrivers,8);
+  SetLength(FPlainDrivers,10);
   FPlainDrivers[0] := TZInterbase6PlainDriver.Create;
   FPlainDrivers[1] := TZFirebird10PlainDriver.Create;
   FPlainDrivers[2] := TZFirebird15PlainDriver.Create;
   FPlainDrivers[3] := TZFirebird20PlainDriver.Create;
   FPlainDrivers[4] := TZFirebird21PlainDriver.Create;
+  FPlainDrivers[5] := TZFirebird25PlainDriver.Create;
   // embedded drivers
-  FPlainDrivers[5] := TZFirebirdD15PlainDriver.Create;
-  FPlainDrivers[6] := TZFirebirdD20PlainDriver.Create;
-  FPlainDrivers[7] := TZFirebirdD21PlainDriver.Create;
-
+  FPlainDrivers[6] := TZFirebirdD15PlainDriver.Create;
+  FPlainDrivers[7] := TZFirebirdD20PlainDriver.Create;
+  FPlainDrivers[8] := TZFirebirdD21PlainDriver.Create;
+  FPlainDrivers[9] := TZFirebirdD25PlainDriver.Create;
 end;
 
 {**
