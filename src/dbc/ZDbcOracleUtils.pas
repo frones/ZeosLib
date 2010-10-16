@@ -433,7 +433,11 @@ begin
         SQLT_STR:
           begin
             StrLCopy(PAnsiChar(CurrentVar.Data),
+{$IFDEF DELPHI12_UP}
+                PAnsiChar(UTF8String(DefVarManager.GetAsString(Values[I]))), 1024);
+{$ELSE}
                 PAnsiChar(DefVarManager.GetAsString(Values[I])), 1024);
+{$ENDIF}
           end;
         SQLT_TIMESTAMP:
           begin
