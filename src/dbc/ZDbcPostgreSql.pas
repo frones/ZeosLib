@@ -782,7 +782,7 @@ var
   SQL: PChar;
   TypeCode, BaseTypeCode: Integer;
   TypeName: string;
-  LastVersion: boolean;
+  LastVersion, IsEnum: boolean;
 begin
   if Closed then Open;
 
@@ -798,8 +798,8 @@ begin
     if LastVersion then
       SQL := 'SELECT oid, typname FROM pg_type WHERE oid<10000'
     else
-      SQL := 'SELECT oid, typname, typbasetype FROM pg_type'
-        + ' WHERE oid<10000 OR typbasetype<>0 ORDER BY oid';
+      SQL := 'SELECT oid, typname, typbasetype,typtype FROM pg_type' + 
+             ' WHERE (typtype = ''b'' and oid < 10000) OR typtype = ''p'' OR typtype = ''e'' OR typbasetype<>0 ORDER BY oid'; 
 
     QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL);
     CheckPostgreSQLError(Self, FPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
@@ -810,7 +810,11 @@ begin
     begin
       TypeCode := StrToIntDef(StrPas(
         FPlainDriver.GetValue(QueryHandle, I, 0)), 0);
-      TypeName := StrPas(FPlainDriver.GetValue(QueryHandle, I, 1));
+      isEnum := LowerCase(StrPas(FPlainDriver.GetValue(QueryHandle, I, 3))) = 'e'; 
+      if isEnum then 
+        TypeName := 'enum' 
+      else 
+        TypeName := StrPas(FPlainDriver.GetValue(QueryHandle, I, 1)); 
 
       if LastVersion then
         BaseTypeCode := 0

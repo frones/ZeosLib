@@ -330,12 +330,12 @@ begin
   Variable.DataSize := DataSize;
   Length := 0;
   case Variable.ColType of
-    stByte, stShort, stInteger, stLong:
+    stByte, stShort, stInteger:
       begin
         Variable.TypeCode := SQLT_INT;
         Length := SizeOf(LongInt);
       end;
-    stFloat, stDouble:
+    stFloat, stDouble, stLong:
       begin
         Variable.TypeCode := SQLT_FLT;
         Length := SizeOf(Double);
@@ -439,7 +439,7 @@ begin
             Status := PlainDriver.DateTimeConstruct(
               OracleConnection.GetConnectionHandle,
               ErrorHandle, PPOCIDescriptor(CurrentVar.Data)^,
-              Year, Month, Day, Hour, Min, Sec, MSec, nil, 0);
+              Year, Month, Day, Hour, Min, Sec, MSec * 1000000, nil, 0);
             CheckOracleError(PlainDriver, ErrorHandle, Status, lcOther, '');
           end;
         SQLT_BLOB, SQLT_CLOB:
@@ -566,8 +566,8 @@ begin
     Result := stUnicodeString
   else if TypeName = 'FLOAT' then
     Result := stDouble
-  else if TypeName = 'DATE' then
-    Result := stDate
+  else if TypeName = 'DATE' then  {precission - 1 sec, so Timestamp}
+    Result := stTimestamp
   else if TypeName = 'BLOB' then
     Result := stBinaryStream
   else if (TypeName = 'RAW') or (TypeName = 'LONG RAW') then
@@ -582,6 +582,7 @@ begin
     Result := stTimestamp
   else if TypeName = 'NUMBER' then
   begin
+    Result := stDouble;  { default for number types}
     if Precision = 0 then
     begin
       if Size = 0 then
@@ -592,9 +593,9 @@ begin
         Result := stShort
       else if Size <= 9 then
         Result := stInteger
-      else Result := stLong
-    end else
-      Result := stDouble;
+      else if Size <= 19 then
+        Result := stLong  {!!in fact, unusable}
+    end;
   end;
 end;
 

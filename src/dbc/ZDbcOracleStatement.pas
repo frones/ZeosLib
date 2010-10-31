@@ -612,35 +612,37 @@ begin
   LoadOracleVars(FPlainDriver, Connection, ErrorHandle,
     FInVars, InParamValues);
 
-  StatementType := 0;
-  FPlainDriver.AttrGet(Handle, OCI_HTYPE_STMT, @StatementType, nil,
-    OCI_ATTR_STMT_TYPE, ErrorHandle);
+  try
+    StatementType := 0;
+    FPlainDriver.AttrGet(Handle, OCI_HTYPE_STMT, @StatementType, nil,
+      OCI_ATTR_STMT_TYPE, ErrorHandle);
 
-  if StatementType = OCI_STMT_SELECT then
-  begin
-    { Executes the statement and gets a resultset. }
-    ResultSet := CreateOracleResultSet(FPlainDriver, Self,
-      SQL, Handle, ErrorHandle);
-    try
-      while ResultSet.Next do;
-      LastUpdateCount := ResultSet.GetRow;
-    finally
-      ResultSet.Close;
+    if StatementType = OCI_STMT_SELECT then
+    begin
+      { Executes the statement and gets a resultset. }
+      ResultSet := CreateOracleResultSet(FPlainDriver, Self,
+        SQL, Handle, ErrorHandle);
+      try
+        while ResultSet.Next do;
+        LastUpdateCount := ResultSet.GetRow;
+      finally
+        ResultSet.Close;
+      end;
+    end
+    else
+    begin
+      { Executes the statement and gets a result. }
+      ExecuteOracleStatement(FPlainDriver, Connection, OracleSQL,
+        Handle, ErrorHandle);
+      LastUpdateCount := GetOracleUpdateCount(FPlainDriver, Handle, ErrorHandle);
     end;
-  end
-  else
-  begin
-    { Executes the statement and gets a result. }
-    ExecuteOracleStatement(FPlainDriver, Connection, OracleSQL,
-      Handle, ErrorHandle);
-    LastUpdateCount := GetOracleUpdateCount(FPlainDriver, Handle, ErrorHandle);
+    Result := LastUpdateCount;
+
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, OracleSQL);
+  finally
+    { Unloads binded variables with values. }
+    UnloadOracleVars(FInVars);
   end;
-  Result := LastUpdateCount;
-
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, OracleSQL);
-
-  { Unloads binded variables with values. }
-  UnloadOracleVars(FInVars);
 
   { Autocommit statement. }
   if Connection.GetAutoCommit then

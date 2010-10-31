@@ -127,6 +127,8 @@ type
     FPlainDriver: IZOraclePlainDriver;
     FBlobType: TZSQLType;
     FTemporary: Boolean;
+  protected
+    procedure InternalSetData(AData: Pointer; ASize: Integer);
   public
     constructor Create(PlainDriver: IZOraclePlainDriver; Data: Pointer;
       Size: Integer; Handle: IZConnection; LobLocator: POCILobLocator;
@@ -138,9 +140,12 @@ type
     procedure ReadBlob;
     procedure WriteBlob;
 
+    function Length: LongInt; override;
     function IsEmpty: Boolean; override;
     function Clone: IZBlob; override;
 
+    function GetString: AnsiString; override;
+    function GetBytes: TByteDynArray; override;
     function GetStream: TStream; override;
   end;
 
@@ -241,19 +246,19 @@ begin
           FPlainDriver.AttrGet(CurrentVar.Handle, OCI_DTYPE_PARAM,
             @CurrentVar.Scale, nil, OCI_ATTR_SCALE, FErrorHandle);
 
+          {by default convert number to double}
+          CurrentVar.ColType := stDouble;
           if (CurrentVar.Scale = 0) and (CurrentVar.Precision <> 0) then
           begin
-            if CurrentVar.Precision = 0 then
-              CurrentVar.ColType := stInteger
-            else if CurrentVar.Precision <= 2 then
+            if CurrentVar.Precision <= 2 then
               CurrentVar.ColType := stByte
             else if CurrentVar.Precision <= 4 then
               CurrentVar.ColType := stShort
             else if CurrentVar.Precision <= 9 then
               CurrentVar.ColType := stInteger
-            else CurrentVar.ColType := stLong;
-          end else
-            CurrentVar.ColType := stDouble;
+            else if CurrentVar.Precision <= 19 then
+              CurrentVar.ColType := stLong;
+          end
         end;
       SQLT_INT, _SQLT_PLI:
         CurrentVar.ColType := stInteger;
@@ -265,7 +270,8 @@ begin
           CurrentVar.DataSize := 20;
         end;
       SQLT_DAT, SQLT_DATE:
-        CurrentVar.ColType := stDate;
+        { oracle DATE precission - 1 second}
+        CurrentVar.ColType := stTimestamp;
       SQLT_TIME, SQLT_TIME_TZ:
         CurrentVar.ColType := stTime;
       SQLT_TIMESTAMP, SQLT_TIMESTAMP_TZ, SQLT_TIMESTAMP_LTZ:
@@ -345,9 +351,13 @@ end;
   is also automatically closed when it is garbage collected.
 }
 procedure TZOracleResultSet.Close;
+var
+  ps: IZPreparedStatement;
 begin
   FreeOracleSQLVars(FPlainDriver, FOutVars);
-  FreeOracleStatementHandles(FPlainDriver, FStmtHandle, FErrorHandle);
+  { prepared statement own handles, so dont free them }
+  if not Supports(GetStatement, IZPreparedStatement, ps) then
+     FreeOracleStatementHandles(FPlainDriver, FStmtHandle, FErrorHandle);
   inherited Close;
 end;
 
@@ -564,6 +574,8 @@ begin
 //            CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, '');
             if Status = OCI_SUCCESS then
             begin
+              Millis := Round(Millis / 1000000);
+              if Millis >= 1000 then Millis := 999;
               if Result >= 0 then
               begin
                 Result := Result + EncodeTime(
@@ -689,7 +701,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-  Result := GetAsLongIntValue(ColumnIndex, nil);
+  Result := Trunc(GetAsDoubleValue(ColumnIndex, nil));
 end;
 
 {**
@@ -995,11 +1007,12 @@ end;
   Reads the blob by the blob handle.
 }
 procedure TZOracleBlob.ReadBlob;
+const
+  MemDelta = 1 shl 12;  // read page (2^...)
 var
   Status: Integer;
-  Buffer: array[0..1024] of Char;
-  ReadNum, Offset: ub4;
-  ReadStream: TMemoryStream;
+  Buf: PByteArray;
+  ReadNum, Offset, Cap: ub4;
   Connection: IZOracleConnection;
 begin
   if not Updated and (FLobLocator <> nil)
@@ -1012,35 +1025,39 @@ begin
       Connection.GetErrorHandle, FLobLocator, OCI_LOB_READONLY);
     CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
       Status, lcOther, 'Open Large Object');
-
-    { Reads data in chunks. }
-    ReadStream := TMemoryStream.Create;
-    Offset := 0;
-    repeat
-      ReadNum := 1024;
-      Status := FPlainDriver.LobRead(Connection.GetContextHandle,
-        Connection.GetErrorHandle, FLobLocator, ReadNum, Offset + 1,
-        @Buffer, 1024, nil, nil, 0, SQLCS_IMPLICIT);
-      CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
-        Status, lcOther, 'Read Large Object');
-      if ReadNum > 0 then
-      begin
-        ReadStream.SetSize(ReadStream.Size + ReadNum);
-        ReadStream.Write(Buffer, ReadNum);
-        Inc(Offset, 1024);
+    try
+      { Reads data in chunks by MemDelta or more }
+      Offset := 0;
+      Cap := 0;
+      Buf := nil;
+      try
+        repeat
+          {Calc new progressive by 1/8 and aligned by MemDelta capacity for buffer}
+          Cap := (Offset + (Offset shr 3) + 2 * MemDelta - 1) and not (MemDelta - 1);
+          ReallocMem(Buf, Cap);
+          ReadNum := Cap - Offset;
+          Status := FPlainDriver.LobRead(Connection.GetContextHandle,
+            Connection.GetErrorHandle, FLobLocator, ReadNum, Offset + 1,
+            @Buf[Offset], ReadNum, nil, nil, 0, SQLCS_IMPLICIT);
+          CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
+            Status, lcOther, 'Read Large Object');
+          if ReadNum > 0 then
+            Inc(Offset, ReadNum);
+        until Offset < Cap;
+      except
+        FreeMem(Buf);
+        raise;
       end;
-    until ReadNum < 1024;
-
-    { Closes large object or file. }
-    Status := FPlainDriver.LobClose(Connection.GetContextHandle,
-      Connection.GetErrorHandle, FLobLocator);
-    CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
-      Status, lcOther, 'Close Large Object');
-
-    { Assigns a retrieved data stream. }
-    ReadStream.Position := 0;
-    SetStream(ReadStream);
-    ReadStream.Free;
+      ReallocMem(Buf, Offset);
+    finally
+      { Closes large object or file. }
+      Status := FPlainDriver.LobClose(Connection.GetContextHandle,
+        Connection.GetErrorHandle, FLobLocator);
+      CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
+        Status, lcOther, 'Close Large Object');
+    end;
+    { Assigns data }
+    InternalSetData(Buf, Offset);
   end;
 end;
 
@@ -1086,6 +1103,16 @@ begin
 end;
 
 {**
+  Replace data in blob by AData without copy (keep ref of AData)
+}
+procedure TZOracleBlob.InternalSetData(AData: Pointer; ASize: Integer);
+begin
+  Clear;
+  BlobData := AData;
+  BlobSize := ASize;
+end;
+
+{**
   Checks if this blob has an empty content.
   @return <code>True</code> if this blob is empty.
 }
@@ -1093,6 +1120,12 @@ function TZOracleBlob.IsEmpty: Boolean;
 begin
   ReadBlob;
   Result := inherited IsEmpty;
+end;
+
+function TZOracleBlob.Length: LongInt;
+begin
+  ReadBlob;
+  Result := inherited Length;
 end;
 
 {**
@@ -1113,6 +1146,26 @@ function TZOracleBlob.GetStream: TStream;
 begin
   ReadBlob;
   Result := inherited GetStream;
+end;
+
+{**
+  Gets the string from the stored data.
+  @return a string which contains the stored data.
+}
+function TZOracleBlob.GetString: AnsiString;
+begin
+  ReadBlob;
+  Result := inherited GetString;
+end;
+
+{**
+  Gets the byte buffer from the stored data.
+  @return a byte buffer which contains the stored data.
+}
+function TZOracleBlob.GetBytes: TByteDynArray;
+begin
+  ReadBlob;
+  Result := inherited GetBytes;
 end;
 
 end.

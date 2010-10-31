@@ -233,6 +233,8 @@ begin
   end
   else if TypeName = 'name' then
     Result := stString
+  else if TypeName = 'enum' then 
+    Result := stString
   else if TypeName = 'cidr' then
     Result := stString
   else if TypeName = 'inet' then
