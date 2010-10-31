@@ -351,7 +351,7 @@ begin
         Variable.TypeCode := SQLT_STR;
         Length := Variable.DataSize + 1;
       end;
-    stAsciiStream, stBinaryStream:
+    stAsciiStream, stUnicodeStream, stBinaryStream:
       begin
         if not (Variable.TypeCode in [SQLT_CLOB, SQLT_BLOB]) then
         begin
@@ -433,7 +433,11 @@ begin
         SQLT_STR:
           begin
             StrLCopy(PAnsiChar(CurrentVar.Data),
+{$IFDEF DELPHI12_UP}
+                PAnsiChar(UTF8String(DefVarManager.GetAsString(Values[I]))), 1024);
+{$ELSE}
                 PAnsiChar(DefVarManager.GetAsString(Values[I])), 1024);
+{$ENDIF}
           end;
         SQLT_TIMESTAMP:
           begin

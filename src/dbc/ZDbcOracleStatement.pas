@@ -495,6 +495,8 @@ begin
         TypeCode := SQLT_BLOB
       else if InParamTypes[I] = stAsciiStream then
         TypeCode := SQLT_CLOB
+      else if InParamTypes[I] = stUnicodeStream then
+        TypeCode := SQLT_CLOB
       else TypeCode := SQLT_STR;
 
       InitializeOracleVar(FPlainDriver, Connection, CurrentVar,

@@ -633,6 +633,7 @@ var
 begin
   if State=dsBrowse then begin
    if CachedResultSet <> nil then begin
+    UpdateCursorPos;
     RowNo := Integer(CurrentRows[CurrentRow - 1]);
     CachedResultSet.MoveAbsolute(RowNo);
     CachedResultSet.RefreshRow;
