@@ -142,7 +142,7 @@ function DecodeString(Value: string): string;
 
 procedure CheckPostgreSQLError(Connection: IZConnection;
   PlainDriver: IZPostgreSQLPlainDriver;
-  var Handle: PZPostgreSQLConnect; LogCategory: TZLoggingCategory;
+  Handle: PZPostgreSQLConnect; LogCategory: TZLoggingCategory;
   LogMessage: string;
   ResultHandle: PZPostgreSQLResult);
 
@@ -737,13 +737,14 @@ end;
 }
 procedure CheckPostgreSQLError(Connection: IZConnection;
   PlainDriver: IZPostgreSQLPlainDriver;
-  var Handle: PZPostgreSQLConnect; LogCategory: TZLoggingCategory;
+  Handle: PZPostgreSQLConnect; LogCategory: TZLoggingCategory;
   LogMessage: string;
   ResultHandle: PZPostgreSQLResult);
 
 var ErrorMessage: string;
 //FirmOS
     StatusCode:String;
+   ConnectionLost: boolean;
 begin
   if Assigned(Handle) then
     ErrorMessage := Trim(StrPas(PlainDriver.GetErrorMessage(Handle)))
@@ -772,16 +773,17 @@ begin
 
   if ErrorMessage <> '' then
   begin
-    if Assigned(Connection) and Connection.GetAutoCommit then
+    ConnectionLost := (PlainDriver.GetStatus(Handle) = CONNECTION_BAD);
+
+    if Assigned(Connection) and Connection.GetAutoCommit
+                            and not ConnectionLost then
       Connection.Rollback;
 
-    DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,      0, ErrorMessage);
+    DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,
+      0, ErrorMessage);
+
     if ResultHandle <> nil then PlainDriver.Clear(ResultHandle);
-    if PlainDriver.GetStatus(Handle) = CONNECTION_BAD then
-      begin
-        PlainDriver.Finish(Handle);
-        Handle := nil;
-      end;
+
     raise EZSQLException.CreateWithStatus(StatusCode,Format(SSQLError1, [ErrorMessage]));
   end;
 end;

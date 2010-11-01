@@ -75,14 +75,15 @@ type
   {** Defines a variant structure. }
   TZVariant = packed record
     VType: TZVariantType;
-    VBoolean: Boolean;
-    VInteger: Int64;
-    VFloat: Extended;
     VString: AnsiString;
     VUnicodeString: WideString;
-    VDateTime: TDateTime;
-    VPointer: Pointer;
     VInterface: IZInterface;
+    case TZVariantType of 
+      vtBoolean: (VBoolean: Boolean); 
+      vtInteger: (VInteger: Int64); 
+      vtFloat: (VFloat: Extended); 
+      VtDateTime: (VDateTime: TDateTime); 
+      VtPointer: (VPointer: Pointer); 
   end;
 
   {** Defines an array of variants. }

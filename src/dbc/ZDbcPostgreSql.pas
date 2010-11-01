@@ -518,14 +518,18 @@ begin
 
   { Connect to PostgreSQL database. }
   FHandle := FPlainDriver.ConnectDatabase(PChar(BuildConnectStr));
-  if FPlainDriver.GetStatus(FHandle) = CONNECTION_BAD then
-    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcConnect, LogMessage,nil)
-  else
-    DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
+  try
+    if FPlainDriver.GetStatus(FHandle) = CONNECTION_BAD then
+    begin
+      CheckPostgreSQLError(nil, FPlainDriver, FHandle,
+                            lcConnect, LogMessage,nil)
+    end
+    else
+      DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
 
-  { Set the notice processor (default = nil)}
+    { Set the notice processor (default = nil)}
 
-  FPlainDriver.SetNoticeProcessor(FHandle,FNoticeProcessor,nil);
+    FPlainDriver.SetNoticeProcessor(FHandle,FNoticeProcessor,nil);
 
   { Sets a client codepage. }
   if FClientCodePage <> '' then
@@ -537,12 +541,19 @@ begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
   end;
 
-  { Turn on transaction mode }
-  StartTransactionSupport;
-  { Setup notification mechanism }
-//  PQsetNoticeProcessor(FHandle, NoticeProc, Self);
+    { Turn on transaction mode }
+    StartTransactionSupport;
+    { Setup notification mechanism }
+    //  PQsetNoticeProcessor(FHandle, NoticeProc, Self);
 
-  inherited Open;
+    inherited Open;
+  finally
+    if self.IsClosed and (Self.FHandle <> nil) then
+    begin
+      FPlainDriver.Finish(Self.FHandle);
+      Self.FHandle := nil;
+    end;
+  end;
 end;
 
 procedure TZPostgreSQLConnection.PrepareTransaction(const transactionid: string);
