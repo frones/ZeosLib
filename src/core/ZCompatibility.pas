@@ -154,7 +154,7 @@ const
   RTLD_GLOBAL = $101;
 
 type
-  HMODULE = LongWord;
+  HMODULE = PtrInt;
 
 function LoadLibrary(ModuleName: PChar): HMODULE;
 function FreeLibrary(Module: HMODULE): LongBool;

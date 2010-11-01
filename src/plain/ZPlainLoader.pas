@@ -68,7 +68,11 @@ type
   TZNativeLibraryLoader = class (TObject)
   private
     FLocations: TStringDynArray;
+  {$IFDEF FPC}
+    FHandle: PtrInt;
+  {$ELSE}
     FHandle: LongWord;
+  {$ENDIF}
     FLoaded: Boolean;
   protected
     function LoadNativeLibrary: Boolean; virtual;
@@ -82,7 +86,11 @@ type
     procedure LoadIfNeeded; virtual;
 
 //    property Locations: TStringDynArray read FLocations write FLocations;
+  {$IFDEF FPC}
+    property Handle: PtrInt read FHandle write FHandle;
+  {$ELSE}
     property Handle: LongWord read FHandle write FHandle;
+  {$ENDIF}
     property Loaded: Boolean read FLoaded write FLoaded;
   end;
 
