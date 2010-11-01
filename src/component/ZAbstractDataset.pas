@@ -469,7 +469,11 @@ begin
       FreeFieldBuffers;
       SetState(dsBrowse);
       Resync([]);
-      BM:=Bookmark;
+      if BookmarkValid(@BM) Then
+      begin 
+        InternalGotoBookmark(@BM); 
+        Resync([rmExact, rmCenter]); 
+      end; 
       DisableControls;
       InternalSort;
       BookMark:=BM;

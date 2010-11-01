@@ -155,7 +155,7 @@ procedure UnloadOracleVars(Variables: PZSQLVars);
   @result the SQLType field type value
 }
 function ConvertOracleTypeToSQLType(TypeName: string;
-  Size: Integer; Precision: Integer): TZSQLType;
+  Precision, Scale: Integer): TZSQLType;
 
 {**
   Converts Oracle internal date into TDateTime
@@ -317,6 +317,7 @@ end;
   @param OracleType a correspondent Oracle type.
   @param DataSize a length for string variables.
 }
+
 procedure InitializeOracleVar(PlainDriver: IZOraclePlainDriver;
   Connection: IZConnection; var Variable: PZSQLVar;
   DataType: TZSQLType; OracleType: ub2; DataSize: Integer);
@@ -555,7 +556,7 @@ end;
   @result the SQLType field type value
 }
 function ConvertOracleTypeToSQLType(TypeName: string;
-  Size: Integer; Precision: Integer): TZSQLType;
+  Precision, Scale: Integer): TZSQLType;
 begin
   TypeName := UpperCase(TypeName);
   Result := stUnknown;
@@ -583,17 +584,15 @@ begin
   else if TypeName = 'NUMBER' then
   begin
     Result := stDouble;  { default for number types}
-    if Precision = 0 then
+    if (Scale = 0) and (Precision <> 0) then
     begin
-      if Size = 0 then
-        Result := stLong
-      else if Size <= 2 then
+      if Precision <= 2 then
         Result := stByte
-      else if Size <= 4 then
+      else if Precision <= 4 then
         Result := stShort
-      else if Size <= 9 then
+      else if Precision <= 9 then
         Result := stInteger
-      else if Size <= 19 then
+      else if Precision <= 19 then
         Result := stLong  {!!in fact, unusable}
     end;
   end;
