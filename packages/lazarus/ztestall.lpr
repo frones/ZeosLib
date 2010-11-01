@@ -29,8 +29,8 @@ uses
   ZTestBugDbcCore,
   ZTestBugDbcMySql, ZTestBugCompMySql,
   ZTestBugDbcOracle, ZTestBugCompOracle,
-  ZTestBugDbcPostgreSql, //ZTestBugCompPostgreSql,
-  //ZTestBugDbcInterbase, //ZTestBugCompInterbase,
+  ZTestBugDbcPostgreSql, ZTestBugCompPostgreSql,
+  ZTestBugDbcInterbase, ZTestBugCompInterbase,
   ZTestBugDbcDbLib, ZTestBugCompDbLib,
   ZTestBugCompMSSql
 ;

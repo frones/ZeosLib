@@ -181,7 +181,7 @@ begin
           Statement.SetDouble(I+1, Param.AsFloat);
         ftLargeInt:
           Statement.SetLong(I+1, StrToInt64(Param.AsString));
-        ftString , ftFixedChar:
+        ftString, ftWideString , ftFixedChar:
           Statement.SetString(I+1, Param.AsString);
         ftBytes:
           Statement.SetString(I+1, Param.AsString);
