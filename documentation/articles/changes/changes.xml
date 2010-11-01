@@ -30,13 +30,7 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
-          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=218">#0000218</ulink> [normal] Oracle NUMBER wrong conversion - New Oracle tests</simpara>
-        </listitem>
-        <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=216">#0000216</ulink> [normal] Multiselect in TDbGrid wont work</simpara>
-        </listitem>
-        <listitem>
-          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=212">#0000212</ulink> [normal] Oracle Dbc bugs</simpara>
         </listitem>
         <listitem>
           <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=211">#0000211</ulink> [normal] Save blob with sqlite and Delphi 2009/2010</simpara>
@@ -51,9 +45,6 @@
         </listitem>
         <listitem>
           <simpara> SQLite3 Connect Error (D2010) (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2766">http://zeos.firmos.at/viewtopic.php?t=2766</ulink>)</simpara>
-        </listitem>
-        <listitem>
-          <simpara> Error Param.DataType in TZStoredProcedure (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2742">http://zeos.firmos.at/viewtopic.php?t=2742</ulink>)</simpara>
         </listitem>
       </itemizedlist>
     </sect2>
@@ -84,20 +75,11 @@
         <listitem>
           <simpara>[SQLite] Blobdata is now stored as original bytes, without conversion</simpara>
         </listitem>
-        <listitem>
-          <simpara>[POSTGRES] Added new Postgres 8.3 Enum support (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2625">http://zeos.firmos.at/viewtopic.php?t=2625</ulink>)</simpara>
-        </listitem>
      </itemizedlist>
     </sect2>
     <sect2>
       <title>Internal Changes</title>
       <itemizedlist spacing="compact">
-        <listitem>
-          <simpara>TZVariant : Putting vtBoolean, vtInteger, vtFloat.vtDatetime and vtPointer in a case record saves memory without any loss in function (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2696">http://zeos.firmos.at/viewtopic.php?t=2696</ulink>)</simpara>
-        </listitem>
-        <listitem>
-          <simpara>[POSTGRES] A beter fix for bug report 136 (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2599">http://zeos.firmos.at/viewtopic.php?t=2599</ulink>)</simpara>
-        </listitem>
         <listitem>
           <simpara>[POSTGRES] Statements no longer keep a pointer to the connection handle but get it directly from the associated connection object (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2599">http://zeos.firmos.at/viewtopic.php?t=2599</ulink>)</simpara>
         </listitem>
@@ -156,9 +138,6 @@
         </listitem>
         <listitem>
           <simpara>[Common] Some dates of form 2008-1-1 seem not to work good with function TimestampStrToDateTime (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2093">http://zeos.firmos.at/viewtopic.php?t=2093</ulink>)</simpara>
-        </listitem>
-        <listitem>
-          <simpara>[Common] TZTable and TZQuery Filter property do not work correctly with datetime fields (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2055">http://zeos.firmos.at/viewtopic.php?t=2055</ulink>)</simpara>
         </listitem>
       </itemizedlist>
     </sect2>
@@ -273,13 +252,19 @@
       <para>The bug tracker can be found at: <ulink url="http://zeosbugs.firmos.at/">http://zeosbugs.firmos.at</ulink></para>
       <itemizedlist spacing="compact">
         <listitem>
-          <simpara>NONE</simpara>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=218">#0000218</ulink> [normal] Oracle NUMBER wrong conversion - New Oracle tests</simpara>
+        </listitem>
+        <listitem>
+          <simpara><ulink url="http://zeosbugs.firmos.at/view.php?id=212">#0000212</ulink> [normal] Oracle Dbc bugs</simpara>
         </listitem>
    </itemizedlist>
     </sect2>
     <sect2>
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
+        <listitem>
+          <simpara> Error Param.DataType in TZStoredProcedure (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2742">http://zeos.firmos.at/viewtopic.php?t=2742</ulink>)</simpara>
+        </listitem>
         <listitem>
           <simpara>[Common] alter and column were not on the list of AnsiSQLKeywords</simpara>
         </listitem>
@@ -309,11 +294,29 @@
         <listitem>
           <simpara>Zeoslib 6.6 is in it's stable phase. No features, except for eventual translations and docs, will (should) be added.</simpara>
         </listitem>
+        <listitem>
+          <simpara>[POSTGRES] Added new Postgres 8.3 Enum support (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2625">http://zeos.firmos.at/viewtopic.php?t=2625</ulink>)</simpara>
+        </listitem>
      </itemizedlist>
     </sect2>
     <sect2>
       <title>Internal Changes</title>
       <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>[Lazarus/FPC] More tests enabled for Lazarus/FPC.</simpara>
+        </listitem>
+        <listitem>
+          <simpara>FPC : changing types of FHandle and HModul to PtrInt in ZCompatibility.pas and ZPlainLoader.pas for 64-bit compatibility  (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2358">http://zeos.firmos.at/viewtopic.php?t=2358</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>Add system path to testing path (to avoid installing oracle oci in different testing environments)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>TZVariant : Putting vtBoolean, vtInteger, vtFloat.vtDatetime and vtPointer in a case record saves memory without any loss in function (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2696">http://zeos.firmos.at/viewtopic.php?t=2696</ulink>)</simpara>
+        </listitem>
+        <listitem>
+          <simpara>[POSTGRES] A beter fix for bug report 136 (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2599">http://zeos.firmos.at/viewtopic.php?t=2599</ulink>)</simpara>
+        </listitem>
         <listitem>
           <simpara>[Lazarus/FPC] Test database rebuild for Lazarus/FPC added.</simpara>
         </listitem>
