@@ -79,7 +79,7 @@ type
     FController: Pointer;
     function GetController: IInterface;
   protected
-    function QueryInterface(const IID: TGUID; out Obj): HResult; stdcall;
+    function QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID; out Obj): HResult;
     function _AddRef: Integer; stdcall;
     function _Release: Integer; stdcall;
   public
@@ -89,7 +89,7 @@ type
 
   TContainedObject = class(TAggregatedObject, IInterface)
   protected
-    function QueryInterface(const IID: TGUID; out Obj): HResult; virtual; stdcall;
+    function QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID; out Obj): HResult; virtual; {$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF};
   end;
   {$ENDIF}
 
@@ -211,7 +211,7 @@ begin
   Result := IInterface(FController);
 end;
 
-function TAggregatedObject.QueryInterface(const IID: TGUID; out Obj): HResult;
+function TAggregatedObject.QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID; out Obj): HResult;
 begin
   Result := IInterface(FController).QueryInterface(IID, Obj);
 end;
@@ -228,7 +228,7 @@ end;
 
 { TContainedObject }
 
-function TContainedObject.QueryInterface(const IID: TGUID; out Obj): HResult;
+function TContainedObject.QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID; out Obj): HResult;
 begin
   if GetInterface(IID, Obj) then
     Result := S_OK
