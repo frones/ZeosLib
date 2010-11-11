@@ -82,7 +82,8 @@ uses
   DesignIntf,
 {$ENDIF}
 {$ENDIF}
-  Classes, ZConnection, ZDataset, ZSqlUpdate, ZSqlProcessor, ZStoredProcedure,
+  Classes, ZConnection, ZAbstractConnection, ZDataset, ZSqlUpdate, ZSqlProcessor, ZStoredProcedure,
+  ZGroupedConnection, ZConnectionGroup ,
   ZSqlMonitor, ZSqlMetadata, ZSequence{$IFDEF ENABLE_INTERBASE}, ZIBEventAlerter {$ENDIF},
   ZPgEventAlerter;
 
@@ -93,16 +94,24 @@ procedure Register;
 begin
   RegisterComponents(ZEOS_DB_PALETTE, [
     TZConnection, TZReadOnlyQuery, TZQuery, TZTable, TZUpdateSQL,
+    TZConnectionGroup, TZGroupedConnection,
     TZStoredProc, TZSQLMetadata, TZSQLProcessor, TZSQLMonitor, TZSequence {$IFDEF ENABLE_INTERBASE}, TZIBEventAlerter {$ENDIF},
     TZPgEventAlerter]);
 
 {$IFDEF WITH_PROPERTY_EDITOR}
+
   RegisterPropertyEditor(TypeInfo(string), TZConnection, 'Protocol',
     TZProtocolPropertyEditor);
   RegisterPropertyEditor(TypeInfo(string), TZConnection, 'Database',
     TZDatabasePropertyEditor);
   RegisterPropertyEditor(TypeInfo(string), TZConnection, 'Catalog',
     TZCatalogPropertyEditor);
+
+  RegisterPropertyEditor(TypeInfo(string), TZConnectionGroup, 'Protocol',
+    TZProtocolPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZConnectionGroup, 'Database',
+    TZConnectionGroupPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZGroupedConnection, 'Catalog', TZGroupedConnectionCatalogPropertyEditor);
 
   RegisterPropertyEditor(TypeInfo(string), TZQuery, 'LinkedFields',
     TZDataFieldPropertyEditor); {renamed by bangfauzan}

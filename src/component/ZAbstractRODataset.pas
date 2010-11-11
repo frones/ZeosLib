@@ -64,7 +64,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  Types, SysUtils, DB, Classes, ZSysUtils, ZConnection, ZDbcIntfs, ZSqlStrings,
+  Types, SysUtils, DB, Classes, ZSysUtils, ZAbstractConnection, ZDbcIntfs, ZSqlStrings,
   Contnrs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility, ZExpression;
 
 type
@@ -146,7 +146,7 @@ type
     FOptions: TZDatasetOptions;
 
     FProperties: TStrings;
-    FConnection: TZConnection;
+    FConnection: TZAbstractConnection;
     FStatement: IZPreparedStatement;
     FResultSet: IZResultSet;
 
@@ -182,7 +182,7 @@ type
     procedure SetParams(Value: TParams);
     function GetShowRecordTypes: TUpdateStatusSet;
     procedure SetShowRecordTypes(Value: TUpdateStatusSet);
-    procedure SetConnection(Value: TZConnection);
+    procedure SetConnection(Value: TZAbstractConnection);
     procedure SetDataSource(Value: TDataSource);
     function GetMasterFields: string;
     procedure SetMasterFields(const Value: string);
@@ -453,7 +453,7 @@ type
     property DbcResultSet: IZResultSet read FResultSet;
 
   published
-    property Connection: TZConnection read FConnection write SetConnection;
+    property Connection: TZAbstractConnection read FConnection write SetConnection;
     property SortedFields: string read FSortedFields write SetSortedFields;
     property SortType : TSortType read FSortType write SetSortType
       default stAscending; {bangfauzan addition}
@@ -615,7 +615,7 @@ end;
   Sets database connection object.
   @param Value a database connection object.
 }
-procedure TZAbstractRODataset.SetConnection(Value: TZConnection);
+procedure TZAbstractRODataset.SetConnection(Value: TZAbstractConnection);
 begin
   if FConnection <> Value then
   begin

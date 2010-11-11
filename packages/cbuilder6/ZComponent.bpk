@@ -5,7 +5,8 @@
     <VERSION value="BCB.06.00"/>
     <PROJECT value="ZComponent.bpl"/>
     <OBJFILES value="build\ZComponent.obj build\ZStreamBlob.obj build\ZAbstractRODataset.obj 
-      build\ZComponentReg.obj build\ZConnection.obj build\ZDataset.obj 
+      build\ZComponentReg.obj build\ZAbstractConnection.obj build\ZGroupedConnection.obj
+      build\ZConnectionGroup.obj build\ZConnection.obj build\ZDataset.obj 
       build\ZDatasetUtils.obj build\ZSqlProcessor.obj build\ZSqlStrings.obj 
       build\ZSqlUpdate.obj build\ZAbstractDataset.obj build\ZPropertyEditor.obj 
       build\ZSqlMonitor.obj build\ZStoredProcedure.obj build\ZAbstractTable.obj 
@@ -58,6 +59,9 @@
       <FILE FILENAME="..\..\src\component\ZStreamBlob.pas" FORMNAME="" UNITNAME="ZStreamBlob" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\component\ZAbstractRODataset.pas" FORMNAME="" UNITNAME="ZAbstractRODataset" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\component\ZComponentReg.pas" FORMNAME="" UNITNAME="ZComponentReg" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\component\ZAbstractConnection.pas" FORMNAME="" UNITNAME="ZAbstractConnection" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\component\ZGroupedConnection.pas" FORMNAME="" UNITNAME="ZGroupedConnection" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\src\component\ZConnectionGroup.pas" FORMNAME="" UNITNAME="ZConnectionGroup" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\component\ZConnection.pas" FORMNAME="" UNITNAME="ZConnection" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\component\ZDataset.pas" FORMNAME="" UNITNAME="ZDataset" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="..\..\src\component\ZDatasetUtils.pas" FORMNAME="" UNITNAME="ZDatasetUtils" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
