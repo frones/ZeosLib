@@ -14,7 +14,7 @@ interface
 {$I ZComponent.inc}
 
 uses
-  Types, SysUtils, Classes, ZDbcIntfs, DB, ZDbcAdoUtils,Forms,
+  Types, SysUtils, Classes, ZDbcIntfs, DB, Forms,
   ZCompatibility, ZConnection, ZSequence, Dialogs;
 
 const

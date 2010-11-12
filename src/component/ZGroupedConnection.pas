@@ -14,7 +14,7 @@ interface
 {$I ZComponent.inc}
 
 uses
-  Types, SysUtils, Messages, Classes, ZDbcIntfs, DB, ZDbcAdoUtils,Forms,
+  Types, SysUtils, Messages, Classes, ZDbcIntfs, DB,Forms,
   ZCompatibility, ZAbstractConnection, ZSequence, Dialogs, ZConnectionGroup ;
 
 const  CM_ZCONNECTIONGROUPCHANGED = WM_USER + 100;
