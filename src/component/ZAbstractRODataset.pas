@@ -1135,7 +1135,7 @@ begin
             Statement.SetLong(I + 1, StrToInt64(Param.AsString));
           ftCurrency:
             Statement.SetBigDecimal(I + 1, Param.AsCurrency);
-          ftString:
+          ftString, ftFixedChar:
             Statement.SetString(I + 1, Param.AsString);
           {$IFNDEF VER150BELOW} // not available on Delhi 7 
           ftWideString:
