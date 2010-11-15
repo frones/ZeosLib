@@ -59,7 +59,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZPlainMySqlDriver, ZPlainMySqlConstants, ZDbcLogging;
+  Classes, SysUtils, StrUtils,
+  ZSysUtils, ZDbcIntfs, ZPlainMySqlDriver, ZPlainMySqlConstants,  ZDbcLogging;
 
 const
   MAXBUF = 65535;
@@ -83,7 +84,7 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
   @param string field type value
   @result the SQLType field type value
 }
-function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull: string): TZSQLType;
+function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull, Collation: string): TZSQLType;
 
 {**
   Checks for possible sql errors.
@@ -226,17 +227,37 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
         Result := stBinaryStream;
     FIELD_TYPE_BIT:
       Result := stBinaryStream;
-    FIELD_TYPE_VARCHAR:
+    // by aperger
+    // SQL = "SELECT ID, COLLATION_NAME, CHARACTER_SET_NAME FROM INFORMATION_SCHEMA.COLLATIONS WHERE ID = :charsetnr"
+    // which provides correct result, but would be slow. maybe this table conteent is "fix".
+    // ID ==> PMYSQL_FIELD(Field)^.charsetnr
+    // http://dev.mysql.com/doc/refman/5.0/en/c-api-data-structures.html
+    FIELD_TYPE_VARCHAR,
+    FIELD_TYPE_VAR_STRING,
+    FIELD_TYPE_STRING:
+    	if (PMYSQL_FIELD(FieldHandle)^.charsetnr = 63) then
+      	Result := stString // ?? stBytes // BINARY from CHAR, VARBINARY from VARCHAR, BLOB from TEXT
+      else
+      if ( // UTF8
+        	(PMYSQL_FIELD(FieldHandle)^.charsetnr = 33) or
+          (PMYSQL_FIELD(FieldHandle)^.charsetnr = 83) or
+        	((PMYSQL_FIELD(FieldHandle)^.charsetnr>=192) and
+          (PMYSQL_FIELD(FieldHandle)^.charsetnr<=210)) )(*  the end is not fix ??? *) then
+        Result := stUnicodeString
+      else
+      if ( // UCS2
+        	(PMYSQL_FIELD(FieldHandle)^.charsetnr = 35) or
+          (PMYSQL_FIELD(FieldHandle)^.charsetnr = 90) or
+        	((PMYSQL_FIELD(FieldHandle)^.charsetnr>=128) and
+          (PMYSQL_FIELD(FieldHandle)^.charsetnr<=146)) )(*  the end is not fix ??? *) then
+        Result := stUnicodeString
+      else
+        Result := stString;
+    FIELD_TYPE_ENUM:
       Result := stString;
-   FIELD_TYPE_VAR_STRING:
+    FIELD_TYPE_SET:
       Result := stString;
-   FIELD_TYPE_STRING:
-      Result := stString;
-   FIELD_TYPE_ENUM:
-      Result := stString;
-   FIELD_TYPE_SET:
-      Result := stString;
-   FIELD_TYPE_NULL:
+    FIELD_TYPE_NULL:
       // Example: SELECT NULL FROM DUAL
       Result := stString;
    FIELD_TYPE_GEOMETRY:
@@ -249,6 +270,10 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
   { SHOW FULL PROCESSLIST on 4.x servers can return veeery long FIELD_TYPE_VAR_STRINGs. The following helps avoid excessive row buffer allocation later on. }
   if (Result = stString) and (PlainDriver.GetFieldLength(FieldHandle) > 8192) then
      Result := stAsciiStream;
+
+  if (Result = stUnicodeString) and (PlainDriver.GetFieldLength(FieldHandle) > 8192) then
+     Result := stUnicodeStream;
+
 end;
 
 {**
@@ -256,7 +281,7 @@ end;
   @param string field type value
   @result the SQLType field type value
 }
-function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull: string): TZSQLType;
+function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull, Collation: string): TZSQLType;
 const
   GeoTypes: array[0..7] of string = (
    'POINT','LINESTRING','POLYGON','GEOMETRY',
@@ -266,10 +291,14 @@ var
   IsUnsigned: Boolean;
   Posi, Len, i: Integer;
   Spec: string;
+	IsUnicodeField:boolean;
 begin
   TypeName := UpperCase(TypeName);
   TypeNameFull := UpperCase(TypeNameFull);
   Result := stUnknown;
+  IsUnicodeField:=
+  	StrUtils.AnsiContainsText(Collation, 'utf8') or
+    StrUtils.AnsiContainsText(Collation, 'ucs2');
 
   Posi := FirstDelimiter(' ', TypeName);
   if Posi > 0 then
@@ -339,10 +368,17 @@ begin
   end
   else if TypeName = 'DOUBLE' then
     Result := stDouble
-  else if TypeName = 'CHAR' then
-    Result := stString
-  else if TypeName = 'VARCHAR' then
-    Result := stString
+  else if TypeName = 'CHAR' then begin
+    if IsUnicodeField then
+    	Result := stUnicodeString
+    else
+     Result := stString;
+  end else if TypeName = 'VARCHAR' then begin
+    if IsUnicodeField then
+    	Result := stUnicodeString
+    else
+     Result := stString;
+  end
   else if TypeName = 'VARBINARY' then
     Result := stBytes
   else if TypeName = 'BINARY' then

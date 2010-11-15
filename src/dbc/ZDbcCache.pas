@@ -1010,7 +1010,7 @@ begin
             Result := TempBlob.GetUnicodeString;
         end;
       else
-        Result := GetString(ColumnIndex, IsNull);
+        Result := UTF8Encode(GetString(ColumnIndex, IsNull));
     end;
     IsNull := False;
   end

@@ -83,7 +83,6 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetString(ColumnIndex: Integer): AnsiString; override;
-    function GetUnicodeString(ColumnIndex: Integer): WideString; override;
     function GetUnicodeStream(ColumnIndex: Integer): TStream; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
@@ -576,12 +575,6 @@ begin
   Result := TMemoryStream.Create;
   Result.Write(PWideChar(Data)^, Length(Data)*2);
   Result.Position := 0;
-end;
-
-function TZPostgreSQLResultSet.GetUnicodeString(
-  ColumnIndex: Integer): WideString;
-begin
-  Result := UTF8Decode(GetString(ColumnIndex));
 end;
 
 {**
