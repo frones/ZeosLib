@@ -41,6 +41,9 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara> ADO SetParams->Reopen failure! (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2988">http://zeos.firmos.at/viewtopic.php?t=2988</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara> SQLite strange characters on retrieval (D2010)</simpara>
         </listitem>
         <listitem>

@@ -389,10 +389,16 @@ begin
 
   if ParameterIndex <= PC then
   begin
+
     P := FAdoCommand.Parameters.Item[ParameterIndex - 1];
-    FAdoCommand.Parameters.Item[ParameterIndex - 1].Type_ := T;
-    FAdoCommand.Parameters.Item[ParameterIndex - 1].Size := S;
-    FAdoCommand.Parameters.Item[ParameterIndex - 1].Value := V;
+    P.Type_ := T;
+    P.Size := S;
+    // by aperger:
+    // to use the new value at the next calling of the statement
+    if P.Value <> V then begin
+    	P.Value := V;
+      FAdoCommand.Prepared:=false;
+    end;
   end
   else
   begin
