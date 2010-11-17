@@ -79,7 +79,9 @@ const
   WINDOWS_51_DLL_LOCATION = 'libmysql51.dll';
   WINDOWS_50_DLL_LOCATION_EMBEDDED = 'libmysqld50.dll';
   WINDOWS_51_DLL_LOCATION_EMBEDDED = 'libmysqld51.dll';
-  LINUX1_DLL_LOCATION  = 'libmysqlclient.so.15';
+  { changed names and added MySql 5.1 driver for Linux by tintinux 13 Nov.2010 }
+  LINUX_50_DLL_LOCATION  = 'libmysqlclient.so.15';
+  LINUX_51_DLL_LOCATION  = 'libmysqlclient.so.16';
 
 { General Declarations }
 //  PROTOCOL_VERSION     = 10;
@@ -588,8 +590,13 @@ initialization
 {$ENDIF}
     ]);
 {$ELSE}
+  { Added LINUX_51, and test MYSQL_STRICT_DLL_LOADING by tintinux 13 Nov.2010}
   LibraryLoader := TZMySQLNativeLibraryLoader.Create(
-    [LINUX1_DLL_LOCATION,LINUX2_DLL_LOCATION]);
+    [LINUX_51_DLL_LOCATION,LINUX_50_DLL_LOCATION
+{$IFNDEF MYSQL_STRICT_DLL_LOADING}
+    ,LINUX2_DLL_LOCATION
+{$ENDIF}
+    ]);
   LibraryLoaderEmbedded := TZMySQLNativeLibraryLoader.Create(
     [LINUX_DLL_LOCATION_EMBEDDED]);
 {$ENDIF}
