@@ -620,7 +620,7 @@ begin
           begin
             if ((Statement.GetConnection as IZPostgreSQLConnection).GetCharactersetCode = csUTF8) then
               Stream := GetUnicodeStream(ColumnIndex) else
-              Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)));
+              Stream := TStringStream.Create(GetString(ColumnIndex));
           end;
         Result := TZAbstractBlob.CreateWithStream(Stream);
       finally
