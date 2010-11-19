@@ -87,7 +87,7 @@ type
       FLoader: TZNativeLibraryLoader;
       procedure LoadApi; virtual;
    public
-    constructor CreateWithLibrary(LibName : String);
+    constructor CreateWithLibrary(const LibName : String);
     property Loader: TZNativeLibraryLoader read FLoader;
     function GetProtocol: string; virtual; abstract;
     function GetDescription: string; virtual; abstract;
@@ -182,7 +182,7 @@ begin
 
 end;
 
-constructor TZAbstractPlainDriver.CreateWithLibrary(LibName: String);
+constructor TZAbstractPlainDriver.CreateWithLibrary(const LibName: String);
 begin
   Inherited Create;
   Loader.ClearLocations;

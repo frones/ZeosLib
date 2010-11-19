@@ -472,8 +472,8 @@ type
   IZPostgreSQLPlainDriver = interface (IZPlainDriver)
     ['{03CD6345-2D7A-4FE2-B03D-3C5656789FEB}']
 
-    function  EncodeBYTEA(Value: AnsiString; Handle: PZPostgreSQLConnect): AnsiString;
-    function  DecodeBYTEA(value: AnsiString): AnsiString;
+    function  EncodeBYTEA(const Value: AnsiString; Handle: PZPostgreSQLConnect): AnsiString;
+    function  DecodeBYTEA(const value: AnsiString): AnsiString;
 
     function ConnectDatabase(ConnInfo: PAnsiChar): PZPostgreSQLConnect;
     function SetDatabaseLogin(Host, Port, Options, TTY, Db, User,Passwd: PAnsiChar): PZPostgreSQLConnect;
@@ -577,8 +577,8 @@ type
   public
     constructor Create;
 
-    function EncodeBYTEA(Value: AnsiString; Handle: PZPostgreSQLConnect): AnsiString; virtual;
-    function DecodeBYTEA(value: AnsiString): AnsiString; virtual;
+    function EncodeBYTEA(const Value: AnsiString; Handle: PZPostgreSQLConnect): AnsiString; virtual;
+    function DecodeBYTEA(const value: AnsiString): AnsiString; virtual;
 
     function ConnectDatabase(ConnInfo: PAnsiChar): PZPostgreSQLConnect;
     function SetDatabaseLogin(Host, Port, Options, TTY, Db, User, Passwd: PAnsiChar): PZPostgreSQLConnect;
@@ -692,8 +692,8 @@ type
     function GetProtocol: string; override;
     function GetDescription: string; override;
 
-    function  EncodeBYTEA(Value: AnsiString; Handle: PZPostgreSQLConnect): AnsiString; override;
-    function  DecodeBYTEA(value: AnsiString): AnsiString; override;
+    function  EncodeBYTEA(const Value: AnsiString; Handle: PZPostgreSQLConnect): AnsiString; override;
+    function  DecodeBYTEA(const value: AnsiString): AnsiString; override;
 
     function GetResultErrorField(Res: PZPostgreSQLResult;FieldCode:TZPostgreSQLFieldCode):PAnsiChar; override;
   end;
@@ -836,7 +836,7 @@ begin
   Result := POSTGRESQL_API.lo_creat(Handle, Mode);
 end;
 
-function TZPostgreSQLBaseDriver.DecodeBYTEA(value: AnsiString): AnsiString;
+function TZPostgreSQLBaseDriver.DecodeBYTEA(const value: AnsiString): AnsiString;
 var
    decoded: PAnsiChar;
    len: Longword;
@@ -848,7 +848,7 @@ begin
   POSTGRESQL_API.PQFreemem(decoded);
 end;
 
-function TZPostgreSQLBaseDriver.EncodeBYTEA(Value: AnsiString;  Handle: PZPostgreSQLConnect): AnsiString;
+function TZPostgreSQLBaseDriver.EncodeBYTEA(const Value: AnsiString;  Handle: PZPostgreSQLConnect): AnsiString;
 var
    encoded: PAnsiChar;
    len: Longword;
@@ -1238,12 +1238,12 @@ begin
   Result := 'Native Plain Driver for PostgreSQL 7.x';
 end;
 
-function TZPostgreSQL7PlainDriver.DecodeBYTEA(value: AnsiString): AnsiString;
+function TZPostgreSQL7PlainDriver.DecodeBYTEA(const value: AnsiString): AnsiString;
 begin
  result:=value;
 end;
 
-function TZPostgreSQL7PlainDriver.EncodeBYTEA(Value: AnsiString;  Handle: PZPostgreSQLConnect): AnsiString;
+function TZPostgreSQL7PlainDriver.EncodeBYTEA(const Value: AnsiString;  Handle: PZPostgreSQLConnect): AnsiString;
 begin
  result:=value;
 end;
