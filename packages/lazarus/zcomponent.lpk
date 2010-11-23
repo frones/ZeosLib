@@ -4,28 +4,28 @@
     <PathDelim Value="\"/>
     <Name Value="zcomponent"/>
     <CompilerOptions>
-      <Version Value="5"/>
+      <Version Value="9"/>
       <PathDelim Value="\"/>
       <SearchPaths>
-        <OtherUnitFiles Value="..\..\src\component\;build\"/>
+        <OtherUnitFiles Value="..\..\src\component;build"/>
         <UnitOutputDirectory Value="build"/>
       </SearchPaths>
       <Parsing>
         <SyntaxOptions>
-          <DelphiCompat Value="True"/>
+          <SyntaxMode Value="Delphi"/>
+          <CStyleOperator Value="False"/>
+          <UseAnsiStrings Value="False"/>
         </SyntaxOptions>
       </Parsing>
-      <CodeGeneration>
-        <Generate Value="Faster"/>
-      </CodeGeneration>
       <Other>
+        <CustomOptions Value="-dZEOSDEBUG"/>
         <CompilerPath Value="$(CompPath)"/>
       </Other>
     </CompilerOptions>
     <Description Value="Zeos Database Components
 "/>
-    <Version Major="7" Minor="0" Release="0"/>
-    <Files Count="4">
+    <Version Major="7"/>
+    <Files Count="6">
       <Item1>
         <Filename Value="..\..\src\component\ZComponentReg.pas"/>
         <HasRegisterProc Value="True"/>
@@ -43,20 +43,32 @@
         <Filename Value="..\..\src\component\ZUpdateSqlEditor.pas"/>
         <UnitName Value="ZUpdateSqlEditor"/>
       </Item4>
+      <Item5>
+        <Filename Value="..\..\src\component\ZConnectionGroup.pas"/>
+        <UnitName Value="ZConnectionGroup"/>
+      </Item5>
+      <Item6>
+        <Filename Value="..\..\src\component\ZGroupedConnection.pas"/>
+        <UnitName Value="ZGroupedConnection"/>
+      </Item6>
     </Files>
     <Type Value="RunAndDesignTime"/>
     <RequiredPkgs Count="7">
       <Item1>
         <PackageName Value="zplain"/>
+        <MinVersion Major="7" Valid="True"/>
       </Item1>
       <Item2>
         <PackageName Value="zparsesql"/>
+        <MinVersion Major="7" Valid="True"/>
       </Item2>
       <Item3>
         <PackageName Value="zdbc"/>
+        <MinVersion Major="7" Valid="True"/>
       </Item3>
       <Item4>
         <PackageName Value="zcore"/>
+        <MinVersion Major="7" Valid="True"/>
       </Item4>
       <Item5>
         <PackageName Value="LCL"/>

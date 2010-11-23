@@ -83,7 +83,6 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetString(ColumnIndex: Integer): AnsiString; override;
-    function GetUnicodeString(ColumnIndex: Integer): WideString; override;
     function GetUnicodeStream(ColumnIndex: Integer): TStream; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
@@ -578,12 +577,6 @@ begin
   Result.Position := 0;
 end;
 
-function TZPostgreSQLResultSet.GetUnicodeString(
-  ColumnIndex: Integer): WideString;
-begin
-  Result := UTF8Decode(GetString(ColumnIndex));
-end;
-
 {**
   Returns the value of the designated column in the current row
   of this <code>ResultSet</code> object as a <code>Blob</code> object
@@ -627,7 +620,7 @@ begin
           begin
             if ((Statement.GetConnection as IZPostgreSQLConnection).GetCharactersetCode = csUTF8) then
               Stream := GetUnicodeStream(ColumnIndex) else
-              Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)));
+              Stream := TStringStream.Create(GetString(ColumnIndex));
           end;
         Result := TZAbstractBlob.CreateWithStream(Stream);
       finally

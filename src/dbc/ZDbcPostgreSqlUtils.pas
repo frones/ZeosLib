@@ -94,7 +94,7 @@ function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
   @param Value a regular string.
   @return a string in PostgreSQL escape format.
 }
-function EncodeString(Value: string): string; overload;
+function EncodeString(const Value: string): string; overload;
 
 {**
   add by Perger -> based on SourceForge:
@@ -105,7 +105,7 @@ function EncodeString(Value: string): string; overload;
   @param Value a binary stream.
   @return a string in PostgreSQL binary string escape format.
 }
-function EncodeBinaryString(Value: string): string;
+function EncodeBinaryString(const Value: string): string;
 
 {**
   Determine the character code in terms of enumerated number.
@@ -121,14 +121,14 @@ function pg_CS_code(const InputString: string): TZPgCharactersetType;
   @param Value the regular string.
   @return the encoded string.
 }
-function EncodeString(CharactersetCode: TZPgCharactersetType; Value: string): string; overload;
+function EncodeString(CharactersetCode: TZPgCharactersetType; const Value: string): string; overload;
 
 {**
   Converts an string from escape PostgreSQL format.
   @param Value a string in PostgreSQL escape format.
   @return a regular string.
 }
-function DecodeString(Value: string): string;
+function DecodeString(const Value: string): string;
 
 {**
   Checks for possible sql errors.
@@ -143,7 +143,7 @@ function DecodeString(Value: string): string;
 procedure CheckPostgreSQLError(Connection: IZConnection;
   PlainDriver: IZPostgreSQLPlainDriver;
   Handle: PZPostgreSQLConnect; LogCategory: TZLoggingCategory;
-  LogMessage: string;
+  const LogMessage: string;
   ResultHandle: PZPostgreSQLResult);
 
 
@@ -152,7 +152,7 @@ procedure CheckPostgreSQLError(Connection: IZConnection;
    @param Value a minor version string like "4betta2"
    @return a miror version number
 }
-function GetMinorVersion(Value: string): Word;
+function GetMinorVersion(const Value: string): Word;
 
 implementation
 
@@ -355,7 +355,7 @@ end;
   @param Value a regular string.
   @return a string in PostgreSQL escape format.
 }
-function EncodeString(Value: string): string;
+function EncodeString(const Value: string): string;
 var
   I: Integer;
   SrcLength, DestLength: Integer;
@@ -585,7 +585,7 @@ end;
   @param Value the regular string.
   @return the encoded string.
 }
-function EncodeString(CharactersetCode: TZPgCharactersetType; Value: string): string;
+function EncodeString(CharactersetCode: TZPgCharactersetType; const Value: string): string;
 var
   I, LastState: Integer;
   SrcLength, DestLength: Integer;
@@ -643,7 +643,7 @@ end;
   @param Value a binary stream.
   @return a string in PostgreSQL binary string escape format.
 }
-function EncodeBinaryString(Value: string): string;
+function EncodeBinaryString(const Value: string): string;
 var
   I: Integer;
   SrcLength, DestLength: Integer;
@@ -695,7 +695,7 @@ end;
   @param Value a string in PostgreSQL escape format.
   @return a regular string.
 }
-function DecodeString(Value: string): string;
+function DecodeString(const Value: string): string;
 var
   SrcLength, DestLength: Integer;
   SrcBuffer, DestBuffer: PAnsiChar;
@@ -751,7 +751,7 @@ end;
 procedure CheckPostgreSQLError(Connection: IZConnection;
   PlainDriver: IZPostgreSQLPlainDriver;
   Handle: PZPostgreSQLConnect; LogCategory: TZLoggingCategory;
-  LogMessage: string;
+  const LogMessage: string;
   ResultHandle: PZPostgreSQLResult);
 
 var
@@ -816,7 +816,7 @@ end;
    @param Value a minor version string like "4betta2"
    @return a miror version number
 }
-function GetMinorVersion(Value: string): Word;
+function GetMinorVersion(const Value: string): Word;
 var
   I: integer;
   Temp: string;

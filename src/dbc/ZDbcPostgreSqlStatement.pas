@@ -111,7 +111,7 @@ type
   private
     FOidAsBlob: Boolean;
     function GetProcedureSql(): string;
-    function FillParams(ASql:String):String;
+    function FillParams(const ASql:String):String;
     function PrepareSQLParam(ParamIndex: Integer): string;
   protected
     function GetConnectionHandle():PZPostgreSQLConnect;
@@ -757,7 +757,7 @@ end;
    Fills the parameter (?) tokens with corresponding parameter value
    @return a prepared SQL query for execution
 }
-function TZPostgreSQLCallableStatement.FillParams(ASql:String):String;
+function TZPostgreSQLCallableStatement.FillParams(const ASql:String):String;
 var I: Integer;
   Tokens: TStrings;
   ParamIndex: Integer;

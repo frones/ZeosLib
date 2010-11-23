@@ -625,7 +625,7 @@ begin
       end
         else
       begin
-        CursorName := 'ExecProc'; //AVZ - Need a way to return one row so we give the cursor a name
+        CursorName := 'ExecProc'+RandomString(12); //AVZ - Need a way to return one row so we give the cursor a name
         if (SQLData = nil) then
         begin
           GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
@@ -714,7 +714,7 @@ begin
       end
         else
       begin
-        CursorName := 'ExecProc'; //AVZ - Need a way to return one row so we give the cursor a name
+        CursorName := 'ExecProc'+RandomString(12); //AVZ - Need a way to return one row so we give the cursor a name
         if (SQLData = nil) then
         begin
           GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
@@ -747,7 +747,7 @@ begin
       on E: Exception do
       begin
         //The cursor will be already closed for exec2
-        if (CursorName = 'ExecProc') then
+        if (Pos('ExecProc', CursorName) <> 0) then
         begin
           StmtHandle := nil;
         end;
@@ -1008,7 +1008,7 @@ begin
       end
         else
       begin
-        CursorName := 'ExecProc'; //AVZ - Need a way to return one row so we give the cursor a name
+        CursorName := 'ExecProc'+RandomString(12); //AVZ - Need a way to return one row so we give the cursor a name
         GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
           GetDialect, FParamSQLData.GetData, SQLData.GetData);
       end;

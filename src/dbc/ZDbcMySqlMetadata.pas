@@ -1162,7 +1162,7 @@ var
   TempPos: Integer;
 
   TypeInfoList: TStrings;
-  TypeInfo, TypeInfoFirst, TypeInfoSecond: string;
+  TypeInfo, TypeInfoFirst, TypeInfoSecond, Collation: string;
   Nullable, DefaultValue: string;
   HasDefaultValue: Boolean;
   ColumnSize, ColumnDecimals: Integer;
@@ -1170,7 +1170,7 @@ var
 
   TableNameList: TStrings;
   TableNameLength: Integer;
-  ColumnIndexes : Array[1..5] of integer;
+  ColumnIndexes : Array[1..6] of integer;
   Res : IZResultset;
 
 begin
@@ -1199,7 +1199,7 @@ begin
         TempTableNamePattern := TableNameList.Strings[I];
 
         with GetConnection.CreateStatement.ExecuteQuery(
-          Format('SHOW COLUMNS FROM %s.%s LIKE ''%s''',
+          Format('SHOW FULL COLUMNS FROM %s.%s LIKE ''%s''',
           [GetIdentifierConvertor.Quote(TempCatalog),
           GetIdentifierConvertor.Quote(TempTableNamePattern),
           TempColumnNamePattern])) do
@@ -1209,12 +1209,14 @@ begin
           ColumnIndexes[3] := FindColumn('Null');
           ColumnIndexes[4] := FindColumn('Extra');
           ColumnIndexes[5] := FindColumn('Default');
+          ColumnIndexes[6] := FindColumn('Collation');
           while Next do
           begin
             {initialise some variables}
             ColumnSize := 0;
             TypeInfoFirst := '';
             TypeInfoSecond := '';
+            Collation:='';
 
             Res.MoveToInsertRow;
             Res.UpdateString(1, TempCatalog);
@@ -1232,8 +1234,10 @@ begin
             else
               TypeInfoFirst := TypeInfo;
 
+            Collation:=GetString(ColumnIndexes[6]);
+
             TypeInfoFirst := LowerCase(TypeInfoFirst);
-            MySQLType := ConvertMySQLTypeToSQLType(TypeInfoFirst, TypeInfo);
+            MySQLType := ConvertMySQLTypeToSQLType(TypeInfoFirst, TypeInfo, Collation);
             Res.UpdateInt(5, Ord(MySQLType));
             Res.UpdateString(6, TypeInfoFirst);
 

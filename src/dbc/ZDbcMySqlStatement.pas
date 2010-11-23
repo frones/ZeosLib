@@ -109,6 +109,7 @@ type
   protected
     function CreateExecStatement: IZStatement; override;
     function GetEscapeString(const Value: string): string;
+    function GetAnsiEscapeString(const Value: AnsiString): AnsiString;
     function PrepareSQLParam(ParamIndex: Integer): string; override;
   public
     constructor Create(PlainDriver: IZMySQLPlainDriver;
@@ -182,7 +183,7 @@ type
 implementation
 
 uses
-  Types, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZSysUtils,
+  Types, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZSysUtils, ZDbcResultSetMetadata,
   ZMessages, ZDbcCachedResultSet, ZDbcUtils, DateUtils;
 
 { TZMySQLStatement }
@@ -462,14 +463,34 @@ begin
   GetMem(Buffer, BufferLen);
   if FHandle = nil then
   {$IFDEF DELPHI12_UP}
-    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(AnsiString(Value)), Length(Value))
+    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(UTF8Encode(Value)), Length(PAnsiChar(UTF8Encode(Value))))
   else
-    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(AnsiString(Value)), Length(Value));   
+    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(UTF8Encode(Value)), Length(PAnsiChar(UTF8Encode(Value))));
   {$ELSE}
     BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(Value), Length(Value))
    else
-    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(Value), Length(Value));   
-  {$ENDIF}        
+    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(Value), Length(Value));
+  {$ENDIF}
+  Result := '''' + BufferToStr(Buffer, BufferLen) + '''';
+  FreeMem(Buffer);
+end;
+
+{**
+  Converts an ansi string (binary data) into escape MySQL format.
+  @param Value a regular string.
+  @return a string in MySQL escape format.
+}
+function TZMySQLEmulatedPreparedStatement.GetAnsiEscapeString(const Value: AnsiString): AnsiString;
+var
+  BufferLen: Integer;
+  Buffer: PAnsiChar;
+begin
+  BufferLen := Length(Value) * 2 + 1;
+  GetMem(Buffer, BufferLen);
+  if FHandle = nil then
+    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(Value), Length(Value))
+   else
+    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(Value), Length(Value));
   Result := '''' + BufferToStr(Buffer, BufferLen) + '''';
   FreeMem(Buffer);
 end;
@@ -535,10 +556,19 @@ begin
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
-            Result := GetEscapeString(TempBlob.GetString)
+            Result := GetAnsiEscapeString(TempBlob.GetString)
           else
             Result := 'NULL';
         end;
+{   ????
+     stUnicodeStream:
+        begin
+          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
+          if not TempBlob.IsEmpty then
+            Result := GetEscapeString(TempBlob.GetString)
+          else
+            Result := 'NULL';
+        end;}
     end;
   end;
 end;

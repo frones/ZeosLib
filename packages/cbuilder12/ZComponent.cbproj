@@ -103,6 +103,18 @@
 				<BuildOrder>17</BuildOrder>
 				<BuildOrder>15</BuildOrder>
 			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\component\ZAbstractConnection.pas">
+				<BuildOrder>20</BuildOrder>
+				<BuildOrder>16</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\component\ZGroupedConnection.pas">
+				<BuildOrder>20</BuildOrder>
+				<BuildOrder>16</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\component\ZConnectionGroup.pas">
+				<BuildOrder>20</BuildOrder>
+				<BuildOrder>16</BuildOrder>
+			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\component\ZConnection.pas">
 				<BuildOrder>20</BuildOrder>
 				<BuildOrder>16</BuildOrder>

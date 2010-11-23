@@ -60,7 +60,7 @@ interface
 {$IFDEF WITH_PROPERTY_EDITOR}
 
 uses
-  Types, Classes, ZClasses, ZCompatibility, ZDbcIntfs,
+  Types, Classes, ZClasses, ZCompatibility, ZDbcIntfs, ZGroupedConnection , ZConnectionGroup, ZAbstractConnection,
 {$IFDEF BDS4_UP}
   WideStrings,
 {$ENDIF}
@@ -133,6 +133,28 @@ type
     procedure GetValueList(List: TStrings); override;
     procedure SetValue(const Value: string); override;
   end;
+
+  // Modified by Una.Bicicleta 2010/10/31
+  {** Implements a property editor for ZConnectionGroup.Database property. }
+  TZConnectionGroupPropertyEditor = class(TZStringProperty)
+  public
+    function  GetAttributes: TPropertyAttributes; override;
+    function  GetValue: string; override;
+    procedure Edit; override;
+    procedure GetValueList(List: TStrings); override;
+    procedure SetValue(const Value: string); override;
+  end;
+
+  {** Implements a property editor for ZGroupedConnection.Catalog property. }
+  TZGroupedConnectionCatalogPropertyEditor = class(TZStringProperty)
+  public
+    function  GetValue: string; override;
+    procedure GetValueList(List: TStrings); override;
+    procedure SetValue(const Value: string); override;
+  end;
+
+  /////////////////////////////////////////////////////////
+
 
   {** Implements a property editor for ZConnection.Catalog property. }
   TZCatalogPropertyEditor = class(TZStringProperty)
@@ -321,14 +343,14 @@ end;
 }
 procedure TZTableNamePropertyEditor.GetValueList(List: TStrings);
 var
-  Connection: TZConnection;
+  Connection: TZAbstractConnection;
   Metadata: IZDatabaseMetadata;
   ResultSet: IZResultSet;
   Schema, Tablename:String;
   IdentifierConvertor: IZIdentifierConvertor;
   Catalog: string;
 begin
-  Connection := GetObjectProp(GetComponent(0), 'Connection') as TZConnection;
+  Connection := GetObjectProp(GetComponent(0), 'Connection') as TZAbstractConnection;
   if Assigned(Connection) and Connection.Connected then
   begin
     Metadata := Connection.DbcConnection.GetMetadata;
@@ -390,14 +412,14 @@ end;
 }
 procedure TZProcedureNamePropertyEditor.GetValueList(List: TStrings);
 var
-  Connection: TZConnection;
+  Connection: TZAbstractConnection;
   Metadata: IZDatabaseMetadata;
   ResultSet: IZResultSet;
 {$IFDEF USE_METADATA}
   Catalog, Schema: string;
 {$ENDIF}
 begin
-  Connection := GetObjectProp(GetComponent(0), 'Connection') as TZConnection;
+  Connection := GetObjectProp(GetComponent(0), 'Connection') as TZAbstractConnection;
   if Assigned(Connection) and Connection.Connected then
   begin
 {$IFDEF USE_METADATA}
@@ -444,14 +466,14 @@ end;
 }
 procedure TZSequenceNamePropertyEditor.GetValueList(List: TStrings);
 var
-  Connection: TZConnection;
+  Connection: TZAbstractConnection;
   Metadata: IZDatabaseMetadata;
   ResultSet: IZResultSet;
 {$IFDEF USE_METADATA}
   Catalog, Schema: string;
 {$ENDIF}
 begin
-  Connection := GetObjectProp(GetComponent(0), 'Connection') as TZConnection;
+  Connection := GetObjectProp(GetComponent(0), 'Connection') as TZAbstractConnection;
   if Assigned(Connection) and Connection.Connected then
   begin
 {$IFDEF USE_METADATA}
@@ -511,8 +533,8 @@ end;
 procedure TZProtocolPropertyEditor.SetValue(const Value: string);
 begin
   SetStrValue(Value);
-  if GetComponent(0) is TZConnection then
-    (GetComponent(0) as TZConnection).Connected := False;
+  if GetComponent(0) is TZAbstractConnection then
+    (GetComponent(0) as TZAbstractConnection).Connected := False;
 end;
 
 {**
@@ -543,10 +565,10 @@ end;
 }
 function TZDatabasePropertyEditor.GetAttributes: TPropertyAttributes;
 begin
-  if GetComponent(0) is TZConnection then
+  if GetComponent(0) is TZAbstractConnection then
   begin
-    if ((GetComponent(0) as TZConnection).Protocol = 'mssql') or
-    ((GetComponent(0) as TZConnection).Protocol = 'sybase') then
+    if ((GetComponent(0) as TZAbstractConnection).Protocol = 'mssql') or
+    ((GetComponent(0) as TZAbstractConnection).Protocol = 'sybase') then
       Result := inherited GetAttributes
     else
       Result := [paDialog];
@@ -569,8 +591,8 @@ end;
 procedure TZDatabasePropertyEditor.SetValue(const Value: string);
 begin
   SetStrValue(Value);
-  if GetComponent(0) is TZConnection then
-    (GetComponent(0) as TZConnection).Connected := False;
+  if GetComponent(0) is TZAbstractConnection then
+    (GetComponent(0) as TZAbstractConnection).Connected := False;
 end;
 
 {**
@@ -582,28 +604,28 @@ var
   DbcConnection: IZConnection;
   Url: string;
 begin
-  if GetComponent(0) is TZConnection then
+  if GetComponent(0) is TZAbstractConnection then
   try
-    if (GetComponent(0) as TZConnection).Port = 0 then
+    if (GetComponent(0) as TZAbstractConnection).Port = 0 then
       Url := Format('zdbc:%s://%s/%s?UID=%s;PWD=%s', [
-        (GetComponent(0) as TZConnection).Protocol,
-        (GetComponent(0) as TZConnection).HostName,
+        (GetComponent(0) as TZAbstractConnection).Protocol,
+        (GetComponent(0) as TZAbstractConnection).HostName,
         '',
-        (GetComponent(0) as TZConnection).User,
-        (GetComponent(0) as TZConnection).Password])
+        (GetComponent(0) as TZAbstractConnection).User,
+        (GetComponent(0) as TZAbstractConnection).Password])
     else
       Url := Format('zdbc:%s://%s:%d/%s?UID=%s;PWD=%s', [
-        (GetComponent(0) as TZConnection).Protocol,
-        (GetComponent(0) as TZConnection).HostName,
-        (GetComponent(0) as TZConnection).Port,
+        (GetComponent(0) as TZAbstractConnection).Protocol,
+        (GetComponent(0) as TZAbstractConnection).HostName,
+        (GetComponent(0) as TZAbstractConnection).Port,
         '',
-        (GetComponent(0) as TZConnection).User,
-        (GetComponent(0) as TZConnection).Password]);
+        (GetComponent(0) as TZAbstractConnection).User,
+        (GetComponent(0) as TZAbstractConnection).Password]);
 
-    (GetComponent(0) as TZConnection).ShowSqlHourGlass;
+    (GetComponent(0) as TZAbstractConnection).ShowSqlHourGlass;
     try
       DbcConnection := DriverManager.GetConnectionWithParams(Url,
-        (GetComponent(0) as TZConnection).Properties);
+        (GetComponent(0) as TZAbstractConnection).Properties);
 
       with DbcConnection.GetMetadata.GetCatalogs do
       try
@@ -614,7 +636,7 @@ begin
       end;
 
     finally
-      (GetComponent(0) as TZConnection).HideSqlHourGlass;
+      (GetComponent(0) as TZAbstractConnection).HideSqlHourGlass;
     end;
   except
 //    raise;
@@ -628,18 +650,18 @@ procedure TZDatabasePropertyEditor.Edit;
 var
   OD: TOpenDialog;
 begin
-  if GetComponent(0) is TZConnection then
+  if GetComponent(0) is TZAbstractConnection then
   begin
-    if ((GetComponent(0) as TZConnection).Protocol = 'mssql') or
-    ((GetComponent(0) as TZConnection).Protocol = 'sybase') then
+    if ((GetComponent(0) as TZAbstractConnection).Protocol = 'mssql') or
+    ((GetComponent(0) as TZAbstractConnection).Protocol = 'sybase') then
       inherited
 {$IFNDEF UNIX}
 {$IFNDEF FPC}
 {$IFDEF ENABLE_ADO}
     else
-    if ((GetComponent(0) as TZConnection).Protocol = 'ado') then
-      (GetComponent(0) as TZConnection).Database := PromptDataSource(Application.Handle,
-        (GetComponent(0) as TZConnection).Database)
+    if ((GetComponent(0) as TZAbstractConnection).Protocol = 'ado') then
+      (GetComponent(0) as TZAbstractConnection).Database := PromptDataSource(Application.Handle,
+        (GetComponent(0) as TZAbstractConnection).Database)
 {$ENDIF}
 {$ENDIF}
 {$ENDIF}
@@ -647,9 +669,9 @@ begin
     begin
       OD := TOpenDialog.Create(nil);
       try
-        OD.InitialDir := ExtractFilePath((GetComponent(0) as TZConnection).Database);
+        OD.InitialDir := ExtractFilePath((GetComponent(0) as TZAbstractConnection).Database);
         if OD.Execute then
-          (GetComponent(0) as TZConnection).Database := OD.FileName;
+          (GetComponent(0) as TZAbstractConnection).Database := OD.FileName;
       finally
         OD.Free;
       end;
@@ -688,28 +710,28 @@ var
   DbcConnection: IZConnection;
   Url: string;
 begin
-  if GetComponent(0) is TZConnection then
+  if GetComponent(0) is TZAbstractConnection then
   try
-    if (GetComponent(0) as TZConnection).Port = 0 then
+    if (GetComponent(0) as TZAbstractConnection).Port = 0 then
       Url := Format('zdbc:%s://%s/%s?UID=%s;PWD=%s', [
-        (GetComponent(0) as TZConnection).Protocol,
-        (GetComponent(0) as TZConnection).HostName,
+        (GetComponent(0) as TZAbstractConnection).Protocol,
+        (GetComponent(0) as TZAbstractConnection).HostName,
         '',
-        (GetComponent(0) as TZConnection).User,
-        (GetComponent(0) as TZConnection).Password])
+        (GetComponent(0) as TZAbstractConnection).User,
+        (GetComponent(0) as TZAbstractConnection).Password])
     else
       Url := Format('zdbc:%s://%s:%d/%s?UID=%s;PWD=%s', [
-        (GetComponent(0) as TZConnection).Protocol,
-        (GetComponent(0) as TZConnection).HostName,
-        (GetComponent(0) as TZConnection).Port,
+        (GetComponent(0) as TZAbstractConnection).Protocol,
+        (GetComponent(0) as TZAbstractConnection).HostName,
+        (GetComponent(0) as TZAbstractConnection).Port,
         '',
-        (GetComponent(0) as TZConnection).User,
-        (GetComponent(0) as TZConnection).Password]);
+        (GetComponent(0) as TZAbstractConnection).User,
+        (GetComponent(0) as TZAbstractConnection).Password]);
 
-    (GetComponent(0) as TZConnection).ShowSqlHourGlass;
+    (GetComponent(0) as TZAbstractConnection).ShowSqlHourGlass;
     try
       DbcConnection := DriverManager.GetConnectionWithParams(Url,
-        (GetComponent(0) as TZConnection).Properties);
+        (GetComponent(0) as TZAbstractConnection).Properties);
 
       with DbcConnection.GetMetadata.GetCatalogs do
       try
@@ -720,7 +742,7 @@ begin
       end;
 
     finally
-      (GetComponent(0) as TZConnection).HideSqlHourGlass;
+      (GetComponent(0) as TZAbstractConnection).HideSqlHourGlass;
     end;
   except
 //    raise;
@@ -737,11 +759,11 @@ end;
 }
 procedure TZCatalogProperty.GetValueList(List: TStrings);
 var
-  Connection: TZConnection;
+  Connection: TZAbstractConnection;
   Metadata: IZDatabaseMetadata;
   ResultSet: IZResultSet;
 begin
-  Connection := GetObjectProp(GetComponent(0), 'Connection') as TZConnection;
+  Connection := GetObjectProp(GetComponent(0), 'Connection') as TZAbstractConnection;
   if Assigned(Connection) and Connection.Connected then
   try
     Metadata := Connection.DbcConnection.GetMetadata;
@@ -761,12 +783,12 @@ end;
 }
 procedure TZColumnNamePropertyEditor.GetValueList(List: TStrings);
 var
-  Connection: TZConnection;
+  Connection: TZAbstractConnection;
   Metadata: IZDatabaseMetadata;
   ResultSet: IZResultSet;
   Catalog, Schema, TableName: string;
 begin
-  Connection := GetObjectProp(GetComponent(0), 'Connection') as TZConnection;
+  Connection := GetObjectProp(GetComponent(0), 'Connection') as TZAbstractConnection;
   if Assigned(Connection) and Connection.Connected then
   begin
     Catalog := GetStrProp(GetComponent(0), 'Catalog');
@@ -798,11 +820,11 @@ end;
 }
 procedure TZSchemaPropertyEditor.GetValueList(List: TStrings);
 var
-  Connection: TZConnection;
+  Connection: TZAbstractConnection;
   Metadata: IZDatabaseMetadata;
   ResultSet: IZResultSet;
 begin
-  Connection := GetObjectProp(GetComponent(0), 'Connection') as TZConnection;
+  Connection := GetObjectProp(GetComponent(0), 'Connection') as TZAbstractConnection;
   if Assigned(Connection) and Connection.Connected then
   try
     Metadata := Connection.DbcConnection.GetMetadata;
@@ -822,11 +844,11 @@ end;
 }
 procedure TZTypeNamePropertyEditor.GetValueList(List: TStrings);
 var
-  Connection: TZConnection;
+  Connection: TZAbstractConnection;
   Metadata: IZDatabaseMetadata;
   ResultSet: IZResultSet;
 begin
-  Connection := GetObjectProp(GetComponent(0), 'Connection') as TZConnection;
+  Connection := GetObjectProp(GetComponent(0), 'Connection') as TZAbstractConnection;
   if Assigned(Connection) and Connection.Connected then
   try
     Metadata := Connection.DbcConnection.GetMetadata;
@@ -837,6 +859,191 @@ begin
     ResultSet.Close;
   end;
 end;
+
+
+//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+{ TZConnectionGroupCatalogPropertyEditor }
+
+
+function TZGroupedConnectionCatalogPropertyEditor.GetValue: string;
+begin
+  Result := GetStrValue;
+end;
+
+procedure TZGroupedConnectionCatalogPropertyEditor.SetValue(const Value: string);
+begin
+  SetStrValue(Value);
+end;
+
+procedure TZGroupedConnectionCatalogPropertyEditor.GetValueList(List: TStrings);
+var
+  DbcConnection: IZConnection;
+  Url: string;
+begin
+  if GetComponent(0) is TZAbstractConnection then
+  try
+    if (GetComponent(0) as TZAbstractConnection).Port = 0 then
+      Url := Format('zdbc:%s://%s/%s?UID=%s;PWD=%s', [
+        (GetComponent(0) as TZAbstractConnection).Protocol,
+        (GetComponent(0) as TZAbstractConnection).HostName,
+        '',
+        (GetComponent(0) as TZAbstractConnection).User,
+        (GetComponent(0) as TZAbstractConnection).Password])
+    else
+      Url := Format('zdbc:%s://%s:%d/%s?UID=%s;PWD=%s', [
+        (GetComponent(0) as TZAbstractConnection).Protocol,
+        (GetComponent(0) as TZAbstractConnection).HostName,
+        (GetComponent(0) as TZAbstractConnection).Port,
+        '',
+        (GetComponent(0) as TZAbstractConnection).User,
+        (GetComponent(0) as TZAbstractConnection).Password]);
+
+    (GetComponent(0) as TZAbstractConnection).ShowSqlHourGlass;
+    try
+      DbcConnection := DriverManager.GetConnectionWithParams(Url,
+        (GetComponent(0) as TZAbstractConnection).Properties);
+
+      with DbcConnection.GetMetadata.GetCatalogs do
+      try
+        while Next do
+          List.Append(GetStringByName('TABLE_CAT'));
+      finally
+        Close;
+      end;
+
+    finally
+      (GetComponent(0) as TZAbstractConnection).HideSqlHourGlass;
+    end;
+  except
+//    raise;
+  end;
+end;
+
+
+
+
+{ TZConnectionGroupPropertyEditor }
+
+{**
+  Gets a type of property attributes.
+  @return a type of property attributes.
+}
+function TZConnectionGroupPropertyEditor.GetAttributes: TPropertyAttributes;
+begin
+  if GetComponent(0) is TZConnectionGroup then
+  begin
+    if ((GetComponent(0) as TZConnectionGroup).Protocol = 'mssql') or
+    ((GetComponent(0) as TZConnectionGroup).Protocol = 'sybase') then
+      Result := inherited GetAttributes
+    else
+      Result := [paDialog];
+  end;
+end;
+
+{**
+  Gets a selected string value.
+  @return a selected string value.
+}
+function TZConnectionGroupPropertyEditor.GetValue: string;
+begin
+  Result := GetStrValue;
+end;
+
+{**
+  Sets a new selected string value.
+  @param Value a new selected string value.
+}
+procedure TZConnectionGroupPropertyEditor.SetValue(const Value: string);
+begin
+  SetStrValue(Value);
+//  if GetComponent(0) is TZConnectionGroup then
+//    (GetComponent(0) as TZConnectionGroup).Connected := False;
+end;
+
+{**
+  Processes a list of list items.
+  @param List the list to process the list items.
+}
+procedure TZConnectionGroupPropertyEditor.GetValueList(List: TStrings);
+var
+  DbcConnection: IZConnection;
+  Url: string;
+begin
+  if GetComponent(0) is TZConnectionGroup then
+  try
+    if (GetComponent(0) as TZConnectionGroup).Port = 0 then
+      Url := Format('zdbc:%s://%s/%s?UID=%s;PWD=%s', [
+        (GetComponent(0) as TZConnectionGroup).Protocol,
+        (GetComponent(0) as TZConnectionGroup).HostName,
+        '',
+        (GetComponent(0) as TZConnectionGroup).User,
+        (GetComponent(0) as TZConnectionGroup).Password])
+    else
+      Url := Format('zdbc:%s://%s:%d/%s?UID=%s;PWD=%s', [
+        (GetComponent(0) as TZConnectionGroup).Protocol,
+        (GetComponent(0) as TZConnectionGroup).HostName,
+        (GetComponent(0) as TZConnectionGroup).Port,
+        '',
+        (GetComponent(0) as TZConnectionGroup).User,
+        (GetComponent(0) as TZConnectionGroup).Password]);
+
+
+
+      with DbcConnection.GetMetadata.GetCatalogs do
+      try
+        while Next do
+          List.Append(GetStringByName('TABLE_CAT'));
+      finally
+        Close;
+      end;
+
+
+  except
+//    raise;
+  end;
+end;
+
+{**
+  Brings up the proper database property editor dialog.
+}
+procedure TZConnectionGroupPropertyEditor.Edit;
+var
+  OD: TOpenDialog;
+begin
+  if GetComponent(0) is TZConnectionGroup then
+  begin
+    if ((GetComponent(0) as TZConnectionGroup).Protocol = 'mssql') or
+    ((GetComponent(0) as TZConnectionGroup).Protocol = 'sybase') then
+      inherited
+{$IFNDEF UNIX}
+{$IFNDEF FPC}
+{$IFDEF ENABLE_ADO}
+    else
+    if ((GetComponent(0) as TZConnectionGroup).Protocol = 'ado') then
+      (GetComponent(0) as TZConnectionGroup).Database := PromptDataSource(Application.Handle,
+        (GetComponent(0) as TZConnectionGroup).Database)
+{$ENDIF}
+{$ENDIF}
+{$ENDIF}
+    else
+    begin
+      OD := TOpenDialog.Create(nil);
+      try
+        OD.InitialDir := ExtractFilePath((GetComponent(0) as TZConnectionGroup).Database);
+        if OD.Execute then
+          (GetComponent(0) as TZConnectionGroup).Database := OD.FileName;
+      finally
+        OD.Free;
+      end;
+    end;
+  end
+  else
+    inherited;
+end;
+
+
+
 {$ENDIF}
 
 {$ENDIF}

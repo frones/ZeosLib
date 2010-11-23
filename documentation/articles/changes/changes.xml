@@ -41,6 +41,9 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara> ADO SetParams->Reopen failure! (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2988">http://zeos.firmos.at/viewtopic.php?t=2988</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara> SQLite strange characters on retrieval (D2010)</simpara>
         </listitem>
         <listitem>
@@ -51,6 +54,9 @@
     <sect2>
       <title>Features added</title>
       <itemizedlist spacing="compact">
+        <listitem>
+          <simpara>New GroupedConnection and ConnectionGroup components - by una.bicicleta (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2760">http://zeos.firmos.at/viewtopic.php?t=2760</ulink>)</simpara>
+        </listitem>
         <listitem>
           <simpara>Added ParamChar Property to Dataset components and SQLProcessor to indicate which character parameters start with</simpara>
         </listitem>
