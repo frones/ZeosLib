@@ -925,7 +925,7 @@ begin
   if not (Status in [OCI_SUCCESS, OCI_NO_DATA]) then
     CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'FETCH ROW');
 
-  if Status = OCI_SUCCESS then
+  if Status in [OCI_SUCCESS, OCI_SUCCESS_WITH_INFO] then
   begin
     RowNo := RowNo + 1;
     if LastRowNo < RowNo then
