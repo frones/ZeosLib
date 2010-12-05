@@ -833,6 +833,8 @@ begin
       utModified:
           begin
         SQL := FormUpdateStatement(SQLParams, OldRowAccessor, NewRowAccessor);
+            If SQL =''then // no fields have been changed
+               exit; 
             If Assigned(UpdateStatement) and (SQL <> UpdateStatement.GetSQL) then
               UpdateStatement := nil;
             If (not Assigned(UpdateStatement)) and (Trim(SQL) <> '') then 
