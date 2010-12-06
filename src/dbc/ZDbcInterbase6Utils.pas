@@ -1798,9 +1798,19 @@ end;
 procedure TZParamsSQLDA.UpdateBigDecimal(const Index: Integer; Value: Extended);
 var
   SQLCode: SmallInt;
+  DecimalPoints : SmallInt; //Store the number of decimals for the value above
+
 begin
   CheckRange(Index);
-  SetFieldType(Index, sizeof(Int64), SQL_INT64 + 1, -4);
+  //AVZ - Fix to make the update of a column accurate based on the correct number of decimals
+  //The decimal points need to be dynamic depending on the value submitted - otherwise translation errors occur when reading from the database
+
+  DecimalPoints := Length (FloatToStr(Value)) - Pos ('.', FloatToStr(Value));
+  if (DecimalPoints > 15) then DecimalPoints := 15;
+  if (DecimalPoints < 0) then DecimalPoints := 0;
+  SetFieldType(Index, sizeof(Int64), SQL_INT64 + 1, -DecimalPoints);  //AVZ
+
+
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   begin
