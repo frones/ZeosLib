@@ -2381,7 +2381,7 @@ begin
       SQL_VARYING   : EncodeString(SQL_VARYING, Index, Value);
       SQL_LONG: PInteger(sqldata)^ := StrToInt(Value);
       SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, Value);
-      SQL_INT64     :  PInt64(sqldata)^ := StrToInt(Value); //AVZ - INT64 value was not recognized
+      SQL_INT64     :  PInt64(sqldata)^ := Trunc(StrToFloat(Value) * IBScaleDivisor[sqlscale]); //AVZ - INT64 value was not recognized
       SQL_BLOB:
         begin
           Stream := TStringStream.Create(Value);
