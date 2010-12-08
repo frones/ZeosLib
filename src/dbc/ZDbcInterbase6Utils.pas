@@ -2379,8 +2379,11 @@ begin
     case SQLCode of
       SQL_TEXT      : EncodeString(SQL_TEXT, Index, Value);
       SQL_VARYING   : EncodeString(SQL_VARYING, Index, Value);
-      SQL_LONG: PInteger(sqldata)^ := StrToInt(Value);
+      SQL_LONG      : PInteger (sqldata)^ := Round(StrToFloat(Value) * IBScaleDivisor[sqlscale]); //AVZ
       SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, Value);
+      SQL_DOUBLE    : PDouble (sqldata)^ := StrToFloat(Value) * IBScaleDivisor[sqlscale]; //AVZ
+      SQL_D_FLOAT,
+      SQL_FLOAT     : PSingle (sqldata)^ := StrToFloat(Value) * IBScaleDivisor[sqlscale];  //AVZ
       SQL_INT64     :  PInt64(sqldata)^ := Trunc(StrToFloat(Value) * IBScaleDivisor[sqlscale]); //AVZ - INT64 value was not recognized
       SQL_BLOB:
         begin
