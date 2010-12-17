@@ -849,9 +849,14 @@ var
   LobLocator: POCILobLocator;
   Stream: TStream;
 begin
+  Result := nil ;
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
 {$ENDIF}
+
+  LastWasNull := IsNull(ColumnIndex);
+  if LastWasNull then
+      Exit;
 
   GetSQLVarHolder(ColumnIndex);
   CurrentVar := @FOutVars.Variables[ColumnIndex];
@@ -925,7 +930,7 @@ begin
   if not (Status in [OCI_SUCCESS, OCI_NO_DATA]) then
     CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'FETCH ROW');
 
-  if Status = OCI_SUCCESS then
+  if Status in [OCI_SUCCESS, OCI_SUCCESS_WITH_INFO] then
   begin
     RowNo := RowNo + 1;
     if LastRowNo < RowNo then

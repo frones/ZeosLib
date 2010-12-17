@@ -15,10 +15,16 @@ interface
 
 uses
   Types, SysUtils, Messages, Classes, ZDbcIntfs, DB,Forms,
-  ZCompatibility, ZAbstractConnection, ZSequence, Dialogs, ZConnectionGroup ;
+  ZCompatibility, ZAbstractConnection, ZSequence, Dialogs,
+  ZConnectionGroup {$IFDEF FPC}, LMessages{$ENDIF};
 
-const  CM_ZCONNECTIONGROUPCHANGED = WM_USER + 100;
-const  CM_ZCONNECTIONGROUPCHANGE  = WM_USER + 101;
+{$IFNDEF FPC}
+ const  CM_ZCONNECTIONGROUPCHANGED = WM_USER + 100;
+ const  CM_ZCONNECTIONGROUPCHANGE  = WM_USER + 101;
+{$ELSE}
+const  CM_ZCONNECTIONGROUPCHANGED = LM_USER + 100;
+const  CM_ZCONNECTIONGROUPCHANGE  = LM_USER + 101;
+{$ENDIF}
 
 type
   TMsgZDbConnecitionChange = record
