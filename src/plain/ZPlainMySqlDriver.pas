@@ -76,6 +76,8 @@ const
   WINDOWS_DLL50_LOCATION_EMBEDDED = 'libmysqld50.dll';
   WINDOWS_DLL51_LOCATION = 'libmysql51.dll';
   WINDOWS_DLL51_LOCATION_EMBEDDED = 'libmysqld51.dll';
+  WINDOWS_DLL55_LOCATION = 'libmysql55.dll';
+  WINDOWS_DLL55_LOCATION_EMBEDDED = 'libmysqld55.dll';
 {$ELSE}
   {$IFNDEF MYSQL_STRICT_DLL_LOADING}
   LINUX_DLL_LOCATION = 'libmysqlclient.so';
@@ -1127,6 +1129,7 @@ begin
   with Loader do
   begin
   @MYSQL_API.mysql_get_character_set_info := GetAddress('mysql_get_character_set_info');
+  @MYSQL_API.mysql_stmt_next_result       := GetAddress('mysql_stmt_next_result');
   end;
 end;
 
@@ -1136,6 +1139,7 @@ begin
   {$IFNDEF UNIX}
     FLoader.AddLocation(WINDOWS_DLL50_LOCATION);
     FLoader.AddLocation(WINDOWS_DLL51_LOCATION);
+    FLoader.AddLocation(WINDOWS_DLL55_LOCATION);
   {$ELSE}
     FLoader.AddLocation(LINUX_DLL50_LOCATION);
     FLoader.AddLocation(LINUX_DLL51_LOCATION);
@@ -1169,6 +1173,7 @@ begin
   {$IFNDEF UNIX}
     FLoader.AddLocation(WINDOWS_DLL50_LOCATION_EMBEDDED);
     FLoader.AddLocation(WINDOWS_DLL51_LOCATION_EMBEDDED);
+    FLoader.AddLocation(WINDOWS_DLL55_LOCATION_EMBEDDED);
   {$ELSE}
     FLoader.AddLocation(LINUX_DLL50_LOCATION_EMBEDDED);
     FLoader.AddLocation(LINUX_DLL51_LOCATION_EMBEDDED);

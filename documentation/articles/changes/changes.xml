@@ -55,6 +55,9 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[MYSQL] Added support for Mysql 5.5 (new library name and a few new constants</simpara>
+        </listitem>
+        <listitem>
           <simpara>New GroupedConnection and ConnectionGroup components - by una.bicicleta (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2760">http://zeos.firmos.at/viewtopic.php?t=2760</ulink>)</simpara>
         </listitem>
         <listitem>

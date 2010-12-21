@@ -148,6 +148,9 @@ const
   _CLIENT_SECURE_CONNECTION = 32768; { New 4.1 authentication }
   _CLIENT_MULTI_STATEMENTS = 65536; { Enable/disable multi-stmt support }
   _CLIENT_MULTI_RESULTS   = 131072; { Enable/disable multi-results }
+  _CLIENT_PS_MULTI_RESULTS = 262144; { Enable Multi-results in PS-protocol }
+  _CLIENT_PLUGIN_AUTH      = 524288;
+  _CLIENT_SSL_VERIFY_SERVER_CERT = 1073741824;
   _CLIENT_REMEMBER_OPTIONS = 2147483648; {Enable/disable multi-results }
 
 {THD: Killable}
@@ -182,7 +185,12 @@ type
     MYSQL_OPT_USE_EMBEDDED_CONNECTION,
     MYSQL_OPT_GUESS_CONNECTION,
     MYSQL_SET_CLIENT_IP,
-    MYSQL_SECURE_AUTH
+    MYSQL_SECURE_AUTH,
+    MYSQL_REPORT_DATA_TRUNCATION, 
+    MYSQL_OPT_RECONNECT,
+    MYSQL_OPT_SSL_VERIFY_SERVER_CERT,
+    MYSQL_PLUGIN_DIR,
+    MYSQL_DEFAULT_AUTH
   );
 
   PUSED_MEM=^USED_MEM;
@@ -256,10 +264,10 @@ type
     use_ssl:                  Byte;
     compress:                 Byte;
     named_pipe:               Byte;
-    rpl_probe:                Byte;
-    rpl_parse:                Byte;
-    no_master_reads:          Byte;
-    separate_thread:          Byte;
+    unused1:                  Byte;
+    unused2:                  Byte;
+    unused3:                  Byte;
+    unused4:                  Byte;
     methods_to_use:           TMySqlOption;
     client_ip:                PAnsiChar;
     secure_auth:              Byte;
@@ -351,8 +359,8 @@ TMYSQL_CLIENT_OPTIONS =
   CLIENT_SECURE_CONNECTION  ,	{= 32768;  New 4.1 authentication }
   CLIENT_MULTI_STATEMENTS  ,	{= 65536;  Enable/disable multi-stmt support }
   CLIENT_MULTI_RESULTS  ,	{  = 131072;  Enable/disable multi-results }
-  CLIENT_OPT_18,  {2^18 = 262144}
-  CLIENT_OPT_19,{2^19 = 524288}
+  CLIENT_PS_MULTI_RESULTS,  {2^18 = 262144; Enable Multi-results in PS-protocol}
+  CLIENT_PLUGIN_AUTH,{2^19 = 524288}
   CLIENT_OPT_20,  {2^20 = 1048576}
   CLIENT_OPT_21,   {2^21 = 2097152 }
   CLIENT_OPT_22,  {2^22 = 4194304}
@@ -363,7 +371,7 @@ TMYSQL_CLIENT_OPTIONS =
   CLIENT_OPT_27,    {2^27 = 134217728}
   CLIENT_OPT_28,    {2^28 = 268435456}
   CLIENT_OPT_29,    {2^29 = 536870912}
-  CLIENT_OPT_30,    {2^30 = 1073741824}
+  CLIENT_SSL_VERIFY_SERVER_CERT,    {2^30 = 1073741824}
   CLIENT_REMEMBER_OPTIONS	{ = 2147483648; Enable/disable multi-results });
 
   TMysqlStmtState = (
@@ -463,7 +471,7 @@ TMYSQL_CLIENT_OPTIONS =
 
   PMYSQL_BIND51 = ^MYSQL_BIND51;
   MYSQL_BIND51 =  record
-    // 5.1.30 definition
+    // 5.1.30 definition (Still valid for 5.5.8)
     length:            PULong;
     is_null:           PByte;
     buffer:            PAnsiChar;
@@ -666,6 +674,7 @@ type
   Tmysql_stmt_free_result       = function(stmt: PMYSQL_STMT): Byte;                                 {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_init              = function(Handle: PMYSQL): PMYSQL_STMT;                             {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_insert_id         = function(stmt: PMYSQL_STMT): ULongLong;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_next_result       = function(stmt: PMYSQL_STMT): Integer;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_num_rows          = function(stmt: PMYSQL_STMT): ULongLong;                                {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_param_count       = function(stmt: PMYSQL_STMT): ULong;                             {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_param_metadata    = function(stmt: PMYSQL_STMT): PMYSQL_RES;                           {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
@@ -782,6 +791,7 @@ TZMYSQL_API = record
   mysql_stmt_free_result:       Tmysql_stmt_free_result;        {mysql 4.1.1}
   mysql_stmt_init:              Tmysql_stmt_init;               {mysql 4.1.2}
   mysql_stmt_insert_id:         Tmysql_stmt_insert_id;          {mysql 4.1.2}
+  mysql_stmt_next_result:       Tmysql_stmt_next_result;        {mysql 5.5.3}
   mysql_stmt_num_rows:          Tmysql_stmt_num_rows;           {mysql 4.1.1}
   mysql_stmt_param_count:       Tmysql_stmt_param_count;        {mysql 4.1.2}
   mysql_stmt_param_metadata:    Tmysql_stmt_param_metadata;     {mysql 4.1.2}
