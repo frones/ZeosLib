@@ -84,7 +84,7 @@ type
     {$IFDEF FPC}
     frefcount : longint;
     { implement methods of IUnknown }
-    function QueryInterface(const iid : tguid;out obj) : longint;stdcall;
+    function QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID; out Obj): HResult;
     function _AddRef : longint;stdcall;
     function _Release : longint;stdcall;
     procedure CheckEqualsMem(expected, actual: pointer; size:longword; msg:string='');
@@ -186,7 +186,7 @@ end;
 
 {$IFDEF FPC}
 
-function TZAbstractTestCase.QueryInterface(const iid: tguid; out obj): longint;
+function TZAbstractTestCase.QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID; out Obj): HResult;
   stdcall;
 begin
   if getinterface(iid,obj) then
