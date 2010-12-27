@@ -177,7 +177,7 @@ begin
           Statement.SetShort(I+1, Param.AsSmallInt);
         ftInteger, ftAutoInc:
           Statement.SetInt(I+1, Param.AsInteger);
-        ftFloat:
+        ftFloat, ftCurrency: //Added by AVZ
           Statement.SetDouble(I+1, Param.AsFloat);
         ftLargeInt:
           Statement.SetLong(I+1, StrToInt64(Param.AsString));

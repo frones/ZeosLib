@@ -525,7 +525,8 @@ begin
     FPlainDriver.Close(FHandle);
     FHandle := nil;
     LogMessage := Format('DISCONNECT FROM "%s"', [Database]);
-    DriverManager.LogMessage(lcDisconnect, FPlainDriver.GetProtocol, LogMessage);
+    if Assigned(DriverManager) then 
+      DriverManager.LogMessage(lcDisconnect, FPlainDriver.GetProtocol, LogMessage);
   end;
   inherited Close;
 end;

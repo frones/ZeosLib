@@ -857,6 +857,7 @@ begin
     Connection := GetStatement.GetConnection as IZOracleConnection;
     Result := TZOracleBlob.Create(FPlainDriver, nil, 0, Connection, LobLocator,
       CurrentVar.ColType);
+    (Result as IZOracleBlob).ReadBlob;
   end
   else
   begin

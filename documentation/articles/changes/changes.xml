@@ -41,6 +41,9 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara> Oracle BLOB problem after recordcount (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2462">http://zeos.firmos.at/viewtopic.php?t=2462</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara> New QueryInterface handling by Lazarus (<ulink url="http://zeos.firmos.at/viewtopic.php?t=3009">http://zeos.firmos.at/viewtopic.php?t=3009</ulink>)</simpara>
         </listitem>
         <listitem>
