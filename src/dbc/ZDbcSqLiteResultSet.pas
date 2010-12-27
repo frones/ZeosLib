@@ -704,12 +704,17 @@ function TZSQLiteResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
   Stream: TStream;
 begin
+  Result := nil;
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
 {$ENDIF}
+  LastWasNull := IsNull(ColumnIndex);
+  if LastWasNull then
+      Exit;
+
   Stream := nil;
   try
-    if not IsNull(ColumnIndex) then
+    if not LastWasNull then
     begin
       if TZAbstractResultSetMetadata(Metadata).GetColumnType(ColumnIndex)
         <> stBinaryStream then

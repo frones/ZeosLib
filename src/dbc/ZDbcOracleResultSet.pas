@@ -842,9 +842,14 @@ var
   LobLocator: POCILobLocator;
   Stream: TStream;
 begin
+  Result := nil ;
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
 {$ENDIF}
+
+  LastWasNull := IsNull(ColumnIndex);
+  if LastWasNull then
+      Exit;
 
   GetSQLVarHolder(ColumnIndex);
   CurrentVar := @FOutVars.Variables[ColumnIndex];

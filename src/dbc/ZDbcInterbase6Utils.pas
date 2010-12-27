@@ -1789,9 +1789,19 @@ end;
 procedure TZParamsSQLDA.UpdateBigDecimal(const Index: Integer; Value: Extended);
 var
   SQLCode: SmallInt;
+  DecimalPoints : SmallInt; //Store the number of decimals for the value above
+
 begin
   CheckRange(Index);
-  SetFieldType(Index, sizeof(Int64), SQL_INT64 + 1, -4);
+  //AVZ - Fix to make the update of a column accurate based on the correct number of decimals
+  //The decimal points need to be dynamic depending on the value submitted - otherwise translation errors occur when reading from the database
+
+  DecimalPoints := Length (FloatToStr(Value)) - Pos ('.', FloatToStr(Value));
+  if (DecimalPoints > 15) then DecimalPoints := 15;
+  if (DecimalPoints < 0) then DecimalPoints := 0;
+  SetFieldType(Index, sizeof(Int64), SQL_INT64 + 1, -DecimalPoints);  //AVZ
+
+
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   begin
@@ -1804,8 +1814,8 @@ begin
         SQL_SHORT  : PSmallInt(sqldata)^ := Trunc(Value * IBScaleDivisor[sqlscale]);
         SQL_LONG   : PInteger(sqldata)^  := Trunc(Value * IBScaleDivisor[sqlscale]);
         SQL_INT64,
-        SQL_QUAD   : PInt64(sqldata)^    := Trunc(Value * IBScaleDivisor[sqlscale]);
-        SQL_DOUBLE : PDouble(sqldata)^   := Value;
+        SQL_QUAD   : PInt64(sqldata)^    := Trunc(Value * IBScaleDivisor[sqlscale-1]/10); //AVZ - Currently this is a bit of a hack to sort out the decimal places on big Decimals > 10 Decimal Places
+        SQL_DOUBLE : PDouble(sqldata)^   := Value;                                        //I have tested with Query.ParamByName ().AsCurrency to check this, problem does not lie with straight SQL
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
       end;
@@ -2325,14 +2335,19 @@ begin
     case SQLCode of
       SQL_TEXT      : EncodeString(SQL_TEXT, Index, Value);
       SQL_VARYING   : EncodeString(SQL_VARYING, Index, Value);
-      SQL_LONG: PInteger(sqldata)^ := StrToInt(Value);
-      SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, Value); 
-      SQL_BLOB: begin
-        Stream := TStringStream.Create(Value);
-        try
-          WriteBlob(index, Stream);
-        finally
-          Stream.Free;
+      SQL_LONG      : PInteger (sqldata)^ := Round(StrToFloat(Value) * IBScaleDivisor[sqlscale]); //AVZ
+      SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, Value);
+      SQL_DOUBLE    : PDouble (sqldata)^ := StrToFloat(Value) * IBScaleDivisor[sqlscale]; //AVZ
+      SQL_D_FLOAT,
+      SQL_FLOAT     : PSingle (sqldata)^ := StrToFloat(Value) * IBScaleDivisor[sqlscale];  //AVZ
+      SQL_INT64     :  PInt64(sqldata)^ := Trunc(StrToFloat(Value) * IBScaleDivisor[sqlscale]); //AVZ - INT64 value was not recognized
+      SQL_BLOB:
+        begin
+          Stream := TStringStream.Create(Value);
+          try
+            WriteBlob(index, Stream);
+          finally
+            Stream.Free;
         end;
       end;
     else

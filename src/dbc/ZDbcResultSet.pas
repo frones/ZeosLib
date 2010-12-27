@@ -967,9 +967,14 @@ end;
 }
 function TZAbstractResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 begin
+  Result := nil ;
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
 {$ENDIF}
+  LastWasNull := IsNull(ColumnIndex);
+  if LastWasNull then
+      Exit;
+
   Result := TZAbstractBlob.CreateWithStream(nil);
 end;
 
