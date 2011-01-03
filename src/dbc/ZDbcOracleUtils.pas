@@ -645,7 +645,11 @@ begin
     OCI_SUCCESS:
       Exit;
     OCI_SUCCESS_WITH_INFO:
-      ErrorMessage := 'OCI_SUCCESS_WITH_INFO';
+      begin
+        PlainDriver.ErrorGet(ErrorHandle, 1, nil, ErrorCode, ErrorBuffer, 255,
+          OCI_HTYPE_ERROR);
+        ErrorMessage := 'OCI_SUCCESS_WITH_INFO: ' + StrPas(ErrorBuffer);
+      end;
     OCI_NEED_DATA:
       ErrorMessage := 'OCI_NEED_DATA';
     OCI_NO_DATA:
@@ -654,7 +658,7 @@ begin
       begin
         PlainDriver.ErrorGet(ErrorHandle, 1, nil, ErrorCode, ErrorBuffer, 255,
           OCI_HTYPE_ERROR);
-        ErrorMessage := StrPas(ErrorBuffer);
+        ErrorMessage := 'OCI_ERROR: ' + StrPas(ErrorBuffer);
       end;
     OCI_INVALID_HANDLE:
       ErrorMessage := 'OCI_INVALID_HANDLE';
@@ -664,14 +668,14 @@ begin
       ErrorMessage := 'OCI_CONTINUE';
   end;
 
-  if (ErrorCode <> OCI_SUCCESS) and (ErrorCode <> OCI_SUCCESS_WITH_INFO) and (ErrorMessage <> '') then
+  if (Status <> OCI_SUCCESS) and (Status <> OCI_SUCCESS_WITH_INFO) and (ErrorMessage <> '') then
   begin
     DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,
       ErrorCode, ErrorMessage);
     raise EZSQLException.CreateWithCode(ErrorCode,
       Format(SSQLError1, [ErrorMessage]));
   end;
-  if (ErrorCode = OCI_SUCCESS_WITH_INFO) and (ErrorMessage <> '') then
+  if (Status = OCI_SUCCESS_WITH_INFO) and (ErrorMessage <> '') then
   begin
     DriverManager.LogMessage(LogCategory, PlainDriver.GetProtocol, ErrorMessage);
   end;
