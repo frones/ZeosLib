@@ -73,9 +73,9 @@ type
     FController: Pointer;
     function GetController: IInterface;
   protected
-    function QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID; out Obj): HResult; {$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF}; virtual;
-    function _AddRef: Integer; {$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF};
-    function _Release: Integer; {$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF};
+    function QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID; out Obj): HResult; {$IFDEF FPC2_5UP}{$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF}{$ELSE}stdcall{$ENDIF}; virtual;
+    function _AddRef: Integer; {$IFDEF FPC2_5UP}{$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF}{$ELSE}stdcall{$ENDIF};
+    function _Release: Integer; {$IFDEF FPC2_5UP}{$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF}{$ELSE}stdcall{$ENDIF};
   public
     constructor Create(const Controller: IInterface);
     property Controller: IInterface read GetController;
@@ -83,7 +83,7 @@ type
 
   TContainedObject = class(TAggregatedObject, IInterface)
   protected
-    function QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID; out Obj): HResult; {$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF}; override;
+    function QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID; out Obj): HResult; {$IFDEF FPC2_5UP}{$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF}{$ELSE}stdcall{$ENDIF}; override;
   end;
   {$ENDIF}
 
@@ -215,7 +215,7 @@ begin
   Result := IInterface(FController)._AddRef;
 end;
 
-function TAggregatedObject._Release: Integer; {$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF};
+function TAggregatedObject._Release: Integer;
 begin
   Result := IInterface(FController)._Release;
 end;
