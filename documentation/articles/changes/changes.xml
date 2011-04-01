@@ -41,6 +41,9 @@
       <title>Other Bugs fixed</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara> FB/IB shortInteger parameters support added (<ulink url="http://zeos.firmos.at/viewtopic.php?t=3088">http://zeos.firmos.at/viewtopic.php?t=3088</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara> 3 Bugs in Master/Detail Mechanisms (<ulink url="http://zeos.firmos.at/viewtopic.php?t=3090">http://zeos.firmos.at/viewtopic.php?t=3090</ulink>)</simpara>
         </listitem>
         <listitem>
