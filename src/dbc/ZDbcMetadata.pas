@@ -168,6 +168,8 @@ TZAbstractDatabaseMetadata = class(TContainedObject, IZDatabaseMetadata)
       Unique: Boolean; Approximate: Boolean): IZResultSet; virtual;
     function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
       const SequenceNamePattern: string): IZResultSet; virtual;
+    function UncachedGetTriggers(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string; const TriggerNamePattern: string): IZResultSet; virtual;
     function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string): IZResultSet; virtual;
     function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
@@ -212,6 +214,8 @@ TZAbstractDatabaseMetadata = class(TContainedObject, IZDatabaseMetadata)
       const ForeignTable: string): IZResultSet;
     function GetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
       Unique: Boolean; Approximate: Boolean): IZResultSet;
+    function GetTriggers(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string; const TriggerNamePattern: string): IZResultSet;
     function GetSequences(const Catalog: string; const SchemaPattern: string;
       const SequenceNamePattern: string): IZResultSet;
     function GetProcedures(const Catalog: string; const SchemaPattern: string;
@@ -259,6 +263,9 @@ TZAbstractDatabaseMetadata = class(TContainedObject, IZDatabaseMetadata)
       const Unique: Boolean; const Approximate: Boolean): string;
     function GetSequencesCacheKey(const Catalog: string; const SchemaPattern: string;
       const SequenceNamePattern: string): string;
+    function GetTriggersCacheKey(const Catalog: string;
+      const SchemaPattern: string; const TableNamePattern: string;
+      const TriggerNamePattern: string): string;
     function GetProceduresCacheKey(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string): string;
     function GetProcedureColumnsCacheKey(const Catalog: string; const SchemaPattern: string;
@@ -446,6 +453,8 @@ TZAbstractDatabaseMetadata = class(TContainedObject, IZDatabaseMetadata)
 
 
 var
+  TriggersColumnsDynArray: TZMetadataColumnDefs;
+  TriggersColColumnsDynArray: TZMetadataColumnDefs;
   ProceduresColumnsDynArray: TZMetadataColumnDefs;
   ProceduresColColumnsDynArray: TZMetadataColumnDefs;
   TableColumnsDynArray: TZMetadataColumnDefs;
@@ -2194,6 +2203,35 @@ function TZAbstractDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: s
   const ColumnNamePattern: string): IZResultSet;
 begin
     Result := ConstructVirtualResultSet(ProceduresColColumnsDynArray);
+end;
+
+function TZAbstractDatabaseMetadata.GetTriggers(const Catalog: string; const SchemaPattern: string;
+  const TableNamePattern: string; const TriggerNamePattern: string): IZResultSet;
+var
+  Key: string;
+begin
+  Key := GetTriggersCacheKey(Catalog, SchemaPattern, TableNamePattern, TriggerNamePattern);
+
+  Result := GetResultSetFromCache(Key);
+  if Result = nil then
+  begin
+    Result := UncachedGetTriggers(Catalog, SchemaPattern, TableNamePattern, TriggerNamePattern);
+    AddResultSetToCache(Key, Result);
+  end;
+end;
+function TZAbstractDatabaseMetadata.UncachedGetTriggers(const Catalog: string; const SchemaPattern: string;
+  const TableNamePattern: string; const TriggerNamePattern: string): IZResultSet;
+begin
+  Result := ConstructVirtualResultSet(TriggersColumnsDynArray);
+end;
+
+
+function TZAbstractDatabaseMetadata.GetTriggersCacheKey(const Catalog: string;
+  const SchemaPattern: string; const TableNamePattern: string;
+  const TriggerNamePattern: string): string;
+begin
+  Result := Format('get-trigger:%s:%s:%s:%s',
+    [Catalog, SchemaPattern, TableNamePattern, TriggerNamePattern]);
 end;
 
 {**
@@ -4440,6 +4478,19 @@ end;
 
 
 const
+  TriggersColumnCount = 8;
+  TriggersColumns: array[1..TriggersColumnCount]
+    of TZMetadataColumnDef =(
+    (Name: 'TRIGGER_CAT'; SQLType: stString; Length: 255),
+    (Name: 'TRIGGER_SCHEM'; SQLType: stString; Length: 255),
+    (Name: 'TRIGGER_NAME'; SQLType: stString; Length: 255), //RDB$TRIGGER_NAME
+    (Name: 'TRIGGER_RELATION'; SQLType: stString; Length: 255), //RDB$RELATION_NAME
+    (Name: 'TRIGGER_TYPE'; SQLType: stShort; Length: 0),     //RDB$TRIGGER_TYPE
+    (Name: 'TRIGGER_INACTIVE'; SQLType: stShort; Length: 0),     //RDB$TRIGGER_INACTIVE
+    (Name: 'TRIGGER_SOURCE'; SQLType: stString; Length: 3000),     //RDB$TRIGGER_SOURCE
+    (Name: 'TRIGGER_DESCRIPTION'; SQLType: stString; Length: 255)     //RDB$DESCRIPTION
+  );
+
   ProceduresColumnCount = 8;
   ProceduresColumns: array[1..ProceduresColumnCount]
     of TZMetadataColumnDef =(
@@ -4711,6 +4762,10 @@ var
   I: Integer;
 
 initialization
+  SetLength(TriggersColumnsDynArray, TriggersColumnCount);
+  for I := 1 to TriggersColumnCount do
+    TriggersColumnsDynArray[I - 1] := TriggersColumns[I];
+
   SetLength(ProceduresColumnsDynArray, ProceduresColumnCount);
   for I := 1 to ProceduresColumnCount do
     ProceduresColumnsDynArray[I - 1] := ProceduresColumns[I];
