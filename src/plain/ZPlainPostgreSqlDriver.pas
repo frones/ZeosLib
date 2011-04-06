@@ -466,6 +466,8 @@ TZPOSTGRESQL_API = record
   lo_export:       Tlo_export;
 end;
 
+PAPI = ^TZPOSTGRESQL_API;
+
 type
 
   {** Represents a generic interface to PostgreSQL native API. }
@@ -567,6 +569,7 @@ type
       FileName: PAnsiChar): Oid;
     function ExportLargeObject(Handle: PZPostgreSQLConnect; ObjId: Oid;
       FileName: PAnsiChar): Integer;
+    function GetPlainFunc:PAPI;
   end;
 
   {** Implements a base driver for PostgreSQL}
@@ -681,6 +684,7 @@ type
       FileName: PAnsiChar): Oid;
     function ExportLargeObject(Handle: PZPostgreSQLConnect; ObjId: Oid;
       FileName: PAnsiChar): Integer;
+    function GetPlainFunc:PAPI;
   end;
 
   {** Implements a driver for PostgreSQL 7.4 }
@@ -1217,6 +1221,11 @@ function TZPostgreSQLBaseDriver.WriteLargeObject(
 begin
   Result := POSTGRESQL_API.lo_write(Handle, Fd, Buffer, Length);
 end;
+
+function TZPostgreSQLBaseDriver.GetPlainFunc():PAPI; 
+begin 
+  result:= @POSTGRESQL_API; 
+end; 
 
 { TZPostgreSQL7PlainDriver }
 
