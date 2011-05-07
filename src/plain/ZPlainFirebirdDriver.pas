@@ -147,8 +147,7 @@ type
       source_array: PVoid; slice_length: PISC_LONG): ISC_STATUS;
     function isc_free(isc_arg1: PAnsiChar): ISC_LONG;
     function isc_sqlcode(status_vector: PISC_STATUS): ISC_LONG;
-    procedure isc_sql_interprete(sqlcode: Short; buffer: PAnsiChar;
-      buffer_length: Short);
+    procedure isc_sql_interprete(sqlcode: Short; buffer: PAnsiChar; buffer_length: Short);
     function isc_interprete(buffer: PAnsiChar; status_vector: PPISC_STATUS): ISC_STATUS;
     function isc_start_transaction(status_vector: PISC_STATUS;
       tran_handle: PISC_TR_HANDLE; db_handle_count: Short;
@@ -657,8 +656,10 @@ function TZFirebirdBaseDriver.isc_attach_database(status_vector: PISC_STATUS;
   db_name_length: Short; db_name: PAnsiChar; db_handle: PISC_DB_HANDLE;
   parm_buffer_length: Short; parm_buffer: PAnsiChar): ISC_STATUS;
 begin
-  Result := FIREBIRD_API.isc_attach_database(status_vector, db_name_length,
+
+    Result := FIREBIRD_API.isc_attach_database(status_vector, db_name_length,
     db_name, db_handle, parm_buffer_length, parm_buffer);
+
 end;
 
 function TZFirebirdBaseDriver.isc_blob_info(status_vector: PISC_STATUS;
@@ -957,14 +958,14 @@ begin
   Result := FIREBIRD_API.isc_rollback_retaining(status_vector, tran_handle);
 end;
 
-procedure TZFirebirdBaseDriver.isc_sql_interprete(sqlcode: Short;
-  buffer: PAnsiChar; buffer_length: Short);
+procedure TZFirebirdBaseDriver.isc_sql_interprete(sqlcode: Short;  buffer: PAnsiChar; buffer_length: Short);
 begin
-  FIREBIRD_API.isc_sql_interprete(sqlcode, buffer, buffer_length);
+
+    FIREBIRD_API.isc_sql_interprete(sqlcode, buffer, buffer_length);
+
 end;
 
-function TZFirebirdBaseDriver.isc_sqlcode(
-  status_vector: PISC_STATUS): ISC_LONG;
+function TZFirebirdBaseDriver.isc_sqlcode(status_vector: PISC_STATUS): ISC_LONG;
 begin
   Result := FIREBIRD_API.isc_sqlcode(status_vector);
 end;
@@ -988,8 +989,7 @@ function TZFirebirdBaseDriver.isc_start_transaction(
   db_handle_count: Short; db_handle: PISC_DB_HANDLE; tpb_length: Word;
   tpb_address: PAnsiChar): ISC_STATUS;
 begin
-  Result := FIREBIRD_API.isc_start_transaction(status_vector, tran_handle,
-    db_handle_count, db_handle, tpb_length, tpb_address);
+  Result := FIREBIRD_API.isc_start_transaction(status_vector, tran_handle, db_handle_count, db_handle, tpb_length, tpb_address);
 end;
 
 function TZFirebirdBaseDriver.isc_vax_integer(buffer: PAnsiChar;
