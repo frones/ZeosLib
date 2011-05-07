@@ -667,11 +667,11 @@ begin
     except
       on E: Exception do
       begin
-       if (CursorName <> '') then
+       {if (CursorName <> '') then //AVZ TEST
        begin
          StmtHandle := nil;
-       end;
-       FreeStatement(GetPlainDriver, StmtHandle, DSQL_close);
+       end;}
+       FreeStatement(GetPlainDriver, StmtHandle, DSQL_CLOSE); //AVZ
        raise;
       end;
     end;
@@ -751,7 +751,8 @@ begin
         begin
           StmtHandle := nil;
         end;
-        FreeStatement(GetPlainDriver, StmtHandle, DSQL_close);
+
+        FreeStatement(GetPlainDriver, StmtHandle, DSQL_CLOSE); //AVZ
         raise;
       end;
     end;
@@ -805,8 +806,13 @@ begin
 
       case StatementType of
         stCommit, stRollback, stUnknown: Result := -1;
-        stSelect : FreeStatement(GetPlainDriver, StmtHandle, DSQL_close);
+        stSelect           : FreeStatement(GetPlainDriver, StmtHandle, DSQL_CLOSE);  //AVZ
+        stDelete, stUpdate : begin
+                     if (Result = 0) then Result := 1; //AVZ - A delete statement may return zero affected rows, calling procedure expects 1 as Result or Error!
+                   end;
       end;
+
+
 
       { Autocommit statement. }
       if Connection.GetAutoCommit then
@@ -934,7 +940,7 @@ begin
       begin
         { Fetch data and fill Output params }
         FetchOutParams(SQLData);
-        FreeStatement(GetPlainDriver, StmtHandle, DSQL_close);
+        FreeStatement(GetPlainDriver, StmtHandle, DSQL_CLOSE); //AVZ
         LastResultSet := nil;
       end;
 
@@ -946,7 +952,7 @@ begin
     except
       on E: Exception do
       begin
-       FreeStatement(GetPlainDriver, StmtHandle, DSQL_close);
+       FreeStatement(GetPlainDriver, StmtHandle, DSQL_CLOSE); //AVZ
        raise;
       end;
     end;
@@ -1032,7 +1038,7 @@ begin
     except
       on E: Exception do
       begin
-        FreeStatement(GetPlainDriver, StmtHandle, DSQL_unprepare);
+        FreeStatement(GetPlainDriver, StmtHandle, DSQL_unprepare); //AVZ
         raise;
       end;
     end;
