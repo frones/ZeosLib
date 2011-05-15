@@ -465,7 +465,7 @@ type
 
   TISC_VARYING = record
     strlen:       Short;
-    str:          array[0..0] of AnsiChar;
+    str:          array[0..0] of AnsiChar; //AVZ - was AnsiChar
   end;
   PISC_VARYING = ^TISC_VARYING;
 
