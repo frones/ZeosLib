@@ -71,7 +71,7 @@ type
     FStatusVector: TARRAY_ISC_STATUS;
     FIBConnection: IZInterbase6Connection;
   protected
-    procedure CheckInterbase6Error(const Sql: string = '');
+    function CheckInterbase6Error(const Sql: string = '') : Integer;
   public
     constructor Create(Connection: IZConnection; Info: TStrings);
 
@@ -99,7 +99,7 @@ type
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
-    procedure CheckInterbase6Error(const Sql: string = '');
+    function CheckInterbase6Error(const Sql: string = '') : Integer;
   public
     constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
     destructor Destroy; override;
@@ -147,10 +147,12 @@ uses ZSysUtils, ZDbcUtils;
 {**
    Check interbase error status
    @param Sql the used sql tring
+
+   @return ErrorCode for possible Database Disconnect 
 }
-procedure TZInterbase6Statement.CheckInterbase6Error(const Sql: string = '');
+function TZInterbase6Statement.CheckInterbase6Error(const Sql: string = '') : Integer;
 begin
-  ZDbcInterbase6Utils.CheckInterbase6Error(FIBConnection.GetPlainDriver,
+  Result := ZDbcInterbase6Utils.CheckInterbase6Error(FIBConnection.GetPlainDriver,
     FStatusVector, lcExecute, SQL);
 end;
 
@@ -188,8 +190,10 @@ var
   SQLData: IZResultSQLDA;
   StmtHandle: TISC_STMT_HANDLE;
   StatementType: TZIbSqlStatementType;
+  iError : Integer; //For closing the database //AVZ
 begin
   StmtHandle := nil;
+  iError := 0;
 
   with FIBConnection do
   begin
@@ -207,7 +211,7 @@ begin
 
       GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle,
         @StmtHandle, GetDialect, SQLData.GetData);
-      CheckInterbase6Error(SQL);
+      iError := CheckInterbase6Error(SQL);
 
       if (StatementType in [stSelect, stExecProc])
         and (SQLData.GetFieldCount <> 0) then
@@ -223,9 +227,13 @@ begin
         Result := GetCachedResultSet(SQL, Self,
                TZInterbase6ResultSet.Create(Self, SQL, StmtHandle, Cursor, SQLData, nil, FCachedBlob));
       end
-      else
-        raise EZSQLException.Create(SCanNotRetrieveResultSetData);
-
+        else
+      begin
+        if (iError <> DISCONNECT_ERROR) then
+        begin
+          raise EZSQLException.Create(SCanNotRetrieveResultSetData);
+        end;
+      end;
       { Logging SQL Command }
       DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SQL);
     except
@@ -516,10 +524,12 @@ end;
 {**
    Check interbase error status
    @param Sql the used sql tring
+
+   @return Integer - Error Code to test for graceful database disconnection
 }
-procedure TZInterbase6PreparedStatement.CheckInterbase6Error(const Sql: string);
+function  TZInterbase6PreparedStatement.CheckInterbase6Error(const Sql: string) : Integer;
 begin
-  ZDbcInterbase6Utils.CheckInterbase6Error(FIBConnection.GetPlainDriver,
+  Result := ZDbcInterbase6Utils.CheckInterbase6Error(FIBConnection.GetPlainDriver,
     FStatusVector, lcExecute, SQL);
 end;
 
@@ -701,6 +711,8 @@ end;
 }
 {$HINTS OFF}
 function TZInterbase6PreparedStatement.ExecuteQueryPrepared: IZResultSet;
+var
+  iError : Integer; //Check for database disconnect AVZ
 begin
   with FIBConnection do
   begin
@@ -724,10 +736,10 @@ begin
         begin
           GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
             GetDialect, FParamSQLData.GetData, SQLData.GetData); //expecting a result
-        end;  
+        end;
       end;
 
-      CheckInterbase6Error(SQL);
+      iError := CheckInterbase6Error(SQL);
 
       if (StatementType in [stSelect, stExecProc]) and (SQLData.GetFieldCount <> 0) then
       begin
@@ -736,13 +748,25 @@ begin
           Cursor := CursorName;
           GetPlainDriver.isc_dsql_set_cursor_name(@FStatusVector,
                   @StmtHandle, PAnsiChar(Cursor), 0);
-          CheckInterbase6Error(SQL);
+          iError := CheckInterbase6Error(SQL);
         end;
 
-        Result := GetCachedResultSet(SQL, Self, TZInterbase6ResultSet.Create(Self, SQL, StmtHandle, Cursor, SQLData, nil, FCachedBlob));
+        if (iError <> DISCONNECT_ERROR) then
+        begin
+          Result := GetCachedResultSet(SQL, Self, TZInterbase6ResultSet.Create(Self, SQL, StmtHandle, Cursor, SQLData, nil, FCachedBlob));
+        end;
       end
-      else
-        raise EZSQLException.Create(SCanNotRetrieveResultSetData);
+        else
+      begin
+        if (iError <> DISCONNECT_ERROR) then    //AVZ
+        begin
+          raise EZSQLException.Create(SCanNotRetrieveResultSetData);
+        end
+          else
+        begin
+          Result := nil;
+        end;
+      end;
     except
       on E: Exception do
       begin
@@ -790,6 +814,8 @@ end;
 }
 {$HINTS OFF}
 function TZInterbase6PreparedStatement.ExecuteUpdatePrepared: Integer;
+var
+  iError : Integer; //Implementation for graceful disconnect AVZ
 begin
   Result := -1;
 
@@ -799,7 +825,7 @@ begin
 
       GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle,
         @StmtHandle, GetDialect, FParamSQLData.GetData);
-      CheckInterbase6Error(SQL);
+      iError := CheckInterbase6Error(SQL);
 
       Result := GetAffectedRows(GetPlainDriver, StmtHandle, StatementType);
       LastUpdateCount := Result;
@@ -819,6 +845,13 @@ begin
         Connection.Commit;
   end;
   inherited ExecuteUpdatePrepared;
+
+  //Trail for the disconnection of the database gracefully - AVZ
+  if (iError = DISCONNECT_ERROR) then
+  begin
+    Result := DISCONNECT_ERROR;
+  end;
+
 end;
 {$HINTS ON}
 
