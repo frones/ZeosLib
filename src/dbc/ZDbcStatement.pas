@@ -223,8 +223,11 @@ type
     procedure SetBigDecimal(ParameterIndex: Integer; Value: Extended); virtual;
     procedure SetPChar(ParameterIndex: Integer; Value: PAnsiChar); virtual;
     procedure SetString(ParameterIndex: Integer; const Value: Ansistring); virtual;
-    procedure SetUnicodeString(ParameterIndex: Integer;
-      const Value: WideString); virtual;
+    {$IFDEF DELPHI12_UP}
+      procedure SetUnicodeString(ParameterIndex: Integer; const Value: String);  virtual; //AVZ
+    {$ELSE}
+      procedure SetUnicodeString(ParameterIndex: Integer; const Value: WideString); virtual;  //AVZ
+    {$ENDIF}
     procedure SetBytes(ParameterIndex: Integer; const Value: TByteDynArray); virtual;
     procedure SetDate(ParameterIndex: Integer; Value: TDateTime); virtual;
     procedure SetTime(ParameterIndex: Integer; Value: TDateTime); virtual;
@@ -1313,8 +1316,11 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
-procedure TZAbstractPreparedStatement.SetUnicodeString(ParameterIndex: Integer;
-  const Value: WideString);
+{$IFDEF DELPHI12_UP}
+procedure TZAbstractPreparedStatement.SetUnicodeString(ParameterIndex: Integer; const Value: String);  //AVZ
+{$ELSE}
+procedure TZAbstractPreparedStatement.SetUnicodeString(ParameterIndex: Integer; const Value: WideString);
+{$ENDIF}
 var
   Temp: TZVariant;
 begin
