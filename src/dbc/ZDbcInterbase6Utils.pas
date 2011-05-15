@@ -850,7 +850,6 @@ begin
        EZSQLWarning.CreateWithCode (ErrorCode,
           Format('SQL Error: %s. Error Code: %d. %s',
           [ErrorMessage, ErrorCode, ErrorSqlMessage])); //AVZ
-        //This error constant is declared in ZClasses  
         Result := DISCONNECT_ERROR;
       end;
     end;
