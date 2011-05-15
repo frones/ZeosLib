@@ -968,13 +968,9 @@ end;
 }
 function TZAbstractResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 begin
-  Result := nil ;
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
 {$ENDIF}
-  LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then
-      Exit;
 
   Result := TZAbstractBlob.CreateWithStream(nil);
 end;
@@ -2863,9 +2859,13 @@ end;
   @return a string which contains the stored data.
 }
 
-// gto: this must be tested!
+// gto: this must be tested!  We need to add the Move (  Len * Sizeof(Char)) to this    //AVZ
 function TZAbstractBlob.GetUnicodeString: WideString;
 var
+
+
+
+
   Buffer: AnsiString;
   Len: Integer;
 begin
