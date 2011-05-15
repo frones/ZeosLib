@@ -1,4 +1,4 @@
-{*********************************************************}
+﻿{*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
 {         Interbase Database Connectivity Classes         }
@@ -66,7 +66,7 @@ type
   { Interbase Statement Type }
   TZIbSqlStatementType = (stUnknown, stSelect, stInsert, stUpdate, stDelete,
     stDDL, stGetSegment, stPutSegment, stExecProc, stStartTrans, stCommit,
-    stRollback, stSelectForUpdate, stSetGenerator);
+    stRollback, stSelectForUpdate, stSetGenerator, stDisconnect);
 
   { Interbase Error Class}
   EZIBConvertError = class(Exception);
@@ -128,7 +128,11 @@ type
     procedure UpdateDouble(const Index: Integer; Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
     procedure UpdatePChar(const Index: Integer; Value: PAnsiChar);
+    {$IFDEF DELPHI12_UP}                //AVZ - Unicode
+    procedure UpdateString(const Index: Integer; Value: String);
+    {$ELSE}
     procedure UpdateString(const Index: Integer; Value: AnsiString);
+    {$ENDIF}
     procedure UpdateBytes(const Index: Integer; Value: TByteDynArray);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
     procedure UpdateTime(const Index: Integer; Value: TDateTime);
@@ -203,7 +207,13 @@ type
     FHandle: PISC_DB_HANDLE;
     FTransactionHandle: PISC_TR_HANDLE;
   private
+    //AVZ
+    {$IFDEF DELPHI12_UP}
+    procedure EncodeString(Code: Smallint; const Index: Word; const Str: String);
+    {$ELSE}
     procedure EncodeString(Code: Smallint; const Index: Word; const Str: AnsiString);
+    {$ENDIF}
+
     procedure UpdateDateTime(const Index: Integer; Value: TDateTime);
   public
     constructor Create(PlainDriver: IZInterbasePlainDriver;
@@ -222,7 +232,11 @@ type
     procedure UpdateDouble(const Index: Integer; Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
     procedure UpdatePChar(const Index: Integer; Value: PAnsiChar);
+    {$IFDEF DELPHI12_UP}                         //AVZ  - Unicode
+    procedure UpdateString(const Index: Integer; Value: String);
+    {$ELSE}
     procedure UpdateString(const Index: Integer; Value: AnsiString);
+    {$ENDIF}
     procedure UpdateBytes(const Index: Integer; Value: TByteDynArray);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
     procedure UpdateTime(const Index: Integer; Value: TDateTime);
@@ -282,9 +296,9 @@ type
 
   { Interbase6 errors functions }
   function GetNameSqlType(Value: Word): AnsiString;
-  procedure CheckInterbase6Error(PlainDriver: IZInterbasePlainDriver;
+  function CheckInterbase6Error(PlainDriver: IZInterbasePlainDriver;
     StatusVector: TARRAY_ISC_STATUS; LoggingCategory: TZLoggingCategory = lcOther;
-    SQL: string = '');
+    SQL: string = '') : Integer;
 
   { Interbase information functions}
   function GetVersion(PlainDriver: IZInterbasePlainDriver;
@@ -781,16 +795,19 @@ end;
   @param PlainDriver a Interbase Plain drver
   @param StatusVector a status vector. It contain information about error
   @param Sql a sql query commend
+
+  @Param Integer Return is the ErrorCode that happened - for disconnecting the database
 }
-procedure CheckInterbase6Error(PlainDriver: IZInterbasePlainDriver;
+function CheckInterbase6Error(PlainDriver: IZInterbasePlainDriver;
   StatusVector: TARRAY_ISC_STATUS; LoggingCategory: TZLoggingCategory = lcOther;
-  SQL: string = '');
+  SQL: string = '') : Integer;
 var
   Msg: array[0..1024] of AnsiChar;
   PStatusVector: PISC_STATUS;
   ErrorMessage, ErrorSqlMessage: string;
   ErrorCode: LongInt;
 begin
+  Result := 0;
   if (StatusVector[0] = 1) and (StatusVector[1] > 0) then
   begin
     ErrorMessage := '';
@@ -812,15 +829,30 @@ begin
       DriverManager.LogError(LoggingCategory, PlainDriver.GetProtocol,
         ErrorMessage, ErrorCode, ErrorSqlMessage + SQL);
 
+      //AVZ Ignore error codes for disconnected database -901, -902
+      if ((ErrorCode <> -901) and (ErrorCode <> -902)) then
+      begin
 {$IFDEF INTERBASE_EXTENDED_MESSAGES}
-      raise EZSQLException.CreateWithCode(ErrorCode,
-        Format('SQL Error: %s. Error Code: %d. %s',
-        [ErrorMessage, ErrorCode, ErrorSqlMessage]) + SQL);
+        raise EZSQLException.CreateWithCode(ErrorCode,
+          Format('SQL Error: %s. Error Code: %d. %s',
+          [ErrorMessage, ErrorCode, ErrorSqlMessage]) + SQL);
 {$ELSE}
-      raise EZSQLException.CreateWithCode(ErrorCode,
-        Format('SQL Error: %s. Error Code: %d. %s',
-        [ErrorMessage, ErrorCode, ErrorSqlMessage]));
+        raise EZSQLException.CreateWithCode(ErrorCode,
+          Format('SQL Error: %s. Error Code: %d. %s',
+          [ErrorMessage, ErrorCode, ErrorSqlMessage]));
 {$ENDIF}
+      end
+        else
+      begin      //AVZ -- connection lost to the database, shutting down the application // raise a connection error event to the database component
+        {raise EZSQLException.CreateWithCode(ErrorCode,
+          Format('SQL Error: %s. Error Code: %d. %s',
+          [ErrorMessage, ErrorCode, ErrorSqlMessage]));}
+       EZSQLWarning.CreateWithCode (ErrorCode,
+          Format('SQL Error: %s. Error Code: %d. %s',
+          [ErrorMessage, ErrorCode, ErrorSqlMessage])); //AVZ
+        //This error constant is declared in ZClasses  
+        Result := DISCONNECT_ERROR;
+      end;
     end;
   end;
 end;
@@ -842,6 +874,7 @@ function PrepareStatement(PlainDriver: IZInterbasePlainDriver;
   TZIbSqlStatementType;
 var
   StatusVector: TARRAY_ISC_STATUS;
+  iError : Integer; //Error for disconnect
 begin
   { Allocate an sql statement }
   PlainDriver.isc_dsql_alloc_statement2(@StatusVector, Handle, @StmtHandle);
@@ -855,14 +888,21 @@ begin
   PlainDriver.isc_dsql_prepare(@StatusVector, TrHandle, @StmtHandle,
      0, PAnsiChar(SQL), Dialect, nil);
   {$ENDIF}
-  CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, SQL);
+  iError := CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, SQL); //Check for disconnect AVZ
 
   { Set Statement Type }
-  Result := GetStatementType(PlainDriver, StmtHandle);
+  if (iError <> DISCONNECT_ERROR) then //AVZ
+  begin
+    Result := GetStatementType(PlainDriver, StmtHandle);
+  end
+    else
+  begin
+    Result := stDisconnect;
+  end;
 
   if Result in [stUnknown, stGetSegment, stPutSegment, stStartTrans] then
   begin
-    FreeStatement(PlainDriver, StmtHandle, DSQL_close);
+    FreeStatement(PlainDriver, StmtHandle, DSQL_CLOSE);  //AVZ
     raise EZSQLException.Create(SStatementIsNotAllowed);
   end;
 end;
@@ -1054,8 +1094,7 @@ begin
         ParamSqlData.UpdateString(I,
           SoftVarManager.GetAsString(InParamValues[I]));
       stUnicodeString:
-        ParamSqlData.UpdateString(I,
-          SoftVarManager.GetAsUnicodeString(InParamValues[I]));
+        ParamSqlData.UpdateString(I,(SoftVarManager.GetAsUnicodeString(InParamValues[I]))); //AVZ
       stBytes:
         ParamSqlData.UpdateBytes(I,
           StrToBytes(SoftVarManager.GetAsString(InParamValues[I])));
@@ -1473,7 +1512,7 @@ begin
   case GetIbSqlType(Index) of
     SQL_TEXT: Result := GetIbSqlLen(Index);
     SQL_VARYING: Result := GetIbSqlLen(Index);
-    //SQL_VARYING: Result := FPlainDriver.isc_vax_integer(GetData.sqlvar[Index].sqldata, 2);
+    //SQL_VARYING: Result := FPlainDriver.isc_vax_integer(GetData.sqlvar[Index].sqldata, 2);  //AVZ
     else
       Result := GetIbSqlLen(Index);
   end;
@@ -1756,12 +1795,23 @@ end;
    @param Index the index target filed
    @param Str the source string
 }
+{$IFDEF DELPHI12_UP}   //AVZ
+procedure TZParamsSQLDA.EncodeString(Code: Smallint; const Index: Word;
+  const Str: String);
+{$ELSE}
 procedure TZParamsSQLDA.EncodeString(Code: Smallint; const Index: Word;
   const Str: AnsiString);
+{$ENDIF}
 var
   Len: Cardinal;
+  Stream : TStream;
 begin
+  {$IFDEF DELPHI12_UP}   //AVZ - fix forUNICODE Size
+  Len := Length(UTF8Encode(Str));
+  {$ELSE}
   Len := Length(Str);
+  {$ENDIF}
+
   {$R-}
    with FXSQLDA.sqlvar[Index] do
     case Code of
@@ -1776,13 +1826,31 @@ begin
         end;
       SQL_VARYING :
         begin
-          if sqllen = 0 then
-            GetMem(sqldata, Len + 2)
-          else
-            IbReAlloc(sqldata, 0, Len + 2);
           sqllen := Len + 2;
-          PISC_VARYING(sqldata).strlen := Len;
-          Move(PAnsiChar(Str)^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
+          {$IFDEF DELPHI12_UP}
+            if sqllen = 0 then
+            begin
+              GetMem(sqldata, Len + 2)
+            end
+              else
+            begin
+              IbReAlloc(sqldata, 0, (Length(UTF8Encode(Str)) * SizeOf(AnsiChar)) + 2);
+            end;
+
+             PISC_VARYING(sqldata).strlen :=  (Length(UTF8Encode(Str)) * SizeOf(AnsiChar));
+             Move(PAnsiChar(UTF8Encode((Str)))^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);  //AVZ
+          {$ELSE}
+             if sqllen = 0 then
+             begin
+               GetMem(sqldata, Len + 2)
+             end
+               else
+             begin
+               IbReAlloc(sqldata, 0, Len + 2);
+             end;
+             PISC_VARYING(sqldata).strlen :=  Len;
+             Move(PAnsiChar(Str)^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
+          {$ENDIF}
         end;
     end;
   {$IFOPT D+}
@@ -1798,18 +1866,9 @@ end;
 procedure TZParamsSQLDA.UpdateBigDecimal(const Index: Integer; Value: Extended);
 var
   SQLCode: SmallInt;
-  DecimalPoints : SmallInt; //Store the number of decimals for the value above
 
 begin
   CheckRange(Index);
-  //AVZ - Fix to make the update of a column accurate based on the correct number of decimals
-  //The decimal points need to be dynamic depending on the value submitted - otherwise translation errors occur when reading from the database
-
-  DecimalPoints := Length (FloatToStr(Value)) - Pos ('.', FloatToStr(Value));
-  if (DecimalPoints > 15) then DecimalPoints := 15;
-  if (DecimalPoints < 0) then DecimalPoints := 0;
-  SetFieldType(Index, sizeof(Int64), SQL_INT64 + 1, -DecimalPoints);  //AVZ
-
 
   {$R-}
   with FXSQLDA.sqlvar[Index] do
@@ -1824,7 +1883,7 @@ begin
         SQL_SHORT  : PSmallInt(sqldata)^ := Trunc(Value * IBScaleDivisor[sqlscale]);
         SQL_LONG   : PInteger(sqldata)^  := Trunc(Value * IBScaleDivisor[sqlscale]);
         SQL_INT64,
-        SQL_QUAD   : PInt64(sqldata)^    := Trunc(Value * IBScaleDivisor[sqlscale-1]/10); //AVZ - Currently this is a bit of a hack to sort out the decimal places on big Decimals > 10 Decimal Places
+        SQL_QUAD   : PInt64(sqldata)^    := Trunc(Value * IBScaleDivisor[sqlscale]); //AVZ - Trunc was cutting off decimals
         SQL_DOUBLE : PDouble(sqldata)^   := Value;                                        //I have tested with Query.ParamByName ().AsCurrency to check this, problem does not lie with straight SQL
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
@@ -2363,7 +2422,12 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
+
+{$IFDEF DELPHI12_UP}
+procedure TZParamsSQLDA.UpdateString(const Index: Integer; Value: String);
+{$ELSE}
 procedure TZParamsSQLDA.UpdateString(const Index: Integer; Value: AnsiString);
+{$ENDIF}
 var
  SQLCode: SmallInt;
  Stream: TStream;
