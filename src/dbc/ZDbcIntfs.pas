@@ -113,10 +113,6 @@ type
   {** Defines a nullable type for the column. }
   TZColumnNullableType = (ntNoNulls, ntNullable, ntNullableUnknown);
 
-  {** Defines a type of the Triggers.}
-  TZTriggerType = (ttBeforeInsert, ttAfterInsert, ttBeforeUpdate, ttAfterUpdate,
-    ttBeforeDelete, ttAfterDelete);
-
   {** Defines a result type for the procedures. }
   TZProcedureResultType = (prtUnknown, prtNoResult, prtReturnsResult);
 
@@ -275,9 +271,8 @@ type
     function GetURL: string;
     function GetUserName: string;
 
-    function GetDatabaseInfo: IZDatabaseInfo;
-    function GetTriggers(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string; const TriggerNamePattern: string): IZResultSet; //EgonHugeist 30.03.2011
+    function GetDatabaseInfo: IZDatabaseInfo; // technobot 2008-06-24
+
     function GetProcedures(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string): IZResultSet;
     function GetProcedureColumns(const Catalog: string; const SchemaPattern: string;
@@ -546,7 +541,13 @@ type
     procedure SetBigDecimal(ParameterIndex: Integer; Value: Extended);
     procedure SetPChar(ParameterIndex: Integer; Value: PAnsiChar);
     procedure SetString(ParameterIndex: Integer; const Value: AnsiString);
-    procedure SetUnicodeString(ParameterIndex: Integer; const Value: WideString);
+
+    {$IFDEF DELPHI12_UP}
+      procedure SetUnicodeString(ParameterIndex: Integer; const Value: String); //AVZ
+    {$ELSE}
+      procedure SetUnicodeString(ParameterIndex: Integer; const Value: WideString); //AVZ
+    {$ENDIF}
+
     procedure SetBytes(ParameterIndex: Integer; const Value: TByteDynArray);
     procedure SetDate(ParameterIndex: Integer; Value: TDateTime);
     procedure SetTime(ParameterIndex: Integer; Value: TDateTime);
