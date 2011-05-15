@@ -113,6 +113,10 @@ type
   {** Defines a nullable type for the column. }
   TZColumnNullableType = (ntNoNulls, ntNullable, ntNullableUnknown);
 
+  {** Defines a type of the Triggers.}
+  TZTriggerType = (ttBeforeInsert, ttAfterInsert, ttBeforeUpdate, ttAfterUpdate,
+    ttBeforeDelete, ttAfterDelete);
+
   {** Defines a result type for the procedures. }
   TZProcedureResultType = (prtUnknown, prtNoResult, prtReturnsResult);
 
@@ -271,8 +275,9 @@ type
     function GetURL: string;
     function GetUserName: string;
 
-    function GetDatabaseInfo: IZDatabaseInfo; // technobot 2008-06-24
-
+    function GetDatabaseInfo: IZDatabaseInfo;
+    function GetTriggers(const Catalog: string; const SchemaPattern: string;
+      const TableNamePattern: string; const TriggerNamePattern: string): IZResultSet; //EgonHugeist 30.03.2011
     function GetProcedures(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string): IZResultSet;
     function GetProcedureColumns(const Catalog: string; const SchemaPattern: string;
