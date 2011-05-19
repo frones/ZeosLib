@@ -499,31 +499,11 @@ procedure TZAbstractDataset.InternalDelete;
 var
   RowNo: Integer;
   RowBuffer: PZRowBuffer;
-  {$IFNDEF FPC}
-  i: Integer; 
-  Detailsets: TList; 
-  ds: TZAbstractDataset; 
-  {$ENDIF}
 begin
   if (CachedResultSet <> nil) and GetActiveBuffer(RowBuffer) then
   begin
-    {$IFNDEF FPC}
     Connection.ShowSqlHourGlass;
-    Detailsets := TList.create; 
-    getdetaildatasets(Detailsets); 
-    for i := 0 to Detailsets.Count - 1 do begin 
-      ds := TZAbstractDataset(Detailsets[i]); 
-      with ds do begin 
-        if not Active then Open; 
-        first; 
-        while not Eof do begin 
-          Delete; 
-        end; 
-      end; 
-    end; 
-    Detailsets.Free; 
-    {$ENDIF}
-  try
+    try
       RowNo := Integer(CurrentRows[CurrentRow - 1]);
       CachedResultSet.MoveAbsolute(RowNo);
       try
