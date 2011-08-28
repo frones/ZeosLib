@@ -193,7 +193,7 @@ begin
   CheckEquals(8, ResultSet.FindColumn('IS_GRANTABLE'));
 
   CheckEquals(True, ResultSet.Next);
-  CheckEquals('zeoslib', ResultSet.GetStringByName('TABLE_CAT'));
+  CheckEquals(uppercase(Database), uppercase(ResultSet.GetStringByName('TABLE_CAT')));
   CheckEquals('', ResultSet.GetStringByName('TABLE_SCHEM'));
   CheckEquals('people', ResultSet.GetStringByName('TABLE_NAME'));
   CheckEquals('p_resume', ResultSet.GetStringByName('COLUMN_NAME'));
@@ -203,7 +203,7 @@ begin
   CheckEquals('', ResultSet.GetStringByName('IS_GRANTABLE'));
 
   CheckEquals(True, ResultSet.Next);
-  CheckEquals('zeoslib', ResultSet.GetStringByName('TABLE_CAT'));
+  CheckEquals(uppercase(Database), uppercase(ResultSet.GetStringByName('TABLE_CAT')));
   CheckEquals('', ResultSet.GetStringByName('TABLE_SCHEM'));
   CheckEquals('people', ResultSet.GetStringByName('TABLE_NAME'));
   CheckEquals('p_redundant', ResultSet.GetStringByName('COLUMN_NAME'));
@@ -244,7 +244,7 @@ begin
   CheckEquals(18, ResultSet.FindColumn('IS_NULLABLE'));
 
   ResultSet.Next;
-  CheckEquals('zeoslib', ResultSet.GetStringByName('TABLE_CAT'));
+  CheckEquals(uppercase(Database), uppercase(ResultSet.GetStringByName('TABLE_CAT')));
   CheckEquals('', ResultSet.GetStringByName('TABLE_SCHEM'));
   CheckEquals('people', ResultSet.GetStringByName('TABLE_NAME'));
   CheckEquals('p_resume', ResultSet.GetStringByName('COLUMN_NAME'));
@@ -264,7 +264,7 @@ begin
   CheckEquals('YES', ResultSet.GetStringByName('IS_NULLABLE'));
 
   ResultSet.Next;
-  CheckEquals('zeoslib', ResultSet.GetStringByName('TABLE_CAT'));
+  CheckEquals(uppercase(Database), uppercase(ResultSet.GetStringByName('TABLE_CAT')));
   CheckEquals('', ResultSet.GetStringByName('TABLE_SCHEM'));
   CheckEquals('people', ResultSet.GetStringByName('TABLE_NAME'));
   CheckEquals('p_redundant', ResultSet.GetStringByName('COLUMN_NAME'));
@@ -367,7 +367,7 @@ begin
   CheckEquals(7, ResultSet.FindColumn('IS_GRANTABLE'));
 
   Check(ResultSet.Next);
-  CheckEquals('zeoslib', ResultSet.GetStringByName('TABLE_CAT'));
+  CheckEquals(uppercase(Database), uppercase(ResultSet.GetStringByName('TABLE_CAT')));
   CheckEquals('', ResultSet.GetStringByName('TABLE_SCHEM'));
   CheckEquals('people', ResultSet.GetStringByName('TABLE_NAME'));
 //!!!  CheckEquals('root@localhost', ResultSet.GetStringByName('GRANTOR'));
@@ -393,7 +393,7 @@ begin
   CheckEquals(5, ResultSet.FindColumn('REMARKS'));
 
   ResultSet.Next;
-  CheckEquals('zeoslib', ResultSet.GetStringByName('TABLE_CAT'));
+  CheckEquals(uppercase(Database), uppercase(ResultSet.GetStringByName('TABLE_CAT')));
   CheckEquals('', ResultSet.GetStringByName('TABLE_SCHEM'));
   CheckEquals('people', ResultSet.GetStringByName('TABLE_NAME'));
   CheckEquals('TABLE', ResultSet.GetStringByName('TABLE_TYPE'));
