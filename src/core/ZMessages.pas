@@ -1680,7 +1680,7 @@ resourcestring
   SMustBeInBrowseMode = 'Operation is only allowed in dsBROWSE state';
 
   SUnKnownParamDataType = 'Unknown Param.DataType';
-  SFieldReadOnly        = 'Readonly field can''t be assigned a value: %d';
+  SFieldReadOnly        = 'Readonly field can''t be assigned a value: %s';
   SInvalidUpdateCount     = '%d record(s) updated. Only one record should have been updated.';
 
 {$ENDIF} // POLISH
