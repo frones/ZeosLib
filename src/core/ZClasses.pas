@@ -73,9 +73,15 @@ type
     FController: Pointer;
     function GetController: IInterface;
   protected
-    function QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID; out Obj): HResult; {$IFDEF FPC2_5UP}{$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF}{$ELSE}stdcall{$ENDIF}; virtual;
-    function _AddRef: Integer; {$IFDEF FPC2_5UP}{$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF}{$ELSE}stdcall{$ENDIF};
-    function _Release: Integer; {$IFDEF FPC2_5UP}{$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF}{$ELSE}stdcall{$ENDIF};
+    {$IFDEF FPC2_5UP}
+    function QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} iid : tguid;out obj) : longint;{$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF}; virtual;
+    function _AddRef : longint;{$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF};
+    function _Release : longint;{$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF};
+    {$ELSE}
+    function QueryInterface(const iid : tguid;out obj) : longint;stdcall;
+    function _AddRef : longint;stdcall;
+    function _Release : longint;stdcall;
+    {$ENDIF}
   public
     constructor Create(const Controller: IInterface);
     property Controller: IInterface read GetController;
@@ -83,7 +89,12 @@ type
 
   TContainedObject = class(TAggregatedObject, IInterface)
   protected
-    function QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID; out Obj): HResult; {$IFDEF FPC2_5UP}{$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF}{$ELSE}stdcall{$ENDIF}; override;
+    {$IFDEF FPC2_5UP}
+    function QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} iid : tguid;out obj) : longint;{$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF}; override;
+    {$ELSE}
+    function QueryInterface(const iid : tguid;out obj) : longint;stdcall;
+    {$ENDIF}
+
   end;
   {$ENDIF}
 
@@ -205,24 +216,33 @@ begin
   Result := IInterface(FController);
 end;
 
-function TAggregatedObject.QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID; out Obj): HResult;
+{$IFDEF FPC2_5UP}
+function TAggregatedObject.QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} iid : tguid;out obj) : longint;
+{$ELSE}
+function TAggregatedObject.QueryInterface(const iid : tguid;out obj) : longint;stdcall;
+{$ENDIF}
 begin
   Result := IInterface(FController).QueryInterface(IID, Obj);
 end;
 
-function TAggregatedObject._AddRef: Integer;
+function TAggregatedObject._AddRef: longint;
 begin
   Result := IInterface(FController)._AddRef;
 end;
 
-function TAggregatedObject._Release: Integer;
+function TAggregatedObject._Release : longint;
 begin
   Result := IInterface(FController)._Release;
 end;
 
 { TContainedObject }
 
-function TContainedObject.QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID; out Obj): HResult;
+{$IFDEF FPC2_5UP}
+function TContainedObject.QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} iid : tguid;out obj) : longint;{$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF};
+{$ELSE}
+function TContainedObject.QueryInterface(const iid : tguid;out obj) : longint;stdcall;
+{$ENDIF}
+
 begin
   if GetInterface(IID, Obj) then
     Result := S_OK
