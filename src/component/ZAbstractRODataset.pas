@@ -103,7 +103,7 @@ type
   end;
 
   {** Dataset Linker class. }
-  TZDataLink = class(TDataLink)
+  TZDataLink = class(TMasterDataLink)
   private
     FDataset: TZAbstractRODataset;
   protected
@@ -476,7 +476,7 @@ TZDataLink }
 }
 constructor TZDataLink.Create(ADataset: TZAbstractRODataset);
 begin
-  inherited Create;
+  inherited Create(ADataset);
   FDataset := ADataset;
 end;
 
@@ -1888,6 +1888,7 @@ var
   I: Integer;
   MasterField, DetailField: TField;
   Temp: Int64;
+  P1, P2 : Integer;
 begin
   if MasterLink.Active and (MasterLink.Fields.Count > 0) then
   begin
@@ -1915,7 +1916,20 @@ begin
           DetailField.Value := MasterField.Value;
       end;
     end;
-  end;
+  end
+  else
+  begin 
+    if DataLink.Active and (DataLink.dataset.Fields.Count > 0) then
+    begin 
+      p1 := 1; p2 := 1; 
+      while (P1 <= Length(LinkedFields)) and (p2 <= Length(MasterFields)) do
+      begin 
+        DetailField := FieldByName(ExtractFieldName(LinkedFields, P1)); 
+        MasterField := DataLink.DataSet.FieldByName (ExtractFieldName(MasterFields, P2)); 
+        DetailField.Assign(MasterField); 
+      end; 
+    end; 
+  end; 
   inherited DoOnNewRecord;
 end;
 
