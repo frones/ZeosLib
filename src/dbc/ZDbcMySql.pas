@@ -392,6 +392,7 @@ var
   sMyOpt: string;
   my_client_Opt:TMYSQL_CLIENT_OPTIONS;
   sMy_client_Opt:String;
+  ClientVersion: Integer; 
 begin
   if not Closed then Exit;
 
@@ -465,6 +466,15 @@ begin
     end;
     DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
 
+    { Fix Bugs in certain Versions where real_conncet resets the Reconnect flag } 
+    if StrToBoolEx(Info.Values['MYSQL_OPT_RECONNECT']) then 
+    begin 
+      ClientVersion := FPlainDriver.GetClientVersion; 
+      if ((ClientVersion>=50013) and (ClientVersion<50019)) or 
+         ((ClientVersion>=50100) and (ClientVersion<50106)) then 
+        FPlainDriver.SetOptions(FHandle, MYSQL_OPT_RECONNECT, 'true'); 
+    end; 
+ 
     { Sets a client codepage. }
     if FClientCodePage <> '' then
     begin

@@ -50,7 +50,7 @@
           <simpara> New QueryInterface handling by Lazarus (<ulink url="http://zeos.firmos.at/viewtopic.php?t=3009">http://zeos.firmos.at/viewtopic.php?t=3009</ulink>)</simpara>
         </listitem>
         <listitem>
-          <simpara> ftFixedChar input parameters were not handled correctly (<ulink url="http://zeos.firmos.at/viewtopic.php?t=3004">http://zeos.firmos.at/viewtopic.php?t=3004</ulink>)</simpara>
+          <simpara> ftFixedChar input parameters were not handled correctly (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2979">http://zeos.firmos.at/viewtopic.php?t=2979</ulink>)</simpara>
         </listitem>
         <listitem>
           <simpara>[Common] TZTable and TZQuery Filter property do not work correctly with datetime fields (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2002">http://zeos.firmos.at/viewtopic.php?t=2055</ulink>)</simpara>
