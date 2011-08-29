@@ -370,12 +370,20 @@ begin
     Result := stDouble
   else if TypeName = 'CHAR' then begin
     if IsUnicodeField then
-    	Result := stUnicodeString
+    {$IFDEF FPC}
+      Result := stString
+    {$ELSE}
+      Result := stUnicodeString
+    {$ENDIF}
     else
      Result := stString;
   end else if TypeName = 'VARCHAR' then begin
     if IsUnicodeField then
-    	Result := stUnicodeString
+    {$IFDEF FPC}
+      Result := stString
+    {$ELSE}
+      Result := stUnicodeString
+    {$ENDIF}
     else
      Result := stString;
   end
