@@ -78,6 +78,7 @@ type
     function  GetAttributes: TPropertyAttributes; override;
     procedure GetValueList(List: TStrings); virtual; abstract;
     procedure GetValues(Proc: TGetStrProc); override;
+    function  GetZComponent:TPersistent; virtual;
   end;
 
   {** Shows all Fields received from FieldDefs. }
@@ -285,6 +286,14 @@ begin
   end;
 end;
 
+{**
+  Gets the component that has the property.
+}
+function TZStringProperty.GetZComponent:TPersistent;
+begin
+  Result:=GetComponent(0);
+end;
+
 { TZDataFieldPropertyEditor }
 
 {**
@@ -294,7 +303,7 @@ end;
 procedure TZDataFieldPropertyEditor.GetValueList(List: TStrings);
 begin
   try
-    with (GetComponent(0) as TDataSet) do
+    with (GetZComponent as TDataSet) do
     begin
       // Update the FieldDefs and return the Fieldnames
       FieldDefs.Updated := False;
@@ -314,9 +323,9 @@ end;
 procedure TZIndexFieldPropertyEditor.GetValueList(List: TStrings);
 begin
   {$IFNDEF FPC}
-  GetIndexDefs(GetComponent(0)).GetItemNames(List);
+  GetIndexDefs(GetZComponent).GetItemNames(List);
   {$ELSE}
-  GetItemNames(GetIndexDefs(GetComponent(0)), List);
+  GetItemNames(GetIndexDefs(GetZComponent), List);
   {$ENDIF}
 end;
 
@@ -326,7 +335,7 @@ procedure TZMasterFieldPropertyEditor.GetValueList(List: TStrings);
 var
   DataSource: TDataSource;
 begin
-  DataSource := GetObjectProp(GetComponent(0), 'MasterSource') as TDataSource;
+  DataSource := GetObjectProp(GetZComponent, 'MasterSource') as TDataSource;
   if (DataSource <> nil) and (DataSource.DataSet <> nil) then
     {$IFDEF BDS4_UP}
     DataSource.DataSet.GetFieldNames(TWideStrings(List));
@@ -350,7 +359,7 @@ var
   IdentifierConvertor: IZIdentifierConvertor;
   Catalog: string;
 begin
-  Connection := GetObjectProp(GetComponent(0), 'Connection') as TZAbstractConnection;
+  Connection := GetObjectProp(GetZComponent, 'Connection') as TZAbstractConnection;
   if Assigned(Connection) and Connection.Connected then
   begin
     Metadata := Connection.DbcConnection.GetMetadata;
@@ -358,10 +367,10 @@ begin
     Catalog := Connection.Catalog;
     Schema := '';
 {$IFDEF USE_METADATA}
-    if GetComponent(0) is TZSqlMetadata then
+    if GetZComponent is TZSqlMetadata then
     begin
-      Catalog := GetStrProp(GetComponent(0), 'Catalog');
-      Schema := GetStrProp(GetComponent(0), 'Schema');
+      Catalog := GetStrProp(GetZComponent, 'Catalog');
+      Schema := GetStrProp(GetZComponent, 'Schema');
 {$IFDEF SHOW_WARNING}
       if not (IsEmpty(Catalog) and IsEmpty(Schema)) or
        (MessageDlg(SPropertyQuery + CRLF + SPropertyTables + CRLF +
@@ -419,14 +428,14 @@ var
   Catalog, Schema: string;
 {$ENDIF}
 begin
-  Connection := GetObjectProp(GetComponent(0), 'Connection') as TZAbstractConnection;
+  Connection := GetObjectProp(GetZComponent, 'Connection') as TZAbstractConnection;
   if Assigned(Connection) and Connection.Connected then
   begin
 {$IFDEF USE_METADATA}
-    if GetComponent(0) is TZSqlMetadata then
+    if GetZComponent is TZSqlMetadata then
     begin
-      Catalog := GetStrProp(GetComponent(0), 'Catalog');
-      Schema := GetStrProp(GetComponent(0), 'Schema');
+      Catalog := GetStrProp(GetZComponent, 'Catalog');
+      Schema := GetStrProp(GetZComponent, 'Schema');
 {$IFDEF SHOW_WARNING}
       if not (IsEmpty(Catalog) and IsEmpty(Schema)) or
        (MessageDlg(SPropertyQuery + CRLF + SPropertyProcedures + CRLF +
@@ -473,14 +482,14 @@ var
   Catalog, Schema: string;
 {$ENDIF}
 begin
-  Connection := GetObjectProp(GetComponent(0), 'Connection') as TZAbstractConnection;
+  Connection := GetObjectProp(GetZComponent, 'Connection') as TZAbstractConnection;
   if Assigned(Connection) and Connection.Connected then
   begin
 {$IFDEF USE_METADATA}
-    if GetComponent(0) is TZSqlMetadata then
+    if GetZComponent is TZSqlMetadata then
     begin
-      Catalog := GetStrProp(GetComponent(0), 'Catalog');
-      Schema := GetStrProp(GetComponent(0), 'Schema');
+      Catalog := GetStrProp(GetZComponent, 'Catalog');
+      Schema := GetStrProp(GetZComponent, 'Schema');
 {$IFDEF SHOW_WARNING}
       if not (IsEmpty(Catalog) and IsEmpty(Schema)) or
        (MessageDlg(SPropertyQuery + CRLF + SPropertySequences + CRLF +
@@ -533,8 +542,8 @@ end;
 procedure TZProtocolPropertyEditor.SetValue(const Value: string);
 begin
   SetStrValue(Value);
-  if GetComponent(0) is TZAbstractConnection then
-    (GetComponent(0) as TZAbstractConnection).Connected := False;
+  if GetZComponent is TZAbstractConnection then
+    (GetZComponent as TZAbstractConnection).Connected := False;
 end;
 
 {**
@@ -565,10 +574,10 @@ end;
 }
 function TZDatabasePropertyEditor.GetAttributes: TPropertyAttributes;
 begin
-  if GetComponent(0) is TZAbstractConnection then
+  if GetZComponent is TZAbstractConnection then
   begin
-    if ((GetComponent(0) as TZAbstractConnection).Protocol = 'mssql') or
-    ((GetComponent(0) as TZAbstractConnection).Protocol = 'sybase') then
+    if ((GetZComponent as TZAbstractConnection).Protocol = 'mssql') or
+    ((GetZComponent as TZAbstractConnection).Protocol = 'sybase') then
       Result := inherited GetAttributes
     else
       Result := [paDialog];
@@ -591,8 +600,8 @@ end;
 procedure TZDatabasePropertyEditor.SetValue(const Value: string);
 begin
   SetStrValue(Value);
-  if GetComponent(0) is TZAbstractConnection then
-    (GetComponent(0) as TZAbstractConnection).Connected := False;
+  if GetZComponent is TZAbstractConnection then
+    (GetZComponent as TZAbstractConnection).Connected := False;
 end;
 
 {**
@@ -604,28 +613,28 @@ var
   DbcConnection: IZConnection;
   Url: string;
 begin
-  if GetComponent(0) is TZAbstractConnection then
+  if GetZComponent is TZAbstractConnection then
   try
-    if (GetComponent(0) as TZAbstractConnection).Port = 0 then
+    if (GetZComponent as TZAbstractConnection).Port = 0 then
       Url := Format('zdbc:%s://%s/%s?UID=%s;PWD=%s', [
-        (GetComponent(0) as TZAbstractConnection).Protocol,
-        (GetComponent(0) as TZAbstractConnection).HostName,
+        (GetZComponent as TZAbstractConnection).Protocol,
+        (GetZComponent as TZAbstractConnection).HostName,
         '',
-        (GetComponent(0) as TZAbstractConnection).User,
-        (GetComponent(0) as TZAbstractConnection).Password])
+        (GetZComponent as TZAbstractConnection).User,
+        (GetZComponent as TZAbstractConnection).Password])
     else
       Url := Format('zdbc:%s://%s:%d/%s?UID=%s;PWD=%s', [
-        (GetComponent(0) as TZAbstractConnection).Protocol,
-        (GetComponent(0) as TZAbstractConnection).HostName,
-        (GetComponent(0) as TZAbstractConnection).Port,
+        (GetZComponent as TZAbstractConnection).Protocol,
+        (GetZComponent as TZAbstractConnection).HostName,
+        (GetZComponent as TZAbstractConnection).Port,
         '',
-        (GetComponent(0) as TZAbstractConnection).User,
-        (GetComponent(0) as TZAbstractConnection).Password]);
+        (GetZComponent as TZAbstractConnection).User,
+        (GetZComponent as TZAbstractConnection).Password]);
 
-    (GetComponent(0) as TZAbstractConnection).ShowSqlHourGlass;
+    (GetZComponent as TZAbstractConnection).ShowSqlHourGlass;
     try
       DbcConnection := DriverManager.GetConnectionWithParams(Url,
-        (GetComponent(0) as TZAbstractConnection).Properties);
+        (GetZComponent as TZAbstractConnection).Properties);
 
       with DbcConnection.GetMetadata.GetCatalogs do
       try
@@ -636,7 +645,7 @@ begin
       end;
 
     finally
-      (GetComponent(0) as TZAbstractConnection).HideSqlHourGlass;
+      (GetZComponent as TZAbstractConnection).HideSqlHourGlass;
     end;
   except
 //    raise;
@@ -650,18 +659,18 @@ procedure TZDatabasePropertyEditor.Edit;
 var
   OD: TOpenDialog;
 begin
-  if GetComponent(0) is TZAbstractConnection then
+  if GetZComponent is TZAbstractConnection then
   begin
-    if ((GetComponent(0) as TZAbstractConnection).Protocol = 'mssql') or
-    ((GetComponent(0) as TZAbstractConnection).Protocol = 'sybase') then
+    if ((GetZComponent as TZAbstractConnection).Protocol = 'mssql') or
+    ((GetZComponent as TZAbstractConnection).Protocol = 'sybase') then
       inherited
 {$IFNDEF UNIX}
 {$IFNDEF FPC}
 {$IFDEF ENABLE_ADO}
     else
-    if ((GetComponent(0) as TZAbstractConnection).Protocol = 'ado') then
-      (GetComponent(0) as TZAbstractConnection).Database := PromptDataSource(Application.Handle,
-        (GetComponent(0) as TZAbstractConnection).Database)
+    if ((GetZComponent as TZAbstractConnection).Protocol = 'ado') then
+      (GetZComponent as TZAbstractConnection).Database := PromptDataSource(Application.Handle,
+        (GetZComponent as TZAbstractConnection).Database)
 {$ENDIF}
 {$ENDIF}
 {$ENDIF}
@@ -669,9 +678,9 @@ begin
     begin
       OD := TOpenDialog.Create(nil);
       try
-        OD.InitialDir := ExtractFilePath((GetComponent(0) as TZAbstractConnection).Database);
+        OD.InitialDir := ExtractFilePath((GetZComponent as TZAbstractConnection).Database);
         if OD.Execute then
-          (GetComponent(0) as TZAbstractConnection).Database := OD.FileName;
+          (GetZComponent as TZAbstractConnection).Database := OD.FileName;
       finally
         OD.Free;
       end;
@@ -710,28 +719,28 @@ var
   DbcConnection: IZConnection;
   Url: string;
 begin
-  if GetComponent(0) is TZAbstractConnection then
+  if GetZComponent is TZAbstractConnection then
   try
-    if (GetComponent(0) as TZAbstractConnection).Port = 0 then
+    if (GetZComponent as TZAbstractConnection).Port = 0 then
       Url := Format('zdbc:%s://%s/%s?UID=%s;PWD=%s', [
-        (GetComponent(0) as TZAbstractConnection).Protocol,
-        (GetComponent(0) as TZAbstractConnection).HostName,
+        (GetZComponent as TZAbstractConnection).Protocol,
+        (GetZComponent as TZAbstractConnection).HostName,
         '',
-        (GetComponent(0) as TZAbstractConnection).User,
-        (GetComponent(0) as TZAbstractConnection).Password])
+        (GetZComponent as TZAbstractConnection).User,
+        (GetZComponent as TZAbstractConnection).Password])
     else
       Url := Format('zdbc:%s://%s:%d/%s?UID=%s;PWD=%s', [
-        (GetComponent(0) as TZAbstractConnection).Protocol,
-        (GetComponent(0) as TZAbstractConnection).HostName,
-        (GetComponent(0) as TZAbstractConnection).Port,
+        (GetZComponent as TZAbstractConnection).Protocol,
+        (GetZComponent as TZAbstractConnection).HostName,
+        (GetZComponent as TZAbstractConnection).Port,
         '',
-        (GetComponent(0) as TZAbstractConnection).User,
-        (GetComponent(0) as TZAbstractConnection).Password]);
+        (GetZComponent as TZAbstractConnection).User,
+        (GetZComponent as TZAbstractConnection).Password]);
 
-    (GetComponent(0) as TZAbstractConnection).ShowSqlHourGlass;
+    (GetZComponent as TZAbstractConnection).ShowSqlHourGlass;
     try
       DbcConnection := DriverManager.GetConnectionWithParams(Url,
-        (GetComponent(0) as TZAbstractConnection).Properties);
+        (GetZComponent as TZAbstractConnection).Properties);
 
       with DbcConnection.GetMetadata.GetCatalogs do
       try
@@ -742,7 +751,7 @@ begin
       end;
 
     finally
-      (GetComponent(0) as TZAbstractConnection).HideSqlHourGlass;
+      (GetZComponent as TZAbstractConnection).HideSqlHourGlass;
     end;
   except
 //    raise;
@@ -763,7 +772,7 @@ var
   Metadata: IZDatabaseMetadata;
   ResultSet: IZResultSet;
 begin
-  Connection := GetObjectProp(GetComponent(0), 'Connection') as TZAbstractConnection;
+  Connection := GetObjectProp(GetZComponent, 'Connection') as TZAbstractConnection;
   if Assigned(Connection) and Connection.Connected then
   try
     Metadata := Connection.DbcConnection.GetMetadata;
@@ -788,12 +797,12 @@ var
   ResultSet: IZResultSet;
   Catalog, Schema, TableName: string;
 begin
-  Connection := GetObjectProp(GetComponent(0), 'Connection') as TZAbstractConnection;
+  Connection := GetObjectProp(GetZComponent, 'Connection') as TZAbstractConnection;
   if Assigned(Connection) and Connection.Connected then
   begin
-    Catalog := GetStrProp(GetComponent(0), 'Catalog');
-    Schema := GetStrProp(GetComponent(0), 'Schema');
-    TableName := GetStrProp(GetComponent(0), 'TableName');
+    Catalog := GetStrProp(GetZComponent, 'Catalog');
+    Schema := GetStrProp(GetZComponent, 'Schema');
+    TableName := GetStrProp(GetZComponent, 'TableName');
 {$IFDEF SHOW_WARNING}
     if not IsEmpty(TableName) or not (IsEmpty(Schema) and IsEmpty(Schema)) or
      (MessageDlg(SPropertyQuery + CRLF + SPropertyTables + CRLF +
@@ -824,7 +833,7 @@ var
   Metadata: IZDatabaseMetadata;
   ResultSet: IZResultSet;
 begin
-  Connection := GetObjectProp(GetComponent(0), 'Connection') as TZAbstractConnection;
+  Connection := GetObjectProp(GetZComponent, 'Connection') as TZAbstractConnection;
   if Assigned(Connection) and Connection.Connected then
   try
     Metadata := Connection.DbcConnection.GetMetadata;
@@ -848,7 +857,7 @@ var
   Metadata: IZDatabaseMetadata;
   ResultSet: IZResultSet;
 begin
-  Connection := GetObjectProp(GetComponent(0), 'Connection') as TZAbstractConnection;
+  Connection := GetObjectProp(GetZComponent, 'Connection') as TZAbstractConnection;
   if Assigned(Connection) and Connection.Connected then
   try
     Metadata := Connection.DbcConnection.GetMetadata;
@@ -881,28 +890,28 @@ var
   DbcConnection: IZConnection;
   Url: string;
 begin
-  if GetComponent(0) is TZAbstractConnection then
+  if GetZComponent is TZAbstractConnection then
   try
-    if (GetComponent(0) as TZAbstractConnection).Port = 0 then
+    if (GetZComponent as TZAbstractConnection).Port = 0 then
       Url := Format('zdbc:%s://%s/%s?UID=%s;PWD=%s', [
-        (GetComponent(0) as TZAbstractConnection).Protocol,
-        (GetComponent(0) as TZAbstractConnection).HostName,
+        (GetZComponent as TZAbstractConnection).Protocol,
+        (GetZComponent as TZAbstractConnection).HostName,
         '',
-        (GetComponent(0) as TZAbstractConnection).User,
-        (GetComponent(0) as TZAbstractConnection).Password])
+        (GetZComponent as TZAbstractConnection).User,
+        (GetZComponent as TZAbstractConnection).Password])
     else
       Url := Format('zdbc:%s://%s:%d/%s?UID=%s;PWD=%s', [
-        (GetComponent(0) as TZAbstractConnection).Protocol,
-        (GetComponent(0) as TZAbstractConnection).HostName,
-        (GetComponent(0) as TZAbstractConnection).Port,
+        (GetZComponent as TZAbstractConnection).Protocol,
+        (GetZComponent as TZAbstractConnection).HostName,
+        (GetZComponent as TZAbstractConnection).Port,
         '',
-        (GetComponent(0) as TZAbstractConnection).User,
-        (GetComponent(0) as TZAbstractConnection).Password]);
+        (GetZComponent as TZAbstractConnection).User,
+        (GetZComponent as TZAbstractConnection).Password]);
 
-    (GetComponent(0) as TZAbstractConnection).ShowSqlHourGlass;
+    (GetZComponent as TZAbstractConnection).ShowSqlHourGlass;
     try
       DbcConnection := DriverManager.GetConnectionWithParams(Url,
-        (GetComponent(0) as TZAbstractConnection).Properties);
+        (GetZComponent as TZAbstractConnection).Properties);
 
       with DbcConnection.GetMetadata.GetCatalogs do
       try
@@ -913,7 +922,7 @@ begin
       end;
 
     finally
-      (GetComponent(0) as TZAbstractConnection).HideSqlHourGlass;
+      (GetZComponent as TZAbstractConnection).HideSqlHourGlass;
     end;
   except
 //    raise;
@@ -931,10 +940,10 @@ end;
 }
 function TZConnectionGroupPropertyEditor.GetAttributes: TPropertyAttributes;
 begin
-  if GetComponent(0) is TZConnectionGroup then
+  if GetZComponent is TZConnectionGroup then
   begin
-    if ((GetComponent(0) as TZConnectionGroup).Protocol = 'mssql') or
-    ((GetComponent(0) as TZConnectionGroup).Protocol = 'sybase') then
+    if ((GetZComponent as TZConnectionGroup).Protocol = 'mssql') or
+    ((GetZComponent as TZConnectionGroup).Protocol = 'sybase') then
       Result := inherited GetAttributes
     else
       Result := [paDialog];
@@ -957,8 +966,8 @@ end;
 procedure TZConnectionGroupPropertyEditor.SetValue(const Value: string);
 begin
   SetStrValue(Value);
-//  if GetComponent(0) is TZConnectionGroup then
-//    (GetComponent(0) as TZConnectionGroup).Connected := False;
+//  if GetZComponent is TZConnectionGroup then
+//    (GetZComponent as TZConnectionGroup).Connected := False;
 end;
 
 {**
@@ -970,23 +979,23 @@ var
   DbcConnection: IZConnection;
   Url: string;
 begin
-  if GetComponent(0) is TZConnectionGroup then
+  if GetZComponent is TZConnectionGroup then
   try
-    if (GetComponent(0) as TZConnectionGroup).Port = 0 then
+    if (GetZComponent as TZConnectionGroup).Port = 0 then
       Url := Format('zdbc:%s://%s/%s?UID=%s;PWD=%s', [
-        (GetComponent(0) as TZConnectionGroup).Protocol,
-        (GetComponent(0) as TZConnectionGroup).HostName,
+        (GetZComponent as TZConnectionGroup).Protocol,
+        (GetZComponent as TZConnectionGroup).HostName,
         '',
-        (GetComponent(0) as TZConnectionGroup).User,
-        (GetComponent(0) as TZConnectionGroup).Password])
+        (GetZComponent as TZConnectionGroup).User,
+        (GetZComponent as TZConnectionGroup).Password])
     else
       Url := Format('zdbc:%s://%s:%d/%s?UID=%s;PWD=%s', [
-        (GetComponent(0) as TZConnectionGroup).Protocol,
-        (GetComponent(0) as TZConnectionGroup).HostName,
-        (GetComponent(0) as TZConnectionGroup).Port,
+        (GetZComponent as TZConnectionGroup).Protocol,
+        (GetZComponent as TZConnectionGroup).HostName,
+        (GetZComponent as TZConnectionGroup).Port,
         '',
-        (GetComponent(0) as TZConnectionGroup).User,
-        (GetComponent(0) as TZConnectionGroup).Password]);
+        (GetZComponent as TZConnectionGroup).User,
+        (GetZComponent as TZConnectionGroup).Password]);
 
 
 
@@ -1011,18 +1020,18 @@ procedure TZConnectionGroupPropertyEditor.Edit;
 var
   OD: TOpenDialog;
 begin
-  if GetComponent(0) is TZConnectionGroup then
+  if GetZComponent is TZConnectionGroup then
   begin
-    if ((GetComponent(0) as TZConnectionGroup).Protocol = 'mssql') or
-    ((GetComponent(0) as TZConnectionGroup).Protocol = 'sybase') then
+    if ((GetZComponent as TZConnectionGroup).Protocol = 'mssql') or
+    ((GetZComponent as TZConnectionGroup).Protocol = 'sybase') then
       inherited
 {$IFNDEF UNIX}
 {$IFNDEF FPC}
 {$IFDEF ENABLE_ADO}
     else
-    if ((GetComponent(0) as TZConnectionGroup).Protocol = 'ado') then
-      (GetComponent(0) as TZConnectionGroup).Database := PromptDataSource(Application.Handle,
-        (GetComponent(0) as TZConnectionGroup).Database)
+    if ((GetZComponent as TZConnectionGroup).Protocol = 'ado') then
+      (GetZComponent as TZConnectionGroup).Database := PromptDataSource(Application.Handle,
+        (GetZComponent as TZConnectionGroup).Database)
 {$ENDIF}
 {$ENDIF}
 {$ENDIF}
@@ -1030,9 +1039,9 @@ begin
     begin
       OD := TOpenDialog.Create(nil);
       try
-        OD.InitialDir := ExtractFilePath((GetComponent(0) as TZConnectionGroup).Database);
+        OD.InitialDir := ExtractFilePath((GetZComponent as TZConnectionGroup).Database);
         if OD.Execute then
-          (GetComponent(0) as TZConnectionGroup).Database := OD.FileName;
+          (GetZComponent as TZConnectionGroup).Database := OD.FileName;
       finally
         OD.Free;
       end;

@@ -242,6 +242,9 @@ type
       Unique: Boolean; Approximate: Boolean): IZResultSet; override;
     function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
       const SequenceNamePattern: string): IZResultSet; override;
+    function UncachedGetTriggers(const Catalog: string;
+      const SchemaPattern: string; const TableNamePattern: string;
+      const TriggerNamePattern: string): IZResultSet; override;
     function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string): IZResultSet; override;
     function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
@@ -443,15 +446,15 @@ function TZInterbase6DatabaseInfo.GetSQLKeywords: string;
 begin
   Result := 'ACTIVE,AFTER,ASCENDING,BASE_NAME,BEFORE,BLOB,' +
     'CACHE,CHECK_POINT_LENGTH,COMPUTED,CONDITIONAL,CONTAINING,' +
-    'CSTRING,DATABASE,DATE,RDB$DB_KEY,DEBUG,DESCENDING,DO,ENTRY_POINT,' +
+    'CSTRING,DATABASE,RDB$DB_KEY,DEBUG,DESCENDING,DO,ENTRY_POINT,' +
     'EXIT,FILE,FILTER,FUNCTION,GDSCODE,GENERATOR,GEN_ID,' +
     'GROUP_COMMIT_WAIT_TIME,IF,INACTIVE,INPUT_TYPE,INDEX,' +
-    'LOGFILE,LOG_BUFFER_SIZE,MANUAL,MAX,MAXIMUM_SEGMENT,MERGE,MESSAGE,' +
-    'MIN,MODULE_NAME,NCHAR,NUM_LOG_BUFFERS,OUTPUT_TYPE,OVERFLOW,PAGE,' +
+    'LOGFILE,LOG_BUFFER_SIZE,MANUAL,MAXIMUM_SEGMENT,MERGE, MESSAGE,' +
+    'MODULE_NAME,NCHAR,NUM_LOG_BUFFERS,OUTPUT_TYPE,OVERFLOW,PAGE,' +
     'PAGES,PAGE_SIZE,PARAMETER,PASSWORD,PLAN,POST_EVENT,PROTECTED,' +
     'RAW_PARTITIONS,RESERV,RESERVING,RETAIN,RETURNING_VALUES,RETURNS,' +
     'SEGMENT,SHADOW,SHARED,SINGULAR,SNAPSHOT,SORT,STABILITY,STARTS,' +
-    'STARTING,STATISTICS,SUB_TYPE,SUSPEND,TIME,TRIGGER,VARIABLE,RECORD_VERSION,USER,' +
+    'STARTING,STATISTICS,SUB_TYPE,SUSPEND,TRIGGER,VARIABLE,RECORD_VERSION,' +
     'WAIT,WHILE,WORK';
 end;
 
@@ -1212,6 +1215,53 @@ function TZInterbase6DatabaseMetadata.CreateDatabaseInfo: IZDatabaseInfo;
 begin
   Result := TZInterbase6DatabaseInfo.Create(Self);
 end;
+
+function TZInterbase6DatabaseMetadata.UncachedGetTriggers(const Catalog: string;
+  const SchemaPattern: string; const TableNamePattern: string;
+  const TriggerNamePattern: string): IZResultSet;
+var
+  SQL: string;
+  LTriggerNamePattern: string;
+  LTableNamePattern: string;
+begin
+  Result := ConstructVirtualResultSet(TriggersColumnsDynArray);
+
+  LTriggerNamePattern := ConstructNameCondition(TriggerNamePattern,
+    'RDB$TRIGGER_NAME');
+  LTableNamePattern := ConstructNameCondition(TableNamePattern,
+    'RDB$RELATION_NAME');
+  SQL := 'SELECT RDB$TRIGGER_NAME, RDB$RELATION_NAME,'
+    + ' RDB$TRIGGER_TYPE, RDB$TRIGGER_INACTIVE,'
+    + ' RDB$TRIGGER_SOURCE, RDB$DESCRIPTION FROM RDB$TRIGGERS';
+  if TriggerNamePattern <> '' then
+  begin
+    SQL := SQL + ' WHERE ' + LTriggerNamePattern;
+    if TableNamePattern <> '' then
+      SQL := SQL + ' AND ' + LTableNamePattern;
+  end
+  else
+    if TableNamePattern <> '' then
+      SQL := SQL + ' WHERE ' + LTableNamePattern;
+
+  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+  begin
+    while Next do
+    begin
+      Result.MoveToInsertRow;
+      Result.UpdateNull(1);
+      Result.UpdateNull(2);
+      Result.UpdateString(3, GetString(1)); //RDB$TRIGGER_NAME
+      Result.UpdateString(4, GetString(2)); //RDB$RELATION_NAME
+      Result.UpdateShort(5, GetShort(3)); //RDB$TRIGGER_TYPE
+      Result.UpdateShort(6, GetShort(4)); //RDB$TRIGGER_INACTIVE
+      Result.UpdateString(7, GetString(5)); //RDB$TRIGGER_SOURCE
+      Result.UpdateString(8, GetString(6)); //RDB$DESCRIPTION
+      Result.InsertRow;
+    end;
+    Close;
+  end;
+end;
+
 
 {**
   Gets a description of the stored procedures available in a

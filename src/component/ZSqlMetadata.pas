@@ -66,7 +66,7 @@ type
   TZMetadataType = (mdProcedures, mdProcedureColumns, mdTables, mdSchemas,
     mdCatalogs, mdTableTypes, mdColumns, mdColumnPrivileges, mdTablePrivileges,
     mdBestRowIdentifier, mdVersionColumns, mdPrimaryKeys, mdImportedKeys,
-    mdExportedKeys, mdCrossReference, mdTypeInfo, mdIndexInfo, mdSequences,
+    mdExportedKeys, mdCrossReference, mdTypeInfo, mdTriggers, mdIndexInfo, mdSequences,
     mdUserDefinedTypes);
 
   {**
@@ -78,6 +78,7 @@ type
     FCatalog: string;
     FSchema: string;
     FTableName: string;
+    FTriggerName: string;
     FColumnName: string;
     FProcedureName: string;
     FScope: Integer;
@@ -111,7 +112,7 @@ type
     property Approximate: Boolean read FApproximate write FApproximate default False;
     property TypeName: string read FTypeName write FTypeName;
     property SequenceName: string read FSequenceName write FSequenceName;
-
+    property TriggerName: String read FTriggerName write FTriggerName;
     property Active;
     property MasterFields;
     property MasterSource;
@@ -164,6 +165,8 @@ begin
         Result := Metadata.GetCatalogs;
       mdTableTypes:
         Result := Metadata.GetTableTypes;
+      mdTriggers:
+        Result := Metadata.GetTriggers(FCatalog, FSchema, FTableName, FTriggerName);
       mdColumns:
         Result := Metadata.GetColumns(FCatalog, FSchema, FTableName,
           FColumnName);

@@ -209,6 +209,7 @@ type
     procedure GetColumnNames(const TablePattern, ColumnPattern: string; List: TStrings);
 
     procedure GetStoredProcNames(const Pattern: string; List: TStrings);
+    procedure GetTriggerNames(const TablePattern, SchemaPattern: string; List: TStrings);
 
     property InTransaction: Boolean read GetInTransaction;
 
@@ -1183,6 +1184,21 @@ begin
   ResultSet := Metadata.GetProcedures('', '', Pattern);
   while ResultSet.Next do
     List.Add(ResultSet.GetStringByName('PROCEDURE_NAME'));
+end;
+
+procedure TZAbstractConnection.GetTriggerNames(const TablePattern,
+  SchemaPattern: string; List: TStrings);
+var
+  Metadata: IZDatabaseMetadata;
+  ResultSet: IZResultSet;
+begin
+  CheckConnected;
+
+  List.Clear;
+  Metadata := DbcConnection.GetMetadata;
+  ResultSet := Metadata.GetTriggers('', '', '', TablePattern);
+  while ResultSet.Next do
+    List.Add(ResultSet.GetStringByName('TRIGGER_NAME'));
 end;
 
 {**
