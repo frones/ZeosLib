@@ -1760,7 +1760,9 @@ begin
       begin
         SQL := SQL + ' AND n.nspname LIKE '
           + EscapeString(SchemaPattern);
-      end;
+      end else begin
+         SQL := SQL + ' AND pg_table_is_visible (c.oid) ';
+      end; 
     end
     else
     begin

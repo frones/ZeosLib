@@ -2416,10 +2416,16 @@ begin
       + ' OR P.RDB$PAGE_TYPE = 6) WHERE ';
     if Unique then
       SQL := SQL + ' I.RDB$UNIQUE_FLAG = 1 AND ';
-    SQL := SQL + ' I.RDB$RELATION_NAME = ''' + Table + ''' GROUP BY '
-      + ' I.RDB$INDEX_NAME, I.RDB$RELATION_NAME, I.RDB$UNIQUE_FLAG, '
-      + ' ISGMT.RDB$FIELD_POSITION, ISGMT.RDB$FIELD_NAME, I.RDB$INDEX_TYPE, '
-      + ' I.RDB$SEGMENT_COUNT ORDER BY 2,3,4';
+    if ( Table = '' ) then 
+      SQL := SQL + 'I.RDB$RELATION_NAME != '''' '
+    else 
+      SQL := SQL + ' I.RDB$RELATION_NAME = ''' + Table + ''' ';
+
+    SQL := SQL + ' GROUP BY ' 
+               + ' I.RDB$INDEX_NAME, I.RDB$RELATION_NAME, I.RDB$UNIQUE_FLAG, ' 
+               + ' ISGMT.RDB$FIELD_POSITION, ISGMT.RDB$FIELD_NAME, I.RDB$INDEX_TYPE, ' 
+               + ' I.RDB$SEGMENT_COUNT ORDER BY 1,2,3,4'; 
+
 
     with GetConnection.CreateStatement.ExecuteQuery(SQL) do
     begin
