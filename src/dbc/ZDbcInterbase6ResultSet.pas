@@ -159,7 +159,7 @@ begin
     FSqlData := nil;
     FParamsSqlData := nil;
     { Free allocate sql statement }
-    FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_close);
+    FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_CLOSE); //AVZ
   end;
 inherited Close;
 end;
@@ -565,7 +565,7 @@ begin
       begin     //AVZ - Cursor name has a value therefore the result set already exists
         FFetchStat := 1;
         Result := True;
-        FStmtHandle := nil;
+        //FStmtHandle := nil;  //AVZ TEST
       end;
     end;
 

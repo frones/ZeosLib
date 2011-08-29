@@ -546,7 +546,13 @@ type
     procedure SetBigDecimal(ParameterIndex: Integer; Value: Extended);
     procedure SetPChar(ParameterIndex: Integer; Value: PAnsiChar);
     procedure SetString(ParameterIndex: Integer; const Value: AnsiString);
-    procedure SetUnicodeString(ParameterIndex: Integer; const Value: WideString);
+
+    {$IFDEF DELPHI12_UP}
+      procedure SetUnicodeString(ParameterIndex: Integer; const Value: String); //AVZ
+    {$ELSE}
+      procedure SetUnicodeString(ParameterIndex: Integer; const Value: WideString); //AVZ
+    {$ENDIF}
+
     procedure SetBytes(ParameterIndex: Integer; const Value: TByteDynArray);
     procedure SetDate(ParameterIndex: Integer; Value: TDateTime);
     procedure SetTime(ParameterIndex: Integer; Value: TDateTime);

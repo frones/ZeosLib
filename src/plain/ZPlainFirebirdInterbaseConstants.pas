@@ -65,6 +65,12 @@ const
   IBBigLocalBufferLength = IBLocalBufferLength * 2;
   IBHugeLocalBufferLength = IBBigLocalBufferLength * 20;
 
+  {temporary fix by mdaems
+   I think Andre wanted to use this as a generic error code for a broken connection
+   At the moment I put it here as it's only used in the IB/FB implementation
+  }
+  DISCONNECT_ERROR = -1;
+
   ISC_NULL = -1;
   ISC_NOTNULL = 0;
 
@@ -465,7 +471,7 @@ type
 
   TISC_VARYING = record
     strlen:       Short;
-    str:          array[0..0] of AnsiChar;
+    str:          array[0..0] of AnsiChar; //AVZ - was AnsiChar
   end;
   PISC_VARYING = ^TISC_VARYING;
 
