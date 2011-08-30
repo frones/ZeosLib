@@ -64,6 +64,9 @@
       <title>Features added</title>
       <itemizedlist spacing="compact">
         <listitem>
+          <simpara>[SQLITE] Enabled busy_timeout() using connection properties - by johank (<ulink url="http://zeos.firmos.at/viewtopic.php?t=2853">http://zeos.firmos.at/viewtopic.php?t=2853</ulink>)</simpara>
+        </listitem>
+        <listitem>
           <simpara>Start of Trigger Metadata (IB/FB)- by EgonHugeist (<ulink url="http://zeos.firmos.at/viewtopic.php?t=3140">http://zeos.firmos.at/viewtopic.php?t=3140</ulink>)</simpara>
         </listitem>
         <listitem>

@@ -349,6 +349,7 @@ var
   ErrorMessage: PAnsiChar;
   LogMessage: string;
   SQL: AnsiString;
+  Timeout_ms: Integer;
 begin
   if not Closed then
     Exit;
@@ -379,6 +380,13 @@ begin
     {$ENDIF}
     CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcConnect, 'SQLite.Key');
   end;
+
+  { Set busy timeout if requested } 
+  Timeout_ms := StrToIntDef(Info.Values['busytimeout'], -1); 
+  if Timeout_ms >= 0 then 
+  begin 
+    FPlainDriver.BusyTimeout(FHandle, Timeout_ms); 
+  end; 
 
   try
     SQL := 'PRAGMA show_datatypes = ON';

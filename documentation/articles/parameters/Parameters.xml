@@ -196,4 +196,13 @@ If PostgreSQL is compiled without SSL support, using option require will cause a
       </itemizedlist>
     </sect2>
   </sect1>
+  <sect1>
+    <title>SQLite Driver Parameters</title>
+    <sect2>
+      <title>Connection parameters</title>
+      <itemizedlist>
+      <listitem><para>busytimeout=&lt;milliseconds&gt; - Timeout before throwing an error because the database to be opened is locked</para></listitem>
+      </itemizedlist>
+    </sect2>
+  </sect1>
 </article>
