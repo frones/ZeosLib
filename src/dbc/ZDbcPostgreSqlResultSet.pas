@@ -185,8 +185,11 @@ begin
 
   case TypeOid of
     790: ColumnInfo.Currency := True; { money }
-    19: if ((Connection.GetServerMajorVersion = 7) and (Connection.GetServerMinorVersion < 3)) then ColumnInfo.Precision := 32
-        else ColumnInfo.Precision := 64; { name }
+    19: if (Connection.GetServerMajorVersion < 7) or
+           ((Connection.GetServerMajorVersion = 7) and (Connection.GetServerMinorVersion < 3)) then
+          ColumnInfo.Precision := 32
+        else
+          ColumnInfo.Precision := 64; { name }
     1186: ColumnInfo.Precision := 32; { interval }
     24: ColumnInfo.Precision := 10; { regproc }
     17:{ bytea }
