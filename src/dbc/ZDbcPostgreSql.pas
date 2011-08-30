@@ -420,6 +420,11 @@ begin
   ConnectTimeout := StrToIntDef(Info.Values['timeout'], -1);
   if ConnectTimeout >= 0 then
     AddParamToResult('connect_timeout', IntToStr(ConnectTimeout));
+
+  { Sets the application name }
+  if Info.Values['application_name'] <> '' then
+    AddParamToResult('application_name', Info.Values['application_name']);
+
 end;
 
 {**
