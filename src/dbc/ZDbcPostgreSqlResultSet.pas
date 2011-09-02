@@ -201,7 +201,7 @@ begin
 
   if Connection.GetCharactersetCode = csUTF8 then
     case SQLType of
-      stString: SQLType := stUnicodeString;
+      stString: SQLType := {$IFDEF FPC} stString;  {$ELSE}  stUnicodeString; {$ENDIF}
       stAsciiStream: SQLType := stUnicodeStream;
     end;
 

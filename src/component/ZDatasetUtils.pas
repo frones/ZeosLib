@@ -909,8 +909,13 @@ begin
           DecodedKeyValues[I], vtString);
         if CaseInsensitive then
         begin
-          DecodedKeyValues[I].VString :=
-            AnsiUpperCase(DecodedKeyValues[I].VString);
+          {$IFDEF FPC} 
+          DecodedKeyValues[I].VString := 
+            WideUpperCase(UTF8Decode (DecodedKeyValues[I].VString)); 
+          {$ELSE} 
+          DecodedKeyValues[I].VString := 
+            AnsiUpperCase(DecodedKeyValues[I].VString); 
+          {$ENDIF} 
         end;
       end;
     end
@@ -953,10 +958,15 @@ begin
         else
           if CaseInsensitive then
           begin
-            DecodedKeyValues[I] := SoftVarManager.Convert(
-              DecodedKeyValues[I], vtString);
-            DecodedKeyValues[I].VString :=
-              AnsiUpperCase(DecodedKeyValues[I].VString);
+            DecodedKeyValues[I] := SoftVarManager.Convert( 
+              DecodedKeyValues[I], vtString); 
+            {$IFDEF FPC} 
+            DecodedKeyValues[I].VString := 
+              WideUpperCase(UTF8Decode (DecodedKeyValues[I].VString)); 
+            {$ELSE} 
+            DecodedKeyValues[I].VString := 
+              AnsiUpperCase(DecodedKeyValues[I].VString); 
+            {$ENDIF} 
           end
           else
           begin
@@ -1015,7 +1025,11 @@ begin
       end;
 
       if CaseInsensitive then
-        Value2 := AnsiUpperCase(Value2);
+        {$IFDEF FPC} 
+        Value2 := AnsiUpperCase(Utf8ToAnsi(Value2)); 
+        {$ELSE} 
+        Value2 := AnsiUpperCase(Value2); 
+        {$ENDIF} 
       Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
     end
     else
@@ -1064,8 +1078,13 @@ begin
         else
           if CaseInsensitive then
           begin
-            Result := KeyValues[I].VString =
-              AnsiUpperCase(ResultSet.GetString(ColumnIndex));
+            {$IFDEF FPC} 
+            Result := KeyValues[I].VString = 
+              AnsiUpperCase (Utf8ToAnsi(ResultSet.GetString(ColumnIndex))); 
+            {$ELSE} 
+            Result := KeyValues[I].VString = 
+              AnsiUpperCase(ResultSet.GetString(ColumnIndex)); 
+            {$ENDIF} 
           end
           else
           begin
