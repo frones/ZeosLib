@@ -378,7 +378,7 @@ begin
     {$ELSE}
     ErrorCode := FPlainDriver.Key(FHandle, PAnsiChar(Password), StrLen(PAnsiChar(Password)));
     {$ENDIF}
-    CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcConnect, 'SQLite.Key');
+    CheckSQLiteError(FPlainDriver, ErrorCode, nil, lcConnect, 'SQLite.Key');
   end;
 
   { Set busy timeout if requested } 
