@@ -1,4 +1,4 @@
-﻿<?xml version="1.0"?>
+<?xml version="1.0"?>
 
 <!--
   Project: Zeos Database Objects.
@@ -64,6 +64,16 @@
     </condition>
     <antcall target="delphi12_compile"/>
 
+    <condition property="delphi14.compile">
+      <istrue value="${delphi14.active}"/>
+    </condition>
+    <antcall target="delphi14_compile"/>
+
+    <condition property="delphi15.compile">
+      <istrue value="${delphi15.active}"/>
+    </condition>
+    <antcall target="delphi15_compile"/>
+
     <condition property="cbuilder6.compile">
       <istrue value="${cbuilder6.active}"/>
     </condition>
@@ -123,6 +133,24 @@
       <param name="compile" value="${delphi12.compile}"/>
       <param name="compiler" value="delphi12"/>
       <param name="compiler.dir" value="${delphi12.home}"/>
+    </antcall>
+  </target>
+
+ <target name="delphi14_compile" if="delphi14.compile">
+    <property name="bpl.dir" value="${delphi14.bpl.dir}"/>
+    <antcall target="delphi_compile">
+      <param name="compile" value="${delphi14.compile}"/>
+      <param name="compiler" value="delphi14"/>
+      <param name="compiler.dir" value="${delphi14.home}"/>
+    </antcall>
+  </target>
+
+ <target name="delphi15_compile" if="delphi15.compile">
+    <property name="bpl.dir" value="${delphi15.bpl.dir}"/>
+    <antcall target="delphi_compile">
+      <param name="compile" value="${delphi15.compile}"/>
+      <param name="compiler" value="delphi15"/>
+      <param name="compiler.dir" value="${delphi15.home}"/>
     </antcall>
   </target>
 
