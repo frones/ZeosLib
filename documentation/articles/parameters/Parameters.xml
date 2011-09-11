@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN" "file:/c:/docbook/dtd/docbookx.dtd" [
 <!ENTITY % global.entities SYSTEM "file:/c:/docbook/include/global.xml">
 <!-- e-novative DocBook environment --><!-- global entities                --><!-- (c) 2002 e-novative GmbH       --><!-- http://www.e-novative.de       --><!ENTITY global_entity "global entity (can be included in every document)">
@@ -146,6 +146,8 @@ TMYSQL_CLIENT_OPTIONS =
       <listitem><para>sslmode=[disable, allow, prefer, require] - (From PostgreSQL docs:) This option determines whether or with what priority an SSL connection will be negotiated with the server. There are four modes: disable will attempt only an unencrypted SSL connection; allow will negotiate, trying first a non-SSL connection, then if that fails, trying an SSL connection; prefer (the default) will negotiate, trying first an SSL connection, then if that fails, trying a regular non-SSL connection; require will try only an SSL connection.
 If PostgreSQL is compiled without SSL support, using option require will cause an error, while options allow and prefer will be accepted but libpq will not in fact attempt an SSL connection.</para></listitem>
       <listitem><para>requiressl=[0,1] - This option is deprecated in favor of the sslmode setting.</para></listitem>
+      <listitem><para>application_name=&lt;application name&gt; - (From PostgreSQL docs:) This option is typically set by an application upon connection to the server. The name will be displayed in the pg_stat_activity view and included in CSV log entries.</para></listitem>
+
       </itemizedlist>
     </sect2>
     <sect2>
@@ -193,6 +195,15 @@ If PostgreSQL is compiled without SSL support, using option require will cause a
       <title>Connection parameters</title>
       <itemizedlist>
       <listitem><para>codepage=[utf8,UTF8,0..max word value] - The codepage used by the oracle OCI to interprete strings sent to the server. For Lazarus this should be set to UTF8.</para></listitem>
+      </itemizedlist>
+    </sect2>
+  </sect1>
+  <sect1>
+    <title>SQLite Driver Parameters</title>
+    <sect2>
+      <title>Connection parameters</title>
+      <itemizedlist>
+      <listitem><para>busytimeout=&lt;milliseconds&gt; - Timeout before throwing an error because the database to be opened is locked</para></listitem>
       </itemizedlist>
     </sect2>
   </sect1>

@@ -168,6 +168,7 @@ type
 
   PZPostgreSQLConnect = Pointer;
   PZPostgreSQLResult = Pointer;
+  PZPostgreSQLCancel = Pointer;
   Oid = Integer;
 
 TZPgCharactersetType = (
@@ -231,6 +232,7 @@ type
 }
   PGresult = Pointer;
   PPGresult = Pointer;
+  PGCancel = Pointer;
 
 { PGnotify represents the occurrence of a NOTIFY message.
   Ideally this would be an opaque typedef, but it's so simple that it's
@@ -349,6 +351,9 @@ type
   TPQgetResult     = function(Handle: PPGconn): PPGresult; cdecl;
   TPQisBusy        = function(Handle: PPGconn): Integer; cdecl;
   TPQconsumeInput  = function(Handle: PPGconn): Integer; cdecl;
+  TPQgetCancel     = function(Handle: PPGconn): PGcancel; cdecl; 
+  TPQfreeCancel    = procedure(Canc: PGcancel); cdecl; 
+  TPQcancel        = function(Canc: PGcancel; Buffer: PChar; BufSize: Integer): Integer; 
   TPQgetline       = function(Handle: PPGconn; Str: PAnsiChar; length: Integer): Integer; cdecl;
   TPQputline       = function(Handle: PPGconn; Str: PAnsiChar): Integer; cdecl;
   TPQgetlineAsync  = function(Handle: PPGconn; Buffer: PAnsiChar; BufSize: Integer): Integer; cdecl;
@@ -423,6 +428,9 @@ TZPOSTGRESQL_API = record
   PQgetResult:     TPQgetResult;
   PQisBusy:        TPQisBusy;
   PQconsumeInput:  TPQconsumeInput;
+  PQgetCancel:     TPQgetCancel; 
+  PQfreeCancel:    TPQfreeCancel; 
+  PQcancel:        TPQcancel; 
   PQgetline:       TPQgetline;
   PQputline:       TPQputline;
   PQgetlineAsync:  TPQgetlineAsync;
@@ -509,6 +517,9 @@ type
     function GetResult(Handle: PZPostgreSQLConnect): PZPostgreSQLResult;
     function IsBusy(Handle: PZPostgreSQLConnect): Integer;
     function ConsumeInput(Handle: PZPostgreSQLConnect): Integer;
+    function GetCancel(Handle: PZPostgreSQLConnect): PZPostgreSQLCancel; 
+    procedure FreeCancel( Canc: PZPostgreSQLCancel); 
+    function Cancel( Canc: PZPostgreSQLCancel; Buffer: PChar; Length: Integer): Integer; 
     function GetLine(Handle: PZPostgreSQLConnect; Str: PAnsiChar;
       Length: Integer): Integer;
     function PutLine(Handle: PZPostgreSQLConnect; Str: PAnsiChar): Integer;
@@ -618,6 +629,9 @@ type
     function GetResult(Handle: PZPostgreSQLConnect): PZPostgreSQLResult;
     function IsBusy(Handle: PZPostgreSQLConnect): Integer;
     function ConsumeInput(Handle: PZPostgreSQLConnect): Integer;
+    function GetCancel(Handle: PZPostgreSQLConnect): PZPostgreSQLCancel; virtual;
+    procedure FreeCancel( Canc: PZPostgreSQLCancel); virtual;
+    function Cancel( Canc: PZPostgreSQLCancel; Buffer: PChar; Length: Integer): Integer; virtual;
     function GetLine(Handle: PZPostgreSQLConnect; Buffer: PAnsiChar;
       Length: Integer): Integer;
     function PutLine(Handle: PZPostgreSQLConnect; Buffer: PAnsiChar): Integer;
@@ -700,7 +714,10 @@ type
     function  DecodeBYTEA(const value: AnsiString): AnsiString; override;
 
     function GetResultErrorField(Res: PZPostgreSQLResult;FieldCode:TZPostgreSQLFieldCode):PAnsiChar; override;
-  end;
+    function GetCancel(Handle: PZPostgreSQLConnect): PZPostgreSQLCancel; override;
+    procedure FreeCancel( Canc: PZPostgreSQLCancel); override;
+    function Cancel( Canc: PZPostgreSQLCancel; Buffer: PChar; Length: Integer): Integer; override;
+ end;
 
 
   {** Implements a driver for PostgreSQL 8.1 }
@@ -834,6 +851,21 @@ begin
   Result := POSTGRESQL_API.PQconsumeInput(Handle);
 end;
 
+function TZPostgreSQLBaseDriver.GetCancel(Handle: PZPostgreSQLConnect): PZPostgreSQLCancel; 
+begin 
+  Result := POSTGRESQL_API.PQgetCancel(Handle); 
+end; 
+
+procedure TZPostgreSQLBaseDriver.FreeCancel(Canc: PZPostgreSQLCancel); 
+begin 
+  POSTGRESQL_API.PQfreeCancel( Canc); 
+end; 
+
+function TZPostgreSQLBaseDriver.Cancel(Canc: PZPostgreSQLCancel; Buffer: PChar; Length: Integer): Integer; 
+begin 
+  Result := POSTGRESQL_API.PQcancel( Canc, Buffer, Length); 
+end; 
+
 function TZPostgreSQLBaseDriver.CreateLargeObject(
   Handle: PZPostgreSQLConnect; Mode: Integer): Oid;
 begin
@@ -857,7 +889,6 @@ var
    encoded: PAnsiChar;
    len: Longword;
    leng: cardinal;
-   a : String;
 begin
  leng := Length(Value);
  if assigned(POSTGRESQL_API.PQescapeByteaConn) then
@@ -1257,11 +1288,25 @@ begin
  result:=value;
 end;
 
+ // Following functions are NOT implemented for 7
 function TZPostgreSQL7PlainDriver.GetResultErrorField(Res: PZPostgreSQLResult;  FieldCode: TZPostgreSQLFieldCode): PAnsiChar;
 begin
- // Not implemented for 7
  result:='';
 end;
+
+function TZPostgreSQL7PlainDriver.GetCancel(Handle: PZPostgreSQLConnect): PZPostgreSQLCancel; 
+begin 
+ result := nil; 
+end; 
+
+procedure TZPostgreSQL7PlainDriver.FreeCancel(Canc: PZPostgreSQLCancel); 
+begin 
+end; 
+
+function TZPostgreSQL7PlainDriver.Cancel(Canc: PZPostgreSQLCancel; Buffer: PChar; Length: Integer): Integer; 
+begin 
+ result := 0; 
+end; 
 
 { TZPostgreSQL8PlainDriver }
 
@@ -1276,6 +1321,9 @@ begin
   @POSTGRESQL_API.PQescapeBytea       := GetAddress('PQescapeBytea');
   @POSTGRESQL_API.PQunescapeBytea     := GetAddress('PQunescapeBytea');
   @POSTGRESQL_API.PQresultErrorField  := GetAddress('PQresultErrorField');
+  @POSTGRESQL_API.PQgetCancel         := GetAddress('PQgetCancel'); 
+  @POSTGRESQL_API.PQfreeCancel        := GetAddress('PQfreeCancel'); 
+  @POSTGRESQL_API.PQcancel            := GetAddress('PQcancel'); 
   end;
 end;
 

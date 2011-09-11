@@ -243,14 +243,22 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
           (PMYSQL_FIELD(FieldHandle)^.charsetnr = 83) or
         	((PMYSQL_FIELD(FieldHandle)^.charsetnr>=192) and
           (PMYSQL_FIELD(FieldHandle)^.charsetnr<=210)) )(*  the end is not fix ??? *) then
+       {$IFDEF FPC}
+        Result := stString
+       {$ELSE}
         Result := stUnicodeString
-      else
+       {$ENDIF}
+     else
       if ( // UCS2
         	(PMYSQL_FIELD(FieldHandle)^.charsetnr = 35) or
           (PMYSQL_FIELD(FieldHandle)^.charsetnr = 90) or
         	((PMYSQL_FIELD(FieldHandle)^.charsetnr>=128) and
           (PMYSQL_FIELD(FieldHandle)^.charsetnr<=146)) )(*  the end is not fix ??? *) then
+       {$IFDEF FPC}
+        Result := stString
+       {$ELSE}
         Result := stUnicodeString
+       {$ENDIF}
       else
         Result := stString;
     FIELD_TYPE_ENUM:

@@ -285,7 +285,7 @@ begin
 
   if Connection.GetCharactersetCode = csUTF8 then
     case Result of
-      stString: Result := stUnicodeString;
+      stString: Result := {$IFDEF FPC}stString{$ELSE}stUnicodeString{$ENDIF};
       stAsciiStream: Result := stUnicodeStream;
     end;
 end;
