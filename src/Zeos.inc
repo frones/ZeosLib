@@ -42,54 +42,10 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-// Compilation directives for Lazarus
-{$IFDEF FPC}
-  {$MODE DELPHI}
-  {$INTERFACES COM}
-  {$DEFINE VER140BELOW}
-  // We assume 2 levels is sufficient.
-  // The higher the third number in a version, the better... (we hope)
-  {$IFDEF VER2_7}
-    {$DEFINE FPC2_7UP}
-    {$DEFINE FPC2_5UP}
-    {$DEFINE FPC2_4UP}
-    {$DEFINE FPC2_3UP}
-    {$DEFINE FPC2_2UP}
-    {$DEFINE FPC2_1UP}
-  {$ENDIF}
-  {$IFDEF VER2_5}
-    {$DEFINE FPC2_5UP}
-    {$DEFINE FPC2_4UP}
-    {$DEFINE FPC2_3UP}
-    {$DEFINE FPC2_2UP}
-    {$DEFINE FPC2_1UP}
-  {$ENDIF}
-  {$IFDEF VER2_4}
-    {$DEFINE FPC2_4UP}
-    {$DEFINE FPC2_3UP}
-    {$DEFINE FPC2_2UP}
-    {$DEFINE FPC2_1UP}
-  {$ENDIF}
-  {$IFDEF VER2_3}
-    {$DEFINE FPC2_3UP}
-    {$DEFINE FPC2_2UP}
-    {$DEFINE FPC2_1UP}
-  {$ENDIF}
-
-  {$IFDEF VER2_2}
-    {$DEFINE FPC2_2UP}
-    {$DEFINE FPC2_1UP}
-  {$ENDIF}
-
-  {$IFDEF VER2_1}
-    {$DEFINE FPC2_1UP}
-  {$ENDIF}
-
-  {$IFDEF VER2}
-    {$DEFINE FPC2_UP}
-  {$ENDIF}
-{$ENDIF}
-
+// Compilation directives for Lazarus 
+{$IFDEF FPC} 
+{$I ZeosLazarus.inc}
+{$ENDIF} 
 
 // Compilation directives for Delphi4
 // Not supported since Zeoslib 7.X
