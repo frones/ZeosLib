@@ -118,7 +118,7 @@ type
 implementation
 
 uses
-  Variants, Math, OleDB, ZMessages, ZDbcUtils, ZDbcAdoUtils;
+  Variants, Math, {$IFDEF DELPHI16_UP}Winapi.{$ENDIF}OleDB, ZMessages, ZDbcUtils, ZDbcAdoUtils;
 
 {**
   Creates this object and assignes the main properties.
@@ -149,7 +149,7 @@ procedure TZAdoResultSet.Open;
 var
   OleDBRowset: IUnknown;
   OleDBColumnsInfo: IColumnsInfo;
-  pcColumns: Cardinal;
+  pcColumns: {$IFDEF DELPHI16_UP}NativeUInt{$ELSE}Cardinal{$ENDIF};
   prgInfo, OriginalprgInfo: PDBColumnInfo;
   ppStringsBuffer: PWideChar;
   I: Integer;
