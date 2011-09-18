@@ -63,7 +63,7 @@ uses
   Windows,
 {$ENDIF}
   Types, SysUtils, DB, Classes, ZConnection, ZDbcIntfs,
-  ZAbstractDataset, ZCompatibility;
+  ZAbstractDataset, ZCompatibility, ZDbcStatement;
 
 type
 
@@ -134,11 +134,16 @@ begin
   CallableStatement := Connection.DbcConnection.PrepareCallWithParams(
     Trim(SQL), Properties);
 
+  CallableStatement.ClearParameters;
+
+
+
   for I := 0 to Params.Count - 1 do
   begin
     if Params[I].ParamType in [ptResult, ptOutput, ptInputOutput] then
       CallableStatement.RegisterOutParameter(I + 1,
         Ord(ConvertDatasetToDbcType(Params[I].DataType)));
+    TZAbstractCallableStatement(CallableStatement).RegisterParamType( I+1, ord(Params[I].ParamType)  );
   end;
   Result := CallableStatement;
 end;

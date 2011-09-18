@@ -121,6 +121,9 @@ type
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
 
+    function CreateCallableStatement(const SQL: string; Info: TStrings):
+      IZCallableStatement; override;
+
     procedure Commit; override;
     procedure Rollback; override;
 
@@ -319,6 +322,15 @@ begin
   FClientCodePage := Trim(Info.Values['codepage']);
 
   Open;
+end;
+
+function TZOracleConnection.CreateCallableStatement(const SQL: string;
+  Info: TStrings): IZCallableStatement;
+begin
+  if IsClosed then
+     Open;
+  Result := TZOracleCallableStatement.Create(Self, SQL, Info);
+  Result.ClearParameters;
 end;
 
 {**
