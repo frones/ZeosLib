@@ -1030,7 +1030,11 @@ end;
 procedure TZSortedList.Sort(Compare: TZListSortCompare);
 begin
   if (List <> nil) and (Count > 0) then
+    {$IFDEF DELPHI16_UP}
+    QuickSort(@List, 0, Count - 1, Compare);
+    {$ELSE}
     QuickSort(List, 0, Count - 1, Compare);
+    {$ENDIF}
 end;
 
 {**
