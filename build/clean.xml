@@ -1,4 +1,4 @@
-﻿<?xml version="1.0"?>
+<?xml version="1.0"?>
 
 <!--
   Project: Zeos Database Objects.
@@ -68,6 +68,8 @@
     <antcall target="clean_delphi10"/>
     <antcall target="clean_delphi11"/>
     <antcall target="clean_delphi12"/>
+    <antcall target="clean_delphi14"/>
+    <antcall target="clean_delphi15"/>
     <antcall target="clean_cbuilder6"/>
     <antcall target="clean_kylix3"/>
     <antcall target="clean_lazarus"/>
@@ -115,6 +117,24 @@
     </condition>
     <antcall target="clean_package_build">
       <param name="compiler" value="delphi12"/>
+    </antcall>
+  </target>
+
+  <target name="clean_delphi14">
+    <condition property="do_clean">
+      <istrue value="${delphi14.active}"/>
+    </condition>
+    <antcall target="clean_package_build">
+      <param name="compiler" value="delphi14"/>
+    </antcall>
+  </target>
+
+  <target name="clean_delphi15">
+    <condition property="do_clean">
+      <istrue value="${delphi15.active}"/>
+    </condition>
+    <antcall target="clean_package_build">
+      <param name="compiler" value="delphi15"/>
     </antcall>
   </target>
 
