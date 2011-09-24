@@ -575,6 +575,7 @@ type
     ['{E6FA6C18-C764-4C05-8FCB-0582BDD1EF40}']
 
     procedure RegisterOutParameter(ParameterIndex: Integer; SQLType: Integer);
+    procedure RegisterParamType(ParameterIndex:integer;ParamType:Integer);
     function WasNull: Boolean;
 
     function IsNull(ParameterIndex: Integer): Boolean;

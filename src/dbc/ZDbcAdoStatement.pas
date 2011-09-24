@@ -276,7 +276,7 @@ var
   OleDBCommand: IUnknown;
   OleDBCmdParams: ICommandWithParameters;
   OleDBCmdPrepare: ICommandPrepare;
-  OleDBPC: Cardinal;
+  OleDBPC: {$IFDEF DELPHI16_UP}NativeUInt{$ELSE}Cardinal{$ENDIF};
   ParamInfo: PDBParamInfo;
   NamesBuffer: PPOleStr;
   RetValue: TZVariant;

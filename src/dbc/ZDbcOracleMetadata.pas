@@ -59,7 +59,8 @@ interface
 
 uses
   Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
-  ZCompatibility, ZDbcOracleUtils, ZDbcConnection;
+  ZCompatibility, ZDbcOracleUtils, ZDbcConnection,
+  ZDbcCachedResultSet, ZDbcCache;
 
 type
 
@@ -237,11 +238,11 @@ type
       Unique: Boolean; Approximate: Boolean): IZResultSet; override;
 //     function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
 //      const SequenceNamePattern: string): IZResultSet; virtual; -> Not implemented
-//    function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
-//      const ProcedureNamePattern: string): IZResultSet; override;
-//    function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
-//      const ProcedureNamePattern: string; const ColumnNamePattern: string):
-//      IZResultSet; override;
+    function UncachedGetProcedures(const Catalog, SchemaPattern,
+      ProcedureNamePattern: string): IZResultSet;override;
+    function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
+      const ProcedureNamePattern: string; const ColumnNamePattern: string):
+      IZResultSet; override;
 //    function UncachedGetVersionColumns(const Catalog: string; const Schema: string;
 //      const Table: string): IZResultSet; override;
 //    function UncachedGetTypeInfo: IZResultSet; override;
@@ -1288,6 +1289,181 @@ begin
       GetConnection.CreateStatement.ExecuteQuery(SQL),
       ConstructVirtualResultSet(TableColumnsDynArray));
 end;
+
+
+type
+THackCachedResultSet = class(TZAbstractCachedResultSet);
+
+function TZOracleDatabaseMetadata.UncachedGetProcedureColumns(const Catalog,
+  SchemaPattern, ProcedureNamePattern, ColumnNamePattern: string): IZResultSet;
+  var
+    SQL, Where: string;
+    LProcedureNamePattern, LColumnNamePattern: string;
+    TypeName, SubTypeName: string;
+    ColumnIndexes : Array[1..8] of integer;
+    ReturnIndexes : Array[1..8] of integer;
+    colName:string;
+    iColName:integer;
+    isFunction:boolean;
+    IZStmt:IZStatement;
+    iCol,iRow:integer;
+    bNeedInsertReturns:boolean;
+    bInsertingReturns:boolean;
+    PZRow1,PZRow2:PZRowBuffer;
+
+//  Label InsertingRecord;
+
+  begin
+    Result := ConstructVirtualResultSet(ProceduresColColumnsDynArray);
+    iColName:=0;
+    iCol:= 0;
+    bNeedInsertReturns:=false;
+    bInsertingReturns:=false;
+
+    LProcedureNamePattern := '';//;ConstructNameCondition(ProcedureNamePattern,
+//      'P.RDB$PROCEDURE_NAME');
+//    LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,
+//      'PP.RDB$PARAMETER_NAME');
+    SQL := 'select * from user_arguments where object_name = '''+ProcedureNamePattern+''' '+// AND PACKAGE_NAME {IS NULL}
+      'ORDER BY POSITION';
+
+    IZStmt := GetConnection.CreateStatement;
+    with IZStmt.ExecuteQuery(SQL) do
+    begin
+
+      ColumnIndexes[1] := FindColumn('object_name');
+      ColumnIndexes[2] := FindColumn('argument_name');
+      ColumnIndexes[3] := FindColumn('IN_OUT'); //'RDB$PARAMETER_TYPE');
+      ColumnIndexes[4] := FindColumn('DATA_TYPE');//'RDB$FIELD_TYPE');
+      ColumnIndexes[5] := FindColumn('TYPE_SUBNAME');//RDB$FIELD_SUB_TYPE');
+      ColumnIndexes[6] := FindColumn('DATA_PRECISION');//RDB$FIELD_PRECISION');
+      ColumnIndexes[7] := FindColumn('DATA_SCALE');//RDB$FIELD_SCALE');
+      ColumnIndexes[8] := 0;//FindColumn('RDB$NULL_FLAG');
+
+
+      while Next do
+      begin
+
+      if iCol=0 then
+      begin
+         isFunction := (GetString(FindColumn('IN_OUT'))='OUT'); // find another way to test...   //IsOracleFunction(GetConnection.GetIZPlainDriver,IZStmt. GetString(FindColumn('object_name')));
+//         if isFunction then
+//            begin
+//              inc(iCol);
+//              bNeedInsertReturns := true;
+//              continue;
+//            end;
+      end;
+
+
+//        InsertingRecord:
+        TypeName := GetString(ColumnIndexes[4]);
+        SubTypeName := GetString(ColumnIndexes[5]);
+        colName := GetString(ColumnIndexes[2]);
+
+        Result.MoveToInsertRow;
+        Result.UpdateNull(1);    //PROCEDURE_CAT
+        Result.UpdateNull(2);    //PROCEDURE_SCHEM
+        Result.UpdateString(3, GetString(ColumnIndexes[1]));    //TABLE_NAME
+        if GetString(ColumnIndexes[3])='IN' then
+          result.UpdateInt(5,1) //ptInput
+        else
+          if GetString(ColumnIndexes[3])='OUT' then
+          begin
+            result.UpdateInt(5,2); //ptOutPut
+            if colName='' then
+            begin
+               colName := 'RESULT';
+               result.UpdateInt(5,4); // ptResult
+            end;
+            if iColName>0 then
+               colName := 'RESULT'+IntToStr(iColName);
+            inc(iColName);
+          end
+          else
+            if GetString(ColumnIndexes[3])='IN/OUT' then
+              result.UpdateInt(5,3) //ptOutPut
+            else
+              Result.UpdateInt(5, 0); //ptUnknown
+        Result.UpdateString(4, colName);    //COLUMN_NAME
+
+       { case GetInt(ColumnIndexes[3]) of
+          0: Result.UpdateInt(5, 1);//ptInput
+          1: Result.UpdateInt(5, 4);//ptResult
+        else
+            Result.UpdateInt(5, 0); //ptUnknown
+        end;
+       }
+        Result.UpdateInt(6,
+          Ord(ConvertOracleTypeToSQLType(TypeName,GetInt(ColumnIndexes[6]),GetInt(ColumnIndexes[7]) ))); //DATA_TYPE
+        Result.UpdateString(7,GetString(ColumnIndexes[4]));    //TYPE_NAME
+        Result.UpdateInt(10, GetInt(ColumnIndexes[6]));
+        Result.UpdateNull(9);    //BUFFER_LENGTH
+        Result.UpdateInt(10, GetInt(ColumnIndexes[7]));
+        Result.UpdateInt(11, 10);
+        //Result.UpdateInt(12, GetInt(ColumnIndexes[8]));
+        Result.UpdateNull(12);
+        Result.UpdateString(12, GetString(ColumnIndexes[6]));
+        Result.InsertRow;
+        if bInsertingReturns then break;
+        inc(iCol);
+      end;
+      if isFunction {and (bInsertingReturns=false)} then
+      begin
+        with THackCachedResultSet(result) do  // change first per last
+        begin
+           PZRow2 := SelectedRow;
+           result.First;
+           PZRow1 := SelectedRow;
+           SelectedRow := PZRow2;
+           result.Last ;
+           SelectedRow := PZRow1;
+        end;
+      end;
+      Close;
+    end;
+  end;
+
+function TZOracleDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
+  const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
+  var
+    SQL: string;
+    LProcedureNamePattern: string;
+    sName:string;
+  begin
+    Result := ConstructVirtualResultSet(ProceduresColumnsDynArray);
+
+    LProcedureNamePattern := '';//ConstructNameCondition(ProcedureNamePattern,      'RDB$PROCEDURE_NAME');
+    SQL := 'select Object_Name, procedure_name from user_procedures';
+
+    if LProcedureNamePattern <> '' then
+      SQL := SQL + ' WHERE ' + LProcedureNamePattern;
+
+    with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+    begin
+      while Next do
+      begin
+        sName :=GetString(1);
+        if GetString(2)<>'' then
+          sName := sName+'.'+GetString(2);
+        Result.MoveToInsertRow;
+        Result.UpdateNull(1);
+        Result.UpdateNull(2);
+        Result.UpdateString(3, sName); //RDB$PROCEDURE_NAME
+        Result.UpdateNull(4);
+        Result.UpdateNull(5);
+        Result.UpdateNull(6);
+        Result.UpdateNull(7);
+        //Result.UpdateString(7, GetString(3)); //RDB$DESCRIPTION
+//        if IsNull(2) then //RDB$PROCEDURE_OUTPUTS
+        Result.UpdateInt(8, Ord(prtNoResult));
+ //       else Result.UpdateInt(8, Ord(prtReturnsResult));
+        Result.InsertRow;
+      end;
+      Close;
+    end;
+  end;
+
 
 {**
   Gets the schema names available in this database.  The results

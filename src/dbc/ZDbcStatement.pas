@@ -254,6 +254,7 @@ type
     FLastWasNull: Boolean;
     FTemp: string;
   protected
+    FDBParamTypes:array[0..1024] of shortInt;
     procedure SetOutParamCount(NewParamCount: Integer); virtual;
     function GetOutParam(ParameterIndex: Integer): TZVariant; virtual;
 
@@ -268,6 +269,7 @@ type
     procedure ClearParameters; override;
     procedure RegisterOutParameter(ParameterIndex: Integer;
       SQLType: Integer); virtual;
+    procedure RegisterParamType(ParameterIndex:integer;ParamType:Integer);virtual;
     function WasNull: Boolean; virtual;
 
     function IsNull(ParameterIndex: Integer): Boolean; virtual;
@@ -1660,6 +1662,12 @@ procedure TZAbstractCallableStatement.RegisterOutParameter(ParameterIndex,
 begin
   SetOutParamCount(ParameterIndex);
   OutParamTypes[ParameterIndex - 1] := TZSQLType(SQLType);
+end;
+
+procedure TZAbstractCallableStatement.RegisterParamType(ParameterIndex,
+  ParamType: Integer);
+begin
+  FDBParamTypes[ParameterIndex - 1] := ParamType;
 end;
 
 {**

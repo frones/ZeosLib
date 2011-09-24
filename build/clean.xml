@@ -70,6 +70,7 @@
     <antcall target="clean_delphi12"/>
     <antcall target="clean_delphi14"/>
     <antcall target="clean_delphi15"/>
+	<antcall target="clean_delphi16"/>	
     <antcall target="clean_cbuilder6"/>
     <antcall target="clean_kylix3"/>
     <antcall target="clean_lazarus"/>
@@ -135,6 +136,15 @@
     </condition>
     <antcall target="clean_package_build">
       <param name="compiler" value="delphi15"/>
+    </antcall>
+  </target>
+
+  <target name="clean_delphi16">
+    <condition property="do_clean">
+      <istrue value="${delphi16.active}"/>
+    </condition>
+    <antcall target="clean_package_build">
+      <param name="compiler" value="delphi16"/>
     </antcall>
   </target>
 
