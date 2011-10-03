@@ -259,7 +259,7 @@ begin
       end
       else
       begin
-        ColumnType := ConvertSQLiteTypeToSQLType('',
+        ColumnType := ConvertSQLiteTypeToSQLType(FPlainDriver.GetColumnDataType(FStmtHandle,I-1),
           FieldPrecision, FieldDecimals);
       end;
       ColumnDisplaySize := FieldPrecision;
