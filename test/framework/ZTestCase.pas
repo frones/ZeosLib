@@ -84,9 +84,15 @@ type
     {$IFDEF FPC}
     frefcount : longint;
     { implement methods of IUnknown }
-    function QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID; out Obj): HResult;
+    {$IFDEF FPC2_5UP}
+    function QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} iid : tguid; out obj) : HResult;{$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF}; virtual;
+    function _AddRef : longint;{$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF};
+    function _Release : longint;{$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF};
+    {$ELSE}
+    function QueryInterface(const iid : tguid;out obj) : HResult;stdcall;
     function _AddRef : longint;stdcall;
     function _Release : longint;stdcall;
+    {$ENDIF}
     procedure CheckEqualsMem(expected, actual: pointer; size:longword; msg:string='');
     {$ENDIF}
     property DecimalSeparator: Char read FDecimalSeparator
@@ -187,7 +193,6 @@ end;
 {$IFDEF FPC}
 
 function TZAbstractTestCase.QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID; out Obj): HResult;
-  stdcall;
 begin
   if getinterface(iid,obj) then
    result:=0
@@ -195,12 +200,12 @@ begin
    result:=longint(E_NOINTERFACE);
 end;
 
-function TZAbstractTestCase._AddRef: longint; stdcall;
+function TZAbstractTestCase._AddRef: longint;
 begin
   _addref:=interlockedincrement(frefcount);
 end;
 
-function TZAbstractTestCase._Release: longint; stdcall;
+function TZAbstractTestCase._Release: longint;
 begin
   _Release:=interlockeddecrement(frefcount);
   if _Release=0 then self.destroy;

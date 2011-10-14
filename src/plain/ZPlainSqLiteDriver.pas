@@ -149,6 +149,12 @@ const
   SQLITE_DENY    = 1;   // Abort the SQL statement with an error
   SQLITE_IGNORE = 2;   // Don't allow access, but don't generate an error
 
+  SQLITE_INTEGER = 1;
+  SQLITE_FLOAT   = 2;
+  SQLITE3_TEXT   = 3;
+  SQLITE_BLOB    = 4;
+  SQLITE_NULL    = 5;
+
 type
   Psqlite = Pointer;
   Psqlite_func = Pointer;
@@ -179,6 +185,9 @@ type
   //  NEW : FST  100214
   Tsqlite_column_rawbytes = function(db: Psqlite; iCol: Integer): integer; cdecl;
   Tsqlite_column_blob = function(db:PSqlite;iCol:integer):PAnsiChar; cdecl;
+
+  //gets the column type
+  Tsqlite_column_type = function(db:PSqlite;iCol:integer):Integer; cdecl;
 
   Tsqlite_column_name = function(db: Psqlite; iCol: Integer): PAnsiChar; cdecl;
   Tsqlite_column_decltype = function(db: Psqlite; iCol: Integer): PAnsiChar; cdecl;
@@ -270,6 +279,9 @@ TZSQLite_API = record
 //  NEW : FST  100214
   sqlite_column_rawbytes: Tsqlite_column_rawbytes;
   sqlite_column_blob:TSqlite_column_blob;
+
+  //gets the column type
+  sqlite_column_type:Tsqlite_column_type;
 
   sqlite_column_name: Tsqlite_column_name;
   sqlite_column_decltype: Tsqlite_column_decltype;
@@ -385,6 +397,9 @@ type
 
 //  NEW : FST  100214
     function getBlob(pVm: Psqlite_vm; columnID: integer): TMemoryStream;
+
+    //gets the datatype of field.
+    function GetColumnDataType(stmt:Psqlite_vm; iCol:Integer):String;
   end;
 
   {** Implements a base driver for SQLite}
@@ -463,6 +478,9 @@ type
 
 //  NEW : FST  100214
     function getBlob(pVm: Psqlite_vm; columnID: integer): TMemoryStream;
+
+    //gets the datatype of field.
+    function GetColumnDataType(stmt:Psqlite_vm; iCol:Integer):String;
   end;
 
   {** Implements a driver for SQLite 3 }
@@ -770,6 +788,25 @@ begin
    result.WriteBuffer(P^,len);
 end;
 
+function TZSQLiteBaseDriver.GetColumnDataType(stmt:Psqlite_vm; iCol:Integer):String;
+begin
+  if Assigned(SQLite_API.sqlite_column_type) then begin
+    case SQLite_API.sqlite_column_type(stmt,iCol) of
+      SQLITE_INTEGER:
+         Result:='INT';
+      SQLITE_FLOAT:
+         Result:='FLOAT';
+      SQLITE3_TEXT:
+         Result:='VARCHAR';
+      SQLITE_BLOB:
+         Result:='BLOB';
+      else
+         Result:='';
+    end
+  end else
+    Result:='';
+end;
+
 function TZSQLiteBaseDriver.Step(pVm: Psqlite_vm; var pN: Integer;
   var pazValue, pazColName: PPAnsiChar): Integer;
 var
@@ -851,6 +888,9 @@ begin
 //  NEW : FST  100214
   @SQLite_API.sqlite_column_rawbytes        := GetAddress('sqlite3_column_bytes');
   @SQLite_API.sqlite_Column_blob            := GetAddress('sqlite3_column_blob');
+
+  //gets the column type
+  @SQLite_API.sqlite_column_type            := GetAddress('sqlite3_column_type');
 
   @SQLite_API.sqlite_column_name            := GetAddress('sqlite3_column_name');
   @SQLite_API.sqlite_column_decltype        := GetAddress('sqlite3_column_decltype');
