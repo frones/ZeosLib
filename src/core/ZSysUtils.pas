@@ -353,7 +353,7 @@ function FormatSQLVersion( const SQLVersion: Integer ): String;
 
 implementation
 
-uses ZMatchPattern;
+uses ZMatchPattern, StrUtils;
 
 {**
   Determines a position of a first delimiter.
