@@ -268,6 +268,7 @@ begin
   DT := DBLibColTypeCache[ColumnIndex];
   LastWasNull := Data = nil;
 
+  Result := '';
   if Assigned(Data) then
   begin
     case DT of
@@ -295,9 +296,9 @@ begin
         SetLength(Result, DL);
       end;
     end;
-  end
-  else
-    Result := '';
+  end;
+  //else
+
   FDBLibConnection.CheckDBLibError(lcOther, 'GETSTRING');
 end;
 
