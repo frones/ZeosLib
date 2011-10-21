@@ -353,7 +353,7 @@ function FormatSQLVersion( const SQLVersion: Integer ): String;
 
 implementation
 
-uses ZMatchPattern;
+uses ZMatchPattern, StrUtils;
 
 {**
   Determines a position of a first delimiter.
@@ -867,14 +867,16 @@ begin
 end;
 
 {**
-  Converts Ansi SQL Date/Time (yyyy-mm-dd hh:nn:ss) to TDateTime
+  Converts Ansi SQL Date/Time (yyyy-mm-dd hh:nn:ss or yyyy-mm-dd hh:nn:ss.zzz)
+  to TDateTime
   @param Value a date and time string.
   @return a decoded TDateTime value.
 }
 function AnsiSQLDateToDateTime(const Value: string): TDateTime;
 var
-  Year, Month, Day, Hour, Min, Sec: Word;
+  Year, Month, Day, Hour, Min, Sec, MSec: Word;
   Temp: string;
+  dotPosition:Integer;
 begin
   Temp := Value;
   Result := 0;
@@ -891,18 +893,30 @@ begin
       except
       end;
     end;
-    Temp := Copy(Temp, 12, 8);
+    Temp := RightStr(Temp, Length(Temp)-11);
   end;
   if Length(Temp) >= 8 then
   begin
     Hour := StrToIntDef(Copy(Temp, 1, 2), 0);
     Min := StrToIntDef(Copy(Temp, 4, 2), 0);
     Sec := StrToIntDef(Copy(Temp, 7, 2), 0);
+
+    //it the time Length is bigger than 8, it can have milliseconds and it ...
+    dotPosition:=0;
+    MSec:=0;
+    if Length(Temp) > 8 then
+      dotPosition:=Pos('.', Temp);
+
+    //if the dot are found, milliseconds are present.
+    if dotPosition>0 then begin
+      MSec:=StrToIntDef(LeftStr(RightStr(Temp,Length(Temp)-dotPosition)+'000',3),0);
+    end;
+
     try
       if Result >= 0 then
-        Result := Result + EncodeTime(Hour, Min, Sec, 0)
-         else
-            Result := Result - EncodeTime(Hour, Min, Sec, 0)
+        Result := Result + EncodeTime(Hour, Min, Sec, MSec)
+      else
+        Result := Result - EncodeTime(Hour, Min, Sec, MSec)
     except
     end;
   end;
@@ -984,8 +998,14 @@ end;
   @return a  date and time string.
 }
 function DateTimeToAnsiSQLDate(Value: TDateTime): string;
+//var
+  //a, MSec:Word;
 begin
-  Result := FormatDateTime('yyyy-mm-dd hh:nn:ss', Value);
+  //DecodeTime(Value,a,a,a,MSec);
+  //if MSec=0 then
+    Result := FormatDateTime('yyyy-mm-dd hh:nn:ss', Value)
+  //else
+  //  Result := FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', Value);
 end;
 
 { TZSortedList }
