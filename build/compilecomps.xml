@@ -337,7 +337,7 @@
     </antcall>
     <antcall target="fpc_compile_project" inheritAll="true">
       <param name="project.name" value="component"/>
-      <param name="extra_unit_path" value=" -Fu${lazarus.path}/lcl/units/${lazarus.processor}-${lazarus.os}/ -Fu${lazarus.path}/lcl/units/${lazarus.processor}-${lazarus.os}/${lazarus.interface}/ -Fu${lazarus.path}/packager/units/${lazarus.processor}-${lazarus.os}/ -Fu${lazarus.path}/ideintf/units/${lazarus.processor}-${lazarus.os}/"/>
+      <param name="extra_unit_path" value=" -Fu${lazarus.path}/lcl/units/${lazarus.processor}-${lazarus.os}/ -Fu${lazarus.path}/lcl/units/${lazarus.processor}-${lazarus.os}/${lazarus.interface}/ -Fu${lazarus.path}/packager/units/${lazarus.processor}-${lazarus.os}/ -Fu${lazarus.path}/ideintf/units/${lazarus.processor}-${lazarus.os}/ -Fu${lazarus.path}/components/lazutils/lib/${lazarus.processor}-${lazarus.os}/ "/>
     </antcall>
   </target>
   

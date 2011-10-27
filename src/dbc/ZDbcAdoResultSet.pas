@@ -118,7 +118,7 @@ type
 implementation
 
 uses
-  Variants, Math, {$IFDEF DELPHI16_UP}Winapi.{$ENDIF}OleDB, ZMessages, ZDbcUtils, ZDbcAdoUtils;
+  Variants, Math, OleDB, ZMessages, ZDbcUtils, ZDbcAdoUtils;
 
 {**
   Creates this object and assignes the main properties.
