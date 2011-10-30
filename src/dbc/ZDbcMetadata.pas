@@ -4367,7 +4367,7 @@ function TZDefaultIdentifierConvertor.IsCaseSensitive(const Value: string): Bool
 const
   AnsiSQLKeywords = 'insert,update,delete,select,drop,create,from,set,values,'
     + 'where,order,group,by,having,into,as,table,index,primary,key,on,is,null,'
-    + 'char,varchar,integer,number,alter,column';
+    + 'char,varchar,integer,number,alter,column,value';
 var
   Keywords: string;
 begin
