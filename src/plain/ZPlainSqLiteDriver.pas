@@ -693,7 +693,7 @@ begin
   FileNameString := filename;
   if (Version > '3.2.5') then
     {$IFDEF FPC} 
-      SQLite_API.sqlite_open(FileNameString, Result0)
+      SQLite_API.sqlite_open(PAnsiChar(FileNameString), Result0)
     {$ELSE} 
       SQLite_API.sqlite_open(PAnsiChar(AnsiToUTF8(FileNameString)), Result0) 
     {$ENDIF} 
