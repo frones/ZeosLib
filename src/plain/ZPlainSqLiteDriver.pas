@@ -836,7 +836,11 @@ begin
   FileNameString := filename;
   {$IFNDEF VER130}
   if (Version > '3.2.5') then
+    {$IFDEF FPC}
+    ZPlainSqLite3.sqlite_open(PAnsiChar(FileNameString), Result0)  // Lazarus nuzt direkt UTL-8 so auch SQLite.dll
+    {$ELSE}
     ZPlainSqLite3.sqlite_open(PAnsiChar(AnsiToUTF8(FileNameString)), Result0)
+    {$ENDIF}
   else
   {$ENDIF}
     ZPlainSqLite3.sqlite_open(filename, Result0);
