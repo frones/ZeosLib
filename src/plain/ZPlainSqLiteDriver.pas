@@ -692,7 +692,11 @@ begin
   Version := LibVersion;
   FileNameString := filename;
   if (Version > '3.2.5') then
-    SQLite_API.sqlite_open(PAnsiChar(AnsiToUTF8(FileNameString)), Result0)
+    {$IFDEF FPC} 
+      SQLite_API.sqlite_open(PAnsiChar(FileNameString), Result0)
+    {$ELSE} 
+      SQLite_API.sqlite_open(PAnsiChar(AnsiToUTF8(FileNameString)), Result0) 
+    {$ENDIF} 
   else
     SQLite_API.sqlite_open(filename, Result0);
 {$ENDIF}
