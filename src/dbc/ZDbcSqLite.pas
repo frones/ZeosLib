@@ -354,7 +354,7 @@ begin
   if StrToBoolEx(Info.Values['encrypted']) then
   begin
     ErrorCode := FPlainDriver.Key(FHandle, PChar(Password), StrLen(PChar(Password)));
-    CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcConnect, 'SQLite.Key');
+    CheckSQLiteError(FPlainDriver, ErrorCode, nil, lcConnect, 'SQLite.Key');
   end;
 
   try
