@@ -447,11 +447,11 @@ begin
     {$IFDEF DELPHI12_UP}
     if FPlainDriver.RealConnect(FHandle, PAnsiChar(UTF8String(HostName)),
                                 PAnsiChar(UTF8String(User)), PAnsiChar(UTF8String(Password)),
-                                PAnsiChar(UTF8String(Database)), Port, nil,
+                                PAnsiChar(UTF8String(Database)), Port, UTF8String('MySQL'),
                                 ClientFlag) = nil then
     {$ELSE}
     if FPlainDriver.RealConnect(FHandle, PAnsiChar(HostName), PAnsiChar(User),
-                                PAnsiChar(Password), PAnsiChar(Database), Port, nil,
+                                PAnsiChar(Password), PAnsiChar(Database), Port, 'MySQL',
                                 ClientFlag) = nil then
     {$ENDIF}
     begin
