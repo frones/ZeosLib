@@ -184,9 +184,9 @@ begin
       Stream.Seek(-SizeOf(Char), soFromCurrent);
       Break;
     end;
-    if ReadChar = TimeSeparator then
+    if ReadChar = {$IFDEF DELPHI15_UP}FormatSettings.{$ENDIF}TimeSeparator then
       inc(CountDoublePoint);
-    if ReadChar = DateSeparator then
+    if ReadChar = {$IFDEF DELPHI15_UP}FormatSettings.{$ENDIF}DateSeparator then
       inc(CountSlash);
     Result.Value := Result.Value + ReadChar;
     if (LastChar = FirstChar) and (ReadChar = FirstChar) then
