@@ -185,6 +185,7 @@ end;
 }
 constructor TZSQLStrings.Create;
 begin
+  inherited Create; { -> needed to run the TestSuite else Inheritance(Self).Methods fails}
   FParams := TStringList.Create;
   FParamCheck := True;
   FStatements := TObjectList.Create;
