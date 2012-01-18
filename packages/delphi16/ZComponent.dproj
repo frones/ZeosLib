@@ -95,7 +95,6 @@
 			<DCCReference Include="..\..\src\component\ZAbstractTable.pas"/>
 			<DCCReference Include="..\..\src\component\ZSqlMetadata.pas"/>
 			<DCCReference Include="..\..\src\component\ZSequence.pas">
-				<Form>$ENDIF</Form>
 			</DCCReference>
 			<BuildConfiguration Include="Debug">
 				<Key>Cfg_2</Key>
