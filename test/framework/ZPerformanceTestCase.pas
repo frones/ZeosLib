@@ -338,7 +338,11 @@ begin
   for I := 1 to Length do
   begin
     C := Chr((Random(Ord('z') - Ord('A') + 1)) + Ord('A'));
+    {$IFDEF DELPHI12_UP}
+    if not CharInSet(C, ['A'..'Z', 'a'..'z']) then
+    {$ELSE}
     if not (C in ['A'..'Z', 'a'..'z']) then
+    {$ENDIF}
       C := ' ';
     Result := Result + C;
   end;

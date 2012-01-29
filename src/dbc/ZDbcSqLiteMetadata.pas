@@ -245,6 +245,7 @@ type
 //    function UncachedGetVersionColumns(const Catalog: string; const Schema: string;
 //      const Table: string): IZResultSet; override;
     function UncachedGetTypeInfo: IZResultSet; override;
+    function UncachedGetCharacterSets: IZResultSet; override; //EgonHugeist
   public
     constructor Create(Connection: TZAbstractConnection; Url: string;
       Info: TStrings);
@@ -1540,7 +1541,8 @@ const
   TypeCodes: array[1..MaxTypeCount] of TZSQLType = (
     stBoolean, stByte, stShort, stInteger, stInteger, stLong,
     stFloat, stFloat, stDouble, stDouble, stDouble, stDouble,
-    stString, stString, stBytes, stBytes, stDate, stTime, stTimestamp,
+    stString, {$IFDEF DELPHI12_UP}stUnicodeString{$ELSE}stString{$ENDIF},
+    stBytes, stBytes, stDate, stTime, stTimestamp,
     stTimestamp, stBinaryStream, stAsciiStream);
   TypePrecision: array[1..MaxTypeCount] of Integer = (
     -1, 2, 4, 9, 9, 16, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -1554,13 +1556,13 @@ begin
     begin
       Result.MoveToInsertRow;
 
-      Result.UpdateString(1, TypeNames[I]);
+      Result.UpdateString(1, AnsiString(TypeNames[I]));
       Result.UpdateInt(2, Ord(TypeCodes[I]));
       if TypePrecision[I] >= 0 then
         Result.UpdateInt(3, TypePrecision[I])
       else Result.UpdateNull(3);
       if TypeCodes[I] in [stString, stBytes, stDate, stTime,
-        stTimeStamp, stBinaryStream, stAsciiStream] then
+        stTimeStamp, stBinaryStream, stAsciiStream, stUnicodeString] then
       begin
         Result.UpdateString(4, '''');
         Result.UpdateString(5, '''');
@@ -1658,7 +1660,7 @@ begin
     begin
       while Next do
       begin
-        if (Pos(' autoindex ', GetString(2)) = 0)
+        if (Pos(' autoindex ', String(GetString(2))) = 0)
           and ((Unique = False) or (GetInt(3) = 0)) then
         begin
           ResultSet := GetConnection.CreateStatement.ExecuteQuery(
@@ -1668,10 +1670,10 @@ begin
             Result.MoveToInsertRow;
 
             if Schema <> '' then
-              Result.UpdateString(1, Schema)
+              Result.UpdateString(1, AnsiString(Schema))
             else Result.UpdateNull(1);
             Result.UpdateNull(2);
-            Result.UpdateString(3, Table);
+            Result.UpdateString(3, AnsiString(Table));
             Result.UpdateBoolean(4, GetInt(3) = 0);
             Result.UpdateNull(5);
             Result.UpdateString(6, GetString(2));
@@ -1690,6 +1692,50 @@ begin
       end;
       Close;
     end;
+end;
+
+{**
+  Gets the supported CharacterSets:
+  @return <code>ResultSet</code> - each row is a CharacterSetName and it's ID
+}
+type
+  CodePageRec = record
+    CP: String;
+    ID: Integer;
+  end;
+
+function TZSQLiteDatabaseMetadata.UncachedGetCharacterSets: IZResultSet; //EgonHugeist
+const
+  Encodings: array[0..3] of CodePageRec =(
+    (CP: 'UTF-8'; ID: 1),
+    (CP: 'UTF-16le'; ID: 2),
+    (CP: 'UTF-16be'; ID: 3),
+    (CP: 'UTF-16'; ID: 4)
+    );
+var
+  I: Integer;
+begin
+ { TODO -oEgonHugeist : Correct this please if i'm wrong here!!! }
+{Text Encodings
+
+    #define SQLITE_UTF8           1
+    #define SQLITE_UTF16LE        2
+    #define SQLITE_UTF16BE        3
+    #define SQLITE_UTF16          4    /* Use native byte order */
+    #define SQLITE_ANY            5    /* sqlite3_create_function only */
+    #define SQLITE_UTF16_ALIGNED  8    /* sqlite3_create_collation only */
+
+These constant define integer codes that represent the various text encodings supported by SQLite.}
+
+  Result := ConstructVirtualResultSet(CharacterSetsColumnsDynArray);
+
+  for i := 0 to high(Encodings) do
+  begin
+    Result.MoveToInsertRow;
+    Result.UpdateString(1, Encodings[i].CP); //CHARACTER_SET_NAME
+    Result.UpdateShort(2, Encodings[i].ID); //CHARACTER_SET_ID
+    Result.InsertRow;
+  end;
 end;
 
 end.

@@ -479,7 +479,7 @@ begin
           SoftVarManager.GetAsUnicodeString(InParamValues[I]));
       stBytes:
         FParamSQLData.UpdateBytes(I,
-          StrToBytes(SoftVarManager.GetAsString(InParamValues[I])));
+          StrToBytes(AnsiString(SoftVarManager.GetAsString(InParamValues[I]))));
       stDate:
         FParamSQLData.UpdateDate(I,
           SoftVarManager.GetAsDateTime(InParamValues[I]));
@@ -553,11 +553,8 @@ begin
 end;
 
 destructor TZInterbase6PreparedStatement.Destroy;  
-var
-  StatusVector: TARRAY_ISC_STATUS;
 begin
-    FreeStatement(FIBConnection.GetPlainDriver, StmtHandle, DSQL_drop);
-
+  FreeStatement(FIBConnection.GetPlainDriver, StmtHandle, DSQL_drop);
   inherited Destroy;
 end;
 
@@ -771,7 +768,7 @@ begin
       on E: Exception do
       begin
         //The cursor will be already closed for exec2
-        if (Pos('ExecProc', CursorName) <> 0) then
+        if (Pos('ExecProc', String(CursorName)) <> 0) then
         begin
           StmtHandle := nil;
         end;
@@ -928,7 +925,8 @@ end;
 {$HINTS OFF}
 function TZInterbase6CallableStatement.ExecutePrepared: Boolean;
 var
-  Cursor, ProcSql: AnsiString;
+  ProcSql: String;
+  Cursor: AnsiString;
   SQLData: IZResultSQLDA;
   StmtHandle: TISC_STMT_HANDLE;
   StatementType: TZIbSqlStatementType;
@@ -1016,7 +1014,7 @@ end;
 function TZInterbase6CallableStatement.ExecuteQueryPrepared: IZResultSet;
 var
   Cursor: AnsiString;
-  ProcSql: AnsiString;
+  ProcSql: String;
   SQLData: IZResultSQLDA;
   StmtHandle: TISC_STMT_HANDLE;
   StatementType: TZIbSqlStatementType;
@@ -1108,7 +1106,7 @@ end;
 }
 function TZInterbase6CallableStatement.ExecuteUpdatePrepared: Integer;
 var
-  ProcSql: AnsiString;
+  ProcSql: String;
   SQLData: IZResultSQLDA;
   StmtHandle: TISC_STMT_HANDLE;
   StatementType: TZIbSqlStatementType;

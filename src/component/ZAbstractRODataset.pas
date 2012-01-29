@@ -1142,7 +1142,7 @@ begin
             Statement.SetUnicodeString(I + 1, Param.AsWideString);
           {$ENDIF}
           ftBytes:
-            Statement.SetString(I + 1, Param.AsString);
+            Statement.SetString(I + 1, AnsiString(Param.AsString));
           ftDate:
             Statement.SetDate(I + 1, Param.AsDate);
           ftTime:
@@ -3438,7 +3438,7 @@ begin
             ftLargeInt:
               Statement.SetLong(I + 1, StrToInt64(ParamValue.AsString));
             ftString:
-              Statement.SetString(I + 1, ParamValue.AsString);
+              Statement.SetString(I + 1, AnsiString(ParamValue.AsString)); //smells like DataLoss since ParamValue.String is Unicodestring (example: Big5 2Byte-Chars...)
             ftBytes:
               Statement.SetString(I + 1, ParamValue.AsString);
             ftDate:

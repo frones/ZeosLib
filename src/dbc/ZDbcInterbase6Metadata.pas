@@ -235,16 +235,13 @@ type
       const Table: string): IZResultSet; override;
     function UncachedGetExportedKeys(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
-//    function UncachedGetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
-//      const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
-//      const ForeignTable: string): IZResultSet; override;
+    function UncachedGetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
+      const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
+      const ForeignTable: string): IZResultSet; override;
     function UncachedGetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
       Unique: Boolean; Approximate: Boolean): IZResultSet; override;
     function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
       const SequenceNamePattern: string): IZResultSet; override;
-    function UncachedGetTriggers(const Catalog: string;
-      const SchemaPattern: string; const TableNamePattern: string;
-      const TriggerNamePattern: string): IZResultSet; override;
     function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string): IZResultSet; override;
     function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
@@ -253,6 +250,12 @@ type
     function UncachedGetVersionColumns(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
     function UncachedGetTypeInfo: IZResultSet; override;
+    function UncachedGetTriggers(const Catalog: string;
+      const SchemaPattern: string; const TableNamePattern: string;
+      const TriggerNamePattern: string): IZResultSet; override; //EgonHugesit
+    function UncachedGetCollationAndCharSet(const Catalog, SchemaPattern,
+      TableNamePattern, ColumnNamePattern: string): IZResultSet; override; //EgonHugeist
+    function UncachedGetCharacterSets: IZResultSet; override; //EgonHugeist
   public
     constructor Create(Connection: TZAbstractConnection; Url: string; Info: TStrings);
     destructor Destroy; override;
@@ -340,8 +343,8 @@ begin
   if FServerVersion = '' then
   begin
     FIBConnection := Metadata.GetConnection as IZInterbase6Connection;
-    FServerVersion := GetVersion(FIBConnection.GetPlainDriver,
-      FIBConnection.GetDBHandle);
+    FServerVersion := String(GetVersion(FIBConnection.GetPlainDriver,
+      FIBConnection.GetDBHandle));
   end;
   Result := FServerVersion;
 end;
@@ -1532,10 +1535,9 @@ function TZInterbase6DatabaseMetadata.UncachedGetTables(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string; 
   const Types: TStringDynArray): IZResultSet; 
 var 
-  SQL, TableType: string; 
-  LTableNamePattern: string; 
-  BLR: IZBlob; 
-  I, SystemFlag, ViewContext: Integer; 
+  SQL, LTableNamePattern: string;
+  TableType: Ansistring;
+  I, SystemFlag: Integer;
 begin 
     Result := ConstructVirtualResultSet(TableColumnsDynArray); 
 
@@ -1569,21 +1571,21 @@ begin
           Result.UpdateNull(1); 
           Result.UpdateNull(2); 
           Result.UpdateString(3, GetString(1)); //RDB$RELATION_NAME
-          Result.UpdateString(4, TableType); 
+          Result.UpdateString(4, TableType);
           Result.UpdateString(5, Copy(GetString(4),1,255)); //RDB$DESCRIPTION
-          Result.InsertRow; 
-        end 
+          Result.InsertRow;
+        end
         else
         begin
-          for I := 0 to High(Types) do 
-          begin 
-            if Types[I] = TableType then 
-            begin 
-              Result.MoveToInsertRow; 
-              Result.UpdateNull(1); 
-              Result.UpdateNull(2); 
+          for I := 0 to High(Types) do
+          begin
+            if Types[I] = TableType then
+            begin
+              Result.MoveToInsertRow;
+              Result.UpdateNull(1);
+              Result.UpdateNull(2);
               Result.UpdateString(3, GetString(1)); //RDB$RELATION_NAME
-              Result.UpdateString(4, TableType); 
+              Result.UpdateString(4, TableType);
               Result.UpdateString(5, Copy(GetString(4),1,255)); //RDB$DESCRIPTION 
               Result.InsertRow; 
             end; 
@@ -1611,7 +1613,7 @@ end;
 }
 function TZInterbase6DatabaseMetadata.UncachedGetTableTypes: IZResultSet;
 const
-  TablesTypes: array [0..2] of string = ('TABLE', 'VIEW', 'SYSTEM TABLE');
+  TablesTypes: array [0..2] of AnsiString = ('TABLE', 'VIEW', 'SYSTEM TABLE');
 var
   I: Integer;
 begin
@@ -1680,7 +1682,7 @@ function TZInterbase6DatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 var
-  SQL, Where, ColumnName, DefaultValue: string;
+  SQL, Where, ColumnName, DefaultValue: ansistring;
   TypeName, SubTypeName, FieldScale: integer;
   LTableNamePattern, LColumnNamePattern: string;
   ColumnIndexes : Array[1..14] of integer;
@@ -1769,7 +1771,6 @@ begin
         FieldScale := GetInt(ColumnIndexes[3]);
         ColumnName := GetString(ColumnIndexes[4]);
 
-
         if (GetString(ColumnIndexes[14]) <> '') then  //AVZ -- not isNull(14) was not working correcly here could be ' ' - subselect
         begin //Computed by Source  & Sub Selects  //AVZ
           if ((TypeName = 16) and (FieldScale < 0)) then SubTypeName := 1; // Fix for 0 subtype which removes decimals
@@ -1777,7 +1778,7 @@ begin
 
         DefaultValue := GetString(ColumnIndexes[5]);
         if DefaultValue = '' then
-          DefaultValue := GetString(ColumnIndexes[6]);
+          DefaultValue := String(GetString(ColumnIndexes[6]));
         if StartsWith(Trim(UpperCase(DefaultValue)), 'DEFAULT') then
         begin
           DefaultValue := Trim(StringReplace(DefaultValue, 'DEFAULT ', '',
@@ -1908,9 +1909,9 @@ function TZInterbase6DatabaseMetadata.UncachedGetColumnPrivileges(const Catalog:
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
 var
   SQL: string;
-  TableName, FieldName, Privilege: string;
-  Grantor, Grantee, Grantable: string;
-  LColumnNamePattern, LTable: string;
+  TableName, FieldName, Privilege: Ansistring;
+  Grantor, Grantee, Grantable: Ansistring;
+  LColumnNamePattern, LTable: Ansistring;
 begin
     Result := ConstructVirtualResultSet(TableColPrivColumnsDynArray);
 
@@ -1934,12 +1935,12 @@ begin
     begin
       while Next do
       begin
+
         TableName := GetString(5); //RDB$RELATION_NAME
         FieldName := GetString(6); //RDB$FIELD_NAME
         Privilege := GetPrivilege(GetString(3)); //RDB$PRIVILEGE
         Grantor := GetString(2); //RDB$GRANTOR
         Grantee := GetString(1); //RDB$USER
-
         if Grantor = Grantee then
           Grantable := 'YES'
         else
@@ -2021,9 +2022,9 @@ function TZInterbase6DatabaseMetadata.UncachedGetTablePrivileges(const Catalog: 
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
 var
   SQL: string;
-  TableName, Privilege, Grantor: string;
-  Grantee, Grantable: string;
-  LTableNamePattern: string;
+  TableName, Privilege, Grantor: Ansistring;
+  Grantee, Grantable: Ansistring;
+  LTableNamePattern: Ansistring;
 begin
     Result := ConstructVirtualResultSet(TablePrivColumnsDynArray);
 
@@ -2450,6 +2451,171 @@ begin
 end;
 
 {**
+  EgonHugeist:
+  Gets a description of the foreign key columns in the foreign key
+  table that reference the primary key columns of the primary key
+  table (describe how one table imports another's key.) This
+  should normally return a single foreign key/primary key pair
+  (most tables only import a foreign key from a table once.)  They
+  are ordered by FKTABLE_CAT, FKTABLE_SCHEM, FKTABLE_NAME, and
+  KEY_SEQ.
+
+  <P>Each foreign key column description has the following columns:
+   <OL>
+ 	<LI><B>PKTABLE_CAT</B> String => primary key table catalog (may be null)
+ 	<LI><B>PKTABLE_SCHEM</B> String => primary key table schema (may be null)
+ 	<LI><B>PKTABLE_NAME</B> String => primary key table name
+ 	<LI><B>PKCOLUMN_NAME</B> String => primary key column name
+ 	<LI><B>FKTABLE_CAT</B> String => foreign key table catalog (may be null)
+       being exported (may be null)
+ 	<LI><B>FKTABLE_SCHEM</B> String => foreign key table schema (may be null)
+       being exported (may be null)
+ 	<LI><B>FKTABLE_NAME</B> String => foreign key table name
+       being exported
+ 	<LI><B>FKCOLUMN_NAME</B> String => foreign key column name
+       being exported
+ 	<LI><B>KEY_SEQ</B> short => sequence number within foreign key
+ 	<LI><B>UPDATE_RULE</B> short => What happens to
+        foreign key when primary is updated:
+       <UL>
+       <LI> importedNoAction - do not allow update of primary
+                key if it has been imported
+       <LI> importedKeyCascade - change imported key to agree
+                with primary key update
+       <LI> importedKeySetNull - change imported key to NULL if
+                its primary key has been updated
+       <LI> importedKeySetDefault - change imported key to default values
+                if its primary key has been updated
+       <LI> importedKeyRestrict - same as importedKeyNoAction
+                                  (for ODBC 2.x compatibility)
+       </UL>
+ 	<LI><B>DELETE_RULE</B> short => What happens to
+       the foreign key when primary is deleted.
+       <UL>
+       <LI> importedKeyNoAction - do not allow delete of primary
+                key if it has been imported
+       <LI> importedKeyCascade - delete rows that import a deleted key
+       <LI> importedKeySetNull - change imported key to NULL if
+                its primary key has been deleted
+       <LI> importedKeyRestrict - same as importedKeyNoAction
+                                  (for ODBC 2.x compatibility)
+       <LI> importedKeySetDefault - change imported key to default if
+                its primary key has been deleted
+       </UL>
+ 	<LI><B>FK_NAME</B> String => foreign key name (may be null)
+ 	<LI><B>PK_NAME</B> String => primary key name (may be null)
+ 	<LI><B>DEFERRABILITY</B> short => can the evaluation of foreign key
+       constraints be deferred until commit
+       <UL>
+       <LI> importedKeyInitiallyDeferred - see SQL92 for definition
+       <LI> importedKeyInitiallyImmediate - see SQL92 for definition
+       <LI> importedKeyNotDeferrable - see SQL92 for definition
+       </UL>
+   </OL>
+
+  @param primaryCatalog a catalog name; "" retrieves those without a
+  catalog; null means drop catalog name from the selection criteria
+  @param primarySchema a schema name; "" retrieves those
+  without a schema
+  @param primaryTable the table name that exports the key
+  @param foreignCatalog a catalog name; "" retrieves those without a
+  catalog; null means drop catalog name from the selection criteria
+  @param foreignSchema a schema name; "" retrieves those
+  without a schema
+  @param foreignTable the table name that imports the key
+  @return <code>ResultSet</code> - each row is a foreign key column description
+  @see #getImportedKeys
+}
+function TZInterbase6DatabaseMetadata.UncachedGetCrossReference(
+  const PrimaryCatalog: string; const PrimarySchema: string;
+  const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
+  const ForeignTable: string): IZResultSet;
+var
+  KeySeq: Integer;
+  LCatalog, SQLString, LPTable, LFTable: String;
+
+  function GetRuleType(const Rule: AnsiString): TZImportedKey;
+  begin
+    if Rule = 'RESTRICT' then
+      Result := ikRestrict
+    else if Rule = 'NO ACTION' then
+      Result := ikNoAction
+    else if Rule = 'CASCADE' then
+      Result := ikCascade
+    else if Rule = 'SET DEFAULT' then
+      Result := ikSetDefault
+    else if Rule = 'SET NULL' then
+      Result := ikSetNull
+    else
+      Result := ikNotDeferrable; //impossible!
+  end;
+begin
+  if PrimaryCatalog = '' then
+    LCatalog := GetConnection.GetCatalog
+  else
+    LCatalog := PrimaryCatalog;
+
+  LPTable := ConstructNameCondition(AddEscapeCharToWildcards(PrimaryTable), 'i2.RDB$RELATION_NAME');
+  LFTable := ConstructNameCondition(AddEscapeCharToWildcards(ForeignTable), 'rc.RDB$RELATION_NAME');
+
+  Result := ConstructVirtualResultSet(ExportedKeyColumnsDynArray);
+
+  SQLString :=
+      'SELECT '+
+      'i2.RDB$RELATION_NAME AS PKTABLE_NAME, '+
+      's2.RDB$FIELD_NAME AS PKCOLUMN_NAME, '+
+      'rc.RDB$RELATION_NAME as FKTABLE_NAME, '+
+      's.RDB$FIELD_NAME AS FKCOLUMN_NAME, '+
+      'refc.RDB$UPDATE_RULE AS UPDATE_RULE, '+
+      'refc.RDB$DELETE_RULE AS DELETE_RULE, '+
+      'i.RDB$INDEX_NAME AS FK_NAME, '+
+      's2.RDB$INDEX_NAME as PK_NAME, '+
+      'rc.RDB$DEFERRABLE AS DEFERRABILITY '+
+      'FROM RDB$INDEX_SEGMENTS s '+
+      'LEFT JOIN RDB$INDICES i ON i.RDB$INDEX_NAME = s.RDB$INDEX_NAME '+
+      'LEFT JOIN RDB$RELATION_CONSTRAINTS rc ON rc.RDB$INDEX_NAME = s.RDB$INDEX_NAME '+
+      'LEFT JOIN RDB$REF_CONSTRAINTS refc ON rc.RDB$CONSTRAINT_NAME = refc.RDB$CONSTRAINT_NAME '+
+      'LEFT JOIN RDB$RELATION_CONSTRAINTS rc2 ON rc2.RDB$CONSTRAINT_NAME = refc.RDB$CONST_NAME_UQ '+
+      'LEFT JOIN RDB$INDICES i2 ON i2.RDB$INDEX_NAME = rc2.RDB$INDEX_NAME '+
+      'LEFT JOIN RDB$INDEX_SEGMENTS s2 ON i2.RDB$INDEX_NAME = s2.RDB$INDEX_NAME '+
+      'WHERE rc.RDB$CONSTRAINT_TYPE = ''FOREIGN KEY'' '+
+      'AND rc.RDB$CONSTRAINT_TYPE IS NOT NULL ';
+  if LPTable <> '' then
+    SQLString := SQLString + 'AND '+LPTable;
+  if LFTable <> '' then
+    SQLString := SQLString + 'AND '+LFTable;
+
+  KeySeq := 0;
+  with GetConnection.CreateStatement.ExecuteQuery(SQLString) do
+  begin
+    while Next do
+    begin
+      Inc(KeySeq);
+      Result.MoveToInsertRow;
+      Result.UpdateString(1, LCatalog); //PKTABLE_CAT
+      Result.UpdateNull(2); //PKTABLE_SCHEM
+      Result.UpdateString(3, GetString(1)); //PKTABLE_NAME
+      Result.UpdateString(4, GetString(2)); //PKCOLUMN_NAME
+      Result.UpdateString(5, AnsiString(LCatalog)); //PKTABLE_CAT
+      Result.UpdateNull(6); //FKTABLE_SCHEM
+      Result.UpdateString(7, GetString(3)); //FKTABLE_NAME
+      Result.UpdateString(8, GetString(4)); //FKCOLUMN_NAME
+      Result.UpdateShort(9, KeySeq); //KEY_SEQ
+      Result.UpdateShort(10, Ord(GetRuleType(GetString(5)))); //UPDATE_RULE
+      Result.UpdateShort(11, Ord(GetRuleType(GetString(6)))); //DELETE_RULE
+      Result.UpdateString(12, GetString(7)); //FK_NAME
+      Result.UpdateString(12, GetString(8)); //PK_NAME
+      if GetString(9) = 'NO' then
+        Result.UpdateShort(13, Ord(ikNotDeferrable)) //DEFERRABILITY
+      else
+        Result.UpdateShort(13, Ord(ikInitiallyDeferred)); //DEFERRABILITY
+      Result.InsertRow;
+    end;
+    Close;
+  end;
+end;
+
+{**
   Gets a description of all the standard SQL types supported by
   this database. They are ordered by DATA_TYPE and then by how
   closely the data type maps to the corresponding JDBC SQL type.
@@ -2729,7 +2895,11 @@ begin
   WildcardsSet := GetWildcardsSet;
   for I := 1 to Length(Pattern) do
   begin
+    {$IFDEF DELPHI12_UP}
+    if (not PreviousCharWasEscape) and CharInset(Pattern[I], WildcardsSet) then
+    {$ELSE}
     if (not PreviousCharWasEscape) and (Pattern[I] in WildcardsSet) then
+    {$ENDIF}
      Exit;
 
     PreviousCharWasEscape := (Pattern[I] = EscapeChar) and (PreviousChar <> EscapeChar);
@@ -2773,6 +2943,126 @@ begin
       else
         PreviousChar := Pattern[i];
     end;
+  end;
+end;
+
+{**
+  Gets the used Collation and CharacterSet of spezified Object.
+
+  @param catalog a catalog name; "" retrieves those without a
+  catalog; null means drop catalog name from the selection criteria
+  @param schema a schema name; "" and Catolog "" retrieves nothing
+  @param table a table name; "" retrieves the Schema Colloation and CharacterSet
+  @param ColumnNamePattern ColumnPattern;"" retrieves the
+    Table(if @param TablePattern is set) or
+    Schema(if @param TablePattern is NULL)
+      Colloation and CharacterSet
+  @return <code>ResultSet</code> - each row is a Collation, CharacterSet, ID,
+    and ByteLength per Char of speziefied Object
+}
+function TZInterbase6DatabaseMetadata.UncachedGetCollationAndCharSet(const Catalog, SchemaPattern,
+  TableNamePattern, ColumnNamePattern: string): IZResultSet; //EgonHugeist
+var
+  SQL, LCatalog: string;
+begin
+  if Catalog = '' then
+  begin
+    if SchemaPattern <> '' then
+      LCatalog := SchemaPattern
+    else
+      LCatalog := '';
+  end
+  else
+    LCatalog := Catalog;
+
+  Result := ConstructVirtualResultSet(CollationCharSetColumnsDynArray);
+
+  if LCatalog <> '' then
+  begin
+    if TableNamePattern <> '' then
+    begin
+      if ColumnNamePattern <> '' then
+      begin
+        SQL :=  'SELECT C.RDB$CHARACTER_SET_NAME, C.RDB$DEFAULT_COLLATE_NAME, '+
+                'C.RDB$CHARACTER_SET_ID, C.RDB$BYTES_PER_CHARACTER '+
+                'FROM RDB$RELATION_FIELDS R '+
+                'right join RDB$FIELDS F on R.RDB$FIELD_SOURCE = F.RDB$FIELD_NAME '+
+                'left join RDB$CHARACTER_SETS C on C.RDB$CHARACTER_SET_ID = F.RDB$CHARACTER_SET_ID '+
+                'left join RDB$TYPES T on F.RDB$FIELD_TYPE = T.RDB$TYPE'+
+                'where T.RDB$FIELD_NAME=''RDB$FIELD_TYPE'' and '+
+                'R.RDB$FIELD_NAME='''+ColumnNamePattern+''' AND '+
+                'R.RDB$RELATION_NAME='''+TableNamePattern+''''+
+                'order by R.RDB$FIELD_POSITION;';
+        with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+        begin
+          if Next then
+          begin
+            if not ( GetString(FindColumn('RDB$CHARACTER_SET_NAME')) = 'NONE' ) then
+            begin
+              Result.MoveToInsertRow;
+              Result.UpdateString(1, AnsiString(LCatalog));   //COLLATION_CATALOG
+              Result.UpdateString(2, AnsiString(LCatalog));   //COLLATION_SCHEMA
+              Result.UpdateString(3, AnsiString(TableNamePattern)); //COLLATION_TABLE
+              Result.UpdateString(4, AnsiString(ColumnNamePattern));//COLLATION_COLUMN
+              Result.UpdateString(5, GetString(FindColumn('RDB$DEFAULT_COLLATE_NAME'))); //COLLATION_NAME
+              Result.UpdateString(6, GetString(FindColumn('RDB$CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
+              Result.UpdateShort(7, GetShort(FindColumn('RDB$CHARACTER_SET_ID'))); //CHARACTER_SET_ID
+              Result.UpdateShort(8, GetShort(FindColumn('RDB$BYTES_PER_CHARACTER'))); //CHARACTER_SET_SIZE
+              Result.InsertRow;
+              Close;
+              Exit;
+            end;
+          end;
+          Close;
+        end;
+      end;
+    end;
+  end;
+  {Brings Defaults for Table or Database up}
+  SQL :=  'SELECT D.RDB$CHARACTER_SET_NAME, CS.RDB$DEFAULT_COLLATE_NAME, '+
+          'C.RDB$CHARACTER_SET_ID, C.RDB$BYTES_PER_CHARACTER '+
+          'FROM RDB$DATABASE D '+
+          'LEFT JOIN RDB$CHARACTER_SETS CS on '+
+          'D.RDB$CHARACTER_SET_NAME = CS.RDB$CHARACTER_SET_NAME; ';
+  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+  begin
+    if Next then
+    begin
+      Result.MoveToInsertRow;
+      Result.UpdateString(1, AnsiString(LCatalog));   //COLLATION_CATALOG
+      Result.UpdateString(2, AnsiString(LCatalog));   //COLLATION_SCHEMA
+      Result.UpdateString(3, AnsiString(TableNamePattern)); //COLLATION_TABLE
+      Result.UpdateNull(4);//COLLATION_COLUMN
+      Result.UpdateString(5, GetString(FindColumn('RDB$DEFAULT_COLLATE_NAME'))); //COLLATION_NAME
+      Result.UpdateString(6, GetString(FindColumn('RDB$CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
+      Result.UpdateShort(7, GetShort(FindColumn('RDB$CHARACTER_SET_ID'))); //CHARACTER_SET_ID
+      Result.UpdateShort(8, GetShort(FindColumn('RDB$BYTES_PER_CHARACTER'))); //CHARACTER_SET_SIZE
+      Result.InsertRow;
+    end;
+    Close;
+  end;
+end;
+
+{**
+  Gets the supported CharacterSets:
+  @return <code>ResultSet</code> - each row is a CharacterSetName and it's ID
+}
+function TZInterbase6DatabaseMetadata.UncachedGetCharacterSets: IZResultSet; //EgonHugeist
+begin
+  Result := ConstructVirtualResultSet(CharacterSetsColumnsDynArray);
+
+  with GetConnection.CreateStatement.ExecuteQuery(
+  'SELECT RDB$CHARACTER_SET_NAME, RDB$CHARACTER_SET_ID '+
+  'FROM RDB$CHARACTER_SETS') do
+  begin
+    while Next do
+    begin
+      Result.MoveToInsertRow;
+      Result.UpdateString(1, GetString(FindColumn('RDB$CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
+      Result.UpdateString(2, GetString(FindColumn('RDB$CHARACTER_SET_ID'))); //CHARACTER_SET_ID
+      Result.InsertRow;
+    end;
+    Close;
   end;
 end;
 

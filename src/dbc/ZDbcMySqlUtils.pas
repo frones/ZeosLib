@@ -457,7 +457,7 @@ var
   ErrorMessage: string;
   ErrorCode: Integer;
 begin
-  ErrorMessage := Trim(StrPas(PlainDriver.GetLastError(Handle)));
+  ErrorMessage := Trim(String(StrPas(PlainDriver.GetLastError(Handle))));
   ErrorCode := PlainDriver.GetLastErrorCode(Handle);
   if (ErrorCode <> 0) and (ErrorMessage <> '') then
   begin
@@ -477,7 +477,7 @@ var
   ErrorMessage: string;
   ErrorCode: Integer;
 begin
-  ErrorMessage := Trim(PlainDriver.GetLastPreparedError(Handle));
+  ErrorMessage := Trim(String(PlainDriver.GetLastPreparedError(Handle)));
   ErrorCode := PlainDriver.GetLastPreparedErrorCode(Handle);
   if (ErrorCode <> 0) and (ErrorMessage <> '') then
   begin

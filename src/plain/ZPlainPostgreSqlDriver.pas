@@ -177,7 +177,7 @@ TZPgCharactersetType = (
 	csEUC_CN,	{ EUC for Chinese }
 	csEUC_KR,	{ EUC for Korean }
 	csEUC_TW,	{ EUC for Taiwan }
-	csJOHAB,
+  csEUC_JIS_2004, {Extended UNIX Code-JP, JIS X 0213 	Japanese}
 	csUTF8,		{ Unicode UTF-8 }
 	csMULE_INTERNAL,	{ Mule internal code }
 	csLATIN1,	{ ISO-8859 Latin 1 }
@@ -192,20 +192,29 @@ TZPgCharactersetType = (
 	csLATIN10,	{ ISO-8859 Latin 10 }
 	csWIN1256,	{ Arabic Windows }
 	csWIN1258,	{ Vietnamese Windows }
-	csWIN874,	{ Thai Windows }
-	csKOI8R,	{ KOI8-R/U }
-	csWIN1251,	{ windows-1251 }
 	csWIN866,	{ Alternativny Variant (MS-DOS CP866) }
+	csWIN874,	{ Thai Windows }
+  csKOI8, {KOI8-R(U) 	Cyrillic}
+	csKOI8R,	{ KOI8-R 	Cyrillic (Russian) }
+	csWIN1251,	{ windows-1251 }
+  csWIN1252, {Windows CP1252 	Western European}
 	csISO_8859_5,	{ ISO-8859-5 }
 	csISO_8859_6,	{ ISO-8859-6 }
 	csISO_8859_7,	{ ISO-8859-7 }
 	csISO_8859_8,	{ ISO-8859-8 }
-	csSJIS,		{ Shift JIS }
-	csBIG5,		{ Big5 }
-	csGBK,		{ GBK }
-	csUHC,		{ UHC }
-	csWIN1250,	{ windows-1250 }
-	csGB18030,	{ GB18030 }
+  csWIN1250, { Windows CP1250 	Central European }
+  csWIN1253, { Windows CP1253 	Greek }
+  csWIN1254, { Windows CP1254 	Turkish }
+  csWIN1255, { Windows CP1255 	Hebrew }
+  csWIN1257, { Windows CP1257 	Baltic }
+	csKOI8U,	{ KOI8-R 	Cyrillic (Ukrainian) }
+	csSJIS,		{ Shift JIS 	Japanese }
+	csBIG5,		{ Big Five 	Traditional Chinese }
+	csGBK,		{ Extended National Standard 	Simplified Chinese }
+	csUHC,		{ Unified Hangul Code 	Korean }
+	csGB18030,	{ National Standard 	Chinese }
+	csJOHAB,  {JOHAB 	Korean (Hangul)}
+  csSHIFT_JIS_2004, {Shift JIS, JIS X 0213 	Japanese}
 	csUNICODE_PODBC,{ UNICODE ( < Ver8.1). Can't call it UNICODE as that's already used }
 	csTCVN,		{ TCVN ( < Ver8.1) }
 	csALT,		{ ALT ( < Var8.1) }
@@ -343,6 +352,8 @@ type
   TPQtrace         = procedure(Handle: PPGconn; DebugPort: Pointer); cdecl;
   TPQuntrace       = procedure(Handle: PPGconn); cdecl;
   TPQsetNoticeProcessor = procedure(Handle: PPGconn; Proc: PQnoticeProcessor; Arg: Pointer); cdecl;
+
+  TPQclientEncoding = function(Handle: PPGconn): Integer; cdecl; //EgonHugeist
 { === in fe-exec.c === }
   TPQexec          = function(Handle: PPGconn; Query: PAnsiChar): PPGresult; cdecl;
   TPQnotifies      = function(Handle: PPGconn): PPGnotify; cdecl;
@@ -420,6 +431,7 @@ TZPOSTGRESQL_API = record
   PQtrace:         TPQtrace;
   PQuntrace:       TPQuntrace;
   PQsetNoticeProcessor: TPQsetNoticeProcessor;
+  PQclientEncoding: TPQclientEncoding;
 { === in fe-exec.c === }
   PQexec:          TPQexec;
   PQnotifies:      TPQnotifies;
@@ -500,6 +512,7 @@ type
     function GetTTY(Handle: PZPostgreSQLConnect): PAnsiChar; cdecl;
     function GetOptions(Handle: PZPostgreSQLConnect): PAnsiChar;
     function GetStatus(Handle: PZPostgreSQLConnect):TZPostgreSQLConnectStatusType;
+    function GetClientEncoding(Handle: PPGconn): Integer; //EgonHugeist
 
     function GetErrorMessage(Handle: PZPostgreSQLConnect): PAnsiChar;
     function GetSocket(Handle: PZPostgreSQLConnect): Integer;
@@ -610,6 +623,7 @@ type
     function GetOptions(Handle: PZPostgreSQLConnect): PAnsiChar;
     function GetStatus(Handle: PZPostgreSQLConnect):
       TZPostgreSQLConnectStatusType;
+    function GetClientEncoding(Handle: PPGconn): Integer; //EgonHugeist
 
     function GetErrorMessage(Handle: PZPostgreSQLConnect): PAnsiChar;
     function GetSocket(Handle: PZPostgreSQLConnect): Integer;
@@ -766,7 +780,7 @@ begin
     @POSTGRESQL_API.PQtrace        := GetAddress('PQtrace');
     @POSTGRESQL_API.PQuntrace      := GetAddress('PQuntrace');
     @POSTGRESQL_API.PQsetNoticeProcessor := GetAddress('PQsetNoticeProcessor');
-
+    @POSTGRESQL_API.PQclientEncoding := GetAddress('PQclientEncoding');
   { === in fe-exec.c === }
     @POSTGRESQL_API.PQexec         := GetAddress('PQexec');
     @POSTGRESQL_API.PQnotifies     := GetAddress('PQnotifies');
@@ -1117,6 +1131,11 @@ begin
   Result := TZPostgreSQLConnectStatusType(POSTGRESQL_API.PQstatus(Handle));
 end;
 
+function TZPostgreSQLBaseDriver.GetClientEncoding(Handle: PPGconn): Integer; //EgonHugeist
+begin
+  Result := POSTGRESQL_API.PQclientEncoding(Handle);
+end;
+
 function TZPostgreSQLBaseDriver.GetTTY(
   Handle: PZPostgreSQLConnect): PAnsiChar;
 begin
@@ -1294,19 +1313,19 @@ begin
  result:='';
 end;
 
-function TZPostgreSQL7PlainDriver.GetCancel(Handle: PZPostgreSQLConnect): PZPostgreSQLCancel; 
-begin 
- result := nil; 
-end; 
+function TZPostgreSQL7PlainDriver.GetCancel(Handle: PZPostgreSQLConnect): PZPostgreSQLCancel;
+begin
+ result := nil;
+end;
 
-procedure TZPostgreSQL7PlainDriver.FreeCancel(Canc: PZPostgreSQLCancel); 
-begin 
-end; 
+procedure TZPostgreSQL7PlainDriver.FreeCancel(Canc: PZPostgreSQLCancel);
+begin
+end;
 
-function TZPostgreSQL7PlainDriver.Cancel(Canc: PZPostgreSQLCancel; Buffer: PChar; Length: Integer): Integer; 
-begin 
- result := 0; 
-end; 
+function TZPostgreSQL7PlainDriver.Cancel(Canc: PZPostgreSQLCancel; Buffer: PChar; Length: Integer): Integer;
+begin
+ result := 0;
+end;
 
 { TZPostgreSQL8PlainDriver }
 
@@ -1321,7 +1340,7 @@ begin
   @POSTGRESQL_API.PQescapeBytea       := GetAddress('PQescapeBytea');
   @POSTGRESQL_API.PQunescapeBytea     := GetAddress('PQunescapeBytea');
   @POSTGRESQL_API.PQresultErrorField  := GetAddress('PQresultErrorField');
-  @POSTGRESQL_API.PQgetCancel         := GetAddress('PQgetCancel'); 
+  @POSTGRESQL_API.PQgetCancel         := GetAddress('PQgetCancel');
   @POSTGRESQL_API.PQfreeCancel        := GetAddress('PQfreeCancel'); 
   @POSTGRESQL_API.PQcancel            := GetAddress('PQcancel'); 
   end;

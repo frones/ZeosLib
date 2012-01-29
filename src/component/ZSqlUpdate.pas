@@ -596,7 +596,7 @@ begin
           Statement.SetBigDecimal(I + 1,
             RowAccessor.GetBigDecimal(ColumnIndex, WasNull));
         stString:
-          Statement.SetString(I + 1, RowAccessor.GetString(ColumnIndex, WasNull));
+          Statement.SetString(I + 1, RowAccessor.GetString(ColumnIndex, WasNull)); //smells like DataLoss
         stUnicodeString:
           Statement.SetUnicodeString(I + 1, RowAccessor.GetUnicodeString(ColumnIndex, WasNull));
         stBytes:
@@ -659,7 +659,7 @@ begin
           ftString:
             Statement.SetString(I + 1, ParamValue.AsString);
           ftBytes:
-            Statement.SetString(I + 1, ParamValue.AsString);
+            Statement.SetString(I + 1, AnsiString(ParamValue.AsString));
           ftDate:
             Statement.SetDate(I + 1, ParamValue.AsDate);
           ftTime:
@@ -738,12 +738,10 @@ begin
             stLong: RefreshRowAccessor.SetLong(RefreshColumnIndex, RefreshResultSet.GetLong(I));
             stFloat: RefreshRowAccessor.SetFloat(RefreshColumnIndex, RefreshResultSet.GetFloat(I));
             stDouble: RefreshRowAccessor.SetDouble(RefreshColumnIndex, RefreshResultSet.GetDouble(I));
-               stBigDecimal:
-                  RefreshRowAccessor.SetBigDecimal(RefreshColumnIndex,
-                  RefreshResultSet.GetBigDecimal(I));
+            stBigDecimal: RefreshRowAccessor.SetBigDecimal(RefreshColumnIndex, RefreshResultSet.GetBigDecimal(I));
                // gto: do we need PChar here?
 			   //stString: RefreshRowAccessor.SetPChar(RefreshColumnIndex, RefreshResultSet.GetPChar(I));
-			   stString: RefreshRowAccessor.SetString(RefreshColumnIndex, RefreshResultSet.GetString(I));
+			      stString: RefreshRowAccessor.SetString(RefreshColumnIndex, String(RefreshResultSet.GetString(I)));
             stUnicodeString: RefreshRowAccessor.SetUnicodeString(RefreshColumnIndex, RefreshResultSet.GetUnicodeString(I));
             stBytes: RefreshRowAccessor.SetBytes(RefreshColumnIndex, RefreshResultSet.GetBytes(I));
             stDate: RefreshRowAccessor.SetDate(RefreshColumnIndex, RefreshResultSet.GetDate(I));

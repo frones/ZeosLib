@@ -396,7 +396,11 @@ begin
           SQL := SQL + '?';
 
           ParamName := TokenValue;
+          {$IFDEF DELPHI12_UP}
+          if (ParamName <> '') and CharInSet(ParamName[1], [#39, '`', '"', '[']) then
+          {$ELSE}
           if (ParamName <> '') and (ParamName[1] in [#39, '`', '"', '[']) then
+          {$ENDIF}
           begin
             ParamName := Tokenizer.GetQuoteState.
               DecodeString(ParamName, ParamName[1]);

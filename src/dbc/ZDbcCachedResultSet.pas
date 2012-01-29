@@ -1233,7 +1233,7 @@ begin
   CheckUpdatable;
 {$ENDIF}
   PrepareRowForUpdates;
-  FRowAccessor.SetString(ColumnIndex, Value);
+  FRowAccessor.SetString(ColumnIndex, String(Value));
 end;
 
 {**
@@ -1805,7 +1805,7 @@ begin
         stBigDecimal: RowAccessor.SetBigDecimal(I, ResultSet.GetBigDecimal(I));
         //stString: RowAccessor.SetPChar(I, ResultSet.GetPChar(I));
         // gto: do we need PChar here? (Unicode problems)
-        stString: RowAccessor.SetString(I, ResultSet.GetString(I));
+        stString: RowAccessor.SetString(I, String(ResultSet.GetString(I)));
         stUnicodeString: RowAccessor.SetUnicodeString(I,
                   ResultSet.GetUnicodeString(I));
         stBytes: RowAccessor.SetBytes(I, ResultSet.GetBytes(I));

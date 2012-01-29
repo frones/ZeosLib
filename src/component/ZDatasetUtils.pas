@@ -442,7 +442,7 @@ begin
       ftString:
         // gto: do we need PChar here?
         //RowAccessor.SetPChar(FieldIndex, ResultSet.GetPChar(ColumnIndex));
-        RowAccessor.SetString(FieldIndex, ResultSet.GetString(ColumnIndex));
+        RowAccessor.SetString(FieldIndex, String(ResultSet.GetString(ColumnIndex)));
       ftWidestring:
         RowAccessor.SetUnicodeString(FieldIndex, ResultSet.GetUnicodeString(ColumnIndex));
       ftBytes:
@@ -513,7 +513,7 @@ begin
       ftString:
         // gto: do we need PChar here?
         //ResultSet.UpdatePChar(ColumnIndex, RowAccessor.GetPChar(FieldIndex, WasNull));
-        ResultSet.UpdateString(ColumnIndex, RowAccessor.GetString(FieldIndex, WasNull));			
+        ResultSet.UpdateString(ColumnIndex, AnsiString(RowAccessor.GetString(FieldIndex, WasNull)));
       ftWidestring:
         ResultSet.UpdateUnicodeString(ColumnIndex,
           RowAccessor.GetUnicodeString(FieldIndex, WasNull));

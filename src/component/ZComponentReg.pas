@@ -82,10 +82,11 @@ uses
   DesignIntf,
 {$ENDIF}
 {$ENDIF}
-  Classes, ZConnection, ZAbstractConnection, ZDataset, ZSqlUpdate, ZSqlProcessor, ZStoredProcedure,
-  ZGroupedConnection, ZConnectionGroup ,
-  ZSqlMonitor, ZSqlMetadata, ZSequence{$IFDEF ENABLE_INTERBASE}, ZIBEventAlerter {$ENDIF},
-  ZPgEventAlerter;
+  Classes, ZConnection, ZAbstractConnection, ZDataset, ZSqlUpdate, ZSqlProcessor,
+  ZStoredProcedure, ZGroupedConnection, ZConnectionGroup ,
+  ZSqlMonitor, ZSqlMetadata, ZSequence
+  {$IFDEF ENABLE_INTERBASE}, ZIBEventAlerter {$ENDIF}
+  {$IFDEF ENABLE_POSTGRESQL}, ZPgEventAlerter {$ENDIF};
 
 {**
   Registers components in a component palette.
@@ -95,11 +96,14 @@ begin
   RegisterComponents(ZEOS_DB_PALETTE, [
     TZConnection, TZReadOnlyQuery, TZQuery, TZTable, TZUpdateSQL,
     TZConnectionGroup, TZGroupedConnection,
-    TZStoredProc, TZSQLMetadata, TZSQLProcessor, TZSQLMonitor, TZSequence {$IFDEF ENABLE_INTERBASE}, TZIBEventAlerter {$ENDIF},
-    TZPgEventAlerter]);
+    TZStoredProc, TZSQLMetadata, TZSQLProcessor, TZSQLMonitor, TZSequence
+    {$IFDEF ENABLE_INTERBASE}, TZIBEventAlerter {$ENDIF}
+    {$IFDEF ENABLE_POSTGRESQL}, TZPgEventAlerter]) {$ENDIF};
 
 {$IFDEF WITH_PROPERTY_EDITOR}
 
+  RegisterPropertyEditor(TypeInfo(string), TZConnection, 'ClientCodepage',
+    TZClientCodePagePropertyEditor); {EgonHugeist}
   RegisterPropertyEditor(TypeInfo(string), TZConnection, 'Protocol',
     TZProtocolPropertyEditor);
   RegisterPropertyEditor(TypeInfo(string), TZConnection, 'Database',
@@ -111,7 +115,8 @@ begin
     TZProtocolPropertyEditor);
   RegisterPropertyEditor(TypeInfo(string), TZConnectionGroup, 'Database',
     TZConnectionGroupPropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZGroupedConnection, 'Catalog', TZGroupedConnectionCatalogPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZGroupedConnection, 'Catalog',
+      TZGroupedConnectionCatalogPropertyEditor);
 
   RegisterPropertyEditor(TypeInfo(string), TZQuery, 'LinkedFields',
     TZDataFieldPropertyEditor); {renamed by bangfauzan}

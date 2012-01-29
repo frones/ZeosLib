@@ -631,7 +631,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeString);
 {$ENDIF}
-  Result := UTF8Decode(GetString(ColumnIndex));
+  Result := UTF8ToString(GetString(ColumnIndex));
 end;
 
 {**

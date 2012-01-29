@@ -102,7 +102,8 @@ begin
     CheckEquals('masterkey', ZURL.Password);
     CheckEquals('rolename=public'+LineEnding, ZURL.Properties.Text);
   finally
-    ZURL.Free;
+    if Assigned(ZURL) then
+      ZURL.Free;
   end;
 end;
 
@@ -123,7 +124,8 @@ begin
     ZURL.Properties.Text := 'rolename=public'+LineEnding;
     CheckEquals('zdbc:oracle://127.0.0.1:3050/model?username=root;password=passwd;rolename=public', ZURL.URL);
   finally
-    ZURL.Free;
+    if Assigned(ZURL) then
+      ZURL.Free;
   end;
 end;
 
@@ -144,7 +146,8 @@ begin
     CheckEquals('pw', ZURL.Password);
     CheckEquals('rolename=public'+LineEnding, ZURL.Properties.Text);
   finally
-    ZURL.Free;
+    if Assigned(ZURL) then
+      ZURL.Free;
   end;
 end;
 

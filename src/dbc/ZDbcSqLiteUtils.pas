@@ -164,7 +164,7 @@ begin
   else if StartsWith(TypeName, 'CHAR') then
     Result := stString
   else if TypeName = 'VARCHAR' then
-    Result := stString
+    Result := {$IFDEF DELPHI12_UP}stUnicodeString{$ELSE}stString{$ENDIF}
   else if TypeName = 'VARBINARY' then
     Result := stBytes
   else if TypeName = 'BINARY' then
@@ -263,8 +263,9 @@ begin
 end;
 
 function NewDecodeString(Value:ansistring):ansistring;
-var iH, i : integer;
-    srcbuffer, destbuffer : PAnsichar;
+var
+  i : integer;
+  srcbuffer : PAnsichar;
 begin
   value := copy(value,3,length(value)-4);
   value := AnsiLowercase(value);
@@ -347,7 +348,7 @@ var
   SrcBuffer, DestBuffer: PAnsiChar;
 begin
   {$IFDEF DELPHI12_UP} 
-  value := utf8decode(value);
+  value := utf8decode(value); //EgonHugeist: DataLoss!!!
   {$ENDIF}
   if pos('x''',value)= 1 then
     result := NewDecodeString(value)

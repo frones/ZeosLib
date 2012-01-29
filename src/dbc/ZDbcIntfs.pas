@@ -113,10 +113,6 @@ type
   {** Defines a nullable type for the column. }
   TZColumnNullableType = (ntNoNulls, ntNullable, ntNullableUnknown);
 
-  {** Defines a type of the Triggers.}
-  TZTriggerType = (ttBeforeInsert, ttAfterInsert, ttBeforeUpdate, ttAfterUpdate,
-    ttBeforeDelete, ttAfterDelete);
-
   {** Defines a result type for the procedures. }
   TZProcedureResultType = (prtUnknown, prtNoResult, prtReturnsResult);
 
@@ -278,6 +274,8 @@ type
     function GetDatabaseInfo: IZDatabaseInfo;
     function GetTriggers(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const TriggerNamePattern: string): IZResultSet; //EgonHugeist 30.03.2011
+    function GetCollationAndCharSet(const Catalog, Schema, TableName, ColumnName: String): IZResultSet; //EgonHugeist 10.01.2012
+    function GetCharacterSets: IZResultSet; //EgonHugeist 19.01.2012
     function GetProcedures(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string): IZResultSet;
     function GetProcedureColumns(const Catalog: string; const SchemaPattern: string;

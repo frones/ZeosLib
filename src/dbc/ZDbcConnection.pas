@@ -776,7 +776,7 @@ end;
 }
 function TZAbstractConnection.EscapeString(Value : AnsiString) : AnsiString;
 begin
-  Result := EncodeCString(Value);
+  Result := AnsiString(EncodeCString(String(Value)));
 end;
 
 {**
