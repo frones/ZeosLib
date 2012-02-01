@@ -76,6 +76,10 @@ type
     constructor Create;
     function Connect(const Url: string; Info: TStrings): IZConnection; override;
     function GetSupportedProtocols: TStringDynArray; override;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetSupportedClientCodePages(const Url: string;
+      const SupportedsOnly: Boolean): TStringDynArray; override; //EgonHugeist
+    {$ENDIF}
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
 
@@ -98,7 +102,9 @@ type
     FCatalog: string;
     FPlainDriver: IZMySQLPlainDriver;
     FHandle: PZMySQLConnect;
+    {$IFNDEF CHECK_CLIENT_CODE_PAGE}
     FClientCodePage: string;
+    {$ENDIF}
   public
     constructor Create(Driver: IZDriver; const Url: string;
       PlainDriver: IZMySQLPlainDriver; const HostName: string; Port: Integer;
@@ -130,6 +136,12 @@ type
     function GetPlainDriver: IZMySQLPlainDriver;
     function GetConnectionHandle: PZMySQLConnect;
     function GetDescription: AnsiString;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetBinaryEscapeString(const Value: AnsiString;
+      const EscapeMarkSequence: String = '~<|'): String; override;
+    function GetEscapeString(const Value: String;
+      const EscapeMarkSequence: String = '~<|'): String; override;
+    {$ENDIF}
   end;
 
 
@@ -250,7 +262,7 @@ end;
 }
 function TZMySQLDriver.GetSupportedProtocols: TStringDynArray;
 var
-   i: smallint;
+  i: smallint;
 begin
   SetLength(Result, high(FPlainDrivers)+2);
   // Generic driver
@@ -258,6 +270,31 @@ begin
   For i := 0 to high(FPlainDrivers) do
     Result[i+1] := FPlainDrivers[i].GetProtocol;
 end;
+
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+{**
+  EgonHugeist:
+  Get names of the compiler-supported CharacterSets.
+  For example: ASCII, UTF8...
+}
+function TZMySQLDriver.GetSupportedClientCodePages(const Url: string;
+  Const SupportedsOnly: Boolean): TStringDynArray; //EgonHugeist
+var
+  Protocol: string;
+  i: smallint;
+begin
+  Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
+  if LowerCase(Protocol) = 'mysql' then //Get latest
+     Result := FPlainDrivers[high(FPlainDrivers)].GetSupportedClientCodePages(not SupportedsOnly)
+  else
+    For i := 0 to high(FPlainDrivers) do
+      if Protocol = FPlainDrivers[i].GetProtocol then
+        begin
+          Result := FPlainDrivers[i].GetSupportedClientCodePages(not SupportedsOnly);
+          break;
+        end;
+end;
+{$ENDIF}
 
 {**
   Gets plain driver for selected protocol.
@@ -321,14 +358,15 @@ begin
   { Sets a default properties }
   FPlainDriver := PlainDriver;
   Self.PlainDriver := PlainDriver;
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  CheckCharEncoding(FClientCodePage, True);
+  {$ENDIF}
   if Self.Port = 0 then
      Self.Port := MYSQL_PORT;
   AutoCommit := True;
   TransactIsolationLevel := tiNone;
 
   { Processes connection properties. }
-  FClientCodePage := Trim(Info.Values['codepage']);
-
   Open;
 end;
 
@@ -349,14 +387,17 @@ var
   OldLevel: TZTransactIsolationLevel;
   OldAutoCommit: Boolean;
   ConnectTimeout: Integer;
-  SQL: PAnsiChar;
   ClientFlag : Cardinal;
   SslCa, SslCaPath, SslKey, SslCert, SslCypher: PAnsiChar;
   myopt: TMySQLOption;
   sMyOpt: string;
   my_client_Opt:TMYSQL_CLIENT_OPTIONS;
-  sMy_client_Opt:String;
-  ClientVersion: Integer; 
+  sMy_client_Opt, sMy_client_Char_Set:String;
+  ClientVersion: Integer;
+  {$IFNDEF CHECK_CLIENT_CODE_PAGE}
+  FClientCharacterSet: String;
+  {$ENDIF}
+  SQL: PAnsiChar;
 begin
    if not Closed then
       Exit;
@@ -364,6 +405,19 @@ begin
   LogMessage := Format('CONNECT TO "%s" AS USER "%s"', [Database, User]);
 
   FPlainDriver.Init(FHandle);
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  {EgonHugeist: Arrange Client-CodePage/CharacterSet first
+    Now we know if UTFEncoding is neccessary or not}
+  sMy_client_Char_Set := String(FPlainDriver.GetConnectionCharacterSet(FHandle));
+  ClientCodePage := GetClientCodePageInformations(sMy_client_Char_Set); //This sets the internal use of Encodings..
+  {EgonHugeist:
+    Now we know in which kind of CharacterSet we have to send the next Connection-Properties
+    before we can change to the CharacterSet we want to have here..
+    This sets also all environment-variables to the Codepaged Object.
+    Now the compatibility-functions ZString/ZAnsiString working like
+    Database-expected Data has to be!!. }
+
+  {$ENDIF}
   try
     { Sets a default port number. }
     if Port = 0 then
@@ -383,13 +437,17 @@ begin
       sMyOpt:= GetEnumName(typeInfo(TMySQLOption), integer(myOpt));
       if Info.Values[sMyOpt] <> '' then
       begin
-        FPlainDriver.SetOptions(FHandle, myopt, PAnsiChar(Info.Values[sMyOpt]));
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    FPlainDriver.SetOptions(FHandle, myopt, PAnsiChar(ZAnsiString(Info.Values[sMyOpt])));
+  {$ELSE}
+    FPlainDriver.SetOptions(FHandle, myopt, PAnsiChar(AnsiString(Info.Values[sMyOpt])));
+  {$ENDIF}
       end;
     end;
 
     { Set ClientFlag }
     ClientFlag := 0;
-    if Not StrToBoolEx(Info.Values['dbless']) 
+    if Not StrToBoolEx(Info.Values['dbless'])
        then ClientFlag := trunc(power(2, GetEnumValue(   TypeInfo(TMYSQL_CLIENT_OPTIONS),'_CLIENT_CONNECT_WITH_DB')));
 
     for my_client_Opt := low(TMYSQL_CLIENT_OPTIONS) to high(TMYSQL_CLIENT_OPTIONS) do
@@ -399,12 +457,39 @@ begin
           ClientFlag:= ClientFlag or trunc(power(2, GetEnumValue(TypeInfo(TMYSQL_CLIENT_OPTIONS),sMy_client_Opt)));
     end;
 
-    { Set SSL properties before connect}
-    SslKey := nil;
-    SslCert := nil;
-    SslCa := nil;
-    SslCaPath := nil;
-    SslCypher := nil;
+  { Set SSL properties before connect}
+  SslKey := nil;
+  SslCert := nil;
+  SslCa := nil;
+  SslCaPath := nil;
+  SslCypher := nil;
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    {EgonHugeist: If these Paramters MUST BE UTF8 then leave Param ceUTF8 in the
+      ZAnsiString-function like else remove it and it adapts to default codepage}
+    if StrToBoolEx(Info.Values['MYSQL_SSL']) then
+      begin
+         if Info.Values['MYSQL_SSL_KEY'] <> '' then
+            SslKey := PAnsiChar(ZAnsiString(Info.Values['MYSQL_SSL_KEY'], ceUTF8));
+         if Info.Values['MYSQL_SSL_CERT'] <> '' then
+            SslCert := PAnsiChar(ZAnsiString(Info.Values['MYSQL_SSL_CERT'], ceUTF8));
+         if Info.Values['MYSQL_SSL_CA'] <> '' then
+            SslCa := PAnsiChar(ZAnsiString(Info.Values['MYSQL_SSL_CA'], ceUTF8));
+         if Info.Values['MYSQL_SSL_CAPATH'] <> '' then
+            SslCaPath := PAnsiChar(ZAnsiString(Info.Values['MYSQL_SSL_CAPATH'], ceUTF8));
+         if Info.Values['MYSQL_SSL_CYPHER'] <> '' then
+            SslCypher := PAnsiChar(ZAnsiString(Info.Values['MYSQL_SSL_CYPHER'], ceUTF8));
+         FPlainDriver.SslSet(FHandle, SslKey, SslCert, SslCa, SslCaPath,
+            SslCypher);
+         DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol,
+            'SSL options set');
+      end;
+
+    { Connect to MySQL database. }
+    if FPlainDriver.RealConnect(FHandle, PAnsiChar(ZAnsiString(HostName)),
+                                PAnsiChar(ZAnsiString(User)), PAnsiChar(ZAnsiString(Password)),
+                                PAnsiChar(ZAnsiString(Database)), Port, nil,
+                                ClientFlag) = nil then
+  {$ELSE}
     if StrToBoolEx(Info.Values['MYSQL_SSL']) then
       begin
          if Info.Values['MYSQL_SSL_KEY'] <> '' then
@@ -454,6 +539,8 @@ begin
                                 PAnsiChar(Password), PAnsiChar(Database), Port, nil,
                                 ClientFlag) = nil then
     {$ENDIF}
+  {$ENDIF}
+
     begin
       CheckMySQLError(FPlainDriver, FHandle, lcConnect, LogMessage);
       DriverManager.LogError(lcConnect, FPlainDriver.GetProtocol, LogMessage,
@@ -462,17 +549,44 @@ begin
     end;
     DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
 
-    { Fix Bugs in certain Versions where real_conncet resets the Reconnect flag } 
-    if StrToBoolEx(Info.Values['MYSQL_OPT_RECONNECT']) then 
-    begin 
-      ClientVersion := FPlainDriver.GetClientVersion; 
-      if ((ClientVersion>=50013) and (ClientVersion<50019)) or 
-         ((ClientVersion>=50100) and (ClientVersion<50106)) then 
-        FPlainDriver.SetOptions(FHandle, MYSQL_OPT_RECONNECT, 'true'); 
-    end; 
- 
+    { Fix Bugs in certain Versions where real_conncet resets the Reconnect flag }
+    if StrToBoolEx(Info.Values['MYSQL_OPT_RECONNECT']) then
+    begin
+      ClientVersion := FPlainDriver.GetClientVersion;
+      if ((ClientVersion>=50013) and (ClientVersion<50019)) or
+         ((ClientVersion>=50100) and (ClientVersion<50106)) then
+        FPlainDriver.SetOptions(FHandle, MYSQL_OPT_RECONNECT, 'true');
+    end;
+
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    if FClientCodePage = '' then //was set on inherited Create(...)
+      FClientCodePage := sMy_client_Char_Set;
+
+    if FSetCodePageToConnection and (FClientCodePage <> sMy_client_Char_Set) then
+      //Set CharacterSet only if wanted this is a little patch for someone who
+      //currently wrote UTF8 into a latin-database for example
+      //so this rearanges only the internal use of vtUnicodeString
+    begin
+      SQL := PAnsiChar(ZAnsiString(Format('SET NAMES %s', [FClientCodePage])));
+      FPlainDriver.ExecQuery(FHandle, SQL);
+      CheckMySQLError(FPlainDriver, FHandle, lcExecute, String(SQL));
+      DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, String(SQL));
+    end;
+    Self.CheckCharEncoding(FClientCodePage);
+    {EgonHugeist:
+      CheckCharEncoding(FClientCharacterSet);
+      This has to be done before any Query was send to Driver.
+      This procedure sets also the internal TZCharEncoding to ZCompatibility-Objects...
+      Now use the new Functions to get encoded Strings:
+        function ZString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
+        function ZAnsiString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
+      These functions do auto arrange the in/out-coming AnsiStrings in
+      dependency of the used CharacterSet and Compiler
+      they defend the StringDataLoss}
     { Sets a client codepage. }
-    if FClientCodePage <> '' then
+    {$ELSE}
+
+    if FClientCodePage '' then
     begin
       {$IFDEF DELPHI12_UP}
       SQL := PAnsiChar(UTF8String(Format('SET NAMES %s', [FClientCodePage])));
@@ -480,9 +594,10 @@ begin
       SQL := PAnsiChar(Format('SET NAMES %s', [FClientCodePage]));
       {$ENDIF}
       FPlainDriver.ExecQuery(FHandle, SQL);
-      CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
-      DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+      CheckMySQLError(FPlainDriver, FHandle, lcExecute, String(SQL));
+      DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, String(SQL));
     end;
+    {$ENDIF}
 
     { Sets transaction isolation level. }
     OldLevel := TransactIsolationLevel;
@@ -728,9 +843,9 @@ begin
           SQL := '';
       end;
       if (testResult <> 0) then
-          CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
+          CheckMySQLError(FPlainDriver, FHandle, lcExecute, String(SQL));
       if SQL <> '' then
-        DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+        DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, String(SQL));
     end;
   end;
 end;
@@ -817,8 +932,52 @@ end;
 
 function TZMySQLConnection.GetDescription: AnsiString;
 begin
-    Result := self.FPlainDriver.GetDescription;
+    Result := AnsiString(self.FPlainDriver.GetDescription);
 end;
+
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+{**
+  EgonHugeist:
+  Returns the BinaryString in a Tokenizer-detectable kind
+  If the Tokenizer don't need to predetect it Result := BinaryString
+  @param Value represents the Binary-String
+  @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
+  @result the detectable Binary String
+}
+function TZMySQLConnection.GetBinaryEscapeString(const Value: AnsiString;
+  const EscapeMarkSequence: String = '~<|'): String;
+var
+  BufferLen: Integer;
+  Buffer: PAnsiChar;
+begin
+   { TODO -oEgonHugeist : Move this function-internals to MySQLUtils its a copy of MySQLStatement! Don't write it twice }
+  BufferLen := Length(Value) * 2 + 1;
+  GetMem(Buffer, BufferLen);
+  if FHandle = nil then
+    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(Value), Length(Value))
+   else
+    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(Value), Length(Value));
+  Result := Driver.GetTokenizer.AnsiGetEscapeString('''' + AnsiString(BufferToStr(Buffer, BufferLen)) + '''', EscapeMarkSequence);
+  FreeMem(Buffer);
+end;
+
+function TZMySQLConnection.GetEscapeString(const Value: String;
+  const EscapeMarkSequence: String = '~<|'): String;
+var
+  BufferLen: Integer;
+  Buffer: PAnsiChar;
+begin
+   { TODO -oEgonHugeist : Move this function-internals to MySQLUtils its a copy of MySQLStatement! Don't write it twice }
+  BufferLen := Length(Value) * 2 + 1;
+  GetMem(Buffer, BufferLen);
+  if FHandle = nil then
+    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(ZAnsiString(Value)), Length(PAnsiChar(ZAnsiString(Value))))
+  else
+    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(ZAnsiString(Value)), Length(PAnsiChar(ZAnsiString(Value))));
+  Result := Driver.GetTokenizer.GetEscapeString('''' + BufferToStr(Buffer, BufferLen) + '''', EscapeMarkSequence);
+  FreeMem(Buffer);
+end;
+{$ENDIF}
 
 initialization
   MySQLDriver := TZMySQLDriver.Create;

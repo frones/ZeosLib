@@ -58,7 +58,7 @@ interface
 {$I ZCore.inc}
 
 uses
-  SysUtils, Classes;
+  SysUtils, Classes{$IFDEF CHECK_CLIENT_CODE_PAGE},ZCompatibility{$ENDIF};
 
 const
   ZEOS_VERSION = '7.0.0-dev';
@@ -198,13 +198,17 @@ type
   {$WARNINGS OFF}
 {$ENDIF}
   {** Implements an abstract interfaced object. }
-  TZAbstractObject = class(TInterfacedObject, IZObject)
+  TZAbstractObject = class({$IFDEF CHECK_CLIENT_CODE_PAGE}TAbstractCodePagedInterfacedObject
+    {$ELSE}TInterfacedObject{$ENDIF}, IZObject)
   public
     function Equals(const Value: IZInterface): Boolean; {$IFDEF DELPHI12_UP}overload;{$ENDIF} virtual;
     {$IFNDEF DELPHI12_UP}function GetHashCode: LongInt;{$ENDIF}
     function Clone: IZInterface; virtual;
     function ToString: string;{$IFDEF DELPHI12_UP}override{$ELSE} virtual{$ENDIF} ;
     function InstanceOf(const IId: TGUID): Boolean;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    property ClientCodePage;
+    {$ENDIF}
   end;
 {$IFDEF DELPHI12_UP}
   {$WARNINGS ON}
@@ -212,7 +216,7 @@ type
 
 implementation
 
-uses ZMessages, ZCompatibility;
+uses ZMessages{$IFNDEF CHECK_CLIENT_CODE_PAGE}, ZCompatibility{$ENDIF};
 
 {$IFDEF FPC}
 

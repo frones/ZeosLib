@@ -77,6 +77,10 @@ type
     function Connect(const Url: string; Info: TStrings): IZConnection; override;
 
     function GetSupportedProtocols: TStringDynArray; override;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetSupportedClientCodePages(const Url: string;
+      Const SupportedsOnly: Boolean): TStringDynArray; override; //EgonHugeist
+    {$ENDIF}
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
 
@@ -172,6 +176,25 @@ begin
   Result[0] := FSybasePlainDriver.GetProtocol;
   Result[1] := FMSSqlPlainDriver.GetProtocol;
 end;
+
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+{**
+  EgonHugeist:
+  Get names of the compiler-supported CharacterSets.
+  For example: ASCII, UTF8...
+}
+function TZDBLibDriver.GetSupportedClientCodePages(const Url: string;
+  Const SupportedsOnly: Boolean): TStringDynArray; //EgonHugeist
+var
+  Protocol: string;
+begin
+  Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
+  if FSybasePlainDriver.GetProtocol = Protocol then
+    Result := FSybasePlainDriver.GetSupportedClientCodePages(not (SupportedsOnly));
+  if FMSSqlPlainDriver.GetProtocol = Protocol then
+    Result := FMSSqlPlainDriver.GetSupportedClientCodePages(not (SupportedsOnly));
+end;
+{$ENDIF}
 
 {**
   Attempts to make a database connection to the given URL.
@@ -378,11 +401,12 @@ begin
     begin
       S := Info.Values['codepage'];
       if S <> '' then
-            {$IFDEF DELPHI12_UP}
-            FPlainDriver.dbSetLCharSet(LoginRec, PAnsiChar(UTF8String(S)));
-            {$ELSE}
-            FPlainDriver.dbSetLCharSet(LoginRec, PAnsiChar(S));
-            {$ENDIF}
+        {$IFDEF DELPHI12_UP}
+        FPlainDriver.dbSetLCharSet(LoginRec, PAnsiChar(UTF8String(S)));
+        {$ELSE}
+        FPlainDriver.dbSetLCharSet(LoginRec, PAnsiChar(S));
+        {$ENDIF}
+
       {$IFDEF DELPHI12_UP}
       FPLainDriver.dbsetluser(LoginRec, PAnsiChar(UTF8String(User)));
       FPLainDriver.dbsetlpwd(LoginRec, PAnsiChar(UTF8String(Password)));

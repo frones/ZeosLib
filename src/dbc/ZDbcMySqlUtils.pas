@@ -60,7 +60,8 @@ interface
 
 uses
   Classes, SysUtils, StrUtils,
-  ZSysUtils, ZDbcIntfs, ZPlainMySqlDriver, ZPlainMySqlConstants,  ZDbcLogging;
+  ZSysUtils, ZDbcIntfs, ZPlainMySqlDriver, ZPlainMySqlConstants,  ZDbcLogging
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}, ZCompatibility{$ENDIF};
 
 const
   MAXBUF = 65535;
@@ -77,14 +78,16 @@ type
   @return a SQL undepended type.
 }
 function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
-  FieldHandle: PZMySQLField; FieldFlags: Integer): TZSQLType;
+  FieldHandle: PZMySQLField; FieldFlags: Integer
+   {$IFDEF CHECK_CLIENT_CODE_PAGE}; const CharEncoding: TZCharEncoding{$ENDIF}): TZSQLType;
 
 {**
   Convert string mysql field type to SQLType
   @param string field type value
   @result the SQLType field type value
 }
-function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull, Collation: string): TZSQLType;
+function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull{$IFNDEF CHECK_CLIENT_CODE_PAGE}, Collation{$ENDIF}: string
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}; const CharEncoding: TZCharEncoding{$ENDIF}): TZSQLType;
 
 {**
   Checks for possible sql errors.
@@ -160,7 +163,8 @@ end;
   @return a SQL undepended type.
 }
 function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
-  FieldHandle: PZMySQLField; FieldFlags: Integer): TZSQLType;
+  FieldHandle: PZMySQLField; FieldFlags: Integer
+   {$IFDEF CHECK_CLIENT_CODE_PAGE}; const CharEncoding: TZCharEncoding{$ENDIF}): TZSQLType;
 
   function Signed: Boolean;
   begin
@@ -232,9 +236,26 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
     // which provides correct result, but would be slow. maybe this table conteent is "fix".
     // ID ==> PMYSQL_FIELD(Field)^.charsetnr
     // http://dev.mysql.com/doc/refman/5.0/en/c-api-data-structures.html
+
+    //by EgonHugeist: Here i disagree! Priority 1: Client_Character_Set
+    //so aperger i implemented a MetadatType mdCharacterSetAndCollaton to check this up
+    //The dbcCacheKey is a mighty tool here, ask for column once and its cached!!
+    //But this later
     FIELD_TYPE_VARCHAR,
     FIELD_TYPE_VAR_STRING,
     FIELD_TYPE_STRING:
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+       case CharEncoding of
+        ceUTF8, ceUTF16:
+          {$IFDEF FPC} //no more in FPC 2.8!!
+          Result := stString;
+         {$ELSE}
+          Result := stUnicodeString;
+         {$ENDIF}
+        else
+          Result := stString
+       end;
+    {$ELSE}
     	if (PMYSQL_FIELD(FieldHandle)^.charsetnr = 63) then
       	Result := stString // ?? stBytes // BINARY from CHAR, VARBINARY from VARCHAR, BLOB from TEXT
       else
@@ -261,6 +282,7 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
        {$ENDIF}
       else
         Result := stString;
+    {$ENDIF}
     FIELD_TYPE_ENUM:
       Result := stString;
     FIELD_TYPE_SET:
@@ -275,7 +297,8 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
       raise Exception.Create('Unknown MySQL data type!');
    end;
   { Fix by the HeidiSql team. - See their SVN repository rev.775 and 900}
-  { SHOW FULL PROCESSLIST on 4.x servers can return veeery long FIELD_TYPE_VAR_STRINGs. The following helps avoid excessive row buffer allocation later on. }
+  { SHOW FULL PROCESSLIST on 4.x servers can return veeery long FIELD_TYPE_VAR_STRINGs.
+  The following helps avoid excessive row buffer allocation later on. }
   if (Result = stString) and (PlainDriver.GetFieldLength(FieldHandle) > 8192) then
      Result := stAsciiStream;
 
@@ -289,7 +312,8 @@ end;
   @param string field type value
   @result the SQLType field type value
 }
-function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull, Collation: string): TZSQLType;
+function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull{$IFNDEF CHECK_CLIENT_CODE_PAGE}, Collation{$ENDIF}: string
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}; const CharEncoding: TZCharEncoding{$ENDIF}): TZSQLType;
 const
   GeoTypes: array[0..7] of string = (
    'POINT','LINESTRING','POLYGON','GEOMETRY',
@@ -304,9 +328,16 @@ begin
   TypeName := UpperCase(TypeName);
   TypeNameFull := UpperCase(TypeNameFull);
   Result := stUnknown;
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
+  case CharEncoding of
+    ceUTF8, ceUTF16: IsUnicodeField := True;
+    else IsUnicodeField := False;
+  end;
+  {$ELSE} //fails if client_character_set is not UTF8
   IsUnicodeField:=
   	StrUtils.AnsiContainsText(Collation, 'utf8') or
     StrUtils.AnsiContainsText(Collation, 'ucs2');
+  {$ENDIF}
 
   Posi := FirstDelimiter(' ', TypeName);
   if Posi > 0 then
@@ -385,13 +416,14 @@ begin
     {$ENDIF}
     else
      Result := stString;
-  end else if TypeName = 'VARCHAR' then begin
-    if IsUnicodeField then
-    {$IFDEF FPC}
-      Result := stString
-    {$ELSE}
-      Result := stUnicodeString
-    {$ENDIF}
+  end else
+    if TypeName = 'VARCHAR' then begin
+      if IsUnicodeField then
+      {$IFDEF FPC}
+        Result := stString
+      {$ELSE}
+        Result := stUnicodeString
+      {$ENDIF}
     else
      Result := stString;
   end

@@ -102,7 +102,8 @@ type
     procedure Despose(var Handle: PZMySQLConnect);
 
     function GetAffectedRows(Handle: PZMySQLConnect): Int64;
-    // char_set_name
+    {ADDED by EgonHugeist}
+    function GetConnectionCharacterSet(Handle: PMYSQL): PAnsiChar;// char_set_name
     procedure Close(Handle: PZMySQLConnect);
     function Connect(Handle: PZMySQLConnect; const Host, User, Password: PAnsiChar): PZMySQLConnect;
     function CreateDatabase(Handle: PZMySQLConnect; const Database: PAnsiChar): Integer;
@@ -173,7 +174,8 @@ type
     function CheckAnotherRowset   (Handle: PZMySQLConnect): Boolean;
     function RetrieveNextRowset   (Handle: PZMySQLConnect): Integer;
     function Rollback (Handle: PZMySQLConnect): Boolean;
-    // set_character_set
+    {ADDED by EgonHugeist}
+    function SetConnectionCharacterSet(Handle: PMYSQL; const csname: PAnsiChar): Integer; // set_character_set Returns 0 if valid
     // set_server_option
     function GetSQLState (Handle: PZMySQLConnect): AnsiString;
     // warning_count
@@ -235,6 +237,9 @@ type
     ServerArgs: array of PAnsiChar;
     ServerArgsLen: Integer;
     IsEmbeddedDriver: Boolean;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    procedure LoadCodePages; override;
+    {$ENDIF}
     procedure LoadApi; override;
     procedure BuildServerArguments(Options: TStrings);
   public
@@ -328,6 +333,9 @@ type
     function UseResult(Handle: PZMySQLConnect): PZMySQLResult;
     procedure FreeResult(Res: PZMySQLResult);
     function GetAffectedRows(Handle: PZMySQLConnect): Int64;
+    {ADDED by EgonHugeist}
+    function GetConnectionCharacterSet(Handle: PMYSQL): PAnsiChar;// char_set_name
+    function SetConnectionCharacterSet(Handle: PMYSQL; const csname: PAnsiChar): Integer; // set_character_set Returns 0 if valid
 
     function FetchRow(Res: PZMySQLResult): PZMySQLRow;
     function FetchLengths(Res: PZMySQLResult): PULong;
@@ -381,6 +389,9 @@ type
   TZMySQL5PlainDriver = class (TZMysqlBaseDriver)
   protected
     procedure LoadApi; override;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    procedure LoadCodePages; override;
+    {$ENDIF}
   public
     constructor Create;
     function GetProtocol: string; override;
@@ -400,6 +411,50 @@ implementation
 uses SysUtils, ZSysUtils, ZPlainLoader;
 
 { TZMySQLPlainBaseDriver }
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+procedure TZMySQLBaseDriver.LoadCodePages;
+begin
+  {MySQL 3.23-4.1}
+  { MultiChar }
+  AddCodePage('big5', 1); {Big5 Traditional Chinese}
+  AddCodePage('ujis', 10); {EUC-JP Japanese}
+  AddCodePage('sjis', 11); {Shift-JIS Japanese}
+  AddCodePage('gbk', 19); {GBK Simplified Chinese}
+  AddCodePage('utf8', 22, ceUTF8); {UTF-8 Unicode}
+  AddCodePage('ucs2', 23, ceUTF16); {UCS-2 Unicode}
+  AddCodePage('euckr', 14); {EUC-KR Korean}
+  AddCodePage('gb2312', 16); {GB2312 Simplified Chinese}
+  AddCodePage('cp932', 35); {SJIS for Windows Japanese}
+  AddCodePage('eucjpms', 36); {UJIS for Windows Japanese}
+  { SingleChar }
+  AddCodePage('dec8', 2); {DEC West European}
+  AddCodePage('cp850', 3); {DOS West European}
+  AddCodePage('hp8', 4); {HP West European}
+  AddCodePage('koi8r', 5); {KOI8-R Relcom Russian}
+  AddCodePage('latin1', 6); {cp1252 West European}
+  AddCodePage('latin2', 7); {ISO 8859-2 Central European}
+  AddCodePage('swe7', 8); {7bit Swedish}
+  AddCodePage('ascii', 9); {US ASCII}
+  AddCodePage('hebrew', 12); {ISO 8859-8 Hebrew}
+  AddCodePage('tis620', 13); {TIS620 Thai}
+  AddCodePage('koi8u', 15); {KOI8-U Ukrainian}
+  AddCodePage('greek', 17); {ISO 8859-7 Greek}
+  AddCodePage('cp1250', 18); {Windows Central European}
+  AddCodePage('latin5', 20); {ISO 8859-9 Turkish}
+  AddCodePage('armscii8', 21); {ARMSCII-8 Armenian}
+  AddCodePage('cp866', 24); {DOS Russian}
+  AddCodePage('keybcs2', 25); {DOS Kamenicky Czech-Slovak}
+  AddCodePage('macce', 26); {Mac Central European}
+  AddCodePage('macroman', 27); {Mac West European}
+  AddCodePage('cp852', 28); {DOS Central European}
+  AddCodePage('latin7', 29); {ISO 8859-13 Baltic}
+  AddCodePage('cp1251', 30, ceAnsi, 1251); {Windows Cyrillic}
+  AddCodePage('cp1256', 31, ceAnsi, 1256); {Windows Arabic}
+  AddCodePage('cp1257', 32, ceAnsi, 1257); {Windows Baltic}
+  AddCodePage('binary', 33); {Binary pseudo charset}
+  AddCodePage('geostd8', 34); {GEOSTD8 Georgian}
+end;
+{$ENDIF}
 
 procedure TZMySQLBaseDriver.LoadApi;
 begin
@@ -471,8 +526,8 @@ begin
 
   @MYSQL_API.mysql_get_client_version     := GetAddress('mysql_get_client_version');
 
-  @MYSQL_API.mysql_send_query      := GetAddress('mysql_send_query');
-  @MYSQL_API.mysql_read_query_result := GetAddress('mysql_read_query_result');
+  @MYSQL_API.mysql_send_query             := GetAddress('mysql_send_query');
+  @MYSQL_API.mysql_read_query_result      := GetAddress('mysql_read_query_result');
 
   @MYSQL_API.mysql_autocommit             := GetAddress('mysql_autocommit');
   @MYSQL_API.mysql_commit                 := GetAddress('mysql_commit');
@@ -551,8 +606,8 @@ end;
 
 constructor TZMySQLBaseDriver.Create;
 begin
-   inherited create;
-   FLoader := TZNativeLibraryLoader.Create([]);
+  inherited create;
+  FLoader := TZNativeLibraryLoader.Create([]);
 {$IFNDEF MYSQL_STRICT_DLL_LOADING}
   {$IFNDEF UNIX}
     FLoader.AddLocation(WINDOWS_DLL_LOCATION);
@@ -563,6 +618,9 @@ begin
   ServerArgsLen := 0;
   SetLength(ServerArgs, ServerArgsLen);
   IsEmbeddedDriver := False;
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  LoadCodePages;
+  {$ENDIF}
 end;
 
 destructor TZMySQLBaseDriver.Destroy;
@@ -647,6 +705,28 @@ end;
 function TZMySQLBaseDriver.GetAffectedRows(Handle: PZMySQLConnect): Int64;
 begin
   Result := MYSQL_API.mysql_affected_rows(Handle);
+end;
+
+{**
+  EgonHugeist: Get CharacterSet of current Connection
+  Returns the default character set name for the current connection.
+}
+function TZMySQLBaseDriver.GetConnectionCharacterSet(Handle: PMYSQL): PAnsiChar;// char_set_name
+begin
+  Result := MYSQL_API.mysql_character_set_name(Handle);
+end;
+
+{**
+  EgonHugeist: This function is used to set the default character set for the
+  current connection. The string csname specifies a valid character set name.
+  The connection collation becomes the default collation of the character set.
+  This function works like the SET NAMES statement, but also sets the value
+  of mysql->charset, and thus affects the character set
+  used by mysql_real_escape_string()
+}
+function TZMySQLBaseDriver.SetConnectionCharacterSet(Handle: PMYSQL; const csName: PAnsiChar): Integer; // set_character_set Returns 0 if valid
+begin
+  Result := MYSQL_API.mysql_set_character_set(Handle, csName);
 end;
 
 function TZMySQLBaseDriver.GetClientInfo: PAnsiChar;
@@ -1128,10 +1208,22 @@ begin
 
   with Loader do
   begin
-  @MYSQL_API.mysql_get_character_set_info := GetAddress('mysql_get_character_set_info');
-  @MYSQL_API.mysql_stmt_next_result       := GetAddress('mysql_stmt_next_result');
+    @MYSQL_API.mysql_get_character_set_info := GetAddress('mysql_get_character_set_info');
+    @MYSQL_API.mysql_stmt_next_result       := GetAddress('mysql_stmt_next_result');
   end;
 end;
+
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+procedure TZMySQL5PlainDriver.LoadCodePages;
+begin
+  inherited LoadCodePages;
+  {MySQL 4.1-5.5}
+  { MultiChar }
+  AddCodePage('utf8mb4', 37, ceUTF8); {UTF-8 Unicode}
+  AddCodePage('utf16', 38, ceUTF16); {UTF-16 Unicode}
+  AddCodePage('utf32', 39, {$IFDEF MSWINDOWS}ceUnsupported{$ELSE}ceUTF32{$ENDIF}); {UTF-32 Unicode}
+end;
+{$ENDIF}
 
 constructor TZMySQL5PlainDriver.Create;
 begin

@@ -76,6 +76,10 @@ type
     function Connect(const Url: string; Info: TStrings): IZConnection; override;
 
     function GetSupportedProtocols: TStringDynArray; override;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetSupportedClientCodePages(const Url: string;
+      Const SupportedsOnly: Boolean): TStringDynArray; override; //EgonHugeist
+    {$ENDIF}
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
 
@@ -136,6 +140,13 @@ type
 
     procedure Open; override;
     procedure Close; override;
+
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetBinaryEscapeString(const Value: AnsiString;
+      const EscapeMarkSequence: String = '~<|'): String; override;
+    //function GetEscapeString(const Value: String;
+      //const EscapeMarkSequence: String = '~<|'): String; override;
+    {$ENDIF}
   end;
 
   {** Implements a specialized cached resolver for Interbase/Firebird. }
@@ -302,6 +313,28 @@ begin
     Result[i] := FPlainDrivers[i].GetProtocol;
 end;
 
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+{**
+  EgonHugeist:
+  Get names of the compiler-supported CharacterSets.
+  For example: ASCII, UTF8...
+}
+function TZInterbase6Driver.GetSupportedClientCodePages(const Url: string;
+  Const SupportedsOnly: Boolean): TStringDynArray; //EgonHugeist
+var
+  Protocol: string;
+  i: smallint;
+begin
+  Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
+  For i := 0 to high(FPlainDrivers) do
+    if Protocol = FPlainDrivers[i].GetProtocol then
+      begin
+        Result := FPlainDrivers[i].GetSupportedClientCodePages(not SupportedsOnly);
+        break;
+      end;
+end;
+{$ENDIF}
+
 { TZInterbase6Connection }
 
 {**
@@ -338,7 +371,11 @@ begin
 
   if FHandle <> nil then
   begin
-    FPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
+    //TestSuite Errors -> Handle is erronymous Why???
+    try
+      FPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
+    except
+    end;
     FHandle := nil;
     CheckInterbase6Error(FPlainDriver, FStatusVector, lcDisconnect);
   end;
@@ -389,7 +426,6 @@ constructor TZInterbase6Connection.Create(Driver: IZDriver; const Url: string;
   Info: TStrings);
 var
   RoleName: string;
-  ClientCodePage: string;
   UserSetDialect: string;
   ConnectTimeout : integer;
 begin
@@ -400,6 +436,9 @@ begin
 
   FPlainDriver := PlainDriver;
   Self.PlainDriver := PlainDriver;
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  CheckCharEncoding(FClientCodePage, True);
+  {$ENDIF}
 
   { Sets a default Interbase port }
   if Self.Port = 0 then
@@ -419,18 +458,29 @@ begin
   self.Info.Values['isc_dpb_username'] := User;
   self.Info.Values['isc_dpb_password'] := Password;
 
-  ClientCodePage := Trim(Info.Values['codepage']);
-  if ClientCodePage <> '' then
-    self.Info.Values['isc_dpb_lc_ctype'] := UpperCase(ClientCodePage);
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  if FClientCodePage = '' then //was set on inherited Create(...)
+    if self.Info.Values['isc_dpb_lc_ctype'] <> '' then //Check if Dev set's it manually
+    begin
+      FClientCodePage := self.Info.Values['isc_dpb_lc_ctype'];
+      Self.CheckCharEncoding(FClientCodePage, True);
+      Info.Values['isc_dpb_lc_ctype'] := ''; //drop it (setting is optional)
+    end;
+
+  if FSetCodePageToConnection then
+    //Set CharacterSet only if wanted! This is a little patch for someone who
+    //currently wrote UTF8 into a latin-database for example
+    //so this rearanges only the internal use of vtUnicodeString
+    Info.Values['isc_dpb_lc_ctype'] := '';
+  {$ENDIF}
 
   RoleName := Trim(Info.Values['rolename']);
   if RoleName <> '' then
     self.Info.Values['isc_dpb_sql_role_name'] := UpperCase(RoleName);
-	
-  ConnectTimeout := StrToIntDef(Info.Values['timeout'], -1); 
-  if ConnectTimeout >= 0 then 
-    self.Info.Values['isc_dpb_connect_timeout'] := IntToStr(ConnectTimeout); 
 
+  ConnectTimeout := StrToIntDef(Info.Values['timeout'], -1);
+  if ConnectTimeout >= 0 then
+    self.Info.Values['isc_dpb_connect_timeout'] := IntToStr(ConnectTimeout);
 end;
 
 {**
@@ -559,6 +609,22 @@ begin
       StartTransaction;
 
     inherited Open;
+
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    {Check for ClientCodePage: if empty switch to database-defaults}
+    if Self.FClientCodePage = '' then
+      with GetMetadata.GetCollationAndCharSet('', '', '', '') do
+      begin
+        if Next then
+        begin
+          FCLientCodePage := ZString(GetString(6));
+          CheckCharEncoding(FClientCodePage);
+        end
+        else
+          raise Exception.Create('Cannot determine character set of connection!'); //marsupilami
+        Close;
+      end;
+    {$ENDIF}
   finally
     StrDispose(DPB);
   end;
@@ -705,6 +771,10 @@ begin
   Params := TStringList.Create;
 
   { Set transaction parameters by TransactIsolationLevel }
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  if FSetCodePageToConnection then
+    Params.Values['isc_dpb_lc_ctype'] := FClientCodePage; //Set CharacterSet allways if option is set
+  {$ENDIF}
   Params.Add('isc_tpb_version3');
   case TransactIsolationLevel of
     tiReadCommitted:
@@ -724,14 +794,14 @@ begin
       end;
   else
     begin
-      { Add user defined parameters for traansaction }
+      { Add user defined parameters for transaction }
       Params.Clear;
       Params.AddStrings(Info);
     end;
   end;
 
   try
-    { GenerateTPB return PTEB with null pointer tpb_address from defaul
+    { GenerateTPB return PTEB with null pointer tpb_address from default
       transaction }
     PTEB := GenerateTPB(Params, FHandle);
     FPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, PTEB);
@@ -763,6 +833,20 @@ begin
   FPlainDriver.isc_detach_database(@FStatusVector, @DbHandle);
   CheckInterbase6Error(FPlainDriver, FStatusVector, lcExecute, SQL);
 end;
+
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+function TZInterbase6Connection.GetBinaryEscapeString(const Value: AnsiString;
+  const EscapeMarkSequence: String = '~<|'): String;
+begin
+  if Self.FPlainDriver.GetProtocol = 'firebird-2.5' then
+    if SizeOf(Value) < 32*1024 then
+      Result := Self.GetDriver.GetTokenizer.GetEscapeString('x'''+Value+'''', EscapeMarkSequence)
+    else
+      raise Exception.Create('Binary data out of range! Use Blob-Fields!')
+  else
+    raise Exception.Create('Your Firebird-Version does''t support Binary-Data in SQL-Statements!');
+end;
+{$ENDIF}
 
 {**
   Creates a sequence generator object.

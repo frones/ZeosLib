@@ -77,6 +77,10 @@ type
     function Connect(const Url: string; Info: TStrings): IZConnection; override;
 
     function GetSupportedProtocols: TStringDynArray; override;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetSupportedClientCodePages(const Url: string;
+      Const SupportedsOnly: Boolean): TStringDynArray; override; //EgonHugeist
+    {$ENDIF}
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
     function GetTokenizer: IZTokenizer; override;
@@ -268,6 +272,26 @@ begin
   Result[2] := FASA9PlainDriver.GetProtocol;
 end;
 
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+{**
+  EgonHugeist:
+  Get names of the compiler-supported CharacterSets.
+  For example: ASCII, UTF8...
+}
+function TZASADriver.GetSupportedClientCodePages(const Url: string;
+  Const SupportedsOnly: Boolean): TStringDynArray; //EgonHugeist
+var
+  Protocol: string;
+begin
+  Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
+  if FASA7PlainDriver.GetProtocol = Protocol then
+    Result := FASA7PlainDriver.GetSupportedClientCodePages(not SupportedsOnly);
+  if FASA8PlainDriver.GetProtocol = Protocol then
+    Result := FASA8PlainDriver.GetSupportedClientCodePages(not SupportedsOnly);
+  if FASA8PlainDriver.GetProtocol = Protocol then
+    Result := FASA9PlainDriver.GetSupportedClientCodePages(not SupportedsOnly);
+end;
+{$ENDIF}
 
 { TZASAConnection }
 

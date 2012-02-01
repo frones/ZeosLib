@@ -60,16 +60,34 @@ interface
 uses ZClasses, ZPlainDriver;
 
 type
-  TZAdoPlainDriver = class (TZAbstractObject, IZPlainDriver)
+  TZAdoPlainDriver = class ({$IFDEF CHECK_CLIENT_CODE_PAGE}
+    TZGenericAbstractPlainDriver{$ELSE}TZAbstractObject{$ENDIF}, IZPlainDriver)
   public
     constructor Create;
 
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    procedure LoadCodePages; override;
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+    procedure Initialize; override;
+    {$ELSE}
     function GetProtocol: string;
     function GetDescription: string;
     procedure Initialize;
+    {$ENDIF}
   end;
 
 implementation
+
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+uses ZCompatibility;
+
+procedure TZAdoPlainDriver.LoadCodePages;
+begin
+  AddCodePage('Not implemented!', -1);
+   { TODO -oEgonHugeist : Must be completed!!!! }
+end;
+{$ENDIF}
 
 constructor TZAdoPlainDriver.Create;
 begin

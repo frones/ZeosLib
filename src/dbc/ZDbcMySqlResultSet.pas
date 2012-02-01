@@ -215,7 +215,8 @@ constructor TZMySQLResultSet.Create(PlainDriver: IZMySQLPlainDriver;
   UseResult: Boolean);
 begin
   inherited Create(Statement, SQL, TZMySQLResultSetMetadata.Create(
-    Statement.GetConnection.GetMetadata, SQL, Self));
+    Statement.GetConnection.GetMetadata, SQL, Self)
+    {$IFDEF CHECK_CLIENT_CODE_PAGE},Statement.GetConnection.GetClientCodePageInformations{$ENDIF});
 
   FHandle := Handle;
   FQueryHandle := nil;
@@ -279,13 +280,19 @@ begin
     begin
       FieldFlags := FPlainDriver.GetFieldFlags(FieldHandle);
 
-      ColumnLabel := FPlainDriver.GetFieldName(FieldHandle);
-      ColumnName := FPlainDriver.GetFieldOrigName(FieldHandle);
-      TableName := FPlainDriver.GetFieldTable(FieldHandle);
+      {$IFDEF CHECK_CLIENT_CODE_PAGE}
+      ColumnLabel := ZString(FPlainDriver.GetFieldName(FieldHandle));
+      ColumnName := ZString(FPlainDriver.GetFieldOrigName(FieldHandle));
+      TableName := ZString(FPlainDriver.GetFieldTable(FieldHandle));
+      {$ELSE}
+      ColumnLabel := String(FPlainDriver.GetFieldName(FieldHandle));
+      ColumnName := String(FPlainDriver.GetFieldOrigName(FieldHandle));
+      TableName := String(FPlainDriver.GetFieldTable(FieldHandle));
+      {$ENDIF}
       ReadOnly := (FPlainDriver.GetFieldTable(FieldHandle) = '');
       Writable := not ReadOnly;
       ColumnType := ConvertMySQLHandleToSQLType(FPlainDriver,
-        FieldHandle, FieldFlags);
+        FieldHandle, FieldFlags{$IFDEF CHECK_CLIENT_CODE_PAGE}, ClientCodePage.Encoding{$ENDIF});
       ColumnDisplaySize := FPlainDriver.GetFieldLength(FieldHandle);
       Precision := Max(FPlainDriver.GetFieldMaxLength(FieldHandle),
         FPlainDriver.GetFieldLength(FieldHandle));
@@ -355,8 +362,8 @@ begin
   if not Result and (TZAbstractResultSetMetadata(Metadata).
     GetColumnType(ColumnIndex) in [stDate, stTimestamp]) then
   begin
-    Result := (AnsiSQLDateToDateTime(Temp) = 0)
-      and (TimestampStrToDateTime(Temp) = 0);
+    Result := (AnsiSQLDateToDateTime(String(Temp)) = 0)
+      and (TimestampStrToDateTime(String(Temp)) = 0);
   end;
 end;
 
@@ -431,7 +438,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-  Temp := UpperCase(GetString(ColumnIndex));
+  Temp := UpperCase(String(GetString(ColumnIndex)));
   Result := (Temp = 'Y') or (Temp = 'YES') or (Temp = 'T') or
     (Temp = 'TRUE') or (StrToIntDef(Temp, 0) <> 0);
 end;
@@ -450,7 +457,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  Result := ShortInt(StrToIntDef(GetString(ColumnIndex), 0));
+  Result := ShortInt(StrToIntDef(String(GetString(ColumnIndex)), 0));
 end;
 
 {**
@@ -467,7 +474,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
-  Result := SmallInt(StrToIntDef(GetString(ColumnIndex), 0));
+  Result := SmallInt(StrToIntDef(String(GetString(ColumnIndex)), 0));
 end;
 
 {**
@@ -484,7 +491,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
-  Result := StrToIntDef(GetString(ColumnIndex), 0);
+  Result := StrToIntDef(String(GetString(ColumnIndex)), 0);
 end;
 
 {**
@@ -501,7 +508,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-  Result := StrToInt64Def(GetString(ColumnIndex), 0);
+  Result := StrToInt64Def(String(GetString(ColumnIndex)), 0);
 end;
 
 {**
@@ -518,7 +525,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
-  Result := SQLStrToFloatDef(GetString(ColumnIndex), 0);
+  Result := SQLStrToFloatDef(String(GetString(ColumnIndex)), 0);
 end;
 
 {**
@@ -535,7 +542,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
-  Result := SQLStrToFloatDef(GetString(ColumnIndex), 0);
+  Result := SQLStrToFloatDef(String(GetString(ColumnIndex)), 0);
 end;
 
 {**
@@ -553,7 +560,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
-  Result := SQLStrToFloatDef(GetString(ColumnIndex), 0);
+  Result := SQLStrToFloatDef(String(GetString(ColumnIndex)), 0);
 end;
 
 {**
@@ -590,7 +597,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
-  Value := GetString(ColumnIndex);
+  Value := String(GetString(ColumnIndex));
 
   LastWasNull := (LastWasNull or (Copy(Value, 1, 10)='0000-00-00'));
   if LastWasNull then
@@ -622,7 +629,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-  Value := GetString(ColumnIndex);
+  Value := String(GetString(ColumnIndex));
 
   LastWasNull := (LastWasNull or (Copy(Value, 1, 8)='00:00:00'));
   if LastWasNull then
@@ -654,7 +661,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
 {$ENDIF}
-  Temp := GetPChar(ColumnIndex);
+  Temp := String(GetPChar(ColumnIndex));
 
   if LastWasNull then
   begin
@@ -908,7 +915,10 @@ var
   tempPrepStmt : IZMysqlPreparedStatement;
 begin
   inherited Create(Statement, SQL, TZMySQLResultSetMetadata.Create(
-    Statement.GetConnection.GetMetadata, SQL, Self));
+    Statement.GetConnection.GetMetadata, SQL, Self)
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    ,Statement.GetConnection.GetClientCodePageInformations
+    {$ENDIF});
 
   FHandle := Handle;
   tempPrepStmt := Statement as IZMysqlPreparedStatement;
@@ -978,11 +988,17 @@ begin
     begin
       FieldFlags := FPlainDriver.GetFieldFlags(FieldHandle);
 
-      ColumnLabel := FPlainDriver.GetFieldName(FieldHandle);
-      TableName := FPlainDriver.GetFieldTable(FieldHandle);
+      {$IFDEF CHECK_CLIENT_CODE_PAGE}
+      ColumnLabel := ZString(FPlainDriver.GetFieldName(FieldHandle));
+      TableName := ZString(FPlainDriver.GetFieldTable(FieldHandle));
+      {$ELSE}
+      ColumnLabel := String(FPlainDriver.GetFieldName(FieldHandle));
+      TableName := String(FPlainDriver.GetFieldTable(FieldHandle));
+      {$ENDIF}
       ReadOnly := (FPlainDriver.GetFieldTable(FieldHandle) = '');
       ColumnType := ConvertMySQLHandleToSQLType(FPlainDriver,
-        FieldHandle, FieldFlags);
+        FieldHandle, FieldFlags
+        {$IFDEF CHECK_CLIENT_CODE_PAGE}, GetStatement.GetConnection.GetClientCodePageInformations^.Encoding{$ENDIF});
       ColumnDisplaySize := FPlainDriver.GetFieldLength(FieldHandle);
       Precision := Max(FPlainDriver.GetFieldMaxLength(FieldHandle),
         FPlainDriver.GetFieldLength(FieldHandle));
@@ -1091,11 +1107,14 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
 {$ENDIF}
-
-   {$IFDEF DELPHI12_UP}
-   Result := UTF8String(PAnsiChar(FColumnArray[ColumnIndex - 1].buffer));
+   {$IFDEF CHECK_CLIENT_CODE_PAGE}
+     Result := ZAnsiString(String(PAnsiChar(FColumnArray[ColumnIndex - 1].buffer)));
    {$ELSE}
-   Result := AnsiString(FColumnArray[ColumnIndex - 1].buffer);
+     {$IFDEF DELPHI12_UP}
+     Result := UTF8String(PAnsiChar(FColumnArray[ColumnIndex - 1].buffer));
+     {$ELSE}
+     Result := AnsiString(FColumnArray[ColumnIndex - 1].buffer);
+     {$ENDIF}
    {$ENDIF}
 
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
@@ -1117,7 +1136,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-   Temp := UpperCase(GetString(ColumnIndex));
+   Temp := UpperCase(String(GetString(ColumnIndex)));
   Result := (Temp = 'Y') or (Temp = 'YES') or (Temp = 'T') or
     (Temp = 'TRUE') or (StrToIntDef(Temp, 0) <> 0);
 end;

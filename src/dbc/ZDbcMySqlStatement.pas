@@ -197,15 +197,15 @@ uses
 }
 constructor TZMySQLStatement.Create(PlainDriver: IZMySQLPlainDriver;
   Connection: IZConnection; Info: TStrings; Handle: PZMySQLConnect);
-var
-  MySQLConnection: IZMySQLConnection;
+//var
+//  MySQLConnection: IZMySQLConnection;
 begin
   inherited Create(Connection, Info);
   FHandle := Handle;
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
 
-  MySQLConnection := Connection as IZMySQLConnection;
+  //MySQLConnection := Connection as IZMySQLConnection;
   FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
 end;
 
@@ -252,7 +252,7 @@ begin
     CachedResolver := TZMySQLCachedResolver.Create(FPlainDriver, FHandle, Self,
       NativeResultSet.GetMetaData);
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
-      CachedResolver);
+      CachedResolver{$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
     CachedResultSet.SetConcurrency(GetResultSetConcurrency);
     Result := CachedResultSet;
   end
@@ -270,10 +270,10 @@ end;
 function TZMySQLStatement.ExecuteQuery(const SQL: string): IZResultSet;
 begin
   Result := nil;
-  {$IFDEF DELPHI12_UP}
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(AnsiString(SQL))) = 0 then
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(Self.GetPrepreparedSQL(SQL))) = 0 then
   {$ELSE}
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
+    if FPlainDriver.ExecQuery(FHandle, PAnsiChar(AnsiString(SQL))) = 0 then
   {$ENDIF}
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
@@ -302,10 +302,10 @@ var
   HasResultset : Boolean;
 begin
   Result := -1;
-  {$IFDEF DELPHI12_UP}
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(AnsiString(SQL))) = 0 then
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(Self.GetPrepreparedSQL(SQL))) = 0 then
   {$ELSE}
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
+    if FPlainDriver.ExecQuery(FHandle, PAnsiChar(AnsiString(SQL))) = 0 then
   {$ENDIF}
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
@@ -357,10 +357,10 @@ var
 begin
   Result := False;
   FSQL := SQL;
-  {$IFDEF DELPHI12_UP}
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(AnsiString(SQL))) = 0 then
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(Self.GetPrepreparedSQL(SQL))) = 0 then
   {$ELSE}
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
+    if FPlainDriver.ExecQuery(FHandle, PAnsiChar(AnsiString(SQL))) = 0 then
   {$ENDIF}
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
@@ -462,14 +462,20 @@ begin
   BufferLen := Length(Value) * 2 + 1;
   GetMem(Buffer, BufferLen);
   if FHandle = nil then
-  {$IFDEF DELPHI12_UP}
-    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(UTF8Encode(Value)), Length(PAnsiChar(UTF8Encode(Value))))
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: If it's tested remove all directives
+    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(ZAnsiString(Value)), Length(PAnsiChar(ZAnsiString(Value))))
   else
-    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(UTF8Encode(Value)), Length(PAnsiChar(UTF8Encode(Value))));
-  {$ELSE}
-    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(Value), Length(Value))
-   else
-    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(Value), Length(Value));
+    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(ZAnsiString(Value)), Length(PAnsiChar(ZAnsiString(Value))));
+  {$ELSE} //The rest should be waste
+    {$IFDEF DELPHI12_UP}
+      BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(UTF8Encode(Value)), Length(PAnsiChar(UTF8Encode(Value))))
+    else
+      BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(UTF8Encode(Value)), Length(PAnsiChar(UTF8Encode(Value))));
+    {$ELSE}
+      BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(Value), Length(Value))
+     else
+      BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(Value), Length(Value));
+    {$ENDIF}
   {$ENDIF}
   Result := '''' + BufferToStr(Buffer, BufferLen) + '''';
   FreeMem(Buffer);
@@ -614,10 +620,11 @@ begin
       CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoInitPrepStmt);
       exit;
     end;
-  {$IFDEF DELPHI12_UP}
-  if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(AnsiString(SQL)), length(SQL)) <> 0) then
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(GetPrepreparedSQL(SQL)),
+    length(SQL)) <> 0) then
   {$ELSE}
-  if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(SQL), length(SQL)) <> 0) then
+  if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(AnsiString(SQL)), length(SQL)) <> 0) then
   {$ENDIF}
     begin
       CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoPrepareStmt);
@@ -665,7 +672,7 @@ begin
     CachedResolver := TZMySQLCachedResolver.Create(FPlainDriver, FHandle, (Self as IZMysqlStatement),
       NativeResultSet.GetMetaData);
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
-      CachedResolver);
+      CachedResolver{$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
     CachedResultSet.SetConcurrency(GetResultSetConcurrency);
     Result := CachedResultSet;
   end
@@ -705,7 +712,11 @@ begin
               FIELD_TYPE_FLOAT:    Single(PBuffer^)     := InParamValues[I].VFloat;
               FIELD_TYPE_STRING:
                 begin
-                  CastString := AnsiString(InParamValues[I].VString);
+                  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+                  CastString := ZAnsiString(InParamValues[I].VString);
+                  {$ELSE}
+                  CastString := InParamValues[I].VString; //DataLoss!! VString = Wide since D12_UP
+                  {$ENDIF}
                   for J := 1 to system.length(CastString) do
                     begin
                       PAnsiChar(PBuffer)^ := CastString[J];

@@ -132,8 +132,12 @@ type
     //HA 090811 Change Type of FOnLogin to new TZLoginEvent
     //FOnLogin: TLoginEvent;
     FOnLogin: TZLoginEvent;
-    FClientCodepage: String; //String
+    FClientCodepage: String;
 
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    FClientCodePageOptions: TZClientCodePageOptions;
+    procedure SetClientCodePageOptions(Value: TZClientCodePageOptions);
+    {$ENDIF}
     function GetConnected: Boolean;
     procedure SetConnected(Value: Boolean);
     procedure SetProperties(Value: TStrings);
@@ -213,6 +217,13 @@ type
     procedure GetStoredProcNames(const Pattern: string; List: TStrings);
     procedure GetTriggerNames(const TablePattern, SchemaPattern: string; List: TStrings);
 
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    //EgonHugeist
+    function GetBinaryEscapeStringFromString(const BinaryMarkSequence: String; const BinaryString: AnsiString): String; overload;
+    function GetBinaryEscapeStringFromStream(const BinaryMarkSequence: String; const Stream: TStream): String; overload;
+    function GetBinaryEscapeStringFromFile(const BinaryMarkSequence: String; const FileName: String): String; overload;
+    {$ENDIF}
+
     property InTransaction: Boolean read GetInTransaction;
 
     property User: string read FUser write FUser;
@@ -231,6 +242,9 @@ type
     procedure ShowSQLHourGlass;
     procedure HideSQLHourGlass;
   published
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    property ClientCodePageOptions: TZClientCodePageOptions read FClientCodePageOptions write SetClientCodePageOptions default [coShowSupportedsOnly, coSetCodePageToConnection];
+    {$ENDIF}
     property ClientCodepage: String read FClientCodepage write SetClientCodePage; //EgonHugeist
     property Catalog: string read FCatalog write FCatalog;
     property Properties: TStrings read FProperties write SetProperties;
@@ -403,6 +417,21 @@ begin
       FClientCodepage := Trim(Value.Values['codepage'])
     else
       Value.Values['codepage'] := FClientCodepage;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    if Value.Values['CodePageCompatibilityWarning']='OFF' then
+      if coShowSupportedsOnly in FClientCodePageOptions then
+        FClientCodePageOptions := FClientCodePageOptions + [coShowSupportedsOnly]
+      else
+        FClientCodePageOptions := FClientCodePageOptions - [coShowSupportedsOnly];
+      if Value.Values['SetCodePageToConnection'] = 'ON' then
+        FClientCodePageOptions := FClientCodePageOptions + [coSetCodePageToConnection]
+      else
+        FClientCodePageOptions := FClientCodePageOptions - [coSetCodePageToConnection];
+      if Value.Values['PreprepareSQL'] = 'ON' then
+        FClientCodePageOptions := FClientCodePageOptions + [coPreprepareSQL]
+      else
+        FClientCodePageOptions := FClientCodePageOptions - [coPreprepareSQL];
+    {$ENDIF}
     FProperties.Text := Value.Text
   end
   else
@@ -1219,7 +1248,123 @@ begin
   end;
 end;
 
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+{**
+  EgonHugeist: Returns a EscapeState detectable String to inform the Tokenizer
+    to do no UTF8Encoding if neccessary
+  @param BinaryString Represents the BinaryString wich has to prepered
+  @param BinaryMarkSequence represents an identifier string minimum length >= 3
+  @Result: A Prepared String like '~<|1023|<~''Binary-data-string(1023 Bytes)''~<|1023|<~
+}
+function TZAbstractConnection.GetBinaryEscapeStringFromString(const
+  BinaryMarkSequence: String; const BinaryString: AnsiString): String;
+begin
+  CheckConnected;
 
+  if Assigned(FConnection) then
+    Result := FConnection.GetBinaryEscapeString(BinaryString, BinaryMarkSequence);
+end;
+
+{**
+  EgonHugeist: Returns a BinaryState detectable String to inform the Tokenizer
+    to do no UTF8Encoding if neccessary
+  @param BinaryString Represents the BinaryString wich has to prepered
+  @param BinaryMarkSequence represents an identifier string minimum length >= 3
+  @Result: A Prepared String like '~<|1023|<~''Binary-data-string(1023 Char's)''~<|1023|<~
+}
+function TZAbstractConnection.GetBinaryEscapeStringFromStream(
+  const BinaryMarkSequence: String; const Stream: TStream): String;
+var
+  FBlobSize: Integer;
+  FBlobData: Pointer;
+  TempAnsi: AnsiString;
+begin
+  CheckConnected;
+
+  if Assigned(FConnection) then
+  begin
+    if Assigned(Stream) then
+    begin
+      FBlobSize := Stream.Size;
+      if FBlobSize > 0 then
+      begin
+        GetMem(FBlobData, FBlobSize);
+        Stream.Position := 0;
+        Stream.ReadBuffer(FBlobData^, FBlobSize);
+      end;
+    end
+    else
+    begin
+      FBlobSize := -1;
+      FBlobData := nil;
+    end;
+    if (FBlobSize > 0) and Assigned(FBlobData) then
+      System.SetString(TempAnsi, PAnsiChar(FBlobData), FBlobSize)
+    else
+      TempAnsi := '';
+    if Assigned(FBlobData) then
+      FreeMem(FBlobData);
+    FBlobData := nil;
+
+    Result := FConnection.GetBinaryEscapeString(TempAnsi, BinaryMarkSequence);
+  end;
+end;
+
+{**
+  EgonHugeist: Returns a BinaryState detectable String to inform the Tokenizer
+    to do no UTF8Encoding if neccessary
+  @param BinaryMarkSequence represents an identifier string minimum length >= 3
+  @param FileName represents the FileName which has to be readed
+  @Result: A Prepared String like '~<|1023|<~''Binary-data-string(1023 Char's)''~<|1023|<~
+}
+function TZAbstractConnection.GetBinaryEscapeStringFromFile(
+  const BinaryMarkSequence: String; const FileName: String): String;
+var
+  FStream: TFileStream;
+begin
+  CheckConnected;
+
+  if FileExists(FileName) then
+  begin
+    FStream := TFileStream.Create(FileName, fmOpenRead);
+    Result := GetBinaryEscapeStringFromStream(BinaryMarkSequence, FStream);
+    FStream.Free;
+    FStream := nil;
+  end;
+end;
+
+{**
+  EgonHugeist: ClientCodePage-handling-options:
+  @param Value the Set of TZClientCodePageOptions
+    possible Values:
+      coShowSupportedsOnly: represents a switch to show or hide Compiler &
+        Database (un)supported CharacterSets/CodePages
+      coDisableSupportWarning swiches the internal Warning for unsupported
+        CharacterSets/CodePages on or off
+    coSetCodePageToConnection:
+      Compatibility-switch for developers who need Unicode-Fields and do write
+      unicoded data in a non unicoded Database
+    coPreprepareSQL:
+      Compatibility swich. So the SQL-Statemnents where/where not preprepared
+      (neccessary for UTFEncodings)
+}
+procedure TZAbstractConnection.SetClientCodePageOptions(Value: TZClientCodePageOptions);
+begin
+  if coDisableSupportWarning in Value then
+    Self.FProperties.Values['CodePageCompatibilityWarning'] :=  'OFF'
+  else
+    Self.FProperties.Values['CodePageCompatibilityWarning'] :=  '';
+  if coSetCodePageToConnection in Value then
+    Self.FProperties.Values['SetCodePageToConnection'] :=  'ON'
+  else
+    Self.FProperties.Values['SetCodePageToConnection'] :=  '';
+  if coPreprepareSQL in Value then
+    Self.FProperties.Values['PreprepareSQL'] := 'ON'
+  else
+    Self.FProperties.Values['PreprepareSQL'] := '';
+  Self.FClientCodePageOptions := Value;
+end;
+{$ENDIF}
 
 
 {**

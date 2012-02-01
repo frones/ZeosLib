@@ -71,7 +71,8 @@ uses
 
 type
   {** Implements Abstract ResultSet. }
-  TZAbstractResultSet = class(TInterfacedObject, IZResultSet)
+  TZAbstractResultSet = class({$IFDEF CHECK_CLIENT_CODE_PAGE}
+  TAbstractCodePagedInterfacedObject{$ELSE}TInterfacedObject{$ENDIF}, IZResultSet)
   private
     FTemp: Ansistring;
     FRowNo: Integer;
@@ -114,7 +115,8 @@ type
     property Metadata: TContainedObject read FMetadata write FMetadata;
   public
     constructor Create(Statement: IZStatement; SQL: string;
-      Metadata: TContainedObject);
+      Metadata: TContainedObject{$IFDEF CHECK_CLIENT_CODE_PAGE}
+      ;ClientCodePage: PZCodePage{$ENDIF});
     destructor Destroy; override;
 
     procedure SetType(Value: TZResultSetType);
@@ -293,7 +295,8 @@ type
   end;
 
   {** Implements external or internal blob wrapper object. }
-  TZAbstractBlob = class(TInterfacedObject, IZBlob)
+  TZAbstractBlob = class({$IFDEF CHECK_CLIENT_CODE_PAGE}
+  TAbstractCodePagedInterfacedObject{$ELSE}TInterfacedObject{$ENDIF}, IZBlob)
   private
     FBlobData: Pointer;
     FBlobSize: Integer;
@@ -337,10 +340,14 @@ uses ZMessages, ZDbcUtils, ZDbcResultSetMetadata;
   @param Metadata a resultset metadata object.
 }
 constructor TZAbstractResultSet.Create(Statement: IZStatement; SQL: string;
-  Metadata: TContainedObject);
+  Metadata: TContainedObject{$IFDEF CHECK_CLIENT_CODE_PAGE}
+      ;ClientCodePage: PZCodePage{$ENDIF});
 var
   DatabaseMetadata: IZDatabaseMetadata;
 begin
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  Self.ClientCodePage := ClientCodePage;
+  {$ENDIF}
   LastWasNull := True;
   FRowNo := 0;
   FLastRowNo := 0;
@@ -2176,7 +2183,11 @@ begin
     vtBoolean: UpdateBoolean(ColumnIndex, Value.VBoolean);
     vtInteger: UpdateLong(ColumnIndex, Value.VInteger);
     vtFloat: UpdateBigDecimal(ColumnIndex, Value.VFloat);
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    vtString: UpdateString(ColumnIndex, ZAnsiString(Value.VString));
+    {$ELSE}
     vtString: UpdateString(ColumnIndex, Value.VString);
+    {$ENDIF}
     vtDateTime: UpdateTimestamp(ColumnIndex, Value.VDateTime);
     vtUnicodeString: UpdateUnicodeString(ColumnIndex, Value.VUnicodeString);
   else
@@ -2736,6 +2747,7 @@ end;
 }
 constructor TZAbstractBlob.CreateWithStream(Stream: TStream);
 begin
+   { TODO -oEgonHugeist : CodePageSettings... }
   inherited Create;
   FUpdated := False;
   if Assigned(Stream) then
@@ -2866,10 +2878,6 @@ end;
 // gto: this must be tested!  We need to add the Move (  Len * Sizeof(Char)) to this    //AVZ
 function TZAbstractBlob.GetUnicodeString: WideString;
 var
-
-
-
-
   Buffer: AnsiString;
   Len: Integer;
 begin
@@ -2890,7 +2898,11 @@ end;
 }
 procedure TZAbstractBlob.SetUnicodeString(const Value: WideString);
 begin
-  SetString(Value);
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  SetString(ZAnsiString(Value));
+  {$ELSE}
+  SetString(AnsiString(Value)); //EgonHugeist: String-DataLoss!!
+  {$ENDIF}
 end;
 
 {**

@@ -134,7 +134,193 @@ function GetProcAddress(Module: HMODULE; Proc: PChar): Pointer;
   {$ENDIF}
 {$ENDIF}
 
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+{EgonHugeist:}
+type
+
+  TZClientCodePageOption = (coShowSupportedsOnly, coDisableSupportWarning,
+    coSetCodePageToConnection, coPreprepareSQL);
+  TZClientCodePageOptions = set of TZClientCodePageOption;
+
+  TZCharEncoding = (
+    ceDefault, //Internal switch for the two Functions below do not use it as a CodePage-decaration!
+    ceUnsupported,  //may be Realy Unsupported CodePages {This must be testet before}
+    ceAnsi, //Base Ansi-String: not prefred CodePage
+    ceUTF8, //UTF8_Unicode: 1-4Byte/Char
+    ceUTF16 //UTF16/USC2 Unicode: 2-4 Byte/Char
+    {$IFNDEF MSWINDOWS}
+    ,ceUTF32 //UTF32 Unicode 4Bytes per Char actual Windows-unsupported!!
+    {$ENDIF});
+    {Here it possible to add some more, to handle the Ansi->Unicode-Translations}
+
+  TZCodePage = {packed to slow..} record
+    Name: String; //Name of Client-CharacterSet
+    ID:  Integer; {may be an ordinal value of predefined Types...}
+    Encoding: TZCharEncoding; //The Type of String-Translation handling
+    CP:  Word; //The CodePage the AnsiString must have to
+    ZAlias: String; //A possible (saver?) CharacterSet which is more Zeos compatible...
+                    //If it's empty it will be ignored!!!
+  end;
+  PZCodePage = ^TZCodePage;
+
+  TAbstractCodePagedInterfacedObject = Class(TInterfacedObject)
+  private
+    FCodePage: PZCodePage;
+  protected
+    {EgonHugeist:
+      Now use the new Functions to get encoded Strings instead of
+      hard-Coded Compiler-Directives or UTF8Encode/Decode:
+
+      function ZString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
+      function ZAnsiString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
+    These functions do auto arrange the in/out-coming AnsiStrings in
+    dependency of the used CharacterSet and the used Compiler}
+    function ZString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
+    function ZAnsiString(const Str: String; const Encoding: TZCharEncoding = ceDefault; const CP:  Word = 0): AnsiString;
+    property ClientCodePage: PZCodePage read FCodePage write FCodePage;
+  public
+    destructor Destroy; override;
+  end;
+  //TZAbstractObject
+const
+  ClientCodePageDummy: TZCodepage =
+    (Name: ''; ID: 0; Encoding: ceAnsi; CP: 0; ZAlias: '');
+{$ENDIF}
+
 implementation
+
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+
+{**
+EgonHugeist:
+  Now use the new Functions to get encoded Strings instead of
+  hard-coded Compiler-Directives or UTF8Encode/Decode:
+
+  function ZString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
+  function ZAnsiString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
+
+  These functions do auto arrange the in/out-coming AnsiStrings in
+  dependency of the used CharacterSet and the used Compiler whithout
+  String-DataLoss!!.
+  So my thouths where use only these two function for all
+  String/Ansi/Unicode-handlings of DBC-layer. Which means in full effect
+  no more directives in Zeos Source-Code then here to do this handling.
+  @param Ansi: the String which has to be handled.
+  @param Encoding is set to Default-Character-Set we've choosen bevor (on conecting)
+    Change this if you need some Transtations to a specified Encoding.
+    Example: CharacterSet was set to Latin1 and some "special"-String MUST BE
+     UTF8 instead of Latin1. (SSL-Keys eventualy)
+
+  IS there a need for it? AnsiEncoded adaps automaticaly to WideString
+  So what about coming UTF16/32????
+}
+
+function TAbstractCodePagedInterfacedObject.ZString(const Ansi: AnsiString;
+  const Encoding: TZCharEncoding = ceDefault): String;
+var
+  UseEncoding: TZCharEncoding;
+begin
+  if not Assigned(FCodePage) then
+    raise Exception.Create('CodePage-Informations not Assigned!');
+  if Encoding = ceDefault then
+    UseEncoding := FCodePage.Encoding
+  else
+    UseEncoding := Encoding;
+
+  case UseEncoding of
+    ceUTF8, ceUTF16:
+    {$IFDEF VER200BELOW}
+      Result := UTF8ToString(Ansi);
+    {$ELSE}
+      Result := UTF8Decode(Ansi);
+    {$ENDIF}
+    //ceUTF16: ;//not done yet, may be interesting for SQLite which supports Execute&Open_16-Functions
+    //ceUTF32: //not done yet
+  else
+    Result := String(Ansi); //Ansi to Wide/Unicode is no Problem!!!
+  end;
+end;
+
+{**
+EgonHugeist:
+  Now use the new Functions to get encoded Strings instead of
+  hard-Coded Compiler-Directives or UTF8Encode/Decode:
+
+  function ZString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
+  function ZAnsiString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
+
+  These functions do auto arrange the in/out-coming AnsiStrings in
+  dependency of the used CharacterSet and the used Compiler whithout
+  String-DataLoss!!.
+  So my thouths where Use only these two function for all
+  String/Ansi/Unicode-handlings. Which means in full effect no more Directives
+  in Zeos Source-Code then here to do this Handling
+  @Str: the String which has to be handled.
+  @Encoding is set to Default-Character-Set we've choosen bevor (on conecting)
+    Change this if you need some Transtations to a specified Encoding.
+    Example: CharacterSet was set to Latin1 and some "special"-String MUST BE
+     UTF8 instead of Latin1. (SSL-Keys eventualy)
+}
+function TAbstractCodePagedInterfacedObject.ZAnsiString(const Str: String;
+  const Encoding: TZCharEncoding = ceDefault; const CP:  Word = 0): AnsiString;
+var
+  UseEncoding: TZCharEncoding;
+begin
+  if not Assigned(FCodePage) then
+    raise Exception.Create('CodePage-Informations not Assigned!');
+  if Encoding = ceDefault then
+    UseEncoding := FCodePage.Encoding
+  else
+    UseEncoding := Encoding;
+
+  case UseEncoding of
+    ceUTF8, ceUTF16: Result := AnsiString(UTF8Encode(Str));
+    //ceUTF16: ;//not done yet
+    //ceUTF32
+  else
+    { EgonHugeist:
+      To Delphi12_UP and (comming) FPC 2.8 Users:
+      This function Result an Ansi-String with default OS CodePage
+      Possible Problems:
+        if you've CodePage 1252 and add some Chinese Letters the CodePage
+        turns to 1200 which is able to pick up this 2Byte letters
+        So on we've to add an additional Param to my encodingRecord
+        like an !SAVE!-Alias, we've to use and the CodePage we must have
+        here if it's not UTFx
+
+        BE WARNED!! This is a string-helper Function to handle DataLoss not
+        a solution to Enable all chars for your spezified CharacterSet of your
+        Connection -> trying this may result an Exception if Chars are not
+        supported}
+
+    {$IFDEF DELPHI12_UP} //later for FPC 2.8 too
+    if CP <> 0 then SetCodePage({$IFDEF DELPHI14_UP}RawByteString{$ENDIF}(Result), CP, True);
+    Result := Copy(UTF8Encode(Str), 1, Length(UTF8Encode(Str)));
+    {$ELSE}
+
+      {$IFDEF FPC} //Lazarus -> FPC 2.6
+      { EgonHugeist:
+        Actual the FPC uses CodePage of UTF8 generally (or am i wrong?)
+        So we need to switch to Result to OS- or better Database-Used CodePage first!
+        If this this is correct we have to Copy the String like in Delphi12_UP.
+        Maybe if there is somebody who know's a better solution then me,
+        please do it!}
+
+      Result := Str; //so this must be testet please!!!!!!!
+      {$ELSE} //Delphi7-2005
+      {Uses Alway OS-Default Ansi-CodePage so check if we've to switch here too }
+      Result := Str;
+      {$ENDIF}
+    {$ENDIF}
+  end;
+end;
+
+destructor TAbstractCodePagedInterfacedObject.Destroy;
+begin
+  Self.FCodePage := nil;
+  inherited Destroy;
+end;
+{$ENDIF}
 
 {$IFDEF UNIX}
   {$IFDEF FPC}

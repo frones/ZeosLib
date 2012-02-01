@@ -185,7 +185,8 @@ constructor TZSQLiteResultSet.Create(PlainDriver: IZSQLitePlainDriver;
   ColumnValues: PPAnsiChar);
 begin
   inherited Create(Statement, SQL, TZSQLiteResultSetMetadata.Create(
-    Statement.GetConnection.GetMetadata, SQL, Self));
+    Statement.GetConnection.GetMetadata, SQL, Self)
+    {$IFDEF CHECK_CLIENT_CODE_PAGE},Statement.GetConnection.GetClientCodePageInformations{$ENDIF});
 
   FHandle := Handle;
   FStmtHandle := StmtHandle;
@@ -253,14 +254,16 @@ begin
       ReadOnly := False;
       if TypeName^ <> nil then
       begin
-        ColumnType := ConvertSQLiteTypeToSQLType(TypeName^,
-          FieldPrecision, FieldDecimals);
+        ColumnType := ConvertSQLiteTypeToSQLType(String(TypeName^),
+          FieldPrecision, FieldDecimals
+          {$IFDEF CHECK_CLIENT_CODE_PAGE}, ClientCodePage^.Encoding{$ENDIF});
         Inc(TypeName);
       end
       else
       begin
         ColumnType := ConvertSQLiteTypeToSQLType(FPlainDriver.GetColumnDataType(FStmtHandle,I-1),
-          FieldPrecision, FieldDecimals);
+          FieldPrecision, FieldDecimals
+          {$IFDEF CHECK_CLIENT_CODE_PAGE}, ClientCodePage^.Encoding{$ENDIF});
       end;
       ColumnDisplaySize := FieldPrecision;
       AutoIncrement := False;

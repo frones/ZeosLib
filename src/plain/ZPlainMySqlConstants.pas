@@ -236,7 +236,7 @@ type
 
   MYSQL_FIELD_OFFSET = UInt;
 
-  PMYSQL_OPTIONS = ^_MYSQL_OPTIONS;
+  PMYSQL_OPTIONS   = ^_MYSQL_OPTIONS;
   _MYSQL_OPTIONS = record
     connect_timeout:          UInt;
     read_timeout:             UInt;
@@ -407,7 +407,7 @@ TMYSQL_CLIENT_OPTIONS =
     table:            PAnsiChar;   // Table of column if column was a field
     org_table:        PAnsiChar;   // Org table name if table was an alias
     db:               PAnsiChar;   // Database for table
-    catalog:	       PAnsiChar;   // Catalog for table
+    catalog:	        PAnsiChar;   // Catalog for table
     def:              PAnsiChar;   // Default value (set by mysql_list_fields)
     length:           ULong; // Width of column
     max_length:       ULong; // Max width of selected set
@@ -649,7 +649,7 @@ type
   Tmysql_more_results           = function(Handle: PMYSQL): Byte;                                      {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_next_result            = function(Handle: PMYSQL): Integer;                                   {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_rollback               = function(Handle: PMYSQL): Byte;                                      {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_set_character_set      = function(Handle: PMYSQL; csname: PAnsiChar): Integer;                    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_set_character_set      = function(Handle: PMYSQL; const csname: PAnsiChar): Integer;                    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_set_server_option      = function(Handle: PMYSQL; Option: TMysqlSetOption): Integer;          {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_shutdown               = function(Handle: PMYSQL; shutdown_level: TMysqlShutdownLevel): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_sqlstate               = function(Handle: PMYSQL): PAnsiChar;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};

@@ -201,7 +201,9 @@ begin
       Result := True;
       NativeResultSet := TZAdoResultSet.Create(Self, SQL, AdoRecordSet);
       if ResultSetConcurrency = rcUpdatable then
-        LastResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, TZAdoCachedResolver.Create((Connection as IZAdoConnection).GetAdoConnection, Self, NativeResultSet.GetMetaData))
+        LastResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
+          TZAdoCachedResolver.Create((Connection as IZAdoConnection).GetAdoConnection,
+          Self, NativeResultSet.GetMetaData){$IFDEF CHECK_CLIENT_CODE_PAGE}, ClientCodePage{$ENDIF})
       else LastResultSet := NativeResultSet;
     end else
       LastUpdateCount := RC;

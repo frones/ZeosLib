@@ -74,6 +74,10 @@ type
     function Connect(const Url: string; Info: TStrings): IZConnection; override;
 
     function GetSupportedProtocols: TStringDynArray; override;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetSupportedClientCodePages(const Url: string;
+      Const SupportedsOnly: Boolean): TStringDynArray; override; //EgonHugeist
+    {$ENDIF}
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
 
@@ -103,7 +107,9 @@ type
     FTypeList: TStrings;
     FPlainDriver: IZPostgreSQLPlainDriver;
     FOidAsBlob: Boolean;
+    {$IFNDEF CHECK_CLIENT_CODE_PAGE}
     FClientCodePage: string;
+    {$ENDIF}
     FCharactersetCode: TZPgCharactersetType;
     FServerMajorVersion: Integer;
     FServerMinorVersion: Integer;
@@ -152,6 +158,12 @@ type
 
     function PingServer: Integer; override;
     function GetCharactersetCode: TZPgCharactersetType;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetBinaryEscapeString(const Value: AnsiString;
+      const EscapeMarkSequence: String = '~<|'): String; override;
+    function GetEscapeString(const Value: String;
+      const EscapeMarkSequence: String = '~<|'): String; override;
+    {$ENDIF}
   end;
 
   {** Implements a Postgres sequence. }
@@ -288,6 +300,31 @@ begin
     Result[i+1] := FPlainDrivers[i].GetProtocol;
 end;
 
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+{**
+  EgonHugeist:
+  Get names of the compiler-supported CharacterSets.
+  For example: ASCII, UTF8...
+}
+function TZPostgreSQLDriver.GetSupportedClientCodePages(const Url: string;
+  Const SupportedsOnly: Boolean): TStringDynArray; //EgonHugeist
+var
+  Protocol: string;
+  i: smallint;
+begin
+  Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
+  if LowerCase(Protocol) = 'postgresql' then //Get latest
+    Result := FPlainDrivers[high(FPlainDrivers)].GetSupportedClientCodePages(not SupportedsOnly)
+  else
+    For i := 0 to high(FPlainDrivers) do
+      if Protocol = FPlainDrivers[i].GetProtocol then
+        begin
+          Result := FPlainDrivers[i].GetSupportedClientCodePages(not SupportedsOnly);
+          break;
+        end;
+end;
+{$ENDIF}
+
 {**
   Gets plain driver for selected protocol.
   @param Url a database connection URL.
@@ -344,6 +381,9 @@ begin
 
   FPlainDriver := PlainDriver;
   Self.PlainDriver := PlainDriver;
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  CheckCharEncoding(FClientCodePage, True);
+  {$ENDIF}
   TransactIsolationLevel := tiNone;
 
   { Processes connection properties. }
@@ -351,7 +391,10 @@ begin
     FOidAsBlob := StrToBoolEx(Info.Values['oidasblob'])
   else
     FOidAsBlob := False;
+
+  {$IFNDEF CHECK_CLIENT_CODE_PAGE}
   FClientCodePage := Trim(Info.Values['codepage']);
+  {$ENDIF}
   FCharactersetCode := pg_CS_code(FClientCodePage);
 //  DriverManager.LogError(lcOther,'','Create',Integer(FCharactersetCode),'');
   FNoticeProcessor := DefaultNoticeProcessor;
@@ -505,29 +548,54 @@ begin
 
     FPlainDriver.SetNoticeProcessor(FHandle,FNoticeProcessor,nil);
 
-    { Sets a client codepage. } 
-    if FClientCodePage <> '' then
+    { Sets a client codepage. }
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    if ( FClientCodePage <> '' )and FSetCodePageToConnection then
     begin
-    {$IFDEF DELPHI12_UP}
-      SQL := PAnsiChar(AnsiString(UTF8Decode(Format('SET CLIENT_ENCODING TO ''%s''',
-                                          [FClientCodePage]))));
-    {$ELSE}
-      SQL := PAnsiChar(Format('SET CLIENT_ENCODING TO ''%s''',
-                              [FClientCodePage]));
-    {$ENDIF}
+      SQL := PAnsiChar(ZAnsiString(Format('SET CLIENT_ENCODING TO ''%s''',
+                                          [FClientCodePage])));
       QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL);
       CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute,
                             SQL,QueryHandle);
       FPlainDriver.Clear(QueryHandle);
       DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
     end;
+    {$ELSE}
+    if FClientCodePage <> '' then
+    begin
+      {$IFDEF DELPHI12_UP}
+      SQL := PAnsiChar(AnsiString(UTF8Decode(Format('SET CLIENT_ENCODING TO ''%s''',
+                                          [FClientCodePage]))));
+      {$ELSE}
+      SQL := PAnsiChar(Format('SET CLIENT_ENCODING TO ''%s''',
+                              [FClientCodePage]));
+      {$ENDIF}
+      QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL);
+      CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute,
+                            SQL,QueryHandle);
+      FPlainDriver.Clear(QueryHandle);
+      DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+    end;
+    {$ENDIF}
 
     { Turn on transaction mode }
     StartTransactionSupport;
     { Setup notification mechanism }
     //  PQsetNoticeProcessor(FHandle, NoticeProc, Self);
-
     inherited Open;
+
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    { Gets the current codepage if it wasn't set..}
+    if FClientCodePage = '' then
+      with CreateStatement.ExecuteQuery(Format('select pg_encoding_to_char(%d)',
+        [FPlainDriver.GetClientEncoding(FHandle)])) do
+      begin
+        if Next then FClientCodePage := ZAnsiString(GetString(1));
+        Close;
+      end;
+    CheckCharEncoding(FClientCodePage);
+    {$ENDIF}
+
   finally
     if self.IsClosed and (Self.FHandle <> nil) then
     begin
@@ -1020,6 +1088,36 @@ function TZPostgreSQLConnection.GetCharactersetCode: TZPgCharactersetType;
 begin
   Result := FCharactersetCode;
 end;
+
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+{**
+  EgonHugeist:
+  Returns the BinaryString in a Tokenizer-detectable kind
+  If the Tokenizer don't need to predetect it Result = BinaryString
+  @param Value represents the Binary-String
+  @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
+  @result the detectable Binary String
+}
+function TZPostgreSQLConnection.GetBinaryEscapeString(const Value: AnsiString;
+  const EscapeMarkSequence: String = '~<|'): String;
+begin
+  Result := GetDriver.GetTokenizer.AnsiGetEscapeString(ZDbcPostgreSqlUtils.EncodeBinaryString(String(Value)), EscapeMarkSequence);
+end;
+
+{**
+  EgonHugeist:
+  Returns the BinaryString in a Tokenizer-detectable kind
+  If the Tokenizer don't need to predetect it Result = BinaryString
+  @param Value represents the String
+  @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
+  @result the detectable Postrgres-compatible String
+}
+function TZPostgreSQLConnection.GetEscapeString(const Value: String;
+  const EscapeMarkSequence: String = '~<|'): String;
+begin
+  Result := GetDriver.GetTokenizer.GetEscapeString(ZDbcPostgreSqlUtils.EncodeString(Self.FCharactersetCode, Value), EscapeMarkSequence);
+end;
+{$ENDIF}
 
 { TZPostgreSQLSequence }
 {**

@@ -177,7 +177,8 @@ constructor TZInterbase6ResultSet.Create(Statement: IZStatement; SQL: string;
   var StatementHandle: TISC_STMT_HANDLE; CursorName: AnsiString;
   SqlData: IZResultSQLDA; ParamsSqlData: IZParamsSQLDA; CachedBlob: boolean);
 begin
-  inherited Create(Statement, SQL, nil);
+  inherited Create(Statement, SQL, nil
+  {$IFDEF CHECK_CLIENT_CODE_PAGE},Statement.GetConnection.GetClientCodePageInformations{$ENDIF});
   
   FFetchStat := 0;
   FSqlData := SqlData;

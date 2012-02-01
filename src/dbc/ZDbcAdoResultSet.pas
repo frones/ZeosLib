@@ -128,7 +128,8 @@ uses
 }
 constructor TZAdoResultSet.Create(Statement: IZStatement; SQL: string; AdoRecordSet: ZPlainAdo.RecordSet);
 begin
-  inherited Create(Statement, SQL, nil);
+  inherited Create(Statement, SQL, nil
+  {$IFDEF CHECK_CLIENT_CODE_PAGE},Statement.GetConnection.GetClientCodePageInformations{$ENDIF});
   FAdoRecordSet := AdoRecordSet;
   Open;
 end;

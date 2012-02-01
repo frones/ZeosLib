@@ -75,6 +75,10 @@ type
     function Connect(const Url: string; Info: TStrings): IZConnection; override;
 
     function GetSupportedProtocols: TStringDynArray; override;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetSupportedClientCodePages(const Url: string;
+      Const SupportedsOnly: Boolean): TStringDynArray; override; //EgonHugeist
+    {$ENDIF}
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
 
@@ -271,6 +275,19 @@ begin
   Result[0] := 'oracle';
   Result[1] := FOracle9iPlainDriver.GetProtocol;
 end;
+
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+{**
+  EgonHugeist:
+  Get names of the compiler-supported CharacterSets.
+  For example: ASCII, UTF8...
+}
+function TZOracleDriver.GetSupportedClientCodePages(const Url: string;
+  Const SupportedsOnly: Boolean): TStringDynArray; //EgonHugeist
+begin
+  Result := FOracle9iPlainDriver.GetSupportedClientCodePages(not SupportedsOnly);
+end;
+{$ENDIF}
 
 {**
   Gets plain driver for selected protocol.
@@ -751,6 +768,25 @@ function TZOracleConnection.GetTransactionHandle: POCITrans;
 begin
   Result := FTransHandle;
 end;
+
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+{**
+  Result 100% Compiler-Compatible
+  And sets it Result to FPlaindriver by calling the same Routine
+
+  @param ClientCharacterSet the CharacterSet which has to be checked
+  @result TZCharEncoding may be ceUnsupported if Compiler can't hande...
+
+
+function TZOracleConnection.GetClientCharEncoding(
+  const ClientCharacterSet: String = ''): TZCharEncoding; //EgonHugeist
+begin
+  if ClientCharacterSet = '' then
+    Result := Self.FPlainDriver.GetClientCharEncoding(Self.Info.Values['codepage]) //Save time
+  else
+    Result := Self.FPlainDriver.GetClientCharEncoding(ClientCharacterSet);
+end;}
+{$ENDIF}
 
 { TZOracleSequence }
 

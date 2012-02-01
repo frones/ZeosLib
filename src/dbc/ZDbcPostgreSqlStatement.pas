@@ -90,6 +90,10 @@ type
     function Execute(const SQL: string): Boolean; override;
 
     function IsOidAsBlob: Boolean;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetPrepreparedSQL(const SQL: String): AnsiString; override;
+    {$ENDIF}
+
   end;
 
   {** Implements Prepared SQL Statement. }
@@ -116,10 +120,6 @@ type
   protected
     function GetConnectionHandle():PZPostgreSQLConnect;
     function GetPlainDriver():IZPostgreSQLPlainDriver;
-    {procedure CheckInterbase6Error(const Sql: string = '');
-    procedure FetchOutParams(Value: IZResultSQLDA);
-    function GetProcedureSql(SelectProc: boolean): string;
-    procedure TrimInParameters;}
     function CreateResultSet(const SQL: string;
       QueryHandle: PZPostgreSQLResult): IZResultSet;
   public
@@ -206,7 +206,8 @@ begin
   NativeResultSet.SetConcurrency(rcReadOnly);
   if GetResultSetConcurrency = rcUpdatable then
   begin
-    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil);
+    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil
+      {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
     CachedResultSet.SetConcurrency(rcUpdatable);
     CachedResultSet.SetResolver(TZPostgreSQLCachedResolver.Create(
       Self,  NativeResultSet.GetMetadata));
@@ -229,11 +230,16 @@ var
 begin
   Result := nil;
   ConnectionHandle := GetConnectionHandle();
-  {$IFDEF DELPHI12_UP}
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
-    PAnsiChar(UTF8String(SQL)));
+    PAnsiChar(GetPrepreparedSQL(SQL)));
   {$ELSE}
-  QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
+    {$IFDEF DELPHI12_UP}
+    QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
+      PAnsiChar(UTF8String(SQL)));
+    {$ELSE}
+    QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
+    {$ENDIF}
   {$ENDIF}
   CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
     SQL, QueryHandle);
@@ -262,11 +268,16 @@ var
 begin
   Result := -1;
   ConnectionHandle := GetConnectionHandle();
-  {$IFDEF DELPHI12_UP}
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
-    PAnsiChar(UTF8String(SQL)));
+    PAnsiChar(GetPrepreparedSQL(SQL)));
   {$ELSE}
-  QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
+    {$IFDEF DELPHI12_UP}
+    QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
+      PAnsiChar(UTF8String(SQL)));
+    {$ELSE}
+    QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
+    {$ENDIF}
   {$ENDIF}
   CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
     SQL, QueryHandle);
@@ -310,11 +321,16 @@ var
   ConnectionHandle: PZPostgreSQLConnect;
 begin
   ConnectionHandle := GetConnectionHandle();
-  {$IFDEF DELPHI12_UP}
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
-    PAnsiChar(UTF8String(SQL)));
+    PAnsiChar(GetPrepreparedSQL(SQL)));
   {$ELSE}
-  QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
+    {$IFDEF DELPHI12_UP}
+    QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
+      PAnsiChar(UTF8String(SQL)));
+    {$ELSE}
+    QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
+    {$ENDIF}
   {$ENDIF}
   CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
     SQL, QueryHandle);
@@ -360,6 +376,12 @@ begin
     Result := (self.Connection as IZPostgreSQLConnection).GetConnectionHandle;
 end;
 
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+function TZPostgreSQLStatement.GetPrepreparedSQL(const SQL: String): AnsiString;
+begin
+  Result := inherited GetPrepreparedSQL(SQL);
+end;
+{$ENDIF}
 { TZPostgreSQLPreparedStatement }
 
 {**
@@ -555,7 +577,8 @@ begin
   NativeResultSet.SetConcurrency(rcReadOnly);
   if GetResultSetConcurrency = rcUpdatable then
   begin
-    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil);
+    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil
+      {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
     CachedResultSet.SetConcurrency(rcUpdatable);
     CachedResultSet.SetResolver(TZPostgreSQLCachedResolver.Create(
       Self,  NativeResultSet.GetMetadata));
@@ -697,10 +720,15 @@ var
 begin
   Result := nil;
   ConnectionHandle := GetConnectionHandle();
-  {$IFDEF DELPHI12_UP}
-  QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(UTF8String(SQL)));
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle,
+    PAnsiChar(GetPrepreparedSQL(SQL)));
   {$ELSE}
-  QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
+    {$IFDEF DELPHI12_UP}
+    QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(UTF8String(SQL)));
+    {$ELSE}
+    QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
+    {$ENDIF}
   {$ENDIF}
   CheckPostgreSQLError(Connection, GetPlainDriver, ConnectionHandle, lcExecute,
     SQL, QueryHandle);
@@ -782,7 +810,10 @@ begin
   end
   else
     Result := ASql;
-
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  if GetConnection.DoPreprepareSQL then
+    Result := GetConnection.EscapeString(Result);
+  {$ENDIF}
 end;
 
 {**
@@ -803,11 +834,16 @@ var
 begin
   Result := -1;
   ConnectionHandle := GetConnectionHandle();
-  {$IFDEF DELPHI12_UP}
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle,
-    PAnsiChar(UTF8String(SQL)));
+    PAnsiChar(GetPrepreparedSQL(SQL)));
   {$ELSE}
-  QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
+    {$IFDEF DELPHI12_UP}
+    QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle,
+      PAnsiChar(UTF8String(SQL)));
+    {$ELSE}
+    QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
+    {$ENDIF}
   {$ENDIF}
   CheckPostgreSQLError(Connection, GetPlainDriver, ConnectionHandle, lcExecute,
     SQL, QueryHandle);

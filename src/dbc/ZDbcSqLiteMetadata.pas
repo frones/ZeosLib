@@ -1375,7 +1375,10 @@ begin
         Result.UpdateString(3, TableNamePattern);
         Result.UpdateString(4, GetString(2));
         Result.UpdateInt(5, Ord(ConvertSQLiteTypeToSQLType(
-          GetString(3), Precision, Decimals)));
+          GetString(3), Precision, Decimals
+          {$IFDEF CHECK_CLIENT_CODE_PAGE} { TODO -oEgonHugeist : Remove the directives if its tested... }
+          , GetConnection.GetClientCodePageInformations.Encoding
+          {$ENDIF})));
 
         { Defines a table name. }
         Temp := UpperCase(GetString(3));

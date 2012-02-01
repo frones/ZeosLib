@@ -168,7 +168,8 @@ constructor TZOracleResultSet.Create(PlainDriver: IZOraclePlainDriver;
   Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
   ErrorHandle: POCIError);
 begin
-  inherited Create(Statement, SQL, nil);
+  inherited Create(Statement, SQL, nil
+  {$IFDEF CHECK_CLIENT_CODE_PAGE},Statement.GetConnection.GetClientCodePageInformations{$ENDIF});
 
   FSQL := SQL;
   FStmtHandle := StmtHandle;

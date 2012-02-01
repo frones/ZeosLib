@@ -240,6 +240,45 @@ type
 
   Tsqlite_compile = function(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
      var ppVm: Psqlite_vm; pzTail: PAnsiChar): Integer; cdecl;
+     (*
+      int sqlite3_prepare(
+        sqlite3 *db,            /* Database handle */
+        const char *zSql,       /* SQL statement, UTF-8 encoded */
+        int nByte,              /* Maximum length of zSql in bytes. */
+        sqlite3_stmt **ppStmt,  /* OUT: Statement handle */
+        const char **pzTail     /* OUT: Pointer to unused portion of zSql *)
+
+  Tsqlite_compile_v2 = function(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
+     var ppVm: Psqlite_vm; pzTail: PAnsiChar): Integer; cdecl;
+    (*
+    int sqlite3_prepare_v2(
+      sqlite3 *db,            /* Database handle */
+      const char *zSql,       /* SQL statement, UTF-8 encoded */
+      int nByte,              /* Maximum length of zSql in bytes. */
+      sqlite3_stmt **ppStmt,  /* OUT: Statement handle */
+      const char **pzTail     /* OUT: Pointer to unused portion of zSql */
+    ); *)
+  Tsqlite_compile16 = function(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
+     var ppVm: Psqlite_vm; pzTail: PAnsiChar): Integer; cdecl;
+    (*
+    int sqlite3_prepare16(
+      sqlite3 *db,            /* Database handle */
+      const void *zSql,       /* SQL statement, UTF-16 encoded */
+      int nByte,              /* Maximum length of zSql in bytes. */
+      sqlite3_stmt **ppStmt,  /* OUT: Statement handle */
+      const void **pzTail     /* OUT: Pointer to unused portion of zSql */
+    ); *)
+  Tsqlite_compile16_v2 = function(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
+     var ppVm: Psqlite_vm; pzTail: PAnsiChar): Integer; cdecl;
+    (*
+    int sqlite3_prepare16_v2(
+      sqlite3 *db,            /* Database handle */
+      const void *zSql,       /* SQL statement, UTF-16 encoded */
+      int nByte,              /* Maximum length of zSql in bytes. */
+      sqlite3_stmt **ppStmt,  /* OUT: Statement handle */
+      const void **pzTail     /* OUT: Pointer to unused portion of zSql */
+    ); *)
+
   Tsqlite_step = function(pVm: Psqlite_vm): Integer; cdecl;
   Tsqlite_finalize = function(vm: Psqlite_vm): Integer; cdecl;
   Tsqlite_reset = function(vm: Psqlite_vm): Integer; cdecl;
@@ -407,6 +446,9 @@ type
   protected
     SQLite_API : TZSQLite_API;
     // procedure LoadApi; override; ->completely done in version dependent child classes
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    procedure LoadCodePages; override;
+    {$ENDIF}
   public
     constructor Create;
 
@@ -498,6 +540,17 @@ implementation
 uses ZPlainLoader;
 
 { TZSQLiteBaseDriver }
+
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+procedure TZSQLiteBaseDriver.LoadCodePages;  //Egonhugeist
+begin
+  { MultiByte }
+  AddCodePage('UTF-8', 1, ceUTF8);
+  AddCodePage('UTF-16le', 2, ceUTF16); //Setting this will be ignored by actual Excute(called Compile) of Plaindriver
+  AddCodePage('UTF-16be', 3, ceUTF16); //Setting this will be ignored by actual Excute(called Compile) of Plaindriver
+  AddCodePage('UTF-16', 4, ceUTF16); //Setting this will be ignored by actual Excute(called Compile) of Plaindriver
+end;
+{$ENDIF}
 
 constructor TZSQLiteBaseDriver.Create;
 begin
@@ -953,6 +1006,9 @@ begin
     FLoader.AddLocation(WINDOWS_DLL3_LOCATION);
   {$ELSE}
     FLoader.AddLocation(LINUX_DLL3_LOCATION);
+  {$ENDIF}
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  LoadCodePages;
   {$ENDIF}
 end;
 

@@ -1301,12 +1301,12 @@ function TZOracleDatabaseMetadata.UncachedGetProcedureColumns(const Catalog,
     LProcedureNamePattern, LColumnNamePattern: string;
     TypeName, SubTypeName: string;
     ColumnIndexes : Array[1..8] of integer;
-    ReturnIndexes : Array[1..8] of integer;
+    //ReturnIndexes : Array[1..8] of integer;
     colName:string;
     iColName:integer;
     isFunction:boolean;
     IZStmt:IZStatement;
-    iCol,iRow:integer;
+    iCol:integer;
     bNeedInsertReturns:boolean;
     bInsertingReturns:boolean;
     PZRow1,PZRow2:PZRowBuffer;
@@ -1426,43 +1426,44 @@ function TZOracleDatabaseMetadata.UncachedGetProcedureColumns(const Catalog,
 
 function TZOracleDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
-  var
-    SQL: string;
-    LProcedureNamePattern: string;
-    sName:string;
+var
+  SQL: string;
+  LProcedureNamePattern: string;
+  sName: string;
+begin
+  Result := ConstructVirtualResultSet(ProceduresColumnsDynArray);
+
+  LProcedureNamePattern := '';//ConstructNameCondition(ProcedureNamePattern,      'RDB$PROCEDURE_NAME');
+  SQL := 'select Object_Name, procedure_name from user_procedures';
+
+  if LProcedureNamePattern <> '' then
+    SQL := SQL + ' WHERE ' + LProcedureNamePattern;
+
+  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
   begin
-    Result := ConstructVirtualResultSet(ProceduresColumnsDynArray);
-
-    LProcedureNamePattern := '';//ConstructNameCondition(ProcedureNamePattern,      'RDB$PROCEDURE_NAME');
-    SQL := 'select Object_Name, procedure_name from user_procedures';
-
-    if LProcedureNamePattern <> '' then
-      SQL := SQL + ' WHERE ' + LProcedureNamePattern;
-
-    with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+    while Next do
     begin
-      while Next do
-      begin
-        sName :=GetString(1);
-        if GetString(2)<>'' then
-          sName := sName+'.'+GetString(2);
-        Result.MoveToInsertRow;
-        Result.UpdateNull(1);
-        Result.UpdateNull(2);
-        Result.UpdateString(3, sName); //RDB$PROCEDURE_NAME
-        Result.UpdateNull(4);
-        Result.UpdateNull(5);
-        Result.UpdateNull(6);
-        Result.UpdateNull(7);
-        //Result.UpdateString(7, GetString(3)); //RDB$DESCRIPTION
+      {}
+      sName :=GetString(1);
+      if GetString(2)<>'' then
+        sName := sName+'.'+GetString(2);
+      Result.MoveToInsertRow;
+      Result.UpdateNull(1);
+      Result.UpdateNull(2);
+      Result.UpdateString(3, sName); //RDB$PROCEDURE_NAME
+      Result.UpdateNull(4);
+      Result.UpdateNull(5);
+      Result.UpdateNull(6);
+      Result.UpdateNull(7);
+      //Result.UpdateString(7, GetString(3)); //RDB$DESCRIPTION
 //        if IsNull(2) then //RDB$PROCEDURE_OUTPUTS
-        Result.UpdateInt(8, Ord(prtNoResult));
- //       else Result.UpdateInt(8, Ord(prtReturnsResult));
-        Result.InsertRow;
-      end;
-      Close;
+      Result.UpdateInt(8, Ord(prtNoResult));
+//       else Result.UpdateInt(8, Ord(prtReturnsResult));
+      Result.InsertRow;
     end;
+    Close;
   end;
+end;
 
 
 {**

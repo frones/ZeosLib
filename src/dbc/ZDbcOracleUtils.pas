@@ -698,7 +698,8 @@ begin
   if (Statement.GetResultSetConcurrency = rcUpdatable)
     or (Statement.GetResultSetType <> rtForwardOnly) then
   begin
-    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil);
+    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil
+      {$IFDEF CHECK_CLIENT_CODE_PAGE},Statement.GetConnection.GetClientCodePageInformations{$ENDIF});
     CachedResultSet.SetConcurrency(rcUpdatable);
     CachedResultSet.SetResolver(TZOracleCachedResolver.Create(
       Statement, NativeResultSet.GetMetadata));

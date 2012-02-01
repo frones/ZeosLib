@@ -192,6 +192,10 @@ type
     ['{2157710E-FBD8-417C-8541-753B585332E2}']
 
     function GetSupportedProtocols: TStringDynArray;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetSupportedClientCodePages(const Url: string;
+      Const SupportedsOnly: Boolean): TStringDynArray;
+    {$ENDIF}
     function Connect(const Url: string; Info: TStrings): IZConnection;
     function GetClientVersion(const Url: string): Integer;
     function AcceptsURL(const Url: string): Boolean;
@@ -239,7 +243,6 @@ type
 
     function PingServer: Integer;
     function EscapeString(Value: AnsiString): AnsiString;
-
     procedure Open;
     procedure Close;
     function IsClosed: Boolean;
@@ -262,6 +265,14 @@ type
 
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetBinaryEscapeString(const Value: AnsiString;
+      const EscapeMarkSequence: String = '~<|'): String;
+    function GetEscapeString(const Value: String;
+      const EscapeMarkSequence: String = '~<|'): String;
+    function GetClientCodePageInformations(const ClientCharacterSet: String = ''): PZCodePage; //EgonHugeist
+    function DoPreprepareSQL: Boolean;
+    {$ENDIF}
   end;
 
   {** Database metadata interface. }
@@ -516,6 +527,10 @@ type
 
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;
+
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetPrepreparedSQL(const SQL: String): AnsiString;
+    {$ENDIF}
   end;
 
   {** Prepared SQL statement interface. }
@@ -772,6 +787,10 @@ type
       const ColumnDirs: TBooleanDynArray): Integer;
 
     function GetStatement: IZStatement;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function ZString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
+    function ZAnsiString(const Str: String; const Encoding: TZCharEncoding = ceDefault; const CP:  Word = 0): AnsiString;
+    {$ENDIF}
   end;
 
   {** ResultSet metadata interface. }

@@ -109,8 +109,10 @@ type
     procedure PostRowUpdates(OldRowAccessor, NewRowAccessor: TZRowAccessor);
       override;
   public
-    constructor CreateWithStatement(const SQL: string; Statement: IZStatement);
-    constructor CreateWithColumns(ColumnsInfo: TObjectList; const SQL: string);
+    constructor CreateWithStatement(const SQL: string; Statement: IZStatement
+    {$IFDEF CHECK_CLIENT_CODE_PAGE};ClientCodePage: PZCodePage{$ENDIF});
+    constructor CreateWithColumns(ColumnsInfo: TObjectList; const SQL: string
+    {$IFDEF CHECK_CLIENT_CODE_PAGE};ClientCodePage: PZCodePage{$ENDIF});
     destructor Destroy; override;
   end;
 
@@ -1800,7 +1802,8 @@ begin
       ColumnsInfo.Add(ColumnInfo);
     end;
 
-    Result := TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '');
+    Result := TZVirtualResultSet.CreateWithColumns(ColumnsInfo, ''
+      {$IFDEF CHECK_CLIENT_CODE_PAGE}, IZConnection(FConnection).GetClientCodePageInformations{$ENDIF});
     with Result do
     begin
       SetType(rtScrollInsensitive);
@@ -1959,7 +1962,8 @@ begin
 
     ResultSet.BeforeFirst;
     Result := CopyToVirtualResultSet(ResultSet,
-      TZVirtualResultSet.CreateWithColumns(ColumnsInfo, ''));
+      TZVirtualResultSet.CreateWithColumns(ColumnsInfo, ''
+      {$IFDEF CHECK_CLIENT_CODE_PAGE},IZConnection(Self.FConnection).GetClientCodePageInformations{$ENDIF}));
     ResultSet.BeforeFirst;
   finally
     ColumnsInfo.Free;
@@ -4304,9 +4308,11 @@ end;
   @param SQL an SQL query string.
 }
 constructor TZVirtualResultSet.CreateWithStatement(const SQL: string;
-   Statement: IZStatement);
+   Statement: IZStatement
+   {$IFDEF CHECK_CLIENT_CODE_PAGE};ClientCodePage: PZCodePage{$ENDIF});
 begin
-  inherited CreateWithStatement(SQL, Statement);
+  inherited CreateWithStatement(SQL, Statement
+  {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
 end;
 
 {**
@@ -4315,9 +4321,10 @@ end;
   @param SQL an SQL query string.
 }
 constructor TZVirtualResultSet.CreateWithColumns(ColumnsInfo: TObjectList;
-  const SQL: string);
+  const SQL: string{$IFDEF CHECK_CLIENT_CODE_PAGE};ClientCodePage: PZCodePage{$ENDIF});
 begin
-  inherited CreateWithColumns(ColumnsInfo, SQL);
+  inherited CreateWithColumns(ColumnsInfo, SQL
+  {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
 end;
 
 {**

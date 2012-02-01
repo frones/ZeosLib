@@ -195,7 +195,8 @@ constructor TZASAResultSet.Create(Statement: IZStatement; SQL: string;
       SqlData: IZASASQLDA; ParamsSqlData: IZASASQLDA;
       CachedBlob: boolean);
 begin
-  inherited Create( Statement, SQL, nil);
+  inherited Create( Statement, SQL, nil
+    {$IFDEF CHECK_CLIENT_CODE_PAGE},Statement.GetConnection.GetClientCodePageInformations{$ENDIF});
 
   FFetchStat := 0;
   FSqlData := SqlData;
@@ -473,9 +474,17 @@ begin
   CheckClosed;
   CheckColumnConvertion( ColumnIndex, stString);
   if FInsert or ( FUpdate and FUpdateSQLData.IsAssigned( ColumnIndex - 1)) then
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    Result := ZAnsiString(FUpdateSqlData.GetString( ColumnIndex - 1))
+    {$ELSE}
     Result := FUpdateSqlData.GetString( ColumnIndex - 1)
+    {$ENDIF}
   else
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    Result := ZAnsiString(FSqlData.GetString( ColumnIndex - 1));
+    {$ELSE}
     Result := FSqlData.GetString( ColumnIndex - 1);
+    {$ENDIF}
   LastWasNull := IsNull( ColumnIndex);
 end;
 
@@ -803,7 +812,11 @@ end;
 procedure TZASAResultSet.UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString);
 begin
   PrepareUpdateSQLData;
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  FUpdateSqlData.UpdatePChar(ColumnIndex, PAnsiChar(ZAnsiString(Value)));
+  {$ELSE}
   FUpdateSqlData.UpdatePChar(ColumnIndex, PAnsiChar(string(Value)));
+  {$ENDIF}
 end;
 
 procedure TZASAResultSet.UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray);

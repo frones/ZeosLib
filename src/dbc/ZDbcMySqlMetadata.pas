@@ -1239,7 +1239,9 @@ begin
             Collation:=GetString(ColumnIndexes[6]);
 
             TypeInfoFirst := LowerCase(TypeInfoFirst);
-            MySQLType := ConvertMySQLTypeToSQLType(TypeInfoFirst, TypeInfo, Collation);
+            MySQLType := ConvertMySQLTypeToSQLType(TypeInfoFirst, TypeInfo,
+            {$IFDEF CHECK_CLIENT_CODE_PAGE}GetConnection.GetClientCodePageInformations.Encoding
+            {$ELSE}Collation{$ENDIF});
             Res.UpdateInt(5, Ord(MySQLType));
             Res.UpdateString(6, TypeInfoFirst);
 

@@ -197,11 +197,18 @@ begin
 
   with FIBConnection do
   begin
-    SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle);
-
+    SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle
+      {$IFDEF CHECK_CLIENT_CODE_PAGE}, Self.ClientCodePage{$ENDIF});
     try
+      {$IFDEF CHECK_CLIENT_CODE_PAGE}
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-        GetDBHandle, GetTrHandle, GetDialect, SQL, StmtHandle);
+        FIBConnection.GetDriver.GetTokenizer, ClientCodePage,
+        GetConnection.DoPreprepareSQL, GetDBHandle,
+        GetTrHandle, GetDialect, SQL, StmtHandle);
+      {$ELSE}
+      StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver, GetDBHandle, GetTrHandle,
+        GetDialect, SQL, StmtHandle);
+      {$ENDIF}
 
 //      if not(StatementType in [stSelect, stSelectForUpdate]) then
 //        raise EZSQLException.Create(SStatementIsNotAllowed);
@@ -269,8 +276,15 @@ begin
   with FIBConnection do
   begin
     try
+      {$IFDEF CHECK_CLIENT_CODE_PAGE}
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-        GetDBHandle, GetTrHandle, GetDialect, SQL, StmtHandle);
+        FIBConnection.GetDriver.GetTokenizer, ClientCodePage,
+        GetConnection.DoPreprepareSQL, GetDBHandle, GetTrHandle,
+        GetDialect, SQL, StmtHandle);
+      {$ELSE}
+      StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver, GetDBHandle, GetTrHandle,
+        GetDialect, SQL, StmtHandle);
+      {$ENDIF}
 
 //      if StatementType in [stExecProc, stSelect, stSelectForUpdate] then
 //        raise EZSQLException.Create(SStatementIsNotAllowed);
@@ -336,8 +350,15 @@ begin
   begin
     try
       Result := False;
+      {$IFDEF CHECK_CLIENT_CODE_PAGE}
+      StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
+        FIBConnection.GetDriver.GetTokenizer, ClientCodePage,
+        GetConnection.DoPreprepareSQL, GetDBHandle,
+        GetTrHandle, GetDialect, SQL, StmtHandle);
+      {$ELSE}
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver, GetDBHandle, GetTrHandle,
         GetDialect, SQL, StmtHandle);
+      {$ENDIF}
 
       { Check statement type }
 //      if not (StatementType in [stExecProc]) then
@@ -346,7 +367,8 @@ begin
       { Create Result SQLData if statement returns result }
       if StatementType = stSelect then
       begin
-        SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle);
+        SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle
+          {$IFDEF CHECK_CLIENT_CODE_PAGE}, ClientCodePage{$ENDIF});
         PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
           SQL, StmtHandle, SQLData);
       end;
@@ -411,7 +433,8 @@ begin
   With FIBConnection do
     begin
       {create the parameter bind structure}
-      FParamSQLData := TZParamsSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle);
+      FParamSQLData := TZParamsSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle
+      {$IFDEF CHECK_CLIENT_CODE_PAGE}, ClientCodePage{$ENDIF});
       {check dynamic sql}
       GetPlainDriver.isc_dsql_describe_bind(@StatusVector, @StmtHandle, GetDialect,
         FParamSQLData.GetData);
@@ -563,12 +586,19 @@ begin
   StmtHandle := nil;
   with FIBConnection do
   begin
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+      StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
+        FIBConnection.GetDriver.GetTokenizer, ClientCodePage,
+        GetConnection.DoPreprepareSQL, GetDBHandle,
+        GetTrHandle, GetDialect, SQL, StmtHandle);
+    {$ELSE}
     StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
         GetDBHandle, GetTrHandle, GetDialect, SQL, StmtHandle);
-
+    {$ENDIF}
     if StatementType in [stSelect, stExecProc] then
       begin
-        SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle);
+        SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle
+        {$IFDEF CHECK_CLIENT_CODE_PAGE}, ClientCodePage{$ENDIF});
         PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
           SQL, StmtHandle, SQLData);
       end;
@@ -881,7 +911,8 @@ begin
   ResultSetType := rtScrollInsensitive;
   FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cashedblob', 'true'));
   with FIBConnection do
-    FParamSQLData := TZParamsSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle);
+    FParamSQLData := TZParamsSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}, ClientCodePage{$ENDIF});
 end;
 
 {**
@@ -937,11 +968,19 @@ begin
   begin
     TrimInParameters;
     ProcSql := GetProcedureSql(False);
-    SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle);
+    SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle
+      {$IFDEF CHECK_CLIENT_CODE_PAGE}, ClientCodePage{$ENDIF});
     try
       { Prepare statement }
+      {$IFDEF CHECK_CLIENT_CODE_PAGE}
+        StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
+          FIBConnection.GetDriver.GetTokenizer, ClientCodePage,
+          GetConnection.DoPreprepareSQL, GetDBHandle, GetTrHandle,
+          GetDialect, ProcSql, StmtHandle);
+      {$ELSE}
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver, GetDBHandle, GetTrHandle,
         GetDialect, ProcSql, StmtHandle);
+      {$ENDIF}
       PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
         SQL, StmtHandle, SQLData);
       PrepareParameters(GetPlainDriver, ProcSql, InParamValues, InParamTypes,
@@ -1025,11 +1064,18 @@ begin
   begin
     TrimInParameters;
     ProcSql := GetProcedureSql(True);
-    SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle);
+    SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}, ClientCodePage{$ENDIF});
     try
+      {$IFDEF CHECK_CLIENT_CODE_PAGE}
+        StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
+          FIBConnection.GetDriver.GetTokenizer, ClientCodePage,
+          GetConnection.DoPreprepareSQL, GetDBHandle,
+          GetTrHandle, GetDialect, ProcSql, StmtHandle);
+      {$ELSE}
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
         GetDBHandle, GetTrHandle, GetDialect, ProcSql, StmtHandle);
-
+      {$ENDIF}
 //      if not(StatementType in [stSelect, stSelectForUpdate]) then
 //        raise EZSQLException.Create(SStatementIsNotAllowed);
 
@@ -1120,11 +1166,18 @@ begin
     TrimInParameters;
 
     ProcSql := GetProcedureSql(False);
-    SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle);
+    SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle
+      {$IFDEF CHECK_CLIENT_CODE_PAGE}, ClientCodePage{$ENDIF});
     try
+      {$IFDEF CHECK_CLIENT_CODE_PAGE}
+        StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
+          FIBConnection.GetDriver.GetTokenizer, ClientCodePage,
+          GetConnection.DoPreprepareSQL, GetDBHandle,
+          GetTrHandle, GetDialect, ProcSql, StmtHandle);
+      {$ELSE}
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
         GetDBHandle, GetTrHandle, GetDialect, ProcSql, StmtHandle);
-
+      {$ENDIF}
 //      if not (StatementType in [stSelect, stSelectForUpdate]) then
 //        raise EZSQLException.Create(SStatementIsNotAllowed);
 
@@ -1187,10 +1240,9 @@ begin
       stBigDecimal:
         DefVarManager.SetAsFloat(Temp, Value.GetBigDecimal(I));
       stString:
-        DefVarManager.SetAsString(Temp, Value.GetString(I));
+        DefVarManager.SetAsString(Temp, String(Value.GetString(I)));
       stUnicodeString:
-//        DefVarManager.SetAsUnicodeString(Temp, Value.GetUnicodeString(I));
-        DefVarManager.SetAsUnicodeString(Temp, Value.GetString(I));
+        DefVarManager.SetAsUnicodeString(Temp, String(Value.GetString(I)));
       stDate:
         DefVarManager.SetAsDateTime(Temp, Value.GetDate(I));
       stTime:

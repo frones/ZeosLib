@@ -283,7 +283,9 @@ begin
     begin
       NativeResultSet := TZDBLibResultSet.Create(Self, FSQL);
       NativeResultSet.SetConcurrency(rcReadOnly);
-      CachedResultSet := TZCachedResultSet.Create(NativeResultSet, FSQL, TZDBLibCachedResolver.Create(Self, NativeResultSet.GetMetaData));
+      CachedResultSet := TZCachedResultSet.Create(NativeResultSet,
+        FSQL, TZDBLibCachedResolver.Create(Self, NativeResultSet.GetMetaData)
+        {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
       CachedResultSet.SetType(rtScrollInsensitive);//!!!Cached resultsets are allways this
       CachedResultSet.Last; CachedResultSet.BeforeFirst; //!!!Just to invoke fetchall
       CachedResultSet.SetConcurrency(GetResultSetConcurrency);
@@ -481,7 +483,9 @@ begin
     begin
       NativeResultSet := TZDBLibResultSet.Create(Self, FSQL);
       NativeResultSet.SetConcurrency(rcReadOnly);
-      CachedResultSet := TZCachedResultSet.Create(NativeResultSet, FSQL, TZDBLibCachedResolver.Create(Self, NativeResultSet.GetMetaData));
+      CachedResultSet := TZCachedResultSet.Create(NativeResultSet, FSQL,
+        TZDBLibCachedResolver.Create(Self, NativeResultSet.GetMetaData)
+        {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
       CachedResultSet.SetType(rtScrollInsensitive);//!!!Cached resultsets are allways this
       CachedResultSet.Last; CachedResultSet.BeforeFirst; //!!!Just to invoke fetchall
       CachedResultSet.SetConcurrency(GetResultSetConcurrency);

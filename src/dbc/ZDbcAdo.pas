@@ -71,6 +71,11 @@ type
     function Connect(const Url: string; Info: TStrings): IZConnection; override;
 
     function GetSupportedProtocols: TStringDynArray; override;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetSupportedClientCodePages(const Url: string;
+      const SupportedsOnly: Boolean): TStringDynArray; override; //EgonHugeist
+    {$ENDIF}
+
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
   end;
@@ -159,6 +164,19 @@ begin
   SetLength(Result, 1);
   Result[0] := FAdoPlainDriver.GetProtocol;
 end;
+
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+{**
+  EgonHugeist:
+  Get names of the compiler-supported CharacterSets.
+  For example: ASCII, UTF8...
+}
+function TZAdoDriver.GetSupportedClientCodePages(const Url: string;
+  Const SupportedsOnly: Boolean): TStringDynArray; //EgonHugeist
+begin
+  Result := Self.FAdoPlainDriver.GetSupportedClientCodePages(not SupportedsOnly);
+end;
+{$ENDIF}
 
 {**
   Attempts to make a database connection to the given URL.

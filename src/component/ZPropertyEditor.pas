@@ -222,7 +222,7 @@ uses SysUtils, Forms, Dialogs, Controls, DB, TypInfo,
 {$ENDIF}
 {$IFDEF SHOW_WARNING} 
 ,ZMessages 
-{$ENDIF SHOW_WARNING} 
+{$ENDIF SHOW_WARNING}
 ;
 
 {$IFDEF FPC}
@@ -593,11 +593,31 @@ procedure TZClientCodePagePropertyEditor.GetValueList(List: TStrings);
 var
   Connection: TZAbstractConnection;
   B: Boolean;
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  I: Integer;
+  SDyn: TStringDynArray;
+  S: String;
+  {$ENDIF}
 begin
+
   if GetZComponent is TZAbstractConnection then
     Connection := (GetZComponent as TZAbstractConnection);
+
   if Assigned(Connection) then
   begin
+    {$IFDEF CHECK_CLIENT_CODE_PAGE} //Result Compiler supported CharacterSets
+    if Connection.Protocol = '' then
+      List.Append('No Protocol selected!')
+    else
+    begin
+      s := Format('zdbc:%s:', [Connection.Protocol]);
+      SDyn := DriverManager.GetDriver(s).GetSupportedClientCodePages(s, (coShowSupportedsOnly in Connection.ClientCodePageOptions));
+      for i := 0 to high(SDyn) do
+        List.Append(SDyn[i]);
+
+      TStringList(List).Sort;
+    end;
+    {$ELSE}
     B := Connection.Connected;
     if not B then
     try
@@ -620,6 +640,7 @@ begin
       Connection.HideSqlHourGlass;
       Connection.Connected := B;
     end;
+    {$ENDIF}
   end;
   Connection := nil;
 end;

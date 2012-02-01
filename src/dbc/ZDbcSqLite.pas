@@ -74,6 +74,10 @@ type
     function Connect(const Url: string; Info: TStrings): IZConnection; override;
 
     function GetSupportedProtocols: TStringDynArray; override;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetSupportedClientCodePages(const Url: string;
+      Const SupportedsOnly: Boolean): TStringDynArray; override; //EgonHugeist
+    {$ENDIF}
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
 
@@ -125,6 +129,12 @@ type
 
     function ReKey(const Key: string): Integer;
     function Key(const Key: string): Integer; 
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetBinaryEscapeString(const Value: AnsiString;
+      const EscapeMarkSequence: String = '~<|'): String; override;
+    function GetEscapeString(const Value: String;
+      const EscapeMarkSequence: String = '~<|'): String; override;
+    {$ENDIF}
   end;
 
 var
@@ -245,6 +255,32 @@ begin
     Result[i+1] := FPlainDrivers[i].GetProtocol;
 end;
 
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+{**
+  EgonHugeist:
+  Get names of the compiler-supported CharacterSets.
+  For example: ASCII, UTF8...
+}
+function TZSQLiteDriver.GetSupportedClientCodePages(const Url: string;
+  Const SupportedsOnly: Boolean): TStringDynArray; //EgonHugeist
+var
+  Protocol: string;
+  i: smallint;
+begin
+  Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
+  if LowerCase(Protocol) = 'sqlite' then //latest version
+    Result := FPlainDrivers[high(FPlainDrivers)].GetSupportedClientCodePages(not SupportedsOnly)
+  else
+    For i := 0 to high(FPlainDrivers) do
+      if Protocol = FPlainDrivers[i].GetProtocol then
+        begin
+          Result := FPlainDrivers[i].GetSupportedClientCodePages(not SupportedsOnly);
+          break;
+        end;
+end;
+
+{$ENDIF}
+
 {**
   Gets plain driver for selected protocol.
   @param Url a database connection URL.
@@ -291,9 +327,11 @@ begin
   { Sets a default properties }
   FPlainDriver := PlainDriver;
   Self.PlainDriver := PlainDriver;
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  CheckCharEncoding(FClientCodePage, True);
+  {$ENDIF}
   AutoCommit := True;
   TransactIsolationLevel := tiNone;
-
   Open;
 end;
 
@@ -645,6 +683,28 @@ function TZSQLiteConnection.GetPlainDriver: IZSQLitePlainDriver;
 begin
   Result := FPlainDriver;
 end;
+
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+{**
+  EgonHugeist:
+  Returns the BinaryString in a Tokenizer-detectable kind
+  If the Tokenizer don't need to predetect it Result := BinaryString
+  @param Value represents the Binary-String
+  @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
+  @result the detectable Binary String
+}
+function TZSQLiteConnection.GetBinaryEscapeString(const Value: AnsiString;
+  const EscapeMarkSequence: String = '~<|'): String;
+begin
+  Result := Driver.GetTokenizer.AnsiGetEscapeString('''' + ZDbcSqLiteUtils.EncodeString(Value) + '''', EscapeMarkSequence);
+end;
+
+function TZSQLiteConnection.GetEscapeString(const Value: String;
+  const EscapeMarkSequence: String = '~<|'): String;
+begin
+  Result := Driver.GetTokenizer.GetEscapeString('''' + (Value) + '''', EscapeMarkSequence);
+end;
+{$ENDIF}
 
 initialization
   SQLiteDriver := TZSQLiteDriver.Create;

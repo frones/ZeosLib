@@ -58,7 +58,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, ZDbcIntfs, ZTokenizer, ZCompatibility, ZVariant, ZDbcLogging;
+  Types, Classes, SysUtils, ZDbcIntfs, ZTokenizer, ZCompatibility, ZVariant,
+  ZDbcLogging;
 
 type
   TZSQLTypeArray = array of TZSQLType;
@@ -67,7 +68,8 @@ type
 
   { TZAbstractStatement }
 
-  TZAbstractStatement = class(TInterfacedObject, IZStatement)
+  TZAbstractStatement = class({$IFDEF CHECK_CLIENT_CODE_PAGE}
+  TAbstractCodePagedInterfacedObject{$ELSE}TInterfacedObject{$ENDIF}, IZStatement)
   private
     FMaxFieldSize: Integer;
     FMaxRows: Integer;
@@ -162,6 +164,9 @@ type
 
     function GetWarnings: EZSQLWarning; virtual;
     procedure ClearWarnings; virtual;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetPrepreparedSQL(const SQL: String): AnsiString; virtual;
+    {$ENDIF}
   end;
 
   {** Implements Abstract Prepared SQL Statement. }
@@ -252,7 +257,7 @@ type
     FOutParamTypes: TZSQLTypeArray;
     FOutParamCount: Integer;
     FLastWasNull: Boolean;
-    FTemp: string;
+    FTemp: AnsiString;
   protected
     FDBParamTypes:array[0..1024] of shortInt;
     procedure SetOutParamCount(NewParamCount: Integer); virtual;
@@ -346,6 +351,9 @@ var
 constructor TZAbstractStatement.Create(Connection: IZConnection; Info: TStrings);
 begin
   { Sets the default properties. }
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  Self.ClientCodePage := Connection.GetClientCodePageInformations;
+  {$ENDIF}
   FMaxFieldSize := 0;
   FMaxRows := 0;
   FEscapeProcessing := False;
@@ -594,6 +602,13 @@ end;
 procedure TZAbstractStatement.ClearWarnings;
 begin
 end;
+
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+function TZAbstractStatement.GetPrepreparedSQL(const SQL: String): AnsiString;
+begin
+  Result := Self.GetConnection.GetDriver.GetTokenizer.GetPreparedAnsiSQLString(SQL, CLientCodePage, GetConnection.DoPreprepareSQL);;
+end;
+{$ENDIF}
 
 {**
   Defines the SQL cursor name that will be used by
@@ -1281,7 +1296,7 @@ procedure TZAbstractPreparedStatement.SetPChar(ParameterIndex: Integer;
 var
   Temp: TZVariant;
 begin
-  DefVarManager.SetAsString(Temp, AnsiString(Value));
+  DefVarManager.SetAsString(Temp, String(AnsiString(Value)));
   SetInParam(ParameterIndex, stString, Temp);
 end;
 
@@ -1301,7 +1316,7 @@ procedure TZAbstractPreparedStatement.SetString(ParameterIndex: Integer;
 var
   Temp: TZVariant;
 begin
-  DefVarManager.SetAsString(Temp, Value);
+  DefVarManager.SetAsString(Temp, String(Value));
   SetInParam(ParameterIndex, stString, Temp);
 end;
 
@@ -1316,11 +1331,9 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
-{$IFDEF DELPHI12_UP}
-procedure TZAbstractPreparedStatement.SetUnicodeString(ParameterIndex: Integer; const Value: String);  //AVZ
-{$ELSE}
-procedure TZAbstractPreparedStatement.SetUnicodeString(ParameterIndex: Integer; const Value: WideString);
-{$ENDIF}
+
+procedure TZAbstractPreparedStatement.SetUnicodeString(ParameterIndex: Integer;
+  const Value: {$IFDEF DELPHI12_UP}String{$ELSE}WideString{$ENDIF});
 var
   Temp: TZVariant;
 begin
@@ -1342,7 +1355,7 @@ procedure TZAbstractPreparedStatement.SetBytes(ParameterIndex: Integer;
 var
   Temp: TZVariant;
 begin
-  DefVarManager.SetAsString(Temp, BytesToStr(Value));
+  DefVarManager.SetAsString(Temp, String(BytesToStr(Value)));
   SetInParam(ParameterIndex, stBytes, Temp);
 end;
 
@@ -1757,7 +1770,11 @@ end;
 }
 function TZAbstractCallableStatement.GetString(ParameterIndex: Integer): AnsiString;
 begin
-  Result := SoftVarManager.GetAsString(GetOutParam(ParameterIndex));
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  Result := ZAnsiString(SoftVarManager.GetAsString(GetOutParam(ParameterIndex)));
+  {$ELSE}
+  Result := AnsiString(SoftVarManager.GetAsString(GetOutParam(ParameterIndex)));
+  {$ENDIF}
 end;
 
 {**
@@ -1900,7 +1917,7 @@ end;
 function TZAbstractCallableStatement.GetBytes(ParameterIndex: Integer):
   TByteDynArray;
 begin
-  Result := StrToBytes(SoftVarManager.GetAsString(GetOutParam(ParameterIndex)));
+  Result := StrToBytes(AnsiString(SoftVarManager.GetAsString(GetOutParam(ParameterIndex))));
 end;
 
 {**
@@ -2072,6 +2089,10 @@ begin
     else
       Result := Result + Tokens[I];
   end;
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  if FConnection.DoPreprepareSQL then
+    Result := Self.FConnection.EscapeString(Result);
+  {$ENDIF}
 end;
 
 {**

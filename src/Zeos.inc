@@ -366,4 +366,16 @@
 //PATCH TO DO NO METADATALOADING / UNTESTED HIGH RISK
 {.$DEFINE FOSNOMETA}
 
+//Patch by EgonHugeist to predefine Binary-Data and use ClientCodePages as minimum requirement
+//Uncomment it if you want do use this Unicode-Workaround
+//First way adds a sequence to to Each binary-data so it's detectable and the tokenizer doesn't becomes 'viny-nilly'!
+//Second way: (not done Yet).
+//First disassamble the Query.
+//Then check for used Fields(binary-prefered).
+//Execute the necccessary UTF8Encoding on specified Token and/or add Characterset-Prefix).
+//Last reassamble the Query and send it to the Plain-Driver.
+//Please do some Bug reporting...
+
+//EgonHugeist: Enables to predetect ClientCodePage and arranges the Fields in dependency of it.
+{$DEFINE CHECK_CLIENT_CODE_PAGE}
 

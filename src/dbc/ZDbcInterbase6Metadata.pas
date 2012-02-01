@@ -1486,7 +1486,8 @@ begin
         end;
 
         Result.UpdateInt(6,
-          Ord(ConvertInterbase6ToSqlType(TypeName, SubTypeName))); //DATA_TYPE
+          Ord(ConvertInterbase6ToSqlType(TypeName, SubTypeName
+            {$IFDEF CHECK_CLIENT_CODE_PAGE}, GetConnection.GetClientCodePageInformations^.Encoding{$ENDIF}))); //DATA_TYPE
         Result.UpdateString(7,GetString(ColumnIndexes[4]));    //TYPE_NAME
         Result.UpdateInt(10, GetInt(ColumnIndexes[6]));
         Result.UpdateNull(9);    //BUFFER_LENGTH
@@ -1798,7 +1799,10 @@ begin
         Result.UpdateNull(2);    //TABLE_SCHEM
         Result.UpdateString(3, GetString(ColumnIndexes[7]));    //TABLE_NAME
         Result.UpdateString(4, ColumnName);    //COLUMN_NAME
-        Result.UpdateInt(5, Ord(ConvertInterbase6ToSqlType(TypeName, SubTypeName))); //DATA_TYPE
+        Result.UpdateInt(5, Ord(ConvertInterbase6ToSqlType(TypeName, SubTypeName
+          {$IFDEF CHECK_CLIENT_CODE_PAGE} { TODO -oEgonHugeist : Remove the directives if its tested... }
+          , GetConnection.GetClientCodePageInformations^.Encoding
+          {$ENDIF})));
         // TYPE_NAME
         case TypeName of
           7  : Result.UpdateString(6, 'SMALLINT');
@@ -2674,7 +2678,8 @@ begin
       begin
         Result.MoveToInsertRow;
         Result.UpdateString(1, GetString(2));
-        Result.UpdateInt(2, Ord(ConvertInterbase6ToSqlType(GetInt(1), 0)));
+        Result.UpdateInt(2, Ord(ConvertInterbase6ToSqlType(GetInt(1), 0
+          {$IFDEF CHECK_CLIENT_CODE_PAGE}, Self.GetConnection.GetClientCodePageInformations^.Encoding{$ENDIF})));
         Result.UpdateInt(3, 9);
         Result.UpdateInt(7, Ord(ntNoNulls));
         Result.UpdateBoolean(8, false);
@@ -3020,7 +3025,7 @@ begin
   end;
   {Brings Defaults for Table or Database up}
   SQL :=  'SELECT D.RDB$CHARACTER_SET_NAME, CS.RDB$DEFAULT_COLLATE_NAME, '+
-          'C.RDB$CHARACTER_SET_ID, C.RDB$BYTES_PER_CHARACTER '+
+          'CS.RDB$CHARACTER_SET_ID, CS.RDB$BYTES_PER_CHARACTER '+
           'FROM RDB$DATABASE D '+
           'LEFT JOIN RDB$CHARACTER_SETS CS on '+
           'D.RDB$CHARACTER_SET_NAME = CS.RDB$CHARACTER_SET_NAME; ';

@@ -150,7 +150,8 @@ constructor TZPostgreSQLResultSet.Create(PlainDriver: IZPostgreSQLPlainDriver;
   Statement: IZStatement; SQL: string; Handle: PZPostgreSQLConnect;
   QueryHandle: PZPostgreSQLResult);
 begin
-  inherited Create(Statement, SQL, nil);
+  inherited Create(Statement, SQL, nil
+  {$IFDEF CHECK_CLIENT_CODE_PAGE},Statement.GetConnection.GetClientCodePageInformations{$ENDIF});
 
   FHandle := Handle;
   FQueryHandle := QueryHandle;

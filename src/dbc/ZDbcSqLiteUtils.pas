@@ -58,7 +58,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZPlainSqLiteDriver, ZDbcLogging;
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZPlainSqLiteDriver, ZDbcLogging
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}, ZCompatibility{$ENDIF};
 
 {**
   Convert string SQLite field type to SQLType
@@ -68,7 +69,8 @@ uses
   @result the SQLType field type value
 }
 function ConvertSQLiteTypeToSQLType(TypeName: string; var Precision: Integer;
-  var Decimals: Integer): TZSQLType;
+  var Decimals: Integer
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}; CharEncoding: TZCharEncoding{$ENDIF}): TZSQLType;
 
 {**
   Checks for possible sql errors.
@@ -108,7 +110,8 @@ uses ZMessages;
   @result the SQLType field type value
 }
 function ConvertSQLiteTypeToSQLType(TypeName: string; var Precision: Integer;
-  var Decimals: Integer): TZSQLType;
+  var Decimals: Integer
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}; CharEncoding: TZCharEncoding{$ENDIF}): TZSQLType;
 var
   P1, P2: Integer;
   Temp: string;
@@ -164,7 +167,15 @@ begin
   else if StartsWith(TypeName, 'CHAR') then
     Result := stString
   else if TypeName = 'VARCHAR' then
+    {$IFDEF CHECK_CLIENT_CODE_PAGE} { TODO -oEgonHugeist : Remove the directives if its tested...
+      Shouldn't it be allways stUnicodeString for SQLite? -> minimum requirement is UTF8}
+      if (CharEncoding = ceAnsi) then
+        Result := stString
+      else
+        Result := stUnicodeString
+    {$ELSE}
     Result := {$IFDEF DELPHI12_UP}stUnicodeString{$ELSE}stString{$ENDIF}
+    {$ENDIF}
   else if TypeName = 'VARBINARY' then
     Result := stBytes
   else if TypeName = 'BINARY' then

@@ -57,7 +57,8 @@ interface
 
 {$I ZPlain.inc}
 
-uses ZClasses, ZPlainLoader;
+uses ZClasses, ZPlainLoader
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}, ZCompatibility, Types{$ENDIF};
 
 type
 
@@ -66,45 +67,145 @@ type
     ['{2A0CC600-B3C4-43AF-92F5-C22A3BB1BB7D}']
     function GetProtocol: string;
     function GetDescription: string;
-    {
-    function GetClientVersion: Integer;
-    function GetServerVersion: Integer;
-    procedure GetClientVersionEx(out MajorVersion: Integer;
-     out MinorVersion: Integer; out SubVersion: Integer);
-    procedure GetServerVersionEx(out MajorVersion: Integer;
-     out MinorVersion: Integer; out SubVersion: Integer);
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    {EgonHugeist:
+      Why this here? -> No one else then Plaindriver knows which Characterset
+      is supported. Here i've made a intervention in dependency of used Compiler..
     }
+    function GetSupportedClientCodePages(const IgnoreUnsupported: Boolean): TStringDynArray;
+    function GetClientCodePageInformations(const ClientCharacterSet: String): PZCodePage; //Egonhugeist
+    {$ENDIF}
     procedure Initialize;
   end;
 
+  {ADDED by EgonHugeist 20-01-2011}
+  {** implements a generic base class of a generic plain driver.
+   to make the CodePage-handling tranparency for all Plain-Drivers}
+
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  TZGenericAbstractPlainDriver = class(TZAbstractObject, IZPlainDriver)
+  private
+    FClientCodePage: PZCodePage;
+    FCodePages: array of TZCodePage;
+  protected
+    procedure LoadCodePages; virtual; abstract;
+    procedure AddCodePage(const Name: String; const ID:  Integer;
+      Encoding: TZCharEncoding = ceAnsi;
+      const CP: Word = 0; const ZAlias: String = '');
+    procedure ResetCodePage(const OldID: Integer; const Name: String;
+      const ID:  Integer; {may be an ordinal value of predefined Types...}
+      Encoding: TZCharEncoding = ceAnsi;
+      const CP: Word = 0; const ZAlias: String = '');
+  public
+    function GetProtocol: string; virtual; abstract;
+    function GetDescription: string; virtual; abstract;
+    function GetSupportedClientCodePages(const IgnoreUnsupported: Boolean): TStringDynArray;
+    procedure Initialize; virtual; abstract;
+    destructor Destroy; override;
+
+    function GetClientCodePageInformations(const ClientCharacterSet: String): PZCodePage;
+  end;
+  {$ENDIF}
+
   {ADDED by fduenas 15-06-2006}
-  {** Base class of a generic plain driver. }
+  {** Base class of a generic plain driver with TZNativeLibraryLoader-object. }
 
   { TZAbstractPlainDriver }
 
-  TZAbstractPlainDriver = class(TZAbstractObject, IZPlainDriver)
-   protected
-      FLoader: TZNativeLibraryLoader;
-      procedure LoadApi; virtual;
-   public
+  TZAbstractPlainDriver = class({$IFDEF CHECK_CLIENT_CODE_PAGE}
+    TZGenericAbstractPlainDriver{$ELSE}TZAbstractObject{$ENDIF}, IZPlainDriver)
+  protected
+    FLoader: TZNativeLibraryLoader;
+    procedure LoadApi; virtual;
+  public
     constructor CreateWithLibrary(const LibName : String);
     property Loader: TZNativeLibraryLoader read FLoader;
-    function GetProtocol: string; virtual; abstract;
-    function GetDescription: string; virtual; abstract;
-    {
-    function GetClientVersion: Integer; virtual;
-    function GetServerVersion: Integer; virtual;
-    procedure GetClientVersionEx(out MajorVersion: Integer;
-     out MinorVersion: Integer; out SubVersion: Integer); virtual;
-    procedure GetServerVersionEx(out MajorVersion: Integer;
-     out MinorVersion: Integer; out SubVersion: Integer); virtual;
-    }
-    procedure Initialize; virtual;
+    function GetProtocol: string; {$IFDEF CHECK_CLIENT_CODE_PAGE} override; {$ELSE}virtual; {$ENDIF}abstract;
+    function GetDescription: string; {$IFDEF CHECK_CLIENT_CODE_PAGE} override; {$ELSE}virtual; {$ENDIF} abstract;
+    procedure Initialize; {$IFDEF CHECK_CLIENT_CODE_PAGE} override; {$ELSE}virtual; {$ENDIF}
     destructor Destroy; override;
   end;
   {END ADDED by fduenas 15-06-2006}
 implementation
-uses ZSysUtils;
+
+uses ZSysUtils{$IFDEF CHECK_CLIENT_CODE_PAGE}, SysUtils{$ENDIF};
+
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+
+{TZGenericAbstractPlainDriver}
+
+procedure TZGenericAbstractPlainDriver.AddCodePage(const Name: String;
+      const ID:  Integer; Encoding: TZCharEncoding = ceAnsi;
+      const CP: Word = 0; const ZAlias: String = '');
+begin
+  SetLength(FCodePages, Length(FCodePages)+1);
+  FCodePages[High(FCodePages)].Name := Name;
+  FCodePages[High(FCodePages)].ID := ID;
+  FCodePages[High(FCodePages)].Encoding := Encoding;
+  FCodePages[High(FCodePages)].CP := CP;
+  FCodePages[High(FCodePages)].ZAlias := ZAlias;
+end;
+
+procedure TZGenericAbstractPlainDriver.ResetCodePage(const OldID: Integer;
+      const Name: String; const ID:  Integer; Encoding: TZCharEncoding = ceAnsi;
+      const CP: Word = 0; const ZAlias: String = '');
+var
+  I: Integer;
+begin
+  for i := low(FCodePages) to high(FCodePages) do
+    if OldID = FCodePages[I].ID then
+    begin
+      FCodePages[I].ID := ID;
+      FCodePages[I].Name := Name;
+      FCodePages[I].Encoding := Encoding;
+      FCodePages[I].CP := CP;
+      FCodePages[I].ZAlias := ZAlias;
+      Break;
+    end;
+end;
+
+function TZGenericAbstractPlainDriver.GetSupportedClientCodePages(
+  const IgnoreUnsupported: Boolean): TStringDynArray;
+var
+  I: Integer;
+begin
+  for i := low(FCodePages) to high(FCodePages) do
+    if (not (FCodePages[i].Encoding = ceUnsupported) )
+      or ( IgnoreUnsupported ) then
+    begin
+      SetLength(Result, Length(Result)+1);
+      Result[High(Result)] := FCodePages[i].Name;
+    end;
+end;
+
+destructor TZGenericAbstractPlainDriver.Destroy;
+begin
+  SetLength(FCodePages, 0);
+  inherited Destroy;
+end;
+
+{**
+   Checks if the given CharacterSet is Unicode-Save!
+   @param ClientCharacterSet the Value wich hast to be compared
+   @result True if ClientCharacterSet supports Unicode
+}
+function TZGenericAbstractPlainDriver.GetClientCodePageInformations(
+  const ClientCharacterSet: String): PZCodePage;
+var
+  I: Integer;
+begin
+  {now check for PlainDriver-Informations...}
+  for i := Low(FCodePages) to high(FCodePages) do
+    if UpperCase(FCodePages[i].Name) = UpperCase(ClientCharacterSet) then
+    begin
+      Result := @FCodePages[i];
+      Exit;
+    end;
+  Result := @ClientCodePageDummy;
+end;
+
+{$ENDIF}
+
 { TZAbstractPlainDriver }
 
 {ADDED by fduenas 15-06-2006}

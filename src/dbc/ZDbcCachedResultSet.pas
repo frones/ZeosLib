@@ -157,8 +157,10 @@ type
     property NativeResolver: IZCachedResolver read FNativeResolver;
     {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   public
-    constructor CreateWithStatement(SQL: string; Statement: IZStatement);
-    constructor CreateWithColumns(ColumnsInfo: TObjectList; SQL: string);
+    constructor CreateWithStatement(SQL: string; Statement: IZStatement
+    {$IFDEF CHECK_CLIENT_CODE_PAGE};ClientCodePage: PZCodePage{$ENDIF});
+    constructor CreateWithColumns(ColumnsInfo: TObjectList; SQL: string
+    {$IFDEF CHECK_CLIENT_CODE_PAGE};ClientCodePage: PZCodePage{$ENDIF});
     destructor Destroy; override;
 
     procedure Close; override;
@@ -268,7 +270,8 @@ type
     property ResultSet: IZResultSet read FResultSet write FResultSet;
   public
     constructor Create(ResultSet: IZResultSet; SQL: string;
-      Resolver: IZCachedResolver);
+      Resolver: IZCachedResolver{$IFDEF CHECK_CLIENT_CODE_PAGE}
+      ;ClientCodePage: PZCodePage{$ENDIF});
     destructor Destroy; override;
 
     procedure Close; override;
@@ -293,9 +296,11 @@ uses ZMessages, ZDbcResultSetMetadata, ZDbcGenericResolver, ZDbcUtils;
   @param SQL an SQL query.
 }
 constructor TZAbstractCachedResultSet.CreateWithStatement(SQL: string;
-  Statement: IZStatement);
+  Statement: IZStatement
+  {$IFDEF CHECK_CLIENT_CODE_PAGE};ClientCodePage: PZCodePage{$ENDIF});
 begin
-  inherited Create(Statement, SQL, nil);
+  inherited Create(Statement, SQL, nil
+  {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
   FCachedUpdates := False;
 end;
 
@@ -305,9 +310,10 @@ end;
   @param ColumnsInfo a columns info for cached rows.
 }
 constructor TZAbstractCachedResultSet.CreateWithColumns(
-  ColumnsInfo: TObjectList; SQL: string);
+  ColumnsInfo: TObjectList; SQL: string
+  {$IFDEF CHECK_CLIENT_CODE_PAGE};ClientCodePage: PZCodePage{$ENDIF});
 begin
-  inherited Create(nil, SQL, nil);
+  inherited Create(nil, SQL, nil{$IFDEF CHECK_CLIENT_CODE_PAGE}, ClientCodePage{$ENDIF});
 
   CopyColumnsInfo(ColumnsInfo, Self.ColumnsInfo);
   FCachedUpdates := False;
@@ -753,7 +759,11 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckAvailable;
 {$ENDIF}
-  Result := FRowAccessor.GetString(ColumnIndex, LastWasNull);
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  Result := ZAnsiString(FRowAccessor.GetString(ColumnIndex, LastWasNull));
+  {$ELSE}
+  Result := AnsiString(FRowAccessor.GetString(ColumnIndex, LastWasNull));
+  {$ENDIF}
 end;
 
 {**
@@ -1753,9 +1763,11 @@ end;
   @param Resolver a cached updates resolver object.
 }
 constructor TZCachedResultSet.Create(ResultSet: IZResultSet; SQL: string;
-  Resolver: IZCachedResolver);
+  Resolver: IZCachedResolver{$IFDEF CHECK_CLIENT_CODE_PAGE}
+      ;ClientCodePage: PZCodePage{$ENDIF});
 begin
-  inherited Create(ResultSet.GetStatement, SQL, nil);
+  inherited Create(ResultSet.GetStatement, SQL, nil
+  {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
   FResultSet := ResultSet;
   FResolver := Resolver;
   {BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}

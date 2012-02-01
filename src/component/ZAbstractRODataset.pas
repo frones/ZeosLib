@@ -3440,7 +3440,7 @@ begin
             ftString:
               Statement.SetString(I + 1, AnsiString(ParamValue.AsString)); //smells like DataLoss since ParamValue.String is Unicodestring (example: Big5 2Byte-Chars...)
             ftBytes:
-              Statement.SetString(I + 1, ParamValue.AsString);
+              Statement.SetString(I + 1, String(ParamValue.AsString));
             ftDate:
               Statement.SetDate(I + 1, ParamValue.AsDate);
             ftTime:

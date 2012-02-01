@@ -129,7 +129,8 @@ uses ZMessages, ZDbcLogging, ZDbcDBLibUtils;
 }
 constructor TZDBLibResultSet.Create(Statement: IZStatement; SQL: string);
 begin
-  inherited Create(Statement, SQL, nil);
+  inherited Create(Statement, SQL, nil
+    {$IFDEF CHECK_CLIENT_CODE_PAGE},Statement.GetConnection.GetClientCodePageInformations{$ENDIF});
   Statement.GetConnection.QueryInterface(IZDBLibConnection, FDBLibConnection);
   FPlainDriver := FDBLibConnection.GetPlainDriver;
   FHandle := FDBLibConnection.GetConnectionHandle;

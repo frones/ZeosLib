@@ -110,6 +110,7 @@ type
   {** Represents a generic interface to Interbase native API. }
   IZInterbasePlainDriver = interface (IZPlainDriver)
     ['{AE2C4379-4E47-4752-BC01-D405ACC337F5}']
+
     function GetFirebirdAPI: TZFirebird_API;
     function isc_attach_database (status_vector: PISC_STATUS;
       db_name_length: Short; db_name: PAnsiChar; db_handle: PISC_DB_HANDLE;
@@ -246,6 +247,9 @@ type
     IZInterbasePlainDriver)
     FIREBIRD_API : TZFIREBIRD_API;
   protected
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    procedure LoadCodePages; override;
+    {$ENDIF}
     {$IFDEF ENABLE_INTERBASE_CRYPT}
     FPreLoader : TZNativeLibraryLoader;
     procedure Initialize; virtual;
@@ -409,6 +413,10 @@ type
 
   {** Implements a native driver for Firebird 1.5}
   TZFirebird15PlainDriver = class (TZFirebirdBaseDriver)
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  protected
+    procedure LoadCodePages; override;
+  {$ENDIF}
   public
     constructor Create;
 
@@ -427,6 +435,10 @@ type
 
   {** Implements a native driver for Firebird 2.0}
   TZFirebird20PlainDriver = class (TZFirebirdBaseDriver)
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  protected
+    procedure LoadCodePages; override;
+  {$ENDIF}
   public
     constructor Create;
 
@@ -448,6 +460,9 @@ type
 
   TZFirebird21PlainDriver = class (TZFirebirdBaseDriver)
   protected
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    procedure LoadCodePages; override;
+  {$ENDIF}
     procedure LoadApi; override;
   public
     constructor Create;
@@ -470,6 +485,9 @@ type
 
   TZFirebird25PlainDriver = class (TZFirebirdBaseDriver)
   protected
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    procedure LoadCodePages; override;
+  {$ENDIF}
     procedure LoadApi; override;
   public
     constructor Create;
@@ -503,6 +521,36 @@ begin
 end;
 
 { IZFirebirdPlainDriver }
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+procedure TZFirebirdBaseDriver.LoadCodePages;
+begin
+  Self.AddCodePage('ASCII', 2); {English}
+  Self.AddCodePage('BIG_5', 56); {Chinese, Vietnamese, Korean}
+  Self.AddCodePage('CYRL', 50);  {Russian}
+  Self.AddCodePage('DOS437', 10); {English (USA)}
+  Self.AddCodePage('DOS850', 11); {Latin I (no Euro symbol)}
+  Self.AddCodePage('DOS852', 45); {Latin II}
+  Self.AddCodePage('DOS857', 46); {Turkish}
+  Self.AddCodePage('DOS860', 13); {Portuguese}
+  Self.AddCodePage('DOS861', 47); {Icelandic}
+  Self.AddCodePage('DOS863', 14); {French (Canada)}
+  Self.AddCodePage('DOS865', 12); {Nordic}
+  Self.AddCodePage('EUCJ_0208', 6); {EUC Japanese}
+  Self.AddCodePage('GB_2312', 57); {Simplified Chinese (Hong Kong, PRC)}
+  Self.AddCodePage('ISO8859_1', 21); {Latin 1}
+  Self.AddCodePage('KSC_5601', 44); {Korean (Unified Hangeul)}
+  Self.AddCodePage('NEXT', 19);  {NeXTSTEP encoding}
+  Self.AddCodePage('NONE', 0); {Codepage-neutral. Uppercasing limited to ASCII codes 97-122}
+  Self.AddCodePage('OCTETS', 1); {Binary character}
+  Self.AddCodePage('SJIS_0208', 5); {Japanese}
+  Self.AddCodePage('UNICODE_FSS', 3, ceUTF8); {UNICODE}
+  Self.AddCodePage('WIN1250', 51, ceAnsi, 1250); {ANSI — Central European}
+  Self.AddCodePage('WIN1251', 52, ceAnsi, 1251); {ANSI — Cyrillic}
+  Self.AddCodePage('WIN1252', 53, ceAnsi, 1252); {ANSI — Latin I}
+  Self.AddCodePage('WIN1253', 54, ceAnsi, 1253); {ANSI Greek}
+  Self.AddCodePage('WIN1254', 55, ceAnsi, 1254); {ANSI Turkish}
+end;
+{$ENDIF}
 
 {$IFDEF ENABLE_INTERBASE_CRYPT}
 procedure TZFirebirdBaseDriver.Initialize;
@@ -580,11 +628,11 @@ end;
 
 constructor TZFirebirdBaseDriver.Create;
 begin
-   inherited create;
-    FLoader := TZNativeLibraryLoader.Create([]);
-    {$IFDEF ENABLE_INTERBASE_CRYPT}
-    FPreLoader := TZNativeLibraryLoader.Create([LINUX_IB_CRYPT_LOCATION]);
-    {$ENDIF}
+  inherited create;
+  FLoader := TZNativeLibraryLoader.Create([]);
+  {$IFDEF ENABLE_INTERBASE_CRYPT}
+  FPreLoader := TZNativeLibraryLoader.Create([LINUX_IB_CRYPT_LOCATION]);
+  {$ENDIF}
 end;
 
 {$IFDEF ENABLE_INTERBASE_CRYPT}
@@ -998,6 +1046,7 @@ begin
   Result := FIREBIRD_API.isc_vax_integer(buffer, length);
 end;
 
+{ TZInterbase6PlainDriver }
 
 constructor TZInterbase6PlainDriver.Create;
 begin
@@ -1009,6 +1058,9 @@ begin
     {$IFDEF ENABLE_INTERBASE_CRYPT}
     FPreLoader.AddLocation(LINUX_IB_CRYPT_LOCATION);
     {$ENDIF}
+  {$ENDIF}
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  Self.LoadCodePages;
   {$ENDIF}
 end;
 
@@ -1033,6 +1085,9 @@ begin
     FPreLoader.AddLocation(LINUX_IB_CRYPT_LOCATION);
     {$ENDIF}
   {$ENDIF}
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  Self.LoadCodePages;
+  {$ENDIF}
 end;
 
 function TZFirebird10PlainDriver.GetDescription: string;
@@ -1046,6 +1101,33 @@ begin
 end;
 
 { IZFirebird15PlainDriver }
+
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+procedure TZFirebird15PlainDriver.LoadCodePages;
+begin
+  inherited;
+  ResetCodePage(56, 'BIG_5', 56); {Chinese, Vietnamese, Korean} //Changed Bytes
+  Self.AddCodePage('DOS737', 9); {Greek}
+  Self.AddCodePage('DOS775', 15); {Baltic}
+  Self.AddCodePage('DOS858', 16); {Latin I + Euro symbol}
+  Self.AddCodePage('DOS862', 17); {Hebrew}
+  Self.AddCodePage('DOS864', 18); {Arabic}
+  Self.AddCodePage('DOS866', 48); {Russian}
+  Self.AddCodePage('DOS869', 49); {Modern Greek}
+  Self.AddCodePage('ISO8859_2', 22); {Latin 2 —  Latin3 — Southern European (Maltese, Esperanto)}
+  Self.AddCodePage('ISO8859_3', 23); {Latin 1}
+  Self.AddCodePage('ISO8859_4', 34); {Latin 4 — Northern European (Estonian, Latvian, Lithuanian, Greenlandic, Lappish)}
+  Self.AddCodePage('ISO8859_5', 35); {Cyrillic (Russian)}
+  Self.AddCodePage('ISO8859_6', 36); {Arabic}
+  Self.AddCodePage('ISO8859_7', 37); {Greek}
+  Self.AddCodePage('ISO8859_8', 38); {Hebrew}
+  Self.AddCodePage('ISO8859_9', 39); {Latin 5}
+  Self.AddCodePage('ISO8859_13', 40); {Latin 7 — Baltic Rim}
+  Self.AddCodePage('WIN1255', 58, ceAnsi, 1255); {ANSI Hebrew}
+  Self.AddCodePage('WIN1256', 59, ceAnsi, 1256); {ANSI Arabic}
+  Self.AddCodePage('WIN1257', 60, ceAnsi, 1257); {ANSI Baltic}
+end;
+{$ENDIF}
 
 constructor TZFirebird15PlainDriver.Create;
 begin
@@ -1066,6 +1148,9 @@ begin
       {$ENDIF}
       FPreLoader.AddLocation(LINUX15_IB_CRYPT_LOCATION);
     {$ENDIF}
+  {$ENDIF}
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  Self.LoadCodePages;
   {$ENDIF}
 end;
 
@@ -1109,6 +1194,37 @@ end;
 
 { IZFirebird20PlainDriver }
 
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+procedure TZFirebird20PlainDriver.LoadCodePages;
+begin
+  inherited LoadCodePages;
+  ResetCodePage(56, 'BIG_5', 56); {Chinese, Vietnamese, Korean} //Changed Bytes
+  Self.AddCodePage('DOS737', 9); {Greek}
+  Self.AddCodePage('DOS775', 15); {Baltic}
+  Self.AddCodePage('DOS858', 16); {Latin I + Euro symbol}
+  Self.AddCodePage('DOS862', 17); {Hebrew}
+  Self.AddCodePage('DOS864', 18); {Arabic}
+  Self.AddCodePage('DOS866', 48); {Russian}
+  Self.AddCodePage('DOS869', 49); {Modern Greek}
+  Self.AddCodePage('ISO8859_2', 22); {Latin 2 —  Latin3 — Southern European (Maltese, Esperanto)}
+  Self.AddCodePage('ISO8859_3', 23); {Latin 1}
+  Self.AddCodePage('ISO8859_4', 34); {Latin 4 — Northern European (Estonian, Latvian, Lithuanian, Greenlandic, Lappish)}
+  Self.AddCodePage('ISO8859_5', 35); {Cyrillic (Russian)}
+  Self.AddCodePage('ISO8859_6', 36); {Arabic}
+  Self.AddCodePage('ISO8859_7', 37); {Greek}
+  Self.AddCodePage('ISO8859_8', 38); {Hebrew}
+  Self.AddCodePage('ISO8859_9', 39); {Latin 5}
+  Self.AddCodePage('ISO8859_13', 40); {Latin 7 — Baltic Rim}
+  Self.AddCodePage('WIN1255', 58, ceAnsi, 1255); {ANSI Hebrew}
+  Self.AddCodePage('WIN1256', 59, ceAnsi, 1256); {ANSI Arabic}
+  Self.AddCodePage('WIN1257', 60, ceAnsi, 1257); {ANSI Baltic}
+  Self.AddCodePage('WIN1258', 65, ceAnsi, 1258); {Vietnamese}
+  Self.AddCodePage('KOI8R', 63); {Russian}
+  Self.AddCodePage('KOI8U', 64); {Ukrainian}
+  Self.AddCodePage('UTF8', 4, ceUTF8); {All}
+end;
+{$ENDIF}
+
 constructor TZFirebird20PlainDriver.Create;
 begin
    inherited create;
@@ -1128,6 +1244,9 @@ begin
       {$ENDIF}
       FPreLoader.AddLocation(LINUX20_IB_CRYPT_LOCATION);
     {$ENDIF}
+  {$ENDIF}
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  Self.LoadCodePages;
   {$ENDIF}
 end;
 
@@ -1172,6 +1291,16 @@ end;
 
 { IZFirebird21PlainDriver }
 
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+procedure TZFirebird21PlainDriver.LoadCodePages;
+begin
+  inherited;
+  Self.AddCodePage('CP943C', 68); {Japanese}
+  Self.AddCodePage('GBK', 67); {Chinese}
+  Self.AddCodePage('TIS620', 66); {Thai}
+end;
+{$ENDIF}
+
 procedure TZFirebird21PlainDriver.LoadApi;
 begin
   inherited LoadApi;
@@ -1201,6 +1330,9 @@ begin
       {$ENDIF}
       FPreLoader.AddLocation(LINUX21_IB_CRYPT_LOCATION);
     {$ENDIF}
+  {$ENDIF}
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  Self.LoadCodePages;
   {$ENDIF}
 end;
 
@@ -1254,6 +1386,38 @@ end;
 
 { TZFirebird25PlainDriver }
 
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+procedure TZFirebird25PlainDriver.LoadCodePages;
+begin
+  inherited;
+  ResetCodePage(56, 'BIG_5', 56); {Chinese, Vietnamese, Korean} //Changed Bytes
+  Self.AddCodePage('DOS737', 9); {Greek}
+  Self.AddCodePage('DOS775', 15); {Baltic}
+  Self.AddCodePage('DOS858', 16); {Latin I + Euro symbol}
+  Self.AddCodePage('DOS862', 17); {Hebrew}
+  Self.AddCodePage('DOS864', 18); {Arabic}
+  Self.AddCodePage('DOS866', 48); {Russian}
+  Self.AddCodePage('DOS869', 49); {Modern Greek}
+  Self.AddCodePage('ISO8859_2', 22); {Latin 2 —  Latin3 — Southern European (Maltese, Esperanto)}
+  Self.AddCodePage('ISO8859_3', 23); {Latin 1}
+  Self.AddCodePage('ISO8859_4', 34); {Latin 4 — Northern European (Estonian, Latvian, Lithuanian, Greenlandic, Lappish)}
+  Self.AddCodePage('ISO8859_5', 35); {Cyrillic (Russian)}
+  Self.AddCodePage('ISO8859_6', 36); {Arabic}
+  Self.AddCodePage('ISO8859_7', 37); {Greek}
+  Self.AddCodePage('ISO8859_8', 38); {Hebrew}
+  Self.AddCodePage('ISO8859_9', 39); {Latin 5}
+  Self.AddCodePage('ISO8859_13', 40); {Latin 7 — Baltic Rim}
+  Self.AddCodePage('WIN1255', 58, ceAnsi, 1255); {ANSI Hebrew}
+  Self.AddCodePage('WIN1256', 59, ceAnsi, 1256); {ANSI Arabic}
+  Self.AddCodePage('WIN1257', 60, ceAnsi, 1257); {ANSI Baltic}
+  Self.AddCodePage('WIN1258', 65, ceAnsi, 1258); {Vietnamese}
+  Self.AddCodePage('KOI8R', 63); {Russian}
+  Self.AddCodePage('KOI8U', 64); {Ukrainian}
+  Self.AddCodePage('UTF8', 4, ceUTF8); {All}
+  Self.AddCodePage('GB18030', 69); {Chinese}
+end;
+{$ENDIF}
+
 procedure TZFirebird25PlainDriver.LoadApi;
 begin
   inherited LoadApi;
@@ -1283,6 +1447,9 @@ begin
       {$ENDIF}
       FPreLoader.AddLocation(LINUX25_IB_CRYPT_LOCATION);
     {$ENDIF}
+  {$ENDIF}
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  Self.LoadCodePages;
   {$ENDIF}
 end;
 

@@ -103,7 +103,13 @@ type
 
   {** Implements a default tokenizer object. }
   TZMySQLTokenizer = class (TZTokenizer)
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   public
+    function AnsiGetEscapeString(const EscapeString: AnsiString;
+      const EscapeMarkSequence: String = '~<|'): String; override;
+    {$ELSE}
+  public
+    {$ENDIF}
     constructor Create;
   end;
 
@@ -432,6 +438,55 @@ end;
 { TZMySQLTokenizer }
 
 {**
+  EgonHugeist:
+  Checks if SymboState is BinaryState and sets it ...
+  @param Stream the Read-Stream which has to checked for Next-Chars.
+  @FirstChar The FirstChar which was readed and sets the Symbolstate
+  @returns either the given SymbolState or the BinaryState
+}
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+{**
+  Converts a Binary-String to an detectable String.
+  @param BinaryString is the Binary-data-string
+  @param  BinaryMarkSequence represents the detectable String
+  @Result give's out the detectable String
+}
+function TZMySQLTokenizer.AnsiGetEscapeString(const EscapeString: AnsiString;
+  const EscapeMarkSequence: String = '~<|'): String;
+var
+  Temp: String;
+  function GetReverted: String;
+  var
+    I: Integer;
+  begin
+    for I := Length(Self.EscapeMarkSequence) downto 1 do
+      Result := Result + Copy(EscapeMarkSequence, i, 1);
+  end;
+begin
+  Self.EscapeMarkSequence := EscapeMarkSequence; //Checks if BinaryMarkSequence is valid
+  Temp := EscapeMarkSequence+IntToStr(Length(EscapeString))+GetReverted;
+
+  Result := String(EscapeString);
+  if Length(EscapeString) > 1 then //Check for Quotes
+  begin
+    if not ( EscapeString[1] = '''' ) then
+      Result := ''''+Result;
+    if not ( EscapeString[Length(EscapeString)] = '''' ) then
+      Result := Result+'''';
+  end
+  else
+    if Length(EscapeString) = 1 then
+      Result := QuotedStr(Result)
+    else
+    begin
+      Result := 'NULL';
+      Exit;
+    end;
+
+  Result := Temp+Result+Temp;
+end;
+{$ENDIF}
+{**
   Constructs a tokenizer with a default state table (as
   described in the class comment).
 }
@@ -439,6 +494,10 @@ constructor TZMySQLTokenizer.Create;
 begin
   WhitespaceState := TZWhitespaceState.Create;
 
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  EscapeState := TZEscapeState.Create;
+  EscapeMarkSequence := '~<|'; //Defaults
+  {$ENDIF}
   SymbolState := TZMySQLSymbolState.Create;
   NumberState := TZMySQLNumberState.Create;
   QuoteState := TZMySQLQuoteState.Create;

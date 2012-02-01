@@ -141,7 +141,7 @@ begin
   CachedResolver := TZSQLiteCachedResolver.Create(FPlainDriver, FHandle, Self,
     NativeResultSet.GetMetaData);
   CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
-    CachedResolver);
+    CachedResolver{$IFDEF CHECK_CLIENT_CODE_PAGE},GetConnection.GetClientCodePageInformations{$ENDIF});
 
   { Fetches all rows to prevent blocking. }
   CachedResultSet.SetType(rtScrollInsensitive);
