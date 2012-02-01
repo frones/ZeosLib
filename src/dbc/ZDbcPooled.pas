@@ -21,7 +21,8 @@ uses
   ZURL,
   ZDbcConnection,
   ZDbcIntfs,
-  ZPlainDriver;
+  ZPlainDriver,
+  ZMessages;
 
 type
   TConnectionPool = class;
@@ -77,12 +78,25 @@ type
 
   { This class embedds a real connection and redirects all methods to it.
     When it is droped or closed, it returns the real connection to the pool. }
-  TZDbcPooledConnection = class(TInterfacedObject, IZConnection)
+  TZDbcPooledConnection = class({$IFDEF CHECK_CLIENT_CODE_PAGE}
+  TAbstractCodePagedInterfacedObject{$ELSE}TInterfacedObject{$ENDIF}, IZConnection)
   private
     FConnection: IZConnection;
     FConnectionPool: TConnectionPool;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    FRaiseOnUnsupportedCP: Boolean;
+    FPreprepareSQL: Boolean;
+    {$ENDIF}
     function GetConnection: IZConnection;
   protected // IZConnection
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    FSetCodePageToConnection: Boolean;
+    FClientCodePage: String;
+    procedure CheckCharEncoding(CharSet: String;
+      const DoArrange: Boolean = False);
+    function GetClientCodePageInformations(const ClientCharacterSet: String = ''): PZCodePage; //EgonHugeist
+    function DoPreprepareSQL: Boolean; //EgonHugeist
+    {$ENDIF}
     function CreateStatement: IZStatement;
     function PrepareStatement(const SQL: string): IZPreparedStatement;
     function PrepareCall(const SQL: string): IZCallableStatement;
@@ -121,6 +135,12 @@ type
   public
     constructor Create(const ConnectionPool: TConnectionPool);
     destructor Destroy; override;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetBinaryEscapeString(const Value: AnsiString;
+      const EscapeMarkSequence: String = '~<|'): String;
+    function GetEscapeString(const Value: String;
+      const EscapeMarkSequence: String = '~<|'): String;
+    {$ENDIF}
   end;
 
   TZDbcPooledConnectionDriver = class(TZAbstractDriver)
@@ -552,6 +572,86 @@ procedure TZDbcPooledConnection.SetTransactionIsolation(Value: TZTransactIsolati
 begin
   GetConnection.SetTransactionIsolation(Value);
 end;
+
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+{**
+  EgonHugeist: Check if the given Charset for Compiler/Database-Support!!
+    Not supported means if there is a pissible String-DataLoss.
+    So it raises an Exception if case of settings. This handling
+    is an improofment to inform Zeos-Users about the troubles the given
+    CharacterSet may have.
+  @param CharSet the CharacterSet which has to be proofed
+  @param DoArrange represents a switch to check and set a aternative ZAlias as
+    default. This means it ignores the choosen Client-CharacterSet and sets a
+    "more" Zeos-Compatible Client-CharacterSet if known.
+}
+procedure TZDbcPooledConnection.CheckCharEncoding(CharSet: String;
+  const DoArrange: Boolean = False);
+begin
+  Self.ClientCodePage := Self.GetIZPlainDriver.GetClientCodePageInformations(CharSet);
+
+  if (DoArrange) and (ClientCodePage^.ZAlias <> '' ) then
+    CheckCharEncoding(ClientCodePage^.ZAlias); //recalls em selves
+  FPreprepareSQL := FPreprepareSQL and (ClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]);
+  FPreprepareSQL := True; //Test
+  FSetCodePageToConnection := True; //optional for the testsuites
+  if ( ClientCodePage^.Encoding = ceUnsupported ) and FRaiseOnUnsupportedCP then
+    try
+      raise Exception.Create(WUnsupportedCodePage);
+    except
+    end;
+  FClientCodePage := ClientCodePage^.Name; //resets the developer choosen ClientCodePage
+end;
+
+
+{**
+  EgonHugeist: this is a compatibility-Option for exiting Applictions.
+    Zeos is now able to preprepare direct insered SQL-Statements.
+    Means do the UTF8-preparation if the CharacterSet was choosen.
+    So we do not need to do the SQLString + UTF8Encode(Edit1.Test) for example.
+  @result True if coPreprepareSQL was choosen in the TZAbstractConnection
+}
+function TZDbcPooledConnection.DoPreprepareSQL: Boolean;
+begin
+  Result := FPreprepareSQL;
+end;
+{**
+  EgonHugeist:
+  Returns the BinaryString in a Tokenizer-detectable kind
+  If the Tokenizer don't need to predetect it Result = BinaryString
+  @param Value represents the Binary-String
+  @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
+  @result the detectable Binary String
+}
+function TZDbcPooledConnection.GetBinaryEscapeString(const Value: AnsiString;
+  const EscapeMarkSequence: String = '~<|'): String;
+begin
+  Result := Self.GetDriver.GetTokenizer.AnsiGetEscapeString(Value, EscapeMarkSequence);
+end;
+
+function TZDbcPooledConnection.GetEscapeString(const Value: String;
+  const EscapeMarkSequence: String = '~<|'): String;
+begin
+  Result := Self.GetDriver.GetTokenizer.GetEscapeString(Value);
+end;
+
+{**
+  Result 100% Compiler-Compatible
+  And sets it Result to ClientCodePage by calling the
+    PlainDriver.GetClientCodePageInformations function
+
+  @param ClientCharacterSet the CharacterSet which has to be checked
+  @result PZCodePage see ZCompatible.pas
+}
+function TZDbcPooledConnection.GetClientCodePageInformations(
+  const ClientCharacterSet: String = ''): PZCodePage; //EgonHugeist
+begin
+  if ClientCharacterSet = '' then
+    Result := ClientCodePage
+  else
+    Result := GetIZPlainDriver.GetClientCodePageInformations(ClientCharacterSet);
+end;
+{$ENDIF}
 
 { TZDbcPooledConnectionDriver }
 
