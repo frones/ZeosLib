@@ -1,4 +1,4 @@
-﻿{*********************************************************}
+{*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
 {           ASA Database Connectivity Classes             }
@@ -1845,7 +1845,7 @@ begin
     DT_INT:
       Result := stInteger;
     DT_DECIMAL:
-      Result := stDouble; //BCD Felder mom. nicht unterstützt
+      Result := stDouble; //BCD Fields not supported
     DT_FLOAT:
       Result := stFloat;
     DT_DOUBLE:
@@ -1896,7 +1896,7 @@ begin
     DT_INT:
       Result := 'DT_INT';
     DT_DECIMAL:
-      Result := 'DT_DECIMAL'; //BCD Felder mom. nicht unterstützt
+      Result := 'DT_DECIMAL'; //BCD Fields not supported
     DT_FLOAT:
       Result := 'DT_FLOAT';
     DT_DOUBLE:

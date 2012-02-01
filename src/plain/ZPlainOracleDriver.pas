@@ -1296,7 +1296,9 @@ end;
 
 constructor TZOracle9iPlainDriver.Create;
 begin
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
   LoadCodePages;
+{$ENDIF}
 end;
 
 function TZOracle9iPlainDriver.GetProtocol: string;

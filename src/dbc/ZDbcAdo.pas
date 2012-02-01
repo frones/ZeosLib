@@ -244,8 +244,7 @@ begin
   Self.PlainDriver := PlainDriver;
   {$ENDIF}
   inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
-    TZAdoDatabaseMetadata.Create(Self, Url, Info)
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}, PlainDriver{$ENDIF});
+    TZAdoDatabaseMetadata.Create(Self, Url, Info), PlainDriver);
 end;
 
 {**

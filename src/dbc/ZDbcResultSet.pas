@@ -638,7 +638,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeString);
 {$ENDIF}
-{$IFDEF VER200BELOW}
+{$IFDEF DELPHI12_UP}
   Result := UTF8ToString(GetString(ColumnIndex));
 {$ELSE}
   Result := UTF8Decode(GetString(ColumnIndex));

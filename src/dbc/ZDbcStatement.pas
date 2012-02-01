@@ -397,6 +397,7 @@ begin
   inherited Destroy;
 end;
 
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
 {**
   Sets the preprepared SQL-Statement in an String and AnsiStringForm.
   @param Value: the SQL-String which has to be optional preprepared
@@ -406,6 +407,7 @@ begin
   FaSQL := Self.GetPrepreparedSQL(Value);
   FSSQL := String(FaSQL);
 end;
+{$ENDIF}
 {**
   Raises unsupported operation exception.
 }

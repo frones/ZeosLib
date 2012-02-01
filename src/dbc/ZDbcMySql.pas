@@ -583,7 +583,7 @@ begin
     { Sets a client codepage. }
     {$ELSE}
 
-    if FClientCodePage '' then
+    if FClientCodePage <> '' then
     begin
       {$IFDEF DELPHI12_UP}
       SQL := PAnsiChar(UTF8String(Format('SET NAMES %s', [FClientCodePage])));
