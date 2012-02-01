@@ -324,11 +324,10 @@ constructor TZOracleConnection.Create(Driver: IZDriver; const Url: string;
   const Database, User, Password: string; Info: TStrings);
 begin
   inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
-    TZOracleDatabaseMetadata.Create(Self, Url, Info));
+    TZOracleDatabaseMetadata.Create(Self, Url, Info), PlainDriver);
 
   { Sets a default properties }
   FPlainDriver := PlainDriver;
-  Self.PlainDriver := PlainDriver;
   FHandle := nil;
   if Self.Port = 0 then
       Self.Port := 1521;

@@ -181,7 +181,7 @@ type
   public
     destructor Destroy; override;
   end;
-  //TZAbstractObject
+
 const
   ClientCodePageDummy: TZCodepage =
     (Name: ''; ID: 0; Encoding: ceAnsi; CP: 0; ZAlias: '');
@@ -296,6 +296,7 @@ begin
     {$IFDEF DELPHI12_UP} //later for FPC 2.8 too
     if CP <> 0 then SetCodePage({$IFDEF DELPHI14_UP}RawByteString{$ENDIF}(Result), CP, True);
     Result := Copy(UTF8Encode(Str), 1, Length(UTF8Encode(Str)));
+    //Check function Utf8ToAnsiEx(const S: UTF8String; const cp : integer): AnsiString;
     {$ELSE}
 
       {$IFDEF FPC} //Lazarus -> FPC 2.6

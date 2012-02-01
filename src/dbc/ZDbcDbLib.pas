@@ -283,7 +283,6 @@ var
   Metadata: TContainedObject;
 begin
   FPlainDriver := PlainDriver;
-  Self.PlainDriver := PlainDriver;
   if FPlainDriver.GetProtocol = 'mssql' then
     Metadata := TZMsSqlDatabaseMetadata.Create(Self, Url, Info)
   else if FPlainDriver.GetProtocol = 'sybase' then
@@ -292,7 +291,7 @@ begin
     Metadata := nil;
 
   inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
-    Metadata);
+    Metadata, PlainDriver);
 
   FHandle := nil;
 end;

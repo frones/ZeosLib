@@ -428,6 +428,10 @@ end;
 }
 constructor TZSybaseTokenizer.Create;
 begin
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  EscapeState := TZEscapeState.Create;
+  EscapeMarkSequence := '~<|'; //Defaults
+  {$ENDIF}
   WhitespaceState := TZWhitespaceState.Create;
 
   SymbolState := TZSybaseSymbolState.Create;

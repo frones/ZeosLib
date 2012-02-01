@@ -202,9 +202,7 @@ begin
     try
       {$IFDEF CHECK_CLIENT_CODE_PAGE}
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-        FIBConnection.GetDriver.GetTokenizer, ClientCodePage,
-        GetConnection.DoPreprepareSQL, GetDBHandle,
-        GetTrHandle, GetDialect, SQL, StmtHandle);
+        GetDBHandle, GetTrHandle, GetDialect, GetPrepreparedSQL(SQL), StmtHandle);
       {$ELSE}
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver, GetDBHandle, GetTrHandle,
         GetDialect, SQL, StmtHandle);
@@ -278,9 +276,7 @@ begin
     try
       {$IFDEF CHECK_CLIENT_CODE_PAGE}
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-        FIBConnection.GetDriver.GetTokenizer, ClientCodePage,
-        GetConnection.DoPreprepareSQL, GetDBHandle, GetTrHandle,
-        GetDialect, SQL, StmtHandle);
+        GetDBHandle, GetTrHandle, GetDialect, GetPrepreparedSQL(SQL), StmtHandle);
       {$ELSE}
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver, GetDBHandle, GetTrHandle,
         GetDialect, SQL, StmtHandle);
@@ -352,9 +348,7 @@ begin
       Result := False;
       {$IFDEF CHECK_CLIENT_CODE_PAGE}
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-        FIBConnection.GetDriver.GetTokenizer, ClientCodePage,
-        GetConnection.DoPreprepareSQL, GetDBHandle,
-        GetTrHandle, GetDialect, SQL, StmtHandle);
+        GetDBHandle, GetTrHandle, GetDialect, GetPrepreparedSQL(SQL), StmtHandle);
       {$ELSE}
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver, GetDBHandle, GetTrHandle,
         GetDialect, SQL, StmtHandle);
@@ -588,9 +582,7 @@ begin
   begin
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-        FIBConnection.GetDriver.GetTokenizer, ClientCodePage,
-        GetConnection.DoPreprepareSQL, GetDBHandle,
-        GetTrHandle, GetDialect, SQL, StmtHandle);
+        GetDBHandle, GetTrHandle, GetDialect, GetPrepreparedSQL(SQL), StmtHandle);
     {$ELSE}
     StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
         GetDBHandle, GetTrHandle, GetDialect, SQL, StmtHandle);
@@ -974,9 +966,7 @@ begin
       { Prepare statement }
       {$IFDEF CHECK_CLIENT_CODE_PAGE}
         StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-          FIBConnection.GetDriver.GetTokenizer, ClientCodePage,
-          GetConnection.DoPreprepareSQL, GetDBHandle, GetTrHandle,
-          GetDialect, ProcSql, StmtHandle);
+          GetDBHandle, GetTrHandle, GetDialect, ZAnsiString(ProcSql), StmtHandle);
       {$ELSE}
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver, GetDBHandle, GetTrHandle,
         GetDialect, ProcSql, StmtHandle);
@@ -1069,9 +1059,7 @@ begin
     try
       {$IFDEF CHECK_CLIENT_CODE_PAGE}
         StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-          FIBConnection.GetDriver.GetTokenizer, ClientCodePage,
-          GetConnection.DoPreprepareSQL, GetDBHandle,
-          GetTrHandle, GetDialect, ProcSql, StmtHandle);
+          GetDBHandle, GetTrHandle, GetDialect, ZAnsiString(ProcSql), StmtHandle);
       {$ELSE}
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
         GetDBHandle, GetTrHandle, GetDialect, ProcSql, StmtHandle);
@@ -1171,9 +1159,7 @@ begin
     try
       {$IFDEF CHECK_CLIENT_CODE_PAGE}
         StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-          FIBConnection.GetDriver.GetTokenizer, ClientCodePage,
-          GetConnection.DoPreprepareSQL, GetDBHandle,
-          GetTrHandle, GetDialect, ProcSql, StmtHandle);
+          GetDBHandle, GetTrHandle, GetDialect, ZAnsiString(ProcSql), StmtHandle);
       {$ELSE}
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
         GetDBHandle, GetTrHandle, GetDialect, ProcSql, StmtHandle);

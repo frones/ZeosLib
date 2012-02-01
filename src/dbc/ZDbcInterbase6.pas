@@ -430,15 +430,10 @@ var
   ConnectTimeout : integer;
 begin
   inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
-    TZInterbase6DatabaseMetadata.Create(Self, Url, Info));
+    TZInterbase6DatabaseMetadata.Create(Self, Url, Info), PlainDriver);
 
   FHardCommit := StrToBoolEx(Info.Values['hard_commit']);
-
   FPlainDriver := PlainDriver;
-  Self.PlainDriver := PlainDriver;
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  CheckCharEncoding(FClientCodePage, True);
-  {$ENDIF}
 
   { Sets a default Interbase port }
   if Self.Port = 0 then

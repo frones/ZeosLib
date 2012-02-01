@@ -322,14 +322,11 @@ constructor TZSQLiteConnection.Create(Driver: IZDriver; const Url: string;
   const Database, User, Password: string; Info: TStrings);
 begin
   inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
-    TZSQLiteDatabaseMetadata.Create(Self, Url, Info));
+    TZSQLiteDatabaseMetadata.Create(Self, Url, Info), PlainDriver);
 
   { Sets a default properties }
   FPlainDriver := PlainDriver;
-  Self.PlainDriver := PlainDriver;
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  CheckCharEncoding(FClientCodePage, True);
-  {$ENDIF}
+
   AutoCommit := True;
   TransactIsolationLevel := tiNone;
   Open;

@@ -83,7 +83,7 @@ type
     FHandle: PZMySQLConnect;
     FPlainDriver: IZMySQLPlainDriver;
     FUseResult: Boolean;
-    FSQL: string;
+    {$IFNDEF CHECK_CLIENT_CODE_PAGE}FSQL: string;{$ENDIF}
 
     function CreateResultSet(const SQL: string): IZResultSet;
     function GetStmtHandle : PZMySqlPrepStmt;
@@ -271,10 +271,18 @@ function TZMySQLStatement.ExecuteQuery(const SQL: string): IZResultSet;
 begin
   Result := nil;
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(Self.GetPrepreparedSQL(SQL))) = 0 then
+  Self.SSQL := SQL; //Did preprepare the SQL
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(Self.ASQL)) = 0 then
+  begin
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
+    if not FPlainDriver.ResultSetExists(FHandle) then
+      raise EZSQLException.Create(SCanNotOpenResultSet);
+    Result := CreateResultSet(SSQL);
+  end
+  else
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
   {$ELSE}
     if FPlainDriver.ExecQuery(FHandle, PAnsiChar(AnsiString(SQL))) = 0 then
-  {$ENDIF}
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
     if not FPlainDriver.ResultSetExists(FHandle) then
@@ -283,6 +291,7 @@ begin
   end
   else
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
+  {$ENDIF}
 end;
 
 {**
@@ -303,12 +312,15 @@ var
 begin
   Result := -1;
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(Self.GetPrepreparedSQL(SQL))) = 0 then
+  Self.SSQL := SQL; //Preprepare SQL
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
+  begin
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
   {$ELSE}
-    if FPlainDriver.ExecQuery(FHandle, PAnsiChar(AnsiString(SQL))) = 0 then
-  {$ENDIF}
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(AnsiString(SQL))) = 0 then
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+  {$ENDIF}
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
     if HasResultSet then
@@ -327,7 +339,11 @@ begin
       Result := FPlainDriver.GetAffectedRows(FHandle);
   end
   else
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
+    {$ELSE}
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
+    {$ENDIF}
   LastUpdateCount := Result;
 end;
 
@@ -356,14 +372,17 @@ var
   HasResultset : Boolean;
 begin
   Result := False;
-  FSQL := SQL;
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(Self.GetPrepreparedSQL(SQL))) = 0 then
+  Self.SSQL := SQL; //Preprepare SQL and sets AnsiSQL
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
+  begin
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
   {$ELSE}
-    if FPlainDriver.ExecQuery(FHandle, PAnsiChar(AnsiString(SQL))) = 0 then
-  {$ENDIF}
+  FSQL := SQL;
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(AnsiString(SQL))) = 0 then
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+  {$ENDIF}
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
     if HasResultSet then
@@ -379,7 +398,11 @@ begin
     end;
   end
   else
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
+  {$ELSE}
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
+  {$ENDIF}
 end;
 
 {**
@@ -406,7 +429,11 @@ begin
   begin
     AStatus := FPlainDriver.RetrieveNextRowset(FHandle);
     if AStatus > 0 then
+      {$IFDEF CHECK_CLIENT_CODE_PAGE}
+      CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL)
+      {$ELSE}
       CheckMySQLError(FPlainDriver, FHandle, lcExecute, FSQL)
+      {$ENDIF}
     else
       Result := (AStatus = 0);
 
@@ -415,7 +442,11 @@ begin
     LastResultSet := nil;
     LastUpdateCount := -1;
     if FPlainDriver.ResultSetExists(FHandle) then
+      {$IFDEF CHECK_CLIENT_CODE_PAGE}
+      LastResultSet := CreateResultSet(SSQL)
+      {$ELSE}
       LastResultSet := CreateResultSet(FSQL)
+      {$ENDIF}
     else
       LastUpdateCount := FPlainDriver.GetAffectedRows(FHandle);
   end;
@@ -613,6 +644,10 @@ begin
 end;
 
 procedure TZMySQLPreparedStatement.Prepare;
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+var
+  AnsiSQL: AnsiString;
+{$ENDIF}
 begin
   FStmtHandle := FPlainDriver.InitializePrepStmt(FHandle);
   if (FStmtHandle = nil) then
@@ -621,8 +656,8 @@ begin
       exit;
     end;
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(GetPrepreparedSQL(SQL)),
-    length(SQL)) <> 0) then
+  AnsiSQL := GetPrepreparedSQL(SQL); //do not spit Tokens twice
+  if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(AnsiSQL), length(AnsiSQL)) <> 0) then
   {$ELSE}
   if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(AnsiString(SQL)), length(SQL)) <> 0) then
   {$ENDIF}

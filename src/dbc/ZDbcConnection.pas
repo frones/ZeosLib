@@ -157,7 +157,7 @@ type
   public
     constructor Create(Driver: IZDriver; const Url: string; const HostName: string;
       Port: Integer; const Database: string; const User: string; const Password: string;
-      Info: TStrings; Metadata: TContainedObject);
+      Info: TStrings; Metadata: TContainedObject; APlainDriver: IZPlainDriver);
     destructor Destroy; override;
 
     function CreateStatement: IZStatement;
@@ -443,8 +443,9 @@ begin
   if (DoArrange) and (ClientCodePage^.ZAlias <> '' ) then
     CheckCharEncoding(ClientCodePage^.ZAlias); //recalls em selves
   FPreprepareSQL := FPreprepareSQL and (ClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]);
-  //FPreprepareSQL := True; //Test
-  if ( Self.FIZPlainDriver.GetClientCodePageInformations(CharSet).Encoding = ceUnsupported ) and FRaiseOnUnsupportedCP then
+  FPreprepareSQL := True; //Test
+  FSetCodePageToConnection := True; //optional for the testsuites
+  if ( ClientCodePage^.Encoding = ceUnsupported ) and FRaiseOnUnsupportedCP then
     try
       raise Exception.Create(WUnsupportedCodePage);
     except
@@ -479,13 +480,15 @@ end;
 }
 constructor TZAbstractConnection.Create(Driver: IZDriver; const Url: string;
   const HostName: string; Port: Integer; const Database: string; const User: string;
-  const Password: string; Info: TStrings; Metadata: TContainedObject);
+  const Password: string; Info: TStrings; Metadata: TContainedObject;
+  APlainDriver: IZPlainDriver);
 begin
   FDriver := Driver;
   FHostName := HostName;
   FPort := Port;
   FDatabase := Database;
   FMetadata := Metadata;
+  FIZPlainDriver := APlainDriver;
 
   FInfo := TStringList.Create;
   if Info <> nil then
@@ -510,6 +513,8 @@ begin
   Info.Values['SetCodePageToConnection'] := '';
   Info.Values['PreprepareSQL'] := '';
   Info.Values['codepage'] := '';
+  {CheckCharEncoding}
+  CheckCharEncoding(FClientCodePage, True);
   {$ENDIF}
   FAutoCommit := True;
   FClosed := True;

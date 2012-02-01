@@ -88,7 +88,11 @@ type
     FConnection: IZConnection;
     FInfo: TStrings;
     FClosed: Boolean;
-
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    FsSQL: String;
+    FaSQL: AnsiString;
+    procedure SetSSQL(const Value: String);
+    {$ENDIF}
     procedure SetLastResultSet(ResultSet: IZResultSet); virtual;
 
   protected
@@ -116,7 +120,11 @@ type
     property Connection: IZConnection read FConnection;
     property Info: TStrings read FInfo;
     property Closed: Boolean read FClosed write FClosed;
-    
+
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    property SSQL: String read FsSQL write SetSSQL;
+    property ASQL: AnsiString read FaSQL;
+    {$ENDIF}
   public
     constructor Create(Connection: IZConnection; Info: TStrings);
     destructor Destroy; override;
@@ -390,6 +398,15 @@ begin
 end;
 
 {**
+  Sets the preprepared SQL-Statement in an String and AnsiStringForm.
+  @param Value: the SQL-String which has to be optional preprepared
+}
+procedure TZAbstractStatement.SetSSQL(const Value: String);
+begin
+  FaSQL := Self.GetPrepreparedSQL(Value);
+  FSSQL := String(FaSQL);
+end;
+{**
   Raises unsupported operation exception.
 }
 procedure TZAbstractStatement.RaiseUnsupportedException;
@@ -605,8 +622,32 @@ end;
 
 {$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZAbstractStatement.GetPrepreparedSQL(const SQL: String): AnsiString;
+var
+  SQLTokens: TZTokenDynArray;
+  i: Integer;
 begin
-  Result := Self.GetConnection.GetDriver.GetTokenizer.GetPreparedAnsiSQLString(SQL, CLientCodePage, GetConnection.DoPreprepareSQL);;
+  {Mark i agree: It must be enough to get the Tokens..
+  then we can build an IZUpdate/IZInsert/IZDelete-Schema
+  if this is done we can add column-specific CharacterSets/Collations
+  to the detected Columns and tell the Server which kind of Data will be sended
+  now. So this also must be done in the IZSelectSchema if somebody asks
+  for conerted column-data...}
+
+  Result := ZAnsiString(String(Result)); //Sets CodePage to Result if known
+
+  if GetConnection.DoPreprepareSQL then
+  begin
+    SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeEscapeBufferToList(SQL); //Disassembles the Query
+    for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
+      case (SQLTokens[i].TokenType) of
+        ttEscape:
+          Result := Result + AnsiString(SQLTokens[i].Value)
+        else
+          Result := Result + ZAnsiString(SQLTokens[i].Value);
+      end;
+  end
+  else
+    Result := Result + AnsiString(SQL); //keep the Ansi-codepage
 end;
 {$ENDIF}
 
@@ -1744,8 +1785,8 @@ end;
 }
 function TZAbstractCallableStatement.GetPChar(ParameterIndex: Integer): PAnsiChar;
 begin
-  FTemp := GetString(ParameterIndex);
-  {$IFDEF DELPHI12_UP}
+  FTemp := GetString(ParameterIndex); //EgonHugeist: is this pointer valid after function exit?
+  {$IFDEF DELPHI12_UP} //????
   Result := PAnsiChar(UTF8String(FTemp));
   {$ELSE}
   Result := PAnsiChar(FTemp);
@@ -2091,7 +2132,7 @@ begin
   end;
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
   if FConnection.DoPreprepareSQL then
-    Result := Self.FConnection.EscapeString(Result);
+    Result := FConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
   {$ENDIF}
 end;
 

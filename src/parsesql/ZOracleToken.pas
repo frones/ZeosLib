@@ -138,6 +138,10 @@ end;
 }
 constructor TZOracleTokenizer.Create;
 begin
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  EscapeState := TZEscapeState.Create;
+  EscapeMarkSequence := '~<|'; //Defaults
+  {$ENDIF}
   WhitespaceState := TZWhitespaceState.Create;
 
   SymbolState := TZOracleSymbolState.Create;

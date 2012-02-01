@@ -335,9 +335,8 @@ type
 
   { Interbase statement functions}
   function PrepareStatement(PlainDriver: IZInterbasePlainDriver;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}Tokenizer: IZTokenizer; Encoding: PZCodePage;
-    DoPrepareSQL: Boolean;{$ENDIF} Handle: PISC_DB_HANDLE;
-    TrHandle: PISC_TR_HANDLE; Dialect: Word; SQL: string;
+    Handle: PISC_DB_HANDLE; TrHandle: PISC_TR_HANDLE; Dialect: Word;
+    SQL: {$IFDEF CHECK_CLIENT_CODE_PAGE}AnsiString{$ELSE}string{$ENDIF};
     var StmtHandle: TISC_STMT_HANDLE): TZIbSqlStatementType;
   procedure PrepareResultSqlData(PlainDriver: IZInterbasePlainDriver;
     Handle: PISC_DB_HANDLE; Dialect: Word; SQL: string;
@@ -900,10 +899,9 @@ end;
    @return sql statement type
 }
 function PrepareStatement(PlainDriver: IZInterbasePlainDriver;
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}Tokenizer: IZTokenizer; Encoding: PZCodePage;
-  DoPrepareSQL: Boolean;{$ENDIF}
   Handle: PISC_DB_HANDLE; TrHandle: PISC_TR_HANDLE; Dialect: Word;
-  SQL: string; var StmtHandle: TISC_STMT_HANDLE):
+  SQL: {$IFDEF CHECK_CLIENT_CODE_PAGE}AnsiString{$ELSE}string{$ENDIF};
+  var StmtHandle: TISC_STMT_HANDLE):
   TZIbSqlStatementType;
 var
   StatusVector: TARRAY_ISC_STATUS;
@@ -915,9 +913,7 @@ begin
   { Prepare an sql statement }
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
     PlainDriver.isc_dsql_prepare(@StatusVector, TrHandle, @StmtHandle,
-      0, PAnsiChar(Tokenizer.GetPreparedAnsiSQLString(SQL, Encoding,
-      (Encoding^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}])
-      and DoPrepareSQL)), Dialect, nil);
+      0, PAnsiChar(SQL), Dialect, nil);
   {$ELSE}
     {$IFDEF DELPHI12_UP} //Rev 867 Mode
      PlainDriver.isc_dsql_prepare(@StatusVector, TrHandle, @StmtHandle,

@@ -231,8 +231,16 @@ begin
   Result := nil;
   ConnectionHandle := GetConnectionHandle();
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  Self.SSQL := SQL; //Preprepares the SQL and Sets the AnsiSQL
   QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
-    PAnsiChar(GetPrepreparedSQL(SQL)));
+    PAnsiChar(Self.ASQL));
+  CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
+    SQL, QueryHandle);
+  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, Self.SSQL);
+  if QueryHandle <> nil then
+    Result := CreateResultSet(Self.SSQL, QueryHandle)
+  else
+    Result := nil;
   {$ELSE}
     {$IFDEF DELPHI12_UP}
     QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
@@ -240,7 +248,6 @@ begin
     {$ELSE}
     QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
     {$ENDIF}
-  {$ENDIF}
   CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
     SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
@@ -248,6 +255,7 @@ begin
     Result := CreateResultSet(SQL, QueryHandle)
   else
     Result := nil;
+  {$ENDIF}
 end;
 
 {**
@@ -665,9 +673,7 @@ begin
             Result := EncodeString( UTF8Encode(TempBlob.GetUnicodeString))
           end
           else
-          begin
             Result := 'NULL';
-          end;
         end;
       stBinaryStream:
         begin
@@ -721,15 +727,22 @@ begin
   Result := nil;
   ConnectionHandle := GetConnectionHandle();
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  Self.SSQL := SQL; //Preprepares the SQL and Sets the AnsiSQL
   QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle,
-    PAnsiChar(GetPrepreparedSQL(SQL)));
+    PAnsiChar(ASQL));
+  CheckPostgreSQLError(Connection, GetPlainDriver, ConnectionHandle, lcExecute,
+    SQL, QueryHandle);
+  DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SSQL);
+  if QueryHandle <> nil then
+    Result := CreateResultSet(SSQL, QueryHandle)
+  else
+    Result := nil;
   {$ELSE}
     {$IFDEF DELPHI12_UP}
     QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(UTF8String(SQL)));
     {$ELSE}
     QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
     {$ENDIF}
-  {$ENDIF}
   CheckPostgreSQLError(Connection, GetPlainDriver, ConnectionHandle, lcExecute,
     SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SQL);
@@ -737,6 +750,7 @@ begin
     Result := CreateResultSet(SQL, QueryHandle)
   else
     Result := nil;
+  {$ENDIF}
 end;
 
 {**
@@ -790,9 +804,9 @@ var I: Integer;
   Tokens: TStrings;
   ParamIndex: Integer;
 begin
-  if Pos('?', ASql) > 0 then
+  if Pos('?', Sql) > 0 then
   begin
-    Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(ASql, [toUnifyWhitespaces]);
+    Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(Sql, [toUnifyWhitespaces]);
     try
       ParamIndex := 0;
       for I := 0 to Tokens.Count - 1 do
@@ -812,7 +826,7 @@ begin
     Result := ASql;
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
   if GetConnection.DoPreprepareSQL then
-    Result := GetConnection.EscapeString(Result);
+    Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
   {$ENDIF}
 end;
 
@@ -835,8 +849,12 @@ begin
   Result := -1;
   ConnectionHandle := GetConnectionHandle();
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  Self.SSQL := SQL; //Preprepares the SQL and Sets the AnsiSQL
   QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle,
-    PAnsiChar(GetPrepreparedSQL(SQL)));
+    PAnsiChar(ASQL));
+  CheckPostgreSQLError(Connection, GetPlainDriver, ConnectionHandle, lcExecute,
+    SSQL, QueryHandle);
+  DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SSQL);
   {$ELSE}
     {$IFDEF DELPHI12_UP}
     QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle,
@@ -844,10 +862,10 @@ begin
     {$ELSE}
     QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
     {$ENDIF}
-  {$ENDIF}
   CheckPostgreSQLError(Connection, GetPlainDriver, ConnectionHandle, lcExecute,
     SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SQL);
+  {$ENDIF}
 
   if QueryHandle <> nil then
   begin

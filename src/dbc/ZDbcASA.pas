@@ -364,10 +364,8 @@ constructor TZASAConnection.Create(Driver: IZDriver; const Url: string;
   const Database, User, Password: string; Info: TStrings);
 begin
   inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
-    TZASADatabaseMetadata.Create(Self, Url, Info));
-
+    TZASADatabaseMetadata.Create(Self, Url, Info), PlainDriver);
   FPlainDriver := PlainDriver;
-  Self.PlainDriver := PlainDriver;
 end;
 
 {**

@@ -367,7 +367,7 @@ constructor TZPostgreSQLConnection.Create(Driver: IZDriver; const Url: string;
   const Database, User, Password: string; Info: TStrings);
 begin
   inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
-    TZPostgreSQLDatabaseMetadata.Create(Self, Url, Info));
+    TZPostgreSQLDatabaseMetadata.Create(Self, Url, Info), PlainDriver);
 
   { Sets a default PostgreSQL port }
   if Self.Port = 0 then
@@ -380,10 +380,6 @@ begin
     FBeginRequired := True;
 
   FPlainDriver := PlainDriver;
-  Self.PlainDriver := PlainDriver;
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  CheckCharEncoding(FClientCodePage, True);
-  {$ENDIF}
   TransactIsolationLevel := tiNone;
 
   { Processes connection properties. }

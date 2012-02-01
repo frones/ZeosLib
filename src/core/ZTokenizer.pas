@@ -466,9 +466,8 @@ type
       const EscapeMarkSequence: String = '~<|'): String;
     function GetEscapeString(const Str: String;
       const EscapeMarkSequence: String = '~<|'): String;
-    function GetPreparedAnsiSQLString(const SQL: String;
-      const ClientCodePage: PZCodePage; const DoPreprepareSQL: Boolean;
-      const EscapeMarkSequence: String = '~<|'): AnsiString;
+    function TokenizeEscapeBufferToList(const SQL: String;
+      const EscapeMarkSequence: String = '~<|'): TZTokenDynArray;
     {$ENDIF}
   end;
 
@@ -504,9 +503,8 @@ type
       const EscapeMarkSequence: String = '~<|'): String; virtual;
     function GetEscapeString(const EscapeString: String;
       const EscapeMarkSequence: String = '~<|'): String; virtual;
-    function GetPreparedAnsiSQLString(const SQL: String;
-      const ClientCodePage: PZCodePage; const DoPreprepareSQL: Boolean;
-      const EscapeMarkSequence: String = '~<|'): AnsiString; virtual;
+    function TokenizeEscapeBufferToList(const SQL: String;
+      const EscapeMarkSequence: String = '~<|'): TZTokenDynArray; virtual;
     {$ENDIF}
     function TokenizeBufferToList(const Buffer: string; Options: TZTokenOptions):
       TStrings;
@@ -1438,7 +1436,7 @@ begin
   end;
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
   FEscapeState := TZEscapeState.Create;
-  FEscapeState.FEscapeMarks := '~<|'; //Default
+  SetEscapeMarkSequence('~<|'); //Default
   {$ENDIF}
   FNumberState := TZNumberState.Create;
   FQuoteState := TZQuoteState.Create;
@@ -1541,13 +1539,6 @@ begin
   end;
 end;
 
-{**
-  EgonHugeist:
-  Tokenizes a string buffer into a list of tokens. UTF8Encodes some Tokens by
-  ignoring Escape-Market-Data. Results an AnsiString for the PlainDriver;
-  @param Buffer a string buffer to be tokenized.
-  @returns a Ansi-UTF8-prepared-String;
-}
 {$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZTokenizer.AnsiGetEscapeString(const EscapeString: AnsiString;
   const EscapeMarkSequence: String = '~<|'): String;
@@ -1579,31 +1570,19 @@ begin
 end;
 
 
-function TZTokenizer.GetPreparedAnsiSQLString(const SQL: String;
-  const ClientCodePage: PZCodePage; const DoPreprepareSQL: Boolean;
-  const EscapeMarkSequence: String = '~<|'): AnsiString;
-var
-  SQLTokens: TZTokenDynArray;
-  i: Integer;
+{**
+  Tokenizes a string buffer into a dynamic array of tokens and informs
+  the Tokenizer and EscapeState about the used sequence
+  @param SQL a string buffer to be tokenized.
+  @param EscapeMarkSequence to detect preprepared data
+  @returns a dynamic array of tokens
+}
+function TZTokenizer.TokenizeEscapeBufferToList(const SQL: String;
+  const EscapeMarkSequence: String = '~<|'): TZTokenDynArray;
 begin
-  Self.ClientCodePage := ClientCodePage;
-  Result := '';
-  SetEscapeMarkSequence(EscapeMarkSequence);
-  Result := ZAnsiString(String(Result)); //Sets CodePage to Result if known
-
-  if DoPreprepareSQL then
-  begin
-    SQLTokens := TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
-    for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
-      case (SQLTokens[i].TokenType) of
-        ttEscape:
-          Result := Result + AnsiString(SQLTokens[i].Value)
-        else
-          Result := Result + ZAnsiString(SQLTokens[i].Value);
-      end;
-  end
-  else
-    Result := Result + AnsiString(SQL);
+  if ( EscapeMarkSequence <> '~<|' ) and ( EscapeMarkSequence <> '' )then
+    SetEscapeMarkSequence(EscapeMarkSequence);
+  Result := TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
 end;
 
 {**
