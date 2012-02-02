@@ -145,7 +145,7 @@ type
   TZCharEncoding = (
     ceDefault, //Internal switch for the two Functions below do not use it as a CodePage-decaration!
     ceUnsupported,  //may be Realy Unsupported CodePages {This must be testet before}
-    ceAnsi, //Base Ansi-String: not prefred CodePage
+    ceAnsi, //Base Ansi-String: prefered CodePage
     ceUTF8, //UTF8_Unicode: 1-4Byte/Char
     ceUTF16 //UTF16/USC2 Unicode: 2-4 Byte/Char
     {$IFNDEF MSWINDOWS}
@@ -192,6 +192,10 @@ function CharInSet(C: AnsiChar; const CharSet: TSysCharSet): Boolean; overload;
 function CharInSet(C: WideChar; const CharSet: TSysCharSet): Boolean; overload;  
 {$ENDIF}
 
+{$IF not Declared(UTF8ToString)}
+function UTF8ToString(const s: AnsiString): WideString;
+{$IFEND}
+
 implementation
 
 {$IFDEF CHECK_CLIENT_CODE_PAGE}
@@ -234,11 +238,7 @@ begin
 
   case UseEncoding of
     ceUTF8, ceUTF16:
-    {$IFDEF VER200BELOW}
       Result := UTF8ToString(Ansi);
-    {$ELSE}
-      Result := UTF8Decode(Ansi);
-    {$ENDIF}
     //ceUTF16: ;//not done yet, may be interesting for SQLite which supports Execute&Open_16-Functions
     //ceUTF32: //not done yet
   else
@@ -401,6 +401,14 @@ begin
   result := Char(C) in Charset;
 end;
 {$ENDIF}
+
+{$IF not Declared(UTF8ToString)}
+function UTF8ToString(const s: AnsiString): WideString;
+begin
+  Result := UTF8Decode(s);
+end;
+{$IFEND}
+
 
 end.
 
