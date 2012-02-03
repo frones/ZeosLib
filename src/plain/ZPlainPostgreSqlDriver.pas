@@ -770,11 +770,11 @@ begin
   AddCodePage('EUC_KR', Ord(csEUC_KR)); {Extended UNIX Code-KR 	Korean}
   AddCodePage('JOHAB', Ord(csJOHAB)); {JOHAB 	Korean (Hangul)}
   AddCodePage('EUC_TW', Ord(csEUC_TW)); {Extended UNIX Code-TW 	Traditional Chinese, Taiwanese}
-  AddCodePage('UNICODE', Ord(csUNICODE_PODBC), ceUTF8); {UNICODE 	Unicode (UTF-8)}
+  AddCodePage('UNICODE', Ord(csUNICODE_PODBC), ceUTF8, zCP_UTF8); {UNICODE 	Unicode (UTF-8)}
   AddCodePage('MULE_INTERNAL', Ord(csMULE_INTERNAL)); { Mule internal code 	Multilingual Emacs }
   {SingleByte}
   AddCodePage('SQL_ASCII', Ord(csSQL_ASCII)); {unspecified (see text) 	any}
-  AddCodePage('LATIN1', Ord(csLATIN1)); { ISO 8859-1, ECMA 94 	Western European }
+  AddCodePage('LATIN1', Ord(csLATIN1), ceAnsi, zCP_Latin1); { ISO 8859-1, ECMA 94 	Western European }
   AddCodePage('LATIN2', Ord(csLATIN2));  { 	ISO 8859-2, ECMA 94 	Central European }
   AddCodePage('LATIN3', Ord(csLATIN3));  { ISO 8859-3, ECMA 94 	South European }
   AddCodePage('LATIN4', Ord(csLATIN4));  { ISO 8859-4, ECMA 94 	North European }

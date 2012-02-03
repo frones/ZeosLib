@@ -91,11 +91,11 @@ type
     procedure LoadCodePages; virtual; abstract;
     procedure AddCodePage(const Name: String; const ID:  Integer;
       Encoding: TZCharEncoding = ceAnsi;
-      const CP: Word = 0; const ZAlias: String = '');
+      const CP: Word = $ffff; const ZAlias: String = '');
     procedure ResetCodePage(const OldID: Integer; const Name: String;
       const ID:  Integer; {may be an ordinal value of predefined Types...}
       Encoding: TZCharEncoding = ceAnsi;
-      const CP: Word = 0; const ZAlias: String = '');
+      const CP: Word = $ffff; const ZAlias: String = '');
   public
     function GetProtocol: string; virtual; abstract;
     function GetDescription: string; virtual; abstract;
@@ -136,7 +136,7 @@ uses ZSysUtils{$IFDEF CHECK_CLIENT_CODE_PAGE}, SysUtils{$ENDIF};
 
 procedure TZGenericAbstractPlainDriver.AddCodePage(const Name: String;
       const ID:  Integer; Encoding: TZCharEncoding = ceAnsi;
-      const CP: Word = 0; const ZAlias: String = '');
+      const CP: Word = $ffff; const ZAlias: String = '');
 begin
   SetLength(FCodePages, Length(FCodePages)+1);
   FCodePages[High(FCodePages)].Name := Name;
@@ -148,7 +148,7 @@ end;
 
 procedure TZGenericAbstractPlainDriver.ResetCodePage(const OldID: Integer;
       const Name: String; const ID:  Integer; Encoding: TZCharEncoding = ceAnsi;
-      const CP: Word = 0; const ZAlias: String = '');
+      const CP: Word = $ffff; const ZAlias: String = '');
 var
   I: Integer;
 begin

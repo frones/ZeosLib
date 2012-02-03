@@ -1063,7 +1063,7 @@ uses ZCompatibility;
 procedure TZOracle9iPlainDriver.LoadCodePages;
 begin
   AddCodePage('AL16UTF16', 1, ceUTF16); {Unicode 3.1 UTF-16 Universal character set}
-  AddCodePage('AL32UTF8', 2, ceUTF8); {Unicode 3.1 UTF-8 Universal character set}
+  AddCodePage('AL32UTF8', 2, ceUTF8, 65001 ); {Unicode 3.1 UTF-8 Universal character set}
   AddCodePage('AR8ADOS710', 3); {Arabic MS-DOS 710 Server 8-bit Latin/Arabic}
   AddCodePage('AR8ADOS710T', 4); {Arabic MS-DOS 710 8-bit Latin/Arabic}
   AddCodePage('AR8ADOS720', 5); {Arabic MS-DOS 720 Server 8-bit Latin/Arabic}

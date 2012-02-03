@@ -789,7 +789,7 @@ type
     function GetStatement: IZStatement;
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function ZString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
-    function ZAnsiString(const Str: String; const Encoding: TZCharEncoding = ceDefault; const CP:  Word = 0): AnsiString;
+    function ZAnsiString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
     {$ENDIF}
   end;
 

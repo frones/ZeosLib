@@ -416,25 +416,25 @@ procedure TZMySQLBaseDriver.LoadCodePages;
 begin
   {MySQL 3.23-4.1}
   { MultiChar }
-  AddCodePage('big5', 1); {Big5 Traditional Chinese}
+  AddCodePage('big5', 1, ceAnsi, zCP_Big5); {Big5 Traditional Chinese}
   AddCodePage('ujis', 10); {EUC-JP Japanese}
   AddCodePage('sjis', 11); {Shift-JIS Japanese}
-  AddCodePage('gbk', 19); {GBK Simplified Chinese}
-  AddCodePage('utf8', 22, ceUTF8); {UTF-8 Unicode}
-  AddCodePage('ucs2', 23, ceUTF16); {UCS-2 Unicode}
-  AddCodePage('euckr', 14); {EUC-KR Korean}
-  AddCodePage('gb2312', 16); {GB2312 Simplified Chinese}
-  AddCodePage('cp932', 35); {SJIS for Windows Japanese}
+  AddCodePage('gbk', 19, ceAnsi, zCP_GB2312); {GBK Simplified Chinese}
+  AddCodePage('utf8', 22, ceUTF8, zCP_UTF8); {UTF-8 Unicode}
+  AddCodePage('ucs2', 23, ceUTF16, 0, 'utf8'); {UCS-2 Unicode}
+  AddCodePage('euckr', 14, ceAnsi, zCP_EUCKR); {EUC-KR Korean}
+  AddCodePage('gb2312', 16, ceAnsi, zCP_GB2312); {GB2312 Simplified Chinese}
+  AddCodePage('cp932', 35, ceAnsi, zCP_SHIFTJS); {SJIS for Windows Japanese}
   AddCodePage('eucjpms', 36); {UJIS for Windows Japanese}
   { SingleChar }
   AddCodePage('dec8', 2); {DEC West European}
   AddCodePage('cp850', 3); {DOS West European}
   AddCodePage('hp8', 4); {HP West European}
   AddCodePage('koi8r', 5); {KOI8-R Relcom Russian}
-  AddCodePage('latin1', 6); {cp1252 West European}
-  AddCodePage('latin2', 7); {ISO 8859-2 Central European}
+  AddCodePage('latin1', 6, ceAnsi, zCP_Latin1); {cp1252 West European}
+  AddCodePage('latin2', 7, ceAnsi, zCP_Latin2); {ISO 8859-2 Central European}
   AddCodePage('swe7', 8); {7bit Swedish}
-  AddCodePage('ascii', 9); {US ASCII}
+  AddCodePage('ascii', 9, ceAnsi, zCP_Latin1); {US ASCII}
   AddCodePage('hebrew', 12); {ISO 8859-8 Hebrew}
   AddCodePage('tis620', 13); {TIS620 Thai}
   AddCodePage('koi8u', 15); {KOI8-U Ukrainian}
