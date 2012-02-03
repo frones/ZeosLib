@@ -314,6 +314,7 @@ function TAbstractCodePagedInterfacedObject.ZString(const Ansi: AnsiString;
   const Encoding: TZCharEncoding = ceDefault): String;
 var
   UseEncoding: TZCharEncoding;
+  AnsiTemp: {$IFDEF DELPHI14_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
 begin
   if not Assigned(FCodePage) then
     raise Exception.Create('CodePage-Informations not Assigned!');
@@ -333,7 +334,13 @@ begin
     {$ENDIF}
   else
     {$IFDEF DELPHI12_UP}
-    Result := String(Ansi); //Ansi to Wide/Unicode is no Problem!!!
+    begin
+//    AnsiTemp := Ansi;
+//    if ( Result <> '' ) and ( FCodePage^.CP <> $ffff ) {and DoConvert} then
+//      SetCodePage(AnsiTemp, FCodePage^.CP, True); //Server-Supported!
+//    Result := UTF8ToString(AnsiTemp); //Ansi to Wide/Unicode is no Problem!!!
+      Result := String(Ansi);
+    end;
     {$ELSE}
     //CodepageCheck of incoming Ansi?
     Result := Ansi; //Systemdefaults no CP aviable Ansi to Ansi is no Problem!!!
@@ -365,6 +372,7 @@ function TAbstractCodePagedInterfacedObject.ZAnsiString(const Str: String;
   const Encoding: TZCharEncoding = ceDefault): AnsiString;
 var
   UseEncoding: TZCharEncoding;
+  AnsiTemp: {$IFDEF DELPHI14_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
 begin
   if not Assigned(FCodePage) then
     raise Exception.Create('CodePage-Informations not Assigned!');
@@ -401,16 +409,17 @@ begin
 
 
       {$IFDEF DELPHI12_UP} //later for FPC 2.8 too eventual
-        {$IFDEF DELPHI15_UP}
+        (*{$IFDEF DELPHI15_UP}
           if  FCodePage^.CP <> $ffff then
             Result := Utf8ToAnsiEx(UTF8Encode(Str), FCodePage^.CP) //possible Dataloss for unsupported Chars else the Database raises errors
           else
-            Result := Copy(UTF8Encode(Str), 1, Length(UTF8Encode(Str))); //total Char-transport. may be server-unsupported
-        {$ELSE}
-          Result := Copy(UTF8Encode(Str), 1, Length(UTF8Encode(Str))); //total Char-transport. may be server-unsupported
-          if ( Result <> '' ) and ( FCodePage^.CP <> $ffff ) then
-            PWord(Integer(Result) - 12)^ := FCodePage^.CP;
-        {$ENDIF}
+            Result := UTF8Encode(Str); //total Char-transport. may be server-unsupported
+        {$ELSE} *)
+          AnsiTemp := UTF8Encode(Str); //total Char-transport. may be server-unsupported
+          if ( Result <> '' ) and ( FCodePage^.CP <> $ffff ) {and DoConvert} then
+            SetCodePage(AnsiTemp, FCodePage^.CP, True); //Server-Supported!
+          Result := AnsiTemp;
+        //{$ENDIF}
       {$ELSE}
         {$IFDEF FPC} //Lazarus -> FPC 2.6
         { EgonHugeist:
