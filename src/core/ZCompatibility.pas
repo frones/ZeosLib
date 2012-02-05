@@ -464,10 +464,7 @@ begin
     Result := ''
   else
   {$IFDEF FPC}
-  if codePage = zCP_UTF8 then
-    Result := UTF8ToString(S)
-  else
-     Result := UTF8ToCodePagedString(UTF8Encode(ws));
+   Result := UTF8ToString(S)
   {$ELSE}
     {$IFDEF DELPHI14_UP} //possible MARVIN mode...
     if ( codePage <> $ffff ) and ( s <> '' ) then
