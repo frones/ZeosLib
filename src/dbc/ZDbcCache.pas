@@ -981,7 +981,7 @@ begin
         {$ELSE}
         Result := PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
         {$ENDIF}
-      stUnicodeString, stUnicodeStream: Result := GetUnicodeString(ColumnIndex, IsNull);
+      stUnicodeString, stUnicodeStream: Result := ZWAnsiString(GetUnicodeString(ColumnIndex, IsNull), FCodePage);
       {$ENDIF}
       stBytes: Result := String(BytesToStr(GetBytes(ColumnIndex, IsNull)));
       stDate: Result := FormatDateTime('yyyy-mm-dd', GetDate(ColumnIndex, IsNull));

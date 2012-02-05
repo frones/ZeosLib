@@ -728,7 +728,7 @@ begin
     RDB_VARCHAR2, RDB_VARCHAR, RDB_CSTRING, RDB_CSTRING2:
       {$IFDEF CHECK_CLIENT_CODE_PAGE}
       if CharEncoding = ceUTF8 then
-        Result := stUnicodeString
+        Result := {$IFDEF FPC}stString{$ELSE}stUnicodeString{$ENDIF}
       else
         Result := stString;
       {$ELSE}
@@ -1607,7 +1607,7 @@ begin
     SQL_VARYING, SQL_TEXT:
       {$IFDEF CHECK_CLIENT_CODE_PAGE}
       if Self.ClientCodePage^.Encoding = ceUTF8 then
-        Result := stUnicodeString
+        Result := {$IFDEF FPC}stString{$ELSE}stUnicodeString{$ENDIF}
       else
         Result := stString;
       {$ELSE}
