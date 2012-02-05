@@ -635,8 +635,6 @@ begin
   now. So this also must be done in the IZSelectSchema if somebody asks
   for conerted column-data...}
 
-  Result := ZAnsiString(String(Result)); //Sets CodePage to Result if known
-
   if GetConnection.DoPreprepareSQL then
   begin
     SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeEscapeBufferToList(SQL); //Disassembles the Query

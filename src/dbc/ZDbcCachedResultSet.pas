@@ -644,9 +644,12 @@ begin
   FInitialRowsList := TList.Create;
   FCurrentRowsList := TList.Create;
 
-  FRowAccessor := TZRowAccessor.Create(ColumnsInfo);
-  FOldRowAccessor := TZRowAccessor.Create(ColumnsInfo);
-  FNewRowAccessor := TZRowAccessor.Create(ColumnsInfo);
+  FRowAccessor := TZRowAccessor.Create(ColumnsInfo
+    {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage^.CP{$ENDIF});
+  FOldRowAccessor := TZRowAccessor.Create(ColumnsInfo
+    {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage^.CP{$ENDIF});
+  FNewRowAccessor := TZRowAccessor.Create(ColumnsInfo
+    {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage^.CP{$ENDIF});
 
   FRowAccessor.AllocBuffer(FUpdatedRow);
   FRowAccessor.AllocBuffer(FInsertedRow);

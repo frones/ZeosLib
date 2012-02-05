@@ -128,7 +128,7 @@ function EncodeString(CharactersetCode: TZPgCharactersetType; const Value: strin
   @param Value a string in PostgreSQL escape format.
   @return a regular string.
 }
-function DecodeString(const Value: string): string;
+function DecodeString(const Value: AnsiString): AnsiString;
 
 {**
   Checks for possible sql errors.
@@ -729,7 +729,7 @@ end;
   @param Value a string in PostgreSQL escape format.
   @return a regular string.
 }
-function DecodeString(const Value: string): string;
+function DecodeString(const Value: AnsiString): AnsiString;
 var
   SrcLength, DestLength: Integer;
   SrcBuffer, DestBuffer: PAnsiChar;

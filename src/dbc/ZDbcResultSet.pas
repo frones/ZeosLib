@@ -638,7 +638,11 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeString);
 {$ENDIF}
+{$IFDEF DELPHI12_UP}
   Result := UTF8ToString(GetString(ColumnIndex));
+{$ELSE}
+  Result := UTF8Decode(GetString(ColumnIndex));
+{$ENDIF}
 end;
 
 {**
@@ -1031,7 +1035,7 @@ begin
     stString, stBytes, stAsciiStream, stBinaryStream:
       begin
         Result.VType := vtString;
-        Result.VString := GetString(ColumnIndex);
+        Result.VString := String(GetString(ColumnIndex));
       end;
     stUnicodeString, stUnicodeStream:
       begin

@@ -83,6 +83,9 @@ type
   {** Implements a column buffer accessor. }
   TZRowAccessor = class(TObject)
   private
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    FCodePage: Word;
+    {$ENDIF}
     FRowSize: Integer;
     FColumnsSize: Integer;
     FColumnCount: Integer;
@@ -106,7 +109,8 @@ type
     procedure CheckColumnConvertion(ColumnIndex: Integer; ResultType: TZSQLType);
 
   public
-    constructor Create(ColumnsInfo: TObjectList);
+    constructor Create(ColumnsInfo: TObjectList{$IFDEF CHECK_CLIENT_CODE_PAGE}
+      ;CodePage: Word = $ffff{$ENDIF});
     destructor Destroy; override;
 
     function AllocBuffer(var Buffer: PZRowBuffer): PZRowBuffer;
@@ -213,7 +217,8 @@ uses Math, ZMessages, ZSysUtils, ZDbcUtils{$IFDEF DELPHI12_UP}, AnsiStrings{$END
   Creates this object and assignes the main properties.
   @param ColumnsInfo a collection with column information.
 }
-constructor TZRowAccessor.Create(ColumnsInfo: TObjectList);
+constructor TZRowAccessor.Create(ColumnsInfo: TObjectList
+  {$IFDEF CHECK_CLIENT_CODE_PAGE};CodePage: Word = $ffff{$ENDIF});
 var
   I: Integer;
   Current: TZColumnInfo;
@@ -228,6 +233,9 @@ begin
   SetLength(FColumnOffsets, FColumnCount);
   SetLength(FColumnDefaultExpressions, FColumnCount);
   FHasBlobs := False;
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  FCodePage := CodePage;
+  {$ENDIF}
 
   for I := 0 to FColumnCount - 1 do
   begin
@@ -916,7 +924,7 @@ begin
         Result := @FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1];
       else
       begin
-        FTemp := AnsiString(GetString(ColumnIndex, IsNull));  //EgonHugeist: is this Save in Delphi12_up
+        FTemp := AnsiString(GetString(ColumnIndex, IsNull));  //EgonHugeist: is this Save in Delphi12_up? GetString results WideString
         Result := PAnsiChar(FTemp);
       end;
     end;
@@ -963,7 +971,16 @@ begin
       {$IFDEF DELPHI12_UP}
       stString, stUnicodeString, stUnicodeStream: Result := GetUnicodeString(ColumnIndex, IsNull);
       {$ELSE}
-      stString: Result := PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
+      stString:
+        {$IFDEF CHECK_CLIENT_CODE_PAGE}
+        //Converts a incoming CharacterSet-encoded string to Compiler-supported format (example: UTF8 for FPC)
+        begin
+          Result := PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
+          Result := ZCPToAnsiString(Result, FCodePage);
+        end;
+        {$ELSE}
+        Result := PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
+        {$ENDIF}
       stUnicodeString, stUnicodeStream: Result := GetUnicodeString(ColumnIndex, IsNull);
       {$ENDIF}
       stBytes: Result := String(BytesToStr(GetBytes(ColumnIndex, IsNull)));
@@ -1005,7 +1022,7 @@ begin
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     case FColumnTypes[ColumnIndex - 1] of
-      stUnicodeString{$IFDEF DELPHI12_UP},stString{$ENDIF}:
+      stUnicodeString{$IFDEF DELPHI12_UP} ,stString{$ENDIF}:
         Result := PWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
       stUnicodeStream:
         begin
@@ -1014,7 +1031,11 @@ begin
             Result := TempBlob.GetUnicodeString;
         end;
       else
-        Result := UTF8Encode(GetString(ColumnIndex, IsNull));
+        {$IFDEF CHECK_CLIENT_CODE_PAGE}
+        Result := UTF8ToString(GetString(ColumnIndex, IsNull));
+        {$ELSE}
+        Result := UTF8Encode(GetString(ColumnIndex, IsNull)); //EgonHugeist: is'nt it reverted?? -> Ansi out/Wide in?
+        {$ENDIF}
     end;
     IsNull := False;
   end
@@ -2096,8 +2117,16 @@ begin
     stString:
       begin
         FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
+        {$IFDEF CHECK_CLIENT_CODE_PAGE}
+        {EgonHugeist: this picks out unsupported Chars right now.
+          So they where displayed like the Server expects the Data!}
+        StrPLCopy(PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]),
+          ZCPCheckedAnsiString(Value, FCodePage),
+          FColumnLengths[ColumnIndex - 1] - 1);
+        {$ELSE}
         StrPLCopy(PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]), Value,
           FColumnLengths[ColumnIndex - 1] - 1);
+        {$ENDIF}
       end;
     stUnicodeString: SetUnicodeString(ColumnIndex, Value);
     {$ENDIF}
@@ -2130,7 +2159,11 @@ begin
       begin
         FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
         Value := System.Copy(Value, 1, FColumnLengths[ColumnIndex - 1] div 2);
-        
+        {$IFDEF CHECK_CLIENT_CODE_PAGE}
+        {EgonHugeist: this picks out unsupported Chars right now.
+          So they where displayed like the Server expects the Data!}
+        Value := ZCPWideString(Value, FCodePage);
+        {$ENDIF}
         if Length(Value) > 0 then
                System.Move(PWideString(Value)^,
                   Pointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
@@ -2139,7 +2172,11 @@ begin
           PWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := #0;
       end;
     else
+      {$IFDEF CHECK_CLIENT_CODE_PAGE}
+      SetString(ColumnIndex, ZWAnsiString(Value, FCodePage));
+      {$ELSE}
       SetString(ColumnIndex, Value);
+      {$ENDIF}
   end;
 end;
 

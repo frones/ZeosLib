@@ -85,17 +85,17 @@ type
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
   TZGenericAbstractPlainDriver = class(TZAbstractObject, IZPlainDriver)
   private
-    FClientCodePage: PZCodePage;
     FCodePages: array of TZCodePage;
   protected
     procedure LoadCodePages; virtual; abstract;
     procedure AddCodePage(const Name: String; const ID:  Integer;
       Encoding: TZCharEncoding = ceAnsi;
-      const CP: Word = $ffff; const ZAlias: String = '');
+      const CP: Word = $ffff; const ZAlias: String = ''); virtual;
     procedure ResetCodePage(const OldID: Integer; const Name: String;
       const ID:  Integer; {may be an ordinal value of predefined Types...}
       Encoding: TZCharEncoding = ceAnsi;
       const CP: Word = $ffff; const ZAlias: String = '');
+    function GetCompilerSaveCodePageName: String; virtual;
   public
     function GetProtocol: string; virtual; abstract;
     function GetDescription: string; virtual; abstract;
@@ -126,6 +126,7 @@ type
     destructor Destroy; override;
   end;
   {END ADDED by fduenas 15-06-2006}
+
 implementation
 
 uses ZSysUtils{$IFDEF CHECK_CLIENT_CODE_PAGE}, SysUtils{$ENDIF};
@@ -133,6 +134,11 @@ uses ZSysUtils{$IFDEF CHECK_CLIENT_CODE_PAGE}, SysUtils{$ENDIF};
 {$IFDEF CHECK_CLIENT_CODE_PAGE}
 
 {TZGenericAbstractPlainDriver}
+
+function TZGenericAbstractPlainDriver.GetCompilerSaveCodePageName: String;
+begin
+  Result := '';
+end;
 
 procedure TZGenericAbstractPlainDriver.AddCodePage(const Name: String;
       const ID:  Integer; Encoding: TZCharEncoding = ceAnsi;
@@ -143,7 +149,18 @@ begin
   FCodePages[High(FCodePages)].ID := ID;
   FCodePages[High(FCodePages)].Encoding := Encoding;
   FCodePages[High(FCodePages)].CP := CP;
-  FCodePages[High(FCodePages)].ZAlias := ZAlias;
+  {$IFDEF FPC}
+  if not ( ( CP in FPCSupportedCodePages) or ( CP = zCP_UTF8) ) then
+  begin
+    FCodePages[High(FCodePages)].ZAlias := GetCompilerSaveCodePageName;
+    FCodePages[High(FCodePages)].Encoding := ceUnsupported;
+  {$ELSE}
+  if CP = $ffff then
+  begin
+    FCodePages[High(FCodePages)].ZAlias := GetCompilerSaveCodePageName;
+    FCodePages[High(FCodePages)].Encoding := ceUnsupported;
+  {$ENDIF}
+  end;
 end;
 
 procedure TZGenericAbstractPlainDriver.ResetCodePage(const OldID: Integer;
@@ -160,6 +177,18 @@ begin
       FCodePages[I].Encoding := Encoding;
       FCodePages[I].CP := CP;
       FCodePages[I].ZAlias := ZAlias;
+      {$IFDEF FPC}
+      if not ( ( CP in FPCSupportedCodePages) or ( CP = zCP_UTF8) ) then
+      begin
+        FCodePages[i].ZAlias := GetCompilerSaveCodePageName;
+        FCodePages[i].Encoding := ceUnsupported;
+      {$ELSE}
+      if CP = $ffff then
+      begin
+        FCodePages[i].ZAlias := GetCompilerSaveCodePageName;
+        FCodePages[i].Encoding := ceUnsupported;
+      {$ENDIF}
+      end;
       Break;
     end;
 end;
@@ -201,7 +230,7 @@ begin
       Result := @FCodePages[i];
       Exit;
     end;
-  Result := @ClientCodePageDummy;
+  Result := GetClientCodePageInformations(GetCompilerSaveCodePageName); //recalls em selve -> switch to supported
 end;
 
 {$ENDIF}

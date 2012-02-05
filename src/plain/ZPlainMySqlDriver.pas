@@ -238,6 +238,7 @@ type
     ServerArgsLen: Integer;
     IsEmbeddedDriver: Boolean;
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetCompilerSaveCodePageName: String; override;
     procedure LoadCodePages; override;
     {$ENDIF}
     procedure LoadApi; override;
@@ -412,6 +413,11 @@ uses SysUtils, ZSysUtils, ZPlainLoader;
 
 { TZMySQLPlainBaseDriver }
 {$IFDEF CHECK_CLIENT_CODE_PAGE}
+function TZMySQLBaseDriver.GetCompilerSaveCodePageName: String;
+begin
+  Result := 'utf8';
+end;
+
 procedure TZMySQLBaseDriver.LoadCodePages;
 begin
   {MySQL 3.23-4.1}
@@ -421,36 +427,36 @@ begin
   AddCodePage('sjis', 11); {Shift-JIS Japanese}
   AddCodePage('gbk', 19, ceAnsi, zCP_GB2312); {GBK Simplified Chinese}
   AddCodePage('utf8', 22, ceUTF8, zCP_UTF8); {UTF-8 Unicode}
-  AddCodePage('ucs2', 23, ceUTF16, 0, 'utf8'); {UCS-2 Unicode}
+  AddCodePage('ucs2', 23, ceUTF16, zCP_UTF8, 'utf8'); {UCS-2 Unicode}
   AddCodePage('euckr', 14, ceAnsi, zCP_EUCKR); {EUC-KR Korean}
   AddCodePage('gb2312', 16, ceAnsi, zCP_GB2312); {GB2312 Simplified Chinese}
   AddCodePage('cp932', 35, ceAnsi, zCP_SHIFTJS); {SJIS for Windows Japanese}
   AddCodePage('eucjpms', 36); {UJIS for Windows Japanese}
   { SingleChar }
   AddCodePage('dec8', 2); {DEC West European}
-  AddCodePage('cp850', 3); {DOS West European}
+  AddCodePage('cp850', 3, ceAnsi, zCP_DOS850); {DOS West European}
   AddCodePage('hp8', 4); {HP West European}
-  AddCodePage('koi8r', 5); {KOI8-R Relcom Russian}
-  AddCodePage('latin1', 6, ceAnsi, zCP_Latin1); {cp1252 West European}
+  AddCodePage('koi8r', 5, ceAnsi, zCP_KOI8R); {KOI8-R Relcom Russian}
+  AddCodePage('latin1', 6, ceAnsi, zCP_WIN1252); {cp1252 West European}
   AddCodePage('latin2', 7, ceAnsi, zCP_Latin2); {ISO 8859-2 Central European}
   AddCodePage('swe7', 8); {7bit Swedish}
-  AddCodePage('ascii', 9, ceAnsi, zCP_Latin1); {US ASCII}
-  AddCodePage('hebrew', 12); {ISO 8859-8 Hebrew}
+  AddCodePage('ascii', 9, ceAnsi, zCP_WIN1252); {US ASCII}
+  AddCodePage('hebrew', 12, ceAnsi, zCP_WIN1255); {ISO 8859-8 Hebrew}
   AddCodePage('tis620', 13); {TIS620 Thai}
   AddCodePage('koi8u', 15); {KOI8-U Ukrainian}
-  AddCodePage('greek', 17); {ISO 8859-7 Greek}
-  AddCodePage('cp1250', 18); {Windows Central European}
-  AddCodePage('latin5', 20); {ISO 8859-9 Turkish}
-  AddCodePage('armscii8', 21); {ARMSCII-8 Armenian}
-  AddCodePage('cp866', 24); {DOS Russian}
+  AddCodePage('greek', 17, ceAnsi, zCP_WIN1253); {ISO 8859-7 Greek}
+  AddCodePage('cp1250', 18, ceAnsi, zCP_WIN1250); {Windows Central European}
+  AddCodePage('latin5', 20, ceAnsi, zCP_WIN1254); {ISO 8859-9 Turkish}
+  AddCodePage('armscii8', 21, ceAnsi, zCP_ACP); {ARMSCII-8 Armenian}
+  AddCodePage('cp866', 24, ceAnsi, zCP_DOS866); {DOS Russian}
   AddCodePage('keybcs2', 25); {DOS Kamenicky Czech-Slovak}
   AddCodePage('macce', 26); {Mac Central European}
   AddCodePage('macroman', 27); {Mac West European}
-  AddCodePage('cp852', 28); {DOS Central European}
-  AddCodePage('latin7', 29); {ISO 8859-13 Baltic}
-  AddCodePage('cp1251', 30, ceAnsi, 1251); {Windows Cyrillic}
-  AddCodePage('cp1256', 31, ceAnsi, 1256); {Windows Arabic}
-  AddCodePage('cp1257', 32, ceAnsi, 1257); {Windows Baltic}
+  AddCodePage('cp852', 28, ceAnsi, zCP_DOS852); {DOS Central European}
+  AddCodePage('latin7', 29, ceAnsi, zCP_WIN1257); {ISO 8859-13 Baltic}
+  AddCodePage('cp1251', 30, ceAnsi, zCP_WIN1251); {Windows Cyrillic}
+  AddCodePage('cp1256', 31, ceAnsi, cCP_WIN1256); {Windows Arabic}
+  AddCodePage('cp1257', 32, ceAnsi, zCP_WIN1257); {Windows Baltic}
   AddCodePage('binary', 33); {Binary pseudo charset}
   AddCodePage('geostd8', 34); {GEOSTD8 Georgian}
 end;
@@ -1219,9 +1225,9 @@ begin
   inherited LoadCodePages;
   {MySQL 4.1-5.5}
   { MultiChar }
-  AddCodePage('utf8mb4', 37, ceUTF8); {UTF-8 Unicode}
-  AddCodePage('utf16', 38, ceUTF16); {UTF-16 Unicode}
-  AddCodePage('utf32', 39, {$IFDEF MSWINDOWS}ceUnsupported{$ELSE}ceUTF32{$ENDIF}); {UTF-32 Unicode}
+  AddCodePage('utf8mb4', 37, ceUTF8, zCP_UTF8); {UTF-8 Unicode}
+  AddCodePage('utf16', 38, ceUnsupported, zCP_UNICODE, 'utf8mb4'); {UTF-16 Unicode}
+  AddCodePage('utf32', 39, ceUnsupported, zCP_UNICODE, 'utf8mb4'); {UTF-32 Unicode}
 end;
 {$ENDIF}
 

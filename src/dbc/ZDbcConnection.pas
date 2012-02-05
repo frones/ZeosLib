@@ -504,15 +504,15 @@ begin
     FPassword := FInfo.Values['password'];
 
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  FClientCodePage := Info.Values['codepage'];
-  FRaiseOnUnsupportedCP := not (Info.Values['CodePageCompatibilityWarning'] = 'OFF');
-  FSetCodePageToConnection := Info.Values['SetCodePageToConnection'] =  'ON'; //compatibitity Option for existing Applications
-  FPreprepareSQL := Info.Values['PreprepareSQL'] = 'ON'; //compatibitity Option for existing Applications
+  FClientCodePage := FInfo.Values['codepage'];
+  FRaiseOnUnsupportedCP := not (FInfo.Values['CodePageCompatibilityWarning'] = 'OFF');
+  FSetCodePageToConnection := FInfo.Values['SetCodePageToConnection'] =  'ON'; //compatibitity Option for existing Applications
+  FPreprepareSQL := FInfo.Values['PreprepareSQL'] = 'ON'; //compatibitity Option for existing Applications
   {Pick out the values from Info}
-  Info.Values['CodePageCompatibilityWarning'] := '';
-  Info.Values['SetCodePageToConnection'] := '';
-  Info.Values['PreprepareSQL'] := '';
-  Info.Values['codepage'] := '';
+  FInfo.Values['CodePageCompatibilityWarning'] := '';
+  FInfo.Values['SetCodePageToConnection'] := '';
+  FInfo.Values['PreprepareSQL'] := '';
+  FInfo.Values['codepage'] := '';
   {CheckCharEncoding}
   CheckCharEncoding(FClientCodePage, True);
   {$ENDIF}
@@ -531,16 +531,6 @@ begin
     Close;
   FInfo.Free;
   FMetadata.Free;
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  {Put the values back to Info}
-  if not FRaiseOnUnsupportedCP then
-    Self.Info.Values['CodePageCompatibilityWarning'] :=  'OFF';
-  if FSetCodePageToConnection then
-    Self.Info.Values['SetCodePageToConnection'] :=  'ON';
-  Info.Values['codepage'] := FClientCodePage;
-  if FPreprepareSQL then
-    Info.Values['PreprepareSQL'] := 'ON';
-  {$ENDIF}
   inherited Destroy;
 end;
 

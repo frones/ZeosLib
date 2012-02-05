@@ -59,7 +59,7 @@ interface
 
 uses
    Classes, SysUtils, ZClasses
-   {$IFDEF CHECK_CLIENT_CODE_PAGE},ZCompatibility, Types{$ENDIF};
+   {$IFDEF CHECK_CLIENT_CODE_PAGE},ZCompatibility{$ENDIF};
 
 type
 
@@ -668,7 +668,7 @@ begin
 
   //OutMarks where Found too. So let's read the BinarayData to the TempStr
   //Including the Quotes
-  for i := 0 to (StrToInt(LenString)-Length(FEscapeMarks)+(1*SizeOf(Char)+1)) do
+  for i := 0 to (StrToInt(LenString)-Length(FEscapeMarks)+(1*2+1)) do
   begin
     if not ReadNextCharToTempChar then
       Exit

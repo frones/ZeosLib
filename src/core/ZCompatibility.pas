@@ -72,6 +72,9 @@ uses
   {$IFDEF MSWINDOWS}
   Windows,
   {$ENDIF}
+  {$IFDEF FPC}
+  LConvEncoding,
+  {$ENDIF}
   Classes, SysUtils;
 
 type
@@ -142,31 +145,7 @@ function GetProcAddress(Module: HMODULE; Proc: PChar): Pointer;
 
 {$IFDEF CHECK_CLIENT_CODE_PAGE}
 {EgonHugeist:}
-const
-  zCP_DOS852 = 852; {ibm852	852	Osteuropäisch (DOS)}
-  zCP_DOS866 = 866; {ibm866	866	Kyrillisch (DOS)}
-  zCP_WIN874 = 874; {windows-874	874	Thailändisch}
-  zCP_SHIFTJS = 932; {csshiftjis	932	Shift-JIS, ms_kanji}
-  zCP_GB2312 = 936; {csiso58gb231280	936	Chinesisch - VR (GB2312), iso-ir-58}
-  zCP_EUCKR = 949; {cseuckr Korean, iso-ir-149, ks-c-5601, ks-c-5601-1987, ks_c_5601-1989}
-  zCP_Big5 = 950; {big5, csbig5}
-  zCP_WIN1250 = 1250; {x-cp1250	1250	Osteuropäisch (Windows), Window-Unicode}
-  zCP_WIN1251 = 1251; {x-cp1251	1251	Kyrillisch (Windows)}
-  zCP_Latin1 = 1252; {cp367, cp819, ansi_x3.4-1968, ansi_x3.4-1986, ascii, csascii, iso-8859-1, iso646-us, ibm367, ibm819, Latin1, iso-ir-100, iso-ir-6, iso_646.irv}
-  zCP_WIN1253 = 1253; {windows-1253	1253	Greck (Windows) }
-  zCP_WIN1254 = 1254; { windows-1254	1254	Türkisch (Windows) }
-  zCP_WIN1255 = 1255; {  csisolatinhebrew	1255	Hebräisch (ISO-Visual), so-ir-138, iso-8859-8}
-  cCP_WIN1256 = 1256; { windows-1256	1256	Arabisch}
-  zCP_WIN1257 = 1257; {windows-1257	1257	Baltic (Windows)}
-  zCP_WIN1285 = 1285; {windows-1258	1258	Vietnamese}
-  zCP_Latin2 = 28592; {latin2	east european (ISO), iso-8859-2, iso-ir-101}
-  zCP_KOREAN = 2022; {iso-2022-kr	50225	Koreanisch (ISO)}
-  zCP_KOI8R = 20866; {cskoi8r	20866	Kyrillisch (KOI8-R)}
-  zCP_UTF8 = 65001;
-  zCP_UTF7 = 65000;
-  zCP_2022kr = 50225; {csiso2022kr	50225	Koreanisch (ISO) }
 type
-
   TZClientCodePageOption = (coShowSupportedsOnly, coDisableSupportWarning,
     coSetCodePageToConnection, coPreprepareSQL);
   TZClientCodePageOptions = set of TZClientCodePageOption;
@@ -204,8 +183,8 @@ type
       function ZAnsiString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
     These functions do auto arrange the in/out-coming AnsiStrings in
     dependency of the used CharacterSet and the used Compiler}
-    function ZString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
-    function ZAnsiString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
+    function ZString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault; Convert: Boolean = True): String;
+    function ZAnsiString(const Str: String; const Encoding: TZCharEncoding = ceDefault; Convert: Boolean = False): AnsiString;
     property ClientCodePage: PZCodePage read FCodePage write FCodePage;
   public
     destructor Destroy; override;
@@ -215,6 +194,79 @@ const
   ClientCodePageDummy: TZCodepage =
     (Name: ''; ID: 0; Encoding: ceAnsi; CP: 0; ZAlias: '');
 
+function ZWAnsiString(const ws: WideString; codePage: Word): AnsiString;
+function ZWideString(const s: AnsiString; codePage: Word): WideString;
+function ZCPWideString(const ws: WideString; codePage: Word): WideString;
+function ZCPCheckedAnsiString(const s: AnsiString; codepage: Word): AnsiString;
+function ZCPToAnsiString(const s: AnsiString; codepage: Word): AnsiString;
+function ZAnsiStringToCP(const s: AnsiString; codepage: Word): AnsiString;
+
+const
+  zCP_ACP = 0; {ASCII US}
+  zCP_EBC037 = 37; {EBCDIC Codepage 037}
+  zCP_EBC273 = 273; {EBCDIC Code Page 273/1 8-bit Austrian German}
+  zCP_EBC277 = 277; {EBCDIC Code Page 277/1 8-bit Danish}
+  zCP_EBC278 = 278; {EBCDIC Code Page 278/1 8-bit Swedish}
+  zCP_EBC280 = 280; {EBCDIC Code Page 280/1 8-bit Italian}
+  zCP_EBC284 = 284; {EBCDIC Code Page 284 8-bit Latin American/Spanish}
+
+  zCP_DOS437 = 437; {MS-DOS odepage 437 (US)}
+  zCP_DOS737 = 737; {MS-DOS Codepage 737 (Greek IBM PC defacto Standard)}
+  zCP_DOS775 = 775; {MS-DOS Codepage 775 (BaltRim)}
+  zCP_DOS850 = 850;	{MS-DOS Codepage 850 (Multilingual Latin 1)}
+  zCP_DOS851 = 851; {MS-DOS Codepage 851 (Greece) - obsolete}
+  zCP_DOS852 = 852; {ibm852	852	Osteuropäisch (DOS)}
+  zCP_DOS853 = 853;	{MS-DOS Codepage 853 (Multilingual Latin 3)}
+  zCP_DOS855 = 855;	{MS-DOS Codepage 855 (Russia) - obsolete}
+  zCP_DOS857 = 857;	{MS-DOS Codepage 857 (Multilingual Latin 5)}
+  zCP_DOS858 = 858; {MS-DOS Codepage 858  {Latin I + Euro symbol}
+  zCP_DOS860 = 860;	{MS-DOS Codepage 860 (Portugal)}
+  zCP_DOS861 = 861;	{MS-DOS Codepage 861 (Iceland)}
+  zCP_DOS862 = 862;	{MS-DOS Codepage 862 (Israel)}
+  zCP_DOS863 = 863;	{MS-DOS Codepage 863 (Canada (French))}
+  zCP_DOS864 = 864;	{MS-DOS Codepage 864 (Arabic) without BOX DRAWINGS below 20}
+  zCP_DOS865 = 865;	{MS-DOS Codepage 865 (Norway)}
+  zCP_DOS866 = 866; {ibm866	866	Cyrl (DOS)}
+  zCP_DOS869 = 869; {MS-DOS Codepage 869 (Greece)}
+  zCP_DOS874 = 874; {MS-DOS Codepage 874 (Thai)}
+  zCP_EBC875 = 875;	{EBCDIC Codepage 875 (Greek)}
+  zCP_EBC924 = 924; {Latin 9 EBCDIC 924}
+  zCP_DOS895 = 895; {MS-DOS Codepage 895 (Kamenicky CS)}
+  zCP_SHIFTJS = 932; {csshiftjis	932	Shift-JIS, ms_kanji}
+  zCP_GB2312 = 936; {csiso58gb231280	936	Chinesisch - VR (GB2312), iso-ir-58}
+  zCP_EUCKR = 949; {cseuckr Korean, iso-ir-149, ks-c-5601, ks-c-5601-1987, ks_c_5601-1989}
+  zCP_Big5 = 950; {big5, csbig5}
+  zCP_EBC1026 = 1026; {EBCDIC Code Page 1026 8-bit Turkish}
+  zCP_UNICODE = 1200; {Indicates the Unicode character set, Windows code page 1200}
+  zCP_WIN1250 = 1250; {Microsoft Windows Codepage 1250 (EE)}
+  zCP_WIN1251 = 1251; {Microsoft Windows Codepage 1251 (Cyrl)}
+  zCP_WIN1252 = 1252; {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
+  zCP_WIN1253 = 1253; {Microsoft Windows Codepage 1253 (Greek)}
+  zCP_WIN1254 = 1254; {Microsoft Windows Codepage 1254 (Turk)}
+  zCP_WIN1255 = 1255; {Microsoft Windows Codepage 1255 (Hebrew)}
+  cCP_WIN1256 = 1256; {Microsoft Windows Codepage 1256 (Arab)}
+  zCP_WIN1257 = 1257; {Microsoft Windows Codepage 1257 (BaltRim)}
+  zCP_WIN1258 = 1258; {Microsoft Windows Codepage 1258 (Viet), TCVN-5712}
+  zCP_Latin2 = 28592; {latin2	east european (ISO), iso-8859-2, iso-ir-101,}
+  zCP_KOREAN = 2022; {iso-2022-kr	50225	Koreanisch (ISO)}
+  zCP_KOI8R = 20866; {cskoi8r	20866	Kyrillisch (KOI8-R)}
+  zCP_ISO2022JPSIO = 50222; {Indicates the Internet character set ISO-2022-JP-SIO.}
+  zCP_ISO2022JPESC = 50221; {Indicates the Internet character set ISO-2022-JP-ESC.}
+  zCP_JAUTODETECT = 50932; {Indicates Japanese auto-detect (50932). }
+  zCP_KAUTODETECT = 50949; {Indicates Korean auto-detect (50949).}
+  zCP_UTF8 = 65001;
+  zCP_UTF7 = 65000;
+  zCP_2022kr = 50225; {csiso2022kr	50225	Koreanisch (ISO) }
+  zCP_EBC1047 = 1047;	{EBCDIC Codepage 1047}
+  zCP_EBC500 = 500;	{EBCDIC Codepage 500}
+
+  {$IFDEF FPC}
+  FPCSupportedCodePages = [
+    zCP_DOS850, zCP_DOS858, zCP_DOS866, zCP_DOS874, zCP_SHIFTJS, zCP_GB2312,
+    zCP_EUCKR, zCP_Big5, zCP_WIN1250, zCP_WIN1251,zCP_WIN1252, zCP_WIN1253,
+    zCP_WIN1254, zCP_WIN1255, cCP_WIN1256, zCP_WIN1257, zCP_WIN1258,
+    zCP_Latin2, zCP_KOI8R];
+  {$ENDIF}
 {$ENDIF}
 
 {$IFNDEF DELPHI12_UP}
@@ -227,16 +279,128 @@ function CharInSet(C: WideChar; const CharSet: TSysCharSet): Boolean; overload;
 function UTF8ToString(const s: AnsiString): WideString;
 {$IFEND}
 
-{$IFDEF MSWINDOWS}
-function WideStringToString(const ws: WideString; codePage: Word): AnsiString;
-function StringToWideString(const s: AnsiString; codePage: Word): WideString;
-{$ENDIF}
 
 implementation
 
 {$IFDEF CHECK_CLIENT_CODE_PAGE}
 
-{$IFDEF MSWINDOWS}
+{$IFDEF FPC}
+function UTF8ToCodePagedString(const s: String; CP: Word): String;
+begin
+  case CP of
+    //zCP_ACP = 0; {ASCII US}
+    //zCP_DOS437: Reuslt := UTF8ToCP437(S);
+    //zCP_DOS737 = 737; {MS-DOS Codepage 737 (Greek IBM PC defacto Standard)}
+    //zCP_DOS775 = 775; {MS-DOS Codepage 775 (BaltRim)}
+    zCP_DOS850: Result := UTF8ToCP850(s);
+    //zCP_DOS851 = 851; {MS-DOS Codepage 851 (Greece) - obsolete}
+    //zCP_DOS852 = 852; {ibm852	852	Osteuropäisch (DOS)}
+    //zCP_DOS853 = 853;	{MS-DOS Codepage 853 (Multilingual Latin 3)}
+    //zCP_DOS855 = 855;	{MS-DOS Codepage 855 (Russia) - obsolete}
+    //zCP_DOS857 = 857;	{MS-DOS Codepage 857 (Multilingual Latin 5)}
+    zCP_DOS858: Result := UTF8ToCP1252(s); {MS-DOS Codepage 858  {Latin I + Euro symbol}
+    //zCP_DOS860 = 860;	{MS-DOS Codepage 860 (Portugal)}
+    //zCP_DOS861 = 861;	{MS-DOS Codepage 861 (Iceland)}
+    //zCP_DOS862 = 862;	{MS-DOS Codepage 862 (Israel)}
+    //zCP_DOS863 = 863;	{MS-DOS Codepage 863 (Canada (French))}
+    //zCP_DOS864 = 864;	{MS-DOS Codepage 864 (Arabic) without BOX DRAWINGS below 20}
+    //zCP_DOS865 = 865;	{MS-DOS Codepage 865 (Norway)}
+    zCP_DOS866: Result := UTF8ToCP866(s);
+    //zCP_DOS869 = 869; {MS-DOS Codepage 869 (Greece)}
+    zCP_DOS874: Result := UTF8ToCP874(s);
+    //zCP_EBC875 = 875;	{EBCDIC Codepage 875 (Greek)}
+    //zCP_DOS895 = 895; {MS-DOS Codepage 895 (Kamenicky CS)}
+    zCP_SHIFTJS: Result := UTF8ToCP932(s);
+    zCP_GB2312: Result := UTF8ToCP936(s);
+    zCP_EUCKR: Result := UTF8ToCP949(s);
+    zCP_Big5: Result := UTF8ToCP950(s);
+    //zCP_UNICODE = 1200; {Indicates the Unicode character set, Windows code page 1200}
+    zCP_WIN1250: Result := UTF8ToCP1250(S);
+    zCP_WIN1251: Result := UTF8ToCP1251(S);
+    zCP_WIN1252: Result := UTF8ToCP1252(s);
+    zCP_WIN1253: Result := UTF8ToCP1253(s);
+    zCP_WIN1254: Result := UTF8ToCP1254(s);
+    zCP_WIN1255: Result := UTF8ToCP1255(s);
+    cCP_WIN1256: Result := UTF8ToCP1256(s);
+    zCP_WIN1257: Result := UTF8ToCP1257(s);
+    zCP_WIN1258: Result := UTF8ToCP1258(s);
+    zCP_Latin2: Result := UTF8ToISO_8859_2(s);
+    //zCP_KOREAN = 2022; {iso-2022-kr	50225	Koreanisch (ISO)}
+    zCP_KOI8R: Result := UTF8ToKOI8(s);
+    //zCP_ISO2022JPSIO = 50222; {Indicates the Internet character set ISO-2022-JP-SIO.}
+    //zCP_ISO2022JPESC = 50221; {Indicates the Internet character set ISO-2022-JP-ESC.}
+    //zCP_JAUTODETECT = 50932; {Indicates Japanese auto-detect (50932). }
+    //zCP_KAUTODETECT = 50949; {Indicates Korean auto-detect (50949).}
+    zCP_UTF8: Result := s;
+    //zCP_UTF7 = 65000;
+    //zCP_2022kr = 50225; {csiso2022kr	50225	Koreanisch (ISO) }
+    //zCP_EBC037 = 37; {EBCDIC Codepage 037}
+    //zCP_EBC1026 = 1026;	{EBCDIC Codepage 1026 (Turkish)}
+    //zCP_EBC1047 = 1047;	{EBCDIC Codepage 1047}
+    //zCP_EBC500 = 500;	{EBCDIC Codepage 500}
+    else
+      Result := s;
+  end;
+end;
+
+function CodePagedStringToUTF8(const s: String; CP: Word): String;
+begin
+  case CP of
+    //zCP_ACP = 0; {ASCII US}
+    //zCP_DOS437: Reuslt := UTF8ToCP437(S);
+    //zCP_DOS737 = 737; {MS-DOS Codepage 737 (Greek IBM PC defacto Standard)}
+    //zCP_DOS775 = 775; {MS-DOS Codepage 775 (BaltRim)}
+    zCP_DOS850: Result := CP850ToUTF8(s);
+    //zCP_DOS851 = 851; {MS-DOS Codepage 851 (Greece) - obsolete}
+    //zCP_DOS852 = 852; {ibm852	852	Osteuropäisch (DOS)}
+    //zCP_DOS853 = 853;	{MS-DOS Codepage 853 (Multilingual Latin 3)}
+    //zCP_DOS855 = 855;	{MS-DOS Codepage 855 (Russia) - obsolete}
+    //zCP_DOS857 = 857;	{MS-DOS Codepage 857 (Multilingual Latin 5)}
+    zCP_DOS858: Result := CP1252ToUTF8(s); {MS-DOS Codepage 858  {Latin I + Euro symbol}
+    //zCP_DOS860 = 860;	{MS-DOS Codepage 860 (Portugal)}
+    //zCP_DOS861 = 861;	{MS-DOS Codepage 861 (Iceland)}
+    //zCP_DOS862 = 862;	{MS-DOS Codepage 862 (Israel)}
+    //zCP_DOS863 = 863;	{MS-DOS Codepage 863 (Canada (French))}
+    //zCP_DOS864 = 864;	{MS-DOS Codepage 864 (Arabic) without BOX DRAWINGS below 20}
+    //zCP_DOS865 = 865;	{MS-DOS Codepage 865 (Norway)}
+    zCP_DOS866: Result := CP866ToUTF8(s);
+    //zCP_DOS869 = 869; {MS-DOS Codepage 869 (Greece)}
+    zCP_DOS874: Result := CP874ToUTF8(s);
+    //zCP_EBC875 = 875;	{EBCDIC Codepage 875 (Greek)}
+    //zCP_DOS895 = 895; {MS-DOS Codepage 895 (Kamenicky CS)}
+    zCP_SHIFTJS: Result := CP932ToUTF8(s);
+    zCP_GB2312: Result := CP936ToUTF8(s);
+    zCP_EUCKR: Result := CP949ToUTF8(s);
+    zCP_Big5: Result := CP950ToUTF8(s);
+    //zCP_UNICODE = 1200; {Indicates the Unicode character set, Windows code page 1200}
+    zCP_WIN1250: Result := CP1250ToUTF8(S);
+    zCP_WIN1251: Result := CP1251ToUTF8(S);
+    zCP_WIN1252: Result := CP1252ToUTF8(s);
+    zCP_WIN1253: Result := CP1253ToUTF8(s);
+    zCP_WIN1254: Result := CP1254ToUTF8(s);
+    zCP_WIN1255: Result := CP1255ToUTF8(s);
+    cCP_WIN1256: Result := CP1256ToUTF8(s);
+    zCP_WIN1257: Result := CP1257ToUTF8(s);
+    zCP_WIN1258: Result := UTF8ToCP1258(s);
+    zCP_Latin2: Result := CP1258ToUTF8(s);
+    //zCP_KOREAN = 2022; {iso-2022-kr	50225	Koreanisch (ISO)}
+    zCP_KOI8R: Result := KOI8ToUTF8(s);
+    //zCP_ISO2022JPSIO = 50222; {Indicates the Internet character set ISO-2022-JP-SIO.}
+    //zCP_ISO2022JPESC = 50221; {Indicates the Internet character set ISO-2022-JP-ESC.}
+    //zCP_JAUTODETECT = 50932; {Indicates Japanese auto-detect (50932). }
+    //zCP_KAUTODETECT = 50949; {Indicates Korean auto-detect (50949).}
+    zCP_UTF8: Result := s;
+    //zCP_UTF7 = 65000;
+    //zCP_2022kr = 50225; {csiso2022kr	50225	Koreanisch (ISO) }
+    //zCP_EBC037 = 37; {EBCDIC Codepage 037}
+    //zCP_EBC1026 = 1026;	{EBCDIC Codepage 1026 (Turkish)}
+    //zCP_EBC1047 = 1047;	{EBCDIC Codepage 1047}
+    //zCP_EBC500 = 500;	{EBCDIC Codepage 500}
+    else
+      Result := s;
+  end;
+end;
+{$ENDIF}
 {**
   Converts Unicode string to Ansi string using specified code page.
   @param   ws       Unicode string.
@@ -244,24 +408,45 @@ implementation
   @returns Converted ansi string.
 }
 
-function WideStringToString(const ws: WideString; codePage: Word): AnsiString;
+function ZWAnsiString(const ws: WideString; codePage: Word): AnsiString;
+{$IFNDEF FPC}
 var
+  {$IFNDEF DELPHI12_UP}
   l: integer;
+  {$ENDIF}
+  AnsiTemp: {$IFDEF DELPHI14_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
+{$ENDIF}
 begin
   if ws = '' then
     Result := ''
   else
   begin
-    l := WideCharToMultiByte(codePage,
-      WC_COMPOSITECHECK or WC_DISCARDNS or WC_SEPCHARS or WC_DEFAULTCHAR,
-      @ws[1], - 1, nil, 0, nil, nil);
-    SetLength(Result, l - 1);
-    if l > 1 then
-      WideCharToMultiByte(codePage,
-        WC_COMPOSITECHECK or WC_DISCARDNS or WC_SEPCHARS or WC_DEFAULTCHAR,
-        @ws[1], - 1, @Result[1], l - 1, nil, nil);
+    {$IFDEF FPC}
+    Result := UTF8Encode(ws)
+    {$ELSE}
+      {$IFDEF DELPHI12_UP} //use Delphi-RTL cause of possible Marvin-Mode for XE2
+      AnsiTemp := UTF8Encode(ws); //total Char-transport. may be server-unsupported
+      if ( AnsiTemp <> '' ) and ( codePage <> $ffff )  then
+        SetCodePage(AnsiTemp, codePage, True); //Server-Codepage supported!
+      Result := AnsiTemp;
+      {$ELSE}
+      if ( codePage <> $ffff ) and ( ws <> '' ) then
+      begin
+        l := WideCharToMultiByte(codePage,
+          WC_COMPOSITECHECK or WC_DISCARDNS or WC_SEPCHARS or WC_DEFAULTCHAR,
+          @ws[1], - 1, nil, 0, nil, nil);
+        SetLength(Result, l - 1);
+        if l > 1 then
+          WideCharToMultiByte(codePage,
+            WC_COMPOSITECHECK or WC_DISCARDNS or WC_SEPCHARS or WC_DEFAULTCHAR,
+            @ws[1], - 1, @Result[1], l - 1, nil, nil);
+      end
+      else
+        Result := UTF8Encode(ws); //toal chars
+      {$ENDIF}
+    {$ENDIF}
   end;
-end; { WideStringToString }
+end; { ZWAnsiString }
 
 {**
   Converts Ansi string to Unicode string using specified code page.
@@ -269,22 +454,77 @@ end; { WideStringToString }
   @param   codePage Code page to be used in conversion.
   @returns Converted wide string.
 }
-function StringToWideString(const s: AnsiString; codePage: Word): WideString;
+function ZWideString(const s: AnsiString; codePage: Word): WideString;
+{$IFNDEF DELPHI12_UP AND IFNDEF FPC}
 var
   l: integer;
+{$ENDIF}
 begin
   if s = '' then
     Result := ''
   else
-  begin
-    l := MultiByteToWideChar(codePage, MB_PRECOMPOSED, PAnsiChar(@s[1]), - 1, nil, 0);
-    SetLength(Result, l - 1);
-    if l > 1 then
-      MultiByteToWideChar(CodePage, MB_PRECOMPOSED, PAnsiChar(@s[1]),
-        - 1, PWideChar(@Result[1]), l - 1);
-  end;
-end; { StringToWideString }
-{$ENDIF}
+  {$IFDEF FPC}
+  if codePage = zCP_UTF8 then
+    Result := UTF8ToString(S)
+  else
+     Result := UTF8ToCodePagedString(UTF8Encode(ws));
+  {$ELSE}
+    {$IFDEF DELPHI14_UP} //possible MARVIN mode...
+    if ( codePage <> $ffff ) and ( s <> '' ) then
+      Result := UTF8ToString(AnsiToUTF8Ex(s, codePage))
+    else
+      Result := WideString(s);
+    {$ELSE}
+    if ( codePage <> $ffff ) and ( s <> '' ) then //Older Delphi-Version can use Allways the Win-APi
+    begin
+      l := MultiByteToWideChar(codePage, MB_PRECOMPOSED, PAnsiChar(@s[1]), - 1, nil, 0);
+      SetLength(Result, l - 1);
+      if l > 1 then
+        MultiByteToWideChar(CodePage, MB_PRECOMPOSED, PAnsiChar(@s[1]),
+          - 1, PWideChar(@Result[1]), l - 1);
+    end
+    else
+      Result := WideString(s);
+    {$ENDIF}
+  {$ENDIF}
+end; { ZWideString }
+
+function ZCPWideString(const ws: WideString; codePage: Word): WideString;
+begin
+  Result := ZWideString(ZWAnsiString(ws, codePage), codePage);
+end;
+
+{**
+  Egonhugeist
+  This little function picks unsupported chars out. So the data is 100%
+  Server-supported and no Errors where raised
+  }
+function ZCPCheckedAnsiString(const s: AnsiString; codepage: Word): AnsiString;
+begin
+  {$IFDEF FPC}
+  Result := CodePagedStringToUTF8(UTF8ToCodePagedString(s, codePage), codePage);;
+  {$ELSE}
+  Result := ZWAnsiString(ZWideString(s, CodePage), CodePage);
+  {$ENDIF}
+end;
+
+function ZCPToAnsiString(const s: AnsiString; codepage: Word): AnsiString;
+begin
+  {$IFDEF FPC}
+  Result := CodePagedStringToUTF8(s, codePage);
+  {$ELSE}
+  Result := ZWAnsiString(ZWideString(s, CodePage), CodePage);
+  {$ENDIF}
+end;
+
+function ZAnsiStringToCP(const s: AnsiString; codepage: Word): AnsiString;
+begin
+  {$IFDEF FPC}
+  Result := UTF8ToCodePagedString(s, codePage);
+  {$ELSE}
+  Result := ZWAnsiString(ZWideString(s, CodePage), CodePage);
+  {$ENDIF}
+end;
 
 {**
   EgonHugeist:
@@ -305,16 +545,18 @@ end; { StringToWideString }
     Change this if you need some Transtations to a specified Encoding.
     Example: CharacterSet was set to Latin1 and some "special"-String MUST BE
      UTF8 instead of Latin1. (SSL-Keys eventualy)
+  @param Convert ignored for Delphi means if the Chararacters should be propper
+    to the specified codepage
+
 
   IS there a need for it? AnsiEncoded adaps automaticaly to WideString
   So what about coming UTF16/32????
 }
 
 function TAbstractCodePagedInterfacedObject.ZString(const Ansi: AnsiString;
-  const Encoding: TZCharEncoding = ceDefault): String;
+  const Encoding: TZCharEncoding = ceDefault; Convert: Boolean = True): String;
 var
   UseEncoding: TZCharEncoding;
-  AnsiTemp: {$IFDEF DELPHI14_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
 begin
   if not Assigned(FCodePage) then
     raise Exception.Create('CodePage-Informations not Assigned!');
@@ -327,23 +569,23 @@ begin
     ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}:
     //ceUTF16: ;//not done yet, may be interesting for SQLite which supports Execute&Open_16-Functions
     //ceUTF32: //not done yet
-    {$IFDEF FPC}
-    Result := Ansi; //Ansi to Ansi is no Problem!!!
-    {$ELSE}
+    {$IFDEF DELPHI12_UP}
     Result := UTF8ToString(Ansi);
+    {$ELSE}
+    Result := Ansi;
     {$ENDIF}
   else
     {$IFDEF DELPHI12_UP}
-    begin
-//    AnsiTemp := Ansi;
-//    if ( Result <> '' ) and ( FCodePage^.CP <> $ffff ) {and DoConvert} then
-//      SetCodePage(AnsiTemp, FCodePage^.CP, True); //Server-Supported!
-//    Result := UTF8ToString(AnsiTemp); //Ansi to Wide/Unicode is no Problem!!!
-      Result := String(Ansi);
-    end;
+    Result := ZWideString(Ansi, FCodePage^.CP);
     {$ELSE}
-    //CodepageCheck of incoming Ansi?
-    Result := Ansi; //Systemdefaults no CP aviable Ansi to Ansi is no Problem!!!
+      {$IFDEF FPC}
+      if Convert then
+        Result := CodePagedStringToUTF8(Ansi, FCodePage^.CP)
+      else
+        Result := Ansi; //Ansi to Ansi is no Problem!!!
+      {$ELSE}
+      Result := ZCPAnsiString(Ansi, FCodePage^.CP);
+      {$ENDIF}
     {$ENDIF}
   end;
 end;
@@ -367,12 +609,13 @@ EgonHugeist:
     Change this if you need some Transtations to a specified Encoding.
     Example: CharacterSet was set to Latin1 and some "special"-String MUST BE
      UTF8 instead of Latin1. (SSL-Keys eventualy)
+  @param Convert ignored for Delphi means if the Chararacters should be propper
+    to the specified codepage. Security-switch.
 }
 function TAbstractCodePagedInterfacedObject.ZAnsiString(const Str: String;
-  const Encoding: TZCharEncoding = ceDefault): AnsiString;
+  const Encoding: TZCharEncoding = ceDefault; Convert: Boolean = False): AnsiString;
 var
   UseEncoding: TZCharEncoding;
-  AnsiTemp: {$IFDEF DELPHI14_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
 begin
   if not Assigned(FCodePage) then
     raise Exception.Create('CodePage-Informations not Assigned!');
@@ -383,10 +626,10 @@ begin
 
   case UseEncoding of
     ceUTF8, ceUTF16:
-        {$IFDEF FPC}
-        Result := Str;
-        {$ELSE}
+        {$IFDEF DELPHI12_UP}
         Result := AnsiString(UTF8Encode(Str));
+        {$ELSE}
+        Result := Str;
         {$ENDIF}
     //ceUTF16: ;//not done yet
     //ceUTF32
@@ -402,38 +645,26 @@ begin
           like an !SAVE!-Alias, we've to use and the CodePage we must have
           here if it's not UTFx
 
-          BE WARNED!! This is a string-helper Function to handle DataLoss not
-          a solution to Enable all chars for your spezified CharacterSet of your
-          Connection -> trying this may result an Exception if Chars are not
-          supported}
-
-
+          BE WARNED!! This is a string-helper Function to handle data loss in
+          dependency of the choosen Character-Codepage not
+          a solution to enable all chars for your spezified CharacterSet of your
+          Connection.}
       {$IFDEF DELPHI12_UP} //later for FPC 2.8 too eventual
-        (*{$IFDEF DELPHI15_UP}
-          if  FCodePage^.CP <> $ffff then
-            Result := Utf8ToAnsiEx(UTF8Encode(Str), FCodePage^.CP) //possible Dataloss for unsupported Chars else the Database raises errors
-          else
-            Result := UTF8Encode(Str); //total Char-transport. may be server-unsupported
-        {$ELSE} *)
-          AnsiTemp := UTF8Encode(Str); //total Char-transport. may be server-unsupported
-          if ( Result <> '' ) and ( FCodePage^.CP <> $ffff ) {and DoConvert} then
-            SetCodePage(AnsiTemp, FCodePage^.CP, True); //Server-Supported!
-          Result := AnsiTemp;
-        //{$ENDIF}
+        Result := ZWAnsiString(Str, FCodePage^.CP);
       {$ELSE}
-        {$IFDEF FPC} //Lazarus -> FPC 2.6
+        {$IFDEF FPC}
         { EgonHugeist:
           Actual the FPC uses CodePage of UTF8 generally (or am i wrong?)
           So we need to switch to Result to OS- or better Database-Used CodePage first!
           If this this is correct we have to Copy the String like in Delphi12_UP.
           Maybe if there is somebody who know's a better solution then me,
           please do it!}
-          Result := Str; //so this must be testet please!!!!!!!
-        {$ELSE} //Delphi7-2005
-        {Uses Alway OS-Default Ansi-CodePage so check if we've to switch here too }
-        Result := Str;
-        if Result <> '' and FCodePage^.CP <> $ffff then
-          PWord(Integer(Result) - 12)^ := FCodePage^.CP;
+        if Convert then //so this must be testet please!!!!!!!
+          Result := UTF8ToCodePagedString(Str, FCodePage^.CP)
+        else
+          Result := Str; //Ansi to Ansi is no Problem!!!
+        {$ELSE} //Delphi7=>?<2009
+        Result := ZCPAnsiString(Str, FCodePage^.CP);
         {$ENDIF}
       {$ENDIF}
     end;
@@ -531,4 +762,5 @@ end;
 
 
 end.
+
 

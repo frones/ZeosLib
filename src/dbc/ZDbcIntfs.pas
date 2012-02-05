@@ -788,8 +788,8 @@ type
 
     function GetStatement: IZStatement;
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
-    function ZString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
-    function ZAnsiString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
+    function ZString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault; Convert: Boolean = True): String;
+    function ZAnsiString(const Str: String; const Encoding: TZCharEncoding = ceDefault; Convert: Boolean = False): AnsiString;
     {$ENDIF}
   end;
 

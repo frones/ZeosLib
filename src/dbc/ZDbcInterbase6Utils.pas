@@ -1858,22 +1858,22 @@ end;
    @param Index the index target filed
    @param Str the source string
 }
-{$IFDEF DELPHI12_UP}   //AVZ
+
 procedure TZParamsSQLDA.EncodeString(Code: Smallint; const Index: Word;
-  const Str: String);
-{$ELSE}
-procedure TZParamsSQLDA.EncodeString(Code: Smallint; const Index: Word;
-  const Str: AnsiString);
-{$ENDIF}
+  const Str: {$IFDEF DELPHI12_UP}String{$ELSE}AnsiString{$ENDIF});//AVZ
 var
   Len: Cardinal;
   Stream : TStream;
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  TempAnsi: AnsiString;
+  {$ENDIF}
 begin
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  Len := Length(ZAnsiString(Str));
+  TempAnsi := ZAnsiString(Str, ceDefault, True); //Convert once
+  Len := Length(TempAnsi);
   {$ELSE}
     {$IFDEF DELPHI12_UP}   //AVZ - fix forUNICODE Size
-    Len := Length(UTF8Encode(Str));
+    Len := Length(UTF8Encode(Str)); //???????????? Latin1 Conneciton or something like this??
     {$ELSE}
     Len := Length(Str);
     {$ENDIF}
@@ -1890,7 +1890,7 @@ begin
             IbReAlloc(sqldata, 0, Len + 1);
           sqllen := Len;
           {$IFDEF CHECK_CLIENT_CODE_PAGE}
-          Move(PAnsiChar(ZAnsiString(Str))^, sqldata^, sqllen);
+          Move(PAnsiChar(TempAnsi)^, sqldata^, sqllen);
           {$ELSE}
           Move(PAnsiChar(Str)^, sqldata^, sqllen);
           {$ENDIF}
@@ -1904,7 +1904,7 @@ begin
             IbReAlloc(sqldata, 0, Len + 2);
           PISC_VARYING(sqldata).strlen :=  Len;
           {$IFDEF CHECK_CLIENT_CODE_PAGE}
-          Move(PAnsiChar(ZAnsiString(Str))^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen)  //AVZ
+          Move(PAnsiChar(TempAnsi)^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen)  //AVZ
           {$ELSE}
             {$IFDEF DELPHI12_UP} //???? EgonHugeist: UTF8Encode! Is this right here? In all cases? Realy?
               Move(PAnsiChar(AnsiString(UTF8Encode(Str)))^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);  //AVZ
@@ -2630,7 +2630,7 @@ begin
                     if l < sqllen then
                        result := copy(result, 1, l);
                   end;
-    SQL_VARYING : SetString(Result, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
+    SQL_VARYING : System.SetString(Result, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
   end;
   {$IFOPT D+}
 {$R+}
