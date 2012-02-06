@@ -645,11 +645,11 @@ begin
   FCurrentRowsList := TList.Create;
 
   FRowAccessor := TZRowAccessor.Create(ColumnsInfo
-    {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage^.CP{$ENDIF});
+    {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
   FOldRowAccessor := TZRowAccessor.Create(ColumnsInfo
-    {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage^.CP{$ENDIF});
+    {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
   FNewRowAccessor := TZRowAccessor.Create(ColumnsInfo
-    {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage^.CP{$ENDIF});
+    {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
 
   FRowAccessor.AllocBuffer(FUpdatedRow);
   FRowAccessor.AllocBuffer(FInsertedRow);

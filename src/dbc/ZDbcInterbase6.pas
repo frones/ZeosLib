@@ -459,14 +459,14 @@ begin
     begin
       FClientCodePage := self.Info.Values['isc_dpb_lc_ctype'];
       Self.CheckCharEncoding(FClientCodePage, True);
-      Info.Values['isc_dpb_lc_ctype'] := ''; //drop it (setting is optional)
+      Self.Info.Values['isc_dpb_lc_ctype'] := ''; //drop it (setting is optional)
     end;
 
   if FSetCodePageToConnection then
     //Set CharacterSet only if wanted! This is a little patch for someone who
     //currently wrote UTF8 into a latin-database for example
     //so this rearanges only the internal use of vtUnicodeString
-    Info.Values['isc_dpb_lc_ctype'] := FClientCodePage;
+    Self.Info.Values['isc_dpb_lc_ctype'] := FClientCodePage;
   {$ENDIF}
 
   RoleName := Trim(Info.Values['rolename']);

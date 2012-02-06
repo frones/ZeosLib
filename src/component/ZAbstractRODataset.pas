@@ -1816,7 +1816,8 @@ begin
     { Initializes accessors and buffers. }
     ColumnList := ConvertFieldsToColumnInfo(Fields);
     try
-      RowAccessor := TZRowAccessor.Create(ColumnList);
+      RowAccessor := TZRowAccessor.Create(ColumnList{$IFDEF CHECK_CLIENT_CODE_PAGE}
+      ,Connection.DbcConnection.GetIZPlainDriver.GetClientCodePageInformations(Connection.ClientCodepage){$ENDIF});
     finally
       ColumnList.Free;
     end;

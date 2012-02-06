@@ -150,7 +150,7 @@ begin
   FCodePages[High(FCodePages)].Encoding := Encoding;
   FCodePages[High(FCodePages)].CP := CP;
   {$IFDEF FPC}
-  if not ( ( CP in FPCSupportedCodePages) or ( CP = zCP_UTF8) ) then
+  if not ( FCodePages[High(FCodePages)].Encoding = ceUTF8 ) then
   begin
     FCodePages[High(FCodePages)].ZAlias := GetCompilerSaveCodePageName;
     FCodePages[High(FCodePages)].Encoding := ceUnsupported;
@@ -178,7 +178,7 @@ begin
       FCodePages[I].CP := CP;
       FCodePages[I].ZAlias := ZAlias;
       {$IFDEF FPC}
-      if not ( ( CP in FPCSupportedCodePages) or ( CP = zCP_UTF8) ) then
+      if not ( FCodePages[I].Encoding = ceUTF8 ) then
       begin
         FCodePages[i].ZAlias := GetCompilerSaveCodePageName;
         FCodePages[i].Encoding := ceUnsupported;

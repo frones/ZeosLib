@@ -727,7 +727,7 @@ begin
     RDB_BOOLEAN: Result := stBoolean;
     RDB_VARCHAR2, RDB_VARCHAR, RDB_CSTRING, RDB_CSTRING2:
       {$IFDEF CHECK_CLIENT_CODE_PAGE}
-      if CharEncoding = ceUTF8 then
+      if CharEncoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUF32{$ENDIF}] then
         Result := {$IFDEF FPC}stString{$ELSE}stUnicodeString{$ENDIF}
       else
         Result := stString;
@@ -1606,7 +1606,7 @@ begin
   case GetIbSqlType(Index) of
     SQL_VARYING, SQL_TEXT:
       {$IFDEF CHECK_CLIENT_CODE_PAGE}
-      if Self.ClientCodePage^.Encoding = ceUTF8 then
+      if Self.ClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
         Result := {$IFDEF FPC}stString{$ELSE}stUnicodeString{$ENDIF}
       else
         Result := stString;
@@ -1869,7 +1869,7 @@ var
   {$ENDIF}
 begin
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  TempAnsi := ZAnsiString(Str, ceDefault, True); //Convert once
+  TempAnsi := ZAnsiString(Str);
   Len := Length(TempAnsi);
   {$ELSE}
     {$IFDEF DELPHI12_UP}   //AVZ - fix forUNICODE Size

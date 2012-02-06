@@ -463,6 +463,7 @@ type
   TZFirebird21PlainDriver = class (TZFirebirdBaseDriver)
   protected
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetCompilerSaveCodePageName: String; override;
     procedure LoadCodePages; override;
   {$ENDIF}
     procedure LoadApi; override;
@@ -488,6 +489,7 @@ type
   TZFirebird25PlainDriver = class (TZFirebirdBaseDriver)
   protected
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetCompilerSaveCodePageName: String; override;
     procedure LoadCodePages; override;
   {$ENDIF}
     procedure LoadApi; override;
@@ -1303,6 +1305,11 @@ end;
 { IZFirebird21PlainDriver }
 
 {$IFDEF CHECK_CLIENT_CODE_PAGE}
+function TZFirebird21PlainDriver.GetCompilerSaveCodePageName: String;
+begin
+  Result := 'UTF8';
+end;
+
 procedure TZFirebird21PlainDriver.LoadCodePages;
 begin
   inherited;
@@ -1398,6 +1405,11 @@ end;
 { TZFirebird25PlainDriver }
 
 {$IFDEF CHECK_CLIENT_CODE_PAGE}
+function TZFirebird25PlainDriver.GetCompilerSaveCodePageName: String;
+begin
+  Result := 'UTF8';
+end;
+
 procedure TZFirebird25PlainDriver.LoadCodePages;
 begin
   inherited;

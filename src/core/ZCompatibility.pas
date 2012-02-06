@@ -183,8 +183,9 @@ type
       function ZAnsiString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
     These functions do auto arrange the in/out-coming AnsiStrings in
     dependency of the used CharacterSet and the used Compiler}
-    function ZString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault; Convert: Boolean = True): String;
-    function ZAnsiString(const Str: String; const Encoding: TZCharEncoding = ceDefault; Convert: Boolean = False): AnsiString;
+    function ZString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
+    function ZAnsiString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
+    function ZStringW(const ws: WideString; const Encoding: TZCharEncoding = ceDefault): String;
     property ClientCodePage: PZCodePage read FCodePage write FCodePage;
   public
     destructor Destroy; override;
@@ -194,8 +195,8 @@ const
   ClientCodePageDummy: TZCodepage =
     (Name: ''; ID: 0; Encoding: ceAnsi; CP: 0; ZAlias: '');
 
-function ZWAnsiString(const ws: WideString; codePage: Word): AnsiString;
-function ZWideString(const s: AnsiString; codePage: Word): WideString;
+function ZWideToAnsiString(const ws: WideString; codePage: Word): AnsiString;
+function ZAnsiToWideString(const s: AnsiString; codePage: Word): WideString;
 function ZCPWideString(const ws: WideString; codePage: Word): WideString;
 function ZCPCheckedAnsiString(const s: AnsiString; codepage: Word): AnsiString;
 function ZCPToAnsiString(const s: AnsiString; codepage: Word): AnsiString;
@@ -261,11 +262,11 @@ const
   zCP_EBC500 = 500;	{EBCDIC Codepage 500}
 
   {$IFDEF FPC}
-  FPCSupportedCodePages = [
+  FPCSupportedCodePages: array[0..19] of Word = (
     zCP_DOS850, zCP_DOS858, zCP_DOS866, zCP_DOS874, zCP_SHIFTJS, zCP_GB2312,
     zCP_EUCKR, zCP_Big5, zCP_WIN1250, zCP_WIN1251,zCP_WIN1252, zCP_WIN1253,
     zCP_WIN1254, zCP_WIN1255, cCP_WIN1256, zCP_WIN1257, zCP_WIN1258,
-    zCP_Latin2, zCP_KOI8R];
+    zCP_Latin2, zCP_KOI8R, zCP_UTF8);
   {$ENDIF}
 {$ENDIF}
 
@@ -408,7 +409,7 @@ end;
   @returns Converted ansi string.
 }
 
-function ZWAnsiString(const ws: WideString; codePage: Word): AnsiString;
+function ZWideToAnsiString(const ws: WideString; codePage: Word): AnsiString;
 {$IFNDEF FPC}
 var
   {$IFNDEF DELPHI12_UP}
@@ -454,7 +455,7 @@ end; { ZWAnsiString }
   @param   codePage Code page to be used in conversion.
   @returns Converted wide string.
 }
-function ZWideString(const s: AnsiString; codePage: Word): WideString;
+function ZAnsiToWideString(const s: AnsiString; codePage: Word): WideString;
 {$IFNDEF DELPHI12_UP AND IFNDEF FPC}
 var
   l: integer;
@@ -488,7 +489,7 @@ end; { ZWideString }
 
 function ZCPWideString(const ws: WideString; codePage: Word): WideString;
 begin
-  Result := ZWideString(ZWAnsiString(ws, codePage), codePage);
+  Result := ZAnsiToWideString(ZWideToAnsiString(ws, codePage), codePage);
 end;
 
 {**
@@ -499,9 +500,9 @@ end;
 function ZCPCheckedAnsiString(const s: AnsiString; codepage: Word): AnsiString;
 begin
   {$IFDEF FPC}
-  Result := CodePagedStringToUTF8(UTF8ToCodePagedString(s, codePage), codePage);;
+  Result := S;
   {$ELSE}
-  Result := ZWAnsiString(ZWideString(s, CodePage), CodePage);
+  Result := ZWideToAnsiString(ZAnsiToWideString(s, CodePage), CodePage);
   {$ENDIF}
 end;
 
@@ -510,7 +511,7 @@ begin
   {$IFDEF FPC}
   Result := CodePagedStringToUTF8(s, codePage);
   {$ELSE}
-  Result := ZWAnsiString(ZWideString(s, CodePage), CodePage);
+  Result := ZWideToAnsiString(ZAnsiToWideString(s, CodePage), CodePage);
   {$ENDIF}
 end;
 
@@ -519,7 +520,7 @@ begin
   {$IFDEF FPC}
   Result := UTF8ToCodePagedString(s, codePage);
   {$ELSE}
-  Result := ZWAnsiString(ZWideString(s, CodePage), CodePage);
+  Result := ZWideToAnsiString(ZAnsiToWideString(s, CodePage), CodePage);
   {$ENDIF}
 end;
 
@@ -551,7 +552,7 @@ end;
 }
 
 function TAbstractCodePagedInterfacedObject.ZString(const Ansi: AnsiString;
-  const Encoding: TZCharEncoding = ceDefault; Convert: Boolean = True): String;
+  const Encoding: TZCharEncoding = ceDefault): String;
 var
   UseEncoding: TZCharEncoding;
 begin
@@ -573,15 +574,12 @@ begin
     {$ENDIF}
   else
     {$IFDEF DELPHI12_UP}
-    Result := ZWideString(Ansi, FCodePage^.CP);
+    Result := ZAnsiToWideString(Ansi, FCodePage^.CP);
     {$ELSE}
       {$IFDEF FPC}
-      if Convert then
-        Result := CodePagedStringToUTF8(Ansi, FCodePage^.CP)
-      else
-        Result := Ansi; //Ansi to Ansi is no Problem!!!
+      Result := Ansi; //Ansi to Ansi is no Problem!!!
       {$ELSE}
-      Result := ZCPAnsiString(Ansi, FCodePage^.CP);
+      Result := ZCPCheckedAnsiString(Ansi, FCodePage^.CP);
       {$ENDIF}
     {$ENDIF}
   end;
@@ -606,11 +604,9 @@ EgonHugeist:
     Change this if you need some Transtations to a specified Encoding.
     Example: CharacterSet was set to Latin1 and some "special"-String MUST BE
      UTF8 instead of Latin1. (SSL-Keys eventualy)
-  @param Convert ignored for Delphi means if the Chararacters should be propper
-    to the specified codepage. Security-switch.
 }
 function TAbstractCodePagedInterfacedObject.ZAnsiString(const Str: String;
-  const Encoding: TZCharEncoding = ceDefault; Convert: Boolean = False): AnsiString;
+  const Encoding: TZCharEncoding = ceDefault): AnsiString;
 var
   UseEncoding: TZCharEncoding;
 begin
@@ -647,21 +643,77 @@ begin
           a solution to enable all chars for your spezified CharacterSet of your
           Connection.}
       {$IFDEF DELPHI12_UP} //later for FPC 2.8 too eventual
-        Result := ZWAnsiString(Str, FCodePage^.CP);
+        Result := ZWideToAnsiString(Str, FCodePage^.CP);
       {$ELSE}
         {$IFDEF FPC}
         { EgonHugeist:
-          Actual the FPC uses CodePage of UTF8 generally (or am i wrong?)
-          So we need to switch to Result to OS- or better Database-Used CodePage first!
-          If this this is correct we have to Copy the String like in Delphi12_UP.
-          Maybe if there is somebody who know's a better solution then me,
-          please do it!}
-        if Convert then //so this must be testet please!!!!!!!
-          Result := UTF8ToCodePagedString(Str, FCodePage^.CP)
-        else
+          Actual the FPC uses CodePage of UTF8 generally.
+          FPC doesn't support CodePage-informations so a save prepreparing
+          is'nt possible in the Resultsets. So we only can hope the data is
+          valid. Or we need a changed/addidtional Cached-Resultset which
+          is only for the user-data and NOT for Metadata. While testing these
+          prepreparations the Metadata-informations where changed. Or on the
+          other hand it's possible thate Lazarus-functions are not right there..}
           Result := Str; //Ansi to Ansi is no Problem!!!
         {$ELSE} //Delphi7=>?<2009
-        Result := ZCPAnsiString(Str, FCodePage^.CP);
+        Result := ZCPCheckedAnsiString(Str, FCodePage^.CP);
+        {$ENDIF}
+      {$ENDIF}
+    end;
+  end;
+end;
+
+function TAbstractCodePagedInterfacedObject.ZStringW(const ws: WideString; const Encoding: TZCharEncoding = ceDefault): String;
+var
+  UseEncoding: TZCharEncoding;
+begin
+  if not Assigned(FCodePage) then
+    raise Exception.Create('CodePage-Informations not Assigned!');
+  if Encoding = ceDefault then
+    UseEncoding := FCodePage.Encoding
+  else
+    UseEncoding := Encoding;
+
+  case UseEncoding of
+    ceUTF8, ceUTF16:
+        {$IFDEF DELPHI12_UP}
+        Result := WS;
+        {$ELSE}
+        Result := UTF8Encode(WS);
+        {$ENDIF}
+    //ceUTF16: ;//not done yet
+    //ceUTF32
+  else
+    begin
+      { EgonHugeist:
+        To Delphi12_UP and ev. (comming) FPC 2.8 Users:
+        This function Result an Ansi-String with default DB CodePage
+        Possible Problems:
+          if you've CodePage 1252 and add some Chinese Letters the CodePage
+          turns to 1200(Windows Unicode) which is able to pick up this 2Byte letters
+          So on we've to add an additional Param to my encodingRecord
+          like an !SAVE!-Alias, we've to use and the CodePage we must have
+          here if it's not UTFx
+
+          BE WARNED!! This is a string-helper Function to handle data loss in
+          dependency of the choosen Character-Codepage not
+          a solution to enable all chars for your spezified CharacterSet of your
+          Connection.}
+      {$IFDEF DELPHI12_UP} //later for FPC 2.8 too eventual
+        Result := WS;
+      {$ELSE}
+        {$IFDEF FPC}
+        { EgonHugeist:
+          Actual the FPC uses CodePage of UTF8 generally.
+          FPC doesn't support CodePage-informations so a save prepreparing
+          is'nt possible in the Resultsets. So we only can hope the data is
+          valid. Or we need a changed/addidtional Cached-Resultset which
+          is only for the user-data and NOT for Metadata. While testing these
+          prepreparations the Metadata-informations where changed. Or on the
+          other hand it's possible thate Lazarus-functions are not right there..}
+          Result := UTF8Encode(WS);
+        {$ELSE} //Delphi7=>?<2009
+        Result := ZWideToAnsiString(Str, FCodePage^.CP);
         {$ENDIF}
       {$ENDIF}
     end;
@@ -673,6 +725,7 @@ begin
   Self.FCodePage := nil;
   inherited Destroy;
 end;
+
 {$ENDIF}
 
 {$IFDEF UNIX}

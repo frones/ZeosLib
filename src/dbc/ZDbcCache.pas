@@ -81,11 +81,8 @@ type
   PZRowBuffer = ^TZRowBuffer;
 
   {** Implements a column buffer accessor. }
-  TZRowAccessor = class(TObject)
+  TZRowAccessor = class({$IFDEF CHECK_CLIENT_CODE_PAGE}TAbstractCodePagedInterfacedObject{$ELSE}TObject{$ENDIF})
   private
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
-    FCodePage: Word;
-    {$ENDIF}
     FRowSize: Integer;
     FColumnsSize: Integer;
     FColumnCount: Integer;
@@ -109,8 +106,8 @@ type
     procedure CheckColumnConvertion(ColumnIndex: Integer; ResultType: TZSQLType);
 
   public
-    constructor Create(ColumnsInfo: TObjectList{$IFDEF CHECK_CLIENT_CODE_PAGE}
-      ;CodePage: Word = $ffff{$ENDIF});
+    constructor Create(ColumnsInfo: TObjectList
+      {$IFDEF CHECK_CLIENT_CODE_PAGE};ClientCodePage: PZCodePage = nil{$ENDIF});
     destructor Destroy; override;
 
     function AllocBuffer(var Buffer: PZRowBuffer): PZRowBuffer;
@@ -218,7 +215,7 @@ uses Math, ZMessages, ZSysUtils, ZDbcUtils{$IFDEF DELPHI12_UP}, AnsiStrings{$END
   @param ColumnsInfo a collection with column information.
 }
 constructor TZRowAccessor.Create(ColumnsInfo: TObjectList
-  {$IFDEF CHECK_CLIENT_CODE_PAGE};CodePage: Word = $ffff{$ENDIF});
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}; ClientCodePage: PZCodePage = nil{$ENDIF});
 var
   I: Integer;
   Current: TZColumnInfo;
@@ -234,7 +231,10 @@ begin
   SetLength(FColumnDefaultExpressions, FColumnCount);
   FHasBlobs := False;
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  FCodePage := CodePage;
+  if Assigned(ClientCodePage) then
+    Self.ClientCodePage := ClientCodePage
+  else
+    Self.ClientCodePage := @ClientCodePageDummy;
   {$ENDIF}
 
   for I := 0 to FColumnCount - 1 do
@@ -974,14 +974,12 @@ begin
       stString:
         {$IFDEF CHECK_CLIENT_CODE_PAGE}
         //Converts a incoming CharacterSet-encoded string to Compiler-supported format (example: UTF8 for FPC)
-        begin
-          Result := PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
-          Result := ZCPToAnsiString(Result, FCodePage);
-        end;
+        Result := ZString(PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])); //compiler neutral else dataloss
+      stUnicodeString, stUnicodeStream: Result := ZStringW(GetUnicodeString(ColumnIndex, IsNull)); //wide to Ansi?
         {$ELSE}
         Result := PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
+      stUnicodeString, stUnicodeStream: Result := GetUnicodeString(ColumnIndex, IsNull);
         {$ENDIF}
-      stUnicodeString, stUnicodeStream: Result := ZWAnsiString(GetUnicodeString(ColumnIndex, IsNull), FCodePage);
       {$ENDIF}
       stBytes: Result := String(BytesToStr(GetBytes(ColumnIndex, IsNull)));
       stDate: Result := FormatDateTime('yyyy-mm-dd', GetDate(ColumnIndex, IsNull));
@@ -2121,8 +2119,7 @@ begin
         {EgonHugeist: this picks out unsupported Chars right now.
           So they where displayed like the Server expects the Data!}
         StrPLCopy(PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]),
-          ZCPCheckedAnsiString(Value, FCodePage),
-          FColumnLengths[ColumnIndex - 1] - 1);
+          ZAnsiString(Value), FColumnLengths[ColumnIndex - 1] - 1);
         {$ELSE}
         StrPLCopy(PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]), Value,
           FColumnLengths[ColumnIndex - 1] - 1);
@@ -2160,9 +2157,7 @@ begin
         FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
         Value := System.Copy(Value, 1, FColumnLengths[ColumnIndex - 1] div 2);
         {$IFDEF CHECK_CLIENT_CODE_PAGE}
-        {EgonHugeist: this picks out unsupported Chars right now.
-          So they where displayed like the Server expects the Data!}
-        Value := ZCPWideString(Value, FCodePage);
+        Value := ZCPWideString(Value, ClientCodePage^.CP);
         {$ENDIF}
         if Length(Value) > 0 then
                System.Move(PWideString(Value)^,
@@ -2173,7 +2168,7 @@ begin
       end;
     else
       {$IFDEF CHECK_CLIENT_CODE_PAGE}
-      SetString(ColumnIndex, ZWAnsiString(Value, FCodePage));
+      SetString(ColumnIndex, ZStringW(Value));
       {$ELSE}
       SetString(ColumnIndex, Value);
       {$ENDIF}
