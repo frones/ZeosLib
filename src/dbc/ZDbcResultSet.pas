@@ -2895,7 +2895,7 @@ end;
 procedure TZAbstractBlob.SetUnicodeString(const Value: WideString);
 begin
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  SetString(ZAnsiString(Value));
+  SetString(AnsiString(UTF8Encode(Value)));
   {$ELSE}
   SetString(AnsiString(Value)); //EgonHugeist: String-DataLoss!!
   {$ENDIF}

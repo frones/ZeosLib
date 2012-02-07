@@ -328,12 +328,7 @@ begin
   TypeName := UpperCase(TypeName);
   TypeNameFull := UpperCase(TypeNameFull);
   Result := stUnknown;
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
-  case CharEncoding of
-    ceUTF8, ceUTF16: IsUnicodeField := True;
-    else IsUnicodeField := False;
-  end;
-  {$ELSE} //fails if client_character_set is not UTF8
+  {$IFNDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
   IsUnicodeField:=
   	StrUtils.AnsiContainsText(Collation, 'utf8') or
     StrUtils.AnsiContainsText(Collation, 'ucs2');
@@ -407,7 +402,11 @@ begin
   end
   else if TypeName = 'DOUBLE' then
     Result := stDouble
-  else if TypeName = 'CHAR' then begin
+  else if TypeName = 'CHAR' then
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    Result := stString
+  {$ELSE}
+  begin
     if IsUnicodeField then
     {$IFDEF FPC}
       Result := stString
@@ -416,17 +415,24 @@ begin
     {$ENDIF}
     else
      Result := stString;
-  end else
-    if TypeName = 'VARCHAR' then begin
-      if IsUnicodeField then
-      {$IFDEF FPC}
-        Result := stString
-      {$ELSE}
-        Result := stUnicodeString
-      {$ENDIF}
+  end
+  {$ENDIF}
+  else
+    if TypeName = 'VARCHAR' then
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    Result := stString
+  {$ELSE}
+    begin
+    if IsUnicodeField then
+    {$IFDEF FPC}
+      Result := stString
+    {$ELSE}
+      Result := stUnicodeString
+    {$ENDIF}
     else
      Result := stString;
   end
+  {$ENDIF}
   else if TypeName = 'VARBINARY' then
     Result := stBytes
   else if TypeName = 'BINARY' then
@@ -472,6 +478,13 @@ begin
          if GeoTypes[i] = TypeName then
             Result := stBinaryStream;
 
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
+  if CharEncoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+    case result of
+      stString: Result := {$IFDEF FPC}stString{$ELSE}stUnicodeString{$ENDIF};
+      stAsciiStream: Result := stUnicodeStream;
+    end;
+  {$ENDIF}
   if Result = stUnknown then
      raise Exception.Create('Unknown MySQL data type!');
 end;

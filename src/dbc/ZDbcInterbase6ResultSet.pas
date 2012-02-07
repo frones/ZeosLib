@@ -108,7 +108,7 @@ type
     function Next: Boolean; override;
   end;
 
-  {** Implements external blob wrapper object for PostgreSQL. }
+  {** Implements external blob wrapper object for Intebase/Firbird. }
   TZInterbase6Blob = class(TZAbstractBlob)
   private
     FBlobId: TISC_QUAD;

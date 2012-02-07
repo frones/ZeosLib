@@ -589,23 +589,24 @@ begin
         Result := '''' + Format('%0.4d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d',
           [AYear, AMonth, ADay, AHour, AMinute, ASecond]) + '''';
       end;
-      stAsciiStream, stUnicodeStream, stBinaryStream:
+      stAsciiStream, {$IFNDEF CHECK_CLIENT_CODE_PAGE}stUnicodeStream,{$ENDIF} stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
-            Result := GetAnsiEscapeString(TempBlob.GetString)
+            Result := String(GetAnsiEscapeString(TempBlob.GetString))
           else
             Result := 'NULL';
         end;
-{   ????
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
      stUnicodeStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
-            Result := GetEscapeString(TempBlob.GetString)
+            Result := String(GetAnsiEscapeString(AnsiString(UTF8Encode(TempBlob.GetUnicodeString))))
           else
             Result := 'NULL';
-        end;}
+        end;
+     {$ENDIF}
     end;
   end;
 end;

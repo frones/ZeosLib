@@ -156,7 +156,7 @@ function GetMinorVersion(const Value: string): Word;
 
 implementation
 
-uses ZMessages;
+uses ZMessages{$IFDEF CHECK_CLIENT_CODE_PAGE}, ZCompatibility{$ENDIF};
 
 type
 
@@ -292,11 +292,19 @@ begin
   else
     Result := stUnknown;
 
-  if Connection.GetCharactersetCode = csUTF8 then
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
+  if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+    case result of
+      stString: Result := {$IFDEF FPC}stString{$ELSE}stUnicodeString{$ENDIF};
+      stAsciiStream: Result := stUnicodeStream;
+    end;
+  {$ELSE}
+  if Connection.GetCharactersetCode = csUTF8 then  //whats with csUNICODE_PODBC ??
     case Result of
       stString: Result := {$IFDEF FPC}stString{$ELSE}stUnicodeString{$ENDIF};
       stAsciiStream: Result := stUnicodeStream;
     end;
+  {$ENDIF}
 end;
 
 {**
@@ -347,11 +355,19 @@ begin
       Result := stUnknown;
   end;
 
-  if Connection.GetCharactersetCode = csUTF8 then
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
+  if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+    case result of
+      stString: Result := {$IFDEF FPC}stString{$ELSE}stUnicodeString{$ENDIF};
+      stAsciiStream: Result := stUnicodeStream;
+    end;
+  {$ELSE}
+  if Connection.GetCharactersetCode = csUTF8 then  //whats with csUNICODE_PODBC ??
     case Result of
       stString: Result := {$IFDEF FPC}stString{$ELSE}stUnicodeString{$ENDIF};
       stAsciiStream: Result := stUnicodeStream;
     end;
+  {$ENDIF}
 
 end;
 
