@@ -293,11 +293,13 @@ begin
     Result := stUnknown;
 
   {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
+  {$IFNDEF FPC}
   if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
     case result of
-      stString: Result := {$IFDEF FPC}stString{$ELSE}stUnicodeString{$ENDIF};
+      stString: Result := stUnicodeString;
       stAsciiStream: Result := stUnicodeStream;
     end;
+  {$ENDIF}
   {$ELSE}
   if Connection.GetCharactersetCode = csUTF8 then  //whats with csUNICODE_PODBC ??
     case Result of

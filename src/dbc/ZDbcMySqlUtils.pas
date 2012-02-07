@@ -479,11 +479,13 @@ begin
             Result := stBinaryStream;
 
   {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
+  {$IFNDEF FPC}
   if CharEncoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
     case result of
-      stString: Result := {$IFDEF FPC}stString{$ELSE}stUnicodeString{$ENDIF};
+      stString: Result := stUnicodeString;
       stAsciiStream: Result := stUnicodeStream;
     end;
+  {$ENDIF}
   {$ENDIF}
   if Result = stUnknown then
      raise Exception.Create('Unknown MySQL data type!');

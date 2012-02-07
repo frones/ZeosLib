@@ -726,14 +726,7 @@ begin
   case SqlType of
     RDB_BOOLEAN: Result := stBoolean;
     RDB_VARCHAR2, RDB_VARCHAR, RDB_CSTRING, RDB_CSTRING2:
-      {$IFDEF CHECK_CLIENT_CODE_PAGE}
-      if CharEncoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUF32{$ENDIF}] then
-        Result := {$IFDEF FPC}stString{$ELSE}stUnicodeString{$ENDIF}
-      else
-        Result := stString;
-      {$ELSE}
       Result := stString;
-      {$ENDIF}
     RDB_CHAR, RDB_CHAR2:
       begin
         case SqlSubType of
@@ -792,6 +785,15 @@ begin
     else
       Result := ZDbcIntfs.stUnknown;
   end;
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
+  {$IFNDEF FPC}
+  if CharEncoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+    case result of
+      stString: Result := stUnicodeString;
+      stAsciiStream: Result := stUnicodeStream;
+    end;
+  {$ENDIF}
+  {$ENDIF}
 end;
 
 {**
@@ -1605,14 +1607,7 @@ begin
 
   case GetIbSqlType(Index) of
     SQL_VARYING, SQL_TEXT:
-      {$IFDEF CHECK_CLIENT_CODE_PAGE}
-      if Self.ClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-        Result := {$IFDEF FPC}stString{$ELSE}stUnicodeString{$ENDIF}
-      else
-        Result := stString;
-      {$ELSE}
       Result := stString;
-      {$ENDIF}
     SQL_LONG:
       begin
         if SqlScale = 0 then
@@ -1651,6 +1646,15 @@ begin
   else
       Result := stString;
   end;
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
+  {$IFNDEF FPC}
+  if ClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+    case result of
+      stString: Result := stUnicodeString;
+      stAsciiStream: Result := stUnicodeStream;
+    end;
+  {$ENDIF}
+  {$ENDIF}
 end;
 
 {**
@@ -1665,7 +1669,7 @@ begin
   SetString(Result, FXSQLDA.sqlvar[Index].OwnName, FXSQLDA.sqlvar[Index].OwnName_length);
   {$IFOPT D+}
 {$R+}
-{$ENDIF}  
+{$ENDIF}
 end;
 
 {**
@@ -1882,7 +1886,7 @@ begin
   {$R-}
    with FXSQLDA.sqlvar[Index] do
     case Code of
-      SQL_TEXT :  { TODO -oEgonHugeist : UTF8Handling ???? }
+      SQL_TEXT :
         begin
           if sqllen = 0 then
             GetMem(sqldata, Len)
