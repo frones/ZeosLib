@@ -112,8 +112,9 @@ function EncodeBinaryString(const Value: string): string;
   @param InputString the input string.
   @return the character code in terms of enumerated number.
 }
+{$IFNDEF CHECK_CLIENT_CODE_PAGE}
 function pg_CS_code(const InputString: string): TZPgCharactersetType;
-
+{$ENDIF}
 {**
   Encode string which probably consists of multi-byte characters.
   Characters ' (apostraphy), low value (value zero), and \ (back slash) are encoded. Since we have noticed that back slash is the second byte of some BIG5 characters (each of them is two bytes in length), we need a characterset aware encoding function.
@@ -164,7 +165,7 @@ pg_CS = record
   name: string;
   code: TZPgCharactersetType;
 end;
-
+{$IFNDEF CHECK_CLIENT_CODE_PAGE}
 const
 
 pg_CS_Table: array [0..47] of pg_CS =
@@ -219,6 +220,7 @@ pg_CS_Table: array [0..47] of pg_CS =
   (name:'OTHER'; code: csOTHER)
 );
 
+{$ENDIF}
 {**
    Return ZSQLType from PostgreSQL type name
    @param Connection a connection to PostgreSQL
@@ -292,7 +294,7 @@ begin
   else
     Result := stUnknown;
 
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   {$IFNDEF FPC}
   if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
     case result of
@@ -446,6 +448,7 @@ end;
   @param InputString the input string.
   @return the character code in terms of enumerated number.
 }
+{$IFNDEF CHECK_CLIENT_CODE_PAGE}
 function pg_CS_code(const InputString: string): TZPgCharactersetType;
 var
   i,len: integer;
@@ -481,6 +484,7 @@ begin
     end;
   end;
 end;
+{$ENDIF}
 
 function pg_CS_stat(stat: integer; character: integer;
         CharactersetCode: TZPgCharactersetType): integer;

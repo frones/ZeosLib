@@ -468,25 +468,17 @@ begin
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
-          begin
             Result := EncodeString(TempBlob.GetString)
-          end
           else
-          begin
             Result := 'NULL';
-          end;
         end;
       stUnicodeStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
-          begin
             Result := EncodeString(FCharactersetCode, UTF8Encode(TempBlob.GetUnicodeString))
-          end
           else
-          begin
             Result := 'NULL';
-          end;
         end;
       stBinaryStream:
         begin

@@ -210,6 +210,15 @@ begin
 
   if (Result = stString) and (Precision = 0) then
     Precision := 255;
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  {$IFNDEF FPC}
+  if CharEncoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+    case result of
+      stString: Result := stUnicodeString;
+      stAsciiStream: Result := stUnicodeStream;
+    end;
+  {$ENDIF}
+  {$ENDIF}
 end;
 
 {**
@@ -233,7 +242,7 @@ begin
   {$ELSE} 
     Error := Trim(StrPas(ErrorMessage)); 
   {$ENDIF} 
-    PlainDriver.FreeMem(ErrorMessage); 
+    PlainDriver.FreeMem(ErrorMessage);
   end
   else
     Error := '';
@@ -359,7 +368,7 @@ var
   SrcBuffer, DestBuffer: PAnsiChar;
 begin
   {$IFDEF DELPHI12_UP} 
-  value := utf8decode(value); //EgonHugeist: DataLoss!!!
+  value := utf8decode(value); //EgonHugeist: DataLoss!!! Wide to Ansi
   {$ENDIF}
   if pos('x''',value)= 1 then
     result := NewDecodeString(value)

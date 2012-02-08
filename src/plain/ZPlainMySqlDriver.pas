@@ -175,7 +175,7 @@ type
     function RetrieveNextRowset   (Handle: PZMySQLConnect): Integer;
     function Rollback (Handle: PZMySQLConnect): Boolean;
     {ADDED by EgonHugeist}
-    function SetConnectionCharacterSet(Handle: PMYSQL; const csname: PAnsiChar): Integer; // set_character_set Returns 0 if valid
+    function SetConnectionCharacterSet(Handle: PMYSQL; const csname: PAnsiChar): Integer; // set_character_set returns 0 if valid
     // set_server_option
     function GetSQLState (Handle: PZMySQLConnect): AnsiString;
     // warning_count

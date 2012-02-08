@@ -171,15 +171,23 @@ begin
   ErrorMessage := '';
   SQLTail := '';
   ColumnCount := 0;
-  {$IFDEF DELPHI12_UP}
-  ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(AnsiString(UTF8Encode(SQL))), Length(SQL), SQLTail,
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  SSQL := SQL; //preprepares SQL
+  ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(ASQL), Length(ASQL), SQLTail,
     StmtHandle, ErrorMessage);
+  CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SSQL);
+  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
   {$ELSE}
-  ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(SQL), Length(SQL), SQLTail,
-    StmtHandle, ErrorMessage);
+    {$IFDEF DELPHI12_UP}
+    ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(AnsiString(UTF8Encode(SQL))), Length(SQL), SQLTail,
+      StmtHandle, ErrorMessage);
+    {$ELSE}
+    ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(SQL), Length(SQL), SQLTail,
+      StmtHandle, ErrorMessage);
+    {$ENDIF}
+    CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
   {$ENDIF}
-  CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
 
   try
     ErrorCode := FPlainDriver.Step(StmtHandle, ColumnCount,
@@ -211,13 +219,20 @@ var
   ErrorMessage: PAnsiChar;
 begin
   ErrorMessage := '';
-  {$IFDEF DELPHI12_UP}
-  ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(AnsiString(UTF8Encode(SQL))), nil, nil,ErrorMessage);
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  SSQL := SQL; //preprepares SQL
+  ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(ASQL), nil, nil,ErrorMessage);
+  CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SSQL);
+  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
   {$ELSE}
-  ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,ErrorMessage);
-  {$ENDIF}
+    {$IFDEF DELPHI12_UP}
+    ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(AnsiString(UTF8Encode(SQL))), nil, nil,ErrorMessage);
+    {$ELSE}
+    ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,ErrorMessage);
+    {$ENDIF}
   CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+  {$ENDIF}
   Result := FPlainDriver.Changes(FHandle);
   LastUpdateCount := Result;
 end;
@@ -255,15 +270,23 @@ begin
   ErrorMessage := '';
   SQLTail := '';
   ColumnCount := 0;
-  {$IFDEF DELPHI12_UP}
-  ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(AnsiString(UTF8Encode(SQL))), Length(SQL), SQLTail,
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  SSQL := SQL; //preprapares SQL
+  ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(ASQL), Length(ASQL), SQLTail,
     StmtHandle, ErrorMessage);
+  CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SSQL);
+  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
   {$ELSE}
-  ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(SQL), Length(SQL), SQLTail,
-    StmtHandle, ErrorMessage);
-  {$ENDIF}
+    {$IFDEF DELPHI12_UP}
+    ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(AnsiString(UTF8Encode(SQL))), Length(SQL), SQLTail,
+      StmtHandle, ErrorMessage);
+    {$ELSE}
+    ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(SQL), Length(SQL), SQLTail,
+      StmtHandle, ErrorMessage);
+    {$ENDIF}
   CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+  {$ENDIF}
 
   try
     ErrorCode := FPlainDriver.Step(StmtHandle, ColumnCount,
@@ -377,7 +400,7 @@ begin
       stTimestamp:
         Result := '''' + FormatDateTime('yyyy-mm-dd hh:mm:ss',
           SoftVarManager.GetAsDateTime(Value)) + '''';
-      stAsciiStream, stUnicodeStream, stBinaryStream:
+      stAsciiStream{$IFNDEF CHECK_CLIENT_CODE_PAGE}, stUnicodeStream{$ENDIF}, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
@@ -390,6 +413,16 @@ begin
           else
             Result := 'NULL';
         end;
+      {$IFDEF CHECK_CLIENT_CODE_PAGE}
+      stUnicodeStream:
+        begin
+          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
+          if not TempBlob.IsEmpty then
+            Result := GetEscapeString(String(UTF8Encode(TempBlob.GetUnicodeString)))
+          else
+            Result := 'NULL';
+        end;
+      {$ENDIF}
     end;
   end;
 end;

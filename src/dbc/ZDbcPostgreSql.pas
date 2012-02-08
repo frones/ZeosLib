@@ -388,10 +388,12 @@ begin
   else
     FOidAsBlob := False;
 
-  {$IFNDEF CHECK_CLIENT_CODE_PAGE}
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  FCharactersetCode := TZPgCharactersetType(ClientCodePage^.ID);
+  {$ELSE}
   FClientCodePage := Trim(Info.Values['codepage']);
-  {$ENDIF}
   FCharactersetCode := pg_CS_code(FClientCodePage);
+  {$ENDIF}
 //  DriverManager.LogError(lcOther,'','Create',Integer(FCharactersetCode),'');
   FNoticeProcessor := DefaultNoticeProcessor;
 end;
@@ -590,6 +592,7 @@ begin
         Close;
       end;
     CheckCharEncoding(FClientCodePage);
+    FCharactersetCode := TZPgCharactersetType(ClientCodePage^.ID);
     {$ENDIF}
 
   finally
@@ -1111,7 +1114,7 @@ end;
 function TZPostgreSQLConnection.GetEscapeString(const Value: String;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
-  Result := GetDriver.GetTokenizer.GetEscapeString(ZDbcPostgreSqlUtils.EncodeString(Self.FCharactersetCode, Value), EscapeMarkSequence);
+  Result := GetDriver.GetTokenizer.GetEscapeString(ZDbcPostgreSqlUtils.EncodeString(TZPgCharactersetType(Self.ClientCodePage^.ID), Value), EscapeMarkSequence);
 end;
 {$ENDIF}
 
