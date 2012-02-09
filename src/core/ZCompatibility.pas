@@ -72,9 +72,11 @@ uses
   {$IFDEF MSWINDOWS}
   Windows,
   {$ENDIF}
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
   {$IFDEF FPC}
   LConvEncoding,
   {$ENDIF}
+{$ENDIF}
   Classes, SysUtils;
 
 type
