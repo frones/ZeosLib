@@ -458,7 +458,7 @@ end; { ZWAnsiString }
   @returns Converted wide string.
 }
 function ZAnsiToWideString(const s: AnsiString; codePage: Word): WideString;
-{$IFNDEF DELPHI12_UP AND IFNDEF FPC}
+{$IFNDEF DELPHI14_UP AND IFNDEF FPC}
 var
   l: integer;
 {$ENDIF}
