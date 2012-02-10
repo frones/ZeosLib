@@ -790,6 +790,7 @@ type
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function ZString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
     function ZAnsiString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
+    function GetClientCodePage: PZCodePage;
     {$ENDIF}
   end;
 

@@ -244,11 +244,15 @@ begin
     ColumnInfo := TZColumnInfo.Create;
     with ColumnInfo do
     begin
-  {$IFDEF DELPHI12_UP} 
-      ColumnLabel := UTF8ToUnicodeString(StrPas(FieldName^)); 
-  {$ELSE} 
-      ColumnLabel := StrPas(FieldName^); 
+      {$IFDEF CHECK_CLIENT_CODE_PAGE}
+      ColumnLabel := ZString(StrPas(FieldName^));
+      {$ELSE}
+  {$IFDEF DELPHI12_UP}
+      ColumnLabel := UTF8ToUnicodeString(StrPas(FieldName^));
+  {$ELSE}
+      ColumnLabel := StrPas(FieldName^);
   {$ENDIF}
+      {$ENDIF}
       Inc(FieldName);
       TableName := '';
       ReadOnly := False;
@@ -652,7 +656,8 @@ end;
   as a stream of Unicode characters.
   The value can then be read in chunks from the
   stream. This method is particularly
-  suitable for retrieving large<code>LONGVARCHAR</code>values.  The JDBC driver will
+  suitable for retrieving large<code>LONGVARCHAR</code>values.
+  The JDBC driver will
   do any necessary conversion from the database format into Unicode.
   The byte format of the Unicode stream must be Java UTF-8,
   as specified in the Java virtual machine specification.
@@ -670,11 +675,19 @@ end;
     <code>NULL</code>, the value returned is <code>null</code>
 }
 function TZSQLiteResultSet.GetUnicodeStream(ColumnIndex: Integer): TStream;
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+var
+  Data: WideString;
+{$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+  Result := TStringStream.Create(GetString(ColumnIndex));
+{$ELSE}
   Result := nil;
+{$ENDIF}
 end;
 
 {**

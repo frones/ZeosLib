@@ -58,8 +58,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZClasses, ZDbcIntfs, ZDbcStatement, ZDbcMySql, ZPlainMySqlDriver, ZPlainMySqlConstants,
-  ZCompatibility, ZDbcLogging, ZVariant;
+  Classes, SysUtils, ZClasses, ZDbcIntfs, ZDbcStatement, ZDbcMySql, ZVariant,
+  ZPlainMySqlDriver, ZPlainMySqlConstants, ZCompatibility, ZDbcLogging;
 
 type
 
@@ -589,7 +589,7 @@ begin
         Result := '''' + Format('%0.4d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d',
           [AYear, AMonth, ADay, AHour, AMinute, ASecond]) + '''';
       end;
-      stAsciiStream, {$IFNDEF CHECK_CLIENT_CODE_PAGE}stUnicodeStream,{$ENDIF} stBinaryStream:
+      stAsciiStream, stUnicodeStream,stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
@@ -597,16 +597,14 @@ begin
           else
             Result := 'NULL';
         end;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
-     stUnicodeStream:
+{     stUnicodeStream: EgonHugeist: Write allway byte per byte. so there is no need for it
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
             Result := String(GetAnsiEscapeString(AnsiString(UTF8Encode(TempBlob.GetUnicodeString))))
           else
             Result := 'NULL';
-        end;
-     {$ENDIF}
+        end;}
     end;
   end;
 end;

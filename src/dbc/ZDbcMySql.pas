@@ -943,36 +943,14 @@ end;
 }
 function TZMySQLConnection.GetBinaryEscapeString(const Value: AnsiString;
   const EscapeMarkSequence: String = '~<|'): String;
-var
-  BufferLen: Integer;
-  Buffer: PAnsiChar;
 begin
-   { TODO -oEgonHugeist : Move this function-internals to MySQLUtils its a copy of MySQLStatement! Don't write it twice }
-  BufferLen := Length(Value) * 2 + 1;
-  GetMem(Buffer, BufferLen);
-  if FHandle = nil then
-    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(Value), Length(Value))
-   else
-    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(Value), Length(Value));
-  Result := Driver.GetTokenizer.AnsiGetEscapeString('''' + AnsiString(BufferToStr(Buffer, BufferLen)) + '''', EscapeMarkSequence);
-  FreeMem(Buffer);
+  Result := inherited GetBinaryEscapeString('''' + EscapeString(Value) + '''', EscapeMarkSequence);
 end;
 
 function TZMySQLConnection.GetEscapeString(const Value: String;
   const EscapeMarkSequence: String = '~<|'): String;
-var
-  BufferLen: Integer;
-  Buffer: PAnsiChar;
 begin
-   { TODO -oEgonHugeist : Move this function-internals to MySQLUtils its a copy of MySQLStatement! Don't write it twice }
-  BufferLen := Length(Value) * 2 + 1;
-  GetMem(Buffer, BufferLen);
-  if FHandle = nil then
-    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(ZAnsiString(Value)), Length(PAnsiChar(ZAnsiString(Value))))
-  else
-    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(ZAnsiString(Value)), Length(PAnsiChar(ZAnsiString(Value))));
-  Result := Driver.GetTokenizer.GetEscapeString('''' + BufferToStr(Buffer, BufferLen) + '''', EscapeMarkSequence);
-  FreeMem(Buffer);
+  Result := inherited GetEscapeString('''' + String(EscapeString(ZAnsiString(Value))) + '''', EscapeMarkSequence);
 end;
 {$ENDIF}
 

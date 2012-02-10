@@ -400,7 +400,7 @@ begin
       stTimestamp:
         Result := '''' + FormatDateTime('yyyy-mm-dd hh:mm:ss',
           SoftVarManager.GetAsDateTime(Value)) + '''';
-      stAsciiStream{$IFNDEF CHECK_CLIENT_CODE_PAGE}, stUnicodeStream{$ENDIF}, stBinaryStream:
+      stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
@@ -413,16 +413,6 @@ begin
           else
             Result := 'NULL';
         end;
-      {$IFDEF CHECK_CLIENT_CODE_PAGE}
-      stUnicodeStream:
-        begin
-          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
-          if not TempBlob.IsEmpty then
-            Result := GetEscapeString(String(UTF8Encode(TempBlob.GetUnicodeString)))
-          else
-            Result := 'NULL';
-        end;
-      {$ENDIF}
     end;
   end;
 end;

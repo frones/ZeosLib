@@ -1123,7 +1123,7 @@ begin
   Self.AddCodePage('DOS864', 18, ceAnsi, zCP_DOS864); {Arabic}
   Self.AddCodePage('DOS866', 48, ceAnsi, zCP_DOS866); {Russian}
   Self.AddCodePage('DOS869', 49, ceAnsi, zCP_DOS869); {Modern Greek}
-  Self.AddCodePage('ISO8859_2', 22, ceAnsi, zCP_Latin2); {Latin 2 —  Latin3 — Southern European (Maltese, Esperanto)}
+  Self.AddCodePage('ISO8859_2', 22, ceAnsi, zCP_L2_ISO_8859_2); {Latin 2 —  Latin3 — Southern European (Maltese, Esperanto)}
   Self.AddCodePage('ISO8859_3', 23, ceAnsi, zCP_WIN1252); {Latin 1}
   Self.AddCodePage('ISO8859_4', 34); {Latin 4 — Northern European (Estonian, Latvian, Lithuanian, Greenlandic, Lappish)}
   Self.AddCodePage('ISO8859_5', 35); {Cyrillic (Russian)}
@@ -1219,7 +1219,7 @@ begin
   Self.AddCodePage('DOS864', 18, ceAnsi, zCP_DOS864); {Arabic}
   Self.AddCodePage('DOS866', 48, ceAnsi, zCP_DOS866); {Russian}
   Self.AddCodePage('DOS869', 49, ceAnsi, zCP_DOS869); {Modern Greek}
-  Self.AddCodePage('ISO8859_2', 22, ceAnsi, zCP_Latin2); {Latin 2 —  Latin3 — Southern European (Maltese, Esperanto)}
+  Self.AddCodePage('ISO8859_2', 22, ceAnsi, zCP_L2_ISO_8859_2); {Latin 2 —  Latin3 — Southern European (Maltese, Esperanto)}
   Self.AddCodePage('ISO8859_3', 23, ceAnsi, zCP_WIN1252); {Latin 1}
   Self.AddCodePage('ISO8859_4', 34); {Latin 4 — Northern European (Estonian, Latvian, Lithuanian, Greenlandic, Lappish)}
   Self.AddCodePage('ISO8859_5', 35); {Cyrillic (Russian)}

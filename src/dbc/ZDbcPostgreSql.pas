@@ -1100,7 +1100,7 @@ end;
 function TZPostgreSQLConnection.GetBinaryEscapeString(const Value: AnsiString;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
-  Result := GetDriver.GetTokenizer.AnsiGetEscapeString(ZDbcPostgreSqlUtils.EncodeBinaryString(String(Value)), EscapeMarkSequence);
+  Result := inherited GetBinaryEscapeString(ZDbcPostgreSqlUtils.EncodeBinaryString(String(Value)), EscapeMarkSequence);
 end;
 
 {**
@@ -1114,7 +1114,7 @@ end;
 function TZPostgreSQLConnection.GetEscapeString(const Value: String;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
-  Result := GetDriver.GetTokenizer.GetEscapeString(ZDbcPostgreSqlUtils.EncodeString(TZPgCharactersetType(Self.ClientCodePage^.ID), Value), EscapeMarkSequence);
+  Result := inherited GetEscapeString(ZDbcPostgreSqlUtils.EncodeString(TZPgCharactersetType(Self.ClientCodePage^.ID), Value), EscapeMarkSequence);
 end;
 {$ENDIF}
 

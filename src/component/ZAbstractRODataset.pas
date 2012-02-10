@@ -1088,6 +1088,9 @@ var
   Stream: TStream;
   Dataset: TDataset;
   Field: TField;
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  Temp: String;
+  {$Endif}
 begin
   if DataLink.Active then
     Dataset := DataLink.DataSet
@@ -1151,7 +1154,20 @@ begin
             Statement.SetTimestamp(I + 1, Param.AsDateTime);
           ftMemo:
             begin
+              {EgonHugeist: On reading a Param as Memo the Stream reads Byte-wise
+                on Changing to stUnicodeString/Delphi12Up a String is from
+                Type wide/unicode so we have to give him back as
+                Stream!}
+              {$IFDEF CHECK_CLIENT_CODE_PAGE}
+              {$IFNDEF FPC}
+              if Statement.GetConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+                Stream := Param.AsStream
+              else
+                Stream := TStringStream.Create(Param.AsMemo);
+              {$ENDIF}
+              {$ELSE}
               Stream := TStringStream.Create(Param.AsMemo);
+              {$ENDIF}
               try
                 Statement.SetAsciiStream(I + 1, Stream);
               finally

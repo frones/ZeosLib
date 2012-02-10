@@ -730,19 +730,12 @@ end;
     <code>NULL</code>, the value returned is <code>null</code>
 }
 function TZMySQLResultSet.GetUnicodeStream(ColumnIndex: Integer): TStream;
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
-var
-  Data: WideString;
-{$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
 {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  Data := GetUnicodeString(ColumnIndex);
-  Result := TMemoryStream.Create;
-  Result.Write(PWideChar(Data)^, Length(Data)*2);
-  Result.Position := 0;
+  Result := TStringStream.Create(GetString(ColumnIndex));
 {$ELSE}
   Result := nil;
 {$ENDIF}
@@ -796,25 +789,11 @@ begin
   try
     if not IsNull(ColumnIndex) then
     begin
-      {$IFDEF CHECK_CLIENT_CODE_PAGE}
-      if GetMetadata.GetColumnType(ColumnIndex) = stBinaryStream then
-        Stream := TStringStream.Create(GetString(ColumnIndex))
-      else
-        if ClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-          Stream := GetUnicodeStream(ColumnIndex)
-        else
-          Stream := TStringStream.Create(GetString(ColumnIndex));
-      Result := TZAbstractBlob.CreateWithStream(Stream);
-    end
-    else
-      Result := TZAbstractBlob.CreateWithStream(nil);
-    {$ELSE}
       Stream := TStringStream.Create(GetString(ColumnIndex));
       Result := TZAbstractBlob.CreateWithStream(Stream)
     end
     else
       Result := TZAbstractBlob.CreateWithStream(nil);
-    {$ENDIF}
   finally
     if Assigned(Stream) then
       Stream.Free;
@@ -1419,6 +1398,7 @@ begin
   CheckColumnConvertion(ColumnIndex, stAsciiStream);
 {$ENDIF}
   Result := TStringStream.Create(GetString(ColumnIndex));
+  LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
 end;
 
 {**
@@ -1446,19 +1426,13 @@ end;
     <code>NULL</code>, the value returned is <code>null</code>
 }
 function TZMySQLPreparedResultSet.GetUnicodeStream(ColumnIndex: Integer): TStream;
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
-var
-  Data: WideString;
-{$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
 {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  Data := GetUnicodeString(ColumnIndex);
-  Result := TMemoryStream.Create;
-  Result.Write(PWideChar(Data)^, Length(Data)*2);
-  Result.Position := 0;
+  Result := TStringStream.Create(GetString(ColumnIndex));
+  LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
 {$ELSE}
   Result := nil;
 {$ENDIF}
@@ -1519,30 +1493,11 @@ begin
   try
     if not LastWasNull then
     begin
-      {$IFDEF CHECK_CLIENT_CODE_PAGE}
-      try
-        if GetMetadata.GetColumnType(ColumnIndex) = stBinaryStream then
-          Stream := TStringStream.Create(GetString(ColumnIndex))
-        else
-          if ClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-            Stream := GetUnicodeStream(ColumnIndex)
-          else
-            Stream := TStringStream.Create(GetString(ColumnIndex));
-        Result := TZAbstractBlob.CreateWithStream(Stream);
-      finally
-        if Assigned(Stream) then
-          Stream.Free;
-      end;
-    end
-    else
-      Result := TZAbstractBlob.CreateWithStream(nil);
-    {$ELSE}
       Stream := TStringStream.Create(GetString(ColumnIndex));
       Result := TZAbstractBlob.CreateWithStream(Stream)
     end
     else
       Result := TZAbstractBlob.CreateWithStream(nil);
-    {$ENDIF}
   finally
     if Assigned(Stream) then
       Stream.Free;

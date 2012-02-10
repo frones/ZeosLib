@@ -632,8 +632,8 @@ begin
   then we can build an IZUpdate/IZInsert/IZDelete-Schema
   if this is done we can add column-specific CharacterSets/Collations
   to the detected Columns and tell the Server which kind of Data will be sended
-  now. So this also must be done in the IZSelectSchema if somebody asks
-  for conerted column-data...}
+  now. So this also must be done in the IZSelectSchema if somebody requests
+  converted column-data...}
 
   if GetConnection.DoPreprepareSQL then
   begin
@@ -641,9 +641,11 @@ begin
     for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
       case (SQLTokens[i].TokenType) of
         ttEscape:
-          Result := Result + AnsiString(SQLTokens[i].Value)
-        else
+          Result := Result + AnsiString(SQLTokens[i].Value);
+        ttWord, ttQuoted:
           Result := Result + ZAnsiString(SQLTokens[i].Value);
+        else
+          Result := Result + AnsiString(SQLTokens[i].Value);
       end;
   end
   else

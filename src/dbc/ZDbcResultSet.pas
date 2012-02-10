@@ -291,6 +291,9 @@ type
 
     function GetStatement: IZStatement; virtual;
 
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetClientCodePage: PZCodePage;
+    {$ENDIF}
     property ColumnsInfo: TObjectList read FColumnsInfo write FColumnsInfo;
   end;
 
@@ -2735,6 +2738,13 @@ begin
   Result := FStatement;
 end;
 
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+function TZAbstractResultSet.GetClientCodePage: PZCodePage;
+begin
+  Result := ClientCodePage;
+end;
+{$ENDIF}
+
 { TZAbstractBlob }
 
 {**
@@ -2743,7 +2753,6 @@ end;
 }
 constructor TZAbstractBlob.CreateWithStream(Stream: TStream);
 begin
-   { TODO -oEgonHugeist : CodePageSettings... }
   inherited Create;
   FUpdated := False;
   if Assigned(Stream) then
@@ -2874,18 +2883,29 @@ end;
 // gto: this must be tested!  We need to add the Move (  Len * Sizeof(Char)) to this    //AVZ
 function TZAbstractBlob.GetUnicodeString: WideString;
 var
-  Buffer: AnsiString;
+  Buffer: WideString;
   Len: Integer;
 begin
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  Buffer := UTF8ToString(GetString);
+  Len := System.Length(Buffer);
+  if Len > 0 then
+  begin
+    //Assert(Len mod 2 = 0); //could be varying so an assertion must fail but Buffer moving to Wide is allways valid
+    SetLength(Result, Len);
+    System.Move(PWideChar(Buffer)^, Pointer(Result)^, Len * 2);
+  end;
+  {$ELSE}
   Buffer := GetString;
   Len := System.Length(Buffer);
 
   if Len > 0 then
   begin
-    Assert(Len mod 2 = 0);
+    //Assert(Len mod 2 = 0);
     SetLength(Result, Len div 2);
     System.Move(PAnsiChar(Buffer)^, Pointer(Result)^, Len);
   end;
+  {$ENDIF}
 end;
 
 {**

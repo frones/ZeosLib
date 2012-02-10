@@ -1056,13 +1056,19 @@ end;
 function TZAbstractConnection.GetBinaryEscapeString(const Value: AnsiString;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
-  Result := Self.GetDriver.GetTokenizer.AnsiGetEscapeString(Value, EscapeMarkSequence);
+  if Self.FPreprepareSQL then //Set detect-sequence only if Prepreparing should be done else it's not server-understandable.
+    Result := Self.GetDriver.GetTokenizer.AnsiGetEscapeString(Value, EscapeMarkSequence)
+  else
+    Result := String(Value);
 end;
 
 function TZAbstractConnection.GetEscapeString(const Value: String;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
-  Result := Self.GetDriver.GetTokenizer.GetEscapeString(Value);
+  if Self.FPreprepareSQL then //Set detect-sequence only if Prepreparing should be done else it's not server-understandable.
+    Result := Self.GetDriver.GetTokenizer.GetEscapeString(Value)
+  else
+    Result := Value;
 end;
 
 {**

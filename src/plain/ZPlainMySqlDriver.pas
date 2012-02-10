@@ -438,7 +438,7 @@ begin
   AddCodePage('hp8', 4); {HP West European}
   AddCodePage('koi8r', 5, ceAnsi, zCP_KOI8R); {KOI8-R Relcom Russian}
   AddCodePage('latin1', 6, ceAnsi, zCP_WIN1252); {cp1252 West European}
-  AddCodePage('latin2', 7, ceAnsi, zCP_Latin2); {ISO 8859-2 Central European}
+  AddCodePage('latin2', 7, ceAnsi, zCP_L2_ISO_8859_2); {ISO 8859-2 Central European}
   AddCodePage('swe7', 8); {7bit Swedish}
   AddCodePage('ascii', 9, ceAnsi, zCP_WIN1252); {US ASCII}
   AddCodePage('hebrew', 12, ceAnsi, zCP_WIN1255); {ISO 8859-8 Hebrew}

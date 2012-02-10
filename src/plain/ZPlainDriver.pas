@@ -127,6 +127,71 @@ type
   end;
   {END ADDED by fduenas 15-06-2006}
 
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+const
+  zCP_ACP = 0; {ASCII US}
+  zCP_EBC037 = 37; {EBCDIC Codepage 037}
+  zCP_EBC273 = 273; {EBCDIC Code Page 273/1 8-bit Austrian German}
+  zCP_EBC277 = 277; {EBCDIC Code Page 277/1 8-bit Danish}
+  zCP_EBC278 = 278; {EBCDIC Code Page 278/1 8-bit Swedish}
+  zCP_EBC280 = 280; {EBCDIC Code Page 280/1 8-bit Italian}
+  zCP_EBC284 = 284; {EBCDIC Code Page 284 8-bit Latin American/Spanish}
+
+  zCP_DOS437 = 437; {MS-DOS odepage 437 (US)}
+  zCP_DOS737 = 737; {MS-DOS Codepage 737 (Greek IBM PC defacto Standard)}
+  zCP_DOS775 = 775; {MS-DOS Codepage 775 (BaltRim)}
+  zCP_DOS850 = 850;	{MS-DOS Codepage 850 (Multilingual Latin 1)}
+  zCP_DOS851 = 851; {MS-DOS Codepage 851 (Greece) - obsolete}
+  zCP_DOS852 = 852; {ibm852	852	Osteuropäisch (DOS)}
+  zCP_DOS853 = 853;	{MS-DOS Codepage 853 (Multilingual Latin 3)}
+  zCP_DOS855 = 855;	{MS-DOS Codepage 855 (Russia) - obsolete}
+  zCP_DOS857 = 857;	{MS-DOS Codepage 857 (Multilingual Latin 5)}
+  zCP_DOS858 = 858; {MS-DOS Codepage 858  {Latin I + Euro symbol}
+  zCP_DOS860 = 860;	{MS-DOS Codepage 860 (Portugal)}
+  zCP_DOS861 = 861;	{MS-DOS Codepage 861 (Iceland)}
+  zCP_DOS862 = 862;	{MS-DOS Codepage 862 (Israel)}
+  zCP_DOS863 = 863;	{MS-DOS Codepage 863 (Canada (French))}
+  zCP_DOS864 = 864;	{MS-DOS Codepage 864 (Arabic) without BOX DRAWINGS below 20}
+  zCP_DOS865 = 865;	{MS-DOS Codepage 865 (Norway)}
+  zCP_DOS866 = 866; {ibm866	866	Cyrl (DOS)}
+  zCP_DOS869 = 869; {MS-DOS Codepage 869 (Greece)}
+  zCP_DOS874 = 874; {MS-DOS Codepage 874 (Thai)}
+  zCP_EBC875 = 875;	{EBCDIC Codepage 875 (Greek)}
+  zCP_EBC924 = 924; {Latin 9 EBCDIC 924}
+  zCP_DOS895 = 895; {MS-DOS Codepage 895 (Kamenicky CS)}
+  zCP_SHIFTJS = 932; {csshiftjis	932	Shift-JIS, ms_kanji}
+  zCP_GB2312 = 936; {csiso58gb231280	936	Chinesisch - VR (GB2312), iso-ir-58}
+  zCP_EUCKR = 949; {cseuckr Korean, iso-ir-149, ks-c-5601, ks-c-5601-1987, ks_c_5601-1989}
+  zCP_Big5 = 950; {big5, csbig5}
+  zCP_EBC1026 = 1026; {EBCDIC Code Page 1026 8-bit Turkish}
+  zCP_UNICODE = 1200; {Indicates the Unicode character set, Windows code page 1200}
+  zCP_WIN1250 = 1250; {Microsoft Windows Codepage 1250 (EE)}
+  zCP_WIN1251 = 1251; {Microsoft Windows Codepage 1251 (Cyrl)}
+  zCP_WIN1252 = 1252; {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
+  zCP_WIN1253 = 1253; {Microsoft Windows Codepage 1253 (Greek)}
+  zCP_WIN1254 = 1254; {Microsoft Windows Codepage 1254 (Turk)}
+  zCP_WIN1255 = 1255; {Microsoft Windows Codepage 1255 (Hebrew)}
+  cCP_WIN1256 = 1256; {Microsoft Windows Codepage 1256 (Arab)}
+  zCP_WIN1257 = 1257; {Microsoft Windows Codepage 1257 (BaltRim)}
+  zCP_WIN1258 = 1258; {Microsoft Windows Codepage 1258 (Viet), TCVN-5712}
+  zCP_KOREAN = 2022; {iso-2022-kr	50225	Koreanisch (ISO)}
+  zCP_KOI8R = 20866; {cskoi8r	20866	Kyrillisch (KOI8-R)}
+  zCP_KOI8U = 21866; {KOI8-U is an 8-bit character encoding, designed to cover Ukrainian, which uses the Cyrillic alphabet.}
+  zCP_L1_ISO_8859_1 = 28591; {8-bit single-byte coded graphic character sets — Part 1: Latin alphabet No. 1, is part of the ISO/IEC 8859 series of ASCII-based standard character encodings}
+  zCP_L2_ISO_8859_2 = 28592; {latin2	east european (ISO), 8-bit single-byte coded graphic character sets — Part 2: Latin alphabet No. 2, is part of the ISO/IEC 8859 series of ASCII-based standard character encodings}
+
+  zCP_ISO_8859_5 = 28595; {-bit single-byte coded graphic character sets — Part 5: Latin/Cyrillic alphabet, is part of the ISO/IEC 8859 series of ASCII-based standard character encodings}
+  zCP_ISO2022JPSIO = 50222; {Indicates the Internet character set ISO-2022-JP-SIO.}
+  zCP_ISO2022JPESC = 50221; {Indicates the Internet character set ISO-2022-JP-ESC.}
+  zCP_JAUTODETECT = 50932; {Indicates Japanese auto-detect (50932). }
+  zCP_KAUTODETECT = 50949; {Indicates Korean auto-detect (50949).}
+  zCP_UTF8 = 65001;
+  zCP_UTF7 = 65000;
+  zCP_2022kr = 50225; {csiso2022kr	50225	Koreanisch (ISO) }
+  zCP_EBC1047 = 1047;	{EBCDIC Codepage 1047}
+  zCP_EBC500 = 500;	{EBCDIC Codepage 500}
+{$ENDIF}
+
 implementation
 
 uses ZSysUtils{$IFDEF CHECK_CLIENT_CODE_PAGE}, SysUtils{$ENDIF};

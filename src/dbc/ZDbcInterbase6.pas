@@ -835,7 +835,7 @@ function TZInterbase6Connection.GetBinaryEscapeString(const Value: AnsiString;
 begin
   if Self.FPlainDriver.GetProtocol = 'firebird-2.5' then
     if SizeOf(Value) < 32*1024 then
-      Result := Self.GetDriver.GetTokenizer.GetEscapeString('x'''+Value+'''', EscapeMarkSequence)
+      Result := inherited GetEscapeString('x'''+Value+'''', EscapeMarkSequence)
     else
       raise Exception.Create('Binary data out of range! Use Blob-Fields!')
   else
