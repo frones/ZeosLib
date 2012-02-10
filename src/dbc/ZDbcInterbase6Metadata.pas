@@ -1779,7 +1779,7 @@ begin
 
         DefaultValue := GetString(ColumnIndexes[5]);
         if DefaultValue = '' then
-          DefaultValue := {$IFDEF CHECK_CLIENT_CODE_PAGE}Z{$ENDIF}String(GetString(ColumnIndexes[6]));
+          DefaultValue := {$IFDEF CHECK_CLIENT_CODE_PAGE}ZString{$ELSE}String{$ENDIF}(GetString(ColumnIndexes[6]));
         if StartsWith(Trim(UpperCase(DefaultValue)), 'DEFAULT') then
         begin
           DefaultValue := Trim(StringReplace(DefaultValue, 'DEFAULT ', '',
