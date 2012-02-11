@@ -2610,9 +2610,93 @@ var
   List: TStrings;
   Deferrability: Integer;
   Deferrable, InitiallyDeferred: Boolean;
+
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+  function GetRuleType(const Rule: AnsiString): TZImportedKey;
+  begin
+    if Rule = 'RESTRICT' then
+      Result := ikRestrict
+    else if Rule = 'NO ACTION' then
+      Result := ikNoAction
+    else if Rule = 'CASCADE' then
+      Result := ikCascade
+    else if Rule = 'SET DEFAULT' then
+      Result := ikSetDefault
+    else if Rule = 'SET NULL' then
+      Result := ikSetNull
+    else
+      Result := ikNotDeferrable; //impossible!
+  end;
+{$ENDIF}
 begin
   Result := ConstructVirtualResultSet(CrossRefColumnsDynArray);
 
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+  SQL := 'SELECT '+
+    'tc.constraint_catalog as PKTABLE_CAT, '+
+    'tc.constraint_schema as PKTABLE_SCHEM, '+
+    'ccu.table_name as PKTABLE_NAME, '+
+    'ccu.column_name as PKCOLUMN_NAME, '+
+    'kcu.table_catalog as FKTABLE_CAT, '+
+    'kcu.constraint_schema as FKTABLE_SCHEM, '+
+    'kcu.table_name as PKTABLE_NAME, '+
+    'kcu.column_name as FKCOLUMN_NAME, '+
+    'rf.update_rule as UPDATE_RULE, '+
+    'rf.delete_rule as DELETE_RULE, '+
+    'kcu.constraint_name as FK_NAME, '+
+    'kcu.ordinal_position as PK_NAME, '+
+    'tc.is_deferrable as DEFERRABILITY '+
+    'FROM information_schema.table_constraints AS tc '+
+    'JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name '+
+    'JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name '+
+    'join information_schema.referential_constraints as rf on rf.constraint_name = tc.constraint_name '+
+    'WHERE constraint_type = ''FOREIGN KEY''';
+  if PrimaryCatalog <> '' then
+    SQL := SQL + ' and tc.constraint_catalog = '''+PrimaryCatalog+'''';
+  if PrimarySchema <> '' then
+    SQL := SQL + ' and tc.constraint_schema = '''+PrimarySchema+'''';
+  if PrimaryTable <> '' then
+    SQL := SQL + ' and ccu.table_name = '''+PrimaryTable+'''';
+  if ForeignCatalog <> '' then
+    SQL := SQL + ' and kcu.table_catalog = '''+ForeignCatalog+'''';
+  if ForeignSchema <> '' then
+    SQL := SQL + ' and kcu.constraint_schema = '''+ForeignSchema+'''';
+  if ForeignTable <> '' then
+    SQL := SQL + ' and kcu.table_name = '''+ForeignTable+'''';
+
+  KeySequence := 0;
+  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+  begin
+    while Next do
+    begin
+      Inc(KeySequence);
+      Result.MoveToInsertRow;
+      //Result.UpdateString(1, GetString(1)); //PKTABLE_CAT
+      Result.UpdateString(1, ZAnsiString(PrimaryCatalog)); //PKTABLE_CAT
+      Result.UpdateString(2, GetString(2)); //PKTABLE_SCHEM
+      Result.UpdateString(3, GetString(3)); //PKTABLE_NAME
+      Result.UpdateString(4, GetString(4)); //PKCOLUMN_NAME
+      //Result.UpdateString(5, GetString(5)); //PKTABLE_CAT
+      Result.UpdateString(5, ZAnsiString(ForeignCatalog)); //PKTABLE_CAT
+      Result.UpdateString(6, GetString(6)); //FKTABLE_SCHEM
+      Result.UpdateString(7, GetString(7)); //FKTABLE_NAME
+      Result.UpdateString(8, GetString(8)); //FKCOLUMN_NAME
+      Result.UpdateShort(9, KeySequence); //KEY_SEQ
+      Result.UpdateShort(10, Ord(GetRuleType(GetString(9)))); //UPDATE_RULE
+      Result.UpdateShort(11, Ord(GetRuleType(GetString(10)))); //DELETE_RULE
+      Result.UpdateString(12, GetString(11)); //FK_NAME
+      Result.UpdateString(13, GetString(12)); //PK_NAME
+      if GetString(13) = 'NO' then
+        Result.UpdateShort(14, Ord(ikNotDeferrable)) //DEFERRABILITY
+      else
+        Result.UpdateShort(14, Ord(ikInitiallyDeferred)); //DEFERRABILITY
+      Result.InsertRow;
+    end;
+    Close;
+  end;
+
+
+{$ELSE}
     if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
     begin
       Select := 'SELECT DISTINCT n1.nspname as pnspname,n2.nspname as fnspname,';
@@ -2770,6 +2854,7 @@ begin
     finally
       List.Free;
     end;
+{$ENDIF}
 end;
 
 {**

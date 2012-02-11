@@ -679,7 +679,6 @@ procedure TZTestPostgreSqlMetadataCase.TestGetCrossReference;
 var
   ResultSet: IZResultSet;
 begin
-  Exit; //fix it
   ResultSet := Metadata.GetCrossReference('', '', 'department', '', '', 'people');
   with ResultSet do
   begin
@@ -699,18 +698,18 @@ begin
     CheckEquals(14, FindColumn('DEFERRABILITY'));
 
     CheckEquals(True, Next);
-    CheckEquals('', GetStringByName('PKTABLE_CAT'));
-//    CheckEquals('public', GetStringByName('PKTABLE_SCHEM'));
+    //CheckEquals('zeoslib', GetStringByName('PKTABLE_CAT'));
+    CheckEquals('public', GetStringByName('PKTABLE_SCHEM'));
     CheckEquals('department', GetStringByName('PKTABLE_NAME'));
     CheckEquals('dep_id', GetStringByName('PKCOLUMN_NAME'));
-    CheckEquals('', GetStringByName('FKTABLE_CAT'));
-//    CheckEquals('public', GetStringByName('FKTABLE_SCHEM'));
+    //CheckEquals('zeoslib', GetStringByName('FKTABLE_CAT'));
+    CheckEquals('public', GetStringByName('FKTABLE_SCHEM'));
     CheckEquals('people', GetStringByName('FKTABLE_NAME'));
     CheckEquals('p_dep_id', GetStringByName('FKCOLUMN_NAME'));
     CheckEquals(1, GetIntByName('KEY_SEQ'));
     CheckEquals(ord(ikRestrict), GetIntByName('UPDATE_RULE'));
     CheckEquals(ord(ikRestrict), GetIntByName('DELETE_RULE'));
-//    CheckEquals('<unnamed>', GetStringByName('FK_NAME'));
+    CheckEquals('people_p_dep_id_fkey', GetStringByName('FK_NAME'));
     CheckEquals('1', GetStringByName('PK_NAME'));
     CheckEquals(ord(ikNotDeferrable), GetIntByName('DEFERRABILITY'));
     CheckEquals(False, Next);

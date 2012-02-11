@@ -2608,11 +2608,11 @@ begin
       Result.UpdateShort(10, Ord(GetRuleType(GetString(5)))); //UPDATE_RULE
       Result.UpdateShort(11, Ord(GetRuleType(GetString(6)))); //DELETE_RULE
       Result.UpdateString(12, GetString(7)); //FK_NAME
-      Result.UpdateString(12, GetString(8)); //PK_NAME
+      Result.UpdateString(13, GetString(8)); //PK_NAME
       if GetString(9) = 'NO' then
-        Result.UpdateShort(13, Ord(ikNotDeferrable)) //DEFERRABILITY
+        Result.UpdateShort(14, Ord(ikNotDeferrable)) //DEFERRABILITY
       else
-        Result.UpdateShort(13, Ord(ikInitiallyDeferred)); //DEFERRABILITY
+        Result.UpdateShort(14, Ord(ikInitiallyDeferred)); //DEFERRABILITY
       Result.InsertRow;
     end;
     Close;
