@@ -498,39 +498,37 @@ begin
     //ceUTF16: ;//not done yet
     //ceUTF32
   else
-    begin
-      { EgonHugeist:
-        To Delphi12_UP and ev. (comming) FPC 2.8 Users:
-        This function Result an Ansi-String with default DB CodePage
-        Possible Problems:
-          if you've CodePage 1252 and add some Chinese Letters the CodePage
-          turns to 1200(Windows Unicode) which is able to pick up this 2Byte letters
-          So on we've to add an additional Param to my encodingRecord
-          like an !SAVE!-Alias, we've to use and the CodePage we must have
-          here if it's not UTFx
+    { EgonHugeist:
+      To Delphi12_UP and ev. (comming) FPC 2.8 Users:
+      This function Result an Ansi-String with default DB CodePage
+      Possible Problems:
+        if you've CodePage 1252 and add some Chinese Letters the CodePage
+        turns to 1200(Windows Unicode) which is able to pick up this 2Byte letters
+        So on we've to add an additional Param to my encodingRecord
+        like an !SAVE!-Alias, we've to use and the CodePage we must have
+        here if it's not UTFx
 
-          BE WARNED!! This is a string-helper Function to handle data loss in
-          dependency of the choosen Character-Codepage not
-          a solution to enable all chars for your spezified CharacterSet of your
-          Connection.}
-      {$IFDEF DELPHI12_UP} //later for FPC 2.8 too eventual
-        Result := WS;
-      {$ELSE}
-        {$IFDEF FPC}
-        { EgonHugeist:
-          Actual the FPC uses CodePage of UTF8 generally.
-          FPC doesn't support CodePage-informations so a save prepreparing
-          is'nt possible in the Resultsets. So we only can hope the data is
-          valid. Or we need a changed/addidtional Cached-Resultset which
-          is only for the user-data and NOT for Metadata. While testing these
-          prepreparations the Metadata-informations where changed. Or on the
-          other hand it's possible thate Lazarus-functions are not right there..}
-          Result := UTF8Encode(WS);
-        {$ELSE} //Delphi7=>?<2009
-        Result := ZWideToAnsiString(Str, FCodePage^.CP);
-        {$ENDIF}
+        BE WARNED!! This is a string-helper Function to handle data loss in
+        dependency of the choosen Character-Codepage not
+        a solution to enable all chars for your spezified CharacterSet of your
+        Connection.}
+    {$IFDEF DELPHI12_UP} //later for FPC 2.8 too eventual
+      Result := WS;
+    {$ELSE}
+      {$IFDEF FPC}
+      { EgonHugeist:
+        Actual the FPC uses CodePage of UTF8 generally.
+        FPC doesn't support CodePage-informations so a save prepreparing
+        is'nt possible in the Resultsets. So we only can hope the data is
+        valid. Or we need a changed/addidtional Cached-Resultset which
+        is only for the user-data and NOT for Metadata. While testing these
+        prepreparations the Metadata-informations where changed. Or on the
+        other hand it's possible thate Lazarus-functions are not right there..}
+      Result := UTF8Encode(WS);
+      {$ELSE} //Delphi7=>?<2009
+      Result := ZWideToAnsiString(ws, FCodePage^.CP);
       {$ENDIF}
-    end;
+    {$ENDIF}
   end;
 end;
 
