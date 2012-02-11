@@ -247,12 +247,12 @@ type
     IZInterbasePlainDriver)
     FIREBIRD_API : TZFIREBIRD_API;
   protected
+    FPreLoader : TZNativeLibraryLoader;
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
     procedure LoadCodePages; override;
     function GetCompilerSaveCodePageName: String; override;
     {$ENDIF}
     {$IFDEF ENABLE_INTERBASE_CRYPT}
-    FPreLoader : TZNativeLibraryLoader;
     procedure Initialize; virtual;
     {$ENDIF}
     procedure LoadApi; override;
