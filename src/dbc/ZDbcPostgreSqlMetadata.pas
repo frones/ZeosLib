@@ -2857,7 +2857,6 @@ begin
     finally
       List.Free;
     end;
-{$ENDIF}
 {$IFDEF CHECK_CLIENT_CODE_PAGE}
   end;
 {$ENDIF}
