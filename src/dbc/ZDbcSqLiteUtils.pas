@@ -167,15 +167,8 @@ begin
   else if StartsWith(TypeName, 'CHAR') then
     Result := stString
   else if TypeName = 'VARCHAR' then
-    {$IFDEF CHECK_CLIENT_CODE_PAGE} { TODO -oEgonHugeist : Remove the directives if its tested...
-      Shouldn't it be allways stUnicodeString for SQLite? -> minimum requirement is UTF8}
-      if (CharEncoding = ceAnsi) then
-        Result := stString
-      else
-        Result := stUnicodeString
-    {$ELSE}
     Result := {$IFDEF DELPHI12_UP}stUnicodeString{$ELSE}stString{$ENDIF}
-    {$ENDIF}
+    //Result := stString
   else if TypeName = 'VARBINARY' then
     Result := stBytes
   else if TypeName = 'BINARY' then
@@ -208,13 +201,13 @@ begin
       Result := stLong;
   end;
 
-  if (Result = stString) and (Precision = 0) then
+  if ((Result = stString) or (Result = stUnicodeString)) and (Precision = 0) then
     Precision := 255;
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
   {$IFNDEF FPC}
   if CharEncoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
     case result of
-      stString: Result := stUnicodeString;
+      //stString: Result := stUnicodeString;
       stAsciiStream: Result := stUnicodeStream;
     end;
   {$ENDIF}

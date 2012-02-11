@@ -2891,7 +2891,7 @@ begin
   Len := System.Length(Buffer);
   if Len > 0 then
   begin
-    //Assert(Len mod 2 = 0); //could be varying so an assertion must fail but Buffer moving to Wide is allways valid
+    //Assert(Len mod 2 = 0); //could be varying so an assertiation must fail but Buffer moving to Wide is allways valid (1Byte *2)
     SetLength(Result, Len);
     System.Move(PWideChar(Buffer)^, Pointer(Result)^, Len * 2);
   end;
@@ -2901,7 +2901,7 @@ begin
 
   if Len > 0 then
   begin
-    //Assert(Len mod 2 = 0);
+    Assert(Len mod 2 = 0);
     SetLength(Result, Len div 2);
     System.Move(PAnsiChar(Buffer)^, Pointer(Result)^, Len);
   end;

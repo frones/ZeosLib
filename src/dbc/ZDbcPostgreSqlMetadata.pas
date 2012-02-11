@@ -2611,7 +2611,7 @@ var
   Deferrability: Integer;
   Deferrable, InitiallyDeferred: Boolean;
 begin
-    Result := ConstructVirtualResultSet(CrossRefColumnsDynArray);
+  Result := ConstructVirtualResultSet(CrossRefColumnsDynArray);
 
     if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
     begin

@@ -277,8 +277,12 @@ begin
   Result := -1;
   ConnectionHandle := GetConnectionHandle();
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  SSQL := SQL;
   QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
-    PAnsiChar(GetPrepreparedSQL(SQL)));
+    PAnsiChar(ASQL));
+  CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
+    SSQL, QueryHandle);
+  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
   {$ELSE}
     {$IFDEF DELPHI12_UP}
     QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
@@ -286,10 +290,10 @@ begin
     {$ELSE}
     QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
     {$ENDIF}
-  {$ENDIF}
   CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
     SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+  {$ENDIF}
 
   if QueryHandle <> nil then
   begin

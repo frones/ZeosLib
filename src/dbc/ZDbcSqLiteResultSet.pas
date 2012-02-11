@@ -244,15 +244,11 @@ begin
     ColumnInfo := TZColumnInfo.Create;
     with ColumnInfo do
     begin
-      {$IFDEF CHECK_CLIENT_CODE_PAGE}
-      ColumnLabel := ZString(StrPas(FieldName^));
-      {$ELSE}
-  {$IFDEF DELPHI12_UP}
-      ColumnLabel := UTF8ToUnicodeString(StrPas(FieldName^));
-  {$ELSE}
-      ColumnLabel := StrPas(FieldName^);
+  {$IFDEF DELPHI12_UP} 
+      ColumnLabel := UTF8ToUnicodeString(StrPas(FieldName^)); 
+  {$ELSE} 
+      ColumnLabel := StrPas(FieldName^); 
   {$ENDIF}
-      {$ENDIF}
       Inc(FieldName);
       TableName := '';
       ReadOnly := False;

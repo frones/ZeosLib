@@ -133,6 +133,19 @@ var
   CachedResultSet: TZCachedResultSet;
 begin
   { Creates a native result set. }
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  Self.SSQL := SQL;
+  NativeResultSet := TZSQLiteResultSet.Create(FPlainDriver, Self, SSQL, FHandle,
+    StmtHandle, ColumnCount, ColumnNames, ColumnValues);
+  NativeResultSet.SetConcurrency(rcReadOnly);
+
+  { Creates a cached result set. }
+  CachedResolver := TZSQLiteCachedResolver.Create(FPlainDriver, FHandle, Self,
+    NativeResultSet.GetMetaData);
+  CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SSQL,
+    CachedResolver,GetConnection.GetClientCodePageInformations);
+  {$ELSE}
+
   NativeResultSet := TZSQLiteResultSet.Create(FPlainDriver, Self, SQL, FHandle,
     StmtHandle, ColumnCount, ColumnNames, ColumnValues);
   NativeResultSet.SetConcurrency(rcReadOnly);
@@ -141,7 +154,8 @@ begin
   CachedResolver := TZSQLiteCachedResolver.Create(FPlainDriver, FHandle, Self,
     NativeResultSet.GetMetaData);
   CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
-    CachedResolver{$IFDEF CHECK_CLIENT_CODE_PAGE},GetConnection.GetClientCodePageInformations{$ENDIF});
+    CachedResolver);
+  {$ENDIF}
 
   { Fetches all rows to prevent blocking. }
   CachedResultSet.SetType(rtScrollInsensitive);

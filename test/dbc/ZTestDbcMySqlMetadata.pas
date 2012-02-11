@@ -248,7 +248,7 @@ begin
   CheckEquals('', ResultSet.GetStringByName('TABLE_SCHEM'));
   CheckEquals('people', ResultSet.GetStringByName('TABLE_NAME'));
   CheckEquals('p_resume', ResultSet.GetStringByName('COLUMN_NAME'));
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: the ClientCharacterSet sets now the Stream-Type
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: the ClientCharacter-set sets now the Stream-Type
   {$IFNDEF FPC}
   if ResultSet.GetClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
   CheckEquals(ord(stUnicodeStream), ResultSet.GetIntByName('DATA_TYPE'));

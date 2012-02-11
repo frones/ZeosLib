@@ -455,7 +455,6 @@ begin
   try
     if Assigned(Properties) then
       Temp.AddStrings(Properties);
-
     Result := FConnection.DbcConnection.PrepareStatementWithParams(SQL, Temp);
   finally
     Temp.Free;

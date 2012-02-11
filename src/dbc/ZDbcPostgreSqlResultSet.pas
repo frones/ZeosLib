@@ -585,13 +585,19 @@ begin
 end;
 
 function TZPostgreSQLResultSet.GetUnicodeStream(ColumnIndex: Integer): TStream;
+{$IFNDEF CHECK_CLIENT_CODE_PAGE}
 var
   Data: WideString;
+{$ENDIF}
 begin
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+  Result := TStringStream.Create(GetString(ColumnIndex));
+{$ELSE}
   Data := GetUnicodeString(ColumnIndex);
   Result := TMemoryStream.Create;
   Result.Write(PWideChar(Data)^, Length(Data)*2);
   Result.Position := 0;
+{$ENDIF}
 end;
 
 {**
@@ -635,13 +641,11 @@ begin
           Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)))
         else
           begin
-            {$IFDEF CHECK_CLIENT_CODE_PAGE}
-            if ClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-            {$ELSE}
+           {$IFNDEF CHECK_CLIENT_CODE_PAGE}
             if ((Statement.GetConnection as IZPostgreSQLConnection).GetCharactersetCode = csUTF8) then
-            {$ENDIF}
               Stream := GetUnicodeStream(ColumnIndex)
             else
+            {$ENDIF}
               Stream := TStringStream.Create(GetString(ColumnIndex));
           end;
         Result := TZAbstractBlob.CreateWithStream(Stream);

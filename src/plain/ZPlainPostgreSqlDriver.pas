@@ -1392,7 +1392,7 @@ begin
   inherited LoadCodePages;
   { Version 8.1 }
   {MultiChar}
-  ResetCodePage(Ord(csUNICODE_PODBC), 'UTF8', Ord(csUTF8), ceUTF8); { Unicode, 8-bit 	all }
+  ResetCodePage(Ord(csUNICODE_PODBC), 'UTF8', Ord(csUTF8), ceUTF8, zCP_UTF8); { Unicode, 8-bit 	all }
   AddCodePage('BIG5', Ord(csBIG5), ceAnsi, zCP_Big5); { Big Five 	Traditional Chinese }
   AddCodePage('GB18030', Ord(csGB18030)); { National Standard 	Chinese }
   AddCodePage('GBK', Ord(csGBK)); { Extended National Standard 	Simplified Chinese }
