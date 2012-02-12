@@ -616,7 +616,6 @@ var
   Stream: TStream;
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
   TempAnsi, Decoded: AnsiString;
-  Buffer: Pointer;
   len: Integer;
   {$ENDIF}
 begin
