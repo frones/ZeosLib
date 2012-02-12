@@ -402,11 +402,7 @@ begin
   DestLength := 2;
   for I := 1 to SrcLength do
   begin
-    {$IFDEF DELPHI12_UP}
     if CharInSet(SrcBuffer^, [#0, '''', '\']) then
-    {$ELSE}
-    if SrcBuffer^ in [#0, '''', '\'] then
-    {$ENDIF}
       Inc(DestLength, 4)
     else
       Inc(DestLength);
@@ -421,11 +417,7 @@ begin
 
   for I := 1 to SrcLength do
   begin
-    {$IFDEF DELPHI12_UP}
     if CharInSet(SrcBuffer^, [#0, '''', '\']) then
-    {$ELSE}
-    if SrcBuffer^ in [#0, '''', '\'] then
-    {$ENDIF}
     begin
       DestBuffer[0] := '\';
       DestBuffer[1] := Char(Ord('0') + (Byte(SrcBuffer^) shr 6));
@@ -646,11 +638,7 @@ var
   for I := 1 to SrcLength do
   begin
     LastState := pg_CS_stat(LastState,integer(SrcBuffer^),CharactersetCode);
-    {$IFDEF DELPHI12_UP}
     if CharInSet(SrcBuffer^, [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
-    {$ELSE}
-    if (SrcBuffer^ in [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
-    {$ENDIF}
       Inc(DestLength, 4)
     else
       Inc(DestLength);
@@ -667,18 +655,14 @@ var
   for I := 1 to SrcLength do
   begin
     LastState := pg_CS_stat(LastState,integer(SrcBuffer^),CharactersetCode);
-    {$IFDEF DELPHI12_UP}
     if CharInSet(SrcBuffer^, [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
-    {$ELSE}
-    if (SrcBuffer^ in [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
-    {$ENDIF}
-      begin
-        DestBuffer[0] := '\';
-        DestBuffer[1] := Char(Ord('0') + (Byte(SrcBuffer^) shr 6));
-        DestBuffer[2] := Char(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
-        DestBuffer[3] := Char(Ord('0') + (Byte(SrcBuffer^) and $07));
-        Inc(DestBuffer, 4);
-      end
+    begin
+      DestBuffer[0] := '\';
+      DestBuffer[1] := Char(Ord('0') + (Byte(SrcBuffer^) shr 6));
+      DestBuffer[2] := Char(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
+      DestBuffer[3] := Char(Ord('0') + (Byte(SrcBuffer^) and $07));
+      Inc(DestBuffer, 4);
+    end
     else
     begin
       DestBuffer^ := SrcBuffer^;
@@ -879,11 +863,7 @@ var
 begin
   Temp := '';
   for I := 1 to Length(Value) do
-    {$IFDEF DELPHI12_UP}
     if CharInSet(Value[I], ['0'..'9']) then
-    {$ELSE}
-    if Value[I] in ['0'..'9'] then
-    {$ENDIF}
       Temp := Temp + Value[I]
     else
       Break;

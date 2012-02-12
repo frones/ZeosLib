@@ -119,6 +119,7 @@ type
   public
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver; Data: Pointer;
       Size: Integer; Handle: PZPostgreSQLConnect; BlobOid: Oid);
+
     destructor Destroy; override;
 
     function GetBlobOid: Oid;
@@ -613,6 +614,11 @@ function TZPostgreSQLResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
   BlobOid: Oid;
   Stream: TStream;
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  TempAnsi, Decoded: AnsiString;
+  Buffer: Pointer;
+  len: Integer;
+  {$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
@@ -638,16 +644,29 @@ begin
       Stream := nil;
       try
         if GetMetadata.GetColumnType(ColumnIndex) = stBinaryStream then
+        {$IFDEF CHECK_CLIENT_CODE_PAGE}
+        begin
+          Decoded := FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)); //gives a hex-string back
+          Decoded := Copy(Decoded, 2, Length(Decoded)-1); //remove the first 'x'-byte
+          Len := Length(Decoded) div 2; //GetLength of binary result
+          SetLength(TempAnsi, Len); //Set length of binary-result
+          HexToBin(PAnsiChar(Decoded), PAnsichar(TempAnsi), Len); //convert hex to binary
+          Stream := TStringStream.Create(TempAnsi); //write proper binary-stream
+        end
+        {$ELSE}
           Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)))
+        {$ENDIF}
         else
+          {$IFNDEF CHECK_CLIENT_CODE_PAGE}
           begin
-           {$IFNDEF CHECK_CLIENT_CODE_PAGE}
             if ((Statement.GetConnection as IZPostgreSQLConnection).GetCharactersetCode = csUTF8) then
               Stream := GetUnicodeStream(ColumnIndex)
             else
-            {$ENDIF}
               Stream := TStringStream.Create(GetString(ColumnIndex));
           end;
+          {$ELSE}
+        Stream := TStringStream.Create(GetString(ColumnIndex));
+          {$ENDIF}
         Result := TZAbstractBlob.CreateWithStream(Stream);
       finally
         if Assigned(Stream) then
