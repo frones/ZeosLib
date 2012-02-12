@@ -157,7 +157,7 @@ function GetMinorVersion(const Value: string): Word;
 
 implementation
 
-uses ZMessages{$IFDEF CHECK_CLIENT_CODE_PAGE}, ZCompatibility{$ENDIF};
+uses ZMessages, ZCompatibility;
 
 type
 
