@@ -235,7 +235,7 @@ begin
   QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
     PAnsiChar(Self.ASQL));
   CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
-    SQL, QueryHandle);
+    SSQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, Self.SSQL);
   if QueryHandle <> nil then
     Result := CreateResultSet(Self.SSQL, QueryHandle)

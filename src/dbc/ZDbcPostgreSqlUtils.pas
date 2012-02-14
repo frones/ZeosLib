@@ -299,7 +299,9 @@ begin
   if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
     case result of
       stString: Result := stUnicodeString;
+      {$IFNDEF VER150BELOW} //Delphi 7 does not support WideMemos
       stAsciiStream: Result := stUnicodeStream;
+      {$ENDIF}
     end;
   {$ENDIF}
   {$ELSE}
@@ -362,8 +364,10 @@ begin
   {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
   if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
     case result of
-      stString: Result := {$IFDEF FPC}stString{$ELSE}stUnicodeString{$ENDIF};
+      stString: Result := stUnicodeString;
+      {$IFNDEF VER150BELOW} //Delphi 7 does not support WideMemos
       stAsciiStream: Result := stUnicodeStream;
+      {$ENDIF}
     end;
   {$ELSE}
   if Connection.GetCharactersetCode = csUTF8 then  //whats with csUNICODE_PODBC ??
@@ -801,11 +805,11 @@ var
    ConnectionLost: boolean;
 begin
   if Assigned(Handle) then
- {$IFDEF DELPHI12_UP} 
-    ErrorMessage := Trim(UTF8ToUnicodeString(StrPas(PlainDriver.GetErrorMessage(Handle)))) 
- {$ELSE} 
-    ErrorMessage := Trim(StrPas(PlainDriver.GetErrorMessage(Handle))) 
- {$ENDIF} 
+ {$IFDEF DELPHI12_UP}
+    ErrorMessage := Trim(UTF8ToUnicodeString(StrPas(PlainDriver.GetErrorMessage(Handle))))
+ {$ELSE}
+    ErrorMessage := Trim(StrPas(PlainDriver.GetErrorMessage(Handle)))
+ {$ENDIF}
   else
     ErrorMessage := '';
   if ErrorMessage <> '' then

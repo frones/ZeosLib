@@ -226,7 +226,24 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
     FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
     FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB:
       if (FieldFlags and BINARY_FLAG) = 0 then
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+       case CharEncoding of
+        ceUTF8, ceUTF16:
+          {$IFDEF FPC}
+          Result := stAsciiStream
+          {$ELSE}
+            {$IFNDEF VER150BELOW} //Delphi 7 does not support WideMemos
+            Result := stAsciiStream;
+            {$ELSE}
+            Result := stUnicodeStream;
+            {$ENDIF}
+          {$ENDIF}
+        else
+          Result := stAsciiStream
+       end
+    {$ELSE}
         Result := stAsciiStream
+    {$ENDIF}
       else
         Result := stBinaryStream;
     FIELD_TYPE_BIT:
@@ -323,7 +340,9 @@ var
   IsUnsigned: Boolean;
   Posi, Len, i: Integer;
   Spec: string;
+  {$IFNDEF CHECK_CLIENT_CODE_PAGE}
 	IsUnicodeField:boolean;
+  {$ENDIF}
 begin
   TypeName := UpperCase(TypeName);
   TypeNameFull := UpperCase(TypeNameFull);
@@ -483,7 +502,9 @@ begin
   if CharEncoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
     case result of
       stString: Result := stUnicodeString;
+      {$IFNDEF VER150BELOW} //Delphi 7 does not support WideMemos
       stAsciiStream: Result := stUnicodeStream;
+      {$ENDIF}
     end;
   {$ENDIF}
   {$ENDIF}

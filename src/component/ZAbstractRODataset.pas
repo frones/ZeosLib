@@ -1088,9 +1088,6 @@ var
   Stream: TStream;
   Dataset: TDataset;
   Field: TField;
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  Temp: String;
-  {$Endif}
 begin
   if DataLink.Active then
     Dataset := DataLink.DataSet
@@ -1159,14 +1156,14 @@ begin
                 Type wide/unicode so we have to give him back as
                 Stream!}
               {$IFDEF CHECK_CLIENT_CODE_PAGE}
-              {$IFNDEF FPC}
+              {$IFDEF DELPHI12_UP}
               if Statement.GetConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
                 Stream := Param.AsStream
               else
                 Stream := TStringStream.Create(Param.AsMemo);
-              {$ENDIF}
               {$ELSE}
               Stream := TStringStream.Create(Param.AsMemo);
+              {$ENDIF}
               {$ENDIF}
               try
                 Statement.SetAsciiStream(I + 1, Stream);
@@ -1174,7 +1171,7 @@ begin
                 Stream.Free;
               end;
             end;
-          {$IFNDEF VER150BELOW} // not available on Delhi 7 
+          {$IFNDEF VER150BELOW} // not available on Delhi 7
           ftWideMemo:
             begin
               Stream := WideStringStream(Param.AsWideString);

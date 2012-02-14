@@ -790,7 +790,9 @@ begin
   if CharEncoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
     case result of
       stString: Result := stUnicodeString;
+      {$IFNDEF VER150BELOW} //Delphi 7 does not support WideMemos
       stAsciiStream: Result := stUnicodeStream;
+      {$ENDIF}
     end;
   {$ENDIF}
   {$ENDIF}

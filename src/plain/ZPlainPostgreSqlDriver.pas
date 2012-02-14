@@ -950,16 +950,16 @@ end;
 
 function TZPostgreSQLBaseDriver.EncodeBYTEA(const Value: AnsiString;  Handle: PZPostgreSQLConnect): AnsiString;
 var
-   encoded: PAnsiChar;
-   len: Longword;
-   leng: cardinal;
+  encoded: PAnsiChar;
+  len: Longword;
+  leng: cardinal;
 begin
  leng := Length(Value);
  if assigned(POSTGRESQL_API.PQescapeByteaConn) then
    encoded := POSTGRESQL_API.PQescapeByteaConn(Handle, PAnsiChar(value), leng, @len)
  else
    encoded := POSTGRESQL_API.PQescapeBytea(PAnsiChar(value),leng,@len);
- SetLength(result, len - 1);
+ SetLength(result, len -1); //removes the #0 byte
  StrCopy(PAnsiChar(result), encoded);
  POSTGRESQL_API.PQFreemem(encoded);
  result := ''''+result+'''';

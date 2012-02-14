@@ -354,6 +354,10 @@ begin
     FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex));
   if FPlainDriver.GetFieldType(FQueryHandle, ColumnIndex) = 1042 then
     Result := TrimRight(Result);
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  if not ( GetMetaData.GetColumnType(ColumnIndex +1) = stBinaryStream ) then
+    Result := DecodeString(Result);
+  {$ENDIF}
 end;
 
 {**
@@ -646,8 +650,8 @@ begin
         {$IFDEF CHECK_CLIENT_CODE_PAGE}
         begin
           Decoded := FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)); //gives a hex-string back
-          Decoded := Copy(Decoded, 2, Length(Decoded)-1); //remove the first 'x'-byte
-          Len := Length(Decoded) div 2; //GetLength of binary result
+          Len := (Length(Decoded) div 2); //GetLength of binary result
+          Decoded := Copy(Decoded, 2, Length(Decoded)); //remove the first 'x'sign-byte
           SetLength(TempAnsi, Len); //Set length of binary-result
           HexToBin(PAnsiChar(Decoded), PAnsichar(TempAnsi), Len); //convert hex to binary
           Stream := TStringStream.Create(TempAnsi); //write proper binary-stream

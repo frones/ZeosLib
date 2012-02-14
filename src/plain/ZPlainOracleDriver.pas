@@ -864,7 +864,7 @@ type
     constructor Create;
 
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
-    function GetCompilerSaveCodePageName: String;
+    function GetCompilerSaveCodePageName: String; override;
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;

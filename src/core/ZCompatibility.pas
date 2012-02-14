@@ -181,7 +181,7 @@ type
     These functions do auto arrange the in/out-coming AnsiStrings in
     dependency of the used CharacterSet and the used Compiler}
     function ZString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
-    function ZAnsiString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
+    function ZAnsiString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
     function ZStringW(const ws: WideString; const Encoding: TZCharEncoding = ceDefault): String;
     property ClientCodePage: PZCodePage read FCodePage write FCodePage;
   public
@@ -192,12 +192,12 @@ const
   ClientCodePageDummy: TZCodepage =
     (Name: ''; ID: 0; Encoding: ceAnsi; CP: 0; ZAlias: '');
 
-function ZWideToAnsiString(const ws: WideString; codePage: Word): AnsiString;
-function ZAnsiToWideString(const s: AnsiString; codePage: Word): WideString;
-function ZCPWideString(const ws: WideString; codePage: Word): WideString;
-function ZCPCheckedAnsiString(const s: AnsiString; codepage: Word): AnsiString;
-function ZCPToAnsiString(const s: AnsiString; codepage: Word): AnsiString;
-function ZAnsiStringToCP(const s: AnsiString; codepage: Word): AnsiString;
+function ZWideToAnsiString(const ws: WideString; CP: Word): AnsiString;
+function ZAnsiToWideString(const s: AnsiString; CP: Word): WideString;
+function ZCPWideString(const ws: WideString; CP: Word): WideString;
+function ZCPCheckedAnsiString(const s: AnsiString; CP: Word): AnsiString;
+function ZCPToAnsiString(const s: AnsiString; CP: Word): AnsiString;
+function ZAnsiStringToCP(const s: AnsiString; CP: Word): AnsiString;
 
 {$ENDIF}
 
@@ -223,12 +223,10 @@ implementation
   @returns Converted ansi string.
 }
 
-function ZWideToAnsiString(const ws: WideString; codePage: Word): AnsiString;
-{$IFNDEF FPC}
+function ZWideToAnsiString(const ws: WideString; CP: Word): AnsiString;
+{$IFNDEF FPC AND IFDEF DELPHI12_UP}
 var
-  {$IFNDEF DELPHI12_UP}
   l: integer;
-  {$ENDIF}
   AnsiTemp: {$IFDEF DELPHI14_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
 {$ENDIF}
 begin
@@ -241,20 +239,25 @@ begin
     {$ELSE}
       {$IFDEF DELPHI12_UP} //use Delphi-RTL cause of possible Marvin-Mode for XE2
       AnsiTemp := UTF8Encode(ws); //total Char-transport. may be server-unsupported
-      if ( AnsiTemp <> '' ) and ( codePage <> $ffff )  then
-        SetCodePage(AnsiTemp, codePage, True); //Server-Codepage supported!
+      if ( AnsiTemp <> '' ) and ( CP <> $ffff )  then
+        SetCodePage(AnsiTemp, CP, True); //Server-CP supported!
       Result := AnsiTemp;
       {$ELSE}
-      if ( codePage <> $ffff ) and ( ws <> '' ) then
+      if ( CP <> $ffff ) and ( ws <> '' ) then
       begin
-        l := WideCharToMultiByte(codePage,
-          WC_COMPOSITECHECK or WC_DISCARDNS or WC_SEPCHARS or WC_DEFAULTCHAR,
-          @ws[1], - 1, nil, 0, nil, nil);
-        SetLength(Result, l - 1);
-        if l > 1 then
-          WideCharToMultiByte(codePage,
+        if CP = 65001 then
+          Result := UTF8Encode(WS)
+        else
+        begin
+          l := WideCharToMultiByte(CP,
             WC_COMPOSITECHECK or WC_DISCARDNS or WC_SEPCHARS or WC_DEFAULTCHAR,
-            @ws[1], - 1, @Result[1], l - 1, nil, nil);
+            @ws[1], - 1, nil, 0, nil, nil);
+          SetLength(Result, l - 1);
+          if l > 1 then
+            WideCharToMultiByte(CP,
+              WC_COMPOSITECHECK or WC_DISCARDNS or WC_SEPCHARS or WC_DEFAULTCHAR,
+              @ws[1], - 1, @Result[1], l - 1, nil, nil);
+        end;
       end
       else
         Result := UTF8Encode(ws); //toal chars
@@ -266,13 +269,16 @@ end; { ZWAnsiString }
 {**
   Converts Ansi string to Unicode string using specified code page.
   @param   s        Ansi string.
-  @param   codePage Code page to be used in conversion.
+  @param   CP Code page to be used in conversion.
   @returns Converted wide string.
 }
-function ZAnsiToWideString(const s: AnsiString; codePage: Word): WideString;
-{$IFNDEF DELPHI14_UP AND IFNDEF FPC}
+function ZAnsiToWideString(const s: AnsiString; CP: Word): WideString;
+{$IFNDEF FPC AND IFDEF DELPHI12_UP}
 var
   l: integer;
+  {$IFDEF DELPHI14_UP}
+  AnsiTemp: AnsiString;
+  {$ENDIF}
 {$ENDIF}
 begin
   if s = '' then
@@ -281,19 +287,37 @@ begin
   {$IFDEF FPC}
    Result := UTF8ToString(S)
   {$ELSE}
-    {$IFDEF DELPHI14_UP} //possible MARVIN mode...
-    if ( codePage <> $ffff ) and ( s <> '' ) then
-      Result := UTF8ToString(AnsiToUTF8Ex(s, codePage))
+    {$IFDEF DELPHI12_UP}
+    if ( CP <> $ffff ) and ( s <> '' ) then
+      {$IFDEF DELPHI14_UP} //possible MARVIN mode...
+      Result := UTF8ToString(AnsiToUTF8Ex(s, CP))
+      {$ELSE}
+      begin
+        if CP = 65001 then
+          result := UTF8ToString(s)
+        else
+        begin
+          AnsiTemp := s;
+          SetCodePage(AnsiTemp, CP);
+          Result := WideString(AnsiTemp);
+        end;
+      end
+      {$ENDIF}
     else
       Result := WideString(s);
     {$ELSE}
-    if ( codePage <> $ffff ) and ( s <> '' ) then //Older Delphi-Version can use Allways the Win-APi
+    if ( CP <> $ffff ) and ( s <> '' ) then //Older Delphi-Version can use Allways the Win-APi
     begin
-      l := MultiByteToWideChar(codePage, MB_PRECOMPOSED, PAnsiChar(@s[1]), - 1, nil, 0);
-      SetLength(Result, l - 1);
-      if l > 1 then
-        MultiByteToWideChar(CodePage, MB_PRECOMPOSED, PAnsiChar(@s[1]),
-          - 1, PWideChar(@Result[1]), l - 1);
+      if CP = 65001 then
+        Result := UTF8ToString(s)
+      else
+      begin
+        l := MultiByteToWideChar(CP, MB_PRECOMPOSED, PAnsiChar(@s[1]), - 1, nil, 0);
+        SetLength(Result, l - 1);
+        if l > 1 then
+          MultiByteToWideChar(CP, MB_PRECOMPOSED, PAnsiChar(@s[1]),
+            - 1, PWideChar(@Result[1]), l - 1);
+      end;
     end
     else
       Result := WideString(s);
@@ -301,9 +325,9 @@ begin
   {$ENDIF}
 end; { ZWideString }
 
-function ZCPWideString(const ws: WideString; codePage: Word): WideString;
+function ZCPWideString(const ws: WideString; CP: Word): WideString;
 begin
-  Result := ZAnsiToWideString(ZWideToAnsiString(ws, codePage), codePage);
+  Result := ZAnsiToWideString(ZWideToAnsiString(ws, CP), CP);
 end;
 
 {**
@@ -311,30 +335,30 @@ end;
   This little function picks unsupported chars out. So the data is 100%
   Server-supported and no Errors where raised
   }
-function ZCPCheckedAnsiString(const s: AnsiString; codepage: Word): AnsiString;
+function ZCPCheckedAnsiString(const s: AnsiString; CP: Word): AnsiString;
 begin
   {$IFDEF FPC}
   Result := S;
   {$ELSE}
-  Result := ZWideToAnsiString(ZAnsiToWideString(s, CodePage), CodePage);
+  Result := ZWideToAnsiString(ZAnsiToWideString(s, CP), CP);
   {$ENDIF}
 end;
 
-function ZCPToAnsiString(const s: AnsiString; codepage: Word): AnsiString;
+function ZCPToAnsiString(const s: AnsiString; CP: Word): AnsiString;
 begin
   {$IFDEF FPC}
   Result := S;
   {$ELSE}
-  Result := ZWideToAnsiString(ZAnsiToWideString(s, CodePage), CodePage);
+  Result := ZWideToAnsiString(ZAnsiToWideString(s, CP), CP);
   {$ENDIF}
 end;
 
-function ZAnsiStringToCP(const s: AnsiString; codepage: Word): AnsiString;
+function ZAnsiStringToCP(const s: AnsiString; CP: Word): AnsiString;
 begin
   {$IFDEF FPC}
   Result := S;
   {$ELSE}
-  Result := ZWideToAnsiString(ZAnsiToWideString(s, CodePage), CodePage);
+  Result := ZWideToAnsiString(ZAnsiToWideString(s, CP), CP);
   {$ENDIF}
 end;
 
@@ -384,7 +408,11 @@ begin
     {$IFDEF DELPHI12_UP}
     Result := UTF8ToString(Ansi);
     {$ELSE}
-    Result := Ansi;
+      {.$IFDEF FPC}
+      Result := Ansi;
+      {.$ELSE}
+      //Result := ZCPCheckedAnsiString(Ansi, Self.ClientCodePage^.CP);
+      {.$ENDIF}
     {$ENDIF}
   else
     {$IFDEF DELPHI12_UP}
@@ -419,7 +447,7 @@ EgonHugeist:
     Example: CharacterSet was set to Latin1 and some "special"-String MUST BE
      UTF8 instead of Latin1. (SSL-Keys eventualy)
 }
-function TAbstractCodePagedInterfacedObject.ZAnsiString(const Str: String;
+function TAbstractCodePagedInterfacedObject.ZAnsiString(const AStr: String;
   const Encoding: TZCharEncoding = ceDefault): AnsiString;
 var
   UseEncoding: TZCharEncoding;
@@ -433,11 +461,15 @@ begin
 
   case UseEncoding of
     ceUTF8, ceUTF16:
-        {$IFDEF DELPHI12_UP}
-        Result := AnsiString(UTF8Encode(Str));
+      {$IFDEF DELPHI12_UP}
+      Result := AnsiString(UTF8Encode(AStr));
+      {$ELSE}
+        {$IFDEF FPC}
+        Result := AStr;
         {$ELSE}
-        Result := Str;
+        Result := AStr;
         {$ENDIF}
+      {$ENDIF}
     //ceUTF16: ;//not done yet
     //ceUTF32
   else
@@ -457,7 +489,7 @@ begin
           a solution to enable all chars for your spezified CharacterSet of your
           Connection.}
       {$IFDEF DELPHI12_UP} //later for FPC 2.8 too eventual
-        Result := ZWideToAnsiString(Str, FCodePage^.CP);
+        Result := ZWideToAnsiString(AStr, FCodePage^.CP);
       {$ELSE}
         {$IFDEF FPC}
         { EgonHugeist:
@@ -468,9 +500,9 @@ begin
           is only for the user-data and NOT for Metadata. While testing these
           prepreparations the Metadata-informations where changed. Or on the
           other hand it's possible thate Lazarus-functions are not right there..}
-          Result := Str; //Ansi to Ansi is no Problem!!!
+          Result := AStr; //Ansi to Ansi is no Problem!!!
         {$ELSE} //Delphi7=>?<2009
-        Result := ZCPCheckedAnsiString(Str, FCodePage^.CP);
+        Result := ZCPCheckedAnsiString(AStr, FCodePage^.CP);
         {$ENDIF}
       {$ENDIF}
     end;

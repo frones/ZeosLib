@@ -187,7 +187,6 @@ begin
     Result := stAsciiStream
   else if Pos('TEXT', TypeName) > 0 then
     Result := stAsciiStream;
-    //Result := stString;
 
   if (Result = stInteger) and (Precision <> 0) then
   begin
@@ -207,8 +206,8 @@ begin
   {$IFNDEF FPC}
   if CharEncoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
     case result of
-      //stString: Result := stUnicodeString;
-      stAsciiStream: Result := stUnicodeStream;
+      //stString: Result := stUnicodeString; //Egonhugeist -> Metadataproblems are not readable if stUnicodeString
+      stAsciiStream: Result := {$IFDEF VER150BELOW}stAsciiStream{$ELSE}stUnicodeStream{$ENDIF}; //Delphi 7 does not support WideMemos
     end;
   {$ENDIF}
   {$ENDIF}
