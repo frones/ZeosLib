@@ -1518,9 +1518,24 @@ end;
 {$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZTokenizer.AnsiGetEscapeString(const EscapeString: AnsiString;
   const EscapeMarkSequence: String = '~<|'): String;
+var
+  Temp: String;
+
+  function GetReverted: String;
+  var
+    I: Integer;
+  begin
+    for I := Length(EscapeMarkSequence) downto 1 do
+      Result := Result + Copy(EscapeMarkSequence, i, 1);
+  end;
 begin
-  Self.FMarkSequence := EscapeMarkSequence;
-  Result := String(EscapeString);
+  Self.SetEscapeMarkSequence(EscapeMarkSequence);
+  Temp := EscapeMarkSequence+IntToStr(Length(EscapeString))+GetReverted;
+
+  if Length(EscapeString) > 0 then
+    Result := Temp+String(EscapeString)+Temp
+  else
+    Result := 'NULL';
 end;
 
 function TZTokenizer.GetEscapeString(const EscapeString: String;

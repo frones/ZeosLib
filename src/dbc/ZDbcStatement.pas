@@ -639,14 +639,17 @@ begin
   begin
     SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeEscapeBufferToList(SQL); //Disassembles the Query
     for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
+    begin
       case (SQLTokens[i].TokenType) of
         ttEscape:
           Result := Result + AnsiString(SQLTokens[i].Value);
-        ttWord, ttQuoted:
+        ttComment: Result := Result;
+        ttWord, ttQuoted, ttQuotedIdentifier, ttKeyword:
           Result := Result + ZAnsiString(SQLTokens[i].Value);
         else
           Result := Result + AnsiString(SQLTokens[i].Value);
       end;
+    end;
   end
   else
     Result := Result + AnsiString(SQL); //keep the Ansi-codepage
@@ -2133,8 +2136,8 @@ begin
       Result := Result + Tokens[I];
   end;
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  if FConnection.DoPreprepareSQL then
-    Result := FConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
+  //if FConnection.DoPreprepareSQL then
+    //Result := FConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
   {$ENDIF}
 end;
 

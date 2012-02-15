@@ -219,9 +219,9 @@ type
 
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
     //EgonHugeist
-    function GetBinaryEscapeStringFromString(const BinaryMarkSequence: String; const BinaryString: AnsiString): String; overload;
-    function GetBinaryEscapeStringFromStream(const BinaryMarkSequence: String; const Stream: TStream): String; overload;
-    function GetBinaryEscapeStringFromFile(const BinaryMarkSequence: String; const FileName: String): String; overload;
+    function GetAnsiEscapeStringFromString(const BinaryMarkSequence: String; const BinaryString: AnsiString): String; overload;
+    function GetAnsiEscapeStringFromStream(const BinaryMarkSequence: String; const Stream: TStream): String; overload;
+    function GetAnsiEscapeStringFromFile(const BinaryMarkSequence: String; const FileName: String): String; overload;
     {$ENDIF}
 
     property InTransaction: Boolean read GetInTransaction;
@@ -1256,13 +1256,13 @@ end;
   @param BinaryMarkSequence represents an identifier string minimum length >= 3
   @Result: A Prepared String like '~<|1023|<~''Binary-data-string(1023 Bytes)''~<|1023|<~
 }
-function TZAbstractConnection.GetBinaryEscapeStringFromString(const
+function TZAbstractConnection.GetAnsiEscapeStringFromString(const
   BinaryMarkSequence: String; const BinaryString: AnsiString): String;
 begin
   CheckConnected;
 
   if Assigned(FConnection) then
-    Result := FConnection.GetBinaryEscapeString(BinaryString, BinaryMarkSequence);
+    Result := FConnection.GetAnsiEscapeString(BinaryString, BinaryMarkSequence);
 end;
 
 {**
@@ -1272,7 +1272,7 @@ end;
   @param BinaryMarkSequence represents an identifier string minimum length >= 3
   @Result: A Prepared String like '~<|1023|<~''Binary-data-string(1023 Char's)''~<|1023|<~
 }
-function TZAbstractConnection.GetBinaryEscapeStringFromStream(
+function TZAbstractConnection.GetAnsiEscapeStringFromStream(
   const BinaryMarkSequence: String; const Stream: TStream): String;
 var
   FBlobSize: Integer;
@@ -1306,7 +1306,7 @@ begin
       FreeMem(FBlobData);
     FBlobData := nil;
 
-    Result := FConnection.GetBinaryEscapeString(TempAnsi, BinaryMarkSequence);
+    Result := FConnection.GetAnsiEscapeString(TempAnsi, BinaryMarkSequence);
   end;
 end;
 
@@ -1317,7 +1317,7 @@ end;
   @param FileName represents the FileName which has to be readed
   @Result: A Prepared String like '~<|1023|<~''Binary-data-string(1023 Char's)''~<|1023|<~
 }
-function TZAbstractConnection.GetBinaryEscapeStringFromFile(
+function TZAbstractConnection.GetAnsiEscapeStringFromFile(
   const BinaryMarkSequence: String; const FileName: String): String;
 var
   FStream: TFileStream;
@@ -1327,7 +1327,7 @@ begin
   if FileExists(FileName) then
   begin
     FStream := TFileStream.Create(FileName, fmOpenRead);
-    Result := GetBinaryEscapeStringFromStream(BinaryMarkSequence, FStream);
+    Result := GetAnsiEscapeStringFromStream(BinaryMarkSequence, FStream);
     FStream.Free;
     FStream := nil;
   end;

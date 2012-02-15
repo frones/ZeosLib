@@ -130,7 +130,7 @@ type
     function ReKey(const Key: string): Integer;
     function Key(const Key: string): Integer; 
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
-    function GetBinaryEscapeString(const Value: AnsiString;
+    function GetAnsiEscapeString(const Value: AnsiString;
       const EscapeMarkSequence: String = '~<|'): String; override;
     function GetEscapeString(const Value: String;
       const EscapeMarkSequence: String = '~<|'): String; override;
@@ -690,7 +690,7 @@ end;
   @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
   @result the detectable Binary String
 }
-function TZSQLiteConnection.GetBinaryEscapeString(const Value: AnsiString;
+function TZSQLiteConnection.GetAnsiEscapeString(const Value: AnsiString;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
   Result := Driver.GetTokenizer.AnsiGetEscapeString('''' + ZDbcSqLiteUtils.EncodeString(Value) + '''', EscapeMarkSequence);

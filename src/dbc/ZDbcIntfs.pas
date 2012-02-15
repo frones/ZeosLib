@@ -266,7 +266,7 @@ type
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
-    function GetBinaryEscapeString(const Value: AnsiString;
+    function GetAnsiEscapeString(const Value: AnsiString;
       const EscapeMarkSequence: String = '~<|'): String;
     function GetEscapeString(const Value: String;
       const EscapeMarkSequence: String = '~<|'): String;

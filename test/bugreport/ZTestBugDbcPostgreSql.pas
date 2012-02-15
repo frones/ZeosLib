@@ -485,7 +485,14 @@ begin
   ResultSet := Statement.ExecuteQuery('select fld1, fld2 from test815852 ');
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}  //Client_Character_set sets column-type!!!!
+  if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)))
+  else
+    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
+  {$ELSE}
   CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
+  {$ENDIF}
 
   Statement.ExecuteUpdate('delete from test815852');
 
@@ -493,7 +500,14 @@ begin
   ResultSet := Statement.ExecuteQuery('select fld1, fld2 from test815852');
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}  //Client_Character_set sets column-type!!!!
+  if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)))
+  else
+    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
+  {$ELSE}
   CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
+  {$ENDIF}
 
   ResultSet.MoveToInsertRow;
   ResultSet.UpdateInt(1, 123456);
@@ -536,7 +550,14 @@ begin
   ResultSet := Statement.ExecuteQuery('select fld1, fld2 from xyz.test824780 ');
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}  //Client_Character_set sets column-type!!!!
+  if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)))
+  else
+    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
+  {$ELSE}
   CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
+  {$ENDIF}
 
   Statement.ExecuteUpdate('delete from xyz.test824780');
 
@@ -544,7 +565,14 @@ begin
   ResultSet := Statement.ExecuteQuery('select fld1, fld2 from xyz.test824780');
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}  //Client_Character_set sets column-type!!!!
+  if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)))
+  else
+    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
+  {$ELSE}
   CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
+  {$ENDIF}
 
   ResultSet.MoveToInsertRow;
   ResultSet.UpdateInt(1, 123456);
@@ -644,11 +672,11 @@ begin
   Statement.SetResultSetConcurrency(rcReadOnly);
   ResultSet := Statement.ExecuteQuery('select fld1, fld2, fld3 from test1014416');
   Metadata := ResultSet.GetMetadata;
-  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(1)));
+  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
   CheckEquals(100, Metadata.GetPrecision(1));
   CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
   CheckEquals(100, Metadata.GetPrecision(2));
-  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(3)));
+  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
   CheckEquals(17, Metadata.GetPrecision(3));
 
   Check(ResultSet.Next);

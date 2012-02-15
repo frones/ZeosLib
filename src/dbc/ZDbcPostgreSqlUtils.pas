@@ -105,7 +105,11 @@ function EncodeString(const Value: string): string; overload;
   @param Value a binary stream.
   @return a string in PostgreSQL binary string escape format.
 }
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+function EncodeBinaryString(const Value: AnsiString): AnsiString;
+{$ELSE}
 function EncodeBinaryString(const Value: string): string;
+{$ENDIF}
 
 {**
   Determine the character code in terms of enumerated number.
@@ -233,7 +237,14 @@ begin
   TypeName := LowerCase(TypeName);
   if (TypeName = 'interval') or (TypeName = 'char')
     or (TypeName = 'varchar') or (TypeName = 'bit') or (TypeName = 'varbit') then
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
+    if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+      Result := stUnicodeString
+    else
+      Result := stString
+    {$ELSE}
     Result := stString
+    {$ENDIF}
   else if TypeName = 'text' then
     Result := stAsciiStream
   else if TypeName = 'oid' then
@@ -244,8 +255,15 @@ begin
       Result := stInteger;
   end
   else if TypeName = 'name' then
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
+    if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+      Result := stUnicodeString
+    else
+      Result := stString
+    {$ELSE}
     Result := stString
-  else if TypeName = 'enum' then 
+    {$ENDIF}
+  else if TypeName = 'enum' then
     Result := stString
   else if TypeName = 'cidr' then
     Result := stString
@@ -297,12 +315,8 @@ begin
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
   {$IFNDEF FPC}
   if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-    case result of
-      stString: Result := stUnicodeString;
-      {$IFNDEF VER150BELOW} //Delphi 7 does not support WideMemos
-      stAsciiStream: Result := stUnicodeStream;
-      {$ENDIF}
-    end;
+    if Result = stAsciiStream then
+      Result := {$IFNDEF VER150BELOW}stUnicodeStream{$ELSE}stAsciiStream{$ENDIF}; //Delphi 7 does not support WideMemos
   {$ENDIF}
   {$ELSE}
   if Connection.GetCharactersetCode = csUTF8 then  //whats with csUNICODE_PODBC ??
@@ -325,7 +339,15 @@ function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
   TypeOid: Integer): TZSQLType; overload;
 begin
   case TypeOid of
-    1186,18,1043: Result := stString; { interval/char/varchar }
+    1186,18,1043:  { interval/char/varchar }
+      {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
+      if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+        Result := stUnicodeString
+      else
+        Result := stString;
+      {$ELSE}
+      Result := stString;
+      {$ENDIF}
     25: Result := stAsciiStream; { text }
     26: { oid }
       begin
@@ -334,10 +356,23 @@ begin
         else
           Result := stInteger;
       end;
-    19: Result := stString; { name }
+    19: { name }
+      {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
+      if ( Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] ) then
+        Result := stUnicodeString
+      else
+        Result := stString;
+      {$ELSE}
+      Result := stString;
+      {$ENDIF}
     21: Result := stShort; { int2 }
     23: Result := stInteger; { int4 }
     20: Result := stLong; { int8 }
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    650: Result := stString; { cidr }
+    869: Result := stString; { inet }
+    829: Result := stString; { macaddr }
+    {$ENDIF}
     700: Result := stFloat; { float4 }
     701,1700: Result := stDouble; { float8/numeric. no 'decimal' any more }
     790: Result := stFloat; { money }
@@ -363,12 +398,8 @@ begin
 
   {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
   if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-    case result of
-      stString: Result := stUnicodeString;
-      {$IFNDEF VER150BELOW} //Delphi 7 does not support WideMemos
-      stAsciiStream: Result := stUnicodeStream;
-      {$ENDIF}
-    end;
+    if Result = stAsciiStream then
+      Result := {$IFNDEF VER150BELOW}stUnicodeStream{$ELSE}stAsciiStream{$ENDIF}; //Delphi 7 does not support WideMemos
   {$ELSE}
   if Connection.GetCharactersetCode = csUTF8 then  //whats with csUNICODE_PODBC ??
     case Result of
@@ -436,7 +467,9 @@ begin
     end;
     Inc(SrcBuffer);
   end;
+  {$IFNDEF CHECK_CLIENT_CODE_PAGE}
   DestBuffer^ := '''';
+  {$ENDIF}
 end;
 
 {**
@@ -687,7 +720,11 @@ end;
   @param Value a binary stream.
   @return a string in PostgreSQL binary string escape format.
 }
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+function EncodeBinaryString(const Value: AnsiString): AnsiString;
+{$ELSE}
 function EncodeBinaryString(const Value: string): string;
+{$ENDIF}
 var
   I: Integer;
   SrcLength, DestLength: Integer;

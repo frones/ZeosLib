@@ -137,7 +137,7 @@ type
     function GetConnectionHandle: PZMySQLConnect;
     function GetDescription: AnsiString;
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
-    function GetBinaryEscapeString(const Value: AnsiString;
+    function GetAnsiEscapeString(const Value: AnsiString;
       const EscapeMarkSequence: String = '~<|'): String; override;
     function GetEscapeString(const Value: String;
       const EscapeMarkSequence: String = '~<|'): String; override;
@@ -941,10 +941,10 @@ end;
   @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
   @result the detectable Binary String
 }
-function TZMySQLConnection.GetBinaryEscapeString(const Value: AnsiString;
+function TZMySQLConnection.GetAnsiEscapeString(const Value: AnsiString;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
-  Result := inherited GetBinaryEscapeString('''' + EscapeString(Value) + '''', EscapeMarkSequence);
+  Result := inherited GetAnsiEscapeString('''' + EscapeString(Value) + '''', EscapeMarkSequence);
 end;
 
 function TZMySQLConnection.GetEscapeString(const Value: String;

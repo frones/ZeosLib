@@ -567,7 +567,11 @@ begin
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
       stString, stUnicodeString, stBytes:
+        {$IFDEF CHECK_CLIENT_CODE_PAGE}
+        Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
+        {$ELSE}
         Result := GetEscapeString(SoftVarManager.GetAsString(Value));
+        {$ENDIF}
       stDate:
       begin
         DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
@@ -593,11 +597,15 @@ begin
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
+            {$IFDEF CHECK_CLIENT_CODE_PAGE}
+            Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString)
+            {$ELSE}
             Result := String(GetAnsiEscapeString(TempBlob.GetString))
+            {$ENDIF}
           else
             Result := 'NULL';
         end;
-{     stUnicodeStream: EgonHugeist: Write allway byte per byte. so there is no need for it
+{     stUnicodeStream: EgonHugeist: Write allways byte per byte. so there is no need for it
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then

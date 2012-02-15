@@ -193,6 +193,11 @@ begin
           ColumnInfo.Precision := 32
         else
           ColumnInfo.Precision := 64; { name }
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    650: ColumnInfo.Precision := 100; { cidr }
+    869: ColumnInfo.Precision := 100; { inet }
+    829: ColumnInfo.Precision := 17; { macaddr }
+    {$ENDIF}
     1186: ColumnInfo.Precision := 32; { interval }
     24: ColumnInfo.Precision := 10; { regproc }
     17:{ bytea }
@@ -202,14 +207,8 @@ begin
 
   SQLType := PostgreSQLToSQLType(Connection, TypeOid);
 
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  if ( Self.ClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] ) then
-    case SQLType of
-      stString: SQLType := {$IFDEF FPC} stString;  {$ELSE}  stUnicodeString; {$ENDIF}
-      stAsciiStream: SQLType := stUnicodeStream;
-    end;
-  {$ELSE}
-  if Connection.GetCharactersetCode = csUTF8 then //EgonHugeist: what's with csUNICODE_PODBC ???
+  {$IFNDEF CHECK_CLIENT_CODE_PAGE}
+  if Connection.GetCharactersetCode = csUTF8 then //EgonHugeist: what's with csUNICODE_PODBC ??? and why check again??
     case SQLType of
       stString: SQLType := {$IFDEF FPC} stString;  {$ELSE}  stUnicodeString; {$ENDIF}
       stAsciiStream: SQLType := stUnicodeStream;
@@ -649,7 +648,7 @@ begin
         if GetMetadata.GetColumnType(ColumnIndex) = stBinaryStream then
         {$IFDEF CHECK_CLIENT_CODE_PAGE}
         begin
-          Decoded := FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)); //gives a hex-string back
+          Decoded := FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)); //gives a hex-string with a starting 'x' back
           Len := (Length(Decoded) div 2); //GetLength of binary result
           Decoded := Copy(Decoded, 2, Length(Decoded)); //remove the first 'x'sign-byte
           SetLength(TempAnsi, Len); //Set length of binary-result

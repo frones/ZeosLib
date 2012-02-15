@@ -136,7 +136,7 @@ type
     constructor Create(const ConnectionPool: TConnectionPool);
     destructor Destroy; override;
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
-    function GetBinaryEscapeString(const Value: AnsiString;
+    function GetAnsiEscapeString(const Value: AnsiString;
       const EscapeMarkSequence: String = '~<|'): String;
     function GetEscapeString(const Value: String;
       const EscapeMarkSequence: String = '~<|'): String;
@@ -623,7 +623,7 @@ end;
   @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
   @result the detectable Binary String
 }
-function TZDbcPooledConnection.GetBinaryEscapeString(const Value: AnsiString;
+function TZDbcPooledConnection.GetAnsiEscapeString(const Value: AnsiString;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
   Result := Self.GetDriver.GetTokenizer.AnsiGetEscapeString(Value, EscapeMarkSequence);

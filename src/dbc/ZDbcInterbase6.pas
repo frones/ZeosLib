@@ -142,7 +142,7 @@ type
     procedure Close; override;
 
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
-    function GetBinaryEscapeString(const Value: AnsiString;
+    function GetAnsiEscapeString(const Value: AnsiString;
       const EscapeMarkSequence: String = '~<|'): String; override;
     //function GetEscapeString(const Value: String;
       //const EscapeMarkSequence: String = '~<|'): String; override;
@@ -830,7 +830,7 @@ begin
 end;
 
 {$IFDEF CHECK_CLIENT_CODE_PAGE}
-function TZInterbase6Connection.GetBinaryEscapeString(const Value: AnsiString;
+function TZInterbase6Connection.GetAnsiEscapeString(const Value: AnsiString;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
   if Self.FPlainDriver.GetProtocol = 'firebird-2.5' then

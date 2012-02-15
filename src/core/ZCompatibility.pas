@@ -408,11 +408,11 @@ begin
     {$IFDEF DELPHI12_UP}
     Result := UTF8ToString(Ansi);
     {$ELSE}
-      {.$IFDEF FPC}
+      {$IFDEF FPC}
       Result := Ansi;
-      {.$ELSE}
-      //Result := ZCPCheckedAnsiString(Ansi, Self.ClientCodePage^.CP);
-      {.$ENDIF}
+      {$ELSE}
+      Result := UTF8ToAnsi(Ansi);
+      {$ENDIF}
     {$ENDIF}
   else
     {$IFDEF DELPHI12_UP}
@@ -467,7 +467,7 @@ begin
         {$IFDEF FPC}
         Result := AStr;
         {$ELSE}
-        Result := AStr;
+        Result := AnsiToUTF8(AStr);
         {$ENDIF}
       {$ENDIF}
     //ceUTF16: ;//not done yet

@@ -454,10 +454,16 @@ begin
           Result := 'FALSE';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
-      stString, stBytes:
+      stString, stBytes{$IFDEF CHECK_CLIENT_CODE_PAGE}, stUnicodeString{$ENDIF}:
+        {$IFDEF CHECK_CLIENT_CODE_PAGE}
+        Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
+        {$ELSE}
         Result := EncodeString(FCharactersetCode,SoftVarManager.GetAsString(Value));
+        {$ENDIF}
+      {$IFNDEF CHECK_CLIENT_CODE_PAGE}
       stUnicodeString:
         Result := UTF8Encode(EncodeString(FCharactersetCode,SoftVarManager.GetAsUnicodeString(Value)));
+      {$ENDIF}
       stDate:
         Result := Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]);
@@ -468,14 +474,19 @@ begin
         Result := Format('''%s''::timestamp',
           [FormatDateTime('yyyy-mm-dd hh":"mm":"ss',
             SoftVarManager.GetAsDateTime(Value))]);
-      stAsciiStream:
+      stAsciiStream{$IFDEF CHECK_CLIENT_CODE_PAGE}, stUnicodeStream{$ENDIF}:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
+            {$IFDEF CHECK_CLIENT_CODE_PAGE}
+            Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString)
+            {$ELSE}
             Result := EncodeString(TempBlob.GetString)
+            {$ENDIF}
           else
             Result := 'NULL';
         end;
+      {$IFNDEF CHECK_CLIENT_CODE_PAGE}
       stUnicodeStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
@@ -484,6 +495,7 @@ begin
           else
             Result := 'NULL';
         end;
+      {$ENDIF}
       stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
@@ -505,8 +517,12 @@ begin
             end
             else
             begin
+              {$IFDEF CHECK_CLIENT_CODE_PAGE}
+              result := GetConnection.GetAnsiEscapeString(TempBlob.GetString);
+              {$ELSE}
               result:= FPlainDriver.EncodeBYTEA(TempBlob.GetString,
                 Self.GetConnectionHandle); // FirmOS
+              {$ENDIF}
               {
                Result := EncodeString(TempBlob.GetString);
                Result := Copy(Result, 2, Length(Result) - 2);
@@ -635,10 +651,16 @@ begin
           Result := 'FALSE';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
-      stString, stBytes:
-        Result := EncodeString(SoftVarManager.GetAsString(Value));
+      stString, stBytes{$IFDEF CHECK_CLIENT_CODE_PAGE}, stUnicodeString{$ENDIF}:
+        {$IFDEF CHECK_CLIENT_CODE_PAGE}
+        Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
+        {$ELSE}
+        Result := EncodeString(FCharactersetCode,SoftVarManager.GetAsString(Value));
+        {$ENDIF}
+      {$IFNDEF CHECK_CLIENT_CODE_PAGE}
       stUnicodeString:
-        Result := UTF8Encode(EncodeString(SoftVarManager.GetAsUnicodeString(Value)));
+        Result := UTF8Encode(EncodeString(FCharactersetCode,SoftVarManager.GetAsUnicodeString(Value)));
+      {$ENDIF}
       stDate:
         Result := Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]);
@@ -649,28 +671,28 @@ begin
         Result := Format('''%s''::timestamp',
           [FormatDateTime('yyyy-mm-dd hh":"mm":"ss',
             SoftVarManager.GetAsDateTime(Value))]);
-      stAsciiStream:
+      stAsciiStream{$IFDEF CHECK_CLIENT_CODE_PAGE}, stUnicodeStream{$ENDIF}:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
-          begin
+            {$IFDEF CHECK_CLIENT_CODE_PAGE}
+            Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString)
+            {$ELSE}
             Result := EncodeString(TempBlob.GetString)
-          end
+            {$ENDIF}
           else
-          begin
             Result := 'NULL';
-          end;
         end;
+      {$IFNDEF CHECK_CLIENT_CODE_PAGE}
       stUnicodeStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
-          begin
-            Result := EncodeString( UTF8Encode(TempBlob.GetUnicodeString))
-          end
+            Result := EncodeString(FCharactersetCode, UTF8Encode(TempBlob.GetUnicodeString))
           else
             Result := 'NULL';
         end;
+      {$ENDIF}
       stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
@@ -692,8 +714,12 @@ begin
             end
             else
             begin
-              result:= GetPlainDriver.EncodeBYTEA(TempBlob.GetString,
+              {$IFDEF CHECK_CLIENT_CODE_PAGE}
+              result := GetConnection.GetAnsiEscapeString(TempBlob.GetString);
+              {$ELSE}
+              result:= FPlainDriver.EncodeBYTEA(TempBlob.GetString,
                 Self.GetConnectionHandle); // FirmOS
+              {$ENDIF}
               {
                Result := EncodeString(TempBlob.GetString);
                Result := Copy(Result, 2, Length(Result) - 2);
