@@ -276,7 +276,7 @@ function ZAnsiToWideString(const s: AnsiString; CP: Word): WideString;
 {$IFNDEF FPC AND IFDEF DELPHI12_UP}
 var
   l: integer;
-  {$IFDEF DELPHI14_UP}
+  {$IFDEF DELPHI12_UP}
   AnsiTemp: AnsiString;
   {$ENDIF}
 {$ENDIF}

@@ -113,6 +113,8 @@ type
   {** Implements callable Postgresql Statement. }
   TZPostgreSQLCallableStatement = class(TZAbstractCallableStatement)
   private
+    FPlainDriver: IZPostgreSQLPlainDriver;
+    FCharactersetCode : TZPgCharactersetType;
     FOidAsBlob: Boolean;
     function GetProcedureSql(): string;
     function FillParams(const ASql:String):String;
@@ -566,6 +568,8 @@ begin
     FOidAsBlob := StrToBoolEx(Self.Info.Values['oidasblob'])
   else
     FOidAsBlob := (Connection as IZPostgreSQLConnection).IsOidAsBlob;
+  FPlainDriver := (Connection as IZPostgreSQLConnection).GetPlainDriver;
+  FCharactersetCode := (Connection as IZPostgreSQLConnection).GetCharactersetCode;
 end;
 
 {**
