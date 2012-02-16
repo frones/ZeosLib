@@ -416,7 +416,7 @@ procedure TZPlainMySQLPerformanceTestCase.RunTestFetch;
   function GetString(ColumnIndex: Integer; var QueryHandle: PZMySQLResult;
     var RowHandle: PZMySQLRow): string;
   var
-    LengthPointer: PLongInt;
+    LengthPointer: {$IFDEF VER150BELOW}PULong{$ELSE}PLongInt{$ENDIF};
     Length: LongInt;
     Buffer: PChar;
   begin
@@ -863,7 +863,8 @@ var
   StatusVector: TARRAY_ISC_STATUS;
 begin
   StmtHandle := nil;
-  SQLData := TZResultSQLDA.Create(FPlainDriver, FHandle, FTrHandle);
+  SQLData := TZResultSQLDA.Create(FPlainDriver, FHandle, FTrHandle
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}, @ZCompatibility.ClientCodePageDummy{$ENDIF});
 
   try
     PrepareStatement(FPlainDriver, @FHandle, @FTrHandle,
