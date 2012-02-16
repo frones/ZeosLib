@@ -224,10 +224,13 @@ implementation
 }
 
 function ZWideToAnsiString(const ws: WideString; CP: Word): AnsiString;
-{$IFNDEF FPC AND IFDEF DELPHI12_UP}
+{$IFNDEF FPC}
 var
+  {$IFNDEF DELPHI12_UP}
   l: integer;
+  {$ELSE}
   AnsiTemp: {$IFDEF DELPHI14_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
+  {$ENDIF}
 {$ENDIF}
 begin
   if ws = '' then
@@ -273,11 +276,14 @@ end; { ZWAnsiString }
   @returns Converted wide string.
 }
 function ZAnsiToWideString(const s: AnsiString; CP: Word): WideString;
-{$IFNDEF FPC AND IFDEF DELPHI12_UP}
+{$IFNDEF FPC}
+  {$IFNDEF DELPHI14_UP}
 var
-  l: integer;
-  {$IFDEF DELPHI12_UP}
-  AnsiTemp: AnsiString;
+    {$IFNDEF DELPHI12_UP}
+    l: integer;
+    {$ELSE}
+      AnsiTemp: AnsiString;
+    {$ENDIF}
   {$ENDIF}
 {$ENDIF}
 begin
