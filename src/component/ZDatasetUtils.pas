@@ -1387,15 +1387,15 @@ begin
   Strings.BeginUpdate;
   try
     repeat
-      while Tail^ in WhiteSpace + [#13, #10] do
+      while CharInSet(Tail^, WhiteSpace + [#13, #10]) do
         Inc(Tail);
       Head := Tail;
       while True do
       begin
-        while (InQuote and not (Tail^ in [QuoteChar, #0])) or
-               not (Tail^ in Separators + [#0, #13, #10, '''', '"']) do
+        while (InQuote and not CharInSet(Tail^, [QuoteChar, #0])) or
+               not CharInSet(Tail^, Separators + [#0, #13, #10, '''', '"']) do
            Inc(Tail);
-        if Tail^ in ['''', '"'] then
+        if CharInSet(Tail^, ['''', '"']) then
         begin
           if (QuoteChar <> #0) and (QuoteChar = Tail^) then
             QuoteChar := #0
