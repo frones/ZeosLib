@@ -156,7 +156,7 @@ function GetMinorVersion(const Value: string): Word;
 
 implementation
 
-uses ZMessages;
+uses ZMessages, ZCompatibility;
 
 type
 
@@ -857,11 +857,7 @@ var
 begin
   Temp := '';
   for I := 1 to Length(Value) do
-    {$IFDEF DELPHI12_UP}
     if CharInSet(Value[I], ['0'..'9']) then
-    {$ELSE}
-    if Value[I] in ['0'..'9'] then
-    {$ENDIF}
       Temp := Temp + Value[I]
     else
       Break;
