@@ -736,7 +736,7 @@ begin
   for I := 1 to SrcLength do
   begin
     if (Byte(SrcBuffer^) < 32) or (Byte(SrcBuffer^) > 126)
-    or (SrcBuffer^ in ['''', '\']) then
+    or CharInSet(SrcBuffer^, ['''', '\']) then
       Inc(DestLength, 5)
     else
       Inc(DestLength);
@@ -752,7 +752,7 @@ begin
   for I := 1 to SrcLength do
   begin
     if (Byte(SrcBuffer^) < 32) or (Byte(SrcBuffer^) > 126)
-    or (SrcBuffer^ in ['''', '\']) then
+    or CharInSet(SrcBuffer^, ['''', '\']) then
     begin
       DestBuffer[0] := '\';
       DestBuffer[1] := '\';
@@ -792,7 +792,7 @@ begin
     if SrcBuffer^ = '\' then
     begin
       Inc(SrcBuffer);
-      if SrcBuffer^ in ['\', ''''] then
+      if CharInSet(SrcBuffer^, ['\', '''']) then
       begin
         DestBuffer^ := SrcBuffer^;
         Inc(SrcBuffer);

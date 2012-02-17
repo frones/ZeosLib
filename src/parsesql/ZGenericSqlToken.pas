@@ -238,11 +238,7 @@ end;
 function TZGenericSQLQuoteState.EncodeString(const Value: string;
   QuoteChar: Char): string;
 begin
-{$IFDEF DELPHI12_UP}
   if CharInSet(QuoteChar, [#39, '"', '`']) then
-{$ELSE}
-  if QuoteChar in [#39, '"', '`'] then
-{$ENDIF}
     Result := AnsiQuotedStr(Value, QuoteChar)
   else Result := Value;
 end;
@@ -259,11 +255,7 @@ var
   Len: Integer;
 begin
   Len := Length(Value);
-{$IFDEF DELPHI12_UP}
   if (Len >= 2) and CharInSet(QuoteChar, [#39, '"', '`'])
-{$ELSE}
-  if (Len >= 2) and (QuoteChar in [#39, '"', '`'])
-{$ENDIF}
     and (Value[1] = QuoteChar) and (Value[Len] = QuoteChar) then
   begin
     if Len > 2 then

@@ -306,7 +306,7 @@ exit;
   DestLength := 2;
   for I := 1 to SrcLength do
   begin
-    if SrcBuffer^ in [#0, '''', '%'] then
+    if CharInSet(SrcBuffer^, [#0, '''', '%']) then
       Inc(DestLength, 2)
     else
       Inc(DestLength);

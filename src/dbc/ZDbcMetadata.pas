@@ -4379,11 +4379,7 @@ begin
   Result := True;
   for I := 1 to Length(Value) do
   begin
-    {$IFDEF DELPHI12_UP}
     if not CharInSet(Value[I], ['a'..'z','0'..'9','_']) then
-    {$ELSE}
-    if not (Value[I] in ['a'..'z','0'..'9','_']) then
-    {$ENDIF}
     begin
       Result := False;
       Break;
@@ -4403,11 +4399,7 @@ begin
   Result := True;
   for I := 1 to Length(Value) do
   begin
-    {$IFDEF DELPHI12_UP}
     if not CharInSet(Value[I], ['A'..'Z','0'..'9','_']) then
-    {$ELSE}
-    if not (Value[I] in ['A'..'Z','0'..'9','_']) then
-    {$ENDIF}
     begin
       Result := False;
       Break;
@@ -4425,22 +4417,14 @@ var
   I: Integer;
 begin
   Result := False;
-  {$IFDEF DELPHI12_UP}
   if CharInSet(Value[1], ['0'..'9']) then
-  {$ELSE}
-  if (Value[1] in ['0'..'9']) then
-  {$ENDIF}
   begin
     Result := True;
     exit;
   end;
   for I := 1 to Length(Value) do
   begin
-    {$IFDEF DELPHI12_UP}
     if not CharInSet(Value[I], ['A'..'Z','a'..'z','0'..'9','_']) then
-    {$ELSE}
-    if not (Value[I] in ['A'..'Z','a'..'z','0'..'9','_']) then
-    {$ENDIF}
     begin
       Result := True;
       Break;

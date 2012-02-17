@@ -2900,11 +2900,7 @@ begin
   WildcardsSet := GetWildcardsSet;
   for I := 1 to Length(Pattern) do
   begin
-    {$IFDEF DELPHI12_UP}
     if (not PreviousCharWasEscape) and CharInset(Pattern[I], WildcardsSet) then
-    {$ELSE}
-    if (not PreviousCharWasEscape) and (Pattern[I] in WildcardsSet) then
-    {$ENDIF}
      Exit;
 
     PreviousCharWasEscape := (Pattern[I] = EscapeChar) and (PreviousChar <> EscapeChar);
