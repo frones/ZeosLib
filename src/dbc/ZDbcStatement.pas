@@ -1115,6 +1115,8 @@ end;
 
 
 function TZAbstractPreparedStatement.GetInParamLogValue(Value: TZVariant): String;
+var
+  vInt: Int64;
 begin
   With Value do
     case VType of

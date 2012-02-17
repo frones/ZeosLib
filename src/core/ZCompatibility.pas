@@ -282,7 +282,7 @@ var
     {$IFNDEF DELPHI12_UP}
     l: integer;
     {$ELSE}
-      AnsiTemp: AnsiString;
+    AnsiTemp: AnsiString;
     {$ENDIF}
   {$ENDIF}
 {$ENDIF}
@@ -414,15 +414,7 @@ begin
     {$IFDEF DELPHI12_UP}
     Result := UTF8ToString(Ansi);
     {$ELSE}
-      //{$IFDEF FPC}
-      //Result := Ansi;
-      //{$ELSE}
-        {.$IFDEF VER150BELOW}
-        Result := UTF8ToAnsi(UTF8Encode(WideString(Ansi)));
-        {.$ELSE}
-        //Result := UTF8ToAnsi(Ansi);
-        {.$ENDIF}
-      //{$ENDIF}
+    Result := UTF8ToAnsi(UTF8Encode(WideString(Ansi)));
     {$ENDIF}
   else
     {$IFDEF DELPHI12_UP}
@@ -474,15 +466,7 @@ begin
       {$IFDEF DELPHI12_UP}
       Result := AnsiString(UTF8Encode(AStr));
       {$ELSE}
-        {.$IFDEF FPC}
-        //Result := AStr;
-        {.$ELSE}
-          {.$IFDEF VER150BELOW}
-          Result := AnsiToUTF8(AStr); //All ansiStrings are encodable from WS
-          {.$ELSE}
-          //Result := AnsiToUTF8(AStr);
-          {.$ENDIF}
-        {.$ENDIF}
+      Result := AnsiToUTF8(AStr);
       {$ENDIF}
     //ceUTF16: ;//not done yet
     //ceUTF32

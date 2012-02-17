@@ -290,7 +290,14 @@ begin
 //    CheckEquals('public', GetStringByName('TABLE_SCHEM'));
     CheckEquals('people', GetStringByName('TABLE_NAME'));
     CheckEquals('p_resume', GetStringByName('COLUMN_NAME'));
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}  //Client_Character_set sets column-type!!!!
+    if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+      CheckEquals(Ord(stUnicodeStream), GetIntByName('DATA_TYPE'))
+    else
+      CheckEquals(ord(stAsciiStream), GetIntByName('DATA_TYPE'));
+    {$ELSE}
     CheckEquals(ord(stAsciiStream), GetIntByName('DATA_TYPE'));
+    {$ENDIF}
     CheckEquals('TEXT', UpperCase(GetStringByName('TYPE_NAME')));
     CheckEquals(-1, GetIntByName('COLUMN_SIZE'));
     CheckEquals(0, GetIntByName('BUFFER_LENGTH'));

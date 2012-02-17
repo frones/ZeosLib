@@ -1246,7 +1246,11 @@ begin
   CheckUpdatable;
 {$ENDIF}
   PrepareRowForUpdates;
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  FRowAccessor.SetString(ColumnIndex, ZString(Value));
+  {$ELSE}
   FRowAccessor.SetString(ColumnIndex, String(Value));
+  {$ENDIF}
 end;
 
 {**
