@@ -290,13 +290,17 @@ begin
 //    CheckEquals('public', GetStringByName('TABLE_SCHEM'));
     CheckEquals('people', GetStringByName('TABLE_NAME'));
     CheckEquals('p_resume', GetStringByName('COLUMN_NAME'));
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}  //Client_Character_set sets column-type!!!!
-    if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-      CheckEquals(Ord(stUnicodeStream), GetIntByName('DATA_TYPE'))
-    else
-      CheckEquals(ord(stAsciiStream), GetIntByName('DATA_TYPE'));
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: the ClientCharacter-set sets now the Stream-Type
+    {$IFNDEF FPC}
+    if ResultSet.GetClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+      {$IFDEF VER150BELOW}
+      CheckEquals(ord(stAsciiStream), ResultSet.GetIntByName('DATA_TYPE'));
+      {$ELSE}
+      CheckEquals(ord(stUnicodeStream), ResultSet.GetIntByName('DATA_TYPE'));
+      {$ENDIF}
     {$ELSE}
-    CheckEquals(ord(stAsciiStream), GetIntByName('DATA_TYPE'));
+    CheckEquals(ord(stAsciiStream), ResultSet.GetIntByName('DATA_TYPE'));
+    {$ENDIF}
     {$ENDIF}
     CheckEquals('TEXT', UpperCase(GetStringByName('TYPE_NAME')));
     CheckEquals(-1, GetIntByName('COLUMN_SIZE'));

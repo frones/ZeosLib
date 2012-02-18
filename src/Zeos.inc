@@ -116,6 +116,25 @@
   {$ENDIF}
 {$ENDIF}
 
+// Compilation directives for BDS 2007 (Delphi 2007, BCB 2007)
+{$IFDEF VER185}
+  {$DEFINE VER185BELOW}
+  {$DEFINE BDS}
+  {$DEFINE BDS4}
+  {$DEFINE BDS4_UP}
+  {$DEFINE COMPILER10}
+  {$DEFINE COMPILER10_UP}
+  {$IFDEF BCB}
+    {$DEFINE BCB10}
+    {$DEFINE BCB9_UP}
+    {$DEFINE BCB10_UP}
+  {$ELSE}
+    {$DEFINE DELPHI10}
+    {$DEFINE DELPHI9_UP}
+    {$DEFINE DELPHI10_UP}
+  {$ENDIF}
+{$ENDIF}
+
 // Compilation directives for Delphi 2009
 {$IFDEF VER200}
   {$DEFINE VER200BELOW}

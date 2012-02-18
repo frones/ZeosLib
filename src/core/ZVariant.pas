@@ -493,10 +493,7 @@ begin
         vtString:
           Result.VString := Value.VString;
         vtUnicodeString:
-          {$IFDEF CHECK_CLIENT_CODE_PAGE}
-          {$ELSE}
           RaiseTypeMismatchError;
-          {$ENDIF}
           { gto: If running on a full unicode IDE, like Delphi 2009, converting
                  from a UnicodeString to a AnsiString can lead to data loss.
 

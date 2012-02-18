@@ -372,7 +372,7 @@ procedure ZTestCompInterbaseBugReport.Test864622;
 var
   Query: TZQuery;
 begin
-  Query := TZQuery.Create(nil);
+    Query := TZQuery.Create(nil);
   Query.Connection := Connection;
   // Query.RequestLive := True;
   try
@@ -434,7 +434,20 @@ begin
     'rc.rdb$constraint_type=''PRIMARY KEY'' and rc.rdb$relation_name=''PEOPLE'' ' +
     'order by rc.rdb$relation_name';
     Query.Open;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}  //Client_Character_set sets column-type!!!!
+    if Query.Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+    begin
+      {$IFNDEF FPC}
+      CheckEquals(ord(ftWideString), ord(Query.Fields[0].DataType));
+    end
+    else
+    begin
+      {$ENDIF}
+      CheckEquals(ord(ftString), ord(Query.Fields[0].DataType));
+    end;
+    {$ELSE}
     CheckEquals(ord(ftString), ord(Query.Fields[0].DataType));
+    {$ENDIF}
     CheckEquals(ord(ftWideString), ord(Query.Fields[1].DataType));
     CheckEquals(ord(ftWideString), ord(Query.Fields[2].DataType));
     CheckEquals(ord(ftSmallint), ord(Query.Fields[3].DataType));

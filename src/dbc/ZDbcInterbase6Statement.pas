@@ -520,7 +520,9 @@ begin
   if InParamCount <> FParamSQLData.GetFieldCount then
     raise EZSQLException.Create(SInvalidInputParameterCount);
 
-  {$R-}
+  //{$R-} //EgonHugeist: if RangeCheck is disabled the Values are referanceable
+  //as pointers. But directly acessing isn't possible any more! So
+  //the Log-params fails!
   for I := 0 to FParamSQLData.GetFieldCount - 1 do
   begin
     FParamSQLData.UpdateNull(I, DefVarManager.IsNull(InParamValues[I])); 
@@ -590,7 +592,7 @@ begin
     end;
   end;
  {$IFOPT D+}
-{$R+}
+//{$R+}
 {$ENDIF}
   inherited BindInParameters;
 end;

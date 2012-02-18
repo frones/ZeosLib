@@ -291,8 +291,23 @@ begin
     + ' ON (table881634b.ft1 = table881634a.idt1)');
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}  //Client_Character_set sets column-type!!!!
+  if Statement.GetConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+  begin
+    {$IFNDEF FPC}
+      CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)));
+      CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(3)));
+    end
+    else
+    begin
+    {$ENDIF}
+    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
+    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(3)));
+  end;
+  {$ELSE}
   CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
   CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(3)));
+  {$ENDIF}
 end;
 
 {**

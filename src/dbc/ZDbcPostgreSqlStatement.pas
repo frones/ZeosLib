@@ -456,16 +456,18 @@ begin
           Result := 'FALSE';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
-      stString, stBytes{$IFDEF CHECK_CLIENT_CODE_PAGE}, stUnicodeString{$ENDIF}:
+      stString, stBytes:
         {$IFDEF CHECK_CLIENT_CODE_PAGE}
         Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
         {$ELSE}
         Result := EncodeString(FCharactersetCode,SoftVarManager.GetAsString(Value));
         {$ENDIF}
-      {$IFNDEF CHECK_CLIENT_CODE_PAGE}
       stUnicodeString:
+        {$IFDEF CHECK_CLIENT_CODE_PAGE}
+        Result := EncodeString(FCharactersetCode,SoftVarManager.GetAsUnicodeString(Value));
+        {$ELSE}
         Result := UTF8Encode(EncodeString(FCharactersetCode,SoftVarManager.GetAsUnicodeString(Value)));
-      {$ENDIF}
+        {$ENDIF}
       stDate:
         Result := Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]);

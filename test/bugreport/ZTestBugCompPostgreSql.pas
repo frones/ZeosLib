@@ -676,11 +676,11 @@ begin
 
     Query.SQL.Text := 'select p_name from people where p_id=1';
     Query.Open;
-    Query.FieldDefs[0].DisplayName := ' xxx xxx ';
+    Query.FieldDefs[0].DisplayName := ' xxx xxx '; //Changes nothing since which D-Version?
 
     CheckEquals(1, Query.RecordCount);
-    CheckEquals(' xxx xxx ', Query.FieldDefs[0].Name);
-    CheckEquals(' xxx xxx ', Query.FieldDefs[0].DisplayName);
+    CheckEquals('p_name', Query.FieldDefs[0].Name); //EgonHugeist: Changed from ' xxx xxx ' -> select!
+    //CheckEquals(' xxx xxx ', Query.FieldDefs[0].DisplayName); //EgonHugeist: The TFieldDef inherites from TCollectionItem! the DisplayName is'nt changeable there. This is only possible if we create a class of TFieldDef and override the SetDisplayName method
     CheckEquals('Vasia Pupkin', Query.Fields[0].AsString);
     CheckEquals('Vasia Pupkin', Query.FieldByName('p_name').AsString);
 

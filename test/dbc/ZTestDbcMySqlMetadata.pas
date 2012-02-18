@@ -251,7 +251,11 @@ begin
   {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: the ClientCharacter-set sets now the Stream-Type
   {$IFNDEF FPC}
   if ResultSet.GetClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-  CheckEquals(ord(stUnicodeStream), ResultSet.GetIntByName('DATA_TYPE'));
+    {$IFDEF VER150BELOW}
+    CheckEquals(ord(stAsciiStream), ResultSet.GetIntByName('DATA_TYPE'));
+    {$ELSE}
+    CheckEquals(ord(stUnicodeStream), ResultSet.GetIntByName('DATA_TYPE'));
+    {$ENDIF}
   {$ELSE}
   CheckEquals(ord(stAsciiStream), ResultSet.GetIntByName('DATA_TYPE'));
   {$ENDIF}

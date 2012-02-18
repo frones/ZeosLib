@@ -739,9 +739,12 @@ begin
           Result := stString;
         end;
       end;
-    RDB_D_FLOAT: Result := stDouble;
-    RDB_DOUBLE: Result := stDouble;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    RDB_FLOAT: Result := stFloat;
+    {$ELSE}
     RDB_FLOAT: Result := stDouble;
+    {$ENDIF}
+    RDB_DOUBLE: Result := stDouble;
     RDB_BLOB_ID, RDB_QUAD: Result := stLong;
     RDB_INT64:
       begin
@@ -1622,9 +1625,18 @@ begin
         if SqlScale = 0 then
           Result := stShort
         else
+          {$IFDEF CHECK_CLIENT_CODE_PAGE}
+          Result := stFloat; //Numeric with low precision
+          {$ELSE}
           Result := stdouble;
-      end;
+          {$ENDIF}
+       end;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    SQL_FLOAT: Result := stFloat;
+    SQL_DOUBLE: Result := stDouble;
+    {$ELSE}
     SQL_FLOAT, SQL_DOUBLE: Result := stDouble;
+    {$ENDIF}
     SQL_DATE: Result := stTimestamp;
     SQL_TYPE_TIME: Result := stTime;
     SQL_TYPE_DATE: Result := stDate;
@@ -2040,7 +2052,7 @@ var
 begin
   CheckRange(Index);
   SetFieldType(Index, sizeof(Smallint), SQL_SHORT + 1, 0);
-  {$R-}
+  //{$R-}
   with FXSQLDA.sqlvar[Index] do
   begin
     if (sqlind <> nil) and (sqlind^ = -1) then

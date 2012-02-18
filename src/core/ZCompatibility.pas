@@ -66,7 +66,7 @@ uses
     libc,
   {$ENDIF}
 {$ENDIF}
-  {$IFDEF DELPHI15_UP}
+  {$IFDEF DELPHI12_UP}
   WideStrUtils,
   {$ENDIF}
   {$IFDEF MSWINDOWS}
@@ -412,7 +412,10 @@ begin
     //ceUTF16: ;//not done yet, may be interesting for SQLite which supports Execute&Open_16-Functions
     //ceUTF32: //not done yet
     {$IFDEF DELPHI12_UP}
-    Result := UTF8ToString(Ansi);
+    if DetectUTF8Encoding(Ansi) = etUTF8 then
+      Result := UTF8ToString(Ansi) //Decode the AnsiString
+    else
+      Result := WideString(Ansi); //Reference the AnsiString and move 'em up to UnicodeString
     {$ELSE}
     Result := UTF8ToAnsi(UTF8Encode(WideString(Ansi)));
     {$ENDIF}
