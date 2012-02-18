@@ -390,7 +390,7 @@ begin
         if (TokenType <> ttEOF) and (TokenValue <> FParamChar) then
         begin
           { Check for correct parameter type. }
-          if not (TokenType in [ttWord, ttQuoted{$IFDEF CHECK_CLIENT_CODE_PAGE},ttQuotedIdentifier{$ENDIF}]) then
+          if not (TokenType in [ttWord, ttQuoted, ttQuotedIdentifier]) then
             raise EZDatabaseError.Create(SIncorrectToken);
 
           SQL := SQL + '?';

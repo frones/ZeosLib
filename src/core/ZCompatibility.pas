@@ -469,7 +469,10 @@ begin
       {$IFDEF DELPHI12_UP}
       Result := AnsiString(UTF8Encode(AStr));
       {$ELSE}
-      Result := AnsiToUTF8(AStr);
+        {$IFDEF MSWINDOWS}
+        Result := AnsiToUTF8(AStr);
+        {$ELSE}
+        Result := AStr;
       {$ENDIF}
     //ceUTF16: ;//not done yet
     //ceUTF32
@@ -500,7 +503,7 @@ begin
           valid. Or we need a changed/addidtional Cached-Resultset which
           is only for the user-data and NOT for Metadata. While testing these
           prepreparations the Metadata-informations where changed. Or on the
-          other hand it's possible thate Lazarus-functions are not right there..}
+          other hand it's possible that the Lazarus-functions are not right there..}
           Result := AStr; //Ansi to Ansi is no Problem!!!
         {$ELSE} //Delphi7=>?<2009
         Result := ZCPCheckedAnsiString(AStr, FCodePage^.CP);
