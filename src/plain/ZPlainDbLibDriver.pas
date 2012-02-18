@@ -1277,7 +1277,7 @@ end;
 function TZDBLibMSSQL7PlainDriver.dbsetmaxprocs(
   MaxProcs: SmallInt): RETCODE;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbsetmaxprocs(MaxProcs);
+  Result := ZPlainDBLibMSSql7.dbsetmaxprocs(MaxProcs);
 end;
 
 function TZDBLibMSSQL7PlainDriver.dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;

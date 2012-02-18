@@ -194,6 +194,9 @@ type
     property Count: Integer read GetCount;
   end;
 
+{$IFDEF DELPHI12_UP}
+  {$WARNINGS OFF}
+{$ENDIF}
   {** Implements an abstract interfaced object. }
   TZAbstractObject = class(TInterfacedObject, IZObject)
   public
@@ -203,6 +206,9 @@ type
     function ToString: string;{$IFDEF DELPHI12_UP}override{$ELSE} virtual{$ENDIF} ;
     function InstanceOf(const IId: TGUID): Boolean;
   end;
+{$IFDEF DELPHI12_UP}
+  {$WARNINGS ON}
+{$ENDIF}
 
 implementation
 

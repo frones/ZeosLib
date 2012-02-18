@@ -179,7 +179,6 @@ begin
 end;
 
 function AnsiProperCase(const S: string; const WordDelims: TSysCharSet): string;
-
 var
   P,PE : PChar;
 
@@ -189,11 +188,11 @@ begin
   PE:=P+Length(Result);
   while (P<PE) do
     begin
-    while (P<PE) and (P^ in WordDelims) do
+    while (P<PE) and {$IFDEF DELPHI12_UP} CharInSet(P^, WordDelims) {$ELSE} (P^ in WordDelims){$ENDIF}do
       inc(P);
     if (P<PE) then
       P^:=UpCase(P^);
-    while (P<PE) and not (P^ in WordDelims) do
+    while (P<PE) and not {$IFDEF DELPHI12_UP}(CharInSet(P^, WordDelims)){$ELSE} (P^ in WordDelims){$ENDIF} do
       inc(P);
     end;
 end;

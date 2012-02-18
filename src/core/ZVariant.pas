@@ -1253,7 +1253,7 @@ begin
           Result.VString := Value.VString;
         vtUnicodeString:
           {$IFDEF DELPHI12_UP}
-          Result.VString := UTF8String(Value.VUnicodeString);
+          Result.VString := String(UTF8String(Value.VUnicodeString));
           {$ELSE}
           Result.VString := Value.VUnicodeString;
           {$ENDIF}

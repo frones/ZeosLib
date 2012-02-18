@@ -504,18 +504,18 @@ var
   OldThousandSeparator: Char;
   {$ENDIF}
 begin
-  OldDecimalSeparator := DecimalSeparator;
-  OldThousandSeparator := ThousandSeparator;
-  DecimalSeparator := '.';
-  ThousandSeparator := ',';
+  OldDecimalSeparator := {$IFDEF DELPHI15_UP}FormatSettings.{$ENDIF}DecimalSeparator;
+  OldThousandSeparator := {$IFDEF DELPHI15_UP}FormatSettings.{$ENDIF}ThousandSeparator;
+  {$IFDEF DELPHI15_UP}FormatSettings.{$ENDIF}DecimalSeparator := '.';
+  {$IFDEF DELPHI15_UP}FormatSettings.{$ENDIF}ThousandSeparator := ',';
   if Pos('$', Str) = 1 then
     Str := Copy(Str, 2, Pred(Length(Str)));
   If Str = '' then
     Result := Def
   else
     Result := StrToFloatDef(Str, Def);
-  DecimalSeparator := OldDecimalSeparator;
-  ThousandSeparator := OldThousandSeparator;
+  {$IFDEF DELPHI15_UP}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
+  {$IFDEF DELPHI15_UP}FormatSettings.{$ENDIF}ThousandSeparator := OldThousandSeparator;
 end;
 
 {**
@@ -531,12 +531,12 @@ var
   OldDecimalSeparator: Char;
   {$ENDIF}
 begin
-  OldDecimalSeparator := DecimalSeparator;
-  DecimalSeparator := '.';
+  OldDecimalSeparator := {$IFDEF DELPHI15_UP}FormatSettings.{$ENDIF}DecimalSeparator;
+  {$IFDEF DELPHI15_UP}FormatSettings.{$ENDIF}DecimalSeparator := '.';
   try
     Result := StrToFloat(Str);
   finally
-    DecimalSeparator := OldDecimalSeparator;
+    {$IFDEF DELPHI15_UP}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
   end;
 end;
 
@@ -741,12 +741,12 @@ var
   OldDecimalSeparator: Char;
   {$ENDIF}
 begin
-  OldDecimalSeparator := DecimalSeparator;
-  DecimalSeparator := '.';
+  OldDecimalSeparator := {$IFDEF DELPHI15_UP}FormatSettings.{$ENDIF}DecimalSeparator;
+  {$IFDEF DELPHI15_UP}FormatSettings.{$ENDIF}DecimalSeparator := '.';
   try
     Result := FloatToStr(Value);
   finally
-    DecimalSeparator := OldDecimalSeparator;
+    {$IFDEF DELPHI15_UP}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
   end;
 end;
 
