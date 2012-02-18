@@ -165,6 +165,7 @@ type
     CP:  Word; //The CodePage the AnsiString must have to
     ZAlias: String; //A possible (saver?) CharacterSet which is more Zeos compatible...
                     //If it's empty it will be ignored!!!
+    IsSupported: Boolean;
   end;
   PZCodePage = ^TZCodePage;
 
@@ -473,6 +474,7 @@ begin
         Result := AnsiToUTF8(AStr);
         {$ELSE}
         Result := AStr;
+        {$ENDIF}
       {$ENDIF}
     //ceUTF16: ;//not done yet
     //ceUTF32
