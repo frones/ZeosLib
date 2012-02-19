@@ -58,8 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZPlainSqLiteDriver, ZDbcLogging
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}, ZCompatibility{$ENDIF};
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZPlainSqLiteDriver, ZDbcLogging, ZCompatibility;
 
 {**
   Convert string SQLite field type to SQLType
