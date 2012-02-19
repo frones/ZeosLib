@@ -1226,8 +1226,8 @@ begin
   {MySQL 4.1-5.5}
   { MultiChar }
   AddCodePage('utf8mb4', 37, ceUTF8, zCP_UTF8); {UTF-8 Unicode}
-  AddCodePage('utf16', 38, ceUnsupported, zCP_UNICODE, 'utf8mb4'); {UTF-16 Unicode}
-  AddCodePage('utf32', 39, ceUnsupported, zCP_UNICODE, 'utf8mb4'); {UTF-32 Unicode}
+  AddCodePage('utf16', 38, ceUTF16, zCP_UNICODE, 'utf8mb4'); {UTF-16 Unicode}
+  AddCodePage('utf32', 39, ceUTF16, $ffff, 'utf8mb4'); {UTF-32 Unicode} //Egonhugeist improved
 end;
 {$ENDIF}
 

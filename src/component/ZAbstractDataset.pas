@@ -475,7 +475,10 @@ begin
       FreeFieldBuffers;
       SetState(dsBrowse);
       Resync([]);
-      if BookmarkValid(@BM) Then
+      if BookmarkValid(
+      {$IFDEF CHECK_CLIENT_CODE_PAGE}
+        {$IFDEF DELPHI12_UP}BM{$ELSE}@BM{$ENDIF}
+      {$ENDIF}) Then //Egon hugeist: dont point a unassigned pointer
       begin 
         InternalGotoBookmark(@BM); 
         Resync([rmExact, rmCenter]); 

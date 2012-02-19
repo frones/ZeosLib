@@ -76,7 +76,7 @@ type
     procedure Open; override;
     function GetSQLVarHolder(ColumnIndex: Integer): PZSQLVar;
     function GetAsStringValue(ColumnIndex: Integer;
-      SQLVarHolder: PZSQLVar): string;
+      SQLVarHolder: PZSQLVar): {$IFDEF CHECK_CLIENT_CODE_PAGE}AnsiString{$ELSE}string{$ENDIF};
     function GetAsLongIntValue(ColumnIndex: Integer;
       SQLVarHolder: PZSQLVar): LongInt;
     function GetAsDoubleValue(ColumnIndex: Integer;
@@ -92,7 +92,11 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetString(ColumnIndex: Integer): AnsiString; override;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = ceAnsi): Ansistring; override;
+    {$ELSE}
+    function GetString(ColumnIndex: Integer): Ansistring; override;
+    {$ENDIF}
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -420,7 +424,7 @@ end;
     value returned is <code>null</code>
 }
 function TZOracleResultSet.GetAsStringValue(ColumnIndex: Integer;
-  SQLVarHolder: PZSQLVar): string;
+  SQLVarHolder: PZSQLVar): {$IFDEF CHECK_CLIENT_CODE_PAGE}AnsiString{$ELSE}string{$ENDIF};
 var
   OldSeparator: Char;
   Blob: IZBlob;
@@ -616,7 +620,11 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZOracleResultSet.GetString(ColumnIndex: Integer): AnsiString;
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+function TZOracleResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = ceAnsi): Ansistring;
+{$ELSE}
+function TZOracleResultSet.GetString(ColumnIndex: Integer): Ansistring;
+{$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);

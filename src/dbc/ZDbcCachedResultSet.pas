@@ -171,7 +171,11 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPChar(ColumnIndex: Integer): PAnsiChar; override;
-    function GetString(ColumnIndex: Integer): AnsiString; override;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = ceAnsi): Ansistring; override;
+    {$ELSE}
+    function GetString(ColumnIndex: Integer): Ansistring; virtual;
+    {$ENDIF}
     function GetUnicodeString(ColumnIndex: Integer): Widestring; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
@@ -757,13 +761,47 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractCachedResultSet.GetString(ColumnIndex: Integer): AnsiString;
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+function TZAbstractCachedResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = ceAnsi): Ansistring;
+var
+  UseEncoding: TZCharEncoding;
+{$ELSE}
+function TZAbstractCachedResultSet.GetString(ColumnIndex: Integer): Ansistring;
+{$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckAvailable;
 {$ENDIF}
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  Result := ZAnsiString(FRowAccessor.GetString(ColumnIndex, LastWasNull));
+  {$IFDEF CHECK_CLIENT_CODE_PAGE};
+  if CharEncoding = ceDefault then
+    UseEncoding := ClientCodePage^.Encoding
+  else
+    UseEncoding := CharEncoding;
+
+  case ClientCodePage^.Encoding of
+    ceAnsi:
+      case UseEncoding of
+        ceAnsi: Result := AnsiString(FRowAccessor.GetString(ColumnIndex, LastWasNull));
+        ceUTF8: Result := AnsiString(UTF8Encode(WideString(FRowAccessor.GetString(ColumnIndex, LastWasNull))));
+        ceUTF16: ;
+        {$IFNDEF MSWINDOWS}
+        ceUTF32: ;
+        {$ENDIF}
+      end;
+    ceUTF8:
+      case UseEncoding of
+        ceAnsi: Result := AnsiString(FRowAccessor.GetString(ColumnIndex, LastWasNull));
+        ceUTF8: Result := AnsiString(UTF8Encode(WideString(FRowAccessor.GetString(ColumnIndex, LastWasNull))));
+        ceUTF16: ;
+        {$IFNDEF MSWINDOWS}
+        ceUTF32: ;
+        {$ENDIF}
+      end;
+    ceUTF16: ;
+    {$IFNDEF MSWINDOWS}
+    ceUTF32: ;
+    {$ENDIF}
+  end;
   {$ELSE}
   Result := AnsiString(FRowAccessor.GetString(ColumnIndex, LastWasNull));
   {$ENDIF}

@@ -218,14 +218,16 @@ begin
   if not ( FCodePages[High(FCodePages)].Encoding = ceUTF8 ) then
   begin
     FCodePages[High(FCodePages)].ZAlias := GetCompilerSaveCodePageName;
-    FCodePages[High(FCodePages)].Encoding := ceUnsupported;
+    FCodePages[High(FCodePages)].IsSupported := False;
   {$ELSE}
   if CP = $ffff then
   begin
     FCodePages[High(FCodePages)].ZAlias := GetCompilerSaveCodePageName;
-    FCodePages[High(FCodePages)].Encoding := ceUnsupported;
+    FCodePages[High(FCodePages)].IsSupported := False;
   {$ENDIF}
-  end;
+  end
+  else
+    FCodePages[High(FCodePages)].IsSupported := True;
 end;
 
 procedure TZGenericAbstractPlainDriver.ResetCodePage(const OldID: Integer;
@@ -246,14 +248,16 @@ begin
       if not ( FCodePages[I].Encoding = ceUTF8 ) then
       begin
         FCodePages[i].ZAlias := GetCompilerSaveCodePageName;
-        FCodePages[i].Encoding := ceUnsupported;
+        FCodePages[i].IsSupported := False;
       {$ELSE}
       if CP = $ffff then
       begin
         FCodePages[i].ZAlias := GetCompilerSaveCodePageName;
-        FCodePages[i].Encoding := ceUnsupported;
+        FCodePages[i].IsSupported := False;
       {$ENDIF}
-      end;
+      end
+      else
+        FCodePages[High(FCodePages)].IsSupported := True;
       Break;
     end;
 end;
@@ -264,8 +268,7 @@ var
   I: Integer;
 begin
   for i := low(FCodePages) to high(FCodePages) do
-    if (not (FCodePages[i].Encoding = ceUnsupported) )
-      or ( IgnoreUnsupported ) then
+    if ( FCodePages[i].IsSupported ) or ( IgnoreUnsupported ) then
     begin
       SetLength(Result, Length(Result)+1);
       Result[High(Result)] := FCodePages[i].Name;

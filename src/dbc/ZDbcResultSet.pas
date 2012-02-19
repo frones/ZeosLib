@@ -99,7 +99,6 @@ type
     procedure CheckBlobColumn(ColumnIndex: Integer);
     procedure Open; virtual;
     function GetColumnIndex(const ColumnName: string): Integer;
-
     property RowNo: Integer read FRowNo write FRowNo;
     property LastRowNo: Integer read FLastRowNo write FLastRowNo;
     property MaxRows: Integer read FMaxRows write FMaxRows;
@@ -132,7 +131,11 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; virtual;
     function GetPChar(ColumnIndex: Integer): PAnsiChar; virtual;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = ceAnsi): Ansistring; virtual;
+    {$ELSE}
     function GetString(ColumnIndex: Integer): Ansistring; virtual;
+    {$ENDIF}
     function GetUnicodeString(ColumnIndex: Integer): WideString; virtual;
     function GetBoolean(ColumnIndex: Integer): Boolean; virtual;
     function GetByte(ColumnIndex: Integer): ShortInt; virtual;
@@ -159,7 +162,11 @@ type
 
     function IsNullByName(const ColumnName: string): Boolean; virtual;
     function GetPCharByName(const ColumnName: string): PAnsiChar; virtual;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetStringByName(const ColumnName: string; CharEncoding: TZCharEncoding = ceAnsi): Ansistring; virtual;
+    {$ELSE}
     function GetStringByName(const ColumnName: string): Ansistring; virtual;
+    {$ENDIF}
     function GetUnicodeStringByName(const ColumnName: string): WideString; virtual;
     function GetBooleanByName(const ColumnName: string): Boolean; virtual;
     function GetByteByName(const ColumnName: string): ShortInt; virtual;
@@ -298,8 +305,7 @@ type
   end;
 
   {** Implements external or internal blob wrapper object. }
-  TZAbstractBlob = class({$IFDEF CHECK_CLIENT_CODE_PAGE}
-  TAbstractCodePagedInterfacedObject{$ELSE}TInterfacedObject{$ENDIF}, IZBlob)
+  TZAbstractBlob = class(TInterfacedObject, IZBlob)
   private
     FBlobData: Pointer;
     FBlobSize: Integer;
@@ -619,7 +625,10 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetString(ColumnIndex: Integer): AnsiString;
+function TZAbstractResultSet.GetString(ColumnIndex: Integer
+{$IFDEF CHECK_CLIENT_CODE_PAGE};const  CharEncoding: TZCharEncoding = ceAnsi{$ENDIF}): AnsiString;
+var
+  UseEncoding: TZCharEncoding;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -1105,9 +1114,10 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetStringByName(const ColumnName: string): AnsiString;
+function TZAbstractResultSet.GetStringByName(const ColumnName: string
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}; CharEncoding: TZCharEncoding{$ENDIF}): AnsiString;
 begin
-  Result := GetString(GetColumnIndex(ColumnName));
+  Result := GetString(GetColumnIndex(ColumnName){$IFDEF CHECK_CLIENT_CODE_PAGE}, CharEncoding{$ENDIF});
 end;
 
 {**

@@ -445,7 +445,7 @@ begin
   FPreprepareSQL := FPreprepareSQL and (ClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]);
   FPreprepareSQL := True; //Test
   FSetCodePageToConnection := True; //optional for the testsuites
-  if ( ClientCodePage^.Encoding = ceUnsupported ) and FRaiseOnUnsupportedCP then
+  if ( not ClientCodePage^.IsSupported ) and FRaiseOnUnsupportedCP then
     try
       raise Exception.Create(WUnsupportedCodePage);
     except

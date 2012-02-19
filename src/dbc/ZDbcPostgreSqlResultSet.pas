@@ -83,7 +83,11 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetString(ColumnIndex: Integer): AnsiString; override;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = ceAnsi): Ansistring; override;
+    {$ELSE}
+    function GetString(ColumnIndex: Integer): Ansistring; override;
+    {$ENDIF}
     function GetUnicodeStream(ColumnIndex: Integer): TStream; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
@@ -337,7 +341,11 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+function TZPostgreSQLResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = ceAnsi): Ansistring;
+{$ELSE}
 function TZPostgreSQLResultSet.GetString(ColumnIndex: Integer): AnsiString;
+{$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;

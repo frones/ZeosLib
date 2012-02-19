@@ -68,7 +68,7 @@ const
   BlockSize = 20;
 
 type
-  { Interbase Error Class}
+  { ASA Error Class}
   EZASAConvertError = class(Exception);
 
   TZASADECLTYPE = record

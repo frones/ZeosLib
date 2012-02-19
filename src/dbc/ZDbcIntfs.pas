@@ -624,7 +624,11 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean;
     function GetPChar(ColumnIndex: Integer): PAnsiChar;
-    function GetString(ColumnIndex: Integer): AnsiString;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = ceAnsi): Ansistring;
+    {$ELSE}
+    function GetString(ColumnIndex: Integer): Ansistring;
+    {$ENDIF}
     function GetUnicodeString(ColumnIndex: Integer): WideString;
     function GetBoolean(ColumnIndex: Integer): Boolean;
     function GetByte(ColumnIndex: Integer): ShortInt;
@@ -651,7 +655,11 @@ type
 
     function IsNullByName(const ColumnName: string): Boolean;
     function GetPCharByName(const ColumnName: string): PAnsiChar;
-    function GetStringByName(const ColumnName: string): AnsiString;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetStringByName(const ColumnName: string; CharEncoding: TZCharEncoding = ceAnsi): Ansistring;
+    {$ELSE}
+    function GetStringByName(const ColumnName: string): Ansistring;
+    {$ENDIF}
     function GetUnicodeStringByName(const ColumnName: string): WideString;
     function GetBooleanByName(const ColumnName: string): Boolean;
     function GetByteByName(const ColumnName: string): ShortInt;

@@ -85,7 +85,11 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetString(ColumnIndex: Integer): AnsiString; override;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = ceAnsi): Ansistring; override;
+    {$ELSE}
+    function GetString(ColumnIndex: Integer): Ansistring; override;
+    {$ENDIF}
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -255,7 +259,11 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZDBLibResultSet.GetString(ColumnIndex: Integer): AnsiString;
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+function TZDBLibResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = ceAnsi): Ansistring;
+{$ELSE}
+function TZDBLibResultSet.GetString(ColumnIndex: Integer): Ansistring;
+{$ENDIF}
 var
   DL: Integer;
   Data: Pointer;

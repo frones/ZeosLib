@@ -89,7 +89,11 @@ type
     function GetCursorName: AnsiString; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetString(ColumnIndex: Integer): AnsiString; override;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = ceAnsi): Ansistring; override;
+    {$ELSE}
+    function GetString(ColumnIndex: Integer): Ansistring; override;
+    {$ENDIF}
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -228,7 +232,9 @@ end;
 function TZInterbase6ResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 begin
   CheckClosed;
+{$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
+{$ENDIF}
   Result := FSqlData.GetBigDecimal(ColumnIndex - 1);
   LastWasNull := IsNull(ColumnIndex);
 end;
@@ -287,7 +293,9 @@ end;
 function TZInterbase6ResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
 begin
   CheckClosed;
+{$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
+{$ENDIF}
   Result := FSqlData.GetBoolean(ColumnIndex - 1);
   LastWasNull := IsNull(ColumnIndex);
 end;
@@ -304,7 +312,9 @@ end;
 function TZInterbase6ResultSet.GetByte(ColumnIndex: Integer): ShortInt;
 begin
   CheckClosed;
+{$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
+{$ENDIF}
   Result := FSqlData.GetByte(ColumnIndex - 1);
   LastWasNull := IsNull(ColumnIndex);
 end;
@@ -322,7 +332,9 @@ end;
 function TZInterbase6ResultSet.GetBytes(ColumnIndex: Integer): TByteDynArray;
 begin
   CheckClosed;
+{$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
+{$ENDIF}
   Result := FSqlData.GetBytes(ColumnIndex - 1);
   LastWasNull := IsNull(ColumnIndex);
 end;
@@ -339,7 +351,9 @@ end;
 function TZInterbase6ResultSet.GetDate(ColumnIndex: Integer): TDateTime;
 begin
   CheckClosed;
+{$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
+{$ENDIF}
   Result := FSqlData.GetDate(ColumnIndex - 1);
   LastWasNull := IsNull(ColumnIndex);
 end;
@@ -356,7 +370,9 @@ end;
 function TZInterbase6ResultSet.GetDouble(ColumnIndex: Integer): Double;
 begin
   CheckClosed;
+{$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
+{$ENDIF}
   Result := FSqlData.GetDouble(ColumnIndex - 1);
   LastWasNull := IsNull(ColumnIndex);
 end;
@@ -373,7 +389,9 @@ end;
 function TZInterbase6ResultSet.GetFloat(ColumnIndex: Integer): Single;
 begin
   CheckClosed;
+{$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
+{$ENDIF}
   Result := FSqlData.GetFloat(ColumnIndex - 1);
   LastWasNull := IsNull(ColumnIndex);
 end;
@@ -390,7 +408,9 @@ end;
 function TZInterbase6ResultSet.GetInt(ColumnIndex: Integer): Integer;
 begin
   CheckClosed;
+{$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
+{$ENDIF}
   Result := FSqlData.GetInt(ColumnIndex - 1);
   LastWasNull := IsNull(ColumnIndex);
 end;
@@ -407,7 +427,9 @@ end;
 function TZInterbase6ResultSet.GetLong(ColumnIndex: Integer): Int64;
 begin
   CheckClosed;
+{$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
+{$ENDIF}
   Result := FSqlData.GetLong(ColumnIndex - 1);
   LastWasNull := IsNull(ColumnIndex);
 end;
@@ -424,7 +446,9 @@ end;
 function TZInterbase6ResultSet.GetShort(ColumnIndex: Integer): SmallInt;
 begin
   CheckClosed;
+{$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
+{$ENDIF}
   Result := FSqlData.GetShort(ColumnIndex - 1);
   LastWasNull := IsNull(ColumnIndex);
 end;
@@ -438,10 +462,16 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZInterbase6ResultSet.GetString(ColumnIndex: Integer): AnsiString;
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+function TZInterbase6ResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = ceAnsi): Ansistring;
+{$ELSE}
+function TZInterbase6ResultSet.GetString(ColumnIndex: Integer): Ansistring;
+{$ENDIF}
 begin
   CheckClosed;
+{$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
+{$ENDIF}
   LastWasNull := IsNull(ColumnIndex);
   Result := FSqlData.GetString(ColumnIndex - 1);
 end;
@@ -458,7 +488,9 @@ end;
 function TZInterbase6ResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 begin
   CheckClosed;
+{$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
+{$ENDIF}
   Result := FSqlData.GetTime(ColumnIndex - 1);
   LastWasNull := IsNull(ColumnIndex);
 end;
@@ -476,7 +508,9 @@ end;
 function TZInterbase6ResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
 begin
   CheckClosed;
+{$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
+{$ENDIF}
   Result := FSqlData.GetTimestamp(ColumnIndex - 1);
   LastWasNull := IsNull(ColumnIndex);
 end;
@@ -562,7 +596,7 @@ begin
         FFetchStat := GetPlainDriver.isc_dsql_fetch(@StatusVector,
           @FStmtHandle, GetDialect, FSqlData.GetData);
       end
-        else
+      else
       begin     //AVZ - Cursor name has a value therefore the result set already exists
         FFetchStat := 1;
         Result := True;

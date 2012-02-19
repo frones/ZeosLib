@@ -89,7 +89,11 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPChar(ColumnIndex: Integer): PAnsiChar; override;
-    function GetString(ColumnIndex: Integer): AnsiString; override;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = ceAnsi): Ansistring; override;
+    {$ELSE}
+    function GetString(ColumnIndex: Integer): Ansistring; override;
+    {$ENDIF}
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -135,7 +139,11 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPChar(ColumnIndex: Integer): PAnsiChar; override;
-    function GetString(ColumnIndex: Integer): AnsiString; override;
+    {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = ceAnsi): Ansistring; override;
+    {$ELSE}
+    function GetString(ColumnIndex: Integer): Ansistring; override;
+    {$ENDIF}
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -397,7 +405,11 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZMySQLResultSet.GetString(ColumnIndex: Integer): AnsiString;
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+function TZMySQLResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = ceAnsi): Ansistring;
+{$ELSE}
+function TZMySQLResultSet.GetString(ColumnIndex: Integer): Ansistring;
+{$ENDIF}
 var
   LengthPointer: PULong;
   Length: ULong;
@@ -1106,7 +1118,11 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZMySQLPreparedResultSet.GetString(ColumnIndex: Integer): AnsiString;
+{$IFDEF CHECK_CLIENT_CODE_PAGE}
+function TZMySQLPreparedResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = ceAnsi): Ansistring;
+{$ELSE}
+function TZMySQLPreparedResultSet.GetString(ColumnIndex: Integer): Ansistring;
+{$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;

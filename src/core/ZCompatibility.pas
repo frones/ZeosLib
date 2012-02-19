@@ -149,7 +149,7 @@ type
 
   TZCharEncoding = (
     ceDefault, //Internal switch for the two Functions below do not use it as a CodePage-decaration!
-    ceUnsupported,  //may be Realy Unsupported CodePages {This must be testet before}
+    //ceUnsupported,  //may be Realy Unsupported CodePages {This must be testet before}
     ceAnsi, //Base Ansi-String: prefered CodePage
     ceUTF8, //UTF8_Unicode: 1-4Byte/Char
     ceUTF16 //UTF16/USC2 Unicode: 2-4 Byte/Char
