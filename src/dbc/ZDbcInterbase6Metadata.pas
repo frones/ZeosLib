@@ -235,9 +235,9 @@ type
       const Table: string): IZResultSet; override;
     function UncachedGetExportedKeys(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
-//    function UncachedGetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
-//      const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
-//      const ForeignTable: string): IZResultSet; override;
+    function UncachedGetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
+      const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
+      const ForeignTable: string): IZResultSet; override;
     function UncachedGetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
       Unique: Boolean; Approximate: Boolean): IZResultSet; override;
     function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
@@ -2447,6 +2447,171 @@ begin
       end;
       Close;
     end;
+end;
+
+{**
+  EgonHugeist:
+  Gets a description of the foreign key columns in the foreign key
+  table that reference the primary key columns of the primary key
+  table (describe how one table imports another's key.) This
+  should normally return a single foreign key/primary key pair
+  (most tables only import a foreign key from a table once.)  They
+  are ordered by FKTABLE_CAT, FKTABLE_SCHEM, FKTABLE_NAME, and
+  KEY_SEQ.
+
+  <P>Each foreign key column description has the following columns:
+   <OL>
+ 	<LI><B>PKTABLE_CAT</B> String => primary key table catalog (may be null)
+ 	<LI><B>PKTABLE_SCHEM</B> String => primary key table schema (may be null)
+ 	<LI><B>PKTABLE_NAME</B> String => primary key table name
+ 	<LI><B>PKCOLUMN_NAME</B> String => primary key column name
+ 	<LI><B>FKTABLE_CAT</B> String => foreign key table catalog (may be null)
+       being exported (may be null)
+ 	<LI><B>FKTABLE_SCHEM</B> String => foreign key table schema (may be null)
+       being exported (may be null)
+ 	<LI><B>FKTABLE_NAME</B> String => foreign key table name
+       being exported
+ 	<LI><B>FKCOLUMN_NAME</B> String => foreign key column name
+       being exported
+ 	<LI><B>KEY_SEQ</B> short => sequence number within foreign key
+ 	<LI><B>UPDATE_RULE</B> short => What happens to
+        foreign key when primary is updated:
+       <UL>
+       <LI> importedNoAction - do not allow update of primary
+                key if it has been imported
+       <LI> importedKeyCascade - change imported key to agree
+                with primary key update
+       <LI> importedKeySetNull - change imported key to NULL if
+                its primary key has been updated
+       <LI> importedKeySetDefault - change imported key to default values
+                if its primary key has been updated
+       <LI> importedKeyRestrict - same as importedKeyNoAction
+                                  (for ODBC 2.x compatibility)
+       </UL>
+ 	<LI><B>DELETE_RULE</B> short => What happens to
+       the foreign key when primary is deleted.
+       <UL>
+       <LI> importedKeyNoAction - do not allow delete of primary
+                key if it has been imported
+       <LI> importedKeyCascade - delete rows that import a deleted key
+       <LI> importedKeySetNull - change imported key to NULL if
+                its primary key has been deleted
+       <LI> importedKeyRestrict - same as importedKeyNoAction
+                                  (for ODBC 2.x compatibility)
+       <LI> importedKeySetDefault - change imported key to default if
+                its primary key has been deleted
+       </UL>
+ 	<LI><B>FK_NAME</B> String => foreign key name (may be null)
+ 	<LI><B>PK_NAME</B> String => primary key name (may be null)
+ 	<LI><B>DEFERRABILITY</B> short => can the evaluation of foreign key
+       constraints be deferred until commit
+       <UL>
+       <LI> importedKeyInitiallyDeferred - see SQL92 for definition
+       <LI> importedKeyInitiallyImmediate - see SQL92 for definition
+       <LI> importedKeyNotDeferrable - see SQL92 for definition
+       </UL>
+   </OL>
+
+  @param primaryCatalog a catalog name; "" retrieves those without a
+  catalog; null means drop catalog name from the selection criteria
+  @param primarySchema a schema name; "" retrieves those
+  without a schema
+  @param primaryTable the table name that exports the key
+  @param foreignCatalog a catalog name; "" retrieves those without a
+  catalog; null means drop catalog name from the selection criteria
+  @param foreignSchema a schema name; "" retrieves those
+  without a schema
+  @param foreignTable the table name that imports the key
+  @return <code>ResultSet</code> - each row is a foreign key column description
+  @see #getImportedKeys
+}
+function TZInterbase6DatabaseMetadata.UncachedGetCrossReference(
+  const PrimaryCatalog: string; const PrimarySchema: string;
+  const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
+  const ForeignTable: string): IZResultSet;
+var
+  KeySeq: Integer;
+  LCatalog, SQLString, LPTable, LFTable: String;
+
+  function GetRuleType(const Rule: AnsiString): TZImportedKey;
+  begin
+    if Rule = 'RESTRICT' then
+      Result := ikRestrict
+    else if Rule = 'NO ACTION' then
+      Result := ikNoAction
+    else if Rule = 'CASCADE' then
+      Result := ikCascade
+    else if Rule = 'SET DEFAULT' then
+      Result := ikSetDefault
+    else if Rule = 'SET NULL' then
+      Result := ikSetNull
+    else
+      Result := ikNotDeferrable; //impossible!
+  end;
+begin
+  if PrimaryCatalog = '' then
+    LCatalog := GetConnection.GetCatalog
+  else
+    LCatalog := PrimaryCatalog;
+
+  LPTable := ConstructNameCondition(AddEscapeCharToWildcards(PrimaryTable), 'i2.RDB$RELATION_NAME');
+  LFTable := ConstructNameCondition(AddEscapeCharToWildcards(ForeignTable), 'rc.RDB$RELATION_NAME');
+
+  Result := ConstructVirtualResultSet(ExportedKeyColumnsDynArray);
+
+  SQLString :=
+      'SELECT '+
+      'i2.RDB$RELATION_NAME AS PKTABLE_NAME, '+
+      's2.RDB$FIELD_NAME AS PKCOLUMN_NAME, '+
+      'rc.RDB$RELATION_NAME as FKTABLE_NAME, '+
+      's.RDB$FIELD_NAME AS FKCOLUMN_NAME, '+
+      'refc.RDB$UPDATE_RULE AS UPDATE_RULE, '+
+      'refc.RDB$DELETE_RULE AS DELETE_RULE, '+
+      'i.RDB$INDEX_NAME AS FK_NAME, '+
+      's2.RDB$INDEX_NAME as PK_NAME, '+
+      'rc.RDB$DEFERRABLE AS DEFERRABILITY '+
+      'FROM RDB$INDEX_SEGMENTS s '+
+      'LEFT JOIN RDB$INDICES i ON i.RDB$INDEX_NAME = s.RDB$INDEX_NAME '+
+      'LEFT JOIN RDB$RELATION_CONSTRAINTS rc ON rc.RDB$INDEX_NAME = s.RDB$INDEX_NAME '+
+      'LEFT JOIN RDB$REF_CONSTRAINTS refc ON rc.RDB$CONSTRAINT_NAME = refc.RDB$CONSTRAINT_NAME '+
+      'LEFT JOIN RDB$RELATION_CONSTRAINTS rc2 ON rc2.RDB$CONSTRAINT_NAME = refc.RDB$CONST_NAME_UQ '+
+      'LEFT JOIN RDB$INDICES i2 ON i2.RDB$INDEX_NAME = rc2.RDB$INDEX_NAME '+
+      'LEFT JOIN RDB$INDEX_SEGMENTS s2 ON i2.RDB$INDEX_NAME = s2.RDB$INDEX_NAME '+
+      'WHERE rc.RDB$CONSTRAINT_TYPE = ''FOREIGN KEY'' '+
+      'AND rc.RDB$CONSTRAINT_TYPE IS NOT NULL ';
+  if LPTable <> '' then
+    SQLString := SQLString + 'AND '+LPTable;
+  if LFTable <> '' then
+    SQLString := SQLString + 'AND '+LFTable;
+
+  KeySeq := 0;
+  with GetConnection.CreateStatement.ExecuteQuery(SQLString) do
+  begin
+    while Next do
+    begin
+      Inc(KeySeq);
+      Result.MoveToInsertRow;
+      Result.UpdateString(1, LCatalog); //PKTABLE_CAT
+      Result.UpdateNull(2); //PKTABLE_SCHEM
+      Result.UpdateString(3, GetString(1)); //PKTABLE_NAME
+      Result.UpdateString(4, GetString(2)); //PKCOLUMN_NAME
+      Result.UpdateString(5, AnsiString(LCatalog)); //PKTABLE_CAT
+      Result.UpdateNull(6); //FKTABLE_SCHEM
+      Result.UpdateString(7, GetString(3)); //FKTABLE_NAME
+      Result.UpdateString(8, GetString(4)); //FKCOLUMN_NAME
+      Result.UpdateShort(9, KeySeq); //KEY_SEQ
+      Result.UpdateShort(10, Ord(GetRuleType(GetString(5)))); //UPDATE_RULE
+      Result.UpdateShort(11, Ord(GetRuleType(GetString(6)))); //DELETE_RULE
+      Result.UpdateString(12, GetString(7)); //FK_NAME
+      Result.UpdateString(13, GetString(8)); //PK_NAME
+      if GetString(9) = 'NO' then
+        Result.UpdateShort(14, Ord(ikNotDeferrable)) //DEFERRABILITY
+      else
+        Result.UpdateShort(14, Ord(ikInitiallyDeferred)); //DEFERRABILITY
+      Result.InsertRow;
+    end;
+    Close;
+  end;
 end;
 
 {**

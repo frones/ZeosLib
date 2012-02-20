@@ -185,6 +185,7 @@ end;
 }
 constructor TZSQLStrings.Create;
 begin
+  inherited Create; { -> needed to run the TestSuite else Inheritance(Self).Methods fails}
   FParams := TStringList.Create;
   FParamCheck := True;
   FStatements := TObjectList.Create;
@@ -389,7 +390,7 @@ begin
         if (TokenType <> ttEOF) and (TokenValue <> FParamChar) then
         begin
           { Check for correct parameter type. }
-          if not (TokenType in [ttWord, ttQuoted]) then
+          if not (TokenType in [ttWord, ttQuoted, ttQuotedIdentifier]) then
             raise EZDatabaseError.Create(SIncorrectToken);
 
           SQL := SQL + '?';
