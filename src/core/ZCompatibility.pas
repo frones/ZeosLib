@@ -192,6 +192,10 @@ type
 const
   ClientCodePageDummy: TZCodepage =
     (Name: ''; ID: 0; Encoding: ceAnsi; CP: 0; ZAlias: '');
+  ZFullMultiByteCodePages: array[0..21] of Word = (50220, 50221, 50222, 50225,
+    50227, 50229, 52936, 54936, 54936, 57002, 57003, 57004, 57005, 57006,
+    57007, 57008, 57009, 57010, 57011, 65000, 65001, 42);
+
 
 function ZWideToAnsiString(const ws: WideString; CP: Word): AnsiString;
 function ZAnsiToWideString(const s: AnsiString; CP: Word): WideString;
@@ -217,6 +221,16 @@ implementation
 
 {$IFDEF CHECK_CLIENT_CODE_PAGE}
 
+function IsFullMultiByteCodePage(CP: Word): Boolean;
+var
+  I: Integer;
+begin
+  for i := 0 to High(ZFullMultiByteCodePages) do
+  begin
+    Result := CP = ZFullMultiByteCodePages[i];
+    if Result then Break;
+  end;
+end;
 {**
   Converts Unicode string to Ansi string using specified code page.
   @param   ws       Unicode string.
@@ -237,37 +251,45 @@ begin
   if ws = '' then
     Result := ''
   else
-  begin
-    {$IFDEF FPC}
-    Result := UTF8Encode(ws)
-    {$ELSE}
-      {$IFDEF DELPHI12_UP} //use Delphi-RTL cause of possible Marvin-Mode for XE2
-      AnsiTemp := UTF8Encode(ws); //total Char-transport. may be server-unsupported
-      if ( AnsiTemp <> '' ) and ( CP <> $ffff )  then
-        SetCodePage(AnsiTemp, CP, True); //Server-CP supported!
-      Result := AnsiTemp;
+    if CP = 65001 then
+      Result := UTF8Encode(WS)
+    else
+    begin
+      {$IFDEF FPC}
+      Result := Result;
       {$ELSE}
-      if ( CP <> $ffff ) and ( ws <> '' ) then
-      begin
-        if CP = 65001 then
-          Result := UTF8Encode(WS)
-        else
+        {$IFDEF DELPHI12_UP} //use Delphi-RTL cause of possible Marvin-Mode for XE2
+        AnsiTemp := UTF8Encode(ws); //total Char-transport. may be server-unsupported
+        if ( AnsiTemp <> '' ) and ( CP <> $ffff )  then
+          SetCodePage(AnsiTemp, CP, True); //Server-CP supported!
+        Result := AnsiTemp;
+        {$ELSE} //Here we can use faster Delphi-RTL if somebode knows how!
+        if ( CP <> $ffff ) then //EgonHugeist
         begin
-          l := WideCharToMultiByte(CP,
-            WC_COMPOSITECHECK or WC_DISCARDNS or WC_SEPCHARS or WC_DEFAULTCHAR,
-            @ws[1], - 1, nil, 0, nil, nil);
-          SetLength(Result, l - 1);
-          if l > 1 then
-            WideCharToMultiByte(CP,
+          if ( IsFullMultiByteCodePage(CP)) then //dwFlags MUST be Set to 0!!!!
+          begin
+            l := WideCharToMultiByte(CP,0, @ws[1], - 1, nil, 0, nil, nil); //Checkout the result length
+            SetLength(Result, l - 1); //SetResult Length
+            if l > 1 then
+              WideCharToMultiByte(CP,0, @ws[1], - 1, @Result[1], l - 1, nil, nil); // Convert Wide down to Ansi
+          end
+          else
+          begin
+            l := WideCharToMultiByte(CP,
               WC_COMPOSITECHECK or WC_DISCARDNS or WC_SEPCHARS or WC_DEFAULTCHAR,
-              @ws[1], - 1, @Result[1], l - 1, nil, nil);
-        end;
-      end
-      else
-        Result := UTF8Encode(ws); //toal chars
+              @ws[1], - 1, nil, 0, nil, nil); //Checkout the result length
+            SetLength(Result, l - 1); //SetResult Length
+            if l > 1 then
+              WideCharToMultiByte(CP,
+                WC_COMPOSITECHECK or WC_DISCARDNS or WC_SEPCHARS or WC_DEFAULTCHAR,
+                @ws[1], - 1, @Result[1], l - 1, nil, nil); // Convert Wide down to Ansi
+          end;
+        end
+        else
+          Result := UTF8Encode(ws); //toal chars
+        {$ENDIF}
       {$ENDIF}
-    {$ENDIF}
-  end;
+    end;
 end; { ZWAnsiString }
 
 {**
@@ -291,45 +313,49 @@ begin
   if s = '' then
     Result := ''
   else
-  {$IFDEF FPC}
-   Result := UTF8ToString(S)
-  {$ELSE}
-    {$IFDEF DELPHI12_UP}
-    if ( CP <> $ffff ) and ( s <> '' ) then
-      {$IFDEF DELPHI14_UP} //possible MARVIN mode...
-      Result := UTF8ToString(AnsiToUTF8Ex(s, CP))
+    if CP = 65001 then
+      result := UTF8ToString(s)
+    else
+      {$IFDEF FPC}
+      Result := WideString(S)
       {$ELSE}
-      begin
-        if CP = 65001 then
-          result := UTF8ToString(s)
-        else
-        begin
-          AnsiTemp := s;
-          SetCodePage(AnsiTemp, CP);
-          Result := WideString(AnsiTemp);
-        end;
-      end
+        {$IFDEF DELPHI12_UP}
+          if ( CP <> $ffff ) then
+          {$IFDEF DELPHI14_UP} //possible MARVIN mode...
+            Result := UTF8ToString(AnsiToUTF8Ex(s, CP))
+          {$ELSE}
+            begin
+              AnsiTemp := s;
+              SetCodePage(AnsiTemp, CP);
+              Result := WideString(AnsiTemp);
+            end
+          {$ENDIF}
+          else
+            Result := WideString(s);
+        {$ELSE} //Here we can use faster Delphi-RTL if somebode knows how!
+          if ( CP <> $ffff ) then //Older Delphi-Version can use Allways the Win-APi
+          begin
+            if ( IsFullMultiByteCodePage(CP) ) then //dwFlags must be set to 0!!!
+            begin
+              l := MultiByteToWideChar(CP, 0, PAnsiChar(@s[1]), - 1, nil, 0); //Checkout the Result-Lengh
+              SetLength(Result, l - 1); //Set Result-Length
+              if l > 1 then
+                MultiByteToWideChar(CP, 0, PAnsiChar(@s[1]),
+                  - 1, PWideChar(@Result[1]), l - 1); //Convert Ansi to Wide with supported Chard
+            end
+            else
+            begin
+              l := MultiByteToWideChar(CP, MB_PRECOMPOSED, PAnsiChar(@s[1]), - 1, nil, 0);
+              SetLength(Result, l - 1);
+              if l > 1 then
+                MultiByteToWideChar(CP, MB_PRECOMPOSED, PAnsiChar(@s[1]),
+                  - 1, PWideChar(@Result[1]), l - 1);
+            end;
+          end
+          else
+            Result := WideString(s);
+        {$ENDIF}
       {$ENDIF}
-    else
-      Result := WideString(s);
-    {$ELSE}
-    if ( CP <> $ffff ) and ( s <> '' ) then //Older Delphi-Version can use Allways the Win-APi
-    begin
-      if CP = 65001 then
-        Result := UTF8ToString(s)
-      else
-      begin
-        l := MultiByteToWideChar(CP, MB_PRECOMPOSED, PAnsiChar(@s[1]), - 1, nil, 0);
-        SetLength(Result, l - 1);
-        if l > 1 then
-          MultiByteToWideChar(CP, MB_PRECOMPOSED, PAnsiChar(@s[1]),
-            - 1, PWideChar(@Result[1]), l - 1);
-      end;
-    end
-    else
-      Result := WideString(s);
-    {$ENDIF}
-  {$ENDIF}
 end; { ZWideString }
 
 function ZCPWideString(const ws: WideString; CP: Word): WideString;

@@ -656,12 +656,18 @@ begin
         if GetMetadata.GetColumnType(ColumnIndex) = stBinaryStream then
         {$IFDEF CHECK_CLIENT_CODE_PAGE}
         begin
-          Decoded := FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)); //gives a hex-string with a starting 'x' back
-          Len := (Length(Decoded) div 2); //GetLength of binary result
-          Decoded := Copy(Decoded, 2, Length(Decoded)); //remove the first 'x'sign-byte
-          SetLength(TempAnsi, Len); //Set length of binary-result
-          HexToBin(PAnsiChar(Decoded), PAnsichar(TempAnsi), Len); //convert hex to binary
-          Stream := TStringStream.Create(TempAnsi); //write proper binary-stream
+          {Mantis-BugTracker #0000247 / }
+          if (Statement.GetConnection as IZPostgreSQLConnection).GetServerMajorVersion >= 9 then
+          begin
+            Decoded := FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)); //gives a hex-string with a starting 'x' back
+            Len := (Length(Decoded) div 2); //GetLength of binary result
+            Decoded := Copy(Decoded, 2, Length(Decoded)); //remove the first 'x'sign-byte
+            SetLength(TempAnsi, Len); //Set length of binary-result
+            HexToBin(PAnsiChar(Decoded), PAnsichar(TempAnsi), Len); //convert hex to binary
+            Stream := TStringStream.Create(TempAnsi); //write proper binary-stream
+          end
+          else
+            Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)));
         end
         {$ELSE}
           Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)))
