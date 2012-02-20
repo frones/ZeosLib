@@ -977,6 +977,7 @@ begin
         Result := ZString(PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])); //compiler neutral else dataloss
       stUnicodeString, stUnicodeStream: Result := UTF8ToAnsi(UTF8Encode(GetUnicodeString(ColumnIndex, IsNull))); //wide to Ansi?
         {$ELSE}
+      stString:
         Result := PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
       stUnicodeString, stUnicodeStream: Result := GetUnicodeString(ColumnIndex, IsNull);
         {$ENDIF}
