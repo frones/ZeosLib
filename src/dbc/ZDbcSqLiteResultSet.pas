@@ -549,7 +549,11 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
 {$ENDIF}
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  Result := StrToBytes(DecodeString(GetString(ColumnIndex)));
+  {$ELSE}
   Result := StrToBytes(GetString(ColumnIndex));
+  {$ENDIF}
 end;
 
 {**
@@ -679,10 +683,6 @@ end;
     <code>NULL</code>, the value returned is <code>null</code>
 }
 function TZSQLiteResultSet.GetUnicodeStream(ColumnIndex: Integer): TStream;
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
-var
-  Data: WideString;
-{$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);

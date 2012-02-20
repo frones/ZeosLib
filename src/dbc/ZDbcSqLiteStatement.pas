@@ -212,8 +212,13 @@ begin
     raise;
   end;
 
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+  Result := CreateResultSet(SSQL, StmtHandle, ColumnCount, ColumnNames,
+    ColumnValues);
+  {$ELSE}
   Result := CreateResultSet(SQL, StmtHandle, ColumnCount, ColumnNames,
     ColumnValues);
+  {$ENDIF}
 end;
 
 {**
@@ -315,8 +320,13 @@ begin
   if ColumnCount <> 0 then
   begin
     Result := True;
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}
+    LastResultSet := CreateResultSet(SSQL, StmtHandle, ColumnCount, ColumnNames,
+      ColumnValues);
+  {$ELSE}
     LastResultSet := CreateResultSet(SQL, StmtHandle, ColumnCount, ColumnNames,
       ColumnValues);
+  {$ENDIF}
   end
   { Processes regular query. }
   else
@@ -395,15 +405,22 @@ begin
                Result := '''N''';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
-      stString, stUnicodeString{$IFNDEF DELPHI_12UP}, stBytes{$ENDIF}:
-        {$IFDEF DELPHI12_UP}
-        Result := GetEscapeString(String(UTF8Encode(SoftVarManager.GetAsString(Value))));
-        {$ELSE}
+      {$IFDEF CHECK_CLIENT_CODE_PAGE}
+      stString, stUnicodeString:
         Result := GetEscapeString(SoftVarManager.GetAsString(Value));
-        {$ENDIF}
-      {$IFDEF DELPHI_12UP}
       stBytes:
-        Result := GetEscapeString(SoftVarManager.GetAsString(Value));
+        Result := GetConnection.GetAnsiEscapeString(EncodeString(AnsiString(SoftVarManager.GetAsString(Value))));  //Egonhugeist stBytes can be from #0 -> ~ so this encoding must be!
+      {$ELSE}
+        stString, stUnicodeString{$IFNDEF DELPHI_12UP}, stBytes{$ENDIF}:
+          {$IFDEF DELPHI12_UP}
+          Result := GetEscapeString(String(UTF8Encode(SoftVarManager.GetAsString(Value))));
+          {$ELSE}
+          Result := GetEscapeString(SoftVarManager.GetAsString(Value));
+          {$ENDIF}
+        {$IFDEF DELPHI_12UP}
+        stBytes:
+          Result := GetEscapeString(SoftVarManager.GetAsString(Value));
+        {$ENDIF}
       {$ENDIF}
       stDate:
         Result := '''' + FormatDateTime('yyyy-mm-dd',
