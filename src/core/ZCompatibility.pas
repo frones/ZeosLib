@@ -156,7 +156,7 @@ type
     {$IFNDEF MSWINDOWS}
     ,ceUTF32 //UTF32 Unicode 4Bytes per Char actual Windows-unsupported!!
     {$ENDIF});
-    {Here it possible to add some more, to handle the Ansi->Unicode-Translations}
+    {Here it's possible to add some more, to handle the Ansi->Unicode-Translations}
 
   TZCodePage = {packed to slow..} record
     Name: String; //Name of Client-CharacterSet
@@ -206,10 +206,11 @@ function ZAnsiStringToCP(const s: AnsiString; CP: Word): AnsiString;
 
 {$ENDIF}
 
-{$IFNDEF DELPHI12_UP}
+{$IF not Declared(CharInSet)}
+{$DEFINE ZCharInSet}
 function CharInSet(C: AnsiChar; const CharSet: TSysCharSet): Boolean; overload;
 function CharInSet(C: WideChar; const CharSet: TSysCharSet): Boolean; overload;
-{$ENDIF}
+{$IFEND}
 
 {$IF not Declared(UTF8ToString)}
 {$DEFINE ZUTF8ToString}
@@ -341,15 +342,15 @@ begin
               SetLength(Result, l - 1); //Set Result-Length
               if l > 1 then
                 MultiByteToWideChar(CP, 0, PAnsiChar(@s[1]),
-                  - 1, PWideChar(@Result[1]), l - 1); //Convert Ansi to Wide with supported Chard
+                  - 1, PWideChar(@Result[1]), l - 1); //Convert Ansi to Wide with supported Chars
             end
             else
             begin
-              l := MultiByteToWideChar(CP, MB_PRECOMPOSED, PAnsiChar(@s[1]), - 1, nil, 0);
+              l := MultiByteToWideChar(CP, MB_PRECOMPOSED, PAnsiChar(@s[1]), - 1, nil, 0); //Checkout the Result-Lengh
               SetLength(Result, l - 1);
               if l > 1 then
                 MultiByteToWideChar(CP, MB_PRECOMPOSED, PAnsiChar(@s[1]),
-                  - 1, PWideChar(@Result[1]), l - 1);
+                  - 1, PWideChar(@Result[1]), l - 1); //Convert Ansi to Wide with supported Chars
             end;
           end
           else
@@ -444,7 +445,7 @@ begin
     else
       Result := WideString(Ansi); //Reference the AnsiString and move 'em up to UnicodeString
     {$ELSE}
-    Result := UTF8ToAnsi(UTF8Encode(WideString(Ansi)));
+    Result := UTF8ToAnsi(UTF8Encode(WideString(Ansi))); //Take care we've rael ansi as result
     {$ENDIF}
   else
     {$IFDEF DELPHI12_UP}
@@ -492,15 +493,12 @@ begin
     UseEncoding := Encoding;
 
   case UseEncoding of
-    ceUTF8, ceUTF16:
+    ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}:
       {$IFDEF DELPHI12_UP}
       Result := AnsiString(UTF8Encode(AStr));
       {$ELSE}
-        {$IFDEF MSWINDOWS}
-        Result := AnsiToUTF8(AStr);
-        {$ELSE}
-        Result := AStr;
-        {$ENDIF}
+      //Result := AnsiToUTF8(AStr);
+      Result := UTF8Encode(WideString(AStr)); //Move Ansi up to wide and encode him
       {$ENDIF}
     //ceUTF16: ;//not done yet
     //ceUTF32
@@ -666,7 +664,7 @@ begin
 end;
 {$ENDIF}
 
-{$IFNDEF DELPHI12_UP}
+{$IFDEF ZCharInSet}
 function CharInSet(C: AnsiChar; const CharSet: TSysCharSet): Boolean;
 begin
   result := C in Charset;
@@ -676,6 +674,7 @@ function CharInSet(C: WideChar; const CharSet: TSysCharSet): Boolean;
 begin
   result := Char(C) in Charset;
 end;
+{$UNDEF ZCharInSet}
 {$ENDIF}
 
 {$IFDEF  ZUTF8ToString}

@@ -2611,7 +2611,6 @@ var
   Deferrability: Integer;
   Deferrable, InitiallyDeferred: Boolean;
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
   function GetRuleType(const Rule: AnsiString): TZImportedKey;
   begin
     if Rule = 'RESTRICT' then
@@ -2627,11 +2626,9 @@ var
     else
       Result := ikNotDeferrable; //impossible!
   end;
-{$ENDIF}
 begin
   Result := ConstructVirtualResultSet(CrossRefColumnsDynArray);
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
   if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 4) then
   begin
     SQL := 'SELECT '+
@@ -2699,7 +2696,6 @@ begin
   end
   else
   begin
-{$ENDIF}
     if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
     begin
       Select := 'SELECT DISTINCT n1.nspname as pnspname,n2.nspname as fnspname,';
@@ -2857,9 +2853,7 @@ begin
     finally
       List.Free;
     end;
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
   end;
-{$ENDIF}
 end;
 
 {**
@@ -3195,7 +3189,7 @@ begin
    'C': Result := 'CREATE';
    'T': Result := 'CREATE TEMP';
    else Result := 'UNKNOWN';
-   end;
+ end;
 end;
 
 function TZPostgreSQLDatabaseMetadata.GetIdentifierConvertor: IZIdentifierConvertor;
@@ -3253,21 +3247,21 @@ var
   QuoteDelim: string;
 begin
   QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
-  Result := Value;
-  if (QuoteDelim <> '') and (Value <> '') then
-    if (copy(Value,1,1)=QuoteDelim) and
-       (copy(Value,length(Value),1)=QuoteDelim) then
-    begin
-      Result:=copy(Value,2,length(Value)-2);
-      Result:=StringReplace(Result,QuoteDelim+QuoteDelim,QuoteDelim,[rfReplaceAll]);
-    end;
-
-end;
-
-function TZPostgreSQLIdentifierConvertor.IsQuoted(const Value: string): Boolean;
-var
-  QuoteDelim: string;
-begin
+  Result := Value; 
+  if (QuoteDelim <> '') and (Value <> '') then 
+    if (copy(Value,1,1)=QuoteDelim) and 
+       (copy(Value,length(Value),1)=QuoteDelim) then 
+    begin 
+      Result:=copy(Value,2,length(Value)-2); 
+      Result:=StringReplace(Result,QuoteDelim+QuoteDelim,QuoteDelim,[rfReplaceAll]); 
+    end; 
+ 
+end; 
+ 
+function TZPostgreSQLIdentifierConvertor.IsQuoted(const Value: string): Boolean; 
+var 
+  QuoteDelim: string; 
+begin 
   QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
   Result := (QuoteDelim <> '') and (Value <> '') and
             (copy(Value,1,1)=QuoteDelim) and
