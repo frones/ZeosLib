@@ -2627,7 +2627,7 @@ var
       Result := ikNotDeferrable; //impossible!
   end;
 begin
-    Result := ConstructVirtualResultSet(CrossRefColumnsDynArray);
+  Result := ConstructVirtualResultSet(CrossRefColumnsDynArray);
 
   if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 4) then
   begin
