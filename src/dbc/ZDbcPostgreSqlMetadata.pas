@@ -2670,12 +2670,12 @@ begin
         Inc(KeySequence);
         Result.MoveToInsertRow;
         //Result.UpdateString(1, GetString(1)); //PKTABLE_CAT
-        Result.UpdateString(1, ZAnsiString(PrimaryCatalog)); //PKTABLE_CAT
+        Result.UpdateString(1, PrimaryCatalog); //PKTABLE_CAT
         Result.UpdateString(2, GetString(2)); //PKTABLE_SCHEM
         Result.UpdateString(3, GetString(3)); //PKTABLE_NAME
         Result.UpdateString(4, GetString(4)); //PKCOLUMN_NAME
         //Result.UpdateString(5, GetString(5)); //PKTABLE_CAT
-        Result.UpdateString(5, ZAnsiString(ForeignCatalog)); //PKTABLE_CAT
+        Result.UpdateString(5, ForeignCatalog); //PKTABLE_CAT
         Result.UpdateString(6, GetString(6)); //FKTABLE_SCHEM
         Result.UpdateString(7, GetString(7)); //FKTABLE_NAME
         Result.UpdateString(8, GetString(8)); //FKCOLUMN_NAME
