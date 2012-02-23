@@ -166,8 +166,11 @@ begin
   else if StartsWith(TypeName, 'CHAR') then
     Result := stString
   else if TypeName = 'VARCHAR' then
-    Result := {$IFDEF DELPHI12_UP}stUnicodeString{$ELSE}stString{$ENDIF}
-    //Result := stString
+    {$IFDEF FPC}
+    Result := stString
+	{$ELSE}
+    Result := stUnicodeString; //All delphi compilers need here UTF8Encoding/Decoding in OpenUTF8 Mode(minimum)
+	{$ENDIF}
   else if TypeName = 'VARBINARY' then
     Result := stBytes
   else if TypeName = 'BINARY' then

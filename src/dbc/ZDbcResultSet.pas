@@ -627,10 +627,6 @@ end;
 }
 function TZAbstractResultSet.GetString(ColumnIndex: Integer
 {$IFDEF CHECK_CLIENT_CODE_PAGE};const  CharEncoding: TZCharEncoding = ceAnsi{$ENDIF}): AnsiString;
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
-var
-  UseEncoding: TZCharEncoding;
-{$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);

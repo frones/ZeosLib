@@ -972,10 +972,10 @@ begin
       stString, stUnicodeString, stUnicodeStream: Result := GetUnicodeString(ColumnIndex, IsNull);
       {$ELSE}
         {$IFDEF CHECK_CLIENT_CODE_PAGE}
-        //Converts a incoming CharacterSet-encoded string to Compiler-supported format (example: UTF8 for FPC)
       stString:
+        //Converts a incoming CharacterSet-encoded string to Compiler-supported format (example: UTF8 for FPC)
         Result := ZString(PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])); //compiler neutral else dataloss
-      stUnicodeString, stUnicodeStream: Result := UTF8ToAnsi(UTF8Encode(GetUnicodeString(ColumnIndex, IsNull))); //wide to Ansi?
+      stUnicodeString, stUnicodeStream: Result := UTF8ToAnsi(UTF8Encode(GetUnicodeString(ColumnIndex, IsNull))); //wide down to Ansi
         {$ELSE}
       stString:
         Result := PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);

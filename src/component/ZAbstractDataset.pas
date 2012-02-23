@@ -480,7 +480,7 @@ begin
         {$IFDEF DELPHI12_UP}BM{$ELSE}@BM{$ENDIF}
       {$ELSE}
         @BM
-      {$ENDIF}) Then //Egon hugeist: dont point a unassigned pointer
+      {$ENDIF}) Then //Egonhugeist: don't point a unassigned pointer
       begin 
         InternalGotoBookmark(@BM); 
         Resync([rmExact, rmCenter]); 

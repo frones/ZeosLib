@@ -1156,14 +1156,16 @@ begin
                 Type wide/unicode so we have to give him back as
                 Stream!}
               {$IFDEF CHECK_CLIENT_CODE_PAGE}
-              {$IFDEF DELPHI12_UP}
-              if Statement.GetConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-                Stream := Param.AsStream
-              else
+                {$IFDEF DELPHI12_UP}
+                if Statement.GetConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+                  Stream := Param.AsStream
+                else
+                  Stream := TStringStream.Create(Param.AsMemo);
+                {$ELSE}
                 Stream := TStringStream.Create(Param.AsMemo);
+                {$ENDIF}
               {$ELSE}
               Stream := TStringStream.Create(Param.AsMemo);
-              {$ENDIF}
               {$ENDIF}
               try
                 Statement.SetAsciiStream(I + 1, Stream);
