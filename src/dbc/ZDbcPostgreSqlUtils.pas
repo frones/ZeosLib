@@ -375,7 +375,7 @@ begin
     {$ENDIF}
     700: Result := stFloat; { float4 }
     701,1700: Result := stDouble; { float8/numeric. no 'decimal' any more }
-    790: Result := stFloat; { money }
+    790: Result := {$IFDEF CHECK_CLIENT_CODE_PAGE}stDouble{$ELSE}stFloat{$ENDIF}; { money }
     16: Result := stBoolean; { bool }
     1082: Result := stDate; { date }
     1083: Result := stTime; { time }
