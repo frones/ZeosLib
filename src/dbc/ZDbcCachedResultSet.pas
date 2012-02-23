@@ -174,7 +174,7 @@ type
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = ceAnsi): Ansistring; override;
     {$ELSE}
-    function GetString(ColumnIndex: Integer): Ansistring; virtual;
+    function GetString(ColumnIndex: Integer): Ansistring; override;
     {$ENDIF}
     function GetUnicodeString(ColumnIndex: Integer): Widestring; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
