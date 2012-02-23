@@ -388,7 +388,7 @@ begin
   Buffer := GetPChar(ColumnIndex);
   if Buffer <> nil then
    // Result := UTF8ToUnicodeString(StrPas(Buffer)) EgonHugeist: AnsiUTF8 to UnicodeString and reverted(result)= DataLoss!! Do not change this type!
-    Result := StrPas(Buffer)
+    Result := Buffer//StrPas(Buffer)
   else
     Result := '';
 end;
@@ -747,14 +747,21 @@ begin
   try
     if not LastWasNull then
     begin
-      if TZAbstractResultSetMetadata(Metadata).GetColumnType(ColumnIndex)
-        <> stBinaryStream then
+     {$IFDEF CHECK_CLIENT_CODE_PAGE}
+     if TZAbstractResultSetMetadata(Metadata).GetColumnType(ColumnIndex) = stAsciiStream then
         Stream := TStringStream.Create(GetString(ColumnIndex))
-      else begin
+      else
+        Stream := FPlaindriver.getblob(FStmtHandle,columnIndex);
+     {$ELSE}
+     if TZAbstractResultSetMetadata(Metadata).GetColumnType(ColumnIndex) <> stBinaryStream then
+        Stream := TStringStream.Create(GetString(ColumnIndex))
+      else
+      begin
 //  NEW : FST  100214
           Stream := FPlaindriver.getblob(FStmtHandle,columnIndex);
   //        Stream := TStringStream.Create(DecodeString(GetString(ColumnIndex)));
       end;
+      {$ENDIF}
       Result := TZAbstractBlob.CreateWithStream(Stream)
     end
     else

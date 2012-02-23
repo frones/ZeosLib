@@ -483,11 +483,45 @@ end;
     value returned is <code>0</code>
 }
 function TZPostgreSQLResultSet.GetDouble(ColumnIndex: Integer): Double;
+  function ConvertMoneyToFloat(MoneyString: AnsiString): String;
+  var
+    I: Integer;
+    s: String;
+  begin
+    if MoneyString = '' then
+      Result := ''
+    else
+    begin
+      I := 0;
+      if CharInSet(Char(MoneyString[1]), ['0'..'9']) then
+        Result := String(MoneyString)
+      else
+        for i := 1 to Length(MoneyString) do
+          if CharInSet(Char(MoneyString[I]), ['0'..'9']) then
+          begin
+            if I > 1 then
+            begin //Money type
+              Result := Copy(MoneyString, I, Length(MoneyString)-i+1);
+              if Pos(',', Result) > 0 then
+                if Pos('.', Result) > 0  then
+                begin
+                  Result := Copy(Result, 1, Pos(',', Result)-1);
+                  while Pos('.', Result) > 0  do
+                    Result := Copy(Result, 1, Pos('.', Result)-1)+Copy(Result, Pos('.', Result)+1, Length(Result)); //remove ThousandSeparator
+                  Result := Result + '.'+Copy(MoneyString, Pos(',', MoneyString)+1, Length(MoneyString));
+                end
+                else
+                  Result[Pos(',', Result)] := '.';
+            end;
+            Break;
+          end;
+    end;
+  end;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
-  Result := SQLStrToFloatDef(String(GetString(ColumnIndex)), 0);
+  Result := SQLStrToFloatDef(ConvertMoneyToFloat(GetString(ColumnIndex)), 0); //EgonHugeist: PostgreSQL-curiusity returns with currency-Prefix
 end;
 
 {**

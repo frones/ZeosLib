@@ -88,7 +88,9 @@ type
     FPlainDriver: IZSQLitePlainDriver;
   protected
     function CreateExecStatement: IZStatement; override;
+    {$IFNDEF CHECK_CLIENT_CODE_PAGE}
     function GetEscapeString(const Value: string): string;
+    {$ENDIF}
     function PrepareSQLParam(ParamIndex: Integer): string; override;
   public
     constructor Create(PlainDriver: IZSQLitePlainDriver;
@@ -372,10 +374,12 @@ end;
   @param Value a regular string.
   @return a string in SQLite escape format.
 }
+{$IFNDEF CHECK_CLIENT_CODE_PAGE}
 function TZSQLitePreparedStatement.GetEscapeString(const Value: string): string;
 begin
-  Result := AnsiQuotedStr(Value, '''');
+  Result := AnsiQuotedStr(UTF8Encode(Value), '''');
 end;
+{$ENDIF}
 
 {**
   Prepares an SQL parameter for the query.
@@ -407,9 +411,9 @@ begin
         Result := SoftVarManager.GetAsString(Value);
       {$IFDEF CHECK_CLIENT_CODE_PAGE}
       stString, stUnicodeString:
-        Result := GetEscapeString(SoftVarManager.GetAsString(Value));
+        Result := AnsiQuotedStr(SoftVarManager.GetAsString(Value), '''');
       stBytes:
-        Result := GetConnection.GetAnsiEscapeString(EncodeString(AnsiString(SoftVarManager.GetAsString(Value))));  //Egonhugeist stBytes can be from #0 -> ~ so this encoding must be!
+        Result := GetConnection.GetAnsiEscapeString(AnsiString(SoftVarManager.GetAsString(Value)));  //Egonhugeist stBytes can be from #0 -> ~ so this encoding must be!
       {$ELSE}
         stString, stUnicodeString{$IFNDEF DELPHI_12UP}, stBytes{$ENDIF}:
           {$IFDEF DELPHI12_UP}
@@ -436,10 +440,17 @@ begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
           begin
+            {$IFDEF CHECK_CLIENT_CODE_PAGE}
+            if InParamTypes[ParamIndex] = stAsciiStream then
+              Result := AnsiQuotedStr(String(TempBlob.GetString), '''')
+            else
+              Result := GetConnection.GetAnsiEscapeString(TempBlob.GetString);
+            {$ELSE}
             if InParamTypes[ParamIndex] = stBinaryStream then
               Result := String(EncodeString(TempBlob.GetString))
             else
               Result := GetEscapeString(String(TempBlob.GetString));
+            {$ENDIF}
           end
           else
             Result := 'NULL';
