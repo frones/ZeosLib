@@ -198,8 +198,8 @@ end;
 }
 destructor TZSQLStrings.Destroy;
 begin
-  FParams.Free;
-  FStatements.Free;
+  FreeAndNil(FParams);//.Free;
+  FreeAndNil(FStatements);//.Free;
   inherited Destroy;
 end;
 

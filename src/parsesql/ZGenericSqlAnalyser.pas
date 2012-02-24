@@ -662,13 +662,16 @@ begin
     { Reads table. }
     else if ReadTable and ((CurrentType = ttWord) or (CurrentType = ttQuotedIdentifier)) then
     begin
-      Catalog := Schema;
-      Schema := Table;
+      {Catalog := Schema;
+      Schema := Table;}
       Table := CurrentValue;
     end
     { Skips a '.' in table part. }
     else if ReadTable and (CurrentValue = '.') then
     begin
+      Catalog := Schema;
+      Schema := Table;
+      Table := '';
     end
     { Reads alias. }
     else if not ReadTable and (CurrentType = ttWord) then
