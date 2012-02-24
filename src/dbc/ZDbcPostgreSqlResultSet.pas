@@ -197,11 +197,9 @@ begin
           ColumnInfo.Precision := 32
         else
           ColumnInfo.Precision := 64; { name }
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     650: ColumnInfo.Precision := 100; { cidr }
     869: ColumnInfo.Precision := 100; { inet }
     829: ColumnInfo.Precision := 17; { macaddr }
-    {$ENDIF}
     1186: ColumnInfo.Precision := 32; { interval }
     24: ColumnInfo.Precision := 10; { regproc }
     17:{ bytea }

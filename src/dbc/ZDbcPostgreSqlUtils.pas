@@ -368,14 +368,12 @@ begin
     21: Result := stShort; { int2 }
     23: Result := stInteger; { int4 }
     20: Result := stLong; { int8 }
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     650: Result := stString; { cidr }
     869: Result := stString; { inet }
     829: Result := stString; { macaddr }
-    {$ENDIF}
     700: Result := stFloat; { float4 }
     701,1700: Result := stDouble; { float8/numeric. no 'decimal' any more }
-    790: Result := {$IFDEF CHECK_CLIENT_CODE_PAGE}stDouble{$ELSE}stFloat{$ENDIF}; { money }
+    790: Result := stDouble; { money }
     16: Result := stBoolean; { bool }
     1082: Result := stDate; { date }
     1083: Result := stTime; { time }
