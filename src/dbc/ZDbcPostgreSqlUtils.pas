@@ -324,9 +324,12 @@ begin
     21: Result := stShort; { int2 }
     23: Result := stInteger; { int4 }
     20: Result := stLong; { int8 }
+    650: Result := stString; { cidr }
+    869: Result := stString; { inet }
+    829: Result := stString; { macaddr }
     700: Result := stFloat; { float4 }
     701,1700: Result := stDouble; { float8/numeric. no 'decimal' any more }
-    790: Result := stFloat; { money }
+    790: Result := stDouble; { money }
     16: Result := stBoolean; { bool }
     1082: Result := stDate; { date }
     1083: Result := stTime; { time }
@@ -382,11 +385,7 @@ begin
   DestLength := 2;
   for I := 1 to SrcLength do
   begin
-    {$IFDEF DELPHI12_UP}
     if CharInSet(SrcBuffer^, [#0, '''', '\']) then
-    {$ELSE}
-    if SrcBuffer^ in [#0, '''', '\'] then
-    {$ENDIF}
       Inc(DestLength, 4)
     else
       Inc(DestLength);
@@ -401,11 +400,7 @@ begin
 
   for I := 1 to SrcLength do
   begin
-    {$IFDEF DELPHI12_UP}
     if CharInSet(SrcBuffer^, [#0, '''', '\']) then
-    {$ELSE}
-    if SrcBuffer^ in [#0, '''', '\'] then
-    {$ENDIF}
     begin
       DestBuffer[0] := '\';
       DestBuffer[1] := Char(Ord('0') + (Byte(SrcBuffer^) shr 6));
@@ -624,11 +619,7 @@ var
   for I := 1 to SrcLength do
   begin
     LastState := pg_CS_stat(LastState,integer(SrcBuffer^),CharactersetCode);
-    {$IFDEF DELPHI12_UP}
     if CharInSet(SrcBuffer^, [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
-    {$ELSE}
-    if (SrcBuffer^ in [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
-    {$ENDIF}
       Inc(DestLength, 4)
     else
       Inc(DestLength);
@@ -645,18 +636,14 @@ var
   for I := 1 to SrcLength do
   begin
     LastState := pg_CS_stat(LastState,integer(SrcBuffer^),CharactersetCode);
-    {$IFDEF DELPHI12_UP}
     if CharInSet(SrcBuffer^, [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
-    {$ELSE}
-    if (SrcBuffer^ in [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
-    {$ENDIF}
-      begin
-        DestBuffer[0] := '\';
-        DestBuffer[1] := Char(Ord('0') + (Byte(SrcBuffer^) shr 6));
-        DestBuffer[2] := Char(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
-        DestBuffer[3] := Char(Ord('0') + (Byte(SrcBuffer^) and $07));
-        Inc(DestBuffer, 4);
-      end
+    begin
+      DestBuffer[0] := '\';
+      DestBuffer[1] := Char(Ord('0') + (Byte(SrcBuffer^) shr 6));
+      DestBuffer[2] := Char(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
+      DestBuffer[3] := Char(Ord('0') + (Byte(SrcBuffer^) and $07));
+      Inc(DestBuffer, 4);
+    end
     else
     begin
       DestBuffer^ := SrcBuffer^;
