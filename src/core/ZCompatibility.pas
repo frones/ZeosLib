@@ -445,7 +445,11 @@ begin
     else
       Result := WideString(Ansi); //Reference the AnsiString and move 'em up to UnicodeString
     {$ELSE}
-    Result := UTF8ToAnsi(UTF8Encode(WideString(Ansi))); //Take care we've rael ansi as result
+      {$IFDEF FPC}
+      Result := Ansi;
+      {$ELSE}
+      Result := UTF8ToAnsi(UTF8Encode(WideString(Ansi))); //Take care we've rael ansi as result
+      {$ENDIF}
     {$ENDIF}
   else
     {$IFDEF DELPHI12_UP}
@@ -497,8 +501,12 @@ begin
       {$IFDEF DELPHI12_UP}
       Result := AnsiString(UTF8Encode(AStr));
       {$ELSE}
-      //Result := AnsiToUTF8(AStr);
-      Result := UTF8Encode(WideString(AStr)); //Move Ansi up to wide and encode him
+        {$IFDEF FPC}
+        Result := AStr;
+        {$ELSE}
+        //Result := AnsiToUTF8(AStr);
+        Result := UTF8Encode(WideString(AStr)); //Move Ansi up to wide and encode him
+        {$ENDIF}
       {$ENDIF}
     //ceUTF16: ;//not done yet
     //ceUTF32
