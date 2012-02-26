@@ -458,13 +458,19 @@ begin
         Result := SoftVarManager.GetAsString(Value);
       stString, stBytes:
         {$IFDEF CHECK_CLIENT_CODE_PAGE}
-        Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
+        if GetConnection.DoPreprepareSQL then
+          Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value))
+        else
+          Result := EncodeString(FCharactersetCode,SoftVarManager.GetAsString(Value));
         {$ELSE}
         Result := EncodeString(FCharactersetCode,SoftVarManager.GetAsString(Value));
         {$ENDIF}
       stUnicodeString:
         {$IFDEF CHECK_CLIENT_CODE_PAGE}
-        Result := EncodeString(FCharactersetCode,SoftVarManager.GetAsUnicodeString(Value));
+        if GetConnection.DoPreprepareSQL then
+          Result := EncodeString(FCharactersetCode,SoftVarManager.GetAsUnicodeString(Value))
+        else
+          Result := UTF8Encode(EncodeString(FCharactersetCode,SoftVarManager.GetAsUnicodeString(Value)));
         {$ELSE}
         Result := UTF8Encode(EncodeString(FCharactersetCode,SoftVarManager.GetAsUnicodeString(Value)));
         {$ENDIF}
@@ -483,7 +489,10 @@ begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
             {$IFDEF CHECK_CLIENT_CODE_PAGE}
-            Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString)
+            if GetConnection.DoPreprepareSQL then
+              Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString)
+            else
+              Result := EncodeString(TempBlob.GetString)
             {$ELSE}
             Result := EncodeString(TempBlob.GetString)
             {$ENDIF}
@@ -522,7 +531,11 @@ begin
             else
             begin
               {$IFDEF CHECK_CLIENT_CODE_PAGE}
-              result := GetConnection.GetAnsiEscapeString(TempBlob.GetString);
+              if GetConnection.DoPreprepareSQL then
+                result := GetConnection.GetAnsiEscapeString(TempBlob.GetString)
+              else
+                result:= FPlainDriver.EncodeBYTEA(TempBlob.GetString,
+                  Self.GetConnectionHandle); // FirmOS
               {$ELSE}
               result:= FPlainDriver.EncodeBYTEA(TempBlob.GetString,
                 Self.GetConnectionHandle); // FirmOS

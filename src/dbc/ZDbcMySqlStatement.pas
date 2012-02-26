@@ -568,7 +568,10 @@ begin
         Result := SoftVarManager.GetAsString(Value);
       stString, stUnicodeString, stBytes:
         {$IFDEF CHECK_CLIENT_CODE_PAGE}
-        Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
+        if GetConnection.DoPreprepareSQL then
+          Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value))
+        else
+          Result := GetEscapeString(SoftVarManager.GetAsString(Value));
         {$ELSE}
         Result := GetEscapeString(SoftVarManager.GetAsString(Value));
         {$ENDIF}
@@ -598,7 +601,10 @@ begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
             {$IFDEF CHECK_CLIENT_CODE_PAGE}
-            Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString)
+            if GetConnection.DoPreprepareSQL then
+              Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString)
+            else
+              Result := String(GetAnsiEscapeString(TempBlob.GetString))
             {$ELSE}
             Result := String(GetAnsiEscapeString(TempBlob.GetString))
             {$ENDIF}

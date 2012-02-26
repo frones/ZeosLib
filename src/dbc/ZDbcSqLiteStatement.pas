@@ -411,9 +411,19 @@ begin
         Result := SoftVarManager.GetAsString(Value);
       {$IFDEF CHECK_CLIENT_CODE_PAGE}
       stString, stUnicodeString:
-        Result := AnsiQuotedStr(SoftVarManager.GetAsString(Value), '''');
+        if GetConnection.DoPreprepareSQL then
+          Result := AnsiQuotedStr(SoftVarManager.GetAsString(Value), '''')
+        else
+          {$IFDEF DELPHI12_UP}
+          Result := AnsiQuotedStr(UTF8Encode(SoftVarManager.GetAsString(Value)), '''');
+          {$ELSE}
+          Result := AnsiQuotedStr(SoftVarManager.GetAsString(Value), '''');
+          {$ENDIF}
       stBytes:
-        Result := GetConnection.GetAnsiEscapeString(AnsiString(SoftVarManager.GetAsString(Value)));  //Egonhugeist stBytes can be from #0 -> ~ so this encoding must be!
+        if GetConnection.DoPreprepareSQL then
+          Result := GetConnection.GetAnsiEscapeString(AnsiString(SoftVarManager.GetAsString(Value)))  //Egonhugeist stBytes can be from #0 -> ~ so this encoding must be!
+        else
+          Result := String(EncodeString(AnsiString(SoftVarManager.GetAsString(Value))));
       {$ELSE}
         stString, stUnicodeString{$IFNDEF DELPHI_12UP}, stBytes{$ENDIF}:
           {$IFDEF DELPHI12_UP}
@@ -441,10 +451,13 @@ begin
           if not TempBlob.IsEmpty then
           begin
             {$IFDEF CHECK_CLIENT_CODE_PAGE}
-            if InParamTypes[ParamIndex] = stAsciiStream then
-              Result := AnsiQuotedStr(String(TempBlob.GetString), '''')
+            if GetConnection.DoPreprepareSQL then
+              Result := GetConnection.GetAnsiEscapeString(TempBlob.GetString)
             else
-              Result := GetConnection.GetAnsiEscapeString(TempBlob.GetString);
+              if InParamTypes[ParamIndex] = stBinaryStream then
+                Result := String(EncodeString(TempBlob.GetString))
+              else
+                Result := AnsiQuotedStr(TempBlob.GetString, '''');
             {$ELSE}
             if InParamTypes[ParamIndex] = stBinaryStream then
               Result := String(EncodeString(TempBlob.GetString))
