@@ -1,7 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{         Interbase Database Connectivity Classes         }
+  {         Interbase Database Connectivity Classes         }
 {                                                         }
 {    Copyright (c) 1999-2003 Zeos Development Group       }
 {            Written by Sergey Merkuriev                  }
@@ -43,10 +43,10 @@ interface
 
 uses
   SysUtils, Classes, Math,
-{$IFNDEF UNIX} 
+{$IFDEF MSWINDOWS}
   Windows, 
 {$ELSE} 
-  {$IFNDEF FPC} 
+  {$IFDEF KYLIX}
     libc, 
   {$ENDIF} 
 {$ENDIF} 
@@ -110,10 +110,10 @@ uses
 const
   IB_MAX_EVENT_BLOCK = 15;   // maximum events handled per block by InterBase
   IB_MAX_EVENT_LENGTH = 64;  // maximum event name length
-  {$IFDEF LINUX}
+  {$IFNDEF MSWINDOWS} // define in windows unit.
   INFINITE = $FFFFFFFF;
   {$ELSE}
-    {$IFDEF VER140BELOW}
+    {$IFDEF VER140BELOW} // too lazy to make a define for this.
     INFINITE = $FFFFFFFF;
     {$ENDIF}
   {$ENDIF}

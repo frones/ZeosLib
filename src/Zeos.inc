@@ -42,10 +42,21 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-// Compilation directives for Lazarus 
-{$IFDEF FPC} 
+// Compilation directives for Lazarus
+{$IFDEF FPC}
 {$I ZeosLazarus.inc}
-{$ENDIF} 
+{$ELSE}
+ {$DEFINE DELPHI}
+  // Defines that go for ALL still supported Delphi's   (usually means they were under ifndef fpc)
+ {$DEFINE WITH_DBCONSTS}        // Delphi DBCONSTS, FPC DBCONST
+ {$DEFINE WITH_ASLARGEINT}      // tlargeint aslargeint. Fixed 2.6.0+ or 2.6.2+ probably
+ {$DEFINE WITH_ASCURRENCY}      // Has AsCurrency.
+ {$DEFINE WITH_ASVARIANT}
+ {$DEFINE WITH_IPROVIDER}       // Turn on IProviderSupport interface
+ {$DEFINE WITH_CHECKFIELDCOMPATIBILITY}
+ {$DEFINE WITH_WIDEMEMO}        // Have WIDEMEMO,  For Delphi we turn these off if not applicable
+ {$DEFINE WITH_FTWIDESTRING}    // Have ftwidestring, For Delphi we turn these off if not applicable
+{$ENDIF}
 
 // Compilation directives for Delphi4
 // Not supported since Zeoslib 7.X
@@ -183,11 +194,33 @@
   {$DEFINE BDS7_UP}
   {$DEFINE BDS8_UP}
 {$ENDIF}
+// END of per Delphi version defines
+
+{$IFDEF DELPHI12_UP}
+  {$DEFINE WITH_TBOOKMARK}              // Have TBookmark
+  {$DEFINE WITH_TRECORDBUFFER}          // Abstract buffer type (pansichar or pbyte)
+  {$DEFINE WITH_STSTRINGUNICODE}        // ststring is unicodestring.
+  {$DEFINE WITH_NEWTOBJECT}             // allows new methods in TObject (D2009+/FPC 2.4.4)
+  {$DEFINE WITH_CHARINSET}              // D2009's poor substitute for character specific "xx in yy"
+{$ENDIF}
+
+{$IFDEF BDS4_UP}
+  {$DEFINE WIDE_DATASET}                // TWidedataset exists
+  {$DEFINE WITH_PWIDECHAR_TOWIDESTRING} // Able to pass pwidechar to a widestring parameter
+  {$DEFINE WITH_IPROVIDERWIDE}          // IProvider -W widestring using interface
+  {$DEFINE WITH_WIDESTRUTILS}           // WideStrUtils Unit.
+{$ENDIF}
+
+{$IFDEF VER150BELOW}
+     {$UNDEF WITH_WIDEMEMO}
+     {$UNDEF WITH_FTWIDESTRING}
+{$ENDIF}
 
 {$IFDEF VER140BELOW}
   {$IFNDEF FPC}
     {$IFNDEF WIN32}
       {$if Declared(RTLVersion) and (RTLVersion = 14.5)}  //Kylix 3
+         {$DEFINE KYLIX}
       {$ELSE}
           "Kylix versions below Kylix3 aren't supported anymore"
       {$ifend}
@@ -332,10 +365,6 @@
 // Registers property editors for the components.
 {$DEFINE WITH_PROPERTY_EDITOR}
 
-// Turn on IProviderSupport interface
-{$IFNDEF FPC}
-{$DEFINE WITH_IPROVIDER}
-{$ENDIF}
 
 // Turn on multithreading
 {$DEFINE MULTI_THREADED}

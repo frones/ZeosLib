@@ -58,7 +58,7 @@ unit ZQuerySQLEditor;
 interface
 
 uses
-{$IFDEF WIN32}
+{$IFDEF MSWINDOWS}
   Windows, Messages,
 {$ENDIF}
   {$IFDEF FPC}
@@ -445,7 +445,7 @@ begin
     Align := alClient;
     Anchors := [akTop,akLeft,akRight,akBottom];
     Font.Height := -14;
-    {$IFDEF WIN32}
+    {$IFDEF MSWINDOWS}
     Font.Name := 'Courier New';
     {$ENDIF}
     Font.Pitch := fpFixed;
