@@ -356,7 +356,7 @@ begin
       Result := stBinaryStream;
     ftWideString:
       Result := stUnicodeString;
-    {$IFNDEF WITH_WIDEMEMO}
+    {$IFDEF WITH_WIDEMEMO}
     ftWideMemo:
       Result := stUnicodeStream;
     {$ENDIF}
@@ -453,7 +453,7 @@ begin
         RowAccessor.SetTime(FieldIndex, ResultSet.GetTime(ColumnIndex));
       ftDateTime:
         RowAccessor.SetTimestamp(FieldIndex, ResultSet.GetTimestamp(ColumnIndex));
-      ftMemo, ftBlob {$IFNDEF VER150BELOW}, ftWideMemo{$ENDIF}:
+      ftMemo, ftBlob {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}:
         RowAccessor.SetBlob(FieldIndex, ResultSet.GetBlob(ColumnIndex));
     end;
 
@@ -535,7 +535,7 @@ begin
             Stream.Free;
           end;
         end;
-      {$IFNDEF VER150BELOW}
+      {$IFDEF WITH_WIDEMEMO}
       ftWideMemo:
         begin
           Stream := RowAccessor.GetUnicodeStream(FieldIndex, WasNull);
@@ -1117,7 +1117,7 @@ begin
   for I := 0 to Fields.Count - 1 do
   begin
     if (Fields[I].FieldKind = fkData)
-      and not (Fields[I].DataType in [ftBlob, ftMemo, ftBytes {$IFNDEF VER150BELOW}, ftWideMemo{$ENDIF}]) then
+      and not (Fields[I].DataType in [ftBlob, ftMemo, ftBytes {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}]) then
     begin
       if Result <> '' then
         Result := Result + ',';

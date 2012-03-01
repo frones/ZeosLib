@@ -110,13 +110,9 @@ uses
 const
   IB_MAX_EVENT_BLOCK = 15;   // maximum events handled per block by InterBase
   IB_MAX_EVENT_LENGTH = 64;  // maximum event name length
-  {$IFNDEF MSWINDOWS} // define in windows unit.
+  {$IF NOT DECLARED(INFINITE)}
   INFINITE = $FFFFFFFF;
-  {$ELSE}
-    {$IFDEF VER140BELOW} // too lazy to make a define for this.
-    INFINITE = $FFFFFFFF;
-    {$ENDIF}
-  {$ENDIF}
+  {$IFEND}
 threadvar
   FStatusVector: TARRAY_ISC_STATUS;
 
