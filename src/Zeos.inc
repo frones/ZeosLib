@@ -117,7 +117,7 @@
 {$IFDEF VER220}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
-  {$DEFINE DELPHI15_UP} // Used in code (Formatsettings)
+  {$DEFINE DELPHI15_UP} // Used in zeos.inc only
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
 {$ENDIF}
@@ -129,7 +129,7 @@
 {$IFDEF VER230}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
-  {$DEFINE DELPHI15_UP} // Used in code (Formatsettings)
+  {$DEFINE DELPHI15_UP} // Used in zeos.inc only
   {$DEFINE DELPHI16_UP} // Used in code
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
@@ -142,6 +142,10 @@
   {$DEFINE WITH_STSTRINGUNICODE}        // ststring is unicodestring.
   {$DEFINE WITH_NEWTOBJECT}             // allows new methods in TObject (D2009+/FPC 2.4.4)
   {$DEFINE WITH_CHARINSET}              // D2009's poor substitute for character specific "xx in yy"
+{$ENDIF}
+
+{$IFDEF DELPHI15_UP}
+  {$DEFINE WITH_FORMATSETTINGS}
 {$ENDIF}
 
 {$IFDEF BDS4_UP}

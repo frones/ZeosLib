@@ -64,6 +64,7 @@
        {$DEFINE WITH_ASLARGEINT}      // tlargeint aslargeint. Fixed 2.6.0+ or 2.6.2+ probably
        {$DEFINE WITH_ASCURRENCY}      // Has AsCurrency.
        {$DEFINE WITH_ASVARIANT}
+       {$DEFINE WITH_FORMATSETTINGS}
       {$DEFINE FPC2_6UP}
     {$IFEND}
 
