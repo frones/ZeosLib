@@ -226,7 +226,6 @@ implementation
 
 {$IFDEF CHECK_CLIENT_CODE_PAGE}
 
-//http://stackoverflow.com/questions/1031645/how-to-detect-utf-8-in-plain-c
 {$IFDEF ZDetectUTF8Encoding}
 function DetectUTF8Encoding(Ansi: AnsiString): Boolean; //EgonHugeist: Detect a valid UTF8Sequence
 var
@@ -242,8 +241,7 @@ begin
   while PB < EndB do
   begin
     //US-ASCII
-    if ( PB^ = $09 ) or ( PB^ = $0A ) or ( PB^ = $0D ) or
-       ( PB^ >= $20 ) or ( PB^ <= $7F ) then
+    if ( PB^ <= $7E ) then
       Inc(PB)
     else
       Break;
@@ -255,8 +253,7 @@ begin
   while PB < EndB do
   begin
     //Check again for Ascii Char
-    if ( PB^ = $09 ) or ( PB^ = $0A ) or ( PB^ = $0D ) or
-       ( PB^ >= $20 ) or ( PB^ <= $7F ) then
+    if ( PB^ <= $7E ) then
       Inc(PB)
     else
     begin
@@ -328,10 +325,11 @@ begin
       end;
     end;
   end;
+
   if PB = EndB then
     Result := True
   else
-    Result := False;
+    Result := False; //Ansi
 end;
 {$ENDIF}
 

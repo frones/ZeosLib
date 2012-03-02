@@ -219,9 +219,10 @@ type
 
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
     //EgonHugeist
-    function GetAnsiEscapeStringFromString(const BinaryMarkSequence: String; const BinaryString: AnsiString): String; overload;
-    function GetAnsiEscapeStringFromStream(const BinaryMarkSequence: String; const Stream: TStream): String; overload;
-    function GetAnsiEscapeStringFromFile(const BinaryMarkSequence: String; const FileName: String): String; overload;
+    function GetBinaryEscapeStringFromString(const BinaryString: AnsiString): String; overload;
+    function GetBinaryEscapeStringFromStream(const Stream: TStream): String; overload;
+    function GetBinaryEscapeStringFromFile(const FileName: String): String; overload;
+    function GetAnsiEscapeString(const Ansi: AnsiString): String;
     {$ENDIF}
 
     property InTransaction: Boolean read GetInTransaction;
@@ -1253,27 +1254,23 @@ end;
   EgonHugeist: Returns a EscapeState detectable String to inform the Tokenizer
     to do no UTF8Encoding if neccessary
   @param BinaryString Represents the BinaryString wich has to prepered
-  @param BinaryMarkSequence represents an identifier string minimum length >= 3
   @Result: A Prepared String like '~<|1023|<~''Binary-data-string(1023 Bytes)''~<|1023|<~
 }
-function TZAbstractConnection.GetAnsiEscapeStringFromString(const
-  BinaryMarkSequence: String; const BinaryString: AnsiString): String;
+function TZAbstractConnection.GetBinaryEscapeStringFromString(const BinaryString: AnsiString): String;
 begin
   CheckConnected;
 
   if Assigned(FConnection) then
-    Result := FConnection.GetAnsiEscapeString(BinaryString, BinaryMarkSequence);
+    Result := FConnection.GetAnsiEscapeString(BinaryString);
 end;
 
 {**
   EgonHugeist: Returns a BinaryState detectable String to inform the Tokenizer
     to do no UTF8Encoding if neccessary
-  @param BinaryString Represents the BinaryString wich has to prepered
-  @param BinaryMarkSequence represents an identifier string minimum length >= 3
+  @param Strem Represents the Stream wich has to prepered
   @Result: A Prepared String like '~<|1023|<~''Binary-data-string(1023 Char's)''~<|1023|<~
 }
-function TZAbstractConnection.GetAnsiEscapeStringFromStream(
-  const BinaryMarkSequence: String; const Stream: TStream): String;
+function TZAbstractConnection.GetBinaryEscapeStringFromStream(const Stream: TStream): String;
 var
   FBlobSize: Integer;
   FBlobData: Pointer;
@@ -1306,19 +1303,17 @@ begin
       FreeMem(FBlobData);
     FBlobData := nil;
 
-    Result := FConnection.GetAnsiEscapeString(TempAnsi, BinaryMarkSequence);
+    Result := FConnection.GetAnsiEscapeString(TempAnsi);
   end;
 end;
 
 {**
   EgonHugeist: Returns a BinaryState detectable String to inform the Tokenizer
     to do no UTF8Encoding if neccessary
-  @param BinaryMarkSequence represents an identifier string minimum length >= 3
-  @param FileName represents the FileName which has to be readed
+  @param FileNaem Represents the File wich has to prepered
   @Result: A Prepared String like '~<|1023|<~''Binary-data-string(1023 Char's)''~<|1023|<~
 }
-function TZAbstractConnection.GetAnsiEscapeStringFromFile(
-  const BinaryMarkSequence: String; const FileName: String): String;
+function TZAbstractConnection.GetBinaryEscapeStringFromFile(const FileName: String): String;
 var
   FStream: TFileStream;
 begin
@@ -1327,11 +1322,23 @@ begin
   if FileExists(FileName) then
   begin
     FStream := TFileStream.Create(FileName, fmOpenRead);
-    Result := GetAnsiEscapeStringFromStream(BinaryMarkSequence, FStream);
+    Result := GetBinaryEscapeStringFromStream(FStream);
     FStream.Free;
     FStream := nil;
   end;
 end;
+
+{**
+  EgonHugeist: Returns a detectable String to inform the Tokenizer
+    to do no UTF8Encoding if neccessary
+  @param Ansi Represents the AnsiString wich has to prepered
+  @Result: A Prepared String like '~<|1023|<~''Binary-data-string(1023 Char's)''~<|1023|<~
+}
+function TZAbstractConnection.GetAnsiEscapeString(const Ansi: AnsiString): String;
+begin
+  Result := DbcConnection.GetDriver.GetTokenizer.GetEscapeString(String(Ansi));
+end;
+
 
 {**
   EgonHugeist: ClientCodePage-handling-options:
