@@ -46,25 +46,16 @@
 // These are in a spearate file as Delphi compilers don't digest the macros stuff very well
   {$MODE DELPHI}
   {$INTERFACES COM}
-  {$DEFINE VER140BELOW}
-
-  // We assume 2 levels is sufficient.
-  // The higher the third number in a version, the better... (we hope)
-  {$IFDEF  VER1_0}
-    {$FATAL Please use FPC 2.0 or later to compile this!}
-  {$ENDIF}
 
   {$IFDEF FPC_FULLVERSION}  // FPC_FULLVERSION was added in FPC 2.2.4
-    {$DEFINE FPC2_UP}       // for legacy's sake. Will be killed in time.
-    {$DEFINE FPC2_2UP}      // for legacy's sake. Will be killed in time.
 
     {$MACRO ON}             // Macros needed for FPC_VERSION and FPC_RELEASE
 
-    {$IF FPC_FULLVERSION>=20400}  // 2.4.0 status is unknown. 2.4.2+ should be generally fine.
-      {$DEFINE FPC2_4UP}
-    {$IFEND}
+//    {$IF FPC_FULLVERSION>=20400}  // 2.4.0 status is unknown. 2.4.2+ should be generally fine.
+//      {$DEFINE FPC2_4UP}
+//    {$IFEND}
     {$IF FPC_FULLVERSION>=20500}  // Upgrade to 2.6.x asap.
-      {$DEFINE FPC2_5UP}
+      {$DEFINE FPC2_5UP} // Used in code
       {$DEFINE WITH_NEWTOBJECT}
       {$DEFINE WITH_IPROVIDER}
     {$IFEND}
@@ -79,12 +70,11 @@
     {$DEFINE LAZARUSUTF8HACK} // Places that fixed for the Lazarus convention that all strings are UTF8  are marked with this
                               // ifdef. But probably most of them are adhoc hacks, and need revisiting in time.
   {$ELSE}
-    Versions Older than 2.4.2 are not supported
+    {$FATAL Versions Older than 2.2.4 are not supported!}
   {$ENDIF}
 
   {$DEFINE WITH_FUNIDIRECTIONAL} // FPC has references a field instead of a setter here.  (at least in 2.6.0)
-  // We assume 2 levels is sufficient.
-  // The higher the third number in a version, the better... (we hope)
+
   {$IF FPC_FULLVERSION>20600} // will be introduced in 2.6.2 (and up to date 2.6.1)
     {$DEFINE WITH_TRECORDBUFFER}
     {$DEFINE WITH_TBOOKMARK}              // Have TBookmark

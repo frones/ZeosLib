@@ -61,116 +61,65 @@
 // Compilation directives for Delphi4
 // Not supported since Zeoslib 7.X
 {$IFDEF VER120}
-{$DEFINE VER140BELOW}
+{$DEFINE VER140BELOW} // Used in zeos.inc only
 {$ENDIF}
 
 // Compilation directives for Delphi 5
 // Not supported since Zeoslib 7.X
 {$IFDEF VER130}
-{$DEFINE VER140BELOW}
+{$DEFINE VER140BELOW} // Used in zeos.inc only
 {$ENDIF}
 
 // Compilation directives for Delphi 6
 // Not supported since Zeoslib 7.X
 {$IFDEF VER140}
-  {$DEFINE VER140BELOW}
-  {$DEFINE VER150BELOW}
-  {$DEFINE VER160BELOW}
-  {$DEFINE VER170BELOW}
-  {$DEFINE VER180BELOW}
+  {$DEFINE VER140BELOW} // Used in zeos.inc only
+  {$DEFINE VER150BELOW} // Used in zeos.inc only
 {$ENDIF}
 
 // Compilation directives for Delphi 7
 {$IFDEF VER150}
-  {$DEFINE VER150BELOW}
-  {$DEFINE VER160BELOW}
-  {$DEFINE VER170BELOW}
-  {$DEFINE VER180BELOW}
+  {$DEFINE VER150BELOW} // Used in zeos.inc only
 {$ENDIF}
 
 // Compilation directives for Delphi 8
 {$IFDEF VER160}
-  {$DEFINE VER160BELOW}
-  {$DEFINE VER170BELOW}
-  {$DEFINE VER180BELOW}
+// No directives needed
 {$ENDIF}
 
 // Compilation directives for Delphi 9 (DELPHI 2005)
 {$IFDEF VER170}
-  {$DEFINE VER170BELOW}
-  {$DEFINE VER180BELOW}
-  {$DEFINE BDS}
-  {$DEFINE BDS3}
-  {$DEFINE BDS3_UP}
-  {$DEFINE COMPILER9}
-  {$DEFINE COMPILER9_UP}
-  {$DEFINE DELPHI9}
-  {$DEFINE DELPHI9_UP}
+// No directives needed
 {$ENDIF}
 
 // Compilation directives for BDS 2006 (Delphi 2006, BCB 2006)
 {$IFDEF VER180}
-  {$DEFINE VER180BELOW}
-  {$DEFINE BDS}
-  {$DEFINE BDS4}
-  {$DEFINE BDS4_UP}
-  {$DEFINE COMPILER10}
-  {$DEFINE COMPILER10_UP}
-  {$IFDEF BCB}
-    {$DEFINE BCB10}
-    {$DEFINE BCB9_UP}
-    {$DEFINE BCB10_UP}
-  {$ELSE}
-    {$DEFINE DELPHI10}
-    {$DEFINE DELPHI9_UP}
-    {$DEFINE DELPHI10_UP}
-  {$ENDIF}
+  {$DEFINE BDS4_UP} // Used in code
 {$ENDIF}
 
 // Compilation directives for Delphi 2009
 {$IFDEF VER200}
-  {$DEFINE VER200BELOW}
-  {$DEFINE DELPHI12}
-  {$DEFINE DELPHI9_UP}
-  {$DEFINE DELPHI10_UP}
-  {$DEFINE DELPHI12_UP}
-  {$DEFINE BDS}
-  {$DEFINE BDS5}
-  {$DEFINE BDS4_UP}
-  {$DEFINE BDS5_UP}
+  {$DEFINE VER200BELOW} // Used in code
+  {$DEFINE DELPHI12_UP} // Used in code
+  {$DEFINE BDS4_UP} // Used in code
+  {$DEFINE BDS5_UP} // Used in code
 {$ENDIF}
 
 // Compilation directives for Delphi 2010
 {$IFDEF VER210}
-  {$DEFINE VER200BELOW}
-  {$DEFINE DELPHI14}
-  {$DEFINE DELPHI9_UP}
-  {$DEFINE DELPHI10_UP}
-  {$DEFINE DELPHI12_UP}
-  {$DEFINE DELPHI14_UP}
-  {$DEFINE BDS}
-  {$DEFINE BDS7}
-  {$DEFINE BDS4_UP}
-  {$DEFINE BDS5_UP}
-  {$DEFINE BDS7_UP}
+  {$DEFINE VER200BELOW} // Used in code
+  {$DEFINE DELPHI12_UP} // Used in code
+  {$DEFINE BDS4_UP} // Used in code
+  {$DEFINE BDS5_UP} // Used in code
 {$ENDIF}
 
 // Compilation directives for Delphi XE
 {$IFDEF VER220}
-  {$DEFINE VER200BELOW}
-  {$DEFINE DELPHI14}
-  {$DEFINE DELPHI9_UP}
-  {$DEFINE DELPHI10_UP}
-  {$DEFINE DELPHI12_UP}
-  {$DEFINE DELPHI14_UP}
-  {$DEFINE DELPHI15_UP}
-  {$DEFINE BDS}
-  {$DEFINE BDS7}
-  {$DEFINE BDS8}  // EDS8 ?
-  {$DEFINE BDS4_UP}
-  {$DEFINE BDS5_UP}
-  {$DEFINE BDS7_UP}
-  {$DEFINE BDS8_UP}
+  {$DEFINE VER200BELOW} // Used in code
+  {$DEFINE DELPHI12_UP} // Used in code
+  {$DEFINE DELPHI15_UP} // Used in code (Formatsettings)
+  {$DEFINE BDS4_UP} // Used in code
+  {$DEFINE BDS5_UP} // Used in code
 {$ENDIF}
 {$IFDEF LINUX}
   {$DEFINE UNIX}
@@ -178,21 +127,12 @@
 
 // Compilation directives for Delphi XE2
 {$IFDEF VER230}
-  {$DEFINE VER200BELOW}
-  {$DEFINE DELPHI14}
-  {$DEFINE DELPHI9_UP}
-  {$DEFINE DELPHI10_UP}
-  {$DEFINE DELPHI12_UP}
-  {$DEFINE DELPHI14_UP}
-  {$DEFINE DELPHI15_UP}
-  {$DEFINE DELPHI16_UP}
-  {$DEFINE BDS}
-  {$DEFINE BDS7}
-  {$DEFINE BDS8}  // EDS8 ?
-  {$DEFINE BDS4_UP}
-  {$DEFINE BDS5_UP}
-  {$DEFINE BDS7_UP}
-  {$DEFINE BDS8_UP}
+  {$DEFINE VER200BELOW} // Used in code
+  {$DEFINE DELPHI12_UP} // Used in code
+  {$DEFINE DELPHI15_UP} // Used in code (Formatsettings)
+  {$DEFINE DELPHI16_UP} // Used in code
+  {$DEFINE BDS4_UP} // Used in code
+  {$DEFINE BDS5_UP} // Used in code
 {$ENDIF}
 // END of per Delphi version defines
 
@@ -232,10 +172,6 @@
       {$ELSE}
         "Delphi versions below Delphi 7 aren't supported anymore"
       {$ENDIF}
-    {$ENDIF}
-  {$ELSE}
-    {$IFNDEF FPC2_UP}
-    "FPC versions below FPC 2.0 aren't supported anymore"
     {$ENDIF}
   {$ENDIF}
 {$ENDIF}
