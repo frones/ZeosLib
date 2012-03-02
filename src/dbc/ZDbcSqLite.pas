@@ -392,18 +392,7 @@ begin
 
   LogMessage := Format('CONNECT TO "%s" AS USER "%s"', [Database, User]);
 
-  (*Note to Windows users: The encoding used for the filename argument of
-    sqlite3_open() and sqlite3_open_v2() must be UTF-8, not whatever codepage
-    is currently defined. Filenames containing international characters must
-    be converted to UTF-8 prior to passing them into sqlite3_open() or
-    sqlite3_open_v2(). or
-  int sqlite3_open16(
-  const void *filename,   /* Database filename (UTF-16) */
-  sqlite3 **ppDb          /* OUT: SQLite db handle */
-  *)
-
-//{$IFDEF DELPHI12_UP} //so this is not a delphi-problem here
-{$IFDEF MSWINDOWS}
+{$IFDEF DELPHI12_UP}
   FHandle := FPlainDriver.Open(PAnsiChar(AnsiString(UTF8Encode(Database))), 0, ErrorMessage);
 {$ELSE}
   FHandle := FPlainDriver.Open(PAnsiChar(Database), 0, ErrorMessage);
