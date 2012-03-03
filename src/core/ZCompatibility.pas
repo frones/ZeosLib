@@ -61,8 +61,9 @@ uses
   Variants,
 {$IFDEF UNIX}
   {$IFDEF FPC}
-    dl,
-  {$ELSE}
+    dynlibs,
+  {$endif}
+   {$ifdef kylix}
     libc,
   {$ENDIF}
 {$ENDIF}
@@ -75,14 +76,9 @@ uses
   Classes, SysUtils;
 
 type
-
 {$IFDEF FPC}
-  TVariantDynArray      = array of Variant;
-  {$IFDEF CPU64}
-  ULong                 = QWord;
-  {$ELSE}
-  ULong                 = LongWord;
-  {$ENDIF}
+//  TVariantDynArray      = array of Variant; // used nowhere, doesn't exist in Delphi?
+  ULong                 = PTRUINT;
   ULongLong             = QWord;
 {$ELSE}
   ULong                 = LongWord;
@@ -211,11 +207,10 @@ function DetectUTF8Encoding(Ansi: AnsiString): Boolean;
 
 {$ENDIF}
 
-{$IF not Declared(CharInSet)}
-{$DEFINE ZCharInSet}
+{$IFNDEF WITH_CHARINSET}
 function CharInSet(C: AnsiChar; const CharSet: TSysCharSet): Boolean; overload;
 function CharInSet(C: WideChar; const CharSet: TSysCharSet): Boolean; overload;
-{$IFEND}
+{$ENDIF}
 
 {$IF not Declared(UTF8ToString)}
 {$DEFINE ZUTF8ToString}
@@ -226,7 +221,6 @@ implementation
 
 {$IFDEF CHECK_CLIENT_CODE_PAGE}
 
-//http://stackoverflow.com/questions/1031645/how-to-detect-utf-8-in-plain-c
 {$IFDEF ZDetectUTF8Encoding}
 function DetectUTF8Encoding(Ansi: AnsiString): Boolean; //EgonHugeist: Detect a valid UTF8Sequence
 var
@@ -256,7 +250,7 @@ begin
   begin
     //Check again for Ascii Char
     if ( PB^ = $09 ) or ( PB^ = $0A ) or ( PB^ = $0D ) or
-       ( PB^ >= $20 ) or ( PB^ <= $7E ) then
+       (( PB^ >= $20 ) or ( PB^ <= $7E )) then
       Inc(PB)
     else
     begin
@@ -791,7 +785,7 @@ begin
 end;
 {$ENDIF}
 
-{$IFDEF ZCharInSet}
+{$IFNDEF WITH_CHARINSET}
 function CharInSet(C: AnsiChar; const CharSet: TSysCharSet): Boolean;
 begin
   result := C in Charset;
@@ -801,7 +795,6 @@ function CharInSet(C: WideChar; const CharSet: TSysCharSet): Boolean;
 begin
   result := Char(C) in Charset;
 end;
-{$UNDEF ZCharInSet}
 {$ENDIF}
 
 {$IFDEF  ZUTF8ToString}

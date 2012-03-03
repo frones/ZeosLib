@@ -59,8 +59,7 @@ interface
 
 uses
   Types, Classes, SysUtils, Db, ZSysUtils, ZDbcIntfs, ZDbcCache,
-  Contnrs, ZCompatibility, ZExpression, ZVariant, ZTokenizer
-  {$IFDEF DELPHI12_UP},AnsiStrings{$ENDIF};
+  Contnrs, ZCompatibility, ZExpression, ZVariant, ZTokenizer;
 
 {**
   Converts DBC Field Type to TDataset Field Type.
@@ -299,7 +298,7 @@ begin
     stFloat, stDouble, stBigDecimal:
       Result := ftFloat;
     stString:
-      Result := {$IFDEF DELPHI12_UP}ftWideString{$ELSE}ftString{$ENDIF}; 
+      Result := {$IFDEF WITH_STSTRINGUNICODE}ftWideString{$ELSE}ftString{$ENDIF};
     stBytes:
       Result := ftBytes;
     stDate:
@@ -315,7 +314,7 @@ begin
     stUnicodeString:
       Result := ftWideString;
     stUnicodeStream:
-      Result := {$IFDEF VER150BELOW}ftWideString{$ELSE}ftWideMemo{$ENDIF};
+      Result := {$IFNDEF WITH_WIDEMEMO}ftWideString{$ELSE}ftWideMemo{$ENDIF};
     else
       Result := ftUnknown;
   end;
@@ -357,7 +356,7 @@ begin
       Result := stBinaryStream;
     ftWideString:
       Result := stUnicodeString;
-    {$IFNDEF VER150BELOW}
+    {$IFDEF WITH_WIDEMEMO}
     ftWideMemo:
       Result := stUnicodeStream;
     {$ENDIF}
@@ -454,7 +453,7 @@ begin
         RowAccessor.SetTime(FieldIndex, ResultSet.GetTime(ColumnIndex));
       ftDateTime:
         RowAccessor.SetTimestamp(FieldIndex, ResultSet.GetTimestamp(ColumnIndex));
-      ftMemo, ftBlob {$IFNDEF VER150BELOW}, ftWideMemo{$ENDIF}:
+      ftMemo, ftBlob {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}:
         RowAccessor.SetBlob(FieldIndex, ResultSet.GetBlob(ColumnIndex));
     end;
 
@@ -536,7 +535,7 @@ begin
             Stream.Free;
           end;
         end;
-      {$IFNDEF VER150BELOW}
+      {$IFDEF WITH_WIDEMEMO}
       ftWideMemo:
         begin
           Stream := RowAccessor.GetUnicodeStream(FieldIndex, WasNull);
@@ -593,8 +592,8 @@ begin
   try
     for I := 0 to Tokens.Count - 1 do
     begin
-      TokenType := TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
-        Tokens.Objects[I]{$IFDEF FPC}){$ENDIF});
+      TokenType := TZTokenType({$IFDEF oldFPC}Pointer({$ENDIF}
+        Tokens.Objects[I]{$IFDEF oldFPC}){$ENDIF});
       TokenValue := Tokens[I];
       Field := nil;
 
@@ -910,7 +909,8 @@ begin
           DecodedKeyValues[I], vtString);
         if CaseInsensitive then
         begin
-          {$IFDEF FPC} 
+          {$IFDEF LAZARUSUTF8HACK} // Is this correct? Assumes the Lazarus convention all strings are UTF8. But is that
+                       // true in this point, or should that be converted higher up?
           DecodedKeyValues[I].VString := 
             WideUpperCase(UTF8Decode (DecodedKeyValues[I].VString)); 
           {$ELSE} 
@@ -961,9 +961,11 @@ begin
           begin
             DecodedKeyValues[I] := SoftVarManager.Convert( 
               DecodedKeyValues[I], vtString); 
-            {$IFDEF FPC} 
-            DecodedKeyValues[I].VString := 
-              WideUpperCase(UTF8Decode (DecodedKeyValues[I].VString)); 
+            {$IFDEF LAZARUSUTF8HACK}
+                    // Is this correct? Assumes the Lazarus convention all strings are UTF8. But is that
+                    // true in this point, or should that be converted higher up?
+            DecodedKeyValues[I].VString :=
+              WideUpperCase(UTF8Decode (DecodedKeyValues[I].VString));
             {$ELSE} 
             DecodedKeyValues[I].VString := 
               AnsiUpperCase(DecodedKeyValues[I].VString); 
@@ -1026,8 +1028,8 @@ begin
       end;
 
       if CaseInsensitive then
-        {$IFDEF FPC} 
-        Value2 := AnsiUpperCase(Utf8ToAnsi(Value2)); 
+        {$IFDEF LAZARUSUTF8HACK}
+        Value2 := AnsiUpperCase(Utf8ToAnsi(Value2));
         {$ELSE} 
         Value2 := AnsiUpperCase(Value2); 
         {$ENDIF} 
@@ -1079,7 +1081,7 @@ begin
         else
           if CaseInsensitive then
           begin
-            {$IFDEF FPC} 
+            {$IFDEF LAZARUSUTF8HACK}
             Result := KeyValues[I].VString = 
               AnsiUpperCase (Utf8ToAnsi(ResultSet.GetString(ColumnIndex))); 
             {$ELSE} 
@@ -1115,7 +1117,7 @@ begin
   for I := 0 to Fields.Count - 1 do
   begin
     if (Fields[I].FieldKind = fkData)
-      and not (Fields[I].DataType in [ftBlob, ftMemo, ftBytes {$IFNDEF VER150BELOW}, ftWideMemo{$ENDIF}]) then
+      and not (Fields[I].DataType in [ftBlob, ftMemo, ftBytes {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}]) then
     begin
       if Result <> '' then
         Result := Result + ',';
@@ -1154,7 +1156,7 @@ end;
   @return a data which contains a value.
 }
 function NativeToDateTime(DataType: TFieldType; Buffer: Pointer): TDateTime;
-{$IFNDEF FPC}
+{$IFNDEF OLDFPC}
 var
   TimeStamp: TTimeStamp;
 begin
@@ -1217,7 +1219,7 @@ begin
       ftCurrency:
         begin 
           Result := Abs(ResultSet.GetBigDecimal(Field1.FieldNo) 
-            - Field2.{$IFNDEF FPC}AsCurrency{$ELSE}AsFloat{$ENDIF})
+            - Field2.{$IFDEF WITH_ASCURRENCY}AsCurrency{$ELSE}AsFloat{$ENDIF})
             < FLOAT_COMPARE_PRECISION;
         end;
       ftDate:
@@ -1228,7 +1230,7 @@ begin
         Result := ResultSet.GetTimestamp(Field1.FieldNo) = Field2.AsDateTime;
       ftWideString:
         Result := ResultSet.GetUnicodeString(Field1.FieldNo) =
-          Field2.{$IFNDEF FPC}AsVariant{$ELSE}AsString{$ENDIF};
+          Field2.{$IFDEF WITH_ASVARIANT}AsVariant{$ELSE}AsString{$ENDIF};
       else
         Result := ResultSet.GetString(Field1.FieldNo) = Field2.AsString;
     end;
@@ -1265,8 +1267,8 @@ begin
   try
     for I := 0 to Tokens.Count - 1 do
     begin
-      TokenType := TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
-        Tokens.Objects[I]{$IFDEF FPC}){$ENDIF});
+      TokenType := TZTokenType({$IFDEF OLDFPC}Pointer({$ENDIF}
+        Tokens.Objects[I]{$IFDEF OLDFPC}){$ENDIF});
       TokenValue := Tokens[I];
       Field := nil;
 
@@ -1370,7 +1372,7 @@ end;
 procedure SplitQualifiedObjectName(QualifiedName: string;
   var Catalog, Schema, ObjectName: string);
 
-{$IFDEF FPC}
+{$IFDEF OLDFPC}
 function ExtractStrings(Separators, WhiteSpace: TSysCharSet; Content: PChar;
   Strings: TStrings): Integer;
 var

@@ -58,16 +58,14 @@ interface
 {$I ZComponent.inc}
 
 uses
-{$IFNDEF FPC}
   Types,
   Variants,
-{$ENDIF}
   SysUtils, DB, Classes, ZSqlUpdate, ZDbcIntfs, ZVariant,
   ZDbcCache, ZDbcCachedResultSet, ZAbstractRODataset,
   ZCompatibility, ZSequence;
 
 type
-  {$IFDEF FPC}
+  {$IFDEF oldFPC} // added in 2006, probably pre 2.2.4
   TUpdateAction = (uaFail, uaAbort, uaSkip, uaRetry, uaApplied);
   {$ENDIF}
 
@@ -445,7 +443,7 @@ end;
 procedure TZAbstractDataset.InternalPost;
 var
   RowBuffer: PZRowBuffer;
-  {$IFDEF DELPHI12_UP}
+  {$IFDEF WITH_TBOOKMARK}
   BM: TBookMark;
   {$ELSE}
   BM:TBookMarkStr;
@@ -787,9 +785,9 @@ var
             else
               DestField.AsInteger := SrcField.AsInteger;
           end;
-        ftBlob, ftMemo {$IFNDEF VER150BELOW}, ftWideMemo{$ENDIF}:
+        ftBlob, ftMemo {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}:
           begin
-            if SrcField.DataType in [ftBlob, ftMemo {$IFNDEF VER150BELOW}, ftWideMemo{$ENDIF}] then
+            if SrcField.DataType in [ftBlob, ftMemo {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}] then
             begin
               SrcStream := SrcDataset.CreateBlobStream(SrcField, bmRead);
               try

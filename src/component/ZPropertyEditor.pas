@@ -222,7 +222,7 @@ uses SysUtils, Forms, Dialogs, Controls, DB, TypInfo,
 {$ENDIF}
 {$IFDEF SHOW_WARNING} 
 ,ZMessages 
-{$ENDIF SHOW_WARNING}
+{$ENDIF SHOW_WARNING} 
 ;
 
 {$IFDEF FPC}

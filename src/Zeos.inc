@@ -42,143 +42,84 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-// Compilation directives for Lazarus 
-{$IFDEF FPC} 
+// Compilation directives for Lazarus
+{$IFDEF FPC}
 {$I ZeosLazarus.inc}
-{$ENDIF} 
+{$ELSE}
+ {$DEFINE DELPHI}
+  // Defines that go for ALL still supported Delphi's   (usually means they were under ifndef fpc)
+ {$DEFINE WITH_DBCONSTS}        // Delphi DBCONSTS, FPC DBCONST
+ {$DEFINE WITH_ASLARGEINT}      // tlargeint aslargeint. Fixed 2.6.0+ or 2.6.2+ probably
+ {$DEFINE WITH_ASCURRENCY}      // Has AsCurrency.
+ {$DEFINE WITH_ASVARIANT}
+ {$DEFINE WITH_IPROVIDER}       // Turn on IProviderSupport interface
+ {$DEFINE WITH_CHECKFIELDCOMPATIBILITY}
+ {$DEFINE WITH_WIDEMEMO}        // Have WIDEMEMO,  For Delphi we turn these off if not applicable
+ {$DEFINE WITH_FTWIDESTRING}    // Have ftwidestring, For Delphi we turn these off if not applicable
+{$ENDIF}
 
 // Compilation directives for Delphi4
 // Not supported since Zeoslib 7.X
 {$IFDEF VER120}
-{$DEFINE VER140BELOW}
+{$DEFINE VER140BELOW} // Used in zeos.inc only
 {$ENDIF}
 
 // Compilation directives for Delphi 5
 // Not supported since Zeoslib 7.X
 {$IFDEF VER130}
-{$DEFINE VER140BELOW}
+{$DEFINE VER140BELOW} // Used in zeos.inc only
 {$ENDIF}
 
 // Compilation directives for Delphi 6
 // Not supported since Zeoslib 7.X
 {$IFDEF VER140}
-  {$DEFINE VER140BELOW}
-  {$DEFINE VER150BELOW}
-  {$DEFINE VER160BELOW}
-  {$DEFINE VER170BELOW}
-  {$DEFINE VER180BELOW}
+  {$DEFINE VER140BELOW} // Used in zeos.inc only
+  {$DEFINE VER150BELOW} // Used in zeos.inc only
 {$ENDIF}
 
 // Compilation directives for Delphi 7
 {$IFDEF VER150}
-  {$DEFINE VER150BELOW}
-  {$DEFINE VER160BELOW}
-  {$DEFINE VER170BELOW}
-  {$DEFINE VER180BELOW}
+  {$DEFINE VER150BELOW} // Used in zeos.inc only
 {$ENDIF}
 
 // Compilation directives for Delphi 8
 {$IFDEF VER160}
-  {$DEFINE VER160BELOW}
-  {$DEFINE VER170BELOW}
-  {$DEFINE VER180BELOW}
+// No directives needed
 {$ENDIF}
 
 // Compilation directives for Delphi 9 (DELPHI 2005)
 {$IFDEF VER170}
-  {$DEFINE VER170BELOW}
-  {$DEFINE VER180BELOW}
-  {$DEFINE BDS}
-  {$DEFINE BDS3}
-  {$DEFINE BDS3_UP}
-  {$DEFINE COMPILER9}
-  {$DEFINE COMPILER9_UP}
-  {$DEFINE DELPHI9}
-  {$DEFINE DELPHI9_UP}
+// No directives needed
 {$ENDIF}
 
 // Compilation directives for BDS 2006 (Delphi 2006, BCB 2006)
 {$IFDEF VER180}
-  {$DEFINE VER180BELOW}
-  {$DEFINE BDS}
-  {$DEFINE BDS4}
-  {$DEFINE BDS4_UP}
-  {$DEFINE COMPILER10}
-  {$DEFINE COMPILER10_UP}
-  {$IFDEF BCB}
-    {$DEFINE BCB10}
-    {$DEFINE BCB9_UP}
-    {$DEFINE BCB10_UP}
-  {$ELSE}
-    {$DEFINE DELPHI10}
-    {$DEFINE DELPHI9_UP}
-    {$DEFINE DELPHI10_UP}
-  {$ENDIF}
-{$ENDIF}
-
-// Compilation directives for BDS 2007 (Delphi 2007, BCB 2007)
-{$IFDEF VER185}
-  {$DEFINE VER185BELOW}
-  {$DEFINE BDS}
-  {$DEFINE BDS4}
-  {$DEFINE BDS4_UP}
-  {$DEFINE COMPILER10}
-  {$DEFINE COMPILER10_UP}
-  {$IFDEF BCB}
-    {$DEFINE BCB10}
-    {$DEFINE BCB9_UP}
-    {$DEFINE BCB10_UP}
-  {$ELSE}
-    {$DEFINE DELPHI10}
-    {$DEFINE DELPHI9_UP}
-    {$DEFINE DELPHI10_UP}
-  {$ENDIF}
+  {$DEFINE BDS4_UP} // Used in code
 {$ENDIF}
 
 // Compilation directives for Delphi 2009
 {$IFDEF VER200}
-  {$DEFINE VER200BELOW}
-  {$DEFINE DELPHI12}
-  {$DEFINE DELPHI9_UP}
-  {$DEFINE DELPHI10_UP}
-  {$DEFINE DELPHI12_UP}
-  {$DEFINE BDS}
-  {$DEFINE BDS5}
-  {$DEFINE BDS4_UP}
-  {$DEFINE BDS5_UP}
+  {$DEFINE VER200BELOW} // Used in code
+  {$DEFINE DELPHI12_UP} // Used in code
+  {$DEFINE BDS4_UP} // Used in code
+  {$DEFINE BDS5_UP} // Used in code
 {$ENDIF}
 
 // Compilation directives for Delphi 2010
 {$IFDEF VER210}
-  {$DEFINE VER200BELOW}
-  {$DEFINE DELPHI14}
-  {$DEFINE DELPHI9_UP}
-  {$DEFINE DELPHI10_UP}
-  {$DEFINE DELPHI12_UP}
-  {$DEFINE DELPHI14_UP}
-  {$DEFINE BDS}
-  {$DEFINE BDS7}
-  {$DEFINE BDS4_UP}
-  {$DEFINE BDS5_UP}
-  {$DEFINE BDS7_UP}
+  {$DEFINE VER200BELOW} // Used in code
+  {$DEFINE DELPHI12_UP} // Used in code
+  {$DEFINE BDS4_UP} // Used in code
+  {$DEFINE BDS5_UP} // Used in code
 {$ENDIF}
 
 // Compilation directives for Delphi XE
 {$IFDEF VER220}
-  {$DEFINE VER200BELOW}
-  {$DEFINE DELPHI14}
-  {$DEFINE DELPHI9_UP}
-  {$DEFINE DELPHI10_UP}
-  {$DEFINE DELPHI12_UP}
-  {$DEFINE DELPHI14_UP}
-  {$DEFINE DELPHI15_UP}
-  {$DEFINE BDS}
-  {$DEFINE BDS7}
-  {$DEFINE BDS8}  // EDS8 ?
-  {$DEFINE BDS4_UP}
-  {$DEFINE BDS5_UP}
-  {$DEFINE BDS7_UP}
-  {$DEFINE BDS8_UP}
+  {$DEFINE VER200BELOW} // Used in code
+  {$DEFINE DELPHI12_UP} // Used in code
+  {$DEFINE DELPHI15_UP} // Used in zeos.inc only
+  {$DEFINE BDS4_UP} // Used in code
+  {$DEFINE BDS5_UP} // Used in code
 {$ENDIF}
 {$IFDEF LINUX}
   {$DEFINE UNIX}
@@ -186,27 +127,44 @@
 
 // Compilation directives for Delphi XE2
 {$IFDEF VER230}
-  {$DEFINE VER200BELOW}
-  {$DEFINE DELPHI14}
-  {$DEFINE DELPHI9_UP}
-  {$DEFINE DELPHI10_UP}
-  {$DEFINE DELPHI12_UP}
-  {$DEFINE DELPHI14_UP}
-  {$DEFINE DELPHI15_UP}
-  {$DEFINE DELPHI16_UP}
-  {$DEFINE BDS}
-  {$DEFINE BDS7}
-  {$DEFINE BDS8}  // EDS8 ?
-  {$DEFINE BDS4_UP}
-  {$DEFINE BDS5_UP}
-  {$DEFINE BDS7_UP}
-  {$DEFINE BDS8_UP}
+  {$DEFINE VER200BELOW} // Used in code
+  {$DEFINE DELPHI12_UP} // Used in code
+  {$DEFINE DELPHI15_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI16_UP} // Used in code
+  {$DEFINE BDS4_UP} // Used in code
+  {$DEFINE BDS5_UP} // Used in code
+{$ENDIF}
+// END of per Delphi version defines
+
+{$IFDEF DELPHI12_UP}
+  {$DEFINE WITH_TBOOKMARK}              // Have TBookmark
+  {$DEFINE WITH_TRECORDBUFFER}          // Abstract buffer type (pansichar or pbyte)
+  {$DEFINE WITH_STSTRINGUNICODE}        // ststring is unicodestring.
+  {$DEFINE WITH_NEWTOBJECT}             // allows new methods in TObject (D2009+/FPC 2.4.4)
+  {$DEFINE WITH_CHARINSET}              // D2009's poor substitute for character specific "xx in yy"
+{$ENDIF}
+
+{$IFDEF DELPHI15_UP}
+  {$DEFINE WITH_FORMATSETTINGS}
+{$ENDIF}
+
+{$IFDEF BDS4_UP}
+  {$DEFINE WIDE_DATASET}                // TWidedataset exists
+  {$DEFINE WITH_PWIDECHAR_TOWIDESTRING} // Able to pass pwidechar to a widestring parameter
+  {$DEFINE WITH_IPROVIDERWIDE}          // IProvider -W widestring using interface
+  {$DEFINE WITH_WIDESTRUTILS}           // WideStrUtils Unit.
+{$ENDIF}
+
+{$IFDEF VER150BELOW}
+     {$UNDEF WITH_WIDEMEMO}
+     {$UNDEF WITH_FTWIDESTRING}
 {$ENDIF}
 
 {$IFDEF VER140BELOW}
   {$IFNDEF FPC}
     {$IFNDEF WIN32}
       {$if Declared(RTLVersion) and (RTLVersion = 14.5)}  //Kylix 3
+         {$DEFINE KYLIX}
       {$ELSE}
           "Kylix versions below Kylix3 aren't supported anymore"
       {$ifend}
@@ -218,10 +176,6 @@
       {$ELSE}
         "Delphi versions below Delphi 7 aren't supported anymore"
       {$ENDIF}
-    {$ENDIF}
-  {$ELSE}
-    {$IFNDEF FPC2_UP}
-    "FPC versions below FPC 2.0 aren't supported anymore"
     {$ENDIF}
   {$ENDIF}
 {$ENDIF}
@@ -351,10 +305,6 @@
 // Registers property editors for the components.
 {$DEFINE WITH_PROPERTY_EDITOR}
 
-// Turn on IProviderSupport interface
-{$IFNDEF FPC}
-{$DEFINE WITH_IPROVIDER}
-{$ENDIF}
 
 // Turn on multithreading
 {$DEFINE MULTI_THREADED}

@@ -455,6 +455,7 @@ begin
   try
     if Assigned(Properties) then
       Temp.AddStrings(Properties);
+
     Result := FConnection.DbcConnection.PrepareStatementWithParams(SQL, Temp);
   finally
     Temp.Free;
@@ -518,7 +519,7 @@ begin
                 Stream.Free;
               end;
             end;
-          {$IFNDEF VER150BELOW}
+          {$IFDEF WITH_WIDEMEMO}
           ftWideMemo:
             begin
               Stream := WideStringStream(Param.AsWideString);

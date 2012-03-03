@@ -59,7 +59,7 @@ interface
 
 uses
 
-{$IFDEF WIN32}
+{$IFDEF MSWINDOWS}
   Windows, Messages,
 {$ENDIF}
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ExtCtrls,
