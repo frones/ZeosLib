@@ -358,6 +358,8 @@ var
   end;
 
 begin
+  if not (Assigned(FParams) and Assigned(FStatements)) then exit; //Alexs
+
   FParams.Clear;
   FStatements.Clear;
   SQL := '';

@@ -51,12 +51,11 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-{$I ZComponent.inc}
-
 unit ZAbstractRODataset;
 
 interface
-{I ZComponent.inc}
+
+{$I ZComponent.inc}
 
 uses
 {$IFNDEF UNIX}

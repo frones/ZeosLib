@@ -1,7 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-  {         Interbase Database Connectivity Classes         }
+{         Interbase Database Connectivity Classes         }
 {                                                         }
 {    Copyright (c) 1999-2003 Zeos Development Group       }
 {            Written by Sergey Merkuriev                  }

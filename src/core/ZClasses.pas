@@ -193,7 +193,7 @@ type
     property Count: Integer read GetCount;
   end;
 
-{$IFDEF DELPHI12_UP} // to suppress what?
+{$IFDEF DELPHI12_UP} // to suppress the overload warning of the Equals overload, Marco.
   {$WARNINGS OFF}
 {$ENDIF}
   {** Implements an abstract interfaced object. }
