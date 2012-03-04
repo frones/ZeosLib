@@ -200,7 +200,7 @@ type
   TZAbstractObject = class(TInterfacedObject, IZObject)
   public
     function Equals(const Value: IZInterface): Boolean; {$IFDEF WITH_NEWTOBJECT}overload;{$ENDIF} virtual;
-    {.$IFNDEF WITH_NEWTOBJECT}function GetHashCode: LongInt;{.$ENDIF}
+    {$IFNDEF WITH_NEWTOBJECT}function GetHashCode: LongInt;{$ENDIF}
     function Clone: IZInterface; virtual;
     function ToString: string;{$IFDEF WITH_NEWTOBJECT}override{$ELSE} virtual{$ENDIF} ;
     function InstanceOf(const IId: TGUID): Boolean;
