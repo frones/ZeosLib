@@ -686,9 +686,8 @@ begin
       Stream := nil;
       try
         if GetMetadata.GetColumnType(ColumnIndex) = stBinaryStream then
-        {$IFDEF CHECK_CLIENT_CODE_PAGE}
         begin
-          {Mantis-BugTracker #0000247 / }
+          {EgonHugeist: Mantis-BugTracker #0000247 / }
           if (Statement.GetConnection as IZPostgreSQLConnection).GetServerMajorVersion >= 9 then
           begin
             Decoded := FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)); //gives a hex-string with a starting 'x' back
@@ -699,11 +698,11 @@ begin
             Stream := TStringStream.Create(TempAnsi); //write proper binary-stream
           end
           else
-            Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)));
+            if (Statement.GetConnection as IZPostgreSQLConnection).GetServerMajorVersion >= 8 then
+              Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)))
+            else
+              Stream := TStringStream.Create(DecodeString(GetString(ColumnIndex))); //Egonhugeist: not sure about DecodeBinaryString...
         end
-        {$ELSE}
-          Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)))
-        {$ENDIF}
         else
           {$IFNDEF CHECK_CLIENT_CODE_PAGE}
           begin

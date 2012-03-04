@@ -682,7 +682,7 @@ end;
 function TZSQLiteConnection.GetAnsiEscapeString(const Value: AnsiString;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
-  Result := Driver.GetTokenizer.AnsiGetEscapeString('''' + ZDbcSqLiteUtils.EncodeString(Value) + '''', EscapeMarkSequence);
+  Result := Driver.GetTokenizer.AnsiGetEscapeString(ZDbcSqLiteUtils.EncodeString(Value), EscapeMarkSequence);
 end;
 
 function TZSQLiteConnection.GetEscapeString(const Value: String;

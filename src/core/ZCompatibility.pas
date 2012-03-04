@@ -73,6 +73,9 @@ uses
   {$IFDEF MSWINDOWS}
   Windows,
   {$ENDIF}
+  {$IFDEF FPC}
+    Types,
+  {$endif}
   Classes, SysUtils;
 
 type
@@ -224,106 +227,118 @@ implementation
 {$IFDEF ZDetectUTF8Encoding}
 function DetectUTF8Encoding(Ansi: AnsiString): Boolean; //EgonHugeist: Detect a valid UTF8Sequence
 var
-  PB, EndB: PByte;
+  //Bts: TBytes;
+  I, Len: Integer;
 begin
   Result := False;
   if Ansi = '' then Exit;
 
-  PB := PByte(PAnsiChar(Ansi));
-  EndB := PB + Length(Ansi);
+  Len := Length(Ansi);
 
   // skip US-ASCII Chars they are allways valid.
-  while PB < EndB do
+  I := 0;
+  while ( I <= Len ) do
   begin
     //US-ASCII visible/valid
-    if ( PB^ = $09 ) or ( PB^ = $0A ) or ( PB^ = $0D ) or
-       ((  PB^ >= $20 ) or ( PB^ <= $7E )) then
-      Inc(PB)
+    if ( Byte(Ansi[i]) = $09 ) or ( Byte(Ansi[i]) = $0A ) or ( Byte(Ansi[i]) = $0D ) or
+       ((  Byte(Ansi[i]) >= $20 ) or ( Byte(Ansi[i]) <= $7E )) then
+      Inc(i)
     else
       Break;
   end;
 
-  if PB = EndB then exit; //US ACII
+  if i > Len then exit; //US ACII
 
   //No US-Ascii at all.
-  while PB < EndB do
+  while i <= Len do
   begin
     //Check again for Ascii Char
-    if ( PB^ = $09 ) or ( PB^ = $0A ) or ( PB^ = $0D ) or
-       (( PB^ >= $20 ) or ( PB^ <= $7E )) then
-      Inc(PB)
+    if ( Byte(Ansi[i]) = $09 ) or ( Byte(Ansi[i]) = $0A ) or ( Byte(Ansi[i]) = $0D ) or
+       (( Byte(Ansi[i]) >= $20 ) or ( Byte(Ansi[i]) <= $7E )) then
+      Inc(i)
     else
     begin
-      if ( PB+1 < EndB ) and
-        (// non-overlong 2-byte
-          ( ( $C2 <= PB^ ) and ( PB^ <= $DF ) ) and
-          ( ( $80 <= (PB+1)^ ) and ((PB+1)^ <= $BF) )
-        )//end non-overlong 2-byte
-      then
-        inc(PB, 2)
-      else
+      if ( (i+1) <= Len ) then
       begin
-        if ( PB+2 < EndB ) and
-          (
-            ( // excluding overlongs
-              ( PB^ = $E0 ) and
-              (($A0 <= (PB+1)^) and ((PB+1)^ <= $BF)) and
-              (($80 <= (PB+2)^) and ((PB+2)^ <= $BF))
-            ) //end excluding overlongs
-            or
-            ( // straight 3-byte
-              (
-                ( ($E1 <= PB^) and (PB^ <= $EC) ) or
-                (PB^ = $EE) or (PB^ = $EF)
-              )
-              and
-              ( ($80 <= (PB+1)^) and ((PB+1)^ <= $BF) ) and
-              ( ($80 <= (PB+2)^) and ((PB+2)^ <= $BF) )
-            ) //end straight 3-byte
-            or
-            ( // excluding surrogates
-              (PB^ = $ED) and
-              ( ($80 <= (PB+1)^) and ((PB+1)^ <= $9F) ) and
-              ( ($80 <= (PB+2)^) and ((PB+2)^ <= $BF) )
-            ) //end excluding surrogates
-          )
+        if
+          (// non-overlong 2-byte
+            ( ( $C2 <= Byte(Ansi[i]) ) and ( Byte(Ansi[i]) <= $DF ) ) and
+            ( ( $80 <= Byte(Ansi[i+1]) ) and (Byte(Ansi[i+1]) <= $BF) )
+          )//end non-overlong 2-byte
         then
-          inc(PB, 3)
+          inc(I, 2)
         else
-        begin
-          if ( PB+3 < EndB ) and
-            (
-              (// planes 1-3
-                (PB^ = $F0) and
-                ( ($90 <= (PB+1)^) and ((PB+1)^ <= $BF) ) and
-                ( ($80 <= (PB+2)^) and ((PB+2)^ <= $BF) ) and
-                ( ($80 <= (PB+2)^) and ((PB+3)^ <= $BF) )
-              )//end planes 1-3
-              or
-              (// planes 4-15
-                ( ($F1 <= PB^) and (PB^ <= $F3) ) and
-                ( ($80 <= (PB+1)^) and ((PB+1)^ <= $BF) ) and
-                ( ($80 <= (PB+2)^) and ((PB+2)^ <= $BF) ) and
-                ( ($80 <= (PB+3)^) and ((PB+3)^ <= $BF) )
-              )//end planes 4-15
-              or
-              (// plane 16
-                (PB^ = $F4) and
-                ( ($80 <= (PB+1)^) and ((PB+1)^ <= $8F) ) and
-                ( ($80 <= (PB+2)^) and ((PB+2)^ <= $BF) ) and
-                ( ($80 <= (PB+3)^) and ((PB+3)^ <= $BF) )
-              )//end plane 16
-            )
-          then
-            Inc(PB, 4)
+          if ( i+2 <= Len ) then
+          begin
+            if
+              (
+                ( // excluding overlongs
+                  ( Byte(Ansi[i]) = $E0 ) and
+                  (($A0 <= Byte(Ansi[i+1])) and (Byte(Ansi[i+1]) <= $BF)) and
+                  (($80 <= Byte(Ansi[i+2])) and (Byte(Ansi[i+2]) <= $BF))
+                ) //end excluding overlongs
+                or
+                ( // straight 3-byte
+                  (
+                    ( ($E1 <= Byte(Ansi[i])) and (Byte(Ansi[i]) <= $EC) ) or
+                    (Byte(Ansi[i]) = $EE) or (Byte(Ansi[i]) = $EF)
+                  )
+                  and
+                  ( ($80 <= Byte(Ansi[i+1])) and (Byte(Ansi[i+1]) <= $BF) ) and
+                  ( ($80 <= Byte(Ansi[i+2])) and (Byte(Ansi[i+2]) <= $BF) )
+                ) //end straight 3-byte
+                or
+                ( // excluding surrogates
+                  (Byte(Ansi[i]) = $ED) and
+                  ( ($80 <= Byte(Ansi[i+1])) and (Byte(Ansi[i+1]) <= $9F) ) and
+                  ( ($80 <= Byte(Ansi[i+2])) and (Byte(Ansi[i+2]) <= $BF) )
+                ) //end excluding surrogates
+              )
+            then
+              inc(I, 3)
+            else
+              if ( I+3 <= Len ) then
+              begin
+                if
+                  (
+                    (// planes 1-3
+                      ( Byte(Ansi[i]) = $F0) and
+                      ( ($90 <= Byte(Ansi[i+1])) and (Byte(Ansi[i+1]) <= $BF) ) and
+                      ( ($80 <= Byte(Ansi[i+2])) and (Byte(Ansi[i+2]) <= $BF) ) and
+                      ( ($80 <= Byte(Ansi[i+2])) and (Byte(Ansi[i+2]) <= $BF) )
+                    )//end planes 1-3
+                    or
+                    (// planes 4-15
+                      ( ($F1 <= Byte(Ansi[i])) and (Byte(Ansi[i]) <= $F3) ) and
+                      ( ($80 <= Byte(Ansi[i+1])) and (Byte(Ansi[i+1]) <= $BF) ) and
+                      ( ($80 <= Byte(Ansi[i+2])) and (Byte(Ansi[i+2]) <= $BF) ) and
+                      ( ($80 <= Byte(Ansi[i+3])) and (Byte(Ansi[i+3]) <= $BF) )
+                    )//end planes 4-15
+                    or
+                    (// plane 16
+                      ( Byte(Ansi[i]) = $F4) and
+                      ( ($80 <= Byte(Ansi[i+1])) and (Byte(Ansi[i+1]) <= $8F) ) and
+                      ( ($80 <= Byte(Ansi[i+2])) and (Byte(Ansi[i+2]) <= $BF) ) and
+                      ( ($80 <= Byte(Ansi[i+3])) and (Byte(Ansi[i+3]) <= $BF) )
+                    )//end plane 16
+                  )
+                then
+                  Inc(I, 4)
+                else
+                  break;
+              end
+              else
+                break;
+          end
           else
             break;
-        end;
-      end;
+      end
+      else
+        break;
     end;
   end;
 
-  if PB = EndB then
+  if i = Len then
     Result := True  //UTF8
   else
     Result := False; //Ansi
@@ -557,7 +572,7 @@ begin
       Result := Ansi;
       {$ELSE}
       if DetectUTF8Encoding(Ansi) then //Take care we've rael ansi as result
-        Result := UTF8ToAnsi
+        Result := UTF8ToAnsi(Ansi)
       else
         Result := Ansi;
       {$ENDIF}
