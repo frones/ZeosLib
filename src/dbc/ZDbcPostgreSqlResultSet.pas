@@ -631,6 +631,8 @@ function TZPostgreSQLResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
   BlobOid: Oid;
   Stream: TStream;
+  TempAnsi, Decoded: AnsiString;
+  len: Integer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
