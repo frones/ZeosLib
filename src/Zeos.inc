@@ -97,6 +97,11 @@
   {$DEFINE BDS4_UP} // Used in code
 {$ENDIF}
 
+// Compilation directives for BDS 2007 (Delphi 2007, BCB 2007)
+{$IFDEF VER185}
+  {$DEFINE BDS4_UP} // Used in code
+{$ENDIF}
+
 // Compilation directives for Delphi 2009
 {$IFDEF VER200}
   {$DEFINE VER200BELOW} // Used in code
