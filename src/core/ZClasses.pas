@@ -200,9 +200,9 @@ type
   TZAbstractObject = class(TInterfacedObject, IZObject)
   public
     function Equals(const Value: IZInterface): Boolean; {$IFDEF WITH_NEWTOBJECT}overload;{$ENDIF} virtual;
-    {.$IFNDEF WITH_NEWTOBJECT}function GetHashCode: LongInt;{.$ENDIF}
+    function GetHashCode: LongInt;
     function Clone: IZInterface; virtual;
-    function ToString: string;{$IFDEF WITH_NEWTOBJECT}override{$ELSE} virtual{$ENDIF};
+    function ToString: string;{$IFDEF WITH_NEWTOBJECT}override{$ELSE} virtual{$ENDIF} ;
     function InstanceOf(const IId: TGUID): Boolean;
   end;
 {$IFDEF DELPHI12_UP}
@@ -284,12 +284,10 @@ end;
   Gets a unique hash for this object.
   @return a unique hash for this object.
 }
-{.$IFNDEF WITH_NEWTOBJECT}
 function TZAbstractObject.GetHashCode: LongInt;
 begin
   Result := LongInt(Self);
 end;
-{.$ENDIF}
 
 {**
   Clones an object instance.
