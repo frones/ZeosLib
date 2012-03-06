@@ -205,7 +205,7 @@ type
     function ToString: string;{$IFDEF WITH_NEWTOBJECT}override{$ELSE} virtual{$ENDIF} ;
     function InstanceOf(const IId: TGUID): Boolean;
   end;
-{$IFDEF DELPHI12_UP}
+{$IFDEF WITH_NEWTOBJECT}
   {$WARNINGS ON}
 {$ENDIF}
 
