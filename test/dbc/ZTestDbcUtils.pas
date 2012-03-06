@@ -445,7 +445,7 @@ var
   Info, ResultInfo: TStrings;
   Port: Integer;
 begin
-  Info := SplitString('trace=true;username=scott', ';');
+  Info := SplitString('trace=true'#9'username=scott', #9);
   ResultInfo := TStringList.Create;
   try
     CheckEquals('true', Info.Values['trace']);
@@ -453,7 +453,7 @@ begin
     CheckEquals('scott', Info.Values['username']);
     CheckEquals('', Info.Values['unknownparam']);
 
-    Url := 'zdbc:mysql://192.168.0.1:33600/test?UID=admin;PWD=none';
+    Url := 'zdbc:mysql://192.168.0.1:33600/test?UID=admin'#9'PWD=none';
     ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
       UserName, Password, ResultInfo);
     CheckEquals('192.168.0.1', HostName);
@@ -473,7 +473,7 @@ begin
     CheckEquals('none', Password);
     CheckEquals('true', ResultInfo.Values['trace']);
 
-    Url := 'zdbc:mysql:test?UID=admin;PWD=none';
+    Url := 'zdbc:mysql:test?UID=admin'#9'PWD=none';
     ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
       UserName, Password, ResultInfo);
     CheckEquals('localhost', HostName);

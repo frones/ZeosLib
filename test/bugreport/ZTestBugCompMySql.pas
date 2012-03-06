@@ -583,7 +583,7 @@ begin
     Query.SQL.Text := 'set @user_var=0';
     Query.ExecSQL;
 
-    Query.SQL.Text := 'update people set p_id=(@user_var::=@user_var+1)'
+    Query.SQL.Text := 'update people set p_id=(@user_var:=@user_var+1)'
       + ' where 1=0';
     Query.ExecSQL;
 

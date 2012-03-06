@@ -61,7 +61,7 @@ uses
   Variants,
 {$IFDEF UNIX}
   {$IFDEF FPC}
-    dynlibs,
+    dl,
   {$endif}
    {$ifdef kylix}
     libc,

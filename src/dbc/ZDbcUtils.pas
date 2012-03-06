@@ -265,7 +265,7 @@ begin
   begin
     Database := Copy(Temp, 1, Index - 1);
     Delete(Temp, 1, Index);
-    PutSplitString(ResultInfo, Temp, ';');
+    PutSplitString(ResultInfo, Temp, #9);
   end
   else
     Database := Temp;

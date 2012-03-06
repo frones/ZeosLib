@@ -193,7 +193,7 @@ type
     property Count: Integer read GetCount;
   end;
 
-{$IFDEF DELPHI12_UP} // to suppress the overload warning of the Equals overload, Marco. (overload a non overload-declared funtion)
+{$IFDEF WITH_NEWTOBJECT} // to suppress the overload warning of the Equals overload, Marco. (overload a non overload-declared funtion)
   {$WARNINGS OFF}
 {$ENDIF}
   {** Implements an abstract interfaced object. }
