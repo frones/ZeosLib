@@ -788,7 +788,7 @@ begin
     Stream := Query.CreateBlobStream(Query.Fields[1], bmWrite);
     try
       Temp := 'xyz';
-      Stream.Write(Temp^, StrLen(Temp));
+      Stream.Write(PAnsiChar(Temp), StrLen(Temp));
     finally
       Stream.Free;
     end;
@@ -1190,9 +1190,9 @@ procedure TZTestCompMySQLBugReport.Test914436;
 {var
   Query: TZQuery;}
 begin
-  {if SkipClosed then Exit;
+  if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  {Test914436Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
 

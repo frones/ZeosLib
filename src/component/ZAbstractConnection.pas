@@ -569,12 +569,12 @@ function TZAbstractConnection.ConstructURL(const UserName, Password: string): st
 begin
   if Port <> 0 then
   begin
-    Result := Format('zdbc:%s://%s:%d/%s?UID=%s;PWD=%s', [FProtocol, FHostName,
+    Result := Format('zdbc:%s://%s:%d/%s?UID=%s'#9'PWD=%s', [FProtocol, FHostName,
       FPort, FDatabase, UserName, Password]);
   end
   else
   begin
-    Result := Format('zdbc:%s://%s/%s?UID=%s;PWD=%s', [FProtocol, FHostName,
+    Result := Format('zdbc:%s://%s/%s?UID=%s'#9'PWD=%s', [FProtocol, FHostName,
       FDatabase, UserName, Password]);
   end;
 end;

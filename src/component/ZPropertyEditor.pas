@@ -707,14 +707,14 @@ begin
   if GetZComponent is TZAbstractConnection then
   try
     if (GetZComponent as TZAbstractConnection).Port = 0 then
-      Url := Format('zdbc:%s://%s/%s?UID=%s;PWD=%s', [
+      Url := Format('zdbc:%s://%s/%s?UID=%s'#9'PWD=%s', [
         (GetZComponent as TZAbstractConnection).Protocol,
         (GetZComponent as TZAbstractConnection).HostName,
         '',
         (GetZComponent as TZAbstractConnection).User,
         (GetZComponent as TZAbstractConnection).Password])
     else
-      Url := Format('zdbc:%s://%s:%d/%s?UID=%s;PWD=%s', [
+      Url := Format('zdbc:%s://%s:%d/%s?UID=%s'#9'PWD=%s', [
         (GetZComponent as TZAbstractConnection).Protocol,
         (GetZComponent as TZAbstractConnection).HostName,
         (GetZComponent as TZAbstractConnection).Port,
@@ -813,14 +813,14 @@ begin
   if GetZComponent is TZAbstractConnection then
   try
     if (GetZComponent as TZAbstractConnection).Port = 0 then
-      Url := Format('zdbc:%s://%s/%s?UID=%s;PWD=%s', [
+      Url := Format('zdbc:%s://%s/%s?UID=%s'#9'PWD=%s', [
         (GetZComponent as TZAbstractConnection).Protocol,
         (GetZComponent as TZAbstractConnection).HostName,
         '',
         (GetZComponent as TZAbstractConnection).User,
         (GetZComponent as TZAbstractConnection).Password])
     else
-      Url := Format('zdbc:%s://%s:%d/%s?UID=%s;PWD=%s', [
+      Url := Format('zdbc:%s://%s:%d/%s?UID=%s'#9'PWD=%s', [
         (GetZComponent as TZAbstractConnection).Protocol,
         (GetZComponent as TZAbstractConnection).HostName,
         (GetZComponent as TZAbstractConnection).Port,
@@ -984,14 +984,14 @@ begin
   if GetZComponent is TZAbstractConnection then
   try
     if (GetZComponent as TZAbstractConnection).Port = 0 then
-      Url := Format('zdbc:%s://%s/%s?UID=%s;PWD=%s', [
+      Url := Format('zdbc:%s://%s/%s?UID=%s'#9'PWD=%s', [
         (GetZComponent as TZAbstractConnection).Protocol,
         (GetZComponent as TZAbstractConnection).HostName,
         '',
         (GetZComponent as TZAbstractConnection).User,
         (GetZComponent as TZAbstractConnection).Password])
     else
-      Url := Format('zdbc:%s://%s:%d/%s?UID=%s;PWD=%s', [
+      Url := Format('zdbc:%s://%s:%d/%s?UID=%s'#9'PWD=%s', [
         (GetZComponent as TZAbstractConnection).Protocol,
         (GetZComponent as TZAbstractConnection).HostName,
         (GetZComponent as TZAbstractConnection).Port,
@@ -1073,14 +1073,14 @@ begin
   if GetZComponent is TZConnectionGroup then
   try
     if (GetZComponent as TZConnectionGroup).Port = 0 then
-      Url := Format('zdbc:%s://%s/%s?UID=%s;PWD=%s', [
+      Url := Format('zdbc:%s://%s/%s?UID=%s'#9'PWD=%s', [
         (GetZComponent as TZConnectionGroup).Protocol,
         (GetZComponent as TZConnectionGroup).HostName,
         '',
         (GetZComponent as TZConnectionGroup).User,
         (GetZComponent as TZConnectionGroup).Password])
     else
-      Url := Format('zdbc:%s://%s:%d/%s?UID=%s;PWD=%s', [
+      Url := Format('zdbc:%s://%s:%d/%s?UID=%s'#9'PWD=%s', [
         (GetZComponent as TZConnectionGroup).Protocol,
         (GetZComponent as TZConnectionGroup).HostName,
         (GetZComponent as TZConnectionGroup).Port,

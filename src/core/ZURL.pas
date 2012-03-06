@@ -186,7 +186,7 @@ begin
   if FPassword <> '' then
   begin
     if Result[Length(Result)] <> '?' then
-      Result := Result + ';';
+      Result := Result + #9;
     Result := Result + 'password=' + FPassword
   end;
 
@@ -198,7 +198,7 @@ begin
     if (PropValue <> '') and (PropValue <> '') and (PropValue <> 'uid') and (PropValue <> 'pwd') and (PropValue <> 'username') and (PropValue <> 'password') then
     begin
       if Result[Length(Result)] <> '?' then
-        Result := Result + ';';
+        Result := Result + #9;
       Result := Result + FProperties[I]
     end;
   end;
@@ -282,7 +282,7 @@ begin
     begin
       ADatabase := Copy(AValue, 1, I - 1);
       Delete(AValue, 1, I);
-      AProperties.Text := StringReplace(AValue, ';', LineEnding, [rfReplaceAll]);
+      AProperties.Text := StringReplace(AValue, #9, LineEnding, [rfReplaceAll]);
     end
     else
       ADatabase := AValue;

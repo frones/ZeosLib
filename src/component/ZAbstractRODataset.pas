@@ -1657,7 +1657,6 @@ begin
       for I := 1 to GetColumnCount do
       begin
         FieldType := ConvertDbcToDatasetType(GetColumnType(I));
-
         if FieldType in [ftString, ftWidestring, ftBytes] then
           Size := GetPrecision(I)
         else
@@ -2396,10 +2395,8 @@ end;
 }
 
 {$IFDEF WITH_TRECORDBUFFER}
-
 procedure TZAbstractRODataset.GetBookmarkData(Buffer: TRecordBuffer; Data: Pointer);
 {$ELSE}
-
 procedure TZAbstractRODataset.GetBookmarkData(Buffer: PChar; Data: Pointer);
 {$ENDIF}
 begin
@@ -2413,10 +2410,8 @@ end;
 }
 
 {$IFDEF WITH_TRECORDBUFFER}
-
 procedure TZAbstractRODataset.SetBookmarkData(Buffer: TRecordBuffer; Data: Pointer);
 {$ELSE}
-
 procedure TZAbstractRODataset.SetBookmarkData(Buffer: PChar; Data: Pointer);
 {$ENDIF}
 begin
@@ -2468,10 +2463,8 @@ end;
 }
 
 {$IFDEF WITH_TRECORDBUFFER}
-
 procedure TZAbstractRODataset.InternalInitRecord(Buffer: TRecordBuffer);
 {$ELSE}
-
 procedure TZAbstractRODataset.InternalInitRecord(Buffer: PChar);
 {$ENDIF}
 begin
@@ -3499,7 +3492,7 @@ procedure TZAbstractRODataset.CheckFieldCompatibility(Field: TField;FieldDef: TF
 const
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,
-    ftFloat, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
+    ftCurrency, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
     ftInteger, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftUnknown,
     ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
     ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp, ftFMTBcd
@@ -3510,7 +3503,7 @@ const
  const
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,
-    ftFloat, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
+    ftCurrency, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
     ftInteger, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftUnknown,
     ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
     ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp, ftFMTBcd,
@@ -3568,7 +3561,7 @@ const
  const
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,
-    ftFloat, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
+    ftCurrency, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
     ftInteger, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftUnknown,
     ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
     ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimestamp, ftFMTBcd);

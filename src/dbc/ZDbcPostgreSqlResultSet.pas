@@ -657,10 +657,8 @@ function TZPostgreSQLResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
   BlobOid: Oid;
   Stream: TStream;
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   TempAnsi, Decoded: AnsiString;
   len: Integer;
-  {$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);

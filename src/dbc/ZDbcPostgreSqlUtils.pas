@@ -283,7 +283,7 @@ begin
     or (TypeName = 'numeric') then
     Result := stDouble
   else if TypeName = 'money' then
-    Result := stBigDecimal
+    Result := stDouble
   else if TypeName = 'bool' then
     Result := stBoolean
   else if TypeName = 'date' then
@@ -373,7 +373,7 @@ begin
     829: Result := stString; { macaddr }
     700: Result := stFloat; { float4 }
     701,1700: Result := stDouble; { float8/numeric. no 'decimal' any more }
-    790: Result := stBigDecimal; { money }
+    790: Result := stDouble; { money }
     16: Result := stBoolean; { bool }
     1082: Result := stDate; { date }
     1083: Result := stTime; { time }
@@ -660,11 +660,11 @@ end;
   @param Value the regular string.
   @return the encoded string.
 }
-function EncodeString(CharactersetCode: TZPgCharactersetType; const Value: {$IFDEF CHECK_CLIENT_CODE_PAGE}AnsiString{$ELSE}string{$ENDIF}): string;
+function EncodeString(CharactersetCode: TZPgCharactersetType; const Value: string): string;
 var
   I, LastState: Integer;
   SrcLength, DestLength: Integer;
-  SrcBuffer, DestBuffer: {$IFDEF CHECK_CLIENT_CODE_PAGE}PAnsiChar{$ELSE}PChar{$ENDIF};
+  SrcBuffer, DestBuffer: PChar;
  begin
   SrcLength := Length(Value);
   SrcBuffer := PChar(Value);
@@ -680,9 +680,9 @@ var
     Inc(SrcBuffer);
   end;
 
-  SrcBuffer := {$IFDEF CHECK_CLIENT_CODE_PAGE}PAnsiChar{$ELSE}PChar{$ENDIF}(Value);
+  SrcBuffer := PChar(Value);
   SetLength(Result, DestLength);
-  DestBuffer := {$IFDEF CHECK_CLIENT_CODE_PAGE}PAnsiChar{$ELSE}PChar{$ENDIF}(Result);
+  DestBuffer := PChar(Result);
   DestBuffer^ := '''';
   Inc(DestBuffer);
 
@@ -693,9 +693,9 @@ var
     if CharInSet(SrcBuffer^, [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
     begin
       DestBuffer[0] := '\';
-      DestBuffer[1] := {$IFDEF CHECK_CLIENT_CODE_PAGE}AnsiChar{$ELSE}Char{$ENDIF}(Ord('0') + (Byte(SrcBuffer^) shr 6));
-      DestBuffer[2] := {$IFDEF CHECK_CLIENT_CODE_PAGE}AnsiChar{$ELSE}Char{$ENDIF}(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
-      DestBuffer[3] := {$IFDEF CHECK_CLIENT_CODE_PAGE}AnsiChar{$ELSE}Char{$ENDIF}(Ord('0') + (Byte(SrcBuffer^) and $07));
+      DestBuffer[1] := Char(Ord('0') + (Byte(SrcBuffer^) shr 6));
+      DestBuffer[2] := Char(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
+      DestBuffer[3] := Char(Ord('0') + (Byte(SrcBuffer^) and $07));
       Inc(DestBuffer, 4);
     end
     else

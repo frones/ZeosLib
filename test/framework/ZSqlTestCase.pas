@@ -435,8 +435,8 @@ var
   I: Integer;
 begin
   if Port <> 0 then
-    URL := Format('zdbc:%s://%s:%d/%s?UID=%s;PWD=%s', [Protocol, HostName, Port, Database, UserName, Password])
-  else URL := Format('zdbc:%s://%s/%s?UID=%s;PWD=%s', [Protocol, HostName, Database, UserName, Password]);
+    URL := Format('zdbc:%s://%s:%d/%s?UID=%s'#9'PWD=%s', [Protocol, HostName, Port, Database, UserName, Password])
+  else URL := Format('zdbc:%s://%s/%s?UID=%s'#9'PWD=%s', [Protocol, HostName, Database, UserName, Password]);
   TempProperties := TStringList.Create;
   for I := 0 to High(Properties) do
   begin

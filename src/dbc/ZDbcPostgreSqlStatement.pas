@@ -468,11 +468,11 @@ begin
       stUnicodeString:
         {$IFDEF CHECK_CLIENT_CODE_PAGE}
         if GetConnection.DoPreprepareSQL then
-          Result := EncodeString(FCharactersetCode, UTF8Decode(SoftVarManager.GetAsUnicodeString(Value)))
+          Result := EncodeString(FCharactersetCode,SoftVarManager.GetAsUnicodeString(Value))
         else
-          Result := EncodeString(FCharactersetCode, UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)));
+          Result := UTF8Encode(EncodeString(FCharactersetCode,SoftVarManager.GetAsUnicodeString(Value)));
         {$ELSE}
-        Result := UTF8Encode(EncodeString(FCharactersetCode,SoftVarManager.GetAsUnicodeString(Value))); //Egonhugeist Dataloss for non Unicode-IDE
+        Result := UTF8Encode(EncodeString(FCharactersetCode,SoftVarManager.GetAsUnicodeString(Value)));
         {$ENDIF}
       stDate:
         Result := Format('''%s''::date',

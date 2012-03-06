@@ -3,7 +3,6 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
   Height = 258
   Top = 271
   Width = 398
-  BorderStyle = bsDialog
   Caption = 'ZUpdateSQLEditForm'
   ClientHeight = 258
   ClientWidth = 398
@@ -13,7 +12,7 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   Position = poScreenCenter
-  LCLVersion = '0.9.25'
+  LCLVersion = '0.9.30.2'
   object OkButton: TButton
     Left = 176
     Height = 22
@@ -48,11 +47,13 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
     TabOrder = 2
   end
   object PageControl: TPageControl
+    Left = 0
     Height = 222
+    Top = 0
     Width = 398
-    ActivePage = FieldsPage
+    ActivePage = SQLPage
     Align = alTop
-    TabIndex = 0
+    TabIndex = 1
     TabOrder = 3
     OnChanging = PageControlChanging
     object FieldsPage: TTabSheet
@@ -60,7 +61,9 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
       ClientHeight = 196
       ClientWidth = 390
       object GroupBox1: TGroupBox
+        Left = 0
         Height = 196
+        Top = 0
         Width = 390
         Align = alClient
         Caption = ' SQL Generation '
@@ -69,28 +72,28 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
         TabOrder = 0
         object Label1: TLabel
           Left = 16
-          Height = 16
+          Height = 14
           Top = 8
-          Width = 68
+          Width = 62
           Caption = 'Table &Name:'
           FocusControl = UpdateTableName
           ParentColor = False
         end
         object Label3: TLabel
-          Left = 139
-          Height = 16
+          Left = 143
+          Height = 14
           Top = 8
-          Width = 56
+          Width = 52
           Anchors = [akTop, akRight]
           Caption = '&Key Fields:'
           FocusControl = KeyFieldList
           ParentColor = False
         end
         object Label4: TLabel
-          Left = 259
-          Height = 16
+          Left = 265
+          Height = 14
           Top = 8
-          Width = 75
+          Width = 69
           Anchors = [akTop, akRight]
           Caption = 'Update &Fields:'
           FocusControl = UpdateFieldList
@@ -98,9 +101,9 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
         end
         object QuoteFields: TCheckBox
           Left = 16
-          Height = 21
+          Height = 19
           Top = 152
-          Width = 129
+          Width = 110
           Caption = '&Quote Field Names'
           OnClick = SettingsChanged
           TabOrder = 5
@@ -110,9 +113,7 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
           Height = 21
           Top = 24
           Width = 113
-          AutoCompleteText = [cbactEndOfLineComplete, cbactSearchAscending]
           ItemHeight = 13
-          MaxLength = 0
           OnChange = UpdateTableNameChange
           OnClick = UpdateTableNameClick
           TabOrder = 0
@@ -160,7 +161,7 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
           Top = 24
           Width = 118
           Anchors = [akTop, akRight, akBottom]
-          ItemHeight = 13
+          ItemHeight = 0
           MultiSelect = True
           OnClick = SettingsChanged
           PopupMenu = FieldListPopup
@@ -171,8 +172,8 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
           Height = 145
           Top = 24
           Width = 117
-          Anchors = [akTop, akRight, akBottom]
-          ItemHeight = 13
+          Anchors = [akTop, akLeft, akRight, akBottom]
+          ItemHeight = 0
           MultiSelect = True
           OnClick = SettingsChanged
           PopupMenu = FieldListPopup
@@ -182,13 +183,13 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
     end
     object SQLPage: TTabSheet
       Caption = 'SQL'
-      ClientHeight = 192
-      ClientWidth = 394
+      ClientHeight = 196
+      ClientWidth = 390
       object Label2: TLabel
         Left = 8
-        Height = 13
+        Height = 14
         Top = 40
-        Width = 48
+        Width = 49
         Caption = 'S&QL Text:'
         FocusControl = SQLMemo
         ParentColor = False
@@ -197,15 +198,19 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
         Left = 8
         Height = 129
         Top = 56
-        Width = 377
+        Width = 373
         Align = alCustom
+        Anchors = [akTop, akLeft, akRight]
         OnKeyPress = SQLMemoKeyPress
         ScrollBars = ssVertical
         TabOrder = 0
+        WordWrap = False
       end
       object StatementType: TRadioGroup
+        Left = 0
         Height = 35
-        Width = 394
+        Top = 0
+        Width = 390
         Align = alTop
         AutoFill = True
         Caption = 'Statement Type'
@@ -217,8 +222,8 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
         ChildSizing.ShrinkVertical = crsScaleChilds
         ChildSizing.Layout = cclLeftToRightThenTopToBottom
         ChildSizing.ControlsPerLine = 3
-        ClientHeight = 35
-        ClientWidth = 394
+        ClientHeight = 17
+        ClientWidth = 386
         Columns = 3
         Items.Strings = (
           '&Modify'
