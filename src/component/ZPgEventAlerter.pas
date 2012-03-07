@@ -48,7 +48,7 @@
 unit ZPgEventAlerter;
 
 interface
-{$i zcomponent.inc}
+{$I ZComponent.inc}
 uses
   SysUtils, Classes, ExtCtrls,
 {$IFDEF MSWINDOWS}
