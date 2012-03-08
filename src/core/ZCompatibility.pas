@@ -227,7 +227,6 @@ implementation
 {$IFDEF ZDetectUTF8Encoding}
 function DetectUTF8Encoding(Ansi: AnsiString): Boolean; //EgonHugeist: Detect a valid UTF8Sequence
 var
-  //Bts: TBytes;
   I, Len: Integer;
 begin
   Result := False;
@@ -742,17 +741,20 @@ end;
   {$IFDEF FPC}
 function LoadLibrary(ModuleName: PChar): HMODULE;
 begin
-  Result := HMODULE(dlopen(Modulename, RTLD_GLOBAL));
+  //Result := HMODULE(dlopen(Modulename, RTLD_GLOBAL));
+  Result := dynlibs.LoadLibrary(ModuleName);
 end;
 
 function FreeLibrary(Module: HMODULE): LongBool;
 begin
-  Result := longbool(dlclose(pointer(Module)));
+  //Result := longbool(dlclose(pointer(Module)));
+  Result := dynlibs.FreeLibrary(Module);
 end;
 
 function GetProcAddress(Module: HMODULE; Proc: PChar): Pointer;
 begin
-  Result := dlsym(pointer(Module), Proc);
+  //Result := dlsym(pointer(Module), Proc);
+  Result := dynlibs.GetProcAddress(Module,Proc)
 end;
   {$ENDIF}
 {$ENDIF}
