@@ -63,9 +63,6 @@ uses
   {$IFDEF FPC}
     dl,
   {$endif}
-   {$ifdef kylix}
-    libc,
-  {$ENDIF}
 {$ENDIF}
   Classes, SysUtils;
 

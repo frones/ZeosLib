@@ -45,10 +45,6 @@ uses
   SysUtils, Classes, Math,
 {$IFDEF MSWINDOWS}
   Windows, 
-{$ELSE} 
-  {$IFDEF KYLIX}
-    libc, 
-  {$ENDIF} 
 {$ENDIF} 
   ZDbcInterbase6, ZConnection, ZDbcIntfs,
   ZPlainFirebirdDriver, ZPlainFirebirdInterbaseConstants;
@@ -110,9 +106,6 @@ uses
 const
   IB_MAX_EVENT_BLOCK = 15;   // maximum events handled per block by InterBase
   IB_MAX_EVENT_LENGTH = 64;  // maximum event name length
-  {$IF NOT DECLARED(INFINITE)}
-  INFINITE = $FFFFFFFF;
-  {$IFEND}
 threadvar
   FStatusVector: TARRAY_ISC_STATUS;
 
