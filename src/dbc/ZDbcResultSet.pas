@@ -132,7 +132,7 @@ type
     function IsNull(ColumnIndex: Integer): Boolean; virtual;
     function GetPChar(ColumnIndex: Integer): PAnsiChar; virtual;
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
-    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = ceAnsi): Ansistring; virtual;
+    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring; virtual;
     {$ELSE}
     function GetString(ColumnIndex: Integer): Ansistring; virtual;
     {$ENDIF}
@@ -163,7 +163,7 @@ type
     function IsNullByName(const ColumnName: string): Boolean; virtual;
     function GetPCharByName(const ColumnName: string): PAnsiChar; virtual;
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
-    function GetStringByName(const ColumnName: string; CharEncoding: TZCharEncoding = ceAnsi): Ansistring; virtual;
+    function GetStringByName(const ColumnName: string; CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring; virtual;
     {$ELSE}
     function GetStringByName(const ColumnName: string): Ansistring; virtual;
     {$ENDIF}
@@ -626,7 +626,7 @@ end;
     value returned is <code>null</code>
 }
 function TZAbstractResultSet.GetString(ColumnIndex: Integer
-{$IFDEF CHECK_CLIENT_CODE_PAGE};const  CharEncoding: TZCharEncoding = ceAnsi{$ENDIF}): AnsiString;
+{$IFDEF CHECK_CLIENT_CODE_PAGE};const  CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}{$ENDIF}): AnsiString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -1113,7 +1113,8 @@ end;
     value returned is <code>null</code>
 }
 function TZAbstractResultSet.GetStringByName(const ColumnName: string
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}; CharEncoding: TZCharEncoding{$ENDIF}): AnsiString;
+  {$IFDEF CHECK_CLIENT_CODE_PAGE}; CharEncoding: TZCharEncoding
+   = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}{$ENDIF}): AnsiString;
 begin
   Result := GetString(GetColumnIndex(ColumnName){$IFDEF CHECK_CLIENT_CODE_PAGE}, CharEncoding{$ENDIF});
 end;

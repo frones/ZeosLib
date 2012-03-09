@@ -265,11 +265,7 @@ begin
   begin
     Database := Copy(Temp, 1, Index - 1);
     Delete(Temp, 1, Index);
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     PutSplitString(ResultInfo, Temp, #9);
-    {$ELSE}
-    PutSplitString(ResultInfo, Temp, ';');
-    {$ENDIF}
   end
   else
     Database := Temp;

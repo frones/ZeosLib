@@ -625,7 +625,7 @@ type
     function IsNull(ColumnIndex: Integer): Boolean;
     function GetPChar(ColumnIndex: Integer): PAnsiChar;
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
-    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = ceAnsi): Ansistring;
+    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring;
     {$ELSE}
     function GetString(ColumnIndex: Integer): Ansistring;
     {$ENDIF}
@@ -656,7 +656,7 @@ type
     function IsNullByName(const ColumnName: string): Boolean;
     function GetPCharByName(const ColumnName: string): PAnsiChar;
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
-    function GetStringByName(const ColumnName: string; CharEncoding: TZCharEncoding = ceAnsi): Ansistring;
+    function GetStringByName(const ColumnName: string; CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring;
     {$ELSE}
     function GetStringByName(const ColumnName: string): Ansistring;
     {$ENDIF}

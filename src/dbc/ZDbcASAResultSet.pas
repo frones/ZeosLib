@@ -92,7 +92,7 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
-    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = ceAnsi): Ansistring; override;
+    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring; override;
     {$ELSE}
     function GetString(ColumnIndex: Integer): Ansistring; override;
     {$ENDIF}
@@ -474,7 +474,7 @@ end;
     value returned is <code>null</code>
 }
 {$IFDEF CHECK_CLIENT_CODE_PAGE}
-function TZASAResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = ceAnsi): Ansistring;
+function TZASAResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring;
 {$ELSE}
 function TZASAResultSet.GetString(ColumnIndex: Integer): Ansistring;
 {$ENDIF}
