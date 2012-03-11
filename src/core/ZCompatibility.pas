@@ -61,7 +61,7 @@ uses
   Variants,
 {$IFDEF UNIX}
   {$IFDEF FPC}
-    dl,
+    dynlibs,
   {$endif}
 {$ENDIF}
   Classes, SysUtils;
@@ -138,17 +138,20 @@ implementation
   {$IFDEF FPC}
 function LoadLibrary(ModuleName: PChar): HMODULE;
 begin
-  Result := HMODULE(dlopen(Modulename, RTLD_GLOBAL));
+  //Result := HMODULE(dlopen(Modulename, RTLD_GLOBAL));
+  Result := dynlibs.LoadLibrary(ModuleName);
 end;
 
 function FreeLibrary(Module: HMODULE): LongBool;
 begin
-  Result := longbool(dlclose(pointer(Module)));
+  //Result := longbool(dlclose(pointer(Module)));
+  Result := dynlibs.FreeLibrary(Module);
 end;
 
 function GetProcAddress(Module: HMODULE; Proc: PChar): Pointer;
 begin
-  Result := dlsym(pointer(Module), Proc);
+  //Result := dlsym(pointer(Module), Proc);
+  Result := dynlibs.GetProcAddress(Module,Proc)
 end;
   {$ENDIF}
 {$ENDIF}
