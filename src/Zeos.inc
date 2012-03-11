@@ -61,20 +61,19 @@
 // Compilation directives for Delphi4
 // Not supported since Zeoslib 7.X
 {$IFDEF VER120}
-{$DEFINE VER140BELOW} // Used in zeos.inc only
+   "Delphi versions below Delphi 7 aren't supported anymore"
 {$ENDIF}
 
 // Compilation directives for Delphi 5
 // Not supported since Zeoslib 7.X
 {$IFDEF VER130}
-{$DEFINE VER140BELOW} // Used in zeos.inc only
+  "Delphi versions below Delphi 7 aren't supported anymore"
 {$ENDIF}
 
 // Compilation directives for Delphi 6
 // Not supported since Zeoslib 7.X
 {$IFDEF VER140}
-  {$DEFINE VER140BELOW} // Used in zeos.inc only
-  {$DEFINE VER150BELOW} // Used in zeos.inc only
+    "Kylix3, CBuilder/Delphi Versions below version 7 aren't supported anymore"
 {$ENDIF}
 
 // Compilation directives for Delphi 7
@@ -123,7 +122,7 @@
 {$IFDEF VER220}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
-  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code at ZCompatibility.pas
+  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code 
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
@@ -136,7 +135,7 @@
 {$IFDEF VER230}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
-  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code at ZCompatibility.pas 
+  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code 
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
   {$DEFINE DELPHI16_UP} // Used in code
   {$DEFINE BDS4_UP} // Used in code
@@ -166,26 +165,6 @@
 {$IFDEF VER150BELOW}
      {$UNDEF WITH_WIDEMEMO}
      {$UNDEF WITH_FTWIDESTRING}
-{$ENDIF}
-
-{$IFDEF VER140BELOW}
-  {$IFNDEF FPC}
-    {$IFNDEF WIN32}
-      {$if Declared(RTLVersion) and (RTLVersion = 14.5)}  //Kylix 3
-         {$DEFINE KYLIX}
-      {$ELSE}
-          "Kylix versions below Kylix3 aren't supported anymore"
-      {$ifend}
-    {$ELSE}
-      {$ifdef BCB}  //Cbuilder
-        {$IFNDEF VER140}
-          "CBuilder versions below CBuilder6 aren't supported anymore"
-        {$ENDIF}
-      {$ELSE}
-        "Delphi versions below Delphi 7 aren't supported anymore"
-      {$ENDIF}
-    {$ENDIF}
-  {$ENDIF}
 {$ENDIF}
 
 // Debug/release compiler options

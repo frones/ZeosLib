@@ -54,9 +54,6 @@ uses
 {$IFDEF MSWINDOWS}
   Windows,
 {$ELSE}
-  {$IFDEF KYLIX}
-    libc, Math,
-  {$ENDIF}
 {$ENDIF}
   ZDbcPostgreSql, ZPlainPostgreSqlDriver, ZConnection, ZAbstractRODataset,
   ZDataset;

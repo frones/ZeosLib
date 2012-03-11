@@ -589,11 +589,7 @@ begin
       if SameText(SERVER_ARGUMENTS_KEY_PREFIX,
                   Copy(Options.Names[i], 1,
                        Length(SERVER_ARGUMENTS_KEY_PREFIX))) then
-{$IFDEF VER140}
-        TmpList.Add(Options.Values[Options.Names[i]]);
-{$ELSE}
         TmpList.Add(Options.ValueFromIndex[i]);
-{$ENDIF}
     //Check if DataDir is specified, if not, then add it to the Arguments List
     if TmpList.Values['--datadir'] = '' then
        TmpList.Add('--datadir='+EMBEDDED_DEFAULT_DATA_DIR);

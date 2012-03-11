@@ -63,9 +63,6 @@ uses
   {$IFDEF FPC}
     dynlibs,
   {$endif}
-   {$ifdef kylix}
-    libc,
-  {$ENDIF}
 {$ENDIF}
   {$IFDEF DELPHI12_UP}
   WideStrUtils,
