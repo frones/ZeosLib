@@ -336,6 +336,7 @@ begin
     begin
       FCodePages[High(FCodePages)].ZAlias := GetCompilerSaveCodePageName;
       FCodePages[High(FCodePages)].IsSupported := False;
+    end;
   {$ELSE}
     {$IFDEF WITH_CHAR_CONTROL}
       if CP = $ffff then
@@ -369,6 +370,7 @@ begin
       begin
         FCodePages[i].ZAlias := GetCompilerSaveCodePageName;
         FCodePages[i].IsSupported := False;
+      end;
       {$ELSE}
         {$IFDEF WITH_CHAR_CONTROL}
         if CP = $ffff then
