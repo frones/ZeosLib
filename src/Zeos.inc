@@ -333,6 +333,6 @@
 {$IFDEF CHECK_CLIENT_CODE_PAGE}
   {.$DEFINE WITH_CHAR_CONTROL} //Disables/Enables the CharControl widget
   {.$DEFINE WITH_CLIENT_CODE_PAGE_OPTIONS} //Disables/Enables the ClientCodepageOptions-Proberty
-  {$DEFINE SQLPREPREPARE} //A spezial mode for the Test-Suites to hardly enable the PreprepareStep
+  {.$DEFINE SQLPREPREPARE} //A spezial mode for the Test-Suites to hardly enable the PreprepareStep
 {$ENDIF}
 
