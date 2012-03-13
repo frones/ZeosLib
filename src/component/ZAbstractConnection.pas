@@ -450,7 +450,7 @@ begin
         FPreprepareSQL := Value.Values['PreprepareSQL'] = 'ON';
       end
       else
-        FPreprepareSQL Value.Values['PreprepareSQL'] = 'ON';
+        FPreprepareSQL := Value.Values['PreprepareSQL'] = 'ON';
       {$ENDIF}
     {$ENDIF}
     FProperties.Text := Value.Text
