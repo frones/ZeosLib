@@ -611,7 +611,9 @@ begin
     else
     begin
       s := Format('zdbc:%s:', [Connection.Protocol]);
-      SDyn := DriverManager.GetDriver(s).GetSupportedClientCodePages(s, (coShowSupportedsOnly in Connection.ClientCodePageOptions));
+      SDyn := DriverManager.GetDriver(s).GetSupportedClientCodePages(s,
+        {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}(coShowSupportedsOnly in Connection.ClientCodePageOptions)
+        {$ELSE}True{$ENDIF});
       for i := 0 to high(SDyn) do
         List.Append(SDyn[i]);
 

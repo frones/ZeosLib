@@ -411,7 +411,7 @@ begin
         Result := SoftVarManager.GetAsString(Value);
       {$IFDEF CHECK_CLIENT_CODE_PAGE}
       stString, stUnicodeString:
-        if GetConnection.DoPreprepareSQL then
+        if GetConnection.PreprepareSQL then
           Result := AnsiQuotedStr(SoftVarManager.GetAsString(Value), '''')
         else
           {$IFDEF DELPHI12_UP}
@@ -420,7 +420,7 @@ begin
           Result := AnsiQuotedStr(SoftVarManager.GetAsString(Value), '''');
           {$ENDIF}
       stBytes:
-        if GetConnection.DoPreprepareSQL then
+        if GetConnection.PreprepareSQL then
           Result := GetConnection.GetAnsiEscapeString(AnsiString(SoftVarManager.GetAsString(Value)))  //Egonhugeist stBytes can be from #0 -> ~ so this encoding must be!
         else
           Result := String(EncodeString(AnsiString(SoftVarManager.GetAsString(Value))));
@@ -451,7 +451,7 @@ begin
           if not TempBlob.IsEmpty then
           begin
             {$IFDEF CHECK_CLIENT_CODE_PAGE}
-            if GetConnection.DoPreprepareSQL then
+            if GetConnection.PreprepareSQL then
               Result := GetConnection.GetAnsiEscapeString(TempBlob.GetString)
             else
               if InParamTypes[ParamIndex] = stBinaryStream then

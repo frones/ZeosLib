@@ -135,8 +135,14 @@ type
     FClientCodepage: String;
 
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
-    FClientCodePageOptions: TZClientCodePageOptions;
-    procedure SetClientCodePageOptions(Value: TZClientCodePageOptions);
+      FPreprepareSQL: Boolean;
+      {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
+        FClientCodePageOptions: TZClientCodePageOptions;
+        procedure SetClientCodePageOptions(Value: TZClientCodePageOptions);
+      {$ELSE}
+        function GetPreprepareSQL: Boolean;
+        procedure SetPreprepareSQL(Value: Boolean);
+      {$ENDIF}
     {$ENDIF}
     function GetConnected: Boolean;
     procedure SetConnected(Value: Boolean);
@@ -244,7 +250,11 @@ type
     procedure HideSQLHourGlass;
   published
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
-    property ClientCodePageOptions: TZClientCodePageOptions read FClientCodePageOptions write SetClientCodePageOptions default [coShowSupportedsOnly, coSetCodePageToConnection];
+      {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
+      property ClientCodePageOptions: TZClientCodePageOptions read FClientCodePageOptions write SetClientCodePageOptions default [coShowSupportedsOnly, coSetCodePageToConnection];
+      {$ELSE}
+      property PreprepareSQL: Boolean read GetPreprepareSQL write SetPreprepareSQL default True;
+      {$ENDIF}
     {$ENDIF}
     property ClientCodepage: String read FClientCodepage write SetClientCodePage; //EgonHugeist
     property Catalog: string read FCatalog write FCatalog;
@@ -419,19 +429,29 @@ begin
     else
       Value.Values['codepage'] := FClientCodepage;
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
-    if Value.Values['CodePageCompatibilityWarning']='OFF' then
-      if coShowSupportedsOnly in FClientCodePageOptions then
-        FClientCodePageOptions := FClientCodePageOptions + [coShowSupportedsOnly]
+      {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
+      if Value.Values['CodePageCompatibilityWarning']='OFF' then
+        if coShowSupportedsOnly in FClientCodePageOptions then
+          FClientCodePageOptions := FClientCodePageOptions + [coShowSupportedsOnly]
+        else
+          FClientCodePageOptions := FClientCodePageOptions - [coShowSupportedsOnly];
+        if Value.Values['SetCodePageToConnection'] = 'ON' then
+          FClientCodePageOptions := FClientCodePageOptions + [coSetCodePageToConnection]
+        else
+          FClientCodePageOptions := FClientCodePageOptions - [coSetCodePageToConnection];
+        if Value.Values['PreprepareSQL'] = 'ON' then
+          FClientCodePageOptions := FClientCodePageOptions + [coPreprepareSQL]
+        else
+          FClientCodePageOptions := FClientCodePageOptions - [coPreprepareSQL];
+      {$ELSE}
+      if Self.Connected then
+      begin
+        DbcConnection.PreprepareSQL := Value.Values['PreprepareSQL'] = 'ON';
+        FPreprepareSQL := Value.Values['PreprepareSQL'] = 'ON';
+      end
       else
-        FClientCodePageOptions := FClientCodePageOptions - [coShowSupportedsOnly];
-      if Value.Values['SetCodePageToConnection'] = 'ON' then
-        FClientCodePageOptions := FClientCodePageOptions + [coSetCodePageToConnection]
-      else
-        FClientCodePageOptions := FClientCodePageOptions - [coSetCodePageToConnection];
-      if Value.Values['PreprepareSQL'] = 'ON' then
-        FClientCodePageOptions := FClientCodePageOptions + [coPreprepareSQL]
-      else
-        FClientCodePageOptions := FClientCodePageOptions - [coPreprepareSQL];
+        FPreprepareSQL Value.Values['PreprepareSQL'] = 'ON';
+      {$ENDIF}
     {$ENDIF}
     FProperties.Text := Value.Text
   end
@@ -1120,7 +1140,7 @@ begin
   Metadata := DbcConnection.GetMetadata;
   ResultSet := Metadata.GetCatalogs;
   while ResultSet.Next do
-    List.Add(ResultSet.GetStringByName('TABLE_CAT'));
+    List.Add(String(ResultSet.GetStringByName('TABLE_CAT')));
 end;
 
 {**
@@ -1138,7 +1158,7 @@ begin
   Metadata := DbcConnection.GetMetadata;
   ResultSet := Metadata.GetSchemas;
   while ResultSet.Next do
-    List.Add(ResultSet.GetStringByName('TABLE_SCHEM'));
+    List.Add(String(ResultSet.GetStringByName('TABLE_SCHEM')));
 end;
 
 {**
@@ -1187,7 +1207,7 @@ begin
   Metadata := DbcConnection.GetMetadata;
   ResultSet := Metadata.GetTables('', schemaPattern, tablePattern, types);
   while ResultSet.Next do
-    List.Add(ResultSet.GetStringByName('TABLE_NAME'));
+    List.Add(String(ResultSet.GetStringByName('TABLE_NAME')));
 end;
 
 {**
@@ -1206,7 +1226,7 @@ begin
   Metadata := DbcConnection.GetMetadata;
   ResultSet := Metadata.GetColumns('', '', TablePattern, ColumnPattern);
   while ResultSet.Next do
-    List.Add(ResultSet.GetStringByName('COLUMN_NAME'));
+    List.Add(String(ResultSet.GetStringByName('COLUMN_NAME')));
 end;
 
 {**
@@ -1226,7 +1246,7 @@ begin
   Metadata := DbcConnection.GetMetadata;
   ResultSet := Metadata.GetProcedures('', '', Pattern);
   while ResultSet.Next do
-    List.Add(ResultSet.GetStringByName('PROCEDURE_NAME'));
+    List.Add(String(ResultSet.GetStringByName('PROCEDURE_NAME')));
 end;
 
 {**
@@ -1301,7 +1321,6 @@ begin
       TempAnsi := '';
     if Assigned(FBlobData) then
       FreeMem(FBlobData);
-    FBlobData := nil;
 
     Result := FConnection.GetAnsiEscapeString(TempAnsi);
   end;
@@ -1339,7 +1358,6 @@ begin
   Result := DbcConnection.GetDriver.GetTokenizer.GetEscapeString(String(Ansi));
 end;
 
-
 {**
   EgonHugeist: ClientCodePage-handling-options:
   @param Value the Set of TZClientCodePageOptions
@@ -1355,22 +1373,59 @@ end;
       Compatibility swich. So the SQL-Statemnents where/where not preprepared
       (neccessary for UTFEncodings)
 }
-procedure TZAbstractConnection.SetClientCodePageOptions(Value: TZClientCodePageOptions);
-begin
-  if coDisableSupportWarning in Value then
-    Self.FProperties.Values['CodePageCompatibilityWarning'] :=  'OFF'
-  else
-    Self.FProperties.Values['CodePageCompatibilityWarning'] :=  '';
-  if coSetCodePageToConnection in Value then
-    Self.FProperties.Values['SetCodePageToConnection'] :=  'ON'
-  else
-    Self.FProperties.Values['SetCodePageToConnection'] :=  '';
-  if coPreprepareSQL in Value then
-    Self.FProperties.Values['PreprepareSQL'] := 'ON'
-  else
-    Self.FProperties.Values['PreprepareSQL'] := '';
-  Self.FClientCodePageOptions := Value;
-end;
+{$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
+  procedure TZAbstractConnection.SetClientCodePageOptions(Value: TZClientCodePageOptions);
+  begin
+    if coDisableSupportWarning in Value then
+      Self.FProperties.Values['CodePageCompatibilityWarning'] :=  'OFF'
+    else
+      Self.FProperties.Values['CodePageCompatibilityWarning'] :=  '';
+    if coSetCodePageToConnection in Value then
+      Self.FProperties.Values['SetCodePageToConnection'] :=  'ON'
+    else
+      Self.FProperties.Values['SetCodePageToConnection'] :=  '';
+    if coPreprepareSQL in Value then
+    begin
+      if Self.Connected then
+        DbcConnection.PreprepareSQL := True;
+      Self.FProperties.Values['PreprepareSQL'] := 'ON'
+    end
+    else
+    begin
+      if Self.Connected then
+        DbcConnection.PreprepareSQL := False;
+      Self.FProperties.Values['PreprepareSQL'] := '';
+    end;
+    Self.FClientCodePageOptions := Value;
+  end;
+{$ELSE}
+  function TZAbstractConnection.GetPreprepareSQL: Boolean;
+  begin
+    if Self.Connected then
+    begin
+      Result := DbcConnection.PreprepareSQL;
+      Self.FPreprepareSQL := Result;
+    end
+    else
+      Result := FPreprepareSQL;
+  end;
+
+  procedure TZAbstractConnection.SetPreprepareSQL(Value: Boolean);
+  begin
+    if Value then
+      Self.FProperties.Values['PreprepareSQL'] := 'ON'
+    else
+      Self.FProperties.Values['PreprepareSQL'] := '';
+
+    if Self.Connected then
+    begin
+      DbcConnection.PreprepareSQL := Value;
+      FPreprepareSQL := Value;
+    end
+    else
+      FPreprepareSQL := Value;
+  end;
+  {$ENDIF}
 {$ENDIF}
 
 

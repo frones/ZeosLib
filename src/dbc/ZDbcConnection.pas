@@ -115,7 +115,9 @@ type
     FPassword: string;
     FInfo: TStrings;
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
-    FRaiseOnUnsupportedCP: Boolean;
+      {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
+      FRaiseOnUnsupportedCP: Boolean;
+      {$ENDIF}
     FPreprepareSQL: Boolean;
     {$ENDIF}
     FAutoCommit: Boolean;
@@ -125,12 +127,15 @@ type
     FMetadata: TContainedObject;
   protected
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
-    FSetCodePageToConnection: Boolean;
+      {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
+      FSetCodePageToConnection: Boolean;
+      {$ENDIF}
     FClientCodePage: String;
     procedure CheckCharEncoding(CharSet: String;
       const DoArrange: Boolean = False);
     function GetClientCodePageInformations(const ClientCharacterSet: String = ''): PZCodePage; //EgonHugeist
-    function DoPreprepareSQL: Boolean; //EgonHugeist
+    function GetPreprepareSQL: Boolean; //EgonHugeist
+    procedure SetPreprepareSQL(const Value: Boolean);
     {$ENDIF}
     procedure RaiseUnsupportedException;
 
@@ -443,13 +448,16 @@ begin
   if (DoArrange) and (ClientCodePage^.ZAlias <> '' ) then
     CheckCharEncoding(ClientCodePage^.ZAlias); //recalls em selves
   FPreprepareSQL := FPreprepareSQL and (ClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]);
-  FPreprepareSQL := True; //Test
-  FSetCodePageToConnection := True; //optional for the testsuites
+  {$IFDEF SQLPREPREPARE}
+  FPreprepareSQL := True;
+  {$ENDIF}
+  {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
   if ( not ClientCodePage^.IsSupported ) and FRaiseOnUnsupportedCP then
     try
       raise Exception.Create(WUnsupportedCodePage);
     except
     end;
+  {$ENDIF}
   FClientCodePage := ClientCodePage^.Name; //resets the developer choosen ClientCodePage
 end;
 
@@ -461,9 +469,14 @@ end;
     So we do not need to do the SQLString + UTF8Encode(Edit1.Test) for example.
   @result True if coPreprepareSQL was choosen in the TZAbstractConnection
 }
-function TZAbstractConnection.DoPreprepareSQL: Boolean;
+function TZAbstractConnection.GetPreprepareSQL: Boolean;
 begin
   Result := FPreprepareSQL;
+end;
+
+procedure TZAbstractConnection.SetPreprepareSQL(const Value: Boolean);
+begin
+  FPreprepareSQL := Value;
 end;
 {$ENDIF}
 
@@ -504,17 +517,21 @@ begin
     FPassword := FInfo.Values['password'];
 
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  FClientCodePage := FInfo.Values['codepage'];
-  FRaiseOnUnsupportedCP := not (FInfo.Values['CodePageCompatibilityWarning'] = 'OFF');
-  FSetCodePageToConnection := FInfo.Values['SetCodePageToConnection'] =  'ON'; //compatibitity Option for existing Applications
-  FPreprepareSQL := FInfo.Values['PreprepareSQL'] = 'ON'; //compatibitity Option for existing Applications
-  {Pick out the values from Info}
-  FInfo.Values['CodePageCompatibilityWarning'] := '';
-  FInfo.Values['SetCodePageToConnection'] := '';
-  FInfo.Values['PreprepareSQL'] := '';
-  FInfo.Values['codepage'] := '';
-  {CheckCharEncoding}
-  CheckCharEncoding(FClientCodePage, True);
+    FClientCodePage := FInfo.Values['codepage'];
+    {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
+    FRaiseOnUnsupportedCP := not (FInfo.Values['CodePageCompatibilityWarning'] = 'OFF');
+    FSetCodePageToConnection := FInfo.Values['SetCodePageToConnection'] =  'ON'; //compatibitity Option for existing Applications
+    {$ENDIF}
+    FPreprepareSQL := FInfo.Values['PreprepareSQL'] = 'ON'; //compatibitity Option for existing Applications
+    {Pick out the values from Info}
+    {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
+    FInfo.Values['CodePageCompatibilityWarning'] := '';
+    FInfo.Values['SetCodePageToConnection'] := '';
+    {$ENDIF}
+    FInfo.Values['PreprepareSQL'] := '';
+    FInfo.Values['codepage'] := '';
+    {CheckCharEncoding}
+    CheckCharEncoding(FClientCodePage, True);
   {$ENDIF}
   FAutoCommit := True;
   FClosed := True;

@@ -271,7 +271,9 @@ type
     function GetEscapeString(const Value: String;
       const EscapeMarkSequence: String = '~<|'): String;
     function GetClientCodePageInformations(const ClientCharacterSet: String = ''): PZCodePage; //EgonHugeist
-    function DoPreprepareSQL: Boolean;
+    function GetPreprepareSQL: Boolean;
+    procedure SetPreprepareSQL(const Value: Boolean);
+    property PreprepareSQL: Boolean read GetPreprepareSQL write SetPreprepareSQL;
     {$ENDIF}
   end;
 

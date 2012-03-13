@@ -84,18 +84,23 @@ type
     FConnection: IZConnection;
     FConnectionPool: TConnectionPool;
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
-    FRaiseOnUnsupportedCP: Boolean;
+      {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
+      FRaiseOnUnsupportedCP: Boolean;
+      {$ENDIF}
     FPreprepareSQL: Boolean;
     {$ENDIF}
     function GetConnection: IZConnection;
   protected // IZConnection
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
-    FSetCodePageToConnection: Boolean;
+      {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
+      FSetCodePageToConnection: Boolean;
+      {$ENDIF}
     FClientCodePage: String;
     procedure CheckCharEncoding(CharSet: String;
       const DoArrange: Boolean = False);
     function GetClientCodePageInformations(const ClientCharacterSet: String = ''): PZCodePage; //EgonHugeist
-    function DoPreprepareSQL: Boolean; //EgonHugeist
+    function GetPreprepareSQL: Boolean; //EgonHugeist
+    procedure SetPreprepareSQL(const Value: Boolean);
     {$ENDIF}
     function CreateStatement: IZStatement;
     function PrepareStatement(const SQL: string): IZPreparedStatement;
@@ -593,13 +598,13 @@ begin
   if (DoArrange) and (ClientCodePage^.ZAlias <> '' ) then
     CheckCharEncoding(ClientCodePage^.ZAlias); //recalls em selves
   FPreprepareSQL := FPreprepareSQL and (ClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]);
-  FPreprepareSQL := True; //Test
-  FSetCodePageToConnection := True; //optional for the testsuites
+  {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
   if ( not ClientCodePage^.IsSupported ) and FRaiseOnUnsupportedCP then
     try
       raise Exception.Create(WUnsupportedCodePage);
     except
     end;
+  {$ENDIF}
   FClientCodePage := ClientCodePage^.Name; //resets the developer choosen ClientCodePage
 end;
 
@@ -611,9 +616,14 @@ end;
     So we do not need to do the SQLString + UTF8Encode(Edit1.Test) for example.
   @result True if coPreprepareSQL was choosen in the TZAbstractConnection
 }
-function TZDbcPooledConnection.DoPreprepareSQL: Boolean;
+function TZDbcPooledConnection.GetPreprepareSQL: Boolean;
 begin
   Result := FPreprepareSQL;
+end;
+
+procedure TZDbcPooledConnection.SetPreprepareSQL(const Value: Boolean);
+begin
+  FPreprepareSQL := Value;
 end;
 {**
   EgonHugeist:

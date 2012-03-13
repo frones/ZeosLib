@@ -458,7 +458,7 @@ begin
         Result := SoftVarManager.GetAsString(Value);
       stString, stBytes:
         {$IFDEF CHECK_CLIENT_CODE_PAGE}
-        if GetConnection.DoPreprepareSQL then
+        if GetConnection.PreprepareSQL then
           Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value))
         else
           Result := EncodeString(FCharactersetCode,SoftVarManager.GetAsString(Value));
@@ -467,7 +467,7 @@ begin
         {$ENDIF}
       stUnicodeString:
         {$IFDEF CHECK_CLIENT_CODE_PAGE}
-        if GetConnection.DoPreprepareSQL then
+        if GetConnection.PreprepareSQL then
           Result := EncodeString(FCharactersetCode,SoftVarManager.GetAsUnicodeString(Value))
         else
           Result := UTF8Encode(EncodeString(FCharactersetCode,SoftVarManager.GetAsUnicodeString(Value)));
@@ -489,7 +489,7 @@ begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
             {$IFDEF CHECK_CLIENT_CODE_PAGE}
-            if GetConnection.DoPreprepareSQL then
+            if GetConnection.PreprepareSQL then
               Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString)
             else
               Result := EncodeString(TempBlob.GetString)
@@ -531,7 +531,7 @@ begin
             else
             begin
               {$IFDEF CHECK_CLIENT_CODE_PAGE}
-              if GetConnection.DoPreprepareSQL then
+              if GetConnection.PreprepareSQL then
                 result := GetConnection.GetAnsiEscapeString(TempBlob.GetString)
               else
                 result:= FPlainDriver.EncodeBYTEA(TempBlob.GetString,
@@ -866,7 +866,7 @@ begin
   else
     Result := ASql;
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  if GetConnection.DoPreprepareSQL then
+  if GetConnection.PreprepareSQL then
     Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
   {$ENDIF}
 end;

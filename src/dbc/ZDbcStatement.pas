@@ -635,7 +635,7 @@ begin
   now. So this also must be done in the IZSelectSchema if somebody requests
   converted column-data...}
 
-  if GetConnection.DoPreprepareSQL then
+  if GetConnection.PreprepareSQL then
   begin
     SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeEscapeBufferToList(SQL); //Disassembles the Query
     for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query

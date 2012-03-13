@@ -551,10 +551,10 @@ end;
 procedure TZSQLiteBaseDriver.LoadCodePages;  //Egonhugeist
 begin
   { MultiByte }
-  AddCodePage('UTF-8', 1, ceUTF8, zCP_UTF8);
-  AddCodePage('UTF-16le', 2, ceUTF16, zCP_UTF8, 'UTF-8'); //Setting this will be ignored by actual Excute of Plaindriver
-  AddCodePage('UTF-16be', 3, ceUTF16, zCP_UTF8, 'UTF-8'); //Setting this will be ignored by actual Excute of Plaindriver
-  AddCodePage('UTF-16', 4, ceUTF16, zCP_UTF8, 'UTF-8'); //Setting this will be ignored by actual Excute of Plaindriver
+  AddCodePage('UTF-8', 1, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF});
+  AddCodePage('UTF-16le', 2, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}, 'UTF-8'); //Setting this will be ignored by actual Excute of Plaindriver
+  AddCodePage('UTF-16be', 3, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16BE{$ENDIF}, 'UTF-8'); //Setting this will be ignored by actual Excute of Plaindriver
+  AddCodePage('UTF-16', 4, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16{$ENDIF}, 'UTF-8'); //Setting this will be ignored by actual Excute of Plaindriver
 end;
 {$ENDIF}
 

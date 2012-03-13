@@ -559,7 +559,9 @@ begin
     if FClientCodePage = '' then //was set on inherited Create(...)
       FClientCodePage := sMy_client_Char_Set;
 
-    if FSetCodePageToConnection and (FClientCodePage <> sMy_client_Char_Set) then
+
+    if {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS} FSetCodePageToConnection and {$ENDIF}
+      (FClientCodePage <> sMy_client_Char_Set) then
       //Set CharacterSet only if wanted this is a little patch for someone who
       //currently wrote UTF8 into a latin-database for example
       //so this rearanges only the internal use of vtUnicodeString

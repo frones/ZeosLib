@@ -461,8 +461,9 @@ begin
       Self.CheckCharEncoding(FClientCodePage, True);
       Self.Info.Values['isc_dpb_lc_ctype'] := ''; //drop it (setting is optional)
     end;
-
+  {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
   if FSetCodePageToConnection then
+  {$ENDIF}
     //Set CharacterSet only if wanted! This is a little patch for someone who
     //currently wrote UTF8 into a latin-database for example
     //so this rearanges only the internal use of vtUnicodeString
@@ -767,7 +768,7 @@ begin
 
   { Set transaction parameters by TransactIsolationLevel }
   {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  if FSetCodePageToConnection then
+  {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}if FSetCodePageToConnection then{$ENDIF}
     Params.Values['isc_dpb_lc_ctype'] := FClientCodePage; //Set CharacterSet allways if option is set
   {$ENDIF}
   Params.Add('isc_tpb_version3');
@@ -832,14 +833,20 @@ end;
 {$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZInterbase6Connection.GetAnsiEscapeString(const Value: AnsiString;
   const EscapeMarkSequence: String = '~<|'): String;
+var
+  Tmp: AnsiString;
 begin
   if Self.FPlainDriver.GetProtocol = 'firebird-2.5' then
-    if SizeOf(Value) < 32*1024 then
-      Result := inherited GetEscapeString('x'''+Value+'''', EscapeMarkSequence)
+    if SizeOf(Value) < 32*1024*2 then
+    begin
+      SetLength(Tmp, Length(Value)*2);
+      BinToHex(PAnsiChar(Value), PAnsiChar(Tmp), Length(Value)*2);
+      Result := inherited GetEscapeString('x'''+Tmp+'''', EscapeMarkSequence)
+    end
     else
       raise Exception.Create('Binary data out of range! Use Blob-Fields!')
   else
-    raise Exception.Create('Your Firebird-Version does''t support Binary-Data in SQL-Statements!');
+    raise Exception.Create('Your Firebird-Version does''t support Binary-Data in SQL-Statements! Use Blob-Fields!');
 end;
 {$ENDIF}
 

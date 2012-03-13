@@ -548,7 +548,8 @@ begin
 
     { Sets a client codepage. }
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
-    if ( FClientCodePage <> '' )and FSetCodePageToConnection then
+    if ( FClientCodePage <> '' )
+      {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}and FSetCodePageToConnection {$ENDIF}then
     begin
       SQL := PAnsiChar(ZAnsiString(Format('SET CLIENT_ENCODING TO ''%s''',
                                           [FClientCodePage])));

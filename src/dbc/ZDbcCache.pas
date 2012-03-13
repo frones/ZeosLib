@@ -2158,7 +2158,9 @@ begin
         FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
         Value := System.Copy(Value, 1, FColumnLengths[ColumnIndex - 1] div 2);
         {$IFDEF CHECK_CLIENT_CODE_PAGE}
-        Value := ZCPWideString(Value, ClientCodePage^.CP);
+          {$IFDEF WITH_CHAR_CONTROL}
+          Value := ZCPWideString(Value, ClientCodePage^.CP);
+          {$ENDIF}
         {$ENDIF}
         if Length(Value) > 0 then
                System.Move(PWideString(Value)^,

@@ -204,7 +204,7 @@ begin
     Exit;
   for I := 0 to FEvents.Count-1 do
   begin
-    StrPCopy(Tmp, 'listen ' + FEvents.Strings[I]);
+    StrPCopy(Tmp, 'listen ' + AnsiString(FEvents.Strings[I]));
     Res := PlainDRV.ExecuteQuery(Handle, Tmp);
     if (PlainDRV.GetResultStatus(Res) <> TZPostgreSQLExecStatusType(
       PGRES_COMMAND_OK)) then
@@ -238,7 +238,7 @@ begin
     Exit;
   for I := 0 to FEvents.Count-1 do
   begin
-    StrPCopy(Tmp, 'unlisten ' + FEvents.Strings[i]);
+    StrPCopy(Tmp, 'unlisten ' + AnsiString(FEvents.Strings[i]));
     Res := PlainDRV.ExecuteQuery(Handle, Tmp);
     if (PlainDRV.GetResultStatus(Res) <> TZPostgreSQLExecStatusType(
       PGRES_COMMAND_OK)) then

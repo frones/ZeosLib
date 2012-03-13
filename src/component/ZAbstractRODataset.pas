@@ -1657,6 +1657,10 @@ begin
       for I := 1 to GetColumnCount do
       begin
         FieldType := ConvertDbcToDatasetType(GetColumnType(I));
+        {$IFDEF CHECK_CLIENT_CODE_PAGE}
+        //if IsCurrency(I) then
+          //FieldType := ftCurrency;
+        {$ENDIF}
         if FieldType in [ftString, ftWidestring, ftBytes] then
           Size := GetPrecision(I)
         else
