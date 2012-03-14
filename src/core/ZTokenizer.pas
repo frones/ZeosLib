@@ -1607,7 +1607,7 @@ begin
   end
   else
     Exit;
-  Stream.Seek(-(iReadCount * SizeOf(Char)), soFromCurrent); //Seek Strem back to starting Position
+  Stream.Seek(-(iReadCount * SizeOf(Char)), soFromCurrent); //Seek Stream back to starting Position
   Result := Self.EscapeState;
 end;
 {$ENDIF}

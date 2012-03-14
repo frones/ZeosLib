@@ -548,6 +548,9 @@ begin
 
     { Sets a client codepage. }
     {$IFDEF CHECK_CLIENT_CODE_PAGE}
+      {$IFDEF SETPGTOLATIN1}
+      FClientCodePage := 'LATIN1';
+      {$ENDIF}
     if ( FClientCodePage <> '' )
       {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}and FSetCodePageToConnection {$ENDIF}then
     begin
@@ -1119,7 +1122,7 @@ function TZPostgreSQLConnection.GetEscapeString(const Value: String;
   const EscapeMarkSequence: String = '~<|'): String;
 var TempAnsi: String;
 begin
-  Result := inherited GetEscapeString(ZDbcPostgreSqlUtils.EncodeString(TZPgCharactersetType(Self.ClientCodePage^.ID), Value), EscapeMarkSequence);
+  Result := inherited GetEscapeString(ZDbcPostgreSqlUtils.EncodeString(TZPgCharactersetType(Self.ClientCodePage^.ID), Value), EscapeMarkSequence)
 end;
 {$ENDIF}
 
