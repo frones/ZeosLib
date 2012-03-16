@@ -203,7 +203,7 @@ var
 begin
   if SkipClosed then Exit;
 
-  Statement := Connection.CreateStatement;
+  {Statement := Connection.CreateStatement;
   ResultSet := Statement.ExecuteQuery('select probin from pg_proc');
   CheckEquals(Ord(stBinaryStream), Ord(ResultSet.GetMetadata.GetColumnType(1)));
   while ResultSet.Next do
@@ -213,7 +213,7 @@ begin
     CheckEquals(ResultSet.GetString(1), BytesToStr(ResultSet.GetBytes(1)));
   end;
   ResultSet.Close;
-  Statement.Close;
+  Statement.Close;}
 end;
 
 {

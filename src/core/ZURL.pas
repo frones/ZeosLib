@@ -125,7 +125,7 @@ end;
 
 procedure TZURL.SetHostName(const Value: string);
 begin
-  FHostName := Value;
+  FHostName := StringReplace(Value, ';', #9, [rfReplaceAll]); //escape the ';' char to #9
 end;
 
 procedure TZURL.SetPort(const Value: Integer);
@@ -135,17 +135,17 @@ end;
 
 procedure TZURL.SetDatabase(const Value: string);
 begin
-  FDatabase := Value;
+  FDatabase := StringReplace(Value, ';', #9, [rfReplaceAll]); //escape the ';' char to #9
 end;
 
 procedure TZURL.SetUserName(const Value: string);
 begin
-  FUserName := Value;
+  FUserName := StringReplace(Value, ';', #9, [rfReplaceAll]); //escape the ';' char to #9
 end;
 
 procedure TZURL.SetPassword(const Value: string);
 begin
-  FPassword := Value;
+  FPassword := StringReplace(Value, ';', #9, [rfReplaceAll]); //escape the ';' char to #9
 end;
 
 function TZURL.GetURL: string;
@@ -186,7 +186,7 @@ begin
   if FPassword <> '' then
   begin
     if Result[Length(Result)] <> '?' then
-      Result := Result + #9;
+      Result := Result + ';';
     Result := Result + 'password=' + FPassword
   end;
 
@@ -198,7 +198,7 @@ begin
     if (PropValue <> '') and (PropValue <> '') and (PropValue <> 'uid') and (PropValue <> 'pwd') and (PropValue <> 'username') and (PropValue <> 'password') then
     begin
       if Result[Length(Result)] <> '?' then
-        Result := Result + #9;
+        Result := Result + ';';
       Result := Result + FProperties[I]
     end;
   end;
@@ -282,7 +282,7 @@ begin
     begin
       ADatabase := Copy(AValue, 1, I - 1);
       Delete(AValue, 1, I);
-      AProperties.Text := StringReplace(AValue, #9, LineEnding, [rfReplaceAll]);
+      AProperties.Text := StringReplace(AValue, ';', LineEnding, [rfReplaceAll]);
     end
     else
       ADatabase := AValue;

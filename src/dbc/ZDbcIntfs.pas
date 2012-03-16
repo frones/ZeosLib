@@ -59,7 +59,8 @@ interface
 
 uses
   Types, Classes, SysUtils, ZClasses, ZCollections, ZSysUtils, ZCompatibility,
-  ZTokenizer, ZSelectSchema, ZGenericSqlAnalyser, ZDbcLogging, ZVariant, ZPlainDriver;
+  ZTokenizer, ZSelectSchema, ZGenericSqlAnalyser, ZDbcLogging, ZVariant,
+  ZPlainDriver, ZURL;
 
 const
   { Constants from JDBC DatabaseMetadata }
@@ -185,6 +186,9 @@ type
       const Msg: string);
     procedure LogError(Category: TZLoggingCategory; const Protocol: string;
       const Msg: string; ErrorCode: Integer; const Error: string);
+    function ConstructURL(const Protocol, HostName, Database,
+      UserName, Password: String; const Port: Integer;
+      const Properties: TStrings = nil): String;
   end;
 
   {** Database Driver interface. }
@@ -243,6 +247,7 @@ type
 
     function PingServer: Integer;
     function EscapeString(Value: AnsiString): AnsiString;
+
     procedure Open;
     procedure Close;
     function IsClosed: Boolean;
@@ -896,6 +901,7 @@ type
     FDrivers: IZCollection;
     FLoginTimeout: Integer;
     FLoggingListeners: IZCollection;
+    FURL: TZURL;
   public
     constructor Create;
     destructor Destroy; override;
@@ -923,6 +929,10 @@ type
       const Msg: string);
     procedure LogError(Category: TZLoggingCategory; const Protocol: string;
       const Msg: string; ErrorCode: Integer; const Error: string);
+
+    function ConstructURL(const Protocol, HostName, Database,
+      UserName, Password: String; const Port: Integer;
+      const Properties: TStrings = nil): String;
   end;
 
 { TZDriverManager }
@@ -935,6 +945,7 @@ begin
   FDrivers := TZCollection.Create;
   FLoginTimeout := 0;
   FLoggingListeners := TZCollection.Create;
+  FURL := TZURL.Create;
 end;
 
 {**
@@ -942,6 +953,7 @@ end;
 }
 destructor TZDriverManager.Destroy;
 begin
+  FURL.Destroy;
   FDrivers := nil;
   FLoggingListeners := nil;
   inherited Destroy;
@@ -1141,6 +1153,31 @@ begin
   if FLoggingListeners.Count = 0 then
       Exit;
   LogError(Category, Protocol, Msg, 0, '');
+end;
+
+{**
+  Constructs a valid URL
+  @param Protocol the Driver-protocol (must be assigned).
+  @param HostName the hostname (could be empty).
+  @param Database the connection-database (could be empty).
+  @param UserName the username (could be empty).
+  @param Password the password(could be empty).
+  @param Port the Server-Port (could be 0).
+  @param Properties the Database-Properties (could be empty).
+}
+function TZDriverManager.ConstructURL(const Protocol, HostName, Database,
+  UserName, Password: String; const Port: Integer;
+  const Properties: TStrings = nil): String;
+begin
+  FURL.Protocol := Protocol;
+  FURL.HostName := HostName;
+  FURL.Database := DataBase;
+  FURL.UserName := UserName;
+  FURL.Password := Password;
+  FURL.Port := Port;
+  if Assigned(Properties) then
+    FURL.Properties.Text := StringReplace(Properties.Text, ';', #9, [rfReplaceAll]); //escape the ';' char to #9
+  Result := FURL.URL;
 end;
 
 { EZSQLThrowable }

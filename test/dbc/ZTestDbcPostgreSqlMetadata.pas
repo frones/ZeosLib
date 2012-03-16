@@ -612,7 +612,7 @@ procedure TZTestPostgreSqlMetadataCase.TestGetExportedKeys;
 var
   ResultSet: IZResultSet;
 begin
-  Exit; //fix it
+  //Exit; //fix it
   ResultSet := Metadata.GetExportedKeys('', '', 'department');
   with ResultSet do
   begin

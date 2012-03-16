@@ -207,7 +207,7 @@ procedure ResolveDatabaseUrl(const Url: string; Info: TStrings;
   var HostName: string; var Port: Integer; var Database: string;
   var UserName: string; var Password: string; ResultInfo: TStrings);
 var
-  Index: Integer;
+  Index,i: Integer;
   Temp: string;
 
   procedure RaiseException;
@@ -263,15 +263,18 @@ begin
   Index := FirstDelimiter('?', Temp);
   if Index > 0 then
   begin
-    Database := Copy(Temp, 1, Index - 1);
+    Database := StringReplace(Copy(Temp, 1, Index - 1), #9, ';', [rfReplaceAll]); //Un-escape the #9 char to ';'
     Delete(Temp, 1, Index);
-    PutSplitString(ResultInfo, Temp, #9);
+    PutSplitString(ResultInfo, Temp, ';');
   end
   else
     Database := Temp;
 
   if Info <> nil then
     ResultInfo.AddStrings(Info);
+
+  for i := 0 to ResultInfo.Count -1 do //Un-escape the #9 char to ';'
+    ResultInfo[I] := StringReplace(ResultInfo[I], #9, ';', [rfReplaceAll]);
 
   { Defines user name }
   UserName := ResultInfo.Values['UID'];

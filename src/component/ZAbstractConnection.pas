@@ -229,6 +229,7 @@ type
     function GetBinaryEscapeStringFromStream(const Stream: TStream): String; overload;
     function GetBinaryEscapeStringFromFile(const FileName: String): String; overload;
     function GetAnsiEscapeString(const Ansi: AnsiString): String;
+    function GetURL: String;
     {$ENDIF}
 
     property InTransaction: Boolean read GetInTransaction;
@@ -587,7 +588,9 @@ end;
 }
 function TZAbstractConnection.ConstructURL(const UserName, Password: string): string;
 begin
-  if Port <> 0 then
+  Result := DriverManager.ConstructURL(FProtocol, FHostName, FDatabase, UserName,
+    Password, FPort, FProperties);
+  {if Port <> 0 then
   begin
     Result := Format('zdbc:%s://%s:%d/%s?UID=%s'#9'PWD=%s', [FProtocol, FHostName,
       FPort, FDatabase, UserName, Password]);
@@ -596,7 +599,7 @@ begin
   begin
     Result := Format('zdbc:%s://%s/%s?UID=%s'#9'PWD=%s', [FProtocol, FHostName,
       FDatabase, UserName, Password]);
-  end;
+  end;}
 end;
 
 {**
@@ -1356,6 +1359,11 @@ end;
 function TZAbstractConnection.GetAnsiEscapeString(const Ansi: AnsiString): String;
 begin
   Result := DbcConnection.GetDriver.GetTokenizer.GetEscapeString(String(Ansi));
+end;
+
+function TZAbstractConnection.GetURL: String;
+begin
+  Result := ConstructURL(Self.FUser, Self.FPassword);
 end;
 
 {**
