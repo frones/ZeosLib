@@ -132,7 +132,7 @@ type
     //HA 090811 Change Type of FOnLogin to new TZLoginEvent
     //FOnLogin: TLoginEvent;
     FOnLogin: TZLoginEvent;
-    FClientCodepage: String; //String
+    FClientCodepage: String;
 
     function GetConnected: Boolean;
     procedure SetConnected(Value: Boolean);
@@ -213,6 +213,7 @@ type
     procedure GetStoredProcNames(const Pattern: string; List: TStrings);
     procedure GetTriggerNames(const TablePattern, SchemaPattern: string; List: TStrings);
 
+    function GetURL: String;
     property InTransaction: Boolean read GetInTransaction;
 
     property User: string read FUser write FUser;
@@ -537,7 +538,9 @@ end;
 }
 function TZAbstractConnection.ConstructURL(const UserName, Password: string): string;
 begin
-  if Port <> 0 then
+  Result := DriverManager.ConstructURL(FProtocol, FHostName, FDatabase, UserName,
+    Password, FPort, FProperties);
+  {if Port <> 0 then
   begin
     Result := Format('zdbc:%s://%s:%d/%s?UID=%s'#9'PWD=%s', [FProtocol, FHostName,
       FPort, FDatabase, UserName, Password]);
@@ -546,7 +549,7 @@ begin
   begin
     Result := Format('zdbc:%s://%s/%s?UID=%s'#9'PWD=%s', [FProtocol, FHostName,
       FDatabase, UserName, Password]);
-  end;
+  end;}
 end;
 
 {**
@@ -1090,7 +1093,7 @@ begin
   Metadata := DbcConnection.GetMetadata;
   ResultSet := Metadata.GetCatalogs;
   while ResultSet.Next do
-    List.Add(ResultSet.GetStringByName('TABLE_CAT'));
+    List.Add(String(ResultSet.GetStringByName('TABLE_CAT')));
 end;
 
 {**
@@ -1108,7 +1111,7 @@ begin
   Metadata := DbcConnection.GetMetadata;
   ResultSet := Metadata.GetSchemas;
   while ResultSet.Next do
-    List.Add(ResultSet.GetStringByName('TABLE_SCHEM'));
+    List.Add(String(ResultSet.GetStringByName('TABLE_SCHEM')));
 end;
 
 {**
@@ -1157,7 +1160,7 @@ begin
   Metadata := DbcConnection.GetMetadata;
   ResultSet := Metadata.GetTables('', schemaPattern, tablePattern, types);
   while ResultSet.Next do
-    List.Add(ResultSet.GetStringByName('TABLE_NAME'));
+    List.Add(String(ResultSet.GetStringByName('TABLE_NAME')));
 end;
 
 {**
@@ -1176,7 +1179,7 @@ begin
   Metadata := DbcConnection.GetMetadata;
   ResultSet := Metadata.GetColumns('', '', TablePattern, ColumnPattern);
   while ResultSet.Next do
-    List.Add(ResultSet.GetStringByName('COLUMN_NAME'));
+    List.Add(String(ResultSet.GetStringByName('COLUMN_NAME')));
 end;
 
 {**
@@ -1196,7 +1199,7 @@ begin
   Metadata := DbcConnection.GetMetadata;
   ResultSet := Metadata.GetProcedures('', '', Pattern);
   while ResultSet.Next do
-    List.Add(ResultSet.GetStringByName('PROCEDURE_NAME'));
+    List.Add(String(ResultSet.GetStringByName('PROCEDURE_NAME')));
 end;
 
 {**
@@ -1220,6 +1223,10 @@ begin
 end;
 
 
+function TZAbstractConnection.GetURL: String;
+begin
+  Result := ConstructURL(Self.FUser, Self.FPassword);
+end;
 
 
 {**
