@@ -108,8 +108,8 @@ type
     FPlainDriver: IZMySQLPlainDriver;
   protected
     function CreateExecStatement: IZStatement; override;
-    function GetEscapeString(const Value: string): string;
-    function GetAnsiEscapeString(const Value: AnsiString): AnsiString;
+    {function GetEscapeString(const Value: string): string;
+    function GetAnsiEscapeString(const Value: AnsiString): AnsiString;}
     function PrepareSQLParam(ParamIndex: Integer): string; override;
   public
     constructor Create(PlainDriver: IZMySQLPlainDriver;
@@ -252,7 +252,7 @@ begin
     CachedResolver := TZMySQLCachedResolver.Create(FPlainDriver, FHandle, Self,
       NativeResultSet.GetMetaData);
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
-      CachedResolver{$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
+      CachedResolver, ClientCodePage);
     CachedResultSet.SetConcurrency(GetResultSetConcurrency);
     Result := CachedResultSet;
   end
@@ -270,7 +270,6 @@ end;
 function TZMySQLStatement.ExecuteQuery(const SQL: string): IZResultSet;
 begin
   Result := nil;
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   Self.SSQL := SQL; //Did preprepare the SQL
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(Self.ASQL)) = 0 then
   begin
@@ -281,17 +280,6 @@ begin
   end
   else
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
-  {$ELSE}
-    if FPlainDriver.ExecQuery(FHandle, PAnsiChar(AnsiString(SQL))) = 0 then
-  begin
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
-    if not FPlainDriver.ResultSetExists(FHandle) then
-      raise EZSQLException.Create(SCanNotOpenResultSet);
-    Result := CreateResultSet(SQL);
-  end
-  else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
-  {$ENDIF}
 end;
 
 {**
@@ -311,16 +299,10 @@ var
   HasResultset : Boolean;
 begin
   Result := -1;
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   Self.SSQL := SQL; //Preprepare SQL
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
-  {$ELSE}
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(AnsiString(SQL))) = 0 then
-  begin
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
-  {$ENDIF}
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
     if HasResultSet then
@@ -339,11 +321,7 @@ begin
       Result := FPlainDriver.GetAffectedRows(FHandle);
   end
   else
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
-    {$ELSE}
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
-    {$ENDIF}
   LastUpdateCount := Result;
 end;
 
@@ -372,17 +350,10 @@ var
   HasResultset : Boolean;
 begin
   Result := False;
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   Self.SSQL := SQL; //Preprepare SQL and sets AnsiSQL
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
-  {$ELSE}
-  FSQL := SQL;
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(AnsiString(SQL))) = 0 then
-  begin
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
-  {$ENDIF}
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
     if HasResultSet then
@@ -398,11 +369,7 @@ begin
     end;
   end
   else
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
-  {$ELSE}
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
-  {$ENDIF}
 end;
 
 {**
@@ -429,11 +396,7 @@ begin
   begin
     AStatus := FPlainDriver.RetrieveNextRowset(FHandle);
     if AStatus > 0 then
-      {$IFDEF CHECK_CLIENT_CODE_PAGE}
       CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL)
-      {$ELSE}
-      CheckMySQLError(FPlainDriver, FHandle, lcExecute, FSQL)
-      {$ENDIF}
     else
       Result := (AStatus = 0);
 
@@ -442,11 +405,7 @@ begin
     LastResultSet := nil;
     LastUpdateCount := -1;
     if FPlainDriver.ResultSetExists(FHandle) then
-      {$IFDEF CHECK_CLIENT_CODE_PAGE}
       LastResultSet := CreateResultSet(SSQL)
-      {$ELSE}
-      LastResultSet := CreateResultSet(FSQL)
-      {$ENDIF}
     else
       LastUpdateCount := FPlainDriver.GetAffectedRows(FHandle);
   end;
@@ -485,7 +444,7 @@ end;
   @param Value a regular string.
   @return a string in MySQL escape format.
 }
-function TZMySQLEmulatedPreparedStatement.GetEscapeString(const Value: string): string;
+(* function TZMySQLEmulatedPreparedStatement.GetEscapeString(const Value: string): string;
 var
   BufferLen: Integer;
   Buffer: PAnsiChar;
@@ -493,31 +452,25 @@ begin
   BufferLen := Length(Value) * 2 + 1;
   GetMem(Buffer, BufferLen);
   if FHandle = nil then
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: If it's tested remove all directives
-    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(ZAnsiString(Value)), Length(PAnsiChar(ZAnsiString(Value))))
+  {$IFDEF DELPHI12_UP}
+    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(UTF8Encode(Value)), Length(PAnsiChar(UTF8Encode(Value))))
   else
-    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(ZAnsiString(Value)), Length(PAnsiChar(ZAnsiString(Value))));
-  {$ELSE} //The rest should be waste
-    {$IFDEF DELPHI12_UP}
-      BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(UTF8Encode(Value)), Length(PAnsiChar(UTF8Encode(Value))))
-    else
-      BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(UTF8Encode(Value)), Length(PAnsiChar(UTF8Encode(Value))));
-    {$ELSE}
-      BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(Value), Length(Value))
-     else
-      BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(Value), Length(Value));
-    {$ENDIF}
+    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(UTF8Encode(Value)), Length(PAnsiChar(UTF8Encode(Value))));
+  {$ELSE}
+    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(Value), Length(Value))
+   else
+    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(Value), Length(Value));
   {$ENDIF}
   Result := '''' + BufferToStr(Buffer, BufferLen) + '''';
   FreeMem(Buffer);
-end;
+end; *)
 
 {**
   Converts an ansi string (binary data) into escape MySQL format.
   @param Value a regular string.
   @return a string in MySQL escape format.
 }
-function TZMySQLEmulatedPreparedStatement.GetAnsiEscapeString(const Value: AnsiString): AnsiString;
+(*function TZMySQLEmulatedPreparedStatement.GetAnsiEscapeString(const Value: AnsiString): AnsiString;
 var
   BufferLen: Integer;
   Buffer: PAnsiChar;
@@ -530,7 +483,7 @@ begin
     BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(Value), Length(Value));
   Result := '''' + AnsiString(BufferToStr(Buffer, BufferLen)) + '''';
   FreeMem(Buffer);
-end;
+end;*)
 
 {**
   Prepares an SQL parameter for the query.
@@ -567,14 +520,7 @@ begin
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
       stString, stUnicodeString, stBytes:
-        {$IFDEF CHECK_CLIENT_CODE_PAGE}
-        if GetConnection.PreprepareSQL then
-          Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value))
-        else
-          Result := GetEscapeString(SoftVarManager.GetAsString(Value));
-        {$ELSE}
-        Result := GetEscapeString(SoftVarManager.GetAsString(Value));
-        {$ENDIF}
+        Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
       stDate:
       begin
         DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
@@ -600,25 +546,10 @@ begin
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
-            {$IFDEF CHECK_CLIENT_CODE_PAGE}
-            if GetConnection.PreprepareSQL then
-              Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString)
-            else
-              Result := String(GetAnsiEscapeString(TempBlob.GetString))
-            {$ELSE}
-            Result := String(GetAnsiEscapeString(TempBlob.GetString))
-            {$ENDIF}
+            Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString)
           else
             Result := 'NULL';
         end;
-{     stUnicodeStream: EgonHugeist: Write allways byte per byte. so there is no need for it
-        begin
-          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
-          if not TempBlob.IsEmpty then
-            Result := String(GetAnsiEscapeString(AnsiString(UTF8Encode(TempBlob.GetUnicodeString))))
-          else
-            Result := 'NULL';
-        end;}
     end;
   end;
 end;
@@ -657,10 +588,8 @@ begin
 end;
 
 procedure TZMySQLPreparedStatement.Prepare;
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 var
   AnsiSQL: AnsiString;
-{$ENDIF}
 begin
   FStmtHandle := FPlainDriver.InitializePrepStmt(FHandle);
   if (FStmtHandle = nil) then
@@ -668,12 +597,8 @@ begin
       CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoInitPrepStmt);
       exit;
     end;
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   AnsiSQL := GetPrepreparedSQL(SQL); //do not spit Tokens twice
   if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(AnsiSQL), length(AnsiSQL)) <> 0) then
-  {$ELSE}
-  if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(AnsiString(SQL)), length(SQL)) <> 0) then
-  {$ENDIF}
     begin
       CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoPrepareStmt);
       exit;
@@ -720,7 +645,7 @@ begin
     CachedResolver := TZMySQLCachedResolver.Create(FPlainDriver, FHandle, (Self as IZMysqlStatement),
       NativeResultSet.GetMetaData);
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
-      CachedResolver{$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
+      CachedResolver, ClientCodePage);
     CachedResultSet.SetConcurrency(GetResultSetConcurrency);
     Result := CachedResultSet;
   end
@@ -760,11 +685,7 @@ begin
               FIELD_TYPE_FLOAT:    Single(PBuffer^)     := InParamValues[I].VFloat;
               FIELD_TYPE_STRING:
                 begin
-                  {$IFDEF CHECK_CLIENT_CODE_PAGE}
                   CastString := ZAnsiString(InParamValues[I].VString);
-                  {$ELSE}
-                  CastString := InParamValues[I].VString; //DataLoss!! VString = Wide since D12_UP
-                  {$ENDIF}
                   for J := 1 to system.length(CastString) do
                     begin
                       PAnsiChar(PBuffer)^ := CastString[J];

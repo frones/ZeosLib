@@ -893,20 +893,13 @@ type
   end;
 
   {** Implements a driver for ASA 7.0 }
-  TZASA7PlainDriver = class ({$IFDEF CHECK_CLIENT_CODE_PAGE}
-  TZGenericAbstractPlainDriver{$ELSE}TZAbstractObject{$ENDIF}, IZPlainDriver,
+  TZASA7PlainDriver = class (TZGenericAbstractPlainDriver, IZPlainDriver,
     IZASAPlainDriver, IZASA7PlainDriver)
   public
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
     procedure Initialize; override;
-    {$ELSE}
-    function GetProtocol: string;
-    function GetDescription: string;
-    procedure Initialize;
-    {$ENDIF}
     constructor Create;
 
     function sqlerror_message(sqlca: PZASASQLCA; Buffer: PAnsiChar;
@@ -993,21 +986,14 @@ type
   end;
 
   {** Implements a driver for ASA 8.0 }
-  TZASA8PlainDriver = class ({$IFDEF CHECK_CLIENT_CODE_PAGE}
-    TZGenericAbstractPlainDriver{$ELSE}TZAbstractObject{$ENDIF}, IZPlainDriver,
+  TZASA8PlainDriver = class (TZGenericAbstractPlainDriver, IZPlainDriver,
     IZASAPlainDriver, IZASA8PlainDriver)
   public
     constructor Create;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
     procedure Initialize; override;
-    {$ELSE}
-    function GetProtocol: string;
-    function GetDescription: string;
-    procedure Initialize;
-    {$ENDIF}
 
     function sqlerror_message(sqlca: PZASASQLCA; Buffer: PAnsiChar;
       MaxSize: Integer): PAnsiChar;
@@ -1093,20 +1079,13 @@ type
   end;
 
   {** Implements a driver for ASA 9.0 }
-  TZASA9PlainDriver = class ({$IFDEF CHECK_CLIENT_CODE_PAGE}
-    TZGenericAbstractPlainDriver{$ELSE}TZAbstractObject{$ENDIF}, IZPlainDriver,
+  TZASA9PlainDriver = class (TZGenericAbstractPlainDriver, IZPlainDriver,
     IZASAPlainDriver, IZASA9PlainDriver)
   public
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
     procedure Initialize; override;
-    {$ELSE}
-    function GetProtocol: string;
-    function GetDescription: string;
-    procedure Initialize;
-    {$ENDIF}
     constructor Create;
 
     function sqlerror_message(sqlca: PZASASQLCA; Buffer: PAnsiChar;
@@ -1191,17 +1170,15 @@ implementation
 
 uses SysUtils, ZPlainASA7, ZPlainASA8, ZPlainASA9;
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 procedure TZASA7PlainDriver.LoadCodePages;
 begin
   AddCodePage('Not implemented!', -1);
    { TODO -oEgonHugeist : Must be completed!!!! }
 end;
-{$ENDIF}
 
 constructor TZASA7PlainDriver.Create;
 begin
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}inherited;{$ENDIF}
+  inherited;
 end;
 
 function TZASA7PlainDriver.GetProtocol: string;
@@ -1483,13 +1460,11 @@ end;
 
 {TZASA8PlainDriver}
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 procedure TZASA8PlainDriver.LoadCodePages;
 begin
   AddCodePage('Not implemented!', -1);
    { TODO -oEgonHugeist : Must be completed!!!! }
 end;
-{$ENDIF}
 
 constructor TZASA8PlainDriver.Create;
 begin
@@ -1774,13 +1749,11 @@ end;
 
 {TZASA9PlainDriver}
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 procedure TZASA9PlainDriver.LoadCodePages;
 begin
   AddCodePage('Not implemented!', -1);
    { TODO -oEgonHugeist : Must be completed!!!! }
 end;
-{$ENDIF}
 
 constructor TZASA9PlainDriver.Create;
 begin

@@ -76,10 +76,8 @@ type
     function Connect(const Url: string; Info: TStrings): IZConnection; override;
 
     function GetSupportedProtocols: TStringDynArray; override;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetSupportedClientCodePages(const Url: string;
       Const SupportedsOnly: Boolean): TStringDynArray; override; //EgonHugeist
-    {$ENDIF}
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
 
@@ -141,12 +139,10 @@ type
     procedure Open; override;
     procedure Close; override;
 
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetAnsiEscapeString(const Value: AnsiString;
       const EscapeMarkSequence: String = '~<|'): String; override;
     //function GetEscapeString(const Value: String;
       //const EscapeMarkSequence: String = '~<|'): String; override;
-    {$ENDIF}
   end;
 
   {** Implements a specialized cached resolver for Interbase/Firebird. }
@@ -313,7 +309,6 @@ begin
     Result[i] := FPlainDrivers[i].GetProtocol;
 end;
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 {**
   EgonHugeist:
   Get names of the compiler-supported CharacterSets.
@@ -333,7 +328,6 @@ begin
         break;
       end;
 end;
-{$ENDIF}
 
 { TZInterbase6Connection }
 
@@ -453,7 +447,6 @@ begin
   self.Info.Values['isc_dpb_username'] := User;
   self.Info.Values['isc_dpb_password'] := Password;
 
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   if FClientCodePage = '' then //was set on inherited Create(...)
     if self.Info.Values['isc_dpb_lc_ctype'] <> '' then //Check if Dev set's it manually
     begin
@@ -461,14 +454,7 @@ begin
       Self.CheckCharEncoding(FClientCodePage, True);
       Self.Info.Values['isc_dpb_lc_ctype'] := ''; //drop it (setting is optional)
     end;
-  {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
-  if FSetCodePageToConnection then
-  {$ENDIF}
-    //Set CharacterSet only if wanted! This is a little patch for someone who
-    //currently wrote UTF8 into a latin-database for example
-    //so this rearanges only the internal use of vtUnicodeString
-    Self.Info.Values['isc_dpb_lc_ctype'] := FClientCodePage;
-  {$ENDIF}
+  Self.Info.Values['isc_dpb_lc_ctype'] := FClientCodePage;
 
   RoleName := Trim(Info.Values['rolename']);
   if RoleName <> '' then
@@ -606,7 +592,6 @@ begin
 
     inherited Open;
 
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     {Check for ClientCodePage: if empty switch to database-defaults}
     if Self.FClientCodePage = '' then
       with GetMetadata.GetCollationAndCharSet('', '', '', '') do
@@ -620,7 +605,6 @@ begin
           raise Exception.Create('Cannot determine character set of connection!'); //marsupilami
         Close;
       end;
-    {$ENDIF}
   finally
     StrDispose(DPB);
   end;
@@ -767,10 +751,7 @@ begin
   Params := TStringList.Create;
 
   { Set transaction parameters by TransactIsolationLevel }
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}if FSetCodePageToConnection then{$ENDIF}
-    Params.Values['isc_dpb_lc_ctype'] := FClientCodePage; //Set CharacterSet allways if option is set
-  {$ENDIF}
+  Params.Values['isc_dpb_lc_ctype'] := FClientCodePage; //Set CharacterSet allways if option is set
   Params.Add('isc_tpb_version3');
   case TransactIsolationLevel of
     tiReadCommitted:
@@ -830,14 +811,13 @@ begin
   CheckInterbase6Error(FPlainDriver, FStatusVector, lcExecute, SQL);
 end;
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZInterbase6Connection.GetAnsiEscapeString(const Value: AnsiString;
   const EscapeMarkSequence: String = '~<|'): String;
 var
   Tmp: AnsiString;
 begin
   if Self.FPlainDriver.GetProtocol = 'firebird-2.5' then
-    if SizeOf(Value) < 32*1024*2 then
+    if Length(Value)*2 < 32*1024 then
     begin
       SetLength(Tmp, Length(Value)*2);
       BinToHex(PAnsiChar(Value), PAnsiChar(Tmp), Length(Value)*2);
@@ -848,7 +828,6 @@ begin
   else
     raise Exception.Create('Your Firebird-Version does''t support Binary-Data in SQL-Statements! Use Blob-Fields!');
 end;
-{$ENDIF}
 
 {**
   Creates a sequence generator object.

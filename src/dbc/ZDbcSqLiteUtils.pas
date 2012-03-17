@@ -68,8 +68,7 @@ uses
   @result the SQLType field type value
 }
 function ConvertSQLiteTypeToSQLType(TypeName: string; var Precision: Integer;
-  var Decimals: Integer
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}; CharEncoding: TZCharEncoding{$ENDIF}): TZSQLType;
+  var Decimals: Integer; CharEncoding: TZCharEncoding): TZSQLType;
 
 {**
   Checks for possible sql errors.
@@ -109,8 +108,7 @@ uses ZMessages;
   @result the SQLType field type value
 }
 function ConvertSQLiteTypeToSQLType(TypeName: string; var Precision: Integer;
-  var Decimals: Integer
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}; CharEncoding: TZCharEncoding{$ENDIF}): TZSQLType;
+  var Decimals: Integer; CharEncoding: TZCharEncoding): TZSQLType;
 var
   P1, P2: Integer;
   Temp: string;
@@ -204,14 +202,12 @@ begin
 
   if ((Result = stString) or (Result = stUnicodeString)) and (Precision = 0) then
     Precision := 255;
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   {$IFNDEF FPC}
   if CharEncoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
     case result of
       //stString: Result := stUnicodeString; //Egonhugeist -> Metadataproblems are not readable if stUnicodeString
       stAsciiStream: Result := {$IFDEF VER150BELOW}stAsciiStream{$ELSE}stUnicodeStream{$ENDIF}; //Delphi 7 does not support WideMemos
     end;
-  {$ENDIF}
   {$ENDIF}
 end;
 

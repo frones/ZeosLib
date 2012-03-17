@@ -446,10 +446,8 @@ type
   protected
     SQLite_API : TZSQLite_API;
     // procedure LoadApi; override; ->completely done in version dependent child classes
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetCompilerSaveCodePageName: String; override;
     procedure LoadCodePages; override;
-    {$ENDIF}
   public
     constructor Create;
 
@@ -542,7 +540,6 @@ uses ZPlainLoader;
 
 { TZSQLiteBaseDriver }
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZSQLiteBaseDriver.GetCompilerSaveCodePageName: String;
 begin
   Result := 'UTF-8'
@@ -556,7 +553,6 @@ begin
   AddCodePage('UTF-16be', 3, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16BE{$ENDIF}, 'UTF-8'); //Setting this will be ignored by actual Excute of Plaindriver
   AddCodePage('UTF-16', 4, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16{$ENDIF}, 'UTF-8'); //Setting this will be ignored by actual Excute of Plaindriver
 end;
-{$ENDIF}
 
 constructor TZSQLiteBaseDriver.Create;
 begin
@@ -1012,9 +1008,7 @@ begin
   {$ELSE}
     FLoader.AddLocation(LINUX_DLL3_LOCATION);
   {$ENDIF}
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   LoadCodePages;
-  {$ENDIF}
 end;
 
 function TZSQLite3PlainDriver.GetProtocol: string;

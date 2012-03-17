@@ -103,13 +103,9 @@ type
 
   {** Implements a default tokenizer object. }
   TZMySQLTokenizer = class (TZTokenizer)
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   public
     function AnsiGetEscapeString(const EscapeString: AnsiString;
       const EscapeMarkSequence: String = '~<|'): String; override;
-    {$ELSE}
-  public
-    {$ENDIF}
     constructor Create;
   end;
 
@@ -406,14 +402,6 @@ end;
 { TZMySQLTokenizer }
 
 {**
-  EgonHugeist:
-  Checks if SymboState is BinaryState and sets it ...
-  @param Stream the Read-Stream which has to checked for Next-Chars.
-  @FirstChar The FirstChar which was readed and sets the Symbolstate
-  @returns either the given SymbolState or the BinaryState
-}
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
-{**
   Converts a Binary-String to an detectable String.
   @param BinaryString is the Binary-data-string
   @param  BinaryMarkSequence represents the detectable String
@@ -453,7 +441,7 @@ begin
 
   Result := Temp+Result+Temp;
 end;
-{$ENDIF}
+
 {**
   Constructs a tokenizer with a default state table (as
   described in the class comment).
@@ -462,10 +450,8 @@ constructor TZMySQLTokenizer.Create;
 begin
   WhitespaceState := TZWhitespaceState.Create;
 
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   EscapeState := TZEscapeState.Create;
   EscapeMarkSequence := '~<|'; //Defaults
-  {$ENDIF}
   SymbolState := TZMySQLSymbolState.Create;
   NumberState := TZMySQLNumberState.Create;
   QuoteState := TZMySQLQuoteState.Create;

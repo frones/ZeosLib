@@ -109,10 +109,10 @@ type
     procedure PostRowUpdates(OldRowAccessor, NewRowAccessor: TZRowAccessor);
       override;
   public
-    constructor CreateWithStatement(const SQL: string; Statement: IZStatement
-    {$IFDEF CHECK_CLIENT_CODE_PAGE};ClientCodePage: PZCodePage{$ENDIF});
-    constructor CreateWithColumns(ColumnsInfo: TObjectList; const SQL: string
-    {$IFDEF CHECK_CLIENT_CODE_PAGE};ClientCodePage: PZCodePage{$ENDIF});
+    constructor CreateWithStatement(const SQL: string; Statement: IZStatement;
+      ClientCodePage: PZCodePage);
+    constructor CreateWithColumns(ColumnsInfo: TObjectList; const SQL: string;
+      ClientCodePage: PZCodePage);
     destructor Destroy; override;
   end;
 
@@ -1802,8 +1802,8 @@ begin
       ColumnsInfo.Add(ColumnInfo);
     end;
 
-    Result := TZVirtualResultSet.CreateWithColumns(ColumnsInfo, ''
-      {$IFDEF CHECK_CLIENT_CODE_PAGE}, IZConnection(FConnection).GetClientCodePageInformations{$ENDIF});
+    Result := TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '',
+      IZConnection(FConnection).GetClientCodePageInformations);
     with Result do
     begin
       SetType(rtScrollInsensitive);
@@ -1962,8 +1962,8 @@ begin
 
     ResultSet.BeforeFirst;
     Result := CopyToVirtualResultSet(ResultSet,
-      TZVirtualResultSet.CreateWithColumns(ColumnsInfo, ''
-      {$IFDEF CHECK_CLIENT_CODE_PAGE},IZConnection(Self.FConnection).GetClientCodePageInformations{$ENDIF}));
+      TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '',
+        IZConnection(Self.FConnection).GetClientCodePageInformations));
     ResultSet.BeforeFirst;
   finally
     ColumnsInfo.Free;
@@ -4308,11 +4308,9 @@ end;
   @param SQL an SQL query string.
 }
 constructor TZVirtualResultSet.CreateWithStatement(const SQL: string;
-   Statement: IZStatement
-   {$IFDEF CHECK_CLIENT_CODE_PAGE};ClientCodePage: PZCodePage{$ENDIF});
+   Statement: IZStatement; ClientCodePage: PZCodePage);
 begin
-  inherited CreateWithStatement(SQL, Statement
-  {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
+  inherited CreateWithStatement(SQL, Statement, ClientCodePage);
 end;
 
 {**
@@ -4321,10 +4319,9 @@ end;
   @param SQL an SQL query string.
 }
 constructor TZVirtualResultSet.CreateWithColumns(ColumnsInfo: TObjectList;
-  const SQL: string{$IFDEF CHECK_CLIENT_CODE_PAGE};ClientCodePage: PZCodePage{$ENDIF});
+  const SQL: string; ClientCodePage: PZCodePage);
 begin
-  inherited CreateWithColumns(ColumnsInfo, SQL
-  {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
+  inherited CreateWithColumns(ColumnsInfo, SQL, ClientCodePage);
 end;
 
 {**

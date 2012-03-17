@@ -1164,7 +1164,7 @@ var
   TempPos: Integer;
 
   TypeInfoList: TStrings;
-  TypeInfo, TypeInfoFirst, TypeInfoSecond, Collation: Ansistring;
+  TypeInfo, TypeInfoFirst, TypeInfoSecond: Ansistring;
   Nullable, DefaultValue: Ansistring;
   HasDefaultValue: Boolean;
   ColumnSize, ColumnDecimals: Integer;
@@ -1218,7 +1218,6 @@ begin
             ColumnSize := 0;
             TypeInfoFirst := '';
             TypeInfoSecond := '';
-            Collation:='';
 
             Res.MoveToInsertRow;
             Res.UpdateString(1, TempCatalog);
@@ -1236,12 +1235,11 @@ begin
             else
               TypeInfoFirst := TypeInfo;
 
-            Collation:=GetString(ColumnIndexes[6]);
+            //Collation:=GetString(ColumnIndexes[6]);
 
             TypeInfoFirst := LowerCase(TypeInfoFirst);
             MySQLType := ConvertMySQLTypeToSQLType(TypeInfoFirst, TypeInfo,
-            {$IFDEF CHECK_CLIENT_CODE_PAGE}GetConnection.GetClientCodePageInformations.Encoding
-            {$ELSE}Collation{$ENDIF});
+              GetConnection.GetClientCodePageInformations.Encoding);
             Res.UpdateInt(5, Ord(MySQLType));
             Res.UpdateString(6, TypeInfoFirst);
 

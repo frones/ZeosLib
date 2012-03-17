@@ -91,11 +91,7 @@ type
     function GetCursorName: AnsiString; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring; override;
-    {$ELSE}
-    function GetString(ColumnIndex: Integer): Ansistring; override;
-    {$ENDIF}
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -199,8 +195,7 @@ constructor TZASAResultSet.Create(Statement: IZStatement; SQL: string;
       SqlData: IZASASQLDA; ParamsSqlData: IZASASQLDA;
       CachedBlob: boolean);
 begin
-  inherited Create( Statement, SQL, nil
-    {$IFDEF CHECK_CLIENT_CODE_PAGE},Statement.GetConnection.GetClientCodePageInformations{$ENDIF});
+  inherited Create( Statement, SQL, nil,Statement.GetConnection.GetClientCodePageInformations);
 
   FFetchStat := 0;
   FSqlData := SqlData;
@@ -473,26 +468,14 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZASAResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring;
-{$ELSE}
-function TZASAResultSet.GetString(ColumnIndex: Integer): Ansistring;
-{$ENDIF}
 begin
   CheckClosed;
   CheckColumnConvertion( ColumnIndex, stString);
   if FInsert or ( FUpdate and FUpdateSQLData.IsAssigned( ColumnIndex - 1)) then
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     Result := ZAnsiString(FUpdateSqlData.GetString( ColumnIndex - 1))
-    {$ELSE}
-    Result := FUpdateSqlData.GetString( ColumnIndex - 1)
-    {$ENDIF}
   else
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     Result := ZAnsiString(FSqlData.GetString( ColumnIndex - 1));
-    {$ELSE}
-    Result := FSqlData.GetString( ColumnIndex - 1);
-    {$ENDIF}
   LastWasNull := IsNull( ColumnIndex);
 end;
 
@@ -820,11 +803,7 @@ end;
 procedure TZASAResultSet.UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString);
 begin
   PrepareUpdateSQLData;
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   FUpdateSqlData.UpdatePChar(ColumnIndex, PAnsiChar(ZAnsiString(Value)));
-  {$ELSE}
-  FUpdateSqlData.UpdatePChar(ColumnIndex, PAnsiChar(string(Value)));
-  {$ENDIF}
 end;
 
 procedure TZASAResultSet.UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray);

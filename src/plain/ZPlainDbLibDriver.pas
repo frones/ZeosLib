@@ -738,22 +738,15 @@ type
   end;
 
   {** Implements a dblib driver for Sybase ASE 12.5 }
-  TZDBLibSybaseASE125PlainDriver = class ({$IFDEF CHECK_CLIENT_CODE_PAGE}
-    TZGenericAbstractPlainDriver{$ELSE}TZAbstractObject{$ENDIF}, IZPlainDriver,
+  TZDBLibSybaseASE125PlainDriver = class (TZGenericAbstractPlainDriver, IZPlainDriver,
     IZDBLibPlainDriver)
   public
     constructor Create;
 
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
     procedure Initialize; override;
-    {$ELSE}
-    function GetProtocol: string;
-    function GetDescription: string;
-    procedure Initialize;
-    {$ENDIF}
 
     procedure CheckError;
 
@@ -808,22 +801,15 @@ type
   end;
 
   {** Implements a dblib driver for MSSql7 }
-  TZDBLibMSSQL7PlainDriver = class ({$IFDEF CHECK_CLIENT_CODE_PAGE}
-    TZGenericAbstractPlainDriver{$ELSE}TZAbstractObject{$ENDIF}, IZPlainDriver,
+  TZDBLibMSSQL7PlainDriver = class (TZGenericAbstractPlainDriver, IZPlainDriver,
     IZDBLibPlainDriver)
   public
     constructor Create;
 
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
     procedure Initialize; override;
-    {$ELSE}
-    function GetProtocol: string;
-    function GetDescription: string;
-    procedure Initialize;
-    {$ENDIF}
 
     procedure CheckError;
 
@@ -884,13 +870,11 @@ uses SysUtils, ZPlainDbLibSybaseAse125, ZPlainDbLibMsSql7;
 
 { TZDBLibSybaseASE125PlainDriver }
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 procedure TZDBLibSybaseASE125PlainDriver.LoadCodePages;
 begin
   AddCodePage('Not implemented!', -1);
    { TODO -oEgonHugeist : Must be completed!!!! }
 end;
-{$ENDIF}
 
 constructor TZDBLibSybaseASE125PlainDriver.Create;
 begin
@@ -1181,13 +1165,11 @@ end;
 
 {TZDBLibMSSQL7PlainDriver}
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 procedure TZDBLibMSSQL7PlainDriver.LoadCodePages;
 begin
   AddCodePage('Not implemented!', -1);
    { TODO -oEgonHugeist : Must be completed!!!! }
 end;
-{$ENDIF}
 
 constructor TZDBLibMSSQL7PlainDriver.Create;
 begin

@@ -134,16 +134,9 @@ type
     FOnLogin: TZLoginEvent;
     FClientCodepage: String;
 
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
-      FPreprepareSQL: Boolean;
-      {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
-        FClientCodePageOptions: TZClientCodePageOptions;
-        procedure SetClientCodePageOptions(Value: TZClientCodePageOptions);
-      {$ELSE}
-        function GetPreprepareSQL: Boolean;
-        procedure SetPreprepareSQL(Value: Boolean);
-      {$ENDIF}
-    {$ENDIF}
+    FPreprepareSQL: Boolean;
+    function GetPreprepareSQL: Boolean;
+    procedure SetPreprepareSQL(Value: Boolean);
     function GetConnected: Boolean;
     procedure SetConnected(Value: Boolean);
     procedure SetProperties(Value: TStrings);
@@ -193,7 +186,6 @@ type
     procedure Disconnect; virtual;
     procedure Reconnect;
     function Ping: Boolean; virtual;
-    function GetURL: String;
 
     procedure StartTransaction; virtual;
     procedure Commit; virtual;
@@ -224,13 +216,12 @@ type
     procedure GetStoredProcNames(const Pattern: string; List: TStrings);
     procedure GetTriggerNames(const TablePattern, SchemaPattern: string; List: TStrings);
 
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     //EgonHugeist
     function GetBinaryEscapeStringFromString(const BinaryString: AnsiString): String; overload;
     function GetBinaryEscapeStringFromStream(const Stream: TStream): String; overload;
     function GetBinaryEscapeStringFromFile(const FileName: String): String; overload;
     function GetAnsiEscapeString(const Ansi: AnsiString): String;
-    {$ENDIF}
+    function GetURL: String;
 
     property InTransaction: Boolean read GetInTransaction;
 
@@ -250,13 +241,7 @@ type
     procedure ShowSQLHourGlass;
     procedure HideSQLHourGlass;
   published
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
-      {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
-      property ClientCodePageOptions: TZClientCodePageOptions read FClientCodePageOptions write SetClientCodePageOptions default [coShowSupportedsOnly, coSetCodePageToConnection];
-      {$ELSE}
-      property PreprepareSQL: Boolean read GetPreprepareSQL write SetPreprepareSQL default True;
-      {$ENDIF}
-    {$ENDIF}
+    property PreprepareSQL: Boolean read GetPreprepareSQL write SetPreprepareSQL default True;
     property ClientCodepage: String read FClientCodepage write SetClientCodePage; //EgonHugeist
     property Catalog: string read FCatalog write FCatalog;
     property Properties: TStrings read FProperties write SetProperties;
@@ -429,31 +414,13 @@ begin
       FClientCodepage := Trim(Value.Values['codepage'])
     else
       Value.Values['codepage'] := FClientCodepage;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
-      {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
-      if Value.Values['CodePageCompatibilityWarning']='OFF' then
-        if coShowSupportedsOnly in FClientCodePageOptions then
-          FClientCodePageOptions := FClientCodePageOptions + [coShowSupportedsOnly]
-        else
-          FClientCodePageOptions := FClientCodePageOptions - [coShowSupportedsOnly];
-        if Value.Values['SetCodePageToConnection'] = 'ON' then
-          FClientCodePageOptions := FClientCodePageOptions + [coSetCodePageToConnection]
-        else
-          FClientCodePageOptions := FClientCodePageOptions - [coSetCodePageToConnection];
-        if Value.Values['PreprepareSQL'] = 'ON' then
-          FClientCodePageOptions := FClientCodePageOptions + [coPreprepareSQL]
-        else
-          FClientCodePageOptions := FClientCodePageOptions - [coPreprepareSQL];
-      {$ELSE}
-      if Self.Connected then
-      begin
-        DbcConnection.PreprepareSQL := Value.Values['PreprepareSQL'] = 'ON';
-        FPreprepareSQL := Value.Values['PreprepareSQL'] = 'ON';
-      end
-      else
-        FPreprepareSQL := Value.Values['PreprepareSQL'] = 'ON';
-      {$ENDIF}
-    {$ENDIF}
+    if Self.Connected then
+    begin
+      DbcConnection.PreprepareSQL := Value.Values['PreprepareSQL'] = 'ON';
+      FPreprepareSQL := Value.Values['PreprepareSQL'] = 'ON';
+    end
+    else
+      FPreprepareSQL := Value.Values['PreprepareSQL'] = 'ON';
     FProperties.Text := Value.Text
   end
   else
@@ -590,16 +557,6 @@ function TZAbstractConnection.ConstructURL(const UserName, Password: string): st
 begin
   Result := DriverManager.ConstructURL(FProtocol, FHostName, FDatabase, UserName,
     Password, FPort, FProperties);
-  {if Port <> 0 then
-  begin
-    Result := Format('zdbc:%s://%s:%d/%s?UID=%s;PWD=%s', [FProtocol, FHostName,
-      FPort, FDatabase, UserName, Password]);
-  end
-  else
-  begin
-    Result := Format('zdbc:%s://%s/%s?UID=%s;PWD=%s', [FProtocol, FHostName,
-      FDatabase, UserName, Password]);
-  end;}
 end;
 
 {**
@@ -817,11 +774,6 @@ begin
 
     DoAfterReconnect;
   end;
-end;
-
-function TZAbstractConnection.GetURL: String;
-begin
-  Result := ConstructURL(Self.FUser, Self.FPassword);
 end;
 
 {**  Checks if this connection is active.
@@ -1277,7 +1229,6 @@ begin
   end;
 end;
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 {**
   EgonHugeist: Returns a EscapeState detectable String to inform the Tokenizer
     to do no UTF8Encoding if neccessary
@@ -1366,76 +1317,37 @@ begin
   Result := DbcConnection.GetDriver.GetTokenizer.GetEscapeString(String(Ansi));
 end;
 
-{**
-  EgonHugeist: ClientCodePage-handling-options:
-  @param Value the Set of TZClientCodePageOptions
-    possible Values:
-      coShowSupportedsOnly: represents a switch to show or hide Compiler &
-        Database (un)supported CharacterSets/CodePages
-      coDisableSupportWarning swiches the internal Warning for unsupported
-        CharacterSets/CodePages on or off
-    coSetCodePageToConnection:
-      Compatibility-switch for developers who need Unicode-Fields and do write
-      unicoded data in a non unicoded Database
-    coPreprepareSQL:
-      Compatibility swich. So the SQL-Statemnents where/where not preprepared
-      (neccessary for UTFEncodings)
-}
-{$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
-  procedure TZAbstractConnection.SetClientCodePageOptions(Value: TZClientCodePageOptions);
-  begin
-    if coDisableSupportWarning in Value then
-      Self.FProperties.Values['CodePageCompatibilityWarning'] :=  'OFF'
-    else
-      Self.FProperties.Values['CodePageCompatibilityWarning'] :=  '';
-    if coSetCodePageToConnection in Value then
-      Self.FProperties.Values['SetCodePageToConnection'] :=  'ON'
-    else
-      Self.FProperties.Values['SetCodePageToConnection'] :=  '';
-    if coPreprepareSQL in Value then
-    begin
-      if Self.Connected then
-        DbcConnection.PreprepareSQL := True;
-      Self.FProperties.Values['PreprepareSQL'] := 'ON'
-    end
-    else
-    begin
-      if Self.Connected then
-        DbcConnection.PreprepareSQL := False;
-      Self.FProperties.Values['PreprepareSQL'] := '';
-    end;
-    Self.FClientCodePageOptions := Value;
-  end;
-{$ELSE}
-  function TZAbstractConnection.GetPreprepareSQL: Boolean;
-  begin
-    if Self.Connected then
-    begin
-      Result := DbcConnection.PreprepareSQL;
-      Self.FPreprepareSQL := Result;
-    end
-    else
-      Result := FPreprepareSQL;
-  end;
+function TZAbstractConnection.GetURL: String;
+begin
+  Result := ConstructURL(Self.FUser, Self.FPassword);
+end;
 
-  procedure TZAbstractConnection.SetPreprepareSQL(Value: Boolean);
+function TZAbstractConnection.GetPreprepareSQL: Boolean;
+begin
+  if Self.Connected then
   begin
-    if Value then
-      Self.FProperties.Values['PreprepareSQL'] := 'ON'
-    else
-      Self.FProperties.Values['PreprepareSQL'] := '';
+    Result := DbcConnection.PreprepareSQL;
+    Self.FPreprepareSQL := Result;
+  end
+  else
+    Result := FPreprepareSQL;
+end;
 
-    if Self.Connected then
-    begin
-      DbcConnection.PreprepareSQL := Value;
-      FPreprepareSQL := Value;
-    end
-    else
-      FPreprepareSQL := Value;
-  end;
-  {$ENDIF}
-{$ENDIF}
+procedure TZAbstractConnection.SetPreprepareSQL(Value: Boolean);
+begin
+  if Value then
+    Self.FProperties.Values['PreprepareSQL'] := 'ON'
+  else
+    Self.FProperties.Values['PreprepareSQL'] := '';
 
+  if Self.Connected then
+  begin
+    DbcConnection.PreprepareSQL := Value;
+    FPreprepareSQL := Value;
+  end
+  else
+    FPreprepareSQL := Value;
+end;
 
 {**
   Returns the current version of zeosdbo.

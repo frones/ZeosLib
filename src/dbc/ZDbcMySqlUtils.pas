@@ -60,8 +60,8 @@ interface
 
 uses
   Classes, SysUtils, StrUtils,
-  ZSysUtils, ZDbcIntfs, ZPlainMySqlDriver, ZPlainMySqlConstants,  ZDbcLogging
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}, ZCompatibility{$ENDIF};
+  ZSysUtils, ZDbcIntfs, ZPlainMySqlDriver, ZPlainMySqlConstants,  ZDbcLogging,
+  ZCompatibility;
 
 const
   MAXBUF = 65535;
@@ -78,16 +78,15 @@ type
   @return a SQL undepended type.
 }
 function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
-  FieldHandle: PZMySQLField; FieldFlags: Integer
-   {$IFDEF CHECK_CLIENT_CODE_PAGE}; const CharEncoding: TZCharEncoding{$ENDIF}): TZSQLType;
+  FieldHandle: PZMySQLField; FieldFlags: Integer; const CharEncoding: TZCharEncoding): TZSQLType;
 
 {**
   Convert string mysql field type to SQLType
   @param string field type value
   @result the SQLType field type value
 }
-function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull{$IFNDEF CHECK_CLIENT_CODE_PAGE}, Collation{$ENDIF}: string
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}; const CharEncoding: TZCharEncoding{$ENDIF}): TZSQLType;
+function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull: string;
+  const CharEncoding: TZCharEncoding): TZSQLType;
 
 {**
   Checks for possible sql errors.
@@ -163,8 +162,8 @@ end;
   @return a SQL undepended type.
 }
 function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
-  FieldHandle: PZMySQLField; FieldFlags: Integer
-   {$IFDEF CHECK_CLIENT_CODE_PAGE}; const CharEncoding: TZCharEncoding{$ENDIF}): TZSQLType;
+  FieldHandle: PZMySQLField; FieldFlags: Integer;
+  const CharEncoding: TZCharEncoding): TZSQLType;
 
   function Signed: Boolean;
   begin
@@ -226,13 +225,12 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
     FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
     FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB:
       if (FieldFlags and BINARY_FLAG) = 0 then
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
        case CharEncoding of
         ceUTF8, ceUTF16:
           {$IFDEF FPC}
           Result := stAsciiStream
           {$ELSE}
-            {$IFNDEF VER150BELOW} //Delphi 7 does not support WideMemos
+            {$IFNDEF WITH_WIDEMEMO}} //Delphi 7 does not support WideMemos
             Result := stAsciiStream;
             {$ELSE}
             Result := stUnicodeStream;
@@ -240,10 +238,7 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
           {$ENDIF}
         else
           Result := stAsciiStream
-       end
-    {$ELSE}
-        Result := stAsciiStream
-    {$ENDIF}
+        end
       else
         Result := stBinaryStream;
     FIELD_TYPE_BIT:
@@ -261,7 +256,6 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
     FIELD_TYPE_VARCHAR,
     FIELD_TYPE_VAR_STRING,
     FIELD_TYPE_STRING:
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
        case CharEncoding of
         ceUTF8, ceUTF16:
           {$IFDEF FPC} //no more in FPC 2.8!!
@@ -272,34 +266,6 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
         else
           Result := stString
        end;
-    {$ELSE}
-    	if (PMYSQL_FIELD(FieldHandle)^.charsetnr = 63) then
-      	Result := stString // ?? stBytes // BINARY from CHAR, VARBINARY from VARCHAR, BLOB from TEXT
-      else
-      if ( // UTF8
-        	(PMYSQL_FIELD(FieldHandle)^.charsetnr = 33) or
-          (PMYSQL_FIELD(FieldHandle)^.charsetnr = 83) or
-        	((PMYSQL_FIELD(FieldHandle)^.charsetnr>=192) and
-          (PMYSQL_FIELD(FieldHandle)^.charsetnr<=210)) )(*  the end is not fix ??? *) then
-       {$IFDEF FPC}
-        Result := stString
-       {$ELSE}
-        Result := stUnicodeString
-       {$ENDIF}
-     else
-      if ( // UCS2
-        	(PMYSQL_FIELD(FieldHandle)^.charsetnr = 35) or
-          (PMYSQL_FIELD(FieldHandle)^.charsetnr = 90) or
-        	((PMYSQL_FIELD(FieldHandle)^.charsetnr>=128) and
-          (PMYSQL_FIELD(FieldHandle)^.charsetnr<=146)) )(*  the end is not fix ??? *) then
-       {$IFDEF FPC}
-        Result := stString
-       {$ELSE}
-        Result := stUnicodeString
-       {$ENDIF}
-      else
-        Result := stString;
-    {$ENDIF}
     FIELD_TYPE_ENUM:
       Result := stString;
     FIELD_TYPE_SET:
@@ -329,8 +295,8 @@ end;
   @param string field type value
   @result the SQLType field type value
 }
-function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull{$IFNDEF CHECK_CLIENT_CODE_PAGE}, Collation{$ENDIF}: string
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}; const CharEncoding: TZCharEncoding{$ENDIF}): TZSQLType;
+function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull: string;
+  const CharEncoding: TZCharEncoding): TZSQLType;
 const
   GeoTypes: array[0..7] of string = (
    'POINT','LINESTRING','POLYGON','GEOMETRY',
@@ -340,18 +306,10 @@ var
   IsUnsigned: Boolean;
   Posi, Len, i: Integer;
   Spec: string;
-  {$IFNDEF CHECK_CLIENT_CODE_PAGE}
-	IsUnicodeField:boolean;
-  {$ENDIF}
 begin
   TypeName := UpperCase(TypeName);
   TypeNameFull := UpperCase(TypeNameFull);
   Result := stUnknown;
-  {$IFNDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
-  IsUnicodeField:=
-  	StrUtils.AnsiContainsText(Collation, 'utf8') or
-    StrUtils.AnsiContainsText(Collation, 'ucs2');
-  {$ENDIF}
 
   Posi := FirstDelimiter(' ', TypeName);
   if Posi > 0 then
@@ -422,36 +380,10 @@ begin
   else if TypeName = 'DOUBLE' then
     Result := stDouble
   else if TypeName = 'CHAR' then
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
     Result := stString
-  {$ELSE}
-  begin
-    if IsUnicodeField then
-    {$IFDEF FPC}
-      Result := stString
-    {$ELSE}
-      Result := stUnicodeString
-    {$ENDIF}
-    else
-     Result := stString;
-  end
-  {$ENDIF}
   else
     if TypeName = 'VARCHAR' then
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
     Result := stString
-  {$ELSE}
-    begin
-    if IsUnicodeField then
-    {$IFDEF FPC}
-      Result := stString
-    {$ELSE}
-      Result := stUnicodeString
-    {$ENDIF}
-    else
-     Result := stString;
-  end
-  {$ENDIF}
   else if TypeName = 'VARBINARY' then
     Result := stBytes
   else if TypeName = 'BINARY' then
@@ -497,7 +429,6 @@ begin
          if GeoTypes[i] = TypeName then
             Result := stBinaryStream;
 
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
   {$IFNDEF FPC}
   if CharEncoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
     case result of
@@ -506,7 +437,6 @@ begin
       stAsciiStream: Result := stUnicodeStream;
       {$ENDIF}
     end;
-  {$ENDIF}
   {$ENDIF}
   if Result = stUnknown then
      raise Exception.Create('Unknown MySQL data type!');

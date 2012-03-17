@@ -863,8 +863,8 @@ var
   StatusVector: TARRAY_ISC_STATUS;
 begin
   StmtHandle := nil;
-  SQLData := TZResultSQLDA.Create(FPlainDriver, FHandle, FTrHandle
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}, @ZCompatibility.ClientCodePageDummy{$ENDIF});
+  SQLData := TZResultSQLDA.Create(FPlainDriver, FHandle, FTrHandle,
+    @ZCompatibility.ClientCodePageDummy);
 
   try
     PrepareStatement(FPlainDriver, @FHandle, @FTrHandle,

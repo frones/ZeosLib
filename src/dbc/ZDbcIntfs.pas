@@ -196,10 +196,8 @@ type
     ['{2157710E-FBD8-417C-8541-753B585332E2}']
 
     function GetSupportedProtocols: TStringDynArray;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetSupportedClientCodePages(const Url: string;
       Const SupportedsOnly: Boolean): TStringDynArray;
-    {$ENDIF}
     function Connect(const Url: string; Info: TStrings): IZConnection;
     function GetClientVersion(const Url: string): Integer;
     function AcceptsURL(const Url: string): Boolean;
@@ -270,7 +268,6 @@ type
 
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetAnsiEscapeString(const Value: AnsiString;
       const EscapeMarkSequence: String = '~<|'): String;
     function GetEscapeString(const Value: String;
@@ -279,7 +276,6 @@ type
     function GetPreprepareSQL: Boolean;
     procedure SetPreprepareSQL(const Value: Boolean);
     property PreprepareSQL: Boolean read GetPreprepareSQL write SetPreprepareSQL;
-    {$ENDIF}
   end;
 
   {** Database metadata interface. }
@@ -535,9 +531,7 @@ type
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;
 
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetPrepreparedSQL(const SQL: String): AnsiString;
-    {$ENDIF}
   end;
 
   {** Prepared SQL statement interface. }
@@ -631,11 +625,7 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean;
     function GetPChar(ColumnIndex: Integer): PAnsiChar;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring;
-    {$ELSE}
-    function GetString(ColumnIndex: Integer): Ansistring;
-    {$ENDIF}
     function GetUnicodeString(ColumnIndex: Integer): WideString;
     function GetBoolean(ColumnIndex: Integer): Boolean;
     function GetByte(ColumnIndex: Integer): ShortInt;
@@ -662,11 +652,7 @@ type
 
     function IsNullByName(const ColumnName: string): Boolean;
     function GetPCharByName(const ColumnName: string): PAnsiChar;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetStringByName(const ColumnName: string; CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring;
-    {$ELSE}
-    function GetStringByName(const ColumnName: string): Ansistring;
-    {$ENDIF}
     function GetUnicodeStringByName(const ColumnName: string): WideString;
     function GetBooleanByName(const ColumnName: string): Boolean;
     function GetByteByName(const ColumnName: string): ShortInt;
@@ -802,11 +788,9 @@ type
       const ColumnDirs: TBooleanDynArray): Integer;
 
     function GetStatement: IZStatement;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function ZString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
     function ZAnsiString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
     function GetClientCodePage: PZCodePage;
-    {$ENDIF}
   end;
 
   {** ResultSet metadata interface. }

@@ -68,8 +68,7 @@ type
   }
   TZTokenType = (ttUnknown, ttEOF, ttFloat, ttInteger, ttHexDecimal,
     ttNumber, ttSymbol, ttQuoted, ttQuotedIdentifier, ttWord, ttKeyword, ttWhitespace,
-    ttComment, ttSpecial, ttTime, ttDate, ttDateTime
-    {$IFDEF CHECK_CLIENT_CODE_PAGE},ttEscape{$ENDIF});
+    ttComment, ttSpecial, ttTime, ttDate, ttDateTime, ttEscape);
 
   {**
     Defines options for tokenizing strings.
@@ -148,7 +147,6 @@ type
     This State is only neccessary for <code>Delphi12_UP</code> ( 2009 and later)
     and results of it's mixing nByte-Chars and binary-Data 1Byte-Chars.
   }
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   TZEscapeState = class (TZTokenizerState)
   protected
     FEscapeMarks: String;
@@ -157,7 +155,6 @@ type
     function NextToken(Stream: TStream; FirstChar: Char;
       Tokenizer: TZTokenizer): TZToken; override;
   end;
-  {$ENDIF}
   {**
     A NumberState object returns a number from a reader. This
     state's idea of a number allows an optional, initial
@@ -459,7 +456,6 @@ type
     function GetWhitespaceState: TZWhitespaceState;
     function GetWordState: TZWordState;
     function GetCharacterState(StartChar: Char): TZTokenizerState;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     procedure SetEscapeMarkSequence(const Value: String);
     function AnsiGetEscapeString(const Ansi: AnsiString;
       const EscapeMarkSequence: String = '~<|'): String;
@@ -467,7 +463,6 @@ type
       const EscapeMarkSequence: String = '~<|'): String;
     function TokenizeEscapeBufferToList(const SQL: String;
       const EscapeMarkSequence: String = '~<|'): TZTokenDynArray;
-    {$ENDIF}
   end;
 
   {** Implements a default tokenizer object. }
@@ -484,7 +479,6 @@ type
     FSymbolState: TZSymbolState;
     FWhitespaceState: TZWhitespaceState;
     FWordState: TZWordState;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     FEscapeState: TZEscapeState; //EgonHugeist
     FMarkSequence: String;
     function GetEscapeMarkSequence: String;
@@ -492,19 +486,16 @@ type
   protected
     function CheckEscapeState(const ActualState: TZTokenizerState;
       Stream: TStream; const FirstChar: Char): TZTokenizerState; virtual;
-    {$ENDIF}
   public
     constructor Create;
     destructor Destroy; override;
 
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function AnsiGetEscapeString(const EscapeString: AnsiString;
       const EscapeMarkSequence: String = '~<|'): String; virtual;
     function GetEscapeString(const EscapeString: String;
       const EscapeMarkSequence: String = '~<|'): String; virtual;
     function TokenizeEscapeBufferToList(const SQL: String;
       const EscapeMarkSequence: String = '~<|'): TZTokenDynArray; virtual;
-    {$ENDIF}
     function TokenizeBufferToList(const Buffer: string; Options: TZTokenOptions):
       TStrings;
     function TokenizeStreamToList(Stream: TStream; Options: TZTokenOptions):
@@ -518,9 +509,7 @@ type
     function GetCharacterState(StartChar: Char): TZTokenizerState;
     procedure SetCharacterState(FromChar, ToChar: Char; State: TZTokenizerState);
 
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetEscapeState: TZEscapeState;
-    {$ENDIF}
     function GetCommentState: TZCommentState;
     function GetNumberState: TZNumberState;
     function GetQuoteState: TZQuoteState;
@@ -528,10 +517,8 @@ type
     function GetWhitespaceState: TZWhitespaceState;
     function GetWordState: TZWordState;
 
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     property EscapeState: TZEscapeState read FEscapeState write FEscapeState;
     property EscapeMarkSequence: String read GetEscapeMarkSequence write SetEscapeMarkSequence;
-    {$ENDIF}
     property CommentState: TZCommentState read FCommentState write FCommentState;
     property NumberState: TZNumberState read FNumberState write FNumberState;
     property QuoteState: TZQuoteState read FQuoteState write FQuoteState;
@@ -553,7 +540,6 @@ uses
 
   @return a quoted string token from a reader
 }
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 procedure TZEscapeState.SetMarks(const Value: String);
 begin
   FEscapeMarks := Value;
@@ -696,8 +682,6 @@ begin
   Result.TokenType := ttEscape;
   //End..
 end;
-{$ENDIF}
-
 
 { TZNumberState }
 
@@ -1376,7 +1360,6 @@ end;
 {**
   Gets the Binaray-Detect-Mark-String.
 }
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZTokenizer.GetEscapeMarkSequence: String;
 begin
   Result := Self.FMarkSequence;
@@ -1395,7 +1378,6 @@ begin
     FEscapeState.SetMarks(Value);
   end;
 end;
-{$ENDIF}
 
 {**
   Constructs a tokenizer with a default state table (as
@@ -1410,10 +1392,8 @@ begin
     Add('<=');
     Add('>=');
   end;
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   FEscapeState := TZEscapeState.Create;
   SetEscapeMarkSequence('~<|'); //Default
-  {$ENDIF}
   FNumberState := TZNumberState.Create;
   FQuoteState := TZQuoteState.Create;
   FWhitespaceState := TZWhitespaceState.Create;
@@ -1443,10 +1423,8 @@ end;
 }
 destructor TZTokenizer.Destroy;
 begin
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   if FEscapeState <> nil then
     FEscapeState.Free;
-  {$ENDIF}
   if FCommentState <> nil then
     FCommentState.Free;
   if FNumberState <> nil then
@@ -1515,7 +1493,6 @@ begin
   end;
 end;
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZTokenizer.AnsiGetEscapeString(const EscapeString: AnsiString;
   const EscapeMarkSequence: String = '~<|'): String;
 var
@@ -1610,7 +1587,6 @@ begin
   Stream.Seek(-(iReadCount * SizeOf(Char)), soFromCurrent); //Seek Stream back to starting Position
   Result := Self.EscapeState;
 end;
-{$ENDIF}
 
 {**
   Tokenizes a string buffer into a list of tokens.
@@ -1685,9 +1661,7 @@ begin
     State := FCharacterStates[Ord(FirstChar)];
     if State <> nil then
     begin
-      {$IFDEF CHECK_CLIENT_CODE_PAGE}
       State := CheckEscapeState(State, Stream, FirstChar);
-      {$ENDIF}
 
       Token := State.NextToken(Stream, FirstChar, Self);
       { Decode strings. }
@@ -1736,7 +1710,6 @@ begin
     Result.AddObject('', TObject(Ord(ttEOF)));
 end;
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 {**
   Gets a tokenizer default Escape state.
   @returns a tokenizer default Escape state.
@@ -1745,7 +1718,6 @@ function TZTokenizer.GetEscapeState: TZEscapeState;
 begin
   Result := EscapeState;
 end;
-{$ENDIF}
 
 {**
   Gets a tokenizer default comment state.

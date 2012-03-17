@@ -71,8 +71,7 @@ uses
 
 type
   {** Implements Abstract ResultSet. }
-  TZAbstractResultSet = class({$IFDEF CHECK_CLIENT_CODE_PAGE}
-  TAbstractCodePagedInterfacedObject{$ELSE}TInterfacedObject{$ENDIF}, IZResultSet)
+  TZAbstractResultSet = class(TAbstractCodePagedInterfacedObject, IZResultSet)
   private
     FTemp: Ansistring;
     FRowNo: Integer;
@@ -114,8 +113,7 @@ type
     property Metadata: TContainedObject read FMetadata write FMetadata;
   public
     constructor Create(Statement: IZStatement; SQL: string;
-      Metadata: TContainedObject{$IFDEF CHECK_CLIENT_CODE_PAGE}
-      ;ClientCodePage: PZCodePage{$ENDIF});
+      Metadata: TContainedObject; ClientCodePage: PZCodePage);
     destructor Destroy; override;
 
     procedure SetType(Value: TZResultSetType);
@@ -131,11 +129,7 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; virtual;
     function GetPChar(ColumnIndex: Integer): PAnsiChar; virtual;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring; virtual;
-    {$ELSE}
-    function GetString(ColumnIndex: Integer): Ansistring; virtual;
-    {$ENDIF}
     function GetUnicodeString(ColumnIndex: Integer): WideString; virtual;
     function GetBoolean(ColumnIndex: Integer): Boolean; virtual;
     function GetByte(ColumnIndex: Integer): ShortInt; virtual;
@@ -162,11 +156,7 @@ type
 
     function IsNullByName(const ColumnName: string): Boolean; virtual;
     function GetPCharByName(const ColumnName: string): PAnsiChar; virtual;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetStringByName(const ColumnName: string; CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring; virtual;
-    {$ELSE}
-    function GetStringByName(const ColumnName: string): Ansistring; virtual;
-    {$ENDIF}
     function GetUnicodeStringByName(const ColumnName: string): WideString; virtual;
     function GetBooleanByName(const ColumnName: string): Boolean; virtual;
     function GetByteByName(const ColumnName: string): ShortInt; virtual;
@@ -298,9 +288,7 @@ type
 
     function GetStatement: IZStatement; virtual;
 
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetClientCodePage: PZCodePage;
-    {$ENDIF}
     property ColumnsInfo: TObjectList read FColumnsInfo write FColumnsInfo;
   end;
 
@@ -349,14 +337,11 @@ uses ZMessages, ZDbcUtils, ZDbcResultSetMetadata;
   @param Metadata a resultset metadata object.
 }
 constructor TZAbstractResultSet.Create(Statement: IZStatement; SQL: string;
-  Metadata: TContainedObject{$IFDEF CHECK_CLIENT_CODE_PAGE}
-      ;ClientCodePage: PZCodePage{$ENDIF});
+  Metadata: TContainedObject; ClientCodePage: PZCodePage);
 var
   DatabaseMetadata: IZDatabaseMetadata;
 begin
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   Self.ClientCodePage := ClientCodePage;
-  {$ENDIF}
   LastWasNull := True;
   FRowNo := 0;
   FLastRowNo := 0;
@@ -625,8 +610,8 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetString(ColumnIndex: Integer
-{$IFDEF CHECK_CLIENT_CODE_PAGE};const  CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}{$ENDIF}): AnsiString;
+function TZAbstractResultSet.GetString(ColumnIndex: Integer;
+  const  CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): AnsiString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -1112,11 +1097,10 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetStringByName(const ColumnName: string
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}; CharEncoding: TZCharEncoding
-   = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}{$ENDIF}): AnsiString;
+function TZAbstractResultSet.GetStringByName(const ColumnName: string;
+  CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): AnsiString;
 begin
-  Result := GetString(GetColumnIndex(ColumnName){$IFDEF CHECK_CLIENT_CODE_PAGE}, CharEncoding{$ENDIF});
+  Result := GetString(GetColumnIndex(ColumnName), CharEncoding);
 end;
 
 {**
@@ -2191,11 +2175,7 @@ begin
     vtBoolean: UpdateBoolean(ColumnIndex, Value.VBoolean);
     vtInteger: UpdateLong(ColumnIndex, Value.VInteger);
     vtFloat: UpdateBigDecimal(ColumnIndex, Value.VFloat);
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     vtString: UpdateString(ColumnIndex, ZAnsiString(Value.VString));
-    {$ELSE}
-    vtString: UpdateString(ColumnIndex, Value.VString);
-    {$ENDIF}
     vtDateTime: UpdateTimestamp(ColumnIndex, Value.VDateTime);
     vtUnicodeString: UpdateUnicodeString(ColumnIndex, Value.VUnicodeString);
   else
@@ -2747,12 +2727,10 @@ begin
   Result := FStatement;
 end;
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZAbstractResultSet.GetClientCodePage: PZCodePage;
 begin
   Result := ClientCodePage;
 end;
-{$ENDIF}
 
 { TZAbstractBlob }
 
@@ -2895,26 +2873,13 @@ var
   Buffer: WideString;
   Len: Integer;
 begin
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   Buffer := UTF8ToString(GetString);
   Len := System.Length(Buffer);
   if Len > 0 then
   begin
-    //Assert(Len mod 2 = 0); //could be varying so an assertiation must fail but Buffer moving to Wide is allways valid (1Byte *2)
     SetLength(Result, Len);
     System.Move(PWideChar(Buffer)^, Pointer(Result)^, Len * 2);
   end;
-  {$ELSE}
-  Buffer := GetString;
-  Len := System.Length(Buffer);
-
-  if Len > 0 then
-  begin
-    Assert(Len mod 2 = 0);
-    SetLength(Result, Len div 2);
-    System.Move(PAnsiChar(Buffer)^, Pointer(Result)^, Len);
-  end;
-  {$ENDIF}
 end;
 
 {**
@@ -2923,11 +2888,7 @@ end;
 }
 procedure TZAbstractBlob.SetUnicodeString(const Value: WideString);
 begin
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   SetString(AnsiString(UTF8Encode(Value)));
-  {$ELSE}
-  SetString(AnsiString(Value)); //EgonHugeist: String-DataLoss!!
-  {$ENDIF}
 end;
 
 {**

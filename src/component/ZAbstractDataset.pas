@@ -474,12 +474,8 @@ begin
       SetState(dsBrowse);
       Resync([]);
       if BookmarkValid(
-      {$IFDEF CHECK_CLIENT_CODE_PAGE}
-        {$IFDEF DELPHI12_UP}BM{$ELSE}@BM{$ENDIF}
-      {$ELSE}
-        @BM
-      {$ENDIF}) Then //Egonhugeist: don't point a unassigned pointer
-      begin 
+        {$IFDEF DELPHI12_UP}BM{$ELSE}@BM{$ENDIF}) Then //Egonhugeist: don't point a unassigned pointer
+      begin
         InternalGotoBookmark(@BM); 
         Resync([rmExact, rmCenter]); 
       end; 

@@ -83,11 +83,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring; override;
-    {$ELSE}
-    function GetString(ColumnIndex: Integer): Ansistring; override;
-    {$ENDIF}
     function GetUnicodeStream(ColumnIndex: Integer): TStream; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
@@ -156,8 +152,8 @@ constructor TZPostgreSQLResultSet.Create(PlainDriver: IZPostgreSQLPlainDriver;
   Statement: IZStatement; SQL: string; Handle: PZPostgreSQLConnect;
   QueryHandle: PZPostgreSQLResult);
 begin
-  inherited Create(Statement, SQL, nil
-  {$IFDEF CHECK_CLIENT_CODE_PAGE},Statement.GetConnection.GetClientCodePageInformations{$ENDIF});
+  inherited Create(Statement, SQL, nil,
+    Statement.GetConnection.GetClientCodePageInformations);
 
   FHandle := Handle;
   FQueryHandle := QueryHandle;
@@ -209,13 +205,6 @@ begin
 
   SQLType := PostgreSQLToSQLType(Connection, TypeOid);
 
-  {$IFNDEF CHECK_CLIENT_CODE_PAGE}
-  if Connection.GetCharactersetCode = csUTF8 then //EgonHugeist: what's with csUNICODE_PODBC ??? and why check again??
-    case SQLType of
-      stString: SQLType := {$IFDEF FPC} stString;  {$ELSE}  stUnicodeString; {$ENDIF}
-      stAsciiStream: SQLType := stUnicodeStream;
-    end;
-  {$ENDIF}
   if SQLType <> stUnknown then
     ColumnInfo.ColumnType := SQLType
   else
@@ -251,15 +240,7 @@ begin
     begin
       ColumnName := '';
       TableName := '';
-      {$IFDEF CHECK_CLIENT_CODE_PAGE}
       ColumnLabel := ZString(StrPas(FPlainDriver.GetFieldName(FQueryHandle, I)));
-      {$ELSE}
-    {$IFDEF DELPHI12_UP}
-      ColumnLabel := UTF8ToUnicodeString(StrPas(FPlainDriver.GetFieldName(FQueryHandle, I)));
-    {$ELSE}
-      ColumnLabel := StrPas(FPlainDriver.GetFieldName(FQueryHandle, I));
-    {$ENDIF}
-      {$ENDIF}
       ColumnDisplaySize := 0;
       Scale := 0;
       Precision := 0;
@@ -339,11 +320,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZPostgreSQLResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring;
-{$ELSE}
-function TZPostgreSQLResultSet.GetString(ColumnIndex: Integer): AnsiString;
-{$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
@@ -359,10 +336,8 @@ begin
     FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex));
   if FPlainDriver.GetFieldType(FQueryHandle, ColumnIndex) = 1042 then
     Result := TrimRight(Result);
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   if not ( GetMetaData.GetColumnType(ColumnIndex +1) = stBinaryStream ) then
     Result := DecodeString(Result);
-  {$ENDIF}
 end;
 
 {**
@@ -629,19 +604,11 @@ begin
 end;
 
 function TZPostgreSQLResultSet.GetUnicodeStream(ColumnIndex: Integer): TStream;
-{$IFNDEF CHECK_CLIENT_CODE_PAGE}
-var
-  Data: WideString;
-{$ENDIF}
 begin
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
-  Result := TStringStream.Create(GetString(ColumnIndex));
-{$ELSE}
-  Data := GetUnicodeString(ColumnIndex);
-  Result := TMemoryStream.Create;
-  Result.Write(PWideChar(Data)^, Length(Data)*2);
-  Result.Position := 0;
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
+  Result := TStringStream.Create(GetString(ColumnIndex));
 end;
 
 {**
@@ -702,16 +669,7 @@ begin
               Stream := TStringStream.Create(DecodeString(GetString(ColumnIndex))); //Egonhugeist: not sure about DecodeBinaryString...
         end
         else
-          {$IFNDEF CHECK_CLIENT_CODE_PAGE}
-          begin
-            if ((Statement.GetConnection as IZPostgreSQLConnection).GetCharactersetCode = csUTF8) then
-              Stream := GetUnicodeStream(ColumnIndex)
-            else
-              Stream := TStringStream.Create(GetString(ColumnIndex));
-          end;
-          {$ELSE}
-        Stream := TStringStream.Create(GetString(ColumnIndex));
-          {$ENDIF}
+          Stream := TStringStream.Create(GetString(ColumnIndex));
         Result := TZAbstractBlob.CreateWithStream(Stream);
       finally
         if Assigned(Stream) then

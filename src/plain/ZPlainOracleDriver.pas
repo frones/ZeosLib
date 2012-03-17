@@ -857,23 +857,16 @@ type
   end;
 
   {** Implements a driver for Oracle 9i }
-  TZOracle9iPlainDriver = class ({$IFDEF CHECK_CLIENT_CODE_PAGE}
-    TZGenericAbstractPlainDriver{$ELSE}TZAbstractObject{$ENDIF}, IZPlainDriver,
+  TZOracle9iPlainDriver = class (TZGenericAbstractPlainDriver, IZPlainDriver,
     IZOraclePlainDriver)
   public
     constructor Create;
 
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetCompilerSaveCodePageName: String; override;
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
     procedure Initialize; override;
-    {$ELSE}
-    function GetProtocol: string;
-    function GetDescription: string;
-    procedure Initialize;
-    {$ENDIF}
 
     function Initializ(mode: ub4; ctxp: Pointer; malocfp: Pointer;
       ralocfp: Pointer; mfreefp: Pointer): sword;
@@ -1056,8 +1049,6 @@ type
 implementation
 
 { TZOracle9iPlainDriver }
-
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 
 uses ZCompatibility;
 
@@ -1298,13 +1289,10 @@ begin
   AddCodePage('UTF8', 226, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}); {Unicode 3.0 UTF-8 Universal character set, CESU-8 compliant}
   AddCodePage('UTFE', 227, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}); {EBCDIC form of Unicode 3.0 UTF-8 Universal character set}
 end;
-{$ENDIF}
 
 constructor TZOracle9iPlainDriver.Create;
 begin
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
   LoadCodePages;
-{$ENDIF}
 end;
 
 function TZOracle9iPlainDriver.GetProtocol: string;

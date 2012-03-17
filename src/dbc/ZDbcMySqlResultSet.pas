@@ -89,11 +89,7 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPChar(ColumnIndex: Integer): PAnsiChar; override;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring; override;
-    {$ELSE}
-    function GetString(ColumnIndex: Integer): Ansistring; override;
-    {$ENDIF}
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -139,11 +135,7 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPChar(ColumnIndex: Integer): PAnsiChar; override;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring; override;
-    {$ELSE}
-    function GetString(ColumnIndex: Integer): Ansistring; override;
-    {$ENDIF}
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -223,8 +215,8 @@ constructor TZMySQLResultSet.Create(PlainDriver: IZMySQLPlainDriver;
   UseResult: Boolean);
 begin
   inherited Create(Statement, SQL, TZMySQLResultSetMetadata.Create(
-    Statement.GetConnection.GetMetadata, SQL, Self)
-    {$IFDEF CHECK_CLIENT_CODE_PAGE},Statement.GetConnection.GetClientCodePageInformations{$ENDIF});
+    Statement.GetConnection.GetMetadata, SQL, Self),
+      Statement.GetConnection.GetClientCodePageInformations);
 
   FHandle := Handle;
   FQueryHandle := nil;
@@ -288,19 +280,13 @@ begin
     begin
       FieldFlags := FPlainDriver.GetFieldFlags(FieldHandle);
 
-      {$IFDEF CHECK_CLIENT_CODE_PAGE}
-      ColumnLabel := ZString(FPlainDriver.GetFieldName(FieldHandle));
-      ColumnName := ZString(FPlainDriver.GetFieldOrigName(FieldHandle));
-      TableName := ZString(FPlainDriver.GetFieldTable(FieldHandle));
-      {$ELSE}
       ColumnLabel := String(FPlainDriver.GetFieldName(FieldHandle));
       ColumnName := String(FPlainDriver.GetFieldOrigName(FieldHandle));
       TableName := String(FPlainDriver.GetFieldTable(FieldHandle));
-      {$ENDIF}
       ReadOnly := (FPlainDriver.GetFieldTable(FieldHandle) = '');
       Writable := not ReadOnly;
       ColumnType := ConvertMySQLHandleToSQLType(FPlainDriver,
-        FieldHandle, FieldFlags{$IFDEF CHECK_CLIENT_CODE_PAGE}, ClientCodePage.Encoding{$ENDIF});
+        FieldHandle, FieldFlags, ClientCodePage.Encoding);
       ColumnDisplaySize := FPlainDriver.GetFieldLength(FieldHandle);
       Precision := Max(FPlainDriver.GetFieldMaxLength(FieldHandle),
         FPlainDriver.GetFieldLength(FieldHandle));
@@ -405,11 +391,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZMySQLResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring;
-{$ELSE}
-function TZMySQLResultSet.GetString(ColumnIndex: Integer): Ansistring;
-{$ENDIF}
 var
   LengthPointer: PULong;
   Length: ULong;
@@ -746,11 +728,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
   Result := TStringStream.Create(GetString(ColumnIndex));
-{$ELSE}
-  Result := nil;
-{$ENDIF}
 end;
 
 {**
@@ -931,10 +909,8 @@ var
   tempPrepStmt : IZMysqlPreparedStatement;
 begin
   inherited Create(Statement, SQL, TZMySQLResultSetMetadata.Create(
-    Statement.GetConnection.GetMetadata, SQL, Self)
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
-    ,Statement.GetConnection.GetClientCodePageInformations
-    {$ENDIF});
+    Statement.GetConnection.GetMetadata, SQL, Self),
+    Statement.GetConnection.GetClientCodePageInformations);
 
   FHandle := Handle;
   tempPrepStmt := Statement as IZMysqlPreparedStatement;
@@ -1004,17 +980,11 @@ begin
     begin
       FieldFlags := FPlainDriver.GetFieldFlags(FieldHandle);
 
-      {$IFDEF CHECK_CLIENT_CODE_PAGE}
-      ColumnLabel := ZString(FPlainDriver.GetFieldName(FieldHandle));
-      TableName := ZString(FPlainDriver.GetFieldTable(FieldHandle));
-      {$ELSE}
       ColumnLabel := String(FPlainDriver.GetFieldName(FieldHandle));
       TableName := String(FPlainDriver.GetFieldTable(FieldHandle));
-      {$ENDIF}
       ReadOnly := (FPlainDriver.GetFieldTable(FieldHandle) = '');
       ColumnType := ConvertMySQLHandleToSQLType(FPlainDriver,
-        FieldHandle, FieldFlags
-        {$IFDEF CHECK_CLIENT_CODE_PAGE}, GetStatement.GetConnection.GetClientCodePageInformations^.Encoding{$ENDIF});
+        FieldHandle, FieldFlags, GetStatement.GetConnection.GetClientCodePageInformations^.Encoding);
       ColumnDisplaySize := FPlainDriver.GetFieldLength(FieldHandle);
       Precision := Max(FPlainDriver.GetFieldMaxLength(FieldHandle),
         FPlainDriver.GetFieldLength(FieldHandle));
@@ -1118,25 +1088,12 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZMySQLPreparedResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring;
-{$ELSE}
-function TZMySQLPreparedResultSet.GetString(ColumnIndex: Integer): Ansistring;
-{$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
 {$ENDIF}
-   {$IFDEF CHECK_CLIENT_CODE_PAGE}
-     Result := ZAnsiString(String(PAnsiChar(FColumnArray[ColumnIndex - 1].buffer)));
-   {$ELSE}
-     {$IFDEF DELPHI12_UP}
-     Result := UTF8String(PAnsiChar(FColumnArray[ColumnIndex - 1].buffer));
-     {$ELSE}
-     Result := AnsiString(FColumnArray[ColumnIndex - 1].buffer);
-     {$ENDIF}
-   {$ENDIF}
-
+  Result := PAnsiChar(FColumnArray[ColumnIndex - 1].buffer);
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
 end;
 
@@ -1446,12 +1403,8 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
   Result := TStringStream.Create(GetString(ColumnIndex));
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
-{$ELSE}
-  Result := nil;
-{$ENDIF}
 end;
 
 {**

@@ -83,10 +83,8 @@ type
     destructor Destroy; override;
 
     function GetSupportedProtocols: TStringDynArray; virtual; abstract;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetSupportedClientCodePages(const Url: string;
       Const SupportedsOnly: Boolean): TStringDynArray; virtual; abstract;
-    {$ENDIF}
     function Connect(const Url: string; Info: TStrings): IZConnection; virtual;
     function AcceptsURL(const Url: string): Boolean; virtual;
 
@@ -103,8 +101,7 @@ type
 
   { TZAbstractConnection }
 
-  TZAbstractConnection = class({$IFDEF CHECK_CLIENT_CODE_PAGE}
-  TAbstractCodePagedInterfacedObject{$ELSE}TInterfacedObject{$ENDIF}, IZConnection)
+  TZAbstractConnection = class(TAbstractCodePagedInterfacedObject, IZConnection)
   private
     FDriver: IZDriver;
     FIZPlainDriver: IZPlainDriver;
@@ -114,29 +111,19 @@ type
     FUser: string;
     FPassword: string;
     FInfo: TStrings;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
-      {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
-      FRaiseOnUnsupportedCP: Boolean;
-      {$ENDIF}
     FPreprepareSQL: Boolean;
-    {$ENDIF}
     FAutoCommit: Boolean;
     FReadOnly: Boolean;
     FTransactIsolationLevel: TZTransactIsolationLevel;
     FClosed: Boolean;
     FMetadata: TContainedObject;
   protected
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
-      {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
-      FSetCodePageToConnection: Boolean;
-      {$ENDIF}
     FClientCodePage: String;
     procedure CheckCharEncoding(CharSet: String;
       const DoArrange: Boolean = False);
     function GetClientCodePageInformations(const ClientCharacterSet: String = ''): PZCodePage; //EgonHugeist
     function GetPreprepareSQL: Boolean; //EgonHugeist
     procedure SetPreprepareSQL(const Value: Boolean);
-    {$ENDIF}
     procedure RaiseUnsupportedException;
 
     function CreateRegularStatement(Info: TStrings): IZStatement;
@@ -219,12 +206,10 @@ type
 
     function GetWarnings: EZSQLWarning; virtual;
     procedure ClearWarnings; virtual;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetAnsiEscapeString(const Value: AnsiString;
       const EscapeMarkSequence: String = '~<|'): String; virtual;
     function GetEscapeString(const Value: String;
       const EscapeMarkSequence: String = '~<|'): String; virtual;
-    {$ENDIF}
   end;
 
   {** Implements Abstract Database notification. }
@@ -439,7 +424,6 @@ end;
     default. This means it ignores the choosen Client-CharacterSet and sets a
     "more" Zeos-Compatible Client-CharacterSet if known.
 }
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 procedure TZAbstractConnection.CheckCharEncoding(CharSet: String;
   const DoArrange: Boolean = False);
 begin
@@ -450,13 +434,6 @@ begin
   FPreprepareSQL := FPreprepareSQL and (ClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]);
   {$IFDEF SQLPREPREPARE}
   FPreprepareSQL := True;
-  {$ENDIF}
-  {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
-  if ( not ClientCodePage^.IsSupported ) and FRaiseOnUnsupportedCP then
-    try
-      raise Exception.Create(WUnsupportedCodePage);
-    except
-    end;
   {$ENDIF}
   FClientCodePage := ClientCodePage^.Name; //resets the developer choosen ClientCodePage
 end;
@@ -478,7 +455,6 @@ procedure TZAbstractConnection.SetPreprepareSQL(const Value: Boolean);
 begin
   FPreprepareSQL := Value;
 end;
-{$ENDIF}
 
 {**
   Constructs this object and assignes the main properties.
@@ -516,23 +492,13 @@ begin
   else
     FPassword := FInfo.Values['password'];
 
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
-    FClientCodePage := FInfo.Values['codepage'];
-    {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
-    FRaiseOnUnsupportedCP := not (FInfo.Values['CodePageCompatibilityWarning'] = 'OFF');
-    FSetCodePageToConnection := FInfo.Values['SetCodePageToConnection'] =  'ON'; //compatibitity Option for existing Applications
-    {$ENDIF}
-    FPreprepareSQL := FInfo.Values['PreprepareSQL'] = 'ON'; //compatibitity Option for existing Applications
-    {Pick out the values from Info}
-    {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
-    FInfo.Values['CodePageCompatibilityWarning'] := '';
-    FInfo.Values['SetCodePageToConnection'] := '';
-    {$ENDIF}
-    FInfo.Values['PreprepareSQL'] := '';
-    FInfo.Values['codepage'] := '';
-    {CheckCharEncoding}
-    CheckCharEncoding(FClientCodePage, True);
-  {$ENDIF}
+  FClientCodePage := FInfo.Values['codepage'];
+  FPreprepareSQL := FInfo.Values['PreprepareSQL'] = 'ON'; //compatibitity Option for existing Applications
+  {Pick out the values from Info}
+  FInfo.Values['PreprepareSQL'] := '';
+  FInfo.Values['codepage'] := '';
+  {CheckCharEncoding}
+  CheckCharEncoding(FClientCodePage, True);
   FAutoCommit := True;
   FClosed := True;
   FReadOnly := True;
@@ -1061,7 +1027,6 @@ procedure TZAbstractConnection.ClearWarnings;
 begin
 end;
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 {**
   EgonHugeist:
   Returns the BinaryString in a Tokenizer-detectable kind
@@ -1104,7 +1069,6 @@ begin
   else
     Result := GetIZPlainDriver.GetClientCodePageInformations(ClientCharacterSet);
 end;
-{$ENDIF}
 
 { TZAbstractNotification }
 

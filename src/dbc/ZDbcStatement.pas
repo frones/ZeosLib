@@ -68,8 +68,7 @@ type
 
   { TZAbstractStatement }
 
-  TZAbstractStatement = class({$IFDEF CHECK_CLIENT_CODE_PAGE}
-  TAbstractCodePagedInterfacedObject{$ELSE}TInterfacedObject{$ENDIF}, IZStatement)
+  TZAbstractStatement = class(TAbstractCodePagedInterfacedObject, IZStatement)
   private
     FMaxFieldSize: Integer;
     FMaxRows: Integer;
@@ -88,11 +87,9 @@ type
     FConnection: IZConnection;
     FInfo: TStrings;
     FClosed: Boolean;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     FsSQL: String;
     FaSQL: AnsiString;
     procedure SetSSQL(const Value: String);
-    {$ENDIF}
     procedure SetLastResultSet(ResultSet: IZResultSet); virtual;
 
   protected
@@ -121,10 +118,8 @@ type
     property Info: TStrings read FInfo;
     property Closed: Boolean read FClosed write FClosed;
 
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     property SSQL: String read FsSQL write SetSSQL;
     property ASQL: AnsiString read FaSQL;
-    {$ENDIF}
   public
     constructor Create(Connection: IZConnection; Info: TStrings);
     destructor Destroy; override;
@@ -172,9 +167,7 @@ type
 
     function GetWarnings: EZSQLWarning; virtual;
     procedure ClearWarnings; virtual;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetPrepreparedSQL(const SQL: String): AnsiString; virtual;
-    {$ENDIF}
   end;
 
   {** Implements Abstract Prepared SQL Statement. }
@@ -359,9 +352,7 @@ var
 constructor TZAbstractStatement.Create(Connection: IZConnection; Info: TStrings);
 begin
   { Sets the default properties. }
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   Self.ClientCodePage := Connection.GetClientCodePageInformations;
-  {$ENDIF}
   FMaxFieldSize := 0;
   FMaxRows := 0;
   FEscapeProcessing := False;
@@ -397,7 +388,6 @@ begin
   inherited Destroy;
 end;
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 {**
   Sets the preprepared SQL-Statement in an String and AnsiStringForm.
   @param Value: the SQL-String which has to be optional preprepared
@@ -407,7 +397,6 @@ begin
   FaSQL := Self.GetPrepreparedSQL(Value);
   FSSQL := String(FaSQL);
 end;
-{$ENDIF}
 {**
   Raises unsupported operation exception.
 }
@@ -622,7 +611,6 @@ procedure TZAbstractStatement.ClearWarnings;
 begin
 end;
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZAbstractStatement.GetPrepreparedSQL(const SQL: String): AnsiString;
 var
   SQLTokens: TZTokenDynArray;
@@ -654,7 +642,6 @@ begin
   else
     Result := Result + AnsiString(SQL); //keep the Ansi-codepage
 end;
-{$ENDIF}
 
 {**
   Defines the SQL cursor name that will be used by
@@ -1792,12 +1779,8 @@ end;
 }
 function TZAbstractCallableStatement.GetPChar(ParameterIndex: Integer): PAnsiChar;
 begin
-  FTemp := GetString(ParameterIndex); //EgonHugeist: is this pointer valid after function exit?
-  {$IFDEF DELPHI12_UP} //????
-  Result := PAnsiChar(UTF8String(FTemp));
-  {$ELSE}
+  FTemp := GetString(ParameterIndex);
   Result := PAnsiChar(FTemp);
-  {$ENDIF}
 end;
 
 {**
@@ -1818,11 +1801,7 @@ end;
 }
 function TZAbstractCallableStatement.GetString(ParameterIndex: Integer): AnsiString;
 begin
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   Result := ZAnsiString(SoftVarManager.GetAsString(GetOutParam(ParameterIndex)));
-  {$ELSE}
-  Result := AnsiString(SoftVarManager.GetAsString(GetOutParam(ParameterIndex)));
-  {$ENDIF}
 end;
 
 {**
@@ -2137,10 +2116,6 @@ begin
     else
       Result := Result + Tokens[I];
   end;
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
-  //if FConnection.DoPreprepareSQL then
-    //Result := FConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
-  {$ENDIF}
 end;
 
 {**

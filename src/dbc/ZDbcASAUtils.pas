@@ -2030,8 +2030,8 @@ begin
   if (Statement.GetResultSetConcurrency <> rcReadOnly)
     or (Statement.GetResultSetType <> rtForwardOnly) then
   begin
-    CachedResultSet := TZCachedResultSet.Create( NativeResultSet, SQL, nil
-      {$IFDEF CHECK_CLIENT_CODE_PAGE},Statement.GetConnection.GetClientCodePageInformations{$ENDIF});
+    CachedResultSet := TZCachedResultSet.Create( NativeResultSet, SQL, nil,
+      Statement.GetConnection.GetClientCodePageInformations);
     CachedResultSet.SetResolver( TZASACachedResolver.Create(
       Statement, NativeResultSet.GetMetadata));
     CachedResultSet.SetConcurrency( Statement.GetResultSetConcurrency);

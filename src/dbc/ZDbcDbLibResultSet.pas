@@ -85,11 +85,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring; override;
-    {$ELSE}
-    function GetString(ColumnIndex: Integer): Ansistring; override;
-    {$ENDIF}
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -133,8 +129,8 @@ uses ZMessages, ZDbcLogging, ZDbcDBLibUtils;
 }
 constructor TZDBLibResultSet.Create(Statement: IZStatement; SQL: string);
 begin
-  inherited Create(Statement, SQL, nil
-    {$IFDEF CHECK_CLIENT_CODE_PAGE},Statement.GetConnection.GetClientCodePageInformations{$ENDIF});
+  inherited Create(Statement, SQL, nil,
+    Statement.GetConnection.GetClientCodePageInformations);
   Statement.GetConnection.QueryInterface(IZDBLibConnection, FDBLibConnection);
   FPlainDriver := FDBLibConnection.GetPlainDriver;
   FHandle := FDBLibConnection.GetConnectionHandle;
@@ -259,11 +255,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZDBLibResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring;
-{$ELSE}
-function TZDBLibResultSet.GetString(ColumnIndex: Integer): Ansistring;
-{$ENDIF}
 var
   DL: Integer;
   Data: Pointer;

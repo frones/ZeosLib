@@ -93,11 +93,7 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPChar(ColumnIndex: Integer): PAnsiChar; override;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring; override;
-    {$ELSE}
-    function GetString(ColumnIndex: Integer): Ansistring; override;
-    {$ENDIF}
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -189,8 +185,8 @@ constructor TZSQLiteResultSet.Create(PlainDriver: IZSQLitePlainDriver;
   ColumnValues: PPAnsiChar);
 begin
   inherited Create(Statement, SQL, TZSQLiteResultSetMetadata.Create(
-    Statement.GetConnection.GetMetadata, SQL, Self)
-    {$IFDEF CHECK_CLIENT_CODE_PAGE},Statement.GetConnection.GetClientCodePageInformations{$ENDIF});
+    Statement.GetConnection.GetMetadata, SQL, Self),
+    Statement.GetConnection.GetClientCodePageInformations);
 
   FHandle := Handle;
   FStmtHandle := StmtHandle;
@@ -259,15 +255,13 @@ begin
       if TypeName^ <> nil then
       begin
         ColumnType := ConvertSQLiteTypeToSQLType(String(TypeName^),
-          FieldPrecision, FieldDecimals
-          {$IFDEF CHECK_CLIENT_CODE_PAGE}, ClientCodePage^.Encoding{$ENDIF});
+          FieldPrecision, FieldDecimals, ClientCodePage^.Encoding);
         Inc(TypeName);
       end
       else
       begin
         ColumnType := ConvertSQLiteTypeToSQLType(FPlainDriver.GetColumnDataType(FStmtHandle,I-1),
-          FieldPrecision, FieldDecimals
-          {$IFDEF CHECK_CLIENT_CODE_PAGE}, ClientCodePage^.Encoding{$ENDIF});
+          FieldPrecision, FieldDecimals, ClientCodePage^.Encoding);
       end;
       ColumnDisplaySize := FieldPrecision;
       AutoIncrement := False;
@@ -377,18 +371,13 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZSQLiteResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring;
-{$ELSE}
-function TZSQLiteResultSet.GetString(ColumnIndex: Integer): Ansistring;
-{$ENDIF}
 var
   Buffer: PAnsiChar;
 begin
   Buffer := GetPChar(ColumnIndex);
   if Buffer <> nil then
-   // Result := UTF8ToUnicodeString(StrPas(Buffer)) EgonHugeist: AnsiUTF8 to UnicodeString and reverted(result)= DataLoss!! Do not change this type!
-    Result := Buffer//StrPas(Buffer)
+    Result := Buffer
   else
     Result := '';
 end;
@@ -549,11 +538,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
 {$ENDIF}
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   Result := StrToBytes(DecodeString(GetString(ColumnIndex)));
-  {$ELSE}
-  Result := StrToBytes(GetString(ColumnIndex));
-  {$ENDIF}
 end;
 
 {**
@@ -687,11 +672,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
   Result := TStringStream.Create(GetString(ColumnIndex));
-{$ELSE}
-  Result := nil;
-{$ENDIF}
 end;
 
 {**
@@ -747,21 +728,10 @@ begin
   try
     if not LastWasNull then
     begin
-     {$IFDEF CHECK_CLIENT_CODE_PAGE}
      if TZAbstractResultSetMetadata(Metadata).GetColumnType(ColumnIndex) = stAsciiStream then
         Stream := TStringStream.Create(GetString(ColumnIndex))
       else
         Stream := FPlaindriver.getblob(FStmtHandle,columnIndex);
-     {$ELSE}
-     if TZAbstractResultSetMetadata(Metadata).GetColumnType(ColumnIndex) <> stBinaryStream then
-        Stream := TStringStream.Create(GetString(ColumnIndex))
-      else
-      begin
-//  NEW : FST  100214
-          Stream := FPlaindriver.getblob(FStmtHandle,columnIndex);
-  //        Stream := TStringStream.Create(DecodeString(GetString(ColumnIndex)));
-      end;
-      {$ENDIF}
       Result := TZAbstractBlob.CreateWithStream(Stream)
     end
     else

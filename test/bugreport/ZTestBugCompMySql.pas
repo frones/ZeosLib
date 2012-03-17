@@ -677,11 +677,7 @@ begin
     Query.SQL.Text := 'select * from table799863';
     Query.Open;
     CheckEquals(Ord(ftSmallInt), Ord(Query.Fields[0].DataType));
-    {$IFNDEF CHECK_CLIENT_CODE_PAGE} //the Script create_mysql_bugreport pupolates only two years
-    CheckEquals(3, Query.RecordCount);
-    CheckEquals(0, Query.Fields[0].AsInteger);
-    Query.Next;
-    {$ENDIF}
+    CheckEquals(2, Query.RecordCount);
     CheckEquals(1940, Query.Fields[0].AsInteger);
     Query.Next;
     CheckEquals(2003, Query.Fields[0].AsInteger);
@@ -770,7 +766,7 @@ begin
     Query.Open;
     CheckEquals(1, Query.RecordCount);
     CheckEquals(Ord(ftInteger), Ord(Query.Fields[0].DataType));
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}  //Client_Character_set sets column-type!!!!
+    //Client_Character_set sets column-type!!!!
     if Query.Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
       {$IFNDEF FPC}
         {$IFNDEF VER150Below}
@@ -779,9 +775,7 @@ begin
         {$ENDIF}
       {$ENDIF}
       CheckEquals(Ord(ftMemo), Ord(Query.Fields[1].DataType));
-    {$ELSE}
-    CheckEquals(Ord(ftMemo), Ord(Query.Fields[1].DataType));
-    {$ENDIF}
+
     CheckEquals('abc', Query.Fields[1].AsString);
 
     Query.Edit;
@@ -901,15 +895,9 @@ begin
     Query.SQL.Text := 'SELECT fld1, fld2 FROM table849723';
     // Query.RequestLive := True;
     Query.Open;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     CheckEquals(1, Query.RecordCount);
     CheckEquals(True, Query.Fields[0].IsNull);
     CheckEquals(0, Query.Fields[0].AsDateTime, 0);
-    {$ELSE}
-    CheckEquals(2, Query.RecordCount);
-    CheckEquals(False, Query.Fields[0].IsNull);
-    CheckEquals(0, Query.Fields[0].AsDateTime, 0);
-    {$ENDIF}
     CheckEquals('abc', Query.Fields[1].AsString);
 
     Query.Edit;
@@ -1028,23 +1016,19 @@ begin
     Query.Open;
 
     CheckEquals(Ord(ftInteger), Ord(Query.Fields[0].DataType));
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
+    //EgonHugeist: Highest Priority Client_Character_set!!!!
     if Query.Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-      {$IFNDEF FPC}
-      begin
-        CheckEquals(Ord(ftWideString), Ord(Query.Fields[1].DataType));
-        CheckEquals(Ord(ftWideString), Ord(Query.Fields[2].DataType));
-      end
-      else
-      {$ELSE}
-      begin
-        CheckEquals(Ord(ftString), Ord(Query.Fields[1].DataType));
-        CheckEquals(Ord(ftString), Ord(Query.Fields[2].DataType));
-      end;
-      {$ENDIF}
+    {$IFNDEF FPC}
+    begin
+      CheckEquals(Ord(ftWideString), Ord(Query.Fields[1].DataType));
+      CheckEquals(Ord(ftWideString), Ord(Query.Fields[2].DataType));
+    end
+    else
     {$ELSE}
-    CheckEquals(Ord(ftString), Ord(Query.Fields[1].DataType));
-    CheckEquals(Ord(ftString), Ord(Query.Fields[2].DataType));
+    begin
+      CheckEquals(Ord(ftString), Ord(Query.Fields[1].DataType));
+      CheckEquals(Ord(ftString), Ord(Query.Fields[2].DataType));
+    end;
     {$ENDIF}
     Query.Close;
   finally
@@ -1226,16 +1210,13 @@ begin
     Query.SQL.Text := 'SELECT "aa\"aa"';
     Query.Open;
 
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}  //Client_Character_set sets column-type!!!!
+    //Client_Character_set sets column-type!!!!
     if Query.Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
       {$IFNDEF FPC}
       CheckEquals(Ord(ftWideString), Ord(Query.Fields[0].DataType))
       else
       {$ENDIF}
       CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
-    {$ELSE}
-    CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
-    {$ENDIF}
     CheckEquals('aa"aa', Query.Fields[0].AsString);
 
     Query.Close;
@@ -1603,20 +1584,15 @@ begin
 
     Query.Open;
     CheckEquals(1, Query.RecordCount);
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}  //Client_Character_set sets column-type!!!!
+    //Client_Character_set sets column-type!!!!
     {$IFNDEF FPC}
     if Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-    begin
       {$IFNDEF VER150BELOW}
-        CheckEquals(Ord(ftWideMemo), Ord(Query.Fields[0].DataType));
-      end
-      else
-      begin
+      CheckEquals(Ord(ftWideMemo), Ord(Query.Fields[0].DataType))
+    else
       {$ENDIF}
       CheckEquals(Ord(ftMemo), Ord(Query.Fields[0].DataType));
-    end;
     {$ELSE}
-    {$ENDIF}
     CheckEquals(Ord(ftMemo), Ord(Query.Fields[0].DataType));
     {$ENDIF}
     CheckEquals('', Query.Fields[0].AsString);

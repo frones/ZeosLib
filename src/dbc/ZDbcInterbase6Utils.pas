@@ -60,8 +60,7 @@ interface
 uses
   Classes, SysUtils, Types, ZDbcIntfs, ZDbcStatement,
   ZPlainFirebirdDriver, ZPlainFirebirdInterbaseConstants,ZCompatibility,
-  ZDbcCachedResultSet, ZDbcLogging, ZMessages, ZVariant
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}, ZTokenizer{$ENDIF};
+  ZDbcCachedResultSet, ZDbcLogging, ZMessages, ZVariant, ZTokenizer;
 
 type
   { Interbase Statement Type }
@@ -169,13 +168,10 @@ type
 
   { Base class contain core functions to work with sqlda structure
     Can allocate memory for sqlda structure get basic information }
-  TZSQLDA = class ({$IFDEF CHECK_CLIENT_CODE_PAGE}
-    TAbstractCodePagedInterfacedObject{$ELSE}TInterfacedObject{$ENDIF}, IZSQLDA)
+  TZSQLDA = class (TAbstractCodePagedInterfacedObject, IZSQLDA)
   private
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     FHandle: PISC_DB_HANDLE;
     FTransactionHandle: PISC_TR_HANDLE;
-    {$ENDIF}
     FXSQLDA: PXSQLDA;
     FPlainDriver: IZInterbasePlainDriver;
     procedure CheckRange(const Index: Word);
@@ -183,11 +179,9 @@ type
     procedure SetFieldType(const Index: Word; Size: Integer; Code: Smallint;
       Scale: Smallint);
   public
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     constructor Create(PlainDriver: IZInterbasePlainDriver;
       Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE;
       Encoding: PZCodePage); virtual;
-    {$ENDIF}
     procedure InitFields(Parameters: boolean);
     procedure AllocateSQLDA; virtual;
     procedure FreeParamtersValues;
@@ -214,11 +208,6 @@ type
   { Parameters class for sqlda structure.
     It clas can only write data to parameters/fields }
   TZParamsSQLDA = class (TZSQLDA, IZParamsSQLDA)
-  protected
-    {$IFNDEF CHECK_CLIENT_CODE_PAGE}
-    FHandle: PISC_DB_HANDLE;
-    FTransactionHandle: PISC_TR_HANDLE;
-    {$ENDIF}
   private
     //AVZ
     {$IFDEF DELPHI12_UP}
@@ -229,10 +218,6 @@ type
 
     procedure UpdateDateTime(const Index: Integer; Value: TDateTime);
   public
-    {$IFNDEF CHECK_CLIENT_CODE_PAGE}
-    constructor Create(PlainDriver: IZInterbasePlainDriver;
-      Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE);
-    {$ENDIF}
     destructor Destroy; override;
 
     procedure WriteBlob(const Index: Integer; Stream: TStream);
@@ -264,18 +249,10 @@ type
   TZResultSQLDA = class (TZSQLDA, IZResultSQLDA)
   protected
     FDefaults: array of Variant;
-    {$IFNDEF CHECK_CLIENT_CODE_PAGE}
-    FHandle: PISC_DB_HANDLE;
-    FTransactionHandle: PISC_TR_HANDLE;
-    {$ENDIF}
   private
     function DecodeString(const Code: Smallint; const Index: Word): AnsiString;
     procedure DecodeString2(const Code: Smallint; const Index: Word; out Str: AnsiString);
   public
-    {$IFNDEF CHECK_CLIENT_CODE_PAGE}
-    constructor Create(PlainDriver: IZInterbasePlainDriver;
-      Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE);
-    {$ENDIF}
     destructor Destroy; override;
 
     procedure AllocateSQLDA; override;
@@ -336,7 +313,7 @@ type
   { Interbase statement functions}
   function PrepareStatement(PlainDriver: IZInterbasePlainDriver;
     Handle: PISC_DB_HANDLE; TrHandle: PISC_TR_HANDLE; Dialect: Word;
-    SQL: {$IFDEF CHECK_CLIENT_CODE_PAGE}AnsiString{$ELSE}string{$ENDIF};
+    SQL: AnsiString;
     var StmtHandle: TISC_STMT_HANDLE): TZIbSqlStatementType;
   procedure PrepareResultSqlData(PlainDriver: IZInterbasePlainDriver;
     Handle: PISC_DB_HANDLE; Dialect: Word; SQL: string;
@@ -351,8 +328,8 @@ type
   function GetAffectedRows(PlainDriver: IZInterbasePlainDriver;
     StmtHandle: TISC_STMT_HANDLE; StatementType: TZIbSqlStatementType): integer;
 
-  function ConvertInterbase6ToSqlType(SqlType, SqlSubType: Integer
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}; CharEncoding: TZCharEncoding{$ENDIF}): TZSqlType;
+  function ConvertInterbase6ToSqlType(SqlType, SqlSubType: Integer;
+    CharEncoding: TZCharEncoding): TZSqlType;
 
   { interbase blob routines }
   procedure GetBlobInfo(PlainDriver: IZInterbasePlainDriver;
@@ -507,8 +484,8 @@ begin
      or (Statement.GetResultSetType <> rtForwardOnly) then
   begin
     CachedResolver  := TZInterbase6CachedResolver.Create(Statement,  NativeResultSet.GetMetadata);
-    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, CachedResolver
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}, Statement.GetConnection.GetClientCodePageInformations{$ENDIF});
+    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
+      CachedResolver, Statement.GetConnection.GetClientCodePageInformations);
     CachedResultSet.SetConcurrency(Statement.GetResultSetConcurrency);
     Result := CachedResultSet;
   end
@@ -717,9 +694,8 @@ end;
 
   <b>Note:</b> The interbase type and subtype get from RDB$TYPES table
 }
-function ConvertInterbase6ToSqlType(SqlType, SqlSubType: Integer
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}; CharEncoding: TZCharEncoding{$ENDIF}):
-  TZSQLType;
+function ConvertInterbase6ToSqlType(SqlType, SqlSubType: Integer;
+  CharEncoding: TZCharEncoding): TZSQLType;
 begin
   Result := ZDbcIntfs.stUnknown;
 
@@ -739,11 +715,7 @@ begin
           Result := stString;
         end;
       end;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     RDB_FLOAT: Result := stFloat;
-    {$ELSE}
-    RDB_FLOAT: Result := stDouble;
-    {$ENDIF}
     RDB_DOUBLE: Result := stDouble;
     RDB_BLOB_ID, RDB_QUAD: Result := stLong;
     RDB_INT64:
@@ -788,16 +760,14 @@ begin
     else
       Result := ZDbcIntfs.stUnknown;
   end;
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
   {$IFNDEF FPC}
   if CharEncoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
     case result of
       stString: Result := stUnicodeString;
-      {$IFNDEF VER150BELOW} //Delphi 7 does not support WideMemos
+      {$IFDEF WITH_WIDEMEMO} //Delphi 7 does not support WideMemos
       stAsciiStream: Result := stUnicodeStream;
       {$ENDIF}
     end;
-  {$ENDIF}
   {$ENDIF}
 end;
 
@@ -907,8 +877,7 @@ end;
 }
 function PrepareStatement(PlainDriver: IZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; TrHandle: PISC_TR_HANDLE; Dialect: Word;
-  SQL: {$IFDEF CHECK_CLIENT_CODE_PAGE}AnsiString{$ELSE}string{$ENDIF};
-  var StmtHandle: TISC_STMT_HANDLE):
+  SQL: AnsiString; var StmtHandle: TISC_STMT_HANDLE):
   TZIbSqlStatementType;
 var
   StatusVector: TARRAY_ISC_STATUS;
@@ -918,18 +887,8 @@ begin
   PlainDriver.isc_dsql_alloc_statement2(@StatusVector, Handle, @StmtHandle);
   CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, Sql);
   { Prepare an sql statement }
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
     PlainDriver.isc_dsql_prepare(@StatusVector, TrHandle, @StmtHandle,
       0, PAnsiChar(SQL), Dialect, nil);
-  {$ELSE}
-    {$IFDEF DELPHI12_UP} //Rev 867 Mode
-     PlainDriver.isc_dsql_prepare(@StatusVector, TrHandle, @StmtHandle,
-       0, PAnsiChar(UTF8String(SQL)), Dialect, nil);
-    {$ELSE}
-    PlainDriver.isc_dsql_prepare(@StatusVector, TrHandle, @StmtHandle,
-      0, PAnsiChar(SQL), Dialect, nil);
-    {$ENDIF}
-  {$ENDIF}
   iError := CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, SQL); //Check for disconnect AVZ
 
   { Set Statement Type }
@@ -1414,8 +1373,6 @@ begin
 end;
 
 { TSQLDA }
-
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 constructor TZSQLDA.Create(PlainDriver: IZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE;
   Encoding: PZCodePage);
@@ -1433,7 +1390,6 @@ begin
 
   FXSQLDA.version := SQLDA_VERSION1;
 end;
-{$ENDIF}
 {**
    Allocate memory for SQLVar in SQLDA structure for every
    fields by it length.
@@ -1625,18 +1581,10 @@ begin
         if SqlScale = 0 then
           Result := stShort
         else
-          {$IFDEF CHECK_CLIENT_CODE_PAGE}
           Result := stFloat; //Numeric with low precision
-          {$ELSE}
-          Result := stdouble;
-          {$ENDIF}
        end;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     SQL_FLOAT: Result := stFloat;
     SQL_DOUBLE: Result := stDouble;
-    {$ELSE}
-    SQL_FLOAT, SQL_DOUBLE: Result := stDouble;
-    {$ENDIF}
     SQL_DATE: Result := stTimestamp;
     SQL_TYPE_TIME: Result := stTime;
     SQL_TYPE_DATE: Result := stDate;
@@ -1660,14 +1608,14 @@ begin
   else
       Result := stString;
   end;
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
   {$IFNDEF FPC}
   if ClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
     case result of
       stString: Result := stUnicodeString;
+      {$IFDEF WITH_WIDEMEMO}
       stAsciiStream: Result := stUnicodeStream;
+      {$ENDIF}
     end;
-  {$ENDIF}
   {$ENDIF}
 end;
 
@@ -1841,26 +1789,6 @@ end;
 { TParamsSQLDA }
 
 {**
-   Constructs this object and assignes the main properties.
-   param PlainDriver the interbase plain driver
-}
-{$IFNDEF CHECK_CLIENT_CODE_PAGE}
-constructor TZParamsSQLDA.Create(PlainDriver: IZInterbasePlainDriver;
-  Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE);
-begin
-  FPlainDriver := PlainDriver;
-  FHandle := Handle;
-  FTransactionHandle := TransactionHandle;
-
-  GetMem(FXSQLDA, XSQLDA_LENGTH(0));
-  FillChar(FXSQLDA^, XSQLDA_LENGTH(0), 0);
-  FXSQLDA.sqln := 0;
-  FXSQLDA.sqld := 0;
-
-  FXSQLDA.version := SQLDA_VERSION1;
-end;
-{$ENDIF}
-{**
    Free allocated memory and free object
 }
 destructor TZParamsSQLDA.Destroy;
@@ -1881,21 +1809,10 @@ procedure TZParamsSQLDA.EncodeString(Code: Smallint; const Index: Word;
   const Str: {$IFDEF DELPHI12_UP}String{$ELSE}AnsiString{$ENDIF});//AVZ
 var
   Len: Cardinal;
-  Stream : TStream;
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   TempAnsi: AnsiString;
-  {$ENDIF}
 begin
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   TempAnsi := ZAnsiString(Str);
   Len := Length(TempAnsi);
-  {$ELSE}
-    {$IFDEF DELPHI12_UP}   //AVZ - fix forUNICODE Size
-    Len := Length(UTF8Encode(Str)); //???????????? Latin1 Conneciton or something like this??
-    {$ELSE}
-    Len := Length(Str);
-    {$ENDIF}
-  {$ENDIF}
 
   {$R-}
    with FXSQLDA.sqlvar[Index] do
@@ -1907,11 +1824,7 @@ begin
           else
             IbReAlloc(sqldata, 0, Len + 1);
           sqllen := Len;
-          {$IFDEF CHECK_CLIENT_CODE_PAGE}
           Move(PAnsiChar(TempAnsi)^, sqldata^, sqllen);
-          {$ELSE}
-          Move(PAnsiChar(Str)^, sqldata^, sqllen);
-          {$ENDIF}
         end;
       SQL_VARYING :
         begin
@@ -1921,15 +1834,7 @@ begin
           else
             IbReAlloc(sqldata, 0, Len + 2);
           PISC_VARYING(sqldata).strlen :=  Len;
-          {$IFDEF CHECK_CLIENT_CODE_PAGE}
-          Move(PAnsiChar(TempAnsi)^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen)  //AVZ
-          {$ELSE}
-            {$IFDEF DELPHI12_UP} //???? EgonHugeist: UTF8Encode! Is this right here? In all cases? Realy?
-              Move(PAnsiChar(AnsiString(UTF8Encode(Str)))^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);  //AVZ
-            {$ELSE}
-              Move(PAnsiChar(Str)^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
-            {$ENDIF}
-          {$ENDIF}
+          Move(PAnsiChar(TempAnsi)^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
         end;
     end;
   {$IFOPT D+}
@@ -2639,15 +2544,15 @@ begin
   with FXSQLDA.sqlvar[Index] do
   case Code of
     SQL_TEXT:
-                  begin
-                    Result := BufferToStr(sqldata, sqllen);
-                    // Trim only spaces. TrimRight also removes other characters)
-                    l := sqllen;
-                    while (l > 0) and (Result[l] = ' ') do
-                       dec(l);
-                    if l < sqllen then
-                       result := copy(result, 1, l);
-                  end;
+      begin
+        Result := BufferToStr(sqldata, sqllen);
+        // Trim only spaces. TrimRight also removes other characters)
+        l := sqllen;
+        while (l > 0) and (Result[l] = ' ') do
+           dec(l);
+        if l < sqllen then
+           result := copy(result, 1, l);
+      end;
     SQL_VARYING : System.SetString(Result, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
   end;
   {$IFOPT D+}
@@ -2671,8 +2576,7 @@ end;
    Constructs this object and assignes the main properties.
    param PlainDriver the interbase plain driver
 }
-{$IFNDEF CHECK_CLIENT_CODE_PAGE}
-constructor TZResultSQLDA.Create(PlainDriver: IZInterbasePlainDriver;
+{constructor TZResultSQLDA.Create(PlainDriver: IZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE);
 begin
   FPlainDriver := PlainDriver;
@@ -2685,8 +2589,8 @@ begin
   FXSQLDA.sqld := 0;
 
   FXSQLDA.version := SQLDA_VERSION1;
-end;
-{$ENDIF}
+end;}
+
 {**
    Return BigDecimal field value
    @param Index the field index
@@ -2880,10 +2784,54 @@ end;
 }
 function TZResultSQLDA.GetFloat(const Index: Integer): Single;
 var
-  SQLCode: SmallInt;
+  SQLCode, sVal: SmallInt;
+  E: Extended;
 begin
   CheckRange(Index);
   {$R-}
+  //with FXSQLDA.sqlvar[Index] do
+  {begin
+    Result := 0;
+    if Assigned(FXSQLDA.sqlvar[Index].sqlind) then
+      if (FXSQLDA.sqlvar[Index].sqlind^ = -1) then
+        Exit;
+    SQLCode := (FXSQLDA.sqlvar[Index].sqltype and not(1));
+
+    if (FXSQLDA.sqlvar[Index].sqlscale < 0)  then
+    begin
+      case SQLCode of
+        SQL_SHORT  :
+          begin
+            System.Move(PSmallInt(FXSQLDA.sqlvar[Index].sqldata)^, sVal, Sizeof(Smallint));
+            E := SVal / IBScaleDivisor[FXSQLDA.sqlvar[Index].sqlscale];
+            Result := SVal / IBScaleDivisor[FXSQLDA.sqlvar[Index].sqlscale];
+          end;
+        SQL_LONG   : Result := PInteger(FXSQLDA.sqlvar[Index].sqldata)^  / IBScaleDivisor[FXSQLDA.sqlvar[Index].sqlscale];
+        SQL_INT64,
+        SQL_QUAD   : Result := PInt64(FXSQLDA.sqlvar[Index].sqldata)^    / IBScaleDivisor[FXSQLDA.sqlvar[Index].sqlscale];
+        SQL_DOUBLE : Result := PDouble(FXSQLDA.sqlvar[Index].sqldata)^;
+      else
+        raise EZIBConvertError.Create(Format(SErrorConvertionField,
+          [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
+      end;
+    end
+    else
+      case SQLCode of
+        SQL_DOUBLE    : Result := PDouble(FXSQLDA.sqlvar[Index].sqldata)^;
+        SQL_LONG      : Result := PInteger(FXSQLDA.sqlvar[Index].sqldata)^;
+        SQL_D_FLOAT,
+        SQL_FLOAT     : Result := PSingle(FXSQLDA.sqlvar[Index].sqldata)^;
+        SQL_BOOLEAN   : Result := PSmallint(FXSQLDA.sqlvar[Index].sqldata)^;
+        SQL_SHORT     : Result := PSmallint(FXSQLDA.sqlvar[Index].sqldata)^;
+        SQL_INT64     : Result := PInt64(FXSQLDA.sqlvar[Index].sqldata)^;
+        SQL_TEXT      : Result := StrToFloat(DecodeString(SQL_TEXT, Index));
+        SQL_VARYING   : Result := StrToFloat(DecodeString(SQL_VARYING, Index));
+      else
+        raise EZIBConvertError.Create(Format(SErrorConvertionField,
+          [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
+      end;
+  end;}
+
   with FXSQLDA.sqlvar[Index] do
   begin
     Result := 0;
@@ -3254,11 +3202,11 @@ begin
                        Result := IntToStr(PSmallint(sqldata)^);
                      end;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
-  {$IFDEF COMPILER6_UP}
+  {.$IFDEF COMPILER6_UP}
         SQL_INT64     : Result := PInt64(sqldata)^;
-  {$ELSE}
-        SQL_INT64     : Result := Integer(PInt64(sqldata)^);
-  {$ENDIF}
+  {.$ELSE}
+    //    SQL_INT64     : Result := Integer(PInt64(sqldata)^);
+  {.$ENDIF}
         SQL_TEXT      : Result := DecodeString(SQL_TEXT, Index);
         SQL_VARYING   : Result := DecodeString(SQL_VARYING, Index);
         SQL_BLOB      : if VarIsEmpty(FDefaults[Index]) then

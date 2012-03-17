@@ -1147,7 +1147,6 @@ begin
                 on Changing to stUnicodeString/Delphi12Up a String is from
                 Type wide/unicode so we have to give him back as
                 Stream!}
-              {$IFDEF CHECK_CLIENT_CODE_PAGE}
                 {$IFDEF DELPHI12_UP}
                 if Statement.GetConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
                   Stream := Param.AsStream
@@ -1156,9 +1155,6 @@ begin
                 {$ELSE}
                 Stream := TStringStream.Create(Param.AsMemo);
                 {$ENDIF}
-              {$ELSE}
-              Stream := TStringStream.Create(Param.AsMemo);
-              {$ENDIF}
               try
                 Statement.SetAsciiStream(I + 1, Stream);
               finally
@@ -1657,10 +1653,8 @@ begin
       for I := 1 to GetColumnCount do
       begin
         FieldType := ConvertDbcToDatasetType(GetColumnType(I));
-        {$IFDEF CHECK_CLIENT_CODE_PAGE}
         //if IsCurrency(I) then
           //FieldType := ftCurrency;
-        {$ENDIF}
         if FieldType in [ftString, ftWidestring, ftBytes] then
           Size := GetPrecision(I)
         else
@@ -1823,8 +1817,8 @@ begin
     { Initializes accessors and buffers. }
     ColumnList := ConvertFieldsToColumnInfo(Fields);
     try
-      RowAccessor := TZRowAccessor.Create(ColumnList{$IFDEF CHECK_CLIENT_CODE_PAGE}
-      ,Connection.DbcConnection.GetClientCodePageInformations{$ENDIF});
+      RowAccessor := TZRowAccessor.Create(ColumnList,
+        Connection.DbcConnection.GetClientCodePageInformations);
     finally
       ColumnList.Free;
     end;

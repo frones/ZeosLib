@@ -136,15 +136,8 @@ function GetProcAddress(Module: HMODULE; Proc: PChar): Pointer;
   {$ENDIF}
 {$ENDIF}
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 {EgonHugeist:}
 type
-  {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
-  TZClientCodePageOption = (coShowSupportedsOnly, coDisableSupportWarning,
-    coSetCodePageToConnection, coPreprepareSQL);
-  TZClientCodePageOptions = set of TZClientCodePageOption;
-  {$ENDIF}
-
   TZCharEncoding = (
     ceDefault, //Internal switch for the two Functions below do not use it as a CodePage-decaration!
     //ceUnsupported,  //may be Realy Unsupported CodePages {This must be testet before}
@@ -210,8 +203,6 @@ function ZAnsiStringToCP(const s: AnsiString; CP: Word): AnsiString;
 function DetectUTF8Encoding(Ansi: AnsiString): Boolean;
 {$IFEND}
 
-{$ENDIF}
-
 {$IFNDEF WITH_CHARINSET}
 function CharInSet(C: AnsiChar; const CharSet: TSysCharSet): Boolean; overload;
 function CharInSet(C: WideChar; const CharSet: TSysCharSet): Boolean; overload;
@@ -223,8 +214,6 @@ function UTF8ToString(const s: AnsiString): WideString;
 {$IFEND}
 
 implementation
-
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 
 {$IFDEF ZDetectUTF8Encoding}
 function DetectUTF8Encoding(Ansi: AnsiString): Boolean; //EgonHugeist: Detect a valid UTF8Sequence
@@ -757,8 +746,6 @@ begin
   Self.FCodePage := nil;
   inherited Destroy;
 end;
-
-{$ENDIF}
 
 {$IFDEF UNIX}
   {$IFDEF FPC}

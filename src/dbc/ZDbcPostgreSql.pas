@@ -74,10 +74,8 @@ type
     function Connect(const Url: string; Info: TStrings): IZConnection; override;
 
     function GetSupportedProtocols: TStringDynArray; override;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetSupportedClientCodePages(const Url: string;
       Const SupportedsOnly: Boolean): TStringDynArray; override; //EgonHugeist
-    {$ENDIF}
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
 
@@ -158,12 +156,10 @@ type
 
     function PingServer: Integer; override;
     function GetCharactersetCode: TZPgCharactersetType;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetAnsiEscapeString(const Value: AnsiString;
       const EscapeMarkSequence: String = '~<|'): String; override;
     function GetEscapeString(const Value: String;
       const EscapeMarkSequence: String = '~<|'): String; override;
-    {$ENDIF}
   end;
 
   {** Implements a Postgres sequence. }
@@ -300,7 +296,6 @@ begin
     Result[i+1] := FPlainDrivers[i].GetProtocol;
 end;
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 {**
   EgonHugeist:
   Get names of the compiler-supported CharacterSets.
@@ -323,7 +318,6 @@ begin
           break;
         end;
 end;
-{$ENDIF}
 
 {**
   Gets plain driver for selected protocol.
@@ -388,12 +382,7 @@ begin
   else
     FOidAsBlob := False;
 
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   FCharactersetCode := TZPgCharactersetType(ClientCodePage^.ID);
-  {$ELSE}
-  FClientCodePage := Trim(Info.Values['codepage']);
-  FCharactersetCode := pg_CS_code(FClientCodePage);
-  {$ENDIF}
 //  DriverManager.LogError(lcOther,'','Create',Integer(FCharactersetCode),'');
   FNoticeProcessor := DefaultNoticeProcessor;
 end;
@@ -547,12 +536,10 @@ begin
     FPlainDriver.SetNoticeProcessor(FHandle,FNoticeProcessor,nil);
 
     { Sets a client codepage. }
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
-      {$IFDEF SETPGTOLATIN1}
-      FClientCodePage := 'LATIN1';
-      {$ENDIF}
-    if ( FClientCodePage <> '' )
-      {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}and FSetCodePageToConnection {$ENDIF}then
+    {$IFDEF SETPGTOLATIN1}
+    FClientCodePage := 'LATIN1';
+    {$ENDIF}
+    if ( FClientCodePage <> '' ) then
     begin
       SQL := PAnsiChar(ZAnsiString(Format('SET CLIENT_ENCODING TO ''%s''',
                                           [FClientCodePage])));
@@ -562,23 +549,6 @@ begin
       FPlainDriver.Clear(QueryHandle);
       DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
     end;
-    {$ELSE}
-    if FClientCodePage <> '' then
-    begin
-      {$IFDEF DELPHI12_UP}
-      SQL := PAnsiChar(AnsiString(UTF8Decode(Format('SET CLIENT_ENCODING TO ''%s''',
-                                          [FClientCodePage]))));
-      {$ELSE}
-      SQL := PAnsiChar(Format('SET CLIENT_ENCODING TO ''%s''',
-                              [FClientCodePage]));
-      {$ENDIF}
-      QueryHandle := FPlainDriver.ExecuteQuery(FHandle, SQL);
-      CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute,
-                            SQL,QueryHandle);
-      FPlainDriver.Clear(QueryHandle);
-      DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
-    end;
-    {$ENDIF}
 
     { Turn on transaction mode }
     StartTransactionSupport;
@@ -586,7 +556,6 @@ begin
     //  PQsetNoticeProcessor(FHandle, NoticeProc, Self);
     inherited Open;
 
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     { Gets the current codepage if it wasn't set..}
     if FClientCodePage = '' then
       with CreateStatement.ExecuteQuery(Format('select pg_encoding_to_char(%d)',
@@ -597,7 +566,6 @@ begin
       end;
     CheckCharEncoding(FClientCodePage);
     FCharactersetCode := TZPgCharactersetType(ClientCodePage^.ID);
-    {$ENDIF}
 
   finally
     if self.IsClosed and (Self.FHandle <> nil) then
@@ -1092,7 +1060,6 @@ begin
   Result := FCharactersetCode;
 end;
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 {**
   EgonHugeist:
   Returns the BinaryString in a Tokenizer-detectable kind
@@ -1124,7 +1091,6 @@ var TempAnsi: String;
 begin
   Result := inherited GetEscapeString(ZDbcPostgreSqlUtils.EncodeString(TZPgCharactersetType(Self.ClientCodePage^.ID), Value), EscapeMarkSequence)
 end;
-{$ENDIF}
 
 { TZPostgreSQLSequence }
 {**

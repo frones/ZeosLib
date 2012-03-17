@@ -105,20 +105,15 @@ function EncodeString(const Value: string): string; overload;
   @param Value a binary stream.
   @return a string in PostgreSQL binary string escape format.
 }
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 function EncodeBinaryString(const Value: AnsiString): AnsiString;
-{$ELSE}
-function EncodeBinaryString(const Value: string): string;
-{$ENDIF}
 
 {**
   Determine the character code in terms of enumerated number.
   @param InputString the input string.
   @return the character code in terms of enumerated number.
 }
-{$IFNDEF CHECK_CLIENT_CODE_PAGE}
-function pg_CS_code(const InputString: string): TZPgCharactersetType;
-{$ENDIF}
+
+//function pg_CS_code(const InputString: string): TZPgCharactersetType;
 {**
   Encode string which probably consists of multi-byte characters.
   Characters ' (apostraphy), low value (value zero), and \ (back slash) are encoded. Since we have noticed that back slash is the second byte of some BIG5 characters (each of them is two bytes in length), we need a characterset aware encoding function.
@@ -163,13 +158,12 @@ implementation
 
 uses ZMessages, ZCompatibility;
 
-type
+(*type
 
 pg_CS = record
   name: string;
   code: TZPgCharactersetType;
 end;
-{$IFNDEF CHECK_CLIENT_CODE_PAGE}
 const
 
 pg_CS_Table: array [0..47] of pg_CS =
@@ -222,9 +216,8 @@ pg_CS_Table: array [0..47] of pg_CS =
   (name:'ALT'; code: csALT),
   (name:'WIN'; code: csWIN),
   (name:'OTHER'; code: csOTHER)
-);
+); *)
 
-{$ENDIF}
 {**
    Return ZSQLType from PostgreSQL type name
    @param Connection a connection to PostgreSQL
@@ -236,15 +229,11 @@ function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
 begin
   TypeName := LowerCase(TypeName);
   if (TypeName = 'interval') or (TypeName = 'char')
-    or (TypeName = 'varchar') or (TypeName = 'bit') or (TypeName = 'varbit') then
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
+    or (TypeName = 'varchar') or (TypeName = 'bit') or (TypeName = 'varbit') then//EgonHugeist: Highest Priority Client_Character_set!!!!
     if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
       Result := stUnicodeString
     else
       Result := stString
-    {$ELSE}
-    Result := stString
-    {$ENDIF}
   else if TypeName = 'text' then
     Result := stAsciiStream
   else if TypeName = 'oid' then
@@ -255,14 +244,10 @@ begin
       Result := stInteger;
   end
   else if TypeName = 'name' then
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
     if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
       Result := stUnicodeString
     else
       Result := stString
-    {$ELSE}
-    Result := stString
-    {$ENDIF}
   else if TypeName = 'enum' then
     Result := stString
   else if TypeName = 'cidr' then
@@ -312,18 +297,10 @@ begin
   else
     Result := stUnknown;
 
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   {$IFNDEF FPC}
   if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
     if Result = stAsciiStream then
       Result := {$IFNDEF VER150BELOW}stUnicodeStream{$ELSE}stAsciiStream{$ENDIF}; //Delphi 7 does not support WideMemos
-  {$ENDIF}
-  {$ELSE}
-  if Connection.GetCharactersetCode = csUTF8 then  //whats with csUNICODE_PODBC ??
-    case Result of
-      stString: Result := {$IFDEF FPC}stString{$ELSE}stUnicodeString{$ENDIF};
-      stAsciiStream: Result := stUnicodeStream;
-    end;
   {$ENDIF}
 end;
 
@@ -340,14 +317,10 @@ function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
 begin
   case TypeOid of
     1186,18,1043:  { interval/char/varchar }
-      {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
       if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
         Result := stUnicodeString
       else
         Result := stString;
-      {$ELSE}
-      Result := stString;
-      {$ENDIF}
     25: Result := stAsciiStream; { text }
     26: { oid }
       begin
@@ -357,14 +330,10 @@ begin
           Result := stInteger;
       end;
     19: { name }
-      {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
       if ( Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] ) then
         Result := stUnicodeString
       else
         Result := stString;
-      {$ELSE}
-      Result := stString;
-      {$ENDIF}
     21: Result := stShort; { int2 }
     23: Result := stInteger; { int4 }
     20: Result := stLong; { int8 }
@@ -394,18 +363,9 @@ begin
       Result := stUnknown;
   end;
 
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: Highest Priority Client_Character_set!!!!
   if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
     if Result = stAsciiStream then
       Result := {$IFNDEF VER150BELOW}stUnicodeStream{$ELSE}stAsciiStream{$ENDIF}; //Delphi 7 does not support WideMemos
-  {$ELSE}
-  if Connection.GetCharactersetCode = csUTF8 then  //whats with csUNICODE_PODBC ??
-    case Result of
-      stString: Result := {$IFDEF FPC}stString{$ELSE}stUnicodeString{$ENDIF};
-      stAsciiStream: Result := stUnicodeStream;
-    end;
-  {$ENDIF}
-
 end;
 
 {**
@@ -465,9 +425,7 @@ begin
     end;
     Inc(SrcBuffer);
   end;
-  {$IFNDEF CHECK_CLIENT_CODE_PAGE}
-  DestBuffer^ := '''';
-  {$ENDIF}
+  //DestBuffer^ := '''';
 end;
 
 {**
@@ -475,8 +433,7 @@ end;
   @param InputString the input string.
   @return the character code in terms of enumerated number.
 }
-{$IFNDEF CHECK_CLIENT_CODE_PAGE}
-function pg_CS_code(const InputString: string): TZPgCharactersetType;
+(*function pg_CS_code(const InputString: string): TZPgCharactersetType;
 var
   i,len: integer;
 begin
@@ -510,8 +467,7 @@ begin
       Inc(i);
     end;
   end;
-end;
-{$ENDIF}
+end;  *)
 
 function pg_CS_stat(stat: integer; character: integer;
         CharactersetCode: TZPgCharactersetType): integer;
@@ -718,11 +674,7 @@ end;
   @param Value a binary stream.
   @return a string in PostgreSQL binary string escape format.
 }
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 function EncodeBinaryString(const Value: AnsiString): AnsiString;
-{$ELSE}
-function EncodeBinaryString(const Value: string): string;
-{$ENDIF}
 var
   I: Integer;
   SrcLength, DestLength: Integer;

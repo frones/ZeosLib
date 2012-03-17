@@ -340,7 +340,7 @@ begin
   with Metadata do
   begin
     CheckEquals(4, GetColumnCount);
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}  //Client_Character_set sets column-type!!!!
+    //Client_Character_set sets column-type!!!!
     if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
     begin
       {$IFNDEF FPC}
@@ -355,11 +355,6 @@ begin
       CheckEquals(ord(stString), ord(GetColumnType(2)));
       CheckEquals(ord(stString), ord(GetColumnType(3)));
     end;
-    {$ELSE}
-    CheckEquals(ord(stString), ord(GetColumnType(1)));
-    CheckEquals(ord(stString), ord(GetColumnType(2)));
-    CheckEquals(ord(stString), ord(GetColumnType(3)));
-    {$ENDIF}
     CheckEquals(ord(stShort), ord(GetColumnType(4)));
   end;
 

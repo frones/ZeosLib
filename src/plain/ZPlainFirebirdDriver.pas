@@ -248,10 +248,8 @@ type
     FIREBIRD_API : TZFIREBIRD_API;
   protected
     FPreLoader : TZNativeLibraryLoader;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     procedure LoadCodePages; override;
     function GetCompilerSaveCodePageName: String; override;
-    {$ENDIF}
     {$IFDEF ENABLE_INTERBASE_CRYPT}
     procedure Initialize; virtual;
     {$ENDIF}
@@ -414,10 +412,8 @@ type
 
   {** Implements a native driver for Firebird 1.5}
   TZFirebird15PlainDriver = class (TZFirebirdBaseDriver)
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   protected
     procedure LoadCodePages; override;
-  {$ENDIF}
   public
     constructor Create;
 
@@ -436,11 +432,9 @@ type
 
   {** Implements a native driver for Firebird 2.0}
   TZFirebird20PlainDriver = class (TZFirebirdBaseDriver)
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   protected
     function GetCompilerSaveCodePageName: String; override;
     procedure LoadCodePages; override;
-  {$ENDIF}
   public
     constructor Create;
 
@@ -462,10 +456,8 @@ type
 
   TZFirebird21PlainDriver = class (TZFirebirdBaseDriver)
   protected
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetCompilerSaveCodePageName: String; override;
     procedure LoadCodePages; override;
-  {$ENDIF}
     procedure LoadApi; override;
   public
     constructor Create;
@@ -488,10 +480,8 @@ type
 
   TZFirebird25PlainDriver = class (TZFirebirdBaseDriver)
   protected
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetCompilerSaveCodePageName: String; override;
     procedure LoadCodePages; override;
-  {$ENDIF}
     procedure LoadApi; override;
   public
     constructor Create;
@@ -525,7 +515,6 @@ begin
 end;
 
 { IZFirebirdPlainDriver }
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 
 function TZFirebirdBaseDriver.GetCompilerSaveCodePageName: String;
 begin
@@ -560,7 +549,6 @@ begin
   Self.AddCodePage('WIN1253', 54, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1253{$ENDIF}); {ANSI Greek}
   Self.AddCodePage('WIN1254', 55, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1254{$ENDIF}); {ANSI Turkish}
 end;
-{$ENDIF}
 
 {$IFDEF ENABLE_INTERBASE_CRYPT}
 procedure TZFirebirdBaseDriver.Initialize;
@@ -1069,9 +1057,7 @@ begin
     FPreLoader.AddLocation(LINUX_IB_CRYPT_LOCATION);
     {$ENDIF}
   {$ENDIF}
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   Self.LoadCodePages;
-  {$ENDIF}
 end;
 
 function TZInterbase6PlainDriver.GetDescription: string;
@@ -1095,9 +1081,7 @@ begin
     FPreLoader.AddLocation(LINUX_IB_CRYPT_LOCATION);
     {$ENDIF}
   {$ENDIF}
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   Self.LoadCodePages;
-  {$ENDIF}
 end;
 
 function TZFirebird10PlainDriver.GetDescription: string;
@@ -1112,7 +1096,6 @@ end;
 
 { IZFirebird15PlainDriver }
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 procedure TZFirebird15PlainDriver.LoadCodePages;
 begin
   inherited;
@@ -1136,7 +1119,6 @@ begin
   Self.AddCodePage('WIN1256', 59, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, cCP_WIN1256{$ENDIF}); {ANSI Arabic}
   Self.AddCodePage('WIN1257', 60, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1257{$ENDIF}); {ANSI Baltic}
 end;
-{$ENDIF}
 
 constructor TZFirebird15PlainDriver.Create;
 begin
@@ -1158,9 +1140,7 @@ begin
       FPreLoader.AddLocation(LINUX15_IB_CRYPT_LOCATION);
     {$ENDIF}
   {$ENDIF}
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   Self.LoadCodePages;
-  {$ENDIF}
 end;
 
 function TZFirebird15PlainDriver.GetDescription: string;
@@ -1203,7 +1183,6 @@ end;
 
 { IZFirebird20PlainDriver }
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZFirebird20PlainDriver.GetCompilerSaveCodePageName: String;
 begin
   Result := 'UTF8';
@@ -1236,7 +1215,6 @@ begin
   Self.AddCodePage('KOI8U', 64, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_KOI8U{$ENDIF}); {Ukrainian}
   Self.AddCodePage('UTF8', 4, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}); {All}
 end;
-{$ENDIF}
 
 constructor TZFirebird20PlainDriver.Create;
 begin
@@ -1258,9 +1236,7 @@ begin
       FPreLoader.AddLocation(LINUX20_IB_CRYPT_LOCATION);
     {$ENDIF}
   {$ENDIF}
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   Self.LoadCodePages;
-  {$ENDIF}
 end;
 
 function TZFirebird20PlainDriver.GetDescription: string;
@@ -1304,7 +1280,6 @@ end;
 
 { IZFirebird21PlainDriver }
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZFirebird21PlainDriver.GetCompilerSaveCodePageName: String;
 begin
   Result := 'UTF8';
@@ -1340,7 +1315,6 @@ begin
   Self.AddCodePage('GBK', 67, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_GB2312{$ENDIF}); {Chinese}
   Self.AddCodePage('TIS620', 66); {Thai}
 end;
-{$ENDIF}
 
 procedure TZFirebird21PlainDriver.LoadApi;
 begin
@@ -1372,9 +1346,7 @@ begin
       FPreLoader.AddLocation(LINUX21_IB_CRYPT_LOCATION);
     {$ENDIF}
   {$ENDIF}
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   Self.LoadCodePages;
-  {$ENDIF}
 end;
 
 
@@ -1427,7 +1399,6 @@ end;
 
 { TZFirebird25PlainDriver }
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZFirebird25PlainDriver.GetCompilerSaveCodePageName: String;
 begin
   Result := 'UTF8';
@@ -1465,7 +1436,6 @@ begin
   Self.AddCodePage('TIS620', 66); {Thai}
   Self.AddCodePage('GB18030', 69, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_GB18030{$ENDIF}); {Chinese}
 end;
-{$ENDIF}
 
 procedure TZFirebird25PlainDriver.LoadApi;
 begin
@@ -1497,9 +1467,7 @@ begin
       FPreLoader.AddLocation(LINUX25_IB_CRYPT_LOCATION);
     {$ENDIF}
   {$ENDIF}
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   Self.LoadCodePages;
-  {$ENDIF}
 end;
 
 function TZFirebird25PlainDriver.GetProtocol: string;

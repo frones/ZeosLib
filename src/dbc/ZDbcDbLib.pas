@@ -77,10 +77,8 @@ type
     function Connect(const Url: string; Info: TStrings): IZConnection; override;
 
     function GetSupportedProtocols: TStringDynArray; override;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetSupportedClientCodePages(const Url: string;
       Const SupportedsOnly: Boolean): TStringDynArray; override; //EgonHugeist
-    {$ENDIF}
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
 
@@ -177,7 +175,6 @@ begin
   Result[1] := FMSSqlPlainDriver.GetProtocol;
 end;
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 {**
   EgonHugeist:
   Get names of the compiler-supported CharacterSets.
@@ -194,7 +191,6 @@ begin
   if FMSSqlPlainDriver.GetProtocol = Protocol then
     Result := FMSSqlPlainDriver.GetSupportedClientCodePages(not (SupportedsOnly));
 end;
-{$ENDIF}
 
 {**
   Attempts to make a database connection to the given URL.

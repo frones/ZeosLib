@@ -74,10 +74,8 @@ type
     function Connect(const Url: string; Info: TStrings): IZConnection; override;
 
     function GetSupportedProtocols: TStringDynArray; override;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetSupportedClientCodePages(const Url: string;
       Const SupportedsOnly: Boolean): TStringDynArray; override; //EgonHugeist
-    {$ENDIF}
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
 
@@ -129,12 +127,10 @@ type
 
     function ReKey(const Key: string): Integer;
     function Key(const Key: string): Integer; 
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetAnsiEscapeString(const Value: AnsiString;
       const EscapeMarkSequence: String = '~<|'): String; override;
     function GetEscapeString(const Value: String;
       const EscapeMarkSequence: String = '~<|'): String; override;
-    {$ENDIF}
   end;
 
 var
@@ -255,7 +251,6 @@ begin
     Result[i+1] := FPlainDrivers[i].GetProtocol;
 end;
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 {**
   EgonHugeist:
   Get names of the compiler-supported CharacterSets.
@@ -278,8 +273,6 @@ begin
           break;
         end;
 end;
-
-{$ENDIF}
 
 {**
   Gets plain driver for selected protocol.
@@ -670,7 +663,6 @@ begin
   Result := FPlainDriver;
 end;
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 {**
   EgonHugeist:
   Returns the BinaryString in a Tokenizer-detectable kind
@@ -682,15 +674,14 @@ end;
 function TZSQLiteConnection.GetAnsiEscapeString(const Value: AnsiString;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
-  Result := Driver.GetTokenizer.AnsiGetEscapeString(ZDbcSqLiteUtils.EncodeString(Value), EscapeMarkSequence);
+  Result := inherited GetAnsiEscapeString(ZDbcSqLiteUtils.EncodeString(Value), EscapeMarkSequence);
 end;
 
 function TZSQLiteConnection.GetEscapeString(const Value: String;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
-  Result := Driver.GetTokenizer.GetEscapeString('''' + (Value) + '''', EscapeMarkSequence);
+  Result := inherited GetEscapeString('''' + (Value) + '''', EscapeMarkSequence);
 end;
-{$ENDIF}
 
 initialization
   SQLiteDriver := TZSQLiteDriver.Create;

@@ -89,8 +89,7 @@ type
 
   { TZGenericCachedResolver }
 
-  TZGenericCachedResolver = class ({$IFDEF CHECK_CLIENT_CODE_PAGE}
-  TAbstractCodePagedInterfacedObject{$ELSE}TInterfacedObject{$ENDIF}, IZCachedResolver)
+  TZGenericCachedResolver = class (TAbstractCodePagedInterfacedObject, IZCachedResolver)
   private
     FConnection: IZConnection;
     FStatement : IZStatement;
@@ -207,9 +206,7 @@ constructor TZGenericCachedResolver.Create(Statement: IZStatement;
 begin
   FStatement := Statement;
   FConnection := Statement.GetConnection;
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   Self.ClientCodePage := FConnection.GetClientCodePageInformations;
-  {$ENDIF}
   FMetadata := Metadata;
   FDatabaseMetadata := Statement.GetConnection.GetMetadata;
   FIdentifierConvertor := FDatabaseMetadata.GetIdentifierConvertor;
@@ -596,11 +593,7 @@ begin
         Statement.SetBigDecimal(I + 1,
           RowAccessor.GetBigDecimal(ColumnIndex, WasNull));
       stString:
-        {$IFDEF CHECK_CLIENT_CODE_PAGE}
         Statement.SetString(I + 1, ZAnsiString(RowAccessor.GetString(ColumnIndex, WasNull)));
-        {$ELSE}
-        Statement.SetString(I + 1, AnsiString(RowAccessor.GetString(ColumnIndex, WasNull)));
-        {$ENDIF}
       stUnicodeString:
         Statement.SetUnicodeString(I + 1,
           RowAccessor.GetUnicodeString(ColumnIndex, WasNull));

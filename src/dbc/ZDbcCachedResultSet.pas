@@ -157,10 +157,10 @@ type
     property NativeResolver: IZCachedResolver read FNativeResolver;
     {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   public
-    constructor CreateWithStatement(SQL: string; Statement: IZStatement
-    {$IFDEF CHECK_CLIENT_CODE_PAGE};ClientCodePage: PZCodePage{$ENDIF});
-    constructor CreateWithColumns(ColumnsInfo: TObjectList; SQL: string
-    {$IFDEF CHECK_CLIENT_CODE_PAGE};ClientCodePage: PZCodePage{$ENDIF});
+    constructor CreateWithStatement(SQL: string; Statement: IZStatement;
+      ClientCodePage: PZCodePage);
+    constructor CreateWithColumns(ColumnsInfo: TObjectList; SQL: string;
+      ClientCodePage: PZCodePage);
     destructor Destroy; override;
 
     procedure Close; override;
@@ -171,11 +171,7 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPChar(ColumnIndex: Integer): PAnsiChar; override;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring; override;
-    {$ELSE}
-    function GetString(ColumnIndex: Integer): Ansistring; override;
-    {$ENDIF}
     function GetUnicodeString(ColumnIndex: Integer): Widestring; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
@@ -274,8 +270,7 @@ type
     property ResultSet: IZResultSet read FResultSet write FResultSet;
   public
     constructor Create(ResultSet: IZResultSet; SQL: string;
-      Resolver: IZCachedResolver{$IFDEF CHECK_CLIENT_CODE_PAGE}
-      ;ClientCodePage: PZCodePage{$ENDIF});
+      Resolver: IZCachedResolver; ClientCodePage: PZCodePage);
     destructor Destroy; override;
 
     procedure Close; override;
@@ -300,11 +295,9 @@ uses ZMessages, ZDbcResultSetMetadata, ZDbcGenericResolver, ZDbcUtils;
   @param SQL an SQL query.
 }
 constructor TZAbstractCachedResultSet.CreateWithStatement(SQL: string;
-  Statement: IZStatement
-  {$IFDEF CHECK_CLIENT_CODE_PAGE};ClientCodePage: PZCodePage{$ENDIF});
+  Statement: IZStatement; ClientCodePage: PZCodePage);
 begin
-  inherited Create(Statement, SQL, nil
-  {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
+  inherited Create(Statement, SQL, nil, ClientCodePage);
   FCachedUpdates := False;
 end;
 
@@ -314,10 +307,9 @@ end;
   @param ColumnsInfo a columns info for cached rows.
 }
 constructor TZAbstractCachedResultSet.CreateWithColumns(
-  ColumnsInfo: TObjectList; SQL: string
-  {$IFDEF CHECK_CLIENT_CODE_PAGE};ClientCodePage: PZCodePage{$ENDIF});
+  ColumnsInfo: TObjectList; SQL: string; ClientCodePage: PZCodePage);
 begin
-  inherited Create(nil, SQL, nil{$IFDEF CHECK_CLIENT_CODE_PAGE}, ClientCodePage{$ENDIF});
+  inherited Create(nil, SQL, nil, ClientCodePage);
 
   CopyColumnsInfo(ColumnsInfo, Self.ColumnsInfo);
   FCachedUpdates := False;
@@ -648,12 +640,9 @@ begin
   FInitialRowsList := TList.Create;
   FCurrentRowsList := TList.Create;
 
-  FRowAccessor := TZRowAccessor.Create(ColumnsInfo
-    {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
-  FOldRowAccessor := TZRowAccessor.Create(ColumnsInfo
-    {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
-  FNewRowAccessor := TZRowAccessor.Create(ColumnsInfo
-    {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
+  FRowAccessor := TZRowAccessor.Create(ColumnsInfo, ClientCodePage);
+  FOldRowAccessor := TZRowAccessor.Create(ColumnsInfo, ClientCodePage);
+  FNewRowAccessor := TZRowAccessor.Create(ColumnsInfo, ClientCodePage);
 
   FRowAccessor.AllocBuffer(FUpdatedRow);
   FRowAccessor.AllocBuffer(FInsertedRow);
@@ -761,18 +750,14 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZAbstractCachedResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring;
 var
   UseEncoding: TZCharEncoding;
-{$ELSE}
-function TZAbstractCachedResultSet.GetString(ColumnIndex: Integer): Ansistring;
-{$ENDIF}
+  WS: WideString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckAvailable;
 {$ENDIF}
-  {$IFDEF CHECK_CLIENT_CODE_PAGE};
   if CharEncoding = ceDefault then
     UseEncoding := ClientCodePage^.Encoding
   else
@@ -782,17 +767,25 @@ begin
     ceAnsi:
       case UseEncoding of
         ceAnsi: Result := AnsiString(FRowAccessor.GetString(ColumnIndex, LastWasNull));
-        ceUTF8: Result := AnsiString(UTF8Encode(WideString(FRowAccessor.GetString(ColumnIndex, LastWasNull))));
-        ceUTF16: ;
+        ceUTF8: Result := AnsiToUTF8(FRowAccessor.GetString(ColumnIndex, LastWasNull));
+        ceUTF16:
+          begin
+            WS := UTF8ToString(AnsiToUTF8(FRowAccessor.GetString(ColumnIndex, LastWasNull)));
+            Result := Copy(UTF8Encode(WS), 1, Length(UTF8Encode(WS)));;
+          end;
         {$IFNDEF MSWINDOWS}
         ceUTF32: ;
         {$ENDIF}
       end;
     ceUTF8:
       case UseEncoding of
-        ceAnsi: Result := AnsiString(FRowAccessor.GetString(ColumnIndex, LastWasNull));
-        ceUTF8: Result := AnsiString(UTF8Encode(WideString(FRowAccessor.GetString(ColumnIndex, LastWasNull))));
-        ceUTF16: ;
+        ceAnsi: Result := AnsiString(UTF8ToAnsi(FRowAccessor.GetString(ColumnIndex, LastWasNull)));
+        ceUTF8: Result := AnsiString(FRowAccessor.GetString(ColumnIndex, LastWasNull));
+        ceUTF16:
+          begin
+            WS := FRowAccessor.GetUnicodeString(ColumnIndex, LastWasNull);
+            Result := Copy(UTF8Encode(WS), 1, Length(UTF8Encode(WS)));;
+          end;
         {$IFNDEF MSWINDOWS}
         ceUTF32: ;
         {$ENDIF}
@@ -802,9 +795,6 @@ begin
     ceUTF32: ;
     {$ENDIF}
   end;
-  {$ELSE}
-  Result := AnsiString(FRowAccessor.GetString(ColumnIndex, LastWasNull));
-  {$ENDIF}
 end;
 
 {**
@@ -1284,11 +1274,7 @@ begin
   CheckUpdatable;
 {$ENDIF}
   PrepareRowForUpdates;
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   FRowAccessor.SetString(ColumnIndex, ZString(Value));
-  {$ELSE}
-  FRowAccessor.SetString(ColumnIndex, String(Value));
-  {$ENDIF}
 end;
 
 {**
@@ -1808,11 +1794,9 @@ end;
   @param Resolver a cached updates resolver object.
 }
 constructor TZCachedResultSet.Create(ResultSet: IZResultSet; SQL: string;
-  Resolver: IZCachedResolver{$IFDEF CHECK_CLIENT_CODE_PAGE}
-      ;ClientCodePage: PZCodePage{$ENDIF});
+  Resolver: IZCachedResolver; ClientCodePage: PZCodePage);
 begin
-  inherited Create(ResultSet.GetStatement, SQL, nil
-  {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
+  inherited Create(ResultSet.GetStatement, SQL, nil,ClientCodePage);
   FResultSet := ResultSet;
   FResolver := Resolver;
   {BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}

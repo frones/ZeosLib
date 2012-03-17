@@ -237,10 +237,8 @@ type
     ServerArgs: array of PAnsiChar;
     ServerArgsLen: Integer;
     IsEmbeddedDriver: Boolean;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetCompilerSaveCodePageName: String; override;
     procedure LoadCodePages; override;
-    {$ENDIF}
     procedure LoadApi; override;
     procedure BuildServerArguments(Options: TStrings);
   public
@@ -390,9 +388,7 @@ type
   TZMySQL5PlainDriver = class (TZMysqlBaseDriver)
   protected
     procedure LoadApi; override;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     procedure LoadCodePages; override;
-    {$ENDIF}
   public
     constructor Create;
     function GetProtocol: string; override;
@@ -412,7 +408,6 @@ implementation
 uses SysUtils, ZSysUtils, ZPlainLoader;
 
 { TZMySQLPlainBaseDriver }
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZMySQLBaseDriver.GetCompilerSaveCodePageName: String;
 begin
   Result := 'utf8';
@@ -460,7 +455,6 @@ begin
   AddCodePage('binary', 33); {Binary pseudo charset}
   AddCodePage('geostd8', 34); {GEOSTD8 Georgian}
 end;
-{$ENDIF}
 
 procedure TZMySQLBaseDriver.LoadApi;
 begin
@@ -620,9 +614,7 @@ begin
   ServerArgsLen := 0;
   SetLength(ServerArgs, ServerArgsLen);
   IsEmbeddedDriver := False;
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   LoadCodePages;
-  {$ENDIF}
 end;
 
 destructor TZMySQLBaseDriver.Destroy;
@@ -1215,7 +1207,6 @@ begin
   end;
 end;
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 procedure TZMySQL5PlainDriver.LoadCodePages;
 begin
   inherited LoadCodePages;
@@ -1225,7 +1216,6 @@ begin
   AddCodePage('utf16', 38, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16{$ENDIF}, 'utf8mb4'); {UTF-16 Unicode}
   AddCodePage('utf32', 39, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_utf32{$ENDIF}, 'utf8mb4'); {UTF-32 Unicode} //Egonhugeist improved
 end;
-{$ENDIF}
 
 constructor TZMySQL5PlainDriver.Create;
 begin

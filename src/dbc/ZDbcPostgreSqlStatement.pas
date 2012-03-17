@@ -90,9 +90,7 @@ type
     function Execute(const SQL: string): Boolean; override;
 
     function IsOidAsBlob: Boolean;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetPrepreparedSQL(const SQL: String): AnsiString; override;
-    {$ENDIF}
 
   end;
 
@@ -208,8 +206,8 @@ begin
   NativeResultSet.SetConcurrency(rcReadOnly);
   if GetResultSetConcurrency = rcUpdatable then
   begin
-    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil
-      {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
+    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil,
+      ClientCodePage);
     CachedResultSet.SetConcurrency(rcUpdatable);
     CachedResultSet.SetResolver(TZPostgreSQLCachedResolver.Create(
       Self,  NativeResultSet.GetMetadata));
@@ -232,7 +230,6 @@ var
 begin
   Result := nil;
   ConnectionHandle := GetConnectionHandle();
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   Self.SSQL := SQL; //Preprepares the SQL and Sets the AnsiSQL
   QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
     PAnsiChar(Self.ASQL));
@@ -243,21 +240,6 @@ begin
     Result := CreateResultSet(Self.SSQL, QueryHandle)
   else
     Result := nil;
-  {$ELSE}
-    {$IFDEF DELPHI12_UP}
-    QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
-      PAnsiChar(UTF8String(SQL)));
-    {$ELSE}
-    QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
-    {$ENDIF}
-  CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
-    SQL, QueryHandle);
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
-  if QueryHandle <> nil then
-    Result := CreateResultSet(SQL, QueryHandle)
-  else
-    Result := nil;
-  {$ENDIF}
 end;
 
 {**
@@ -278,24 +260,12 @@ var
 begin
   Result := -1;
   ConnectionHandle := GetConnectionHandle();
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   SSQL := SQL;
   QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
     PAnsiChar(ASQL));
   CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
     SSQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
-  {$ELSE}
-    {$IFDEF DELPHI12_UP}
-    QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
-      PAnsiChar(UTF8String(SQL)));
-    {$ELSE}
-    QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
-    {$ENDIF}
-  CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
-    SQL, QueryHandle);
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
-  {$ENDIF}
 
   if QueryHandle <> nil then
   begin
@@ -335,17 +305,8 @@ var
   ConnectionHandle: PZPostgreSQLConnect;
 begin
   ConnectionHandle := GetConnectionHandle();
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
     PAnsiChar(GetPrepreparedSQL(SQL)));
-  {$ELSE}
-    {$IFDEF DELPHI12_UP}
-    QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
-      PAnsiChar(UTF8String(SQL)));
-    {$ELSE}
-    QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
-    {$ENDIF}
-  {$ENDIF}
   CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
     SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
@@ -390,12 +351,11 @@ begin
     Result := (self.Connection as IZPostgreSQLConnection).GetConnectionHandle;
 end;
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZPostgreSQLStatement.GetPrepreparedSQL(const SQL: String): AnsiString;
 begin
   Result := inherited GetPrepreparedSQL(SQL);
 end;
-{$ENDIF}
+
 { TZPostgreSQLPreparedStatement }
 
 {**
@@ -457,17 +417,9 @@ begin
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
       stString, stBytes:
-        {$IFDEF CHECK_CLIENT_CODE_PAGE}
         Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
-        {$ELSE}
-        Result := EncodeString(FCharactersetCode,SoftVarManager.GetAsString(Value));
-        {$ENDIF}
       stUnicodeString:
-        {$IFDEF CHECK_CLIENT_CODE_PAGE}
         Result := EncodeString(FCharactersetCode,SoftVarManager.GetAsUnicodeString(Value));
-        {$ELSE}
-        Result := UTF8Encode(EncodeString(FCharactersetCode,SoftVarManager.GetAsUnicodeString(Value)));
-        {$ENDIF}
       stDate:
         Result := Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]);
@@ -478,28 +430,14 @@ begin
         Result := Format('''%s''::timestamp',
           [FormatDateTime('yyyy-mm-dd hh":"mm":"ss',
             SoftVarManager.GetAsDateTime(Value))]);
-      stAsciiStream{$IFDEF CHECK_CLIENT_CODE_PAGE}, stUnicodeStream{$ENDIF}:
+      stAsciiStream, stUnicodeStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
-            {$IFDEF CHECK_CLIENT_CODE_PAGE}
             Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString)
-            {$ELSE}
-            Result := EncodeString(TempBlob.GetString)
-            {$ENDIF}
           else
             Result := 'NULL';
         end;
-      {$IFNDEF CHECK_CLIENT_CODE_PAGE}
-      stUnicodeStream:
-        begin
-          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
-          if not TempBlob.IsEmpty then
-            Result := EncodeString(FCharactersetCode, UTF8Encode(TempBlob.GetUnicodeString))
-          else
-            Result := 'NULL';
-        end;
-      {$ENDIF}
       stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
@@ -520,23 +458,7 @@ begin
               end;
             end
             else
-            begin
-              {$IFDEF CHECK_CLIENT_CODE_PAGE}
-              if GetConnection.PreprepareSQL then
-                result := GetConnection.GetAnsiEscapeString(TempBlob.GetString)
-              else
-                result:= FPlainDriver.EncodeBYTEA(TempBlob.GetString,
-                  Self.GetConnectionHandle); // FirmOS
-              {$ELSE}
-              result:= FPlainDriver.EncodeBYTEA(TempBlob.GetString,
-                Self.GetConnectionHandle); // FirmOS
-              {$ENDIF}
-              {
-               Result := EncodeString(TempBlob.GetString);
-               Result := Copy(Result, 2, Length(Result) - 2);
-               Result := EncodeString(Result);
-              }
-            end;
+              Result := GetConnection.GetAnsiEscapeString(TempBlob.GetString);
           end
           else
             Result := 'NULL';
@@ -607,8 +529,8 @@ begin
   NativeResultSet.SetConcurrency(rcReadOnly);
   if GetResultSetConcurrency = rcUpdatable then
   begin
-    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil
-      {$IFDEF CHECK_CLIENT_CODE_PAGE},ClientCodePage{$ENDIF});
+    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil,
+      ClientCodePage);
     CachedResultSet.SetConcurrency(rcUpdatable);
     CachedResultSet.SetResolver(TZPostgreSQLCachedResolver.Create(
       Self,  NativeResultSet.GetMetadata));
@@ -661,16 +583,8 @@ begin
           Result := 'FALSE';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
-      stString, stBytes{$IFDEF CHECK_CLIENT_CODE_PAGE}, stUnicodeString{$ENDIF}:
-        {$IFDEF CHECK_CLIENT_CODE_PAGE}
+      stString, stBytes, stUnicodeString:
         Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
-        {$ELSE}
-        Result := EncodeString(FCharactersetCode,SoftVarManager.GetAsString(Value));
-        {$ENDIF}
-      {$IFNDEF CHECK_CLIENT_CODE_PAGE}
-      stUnicodeString:
-        Result := UTF8Encode(EncodeString(FCharactersetCode,SoftVarManager.GetAsUnicodeString(Value)));
-      {$ENDIF}
       stDate:
         Result := Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]);
@@ -681,28 +595,14 @@ begin
         Result := Format('''%s''::timestamp',
           [FormatDateTime('yyyy-mm-dd hh":"mm":"ss',
             SoftVarManager.GetAsDateTime(Value))]);
-      stAsciiStream{$IFDEF CHECK_CLIENT_CODE_PAGE}, stUnicodeStream{$ENDIF}:
+      stAsciiStream, stUnicodeStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
-            {$IFDEF CHECK_CLIENT_CODE_PAGE}
             Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString)
-            {$ELSE}
-            Result := EncodeString(TempBlob.GetString)
-            {$ENDIF}
           else
             Result := 'NULL';
         end;
-      {$IFNDEF CHECK_CLIENT_CODE_PAGE}
-      stUnicodeStream:
-        begin
-          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
-          if not TempBlob.IsEmpty then
-            Result := EncodeString(FCharactersetCode, UTF8Encode(TempBlob.GetUnicodeString))
-          else
-            Result := 'NULL';
-        end;
-      {$ENDIF}
       stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
@@ -723,19 +623,7 @@ begin
               end;
             end
             else
-            begin
-              {$IFDEF CHECK_CLIENT_CODE_PAGE}
               result := GetConnection.GetAnsiEscapeString(TempBlob.GetString);
-              {$ELSE}
-              result:= FPlainDriver.EncodeBYTEA(TempBlob.GetString,
-                Self.GetConnectionHandle); // FirmOS
-              {$ENDIF}
-              {
-               Result := EncodeString(TempBlob.GetString);
-               Result := Copy(Result, 2, Length(Result) - 2);
-               Result := EncodeString(Result);
-              }
-            end;
           end
           else
             Result := 'NULL';
@@ -758,7 +646,6 @@ var
 begin
   Result := nil;
   ConnectionHandle := GetConnectionHandle();
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   Self.SSQL := SQL; //Preprepares the SQL and Sets the AnsiSQL
   QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle,
     PAnsiChar(ASQL));
@@ -769,20 +656,6 @@ begin
     Result := CreateResultSet(SSQL, QueryHandle)
   else
     Result := nil;
-  {$ELSE}
-    {$IFDEF DELPHI12_UP}
-    QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(UTF8String(SQL)));
-    {$ELSE}
-    QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
-    {$ENDIF}
-  CheckPostgreSQLError(Connection, GetPlainDriver, ConnectionHandle, lcExecute,
-    SQL, QueryHandle);
-  DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SQL);
-  if QueryHandle <> nil then
-    Result := CreateResultSet(SQL, QueryHandle)
-  else
-    Result := nil;
-  {$ENDIF}
 end;
 
 {**
@@ -856,10 +729,8 @@ begin
   end
   else
     Result := ASql;
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   if GetConnection.PreprepareSQL then
     Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
-  {$ENDIF}
 end;
 
 {**
@@ -880,24 +751,12 @@ var
 begin
   Result := -1;
   ConnectionHandle := GetConnectionHandle();
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   Self.SSQL := SQL; //Preprepares the SQL and Sets the AnsiSQL
   QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle,
     PAnsiChar(ASQL));
   CheckPostgreSQLError(Connection, GetPlainDriver, ConnectionHandle, lcExecute,
     SSQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SSQL);
-  {$ELSE}
-    {$IFDEF DELPHI12_UP}
-    QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle,
-      PAnsiChar(UTF8String(SQL)));
-    {$ELSE}
-    QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
-    {$ENDIF}
-  CheckPostgreSQLError(Connection, GetPlainDriver, ConnectionHandle, lcExecute,
-    SQL, QueryHandle);
-  DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SQL);
-  {$ENDIF}
 
   if QueryHandle <> nil then
   begin

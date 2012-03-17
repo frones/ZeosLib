@@ -1117,7 +1117,7 @@ begin
   for I := 0 to Fields.Count - 1 do
   begin
     if (Fields[I].FieldKind = fkData)
-      and not (Fields[I].DataType in [ftBlob, ftMemo, ftBytes {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}]) then
+      and not (Fields[I].DataType in [ftBlob,(* ftMemo, *)ftBytes (*{$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}*)]) then
     begin
       if Result <> '' then
         Result := Result + ',';

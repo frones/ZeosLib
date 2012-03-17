@@ -600,10 +600,8 @@ type
   TZPostgreSQLBaseDriver = class(TZAbstractPlainDriver, IZPlainDriver, IZPostgreSQLPlainDriver)
   protected
     POSTGRESQL_API : TZPOSTGRESQL_API;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetCompilerSaveCodePageName: String; override;
     procedure LoadCodePages; override;
-    {$ENDIF}
     procedure LoadApi; override;
   public
     constructor Create;
@@ -744,10 +742,8 @@ type
 
   TZPostgreSQL8PlainDriver = class(TZPostgreSQLBaseDriver, IZPlainDriver,IZPostgreSQLPlainDriver)
   protected
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetCompilerSaveCodePageName: String; override;
     procedure LoadCodePages; override;
-    {$ENDIF}
     procedure LoadApi; override;
   public
     constructor Create;
@@ -763,7 +759,6 @@ uses SysUtils, ZPlainLoader;
 
 { TZPostgreSQLBaseDriver }
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZPostgreSQLBaseDriver.GetCompilerSaveCodePageName: String;
 begin
   Result := 'UNICODE';
@@ -802,7 +797,6 @@ begin
   AddCodePage('TCVN', Ord(csTCVN), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1258{$ENDIF}); { TCVN-5712/Windows CP1258 (Vietnamese) }
   AddCodePage('WIN874', Ord(csWIN874), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS874{$ENDIF}); { Windows CP874 (Thai) }
 end;
-{$ENDIF}
 
 procedure TZPostgreSQLBaseDriver.LoadApi;
 begin
@@ -1335,9 +1329,7 @@ begin
   {$IFNDEF UNIX}
     FLoader.AddLocation(WINDOWS_DLL7_LOCATION);
   {$ENDIF}
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   LoadCodePages;
-  {$ENDIF}
 end;
 
 function TZPostgreSQL7PlainDriver.GetProtocol: string;
@@ -1381,7 +1373,6 @@ begin
 end;
 
 { TZPostgreSQL8PlainDriver }
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZPostgreSQL8PlainDriver.GetCompilerSaveCodePageName: String;
 begin
   Result := 'UTF8';
@@ -1424,7 +1415,6 @@ begin
   { Version 8.4 }
   //No more changes till latest version (9.1)
 end;
-{$ENDIF}
 
 procedure TZPostgreSQL8PlainDriver.LoadApi;
 begin
@@ -1452,9 +1442,7 @@ begin
     FLoader.AddLocation(LINUX_DLL82_LOCATION);
     FLoader.AddLocation(LINUX_DLL8_LOCATION);
   {$ENDIF}
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   LoadCodePages;
-  {$ENDIF}
 end;
 
 function TZPostgreSQL8PlainDriver.GetProtocol: string;

@@ -78,30 +78,19 @@ type
 
   { This class embedds a real connection and redirects all methods to it.
     When it is droped or closed, it returns the real connection to the pool. }
-  TZDbcPooledConnection = class({$IFDEF CHECK_CLIENT_CODE_PAGE}
-  TAbstractCodePagedInterfacedObject{$ELSE}TInterfacedObject{$ENDIF}, IZConnection)
+  TZDbcPooledConnection = class(TAbstractCodePagedInterfacedObject, IZConnection)
   private
     FConnection: IZConnection;
     FConnectionPool: TConnectionPool;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
-      {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
-      FRaiseOnUnsupportedCP: Boolean;
-      {$ENDIF}
     FPreprepareSQL: Boolean;
-    {$ENDIF}
     function GetConnection: IZConnection;
   protected // IZConnection
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
-      {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
-      FSetCodePageToConnection: Boolean;
-      {$ENDIF}
     FClientCodePage: String;
     procedure CheckCharEncoding(CharSet: String;
       const DoArrange: Boolean = False);
     function GetClientCodePageInformations(const ClientCharacterSet: String = ''): PZCodePage; //EgonHugeist
     function GetPreprepareSQL: Boolean; //EgonHugeist
     procedure SetPreprepareSQL(const Value: Boolean);
-    {$ENDIF}
     function CreateStatement: IZStatement;
     function PrepareStatement(const SQL: string): IZPreparedStatement;
     function PrepareCall(const SQL: string): IZCallableStatement;
@@ -140,12 +129,10 @@ type
   public
     constructor Create(const ConnectionPool: TConnectionPool);
     destructor Destroy; override;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetAnsiEscapeString(const Value: AnsiString;
       const EscapeMarkSequence: String = '~<|'): String;
     function GetEscapeString(const Value: String;
       const EscapeMarkSequence: String = '~<|'): String;
-    {$ENDIF}
   end;
 
   TZDbcPooledConnectionDriver = class(TZAbstractDriver)
@@ -578,7 +565,6 @@ begin
   GetConnection.SetTransactionIsolation(Value);
 end;
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 {**
   EgonHugeist: Check if the given Charset for Compiler/Database-Support!!
     Not supported means if there is a pissible String-DataLoss.
@@ -598,13 +584,6 @@ begin
   if (DoArrange) and (ClientCodePage^.ZAlias <> '' ) then
     CheckCharEncoding(ClientCodePage^.ZAlias); //recalls em selves
   FPreprepareSQL := FPreprepareSQL and (ClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]);
-  {$IFDEF WITH_CLIENT_CODE_PAGE_OPTIONS}
-  if ( not ClientCodePage^.IsSupported ) and FRaiseOnUnsupportedCP then
-    try
-      raise Exception.Create(WUnsupportedCodePage);
-    except
-    end;
-  {$ENDIF}
   FClientCodePage := ClientCodePage^.Name; //resets the developer choosen ClientCodePage
 end;
 
@@ -661,7 +640,6 @@ begin
   else
     Result := GetIZPlainDriver.GetClientCodePageInformations(ClientCharacterSet);
 end;
-{$ENDIF}
 
 { TZDbcPooledConnectionDriver }
 

@@ -248,7 +248,7 @@ begin
   CheckEquals('', ResultSet.GetStringByName('TABLE_SCHEM'));
   CheckEquals('people', ResultSet.GetStringByName('TABLE_NAME'));
   CheckEquals('p_resume', ResultSet.GetStringByName('COLUMN_NAME'));
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}  //EgonHugeist: the ClientCharacter-set sets now the Stream-Type
+  //EgonHugeist: the ClientCharacter-set sets now the Stream-Type
   {$IFNDEF FPC}
   if ResultSet.GetClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
     {$IFDEF VER150BELOW}
@@ -258,7 +258,6 @@ begin
     {$ENDIF}
   {$ELSE}
   CheckEquals(ord(stAsciiStream), ResultSet.GetIntByName('DATA_TYPE'));
-  {$ENDIF}
   {$ENDIF}
   CheckEquals('TEXT', UpperCase(ResultSet.GetStringByName('TYPE_NAME')));
   CheckEquals(65535, ResultSet.GetIntByName('COLUMN_SIZE'));

@@ -57,8 +57,7 @@ interface
 
 {$I ZPlain.inc}
 
-uses ZClasses, ZPlainLoader
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}, ZCompatibility, Types{$ENDIF};
+uses ZClasses, ZPlainLoader, ZCompatibility, Types;
 
 type
 
@@ -67,14 +66,12 @@ type
     ['{2A0CC600-B3C4-43AF-92F5-C22A3BB1BB7D}']
     function GetProtocol: string;
     function GetDescription: string;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     {EgonHugeist:
       Why this here? -> No one else then Plaindriver knows which Characterset
       is supported. Here i've made a intervention in dependency of used Compiler..
     }
     function GetSupportedClientCodePages(const IgnoreUnsupported: Boolean): TStringDynArray;
     function GetClientCodePageInformations(const ClientCharacterSet: String): PZCodePage; //Egonhugeist
-    {$ENDIF}
     procedure Initialize;
   end;
 
@@ -82,7 +79,6 @@ type
   {** implements a generic base class of a generic plain driver.
    to make the CodePage-handling tranparency for all Plain-Drivers}
 
-  {$IFDEF CHECK_CLIENT_CODE_PAGE}
   TZGenericAbstractPlainDriver = class(TZAbstractObject, IZPlainDriver)
   private
     FCodePages: array of TZCodePage;
@@ -107,31 +103,28 @@ type
 
     function GetClientCodePageInformations(const ClientCharacterSet: String): PZCodePage;
   end;
-  {$ENDIF}
 
   {ADDED by fduenas 15-06-2006}
   {** Base class of a generic plain driver with TZNativeLibraryLoader-object. }
 
   { TZAbstractPlainDriver }
 
-  TZAbstractPlainDriver = class({$IFDEF CHECK_CLIENT_CODE_PAGE}
-    TZGenericAbstractPlainDriver{$ELSE}TZAbstractObject{$ENDIF}, IZPlainDriver)
+  TZAbstractPlainDriver = class(TZGenericAbstractPlainDriver, IZPlainDriver)
   protected
     FLoader: TZNativeLibraryLoader;
     procedure LoadApi; virtual;
   public
     constructor CreateWithLibrary(const LibName : String);
     property Loader: TZNativeLibraryLoader read FLoader;
-    function GetProtocol: string; {$IFDEF CHECK_CLIENT_CODE_PAGE} override; {$ELSE}virtual; {$ENDIF}abstract;
-    function GetDescription: string; {$IFDEF CHECK_CLIENT_CODE_PAGE} override; {$ELSE}virtual; {$ENDIF} abstract;
-    procedure Initialize; {$IFDEF CHECK_CLIENT_CODE_PAGE} override; {$ELSE}virtual; {$ENDIF}
+    function GetProtocol: string; override; abstract;
+    function GetDescription: string; override; abstract;
+    procedure Initialize; override;
     destructor Destroy; override;
   end;
   {END ADDED by fduenas 15-06-2006}
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 
-  {$IFDEF WITH_CHAR_CONTROL}
+{$IFDEF WITH_CHAR_CONTROL}
 const
   zCP_ACP = 0; {ASCII US}
   zCP_EBC037 = 37; {IBM EBCDIC US-Canada}
@@ -303,15 +296,13 @@ const
   zCP_x_iscii_pa = 57011; {ISCII Punjabi}
   zCP_UTF8 = 65001;
   zCP_UTF7 = 65000;
-  {$ENDIF}
-
 {$ENDIF}
+
 
 implementation
 
-uses ZSysUtils{$IFDEF CHECK_CLIENT_CODE_PAGE}, SysUtils{$ENDIF};
+uses ZSysUtils, SysUtils;
 
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 
 {TZGenericAbstractPlainDriver}
 
@@ -336,7 +327,6 @@ begin
     begin
       FCodePages[High(FCodePages)].ZAlias := GetCompilerSaveCodePageName;
       FCodePages[High(FCodePages)].IsSupported := False;
-    end;
   {$ELSE}
     {$IFDEF WITH_CHAR_CONTROL}
       if CP = $ffff then
@@ -370,7 +360,6 @@ begin
       begin
         FCodePages[i].ZAlias := GetCompilerSaveCodePageName;
         FCodePages[i].IsSupported := False;
-      end;
       {$ELSE}
         {$IFDEF WITH_CHAR_CONTROL}
         if CP = $ffff then
@@ -428,7 +417,6 @@ begin
   Result := @ClientCodePageDummy;
   {$ENDIF}
 end;
-{$ENDIF}
 
 { TZAbstractPlainDriver }
 

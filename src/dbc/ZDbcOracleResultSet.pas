@@ -76,7 +76,7 @@ type
     procedure Open; override;
     function GetSQLVarHolder(ColumnIndex: Integer): PZSQLVar;
     function GetAsStringValue(ColumnIndex: Integer;
-      SQLVarHolder: PZSQLVar): {$IFDEF CHECK_CLIENT_CODE_PAGE}AnsiString{$ELSE}string{$ENDIF};
+      SQLVarHolder: PZSQLVar): AnsiString;
     function GetAsLongIntValue(ColumnIndex: Integer;
       SQLVarHolder: PZSQLVar): LongInt;
     function GetAsDoubleValue(ColumnIndex: Integer;
@@ -92,11 +92,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    {$IFDEF CHECK_CLIENT_CODE_PAGE}
     function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring; override;
-    {$ELSE}
-    function GetString(ColumnIndex: Integer): Ansistring; override;
-    {$ENDIF}
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -172,8 +168,7 @@ constructor TZOracleResultSet.Create(PlainDriver: IZOraclePlainDriver;
   Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
   ErrorHandle: POCIError);
 begin
-  inherited Create(Statement, SQL, nil
-  {$IFDEF CHECK_CLIENT_CODE_PAGE},Statement.GetConnection.GetClientCodePageInformations{$ENDIF});
+  inherited Create(Statement, SQL, nil, Statement.GetConnection.GetClientCodePageInformations);
 
   FSQL := SQL;
   FStmtHandle := StmtHandle;
@@ -424,7 +419,7 @@ end;
     value returned is <code>null</code>
 }
 function TZOracleResultSet.GetAsStringValue(ColumnIndex: Integer;
-  SQLVarHolder: PZSQLVar): {$IFDEF CHECK_CLIENT_CODE_PAGE}AnsiString{$ELSE}string{$ENDIF};
+  SQLVarHolder: PZSQLVar): AnsiString;
 var
   OldSeparator: Char;
   Blob: IZBlob;
@@ -438,10 +433,10 @@ begin
         Result := IntToStr(PLongInt(SQLVarHolder.Data)^);
       SQLT_FLT:
         begin
-          OldSeparator := {$IFDEF DELPHI15_UP}FormatSettings.{$ENDIF}DecimalSeparator;
-          DecimalSeparator := '.';
+          OldSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
+          {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
           Result := FloatToSqlStr(PDouble(SQLVarHolder.Data)^);
-          {$IFDEF DELPHI15_UP}FormatSettings.{$ENDIF}DecimalSeparator := OldSeparator;
+          {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldSeparator;
         end;
       SQLT_STR:
         Result := StrPas(PAnsiChar(SQLVarHolder.Data));
@@ -620,11 +615,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-{$IFDEF CHECK_CLIENT_CODE_PAGE}
 function TZOracleResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring;
-{$ELSE}
-function TZOracleResultSet.GetString(ColumnIndex: Integer): Ansistring;
-{$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
