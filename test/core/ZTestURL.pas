@@ -80,6 +80,7 @@ type
     procedure TestEmpty;
     procedure TestAssignToUrl_NoHost;
     procedure TestAssignToProperties_Properties_NoHost;
+    procedure TestSemicolons;
   end;
 
 implementation
@@ -336,6 +337,42 @@ begin
   end;
 end;
 
+procedure TZURLTest.TestSemicolons;
+var
+  ZURLIn, ZURLOut: TZURL;
+begin
+  try
+    ZURLIn := TZURL.Create;
+    ZURLIn.Prefix := 'zdbc';
+    ZURLIn.Protocol := 'ado';
+    ZURLIn.HostName := 'localhost';
+    ZURLIn.Port := 3050;
+    ZURLIn.Database := 'data/;\base';
+    ZURLIn.Password := 'pass/;\word';
+    ZURLIn.Properties.Values['UID'] := 'ad/;\min';
+    ZURLIn.Properties.Values['role'] := 'role/;\name';
+    CheckEquals('ad/;\min', ZURLIn.UserName);
+    CheckEquals('pass/;\word', ZURLIn.Password);
+    CheckEquals('zdbc:ado://localhost/data/'#9'\base?username=ad/'#9'\min;password=pass/'#9'\word;role=role/'#9'\name', ZURLIn.URL);
+
+    ZURLOut := TZURL.Create;
+    ZURLOut.URL := ZURLIn.URL;
+    CheckEquals('zdbc', ZURLOut.Prefix);
+    CheckEquals('ado', ZURLOut.Protocol);
+    CheckEquals('localhost', ZURLOut.HostName);
+    CheckEquals(3050, ZURLOut.Port);
+    CheckEquals('data/;\base', ZURLOut.Database);
+    CheckEquals('ad/;\min', ZURLOut.UserName);
+    CheckEquals('pass/;\word', ZURLOut.Password);
+    CheckEquals('rolename=role/;\name'+LineEnding, ZURLOut.Properties.Text);
+  finally
+    if Assigned(ZURLIn) then
+      ZURLIn.Free;
+    if Assigned(ZURLOut) then
+      ZURLOut.Free;
+  end;
+
+end;
 initialization
   RegisterTest('core',TZURLTest.Suite);
 
