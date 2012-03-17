@@ -27,6 +27,7 @@ package ZComponentDesign;
 {$LIBSUFFIX '150'}
 {$DESIGNONLY}
 {$IMPLICITBUILD OFF}
+{$WARN IMPLICIT_IMPORT OFF}
 
 requires
   dbrtl,

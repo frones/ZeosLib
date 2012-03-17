@@ -110,6 +110,7 @@ type
   end;
 
 implementation
+uses ZCompatibility;
 
 const
   {** List of keywords. }
@@ -145,11 +146,7 @@ var
     LastChar := #0;
     while Stream.Read(LastChar, 1 * SizeOf(Char)) > 0 do
     begin
-{$IFDEF DELPHI12_UP}
-         if CharInSet(LastChar, ['0'..'9']) then
-{$ELSE}
-      if LastChar in ['0'..'9'] then
-{$ENDIF}
+      if CharInSet(LastChar, ['0'..'9']) then
       begin
         Result := Result + LastChar;
         LastChar := #0;
@@ -185,22 +182,14 @@ begin
     Result.Value := Result.Value + ReadDecDigits;
 
   { Reads a power part of the number }
-{$IFDEF DELPHI12_UP}
-   if CharInSet(LastChar, ['e', 'E']) then
-{$ELSE}
-  if LastChar in ['e','E'] then
-{$ENDIF}
+  if CharInSet(LastChar, ['e', 'E']) then
   begin
     Stream.Read(TempChar, 1 * SizeOf(Char));
     Result.Value := Result.Value + TempChar;
     FloatPoint := True;
 
     Stream.Read(TempChar, 1 * SizeOf(Char));
-{$IFDEF DELPHI12_UP}
-      if CharInSet(TempChar, ['0'..'9', '-', '+']) then
-{$ELSE}
-    if TempChar in ['0'..'9','-','+'] then
-{$ENDIF}
+    if CharInSet(TempChar, ['0'..'9', '-', '+']) then
       Result.Value := Result.Value + TempChar + ReadDecDigits
     else
     begin
@@ -272,14 +261,10 @@ end;
 function TZExpressionQuoteState.EncodeString(const Value: string;
   QuoteChar: Char): string;
 begin
-{$IFDEF DELPHI12_UP}
-   if CharInSet(QuoteChar, ['''', '"']) then
-{$ELSE}
-  if QuoteChar in ['''', '"'] then
-{$ENDIF}
+  if CharInSet(QuoteChar, ['''', '"']) then
     Result := QuoteChar + EncodeCString(Value) + QuoteChar
-   else
-      Result := Value;
+  else
+    Result := Value;
 end;
 
 {**
@@ -291,13 +276,8 @@ end;
 function TZExpressionQuoteState.DecodeString(const Value: string;
   QuoteChar: Char): string;
 begin
-{$IFDEF DELPHI12_UP}
-   if (Length(Value) >= 2) and CharInSet(QuoteChar, ['''', '"'])
-      and (Value[1] = QuoteChar) and (Value[Length(Value)] = QuoteChar) then
-{$ELSE}
-  if (Length(Value) >= 2) and (QuoteChar in ['''', '"'])
-    and (Value[1] = QuoteChar) and (Value[Length(Value)] = QuoteChar) then
-{$ENDIF}
+  if (Length(Value) >= 2) and CharInSet(QuoteChar, ['''', '"'])
+     and (Value[1] = QuoteChar) and (Value[Length(Value)] = QuoteChar) then
     Result := DecodeCString(Copy(Value, 2, Length(Value) - 2))
    else
       Result := Value;

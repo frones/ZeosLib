@@ -172,7 +172,7 @@ begin
   SQLTail := '';
   ColumnCount := 0;
   {$IFDEF DELPHI12_UP}
-  ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(Utf8String(SQL)), Length(SQL), SQLTail,
+  ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(AnsiString(UTF8Encode(SQL))), Length(SQL), SQLTail,
     StmtHandle, ErrorMessage);
   {$ELSE}
   ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(SQL), Length(SQL), SQLTail,
@@ -212,7 +212,7 @@ var
 begin
   ErrorMessage := '';
   {$IFDEF DELPHI12_UP}
-  ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(UTF8String(SQL)), nil, nil,ErrorMessage);
+  ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(AnsiString(UTF8Encode(SQL))), nil, nil,ErrorMessage);
   {$ELSE}
   ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,ErrorMessage);
   {$ENDIF}
@@ -256,7 +256,7 @@ begin
   SQLTail := '';
   ColumnCount := 0;
   {$IFDEF DELPHI12_UP}
-  ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(Utf8String(SQL)), Length(SQL), SQLTail,
+  ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(AnsiString(UTF8Encode(SQL))), Length(SQL), SQLTail,
     StmtHandle, ErrorMessage);
   {$ELSE}
   ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(SQL), Length(SQL), SQLTail,
@@ -358,8 +358,16 @@ begin
                Result := '''N''';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
-      stString, stUnicodeString, stBytes:
+      stString, stUnicodeString{$IFNDEF DELPHI_12UP}, stBytes{$ENDIF}:
+        {$IFDEF DELPHI12_UP}
+        Result := GetEscapeString(String(UTF8Encode(SoftVarManager.GetAsString(Value))));
+        {$ELSE}
         Result := GetEscapeString(SoftVarManager.GetAsString(Value));
+        {$ENDIF}
+      {$IFDEF DELPHI_12UP}
+      stBytes:
+        Result := GetEscapeString(SoftVarManager.GetAsString(Value));
+      {$ENDIF}
       stDate:
         Result := '''' + FormatDateTime('yyyy-mm-dd',
           SoftVarManager.GetAsDateTime(Value)) + '''';
@@ -375,9 +383,9 @@ begin
           if not TempBlob.IsEmpty then
           begin
             if InParamTypes[ParamIndex] = stBinaryStream then
-              Result := EncodeString(TempBlob.GetString)
+              Result := String(EncodeString(TempBlob.GetString))
             else
-              Result := GetEscapeString(TempBlob.GetString);
+              Result := GetEscapeString(String(TempBlob.GetString));
           end
           else
             Result := 'NULL';

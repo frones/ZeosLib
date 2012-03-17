@@ -198,8 +198,8 @@ end;
 }
 destructor TZSQLStrings.Destroy;
 begin
-  FParams.Free;
-  FStatements.Free;
+  FreeAndNil(FParams);//.Free;
+  FreeAndNil(FStatements);//.Free;
   inherited Destroy;
 end;
 
@@ -396,7 +396,7 @@ begin
           SQL := SQL + '?';
 
           ParamName := TokenValue;
-          if (ParamName <> '') and (ParamName[1] in [#39, '`', '"', '[']) then
+          if (ParamName <> '') and CharInSet(ParamName[1], [#39, '`', '"', '[']) then
           begin
             ParamName := Tokenizer.GetQuoteState.
               DecodeString(ParamName, ParamName[1]);

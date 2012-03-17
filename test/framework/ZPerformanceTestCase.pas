@@ -338,7 +338,7 @@ begin
   for I := 1 to Length do
   begin
     C := Chr((Random(Ord('z') - Ord('A') + 1)) + Ord('A'));
-    if not (C in ['A'..'Z', 'a'..'z']) then
+    if not CharInSet(C, ['A'..'Z', 'a'..'z']) then
       C := ' ';
     Result := Result + C;
   end;

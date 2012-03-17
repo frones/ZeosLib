@@ -196,7 +196,7 @@ implementation
 {$R *.dfm}
 {$ENDIF}
 
-uses Dialogs, {$IFNDEF FPC}LibHelp, {$ENDIF}TypInfo, ZSqlMetadata,
+uses Dialogs, {$IFNDEF FPC}LibHelp, {$ENDIF}TypInfo, ZCompatibility, ZSqlMetadata,
   ZDbcIntfs, ZTokenizer, ZGenericSqlAnalyser, ZSelectSchema, ZDbcMetadata;
 
 function InternalQuoteIdentifier(const S, QuoteString: string): string;
@@ -410,18 +410,18 @@ begin
         if not SysLocale.FarEast then
         begin
           Inc(P);
-          while P^ in ['A'..'Z', 'a'..'z', '0'..'9', '_', '"', '$', #127..#255] do Inc(P);
-          if P^ = '.' then Inc(P);//!!! This must be added for syslocale fareast also 
+          while CharInSet(P^, ['A'..'Z', 'a'..'z', '0'..'9', '_', '"', '$', #127..#255] ) do Inc(P);
+          if P^ = '.' then Inc(P);//!!! This must be added for syslocale fareast also
         end
         else
           begin
             while TRUE do
             begin
-              if (P^ in ['A'..'Z', 'a'..'z', '0'..'9', '_', '.', '"', '$']) or
+              if CharInSet(P^, ['A'..'Z', 'a'..'z', '0'..'9', '_', '.', '"', '$']) or
                  IsKatakana(Byte(P^)) then
                 Inc(P)
               else
-                if P^ in LeadBytes then
+                if CharInSet(P^, LeadBytes) then
                   Inc(P, 2)
                 else
                   Break;
@@ -434,7 +434,7 @@ begin
       begin
         TokenStart := P;
         Inc(P);
-        while P^ in ['0'..'9', '.', 'e', 'E', '+', '-'] do Inc(P);
+        while CharInSet(P^, ['0'..'9', '.', 'e', 'E', '+', '-'] )do Inc(P);
         SetString(FTokenString, TokenStart, P - TokenStart);
         FToken := stNumber;
       end;
@@ -472,7 +472,7 @@ begin
       IsParam := P^ = ':';
       if IsParam then Inc(P);
       TokenStart := P;
-      while not (P^ in [FQuoteString[2], #0]) do Inc(P);
+      while not CharInSet(P^, [FQuoteString[2], #0]) do Inc(P);
       SetString(FTokenString, TokenStart, P - TokenStart);
       Inc(P);
       if P^ = '.' then

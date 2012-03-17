@@ -125,6 +125,14 @@ type
     procedure SetValue(const Value: string); override;
   end;
 
+  {** Implements a property editor for ZConnection.ClientCodePage property. }
+  TZClientCodePagePropertyEditor = class(TZStringProperty)
+  public
+    function  GetValue: string; override;
+    procedure GetValueList(List: TStrings); override;
+    procedure SetValue(const Value: string); override;
+  end;
+
   {** Implements a property editor for ZConnection.Database property. }
   TZDatabasePropertyEditor = class(TZStringProperty)
   public
@@ -565,6 +573,68 @@ begin
       List.Append(Protocols[J]);
   end;
 end;
+
+{TZClientCodePagePropertyEditor -> EgonHugeist 19.01.2012}
+
+{**
+  Sets a new selected string value.
+  @param Value a new selected string value.
+}
+function  TZClientCodePagePropertyEditor.GetValue: string;
+begin
+  Result := GetStrValue;
+end;
+
+{**
+  Processes a list of list items.
+  @param List the list to process the list items.
+}
+procedure TZClientCodePagePropertyEditor.GetValueList(List: TStrings);
+var
+  Connection: TZAbstractConnection;
+  B: Boolean;
+begin
+  if GetZComponent is TZAbstractConnection then
+    Connection := (GetZComponent as TZAbstractConnection);
+  if Assigned(Connection) then
+  begin
+    B := Connection.Connected;
+    if not B then
+    try
+      Connection.Connect;
+    except
+      List.Append('Not Connected!');
+      Connection := nil;
+      Exit;
+    end;
+    Connection.ShowSqlHourGlass;
+    try
+      with Connection.DbcConnection.GetMetadata.GetCharacterSets do
+      begin
+        while Next do
+          List.Append(GetStringByName('CHARACTER_SET_NAME'));
+        Close;
+        if List.Count = 0 then List.Append('Not implementet!');
+      end;
+    finally
+      Connection.HideSqlHourGlass;
+      Connection.Connected := B;
+    end;
+  end;
+  Connection := nil;
+end;
+
+{**
+  Sets a new selected string value.
+  @param Value a new selected string value.
+}
+procedure TZClientCodePagePropertyEditor.SetValue(const Value: string);
+begin
+  SetStrValue(Value);
+  if GetZComponent is TZAbstractConnection then
+    (GetZComponent as TZAbstractConnection).Connected := False;
+end;
+
 
 { TZDatabasePropertyEditor }
 

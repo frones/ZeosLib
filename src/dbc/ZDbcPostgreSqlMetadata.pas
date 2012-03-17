@@ -283,6 +283,7 @@ type
     function UncachedGetVersionColumns(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
     function UncachedGetTypeInfo: IZResultSet; override;
+    function UncachedGetCharacterSets: IZResultSet; override; //EgonHugeist
 
   public
     constructor Create(Connection: TZAbstractConnection; Url: string;
@@ -3188,76 +3189,118 @@ begin
    'C': Result := 'CREATE';
    'T': Result := 'CREATE TEMP';
    else Result := 'UNKNOWN';
- end;
+   end;
 end;
 
 function TZPostgreSQLDatabaseMetadata.GetIdentifierConvertor: IZIdentifierConvertor;
 begin
   Result:=TZPostgreSQLIdentifierConvertor.Create(Self);
-end; 
+end;
 
-{ TZPostgresIdentifierConvertor } 
- 
-function TZPostgreSQLIdentifierConvertor.ExtractQuote( 
-  const Value: string): string; 
-var 
-  QuoteDelim: string; 
-begin 
+{**
+  Gets the all supported CharacterSets:
+  @return <code>ResultSet</code> - each row is a CharacterSetName and it's ID
+}
+function TZPostgreSQLDatabaseMetadata.UncachedGetCharacterSets: IZResultSet; //EgonHugeist
+begin
+  Self.GetConnection.CreateStatement.Execute(
+  ' CREATE OR REPLACE FUNCTION get_encodings() RETURNS INTEGER AS '''+
+  ' DECLARE '+
+  '   enc     INTEGER := 0; '+
+  '   name    VARCHAR; '+
+  ' BEGIN '+
+  '   CREATE TEMP TABLE encodings ( enc_code int, enc_name text ); '+
+  '   LOOP '+
+  '       SELECT INTO name pg_encoding_to_char( enc ); '+
+  '       IF( name = '''''''' ) THEN '+
+  '           EXIT; '+
+  '       ELSE '+
+  '           INSERT INTO encodings VALUES( enc, name ); '+
+  '        END IF; '+
+  '       enc := enc + 1; '+
+  '   END LOOP; '+
+  '   RETURN enc; '+
+  ' END; '+
+  ''' LANGUAGE ''plpgsql'';');
+  Self.GetConnection.CreateStatement.ExecuteQuery('select get_encodings();').Close;
+
+  Result := ConstructVirtualResultSet(CharacterSetsColumnsDynArray);
+  with Self.GetConnection.CreateStatement.ExecuteQuery(
+   'select * from encodings;') do
+  begin
+    while Next do
+    begin
+      Result.MoveToInsertRow;
+      Result.UpdateString(1, GetString(2)); //CHARACTER_SET_NAME
+      Result.UpdateShort(2, GetShort(1)); //CHARACTER_SET_ID
+      Result.InsertRow;
+    end;
+    CLose;
+  end;
+end;
+
+{ TZPostgresIdentifierConvertor }
+
+function TZPostgreSQLIdentifierConvertor.ExtractQuote(
+  const Value: string): string;
+var
+  QuoteDelim: string;
+begin
   QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
-  Result := Value; 
-  if (QuoteDelim <> '') and (Value <> '') then 
-    if (copy(Value,1,1)=QuoteDelim) and 
-       (copy(Value,length(Value),1)=QuoteDelim) then 
-    begin 
-      Result:=copy(Value,2,length(Value)-2); 
-      Result:=StringReplace(Result,QuoteDelim+QuoteDelim,QuoteDelim,[rfReplaceAll]); 
-    end; 
- 
-end; 
- 
-function TZPostgreSQLIdentifierConvertor.IsQuoted(const Value: string): Boolean; 
-var 
-  QuoteDelim: string; 
-begin 
+  Result := Value;
+  if (QuoteDelim <> '') and (Value <> '') then
+    if (copy(Value,1,1)=QuoteDelim) and
+       (copy(Value,length(Value),1)=QuoteDelim) then
+    begin
+      Result:=copy(Value,2,length(Value)-2);
+      Result:=StringReplace(Result,QuoteDelim+QuoteDelim,QuoteDelim,[rfReplaceAll]);
+    end;
+
+end;
+
+function TZPostgreSQLIdentifierConvertor.IsQuoted(const Value: string): Boolean;
+var
+  QuoteDelim: string;
+begin
   QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
-  Result := (QuoteDelim <> '') and (Value <> '') and 
-            (copy(Value,1,1)=QuoteDelim) and 
-            (copy(Value,length(Value),1)=QuoteDelim); 
-end; 
- 
-function TZPostgreSQLIdentifierConvertor.IsSpecialCase( 
-  const Value: string): Boolean; 
-var 
-  I: Integer; 
-begin 
-  Result := False; 
-  if not (Value[1] in ['a'..'z','_']) then 
-  begin 
-    Result := True; 
-    Exit; 
-  end; 
-  for I := 1 to Length(Value) do 
-  begin 
-    if not (Value[I] in ['A'..'Z','a'..'z','0'..'9','_']) then 
-    begin 
-      Result := True; 
-      Break; 
-    end; 
-  end; 
-end; 
- 
-function TZPostgreSQLIdentifierConvertor.Quote(const Value: string): string; 
-var 
-  QuoteDelim: string; 
-begin 
-  Result := Value; 
-  if IsCaseSensitive(Value) then 
-  begin 
+  Result := (QuoteDelim <> '') and (Value <> '') and
+            (copy(Value,1,1)=QuoteDelim) and
+            (copy(Value,length(Value),1)=QuoteDelim);
+end;
+
+function TZPostgreSQLIdentifierConvertor.IsSpecialCase(
+  const Value: string): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  if not CharInSet(Value[1], ['a'..'z','_']) then
+  begin
+    Result := True;
+    Exit;
+  end;
+  for I := 1 to Length(Value) do
+  begin
+    if not CharInSet(Value[I], ['A'..'Z','a'..'z','0'..'9','_']) then
+    begin
+      Result := True;
+      Break;
+    end;
+  end;
+end;
+
+function TZPostgreSQLIdentifierConvertor.Quote(const Value: string): string;
+var
+  QuoteDelim: string;
+begin
+  Result := Value;
+  if IsCaseSensitive(Value) then
+  begin
     QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
-    Result := QuoteDelim + 
-              StringReplace(Result,QuoteDelim,QuoteDelim+QuoteDelim,[rfReplaceAll]) + 
-              QuoteDelim; 
-  end; 
-end; 
- 
+    Result := QuoteDelim +
+              StringReplace(Result,QuoteDelim,QuoteDelim+QuoteDelim,[rfReplaceAll]) +
+              QuoteDelim;
+  end;
+end;
+
 end.

@@ -801,7 +801,6 @@ var
   lUpdateCount         : Integer;
   lValidateUpdateCount : Boolean;
 
-  Temp: TStrings;
 begin
   if (UpdateType = utDeleted)
     and (OldRowAccessor.RowBuffer.UpdateType = utInserted) then
@@ -925,7 +924,7 @@ begin
                   ResultSet.GetBigDecimal(I));
               stString, stAsciiStream:
                 RowAccessor.SetString(Current.ColumnIndex,
-                  ResultSet.GetString(I));
+                  String(ResultSet.GetString(I)));
               stUnicodeString:
                 RowAccessor.SetUnicodeString(Current.ColumnIndex,
                   ResultSet.GetUnicodeString(I));

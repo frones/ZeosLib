@@ -491,7 +491,7 @@ begin
     BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(Value), Length(Value))
    else
     BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(Value), Length(Value));
-  Result := '''' + BufferToStr(Buffer, BufferLen) + '''';
+  Result := '''' + AnsiString(BufferToStr(Buffer, BufferLen)) + '''';
   FreeMem(Buffer);
 end;
 
@@ -705,7 +705,7 @@ begin
               FIELD_TYPE_FLOAT:    Single(PBuffer^)     := InParamValues[I].VFloat;
               FIELD_TYPE_STRING:
                 begin
-                  CastString := InParamValues[I].VString;
+                  CastString := AnsiString(InParamValues[I].VString);
                   for J := 1 to system.length(CastString) do
                     begin
                       PAnsiChar(PBuffer)^ := CastString[J];
@@ -749,7 +749,7 @@ begin
         vtNull:      Result := FIELD_TYPE_TINY;
         vtBoolean:   Result := FIELD_TYPE_TINY;
         vtInteger:   Result := FIELD_TYPE_LONGLONG;
-        vtFloat:    Result := FIELD_TYPE_FLOAT;
+        vtFloat:     Result := FIELD_TYPE_FLOAT;
         vtString:    Result := FIELD_TYPE_STRING;
         vtDateTime:  Result := FIELD_TYPE_DATETIME;
      else
@@ -848,9 +848,6 @@ end;
   or 0 for SQL statements that return nothing
 }
 function TZMySQLPreparedStatement.ExecuteUpdatePrepared: Integer;
-var
-  QueryHandle: PZMySQLResult;
-  HasResultset : Boolean;
 begin
   Result := -1;
   BindInParameters;
@@ -884,8 +881,6 @@ end;
   @see Statement#execute
 }
 function TZMySQLPreparedStatement.ExecutePrepared: Boolean;
-var
-  HasResultset : Boolean;
 begin
   Result := False;
   BindInParameters;
@@ -1031,6 +1026,6 @@ begin
     result := TMysqlFieldTypes(0);
     raise EZSQLException.Create('Unknown dll version : '+IntToStr(FDriverVersion));
   End
-
 end;
+
 end.

@@ -613,14 +613,8 @@ begin
        Inc(N);
        Pos := I + 1;
       end;
-{$IFDEF DELPHI12_UP}
       if CharInSet(Str[I], ['0'..'9']) then
         Inc(M);
-{$ELSE}
-      if Str[I] in ['0'..'9'] then
-        Inc(M);
-{$ENDIF}
-
     end;
     Result := (M + N = Length(Str)) and (N = 3);
   end
@@ -1073,17 +1067,10 @@ begin
   DestLength := 0;
   for I := 1 to SrcLength do
   begin
-{$IFDEF DELPHI12_UP}
     if CharInSet(SrcBuffer^, [#0]) then
        Inc(DestLength, 4)
     else if CharInSet(SrcBuffer^, ['"', '''', '\']) then
        Inc(DestLength, 2)
-{$ELSE}
-    if SrcBuffer^ in [#0] then
-      Inc(DestLength, 4)
-    else if SrcBuffer^ in ['"', '''', '\'] then
-      Inc(DestLength, 2)
-{$ENDIF}
     else
        Inc(DestLength);
     Inc(SrcBuffer);
@@ -1095,11 +1082,7 @@ begin
 
   for I := 1 to SrcLength do
   begin
-{$IFDEF DELPHI12_UP}
     if CharInSet(SrcBuffer^, [#0]) then
-{$ELSE}
-    if SrcBuffer^ in [#0] then
-{$ENDIF}
     begin
       DestBuffer[0] := '\';
       DestBuffer[1] := Chr(Ord('0') + (Byte(SrcBuffer^) shr 6));
@@ -1107,11 +1090,7 @@ begin
       DestBuffer[3] := Chr(Ord('0') + (Byte(SrcBuffer^) and $07));
       Inc(DestBuffer, 4);
     end
-{$IFDEF DELPHI12_UP}
     else if CharInSet(SrcBuffer^, ['"', '''', '\']) then
-{$ELSE}
-    else if SrcBuffer^ in ['"', '''', '\'] then
-{$ENDIF}
     begin
       DestBuffer[0] := '\';
       DestBuffer[1] := SrcBuffer^;
@@ -1147,11 +1126,7 @@ begin
     if SrcBuffer^ = '\' then
     begin
       Inc(SrcBuffer);
-{$IFDEF DELPHI12_UP}
       if CharInSet(SrcBuffer^, ['0'..'9']) then
-{$ELSE}
-      if SrcBuffer^ in ['0'..'9'] then
-{$ENDIF}
       begin
         DestBuffer^ := Chr(((Byte(SrcBuffer[0]) - Ord('0')) shl 6)
           or ((Byte(SrcBuffer[1]) - Ord('0')) shl 3)

@@ -1518,7 +1518,7 @@ end;
 }
 function TZASADatabaseMetadata.UncachedGetTableTypes: IZResultSet;
 const
-  TablesTypes: array [0..4] of string = ( 'TABLE', 'BASE', 'SYSTEM', 'VIEW',
+  TablesTypes: array [0..4] of AnsiString = ( 'TABLE', 'BASE', 'SYSTEM', 'VIEW',
     'GLOBAL TEMPORARY');
 var
   I: Integer;
@@ -1632,7 +1632,7 @@ begin
           GetIntByName('ORDINAL_POSITION'));
 
         Result.UpdateBooleanByName('AUTO_INCREMENT',
-          CompareText( Trim( GetStringByName('COLUMN_DEF')), 'autoincrement') = 0 );
+          CompareText( Trim( String(GetStringByName('COLUMN_DEF'))), 'autoincrement') = 0 );
         Result.UpdateNullByName('CASE_SENSITIVE');
         Result.UpdateBooleanByName('SEARCHABLE', False);
         Result.UpdateStringByName('IS_NULLABLE', GetStringByName( 'IS_NULLABLE'));

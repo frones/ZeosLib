@@ -132,6 +132,7 @@ type
     //HA 090811 Change Type of FOnLogin to new TZLoginEvent
     //FOnLogin: TLoginEvent;
     FOnLogin: TZLoginEvent;
+    FClientCodepage: String; //String
 
     function GetConnected: Boolean;
     procedure SetConnected(Value: Boolean);
@@ -173,6 +174,7 @@ type
 
     property StreamedConnected: Boolean read FStreamedConnected write FStreamedConnected;
 
+    procedure SetClientCodePage(Const Value: String); //Egonhugeist
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -229,6 +231,7 @@ type
     procedure ShowSQLHourGlass;
     procedure HideSQLHourGlass;
   published
+    property ClientCodepage: String read FClientCodepage write SetClientCodePage; //EgonHugeist
     property Catalog: string read FCatalog write FCatalog;
     property Properties: TStrings read FProperties write SetProperties;
     property AutoCommit: Boolean read FAutoCommit write SetAutoCommit
@@ -339,6 +342,25 @@ begin
 end;
 
 {**
+  EgonHugeist:
+  Sets the ClientCode-Page-Property and adds or corrects it in the
+    Info(Properties)-Strings
+  @param <code>string</code> the ClientCharacterSet
+}
+procedure TZAbstractConnection.SetClientCodePage(Const Value: String);
+begin
+  if ( Value = 'Not Connected!' ) or ( Value = 'Not implementet!' ) then
+    //possible! -> result of PropertyEditor if not complete yet
+    //Later we should remove this if the MeataData/Plaindriver-Informations
+    //where complete
+    FClientCodepage := Trim(FProperties.Values['codepage'])
+  else
+    Self.FClientCodepage := Value;
+  if ( Trim(FProperties.Values['codepage']) <> FClientCodepage ) then
+    FProperties.Values['codepage'] := FClientCodepage;
+end;
+
+{**
   Gets an open connection flag.
   @return <code>True</code> if the connection is open
     or <code>False</code> otherwise.
@@ -376,7 +398,13 @@ end;
 procedure TZAbstractConnection.SetProperties(Value: TStrings);
 begin
   if Value <> nil then
+  begin
+    if ( Trim(Value.Values['codepage']) <> '' ) then
+      FClientCodepage := Trim(Value.Values['codepage'])
+    else
+      Value.Values['codepage'] := FClientCodepage;
     FProperties.Text := Value.Text
+  end
   else
     FProperties.Clear;
 end;
@@ -707,10 +735,10 @@ end;
 {**
   Sends a ping to the server.
 }
-function TZAbstractConnection.Ping: Boolean; 
-begin 
-  Result := (FConnection <> nil) and (FConnection.PingServer=0); 
-end; 
+function TZAbstractConnection.Ping: Boolean;
+begin
+  Result := (FConnection <> nil) and (FConnection.PingServer=0);
+end;
 
 {**
   Reconnect, doesn't destroy DataSets if successful.
@@ -863,12 +891,7 @@ begin
   TransactIsolationLevel := oldLev;
 end;
 
-{procedure TZAbstractConnection.RollbackPrepared(transactionid: string);
-begin
-
-end;
-
-**
+{**
   Processes component notifications.
   @param AComponent a changed component object.
   @param Operation a component operation code.
@@ -932,17 +955,7 @@ begin
 end;
 
 
-{procedure TZAbstractConnection.PrepareTransaction(const transactionid: string);
-begin
-
-end;
-
-*procedure TZAbstractConnection.PrepareTransaction(const transactionid: string);
-begin
-
-end;
-
-*
+{**
   Closes all registered datasets.
 }
 procedure TZAbstractConnection.CloseAllDataSets;
@@ -1186,20 +1199,28 @@ begin
     List.Add(ResultSet.GetStringByName('PROCEDURE_NAME'));
 end;
 
+{**
+  EgonHugeist Returns Database-Triggers
+  @Param TablePattern is a "like"-pattern to get Triggers of specified Table
+  @SchemaPattern is Pattern to filter Schema-Trigger
+  @List the Result-Trigger-List
+}
 procedure TZAbstractConnection.GetTriggerNames(const TablePattern,
   SchemaPattern: string; List: TStrings);
-var
-  Metadata: IZDatabaseMetadata;
-  ResultSet: IZResultSet;
 begin
   CheckConnected;
 
   List.Clear;
-  Metadata := DbcConnection.GetMetadata;
-  ResultSet := Metadata.GetTriggers('', '', '', TablePattern);
-  while ResultSet.Next do
-    List.Add(ResultSet.GetStringByName('TRIGGER_NAME'));
+  with DbcConnection.GetMetadata.GetTriggers('', SchemaPattern, TablePattern, '') do
+  begin
+    while Next do
+     List.Add(String(GetStringByName('TRIGGER_NAME')));
+    Close;
+  end;
 end;
+
+
+
 
 {**
   Returns the current version of zeosdbo.
@@ -1262,21 +1283,22 @@ function TZAbstractConnection.ExecuteDirect(SQL:string; var RowsAffected:integer
 var
   stmt : IZStatement;
 begin
-  try 
-    try 
-      CheckConnected; 
-      stmt := DbcConnection.CreateStatement; 
-      RowsAffected:= stmt.ExecuteUpdate(SQL); 
-      result := (RowsAffected <> -1); 
-    except 
-      RowsAffected := -1; 
-      result := False; 
-    end; 
-  finally 
-    stmt:=nil; 
+  try
+    try
+      CheckConnected;
+      stmt := DbcConnection.CreateStatement;
+      RowsAffected:= stmt.ExecuteUpdate(SQL);
+      result := (RowsAffected <> -1);
+    except
+      RowsAffected := -1;
+      result := False;
+    end;
+  finally
+    stmt:=nil;
   end;
 end;
 
 initialization
   SqlHourGlassLock := 0;
 end.
+

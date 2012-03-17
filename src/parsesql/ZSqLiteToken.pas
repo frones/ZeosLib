@@ -109,7 +109,7 @@ type
 
 implementation
 
-uses SysUtils;
+uses SysUtils, ZCompatibility;
 
 { TZSQLiteNumberState }
 
@@ -130,11 +130,7 @@ var
     LastChar := #0;
     while Stream.Read(LastChar, SizeOf(Char)) > 0 do
     begin
-{$IFDEF DELPHI12_UP}
       if CharInSet(LastChar, ['0'..'9']) then
-{$ELSE}
-      if LastChar in ['0'..'9'] then
-{$ENDIF}
       begin
         Result := Result + LastChar;
         LastChar := #0;
@@ -170,22 +166,14 @@ begin
     Result.Value := Result.Value + ReadDecDigits;
 
   { Reads a power part of the number }
-{$IFDEF DELPHI12_UP}
   if CharInSet(LastChar, ['e','E']) then
-{$ELSE}
-  if LastChar in ['e','E'] then
-{$ENDIF}
   begin
     Stream.Read(TempChar, SizeOf(Char));
     Result.Value := Result.Value + TempChar;
     FloatPoint := True;
 
     Stream.Read(TempChar, SizeOf(Char));
-{$IFDEF DELPHI12_UP}
     if CharInSet(TempChar, ['0'..'9','-','+']) then
-{$ELSE}
-    if TempChar in ['0'..'9','-','+'] then
-{$ENDIF}
       Result.Value := Result.Value + TempChar + ReadDecDigits
     else
     begin
@@ -239,11 +227,7 @@ begin
     else LastChar := ReadChar;
   end;
 
-{$IFDEF DELPHI12_UP}
   if CharInSet(FirstChar, ['"', '[']) then
-{$ELSE}
-  if FirstChar in ['"', '['] then
-{$ENDIF}
     Result.TokenType := ttWord
   else Result.TokenType := ttQuoted;
 end;
@@ -258,11 +242,7 @@ function TZSQLiteQuoteState.EncodeString(const Value: string; QuoteChar: Char): 
 begin
   if QuoteChar = '[' then
     Result := '[' + Value + ']'
-{$IFDEF DELPHI12_UP}
   else if CharInSet(QuoteChar, [#39, '"']) then
-{$ELSE}
-  else if QuoteChar in [#39, '"'] then
-{$ENDIF}
     Result := QuoteChar + Value + QuoteChar
   else Result := Value;
 end;
@@ -278,11 +258,7 @@ begin
   Result := Value;
   if Length(Value) >= 2 then
   begin
-{$IFDEF DELPHI12_UP}
     if CharInSet(QuoteChar, [#39, '"']) and (Value[1] = QuoteChar)
-{$ELSE}
-    if (QuoteChar in [#39, '"']) and (Value[1] = QuoteChar)
-{$ENDIF}
       and (Value[Length(Value)] = QuoteChar) then
     begin
       if Length(Value) > 2 then

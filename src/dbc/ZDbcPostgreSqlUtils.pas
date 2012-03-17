@@ -156,25 +156,25 @@ function GetMinorVersion(const Value: string): Word;
 
 implementation
 
-uses ZMessages;
+uses ZMessages, ZCompatibility;
 
 type
 
-pg_CS=record
+pg_CS = record
   name: string;
   code: TZPgCharactersetType;
 end;
 
 const
 
-CS_Table: array [0..38] of pg_CS =
+pg_CS_Table: array [0..47] of pg_CS =
 (
   (name:'SQL_ASCII'; code: csSQL_ASCII),
   (name:'EUC_JP'; code: csEUC_JP),
   (name:'EUC_CN'; code: csEUC_CN),
   (name:'EUC_KR'; code: csEUC_KR),
   (name:'EUC_TW'; code: csEUC_TW),
-  (name:'JOHAB'; code: csJOHAB),
+  (name:'EUC_JIS_2004'; code: csEUC_JIS_2004),
   (name:'UTF8'; code: csUTF8),
   (name:'MULE_INTERNAL'; code: csMULE_INTERNAL),
   (name:'LATIN1'; code: csLATIN1),
@@ -189,20 +189,29 @@ CS_Table: array [0..38] of pg_CS =
   (name:'LATIN10'; code: csLATIN10),
   (name:'WIN1256'; code: csWIN1256),
   (name:'WIN1258'; code: csWIN1258),     { since 8.1 }
+  (name:'WIN866'; code: csWIN866),     { since 8.1 }
   (name:'WIN874'; code: csWIN874),
-  (name:'KOI8'; code: csKOI8R),
+  (name:'KOI8R'; code: csKOI8R),
   (name:'WIN1251'; code: csWIN1251),
-  (name:'WIN866'; code: csWIN866),      { since 8.1 }
+  (name:'WIN1252'; code: csWIN1252),
   (name:'ISO_8859_5'; code: csISO_8859_5),
   (name:'ISO_8859_6'; code: csISO_8859_6),
   (name:'ISO_8859_7'; code: csISO_8859_7),
   (name:'ISO_8859_8'; code: csISO_8859_8),
+  (name:'WIN1250'; code: csWIN1250),
+  (name:'WIN1253'; code: csWIN1253),
+  (name:'WIN1254'; code: csWIN1254),
+  (name:'WIN1255'; code: csWIN1255),
+  (name:'WIN1257'; code: csWIN1257),
+  (name:'KOI8U'; code: csKOI8U),
   (name:'SJIS'; code: csSJIS),
   (name:'BIG5'; code: csBIG5),
   (name:'GBK'; code: csGBK),
   (name:'UHC'; code: csUHC),
   (name:'WIN1250'; code: csWIN1250),
   (name:'GB18030'; code: csGB18030),
+  (name:'JOHAB'; code: csJOHAB),
+  (name:'SHIFT_JIS_2004'; code: csSHIFT_JIS_2004),
   (name:'UNICODE'; code: csUNICODE_PODBC),
   (name:'TCVN'; code: csTCVN),
   (name:'ALT'; code: csALT),
@@ -315,9 +324,12 @@ begin
     21: Result := stShort; { int2 }
     23: Result := stInteger; { int4 }
     20: Result := stLong; { int8 }
+    650: Result := stString; { cidr }
+    869: Result := stString; { inet }
+    829: Result := stString; { macaddr }
     700: Result := stFloat; { float4 }
     701,1700: Result := stDouble; { float8/numeric. no 'decimal' any more }
-    790: Result := stFloat; { money }
+    790: Result := stDouble; { money }
     16: Result := stBoolean; { bool }
     1082: Result := stDate; { date }
     1083: Result := stTime; { time }
@@ -337,6 +349,13 @@ begin
     else
       Result := stUnknown;
   end;
+
+  if Connection.GetCharactersetCode = csUTF8 then
+    case Result of
+      stString: Result := {$IFDEF FPC}stString{$ELSE}stUnicodeString{$ENDIF};
+      stAsciiStream: Result := stUnicodeStream;
+    end;
+
 end;
 
 {**
@@ -366,7 +385,7 @@ begin
   DestLength := 2;
   for I := 1 to SrcLength do
   begin
-    if SrcBuffer^ in [#0, '''', '\'] then
+    if CharInSet(SrcBuffer^, [#0, '''', '\']) then
       Inc(DestLength, 4)
     else
       Inc(DestLength);
@@ -381,7 +400,7 @@ begin
 
   for I := 1 to SrcLength do
   begin
-    if SrcBuffer^ in [#0, '''', '\'] then
+    if CharInSet(SrcBuffer^, [#0, '''', '\']) then
     begin
       DestBuffer[0] := '\';
       DestBuffer[1] := Char(Ord('0') + (Byte(SrcBuffer^) shr 6));
@@ -411,11 +430,11 @@ begin
   Result := csOTHER;
 
   i := 0;
-  while CS_Table[i].code <> csOTHER do
+  while pg_CS_Table[i].code <> csOTHER do
   begin
-    if UpperCase(InputString) = UpperCase(CS_Table[i].name) then
+    if UpperCase(InputString) = UpperCase(pg_CS_Table[i].name) then
     begin
-        Result := CS_Table[i].code;
+        Result := pg_CS_Table[i].code;
         break;
     end;
     Inc(i);
@@ -425,15 +444,15 @@ begin
   begin
     i := 0;
     len := 0;
-    while CS_Table[i].code <> csOTHER do
+    while pg_CS_Table[i].code <> csOTHER do
     begin
-      if Pos(CS_Table[i].name, InputString) > 0 then
+      if Pos(pg_CS_Table[i].name, InputString) > 0 then
       begin
-        if Length(CS_Table[i].name) >= len then
-	begin
-	  len := Length(CS_Table[i].name);
-	  Result := CS_Table[i].code;
-	end;
+        if Length(pg_CS_Table[i].name) >= len then
+        begin
+          len := Length(pg_CS_Table[i].name);
+          Result := pg_CS_Table[i].code;
+        end;
       end;
       Inc(i);
     end;
@@ -580,7 +599,9 @@ end;
 
 {**
   Encode string which probably consists of multi-byte characters.
-  Characters ' (apostraphy), low value (value zero), and \ (back slash) are encoded. Since we have noticed that back slash is the second byte of some BIG5 characters (each of them is two bytes in length), we need a characterset aware encoding function.
+  Characters ' (apostraphy), low value (value zero), and \ (back slash) are encoded.
+  Since we have noticed that back slash is the second byte of some BIG5 characters
+    (each of them is two bytes in length), we need a characterset aware encoding function.
   @param CharactersetCode the characterset in terms of enumerate code.
   @param Value the regular string.
   @return the encoded string.
@@ -598,7 +619,7 @@ var
   for I := 1 to SrcLength do
   begin
     LastState := pg_CS_stat(LastState,integer(SrcBuffer^),CharactersetCode);
-    if (SrcBuffer^ in [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
+    if CharInSet(SrcBuffer^, [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
       Inc(DestLength, 4)
     else
       Inc(DestLength);
@@ -615,14 +636,14 @@ var
   for I := 1 to SrcLength do
   begin
     LastState := pg_CS_stat(LastState,integer(SrcBuffer^),CharactersetCode);
-    if (SrcBuffer^ in [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
-      begin
-        DestBuffer[0] := '\';
-        DestBuffer[1] := Char(Ord('0') + (Byte(SrcBuffer^) shr 6));
-        DestBuffer[2] := Char(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
-        DestBuffer[3] := Char(Ord('0') + (Byte(SrcBuffer^) and $07));
-        Inc(DestBuffer, 4);
-      end
+    if CharInSet(SrcBuffer^, [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
+    begin
+      DestBuffer[0] := '\';
+      DestBuffer[1] := Char(Ord('0') + (Byte(SrcBuffer^) shr 6));
+      DestBuffer[2] := Char(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
+      DestBuffer[3] := Char(Ord('0') + (Byte(SrcBuffer^) and $07));
+      Inc(DestBuffer, 4);
+    end
     else
     begin
       DestBuffer^ := SrcBuffer^;
@@ -655,7 +676,7 @@ begin
   for I := 1 to SrcLength do
   begin
     if (Byte(SrcBuffer^) < 32) or (Byte(SrcBuffer^) > 126)
-    or (SrcBuffer^ in ['''', '\']) then
+    or CharInSet(SrcBuffer^, ['''', '\']) then
       Inc(DestLength, 5)
     else
       Inc(DestLength);
@@ -671,7 +692,7 @@ begin
   for I := 1 to SrcLength do
   begin
     if (Byte(SrcBuffer^) < 32) or (Byte(SrcBuffer^) > 126)
-    or (SrcBuffer^ in ['''', '\']) then
+    or CharInSet(SrcBuffer^, ['''', '\']) then
     begin
       DestBuffer[0] := '\';
       DestBuffer[1] := '\';
@@ -711,7 +732,7 @@ begin
     if SrcBuffer^ = '\' then
     begin
       Inc(SrcBuffer);
-      if SrcBuffer^ in ['\', ''''] then
+      if CharInSet(SrcBuffer^, ['\', '''']) then
       begin
         DestBuffer^ := SrcBuffer^;
         Inc(SrcBuffer);
@@ -823,7 +844,7 @@ var
 begin
   Temp := '';
   for I := 1 to Length(Value) do
-    if Value[I] in ['0'..'9'] then
+    if CharInSet(Value[I], ['0'..'9']) then
       Temp := Temp + Value[I]
     else
       Break;

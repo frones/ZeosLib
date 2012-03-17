@@ -176,7 +176,7 @@ end;
    Test method GetBestRowIdentifier
    <p><b>Note:</b><br>
    For adventure of the test it is necessary to execute sql
-   <i>grant select privileges on zeoslib.people to root@localhist;</i></p>
+   <i>grant select on zeoslib.people to root@localhost;</i></p>
 }
 procedure TZTestMySqlMetadataCase.TestGetColumnPrivileges;
 var
@@ -352,8 +352,8 @@ procedure TZTestMySqlMetadataCase.TestGetTablePrivileges;
 var
   ResultSet: IZResultSet;
 begin
-  { To grant privileges
-    grant select privileges on zeoslib.people to root@localhist;
+  { To grant privileges:
+    grant select on zeoslib.people to root@localhost;
     The result sql is:
     SELECT host,db,table_name,grantor,user,table_priv from mysql.tables_priv
     WHERE table_name LIKE 'people';}

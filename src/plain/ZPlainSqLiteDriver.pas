@@ -686,17 +686,24 @@ var
 {$ENDIF}
 begin
   Result0:= nil;
-{$IFDEF DELPHI12_UP}
-    SQLite_API.sqlite_open(filename, Result0);
+  (*Note to Windows users: The encoding used for the filename argument of
+    sqlite3_open() and sqlite3_open_v2() must be UTF-8, not whatever codepage
+    is currently defined. Filenames containing international characters must
+    be converted to UTF-8 prior to passing them into sqlite3_open() or
+    sqlite3_open_v2(). *)
+
+//{$IFDEF DELPHI12_UP}
+{$IFDEF MSWINDOWS}
+  SQLite_API.sqlite_open(filename, Result0);
 {$ELSE}
   Version := LibVersion;
   FileNameString := filename;
   if (Version > '3.2.5') then
-    {$IFDEF FPC} 
+    {$IFDEF FPC}
       SQLite_API.sqlite_open(PAnsiChar(FileNameString), Result0)
-    {$ELSE} 
-      SQLite_API.sqlite_open(PAnsiChar(AnsiToUTF8(FileNameString)), Result0) 
-    {$ENDIF} 
+    {$ELSE}
+      SQLite_API.sqlite_open(PAnsiChar(AnsiToUTF8(FileNameString)), Result0)
+    {$ENDIF}
   else
     SQLite_API.sqlite_open(filename, Result0);
 {$ENDIF}
@@ -801,7 +808,9 @@ begin
       SQLITE_FLOAT:
          Result:='FLOAT';
       SQLITE3_TEXT:
-         Result:='VARCHAR';
+         RESULT := 'CHAR'; //EgonHugeist: Need to boil down this type  !
+                           //Else Metadatainformations are not readable !
+         //Result:='VARCHAR';
       SQLITE_BLOB:
          Result:='BLOB';
       else

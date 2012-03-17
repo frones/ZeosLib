@@ -205,7 +205,7 @@ const
 
 implementation
 
-uses Math, ZMessages, ZSysUtils, ZDbcUtils;
+uses Math, ZMessages, ZSysUtils, ZDbcUtils{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
 
 { TZRowAccessor }
 
@@ -637,7 +637,11 @@ begin
               Result := 1;
           end
           else if FColumnTypes[ColumnIndex] = stAsciiStream then
+            {$IFDEF DELPHI12_UP}
+            Result := AnsiStrings.AnsiCompareStr(Blob1.GetString, Blob2.GetString)
+            {$ELSE}
             Result := AnsiCompareStr(Blob1.GetString, Blob2.GetString)
+            {$ENDIF}
           else if FColumnTypes[ColumnIndex] = stBinaryStream then
             Result := CompareStr(Blob1.GetString, Blob2.GetString)
           else if FColumnTypes[ColumnIndex] = stUnicodeStream then
@@ -912,7 +916,7 @@ begin
         Result := @FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1];
       else
       begin
-        FTemp := GetString(ColumnIndex, IsNull);
+        FTemp := AnsiString(GetString(ColumnIndex, IsNull));  //EgonHugeist: is this Save in Delphi12_up
         Result := PAnsiChar(FTemp);
       end;
     end;
@@ -962,7 +966,7 @@ begin
       stString: Result := PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
       stUnicodeString, stUnicodeStream: Result := GetUnicodeString(ColumnIndex, IsNull);
       {$ENDIF}
-      stBytes: Result := BytesToStr(GetBytes(ColumnIndex, IsNull));
+      stBytes: Result := String(BytesToStr(GetBytes(ColumnIndex, IsNull)));
       stDate: Result := FormatDateTime('yyyy-mm-dd', GetDate(ColumnIndex, IsNull));
       stTime: Result := FormatDateTime('hh:mm:ss', GetTime(ColumnIndex, IsNull));
       stTimestamp: Result := FormatDateTime('yyyy-mm-dd hh:mm:ss',
@@ -971,7 +975,7 @@ begin
         begin
           TempBlob := GetBlobObject(FBuffer, ColumnIndex);
           if (TempBlob <> nil) and not TempBlob.IsEmpty then
-            Result := TempBlob.GetString;
+            Result := String(TempBlob.GetString);
         end;
     end;
     IsNull := False;
@@ -1371,7 +1375,7 @@ begin
           end;
         end;
       else
-        Result := StrToBytes(GetString(ColumnIndex, IsNull));
+        Result := StrToBytes(AnsiString(GetString(ColumnIndex, IsNull)));
     end;
     IsNull := False;
   end
@@ -1674,7 +1678,7 @@ begin
       stString:
         begin
           Result.VType := vtString;
-          Result.VString := PAnsiChar(ValuePtr);
+          Result.VString := String(PAnsiChar(ValuePtr));
         end;
       stUnicodeString:
         begin
@@ -2097,12 +2101,12 @@ begin
       end;
     stUnicodeString: SetUnicodeString(ColumnIndex, Value);
     {$ENDIF}
-    stBytes: SetBytes(ColumnIndex, StrToBytes(Value));
+    stBytes: SetBytes(ColumnIndex, StrToBytes(AnsiString(Value)));
     stDate: SetDate(ColumnIndex, AnsiSQLDateToDateTime(Value));
     stTime: SetTime(ColumnIndex, AnsiSQLDateToDateTime(Value));
     stTimestamp: SetTimestamp(ColumnIndex, AnsiSQLDateToDateTime(Value));
     stAsciiStream, stUnicodeStream, stBinaryStream:
-      GetBlob(ColumnIndex, IsNull).SetString(Value);
+      GetBlob(ColumnIndex, IsNull).SetString(AnsiString(Value));
   end;
 end;
 
@@ -2173,7 +2177,7 @@ begin
           end;
         end;
       else
-        SetString(ColumnIndex, BytesToStr(Value));
+        SetString(ColumnIndex, String(BytesToStr(Value)));
     end;
   end
   else

@@ -97,12 +97,14 @@ uses SysUtils, ZSysUtils, ZTestConsts, ZTestCase;
 }
 function TZTestDbcInterbaseCase.GetSupportedProtocols: string;
 begin
-  Result := 'interbase,interbase-6.5,interbase-7.2,firebird-1.0,firebird-1.5,firebird-2.0,firebird-2.1,firebirdd-1.5,firebirdd-2.0,firebirdd-2.1';
+  Result := 'interbase,interbase-6.5,interbase-7.2,firebird-1.0,firebird-1.5,'+
+    'firebird-2.0,firebird-2.1,firebird-2.5,firebirdd-1.5,firebirdd-2.0,'+
+    'firebirdd-2.1,firebirdd-2.5';
 end;
 
 {**
   Gets a connection URL string.
-  @return a built connection URL string. 
+  @return a built connection URL string.
 }
 function TZTestDbcInterbaseCase.GetConnectionUrl: string;
 begin

@@ -1761,7 +1761,7 @@ begin
     if sqlType and $FFFE = DT_LONGVARCHAR then
     begin
       SetLength( Str, PZASABlobStruct( sqlData).untrunc_len);
-      ReadBlob(Index, PAnsiChar(Str), Length(Str));
+      ReadBlob(Index, PAnsiChar(AnsiString(Str)), Length(Str));
     end
     else
       CreateException( Format( SErrorConvertionField,
@@ -2178,7 +2178,7 @@ begin
             SoftVarManager.GetAsUnicodeString( InParamValues[i]));
         stBytes:
           ParamSqlData.UpdateBytes( i,
-            StrToBytes(SoftVarManager.GetAsString( InParamValues[i])));
+            StrToBytes(AnsiString(SoftVarManager.GetAsString( InParamValues[i]))));
         stDate:
           ParamSqlData.UpdateDate( i,
             SoftVarManager.GetAsDateTime( InParamValues[i]));

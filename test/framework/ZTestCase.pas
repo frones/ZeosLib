@@ -289,7 +289,7 @@ begin
   if Temp <> '' then
     FDecimalSeparator := Temp[1]
   else FDecimalSeparator :=  DEFAULT_DECIMAL_SEPARATOR;
-  SysUtils.DecimalSeparator := FDecimalSeparator;
+  {$IFDEF DELPHI15_UP}Formatsettings.{$ELSE}SysUtils.{$ENDIF}DecimalSeparator := FDecimalSeparator;
 
   { Defines a 'suppress test output' setting. }
   Temp := ReadInheritProperty(SUPPRESS_TEST_OUTPUT_KEY, TRUE_VALUE);

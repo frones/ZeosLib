@@ -167,7 +167,7 @@ begin
   ResultSetConcurrency := rcUpdatable;
   ResultSetType := rtScrollSensitive;
   FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cashedblob', 'true'));
-  CursorName := RandomString(12);
+  CursorName := AnsiString(RandomString(12));
   FSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
     FASAConnection.GetDBHandle, CursorName);
 end;
@@ -392,7 +392,7 @@ begin
   ResultSetConcurrency := rcUpdatable;
   ResultSetType := rtScrollSensitive;
   FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cashedblob', 'true'));
-  CursorName := RandomString(12);
+  CursorName := AnsiString(RandomString(12));
   FParamSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
     FASAConnection.GetDBHandle, CursorName);
   FSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
@@ -660,7 +660,7 @@ begin
   ResultSetConcurrency := rcUpdatable;
   ResultSetType := rtScrollSensitive;
   FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cashedblob', 'true'));
-  CursorName := RandomString(12);
+  CursorName := AnsiString(RandomString(12));
   FParamSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
     FASAConnection.GetDBHandle, CursorName);
   FSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
@@ -976,7 +976,7 @@ begin
       stUnicodeString:
         DefVarManager.SetAsUnicodeString(Temp, Value.GetString(I));
       stBytes:
-        DefVarManager.SetAsString( Temp, BytesToStr( Value.GetBytes( I)));
+        DefVarManager.SetAsString( Temp, String(BytesToStr( Value.GetBytes( I))));
       stDate:
         DefVarManager.SetAsDateTime(Temp, Value.GetDate(I));
       stTime:

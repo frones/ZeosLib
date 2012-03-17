@@ -79,7 +79,11 @@ const
   procedureNullableUnknown = 2;
 
 type
+  {$IFDEF DELPHI12_UP}
+  TZWildcardsSet=  TSysCharSet;
+  {$ELSE}
   TZWildcardsSet= set of Char;
+  {$ENDIF}
 
   {** Defines a metadata resultset column definition. }
   TZMetadataColumnDef = packed record
@@ -169,7 +173,10 @@ TZAbstractDatabaseMetadata = class(TContainedObject, IZDatabaseMetadata)
     function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
       const SequenceNamePattern: string): IZResultSet; virtual;
     function UncachedGetTriggers(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string; const TriggerNamePattern: string): IZResultSet; virtual;
+      const TableNamePattern: string; const TriggerNamePattern: string): IZResultSet; virtual; //EgonHugeist
+    function UncachedGetCollationAndCharSet(const Catalog, SchemaPattern,
+      TableNamePattern, ColumnNamePattern: string): IZResultSet; virtual; //EgonHugeist
+    function UncachedGetCharacterSets: IZResultSet; virtual; //EgonHugeist
     function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string): IZResultSet; virtual;
     function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
@@ -214,8 +221,10 @@ TZAbstractDatabaseMetadata = class(TContainedObject, IZDatabaseMetadata)
       const ForeignTable: string): IZResultSet;
     function GetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
       Unique: Boolean; Approximate: Boolean): IZResultSet;
+    function GetCollationAndCharSet(const Catalog, Schema, TableName, ColumnName: String): IZResultSet; //EgonHugeist
+    function GetCharacterSets: IZResultSet; //EgonHugeist
     function GetTriggers(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string; const TriggerNamePattern: string): IZResultSet;
+      const TableNamePattern: string; const TriggerNamePattern: string): IZResultSet; //EgonHugesit
     function GetSequences(const Catalog: string; const SchemaPattern: string;
       const SequenceNamePattern: string): IZResultSet;
     function GetProcedures(const Catalog: string; const SchemaPattern: string;
@@ -263,9 +272,12 @@ TZAbstractDatabaseMetadata = class(TContainedObject, IZDatabaseMetadata)
       const Unique: Boolean; const Approximate: Boolean): string;
     function GetSequencesCacheKey(const Catalog: string; const SchemaPattern: string;
       const SequenceNamePattern: string): string;
+    function GetCollationAndCharSetCacheKey(const Catalog, SchemaPattern,
+      TableNamePattern, ColumnPattern: String): string; //EgonHugeist
+    function GetCharacterSetsCacheKey: String; //EgonHugeist
     function GetTriggersCacheKey(const Catalog: string;
       const SchemaPattern: string; const TableNamePattern: string;
-      const TriggerNamePattern: string): string;
+      const TriggerNamePattern: string): string; //EgonHugeist
     function GetProceduresCacheKey(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string): string;
     function GetProcedureColumnsCacheKey(const Catalog: string; const SchemaPattern: string;
@@ -453,7 +465,9 @@ TZAbstractDatabaseMetadata = class(TContainedObject, IZDatabaseMetadata)
 
 
 var
-  TriggersColumnsDynArray: TZMetadataColumnDefs;
+  CharacterSetsColumnsDynArray: TZMetadataColumnDefs; //EgonHugeist
+  CollationCharSetColumnsDynArray: TZMetadataColumnDefs; //EgonHugeist
+  TriggersColumnsDynArray: TZMetadataColumnDefs; //EgonHugeist
   TriggersColColumnsDynArray: TZMetadataColumnDefs;
   ProceduresColumnsDynArray: TZMetadataColumnDefs;
   ProceduresColColumnsDynArray: TZMetadataColumnDefs;
@@ -2219,12 +2233,64 @@ begin
     AddResultSetToCache(Key, Result);
   end;
 end;
+
 function TZAbstractDatabaseMetadata.UncachedGetTriggers(const Catalog: string; const SchemaPattern: string;
   const TableNamePattern: string; const TriggerNamePattern: string): IZResultSet;
 begin
   Result := ConstructVirtualResultSet(TriggersColumnsDynArray);
 end;
 
+function TZAbstractDatabaseMetadata.GetCollationAndCharSet(const Catalog, Schema,
+  TableName, ColumnName: String): IZResultSet;
+var
+  Key: string;
+begin
+  Key := GetCollationAndCharSetCacheKey(Catalog, Schema, TableName, ColumnName);
+
+  Result := GetResultSetFromCache(Key);
+  if Result = nil then
+  begin
+    Result := UncachedGetCollationAndCharSet(Catalog, Schema, TableName, ColumnName);
+    AddResultSetToCache(Key, Result);
+  end;
+end;
+
+function TZAbstractDatabaseMetadata.GetCharacterSets: IZResultSet; //EgonHugeist
+var
+  Key: string;
+begin
+  Key := GetCharacterSetsCacheKey;
+
+  Result := GetResultSetFromCache(Key);
+  if Result = nil then
+  begin
+    Result := UncachedGetCharacterSets;
+    AddResultSetToCache(Key, Result);
+  end;
+end;
+
+function TZAbstractDatabaseMetadata.UncachedGetCollationAndCharSet(const Catalog, SchemaPattern,
+  TableNamePattern, ColumnNamePattern: string): IZResultSet;
+begin
+  Result := ConstructVirtualResultSet(CollationCharSetColumnsDynArray);
+end;
+
+function TZAbstractDatabaseMetadata.UncachedGetCharacterSets: IZResultSet; //EgonHugeist
+begin
+  Result := ConstructVirtualResultSet(CharacterSetsColumnsDynArray);
+end;
+
+function TZAbstractDatabaseMetadata.GetCollationAndCharSetCacheKey(const Catalog, SchemaPattern,
+  TableNamePattern, ColumnPattern: String): string;
+begin
+  Result := Format('get-CollationAndCharSet:%s:%s:%s:%s',
+    [Catalog, SchemaPattern, TableNamePattern, ColumnPattern]);
+end;
+
+function TZAbstractDatabaseMetadata.GetCharacterSetsCacheKey: String; //EgonHugeist
+begin
+  Result := 'get-charactersets';
+end;
 
 function TZAbstractDatabaseMetadata.GetTriggersCacheKey(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
@@ -4306,7 +4372,7 @@ begin
   Result := True;
   for I := 1 to Length(Value) do
   begin
-    if not (Value[I] in ['a'..'z','0'..'9','_']) then
+    if not CharInSet(Value[I], ['a'..'z','0'..'9','_']) then
     begin
       Result := False;
       Break;
@@ -4326,7 +4392,7 @@ begin
   Result := True;
   for I := 1 to Length(Value) do
   begin
-    if not (Value[I] in ['A'..'Z','0'..'9','_']) then
+    if not CharInSet(Value[I], ['A'..'Z','0'..'9','_']) then
     begin
       Result := False;
       Break;
@@ -4344,14 +4410,14 @@ var
   I: Integer;
 begin
   Result := False;
-  if (Value[1] in ['0'..'9']) then
+  if CharInSet(Value[1], ['0'..'9']) then
   begin
     Result := True;
     exit;
   end;
   for I := 1 to Length(Value) do
   begin
-    if not (Value[I] in ['A'..'Z','a'..'z','0'..'9','_']) then
+    if not CharInSet(Value[I], ['A'..'Z','a'..'z','0'..'9','_']) then
     begin
       Result := True;
       Break;
@@ -4478,7 +4544,27 @@ end;
 
 
 const
-  TriggersColumnCount = 8;
+  CharacterSetsColumnsCount = 2;
+  CharacterSetsColumns: array[1..CharacterSetsColumnsCount]
+    of TZMetadataColumnDef =(
+    (Name: 'CHARACTER_SET_NAME'; SQLType: stString; Length: 35),
+    (Name: 'CHARACTER_SET_ID'; SQLType: stShort; Length: 0)
+  );
+
+  CollationCharSetColumnsCount = 8; //EgonHugeist
+  CollationCharSetColumns: array[1..CollationCharSetColumnsCount]
+    of TZMetadataColumnDef =(
+    (Name: 'COLLATION_CATALOG'; SQLType: stString; Length: 35),
+    (Name: 'COLLATION_SCHEMA'; SQLType: stString; Length: 35),
+    (Name: 'COLLATION_TABLE'; SQLType: stString; Length: 35),
+    (Name: 'COLLATION_COLUMN'; SQLType: stString; Length: 35),
+    (Name: 'COLLATION_NAME'; SQLType: stString; Length: 35),
+    (Name: 'CHARACTER_SET_NAME'; SQLType: stString; Length: 35),
+    (Name: 'CHARACTER_SET_ID'; SQLType: stShort; Length: 0),
+    (Name: 'CHARACTER_SET_SIZE'; SQLType: stShort; Length: 0)
+  );
+
+  TriggersColumnCount = 8;  //EgonHugeist
   TriggersColumns: array[1..TriggersColumnCount]
     of TZMetadataColumnDef =(
     (Name: 'TRIGGER_CAT'; SQLType: stString; Length: 255),
@@ -4762,6 +4848,14 @@ var
   I: Integer;
 
 initialization
+  SetLength(CharacterSetsColumnsDynArray, CharacterSetsColumnsCount);
+  for I := 1 to CharacterSetsColumnsCount do
+    CharacterSetsColumnsDynArray[I - 1] := CharacterSetsColumns[I];
+
+  SetLength(CollationCharSetColumnsDynArray, CollationCharSetColumnsCount);
+  for I := 1 to CollationCharSetColumnsCount do
+    CollationCharSetColumnsDynArray[I - 1] := CollationCharSetColumns[I];
+
   SetLength(TriggersColumnsDynArray, TriggersColumnCount);
   for I := 1 to TriggersColumnCount do
     TriggersColumnsDynArray[I - 1] := TriggersColumns[I];

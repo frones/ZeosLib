@@ -501,9 +501,9 @@ begin
           ftCurrency:
             Statement.SetBigDecimal(I + 1, Param.AsCurrency);
           ftString:
-            Statement.SetString(I + 1, Param.AsString);
+            Statement.SetString(I + 1, AnsiString(Param.AsString)); //semlls like Dataloss...
           ftBytes:
-            Statement.SetString(I + 1, Param.AsString);
+            Statement.SetString(I + 1, AnsiString(Param.AsString));
           ftDate:
             Statement.SetDate(I + 1, Param.AsDate);
           ftTime:

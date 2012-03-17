@@ -134,6 +134,11 @@ function GetProcAddress(Module: HMODULE; Proc: PChar): Pointer;
   {$ENDIF}
 {$ENDIF}
 
+{$IFNDEF DELPHI12_UP}
+function CharInSet(C: AnsiChar; const CharSet: TSysCharSet): Boolean; overload;
+function CharInSet(C: WideChar; const CharSet: TSysCharSet): Boolean; overload;  
+{$ENDIF}
+
 implementation
 
 {$IFDEF UNIX}
@@ -195,6 +200,18 @@ begin
     while (P<PE) and not {$IFDEF DELPHI12_UP}(CharInSet(P^, WordDelims)){$ELSE} (P^ in WordDelims){$ENDIF} do
       inc(P);
     end;
+end;
+{$ENDIF}
+
+{$IFNDEF DELPHI12_UP}
+function CharInSet(C: AnsiChar; const CharSet: TSysCharSet): Boolean;
+begin
+  result := C in Charset;
+end;
+
+function CharInSet(C: WideChar; const CharSet: TSysCharSet): Boolean;  
+begin
+  result := Char(C) in Charset;
 end;
 {$ENDIF}
 

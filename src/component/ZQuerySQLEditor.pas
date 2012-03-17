@@ -730,7 +730,7 @@ end;
     //begin
       //J:=i-1;
       ////Get table name
-      //while (j>0) and (S[j] in ['A'..'z','"']) do Dec(j);
+      //while (j>0) and CharInSet(S[j], ['A'..'z','"']) do Dec(j);
       //Result:=trim(Copy(S, j+1, i-j-1));
     //end;
   //end;

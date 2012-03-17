@@ -284,15 +284,7 @@ begin
       if Notify = nil then
         Break;
       if Assigned(FNotifyFired) then
-        FNotifyFired(Self, Notify
-{$IFDEF FPC}
-          ^
-{$ENDIF}
-          .relname, Notify
-{$IFDEF FPC}
-          ^
-{$ENDIF}
-          .be_pid);
+        FNotifyFired(Self, String(Notify{$IFDEF FPC}^{$ENDIF}.relname), Notify{$IFDEF FPC}^{$ENDIF}.be_pid);
       PlainDRV.FreeNotify(Notify);
   end;
  end;

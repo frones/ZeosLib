@@ -648,7 +648,7 @@ begin
       begin
         PlainDriver.ErrorGet(ErrorHandle, 1, nil, ErrorCode, ErrorBuffer, 255,
           OCI_HTYPE_ERROR);
-        ErrorMessage := 'OCI_SUCCESS_WITH_INFO: ' + StrPas(ErrorBuffer);
+        ErrorMessage := 'OCI_SUCCESS_WITH_INFO: ' + String(StrPas(ErrorBuffer));
       end;
     OCI_NEED_DATA:
       ErrorMessage := 'OCI_NEED_DATA';
@@ -658,7 +658,7 @@ begin
       begin
         PlainDriver.ErrorGet(ErrorHandle, 1, nil, ErrorCode, ErrorBuffer, 255,
           OCI_HTYPE_ERROR);
-        ErrorMessage := 'OCI_ERROR: ' + StrPas(ErrorBuffer);
+        ErrorMessage := 'OCI_ERROR: ' + String(StrPas(ErrorBuffer));
       end;
     OCI_INVALID_HANDLE:
       ErrorMessage := 'OCI_INVALID_HANDLE';

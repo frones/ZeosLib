@@ -363,8 +363,7 @@ end;
 
 procedure TZInterbaseTestDbcMetadata.TestMetadataGetCrossReference;
 begin
-  ResultSet := MD.GetCrossReference(Catalog, Schema, 'DEPRTMENT', Catalog, Schema, 'people');
-  Exit; //FIX IT
+  ResultSet := MD.GetCrossReference(Catalog, Schema, 'DEPARTMENT', Catalog, Schema, 'PEOPLE');
   PrintResultSet(ResultSet, False);
   CheckEquals(True, ResultSet.Next, 'There should be a cross reference between people and department table');
   CheckEquals(Catalog, Resultset.GetStringByName('PKTABLE_CAT'));
@@ -450,7 +449,7 @@ end;
 
 function TZInterbaseTestDbcMetadata.GetSupportedProtocols: string;
 begin
-  Result := 'interbase-5,interbase-6,firebird-1.0,firebird-1.5,firebird-2.0,firebird-2.1,firebirdd-1.5,firebirdd-2.0,firebirdd-2.1';
+  Result := 'interbase-5,interbase-6,firebird-1.0,firebird-1.5,firebird-2.0,firebird-2.1,firebird-2.5,firebirdd-1.5,firebirdd-2.0,firebirdd-2.1,firebirdd-2.5';
 end;
 
 initialization

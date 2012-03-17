@@ -251,7 +251,9 @@ type
     function UncachedGetTypeInfo: IZResultSet; override;
 //    function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
 //      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
-
+    function UncachedGetCollationAndCharSet(const Catalog, SchemaPattern,
+      TableNamePattern, ColumnNamePattern: string): IZResultSet; override; //EgonHugeist
+    function UncachedGetCharacterSets: IZResultSet; override; //EgonHugeist
   public
     constructor Create(Connection: TZAbstractConnection; Url: string; Info: TStrings);
     destructor Destroy; override;
@@ -888,7 +890,7 @@ begin
   if (Majorversion < 4) or ((majorversion=4) and (Minorversion = 0)) then
    with Metadata.GetConnection.CreateStatement.ExecuteQuery('SELECT VERSION()') do
     begin
-      VersionList := SplitString(GetString(1), '.-');
+      VersionList := SplitString(String(GetString(1)), '.-');
       try
         if VersionList.Count >= 2 then
         begin
@@ -1162,8 +1164,8 @@ var
   TempPos: Integer;
 
   TypeInfoList: TStrings;
-  TypeInfo, TypeInfoFirst, TypeInfoSecond, Collation: string;
-  Nullable, DefaultValue: string;
+  TypeInfo, TypeInfoFirst, TypeInfoSecond, Collation: Ansistring;
+  Nullable, DefaultValue: Ansistring;
   HasDefaultValue: Boolean;
   ColumnSize, ColumnDecimals: Integer;
   OrdPosition: Integer;
@@ -1187,7 +1189,7 @@ begin
       begin
         while Next do
         begin
-          TableNameList.Add(GetString(3)); //TABLE_NAME
+          TableNameList.Add(String(GetString(3))); //TABLE_NAME
           TableNameLength := Max(TableNameLength, Length(TableNameList[TableNameList.Count - 1]));
         end;
         Close;
@@ -1221,11 +1223,11 @@ begin
             Res.MoveToInsertRow;
             Res.UpdateString(1, TempCatalog);
             Res.UpdateString(2, '');
-            Res.UpdateString(3, TempTableNamePattern);
+            Res.UpdateString(3, AnsiString(TempTableNamePattern)) ;
             Res.UpdateString(4, GetString(ColumnIndexes[1]));
 
             TypeInfo := GetString(ColumnIndexes[2]);
-            if StrPos(PChar(TypeInfo), '(') <> nil then
+            if StrPos(PAnsiChar(TypeInfo), '(') <> nil then
             begin
               PutSplitString(TypeInfoList, TypeInfo, '()');
               TypeInfoFirst := TypeInfoList.Strings[0];
@@ -1411,16 +1413,16 @@ begin
                   DefaultValue := '0';
               end;
             end;
-              Res.UpdateString(13, DefaultValue);
+            Res.UpdateString(13, DefaultValue);
             Res.UpdateNull(14);
             Res.UpdateNull(15);
             Res.UpdateInt(17, OrdPosition);
 
             Res.UpdateBoolean(19, //AUTO_INCREMENT
-              Trim(LowerCase(GetString(ColumnIndexes[4]))) = 'auto_increment'); //Extra
+              Trim(LowerCase(String(GetString(ColumnIndexes[4])))) = 'auto_increment'); //Extra
             Res.UpdateBoolean(20, //CASE_SENSITIVE
               GetIdentifierConvertor.IsCaseSensitive(
-              GetString(ColumnIndexes[1]))); //Field
+              String(GetString(ColumnIndexes[1])))); //Field
             Res.UpdateBoolean(21, True);  //SEARCHABLE
             Res.UpdateBoolean(22, True);  //WRITABLE
             Res.UpdateBoolean(23, True);  //DEFINITELYWRITABLE
@@ -1472,8 +1474,8 @@ function TZMySQLDatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: stri
 var
   I: Integer;
   LCatalog, LColumnNamePattern: string;
-  Host, Database, Grantor, User, FullUser: string;
-  AllPrivileges, ColumnName, Privilege: string;
+  Host, Database, Grantor, User, FullUser: Ansistring;
+  AllPrivileges, ColumnName, Privilege: Ansistring;
   PrivilegesList: TStrings;
 begin
     Result := ConstructVirtualResultSet(TableColPrivColumnsDynArray);
@@ -1509,10 +1511,10 @@ begin
           for I := 0 to PrivilegesList.Count - 1 do
           begin
             Result.MoveToInsertRow;
-            Privilege := Trim(PrivilegesList.Strings[I]);
-            Result.UpdateString(1, LCatalog);
+            Privilege := AnsiString(Trim(PrivilegesList.Strings[I]));
+            Result.UpdateString(1, AnsiString(LCatalog));
             Result.UpdateNull(2);
-            Result.UpdateString(3, Table);
+            Result.UpdateString(3, AnsiString(Table));
             Result.UpdateString(4, ColumnName);
             Result.UpdateString(5, Grantor);
             Result.UpdateString(6, FullUser);
@@ -1565,8 +1567,8 @@ function TZMySQLDatabaseMetadata.UncachedGetTablePrivileges(const Catalog: strin
 var
   I: Integer;
   LCatalog, LTableNamePattern: string;
-  Host, Database, Table, Grantor, User, FullUser: string;
-  AllPrivileges, Privilege: string;
+  Host, Database, Table, Grantor, User, FullUser: Ansistring;
+  AllPrivileges, Privilege: Ansistring;
   PrivilegesList: TStrings;
 begin
     Result := ConstructVirtualResultSet(TablePrivColumnsDynArray);
@@ -1670,7 +1672,7 @@ begin
       ColumnIndexes[3] := FindColumn('Seq_in_index');
       while Next do
       begin
-        KeyType := UpperCase(GetString(ColumnIndexes[1]));
+        KeyType := UpperCase(String(GetString(ColumnIndexes[1])));
         KeyType := Copy(KeyType, 1, 3);
         if KeyType = 'PRI' then
         begin
@@ -1761,7 +1763,7 @@ var
   I: Integer;
   KeySeq: Integer;
   LCatalog: string;
-  TableType, Comment, Keys: string;
+  TableType, Comment, Keys: Ansistring;
   CommentList, KeyList: TStrings;
   ColumnIndexes : Array[1..2] of integer;
 begin
@@ -1807,15 +1809,15 @@ begin
                   Result.MoveToInsertRow;
                   PutSplitString(KeyList, Keys, '() /');
 
-                  Result.UpdateString(5, LCatalog);
-                  Result.UpdateNull(6);// FKTABLE_SCHEM
-                  Result.UpdateString(7, Table); // FKTABLE_NAME
-                  Result.UpdateString(8, KeyList.Strings[0]); // FKCOLUMN_NAME
-
                   Result.UpdateString(1, KeyList.Strings[2]); // PKTABLE_CAT
                   Result.UpdateNull(2); // PKTABLE_SCHEM
                   Result.UpdateString(3, KeyList.Strings[3]); // PKTABLE_NAME
                   Result.UpdateString(4, KeyList.Strings[4]); // PKCOLUMN_NAME
+                  Result.UpdateString(5, AnsiString(LCatalog));
+                  Result.UpdateNull(6);// FKTABLE_SCHEM
+                  Result.UpdateString(7, Table); // FKTABLE_NAME
+                  Result.UpdateString(8, KeyList.Strings[0]); // FKCOLUMN_NAME
+
                   Result.UpdateInt(9, KeySeq); // KEY_SEQ
                   Result.UpdateInt(10, Ord(ikSetDefault)); // UPDATE_RULE
                   Result.UpdateInt(11, Ord(ikSetDefault)); // DELETE_RULE
@@ -1910,7 +1912,7 @@ var
   I: Integer;
   KeySeq: Integer;
   LCatalog: string;
-  TableType, Comment, Keys: string;
+  TableType, Comment, Keys: Ansistring;
   CommentList, KeyList: TStrings;
   ColumnIndexes : Array[1..3] of integer;
 begin
@@ -2228,7 +2230,7 @@ begin
     begin
       Result.MoveToInsertRow;
 
-      Result.UpdateString(1, TypeNames[I]);
+      Result.UpdateString(1, AnsiString(TypeNames[I]));
       Result.UpdateInt(2, Ord(TypeCodes[I]));
       if TypePrecision[I] >= 0 then
         Result.UpdateInt(3, TypePrecision[I])
@@ -2418,6 +2420,149 @@ begin
     Result.UpdateInt(4, Ord(vcPseudo));
     Result.InsertRow;
 end;
+
+{**
+  Gets the used Collation and CharacterSet of spezified Object.
+
+  @param catalog a catalog name; "" retrieves those without a
+  catalog; null means drop catalog name from the selection criteria
+  @param schema a schema name; "" and Catolog "" retrieves nothing
+  @param table a table name; "" retrieves the Schema Colloation and CharacterSet
+  @param ColumnNamePattern ColumnPattern;"" retrieves the
+    Table(if @param TablePattern is set) or
+    Schema(if @param TablePattern is NULL)
+      Colloation and CharacterSet
+  @return <code>ResultSet</code> - each row is a Collation, CharacterSet, ID,
+    and ByteLength per Char of speziefied Object
+}
+function TZMySQLDatabaseMetadata.UncachedGetCollationAndCharSet(const Catalog, SchemaPattern,
+  TableNamePattern, ColumnNamePattern: string): IZResultSet; //EgonHugeist
+var
+  SQL, LCatalog: string;
+begin
+    if Catalog = '' then
+    begin
+      if SchemaPattern <> '' then
+        LCatalog := SchemaPattern
+      else
+        LCatalog := FDatabase;
+    end
+    else
+      LCatalog := Catalog;
+
+  Result := ConstructVirtualResultSet(CollationCharSetColumnsDynArray);
+
+  if LCatalog <> '' then
+  begin
+    if TableNamePattern <> '' then
+    begin
+      if ColumnNamePattern <> '' then
+      begin
+        SQL := 'SELECT CLMS.COLLATION_NAME, CLMS.CHARACTER_SET_NAME, CS.MAXLEN '+
+          'FROM INFORMATION_SCHEMA.COLUMNS CLMS '+
+          'LEFT JOIN INFORMATION_SCHEMA.CHARACTER_SETS CS '+
+          'ON CS.DEFAULT_COLLATE_NAME = CLMS.COLLATION_NAME '+
+          'WHERE TABLE_SCHEMA = '''+LCatalog+ ''' AND '+
+          'TABLE_NAME = '''+TableNamePattern+''' AND '+
+          'COLUMN_NAME = '''+TableNamePattern+''';';
+        with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+        begin
+          if Next then
+          begin
+            Result.MoveToInsertRow;
+            Result.UpdateString(1, AnsiString(LCatalog));   //COLLATION_CATALOG
+            Result.UpdateString(2, AnsiString(LCatalog));   //COLLATION_SCHEMA
+            Result.UpdateString(3, AnsiString(TableNamePattern)); //COLLATION_TABLE
+            Result.UpdateString(4, AnsiString(ColumnNamePattern));//COLLATION_COLUMN
+            Result.UpdateString(5, GetString(FindColumn('COLLATION_NAME'))); //COLLATION_NAME
+            Result.UpdateString(6, GetString(FindColumn('CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
+            Result.UpdateNull(7); //CHARACTER_SET_ID
+            Result.UpdateShort(8, GetShort(FindColumn('MAXLEN'))); //CHARACTER_SET_SIZE
+            Result.InsertRow;
+          end;
+          Close;
+        end;
+      end
+      else
+      begin
+        SQL := 'SELECT TBLS.TABLE_COLLATION, CS.CHARACTER_SET_NAME, CS.MAXLEN '+
+          'FROM INFORMATION_SCHEMA.TABLES TBLS LEFT JOIN '+
+          'INFORMATION_SCHEMA.CHARACTER_SETS CS ON '+
+          'TBLS.TABLE_COLLATION = CS.DEFAULT_COLLATE_NAME '+
+          'WHERE TABLE_SCHEMA = '''+LCatalog+''''+
+          'AND TBLS.TABLE_NAME = '''+TableNamePattern+''';';
+        with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+        begin
+          if Next then
+          begin
+            Result.MoveToInsertRow;
+            Result.UpdateString(1, AnsiString(LCatalog));   //COLLATION_CATALOG
+            Result.UpdateString(2, AnsiString(LCatalog));   //COLLATION_SCHEMA
+            Result.UpdateString(3, AnsiString(TableNamePattern)); //COLLATION_TABLE
+            Result.UpdateString(5, GetString(FindColumn('TABLE_COLLATION'))); //COLLATION_NAME
+            Result.UpdateString(6, GetString(FindColumn('CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
+            Result.UpdateNull(7); //CHARACTER_SET_ID
+            Result.UpdateShort(8, GetShort(FindColumn('MAXLEN'))); //CHARACTER_SET_SIZE
+            Result.InsertRow;
+          end;
+          Close;
+        end;
+      end;
+    end
+    else
+    begin
+      SQL := 'SELECT S.DEFAULT_COLLATION_NAME, S.DEFAULT_CHARACTER_SET_NAME, '+
+        'CS.MAXLEN FROM INFORMATION_SCHEMA.SCHEMATA S '+
+        'LEFT JOIN INFORMATION_SCHEMA.CHARACTER_SETS CS '+
+        'ON CS.DEFAULT_COLLATE_NAME = S.DEFAULT_COLLATION_NAME '+
+        'WHERE S.SCHEMA_NAME = '''+LCatalog+'''';
+      with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+      begin
+        if Next then
+        begin
+          Result.MoveToInsertRow;
+          Result.UpdateString(1, AnsiString(LCatalog));   //COLLATION_CATALOG
+          Result.UpdateString(2, AnsiString(LCatalog));   //COLLATION_SCHEMA
+          Result.UpdateNull(3); //COLLATION_TABLE
+          Result.UpdateNull(4);//COLLATION_COLUMN
+          Result.UpdateString(5, GetString(FindColumn('DEFAULT_COLLATION_NAME'))); //COLLATION_NAME
+          Result.UpdateString(6, GetString(FindColumn('DEFAULT_CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
+          Result.UpdateNull(7); //CHARACTER_SET_ID
+          Result.UpdateShort(8, GetShort(FindColumn('MAXLEN'))); //CHARACTER_SET_SIZE
+          Result.InsertRow;
+        end;
+        Close;
+      end;
+    end;
+  end;
+  //else
+    //raise Exception.Create('Error: No Patterns defined!');
+end;
+
+{**
+  Gets the supported CharacterSets:
+  @return <code>ResultSet</code> - each row is a CharacterSetName and it's ID
+}
+function TZMySQLDatabaseMetadata.UncachedGetCharacterSets: IZResultSet; //EgonHugeist
+begin
+  Result := ConstructVirtualResultSet(CharacterSetsColumnsDynArray);
+
+  with GetConnection.CreateStatement.ExecuteQuery(
+    'SELECT CHARACTER_SET_NAME '+
+    'FROM INFORMATION_SCHEMA.CHARACTER_SETS') do
+  begin
+    while Next do
+    begin
+      Result.MoveToInsertRow;
+      Result.UpdateString(1, GetString(FindColumn('CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
+      Result.UpdateNull(2); //CHARACTER_SET_ID
+      Result.InsertRow;
+    end;
+    Close;
+  end;
+end;
+
+
 
 end.
 

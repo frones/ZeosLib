@@ -843,10 +843,9 @@ procedure TZOracleCallableStatement.FetchOutParam;
 function TZOracleCallableStatement.GetProcedureSql(SelectProc: boolean): string;
 
   var sFunc:string;
-  function GenerateParamsStr({arr:TZVariantDynArray;}Count: integer): string;
+  function GenerateParamsStr(Count: integer): string;
     var
       I: integer;
-      isFunc:boolean;
     begin
       for I := 0 to Count - 1 do
       begin

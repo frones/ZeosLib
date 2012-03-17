@@ -242,9 +242,6 @@ type
       Unique: Boolean; Approximate: Boolean): IZResultSet; override;
     function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
       const SequenceNamePattern: string): IZResultSet; override;
-    function UncachedGetTriggers(const Catalog: string;
-      const SchemaPattern: string; const TableNamePattern: string;
-      const TriggerNamePattern: string): IZResultSet; override;
     function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string): IZResultSet; override;
     function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
@@ -253,6 +250,12 @@ type
     function UncachedGetVersionColumns(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
     function UncachedGetTypeInfo: IZResultSet; override;
+    function UncachedGetTriggers(const Catalog: string;
+      const SchemaPattern: string; const TableNamePattern: string;
+      const TriggerNamePattern: string): IZResultSet; override; //EgonHugesit
+    function UncachedGetCollationAndCharSet(const Catalog, SchemaPattern,
+      TableNamePattern, ColumnNamePattern: string): IZResultSet; override; //EgonHugeist
+    function UncachedGetCharacterSets: IZResultSet; override; //EgonHugeist
   public
     constructor Create(Connection: TZAbstractConnection; Url: string; Info: TStrings);
     destructor Destroy; override;
@@ -340,8 +343,8 @@ begin
   if FServerVersion = '' then
   begin
     FIBConnection := Metadata.GetConnection as IZInterbase6Connection;
-    FServerVersion := GetVersion(FIBConnection.GetPlainDriver,
-      FIBConnection.GetDBHandle);
+    FServerVersion := String(GetVersion(FIBConnection.GetPlainDriver,
+      FIBConnection.GetDBHandle));
   end;
   Result := FServerVersion;
 end;
@@ -1532,10 +1535,9 @@ function TZInterbase6DatabaseMetadata.UncachedGetTables(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string; 
   const Types: TStringDynArray): IZResultSet; 
 var 
-  SQL, TableType: string; 
-  LTableNamePattern: string; 
-  BLR: IZBlob; 
-  I, SystemFlag, ViewContext: Integer; 
+  SQL, LTableNamePattern: string;
+  TableType: Ansistring;
+  I, SystemFlag: Integer;
 begin 
     Result := ConstructVirtualResultSet(TableColumnsDynArray); 
 
@@ -1569,21 +1571,21 @@ begin
           Result.UpdateNull(1); 
           Result.UpdateNull(2); 
           Result.UpdateString(3, GetString(1)); //RDB$RELATION_NAME
-          Result.UpdateString(4, TableType); 
+          Result.UpdateString(4, TableType);
           Result.UpdateString(5, Copy(GetString(4),1,255)); //RDB$DESCRIPTION
-          Result.InsertRow; 
-        end 
+          Result.InsertRow;
+        end
         else
         begin
-          for I := 0 to High(Types) do 
-          begin 
-            if Types[I] = TableType then 
-            begin 
-              Result.MoveToInsertRow; 
-              Result.UpdateNull(1); 
-              Result.UpdateNull(2); 
+          for I := 0 to High(Types) do
+          begin
+            if Types[I] = TableType then
+            begin
+              Result.MoveToInsertRow;
+              Result.UpdateNull(1);
+              Result.UpdateNull(2);
               Result.UpdateString(3, GetString(1)); //RDB$RELATION_NAME
-              Result.UpdateString(4, TableType); 
+              Result.UpdateString(4, TableType);
               Result.UpdateString(5, Copy(GetString(4),1,255)); //RDB$DESCRIPTION 
               Result.InsertRow; 
             end; 
@@ -1611,7 +1613,7 @@ end;
 }
 function TZInterbase6DatabaseMetadata.UncachedGetTableTypes: IZResultSet;
 const
-  TablesTypes: array [0..2] of string = ('TABLE', 'VIEW', 'SYSTEM TABLE');
+  TablesTypes: array [0..2] of AnsiString = ('TABLE', 'VIEW', 'SYSTEM TABLE');
 var
   I: Integer;
 begin
@@ -1680,7 +1682,7 @@ function TZInterbase6DatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 var
-  SQL, Where, ColumnName, DefaultValue: string;
+  SQL, Where, ColumnName, DefaultValue: ansistring;
   TypeName, SubTypeName, FieldScale: integer;
   LTableNamePattern, LColumnNamePattern: string;
   ColumnIndexes : Array[1..14] of integer;
@@ -1769,7 +1771,6 @@ begin
         FieldScale := GetInt(ColumnIndexes[3]);
         ColumnName := GetString(ColumnIndexes[4]);
 
-
         if (GetString(ColumnIndexes[14]) <> '') then  //AVZ -- not isNull(14) was not working correcly here could be ' ' - subselect
         begin //Computed by Source  & Sub Selects  //AVZ
           if ((TypeName = 16) and (FieldScale < 0)) then SubTypeName := 1; // Fix for 0 subtype which removes decimals
@@ -1777,7 +1778,7 @@ begin
 
         DefaultValue := GetString(ColumnIndexes[5]);
         if DefaultValue = '' then
-          DefaultValue := GetString(ColumnIndexes[6]);
+          DefaultValue := String(GetString(ColumnIndexes[6]));
         if StartsWith(Trim(UpperCase(DefaultValue)), 'DEFAULT') then
         begin
           DefaultValue := Trim(StringReplace(DefaultValue, 'DEFAULT ', '',
@@ -1908,9 +1909,9 @@ function TZInterbase6DatabaseMetadata.UncachedGetColumnPrivileges(const Catalog:
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
 var
   SQL: string;
-  TableName, FieldName, Privilege: string;
-  Grantor, Grantee, Grantable: string;
-  LColumnNamePattern, LTable: string;
+  TableName, FieldName, Privilege: Ansistring;
+  Grantor, Grantee, Grantable: Ansistring;
+  LColumnNamePattern, LTable: Ansistring;
 begin
     Result := ConstructVirtualResultSet(TableColPrivColumnsDynArray);
 
@@ -1934,12 +1935,12 @@ begin
     begin
       while Next do
       begin
+
         TableName := GetString(5); //RDB$RELATION_NAME
         FieldName := GetString(6); //RDB$FIELD_NAME
         Privilege := GetPrivilege(GetString(3)); //RDB$PRIVILEGE
         Grantor := GetString(2); //RDB$GRANTOR
         Grantee := GetString(1); //RDB$USER
-
         if Grantor = Grantee then
           Grantable := 'YES'
         else
@@ -2021,9 +2022,9 @@ function TZInterbase6DatabaseMetadata.UncachedGetTablePrivileges(const Catalog: 
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
 var
   SQL: string;
-  TableName, Privilege, Grantor: string;
-  Grantee, Grantable: string;
-  LTableNamePattern: string;
+  TableName, Privilege, Grantor: Ansistring;
+  Grantee, Grantable: Ansistring;
+  LTableNamePattern: Ansistring;
 begin
     Result := ConstructVirtualResultSet(TablePrivColumnsDynArray);
 
@@ -2894,7 +2895,7 @@ begin
   WildcardsSet := GetWildcardsSet;
   for I := 1 to Length(Pattern) do
   begin
-    if (not PreviousCharWasEscape) and (Pattern[I] in WildcardsSet) then
+    if (not PreviousCharWasEscape) and CharInset(Pattern[I], WildcardsSet) then
      Exit;
 
     PreviousCharWasEscape := (Pattern[I] = EscapeChar) and (PreviousChar <> EscapeChar);
@@ -2938,6 +2939,126 @@ begin
       else
         PreviousChar := Pattern[i];
     end;
+  end;
+end;
+
+{**
+  Gets the used Collation and CharacterSet of spezified Object.
+
+  @param catalog a catalog name; "" retrieves those without a
+  catalog; null means drop catalog name from the selection criteria
+  @param schema a schema name; "" and Catolog "" retrieves nothing
+  @param table a table name; "" retrieves the Schema Colloation and CharacterSet
+  @param ColumnNamePattern ColumnPattern;"" retrieves the
+    Table(if @param TablePattern is set) or
+    Schema(if @param TablePattern is NULL)
+      Colloation and CharacterSet
+  @return <code>ResultSet</code> - each row is a Collation, CharacterSet, ID,
+    and ByteLength per Char of speziefied Object
+}
+function TZInterbase6DatabaseMetadata.UncachedGetCollationAndCharSet(const Catalog, SchemaPattern,
+  TableNamePattern, ColumnNamePattern: string): IZResultSet; //EgonHugeist
+var
+  SQL, LCatalog: string;
+begin
+  if Catalog = '' then
+  begin
+    if SchemaPattern <> '' then
+      LCatalog := SchemaPattern
+    else
+      LCatalog := '';
+  end
+  else
+    LCatalog := Catalog;
+
+  Result := ConstructVirtualResultSet(CollationCharSetColumnsDynArray);
+
+  if LCatalog <> '' then
+  begin
+    if TableNamePattern <> '' then
+    begin
+      if ColumnNamePattern <> '' then
+      begin
+        SQL :=  'SELECT C.RDB$CHARACTER_SET_NAME, C.RDB$DEFAULT_COLLATE_NAME, '+
+                'C.RDB$CHARACTER_SET_ID, C.RDB$BYTES_PER_CHARACTER '+
+                'FROM RDB$RELATION_FIELDS R '+
+                'right join RDB$FIELDS F on R.RDB$FIELD_SOURCE = F.RDB$FIELD_NAME '+
+                'left join RDB$CHARACTER_SETS C on C.RDB$CHARACTER_SET_ID = F.RDB$CHARACTER_SET_ID '+
+                'left join RDB$TYPES T on F.RDB$FIELD_TYPE = T.RDB$TYPE'+
+                'where T.RDB$FIELD_NAME=''RDB$FIELD_TYPE'' and '+
+                'R.RDB$FIELD_NAME='''+ColumnNamePattern+''' AND '+
+                'R.RDB$RELATION_NAME='''+TableNamePattern+''''+
+                'order by R.RDB$FIELD_POSITION;';
+        with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+        begin
+          if Next then
+          begin
+            if not ( GetString(FindColumn('RDB$CHARACTER_SET_NAME')) = 'NONE' ) then
+            begin
+              Result.MoveToInsertRow;
+              Result.UpdateString(1, AnsiString(LCatalog));   //COLLATION_CATALOG
+              Result.UpdateString(2, AnsiString(LCatalog));   //COLLATION_SCHEMA
+              Result.UpdateString(3, AnsiString(TableNamePattern)); //COLLATION_TABLE
+              Result.UpdateString(4, AnsiString(ColumnNamePattern));//COLLATION_COLUMN
+              Result.UpdateString(5, GetString(FindColumn('RDB$DEFAULT_COLLATE_NAME'))); //COLLATION_NAME
+              Result.UpdateString(6, GetString(FindColumn('RDB$CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
+              Result.UpdateShort(7, GetShort(FindColumn('RDB$CHARACTER_SET_ID'))); //CHARACTER_SET_ID
+              Result.UpdateShort(8, GetShort(FindColumn('RDB$BYTES_PER_CHARACTER'))); //CHARACTER_SET_SIZE
+              Result.InsertRow;
+              Close;
+              Exit;
+            end;
+          end;
+          Close;
+        end;
+      end;
+    end;
+  end;
+  {Brings Defaults for Table or Database up}
+  SQL :=  'SELECT D.RDB$CHARACTER_SET_NAME, CS.RDB$DEFAULT_COLLATE_NAME, '+
+          'CS.RDB$CHARACTER_SET_ID, CS.RDB$BYTES_PER_CHARACTER '+
+          'FROM RDB$DATABASE D '+
+          'LEFT JOIN RDB$CHARACTER_SETS CS on '+
+          'D.RDB$CHARACTER_SET_NAME = CS.RDB$CHARACTER_SET_NAME; ';
+  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+  begin
+    if Next then
+    begin
+      Result.MoveToInsertRow;
+      Result.UpdateString(1, AnsiString(LCatalog));   //COLLATION_CATALOG
+      Result.UpdateString(2, AnsiString(LCatalog));   //COLLATION_SCHEMA
+      Result.UpdateString(3, AnsiString(TableNamePattern)); //COLLATION_TABLE
+      Result.UpdateNull(4);//COLLATION_COLUMN
+      Result.UpdateString(5, GetString(FindColumn('RDB$DEFAULT_COLLATE_NAME'))); //COLLATION_NAME
+      Result.UpdateString(6, GetString(FindColumn('RDB$CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
+      Result.UpdateShort(7, GetShort(FindColumn('RDB$CHARACTER_SET_ID'))); //CHARACTER_SET_ID
+      Result.UpdateShort(8, GetShort(FindColumn('RDB$BYTES_PER_CHARACTER'))); //CHARACTER_SET_SIZE
+      Result.InsertRow;
+    end;
+    Close;
+  end;
+end;
+
+{**
+  Gets the supported CharacterSets:
+  @return <code>ResultSet</code> - each row is a CharacterSetName and it's ID
+}
+function TZInterbase6DatabaseMetadata.UncachedGetCharacterSets: IZResultSet; //EgonHugeist
+begin
+  Result := ConstructVirtualResultSet(CharacterSetsColumnsDynArray);
+
+  with GetConnection.CreateStatement.ExecuteQuery(
+  'SELECT RDB$CHARACTER_SET_NAME, RDB$CHARACTER_SET_ID '+
+  'FROM RDB$CHARACTER_SETS') do
+  begin
+    while Next do
+    begin
+      Result.MoveToInsertRow;
+      Result.UpdateString(1, GetString(FindColumn('RDB$CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
+      Result.UpdateString(2, GetString(FindColumn('RDB$CHARACTER_SET_ID'))); //CHARACTER_SET_ID
+      Result.InsertRow;
+    end;
+    Close;
   end;
 end;
 

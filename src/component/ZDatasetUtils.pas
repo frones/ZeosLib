@@ -442,7 +442,7 @@ begin
       ftString:
         // gto: do we need PChar here?
         //RowAccessor.SetPChar(FieldIndex, ResultSet.GetPChar(ColumnIndex));
-        RowAccessor.SetString(FieldIndex, ResultSet.GetString(ColumnIndex));
+        RowAccessor.SetString(FieldIndex, String(ResultSet.GetString(ColumnIndex)));
       ftWidestring:
         RowAccessor.SetUnicodeString(FieldIndex, ResultSet.GetUnicodeString(ColumnIndex));
       ftBytes:
@@ -513,7 +513,7 @@ begin
       ftString:
         // gto: do we need PChar here?
         //ResultSet.UpdatePChar(ColumnIndex, RowAccessor.GetPChar(FieldIndex, WasNull));
-        ResultSet.UpdateString(ColumnIndex, RowAccessor.GetString(FieldIndex, WasNull));			
+        ResultSet.UpdateString(ColumnIndex, AnsiString(RowAccessor.GetString(FieldIndex, WasNull)));
       ftWidestring:
         ResultSet.UpdateUnicodeString(ColumnIndex,
           RowAccessor.GetUnicodeString(FieldIndex, WasNull));
@@ -1387,15 +1387,15 @@ begin
   Strings.BeginUpdate;
   try
     repeat
-      while Tail^ in WhiteSpace + [#13, #10] do
+      while CharInSet(Tail^, WhiteSpace + [#13, #10]) do
         Inc(Tail);
       Head := Tail;
       while True do
       begin
-        while (InQuote and not (Tail^ in [QuoteChar, #0])) or
-               not (Tail^ in Separators + [#0, #13, #10, '''', '"']) do
+        while (InQuote and not CharInSet(Tail^, [QuoteChar, #0])) or
+               not CharInSet(Tail^, Separators + [#0, #13, #10, '''', '"']) do
            Inc(Tail);
-        if Tail^ in ['''', '"'] then
+        if CharInSet(Tail^, ['''', '"']) then
         begin
           if (QuoteChar <> #0) and (QuoteChar = Tail^) then
             QuoteChar := #0
