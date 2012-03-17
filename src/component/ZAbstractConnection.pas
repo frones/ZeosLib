@@ -193,6 +193,7 @@ type
     procedure Disconnect; virtual;
     procedure Reconnect;
     function Ping: Boolean; virtual;
+    function GetURL: String;
 
     procedure StartTransaction; virtual;
     procedure Commit; virtual;
@@ -229,7 +230,6 @@ type
     function GetBinaryEscapeStringFromStream(const Stream: TStream): String; overload;
     function GetBinaryEscapeStringFromFile(const FileName: String): String; overload;
     function GetAnsiEscapeString(const Ansi: AnsiString): String;
-    function GetURL: String;
     {$ENDIF}
 
     property InTransaction: Boolean read GetInTransaction;
@@ -819,6 +819,11 @@ begin
   end;
 end;
 
+function TZAbstractConnection.GetURL: String;
+begin
+  Result := ConstructURL(Self.FUser, Self.FPassword);
+end;
+
 {**  Checks if this connection is active.
 }
 procedure TZAbstractConnection.CheckConnected;
@@ -1359,11 +1364,6 @@ end;
 function TZAbstractConnection.GetAnsiEscapeString(const Ansi: AnsiString): String;
 begin
   Result := DbcConnection.GetDriver.GetTokenizer.GetEscapeString(String(Ansi));
-end;
-
-function TZAbstractConnection.GetURL: String;
-begin
-  Result := ConstructURL(Self.FUser, Self.FPassword);
 end;
 
 {**
