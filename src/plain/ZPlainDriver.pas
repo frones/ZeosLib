@@ -327,16 +327,19 @@ begin
     begin
       FCodePages[High(FCodePages)].ZAlias := GetCompilerSaveCodePageName;
       FCodePages[High(FCodePages)].IsSupported := False;
+    end
+    else
+      FCodePages[High(FCodePages)].IsSupported := True;
   {$ELSE}
     {$IFDEF WITH_CHAR_CONTROL}
       if CP = $ffff then
       begin
         FCodePages[High(FCodePages)].ZAlias := GetCompilerSaveCodePageName;
         FCodePages[High(FCodePages)].IsSupported := False;
-  end
-  else
+      end
+      else
     {$ENDIF}
-    FCodePages[High(FCodePages)].IsSupported := True;
+        FCodePages[High(FCodePages)].IsSupported := True;
   {$ENDIF}
 end;
 
@@ -355,11 +358,15 @@ begin
       FCodePages[I].Encoding := Encoding;
       {$IFDEF WITH_CHAR_CONTROL}FCodePages[I].CP := CP;{$ENDIF}
       FCodePages[I].ZAlias := ZAlias;
+
       {$IFDEF FPC}
-      if not ( FCodePages[I].Encoding = ceUTF8 ) then
-      begin
-        FCodePages[i].ZAlias := GetCompilerSaveCodePageName;
-        FCodePages[i].IsSupported := False;
+        if not ( FCodePages[I].Encoding = ceUTF8 ) then
+        begin
+          FCodePages[i].ZAlias := GetCompilerSaveCodePageName;
+          FCodePages[i].IsSupported := False;
+        end
+        else
+          FCodePages[High(FCodePages)].IsSupported := True;
       {$ELSE}
         {$IFDEF WITH_CHAR_CONTROL}
         if CP = $ffff then
