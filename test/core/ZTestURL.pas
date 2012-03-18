@@ -364,7 +364,7 @@ begin
     CheckEquals('data/;\base', ZURLOut.Database);
     CheckEquals('ad/;\min', ZURLOut.UserName);
     CheckEquals('pass/;\word', ZURLOut.Password);
-    CheckEquals('rolename=role/;\name'+LineEnding, ZURLOut.Properties.Text);
+    CheckEquals('role=role/;\name'+LineEnding, ZURLOut.Properties.Text);
   finally
     if Assigned(ZURLIn) then
       ZURLIn.Free;
