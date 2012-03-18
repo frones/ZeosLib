@@ -631,6 +631,8 @@ function TZPostgreSQLResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
   BlobOid: Oid;
   Stream: TStream;
+  TempAnsi, Decoded: AnsiString;
+  len: Integer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
@@ -656,11 +658,28 @@ begin
       Stream := nil;
       try
         if GetMetadata.GetColumnType(ColumnIndex) = stBinaryStream then
-          Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)))
+        begin
+          {EgonHugeist: Mantis-BugTracker #0000247 / }
+          if (Statement.GetConnection as IZPostgreSQLConnection).GetServerMajorVersion >= 9 then
+          begin
+            Decoded := FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)); //gives a hex-string with a starting 'x' back
+            Len := (Length(Decoded) div 2); //GetLength of binary result
+            Decoded := Copy(Decoded, 2, Length(Decoded)); //remove the first 'x'sign-byte
+            SetLength(TempAnsi, Len); //Set length of binary-result
+            HexToBin(PAnsiChar(Decoded), PAnsichar(TempAnsi), Len); //convert hex to binary
+            Stream := TStringStream.Create(TempAnsi); //write proper binary-stream
+          end
+          else
+            if (Statement.GetConnection as IZPostgreSQLConnection).GetServerMajorVersion >= 8 then
+              Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)))
+            else
+              Stream := TStringStream.Create(DecodeString(GetString(ColumnIndex))); //Egonhugeist: not sure about DecodeBinaryString...
+        end
         else
           begin
             if ((Statement.GetConnection as IZPostgreSQLConnection).GetCharactersetCode = csUTF8) then
-              Stream := GetUnicodeStream(ColumnIndex) else
+              Stream := GetUnicodeStream(ColumnIndex)
+            else
               Stream := TStringStream.Create(GetString(ColumnIndex));
           end;
         Result := TZAbstractBlob.CreateWithStream(Stream);

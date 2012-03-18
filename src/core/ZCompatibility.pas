@@ -61,22 +61,18 @@ uses
   Variants,
 {$IFDEF UNIX}
   {$IFDEF FPC}
-    dl,
-  {$ELSE}
+    dynlibs,
+  {$endif}
+   {$ifdef kylix}
     libc,
   {$ENDIF}
 {$ENDIF}
   Classes, SysUtils;
 
 type
-
 {$IFDEF FPC}
-  TVariantDynArray      = array of Variant;
-  {$IFDEF CPU64}
-  ULong                 = QWord;
-  {$ELSE}
-  ULong                 = LongWord;
-  {$ENDIF}
+//  TVariantDynArray      = array of Variant; // used nowhere, doesn't exist in Delphi?
+  ULong                 = PTRUINT;
   ULongLong             = QWord;
 {$ELSE}
   ULong                 = LongWord;
@@ -134,9 +130,9 @@ function GetProcAddress(Module: HMODULE; Proc: PChar): Pointer;
   {$ENDIF}
 {$ENDIF}
 
-{$IFNDEF DELPHI12_UP}
+{$IFNDEF WITH_CHARINSET}
 function CharInSet(C: AnsiChar; const CharSet: TSysCharSet): Boolean; overload;
-function CharInSet(C: WideChar; const CharSet: TSysCharSet): Boolean; overload;  
+function CharInSet(C: WideChar; const CharSet: TSysCharSet): Boolean; overload;
 {$ENDIF}
 
 implementation
@@ -193,17 +189,17 @@ begin
   PE:=P+Length(Result);
   while (P<PE) do
     begin
-    while (P<PE) and {$IFDEF DELPHI12_UP} CharInSet(P^, WordDelims) {$ELSE} (P^ in WordDelims){$ENDIF}do
+    while (P<PE) and CharInSet(P^, WordDelims) do
       inc(P);
     if (P<PE) then
       P^:=UpCase(P^);
-    while (P<PE) and not {$IFDEF DELPHI12_UP}(CharInSet(P^, WordDelims)){$ELSE} (P^ in WordDelims){$ENDIF} do
+    while (P<PE) and not (CharInSet(P^, WordDelims)) do
       inc(P);
     end;
 end;
 {$ENDIF}
 
-{$IFNDEF DELPHI12_UP}
+{$IFNDEF WITH_CHARINSET}
 function CharInSet(C: AnsiChar; const CharSet: TSysCharSet): Boolean;
 begin
   result := C in Charset;

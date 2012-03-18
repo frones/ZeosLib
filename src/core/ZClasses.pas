@@ -70,8 +70,7 @@ const
 
 
 type
-  { Lazarus/FreePascal Support }
-  {$IFDEF FPC}
+  {$IFDEF OLDFPC}
   PDateTime = ^TDateTime;
 
   TAggregatedObject = class(TObject)
@@ -194,19 +193,19 @@ type
     property Count: Integer read GetCount;
   end;
 
-{$IFDEF DELPHI12_UP}
+{$IFDEF DELPHI12_UP} // to suppress the overload warning of the Equals overload, Marco. (overload a non overload-declared funtion)
   {$WARNINGS OFF}
 {$ENDIF}
   {** Implements an abstract interfaced object. }
   TZAbstractObject = class(TInterfacedObject, IZObject)
   public
-    function Equals(const Value: IZInterface): Boolean; {$IFDEF DELPHI12_UP}overload;{$ENDIF} virtual;
-    {$IFNDEF DELPHI12_UP}function GetHashCode: LongInt;{$ENDIF}
+    function Equals(const Value: IZInterface): Boolean; {$IFDEF WITH_NEWTOBJECT}overload;{$ENDIF} virtual;
+    function GetHashCode: LongInt;
     function Clone: IZInterface; virtual;
-    function ToString: string;{$IFDEF DELPHI12_UP}override{$ELSE} virtual{$ENDIF} ;
+    function ToString: string;{$IFDEF WITH_NEWTOBJECT}override{$ELSE} virtual{$ENDIF} ;
     function InstanceOf(const IId: TGUID): Boolean;
   end;
-{$IFDEF DELPHI12_UP}
+{$IFDEF WITH_NEWTOBJECT}
   {$WARNINGS ON}
 {$ENDIF}
 
@@ -214,7 +213,7 @@ implementation
 
 uses ZMessages, ZCompatibility;
 
-{$IFDEF FPC}
+{$IFDEF oldFPC}
 
 { TAggregatedObject }
 
@@ -285,12 +284,10 @@ end;
   Gets a unique hash for this object.
   @return a unique hash for this object.
 }
-{$IFNDEF DELPHI12_UP}
 function TZAbstractObject.GetHashCode: LongInt;
 begin
   Result := LongInt(Self);
 end;
-{$ENDIF}
 
 {**
   Clones an object instance.

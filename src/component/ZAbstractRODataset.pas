@@ -61,14 +61,12 @@ uses
 {$IFNDEF UNIX}
   Windows,
 {$ENDIF}
-{$IFNDEF FPC}
   Variants,
-{$ENDIF}
   Types, SysUtils, DB, Classes, ZSysUtils, ZAbstractConnection, ZDbcIntfs, ZSqlStrings,
   Contnrs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility, ZExpression;
 
 type
-  {$IFDEF FPC}
+  {$IFDEF xFPC} // fixed in r3943 or earlier 2006-06-25
   TUpdateStatusSet = set of TUpdateStatus;
 
   EUpdateError = class(EDatabaseError)
@@ -113,13 +111,13 @@ type
   end;
 
   {** Abstract dataset component optimized for read/only access. }
-  {$IFDEF BDS4_UP}
+  {$IFDEF WITH_WIDEDATASET}
   TZAbstractRODataset = class(TWideDataSet)
   {$ELSE}
   TZAbstractRODataset = class(TDataSet)
   {$ENDIF}
   private
-{$IFDEF FPC}
+{$IFDEF WITH_FUNIDIRECTIONAL}
     FUniDirectional: Boolean;
 {$ENDIF}
     FCurrentRow: Integer;
@@ -267,7 +265,7 @@ type
     property ReadOnly: Boolean read GetReadOnly write SetReadOnly default True;
     property ShowRecordTypes: TUpdateStatusSet read GetShowRecordTypes
       write SetShowRecordTypes default [usUnmodified, usModified, usInserted];
-{$IFDEF FPC}
+{$IFDEF WITH_FUNIDIRECTIONAL}
     property IsUniDirectional: Boolean read FUniDirectional
       write FUnidirectional default False;
 {$ELSE}
@@ -298,7 +296,7 @@ type
     procedure SetFieldData(Field: TField; Buffer: Pointer); override;
     procedure DefineProperties(Filer: TFiler); override;
 
-{$IFDEF DELPHI12_UP}
+{$IFDEF WITH_TRECORDBUFFER}
     function GetRecord(Buffer: TRecordBuffer; GetMode: TGetMode; DoCheck: Boolean):
       TGetResult; override;
 {$ELSE}
@@ -307,7 +305,7 @@ type
 {$ENDIF}
     function GetRecordSize: Word; override;
     function GetActiveBuffer(var RowBuffer: PZRowBuffer): Boolean;
-{$IFDEF DELPHI12_UP}
+{$IFDEF WITH_TRECORDBUFFER}
     function AllocRecordBuffer: TRecordBuffer; override;
     procedure FreeRecordBuffer(var Buffer: TRecordBuffer); override;
 {$ELSE}
@@ -321,8 +319,8 @@ type
       IZResultSet; virtual;
 
     procedure CheckFieldCompatibility(Field: TField; FieldDef: TFieldDef);
-{$IFNDEF FPC} override;{$ENDIF}
-{$IFDEF DELPHI12_UP}
+                    {$IFDEF WITH_CHECKFIELDCOMPATIBILITY} override;{$ENDIF}
+{$IFDEF WITH_TRECORDBUFFER}
     procedure ClearCalcFields(Buffer: TRecordBuffer); override;
 {$ELSE}
     procedure ClearCalcFields(Buffer: PChar); override;
@@ -333,7 +331,7 @@ type
     procedure InternalClose; override;
     procedure InternalFirst; override;
     procedure InternalLast; override;
-{$IFDEF DELPHI12_UP}
+{$IFDEF WITH_TRECORDBUFFER}
     procedure InternalInitRecord(Buffer: TRecordBuffer); override;
 {$ELSE}
     procedure InternalInitRecord(Buffer: PChar); override;
@@ -341,7 +339,7 @@ type
     procedure InternalGotoBookmark(Bookmark: Pointer); override;
     procedure InternalRefresh; override;
     procedure InternalHandleException; override;
-{$IFDEF DELPHI12_UP}
+{$IFDEF WITH_TRECORDBUFFER}
     procedure InternalSetToRecord(Buffer: TRecordBuffer); override;
 
     procedure GetBookmarkData(Buffer: TRecordBuffer; Data: Pointer); override;
@@ -386,7 +384,7 @@ type
     procedure PSStartTransaction; override;
     procedure PSEndTransaction(Commit: Boolean); override;
     // Silvio Clécio
-    {$IFDEF BDS4_UP}
+    {$IFDEF WITH_IPROVIDERWIDE}
     function PSGetTableNameW: WideString; override;
     function PSGetQuoteCharW: WideString; override;
     function PSGetKeyFieldsW: WideString; override;
@@ -463,14 +461,8 @@ type
     property AfterOpen;
     property BeforeClose;
     property AfterClose;
-    {$IFNDEF FPC}
     property BeforeRefresh;
     property AfterRefresh;
-    {$ENDIF}
-    {$IFDEF FPC2_UP}
-    property BeforeRefresh;
-    property AfterRefresh;
-    {$ENDIF}
     property BeforeScroll;
     property AfterScroll;
     property OnCalcFields;
@@ -483,8 +475,8 @@ implementation
 
 uses Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSchema,
   ZGenericSqlToken, ZTokenizer, ZGenericSqlAnalyser, ZAbstractDataset
-  {$IFNDEF FPC}, DBConsts{$ENDIF}
-  {$IFDEF BDS4_UP}, WideStrUtils{$ENDIF};
+  {$IFDEF WITH_DBCONSTS}, DBConsts {$ELSE}, DBConst{$ENDIF}
+  {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF};
 
 { EZDatabaseError }
 
@@ -1137,7 +1129,7 @@ begin
             Statement.SetBigDecimal(I + 1, Param.AsCurrency);
           ftString, ftFixedChar:
             Statement.SetString(I + 1, Param.AsString);
-          {$IFNDEF VER150BELOW} // not available on Delhi 7 
+          {$IFDEF WITH_FTWIDESTRING} // not available on Delphi 7
           ftWideString:
             Statement.SetUnicodeString(I + 1, Param.AsWideString);
           {$ENDIF}
@@ -1158,7 +1150,7 @@ begin
                 Stream.Free;
               end;
             end;
-          {$IFNDEF VER150BELOW} // not available on Delhi 7 
+          {$IFDEF WITH_WIDEMEMO} // not available on Delhi 7
           ftWideMemo:
             begin
               Stream := WideStringStream(Param.AsWideString);
@@ -1194,7 +1186,7 @@ end;
   @return a location result.
 }
 
-{$IFDEF DELPHI12_UP}
+{$IFDEF WITH_TRECORDBUFFER}
 
 function TZAbstractRODataset.GetRecord(Buffer: TRecordBuffer; GetMode: TGetMode;
   DoCheck: Boolean): TGetResult;
@@ -1208,7 +1200,7 @@ var
 begin
   // mad stub for unidirectional (problem in TDataSet.MoveBuffer) - dont know about FPC
   // we always use same TDataSet-level buffer, because we can see only one row
-  {$IFNDEF FPC}
+  {$IFNDEF WITH_FUNIDIRECTIONAL}
   if IsUniDirectional then
     Buffer := Buffers[0];
   {$ENDIF}
@@ -1369,13 +1361,13 @@ begin
             Result := not Result;
           end;
         { Processes blob fields. }
-        ftBlob, ftMemo, ftGraphic, ftFmtMemo {$IFNDEF VER150BELOW},ftWideMemo{$ENDIF} :
+        ftBlob, ftMemo, ftGraphic, ftFmtMemo {$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF} :
           begin
             Result := not RowAccessor.GetBlob(ColumnIndex, Result).IsEmpty;
           end;
         ftWideString:
           begin
-            {$IFDEF BDS4_UP}
+            {$IFDEF WITH_WIDESTRUTILS}
               WStrCopy(Buffer, PWideChar(RowAccessor.GetUnicodeString(ColumnIndex, Result)));
             {$ELSE}
               PWideString(Buffer)^ := RowAccessor.GetUnicodeString(ColumnIndex, Result);
@@ -1393,7 +1385,7 @@ begin
     end
     else
     begin
-      if Field.DataType in [ftBlob, ftMemo, ftGraphic, ftFmtMemo {$IFNDEF VER150BELOW},ftWideMemo{$ENDIF}] then
+      if Field.DataType in [ftBlob, ftMemo, ftGraphic, ftFmtMemo {$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}] then
         Result := not RowAccessor.GetBlob(ColumnIndex, Result).IsEmpty
       else
         Result := not RowAccessor.IsNull(ColumnIndex);
@@ -1411,7 +1403,8 @@ procedure TZAbstractRODataset.SetFieldData(Field: TField; Buffer: Pointer;
 begin
   if Field.DataType = ftWideString then
     NativeFormat := True;
-  {$IFNDEF FPC}
+
+  {$IFNDEF VIRTUALSETFIELDDATA}
   inherited;
   {$ELSE}
   SetFieldData(Field, Buffer);
@@ -1473,14 +1466,10 @@ begin
       { Processes widestring fields. }
       else if Field.DataType = ftWideString then
       begin
-        {$IFDEF BDS4_UP}
+        {$IFDEF WITH_PWIDECHAR_TOWIDESTRING}
               RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(Buffer));
         {$ELSE}
-          {$IFDEF FPC2_1UP}
-              RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(Buffer));
-          {$ELSE}
               RowAccessor.SetUnicodeString(ColumnIndex, PWideString(Buffer)^);
-          {$ENDIF}
         {$ENDIF}
 
       end
@@ -1547,11 +1536,11 @@ end;
   @return an allocated record buffer.
 }
 
-{$IFDEF DELPHI12_UP}
+{$IFDEF WITH_TRECORDBUFFER}
 
 function TZAbstractRODataset.AllocRecordBuffer: TRecordBuffer;
 begin
-   Result := PByte(RowAccessor.Alloc);
+   Result := TRecordBuffer(RowAccessor.Alloc);
 end;
 {$ELSE}
 
@@ -1566,7 +1555,7 @@ end;
   @param Buffer a previously allocated buffer.
 }
 
-{$IFDEF DELPHI12_UP}
+{$IFDEF WITH_TRECORDBUFFER}
 
 procedure TZAbstractRODataset.FreeRecordBuffer(var Buffer: TRecordBuffer);
 {$ELSE}
@@ -1671,11 +1660,11 @@ begin
         with TFieldDef.Create(FieldDefs, FName, FieldType,
           Size, False, I) do
         begin
-          {$IFNDEF FPC}
+       {$IFNDEF OLDFPC}
 {$IFNDEF FOSNOMETA}
           Required := IsWritable(I) and (IsNullable(I) = ntNoNulls);
 {$ENDIF}
-          {$ENDIF}
+{$ENDIF}
 {$IFNDEF FOSNOMETA}
           if IsReadOnly(I) then Attributes := Attributes + [faReadonly];
           Precision := GetPrecision(I);
@@ -1847,15 +1836,15 @@ begin
   ResultSet := nil;
 
   if FOldRowBuffer <> nil then
-{$IFDEF DELPHI12_UP}
-    FreeRecordBuffer(PByte(FOldRowBuffer));
+{$IFDEF WITH_TRECORDBUFFER}
+    FreeRecordBuffer(TRecordBuffer(FOldRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
 {$ELSE}
     FreeRecordBuffer(PChar(FOldRowBuffer));
 {$ENDIF}
   FOldRowBuffer := nil;
   if FNewRowBuffer <> nil then
-{$IFDEF DELPHI12_UP}
-    FreeRecordBuffer(PByte(FNewRowBuffer));
+{$IFDEF WITH_TRECORDBUFFER}
+    FreeRecordBuffer(TRecordBuffer(FNewRowBuffer));
 {$ELSE}
     FreeRecordBuffer(PChar(FNewRowBuffer));
 {$ENDIF}
@@ -2111,11 +2100,11 @@ begin
         begin
           if MasterField is TLargeIntField then
             Temp := TLargeIntField(
-              MasterField).{$IFNDEF FPC}AsLargeInt{$ELSE}Value{$ENDIF}
+              MasterField).{$IFDEF WITH_ASLARGEINT}AsLargeInt{$ELSE}Value{$ENDIF}
           else
             Temp := MasterField.AsInteger;
           if DetailField is TLargeIntField then
-            TLargeIntField(DetailField).{$IFNDEF FPC}AsLargeInt{$ELSE}Value{$ENDIF} := Temp
+            TLargeIntField(DetailField).{$IFDEF WITH_ASLARGEINT}AsLargeInt{$ELSE}Value{$ENDIF} := Temp
           else
             DetailField.AsString := IntToStr(Temp);
         end
@@ -2280,7 +2269,7 @@ end;
   @param Buffer the specified row buffer.
 }
 
-{$IFDEF DELPHI12_UP}
+{$IFDEF WITH_TRECORDBUFFER}
 
 procedure TZAbstractRODataset.InternalSetToRecord(Buffer: TRecordBuffer);
 {$ELSE}
@@ -2354,7 +2343,7 @@ end;
   @return a bookmark flag from the specified record.
 }
 
-{$IFDEF DELPHI12_UP}
+{$IFDEF WITH_TRECORDBUFFER}
 
 function TZAbstractRODataset.GetBookmarkFlag(Buffer: TRecordBuffer): TBookmarkFlag;
 {$ELSE}
@@ -2371,7 +2360,7 @@ end;
   @param Value a new bookmark flag to the specified record.
 }
 
-{$IFDEF DELPHI12_UP}
+{$IFDEF WITH_TRECORDBUFFER}
 
 procedure TZAbstractRODataset.SetBookmarkFlag(Buffer: TRecordBuffer;
   Value: TBookmarkFlag);
@@ -2390,7 +2379,7 @@ end;
   @param Data a pointer to the bookmark value.
 }
 
-{$IFDEF DELPHI12_UP}
+{$IFDEF WITH_TRECORDBUFFER}
 
 procedure TZAbstractRODataset.GetBookmarkData(Buffer: TRecordBuffer; Data: Pointer);
 {$ELSE}
@@ -2407,7 +2396,7 @@ end;
   @param Data a pointer to the bookmark value.
 }
 
-{$IFDEF DELPHI12_UP}
+{$IFDEF WITH_TRECORDBUFFER}
 
 procedure TZAbstractRODataset.SetBookmarkData(Buffer: TRecordBuffer; Data: Pointer);
 {$ELSE}
@@ -2462,7 +2451,7 @@ end;
   @param Buffer a record buffer for initialization.
 }
 
-{$IFDEF DELPHI12_UP}
+{$IFDEF WITH_TRECORDBUFFER}
 
 procedure TZAbstractRODataset.InternalInitRecord(Buffer: TRecordBuffer);
 {$ELSE}
@@ -2739,8 +2728,8 @@ begin
         RowAccessor.RowBuffer := SearchRowBuffer;
         RowAccessor.RowBuffer^.Index := RowNo;
         FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
-{$IFDEF DELPHI12_UP}
-        GetCalcFields(PByte(SearchRowBuffer));
+{$IFDEF WITH_TRECORDBUFFER}
+        GetCalcFields(TRecordBuffer(SearchRowBuffer));
 {$ELSE}
         GetCalcFields(PChar(SearchRowBuffer));
 {$ENDIF}
@@ -2758,8 +2747,8 @@ begin
       end;
     finally
       if SearchRowBuffer <> nil then
-{$IFDEF DELPHI12_UP}
-        FreeRecordBuffer(PByte(SearchRowBuffer));
+{$IFDEF WITH_TRECORDBUFFER}
+        FreeRecordBuffer(TRecordBuffer(SearchRowBuffer));
 {$ELSE}
         FreeRecordBuffer(PChar(SearchRowBuffer));
 {$ENDIF}
@@ -2866,16 +2855,16 @@ begin
     RowAccessor.RowBuffer := SearchRowBuffer;
     RowAccessor.RowBuffer^.Index := RowNo;
     FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
-{$IFDEF DELPHI12_UP}
-    GetCalcFields(PByte(SearchRowBuffer));
+{$IFDEF WITH_TRECORDBUFFER}
+    GetCalcFields(TRecordBuffer(SearchRowBuffer));
 {$ELSE}
     GetCalcFields(PChar(SearchRowBuffer));
 {$ENDIF}
     RetrieveDataFieldsFromRowAccessor(
       FieldRefs, FieldIndices, RowAccessor, ResultValues);
   finally
-{$IFDEF DELPHI12_UP}
-    FreeRecordBuffer(PByte(SearchRowBuffer));
+{$IFDEF WITH_TRECORDBUFFER}
+    FreeRecordBuffer(TRecordBuffer(SearchRowBuffer));
 {$ELSE}
     FreeRecordBuffer(PChar(SearchRowBuffer));
 {$ENDIF}
@@ -2977,7 +2966,7 @@ begin
   CheckActive;
 
   Result := nil;
-  if (Field.DataType in [ftBlob, ftMemo, ftGraphic, ftFmtMemo {$IFNDEF VER150BELOW},ftWideMemo{$ENDIF}])
+  if (Field.DataType in [ftBlob, ftMemo, ftGraphic, ftFmtMemo {$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}])
     and GetActiveBuffer(RowBuffer) then
   begin
     ColumnIndex := DefineFieldIndex(FieldsLookupTable, Field);
@@ -2988,7 +2977,7 @@ begin
       case Field.DataType of
       ftMemo, ftFmtMemo:
         Result := RowAccessor.GetAsciiStream(ColumnIndex, WasNull);
-      {$IFNDEF VER150BELOW}
+      {$IFDEF WITH_WIDEMEMO}
       ftWideMemo:
         Result := RowAccessor.GetUnicodeStream(ColumnIndex, WasNull)
       {$ENDIF}
@@ -3120,8 +3109,8 @@ begin
   RowAccessor.RowBuffer^.Index := RowNo;
   FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
   FRowAccessor.RowBuffer^.BookmarkFlag := Ord(bfCurrent);
-{$IFDEF DELPHI12_UP}
-  GetCalcFields(PByte(FSortRowBuffer1));
+{$IFDEF WITH_TRECORDBUFFER}
+  GetCalcFields(TRecordBuffer(FSortRowBuffer1));
 {$ELSE}
   GetCalcFields(PChar(FSortRowBuffer1));
 {$ENDIF}
@@ -3133,8 +3122,8 @@ begin
   RowAccessor.RowBuffer^.Index := RowNo;
   FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
   FRowAccessor.RowBuffer^.BookmarkFlag := Ord(bfCurrent);
-{$IFDEF DELPHI12_UP}
-  GetCalcFields(PByte(FSortRowBuffer2));
+{$IFDEF WITH_TRECORDBUFFER}
+  GetCalcFields(TRecordBuffer(FSortRowBuffer2));
 {$ELSE}
   GetCalcFields(PChar(FSortRowBuffer2));
 {$ENDIF}
@@ -3214,7 +3203,7 @@ end;
   Returns a string quote character.
   @retuns a quote character.
 }
-{$IFDEF BDS4_UP}
+{$IFDEF WITH_IPROVIDERWIDE}
 function TZAbstractRODataset.PSGetQuoteCharW: WideString;
 {$ELSE}
 function TZAbstractRODataset.PSGetQuoteChar: string;
@@ -3295,7 +3284,7 @@ end;
   @param CommandText a command text for this query.
 }
 
-{$IFDEF BDS4_UP}
+{$IFDEF WITH_IPROVIDERWIDE}
 procedure TZAbstractRODataset.PSSetCommandText(const CommandText: string);
 begin
   SQL.Text := CommandText;
@@ -3350,7 +3339,7 @@ end;
   @returns a table name or an empty string is SQL query is complex SELECT
     or not SELECT statement.
 }
-{$IFDEF BDS4_UP}
+{$IFDEF WITH_IPROVIDERWIDE}
 function TZAbstractRODataset.PSGetTableNameW: WideString;
 {$ELSE}
 function TZAbstractRODataset.PSGetTableName: string;
@@ -3379,7 +3368,7 @@ end;
   @returns a semicolon delimited list of query key fields.
 }
 // Silvio Clécio
-{$IFDEF BDS4_UP}
+{$IFDEF WITH_IPROVIDERWIDE}
 function TZAbstractRODataset.PSGetKeyFieldsW: WideString;
 begin
   Result := inherited PSGetKeyFieldsW;
@@ -3399,7 +3388,7 @@ end;
   @returns a number of updated rows.
 }
 
-{$IFDEF BDS4_UP}
+{$IFDEF WITH_IPROVIDERWIDE}
 function TZAbstractRODataset.PSExecuteStatement(const ASQL: WideString; AParams: TParams;
   ResultSet: Pointer = nil): Integer;
 {$ELSE}
@@ -3456,7 +3445,7 @@ begin
                   Stream.Free;
                 end;
               end;
-            {$IFNDEF VER150BELOW}
+            {$IFDEF WITH_WIDEMEMO}
             ftWideMemo:
               begin
                 Stream := WideStringStream(ParamValue.AsWideString);
@@ -3498,7 +3487,7 @@ const
     ftInteger, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftUnknown,
     ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
     ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp, ftFMTBcd
-    {$IFDEF FPC2_1UP}, ftString, ftBlob{$ENDIF});
+    , ftString, ftBlob);
 
 {$ELSE}
  {$IFDEF VER180}
@@ -3595,7 +3584,7 @@ end;
   @param Buffer
 }
 
-{$IFDEF DELPHI12_UP}
+{$IFDEF WITH_TRECORDBUFFER}
 
 procedure TZAbstractRODataset.ClearCalcFields(Buffer: TRecordBuffer);
 {$ELSE}

@@ -692,8 +692,7 @@ begin
     be converted to UTF-8 prior to passing them into sqlite3_open() or
     sqlite3_open_v2(). *)
 
-//{$IFDEF DELPHI12_UP}
-{$IFDEF MSWINDOWS}
+{$IFDEF DELPHI12_UP}
   SQLite_API.sqlite_open(filename, Result0);
 {$ELSE}
   Version := LibVersion;

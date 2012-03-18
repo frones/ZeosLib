@@ -675,7 +675,7 @@ begin
                 Stream.Free;
               end;
             end;
-          {$IFNDEF VER150BELOW}
+          {$IFDEF WITH_WIDEMEMO}
           ftWideMemo:
             begin
               Stream := WideStringStream(ParamValue.AsWideString);

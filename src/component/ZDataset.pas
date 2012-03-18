@@ -57,7 +57,7 @@ interface
 
 {$I ZComponent.inc}
 
-uses ZAbstractRODataset, ZAbstractDataset, ZAbstractTable {$IFDEF FPC}, DB {$ENDIF};
+uses ZAbstractRODataset, ZAbstractDataset, ZAbstractTable {$IFDEF OLDFPC}, DB {$ENDIF};
 
 type
 
@@ -65,7 +65,7 @@ type
   TZReadOnlyQuery = class (TZAbstractRODataSet)
   published
     property Active;
-  {$IFDEF FPC}
+  {$IFDEF WITH_FUNIDIRECTIONAL}
     property IsUniDirectional;
   {$ENDIF}
     property SQL;

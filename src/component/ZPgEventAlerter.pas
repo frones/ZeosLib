@@ -48,15 +48,15 @@
 unit ZPgEventAlerter;
 
 interface
-
+{$i ZComponent.inc}
 uses
   SysUtils, Classes, ExtCtrls,
-{$IFNDEF UNIX} 
+{$IFDEF MSWINDOWS}
   Windows,
-{$ELSE} 
-  {$IFNDEF FPC} 
+{$ELSE}
+  {$IFDEF KYLIX}
     libc, Math,
-  {$ENDIF} 
+  {$ENDIF}
 {$ENDIF}
   ZDbcPostgreSql, ZPlainPostgreSqlDriver, ZConnection, ZAbstractRODataset,
   ZDataset;
@@ -284,7 +284,7 @@ begin
       if Notify = nil then
         Break;
       if Assigned(FNotifyFired) then
-        FNotifyFired(Self, String(Notify{$IFDEF FPC}^{$ENDIF}.relname), Notify{$IFDEF FPC}^{$ENDIF}.be_pid);
+        FNotifyFired(Self, String(Notify{$IFDEF OLDFPC}^{$ENDIF}.relname), Notify{$IFDEF OLDFPC}^{$ENDIF}.be_pid);
       PlainDRV.FreeNotify(Notify);
   end;
  end;

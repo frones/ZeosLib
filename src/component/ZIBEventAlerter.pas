@@ -43,10 +43,10 @@ interface
 
 uses
   SysUtils, Classes, Math,
-{$IFNDEF UNIX} 
+{$IFDEF MSWINDOWS}
   Windows, 
 {$ELSE} 
-  {$IFNDEF FPC} 
+  {$IFDEF KYLIX}
     libc, 
   {$ENDIF} 
 {$ENDIF} 
@@ -110,13 +110,9 @@ uses
 const
   IB_MAX_EVENT_BLOCK = 15;   // maximum events handled per block by InterBase
   IB_MAX_EVENT_LENGTH = 64;  // maximum event name length
-  {$IFDEF LINUX}
+  {$IF NOT DECLARED(INFINITE)}
   INFINITE = $FFFFFFFF;
-  {$ELSE}
-    {$IFDEF VER140BELOW}
-    INFINITE = $FFFFFFFF;
-    {$ENDIF}
-  {$ENDIF}
+  {$IFEND}
 threadvar
   FStatusVector: TARRAY_ISC_STATUS;
 

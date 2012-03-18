@@ -44,44 +44,51 @@
 
 // Compilation directives for Lazarus
 // These are in a spearate file as Delphi compilers don't digest the macros stuff very well
-  {$MODE DELPHI} 
-  {$INTERFACES COM} 
-  {$DEFINE VER140BELOW} 
+  {$MODE DELPHI}
+  {$INTERFACES COM}
 
-  // We assume 2 levels is sufficient. 
-  // The higher the third number in a version, the better... (we hope) 
-  {$IFDEF  VER1_0} 
-    {$FATAL Please use FPC 2.0 or later to compile this!} 
-  {$ENDIF} 
+  {$IFDEF FPC_FULLVERSION}  // FPC_FULLVERSION was added in FPC 2.2.4
 
-  {$IFDEF FPC_FULLVERSION}  // FPC_FULLVERSION was added in FPC 2.2.4 
-    {$DEFINE FPC2_2UP} 
+    {$MACRO ON}             // Macros needed for FPC_VERSION and FPC_RELEASE
 
-    {$MACRO ON}             // Macros needed for FPC_VERSION and FPC_RELEASE 
+//    {$IF FPC_FULLVERSION>=20400}  // 2.4.0 status is unknown. 2.4.2+ should be generally fine.
+//      {$DEFINE FPC2_4UP}
+//    {$IFEND}
+    {$IF FPC_FULLVERSION>=20500}  // Upgrade to 2.6.x asap.
+      {$DEFINE FPC2_5UP} // Used in code
+      {$DEFINE WITH_NEWTOBJECT}
+      {$DEFINE WITH_IPROVIDER}
+    {$IFEND}
+    {$IF FPC_FULLVERSION>=20600}  // assumes 2.5.1 pretty close to 2.6.0. Summer 2011 or newer
+       {$DEFINE WITH_WIDEMEMO}
+       {$DEFINE WITH_ASLARGEINT}      // tlargeint aslargeint. Fixed 2.6.0+ or 2.6.2+ probably
+       {$DEFINE WITH_ASCURRENCY}      // Has AsCurrency.
+       {$DEFINE WITH_ASVARIANT}
+       {$DEFINE WITH_FORMATSETTINGS}
+      {$DEFINE FPC2_6UP}
+    {$IFEND}
 
-    {$IF FPC_VERSION = 2} 
-      {$IF FPC_RELEASE = 3} 
-        {$DEFINE FPC2_3UP} 
-      {$ENDIF} 
-      {$IF FPC_RELEASE = 4} 
-        {$DEFINE FPC2_4UP} 
-      {$ENDIF} 
-      {$IF FPC_RELEASE >= 5} 
-        {$DEFINE FPC2_5UP} 
-      {$ENDIF} 
-    {$ENDIF} 
+    {$DEFINE LAZARUSUTF8HACK} // Places that fixed for the Lazarus convention that all strings are UTF8  are marked with this
+                              // ifdef. But probably most of them are adhoc hacks, and need revisiting in time.
+  {$ELSE}
+    {$FATAL Versions Older than 2.2.4 are not supported!}
+  {$ENDIF}
 
-    {$IF FPC_VERSION > 2} 
-      {$DEFINE FPC2_5UP} 
-    {$ENDIF} 
+  {$DEFINE WITH_FUNIDIRECTIONAL} // FPC has references a field instead of a setter here.  (at least in 2.6.0)
 
-  {$ELSE} 
-    {$IFDEF VER_2_1} {$DEFINE FPC2_1UP} {$ENDIF} 
-    {$IFDEF VER_2_2} {$DEFINE FPC2_2UP} {$ENDIF}      // 2.2.0 - 2.2.3 
-  {$ENDIF} 
+  {$IF FPC_FULLVERSION>20600} // will be introduced in 2.6.2 (and up to date 2.6.1)
+    {$DEFINE WITH_TRECORDBUFFER}
+    {$DEFINE WITH_TBOOKMARK}              // Have TBookmark
+  {$IFEND}
 
-  {$IFDEF FPC2_5UP} {$DEFINE FPC2_4UP} {$ENDIF} 
-  {$IFDEF FPC2_4UP} {$DEFINE FPC2_3UP} {$ENDIF} 
-  {$IFDEF FPC2_3UP} {$DEFINE FPC2_2UP} {$ENDIF} 
-  {$IFDEF FPC2_2UP} {$DEFINE FPC2_1UP} {$ENDIF} 
-  {$IFDEF FPC2_1UP} {$DEFINE FPC2_UP}  {$ENDIF} 
+
+
+  // todo
+  //   VIRTUALSETFIELDDATA: in nativeformat versions of SETFIELDDATA, inherited wasn't called.
+  //                Afaik that methoid is virtual in FPC since December 2006, and there is no comment why
+  //                it was ifdefed. We'll leave it off, and see if sb complains.
+  //   LAZARUSUTF8HACK :  Places that fixed for the Lazarus convention that all strings are UTF8  are marked with this
+  //                             ifdef. But probably most of them are adhoc hacks, and need constant reevaluation.
+  //   OLDFPC      : IFDEF FPC's so old that I can't remember which version are put under IFDEF OLDFPC. In time these
+  //                   blocks can be killed.
+

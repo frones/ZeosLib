@@ -433,10 +433,10 @@ begin
         Result := IntToStr(PLongInt(SQLVarHolder.Data)^);
       SQLT_FLT:
         begin
-          OldSeparator := {$IFDEF DELPHI15_UP}FormatSettings.{$ENDIF}DecimalSeparator;
-          DecimalSeparator := '.';
+          OldSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
+          {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
           Result := FloatToSqlStr(PDouble(SQLVarHolder.Data)^);
-          {$IFDEF DELPHI15_UP}FormatSettings.{$ENDIF}DecimalSeparator := OldSeparator;
+          {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldSeparator;
         end;
       SQLT_STR:
         Result := StrPas(PAnsiChar(SQLVarHolder.Data));
