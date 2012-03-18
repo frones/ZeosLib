@@ -90,8 +90,6 @@ type
     function Execute(const SQL: string): Boolean; override;
 
     function IsOidAsBlob: Boolean;
-    function GetPrepreparedSQL(const SQL: String): AnsiString; override;
-
   end;
 
   {** Implements Prepared SQL Statement. }
@@ -260,9 +258,19 @@ var
 begin
   Result := -1;
   ConnectionHandle := GetConnectionHandle();
-  SSQL := SQL;
-  QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
-    PAnsiChar(ASQL));
+  if Connection.PreprepareSQL then
+  begin
+    SSQL := SQL;
+    QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
+      PAnsiChar(ASQL))
+  end
+  else
+    if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+      QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
+        PAnsiChar(UTF8String(SQL)))
+    else
+      QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
+        PAnsiChar(AnsiString(SQL)));
   CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
     SSQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
@@ -349,11 +357,6 @@ begin
     Result := nil
   else
     Result := (self.Connection as IZPostgreSQLConnection).GetConnectionHandle;
-end;
-
-function TZPostgreSQLStatement.GetPrepreparedSQL(const SQL: String): AnsiString;
-begin
-  Result := inherited GetPrepreparedSQL(SQL);
 end;
 
 { TZPostgreSQLPreparedStatement }

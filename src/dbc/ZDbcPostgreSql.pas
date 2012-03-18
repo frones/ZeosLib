@@ -105,9 +105,6 @@ type
     FTypeList: TStrings;
     FPlainDriver: IZPostgreSQLPlainDriver;
     FOidAsBlob: Boolean;
-    {$IFNDEF CHECK_CLIENT_CODE_PAGE}
-    FClientCodePage: string;
-    {$ENDIF}
     FCharactersetCode: TZPgCharactersetType;
     FServerMajorVersion: Integer;
     FServerMinorVersion: Integer;
@@ -536,9 +533,6 @@ begin
     FPlainDriver.SetNoticeProcessor(FHandle,FNoticeProcessor,nil);
 
     { Sets a client codepage. }
-    {$IFDEF SETPGTOLATIN1}
-    FClientCodePage := 'LATIN1';
-    {$ENDIF}
     if ( FClientCodePage <> '' ) then
     begin
       SQL := PAnsiChar(ZAnsiString(Format('SET CLIENT_ENCODING TO ''%s''',
