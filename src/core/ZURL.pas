@@ -58,6 +58,12 @@ uses
   SysUtils;
 
 type
+  TZURLStringList = Class(TStringList)
+  protected
+    function GetTextStr: string; override;
+    procedure SetTextStr(const Value: string); override;
+  end;
+
   TZURL = class
   private
     FPrefix: string;
@@ -67,7 +73,7 @@ type
     FDatabase: string;
     FUserName: string;
     FPassword: string;
-    FProperties: TStringList;
+    FProperties: TZURLStringList;
     procedure SetPrefix(const Value: string);
     procedure SetProtocol(const Value: string);
     procedure SetHostName(const Value: string);
@@ -91,12 +97,26 @@ type
     property Database: string read GetDatabase write SetDatabase;
     property UserName: string read GetUserName write SetUserName;
     property Password: string read GetPassword write SetPassword;
-    property Properties: TStringList read FProperties;
+    property Properties: TZURLStringList read FProperties;
     property URL: string read GetURL write SetURL;
   end;
 
 implementation
+
 uses ZCompatibility;
+
+{TZURLStringList}
+function TZURLStringList.GetTextStr: string;
+begin
+  Result := inherited GetTextStr;
+  Result := StringReplace(Result, #9, ';', [rfReplaceAll]); //unescape the #9 char to ';'
+end;
+
+procedure TZURLStringList.SetTextStr(const Value: string);
+begin
+  inherited SetTextStr(StringReplace(Value, ';', #9, [rfReplaceAll])); //escape the ';' char to #9
+end;
+
 { TZURL }
 
 constructor TZURL.Create;
@@ -104,7 +124,7 @@ begin
   inherited;
 
   FPrefix := 'zdbc';
-  FProperties := TStringList.Create;
+  FProperties := TZURLStringList.Create;
   FProperties.CaseSensitive := False;
   FProperties.OnChange := OnPropertiesChange;
 end;
@@ -213,11 +233,13 @@ begin
   begin
     PropName := FProperties.Names[I];
     PropValue := LowerCase(FProperties.Values[PropName]);
-    if (PropValue <> '') and (PropValue <> '') and (PropValue <> 'uid') and (PropValue <> 'pwd') and (PropValue <> 'username') and (PropValue <> 'password') then
+    if (PropValue <> '') and (PropValue <> '') and (PropValue <> 'uid') and
+      (PropValue <> 'pwd') and (PropValue <> 'username') and
+      (PropValue <> 'password') then
     begin
       if Result[Length(Result)] <> '?' then
         Result := Result + ';';
-      Result := Result + FProperties[I]
+      Result := Result + StringReplace(FProperties[I], ';', #9, [rfReplaceAll])
     end;
   end;
 end;
@@ -342,7 +364,6 @@ procedure TZURL.OnPropertiesChange(Sender: TObject);
 begin
   FProperties.OnChange := nil;
   try
-    FProperties.Text := StringReplace(FProperties.Text, ';', #9, [rfReplaceAll]); //escape the ';' char to #9
     if FProperties.Values['UID'] <> '' then
     begin
       UserName := FProperties.Values['UID'];
