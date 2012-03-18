@@ -72,8 +72,11 @@ type
     procedure SetProtocol(const Value: string);
     procedure SetHostName(const Value: string);
     procedure SetPort(const Value: Integer);
+    function GetDatabase: string;
     procedure SetDatabase(const Value: string);
+    function GetUserName: string;
     procedure SetUserName(const Value: string);
+    function GetPassword: string;
     procedure SetPassword(const Value: string);
     function GetURL: string;
     procedure SetURL(const Value: string);
@@ -85,9 +88,9 @@ type
     property Protocol: string read FProtocol write SetProtocol;
     property HostName: string read FHostName write SetHostName;
     property Port: Integer read FPort write SetPort;
-    property Database: string read FDatabase write SetDatabase;
-    property UserName: string read FUserName write SetUserName;
-    property Password: string read FPassword write SetPassword;
+    property Database: string read GetDatabase write SetDatabase;
+    property UserName: string read GetUserName write SetUserName;
+    property Password: string read GetPassword write SetPassword;
     property Properties: TStringList read FProperties;
     property URL: string read GetURL write SetURL;
   end;
@@ -133,14 +136,29 @@ begin
   FPort := Value;
 end;
 
+function TZURL.GetDatabase: string;
+begin
+  Result := StringReplace(FDatabase, #9, ';', [rfReplaceAll]); //unescape the #9 char to ';'
+end;
+
 procedure TZURL.SetDatabase(const Value: string);
 begin
   FDatabase := StringReplace(Value, ';', #9, [rfReplaceAll]); //escape the ';' char to #9
 end;
 
+function TZURL.GetUserName: string;
+begin
+  Result := StringReplace(FUserName, #9, ';', [rfReplaceAll]); //unescape the #9 char to ';'
+end;
+
 procedure TZURL.SetUserName(const Value: string);
 begin
   FUserName := StringReplace(Value, ';', #9, [rfReplaceAll]); //escape the ';' char to #9
+end;
+
+function TZURL.GetPassword: string;
+begin
+  Result := StringReplace(FPassword, #9, ';', [rfReplaceAll]); //unescape the #9 char to ';'
 end;
 
 procedure TZURL.SetPassword(const Value: string);
@@ -172,7 +190,7 @@ begin
 
   // Database
   if Database <> '' then
-    Result := Result + '/' + Database;
+    Result := Result + '/' + FDatabase;
 
   // ?
   if (FUserName <> '') or (FPassword <> '') or (Properties.Count > 0) then
@@ -324,6 +342,7 @@ procedure TZURL.OnPropertiesChange(Sender: TObject);
 begin
   FProperties.OnChange := nil;
   try
+    FProperties.Text := StringReplace(FProperties.Text, ';', #9, [rfReplaceAll]); //escape the ';' char to #9
     if FProperties.Values['UID'] <> '' then
     begin
       UserName := FProperties.Values['UID'];
