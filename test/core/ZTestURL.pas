@@ -353,7 +353,7 @@ begin
     ZURLIn.Properties.Values['role'] := 'role/;\name';
     CheckEquals('ad/;\min', ZURLIn.UserName);
     CheckEquals('pass/;\word', ZURLIn.Password);
-    CheckEquals('zdbc:ado://localhost/data/'#9'\base?username=ad/'#9'\min;password=pass/'#9'\word;role=role/'#9'\name', ZURLIn.URL);
+    CheckEquals('zdbc:ado://localhost:3050/data/'#9'\base?username=ad/'#9'\min;password=pass/'#9'\word;role=role/'#9'\name', ZURLIn.URL);
 
     ZURLOut := TZURL.Create;
     ZURLOut.URL := ZURLIn.URL;
