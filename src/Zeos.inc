@@ -330,6 +330,5 @@
 //EgonHugeist: Enables to predetect ClientCodePage and arranges the Fields in dependency of it.
 
 {.$DEFINE WITH_CHAR_CONTROL} //Disables/Enables the CharControl widget
-{.$DEFINE WITH_CLIENT_CODE_PAGE_OPTIONS} //Disables/Enables the ClientCodepageOptions-Proberty
 {.$DEFINE SQLPREPREPARE} //Test-suite-Mode! don't use it in your code!!! A spezial mode for the Test-Suites to hardly enable the PreprepareStep
 
