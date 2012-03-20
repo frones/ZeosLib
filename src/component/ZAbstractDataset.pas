@@ -473,10 +473,10 @@ begin
       FreeFieldBuffers;
       SetState(dsBrowse);
       Resync([]);
-      if BookmarkValid(
-        {$IFDEF DELPHI12_UP}BM{$ELSE}@BM{$ENDIF}) Then //Egonhugeist: don't point a unassigned pointer
+      BM := Bookmark;
+      if BookmarkValid({$IFDEF WITH_TBOOKMARK}BM{$ELSE}@BM{$ENDIF}) Then
       begin
-        InternalGotoBookmark(@BM); 
+        InternalGotoBookmark({$IFDEF WITH_TBOOKMARK}BM{$ELSE}@BM{$ENDIF});
         Resync([rmExact, rmCenter]); 
       end; 
       DisableControls;
