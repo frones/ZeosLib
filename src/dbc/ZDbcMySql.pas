@@ -199,7 +199,7 @@ begin
   TempInfo := TStringList.Create;
   try
     PlainDriver := GetPlainDriver(Url, Info); // changed by tohenk, 2009-10-11
-    ResolveDatabaseUrl(Url, Info, HResolveostName, Port, Database,
+    ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
       UserName, Password, TempInfo);
     // changed by tohenk, 2009-10-11
     // PATCH ADDED BY tohenk

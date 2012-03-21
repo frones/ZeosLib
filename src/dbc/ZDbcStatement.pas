@@ -640,7 +640,7 @@ begin
     end;
   end
   else
-    Result := Result + AnsiString(SQL); //keep the Ansi-codepage
+    Result := AnsiString(SQL);
 end;
 
 {**

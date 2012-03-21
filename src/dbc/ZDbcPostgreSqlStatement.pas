@@ -261,8 +261,7 @@ begin
   if Connection.PreprepareSQL then
   begin
     SSQL := SQL;
-    QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
-      PAnsiChar(ASQL))
+    QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,PAnsiChar(ASQL));
   end
   else
     if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
@@ -277,7 +276,7 @@ begin
 
   if QueryHandle <> nil then
   begin
-    Result := StrToIntDef(StrPas(FPlainDriver.GetCommandTuples(QueryHandle)), 0);
+    Result := StrToIntDef(String(StrPas(FPlainDriver.GetCommandTuples(QueryHandle))), 0);
     FPlainDriver.Clear(QueryHandle);
   end;
 
@@ -330,15 +329,15 @@ begin
     PGRES_COMMAND_OK:
       begin
         Result := False;
-        LastUpdateCount := StrToIntDef(StrPas(
-          FPlainDriver.GetCommandTuples(QueryHandle)), 0);
+        LastUpdateCount := StrToIntDef(String(StrPas(
+          FPlainDriver.GetCommandTuples(QueryHandle))), 0);
         FPlainDriver.Clear(QueryHandle);
       end;
     else
       begin
         Result := False;
-        LastUpdateCount := StrToIntDef(StrPas(
-          FPlainDriver.GetCommandTuples(QueryHandle)), 0);
+        LastUpdateCount := StrToIntDef(String(StrPas(
+          FPlainDriver.GetCommandTuples(QueryHandle))), 0);
         FPlainDriver.Clear(QueryHandle);
       end;
   end;
@@ -763,7 +762,7 @@ begin
 
   if QueryHandle <> nil then
   begin
-    Result := StrToIntDef(StrPas(GetPlainDriver.GetCommandTuples(QueryHandle)), 0);
+    Result := StrToIntDef(String(StrPas(GetPlainDriver.GetCommandTuples(QueryHandle))), 0);
     GetPlainDriver.Clear(QueryHandle);
   end;
 

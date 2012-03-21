@@ -459,7 +459,6 @@ function TZPostgreSQLResultSet.GetDouble(ColumnIndex: Integer): Double;
   function ConvertMoneyToFloat(MoneyString: AnsiString): String;
   var
     I: Integer;
-    s: String;
   begin
     if MoneyString = '' then
       Result := ''

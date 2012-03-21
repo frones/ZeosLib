@@ -181,7 +181,7 @@ const
 
   zCP_UTF16 = 1200; {utf-16; Indicates the Unicode character set, Windows code page 1200}
   zCP_UTF16BE = 1201; {Unicode UTF-16, big endian byte order; available only to managed applications}
-  zCP_WIN1250 = 1250; {Microsoft Windows Codepage 1250 (EE)}
+  zCP_WIN1250 = 1250; {Microsoft Windows Codepage 1250 (East European)}
   zCP_WIN1251 = 1251; {Microsoft Windows Codepage 1251 (Cyrl)}
   zCP_WIN1252 = 1252; {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
   zCP_WIN1253 = 1253; {Microsoft Windows Codepage 1253 (Greek)}

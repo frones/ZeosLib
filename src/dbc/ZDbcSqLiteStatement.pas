@@ -379,7 +379,7 @@ begin
               if InParamTypes[ParamIndex] = stBinaryStream then
                 Result := String(EncodeString(TempBlob.GetString))
               else
-                Result := AnsiQuotedStr(TempBlob.GetString, '''');
+                Result := AnsiQuotedStr(String(TempBlob.GetString), '''');
           end
           else
             Result := 'NULL';
