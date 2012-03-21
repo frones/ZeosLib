@@ -189,6 +189,9 @@ type
     function ConstructURL(const Protocol, HostName, Database,
       UserName, Password: String; const Port: Integer;
       const Properties: TStrings = nil): String;
+    procedure ResolveDatabaseUrl(const Url: string; out HostName: string;
+      out Port: Integer; out Database: string; out UserName: string;
+      out Password: string; ResultInfo: TStrings);
   end;
 
   {** Database Driver interface. }
@@ -902,6 +905,9 @@ type
     function ConstructURL(const Protocol, HostName, Database,
       UserName, Password: String; const Port: Integer;
       const Properties: TStrings = nil): String;
+    procedure ResolveDatabaseUrl(const Url: string; out HostName: string;
+      out Port: Integer; out Database: string; out UserName: string;
+      out Password: string; ResultInfo: TStrings);
   end;
 
 { TZDriverManager }
@@ -1147,6 +1153,30 @@ begin
   if Assigned(Properties) then
     FURL.Properties.Text := StringReplace(Properties.Text, ';', #9, [rfReplaceAll]); //escape the ';' char to #9
   Result := FURL.URL;
+end;
+
+{**
+  Resolves a database URL and fills the database connection parameters.
+  @param Url an initial database URL.
+  @param HostName a name of the database host.
+  @param Port a port number.
+  @param Database a database name.
+  @param UserName a name of the database user.
+  @param Password a user's password.
+  @param ResutlInfo a result info parameters.
+}
+procedure TZDriverManager.ResolveDatabaseUrl(const Url: string; out HostName: string;
+  out Port: Integer; out Database: string; out UserName: string;
+  out Password: string; ResultInfo: TStrings);
+begin
+  FURL.Properties.Clear;
+  FURL.URL := Url;
+  HostName := FURL.HostName;
+  Port := FURL.Port;
+  DataBase := FURL.Database;
+  UserName := FURL.UserName;
+  PassWord := FURL.Password;
+  ResultInfo.Text := FURL.Properties.Text;
 end;
 
 { EZSQLThrowable }
