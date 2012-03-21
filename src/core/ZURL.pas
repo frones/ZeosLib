@@ -62,8 +62,9 @@ type
   protected
     function GetTextStr: string; override;
     procedure SetTextStr(const Value: string); override;
-
+    function GetURLText: String;
   public
+    property URLText: String read GetURLText;
   end;
 
   TZURL = class
@@ -117,6 +118,11 @@ end;
 procedure TZURLStringList.SetTextStr(const Value: string);
 begin
   inherited SetTextStr(StringReplace(Value, ';', #9, [rfReplaceAll])); //escape the ';' char to #9
+end;
+
+function TZURLStringList.GetURLText: String;
+begin
+  Result := inherited GetTextStr;
 end;
 
 { TZURL }
