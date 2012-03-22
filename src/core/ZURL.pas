@@ -122,7 +122,10 @@ end;
 
 function TZURLStringList.GetURLText: String;
 begin
-  Result := inherited GetTextStr;
+  Result := StringReplace(GetTextStr, ';', #9, [rfReplaceAll]); //keep all ';' escaped
+  Result := StringReplace(Result, LineEnding, ';', [rfReplaceAll]);  //return a URL-usable string
+  if Result[Length(Result)] = ';' then
+    Result := Copy(Result, 1, Length(Result)-1);
 end;
 
 { TZURL }
@@ -237,6 +240,15 @@ begin
   end;
 
   // Properties
+  if Properties.Count > 0 then
+  begin
+    if Result[Length(Result)] <> '?' then
+      Result := Result + ';';  //in case if UserName and/or Password was set
+    Result := Result + Properties.GetURLText; //Adds the escaped string
+  end;
+
+  {EgonHugeist: Mark, i commented this lines out. The case that ['UID',...]
+    if in FProperties is impossible like you've seen.
   for I := 0 to Properties.Count - 1 do
   begin
     PropName := FProperties.Names[I];
@@ -247,9 +259,9 @@ begin
     begin
       if Result[Length(Result)] <> '?' then
         Result := Result + ';';
-      Result := Result + StringReplace(FProperties[I], ';', #9, [rfReplaceAll])
+      Result := Result + FProperties[I];
     end;
-  end;
+  end;}
 end;
 
 procedure TZURL.SetURL(const Value: string);
@@ -267,7 +279,7 @@ var
 begin
   APrefix := '';
   AProtocol := '';
-  AHostName := '';
+  AHostName := 'localhost';
   APort := '';
   ADatabase := '';
   AUserName := '';
@@ -335,8 +347,12 @@ begin
     else
       ADatabase := AValue;
 
+    // AProperties EgonHugeist: we don't need this here the
+    // OnPropertiesChange-Event makes it impossible to assign this values.
+    // So we don't take care if they exist!
+
     // AUserName
-    AUserName := AProperties.Values['UID'];
+{    AUserName := AProperties.Values['UID'];
     if AUserName = '' then
       AUserName := AProperties.Values['username'];
 
@@ -345,7 +361,6 @@ begin
     if APassword = '' then
       APassword := AProperties.Values['password'];
 
-    // AProperties
     if AProperties.IndexOfName('UID') <> -1 then
       AProperties.Delete(AProperties.IndexOfName('UID'));
     if AProperties.IndexOfName('PWD') <> -1 then
@@ -353,7 +368,7 @@ begin
     if AProperties.IndexOfName('username') <> -1 then
       AProperties.Delete(AProperties.IndexOfName('username'));
     if AProperties.IndexOfName('password') <> -1 then
-      AProperties.Delete(AProperties.IndexOfName('password'));
+      AProperties.Delete(AProperties.IndexOfName('password'));}
 
     FPrefix := APrefix;
     FProtocol := AProtocol;

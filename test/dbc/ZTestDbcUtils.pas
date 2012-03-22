@@ -496,7 +496,7 @@ begin
     // Inventory of ResolveDatabaseUrl function (by mdaems and egonhugeist)
     // parameters from Url have precedence over Info parameters
     // extra parameters from info are added to ResultsetInfo
-    // password and username from url replace those from the 
+    // password and username from url replace ResultsetInfo parameters if assigned
     Url := 'zdbc:mysql:test?UID=admin;PWD=none;trace=false';
     Info.Values['extrainfo']:='extravalue';
     ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
@@ -512,15 +512,40 @@ begin
     CheckEquals('false', ResultInfo.Values['trace']);
     //extravalue from Info (isn't available in URL)
     CheckEquals('extravalue', ResultInfo.Values['extrainfo']);
-    //url user and pwd are copied from Url into ResultInfo
-    CheckEquals('admin', ResultInfo.Values['UID']);
-    CheckEquals('none', ResultInfo.Values['PWD']);
     //Strange effect : username from info remains in Resultinfo even if it's not used
+    CheckEquals('scott', ResultInfo.Values['username']);
+
+    // Inventory of ResolveDatabaseUrl function (by mdaems and egonhugeist)
+    // ResultInfo UID/PWD have predence over UserName/Password
+    Url := 'zdbc:mysql:test?trace=false';
+    Info.Values['extrainfo']:='extravalue';
+    Info.Values['UID'] := 'administrator';
+    Info.Values['PWD'] := 'nopwd';
+    ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
+      UserName, Password, ResultInfo);
+    CheckEquals('localhost', HostName);
+    CheckEquals(0, Port);
+    CheckEquals('test', Database);
+    //username from Url has precedence (Info username = scott)
+    CheckEquals('administrator', UserName);
+    //password from Url (is not in Info)
+    CheckEquals('nopwd', Password);
+    //trace from Url has precedence (Info trace = true)
+    CheckEquals('false', ResultInfo.Values['trace']);
+    //extravalue from Info (isn't available in URL)
+    CheckEquals('extravalue', ResultInfo.Values['extrainfo']);
+    //Strange effect : username/Password from info remains in Resultinfo even if it's not used
+    CheckEquals('scott', ResultInfo.Values['UserName']);
+    CheckEquals('', ResultInfo.Values['Password']);
+    //Strange effect : UID/PWD from info remains in Resultinfo even if UserName/Password exists
+    CheckEquals('administrator', ResultInfo.Values['UID']);
+    CheckEquals('nopwd', ResultInfo.Values['PWD']);
     CheckEquals('scott', ResultInfo.Values['username']);
   finally
     Info.Free;
     ResultInfo.Free;
-  end;end;
+  end;
+end;
 
 initialization
   RegisterTest('dbc',TZTestDbcUtilsCase.Suite);

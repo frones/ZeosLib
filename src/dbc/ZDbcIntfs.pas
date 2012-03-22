@@ -191,7 +191,8 @@ type
       const Properties: TStrings = nil): String;
     procedure ResolveDatabaseUrl(const Url: string; out HostName: string;
       out Port: Integer; out Database: string; out UserName: string;
-      out Password: string; ResultInfo: TStrings);
+      out Password: string; ResultInfo: TStrings = nil); overload;
+    procedure ResolveDatabaseUrl(const Url: string; out Database: string); overload;
   end;
 
   {** Database Driver interface. }
@@ -907,7 +908,8 @@ type
       const Properties: TStrings = nil): String;
     procedure ResolveDatabaseUrl(const Url: string; out HostName: string;
       out Port: Integer; out Database: string; out UserName: string;
-      out Password: string; ResultInfo: TStrings);
+      out Password: string; ResultInfo: TStrings = nil); overload;
+    procedure ResolveDatabaseUrl(const Url: string; out Database: string); overload;
   end;
 
 { TZDriverManager }
@@ -1151,7 +1153,7 @@ begin
   FURL.Password := Password;
   FURL.Port := Port;
   if Assigned(Properties) then
-    FURL.Properties.Text := StringReplace(Properties.Text, ';', #9, [rfReplaceAll]); //escape the ';' char to #9
+    FURL.Properties.Text := Properties.Text;
   Result := FURL.URL;
 end;
 
@@ -1167,16 +1169,27 @@ end;
 }
 procedure TZDriverManager.ResolveDatabaseUrl(const Url: string; out HostName: string;
   out Port: Integer; out Database: string; out UserName: string;
-  out Password: string; ResultInfo: TStrings);
+  out Password: string; ResultInfo: TStrings = nil);
 begin
-  FURL.Properties.Clear;
   FURL.URL := Url;
   HostName := FURL.HostName;
   Port := FURL.Port;
   DataBase := FURL.Database;
   UserName := FURL.UserName;
   PassWord := FURL.Password;
-  ResultInfo.Text := FURL.Properties.Text;
+  if Assigned(ResultInfo) then
+    ResultInfo.Text := FURL.Properties.Text;
+end;
+
+{**
+  Resolves a database URL and fills the database parameter for MetaData.
+  @param Url an initial database URL.
+  @param Database a database name.
+}
+procedure TZDriverManager.ResolveDatabaseUrl(const Url: string; out Database: string);
+begin
+  FURL.URL := Url;
+  DataBase := FURL.Database;
 end;
 
 { EZSQLThrowable }
