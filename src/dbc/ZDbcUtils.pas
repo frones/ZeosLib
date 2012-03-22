@@ -308,6 +308,12 @@ begin
     if Password = '' then
       Password := ResultInfo.Values['password']; //Priority 3: Info-password
   end;
+
+  {Set UID/PWD if not exist in }
+  if ResultInfo.Values['UID'] = '' then
+    ResultInfo.Values['UID'] := UserName;
+  if ResultInfo.Values['PWD'] = '' then
+    ResultInfo.Values['PWD'] := Password;
 end;
 
 {**
