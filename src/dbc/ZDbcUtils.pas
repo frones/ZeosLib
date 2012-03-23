@@ -216,7 +216,7 @@ var
   end;
 
 begin
-  { Set default values. }
+(*  { Set default values. }
   HostName := 'localhost';
   Port := 0;
   Database := '';
@@ -284,7 +284,36 @@ begin
   { Defines user password }
   Password := ResultInfo.Values['PWD'];
   if Password = '' then
-    Password := ResultInfo.Values['password'];
+    Password := ResultInfo.Values['password'];*)
+
+   { assign URL first -> define all out out params }
+   {A correct builded URL exports all these Params if they are expected!}
+  DriverManager.ResolveDatabaseUrl(URL, HostName, Port, DataBase, UserName, Password, ResultInfo);
+
+  if Assigned(Info) then //isn't that strange? (Shouldn't we pick out double-values?)
+    Resultinfo.AddStrings(Info);//All possible PWD/Password and UID/UserName are aviable now, but for what?
+
+  { Redefines user name }
+  if UserName = '' then //Priority 1: URL.UserName
+  begin
+    UserName := ResultInfo.Values['UID']; //Priority 2: Info-UID
+    if UserName = '' then
+      UserName := ResultInfo.Values['username']; //Priority 3: Info-username
+  end;
+
+  { Redefines user password }
+  if Password = '' then //Priority 1: URL.Password
+  begin
+    Password := ResultInfo.Values['PWD']; //Priority 2: Info-PWD
+    if Password = '' then
+      Password := ResultInfo.Values['password']; //Priority 3: Info-password
+  end;
+
+  {Set UID/PWD if not exist in }
+  if ResultInfo.Values['UID'] = '' then
+    ResultInfo.Values['UID'] := UserName;
+  if ResultInfo.Values['PWD'] = '' then
+    ResultInfo.Values['PWD'] := Password;
 end;
 
 {**
