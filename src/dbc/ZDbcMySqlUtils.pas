@@ -230,7 +230,7 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
           {$IFDEF FPC}
           Result := stAsciiStream
           {$ELSE}
-            {$IFNDEF WITH_WIDEMEMO}} //Delphi 7 does not support WideMemos
+            {$IFNDEF WITH_WIDEMEMO} //Delphi 7 does not support WideMemos
             Result := stAsciiStream;
             {$ELSE}
             Result := stUnicodeStream;
