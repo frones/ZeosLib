@@ -200,7 +200,8 @@ type
     ['{2157710E-FBD8-417C-8541-753B585332E2}']
 
     function GetSupportedProtocols: TStringDynArray;
-    function Connect(const Url: string; Info: TStrings): IZConnection;
+    function Connect(const Url: string; Info: TStrings): IZConnection; overload;
+    //function Connect(const Url: string): IZConnection; overload;
     function GetClientVersion(const Url: string): Integer;
     function AcceptsURL(const Url: string): Boolean;
 

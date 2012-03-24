@@ -111,7 +111,9 @@ type
     constructor Create(Driver: IZDriver; const Url: string;
       PlainDriver: IZInterbasePlainDriver;
       const HostName: string; Port: Integer; const Database: string;
-      const User: string; const Password: string; Info: TStrings);
+      const User: string; const Password: string; Info: TStrings); overload; deprecated 'Use constructor.Create(Driver: IZDriver; const Url: string; PlainDriver: IZInterbasePlainDriver) instead!';
+    constructor Create(Driver: IZDriver; const Url: string;
+      PlainDriver: IZInterbasePlainDriver); overload;
     destructor Destroy; override;
 
     function GetDBHandle: PISC_DB_HANDLE;
@@ -199,8 +201,9 @@ begin
  try
    ResolveDatabaseUrl(Url, Info, HostName, Port, Database, UserName, Password, TempInfo);
    PlainDriver := GetPlainDriver(Url);
-   Result := TZInterbase6Connection.Create(Self, Url, PlainDriver, HostName,
-     Port, Database, UserName, Password, TempInfo);
+   //Result := TZInterbase6Connection.Create(Self, Url, PlainDriver, HostName,
+     //Port, Database, UserName, Password, TempInfo);
+   Result := TZInterbase6Connection.Create(Self, Url, PlainDriver);
  finally
    TempInfo.Free;
  end;
@@ -427,10 +430,63 @@ begin
   RoleName := Trim(Info.Values['rolename']);
   if RoleName <> '' then
     self.Info.Values['isc_dpb_sql_role_name'] := UpperCase(RoleName);
-	
-  ConnectTimeout := StrToIntDef(Info.Values['timeout'], -1); 
-  if ConnectTimeout >= 0 then 
-    self.Info.Values['isc_dpb_connect_timeout'] := IntToStr(ConnectTimeout); 
+
+  ConnectTimeout := StrToIntDef(Info.Values['timeout'], -1);
+  if ConnectTimeout >= 0 then
+    self.Info.Values['isc_dpb_connect_timeout'] := IntToStr(ConnectTimeout);
+
+end;
+
+{**
+  Constructs this object and assignes the main properties.
+  @param Driver a ZDBC driver interface.
+  @param Url a connection URL.
+  @param MetaData a ZDBC MetaData-Object
+}
+constructor TZInterbase6Connection.Create(Driver: IZDriver; const Url: string;
+  PlainDriver: IZInterbasePlainDriver);
+var
+  RoleName: string;
+  ClientCodePage: string;
+  UserSetDialect: string;
+  ConnectTimeout : integer;
+begin
+  inherited Create(Driver, Url, TZInterbase6DatabaseMetadata.Create(Self, Url));
+
+  FHardCommit := StrToBoolEx(Info.Values['hard_commit']);
+
+  FPlainDriver := PlainDriver;
+  Self.PlainDriver := PlainDriver;
+
+  { Sets a default Interbase port }
+  if Self.Port = 0 then
+    Self.Port := 3050;
+
+  { set default sql dialect it can be overriden }
+  if FPlainDriver.GetProtocol = 'interbase-5' then
+    FDialect := 1
+  else
+    FDialect := 3;
+
+  UserSetDialect := Trim(Info.Values['dialect']);
+  if UserSetDialect <> '' then
+    FDialect := StrToIntDef(UserSetDialect, FDialect);
+
+  { Processes connection properties. }
+  self.Info.Values['isc_dpb_username'] := User;
+  self.Info.Values['isc_dpb_password'] := Password;
+
+  ClientCodePage := Trim(Info.Values['codepage']);
+  if ClientCodePage <> '' then
+    self.Info.Values['isc_dpb_lc_ctype'] := UpperCase(ClientCodePage);
+
+  RoleName := Trim(Info.Values['rolename']);
+  if RoleName <> '' then
+    self.Info.Values['isc_dpb_sql_role_name'] := UpperCase(RoleName);
+
+  ConnectTimeout := StrToIntDef(Info.Values['timeout'], -1);
+  if ConnectTimeout >= 0 then
+    self.Info.Values['isc_dpb_connect_timeout'] := IntToStr(ConnectTimeout);
 
 end;
 

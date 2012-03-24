@@ -91,7 +91,8 @@ type
     procedure SetURL(const Value: string);
     procedure OnPropertiesChange(Sender: TObject);
   public
-    constructor Create;
+    constructor Create; overload;
+    constructor Create(const AURL: String); overload;
     destructor Destroy; override;
     property Prefix: string read FPrefix write SetPrefix;
     property Protocol: string read FProtocol write SetProtocol;
@@ -138,6 +139,16 @@ begin
   FProperties := TZURLStringList.Create;
   FProperties.CaseSensitive := False;
   FProperties.OnChange := OnPropertiesChange;
+end;
+
+constructor TZURL.Create(const AURL: String);
+begin
+  FPrefix := 'zdbc';
+  FProperties := TZURLStringList.Create;
+  FProperties.CaseSensitive := False;
+  FProperties.OnChange := OnPropertiesChange;
+
+  Self.URL := AURL;
 end;
 
 destructor TZURL.Destroy;
@@ -198,10 +209,10 @@ begin
 end;
 
 function TZURL.GetURL: string;
-var
+{var
   I: Integer;
   PropName: string;
-  PropValue: string;
+  PropValue: string;}
 begin
   Result := '';
 
@@ -212,10 +223,9 @@ begin
   Result := Result + Protocol + ':';
 
   // HostName/Port
-    Result := Result + '//';
   if HostName <> '' then
   begin
-    Result := Result + HostName;
+    Result := Result + '//' + HostName;
     if Port <> 0 then
       Result := Result + ':' + IntToStr(Port);
   end;
@@ -278,7 +288,6 @@ var
   AValue: string;
   I: Integer;
 begin
-//writeln('Incoming Url :'+Value);
   APrefix := '';
   AProtocol := '';
   AHostName := 'localhost';

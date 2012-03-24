@@ -97,7 +97,11 @@ type
   public
     constructor Create(Driver: IZDriver; const Url: string;
       PlainDriver: IZPlainDriver; const HostName: string; Port: Integer;
-      const Database: string; const User: string; const Password: string; Info: TStrings);
+      const Database: string; const User: string; const Password: string;
+      Info: TStrings); overload;
+    constructor Create(Driver: IZDriver; const Url: string;
+      PlainDriver: IZPlainDriver); overload;
+
 
     destructor Destroy; override;
 
@@ -226,6 +230,22 @@ begin
   inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
     TZAdoDatabaseMetadata.Create(Self, Url, Info));
 end;
+
+{**
+  Constructs this object and assignes the main properties.
+  @param Driver a ZDBC driver interface.
+  @param Url a connection URL.
+  @param MetaData a ZDBC MetaData-Object
+}
+constructor TZAdoConnection.Create(Driver: IZDriver; const Url: string;
+  PlainDriver: IZPlainDriver);
+begin
+  FAdoConnection := CoConnection.Create;
+  FPLainDriver := PlainDriver;
+  Self.PlainDriver := PlainDriver;
+  inherited Create(Driver, Url, TZAdoDatabaseMetadata.Create(Self, Url, nil));
+end;
+
 
 {**
   Destroys this object and cleanups the memory.
