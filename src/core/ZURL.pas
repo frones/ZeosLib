@@ -209,10 +209,6 @@ begin
 end;
 
 function TZURL.GetURL: string;
-{var
-  I: Integer;
-  PropName: string;
-  PropValue: string;}
 begin
   Result := '';
 
@@ -223,9 +219,10 @@ begin
   Result := Result + Protocol + ':';
 
   // HostName/Port
+    Result := Result + '//';
   if HostName <> '' then
   begin
-    Result := Result + '//' + HostName;
+    Result := Result + HostName;
     if Port <> 0 then
       Result := Result + ':' + IntToStr(Port);
   end;

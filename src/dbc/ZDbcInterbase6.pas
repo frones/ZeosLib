@@ -111,7 +111,7 @@ type
     constructor Create(Driver: IZDriver; const Url: string;
       PlainDriver: IZInterbasePlainDriver;
       const HostName: string; Port: Integer; const Database: string;
-      const User: string; const Password: string; Info: TStrings); overload; deprecated 'Use constructor.Create(Driver: IZDriver; const Url: string; PlainDriver: IZInterbasePlainDriver) instead!';
+      const User: string; const Password: string; Info: TStrings); overload; deprecated;
     constructor Create(Driver: IZDriver; const Url: string;
       PlainDriver: IZInterbasePlainDriver); overload;
     destructor Destroy; override;
