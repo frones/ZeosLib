@@ -212,9 +212,10 @@ begin
   Result := Result + Protocol + ':';
 
   // HostName/Port
+    Result := Result + '//';
   if HostName <> '' then
   begin
-    Result := Result + '//' + HostName;
+    Result := Result + HostName;
     if Port <> 0 then
       Result := Result + ':' + IntToStr(Port);
   end;
@@ -277,6 +278,7 @@ var
   AValue: string;
   I: Integer;
 begin
+//writeln('Incoming Url :'+Value);
   APrefix := '';
   AProtocol := '';
   AHostName := 'localhost';

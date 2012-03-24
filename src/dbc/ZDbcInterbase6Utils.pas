@@ -3202,11 +3202,7 @@ begin
                        Result := IntToStr(PSmallint(sqldata)^);
                      end;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
-  {.$IFDEF COMPILER6_UP}
         SQL_INT64     : Result := PInt64(sqldata)^;
-  {.$ELSE}
-    //    SQL_INT64     : Result := Integer(PInt64(sqldata)^);
-  {.$ENDIF}
         SQL_TEXT      : Result := DecodeString(SQL_TEXT, Index);
         SQL_VARYING   : Result := DecodeString(SQL_VARYING, Index);
         SQL_BLOB      : if VarIsEmpty(FDefaults[Index]) then
