@@ -109,10 +109,6 @@ type
     procedure StartTransaction; virtual;
   public
     constructor Create(Driver: IZDriver; const Url: string;
-      PlainDriver: IZInterbasePlainDriver;
-      const HostName: string; Port: Integer; const Database: string;
-      const User: string; const Password: string; Info: TStrings); overload; deprecated;
-    constructor Create(Driver: IZDriver; const Url: string;
       PlainDriver: IZInterbasePlainDriver); overload;
     destructor Destroy; override;
 
@@ -375,66 +371,6 @@ begin
     DriverManager.LogMessage(lcTransaction,
       FPlainDriver.GetProtocol, 'TRANSACTION COMMIT');
   end;
-end;
-
-{**
-  Constructs this object and assignes the main properties.
-  @param Driver the parent ZDBC driver.
-  @param HostName a name of the host.
-  @param Port a port number (0 for default port).
-  @param Database a name pof the database.
-  @param User a user name.
-  @param Password a user password.
-  @param Info a string list with extra connection parameters.
-}
-constructor TZInterbase6Connection.Create(Driver: IZDriver; const Url: string;
-  PlainDriver: IZInterbasePlainDriver; const HostName: string; Port: Integer;
-  const Database: string; const User: string; const Password: string;
-  Info: TStrings);
-var
-  RoleName: string;
-  ClientCodePage: string;
-  UserSetDialect: string;
-  ConnectTimeout : integer;
-begin
-  inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
-    TZInterbase6DatabaseMetadata.Create(Self, Url, Info));
-
-  FHardCommit := StrToBoolEx(Info.Values['hard_commit']);
-
-  FPlainDriver := PlainDriver;
-  Self.PlainDriver := PlainDriver;
-
-  { Sets a default Interbase port }
-  if Self.Port = 0 then
-    Self.Port := 3050;
-
-  { set default sql dialect it can be overriden }
-  if FPlainDriver.GetProtocol = 'interbase-5' then
-    FDialect := 1
-  else
-    FDialect := 3;
-
-  UserSetDialect := Trim(Info.Values['dialect']);
-  if UserSetDialect <> '' then
-    FDialect := StrToIntDef(UserSetDialect, FDialect);
-
-  { Processes connection properties. }
-  self.Info.Values['isc_dpb_username'] := User;
-  self.Info.Values['isc_dpb_password'] := Password;
-
-  ClientCodePage := Trim(Info.Values['codepage']);
-  if ClientCodePage <> '' then
-    self.Info.Values['isc_dpb_lc_ctype'] := UpperCase(ClientCodePage);
-
-  RoleName := Trim(Info.Values['rolename']);
-  if RoleName <> '' then
-    self.Info.Values['isc_dpb_sql_role_name'] := UpperCase(RoleName);
-
-  ConnectTimeout := StrToIntDef(Info.Values['timeout'], -1);
-  if ConnectTimeout >= 0 then
-    self.Info.Values['isc_dpb_connect_timeout'] := IntToStr(ConnectTimeout);
-
 end;
 
 {**

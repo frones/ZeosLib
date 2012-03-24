@@ -484,41 +484,19 @@ end;
 constructor TZAbstractConnection.Create(Driver: IZDriver; const Url: string;
   const HostName: string; Port: Integer; const Database: string; const User: string;
   const Password: string; Info: TStrings; Metadata: TContainedObject);
+var
+  TempURL: TZURL;
 begin
-  FURL := TZURL.Create(Url);
-  FURL.HostName := HostName;
-  FURL.Port := Port;
-  FURL.Database := Database;
-  FURL.UserName := User;
-  FURL.Password := Password;
+  TempURL := TZURL.Create(Url);
+  TempURL.HostName := HostName;
+  TempURL.Port := Port;
+  TempURL.Database := Database;
+  TempURL.UserName := User;
+  TempURL.Password := Password;
   if Assigned(Info) then
-    FURL.Properties.AddStrings(Info);
-  FDriver := Driver;
-  FMetadata := Metadata;
-
-  {FHostName := HostName;
-  FPort := Port;
-  FDatabase := Database;
-
-  FInfo := TStringList.Create;
-  if Info <> nil then
-    FInfo.AddStrings(Info);
-
-  if User <> '' then
-    FUser := User
-  else
-    FUser := FInfo.Values['username'];
-  if Password <> '' then
-    FPassword := Password
-  else
-    FPassword := FInfo.Values['password'];}
-  if Info <> nil then
-    Self.Info.AddStrings(Info);
-
-  FAutoCommit := True;
-  FClosed := True;
-  FReadOnly := True;
-  FTransactIsolationLevel := tiNone;
+    TempURL.Properties.AddStrings(Info);
+  Create(Driver,TempURL.URL, Metadata);
+  TempURL.Free;
 end;
 
 {**
