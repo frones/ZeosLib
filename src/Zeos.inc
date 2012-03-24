@@ -67,7 +67,7 @@
 // Compilation directives for Delphi 5
 // Not supported since Zeoslib 7.X
 {$IFDEF VER130}
-  "Delphi versions below Delphi 7 aren't supported anymore"
+        "Delphi versions below Delphi 7 aren't supported anymore"
 {$ENDIF}
 
 // Compilation directives for Delphi 6

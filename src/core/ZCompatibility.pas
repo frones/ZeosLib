@@ -61,7 +61,7 @@ uses
   Variants,
 {$IFDEF UNIX}
   {$IFDEF FPC}
-    dl,
+    dynlibs,
   {$endif}
 {$ENDIF}
   {$IFDEF DELPHI12_UP}
