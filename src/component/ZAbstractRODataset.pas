@@ -2393,7 +2393,6 @@ end;
 }
 
 {$IFDEF WITH_TRECORDBUFFER}
-
 procedure TZAbstractRODataset.GetBookmarkData(Buffer: TRecordBuffer; Data: Pointer);
 {$ELSE}
 procedure TZAbstractRODataset.GetBookmarkData(Buffer: PChar; Data: Pointer);
@@ -2409,7 +2408,6 @@ end;
 }
 
 {$IFDEF WITH_TRECORDBUFFER}
-
 procedure TZAbstractRODataset.SetBookmarkData(Buffer: TRecordBuffer; Data: Pointer);
 {$ELSE}
 procedure TZAbstractRODataset.SetBookmarkData(Buffer: PChar; Data: Pointer);
@@ -2463,7 +2461,6 @@ end;
 }
 
 {$IFDEF WITH_TRECORDBUFFER}
-
 procedure TZAbstractRODataset.InternalInitRecord(Buffer: TRecordBuffer);
 {$ELSE}
 procedure TZAbstractRODataset.InternalInitRecord(Buffer: PChar);
