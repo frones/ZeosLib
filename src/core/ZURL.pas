@@ -96,7 +96,7 @@ type
     constructor Create(const AURL: String; Info: TStrings); overload;
     constructor Create(const AURL: TZURL); overload;
     constructor Create(Const AURL, AHostName: string; const APort: Integer;
-      const ADatabase, AUser, APassword: string; Info: TStrings); overload; deprecated;
+      const ADatabase, AUser, APassword: string; Info: TStrings); overload;
 
     destructor Destroy; override;
     property Prefix: string read FPrefix write SetPrefix;
@@ -281,21 +281,6 @@ begin
     Result := Result + Properties.GetURLText; //Adds the escaped string
   end;
 
-  {EgonHugeist: Mark, i commented this lines out. The case that ['UID',...]
-    if in FProperties is impossible like you've seen.
-  for I := 0 to Properties.Count - 1 do
-  begin
-    PropName := FProperties.Names[I];
-    PropValue := LowerCase(FProperties.Values[PropName]);
-    if (PropValue <> '') and (PropValue <> '') and (PropValue <> 'uid') and
-      (PropValue <> 'pwd') and (PropValue <> 'username') and
-      (PropValue <> 'password') then
-    begin
-      if Result[Length(Result)] <> '?' then
-        Result := Result + ';';
-      Result := Result + FProperties[I];
-    end;
-  end;}
 end;
 
 procedure TZURL.SetURL(const Value: string);
@@ -380,29 +365,6 @@ begin
     end
     else
       ADatabase := AValue;
-
-    // AProperties EgonHugeist: we don't need this here the
-    // OnPropertiesChange-Event makes it impossible to assign this values.
-    // So we don't take care if they exist!
-
-    // AUserName
-{    AUserName := AProperties.Values['UID'];
-    if AUserName = '' then
-      AUserName := AProperties.Values['username'];
-
-    // APassword
-    APassword := AProperties.Values['PWD'];
-    if APassword = '' then
-      APassword := AProperties.Values['password'];
-
-    if AProperties.IndexOfName('UID') <> -1 then
-      AProperties.Delete(AProperties.IndexOfName('UID'));
-    if AProperties.IndexOfName('PWD') <> -1 then
-      AProperties.Delete(AProperties.IndexOfName('PWD'));
-    if AProperties.IndexOfName('username') <> -1 then
-      AProperties.Delete(AProperties.IndexOfName('username'));
-    if AProperties.IndexOfName('password') <> -1 then
-      AProperties.Delete(AProperties.IndexOfName('password'));}
 
     FPrefix := APrefix;
     FProtocol := AProtocol;
