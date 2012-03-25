@@ -152,7 +152,7 @@ begin
   Self.URL := AURL;
 end;
 
-constructor Create(const AURL: String; Info: TStrings); overload;
+constructor TZURL.Create(const AURL: String; Info: TStrings);
 begin
   Create(AURL);
   if Assigned(Info) then
