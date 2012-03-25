@@ -93,9 +93,10 @@ type
   public
     constructor Create; overload;
     constructor Create(const AURL: String); overload;
+    constructor Create(const AURL: String; Info: TStrings); overload;
     constructor Create(const AURL: TZURL); overload;
     constructor Create(Const AURL, AHostName: string; const APort: Integer;
-      const ADatabase, AUser, APassword: string; Info: TStrings); overload;
+      const ADatabase, AUser, APassword: string; Info: TStrings); overload; deprecated;
 
     destructor Destroy; override;
     property Prefix: string read FPrefix write SetPrefix;
@@ -149,6 +150,13 @@ constructor TZURL.Create(const AURL: String);
 begin
   Create;
   Self.URL := AURL;
+end;
+
+constructor Create(const AURL: String; Info: TStrings); overload;
+begin
+  Create(AURL);
+  if Assigned(Info) then
+    Self.Properties.AddStrings(Info);
 end;
 
 constructor TZURL.Create(const AURL: TZURL);
