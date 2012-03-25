@@ -93,6 +93,10 @@ type
   public
     constructor Create; overload;
     constructor Create(const AURL: String); overload;
+    constructor Create(const AURL: TZURL); overload;
+    constructor Create(Const AURL, AHostName: string; const APort: Integer;
+      const ADatabase, AUser, APassword: string; Info: TStrings); overload;
+
     destructor Destroy; override;
     property Prefix: string read FPrefix write SetPrefix;
     property Protocol: string read FProtocol write SetProtocol;
@@ -143,12 +147,26 @@ end;
 
 constructor TZURL.Create(const AURL: String);
 begin
-  FPrefix := 'zdbc';
-  FProperties := TZURLStringList.Create;
-  FProperties.CaseSensitive := False;
-  FProperties.OnChange := OnPropertiesChange;
-
+  Create;
   Self.URL := AURL;
+end;
+
+constructor TZURL.Create(const AURL: TZURL);
+begin
+  Create(AURL.URL);
+end;
+
+constructor TZURL.Create(Const AURL, AHostName: string; const APort: Integer;
+  const ADatabase, AUser, APassword: string; Info: TStrings);
+begin
+  Create(AURL);
+  Self.HostName := AHostName;
+  Self.Port := APort;
+  Self.Database := ADataBase;
+  Self.UserName := AUser;
+  Self.Password := APassword;
+  if Assigned(Info) then
+    Self.Properties.AddStrings(Info);
 end;
 
 destructor TZURL.Destroy;
