@@ -61,7 +61,7 @@ uses
   Types, ZCompatibility, Classes, SysUtils, ZDbcUtils, ZDbcIntfs, ZDbcConnection,
   Contnrs, ZPlainFirebirdDriver,
   ZPlainFirebirdInterbaseConstants, ZSysUtils, ZDbcInterbase6Utils, ZDbcLogging,
-  ZDbcGenericResolver, ZTokenizer, ZGenericSqlAnalyser;
+  ZDbcGenericResolver, ZTokenizer, ZGenericSqlAnalyser, ZURL;
 
 type
 
@@ -108,7 +108,7 @@ type
   private
     procedure StartTransaction; virtual;
   public
-    constructor Create(Driver: IZDriver; const Url: string;
+    constructor Create(Driver: IZDriver; const ZUrl: TZURL;
       PlainDriver: IZInterbasePlainDriver); overload;
     destructor Destroy; override;
 
@@ -199,7 +199,7 @@ begin
    PlainDriver := GetPlainDriver(Url);
    //Result := TZInterbase6Connection.Create(Self, Url, PlainDriver, HostName,
      //Port, Database, UserName, Password, TempInfo);
-   Result := TZInterbase6Connection.Create(Self, Url, PlainDriver);
+   Result := TZInterbase6Connection.Create(Self, TZURL.Create(Url), PlainDriver);
  finally
    TempInfo.Free;
  end;
@@ -379,7 +379,7 @@ end;
   @param Url a connection URL.
   @param MetaData a ZDBC MetaData-Object
 }
-constructor TZInterbase6Connection.Create(Driver: IZDriver; const Url: string;
+constructor TZInterbase6Connection.Create(Driver: IZDriver; const ZUrl: TZURL;
   PlainDriver: IZInterbasePlainDriver);
 var
   RoleName: string;
@@ -387,7 +387,7 @@ var
   UserSetDialect: string;
   ConnectTimeout : integer;
 begin
-  inherited Create(Driver, Url, TZInterbase6DatabaseMetadata.Create(Self, Url));
+  inherited Create(Driver, ZUrl, TZInterbase6DatabaseMetadata.Create(Self, ZUrl.URL));
 
   FHardCommit := StrToBoolEx(Info.Values['hard_commit']);
 

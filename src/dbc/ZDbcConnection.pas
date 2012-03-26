@@ -153,7 +153,7 @@ type
     constructor Create(Driver: IZDriver; const Url: string; const HostName: string;
       Port: Integer; const Database: string; const User: string; const Password: string;
       Info: TStrings; Metadata: TContainedObject); overload;
-    constructor Create(Driver: IZDriver; const Url: string;
+    constructor Create(Driver: IZDriver; const ZUrl: TZURL;
       Metadata: TContainedObject); overload;
     destructor Destroy; override;
 
@@ -495,7 +495,7 @@ begin
   TempURL.Password := Password;
   if Assigned(Info) then
     TempURL.Properties.AddStrings(Info);
-  Create(Driver,TempURL.URL, Metadata);
+  Create(Driver,TempURL, Metadata);
   TempURL.Free;
 end;
 
@@ -505,10 +505,10 @@ end;
   @param Url a connection URL.
   @param MetaData a ZDBC MetaData-Object
 }
-constructor TZAbstractConnection.Create(Driver: IZDriver; const Url: string;
+constructor TZAbstractConnection.Create(Driver: IZDriver; const ZUrl: TZUrl;
   Metadata: TContainedObject);
 begin
-  FURL := TZURL.Create(URL);
+  FURL:= TZURL.Create(ZUrl);
   FDriver := Driver;
   FMetadata := Metadata;
 
@@ -525,7 +525,6 @@ destructor TZAbstractConnection.Destroy;
 begin
   if not FClosed then
     Close;
-  //FInfo.Free;
   FURL.Free;
   FMetadata.Free;
   inherited Destroy;
