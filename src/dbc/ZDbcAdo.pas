@@ -236,9 +236,6 @@ constructor TZAdoConnection.Create(Driver: IZDriver; const Url: string;
 begin
   FAdoConnection := CoConnection.Create;
   FPLainDriver := PlainDriver;
-  {$IFNDEF CHECK_CLIENT_CODE_PAGE}
-  Self.PlainDriver := PlainDriver;
-  {$ENDIF}
   inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
     TZAdoDatabaseMetadata.Create(Self, Url, Info), PlainDriver);
 end;

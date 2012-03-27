@@ -100,9 +100,6 @@ type
     FCatalog: string;
     FPlainDriver: IZMySQLPlainDriver;
     FHandle: PZMySQLConnect;
-    {$IFNDEF CHECK_CLIENT_CODE_PAGE}
-    FClientCodePage: string;
-    {$ENDIF}
   public
     constructor Create(Driver: IZDriver; const Url: string;
       PlainDriver: IZMySQLPlainDriver; const HostName: string; Port: Integer;
@@ -385,9 +382,6 @@ var
   my_client_Opt:TMYSQL_CLIENT_OPTIONS;
   sMy_client_Opt, sMy_client_Char_Set:String;
   ClientVersion: Integer;
-  {$IFNDEF CHECK_CLIENT_CODE_PAGE}
-  FClientCharacterSet: String;
-  {$ENDIF}
   SQL: PAnsiChar;
 begin
    if not Closed then

@@ -1093,7 +1093,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
 {$ENDIF}
-  Result := PAnsiChar(FColumnArray[ColumnIndex - 1].buffer);
+  Result := AnsiString(FColumnArray[ColumnIndex - 1].buffer);
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
 end;
 

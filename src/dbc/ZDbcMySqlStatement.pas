@@ -83,7 +83,6 @@ type
     FHandle: PZMySQLConnect;
     FPlainDriver: IZMySQLPlainDriver;
     FUseResult: Boolean;
-    {$IFNDEF CHECK_CLIENT_CODE_PAGE}FSQL: string;{$ENDIF}
 
     function CreateResultSet(const SQL: string): IZResultSet;
     function GetStmtHandle : PZMySqlPrepStmt;
