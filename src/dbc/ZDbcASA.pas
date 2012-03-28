@@ -99,6 +99,8 @@ type
     FPlainDriver: IZASAPlainDriver;
   private
     procedure StartTransaction; virtual;
+  protected
+    procedure InternalCreate;
   public
     constructor Create(Driver: IZDriver; const Url: string;
       PlainDriver: IZASAPlainDriver;
@@ -323,6 +325,14 @@ begin
     DriverManager.LogMessage(lcTransaction,
       FPlainDriver.GetProtocol, 'TRANSACTION COMMIT');
   end;
+end;
+
+procedure TZASAConnection.InternalCreate;
+begin
+  Self.FMetadata := TZASADatabaseMetadata.Create(Self, Self.URL.URL, Info);
+
+  FPlainDriver := TZASADriver(Self.Driver).GetPlainDriver(URL.URL);
+  Self.PlainDriver := FPlainDriver;
 end;
 
 {**

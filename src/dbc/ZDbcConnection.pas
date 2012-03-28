@@ -113,7 +113,6 @@ type
     FReadOnly: Boolean;
     FTransactIsolationLevel: TZTransactIsolationLevel;
     FClosed: Boolean;
-    FMetadata: TContainedObject;
     FURL: TZURL;
     function GetHostName: string;
     procedure SetHostName(const Value: String);
@@ -127,6 +126,8 @@ type
     procedure SetPassword(const Value: String);
     function GetInfo: TStrings;
   protected
+    FMetadata: TContainedObject;
+    procedure InternalCreate; virtual; //abstract; //Mark, if we are ready this one should be abstract!
     procedure RaiseUnsupportedException;
 
     function CreateRegularStatement(Info: TStrings): IZStatement;
@@ -146,15 +147,18 @@ type
     property Info: TStrings read GetInfo;
     property AutoCommit: Boolean read FAutoCommit write FAutoCommit;
     property ReadOnly: Boolean read FReadOnly write FReadOnly;
+    property URL: TZURL read FURL;
     property TransactIsolationLevel: TZTransactIsolationLevel
       read FTransactIsolationLevel write FTransactIsolationLevel;
     property Closed: Boolean read FClosed write FClosed;
+
   public
     constructor Create(Driver: IZDriver; const Url: string; const HostName: string;
       Port: Integer; const Database: string; const User: string; const Password: string;
       Info: TStrings; Metadata: TContainedObject); overload;
     constructor Create(Driver: IZDriver; const ZUrl: TZURL;
       Metadata: TContainedObject); overload;
+    constructor Create(const ZUrl: TZURL); overload;
     destructor Destroy; override;
 
     function CreateStatement: IZStatement;
@@ -469,6 +473,9 @@ begin
   Result := FURL.Properties;
 end;
 
+procedure TZAbstractConnection.InternalCreate;
+begin
+end;
 
 {**
   Constructs this object and assignes the main properties.
@@ -487,14 +494,7 @@ constructor TZAbstractConnection.Create(Driver: IZDriver; const Url: string;
 var
   TempURL: TZURL;
 begin
-  TempURL := TZURL.Create(Url);
-  TempURL.HostName := HostName;
-  TempURL.Port := Port;
-  TempURL.Database := Database;
-  TempURL.UserName := User;
-  TempURL.Password := Password;
-  if Assigned(Info) then
-    TempURL.Properties.AddStrings(Info);
+  TempURL := TZURL.Create(Url, HostName, Port, Database, User, Password, Info);
   Create(Driver,TempURL, Metadata);
   TempURL.Free;
 end;
@@ -516,6 +516,19 @@ begin
   FClosed := True;
   FReadOnly := True;
   FTransactIsolationLevel := tiNone;
+  InternalCreate;
+end;
+
+constructor TZAbstractConnection.Create(const ZUrl: TZURL);
+begin
+  if not assigned(ZUrl) then
+    raise Exception.Create('ZUrl is not assigned!');
+  FDriver := DriverManager.GetDriver(ZURL.URL);
+  FAutoCommit := True;
+  FClosed := True;
+  FReadOnly := True;
+  FTransactIsolationLevel := tiNone;
+  InternalCreate;
 end;
 
 {**

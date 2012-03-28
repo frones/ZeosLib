@@ -94,6 +94,7 @@ type
     procedure InternalExecuteStatement(const SQL: string); virtual;
     procedure CheckAdoError; virtual;
     procedure StartTransaction; virtual;
+    procedure InternalCreate; override;
   public
     constructor Create(Driver: IZDriver; const Url: string;
       PlainDriver: IZPlainDriver; const HostName: string; Port: Integer;
@@ -205,6 +206,14 @@ begin
 end;
 
 { TZAdoConnection }
+
+procedure TZAdoConnection.InternalCreate;
+begin
+  FAdoConnection := CoConnection.Create;
+  FPLainDriver := TZAdoDriver(Driver).FAdoPlainDriver;
+  Self.PlainDriver := FPlainDriver;
+  Self.FMetadata := TZAdoDatabaseMetadata.Create(Self, Self.URL.URL, Info);
+end;
 
 {**
   Constructs this object and assignes the main properties.
