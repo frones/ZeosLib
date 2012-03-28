@@ -197,7 +197,7 @@ type
     constructor Create(ParentConnection: IZConnection;
       const Url: string; Info: TStrings); overload;
     constructor Create(ParentConnection: IZConnection;
-      const Url: string); overload;
+      const Url: TZURL); overload;
     destructor Destroy; override;
 
     function GetURL: string; virtual;
@@ -1729,17 +1729,9 @@ end;
   @param Info an extra connection properties.
 }
 constructor TZAbstractDatabaseMetadata.Create(
-  ParentConnection: IZConnection; const Url: string; Info: TStrings);
+  ParentConnection: IZConnection; const Url: String; Info: TStrings);
 begin
-  inherited Create(ParentConnection);
-  FConnection := Pointer(ParentConnection);
-  FUrl := TZURL.Create(Url);
-  FUrl.Properties.AddStrings(Info);
-  //FURL := Url;
-  //FInfo := Info;
-  FCachedResultSets := TZHashMap.Create;
-  FDatabaseInfo := CreateDatabaseInfo;
-  FillWildcards;
+  Create(ParentConnection, TZURL.Create(Url, Info));
 end;
 
 {**
@@ -1748,11 +1740,11 @@ end;
   @param Url a database connection url string.
 }
 constructor TZAbstractDatabaseMetadata.Create(ParentConnection: IZConnection;
-  const Url: string);
+  const Url: TZURL);
 begin
   inherited Create(ParentConnection);
   FConnection := Pointer(ParentConnection);
-  FUrl := TZURL.Create(Url);
+  FUrl := Url;
   FCachedResultSets := TZHashMap.Create;
   FDatabaseInfo := CreateDatabaseInfo;
   FillWildcards;
@@ -1771,7 +1763,7 @@ end;
 {**  Destroys this object and cleanups the memory.}
 destructor TZAbstractDatabaseMetadata.Destroy;
 begin
-  FUrl.Free;
+  FUrl := nil;
   FCachedResultSets.Clear;
   FCachedResultSets := nil;
   FDatabaseInfo := nil;

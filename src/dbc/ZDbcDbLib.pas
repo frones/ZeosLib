@@ -102,6 +102,7 @@ type
   protected
     FPlainDriver: IZDBLibPlainDriver;
     FHandle: PDBPROCESS;
+    procedure InternalCreate; override;
     procedure InternalExecuteStatement(const SQL: string); virtual;
     procedure InternalLogin; virtual;
     function GetPlainDriver: IZDBLibPlainDriver;
@@ -242,6 +243,25 @@ begin
 end;
 
 { TZDBLibConnection }
+procedure TZDBLibConnection.InternalCreate;
+begin
+  if Url.Protocol = 'mssql' then
+  begin
+    FPlainDriver := TZDBLibDriver(Self.Driver).FMSSqlPlainDriver;
+    FMetadata := TZMsSqlDatabaseMetadata.Create(Self, Url.URL, Info);
+  end
+  else if Url.Protocol = 'sybase' then
+  begin
+    FPlainDriver := TZDBLibDriver(Self.Driver).FSybasePlainDriver;
+    FMetadata := TZSybaseDatabaseMetadata.Create(Self, Url.Url, Info)
+  end
+  else
+    FMetadata := nil;
+
+  Self.PlainDriver := FPlainDriver;
+
+  FHandle := nil;
+end;
 
 {**
   Constructs this object and assignes the main properties.

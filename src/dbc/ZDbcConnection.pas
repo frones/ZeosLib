@@ -103,12 +103,6 @@ type
   private
     FDriver: IZDriver;
     FIZPlainDriver: IZPlainDriver;
-    {FHostName: string;
-    FPort: Integer;
-    FDatabase: string;
-    FUser: string;
-    FPassword: string;
-    FInfo: TStrings;}
     FAutoCommit: Boolean;
     FReadOnly: Boolean;
     FTransactIsolationLevel: TZTransactIsolationLevel;
@@ -522,7 +516,9 @@ end;
 constructor TZAbstractConnection.Create(const ZUrl: TZURL);
 begin
   if not assigned(ZUrl) then
-    raise Exception.Create('ZUrl is not assigned!');
+    raise Exception.Create('ZUrl is not assigned!')
+  else
+    FURL := TZURL.Create(ZURL);
   FDriver := DriverManager.GetDriver(ZURL.URL);
   FAutoCommit := True;
   FClosed := True;
@@ -538,8 +534,8 @@ destructor TZAbstractConnection.Destroy;
 begin
   if not FClosed then
     Close;
-  FURL.Free;
   FMetadata.Free;
+  FURL.Free;
   inherited Destroy;
 end;
 
