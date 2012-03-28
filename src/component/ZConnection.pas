@@ -64,12 +64,12 @@ type
   {** Represents a component which wraps a connection to database. }
   TZConnection = class(TZAbstractConnection)
   published
-    property Protocol: string read FProtocol write FProtocol;
-    property HostName: string read FHostName write FHostName;
-    property Port: Integer read FPort write FPort default 0;
-    property Database: string read FDatabase write FDatabase;
-    property User: string read FUser write FUser;
-    property Password: string read FPassword write FPassword;
+    property HostName: string read GetHostName write SetHostName;
+    property Port: Integer read GetPort write SetPort;
+    property Database: string read GetDatabase write SetDatabase;
+    property User: string read GetUser write SetUser;
+    property Password: string read GetPassword write SetPassword;
+    property Protocol: string read GetProtocol write SetProtocol;
     property Catalog: string read FCatalog write FCatalog;
   end;
 
