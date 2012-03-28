@@ -64,7 +64,7 @@ uses
   {$ENDIF}
 {$ENDIF}
   Types, Classes, SysUtils, ZClasses, ZDbcIntfs, ZTokenizer, ZCompatibility,
-  ZGenericSqlToken, ZGenericSqlAnalyser, ZPlainDriver;
+  ZGenericSqlToken, ZGenericSqlAnalyser, ZPlainDriver, ZURL;
 
 type
 
@@ -105,18 +105,24 @@ type
   private
     FDriver: IZDriver;
     FIZPlainDriver: IZPlainDriver;
-    FHostName: string;
-    FPort: Integer;
-    FDatabase: string;
-    FUser: string;
-    FPassword: string;
-    FInfo: TStrings;
     FPreprepareSQL: Boolean;
     FAutoCommit: Boolean;
     FReadOnly: Boolean;
     FTransactIsolationLevel: TZTransactIsolationLevel;
     FClosed: Boolean;
     FMetadata: TContainedObject;
+    FURL: TZURL;
+    function GetHostName: string;
+    procedure SetHostName(const Value: String);
+    function GetPort: Integer;
+    procedure SetPort(const Value: Integer);
+    function GetDatabase: string;
+    procedure SetDatabase(const Value: String);
+    function GetUser: string;
+    procedure SetUser(const Value: String);
+    function GetPassword: string;
+    procedure SetPassword(const Value: String);
+    function GetInfo: TStrings;
   protected
     FClientCodePage: String;
     procedure CheckCharEncoding(CharSet: String;
@@ -135,12 +141,12 @@ type
 
     property Driver: IZDriver read FDriver write FDriver;
     property PlainDriver: IZPlainDriver read FIZPlainDriver write FIZPlainDriver;
-    property HostName: string read FHostName write FHostName;
-    property Port: Integer read FPort write FPort;
-    property Database: string read FDatabase write FDatabase;
-    property User: string read FUser write FUser;
-    property Password: string read FPassword write FPassword;
-    property Info: TStrings read FInfo;
+    property HostName: string read GetHostName write SetHostName;
+    property Port: Integer read GetPort write SetPort;
+    property Database: string read GetDatabase write SetDatabase;
+    property User: string read GetUser write SetUser;
+    property Password: string read GetPassword write SetPassword;
+    property Info: TStrings read GetInfo;
     property AutoCommit: Boolean read FAutoCommit write FAutoCommit;
     property ReadOnly: Boolean read FReadOnly write FReadOnly;
     property TransactIsolationLevel: TZTransactIsolationLevel
@@ -149,7 +155,9 @@ type
   public
     constructor Create(Driver: IZDriver; const Url: string; const HostName: string;
       Port: Integer; const Database: string; const User: string; const Password: string;
-      Info: TStrings; Metadata: TContainedObject; APlainDriver: IZPlainDriver);
+      Info: TStrings; Metadata: TContainedObject; APlainDriver: IZPlainDriver); overload;
+    constructor Create(Driver: IZDriver; const ZUrl: TZURL;
+      Metadata: TContainedObject; APlainDriver: IZPlainDriver); overload;
     destructor Destroy; override;
 
     function CreateStatement: IZStatement;
@@ -413,6 +421,62 @@ end;
 
 { TZAbstractConnection }
 
+function TZAbstractConnection.GetHostName: string;
+begin
+  Result := FURL.HostName;
+end;
+
+procedure TZAbstractConnection.SetHostName(const Value: String);
+begin
+  FURL.HostName := Value;
+end;
+
+function TZAbstractConnection.GetPort: Integer;
+begin
+  Result := FURL.Port;
+end;
+
+procedure TZAbstractConnection.SetPort(const Value: Integer);
+begin
+  FURL.Port := Value;
+end;
+
+function TZAbstractConnection.GetDatabase: string;
+begin
+  Result := FURL.Database;
+end;
+
+procedure TZAbstractConnection.SetDatabase(const Value: String);
+begin
+  FURL.Database := Value;
+end;
+
+function TZAbstractConnection.GetUser: string;
+begin
+  Result := FURL.UserName;
+end;
+
+procedure TZAbstractConnection.SetUser(const Value: String);
+begin
+  FURL.UserName := Value;
+end;
+
+function TZAbstractConnection.GetPassword: string;
+begin
+  Result := FURL.Password;
+end;
+
+procedure TZAbstractConnection.SetPassword(const Value: String);
+begin
+  FURL.Password := Value;
+end;
+
+function TZAbstractConnection.GetInfo: TStrings;
+begin
+  Result := FURL.Properties;
+end;
+
+
 {**
   EgonHugeist: Check if the given Charset for Compiler/Database-Support!!
     Not supported means if there is a pissible String-DataLoss.
@@ -469,34 +533,41 @@ end;
 }
 constructor TZAbstractConnection.Create(Driver: IZDriver; const Url: string;
   const HostName: string; Port: Integer; const Database: string; const User: string;
-  const Password: string; Info: TStrings; Metadata: TContainedObject;
-  APlainDriver: IZPlainDriver);
+  const Password: string; Info: TStrings; Metadata: TContainedObject; APlainDriver: IZPlainDriver);
+var
+  TempURL: TZURL;
 begin
+  TempURL := TZURL.Create(Url);
+  TempURL.HostName := HostName;
+  TempURL.Port := Port;
+  TempURL.Database := Database;
+  TempURL.UserName := User;
+  TempURL.Password := Password;
+  if Assigned(Info) then
+    TempURL.Properties.AddStrings(Info);
+  Create(Driver,TempURL, Metadata,APlainDriver);
+  TempURL.Free;
+end;
+
+{**
+  Constructs this object and assignes the main properties.
+  @param Driver a ZDBC driver interface.
+  @param Url a connection URL.
+  @param MetaData a ZDBC MetaData-Object
+}
+constructor TZAbstractConnection.Create(Driver: IZDriver; const ZUrl: TZUrl;
+  Metadata: TContainedObject; APlainDriver: IZPlainDriver);
+begin
+  FURL:= TZURL.Create(ZUrl);
   FDriver := Driver;
-  FHostName := HostName;
-  FPort := Port;
-  FDatabase := Database;
   FMetadata := Metadata;
   FIZPlainDriver := APlainDriver;
 
-  FInfo := TStringList.Create;
-  if Info <> nil then
-    FInfo.AddStrings(Info);
-
-  if User <> '' then
-    FUser := User
-  else
-    FUser := FInfo.Values['username'];
-  if Password <> '' then
-    FPassword := Password
-  else
-    FPassword := FInfo.Values['password'];
-
-  FClientCodePage := FInfo.Values['codepage'];
-  FPreprepareSQL := FInfo.Values['PreprepareSQL'] = 'ON'; //compatibitity Option for existing Applications
+  FClientCodePage := Info.Values['codepage'];
+  FPreprepareSQL := Info.Values['PreprepareSQL'] = 'ON'; //compatibitity Option for existing Applications
   {Pick out the values from Info}
-  FInfo.Values['PreprepareSQL'] := '';
-  FInfo.Values['codepage'] := '';
+  Info.Values['PreprepareSQL'] := '';
+  Info.Values['codepage'] := '';
   {CheckCharEncoding}
   CheckCharEncoding(FClientCodePage, True);
   FAutoCommit := True;
@@ -512,7 +583,7 @@ destructor TZAbstractConnection.Destroy;
 begin
   if not FClosed then
     Close;
-  FInfo.Free;
+  FURL.Free;
   FMetadata.Free;
   inherited Destroy;
 end;

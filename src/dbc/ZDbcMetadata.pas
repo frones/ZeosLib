@@ -65,7 +65,7 @@ uses
 {$ENDIF}
   Types, Classes, SysUtils, Contnrs, ZSysUtils, ZClasses, ZDbcIntfs,
   ZDbcResultSetMetadata, ZDbcCachedResultSet, ZDbcCache, ZCompatibility,
-  ZSelectSchema;
+  ZSelectSchema, ZURL;
 
 const
   procedureColumnUnknown = 0;
@@ -117,13 +117,15 @@ type
   end;
 
   {** Implements Abstract Database Metadata. }
-TZAbstractDatabaseMetadata = class(TContainedObject, IZDatabaseMetadata)
+  TZAbstractDatabaseMetadata = class(TContainedObject, IZDatabaseMetadata)
   private
     FConnection: Pointer;
-    FUrl: string;
+    FUrl: TZURL; //string;
     FInfo: TStrings;
     FCachedResultSets: IZHashMap;
     FDatabaseInfo: IZDatabaseInfo;
+    function GetInfo: TStrings;
+    function GetURLString: String;
   protected
     WildcardsArray: array of char; //Added by Cipto
     function CreateDatabaseInfo: IZDatabaseInfo; virtual; // technobot 2008-06-24
@@ -143,8 +145,10 @@ TZAbstractDatabaseMetadata = class(TContainedObject, IZDatabaseMetadata)
     procedure FillWildcards; virtual;
     //End Added by Cipto
 
-    property Url: string read FUrl;
-    property Info: TStrings read FInfo;
+    //property Url: string read FUrl;
+    //property Info: TStrings read FInfo;
+    property Url: string read GetURLString;
+    property Info: TStrings read GetInfo;
     property CachedResultSets: IZHashMap read FCachedResultSets
       write FCachedResultSets;
 
@@ -193,7 +197,9 @@ TZAbstractDatabaseMetadata = class(TContainedObject, IZDatabaseMetadata)
       const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; virtual;
   public
     constructor Create(ParentConnection: IZConnection;
-      const Url: string; Info: TStrings);
+      const Url: string; Info: TStrings); overload;
+    constructor Create(ParentConnection: IZConnection;
+      const Url: string); overload;
     destructor Destroy; override;
 
     function GetURL: string; virtual;
@@ -1729,17 +1735,45 @@ constructor TZAbstractDatabaseMetadata.Create(
 begin
   inherited Create(ParentConnection);
   FConnection := Pointer(ParentConnection);
-  FUrl := Url;
-  FInfo := Info;
+  FUrl := TZURL.Create(Url);
+  FUrl.Properties.AddStrings(Info);
+  //FURL := Url;
+  //FInfo := Info;
   FCachedResultSets := TZHashMap.Create;
   FDatabaseInfo := CreateDatabaseInfo;
   FillWildcards;
 end;
 
-{**  Destroys this object and cleanups the memory.
+{**
+  Constructs this object and assignes the main properties.
+  @param Connection a database connection object.
+  @param Url a database connection url string.
 }
+constructor TZAbstractDatabaseMetadata.Create(ParentConnection: IZConnection;
+  const Url: string);
+begin
+  inherited Create(ParentConnection);
+  FConnection := Pointer(ParentConnection);
+  FUrl := TZURL.Create(Url);
+  FCachedResultSets := TZHashMap.Create;
+  FDatabaseInfo := CreateDatabaseInfo;
+  FillWildcards;
+end;
+
+function TZAbstractDatabaseMetadata.GetInfo: TStrings;
+begin
+  Result := FURL.Properties;
+end;
+
+function TZAbstractDatabaseMetadata.GetURLString: String;
+begin
+  Result := FURL.URL;
+end;
+
+{**  Destroys this object and cleanups the memory.}
 destructor TZAbstractDatabaseMetadata.Destroy;
 begin
+  FUrl.Free;
   FCachedResultSets.Clear;
   FCachedResultSets := nil;
   FDatabaseInfo := nil;
@@ -1976,7 +2010,8 @@ end;
 }
 function TZAbstractDatabaseMetadata.GetURL: string;
 begin
-  Result := FUrl;
+  //Result := FUrl;
+  Result := GetURLString;
 end;
 
 {**
@@ -1985,9 +2020,10 @@ end;
 }
 function TZAbstractDatabaseMetadata.GetUserName: string;
 begin
-  Result := FInfo.Values['UID'];
+  Result := FURL.UserName;
+  {Result := FInfo.Values['UID'];
   if Result = '' then
-    Result := FInfo.Values['username'];
+    Result := FInfo.Values['username'];}
 end;
 
 {**

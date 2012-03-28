@@ -61,7 +61,7 @@ uses
   Types, ZCompatibility, Classes, SysUtils, ZDbcUtils, ZDbcIntfs, ZDbcConnection,
   Contnrs, ZPlainFirebirdDriver,
   ZPlainFirebirdInterbaseConstants, ZSysUtils, ZDbcInterbase6Utils, ZDbcLogging,
-  ZDbcGenericResolver, ZTokenizer, ZGenericSqlAnalyser;
+  ZDbcGenericResolver, ZTokenizer, ZGenericSqlAnalyser, ZURL;
 
 type
 
@@ -110,10 +110,8 @@ type
   private
     procedure StartTransaction; virtual;
   public
-    constructor Create(Driver: IZDriver; const Url: string;
-      PlainDriver: IZInterbasePlainDriver;
-      const HostName: string; Port: Integer; const Database: string;
-      const User: string; const Password: string; Info: TStrings);
+    constructor Create(Driver: IZDriver; const ZUrl: TZURL;
+      PlainDriver: IZInterbasePlainDriver); overload;
     destructor Destroy; override;
 
     function GetDBHandle: PISC_DB_HANDLE;
@@ -206,8 +204,7 @@ begin
  try
    ResolveDatabaseUrl(Url, Info, HostName, Port, Database, UserName, Password, TempInfo);
    PlainDriver := GetPlainDriver(Url);
-   Result := TZInterbase6Connection.Create(Self, Url, PlainDriver, HostName,
-     Port, Database, UserName, Password, TempInfo);
+   Result := TZInterbase6Connection.Create(Self, TZURL.Create(Url), PlainDriver);
  finally
    TempInfo.Free;
  end;
@@ -406,25 +403,18 @@ end;
 
 {**
   Constructs this object and assignes the main properties.
-  @param Driver the parent ZDBC driver.
-  @param HostName a name of the host.
-  @param Port a port number (0 for default port).
-  @param Database a name pof the database.
-  @param User a user name.
-  @param Password a user password.
-  @param Info a string list with extra connection parameters.
+  @param Driver a ZDBC driver interface.
+  @param Url a connection URL.
+  @param MetaData a ZDBC MetaData-Object
 }
-constructor TZInterbase6Connection.Create(Driver: IZDriver; const Url: string;
-  PlainDriver: IZInterbasePlainDriver; const HostName: string; Port: Integer;
-  const Database: string; const User: string; const Password: string;
-  Info: TStrings);
+constructor TZInterbase6Connection.Create(Driver: IZDriver; const ZUrl: TZURL;
+  PlainDriver: IZInterbasePlainDriver);
 var
   RoleName: string;
   UserSetDialect: string;
   ConnectTimeout : integer;
 begin
-  inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
-    TZInterbase6DatabaseMetadata.Create(Self, Url, Info), PlainDriver);
+  inherited Create(Driver, ZUrl, TZInterbase6DatabaseMetadata.Create(Self, ZUrl.URL), PlainDriver);
 
   FHardCommit := StrToBoolEx(Info.Values['hard_commit']);
   FPlainDriver := PlainDriver;
@@ -463,6 +453,7 @@ begin
   ConnectTimeout := StrToIntDef(Info.Values['timeout'], -1);
   if ConnectTimeout >= 0 then
     self.Info.Values['isc_dpb_connect_timeout'] := IntToStr(ConnectTimeout);
+
 end;
 
 {**
