@@ -58,9 +58,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  ZCompatibility, Types,
-  Classes, Contnrs, SysUtils, ZDbcIntfs,
-  ZDbcConnection, ZPlainASADriver, ZSysUtils, ZTokenizer,
+  ZCompatibility, Types, Classes, Contnrs, SysUtils, ZDbcIntfs,
+  ZDbcConnection, ZPlainASADriver, ZSysUtils, ZTokenizer, ZURL,
   ZDbcGenericResolver, ZGenericSqlAnalyser;
 
 type
@@ -100,12 +99,8 @@ type
   private
     procedure StartTransaction; virtual;
   protected
-    procedure InternalCreate;
+    procedure InternalCreate; override;
   public
-    constructor Create(Driver: IZDriver; const Url: string;
-      PlainDriver: IZASAPlainDriver;
-      const HostName: string; Port: Integer; const Database: string;
-      const User: string; const Password: string; Info: TStrings);
     destructor Destroy; override;
 
     function GetDBHandle: PZASASQLCA;
@@ -170,7 +165,7 @@ uses
     connection to the URL
 }
 function TZASADriver.Connect(const Url: string; Info: TStrings): IZConnection;
-var
+{var
   TempInfo: TStrings;
   HostName, Database, UserName, Password: string;
   Port: Integer;
@@ -185,7 +180,9 @@ begin
      Database, UserName, Password, TempInfo);
  finally
    TempInfo.Free;
- end;
+ end;}
+begin
+  Result := TZASAConnection.Create(TZURL.Create(Url, Info));
 end;
 
 {**
@@ -333,27 +330,6 @@ begin
 
   FPlainDriver := TZASADriver(Self.Driver).GetPlainDriver(URL.URL);
   Self.PlainDriver := FPlainDriver;
-end;
-
-{**
-  Constructs this object and assignes the main properties.
-  @param Driver the parent ZDBC driver.
-  @param HostName a name of the host.
-  @param Port a port number (0 for default port).
-  @param Database a name pof the database.
-  @param User a user name.
-  @param Password a user password.
-  @param Info a string list with extra connection parameters.
-}
-constructor TZASAConnection.Create(Driver: IZDriver; const Url: string;
-  PlainDriver: IZASAPlainDriver; const HostName: string; Port: Integer;
-  const Database, User, Password: string; Info: TStrings);
-begin
-  inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
-    TZASADatabaseMetadata.Create(Self, Url, Info));
-
-  FPlainDriver := PlainDriver;
-  Self.PlainDriver := PlainDriver;
 end;
 
 {**

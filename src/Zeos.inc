@@ -164,12 +164,6 @@
      {$UNDEF WITH_FTWIDESTRING}
 {$ENDIF}
 
-{$IFNDEF FPC}
-  {$IFNDEF WIN32}
-          "Kylix isn't supported anymore"
-  {$ENDIF}
-{$ENDIF}
-
 // Debug/release compiler options
 {$D+}
 

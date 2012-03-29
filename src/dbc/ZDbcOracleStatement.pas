@@ -112,7 +112,7 @@ type
     property LastStatement: IZStatement read FLastStatement write SetLastStatement;
     property InVars: PZSQLVars read FInVars write FInVars;
 
-    procedure Prepare; virtual;
+    procedure Prepare; reintroduce;
 
   public
     Params:TParams;
@@ -154,8 +154,8 @@ type
     procedure FetchOutParam;
   protected
     function GetProcedureSql(SelectProc: boolean): string;
-    procedure Prepare;override;
-    procedure RegisterOutParameter(ParameterIndex: Integer;SQLType: Integer); override;
+    procedure Prepare; reintroduce;
+    procedure RegisterOutParameter(ParameterIndex: Integer;SQLType: Integer); reintroduce;
     procedure SetInParam(ParameterIndex: Integer;SQLType: TZSQLType; const Value: TZVariant);override;
 
 

@@ -58,7 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection,
+  Types, ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection, ZURL,
   ZPlainPostgreSqlDriver, ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser;
 
 type
@@ -110,13 +110,11 @@ type
     FServerSubVersion: Integer;
     FNoticeProcessor: TZPostgreSQLNoticeProcessor;
   protected
+    procedure InternalCreate; override;
     function BuildConnectStr: AnsiString;
     procedure StartTransactionSupport;
     procedure LoadServerVersion;
   public
-    constructor Create(Driver: IZDriver; const Url: string;
-      PlainDriver: IZPostgreSQLPlainDriver; const HostName: string; Port: Integer;
-      const Database: string; const User: string; const Password: string; Info: TStrings);
     destructor Destroy; override;
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
@@ -215,7 +213,7 @@ end;
     connection to the URL
 }
 function TZPostgreSQLDriver.Connect(const Url: string; Info: TStrings): IZConnection;
-var
+{var
   TempInfo: TStrings;
   HostName, Database, UserName, Password: string;
   Port: Integer;
@@ -230,7 +228,9 @@ begin
       Port, Database, UserName, Password, TempInfo);
   finally
     TempInfo.Free;
-  end;
+  end;}
+begin
+  Result := TZPostgreSQLConnection.Create(TZURL.Create(Url, Info));
 end;
 
 {**
@@ -314,23 +314,9 @@ end;
 
 { TZPostgreSQLConnection }
 
-{**
-  Constructs this object and assignes the main properties.
-  @param Driver the parent ZDBC driver.
-  @param PlainDriver a PostgreSQL plain driver.
-  @param HostName a name of the host.
-  @param Port a port number (0 for default port).
-  @param Database a name pof the database.
-  @param User a user name.
-  @param Password a user password.
-  @param Info a string list with extra connection parameters.
-}
-constructor TZPostgreSQLConnection.Create(Driver: IZDriver; const Url: string;
-  PlainDriver: IZPostgreSQLPlainDriver; const HostName: string; Port: Integer;
-  const Database, User, Password: string; Info: TStrings);
+procedure TZPostgreSQLConnection.InternalCreate;
 begin
-  inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
-    TZPostgreSQLDatabaseMetadata.Create(Self, Url, Info));
+  FMetaData := TZPostgreSQLDatabaseMetadata.Create(Self, Url.URL, Url.Properties);
 
   { Sets a default PostgreSQL port }
   if Self.Port = 0 then
@@ -342,8 +328,8 @@ begin
   else
     FBeginRequired := True;
 
-  FPlainDriver := PlainDriver;
-  Self.PlainDriver := PlainDriver;
+  FPlainDriver := TZPostgreSQLDriver(Driver).GetPlainDriver(Url.URL);
+  Self.PlainDriver := FPlainDriver;
   TransactIsolationLevel := tiNone;
 
   { Processes connection properties. }

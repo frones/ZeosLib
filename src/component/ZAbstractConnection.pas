@@ -619,8 +619,8 @@ end;
 }
 function TZAbstractConnection.ConstructURL(const UserName, Password: string): string;
 begin
-  Result := DriverManager.ConstructURL(FURL.Protocol, FURL.HostName, FURL.Database, FURL.UserName,
-    FURL.Password, FURL.Port, FURL.Properties);
+  Result := DriverManager.ConstructURL(FURL.Protocol, FURL.HostName, FURL.Database, UserName,
+    Password, FURL.Port, FURL.Properties);
 end;
 
 {**
