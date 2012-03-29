@@ -58,9 +58,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection,
-  ZPlainMySqlDriver, ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser,
-  ZPlainMySqlConstants, ZURL;
+  Types, ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection, ZPlainMySqlDriver,
+  ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser, ZPlainMySqlConstants;
 
 type
 
@@ -100,9 +99,10 @@ type
     FPlainDriver: IZMySQLPlainDriver;
     FHandle: PZMySQLConnect;
     FClientCodePage: string;
-  protected
-    procedure InternalCreate; override;
   public
+    constructor Create(Driver: IZDriver; const Url: string;
+      PlainDriver: IZMySQLPlainDriver; const HostName: string; Port: Integer;
+      const Database: string; const User: string; const Password: string; Info: TStrings);
     destructor Destroy; override;
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
@@ -182,7 +182,7 @@ end;
     connection to the URL
 }
 function TZMySQLDriver.Connect(const Url: string; Info: TStrings): IZConnection;
-{var
+var
   TempInfo: TStrings;
   HostName, Database, UserName, Password: string;
   Port: Integer;
@@ -201,9 +201,7 @@ begin
       Database, UserName, Password, TempInfo);
   finally
     TempInfo.Free;
-  end;}
-begin
-  Result := TZMySQLConnection.Create(TZURL.Create(Url, Info));
+  end;
 end;
 
 {**
@@ -302,13 +300,27 @@ end;
 
 { TZMySQLConnection }
 
-procedure TZMySQLConnection.InternalCreate;
+{**
+  Constructs this object and assignes the main properties.
+  @param Driver the parent ZDBC driver.
+  @param PlainDriver a MySQL plain driver.
+  @param HostName a name of the host.
+  @param Port a port number (0 for default port).
+  @param Database a name pof the database.
+  @param User a user name.
+  @param Password a user password.
+  @param Info a string list with extra connection parameters.
+}
+constructor TZMySQLConnection.Create(Driver: IZDriver; const Url: string;
+  PlainDriver: IZMySQLPlainDriver; const HostName: string; Port: Integer;
+  const Database, User, Password: string; Info: TStrings);
 begin
-  FMetaData := TZMySQLDatabaseMetadata.Create(Self, Url.URL, Info);
+  inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
+    TZMySQLDatabaseMetadata.Create(Self, Url, Info));
 
   { Sets a default properties }
-  FPlainDriver := TZMySQLDriver(Driver).GetPlainDriver(Url.Url);
-  Self.PlainDriver := FPlainDriver;
+  FPlainDriver := PlainDriver;
+  Self.PlainDriver := PlainDriver;
   if Self.Port = 0 then
      Self.Port := MYSQL_PORT;
   AutoCommit := True;

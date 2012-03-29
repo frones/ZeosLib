@@ -59,7 +59,7 @@ interface
 
 uses
   Types, ZCompatibility, Classes, SysUtils, Contnrs, ZDbcIntfs, ZDbcConnection,
-  ZPlainOracleDriver, ZDbcLogging, ZTokenizer, ZDbcGenericResolver, ZURL,
+  ZPlainOracleDriver, ZDbcLogging, ZTokenizer, ZDbcGenericResolver,
   ZGenericSqlAnalyser;
 
 type
@@ -109,10 +109,12 @@ type
     FClientCodePage: string;
 
   protected
-    procedure InternalCreate; override;
     procedure StartTransactionSupport;
 
   public
+    constructor Create(Driver: IZDriver; const Url: string;
+      PlainDriver: IZOraclePlainDriver; const HostName: string; Port: Integer;
+      const Database: string; const User: string; const Password: string; Info: TStrings);
     destructor Destroy; override;
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
@@ -201,7 +203,7 @@ end;
     connection to the URL
 }
 function TZOracleDriver.Connect(const Url: string; Info: TStrings): IZConnection;
-{var
+var
   TempInfo: TStrings;
   HostName, Database, UserName, Password: string;
   Port: Integer;
@@ -216,9 +218,7 @@ begin
       Database, UserName, Password, TempInfo);
   finally
     TempInfo.Free;
-  end;}
-begin
-  Result := TZOracleConnection.Create(TZURL.Create(Url, Info));
+  end;
 end;
 
 {**
@@ -291,13 +291,27 @@ end;
 
 { TZOracleConnection }
 
-procedure TZOracleConnection.InternalCreate;
+{**
+  Constructs this object and assignes the main properties.
+  @param Driver the parent ZDBC driver.
+  @param PlainDriver a Oracle plain driver.
+  @param HostName a name of the host.
+  @param Port a port number (0 for default port).
+  @param Database a name pof the database.
+  @param User a user name.
+  @param Password a user password.
+  @param Info a string list with extra connection parameters.
+}
+constructor TZOracleConnection.Create(Driver: IZDriver; const Url: string;
+  PlainDriver: IZOraclePlainDriver; const HostName: string; Port: Integer;
+  const Database, User, Password: string; Info: TStrings);
 begin
-  FMetaData := TZOracleDatabaseMetadata.Create(Self, Url.URL, Url.Properties);
+  inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
+    TZOracleDatabaseMetadata.Create(Self, Url, Info));
 
   { Sets a default properties }
-  FPlainDriver := TZOracleDriver(Driver).GetPlainDriver(Url.Url);
-  PlainDriver := FPlainDriver;
+  FPlainDriver := PlainDriver;
+  Self.PlainDriver := PlainDriver;
   FHandle := nil;
   if Self.Port = 0 then
       Self.Port := 1521;
@@ -341,7 +355,6 @@ var
   Status: Integer;
   LogMessage: string;
   OCI_CLIENT_CHARSET_ID: ub2;
-  PrefetchCount: ub4;
 
   procedure CleanupOnFail;
   begin
@@ -404,12 +417,6 @@ begin
   end;
   FPlainDriver.AttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FSessionHandle, 0,
     OCI_ATTR_SESSION, FErrorHandle);
-  //Patch to speed up big table selects: http://zeos.firmos.at/viewtopic.php?t=3441
-  PrefetchCount := 100;
-  FPlainDriver.AttrSet(FHandle, OCI_HTYPE_STMT, @PrefetchCount, SizeOf(ub4),
-    OCI_ATTR_PREFETCH_ROWS, FErrorHandle);
-  CheckOracleError(FPlainDriver, FErrorHandle, Status, lcConnect, LogMessage);
-  //end prefetch count
 
   DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
 

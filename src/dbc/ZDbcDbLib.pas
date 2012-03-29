@@ -64,7 +64,7 @@ uses
   {$ENDIF}
 {$ENDIF}
   Types, Classes, ZDbcConnection, ZDbcIntfs, ZCompatibility, ZDbcLogging,
-  ZPlainDbLibDriver, ZTokenizer, ZGenericSqlAnalyser, ZURL;
+  ZPlainDbLibDriver, ZTokenizer, ZGenericSqlAnalyser;
 
 type
   {** Implements DBLib Database Driver. }
@@ -110,6 +110,10 @@ type
     procedure CheckDBLibError(LogCategory: TZLoggingCategory; const LogMessage: string); virtual;
     procedure StartTransaction; virtual;
   public
+    constructor Create(Driver: IZDriver; const Url: string;
+      PlainDriver: IZDBLibPlainDriver; const HostName: string; Port: Integer;
+      const Database: string; const User: string; const Password: string; Info: TStrings);
+
     destructor Destroy; override;
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
@@ -174,7 +178,7 @@ end;
   Attempts to make a database connection to the given URL.
 }
 function TZDBLibDriver.Connect(const Url: string; Info: TStrings): IZConnection;
-{var
+var
   TempInfo: TStrings;
   HostName, Database, UserName, Password: string;
   Port: Integer;
@@ -195,9 +199,7 @@ begin
       Database, UserName, Password, TempInfo);
   finally
     TempInfo.Free;
-  end;}
-begin
-  Result := TZDBLibConnection.Create(TZURL.Create(Url, Info));
+  end;
 end;
 
 {**
@@ -257,6 +259,37 @@ begin
     FMetadata := nil;
 
   Self.PlainDriver := FPlainDriver;
+
+  FHandle := nil;
+end;
+
+{**
+  Constructs this object and assignes the main properties.
+  @param Driver the parent ZDBC driver interface.
+  @param HostName a name of the host.
+  @param Port a port number (0 for default port).
+  @param Database a name pof the database.
+  @param User a user name.
+  @param Password a user password.
+  @param Info a string list with extra connection parameters.
+}
+constructor TZDBLibConnection.Create(Driver: IZDriver; const Url: string;
+  PlainDriver: IZDBLibPlainDriver; const HostName: string; Port: Integer;
+  const Database: string; const User: string; const Password: string; Info: TStrings);
+var
+  Metadata: TContainedObject;
+begin
+  FPlainDriver := PlainDriver;
+  Self.PlainDriver := PlainDriver;
+  if FPlainDriver.GetProtocol = 'mssql' then
+    Metadata := TZMsSqlDatabaseMetadata.Create(Self, Url, Info)
+  else if FPlainDriver.GetProtocol = 'sybase' then
+    Metadata := TZSybaseDatabaseMetadata.Create(Self, Url, Info)
+  else
+    Metadata := nil;
+
+  inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
+    Metadata);
 
   FHandle := nil;
 end;

@@ -59,7 +59,7 @@ interface
 
 uses
   Types, Classes, ZDbcConnection, ZDbcIntfs, ZCompatibility, ZPlainDriver,
-  ZPlainAdoDriver, ZPlainAdo, ZURL;
+  ZPlainAdoDriver, ZPlainAdo;
 
 type
   {** Implements Ado Database Driver. }
@@ -96,6 +96,10 @@ type
     procedure StartTransaction; virtual;
     procedure InternalCreate; override;
   public
+    constructor Create(Driver: IZDriver; const Url: string;
+      PlainDriver: IZPlainDriver; const HostName: string; Port: Integer;
+      const Database: string; const User: string; const Password: string; Info: TStrings);
+
     destructor Destroy; override;
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
@@ -176,9 +180,8 @@ begin
     if Protocol = FAdoPlainDriver.GetProtocol then
       PlainDriver := FAdoPlainDriver;
     PlainDriver.Initialize;
-    //Result := TZAdoConnection.Create(Self, Url, PlainDriver, HostName,
-      //Port, Database, UserName, Password, TempInfo);
-    Result := TZAdoConnection.Create(TZURL.Create(Url, Info));
+    Result := TZAdoConnection.Create(Self, Url, PlainDriver, HostName,
+      Port, Database, UserName, Password, TempInfo);
   finally
     TempInfo.Free;
   end;
@@ -210,6 +213,27 @@ begin
   FPLainDriver := TZAdoDriver(Driver).FAdoPlainDriver;
   Self.PlainDriver := FPlainDriver;
   Self.FMetadata := TZAdoDatabaseMetadata.Create(Self, Self.URL.URL, Info);
+end;
+
+{**
+  Constructs this object and assignes the main properties.
+  @param Driver the parent ZDBC driver.
+  @param HostName a name of the host.
+  @param Port a port number (0 for default port).
+  @param Database a name pof the database.
+  @param User a user name.
+  @param Password a user password.
+  @param Info a string list with extra connection parameters.
+}
+constructor TZAdoConnection.Create(Driver: IZDriver; const Url: string;
+  PlainDriver: IZPlainDriver; const HostName: string; Port: Integer;
+  const Database: string; const User: string; const Password: string; Info: TStrings);
+begin
+  FAdoConnection := CoConnection.Create;
+  FPLainDriver := PlainDriver;
+  Self.PlainDriver := PlainDriver;
+  inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
+    TZAdoDatabaseMetadata.Create(Self, Url, Info));
 end;
 
 {**

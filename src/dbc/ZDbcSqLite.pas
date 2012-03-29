@@ -58,7 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection, ZURL,
+  Types, ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection,
   ZPlainSqLiteDriver, ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser;
 
 type
@@ -97,9 +97,12 @@ type
     FHandle: Psqlite;
 
   protected
-    procedure InternalCreate; override;
     procedure StartTransactionSupport;
+
   public
+    constructor Create(Driver: IZDriver; const Url: string;
+      PlainDriver: IZSQLitePlainDriver; const HostName: string; Port: Integer;
+      const Database: string; const User: string; const Password: string; Info: TStrings);
     destructor Destroy; override;
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
@@ -169,7 +172,7 @@ end;
     connection to the URL
 }
 function TZSQLiteDriver.Connect(const Url: string; Info: TStrings): IZConnection;
-{var
+var
   TempInfo: TStrings;
   HostName, Database, UserName, Password: string;
   Port: Integer;
@@ -184,9 +187,7 @@ begin
       Database, UserName, Password, TempInfo);
   finally
     TempInfo.Free;
-  end;}
-begin
-  Result := TZSQLiteConnection.Create(TZURL.Create(Url, Info));
+  end;
 end;
 
 {**
@@ -269,13 +270,27 @@ end;
 
 { TZSQLiteConnection }
 
-procedure TZSQLiteConnection.InternalCreate;
+{**
+  Constructs this object and assignes the main properties.
+  @param Driver the parent ZDBC driver.
+  @param PlainDriver a SQLite plain driver.
+  @param HostName a name of the host.
+  @param Port a port number (0 for default port).
+  @param Database a name pof the database.
+  @param User a user name.
+  @param Password a user password.
+  @param Info a string list with extra connection parameters.
+}
+constructor TZSQLiteConnection.Create(Driver: IZDriver; const Url: string;
+  PlainDriver: IZSQLitePlainDriver; const HostName: string; Port: Integer;
+  const Database, User, Password: string; Info: TStrings);
 begin
-  FMetaData := TZSQLiteDatabaseMetadata.Create(Self, Url.URL, Info);
+  inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
+    TZSQLiteDatabaseMetadata.Create(Self, Url, Info));
 
   { Sets a default properties }
-  FPlainDriver := TZSQLiteDriver(Driver).GetPlainDriver(Url.URL);
-  Self.PlainDriver := FPlainDriver;
+  FPlainDriver := PlainDriver;
+  Self.PlainDriver := PlainDriver;
   AutoCommit := True;
   TransactIsolationLevel := tiNone;
 
