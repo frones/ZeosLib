@@ -100,7 +100,6 @@ type
     procedure ReStartTransactionSupport;
     procedure InternalSetTransactionIsolation(Level: TZTransactIsolationLevel);
   protected
-    FPlainDriver: IZDBLibPlainDriver;
     FHandle: PDBPROCESS;
     procedure InternalCreate; override;
     procedure InternalExecuteStatement(const SQL: string); virtual;
@@ -247,18 +246,16 @@ procedure TZDBLibConnection.InternalCreate;
 begin
   if Url.Protocol = 'mssql' then
   begin
-    FPlainDriver := TZDBLibDriver(Self.Driver).FMSSqlPlainDriver;
+    PlainDriver := TZDBLibDriver(Self.Driver).FMSSqlPlainDriver;
     FMetadata := TZMsSqlDatabaseMetadata.Create(Self, Url.URL, Info);
   end
   else if Url.Protocol = 'sybase' then
   begin
-    FPlainDriver := TZDBLibDriver(Self.Driver).FSybasePlainDriver;
+    PlainDriver := TZDBLibDriver(Self.Driver).FSybasePlainDriver;
     FMetadata := TZSybaseDatabaseMetadata.Create(Self, Url.Url, Info)
   end
   else
     FMetadata := nil;
-
-  Self.PlainDriver := FPlainDriver;
 
   FHandle := nil;
 end;
@@ -279,11 +276,10 @@ constructor TZDBLibConnection.Create(Driver: IZDriver; const Url: string;
 var
   Metadata: TContainedObject;
 begin
-  FPlainDriver := PlainDriver;
   Self.PlainDriver := PlainDriver;
-  if FPlainDriver.GetProtocol = 'mssql' then
+  if PlainDriver.GetProtocol = 'mssql' then
     Metadata := TZMsSqlDatabaseMetadata.Create(Self, Url, Info)
-  else if FPlainDriver.GetProtocol = 'sybase' then
+  else if PlainDriver.GetProtocol = 'sybase' then
     Metadata := TZSybaseDatabaseMetadata.Create(Self, Url, Info)
   else
     Metadata := nil;
@@ -311,26 +307,26 @@ var
   LSQL: string;
 begin
   FHandle := GetConnectionHandle;
-  if FPlainDriver.dbCancel(FHandle) <> DBSUCCEED then
+  if GetPlainDriver.dbCancel(FHandle) <> DBSUCCEED then
     CheckDBLibError(lcExecute, SQL);
-  if FPlainDriver.GetProtocol = 'mssql' then
+  if GetPlainDriver.GetProtocol = 'mssql' then
     LSQL := StringReplace(Sql, '\'#13, '\\'#13, [rfReplaceAll])
   else
     LSQL := SQL;
   {$IFDEF DELPHI12_UP}
-    if FPlainDriver.dbcmd(FHandle, PAnsiChar(UTF8String(LSql))) <> DBSUCCEED then
+    if GetPlainDriver.dbcmd(FHandle, PAnsiChar(UTF8String(LSql))) <> DBSUCCEED then
   {$ELSE}
-  if FPlainDriver.dbcmd(FHandle, PAnsiChar(LSql)) <> DBSUCCEED then
+  if GetPlainDriver.dbcmd(FHandle, PAnsiChar(LSql)) <> DBSUCCEED then
   {$ENDIF}
     CheckDBLibError(lcExecute, LSQL);
-  if FPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED then
+  if GetPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED then
     CheckDBLibError(lcExecute, LSQL);
   repeat
-    FPlainDriver.dbresults(FHandle);
-    FPlainDriver.dbcanquery(FHandle);
-  until FPlainDriver.dbmorecmds(FHandle) = DBFAIL;
+    GetPlainDriver.dbresults(FHandle);
+    GetPlainDriver.dbcanquery(FHandle);
+  until GetPlainDriver.dbmorecmds(FHandle) = DBFAIL;
   CheckDBLibError(lcExecute, LSQL);
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LSQL);
+  DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, LSQL);
 end;
 
 {**
@@ -343,100 +339,99 @@ var
   S: string;
 begin
   LogMessage := Format('CONNECT TO "%s"', [HostName]);
-  LoginRec := FPLainDriver.dbLogin;
+  LoginRec := GetPLainDriver.dbLogin;
   try
 //Common parameters
     S := Info.Values['workstation'];
     if S <> '' then
          {$IFDEF DELPHI12_UP}
-         FPlainDriver.dbSetLHost(LoginRec, PAnsiChar(UTF8String(S)));
+         GetPlainDriver.dbSetLHost(LoginRec, PAnsiChar(UTF8String(S)));
          {$ELSE}
-         FPlainDriver.dbSetLHost(LoginRec, PAnsiChar(S));
+         GetPlainDriver.dbSetLHost(LoginRec, PAnsiChar(S));
          {$ENDIF}
     S := Info.Values['appname'];
     if S <> '' then
          {$IFDEF DELPHI12_UP}
-         FPlainDriver.dbSetLApp(LoginRec, PAnsiChar(UTF8String(S)));
+         GetPlainDriver.dbSetLApp(LoginRec, PAnsiChar(UTF8String(S)));
          {$ELSE}
-         FPlainDriver.dbSetLApp(LoginRec, PAnsiChar(S));
+         GetPlainDriver.dbSetLApp(LoginRec, PAnsiChar(S));
           {$ENDIF}
     S := Info.Values['language'];
     if S <> '' then
          {$IFDEF DELPHI12_UP}
-         FPlainDriver.dbSetLNatLang(LoginRec, PAnsiChar(UTF8String(S)));
+         GetPlainDriver.dbSetLNatLang(LoginRec, PAnsiChar(UTF8String(S)));
          {$ELSE}
-         FPlainDriver.dbSetLNatLang(LoginRec, PAnsiChar(S));
+         GetPlainDriver.dbSetLNatLang(LoginRec, PAnsiChar(S));
          {$ENDIF}
     S := Info.Values['timeout'];
     if S <> '' then
-      FPlainDriver.dbSetLoginTime(StrToIntDef(S, 60));
+      GetPlainDriver.dbSetLoginTime(StrToIntDef(S, 60));
 
 //mssql specific parameters
-    if FPlainDriver.GetProtocol = 'mssql' then
+    if PlainDriver.GetProtocol = 'mssql' then
     begin
       if StrToBoolEx(Info.Values['NTAuth']) or StrToBoolEx(Info.Values['trusted'])
         or StrToBoolEx(Info.Values['secure']) then
       begin
-        FPLainDriver.dbsetlsecure(LoginRec);
+        GetPlainDriver.dbsetlsecure(LoginRec);
         LogMessage := LogMessage + ' USING WINDOWS AUTHENTICATION';
       end
       else
       begin
         {$IFDEF DELPHI12_UP}
-        FPLainDriver.dbsetluser(LoginRec, PAnsiChar(UTF8String(User)));
-        FPLainDriver.dbsetlpwd(LoginRec, PAnsiChar(UTF8String(Password)));
+        GetPlainDriver.dbsetluser(LoginRec, PAnsiChar(UTF8String(User)));
+        GetPlainDriver.dbsetlpwd(LoginRec, PAnsiChar(UTF8String(Password)));
         {$ELSE}
-        FPLainDriver.dbsetluser(LoginRec, PAnsiChar(User));
-        FPLainDriver.dbsetlpwd(LoginRec, PAnsiChar(Password));
+        GetPlainDriver.dbsetluser(LoginRec, PAnsiChar(User));
+        GetPlainDriver.dbsetlpwd(LoginRec, PAnsiChar(Password));
         {$ENDIF}
         LogMessage := LogMessage + Format(' AS USER "%s"', [User]);
       end;
     end;
 
 //sybase specific parameters
-    if FPlainDriver.GetProtocol = 'sybase' then
+    if PlainDriver.GetProtocol = 'sybase' then
     begin
       S := Info.Values['codepage'];
       if S <> '' then
             {$IFDEF DELPHI12_UP}
-            FPlainDriver.dbSetLCharSet(LoginRec, PAnsiChar(UTF8String(S)));
+            GetPlainDriver.dbSetLCharSet(LoginRec, PAnsiChar(UTF8String(S)));
             {$ELSE}
-            FPlainDriver.dbSetLCharSet(LoginRec, PAnsiChar(S));
+            GetPlainDriver.dbSetLCharSet(LoginRec, PAnsiChar(S));
             {$ENDIF}
       {$IFDEF DELPHI12_UP}
-      FPLainDriver.dbsetluser(LoginRec, PAnsiChar(UTF8String(User)));
-      FPLainDriver.dbsetlpwd(LoginRec, PAnsiChar(UTF8String(Password)));
+      GetPlainDriver.dbsetluser(LoginRec, PAnsiChar(UTF8String(User)));
+      GetPlainDriver.dbsetlpwd(LoginRec, PAnsiChar(UTF8String(Password)));
       {$ELSE}
-      FPLainDriver.dbsetluser(LoginRec, PAnsiChar(User));
-      FPLainDriver.dbsetlpwd(LoginRec, PAnsiChar(Password));
+      GetPLainDriver.dbsetluser(LoginRec, PAnsiChar(User));
+      GetPLainDriver.dbsetlpwd(LoginRec, PAnsiChar(Password));
       {$ENDIF}
       LogMessage := LogMessage + Format(' AS USER "%s"', [User]);
     end;
 
     CheckDBLibError(lcConnect, LogMessage);
     {$IFDEF DELPHI12_UP}
-    FHandle := FPLainDriver.dbOpen(LoginRec, PAnsiChar(UTF8String(HostName)));
+    FHandle := GetPlainDriver.dbOpen(LoginRec, PAnsiChar(UTF8String(HostName)));
     {$ELSE}
-    FHandle := FPLainDriver.dbOpen(LoginRec, PAnsiChar(HostName));
+    FHandle := GetPlainDriver.dbOpen(LoginRec, PAnsiChar(HostName));
     {$ENDIF}
     CheckDBLibError(lcConnect, LogMessage);
-    DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
+    DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol, LogMessage);
   finally
-    FPLainDriver.dbLoginFree(LoginRec);
+    GetPLainDriver.dbLoginFree(LoginRec);
   end;
 end;
 
 function TZDBLibConnection.GetPlainDriver: IZDBLibPlainDriver;
 begin
-  Result := FPlainDriver;
+  Result := PlainDriver as IZDBLibPlainDriver;
 end;
 
 function TZDBLibConnection.GetConnectionHandle: PDBPROCESS;
 begin
-  if FPlainDriver.GetProtocol = 'mssql' then
-    if FPlainDriver.dbDead(FHandle) then
+  if PlainDriver.GetProtocol = 'mssql' then
+    if GetPlainDriver.dbDead(FHandle) then
     begin
-  //    FPlainDriver.dbclose(FHandle);//Docs sais it is needed in case of dead connection but it generates a new error
       Closed := True;
       Open;
     end;
@@ -446,11 +441,11 @@ end;
 procedure TZDBLibConnection.CheckDBLibError(LogCategory: TZLoggingCategory; const LogMessage: string);
 begin
   try
-    FPlainDriver.CheckError;
+    GetPlainDriver.CheckError;
   except
     on E: Exception do
     begin
-      DriverManager.LogError(LogCategory, FPlainDriver.GetProtocol, LogMessage, 0, E.Message);
+      DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage, 0, E.Message);
       raise;
     end;
   end;
@@ -482,17 +477,17 @@ begin
 
   LogMessage := Format('USE %s', [Database]);
   {$IFDEF DELPHI12_UP}
-  if FPlainDriver.dbUse(FHandle, PAnsiChar(UTF8String(Database))) <> DBSUCCEED then
+  if GetPlainDriver.dbUse(FHandle, PAnsiChar(UTF8String(Database))) <> DBSUCCEED then
   {$ELSE}
-  if FPlainDriver.dbUse(FHandle, PAnsiChar(Database)) <> DBSUCCEED then
+  if GetPlainDriver.dbUse(FHandle, PAnsiChar(Database)) <> DBSUCCEED then
   {$ENDIF}
     CheckDBLibError(lcConnect, LogMessage);
-  DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
+  DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol, LogMessage);
 
   LogMessage := 'set textlimit=2147483647';
-  if FPlainDriver.dbsetopt(FHandle, DBTEXTLIMIT, '2147483647') <> DBSUCCEED then
+  if GetPlainDriver.dbsetopt(FHandle, DBTEXTLIMIT, '2147483647') <> DBSUCCEED then
     CheckDBLibError(lcConnect, LogMessage);
-  DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
+  DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol, LogMessage);
 
   InternalExecuteStatement('set textsize 2147483647 set quoted_identifier on');
 
@@ -644,8 +639,8 @@ var
   S: string;
 begin
   Index := -1;
-  if FPlainDriver.GetProtocol = 'mssql' then Index := 0;
-  if FPlainDriver.GetProtocol = 'sybase' then Index := 1;
+  if PlainDriver.GetProtocol = 'mssql' then Index := 0;
+  if PlainDriver.GetProtocol = 'sybase' then Index := 1;
 
   S := 'SET TRANSACTION ISOLATION LEVEL ' + IL[GetTransactionIsolation, Index];
   InternalExecuteStatement(S);
@@ -734,13 +729,13 @@ begin
   if Closed then
     Exit;
 
-  if not FPlainDriver.dbDead(FHandle) then
+  if not GetPlainDriver.dbDead(FHandle) then
     InternalExecuteStatement('if @@trancount > 0 rollback');
 
   LogMessage := Format('CLOSE CONNECTION TO "%s" DATABASE "%s"', [HostName, Database]);
-  if FPlainDriver.dbclose(FHandle) <> DBSUCCEED then
+  if GetPlainDriver.dbclose(FHandle) <> DBSUCCEED then
     CheckDBLibError(lcDisConnect, LogMessage);
-  DriverManager.LogMessage(lcDisconnect, FPlainDriver.GetProtocol, LogMessage);
+  DriverManager.LogMessage(lcDisconnect, PlainDriver.GetProtocol, LogMessage);
 
   FHandle := nil;
   inherited;
@@ -776,12 +771,12 @@ begin
   begin
     LogMessage := Format('SET CATALOG %s', [Catalog]);
     {$IFDEF DELPHI12_UP}
-    if FPLainDriver.dbUse(FHandle, PAnsiChar(UTF8String(Catalog))) <> DBSUCCEED then
+    if GetPLainDriver.dbUse(FHandle, PAnsiChar(UTF8String(Catalog))) <> DBSUCCEED then
     {$ELSE}
-    if FPLainDriver.dbUse(FHandle, PAnsiChar(Catalog)) <> DBSUCCEED then
+    if GetPLainDriver.dbUse(FHandle, PAnsiChar(Catalog)) <> DBSUCCEED then
     {$ENDIF}
       CheckDBLibError(lcOther, LogMessage);
-    DriverManager.LogMessage(lcOther, FPLainDriver.GetProtocol, LogMessage);
+    DriverManager.LogMessage(lcOther, PLainDriver.GetProtocol, LogMessage);
   end;
 end;
 
@@ -791,7 +786,7 @@ end;
 }
 function TZDBLibConnection.GetCatalog: string;
 begin
-  Result := FPlainDriver.dbName(FHandle);
+  Result := GetPlainDriver.dbName(FHandle);
   CheckDBLibError(lcOther, 'GETCATALOG');
 end;
 

@@ -93,7 +93,6 @@ type
   TZSQLiteConnection = class(TZAbstractConnection, IZSQLiteConnection)
   private
     FCatalog: string;
-    FPlainDriver: IZSQLitePlainDriver;
     FHandle: Psqlite;
 
   protected
@@ -289,7 +288,6 @@ begin
     TZSQLiteDatabaseMetadata.Create(Self, Url, Info));
 
   { Sets a default properties }
-  FPlainDriver := PlainDriver;
   Self.PlainDriver := PlainDriver;
   AutoCommit := True;
   TransactIsolationLevel := tiNone;
@@ -315,9 +313,9 @@ var
   ErrorCode: Integer;
 begin
   {$IFDEF DELPHI12_UP}
-  ErrorCode := FPlainDriver.Key(FHandle, PAnsiChar(UTF8String(Key)), StrLen(PAnsiChar(UTF8String(Key))));
+  ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(UTF8String(Key)), StrLen(PAnsiChar(UTF8String(Key))));
   {$ELSE}
-  ErrorCode := FPlainDriver.Key(FHandle, PAnsiChar(Key), StrLen(PAnsiChar(Key)));
+  ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(Key), StrLen(PAnsiChar(Key)));
   {$ENDIF}
   Result := ErrorCode;
 end;
@@ -333,9 +331,9 @@ var
   ErrorCode: Integer;
 begin
   {$IFDEF DELPHI12_UP}
-  ErrorCode := FPlainDriver.ReKey(FHandle, PAnsiChar(UTF8String(Key)), StrLen(PAnsiChar(UTF8String(Key))));
+  ErrorCode := GetPlainDriver.ReKey(FHandle, PAnsiChar(UTF8String(Key)), StrLen(PAnsiChar(UTF8String(Key))));
   {$ELSE}
-  ErrorCode := FPlainDriver.ReKey(FHandle, PAnsiChar(Key), StrLen(PAnsiChar(Key)));
+  ErrorCode := GetPlainDriver.ReKey(FHandle, PAnsiChar(Key), StrLen(PAnsiChar(Key)));
   {$ENDIF}
   Result := ErrorCode;
 end;
@@ -358,58 +356,53 @@ begin
   LogMessage := Format('CONNECT TO "%s" AS USER "%s"', [Database, User]);
 
 {$IFDEF DELPHI12_UP}
-  FHandle := FPlainDriver.Open(PAnsiChar(AnsiString(UTF8Encode(Database))), 0, ErrorMessage);
+  FHandle := GetPlainDriver.Open(PAnsiChar(AnsiString(UTF8Encode(Database))), 0, ErrorMessage);
 {$ELSE}
-  FHandle := FPlainDriver.Open(PAnsiChar(Database), 0, ErrorMessage);
+  FHandle := GetPlainDriver.Open(PAnsiChar(Database), 0, ErrorMessage);
 {$ENDIF}
 
   if FHandle = nil then
   begin
-    CheckSQLiteError(FPlainDriver, SQLITE_ERROR, ErrorMessage,
+    CheckSQLiteError(GetPlainDriver, SQLITE_ERROR, ErrorMessage,
       lcConnect, LogMessage);
   end;
-  DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
+  DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol, LogMessage);
 
   { Turn on encryption if requested }
   if StrToBoolEx(Info.Values['encrypted']) then
   begin
     {$IFDEF DELPHI12_UP}
-    ErrorCode := FPlainDriver.Key(FHandle, PAnsiChar(UTF8String(Password)), StrLen(PAnsiChar(UTF8String(Password))));
+    ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(UTF8String(Password)), StrLen(PAnsiChar(UTF8String(Password))));
     {$ELSE}
-    ErrorCode := FPlainDriver.Key(FHandle, PAnsiChar(Password), StrLen(PAnsiChar(Password)));
+    ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(Password), StrLen(PAnsiChar(Password)));
     {$ENDIF}
-    CheckSQLiteError(FPlainDriver, ErrorCode, nil, lcConnect, 'SQLite.Key');
+    CheckSQLiteError(GetPlainDriver, ErrorCode, nil, lcConnect, 'SQLite.Key');
   end;
 
   { Set busy timeout if requested } 
   Timeout_ms := StrToIntDef(Info.Values['busytimeout'], -1); 
   if Timeout_ms >= 0 then 
   begin 
-    FPlainDriver.BusyTimeout(FHandle, Timeout_ms); 
+    GetPlainDriver.BusyTimeout(FHandle, Timeout_ms);
   end; 
 
   try
     if ( Info.Values['codepage'] <> '' ) then
     begin
         SQL := 'PRAGMA encoding = '''+Info.Values['codepage']+'''';
-        ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(SQL),
+        ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL),
           nil, nil, ErrorMessage);
-        CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
+        CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
     end;
 
     SQL := 'PRAGMA show_datatypes = ON';
-    ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(SQL),
+    ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL),
       nil, nil, ErrorMessage);
-    CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
-{
-    SQL := 'PRAGMA empty_result_callbacks = ON';
-    ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(SQL),
-      nil, nil, ErrorMessage);
-    CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
-}
+    CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
+
     StartTransactionSupport;
   except
-    FPlainDriver.Close(FHandle);
+    GetPlainDriver.Close(FHandle);
     FHandle := nil;
     raise;
   end;
@@ -436,7 +429,7 @@ function TZSQLiteConnection.CreateRegularStatement(Info: TStrings):
 begin
   if IsClosed then
     Open;
-  Result := TZSQLiteStatement.Create(FPlainDriver, Self, Info, FHandle);
+  Result := TZSQLiteStatement.Create(GetPlainDriver, Self, Info, FHandle);
 end;
 
 {**
@@ -472,7 +465,7 @@ function TZSQLiteConnection.CreatePreparedStatement(const SQL: string;
 begin
   if IsClosed then
     Open;
-  Result := TZSQLitePreparedStatement.Create(FPlainDriver, Self, SQL,
+  Result := TZSQLitePreparedStatement.Create(GetPlainDriver, Self, SQL,
     Info, FHandle);
 end;
 
@@ -489,10 +482,10 @@ begin
   begin
     ErrorMessage := '';
     SQL := 'BEGIN TRANSACTION';
-    ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
+    ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
       ErrorMessage);
-    CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+    CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
+    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
   end;
 end;
 
@@ -513,10 +506,10 @@ begin
   begin
     ErrorMessage := '';
     SQL := 'COMMIT TRANSACTION';
-    ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
+    ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
       ErrorMessage);
-    CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+    CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
+    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
 
     StartTransactionSupport;
   end;
@@ -539,10 +532,10 @@ begin
   begin
     ErrorMessage := '';
     SQL := 'ROLLBACK TRANSACTION';
-    ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
+    ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
       ErrorMessage);
-    CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+    CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
+    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
 
     StartTransactionSupport;
   end;
@@ -563,11 +556,11 @@ var
 begin
   if not Closed then
   begin
-    FPlainDriver.Close(FHandle);
+    GetPlainDriver.Close(FHandle);
     FHandle := nil;
     LogMessage := Format('DISCONNECT FROM "%s"', [Database]);
     if Assigned(DriverManager) then 
-      DriverManager.LogMessage(lcDisconnect, FPlainDriver.GetProtocol, LogMessage);
+      DriverManager.LogMessage(lcDisconnect, PlainDriver.GetProtocol, LogMessage);
   end;
   inherited Close;
 end;
@@ -605,10 +598,10 @@ begin
   begin
     ErrorMessage := '';
     SQL := 'ROLLBACK TRANSACTION';
-    ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
+    ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
       ErrorMessage);
-    CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+    CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
+    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
   end;
 
   inherited SetTransactionIsolation(Level);
@@ -632,7 +625,7 @@ end;
 }
 function TZSQLiteConnection.GetPlainDriver: IZSQLitePlainDriver;
 begin
-  Result := FPlainDriver;
+  Result := PlainDriver as IZSQLitePlainDriver;
 end;
 
 initialization

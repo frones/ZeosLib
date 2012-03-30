@@ -96,7 +96,6 @@ type
   private
     FSQLCA: TZASASQLCA;
     FHandle: PZASASQLCA;
-    FPlainDriver: IZASAPlainDriver;
   private
     procedure StartTransaction; virtual;
   protected
@@ -292,19 +291,19 @@ begin
   else
     Rollback;
 
-  FPlainDriver.db_string_disconnect( FHandle, nil);
-  CheckASAError( FPlainDriver, FHandle, lcDisconnect);
+  GetPlainDriver.db_string_disconnect( FHandle, nil);
+  CheckASAError( GetPlainDriver, FHandle, lcDisconnect);
 
   FHandle := nil;
-  if FPlainDriver.db_fini( @FSQLCA) = 0 then
+  if GetPlainDriver.db_fini( @FSQLCA) = 0 then
   begin
-    DriverManager.LogError( lcConnect, FPlainDriver.GetProtocol, 'Inititalizing SQLCA',
+    DriverManager.LogError( lcConnect, PlainDriver.GetProtocol, 'Inititalizing SQLCA',
       0, 'Error closing SQLCA');
     raise EZSQLException.CreateWithCode( 0,
       'Error closing SQLCA');
   end;
 
-  DriverManager.LogMessage(lcDisconnect, FPlainDriver.GetProtocol,
+  DriverManager.LogMessage(lcDisconnect, PlainDriver.GetProtocol,
       Format('DISCONNECT FROM "%s"', [Database]));
 
   inherited Close;
@@ -320,10 +319,10 @@ begin
 
   if FHandle <> nil then
   begin
-    FPlainDriver.db_commit( FHandle, 0);
-    CheckASAError( FPlainDriver, FHandle, lcTransaction);
+    GetPlainDriver.db_commit( FHandle, 0);
+    CheckASAError( GetPlainDriver, FHandle, lcTransaction);
     DriverManager.LogMessage(lcTransaction,
-      FPlainDriver.GetProtocol, 'TRANSACTION COMMIT');
+      PlainDriver.GetProtocol, 'TRANSACTION COMMIT');
   end;
 end;
 
@@ -331,8 +330,7 @@ procedure TZASAConnection.InternalCreate;
 begin
   Self.FMetadata := TZASADatabaseMetadata.Create(Self, Self.URL.URL, Info);
 
-  FPlainDriver := TZASADriver(Self.Driver).GetPlainDriver(URL.URL);
-  Self.PlainDriver := FPlainDriver;
+  PlainDriver := TZASADriver(Self.Driver).GetPlainDriver(URL.URL);
 end;
 
 {**
@@ -352,7 +350,6 @@ begin
   inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
     TZASADatabaseMetadata.Create(Self, Url, Info));
 
-  FPlainDriver := PlainDriver;
   Self.PlainDriver := PlainDriver;
 end;
 
@@ -473,7 +470,7 @@ end;
 }
 function TZASAConnection.GetPlainDriver: IZASAPlainDriver;
 begin
-  Result := FPlainDriver;
+  Result := PlainDriver as IZASAPlainDriver;
 end;
 
 {**
@@ -489,25 +486,14 @@ begin
   FHandle := nil;
   ConnectionString := '';
   try
-    if FPlainDriver.db_init( @FSQLCA) = 0 then
+    if GetPlainDriver.db_init( @FSQLCA) = 0 then
     begin
-      DriverManager.LogError( lcConnect, FPlainDriver.GetProtocol, 'Inititalizing SQLCA',
+      DriverManager.LogError( lcConnect, PlainDriver.GetProtocol, 'Inititalizing SQLCA',
         0, 'Error initializing SQLCA');
       raise EZSQLException.CreateWithCode( 0,
         'Error initializing SQLCA');
     end;
     FHandle := @FSQLCA;
-
-    { Create new db if needed }
-{    if Info.Values['createNewDatabase'] <> '' then
-    begin
-      CreateNewDatabase(Info.Values['createNewDatabase']);
-      DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol,
-        Format('CREATE DATABASE "%s"', [Info.Values['createNewDatabase']]));
-    end;}
-
-{    for i := 0 to Info.Count-1 do
-      ConnectionString := ConnectionString + Info[i] + '; ';}
 
     if HostName <> '' then
       ConnectionString := ConnectionString + 'ENG="' + HostName + '"; ';
@@ -533,10 +519,10 @@ begin
     if Links <> ''
       then ConnectionString := ConnectionString + Links + '; ';
 
-    FPlainDriver.db_string_connect(FHandle, PAnsiChar(ConnectionString));
-    CheckASAError( FPlainDriver, FHandle, lcConnect);
+    GetPlainDriver.db_string_connect(FHandle, PAnsiChar(ConnectionString));
+    CheckASAError( GetPlainDriver, FHandle, lcConnect);
 
-    DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol,
+    DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol,
       Format('CONNECT TO "%s" AS USER "%s"', [Database, User]));
 
     StartTransaction;
@@ -547,7 +533,7 @@ begin
     on E: Exception do
     begin
       if Assigned( FHandle) then
-        FPlainDriver.db_fini( FHandle);
+        GetPlainDriver.db_fini( FHandle);
       FHandle := nil;
       raise;
     end;
@@ -570,10 +556,10 @@ begin
 
   if Assigned( FHandle) then
   begin
-    FPlainDriver.db_rollback( FHandle, 0);
-    CheckASAError( FPlainDriver, FHandle, lcTransaction);
+    GetPlainDriver.db_rollback( FHandle, 0);
+    CheckASAError( GetPlainDriver, FHandle, lcTransaction);
     DriverManager.LogMessage(lcTransaction,
-      FPlainDriver.GetProtocol, 'TRANSACTION ROLLBACK');
+      PlainDriver.GetProtocol, 'TRANSACTION ROLLBACK');
   end;
 end;
 
@@ -596,11 +582,11 @@ begin
       SQLDA.sqlVar[0].sqlType := DT_STRING;
       SQLDA.sqlVar[0].sqlLen := Length( Value)+1;
       SQLDA.sqlVar[0].sqlData := PAnsiChar(Value);
-      FPlainDriver.db_setoption(FHandle, Temporary, User, PAnsiChar(Option), SQLDA);
+      GetPlainDriver.db_setoption(FHandle, Temporary, User, PAnsiChar(Option), SQLDA);
 
-      CheckASAError( FPlainDriver, FHandle, lcOther);
+      CheckASAError( GetPlainDriver, FHandle, lcOther);
       S := User;
-      DriverManager.LogMessage( lcOther, FPlainDriver.GetProtocol,
+      DriverManager.LogMessage( lcOther, PlainDriver.GetProtocol,
         Format( 'SET OPTION %s.%s = %s', [ S, Option, Value]));
     finally
       FreeMem( SQLDA);

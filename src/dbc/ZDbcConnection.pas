@@ -198,6 +198,7 @@ type
     function GetClientVersion: Integer; virtual;
     function GetHostVersion: Integer; virtual;
     {END ADDED by fduenas 15-06-2006}
+    function GetDescription: AnsiString;
     procedure SetReadOnly(ReadOnly: Boolean); virtual;
     function IsReadOnly: Boolean; virtual;
 
@@ -957,6 +958,12 @@ function TZAbstractConnection.GetHostVersion: Integer;
 begin
  Result := 0;
 end;
+
+function TZAbstractConnection.GetDescription: AnsiString;
+begin
+  PlainDriver.GetDescription;
+end;
+
 {END ADDED by fduenas 15-06-2006}
 
 {**

@@ -99,7 +99,6 @@ type
   TZOracleConnection = class(TZAbstractConnection, IZOracleConnection)
   private
     FCatalog: string;
-    FPlainDriver: IZOraclePlainDriver;
     FHandle: POCIEnv;
     FContextHandle: POCISvcCtx;
     FErrorHandle: POCIError;
@@ -310,7 +309,6 @@ begin
     TZOracleDatabaseMetadata.Create(Self, Url, Info));
 
   { Sets a default properties }
-  FPlainDriver := PlainDriver;
   Self.PlainDriver := PlainDriver;
   FHandle := nil;
   if Self.Port = 0 then
@@ -340,7 +338,7 @@ destructor TZOracleConnection.Destroy;
 begin
   if FHandle <> nil then
   begin
-    FPlainDriver.HandleFree(FHandle, OCI_HTYPE_ENV);
+    GetPlainDriver.HandleFree(FHandle, OCI_HTYPE_ENV);
     FHandle := nil;
   end;
 
@@ -358,11 +356,11 @@ var
 
   procedure CleanupOnFail;
   begin
-    FPlainDriver.HandleFree(FContextHandle, OCI_HTYPE_SVCCTX);
+    GetPlainDriver.HandleFree(FContextHandle, OCI_HTYPE_SVCCTX);
     FContextHandle := nil;
-    FPlainDriver.HandleFree(FErrorHandle, OCI_HTYPE_ERROR);
+    GetPlainDriver.HandleFree(FErrorHandle, OCI_HTYPE_ERROR);
     FErrorHandle := nil;
-    FPlainDriver.HandleFree(FServerHandle, OCI_HTYPE_SERVER);
+    GetPlainDriver.HandleFree(FServerHandle, OCI_HTYPE_SERVER);
     FServerHandle := nil;
   end;
 
@@ -383,42 +381,42 @@ begin
     OCI_CLIENT_CHARSET_ID := StrToIntDef(FClientCodePage,0);
   { Connect to Oracle database. }
   if FHandle = nil then
-    FPlainDriver.EnvNlsCreate(FHandle, OCI_DEFAULT, nil, nil, nil, nil, 0, nil,OCI_CLIENT_CHARSET_ID,OCI_CLIENT_CHARSET_ID);
+    GetPlainDriver.EnvNlsCreate(FHandle, OCI_DEFAULT, nil, nil, nil, nil, 0, nil,OCI_CLIENT_CHARSET_ID,OCI_CLIENT_CHARSET_ID);
   FErrorHandle := nil;
-  FPlainDriver.HandleAlloc(FHandle, FErrorHandle, OCI_HTYPE_ERROR, 0, nil);
+  GetPlainDriver.HandleAlloc(FHandle, FErrorHandle, OCI_HTYPE_ERROR, 0, nil);
   FServerHandle := nil;
-  FPlainDriver.HandleAlloc(FHandle, FServerHandle, OCI_HTYPE_SERVER, 0, nil);
+  GetPlainDriver.HandleAlloc(FHandle, FServerHandle, OCI_HTYPE_SERVER, 0, nil);
   FContextHandle := nil;
-  FPlainDriver.HandleAlloc(FHandle, FContextHandle, OCI_HTYPE_SVCCTX, 0, nil);
+  GetPlainDriver.HandleAlloc(FHandle, FContextHandle, OCI_HTYPE_SVCCTX, 0, nil);
 
-  Status := FPlainDriver.ServerAttach(FServerHandle, FErrorHandle,
+  Status := GetPlainDriver.ServerAttach(FServerHandle, FErrorHandle,
       PAnsiChar(ansistring(Database)), Length(AnsiString(Database)), 0);
   try
-    CheckOracleError(FPlainDriver, FErrorHandle, Status, lcConnect, LogMessage);
+    CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcConnect, LogMessage);
   except
     CleanupOnFail;
     raise;
   end;
 
-  FPlainDriver.AttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FServerHandle, 0,
+  GetPlainDriver.AttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FServerHandle, 0,
     OCI_ATTR_SERVER, FErrorHandle);
-  FPlainDriver.HandleAlloc(FHandle, FSessionHandle, OCI_HTYPE_SESSION, 0, nil);
-  FPlainDriver.AttrSet(FSessionHandle, OCI_HTYPE_SESSION, PAnsiChar(AnsiString(User)),
+  GetPlainDriver.HandleAlloc(FHandle, FSessionHandle, OCI_HTYPE_SESSION, 0, nil);
+  GetPlainDriver.AttrSet(FSessionHandle, OCI_HTYPE_SESSION, PAnsiChar(AnsiString(User)),
     Length(User), OCI_ATTR_USERNAME, FErrorHandle);
-  FPlainDriver.AttrSet(FSessionHandle, OCI_HTYPE_SESSION, PAnsiChar(AnsiString(Password)),
+  GetPlainDriver.AttrSet(FSessionHandle, OCI_HTYPE_SESSION, PAnsiChar(AnsiString(Password)),
     Length(Password), OCI_ATTR_PASSWORD, FErrorHandle);
-  Status := FPlainDriver.SessionBegin(FContextHandle, FErrorHandle,
+  Status := GetPlainDriver.SessionBegin(FContextHandle, FErrorHandle,
     FSessionHandle, OCI_CRED_RDBMS, OCI_DEFAULT);
   try
-    CheckOracleError(FPlainDriver, FErrorHandle, Status, lcConnect, LogMessage);
+    CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcConnect, LogMessage);
   except
     CleanupOnFail;
     raise;
   end;
-  FPlainDriver.AttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FSessionHandle, 0,
+  GetPlainDriver.AttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FSessionHandle, 0,
     OCI_ATTR_SESSION, FErrorHandle);
 
-  DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol, LogMessage);
+  DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol, LogMessage);
 
   StartTransactionSupport;
 
@@ -463,14 +461,14 @@ begin
     raise EZSQLException.Create(SIsolationIsNotSupported);
 
   FTransHandle := nil;
-  FPlainDriver.HandleAlloc(FHandle, FTransHandle, OCI_HTYPE_TRANS, 0, nil);
-  FPlainDriver.AttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FTransHandle, 0,
+  GetPlainDriver.HandleAlloc(FHandle, FTransHandle, OCI_HTYPE_TRANS, 0, nil);
+  GetPlainDriver.AttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FTransHandle, 0,
     OCI_ATTR_TRANS, FErrorHandle);
 
-  Status := FPlainDriver.TransStart(FContextHandle, FErrorHandle, 0, Isolation);
-  CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, SQL);
+  Status := GetPlainDriver.TransStart(FContextHandle, FErrorHandle, 0, Isolation);
+  CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcExecute, SQL);
 
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+  DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
 end;
 
 {**
@@ -492,7 +490,7 @@ function TZOracleConnection.CreateRegularStatement(Info: TStrings):
 begin
   if IsClosed then
      Open;
-  Result := TZOracleStatement.Create(FPlainDriver, Self, Info);
+  Result := TZOracleStatement.Create(GetPlainDriver, Self, Info);
 end;
 
 {**
@@ -528,7 +526,7 @@ function TZOracleConnection.CreatePreparedStatement(const SQL: string;
 begin
   if IsClosed then
      Open;
-  Result := TZOraclePreparedStatement.Create(FPlainDriver, Self, SQL, Info);
+  Result := TZOraclePreparedStatement.Create(GetPlainDriver, Self, SQL, Info);
 end;
 
 {**
@@ -547,11 +545,11 @@ begin
   begin
     SQL := 'COMMIT';
 
-    Status := FPlainDriver.TransCommit(FContextHandle, FErrorHandle,
+    Status := GetPlainDriver.TransCommit(FContextHandle, FErrorHandle,
       OCI_DEFAULT);
-    CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, SQL);
+    CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcExecute, SQL);
 
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
   end;
 end;
 
@@ -571,11 +569,11 @@ begin
   begin
     SQL := 'ROLLBACK';
 
-    Status := FPlainDriver.TransRollback(FContextHandle, FErrorHandle,
+    Status := GetPlainDriver.TransRollback(FContextHandle, FErrorHandle,
       OCI_DEFAULT);
-    CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, SQL);
+    CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcExecute, SQL);
 
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
   end;
 end;
 
@@ -598,36 +596,36 @@ begin
     LogMessage := Format('DISCONNECT FROM "%s"', [Database]);
 
     { Closes started transaction }
-    Status := FPlainDriver.TransRollback(FContextHandle, FErrorHandle,
+    Status := GetPlainDriver.TransRollback(FContextHandle, FErrorHandle,
       OCI_DEFAULT);
-    CheckOracleError(FPlainDriver, FErrorHandle, Status, lcDisconnect,
+    CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcDisconnect,
       LogMessage);
-    FPlainDriver.HandleFree(FTransHandle, OCI_HTYPE_TRANS);
+    GetPlainDriver.HandleFree(FTransHandle, OCI_HTYPE_TRANS);
     FTransHandle := nil;
 
     { Closes the session }
-    Status := FPlainDriver.SessionEnd(FContextHandle, FErrorHandle,
+    Status := GetPlainDriver.SessionEnd(FContextHandle, FErrorHandle,
       FSessionHandle, OCI_DEFAULT);
-    CheckOracleError(FPlainDriver, FErrorHandle, Status, lcDisconnect,
+    CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcDisconnect,
       LogMessage);
 
     { Detaches from the server }
-    Status := FPlainDriver.ServerDetach(FServerHandle, FErrorHandle,
+    Status := GetPlainDriver.ServerDetach(FServerHandle, FErrorHandle,
       OCI_DEFAULT);
-    CheckOracleError(FPlainDriver, FErrorHandle, Status, lcDisconnect,
+    CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcDisconnect,
       LogMessage);
 
     { Frees all handlers }
-    FPlainDriver.HandleFree(FSessionHandle, OCI_HTYPE_SESSION);
+    GetPlainDriver.HandleFree(FSessionHandle, OCI_HTYPE_SESSION);
     FSessionHandle := nil;
-    FPlainDriver.HandleFree(FContextHandle, OCI_HTYPE_SVCCTX);
+    GetPlainDriver.HandleFree(FContextHandle, OCI_HTYPE_SVCCTX);
     FContextHandle := nil;
-    FPlainDriver.HandleFree(FServerHandle, OCI_HTYPE_SERVER);
+    GetPlainDriver.HandleFree(FServerHandle, OCI_HTYPE_SERVER);
     FServerHandle := nil;
-    FPlainDriver.HandleFree(FErrorHandle, OCI_HTYPE_ERROR);
+    GetPlainDriver.HandleFree(FErrorHandle, OCI_HTYPE_ERROR);
     FErrorHandle := nil;
 
-    DriverManager.LogMessage(lcDisconnect, FPlainDriver.GetProtocol, LogMessage);
+    DriverManager.LogMessage(lcDisconnect, PlainDriver.GetProtocol, LogMessage);
   end;
   inherited Close;
 end;
@@ -667,12 +665,12 @@ begin
     if not Closed then
     begin
       SQL := 'END TRANSACTION';
-      Status := FPlainDriver.TransRollback(FContextHandle, FErrorHandle,
+      Status := GetPlainDriver.TransRollback(FContextHandle, FErrorHandle,
         OCI_DEFAULT);
-      CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, SQL);
-      FPlainDriver.HandleFree(FTransHandle, OCI_HTYPE_TRANS);
+      CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcExecute, SQL);
+      GetPlainDriver.HandleFree(FTransHandle, OCI_HTYPE_TRANS);
       FTransHandle := nil;
-      DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+      DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
 
       StartTransactionSupport;
     end;
@@ -695,7 +693,7 @@ end;
 }
 function TZOracleConnection.GetPlainDriver: IZOraclePlainDriver;
 begin
-  Result := FPlainDriver;
+  Result := PlainDriver as IZOraclePlainDriver;
 end;
 
 {**

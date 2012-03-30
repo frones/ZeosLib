@@ -89,7 +89,6 @@ type
     procedure ReStartTransactionSupport;
   protected
     FAdoConnection: ZPlainAdo.Connection;
-    FPlainDriver: IZPlainDriver;
     function GetAdoConnection: ZPlainAdo.Connection; virtual;
     procedure InternalExecuteStatement(const SQL: string); virtual;
     procedure CheckAdoError; virtual;
@@ -210,8 +209,7 @@ end;
 procedure TZAdoConnection.InternalCreate;
 begin
   FAdoConnection := CoConnection.Create;
-  FPLainDriver := TZAdoDriver(Driver).FAdoPlainDriver;
-  Self.PlainDriver := FPlainDriver;
+  PlainDriver := TZAdoDriver(Driver).FAdoPlainDriver;
   Self.FMetadata := TZAdoDatabaseMetadata.Create(Self, Self.URL.URL, Info);
 end;
 
@@ -230,7 +228,6 @@ constructor TZAdoConnection.Create(Driver: IZDriver; const Url: string;
   const Database: string; const User: string; const Password: string; Info: TStrings);
 begin
   FAdoConnection := CoConnection.Create;
-  FPLainDriver := PlainDriver;
   Self.PlainDriver := PlainDriver;
   inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
     TZAdoDatabaseMetadata.Create(Self, Url, Info));
@@ -263,11 +260,11 @@ var
 begin
   try
     FAdoConnection.Execute(SQL, RowsAffected, adExecuteNoRecords);
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, FPlainDriver.GetProtocol, SQL, 0, E.Message);
+      DriverManager.LogError(lcExecute, PlainDriver.GetProtocol, SQL, 0, E.Message);
       raise;
     end;
   end;
@@ -305,11 +302,11 @@ begin
       FAdoConnection.Set_Mode(adModeUnknown);
     FAdoConnection.Open(Database, User, Password, -1{adConnectUnspecified});
     FAdoConnection.Set_CursorLocation(adUseClient);
-    DriverManager.LogMessage(lcConnect, FPLainDriver.GetProtocol, LogMessage);
+    DriverManager.LogMessage(lcConnect, PLainDriver.GetProtocol, LogMessage);
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcConnect, FPlainDriver.GetProtocol, LogMessage, 0, E.Message);
+      DriverManager.LogError(lcConnect, PlainDriver.GetProtocol, LogMessage, 0, E.Message);
       raise;
     end;
   end;
@@ -337,7 +334,7 @@ end;
 function TZAdoConnection.CreateRegularStatement(Info: TStrings): IZStatement;
 begin
   if IsClosed then Open;
-  Result := TZAdoStatement.Create(FPlainDriver, Self, '', Info);
+  Result := TZAdoStatement.Create(PlainDriver, Self, '', Info);
 end;
 
 {**
@@ -372,7 +369,7 @@ function TZAdoConnection.CreatePreparedStatement(
   const SQL: string; Info: TStrings): IZPreparedStatement;
 begin
   if IsClosed then Open;
-  Result := TZAdoPreparedStatement.Create(FPLainDriver, Self, SQL, Info);
+  Result := TZAdoPreparedStatement.Create(PlainDriver, Self, SQL, Info);
 end;
 
 {**
@@ -405,7 +402,7 @@ function TZAdoConnection.CreateCallableStatement(const SQL: string; Info: TStrin
   IZCallableStatement;
 begin
   if IsClosed then Open;
-  Result := TZAdoCallableStatement.Create(FPlainDriver, Self, SQL, Info);
+  Result := TZAdoCallableStatement.Create(PlainDriver, Self, SQL, Info);
 end;
 
 {**
@@ -452,7 +449,7 @@ begin
        (GetTransactionIsolation <> tiNone) then
       begin
         FAdoConnection.CommitTrans;
-        DriverManager.LogMessage(lcExecute, FPLainDriver.GetProtocol, 'COMMIT');
+        DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, 'COMMIT');
       end;
   end;
   inherited;
@@ -479,7 +476,7 @@ begin
   if not Closed and not AutoCommit and (GetTransactionIsolation <> tiNone) then
   begin
     FAdoConnection.CommitTrans;
-    DriverManager.LogMessage(lcExecute, FPLainDriver.GetProtocol, 'COMMIT');
+    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, 'COMMIT');
   end;
 
   inherited;
@@ -500,11 +497,11 @@ begin
   LogMessage := 'BEGIN TRANSACTION';
   try
     FAdoConnection.BeginTrans;
-    DriverManager.LogMessage(lcExecute, FPLainDriver.GetProtocol, LogMessage);
+    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, LogMessage);
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, FPlainDriver.GetProtocol, LogMessage, 0, E.Message);
+      DriverManager.LogError(lcExecute, PlainDriver.GetProtocol, LogMessage, 0, E.Message);
       raise;
     end;
   end;
@@ -524,12 +521,12 @@ begin
   LogMessage := 'COMMIT';
   try
     FAdoConnection.CommitTrans;
-    DriverManager.LogMessage(lcExecute, FPLainDriver.GetProtocol, LogMessage);
+    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, LogMessage);
     StartTransaction;
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, FPlainDriver.GetProtocol, LogMessage, 0, E.Message);
+      DriverManager.LogError(lcExecute, PlainDriver.GetProtocol, LogMessage, 0, E.Message);
       raise;
     end;
   end;
@@ -549,12 +546,12 @@ begin
   LogMessage := 'ROLLBACK';
   try
     FAdoConnection.RollbackTrans;
-    DriverManager.LogMessage(lcExecute, FPLainDriver.GetProtocol, LogMessage);
+    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, LogMessage);
     StartTransaction;
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, FPlainDriver.GetProtocol, LogMessage, 0, E.Message);
+      DriverManager.LogError(lcExecute, PlainDriver.GetProtocol, LogMessage, 0, E.Message);
       raise;
     end;
   end;
@@ -580,11 +577,11 @@ begin
   try
     if FAdoConnection.State = adStateOpen then
       FAdoConnection.Close;
-    DriverManager.LogMessage(lcExecute, FPLainDriver.GetProtocol, LogMessage);
+    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, LogMessage);
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, FPlainDriver.GetProtocol, LogMessage, 0, E.Message);
+      DriverManager.LogError(lcExecute, PlainDriver.GetProtocol, LogMessage, 0, E.Message);
       raise;
     end;
   end;
@@ -622,11 +619,11 @@ begin
   LogMessage := Format('SET CATALOG %s', [Catalog]);
   try
     FAdoConnection.DefaultDatabase := Catalog;
-    DriverManager.LogMessage(lcExecute, FPLainDriver.GetProtocol, LogMessage);
+    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, LogMessage);
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, FPlainDriver.GetProtocol, LogMessage, 0, E.Message);
+      DriverManager.LogError(lcExecute, PlainDriver.GetProtocol, LogMessage, 0, E.Message);
       raise;
     end;
   end;
