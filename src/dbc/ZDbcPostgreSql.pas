@@ -59,7 +59,8 @@ interface
 
 uses
   Types, ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection,
-  ZPlainPostgreSqlDriver, ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser;
+  ZPlainPostgreSqlDriver, ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser,
+  ZURL, ZPlainDriver;
 
 type
 
@@ -68,7 +69,8 @@ type
   private
     FPlainDrivers: Array of IZPostgreSQLPlainDriver;
   protected
-    function GetPlainDriver(const Url: string): IZPostgreSQLPlainDriver;
+    function GetPlainDriver(const Url: string): IZPostgreSQLPlainDriver; overload;
+    function GetPlainDriver(const Url: TZURL): IZPlainDriver; overload; override;
   public
     constructor Create;
     function Connect(const Url: string; Info: TStrings): IZConnection; override;
@@ -109,13 +111,14 @@ type
     FServerSubVersion: Integer;
     FNoticeProcessor: TZPostgreSQLNoticeProcessor;
   protected
+    procedure InternalCreate; override;
     function BuildConnectStr: AnsiString;
     procedure StartTransactionSupport;
     procedure LoadServerVersion;
   public
-    constructor Create(Driver: IZDriver; const Url: string;
+    {constructor Create(Driver: IZDriver; const Url: string;
       PlainDriver: IZPostgreSQLPlainDriver; const HostName: string; Port: Integer;
-      const Database: string; const User: string; const Password: string; Info: TStrings);
+      const Database: string; const User: string; const Password: string; Info: TStrings);}
     destructor Destroy; override;
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
@@ -214,7 +217,7 @@ end;
     connection to the URL
 }
 function TZPostgreSQLDriver.Connect(const Url: string; Info: TStrings): IZConnection;
-var
+{var
   TempInfo: TStrings;
   HostName, Database, UserName, Password: string;
   Port: Integer;
@@ -229,7 +232,9 @@ begin
       Port, Database, UserName, Password, TempInfo);
   finally
     TempInfo.Free;
-  end;
+  end;}
+begin
+  Result := TZPostgreSQLConnection.Create(TZURL.Create(Url, Info));
 end;
 
 {**
@@ -310,6 +315,21 @@ begin
   Result.Initialize;
 end;
 
+function TZPostgreSQLDriver.GetPlainDriver(const Url: TZURL): IZPlainDriver;
+var
+  i: smallint;
+begin
+  For i := 0 to high(FPlainDrivers) do
+    if Url.Protocol = FPlainDrivers[i].GetProtocol then
+      begin
+        Result := FPlainDrivers[i];
+        break;
+      end;
+  // Generic driver
+  If result = nil then
+    Result := FPlainDrivers[1];    // Postgresql 8
+  Result.Initialize;
+end;
 
 { TZPostgreSQLConnection }
 
@@ -324,12 +344,14 @@ end;
   @param Password a user password.
   @param Info a string list with extra connection parameters.
 }
-constructor TZPostgreSQLConnection.Create(Driver: IZDriver; const Url: string;
+{constructor TZPostgreSQLConnection.Create(Driver: IZDriver; const Url: string;
   PlainDriver: IZPostgreSQLPlainDriver; const HostName: string; Port: Integer;
-  const Database, User, Password: string; Info: TStrings);
+  const Database, User, Password: string; Info: TStrings);}
+procedure TZPostgreSQLConnection.InternalCreate;
 begin
-  inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
-    TZPostgreSQLDatabaseMetadata.Create(Self, Url, Info));
+  {inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
+    TZPostgreSQLDatabaseMetadata.Create(Self, Url, Info));}
+  FMetaData := TZPostgreSQLDatabaseMetadata.Create(Self, Url.URL, Url.Properties);
 
   { Sets a default PostgreSQL port }
   if Self.Port = 0 then
@@ -341,7 +363,8 @@ begin
   else
     FBeginRequired := True;
 
-  Self.PlainDriver := PlainDriver;
+  //PlainDriver := Driver.GetPlainDriver(Url);
+
   TransactIsolationLevel := tiNone;
 
   { Processes connection properties. }

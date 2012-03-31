@@ -59,7 +59,7 @@ interface
 
 uses
   Types, ZCompatibility, Classes, SysUtils, ZDbcUtils, ZDbcIntfs, ZDbcConnection,
-  Contnrs, ZPlainFirebirdDriver,
+  Contnrs, ZPlainFirebirdDriver, ZPlainDriver,
   ZPlainFirebirdInterbaseConstants, ZSysUtils, ZDbcInterbase6Utils, ZDbcLogging,
   ZDbcGenericResolver, ZTokenizer, ZGenericSqlAnalyser, ZURL;
 
@@ -70,7 +70,8 @@ type
   private
     FPlainDrivers: Array of IZInterbasePlainDriver;
   protected
-    function GetPlainDriver(const Url: string): IZInterbasePlainDriver;
+    function GetPlainDriver(const Url: string): IZInterbasePlainDriver; overload;
+    function GetPlainDriver(const Url: TZURL): IZPlainDriver; overload; override;
   public
     constructor Create;
     function Connect(const Url: string; Info: TStrings): IZConnection; override;
@@ -109,10 +110,10 @@ type
   protected
     procedure InternalCreate; override;
   public
-    constructor Create(Driver: IZDriver; const Url: string;
+    {constructor Create(Driver: IZDriver; const Url: string;
       PlainDriver: IZInterbasePlainDriver;
-	  const HostName: string; Port: Integer; const Database: string;
-      const User: string; const Password: string; Info: TStrings); overload;
+	    const HostName: string; Port: Integer; const Database: string;
+      const User: string; const Password: string; Info: TStrings); overload;}
     destructor Destroy; override;
 
     function GetDBHandle: PISC_DB_HANDLE;
@@ -191,21 +192,25 @@ uses ZDbcInterbase6Statement, ZDbcInterbase6Metadata,
 }
 function TZInterbase6Driver.Connect(const Url: string; Info: TStrings): IZConnection;
 var
-  TempInfo: TStrings;
+  TempURL: TZURL;
+  {TempInfo: TStrings;
   HostName, Database, UserName, Password: string;
   Port: Integer;
   PlainDriver: IZInterbasePlainDriver;
 begin
- TempInfo := TStringList.Create;
- try
-   ResolveDatabaseUrl(Url, Info, HostName, Port, Database, UserName, Password, TempInfo);
-   PlainDriver := GetPlainDriver(Url);
-   //Result := TZInterbase6Connection.Create(Self, Url, PlainDriver, HostName,
-     //Port, Database, UserName, Password, TempInfo);
-   Result := TZInterbase6Connection.Create(TZURL.Create(Url));
- finally
-   TempInfo.Free;
- end;
+  TempInfo := TStringList.Create;
+  try
+    ResolveDatabaseUrl(Url, Info, HostName, Port, Database, UserName, Password, TempInfo);
+    PlainDriver := GetPlainDriver(Url);
+    Result := TZInterbase6Connection.Create(Self, Url, PlainDriver, HostName,
+      Port, Database, UserName, Password, TempInfo);
+  finally
+    TempInfo.Free;
+  end;}
+begin
+  TempURL := TZURL.Create(Url, Info);
+  Result := TZInterbase6Connection.Create(TZURL.Create(Url));
+  TempURL.Free;
 end;
 
 {**
@@ -291,6 +296,21 @@ begin
   Result.Initialize;
 end;
 
+function TZInterbase6Driver.GetPlainDriver(const Url: TZURL): IZPlainDriver;
+var
+  i: smallint;
+begin
+  For i := 0 to high(FPlainDrivers) do
+    if Url.Protocol = FPlainDrivers[i].GetProtocol then
+      begin
+        Result := FPlainDrivers[i];
+        break;
+      end;
+  // Generic driver
+  If result = nil then
+    Result := FPlainDrivers[1];    // interbase-6
+  Result.Initialize;
+end;
 {**
   Get a name of the supported subprotocol.
   For example: mysql, oracle8 or postgresql72
@@ -387,7 +407,7 @@ begin
 
   FHardCommit := StrToBoolEx(URL.Properties.Values['hard_commit']);
 
-  PlainDriver := TZInterbase6Driver(Driver).GetPlainDriver(Url.URL);
+  //PlainDriver := Driver.GetPlainDriver(Url);
 
   { Sets a default Interbase port }
 
@@ -432,7 +452,7 @@ end;
   @param Password a user password.
   @param Info a string list with extra connection parameters.
 }
-constructor TZInterbase6Connection.Create(Driver: IZDriver; const Url: string;
+(*constructor TZInterbase6Connection.Create(Driver: IZDriver; const Url: string;
   PlainDriver: IZInterbasePlainDriver; const HostName: string; Port: Integer;
   const Database: string; const User: string; const Password: string;
   Info: TStrings);
@@ -476,11 +496,11 @@ begin
   RoleName := Trim(Info.Values['rolename']);
   if RoleName <> '' then
     self.Info.Values['isc_dpb_sql_role_name'] := UpperCase(RoleName);
-	
-  ConnectTimeout := StrToIntDef(Info.Values['timeout'], -1); 
-  if ConnectTimeout >= 0 then 
+
+  ConnectTimeout := StrToIntDef(Info.Values['timeout'], -1);
+  if ConnectTimeout >= 0 then
     self.Info.Values['isc_dpb_connect_timeout'] := IntToStr(ConnectTimeout);*)
-end;
+//end;
 
 {**
   Creates a <code>Statement</code> object for sending

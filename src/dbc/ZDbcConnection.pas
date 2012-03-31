@@ -75,15 +75,16 @@ type
     FAnalyser: IZStatementAnalyser;
 
   protected
+    function GetPlainDriver(const Url: TZURL): IZPlainDriver; virtual;
     property Tokenizer: IZTokenizer read FTokenizer write FTokenizer;
     property Analyser: IZStatementAnalyser read FAnalyser write FAnalyser;
-
   public
     constructor Create;
     destructor Destroy; override;
 
     function GetSupportedProtocols: TStringDynArray; virtual; abstract;
-    function Connect(const Url: string; Info: TStrings): IZConnection; virtual;
+    function Connect(const Url: string; Info: TStrings): IZConnection; overload; virtual;
+    //function Connect(const Url: TZURL): IZConnection; overload; virtual;
     function AcceptsURL(const Url: string): Boolean; virtual;
 
     function GetPropertyInfo(const Url: string; Info: TStrings): TStrings; virtual;
@@ -150,8 +151,10 @@ type
     constructor Create(Driver: IZDriver; const Url: string; const HostName: string;
       Port: Integer; const Database: string; const User: string; const Password: string;
       Info: TStrings; Metadata: TContainedObject); overload;
-    constructor Create(Driver: IZDriver; const ZUrl: TZURL;
-      Metadata: TContainedObject); overload;
+    constructor Create(Driver: IZDriver; const Url: string;
+      PlainDriver: IZPlainDriver; const HostName: string; Port: Integer;
+      const Database: string; const User: string; const Password: string;
+      Info: TStrings); overload; deprecated;
     constructor Create(const ZUrl: TZURL); overload;
     destructor Destroy; override;
 
@@ -331,6 +334,11 @@ begin
   end;
 end;
 
+function TZAbstractDriver.GetPlainDriver(const Url: TZURL): IZPlainDriver;
+begin
+  Result := nil;
+end;
+
 {**
   Gets information about the possible properties for this driver.
   <p>The getPropertyInfo method is intended to allow a generic GUI tool to
@@ -490,30 +498,44 @@ var
   TempURL: TZURL;
 begin
   TempURL := TZURL.Create(Url, HostName, Port, Database, User, Password, Info);
-  Create(Driver,TempURL, Metadata);
+  Create(TempURL);
   TempURL.Free;
 end;
 
 {**
+  EgonHugeist and MDeams: The old deprecadet constructor which was used
+  from the descendant classes. We left him here for compatibility reasons to
+  exesting projects which using the DbcConnections directly
+
   Constructs this object and assignes the main properties.
-  @param Driver a ZDBC driver interface.
+  @param Driver the parent ZDBC driver.
   @param Url a connection URL.
-  @param MetaData a ZDBC MetaData-Object
+  @param PlainDriver a versioned ZPlainDriver object interface.
+  @param HostName a name of the host.
+  @param Port a port number (0 for default port).
+  @param Database a name pof the database.
+  @param User a user name.
+  @param Password a user password.
+  @param Info a string list with extra connection parameters.
 }
-constructor TZAbstractConnection.Create(Driver: IZDriver; const ZUrl: TZUrl;
-  Metadata: TContainedObject);
+{$WARNINGS OFF} //suppress the deprecatad warning of calling create from internal
+constructor TZAbstractConnection.Create(Driver: IZDriver; const Url: string;
+  PlainDriver: IZPlainDriver;
+  const HostName: string; Port: Integer; const Database: string;
+  const User: string; const Password: string; Info: TStrings);
+var
+  TempURL: TZURL;
 begin
-  FURL:= TZURL.Create(ZUrl);
-  FDriver := Driver;
-  FMetadata := Metadata;
-
-  FAutoCommit := True;
-  FClosed := True;
-  FReadOnly := True;
-  FTransactIsolationLevel := tiNone;
-  InternalCreate;
+  TempURL := TZURL.Create(Url, HostName, Port, Database, User, Password, Info);
+  Create(TempURL);
+  TempURL.Free;
 end;
+{$WARNINGS OFF}
 
+{**
+  Constructs this object and assignes the main properties.
+  @param Url a connection ZURL-class which exports all connection parameters.
+}
 constructor TZAbstractConnection.Create(const ZUrl: TZURL);
 begin
   if not assigned(ZUrl) then
@@ -521,6 +543,7 @@ begin
   else
     FURL := TZURL.Create(ZURL);
   FDriver := DriverManager.GetDriver(ZURL.URL);
+  FIZPlainDriver := FDriver.GetPlainDriver(ZUrl);
   FAutoCommit := True;
   FClosed := True;
   FReadOnly := True;

@@ -59,8 +59,8 @@ interface
 
 uses
   Types, ZCompatibility, Classes, SysUtils, Contnrs, ZDbcIntfs, ZDbcConnection,
-  ZPlainOracleDriver, ZDbcLogging, ZTokenizer, ZDbcGenericResolver,
-  ZGenericSqlAnalyser;
+  ZPlainOracleDriver, ZDbcLogging, ZTokenizer, ZDbcGenericResolver, ZURL,
+  ZGenericSqlAnalyser, ZPlainDriver;
 
 type
 
@@ -69,7 +69,8 @@ type
   private
     FOracle9iPlainDriver: IZOraclePlainDriver;
   protected
-    function GetPlainDriver(const Url: string): IZOraclePlainDriver;
+    function GetPlainDriver(const Url: string): IZOraclePlainDriver; overload;
+    function GetPlainDriver(const Url: TZURL): IZPlainDriver; overload; override;
   public
     constructor Create;
     function Connect(const Url: string; Info: TStrings): IZConnection; override;
@@ -108,12 +109,13 @@ type
     FClientCodePage: string;
 
   protected
+    procedure InternalCreate; override;
     procedure StartTransactionSupport;
 
   public
-    constructor Create(Driver: IZDriver; const Url: string;
+    {constructor Create(Driver: IZDriver; const Url: string;
       PlainDriver: IZOraclePlainDriver; const HostName: string; Port: Integer;
-      const Database: string; const User: string; const Password: string; Info: TStrings);
+      const Database: string; const User: string; const Password: string; Info: TStrings);}
     destructor Destroy; override;
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
@@ -203,7 +205,8 @@ end;
 }
 function TZOracleDriver.Connect(const Url: string; Info: TStrings): IZConnection;
 var
-  TempInfo: TStrings;
+  TempURL: TZURL;
+{  TempInfo: TStrings;
   HostName, Database, UserName, Password: string;
   Port: Integer;
   PlainDriver: IZOraclePlainDriver;
@@ -217,7 +220,11 @@ begin
       Database, UserName, Password, TempInfo);
   finally
     TempInfo.Free;
-  end;
+  end;}
+begin
+  TempURL := TZURL.Create(Url, Info);
+  Result := TZOracleConnection.Create(TempURL);
+  TempURL.Free;
 end;
 
 {**
@@ -288,6 +295,15 @@ begin
   Result.Initialize;
 end;
 
+function TZOracleDriver.GetPlainDriver(const Url: TZURL): IZPlainDriver;
+begin
+  //if Url.Protocol = FOracle9iPlainDriver.GetProtocol then
+    //Result := FOracle9iPlainDriver
+  //else
+    Result := FOracle9iPlainDriver;
+  Result.Initialize;
+end;
+
 { TZOracleConnection }
 
 {**
@@ -301,15 +317,18 @@ end;
   @param Password a user password.
   @param Info a string list with extra connection parameters.
 }
-constructor TZOracleConnection.Create(Driver: IZDriver; const Url: string;
+{constructor TZOracleConnection.Create(Driver: IZDriver; const Url: string;
   PlainDriver: IZOraclePlainDriver; const HostName: string; Port: Integer;
-  const Database, User, Password: string; Info: TStrings);
+  const Database, User, Password: string; Info: TStrings);}
+procedure TZOracleConnection.InternalCreate;
 begin
-  inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
-    TZOracleDatabaseMetadata.Create(Self, Url, Info));
+  {inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
+    TZOracleDatabaseMetadata.Create(Self, Url, Info));}
+  FMetaData := TZOracleDatabaseMetadata.Create(Self, Url.URL, Url.Properties);
 
   { Sets a default properties }
-  Self.PlainDriver := PlainDriver;
+
+  //Self.PlainDriver := PlainDriver;
   FHandle := nil;
   if Self.Port = 0 then
       Self.Port := 1521;
@@ -353,6 +372,7 @@ var
   Status: Integer;
   LogMessage: string;
   OCI_CLIENT_CHARSET_ID: ub2;
+  PrefetchCount: ub4;
 
   procedure CleanupOnFail;
   begin
@@ -415,6 +435,12 @@ begin
   end;
   GetPlainDriver.AttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FSessionHandle, 0,
     OCI_ATTR_SESSION, FErrorHandle);
+  //Patch to speed up big table selects: http://zeos.firmos.at/viewtopic.php?t=3441
+  PrefetchCount := 100;
+  GetPlainDriver.AttrSet(FHandle, OCI_HTYPE_STMT, @PrefetchCount, SizeOf(ub4),
+    OCI_ATTR_PREFETCH_ROWS, FErrorHandle);
+  CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcConnect, LogMessage);
+  //end prefetch count
 
   DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol, LogMessage);
 

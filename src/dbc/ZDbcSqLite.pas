@@ -59,7 +59,8 @@ interface
 
 uses
   Types, ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection,
-  ZPlainSqLiteDriver, ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser;
+  ZPlainSqLiteDriver, ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser, ZURL,
+  ZPlainDriver;
 
 type
 
@@ -68,7 +69,8 @@ type
   private
     FPlainDrivers: Array of IZSQLitePlainDriver;
   protected
-    function GetPlainDriver(const Url: string): IZSQLitePlainDriver;
+    function GetPlainDriver(const Url: string): IZSQLitePlainDriver; overload;
+    function GetPlainDriver(const Url: TZURL): IZPlainDriver; overload; override;
   public
     constructor Create;
     function Connect(const Url: string; Info: TStrings): IZConnection; override;
@@ -96,12 +98,13 @@ type
     FHandle: Psqlite;
 
   protected
+    procedure InternalCreate; override;
     procedure StartTransactionSupport;
 
   public
-    constructor Create(Driver: IZDriver; const Url: string;
+    {constructor Create(Driver: IZDriver; const Url: string;
       PlainDriver: IZSQLitePlainDriver; const HostName: string; Port: Integer;
-      const Database: string; const User: string; const Password: string; Info: TStrings);
+      const Database: string; const User: string; const Password: string; Info: TStrings);}
     destructor Destroy; override;
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
@@ -172,7 +175,8 @@ end;
 }
 function TZSQLiteDriver.Connect(const Url: string; Info: TStrings): IZConnection;
 var
-  TempInfo: TStrings;
+  TempURL: TZURL;
+{  TempInfo: TStrings;
   HostName, Database, UserName, Password: string;
   Port: Integer;
   PlainDriver: IZSQLitePlainDriver;
@@ -186,7 +190,11 @@ begin
       Database, UserName, Password, TempInfo);
   finally
     TempInfo.Free;
-  end;
+  end; }
+begin
+  TempURL := TZURL.Create(Url, Info);
+  Result := TZSQLiteConnection.Create(TempURL);
+  TempUrl.Free;
 end;
 
 {**
@@ -267,6 +275,22 @@ begin
   Result.Initialize;
 end;
 
+function TZSQLiteDriver.GetPlainDriver(const Url: TZURL): IZPlainDriver;
+var
+  i: smallint;
+begin
+  For i := 0 to high(FPlainDrivers) do
+    if Url.Protocol = FPlainDrivers[i].GetProtocol then
+      begin
+        Result := FPlainDrivers[i];
+        break;
+      end;
+  // Generic driver
+  If result = nil then
+    Result := FPlainDrivers[0];    // sqlite3
+  Result.Initialize;
+end;
+
 { TZSQLiteConnection }
 
 {**
@@ -280,7 +304,7 @@ end;
   @param Password a user password.
   @param Info a string list with extra connection parameters.
 }
-constructor TZSQLiteConnection.Create(Driver: IZDriver; const Url: string;
+{constructor TZSQLiteConnection.Create(Driver: IZDriver; const Url: string;
   PlainDriver: IZSQLitePlainDriver; const HostName: string; Port: Integer;
   const Database, User, Password: string; Info: TStrings);
 begin
@@ -288,7 +312,10 @@ begin
     TZSQLiteDatabaseMetadata.Create(Self, Url, Info));
 
   { Sets a default properties }
-  Self.PlainDriver := PlainDriver;
+  //Self.PlainDriver := PlainDriver;
+procedure TZSQLiteConnection.InternalCreate;
+begin
+  FMetadata := TZSQLiteDatabaseMetadata.Create(Self, Url.URL, Url.Properties);
   AutoCommit := True;
   TransactIsolationLevel := tiNone;
 

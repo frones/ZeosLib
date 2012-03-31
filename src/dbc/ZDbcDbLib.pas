@@ -64,7 +64,7 @@ uses
   {$ENDIF}
 {$ENDIF}
   Types, Classes, ZDbcConnection, ZDbcIntfs, ZCompatibility, ZDbcLogging,
-  ZPlainDbLibDriver, ZTokenizer, ZGenericSqlAnalyser;
+  ZPlainDbLibDriver, ZTokenizer, ZGenericSqlAnalyser, ZURL, ZPlainDriver;
 
 type
   {** Implements DBLib Database Driver. }
@@ -72,6 +72,8 @@ type
   private
     FMSSqlPlainDriver: IZDBLibPlainDriver;
     FSybasePlainDriver: IZDBLibPlainDriver;
+  protected
+    function GetPlainDriver(const Url: TZURL): IZPlainDriver; override;
   public
     constructor Create;
     function Connect(const Url: string; Info: TStrings): IZConnection; override;
@@ -109,9 +111,10 @@ type
     procedure CheckDBLibError(LogCategory: TZLoggingCategory; const LogMessage: string); virtual;
     procedure StartTransaction; virtual;
   public
-    constructor Create(Driver: IZDriver; const Url: string;
+    {constructor Create(Driver: IZDriver; const Url: string;
       PlainDriver: IZDBLibPlainDriver; const HostName: string; Port: Integer;
-      const Database: string; const User: string; const Password: string; Info: TStrings);
+      const Database: string; const User: string; const Password: string;
+      Info: TStrings);}
 
     destructor Destroy; override;
 
@@ -163,6 +166,15 @@ begin
   FSybasePlainDriver := TZDBLibSybaseASE125PlainDriver.Create;
 end;
 
+function TZDBLibDriver.GetPlainDriver(const Url: TZURL): IZPlainDriver;
+begin
+  if Url.Protocol = FMSSqlPlainDriver.GetProtocol then
+    Result := FMSSqlPlainDriver;
+  if Url.Protocol = FSybasePlainDriver.GetProtocol then
+    Result := FSybasePlainDriver;
+  Result.Initialize;
+end;
+
 {**
   Get a name of the supported subprotocol.
 }
@@ -178,7 +190,8 @@ end;
 }
 function TZDBLibDriver.Connect(const Url: string; Info: TStrings): IZConnection;
 var
-  TempInfo: TStrings;
+  TempURL: TZURL;
+  {TempInfo: TStrings;
   HostName, Database, UserName, Password: string;
   Port: Integer;
   Protocol: string;
@@ -198,7 +211,11 @@ begin
       Database, UserName, Password, TempInfo);
   finally
     TempInfo.Free;
-  end;
+  end;}
+begin
+  TempURL := TZURL.Create(Url, Info);
+  Result := TZDBLibConnection.Create(TempURL);
+  TempUrl.Free;
 end;
 
 {**
@@ -245,15 +262,9 @@ end;
 procedure TZDBLibConnection.InternalCreate;
 begin
   if Url.Protocol = 'mssql' then
-  begin
-    PlainDriver := TZDBLibDriver(Self.Driver).FMSSqlPlainDriver;
-    FMetadata := TZMsSqlDatabaseMetadata.Create(Self, Url.URL, Info);
-  end
+    FMetadata := TZMsSqlDatabaseMetadata.Create(Self, Url.URL, Info)
   else if Url.Protocol = 'sybase' then
-  begin
-    PlainDriver := TZDBLibDriver(Self.Driver).FSybasePlainDriver;
     FMetadata := TZSybaseDatabaseMetadata.Create(Self, Url.Url, Info)
-  end
   else
     FMetadata := nil;
 
@@ -270,7 +281,7 @@ end;
   @param Password a user password.
   @param Info a string list with extra connection parameters.
 }
-constructor TZDBLibConnection.Create(Driver: IZDriver; const Url: string;
+{constructor TZDBLibConnection.Create(Driver: IZDriver; const Url: string;
   PlainDriver: IZDBLibPlainDriver; const HostName: string; Port: Integer;
   const Database: string; const User: string; const Password: string; Info: TStrings);
 var
@@ -288,7 +299,7 @@ begin
     Metadata);
 
   FHandle := nil;
-end;
+end;}
 
 {**
   Destroys this object and cleanups the memory.

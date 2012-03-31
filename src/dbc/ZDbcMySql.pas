@@ -58,8 +58,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection, ZPlainMySqlDriver,
-  ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser, ZPlainMySqlConstants;
+  Types, ZCompatibility, Classes, SysUtils, ZDbcIntfs, ZDbcConnection,
+  ZPlainMySqlDriver, ZPlainDriver, ZURL, ZDbcLogging, ZTokenizer,
+  ZGenericSqlAnalyser, ZPlainMySqlConstants;
 
 type
 
@@ -71,7 +72,8 @@ type
   private
     FPlainDrivers: Array of IZMySQLPlainDriver;
   protected
-    function GetPlainDriver(const Url: string; Info: TStrings = nil): IZMySQLPlainDriver; // changed by tohenk, 2009-10-11
+    function GetPlainDriver(const Url: string; Info: TStrings = nil): IZMySQLPlainDriver; overload;// changed by tohenk, 2009-10-11
+    function GetPlainDriver(const Url: TZURL): IZPlainDriver; overload; override;
   public
     constructor Create;
     function Connect(const Url: string; Info: TStrings): IZConnection; override;
@@ -98,10 +100,12 @@ type
     FCatalog: string;
     FHandle: PZMySQLConnect;
     FClientCodePage: string;
+  protected
+    procedure InternalCreate; override;
   public
-    constructor Create(Driver: IZDriver; const Url: string;
+    {constructor Create(Driver: IZDriver; const Url: string;
       PlainDriver: IZMySQLPlainDriver; const HostName: string; Port: Integer;
-      const Database: string; const User: string; const Password: string; Info: TStrings);
+      const Database: string; const User: string; const Password: string; Info: TStrings);}
     destructor Destroy; override;
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
@@ -181,7 +185,8 @@ end;
 }
 function TZMySQLDriver.Connect(const Url: string; Info: TStrings): IZConnection;
 var
-  TempInfo: TStrings;
+  TempURL: TZURL;
+  {TempInfo: TStrings;
   HostName, Database, UserName, Password: string;
   Port: Integer;
   PlainDriver: IZMySQLPlainDriver;
@@ -199,7 +204,11 @@ begin
       Database, UserName, Password, TempInfo);
   finally
     TempInfo.Free;
-  end;
+  end;}
+begin
+  TempURL := TZURL.Create(Url, Info);
+  Result := TZMySQLConnection.Create(TempURL);
+  TempURL.Free;
 end;
 
 {**
@@ -285,6 +294,27 @@ begin
   Result.Initialize;
 end;
 
+function TZMySQLDriver.GetPlainDriver(const Url: TZURL): IZPlainDriver;
+var
+  i: smallint;
+begin
+  For i := 0 to high(FPlainDrivers) do
+    if Url.Protocol = FPlainDrivers[i].GetProtocol then
+      begin
+        Result := FPlainDrivers[i];
+        break;
+      end;
+  // Generic driver
+  If result = nil then
+    Result := FPlainDrivers[1];    // mysql-5
+  // added by tohenk, 2009-10-11
+  // before PlainDriver is initialized, we can perform pre-library loading
+  // requirement check here, e.g. Embedded server argument params
+  (Result as IZMySQLPlainDriver).SetDriverOptions(Url.Properties);
+  // end added by tohenk, 2009-10-11
+  Result.Initialize;
+end;
+
 {**
   Returns the version of the plain driver library that will be used to open a connection
   to the given URL.
@@ -298,6 +328,19 @@ end;
 
 { TZMySQLConnection }
 
+procedure TZMySQLConnection.InternalCreate;
+begin
+  FMetaData := TZMySQLDatabaseMetadata.Create(Self, Url.URL, Url.Properties);
+  if Self.Port = 0 then
+     Self.Port := MYSQL_PORT;
+  AutoCommit := True;
+  TransactIsolationLevel := tiNone;
+
+  { Processes connection properties. }
+  FClientCodePage := Trim(Info.Values['codepage']);
+
+  Open;
+end;
 {**
   Constructs this object and assignes the main properties.
   @param Driver the parent ZDBC driver.
@@ -309,7 +352,7 @@ end;
   @param Password a user password.
   @param Info a string list with extra connection parameters.
 }
-constructor TZMySQLConnection.Create(Driver: IZDriver; const Url: string;
+(*constructor TZMySQLConnection.Create(Driver: IZDriver; const Url: string;
   PlainDriver: IZMySQLPlainDriver; const HostName: string; Port: Integer;
   const Database, User, Password: string; Info: TStrings);
 begin
@@ -327,7 +370,7 @@ begin
   FClientCodePage := Trim(Info.Values['codepage']);
 
   Open;
-end;
+end;*)
 
 {**
   Destroys this object and cleanups the memory.

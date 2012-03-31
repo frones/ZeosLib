@@ -59,13 +59,15 @@ interface
 
 uses
   Types, Classes, ZDbcConnection, ZDbcIntfs, ZCompatibility, ZPlainDriver,
-  ZPlainAdoDriver, ZPlainAdo;
+  ZPlainAdoDriver, ZPlainAdo, ZURL;
 
 type
   {** Implements Ado Database Driver. }
   TZAdoDriver = class(TZAbstractDriver)
   private
     FAdoPlainDriver: IZPlainDriver;
+  protected
+    function GetPlainDriver(const Url: TZURL): IZPlainDriver; override;
   public
     constructor Create;
     function Connect(const Url: string; Info: TStrings): IZConnection; override;
@@ -95,10 +97,6 @@ type
     procedure StartTransaction; virtual;
     procedure InternalCreate; override;
   public
-    constructor Create(Driver: IZDriver; const Url: string;
-      PlainDriver: IZPlainDriver; const HostName: string; Port: Integer;
-      const Database: string; const User: string; const Password: string; Info: TStrings);
-
     destructor Destroy; override;
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
@@ -149,6 +147,11 @@ const                                                //adXactUnspecified
 constructor TZAdoDriver.Create;
 begin
   FAdoPlainDriver := TZAdoPlainDriver.Create;
+end;
+
+function TZAdoDriver.GetPlainDriver(const Url: TZURL): IZPlainDriver;
+begin
+  Result := FAdoPlainDriver;
 end;
 
 {**
@@ -209,28 +212,7 @@ end;
 procedure TZAdoConnection.InternalCreate;
 begin
   FAdoConnection := CoConnection.Create;
-  PlainDriver := TZAdoDriver(Driver).FAdoPlainDriver;
   Self.FMetadata := TZAdoDatabaseMetadata.Create(Self, Self.URL.URL, Info);
-end;
-
-{**
-  Constructs this object and assignes the main properties.
-  @param Driver the parent ZDBC driver.
-  @param HostName a name of the host.
-  @param Port a port number (0 for default port).
-  @param Database a name pof the database.
-  @param User a user name.
-  @param Password a user password.
-  @param Info a string list with extra connection parameters.
-}
-constructor TZAdoConnection.Create(Driver: IZDriver; const Url: string;
-  PlainDriver: IZPlainDriver; const HostName: string; Port: Integer;
-  const Database: string; const User: string; const Password: string; Info: TStrings);
-begin
-  FAdoConnection := CoConnection.Create;
-  Self.PlainDriver := PlainDriver;
-  inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
-    TZAdoDatabaseMetadata.Create(Self, Url, Info));
 end;
 
 {**

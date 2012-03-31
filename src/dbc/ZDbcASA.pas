@@ -58,10 +58,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-  ZCompatibility, Types,
-  Classes, Contnrs, SysUtils, ZDbcIntfs,
-  ZDbcConnection, ZPlainASADriver, ZSysUtils, ZTokenizer,
-  ZDbcGenericResolver, ZGenericSqlAnalyser;
+  ZCompatibility, Types, Classes, Contnrs, SysUtils, ZDbcIntfs, ZDbcConnection,
+  ZPlainASADriver, ZSysUtils, ZTokenizer, ZDbcGenericResolver, ZURL,
+  ZPlainDriver, ZGenericSqlAnalyser;
 
 type
   {** Implements a ASA Database Driver. }
@@ -71,7 +70,8 @@ type
     FASA8PlainDriver: IZASA8PlainDriver;
     FASA9PlainDriver: IZASA9PlainDriver;
   protected
-    function GetPlainDriver(const Url: string): IZASAPlainDriver;
+    function GetPlainDriver(const Url: string): IZASAPlainDriver; overload;
+    function GetPlainDriver(const Url: TZURL): IZPlainDriver; overload; override;
   public
     constructor Create;
     function Connect(const Url: string; Info: TStrings): IZConnection; override;
@@ -99,12 +99,12 @@ type
   private
     procedure StartTransaction; virtual;
   protected
-    procedure InternalCreate;
+    procedure InternalCreate; override;
   public
-    constructor Create(Driver: IZDriver; const Url: string;
+    {constructor Create(Driver: IZDriver; const Url: string;
       PlainDriver: IZASAPlainDriver;
       const HostName: string; Port: Integer; const Database: string;
-      const User: string; const Password: string; Info: TStrings);
+      const User: string; const Password: string; Info: TStrings);}
     destructor Destroy; override;
 
     function GetDBHandle: PZASASQLCA;
@@ -170,7 +170,8 @@ uses
 }
 function TZASADriver.Connect(const Url: string; Info: TStrings): IZConnection;
 var
-  TempInfo: TStrings;
+  TempURL: TZURL;
+{  TempInfo: TStrings;
   HostName, Database, UserName, Password: string;
   Port: Integer;
   PlainDriver: IZASAPlainDriver;
@@ -184,7 +185,11 @@ begin
      Database, UserName, Password, TempInfo);
  finally
    TempInfo.Free;
- end;
+ end;}
+begin
+  TempURL := TZURL.Create(Url, Info);
+  Result := TZASAConnection.Create(TempURL);
+  TempURL.Free;
 end;
 
 {**
@@ -253,6 +258,22 @@ begin
   else if Protocol = FASA8PlainDriver.GetProtocol then
     Result := FASA8PlainDriver
   else if Protocol = FASA9PlainDriver.GetProtocol then
+    Result := FASA9PlainDriver;
+  Result.Initialize;
+end;
+
+{**
+  Gets plain driver for selected protocol.
+  @param Url a database connection URL.
+  @return a selected protocol.
+}
+function TZASADriver.GetPlainDriver(const Url: TZURL): IZPlainDriver;
+begin
+  if Url.Protocol = FASA7PlainDriver.GetProtocol then
+    Result := FASA7PlainDriver
+  else if Url.Protocol = FASA8PlainDriver.GetProtocol then
+    Result := FASA8PlainDriver
+  else if Url.Protocol = FASA9PlainDriver.GetProtocol then
     Result := FASA9PlainDriver;
   Result.Initialize;
 end;
@@ -329,8 +350,6 @@ end;
 procedure TZASAConnection.InternalCreate;
 begin
   Self.FMetadata := TZASADatabaseMetadata.Create(Self, Self.URL.URL, Info);
-
-  PlainDriver := TZASADriver(Self.Driver).GetPlainDriver(URL.URL);
 end;
 
 {**
@@ -343,7 +362,7 @@ end;
   @param Password a user password.
   @param Info a string list with extra connection parameters.
 }
-constructor TZASAConnection.Create(Driver: IZDriver; const Url: string;
+{constructor TZASAConnection.Create(Driver: IZDriver; const Url: string;
   PlainDriver: IZASAPlainDriver; const HostName: string; Port: Integer;
   const Database, User, Password: string; Info: TStrings);
 begin
@@ -351,7 +370,7 @@ begin
     TZASADatabaseMetadata.Create(Self, Url, Info));
 
   Self.PlainDriver := PlainDriver;
-end;
+end;}
 
 {**
   Creates a <code>CallableStatement</code> object for calling
