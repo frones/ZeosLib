@@ -70,11 +70,10 @@ type
     FASA8PlainDriver: IZASA8PlainDriver;
     FASA9PlainDriver: IZASA9PlainDriver;
   protected
-    function GetPlainDriver(const Url: string): IZASAPlainDriver; overload;
-    function GetPlainDriver(const Url: TZURL): IZPlainDriver; overload; override;
+    function GetPlainDriver(const Url: TZURL): IZPlainDriver; override;
   public
     constructor Create;
-    function Connect(const Url: string; Info: TStrings): IZConnection; override;
+    function Connect(const Url: TZURL): IZConnection; override;
 
     function GetSupportedProtocols: TStringDynArray; override;
     function GetMajorVersion: Integer; override;
@@ -101,10 +100,6 @@ type
   protected
     procedure InternalCreate; override;
   public
-    {constructor Create(Driver: IZDriver; const Url: string;
-      PlainDriver: IZASAPlainDriver;
-      const HostName: string; Port: Integer; const Database: string;
-      const User: string; const Password: string; Info: TStrings);}
     destructor Destroy; override;
 
     function GetDBHandle: PZASASQLCA;
@@ -129,7 +124,7 @@ type
   {** Implements a specialized cached resolver for ASA. }
   TZASACachedResolver = class(TZGenericCachedResolver)
   public
-     function FormCalculateStatement(Columns: TObjectList): string; override;
+    function FormCalculateStatement(Columns: TObjectList): string; override;
   end;
 
 
@@ -168,28 +163,9 @@ uses
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
-function TZASADriver.Connect(const Url: string; Info: TStrings): IZConnection;
-var
-  TempURL: TZURL;
-{  TempInfo: TStrings;
-  HostName, Database, UserName, Password: string;
-  Port: Integer;
-  PlainDriver: IZASAPlainDriver;
+function TZASADriver.Connect(const Url: TZURL): IZConnection;
 begin
- TempInfo := TStringList.Create;
- try
-   ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
-      UserName, Password, TempInfo);
-   PlainDriver := GetPlainDriver(Url);
-   Result := TZASAConnection.Create(Self, Url, PlainDriver, HostName, Port,
-     Database, UserName, Password, TempInfo);
- finally
-   TempInfo.Free;
- end;}
-begin
-  TempURL := TZURL.Create(Url, Info);
-  Result := TZASAConnection.Create(TempURL);
-  TempURL.Free;
+  Result := TZASAConnection.Create(Url);
 end;
 
 {**
@@ -240,26 +216,6 @@ begin
   if Analyser = nil then
     Analyser := TZSybaseStatementAnalyser.Create;
   Result := Analyser;
-end;
-
-{**
-  Gets plain driver for selected protocol.
-  @param Url a database connection URL.
-  @return a selected protocol.
-}
-function TZASADriver.GetPlainDriver(const Url: string): IZASAPlainDriver;
-var
-  Protocol: string;
-begin
-  Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
-
-  if Protocol = FASA7PlainDriver.GetProtocol then
-    Result := FASA7PlainDriver
-  else if Protocol = FASA8PlainDriver.GetProtocol then
-    Result := FASA8PlainDriver
-  else if Protocol = FASA9PlainDriver.GetProtocol then
-    Result := FASA9PlainDriver;
-  Result.Initialize;
 end;
 
 {**
@@ -347,30 +303,13 @@ begin
   end;
 end;
 
-procedure TZASAConnection.InternalCreate;
-begin
-  Self.FMetadata := TZASADatabaseMetadata.Create(Self, Self.URL.URL, Info);
-end;
-
 {**
   Constructs this object and assignes the main properties.
-  @param Driver the parent ZDBC driver.
-  @param HostName a name of the host.
-  @param Port a port number (0 for default port).
-  @param Database a name pof the database.
-  @param User a user name.
-  @param Password a user password.
-  @param Info a string list with extra connection parameters.
 }
-{constructor TZASAConnection.Create(Driver: IZDriver; const Url: string;
-  PlainDriver: IZASAPlainDriver; const HostName: string; Port: Integer;
-  const Database, User, Password: string; Info: TStrings);
+procedure TZASAConnection.InternalCreate;
 begin
-  inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
-    TZASADatabaseMetadata.Create(Self, Url, Info));
-
-  Self.PlainDriver := PlainDriver;
-end;}
+  Self.FMetadata := TZASADatabaseMetadata.Create(Self, URL);
+end;
 
 {**
   Creates a <code>CallableStatement</code> object for calling

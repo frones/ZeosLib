@@ -236,7 +236,6 @@ type
   {** Implements PostgreSQL Database Metadata. }
   TZPostgreSQLDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
-    FDatabase: string;
     function EscapeString(const S: string): string;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-27
@@ -286,8 +285,6 @@ type
     function UncachedGetCharacterSets: IZResultSet; override; //EgonHugeist
 
   public
-    constructor Create(Connection: TZAbstractConnection; Url: string;
-      Info: TStrings);
     destructor Destroy; override;
     function GetIdentifierConvertor: IZIdentifierConvertor; override; 
  end;
@@ -1313,30 +1310,6 @@ end;
 
 { TZPostgreSQLDatabaseMetadata }
 
-
-{**
-  Constructs this object and assignes the main properties.
-  @param Connection a database connection object.
-  @param Url a database connection url string.
-  @param Info an extra connection properties.
-}
-constructor TZPostgreSQLDatabaseMetadata.Create(
-  Connection: TZAbstractConnection; Url: string; Info: TStrings);
-var
-  TempInfo: TStrings;
-  Hostname, UserName, Password: string;
-  Port: Integer;
-begin
-  inherited Create(Connection, Url, Info);
-
-  TempInfo := TStringList.Create;
-  try
-    ResolveDatabaseUrl(Url, Info, HostName, Port, FDatabase,
-      UserName, Password, TempInfo);
-  finally
-    TempInfo.Free;
-  end;
-end;
 
 {**
   Destroys this object and cleanups the memory.

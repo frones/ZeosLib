@@ -69,11 +69,10 @@ type
   private
     FOracle9iPlainDriver: IZOraclePlainDriver;
   protected
-    function GetPlainDriver(const Url: string): IZOraclePlainDriver; overload;
-    function GetPlainDriver(const Url: TZURL): IZPlainDriver; overload; override;
+    function GetPlainDriver(const Url: TZURL): IZPlainDriver; override;
   public
     constructor Create;
-    function Connect(const Url: string; Info: TStrings): IZConnection; override;
+    function Connect(const Url: TZURL): IZConnection; override;
 
     function GetSupportedProtocols: TStringDynArray; override;
     function GetMajorVersion: Integer; override;
@@ -113,9 +112,6 @@ type
     procedure StartTransactionSupport;
 
   public
-    {constructor Create(Driver: IZDriver; const Url: string;
-      PlainDriver: IZOraclePlainDriver; const HostName: string; Port: Integer;
-      const Database: string; const User: string; const Password: string; Info: TStrings);}
     destructor Destroy; override;
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
@@ -203,28 +199,9 @@ end;
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
-function TZOracleDriver.Connect(const Url: string; Info: TStrings): IZConnection;
-var
-  TempURL: TZURL;
-{  TempInfo: TStrings;
-  HostName, Database, UserName, Password: string;
-  Port: Integer;
-  PlainDriver: IZOraclePlainDriver;
+function TZOracleDriver.Connect(const Url: TZURL): IZConnection;
 begin
-  TempInfo := TStringList.Create;
-  try
-    PlainDriver := GetPlainDriver(Url);
-    ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
-      UserName, Password, TempInfo);
-    Result := TZOracleConnection.Create(Self, Url, PlainDriver, HostName, Port,
-      Database, UserName, Password, TempInfo);
-  finally
-    TempInfo.Free;
-  end;}
-begin
-  TempURL := TZURL.Create(Url, Info);
-  Result := TZOracleConnection.Create(TempURL);
-  TempURL.Free;
+  Result := TZOracleConnection.Create(Url);
 end;
 
 {**
@@ -283,18 +260,6 @@ end;
   @param Url a database connection URL.
   @return a selected protocol.
 }
-function TZOracleDriver.GetPlainDriver(const Url: string): IZOraclePlainDriver;
-var
-  Protocol: string;
-begin
-  Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
-  if Protocol = FOracle9iPlainDriver.GetProtocol then
-    Result := FOracle9iPlainDriver
-  else
-    Result := FOracle9iPlainDriver;
-  Result.Initialize;
-end;
-
 function TZOracleDriver.GetPlainDriver(const Url: TZURL): IZPlainDriver;
 begin
   //if Url.Protocol = FOracle9iPlainDriver.GetProtocol then
@@ -308,28 +273,13 @@ end;
 
 {**
   Constructs this object and assignes the main properties.
-  @param Driver the parent ZDBC driver.
-  @param PlainDriver a Oracle plain driver.
-  @param HostName a name of the host.
-  @param Port a port number (0 for default port).
-  @param Database a name pof the database.
-  @param User a user name.
-  @param Password a user password.
-  @param Info a string list with extra connection parameters.
 }
-{constructor TZOracleConnection.Create(Driver: IZDriver; const Url: string;
-  PlainDriver: IZOraclePlainDriver; const HostName: string; Port: Integer;
-  const Database, User, Password: string; Info: TStrings);}
 procedure TZOracleConnection.InternalCreate;
 begin
-  {inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
-    TZOracleDatabaseMetadata.Create(Self, Url, Info));}
-  FMetaData := TZOracleDatabaseMetadata.Create(Self, Url.URL, Url.Properties);
+  FMetaData := TZOracleDatabaseMetadata.Create(Self, URL);
+  FHandle := nil;
 
   { Sets a default properties }
-
-  //Self.PlainDriver := PlainDriver;
-  FHandle := nil;
   if Self.Port = 0 then
       Self.Port := 1521;
   AutoCommit := True;

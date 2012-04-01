@@ -70,7 +70,7 @@ type
     function GetPlainDriver(const Url: TZURL): IZPlainDriver; override;
   public
     constructor Create;
-    function Connect(const Url: string; Info: TStrings): IZConnection; override;
+    function Connect(const Url: TZURL): IZConnection; override;
 
     function GetSupportedProtocols: TStringDynArray; override;
     function GetMajorVersion: Integer; override;
@@ -166,27 +166,9 @@ end;
 {**
   Attempts to make a database connection to the given URL.
 }
-function TZAdoDriver.Connect(const Url: string; Info: TStrings): IZConnection;
-var
-  TempInfo: TStrings;
-  HostName, Database, UserName, Password: string;
-  Port: Integer;
-  Protocol: string;
-  PlainDriver: IZPlainDriver;
+function TZAdoDriver.Connect(const Url: TZURL): IZConnection;
 begin
-  TempInfo := TStringList.Create;
-  try
-    ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
-      UserName, Password, TempInfo);
-    Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
-    if Protocol = FAdoPlainDriver.GetProtocol then
-      PlainDriver := FAdoPlainDriver;
-    PlainDriver.Initialize;
-    Result := TZAdoConnection.Create(Self, Url, PlainDriver, HostName,
-      Port, Database, UserName, Password, TempInfo);
-  finally
-    TempInfo.Free;
-  end;
+  Result := TZAdoConnection.Create(Url);
 end;
 
 {**
@@ -212,7 +194,7 @@ end;
 procedure TZAdoConnection.InternalCreate;
 begin
   FAdoConnection := CoConnection.Create;
-  Self.FMetadata := TZAdoDatabaseMetadata.Create(Self, Self.URL.URL, Info);
+  Self.FMetadata := TZAdoDatabaseMetadata.Create(Self, URL);
 end;
 
 {**

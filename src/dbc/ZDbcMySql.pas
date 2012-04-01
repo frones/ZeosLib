@@ -72,11 +72,10 @@ type
   private
     FPlainDrivers: Array of IZMySQLPlainDriver;
   protected
-    function GetPlainDriver(const Url: string; Info: TStrings = nil): IZMySQLPlainDriver; overload;// changed by tohenk, 2009-10-11
-    function GetPlainDriver(const Url: TZURL): IZPlainDriver; overload; override;
+    function GetPlainDriver(const Url: TZURL): IZPlainDriver; override;
   public
     constructor Create;
-    function Connect(const Url: string; Info: TStrings): IZConnection; override;
+    function Connect(const Url: TZURL): IZConnection; override;
     function GetSupportedProtocols: TStringDynArray; override;
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
@@ -103,9 +102,6 @@ type
   protected
     procedure InternalCreate; override;
   public
-    {constructor Create(Driver: IZDriver; const Url: string;
-      PlainDriver: IZMySQLPlainDriver; const HostName: string; Port: Integer;
-      const Database: string; const User: string; const Password: string; Info: TStrings);}
     destructor Destroy; override;
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
@@ -183,32 +179,9 @@ end;
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
-function TZMySQLDriver.Connect(const Url: string; Info: TStrings): IZConnection;
-var
-  TempURL: TZURL;
-  {TempInfo: TStrings;
-  HostName, Database, UserName, Password: string;
-  Port: Integer;
-  PlainDriver: IZMySQLPlainDriver;
+function TZMySQLDriver.Connect(const Url: TZURL): IZConnection;
 begin
-  TempInfo := TStringList.Create;
-  try
-    PlainDriver := GetPlainDriver(Url, Info); // changed by tohenk, 2009-10-11
-    ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
-      UserName, Password, TempInfo);
-    // changed by tohenk, 2009-10-11
-    // PATCH ADDED BY tohenk
-    //if PlainDriver <> nil then
-    //  PlainDriver.BuildArguments(TempInfo);
-    Result := TZMySQLConnection.Create(Self, Url, PlainDriver, HostName, Port,
-      Database, UserName, Password, TempInfo);
-  finally
-    TempInfo.Free;
-  end;}
-begin
-  TempURL := TZURL.Create(Url, Info);
-  Result := TZMySQLConnection.Create(TempURL);
-  TempURL.Free;
+  Result := TZMySQLConnection.Create(Url);
 end;
 
 {**
@@ -269,31 +242,8 @@ end;
 {**
   Gets plain driver for selected protocol.
   @param Url a database connection URL.
-  @return a selected protocol.
+  @return a selected plaindriver.
 }
-function TZMySQLDriver.GetPlainDriver(const Url: string; Info: TStrings = nil): IZMySQLPlainDriver; // changed by tohenk, 2009-10-11
-var
-  Protocol: string;
-  i: smallint;
-begin
-  Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
-  For i := 0 to high(FPlainDrivers) do
-    if Protocol = FPlainDrivers[i].GetProtocol then
-      begin
-        Result := FPlainDrivers[i];
-        break;
-      end;
-  // Generic driver
-  If result = nil then
-    Result := FPlainDrivers[1];    // mysql-5
-  // added by tohenk, 2009-10-11
-  // before PlainDriver is initialized, we can perform pre-library loading
-  // requirement check here, e.g. Embedded server argument params
-  if Info <> nil then Result.SetDriverOptions(Info);
-  // end added by tohenk, 2009-10-11
-  Result.Initialize;
-end;
-
 function TZMySQLDriver.GetPlainDriver(const Url: TZURL): IZPlainDriver;
 var
   i: smallint;
@@ -322,15 +272,22 @@ end;
   @return the version number of the plain driver library for the give URL
 }
 function TZMySQLDriver.GetClientVersion(const Url: string): Integer;
+var
+  TempURL: TZURL;
 begin
-  Result := ConvertMySQLVersionToSQLVersion(GetPlainDriver(Url).GetClientVersion);
+  TempURL := TZURL.Create(Url);
+  Result := ConvertMySQLVersionToSQLVersion((GetPlainDriver(TempUrl) as IZMySQLPlainDriver).GetClientVersion);
+  TempUrl.Free
 end;
 
 { TZMySQLConnection }
 
+{**
+  Constructs this object and assignes the main properties.
+}
 procedure TZMySQLConnection.InternalCreate;
 begin
-  FMetaData := TZMySQLDatabaseMetadata.Create(Self, Url.URL, Url.Properties);
+  FMetaData := TZMySQLDatabaseMetadata.Create(Self, Url);
   if Self.Port = 0 then
      Self.Port := MYSQL_PORT;
   AutoCommit := True;
@@ -341,36 +298,6 @@ begin
 
   Open;
 end;
-{**
-  Constructs this object and assignes the main properties.
-  @param Driver the parent ZDBC driver.
-  @param PlainDriver a MySQL plain driver.
-  @param HostName a name of the host.
-  @param Port a port number (0 for default port).
-  @param Database a name pof the database.
-  @param User a user name.
-  @param Password a user password.
-  @param Info a string list with extra connection parameters.
-}
-(*constructor TZMySQLConnection.Create(Driver: IZDriver; const Url: string;
-  PlainDriver: IZMySQLPlainDriver; const HostName: string; Port: Integer;
-  const Database, User, Password: string; Info: TStrings);
-begin
-  inherited Create(Driver, Url, HostName, Port, Database, User, Password, Info,
-    TZMySQLDatabaseMetadata.Create(Self, Url, Info));
-
-  { Sets a default properties }
-  Self.PlainDriver := PlainDriver;
-  if Self.Port = 0 then
-     Self.Port := MYSQL_PORT;
-  AutoCommit := True;
-  TransactIsolationLevel := tiNone;
-
-  { Processes connection properties. }
-  FClientCodePage := Trim(Info.Values['codepage']);
-
-  Open;
-end;*)
 
 {**
   Destroys this object and cleanups the memory.

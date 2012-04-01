@@ -60,7 +60,7 @@ interface
 
 uses
   Types, Classes, SysUtils, ZClasses, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
-  ZDbcResultSet, ZDbcCachedResultSet, ZDbcResultSetMetadata,
+  ZDbcResultSet, ZDbcCachedResultSet, ZDbcResultSetMetadata, ZURL,
    ZCompatibility, ZDbcConnection{$IFDEF MS_WINDOWS}, Windows{$ENDIF};
 
 type
@@ -210,8 +210,6 @@ type
 
   {** Implements MySQL Database Metadata. }
   TZMySQLDatabaseMetadata = class(TZAbstractDatabaseMetadata)
-  private
-    FDatabase: string;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-26
 
@@ -255,7 +253,6 @@ type
       TableNamePattern, ColumnNamePattern: string): IZResultSet; override; //EgonHugeist
     function UncachedGetCharacterSets: IZResultSet; override; //EgonHugeist
   public
-    constructor Create(Connection: TZAbstractConnection; Url: string; Info: TStrings);
     destructor Destroy; override;
   end;
 
@@ -905,30 +902,6 @@ begin
 end;
 
 { TZMySQLDatabaseMetadata }
-
-{**
-  Constructs this object and assignes the main properties.
-  @param Connection a database connection object.
-  @param Url a database connection url string.
-  @param Info an extra connection properties.
-}
-constructor TZMySQLDatabaseMetadata.Create(Connection: TZAbstractConnection;
-  Url: string; Info: TStrings);
-var
-  TempInfo: TStrings;
-  Hostname, UserName, Password: string;
-  Port: Integer;
-begin
-  inherited Create(Connection, Url, Info);
-
-  TempInfo := TStringList.Create;
-  try
-    ResolveDatabaseUrl(Url, Info, HostName, Port, FDatabase,
-      UserName, Password, TempInfo);
-  finally
-    TempInfo.Free;
-  end;
-end;
 
 {**
   Destroys this object and cleanups the memory.

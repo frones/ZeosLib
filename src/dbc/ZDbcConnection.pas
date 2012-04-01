@@ -83,8 +83,8 @@ type
     destructor Destroy; override;
 
     function GetSupportedProtocols: TStringDynArray; virtual; abstract;
-    function Connect(const Url: string; Info: TStrings): IZConnection; overload; virtual;
-    //function Connect(const Url: TZURL): IZConnection; overload; virtual;
+    function Connect(const Url: string; Info: TStrings = nil): IZConnection; overload; deprecated;
+    function Connect(const Url: TZURL): IZConnection; overload; virtual;
     function AcceptsURL(const Url: string): Boolean; virtual;
 
     function GetPropertyInfo(const Url: string; Info: TStrings): TStrings; virtual;
@@ -307,6 +307,15 @@ end;
     connection to the URL
 }
 function TZAbstractDriver.Connect(const Url: string; Info: TStrings): IZConnection;
+var
+  TempURL:  TZURL;
+begin
+  TempURL := TZURL.Create(Url, Info);
+  Result := Connect(TempURL);
+  TempUrl.Free;
+end;
+
+function TZAbstractDriver.Connect(const Url: TZURL): IZConnection;
 begin
   Result := nil;
 end;
