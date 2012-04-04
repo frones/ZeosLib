@@ -343,7 +343,6 @@ begin
   else
     FBeginRequired := True;
 
-  FPlainDriver := PlainDriver;
   TransactIsolationLevel := tiNone;
 
   { Processes connection properties. }
@@ -526,7 +525,7 @@ begin
     { Gets the current codepage if it wasn't set..}
     if FClientCodePage = '' then
       with CreateStatement.ExecuteQuery(Format('select pg_encoding_to_char(%d)',
-        [FPlainDriver.GetClientEncoding(FHandle)])) do
+        [GetPlainDriver.GetClientEncoding(FHandle)])) do
       begin
         if Next then FClientCodePage := ZAnsiString(GetString(1));
         Close;
@@ -1039,7 +1038,7 @@ function TZPostgreSQLConnection.GetAnsiEscapeString(const Value: AnsiString;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
   if Self.GetServerMajorVersion >= 8 then
-    Result := inherited GetAnsiEscapeString(FPlainDriver.EncodeBYTEA(Value, GetConnectionHandle))
+    Result := inherited GetAnsiEscapeString(GetPlainDriver.EncodeBYTEA(Value, GetConnectionHandle))
   else
     Result := inherited GetAnsiEscapeString(ZDbcPostgreSqlUtils.EncodeBinaryString(Value));
 end;

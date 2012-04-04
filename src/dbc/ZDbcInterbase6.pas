@@ -782,7 +782,7 @@ function TZInterbase6Connection.GetAnsiEscapeString(const Value: AnsiString;
 var
   Tmp: AnsiString;
 begin
-  if Self.FPlainDriver.GetProtocol = 'firebird-2.5' then
+  if Self.GetPlainDriver.GetProtocol = 'firebird-2.5' then
     if Length(Value)*2 < 32*1024 then
     begin
       SetLength(Tmp, Length(Value)*2);

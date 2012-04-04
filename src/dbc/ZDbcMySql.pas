@@ -359,7 +359,7 @@ begin
   GetPlainDriver.Init(FHandle);
   {EgonHugeist: Arrange Client-CodePage/CharacterSet first
     Now we know if UTFEncoding is neccessary or not}
-  sMy_client_Char_Set := String(FPlainDriver.GetConnectionCharacterSet(FHandle));
+  sMy_client_Char_Set := String(GetPlainDriver.GetConnectionCharacterSet(FHandle));
   ClientCodePage := GetClientCodePageInformations(sMy_client_Char_Set); //This sets the internal use of Encodings..
   {EgonHugeist:
     Now we know in which kind of CharacterSet we have to send the next Connection-Properties
@@ -446,10 +446,10 @@ begin
     { Fix Bugs in certain Versions where real_conncet resets the Reconnect flag }
     if StrToBoolEx(Info.Values['MYSQL_OPT_RECONNECT']) then
     begin
-      ClientVersion := FPlainDriver.GetClientVersion;
+      ClientVersion := GetPlainDriver.GetClientVersion;
       if ((ClientVersion>=50013) and (ClientVersion<50019)) or
          ((ClientVersion>=50100) and (ClientVersion<50106)) then
-        FPlainDriver.SetOptions(FHandle, MYSQL_OPT_RECONNECT, 'true');
+        GetPlainDriver.SetOptions(FHandle, MYSQL_OPT_RECONNECT, 'true');
     end;
 
     if FClientCodePage = '' then //was set on inherited Create(...)

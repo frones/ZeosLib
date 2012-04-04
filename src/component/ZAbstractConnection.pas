@@ -495,7 +495,6 @@ begin
       FClientCodepage := Trim(Value.Values['codepage'])
     else
       Value.Values['codepage'] := FClientCodepage;
-    FURL.Properties.Text := Value.Text
     if Self.Connected then
     begin
       DbcConnection.PreprepareSQL := Value.Values['PreprepareSQL'] = 'ON';
@@ -503,7 +502,7 @@ begin
     end
     else
       FPreprepareSQL := Value.Values['PreprepareSQL'] = 'ON';
-    FProperties.Text := Value.Text
+    FURL.Properties.Text := Value.Text;
   end
   else
     FURL.Properties.Clear;
@@ -1407,9 +1406,9 @@ end;
 procedure TZAbstractConnection.SetPreprepareSQL(Value: Boolean);
 begin
   if Value then
-    Self.FProperties.Values['PreprepareSQL'] := 'ON'
+    FURL.Properties.Values['PreprepareSQL'] := 'ON'
   else
-    Self.FProperties.Values['PreprepareSQL'] := '';
+    FURL.Properties.Values['PreprepareSQL'] := '';
 
   if Self.Connected then
   begin

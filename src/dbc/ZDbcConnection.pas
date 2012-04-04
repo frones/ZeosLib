@@ -583,8 +583,6 @@ end;
   @param Password a user password.
   @param Info a string list with extra connection parameters.
 }
-constructor TZAbstractConnection.Create(Driver: IZDriver; const ZUrl: TZUrl;
-  Metadata: TContainedObject; APlainDriver: IZPlainDriver);
 {$WARNINGS OFF} //suppress the deprecatad warning of calling create from internal
 constructor TZAbstractConnection.Create(Driver: IZDriver; const Url: string;
   PlainDriver: IZPlainDriver;
@@ -598,7 +596,6 @@ begin
   TempURL.Free;
 end;
 {$WARNINGS OFF}
-  FIZPlainDriver := APlainDriver;
 
 {**
   Constructs this object and assignes the main properties.
