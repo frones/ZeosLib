@@ -85,7 +85,7 @@ uses
 {$IFDEF ENABLE_ASA}
   ZDbcASA,
 {$ENDIF}
-  SysUtils, Classes, ZDbcIntfs, DB,ZCompatibility;
+  SysUtils, Classes, ZDbcIntfs, DB, ZCompatibility, ZURL;
 
 
 type
@@ -98,14 +98,15 @@ type
     function GetVersion: string;
     procedure SetVersion(const Value: string);
   protected
-    FProtocol: string;
+    FURL: TZURL;
+    FCatalog: string;
+    {FProtocol: string;
     FHostName: string;
     FPort: Integer;
     FDatabase: string;
     FUser: string;
     FPassword: string;
-    FCatalog: string;
-    FProperties: TStrings;
+    FProperties: TStrings;}
     FAutoCommit: Boolean;
     FReadOnly: Boolean;
     FTransactIsolationLevel: TZTransactIsolationLevel;
@@ -137,6 +138,19 @@ type
     FPreprepareSQL: Boolean;
     function GetPreprepareSQL: Boolean;
     procedure SetPreprepareSQL(Value: Boolean);
+    function GetHostName: string;
+    procedure SetHostName(const Value: String);
+    function GetPort: Integer;
+    procedure SetPort(const Value: Integer);
+    function GetDatabase: string;
+    procedure SetDatabase(const Value: String);
+    function GetUser: string;
+    procedure SetUser(const Value: String);
+    function GetPassword: string;
+    procedure SetPassword(const Value: String);
+    function GetProtocol: String;
+    procedure SetProtocol(const Value: String);
+    function GetProperties: TStrings;
     function GetConnected: Boolean;
     procedure SetConnected(Value: Boolean);
     procedure SetProperties(Value: TStrings);
@@ -225,12 +239,12 @@ type
 
     property InTransaction: Boolean read GetInTransaction;
 
-    property User: string read FUser write FUser;
-    property Password: string read FPassword write FPassword;
-    property HostName: string read FHostName write FHostName;
-    property Port: Integer read FPort write FPort default 0;
-    property Database: string read FDatabase write FDatabase;
-    property Protocol: string read FProtocol write FProtocol;
+    property HostName: string read GetHostName write SetHostName;
+    property Port: Integer read GetPort write SetPort;
+    property Database: string read GetDatabase write SetDatabase;
+    property User: string read GetUser write SetUser;
+    property Password: string read GetPassword write SetPassword;
+    property Protocol: string read GetProtocol write SetProtocol;
 
     property DbcDriver: IZDriver read GetDbcDriver;
     property DbcConnection: IZConnection read FConnection;
@@ -244,7 +258,7 @@ type
     property PreprepareSQL: Boolean read GetPreprepareSQL write SetPreprepareSQL default True;
     property ClientCodepage: String read FClientCodepage write SetClientCodePage; //EgonHugeist
     property Catalog: string read FCatalog write FCatalog;
-    property Properties: TStrings read FProperties write SetProperties;
+    property Properties: TStrings read GetProperties write SetProperties;
     property AutoCommit: Boolean read FAutoCommit write SetAutoCommit
       default True;
     property ReadOnly: Boolean read FReadOnly write FReadOnly
@@ -301,12 +315,13 @@ var
 }
 constructor TZAbstractConnection.Create(AOwner: TComponent);
 begin
+  FURL := TZURL.Create;
   inherited Create(AOwner);
   FAutoCommit := True;
   FReadOnly := False;
   FTransactIsolationLevel := tiNone;
   FConnection := nil;
-  FProperties := TStringList.Create;
+  //FProperties := TStringList.Create;
   FDatasets := TList.Create;
   // Modified by cipto 8/1/2007 1:45:56 PM
   FSequences:= TList.Create;
@@ -321,13 +336,79 @@ destructor TZAbstractConnection.Destroy;
 begin
   Disconnect;
   UnregisterAllDataSets;
-  FProperties.Free;
+  //FProperties.Free;
   FDatasets.Free;
+  FURL.Free;
   // Modified by cipto 8/1/2007 1:47:37 PM
   FSequences.Clear;
   FSequences.Free;
   ////////////////////////////////////////
   inherited Destroy;
+end;
+
+function TZAbstractConnection.GetHostName: string;
+begin
+  Result := FURL.HostName;
+end;
+
+procedure TZAbstractConnection.SetHostName(const Value: String);
+begin
+  FURL.HostName := Value;
+end;
+
+function TZAbstractConnection.GetPort: Integer;
+begin
+  Result := FURL.Port;
+end;
+
+procedure TZAbstractConnection.SetPort(const Value: Integer);
+begin
+  FURL.Port := Value;
+end;
+
+function TZAbstractConnection.GetDatabase: string;
+begin
+  Result := FURL.Database;
+end;
+
+procedure TZAbstractConnection.SetDatabase(const Value: String);
+begin
+  FURL.Database := Value;
+end;
+
+function TZAbstractConnection.GetUser: string;
+begin
+  Result := FURL.UserName;
+end;
+
+procedure TZAbstractConnection.SetUser(const Value: String);
+begin
+  FURL.UserName := Value;
+end;
+
+function TZAbstractConnection.GetPassword: string;
+begin
+  Result := FURL.Password;
+end;
+
+procedure TZAbstractConnection.SetPassword(const Value: String);
+begin
+  FURL.Password := Value;
+end;
+
+function TZAbstractConnection.GetProtocol: String;
+begin
+  Result := FURL.Protocol;
+end;
+
+procedure TZAbstractConnection.SetProtocol(const Value: String);
+begin
+  FURL.Protocol := Value;
+end;
+
+function TZAbstractConnection.GetProperties: TStrings;
+begin
+  Result := FURL.Properties;
 end;
 
 {**
@@ -364,11 +445,11 @@ begin
     //possible! -> result of PropertyEditor if not complete yet
     //Later we should remove this if the MeataData/Plaindriver-Informations
     //where complete
-    FClientCodepage := Trim(FProperties.Values['codepage'])
+    FClientCodepage := Trim(FURL.Properties.Values['codepage'])
   else
     Self.FClientCodepage := Value;
-  if ( Trim(FProperties.Values['codepage']) <> FClientCodepage ) then
-    FProperties.Values['codepage'] := FClientCodepage;
+  if ( Trim(FURL.Properties.Values['codepage']) <> FClientCodepage ) then
+    FURL.Properties.Values['codepage'] := FClientCodepage;
 end;
 
 {**
@@ -414,6 +495,7 @@ begin
       FClientCodepage := Trim(Value.Values['codepage'])
     else
       Value.Values['codepage'] := FClientCodepage;
+    FURL.Properties.Text := Value.Text
     if Self.Connected then
     begin
       DbcConnection.PreprepareSQL := Value.Values['PreprepareSQL'] = 'ON';
@@ -424,7 +506,7 @@ begin
     FProperties.Text := Value.Text
   end
   else
-    FProperties.Clear;
+    FURL.Properties.Clear;
 end;
 
 {**
@@ -555,8 +637,8 @@ end;
 }
 function TZAbstractConnection.ConstructURL(const UserName, Password: string): string;
 begin
-  Result := DriverManager.ConstructURL(FProtocol, FHostName, FDatabase, UserName,
-    Password, FPort, FProperties);
+  Result := DriverManager.ConstructURL(FURL.Protocol, FURL.HostName, FURL.Database, UserName,
+    Password, FURL.Port, FURL.Properties);
 end;
 
 {**
@@ -660,22 +742,11 @@ begin
 //        Exit;
 //    end;
 
-    UserName := FUser;
-    Password := FPassword;
+    UserName := FURL.UserName;
+    Password := FURL.Password;
 
     if FLoginPrompt then
     begin
-      { Defines user name }
-      if UserName = '' then
-        UserName := FProperties.Values['UID'];
-      if UserName = '' then
-        UserName := FProperties.Values['username'];
-
-      { Defines user password }
-      if Password = '' then
-        Password := FProperties.Values['PWD'];
-      if Password = '' then
-        Password := FProperties.Values['password'];
 
       if Assigned(FOnLogin) then
         FOnLogin(Self, UserName, Password)
@@ -683,7 +754,7 @@ begin
       begin
         if Assigned(LoginDialogProc) then
         begin
-          if not LoginDialogProc(FDatabase, UserName, Password) then
+          if not LoginDialogProc(FURL.Database, UserName, Password) then
             Exit;
         end
         else
@@ -694,7 +765,7 @@ begin
     ShowSqlHourGlass;
     try
       FConnection := DriverManager.GetConnectionWithParams(
-        ConstructURL(UserName, Password), FProperties);
+        ConstructURL(UserName, Password), FURL.Properties);
       try
         with FConnection do
         begin
@@ -1319,7 +1390,7 @@ end;
 
 function TZAbstractConnection.GetURL: String;
 begin
-  Result := ConstructURL(Self.FUser, Self.FPassword);
+  Result := ConstructURL(FURL.UserName, FURL.Password);
 end;
 
 function TZAbstractConnection.GetPreprepareSQL: Boolean;

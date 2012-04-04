@@ -65,7 +65,7 @@ uses
 {$ENDIF}
   Types, Classes, SysUtils, Contnrs, ZSysUtils, ZClasses, ZDbcIntfs,
   ZDbcResultSetMetadata, ZDbcCachedResultSet, ZDbcCache, ZCompatibility,
-  ZSelectSchema, ZURL;
+  ZSelectSchema, ZURL, ZDbcConnection;
 
 const
   procedureColumnUnknown = 0;
@@ -127,6 +127,7 @@ type
     function GetInfo: TStrings;
     function GetURLString: String;
   protected
+    FDatabase: String;
     WildcardsArray: array of char; //Added by Cipto
     function CreateDatabaseInfo: IZDatabaseInfo; virtual; // technobot 2008-06-24
     function GetStatement: IZSTatement; // technobot 2008-06-28 - moved from descendants
@@ -196,10 +197,7 @@ type
     function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
       const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; virtual;
   public
-    constructor Create(ParentConnection: IZConnection;
-      const Url: string; Info: TStrings); overload;
-    constructor Create(ParentConnection: IZConnection;
-      const Url: string); overload;
+    constructor Create(Connection: TZAbstractConnection; const Url: TZURL); virtual;
     destructor Destroy; override;
 
     function GetURL: string; virtual;
@@ -1723,40 +1721,20 @@ end;
 
 { TZAbstractDatabaseMetadata }
 
-
-{**
-  Constructs this object and assignes the main properties.
-  @param Connection a database connection object.
-  @param Url a database connection url string.
-  @param Info an extra connection properties.
-}
-constructor TZAbstractDatabaseMetadata.Create(
-  ParentConnection: IZConnection; const Url: string; Info: TStrings);
-begin
-  inherited Create(ParentConnection);
-  FConnection := Pointer(ParentConnection);
-  FUrl := TZURL.Create(Url);
-  FUrl.Properties.AddStrings(Info);
-  //FURL := Url;
-  //FInfo := Info;
-  FCachedResultSets := TZHashMap.Create;
-  FDatabaseInfo := CreateDatabaseInfo;
-  FillWildcards;
-end;
-
 {**
   Constructs this object and assignes the main properties.
   @param Connection a database connection object.
   @param Url a database connection url string.
 }
-constructor TZAbstractDatabaseMetadata.Create(ParentConnection: IZConnection;
-  const Url: string);
+constructor TZAbstractDatabaseMetadata.Create(Connection: TZAbstractConnection;
+  const Url: TZURL);
 begin
-  inherited Create(ParentConnection);
-  FConnection := Pointer(ParentConnection);
-  FUrl := TZURL.Create(Url);
+  inherited Create(Connection as IZConnection);
+  FConnection := Pointer(Connection as IZConnection);
+  FUrl := Url;
   FCachedResultSets := TZHashMap.Create;
   FDatabaseInfo := CreateDatabaseInfo;
+  FDatabase := Url.Database;
   FillWildcards;
 end;
 
@@ -1773,7 +1751,7 @@ end;
 {**  Destroys this object and cleanups the memory.}
 destructor TZAbstractDatabaseMetadata.Destroy;
 begin
-  FUrl.Free;
+  FUrl := nil;
   FCachedResultSets.Clear;
   FCachedResultSets := nil;
   FDatabaseInfo := nil;

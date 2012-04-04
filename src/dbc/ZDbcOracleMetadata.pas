@@ -59,7 +59,7 @@ interface
 
 uses
   Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
-  ZCompatibility, ZDbcOracleUtils, ZDbcConnection,
+  ZCompatibility, ZDbcOracleUtils, ZDbcConnection, ZURL,
   ZDbcCachedResultSet, ZDbcCache;
 
 type
@@ -209,8 +209,6 @@ type
 
   {** Implements Oracle Database Metadata. }
   TZOracleDatabaseMetadata = class(TZAbstractDatabaseMetadata)
-  private
-    FDatabase: string;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-28
 
@@ -247,8 +245,6 @@ type
 //      const Table: string): IZResultSet; override;
 //    function UncachedGetTypeInfo: IZResultSet; override;
   public
-    constructor Create(Connection: TZAbstractConnection; Url: string;
-      Info: TStrings);
     destructor Destroy; override;
   end;
 
@@ -1150,31 +1146,6 @@ end;
 
 
 { TZOracleDatabaseMetadata }
-
-
-{**
-  Constructs this object and assignes the main properties.
-  @param Connection a database connection object.
-  @param Url a database connection url string.
-  @param Info an extra connection properties.
-}
-constructor TZOracleDatabaseMetadata.Create(
-  Connection: TZAbstractConnection; Url: string; Info: TStrings);
-var
-  TempInfo: TStrings;
-  HostName, UserName, Password: string;
-  Port: Integer;
-begin
-  inherited Create(Connection, Url, Info);
-
-  TempInfo := TStringList.Create;
-  try
-    ResolveDatabaseUrl(Url, Info, HostName, Port, FDatabase,
-      UserName, Password, TempInfo);
-  finally
-    TempInfo.Free;
-  end;
-end;
 
 {**
   Destroys this object and cleanups the memory.

@@ -59,7 +59,7 @@ interface
 
 uses
   Types, ZCompatibility, Classes, SysUtils, ZDbcUtils, ZDbcIntfs, ZDbcConnection,
-  Contnrs, ZPlainFirebirdDriver,
+  Contnrs, ZPlainFirebirdDriver, ZPlainDriver,
   ZPlainFirebirdInterbaseConstants, ZSysUtils, ZDbcInterbase6Utils, ZDbcLogging,
   ZDbcGenericResolver, ZTokenizer, ZGenericSqlAnalyser, ZURL;
 
@@ -70,10 +70,10 @@ type
   private
     FPlainDrivers: Array of IZInterbasePlainDriver;
   protected
-    function GetPlainDriver(const Url: string): IZInterbasePlainDriver;
+    function GetPlainDriver(const Url: TZURL): IZPlainDriver; override;
   public
     constructor Create;
-    function Connect(const Url: string; Info: TStrings): IZConnection; override;
+    function Connect(const Url: TZURL): IZConnection; override;
 
     function GetSupportedProtocols: TStringDynArray; override;
     function GetSupportedClientCodePages(const Url: string;
@@ -105,13 +105,12 @@ type
     FHandle: TISC_DB_HANDLE;
     FTrHandle: TISC_TR_HANDLE;
     FStatusVector: TARRAY_ISC_STATUS;
-    FPlainDriver: IZInterbasePlainDriver;
     FHardCommit: boolean;
   private
     procedure StartTransaction; virtual;
+  protected
+    procedure InternalCreate; override;
   public
-    constructor Create(Driver: IZDriver; const ZUrl: TZURL;
-      PlainDriver: IZInterbasePlainDriver); overload;
     destructor Destroy; override;
 
     function GetDBHandle: PISC_DB_HANDLE;
@@ -193,21 +192,9 @@ uses ZDbcInterbase6Statement, ZDbcInterbase6Metadata,
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
-function TZInterbase6Driver.Connect(const Url: string; Info: TStrings): IZConnection;
-var
-  TempInfo: TStrings;
-  HostName, Database, UserName, Password: string;
-  Port: Integer;
-  PlainDriver: IZInterbasePlainDriver;
+function TZInterbase6Driver.Connect(const Url: TZURL): IZConnection;
 begin
- TempInfo := TStringList.Create;
- try
-   ResolveDatabaseUrl(Url, Info, HostName, Port, Database, UserName, Password, TempInfo);
-   PlainDriver := GetPlainDriver(Url);
-   Result := TZInterbase6Connection.Create(Self, TZURL.Create(Url), PlainDriver);
- finally
-   TempInfo.Free;
- end;
+  Result := TZInterbase6Connection.Create(Url);
 end;
 
 {**
@@ -272,17 +259,14 @@ end;
 {**
   Gets plain driver for selected protocol.
   @param Url a database connection URL.
-  @return a selected protocol.
+  @return a selected plaindriver.
 }
-function TZInterbase6Driver.GetPlainDriver(
-  const Url: string): IZInterbasePlainDriver;
+function TZInterbase6Driver.GetPlainDriver(const Url: TZURL): IZPlainDriver;
 var
-  Protocol: string;
   i: smallint;
 begin
-  Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
   For i := 0 to high(FPlainDrivers) do
-    if Protocol = FPlainDrivers[i].GetProtocol then
+    if Url.Protocol = FPlainDrivers[i].GetProtocol then
       begin
         Result := FPlainDrivers[i];
         break;
@@ -292,7 +276,6 @@ begin
     Result := FPlainDrivers[1];    // interbase-6
   Result.Initialize;
 end;
-
 {**
   Get a name of the supported subprotocol.
   For example: mysql, oracle8 or postgresql72
@@ -346,32 +329,29 @@ begin
   begin
     if AutoCommit then
     begin
-      FPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
-      DriverManager.LogMessage(lcTransaction, FPlainDriver.GetProtocol,
-        Format('COMMITT TRANSACTION "%s"', [Database]));
+      GetPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
+      DriverManager.LogMessage(lcTransaction, PlainDriver.GetProtocol,
+        Format('COMMIT TRANSACTION "%s"', [Database]));
     end
     else
     begin
-      FPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle);
-      DriverManager.LogMessage(lcTransaction, FPlainDriver.GetProtocol,
+      GetPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle);
+      DriverManager.LogMessage(lcTransaction, PlainDriver.GetProtocol,
         Format('ROLLBACK TRANSACTION "%s"', [Database]));
     end;
     FTrHandle := nil;
-    CheckInterbase6Error(FPlainDriver, FStatusVector, lcDisconnect);
+    CheckInterbase6Error(GetPlainDriver, FStatusVector, lcDisconnect);
   end;
 
   if FHandle <> nil then
   begin
-    //TestSuite Errors -> Handle is erronymous Why???
-    try
-      FPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
-    except
-    end;
+    try GetPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
+    except end;
     FHandle := nil;
-    CheckInterbase6Error(FPlainDriver, FStatusVector, lcDisconnect);
+    CheckInterbase6Error(GetPlainDriver, FStatusVector, lcDisconnect);
   end;
 
-  DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol,
+  DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol,
       Format('DISCONNECT FROM "%s"', [Database]));
 
   inherited Close;
@@ -389,70 +369,65 @@ begin
   begin
     if FHardCommit then
     begin
-      FPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
+      GetPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
       FTrHandle := nil;
     end
     else
-      FPlainDriver.isc_commit_retaining(@FStatusVector, @FTrHandle);
+      GetPlainDriver.isc_commit_retaining(@FStatusVector, @FTrHandle);
 
-    CheckInterbase6Error(FPlainDriver, FStatusVector, lcTransaction);
+    CheckInterbase6Error(GetPlainDriver, FStatusVector, lcTransaction);
     DriverManager.LogMessage(lcTransaction,
-      FPlainDriver.GetProtocol, 'TRANSACTION COMMIT');
+      PlainDriver.GetProtocol, 'TRANSACTION COMMIT');
   end;
 end;
 
 {**
   Constructs this object and assignes the main properties.
-  @param Driver a ZDBC driver interface.
-  @param Url a connection URL.
-  @param MetaData a ZDBC MetaData-Object
 }
-constructor TZInterbase6Connection.Create(Driver: IZDriver; const ZUrl: TZURL;
-  PlainDriver: IZInterbasePlainDriver);
+procedure TZInterbase6Connection.InternalCreate;
 var
   RoleName: string;
   UserSetDialect: string;
   ConnectTimeout : integer;
 begin
-  inherited Create(Driver, ZUrl, TZInterbase6DatabaseMetadata.Create(Self, ZUrl.URL), PlainDriver);
+  Self.FMetadata := TZInterbase6DatabaseMetadata.Create(Self, Url);
 
-  FHardCommit := StrToBoolEx(Info.Values['hard_commit']);
-  FPlainDriver := PlainDriver;
-
+  FHardCommit := StrToBoolEx(URL.Properties.Values['hard_commit']);
   { Sets a default Interbase port }
+
   if Self.Port = 0 then
     Self.Port := 3050;
 
   { set default sql dialect it can be overriden }
-  if FPlainDriver.GetProtocol = 'interbase-5' then
+  if PlainDriver.GetProtocol = 'interbase-5' then
     FDialect := 1
   else
     FDialect := 3;
 
-  UserSetDialect := Trim(Info.Values['dialect']);
+  UserSetDialect := Trim(URL.Properties.Values['dialect']);
   if UserSetDialect <> '' then
     FDialect := StrToIntDef(UserSetDialect, FDialect);
 
   { Processes connection properties. }
-  self.Info.Values['isc_dpb_username'] := User;
-  self.Info.Values['isc_dpb_password'] := Password;
+  self.Info.Values['isc_dpb_username'] := Url.UserName;
+  self.Info.Values['isc_dpb_password'] := Url.Password;
 
   if FClientCodePage = '' then //was set on inherited Create(...)
-    if self.Info.Values['isc_dpb_lc_ctype'] <> '' then //Check if Dev set's it manually
+    if URL.Properties.Values['isc_dpb_lc_ctype'] <> '' then //Check if Dev set's it manually
     begin
-      FClientCodePage := self.Info.Values['isc_dpb_lc_ctype'];
+      FClientCodePage := URL.Properties.Values['isc_dpb_lc_ctype'];
       Self.CheckCharEncoding(FClientCodePage, True);
-      Self.Info.Values['isc_dpb_lc_ctype'] := ''; //drop it (setting is optional)
+      URL.Properties.Values['isc_dpb_lc_ctype'] := ''; //drop it (setting is optional)
     end;
-  Self.Info.Values['isc_dpb_lc_ctype'] := FClientCodePage;
+  URL.Properties.Values['isc_dpb_lc_ctype'] := FClientCodePage;
 
-  RoleName := Trim(Info.Values['rolename']);
+  RoleName := Trim(URL.Properties.Values['rolename']);
   if RoleName <> '' then
-    self.Info.Values['isc_dpb_sql_role_name'] := UpperCase(RoleName);
+    URL.Properties.Values['isc_dpb_sql_role_name'] := UpperCase(RoleName);
 
-  ConnectTimeout := StrToIntDef(Info.Values['timeout'], -1);
+  ConnectTimeout := StrToIntDef(URL.Properties.Values['timeout'], -1);
   if ConnectTimeout >= 0 then
-    self.Info.Values['isc_dpb_connect_timeout'] := IntToStr(ConnectTimeout);
+    URL.Properties.Values['isc_dpb_connect_timeout'] := IntToStr(ConnectTimeout);
 
 end;
 
@@ -514,7 +489,7 @@ end;
 }
 function TZInterbase6Connection.GetPlainDriver: IZInterbasePlainDriver;
 begin
-  Result := FPlainDriver;
+  Result := PlainDriver as IZInterbasePlainDriver;
 end;
 
 {**
@@ -561,20 +536,20 @@ begin
     begin
       CreateNewDatabase(Info.Values['createNewDatabase']);
       { Logging connection action }
-      DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol,
+      DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol,
         Format('CREATE DATABASE "%s" AS USER "%s"', [Info.Values['createNewDatabase'], User]));
     end;
 
     { Connect to Interbase6 database. }
     FHandle := nil;
-    FPlainDriver.isc_attach_database(@FStatusVector, StrLen(DBName), DBName,
+    GetPlainDriver.isc_attach_database(@FStatusVector, StrLen(DBName), DBName,
         @FHandle, FDPBLength, DPB);
 
     { Check connection error }
-    CheckInterbase6Error(FPlainDriver, FStatusVector, lcConnect);
+    CheckInterbase6Error(GetPlainDriver, FStatusVector, lcConnect);
 
     { Logging connection action }
-    DriverManager.LogMessage(lcConnect, FPlainDriver.GetProtocol,
+    DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol,
       Format('CONNECT TO "%s" AS USER "%s"', [Database, User]));
 
     { Start transaction }
@@ -694,13 +669,13 @@ begin
   begin
     if FHardCommit then
     begin
-      FPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle);
+      GetPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle);
       FTrHandle := nil;
     end
     else
-      FPlainDriver.isc_rollback_retaining(@FStatusVector, @FTrHandle);
-    CheckInterbase6Error(FPlainDriver, FStatusVector);
-    DriverManager.LogMessage(lcTransaction, FPlainDriver.GetProtocol, 'TRANSACTION ROLLBACK');
+      GetPlainDriver.isc_rollback_retaining(@FStatusVector, @FTrHandle);
+    CheckInterbase6Error(GetPlainDriver, FStatusVector);
+    DriverManager.LogMessage(lcTransaction, PlainDriver.GetProtocol, 'TRANSACTION ROLLBACK');
   end;
 end;
 
@@ -721,7 +696,7 @@ var
 begin
   DatabaseInfoCommand := Char(isc_info_reads);
 
-  ErrorCode := FPlainDriver.isc_database_info(@FStatusVector, @FHandle, 1, @DatabaseInfoCommand,
+  ErrorCode := GetPlainDriver.isc_database_info(@FStatusVector, @FHandle, 1, @DatabaseInfoCommand,
                            IBLocalBufferLength, Buffer);
 
   if (ErrorCode >= 335544721) and (ErrorCode <= 335544727) then
@@ -772,9 +747,9 @@ begin
     { GenerateTPB return PTEB with null pointer tpb_address from default
       transaction }
     PTEB := GenerateTPB(Params, FHandle);
-    FPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, PTEB);
-    CheckInterbase6Error(FPlainDriver, FStatusVector, lcTransaction);
-    DriverManager.LogMessage(lcTransaction, FPlainDriver.GetProtocol,
+    GetPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, PTEB);
+    CheckInterbase6Error(GetPlainDriver, FStatusVector, lcTransaction);
+    DriverManager.LogMessage(lcTransaction, PlainDriver.GetProtocol,
       'TRANSACTION STARTED.');
   finally
     Params.Free;
@@ -795,11 +770,11 @@ begin
   Close;
   DbHandle := nil;
   TrHandle := nil;
-  FPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @DbHandle, @TrHandle,
+  GetPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @DbHandle, @TrHandle,
     0, PAnsiChar(AnsiString(sql)), FDialect, nil);
-  CheckInterbase6Error(FPlainDriver, FStatusVector, lcExecute, SQL);
-  FPlainDriver.isc_detach_database(@FStatusVector, @DbHandle);
-  CheckInterbase6Error(FPlainDriver, FStatusVector, lcExecute, SQL);
+  CheckInterbase6Error(GetPlainDriver, FStatusVector, lcExecute, SQL);
+  GetPlainDriver.isc_detach_database(@FStatusVector, @DbHandle);
+  CheckInterbase6Error(GetPlainDriver, FStatusVector, lcExecute, SQL);
 end;
 
 function TZInterbase6Connection.GetAnsiEscapeString(const Value: AnsiString;

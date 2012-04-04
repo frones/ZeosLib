@@ -94,11 +94,11 @@ procedure TZGroupedConnection .DoZConnectionGroupChange(Sender: TObject);
 begin
   if (Sender is TZConnectionGroup) then
   begin
-    FUser := (Sender as TZConnectionGroup).User;
-    FProtocol := (Sender as TZConnectionGroup).Protocol;
-    FPassword := (Sender as TZConnectionGroup).Password;
-    FHostName := (Sender as TZConnectionGroup).HostName;
-    FDatabase := (Sender as TZConnectionGroup).Database;
+    FURL.UserName := (Sender as TZConnectionGroup).User;
+    FURL.Protocol := (Sender as TZConnectionGroup).Protocol;
+    FURL.Password := (Sender as TZConnectionGroup).Password;
+    FURL.HostName := (Sender as TZConnectionGroup).HostName;
+    FURL.Database := (Sender as TZConnectionGroup).Database;
   end;
 end;
 
@@ -132,11 +132,11 @@ begin
   if Value <> nil then
   begin
     FZConnectionGroup.RegisterChanges(FZConnectionGroupLink);
-    FUser := FZConnectionGroup.User;
-    FProtocol := FZConnectionGroup.Protocol;
-    FPassword := FZConnectionGroup.Password;
-    FHostName := FZConnectionGroup.HostName;
-    FDatabase := FZConnectionGroup.Database;
+    FURL.UserName := FZConnectionGroup.User;
+    FURL.Protocol := FZConnectionGroup.Protocol;
+    FURL.Password := FZConnectionGroup.Password;
+    FURL.HostName := FZConnectionGroup.HostName;
+    FURL.Database := FZConnectionGroup.Database;
   end;
   InternalZConnectionGroupChanged(Self, Value);
 end;
@@ -145,11 +145,11 @@ function TZGroupedConnection .getUser: string;
 begin
   if FZConnectionGroup <> nil then
   begin
-    FUser := FZConnectionGroup.User;
-    Result := FUser;
+    FURL.UserName := FZConnectionGroup.User;
+    Result := FURL.UserName;
   end
   else
-    FUser := '';
+    FURL.UserName := '';
 end;
 
 {
@@ -169,33 +169,33 @@ function TZGroupedConnection .getPassword: string;
 begin
   if FZConnectionGroup <> nil then
   begin
-    FPassword := FZConnectionGroup.Password;
-    Result := FPassword;
+    FURL.Password := FZConnectionGroup.Password;
+    Result := FURL.Password;
   end
   else
-    FPassword := '';
+    FURL.Password := '';
 end;
 
 function TZGroupedConnection .getHostName: string;
 begin
   if FZConnectionGroup <> nil then
   begin
-    FHostName := FZConnectionGroup.HostName;
-    Result := FHostName;
+    FURL.HostName := FZConnectionGroup.HostName;
+    Result := FURL.HostName;
   end
   else
-    FHostName := '';
+    FURL.HostName := '';
 end;
 
 function TZGroupedConnection .getDatabase: string;
 begin
   if FZConnectionGroup <> nil then
   begin
-    FDatabase := FZConnectionGroup.Database;
-    Result := FDatabase;
+    FURL.Database := FZConnectionGroup.Database;
+    Result := FURL.Database;
   end
   else
-    FDatabase := '';
+    FURL.Database := '';
 end;
 
 {

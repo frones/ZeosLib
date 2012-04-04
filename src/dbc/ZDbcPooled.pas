@@ -142,7 +142,7 @@ type
     function GetEmbeddedURL(const URL: AnsiString): AnsiString;
   public
     function GetSupportedProtocols: TStringDynArray; override;
-    function Connect(const URL: string; Info: TStrings): IZConnection; override;
+    function Connect(const URL: TZURL): IZConnection; override;
     function GetClientVersion(const URL: string): Integer; override;
     function AcceptsURL(const URL: string): Boolean; override;
     function GetPropertyInfo(const URL: string; Info: TStrings): TStrings; override;
@@ -664,7 +664,7 @@ begin
   Result := Copy(URL, 1, 5 + Length(PooledPrefix)) = 'zdbc:' + PooledPrefix;
 end;
 
-function TZDbcPooledConnectionDriver.Connect(const URL: string; Info: TStrings): IZConnection;
+function TZDbcPooledConnectionDriver.Connect(const URL: TZURL): IZConnection;
 var
   TempURL: TZURL;
   I: Integer;
@@ -677,9 +677,8 @@ begin
 
   TempURL := TZURL.Create;
   try
-    TempURL.URL := GetEmbeddedURL(URL);
-    if Info <> nil then
-      TempURL.Properties.Text := Info.Text;
+    TempURL.URL := GetEmbeddedURL(URL.URL);
+    TempURL.Properties.Text := URL.Properties.Text;
 
     ConnectionPool := nil;
 
