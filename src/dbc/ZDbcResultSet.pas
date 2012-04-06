@@ -633,7 +633,10 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeString);
 {$ENDIF}
-  Result := UTF8ToString(GetString(ColumnIndex));
+  if Self.ClientCodePage^.Encoding in [ceUTF8] then
+    Result := UTF8ToString(GetString(ColumnIndex))
+  else
+    Result := WideString(GetString(ColumnIndex))
 end;
 
 {**

@@ -55,7 +55,6 @@
  {$DEFINE WITH_IPROVIDER}       // Turn on IProviderSupport interface
  {$DEFINE WITH_CHECKFIELDCOMPATIBILITY}
  {$DEFINE WITH_WIDEMEMO}        // Have WIDEMEMO,  For Delphi we turn these off if not applicable
- {$DEFINE WITH_FTWIDESTRING}    // Have ftwidestring, For Delphi we turn these off if not applicable
 {$ENDIF}
 
 // Compilation directives for Delphi4
@@ -164,7 +163,6 @@
 
 {$IFDEF VER150BELOW}
      {$UNDEF WITH_WIDEMEMO}
-     {$UNDEF WITH_FTWIDESTRING}
 {$ENDIF}
 
 // Debug/release compiler options

@@ -1053,7 +1053,6 @@ end;
 }
 function TZPostgreSQLConnection.GetEscapeString(const Value: String;
   const EscapeMarkSequence: String = '~<|'): String;
-var TempAnsi: String;
 begin
   Result := inherited GetEscapeString(ZDbcPostgreSqlUtils.EncodeString(TZPgCharactersetType(Self.ClientCodePage^.ID), Value), EscapeMarkSequence)
 end;

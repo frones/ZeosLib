@@ -298,7 +298,8 @@ begin
     stFloat, stDouble, stBigDecimal:
       Result := ftFloat;
     stString:
-      Result := {$IFDEF WITH_STSTRINGUNICODE}ftWideString{$ELSE}ftString{$ENDIF};
+      //Result := {$IFDEF WITH_STSTRINGUNICODE}ftWideString{$ELSE}ftString{$ENDIF};
+      Result := ftString;
     stBytes:
       Result := ftBytes;
     stDate:

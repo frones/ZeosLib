@@ -200,7 +200,10 @@ function ZAnsiStringToCP(const s: AnsiString; CP: Word): AnsiString;
 
 {$IF not Declared(DetectUTF8Encoding)}
 {$DEFINE ZDetectUTF8Encoding}
-function DetectUTF8Encoding(Ansi: AnsiString): Boolean;
+Type
+  TEncodeType = (etUSASCII, etUTF8, etANSI);
+
+function DetectUTF8Encoding(Ansi: AnsiString): TEncodeType;
 {$IFEND}
 
 {$IFNDEF WITH_CHARINSET}
@@ -216,11 +219,11 @@ function UTF8ToString(const s: AnsiString): WideString;
 implementation
 
 {$IFDEF ZDetectUTF8Encoding}
-function DetectUTF8Encoding(Ansi: AnsiString): Boolean; //EgonHugeist: Detect a valid UTF8Sequence
+function DetectUTF8Encoding(Ansi: AnsiString): TEncodeType; //EgonHugeist: Detect a valid UTF8Sequence
 var
   I, Len: Integer;
 begin
-  Result := False;
+  Result := etUSASCII;
   if Ansi = '' then Exit;
 
   Len := Length(Ansi);
@@ -329,9 +332,9 @@ begin
   end;
 
   if i = Len then
-    Result := True  //UTF8
+    Result := etUTF8  //UTF8
   else
-    Result := False; //Ansi
+    Result := etANSI; //Ansi
 end;
 {$ENDIF}
 
@@ -562,7 +565,7 @@ begin
       {$IFDEF FPC}
       Result := Ansi;
       {$ELSE}
-      if DetectUTF8Encoding(Ansi) then //Take care we've rael ansi as result
+      if DetectUTF8Encoding(Ansi) = etUTF8 then //Take care we've rael ansi as result
         Result := UTF8ToAnsi(Ansi)
       else
         Result := Ansi;
@@ -629,7 +632,7 @@ begin
         {$IFDEF FPC}
         Result := AStr;
         {$ELSE}
-        if DetectUTF8Encoding(AStr) then
+        if DetectUTF8Encoding(AStr) in [etUTF8, etUSASCII] then
           Result := AStr
         else
           Result := AnsiToUTF8(AStr);

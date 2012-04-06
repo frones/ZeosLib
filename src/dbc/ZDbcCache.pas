@@ -921,7 +921,7 @@ begin
         Result := @FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1];
       else
       begin
-        FTemp := AnsiString(GetString(ColumnIndex, IsNull));  //EgonHugeist: is this Save in Delphi12_up? GetString results WideString
+        FTemp := AnsiString(GetString(ColumnIndex, IsNull));
         Result := PAnsiChar(FTemp);
       end;
     end;
@@ -965,14 +965,8 @@ begin
       stFloat: Result := FloatToSQLStr(GetFloat(ColumnIndex, IsNull));
       stDouble: Result := FloatToSQLStr(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := FloatToSQLStr(GetBigDecimal(ColumnIndex, IsNull));
-      {$IFDEF DELPHI12_UP}
-      stString, stUnicodeString, stUnicodeStream: Result := GetUnicodeString(ColumnIndex, IsNull);
-      {$ELSE}
-      stString:
-        //Converts a incoming CharacterSet-encoded string to Compiler-supported format (example: UTF8 for FPC)
-        Result := ZString(PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])); //compiler neutral else dataloss
+      stString: Result := ZString(PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])); //compiler neutral
       stUnicodeString, stUnicodeStream: Result := UTF8ToAnsi(UTF8Encode(GetUnicodeString(ColumnIndex, IsNull))); //wide down to Ansi
-      {$ENDIF}
       stBytes: Result := String(BytesToStr(GetBytes(ColumnIndex, IsNull)));
       stDate: Result := FormatDateTime('yyyy-mm-dd', GetDate(ColumnIndex, IsNull));
       stTime: Result := FormatDateTime('hh:mm:ss', GetTime(ColumnIndex, IsNull));
@@ -1012,7 +1006,7 @@ begin
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     case FColumnTypes[ColumnIndex - 1] of
-      stUnicodeString{$IFDEF DELPHI12_UP} ,stString{$ENDIF}:
+      stUnicodeString:
         Result := PWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
       stUnicodeStream:
         begin
@@ -1021,7 +1015,7 @@ begin
             Result := TempBlob.GetUnicodeString;
         end;
       else
-        Result := UTF8ToString(GetString(ColumnIndex, IsNull));
+        Result := WideString(GetString(ColumnIndex, IsNull));
     end;
     IsNull := False;
   end
@@ -2097,9 +2091,9 @@ begin
     stFloat: SetFloat(ColumnIndex, SQLStrToFloatDef(Value, 0));
     stDouble: SetDouble(ColumnIndex, SQLStrToFloatDef(Value, 0));
     stBigDecimal: SetBigDecimal(ColumnIndex, SQLStrToFloatDef(Value, 0));
-    {$IFDEF DELPHI12_UP}
-    stString, stUnicodeString: SetUnicodeString(ColumnIndex, Value);
-    {$ELSE}
+    //{$IFDEF DELPHI12_UP}
+    //stString, stUnicodeString: SetUnicodeString(ColumnIndex, Value);
+    //{$ELSE}
     stString:
       begin
         FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
@@ -2109,7 +2103,7 @@ begin
           ZAnsiString(Value), FColumnLengths[ColumnIndex - 1] - 1);
       end;
     stUnicodeString: SetUnicodeString(ColumnIndex, Value);
-    {$ENDIF}
+    {.$ENDIF}
     stBytes: SetBytes(ColumnIndex, StrToBytes(AnsiString(Value)));
     stDate: SetDate(ColumnIndex, AnsiSQLDateToDateTime(Value));
     stTime: SetTime(ColumnIndex, AnsiSQLDateToDateTime(Value));

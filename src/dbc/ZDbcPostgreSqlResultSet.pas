@@ -464,7 +464,6 @@ function TZPostgreSQLResultSet.GetDouble(ColumnIndex: Integer): Double;
       Result := ''
     else
     begin
-      I := 0;
       if CharInSet(Char(MoneyString[1]), ['0'..'9']) then
         Result := String(MoneyString)
       else

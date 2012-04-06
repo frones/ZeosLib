@@ -1129,10 +1129,8 @@ begin
             Statement.SetBigDecimal(I + 1, Param.AsCurrency);
           ftString, ftFixedChar:
             Statement.SetString(I + 1, Param.AsString);
-          {$IFDEF WITH_FTWIDESTRING} // not available on Delphi 7
           ftWideString:
             Statement.SetUnicodeString(I + 1, Param.AsWideString);
-          {$ENDIF}
           ftBytes:
             Statement.SetString(I + 1, AnsiString(Param.AsString));
           ftDate:

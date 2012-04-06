@@ -121,7 +121,6 @@ type
   private
     FConnection: Pointer;
     FUrl: TZURL; //string;
-    FInfo: TStrings;
     FCachedResultSets: IZHashMap;
     FDatabaseInfo: IZDatabaseInfo;
     function GetInfo: TStrings;

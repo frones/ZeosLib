@@ -319,6 +319,7 @@ end;
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
+{$WARNINGS OFF}
 function TZAbstractDriver.Connect(const Url: string; Info: TStrings): IZConnection;
 var
   TempURL:  TZURL;
@@ -327,6 +328,7 @@ begin
   Result := Connect(TempURL);
   TempUrl.Free;
 end;
+{$WARNINGS ON}
 
 function TZAbstractDriver.Connect(const Url: TZURL): IZConnection;
 begin

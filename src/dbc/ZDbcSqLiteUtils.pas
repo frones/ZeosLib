@@ -60,6 +60,8 @@ interface
 uses
   Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZPlainSqLiteDriver, ZDbcLogging, ZCompatibility;
 
+type
+  TSQLiteBlobEncoding = (beZeos6, beZeos7, bePublic);
 {**
   Convert string SQLite field type to SQLType
   @param string field type value
@@ -204,10 +206,8 @@ begin
     Precision := 255;
   {$IFNDEF FPC}
   if CharEncoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-    case result of
-      //stString: Result := stUnicodeString; //Egonhugeist -> Metadataproblems are not readable if stUnicodeString
-      stAsciiStream: Result := {$IFDEF VER150BELOW}stAsciiStream{$ELSE}stUnicodeStream{$ENDIF}; //Delphi 7 does not support WideMemos
-    end;
+    if Result = stAsciiStream then
+      Result := {$IFDEF WITH_WIDEMEMO}stUnicodeStream{$ELSE}stUnicodeString{$ENDIF}; //Delphi 7 does not support WideMemos
   {$ENDIF}
 end;
 
@@ -227,11 +227,15 @@ var
 begin
   if ErrorMessage <> nil then
   begin
-  {$IFDEF DELPHI12_UP} 
-    Error := trim(UTF8ToUnicodeString(ErrorMessage)); 
-  {$ELSE} 
-    Error := Trim(StrPas(ErrorMessage)); 
-  {$ENDIF} 
+  {$IFDEF DELPHI12_UP}
+    Error := trim(UTF8ToUnicodeString(ErrorMessage));
+  {$ELSE}
+    {$IFNDEF FPC}
+    Error := Trim(UTF8ToAnsi(StrPas(ErrorMessage)));
+    {$ELSE}
+    Error := Trim(StrPas(ErrorMessage));
+    {$ENDIF}
+  {$ENDIF}
     PlainDriver.FreeMem(ErrorMessage);
   end
   else
@@ -357,9 +361,6 @@ var
   SrcLength, DestLength: Integer;
   SrcBuffer, DestBuffer: PAnsiChar;
 begin
-  {$IFDEF DELPHI12_UP} 
-  value := utf8decode(value); //EgonHugeist: DataLoss!!! Wide to Ansi
-  {$ENDIF}
   if pos('x''',value)= 1 then
     result := NewDecodeString(value)
   else result := value;

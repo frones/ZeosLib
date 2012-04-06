@@ -80,6 +80,7 @@ type
     FUseResult: Boolean;
   protected
     procedure Open; override;
+    function InternalGetString(ColumnIndex: Integer): Ansistring;
   public
     constructor Create(PlainDriver: IZMySQLPlainDriver; Statement: IZStatement;
       SQL: string; Handle: PZMySQLConnect; UseResult: Boolean);
@@ -385,13 +386,13 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>String</code> in the Java programming language.
+  a <code>String</code>.
 
   @param columnIndex the first column is 1, the second is 2, ...
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZMySQLResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring;
+function TZMySQLResultSet.InternalGetString(ColumnIndex: Integer): Ansistring;
 var
   LengthPointer: PULong;
   Length: ULong;
@@ -414,6 +415,20 @@ begin
   Result := '';
   if not LastWasNull then
     SetString(Result, Buffer, Length);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>String</code>.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZMySQLResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring;
+begin
+  Result := InternalGetString(ColumnIndex);
 end;
 
 {**

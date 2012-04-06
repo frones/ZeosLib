@@ -108,13 +108,6 @@ function EncodeString(const Value: string): string; overload;
 function EncodeBinaryString(const Value: AnsiString): AnsiString;
 
 {**
-  Determine the character code in terms of enumerated number.
-  @param InputString the input string.
-  @return the character code in terms of enumerated number.
-}
-
-//function pg_CS_code(const InputString: string): TZPgCharactersetType;
-{**
   Encode string which probably consists of multi-byte characters.
   Characters ' (apostraphy), low value (value zero), and \ (back slash) are encoded. Since we have noticed that back slash is the second byte of some BIG5 characters (each of them is two bytes in length), we need a characterset aware encoding function.
   @param CharactersetCode the characterset in terms of enumerate code.
@@ -158,66 +151,6 @@ implementation
 
 uses ZMessages, ZCompatibility;
 
-(*type
-
-pg_CS = record
-  name: string;
-  code: TZPgCharactersetType;
-end;
-const
-
-pg_CS_Table: array [0..47] of pg_CS =
-(
-  (name:'SQL_ASCII'; code: csSQL_ASCII),
-  (name:'EUC_JP'; code: csEUC_JP),
-  (name:'EUC_CN'; code: csEUC_CN),
-  (name:'EUC_KR'; code: csEUC_KR),
-  (name:'EUC_TW'; code: csEUC_TW),
-  (name:'EUC_JIS_2004'; code: csEUC_JIS_2004),
-  (name:'UTF8'; code: csUTF8),
-  (name:'MULE_INTERNAL'; code: csMULE_INTERNAL),
-  (name:'LATIN1'; code: csLATIN1),
-  (name:'LATIN2'; code: csLATIN2),
-  (name:'LATIN3'; code: csLATIN3),
-  (name:'LATIN4'; code: csLATIN4),
-  (name:'LATIN5'; code: csLATIN5),
-  (name:'LATIN6'; code: csLATIN6),
-  (name:'LATIN7'; code: csLATIN7),
-  (name:'LATIN8'; code: csLATIN8),
-  (name:'LATIN9'; code: csLATIN9),
-  (name:'LATIN10'; code: csLATIN10),
-  (name:'WIN1256'; code: csWIN1256),
-  (name:'WIN1258'; code: csWIN1258),     { since 8.1 }
-  (name:'WIN866'; code: csWIN866),     { since 8.1 }
-  (name:'WIN874'; code: csWIN874),
-  (name:'KOI8R'; code: csKOI8R),
-  (name:'WIN1251'; code: csWIN1251),
-  (name:'WIN1252'; code: csWIN1252),
-  (name:'ISO_8859_5'; code: csISO_8859_5),
-  (name:'ISO_8859_6'; code: csISO_8859_6),
-  (name:'ISO_8859_7'; code: csISO_8859_7),
-  (name:'ISO_8859_8'; code: csISO_8859_8),
-  (name:'WIN1250'; code: csWIN1250),
-  (name:'WIN1253'; code: csWIN1253),
-  (name:'WIN1254'; code: csWIN1254),
-  (name:'WIN1255'; code: csWIN1255),
-  (name:'WIN1257'; code: csWIN1257),
-  (name:'KOI8U'; code: csKOI8U),
-  (name:'SJIS'; code: csSJIS),
-  (name:'BIG5'; code: csBIG5),
-  (name:'GBK'; code: csGBK),
-  (name:'UHC'; code: csUHC),
-  (name:'WIN1250'; code: csWIN1250),
-  (name:'GB18030'; code: csGB18030),
-  (name:'JOHAB'; code: csJOHAB),
-  (name:'SHIFT_JIS_2004'; code: csSHIFT_JIS_2004),
-  (name:'UNICODE'; code: csUNICODE_PODBC),
-  (name:'TCVN'; code: csTCVN),
-  (name:'ALT'; code: csALT),
-  (name:'WIN'; code: csWIN),
-  (name:'OTHER'; code: csOTHER)
-); *)
-
 {**
    Return ZSQLType from PostgreSQL type name
    @param Connection a connection to PostgreSQL
@@ -230,9 +163,11 @@ begin
   TypeName := LowerCase(TypeName);
   if (TypeName = 'interval') or (TypeName = 'char')
     or (TypeName = 'varchar') or (TypeName = 'bit') or (TypeName = 'varbit') then//EgonHugeist: Highest Priority Client_Character_set!!!!
+    {$IFNDEF FPC}
     if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
       Result := stUnicodeString
     else
+    {$ENDIF}
       Result := stString
   else if TypeName = 'text' then
     Result := stAsciiStream
@@ -244,9 +179,11 @@ begin
       Result := stInteger;
   end
   else if TypeName = 'name' then
+    (*{$IFNDEF FPC}
     if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
       Result := stUnicodeString
     else
+    {$ENDIF}*)
       Result := stString
   else if TypeName = 'enum' then
     Result := stString
@@ -300,8 +237,9 @@ begin
   {$IFNDEF FPC}
   if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
     if Result = stAsciiStream then
-      Result := {$IFNDEF VER150BELOW}stUnicodeStream{$ELSE}stAsciiStream{$ENDIF}; //Delphi 7 does not support WideMemos
+      Result := {$IFDEF WITH_WIDEMEMO}stUnicodeStream{$ELSE}stUnicodeString{$ENDIF}; //Delphi 7 does not support WideMemos
   {$ENDIF}
+
 end;
 
 {**
@@ -317,9 +255,11 @@ function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
 begin
   case TypeOid of
     1186,18,1043:  { interval/char/varchar }
+      {$IFNDEF FPC}
       if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
         Result := stUnicodeString
       else
+      {$ENDIF}
         Result := stString;
     25: Result := stAsciiStream; { text }
     26: { oid }
@@ -330,9 +270,11 @@ begin
           Result := stInteger;
       end;
     19: { name }
+      (*{$IFNDEF FPC}
       if ( Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] ) then
         Result := stUnicodeString
       else
+      {$ENDIF}*)
         Result := stString;
     21: Result := stShort; { int2 }
     23: Result := stInteger; { int4 }
@@ -363,9 +305,11 @@ begin
       Result := stUnknown;
   end;
 
+  {$IFNDEF FPC}
   if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
     if Result = stAsciiStream then
-      Result := {$IFNDEF VER150BELOW}stUnicodeStream{$ELSE}stAsciiStream{$ENDIF}; //Delphi 7 does not support WideMemos
+      Result := {$IFDEF WITH_WIDEMEMO}stUnicodeStream{$ELSE}stUnicodeString{$ENDIF}; //Delphi 7 does not support WideMemos
+  {$ENDIF}
 end;
 
 {**
@@ -425,49 +369,7 @@ begin
     end;
     Inc(SrcBuffer);
   end;
-  //DestBuffer^ := '''';
 end;
-
-{**
-  Determine the character code in terms of enumerated number.
-  @param InputString the input string.
-  @return the character code in terms of enumerated number.
-}
-(*function pg_CS_code(const InputString: string): TZPgCharactersetType;
-var
-  i,len: integer;
-begin
-  Result := csOTHER;
-
-  i := 0;
-  while pg_CS_Table[i].code <> csOTHER do
-  begin
-    if UpperCase(InputString) = UpperCase(pg_CS_Table[i].name) then
-    begin
-        Result := pg_CS_Table[i].code;
-        break;
-    end;
-    Inc(i);
-  end;
-
-  if Result = csOTHER then { No exact match. Look for the closest match. }
-  begin
-    i := 0;
-    len := 0;
-    while pg_CS_Table[i].code <> csOTHER do
-    begin
-      if Pos(pg_CS_Table[i].name, InputString) > 0 then
-      begin
-        if Length(pg_CS_Table[i].name) >= len then
-        begin
-          len := Length(pg_CS_Table[i].name);
-          Result := pg_CS_Table[i].code;
-        end;
-      end;
-      Inc(i);
-    end;
-  end;
-end;  *)
 
 function pg_CS_stat(stat: integer; character: integer;
         CharactersetCode: TZPgCharactersetType): integer;

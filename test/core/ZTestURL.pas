@@ -305,7 +305,7 @@ begin
     ZURL.URL := 'zdbc:firebird-2.0:/C:\database.fdb?username=sysdba;password=masterkey;rolename=public';
     CheckEquals('zdbc', ZURL.Prefix);
     CheckEquals('firebird-2.0', ZURL.Protocol);
-    CheckEquals('', ZURL.HostName);
+    CheckEquals('localhost', ZURL.HostName);
     CheckEquals(0, ZURL.Port);
     CheckEquals('C:\database.fdb', ZURL.Database);
     CheckEquals('sysdba', ZURL.UserName);
