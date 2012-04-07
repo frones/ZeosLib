@@ -731,7 +731,11 @@ begin
      if TZAbstractResultSetMetadata(Metadata).GetColumnType(ColumnIndex) = stAsciiStream then
         Stream := TStringStream.Create(GetString(ColumnIndex))
       else
-        Stream := FPlaindriver.getblob(FStmtHandle,columnIndex);
+        {introduced the old Zeos6 blob-encoding cause of compatibility reasons}
+        if (Statement.GetConnection as IZSQLiteConnection).UseOldBlobEncoding then
+          Stream := TStringStream.Create(DecodeString(GetString(ColumnIndex)))
+        else
+          Stream := FPlaindriver.getblob(FStmtHandle,columnIndex);
       Result := TZAbstractBlob.CreateWithStream(Stream)
     end
     else

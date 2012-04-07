@@ -60,8 +60,6 @@ interface
 uses
   Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZPlainSqLiteDriver, ZDbcLogging, ZCompatibility;
 
-type
-  TSQLiteBlobEncoding = (beZeos6, beZeos7, bePublic);
 {**
   Convert string SQLite field type to SQLType
   @param string field type value
@@ -295,60 +293,8 @@ end;
   @return a string in PostgreSQL escape format.
 }
 function EncodeString(Value: ansistring): ansistring;
-var
-  I: Integer;
-  SrcLength, DestLength: Integer;
-  SrcBuffer, DestBuffer: PAnsiChar;
 begin
-
   result := NewEncodeString(Value);
-exit;
-  SrcLength := Length(Value);
-  SrcBuffer := PAnsiChar(Value);
-  DestLength := 2;
-  for I := 1 to SrcLength do
-  begin
-    if CharInSet(SrcBuffer^, [#0, '''', '%']) then
-      Inc(DestLength, 2)
-    else
-      Inc(DestLength);
-    Inc(SrcBuffer);
-  end;
-
-  SrcBuffer := PAnsiChar(Value);
-  SetLength(Result, DestLength);
-  DestBuffer := PAnsiChar(Result);
-  DestBuffer^ := '''';
-  Inc(DestBuffer);
-
-  for I := 1 to SrcLength do
-  begin
-    if SrcBuffer^ = #0 then
-    begin
-      DestBuffer[0] := '%';
-      DestBuffer[1] := '0';
-      Inc(DestBuffer, 2);
-    end
-    else if SrcBuffer^ = '%' then
-    begin
-      DestBuffer[0] := '%';
-      DestBuffer[1] := '%';
-      Inc(DestBuffer, 2);
-    end
-    else if SrcBuffer^ = '''' then
-    begin
-      DestBuffer[0] := '''';
-      DestBuffer[1] := '''';
-      Inc(DestBuffer, 2);
-    end
-    else
-    begin
-      DestBuffer^ := SrcBuffer^;
-      Inc(DestBuffer);
-    end;
-    Inc(SrcBuffer);
-  end;
-  DestBuffer^ := '''';
 end;
 
 {**
@@ -363,37 +309,37 @@ var
 begin
   if pos('x''',value)= 1 then
     result := NewDecodeString(value)
-  else result := value;
-  exit;
-
-  SrcLength := Length(Value);
-  SrcBuffer := PAnsiChar(Value);
-  SetLength(Result, SrcLength);
-  DestLength := 0;
-  DestBuffer := PAnsiChar(Result);
-
-  while SrcLength > 0 do
+  else
   begin
-    if SrcBuffer^ = '%' then
+    SrcLength := Length(Value);
+    SrcBuffer := PAnsiChar(Value);
+    SetLength(Result, SrcLength);
+    DestLength := 0;
+    DestBuffer := PAnsiChar(Result);
+
+    while SrcLength > 0 do
     begin
-      Inc(SrcBuffer);
-      if SrcBuffer^ <> '0' then
-        DestBuffer^ := SrcBuffer^
+      if SrcBuffer^ = '%' then
+      begin
+        Inc(SrcBuffer);
+        if SrcBuffer^ <> '0' then
+          DestBuffer^ := SrcBuffer^
+        else
+          DestBuffer^ := #0;
+        Inc(SrcBuffer);
+        Dec(SrcLength, 2);
+      end
       else
-        DestBuffer^ := #0;
-      Inc(SrcBuffer);
-      Dec(SrcLength, 2);
-    end
-    else
-    begin
-      DestBuffer^ := SrcBuffer^;
-      Inc(SrcBuffer);
-      Dec(SrcLength);
+      begin
+        DestBuffer^ := SrcBuffer^;
+        Inc(SrcBuffer);
+        Dec(SrcLength);
+      end;
+      Inc(DestBuffer);
+      Inc(DestLength);
     end;
-    Inc(DestBuffer);
-    Inc(DestLength);
+    SetLength(Result, DestLength);
   end;
-  SetLength(Result, DestLength);
 end;
 
 end.

@@ -87,7 +87,7 @@ type
   {** Represents a SQLite specific connection interface. }
   IZSQLiteConnection = interface (IZConnection)
     ['{A4B797A9-7CF7-4DE9-A5BB-693DD32D07D2}']
-
+    function UseOldBlobEncoding: Boolean;
     function GetPlainDriver: IZSQLitePlainDriver;
     function GetConnectionHandle: Psqlite;
   end;
@@ -97,7 +97,7 @@ type
   private
     FCatalog: string;
     FHandle: Psqlite;
-
+    function UseOldBlobEncoding: Boolean;
   protected
     procedure InternalCreate; override;
     procedure StartTransactionSupport;
@@ -289,6 +289,7 @@ begin
   FMetadata := TZSQLiteDatabaseMetadata.Create(Self, Url);
   AutoCommit := True;
   TransactIsolationLevel := tiNone;
+
   Open;
 end;
 
@@ -298,6 +299,11 @@ end;
 destructor TZSQLiteConnection.Destroy;
 begin
   inherited Destroy;
+end;
+
+function TZSQLiteConnection.UseOldBlobEncoding: Boolean;
+begin
+  Result := Url.Properties.Values['OldBlobEncoding'] = 'True';
 end;
 
 {**
