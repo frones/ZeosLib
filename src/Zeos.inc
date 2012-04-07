@@ -44,7 +44,7 @@
 
 // Compilation directives for Lazarus
 {$IFDEF FPC}
-{$I ZeosLazarus.inc}
+ {$I ZeosLazarus.inc}
 {$ELSE}
  {$DEFINE DELPHI}
   // Defines that go for ALL still supported Delphi's   (usually means they were under ifndef fpc)
@@ -55,6 +55,7 @@
  {$DEFINE WITH_IPROVIDER}       // Turn on IProviderSupport interface
  {$DEFINE WITH_CHECKFIELDCOMPATIBILITY}
  {$DEFINE WITH_WIDEMEMO}        // Have WIDEMEMO,  For Delphi we turn these off if not applicable
+ {.$DEFINE WITH_UTF8_CONTROLS}
 {$ENDIF}
 
 // Compilation directives for Delphi4
@@ -148,6 +149,7 @@
   {$DEFINE WITH_STSTRINGUNICODE}        // ststring is unicodestring.
   {$DEFINE WITH_NEWTOBJECT}             // allows new methods in TObject (D2009+/FPC 2.4.4)
   {$DEFINE WITH_CHARINSET}              // D2009's poor substitute for character specific "xx in yy"
+  {$UNDEF WITH_UTF8_CONTROLS}
 {$ENDIF}
 
 {$IFDEF DELPHI15_UP}

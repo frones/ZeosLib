@@ -225,47 +225,26 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
     FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
     FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB:
       if (FieldFlags and BINARY_FLAG) = 0 then
-       case CharEncoding of
-        ceUTF8, ceUTF16:
-          {$IFDEF FPC}
-          Result := stAsciiStream
-          {$ELSE}
-            {$IFNDEF WITH_WIDEMEMO} //Delphi 7 does not support WideMemos
-            Result := stUnicodeString;
+        If CharEncoding = ceUTF8 then
+          Result :=
+            {$IFDEF WITH_UTF8_CONTROLS}
+              stAsciiStream
             {$ELSE}
-            Result := stUnicodeStream;
+              {$IFDEF WITH_WIDEMEMO}stUnicodeStream{$ELSE}stUnicodeString{$ENDIF} //Delphi 7 does not support WideMemos
             {$ENDIF}
-          {$ENDIF}
         else
           Result := stAsciiStream
-        end
       else
         Result := stBinaryStream;
     FIELD_TYPE_BIT:
       Result := stBinaryStream;
-    // by aperger
-    // SQL = "SELECT ID, COLLATION_NAME, CHARACTER_SET_NAME FROM INFORMATION_SCHEMA.COLLATIONS WHERE ID = :charsetnr"
-    // which provides correct result, but would be slow. maybe this table conteent is "fix".
-    // ID ==> PMYSQL_FIELD(Field)^.charsetnr
-    // http://dev.mysql.com/doc/refman/5.0/en/c-api-data-structures.html
-
-    //by EgonHugeist: Here i disagree! Priority 1: Client_Character_Set
-    //so aperger i implemented a MetadatType mdCharacterSetAndCollaton to check this up
-    //The dbcCacheKey is a mighty tool here, ask for column once and its cached!!
-    //But this later
     FIELD_TYPE_VARCHAR,
     FIELD_TYPE_VAR_STRING,
     FIELD_TYPE_STRING:
-       case CharEncoding of
-        ceUTF8, ceUTF16:
-          {$IFDEF FPC}
-          Result := stString;
-         {$ELSE}
-          Result := stUnicodeString;
-         {$ENDIF}
-        else
-          Result := stString
-       end;
+      if CharEncoding = ceUTF8 then
+        Result := {$IFDEF WITH_UTF8_CONTROLS}stString{$ELSE}stUnicodeString{$ENDIF}
+      else
+        Result := stString;
     FIELD_TYPE_ENUM:
       Result := stString;
     FIELD_TYPE_SET:
@@ -285,9 +264,10 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
   if (Result = stString) and (PlainDriver.GetFieldLength(FieldHandle) > 8192) then
      Result := stAsciiStream;
 
+  {$IFDEF WITH_WIDEMEMO}
   if (Result = stUnicodeString) and (PlainDriver.GetFieldLength(FieldHandle) > 8192) then
      Result := stUnicodeStream;
-
+  {$ENDIF}
 end;
 
 {**
@@ -381,8 +361,7 @@ begin
     Result := stDouble
   else if TypeName = 'CHAR' then
     Result := stString
-  else
-    if TypeName = 'VARCHAR' then
+  else if TypeName = 'VARCHAR' then
     Result := stString
   else if TypeName = 'VARBINARY' then
     Result := stBytes
@@ -429,14 +408,15 @@ begin
          if GeoTypes[i] = TypeName then
             Result := stBinaryStream;
 
-  {$IFNDEF FPC}
-  if CharEncoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+  {$IFNDEF WITH_UTF8_CONTROLS}
+  if CharEncoding = ceUTF8 then
     case result of
       stString: Result := stUnicodeString;
        //Delphi 7 does not support WideMemos
       stAsciiStream: Result := {$IFDEF WITH_WIDEMEMO}stUnicodeStream{$ELSE}stUnicodeString{$ENDIF};
     end;
   {$ENDIF}
+
   if Result = stUnknown then
      raise Exception.Create('Unknown MySQL data type!');
 end;

@@ -1130,7 +1130,7 @@ begin
           ftString, ftFixedChar:
             Statement.SetString(I + 1, Param.AsString);
           ftWideString:
-            Statement.SetUnicodeString(I + 1, Param.AsWideString);
+            Statement.SetUnicodeString(I + 1, Param.{$IFDEF WITHOUT_ASWIDESTRING}Value{$ELSE}AsWideString{$ENDIF});
           ftBytes:
             Statement.SetString(I + 1, AnsiString(Param.AsString));
           ftDate:

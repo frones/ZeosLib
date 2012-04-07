@@ -164,11 +164,11 @@ begin
   else if StartsWith(TypeName, 'CHAR') then
     Result := stString
   else if TypeName = 'VARCHAR' then
-    {$IFDEF FPC}
-    Result := stString
-	{$ELSE}
-    Result := stUnicodeString //All delphi compilers need here UTF8Encoding/Decoding in OpenUTF8 Mode(minimum)
-	{$ENDIF}
+    {$IFDEF WITH_UTF8_CONTROLS}
+      Result := stString
+	  {$ELSE}
+      Result := stUnicodeString //All delphi compilers need here UTF8Encoding/Decoding in OpenUTF8 Mode(minimum)
+	  {$ENDIF}
   else if TypeName = 'VARBINARY' then
     Result := stBytes
   else if TypeName = 'BINARY' then
@@ -202,10 +202,10 @@ begin
 
   if ((Result = stString) or (Result = stUnicodeString)) and (Precision = 0) then
     Precision := 255;
-  {$IFNDEF FPC}
-  if CharEncoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-    if Result = stAsciiStream then
-      Result := {$IFDEF WITH_WIDEMEMO}stUnicodeStream{$ELSE}stUnicodeString{$ENDIF}; //Delphi 7 does not support WideMemos
+  {$IFNDEF WITH_UTF8_CONTROLS}
+    if CharEncoding = ceUTF8 then
+      if Result = stAsciiStream then
+        Result := {$IFDEF WITH_WIDEMEMO}stUnicodeStream{$ELSE}stUnicodeString{$ENDIF}; //Delphi 7 does not support WideMemos
   {$ENDIF}
 end;
 
@@ -275,16 +275,16 @@ begin
 end;
 
 function NewDecodeString(Value:ansistring):ansistring;
-var
-  i : integer;
-  srcbuffer : PAnsichar;
-begin
-  value := copy(value,3,length(value)-4);
-  value := AnsiLowercase(value);
-  i := length(value) div 2;
-  srcbuffer := PAnsiChar(value);
-  setlength(result,i);
-  HexToBin(PAnsiChar(srcbuffer),PAnsiChar(result),i);
+  var
+    i : integer;
+    srcbuffer : PAnsichar;
+  begin
+    value := copy(value,3,length(value)-4);
+    value := AnsiLowercase(value);
+    i := length(value) div 2;
+    srcbuffer := PAnsiChar(value);
+    setlength(result,i);
+    HexToBin(PAnsiChar(srcbuffer),PAnsiChar(result),i);
 end;
 
 {**

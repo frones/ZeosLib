@@ -760,7 +760,7 @@ begin
     else
       Result := ZDbcIntfs.stUnknown;
   end;
-  {$IFNDEF FPC}
+  {$IFNDEF WITH_UTF8_CONTROLS}
   if CharEncoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
     case result of
       stString: Result := stUnicodeString;

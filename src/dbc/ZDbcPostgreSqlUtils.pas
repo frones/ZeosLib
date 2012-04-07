@@ -163,9 +163,8 @@ begin
   TypeName := LowerCase(TypeName);
   if (TypeName = 'interval') or (TypeName = 'char')
     or (TypeName = 'varchar') or (TypeName = 'bit') or (TypeName = 'varbit') then//EgonHugeist: Highest Priority Client_Character_set!!!!
-    {$IFNDEF FPC}
-    if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-      Result := stUnicodeString
+    if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+      Result := {$IFNDEF WITH_UTF8_CONTROLS}stUnicodeString{$ELSE}stString{$ENDIF}
     else
     {$ENDIF}
       Result := stString
@@ -179,12 +178,7 @@ begin
       Result := stInteger;
   end
   else if TypeName = 'name' then
-    (*{$IFNDEF FPC}
-    if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-      Result := stUnicodeString
-    else
-    {$ENDIF}*)
-      Result := stString
+    Result := stString
   else if TypeName = 'enum' then
     Result := stString
   else if TypeName = 'cidr' then
@@ -234,10 +228,10 @@ begin
   else
     Result := stUnknown;
 
-  {$IFNDEF FPC}
-  if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-    if Result = stAsciiStream then
-      Result := {$IFDEF WITH_WIDEMEMO}stUnicodeStream{$ELSE}stUnicodeString{$ENDIF}; //Delphi 7 does not support WideMemos
+  {$IFNDEF WITH_UTF8_CONTROLS}
+    if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+      if Result = stAsciiStream then
+        Result := {$IFDEF WITH_WIDEMEMO}stUnicodeStream{$ELSE}stUnicodeString{$ENDIF}; //Delphi 7 does not support WideMemos
   {$ENDIF}
 
 end;
@@ -255,8 +249,8 @@ function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
 begin
   case TypeOid of
     1186,18,1043:  { interval/char/varchar }
-      {$IFNDEF FPC}
-      if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+      {$IFNDEF WITH_UTF8_CONTROLS}
+      if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
         Result := stUnicodeString
       else
       {$ENDIF}
@@ -269,13 +263,7 @@ begin
         else
           Result := stInteger;
       end;
-    19: { name }
-      (*{$IFNDEF FPC}
-      if ( Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] ) then
-        Result := stUnicodeString
-      else
-      {$ENDIF}*)
-        Result := stString;
+    19: Result := stString; { name }
     21: Result := stShort; { int2 }
     23: Result := stInteger; { int4 }
     20: Result := stLong; { int8 }
@@ -305,10 +293,10 @@ begin
       Result := stUnknown;
   end;
 
-  {$IFNDEF FPC}
-  if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-    if Result = stAsciiStream then
-      Result := {$IFDEF WITH_WIDEMEMO}stUnicodeStream{$ELSE}stUnicodeString{$ENDIF}; //Delphi 7 does not support WideMemos
+  {$IFNDEF WITH_UTF8_CONTROLS}
+    if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+      if Result = stAsciiStream then
+        Result := {$IFDEF WITH_WIDEMEMO}stUnicodeStream{$ELSE}stUnicodeString{$ENDIF}; //Delphi 7 does not support WideMemos
   {$ENDIF}
 end;
 
