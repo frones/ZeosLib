@@ -59,7 +59,8 @@ interface
 
 uses
   Types, Classes, SysUtils, Db, ZSysUtils, ZDbcIntfs, ZDbcCache,
-  Contnrs, ZCompatibility, ZExpression, ZVariant, ZTokenizer;
+  Contnrs, ZCompatibility, ZExpression, ZVariant, ZTokenizer
+  {$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
 
 {**
   Converts DBC Field Type to TDataset Field Type.
@@ -1031,8 +1032,8 @@ begin
       if CaseInsensitive then
         {$IFDEF LAZARUSUTF8HACK}
         Value2 := AnsiUpperCase(Utf8ToAnsi(Value2));
-        {$ELSE} 
-        Value2 := AnsiUpperCase(Value2); 
+        {$ELSE}
+        Value2 := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiUpperCase(Value2);
         {$ENDIF} 
       Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
     end
@@ -1174,7 +1175,15 @@ begin
       end;
   else
     try
-      TimeStamp := MSecsToTimeStamp(TDateTime(Buffer^));
+      {$IFDEF FPC}
+        {$IF defined(MSWINDOWS) and ( not defined(WIN32))}
+           TimeStamp := MSecsToTimeStamp(PComp(Buffer^)); //EgonHugeist: FPC Win64 Bug: expected Int64 instead of TDateTime(double)
+        {$ELSE}
+          TimeStamp := MSecsToTimeStamp(TDateTime(Buffer^));
+        {$IFEND}
+      {$ELSE}
+        TimeStamp := MSecsToTimeStamp(TDateTime(Buffer^));
+      {$ENDIF}
     except
       TimeStamp.Time := 0;
       TimeStamp.Date := 0;
