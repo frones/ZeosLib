@@ -166,7 +166,6 @@ begin
     if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
       Result := {$IFNDEF WITH_UTF8_CONTROLS}stUnicodeString{$ELSE}stString{$ENDIF}
     else
-    {$ENDIF}
       Result := stString
   else if TypeName = 'text' then
     Result := stAsciiStream
