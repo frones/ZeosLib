@@ -1177,7 +1177,7 @@ begin
     try
       {$IFDEF FPC}
         {$IF defined(MSWINDOWS) and ( not defined(WIN32))}
-           TimeStamp := MSecsToTimeStamp(PComp(Buffer^)); //EgonHugeist: FPC Win64 Bug: expected Int64 instead of TDateTime(double)
+           TimeStamp := MSecsToTimeStamp(PComp(Buffer)^); //EgonHugeist: FPC Win64 Bug: expected Int64 instead of TDateTime(double)
         {$ELSE}
           TimeStamp := MSecsToTimeStamp(TDateTime(Buffer^));
         {$IFEND}
@@ -1242,7 +1242,7 @@ begin
         Result := ResultSet.GetUnicodeString(Field1.FieldNo) =
           Field2.{$IFDEF WITH_ASVARIANT}AsVariant{$ELSE}AsString{$ENDIF};
       else
-        Result := ResultSet.GetString(Field1.FieldNo) = Field2.AsString;
+        Result := ResultSet.GetString(Field1.FieldNo) = AnsiString(Field2.AsString);
     end;
   end;
 end;

@@ -107,8 +107,6 @@ type
     FPlainDriver: IZMySQLPlainDriver;
   protected
     function CreateExecStatement: IZStatement; override;
-    {function GetEscapeString(const Value: string): string;
-    function GetAnsiEscapeString(const Value: AnsiString): AnsiString;}
     function PrepareSQLParam(ParamIndex: Integer): string; override;
   public
     constructor Create(PlainDriver: IZMySQLPlainDriver;
@@ -439,52 +437,6 @@ begin
 end;
 
 {**
-  Converts an string into escape MySQL format.
-  @param Value a regular string.
-  @return a string in MySQL escape format.
-}
-(* function TZMySQLEmulatedPreparedStatement.GetEscapeString(const Value: string): string;
-var
-  BufferLen: Integer;
-  Buffer: PAnsiChar;
-begin
-  BufferLen := Length(Value) * 2 + 1;
-  GetMem(Buffer, BufferLen);
-  if FHandle = nil then
-  {$IFDEF DELPHI12_UP}
-    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(UTF8Encode(Value)), Length(PAnsiChar(UTF8Encode(Value))))
-  else
-    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(UTF8Encode(Value)), Length(PAnsiChar(UTF8Encode(Value))));
-  {$ELSE}
-    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(Value), Length(Value))
-   else
-    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(Value), Length(Value));
-  {$ENDIF}
-  Result := '''' + BufferToStr(Buffer, BufferLen) + '''';
-  FreeMem(Buffer);
-end; *)
-
-{**
-  Converts an ansi string (binary data) into escape MySQL format.
-  @param Value a regular string.
-  @return a string in MySQL escape format.
-}
-(*function TZMySQLEmulatedPreparedStatement.GetAnsiEscapeString(const Value: AnsiString): AnsiString;
-var
-  BufferLen: Integer;
-  Buffer: PAnsiChar;
-begin
-  BufferLen := Length(Value) * 2 + 1;
-  GetMem(Buffer, BufferLen);
-  if FHandle = nil then
-    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(Value), Length(Value))
-   else
-    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(Value), Length(Value));
-  Result := '''' + AnsiString(BufferToStr(Buffer, BufferLen)) + '''';
-  FreeMem(Buffer);
-end;*)
-
-{**
   Prepares an SQL parameter for the query.
   @param ParameterIndex the first parameter is 1, the second is 2, ...
   @return a string representation of the parameter.
@@ -664,6 +616,7 @@ var
     caststring : AnsiString;
     PBuffer: Pointer;
     year, month, day, hour, minute, second, millisecond: word;
+  MyType: TMysqlFieldTypes;
   I,J : integer;
 begin
   if InParamCount = 0 then
@@ -673,7 +626,11 @@ begin
 
   For I := 0 to InParamCount - 1 do
   begin
-    FBindBuffer.AddColumn(GetFieldType(InParamValues[I]),length(InParamValues[I].VString));
+    MyType := GetFieldType(InParamValues[I]);
+    if MyType = FIELD_TYPE_VARCHAR then
+      FBindBuffer.AddColumn(FIELD_TYPE_STRING,length(UTF8Encode(InParamValues[I].VUnicodeString)))
+    else
+      FBindBuffer.AddColumn(MyType,length(InParamValues[I].VString));
     PBuffer := @FColumnArray[I].buffer[0];
 
         if InParamValues[I].VType=vtNull then
@@ -684,7 +641,10 @@ begin
               FIELD_TYPE_FLOAT:    Single(PBuffer^)     := InParamValues[I].VFloat;
               FIELD_TYPE_STRING:
                 begin
-                  CastString := ZAnsiString(InParamValues[I].VString);
+                  if MyType = FIELD_TYPE_VARCHAR then
+                    CastString := UTF8Encode(InParamValues[I].VUnicodeString)
+                  else
+                    CastString := ZAnsiString(InParamValues[I].VString);
                   for J := 1 to system.length(CastString) do
                     begin
                       PAnsiChar(PBuffer)^ := CastString[J];
@@ -731,6 +691,7 @@ begin
         vtFloat:     Result := FIELD_TYPE_FLOAT;
         vtString:    Result := FIELD_TYPE_STRING;
         vtDateTime:  Result := FIELD_TYPE_DATETIME;
+        vtUnicodeString: Result := FIELD_TYPE_VARCHAR;
      else
         raise EZSQLException.Create(SUnsupportedDataType);
      end;
