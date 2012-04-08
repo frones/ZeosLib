@@ -411,7 +411,7 @@ begin
   begin
     CurrentVar := @Variables.Variables[I + 1];
     CurrentVar.DupData := CurrentVar.Data;
-    if DefVarManager.IsNull(Values[I]) then
+    if (high(Values)<I) or DefVarManager.IsNull(Values[I]) then
     begin
       CurrentVar.Indicator := -1;
       CurrentVar.Data := nil;
