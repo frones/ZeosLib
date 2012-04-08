@@ -165,6 +165,7 @@
 
 {$IFDEF VER150BELOW}
      {$UNDEF WITH_WIDEMEMO}
+  {$DEFINE WITHOUT_ASWIDESTRING}
 {$ENDIF}
 
 // Debug/release compiler options
