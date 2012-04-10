@@ -116,9 +116,6 @@ type
     procedure StartTransactionSupport;
     procedure LoadServerVersion;
   public
-    {constructor Create(Driver: IZDriver; const Url: string;
-      PlainDriver: IZPostgreSQLPlainDriver; const HostName: string; Port: Integer;
-      const Database: string; const User: string; const Password: string; Info: TStrings);}
     destructor Destroy; override;
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;

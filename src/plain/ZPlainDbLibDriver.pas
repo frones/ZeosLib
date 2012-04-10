@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2006 Zeos Development Group       }
+{    Copyright (c) 1999-2012 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -58,6 +58,11 @@ interface
 {$I ZPlain.inc}
 
 uses Classes, ZClasses, ZCompatibility, ZPlainDriver;
+
+{$DEFINE ntwdblib} { if you are using MS SQL Server Client Library (ntwdblib.dll) }
+{$IFNDEF ntwdblib}
+ {$DEFINE freetds} { if you are using db-lib from FreeTDS project (MS SQL Server + Sybase support) }
+{$ENDIF}
 
 {***************** Plain API Constants definition ****************}
 
@@ -143,9 +148,9 @@ const
   DBNOEXEC              = 10;
   DBPARSEONLY           = 11;
   DBSHOWPLAN            = 12;
-  DBSTORPROCID		= 13;
-  DBANSITOOEM		= 14;
-  DBOEMTOANSI	        = 15;
+  DBSTORPROCID		      = 13;
+  DBANSITOOEM		        = 14;
+  DBOEMTOANSI	          = 15;
   DBCLIENTCURSORS       = 16;
   DBSET_TIME            = 17;
   DBQUOTEDIDENT         = 18;
@@ -531,6 +536,9 @@ type
   STATUS                = Integer;
 
 { DB-Library datatypes }
+  INT                   = LongInt;
+  SHORT                 = SmallInt;
+  BOOL                  = LongBool;
   DBCHAR                = AnsiChar;
   DBBINARY              = Byte;
   DBTINYINT             = Byte;
@@ -552,29 +560,18 @@ type
   end;
   PDBDATETIM4 = ^DBDATETIM4;
 
-  DBVARYCHAR = packed record
-    Len:        DBSMALLINT;
-    Str:        array[0..DBMAXCHAR-1] of DBCHAR;
-  end;
-
-  DBVARYBIN = packed record
-    Len:        DBSMALLINT;
-    Bytes:	array[0..DBMAXCHAR-1] of Byte;
-  end;
-
-  DBMONEY = packed record
-    mnyhigh:    DBINT;
-    mnylow:     Cardinal;
-  end;
-
+  {$IFDEF FPC}
+    {$PACKRECORDS C}
+  {$ENDIF}
   DBDATETIME = packed record
     dtdays:	DBINT;          // Days since Jan 1, 1900
-    dttime:	Cardinal;       // 300ths of a second since midnight, 25920000 unit is 1 day
+    dttime:	ULONG;       // 300ths of a second since midnight, 25920000 unit is 1 day
   end;
   PDBDATETIME = ^DBDATETIME;
 
 { DBDATEREC structure used by dbdatecrack }
   DBDATEREC = packed record
+  {$IFNDEF freetds}
     year:       Integer;      { 1753 - 9999 }
     quarter:    Integer;      { 1 - 4 }
     month:      Integer;      { 1 - 12 }
@@ -587,6 +584,41 @@ type
     second:     Integer;      { 0 - 59 }
     millisecond: Integer;     { 0 - 999 }
   end;
+  {$ELSE}
+    case boolean of
+    false:(
+      oldyear:        INT; { 1753 - 9999 }
+      oldmonth:       INT; { 1 - 4 }
+      oldday:         INT; { 1 - 12 }
+      olddayofyear:   INT; { 1 - 366 (in sybdb.h dayofyear and day are changed around!) }
+      oldweekday:     INT; { 1 - 7  (Mon - Sun) }
+      oldhour:        INT; { 0 - 23 }
+      oldminute:      INT; { 0 - 59 }
+      oldsecond:      INT; { 0 - 59 }
+      oldmillisecond: INT; { 0 - 999 }
+      oldtzone:       INT; { 0 - 127 (Sybase only!) }
+    );
+    true:(
+      year:           INT; { 1753 - 9999 }
+      quarter:        INT; { 1 - 4 }
+      month:          INT; { 1 - 12 }
+      {$IFDEF freetds}
+      day:            INT; { 1 - 31 }
+      dayofyear:      INT; { 1 - 366 (in sybdb.h dayofyear and day are changed around!) }
+      {$ELSE}
+      dayofyear:      INT; { 1 - 366 (in sybdb.h dayofyear and day are changed around!) }
+      day:            INT; { 1 - 31 }
+      {$ENDIF}
+      week:           INT; { 1 - 54 (for leap years) }
+      weekday:        INT; { 1 - 7  (Mon - Sun) }
+      hour:           INT; { 0 - 23 }
+      minute:         INT; { 0 - 59 }
+      second:         INT; { 0 - 59 }
+      millisecond:    INT; { 0 - 999 }
+      tzone:          INT; { 0 - 127 (Sybase only!) }
+    );
+  end;
+  {$ENDIF}
   PDBDATEREC = ^DBDATEREC;
 
 type
@@ -596,8 +628,23 @@ type
     Sign:       Byte; { 1 = Positive, 0 = Negative }
     Val:        array[0..MAXNUMERICLEN-1] of Byte;
   end;
-
   DBDECIMAL = DBNUMERIC;
+
+  DBVARYCHAR = packed record
+    Len: {$IFDEF freetds}DBINT{$ELSE}DBSMALLINT{$ENDIF};
+    Str: array[0..DBMAXCHAR-1] of DBCHAR; //CHAR = Wide D12UP
+  end;
+
+  DBVARYBIN = packed record
+    Len: {$IFDEF freetds}DBINT{$ELSE}DBSMALLINT{$ENDIF};
+    Bytes: array[0..DBMAXCHAR-1] of Byte;
+  end;
+
+  DBMONEY = packed record
+    mnyhigh:    DBINT;
+    mnylow:     ULONG;
+  end;
+
 
 
 
@@ -605,6 +652,7 @@ type
 { TODO -ofjanos -cAPI :
 Strange but I had to insert X1 and X2 into the structure to make it work.
 I have not find any reason for this yet. }
+  {$IFNDEF freetds}
   DBCOL = packed record
     SizeOfStruct: DBINT;
     Name:       array[0..MAXCOLNAMELEN] of AnsiChar;
@@ -623,6 +671,30 @@ I have not find any reason for this yet. }
     Identity:   LongBool;{ TRUE, FALSE }
     X2:         Byte;
   end;
+  {$ELSE}
+    {$IF defined (ntwdblib) and defined(FPC)}
+      {$PACKRECORDS 2}
+    {$IFEND}
+  DBCOL=record
+   	SizeOfStruct: DBINT;
+   	Name: array[0..MAXCOLNAMELEN] of char;
+   	ActualName: array[0..MAXCOLNAMELEN] of char;
+   	TableName: array[0..MAXTABLENAME] of char;
+   	Typ: SHORT;
+   	UserType: DBINT;
+   	MaxLength: DBINT;
+   	Precision: BYTE;
+   	Scale: BYTE;
+   	VarLength: BOOL;     // TRUE, FALSE
+   	Null: BYTE;          // TRUE, FALSE or DBUNKNOWN
+   	CaseSensitive: BYTE; // TRUE, FALSE or DBUNKNOWN
+   	Updatable: BYTE;     // TRUE, FALSE or DBUNKNOWN
+   	Identity: BOOL;      // TRUE, FALSE
+  end;
+    {$IFDEF FPC}
+      {$PACKRECORDS DEFAULT}
+    {$ENDIF}
+  {$ENDIF}
   PDBCOL = ^DBCOL;
 
 
@@ -684,12 +756,13 @@ type
     ['{7731C3B4-0608-4B6B-B089-240AC43A3463}']
 
     procedure CheckError;
-    
+
+//    function dbinit:{$IFDEF freetds}RETCODE{$ELSE}PAnsiChar{$ENDIF};
     function dbDead(dbProc: PDBPROCESS): Boolean;
     function dbLogin: PLOGINREC;
     procedure dbLoginFree(Login: PLOGINREC);
-    function dbSetLoginTime(Seconds: Integer): RETCODE;
-    function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE;
+    function dbSetLoginTime(Seconds: INT): RETCODE;
+    function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: INT): RETCODE;
     function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
     function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
     function dbSetLPwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE;
@@ -750,10 +823,11 @@ type
 
     procedure CheckError;
 
+//    function dbinit:{$IFDEF freetds}RETCODE{$ELSE}PAnsiChar{$ENDIF};
     function dbDead(dbProc: PDBPROCESS): Boolean;
     function dbLogin: PLOGINREC;
     procedure dbLoginFree(Login: PLOGINREC);
-    function dbSetLoginTime(Seconds: Integer): RETCODE;
+    function dbSetLoginTime(Seconds: INT): RETCODE;
     function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE;
     function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
     function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
@@ -813,6 +887,7 @@ type
 
     procedure CheckError;
 
+//    function dbinit:{$IFDEF freetds}RETCODE{$ELSE}PAnsiChar{$ENDIF};
     function dbDead(dbProc: PDBPROCESS): Boolean;
     function dbLogin: PLOGINREC;
     procedure dbLoginFree(Login: PLOGINREC);

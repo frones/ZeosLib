@@ -157,9 +157,6 @@ type
     property Closed: Boolean read FClosed write FClosed;
 
   public
-    constructor Create(Driver: IZDriver; const Url: string; const HostName: string;
-      Port: Integer; const Database: string; const User: string; const Password: string;
-      Info: TStrings; Metadata: TContainedObject; APlainDriver: IZPlainDriver); overload;
     constructor Create(Driver: IZDriver; const Url: string;
       PlainDriver: IZPlainDriver; const HostName: string; Port: Integer;
       const Database: string; const User: string; const Password: string;
@@ -545,28 +542,6 @@ end;
 procedure TZAbstractConnection.SetPreprepareSQL(const Value: Boolean);
 begin
   FPreprepareSQL := Value;
-end;
-
-{**
-  Constructs this object and assignes the main properties.
-  @param Driver a ZDBC driver interface.
-  @param Url a connection URL.
-  @param HostName a name of the host.
-  @param Port a port number (0 for default port).
-  @param Database a name pof the database.
-  @param User a user name.
-  @param Password a user password.
-  @param Info a string list with extra connection parameters.
-}
-constructor TZAbstractConnection.Create(Driver: IZDriver; const Url: string;
-  const HostName: string; Port: Integer; const Database: string; const User: string;
-  const Password: string; Info: TStrings; Metadata: TContainedObject; APlainDriver: IZPlainDriver);
-var
-  TempURL: TZURL;
-begin
-  TempURL := TZURL.Create(Url, HostName, Port, Database, User, Password, Info);
-  Create(TempURL);
-  TempURL.Free;
 end;
 
 {**

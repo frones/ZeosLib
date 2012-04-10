@@ -98,7 +98,7 @@ begin
     TZConnectionGroup, TZGroupedConnection,
     TZStoredProc, TZSQLMetadata, TZSQLProcessor, TZSQLMonitor, TZSequence
     {$IFDEF ENABLE_INTERBASE}, TZIBEventAlerter {$ENDIF}
-    {$IFDEF ENABLE_POSTGRESQL}, TZPgEventAlerter]) {$ENDIF};
+    {$IFDEF ENABLE_POSTGRESQL}, TZPgEventAlerter{$ENDIF}]) ;
 
 {$IFDEF WITH_PROPERTY_EDITOR}
 

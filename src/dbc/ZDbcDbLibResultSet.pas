@@ -593,7 +593,7 @@ end;
 }
 function TZDBLibResultSet.GetDate(ColumnIndex: Integer): TDateTime;
 begin
-  Result := Int(GetTimestamp(ColumnIndex));
+  Result := System.Int(GetTimestamp(ColumnIndex));
 end;
 
 {**

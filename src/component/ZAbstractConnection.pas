@@ -100,13 +100,6 @@ type
   protected
     FURL: TZURL;
     FCatalog: string;
-    {FProtocol: string;
-    FHostName: string;
-    FPort: Integer;
-    FDatabase: string;
-    FUser: string;
-    FPassword: string;
-    FProperties: TStrings;}
     FAutoCommit: Boolean;
     FReadOnly: Boolean;
     FTransactIsolationLevel: TZTransactIsolationLevel;
@@ -321,7 +314,6 @@ begin
   FReadOnly := False;
   FTransactIsolationLevel := tiNone;
   FConnection := nil;
-  //FProperties := TStringList.Create;
   FDatasets := TList.Create;
   // Modified by cipto 8/1/2007 1:45:56 PM
   FSequences:= TList.Create;
@@ -336,7 +328,6 @@ destructor TZAbstractConnection.Destroy;
 begin
   Disconnect;
   UnregisterAllDataSets;
-  //FProperties.Free;
   FDatasets.Free;
   FURL.Free;
   // Modified by cipto 8/1/2007 1:47:37 PM
@@ -475,10 +466,10 @@ begin
   begin
     if Value <> GetConnected then
     begin
-         if Value then
-            Connect
-         else
-            Disconnect;
+      if Value then
+        Connect
+      else
+        Disconnect;
     end;
   end;
 end;

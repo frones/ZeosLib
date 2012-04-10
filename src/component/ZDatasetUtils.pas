@@ -60,7 +60,8 @@ interface
 uses
   Types, Classes, SysUtils, Db, ZSysUtils, ZDbcIntfs, ZDbcCache,
   Contnrs, ZCompatibility, ZExpression, ZVariant, ZTokenizer
-  {$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
+  {$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF}
+  {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF};
 
 {**
   Converts DBC Field Type to TDataset Field Type.
@@ -998,7 +999,8 @@ function CompareFieldsFromResultSet(const FieldRefs: TObjectDynArray;
 var
   I: Integer;
   ColumnIndex: Integer;
-  Value1, Value2: AnsiString;
+  AValue1, AValue2: AnsiString;
+  WValue1, WValue2: WideString;
   CurrentType : TZSQLType;
 begin
   Result := True;
@@ -1020,22 +1022,33 @@ begin
     begin
       if CurrentType = stUnicodeString then
       begin
-        Value1 := KeyValues[I].VUnicodeString;
-        Value2 := ResultSet.GetUnicodeString(ColumnIndex);
+        WValue1 := KeyValues[I].VUnicodeString;
+        WValue2 := ResultSet.GetUnicodeString(ColumnIndex);
+
+        if CaseInsensitive then
+          WValue2 := WideUpperCase(WValue2);
+        {$IFDEF DELPHI12_UP}
+        Result := SysUtils.AnsiStrLComp(PWideChar(WValue2), PWideChar(WValue1), Length(WValue1)) = 0;
+        {$ELSE}
+          AValue1 := UTF8ToAnsi(UTF8Encode(WValue1));
+          AValue2 := UTF8ToAnsi(UTF8Encode(WValue2));
+          Result := AnsiStrLComp(PAnsiChar(AValue2), PAnsiChar(AValue1), Length(AValue1)) = 0;
+        {$ENDIF}
       end
       else
       begin
-        Value1 := KeyValues[I].VString;
-        Value2 := ResultSet.GetString(ColumnIndex);
+        AValue1 := AnsiString(KeyValues[I].VString);
+        AValue2 := AnsiString(ResultSet.GetString(ColumnIndex));
+
+        if CaseInsensitive then
+          {$IFDEF LAZARUSUTF8HACK}
+          AValue2 := AnsiUpperCase(Utf8ToAnsi(AValue2));
+          {$ELSE}
+          AValue2 := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiUpperCase(AValue2);
+          {$ENDIF}
+        Result := AnsiStrLComp(PAnsiChar(AValue2), PAnsiChar(AValue1), Length(AValue1)) = 0;
       end;
 
-      if CaseInsensitive then
-        {$IFDEF LAZARUSUTF8HACK}
-        Value2 := AnsiUpperCase(Utf8ToAnsi(Value2));
-        {$ELSE}
-        Value2 := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiUpperCase(Value2);
-        {$ENDIF} 
-      Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
     end
     else
     begin
