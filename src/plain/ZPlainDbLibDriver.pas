@@ -579,7 +579,6 @@ type
 { DB-Library datatypes }
   INT                   = LongInt;
   SHORT                 = SmallInt;
-  BOOL                  = LongBool;
   DBCHAR                = AnsiChar;
   DBBINARY              = Byte;
   DBTINYINT             = Byte;
@@ -726,11 +725,11 @@ I have not find any reason for this yet. }
    	MaxLength: DBINT;
    	Precision: BYTE;
    	Scale: BYTE;
-   	VarLength: BOOL;     // TRUE, FALSE
+   	VarLength: LongBool;     // TRUE, FALSE
    	Null: BYTE;          // TRUE, FALSE or DBUNKNOWN
    	CaseSensitive: BYTE; // TRUE, FALSE or DBUNKNOWN
    	Updatable: BYTE;     // TRUE, FALSE or DBUNKNOWN
-   	Identity: BOOL;      // TRUE, FALSE
+   	Identity: LongBool;      // TRUE, FALSE
   end;
     {$IFDEF FPC}
       {$PACKRECORDS DEFAULT}
