@@ -557,14 +557,14 @@ procedure TZSQLiteConnection.Close;
 var
   LogMessage: string;
 begin
-  if not Closed then
-  begin
-    GetPlainDriver.Close(FHandle);
-    FHandle := nil;
-    LogMessage := Format('DISCONNECT FROM "%s"', [Database]);
-    if Assigned(DriverManager) then 
-      DriverManager.LogMessage(lcDisconnect, PlainDriver.GetProtocol, LogMessage);
-  end;
+  if ( Closed ) or (not Assigned(PlainDriver)) then
+    Exit;
+
+  GetPlainDriver.Close(FHandle);
+  FHandle := nil;
+  LogMessage := Format('DISCONNECT FROM "%s"', [Database]);
+  if Assigned(DriverManager) then
+    DriverManager.LogMessage(lcDisconnect, PlainDriver.GetProtocol, LogMessage);
   inherited Close;
 end;
 

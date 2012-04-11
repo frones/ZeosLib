@@ -61,7 +61,7 @@ uses Classes, ZClasses, ZCompatibility, ZPlainDriver;
 
 {$DEFINE ntwdblib} { if you are using MS SQL Server Client Library (ntwdblib.dll) }
 {$IFNDEF ntwdblib}
- {$DEFINE freetds} { if you are using db-lib from FreeTDS project (MS SQL Server + Sybase support) }
+ {$DEFINE FREETDS} { if you are using db-lib from FreeTDS project (MS SQL Server + Sybase support) }
 {$ENDIF}
 
 {***************** Plain API Constants definition ****************}
@@ -134,16 +134,48 @@ const
   INT_CONTINUE          = 1;
   INT_CANCEL            = 2;
 
+  //from sybdb.h:
+{ DBVERSION_xxx are used with dbsetlversion() }
+  DBVERSION_100= 2; // Sybase TDS 5.0
+  DBVERSION_42 = 3; // This can be used for old Microsoft and Sybase servers
+  DBVERSION_70 = 4;
+  DBVERSION_71 = 5;
+  DBVERSION_72 = 6;
+  DBVERSION_73 = 7;
+
+{ DBTDS_xxx are returned by DBTDS() }
+  DBTDS_UNKNOWN= 0;
+  DBTDS_42     = 4;  // SQL Server 4.2
+  DBTDS_50     = 7;	 // Sybase SQL Server 5.0; use this for connecting to Sybase (ASA or ASE)
+  DBTDS_70     = 8;	 // Microsoft SQL Server 7.0
+  DBTDS_71     = 9;  // Microsoft SQL Server 2000
+  DBTDS_72     = 10; // Microsoft SQL Server 2005
+  DBTDS_73     = 11; // Microsoft SQL Server 2008
+
+  //from sqlfront.h:
+  DBSETHOST=1;
+  DBSETUSER=2;
+  DBSETPWD=3;
+  DBSETAPP=4;
+  DBSETID=5;
+  DBSETLANG=6;
+  DBSETSECURE=7;
+  //These two are defined by Microsoft for dbsetlversion():
+  DBVER42={$IFDEF FREETDS}DBVERSION_42{$ELSE}8{$ENDIF};
+  DBVER60={$IFDEF FREETDS}DBVERSION_71{$ELSE}9{$ENDIF};
+  DBSET_LOGINTIME=10;
+  DBSETFALLBACK=12;
+
 { dboptions }
   DBBUFFER              = 0;
   DBOFFSET              = 1;
   DBROWCOUNT            = 2;
   DBSTAT                = 3;
-  DBTEXTLIMIT           = 4;
-  DBTEXTSIZE            = 5;
+  DBTEXTLIMIT           = {$IFDEF FREETDS}7{$ELSE}4{$ENDIF};
+  DBTEXTSIZE            = {$IFDEF FREETDS}17{$ELSE}5{$ENDIF};
   DBARITHABORT          = 6;
   DBARITHIGNORE         = 7;
-  DBNOAUTOFREE          = 8;
+  DBNOAUTOFREE          = {$IFDEF FREETDS}15{$ELSE}8{$ENDIF};
   DBNOCOUNT             = 9;
   DBNOEXEC              = 10;
   DBPARSEONLY           = 11;
@@ -153,13 +185,13 @@ const
   DBOEMTOANSI	          = 15;
   DBCLIENTCURSORS       = 16;
   DBSET_TIME            = 17;
-  DBQUOTEDIDENT         = 18;
+  DBQUOTEDIDENT         = {$IFDEF FREETDS}35{$ELSE}18{$ENDIF};
 
 { Data Type Tokens }
   SQLVOID               = $1f;
   SQLTEXT               = $23;
   SQLVARBINARY          = $25;
-  SQLINTN               = $26;
+  SQLINTN               = $26; { all nullable integers }
   SQLVARCHAR            = $27;
   SQLBINARY             = $2d;
   SQLIMAGE              = $22;
@@ -179,6 +211,16 @@ const
   SQLDATETIM4           = $3a;
   SQLDECIMAL            = $6a;
   SQLNUMERIC            = $6c;
+
+  //from tds.h:
+  SYBNTEXT=$63;
+  SYBINT8=$7F;
+  SYBUNIQUE=$24;
+  //XSYBVARCHAR=$A7;
+  //XSYBNVARCHAR=$E7;
+  //XSYBNCHAR = $EF;
+  //XSYBBINARY= $AD;
+
 
 { Data stream tokens }
   SQLCOLFMT             = $a1;
@@ -354,11 +396,19 @@ const
   OFF_EXEC              = $12c;
 
 { Decimal constants }
-  MAXNUMERICLEN = 16;
+  MAXNUMERICLEN={$IFDEF FREETDS}32   {$ELSE}16{$ENDIF};
   MAXNUMERICDIG = 38;
 
   DEFAULTPRECISION = 18;
   DEFAULTSCALE     = 0;
+
+{ DB-Table constants}
+{ Pack the following structures on a word boundary }
+  MAXTABLENAME ={$IFDEF FREETDS}512+1{$ELSE}30{$ENDIF};
+  MAXCOLNAMELEN={$IFDEF FREETDS}512+1{$ELSE}30{$ENDIF};
+
+{ DB-Library datatype definitions }
+  DBMAXCHAR=256; // Max length of DBVARBINARY and DBVARCHAR, etc.
 
 { Print lengths for certain fixed length data types }
   PRINT4                = 11;
@@ -375,12 +425,12 @@ const
   FAIL                  = 0;
   SUCCEED_ABORT         = 2;
 
-  DBUNKNOWN             = 2;
+  DBUNKNOWN             = 2; { FALSE = 0, TRUE = 1 }
 
   MORE_ROWS             = -1;
   NO_MORE_ROWS          = -2;
   REG_ROW               = MORE_ROWS;
-  BUF_FULL              = -3;
+  BUF_FULL              = -3; { only if buffering is turned on }
 
 { Status code for dbresults(). Possible return values are }
 { SUCCEED, FAIL, and NO_MORE_RESULTS. }
@@ -505,15 +555,6 @@ const
   NE_MAX_NETERROR       = 17;
 
 
-{ DB-Library datatype definitions }
-const
-  DBMAXCHAR             = 256; { Max length of DBVARBINARY and DBVARCHAR, etc. }
-
-const
-{ Pack the following structures on a word boundary }
-  MAXCOLNAMELEN = 30;
-  MAXTABLENAME  = 30;
-
 const
   MAXSERVERNAME = 30;
   MAXNETLIBNAME = 255;
@@ -571,7 +612,7 @@ type
 
 { DBDATEREC structure used by dbdatecrack }
   DBDATEREC = packed record
-  {$IFNDEF freetds}
+  {$IFNDEF FREETDS}
     year:       Integer;      { 1753 - 9999 }
     quarter:    Integer;      { 1 - 4 }
     month:      Integer;      { 1 - 12 }
@@ -602,7 +643,7 @@ type
       year:           INT; { 1753 - 9999 }
       quarter:        INT; { 1 - 4 }
       month:          INT; { 1 - 12 }
-      {$IFDEF freetds}
+      {$IFDEF FREETDS}
       day:            INT; { 1 - 31 }
       dayofyear:      INT; { 1 - 366 (in sybdb.h dayofyear and day are changed around!) }
       {$ELSE}
@@ -631,12 +672,12 @@ type
   DBDECIMAL = DBNUMERIC;
 
   DBVARYCHAR = packed record
-    Len: {$IFDEF freetds}DBINT{$ELSE}DBSMALLINT{$ENDIF};
+    Len: {$IFDEF FREETDS}DBINT{$ELSE}DBSMALLINT{$ENDIF};
     Str: array[0..DBMAXCHAR-1] of DBCHAR; //CHAR = Wide D12UP
   end;
 
   DBVARYBIN = packed record
-    Len: {$IFDEF freetds}DBINT{$ELSE}DBSMALLINT{$ENDIF};
+    Len: {$IFDEF FREETDS}DBINT{$ELSE}DBSMALLINT{$ENDIF};
     Bytes: array[0..DBMAXCHAR-1] of Byte;
   end;
 
@@ -652,7 +693,7 @@ type
 { TODO -ofjanos -cAPI :
 Strange but I had to insert X1 and X2 into the structure to make it work.
 I have not find any reason for this yet. }
-  {$IFNDEF freetds}
+  {$IFNDEF FREETDS}
   DBCOL = packed record
     SizeOfStruct: DBINT;
     Name:       array[0..MAXCOLNAMELEN] of AnsiChar;
@@ -757,7 +798,7 @@ type
 
     procedure CheckError;
 
-//    function dbinit:{$IFDEF freetds}RETCODE{$ELSE}PAnsiChar{$ENDIF};
+//    function dbinit:{$IFDEF FREETDS}RETCODE{$ELSE}PAnsiChar{$ENDIF};
     function dbDead(dbProc: PDBPROCESS): Boolean;
     function dbLogin: PLOGINREC;
     procedure dbLoginFree(Login: PLOGINREC);
@@ -823,7 +864,7 @@ type
 
     procedure CheckError;
 
-//    function dbinit:{$IFDEF freetds}RETCODE{$ELSE}PAnsiChar{$ENDIF};
+//    function dbinit:{$IFDEF FREETDS}RETCODE{$ELSE}PAnsiChar{$ENDIF};
     function dbDead(dbProc: PDBPROCESS): Boolean;
     function dbLogin: PLOGINREC;
     procedure dbLoginFree(Login: PLOGINREC);
@@ -887,7 +928,7 @@ type
 
     procedure CheckError;
 
-//    function dbinit:{$IFDEF freetds}RETCODE{$ELSE}PAnsiChar{$ENDIF};
+//    function dbinit:{$IFDEF FREETDS}RETCODE{$ELSE}PAnsiChar{$ENDIF};
     function dbDead(dbProc: PDBPROCESS): Boolean;
     function dbLogin: PLOGINREC;
     procedure dbLoginFree(Login: PLOGINREC);

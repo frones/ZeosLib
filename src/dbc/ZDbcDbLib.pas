@@ -700,7 +700,7 @@ procedure TZDBLibConnection.Close;
 var
   LogMessage: string;
 begin
-  if Closed then
+  if Closed or (Not Assigned(PlainDriver) )then
     Exit;
 
   if not GetPlainDriver.dbDead(FHandle) then

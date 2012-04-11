@@ -280,7 +280,7 @@ end;
 }
 procedure TZASAConnection.Close;
 begin
-  if Closed then
+  if Closed or (not Assigned(PlainDriver))then
      Exit;
 
   if AutoCommit then

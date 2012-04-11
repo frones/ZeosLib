@@ -548,7 +548,9 @@ procedure TZAdoConnection.Close;
 var
   LogMessage: string;
 begin
-  if Closed then Exit;
+  if Closed or (not Assigned(PlainDriver)) then
+    Exit;
+
   SetAutoCommit(True);
 
   LogMessage := Format('CLOSE CONNECTION TO "%s"', [Database]);
