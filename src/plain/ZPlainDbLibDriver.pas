@@ -577,8 +577,7 @@ type
   STATUS                = Integer;
 
 { DB-Library datatypes }
-  INT                   = LongInt;
-  SHORT                 = SmallInt;
+  DBSHORT               = SmallInt;
   DBCHAR                = AnsiChar;
   DBBINARY              = Byte;
   DBTINYINT             = Byte;
@@ -627,35 +626,35 @@ type
   {$ELSE}
     case boolean of
     false:(
-      oldyear:        INT; { 1753 - 9999 }
-      oldmonth:       INT; { 1 - 4 }
-      oldday:         INT; { 1 - 12 }
-      olddayofyear:   INT; { 1 - 366 (in sybdb.h dayofyear and day are changed around!) }
-      oldweekday:     INT; { 1 - 7  (Mon - Sun) }
-      oldhour:        INT; { 0 - 23 }
-      oldminute:      INT; { 0 - 59 }
-      oldsecond:      INT; { 0 - 59 }
-      oldmillisecond: INT; { 0 - 999 }
-      oldtzone:       INT; { 0 - 127 (Sybase only!) }
+      oldyear:        DBINT; { 1753 - 9999 }
+      oldmonth:       DBINT; { 1 - 4 }
+      oldday:         DBINT; { 1 - 12 }
+      olddayofyear:   DBINT; { 1 - 366 (in sybdb.h dayofyear and day are changed around!) }
+      oldweekday:     DBINT; { 1 - 7  (Mon - Sun) }
+      oldhour:        DBINT; { 0 - 23 }
+      oldminute:      DBINT; { 0 - 59 }
+      oldsecond:      DBINT; { 0 - 59 }
+      oldmillisecond: DBINT; { 0 - 999 }
+      oldtzone:       DBINT; { 0 - 127 (Sybase only!) }
     );
     true:(
-      year:           INT; { 1753 - 9999 }
-      quarter:        INT; { 1 - 4 }
-      month:          INT; { 1 - 12 }
+      year:           DBINT; { 1753 - 9999 }
+      quarter:        DBINT; { 1 - 4 }
+      month:          DBINT; { 1 - 12 }
       {$IFDEF FREETDS}
-      day:            INT; { 1 - 31 }
-      dayofyear:      INT; { 1 - 366 (in sybdb.h dayofyear and day are changed around!) }
+      day:            DBINT; { 1 - 31 }
+      dayofyear:      DBINT; { 1 - 366 (in sybdb.h dayofyear and day are changed around!) }
       {$ELSE}
-      dayofyear:      INT; { 1 - 366 (in sybdb.h dayofyear and day are changed around!) }
-      day:            INT; { 1 - 31 }
+      dayofyear:      DBINT; { 1 - 366 (in sybdb.h dayofyear and day are changed around!) }
+      day:            DBINT; { 1 - 31 }
       {$ENDIF}
-      week:           INT; { 1 - 54 (for leap years) }
-      weekday:        INT; { 1 - 7  (Mon - Sun) }
-      hour:           INT; { 0 - 23 }
-      minute:         INT; { 0 - 59 }
-      second:         INT; { 0 - 59 }
-      millisecond:    INT; { 0 - 999 }
-      tzone:          INT; { 0 - 127 (Sybase only!) }
+      week:           DBINT; { 1 - 54 (for leap years) }
+      weekday:        DBINT; { 1 - 7  (Mon - Sun) }
+      hour:           DBINT; { 0 - 23 }
+      minute:         DBINT; { 0 - 59 }
+      second:         DBINT; { 0 - 59 }
+      millisecond:    DBINT; { 0 - 999 }
+      tzone:          DBINT; { 0 - 127 (Sybase only!) }
     );
   end;
   {$ENDIF}
@@ -720,7 +719,7 @@ I have not find any reason for this yet. }
    	Name: array[0..MAXCOLNAMELEN] of char;
    	ActualName: array[0..MAXCOLNAMELEN] of char;
    	TableName: array[0..MAXTABLENAME] of char;
-   	Typ: SHORT;
+   	Typ: DBSHORT;
    	UserType: DBINT;
    	MaxLength: DBINT;
    	Precision: BYTE;
@@ -801,8 +800,8 @@ type
     function dbDead(dbProc: PDBPROCESS): Boolean;
     function dbLogin: PLOGINREC;
     procedure dbLoginFree(Login: PLOGINREC);
-    function dbSetLoginTime(Seconds: INT): RETCODE;
-    function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: INT): RETCODE;
+    function dbSetLoginTime(Seconds: DBINT): RETCODE;
+    function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): RETCODE;
     function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
     function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
     function dbSetLPwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE;
@@ -867,7 +866,7 @@ type
     function dbDead(dbProc: PDBPROCESS): Boolean;
     function dbLogin: PLOGINREC;
     procedure dbLoginFree(Login: PLOGINREC);
-    function dbSetLoginTime(Seconds: INT): RETCODE;
+    function dbSetLoginTime(Seconds: DBINT): RETCODE;
     function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE;
     function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
     function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
