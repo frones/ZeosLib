@@ -2984,7 +2984,7 @@ begin
         Result := RowAccessor.GetAsciiStream(ColumnIndex, WasNull);
       {$IFDEF WITH_WIDEMEMO}
       ftWideMemo:
-        Result := RowAccessor.GetUnicodeStream(ColumnIndex, WasNull)
+        Result := RowAccessor.ReadUnicodeStream(ColumnIndex, WasNull)
       {$ENDIF}
       else
         Result := RowAccessor.GetBinaryStream(ColumnIndex, WasNull);

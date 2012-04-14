@@ -60,8 +60,7 @@ interface
 uses
   Types, Classes, SysUtils, Db, ZSysUtils, ZDbcIntfs, ZDbcCache,
   Contnrs, ZCompatibility, ZExpression, ZVariant, ZTokenizer
-  {$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF}
-  {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF};
+  {$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
 
 {**
   Converts DBC Field Type to TDataset Field Type.

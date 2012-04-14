@@ -842,6 +842,7 @@ type
     procedure SetUnicodeString(const Value: WideString);
     function GetBytes: TByteDynArray;
     procedure SetBytes(const Value: TByteDynArray);
+    function GetUnicodeStream: TStream;
     function GetStream: TStream;
     procedure SetStream(Value: TStream);
 

@@ -285,7 +285,8 @@ type
 
 implementation
 
-uses ZMessages, ZDbcResultSetMetadata, ZDbcGenericResolver, ZDbcUtils;
+uses ZMessages, ZDbcResultSetMetadata, ZDbcGenericResolver, ZDbcUtils
+  {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF};
 
 { TZAbstractCachedResultSet }
 
@@ -1431,12 +1432,31 @@ end;
 }
 procedure TZAbstractCachedResultSet.UpdateUnicodeStream(
   ColumnIndex: Integer; Value: TStream);
+var
+  Ansi: AnsiString;
+  Len: Integer;
+  TempStream: TMemoryStream;
+  WS: WideString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
 {$ENDIF}
   PrepareRowForUpdates;
-  FRowAccessor.SetUnicodeStream(ColumnIndex, Value);
+  {EgonHugeist: TempBuffer the WideString, }
+  if Assigned(Value) then
+  begin
+    WS := PWideChar(TMemoryStream(Value).Memory);
+    SetLength(WS, Value.Size div 2);
+    Ansi := UTF8Encode(WS);
+    Len := Length(Ansi);
+    TempStream := TMemoryStream.Create;
+    TempStream.Write(PAnsiChar(Ansi)^, Len);
+    TempStream.Position := 0;
+    FRowAccessor.SetUnicodeStream(ColumnIndex, TempStream);
+    TempStream.Free;
+  end
+  else
+    FRowAccessor.SetUnicodeStream(ColumnIndex, Value);
 end;
 
 {**

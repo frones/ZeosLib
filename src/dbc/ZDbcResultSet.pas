@@ -317,6 +317,7 @@ type
     procedure SetUnicodeString(const Value: WideString); virtual;
     function GetBytes: TByteDynArray; virtual;
     procedure SetBytes(const Value: TByteDynArray); virtual;
+    function GetUnicodeStream: TStream; virtual;
     function GetStream: TStream; virtual;
     procedure SetStream(Value: TStream); virtual;
 
@@ -920,7 +921,7 @@ begin
   begin
     Blob := GetBlob(ColumnIndex);
     if Blob <> nil then
-      Result := Blob.GetStream;
+      Result := Blob.GetUnicodeStream;
   end;
   LastWasNull := (Result = nil);
 end;
@@ -2844,7 +2845,9 @@ end;
 function TZAbstractBlob.GetString: AnsiString;
 begin
   if (FBlobSize > 0) and Assigned(FBlobData) then
-    System.SetString(Result, PAnsiChar(FBlobData), FBlobSize)
+  begin
+    System.SetString(Result, PAnsiChar(FBlobData), FBlobSize);
+  end
   else
     Result := '';
 end;
@@ -2869,20 +2872,9 @@ end;
   Gets the wide string from the stored data.
   @return a string which contains the stored data.
 }
-
-// gto: this must be tested!  We need to add the Move (  Len * Sizeof(Char)) to this    //AVZ
 function TZAbstractBlob.GetUnicodeString: WideString;
-var
-  Buffer: WideString;
-  Len: Integer;
 begin
-  Buffer := UTF8ToString(GetString);
-  Len := System.Length(Buffer);
-  if Len > 0 then
-  begin
-    SetLength(Result, Len);
-    System.Move(PWideChar(Buffer)^, Pointer(Result)^, Len * 2);
-  end;
+  Result := UTF8ToString(GetString);
 end;
 
 {**
@@ -2929,6 +2921,17 @@ begin
     end;
   end;
   FUpdated := True;
+end;
+
+function TZAbstractBlob.GetUnicodeStream: TStream;
+begin
+  Result := TMemoryStream.Create;
+  if (FBlobSize > 0) and Assigned(FBlobData) then
+  begin
+    Result.Size := System.Length(GetUnicodeString)*2;
+    System.Move(PWideChar(GetUnicodeString)^, TMemoryStream(Result).Memory^, FBlobSize*2);
+  end;
+  Result.Position := 0;
 end;
 
 {**

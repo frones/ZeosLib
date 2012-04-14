@@ -436,7 +436,7 @@ begin
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
-            Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString)
+            Result := Self.GetConnection.GetEscapeString(EncodeString(FCharactersetCode, String(UTF8Encode(TempBlob.GetUnicodeString))))
           else
             Result := 'NULL';
         end;

@@ -351,12 +351,12 @@ end;
 }
 function TZPostgreSQLResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
 var
-  Temp: AnsiString;
+  Temp: string;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-  Temp := UpperCase(GetString(ColumnIndex));
+  Temp := UpperCase(String(GetString(ColumnIndex)));
   Result := (Temp = 'Y') or (Temp = 'YES') or (Temp = 'T') or
     (Temp = 'TRUE') or (StrToIntDef(String(Temp), 0) <> 0);
 end;
@@ -664,7 +664,7 @@ begin
             if (Statement.GetConnection as IZPostgreSQLConnection).GetServerMajorVersion >= 8 then
               Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)))
             else
-              Stream := TStringStream.Create(DecodeString(GetString(ColumnIndex))); //Egonhugeist: not sure about DecodeBinaryString...
+              Stream := TStringStream.Create(GetString(ColumnIndex)); //Egonhugeist: not sure about DecodeBinaryString...
         end
         else
           Stream := TStringStream.Create(GetString(ColumnIndex));

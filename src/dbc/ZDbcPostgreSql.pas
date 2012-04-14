@@ -1051,7 +1051,10 @@ end;
 function TZPostgreSQLConnection.GetEscapeString(const Value: String;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
-  Result := inherited GetEscapeString(ZDbcPostgreSqlUtils.EncodeString(TZPgCharactersetType(Self.ClientCodePage^.ID), Value), EscapeMarkSequence)
+  if StartsWith(Value, '''') and EndsWith(Value, '''') then
+    Result := inherited GetEscapeString({ZDbcPostgreSqlUtils.EncodeString(TZPgCharactersetType(Self.ClientCodePage^.ID),} Value{)}, EscapeMarkSequence)
+  else
+    Result := inherited GetEscapeString({ZDbcPostgreSqlUtils.EncodeString(TZPgCharactersetType(Self.ClientCodePage^.ID),} QuotedStr(Value){)}, EscapeMarkSequence)
 end;
 
 { TZPostgreSQLSequence }
