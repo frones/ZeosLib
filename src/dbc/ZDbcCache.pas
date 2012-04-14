@@ -356,12 +356,12 @@ function TZRowAccessor.GetBlobObject(Buffer: PZRowBuffer;
   ColumnIndex: Integer): IZBlob;
 var
   BlobPtr: PPointer;
-  NullPtr: PByte;
+  NullPtr: PBoolean;
 begin
   BlobPtr := PPointer(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
-  NullPtr := PByte(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1]]);
+  NullPtr := PBoolean(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1]]);
 
-  if NullPtr^ = 0 then
+  if NullPtr^ = {$IFDEF FPC}0{$ELSE}False{$ENDIF} then
     Result := IZBlob(BlobPtr^)
   else
     Result := nil;

@@ -1187,12 +1187,8 @@ begin
       end;
   else
     try
-      {$IFDEF FPC}
-        {$IF defined(MSWINDOWS) and ( not defined(WIN32))}
-           TimeStamp := MSecsToTimeStamp(PComp(Buffer)^); //EgonHugeist: FPC Win64 Bug: expected Int64 instead of TDateTime(double)
-        {$ELSE}
-          TimeStamp := MSecsToTimeStamp(TDateTime(Buffer^));
-        {$IFEND}
+      {$IFDEF WIN64}
+         TimeStamp := MSecsToTimeStamp(PComp(Buffer)^); //EgonHugeist: FPC Win64: expected Int64 instead of TDateTime(double)
       {$ELSE}
         TimeStamp := MSecsToTimeStamp(TDateTime(Buffer^));
       {$ENDIF}
