@@ -419,7 +419,7 @@ begin
       Exit;
     end;
   {$IFDEF FPC}
-  GetClientCodePageInformations(GetCompilerSaveCodePageName); //recalls em selve -> switch to supported (UTF8)
+  Result := GetClientCodePageInformations(GetCompilerSaveCodePageName); //recalls em selve -> switch to supported (UTF8)
   {$ELSE}
   Result := @ClientCodePageDummy;
   {$ENDIF}

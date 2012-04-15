@@ -1042,7 +1042,7 @@ end;
 
 {**
   EgonHugeist:
-  Returns the BinaryString in a Tokenizer-detectable kind
+  Returns a String in a Tokenizer-detectable kind
   If the Tokenizer don't need to predetect it Result = BinaryString
   @param Value represents the String
   @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
