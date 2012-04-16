@@ -295,7 +295,7 @@ end;
 }
 procedure TZInterbase6Connection.Close;
 begin
-  if Closed then
+  if Closed or (not Assigned(PlainDriver)) then
      Exit;
 
   if FTrHandle <> nil then

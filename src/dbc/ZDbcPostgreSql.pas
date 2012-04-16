@@ -115,9 +115,6 @@ type
     procedure StartTransactionSupport;
     procedure LoadServerVersion;
   public
-    {constructor Create(Driver: IZDriver; const Url: string;
-      PlainDriver: IZPostgreSQLPlainDriver; const HostName: string; Port: Integer;
-      const Database: string; const User: string; const Password: string; Info: TStrings);}
     destructor Destroy; override;
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
@@ -717,13 +714,13 @@ procedure TZPostgreSQLConnection.Close;
 var
   LogMessage: string;
 begin
-  if not Closed then
-  begin
-    GetPlainDriver.Finish(FHandle);
-    FHandle := nil;
-    LogMessage := Format('DISCONNECT FROM "%s"', [Database]);
-    DriverManager.LogMessage(lcDisconnect, PlainDriver.GetProtocol, LogMessage);
-  end;
+  if ( Closed ) or (not Assigned(PlainDriver)) then
+    Exit;
+
+  GetPlainDriver.Finish(FHandle);
+  FHandle := nil;
+  LogMessage := Format('DISCONNECT FROM "%s"', [Database]);
+  DriverManager.LogMessage(lcDisconnect, PlainDriver.GetProtocol, LogMessage);
   inherited Close;
 end;
 

@@ -68,8 +68,9 @@ uses
 
 type
 {$IFDEF FPC}
-//  TVariantDynArray      = array of Variant; // used nowhere, doesn't exist in Delphi?
-  ULong                 = PTRUINT;
+  ULong                 = {$IFDEF WIN64}LongWord{$ELSE}PTRUINT{$ENDIF};
+                            // EgonHugeist: Use always a 4Byte Integer as long the PlainDriver dll's are 32Bit for Windows64
+                            //on the other hand MySQL64 and FB64 have problems on Win64!
   ULongLong             = QWord;
 {$ELSE}
   ULong                 = LongWord;

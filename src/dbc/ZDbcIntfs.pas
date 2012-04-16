@@ -201,7 +201,7 @@ type
 
     function GetSupportedProtocols: TStringDynArray;
     function Connect(const Url: string; Info: TStrings): IZConnection; overload;
-    //function Connect(const Url: TZURL): IZConnection; overload;
+    function Connect(const Url: TZURL): IZConnection; overload;
     function GetClientVersion(const Url: string): Integer;
     function AcceptsURL(const Url: string): Boolean;
     function GetPlainDriver(const Url: TZURL): IZPlainDriver;
@@ -932,7 +932,7 @@ end;
 }
 destructor TZDriverManager.Destroy;
 begin
-  FURL.Destroy;
+  FURL.Free;
   FDrivers := nil;
   FLoggingListeners := nil;
   inherited Destroy;

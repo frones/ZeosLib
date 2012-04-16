@@ -112,7 +112,7 @@ type
     function GetHostName: string;
     procedure SetHostName(const Value: String);
     function GetPort: Integer;
-    procedure SetPort(const Value: Integer);
+    procedure SetConnPort(const Value: Integer);
     function GetDatabase: string;
     procedure SetDatabase(const Value: String);
     function GetUser: string;
@@ -135,7 +135,7 @@ type
     property Driver: IZDriver read FDriver write FDriver;
     property PlainDriver: IZPlainDriver read FIZPlainDriver write FIZPlainDriver;
     property HostName: string read GetHostName write SetHostName;
-    property Port: Integer read GetPort write SetPort;
+    property Port: Integer read GetPort write SetConnPort;
     property Database: string read GetDatabase write SetDatabase;
     property User: string read GetUser write SetUser;
     property Password: string read GetPassword write SetPassword;
@@ -148,9 +148,6 @@ type
     property Closed: Boolean read FClosed write FClosed;
 
   public
-    constructor Create(Driver: IZDriver; const Url: string; const HostName: string;
-      Port: Integer; const Database: string; const User: string; const Password: string;
-      Info: TStrings; Metadata: TContainedObject); overload;
     constructor Create(Driver: IZDriver; const Url: string;
       PlainDriver: IZPlainDriver; const HostName: string; Port: Integer;
       const Database: string; const User: string; const Password: string;
@@ -445,7 +442,7 @@ begin
   Result := FURL.Port;
 end;
 
-procedure TZAbstractConnection.SetPort(const Value: Integer);
+procedure TZAbstractConnection.SetConnPort(const Value: Integer);
 begin
   FURL.Port := Value;
 end;
@@ -487,28 +484,6 @@ end;
 
 procedure TZAbstractConnection.InternalCreate;
 begin
-end;
-
-{**
-  Constructs this object and assignes the main properties.
-  @param Driver a ZDBC driver interface.
-  @param Url a connection URL.
-  @param HostName a name of the host.
-  @param Port a port number (0 for default port).
-  @param Database a name pof the database.
-  @param User a user name.
-  @param Password a user password.
-  @param Info a string list with extra connection parameters.
-}
-constructor TZAbstractConnection.Create(Driver: IZDriver; const Url: string;
-  const HostName: string; Port: Integer; const Database: string; const User: string;
-  const Password: string; Info: TStrings; Metadata: TContainedObject);
-var
-  TempURL: TZURL;
-begin
-  TempURL := TZURL.Create(Url, HostName, Port, Database, User, Password, Info);
-  Create(TempURL);
-  TempURL.Free;
 end;
 
 {**

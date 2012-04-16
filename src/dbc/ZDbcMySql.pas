@@ -625,14 +625,14 @@ procedure TZMySQLConnection.Close;
 var
   LogMessage: string;
 begin
-  if not Closed then
-  begin
-    GetPlainDriver.Close(FHandle);
-    GetPlainDriver.Despose(FHandle);
-    FHandle := nil;
-    LogMessage := Format('DISCONNECT FROM "%s"', [Database]);
-    DriverManager.LogMessage(lcDisconnect, GetPlainDriver.GetProtocol, LogMessage);
-  end;
+  if ( Closed ) or (not Assigned(PlainDriver)) then
+    Exit;
+
+  GetPlainDriver.Close(FHandle);
+  GetPlainDriver.Despose(FHandle);
+  FHandle := nil;
+  LogMessage := Format('DISCONNECT FROM "%s"', [Database]);
+  DriverManager.LogMessage(lcDisconnect, GetPlainDriver.GetProtocol, LogMessage);
   inherited Close;
 end;
 

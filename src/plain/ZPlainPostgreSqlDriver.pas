@@ -127,6 +127,7 @@ type
   TZPostgreSQLNotify = packed record
     relname: PAnsiChar;   { name of relation containing data }
     be_pid:  Integer; { process id of backend }
+    payload: PAnsiChar; {additional data in notify}
   end;
 
   PZPostgreSQLNotify = ^TZPostgreSQLNotify;

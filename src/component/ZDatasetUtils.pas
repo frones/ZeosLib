@@ -276,7 +276,7 @@ var
 implementation
 
 uses
-  ZMessages, ZGenericSqlToken,
+  ZMessages, ZGenericSqlToken, {$IFDEF DELPHI12_UP}AnsiStrings,{$ENDIF}
   ZDbcResultSetMetadata, ZAbstractRODataset;
 
 {**
@@ -996,7 +996,8 @@ function CompareFieldsFromResultSet(const FieldRefs: TObjectDynArray;
 var
   I: Integer;
   ColumnIndex: Integer;
-  Value1, Value2: AnsiString;
+  AValue1, AValue2: AnsiString;
+  WValue1, WValue2: WideString;
   CurrentType : TZSQLType;
 begin
   Result := True;
@@ -1018,22 +1019,40 @@ begin
     begin
       if CurrentType = stUnicodeString then
       begin
-        Value1 := KeyValues[I].VUnicodeString;
-        Value2 := ResultSet.GetUnicodeString(ColumnIndex);
+        WValue1 := KeyValues[I].VUnicodeString;
+        WValue2 := ResultSet.GetUnicodeString(ColumnIndex);
+
+        if CaseInsensitive then
+          WValue2 := WideUpperCase(WValue2);
+        {$IFDEF DELPHI12_UP}
+        Result := SysUtils.AnsiStrLComp(PWideChar(WValue2), PWideChar(WValue1), Length(WValue1)) = 0;
+        {$ELSE}
+          AValue1 := UTF8ToAnsi(UTF8Encode(WValue1));
+          AValue2 := UTF8ToAnsi(UTF8Encode(WValue2));
+          Result := AnsiStrLComp(PAnsiChar(AValue2), PAnsiChar(AValue1), Length(AValue1)) = 0;
+        {$ENDIF}
       end
       else
       begin
-        Value1 := KeyValues[I].VString;
-        Value2 := ResultSet.GetString(ColumnIndex);
+        AValue1 := AnsiString(KeyValues[I].VString);
+        AValue2 := AnsiString(ResultSet.GetString(ColumnIndex));
+
+        if CaseInsensitive then
+          {$IFDEF LAZARUSUTF8HACK}
+          AValue2 := AnsiUpperCase(Utf8ToAnsi(AValue2));
+          {$ELSE}
+          AValue2 := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiUpperCase(AValue2);
+          {$ENDIF}
+        Result := AnsiStrLComp(PAnsiChar(AValue2), PAnsiChar(AValue1), Length(AValue1)) = 0;
       end;
 
       if CaseInsensitive then
         {$IFDEF LAZARUSUTF8HACK}
-        Value2 := AnsiUpperCase(Utf8ToAnsi(Value2));
-        {$ELSE} 
-        Value2 := AnsiUpperCase(Value2); 
-        {$ENDIF} 
-      Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
+        AValue2 := AnsiUpperCase(Utf8ToAnsi(Value2));
+        {$ELSE}
+        AValue2 := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiUpperCase(AValue2);
+        {$ENDIF}
+      Result := AnsiStrLComp(PAnsiChar(AValue2), PAnsiChar(AValue1), Length(AValue1)) = 0;
     end
     else
     begin
@@ -1173,7 +1192,11 @@ begin
       end;
   else
     try
-      TimeStamp := MSecsToTimeStamp(TDateTime(Buffer^));
+      {$IFDEF WIN64}
+         TimeStamp := MSecsToTimeStamp(PComp(Buffer)^); //EgonHugeist: FPC Win64: expected Int64 instead of TDateTime(double)
+      {$ELSE}
+        TimeStamp := MSecsToTimeStamp(TDateTime(Buffer^));
+      {$ENDIF}
     except
       TimeStamp.Time := 0;
       TimeStamp.Date := 0;

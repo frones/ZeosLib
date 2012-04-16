@@ -65,7 +65,7 @@ type
   TZConnection = class(TZAbstractConnection)
   published
     property HostName: string read GetHostName write SetHostName;
-    property Port: Integer read GetPort write SetPort;
+    property Port: Integer read GetConnPort write SetConnPort;
     property Database: string read GetDatabase write SetDatabase;
     property User: string read GetUser write SetUser;
     property Password: string read GetPassword write SetPassword;

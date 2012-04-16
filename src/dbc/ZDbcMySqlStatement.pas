@@ -58,8 +58,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZClasses, ZDbcIntfs, ZDbcStatement, ZDbcMySql, ZPlainMySqlDriver, ZPlainMySqlConstants,
-  ZCompatibility, ZDbcLogging, ZVariant;
+  Classes, SysUtils, ZClasses, ZDbcIntfs, ZDbcStatement, ZDbcMySql, ZVariant,
+  ZPlainMySqlDriver, ZPlainMySqlConstants, ZCompatibility, ZDbcLogging;
 
 type
 
@@ -560,15 +560,6 @@ begin
           else
             Result := 'NULL';
         end;
-{   ????
-     stUnicodeStream:
-        begin
-          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
-          if not TempBlob.IsEmpty then
-            Result := GetEscapeString(TempBlob.GetString)
-          else
-            Result := 'NULL';
-        end;}
     end;
   end;
 end;
@@ -685,6 +676,7 @@ var
     caststring : AnsiString;
     PBuffer: Pointer;
     year, month, day, hour, minute, second, millisecond: word;
+  MyType: TMysqlFieldTypes;
   I,J : integer;
 begin
   if InParamCount = 0 then
@@ -694,7 +686,11 @@ begin
 
   For I := 0 to InParamCount - 1 do
   begin
-    FBindBuffer.AddColumn(GetFieldType(InParamValues[I]),length(InParamValues[I].VString));
+    MyType := GetFieldType(InParamValues[I]);
+    if MyType = FIELD_TYPE_VARCHAR then
+      FBindBuffer.AddColumn(FIELD_TYPE_STRING,length(UTF8Encode(InParamValues[I].VUnicodeString)))
+    else
+      FBindBuffer.AddColumn(MyType,length(InParamValues[I].VString));
     PBuffer := @FColumnArray[I].buffer[0];
 
         if InParamValues[I].VType=vtNull then
@@ -705,7 +701,10 @@ begin
               FIELD_TYPE_FLOAT:    Single(PBuffer^)     := InParamValues[I].VFloat;
               FIELD_TYPE_STRING:
                 begin
-                  CastString := AnsiString(InParamValues[I].VString);
+                  if MyType = FIELD_TYPE_VARCHAR then
+                    CastString := UTF8Encode(InParamValues[I].VUnicodeString)
+                  else
+                    CastString := AnsiString(InParamValues[I].VString);
                   for J := 1 to system.length(CastString) do
                     begin
                       PAnsiChar(PBuffer)^ := CastString[J];
@@ -752,6 +751,7 @@ begin
         vtFloat:     Result := FIELD_TYPE_FLOAT;
         vtString:    Result := FIELD_TYPE_STRING;
         vtDateTime:  Result := FIELD_TYPE_DATETIME;
+        vtUnicodeString: Result := FIELD_TYPE_VARCHAR;
      else
         raise EZSQLException.Create(SUnsupportedDataType);
      end;
