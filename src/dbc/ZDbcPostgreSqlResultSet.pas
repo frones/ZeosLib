@@ -336,8 +336,6 @@ begin
     FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex));
   if FPlainDriver.GetFieldType(FQueryHandle, ColumnIndex) = 1042 then
     Result := TrimRight(Result);
-  if not ( GetMetaData.GetColumnType(ColumnIndex +1) = stBinaryStream ) then
-    Result := DecodeString(Result);
 end;
 
 {**
