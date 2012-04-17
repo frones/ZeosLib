@@ -77,10 +77,14 @@ type
 
   { This class embedds a real connection and redirects all methods to it.
     When it is droped or closed, it returns the real connection to the pool. }
+
+  { TZDbcPooledConnection }
+
   TZDbcPooledConnection = class(TInterfacedObject, IZConnection)
   private
     FConnection: IZConnection;
     FConnectionPool: TConnectionPool;
+    FUseMetadata: Boolean;
     function GetConnection: IZConnection;
   protected // IZConnection
     function CreateStatement: IZStatement;
@@ -118,6 +122,8 @@ type
     function GetTransactionIsolation: TZTransactIsolationLevel;
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;
+    function UseMetadata: boolean;
+    procedure SetUseMetadata(Value: Boolean);
   public
     constructor Create(const ConnectionPool: TConnectionPool);
     destructor Destroy; override;
@@ -376,6 +382,16 @@ end;
 procedure TZDbcPooledConnection.ClearWarnings;
 begin
   GetConnection.ClearWarnings;
+end;
+
+function TZDbcPooledConnection.UseMetadata: boolean;
+begin
+  result := FUseMetadata;
+end;
+
+procedure TZDbcPooledConnection.SetUseMetadata(Value: Boolean);
+begin
+  FUseMetadata := Value;
 end;
 
 procedure TZDbcPooledConnection.Close;

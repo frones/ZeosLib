@@ -272,6 +272,9 @@ type
 
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;
+
+    function UseMetadata: boolean;
+    procedure SetUseMetadata(Value: Boolean);
   end;
 
   {** Database metadata interface. }
