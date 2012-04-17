@@ -1048,7 +1048,7 @@ begin
 
       if CaseInsensitive then
         {$IFDEF LAZARUSUTF8HACK}
-        AValue2 := AnsiUpperCase(Utf8ToAnsi(Value2));
+        AValue2 := AnsiUpperCase(Utf8ToAnsi(AValue2));
         {$ELSE}
         AValue2 := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiUpperCase(AValue2);
         {$ENDIF}
