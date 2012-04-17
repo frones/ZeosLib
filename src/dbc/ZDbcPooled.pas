@@ -83,6 +83,7 @@ type
     FConnection: IZConnection;
     FConnectionPool: TConnectionPool;
     FPreprepareSQL: Boolean;
+    FUseMetadata: Boolean;
     function GetConnection: IZConnection;
   protected // IZConnection
     FClientCodePage: String;
@@ -126,6 +127,8 @@ type
     function GetTransactionIsolation: TZTransactIsolationLevel;
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;
+    function UseMetadata: boolean;
+    procedure SetUseMetadata(Value: Boolean);
   public
     constructor Create(const ConnectionPool: TConnectionPool);
     destructor Destroy; override;
@@ -388,6 +391,16 @@ end;
 procedure TZDbcPooledConnection.ClearWarnings;
 begin
   GetConnection.ClearWarnings;
+end;
+
+function TZDbcPooledConnection.UseMetadata: boolean;
+begin
+  result := FUseMetadata;
+end;
+
+procedure TZDbcPooledConnection.SetUseMetadata(Value: Boolean);
+begin
+  FUseMetadata := Value;
 end;
 
 procedure TZDbcPooledConnection.Close;

@@ -112,6 +112,7 @@ type
     FTransactIsolationLevel: TZTransactIsolationLevel;
     FClosed: Boolean;
     FURL: TZURL;
+    FUseMetadata: Boolean;
     function GetHostName: string;
     procedure SetHostName(const Value: String);
     function GetPort: Integer;
@@ -155,7 +156,6 @@ type
     property TransactIsolationLevel: TZTransactIsolationLevel
       read FTransactIsolationLevel write FTransactIsolationLevel;
     property Closed: Boolean read FClosed write FClosed;
-
   public
     constructor Create(Driver: IZDriver; const Url: string;
       PlainDriver: IZPlainDriver; const HostName: string; Port: Integer;
@@ -223,7 +223,10 @@ type
       const EscapeMarkSequence: String = '~<|'): String; virtual;
     function GetEscapeString(const Value: String;
       const EscapeMarkSequence: String = '~<|'): String; virtual;
-  end;
+
+    function UseMetadata: boolean;
+    procedure SetUseMetadata(Value: Boolean);
+end;
 
   {** Implements Abstract Database notification. }
   TZAbstractNotification = class(TInterfacedObject, IZNotification)
@@ -597,6 +600,7 @@ begin
   FClosed := True;
   FReadOnly := True;
   FTransactIsolationLevel := tiNone;
+  FUseMetadata := True;
   InternalCreate;
 end;
 
@@ -1126,6 +1130,16 @@ end;
 }
 procedure TZAbstractConnection.ClearWarnings;
 begin
+end;
+
+function TZAbstractConnection.UseMetadata: boolean;
+begin
+  result := FUseMetadata;
+end;
+
+procedure TZAbstractConnection.SetUseMetadata(Value: Boolean);
+begin
+  FUseMetadata := Value;
 end;
 
 {**

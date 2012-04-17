@@ -93,9 +93,14 @@ type
   TZLoginEvent = procedure(Sender: TObject; var Username:string ; var Password: string) of object;
 
   {** Represents a component which wraps a connection to database. }
+
+  { TZAbstractConnection }
+
   TZAbstractConnection = class(TComponent)
   private
+    FUseMetaData: Boolean;
     function GetVersion: string;
+    procedure SetUseMetadata(AValue: Boolean);
     procedure SetVersion(const Value: string);
   protected
     FURL: TZURL;
@@ -256,6 +261,7 @@ type
       default True;
     property ReadOnly: Boolean read FReadOnly write FReadOnly
       default False;
+    property UseMetadata: Boolean read FUseMetaData write SetUseMetadata default true;
     property TransactIsolationLevel: TZTransactIsolationLevel
       read FTransactIsolationLevel write SetTransactIsolationLevel
       default tiNone;
@@ -314,6 +320,7 @@ begin
   FReadOnly := False;
   FTransactIsolationLevel := tiNone;
   FConnection := nil;
+  FUseMetadata := True;
   FDatasets := TList.Create;
   // Modified by cipto 8/1/2007 1:45:56 PM
   FSequences:= TList.Create;
@@ -763,6 +770,7 @@ begin
           SetReadOnly(FReadOnly);
           SetCatalog(FCatalog);
           SetTransactionIsolation(FTransactIsolationLevel);
+          SetUseMetadata(FUseMetadata);
           Open;
         end;
       except
@@ -1416,6 +1424,14 @@ end;
 function TZAbstractConnection.GetVersion: string;
 begin
   Result := ZEOS_VERSION;
+end;
+
+procedure TZAbstractConnection.SetUseMetadata(AValue: Boolean);
+begin
+  if FUseMetaData=AValue then Exit;
+  FUseMetaData:=AValue;
+  if FConnection <> nil then
+    FConnection.SetUseMetadata(FUseMetadata);
 end;
 
 procedure TZAbstractConnection.SetVersion(const Value: string);

@@ -274,6 +274,9 @@ type
 
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;
+
+    function UseMetadata: boolean;
+    procedure SetUseMetadata(Value: Boolean);
     function GetAnsiEscapeString(const Value: AnsiString;
       const EscapeMarkSequence: String = '~<|'): String;
     function GetEscapeString(const Value: String;

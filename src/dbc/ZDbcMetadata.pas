@@ -2051,6 +2051,12 @@ function TZAbstractDatabaseMetadata.GetProcedures(const Catalog: string;
 var
   Key: string;
 begin
+  if not GetConnection.UseMetadata then
+  begin
+    Result := ConstructVirtualResultSet(ProceduresColumnsDynArray);
+    exit;
+  end;
+
   Key := GetProceduresCacheKey(Catalog, SchemaPattern, ProcedureNamePattern);
 
   Result := GetResultSetFromCache(Key);
@@ -2162,9 +2168,14 @@ function TZAbstractDatabaseMetadata.GetProcedureColumns(const Catalog: string;
 var
   Key: string;
 begin
+  if not GetConnection.UseMetadata then
+  begin
+    Result := ConstructVirtualResultSet(ProceduresColColumnsDynArray);
+    exit;
+  end;
+
   Key := GetProcedureColumnsCacheKey(Catalog, SchemaPattern, ProcedureNamePattern,
     ColumnNamePattern);
-
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -2241,8 +2252,13 @@ function TZAbstractDatabaseMetadata.GetTriggers(const Catalog: string; const Sch
 var
   Key: string;
 begin
-  Key := GetTriggersCacheKey(Catalog, SchemaPattern, TableNamePattern, TriggerNamePattern);
+  if not GetConnection.UseMetadata then
+  begin
+    Result := ConstructVirtualResultSet(TriggersColumnsDynArray);
+    exit;
+  end;
 
+  Key := GetTriggersCacheKey(Catalog, SchemaPattern, TableNamePattern, TriggerNamePattern);
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -2262,8 +2278,13 @@ function TZAbstractDatabaseMetadata.GetCollationAndCharSet(const Catalog, Schema
 var
   Key: string;
 begin
-  Key := GetCollationAndCharSetCacheKey(Catalog, Schema, TableName, ColumnName);
+  if not GetConnection.UseMetadata then
+  begin
+    Result := ConstructVirtualResultSet(CollationCharSetColumnsDynArray);
+    exit;
+  end;
 
+  Key := GetCollationAndCharSetCacheKey(Catalog, Schema, TableName, ColumnName);
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -2276,8 +2297,13 @@ function TZAbstractDatabaseMetadata.GetCharacterSets: IZResultSet; //EgonHugeist
 var
   Key: string;
 begin
-  Key := GetCharacterSetsCacheKey;
+  if not GetConnection.UseMetadata then
+  begin
+    Result := ConstructVirtualResultSet(CharacterSetsColumnsDynArray);
+    exit;
+  end;
 
+  Key := GetCharacterSetsCacheKey;
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -2353,6 +2379,12 @@ function TZAbstractDatabaseMetadata.GetTables(const Catalog: string;
 var
   Key: string;
 begin
+  if not GetConnection.UseMetadata then
+  begin
+    Result := ConstructVirtualResultSet(TableColumnsDynArray);
+    exit;
+  end;
+
   Key := GetTablesCacheKey(Catalog, SchemaPattern, TableNamePattern, Types);
   Result := GetResultSetFromCache(Key);
   if Result = nil then
@@ -2415,8 +2447,13 @@ function TZAbstractDatabaseMetadata.GetSchemas: IZResultSet;
 var
   Key: string;
 begin
-  Key := GetSchemasCacheKey;
+  if not GetConnection.UseMetadata then
+  begin
+    Result := ConstructVirtualResultSet(SchemaColumnsDynArray);
+    exit;
+  end;
 
+  Key := GetSchemasCacheKey;
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -2458,8 +2495,13 @@ function TZAbstractDatabaseMetadata.GetCatalogs: IZResultSet;
 var
   Key: string;
 begin
-  Key := GetCatalogsCacheKey;
+  if not GetConnection.UseMetadata then
+  begin
+    Result := ConstructVirtualResultSet(CatalogColumnsDynArray);
+    exit;
+  end;
 
+  Key := GetCatalogsCacheKey;
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -2503,8 +2545,13 @@ function TZAbstractDatabaseMetadata.GetTableTypes: IZResultSet;
 var
   Key: string;
 begin
-  Key := GetTableTypesCacheKey;
+  if not GetConnection.UseMetadata then
+  begin
+    Result := ConstructVirtualResultSet(TableTypeColumnsDynArray);
+    exit;
+  end;
 
+  Key := GetTableTypesCacheKey;
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -2589,9 +2636,14 @@ function TZAbstractDatabaseMetadata.GetColumns(const Catalog: string;
 var
   Key: string;
 begin
+  if not GetConnection.UseMetadata then
+  begin
+    Result := ConstructVirtualResultSet(TableColColumnsDynArray);
+    exit;
+  end;
+
   Key := GetColumnsCacheKey(Catalog, SchemaPattern, TableNamePattern,
     ColumnNamePattern);
-
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -2691,9 +2743,14 @@ function TZAbstractDatabaseMetadata.GetColumnPrivileges(const Catalog: string;
 var
   Key: string;
 begin
+  if not GetConnection.UseMetadata then
+  begin
+    Result := ConstructVirtualResultSet(TableColPrivColumnsDynArray);
+    exit;
+  end;
+
   Key := GetColumnPrivilegesCacheKey(Catalog, Schema, Table,
     ColumnNamePattern);
-
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -2773,9 +2830,14 @@ function TZAbstractDatabaseMetadata.GetTablePrivileges(const Catalog: string;
 var
   Key: string;
 begin
+  if not GetConnection.UseMetadata then
+  begin
+    Result := ConstructVirtualResultSet(TablePrivColumnsDynArray);
+    exit;
+  end;
+
   Key := GetTablePrivilegesCacheKey(Catalog, SchemaPattern,
     TableNamePattern);
-
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -2863,9 +2925,14 @@ function TZAbstractDatabaseMetadata.GetBestRowIdentifier(const Catalog: string;
 var
   Key: string;
 begin
+  if not GetConnection.UseMetadata then
+  begin
+    Result := ConstructVirtualResultSet(BestRowIdentColumnsDynArray);
+    exit;
+  end;
+
   Key := GetBestRowIdentifierCacheKey(Catalog, Schema, Table, Scope,
     Nullable);
-
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -3010,8 +3077,13 @@ function TZAbstractDatabaseMetadata.GetVersionColumns(const Catalog: string;
 var
   Key: string;
 begin
-  Key := GetVersionColumnsCacheKey(Catalog, Schema, Table);
+  if not GetConnection.UseMetadata then
+  begin
+    Result := ConstructVirtualResultSet(TableColVerColumnsDynArray);
+    exit;
+  end;
 
+  Key := GetVersionColumnsCacheKey(Catalog, Schema, Table);
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -3083,8 +3155,13 @@ function TZAbstractDatabaseMetadata.GetPrimaryKeys(const Catalog: string;
 var
   Key: string;
 begin
-  Key := GetPrimaryKeysCacheKey(Catalog, Schema, Table);
+  if not GetConnection.UseMetadata then
+  begin
+    Result := ConstructVirtualResultSet(PrimaryKeyColumnsDynArray);
+    exit;
+  end;
 
+  Key := GetPrimaryKeysCacheKey(Catalog, Schema, Table);
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -3193,8 +3270,13 @@ function TZAbstractDatabaseMetadata.GetImportedKeys(const Catalog: string;
 var
   Key: string;
 begin
-  Key := GetImportedKeysCacheKey(Catalog, Schema, Table);
+  if not GetConnection.UseMetadata then
+  begin
+    Result := ConstructVirtualResultSet(ImportedKeyColumnsDynArray);
+    exit;
+  end;
 
+  Key := GetImportedKeysCacheKey(Catalog, Schema, Table);
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -3348,8 +3430,13 @@ function TZAbstractDatabaseMetadata.GetExportedKeys(const Catalog: string;
 var
   Key: string;
 begin
-  Key := GetExportedKeysCacheKey(Catalog, Schema, Table);
+  if not GetConnection.UseMetadata then
+  begin
+    Result := ConstructVirtualResultSet(ExportedKeyColumnsDynArray);
+    exit;
+  end;
 
+  Key := GetExportedKeysCacheKey(Catalog, Schema, Table);
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -3512,6 +3599,12 @@ function TZAbstractDatabaseMetadata.GetCrossReference(const PrimaryCatalog: stri
 var
   Key: string;
 begin
+  if not GetConnection.UseMetadata then
+  begin
+    Result := ConstructVirtualResultSet(CrossRefColumnsDynArray);
+    exit;
+  end;
+
   Key := GetCrossReferenceCacheKey(PrimaryCatalog, PrimarySchema, PrimaryTable,
     ForeignCatalog, ForeignSchema, ForeignTable);
 
@@ -3655,8 +3748,13 @@ function TZAbstractDatabaseMetadata.GetTypeInfo: IZResultSet;
 var
   Key: string;
 begin
-  Key := GetTypeInfoCacheKey;
+  if not GetConnection.UseMetadata then
+  begin
+    Result := ConstructVirtualResultSet(TypeInfoColumnsDynArray);
+    exit;
+  end;
 
+  Key := GetTypeInfoCacheKey;
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -3772,6 +3870,12 @@ function TZAbstractDatabaseMetadata.GetIndexInfo(const Catalog: string;
 var
   Key: string;
 begin
+  if not GetConnection.UseMetadata then
+  begin
+    Result := ConstructVirtualResultSet(IndexInfoColumnsDynArray);
+    exit;
+  end;
+
   Key := GetIndexInfoCacheKey(Catalog, Schema, Table, Unique, Approximate);
 
   Result := GetResultSetFromCache(Key);
@@ -3845,8 +3949,13 @@ function TZAbstractDatabaseMetadata.GetSequences(const Catalog, SchemaPattern,
 var
   Key: string;
 begin
-  Key := GetSequencesCacheKey(Catalog, SchemaPattern, SequenceNamePattern);
+  if not GetConnection.UseMetadata then
+  begin
+    Result := ConstructVirtualResultSet(SequenceColumnsDynArray);
+    exit;
+  end;
 
+  Key := GetSequencesCacheKey(Catalog, SchemaPattern, SequenceNamePattern);
   Result := GetResultSetFromCache(Key);
   if Result = nil then
   begin
@@ -3902,6 +4011,12 @@ function TZAbstractDatabaseMetadata.GetUDTs(const Catalog: string;
 var
   Key: string;
 begin
+  if not GetConnection.UseMetadata then
+  begin
+    Result := ConstructVirtualResultSet(UDTColumnsDynArray);
+    exit;
+  end;
+
   Key := GetUDTsCacheKey(Catalog, SchemaPattern, TypeNamePattern,
     Types);
 
