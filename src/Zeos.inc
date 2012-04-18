@@ -323,12 +323,7 @@
 //PATCH TO DO NO METADATALOADING / UNTESTED HIGH RISK
 {.$DEFINE FOSNOMETA}
 
-//Patch by EgonHugeist to use ClientCodePages as minimum requirement
-//Uncomment it if you want do use this Unicode-Workaround
-//First way adds a sequence to to Each binary/prepared-data so it's detectable
-//and the tokenizer doesn't becomes 'viny-nilly' or Encodes-Something twice!
-
-//EgonHugeist: Enables to predetect ClientCodePage and arranges the Fields in dependency of it.
+//Patches by EgonHugeist
 
 {.$DEFINE WITH_CHAR_CONTROL} //Disables/Enables the CharControl widget
 {.$DEFINE SQLPREPREPARE} //Test-suite-Mode! don't use it in your code!!! A spezial mode for the Test-Suites to hardly enable the PreprepareStep

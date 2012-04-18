@@ -502,6 +502,8 @@ begin
             Statement.SetBigDecimal(I + 1, Param.AsCurrency);
           ftString:
             Statement.SetString(I + 1, AnsiString(Param.AsString)); //semlls like Dataloss...
+          ftWideString:
+            Statement.SetUnicodeString(I + 1, Param.AsWideString);
           ftBytes:
             Statement.SetString(I + 1, AnsiString(Param.AsString));
           ftDate:
