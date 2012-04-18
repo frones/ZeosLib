@@ -418,11 +418,11 @@ begin
       Result := @FCodePages[i];
       Exit;
     end;
-  {$IFDEF FPC}
+  {$IF defined(LAZARUSUTF8HACK) or defined(UNIX)}
   Result := GetClientCodePageInformations(GetCompilerSaveCodePageName); //recalls em selve -> switch to supported (UTF8)
   {$ELSE}
   Result := @ClientCodePageDummy;
-  {$ENDIF}
+  {$IFEND}
 end;
 
 { TZAbstractPlainDriver }
