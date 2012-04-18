@@ -244,7 +244,7 @@ begin
   // Protocol
   Result := Result + Protocol + ':';
 
-  if (HostName <> '') and ( Database <> '' ) then
+  if (HostName <> '') or ( Database <> '' ) then
     Result := Result + '//';
 
   // HostName/Port
