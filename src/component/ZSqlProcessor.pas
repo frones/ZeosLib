@@ -501,9 +501,9 @@ begin
           ftCurrency:
             Statement.SetBigDecimal(I + 1, Param.AsCurrency);
           ftString:
-            Statement.SetString(I + 1, AnsiString(Param.AsString)); //semlls like Dataloss...
+            Statement.SetString(I + 1, AnsiString(Param.AsString));
           ftWideString:
-            Statement.SetUnicodeString(I + 1, Param.AsWideString);
+            Statement.SetUnicodeString(I + 1, Param.{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
           ftBytes:
             Statement.SetString(I + 1, AnsiString(Param.AsString));
           ftDate:
