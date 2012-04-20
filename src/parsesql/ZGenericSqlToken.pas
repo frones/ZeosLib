@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2006 Zeos Development Group       }
+{    Copyright (c) 1999-2012 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -170,12 +170,14 @@ function TZGenericSQLQuoteState.NextToken(Stream: TStream;
 var
   ReadChar: Char;
   LastChar: Char;
-  CountDoublePoint,CountSlash : integer;
+  ReadCounter, NumericCounter, CountDoublePoint,CountSlash : integer;
 begin
   Result.Value := FirstChar;
   LastChar := #0;
-  CountDoublePoint := 0; 
+  CountDoublePoint := 0;
   CountSlash := 0;
+  ReadCounter := 0;
+  NumericCounter := 0;
 
   while Stream.Read(ReadChar, SizeOf(Char)) > 0 do
   begin
@@ -185,9 +187,13 @@ begin
       Break;
     end;
     if ReadChar = {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator then
-      inc(CountDoublePoint);
-    if ReadChar = {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator then
-      inc(CountSlash);
+      inc(CountDoublePoint)
+    else if ReadChar = {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator then
+      inc(CountSlash)
+    else if CharInSet(ReadChar, ['0'..'9']) then
+      inc(NumericCounter);
+    Inc(ReadCounter);
+
     Result.Value := Result.Value + ReadChar;
     if (LastChar = FirstChar) and (ReadChar = FirstChar) then
       LastChar := #0
@@ -199,31 +205,40 @@ begin
   else Result.TokenType := ttQuoted;
 
   // Time constant
-  if (CountDoublePoint = 2) and (CountSlash = 0) then
-    begin
-      try
-        Result.Value := DecodeString(Result.Value,'"');
-        Result.TokenType := ttTime;
-      except
+  if (CountDoublePoint = 2) and (CountSlash = 0) and
+    ((NumericCounter + CountDoublePoint) = ReadCounter-1) then
+  begin
+    try
+      if StrToTimeDef(DecodeString(Result.Value, FirstChar), 0) = 0 then
+        Exit;
+      Result.Value := DecodeString(Result.Value,'"');
+      Result.TokenType := ttTime;
+    except
     end;
   end;
   // Date constant
-  if (CountDoublePoint = 0) and (CountSlash = 2) then
-    begin
-      try
-        Result.Value := DecodeString(Result.Value,'"');
-        Result.TokenType := ttDate;
-      except
+  if (CountDoublePoint = 0) and (CountSlash = 2) and
+    ((NumericCounter + CountSlash) = ReadCounter-1) then
+  begin
+    try
+      if StrToDateDef(DecodeString(Result.Value, FirstChar), 0) = 0 then
+        Exit;
+      Result.Value := DecodeString(Result.Value,'"');
+      Result.TokenType := ttDate;
+    except
     end;
   end;
 
   // DateTime constant
-  if (CountDoublePoint = 2) and (CountSlash = 2) then
-    begin
-      try
-        Result.Value := DecodeString(Result.Value,'"');
-        Result.TokenType := ttDateTime;
-      except
+  if (CountDoublePoint = 2) and (CountSlash = 2) and
+    ((NumericCounter + CountDoublePoint + CountSlash) = ReadCounter-1) then
+  begin
+    try
+      if StrToDateTimeDef(DecodeString(Result.Value, FirstChar), 0) = 0 then
+        Exit;
+      Result.Value := DecodeString(Result.Value,'"');
+      Result.TokenType := ttDateTime;
+    except
     end;
   end;
 
