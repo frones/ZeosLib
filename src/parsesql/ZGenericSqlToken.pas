@@ -170,12 +170,13 @@ function TZGenericSQLQuoteState.NextToken(Stream: TStream;
 var
   ReadChar: Char;
   LastChar: Char;
-  ReadCounter, NumericCounter, CountDoublePoint,CountSlash : integer;
+  ReadCounter, NumericCounter, CountDoublePoint, CountSlash, CountSpace : integer;
 begin
   Result.Value := FirstChar;
   LastChar := #0;
   CountDoublePoint := 0;
   CountSlash := 0;
+  CountSpace := 0;
   ReadCounter := 0;
   NumericCounter := 0;
 
@@ -190,6 +191,8 @@ begin
       inc(CountDoublePoint)
     else if ReadChar = {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator then
       inc(CountSlash)
+    else if ReadChar = ' ' then
+      inc(CountSpace)
     else if CharInSet(ReadChar, ['0'..'9']) then
       inc(NumericCounter);
     Inc(ReadCounter);
@@ -231,7 +234,7 @@ begin
 
   // DateTime constant
   if (CountDoublePoint = 2) and (CountSlash = 2) and
-    ((NumericCounter + CountDoublePoint + CountSlash) = ReadCounter-1) then
+    ((NumericCounter + CountDoublePoint + CountSlash + CountSpace) = ReadCounter-1) then
   begin
     try
       if StrToDateTimeDef(DecodeString(Result.Value, FirstChar), 0) = 0 then
