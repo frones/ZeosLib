@@ -116,7 +116,7 @@ type
     function GetHostName: string;
     procedure SetHostName(const Value: String);
     function GetPort: Integer;
-    procedure SetConnPort(const Value: Integer);
+    procedure SetPort(const Value: Integer);
     function GetDatabase: string;
     procedure SetDatabase(const Value: String);
     function GetUser: string;
@@ -145,7 +145,7 @@ type
     property Driver: IZDriver read FDriver write FDriver;
     property PlainDriver: IZPlainDriver read FIZPlainDriver write FIZPlainDriver;
     property HostName: string read GetHostName write SetHostName;
-    property Port: Integer read GetPort write SetConnPort;
+    property Port: Integer read GetPort write SetPort;
     property Database: string read GetDatabase write SetDatabase;
     property User: string read GetUser write SetUser;
     property Password: string read GetPassword write SetPassword;
@@ -156,6 +156,7 @@ type
     property TransactIsolationLevel: TZTransactIsolationLevel
       read FTransactIsolationLevel write FTransactIsolationLevel;
     property Closed: Boolean read FClosed write FClosed;
+
   public
     constructor Create(Driver: IZDriver; const Url: string;
       PlainDriver: IZPlainDriver; const HostName: string; Port: Integer;
@@ -460,7 +461,7 @@ begin
   Result := FURL.Port;
 end;
 
-procedure TZAbstractConnection.SetConnPort(const Value: Integer);
+procedure TZAbstractConnection.SetPort(const Value: Integer);
 begin
   FURL.Port := Value;
 end;
@@ -575,7 +576,7 @@ begin
   Create(TempURL);
   TempURL.Free;
 end;
-{$WARNINGS OFF}
+{$WARNINGS ON}
 
 {**
   Constructs this object and assignes the main properties.
