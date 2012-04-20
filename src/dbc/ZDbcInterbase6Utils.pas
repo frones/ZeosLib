@@ -1810,7 +1810,7 @@ var
   Len: Cardinal;
   TempAnsi: AnsiString;
 begin
-  TempAnsi := ZAnsiString(Str);
+  TempAnsi := DatabaseString(Str);
   Len := Length(TempAnsi);
 
   {$R-}

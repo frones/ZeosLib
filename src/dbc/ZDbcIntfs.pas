@@ -203,7 +203,7 @@ type
     function GetSupportedClientCodePages(const Url: string;
       Const SupportedsOnly: Boolean): TStringDynArray;
     function Connect(const Url: string; Info: TStrings): IZConnection; overload;
-    //function Connect(const Url: TZURL): IZConnection; overload;
+    function Connect(const Url: TZURL): IZConnection; overload;
     function GetClientVersion(const Url: string): Integer;
     function AcceptsURL(const Url: string): Boolean;
     function GetPlainDriver(const Url: TZURL): IZPlainDriver;
@@ -797,8 +797,8 @@ type
       const ColumnDirs: TBooleanDynArray): Integer;
 
     function GetStatement: IZStatement;
-    function ZString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
-    function ZAnsiString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
+    function ComponentString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
+    function DatabaseString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
     function GetClientCodePage: PZCodePage;
   end;
 

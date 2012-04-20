@@ -504,7 +504,7 @@ begin
     { Sets a client codepage. }
     if ( FClientCodePage <> '' ) then
     begin
-      SQL := PAnsiChar(ZAnsiString(Format('SET CLIENT_ENCODING TO ''%s''',
+      SQL := PAnsiChar(DatabaseString(Format('SET CLIENT_ENCODING TO ''%s''',
                                           [FClientCodePage])));
       QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, SQL);
       CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute,
@@ -524,7 +524,7 @@ begin
       with CreateStatement.ExecuteQuery(Format('select pg_encoding_to_char(%d)',
         [GetPlainDriver.GetClientEncoding(FHandle)])) do
       begin
-        if Next then FClientCodePage := ZAnsiString(GetString(1));
+        if Next then FClientCodePage := DatabaseString(GetString(1));
         Close;
       end;
     CheckCharEncoding(FClientCodePage);

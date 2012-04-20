@@ -138,8 +138,8 @@ type
     procedure SetPreprepareSQL(Value: Boolean);
     function GetHostName: string;
     procedure SetHostName(const Value: String);
-    function GetPort: Integer;
-    procedure SetPort(const Value: Integer);
+    function GetConnPort: Integer;
+    procedure SetConnPort(const Value: Integer);
     function GetDatabase: string;
     procedure SetDatabase(const Value: String);
     function GetUser: string;
@@ -238,7 +238,7 @@ type
     property InTransaction: Boolean read GetInTransaction;
 
     property HostName: string read GetHostName write SetHostName;
-    property Port: Integer read GetPort write SetPort;
+    property Port: Integer read GetConnPort write SetConnPort;
     property Database: string read GetDatabase write SetDatabase;
     property User: string read GetUser write SetUser;
     property Password: string read GetPassword write SetPassword;
@@ -354,12 +354,12 @@ begin
   FURL.HostName := Value;
 end;
 
-function TZAbstractConnection.GetPort: Integer;
+function TZAbstractConnection.GetConnPort: Integer;
 begin
   Result := FURL.Port;
 end;
 
-procedure TZAbstractConnection.SetPort(const Value: Integer);
+procedure TZAbstractConnection.SetConnPort(const Value: Integer);
 begin
   FURL.Port := Value;
 end;

@@ -966,7 +966,7 @@ begin
       stFloat: Result := FloatToSQLStr(GetFloat(ColumnIndex, IsNull));
       stDouble: Result := FloatToSQLStr(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := FloatToSQLStr(GetBigDecimal(ColumnIndex, IsNull));
-      stString: Result := ZString(PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])); //compiler neutral
+      stString: Result := ComponentString(PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])); //compiler neutral
       stUnicodeString, stUnicodeStream: Result := UTF8ToAnsi(UTF8Encode(GetUnicodeString(ColumnIndex, IsNull))); //wide down to Ansi
       stBytes: Result := String(BytesToStr(GetBytes(ColumnIndex, IsNull)));
       stDate: Result := FormatDateTime('yyyy-mm-dd', GetDate(ColumnIndex, IsNull));
@@ -2131,19 +2131,15 @@ begin
     stFloat: SetFloat(ColumnIndex, SQLStrToFloatDef(Value, 0));
     stDouble: SetDouble(ColumnIndex, SQLStrToFloatDef(Value, 0));
     stBigDecimal: SetBigDecimal(ColumnIndex, SQLStrToFloatDef(Value, 0));
-    //{$IFDEF DELPHI12_UP}
-    //stString, stUnicodeString: SetUnicodeString(ColumnIndex, Value);
-    //{$ELSE}
     stString:
       begin
         FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
         {EgonHugeist: this picks out unsupported Chars right now.
           So they where displayed like the Server expects the Data!}
         StrPLCopy(PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]),
-          ZAnsiString(Value), FColumnLengths[ColumnIndex - 1] - 1);
+          DatabaseString(Value), FColumnLengths[ColumnIndex - 1] - 1);
       end;
     stUnicodeString: SetUnicodeString(ColumnIndex, Value);
-    {.$ENDIF}
     stBytes: SetBytes(ColumnIndex, StrToBytes(AnsiString(Value)));
     stDate: SetDate(ColumnIndex, AnsiSQLDateToDateTime(Value));
     stTime: SetTime(ColumnIndex, AnsiSQLDateToDateTime(Value));

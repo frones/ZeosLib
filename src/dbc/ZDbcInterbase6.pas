@@ -564,7 +564,7 @@ begin
       begin
         if Next then
         begin
-          FCLientCodePage := ZString(GetString(6));
+          FCLientCodePage := ComponentString(GetString(6));
           CheckCharEncoding(FClientCodePage);
         end
         else

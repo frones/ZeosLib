@@ -1275,7 +1275,7 @@ begin
   CheckUpdatable;
 {$ENDIF}
   PrepareRowForUpdates;
-  FRowAccessor.SetString(ColumnIndex, ZString(Value));
+  FRowAccessor.SetString(ColumnIndex, ComponentString(Value));
 end;
 
 {**

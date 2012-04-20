@@ -64,7 +64,7 @@ uses
     dynlibs,
   {$endif}
 {$ENDIF}
-  {$IFDEF DELPHI12_UP}
+  {$IFDEF WITH_WIDESTRUTILS}
   WideStrUtils,
   {$ENDIF}
   {$IFDEF MSWINDOWS}
@@ -144,10 +144,8 @@ type
     //ceUnsupported,  //may be Realy Unsupported CodePages {This must be testet before}
     ceAnsi, //Base Ansi-String: prefered CodePage
     ceUTF8, //UTF8_Unicode: 1-4Byte/Char
-    ceUTF16 //UTF16/USC2 Unicode: 2-4 Byte/Char
-    {$IFNDEF MSWINDOWS}
-    ,ceUTF32 //UTF32 Unicode 4Bytes per Char actual Windows-unsupported!!
-    {$ENDIF});
+    ceUTF16, ceUTF32);
+
     {Here it's possible to add some more, to handle the Ansi->Unicode-Translations}
 
   TZCodePage = {packed to slow..} record
@@ -165,8 +163,8 @@ type
   private
     FCodePage: PZCodePage;
   protected
-    function ZString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
-    function ZAnsiString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
+    function ComponentString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
+    function DatabaseString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
     function ZStringW(const ws: WideString; const Encoding: TZCharEncoding = ceDefault): String;
     property ClientCodePage: PZCodePage read FCodePage write FCodePage;
   public
@@ -492,8 +490,8 @@ end;
   Now use the new Functions to get encoded Strings instead of
   hard-coded Compiler-Directives or UTF8Encode/Decode:
 
-  function ZString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
-  function ZAnsiString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
+  function ComponentString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
+  function DatabaseString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
 
   These functions do auto arrange the in/out-coming AnsiStrings in
   dependency of the used CharacterSet and the used Compiler whithout
@@ -514,7 +512,7 @@ end;
   So what about coming UTF16/32????
 }
 
-function TAbstractCodePagedInterfacedObject.ZString(const Ansi: AnsiString;
+function TAbstractCodePagedInterfacedObject.ComponentString(const Ansi: AnsiString;
   const Encoding: TZCharEncoding = ceDefault): String;
 var
   UseEncoding: TZCharEncoding;
@@ -527,9 +525,7 @@ begin
     UseEncoding := Encoding;
 
   case UseEncoding of
-    ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}:
-    //ceUTF16: ;//not done yet, may be interesting for SQLite which supports Execute&Open_16-Functions
-    //ceUTF32: //not done yet
+    ceUTF8:
     {$IFDEF DELPHI12_UP}
     if DetectUTF8Encoding(Ansi) = etUTF8 then
       Result := UTF8ToString(Ansi) //Decode the AnsiString
@@ -571,8 +567,8 @@ EgonHugeist:
   Now use the new Functions to get encoded Strings instead of
   hard-Coded Compiler-Directives or UTF8Encode/Decode:
 
-  function ZString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
-  function ZAnsiString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
+  function ComponentString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
+  function DatabaseString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
 
   These functions do auto arrange the in/out-coming AnsiStrings in
   dependency of the used CharacterSet and the used Compiler whithout
@@ -586,7 +582,7 @@ EgonHugeist:
     Example: CharacterSet was set to Latin1 and some "special"-String MUST BE
      UTF8 instead of Latin1. (SSL-Keys eventualy)
 }
-function TAbstractCodePagedInterfacedObject.ZAnsiString(const AStr: String;
+function TAbstractCodePagedInterfacedObject.DatabaseString(const AStr: String;
   const Encoding: TZCharEncoding = ceDefault): AnsiString;
 var
   UseEncoding: TZCharEncoding;
@@ -599,7 +595,7 @@ begin
     UseEncoding := Encoding;
 
   case UseEncoding of
-    ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}:
+    ceUTF8:
       {$IFDEF DELPHI12_UP}
       Result := AnsiString(UTF8Encode(AStr));
       {$ELSE}
@@ -612,8 +608,6 @@ begin
           Result := AnsiToUTF8(AStr);
         {$ENDIF}
       {$ENDIF}
-    //ceUTF16: ;//not done yet
-    //ceUTF32
   else
     begin
       { EgonHugeist:
@@ -671,15 +665,13 @@ begin
     UseEncoding := Encoding;
 
   case UseEncoding of
-    ceUTF8, ceUTF16:
+    ceUTF8:
         {$IFDEF DELPHI12_UP}
         Result := WS;
         {$ELSE}
         Result := UTF8Encode(WS);
         {$ENDIF}
-    //ceUTF16: ;//not done yet
-    //ceUTF32
-  else
+    else
     { EgonHugeist:
       To Delphi12_UP and ev. (comming) FPC 2.8 Users:
       This function Result an Ansi-String with default DB CodePage

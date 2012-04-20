@@ -2179,7 +2179,7 @@ begin
     vtBoolean: UpdateBoolean(ColumnIndex, Value.VBoolean);
     vtInteger: UpdateLong(ColumnIndex, Value.VInteger);
     vtFloat: UpdateBigDecimal(ColumnIndex, Value.VFloat);
-    vtString: UpdateString(ColumnIndex, ZAnsiString(Value.VString));
+    vtString: UpdateString(ColumnIndex, DatabaseString(Value.VString));
     vtDateTime: UpdateTimestamp(ColumnIndex, Value.VDateTime);
     vtUnicodeString: UpdateUnicodeString(ColumnIndex, Value.VUnicodeString);
   else

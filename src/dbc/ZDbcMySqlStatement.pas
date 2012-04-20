@@ -644,7 +644,7 @@ begin
                   if MyType = FIELD_TYPE_VARCHAR then
                     CastString := UTF8Encode(InParamValues[I].VUnicodeString)
                   else
-                    CastString := ZAnsiString(InParamValues[I].VString);
+                    CastString := DatabaseString(InParamValues[I].VString);
                   for J := 1 to system.length(CastString) do
                     begin
                       PAnsiChar(PBuffer)^ := CastString[J];

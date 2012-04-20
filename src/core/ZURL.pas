@@ -250,7 +250,6 @@ begin
   // HostName/Port
   if HostName <> '' then
   begin
-    Result := Result + '//';
     Result := Result + HostName;
     if Port <> 0 then
       Result := Result + ':' + IntToStr(Port);

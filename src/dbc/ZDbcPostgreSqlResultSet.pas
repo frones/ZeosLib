@@ -240,7 +240,7 @@ begin
     begin
       ColumnName := '';
       TableName := '';
-      ColumnLabel := ZString(StrPas(FPlainDriver.GetFieldName(FQueryHandle, I)));
+      ColumnLabel := ComponentString(StrPas(FPlainDriver.GetFieldName(FQueryHandle, I)));
       ColumnDisplaySize := 0;
       Scale := 0;
       Precision := 0;
@@ -407,7 +407,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
-  Result := StrToIntDef(GetString(ColumnIndex), 0);
+  Result := StrToIntDef(String(GetString(ColumnIndex)), 0);
 end;
 
 {**
@@ -454,7 +454,7 @@ end;
     value returned is <code>0</code>
 }
 function TZPostgreSQLResultSet.GetDouble(ColumnIndex: Integer): Double;
-  function ConvertMoneyToFloat(MoneyString: AnsiString): String;
+  function ConvertMoneyToFloat(MoneyString: String): String;
   var
     I: Integer;
   begin
@@ -490,7 +490,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
-  Result := SQLStrToFloatDef(ConvertMoneyToFloat(GetString(ColumnIndex)), 0); //EgonHugeist: PostgreSQL-curiusity returns with currency-Prefix
+  Result := SQLStrToFloatDef(ConvertMoneyToFloat(String(GetString(ColumnIndex))), 0); //EgonHugeist: PostgreSQL-curiusity returns with currency-Prefix
 end;
 
 {**

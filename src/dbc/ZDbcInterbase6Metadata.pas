@@ -1766,7 +1766,7 @@ begin
 
         DefaultValue := GetString(ColumnIndexes[5]);
         if DefaultValue = '' then
-          DefaultValue := ZString(GetString(ColumnIndexes[6]));
+          DefaultValue := ComponentString(GetString(ColumnIndexes[6]));
         if StartsWith(Trim(UpperCase(DefaultValue)), 'DEFAULT') then
         begin
           DefaultValue := Trim(StringReplace(DefaultValue, 'DEFAULT ', '',

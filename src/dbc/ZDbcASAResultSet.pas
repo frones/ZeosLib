@@ -473,9 +473,9 @@ begin
   CheckClosed;
   CheckColumnConvertion( ColumnIndex, stString);
   if FInsert or ( FUpdate and FUpdateSQLData.IsAssigned( ColumnIndex - 1)) then
-    Result := ZAnsiString(FUpdateSqlData.GetString( ColumnIndex - 1))
+    Result := DatabaseString(FUpdateSqlData.GetString( ColumnIndex - 1))
   else
-    Result := ZAnsiString(FSqlData.GetString( ColumnIndex - 1));
+    Result := DatabaseString(FSqlData.GetString( ColumnIndex - 1));
   LastWasNull := IsNull( ColumnIndex);
 end;
 
@@ -803,7 +803,7 @@ end;
 procedure TZASAResultSet.UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString);
 begin
   PrepareUpdateSQLData;
-  FUpdateSqlData.UpdatePChar(ColumnIndex, PAnsiChar(ZAnsiString(Value)));
+  FUpdateSqlData.UpdatePChar(ColumnIndex, PAnsiChar(DatabaseString(Value)));
 end;
 
 procedure TZASAResultSet.UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray);

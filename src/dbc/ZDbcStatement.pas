@@ -633,7 +633,7 @@ begin
           Result := Result + AnsiString(SQLTokens[i].Value);
         ttComment: Result := Result;
         ttWord, ttQuoted, ttQuotedIdentifier, ttKeyword:
-          Result := Result + ZAnsiString(SQLTokens[i].Value);
+          Result := Result + DatabaseString(SQLTokens[i].Value);
         else
           Result := Result + AnsiString(SQLTokens[i].Value);
       end;
@@ -1799,7 +1799,7 @@ end;
 }
 function TZAbstractCallableStatement.GetString(ParameterIndex: Integer): AnsiString;
 begin
-  Result := ZAnsiString(SoftVarManager.GetAsString(GetOutParam(ParameterIndex)));
+  Result := DatabaseString(SoftVarManager.GetAsString(GetOutParam(ParameterIndex)));
 end;
 
 {**

@@ -445,7 +445,7 @@ begin
     PrimaryKeys := DatabaseMetadata.GetPrimaryKeys(Catalog, Schema, Table);
     while PrimaryKeys.Next do
     begin
-      ColumnName := PrimaryKeys.GetString(4);
+      ColumnName := ComponentString(PrimaryKeys.GetString(4));
       Found := False;
       for I := 1 to Metadata.GetColumnCount do
       begin
@@ -593,7 +593,7 @@ begin
         Statement.SetBigDecimal(I + 1,
           RowAccessor.GetBigDecimal(ColumnIndex, WasNull));
       stString:
-        Statement.SetString(I + 1, ZAnsiString(RowAccessor.GetString(ColumnIndex, WasNull)));
+        Statement.SetString(I + 1, DatabaseString(RowAccessor.GetString(ColumnIndex, WasNull)));
       stUnicodeString:
         Statement.SetUnicodeString(I + 1,
           RowAccessor.GetUnicodeString(ColumnIndex, WasNull));
