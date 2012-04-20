@@ -183,8 +183,10 @@ begin
           Statement.SetDouble(I+1, Param.AsFloat);
         ftLargeInt:
           Statement.SetLong(I+1, StrToInt64(Param.AsString));
-        ftString, ftWideString , ftFixedChar:
+        ftString, ftFixedChar:
           Statement.SetString(I+1, Param.AsString);
+        ftWideString:
+          Statement.SetUnicodeString(I+1, Param.{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
         ftBytes:
           Statement.SetString(I+1, Param.AsString);
         ftDate:
@@ -268,6 +270,8 @@ begin
           Param.Value := FCallableStatement.GetLong(I + 1);
         ftString:
           Param.AsString := FCallableStatement.GetString(I + 1);
+        ftWideString:
+          Param.{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := FCallableStatement.GetUnicodeString(I + 1);
         ftBytes:
           Param.AsString := FCallableStatement.GetString(I + 1);
         ftDate:
@@ -321,7 +325,10 @@ begin
       Connection.ShowSQLHourGlass;
       try
         SplitQualifiedObjectName(Value, Catalog, Schema, ObjectName);
-        ObjectName := Connection.DbcConnection.GetMetadata.AddEscapeCharToWildcards(ObjectName);
+        //EgonHugeist: AddEscapeCharToWildcards calls GetSearchStringEscape
+        //which is not related to a ObjectName
+        //names like "xp_getAllData" where wrong escaped
+        //ObjectName := Connection.DbcConnection.GetMetadata.AddEscapeCharToWildcards(ObjectName);
         ResultSet := Connection.DbcConnection.GetMetadata.GetProcedureColumns(Catalog, Schema, ObjectName, '');
         OldParams := TParams.Create;
         try
