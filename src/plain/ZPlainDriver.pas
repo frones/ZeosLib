@@ -322,7 +322,7 @@ begin
   FCodePages[High(FCodePages)].Encoding := Encoding;
   {$IFDEF WITH_CHAR_CONTROL} FCodePages[High(FCodePages)].CP := CP; {$ENDIF}
 
-  {$IFDEF FPC}
+  {$IF defined(LAZARUSUTF8HACK) or defined(UNIX)}
     if not ( FCodePages[High(FCodePages)].Encoding = ceUTF8 ) then
     begin
       FCodePages[High(FCodePages)].ZAlias := GetCompilerSaveCodePageName;
@@ -340,7 +340,7 @@ begin
       else
     {$ENDIF}
         FCodePages[High(FCodePages)].IsSupported := True;
-  {$ENDIF}
+  {$IFEND}
 end;
 
 procedure TZGenericAbstractPlainDriver.ResetCodePage(const OldID: Integer;
@@ -359,7 +359,7 @@ begin
       {$IFDEF WITH_CHAR_CONTROL}FCodePages[I].CP := CP;{$ENDIF}
       FCodePages[I].ZAlias := ZAlias;
 
-      {$IFDEF FPC}
+      {$IF defined(LAZARUSUTF8HACK) or defined(UNIX)}
         if not ( FCodePages[I].Encoding = ceUTF8 ) then
         begin
           FCodePages[i].ZAlias := GetCompilerSaveCodePageName;
@@ -377,7 +377,7 @@ begin
         else
         {$ENDIF}
           FCodePages[High(FCodePages)].IsSupported := True;
-      {$ENDIF}
+      {$IFEND}
       Break;
     end;
 end;
