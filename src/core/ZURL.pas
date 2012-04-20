@@ -80,7 +80,7 @@ type
     procedure SetPrefix(const Value: string);
     procedure SetProtocol(const Value: string);
     procedure SetHostName(const Value: string);
-    procedure SetPort(const Value: Integer);
+    procedure SetConnPort(const Value: Integer);
     function GetDatabase: string;
     procedure SetDatabase(const Value: string);
     function GetUserName: string;
@@ -102,7 +102,7 @@ type
     property Prefix: string read FPrefix write SetPrefix;
     property Protocol: string read FProtocol write SetProtocol;
     property HostName: string read FHostName write SetHostName;
-    property Port: Integer read FPort write SetPort;
+    property Port: Integer read FPort write SetConnPort;
     property Database: string read GetDatabase write SetDatabase;
     property UserName: string read GetUserName write SetUserName;
     property Password: string read GetPassword write SetPassword;
@@ -199,7 +199,7 @@ begin
   FHostName := StringReplace(Value, ';', #9, [rfReplaceAll]); //escape the ';' char to #9
 end;
 
-procedure TZURL.SetPort(const Value: Integer);
+procedure TZURL.SetConnPort(const Value: Integer);
 begin
   FPort := Value;
 end;
