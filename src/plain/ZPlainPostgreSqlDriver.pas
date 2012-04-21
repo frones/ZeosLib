@@ -601,7 +601,7 @@ type
   TZPostgreSQLBaseDriver = class(TZAbstractPlainDriver, IZPlainDriver, IZPostgreSQLPlainDriver)
   protected
     POSTGRESQL_API : TZPOSTGRESQL_API;
-    function GetCompilerSaveCodePageName: String; override;
+    function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
     procedure LoadApi; override;
   public
@@ -743,7 +743,7 @@ type
 
   TZPostgreSQL8PlainDriver = class(TZPostgreSQLBaseDriver, IZPlainDriver,IZPostgreSQLPlainDriver)
   protected
-    function GetCompilerSaveCodePageName: String; override;
+    function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
     procedure LoadApi; override;
   public
@@ -760,7 +760,7 @@ uses SysUtils, ZPlainLoader;
 
 { TZPostgreSQLBaseDriver }
 
-function TZPostgreSQLBaseDriver.GetCompilerSaveCodePageName: String;
+function TZPostgreSQLBaseDriver.GetUnicodeCodePageName: String;
 begin
   Result := 'UNICODE';
 end;
@@ -1374,7 +1374,7 @@ begin
 end;
 
 { TZPostgreSQL8PlainDriver }
-function TZPostgreSQL8PlainDriver.GetCompilerSaveCodePageName: String;
+function TZPostgreSQL8PlainDriver.GetUnicodeCodePageName: String;
 begin
   Result := 'UTF8';
 end;

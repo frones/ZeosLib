@@ -143,6 +143,15 @@ type
     procedure SetValue(const Value: string); override;
   end;
 
+  {** Implements a property editor for ZConnection.LibLocation property. }
+  TZLibLocationPropertyEditor = class(TZStringProperty)
+  public
+    function  GetAttributes: TPropertyAttributes; override;
+    function  GetValue: string; override;
+    procedure Edit; override;
+    procedure SetValue(const Value: string); override;
+  end;
+
   // Modified by Una.Bicicleta 2010/10/31
   {** Implements a property editor for ZConnectionGroup.Database property. }
   TZConnectionGroupPropertyEditor = class(TZStringProperty)
@@ -726,6 +735,60 @@ begin
       finally
         OD.Free;
       end;
+    end;
+  end
+  else
+    inherited;
+end;
+
+{ TZLibLocationPropertyEditor }
+
+{**
+  Gets a type of property attributes.
+  @return a type of property attributes.
+}
+function TZLibLocationPropertyEditor.GetAttributes: TPropertyAttributes;
+begin
+  if GetZComponent is TZAbstractConnection then
+    Result := [paDialog];
+end;
+
+{**
+  Gets a selected string value.
+  @return a selected string value.
+}
+function TZLibLocationPropertyEditor.GetValue: string;
+begin
+  Result := GetStrValue;
+end;
+
+{**
+  Sets a new selected string value.
+  @param Value a new selected string value.
+}
+procedure TZLibLocationPropertyEditor.SetValue(const Value: string);
+begin
+  SetStrValue(Value);
+  if GetZComponent is TZAbstractConnection then
+    (GetZComponent as TZAbstractConnection).Connected := False;
+end;
+
+{**
+  Brings up the proper LibLocation property editor dialog.
+}
+procedure TZLibLocationPropertyEditor.Edit;
+var
+  OD: TOpenDialog;
+begin
+  if GetZComponent is TZAbstractConnection then
+  begin
+    OD := TOpenDialog.Create(nil);
+    try
+      OD.InitialDir := ExtractFilePath((GetZComponent as TZAbstractConnection).LibLocation);
+      if OD.Execute then
+        (GetZComponent as TZAbstractConnection).LibLocation := OD.FileName;
+    finally
+      OD.Free;
     end;
   end
   else

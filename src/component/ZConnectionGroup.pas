@@ -49,6 +49,7 @@ type
     FDatabase: string;
     FUser: string;
     FPassword: string;
+    FLibLocation: String;
     //FCatalog:string;
 
     procedure UnregisterAllDataSets;
@@ -60,6 +61,7 @@ type
     procedure SetHostName(const Value: string);
     procedure SetConnPort(const Value: integer);
     procedure SetDatabase(const Value: string);
+    procedure SetLibLocation(const Value: String);
     //procedure SetCatalog(const Value: string);
 
     function Encrypt(const str: string): string; //virtual;
@@ -80,6 +82,7 @@ type
     property Database: string read FDatabase write SetDatabase;
     property User: string read FUser write SetUser  stored false;
     property Password: string read FPassword write SetPassword  stored false;
+    property LibraryLocation: String read FLibLocation write SetLibLocation;
     //property Catalog: string read FCatalog write SetCatalog;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
     // -- todo ----
@@ -232,6 +235,15 @@ begin
   if FDatabase <> Value then
   begin
     FDatabase := Value;
+    Change;
+  end;
+end;
+
+procedure TZConnectionGroup.SetLibLocation(const Value: String);
+begin
+  if FLibLocation <> Value then
+  begin
+    FLibLocation := Value;
     Change;
   end;
 end;

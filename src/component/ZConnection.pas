@@ -71,6 +71,7 @@ type
     property Password: string read GetPassword write SetPassword;
     property Protocol: string read GetProtocol write SetProtocol;
     property Catalog: string read FCatalog write FCatalog;
+    property LibraryLocation: String read GetLibLocation write SetLibLocation;
   end;
 
 implementation

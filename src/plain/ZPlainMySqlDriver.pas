@@ -237,7 +237,7 @@ type
     ServerArgs: array of PAnsiChar;
     ServerArgsLen: Integer;
     IsEmbeddedDriver: Boolean;
-    function GetCompilerSaveCodePageName: String; override;
+    function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
     procedure LoadApi; override;
     procedure BuildServerArguments(Options: TStrings);
@@ -408,7 +408,7 @@ implementation
 uses SysUtils, ZSysUtils, ZPlainLoader;
 
 { TZMySQLPlainBaseDriver }
-function TZMySQLBaseDriver.GetCompilerSaveCodePageName: String;
+function TZMySQLBaseDriver.GetUnicodeCodePageName: String;
 begin
   Result := 'utf8';
 end;

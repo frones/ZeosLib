@@ -146,6 +146,8 @@ type
     procedure SetUser(const Value: String);
     function GetPassword: string;
     procedure SetPassword(const Value: String);
+    function GetLibLocation: String;
+    procedure SetLibLocation(const Value: String);
     function GetProtocol: String;
     procedure SetProtocol(const Value: String);
     function GetProperties: TStrings;
@@ -243,6 +245,7 @@ type
     property User: string read GetUser write SetUser;
     property Password: string read GetPassword write SetPassword;
     property Protocol: string read GetProtocol write SetProtocol;
+    property LibLocation: string read GetLibLocation write SetLibLocation;
 
     property DbcDriver: IZDriver read GetDbcDriver;
     property DbcConnection: IZConnection read FConnection;
@@ -392,6 +395,16 @@ end;
 procedure TZAbstractConnection.SetPassword(const Value: String);
 begin
   FURL.Password := Value;
+end;
+
+function TZAbstractConnection.GetLibLocation: String;
+begin
+  Result := FURL.LibLocation;
+end;
+
+procedure TZAbstractConnection.SetLibLocation(const Value: String);
+begin
+  FURL.LibLocation := Value;
 end;
 
 function TZAbstractConnection.GetProtocol: String;
@@ -635,7 +648,7 @@ end;
 function TZAbstractConnection.ConstructURL(const UserName, Password: string): string;
 begin
   Result := DriverManager.ConstructURL(FURL.Protocol, FURL.HostName, FURL.Database, UserName,
-    Password, FURL.Port, FURL.Properties);
+    Password, FURL.Port, FURL.Properties, FURL.LibLocation);
 end;
 
 {**

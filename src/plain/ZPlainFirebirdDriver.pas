@@ -249,7 +249,7 @@ type
   protected
     FPreLoader : TZNativeLibraryLoader;
     procedure LoadCodePages; override;
-    function GetCompilerSaveCodePageName: String; override;
+    function GetUnicodeCodePageName: String; override;
     {$IFDEF ENABLE_INTERBASE_CRYPT}
     procedure Initialize; virtual;
     {$ENDIF}
@@ -433,7 +433,7 @@ type
   {** Implements a native driver for Firebird 2.0}
   TZFirebird20PlainDriver = class (TZFirebirdBaseDriver)
   protected
-    function GetCompilerSaveCodePageName: String; override;
+    function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
   public
     constructor Create;
@@ -456,7 +456,7 @@ type
 
   TZFirebird21PlainDriver = class (TZFirebirdBaseDriver)
   protected
-    function GetCompilerSaveCodePageName: String; override;
+    function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
     procedure LoadApi; override;
   public
@@ -480,7 +480,7 @@ type
 
   TZFirebird25PlainDriver = class (TZFirebirdBaseDriver)
   protected
-    function GetCompilerSaveCodePageName: String; override;
+    function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
     procedure LoadApi; override;
   public
@@ -516,7 +516,7 @@ end;
 
 { IZFirebirdPlainDriver }
 
-function TZFirebirdBaseDriver.GetCompilerSaveCodePageName: String;
+function TZFirebirdBaseDriver.GetUnicodeCodePageName: String;
 begin
   Result := 'UNICODE_FSS';
 end;
@@ -1183,7 +1183,7 @@ end;
 
 { IZFirebird20PlainDriver }
 
-function TZFirebird20PlainDriver.GetCompilerSaveCodePageName: String;
+function TZFirebird20PlainDriver.GetUnicodeCodePageName: String;
 begin
   Result := 'UTF8';
 end;
@@ -1280,7 +1280,7 @@ end;
 
 { IZFirebird21PlainDriver }
 
-function TZFirebird21PlainDriver.GetCompilerSaveCodePageName: String;
+function TZFirebird21PlainDriver.GetUnicodeCodePageName: String;
 begin
   Result := 'UTF8';
 end;
@@ -1399,7 +1399,7 @@ end;
 
 { TZFirebird25PlainDriver }
 
-function TZFirebird25PlainDriver.GetCompilerSaveCodePageName: String;
+function TZFirebird25PlainDriver.GetUnicodeCodePageName: String;
 begin
   Result := 'UTF8';
 end;

@@ -318,7 +318,7 @@ begin
   // Generic driver
   If result = nil then
     Result := FPlainDrivers[1];    // Postgresql 8
-  Result.Initialize;
+  Result.Initialize(Url.LibLocation);
 end;
 
 { TZPostgreSQLConnection }

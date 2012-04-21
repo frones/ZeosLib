@@ -47,17 +47,12 @@ type
     function getPassword: string;
     function getHostName: string;
     function getDatabase: string;
+    function GetLibLocation: String;
     //function getCatalog: string;
     procedure DoZConnectionGroupChange(Sender: TObject);
     procedure ParentZConnectionGroupChange(var Msg: TMessage);
   published
     property ConnectionGroup: TZConnectionGroup read FZConnectionGroup write SetConnectionGroup;
-
-    //property User: string read getUser;
-    //property Protocol: string read getProtocol ;
-    //property Password: string read getPassword ;
-    //property HostName: string read getHostName ;
-    //property Database: string read getDatabase ;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -99,6 +94,7 @@ begin
     FURL.Password := (Sender as TZConnectionGroup).Password;
     FURL.HostName := (Sender as TZConnectionGroup).HostName;
     FURL.Database := (Sender as TZConnectionGroup).Database;
+    FURL.LibLocation := (Sender as TZConnectionGroup).LibraryLocation;
   end;
 end;
 
@@ -137,6 +133,7 @@ begin
     FURL.Password := FZConnectionGroup.Password;
     FURL.HostName := FZConnectionGroup.HostName;
     FURL.Database := FZConnectionGroup.Database;
+    FURL.LibLocation := FZConnectionGroup.LibraryLocation;
   end;
   InternalZConnectionGroupChanged(Self, Value);
 end;
@@ -196,6 +193,17 @@ begin
   end
   else
     FURL.Database := '';
+end;
+
+function TZGroupedConnection.GetLibLocation: String;
+begin
+  if FZConnectionGroup <> nil then
+  begin
+    FURL.LibLocation := FZConnectionGroup.LibraryLocation;
+    Result := FURL.LibLocation;
+  end
+  else
+    FURL.LibLocation := '';
 end;
 
 {

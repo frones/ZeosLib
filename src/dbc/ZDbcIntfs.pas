@@ -188,7 +188,7 @@ type
       const Msg: string; ErrorCode: Integer; const Error: string);
     function ConstructURL(const Protocol, HostName, Database,
       UserName, Password: String; const Port: Integer;
-      const Properties: TStrings = nil): String;
+      const Properties: TStrings = nil; const LibLocation: String = ''): String;
     procedure ResolveDatabaseUrl(const Url: string; out HostName: string;
       out Port: Integer; out Database: string; out UserName: string;
       out Password: string; ResultInfo: TStrings = nil); overload;
@@ -926,7 +926,7 @@ type
 
     function ConstructURL(const Protocol, HostName, Database,
       UserName, Password: String; const Port: Integer;
-      const Properties: TStrings = nil): String;
+      const Properties: TStrings = nil; const LibLocation: String = ''): String;
     procedure ResolveDatabaseUrl(const Url: string; out HostName: string;
       out Port: Integer; out Database: string; out UserName: string;
       out Password: string; ResultInfo: TStrings = nil); overload;
@@ -1165,7 +1165,7 @@ end;
 }
 function TZDriverManager.ConstructURL(const Protocol, HostName, Database,
   UserName, Password: String; const Port: Integer;
-  const Properties: TStrings = nil): String;
+  const Properties: TStrings = nil; const LibLocation: String = ''): String;
 begin
   FURL.Protocol := Protocol;
   FURL.HostName := HostName;
@@ -1175,6 +1175,7 @@ begin
   FURL.Port := Port;
   if Assigned(Properties) then
     FURL.Properties.Text := Properties.Text;
+  FURL.LibLocation := LibLocation;
   Result := FURL.URL;
 end;
 

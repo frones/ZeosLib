@@ -67,7 +67,7 @@ type
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
-    procedure Initialize; override;
+    procedure Initialize(const Location: String = ''); override;
   end;
 
 implementation
@@ -94,7 +94,7 @@ begin
   Result := 'Native driver for Microsoft ADO';
 end;
 
-procedure TZAdoPlainDriver.Initialize;
+procedure TZAdoPlainDriver.Initialize(const Location: String = '');
 begin
 end;
 

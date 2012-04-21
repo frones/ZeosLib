@@ -446,7 +446,7 @@ type
   protected
     SQLite_API : TZSQLite_API;
     // procedure LoadApi; override; ->completely done in version dependent child classes
-    function GetCompilerSaveCodePageName: String; override;
+    function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
   public
     constructor Create;
@@ -540,7 +540,7 @@ uses ZPlainLoader;
 
 { TZSQLiteBaseDriver }
 
-function TZSQLiteBaseDriver.GetCompilerSaveCodePageName: String;
+function TZSQLiteBaseDriver.GetUnicodeCodePageName: String;
 begin
   Result := 'UTF-8'
 end;

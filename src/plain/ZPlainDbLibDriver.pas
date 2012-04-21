@@ -858,7 +858,7 @@ type
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
-    procedure Initialize; override;
+    procedure Initialize(const Location: String); override;
 
     procedure CheckError;
 
@@ -922,7 +922,7 @@ type
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
-    procedure Initialize; override;
+    procedure Initialize(const Location: String); override;
 
     procedure CheckError;
 
@@ -1004,8 +1004,9 @@ begin
   Result := 'Native dblib driver for Sybase ASE 12.5';
 end;
 
-procedure TZDBLibSybaseASE125PlainDriver.Initialize;
+procedure TZDBLibSybaseASE125PlainDriver.Initialize(const Location: String);
 begin
+  ZPlainDBLibSybaseASE125.LibraryLoader.AddLocation(Location);
   ZPlainDBLibSybaseASE125.LibraryLoader.LoadIfNeeded;
 end;
 
@@ -1299,8 +1300,9 @@ begin
   Result := 'Native dblib driver for MS SQL 7+';
 end;
 
-procedure TZDBLibMSSQL7PlainDriver.Initialize;
+procedure TZDBLibMSSQL7PlainDriver.Initialize(const Location: String);
 begin
+  ZPlainDBLibMSSql7.LibraryLoader.AddLocation(Location);
   ZPlainDBLibMSSql7.LibraryLoader.LoadIfNeeded;
 end;
 

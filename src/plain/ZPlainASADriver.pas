@@ -899,7 +899,7 @@ type
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
-    procedure Initialize; override;
+    procedure Initialize(const Location: String = ''); override;
     constructor Create;
 
     function sqlerror_message(sqlca: PZASASQLCA; Buffer: PAnsiChar;
@@ -993,7 +993,7 @@ type
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
-    procedure Initialize; override;
+    procedure Initialize(const Location: String = ''); override;
 
     function sqlerror_message(sqlca: PZASASQLCA; Buffer: PAnsiChar;
       MaxSize: Integer): PAnsiChar;
@@ -1085,7 +1085,7 @@ type
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
-    procedure Initialize; override;
+    procedure Initialize(const Location: String = ''); override;
     constructor Create;
 
     function sqlerror_message(sqlca: PZASASQLCA; Buffer: PAnsiChar;
@@ -1191,8 +1191,9 @@ begin
   Result := 'Native Plain Driver for ASA 7.0 DBLib';
 end;
 
-procedure TZASA7PlainDriver.Initialize;
+procedure TZASA7PlainDriver.Initialize(const Location: String = '');
 begin
+  ZPlainASA7.LibraryLoader.AddLocation(Location);
   ZPlainASA7.LibraryLoader.LoadIfNeeded;
 end;
 
@@ -1480,8 +1481,9 @@ begin
   Result := 'Native Plain Driver for ASA 8.0 DBLib';
 end;
 
-procedure TZASA8PlainDriver.Initialize;
+procedure TZASA8PlainDriver.Initialize(const Location: String = '');
 begin
+  ZPlainASA8.LibraryLoader.AddLocation(Location);
   ZPlainASA8.LibraryLoader.LoadIfNeeded;
 end;
 
@@ -1769,8 +1771,9 @@ begin
   Result := 'Native Plain Driver for ASA 9.0 DBLib';
 end;
 
-procedure TZASA9PlainDriver.Initialize;
+procedure TZASA9PlainDriver.Initialize(const Location: String = '');
 begin
+  ZPlainASA9.LibraryLoader.AddLocation(Location);
   ZPlainASA9.LibraryLoader.LoadIfNeeded;
 end;
 

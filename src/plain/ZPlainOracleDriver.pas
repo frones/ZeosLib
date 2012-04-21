@@ -862,11 +862,11 @@ type
   public
     constructor Create;
 
-    function GetCompilerSaveCodePageName: String; override;
+    function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
-    procedure Initialize; override;
+    procedure Initialize(const Location: String); override;
 
     function Initializ(mode: ub4; ctxp: Pointer; malocfp: Pointer;
       ralocfp: Pointer; mfreefp: Pointer): sword;
@@ -1052,7 +1052,7 @@ implementation
 
 uses ZCompatibility;
 
-function TZOracle9iPlainDriver.GetCompilerSaveCodePageName: String;
+function TZOracle9iPlainDriver.GetUnicodeCodePageName: String;
 begin
   Result := 'UTF8';
 end;
@@ -1305,10 +1305,11 @@ begin
   Result := 'Native Plain Driver for Oracle 9i';
 end;
 
-procedure TZOracle9iPlainDriver.Initialize;
+procedure TZOracle9iPlainDriver.Initialize(const Location: String);
 begin
   if not ZPlainOracle9i.LibraryLoader.Loaded then
   begin
+    ZPlainOracle9i.LibraryLoader.AddLocation(Location);
     ZPlainOracle9i.LibraryLoader.Load;
     ZPlainOracle9i.OCIInitialize(OCI_THREADED, nil, nil, nil, nil);
   end;

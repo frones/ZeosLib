@@ -233,7 +233,7 @@ begin
     Result := FASA8PlainDriver
   else if Url.Protocol = FASA9PlainDriver.GetProtocol then
     Result := FASA9PlainDriver;
-  Result.Initialize;
+  Result.Initialize(Url.LibLocation);
 end;
 
 {**
