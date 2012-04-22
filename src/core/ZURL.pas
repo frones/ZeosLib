@@ -76,6 +76,7 @@ type
     FDatabase: string;
     FUserName: string;
     FPassword: string;
+    FLibLocation: String;
     FProperties: TZURLStringList;
     procedure SetPrefix(const Value: string);
     procedure SetProtocol(const Value: string);
@@ -87,6 +88,8 @@ type
     procedure SetUserName(const Value: string);
     function GetPassword: string;
     procedure SetPassword(const Value: string);
+    function GetLibLocation: String;
+    procedure SetLibLocation(const Value: String);
     function GetURL: string;
     procedure SetURL(const Value: string);
     procedure OnPropertiesChange(Sender: TObject);
@@ -106,6 +109,7 @@ type
     property Database: string read GetDatabase write SetDatabase;
     property UserName: string read GetUserName write SetUserName;
     property Password: string read GetPassword write SetPassword;
+    property LibLocation: string read GetLibLocation write SetLibLocation;
     property Properties: TZURLStringList read FProperties;
     property URL: string read GetURL write SetURL;
   end;
@@ -234,6 +238,16 @@ begin
   FPassword := StringReplace(Value, ';', #9, [rfReplaceAll]); //escape the ';' char to #9
 end;
 
+function TZURL.GetLibLocation: String;
+begin
+  Result := StringReplace(FLibLocation, #9, ';', [rfReplaceAll]); //unescape the #9 char to ';'
+end;
+
+procedure TZURL.SetLibLocation(const Value: String);
+begin
+  FLibLocation := StringReplace(Value, ';', #9, [rfReplaceAll]); //escape the ';' char to #9
+end;
+
 function TZURL.GetURL: string;
 begin
   Result := '';
@@ -275,14 +289,22 @@ begin
     Result := Result + 'password=' + FPassword
   end;
 
-  // Properties
+  // Properties + LibLocation
   if Properties.Count > 0 then
   begin
     if Result[Length(Result)] <> '?' then
       Result := Result + ';';  //in case if UserName and/or Password was set
     Result := Result + Properties.GetURLText; //Adds the escaped string
-  end;
-
+    if FLibLocation <> '' then
+      Result := Result + ';LibLocation='+ FLibLocation;
+  end
+  else
+    if FLibLocation <> '' then
+    begin
+      if Result[Length(Result)] <> '?' then
+        Result := Result + ';';
+      Result := Result + 'LibLocation='+FLibLocation;
+    end;
 end;
 
 procedure TZURL.SetURL(const Value: string);
@@ -408,6 +430,13 @@ begin
       Password := FProperties.Values['password'];
       FProperties.Delete(FProperties.IndexOfName('password'));
     end;
+
+    if FProperties.Values['LibLocation'] <> '' then
+    begin
+      LibLocation := FProperties.Values['LibLocation'];
+      FProperties.Delete(FProperties.IndexOfName('LibLocation'));
+    end;
+
   finally
     FProperties.OnChange := OnPropertiesChange;
   end;

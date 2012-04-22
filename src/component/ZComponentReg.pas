@@ -110,11 +110,15 @@ begin
     TZDatabasePropertyEditor);
   RegisterPropertyEditor(TypeInfo(string), TZConnection, 'Catalog',
     TZCatalogPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZConnection, 'LibraryLocation',
+    TZLibLocationPropertyEditor);
 
   RegisterPropertyEditor(TypeInfo(string), TZConnectionGroup, 'Protocol',
     TZProtocolPropertyEditor);
   RegisterPropertyEditor(TypeInfo(string), TZConnectionGroup, 'Database',
     TZConnectionGroupPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZConnectionGroup, 'LibraryLocation',
+    TZLibLocationPropertyEditor);
   RegisterPropertyEditor(TypeInfo(string), TZGroupedConnection, 'Catalog',
       TZGroupedConnectionCatalogPropertyEditor);
 

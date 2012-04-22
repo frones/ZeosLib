@@ -66,7 +66,7 @@ type
 
     function GetProtocol: string;
     function GetDescription: string;
-    procedure Initialize;
+    procedure Initialize(const Location: String = '');
   end;
 
 implementation
@@ -85,7 +85,7 @@ begin
   Result := 'Native driver for Microsoft ADO';
 end;
 
-procedure TZAdoPlainDriver.Initialize;
+procedure TZAdoPlainDriver.Initialize(const Location: String = '');
 begin
 end;
 

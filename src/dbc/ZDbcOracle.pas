@@ -266,7 +266,7 @@ begin
     //Result := FOracle9iPlainDriver
   //else
     Result := FOracle9iPlainDriver;
-  Result.Initialize;
+  Result.Initialize(Url.LibLocation);
 end;
 
 { TZOracleConnection }

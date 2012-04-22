@@ -167,7 +167,7 @@ begin
     Result := FMSSqlPlainDriver;
   if Url.Protocol = FSybasePlainDriver.GetProtocol then
     Result := FSybasePlainDriver;
-  Result.Initialize;
+  Result.Initialize(Url.LibLocation);
 end;
 
 {**

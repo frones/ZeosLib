@@ -864,7 +864,7 @@ type
 
     function GetProtocol: string;
     function GetDescription: string;
-    procedure Initialize;
+     procedure Initialize(const Location: String);
 
     function Initializ(mode: ub4; ctxp: Pointer; malocfp: Pointer;
       ralocfp: Pointer; mfreefp: Pointer): sword;
@@ -1062,10 +1062,11 @@ begin
   Result := 'Native Plain Driver for Oracle 9i';
 end;
 
-procedure TZOracle9iPlainDriver.Initialize;
+procedure TZOracle9iPlainDriver.Initialize(const Location: String);
 begin
   if not ZPlainOracle9i.LibraryLoader.Loaded then
   begin
+    ZPlainOracle9i.LibraryLoader.AddLocation(Location);
     ZPlainOracle9i.LibraryLoader.Load;
     ZPlainOracle9i.OCIInitialize(OCI_THREADED, nil, nil, nil, nil);
   end;

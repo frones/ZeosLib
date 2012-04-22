@@ -248,7 +248,7 @@ type
   protected
     {$IFDEF ENABLE_INTERBASE_CRYPT}
     FPreLoader : TZNativeLibraryLoader;
-    procedure Initialize; virtual;
+    procedure Initialize(const Location: String); virtual;
     {$ENDIF}
     procedure LoadApi; override;
   public
@@ -505,11 +505,11 @@ end;
 { IZFirebirdPlainDriver }
 
 {$IFDEF ENABLE_INTERBASE_CRYPT}
-procedure TZFirebirdBaseDriver.Initialize;
+procedure TZFirebirdBaseDriver.Initialize(const LibLocation: String = '');
 begin
   If Assigned(FPreLoader) and not FPreLoader.Loaded then
     FPreLoader.LoadNativeLibrary;
-  inherited Initialize;
+  inherited Initialize(LibLocation);
 end;
 {$ENDIF}
 
