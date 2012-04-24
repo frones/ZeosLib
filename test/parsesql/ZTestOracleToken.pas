@@ -105,11 +105,11 @@ end;
 }
 procedure TZTestOracleTokenizer.TestQuoteState;
 const
-  TokenString1: string = '"a""aa" ''cc''''c''';
-  TokenTypes1: array[0..1] of TZTokenType = (
-    ttWord, ttQuoted);
-  TokenValues1: array[0..1] of string = (
-    '"a""aa"', '''cc''''c''');
+  TokenString1: string = '"a""aa" ''cc''''c'' ''1/2/3456 01:23:45'' ''30/2/3456 01:23:45'' ''1/2/3456 aa:23:45''';
+  TokenTypes1: array[0..4] of TZTokenType = (
+    ttWord, ttQuoted, ttDateTime, ttQuoted, ttQuoted);
+  TokenValues1: array[0..4] of string = (
+    '"a""aa"', '''cc''''c''', '''1/2/3456 01:23:45''', '''30/2/3456 01:23:45''', '''1/2/3456 aa:23:45''');
 begin
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString1,
     [toSkipEOF, toSkipWhitespaces]), TokenTypes1, TokenValues1);
