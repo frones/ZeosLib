@@ -492,11 +492,35 @@ begin
     CheckEquals('scott', UserName);
     CheckEquals('', Password);
     CheckEquals('true', ResultInfo.Values['trace']);
+
+    // Inventory of ResolveDatabaseUrl function (by mdaems and egonhugeist)
+    // parameters from Url have precedence over Info parameters
+    // extra parameters from info are added to ResultsetInfo
+    // password and username from url replace those from the 
+    Url := 'zdbc:mysql:test?UID=admin;PWD=none;trace=false';
+    Info.Values['extrainfo']:='extravalue';
+    ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
+      UserName, Password, ResultInfo);
+    CheckEquals('localhost', HostName);
+    CheckEquals(0, Port);
+    CheckEquals('test', Database);
+    //username from Url has precedence (Info username = scott)
+    CheckEquals('admin', UserName);
+    //password from Url (is not in Info)
+    CheckEquals('none', Password);
+    //trace from Url has precedence (Info trace = true)
+    CheckEquals('false', ResultInfo.Values['trace']);
+    //extravalue from Info (isn't available in URL)
+    CheckEquals('extravalue', ResultInfo.Values['extrainfo']);
+    //url user and pwd are copied from Url into ResultInfo
+    CheckEquals('admin', ResultInfo.Values['UID']);
+    CheckEquals('none', ResultInfo.Values['PWD']);
+    //Strange effect : username from info remains in Resultinfo even if it's not used
+    CheckEquals('scott', ResultInfo.Values['username']);
   finally
     Info.Free;
     ResultInfo.Free;
-  end;
-end;
+  end;end;
 
 initialization
   RegisterTest('dbc',TZTestDbcUtilsCase.Suite);

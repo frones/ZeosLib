@@ -61,20 +61,19 @@
 // Compilation directives for Delphi4
 // Not supported since Zeoslib 7.X
 {$IFDEF VER120}
-{$DEFINE VER140BELOW} // Used in zeos.inc only
+        "Delphi versions below Delphi 7 aren't supported anymore"
 {$ENDIF}
 
 // Compilation directives for Delphi 5
 // Not supported since Zeoslib 7.X
 {$IFDEF VER130}
-{$DEFINE VER140BELOW} // Used in zeos.inc only
+        "Delphi versions below Delphi 7 aren't supported anymore"
 {$ENDIF}
 
 // Compilation directives for Delphi 6
 // Not supported since Zeoslib 7.X
 {$IFDEF VER140}
-  {$DEFINE VER140BELOW} // Used in zeos.inc only
-  {$DEFINE VER150BELOW} // Used in zeos.inc only
+        "Delphi versions below Delphi 7 aren't supported anymore"
 {$ENDIF}
 
 // Compilation directives for Delphi 7
@@ -165,23 +164,9 @@
      {$UNDEF WITH_FTWIDESTRING}
 {$ENDIF}
 
-{$IFDEF VER140BELOW}
-  {$IFNDEF FPC}
-    {$IFNDEF WIN32}
-      {$if Declared(RTLVersion) and (RTLVersion = 14.5)}  //Kylix 3
-         {$DEFINE KYLIX}
-      {$ELSE}
-          "Kylix versions below Kylix3 aren't supported anymore"
-      {$ifend}
-    {$ELSE}
-      {$ifdef BCB}  //Cbuilder
-        {$IFNDEF VER140}
-          "CBuilder versions below CBuilder6 aren't supported anymore"
-        {$ENDIF}
-      {$ELSE}
-        "Delphi versions below Delphi 7 aren't supported anymore"
-      {$ENDIF}
-    {$ENDIF}
+{$IFNDEF FPC}
+  {$IFNDEF WIN32}
+          "Kylix isn't supported anymore"
   {$ENDIF}
 {$ENDIF}
 

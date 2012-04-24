@@ -58,6 +58,14 @@ uses
   SysUtils;
 
 type
+  TZURLStringList = Class(TStringList)
+  protected
+    function GetTextStr: string; override;
+    procedure SetTextStr(const Value: string); override;
+
+  public
+  end;
+
   TZURL = class
   private
     FPrefix: string;
@@ -67,13 +75,16 @@ type
     FDatabase: string;
     FUserName: string;
     FPassword: string;
-    FProperties: TStringList;
+    FProperties: TZURLStringList;
     procedure SetPrefix(const Value: string);
     procedure SetProtocol(const Value: string);
     procedure SetHostName(const Value: string);
     procedure SetPort(const Value: Integer);
+    function GetDatabase: string;
     procedure SetDatabase(const Value: string);
+    function GetUserName: string;
     procedure SetUserName(const Value: string);
+    function GetPassword: string;
     procedure SetPassword(const Value: string);
     function GetURL: string;
     procedure SetURL(const Value: string);
@@ -85,15 +96,29 @@ type
     property Protocol: string read FProtocol write SetProtocol;
     property HostName: string read FHostName write SetHostName;
     property Port: Integer read FPort write SetPort;
-    property Database: string read FDatabase write SetDatabase;
-    property UserName: string read FUserName write SetUserName;
-    property Password: string read FPassword write SetPassword;
-    property Properties: TStringList read FProperties;
+    property Database: string read GetDatabase write SetDatabase;
+    property UserName: string read GetUserName write SetUserName;
+    property Password: string read GetPassword write SetPassword;
+    property Properties: TZURLStringList read FProperties;
     property URL: string read GetURL write SetURL;
   end;
 
 implementation
+
 uses ZCompatibility;
+
+{TZURLStringList}
+function TZURLStringList.GetTextStr: string;
+begin
+  Result := inherited GetTextStr;
+  Result := StringReplace(Result, #9, ';', [rfReplaceAll]); //unescape the #9 char to ';'
+end;
+
+procedure TZURLStringList.SetTextStr(const Value: string);
+begin
+  inherited SetTextStr(StringReplace(Value, ';', #9, [rfReplaceAll])); //escape the ';' char to #9
+end;
+
 { TZURL }
 
 constructor TZURL.Create;
@@ -101,7 +126,7 @@ begin
   inherited;
 
   FPrefix := 'zdbc';
-  FProperties := TStringList.Create;
+  FProperties := TZURLStringList.Create;
   FProperties.CaseSensitive := False;
   FProperties.OnChange := OnPropertiesChange;
 end;
@@ -125,7 +150,7 @@ end;
 
 procedure TZURL.SetHostName(const Value: string);
 begin
-  FHostName := Value;
+  FHostName := StringReplace(Value, ';', #9, [rfReplaceAll]); //escape the ';' char to #9
 end;
 
 procedure TZURL.SetPort(const Value: Integer);
@@ -133,19 +158,34 @@ begin
   FPort := Value;
 end;
 
+function TZURL.GetDatabase: string;
+begin
+  Result := StringReplace(FDatabase, #9, ';', [rfReplaceAll]); //unescape the #9 char to ';'
+end;
+
 procedure TZURL.SetDatabase(const Value: string);
 begin
-  FDatabase := Value;
+  FDatabase := StringReplace(Value, ';', #9, [rfReplaceAll]); //escape the ';' char to #9
+end;
+
+function TZURL.GetUserName: string;
+begin
+  Result := StringReplace(FUserName, #9, ';', [rfReplaceAll]); //unescape the #9 char to ';'
 end;
 
 procedure TZURL.SetUserName(const Value: string);
 begin
-  FUserName := Value;
+  FUserName := StringReplace(Value, ';', #9, [rfReplaceAll]); //escape the ';' char to #9
+end;
+
+function TZURL.GetPassword: string;
+begin
+  Result := StringReplace(FPassword, #9, ';', [rfReplaceAll]); //unescape the #9 char to ';'
 end;
 
 procedure TZURL.SetPassword(const Value: string);
 begin
-  FPassword := Value;
+  FPassword := StringReplace(Value, ';', #9, [rfReplaceAll]); //escape the ';' char to #9
 end;
 
 function TZURL.GetURL: string;
@@ -162,17 +202,20 @@ begin
   // Protocol
   Result := Result + Protocol + ':';
 
+  if (HostName <> '') or (Database <> '') then
+    Result := Result + '//';
+
   // HostName/Port
   if HostName <> '' then
   begin
-    Result := Result + '//' + HostName;
+    Result := Result + HostName;
     if Port <> 0 then
       Result := Result + ':' + IntToStr(Port);
   end;
 
   // Database
   if Database <> '' then
-    Result := Result + '/' + Database;
+    Result := Result + '/' + FDatabase;
 
   // ?
   if (FUserName <> '') or (FPassword <> '') or (Properties.Count > 0) then
@@ -195,11 +238,13 @@ begin
   begin
     PropName := FProperties.Names[I];
     PropValue := LowerCase(FProperties.Values[PropName]);
-    if (PropValue <> '') and (PropValue <> '') and (PropValue <> 'uid') and (PropValue <> 'pwd') and (PropValue <> 'username') and (PropValue <> 'password') then
+    if (PropValue <> '') and (PropValue <> '') and (PropValue <> 'uid') and
+      (PropValue <> 'pwd') and (PropValue <> 'username') and
+      (PropValue <> 'password') then
     begin
       if Result[Length(Result)] <> '?' then
         Result := Result + ';';
-      Result := Result + FProperties[I]
+      Result := Result + StringReplace(FProperties[I], ';', #9, [rfReplaceAll])
     end;
   end;
 end;

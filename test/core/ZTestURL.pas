@@ -80,6 +80,7 @@ type
     procedure TestEmpty;
     procedure TestAssignToUrl_NoHost;
     procedure TestAssignToProperties_Properties_NoHost;
+    procedure TestSemicolons;
   end;
 
 implementation
@@ -156,8 +157,8 @@ var
   ZURL: TZURL;
 begin
   // Test assignment to URL using UID and PWD in lower case and out of order
+  ZURL := TZURL.Create;
   try
-    ZURL := TZURL.Create;
     ZURL.URL := 'zdbc:firebird-2.0://127.0.0.1:3050/model?rolename=public;pwd=masterkey;uid=sysdba';
     CheckEquals('zdbc', ZURL.Prefix);
     CheckEquals('firebird-2.0', ZURL.Protocol);
@@ -177,8 +178,8 @@ var
   ZURL: TZURL;
 begin
   // Test assignment to properties without port, user, password and properties
+  ZURL := TZURL.Create;
   try
-    ZURL := TZURL.Create;
     ZURL.Prefix := 'zdbc';
     ZURL.Protocol := 'firebird-2.0';
     ZURL.HostName := '127.0.0.1';
@@ -194,8 +195,8 @@ var
   ZURL: TZURL;
 begin
   // Test assignment to properties without hostname, port, user, password and properties
+ ZURL := TZURL.Create;
   try
-    ZURL := TZURL.Create;
     ZURL.Prefix := 'zdbc';
     ZURL.Protocol := 'postgresql';
     ZURL.Database := 'model';
@@ -210,8 +211,8 @@ var
   ZURL: TZURL;
 begin
   // Test assignement to properties, setting user and password in properties
+  ZURL := TZURL.Create;
   try
-    ZURL := TZURL.Create;
     ZURL.Prefix := 'zdbc';
     ZURL.Protocol := 'mysql';
     ZURL.HostName := '127.0.0.1';
@@ -232,8 +233,8 @@ var
   ZURL: TZURL;
 begin
   // Test assignement to properties, setting user and password in properties as UID and PWD
+  ZURL := TZURL.Create;
   try
-    ZURL := TZURL.Create;
     ZURL.Prefix := 'zdbc';
     ZURL.Protocol := 'ado';
     ZURL.HostName := 'localhost';
@@ -253,8 +254,8 @@ procedure TZURLTest.TestEmpty;
 var
   ZURL: TZURL;
 begin
+  ZURL := TZURL.Create;
   try
-    ZURL := TZURL.Create;
     CheckEquals('zdbc::', ZURL.URL);
   finally
     ZURL.Free;
@@ -265,8 +266,8 @@ procedure TZURLTest.TestAssignToProperties_ProtocolOnly;
 var
   ZURL: TZURL;
 begin
+  ZURL := TZURL.Create;
   try
-    ZURL := TZURL.Create;
     ZURL.Protocol := 'protocol';
     CheckEquals('zdbc:protocol:', ZURL.URL);
   finally
@@ -278,8 +279,8 @@ procedure TZURLTest.TestAssignToProperties_DatabaseIsFile;
 var
   ZURL: TZURL;
 begin
+  ZURL := TZURL.Create;
   try
-    ZURL := TZURL.Create;
     ZURL.URL := 'zdbc:firebird-2.0://127.0.0.1/C:\database.fdb?username=sysdba;password=masterkey;rolename=public';
     CheckEquals('zdbc', ZURL.Prefix);
     CheckEquals('firebird-2.0', ZURL.Protocol);
@@ -299,8 +300,8 @@ var
   ZURL: TZURL;
 begin
   // Test assignement to URL without hostname
+  ZURL := TZURL.Create;
   try
-    ZURL := TZURL.Create;
     ZURL.URL := 'zdbc:firebird-2.0:/C:\database.fdb?username=sysdba;password=masterkey;rolename=public';
     CheckEquals('zdbc', ZURL.Prefix);
     CheckEquals('firebird-2.0', ZURL.Protocol);
@@ -320,8 +321,8 @@ var
   ZURL: TZURL;
 begin
   // Test assignement to properties without hostname
+  ZURL := TZURL.Create;
   try
-    ZURL := TZURL.Create;
     ZURL.Prefix := 'zdbc';
     ZURL.Protocol := 'oracle';
     ZURL.HostName := '';
@@ -336,6 +337,42 @@ begin
   end;
 end;
 
+procedure TZURLTest.TestSemicolons;
+var
+  ZURLIn, ZURLOut: TZURL;
+begin
+  try
+    ZURLIn := TZURL.Create;
+    ZURLIn.Prefix := 'zdbc';
+    ZURLIn.Protocol := 'ado';
+    ZURLIn.HostName := 'localhost';
+    ZURLIn.Port := 3050;
+    ZURLIn.Database := 'data/;\base';
+    ZURLIn.Password := 'pass/;\word';
+    ZURLIn.Properties.Values['UID'] := 'ad/;\min';
+    ZURLIn.Properties.Values['role'] := 'role/;\name';
+    CheckEquals('ad/;\min', ZURLIn.UserName);
+    CheckEquals('pass/;\word', ZURLIn.Password);
+    CheckEquals('zdbc:ado://localhost:3050/data/'#9'\base?username=ad/'#9'\min;password=pass/'#9'\word;role=role/'#9'\name', ZURLIn.URL);
+
+    ZURLOut := TZURL.Create;
+    ZURLOut.URL := ZURLIn.URL;
+    CheckEquals('zdbc', ZURLOut.Prefix);
+    CheckEquals('ado', ZURLOut.Protocol);
+    CheckEquals('localhost', ZURLOut.HostName);
+    CheckEquals(3050, ZURLOut.Port);
+    CheckEquals('data/;\base', ZURLOut.Database);
+    CheckEquals('ad/;\min', ZURLOut.UserName);
+    CheckEquals('pass/;\word', ZURLOut.Password);
+    CheckEquals('role=role/;\name'+LineEnding, ZURLOut.Properties.Text);
+  finally
+    if Assigned(ZURLIn) then
+      ZURLIn.Free;
+    if Assigned(ZURLOut) then
+      ZURLOut.Free;
+  end;
+
+end;
 initialization
   RegisterTest('core',TZURLTest.Suite);
 

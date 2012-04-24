@@ -94,16 +94,6 @@
     </condition>
     <antcall target="delphi15_run"/>
 
-   <condition property="cbuilder6.run">
-      <istrue value="${cbuilder6.active}"/>
-    </condition>
-    <antcall target="cbuilder6_run"/>
-
-    <condition property="kylix3.run">
-      <istrue value="${kylix3.active}"/>
-    </condition>
-    <antcall target="kylix3_run"/>
-
     <condition property="lazarus.run">
       <istrue value="${lazarus.active}"/>
     </condition>
@@ -180,38 +170,6 @@
     <antcall target="test_run_all">
       <param name="compiler" value="delphi15"/>
       <param name="compiler.dir" value="${delphi15.home}"/>
-    </antcall>
-  </target>
-
-  <target name="cbuilder5_run" if="cbuilder5.run">
-    <property name="runparams" value=""/>
-    <antcall target="test_run_all">
-      <param name="compiler" value="cbuilder5"/>
-      <param name="compiler.dir" value="${cbuilder5.home}"/>
-    </antcall>
-  </target>
-
-  <target name="cbuilder6_run" if="cbuilder6.run">
-    <property name="runparams" value=""/>
-    <antcall target="test_run_all">
-      <param name="compiler" value="cbuilder6"/>
-      <param name="compiler.dir" value="${cbuilder6.home}"/>
-    </antcall>
-  </target>
-
-  <target name="kylix2_run" if="kylix2.run">
-    <property name="runparams" value=""/>
-    <antcall target="test_run_none">
-      <param name="compiler" value="kylix2"/>
-      <param name="compiler.dir" value="${kylix2.home}"/>
-    </antcall>
-  </target>
-
-  <target name="kylix3_run" if="kylix3.run">
-    <property name="runparams" value=""/>
-    <antcall target="test_run_none">
-      <param name="compiler" value="kylix3"/>
-      <param name="compiler.dir" value="${kylix3.home}"/>
     </antcall>
   </target>
 

@@ -79,16 +79,6 @@
     </condition>
     <antcall target="delphi16_compile"/>	
 	
-    <condition property="cbuilder6.compile">
-      <istrue value="${cbuilder6.active}"/>
-    </condition>
-    <antcall target="cbuilder6_compile"/>
-
-    <condition property="kylix3.compile">
-      <istrue value="${kylix3.active}"/>
-    </condition>
-    <antcall target="kylix3_compile"/>
-
     <condition property="lazarus.compile">
       <istrue value="${lazarus.active}"/>
     </condition>
@@ -165,22 +155,6 @@
       <param name="compile" value="${delphi16.compile}"/>
       <param name="compiler" value="delphi16"/>
       <param name="compiler.dir" value="${delphi16.home}"/>
-    </antcall>
-  </target>
-
-  <target name="cbuilder6_compile" if="cbuilder6.compile">
-    <antcall target="cbuilder_compile">
-      <param name="compile" value="${cbuilder6.compile}"/>
-      <param name="compiler" value="cbuilder6"/>
-      <param name="compiler.dir" value="${cbuilder6.home}"/>
-    </antcall>
-  </target>
-
-  <target name="kylix3_compile" if="kylix3.compile">
-    <antcall target="kylix_compile">
-      <param name="compile" value="${kylix3.compile}"/>
-      <param name="compiler" value="kylix3"/>
-      <param name="compiler.dir" value="${kylix3.home}"/>
     </antcall>
   </target>
 
@@ -300,42 +274,6 @@
 
   </target>
 
-  <target name="kylix_compile">
-    <echo message="Compiling packages for ${compiler}..."
-      file="${log.file}" append="true" />
-
-    <echo/>
-    <echo message="Compiling Test packages for ${compiler}..."/>
-    <echo/>
-
-    <property name="package.dir" value="${packages.dir}/${compiler}"/>
-    <property name="build.dir" value="${package.dir}/build"/>
-    <property name="bpl.dir" value="${compiler.dir}/Projects/Bpl"/>
-
-    <antcall target="delphi_compile_project" inheritAll="true">
-      <param name="project.name" value="ZTestFramework.dpk"/>
-    </antcall>
-    <antcall target="delphi_compile_project" inheritAll="true">
-      <param name="project.name" value="ZTestCoreAll.dpr"/>
-    </antcall>
-    <antcall target="delphi_compile_project" inheritAll="true">
-      <param name="project.name" value="ZTestParseSqlAll.dpr"/>
-    </antcall>
-    <antcall target="delphi_compile_project" inheritAll="true">
-      <param name="project.name" value="ZTestDbcAll.dpr"/>
-    </antcall>
-    <antcall target="delphi_compile_project" inheritAll="true">
-      <param name="project.name" value="ZTestComponentAll.dpr"/>
-    </antcall>
-    <antcall target="delphi_compile_project" inheritAll="true">
-      <param name="project.name" value="ZTestBugReport.dpr"/>
-    </antcall>
-    <antcall target="delphi_compile_project" inheritAll="true">
-      <param name="project.name" value="ZTestPerformance.dpr"/>
-    </antcall>
-    <echo/>
-  </target>
-
 <target name = "fpc_compile">
     <property name="package.dir" value="${packages.dir}\lazarus"/>
     <property name="build.dir" value="${package.dir}\build"/>
@@ -378,21 +316,6 @@
       <env key="PATH" value="${compiler.path}/bin"/>
       <env key="LIB" value="${compiler.path}/lib"/>
    </exec>
-  </target>
-
-  <target name="kylix_compile_project">
-    <echo message="Compiling ${project.name} ..." />
-    <exec dir="${package.dir}" executable="${compiler.dir}/bin/dcc"
-      output="${log.file}" append="true" failonerror="true">
-      <arg value="-Q"/>
-      <arg value="-B"/>
-      <arg value="-N${build.dir}"/>
-      <arg value="-E${build.dir}"/>
-      <arg value="-U${build.dir};${bpl.dir};${test.kunit.dir}"/>
-      <arg value="-LE${bpl.dir}"/>
-      <arg value="-LN${bpl.dir}"/>
-      <arg value="${project.name}"/>
-    </exec>
   </target>
 
   <target name="fpc_compile_project">
