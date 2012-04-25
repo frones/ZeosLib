@@ -1,9 +1,9 @@
 object ZUpdateSQLEditForm: TZUpdateSQLEditForm
   Left = 339
   Top = 271
-  ActiveControl = SQLMemo
-  ClientHeight = 257
-  ClientWidth = 390
+  Width = 406
+  Height = 293
+  ActiveControl = UpdateTableName
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -15,59 +15,16 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  DesignSize = (
-    390
-    257)
   PixelsPerInch = 96
   TextHeight = 13
-  object OkButton: TButton
-    Left = 168
-    Top = 229
-    Width = 65
-    Height = 22
-    Anchors = [akRight, akBottom]
-    Caption = '&OK'
-    Default = True
-    ModalResult = 1
-    TabOrder = 0
-    OnClick = OkButtonClick
-    ExplicitLeft = 166
-    ExplicitTop = 220
-  end
-  object CancelButton: TButton
-    Left = 245
-    Top = 229
-    Width = 65
-    Height = 22
-    Anchors = [akRight, akBottom]
-    Cancel = True
-    Caption = 'Cancel'
-    ModalResult = 2
-    TabOrder = 1
-    ExplicitLeft = 243
-    ExplicitTop = 220
-  end
-  object HelpButton: TButton
-    Left = 321
-    Top = 229
-    Width = 65
-    Height = 22
-    Anchors = [akRight, akBottom]
-    Caption = '&Help'
-    TabOrder = 2
-    OnClick = HelpButtonClick
-    ExplicitLeft = 319
-    ExplicitTop = 220
-  end
   object PageControl: TPageControl
     Left = 0
     Top = 0
     Width = 390
-    Height = 222
+    Height = 223
     ActivePage = SQLPage
-    Align = alTop
-    Anchors = [akLeft, akTop, akRight, akBottom]
-    TabOrder = 3
+    Align = alClient
+    TabOrder = 0
     OnChanging = PageControlChanging
     ExplicitWidth = 388
     object FieldsPage: TTabSheet
@@ -77,14 +34,14 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
         Left = 0
         Top = 0
         Width = 382
-        Height = 194
+        Height = 195
         Align = alClient
         Caption = ' SQL Generation '
         TabOrder = 0
         ExplicitWidth = 380
         DesignSize = (
           382
-          194)
+          195)
         object Label1: TLabel
           Left = 8
           Top = 24
@@ -126,7 +83,7 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
           Left = 126
           Top = 40
           Width = 117
-          Height = 145
+          Height = 146
           Anchors = [akLeft, akTop, akBottom]
           ItemHeight = 13
           MultiSelect = True
@@ -138,7 +95,7 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
           Left = 254
           Top = 40
           Width = 120
-          Height = 145
+          Height = 146
           Anchors = [akLeft, akTop, akRight, akBottom]
           ItemHeight = 13
           MultiSelect = True
@@ -210,7 +167,7 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
         Left = 8
         Top = 56
         Width = 368
-        Height = 129
+        Height = 130
         Align = alCustom
         Anchors = [akLeft, akTop, akRight, akBottom]
         ScrollBars = ssVertical
@@ -235,6 +192,50 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
         OnClick = StatementTypeClick
         ExplicitWidth = 380
       end
+    end
+  end
+  object Panel1: TPanel
+    Left = 0
+    Top = 223
+    Width = 390
+    Height = 34
+    Align = alBottom
+    TabOrder = 1
+    DesignSize = (
+      390
+      34)
+    object OkButton: TButton
+      Left = 162
+      Top = 5
+      Width = 65
+      Height = 22
+      Anchors = [akRight, akBottom]
+      Caption = '&OK'
+      Default = True
+      ModalResult = 1
+      TabOrder = 0
+      OnClick = OkButtonClick
+    end
+    object CancelButton: TButton
+      Left = 239
+      Top = 5
+      Width = 65
+      Height = 22
+      Anchors = [akRight, akBottom]
+      Cancel = True
+      Caption = 'Cancel'
+      ModalResult = 2
+      TabOrder = 1
+    end
+    object HelpButton: TButton
+      Left = 315
+      Top = 5
+      Width = 65
+      Height = 22
+      Anchors = [akRight, akBottom]
+      Caption = '&Help'
+      TabOrder = 2
+      OnClick = HelpButtonClick
     end
   end
   object FieldListPopup: TPopupMenu
