@@ -136,7 +136,6 @@ type
     constructor Create;
     destructor Destroy;
 
-    procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
     procedure Initialize(const Location: String); override;
@@ -200,12 +199,6 @@ uses SysUtils;
 
 { TZFreeTDSPlainDriver }
 
-procedure TZFreeTDSPlainDriver.LoadCodePages;
-begin
-  AddCodePage('Not implemented!', -1);
-   { TODO -oEgonHugeist : Must be completed!!!! }
-end;
-
 constructor TZFreeTDSPlainDriver.Create;
 begin
   inherited create;
@@ -217,7 +210,6 @@ begin
     FLoader.AddLocation(LINUX_DLL_LOCATION);
   {$ENDIF}
 {$ENDIF}
-  LoadCodePages;
 end;
 
 destructor TZFreeTDSPlainDriver.Destroy;
