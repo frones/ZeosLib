@@ -416,7 +416,7 @@ procedure TZPlainMySQLPerformanceTestCase.RunTestFetch;
   function GetString(ColumnIndex: Integer; var QueryHandle: PZMySQLResult;
     var RowHandle: PZMySQLRow): string;
   var
-    LengthPointer: PLongInt;
+    LengthPointer: PULong;
     Length: LongInt;
     Buffer: PChar;
   begin

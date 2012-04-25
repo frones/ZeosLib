@@ -94,10 +94,6 @@
 				<BuildOrder>53</BuildOrder>
 				<BuildOrder>4</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\plain\ZPlainMySql41.pas">
-				<BuildOrder>59</BuildOrder>
-				<BuildOrder>6</BuildOrder>
-			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\plain\ZPlainLoader.pas">
 				<BuildOrder>56</BuildOrder>
 				<BuildOrder>7</BuildOrder>

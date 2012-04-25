@@ -48,6 +48,9 @@
   {$INTERFACES COM}
 
   {$IFDEF FPC_FULLVERSION}  // FPC_FULLVERSION was added in FPC 2.2.4
+    {$IF FPC_FULLVERSION<=20204}
+      {$DEFINE OLDFPC}
+    {$IFEND}
 
     {$MACRO ON}             // Macros needed for FPC_VERSION and FPC_RELEASE
 

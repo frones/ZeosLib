@@ -59,7 +59,7 @@ interface
 
 uses
   Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
-  ZDbcConnection, ZDbcInterbase6;
+  ZDbcConnection, ZDbcInterbase6, ZURL;
 
 type
 
@@ -257,7 +257,6 @@ type
       TableNamePattern, ColumnNamePattern: string): IZResultSet; override; //EgonHugeist
     function UncachedGetCharacterSets: IZResultSet; override; //EgonHugeist
   public
-    constructor Create(Connection: TZAbstractConnection; Url: string; Info: TStrings);
     destructor Destroy; override;
   end;
 
@@ -1188,18 +1187,6 @@ end;
 
 { TZInterbase6DatabaseMetadata }
 
-
-{**
-  Constructs this object and assignes the main properties.
-  @param Connection a database connection object.
-  @param Url a database connection url string.
-  @param Info an extra connection properties.
-}
-constructor TZInterbase6DatabaseMetadata.Create(Connection: TZAbstractConnection;
-  Url: string; Info: TStrings);
-begin
-  inherited Create(Connection, Url, Info);
-end;
 
 {**
   Destroys this object and cleanups the memory.

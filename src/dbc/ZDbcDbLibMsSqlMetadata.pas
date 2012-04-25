@@ -58,7 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
+  Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZURL,
   ZCompatibility, ZDbcConnection;
 
 type
@@ -244,8 +244,6 @@ type
     function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
       const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
   public
-    constructor Create(Connection: TZAbstractConnection; const Url: string;
-      Info: TStrings);
     destructor Destroy; override;
   end;
 
@@ -1167,19 +1165,6 @@ end;
 
 
 { TZMsSqlDatabaseMetadata }
-
-
-{**
-  Constructs this object and assignes the main properties.
-  @param Connection a database connection object.
-  @param Url a database connection url string.
-  @param Info an extra connection properties.
-}
-constructor TZMsSqlDatabaseMetadata.Create(Connection: TZAbstractConnection;
-  const Url: string; Info: TStrings);
-begin
-  inherited Create(Connection, Url, Info);
-end;
 
 {**
   Destroys this object and cleanups the memory.

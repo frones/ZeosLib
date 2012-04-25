@@ -1200,9 +1200,9 @@ begin
         vtFloat:
           Result.VInteger := Trunc(Value.VFloat);
         vtString:
-          Result.VInteger := StrToIntDef(Value.VString, 0);
+          Result.VInteger := StrToInt64Def(Value.VString, 0);
         vtUnicodeString:
-          Result.VInteger := StrToIntDef(Value.VUnicodeString, 0);
+          Result.VInteger := StrToInt64Def(Value.VUnicodeString, 0);
         vtDateTime:
           Result.VInteger := Trunc(Value.VDateTime);
         vtPointer:

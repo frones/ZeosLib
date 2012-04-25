@@ -64,7 +64,7 @@ uses
   {$ENDIF}
 {$ENDIF}
   Types, Classes, SysUtils, ZClasses, ZDbcIntfs, ZTokenizer, ZCompatibility,
-  ZGenericSqlToken, ZGenericSqlAnalyser, ZPlainDriver;
+  ZGenericSqlToken, ZGenericSqlAnalyser, ZPlainDriver, ZURL;
 
 type
 
@@ -75,15 +75,16 @@ type
     FAnalyser: IZStatementAnalyser;
 
   protected
+    function GetPlainDriver(const Url: TZURL): IZPlainDriver; virtual;
     property Tokenizer: IZTokenizer read FTokenizer write FTokenizer;
     property Analyser: IZStatementAnalyser read FAnalyser write FAnalyser;
-
   public
     constructor Create;
     destructor Destroy; override;
 
     function GetSupportedProtocols: TStringDynArray; virtual; abstract;
-    function Connect(const Url: string; Info: TStrings): IZConnection; virtual;
+    function Connect(const Url: string; Info: TStrings = nil): IZConnection; overload; deprecated;
+    function Connect(const Url: TZURL): IZConnection; overload; virtual;
     function AcceptsURL(const Url: string): Boolean; virtual;
 
     function GetPropertyInfo(const Url: string; Info: TStrings): TStrings; virtual;
@@ -103,18 +104,25 @@ type
   private
     FDriver: IZDriver;
     FIZPlainDriver: IZPlainDriver;
-    FHostName: string;
-    FPort: Integer;
-    FDatabase: string;
-    FUser: string;
-    FPassword: string;
-    FInfo: TStrings;
     FAutoCommit: Boolean;
     FReadOnly: Boolean;
     FTransactIsolationLevel: TZTransactIsolationLevel;
     FClosed: Boolean;
-    FMetadata: TContainedObject;
+    FURL: TZURL;
+    function GetHostName: string;
+    procedure SetHostName(const Value: String);
+    function GetPort: Integer;
+    procedure SetConnPort(const Value: Integer);
+    function GetDatabase: string;
+    procedure SetDatabase(const Value: String);
+    function GetUser: string;
+    procedure SetUser(const Value: String);
+    function GetPassword: string;
+    procedure SetPassword(const Value: String);
+    function GetInfo: TStrings;
   protected
+    FMetadata: TContainedObject;
+    procedure InternalCreate; virtual; //abstract; //Mark, if we are ready this one should be abstract!
     procedure RaiseUnsupportedException;
 
     function CreateRegularStatement(Info: TStrings): IZStatement;
@@ -126,21 +134,25 @@ type
 
     property Driver: IZDriver read FDriver write FDriver;
     property PlainDriver: IZPlainDriver read FIZPlainDriver write FIZPlainDriver;
-    property HostName: string read FHostName write FHostName;
-    property Port: Integer read FPort write FPort;
-    property Database: string read FDatabase write FDatabase;
-    property User: string read FUser write FUser;
-    property Password: string read FPassword write FPassword;
-    property Info: TStrings read FInfo;
+    property HostName: string read GetHostName write SetHostName;
+    property Port: Integer read GetPort write SetConnPort;
+    property Database: string read GetDatabase write SetDatabase;
+    property User: string read GetUser write SetUser;
+    property Password: string read GetPassword write SetPassword;
+    property Info: TStrings read GetInfo;
     property AutoCommit: Boolean read FAutoCommit write FAutoCommit;
     property ReadOnly: Boolean read FReadOnly write FReadOnly;
+    property URL: TZURL read FURL;
     property TransactIsolationLevel: TZTransactIsolationLevel
       read FTransactIsolationLevel write FTransactIsolationLevel;
     property Closed: Boolean read FClosed write FClosed;
+
   public
-    constructor Create(Driver: IZDriver; const Url: string; const HostName: string;
-      Port: Integer; const Database: string; const User: string; const Password: string;
-      Info: TStrings; Metadata: TContainedObject);
+    constructor Create(Driver: IZDriver; const Url: string;
+      PlainDriver: IZPlainDriver; const HostName: string; Port: Integer;
+      const Database: string; const User: string; const Password: string;
+      Info: TStrings); overload; deprecated;
+    constructor Create(const ZUrl: TZURL); overload;
     destructor Destroy; override;
 
     function CreateStatement: IZStatement;
@@ -186,6 +198,7 @@ type
     function GetClientVersion: Integer; virtual;
     function GetHostVersion: Integer; virtual;
     {END ADDED by fduenas 15-06-2006}
+    function GetDescription: AnsiString;
     procedure SetReadOnly(ReadOnly: Boolean); virtual;
     function IsReadOnly: Boolean; virtual;
 
@@ -291,6 +304,15 @@ end;
     connection to the URL
 }
 function TZAbstractDriver.Connect(const Url: string; Info: TStrings): IZConnection;
+var
+  TempURL:  TZURL;
+begin
+  TempURL := TZURL.Create(Url, Info);
+  Result := Connect(TempURL);
+  TempUrl.Free;
+end;
+
+function TZAbstractDriver.Connect(const Url: TZURL): IZConnection;
 begin
   Result := nil;
 end;
@@ -316,6 +338,11 @@ begin
     if Result then
       Break;
   end;
+end;
+
+function TZAbstractDriver.GetPlainDriver(const Url: TZURL): IZPlainDriver;
+begin
+  Result := nil;
 end;
 
 {**
@@ -400,10 +427,74 @@ end;
 
 { TZAbstractConnection }
 
+function TZAbstractConnection.GetHostName: string;
+begin
+  Result := FURL.HostName;
+end;
+
+procedure TZAbstractConnection.SetHostName(const Value: String);
+begin
+  FURL.HostName := Value;
+end;
+
+function TZAbstractConnection.GetPort: Integer;
+begin
+  Result := FURL.Port;
+end;
+
+procedure TZAbstractConnection.SetConnPort(const Value: Integer);
+begin
+  FURL.Port := Value;
+end;
+
+function TZAbstractConnection.GetDatabase: string;
+begin
+  Result := FURL.Database;
+end;
+
+procedure TZAbstractConnection.SetDatabase(const Value: String);
+begin
+  FURL.Database := Value;
+end;
+
+function TZAbstractConnection.GetUser: string;
+begin
+  Result := FURL.UserName;
+end;
+
+procedure TZAbstractConnection.SetUser(const Value: String);
+begin
+  FURL.UserName := Value;
+end;
+
+function TZAbstractConnection.GetPassword: string;
+begin
+  Result := FURL.Password;
+end;
+
+procedure TZAbstractConnection.SetPassword(const Value: String);
+begin
+  FURL.Password := Value;
+end;
+
+function TZAbstractConnection.GetInfo: TStrings;
+begin
+  Result := FURL.Properties;
+end;
+
+procedure TZAbstractConnection.InternalCreate;
+begin
+end;
+
 {**
+  EgonHugeist and MDeams: The old deprecadet constructor which was used
+  from the descendant classes. We left him here for compatibility reasons to
+  exesting projects which using the DbcConnections directly
+
   Constructs this object and assignes the main properties.
-  @param Driver a ZDBC driver interface.
+  @param Driver the parent ZDBC driver.
   @param Url a connection URL.
+  @param PlainDriver a versioned ZPlainDriver object interface.
   @param HostName a name of the host.
   @param Port a port number (0 for default port).
   @param Database a name pof the database.
@@ -411,33 +502,37 @@ end;
   @param Password a user password.
   @param Info a string list with extra connection parameters.
 }
+{$WARNINGS OFF} //suppress the deprecatad warning of calling create from internal
 constructor TZAbstractConnection.Create(Driver: IZDriver; const Url: string;
-  const HostName: string; Port: Integer; const Database: string; const User: string;
-  const Password: string; Info: TStrings; Metadata: TContainedObject);
+  PlainDriver: IZPlainDriver;
+  const HostName: string; Port: Integer; const Database: string;
+  const User: string; const Password: string; Info: TStrings);
+var
+  TempURL: TZURL;
 begin
-  FDriver := Driver;
-  FHostName := HostName;
-  FPort := Port;
-  FDatabase := Database;
-  FMetadata := Metadata;
+  TempURL := TZURL.Create(Url, HostName, Port, Database, User, Password, Info);
+  Create(TempURL);
+  TempURL.Free;
+end;
+{$WARNINGS OFF}
 
-  FInfo := TStringList.Create;
-  if Info <> nil then
-    FInfo.AddStrings(Info);
-
-  if User <> '' then
-    FUser := User
+{**
+  Constructs this object and assignes the main properties.
+  @param Url a connection ZURL-class which exports all connection parameters.
+}
+constructor TZAbstractConnection.Create(const ZUrl: TZURL);
+begin
+  if not assigned(ZUrl) then
+    raise Exception.Create('ZUrl is not assigned!')
   else
-    FUser := FInfo.Values['username'];
-  if Password <> '' then
-    FPassword := Password
-  else
-    FPassword := FInfo.Values['password'];
-
+    FURL := TZURL.Create(ZURL);
+  FDriver := DriverManager.GetDriver(ZURL.URL);
+  FIZPlainDriver := FDriver.GetPlainDriver(ZUrl);
   FAutoCommit := True;
   FClosed := True;
   FReadOnly := True;
   FTransactIsolationLevel := tiNone;
+  InternalCreate;
 end;
 
 {**
@@ -447,8 +542,8 @@ destructor TZAbstractConnection.Destroy;
 begin
   if not FClosed then
     Close;
-  FInfo.Free;
   FMetadata.Free;
+  FURL.Free;
   inherited Destroy;
 end;
 
@@ -870,6 +965,12 @@ function TZAbstractConnection.GetHostVersion: Integer;
 begin
  Result := 0;
 end;
+
+function TZAbstractConnection.GetDescription: AnsiString;
+begin
+  PlainDriver.GetDescription;
+end;
+
 {END ADDED by fduenas 15-06-2006}
 
 {**

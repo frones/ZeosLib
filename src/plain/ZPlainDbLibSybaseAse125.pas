@@ -60,8 +60,9 @@ interface
 uses Classes, ZCompatibility, ZPlainLoader, ZPlainDbLibDriver;
 
 const
-  WINDOWS_DLL_LOCATION = 'libsybdb.dll';
-  LINUX_DLL_LOCATION = 'libsybdb.so';
+  WINDOWS_DLL_LOCATION = {$IFDEF FREETDS}'dblib.dll'{$ELSE}'libsybdb.dll'{$ENDIF};
+  LINUX_DLL_LOCATION = {$IFDEF FREETDS}'dblib.so'{$ELSE}'libsybdb.so'{$ENDIF};
+  //MAC_DLL_LOCATION = {$IFDEF FREETDS}'dblib.so'{$ELSE}'libsybdb.so'{$ENDIF};
 
 { Macros for dbsetlname() }
   DBSETHOST             = 1;

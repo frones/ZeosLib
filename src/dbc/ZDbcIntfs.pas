@@ -189,6 +189,10 @@ type
     function ConstructURL(const Protocol, HostName, Database,
       UserName, Password: String; const Port: Integer;
       const Properties: TStrings = nil): String;
+    procedure ResolveDatabaseUrl(const Url: string; out HostName: string;
+      out Port: Integer; out Database: string; out UserName: string;
+      out Password: string; ResultInfo: TStrings = nil); overload;
+    procedure ResolveDatabaseUrl(const Url: string; out Database: string); overload;
   end;
 
   {** Database Driver interface. }
@@ -196,9 +200,11 @@ type
     ['{2157710E-FBD8-417C-8541-753B585332E2}']
 
     function GetSupportedProtocols: TStringDynArray;
-    function Connect(const Url: string; Info: TStrings): IZConnection;
+    function Connect(const Url: string; Info: TStrings): IZConnection; overload;
+    function Connect(const Url: TZURL): IZConnection; overload;
     function GetClientVersion(const Url: string): Integer;
     function AcceptsURL(const Url: string): Boolean;
+    function GetPlainDriver(const Url: TZURL): IZPlainDriver;
 
     function GetPropertyInfo(const Url: string; Info: TStrings): TStrings;
     function GetMajorVersion: Integer;
@@ -902,6 +908,10 @@ type
     function ConstructURL(const Protocol, HostName, Database,
       UserName, Password: String; const Port: Integer;
       const Properties: TStrings = nil): String;
+    procedure ResolveDatabaseUrl(const Url: string; out HostName: string;
+      out Port: Integer; out Database: string; out UserName: string;
+      out Password: string; ResultInfo: TStrings = nil); overload;
+    procedure ResolveDatabaseUrl(const Url: string; out Database: string); overload;
   end;
 
 { TZDriverManager }
@@ -922,7 +932,7 @@ end;
 }
 destructor TZDriverManager.Destroy;
 begin
-  FURL.Destroy;
+  FURL.Free;
   FDrivers := nil;
   FLoggingListeners := nil;
   inherited Destroy;
@@ -1145,8 +1155,43 @@ begin
   FURL.Password := Password;
   FURL.Port := Port;
   if Assigned(Properties) then
-    FURL.Properties.Text := StringReplace(Properties.Text, ';', #9, [rfReplaceAll]); //escape the ';' char to #9
+    FURL.Properties.Text := Properties.Text;
   Result := FURL.URL;
+end;
+
+{**
+  Resolves a database URL and fills the database connection parameters.
+  @param Url an initial database URL.
+  @param HostName a name of the database host.
+  @param Port a port number.
+  @param Database a database name.
+  @param UserName a name of the database user.
+  @param Password a user's password.
+  @param ResutlInfo a result info parameters.
+}
+procedure TZDriverManager.ResolveDatabaseUrl(const Url: string; out HostName: string;
+  out Port: Integer; out Database: string; out UserName: string;
+  out Password: string; ResultInfo: TStrings = nil);
+begin
+  FURL.URL := Url;
+  HostName := FURL.HostName;
+  Port := FURL.Port;
+  DataBase := FURL.Database;
+  UserName := FURL.UserName;
+  PassWord := FURL.Password;
+  if Assigned(ResultInfo) then
+    ResultInfo.Text := FURL.Properties.Text;
+end;
+
+{**
+  Resolves a database URL and fills the database parameter for MetaData.
+  @param Url an initial database URL.
+  @param Database a database name.
+}
+procedure TZDriverManager.ResolveDatabaseUrl(const Url: string; out Database: string);
+begin
+  FURL.URL := Url;
+  DataBase := FURL.Database;
 end;
 
 { EZSQLThrowable }

@@ -662,9 +662,10 @@ begin
           {EgonHugeist: Mantis-BugTracker #0000247 / }
           if (Statement.GetConnection as IZPostgreSQLConnection).GetServerMajorVersion >= 9 then
           begin
-            Decoded := FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)); //gives a hex-string with a starting 'x' back
-            Len := (Length(Decoded) div 2); //GetLength of binary result
-            Decoded := Copy(Decoded, 2, Length(Decoded)); //remove the first 'x'sign-byte
+            Decoded := GetString(ColumnIndex) ;
+            //Decoded := FPlainDriver.DecodeBYTEA(Decoded); //gives a hex-string with a starting 'x' back???
+            Len := (Length(Decoded)-Pos('x', Decoded)) div 2; //GetLength of binary result
+            Decoded := Copy(Decoded, Pos('x', Decoded)+1, Length(Decoded)); //remove the first 'x'sign-byte
             SetLength(TempAnsi, Len); //Set length of binary-result
             HexToBin(PAnsiChar(Decoded), PAnsichar(TempAnsi), Len); //convert hex to binary
             Stream := TStringStream.Create(TempAnsi); //write proper binary-stream

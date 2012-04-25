@@ -60,7 +60,7 @@ uses
 
 type
   TZPgNotifyEvent = procedure(Sender: TObject; Event: string;
-    ProcessID: Integer) of object;
+    ProcessID: Integer; Payload: string) of object;
 
   { TZPgEventAlerter }
 
@@ -257,34 +257,33 @@ var
   ICon     : IZPostgreSQLConnection;
   PlainDRV : IZPostgreSQLPlainDriver;
 begin
-
- ICon      := (FConnection.DbcConnection as IZPostgreSQLConnection);
- Handle    := ICon.GetConnectionHandle;
- if Handle=nil then
- begin
+  ICon      := (FConnection.DbcConnection as IZPostgreSQLConnection);
+  Handle    := ICon.GetConnectionHandle;
+  if Handle=nil then
+  begin
     FTimer.Enabled := False;
     FActive := False;
-  Exit;
- end;
- if not FConnection.Connected then
- begin
-  CloseNotify;
-  Exit;
- end;
- PlainDRV  := ICon.GetPlainDriver;
-
- if PlainDRV.ConsumeInput(Handle)=1 then
- begin
-    while True do
+    Exit;
+  end;
+  if not FConnection.Connected then
   begin
+    CloseNotify;
+    Exit;
+  end;
+  PlainDRV  := ICon.GetPlainDriver;
+
+  if PlainDRV.ConsumeInput(Handle)=1 then
+  begin
+    while True do
+    begin
       Notify := PlainDRV.Notifies(Handle);
       if Notify = nil then
         Break;
       if Assigned(FNotifyFired) then
-        FNotifyFired(Self, String(Notify{$IFDEF OLDFPC}^{$ENDIF}.relname), Notify{$IFDEF OLDFPC}^{$ENDIF}.be_pid);
+        FNotifyFired(Self, String(Notify{$IFDEF OLDFPC}^{$ENDIF}.relname), Notify{$IFDEF OLDFPC}^{$ENDIF}.be_pid,String(Notify{$IFDEF OLDFPC}^{$ENDIF}.payload));
       PlainDRV.FreeNotify(Notify);
+    end;
   end;
- end;
 end;
 
 end.

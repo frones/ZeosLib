@@ -73,7 +73,7 @@
 // Compilation directives for Delphi 6
 // Not supported since Zeoslib 7.X
 {$IFDEF VER140}
-        "Delphi versions below Delphi 7 aren't supported anymore"
+    "Kylix3, CBuilder/Delphi Versions below version 7 aren't supported anymore"
 {$ENDIF}
 
 // Compilation directives for Delphi 7
@@ -162,12 +162,6 @@
 {$IFDEF VER150BELOW}
      {$UNDEF WITH_WIDEMEMO}
      {$UNDEF WITH_FTWIDESTRING}
-{$ENDIF}
-
-{$IFNDEF FPC}
-  {$IFNDEF WIN32}
-          "Kylix isn't supported anymore"
-  {$ENDIF}
 {$ENDIF}
 
 // Debug/release compiler options

@@ -59,7 +59,7 @@ interface
 
 uses
   Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
-  ZDbcConnection, ZDbcASA;
+  ZDbcConnection, ZDbcASA, ZURL;
 
 type
 
@@ -246,7 +246,7 @@ type
     function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
       const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
   public
-    constructor Create(Connection: TZAbstractConnection; Url: string; Info: TStrings);
+    constructor Create(Connection: TZAbstractConnection; const Url: TZURL); override;
     destructor Destroy; override;
   end;
 
@@ -1210,9 +1210,9 @@ end;
   @param Info an extra connection properties.
 }
 constructor TZASADatabaseMetadata.Create(Connection: TZAbstractConnection;
-  Url: string; Info: TStrings);
+  const Url: TZURL);
 begin
-  inherited Create(Connection, Url, Info);
+  inherited Create(Connection, Url);
   FASAConnection := Connection as TZASAConnection;
 end;
 

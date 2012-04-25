@@ -1091,13 +1091,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
 {$ENDIF}
-
-   {$IFDEF DELPHI12_UP}
-   Result := UTF8String(PAnsiChar(FColumnArray[ColumnIndex - 1].buffer));
-   {$ELSE}
-   Result := AnsiString(FColumnArray[ColumnIndex - 1].buffer);
-   {$ENDIF}
-
+  Result := StrPas(PAnsiChar(FColumnArray[ColumnIndex - 1].buffer));
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
 end;
 

@@ -473,11 +473,12 @@ begin
       FreeFieldBuffers;
       SetState(dsBrowse);
       Resync([]);
-      if BookmarkValid(@BM) Then
-      begin 
-        InternalGotoBookmark(@BM); 
-        Resync([rmExact, rmCenter]); 
-      end; 
+      BM := Bookmark;
+      if BookmarkValid({$IFDEF WITH_TBOOKMARK}BM{$ELSE}@BM{$ENDIF}) Then
+      begin
+        InternalGotoBookmark({$IFDEF WITH_TBOOKMARK}BM{$ELSE}@BM{$ENDIF});
+        Resync([rmExact, rmCenter]);
+      end;
       DisableControls;
       InternalSort;
       BookMark:=BM;

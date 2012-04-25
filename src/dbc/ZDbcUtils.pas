@@ -207,84 +207,37 @@ procedure ResolveDatabaseUrl(const Url: string; Info: TStrings;
   var HostName: string; var Port: Integer; var Database: string;
   var UserName: string; var Password: string; ResultInfo: TStrings);
 var
-  Index,i: Integer;
   Temp: string;
-
-  procedure RaiseException;
-  begin
-    raise EZSQLException.Create(Format(SIncorrectConnectionURL, [Url]));
-  end;
-
 begin
-  { Set default values. }
-  HostName := 'localhost';
-  Port := 0;
-  Database := '';
-  UserName := '';
-  Password := '';
-  ResultInfo.Clear;
+   { assign URL first -> define all out out params }
+   {A correct builded URL exports all these Params if they are expected!}
+  DriverManager.ResolveDatabaseUrl(URL, HostName, Port, DataBase, UserName, Password, ResultInfo);
 
-  Temp := Copy(Url, 6, Length(Url) - 5);
-  Index := FirstDelimiter(':', Temp);
-  if Index > 0 then
-    Temp := Copy(Temp, Index + 1, Length(Temp) - Index)
-  else
-    RaiseException;
+  { Retrieves non special-escaped-parameters }
+  Temp := Url;
+  while FirstDelimiter('?', Temp) > 0 do //Get all aditional Parameters
+    Temp := Copy(Temp, FirstDelimiter('?', Temp)+1, Length(Temp));
+  PutSplitString(ResultInfo, Temp, ';'); //overrides all Strings
+  ResultInfo.Text := StringReplace(ResultInfo.Text, #9, ';', [rfReplaceAll]); //unescape the #9 char
 
-  { Retrieves the host name. }
-  if Pos('//', Temp) = 1 then
+  if Assigned(Info) then //isn't that strange? (Shouldn't we pick out double-values?)
+    Resultinfo.AddStrings(Info);//All possible PWD/Password and UID/UserName are aviable now, but for what? And the can also be doubled!
+
+  { Redefines user name if not avialble in the URL}
+  if UserName = '' then //Priority 1: URL.UserName
   begin
-    Delete(Temp, 1, 2);
-    Index := FirstDelimiter('/:?', Temp);
-    if Index = 0 then
-      RaiseException;
-
-    HostName := Copy(Temp, 1, Index - 1);
-    Delete(Temp, 1, Index - 1);
-
-    { Retrieves port }
-    if Pos(':', Temp) = 1 then
-    begin
-      Delete(Temp, 1, 1);
-      Index := FirstDelimiter('/?', Temp);
-      if Index = 0 then
-        RaiseException;
-
-      Port := StrToInt(Copy(Temp, 1, Index - 1));
-      Delete(Temp, 1, Index - 1);
-    end;
-
-    if Pos('/', Temp) <> 1 then
-      RaiseException;
-    Delete(Temp, 1, 1);
+    UserName := ResultInfo.Values['UID']; //Priority 2: Info-UID
+    if UserName = '' then
+      UserName := ResultInfo.Values['username']; //Priority 3: Info-username
   end;
 
-  { Retrieves database }
-  Index := FirstDelimiter('?', Temp);
-  if Index > 0 then
+  { Redefines user password if not avialble in the URL }
+  if Password = '' then //Priority 1: URL.Password
   begin
-    Database := StringReplace(Copy(Temp, 1, Index - 1), #9, ';', [rfReplaceAll]); //Un-escape the #9 char to ';'
-    Delete(Temp, 1, Index);
-    PutSplitString(ResultInfo, Temp, ';');
-  end
-  else
-    Database := Temp;
-
-  if Info <> nil then
-    ResultInfo.AddStrings(Info);
-
-  for i := 0 to ResultInfo.Count -1 do //Un-escape the #9 char to ';'
-    ResultInfo[I] := StringReplace(ResultInfo[I], #9, ';', [rfReplaceAll]);
-
-  { Defines user name }
-  UserName := ResultInfo.Values['UID'];
-  if UserName = '' then
-    UserName := ResultInfo.Values['username'];
-
-  { Defines user password }
-  Password := ResultInfo.Values['PWD'];
-  if Password = '' then
-    Password := ResultInfo.Values['password'];
+    Password := ResultInfo.Values['PWD']; //Priority 2: Info-PWD
+    if Password = '' then
+      Password := ResultInfo.Values['password']; //Priority 3: Info-password
+  end;
 end;
 
 {**

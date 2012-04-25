@@ -208,8 +208,6 @@ type
 
   {** Implements SQLite Database Metadata. }
   TZSQLiteDatabaseMetadata = class(TZAbstractDatabaseMetadata)
-  private
-    FDatabase: string;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-28
 
@@ -247,8 +245,6 @@ type
     function UncachedGetTypeInfo: IZResultSet; override;
     function UncachedGetCharacterSets: IZResultSet; override; //EgonHugeist
   public
-    constructor Create(Connection: TZAbstractConnection; Url: string;
-      Info: TStrings);
     destructor Destroy; override;
   end;
 
@@ -1154,31 +1150,6 @@ end;
 
 
 { TZSQLiteDatabaseMetadata }
-
-
-{**
-  Constructs this object and assignes the main properties.
-  @param Connection a database connection object.
-  @param Url a database connection url string.
-  @param Info an extra connection properties.
-}
-constructor TZSQLiteDatabaseMetadata.Create(
-  Connection: TZAbstractConnection; Url: string; Info: TStrings);
-var
-  TempInfo: TStrings;
-  HostName, UserName, Password: string;
-  Port: Integer;
-begin
-  inherited Create(Connection, Url, Info);
-
-  TempInfo := TStringList.Create;
-  try
-    ResolveDatabaseUrl(Url, Info, HostName, Port, FDatabase,
-      UserName, Password, TempInfo);
-  finally
-    TempInfo.Free;
-  end;
-end;
 
 {**
   Destroys this object and cleanups the memory.
