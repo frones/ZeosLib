@@ -83,10 +83,8 @@ type
     Label2: TLabel;
     Label3: TLabel;
     Label4: TLabel;
-    OkButton: TButton;
-    CancelButton: TButton;
-    HelpButton: TButton;
     GenerateButton: TButton;
+    Panel1: TPanel;
     PrimaryKeyButton: TButton;
     DefaultButton: TButton;
     UpdateTableName: TComboBox;
@@ -104,6 +102,9 @@ type
     FieldListPopup: TPopupMenu;
     miSelectAll: TMenuItem;
     miClearAll: TMenuItem;
+    OkButton: TButton;
+    CancelButton: TButton;
+    HelpButton: TButton;
     procedure FormCreate(Sender: TObject);
     procedure HelpButtonClick(Sender: TObject);
     procedure StatementTypeClick(Sender: TObject);

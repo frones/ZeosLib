@@ -325,10 +325,7 @@ begin
       Connection.ShowSQLHourGlass;
       try
         SplitQualifiedObjectName(Value, Catalog, Schema, ObjectName);
-        //EgonHugeist: AddEscapeCharToWildcards calls GetSearchStringEscape
-        //which is not related to a ObjectName
-        //names like "xp_getAllData" where wrong escaped
-        //ObjectName := Connection.DbcConnection.GetMetadata.AddEscapeCharToWildcards(ObjectName);
+        ObjectName := Connection.DbcConnection.GetMetadata.AddEscapeCharToWildcards(ObjectName);
         ResultSet := Connection.DbcConnection.GetMetadata.GetProcedureColumns(Catalog, Schema, ObjectName, '');
         OldParams := TParams.Create;
         try
