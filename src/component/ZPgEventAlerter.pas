@@ -68,10 +68,15 @@ type
   private
     FActive      : Boolean;
     FEvents      : TStrings;
+
     FTimer       : TTimer;
-    FQueryRefresh: TZReadOnlyQuery;
     FConnection: TZConnection;
     FNotifyFired : TZPgNotifyEvent;
+
+    FProcessor   : TZPgEventAlerter; //processor component - it will actually handle notifications received from DB
+    //if processor is not assignet - component is handling notifications by itself
+    FChildAlerters :TList; //list of TZPgEventAlerter that have our component attached as processor
+    FChildEvents : TStrings; //list of actual events to be handled - gathered from events of all childe
   protected
     procedure SetActive     (Value: Boolean);
     function  GetInterval   : Cardinal;
@@ -82,6 +87,13 @@ type
     procedure CheckEvents;
     procedure OpenNotify;
     procedure CloseNotify;
+
+    procedure SetProcessor(Value: TZPgEventAlerter);
+    procedure AddChildAlerter(Child: TZPgEventAlerter);
+    procedure RemoveChildAlerter(Child: TZPgEventAlerter);
+    procedure HandleNotify(Notify: PZPostgreSQLNotify); //launching OnNotify event fo Self and all child components (if event name is matched)
+    procedure SetChildEvents     (Value: TStrings);
+    procedure RefreshEvents; //gathering all events from all child components (no duplicates), also propagating these events "down" to our processor
   public
     constructor Create     (AOwner: TComponent); override;
     destructor  Destroy; override;
@@ -91,6 +103,8 @@ type
     property Events:     TStrings         read FEvents       write SetEvents;
     property Interval:   Cardinal         read GetInterval   write SetInterval    default 250;
     property OnNotify:   TZPgNotifyEvent  read FNotifyFired  write FNotifyFired;
+    property Processor:     TZPgEventAlerter          read FProcessor       write SetProcessor; //property to assign processor handling notifications
+    property ChildEvents:   TStrings         read FChildEvents write SetChildEvents; //read onlu property to keep all events in one place
   end;
 
 implementation
@@ -102,10 +116,19 @@ var
   I: Integer;
 begin
   inherited Create(AOwner);
-  FQueryRefresh := TZReadOnlyQuery.Create(nil);
   FEvents := TStringList.Create;
+  FChildAlerters := TList.Create;
+  FChildEvents := TStringList.Create;
   with TStringList(FEvents) do
+  begin
     Duplicates := dupIgnore;
+  end;
+
+  with TStringList(FChildEvents) do
+  begin
+    Duplicates := dupIgnore;
+  end;
+
   FTimer         := TTimer.Create(Self);
   FTimer.Enabled := False;
   SetInterval(250);
@@ -122,10 +145,12 @@ end;
 
 destructor TZPgEventAlerter.Destroy;
 begin
-  CloseNotify;
+  if FProcessor = nil then
+    CloseNotify;
   FEvents.Free;
   FTimer.Free;
-  FQueryRefresh.Free;
+  FChildAlerters.Free;
+  FChildEvents.Free;
   inherited Destroy;
 end;
 
@@ -144,18 +169,33 @@ var
   I: Integer;
 begin
   FEvents.Assign(Value);
+
   for I := 0 to FEvents.Count -1 do
     FEvents[I] := Trim(FEvents[I]);
+  RefreshEvents; //we must propagate events down to our processor
 end;
 
 procedure TZPgEventAlerter.SetActive(Value: Boolean);
 begin
   if FActive <> Value then
   begin
-    if Value then
-      OpenNotify
-    else
-      CloseNotify;
+    if FProcessor = nil then
+    begin
+      if Value then
+      begin
+        RefreshEvents;
+        OpenNotify;
+      end
+      else
+      begin
+        CloseNotify;
+      end
+    end
+    else  //we have processor attached - we dont need to open or close notifications
+    begin
+      FActive := Value;
+      FProcessor.RefreshEvents;
+    end;
   end;
 end;
 
@@ -163,9 +203,9 @@ procedure TZPgEventAlerter.SetConnection(Value: TZConnection);
 begin
   if FConnection <> Value then
   begin
-    CloseNotify;
+    if FProcessor = nil then //we are closing notifiers only whern there is no processor attached
+      CloseNotify;
     FConnection := Value;
-    FQueryRefresh.Connection := Value;
   end;
 end;
 
@@ -174,7 +214,12 @@ begin
   if not FActive then
    FTimer.Enabled := False
   else
-   CheckEvents;
+  begin
+    if FProcessor <> nil then
+      FTimer.Enabled := False
+    else
+     CheckEvents;
+  end;
 end;
 
 procedure TZPgEventAlerter.OpenNotify;
@@ -202,9 +247,9 @@ begin
   PlainDRV := ICon.GetPlainDriver;
   if Handle = nil then
     Exit;
-  for I := 0 to FEvents.Count-1 do
+    for I := 0 to FChildEvents.Count-1 do
   begin
-    StrPCopy(Tmp, 'listen ' + AnsiString(FEvents.Strings[I]));
+    StrPCopy(Tmp, 'listen ' + AnsiString(FChildEvents.Strings[I]));
     Res := PlainDRV.ExecuteQuery(Handle, Tmp);
     if (PlainDRV.GetResultStatus(Res) <> TZPostgreSQLExecStatusType(
       PGRES_COMMAND_OK)) then
@@ -214,7 +259,7 @@ begin
    end;
     PlainDRV.Clear(Res);
   end;
- FActive        := True;
+  FActive        := True;
   FTimer.Enabled := True;
 end;
 
@@ -236,9 +281,9 @@ begin
   PlainDRV       := ICon.GetPlainDriver;
   if Handle = nil then
     Exit;
-  for I := 0 to FEvents.Count-1 do
+  for I := 0 to FChildEvents.Count-1 do
   begin
-    StrPCopy(Tmp, 'unlisten ' + AnsiString(FEvents.Strings[i]));
+    StrPCopy(Tmp, 'unlisten ' + AnsiString(FChildEvents.Strings[i]));
     Res := PlainDRV.ExecuteQuery(Handle, Tmp);
     if (PlainDRV.GetResultStatus(Res) <> TZPostgreSQLExecStatusType(
       PGRES_COMMAND_OK)) then
@@ -279,11 +324,101 @@ begin
       Notify := PlainDRV.Notifies(Handle);
       if Notify = nil then
         Break;
-      if Assigned(FNotifyFired) then
-        FNotifyFired(Self, String(Notify{$IFDEF OLDFPC}^{$ENDIF}.relname), Notify{$IFDEF OLDFPC}^{$ENDIF}.be_pid,String(Notify{$IFDEF OLDFPC}^{$ENDIF}.payload));
+      HandleNotify(Notify);
       PlainDRV.FreeNotify(Notify);
     end;
   end;
+end;
+
+procedure TZPgEventAlerter.HandleNotify(Notify: PZPostgreSQLNotify);
+var
+  i: Integer;
+  CurrentChild: TZPgEventAlerter;
+begin
+  if Assigned(FNotifyFired) and (FEvents.IndexOf(String(Notify{$IFDEF OLDFPC}^{$ENDIF}.relname)) <> -1) then
+    FNotifyFired(Self, String(Notify{$IFDEF OLDFPC}^{$ENDIF}.relname), Notify{$IFDEF OLDFPC}^{$ENDIF}.be_pid,String(Notify{$IFDEF OLDFPC}^{$ENDIF}.payload));
+
+  for I := 0 to FChildAlerters.Count-1 do //propagating event to child listeners
+  begin
+    CurrentChild :=TZPgEventAlerter(FChildAlerters[i]);
+    if CurrentChild.Active and (CurrentChild.ChildEvents.IndexOf(String(Notify{$IFDEF OLDFPC}^{$ENDIF}.relname)) <> -1) then //but only active ones
+      CurrentChild.HandleNotify(Notify);
+  end;
+end;
+
+procedure TZPgEventAlerter.SetProcessor(Value: TZPgEventAlerter);
+begin
+  if FProcessor <> Value then
+  begin
+    if FProcessor <> nil then //remove assignment from old processor
+    begin
+      FProcessor.RemoveChildAlerter(Self);
+    end;
+    FProcessor := Value;
+    if FProcessor <> nil then      //add assignment to new processor
+    begin
+      if FProcessor.Connection <> FConnection then
+      begin
+        raise Exception.Create('Cannot set processor with different connection');
+        Exit;
+      end;
+      FProcessor.AddChildAlerter(Self);
+    end;
+
+  end;
+end;
+
+procedure TZPgEventAlerter.RefreshEvents;
+var
+  i,j: integer;
+  CurrentChild: TZPgEventAlerter;
+begin
+  FChildEvents.Clear;
+  for I := 0 to FChildAlerters.Count-1 do
+  begin
+    CurrentChild := TZPgEventAlerter(FChildAlerters[i]);
+    if CurrentChild.Active or ((csLoading in ComponentState) or (csDesigning in ComponentState)) then
+    begin  //gathering vent namse from all childs
+      for j := 0 to CurrentChild.ChildEvents.Count-1 do
+        if FChildEvents.IndexOf(CurrentChild.ChildEvents.Strings[j]) = -1 then
+          FChildEvents.Add(CurrentChild.ChildEvents.Strings[j]);
+    end;
+  end;
+
+  for i := 0 to Events.Count-1 do
+    if FChildEvents.IndexOf(Events.Strings[i]) = -1 then
+      FChildEvents.Add(Events.Strings[i]);
+
+  if FProcessor <> nil then  //refreshing eventrs in our processor
+    FProcessor.RefreshEvents
+  else
+  begin
+    if Active then //refreshing listeners after change of events - to make sure we will listen for everything
+    begin
+      Active := False;
+      Active := True;
+    end;
+  end;
+end;
+
+procedure TZPgEventAlerter.AddChildAlerter(Child: TZPgEventAlerter);
+begin
+  FChildAlerters.Add(Child);
+  RefreshEvents;
+end;
+
+procedure TZPgEventAlerter.RemoveChildAlerter(Child: TZPgEventAlerter);
+var
+  i: integer;
+begin
+  i := FChildAlerters.IndexOf(Child);
+  FChildAlerters.Delete(i);
+  RefreshEvents;
+end;
+
+procedure TZPgEventAlerter.SetChildEvents(Value: TStrings);
+begin
+  Exit;
 end;
 
 end.
