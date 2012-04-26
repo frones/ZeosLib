@@ -762,7 +762,14 @@ procedure PrepareOracleStatement(PlainDriver: IZOraclePlainDriver;
   SQL: string; Handle: POCIStmt; ErrorHandle: POCIError);
 var
   Status: Integer;
+  PrefetchCount: ub4;
 begin
+  // setting PrefetchCount to a default of 100 rows
+  // this seems a good default for most queries
+  // TODO : provide a way to override this using a statement.properties line
+  PrefetchCount := 100; 
+  PlainDriver.AttrSet(Handle, OCI_HTYPE_STMT, @PrefetchCount, SizeOf(ub4), 
+    OCI_ATTR_PREFETCH_ROWS, ErrorHandle); 
   Status := PlainDriver.StmtPrepare(Handle, ErrorHandle, PAnsiChar(AnsiString(SQL)),
     Length(AnsiString(SQL)), OCI_NTV_SYNTAX, OCI_DEFAULT);
   CheckOracleError(PlainDriver, ErrorHandle, Status, lcExecute, SQL);
