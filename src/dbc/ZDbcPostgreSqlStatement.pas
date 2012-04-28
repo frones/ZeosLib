@@ -421,7 +421,7 @@ begin
       stString, stBytes:
         Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
       stUnicodeString:
-        Result := EncodeString(FCharactersetCode,SoftVarManager.GetAsUnicodeString(Value));
+        Result := Self.GetConnection.GetEscapeString(String(UTF8Encode{EncodeString}({FCharactersetCode,}SoftVarManager.GetAsUnicodeString(Value))));
       stDate:
         Result := Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]);
@@ -432,11 +432,19 @@ begin
         Result := Format('''%s''::timestamp',
           [FormatDateTime('yyyy-mm-dd hh":"mm":"ss',
             SoftVarManager.GetAsDateTime(Value))]);
-      stAsciiStream, stUnicodeStream:
+      stAsciiStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
-            Result := Self.GetConnection.GetEscapeString(EncodeString(FCharactersetCode, String(UTF8Encode(TempBlob.GetUnicodeString))))
+            Result := Self.GetConnection.GetEscapeString({EncodeString(FCharactersetCode,} String(TempBlob.GetString))
+          else
+            Result := 'NULL';
+        end;
+      stUnicodeStream:
+        begin
+          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
+          if not TempBlob.IsEmpty then
+            Result := Self.GetConnection.GetEscapeString({EncodeString(FCharactersetCode,} String(UTF8Encode(TempBlob.GetUnicodeString)))
           else
             Result := 'NULL';
         end;
