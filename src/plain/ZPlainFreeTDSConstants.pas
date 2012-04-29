@@ -812,7 +812,7 @@ type
   Ttdsdbopen      = function(Login: PLOGINREC; const Server: PAnsiChar; msdblib: Integer): PDBPROCESS;
   Tdbopen         = function(Login: PLOGINREC; const Server: PAnsiChar): PDBPROCESS;
 
-(* pivot functions */
+{ pivot functions
 void dbpivot_count (struct col_t *output, const struct col_t *input);
 void dbpivot_sum (struct col_t *output, const struct col_t *input);
 void dbpivot_min (struct col_t *output, const struct col_t *input);
@@ -825,7 +825,7 @@ STATUS dbnextrow_pivoted(DBPROCESS *dbproc, struct pivot_t *pp);
 RETCODE dbpivot(DBPROCESS *dbproc, int nkeys, int *keys, int ncols, int *cols, DBPIVOT_FUNC func, int val);
 
 DBPIVOT_FUNC dbpivot_lookup_name( const char name[] );
-*)
+}
   Tdbprhead       = procedure(dbproc: PDBPROCESS); cdecl;
   Tdbprrow        = function(dbproc: PDBPROCESS): RETCODE; cdecl;
   Tdbprtype       = function(Token: Integer): PAnsiChar; cdecl;
@@ -983,7 +983,7 @@ TFreeTDSAPI = Record
   tdsdbopen:      Ttdsdbopen;
   dbopen:         Tdbopen;
 
-(* pivot functions */
+{ pivot functions */
 void dbpivot_count (struct col_t *output, const struct col_t *input);
 void dbpivot_sum (struct col_t *output, const struct col_t *input);
 void dbpivot_min (struct col_t *output, const struct col_t *input);
@@ -996,7 +996,7 @@ STATUS dbnextrow_pivoted(DBPROCESS *dbproc, struct pivot_t *pp);
 RETCODE dbpivot(DBPROCESS *dbproc, int nkeys, int *keys, int ncols, int *cols, DBPIVOT_FUNC func, int val);
 
 DBPIVOT_FUNC dbpivot_lookup_name( const char name[] );
-*)
+}
   dbprhead:       Tdbprhead;
   dbprrow:        Tdbprrow;
   dbprtype:       Tdbprtype;

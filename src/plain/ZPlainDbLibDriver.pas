@@ -751,35 +751,34 @@ type
     function dbCanQuery(dbProc: PDBPROCESS): RETCODE;
     function dbMoreCmds(dbProc: PDBPROCESS): RETCODE;
     function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE;
-    function dbSetOpt(dbProc: PDBPROCESS; Option: Integer;
-      Char_Param: PAnsiChar = nil; Int_Param: Integer = -1): RETCODE;
+    function dbSetOpt(dbProc: PDBPROCESS; Option: DBINT;
+      Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): RETCODE;
     function dbClose(dbProc: PDBPROCESS): RETCODE;
     function dbName(dbProc: PDBPROCESS): PAnsiChar;
     function dbCmdRow(dbProc: PDBPROCESS): RETCODE;
-    function dbNumCols(dbProc: PDBPROCESS): Integer;
-    function dbColName(dbProc: PDBPROCESS; Column: Integer): PAnsiChar;
-    function dbColType(dbProc: PDBPROCESS; Column: Integer): Integer;
-    function dbColLen(dbProc: PDBPROCESS; Column: Integer): DBInt;
-    function dbData(dbProc: PDBPROCESS; Column: Integer): PByte;
-    function dbDatLen(dbProc: PDBPROCESS; Column: Integer): Integer;
-    function dbConvert(dbProc: PDBPROCESS; SrcType: Integer; Src: PByte;
-      SrcLen: DBINT; DestType: Integer; Dest: PByte; DestLen: DBINT): Integer;
+    function dbNumCols(dbProc: PDBPROCESS): DBINT;
+    function dbColName(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar;
+    function dbColType(dbProc: PDBPROCESS; Column: DBINT): DBINT;
+    function dbColLen(dbProc: PDBPROCESS; Column: DBINT): DBInt;
+    function dbData(dbProc: PDBPROCESS; Column: DBINT): PByte;
+    function dbDatLen(dbProc: PDBPROCESS; Column: DBINT): DBINT;
+    function dbConvert(dbProc: PDBPROCESS; SrcType: DBINT; Src: PByte;
+      SrcLen: DBINT; DestType: DBINT; Dest: PByte; DestLen: DBINT): DBINT;
     function dbNextRow(dbProc: PDBPROCESS): STATUS;
-    function dbGetRow(dbProc: PDBPROCESS; Row: Integer): STATUS;
-    function dbCount(dbProc: PDBPROCESS): Integer;
+    function dbGetRow(dbProc: PDBPROCESS; Row: DBINT): STATUS;
+    function dbCount(dbProc: PDBPROCESS): DBINT;
 
     function dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): RETCODE;
     function dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
-      Type_: Integer; MaxLen: Integer; DataLen: Integer; Value: Pointer): RETCODE;
+      Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): RETCODE;
     function dbRpcSend(dbProc: PDBPROCESS): RETCODE;
     function dbRpcExec(dbProc: PDBPROCESS): RETCODE;
-    function dbRetStatus(dbProc: PDBPROCESS): Integer;
+    function dbRetStatus(dbProc: PDBPROCESS): DBINT;
     function dbHasRetStat(dbProc: PDBPROCESS): Boolean;
-    function dbRetName(dbProc: PDBPROCESS; RetNum: Integer): PAnsiChar;
-    function dbRetData(dbProc: PDBPROCESS; RetNum: Integer): Pointer;
-    function dbRetLen(dbProc: PDBPROCESS; RetNum: Integer): Integer;
-    function dbRetType(dbProc: PDBPROCESS; RetNum: Integer): Integer;
-
+    function dbRetName(dbProc: PDBPROCESS; RetNum: DBINT): PAnsiChar;
+    function dbRetData(dbProc: PDBPROCESS; RetNum: DBINT): Pointer;
+    function dbRetLen(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
+    function dbRetType(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
   end;
 
   {** Implements a dblib driver for Sybase ASE 12.5 }
@@ -909,7 +908,7 @@ type
 
 implementation
 
-uses SysUtils, ZPlainDbLibSybaseAse125, ZPlainDbLibMsSql7;
+uses SysUtils, ZPlainDbLibSybaseAse125, ZPlainDbLibMsSql7, ZPlainFreeTDSDriver;
 
 { TZDBLibSybaseASE125PlainDriver }
 

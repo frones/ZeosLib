@@ -59,7 +59,7 @@ interface
 {$I ZPlain.inc}
 
 uses Classes, ZClasses, ZCompatibility, ZPlainDriver, ZPlainLoader,
-  ZPlainFreeTDSConstants;
+  ZPlainFreeTDSConstants, ZPlainDbLibDriver;
 
 const
   WINDOWS_DLL_LOCATION = 'dblib.dll';
@@ -68,61 +68,7 @@ const
 
 type
   {** Represents a generic interface to DBLIB native API. }
-  IZFreeTDSPlainDriver = interface (IZPlainDriver)
-    ['{7731C3B4-0608-4B6B-B089-240AC43A3463}']
-
-    procedure CheckError;
-
-    function dbDead(dbProc: PDBPROCESS): Boolean;
-    function dbLogin: PLOGINREC;
-    procedure dbLoginFree(Login: PLOGINREC);
-    function dbSetLoginTime(Seconds: DBINT): RETCODE;
-    function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): RETCODE;
-    function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
-    function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
-    function dbSetLPwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE;
-    function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE;
-    function dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): RETCODE;
-    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE;
-    function dbSetLSecure(Login: PLOGINREC): RETCODE;
-    function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE;
-    function dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;
-    function dbCancel(dbProc: PDBPROCESS): RETCODE;
-    function dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): RETCODE;
-    function dbSqlExec(dbProc: PDBPROCESS): RETCODE;
-    function dbResults(dbProc: PDBPROCESS): RETCODE;
-    function dbCanQuery(dbProc: PDBPROCESS): RETCODE;
-    function dbMoreCmds(dbProc: PDBPROCESS): RETCODE;
-    function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE;
-    function dbSetOpt(dbProc: PDBPROCESS; Option: DBINT;
-      Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): RETCODE;
-    function dbClose(dbProc: PDBPROCESS): RETCODE;
-    function dbName(dbProc: PDBPROCESS): PAnsiChar;
-    function dbCmdRow(dbProc: PDBPROCESS): RETCODE;
-    function dbNumCols(dbProc: PDBPROCESS): DBINT;
-    function dbColName(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar;
-    function dbColType(dbProc: PDBPROCESS; Column: DBINT): DBINT;
-    function dbColLen(dbProc: PDBPROCESS; Column: DBINT): DBInt;
-    function dbData(dbProc: PDBPROCESS; Column: DBINT): PByte;
-    function dbDatLen(dbProc: PDBPROCESS; Column: DBINT): DBINT;
-    function dbConvert(dbProc: PDBPROCESS; SrcType: DBINT; Src: PByte;
-      SrcLen: DBINT; DestType: DBINT; Dest: PByte; DestLen: DBINT): DBINT;
-    function dbNextRow(dbProc: PDBPROCESS): STATUS;
-    function dbGetRow(dbProc: PDBPROCESS; Row: DBINT): STATUS;
-    function dbCount(dbProc: PDBPROCESS): DBINT;
-
-    function dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): RETCODE;
-    function dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
-      Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): RETCODE;
-    function dbRpcSend(dbProc: PDBPROCESS): RETCODE;
-    function dbRpcExec(dbProc: PDBPROCESS): RETCODE;
-    function dbRetStatus(dbProc: PDBPROCESS): DBINT;
-    function dbHasRetStat(dbProc: PDBPROCESS): Boolean;
-    function dbRetName(dbProc: PDBPROCESS; RetNum: DBINT): PAnsiChar;
-    function dbRetData(dbProc: PDBPROCESS; RetNum: DBINT): Pointer;
-    function dbRetLen(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
-    function dbRetType(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
-
+  IZFreeTDSPlainDriver = interface (IZDbLibPlainDriver)
   end;
 
   {** Implements a dblib driver for Sybase/MSSQL }
@@ -316,8 +262,8 @@ begin
     @FreeTDSAPI.tdsdbopen       := GetAddress('tdsdbopen');
     @FreeTDSAPI.dbopen          := GetAddress('dbopen');
 
-    @FreeTDSAPI.dbprhead        := GetAddress('dbprhead');
-    @FreeTDSAPI.dbprrow         := GetAddress('dbprrow');
+    @FreeTDSAPI.dbprhead        := GetAddress('dbprhead');
+    @FreeTDSAPI.dbprrow         := GetAddress('dbprrow');
     @FreeTDSAPI.dbprtype        := GetAddress('dbprtype');
     @FreeTDSAPI.DRBUF           := GetAddress('DRBUF');
     @FreeTDSAPI.dbreadtext      := GetAddress('dbreadtext');
