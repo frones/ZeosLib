@@ -147,8 +147,7 @@ implementation
 
 uses
   SysUtils, ZSysUtils, ZMessages, ZDbcUtils, ZDbcDbLibStatement,
-  ZDbcDbLibMsSqlMetadata, ZSybaseToken, ZSybaseAnalyser,
-  ZDbcDbLibSybaseMetadata{$IFDEF FPC}, ZClasses{$ENDIF};
+  ZDbcDbLibMetadata, ZSybaseToken, ZSybaseAnalyser{$IFDEF FPC}, ZClasses{$ENDIF};
 
 { TZDBLibDriver }
 
