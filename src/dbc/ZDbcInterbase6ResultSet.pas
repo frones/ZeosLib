@@ -77,6 +77,7 @@ type
   protected
     procedure Open; override;
     function GetFieldValue(ColumnIndex: Integer): Variant;
+    function InternalGetString(ColumnIndex: Integer): AnsiString; override;
   public
     constructor Create(Statement: IZStatement; SQL: string;
       var StatementHandle: TISC_STMT_HANDLE; CursorName: AnsiString;
@@ -89,7 +90,6 @@ type
     function GetCursorName: AnsiString; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -458,7 +458,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZInterbase6ResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring;
+function TZInterbase6ResultSet.InternalGetString(ColumnIndex: Integer): AnsiString;
 begin
   CheckClosed;
 {$IFNDEF DISABLE_CHECKING}

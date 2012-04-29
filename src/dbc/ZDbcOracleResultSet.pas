@@ -83,6 +83,7 @@ type
       SQLVarHolder: PZSQLVar): Double;
     function GetAsDateTimeValue(ColumnIndex: Integer;
       SQLVarHolder: PZSQLVar): TDateTime;
+    function InternalGetString(ColumnIndex: Integer): AnsiString; override;
   public
     constructor Create(PlainDriver: IZOraclePlainDriver;
       Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
@@ -92,7 +93,6 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -430,7 +430,7 @@ begin
   begin
     case SQLVarHolder.TypeCode of
       SQLT_INT:
-        Result := IntToStr(PLongInt(SQLVarHolder.Data)^);
+        Result := AnsiString(IntToStr(PLongInt(SQLVarHolder.Data)^));
       SQLT_FLT:
         begin
           OldSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
@@ -615,7 +615,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZOracleResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring;
+function TZOracleResultSet.InternalGetString(ColumnIndex: Integer): AnsiString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);

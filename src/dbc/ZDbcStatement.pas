@@ -227,8 +227,8 @@ type
     procedure SetFloat(ParameterIndex: Integer; Value: Single); virtual;
     procedure SetDouble(ParameterIndex: Integer; Value: Double); virtual;
     procedure SetBigDecimal(ParameterIndex: Integer; Value: Extended); virtual;
-    procedure SetPChar(ParameterIndex: Integer; Value: PAnsiChar); virtual;
-    procedure SetString(ParameterIndex: Integer; const Value: Ansistring); virtual;
+    procedure SetPChar(ParameterIndex: Integer; Value: PChar); virtual;
+    procedure SetString(ParameterIndex: Integer; const Value: String); virtual;
     {$IFDEF DELPHI12_UP}
       procedure SetUnicodeString(ParameterIndex: Integer; const Value: String);  virtual; //AVZ
     {$ELSE}
@@ -258,7 +258,7 @@ type
     FOutParamTypes: TZSQLTypeArray;
     FOutParamCount: Integer;
     FLastWasNull: Boolean;
-    FTemp: AnsiString;
+    FTemp: String;
   protected
     FDBParamTypes:array[0..1024] of shortInt;
     procedure SetOutParamCount(NewParamCount: Integer); virtual;
@@ -279,8 +279,8 @@ type
     function WasNull: Boolean; virtual;
 
     function IsNull(ParameterIndex: Integer): Boolean; virtual;
-    function GetPChar(ParameterIndex: Integer): PAnsiChar; virtual;
-    function GetString(ParameterIndex: Integer): AnsiString; virtual;
+    function GetPChar(ParameterIndex: Integer): PChar; virtual;
+    function GetString(ParameterIndex: Integer): String; virtual;
     function GetUnicodeString(ParameterIndex: Integer): WideString; virtual;
     function GetBoolean(ParameterIndex: Integer): Boolean; virtual;
     function GetByte(ParameterIndex: Integer): ShortInt; virtual;
@@ -633,7 +633,7 @@ begin
           Result := Result + AnsiString(SQLTokens[i].Value);
         ttComment: Result := Result;
         ttWord, ttQuoted, ttQuotedIdentifier, ttKeyword:
-          Result := Result + DatabaseString(SQLTokens[i].Value);
+          Result := Result + Self.ZPlainString(SQLTokens[i].Value);
         else
           Result := Result + AnsiString(SQLTokens[i].Value);
       end;
@@ -1325,11 +1325,11 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetPChar(ParameterIndex: Integer;
-   Value: PAnsiChar);
+   Value: PChar);
 var
   Temp: TZVariant;
 begin
-  DefVarManager.SetAsString(Temp, String(AnsiString(Value)));
+  DefVarManager.SetAsString(Temp, Value);
   SetInParam(ParameterIndex, stString, Temp);
 end;
 
@@ -1345,11 +1345,11 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetString(ParameterIndex: Integer;
-   const Value: AnsiString);
+   const Value: String);
 var
   Temp: TZVariant;
 begin
-  DefVarManager.SetAsString(Temp, String(Value));
+  DefVarManager.SetAsString(Temp, Value);
   SetInParam(ParameterIndex, stString, Temp);
 end;
 
@@ -1775,10 +1775,10 @@ end;
   is <code>null</code>.
   @exception SQLException if a database access error occurs
 }
-function TZAbstractCallableStatement.GetPChar(ParameterIndex: Integer): PAnsiChar;
+function TZAbstractCallableStatement.GetPChar(ParameterIndex: Integer): PChar;
 begin
   FTemp := GetString(ParameterIndex);
-  Result := PAnsiChar(FTemp);
+  Result := PChar(FTemp);
 end;
 
 {**
@@ -1797,9 +1797,9 @@ end;
   is <code>null</code>.
   @exception SQLException if a database access error occurs
 }
-function TZAbstractCallableStatement.GetString(ParameterIndex: Integer): AnsiString;
+function TZAbstractCallableStatement.GetString(ParameterIndex: Integer): String;
 begin
-  Result := DatabaseString(SoftVarManager.GetAsString(GetOutParam(ParameterIndex)));
+  Result := SoftVarManager.GetAsString(GetOutParam(ParameterIndex));
 end;
 
 {**

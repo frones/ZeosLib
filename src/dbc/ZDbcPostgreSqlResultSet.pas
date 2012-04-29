@@ -70,6 +70,7 @@ type
     FHandle: PZPostgreSQLConnect;
     FQueryHandle: PZPostgreSQLResult;
     FPlainDriver: IZPostgreSQLPlainDriver;
+    function InternalGetString(ColumnIndex: Integer): AnsiString; override;
   protected
     procedure Open; override;
     procedure DefinePostgreSQLToSQLType(ColumnIndex: Integer;
@@ -83,7 +84,6 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring; override;
     function GetUnicodeStream(ColumnIndex: Integer): TStream; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
@@ -240,7 +240,7 @@ begin
     begin
       ColumnName := '';
       TableName := '';
-      ColumnLabel := ComponentString(StrPas(FPlainDriver.GetFieldName(FQueryHandle, I)));
+      ColumnLabel := ZDbcString(StrPas(FPlainDriver.GetFieldName(FQueryHandle, I)));
       ColumnDisplaySize := 0;
       Scale := 0;
       Precision := 0;
@@ -320,15 +320,8 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZPostgreSQLResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring;
+function TZPostgreSQLResultSet.InternalGetString(ColumnIndex: Integer): AnsiString;
 begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckClosed;
-  CheckColumnConvertion(ColumnIndex, stString);
-  if (RowNo < 1) or (RowNo > LastRowNo) then
-    raise EZSQLException.Create(SRowDataIsNotAvailable);
-{$ENDIF}
-
   ColumnIndex := ColumnIndex - 1;
   LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1,
     ColumnIndex) <> 0;
@@ -354,7 +347,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-  Temp := UpperCase(String(GetString(ColumnIndex)));
+  Temp := UpperCase(String(InternalGetString(ColumnIndex)));
   Result := (Temp = 'Y') or (Temp = 'YES') or (Temp = 'T') or
     (Temp = 'TRUE') or (StrToIntDef(String(Temp), 0) <> 0);
 end;
@@ -373,7 +366,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  Result := ShortInt(StrToIntDef(String(GetString(ColumnIndex)), 0));
+  Result := ShortInt(StrToIntDef(String(InternalGetString(ColumnIndex)), 0));
 end;
 
 {**
@@ -390,7 +383,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
-  Result := SmallInt(StrToIntDef(String(GetString(ColumnIndex)), 0));
+  Result := SmallInt(StrToIntDef(String(InternalGetString(ColumnIndex)), 0));
 end;
 
 {**
@@ -407,7 +400,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
-  Result := StrToIntDef(String(GetString(ColumnIndex)), 0);
+  Result := StrToIntDef(String(InternalGetString(ColumnIndex)), 0);
 end;
 
 {**
@@ -424,7 +417,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-  Result := StrToInt64Def(String(GetString(ColumnIndex)), 0);
+  Result := StrToInt64Def(String(InternalGetString(ColumnIndex)), 0);
 end;
 
 {**
@@ -441,7 +434,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
-  Result := SQLStrToFloatDef(String(GetString(ColumnIndex)), 0);
+  Result := SQLStrToFloatDef(String(InternalGetString(ColumnIndex)), 0);
 end;
 
 {**
@@ -490,7 +483,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
-  Result := SQLStrToFloatDef(ConvertMoneyToFloat(String(GetString(ColumnIndex))), 0); //EgonHugeist: PostgreSQL-curiusity returns with currency-Prefix
+  Result := SQLStrToFloatDef(ConvertMoneyToFloat(String(InternalGetString(ColumnIndex))), 0); //EgonHugeist: PostgreSQL-curiusity returns with currency-Prefix
 end;
 
 {**
@@ -508,7 +501,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
-  Result := SQLStrToFloatDef(String(GetString(ColumnIndex)), 0);
+  Result := SQLStrToFloatDef(String(InternalGetString(ColumnIndex)), 0);
 end;
 
 {**
@@ -526,7 +519,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
 {$ENDIF}
-  Result := StrToBytes(DecodeString(GetString(ColumnIndex)));
+  Result := StrToBytes(DecodeString(InternalGetString(ColumnIndex)));
 end;
 
 {**
@@ -545,7 +538,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
-  Value := GetString(ColumnIndex);
+  Value := String(InternalGetString(ColumnIndex));
   if IsMatch('????-??-??*', Value) then
     Result := Trunc(AnsiSQLDateToDateTime(Value))
   else
@@ -568,7 +561,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-  Value := GetString(ColumnIndex);
+  Value := String(InternalGetString(ColumnIndex));
   if IsMatch('*??:??:??*', Value) then
     Result := Frac(AnsiSQLDateToDateTime(Value))
   else
@@ -592,7 +585,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
 {$ENDIF}
-  Value := GetString(ColumnIndex);
+  Value := String(InternalGetString(ColumnIndex));
   if IsMatch('????-??-??*', Value) then
     Result := AnsiSQLDateToDateTime(Value)
   else
@@ -604,7 +597,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
-  Result := TStringStream.Create(GetString(ColumnIndex));
+  Result := TStringStream.Create(InternalGetString(ColumnIndex));
 end;
 
 {**
@@ -634,7 +627,7 @@ begin
     and (Statement.GetConnection as IZPostgreSQLConnection).IsOidAsBlob then
   begin
     if FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1, ColumnIndex - 1) = 0 then
-      BlobOid := StrToIntDef(GetString(ColumnIndex), 0)
+      BlobOid := StrToIntDef(String(InternalGetString(ColumnIndex)), 0)
     else
       BlobOid := 0;
 
@@ -651,7 +644,7 @@ begin
           {EgonHugeist: Mantis-BugTracker #0000247 / }
           if (Statement.GetConnection as IZPostgreSQLConnection).GetServerMajorVersion >= 9 then
           begin
-            Decoded := GetString(ColumnIndex) ;
+            Decoded := InternalGetString(ColumnIndex) ;
             //Decoded := FPlainDriver.DecodeBYTEA(Decoded); //gives a hex-string with a starting 'x' back???
             Len := (Length(Decoded)-Pos('x', Decoded)) div 2; //GetLength of binary result
             Decoded := Copy(Decoded, Pos('x', Decoded)+1, Length(Decoded)); //remove the first 'x'sign-byte
@@ -661,12 +654,12 @@ begin
           end
           else
             if (Statement.GetConnection as IZPostgreSQLConnection).GetServerMajorVersion >= 8 then
-              Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(GetString(ColumnIndex)))
+              Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(InternalGetString(ColumnIndex)))
             else
-              Stream := TStringStream.Create(GetString(ColumnIndex)); //Egonhugeist: not sure about DecodeBinaryString...
+              Stream := TStringStream.Create(InternalGetString(ColumnIndex)); //Egonhugeist: not sure about DecodeBinaryString...
         end
         else
-          Stream := TStringStream.Create(GetString(ColumnIndex));
+          Stream := TStringStream.Create(InternalGetString(ColumnIndex));
         Result := TZAbstractBlob.CreateWithStream(Stream);
       finally
         if Assigned(Stream) then

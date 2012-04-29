@@ -1528,7 +1528,7 @@ begin
     begin
       Result.MoveToInsertRow;
 
-      Result.UpdateString(1, AnsiString(TypeNames[I]));
+      Result.UpdateString(1, TypeNames[I]);
       Result.UpdateInt(2, Ord(TypeCodes[I]));
       if TypePrecision[I] >= 0 then
         Result.UpdateInt(3, TypePrecision[I])
@@ -1642,10 +1642,10 @@ begin
             Result.MoveToInsertRow;
 
             if Schema <> '' then
-              Result.UpdateString(1, AnsiString(Schema))
+              Result.UpdateString(1, Schema)
             else Result.UpdateNull(1);
             Result.UpdateNull(2);
-            Result.UpdateString(3, AnsiString(Table));
+            Result.UpdateString(3, Table);
             Result.UpdateBoolean(4, GetInt(3) = 0);
             Result.UpdateNull(5);
             Result.UpdateString(6, GetString(2));

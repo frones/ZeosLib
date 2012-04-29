@@ -365,7 +365,7 @@ begin
     Now we know in which kind of CharacterSet we have to send the next Connection-Properties
     before we can change to the CharacterSet we want to have here..
     This sets also all environment-variables to the Codepaged Object.
-    Now the compatibility-functions ZString/DatabaseString working like
+    Now the compatibility-functions ZString/ZPlainString working like
     Database-expected Data has to be!!. }
 
   try
@@ -410,19 +410,19 @@ begin
   SslCaPath := nil;
   SslCypher := nil;
   {EgonHugeist: If these Paramters MUST BE UTF8 then leave Param ceUTF8 in the
-    DatabaseString-function like else remove it and it adapts to default codepage}
+    ZPlainString-function like else remove it and it adapts to default codepage}
   if StrToBoolEx(Info.Values['MYSQL_SSL']) then
     begin
        if Info.Values['MYSQL_SSL_KEY'] <> '' then
-          SslKey := PAnsiChar(DatabaseString(Info.Values['MYSQL_SSL_KEY'], ceUTF8));
+          SslKey := PAnsiChar(ZPlainString(Info.Values['MYSQL_SSL_KEY'], ceUTF8));
        if Info.Values['MYSQL_SSL_CERT'] <> '' then
-          SslCert := PAnsiChar(DatabaseString(Info.Values['MYSQL_SSL_CERT'], ceUTF8));
+          SslCert := PAnsiChar(ZPlainString(Info.Values['MYSQL_SSL_CERT'], ceUTF8));
        if Info.Values['MYSQL_SSL_CA'] <> '' then
-          SslCa := PAnsiChar(DatabaseString(Info.Values['MYSQL_SSL_CA'], ceUTF8));
+          SslCa := PAnsiChar(ZPlainString(Info.Values['MYSQL_SSL_CA'], ceUTF8));
        if Info.Values['MYSQL_SSL_CAPATH'] <> '' then
-          SslCaPath := PAnsiChar(DatabaseString(Info.Values['MYSQL_SSL_CAPATH'], ceUTF8));
+          SslCaPath := PAnsiChar(ZPlainString(Info.Values['MYSQL_SSL_CAPATH'], ceUTF8));
        if Info.Values['MYSQL_SSL_CYPHER'] <> '' then
-          SslCypher := PAnsiChar(DatabaseString(Info.Values['MYSQL_SSL_CYPHER'], ceUTF8));
+          SslCypher := PAnsiChar(ZPlainString(Info.Values['MYSQL_SSL_CYPHER'], ceUTF8));
        GetPlainDriver.SslSet(FHandle, SslKey, SslCert, SslCa, SslCaPath,
           SslCypher);
        DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol,
@@ -430,9 +430,9 @@ begin
     end;
 
     { Connect to MySQL database. }
-    if GetPlainDriver.RealConnect(FHandle, PAnsiChar(DatabaseString(HostName)),
-                              PAnsiChar(DatabaseString(User)), PAnsiChar(DatabaseString(Password)),
-                              PAnsiChar(DatabaseString(Database)), Port, nil,
+    if GetPlainDriver.RealConnect(FHandle, PAnsiChar(ZPlainString(HostName)),
+                              PAnsiChar(ZPlainString(User)), PAnsiChar(ZPlainString(Password)),
+                              PAnsiChar(ZPlainString(Database)), Port, nil,
                               ClientFlag) = nil then
 
     begin
@@ -461,7 +461,7 @@ begin
       //currently wrote UTF8 into a latin-database for example
       //so this rearanges only the internal use of vtUnicodeString
     begin
-      SQL := PAnsiChar(DatabaseString(Format('SET NAMES %s', [FClientCodePage])));
+      SQL := PAnsiChar(ZPlainString(Format('SET NAMES %s', [FClientCodePage])));
       GetPlainDriver.ExecQuery(FHandle, SQL);
       CheckMySQLError(GetPlainDriver, FHandle, lcExecute, String(SQL));
       DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, String(SQL));
@@ -473,7 +473,7 @@ begin
       This procedure sets also the internal TZCharEncoding to ZCompatibility-Objects...
       Now use the new Functions to get encoded Strings:
         function ZString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
-        function DatabaseString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
+        function ZPlainString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
       These functions do auto arrange the in/out-coming AnsiStrings in
       dependency of the used CharacterSet and Compiler
       they defend the StringDataLoss}
@@ -827,7 +827,7 @@ end;
 function TZMySQLConnection.GetEscapeString(const Value: String;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
-  Result := inherited GetEscapeString('''' + String(EscapeString(DatabaseString(Value))) + '''', EscapeMarkSequence);
+  Result := inherited GetEscapeString('''' + String(EscapeString(ZPlainString(Value))) + '''', EscapeMarkSequence);
 end;
 
 initialization

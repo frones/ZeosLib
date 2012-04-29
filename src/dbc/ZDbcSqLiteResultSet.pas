@@ -83,6 +83,7 @@ type
   protected
     procedure Open; override;
     procedure FreeHandle;
+    function InternalGetString(ColumnIndex: Integer): AnsiString; override;
   public
     constructor Create(PlainDriver: IZSQLitePlainDriver; Statement: IZStatement;
       SQL: string; Handle: Psqlite; StmtHandle: Psqlite_vm;
@@ -92,8 +93,8 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPChar(ColumnIndex: Integer): PAnsiChar; override;
-    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring; override;
+    function GetPChar(ColumnIndex: Integer): PChar; override;
+    //function GetString(ColumnIndex: Integer): String; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -346,9 +347,9 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZSQLiteResultSet.GetPChar(ColumnIndex: Integer): PAnsiChar;
+function TZSQLiteResultSet.GetPChar(ColumnIndex: Integer): PChar;
 var
-  Temp: PPAnsiChar;
+  TempStr: String;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
@@ -356,9 +357,8 @@ begin
     raise EZSQLException.Create(SRowDataIsNotAvailable);
 {$ENDIF}
 
-  Temp := FColumnValues;
-  Inc(Temp, ColumnIndex - 1);
-  Result := Temp^;
+  TempStr := GetString(ColumnIndex);
+  Result := PChar(TempStr);
   LastWasNull := Result = nil;
 end;
 
@@ -371,15 +371,20 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZSQLiteResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring;
+function TZSQLiteResultSet.InternalGetString(ColumnIndex: Integer): AnsiString;
 var
-  Buffer: PAnsiChar;
+  Temp: PPAnsiChar;
 begin
-  Buffer := GetPChar(ColumnIndex);
-  if Buffer <> nil then
-    Result := Buffer
-  else
-    Result := '';
+{$IFNDEF DISABLE_CHECKING}
+  CheckClosed;
+  if (LastRowNo = 0) or (FColumnValues = nil) then
+    raise EZSQLException.Create(SRowDataIsNotAvailable);
+{$ENDIF}
+
+  Temp := FColumnValues;
+  Inc(Temp, ColumnIndex - 1);
+  Result := Temp^;
+  LastWasNull := Result = '';
 end;
 
 {**
@@ -398,7 +403,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-  Temp := UpperCase(String(GetString(ColumnIndex)));
+  Temp := UpperCase(String(InternalGetString(ColumnIndex)));
   Result := (Temp = 'Y') or (Temp = 'YES') or (Temp = 'T') or
     (Temp = 'TRUE') or (StrToIntDef(Temp, 0) <> 0);
 end;
@@ -417,7 +422,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  Result := ShortInt(StrToIntDef(String(GetString(ColumnIndex)), 0));
+  Result := ShortInt(StrToIntDef(String(InternalGetString(ColumnIndex)), 0));
 end;
 
 {**
@@ -434,7 +439,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
-  Result := SmallInt(StrToIntDef(String(GetString(ColumnIndex)), 0));
+  Result := SmallInt(StrToIntDef(String(InternalGetString(ColumnIndex)), 0));
 end;
 
 {**
@@ -451,7 +456,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
-  Result := StrToIntDef(String(GetString(ColumnIndex)), 0);
+  Result := StrToIntDef(String(InternalGetString(ColumnIndex)), 0);
 end;
 
 {**
@@ -468,7 +473,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-  Result := StrToInt64Def(String(GetString(ColumnIndex)), 0);
+  Result := StrToInt64Def(String(InternalGetString(ColumnIndex)), 0);
 end;
 
 {**
@@ -485,7 +490,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
-  Result := SQLStrToFloatDef(String(GetString(ColumnIndex)), 0);
+  Result := SQLStrToFloatDef(String(InternalGetString(ColumnIndex)), 0);
 end;
 
 {**
@@ -502,7 +507,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
-  Result := SQLStrToFloatDef(String(GetString(ColumnIndex)), 0);
+  Result := SQLStrToFloatDef(String(InternalGetString(ColumnIndex)), 0);
 end;
 
 {**
@@ -520,7 +525,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
-  Result := SQLStrToFloatDef(String(GetString(ColumnIndex)), 0);
+  Result := SQLStrToFloatDef(String(InternalGetString(ColumnIndex)), 0);
 end;
 
 {**
@@ -538,7 +543,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
 {$ENDIF}
-  Result := StrToBytes(DecodeString(GetString(ColumnIndex)));
+  Result := StrToBytes(DecodeString(InternalGetString(ColumnIndex)));
 end;
 
 {**
@@ -557,7 +562,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
-  Value := String(GetString(ColumnIndex));
+  Value := String(InternalGetString(ColumnIndex));
   if IsMatch('????-??-??*', Value) then
     Result := Trunc(AnsiSQLDateToDateTime(Value))
   else
@@ -581,7 +586,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-  Value := String(GetString(ColumnIndex));
+  Value := String(InternalGetString(ColumnIndex));
   if IsMatch('*??:??:??*', Value) then
     Result := Frac(AnsiSQLDateToDateTime(Value))
   else
@@ -605,7 +610,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
 {$ENDIF}
-  Temp := String(GetString(ColumnIndex));
+  Temp := String(InternalGetString(ColumnIndex));
   if IsMatch('????-??-??*', Temp) then
     Result := AnsiSQLDateToDateTime(Temp)
   else
@@ -672,7 +677,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
-  Result := TStringStream.Create(GetString(ColumnIndex));
+  Result := TStringStream.Create(InternalGetString(ColumnIndex));
 end;
 
 {**
@@ -700,7 +705,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBinaryStream);
 {$ENDIF}
-  Result := TStringStream.Create(DecodeString(GetString(ColumnIndex)));
+  Result := TStringStream.Create(DecodeString(Self.InternalGetString(ColumnIndex)));
 end;
 
 {**
@@ -729,11 +734,11 @@ begin
     if not LastWasNull then
     begin
      if TZAbstractResultSetMetadata(Metadata).GetColumnType(ColumnIndex) = stAsciiStream then
-        Stream := TStringStream.Create(GetString(ColumnIndex))
+        Stream := TStringStream.Create(InternalGetString(ColumnIndex))
       else
         {introduced the old Zeos6 blob-encoding cause of compatibility reasons}
         if (Statement.GetConnection as IZSQLiteConnection).UseOldBlobEncoding then
-          Stream := TStringStream.Create(DecodeString(GetString(ColumnIndex)))
+          Stream := TStringStream.Create(DecodeString(InternalGetString(ColumnIndex)))
         else
           Stream := FPlaindriver.getblob(FStmtHandle,columnIndex);
       Result := TZAbstractBlob.CreateWithStream(Stream)

@@ -142,7 +142,7 @@ type
   private
     PoolList: TObjectList;
     URLList: TStringList;
-    function GetEmbeddedURL(const URL: AnsiString): AnsiString;
+    function GetEmbeddedURL(const URL: String): String;
   public
     function GetSupportedProtocols: TStringDynArray; override;
     function Connect(const URL: TZURL): IZConnection; override;
@@ -765,7 +765,7 @@ begin
   Result[0] := PooledPrefix + '*';
 end;
 
-function TZDbcPooledConnectionDriver.GetEmbeddedURL(const URL: AnsiString): AnsiString;
+function TZDbcPooledConnectionDriver.GetEmbeddedURL(const URL: String): String;
 begin
   if Copy(URL, 1, 5 + Length(PooledPrefix)) = 'zdbc:' + PooledPrefix then
     Result := 'zdbc:' + Copy(URL, 5 + Length(PooledPrefix) + 1, Length(URL))

@@ -560,9 +560,9 @@ begin
 
     Status := GetPlainDriver.TransRollback(FContextHandle, FErrorHandle,
       OCI_DEFAULT);
-    CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcExecute, SQL);
+    CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcExecute, String(SQL));
 
-    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
+    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, String(SQL));
   end;
 end;
 
@@ -656,10 +656,10 @@ begin
       SQL := 'END TRANSACTION';
       Status := GetPlainDriver.TransRollback(FContextHandle, FErrorHandle,
         OCI_DEFAULT);
-      CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcExecute, SQL);
+      CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcExecute, String(SQL));
       GetPlainDriver.HandleFree(FTransHandle, OCI_HTYPE_TRANS);
       FTransHandle := nil;
-      DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
+      DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, String(SQL));
 
       StartTransactionSupport;
     end;

@@ -948,7 +948,7 @@ begin
     try
       { Prepare statement }
         StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-          GetDBHandle, GetTrHandle, GetDialect, DatabaseString(ProcSql), StmtHandle);
+          GetDBHandle, GetTrHandle, GetDialect, ZPlainString(ProcSql), StmtHandle);
       PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
         SQL, StmtHandle, SQLData);
       PrepareParameters(GetPlainDriver, ProcSql, InParamValues, InParamTypes,
@@ -1036,7 +1036,7 @@ begin
       ClientCodePage);
     try
         StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-          GetDBHandle, GetTrHandle, GetDialect, DatabaseString(ProcSql), StmtHandle);
+          GetDBHandle, GetTrHandle, GetDialect, ZPlainString(ProcSql), StmtHandle);
 //      if not(StatementType in [stSelect, stSelectForUpdate]) then
 //        raise EZSQLException.Create(SStatementIsNotAllowed);
 
@@ -1130,7 +1130,7 @@ begin
     SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle, ClientCodePage);
     try
         StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-          GetDBHandle, GetTrHandle, GetDialect, DatabaseString(ProcSql), StmtHandle);
+          GetDBHandle, GetTrHandle, GetDialect, ZPlainString(ProcSql), StmtHandle);
 //      if not (StatementType in [stSelect, stSelectForUpdate]) then
 //        raise EZSQLException.Create(SStatementIsNotAllowed);
 

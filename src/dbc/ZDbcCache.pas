@@ -81,7 +81,7 @@ type
   PZRowBuffer = ^TZRowBuffer;
 
   {** Implements a column buffer accessor. }
-  TZRowAccessor = class(TAbstractCodePagedInterfacedObject)
+  TZRowAccessor = class(TObject)
   private
     FRowSize: Integer;
     FColumnsSize: Integer;
@@ -94,7 +94,7 @@ type
     FColumnDefaultExpressions: array of string;
     FBuffer: PZRowBuffer;
     FHasBlobs: Boolean;
-    FTemp: AnsiString;
+    FTemp: String;
 
     function GetColumnSize(ColumnInfo: TZColumnInfo): Integer;
     function GetBlobObject(Buffer: PZRowBuffer; ColumnIndex: Integer): IZBlob;
@@ -106,7 +106,7 @@ type
     procedure CheckColumnConvertion(ColumnIndex: Integer; ResultType: TZSQLType);
 
   public
-    constructor Create(ColumnsInfo: TObjectList; ClientCodePage: PZCodePage = nil);
+    constructor Create(ColumnsInfo: TObjectList);
     destructor Destroy; override;
 
     function AllocBuffer(var Buffer: PZRowBuffer): PZRowBuffer;
@@ -147,7 +147,7 @@ type
     //======================================================================
 
     function IsNull(ColumnIndex: Integer): Boolean;
-    function GetPChar(ColumnIndex: Integer; var IsNull: Boolean): PAnsiChar;
+    function GetPChar(ColumnIndex: Integer; var IsNull: Boolean): PChar;
     function GetString(ColumnIndex: Integer; var IsNull: Boolean): String;
     function GetUnicodeString(ColumnIndex: Integer; var IsNull: Boolean): WideString;
     function GetBoolean(ColumnIndex: Integer; var IsNull: Boolean): Boolean;
@@ -183,7 +183,7 @@ type
     procedure SetFloat(ColumnIndex: Integer; Value: Single);
     procedure SetDouble(ColumnIndex: Integer; Value: Double);
     procedure SetBigDecimal(ColumnIndex: Integer; Value: Extended);
-    procedure SetPChar(ColumnIndex: Integer; Value: PAnsiChar);
+    procedure SetPChar(ColumnIndex: Integer; Value: PChar);
     procedure SetString(ColumnIndex: Integer; Value: String);
     procedure SetUnicodeString(ColumnIndex: Integer; Value: WideString);
     procedure SetBytes(ColumnIndex: Integer; Value: TByteDynArray);
@@ -214,8 +214,7 @@ uses Math, ZMessages, ZSysUtils, ZDbcUtils{$IFDEF DELPHI12_UP}, AnsiStrings{$END
   Creates this object and assignes the main properties.
   @param ColumnsInfo a collection with column information.
 }
-constructor TZRowAccessor.Create(ColumnsInfo: TObjectList;
-  ClientCodePage: PZCodePage = nil);
+constructor TZRowAccessor.Create(ColumnsInfo: TObjectList);
 var
   I: Integer;
   Current: TZColumnInfo;
@@ -230,10 +229,6 @@ begin
   SetLength(FColumnOffsets, FColumnCount);
   SetLength(FColumnDefaultExpressions, FColumnCount);
   FHasBlobs := False;
-  if Assigned(ClientCodePage) then
-    Self.ClientCodePage := ClientCodePage
-  else
-    Self.ClientCodePage := @ClientCodePageDummy;
 
   for I := 0 to FColumnCount - 1 do
   begin
@@ -909,7 +904,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetPChar(ColumnIndex: Integer; var IsNull: Boolean): PAnsiChar;
+function TZRowAccessor.GetPChar(ColumnIndex: Integer; var IsNull: Boolean): PChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -922,8 +917,8 @@ begin
         Result := @FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1];
       else
       begin
-        FTemp := AnsiString(GetString(ColumnIndex, IsNull));
-        Result := PAnsiChar(FTemp);
+        FTemp := GetString(ColumnIndex, IsNull);
+        Result := PChar(FTemp);
       end;
     end;
     IsNull := False;
@@ -966,8 +961,8 @@ begin
       stFloat: Result := FloatToSQLStr(GetFloat(ColumnIndex, IsNull));
       stDouble: Result := FloatToSQLStr(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := FloatToSQLStr(GetBigDecimal(ColumnIndex, IsNull));
-      stString: Result := ComponentString(PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])); //compiler neutral
-      stUnicodeString, stUnicodeStream: Result := UTF8ToAnsi(UTF8Encode(GetUnicodeString(ColumnIndex, IsNull))); //wide down to Ansi
+      stString{$IFDEF DELPHI12_UP},{$ELSE}: Result := PChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);{$ENDIF}
+      stUnicodeString, stUnicodeStream: Result := {$IFDEF DELPHI12_UP}({$ELSE}UTF8ToAnsi(UTF8Encode{$ENDIF}(GetUnicodeString(ColumnIndex, IsNull))); //wide down to Ansi
       stBytes: Result := String(BytesToStr(GetBytes(ColumnIndex, IsNull)));
       stDate: Result := FormatDateTime('yyyy-mm-dd', GetDate(ColumnIndex, IsNull));
       stTime: Result := FormatDateTime('hh:mm:ss', GetTime(ColumnIndex, IsNull));
@@ -1007,7 +1002,7 @@ begin
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     case FColumnTypes[ColumnIndex - 1] of
-      stUnicodeString:
+      stUnicodeString{$IFDEF DELPHI12_UP}, stString{$ENDIF}:
         Result := PWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
       stUnicodeStream:
         begin
@@ -2076,7 +2071,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetPChar(ColumnIndex: Integer; Value: PAnsiChar);
+procedure TZRowAccessor.SetPChar(ColumnIndex: Integer; Value: PChar);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -2087,7 +2082,7 @@ begin
         if Value <> nil then
         begin
           FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
-          StrLCopy(PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]),
+          StrLCopy(PChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]),
               Value, FColumnLengths[ColumnIndex - 1] - 1);
         end
         else
@@ -2131,15 +2126,15 @@ begin
     stFloat: SetFloat(ColumnIndex, SQLStrToFloatDef(Value, 0));
     stDouble: SetDouble(ColumnIndex, SQLStrToFloatDef(Value, 0));
     stBigDecimal: SetBigDecimal(ColumnIndex, SQLStrToFloatDef(Value, 0));
+    {$IFNDEF DELPHI12_UP}
     stString:
       begin
         FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
-        {EgonHugeist: this picks out unsupported Chars right now.
-          So they where displayed like the Server expects the Data!}
-        StrPLCopy(PAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]),
-          DatabaseString(Value), FColumnLengths[ColumnIndex - 1] - 1);
+        StrPLCopy(PChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]),
+          Value, FColumnLengths[ColumnIndex - 1]- 1);
       end;
-    stUnicodeString: SetUnicodeString(ColumnIndex, Value);
+    {$ENDIF}
+    stUnicodeString{$IFDEF DELPHI12_UP}, stString{$ENDIF}: SetUnicodeString(ColumnIndex, Value);
     stBytes: SetBytes(ColumnIndex, StrToBytes(AnsiString(Value)));
     stDate: SetDate(ColumnIndex, AnsiSQLDateToDateTime(Value));
     stTime: SetTime(ColumnIndex, AnsiSQLDateToDateTime(Value));
@@ -2169,9 +2164,6 @@ begin
       begin
         FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
         Value := System.Copy(Value, 1, FColumnLengths[ColumnIndex - 1] div 2);
-        {$IFDEF WITH_CHAR_CONTROL}
-        Value := ZCPWideString(Value, ClientCodePage^.CP);
-        {$ENDIF}
         if Length(Value) > 0 then
                System.Move(PWideString(Value)^,
                   Pointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
@@ -2180,7 +2172,7 @@ begin
           PWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := #0;
       end;
     else
-      SetString(ColumnIndex, ZStringW(Value));
+      SetString(ColumnIndex, {$IFNDEF DELPHI12_UP}UTF8Decode{$ENDIF}(Value));
   end;
 end;
 

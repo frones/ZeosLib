@@ -1631,7 +1631,7 @@ begin
       Format('select c.colid, c.name, c.type, c.prec, c.scale, c.colstat,'
       + ' c.status, c.iscomputed from syscolumns c inner join'
       + ' sysobjects o on (o.id = c.id) where o.name = %s and c.number=0 order by colid',
-      [AQSNull(TableNamePattern)])) do
+       [AQSNull(TableNamePattern)])) do
     begin
       while Next do
       begin

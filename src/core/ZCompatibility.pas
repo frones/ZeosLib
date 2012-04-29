@@ -163,8 +163,8 @@ type
   private
     FCodePage: PZCodePage;
   protected
-    function ComponentString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
-    function DatabaseString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
+    function ZDbcString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
+    function ZPlainString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
     function ZStringW(const ws: WideString; const Encoding: TZCharEncoding = ceDefault): String;
     property ClientCodePage: PZCodePage read FCodePage write FCodePage;
   public
@@ -490,8 +490,8 @@ end;
   Now use the new Functions to get encoded Strings instead of
   hard-coded Compiler-Directives or UTF8Encode/Decode:
 
-  function ComponentString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
-  function DatabaseString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
+  function ZDbcString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
+  function ZPlainString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
 
   These functions do auto arrange the in/out-coming AnsiStrings in
   dependency of the used CharacterSet and the used Compiler whithout
@@ -512,7 +512,7 @@ end;
   So what about coming UTF16/32????
 }
 
-function TAbstractCodePagedInterfacedObject.ComponentString(const Ansi: AnsiString;
+function TAbstractCodePagedInterfacedObject.ZDbcString(const Ansi: AnsiString;
   const Encoding: TZCharEncoding = ceDefault): String;
 var
   UseEncoding: TZCharEncoding;
@@ -567,8 +567,8 @@ EgonHugeist:
   Now use the new Functions to get encoded Strings instead of
   hard-Coded Compiler-Directives or UTF8Encode/Decode:
 
-  function ComponentString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
-  function DatabaseString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
+  function ZDbcString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
+  function ZPlainString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
 
   These functions do auto arrange the in/out-coming AnsiStrings in
   dependency of the used CharacterSet and the used Compiler whithout
@@ -582,7 +582,7 @@ EgonHugeist:
     Example: CharacterSet was set to Latin1 and some "special"-String MUST BE
      UTF8 instead of Latin1. (SSL-Keys eventualy)
 }
-function TAbstractCodePagedInterfacedObject.DatabaseString(const AStr: String;
+function TAbstractCodePagedInterfacedObject.ZPlainString(const AStr: String;
   const Encoding: TZCharEncoding = ceDefault): AnsiString;
 var
   UseEncoding: TZCharEncoding;

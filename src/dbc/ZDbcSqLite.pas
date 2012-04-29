@@ -392,16 +392,16 @@ begin
   try
     if ( Info.Values['codepage'] <> '' ) then
     begin
-        SQL := 'PRAGMA encoding = '''+Info.Values['codepage']+'''';
+        SQL := 'PRAGMA encoding = '''+AnsiString(Info.Values['codepage'])+'''';
         ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL),
           nil, nil, ErrorMessage);
-        CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
+        CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, String(SQL));
     end;
 
     SQL := 'PRAGMA show_datatypes = ON';
     ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL),
       nil, nil, ErrorMessage);
-    CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
+    CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, String(SQL));
 
     StartTransactionSupport;
   except
@@ -479,13 +479,13 @@ procedure TZSQLiteConnection.StartTransactionSupport;
 var
   ErrorCode: Integer;
   ErrorMessage: PAnsiChar;
-  SQL: PAnsiChar;
+  SQL: String;
 begin
   if TransactIsolationLevel <> tiNone then
   begin
     ErrorMessage := '';
     SQL := 'BEGIN TRANSACTION';
-    ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
+    ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(AnsiString(SQL)), nil, nil,
       ErrorMessage);
     CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
     DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
@@ -511,8 +511,8 @@ begin
     SQL := 'COMMIT TRANSACTION';
     ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
       ErrorMessage);
-    CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
-    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
+    CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, String(SQL));
+    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, String(SQL));
 
     StartTransactionSupport;
   end;
@@ -529,13 +529,13 @@ procedure TZSQLiteConnection.Rollback;
 var
   ErrorCode: Integer;
   ErrorMessage: PAnsiChar;
-  SQL: PAnsiChar;
+  SQL: String;
 begin
   if (TransactIsolationLevel <> tiNone) and not Closed then
   begin
     ErrorMessage := '';
     SQL := 'ROLLBACK TRANSACTION';
-    ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
+    ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(AnsiString(SQL)), nil, nil,
       ErrorMessage);
     CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
     DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
@@ -595,13 +595,13 @@ procedure TZSQLiteConnection.SetTransactionIsolation(
 var
   ErrorCode: Integer;
   ErrorMessage: PAnsiChar;
-  SQL: PAnsiChar;
+  SQL: String;
 begin
   if (TransactIsolationLevel <> tiNone) and not Closed then
   begin
     ErrorMessage := '';
     SQL := 'ROLLBACK TRANSACTION';
-    ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
+    ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(AnsiString(SQL)), nil, nil,
       ErrorMessage);
     CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
     DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);

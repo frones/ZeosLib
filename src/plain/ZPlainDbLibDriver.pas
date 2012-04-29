@@ -974,7 +974,7 @@ begin
   end;
   SybaseMessages.Clear;
   if S <> '' then
-    raise Exception.Create(S);
+    raise Exception.Create(String(S));
 end;
 
 
@@ -1270,7 +1270,7 @@ begin
   end;
   MSSqlMessages.Clear;
   if S <> '' then
-    raise Exception.Create(S);
+    raise Exception.Create(String(S));
 end;
 
 

@@ -406,9 +406,9 @@ begin
         ResultSet := Metadata.GetTables(Catalog, Schema, '', nil);
         while ResultSet.Next do
           begin
-            TableName := ResultSet.ComponentString(ResultSet.GetStringByName('TABLE_NAME'));
+            TableName := ResultSet.GetStringByName('TABLE_NAME');
             TableName := IdentifierConvertor.Quote(TableName);
-            Schema := ResultSet.ComponentString(ResultSet.GetStringByName('TABLE_SCHEM'));
+            Schema := ResultSet.GetStringByName('TABLE_SCHEM');
             if Schema <> '' then
               TableName := IdentifierConvertor.Quote(Schema) + '.' + TableName;
             if Connection.Catalog <> '' then
@@ -455,7 +455,7 @@ begin
         // Look for the Procedures of the defined Catalog and Schema
         ResultSet := Metadata.GetProcedures(Catalog, Schema, '');
         while ResultSet.Next do
-          List.Add(ResultSet.ComponentString(ResultSet.GetStringByName('PROCEDURE_NAME')));
+          List.Add(ResultSet.GetStringByName('PROCEDURE_NAME'));
       finally
         ResultSet.Close;
       end;
@@ -468,7 +468,7 @@ begin
         // Look for the Procedures
         ResultSet := Metadata.GetProcedures(Connection.Catalog, '', '');
         while ResultSet.Next do
-          List.Add(ResultSet.ComponentString(ResultSet.GetStringByName('PROCEDURE_NAME')));
+          List.Add(ResultSet.GetStringByName('PROCEDURE_NAME'));
       finally
         ResultSet.Close;
       end;
@@ -509,7 +509,7 @@ begin
         // Look for the Procedures of the defined Catalog and Schema
         ResultSet := Metadata.GetSequences(Catalog, Schema, '');
         while ResultSet.Next do
-          List.Add(ResultSet.ComponentString(ResultSet.GetStringByName('SEQUENCE_NAME')));
+          List.Add(ResultSet.GetStringByName('SEQUENCE_NAME'));
       finally
         ResultSet.Close;
       end;
@@ -523,10 +523,10 @@ begin
         ResultSet := Metadata.GetSequences(Connection.Catalog, '', '');
         while ResultSet.Next do
           if ResultSet.GetStringByName('SEQUENCE_SCHEM') <> '' then
-            List.Add(ResultSet.ComponentString(ResultSet.GetStringByName('SEQUENCE_SCHEM'))+
-              '.'+ResultSet.ComponentString(ResultSet.GetStringByName('SEQUENCE_NAME')))
+            List.Add(ResultSet.GetStringByName('SEQUENCE_SCHEM')+
+              '.'+ResultSet.GetStringByName('SEQUENCE_NAME'))
           else
-            List.Add(ResultSet.ComponentString(ResultSet.GetStringByName('SEQUENCE_NAME')));
+            List.Add(ResultSet.GetStringByName('SEQUENCE_NAME'));
       finally
         ResultSet.Close;
       end;
@@ -690,7 +690,7 @@ begin
       with DbcConnection.GetMetadata.GetCatalogs do
       try
         while Next do
-          List.Append(ComponentString(GetStringByName('TABLE_CAT')));
+          List.Append(GetStringByName('TABLE_CAT'));
       finally
         Close;
       end;
@@ -835,7 +835,7 @@ begin
       with DbcConnection.GetMetadata.GetCatalogs do
       try
         while Next do
-          List.Append(ComponentString(GetStringByName('TABLE_CAT')));
+          List.Append(GetStringByName('TABLE_CAT'));
       finally
         Close;
       end;
@@ -868,7 +868,7 @@ begin
     Metadata := Connection.DbcConnection.GetMetadata;
     ResultSet := Metadata.GetCatalogs;
     while ResultSet.Next do
-      List.Add(ResultSet.ComponentString(ResultSet.GetStringByName('TABLE_CAT')));
+      List.Add(ResultSet.GetStringByName('TABLE_CAT'));
   finally
     ResultSet.Close;
   end;
@@ -903,8 +903,8 @@ begin
       // Look for the Columns of the defined Catalog, Schema and TableName
       ResultSet := Metadata.GetColumns(Catalog, Schema, TableName, '');
       while ResultSet.Next do
-        if List.IndexOf(ResultSet.ComponentString(ResultSet.GetStringByName('COLUMN_NAME'))) = -1 then
-          List.Add(ResultSet.ComponentString(ResultSet.GetStringByName('COLUMN_NAME')));
+        if List.IndexOf(ResultSet.GetStringByName('COLUMN_NAME')) = -1 then
+          List.Add(ResultSet.GetStringByName('COLUMN_NAME'));
     finally
       ResultSet.Close;
     end;
@@ -929,7 +929,7 @@ begin
     Metadata := Connection.DbcConnection.GetMetadata;
     ResultSet := Metadata.GetSchemas;
     while ResultSet.Next do
-      List.Add(ResultSet.ComponentString(ResultSet.GetStringByName('TABLE_SCHEM')));
+      List.Add(ResultSet.GetStringByName('TABLE_SCHEM'));
   finally
     ResultSet.Close;
   end;
@@ -953,7 +953,7 @@ begin
     Metadata := Connection.DbcConnection.GetMetadata;
     ResultSet := Metadata.GetTypeInfo;
     while ResultSet.Next do
-      List.Add(ResultSet.ComponentString(ResultSet.GetStringByName('TYPE_NAME')));
+      List.Add(ResultSet.GetStringByName('TYPE_NAME'));
   finally
     ResultSet.Close;
   end;
@@ -991,7 +991,7 @@ begin
       with DbcConnection.GetMetadata.GetCatalogs do
       try
         while Next do
-          List.Append(ComponentString(GetStringByName('TABLE_CAT')));
+          List.Append(GetStringByName('TABLE_CAT'));
       finally
         Close;
       end;
@@ -1060,7 +1060,7 @@ begin
     with DbcConnection.GetMetadata.GetCatalogs do
     try
       while Next do
-        List.Append(ComponentString(GetStringByName('TABLE_CAT')));
+        List.Append(GetStringByName('TABLE_CAT'));
     finally
       Close;
     end;

@@ -170,8 +170,8 @@ type
     //======================================================================
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPChar(ColumnIndex: Integer): PAnsiChar; override;
-    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring; override;
+    function GetPChar(ColumnIndex: Integer): PChar; override;
+    function GetString(ColumnIndex: Integer): String; override;
     function GetUnicodeString(ColumnIndex: Integer): Widestring; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
@@ -211,8 +211,8 @@ type
     procedure UpdateFloat(ColumnIndex: Integer; Value: Single); override;
     procedure UpdateDouble(ColumnIndex: Integer; Value: Double); override;
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended); override;
-    procedure UpdatePChar(ColumnIndex: Integer; Value: PAnsiChar); override;
-    procedure UpdateString(ColumnIndex: Integer; const Value: AnsiString); override;
+    procedure UpdatePChar(ColumnIndex: Integer; Value: PChar); override;
+    procedure UpdateString(ColumnIndex: Integer; const Value: String); override;
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString); override;
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray); override;
     procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime); override;
@@ -641,9 +641,9 @@ begin
   FInitialRowsList := TList.Create;
   FCurrentRowsList := TList.Create;
 
-  FRowAccessor := TZRowAccessor.Create(ColumnsInfo, ClientCodePage);
-  FOldRowAccessor := TZRowAccessor.Create(ColumnsInfo, ClientCodePage);
-  FNewRowAccessor := TZRowAccessor.Create(ColumnsInfo, ClientCodePage);
+  FRowAccessor := TZRowAccessor.Create(ColumnsInfo);
+  FOldRowAccessor := TZRowAccessor.Create(ColumnsInfo);
+  FNewRowAccessor := TZRowAccessor.Create(ColumnsInfo);
 
   FRowAccessor.AllocBuffer(FUpdatedRow);
   FRowAccessor.AllocBuffer(FInsertedRow);
@@ -734,7 +734,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractCachedResultSet.GetPChar(ColumnIndex: Integer): PAnsiChar;
+function TZAbstractCachedResultSet.GetPChar(ColumnIndex: Integer): PChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckAvailable;
@@ -751,15 +751,16 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractCachedResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring;
-var
-  UseEncoding: TZCharEncoding;
-  WS: WideString;
+function TZAbstractCachedResultSet.GetString(ColumnIndex: Integer): String;
+//var
+//  UseEncoding: TZCharEncoding;
+//  WS: WideString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckAvailable;
 {$ENDIF}
-  if CharEncoding = ceDefault then
+  Result := FRowAccessor.GetString(ColumnIndex, LastWasNull);
+(*  if CharEncoding = ceDefault then
     UseEncoding := ClientCodePage^.Encoding
   else
     UseEncoding := CharEncoding;
@@ -795,7 +796,7 @@ begin
     {$IFNDEF MSWINDOWS}
     ceUTF32: ;
     {$ENDIF}
-  end;
+  end;*)
 end;
 
 {**
@@ -1249,7 +1250,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdatePChar(ColumnIndex: Integer;
-  Value: PAnsiChar);
+  Value: PChar);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1269,13 +1270,13 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateString(ColumnIndex: Integer;
-  const Value: AnsiString);
+  const Value: String);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
 {$ENDIF}
   PrepareRowForUpdates;
-  FRowAccessor.SetString(ColumnIndex, ComponentString(Value));
+  FRowAccessor.SetString(ColumnIndex, Value);
 end;
 
 {**
@@ -1445,8 +1446,13 @@ begin
   {EgonHugeist: TempBuffer the WideString, }
   if Assigned(Value) then
   begin
-    WS := PWideChar(TMemoryStream(Value).Memory);
-    SetLength(WS, Value.Size div 2);
+    if Length(PWideChar(TMemoryStream(Value).Memory)) = Value.Size then
+    begin
+      WS := PWideChar(TMemoryStream(Value).Memory);
+      SetLength(WS, Value.Size div 2);
+    end
+    else
+      WS := WideString(PAnsiChar(TMemoryStream(Value).Memory));
     Ansi := UTF8Encode(WS);
     Len := Length(Ansi);
     TempStream := TMemoryStream.Create;
@@ -1866,7 +1872,7 @@ begin
         stBigDecimal: RowAccessor.SetBigDecimal(I, ResultSet.GetBigDecimal(I));
         //stString: RowAccessor.SetPChar(I, ResultSet.GetPChar(I));
         // gto: do we need PChar here? (Unicode problems)
-        stString: RowAccessor.SetString(I, String(ResultSet.GetString(I)));
+        stString: RowAccessor.SetString(I, ResultSet.GetString(I));
         stUnicodeString: RowAccessor.SetUnicodeString(I,
                   ResultSet.GetUnicodeString(I));
         stBytes: RowAccessor.SetBytes(I, ResultSet.GetBytes(I));

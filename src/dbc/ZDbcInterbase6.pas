@@ -523,9 +523,9 @@ begin
   if HostName <> '' then
   begin
     if Port <> 3050 then
-      StrPCopy(DBName, HostName + '/' + IntToStr(Port) + ':' + Database)
+      StrPCopy(DBName, AnsiString(HostName + '/' + IntToStr(Port) + ':' + Database))
     else
-      StrPCopy(DBName, HostName + ':' + Database)
+      StrPCopy(DBName, ZPlainString(HostName + ':' + Database))
   end
   else
     StrPCopy(DBName, Database);
@@ -564,7 +564,7 @@ begin
       begin
         if Next then
         begin
-          FCLientCodePage := ComponentString(GetString(6));
+          FCLientCodePage := GetString(6);
           CheckCharEncoding(FClientCodePage);
         end
         else
@@ -787,7 +787,7 @@ begin
     begin
       SetLength(Tmp, Length(Value)*2);
       BinToHex(PAnsiChar(Value), PAnsiChar(Tmp), Length(Value)*2);
-      Result := inherited GetEscapeString('x'''+Tmp+'''', EscapeMarkSequence)
+      Result := inherited GetAnsiEscapeString('x'''+Tmp+'''', EscapeMarkSequence)
     end
     else
       raise Exception.Create('Binary data out of range! Use Blob-Fields!')

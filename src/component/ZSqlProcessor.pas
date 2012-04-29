@@ -500,11 +500,11 @@ begin
           ftCurrency:
             Statement.SetBigDecimal(I + 1, Param.AsCurrency);
           ftString:
-            Statement.SetString(I + 1, AnsiString(Param.AsString));
+            Statement.SetString(I + 1, Param.AsString);
           ftWideString:
             Statement.SetUnicodeString(I + 1, Param.{$IFNDEF WITHOUT_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
           ftBytes:
-            Statement.SetString(I + 1, AnsiString(Param.AsString));
+            Statement.SetString(I + 1, Param.AsString);
           ftDate:
             Statement.SetDate(I + 1, Param.AsDate);
           ftTime:

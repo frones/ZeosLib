@@ -82,6 +82,7 @@ type
     procedure Open; override;
     procedure PrepareUpdateSQLData; virtual;
     function GetFieldValue(ColumnIndex: Integer): Variant;
+    function InternalGetString(ColumnIndex: Integer): AnsiString; override;
   public
     constructor Create(Statement: IZStatement; SQL: string;
       var StmtNum: SmallInt; CursorName: AnsiString;
@@ -91,7 +92,6 @@ type
     function GetCursorName: AnsiString; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -125,8 +125,8 @@ type
     procedure UpdateFloat(ColumnIndex: Integer; Value: Single); override;
     procedure UpdateDouble(ColumnIndex: Integer; Value: Double); override;
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended); override;
-    procedure UpdatePChar(ColumnIndex: Integer; Value: PAnsiChar); override;
-    procedure UpdateString(ColumnIndex: Integer; const Value: AnsiString); override;
+    procedure UpdatePChar(ColumnIndex: Integer; Value: PChar); override;
+    procedure UpdateString(ColumnIndex: Integer; const Value: String); override;
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString); override;
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray); override;
     procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime); override;
@@ -468,14 +468,14 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZASAResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring;
+function TZASAResultSet.InternalGetString(ColumnIndex: Integer): Ansistring;
 begin
   CheckClosed;
   CheckColumnConvertion( ColumnIndex, stString);
   if FInsert or ( FUpdate and FUpdateSQLData.IsAssigned( ColumnIndex - 1)) then
-    Result := DatabaseString(FUpdateSqlData.GetString( ColumnIndex - 1))
+    Result := FUpdateSqlData.GetString( ColumnIndex - 1)
   else
-    Result := DatabaseString(FSqlData.GetString( ColumnIndex - 1));
+    Result := FSqlData.GetString( ColumnIndex - 1);
   LastWasNull := IsNull( ColumnIndex);
 end;
 
@@ -728,7 +728,7 @@ begin
   if not Assigned( FUpdateSQLData) then
   begin
     FUpdateSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
-      FASAConnection.GetDBHandle, FCursorName, FSQLData.GetFieldCount);
+      FASAConnection.GetDBHandle, FCursorName, Self.ClientCodePage,FSQLData.GetFieldCount);
   end
   else if FUpdateSQLData.GetFieldCount = 0 then
     FUpdateSQLData.AllocateSQLDA( FSQLData.GetFieldCount);
@@ -788,22 +788,22 @@ begin
   FUpdateSqlData.UpdateBigDecimal( ColumnIndex, Value);
 end;
 
-procedure TZASAResultSet.UpdatePChar(ColumnIndex: Integer; Value: PAnsiChar);
+procedure TZASAResultSet.UpdatePChar(ColumnIndex: Integer; Value: PChar);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.UpdatePChar( ColumnIndex, Value);
 end;
 
-procedure TZASAResultSet.UpdateString(ColumnIndex: Integer; const Value: Ansistring);
+procedure TZASAResultSet.UpdateString(ColumnIndex: Integer; const Value: String);
 begin
   PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateString( ColumnIndex, Value);
+  FUpdateSqlData.UpdateString(ColumnIndex, ZPlainString(Value));
 end;
 
 procedure TZASAResultSet.UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString);
 begin
   PrepareUpdateSQLData;
-  FUpdateSqlData.UpdatePChar(ColumnIndex, PAnsiChar(DatabaseString(Value)));
+  FUpdateSqlData.UpdatePChar(ColumnIndex, PChar(ZStringW(Value)));
 end;
 
 procedure TZASAResultSet.UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray);

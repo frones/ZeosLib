@@ -782,7 +782,10 @@ begin
     Stream := Query.CreateBlobStream(Query.Fields[1], bmWrite);
     try
       Temp := 'xyz';
-      Stream.Write(PAnsiChar(Temp), StrLen(Temp));
+      if Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8] then
+        Stream.Write(PWideChar(Temp), Length(Temp)*2)
+      else
+        Stream.Write(PAnsiChar(AnsiString(Temp))^, Length(Temp));
     finally
       Stream.Free;
     end;

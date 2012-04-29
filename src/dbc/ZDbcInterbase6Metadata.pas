@@ -1523,8 +1523,7 @@ function TZInterbase6DatabaseMetadata.UncachedGetTables(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string; 
   const Types: TStringDynArray): IZResultSet; 
 var 
-  SQL, LTableNamePattern: string;
-  TableType: Ansistring;
+  SQL, LTableNamePattern, TableType: string;
   I, SystemFlag: Integer;
 begin 
     Result := ConstructVirtualResultSet(TableColumnsDynArray); 
@@ -1601,7 +1600,7 @@ end;
 }
 function TZInterbase6DatabaseMetadata.UncachedGetTableTypes: IZResultSet;
 const
-  TablesTypes: array [0..2] of AnsiString = ('TABLE', 'VIEW', 'SYSTEM TABLE');
+  TablesTypes: array [0..2] of String = ('TABLE', 'VIEW', 'SYSTEM TABLE');
 var
   I: Integer;
 begin
@@ -1670,14 +1669,14 @@ function TZInterbase6DatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 var
-  SQL, Where, ColumnName, DefaultValue: ansistring;
+  SQL, Where, ColumnName, DefaultValue: String;
   TypeName, SubTypeName, FieldScale: integer;
   LTableNamePattern, LColumnNamePattern: string;
   ColumnIndexes : Array[1..14] of integer;
 begin
     Result := ConstructVirtualResultSet(TableColColumnsDynArray);
 
-    LTableNamePattern := ConstructNameCondition(TableNamePattern, 
+    LTableNamePattern := ConstructNameCondition(TableNamePattern,
       'a.RDB$RELATION_NAME');
     LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,
       'a.RDB$FIELD_NAME');
@@ -1766,7 +1765,7 @@ begin
 
         DefaultValue := GetString(ColumnIndexes[5]);
         if DefaultValue = '' then
-          DefaultValue := ComponentString(GetString(ColumnIndexes[6]));
+          DefaultValue := GetString(ColumnIndexes[6]);
         if StartsWith(Trim(UpperCase(DefaultValue)), 'DEFAULT') then
         begin
           DefaultValue := Trim(StringReplace(DefaultValue, 'DEFAULT ', '',
@@ -1898,9 +1897,9 @@ function TZInterbase6DatabaseMetadata.UncachedGetColumnPrivileges(const Catalog:
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
 var
   SQL: string;
-  TableName, FieldName, Privilege: Ansistring;
-  Grantor, Grantee, Grantable: Ansistring;
-  LColumnNamePattern, LTable: Ansistring;
+  TableName, FieldName, Privilege: String;
+  Grantor, Grantee, Grantable: String;
+  LColumnNamePattern, LTable: String;
 begin
     Result := ConstructVirtualResultSet(TableColPrivColumnsDynArray);
 
@@ -2011,9 +2010,9 @@ function TZInterbase6DatabaseMetadata.UncachedGetTablePrivileges(const Catalog: 
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
 var
   SQL: string;
-  TableName, Privilege, Grantor: Ansistring;
-  Grantee, Grantable: Ansistring;
-  LTableNamePattern: Ansistring;
+  TableName, Privilege, Grantor: String;
+  Grantee, Grantable: String;
+  LTableNamePattern: String;
 begin
     Result := ConstructVirtualResultSet(TablePrivColumnsDynArray);
 
@@ -2523,7 +2522,7 @@ var
   KeySeq: Integer;
   LCatalog, SQLString, LPTable, LFTable: String;
 
-  function GetRuleType(const Rule: AnsiString): TZImportedKey;
+  function GetRuleType(const Rule: String): TZImportedKey;
   begin
     if Rule = 'RESTRICT' then
       Result := ikRestrict
@@ -2585,7 +2584,7 @@ begin
       Result.UpdateNull(2); //PKTABLE_SCHEM
       Result.UpdateString(3, GetString(1)); //PKTABLE_NAME
       Result.UpdateString(4, GetString(2)); //PKCOLUMN_NAME
-      Result.UpdateString(5, AnsiString(LCatalog)); //PKTABLE_CAT
+      Result.UpdateString(5, LCatalog); //PKTABLE_CAT
       Result.UpdateNull(6); //FKTABLE_SCHEM
       Result.UpdateString(7, GetString(3)); //FKTABLE_NAME
       Result.UpdateString(8, GetString(4)); //FKCOLUMN_NAME
@@ -2986,10 +2985,10 @@ begin
             if not ( GetString(FindColumn('RDB$CHARACTER_SET_NAME')) = 'NONE' ) then
             begin
               Result.MoveToInsertRow;
-              Result.UpdateString(1, AnsiString(LCatalog));   //COLLATION_CATALOG
-              Result.UpdateString(2, AnsiString(LCatalog));   //COLLATION_SCHEMA
-              Result.UpdateString(3, AnsiString(TableNamePattern)); //COLLATION_TABLE
-              Result.UpdateString(4, AnsiString(ColumnNamePattern));//COLLATION_COLUMN
+              Result.UpdateString(1, LCatalog);   //COLLATION_CATALOG
+              Result.UpdateString(2, LCatalog);   //COLLATION_SCHEMA
+              Result.UpdateString(3, TableNamePattern); //COLLATION_TABLE
+              Result.UpdateString(4, ColumnNamePattern);//COLLATION_COLUMN
               Result.UpdateString(5, GetString(FindColumn('RDB$DEFAULT_COLLATE_NAME'))); //COLLATION_NAME
               Result.UpdateString(6, GetString(FindColumn('RDB$CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
               Result.UpdateShort(7, GetShort(FindColumn('RDB$CHARACTER_SET_ID'))); //CHARACTER_SET_ID
@@ -3015,9 +3014,9 @@ begin
     if Next then
     begin
       Result.MoveToInsertRow;
-      Result.UpdateString(1, AnsiString(LCatalog));   //COLLATION_CATALOG
-      Result.UpdateString(2, AnsiString(LCatalog));   //COLLATION_SCHEMA
-      Result.UpdateString(3, AnsiString(TableNamePattern)); //COLLATION_TABLE
+      Result.UpdateString(1, LCatalog);   //COLLATION_CATALOG
+      Result.UpdateString(2, LCatalog);   //COLLATION_SCHEMA
+      Result.UpdateString(3, TableNamePattern); //COLLATION_TABLE
       Result.UpdateNull(4);//COLLATION_COLUMN
       Result.UpdateString(5, GetString(FindColumn('RDB$DEFAULT_COLLATE_NAME'))); //COLLATION_NAME
       Result.UpdateString(6, GetString(FindColumn('RDB$CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME

@@ -299,8 +299,11 @@ begin
     stFloat, stDouble, stBigDecimal:
       Result := ftFloat;
     stString:
+      (*if StringAsWide then
+        Result := ftWideString
+      else
       //Result := {$IFDEF WITH_STSTRINGUNICODE}ftWideString{$ELSE}ftString{$ENDIF};
-      Result := ftString;
+       *)Result := ftString;
     stBytes:
       Result := ftBytes;
     stDate:
@@ -444,7 +447,7 @@ begin
       ftString:
         // gto: do we need PChar here?
         //RowAccessor.SetPChar(FieldIndex, ResultSet.GetPChar(ColumnIndex));
-        RowAccessor.SetString(FieldIndex, String(ResultSet.GetString(ColumnIndex)));
+        RowAccessor.SetString(FieldIndex, ResultSet.GetString(ColumnIndex));
       ftWidestring:
         RowAccessor.SetUnicodeString(FieldIndex, ResultSet.GetUnicodeString(ColumnIndex));
       ftBytes:
@@ -515,7 +518,7 @@ begin
       ftString:
         // gto: do we need PChar here?
         //ResultSet.UpdatePChar(ColumnIndex, RowAccessor.GetPChar(FieldIndex, WasNull));
-        ResultSet.UpdateString(ColumnIndex, AnsiString(RowAccessor.GetString(FieldIndex, WasNull)));
+        ResultSet.UpdateString(ColumnIndex, RowAccessor.GetString(FieldIndex, WasNull));
       ftWidestring:
         ResultSet.UpdateUnicodeString(ColumnIndex,
           RowAccessor.GetUnicodeString(FieldIndex, WasNull));
@@ -1250,7 +1253,7 @@ begin
         Result := ResultSet.GetUnicodeString(Field1.FieldNo) =
           Field2.{$IFDEF WITH_ASVARIANT}AsVariant{$ELSE}AsString{$ENDIF};
       else
-        Result := ResultSet.GetString(Field1.FieldNo) = AnsiString(Field2.AsString);
+        Result := ResultSet.GetString(Field1.FieldNo) = Field2.AsString;
     end;
   end;
 end;

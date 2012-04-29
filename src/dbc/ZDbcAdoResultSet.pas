@@ -85,7 +85,7 @@ type
     function MoveAbsolute(Row: Integer): Boolean; override;
     function GetRow: Integer; override;
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring; override;
+    function GetString(ColumnIndex: Integer): String; override;
     function GetUnicodeString(ColumnIndex: Integer): WideString; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
@@ -361,7 +361,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAdoResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring;
+function TZAdoResultSet.GetString(ColumnIndex: Integer): String;
 var
   NL: Integer;
 begin
@@ -686,7 +686,7 @@ begin
   if VarIsStr(V) then
   begin
     Result := TZAbstractBlob.CreateWithStream(nil);
-    Result.SetString(V);
+    Result.SetString(AnsiString(V));
   end;
   if VarIsArray(V) then
   begin

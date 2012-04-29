@@ -103,8 +103,8 @@ type
     procedure UpdateFloat(const Index: Integer; Value: Single);
     procedure UpdateDouble(const Index: Integer; Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
-    procedure UpdatePChar(const Index: Integer; Value: PAnsiChar);
-    procedure UpdateString(const Index: Integer; Value: string);
+    procedure UpdatePChar(const Index: Integer; Value: PChar);
+    procedure UpdateString(const Index: Integer; Value: AnsiString);
     procedure UpdateBytes(const Index: Integer; Value: TByteDynArray);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
     procedure UpdateTime(const Index: Integer; Value: TDateTime);
@@ -138,7 +138,7 @@ type
 
   { Base class contain core functions to work with sqlda structure
     Can allocate memory for sqlda structure get basic information }
-  TZASASQLDA = class (TInterfacedObject, IZASASQLDA)
+  TZASASQLDA = class (TAbstractCodePagedInterfacedObject, IZASASQLDA)
   private
     FSQLDA: PASASQLDA;
     FPlainDriver: IZASAPlainDriver;
@@ -154,7 +154,7 @@ type
     procedure ReadBlob(const Index: Word; Buffer: Pointer; Length: LongWord);
   public
     constructor Create(PlainDriver: IZASAPlainDriver; Handle: PZASASQLCA;
-      CursorName: AnsiString; NumVars: Word = StdVars);
+      CursorName: AnsiString; ClientCodePage: PZCodePage; NumVars: Word = StdVars);
     destructor Destroy; override;
 
     procedure AllocateSQLDA( NumVars: Word);
@@ -181,8 +181,8 @@ type
     procedure UpdateFloat(const Index: Integer; Value: Single);
     procedure UpdateDouble(const Index: Integer; Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
-    procedure UpdatePChar(const Index: Integer; Value: PAnsiChar);
-    procedure UpdateString(const Index: Integer; Value: string);
+    procedure UpdatePChar(const Index: Integer; Value: PChar);
+    procedure UpdateString(const Index: Integer; Value: AnsiString);
     procedure UpdateBytes(const Index: Integer; Value: TByteDynArray);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
     procedure UpdateTime(const Index: Integer; Value: TDateTime);
@@ -331,12 +331,13 @@ begin
 end;
 
 constructor TZASASQLDA.Create(PlainDriver: IZASAPlainDriver; Handle: PZASASQLCA;
-      CursorName: AnsiString; NumVars: Word = StdVars);
+   CursorName: AnsiString; ClientCodePage: PZCodePage; NumVars: Word = StdVars);
 begin
   FPlainDriver := PlainDriver;
   FHandle := Handle;
   FCursorName := CursorName;
   AllocateSQLDA( NumVars);
+  Self.ClientCodePage := ClientCodePage;
   inherited Create;
 end;
 
@@ -870,11 +871,13 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZASASQLDA.UpdatePChar(const Index: Integer; Value: PAnsiChar);
+procedure TZASASQLDA.UpdatePChar(const Index: Integer; Value: PChar);
 var
   BlobSize: Integer;
+  AnsiTmp: AnsiString;
 begin
   CheckIndex( Index);
+  AnsiTmp := ZPlainString(Value);
   BlobSize := StrLen( Value);
   if BlobSize < MinBLOBSize then
     SetFieldType( Index, DT_VARCHAR or 1, MinBLOBSize - 1)
@@ -909,7 +912,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZASASQLDA.UpdateString(const Index: Integer; Value: string);
+procedure TZASASQLDA.UpdateString(const Index: Integer; Value: Ansistring);
 var
   BlobSize: Integer;
 begin
@@ -922,21 +925,21 @@ begin
   with FSQLDA.sqlvar[Index] do
   begin
     case sqlType and $FFFE of
-         DT_VARCHAR:
-                            begin
-                              PZASASQLSTRING( sqlData).length := BlobSize;
-                              StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
-                                Value, BlobSize);
-                            end;
-         DT_LONGVARCHAR:
-                            begin
-                              StrPLCopy( @PZASABlobStruct( sqlData).arr[0], Value,
-                                BlobSize);
-                              PZASABlobStruct( sqlData).stored_len := BlobSize;
-                              PZASABlobStruct( sqlData).untrunc_len := BlobSize;
-                            end;
-    else
-      CreateException( SUnsupportedParameterType);
+      DT_VARCHAR:
+        begin
+          PZASASQLSTRING( sqlData).length := BlobSize;
+          StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
+            Value, BlobSize);
+        end;
+      DT_LONGVARCHAR:
+        begin
+          StrPLCopy( @PZASABlobStruct( sqlData).arr[0], Value,
+            BlobSize);
+          PZASABlobStruct( sqlData).stored_len := BlobSize;
+          PZASABlobStruct( sqlData).untrunc_len := BlobSize;
+        end;
+      else
+        CreateException( SUnsupportedParameterType);
     end;
     if (sqlind <> nil) then
        sqlind^ := 0; // not null

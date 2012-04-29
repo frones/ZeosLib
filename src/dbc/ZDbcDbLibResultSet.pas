@@ -78,6 +78,7 @@ type
     FDBLibConnection: IZDBLibConnection;
     FPlainDriver: IZDBLibPlainDriver;
     procedure Open; override;
+    function InternalGetString(ColumnIndex: Integer): AnsiString; override;
   public
     constructor Create(Statement: IZStatement; SQL: string);
     destructor Destroy; override;
@@ -85,7 +86,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring; override;
+    //function GetString(ColumnIndex: Integer): String; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -255,7 +256,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZDBLibResultSet.GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring;
+function TZDBLibResultSet.InternalGetString(ColumnIndex: Integer): AnsiString;
 var
   DL: Integer;
   Data: Pointer;

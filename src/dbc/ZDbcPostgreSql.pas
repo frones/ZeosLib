@@ -180,7 +180,7 @@ uses
 
 procedure DefaultNoticeProcessor(arg: Pointer; message: PAnsiChar); cdecl;
 begin
-DriverManager.LogMessage(lcOther,'Postgres NOTICE',message);
+DriverManager.LogMessage(lcOther,'Postgres NOTICE',String(message));
 end;
 { TZPostgreSQLDriver }
 
@@ -504,7 +504,7 @@ begin
     { Sets a client codepage. }
     if ( FClientCodePage <> '' ) then
     begin
-      SQL := PAnsiChar(DatabaseString(Format('SET CLIENT_ENCODING TO ''%s''',
+      SQL := PAnsiChar(ZPlainString(Format('SET CLIENT_ENCODING TO ''%s''',
                                           [FClientCodePage])));
       QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, SQL);
       CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute,
@@ -522,9 +522,9 @@ begin
     { Gets the current codepage if it wasn't set..}
     if FClientCodePage = '' then
       with CreateStatement.ExecuteQuery(Format('select pg_encoding_to_char(%d)',
-        [GetPlainDriver.GetClientEncoding(FHandle)])) do
+        [GetPlainDriver.GetClientEncoding(FHandle)]))  do
       begin
-        if Next then FClientCodePage := DatabaseString(GetString(1));
+        if Next then FClientCodePage := GetString(1);
         Close;
       end;
     CheckCharEncoding(FClientCodePage);
@@ -548,11 +548,11 @@ begin
   if (TransactIsolationLevel <> tiNone) and not Closed then
   begin
     Temp:='PREPARE TRANSACTION '''+copy(transactionid,1,200)+'''';
-    SQL := PAnsiChar(Temp);
+    SQL := PAnsiChar(AnsiString(Temp));
     QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, SQL);
-    CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
+    CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, Temp,QueryHandle);
     GetPlainDriver.Clear(QueryHandle);
-    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
+    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, Temp);
     StartTransactionSupport;
   end;
 end;
@@ -667,9 +667,9 @@ begin
   begin
     SQL := 'COMMIT';
     QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, SQL);
-    CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
+    CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, String(SQL),QueryHandle);
     GetPlainDriver.Clear(QueryHandle);
-    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
+    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, String(SQL));
 
     StartTransactionSupport;
   end;
@@ -684,11 +684,11 @@ begin
   if (TransactIsolationLevel = tiNone) and not Closed then
   begin
     Temp:='COMMIT PREPARED '''+copy(transactionid,1,200)+'''';
-    SQL := PAnsiChar(Temp);
+    SQL := PAnsiChar(AnsiString(Temp));
     QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, SQL);
-    CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
+    CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, Temp,QueryHandle);
     GetPlainDriver.Clear(QueryHandle);
-    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
+    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, Temp);
     StartTransactionSupport;
   end;
 end;
@@ -777,7 +777,7 @@ begin
     QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, SQL);
     CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
     GetPlainDriver.Clear(QueryHandle);
-    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
+    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, String(SQL));
   end;
 
   inherited SetTransactionIsolation(Level);
@@ -837,8 +837,8 @@ begin
              ' WHERE (typtype = ''b'' and oid < 10000) OR typtype = ''p'' OR typtype = ''e'' OR typbasetype<>0 ORDER BY oid'; 
 
     QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, SQL);
-    CheckPostgreSQLError(Self, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
-    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
+    CheckPostgreSQLError(Self, GetPlainDriver, FHandle, lcExecute, String(SQL),QueryHandle);
+    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, String(SQL));
 
     FTypeList := TStringList.Create;
     for I := 0 to GetPlainDriver.GetRowCount(QueryHandle)-1 do

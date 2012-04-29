@@ -351,6 +351,11 @@ begin
         Variable.TypeCode := SQLT_STR;
         Length := Variable.DataSize + 1;
       end;
+    stUnicodeString:
+      begin
+        Variable.TypeCode := SQLT_VST;
+        Length := Variable.DataSize + 1;
+      end;
     stAsciiStream, stUnicodeStream, stBinaryStream:
       begin
         if not (Variable.TypeCode in [SQLT_CLOB, SQLT_BLOB]) then
@@ -438,6 +443,11 @@ begin
 {$ELSE}
                 PAnsiChar(DefVarManager.GetAsString(Values[I])), 1024);
 {$ENDIF}
+          end;
+        SQLT_VST:
+          begin
+            //OCIStringResize()
+            StrLCopy(PAnsiChar(CurrentVar.Data), PAnsiChar(UTF8Encode(DefVarManager.GetAsUnicodeString(Values[I]))), 1024);
           end;
         SQLT_TIMESTAMP:
           begin
@@ -767,9 +777,9 @@ begin
   // setting PrefetchCount to a default of 100 rows
   // this seems a good default for most queries
   // TODO : provide a way to override this using a statement.properties line
-  PrefetchCount := 100; 
-  PlainDriver.AttrSet(Handle, OCI_HTYPE_STMT, @PrefetchCount, SizeOf(ub4), 
-    OCI_ATTR_PREFETCH_ROWS, ErrorHandle); 
+  PrefetchCount := 100;
+  PlainDriver.AttrSet(Handle, OCI_HTYPE_STMT, @PrefetchCount, SizeOf(ub4),
+    OCI_ATTR_PREFETCH_ROWS, ErrorHandle);
   Status := PlainDriver.StmtPrepare(Handle, ErrorHandle, PAnsiChar(AnsiString(SQL)),
     Length(AnsiString(SQL)), OCI_NTV_SYNTAX, OCI_DEFAULT);
   CheckOracleError(PlainDriver, ErrorHandle, Status, lcExecute, SQL);

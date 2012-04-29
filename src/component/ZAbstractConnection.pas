@@ -1383,8 +1383,7 @@ begin
   begin
     FStream := TFileStream.Create(FileName, fmOpenRead);
     Result := GetBinaryEscapeStringFromStream(FStream);
-    FStream.Free;
-    FStream := nil;
+    FreeAndNil(FStream);
   end;
 end;
 

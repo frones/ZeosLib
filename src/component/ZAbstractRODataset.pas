@@ -1132,7 +1132,7 @@ begin
           ftWideString:
             Statement.SetUnicodeString(I + 1, Param.{$IFDEF WITHOUT_ASWIDESTRING}Value{$ELSE}AsWideString{$ENDIF});
           ftBytes:
-            Statement.SetString(I + 1, AnsiString(Param.AsString));
+            Statement.SetString(I + 1, Param.AsString);
           ftDate:
             Statement.SetDate(I + 1, Param.AsDate);
           ftTime:
@@ -1320,7 +1320,7 @@ end;
 function TZAbstractRODataset.GetFieldData(Field: TField; Buffer: Pointer;
   NativeFormat: Boolean): Boolean;
 begin
-  if Field.DataType = ftWideString then
+  if Field.DataType in [ftWideString{$IFDEF DELPHI12_UP}, ftString{$ENDIF}] then
     NativeFormat := True;
   Result := inherited GetFieldData(Field, Buffer, NativeFormat);
 end;
@@ -1383,6 +1383,14 @@ begin
             {$ENDIF}
             Result := not Result;
           end;
+        {$IFDEF DELPHI12_UP}
+        ftString:
+          begin
+            System.Move(PAnsiChar(AnsiString(RowAccessor.GetString(ColumnIndex, Result)))^, Buffer^,
+              RowAccessor.GetColumnDataSize(ColumnIndex));
+            Result := not Result;
+          end;
+        {$ENDIF}
         { Processes all other fields. }
         else
           begin
@@ -1410,7 +1418,7 @@ end;
 procedure TZAbstractRODataset.SetFieldData(Field: TField; Buffer: Pointer;
   NativeFormat: Boolean);
 begin
-  if Field.DataType = ftWideString then
+  if Field.DataType in [ftWideString{$IFDEF DELPHI12_UP}, ftString{$ENDIF}] then
     NativeFormat := True;
 
   {$IFNDEF VIRTUALSETFIELDDATA}
@@ -1486,8 +1494,12 @@ begin
       else if (Field.FieldKind = fkData) and (Field.DataType = ftString) and
         (Length(PAnsiChar(Buffer)) < RowAccessor.GetColumnDataSize(ColumnIndex)) then
       begin
+        {$IFDEF DELPHI12_UP}
+              RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(String(PAnsichar(Buffer))));
+        {$ELSE}
         System.Move(Buffer^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
            Length(PAnsiChar(Buffer)) + 1);
+        {$ENDIF}
         RowAccessor.SetNotNull(ColumnIndex);
       end
       else
@@ -1811,8 +1823,7 @@ begin
     { Initializes accessors and buffers. }
     ColumnList := ConvertFieldsToColumnInfo(Fields);
     try
-      RowAccessor := TZRowAccessor.Create(ColumnList,
-        Connection.DbcConnection.GetClientCodePageInformations);
+      RowAccessor := TZRowAccessor.Create(ColumnList);
     finally
       ColumnList.Free;
     end;
@@ -3428,9 +3439,9 @@ begin
             ftLargeInt:
               Statement.SetLong(I + 1, StrToInt64(ParamValue.AsString));
             ftString:
-              Statement.SetString(I + 1, AnsiString(ParamValue.AsString)); //smells like DataLoss since ParamValue.String is Unicodestring (example: Big5 2Byte-Chars...)
+              Statement.SetString(I + 1, ParamValue.AsString); //smells like DataLoss since ParamValue.String is Unicodestring (example: Big5 2Byte-Chars...)
             ftBytes:
-              Statement.SetString(I + 1, String(ParamValue.AsString));
+              Statement.SetString(I + 1, ParamValue.AsString);
             ftDate:
               Statement.SetDate(I + 1, ParamValue.AsDate);
             ftTime:

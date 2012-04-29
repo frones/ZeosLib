@@ -367,23 +367,24 @@ begin
   case CharactersetCode of
     csUTF8, csUNICODE_PODBC:
       begin
-	if (stat < 2) and (character >= $80) then
-		begin
-			if character >= $fc then
-				stat := 6
-			else if character >= $f8 then
-				stat := 5
-			else if character >= $f0 then
-				stat := 4
-			else if character >= $e0 then
-				stat := 3
-			else if character >= $c0 then
-				stat := 2;
-		end
-		else if (stat > 2) and (character > $7f) then
-			Dec(stat)
-		else
-			stat := 0;
+	      if (stat < 2) and (character >= $80) then
+		    begin
+          if character >= $fc then
+            stat := 6
+          else if character >= $f8 then
+            stat := 5
+          else if character >= $f0 then
+            stat := 4
+          else if character >= $e0 then
+            stat := 3
+          else if character >= $c0 then
+            stat := 2;
+        end
+        else
+          if (stat > 2) and (character > $7f) then
+            Dec(stat)
+          else
+            stat := 0;
       end;
 { Shift-JIS Support. }
     csSJIS:

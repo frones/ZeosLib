@@ -73,7 +73,7 @@ type
   {** Implements Abstract ResultSet. }
   TZAbstractResultSet = class(TAbstractCodePagedInterfacedObject, IZResultSet)
   private
-    FTemp: Ansistring;
+    FTemp: String;
     FRowNo: Integer;
     FLastRowNo: Integer;
     FMaxRows: Integer;
@@ -89,6 +89,8 @@ type
     FStatement: IZStatement;
   protected
     LastWasNull: Boolean;
+
+    function InternalGetString(ColumnIndex: Integer): AnsiString; virtual;
 
     procedure RaiseUnsupportedException;
     procedure RaiseForwardOnlyException;
@@ -111,6 +113,7 @@ type
       read FResultSetConcurrency write FResultSetConcurrency;
     property Statement: IZStatement read FStatement;
     property Metadata: TContainedObject read FMetadata write FMetadata;
+
   public
     constructor Create(Statement: IZStatement; SQL: string;
       Metadata: TContainedObject; ClientCodePage: PZCodePage);
@@ -128,8 +131,8 @@ type
     //======================================================================
 
     function IsNull(ColumnIndex: Integer): Boolean; virtual;
-    function GetPChar(ColumnIndex: Integer): PAnsiChar; virtual;
-    function GetString(ColumnIndex: Integer; const CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring; virtual;
+    function GetPChar(ColumnIndex: Integer): PChar; virtual;
+    function GetString(ColumnIndex: Integer): String; virtual;
     function GetUnicodeString(ColumnIndex: Integer): WideString; virtual;
     function GetBoolean(ColumnIndex: Integer): Boolean; virtual;
     function GetByte(ColumnIndex: Integer): ShortInt; virtual;
@@ -155,8 +158,8 @@ type
     //======================================================================
 
     function IsNullByName(const ColumnName: string): Boolean; virtual;
-    function GetPCharByName(const ColumnName: string): PAnsiChar; virtual;
-    function GetStringByName(const ColumnName: string; CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): Ansistring; virtual;
+    function GetPCharByName(const ColumnName: string): PChar; virtual;
+    function GetStringByName(const ColumnName: string): String; virtual;
     function GetUnicodeStringByName(const ColumnName: string): WideString; virtual;
     function GetBooleanByName(const ColumnName: string): Boolean; virtual;
     function GetByteByName(const ColumnName: string): ShortInt; virtual;
@@ -237,8 +240,8 @@ type
     procedure UpdateFloat(ColumnIndex: Integer; Value: Single); virtual;
     procedure UpdateDouble(ColumnIndex: Integer; Value: Double); virtual;
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended); virtual;
-    procedure UpdatePChar(ColumnIndex: Integer; Value: PAnsiChar); virtual;
-    procedure UpdateString(ColumnIndex: Integer; const Value: Ansistring); virtual;
+    procedure UpdatePChar(ColumnIndex: Integer; Value: PChar); virtual;
+    procedure UpdateString(ColumnIndex: Integer; const Value: String); virtual;
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString); virtual;
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray); virtual;
     procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime); virtual;
@@ -263,8 +266,8 @@ type
     procedure UpdateFloatByName(const ColumnName: string; Value: Single); virtual;
     procedure UpdateDoubleByName(const ColumnName: string; Value: Double); virtual;
     procedure UpdateBigDecimalByName(const ColumnName: string; Value: Extended); virtual;
-    procedure UpdatePCharByName(const ColumnName: string; Value: PAnsiChar); virtual;
-    procedure UpdateStringByName(const ColumnName: string; const Value: AnsiString); virtual;
+    procedure UpdatePCharByName(const ColumnName: string; Value: PChar); virtual;
+    procedure UpdateStringByName(const ColumnName: string; const Value: String); virtual;
     procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: WideString); virtual;
     procedure UpdateBytesByName(const ColumnName: string; const Value: TByteDynArray); virtual;
     procedure UpdateDateByName(const ColumnName: string; Value: TDateTime); virtual;
@@ -397,6 +400,14 @@ begin
 
   FColumnsInfo.Free;
   inherited Destroy;
+end;
+
+function TZAbstractResultSet.InternalGetString(ColumnIndex: Integer): AnsiString;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stString);
+{$ENDIF}
+  Result := '';
 end;
 
 {**
@@ -596,10 +607,10 @@ end;
     value returned is <code>null</code>
 }
 
-function TZAbstractResultSet.GetPChar(ColumnIndex: Integer): PAnsiChar;
+function TZAbstractResultSet.GetPChar(ColumnIndex: Integer): PChar;
 begin
   FTemp := GetString(ColumnIndex);
-  Result := PAnsiChar(FTemp);
+  Result := PChar(FTemp);
 end;
 
 {**
@@ -611,13 +622,9 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetString(ColumnIndex: Integer;
-  const  CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): AnsiString;
+function TZAbstractResultSet.GetString(ColumnIndex: Integer): String;
 begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stString);
-{$ENDIF}
-  Result := '';
+  Result := ZDbcString(InternalGetString(ColumnIndex));
 end;
 
 {**
@@ -635,7 +642,7 @@ begin
   CheckColumnConvertion(ColumnIndex, stUnicodeString);
 {$ENDIF}
   if Self.ClientCodePage^.Encoding in [ceUTF8] then
-    Result := UTF8ToString(GetString(ColumnIndex))
+    Result := UTF8ToString(InternalGetString(ColumnIndex))
   else
     Result := WideString(GetString(ColumnIndex))
 end;
@@ -1087,7 +1094,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetPCharByName(const ColumnName: string): PAnsiChar;
+function TZAbstractResultSet.GetPCharByName(const ColumnName: string): PChar;
 begin
   Result := GetPChar(GetColumnIndex(ColumnName));
 end;
@@ -1101,10 +1108,9 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetStringByName(const ColumnName: string;
-  CharEncoding: TZCharEncoding = {$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}): AnsiString;
+function TZAbstractResultSet.GetStringByName(const ColumnName: string): String;
 begin
-  Result := GetString(GetColumnIndex(ColumnName), CharEncoding);
+  Result := GetString(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2014,7 +2020,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdatePChar(ColumnIndex: Integer; Value: PAnsiChar);
+procedure TZAbstractResultSet.UpdatePChar(ColumnIndex: Integer; Value: PChar);
 begin
   UpdateString(ColumnIndex, Value);
 end;
@@ -2029,7 +2035,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateString(ColumnIndex: Integer; const Value: AnsiString);
+procedure TZAbstractResultSet.UpdateString(ColumnIndex: Integer; const Value: String);
 begin
   RaiseReadOnlyException;
 end;
@@ -2179,7 +2185,7 @@ begin
     vtBoolean: UpdateBoolean(ColumnIndex, Value.VBoolean);
     vtInteger: UpdateLong(ColumnIndex, Value.VInteger);
     vtFloat: UpdateBigDecimal(ColumnIndex, Value.VFloat);
-    vtString: UpdateString(ColumnIndex, DatabaseString(Value.VString));
+    vtString: UpdateString(ColumnIndex, Value.VString);
     vtDateTime: UpdateTimestamp(ColumnIndex, Value.VDateTime);
     vtUnicodeString: UpdateUnicodeString(ColumnIndex, Value.VUnicodeString);
   else
@@ -2352,7 +2358,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractResultSet.UpdatePCharByName(const ColumnName: string;
-   Value: PAnsiChar);
+   Value: PChar);
 begin
   UpdatePChar(GetColumnIndex(ColumnName), Value);
 end;
@@ -2368,7 +2374,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractResultSet.UpdateStringByName(const ColumnName: string;
-   const Value: AnsiString);
+   const Value: String);
 begin
   UpdateString(GetColumnIndex(ColumnName), Value);
 end;
