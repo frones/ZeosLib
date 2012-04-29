@@ -2009,7 +2009,7 @@ var
 begin
   if Handle.SqlCode < SQLE_NOERROR then
   begin
-    ErrorMessage := PlainDriver.sqlError_Message( Handle, ErrorBuf, SizeOf( ErrorBuf));
+    ErrorMessage := String(PlainDriver.sqlError_Message( Handle, ErrorBuf, SizeOf( ErrorBuf)));
     //SyntaxError Position in SQLCount
     DriverManager.LogError( LogCategory, PlainDriver.GetProtocol, LogMessage,
       Handle.SqlCode, ErrorMessage);

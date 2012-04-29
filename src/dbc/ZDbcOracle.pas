@@ -417,7 +417,7 @@ end;
 }
 procedure TZOracleConnection.StartTransactionSupport;
 var
-  SQL: PAnsiChar;
+  SQL: PChar;
   Status: Integer;
   Isolation: Integer;
 begin
@@ -528,7 +528,7 @@ end;
 procedure TZOracleConnection.Commit;
 var
   Status: Integer;
-  SQL: PAnsiChar;
+  SQL: PChar;
 begin
   if not Closed then
   begin

@@ -528,7 +528,7 @@ begin
       StrPCopy(DBName, ZPlainString(HostName + ':' + Database))
   end
   else
-    StrPCopy(DBName, Database);
+    StrPCopy(DBName, AnsiString(Database));
 
   try
     { Create new db if needed }

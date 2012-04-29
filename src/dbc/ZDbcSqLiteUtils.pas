@@ -98,7 +98,7 @@ function DecodeString(Value: ansistring): ansistring;
 
 implementation
 
-uses ZMessages;
+uses ZMessages{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
 
 {**
   Convert string SQLite field type to SQLType
@@ -266,7 +266,7 @@ begin
   ihx := 3; // set 1st hex location
   for I := 1 to SrcLength do
   begin
-    shx := IntToHex( ord(SrcBuffer^),2 ); // eg. '3E'
+    shx := AnsiString(IntToHex( ord(SrcBuffer^),2 )); // eg. '3E'
     result[ihx] := shx[1]; Inc( ihx,1 ); // copy '3'
     result[ihx] := shx[2]; Inc( ihx,1 ); // copy 'E'
     Inc( SrcBuffer,1 ); // next byte source location
@@ -280,7 +280,7 @@ function NewDecodeString(Value:ansistring):ansistring;
     srcbuffer : PAnsichar;
   begin
     value := copy(value,3,length(value)-4);
-    value := AnsiLowercase(value);
+    value := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiLowercase(value);
     i := length(value) div 2;
     srcbuffer := PAnsiChar(value);
     setlength(result,i);
@@ -307,7 +307,7 @@ var
   SrcLength, DestLength: Integer;
   SrcBuffer, DestBuffer: PAnsiChar;
 begin
-  if pos('x''',value)= 1 then
+  if pos('x''',String(value))= 1 then
     result := NewDecodeString(value)
   else
   begin

@@ -70,8 +70,8 @@ type
     FHandle: PZPostgreSQLConnect;
     FQueryHandle: PZPostgreSQLResult;
     FPlainDriver: IZPostgreSQLPlainDriver;
-    function InternalGetString(ColumnIndex: Integer): AnsiString; override;
   protected
+    function InternalGetString(ColumnIndex: Integer): AnsiString; override;
     procedure Open; override;
     procedure DefinePostgreSQLToSQLType(ColumnIndex: Integer;
       ColumnInfo: TZColumnInfo; TypeOid: Oid);
@@ -434,7 +434,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
-  Result := SQLStrToFloatDef(String(InternalGetString(ColumnIndex)), 0);
+  Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
 end;
 
 {**
@@ -483,7 +483,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
-  Result := SQLStrToFloatDef(ConvertMoneyToFloat(String(InternalGetString(ColumnIndex))), 0); //EgonHugeist: PostgreSQL-curiusity returns with currency-Prefix
+  Result := SQLStrToFloatDef(AnsiString(ConvertMoneyToFloat(String(InternalGetString(ColumnIndex)))), 0); //EgonHugeist: PostgreSQL-curiusity returns with currency-Prefix
 end;
 
 {**
@@ -501,7 +501,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
-  Result := SQLStrToFloatDef(String(InternalGetString(ColumnIndex)), 0);
+  Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
 end;
 
 {**

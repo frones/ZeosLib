@@ -705,7 +705,7 @@ begin
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SOURCE_LINE)));
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SOURCE_FUNCTION)));
 }     
-     StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SQLSTATE)));
+     StatusCode := Trim(String(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SQLSTATE))));
     end
     else
     begin

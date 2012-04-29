@@ -1452,7 +1452,15 @@ begin
       SetLength(WS, Value.Size div 2);
     end
     else
-      WS := WideString(PAnsiChar(TMemoryStream(Value).Memory));
+      if Length(String(PAnsiChar(TMemoryStream(Value).Memory))) = 1 then
+      begin
+        SetLength(WS, Value.Size div 2);
+        System.Move(PWideString(TMemoryStream(Value).Memory)^,
+          PWideChar(WS)^, Value.Size);
+
+      end
+      else
+        WS := WideString(PAnsiChar(TMemoryStream(Value).Memory));
     Ansi := UTF8Encode(WS);
     Len := Length(Ansi);
     TempStream := TMemoryStream.Create;

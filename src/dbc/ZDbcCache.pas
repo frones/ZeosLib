@@ -1249,7 +1249,7 @@ begin
       stDouble: Result := GetDouble(ColumnIndex, IsNull);
       stBigDecimal: Result := GetBigDecimal(ColumnIndex, IsNull);
       stString, stUnicodeString:
-        Result := SQLStrToFloatDef(GetString(ColumnIndex, IsNull), 0);
+        Result := SQLStrToFloatDef(AnsiString(GetString(ColumnIndex, IsNull)), 0);
     end;
     IsNull := False;
   end
@@ -1289,7 +1289,7 @@ begin
         Result := PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stBigDecimal: Result := GetBigDecimal(ColumnIndex, IsNull);
       stString, stUnicodeString:
-        Result := SQLStrToFloatDef(GetString(ColumnIndex, IsNull), 0);
+        Result := SQLStrToFloatDef(AnsiString(GetString(ColumnIndex, IsNull)), 0);
     end;
     IsNull := False;
   end
@@ -1330,7 +1330,7 @@ begin
       stBigDecimal:
         Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stString, stUnicodeString:
-        Result := SQLStrToFloatDef(GetString(ColumnIndex, IsNull), 0);
+        Result := SQLStrToFloatDef(AnsiString(GetString(ColumnIndex, IsNull)), 0);
     end;
     IsNull := False;
   end
@@ -2123,9 +2123,9 @@ begin
     stShort: SetShort(ColumnIndex, StrToIntDef(Value, 0));
     stInteger: SetInt(ColumnIndex, StrToIntDef(Value, 0));
     stLong: SetLong(ColumnIndex, StrToIntDef(Value, 0));
-    stFloat: SetFloat(ColumnIndex, SQLStrToFloatDef(Value, 0));
-    stDouble: SetDouble(ColumnIndex, SQLStrToFloatDef(Value, 0));
-    stBigDecimal: SetBigDecimal(ColumnIndex, SQLStrToFloatDef(Value, 0));
+    stFloat: SetFloat(ColumnIndex, SQLStrToFloatDef(AnsiString(Value), 0));
+    stDouble: SetDouble(ColumnIndex, SQLStrToFloatDef(AnsiString(Value), 0));
+    stBigDecimal: SetBigDecimal(ColumnIndex, SQLStrToFloatDef(AnsiString(Value), 0));
     {$IFNDEF DELPHI12_UP}
     stString:
       begin

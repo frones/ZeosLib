@@ -130,14 +130,14 @@ function EndsWith(const Str, SubStr: string): Boolean;
   @param Def a default value if the string can not be converted.
   @return a converted value or Def if conversion was failt.
 }
-function SQLStrToFloatDef(Str: string; Def: Extended): Extended;
+function SQLStrToFloatDef(Str: AnsiString; Def: Extended): Extended;
 
 {**
   Converts SQL string into float value.
   @param Str an SQL string with comma delimiter.
   @return a converted value or Def if conversion was failt.
 }
-function SQLStrToFloat(const Str: string): Extended;
+function SQLStrToFloat(const Str: AnsiString): Extended;
 
 {**
   Converts a character buffer into pascal string.
@@ -494,26 +494,23 @@ end;
   @param Def a default value if the string can not be converted.
   @return a converted value or Def if conversion was failt.
 }
-function SQLStrToFloatDef(Str: string; Def: Extended): Extended;
+function SQLStrToFloatDef(Str: AnsiString; Def: Extended): Extended;
 var
-  {$IFDEF DELPHI12_UP}
-  OldDecimalSeparator: WideChar;
-  OldThousandSeparator: WideChar;
-  {$ELSE}
   OldDecimalSeparator: Char;
   OldThousandSeparator: Char;
-  {$ENDIF}
+  AString: String;
 begin
   OldDecimalSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
   OldThousandSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator;
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := ',';
-  if Pos('$', Str) = 1 then
-    Str := Copy(Str, 2, Pred(Length(Str)));
-  If Str = '' then
+  AString := String(Str);
+  if Pos('$', AString) = 1 then
+    AString := Copy(AString, 2, Pred(Length(AString)));
+  If AString = '' then
     Result := Def
   else
-    Result := StrToFloatDef(Str, Def);
+    Result := StrToFloatDef(AString, Def);
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldThousandSeparator;
 end;
@@ -523,18 +520,14 @@ end;
   @param Str an SQL string with comma delimiter.
   @return a converted value or Def if conversion was failt.
 }
-function SQLStrToFloat(const Str: string): Extended;
+function SQLStrToFloat(const Str: AnsiString): Extended;
 var
-  {$IFDEF DELPHI12_UP}
-  OldDecimalSeparator: WideChar;
-  {$ELSE}
   OldDecimalSeparator: Char;
-  {$ENDIF}
 begin
   OldDecimalSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
   try
-    Result := StrToFloat(Str);
+    Result := StrToFloat(String(Str));
   finally
     {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
   end;

@@ -132,7 +132,7 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; virtual;
     function GetPChar(ColumnIndex: Integer): PChar; virtual;
-    function GetString(ColumnIndex: Integer): String; virtual;
+    function GetString(ColumnIndex: Integer): String; overload; virtual;
     function GetUnicodeString(ColumnIndex: Integer): WideString; virtual;
     function GetBoolean(ColumnIndex: Integer): Boolean; virtual;
     function GetByte(ColumnIndex: Integer): ShortInt; virtual;

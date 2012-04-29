@@ -618,7 +618,7 @@ var
 begin
   FHandle := FDBLibConnection.GetConnectionHandle;
   S := Trim(Sql);
-  if FPLainDriver.dbRPCInit(FHandle, PAnsiChar(S), 0) <> DBSUCCEED then
+  if FPLainDriver.dbRPCInit(FHandle, PAnsiChar(AnsiString(S)), 0) <> DBSUCCEED then
     FDBLibConnection.CheckDBLibError(lcOther, 'EXECUTEPREPARED:dbRPCInit');
 
   for I := 1 to InParamCount - 1 do//The 0 parameter is the return value

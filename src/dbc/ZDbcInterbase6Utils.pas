@@ -445,7 +445,7 @@ const
 implementation
 
 uses
-  Variants, ZSysUtils, Math, ZDbcInterbase6;
+  Variants, ZSysUtils, Math, ZDbcInterbase6{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
 
 {**
    Generate specific length random string and return it
@@ -497,7 +497,8 @@ function GenerateDPB(Info: TStrings; var FDPBLength, Dialect: Word): PAnsiChar;
 var
   I, Pos, PValue: Integer;
   ParamNo: Word;
-  DPB, Buffer, ParamName, ParamValue: AnsiString;
+  Buffer: String;
+  DPB, ParamName, ParamValue: AnsiString;
 begin
   FDPBLength := 1;
   DPB := AnsiChar(isc_dpb_version1);
@@ -506,15 +507,15 @@ begin
   begin
     Buffer := Info.Strings[I];
     Pos := FirstDelimiter(' ='#9#10#13, Buffer);
-    ParamName := Copy(Buffer, 1, Pos - 1);
+    ParamName := AnsiString(Copy(Buffer, 1, Pos - 1));
     Delete(Buffer, 1, Pos);
-    ParamValue := Buffer;
+    ParamValue := AnsiString(Buffer);
     ParamNo := GetInterbase6DatabaseParamNumber(ParamName);
 
     case ParamNo of
       0: Continue;
       isc_dpb_set_db_SQL_dialect:
-        Dialect := StrToIntDef(ParamValue, 0);
+        Dialect := StrToIntDef(String(ParamValue), 0);
       isc_dpb_user_name, isc_dpb_password, isc_dpb_password_enc,
       isc_dpb_sys_user_name, isc_dpb_license, isc_dpb_encrypt_key,
       isc_dpb_lc_messages, isc_dpb_lc_ctype, isc_dpb_sql_role_name,
@@ -526,7 +527,7 @@ begin
       isc_dpb_num_buffers, isc_dpb_dbkey_scope, isc_dpb_force_write,
       isc_dpb_no_reserve, isc_dpb_damaged, isc_dpb_verify:
         begin
-          DPB := DPB + AnsiChar(ParamNo) + #1 + AnsiChar(StrToInt(ParamValue));
+          DPB := DPB + AnsiChar(ParamNo) + #1 + AnsiChar(StrToInt(String(ParamValue)));
           Inc(FDPBLength, 3);
         end;
       isc_dpb_sweep:
@@ -536,7 +537,7 @@ begin
         end;
       isc_dpb_sweep_interval:
         begin
-          PValue := StrToInt(ParamValue);
+          PValue := StrToInt(String(ParamValue));
           DPB := DPB + AnsiChar(ParamNo) + #4 + PAnsiChar(@PValue)[0] +
                  PAnsiChar(@PValue)[1] + PAnsiChar(@PValue)[2] + PAnsiChar(@PValue)[3];
           Inc(FDPBLength, 6);
@@ -579,7 +580,7 @@ begin
   { Prepare transaction parameters string }
   for I := 0 to Params.Count - 1 do
   begin
-    ParamValue := Params.Strings[I];
+    ParamValue := AnsiString(Params.Strings[I]);
     ParamNo := GetInterbase6TransactionParamNumber(ParamValue);
 
     case ParamNo of
@@ -643,9 +644,9 @@ var
  I: Integer;
  ParamName: AnsiString;
 begin
-  ParamName := LowerCase(Value);
+  ParamName := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiLowerCase(Value);
   Result := 0;
-  if System.Pos(BPBPrefix, ParamName) = 1 then
+  if System.Pos(BPBPrefix, String(ParamName)) = 1 then
     for I := 1 to MAX_DPB_PARAMS do
     begin
       if ParamName = DatabaseParams[I].Name then
@@ -666,9 +667,9 @@ var
  I: Integer;
  ParamName: AnsiString;
 begin
-  ParamName := LowerCase(Value);
+  ParamName := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiLowerCase(Value);
   Result := 0;
-  if System.Pos(TPBPrefix, ParamName) = 1 then
+  if System.Pos(TPBPrefix, String(ParamName)) = 1 then
     for I := 1 to MAX_TPB_PARAMS do
     begin
       if ParamName = TransactionParams[I].Name then
@@ -817,7 +818,7 @@ begin
 
     ErrorCode := PlainDriver.isc_sqlcode(@StatusVector);
     PlainDriver.isc_sql_interprete(ErrorCode, Msg, 1024);
-    ErrorSqlMessage := StrPas(Msg);
+    ErrorSqlMessage := String(StrPas(Msg));
 
 {$IFDEF INTERBASE_EXTENDED_MESSAGES}
     if SQL <> '' then
@@ -877,11 +878,11 @@ var
 begin
   { Allocate an sql statement }
   PlainDriver.isc_dsql_alloc_statement2(@StatusVector, Handle, @StmtHandle);
-  CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, Sql);
+  CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, String(Sql));
   { Prepare an sql statement }
     PlainDriver.isc_dsql_prepare(@StatusVector, TrHandle, @StmtHandle,
       0, PAnsiChar(SQL), Dialect, nil);
-  iError := CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, SQL); //Check for disconnect AVZ
+  iError := CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, String(SQL)); //Check for disconnect AVZ
 
   { Set Statement Type }
   if (iError <> DISCONNECT_ERROR) then //AVZ
@@ -2537,7 +2538,7 @@ begin
   case Code of
     SQL_TEXT:
       begin
-        Result := BufferToStr(sqldata, sqllen);
+        Result := AnsiString(BufferToStr(sqldata, sqllen));
         // Trim only spaces. TrimRight also removes other characters)
         l := sqllen;
         while (l > 0) and (Result[l] = ' ') do
@@ -2656,8 +2657,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^ <> 0;
         SQL_SHORT     : Result := PSmallint(sqldata)^ <> 0;
         SQL_INT64     : Result := PInt64(sqldata)^ <> 0;
-        SQL_TEXT      : Result := StrToInt(DecodeString(SQL_TEXT, Index)) <> 0;
-        SQL_VARYING   : Result := StrToInt(DecodeString(SQL_VARYING, Index)) <> 0;
+        SQL_TEXT      : Result := StrToInt(String(DecodeString(SQL_TEXT, Index))) <> 0;
+        SQL_VARYING   : Result := StrToInt(String(DecodeString(SQL_VARYING, Index))) <> 0;
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2738,8 +2739,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := StrToFloat(DecodeString(SQL_TEXT, Index));
-        SQL_VARYING   : Result := StrToFloat(DecodeString(SQL_VARYING, Index));
+        SQL_TEXT      : Result := StrToFloat(String(DecodeString(SQL_TEXT, Index)));
+        SQL_VARYING   : Result := StrToFloat(String(DecodeString(SQL_VARYING, Index)));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2790,8 +2791,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := StrToFloat(DecodeString(SQL_TEXT, Index));
-        SQL_VARYING   : Result := StrToFloat(DecodeString(SQL_VARYING, Index));
+        SQL_TEXT      : Result := StrToFloat(String(DecodeString(SQL_TEXT, Index)));
+        SQL_VARYING   : Result := StrToFloat(String(DecodeString(SQL_VARYING, Index)));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2917,8 +2918,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := StrToInt(DecodeString(SQL_TEXT, Index));
-        SQL_VARYING   : Result := StrToInt(DecodeString(SQL_VARYING, Index));
+        SQL_TEXT      : Result := StrToInt(String(DecodeString(SQL_TEXT, Index)));
+        SQL_VARYING   : Result := StrToInt(String(DecodeString(SQL_VARYING, Index)));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2951,11 +2952,11 @@ begin
     if (sqlscale < 0)  then
     begin
       case SQLCode of
-        SQL_SHORT  : Result := FloatToStr(PSmallInt(sqldata)^ / IBScaleDivisor[sqlscale]);
-        SQL_LONG   : Result := FloatToStr(PInteger(sqldata)^  / IBScaleDivisor[sqlscale]);
+        SQL_SHORT  : Result := AnsiString(FloatToStr(PSmallInt(sqldata)^ / IBScaleDivisor[sqlscale]));
+        SQL_LONG   : Result := AnsiString(FloatToStr(PInteger(sqldata)^  / IBScaleDivisor[sqlscale]));
         SQL_INT64,
-        SQL_QUAD   : Result := FloatToStr(PInt64(sqldata)^    / IBScaleDivisor[sqlscale]);
-        SQL_DOUBLE : Result := FloatToStr(PDouble(sqldata)^);
+        SQL_QUAD   : Result := AnsiString(FloatToStr(PInt64(sqldata)^    / IBScaleDivisor[sqlscale]));
+        SQL_DOUBLE : Result := AnsiString(FloatToStr(PDouble(sqldata)^));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2963,17 +2964,17 @@ begin
     end
     else
       case SQLCode of
-        SQL_DOUBLE    : Result := FloatToStr(PDouble(sqldata)^);
-        SQL_LONG      : Result := IntToStr(PInteger(sqldata)^);
+        SQL_DOUBLE    : Result := AnsiString(FloatToStr(PDouble(sqldata)^));
+        SQL_LONG      : Result := AnsiString(IntToStr(PInteger(sqldata)^));
         SQL_D_FLOAT,
-        SQL_FLOAT     : Result := FloatToStr(PSingle(sqldata)^);
+        SQL_FLOAT     : Result := AnsiString(FloatToStr(PSingle(sqldata)^));
         SQL_BOOLEAN   :
           if Boolean(PSmallint(sqldata)^) = True then
             Result := 'YES'
           else
             Result := 'NO';
-        SQL_SHORT     : Result := IntToStr(PSmallint(sqldata)^);
-        SQL_INT64     : Result := IntToStr(PInt64(sqldata)^);
+        SQL_SHORT     : Result := AnsiString(IntToStr(PSmallint(sqldata)^));
+        SQL_INT64     : Result := AnsiString(IntToStr(PInt64(sqldata)^));
         SQL_TEXT      : DecodeString2(SQL_TEXT, Index, Result);
         SQL_VARYING   : DecodeString2(SQL_VARYING, Index, Result);
         SQL_BLOB      : if VarIsEmpty(FDefaults[Index]) then

@@ -522,7 +522,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
-  Result := SQLStrToFloatDef(String(InternalGetString(ColumnIndex)), 0);
+  Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
 end;
 
 {**
@@ -539,7 +539,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
-  Result := SQLStrToFloatDef(String(InternalGetString(ColumnIndex)), 0);
+  Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
 end;
 
 {**
@@ -557,7 +557,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
-  Result := SQLStrToFloatDef(String(InternalGetString(ColumnIndex)), 0);
+  Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
 end;
 
 {**

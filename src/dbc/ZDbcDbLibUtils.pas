@@ -297,7 +297,7 @@ begin
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
-            Result := AnsiQuotedStr(StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), '''')
+            Result := AnsiQuotedStr(StringReplace(String(TempBlob.GetString), #0, '', [rfReplaceAll]), '''')
           else
             Result := 'NULL';
         end;

@@ -815,7 +815,7 @@ procedure TZOracleCallableStatement.FetchOutParam;
               try
               StrLCopy( ps,
                         {PAnsiChar }(CurrentVar.Data), 1024);  //DefVarManager.SetAsString( outParamValues[I], PAnsiChar (CurrentVar.Data)^ );
-              DefVarManager.SetAsString( OutParamValues[I], ps );
+              DefVarManager.SetAsString( OutParamValues[I], String(ps) );
               finally
                FreeMem(ps);
               end;
