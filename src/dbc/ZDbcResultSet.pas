@@ -132,7 +132,10 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; virtual;
     function GetPChar(ColumnIndex: Integer): PChar; virtual;
-    function GetString(ColumnIndex: Integer): String; overload; virtual;
+    function GetString(ColumnIndex: Integer): String; virtual;
+    {$IFDEF DELPHI12_UP}
+    function GetAnsiString(ColumnIndex: Integer): AnsiString;
+    {$ENDIF}
     function GetUnicodeString(ColumnIndex: Integer): WideString; virtual;
     function GetBoolean(ColumnIndex: Integer): Boolean; virtual;
     function GetByte(ColumnIndex: Integer): ShortInt; virtual;
@@ -627,6 +630,21 @@ begin
   Result := ZDbcString(InternalGetString(ColumnIndex));
 end;
 
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>String</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+{$IFDEF DELPHI12_UP}
+function TZAbstractResultSet.GetAnsiString(ColumnIndex: Integer): AnsiString;
+begin
+  Result := InternalGetString(ColumnIndex);
+end;
+{$ENDIF}
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as

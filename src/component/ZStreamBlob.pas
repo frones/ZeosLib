@@ -103,12 +103,7 @@ begin
     finally
       TempStream.Free;
     end;
-  end
-  else
-    if Mode = bmWrite then
-    begin
-
-    end;
+  end;
 end;
 
 type THackedDataset = class(TDataset);

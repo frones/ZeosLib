@@ -1445,7 +1445,9 @@ begin
   PrepareRowForUpdates;
   {EgonHugeist: TempBuffer the WideString, }
   if Assigned(Value) then
-  begin
+  begin //Step one: Findout, wat's comming in! To avoid User-Bugs
+    //it is possible that a PAnsiChar OR a PWideChar was written into
+    //the Stream!!!
     if Length(PWideChar(TMemoryStream(Value).Memory)) = Value.Size then
     begin
       WS := PWideChar(TMemoryStream(Value).Memory);
@@ -1457,7 +1459,6 @@ begin
         SetLength(WS, Value.Size div 2);
         System.Move(PWideString(TMemoryStream(Value).Memory)^,
           PWideChar(WS)^, Value.Size);
-
       end
       else
         WS := WideString(PAnsiChar(TMemoryStream(Value).Memory));

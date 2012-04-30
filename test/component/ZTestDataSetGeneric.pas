@@ -180,6 +180,8 @@ end;
 }
 procedure TZGenericTestDbcResultSet.TestPreparedStatement;
 var
+  Ansi: AnsiString;
+  WS: WideString;
   Query: TZQuery;
   StrStream, BinStream: TMemoryStream;
   StrStream1, BinStream1: TMemoryStream;
@@ -299,7 +301,8 @@ begin
       StrStream := TMemoryStream.Create;
       StrStream.LoadFromFile('../../../database/text/lgpl.txt');
       StrStream.Size := 1024;
-      Params[6].LoadFromStream(StrStream, {$IFDEF DELPHI12_UP}ftWideMemo{$ELSE}ftMemo{$ENDIF});
+//      Params[6].LoadFromStream(StrStream, {$IFDEF DELPHI12_UP}ftWideMemo{$ELSE}ftMemo{$ENDIF});
+      Params[6].LoadFromStream(StrStream, ftMemo);
 
       Params[7].Value := Null;
       ExecSql;
@@ -327,7 +330,23 @@ begin
       CheckEquals(0, FieldByName('p_redundant').AsInteger);
       CheckEquals(True, FieldByName('p_redundant').IsNull);
 
-      { compare aciistream }
+      { compare aciistream/unicodestream }
+      //Modification by EgonHugeist: Different behavior for the Same Field
+      //With dependencies on stUnicodeStream = CP_UTF8 for Delphi-compilers.
+      //Now we read a none Wide-Stream in! What happens? Zeos is now able
+      //to autodetect such strange things! But Zeos converts the Ansi-Stream to
+      //a WiteString-Stream. So this test must be modified...
+      {$IFNDEF FPC}
+      if Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+      begin
+        SetLength(Ansi,StrStream.Size);
+        StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
+        WS := UTF8Decode(Ansi);
+        StrStream.Clear;
+        StrStream.Write(PWideChar(WS)^, Length(WS)*2);
+        StrStream.Position := 0;
+      end;
+      {$ENDIF}
       StrStream1 := TMemoryStream.Create;
       (FieldByName('p_resume') as TBlobField).SaveToStream(StrStream1);
       CheckEquals(StrStream, StrStream1, 'Ascii Stream');
@@ -562,6 +581,8 @@ end;
 procedure TZGenericTestDbcResultSet.TestQueryUpdate;
 var
   Sql_: string;
+  WS: WideString;
+  Ansi: AnsiString;
   Query: TZQuery;
   StrStream, BinStream: TMemoryStream;
   StrStream1, BinStream1: TMemoryStream;
@@ -657,6 +678,23 @@ begin
       StrStream := TMemoryStream.Create();
       StrStream.LoadFromFile('../../../database/text/lgpl.txt');
       StrStream.Size := 1024;
+
+      //Modification by EgonHugeist: Different behavior for the Same Field
+      //With dependencies on stUnicodeStream = CP_UTF8 for Delphi-compilers.
+      //Now we read a none Wide-Stream in! What happens? Zeos is now able
+      //to autodetect such strange things! But Zeos converts the Ansi-Stream to
+      //a WiteString-Stream. So this test must be modified...
+      {$IFNDEF FPC}
+      if Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+      begin
+        SetLength(Ansi,StrStream.Size);
+        StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
+        WS := UTF8Decode(Ansi);
+        StrStream.Clear;
+        StrStream.Write(PWideChar(WS)^, Length(WS)*2);
+        StrStream.Position := 0;
+      end;
+      {$ENDIF}
       BinStream := TMemoryStream.Create();
       BinStream.LoadFromFile('../../../database/images/dogs.jpg');
       BinStream.Size := 1024;

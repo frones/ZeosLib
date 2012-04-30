@@ -1714,7 +1714,7 @@ begin
       stString:
         begin
           Result.VType := vtString;
-          Result.VString := String(PAnsiChar(ValuePtr));
+          Result.VString := PChar(ValuePtr);
         end;
       stUnicodeString:
         begin
