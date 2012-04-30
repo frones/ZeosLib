@@ -20,6 +20,10 @@ USEUNIT("..\..\src\plain\ZPlainAdoDriver.pas");
 
 USEUNIT("..\..\src\plain\ZPlainDbLibDriver.pas");
 
+USEUNIT("..\..\src\plain\ZPlainFreeTDSDriver.pas");
+
+USEUNIT("..\..\src\plain\ZPlainFreeTDSConstants.pas");
+
 USEUNIT("..\..\src\plain\ZPlainDbLibMsSql7.pas");
 
 USEUNIT("..\..\src\plain\ZPlainDbLibSybaseAse125.pas");

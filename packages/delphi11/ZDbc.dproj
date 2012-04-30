@@ -65,10 +65,9 @@
     <DCCReference Include="..\..\src\dbc\ZDbcCachedResultSet.pas" />
     <DCCReference Include="..\..\src\dbc\ZDbcConnection.pas" />
     <DCCReference Include="..\..\src\dbc\ZDbcDbLib.pas" />
-    <DCCReference Include="..\..\src\dbc\ZDbcDbLibMsSqlMetadata.pas" />
+    <DCCReference Include="..\..\src\dbc\ZDbcDbLibMetadata.pas" />
     <DCCReference Include="..\..\src\dbc\ZDbcDbLibResultSet.pas" />
     <DCCReference Include="..\..\src\dbc\ZDbcDbLibStatement.pas" />
-    <DCCReference Include="..\..\src\dbc\ZDbcDbLibSybaseMetadata.pas" />
     <DCCReference Include="..\..\src\dbc\ZDbcDbLibUtils.pas" />
     <DCCReference Include="..\..\src\dbc\ZDbcGenericResolver.pas" />
     <DCCReference Include="..\..\src\dbc\ZDbcInterbase6.pas" />
