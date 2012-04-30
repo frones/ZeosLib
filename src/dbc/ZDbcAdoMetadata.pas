@@ -1279,7 +1279,7 @@ function TZAdoDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
 var
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-    Result := ConstructVirtualResultSet(ProceduresColumnsDynArray);
+    Result:=inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
 
     AdoRecordSet := AdoOpenSchema(adSchemaProcedures,
       [Catalog, SchemaPattern, ProcedureNamePattern, '']);
@@ -1370,7 +1370,7 @@ function TZAdoDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: string
 var
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-    Result := ConstructVirtualResultSet(ProceduresColColumnsDynArray);
+    Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
     AdoRecordSet := AdoOpenSchema(adSchemaProcedureParameters,
       [Catalog, SchemaPattern, ProcedureNamePattern]);
@@ -1461,7 +1461,7 @@ var
   TableTypes: string;
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-    Result := ConstructVirtualResultSet(TableColumnsDynArray);
+    Result:=inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
 
     for I := Low(Types) to High(Types) do
     begin
@@ -1513,7 +1513,7 @@ function TZAdoDatabaseMetadata.UncachedGetSchemas: IZResultSet;
 var
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-    Result := ConstructVirtualResultSet(SchemaColumnsDynArray);
+    Result:=inherited UncachedGetSchemas;
 
     AdoRecordSet := AdoOpenSchema(adSchemaSchemata, []);
     if Assigned(AdoRecordSet) then
@@ -1549,7 +1549,7 @@ function TZAdoDatabaseMetadata.UncachedGetCatalogs: IZResultSet;
 var
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-    Result := ConstructVirtualResultSet(CatalogColumnsDynArray);
+    Result:=inherited UncachedGetCatalogs;
 
     AdoRecordSet := AdoOpenSchema(adSchemaCatalogs, []);
     if Assigned(AdoRecordSet) then
@@ -1592,7 +1592,8 @@ const
 var
   I: Integer;
 begin
-    Result := ConstructVirtualResultSet(TableTypeColumnsDynArray);
+    Result:=inherited UncachedGetTableTypes;
+
     for I := 0 to 7 do
     begin
       Result.MoveToInsertRow;
@@ -1659,7 +1660,8 @@ var
   AdoRecordSet: ZPlainAdo.RecordSet;
   Flags: Integer;
 begin
-    Result := ConstructVirtualResultSet(TableColColumnsDynArray);
+  Result:=inherited UncachedGetColumns(Catalog, SchemaPattern,
+      TableNamePattern, ColumnNamePattern);
 
     AdoRecordSet := AdoOpenSchema(adSchemaColumns,
       [Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern]);
@@ -1765,7 +1767,7 @@ function TZAdoDatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: string
 var
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-    Result := ConstructVirtualResultSet(TableColPrivColumnsDynArray);
+  Result:=inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
 
     AdoRecordSet := AdoOpenSchema(adSchemaColumnPrivileges,
       [Catalog, Schema, Table, ColumnNamePattern]);
@@ -1839,7 +1841,7 @@ function TZAdoDatabaseMetadata.UncachedGetTablePrivileges(const Catalog: string;
 var
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-    Result := ConstructVirtualResultSet(TablePrivColumnsDynArray);
+  Result:=inherited UncachedGetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
 
     AdoRecordSet := AdoOpenSchema(adSchemaTablePrivileges,
       [Catalog, SchemaPattern, TableNamePattern]);
@@ -1910,7 +1912,7 @@ const
 var
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-    Result := ConstructVirtualResultSet(TableColVerColumnsDynArray);
+    Result:=inherited UncachedGetVersionColumns(Catalog, Schema, Table);
 
     AdoRecordSet := AdoOpenSchema(adSchemaColumns, [Catalog, Schema, Table]);
     if Assigned(AdoRecordSet) then
@@ -1972,7 +1974,7 @@ function TZAdoDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
 var
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-    Result := ConstructVirtualResultSet(PrimaryKeyColumnsDynArray);
+    Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
 
     AdoRecordSet := AdoOpenSchema(adSchemaPrimaryKeys,
       [Catalog, Schema, Table]);
@@ -2233,7 +2235,8 @@ function TZAdoDatabaseMetadata.UncachedGetCrossReference(const PrimaryCatalog: s
 var
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-    Result := ConstructVirtualResultSet(CrossRefColumnsDynArray);
+    Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
+                                                ForeignCatalog, ForeignSchema, ForeignTable);
 
     AdoRecordSet := AdoOpenSchema(adSchemaForeignKeys,
       [PrimaryCatalog, PrimarySchema, PrimaryTable,
@@ -2330,7 +2333,7 @@ function TZAdoDatabaseMetadata.UncachedGetTypeInfo: IZResultSet;
 var
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-    Result := ConstructVirtualResultSet(TypeInfoColumnsDynArray);
+    Result:=inherited UncachedGetTypeInfo;
 
     AdoRecordSet := AdoOpenSchema(adSchemaProviderTypes, []);
     if Assigned(AdoRecordSet) then
@@ -2442,7 +2445,7 @@ function TZAdoDatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
 var
   AdoRecordSet: ZPlainAdo.RecordSet;
 begin
-    Result := ConstructVirtualResultSet(IndexInfoColumnsDynArray);
+    Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
 
     AdoRecordSet := AdoOpenSchema(adSchemaIndexes,
       [Catalog, Schema, '', '', Table]);
@@ -2525,7 +2528,8 @@ end;
 function TZAdoDatabaseMetadata.UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
   const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(UDTColumnsDynArray);
+
+  Result:=inherited UncachedGetUDTs(Catalog, SchemaPattern, TypeNamePattern, Types);
 
 //  AdoRecordSet := AdoOpenSchema(adSchemaIndexes, Restrictions);
 //  if Assigned(AdoRecordSet) then
