@@ -484,9 +484,11 @@ function TZPostgreSQLResultSet.GetDouble(ColumnIndex: Integer): Double;
                 if Pos('.', Result) > 0  then
                 begin
                   Result := Copy(Result, 1, Pos(',', Result)-1);
-                  while Pos('.', Result) > 0  do
-                    Result := Copy(Result, 1, Pos('.', Result)-1)+Copy(Result, Pos('.', Result)+1, Length(Result)); //remove ThousandSeparator
-                  Result := Result + '.'+Copy(MoneyString, Pos(',', MoneyString)+1, Length(MoneyString));
+                  while Pos('.', Result) > 0  do //remove ThousandSeparator
+                    Result := Copy(Result, 1, Pos('.', Result)-1)+
+                      Copy(Result, Pos('.', Result)+1, Length(Result));
+                  Result := Result + '.'+Copy(MoneyString,
+                    Pos(',', MoneyString)+1, Length(MoneyString));
                 end
                 else
                   Result[Pos(',', Result)] := '.';

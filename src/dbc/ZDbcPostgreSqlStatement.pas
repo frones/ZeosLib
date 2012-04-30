@@ -419,9 +419,15 @@ begin
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
       stString, stBytes:
-        Result := EncodeString(FCharactersetCode,SoftVarManager.GetAsString(Value));
+        if (Connection as IZPostgreSQLConnection).StandardConformingStrings then
+          Result := EncodeString(FCharactersetCode,SoftVarManager.GetAsString(Value))
+        else
+          Result := QuotedStr(SoftVarManager.GetAsString(Value));
       stUnicodeString:
-        Result := UTF8Encode(EncodeString(FCharactersetCode,SoftVarManager.GetAsUnicodeString(Value)));
+        if (Connection as IZPostgreSQLConnection).StandardConformingStrings then
+          Result := UTF8Encode(EncodeString(FCharactersetCode,SoftVarManager.GetAsUnicodeString(Value)))
+        else
+          Result := QuotedStr(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)));
       stDate:
         Result := Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]);
@@ -437,7 +443,10 @@ begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
           begin
-            Result := EncodeString(TempBlob.GetString)
+            if (Connection as IZPostgreSQLConnection).StandardConformingStrings then
+              Result := EncodeString(TempBlob.GetString)
+            else
+              Result := QuotedStr(TempBlob.GetString)
           end
           else
           begin
@@ -449,7 +458,10 @@ begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
           begin
-            Result := EncodeString(FCharactersetCode, UTF8Encode(TempBlob.GetUnicodeString))
+            if (Connection as IZPostgreSQLConnection).StandardConformingStrings then
+              Result := EncodeString(FCharactersetCode, UTF8Encode(TempBlob.GetUnicodeString))
+            else
+              Result := QuotedStr(UTF8Encode(TempBlob.GetUnicodeString))
           end
           else
           begin
@@ -609,9 +621,15 @@ begin
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
       stString, stBytes:
-        Result := EncodeString(SoftVarManager.GetAsString(Value));
+        if (Connection as IZPostgreSQLConnection).StandardConformingStrings then
+          Result := EncodeString(SoftVarManager.GetAsString(Value))
+        else
+          Result := QuotedStr(SoftVarManager.GetAsString(Value));
       stUnicodeString:
-        Result := UTF8Encode(EncodeString(SoftVarManager.GetAsUnicodeString(Value)));
+        if (Connection as IZPostgreSQLConnection).StandardConformingStrings then
+          Result := UTF8Encode(EncodeString(SoftVarManager.GetAsUnicodeString(Value)))
+        else
+          Result := QuotedStr(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)));
       stDate:
         Result := Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]);
@@ -627,7 +645,10 @@ begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
           begin
-            Result := EncodeString(TempBlob.GetString)
+            if (Connection as IZPostgreSQLConnection).StandardConformingStrings then
+              Result := EncodeString(TempBlob.GetString)
+            else
+              Result := QuotedStr(TempBlob.GetString);
           end
           else
           begin
@@ -639,7 +660,10 @@ begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
           begin
-            Result := EncodeString( UTF8Encode(TempBlob.GetUnicodeString))
+            if (Connection as IZPostgreSQLConnection).StandardConformingStrings then
+              Result := EncodeString( UTF8Encode(TempBlob.GetUnicodeString))
+            else
+              Result := QuotedStr(UTF8Encode(TempBlob.GetUnicodeString));
           end
           else
           begin
