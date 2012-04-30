@@ -202,10 +202,6 @@
 				<BuildOrder>89</BuildOrder>
 				<BuildOrder>29</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcDbLibSybaseMetadata.pas">
-				<BuildOrder>29</BuildOrder>
-				<BuildOrder>30</BuildOrder>
-			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\dbc\ZDbcDbLibStatement.pas">
 				<BuildOrder>26</BuildOrder>
 				<BuildOrder>31</BuildOrder>
@@ -246,7 +242,7 @@
 				<BuildOrder>11</BuildOrder>
 				<BuildOrder>40</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcDbLibMsSqlMetadata.pas">
+			<DelphiCompile Include="..\..\src\dbc\ZDbcDbLibMetadata.pas">
 				<BuildOrder>20</BuildOrder>
 				<BuildOrder>41</BuildOrder>
 			</DelphiCompile>

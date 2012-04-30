@@ -38,6 +38,8 @@ contains
   ZPlainDbLibDriver in '..\..\src\plain\ZPlainDbLibDriver.pas',
   ZPlainDbLibMsSql7 in '..\..\src\plain\ZPlainDbLibMsSql7.pas',
   ZPlainDbLibSybaseAse125 in '..\..\src\plain\ZPlainDbLibSybaseAse125.pas',
+  ZPlainFreeTDSDriver in '..\..\src\plain\ZPlainFreeTDSDriver.pas',
+  ZPlainFreeTDSConstants in '..\..\src\plain\ZPlainFreeTDSConstants.pas',
 {$ENDIF}
 
 {$IFDEF ENABLE_INTERBASE}
