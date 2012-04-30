@@ -101,6 +101,7 @@ type
   {** Implements PostgreSQL Database Connection. }
   TZPostgreSQLConnection = class(TZAbstractConnection, IZPostgreSQLConnection)
   private
+    FStandardConformingStrings: Boolean;
     FHandle: PZPostgreSQLConnect;
     FBeginRequired: Boolean;
     FTypeList: TStrings;
@@ -527,6 +528,22 @@ begin
       end;
     CheckCharEncoding(FClientCodePage);
     FCharactersetCode := TZPgCharactersetType(ClientCodePage^.ID);
+
+    { sets now the standard_conforming_strings which decides the escaping behavior
+      if not available }
+    if Info.Values['standard_conforming_strings']<>'' then
+    begin
+      FStandardConformingStrings := UpperCase(Info.Values['standard_conforming_strings']) = 'ON';
+      SQL := PAnsiChar(ZPlainString(Format('SET standard_conforming_strings=''%s''',
+                                          [Info.Values['standard_conforming_strings']])));
+      QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, PAnsiChar(AnsiString(SQL)));
+      CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute,
+                            SQL,QueryHandle);
+      GetPlainDriver.Clear(QueryHandle);
+      DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
+    end
+    else
+      FStandardConformingStrings := Self.GetServerMajorVersion < 9;
 
   finally
     if self.IsClosed and (Self.FHandle <> nil) then
@@ -1044,9 +1061,15 @@ function TZPostgreSQLConnection.GetEscapeString(const Value: String;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
   if StartsWith(Value, '''') and EndsWith(Value, '''') then
-    Result := inherited GetEscapeString({ZDbcPostgreSqlUtils.EncodeString(TZPgCharactersetType(Self.ClientCodePage^.ID),} Value{)}, EscapeMarkSequence)
+    if not FStandardConformingStrings then
+      Result := inherited GetEscapeString(ZDbcPostgreSqlUtils.EncodeString(TZPgCharactersetType(Self.ClientCodePage^.ID), Value), EscapeMarkSequence)
+    else
+    Result := inherited GetEscapeString(Value, EscapeMarkSequence)
   else
-    Result := inherited GetEscapeString({ZDbcPostgreSqlUtils.EncodeString(TZPgCharactersetType(Self.ClientCodePage^.ID),} QuotedStr(Value){)}, EscapeMarkSequence)
+    if not FStandardConformingStrings then
+      Result := inherited GetEscapeString(QuotedStr(Value), EscapeMarkSequence)
+    else
+      Result := inherited GetEscapeString(ZDbcPostgreSqlUtils.EncodeString(TZPgCharactersetType(Self.ClientCodePage^.ID), QuotedStr(Value)), EscapeMarkSequence)
 end;
 
 { TZPostgreSQLSequence }

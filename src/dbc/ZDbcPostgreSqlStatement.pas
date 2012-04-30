@@ -585,8 +585,10 @@ begin
           Result := 'FALSE';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
-      stString, stBytes, stUnicodeString:
+      stString, stBytes:
         Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
+      stUnicodeString:
+        Result := Self.GetConnection.GetEscapeString(String(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))));
       stDate:
         Result := Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]);
@@ -601,7 +603,7 @@ begin
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
-            Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString)
+            Result := Self.GetConnection.GetEscapeString(String(TempBlob.GetString))
           else
             Result := 'NULL';
         end;
