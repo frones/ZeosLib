@@ -5,8 +5,8 @@ interface
 {$I ZPlain.inc}
 
 uses ZCompatibility;
-{***************** Plain API Constants definition ****************}
 
+{***************** Plain API Constants definition ****************}
 const
 { General  #define }
   TIMEOUT_IGNORE        = Cardinal(-1);
