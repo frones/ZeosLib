@@ -1,6 +1,8 @@
-unit ZPlainFreeTDSConstants;
+unit ZPlainDbLibConstants;
 
 interface
+
+{$I ZPlain.inc}
 
 uses ZCompatibility;
 {***************** Plain API Constants definition ****************}

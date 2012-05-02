@@ -154,11 +154,7 @@
 				<BuildOrder>8</BuildOrder>
 				<BuildOrder>23</BuildOrder>
 			</PackageImport>
-			<DelphiCompile Include="..\..\src\plain\ZPlainFreeTDSDriver.pas">
-				<BuildOrder>26</BuildOrder>
-				<BuildOrder>29</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\plain\ZPlainFreeTDSConstants.pas">
+			<DelphiCompile Include="..\..\src\plain\ZPlainDbLibConstants.pas">
 				<BuildOrder>26</BuildOrder>
 				<BuildOrder>29</BuildOrder>
 			</DelphiCompile>
