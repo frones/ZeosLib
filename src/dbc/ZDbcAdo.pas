@@ -64,18 +64,9 @@ uses
 type
   {** Implements Ado Database Driver. }
   TZAdoDriver = class(TZAbstractDriver)
-  private
-    FAdoPlainDriver: IZPlainDriver;
-  protected
-    function GetPlainDriver(const Url: TZURL): IZPlainDriver; override;
   public
-    constructor Create;
+    constructor Create; override;
     function Connect(const Url: TZURL): IZConnection; override;
-
-    function GetSupportedProtocols: TStringDynArray; override;
-    function GetSupportedClientCodePages(const Url: string;
-      const SupportedsOnly: Boolean): TStringDynArray; override; //EgonHugeist
-
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
   end;
@@ -149,32 +140,8 @@ const                                                //adXactUnspecified
 }
 constructor TZAdoDriver.Create;
 begin
-  FAdoPlainDriver := TZAdoPlainDriver.Create;
-end;
-
-function TZAdoDriver.GetPlainDriver(const Url: TZURL): IZPlainDriver;
-begin
-  Result := FAdoPlainDriver;
-end;
-
-{**
-  Get a name of the supported subprotocol.
-}
-function TZAdoDriver.GetSupportedProtocols: TStringDynArray;
-begin
-  SetLength(Result, 1);
-  Result[0] := FAdoPlainDriver.GetProtocol;
-end;
-
-{**
-  EgonHugeist:
-  Get names of the compiler-supported CharacterSets.
-  For example: ASCII, UTF8...
-}
-function TZAdoDriver.GetSupportedClientCodePages(const Url: string;
-  Const SupportedsOnly: Boolean): TStringDynArray; //EgonHugeist
-begin
-  Result := Self.FAdoPlainDriver.GetSupportedClientCodePages(not SupportedsOnly);
+  inherited Create;
+  AddSupportedProtocol(AddPlainDriverToCache(TZAdoPlainDriver.Create));
 end;
 
 {**

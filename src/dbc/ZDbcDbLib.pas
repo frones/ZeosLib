@@ -69,18 +69,9 @@ uses
 type
   {** Implements DBLib Database Driver. }
   TZDBLibDriver = class(TZAbstractDriver)
-  private
-    FMSSqlPlainDriver: IZDBLibPlainDriver;
-    FSybasePlainDriver: IZDBLibPlainDriver;
-  protected
-    function GetPlainDriver(const Url: TZURL): IZPlainDriver; override;
   public
-    constructor Create;
+    constructor Create; override;
     function Connect(const Url: TZURL): IZConnection; override;
-
-    function GetSupportedProtocols: TStringDynArray; override;
-    function GetSupportedClientCodePages(const Url: string;
-      Const SupportedsOnly: Boolean): TStringDynArray; override; //EgonHugeist
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
 
@@ -158,44 +149,9 @@ uses
 }
 constructor TZDBLibDriver.Create;
 begin
-  FMSSqlPlainDriver := TZDBLibMSSQL7PlainDriver.Create;
-  FSybasePlainDriver := TZDBLibSybaseASE125PlainDriver.Create;
-end;
-
-function TZDBLibDriver.GetPlainDriver(const Url: TZURL): IZPlainDriver;
-begin
-  if Url.Protocol = FMSSqlPlainDriver.GetProtocol then
-    Result := FMSSqlPlainDriver;
-  if Url.Protocol = FSybasePlainDriver.GetProtocol then
-    Result := FSybasePlainDriver;
-  Result.Initialize(Url.LibLocation);
-end;
-
-{**
-  Get a name of the supported subprotocol.
-}
-function TZDBLibDriver.GetSupportedProtocols: TStringDynArray;
-begin
-  SetLength(Result, 2);
-  Result[0] := FSybasePlainDriver.GetProtocol;
-  Result[1] := FMSSqlPlainDriver.GetProtocol;
-end;
-
-{**
-  EgonHugeist:
-  Get names of the compiler-supported CharacterSets.
-  For example: ASCII, UTF8...
-}
-function TZDBLibDriver.GetSupportedClientCodePages(const Url: string;
-  Const SupportedsOnly: Boolean): TStringDynArray; //EgonHugeist
-var
-  Protocol: string;
-begin
-  Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
-  if FSybasePlainDriver.GetProtocol = Protocol then
-    Result := FSybasePlainDriver.GetSupportedClientCodePages(not (SupportedsOnly));
-  if FMSSqlPlainDriver.GetProtocol = Protocol then
-    Result := FMSSqlPlainDriver.GetSupportedClientCodePages(not (SupportedsOnly));
+  inherited Create;
+  AddSupportedProtocol(AddPlainDriverToCache(TZDBLibMSSQL7PlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZDBLibSybaseASE125PlainDriver.Create));
 end;
 
 {**

@@ -721,6 +721,8 @@ type
   {** Implements a driver for PostgreSQL 7.4 }
   TZPostgreSQL7PlainDriver = class(TZPostgreSQLBaseDriver, IZPlainDriver,
     IZPostgreSQLPlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
   public
     constructor Create;
 
@@ -743,6 +745,7 @@ type
 
   TZPostgreSQL8PlainDriver = class(TZPostgreSQLBaseDriver, IZPlainDriver,IZPostgreSQLPlainDriver)
   protected
+    function Clone: IZPlainDriver; override;
     function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
     procedure LoadApi; override;
@@ -1324,6 +1327,11 @@ end;
 
 { TZPostgreSQL7PlainDriver }
 
+function TZPostgreSQL7PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZPostgreSQL7PlainDriver.Create;
+end;
+
 constructor TZPostgreSQL7PlainDriver.Create;
 begin
   inherited Create;
@@ -1374,6 +1382,11 @@ begin
 end;
 
 { TZPostgreSQL8PlainDriver }
+function TZPostgreSQL8PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZPostgreSQL8PlainDriver.Create;
+end;
+
 function TZPostgreSQL8PlainDriver.GetUnicodeCodePageName: String;
 begin
   Result := 'UTF8';

@@ -366,6 +366,8 @@ type
   { TZNewMySQL41PlainDriver }
 
   TZMySQL41PlainDriver = class (TZMysqlBaseDriver)
+  protected
+    function Clone: IZPlainDriver; override;
   public
     constructor Create;
     function GetProtocol: string; override;
@@ -377,6 +379,8 @@ type
   { TZNewMySQLD41PlainDriver }
 
   TZMySQLD41PlainDriver = class (TZMySQL41PlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
   public
     constructor Create;
     function GetProtocol: string; override;
@@ -386,6 +390,8 @@ type
   { TZNewMySQL5PlainDriver }
 
   TZMySQL5PlainDriver = class (TZMysqlBaseDriver)
+  protected
+    function Clone: IZPlainDriver; override;
   protected
     procedure LoadApi; override;
     procedure LoadCodePages; override;
@@ -398,6 +404,8 @@ type
   { TZNewMySQLD5PlainDriver }
 
   TZMySQLD5PlainDriver = class (TZMySQL5PlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
   public
     constructor Create;
     function GetProtocol: string; override;
@@ -416,7 +424,7 @@ end;
 procedure TZMySQLBaseDriver.LoadCodePages;
 begin
   {MySQL 3.23-4.1}
-  { MultiChar }
+  { MultiByte }
   AddCodePage('big5', 1, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_Big5{$ENDIF}); {Big5 Traditional Chinese}
   AddCodePage('ujis', 10); {EUC-JP Japanese}
   AddCodePage('sjis', 11); {Shift-JIS Japanese}
@@ -1142,6 +1150,11 @@ end;
 
 { TZMySQL41PlainDriver }
 
+function TZMySQL41PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZMySQL41PlainDriver.Create;
+end;
+
 constructor TZMySQL41PlainDriver.Create;
 begin
   inherited Create;
@@ -1163,6 +1176,11 @@ begin
 end;
 
 { TZMySQLD41PlainDriver }
+
+function TZMySQLD41PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZMySQLD41PlainDriver.Create;
+end;
 
 constructor TZMySQLD41PlainDriver.Create;
 begin
@@ -1195,6 +1213,11 @@ begin
 end;
 
 { TZMySQL5PlainDriver }
+
+function TZMySQL5PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZMySQL5PlainDriver.Create;
+end;
 
 procedure TZMySQL5PlainDriver.LoadApi;
 begin
@@ -1241,6 +1264,11 @@ begin
 end;
 
 { TZMySQLD5PlainDriver }
+
+function TZMySQLD5PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZMySQLD5PlainDriver.Create;
+end;
 
 constructor TZMySQLD5PlainDriver.Create;
 begin

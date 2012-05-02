@@ -60,7 +60,8 @@ interface
 {$IFDEF WITH_PROPERTY_EDITOR}
 
 uses
-  Types, Classes, ZClasses, ZCompatibility, ZDbcIntfs, ZGroupedConnection , ZConnectionGroup, ZAbstractConnection,
+  Types, Classes, ZClasses, ZCompatibility, ZDbcIntfs, ZGroupedConnection ,
+  ZConnectionGroup, ZAbstractConnection, ZURL,
 {$IFDEF BDS4_UP}
   WideStrings,
 {$ENDIF}
@@ -596,7 +597,7 @@ var
   Connection: TZAbstractConnection;
   I: Integer;
   SDyn: TStringDynArray;
-  S: String;
+  Url: TZURL;
 begin
 
   if GetZComponent is TZAbstractConnection then
@@ -610,8 +611,10 @@ begin
       List.Append('No Protocol selected!')
     else
     begin
-      s := DriverManager.ConstructURL(Connection.Protocol, '', '', '', '', 0);
-      SDyn := DriverManager.GetDriver(s).GetSupportedClientCodePages(s, True);
+      Url := TZURL.Create;
+      Url.Protocol :=  Connection.Protocol;
+      SDyn := DriverManager.GetDriver(Url.URL).GetSupportedClientCodePages(Url, True);
+      Url.Free;
       for i := 0 to high(SDyn) do
         List.Append(SDyn[i]);
 

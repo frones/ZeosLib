@@ -859,6 +859,8 @@ type
   {** Implements a driver for Oracle 9i }
   TZOracle9iPlainDriver = class (TZGenericAbstractPlainDriver, IZPlainDriver,
     IZOraclePlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
   public
     constructor Create;
 
@@ -1288,6 +1290,11 @@ begin
 
   AddCodePage('UTF8', 226, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}); {Unicode 3.0 UTF-8 Universal character set, CESU-8 compliant}
   AddCodePage('UTFE', 227, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}); {EBCDIC form of Unicode 3.0 UTF-8 Universal character set}
+end;
+
+function TZOracle9iPlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZOracle9iPlainDriver.Create;
 end;
 
 constructor TZOracle9iPlainDriver.Create;

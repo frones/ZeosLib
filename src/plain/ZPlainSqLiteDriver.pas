@@ -527,6 +527,7 @@ type
   {** Implements a driver for SQLite 3 }
   TZSQLite3PlainDriver = class (TZSQLiteBaseDriver, IZPlainDriver, IZSQLitePlainDriver)
   protected
+    function Clone: IZPlainDriver; override;
     procedure LoadApi; override;
   public
     constructor Create;
@@ -941,6 +942,11 @@ begin
 end;
 
 { TZSQLite3PlainDriver }
+
+function TZSQLite3PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZSQLite3PlainDriver.Create;
+end;
 
 procedure TZSQLite3PlainDriver.LoadApi;
 begin

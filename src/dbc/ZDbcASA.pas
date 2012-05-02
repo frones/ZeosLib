@@ -65,19 +65,9 @@ uses
 type
   {** Implements a ASA Database Driver. }
   TZASADriver = class(TZAbstractDriver)
-  private
-    FASA7PlainDriver: IZASA7PlainDriver;
-    FASA8PlainDriver: IZASA8PlainDriver;
-    FASA9PlainDriver: IZASA9PlainDriver;
-  protected
-    function GetPlainDriver(const Url: TZURL): IZPlainDriver; override;
   public
-    constructor Create;
+    constructor Create; override;
     function Connect(const Url: TZURL): IZConnection; override;
-
-    function GetSupportedProtocols: TStringDynArray; override;
-    function GetSupportedClientCodePages(const Url: string;
-      Const SupportedsOnly: Boolean): TStringDynArray; override; //EgonHugeist
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
     function GetTokenizer: IZTokenizer; override;
@@ -175,9 +165,10 @@ end;
 }
 constructor TZASADriver.Create;
 begin
-  FASA7PlainDriver := TZASA7PlainDriver.Create;
-  FASA8PlainDriver := TZASA8PlainDriver.Create;
-  FASA9PlainDriver := TZASA9PlainDriver.Create;
+  inherited Create;
+  AddSupportedProtocol(AddPlainDriverToCache(TZASA7PlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZASA8PlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZASA9PlainDriver.Create));
 end;
 
 {**
@@ -218,53 +209,6 @@ begin
   if Analyser = nil then
     Analyser := TZSybaseStatementAnalyser.Create;
   Result := Analyser;
-end;
-
-{**
-  Gets plain driver for selected protocol.
-  @param Url a database connection URL.
-  @return a selected protocol.
-}
-function TZASADriver.GetPlainDriver(const Url: TZURL): IZPlainDriver;
-begin
-  if Url.Protocol = FASA7PlainDriver.GetProtocol then
-    Result := FASA7PlainDriver
-  else if Url.Protocol = FASA8PlainDriver.GetProtocol then
-    Result := FASA8PlainDriver
-  else if Url.Protocol = FASA9PlainDriver.GetProtocol then
-    Result := FASA9PlainDriver;
-  Result.Initialize(Url.LibLocation);
-end;
-
-{**
-  Get a name of the supported subprotocol.
-  For example: mysql, oracle8 or postgresql72
-}
-function TZASADriver.GetSupportedProtocols: TStringDynArray;
-begin
-  SetLength(Result, 3);
-  Result[0] := FASA7PlainDriver.GetProtocol;
-  Result[1] := FASA8PlainDriver.GetProtocol;
-  Result[2] := FASA9PlainDriver.GetProtocol;
-end;
-
-{**
-  EgonHugeist:
-  Get names of the compiler-supported CharacterSets.
-  For example: ASCII, UTF8...
-}
-function TZASADriver.GetSupportedClientCodePages(const Url: string;
-  Const SupportedsOnly: Boolean): TStringDynArray; //EgonHugeist
-var
-  Protocol: string;
-begin
-  Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
-  if FASA7PlainDriver.GetProtocol = Protocol then
-    Result := FASA7PlainDriver.GetSupportedClientCodePages(not SupportedsOnly);
-  if FASA8PlainDriver.GetProtocol = Protocol then
-    Result := FASA8PlainDriver.GetSupportedClientCodePages(not SupportedsOnly);
-  if FASA8PlainDriver.GetProtocol = Protocol then
-    Result := FASA9PlainDriver.GetSupportedClientCodePages(not SupportedsOnly);
 end;
 
 { TZASAConnection }

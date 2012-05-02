@@ -68,11 +68,11 @@ type
     function GetDescription: string;
     {EgonHugeist:
       Why this here? -> No one else then Plaindriver knows which Characterset
-      is supported. Here i've made a intervention in dependency of used Compiler..
-    }
+      is supported. Here i've made a intervention in dependency of used Compiler.}
     function GetSupportedClientCodePages(const IgnoreUnsupported: Boolean): TStringDynArray;
     function GetClientCodePageInformations(const ClientCharacterSet: String): PZCodePage; //Egonhugeist
     procedure Initialize(const Location: String = '');
+    function Clone: IZPlainDriver;
   end;
 
   {ADDED by EgonHugeist 20-01-2011}
@@ -83,6 +83,7 @@ type
   private
     FCodePages: array of TZCodePage;
   protected
+    function Clone: IZPlainDriver; virtual; abstract;
     procedure LoadCodePages; virtual; abstract;
     procedure AddCodePage(const Name: String; const ID:  Integer;
       Encoding: TZCharEncoding = ceAnsi;
@@ -98,7 +99,7 @@ type
     function GetProtocol: string; virtual; abstract;
     function GetDescription: string; virtual; abstract;
     function GetSupportedClientCodePages(const IgnoreUnsupported: Boolean): TStringDynArray;
-    procedure Initialize(const Location: String); virtual; abstract;
+    procedure Initialize(const Location: String = ''); virtual; abstract;
     destructor Destroy; override;
 
     function GetClientCodePageInformations(const ClientCharacterSet: String): PZCodePage;
@@ -441,6 +442,8 @@ procedure TZAbstractPlainDriver.Initialize(const Location: String = '');
 begin
   If Assigned(Loader) and not Loader.Loaded then
   begin
+    if Location <> '' then
+      Loader.ClearLocations;
     Loader.AddLocation(Location);
     If Loader.LoadNativeLibrary then
       LoadApi;

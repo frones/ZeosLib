@@ -895,6 +895,8 @@ type
   {** Implements a driver for ASA 7.0 }
   TZASA7PlainDriver = class (TZGenericAbstractPlainDriver, IZPlainDriver,
     IZASAPlainDriver, IZASA7PlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
   public
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
@@ -988,6 +990,8 @@ type
   {** Implements a driver for ASA 8.0 }
   TZASA8PlainDriver = class (TZGenericAbstractPlainDriver, IZPlainDriver,
     IZASAPlainDriver, IZASA8PlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
   public
     constructor Create;
     procedure LoadCodePages; override;
@@ -1081,6 +1085,8 @@ type
   {** Implements a driver for ASA 9.0 }
   TZASA9PlainDriver = class (TZGenericAbstractPlainDriver, IZPlainDriver,
     IZASAPlainDriver, IZASA9PlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
   public
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
@@ -1169,6 +1175,11 @@ type
 implementation
 
 uses SysUtils, ZPlainASA7, ZPlainASA8, ZPlainASA9;
+
+function TZASA7PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZASA7PlainDriver.Create;
+end;
 
 procedure TZASA7PlainDriver.LoadCodePages;
 begin
@@ -1471,6 +1482,11 @@ constructor TZASA8PlainDriver.Create;
 begin
 end;
 
+function TZASA8PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZASA8PlainDriver.Create;
+end;
+
 function TZASA8PlainDriver.GetProtocol: string;
 begin
   Result := 'ASA8';
@@ -1750,6 +1766,11 @@ begin
 end;
 
 {TZASA9PlainDriver}
+
+function TZASA9PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZASA9PlainDriver.Create;
+end;
 
 procedure TZASA9PlainDriver.LoadCodePages;
 begin

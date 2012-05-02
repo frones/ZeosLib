@@ -68,15 +68,9 @@ type
   TZSQLiteDriver = class(TZAbstractDriver)
   private
     FPlainDrivers: Array of IZSQLitePlainDriver;
-  protected
-    function GetPlainDriver(const Url: TZURL): IZPlainDriver; override;
   public
-    constructor Create;
+    constructor Create; override;
     function Connect(const Url: TZURL): IZConnection; override;
-
-    function GetSupportedProtocols: TStringDynArray; override;
-    function GetSupportedClientCodePages(const Url: string;
-      Const SupportedsOnly: Boolean): TStringDynArray; override; //EgonHugeist
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
 
@@ -148,8 +142,9 @@ uses
 }
 constructor TZSQLiteDriver.Create;
 begin
-  SetLength(FPlainDrivers,1);
-  FPlainDrivers[0]  := TZSQLite3PlainDriver.Create;
+  inherited Create;
+  AddSupportedProtocol(AddPlainDriverToCache(TZSQLite3PlainDriver.Create, 'sqlite'));
+  AddSupportedProtocol(AddPlainDriverToCache(TZSQLite3PlainDriver.Create));
 end;
 
 {**
@@ -218,65 +213,6 @@ begin
   if Analyser = nil then
     Analyser := TZSQLiteStatementAnalyser.Create;
   Result := Analyser;
-end;
-
-{**
-  Get a name of the supported subprotocol.
-  For example: mysql, oracle8 or postgresql72
-}
-function TZSQLiteDriver.GetSupportedProtocols: TStringDynArray;
-var
-   i: smallint;
-begin
-  SetLength(Result, high(FPlainDrivers)+2);
-  // Generic driver
-  Result[0] := 'sqlite';
-  For i := 0 to high(FPlainDrivers) do
-    Result[i+1] := FPlainDrivers[i].GetProtocol;
-end;
-
-{**
-  EgonHugeist:
-  Get names of the compiler-supported CharacterSets.
-  For example: ASCII, UTF8...
-}
-function TZSQLiteDriver.GetSupportedClientCodePages(const Url: string;
-  Const SupportedsOnly: Boolean): TStringDynArray; //EgonHugeist
-var
-  Protocol: string;
-  i: smallint;
-begin
-  Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
-  if LowerCase(Protocol) = 'sqlite' then //latest version
-    Result := FPlainDrivers[high(FPlainDrivers)].GetSupportedClientCodePages(not SupportedsOnly)
-  else
-    For i := 0 to high(FPlainDrivers) do
-      if Protocol = FPlainDrivers[i].GetProtocol then
-        begin
-          Result := FPlainDrivers[i].GetSupportedClientCodePages(not SupportedsOnly);
-          break;
-        end;
-end;
-
-{**
-  Gets plain driver for selected protocol.
-  @param Url a database connection URL.
-  @return a selected protocol.
-}
-function TZSQLiteDriver.GetPlainDriver(const Url: TZURL): IZPlainDriver;
-var
-  i: smallint;
-begin
-  For i := 0 to high(FPlainDrivers) do
-    if Url.Protocol = FPlainDrivers[i].GetProtocol then
-      begin
-        Result := FPlainDrivers[i];
-        break;
-      end;
-  // Generic driver
-  If result = nil then
-    Result := FPlainDrivers[0];    // sqlite3
-  Result.Initialize(Url.LibLocation);
 end;
 
 { TZSQLiteConnection }

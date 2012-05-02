@@ -77,6 +77,7 @@ type
   private
     FreeTDSAPI: TFreeTDSAPI;
   protected
+    function Clone: IZPlainDriver; override;
     procedure LoadApi; override;
   public
     constructor Create;
@@ -170,6 +171,11 @@ destructor TZFreeTDSPlainDriver.Destroy;
 begin
 
   inherited Destroy;
+end;
+
+function TZFreeTDSPlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZFreeTDSPlainDriver.Create;
 end;
 
 procedure TZFreeTDSPlainDriver.LoadApi;

@@ -120,7 +120,7 @@ type
   TZAbstractDatabaseMetadata = class(TContainedObject, IZDatabaseMetadata)
   private
     FConnection: Pointer;
-    FUrl: TZURL; //string;
+    FUrl: TZURL;
     FCachedResultSets: IZHashMap;
     FDatabaseInfo: IZDatabaseInfo;
     function GetInfo: TStrings;

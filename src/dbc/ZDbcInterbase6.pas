@@ -67,17 +67,9 @@ type
 
   {** Implements Interbase6 Database Driver. }
   TZInterbase6Driver = class(TZAbstractDriver)
-  private
-    FPlainDrivers: Array of IZInterbasePlainDriver;
-  protected
-    function GetPlainDriver(const Url: TZURL): IZPlainDriver; override;
   public
-    constructor Create;
+    constructor Create; override;
     function Connect(const Url: TZURL): IZConnection; override;
-
-    function GetSupportedProtocols: TStringDynArray; override;
-    function GetSupportedClientCodePages(const Url: string;
-      Const SupportedsOnly: Boolean): TStringDynArray; override; //EgonHugeist
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
 
@@ -138,8 +130,6 @@ type
 
     function GetAnsiEscapeString(const Value: AnsiString;
       const EscapeMarkSequence: String = '~<|'): String; override;
-    //function GetEscapeString(const Value: String;
-      //const EscapeMarkSequence: String = '~<|'): String; override;
   end;
 
   {** Implements a specialized cached resolver for Interbase/Firebird. }
@@ -202,18 +192,18 @@ end;
 }
 constructor TZInterbase6Driver.Create;
 begin
-  SetLength(FPlainDrivers,10);
-  FPlainDrivers[0] := TZInterbase6PlainDriver.Create;
-  FPlainDrivers[1] := TZFirebird10PlainDriver.Create;
-  FPlainDrivers[2] := TZFirebird15PlainDriver.Create;
-  FPlainDrivers[3] := TZFirebird20PlainDriver.Create;
-  FPlainDrivers[4] := TZFirebird21PlainDriver.Create;
-  FPlainDrivers[5] := TZFirebird25PlainDriver.Create;
+  inherited Create;
+  AddSupportedProtocol(AddPlainDriverToCache(TZInterbase6PlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZFirebird10PlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZFirebird15PlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZFirebird20PlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZFirebird21PlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZFirebird25PlainDriver.Create));
   // embedded drivers
-  FPlainDrivers[6] := TZFirebirdD15PlainDriver.Create;
-  FPlainDrivers[7] := TZFirebirdD20PlainDriver.Create;
-  FPlainDrivers[8] := TZFirebirdD21PlainDriver.Create;
-  FPlainDrivers[9] := TZFirebirdD25PlainDriver.Create;
+  AddSupportedProtocol(AddPlainDriverToCache(TZFirebirdD15PlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZFirebirdD20PlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZFirebirdD21PlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZFirebirdD25PlainDriver.Create));
 end;
 
 {**
@@ -254,59 +244,6 @@ begin
   if Analyser = nil then
     Analyser := TZInterbaseStatementAnalyser.Create;
   Result := Analyser;
-end;
-
-{**
-  Gets plain driver for selected protocol.
-  @param Url a database connection URL.
-  @return a selected plaindriver.
-}
-function TZInterbase6Driver.GetPlainDriver(const Url: TZURL): IZPlainDriver;
-var
-  i: smallint;
-begin
-  For i := 0 to high(FPlainDrivers) do
-    if Url.Protocol = FPlainDrivers[i].GetProtocol then
-      begin
-        Result := FPlainDrivers[i];
-        break;
-      end;
-  // Generic driver
-  If result = nil then
-    Result := FPlainDrivers[1];    // interbase-6
-  Result.Initialize(Url.LibLocation);
-end;
-{**
-  Get a name of the supported subprotocol.
-  For example: mysql, oracle8 or postgresql72
-}
-function TZInterbase6Driver.GetSupportedProtocols: TStringDynArray;
-var
-   i: smallint;
-begin
-  SetLength(Result, high(FPlainDrivers)+1);
-  For i := 0 to high(FPlainDrivers) do
-    Result[i] := FPlainDrivers[i].GetProtocol;
-end;
-
-{**
-  EgonHugeist:
-  Get names of the compiler-supported CharacterSets.
-  For example: ASCII, UTF8...
-}
-function TZInterbase6Driver.GetSupportedClientCodePages(const Url: string;
-  Const SupportedsOnly: Boolean): TStringDynArray; //EgonHugeist
-var
-  Protocol: string;
-  i: smallint;
-begin
-  Protocol := ResolveConnectionProtocol(Url, GetSupportedProtocols);
-  For i := 0 to high(FPlainDrivers) do
-    if Protocol = FPlainDrivers[i].GetProtocol then
-      begin
-        Result := FPlainDrivers[i].GetSupportedClientCodePages(not SupportedsOnly);
-        break;
-      end;
 end;
 
 { TZInterbase6Connection }
@@ -523,7 +460,7 @@ begin
   if HostName <> '' then
   begin
     if Port <> 3050 then
-      StrPCopy(DBName, AnsiString(HostName + '/' + IntToStr(Port) + ':' + Database))
+      StrPCopy(DBName, ZPlainString(HostName + '/' + IntToStr(Port) + ':' + Database))
     else
       StrPCopy(DBName, ZPlainString(HostName + ':' + Database))
   end
