@@ -1270,7 +1270,7 @@ end;
 function TZASADatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(ProceduresColumnsDynArray);
+    Result:=inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_stored_procedures %s, %s, %s',
@@ -1355,7 +1355,7 @@ function TZASADatabaseMetadata.UncachedGetProcedureColumns(const Catalog: string
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(ProceduresColColumnsDynArray);
+    Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_getprocedurecolumns %s, %s, %s, %s',
@@ -1440,7 +1440,7 @@ var
   I: Integer;
   TableTypes: string;
 begin
-    Result := ConstructVirtualResultSet(TableColumnsDynArray);
+    Result:=inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
 
     TableTypes := '';
     for I := 0 to Length(Types) - 1 do
@@ -1488,7 +1488,8 @@ end;
 }
 function TZASADatabaseMetadata.UncachedGetSchemas: IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(SchemaColumnsDynArray);
+    Result:=inherited UncachedGetSchemas;
+
     with GetStatement.ExecuteQuery('exec sp_jdbc_getschemas') do
     begin
       while Next do
@@ -1523,7 +1524,8 @@ const
 var
   I: Integer;
 begin
-    Result := ConstructVirtualResultSet(TableTypeColumnsDynArray);
+    Result:=inherited UncachedGetTableTypes;
+
     for I := 0 to 4 do
     begin
       Result.MoveToInsertRow;
@@ -1587,7 +1589,7 @@ function TZASADatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(TableColColumnsDynArray);
+    Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_columns %s, %s, %s, %s',
@@ -1706,7 +1708,7 @@ end;
 function TZASADatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: string;
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(TableColPrivColumnsDynArray);
+    Result:=inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_getcolumnprivileges %s, %s, %s, %s',
@@ -1772,7 +1774,7 @@ end;
 function TZASADatabaseMetadata.UncachedGetTablePrivileges(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(TablePrivColumnsDynArray);
+    Result:=inherited UncachedGetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_gettableprivileges %s, %s, %s',
@@ -1834,7 +1836,7 @@ end;
 function TZASADatabaseMetadata.UncachedGetVersionColumns(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(TableColVerColumnsDynArray);
+    Result:=inherited UncachedGetVersionColumns(Catalog, Schema, Table);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_getversioncolumns %s, %s, %s',
@@ -1890,7 +1892,7 @@ end;
 function TZASADatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(PrimaryKeyColumnsDynArray);
+    Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_primarykey %s, %s, %s',
@@ -1987,7 +1989,7 @@ end;
 function TZASADatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(ImportedKeyColumnsDynArray);
+    Result:=inherited UncachedGetImportedKeys(Catalog, Schema, Table);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_importkey %s, %s, %s',
@@ -2100,7 +2102,7 @@ end;
 function TZASADatabaseMetadata.UncachedGetExportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(ExportedKeyColumnsDynArray);
+    Result:=inherited UncachedGetExportedKeys(Catalog, Schema, Table);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_exportkey %s, %s, %s',
@@ -2222,7 +2224,8 @@ function TZASADatabaseMetadata.UncachedGetCrossReference(const PrimaryCatalog: s
   const PrimarySchema: string; const PrimaryTable: string; const ForeignCatalog: string;
   const ForeignSchema: string; const ForeignTable: string): IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(CrossRefColumnsDynArray);
+    Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
+                                                ForeignCatalog, ForeignSchema, ForeignTable);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_getcrossreferences %s, %s, %s, %s, %s, %s',
@@ -2313,7 +2316,7 @@ end;
 }
 function TZASADatabaseMetadata.UncachedGetTypeInfo: IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(TypeInfoColumnsDynArray);
+    Result:=inherited UncachedGetTypeInfo;
 
     with GetStatement.ExecuteQuery('exec sp_jdbc_datatype_info') do
     begin
@@ -2419,7 +2422,7 @@ function TZASADatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
 var
   Is_Unique, Accuracy: string;
 begin
-    Result := ConstructVirtualResultSet(IndexInfoColumnsDynArray);
+    Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
 
     if Unique then
       Is_Unique := '''1'''
@@ -2511,7 +2514,7 @@ var
   I: Integer;
   UDTypes: string;
 begin
-    Result := ConstructVirtualResultSet(UDTColumnsDynArray);
+    Result:=inherited UncachedGetUDTs(Catalog, SchemaPattern, TypeNamePattern, Types);
 
     UDTypes := '';
     for I := 0 to Length(Types) - 1 do

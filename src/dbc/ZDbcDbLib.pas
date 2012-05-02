@@ -64,7 +64,7 @@ uses
   {$ENDIF}
 {$ENDIF}
   Types, Classes, ZDbcConnection, ZDbcIntfs, ZCompatibility, ZDbcLogging,
-  ZPlainDbLibDriver, ZTokenizer, ZGenericSqlAnalyser, ZURL, ZPlainDriver;
+  ZPlainDbLibDriver, ZPlainDbLibConstants, ZTokenizer, ZGenericSqlAnalyser, ZURL, ZPlainDriver;
 
 type
   {** Implements DBLib Database Driver. }

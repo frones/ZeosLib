@@ -58,7 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses Classes, SysUtils, ZCompatibility, ZClasses, ZSysUtils, ZCollections,
-  ZDbcIntfs, ZDbcStatement, ZDbcDbLib, ZPlainDbLibDriver;
+  ZDbcIntfs, ZDbcStatement, ZDbcDbLib, ZplainDbLibConstants, ZPlainDbLibDriver;
 
 type
   {** Implements Generic DBLib Statement. }

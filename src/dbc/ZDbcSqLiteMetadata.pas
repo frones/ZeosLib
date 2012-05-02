@@ -1259,8 +1259,9 @@ const
 var
   I: Integer;
 begin
-    Result := ConstructVirtualResultSet(TableTypeColumnsDynArray);
-    for I := 1 to TableTypeCount do
+  Result:=inherited UncachedGetTableTypes;
+
+  for I := 1 to TableTypeCount do
     begin
       Result.MoveToInsertRow;
       Result.UpdateString(1, Types[I]);
@@ -1327,7 +1328,8 @@ var
   Precision, Decimals: Integer;
   Temp_scheme: string;
 begin
-    Result := ConstructVirtualResultSet(TableColColumnsDynArray);
+    Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
+
     if SchemaPattern = '' then
       Temp_scheme := '' // OR  'main.'
     else
@@ -1423,7 +1425,7 @@ var
   Index: Integer;
   Temp_scheme: string;
 begin
-    Result := ConstructVirtualResultSet(PrimaryKeyColumnsDynArray);
+    Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
 
     if Schema = '' then
       Temp_scheme := '' // OR  'main.'
@@ -1522,7 +1524,7 @@ const
 var
   I: Integer;
 begin
-    Result := ConstructVirtualResultSet(TypeInfoColumnsDynArray);
+    Result:=inherited UncachedGetTypeInfo;
 
     for I := 1 to MaxTypeCount do
     begin
@@ -1620,7 +1622,7 @@ var
   ResultSet: IZResultSet;
   Temp_scheme: string;
 begin
-    Result := ConstructVirtualResultSet(IndexInfoColumnsDynArray);
+    Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
 
     if Schema = '' then
       Temp_scheme := '' // OR  'main.'
@@ -1699,7 +1701,7 @@ begin
 
 These constant define integer codes that represent the various text encodings supported by SQLite.}
 
-  Result := ConstructVirtualResultSet(CharacterSetsColumnsDynArray);
+  Result:=inherited UncachedGetCharacterSets;
 
   for i := 0 to high(Encodings) do
   begin

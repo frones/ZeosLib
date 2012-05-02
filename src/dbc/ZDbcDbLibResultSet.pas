@@ -63,7 +63,7 @@ uses
 {$ENDIF}
   Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcResultSet,
   ZCompatibility, ZDbcResultsetMetadata, ZDbcGenericResolver, ZDbcCachedResultSet,
-  ZDbcCache, ZDbcDBLib, ZPlainDBLibDriver;
+  ZDbcCache, ZDbcDBLib, ZPlainDbLibConstants, ZPlainDBLibDriver;
 
 type
   {** Implements DBLib ResultSet. }

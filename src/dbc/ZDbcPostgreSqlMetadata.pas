@@ -1488,7 +1488,7 @@ var
   ResultSet,
   ColumnsRS: IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(ProceduresColColumnsDynArray);
+    Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
     if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
     begin
@@ -1835,8 +1835,9 @@ const
 var
   I: Integer;
 begin
-    Result := ConstructVirtualResultSet(TableTypeColumnsDynArray);
-    for I := 0 to 10 do
+ Result:=inherited UncachedGetTableTypes;
+
+ for I := 0 to 10 do
     begin
       Result.MoveToInsertRow;
       Result.UpdateString(1, Types[I]);
@@ -1904,7 +1905,7 @@ function TZPostgreSQLDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   TypeOid, AttTypMod: Integer;
   SQL, PgType: string;
 begin
-    Result := ConstructVirtualResultSet(TableColColumnsDynArray);
+    Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
     if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
     begin
@@ -2066,7 +2067,7 @@ var
   Privileges, Grantable, Grantee: string;
   Permissions, PermissionsExp: TStrings;
 begin
-    Result := ConstructVirtualResultSet(TableColPrivColumnsDynArray);
+    Result:=inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
 
     if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
     begin
@@ -2179,7 +2180,7 @@ var
   Privileges, Grantable, Grantee: string;
   Permissions, PermissionsExp: TStringList;
 begin
-    Result := ConstructVirtualResultSet(TablePrivColumnsDynArray);
+    Result:=inherited UncachedGetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
 
     if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
     begin
@@ -2281,7 +2282,7 @@ end;
 function TZPostgreSQLDatabaseMetadata.UncachedGetVersionColumns(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(TableColVerColumnsDynArray);
+    Result:=inherited UncachedGetVersionColumns(Catalog, Schema, Table);
 
     Result.MoveToInsertRow;
     Result.UpdateNull(1);
@@ -2600,7 +2601,8 @@ var
       Result := ikNotDeferrable; //impossible!
   end;
 begin
-  Result := ConstructVirtualResultSet(CrossRefColumnsDynArray);
+  Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
+                                              ForeignCatalog, ForeignSchema, ForeignTable);
 
   if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 4) then
   begin
@@ -2878,7 +2880,7 @@ function TZPostgreSQLDatabaseMetadata.UncachedGetTypeInfo: IZResultSet;
 var
   SQL: string;
 begin
-    Result := ConstructVirtualResultSet(TypeInfoColumnsDynArray);
+    Result:=inherited UncachedGetTypeInfo;
 
     if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
       SQL := ' SELECT typname FROM pg_catalog.pg_type '
@@ -3005,7 +3007,7 @@ function TZPostgreSQLDatabaseMetadata.UncachedGetSequences(const Catalog, Schema
 var
   SQL: string;
 begin
-    Result := ConstructVirtualResultSet(SequenceColumnsDynArray);
+    Result:=inherited UncachedGetSequences(Catalog, SchemaPattern, SequenceNamePattern);
 
     SQL := ' SELECT nspname, relname ' +
       'FROM pg_catalog.pg_namespace n, pg_catalog.pg_class ct ' +
@@ -3197,7 +3199,8 @@ begin
   ''' LANGUAGE ''plpgsql'';');
   Self.GetConnection.CreateStatement.ExecuteQuery('select get_encodings();').Close;
 
-  Result := ConstructVirtualResultSet(CharacterSetsColumnsDynArray);
+  Result:=inherited UncachedGetCharacterSets;
+
   with Self.GetConnection.CreateStatement.ExecuteQuery(
    'select * from encodings;') do
   begin

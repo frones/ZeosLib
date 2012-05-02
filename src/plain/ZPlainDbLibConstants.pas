@@ -1,10 +1,12 @@
-unit ZPlainFreeTDSConstants;
+unit ZPlainDbLibConstants;
 
 interface
 
-uses ZCompatibility;
-{***************** Plain API Constants definition ****************}
+{$I ZPlain.inc}
 
+uses ZCompatibility;
+
+{***************** Plain API Constants definition ****************}
 const
 { General  #define }
   TIMEOUT_IGNORE        = Cardinal(-1);

@@ -1214,7 +1214,7 @@ var
   LTriggerNamePattern: string;
   LTableNamePattern: string;
 begin
-  Result := ConstructVirtualResultSet(TriggersColumnsDynArray);
+  Result:=inherited UncachedGetTriggers(Catalog, SchemaPattern, TableNamePattern, TriggerNamePattern);
 
   LTriggerNamePattern := ConstructNameCondition(TriggerNamePattern,
     'RDB$TRIGGER_NAME');
@@ -1292,7 +1292,7 @@ var
   SQL: string;
   LProcedureNamePattern: string;
 begin
-    Result := ConstructVirtualResultSet(ProceduresColumnsDynArray);
+    Result:=inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
 
     LProcedureNamePattern := ConstructNameCondition(ProcedureNamePattern,
       'RDB$PROCEDURE_NAME');
@@ -1387,7 +1387,7 @@ var
   TypeName, SubTypeName: Integer;
   ColumnIndexes : Array[1..8] of integer;
 begin
-    Result := ConstructVirtualResultSet(ProceduresColColumnsDynArray);
+    Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
     LProcedureNamePattern := ConstructNameCondition(ProcedureNamePattern, 
       'P.RDB$PROCEDURE_NAME');
@@ -1526,7 +1526,7 @@ var
   SQL, LTableNamePattern, TableType: string;
   I, SystemFlag: Integer;
 begin 
-    Result := ConstructVirtualResultSet(TableColumnsDynArray); 
+    Result:=inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
 
     LTableNamePattern := ConstructNameCondition(TableNamePattern, 
       'a.RDB$RELATION_NAME'); 
@@ -1604,8 +1604,9 @@ const
 var
   I: Integer;
 begin
-    Result := ConstructVirtualResultSet(TableTypeColumnsDynArray);
-    for I := 0 to 2 do
+  Result:=inherited UncachedGetTableTypes;
+
+  for I := 0 to 2 do
     begin
       Result.MoveToInsertRow;
       Result.UpdateString(1, TablesTypes[I]);
@@ -1674,7 +1675,7 @@ var
   LTableNamePattern, LColumnNamePattern: string;
   ColumnIndexes : Array[1..14] of integer;
 begin
-    Result := ConstructVirtualResultSet(TableColColumnsDynArray);
+    Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
     LTableNamePattern := ConstructNameCondition(TableNamePattern,
       'a.RDB$RELATION_NAME');
@@ -1901,7 +1902,7 @@ var
   Grantor, Grantee, Grantable: String;
   LColumnNamePattern, LTable: String;
 begin
-    Result := ConstructVirtualResultSet(TableColPrivColumnsDynArray);
+    Result:=inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
 
     LTable := ConstructNameCondition(AddEscapeCharToWildcards(Table), 'a.RDB$RELATION_NAME');// Modified by cipto 6/12/2007 2:26:18 PM
     LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,
@@ -2014,7 +2015,7 @@ var
   Grantee, Grantable: String;
   LTableNamePattern: String;
 begin
-    Result := ConstructVirtualResultSet(TablePrivColumnsDynArray);
+    Result:=inherited UncachedGetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
 
     LTableNamePattern := ConstructNameCondition(TableNamePattern, 'a.RDB$RELATION_NAME');
 
@@ -2088,7 +2089,7 @@ end;
 function TZInterbase6DatabaseMetadata.UncachedGetVersionColumns(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(TableColVerColumnsDynArray);
+    Result:=inherited UncachedGetVersionColumns(Catalog, Schema, Table);
 
     Result.MoveToInsertRow;
     Result.UpdateNull(1);
@@ -2219,7 +2220,7 @@ var
   SQL: string;
   LTable: string;
 begin
-    Result := ConstructVirtualResultSet(ImportedKeyColumnsDynArray);
+    Result:=inherited UncachedGetImportedKeys(Catalog, Schema, Table);
 
     LTable := ConstructNameCondition(AddEscapeCharToWildcards(Table), 'RELC_FOR.RDB$RELATION_NAME'); // Modified by cipto 6/11/2007 4:53:02 PM 
     SQL := 'SELECT RELC_PRIM.RDB$RELATION_NAME, '    // 1 prim.RDB$ key table name
@@ -2365,7 +2366,7 @@ var
   SQL: string;
   LTable: string;
 begin
-    Result := ConstructVirtualResultSet(ExportedKeyColumnsDynArray);
+    Result:=inherited UncachedGetExportedKeys(Catalog, Schema, Table);
 
     LTable := ConstructNameCondition(AddEscapeCharToWildcards(Table), 'RC_PRIM.RDB$RELATION_NAME'); // Modified by cipto 6/11/2007 4:54:02 PM
     SQL := ' SELECT RC_PRIM.RDB$RELATION_NAME, ' // prim.RDB$ key Table name
@@ -2546,7 +2547,8 @@ begin
   LPTable := ConstructNameCondition(AddEscapeCharToWildcards(PrimaryTable), 'i2.RDB$RELATION_NAME');
   LFTable := ConstructNameCondition(AddEscapeCharToWildcards(ForeignTable), 'rc.RDB$RELATION_NAME');
 
-  Result := ConstructVirtualResultSet(ExportedKeyColumnsDynArray);
+  Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
+                                              ForeignCatalog, ForeignSchema, ForeignTable);
 
   SQLString :=
       'SELECT '+
@@ -2652,7 +2654,7 @@ function TZInterbase6DatabaseMetadata.UncachedGetTypeInfo: IZResultSet;
 var
   SQL: string;
 begin
-    Result := ConstructVirtualResultSet(TypeInfoColumnsDynArray);
+    Result:=inherited UncachedGetTypeInfo;
 
     SQL := ' SELECT RDB$TYPE, RDB$TYPE_NAME FROM RDB$TYPES ' +
       ' WHERE RDB$FIELD_NAME = ''RDB$FIELD_TYPE'' ';
@@ -2734,7 +2736,7 @@ function TZInterbase6DatabaseMetadata.UncachedGetIndexInfo(const Catalog: string
 var
   SQL : string;
 begin
-    Result := ConstructVirtualResultSet(IndexInfoColumnsDynArray);
+    Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
 
     SQL :=  ' SELECT I.RDB$RELATION_NAME, I.RDB$UNIQUE_FLAG, I.RDB$INDEX_NAME,'
       + ' ISGMT.RDB$FIELD_POSITION,	ISGMT.RDB$FIELD_NAME, I.RDB$INDEX_TYPE,'
@@ -2787,7 +2789,7 @@ var
   SQL: string;
   LSequenceNamePattern: string;
 begin
-    Result := ConstructVirtualResultSet(SequenceColumnsDynArray);
+    Result:=inherited UncachedGetSequences(Catalog, SchemaPattern, SequenceNamePattern);
 
     LSequenceNamePattern := ConstructNameCondition(SequenceNamePattern, 
       'RDB$GENERATOR_NAME');
@@ -2960,7 +2962,7 @@ begin
   else
     LCatalog := Catalog;
 
-  Result := ConstructVirtualResultSet(CollationCharSetColumnsDynArray);
+  Result:=inherited UncachedGetCollationAndCharSet(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
   if LCatalog <> '' then
   begin
@@ -3034,7 +3036,7 @@ end;
 }
 function TZInterbase6DatabaseMetadata.UncachedGetCharacterSets: IZResultSet; //EgonHugeist
 begin
-  Result := ConstructVirtualResultSet(CharacterSetsColumnsDynArray);
+  Result:=inherited UncachedGetCharacterSets;
 
   with GetConnection.CreateStatement.ExecuteQuery(
   'SELECT RDB$CHARACTER_SET_NAME, RDB$CHARACTER_SET_ID '+

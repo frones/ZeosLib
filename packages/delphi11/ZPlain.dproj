@@ -66,8 +66,7 @@
     <DCCReference Include="..\..\src\plain\ZPlainDbLibDriver.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainDbLibMsSql7.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainDbLibSybaseAse125.pas" />
-    <DCCReference Include="..\..\src\plain\ZPlainFreeTDSDriver.pas" />
-    <DCCReference Include="..\..\src\plain\ZPlainFreeTDSConstants.pas" />
+    <DCCReference Include="..\..\src\plain\ZPlainDbLibConstants.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainDriver.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainFirebirdDriver.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainFirebirdInterbaseConstants.pas" />

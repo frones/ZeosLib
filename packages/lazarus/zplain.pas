@@ -1,17 +1,17 @@
-{ Dit bestand is automatisch aangemaakt door Lazarus. Niet wijzigen!
-  Deze broncode is alleen gebruikt voor compilatie en installatie.
+{ This file was automatically created by Lazarus. Do not edit!
+  This source is only used to compile and install the package.
  }
 
-unit zplain; 
+unit zplain;
 
 interface
 
 uses
-  ZPlainDbLibDriver, ZPlainDbLibMsSql7, ZPlainDbLibSybaseAse125, ZPlainFreeTDSDriver, ZPlainFreeTDSConstants, 
-  ZPlainDriver, ZPlainLoader, ZPlainMySqlConstants, ZPlainMySqlDriver, 
-  ZPlainOracle9i, ZPlainOracleDriver, ZPlainPostgreSqlDriver, 
-  ZPlainSqLiteDriver, ZPlainASADriver, ZPlainASA9, ZPlainASA8, ZPlainASA7, 
-  ZPlainFirebirdDriver, ZPlainFirebirdInterbaseConstants;
+  ZPlainDbLibDriver, ZPlainDbLibMsSql7, ZPlainDbLibSybaseAse125, ZPlainDriver, 
+  ZPlainLoader, ZPlainMySqlConstants, ZPlainMySqlDriver, ZPlainOracle9i, 
+  ZPlainOracleDriver, ZPlainPostgreSqlDriver, ZPlainSqLiteDriver, 
+  ZPlainASADriver, ZPlainASA9, ZPlainASA8, ZPlainASA7, ZPlainFirebirdDriver, 
+  ZPlainFirebirdInterbaseConstants, ZPlainDbLibConstants;
 
 implementation
 

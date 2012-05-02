@@ -1285,7 +1285,8 @@ function TZOracleDatabaseMetadata.UncachedGetProcedureColumns(const Catalog,
 //  Label InsertingRecord;
 
   begin
-    Result := ConstructVirtualResultSet(ProceduresColColumnsDynArray);
+    Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
+
     iColName:=0;
     iCol:= 0;
     bNeedInsertReturns:=false;
@@ -1397,12 +1398,12 @@ function TZOracleDatabaseMetadata.UncachedGetProcedureColumns(const Catalog,
 
 function TZOracleDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
-var
-  SQL: string;
-  LProcedureNamePattern: string;
-  sName: string;
-begin
-  Result := ConstructVirtualResultSet(ProceduresColumnsDynArray);
+  var
+    SQL: string;
+    LProcedureNamePattern: string;
+    sName:string;
+  begin
+      Result:=inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
 
   LProcedureNamePattern := '';//ConstructNameCondition(ProcedureNamePattern,      'RDB$PROCEDURE_NAME');
   SQL := 'select Object_Name, procedure_name from user_procedures';
@@ -1480,8 +1481,9 @@ const
 var
   I: Integer;
 begin
-    Result := ConstructVirtualResultSet(TableTypeColumnsDynArray);
-    for I := 1 to TableTypeCount do
+  Result:=inherited UncachedGetTableTypes;
+
+  for I := 1 to TableTypeCount do
     begin
       Result.MoveToInsertRow;
       Result.UpdateString(1, Types[I]);
@@ -1546,7 +1548,7 @@ function TZOracleDatabaseMetadata.UncachedGetColumns(const Catalog: string;
 var
   SQL: string;
 begin
-    Result := ConstructVirtualResultSet(TableColColumnsDynArray);
+    Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
     SQL := 'SELECT NULL, OWNER, TABLE_NAME, COLUMN_NAME, NULL, DATA_TYPE,'
       + ' DATA_LENGTH, NULL, DATA_PRECISION, DATA_SCALE, NULLABLE, NULL,'
@@ -1801,7 +1803,7 @@ function TZOracleDatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
 var
   SQL: string;
 begin
-    Result := ConstructVirtualResultSet(IndexInfoColumnsDynArray);
+    Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
 
     SQL := 'SELECT NULL, A.OWNER, A.TABLE_NAME, A.UNIQUENESS, NULL,'
       + ' A.INDEX_NAME, 3, B.COLUMN_POSITION, B.COLUMN_NAME, B.DESCEND,'
