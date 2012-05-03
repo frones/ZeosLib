@@ -69,14 +69,11 @@ type
   { TZMySQLDriver }
 
   TZMySQLDriver = class(TZAbstractDriver)
-  private
-    FPlainDrivers: Array of IZMySQLPlainDriver;
   protected
-    function GetPlainDriver(const Url: TZURL): IZPlainDriver; override;
+    function GetPlainDriver(const Url: TZURL; const InitDriver: Boolean = True): IZPlainDriver; override;
   public
-    constructor Create;
+    constructor Create; override;
     function Connect(const Url: TZURL): IZConnection; override;
-    function GetSupportedProtocols: TStringDynArray; override;
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
 
@@ -148,12 +145,18 @@ uses
 }
 constructor TZMySQLDriver.Create;
 begin
-  SetLength(FPlainDrivers,4);
+  inherited Create;
+{  SetLength(FPlainDrivers,4);
   FPlainDrivers[0]  := TZMySQL41PlainDriver.Create;
   FPlainDrivers[1]   := TZMySQL5PlainDriver.Create;
   // embedded drivers
   FPlainDrivers[2]  := TZMySQLD41PlainDriver.Create;
-  FPlainDrivers[3]   := TZMySQLD5PlainDriver.Create;
+  FPlainDrivers[3]   := TZMySQLD5PlainDriver.Create;}
+  AddSupportedProtocol(AddPlainDriverToCache(TZMySQL5PlainDriver.Create, 'mysql'));
+  AddSupportedProtocol(AddPlainDriverToCache(TZMySQL41PlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZMySQL5PlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZMySQLD41PlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZMySQLD5PlainDriver.Create));
 end;
 
 {**
@@ -225,41 +228,17 @@ begin
 end;
 
 {**
-  Get a name of the supported subprotocol.
-  For example: mysql, oracle8 or postgresql72
-}
-function TZMySQLDriver.GetSupportedProtocols: TStringDynArray;
-var
-   i: smallint;
-begin
-  SetLength(Result, high(FPlainDrivers)+2);
-  // Generic driver
-  Result[0] := 'mysql';
-  For i := 0 to high(FPlainDrivers) do
-    Result[i+1] := FPlainDrivers[i].GetProtocol;
-end;
-
-{**
   Gets plain driver for selected protocol.
   @param Url a database connection URL.
   @return a selected plaindriver.
 }
-function TZMySQLDriver.GetPlainDriver(const Url: TZURL): IZPlainDriver;
-var
-  i: smallint;
+function TZMySQLDriver.GetPlainDriver(const Url: TZURL;
+  const InitDriver: Boolean = True): IZPlainDriver;
 begin
-  For i := 0 to high(FPlainDrivers) do
-    if Url.Protocol = FPlainDrivers[i].GetProtocol then
-      begin
-        Result := FPlainDrivers[i];
-        break;
-      end;
-  // Generic driver
-  If result = nil then
-    Result := FPlainDrivers[1];    // mysql-5
   // added by tohenk, 2009-10-11
   // before PlainDriver is initialized, we can perform pre-library loading
   // requirement check here, e.g. Embedded server argument params
+  Result := inherited GetPlainDriver(URL, False);
   (Result as IZMySQLPlainDriver).SetDriverOptions(Url.Properties);
   // end added by tohenk, 2009-10-11
   Result.Initialize(Url.LibLocation);

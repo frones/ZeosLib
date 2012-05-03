@@ -232,6 +232,8 @@ type
   {** Implements a dblib driver for Sybase ASE 12.5 }
   TZDBLibSybaseASE125PlainDriver = class (TZAbstractObject, IZPlainDriver,
     IZDBLibPlainDriver)
+  protected
+    function Clone: IZPlainDriver; reintroduce;
   public
     constructor Create;
 
@@ -294,6 +296,8 @@ type
   {** Implements a dblib driver for MSSql7 }
   TZDBLibMSSQL7PlainDriver = class (TZAbstractObject, IZPlainDriver,
     IZDBLibPlainDriver)
+  protected
+    function Clone: IZPlainDriver; reintroduce;
   public
     constructor Create;
 
@@ -437,6 +441,11 @@ implementation
 uses SysUtils, ZPlainDbLibSybaseAse125, ZPlainDbLibMsSql7, ZPlainLoader;
 
 { TZDBLibSybaseASE125PlainDriver }
+
+function TZDBLibSybaseASE125PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZDBLibSybaseASE125PlainDriver.Create;
+end;
 
 constructor TZDBLibSybaseASE125PlainDriver.Create;
 begin
@@ -727,6 +736,11 @@ end;
 
 
 {TZDBLibMSSQL7PlainDriver}
+
+function TZDBLibMSSQL7PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZDBLibMSSQL7PlainDriver.Create;
+end;
 
 constructor TZDBLibMSSQL7PlainDriver.Create;
 begin

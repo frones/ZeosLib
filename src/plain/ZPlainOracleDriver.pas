@@ -859,6 +859,8 @@ type
   {** Implements a driver for Oracle 9i }
   TZOracle9iPlainDriver = class (TZAbstractObject, IZPlainDriver,
     IZOraclePlainDriver)
+  protected
+    function Clone: IZPlainDriver; reintroduce;
   public
     constructor Create;
 
@@ -1047,6 +1049,11 @@ type
 implementation
 
 { TZOracle9iPlainDriver }
+
+function TZOracle9iPlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZOracle9iPlainDriver.Create;
+end;
 
 constructor TZOracle9iPlainDriver.Create;
 begin

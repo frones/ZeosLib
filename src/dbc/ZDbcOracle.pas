@@ -66,15 +66,9 @@ type
 
   {** Implements Oracle Database Driver. }
   TZOracleDriver = class(TZAbstractDriver)
-  private
-    FOracle9iPlainDriver: IZOraclePlainDriver;
-  protected
-    function GetPlainDriver(const Url: TZURL): IZPlainDriver; override;
   public
-    constructor Create;
+    constructor Create; override;
     function Connect(const Url: TZURL): IZConnection; override;
-
-    function GetSupportedProtocols: TStringDynArray; override;
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
 
@@ -173,7 +167,9 @@ uses
 }
 constructor TZOracleDriver.Create;
 begin
-  FOracle9iPlainDriver := TZOracle9iPlainDriver.Create;
+  inherited Create;
+  AddSupportedProtocol(AddPlainDriverToCache(TZOracle9iPlainDriver.Create, 'oracle'));
+  AddSupportedProtocol(AddPlainDriverToCache(TZOracle9iPlainDriver.Create));
 end;
 
 {**
@@ -244,30 +240,6 @@ begin
   Result := Analyser;
 end;
 
-{**
-  Get a name of the supported subprotocol.
-  For example: oracle, oracle8 or postgresql72
-}
-function TZOracleDriver.GetSupportedProtocols: TStringDynArray;
-begin
-  SetLength(Result, 2);
-  Result[0] := 'oracle';
-  Result[1] := FOracle9iPlainDriver.GetProtocol;
-end;
-
-{**
-  Gets plain driver for selected protocol.
-  @param Url a database connection URL.
-  @return a selected protocol.
-}
-function TZOracleDriver.GetPlainDriver(const Url: TZURL): IZPlainDriver;
-begin
-  //if Url.Protocol = FOracle9iPlainDriver.GetProtocol then
-    //Result := FOracle9iPlainDriver
-  //else
-    Result := FOracle9iPlainDriver;
-  Result.Initialize(Url.LibLocation);
-end;
 
 { TZOracleConnection }
 

@@ -895,6 +895,8 @@ type
   {** Implements a driver for ASA 7.0 }
   TZASA7PlainDriver = class (TZAbstractObject, IZPlainDriver,
     IZASAPlainDriver, IZASA7PlainDriver)
+  protected
+    function Clone: IZPlainDriver; reintroduce;
   public
     constructor Create;
 
@@ -988,6 +990,8 @@ type
   {** Implements a driver for ASA 8.0 }
   TZASA8PlainDriver = class (TZAbstractObject, IZPlainDriver,
     IZASAPlainDriver, IZASA8PlainDriver)
+  protected
+    function Clone: IZPlainDriver; reintroduce;
   public
     constructor Create;
 
@@ -1081,6 +1085,8 @@ type
   {** Implements a driver for ASA 9.0 }
   TZASA9PlainDriver = class (TZAbstractObject, IZPlainDriver,
     IZASAPlainDriver, IZASA9PlainDriver)
+  protected
+    function Clone: IZPlainDriver; reintroduce;
   public
     constructor Create;
 
@@ -1169,6 +1175,11 @@ type
 implementation
 
 uses SysUtils, ZPlainASA7, ZPlainASA8, ZPlainASA9;
+
+function TZASA7PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZASA7PlainDriver.Create;
+end;
 
 constructor TZASA7PlainDriver.Create;
 begin
@@ -1456,6 +1467,11 @@ constructor TZASA8PlainDriver.Create;
 begin
 end;
 
+function TZASA8PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZASA8PlainDriver.Create;
+end;
+
 function TZASA8PlainDriver.GetProtocol: string;
 begin
   Result := 'ASA8';
@@ -1732,6 +1748,13 @@ end;
 function TZASA8PlainDriver.db_cancel_request( sqlca: PZASASQLCA): Integer;
 begin
   Result := ZPlainASA8.db_cancel_request( sqlca);
+end;
+
+{TZASA9PlainDriver}
+
+function TZASA9PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZASA9PlainDriver.Create;
 end;
 
 constructor TZASA9PlainDriver.Create;

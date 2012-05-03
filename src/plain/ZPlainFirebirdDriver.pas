@@ -391,6 +391,8 @@ type
 
   {** Implements a native driver for Interbase6}
   TZInterbase6PlainDriver = class (TZFirebirdBaseDriver)
+  protected
+    function Clone: IZPlainDriver; override;
   public
     constructor Create;
 
@@ -400,6 +402,8 @@ type
 
   {** Implements a native driver for Firebird 1.0}
   TZFirebird10PlainDriver = class (TZFirebirdBaseDriver)
+  protected
+    function Clone: IZPlainDriver; override;
   public
     constructor Create;
 
@@ -409,6 +413,8 @@ type
 
   {** Implements a native driver for Firebird 1.5}
   TZFirebird15PlainDriver = class (TZFirebirdBaseDriver)
+  protected
+    function Clone: IZPlainDriver; override;
   public
     constructor Create;
 
@@ -417,6 +423,8 @@ type
   end;
 
   TZFirebirdD15PlainDriver = class (TZFirebird15PlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
   public
     constructor Create;
 
@@ -427,6 +435,8 @@ type
 
   {** Implements a native driver for Firebird 2.0}
   TZFirebird20PlainDriver = class (TZFirebirdBaseDriver)
+  protected
+    function Clone: IZPlainDriver; override;
   public
     constructor Create;
 
@@ -435,6 +445,8 @@ type
   end;
 
   TZFirebirdD20PlainDriver = class (TZFirebird20PlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
   public
     constructor Create;
 
@@ -448,6 +460,7 @@ type
 
   TZFirebird21PlainDriver = class (TZFirebirdBaseDriver)
   protected
+    function Clone: IZPlainDriver; override;
     procedure LoadApi; override;
   public
     constructor Create;
@@ -459,6 +472,8 @@ type
   end;
 
   TZFirebirdD21PlainDriver = class (TZFirebird21PlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
   public
     constructor Create;
 
@@ -470,6 +485,7 @@ type
 
   TZFirebird25PlainDriver = class (TZFirebirdBaseDriver)
   protected
+    function Clone: IZPlainDriver; override;
     procedure LoadApi; override;
   public
     constructor Create;
@@ -483,6 +499,8 @@ type
   { TZFirebirdD25PlainDriver }
 
   TZFirebirdD25PlainDriver = class (TZFirebird25PlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
   public
     constructor Create;
 
@@ -960,9 +978,7 @@ end;
 
 procedure TZFirebirdBaseDriver.isc_sql_interprete(sqlcode: Short;  buffer: PAnsiChar; buffer_length: Short);
 begin
-
-    FIREBIRD_API.isc_sql_interprete(sqlcode, buffer, buffer_length);
-
+  FIREBIRD_API.isc_sql_interprete(sqlcode, buffer, buffer_length);
 end;
 
 function TZFirebirdBaseDriver.isc_sqlcode(status_vector: PISC_STATUS): ISC_LONG;
@@ -998,6 +1014,10 @@ begin
   Result := FIREBIRD_API.isc_vax_integer(buffer, length);
 end;
 
+function TZInterbase6PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZInterbase6PlainDriver.Create;
+end;
 
 constructor TZInterbase6PlainDriver.Create;
 begin
@@ -1020,6 +1040,11 @@ end;
 function TZInterbase6PlainDriver.GetProtocol: string;
 begin
   Result := 'interbase-6';
+end;
+
+function TZFirebird10PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZFirebird10PlainDriver.Create;
 end;
 
 constructor TZFirebird10PlainDriver.Create;
@@ -1046,6 +1071,11 @@ begin
 end;
 
 { IZFirebird15PlainDriver }
+
+function TZFirebird15PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZFirebird15PlainDriver.Create;
+end;
 
 constructor TZFirebird15PlainDriver.Create;
 begin
@@ -1081,6 +1111,11 @@ end;
 
 { IZFirebird15PlainDriver }
 
+function TZFirebirdD15PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZFirebirdD15PlainDriver.Create;
+end;
+
 constructor TZFirebirdD15PlainDriver.Create;
 begin
    inherited create;
@@ -1108,6 +1143,11 @@ begin
 end;
 
 { IZFirebird20PlainDriver }
+
+function TZFirebird20PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZFirebird20PlainDriver.Create;
+end;
 
 constructor TZFirebird20PlainDriver.Create;
 begin
@@ -1142,7 +1182,10 @@ begin
 end;
 
 { IZFirebirdD20PlainDriver }
-
+function TZFirebirdD20PlainDriver.Clone: IZPlainDriver;
+begin
+  TZFirebirdD20PlainDriver.Create;
+end;
 
 constructor TZFirebirdD20PlainDriver.Create;
 begin
@@ -1171,6 +1214,11 @@ begin
 end;
 
 { IZFirebird21PlainDriver }
+
+function TZFirebird21PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZFirebird21PlainDriver.Create;
+end;
 
 procedure TZFirebird21PlainDriver.LoadApi;
 begin
@@ -1225,6 +1273,10 @@ begin
 end;
 
 { IZFirebirdD21PlainDriver }
+function TZFirebirdD21PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZFirebirdD21PlainDriver.Create;
+end;
 
 constructor TZFirebirdD21PlainDriver.Create;
 begin
@@ -1253,6 +1305,10 @@ begin
 end;
 
 { TZFirebird25PlainDriver }
+function TZFirebird25PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZFirebird25PlainDriver.Create;
+end;
 
 procedure TZFirebird25PlainDriver.LoadApi;
 begin
@@ -1303,6 +1359,10 @@ begin
 end;
 
 { TZFirebirdD25PlainDriver }
+function TZFirebirdD25PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZFirebirdD25PlainDriver.Create;
+end;
 
 constructor TZFirebirdD25PlainDriver.Create;
 begin

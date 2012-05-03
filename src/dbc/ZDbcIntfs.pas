@@ -204,7 +204,8 @@ type
     function Connect(const Url: TZURL): IZConnection; overload;
     function GetClientVersion(const Url: string): Integer;
     function AcceptsURL(const Url: string): Boolean;
-    function GetPlainDriver(const Url: TZURL): IZPlainDriver;
+    //function GetPlainDriver(const Url: TZURL): IZPlainDriver;
+    function GetPlainDriver(const Url: TZURL; const InitDriver: Boolean = True): IZPlainDriver;
 
     function GetPropertyInfo(const Url: string; Info: TStrings): TStrings;
     function GetMajorVersion: Integer;

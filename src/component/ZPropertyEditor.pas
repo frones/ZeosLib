@@ -60,7 +60,8 @@ interface
 {$IFDEF WITH_PROPERTY_EDITOR}
 
 uses
-  Types, Classes, ZClasses, ZCompatibility, ZDbcIntfs, ZGroupedConnection , ZConnectionGroup, ZAbstractConnection,
+  Types, Classes, ZClasses, ZCompatibility, ZDbcIntfs, ZGroupedConnection ,
+  ZConnectionGroup, ZAbstractConnection, ZURL,
 {$IFDEF BDS4_UP}
   WideStrings,
 {$ENDIF}
