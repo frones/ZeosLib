@@ -1,9 +1,9 @@
 object ZUpdateSQLEditForm: TZUpdateSQLEditForm
   Left = 339
   Top = 271
+  Width = 406
+  Height = 293
   ActiveControl = UpdateTableName
-  ClientHeight = 257
-  ClientWidth = 390
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -15,67 +15,30 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  DesignSize = (
-    390
-    257)
   PixelsPerInch = 96
   TextHeight = 13
-  object OkButton: TButton
-    Left = 168
-    Top = 229
-    Width = 65
-    Height = 22
-    Anchors = [akRight, akBottom]
-    Caption = '&OK'
-    Default = True
-    ModalResult = 1
-    TabOrder = 0
-    OnClick = OkButtonClick
-  end
-  object CancelButton: TButton
-    Left = 245
-    Top = 229
-    Width = 65
-    Height = 22
-    Anchors = [akRight, akBottom]
-    Cancel = True
-    Caption = 'Cancel'
-    ModalResult = 2
-    TabOrder = 1
-  end
-  object HelpButton: TButton
-    Left = 321
-    Top = 229
-    Width = 65
-    Height = 22
-    Anchors = [akRight, akBottom]
-    Caption = '&Help'
-    TabOrder = 2
-    OnClick = HelpButtonClick
-  end
   object PageControl: TPageControl
     Left = 0
     Top = 0
-    Width = 398
-    Height = 222
+    Width = 390
+    Height = 223
     ActivePage = FieldsPage
-    Align = alTop
-    Anchors = [akLeft, akTop, akRight, akBottom]
-    TabOrder = 3
+    Align = alClient
+    TabOrder = 0
     OnChanging = PageControlChanging
     object FieldsPage: TTabSheet
       Caption = 'Options'
       object GroupBox1: TGroupBox
         Left = 0
         Top = 0
-        Width = 390
-        Height = 194
+        Width = 382
+        Height = 195
         Align = alClient
         Caption = ' SQL Generation '
         TabOrder = 0
         DesignSize = (
           382
-          194)
+          195)
         object Label1: TLabel
           Left = 8
           Top = 24
@@ -116,7 +79,7 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
           Left = 126
           Top = 40
           Width = 117
-          Height = 145
+          Height = 146
           Anchors = [akLeft, akTop, akBottom]
           ItemHeight = 13
           MultiSelect = True
@@ -128,7 +91,7 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
           Left = 254
           Top = 40
           Width = 120
-          Height = 145
+          Height = 146
           Anchors = [akLeft, akTop, akRight, akBottom]
           ItemHeight = 13
           MultiSelect = True
@@ -198,17 +161,18 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
         Left = 8
         Top = 56
         Width = 368
-        Height = 129
+        Height = 130
         Align = alCustom
         Anchors = [akLeft, akTop, akRight, akBottom]
         ScrollBars = ssVertical
         TabOrder = 0
+        WordWrap = False
         OnKeyPress = SQLMemoKeyPress
       end
       object StatementType: TRadioGroup
         Left = 0
         Top = 0
-        Width = 390
+        Width = 382
         Height = 35
         Align = alTop
         Caption = 'Statement Type'
@@ -220,6 +184,50 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
         TabOrder = 1
         OnClick = StatementTypeClick
       end
+    end
+  end
+  object Panel1: TPanel
+    Left = 0
+    Top = 223
+    Width = 390
+    Height = 34
+    Align = alBottom
+    TabOrder = 1
+    DesignSize = (
+      390
+      34)
+    object OkButton: TButton
+      Left = 162
+      Top = 5
+      Width = 65
+      Height = 22
+      Anchors = [akRight, akBottom]
+      Caption = '&OK'
+      Default = True
+      ModalResult = 1
+      TabOrder = 0
+      OnClick = OkButtonClick
+    end
+    object CancelButton: TButton
+      Left = 239
+      Top = 5
+      Width = 65
+      Height = 22
+      Anchors = [akRight, akBottom]
+      Cancel = True
+      Caption = 'Cancel'
+      ModalResult = 2
+      TabOrder = 1
+    end
+    object HelpButton: TButton
+      Left = 315
+      Top = 5
+      Width = 65
+      Height = 22
+      Anchors = [akRight, akBottom]
+      Caption = '&Help'
+      TabOrder = 2
+      OnClick = HelpButtonClick
     end
   end
   object FieldListPopup: TPopupMenu

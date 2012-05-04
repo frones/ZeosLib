@@ -1660,15 +1660,11 @@ begin
         with TFieldDef.Create(FieldDefs, FName, FieldType,
           Size, False, I) do
         begin
-       {$IFNDEF OLDFPC}
-{$IFNDEF FOSNOMETA}
+          {$IFNDEF OLDFPC}
           Required := IsWritable(I) and (IsNullable(I) = ntNoNulls);
-{$ENDIF}
-{$ENDIF}
-{$IFNDEF FOSNOMETA}
+          {$ENDIF}
           if IsReadOnly(I) then Attributes := Attributes + [faReadonly];
           Precision := GetPrecision(I);
-{$ENDIF}
           DisplayName := FName;
         end;
       end;

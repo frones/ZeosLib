@@ -58,7 +58,7 @@ type
 
     procedure SetProtocol(const Value: string);
     procedure SetHostName(const Value: string);
-    procedure SetPort(const Value: integer);
+    procedure SetConnPort(const Value: integer);
     procedure SetDatabase(const Value: string);
     //procedure SetCatalog(const Value: string);
 
@@ -76,7 +76,7 @@ type
   published
     property Protocol: string read FProtocol write SetProtocol;
     property HostName: string read FHostName write SetHostName;
-    property Port: Integer read FPort write SetPort default 0;
+    property Port: Integer read FPort write SetConnPort default 0;
     property Database: string read FDatabase write SetDatabase;
     property User: string read FUser write SetUser  stored false;
     property Password: string read FPassword write SetPassword  stored false;
@@ -247,7 +247,7 @@ begin
 end;
 }
 
-procedure TZConnectionGroup.SetPort(const Value: integer);
+procedure TZConnectionGroup.SetConnPort(const Value: integer);
 begin
   if FPort <> Value then
   begin
