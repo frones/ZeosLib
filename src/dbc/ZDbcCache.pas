@@ -71,12 +71,13 @@ type
   TZRowUpdateType = (utUnmodified, utModified, utInserted, utDeleted);
   TZRowUpdateTypes = set of TZRowUpdateType;
 
+  TZByteArray = array[0..65535] of Byte;
   {** Defines a header for row buffer. }
   TZRowBuffer = packed record
     Index: Integer;
     UpdateType: TZRowUpdateType;
     BookmarkFlag: Byte;
-    Columns: TByteArray;
+    Columns: TZByteArray;
   end;
   PZRowBuffer = ^TZRowBuffer;
 

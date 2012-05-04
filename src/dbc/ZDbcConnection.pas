@@ -70,6 +70,7 @@ uses
 type
 
   {** Implements Abstract Database Driver. }
+  {$WARNINGS OFF} //to supress the deprecated Warning of connect
   TZAbstractDriver = class(TInterfacedObject, IZDriver)
   private
     FTokenizer: IZTokenizer;
@@ -87,9 +88,9 @@ type
     constructor Create; virtual;
     destructor Destroy; override;
 
-    function GetSupportedProtocols: TStringDynArray; //virtual; abstract;
+    function GetSupportedProtocols: TStringDynArray;
     function GetSupportedClientCodePages(const Url: TZURL;
-      Const SupportedsOnly: Boolean): TStringDynArray; //virtual; abstract;
+      Const SupportedsOnly: Boolean): TStringDynArray;
     function Connect(const Url: string; Info: TStrings = nil): IZConnection; overload; deprecated;
     function Connect(const Url: TZURL): IZConnection; overload; virtual;
     function AcceptsURL(const Url: string): Boolean; virtual;
@@ -102,6 +103,7 @@ type
     function GetStatementAnalyser: IZStatementAnalyser; virtual;
     function GetClientVersion(const Url: string): Integer; virtual;
   end;
+  {$WARNINGS OFF}
 
   {** Implements Abstract Database Connection. }
 

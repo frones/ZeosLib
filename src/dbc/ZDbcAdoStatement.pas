@@ -325,7 +325,7 @@ begin
       stAsciiStream:
         begin
           if Assigned(B) then
-            DefVarManager.SetAsString(RetValue, B.GetString);
+            DefVarManager.SetAsString(RetValue, String(B.GetString));
           SQLType := stString;
         end;
       stUnicodeStream:
@@ -337,7 +337,7 @@ begin
       stBinaryStream:
         begin
           if Assigned(B) then
-            DefVarManager.SetAsString(RetValue, BytesToStr(B.GetBytes));
+            DefVarManager.SetAsString(RetValue, String(BytesToStr(B.GetBytes)));
           SQLType := stBytes;
         end;
     end;

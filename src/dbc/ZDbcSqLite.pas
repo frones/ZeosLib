@@ -66,8 +66,6 @@ type
 
   {** Implements SQLite Database Driver. }
   TZSQLiteDriver = class(TZAbstractDriver)
-  private
-    FPlainDrivers: Array of IZSQLitePlainDriver;
   public
     constructor Create; override;
     function Connect(const Url: TZURL): IZConnection; override;

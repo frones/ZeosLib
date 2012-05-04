@@ -715,7 +715,7 @@ end;
 }
 function TZDBLibConnection.GetCatalog: string;
 begin
-  Result := GetPlainDriver.dbName(FHandle);
+  Result := String(GetPlainDriver.dbName(FHandle));
   CheckDBLibError(lcOther, 'GETCATALOG');
 end;
 

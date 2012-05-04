@@ -565,7 +565,12 @@ begin
       + ' WHERE d65.f1=t65.f1';
     Query.Open;
 
-    CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
+    {$IFNDEF FPC}
+    if Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+      CheckEquals(ord(ftWideString), Ord(Query.Fields[0].DataType))
+    else
+    {$ENDIF}
+      CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
     CheckEquals(Ord(ftBoolean), Ord(Query.Fields[1].DataType));
     CheckEquals(Ord(ftBoolean), Ord(Query.Fields[2].DataType));
 
@@ -576,7 +581,12 @@ begin
       + ' WHERE test894367a.f1=test894367b.f1';
     Query.Open;
 
-    CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
+    {$IFNDEF FPC}
+    if Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+      CheckEquals(ord(ftWideString), Ord(Query.Fields[0].DataType))
+    else
+    {$ENDIF}
+      CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
     CheckEquals(Ord(ftBoolean), Ord(Query.Fields[1].DataType));
     CheckEquals(Ord(ftBoolean), Ord(Query.Fields[2].DataType));
 
