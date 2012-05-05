@@ -475,7 +475,8 @@ end;
   Gets a collection of where all columns for DELETE or UPDATE DML statements.
   @param Columns a collection of key columns.
 }
-procedure TZGenericCachedResolver.DefineWhereAllColumns(Columns: TObjectList; IgnoreKeyColumn: Boolean = False);
+procedure TZGenericCachedResolver.DefineWhereAllColumns(Columns: TObjectList;
+  IgnoreKeyColumn: Boolean = False);
 var
   I: Integer;
 begin
@@ -634,6 +635,7 @@ function TZGenericCachedResolver.FormWhereClause(Columns: TObjectList;
 var
   I, N: Integer;
   Current: TZResolverParameter;
+  IsNull: Boolean;
 begin
   Result := '';
   N := Columns.Count - WhereColumns.Count;
@@ -647,7 +649,23 @@ begin
     Result := Result + IdentifierConvertor.Quote(Current.ColumnName);
     if OldRowAccessor.IsNull(Current.ColumnIndex) then
     begin
-      Result := Result + ' IS NULL ';
+      if WhereColumns.Count = 1 then
+      begin
+        case OldRowAccessor.GetColumnType(Current.ColumnIndex) of
+          stDate:
+            Result := Result+ '=' + QuotedStr('0000-00-00')+
+              ' OR '+Result + ' IS NULL';
+          stTime:
+            Result := Result+ '=' + QuotedStr('00:00:00')+
+              ' OR '+Result + ' IS NULL';
+          stTimeStamp:
+            Result := Result+ '=' + QuotedStr('0000-00-00 00:00:00')+
+              ' OR '+Result + ' IS NULL';
+          else Result := Result + ' IS NULL';
+        end;
+      end
+      else
+        Result := Result + ' IS NULL ';
       Columns.Delete(N);
     end
     else
@@ -705,7 +723,7 @@ begin
     Temp2[I*2+1] := '?'; 
   end; 
   SetLength(Temp1, l1); 
-  Result := Format('INSERT INTO %s (%s) VALUES (%s)', [TableName, Temp1, Temp2]); 
+  Result := Format('INSERT INTO %s (%s) VALUES (%s)', [TableName, Temp1, Temp2]);
 end;
 
 {**
