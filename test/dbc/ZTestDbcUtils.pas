@@ -476,7 +476,7 @@ begin
     Url := 'zdbc:mysql:test?UID=admin;PWD=none';
     ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
       UserName, Password, ResultInfo);
-    CheckEquals('localhost', HostName);
+    CheckEquals('', HostName);
     CheckEquals(0, Port);
     CheckEquals('test', Database);
     CheckEquals('admin', UserName);
@@ -486,7 +486,7 @@ begin
     Url := 'zdbc:mysql:test';
     ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
       UserName, Password, ResultInfo);
-    CheckEquals('localhost', HostName);
+    CheckEquals('', HostName);
     CheckEquals(0, Port);
     CheckEquals('test', Database);
     CheckEquals('scott', UserName);
@@ -501,7 +501,7 @@ begin
     Info.Values['extrainfo']:='extravalue';
     ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
       UserName, Password, ResultInfo);
-    CheckEquals('localhost', HostName);
+    CheckEquals('', HostName);
     CheckEquals(0, Port);
     CheckEquals('test', Database);
     //username from Url has precedence (Info username = scott)
@@ -526,7 +526,7 @@ begin
     Info.Values['PWD'] := 'nopwd';
     ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
       UserName, Password, ResultInfo);
-    CheckEquals('localhost', HostName);
+    CheckEquals('', HostName);
     CheckEquals(0, Port);
     CheckEquals('test', Database);
     //username from Url has precedence (Info username = scott)
