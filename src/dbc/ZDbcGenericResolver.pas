@@ -122,7 +122,7 @@ type
     procedure DefineUpdateColumns(Columns: TObjectList;
       OldRowAccessor, NewRowAccessor: TZRowAccessor);
     procedure DefineWhereKeyColumns(Columns: TObjectList);
-    procedure DefineWhereAllColumns(Columns: TObjectList);
+    procedure DefineWhereAllColumns(Columns: TObjectList; IgnoreKeyColumn: Boolean = False);
     function CheckKeyColumn(ColumnIndex: Integer): Boolean; virtual;
 
     procedure FillStatement(Statement: IZPreparedStatement;
@@ -476,7 +476,7 @@ end;
   Gets a collection of where all columns for DELETE or UPDATE DML statements.
   @param Columns a collection of key columns.
 }
-procedure TZGenericCachedResolver.DefineWhereAllColumns(Columns: TObjectList);
+procedure TZGenericCachedResolver.DefineWhereAllColumns(Columns: TObjectList; IgnoreKeyColumn: Boolean = False);
 var
   I: Integer;
 begin
@@ -491,14 +491,18 @@ begin
   for I := 1 to Metadata.GetColumnCount do
   begin
     if CheckKeyColumn(I) then
-    begin
       WhereColumns.Add(TZResolverParameter.Create(I,
-        Metadata.GetColumnName(I), Metadata.GetColumnType(I), False, ''));
-    end;
+        Metadata.GetColumnName(I), Metadata.GetColumnType(I), False, ''))
+    else
+      if IgnoreKeyColumn then
+        WhereColumns.Add(TZResolverParameter.Create(I,
+          Metadata.GetColumnName(I), Metadata.GetColumnType(I), False, ''));
   end;
-
-  { Copy defined parameters to target columns }
-  CopyResolveParameters(WhereColumns, Columns);
+  if ( WhereColumns.Count = 0 ) and ( not IgnoreKeyColumn ) then
+    DefineWhereAllColumns(Columns, True)
+  else
+    { Copy defined parameters to target columns }
+    CopyResolveParameters(WhereColumns, Columns);
 end;
 
 {**
