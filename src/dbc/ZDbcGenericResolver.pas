@@ -476,7 +476,8 @@ end;
   Gets a collection of where all columns for DELETE or UPDATE DML statements.
   @param Columns a collection of key columns.
 }
-procedure TZGenericCachedResolver.DefineWhereAllColumns(Columns: TObjectList; IgnoreKeyColumn: Boolean = False);
+procedure TZGenericCachedResolver.DefineWhereAllColumns(Columns: TObjectList;
+  IgnoreKeyColumn: Boolean = False);
 var
   I: Integer;
 begin

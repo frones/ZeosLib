@@ -1461,7 +1461,14 @@ begin
           PWideChar(WS)^, Value.Size);
       end
       else
-        WS := WideString(PAnsiChar(TMemoryStream(Value).Memory));
+        if Length(String(PAnsiChar(TMemoryStream(Value).Memory))) = Value.Size then
+          WS := WideString(PAnsiChar(TMemoryStream(Value).Memory))
+        else
+        begin
+          SetLength(Ansi, Value.Size);
+          TMemoryStream(Value).Read(PAnsiChar(Ansi)^, Value.Size);
+          WS := WideString(Ansi);
+        end;
     Ansi := UTF8Encode(WS);
     Len := Length(Ansi);
     TempStream := TMemoryStream.Create;
@@ -1888,8 +1895,9 @@ begin
         stDate: RowAccessor.SetDate(I, ResultSet.GetDate(I));
         stTime: RowAccessor.SetTime(I, ResultSet.GetTime(I));
         stTimestamp: RowAccessor.SetTimestamp(I, ResultSet.GetTimestamp(I));
-        stAsciiStream, stUnicodeStream, stBinaryStream:
+        stAsciiStream, stBinaryStream, stUnicodeStream:
           RowAccessor.SetBlob(I, ResultSet.GetBlob(I));
+
       end;
       if ResultSet.WasNull then
         RowAccessor.SetNull(I);
