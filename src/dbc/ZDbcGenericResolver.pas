@@ -89,7 +89,7 @@ type
 
   { TZGenericCachedResolver }
 
-  TZGenericCachedResolver = class (TAbstractCodePagedInterfacedObject, IZCachedResolver)
+  TZGenericCachedResolver = class (TInterfacedObject, IZCachedResolver)
   private
     FConnection: IZConnection;
     FStatement : IZStatement;
@@ -206,7 +206,6 @@ constructor TZGenericCachedResolver.Create(Statement: IZStatement;
 begin
   FStatement := Statement;
   FConnection := Statement.GetConnection;
-  Self.ClientCodePage := FConnection.GetClientCodePageInformations;
   FMetadata := Metadata;
   FDatabaseMetadata := Statement.GetConnection.GetMetadata;
   FIdentifierConvertor := FDatabaseMetadata.GetIdentifierConvertor;
@@ -636,6 +635,7 @@ function TZGenericCachedResolver.FormWhereClause(Columns: TObjectList;
 var
   I, N: Integer;
   Current: TZResolverParameter;
+  IsNull: Boolean;
 begin
   Result := '';
   N := Columns.Count - WhereColumns.Count;
@@ -649,7 +649,23 @@ begin
     Result := Result + IdentifierConvertor.Quote(Current.ColumnName);
     if OldRowAccessor.IsNull(Current.ColumnIndex) then
     begin
-      Result := Result + ' IS NULL ';
+      if WhereColumns.Count = 1 then
+      begin
+        case OldRowAccessor.GetColumnType(Current.ColumnIndex) of
+          stDate:
+            Result := Result+ '=' + QuotedStr('0000-00-00')+
+              ' OR '+Result + ' IS NULL';
+          stTime:
+            Result := Result+ '=' + QuotedStr('00:00:00')+
+              ' OR '+Result + ' IS NULL';
+          stTimeStamp:
+            Result := Result+ '=' + QuotedStr('0000-00-00 00:00:00')+
+              ' OR '+Result + ' IS NULL';
+          else Result := Result + ' IS NULL';
+        end;
+      end
+      else
+        Result := Result + ' IS NULL ';
       Columns.Delete(N);
     end
     else
