@@ -197,9 +197,9 @@ end;
   "... wrong size ..." when column in bytea datatype
 }
 procedure TZTestDbcPostgreSQLBugReport.Test702368;
-var
+{var
   ResultSet: IZResultSet;
-  Statement: IZStatement;
+  Statement: IZStatement;}
 begin
   if SkipClosed then Exit;
 

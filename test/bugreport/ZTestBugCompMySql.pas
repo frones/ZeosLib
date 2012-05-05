@@ -1145,7 +1145,11 @@ begin
     CheckEquals(Ord(ftBlob), Ord(Query.Fields[4].DataType));
     CheckEquals(Ord(ftInteger), Ord(Query.Fields[5].DataType));
     CheckEquals(Ord(ftLargeInt), Ord(Query.Fields[6].DataType));
-    CheckEquals(Ord(ftString), Ord(Query.Fields[7].DataType));
+    if ( FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
+      FConnection.UTF8StringsAsWideField then
+      CheckEquals(Ord(ftWideString), Ord(Query.Fields[7].DataType))
+    else
+      CheckEquals(Ord(ftString), Ord(Query.Fields[7].DataType));
 
     Query.Close;
 
@@ -1161,7 +1165,11 @@ begin
     CheckEquals(Ord(ftFloat), Ord(Query.Fields[4].DataType));
     CheckEquals(Ord(ftBlob), Ord(Query.Fields[5].DataType));
     CheckEquals(Ord(ftLargeInt), Ord(Query.Fields[6].DataType));
-    CheckEquals(Ord(ftString), Ord(Query.Fields[7].DataType));
+    if ( FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
+      FConnection.UTF8StringsAsWideField then
+      CheckEquals(Ord(ftWideString), Ord(Query.Fields[7].DataType))
+    else
+      CheckEquals(Ord(ftString), Ord(Query.Fields[7].DataType));
 
     Query.Close;
   finally

@@ -237,6 +237,7 @@ type
   TZPostgreSQLDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
     function EscapeString(const S: string): string;
+    function GetRuleType(const Rule: String): TZImportedKey;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-27
 
@@ -1346,6 +1347,22 @@ begin
     Result := 'E' + Result;
 end;
 
+function TZPostgreSQLDatabaseMetadata.GetRuleType(const Rule: String): TZImportedKey;
+begin
+  if Rule = 'RESTRICT' then
+    Result := ikRestrict
+  else if Rule = 'NO ACTION' then
+    Result := ikNoAction
+  else if Rule = 'CASCADE' then
+    Result := ikCascade
+  else if Rule = 'SET DEFAULT' then
+    Result := ikSetDefault
+  else if Rule = 'SET NULL' then
+    Result := ikSetNull
+  else
+    Result := ikNotDeferrable; //impossible!
+end;
+
 {**
   Gets a description of the stored procedures available in a
   catalog.
@@ -2421,8 +2438,71 @@ end;
 }
 function TZPostgreSQLDatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
+var
+  SQL: string;
+  KeySequence: Integer;
 begin
-  Result := UncachedGetCrossReference('', '', '', Catalog, Schema, Table);
+  if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 4) then
+  begin
+    Result:=inherited UncachedGetImportedKeys(Catalog, Schema, Table);
+    SQL := 'SELECT '+
+      'tc.constraint_catalog as PKTABLE_CAT, '+
+      'tc.constraint_schema as PKTABLE_SCHEM, '+
+      'ccu.table_name as PKTABLE_NAME, '+
+      'ccu.column_name as PKCOLUMN_NAME, '+
+      'kcu.table_catalog as FKTABLE_CAT, '+
+      'kcu.constraint_schema as FKTABLE_SCHEM, '+
+      'kcu.table_name as PKTABLE_NAME, '+
+      'kcu.column_name as FKCOLUMN_NAME, '+
+      'rf.update_rule as UPDATE_RULE, '+
+      'rf.delete_rule as DELETE_RULE, '+
+      'kcu.constraint_name as FK_NAME, '+
+      'kcu.ordinal_position as PK_NAME, '+
+      'tc.is_deferrable as DEFERRABILITY '+
+      'FROM information_schema.table_constraints AS tc '+
+      'JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name '+
+      'JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name '+
+      'join information_schema.referential_constraints as rf on rf.constraint_name = tc.constraint_name '+
+      'WHERE constraint_type = ''FOREIGN KEY''';
+    if Catalog <> '' then
+      SQL := SQL + ' and kcu.table_catalog = '''+Catalog+'''';
+    if Schema <> '' then
+      SQL := SQL + ' and kcu.constraint_schema = '''+Schema+'''';
+    if Table <> '' then
+      SQL := SQL + ' and kcu.table_name = '''+Table+'''';
+
+    KeySequence := 0;
+    with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+    begin
+      while Next do
+      begin
+        Inc(KeySequence);
+        Result.MoveToInsertRow;
+        Result.UpdateNull(1); //PKTABLE_CAT
+        Result.UpdateString(2, GetString(2)); //PKTABLE_SCHEM
+        Result.UpdateString(3, GetString(3)); //PKTABLE_NAME
+        Result.UpdateString(4, GetString(4)); //PKCOLUMN_NAME
+        //Result.UpdateString(5, GetString(5)); //PKTABLE_CAT
+        Result.UpdateString(5, Catalog); //PKTABLE_CAT
+        Result.UpdateString(6, GetString(6)); //FKTABLE_SCHEM
+        Result.UpdateString(7, GetString(7)); //FKTABLE_NAME
+        Result.UpdateString(8, GetString(8)); //FKCOLUMN_NAME
+        Result.UpdateShort(9, KeySequence); //KEY_SEQ
+        Result.UpdateShort(10, Ord(GetRuleType(GetString(9)))); //UPDATE_RULE
+        Result.UpdateShort(11, Ord(GetRuleType(GetString(10)))); //DELETE_RULE
+        Result.UpdateString(12, GetString(11)); //FK_NAME
+        Result.UpdateString(13, GetString(12)); //PK_NAME
+        if GetString(13) = 'NO' then
+          Result.UpdateShort(14, Ord(ikNotDeferrable)) //DEFERRABILITY
+        else
+          Result.UpdateShort(14, Ord(ikInitiallyDeferred)); //DEFERRABILITY
+        Result.InsertRow;
+      end;
+      Close;
+    end;
+  end
+  else
+    Result := UncachedGetCrossReference('', '', '', Catalog, Schema, Table);
 end;
 
 {**
@@ -2494,8 +2574,72 @@ end;
 }
 function TZPostgreSQLDatabaseMetadata.UncachedGetExportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
+var
+  SQL: string;
+  KeySequence: Integer;
 begin
-  Result := UncachedGetCrossReference(Catalog, Schema, Table, '', '', '');
+  if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 4) then
+  begin
+    Result:=inherited UncachedGetImportedKeys(Catalog, Schema, Table);
+    SQL := 'SELECT '+
+      'tc.constraint_catalog as PKTABLE_CAT, '+
+      'tc.constraint_schema as PKTABLE_SCHEM, '+
+      'ccu.table_name as PKTABLE_NAME, '+
+      'ccu.column_name as PKCOLUMN_NAME, '+
+      'kcu.table_catalog as FKTABLE_CAT, '+
+      'kcu.constraint_schema as FKTABLE_SCHEM, '+
+      'kcu.table_name as PKTABLE_NAME, '+
+      'kcu.column_name as FKCOLUMN_NAME, '+
+      'rf.update_rule as UPDATE_RULE, '+
+      'rf.delete_rule as DELETE_RULE, '+
+      'kcu.constraint_name as FK_NAME, '+
+      'kcu.ordinal_position as PK_NAME, '+
+      'tc.is_deferrable as DEFERRABILITY '+
+      'FROM information_schema.table_constraints AS tc '+
+      'JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name '+
+      'JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name '+
+      'join information_schema.referential_constraints as rf on rf.constraint_name = tc.constraint_name '+
+      'WHERE constraint_type = ''FOREIGN KEY''';
+    if Catalog <> '' then
+      SQL := SQL + ' and tc.constraint_catalog = '''+Catalog+'''';
+    if Schema <> '' then
+      SQL := SQL + ' and tc.constraint_schema = '''+Schema+'''';
+    if Table <> '' then
+      SQL := SQL + ' and ccu.table_name = '''+Table+'''';
+    SQL := SQL + ' order by kcu.table_name;';
+
+    KeySequence := 0;
+    with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+    begin
+      while Next do
+      begin
+        Inc(KeySequence);
+        Result.MoveToInsertRow;
+        Result.UpdateNull(1); //PKTABLE_CAT
+        Result.UpdateString(2, GetString(2)); //PKTABLE_SCHEM
+        Result.UpdateString(3, GetString(3)); //PKTABLE_NAME
+        Result.UpdateString(4, GetString(4)); //PKCOLUMN_NAME
+        //Result.UpdateString(5, GetString(5)); //PKTABLE_CAT
+        Result.UpdateString(5, Catalog); //PKTABLE_CAT
+        Result.UpdateString(6, GetString(6)); //FKTABLE_SCHEM
+        Result.UpdateString(7, GetString(7)); //FKTABLE_NAME
+        Result.UpdateString(8, GetString(8)); //FKCOLUMN_NAME
+        Result.UpdateShort(9, KeySequence); //KEY_SEQ
+        Result.UpdateShort(10, Ord(GetRuleType(GetString(9)))); //UPDATE_RULE
+        Result.UpdateShort(11, Ord(GetRuleType(GetString(10)))); //DELETE_RULE
+        Result.UpdateString(12, GetString(11)); //FK_NAME
+        Result.UpdateString(13, GetString(12)); //PK_NAME
+        if GetString(13) = 'NO' then
+          Result.UpdateShort(14, Ord(ikNotDeferrable)) //DEFERRABILITY
+        else
+          Result.UpdateShort(14, Ord(ikInitiallyDeferred)); //DEFERRABILITY
+        Result.InsertRow;
+      end;
+      Close;
+    end;
+  end
+  else
+    Result := UncachedGetCrossReference('', '', '', Catalog, Schema, Table);
 end;
 
 {**
@@ -2584,22 +2728,6 @@ var
   List: TStrings;
   Deferrability: Integer;
   Deferrable, InitiallyDeferred: Boolean;
-
-  function GetRuleType(const Rule: String): TZImportedKey;
-  begin
-    if Rule = 'RESTRICT' then
-      Result := ikRestrict
-    else if Rule = 'NO ACTION' then
-      Result := ikNoAction
-    else if Rule = 'CASCADE' then
-      Result := ikCascade
-    else if Rule = 'SET DEFAULT' then
-      Result := ikSetDefault
-    else if Rule = 'SET NULL' then
-      Result := ikSetNull
-    else
-      Result := ikNotDeferrable; //impossible!
-  end;
 begin
   Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
                                               ForeignCatalog, ForeignSchema, ForeignTable);
