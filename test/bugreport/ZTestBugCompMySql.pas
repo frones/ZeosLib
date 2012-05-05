@@ -909,7 +909,7 @@ begin
 
     Query.Refresh;
     CheckEquals(1, Query.RecordCount);
-    CheckEquals(False, Query.Fields[0].IsNull);
+    CheckEquals(True, Query.Fields[0].IsNull);
     CheckEquals(0, Query.Fields[0].AsDateTime, 0);
     CheckEquals('xyz', Query.Fields[1].AsString);
     Query.Close;
