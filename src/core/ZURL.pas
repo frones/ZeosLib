@@ -258,12 +258,10 @@ begin
   // Protocol
   Result := Result + Protocol + ':';
 
-  if (HostName <> '') or (Database <> '') then
-    Result := Result + '//';
-
   // HostName/Port
   if HostName <> '' then
   begin
+    Result := Result + '//';
     Result := Result + HostName;
     if Port <> 0 then
       Result := Result + ':' + IntToStr(Port);
@@ -322,7 +320,7 @@ var
 begin
   APrefix := '';
   AProtocol := '';
-  AHostName := 'localhost';
+  AHostName := '';
   APort := '';
   ADatabase := '';
   AUserName := '';
