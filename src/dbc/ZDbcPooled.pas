@@ -83,8 +83,11 @@ type
     FConnection: IZConnection;
     FConnectionPool: TConnectionPool;
     FPreprepareSQL: Boolean;
+    FUTF8StringAsWideField: Boolean;
     FUseMetadata: Boolean;
     function GetConnection: IZConnection;
+    function GetUTF8StringAsWideField: Boolean;
+    procedure SetUTF8StringAsWideField(const Value: Boolean);
   protected // IZConnection
     FClientCodePage: String;
     procedure CheckCharEncoding(CharSet: String;
@@ -617,6 +620,33 @@ procedure TZDbcPooledConnection.SetPreprepareSQL(const Value: Boolean);
 begin
   FPreprepareSQL := Value;
 end;
+
+function TZDbcPooledConnection.GetUTF8StringAsWideField: Boolean;
+begin
+  {$IFDEF LAZARUSUTF8HACK}
+  Result := False;
+  {$ELSE}
+    {$IFDEF DELPHI12_UP}
+    Result := True;
+    {$ELSE}
+    Result := FUTF8StringAsWideField;
+    {$ENDIF}
+  {$ENDIF}
+end;
+
+procedure TZDbcPooledConnection.SetUTF8StringAsWideField(const Value: Boolean);
+begin
+  {$IFDEF LAZARUSUTF8HACK}
+  FUTF8StringAsWideField := False;
+  {$ELSE}
+    {$IFDEF DELPHI12_UP}
+    FUTF8StringAsWideField := True;
+    {$ELSE}
+    FUTF8StringAsWideField := Value;
+    {$ENDIF}
+  {$ENDIF}
+end;
+
 {**
   EgonHugeist:
   Returns the BinaryString in a Tokenizer-detectable kind

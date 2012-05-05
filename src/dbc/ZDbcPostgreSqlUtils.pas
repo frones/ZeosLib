@@ -164,7 +164,10 @@ begin
   if (TypeName = 'interval') or (TypeName = 'char')
     or (TypeName = 'varchar') or (TypeName = 'bit') or (TypeName = 'varbit') then//EgonHugeist: Highest Priority Client_Character_set!!!!
     if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
-      Result := {$IFNDEF WITH_UTF8_CONTROLS}stUnicodeString{$ELSE}stString{$ENDIF}
+      if Connection.UTF8StringAsWideField then
+        Result := stUnicodeString
+      else
+        Result := stString
     else
       Result := stString
   else if TypeName = 'text' then
@@ -227,12 +230,10 @@ begin
   else
     Result := stUnknown;
 
-  {$IFNDEF WITH_UTF8_CONTROLS}
-    if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
-      if Result = stAsciiStream then
-        Result := {$IFDEF WITH_WIDEMEMO}stUnicodeStream{$ELSE}stUnicodeString{$ENDIF}; //Delphi 7 does not support WideMemos
-  {$ENDIF}
-
+  if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+    if Result = stAsciiStream then
+       if Connection.UTF8StringAsWideField then
+         Result := stUnicodeStream;
 end;
 
 {**
@@ -248,11 +249,12 @@ function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
 begin
   case TypeOid of
     1186,18,1043:  { interval/char/varchar }
-      {$IFNDEF WITH_UTF8_CONTROLS}
       if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
-        Result := stUnicodeString
+        if Connection.UTF8StringAsWideField then
+          Result := stUnicodeString
+        else
+          Result := stString
       else
-      {$ENDIF}
         Result := stString;
     25: Result := stAsciiStream; { text }
     26: { oid }
@@ -292,11 +294,10 @@ begin
       Result := stUnknown;
   end;
 
-  {$IFNDEF WITH_UTF8_CONTROLS}
-    if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
-      if Result = stAsciiStream then
-        Result := {$IFDEF WITH_WIDEMEMO}stUnicodeStream{$ELSE}stUnicodeString{$ENDIF}; //Delphi 7 does not support WideMemos
-  {$ENDIF}
+  if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+    if Result = stAsciiStream then
+      if Connection.UTF8StringAsWideField then
+        Result := stUnicodeStream;
 end;
 
 {**

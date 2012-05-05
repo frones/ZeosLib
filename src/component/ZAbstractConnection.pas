@@ -102,6 +102,8 @@ type
     function GetVersion: string;
     procedure SetUseMetadata(AValue: Boolean);
     procedure SetVersion(const Value: string);
+    function GetUTF8StringAsWideField: Boolean;
+    procedure SetUTF8StringAsWideField(const Value: Boolean);
   protected
     FURL: TZURL;
     FCatalog: string;
@@ -134,6 +136,7 @@ type
     FClientCodepage: String;
 
     FPreprepareSQL: Boolean;
+    FUTF8StringAsWideField: Boolean;
     function GetPreprepareSQL: Boolean;
     procedure SetPreprepareSQL(Value: Boolean);
     function GetHostName: string;
@@ -256,6 +259,7 @@ type
     procedure ShowSQLHourGlass;
     procedure HideSQLHourGlass;
   published
+    property UTF8StringsAsWideField: Boolean read GetUTF8StringAsWideField write FUTF8StringAsWideField;
     property PreprepareSQL: Boolean read GetPreprepareSQL write SetPreprepareSQL default True;
     property ClientCodepage: String read FClientCodepage write SetClientCodePage; //EgonHugeist
     property Catalog: string read FCatalog write FCatalog;
@@ -329,6 +333,11 @@ begin
   FSequences:= TList.Create;
   FLoginPrompt := False;
   FDesignConnection := False;
+  {$IFDEF LAZARUSUTF8HACK}
+  FUTF8StringAsWideField := False;
+  {$ELSE}
+  FUTF8StringAsWideField := True;
+  {$ENDIF}
 end;
 
 {**
@@ -506,13 +515,6 @@ begin
       FClientCodepage := Trim(Value.Values['codepage'])
     else
       Value.Values['codepage'] := FClientCodepage;
-    if Self.Connected then
-    begin
-      DbcConnection.PreprepareSQL := Value.Values['PreprepareSQL'] = 'ON';
-      FPreprepareSQL := Value.Values['PreprepareSQL'] = 'ON';
-    end
-    else
-      FPreprepareSQL := Value.Values['PreprepareSQL'] = 'ON';
     FURL.Properties.Text := Value.Text;
   end
   else
@@ -784,6 +786,8 @@ begin
           SetCatalog(FCatalog);
           SetTransactionIsolation(FTransactIsolationLevel);
           SetUseMetadata(FUseMetadata);
+          SetPreprepareSQL(FPreprepareSQL);
+          SetUTF8StringAsWideField(GetUTF8StringAsWideField);
           Open;
         end;
       except
@@ -1182,7 +1186,7 @@ begin
   Metadata := DbcConnection.GetMetadata;
   ResultSet := Metadata.GetCatalogs;
   while ResultSet.Next do
-    List.Add(String(ResultSet.GetStringByName('TABLE_CAT')));
+    List.Add(ResultSet.GetStringByName('TABLE_CAT'));
 end;
 
 {**
@@ -1200,7 +1204,7 @@ begin
   Metadata := DbcConnection.GetMetadata;
   ResultSet := Metadata.GetSchemas;
   while ResultSet.Next do
-    List.Add(String(ResultSet.GetStringByName('TABLE_SCHEM')));
+    List.Add(ResultSet.GetStringByName('TABLE_SCHEM'));
 end;
 
 {**
@@ -1249,7 +1253,7 @@ begin
   Metadata := DbcConnection.GetMetadata;
   ResultSet := Metadata.GetTables('', schemaPattern, tablePattern, types);
   while ResultSet.Next do
-    List.Add(String(ResultSet.GetStringByName('TABLE_NAME')));
+    List.Add(ResultSet.GetStringByName('TABLE_NAME'));
 end;
 
 {**
@@ -1268,7 +1272,7 @@ begin
   Metadata := DbcConnection.GetMetadata;
   ResultSet := Metadata.GetColumns('', '', TablePattern, ColumnPattern);
   while ResultSet.Next do
-    List.Add(String(ResultSet.GetStringByName('COLUMN_NAME')));
+    List.Add(ResultSet.GetStringByName('COLUMN_NAME'));
 end;
 
 {**
@@ -1288,7 +1292,7 @@ begin
   Metadata := DbcConnection.GetMetadata;
   ResultSet := Metadata.GetProcedures('', '', Pattern);
   while ResultSet.Next do
-    List.Add(String(ResultSet.GetStringByName('PROCEDURE_NAME')));
+    List.Add(ResultSet.GetStringByName('PROCEDURE_NAME'));
 end;
 
 {**
@@ -1306,7 +1310,7 @@ begin
   with DbcConnection.GetMetadata.GetTriggers('', SchemaPattern, TablePattern, '') do
   begin
     while Next do
-     List.Add(String(GetStringByName('TRIGGER_NAME')));
+     List.Add(GetStringByName('TRIGGER_NAME'));
     Close;
   end;
 end;
@@ -1416,12 +1420,7 @@ end;
 
 procedure TZAbstractConnection.SetPreprepareSQL(Value: Boolean);
 begin
-  if Value then
-    FURL.Properties.Values['PreprepareSQL'] := 'ON'
-  else
-    FURL.Properties.Values['PreprepareSQL'] := '';
-
-  if Self.Connected then
+  if Assigned(Self.DbcConnection) then
   begin
     DbcConnection.PreprepareSQL := Value;
     FPreprepareSQL := Value;
@@ -1444,6 +1443,34 @@ begin
   FUseMetaData:=AValue;
   if FConnection <> nil then
     FConnection.SetUseMetadata(FUseMetadata);
+end;
+
+function TZAbstractConnection.GetUTF8StringAsWideField: Boolean;
+begin
+  {$IFDEF LAZARUSUTF8HACK}
+  Result := False;
+  {$ELSE}
+    {$IFDEF DELPHI12_UP}
+    Result := True;
+    {$ELSE}
+    Result := FUTF8StringAsWideField;
+    {$ENDIF}
+  {$ENDIF}
+end;
+
+procedure TZAbstractConnection.SetUTF8StringAsWideField(const Value: Boolean);
+begin
+  {$IFDEF LAZARUSUTF8HACK}
+  FUTF8StringAsWideField := False;
+  {$ELSE}
+    {$IFDEF DELPHI12_UP}
+    FUTF8StringAsWideField := True;
+    {$ELSE}
+    FUTF8StringAsWideField := Value;
+    {$ENDIF}
+  {$ENDIF}
+  if Assigned(DbcConnection) then
+    DbcConnection.UTF8StringAsWideField := FUTF8StringAsWideField;
 end;
 
 procedure TZAbstractConnection.SetVersion(const Value: string);

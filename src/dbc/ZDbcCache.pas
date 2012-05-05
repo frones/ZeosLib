@@ -241,8 +241,7 @@ begin
     FColumnOffsets[I] := FColumnsSize;
     FColumnDefaultExpressions[I] := Current.DefaultExpression;
     Inc(FColumnsSize, FColumnLengths[I] + 1);
-    // 32768 is the length of a TByteArray. (HeidiSQL patch)
-    if FColumnsSize > 32767 then
+    if FColumnsSize > SizeOf(TZByteArray) then
     begin
       raise EZSQLException.Create(SRowBufferWidthExceeded);
     end;

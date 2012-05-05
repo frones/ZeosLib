@@ -207,7 +207,6 @@ var
   I: Integer;
   TriedLocations: string;
 begin
-  Result := False;
   TriedLocations := '';
   for I := 0 to High(FLocations) do
     begin

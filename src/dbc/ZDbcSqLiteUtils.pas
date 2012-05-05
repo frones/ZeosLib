@@ -68,7 +68,8 @@ uses
   @result the SQLType field type value
 }
 function ConvertSQLiteTypeToSQLType(TypeName: string; var Precision: Integer;
-  var Decimals: Integer; CharEncoding: TZCharEncoding): TZSQLType;
+  var Decimals: Integer; CharEncoding: TZCharEncoding;
+  const UTF8StringAsWideField: Boolean): TZSQLType;
 
 {**
   Checks for possible sql errors.
@@ -108,7 +109,8 @@ uses ZMessages{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
   @result the SQLType field type value
 }
 function ConvertSQLiteTypeToSQLType(TypeName: string; var Precision: Integer;
-  var Decimals: Integer; CharEncoding: TZCharEncoding): TZSQLType;
+  var Decimals: Integer; CharEncoding: TZCharEncoding;
+  const UTF8StringAsWideField: Boolean): TZSQLType;
 var
   P1, P2: Integer;
   Temp: string;
@@ -164,11 +166,15 @@ begin
   else if StartsWith(TypeName, 'CHAR') then
     Result := stString
   else if TypeName = 'VARCHAR' then
-    {$IFDEF WITH_UTF8_CONTROLS}
-      Result := stString
-	  {$ELSE}
-      Result := stUnicodeString //All delphi compilers need here UTF8Encoding/Decoding in OpenUTF8 Mode(minimum)
-	  {$ENDIF}
+    case CharEncoding of  //SQLite supports only 2 OpenModes: either UTF8 or UTF16(le, be)
+      ceUTF8:
+        if UTF8StringAsWideField then
+          Result := stUnicodeString
+        else
+          Result := stString;
+      ceUTF16:
+        Result := stUnicodeString
+    end
   else if TypeName = 'VARBINARY' then
     Result := stBytes
   else if TypeName = 'BINARY' then
@@ -202,11 +208,15 @@ begin
 
   if ((Result = stString) or (Result = stUnicodeString)) and (Precision = 0) then
     Precision := 255;
-  {$IFNDEF WITH_UTF8_CONTROLS}
-    if CharEncoding = ceUTF8 then
-      if Result = stAsciiStream then
-        Result := {$IFDEF WITH_WIDEMEMO}stUnicodeStream{$ELSE}stUnicodeString{$ENDIF}; //Delphi 7 does not support WideMemos
-  {$ENDIF}
+  case CharEncoding of
+    ceUTF8:
+      if UTF8StringAsWideField then
+        Result := stUnicodeStream
+      else
+        Result := stAsciiStream;
+    ceUTF16:
+      Result := stUnicodeStream
+  end;
 end;
 
 {**

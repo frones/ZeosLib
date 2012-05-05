@@ -1474,7 +1474,8 @@ begin
 
         Result.UpdateInt(6,
           Ord(ConvertInterbase6ToSqlType(TypeName, SubTypeName,
-            GetConnection.GetClientCodePageInformations^.Encoding))); //DATA_TYPE
+            GetConnection.GetClientCodePageInformations^.Encoding,
+            GetConnection.UTF8StringAsWideField))); //DATA_TYPE
         Result.UpdateString(7,GetString(ColumnIndexes[4]));    //TYPE_NAME
         Result.UpdateInt(10, GetInt(ColumnIndexes[6]));
         Result.UpdateNull(9);    //BUFFER_LENGTH
@@ -1787,7 +1788,8 @@ begin
         Result.UpdateString(3, GetString(ColumnIndexes[7]));    //TABLE_NAME
         Result.UpdateString(4, ColumnName);    //COLUMN_NAME
         Result.UpdateInt(5, Ord(ConvertInterbase6ToSqlType(TypeName, SubTypeName
-          , GetConnection.GetClientCodePageInformations^.Encoding)));
+          , GetConnection.GetClientCodePageInformations^.Encoding,
+          GetConnection.UTF8StringAsWideField)));
         // TYPE_NAME
         case TypeName of
           7  : Result.UpdateString(6, 'SMALLINT');
@@ -2665,7 +2667,8 @@ begin
         Result.MoveToInsertRow;
         Result.UpdateString(1, GetString(2));
         Result.UpdateInt(2, Ord(ConvertInterbase6ToSqlType(GetInt(1), 0,
-          Self.GetConnection.GetClientCodePageInformations^.Encoding)));
+          Self.GetConnection.GetClientCodePageInformations^.Encoding,
+          GetConnection.UTF8StringAsWideField)));
         Result.UpdateInt(3, 9);
         Result.UpdateInt(7, Ord(ntNoNulls));
         Result.UpdateBoolean(8, false);

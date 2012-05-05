@@ -206,7 +206,6 @@ type
     function Connect(const Url: TZURL): IZConnection; overload;
     function GetClientVersion(const Url: string): Integer;
     function AcceptsURL(const Url: string): Boolean;
-    //function GetPlainDriver(const Url: TZURL): IZPlainDriver;
     function GetPlainDriver(const Url: TZURL; const InitDriver: Boolean = True): IZPlainDriver;
 
     function GetPropertyInfo(const Url: string; Info: TStrings): TStrings;
@@ -283,9 +282,12 @@ type
     function GetEscapeString(const Value: String;
       const EscapeMarkSequence: String = '~<|'): String;
     function GetClientCodePageInformations(const ClientCharacterSet: String = ''): PZCodePage; //EgonHugeist
+    function GetUTF8StringAsWideField: Boolean;
+    procedure SetUTF8StringAsWideField(const Value: Boolean);
     function GetPreprepareSQL: Boolean;
     procedure SetPreprepareSQL(const Value: Boolean);
     property PreprepareSQL: Boolean read GetPreprepareSQL write SetPreprepareSQL;
+    property UTF8StringAsWideField: Boolean read GetUTF8StringAsWideField write SetUTF8StringAsWideField;
   end;
 
   {** Database metadata interface. }

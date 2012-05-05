@@ -353,7 +353,7 @@ begin
           Result := AnsiQuotedStr(SoftVarManager.GetAsString(Value), '''')
         else
           {$IFDEF DELPHI12_UP}
-          Result := AnsiQuotedStr(UTF8Encode(SoftVarManager.GetAsString(Value)), '''');
+          Result := AnsiQuotedStr(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)), '''');
           {$ELSE}
           Result := AnsiQuotedStr(SoftVarManager.GetAsString(Value), '''');
           {$ENDIF}

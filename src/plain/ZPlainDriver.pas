@@ -83,7 +83,7 @@ type
   private
     FCodePages: array of TZCodePage;
   protected
-    function Clone: IZPlainDriver; virtual; abstract;
+    function Clone: IZPlainDriver; reintroduce; virtual; abstract;
     procedure LoadCodePages; virtual; abstract;
     procedure AddCodePage(const Name: String; const ID:  Integer;
       Encoding: TZCharEncoding = ceAnsi;

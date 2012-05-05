@@ -114,6 +114,7 @@ type
     FDriver: IZDriver;
     FIZPlainDriver: IZPlainDriver;
     FPreprepareSQL: Boolean;
+    FUTF8StringAsWideField: Boolean;
     FAutoCommit: Boolean;
     FReadOnly: Boolean;
     FTransactIsolationLevel: TZTransactIsolationLevel;
@@ -138,6 +139,8 @@ type
     procedure CheckCharEncoding(CharSet: String;
       const DoArrange: Boolean = False);
     function GetClientCodePageInformations(const ClientCharacterSet: String = ''): PZCodePage; //EgonHugeist
+    function GetUTF8StringAsWideField: Boolean;
+    procedure SetUTF8StringAsWideField(const Value: Boolean);
     function GetPreprepareSQL: Boolean; //EgonHugeist
     procedure SetPreprepareSQL(const Value: Boolean);
     procedure RaiseUnsupportedException;
@@ -665,12 +668,17 @@ begin
   FDriver := DriverManager.GetDriver(ZURL.URL);
   FIZPlainDriver := FDriver.GetPlainDriver(ZUrl);
   FClientCodePage := Info.Values['codepage'];
-  FPreprepareSQL := Info.Values['PreprepareSQL'] = 'ON'; //compatibitity Option for existing Applications
+  FPreprepareSQL := False;
   {Pick out the values from Info}
-  Info.Values['PreprepareSQL'] := '';
   Info.Values['codepage'] := '';
   {CheckCharEncoding}
   CheckCharEncoding(FClientCodePage, True);
+  {$IFDEF LAZARUSUTF8HACK}
+  FUTF8StringAsWideField := False;
+  {$ELSE}
+  FUTF8StringAsWideField := True;
+  {$ENDIF}
+
   FAutoCommit := True;
   FClosed := True;
   FReadOnly := True;
@@ -1258,6 +1266,32 @@ begin
     Result := ClientCodePage
   else
     Result := GetIZPlainDriver.GetClientCodePageInformations(ClientCharacterSet);
+end;
+
+function TZAbstractConnection.GetUTF8StringAsWideField: Boolean;
+begin
+  {$IFDEF LAZARUSUTF8HACK}
+  Result := False;
+  {$ELSE}
+    {$IFDEF DELPHI12_UP}
+    Result := True;
+    {$ELSE}
+    Result := FUTF8StringAsWideField;
+    {$ENDIF}
+  {$ENDIF}
+end;
+
+procedure TZAbstractConnection.SetUTF8StringAsWideField(const Value: Boolean);
+begin
+  {$IFDEF LAZARUSUTF8HACK}
+  FUTF8StringAsWideField := False;
+  {$ELSE}
+    {$IFDEF DELPHI12_UP}
+    FUTF8StringAsWideField := True;
+    {$ELSE}
+    FUTF8StringAsWideField := Value;
+    {$ENDIF}
+  {$ENDIF}
 end;
 
 { TZAbstractNotification }

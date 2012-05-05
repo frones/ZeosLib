@@ -322,7 +322,7 @@ type
     StmtHandle: TISC_STMT_HANDLE; StatementType: TZIbSqlStatementType): integer;
 
   function ConvertInterbase6ToSqlType(SqlType, SqlSubType: Integer;
-    CharEncoding: TZCharEncoding): TZSqlType;
+    CharEncoding: TZCharEncoding; const UTF8StringAsWideField: Boolean): TZSqlType;
 
   { interbase blob routines }
   procedure GetBlobInfo(PlainDriver: IZInterbasePlainDriver;
@@ -689,7 +689,7 @@ end;
   <b>Note:</b> The interbase type and subtype get from RDB$TYPES table
 }
 function ConvertInterbase6ToSqlType(SqlType, SqlSubType: Integer;
-  CharEncoding: TZCharEncoding): TZSQLType;
+  CharEncoding: TZCharEncoding; const UTF8StringAsWideField: Boolean): TZSQLType;
 begin
   Result := ZDbcIntfs.stUnknown;
 
@@ -754,14 +754,12 @@ begin
     else
       Result := ZDbcIntfs.stUnknown;
   end;
-  {$IFNDEF WITH_UTF8_CONTROLS}
   if CharEncoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-    case result of
-      stString: Result := stUnicodeString;
-       //Delphi 7 does not support WideMemos
-      stAsciiStream: Result := {$IFDEF WITH_WIDEMEMO}stUnicodeStream{$ELSE}stUnicodeString{$ENDIF};
-    end;
-  {$ENDIF}
+    if UTF8StringAsWideField then
+      case result of
+        stString: Result := stUnicodeString;
+        stAsciiStream: Result := stUnicodeStream;
+      end;
 end;
 
 {**

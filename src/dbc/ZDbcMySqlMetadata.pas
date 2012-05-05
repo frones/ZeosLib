@@ -1209,11 +1209,10 @@ begin
             else
               TypeInfoFirst := TypeInfo;
 
-            //Collation:=GetString(ColumnIndexes[6]);
-
             TypeInfoFirst := LowerCase(TypeInfoFirst);
             MySQLType := ConvertMySQLTypeToSQLType(TypeInfoFirst, TypeInfo,
-              GetConnection.GetClientCodePageInformations.Encoding);
+              GetConnection.GetClientCodePageInformations.Encoding,
+              GetConnection.UTF8StringAsWideField);
             Res.UpdateInt(5, Ord(MySQLType));
             Res.UpdateString(6, TypeInfoFirst);
 
@@ -1393,10 +1392,9 @@ begin
             Res.UpdateInt(17, OrdPosition);
 
             Res.UpdateBoolean(19, //AUTO_INCREMENT
-              Trim(LowerCase(String(GetString(ColumnIndexes[4])))) = 'auto_increment'); //Extra
+              Trim(LowerCase(GetString(ColumnIndexes[4]))) = 'auto_increment'); //Extra
             Res.UpdateBoolean(20, //CASE_SENSITIVE
-              GetIdentifierConvertor.IsCaseSensitive(
-              String(GetString(ColumnIndexes[1])))); //Field
+              GetIdentifierConvertor.IsCaseSensitive(GetString(ColumnIndexes[1]))); //Field
             Res.UpdateBoolean(21, True);  //SEARCHABLE
             Res.UpdateBoolean(22, True);  //WRITABLE
             Res.UpdateBoolean(23, True);  //DEFINITELYWRITABLE

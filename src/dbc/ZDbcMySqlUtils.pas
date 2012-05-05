@@ -78,7 +78,8 @@ type
   @return a SQL undepended type.
 }
 function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
-  FieldHandle: PZMySQLField; FieldFlags: Integer; const CharEncoding: TZCharEncoding): TZSQLType;
+  FieldHandle: PZMySQLField; FieldFlags: Integer;
+  const CharEncoding: TZCharEncoding; const UTF8StringAsWideField: Boolean): TZSQLType;
 
 {**
   Convert string mysql field type to SQLType
@@ -86,7 +87,7 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
   @result the SQLType field type value
 }
 function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull: string;
-  const CharEncoding: TZCharEncoding): TZSQLType;
+  const CharEncoding: TZCharEncoding; const UTF8StringAsWideField: Boolean): TZSQLType;
 
 {**
   Checks for possible sql errors.
@@ -163,14 +164,14 @@ end;
 }
 function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
   FieldHandle: PZMySQLField; FieldFlags: Integer;
-  const CharEncoding: TZCharEncoding): TZSQLType;
+  const CharEncoding: TZCharEncoding; const UTF8StringAsWideField: Boolean): TZSQLType;
 
   function Signed: Boolean;
   begin
     Result := (UNSIGNED_FLAG and FieldFlags) = 0;
   end;
 
-  begin
+begin
     case PlainDriver.GetFieldType(FieldHandle) of
     FIELD_TYPE_TINY:
       begin
@@ -226,12 +227,10 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
     FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB:
       if (FieldFlags and BINARY_FLAG) = 0 then
         If CharEncoding = ceUTF8 then
-          Result :=
-            {$IFDEF WITH_UTF8_CONTROLS}
-              stAsciiStream
-            {$ELSE}
-              {$IFDEF WITH_WIDEMEMO}stUnicodeStream{$ELSE}stUnicodeString{$ENDIF} //Delphi 7 does not support WideMemos
-            {$ENDIF}
+          if UTF8StringAsWideField then
+            Result := stUnicodeStream
+          else
+            Result := stAsciiStream
         else
           Result := stAsciiStream
       else
@@ -242,7 +241,10 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
     FIELD_TYPE_VAR_STRING,
     FIELD_TYPE_STRING:
       if CharEncoding = ceUTF8 then
-        Result := {$IFDEF WITH_UTF8_CONTROLS}stString{$ELSE}stUnicodeString{$ENDIF}
+        if UTF8StringAsWideField then
+          Result := stUnicodeString
+        else
+          Result := stString
       else
         Result := stString;
     FIELD_TYPE_ENUM:
@@ -264,10 +266,8 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
   if (Result = stString) and (PlainDriver.GetFieldLength(FieldHandle) > 8192) then
      Result := stAsciiStream;
 
-  {$IFDEF WITH_WIDEMEMO}
   if (Result = stUnicodeString) and (PlainDriver.GetFieldLength(FieldHandle) > 8192) then
      Result := stUnicodeStream;
-  {$ENDIF}
 end;
 
 {**
@@ -276,7 +276,7 @@ end;
   @result the SQLType field type value
 }
 function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull: string;
-  const CharEncoding: TZCharEncoding): TZSQLType;
+  const CharEncoding: TZCharEncoding; const UTF8StringAsWideField: Boolean): TZSQLType;
 const
   GeoTypes: array[0..7] of string = (
    'POINT','LINESTRING','POLYGON','GEOMETRY',
@@ -408,14 +408,11 @@ begin
          if GeoTypes[i] = TypeName then
             Result := stBinaryStream;
 
-  {$IFNDEF WITH_UTF8_CONTROLS}
-  if CharEncoding = ceUTF8 then
-    case result of
-      stString: Result := stUnicodeString;
-       //Delphi 7 does not support WideMemos
-      stAsciiStream: Result := {$IFDEF WITH_WIDEMEMO}stUnicodeStream{$ELSE}stUnicodeString{$ENDIF};
-    end;
-  {$ENDIF}
+  if (CharEncoding = ceUTF8) and UTF8StringAsWideField then
+  case result of
+    stString: Result := stUnicodeString;
+    stAsciiStream: Result := stUnicodeStream;
+  end;
 
   if Result = stUnknown then
      raise Exception.Create('Unknown MySQL data type!');

@@ -245,24 +245,22 @@ begin
     ColumnInfo := TZColumnInfo.Create;
     with ColumnInfo do
     begin
-  {$IFDEF DELPHI12_UP} 
-      ColumnLabel := UTF8ToUnicodeString(StrPas(FieldName^)); 
-  {$ELSE} 
-      ColumnLabel := StrPas(FieldName^); 
-  {$ENDIF}
+      ColumnLabel := ZDbcString(StrPas(FieldName^));
       Inc(FieldName);
       TableName := '';
       ReadOnly := False;
       if TypeName^ <> nil then
       begin
         ColumnType := ConvertSQLiteTypeToSQLType(String(TypeName^),
-          FieldPrecision, FieldDecimals, ClientCodePage^.Encoding);
+          FieldPrecision, FieldDecimals, ClientCodePage^.Encoding,
+          Statement.GetConnection.UTF8StringAsWideField);
         Inc(TypeName);
       end
       else
       begin
         ColumnType := ConvertSQLiteTypeToSQLType(FPlainDriver.GetColumnDataType(FStmtHandle,I-1),
-          FieldPrecision, FieldDecimals, ClientCodePage^.Encoding);
+          FieldPrecision, FieldDecimals, ClientCodePage^.Encoding,
+          Statement.GetConnection.UTF8StringAsWideField);
       end;
       ColumnDisplaySize := FieldPrecision;
       AutoIncrement := False;
@@ -490,7 +488,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
-  Result := SQLStrToFloatDef(String(InternalGetString(ColumnIndex)), 0);
+  Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
 end;
 
 {**
@@ -507,7 +505,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
-  Result := SQLStrToFloatDef(String(InternalGetString(ColumnIndex)), 0);
+  Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
 end;
 
 {**
@@ -525,7 +523,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
-  Result := SQLStrToFloatDef(String(InternalGetString(ColumnIndex)), 0);
+  Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
 end;
 
 {**

@@ -368,7 +368,7 @@ type
     procedure LoadApi; override;
   public
     constructor Create;
-    destructor Destroy;
+    destructor Destroy; override;
 
     procedure CheckError;
 

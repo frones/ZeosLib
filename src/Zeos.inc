@@ -55,7 +55,7 @@
  {$DEFINE WITH_IPROVIDER}       // Turn on IProviderSupport interface
  {$DEFINE WITH_CHECKFIELDCOMPATIBILITY}
  {$DEFINE WITH_WIDEMEMO}        // Have WIDEMEMO,  For Delphi we turn these off if not applicable
- {.$DEFINE WITH_UTF8_CONTROLS}
+ {$DEFINE WITH_FTWIDESTRING}    // Have ftwidestring, For Delphi we turn these off if not applicable
 {$ENDIF}
 
 // Compilation directives for Delphi4
@@ -149,7 +149,6 @@
   {$DEFINE WITH_STSTRINGUNICODE}        // ststring is unicodestring.
   {$DEFINE WITH_NEWTOBJECT}             // allows new methods in TObject (D2009+/FPC 2.4.4)
   {$DEFINE WITH_CHARINSET}              // D2009's poor substitute for character specific "xx in yy"
-  {$UNDEF WITH_UTF8_CONTROLS}
 {$ENDIF}
 
 {$IFDEF DELPHI15_UP}
@@ -164,8 +163,8 @@
 {$ENDIF}
 
 {$IFDEF VER150BELOW}
-     {$UNDEF WITH_WIDEMEMO}
-  {$DEFINE WITHOUT_ASWIDESTRING}
+  {$UNDEF WITH_WIDEMEMO}
+  {$UNDEF WITH_FTWIDESTRING}    // D7 doesn't support TField.AsWideString
 {$ENDIF}
 
 // Debug/release compiler options
@@ -327,4 +326,5 @@
 
 {.$DEFINE WITH_CHAR_CONTROL} //Disables/Enables the CharControl widget
 {.$DEFINE SQLPREPREPARE} //Test-suite-Mode! don't use it in your code!!! A spezial mode for the Test-Suites to hardly enable the PreprepareStep
+{.$DEFINE UNICODEMODE} //Run all PlainDrivers in Unicode-CharacterSets. Just for the TestSuites
 

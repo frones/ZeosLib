@@ -81,9 +81,6 @@
     {$DEFINE WITH_TBOOKMARK}              // Have TBookmark
   {$IFEND}
 
-  {$IFDEF LAZARUSUTF8HACK}
-    {$DEFINE WITH_UTF8_CONTROLS}  // EgonHugeist: all Controls for Strings can display UTF8
-  {$ENDIF}
 
   // todo
   //   VIRTUALSETFIELDDATA: in nativeformat versions of SETFIELDDATA, inherited wasn't called.

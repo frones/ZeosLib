@@ -288,7 +288,8 @@ begin
       ReadOnly := (FPlainDriver.GetFieldTable(FieldHandle) = '');
       Writable := not ReadOnly;
       ColumnType := ConvertMySQLHandleToSQLType(FPlainDriver,
-        FieldHandle, FieldFlags, ClientCodePage.Encoding);
+        FieldHandle, FieldFlags, ClientCodePage.Encoding,
+        Self.Statement.GetConnection.UTF8StringAsWideField);
       ColumnDisplaySize := FPlainDriver.GetFieldLength(FieldHandle);
       Precision := Max(FPlainDriver.GetFieldMaxLength(FieldHandle),
         FPlainDriver.GetFieldLength(FieldHandle));
@@ -983,11 +984,12 @@ begin
     begin
       FieldFlags := FPlainDriver.GetFieldFlags(FieldHandle);
 
-      ColumnLabel := String(FPlainDriver.GetFieldName(FieldHandle));
-      TableName := String(FPlainDriver.GetFieldTable(FieldHandle));
+      ColumnLabel := ZDbcString(FPlainDriver.GetFieldName(FieldHandle));
+      TableName := ZDbcString(FPlainDriver.GetFieldTable(FieldHandle));
       ReadOnly := (FPlainDriver.GetFieldTable(FieldHandle) = '');
-      ColumnType := ConvertMySQLHandleToSQLType(FPlainDriver,
-        FieldHandle, FieldFlags, GetStatement.GetConnection.GetClientCodePageInformations^.Encoding);
+      ColumnType := ConvertMySQLHandleToSQLType(FPlainDriver, FieldHandle,
+        FieldFlags, GetStatement.GetConnection.GetClientCodePageInformations^.Encoding,
+        GetStatement.GetConnection.UTF8StringAsWideField);
       ColumnDisplaySize := FPlainDriver.GetFieldLength(FieldHandle);
       Precision := Max(FPlainDriver.GetFieldMaxLength(FieldHandle),
         FPlainDriver.GetFieldLength(FieldHandle));
