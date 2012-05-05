@@ -476,7 +476,7 @@ begin
     Url := 'zdbc:mysql:test?UID=admin;PWD=none';
     ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
       UserName, Password, ResultInfo);
-    CheckEquals('localhost', HostName);
+    CheckEquals('', HostName);
     CheckEquals(0, Port);
     CheckEquals('test', Database);
     CheckEquals('admin', UserName);
@@ -486,12 +486,37 @@ begin
     Url := 'zdbc:mysql:test';
     ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
       UserName, Password, ResultInfo);
-    CheckEquals('localhost', HostName);
+    CheckEquals('', HostName);
     CheckEquals(0, Port);
     CheckEquals('test', Database);
     CheckEquals('scott', UserName);
     CheckEquals('', Password);
     CheckEquals('true', ResultInfo.Values['trace']);
+
+    // Inventory of ResolveDatabaseUrl function (by mdaems and egonhugeist)
+    // parameters from Url have precedence over Info parameters
+    // extra parameters from info are added to ResultsetInfo
+    // password and username from url replace those from the 
+    Url := 'zdbc:mysql:test?UID=admin;PWD=none;trace=false';
+    Info.Values['extrainfo']:='extravalue';
+    ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
+      UserName, Password, ResultInfo);
+    CheckEquals('', HostName);
+    CheckEquals(0, Port);
+    CheckEquals('test', Database);
+    //username from Url has precedence (Info username = scott)
+    CheckEquals('admin', UserName);
+    //password from Url (is not in Info)
+    CheckEquals('none', Password);
+    //trace from Url has precedence (Info trace = true)
+    CheckEquals('false', ResultInfo.Values['trace']);
+    //extravalue from Info (isn't available in URL)
+    CheckEquals('extravalue', ResultInfo.Values['extrainfo']);
+    //url user and pwd are copied from Url into ResultInfo
+    CheckEquals('admin', ResultInfo.Values['UID']);
+    CheckEquals('none', ResultInfo.Values['PWD']);
+    //Strange effect : username from info remains in Resultinfo even if it's not used
+    CheckEquals('scott', ResultInfo.Values['username']);
 
     // Inventory of ResolveDatabaseUrl function (by mdaems and egonhugeist)
     // ResultInfo UID/PWD have predence over UserName/Password
@@ -501,7 +526,7 @@ begin
     Info.Values['PWD'] := 'nopwd';
     ResolveDatabaseUrl(Url, Info, HostName, Port, Database,
       UserName, Password, ResultInfo);
-    CheckEquals('localhost', HostName);
+    CheckEquals('', HostName);
     CheckEquals(0, Port);
     CheckEquals('test', Database);
     //username from Url has precedence (Info username = scott)
