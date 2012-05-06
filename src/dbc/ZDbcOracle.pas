@@ -357,12 +357,6 @@ begin
   end;
   GetPlainDriver.AttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FSessionHandle, 0,
     OCI_ATTR_SESSION, FErrorHandle);
-  //Patch to speed up big table selects: http://zeos.firmos.at/viewtopic.php?t=3441
-  PrefetchCount := 100;
-  GetPlainDriver.AttrSet(FHandle, OCI_HTYPE_STMT, @PrefetchCount, SizeOf(ub4),
-    OCI_ATTR_PREFETCH_ROWS, FErrorHandle);
-  CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcConnect, LogMessage);
-  //end prefetch count
 
   DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol, LogMessage);
 

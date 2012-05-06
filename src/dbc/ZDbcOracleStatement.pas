@@ -738,8 +738,8 @@ procedure TZOracleCallableStatement.Prepare;
             TypeCode := SQLT_CLOB
           else if SQLType = stUnicodeStream then
               TypeCode := SQLT_CLOB
-            else if SQLType = stUnicodeString then
-               TypeCode := SQLT_VST
+//            else if SQLType = stUnicodeString then
+//               TypeCode := SQLT_VST
             else TypeCode := SQLT_STR;
 
         InitializeOracleVar(FPlainDriver, Connection, CurrentVar,
