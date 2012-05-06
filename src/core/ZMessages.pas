@@ -1585,7 +1585,7 @@ resourcestring
   SUnsupportedOperation = 'Unsupported operation';
 
   STokenizerIsNotDefined = 'Tokenizer is not defined';
-  SLibraryNotFound = 'None of the dynamic libraries can be found: %s';
+  SLibraryNotFound = 'None of the dynamic libraries can be found or is not loadable: %s !'#10#13'Use TZConnection.LibraryLocation if the location is invalid.';
   SEncodeDateIsNotSupported = 'This version does not support isc_encode_sql_date';
   SEncodeTimeIsNotSupported = 'This version does not support isc_encode_sql_time';
   SEncodeTimestampIsNotSupported = 'This version does not support isc_encode_sql_timestamp';

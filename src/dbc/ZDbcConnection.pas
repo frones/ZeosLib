@@ -322,7 +322,7 @@ end;
 function TZAbstractDriver.GetSupportedClientCodePages(const Url: TZURL;
   Const SupportedsOnly: Boolean): TStringDynArray;
 begin
-  GetPlainDriverFromCache(Url.Protocol, '').GetSupportedClientCodePages(not SupportedsOnly);
+  Result := GetPlainDriverFromCache(Url.Protocol, '').GetSupportedClientCodePages(not SupportedsOnly);
 end;
 
 {**
