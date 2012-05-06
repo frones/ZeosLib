@@ -1,6 +1,7 @@
 package ZTestFramework;
 
 {$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
 {$ALIGN 8}
 {$ASSERTIONS ON}
 {$BOOLEVAL OFF}
@@ -22,8 +23,10 @@ package ZTestFramework;
 {$WRITEABLECONST OFF}
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'Zeos Testing Framework'}
-{$LIBSUFFIX '150'}
+{$LIBSUFFIX '160'}
 {$IMPLICITBUILD OFF}
 
 requires
@@ -49,7 +52,7 @@ contains
   ZTestCase in '..\..\test\framework\ZTestCase.pas',
   ZBugReport in '..\..\test\framework\ZBugReport.pas',
   ZPerformanceTestCase in '..\..\test\framework\ZPerformanceTestCase.pas',
-  TestFramework in '..\..\..\..\DUnit\src\TestFramework.pas',
+  TestFramework in 'C:\DUnit\src\TestFramework.pas',
   MemCheck in '..\..\test\external\MemCheck.pas';
 
 {TextTestRunner in '..\..\test\external\TextTestRunner.pas',

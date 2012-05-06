@@ -2,6 +2,7 @@ package ZComponentDesign;
 
 {$R *.res}
 {$R '..\..\src\component\ZComponent.dcr'}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
 {$ALIGN 8}
 {$ASSERTIONS ON}
 {$BOOLEVAL OFF}
@@ -23,6 +24,7 @@ package ZComponentDesign;
 {$WRITEABLECONST OFF}
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
+{$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'Zeos Database Components'}
 {$LIBSUFFIX '160'}
 {$DESIGNONLY}
@@ -40,6 +42,8 @@ requires
 contains
   ZPropertyEditor in '..\..\src\component\ZPropertyEditor.pas',
   ZUpdateSqlEditor in '..\..\src\component\ZUpdateSqlEditor.pas' {ZUpdateSQLEditForm},
-  ZComponentReg in '..\..\src\component\ZComponentReg.pas';
+  ZComponentReg in '..\..\src\component\ZComponentReg.pas',
+  ZIBEventAlerter in '..\..\src\component\ZIBEventAlerter.pas',
+  ZPgEventAlerter in '..\..\src\component\ZPgEventAlerter.pas';
 
 end.

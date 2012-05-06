@@ -1,5 +1,6 @@
 package ZCore;
 {$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
 {$ALIGN 8}
 {$ASSERTIONS ON}
 {$BOOLEVAL OFF}
@@ -21,6 +22,7 @@ package ZCore;
 {$WRITEABLECONST OFF}
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
+{$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'Zeos Core Classes and Interfaces'}
 {$LIBSUFFIX '160'}
 {$RUNONLY}
