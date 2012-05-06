@@ -431,7 +431,7 @@ type
     procedure LoadApi; override;
   public
     constructor Create;
-    destructor Destroy;
+    destructor Destroy; override;
 
     function GetProtocol: string; override;
     function GetDescription: string; override;
@@ -1514,7 +1514,6 @@ end;
 
 destructor TZFreeTDSPlainDriver.Destroy;
 begin
-
   inherited Destroy;
 end;
 

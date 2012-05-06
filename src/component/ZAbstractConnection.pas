@@ -137,6 +137,7 @@ type
 
     FPreprepareSQL: Boolean;
     FUTF8StringAsWideField: Boolean;
+    function GetPreprepareSQL: Boolean;
     procedure SetPreprepareSQL(Value: Boolean);
     function GetHostName: string;
     procedure SetHostName(const Value: String);
@@ -259,7 +260,7 @@ type
     procedure HideSQLHourGlass;
   published
     property UTF8StringsAsWideField: Boolean read GetUTF8StringAsWideField write FUTF8StringAsWideField;
-    property PreprepareSQL: Boolean read FPreprepareSQL write SetPreprepareSQL default True;
+    property PreprepareSQL: Boolean read GetPreprepareSQL write SetPreprepareSQL default True;
     property ClientCodepage: String read FClientCodepage write SetClientCodePage; //EgonHugeist
     property Catalog: string read FCatalog write FCatalog;
     property Properties: TStrings read GetProperties write SetProperties;
@@ -514,6 +515,13 @@ begin
       FClientCodepage := Trim(Value.Values['codepage'])
     else
       Value.Values['codepage'] := FClientCodepage;
+    if Self.Connected then
+    begin
+      DbcConnection.PreprepareSQL := Value.Values['PreprepareSQL'] = 'ON';
+      FPreprepareSQL := Value.Values['PreprepareSQL'] = 'ON';
+    end
+    else
+      FPreprepareSQL := Value.Values['PreprepareSQL'] = 'ON';
     FURL.Properties.Text := Value.Text;
   end
   else
@@ -785,7 +793,7 @@ begin
           SetCatalog(FCatalog);
           SetTransactionIsolation(FTransactIsolationLevel);
           SetUseMetadata(FUseMetadata);
-          SetPreprepareSQL(FPreprepareSQL);
+//          SetPreprepareSQL(FPreprepareSQL);
           SetUTF8StringAsWideField(GetUTF8StringAsWideField);
           Open;
         end;
@@ -1406,9 +1414,25 @@ begin
   Result := ConstructURL(FURL.UserName, FURL.Password);
 end;
 
+function TZAbstractConnection.GetPreprepareSQL: Boolean;
+begin
+  if Self.Connected then
+  begin
+    Result := DbcConnection.PreprepareSQL;
+    Self.FPreprepareSQL := Result;
+  end
+  else
+    Result := FPreprepareSQL;
+end;
+
 procedure TZAbstractConnection.SetPreprepareSQL(Value: Boolean);
 begin
-  if Assigned(Self.DbcConnection) then
+  if Value then
+    FURL.Properties.Values['PreprepareSQL'] := 'ON'
+  else
+    FURL.Properties.Values['PreprepareSQL'] := '';
+
+  if Self.Connected then
   begin
     DbcConnection.PreprepareSQL := Value;
     FPreprepareSQL := Value;

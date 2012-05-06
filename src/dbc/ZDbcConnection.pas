@@ -668,8 +668,9 @@ begin
   FDriver := DriverManager.GetDriver(ZURL.URL);
   FIZPlainDriver := FDriver.GetPlainDriver(ZUrl);
   FClientCodePage := Info.Values['codepage'];
-  FPreprepareSQL := False;
+  FPreprepareSQL := Info.Values['PreprepareSQL'] = 'ON'; //compatibitity Option for existing Applications
   {Pick out the values from Info}
+  Info.Values['PreprepareSQL'] := '';
   Info.Values['codepage'] := '';
   {CheckCharEncoding}
   CheckCharEncoding(FClientCodePage, True);

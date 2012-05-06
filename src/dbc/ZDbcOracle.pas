@@ -99,7 +99,7 @@ type
     FServerHandle: POCIServer;
     FSessionHandle: POCISession;
     FTransHandle: POCITrans;
-    FClientCodePage: string;
+    //FClientCodePage: string;
 
   protected
     procedure InternalCreate; override;
@@ -258,8 +258,7 @@ begin
   TransactIsolationLevel := tiNone;
 
   { Processes connection properties. }
-  FClientCodePage := Trim(Info.Values['codepage']);
-
+  //FClientCodePage := Trim(Info.Values['codepage']);
   Open;
 end;
 
@@ -317,13 +316,11 @@ begin
      Port := 1521;
 
   { Sets a client codepage. }
-  if UpperCase(FClientCodePage) = 'UTF8' then
-    OCI_CLIENT_CHARSET_ID:=871  // UTF8 because Lazarus DB components use UTF8 encoding
-  else
-    OCI_CLIENT_CHARSET_ID := StrToIntDef(FClientCodePage,0);
+  OCI_CLIENT_CHARSET_ID := ClientCodePage^.ID;
   { Connect to Oracle database. }
   if FHandle = nil then
-    GetPlainDriver.EnvNlsCreate(FHandle, OCI_DEFAULT, nil, nil, nil, nil, 0, nil,OCI_CLIENT_CHARSET_ID,OCI_CLIENT_CHARSET_ID);
+    GetPlainDriver.EnvNlsCreate(FHandle, OCI_DEFAULT, nil, nil, nil, nil, 0, nil,
+      OCI_CLIENT_CHARSET_ID, OCI_CLIENT_CHARSET_ID);
   FErrorHandle := nil;
   GetPlainDriver.HandleAlloc(FHandle, FErrorHandle, OCI_HTYPE_ERROR, 0, nil);
   FServerHandle := nil;
