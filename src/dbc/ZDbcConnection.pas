@@ -423,7 +423,7 @@ begin
     TempKey := nil;
     TempKey := TZAnyValue.CreateWithString(Protocol);
     TempPlain := FCachedPlainDrivers.Get(TempKey) as IZPlainDriver;
-    if Assigned(Result) then
+    if Assigned(TempPlain) then
       Result := TempPlain.Clone;
   end;
 end;
