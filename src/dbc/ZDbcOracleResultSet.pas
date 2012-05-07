@@ -435,20 +435,20 @@ begin
         begin
           OldSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
           {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
-          Result := FloatToSqlStr(PDouble(SQLVarHolder.Data)^);
+          Result := AnsiString(FloatToSqlStr(PDouble(SQLVarHolder.Data)^));
           {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldSeparator;
         end;
       SQLT_STR:
         Result := StrPas(PAnsiChar(SQLVarHolder.Data));
       SQLT_LVB, SQLT_LVC:
         begin
-          Result := BufferToStr(PAnsiChar(SQLVarHolder.Data) + SizeOf(Integer),
-            PInteger(SQLVarHolder.Data)^);
+          Result := AnsiString(BufferToStr(PAnsiChar(SQLVarHolder.Data) + SizeOf(Integer),
+            PInteger(SQLVarHolder.Data)^));
         end;
       SQLT_DAT, SQLT_TIMESTAMP:
         begin
-          Result := DateTimeToAnsiSQLDate(
-            GetAsDateTimeValue(ColumnIndex, SQLVarHolder));
+          Result := AnsiString(DateTimeToAnsiSQLDate(
+            GetAsDateTimeValue(ColumnIndex, SQLVarHolder)));
         end;
       SQLT_BLOB, SQLT_CLOB:
         begin
@@ -639,7 +639,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-  Temp := GetAsStringValue(ColumnIndex, nil);
+  Temp := String(GetAsStringValue(ColumnIndex, nil));
   Result := (StrToIntDef(Temp, 0) <> 0) or StrToBoolEx(Temp);
 end;
 

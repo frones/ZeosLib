@@ -1475,7 +1475,7 @@ end;
 function TZOracleDatabaseMetadata.UncachedGetTableTypes: IZResultSet;
 const
   TableTypeCount = 4;
-  Types: array [1..TableTypeCount] of AnsiString = (
+  Types: array [1..TableTypeCount] of String = (
     'TABLE', 'SYNONYM', 'VIEW', 'SEQUENCE'
   );
 var

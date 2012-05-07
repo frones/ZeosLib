@@ -70,7 +70,8 @@ type
       Why this here? -> No one else then Plaindriver knows which Characterset
       is supported. Here i've made a intervention in dependency of used Compiler.}
     function GetSupportedClientCodePages(const IgnoreUnsupported: Boolean): TStringDynArray;
-    function GetClientCodePageInformations(const ClientCharacterSet: String): PZCodePage; //Egonhugeist
+    function GetClientCodePageInformations(const ClientCharacterSet: String): PZCodePage; overload;//Egonhugeist
+    function GetClientCodePageInformations(const ClientCharacterSetID: Word): PZCodePage; overload;//Egonhugeist
     procedure Initialize(const Location: String = '');
     function Clone: IZPlainDriver;
   end;
@@ -102,7 +103,8 @@ type
     procedure Initialize(const Location: String = ''); virtual; abstract;
     destructor Destroy; override;
 
-    function GetClientCodePageInformations(const ClientCharacterSet: String): PZCodePage;
+    function GetClientCodePageInformations(const ClientCharacterSet: String): PZCodePage; overload;
+    function GetClientCodePageInformations(const ClientCharacterSetID: Word): PZCodePage; overload;//Egonhugeist
   end;
 
   {ADDED by fduenas 15-06-2006}
@@ -424,6 +426,20 @@ begin
   {$ELSE}
   Result := @ClientCodePageDummy;
   {$IFEND}
+end;
+
+function TZGenericAbstractPlainDriver.GetClientCodePageInformations(const ClientCharacterSetID: Word): PZCodePage;
+var
+  I: Integer;
+begin
+  {now check for PlainDriver-Informations...}
+  for i := Low(FCodePages) to high(FCodePages) do
+    if FCodePages[i].ID = ClientCharacterSetID then
+    begin
+      Result := GetClientCodePageInformations(FCodePages[i].Name);
+      Exit;
+    end;
+  Result := @ClientCodePageDummy;
 end;
 
 procedure TZAbstractPlainDriver.LoadApi;

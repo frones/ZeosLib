@@ -99,8 +99,6 @@ type
     FServerHandle: POCIServer;
     FSessionHandle: POCISession;
     FTransHandle: POCITrans;
-    //FClientCodePage: string;
-
   protected
     procedure InternalCreate; override;
     procedure StartTransactionSupport;
@@ -256,9 +254,6 @@ begin
       Self.Port := 1521;
   AutoCommit := True;
   TransactIsolationLevel := tiNone;
-
-  { Processes connection properties. }
-  //FClientCodePage := Trim(Info.Values['codepage']);
   Open;
 end;
 
@@ -293,7 +288,9 @@ var
   Status: Integer;
   LogMessage: string;
   OCI_CLIENT_CHARSET_ID: ub2;
+  OCI_CLIENT_CHARSET_NAME: array[0..100] of AnsiChar;
   PrefetchCount: ub4;
+  EnvHandle: Pointer;
 
   procedure CleanupOnFail;
   begin
@@ -335,6 +332,13 @@ begin
   except
     CleanupOnFail;
     raise;
+  end;
+
+  if OCI_CLIENT_CHARSET_ID = 0 then //Get Server default CodePage
+  begin
+    Status := GetPlainDriver.AttrGet(FHandle, OCI_HTYPE_ENV, @OCI_CLIENT_CHARSET_ID,
+      nil, OCI_ATTR_ENV_CHARSET_ID, FErrorHandle);
+    CheckCharEncoding(GetPlainDriver.GetClientCodePageInformations(OCI_CLIENT_CHARSET_ID)^.Name);
   end;
 
   GetPlainDriver.AttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FServerHandle, 0,
@@ -502,7 +506,7 @@ end;
 procedure TZOracleConnection.Rollback;
 var
   Status: Integer;
-  SQL: PAnsiChar;
+  SQL: PChar;
 begin
   if not Closed then
   begin
@@ -510,9 +514,9 @@ begin
 
     Status := GetPlainDriver.TransRollback(FContextHandle, FErrorHandle,
       OCI_DEFAULT);
-    CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcExecute, String(SQL));
+    CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcExecute, SQL);
 
-    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, String(SQL));
+    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
   end;
 end;
 
@@ -595,7 +599,7 @@ procedure TZOracleConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);
 var
   Status: Integer;
-  SQL: PAnsiChar;
+  SQL: PChar;
 begin
   if TransactIsolationLevel <> Level then
   begin
@@ -606,10 +610,10 @@ begin
       SQL := 'END TRANSACTION';
       Status := GetPlainDriver.TransRollback(FContextHandle, FErrorHandle,
         OCI_DEFAULT);
-      CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcExecute, String(SQL));
+      CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcExecute, SQL);
       GetPlainDriver.HandleFree(FTransHandle, OCI_HTYPE_TRANS);
       FTransHandle := nil;
-      DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, String(SQL));
+      DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
 
       StartTransactionSupport;
     end;
