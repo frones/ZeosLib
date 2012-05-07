@@ -436,10 +436,14 @@ begin
   for i := Low(FCodePages) to high(FCodePages) do
     if FCodePages[i].ID = ClientCharacterSetID then
     begin
-      Result := GetClientCodePageInformations(FCodePages[i].Name);
+      Result := @FCodePages[i];
       Exit;
     end;
+  {$IF defined(LAZARUSUTF8HACK) or defined(UNIX)}
+  Result := GetClientCodePageInformations(GetUnicodeCodePageName); //recalls em selve -> switch to supported (UTF8)
+  {$ELSE}
   Result := @ClientCodePageDummy;
+  {$IFEND}
 end;
 
 procedure TZAbstractPlainDriver.LoadApi;
