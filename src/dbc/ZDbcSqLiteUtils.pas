@@ -208,15 +208,16 @@ begin
 
   if ((Result = stString) or (Result = stUnicodeString)) and (Precision = 0) then
     Precision := 255;
-  case CharEncoding of
-    ceUTF8:
-      if UTF8StringAsWideField then
+  if Result = stAsciiStream then
+    case CharEncoding of
+      ceUTF8:
+        if UTF8StringAsWideField then
+          Result := stUnicodeStream
+        else
+          Result := stAsciiStream;
+      ceUTF16:
         Result := stUnicodeStream
-      else
-        Result := stAsciiStream;
-    ceUTF16:
-      Result := stUnicodeStream
-  end;
+    end;
 end;
 
 {**
