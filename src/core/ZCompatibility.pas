@@ -530,12 +530,12 @@ begin
     if DetectUTF8Encoding(Ansi) = etUTF8 then
       Result := UTF8ToString(Ansi) //Decode the AnsiString
     else
-      Result := WideString(Ansi); //Reference the AnsiString and move 'em up to UnicodeString
+      Result := String(Ansi); //Reference the AnsiString and move 'em up to UnicodeString
     {$ELSE}
-      {$IFDEF FPC}
+      {.$IFDEF FPC}
       Result := Ansi;
-      {$ELSE}
-      if DetectUTF8Encoding(Ansi) = etUTF8 then //Take care we've rael ansi as result
+      {.$ELSE}
+      {if DetectUTF8Encoding(Ansi) = etUTF8 then //Take care we've rael ansi as result
         Result := UTF8ToAnsi(Ansi)
       else
         Result := Ansi;
@@ -628,7 +628,7 @@ begin
         {$IFDEF WITH_CHAR_CONTROL}
         Result := ZWideToAnsiString(AStr, FCodePage^.CP);
         {$ELSE}
-        Result := AnsiString(UTF8ToAnsi(UTF8Encode(AStr)));
+        Result := AnsiString(AStr);
         {$ENDIF}
       {$ELSE}
         {$IFDEF FPC}
