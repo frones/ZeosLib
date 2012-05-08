@@ -824,15 +824,14 @@ procedure TZOracleCallableStatement.FetchOutParam;
           begin
 
             OracleConnection := Connection as IZOracleConnection;
-            Status := FPlainDriver.DateTimeGetDate(
+            FPlainDriver.DateTimeGetDate(
               OracleConnection.GetConnectionHandle ,
               FErrorHandle, PPOCIDescriptor(CurrentVar.Data)^,
               Year, Month, Day);
-            Status := FPlainDriver.DateTimeGetTime(
+            FPlainDriver.DateTimeGetTime(
               OracleConnection.GetConnectionHandle ,
               FErrorHandle, PPOCIDescriptor(CurrentVar.Data)^,
               Hour, Min, Sec,MSec);
-
             dTmp := EncodeDate(year,month,day )+EncodeTime(Hour,min,sec,msec) ;
             DefVarManager.SetAsDateTime( outParamValues[I], dTmp );
           end;

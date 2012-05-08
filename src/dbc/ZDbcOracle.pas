@@ -287,10 +287,8 @@ procedure TZOracleConnection.Open;
 var
   Status: Integer;
   LogMessage: string;
-  OCI_CLIENT_CHARSET_ID: ub2;
-  OCI_CLIENT_CHARSET_NAME: array[0..100] of AnsiChar;
+  OCI_CLIENT_CHARSET_ID,  OCI_CLIENT_NCHARSET_ID: ub2;
   PrefetchCount: ub4;
-  EnvHandle: Pointer;
 
   procedure CleanupOnFail;
   begin
@@ -315,9 +313,11 @@ begin
   { Sets a client codepage. }
   OCI_CLIENT_CHARSET_ID := ClientCodePage^.ID;
   { Connect to Oracle database. }
-  if FHandle = nil then
-    GetPlainDriver.EnvNlsCreate(FHandle, OCI_DEFAULT, nil, nil, nil, nil, 0, nil,
-      OCI_CLIENT_CHARSET_ID, OCI_CLIENT_CHARSET_ID);
+  if ( FHandle = nil ) then
+    try
+      GetPlainDriver.EnvNlsCreate(FHandle, OCI_DEFAULT, nil, nil, nil, nil, 0, nil,
+        OCI_CLIENT_CHARSET_ID, OCI_CLIENT_CHARSET_ID);
+    except end;
   FErrorHandle := nil;
   GetPlainDriver.HandleAlloc(FHandle, FErrorHandle, OCI_HTYPE_ERROR, 0, nil);
   FServerHandle := nil;
@@ -334,11 +334,19 @@ begin
     raise;
   end;
 
-  if OCI_CLIENT_CHARSET_ID = 0 then //Get Server default CodePage
+  if OCI_CLIENT_CHARSET_ID = 0 then
   begin
-    Status := GetPlainDriver.AttrGet(FHandle, OCI_HTYPE_ENV, @OCI_CLIENT_CHARSET_ID,
-      nil, OCI_ATTR_ENV_CHARSET_ID, FErrorHandle);
+    GetPlainDriver.AttrGet(FHandle, OCI_HTYPE_ENV, @OCI_CLIENT_CHARSET_ID,
+      nil, OCI_ATTR_ENV_CHARSET_ID, FErrorHandle); //Get Server default CodePage
+    GetPlainDriver.AttrGet(FHandle, OCI_HTYPE_ENV, @OCI_CLIENT_NCHARSET_ID,
+      nil, OCI_ATTR_ENV_NCHARSET_ID, FErrorHandle); //Get Server default NCHAR CodePage
     CheckCharEncoding(GetPlainDriver.GetClientCodePageInformations(OCI_CLIENT_CHARSET_ID)^.Name);
+    if OCI_CLIENT_CHARSET_ID <> OCI_CLIENT_NCHARSET_ID then
+    begin
+      CleanupOnFail;
+      Open;
+      Exit;
+    end;
   end;
 
   GetPlainDriver.AttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FServerHandle, 0,
