@@ -649,7 +649,7 @@ begin
     Result := Result + IdentifierConvertor.Quote(Current.ColumnName);
     if OldRowAccessor.IsNull(Current.ColumnIndex) then
     begin
-      if WhereColumns.Count = 1 then
+      if not (Metadata.IsNullable(Current.ColumnIndex) = ntNullable) then
       begin
         case OldRowAccessor.GetColumnType(Current.ColumnIndex) of
           stDate:
