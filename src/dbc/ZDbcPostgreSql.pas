@@ -998,7 +998,7 @@ begin
     if not FStandardConformingStrings then
       Result := inherited GetEscapeString(Value, EscapeMarkSequence)
     else
-      Result := inherited GetEscapeString(ZDbcPostgreSqlUtils.EncodeString(TZPgCharactersetType(Self.ClientCodePage^.ID), AnsiDequotedStr(Value)), EscapeMarkSequence)
+      Result := inherited GetEscapeString(ZDbcPostgreSqlUtils.EncodeString(TZPgCharactersetType(Self.ClientCodePage^.ID), AnsiDequotedStr(Value, '''')), EscapeMarkSequence)
   else
     if not FStandardConformingStrings then
       Result := inherited GetEscapeString(QuotedStr(Value), EscapeMarkSequence)
