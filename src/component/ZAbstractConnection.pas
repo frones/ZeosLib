@@ -259,7 +259,7 @@ type
     procedure ShowSQLHourGlass;
     procedure HideSQLHourGlass;
   published
-    property UTF8StringsAsWideField: Boolean read GetUTF8StringAsWideField write FUTF8StringAsWideField;
+    property UTF8StringsAsWideField: Boolean read GetUTF8StringAsWideField write SetUTF8StringAsWideField;
     property PreprepareSQL: Boolean read GetPreprepareSQL write SetPreprepareSQL default True;
     property ClientCodepage: String read FClientCodepage write SetClientCodePage; //EgonHugeist
     property Catalog: string read FCatalog write FCatalog;
@@ -793,8 +793,7 @@ begin
           SetCatalog(FCatalog);
           SetTransactionIsolation(FTransactIsolationLevel);
           SetUseMetadata(FUseMetadata);
-//          SetPreprepareSQL(FPreprepareSQL);
-          SetUTF8StringAsWideField(GetUTF8StringAsWideField);
+          SetUTF8StringAsWideField(FUTF8StringAsWideField);
           Open;
         end;
       except
@@ -1459,7 +1458,7 @@ end;
 
 function TZAbstractConnection.GetUTF8StringAsWideField: Boolean;
 begin
-  {$IFDEF LAZARUSUTF8HACK}
+  {$IF defined(LAZARUSUTF8HACK) or (not defined(WITH_FTWIDESTRING))}
   Result := False;
   {$ELSE}
     {$IFDEF DELPHI12_UP}
@@ -1467,12 +1466,12 @@ begin
     {$ELSE}
     Result := FUTF8StringAsWideField;
     {$ENDIF}
-  {$ENDIF}
+  {$IFEND}
 end;
 
 procedure TZAbstractConnection.SetUTF8StringAsWideField(const Value: Boolean);
 begin
-  {$IFDEF LAZARUSUTF8HACK}
+  {$IF defined(LAZARUSUTF8HACK) or (not defined(WITH_FTWIDESTRING))}
   FUTF8StringAsWideField := False;
   {$ELSE}
     {$IFDEF DELPHI12_UP}
@@ -1480,7 +1479,7 @@ begin
     {$ELSE}
     FUTF8StringAsWideField := Value;
     {$ENDIF}
-  {$ENDIF}
+  {$IFEND}
   if Assigned(DbcConnection) then
     DbcConnection.UTF8StringAsWideField := FUTF8StringAsWideField;
 end;

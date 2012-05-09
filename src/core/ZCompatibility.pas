@@ -144,6 +144,9 @@ type
     //ceUnsupported,  //may be Realy Unsupported CodePages {This must be testet before}
     ceAnsi, //Base Ansi-String: prefered CodePage
     ceUTF8, //UTF8_Unicode: 1-4Byte/Char
+    {$IFNDEF WITH_WIDECONTROLS}
+    ceUTF8AsAnsi,
+    {$ENDIF}
     ceUTF16, ceUTF32);
 
     {Here it's possible to add some more, to handle the Ansi->Unicode-Translations}
@@ -526,40 +529,43 @@ begin
 
   case UseEncoding of
     ceUTF8:
-    {$IFDEF DELPHI12_UP}
-    if DetectUTF8Encoding(Ansi) = etUTF8 then
-      Result := UTF8ToString(Ansi) //Decode the AnsiString
-    else
-      Result := String(Ansi); //Reference the AnsiString and move 'em up to UnicodeString
-    {$ELSE}
-      {.$IFDEF FPC}
-      Result := Ansi;
-      {.$ELSE}
-      {if DetectUTF8Encoding(Ansi) = etUTF8 then //Take care we've rael ansi as result
-        Result := UTF8ToAnsi(Ansi)
-      else
-        Result := Ansi;
-      {$ENDIF}
-    {$ENDIF}
-  else
-    {$IFDEF DELPHI12_UP}
-      {$IFDEF WITH_CHAR_CONTROL}
-      Result := ZAnsiToWideString(Ansi, FCodePage^.CP);
+      {$IFDEF DELPHI12_UP}
+      //if DetectUTF8Encoding(Ansi) = etUTF8 then
+        Result := UTF8ToString(Ansi); //Decode the AnsiString
+      //else
+        //Result := String(Ansi); //Reference the AnsiString and move 'em up to UnicodeString
       {$ELSE}
-      Result := String(Ansi);
-      {$ENDIF}
-    {$ELSE}
-      {$IFDEF FPC}
-      Result := Ansi; //Ansi to Ansi is no Problem!!!
-      {$ELSE}
-        {$IFDEF WITH_CHAR_CONTROL}
-        Result := ZCPCheckedAnsiString(Ansi, FCodePage^.CP);
-        {$ELSE}
+        {.$IFDEF FPC}
         Result := Ansi;
+        {.$ELSE}
+        {if DetectUTF8Encoding(Ansi) = etUTF8 then //Take care we've rael ansi as result
+          Result := UTF8ToAnsi(Ansi)
+        else
+          Result := Ansi;
         {$ENDIF}
       {$ENDIF}
+    {$IFNDEF WITH_WIDECONTROLS}
+    ceUTF8AsAnsi: Result := UTF8ToAnsi(Ansi);
     {$ENDIF}
-  end;
+    else
+      {$IFDEF DELPHI12_UP}
+        {$IFDEF WITH_CHAR_CONTROL}
+        Result := ZAnsiToWideString(Ansi, FCodePage^.CP);
+        {$ELSE}
+        Result := String(Ansi);
+        {$ENDIF}
+      {$ELSE}
+        {$IFDEF FPC}
+        Result := Ansi; //Ansi to Ansi is no Problem!!!
+        {$ELSE}
+          {$IFDEF WITH_CHAR_CONTROL}
+          Result := ZCPCheckedAnsiString(Ansi, FCodePage^.CP);
+          {$ELSE}
+          Result := Ansi;
+          {$ENDIF}
+        {$ENDIF}
+      {$ENDIF}
+    end;
 end;
 
 {**
@@ -608,8 +614,15 @@ begin
           Result := AnsiToUTF8(AStr);
         {$ENDIF}
       {$ENDIF}
-  else
-    begin
+    {$IFNDEF WITH_WIDECONTROLS}
+    ceUTF8AsAnsi:
+        if DetectUTF8Encoding(AStr) in [etAnsi] then
+          Result := AnsiToUTF8(AStr)
+        else
+          Result := AStr;
+    {$ENDIF}
+    else
+      begin
       { EgonHugeist:
         To Delphi12_UP and ev. (comming) FPC 2.8 Users:
         This function Result an Ansi-String with default DB CodePage

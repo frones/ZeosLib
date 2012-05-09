@@ -54,7 +54,7 @@ unit ZTestPlainPerformance;
 
 interface
 
-uses TestFramework, SysUtils, Classes, ZPerformanceTestCase,
+uses TestFramework, SysUtils, Classes, ZPerformanceTestCase, ZCompatibility,
  {$IFDEF ENABLE_DBLIB}
  {$ENDIF}
  {$IFDEF ENABLE_INTERBASE}
@@ -78,8 +78,7 @@ uses TestFramework, SysUtils, Classes, ZPerformanceTestCase,
  {$IFDEF ENABLE_ASA}
    ZPlainASADriver, ZDbcASAUtils,
  {$ENDIF}
-
-   ZSysUtils, ZDbcUtils, ZCompatibility;
+   ZSysUtils, ZDbcUtils;
 
  {$IFDEF ENABLE_MYSQL}
 type
@@ -1003,7 +1002,7 @@ begin
     PlainDriver := FFirebird10PlainDriver 
   else if Protocol = FFirebird15PlainDriver.GetProtocol then 
     PlainDriver := FFirebird15PlainDriver 
-  else if Protocol = FFirebird20PlainDriver.GetProtocol then 
+  else if Protocol = FFirebird20PlainDriver.GetProtocol then
     PlainDriver := FFirebird20PlainDriver 
   else if Protocol = FFirebird21PlainDriver.GetProtocol then 
     PlainDriver := FFirebird21PlainDriver 
@@ -1134,7 +1133,8 @@ var
 begin
   StmtNum := 0;
   CursorName := RandomString(12);
-  SQLData := TZASASQLDA.Create(FPlainDriver, FHandle, CursorName);
+  SQLData := TZASASQLDA.Create(FPlainDriver, FHandle, CursorName,
+    @ZCompatibility.ClientCodePageDummy);
 
   try
     FPlainDriver.db_prepare_describe( FHandle, nil, @StmtNum,

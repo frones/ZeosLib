@@ -56,6 +56,7 @@
  {$DEFINE WITH_CHECKFIELDCOMPATIBILITY}
  {$DEFINE WITH_WIDEMEMO}        // Have WIDEMEMO,  For Delphi we turn these off if not applicable
  {$DEFINE WITH_FTWIDESTRING}    // Have ftwidestring, For Delphi we turn these off if not applicable
+ {$DEFINE WITH_WIDECONTROLS}
 {$ENDIF}
 
 // Compilation directives for Delphi4
@@ -149,6 +150,10 @@
   {$DEFINE WITH_STSTRINGUNICODE}        // ststring is unicodestring.
   {$DEFINE WITH_NEWTOBJECT}             // allows new methods in TObject (D2009+/FPC 2.4.4)
   {$DEFINE WITH_CHARINSET}              // D2009's poor substitute for character specific "xx in yy"
+{$ELSE}
+  {$IFNDEF LAZARUSUTF8HACK}
+    {$UNDEF WITH_WIDECONTROLS}
+  {$ENDIF}
 {$ENDIF}
 
 {$IFDEF DELPHI15_UP}

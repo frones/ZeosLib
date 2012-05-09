@@ -635,7 +635,6 @@ function TZGenericCachedResolver.FormWhereClause(Columns: TObjectList;
 var
   I, N: Integer;
   Current: TZResolverParameter;
-  IsNull: Boolean;
 begin
   Result := '';
   N := Columns.Count - WhereColumns.Count;

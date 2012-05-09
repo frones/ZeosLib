@@ -565,11 +565,11 @@ begin
       + ' WHERE d65.f1=t65.f1';
     Query.Open;
 
-    {$IFNDEF FPC}
-    if Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+    {$IF not defined(FPC) and defined(WITH_FTWIDESTRING)}
+    if (Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]) then
       CheckEquals(ord(ftWideString), Ord(Query.Fields[0].DataType))
     else
-    {$ENDIF}
+    {$IFEND}
       CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
     CheckEquals(Ord(ftBoolean), Ord(Query.Fields[1].DataType));
     CheckEquals(Ord(ftBoolean), Ord(Query.Fields[2].DataType));
@@ -581,11 +581,11 @@ begin
       + ' WHERE test894367a.f1=test894367b.f1';
     Query.Open;
 
-    {$IFNDEF FPC}
-    if Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+    {$IF not defined(FPC) and defined(WITH_FTWIDESTRING)}
+    if (Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]) then
       CheckEquals(ord(ftWideString), Ord(Query.Fields[0].DataType))
     else
-    {$ENDIF}
+    {$IFEND}
       CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
     CheckEquals(Ord(ftBoolean), Ord(Query.Fields[1].DataType));
     CheckEquals(Ord(ftBoolean), Ord(Query.Fields[2].DataType));
@@ -689,7 +689,11 @@ begin
     Query.FieldDefs[0].DisplayName := ' xxx xxx '; //Changes nothing since which D-Version?
 
     CheckEquals(1, Query.RecordCount);
+    {$IFDEF VER150BELOW}
+    CheckEquals(' xxx xxx ', Query.FieldDefs[0].Name); //EgonHugeist: Changed from ' xxx xxx ' -> select!
+    {$ELSE}
     CheckEquals('p_name', Query.FieldDefs[0].Name); //EgonHugeist: Changed from ' xxx xxx ' -> select!
+    {$ENDIF}
     //CheckEquals(' xxx xxx ', Query.FieldDefs[0].DisplayName); //EgonHugeist: The TFieldDef inherites from TCollectionItem! the DisplayName is'nt changeable there. This is only possible if we create a class of TFieldDef and override the SetDisplayName method
     CheckEquals('Vasia Pupkin', Query.Fields[0].AsString);
     CheckEquals('Vasia Pupkin', Query.FieldByName('p_name').AsString);

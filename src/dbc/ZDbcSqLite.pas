@@ -224,6 +224,10 @@ begin
   AutoCommit := True;
   TransactIsolationLevel := tiNone;
 
+  {$IFNDEF WITH_WIDECONTROLS}
+  if Self.ClientCodePage^.Encoding = ceUTF8AsAnsi then
+    FClientCodePage := 'UTF-8';
+  {$ENDIF}
   Open;
 end;
 
@@ -324,9 +328,9 @@ begin
   end; 
 
   try
-    if ( Info.Values['codepage'] <> '' ) then
+    if ( FClientCodePage <> '' ) then
     begin
-        SQL := 'PRAGMA encoding = '''+AnsiString(Info.Values['codepage'])+'''';
+        SQL := 'PRAGMA encoding = '''+AnsiString(FClientCodePage)+'''';
         ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL),
           nil, nil, ErrorMessage);
         CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, String(SQL));
@@ -582,7 +586,10 @@ end;
 function TZSQLiteConnection.GetEscapeString(const Value: String;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
-  Result := inherited GetEscapeString('''' + (Value) + '''', EscapeMarkSequence);
+  if StartsWith(Value, '''') and EndsWith(Value, '''') then
+    Result := inherited GetEscapeString(Value, EscapeMarkSequence)
+  else
+    Result := inherited GetEscapeString(QuotedStr(Value), EscapeMarkSequence);
 end;
 
 initialization

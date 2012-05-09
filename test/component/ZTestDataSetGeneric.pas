@@ -336,7 +336,7 @@ begin
       //Now we read a none Wide-Stream in! What happens? Zeos is now able
       //to autodetect such strange things! But Zeos converts the Ansi-Stream to
       //a WiteString-Stream. So this test must be modified...
-      {$IFNDEF FPC}
+      {$IF not defined(FPC) and defined(WITH_WIDEMEMO)}
       if Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
       begin
         SetLength(Ansi,StrStream.Size);
@@ -346,7 +346,7 @@ begin
         StrStream.Write(PWideChar(WS)^, Length(WS)*2);
         StrStream.Position := 0;
       end;
-      {$ENDIF}
+      {$IFEND}
       StrStream1 := TMemoryStream.Create;
       (FieldByName('p_resume') as TBlobField).SaveToStream(StrStream1);
       CheckEquals(StrStream, StrStream1, 'Ascii Stream');

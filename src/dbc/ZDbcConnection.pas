@@ -1271,7 +1271,7 @@ end;
 
 function TZAbstractConnection.GetUTF8StringAsWideField: Boolean;
 begin
-  {$IFDEF LAZARUSUTF8HACK}
+  {$IF defined(LAZARUSUTF8HACK) or (not defined(WITH_FTWIDESTRING))}
   Result := False;
   {$ELSE}
     {$IFDEF DELPHI12_UP}
@@ -1279,12 +1279,12 @@ begin
     {$ELSE}
     Result := FUTF8StringAsWideField;
     {$ENDIF}
-  {$ENDIF}
+  {$IFEND}
 end;
 
 procedure TZAbstractConnection.SetUTF8StringAsWideField(const Value: Boolean);
 begin
-  {$IFDEF LAZARUSUTF8HACK}
+  {$IF defined(LAZARUSUTF8HACK) or (not defined(WITH_FTWIDESTRING))}
   FUTF8StringAsWideField := False;
   {$ELSE}
     {$IFDEF DELPHI12_UP}
@@ -1292,7 +1292,7 @@ begin
     {$ELSE}
     FUTF8StringAsWideField := Value;
     {$ENDIF}
-  {$ENDIF}
+  {$IFEND}
 end;
 
 { TZAbstractNotification }

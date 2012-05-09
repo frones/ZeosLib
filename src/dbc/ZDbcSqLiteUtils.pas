@@ -210,13 +210,11 @@ begin
     Precision := 255;
   if Result = stAsciiStream then
     case CharEncoding of
-      ceUTF8:
+      ceUTF8, ceUTF16:
         if UTF8StringAsWideField then
           Result := stUnicodeStream
         else
           Result := stAsciiStream;
-      ceUTF16:
-        Result := stUnicodeStream
     end;
 end;
 

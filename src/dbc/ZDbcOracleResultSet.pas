@@ -1044,7 +1044,6 @@ begin
     try
       { Reads data in chunks by MemDelta or more }
       Offset := 0;
-      Cap := 0;
       Buf := nil;
       try
         repeat

@@ -791,7 +791,6 @@ procedure TZOracleCallableStatement.SetInParam(ParameterIndex: Integer;
 procedure TZOracleCallableStatement.FetchOutParam;
   var  CurrentVar: PZSQLVar;
     I:integer;
-    Status: Integer;
     OracleConnection :IZOracleConnection;
     Year:SmallInt;
     Month, Day:Byte; Hour, Min, Sec:ub1; MSec: ub4;

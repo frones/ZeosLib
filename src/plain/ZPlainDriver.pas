@@ -416,16 +416,16 @@ var
 begin
   {now check for PlainDriver-Informations...}
   for i := Low(FCodePages) to high(FCodePages) do
+  {$IF defined(LAZARUSUTF8HACK) or defined(UNIX) or defined(UNICODEMODE)}
+    if UpperCase(FCodePages[i].Name) = UpperCase(GetUnicodeCodePageName) then
+  {$ELSE}
     if UpperCase(FCodePages[i].Name) = UpperCase(ClientCharacterSet) then
+  {$IFEND}
     begin
       Result := @FCodePages[i];
       Exit;
     end;
-  {$IF defined(LAZARUSUTF8HACK) or defined(UNIX)}
-  Result := GetClientCodePageInformations(GetUnicodeCodePageName); //recalls em selve -> switch to supported (UTF8)
-  {$ELSE}
   Result := @ClientCodePageDummy;
-  {$IFEND}
 end;
 
 function TZGenericAbstractPlainDriver.GetClientCodePageInformations(const ClientCharacterSetID: Word): PZCodePage;
@@ -434,16 +434,16 @@ var
 begin
   {now check for PlainDriver-Informations...}
   for i := Low(FCodePages) to high(FCodePages) do
+  {$IF defined(LAZARUSUTF8HACK) or defined(UNIX) or defined(UNICODEMODE)}
+    if UpperCase(FCodePages[i].Name) = UpperCase(GetUnicodeCodePageName) then
+  {$ELSE}
     if FCodePages[i].ID = ClientCharacterSetID then
+  {$IFEND}
     begin
       Result := @FCodePages[i];
       Exit;
     end;
-  {$IF defined(LAZARUSUTF8HACK) or defined(UNIX)}
-  Result := GetClientCodePageInformations(GetUnicodeCodePageName); //recalls em selve -> switch to supported (UTF8)
-  {$ELSE}
   Result := @ClientCodePageDummy;
-  {$IFEND}
 end;
 
 procedure TZAbstractPlainDriver.LoadApi;
