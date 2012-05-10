@@ -685,7 +685,8 @@ begin
       //to autodetect such strange things! But Zeos converts the Ansi-Stream to
       //a WiteString-Stream. So this test must be modified...
       {$IFNDEF FPC}
-      if Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+      if ( Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 )
+        and Self.FConnection.DbcConnection.UTF8StringAsWideField then
       begin
         SetLength(Ansi,StrStream.Size);
         StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);

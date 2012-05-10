@@ -1415,7 +1415,7 @@ end;
 procedure TZAbstractRODataset.SetFieldData(Field: TField; Buffer: Pointer;
   NativeFormat: Boolean);
 begin
-  if Field.DataType in [ftWideString{$IFDEF DELPHI12_UP}, ftString{$ENDIF}] then
+  if Field.DataType in [ftWideString] then
     NativeFormat := True;
 
   {$IFNDEF VIRTUALSETFIELDDATA}

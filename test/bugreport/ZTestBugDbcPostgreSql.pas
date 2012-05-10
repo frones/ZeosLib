@@ -486,12 +486,10 @@ begin
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
   //Client_Character_set sets column-type!!!!
-  {$IFNDEF FPC}
   if (Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}])
     and Connection.UTF8StringAsWideField then
     CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)))
   else
-  {$ENDIF}
     CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
 
   Statement.ExecuteUpdate('delete from test815852');
@@ -501,11 +499,10 @@ begin
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
   //Client_Character_set sets column-type!!!!
-  {$IFNDEF FPC}
   if (Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}])
     and Connection.UTF8StringAsWideField then
+    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)))
   else
-  {$ENDIF}
     CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
 
   ResultSet.MoveToInsertRow;
@@ -550,12 +547,10 @@ begin
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
   //Client_Character_set sets column-type!!!!
-  {$IFNDEF FPC}
   if (Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}])
     and Connection.UTF8StringAsWideField then
     CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)))
   else
-  {$ENDIF}
     CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
 
   Statement.ExecuteUpdate('delete from xyz.test824780');
@@ -565,7 +560,8 @@ begin
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
   //Client_Character_set sets column-type!!!!
-  if Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+  if ( Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] )
+    and Connection.UTF8StringAsWideField then
     CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)))
   else
     CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
