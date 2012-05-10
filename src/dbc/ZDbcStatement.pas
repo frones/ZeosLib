@@ -631,7 +631,6 @@ begin
       case (SQLTokens[i].TokenType) of
         ttEscape:
           Result := Result + AnsiString(SQLTokens[i].Value);
-        ttComment: Result := Result;
         ttWord, ttQuoted, ttQuotedIdentifier, ttKeyword:
           Result := Result + Self.ZPlainString(SQLTokens[i].Value);
         else
