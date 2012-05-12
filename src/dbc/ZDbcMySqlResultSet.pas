@@ -783,7 +783,7 @@ begin
   try
     if not IsNull(ColumnIndex) then
     begin
-      Stream := TStringStream.Create(GetString(ColumnIndex));
+      Stream := TStringStream.Create(InternalGetString(ColumnIndex));
       Result := TZAbstractBlob.CreateWithStream(Stream)
     end
     else
