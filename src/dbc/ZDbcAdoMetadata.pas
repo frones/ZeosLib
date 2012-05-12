@@ -2610,7 +2610,7 @@ begin
         SupportedSchemas[I].SchemaGuid := PG^;
         SupportedSchemas[I].SupportedRestrictions := IA^[I];
         SupportedSchemas[I].AdoSchemaId := ConvertOleDBToAdoSchema(PG^);
-        Inc(Integer(PG), SizeOf(TGuid));
+        Inc({$IFDEF DELPHI16_UP}NativeInt{$ELSE}Integer{$ENDIF}(PG), SizeOf(TGuid));  //M.A. Inc(Integer(PG), SizeOf(TGuid));
       end;
       FSupportedSchemasInitialized := True;
       if Assigned(OriginalPG) then ZAdoMalloc.Free(OriginalPG);

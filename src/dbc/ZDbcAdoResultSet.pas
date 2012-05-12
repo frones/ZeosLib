@@ -189,7 +189,7 @@ begin
 
   if Assigned(prgInfo) then
     if prgInfo.iOrdinal = 0 then
-      Inc(Integer(prgInfo), SizeOf(TDBColumnInfo));
+      Inc({$IFDEF DELPHI16_UP}NativeInt{$ELSE}Integer{$ENDIF}(prgInfo), SizeOf(TDBColumnInfo)); //M.A. Inc(Integer(prgInfo), SizeOf(TDBColumnInfo));
 
   for I := 0 to AdoColumnCount - 1 do
   begin
@@ -231,7 +231,7 @@ begin
     ColumnsInfo.Add(ColumnInfo);
 
     AdoColTypeCache[I] := ColType;
-    Inc(Integer(prgInfo), SizeOf(TDBColumnInfo));
+    Inc({$IFDEF DELPHI16_UP}NativeInt{$ELSE}Integer{$ENDIF}(prgInfo), SizeOf(TDBColumnInfo));  //M.A. Inc(Integer(prgInfo), SizeOf(TDBColumnInfo));
   end;
   if Assigned(ppStringsBuffer) then ZAdoMalloc.Free(ppStringsBuffer);
   if Assigned(OriginalprgInfo) then ZAdoMalloc.Free(OriginalprgInfo);
