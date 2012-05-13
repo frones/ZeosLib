@@ -37,10 +37,9 @@ contains
 
 {$IFDEF ENABLE_DBLIB}
   ZDbcDbLib in '..\..\src\dbc\ZDbcDbLib.pas',
-  ZDbcDbLibMsSqlMetadata in '..\..\src\dbc\ZDbcDbLibMsSqlMetadata.pas',
+  ZDbcDbLibMetadata in '..\..\src\dbc\ZDbcDbLibMetadata.pas',
   ZDbcDbLibResultSet in '..\..\src\dbc\ZDbcDbLibResultSet.pas',
   ZDbcDbLibStatement in '..\..\src\dbc\ZDbcDbLibStatement.pas',
-  ZDbcDbLibSybaseMetadata in '..\..\src\dbc\ZDbcDbLibSybaseMetadata.pas',
   ZDbcDbLibUtils in '..\..\src\dbc\ZDbcDbLibUtils.pas',
 {$ENDIF}
 

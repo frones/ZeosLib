@@ -247,7 +247,7 @@ begin
   // Generic driver
   If result = nil then
     Result := FPlainDrivers[0];    // sqlite3
-  Result.Initialize;
+  Result.Initialize(Url.LibLocation);
 end;
 
 { TZSQLiteConnection }

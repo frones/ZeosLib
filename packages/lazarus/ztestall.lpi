@@ -41,17 +41,16 @@
         <PackageName Value="FCL"/>
       </Item4>
     </RequiredPackages>
-    <Units Count="61">
+    <Units Count="101">
       <Unit0>
         <Filename Value="ztestall.lpr"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="ztestall"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
         <TopLine Value="8"/>
-        <CursorPos X="8" Y="23"/>
-        <UsageCount Value="58"/>
+        <CursorPos X="74" Y="16"/>
+        <UsageCount Value="104"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit0>
@@ -60,113 +59,115 @@
         <UnitName Value="CustApp"/>
         <TopLine Value="323"/>
         <CursorPos X="3" Y="323"/>
-        <UsageCount Value="9"/>
+        <UsageCount Value="7"/>
       </Unit1>
       <Unit2>
         <Filename Value="C:/lazarus/components/fpcunit/console/consoletestrunner.pas"/>
         <UnitName Value="consoletestrunner"/>
         <TopLine Value="298"/>
         <CursorPos X="1" Y="303"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="9"/>
       </Unit2>
       <Unit3>
         <Filename Value="../../test/core/ZTestSysUtils.pas"/>
         <UnitName Value="ZTestSysUtils"/>
         <TopLine Value="181"/>
         <CursorPos X="1" Y="198"/>
-        <UsageCount Value="14"/>
+        <UsageCount Value="12"/>
       </Unit3>
       <Unit4>
         <Filename Value="../../src/core/ZSysUtils.pas"/>
         <UnitName Value="ZSysUtils"/>
         <TopLine Value="96"/>
         <CursorPos X="20" Y="519"/>
-        <UsageCount Value="12"/>
+        <UsageCount Value="10"/>
       </Unit4>
       <Unit5>
         <Filename Value="../../test/core/ZTestURL.pas"/>
         <UnitName Value="ZTestURL"/>
-        <TopLine Value="150"/>
-        <CursorPos X="40" Y="144"/>
-        <UsageCount Value="10"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="301"/>
+        <CursorPos X="5" Y="379"/>
+        <UsageCount Value="9"/>
       </Unit5>
       <Unit6>
         <Filename Value="../../test/parsesql/ZTestScriptParser.pas"/>
         <UnitName Value="ZTestScriptParser"/>
         <TopLine Value="263"/>
         <CursorPos X="3" Y="295"/>
-        <UsageCount Value="14"/>
+        <UsageCount Value="12"/>
       </Unit6>
       <Unit7>
         <Filename Value="../../src/parsesql/ZScriptParser.pas"/>
         <UnitName Value="ZScriptParser"/>
         <TopLine Value="70"/>
         <CursorPos X="21" Y="103"/>
-        <UsageCount Value="13"/>
+        <UsageCount Value="11"/>
       </Unit7>
       <Unit8>
         <Filename Value="../../src/core/ZTokenizer.pas"/>
         <UnitName Value="ZTokenizer"/>
-        <TopLine Value="1337"/>
-        <CursorPos X="1" Y="1354"/>
-        <UsageCount Value="12"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1280"/>
+        <CursorPos X="1" Y="1295"/>
+        <UsageCount Value="11"/>
       </Unit8>
       <Unit9>
         <Filename Value="../../src/component/ZAbstractDataset.pas"/>
         <UnitName Value="ZAbstractDataset"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="13"/>
+        <UsageCount Value="11"/>
       </Unit9>
       <Unit10>
         <Filename Value="../../src/component/ZSqlProcessor.pas"/>
         <UnitName Value="ZSqlProcessor"/>
         <TopLine Value="529"/>
         <CursorPos X="1" Y="546"/>
-        <UsageCount Value="13"/>
+        <UsageCount Value="11"/>
       </Unit10>
       <Unit11>
         <Filename Value="../../test/framework/ZTestDefinitions.pas"/>
         <UnitName Value="ZTestDefinitions"/>
-        <TopLine Value="48"/>
-        <CursorPos X="41" Y="65"/>
-        <UsageCount Value="12"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="68"/>
+        <CursorPos X="52" Y="95"/>
+        <UsageCount Value="10"/>
       </Unit11>
       <Unit12>
         <Filename Value="../../test/framework/ZTestCase.pas"/>
         <UnitName Value="ZTestCase"/>
         <TopLine Value="73"/>
         <CursorPos X="15" Y="90"/>
-        <UsageCount Value="12"/>
+        <UsageCount Value="10"/>
       </Unit12>
       <Unit13>
         <Filename Value="../../test/core/ZTestExpression.pas"/>
         <UnitName Value="ZTestExpression"/>
         <TopLine Value="49"/>
         <CursorPos X="43" Y="72"/>
-        <UsageCount Value="15"/>
+        <UsageCount Value="13"/>
       </Unit13>
       <Unit14>
         <Filename Value="../../test/bugreport/ZTestBugCompASA.pas"/>
         <UnitName Value="ZTestBugCompASA"/>
         <TopLine Value="76"/>
         <CursorPos X="3" Y="108"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="9"/>
       </Unit14>
       <Unit15>
         <Filename Value="../../src/core/ZExpression.pas"/>
         <UnitName Value="ZExpression"/>
         <TopLine Value="553"/>
         <CursorPos X="14" Y="605"/>
-        <UsageCount Value="12"/>
+        <UsageCount Value="10"/>
       </Unit15>
       <Unit16>
         <Filename Value="C:/lazarus/components/aggpas/src/agg_fpimage.pas"/>
         <UnitName Value="agg_fpimage"/>
         <TopLine Value="431"/>
         <CursorPos X="19" Y="448"/>
-        <SyntaxHighlighter Value="Delphi"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="8"/>
       </Unit16>
       <Unit17>
         <Filename Value="C:/lazarus/components/fpcunit/guitestrunner.pas"/>
@@ -176,468 +177,744 @@
         <UnitName Value="GuiTestRunner"/>
         <TopLine Value="216"/>
         <CursorPos X="52" Y="141"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="9"/>
       </Unit17>
       <Unit18>
         <Filename Value="../../test/parsesql/ZTestSybaseToken.pas"/>
         <UnitName Value="ZTestSybaseToken"/>
         <TopLine Value="61"/>
         <CursorPos X="79" Y="91"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="8"/>
       </Unit18>
       <Unit19>
         <Filename Value="C:/lazarus/lcl/include/treeview.inc"/>
         <TopLine Value="1009"/>
         <CursorPos X="1" Y="1026"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="8"/>
       </Unit19>
       <Unit20>
         <Filename Value="../../test/parsesql/ZTestInterbaseToken.pas"/>
         <UnitName Value="ZTestInterbaseToken"/>
         <TopLine Value="148"/>
         <CursorPos X="31" Y="73"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="8"/>
       </Unit20>
       <Unit21>
         <Filename Value="../../test/parsesql/ZTestSqlAnalyser.pas"/>
         <UnitName Value="ZTestSqlAnalyser"/>
         <TopLine Value="542"/>
         <CursorPos X="23" Y="562"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="8"/>
       </Unit21>
       <Unit22>
         <Filename Value="../../src/plain/ZPlainMySqlDriver.pas"/>
         <UnitName Value="ZPlainMySqlDriver"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
-        <UsageCount Value="11"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="78"/>
+        <CursorPos X="41" Y="96"/>
+        <UsageCount Value="9"/>
       </Unit22>
       <Unit23>
         <Filename Value="../../src/plain/ZPlainMySqlConstants.pas"/>
         <UnitName Value="ZPlainMySqlConstants"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="9"/>
       </Unit23>
       <Unit24>
         <Filename Value="../../src/dbc/ZDbcMySqlResultSet.pas"/>
         <UnitName Value="ZDbcMySqlResultSet"/>
         <TopLine Value="389"/>
         <CursorPos X="24" Y="395"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="9"/>
       </Unit24>
       <Unit25>
         <Filename Value="C:/lazarus/lcl/fileutil.pas"/>
         <UnitName Value="FileUtil"/>
         <TopLine Value="22"/>
         <CursorPos X="53" Y="39"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="8"/>
       </Unit25>
       <Unit26>
         <Filename Value="../../src/component/ZAbstractRODataset.pas"/>
         <UnitName Value="ZAbstractRODataset"/>
-        <TopLine Value="477"/>
-        <CursorPos X="1" Y="494"/>
-        <UsageCount Value="12"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="470"/>
+        <CursorPos X="1" Y="488"/>
+        <UsageCount Value="10"/>
       </Unit26>
       <Unit27>
         <Filename Value="C:/lazarus/fpc/2.5.1/source/rtl/objpas/classes/classesh.inc"/>
         <TopLine Value="276"/>
         <CursorPos X="14" Y="293"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="8"/>
       </Unit27>
       <Unit28>
         <Filename Value="C:/lazarus/examples/hello.pp"/>
         <UnitName Value="Hello_world"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="31"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="8"/>
       </Unit28>
       <Unit29>
         <Filename Value="../../src/dbc/ZDbcInterbase6Metadata.pas"/>
         <UnitName Value="ZDbcInterbase6Metadata"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="9"/>
       </Unit29>
       <Unit30>
         <Filename Value="../../src/dbc/ZDbcInterbase6.pas"/>
         <UnitName Value="ZDbcInterbase6"/>
-        <EditorIndex Value="8"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="477"/>
-        <CursorPos X="1" Y="494"/>
-        <UsageCount Value="11"/>
-        <Loaded Value="True"/>
+        <TopLine Value="434"/>
+        <CursorPos X="1" Y="452"/>
+        <UsageCount Value="19"/>
       </Unit30>
       <Unit31>
         <Filename Value="../../src/dbc/ZDbcInterbase6Utils.pas"/>
         <UnitName Value="ZDbcInterbase6Utils"/>
-        <EditorIndex Value="12"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1430"/>
-        <CursorPos X="1" Y="1447"/>
-        <UsageCount Value="11"/>
-        <Loaded Value="True"/>
+        <TopLine Value="3062"/>
+        <CursorPos X="1" Y="3075"/>
+        <UsageCount Value="9"/>
       </Unit31>
       <Unit32>
         <Filename Value="../../src/dbc/ZDbcPostgreSqlResultSet.pas"/>
         <UnitName Value="ZDbcPostgreSqlResultSet"/>
         <TopLine Value="746"/>
         <CursorPos X="1" Y="771"/>
-        <UsageCount Value="12"/>
+        <UsageCount Value="10"/>
       </Unit32>
       <Unit33>
         <Filename Value="../../src/core/ZVariant.pas"/>
         <UnitName Value="ZVariant"/>
         <TopLine Value="665"/>
         <CursorPos X="1" Y="682"/>
-        <UsageCount Value="12"/>
+        <UsageCount Value="10"/>
       </Unit33>
       <Unit34>
         <Filename Value="../../src/core/ZVariables.pas"/>
         <UnitName Value="ZVariables"/>
         <TopLine Value="151"/>
         <CursorPos X="1" Y="168"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="9"/>
       </Unit34>
       <Unit35>
         <Filename Value="../../src/core/ZFunctions.pas"/>
         <UnitName Value="ZFunctions"/>
         <TopLine Value="107"/>
         <CursorPos X="45" Y="124"/>
-        <UsageCount Value="12"/>
+        <UsageCount Value="10"/>
       </Unit35>
       <Unit36>
         <Filename Value="../../src/core/ZExprParser.pas"/>
         <UnitName Value="ZExprParser"/>
         <TopLine Value="60"/>
         <CursorPos X="1" Y="88"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="9"/>
       </Unit36>
       <Unit37>
         <Filename Value="../../src/core/ZFunctionsConvert.pas"/>
         <UnitName Value="ZFunctionsConvert"/>
         <TopLine Value="152"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="8"/>
       </Unit37>
       <Unit38>
         <Filename Value="../../src/core/ZFunctionsDateTime.pas"/>
         <UnitName Value="ZFunctionsDateTime"/>
         <TopLine Value="508"/>
         <CursorPos X="91" Y="525"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="9"/>
       </Unit38>
       <Unit39>
         <Filename Value="../../src/core/ZFunctionsMath.pas"/>
         <UnitName Value="ZFunctionsMath"/>
         <TopLine Value="552"/>
         <CursorPos X="5" Y="585"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="8"/>
       </Unit39>
       <Unit40>
         <Filename Value="../../src/core/ZFunctionsOther.pas"/>
         <UnitName Value="ZFunctionsOther"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="9"/>
       </Unit40>
       <Unit41>
         <Filename Value="C:/lazarus/fpc/2.5.1/source/rtl/objpas/sysutils/sysinth.inc"/>
         <TopLine Value="127"/>
         <CursorPos X="20" Y="135"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="8"/>
       </Unit41>
       <Unit42>
         <Filename Value="C:/lazarus/fpc/2.5.1/source/rtl/objpas/sysutils/sysstrh.inc"/>
         <TopLine Value="160"/>
         <CursorPos X="10" Y="177"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="8"/>
       </Unit42>
       <Unit43>
         <Filename Value="C:/lazarus/fpc/2.5.1/source/rtl/objpas/sysutils/sysstr.inc"/>
         <TopLine Value="1040"/>
         <CursorPos X="3" Y="1067"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="8"/>
       </Unit43>
       <Unit44>
         <Filename Value="C:/lazarus/fpc/2.5.1/source/packages/fcl-fpcunit/src/fpcunit.pp"/>
         <UnitName Value="fpcunit"/>
         <TopLine Value="292"/>
         <CursorPos X="45" Y="299"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="8"/>
       </Unit44>
       <Unit45>
         <Filename Value="../../test/framework/ZTestConfig.pas"/>
         <UnitName Value="ZTestConfig"/>
         <TopLine Value="80"/>
         <CursorPos X="3" Y="97"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="8"/>
       </Unit45>
       <Unit46>
         <Filename Value="../../test/framework/ZSqlTestCase.pas"/>
         <UnitName Value="ZSqlTestCase"/>
-        <TopLine Value="704"/>
-        <CursorPos X="3" Y="726"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="404"/>
+        <CursorPos X="1" Y="422"/>
         <UsageCount Value="10"/>
       </Unit46>
       <Unit47>
         <Filename Value="../../src/dbc/ZDbcMetadata.pas"/>
         <UnitName Value="ZDbcMetadata"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
-        <UsageCount Value="10"/>
+        <EditorIndex Value="6"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="112"/>
+        <CursorPos X="14" Y="130"/>
+        <UsageCount Value="12"/>
+        <Loaded Value="True"/>
       </Unit47>
       <Unit48>
         <Filename Value="../../test/dbc/ZTestDbcInterbaseMetadata.pas"/>
         <UnitName Value="ZTestDbcInterbaseMetadata"/>
         <TopLine Value="67"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="8"/>
       </Unit48>
       <Unit49>
         <Filename Value="../../test/dbc/ZTestDbcInterbase.pas"/>
         <UnitName Value="ZTestDbcInterbase"/>
-        <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
         <TopLine Value="395"/>
         <CursorPos X="1" Y="412"/>
-        <UsageCount Value="11"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="9"/>
       </Unit49>
       <Unit50>
         <Filename Value="../../src/dbc/ZDbcResultSet.pas"/>
         <UnitName Value="ZDbcResultSet"/>
-        <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="2954"/>
-        <CursorPos X="1" Y="2973"/>
+        <TopLine Value="500"/>
+        <CursorPos X="11" Y="518"/>
         <UsageCount Value="11"/>
-        <Loaded Value="True"/>
       </Unit50>
       <Unit51>
         <Filename Value="../../src/dbc/ZDbcCachedResultSet.pas"/>
         <UnitName Value="ZDbcCachedResultSet"/>
-        <EditorIndex Value="3"/>
         <WindowIndex Value="0"/>
         <TopLine Value="876"/>
         <CursorPos X="1" Y="893"/>
-        <UsageCount Value="11"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="9"/>
       </Unit51>
       <Unit52>
         <Filename Value="../../src/dbc/ZDbcCache.pas"/>
         <UnitName Value="ZDbcCache"/>
-        <EditorIndex Value="14"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1169"/>
         <CursorPos X="1" Y="1186"/>
-        <UsageCount Value="11"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="9"/>
       </Unit52>
       <Unit53>
         <Filename Value="../../src/dbc/ZDbcGenericResolver.pas"/>
         <UnitName Value="ZDbcGenericResolver"/>
-        <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
         <TopLine Value="906"/>
         <CursorPos X="1" Y="923"/>
-        <UsageCount Value="10"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="8"/>
       </Unit53>
       <Unit54>
         <Filename Value="../../src/dbc/ZDbcConnection.pas"/>
         <UnitName Value="ZDbcConnection"/>
-        <EditorIndex Value="13"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="470"/>
-        <CursorPos X="1" Y="487"/>
-        <UsageCount Value="10"/>
-        <Loaded Value="True"/>
+        <TopLine Value="510"/>
+        <CursorPos X="72" Y="537"/>
+        <UsageCount Value="20"/>
       </Unit54>
       <Unit55>
         <Filename Value="../../src/dbc/ZDbcStatement.pas"/>
         <UnitName Value="ZDbcStatement"/>
-        <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="2142"/>
-        <CursorPos X="1" Y="2173"/>
-        <UsageCount Value="10"/>
-        <Loaded Value="True"/>
+        <TopLine Value="2145"/>
+        <CursorPos X="1" Y="2179"/>
+        <UsageCount Value="8"/>
       </Unit55>
       <Unit56>
         <Filename Value="../../src/dbc/ZDbcInterbase6Statement.pas"/>
         <UnitName Value="ZDbcInterbase6Statement"/>
-        <EditorIndex Value="7"/>
         <WindowIndex Value="0"/>
         <TopLine Value="222"/>
         <CursorPos X="1" Y="239"/>
-        <UsageCount Value="10"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="8"/>
       </Unit56>
       <Unit57>
         <Filename Value="../../src/plain/ZPlainFirebirdDriver.pas"/>
         <UnitName Value="ZPlainFirebirdDriver"/>
-        <EditorIndex Value="9"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1118"/>
-        <CursorPos X="1" Y="1135"/>
-        <UsageCount Value="10"/>
-        <Loaded Value="True"/>
+        <TopLine Value="93"/>
+        <CursorPos X="46" Y="111"/>
+        <UsageCount Value="9"/>
       </Unit57>
       <Unit58>
         <Filename Value="../../src/dbc/ZDbcIntfs.pas"/>
         <UnitName Value="ZDbcIntfs"/>
-        <EditorIndex Value="10"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1088"/>
-        <CursorPos X="1" Y="1105"/>
+        <TopLine Value="977"/>
+        <CursorPos X="1" Y="1000"/>
         <UsageCount Value="10"/>
-        <Loaded Value="True"/>
       </Unit58>
       <Unit59>
         <Filename Value="../../src/core/ZCollections.pas"/>
         <UnitName Value="ZCollections"/>
-        <EditorIndex Value="11"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="488"/>
-        <CursorPos X="1" Y="505"/>
+        <TopLine Value="472"/>
+        <CursorPos X="1" Y="496"/>
         <UsageCount Value="10"/>
-        <Loaded Value="True"/>
       </Unit59>
       <Unit60>
         <Filename Value="../../src/dbc/ZDbcResultSetMetadata.pas"/>
         <UnitName Value="ZDbcResultSetMetadata"/>
-        <EditorIndex Value="5"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="751"/>
+        <CursorPos X="1" Y="767"/>
+        <UsageCount Value="9"/>
+      </Unit60>
+      <Unit61>
+        <Filename Value="../../test/dbc/ZTestDbcMySqlMetadata.pas"/>
+        <UnitName Value="ZTestDbcMySqlMetadata"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="352"/>
+        <CursorPos X="15" Y="370"/>
+        <UsageCount Value="8"/>
+      </Unit61>
+      <Unit62>
+        <Filename Value="../../test/dbc/ZTestDbcOracle.pas"/>
+        <UnitName Value="ZTestDbcOracle"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="171"/>
+        <CursorPos X="44" Y="189"/>
+        <UsageCount Value="8"/>
+      </Unit62>
+      <Unit63>
+        <Filename Value="../../test/dbc/ZTestDbcPostgreSqlMetadata.pas"/>
+        <UnitName Value="ZTestDbcPostgreSqlMetadata"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="197"/>
+        <CursorPos X="20" Y="215"/>
+        <UsageCount Value="8"/>
+      </Unit63>
+      <Unit64>
+        <Filename Value="../../test/dbc/ZTestDbcResultSetMetadata.pas"/>
+        <UnitName Value="ZTestDbcResultSetMetadata"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="216"/>
+        <CursorPos X="1" Y="234"/>
+        <UsageCount Value="10"/>
+      </Unit64>
+      <Unit65>
+        <Filename Value="../../src/dbc/ZDbcOracleStatement.pas"/>
+        <UnitName Value="ZDbcOracleStatement"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="22"/>
+        <CursorPos X="47" Y="162"/>
+        <UsageCount Value="8"/>
+      </Unit65>
+      <Unit66>
+        <Filename Value="../../src/dbc/ZDbcOracleResultSet.pas"/>
+        <UnitName Value="ZDbcOracleResultSet"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="304"/>
+        <CursorPos X="16" Y="338"/>
+        <UsageCount Value="9"/>
+      </Unit66>
+      <Unit67>
+        <Filename Value="../../src/dbc/ZDbcOracleMetadata.pas"/>
+        <UnitName Value="ZDbcOracleMetadata"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="8"/>
+      </Unit67>
+      <Unit68>
+        <Filename Value="../../src/dbc/ZDbcOracle.pas"/>
+        <UnitName Value="ZDbcOracle"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="11"/>
+      </Unit68>
+      <Unit69>
+        <Filename Value="../../src/dbc/ZDbcOracleUtils.pas"/>
+        <UnitName Value="ZDbcOracleUtils"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="8"/>
+      </Unit69>
+      <Unit70>
+        <Filename Value="../../src/parsesql/ZSelectSchema.pas"/>
+        <UnitName Value="ZSelectSchema"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="404"/>
+        <CursorPos X="1" Y="434"/>
+        <UsageCount Value="9"/>
+      </Unit70>
+      <Unit71>
+        <Filename Value="C:/lazarus/lcl/lclproc.pas"/>
+        <UnitName Value="LCLProc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="19"/>
+        <CursorPos X="95" Y="37"/>
+        <UsageCount Value="8"/>
+      </Unit71>
+      <Unit72>
+        <Filename Value="../../src/core/ZURL.pas"/>
+        <UnitName Value="ZURL"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="220"/>
+        <CursorPos X="1" Y="238"/>
+        <UsageCount Value="13"/>
+      </Unit72>
+      <Unit73>
+        <Filename Value="../../test/dbc/ZTestDbcUtils.pas"/>
+        <UnitName Value="ZTestDbcUtils"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="431"/>
+        <CursorPos X="1" Y="449"/>
+        <UsageCount Value="11"/>
+      </Unit73>
+      <Unit74>
+        <Filename Value="../../src/dbc/ZDbcUtils.pas"/>
+        <UnitName Value="ZDbcUtils"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="217"/>
+        <CursorPos X="1" Y="247"/>
+        <UsageCount Value="10"/>
+      </Unit74>
+      <Unit75>
+        <Filename Value="../../src/dbc/ZDbcMySql.pas"/>
+        <UnitName Value="ZDbcMySql"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="290"/>
+        <CursorPos X="1" Y="320"/>
+        <UsageCount Value="14"/>
+      </Unit75>
+      <Unit76>
+        <Filename Value="../../src/dbc/ZDbcMySqlMetadata.pas"/>
+        <UnitName Value="ZDbcMySqlMetadata"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="903"/>
+        <CursorPos X="1" Y="931"/>
+        <UsageCount Value="9"/>
+      </Unit76>
+      <Unit77>
+        <Filename Value="../../src/plain/ZPlainDriver.pas"/>
+        <UnitName Value="ZPlainDriver"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="62"/>
+        <CursorPos X="3" Y="65"/>
+        <UsageCount Value="14"/>
+      </Unit77>
+      <Unit78>
+        <Filename Value="../../src/dbc/ZDbcAdo.pas"/>
+        <UnitName Value="ZDbcAdo"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="163"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="10"/>
+      </Unit78>
+      <Unit79>
+        <Filename Value="../../src/dbc/ZDbcASA.pas"/>
+        <UnitName Value="ZDbcASA"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="455"/>
+        <CursorPos X="13" Y="473"/>
+        <UsageCount Value="12"/>
+      </Unit79>
+      <Unit80>
+        <Filename Value="../../src/dbc/ZDbcDbLib.pas"/>
+        <UnitName Value="ZDbcDbLib"/>
+        <EditorIndex Value="2"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="80"/>
+        <CursorPos X="42" Y="240"/>
+        <UsageCount Value="15"/>
+        <Loaded Value="True"/>
+      </Unit80>
+      <Unit81>
+        <Filename Value="../../src/dbc/ZDbcPooled.pas"/>
+        <UnitName Value="ZDbcPooled"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="48" Y="3"/>
+        <UsageCount Value="11"/>
+      </Unit81>
+      <Unit82>
+        <Filename Value="../../src/dbc/ZDbcPostgreSql.pas"/>
+        <UnitName Value="ZDbcPostgreSql"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="691"/>
+        <CursorPos X="8" Y="709"/>
+        <UsageCount Value="11"/>
+      </Unit82>
+      <Unit83>
+        <Filename Value="../../src/dbc/ZDbcSqLite.pas"/>
+        <UnitName Value="ZDbcSqLite"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="109"/>
+        <CursorPos X="1" Y="109"/>
+        <UsageCount Value="10"/>
+      </Unit83>
+      <Unit84>
+        <Filename Value="../../src/component/ZDatasetUtils.pas"/>
+        <UnitName Value="ZDatasetUtils"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1033"/>
+        <CursorPos X="34" Y="1039"/>
+        <UsageCount Value="10"/>
+      </Unit84>
+      <Unit85>
+        <Filename Value="../../src/parsesql/ZGenericSqlToken.pas"/>
+        <UnitName Value="ZGenericSqlToken"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="161"/>
+        <CursorPos X="72" Y="173"/>
+        <UsageCount Value="11"/>
+      </Unit85>
+      <Unit86>
+        <Filename Value="../../test/dbc/ZTestDbcGeneric.pas"/>
+        <UnitName Value="ZTestDbcGeneric"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="10"/>
+      </Unit86>
+      <Unit87>
+        <Filename Value="../../test/component/ZTestDataSetGeneric.pas"/>
+        <UnitName Value="ZTestDataSetGeneric"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1368"/>
+        <CursorPos X="1" Y="1376"/>
+        <UsageCount Value="11"/>
+      </Unit87>
+      <Unit88>
+        <Filename Value="../../test/parsesql/ZTestOracleToken.pas"/>
+        <UnitName Value="ZTestOracleToken"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="92"/>
+        <CursorPos X="21" Y="99"/>
+        <UsageCount Value="12"/>
+      </Unit88>
+      <Unit89>
+        <Filename Value="../../src/component/ZUpdateSqlEditor.pas"/>
+        <ComponentName Value="ZUpdateSQLEditForm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="ZUpdateSqlEditor"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="797"/>
+        <CursorPos X="50" Y="815"/>
+        <UsageCount Value="11"/>
+      </Unit89>
+      <Unit90>
+        <Filename Value="C:/lazarus/lcl/include/dblookup.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="203"/>
+        <CursorPos X="1" Y="221"/>
+        <UsageCount Value="11"/>
+      </Unit90>
+      <Unit91>
+        <Filename Value="../../test/bugreport/ZTestBugCompInterbase.pas"/>
+        <UnitName Value="ZTestBugCompInterbase"/>
         <WindowIndex Value="0"/>
         <TopLine Value="255"/>
-        <CursorPos X="1" Y="272"/>
-        <UsageCount Value="10"/>
+        <CursorPos X="1" Y="291"/>
+        <UsageCount Value="11"/>
+      </Unit91>
+      <Unit92>
+        <Filename Value="../../src/dbc/ZDbcDbLibMetadata.pas"/>
+        <UnitName Value="ZDbcDbLibMetadata"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="5"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="3893"/>
+        <CursorPos X="77" Y="3891"/>
+        <FoldState Value=" T7iOO{u2."/>
+        <UsageCount Value="14"/>
         <Loaded Value="True"/>
-      </Unit60>
+      </Unit92>
+      <Unit93>
+        <Filename Value="../../src/dbc/ZDbcDbLibMsSqlMetadata.pas"/>
+        <UnitName Value="ZDbcDbLibMsSqlMetadata"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="34"/>
+        <CursorPos X="1" Y="68"/>
+        <UsageCount Value="10"/>
+      </Unit93>
+      <Unit94>
+        <Filename Value="../../src/dbc/ZDbcDbLibSybaseMetadata.pas"/>
+        <UnitName Value="ZDbcDbLibSybaseMetadata"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="34"/>
+        <CursorPos X="1" Y="68"/>
+        <UsageCount Value="10"/>
+      </Unit94>
+      <Unit95>
+        <Filename Value="../../test/dbc/ZTestDbcMsSql.pas"/>
+        <UnitName Value="ZTestDbcMsSql"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="42"/>
+        <CursorPos X="46" Y="60"/>
+        <UsageCount Value="10"/>
+      </Unit95>
+      <Unit96>
+        <Filename Value="../../src/plain/ZPlainDbLibDriver.pas"/>
+        <UnitName Value="ZPlainDbLibDriver"/>
+        <EditorIndex Value="1"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="893"/>
+        <CursorPos X="79" Y="911"/>
+        <UsageCount Value="12"/>
+        <Loaded Value="True"/>
+      </Unit96>
+      <Unit97>
+        <Filename Value="../../src/plain/ZPlainDbLibMsSql7.pas"/>
+        <UnitName Value="ZPlainDbLibMsSql7"/>
+        <EditorIndex Value="7"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="529"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="12"/>
+        <Loaded Value="True"/>
+      </Unit97>
+      <Unit98>
+        <Filename Value="../../src/plain/ZPlainDbLibSybaseAse125.pas"/>
+        <UnitName Value="ZPlainDbLibSybaseAse125"/>
+        <EditorIndex Value="8"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="12"/>
+        <Loaded Value="True"/>
+      </Unit98>
+      <Unit99>
+        <Filename Value="../../src/plain/ZPlainFreeTDSDriver.pas"/>
+        <UnitName Value="ZPlainFreeTDSDriver"/>
+        <EditorIndex Value="3"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="53"/>
+        <CursorPos X="56" Y="71"/>
+        <UsageCount Value="12"/>
+        <Loaded Value="True"/>
+      </Unit99>
+      <Unit100>
+        <Filename Value="../../src/plain/ZPlainFreeTDSConstants.pas"/>
+        <UnitName Value="ZPlainFreeTDSConstants"/>
+        <EditorIndex Value="4"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="964"/>
+        <CursorPos X="2" Y="999"/>
+        <UsageCount Value="12"/>
+        <Loaded Value="True"/>
+      </Unit100>
     </Units>
-    <JumpHistory Count="30" HistoryIndex="29">
+    <JumpHistory Count="20" HistoryIndex="19">
       <Position1>
-        <Filename Value="../../src/dbc/ZDbcResultSetMetadata.pas"/>
-        <Caret Line="784" Column="1" TopLine="754"/>
+        <Filename Value="../../src/plain/ZPlainFreeTDSDriver.pas"/>
+        <Caret Line="121" Column="56" TopLine="102"/>
       </Position1>
       <Position2>
-        <Filename Value="../../src/dbc/ZDbcResultSetMetadata.pas"/>
-        <Caret Line="270" Column="1" TopLine="253"/>
+        <Filename Value="../../src/plain/ZPlainDbLibDriver.pas"/>
+        <Caret Line="733" Column="45" TopLine="713"/>
       </Position2>
       <Position3>
-        <Filename Value="../../src/dbc/ZDbcResultSetMetadata.pas"/>
-        <Caret Line="271" Column="1" TopLine="254"/>
+        <Filename Value="../../src/plain/ZPlainFreeTDSConstants.pas"/>
+        <Caret Line="546" Column="1" TopLine="515"/>
       </Position3>
       <Position4>
-        <Filename Value="../../src/dbc/ZDbcResultSetMetadata.pas"/>
-        <Caret Line="272" Column="1" TopLine="255"/>
+        <Filename Value="../../src/plain/ZPlainFreeTDSConstants.pas"/>
+        <Caret Line="985" Column="5" TopLine="978"/>
       </Position4>
       <Position5>
-        <Filename Value="../../src/dbc/ZDbcGenericResolver.pas"/>
-        <Caret Line="905" Column="15" TopLine="889"/>
+        <Filename Value="../../src/plain/ZPlainFreeTDSConstants.pas"/>
+        <Caret Line="815" Column="20" TopLine="799"/>
       </Position5>
       <Position6>
-        <Filename Value="../../src/dbc/ZDbcGenericResolver.pas"/>
-        <Caret Line="907" Column="1" TopLine="890"/>
+        <Filename Value="../../src/dbc/ZDbcDbLibMetadata.pas"/>
+        <Caret Line="2108" Column="64" TopLine="2094"/>
       </Position6>
       <Position7>
-        <Filename Value="../../src/dbc/ZDbcGenericResolver.pas"/>
-        <Caret Line="916" Column="1" TopLine="899"/>
+        <Filename Value="../../src/dbc/ZDbcDbLibMetadata.pas"/>
+        <Caret Line="2208" Column="81" TopLine="2190"/>
       </Position7>
       <Position8>
-        <Filename Value="../../src/dbc/ZDbcResultSet.pas"/>
-        <Caret Line="2985" Column="1" TopLine="2954"/>
+        <Filename Value="../../src/plain/ZPlainFreeTDSDriver.pas"/>
+        <Caret Line="72" Column="1" TopLine="46"/>
       </Position8>
       <Position9>
-        <Filename Value="../../src/dbc/ZDbcCachedResultSet.pas"/>
-        <Caret Line="837" Column="1" TopLine="820"/>
+        <Filename Value="../../src/dbc/ZDbcDbLibMetadata.pas"/>
+        <Caret Line="222" Column="50" TopLine="42"/>
       </Position9>
       <Position10>
-        <Filename Value="../../src/dbc/ZDbcCachedResultSet.pas"/>
-        <Caret Line="841" Column="1" TopLine="824"/>
+        <Filename Value="../../src/dbc/ZDbcDbLibMetadata.pas"/>
+        <Caret Line="226" Column="1" TopLine="222"/>
       </Position10>
       <Position11>
-        <Filename Value="../../src/dbc/ZDbcCache.pas"/>
-        <Caret Line="1157" Column="1" TopLine="1140"/>
+        <Filename Value="../../src/dbc/ZDbcDbLibMetadata.pas"/>
+        <Caret Line="1250" Column="16" TopLine="1498"/>
       </Position11>
       <Position12>
-        <Filename Value="../../src/dbc/ZDbcCache.pas"/>
-        <Caret Line="1161" Column="1" TopLine="1144"/>
+        <Filename Value="../../src/dbc/ZDbcDbLibMetadata.pas"/>
+        <Caret Line="1243" Column="1" TopLine="1237"/>
       </Position12>
       <Position13>
-        <Filename Value="../../src/dbc/ZDbcCache.pas"/>
-        <Caret Line="1162" Column="1" TopLine="1145"/>
+        <Filename Value="../../src/dbc/ZDbcDbLibMetadata.pas"/>
+        <Caret Line="1275" Column="1" TopLine="1242"/>
       </Position13>
       <Position14>
-        <Filename Value="../../src/dbc/ZDbcCache.pas"/>
-        <Caret Line="1164" Column="1" TopLine="1147"/>
+        <Filename Value="../../src/dbc/ZDbcDbLibMetadata.pas"/>
+        <Caret Line="226" Column="1" TopLine="207"/>
       </Position14>
       <Position15>
-        <Filename Value="../../src/dbc/ZDbcCache.pas"/>
-        <Caret Line="1173" Column="1" TopLine="1156"/>
+        <Filename Value="../../src/dbc/ZDbcDbLibMetadata.pas"/>
+        <Caret Line="1263" Column="1" TopLine="1263"/>
       </Position15>
       <Position16>
-        <Filename Value="../../src/dbc/ZDbcCache.pas"/>
-        <Caret Line="1182" Column="1" TopLine="1159"/>
+        <Filename Value="../../src/dbc/ZDbcDbLibMetadata.pas"/>
+        <Caret Line="1339" Column="1" TopLine="1303"/>
       </Position16>
       <Position17>
-        <Filename Value="../../src/dbc/ZDbcCache.pas"/>
-        <Caret Line="1186" Column="1" TopLine="1169"/>
+        <Filename Value="../../src/dbc/ZDbcDbLibMetadata.pas"/>
+        <Caret Line="1401" Column="1" TopLine="1393"/>
       </Position17>
       <Position18>
-        <Filename Value="../../src/dbc/ZDbcCachedResultSet.pas"/>
-        <Caret Line="842" Column="1" TopLine="825"/>
+        <Filename Value="../../src/dbc/ZDbcDbLibMetadata.pas"/>
+        <Caret Line="1397" Column="1" TopLine="1373"/>
       </Position18>
       <Position19>
-        <Filename Value="../../src/dbc/ZDbcGenericResolver.pas"/>
-        <Caret Line="944" Column="1" TopLine="927"/>
+        <Filename Value="../../src/dbc/ZDbcMetadata.pas"/>
+        <Caret Line="2477" Column="3" TopLine="2441"/>
       </Position19>
       <Position20>
-        <Filename Value="../../src/dbc/ZDbcResultSet.pas"/>
-        <Caret Line="2985" Column="1" TopLine="2954"/>
+        <Filename Value="../../src/dbc/ZDbcDbLibMetadata.pas"/>
+        <Caret Line="2043" Column="82" TopLine="2014"/>
       </Position20>
-      <Position21>
-        <Filename Value="../../src/dbc/ZDbcResultSet.pas"/>
-        <Caret Line="567" Column="1" TopLine="550"/>
-      </Position21>
-      <Position22>
-        <Filename Value="../../src/dbc/ZDbcResultSet.pas"/>
-        <Caret Line="568" Column="1" TopLine="551"/>
-      </Position22>
-      <Position23>
-        <Filename Value="../../src/dbc/ZDbcResultSet.pas"/>
-        <Caret Line="569" Column="1" TopLine="552"/>
-      </Position23>
-      <Position24>
-        <Filename Value="../../src/dbc/ZDbcGenericResolver.pas"/>
-        <Caret Line="905" Column="1" TopLine="888"/>
-      </Position24>
-      <Position25>
-        <Filename Value="../../src/dbc/ZDbcGenericResolver.pas"/>
-        <Caret Line="906" Column="1" TopLine="889"/>
-      </Position25>
-      <Position26>
-        <Filename Value="../../src/dbc/ZDbcGenericResolver.pas"/>
-        <Caret Line="907" Column="1" TopLine="890"/>
-      </Position26>
-      <Position27>
-        <Filename Value="../../src/dbc/ZDbcGenericResolver.pas"/>
-        <Caret Line="923" Column="1" TopLine="906"/>
-      </Position27>
-      <Position28>
-        <Filename Value="../../src/dbc/ZDbcResultSet.pas"/>
-        <Caret Line="2985" Column="1" TopLine="2954"/>
-      </Position28>
-      <Position29>
-        <Filename Value="../../src/dbc/ZDbcCachedResultSet.pas"/>
-        <Caret Line="888" Column="1" TopLine="871"/>
-      </Position29>
-      <Position30>
-        <Filename Value="../../src/dbc/ZDbcCachedResultSet.pas"/>
-        <Caret Line="892" Column="1" TopLine="875"/>
-      </Position30>
     </JumpHistory>
   </ProjectOptions>
   <CompilerOptions>
@@ -653,46 +930,23 @@
       </SyntaxOptions>
     </Parsing>
     <Other>
+      <CompilerMessages>
+        <UseMsgFile Value="True"/>
+      </CompilerMessages>
       <CompilerPath Value="$(CompPath)"/>
     </Other>
   </CompilerOptions>
   <Debugging>
-    <BreakPoints Count="4">
+    <BreakPoints Count="1">
       <Item1>
         <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsGlobal"/>
+        <WatchScope Value="wpsLocal"/>
         <WatchKind Value="wpkWrite"/>
-        <Source Value="../../src/component/ZAbstractRODataset.pas"/>
-        <Line Value="328"/>
+        <Source Value="../../test/bugreport/ZTestBugCompInterbase.pas"/>
+        <Line Value="197"/>
       </Item1>
-      <Item2>
-        <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsGlobal"/>
-        <WatchKind Value="wpkWrite"/>
-        <Source Value="../../src/component/ZAbstractRODataset.pas"/>
-        <Line Value="2379"/>
-      </Item2>
-      <Item3>
-        <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsGlobal"/>
-        <WatchKind Value="wpkWrite"/>
-        <Source Value="../../src/component/ZAbstractRODataset.pas"/>
-        <Line Value="2361"/>
-      </Item3>
-      <Item4>
-        <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsGlobal"/>
-        <WatchKind Value="wpkWrite"/>
-        <Source Value="../../test/dbc/ZTestDbcInterbase.pas"/>
-        <Line Value="411"/>
-      </Item4>
     </BreakPoints>
-    <Watches Count="1">
-      <Item1>
-        <Expression Value="PInteger(Bookmark)^"/>
-      </Item1>
-    </Watches>
-    <Exceptions Count="9">
+    <Exceptions Count="12">
       <Item1>
         <Name Value="EAbort"/>
       </Item1>
@@ -720,6 +974,15 @@
       <Item9>
         <Name Value="EZSQLException"/>
       </Item9>
+      <Item10>
+        <Name Value="EVariantError"/>
+      </Item10>
+      <Item11>
+        <Name Value="Exception"/>
+      </Item11>
+      <Item12>
+        <Name Value="EDatabaseError"/>
+      </Item12>
     </Exceptions>
   </Debugging>
 </CONFIG>

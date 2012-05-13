@@ -59,11 +59,6 @@ interface
 
 uses Classes, ZClasses, ZCompatibility, ZPlainDriver;
 
-{$DEFINE ntwdblib} { if you are using MS SQL Server Client Library (ntwdblib.dll) }
-{$IFNDEF ntwdblib}
- {$DEFINE FREETDS} { if you are using db-lib from FreeTDS project (MS SQL Server + Sybase support) }
-{$ENDIF}
-
 {***************** Plain API Constants definition ****************}
 
 const
@@ -161,8 +156,8 @@ const
   DBSETLANG=6;
   DBSETSECURE=7;
   //These two are defined by Microsoft for dbsetlversion():
-  DBVER42={$IFDEF FREETDS}DBVERSION_42{$ELSE}8{$ENDIF};
-  DBVER60={$IFDEF FREETDS}DBVERSION_71{$ELSE}9{$ENDIF};
+  DBVER42=8;
+  DBVER60=9;
   DBSET_LOGINTIME=10;
   DBSETFALLBACK=12;
 
@@ -171,11 +166,11 @@ const
   DBOFFSET              = 1;
   DBROWCOUNT            = 2;
   DBSTAT                = 3;
-  DBTEXTLIMIT           = {$IFDEF FREETDS}7{$ELSE}4{$ENDIF};
-  DBTEXTSIZE            = {$IFDEF FREETDS}17{$ELSE}5{$ENDIF};
+  DBTEXTLIMIT           = 4;
+  DBTEXTSIZE            = 5;
   DBARITHABORT          = 6;
   DBARITHIGNORE         = 7;
-  DBNOAUTOFREE          = {$IFDEF FREETDS}15{$ELSE}8{$ENDIF};
+  DBNOAUTOFREE          = 8;
   DBNOCOUNT             = 9;
   DBNOEXEC              = 10;
   DBPARSEONLY           = 11;
@@ -185,7 +180,7 @@ const
   DBOEMTOANSI	          = 15;
   DBCLIENTCURSORS       = 16;
   DBSET_TIME            = 17;
-  DBQUOTEDIDENT         = {$IFDEF FREETDS}35{$ELSE}18{$ENDIF};
+  DBQUOTEDIDENT         = 18;
 
 { Data Type Tokens }
   SQLVOID               = $1f;
@@ -396,7 +391,7 @@ const
   OFF_EXEC              = $12c;
 
 { Decimal constants }
-  MAXNUMERICLEN={$IFDEF FREETDS}32   {$ELSE}16{$ENDIF};
+  MAXNUMERICLEN = 16;
   MAXNUMERICDIG = 38;
 
   DEFAULTPRECISION = 18;
@@ -404,8 +399,8 @@ const
 
 { DB-Table constants}
 { Pack the following structures on a word boundary }
-  MAXTABLENAME ={$IFDEF FREETDS}512+1{$ELSE}30{$ENDIF};
-  MAXCOLNAMELEN={$IFDEF FREETDS}512+1{$ELSE}30{$ENDIF};
+  MAXTABLENAME = 30;
+  MAXCOLNAMELEN= 30;
 
 { DB-Library datatype definitions }
   DBMAXCHAR=256; // Max length of DBVARBINARY and DBVARCHAR, etc.
@@ -610,54 +605,18 @@ type
 
 { DBDATEREC structure used by dbdatecrack }
   DBDATEREC = packed record
-  {$IFNDEF FREETDS}
-    year:       Integer;      { 1753 - 9999 }
-    quarter:    Integer;      { 1 - 4 }
-    month:      Integer;      { 1 - 12 }
-    dayofyear:  Integer;      { 1 - 366 }
-    day:        Integer;      { 1 - 31 }
-    week:       Integer;      { 1 - 54 (for leap years) }
-    weekday:    Integer;      { 1 - 7  (Mon - Sun) }
-    hour:       Integer;      { 0 - 23 }
-    minute:     Integer;      { 0 - 59 }
-    second:     Integer;      { 0 - 59 }
-    millisecond: Integer;     { 0 - 999 }
+    year:       DBINT;      { 1753 - 9999 }
+    quarter:    DBINT;      { 1 - 4 }
+    month:      DBINT;      { 1 - 12 }
+    dayofyear:  DBINT;      { 1 - 366 }
+    day:        DBINT;      { 1 - 31 }
+    week:       DBINT;      { 1 - 54 (for leap years) }
+    weekday:    DBINT;      { 1 - 7  (Mon - Sun) }
+    hour:       DBINT;      { 0 - 23 }
+    minute:     DBINT;      { 0 - 59 }
+    second:     DBINT;      { 0 - 59 }
+    millisecond: DBINT;     { 0 - 999 }
   end;
-  {$ELSE}
-    case boolean of
-    false:(
-      oldyear:        DBINT; { 1753 - 9999 }
-      oldmonth:       DBINT; { 1 - 4 }
-      oldday:         DBINT; { 1 - 12 }
-      olddayofyear:   DBINT; { 1 - 366 (in sybdb.h dayofyear and day are changed around!) }
-      oldweekday:     DBINT; { 1 - 7  (Mon - Sun) }
-      oldhour:        DBINT; { 0 - 23 }
-      oldminute:      DBINT; { 0 - 59 }
-      oldsecond:      DBINT; { 0 - 59 }
-      oldmillisecond: DBINT; { 0 - 999 }
-      oldtzone:       DBINT; { 0 - 127 (Sybase only!) }
-    );
-    true:(
-      year:           DBINT; { 1753 - 9999 }
-      quarter:        DBINT; { 1 - 4 }
-      month:          DBINT; { 1 - 12 }
-      {$IFDEF FREETDS}
-      day:            DBINT; { 1 - 31 }
-      dayofyear:      DBINT; { 1 - 366 (in sybdb.h dayofyear and day are changed around!) }
-      {$ELSE}
-      dayofyear:      DBINT; { 1 - 366 (in sybdb.h dayofyear and day are changed around!) }
-      day:            DBINT; { 1 - 31 }
-      {$ENDIF}
-      week:           DBINT; { 1 - 54 (for leap years) }
-      weekday:        DBINT; { 1 - 7  (Mon - Sun) }
-      hour:           DBINT; { 0 - 23 }
-      minute:         DBINT; { 0 - 59 }
-      second:         DBINT; { 0 - 59 }
-      millisecond:    DBINT; { 0 - 999 }
-      tzone:          DBINT; { 0 - 127 (Sybase only!) }
-    );
-  end;
-  {$ENDIF}
   PDBDATEREC = ^DBDATEREC;
 
 type
@@ -670,12 +629,12 @@ type
   DBDECIMAL = DBNUMERIC;
 
   DBVARYCHAR = packed record
-    Len: {$IFDEF FREETDS}DBINT{$ELSE}DBSMALLINT{$ENDIF};
+    Len: DBSMALLINT;
     Str: array[0..DBMAXCHAR-1] of DBCHAR; //CHAR = Wide D12UP
   end;
 
   DBVARYBIN = packed record
-    Len: {$IFDEF FREETDS}DBINT{$ELSE}DBSMALLINT{$ENDIF};
+    Len: DBSMALLINT;
     Bytes: array[0..DBMAXCHAR-1] of Byte;
   end;
 
@@ -691,7 +650,6 @@ type
 { TODO -ofjanos -cAPI :
 Strange but I had to insert X1 and X2 into the structure to make it work.
 I have not find any reason for this yet. }
-  {$IFNDEF FREETDS}
   DBCOL = packed record
     SizeOfStruct: DBINT;
     Name:       array[0..MAXCOLNAMELEN] of AnsiChar;
@@ -710,30 +668,6 @@ I have not find any reason for this yet. }
     Identity:   LongBool;{ TRUE, FALSE }
     X2:         Byte;
   end;
-  {$ELSE}
-    {$IF defined (ntwdblib) and defined(FPC)}
-      {$PACKRECORDS 2}
-    {$IFEND}
-  DBCOL=record
-   	SizeOfStruct: DBINT;
-   	Name: array[0..MAXCOLNAMELEN] of char;
-   	ActualName: array[0..MAXCOLNAMELEN] of char;
-   	TableName: array[0..MAXTABLENAME] of char;
-   	Typ: DBSHORT;
-   	UserType: DBINT;
-   	MaxLength: DBINT;
-   	Precision: BYTE;
-   	Scale: BYTE;
-   	VarLength: LongBool;     // TRUE, FALSE
-   	Null: BYTE;          // TRUE, FALSE or DBUNKNOWN
-   	CaseSensitive: BYTE; // TRUE, FALSE or DBUNKNOWN
-   	Updatable: BYTE;     // TRUE, FALSE or DBUNKNOWN
-   	Identity: LongBool;      // TRUE, FALSE
-  end;
-    {$IFDEF FPC}
-      {$PACKRECORDS DEFAULT}
-    {$ENDIF}
-  {$ENDIF}
   PDBCOL = ^DBCOL;
 
 
@@ -796,7 +730,6 @@ type
 
     procedure CheckError;
 
-//    function dbinit:{$IFDEF FREETDS}RETCODE{$ELSE}PAnsiChar{$ENDIF};
     function dbDead(dbProc: PDBPROCESS): Boolean;
     function dbLogin: PLOGINREC;
     procedure dbLoginFree(Login: PLOGINREC);
@@ -818,35 +751,34 @@ type
     function dbCanQuery(dbProc: PDBPROCESS): RETCODE;
     function dbMoreCmds(dbProc: PDBPROCESS): RETCODE;
     function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE;
-    function dbSetOpt(dbProc: PDBPROCESS; Option: Integer;
-      Char_Param: PAnsiChar = nil; Int_Param: Integer = -1): RETCODE;
+    function dbSetOpt(dbProc: PDBPROCESS; Option: DBINT;
+      Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): RETCODE;
     function dbClose(dbProc: PDBPROCESS): RETCODE;
     function dbName(dbProc: PDBPROCESS): PAnsiChar;
     function dbCmdRow(dbProc: PDBPROCESS): RETCODE;
-    function dbNumCols(dbProc: PDBPROCESS): Integer;
-    function dbColName(dbProc: PDBPROCESS; Column: Integer): PAnsiChar;
-    function dbColType(dbProc: PDBPROCESS; Column: Integer): Integer;
-    function dbColLen(dbProc: PDBPROCESS; Column: Integer): DBInt;
-    function dbData(dbProc: PDBPROCESS; Column: Integer): PByte;
-    function dbDatLen(dbProc: PDBPROCESS; Column: Integer): Integer;
-    function dbConvert(dbProc: PDBPROCESS; SrcType: Integer; Src: PByte;
-      SrcLen: DBINT; DestType: Integer; Dest: PByte; DestLen: DBINT): Integer;
+    function dbNumCols(dbProc: PDBPROCESS): DBINT;
+    function dbColName(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar;
+    function dbColType(dbProc: PDBPROCESS; Column: DBINT): DBINT;
+    function dbColLen(dbProc: PDBPROCESS; Column: DBINT): DBInt;
+    function dbData(dbProc: PDBPROCESS; Column: DBINT): PByte;
+    function dbDatLen(dbProc: PDBPROCESS; Column: DBINT): DBINT;
+    function dbConvert(dbProc: PDBPROCESS; SrcType: DBINT; Src: PByte;
+      SrcLen: DBINT; DestType: DBINT; Dest: PByte; DestLen: DBINT): DBINT;
     function dbNextRow(dbProc: PDBPROCESS): STATUS;
-    function dbGetRow(dbProc: PDBPROCESS; Row: Integer): STATUS;
-    function dbCount(dbProc: PDBPROCESS): Integer;
+    function dbGetRow(dbProc: PDBPROCESS; Row: DBINT): STATUS;
+    function dbCount(dbProc: PDBPROCESS): DBINT;
 
     function dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): RETCODE;
     function dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
-      Type_: Integer; MaxLen: Integer; DataLen: Integer; Value: Pointer): RETCODE;
+      Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): RETCODE;
     function dbRpcSend(dbProc: PDBPROCESS): RETCODE;
     function dbRpcExec(dbProc: PDBPROCESS): RETCODE;
-    function dbRetStatus(dbProc: PDBPROCESS): Integer;
+    function dbRetStatus(dbProc: PDBPROCESS): DBINT;
     function dbHasRetStat(dbProc: PDBPROCESS): Boolean;
-    function dbRetName(dbProc: PDBPROCESS; RetNum: Integer): PAnsiChar;
-    function dbRetData(dbProc: PDBPROCESS; RetNum: Integer): Pointer;
-    function dbRetLen(dbProc: PDBPROCESS; RetNum: Integer): Integer;
-    function dbRetType(dbProc: PDBPROCESS; RetNum: Integer): Integer;
-
+    function dbRetName(dbProc: PDBPROCESS; RetNum: DBINT): PAnsiChar;
+    function dbRetData(dbProc: PDBPROCESS; RetNum: DBINT): Pointer;
+    function dbRetLen(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
+    function dbRetType(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
   end;
 
   {** Implements a dblib driver for Sybase ASE 12.5 }
@@ -857,11 +789,10 @@ type
 
     function GetProtocol: string;
     function GetDescription: string;
-    procedure Initialize;
+     procedure Initialize(const Location: String);
 
     procedure CheckError;
 
-//    function dbinit:{$IFDEF FREETDS}RETCODE{$ELSE}PAnsiChar{$ENDIF};
     function dbDead(dbProc: PDBPROCESS): Boolean;
     function dbLogin: PLOGINREC;
     procedure dbLoginFree(Login: PLOGINREC);
@@ -920,11 +851,10 @@ type
 
     function GetProtocol: string;
     function GetDescription: string;
-    procedure Initialize;
+    procedure Initialize(const Location: String);
 
     procedure CheckError;
 
-//    function dbinit:{$IFDEF FREETDS}RETCODE{$ELSE}PAnsiChar{$ENDIF};
     function dbDead(dbProc: PDBPROCESS): Boolean;
     function dbLogin: PLOGINREC;
     procedure dbLoginFree(Login: PLOGINREC);
@@ -978,7 +908,7 @@ type
 
 implementation
 
-uses SysUtils, ZPlainDbLibSybaseAse125, ZPlainDbLibMsSql7;
+uses SysUtils, ZPlainDbLibSybaseAse125, ZPlainDbLibMsSql7, ZPlainFreeTDSDriver;
 
 { TZDBLibSybaseASE125PlainDriver }
 
@@ -996,8 +926,9 @@ begin
   Result := 'Native dblib driver for Sybase ASE 12.5';
 end;
 
-procedure TZDBLibSybaseASE125PlainDriver.Initialize;
+procedure TZDBLibSybaseASE125PlainDriver.Initialize(const Location: String);
 begin
+  ZPlainDBLibSybaseASE125.LibraryLoader.AddLocation(Location);
   ZPlainDBLibSybaseASE125.LibraryLoader.LoadIfNeeded;
 end;
 
@@ -1285,8 +1216,9 @@ begin
   Result := 'Native dblib driver for MS SQL 7+';
 end;
 
-procedure TZDBLibMSSQL7PlainDriver.Initialize;
+procedure TZDBLibMSSQL7PlainDriver.Initialize(const Location: String);
 begin
+  ZPlainDBLibMSSql7.LibraryLoader.AddLocation(Location);
   ZPlainDBLibMSSql7.LibraryLoader.LoadIfNeeded;
 end;
 

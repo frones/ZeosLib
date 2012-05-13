@@ -267,7 +267,7 @@ begin
   // Generic driver
   If result = nil then
     Result := FPlainDrivers[1];    // interbase-6
-  Result.Initialize;
+  Result.Initialize(Url.LibLocation);
 end;
 {**
   Get a name of the supported subprotocol.

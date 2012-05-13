@@ -60,10 +60,7 @@ interface
 uses Classes, ZCompatibility, ZPlainLoader, ZPlainDBLibDriver;
 
 const
-  WINDOWS_DLL_LOCATION ={$IFDEF FREETDS} 'dblib.dll'{$ELSE}'ntwdblib.dll'{$ENDIF};
-  {$IFDEF FREETDS}
-    LINUX_DLL_LOCATION = 'dblib.so';
-  {$ENDIF}
+  WINDOWS_DLL_LOCATION ='ntwdblib.dll';
 
 { Macros for dbsetlname() }
   DBSETHOST             = 1;

@@ -57,7 +57,7 @@ interface
 {$I ZDbc.inc}
 uses
   Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZDbcDbLib, ZDbcDbLibResultSet,
-  ZTestDefinitions, ZCompatibility, ZDbcDbLibMsSqlMetadata;
+  ZTestDefinitions, ZCompatibility, ZDbcDbLibMetadata;
 
 type
 

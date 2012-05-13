@@ -7,7 +7,7 @@ unit zplain;
 interface
 
 uses
-    ZPlainDbLibDriver, ZPlainDbLibMsSql7, ZPlainDbLibSybaseAse125, 
+  ZPlainDbLibDriver, ZPlainDbLibMsSql7, ZPlainDbLibSybaseAse125, ZPlainFreeTDSDriver, ZPlainFreeTDSConstants, 
   ZPlainDriver, ZPlainLoader, ZPlainMySqlConstants, ZPlainMySqlDriver, 
   ZPlainOracle9i, ZPlainOracleDriver, ZPlainPostgreSqlDriver, 
   ZPlainSqLiteDriver, ZPlainASADriver, ZPlainASA9, ZPlainASA8, ZPlainASA7, 

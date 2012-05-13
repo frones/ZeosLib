@@ -262,7 +262,7 @@ begin
   // requirement check here, e.g. Embedded server argument params
   (Result as IZMySQLPlainDriver).SetDriverOptions(Url.Properties);
   // end added by tohenk, 2009-10-11
-  Result.Initialize;
+  Result.Initialize(Url.LibLocation);
 end;
 
 {**

@@ -147,10 +147,13 @@ procedure TZNativeLibraryLoader.AddLocation(Location: String);
 var
    i: integer;
 begin
-   SetLength(FLocations, Length(FLocations) + 1);
-   for i := High(FLocations) downto 1 do
-      FLocations[i] := FLocations[i - 1];
-   FLocations[0] := Location;
+   if Location <> '' then
+   begin
+     SetLength(FLocations, Length(FLocations) + 1);
+     for i := High(FLocations) downto 1 do
+        FLocations[i] := FLocations[i - 1];
+     FLocations[0] := Location;
+   end;
 end;
 
 {**

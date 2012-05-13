@@ -147,8 +147,7 @@ implementation
 
 uses
   SysUtils, ZSysUtils, ZMessages, ZDbcUtils, ZDbcDbLibStatement,
-  ZDbcDbLibMsSqlMetadata, ZSybaseToken, ZSybaseAnalyser,
-  ZDbcDbLibSybaseMetadata{$IFDEF FPC}, ZClasses{$ENDIF};
+  ZDbcDbLibMetadata, ZSybaseToken, ZSybaseAnalyser{$IFDEF FPC}, ZClasses{$ENDIF};
 
 { TZDBLibDriver }
 
@@ -167,7 +166,7 @@ begin
     Result := FMSSqlPlainDriver;
   if Url.Protocol = FSybasePlainDriver.GetProtocol then
     Result := FSybasePlainDriver;
-  Result.Initialize;
+  Result.Initialize(Url.LibLocation);
 end;
 
 {**
