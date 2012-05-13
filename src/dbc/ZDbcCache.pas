@@ -201,7 +201,7 @@ type
   end;
 
 const
-  RowHeaderSize = SizeOf(TZRowBuffer) - SizeOf(TZByteArray); // M.A. RowHeaderSize = SizeOf(TZRowBuffer) - SizeOf(TByteArray);
+  RowHeaderSize = SizeOf(TZRowBuffer) - SizeOf(TByteArray);
 
 implementation
 
