@@ -57,7 +57,7 @@ interface
 
 {$I ZPlain.inc}
 
-uses Classes, ZCompatibility, ZPlainLoader, ZPlainDbLibDriver;
+uses Classes, ZCompatibility, ZPlainLoader, ZPlainDbLibConstants, ZPlainDbLibDriver;
 
 const
   WINDOWS_DLL_LOCATION = 'libsybdb.dll';

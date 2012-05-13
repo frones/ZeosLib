@@ -64,15 +64,9 @@ uses
 type
   {** Implements Ado Database Driver. }
   TZAdoDriver = class(TZAbstractDriver)
-  private
-    FAdoPlainDriver: IZPlainDriver;
-  protected
-    function GetPlainDriver(const Url: TZURL): IZPlainDriver; override;
   public
-    constructor Create;
+    constructor Create; override;
     function Connect(const Url: TZURL): IZConnection; override;
-
-    function GetSupportedProtocols: TStringDynArray; override;
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
   end;
@@ -146,21 +140,8 @@ const                                                //adXactUnspecified
 }
 constructor TZAdoDriver.Create;
 begin
-  FAdoPlainDriver := TZAdoPlainDriver.Create;
-end;
-
-function TZAdoDriver.GetPlainDriver(const Url: TZURL): IZPlainDriver;
-begin
-  Result := FAdoPlainDriver;
-end;
-
-{**
-  Get a name of the supported subprotocol.
-}
-function TZAdoDriver.GetSupportedProtocols: TStringDynArray;
-begin
-  SetLength(Result, 1);
-  Result[0] := FAdoPlainDriver.GetProtocol;
+  inherited Create;
+  AddSupportedProtocol(AddPlainDriverToCache(TZAdoPlainDriver.Create));
 end;
 
 {**

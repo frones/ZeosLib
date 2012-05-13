@@ -102,7 +102,8 @@ type
     procedure Despose(var Handle: PZMySQLConnect);
 
     function GetAffectedRows(Handle: PZMySQLConnect): Int64;
-    // char_set_name
+    {ADDED by EgonHugeist}
+    //function GetConnectionCharacterSet(Handle: PMYSQL): PAnsiChar;// char_set_name
     procedure Close(Handle: PZMySQLConnect);
     function Connect(Handle: PZMySQLConnect; const Host, User, Password: PAnsiChar): PZMySQLConnect;
     function CreateDatabase(Handle: PZMySQLConnect; const Database: PAnsiChar): Integer;
@@ -173,7 +174,8 @@ type
     function CheckAnotherRowset   (Handle: PZMySQLConnect): Boolean;
     function RetrieveNextRowset   (Handle: PZMySQLConnect): Integer;
     function Rollback (Handle: PZMySQLConnect): Boolean;
-    // set_character_set
+    {ADDED by EgonHugeist}
+    //function SetConnectionCharacterSet(Handle: PMYSQL; const csname: PAnsiChar): Integer; // set_character_set returns 0 if valid
     // set_server_option
     function GetSQLState (Handle: PZMySQLConnect): AnsiString;
     // warning_count
@@ -359,6 +361,8 @@ type
   { TZNewMySQL41PlainDriver }
 
   TZMySQL41PlainDriver = class (TZMysqlBaseDriver)
+  protected
+    function Clone: IZPlainDriver; override;
   public
     constructor Create;
     function GetProtocol: string; override;
@@ -370,6 +374,8 @@ type
   { TZNewMySQLD41PlainDriver }
 
   TZMySQLD41PlainDriver = class (TZMySQL41PlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
   public
     constructor Create;
     function GetProtocol: string; override;
@@ -379,6 +385,8 @@ type
   { TZNewMySQL5PlainDriver }
 
   TZMySQL5PlainDriver = class (TZMysqlBaseDriver)
+  protected
+    function Clone: IZPlainDriver; override;
   protected
     procedure LoadApi; override;
   public
@@ -390,6 +398,8 @@ type
   { TZNewMySQLD5PlainDriver }
 
   TZMySQLD5PlainDriver = class (TZMySQL5PlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
   public
     constructor Create;
     function GetProtocol: string; override;
@@ -471,8 +481,8 @@ begin
 
   @MYSQL_API.mysql_get_client_version     := GetAddress('mysql_get_client_version');
 
-  @MYSQL_API.mysql_send_query      := GetAddress('mysql_send_query');
-  @MYSQL_API.mysql_read_query_result := GetAddress('mysql_read_query_result');
+  @MYSQL_API.mysql_send_query             := GetAddress('mysql_send_query');
+  @MYSQL_API.mysql_read_query_result      := GetAddress('mysql_read_query_result');
 
   @MYSQL_API.mysql_autocommit             := GetAddress('mysql_autocommit');
   @MYSQL_API.mysql_commit                 := GetAddress('mysql_commit');
@@ -1064,6 +1074,11 @@ end;
 
 { TZMySQL41PlainDriver }
 
+function TZMySQL41PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZMySQL41PlainDriver.Create;
+end;
+
 constructor TZMySQL41PlainDriver.Create;
 begin
   inherited Create;
@@ -1085,6 +1100,11 @@ begin
 end;
 
 { TZMySQLD41PlainDriver }
+
+function TZMySQLD41PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZMySQLD41PlainDriver.Create;
+end;
 
 constructor TZMySQLD41PlainDriver.Create;
 begin
@@ -1118,14 +1138,19 @@ end;
 
 { TZMySQL5PlainDriver }
 
+function TZMySQL5PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZMySQL5PlainDriver.Create;
+end;
+
 procedure TZMySQL5PlainDriver.LoadApi;
 begin
   inherited LoadApi;
 
   with Loader do
   begin
-  @MYSQL_API.mysql_get_character_set_info := GetAddress('mysql_get_character_set_info');
-  @MYSQL_API.mysql_stmt_next_result       := GetAddress('mysql_stmt_next_result');
+    @MYSQL_API.mysql_get_character_set_info := GetAddress('mysql_get_character_set_info');
+    @MYSQL_API.mysql_stmt_next_result       := GetAddress('mysql_stmt_next_result');
   end;
 end;
 
@@ -1153,6 +1178,11 @@ begin
 end;
 
 { TZMySQLD5PlainDriver }
+
+function TZMySQLD5PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZMySQLD5PlainDriver.Create;
+end;
 
 constructor TZMySQLD5PlainDriver.Create;
 begin

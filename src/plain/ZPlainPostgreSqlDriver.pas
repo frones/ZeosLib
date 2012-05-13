@@ -719,6 +719,8 @@ type
   {** Implements a driver for PostgreSQL 7.4 }
   TZPostgreSQL7PlainDriver = class(TZPostgreSQLBaseDriver, IZPlainDriver,
     IZPostgreSQLPlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
   public
     constructor Create;
 
@@ -741,6 +743,7 @@ type
 
   TZPostgreSQL8PlainDriver = class(TZPostgreSQLBaseDriver, IZPlainDriver,IZPostgreSQLPlainDriver)
   protected
+    function Clone: IZPlainDriver; override;
     procedure LoadApi; override;
   public
     constructor Create;
@@ -1280,6 +1283,11 @@ end;
 
 { TZPostgreSQL7PlainDriver }
 
+function TZPostgreSQL7PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZPostgreSQL7PlainDriver.Create;
+end;
+
 constructor TZPostgreSQL7PlainDriver.Create;
 begin
   inherited Create;
@@ -1329,6 +1337,11 @@ begin
 end;
 
 { TZPostgreSQL8PlainDriver }
+function TZPostgreSQL8PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZPostgreSQL8PlainDriver.Create;
+end;
+
 
 procedure TZPostgreSQL8PlainDriver.LoadApi;
 begin

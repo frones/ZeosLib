@@ -67,6 +67,7 @@ type
     function GetProtocol: string;
     function GetDescription: string;
     procedure Initialize(const Location: String = '');
+    function Clone: IZPlainDriver; reintroduce;
   end;
 
 implementation
@@ -87,6 +88,11 @@ end;
 
 procedure TZAdoPlainDriver.Initialize(const Location: String = '');
 begin
+end;
+
+function TZAdoPlainDriver.Clone: IZPlainDriver;
+begin
+  Result := Self;
 end;
 
 end.

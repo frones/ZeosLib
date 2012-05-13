@@ -1500,7 +1500,7 @@ end;
 function TZMsSqlDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 begin
-    inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
+    Result:=inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_stored_procedures %s, %s, %s',
@@ -1585,7 +1585,7 @@ function TZMsSqlDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: stri
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 begin
-    inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
+    Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_sproc_columns %s, %s, %s, %s',
@@ -1668,7 +1668,7 @@ var
   I: Integer;
   TableTypes: string;
 begin
-    inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
+    Result:=inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
 
     TableTypes := '';
     for I := 0 to Length(Types) - 1 do
@@ -1715,7 +1715,7 @@ end;
 }
 function TZMsSqlDatabaseMetadata.UncachedGetSchemas: IZResultSet;
 begin
-    inherited UncachedGetSchemas;
+    Result:=inherited UncachedGetSchemas;
 
     with GetStatement.ExecuteQuery(
       'select name as TABLE_OWNER from sysusers where islogin = 1') do
@@ -1746,7 +1746,7 @@ end;
 }
 function TZMsSqlDatabaseMetadata.UncachedGetCatalogs: IZResultSet;
 begin
-    inherited UncachedGetCatalogs;
+    Result:=inherited UncachedGetCatalogs;
 
     with GetStatement.ExecuteQuery('exec sp_databases') do
     begin
@@ -1782,7 +1782,8 @@ const
 var
   I: Integer;
 begin
-    inherited UncachedGetTableTypes;
+    Result:=inherited UncachedGetTableTypes;
+
     for I := 0 to 2 do
     begin
       Result.MoveToInsertRow;
@@ -1847,7 +1848,7 @@ function TZMsSqlDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 begin
-    inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
+    Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_columns %s, %s, %s, %s',
@@ -1973,7 +1974,7 @@ end;
 function TZMsSqlDatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: string;
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
 begin
-    inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
+    Result:=inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_column_privileges %s, %s, %s, %s',
@@ -2040,7 +2041,7 @@ end;
 function TZMsSqlDatabaseMetadata.UncachedGetTablePrivileges(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
 begin
-    inherited UncachedGetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
+    Result:=inherited UncachedGetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_table_privileges %s, %s, %s',
@@ -2105,7 +2106,7 @@ function TZMsSqlDatabaseMetadata.UncachedGetVersionColumns(const Catalog: string
 var
   MSCol_Type: string;
 begin
-    inherited UncachedGetVersionColumns(Catalog, Schema, Table);
+    Result:=inherited UncachedGetVersionColumns(Catalog, Schema, Table);
 
     MSCol_Type := '''V''';
 
@@ -2164,7 +2165,7 @@ end;
 function TZMsSqlDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 begin
-    inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
+    Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_pkeys %s, %s, %s',
@@ -2271,8 +2272,8 @@ function TZMsSqlDatabaseMetadata.UncachedGetCrossReference(const PrimaryCatalog:
   const PrimarySchema: string; const PrimaryTable: string; const ForeignCatalog: string;
   const ForeignSchema: string; const ForeignTable: string): IZResultSet;
 begin
-    inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
-                                        ForeignCatalog, ForeignSchema, ForeignTable);
+    Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
+                                                ForeignCatalog, ForeignSchema, ForeignTable);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_fkeys %s, %s, %s, %s, %s, %s',
@@ -2363,7 +2364,7 @@ end;
 }
 function TZMsSqlDatabaseMetadata.UncachedGetTypeInfo: IZResultSet;
 begin
-    inherited UncachedGetTypeInfo;
+    Result:=inherited UncachedGetTypeInfo;
 
     with GetStatement.ExecuteQuery('exec sp_datatype_info') do
     begin
@@ -2470,7 +2471,7 @@ function TZMsSqlDatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
 var
   Is_Unique, Accuracy: string;
 begin
-    inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
+    Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
 
     if Unique then
       Is_Unique := '''Y'''
@@ -2576,7 +2577,7 @@ end;
 function TZSybaseDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 begin
-    inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
+    Result:=inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_stored_procedures %s, %s, %s',
@@ -2665,7 +2666,7 @@ var
   NumberPart: string;
   status2: Integer;
 begin
-    inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
+    Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_getprocedurecolumns %s, %s, %s, %s',
@@ -2794,7 +2795,7 @@ var
   I: Integer;
   TableTypes: string;
 begin
-    inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
+    Result:=inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
 
     TableTypes := '';
     for I := 0 to Length(Types) - 1 do
@@ -2841,7 +2842,7 @@ end;
 }
 function TZSybaseDatabaseMetadata.UncachedGetSchemas: IZResultSet;
 begin
-    inherited UncachedGetSchemas;
+    Result:=inherited UncachedGetSchemas;
 
     with GetStatement.ExecuteQuery('exec sp_jdbc_getschemas') do
     begin
@@ -2870,7 +2871,7 @@ end;
 }
 function TZSybaseDatabaseMetadata.UncachedGetCatalogs: IZResultSet;
 begin
-    inherited UncachedGetCatalogs;
+    Result:=inherited UncachedGetCatalogs;
 
     with GetStatement.ExecuteQuery('exec sp_jdbc_getcatalogs') do
     begin
@@ -2905,7 +2906,7 @@ const
 var
   I: Integer;
 begin
-    inherited UncachedGetTableTypes;
+    Result:=inherited UncachedGetTableTypes;
 
     for I := 0 to 2 do
     begin
@@ -2970,7 +2971,7 @@ function TZSybaseDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 begin
-    inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
+    Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_columns %s, %s, %s, %s',
@@ -3083,7 +3084,7 @@ end;
 function TZSybaseDatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: string;
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
 begin
-    inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
+    Result:=inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_getcolumnprivileges %s, %s, %s, %s',
@@ -3150,7 +3151,7 @@ end;
 function TZSybaseDatabaseMetadata.UncachedGetTablePrivileges(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
 begin
-    inherited UncachedGetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
+    Result:=inherited UncachedGetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_gettableprivileges %s, %s, %s',
@@ -3212,7 +3213,7 @@ end;
 function TZSybaseDatabaseMetadata.UncachedGetVersionColumns(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 begin
-    inherited UncachedGetVersionColumns(Catalog, Schema, Table);
+    Result:=inherited UncachedGetVersionColumns(Catalog, Schema, Table);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_getversioncolumns %s, %s, %s',
@@ -3268,7 +3269,7 @@ end;
 function TZSybaseDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 begin
-    inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
+    Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_primarykey %s, %s, %s',
@@ -3365,7 +3366,7 @@ end;
 function TZSybaseDatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 begin
-    inherited UncachedGetImportedKeys(Catalog, Schema, Table);
+    Result:=inherited UncachedGetImportedKeys(Catalog, Schema, Table);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_importkey %s, %s, %s',
@@ -3478,7 +3479,7 @@ end;
 function TZSybaseDatabaseMetadata.UncachedGetExportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 begin
-    inherited UncachedGetExportedKeys(Catalog, Schema, Table);
+    Result:=inherited UncachedGetExportedKeys(Catalog, Schema, Table);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_exportkey %s, %s, %s',
@@ -3600,7 +3601,7 @@ function TZSybaseDatabaseMetadata.UncachedGetCrossReference(const PrimaryCatalog
   const PrimarySchema: string; const PrimaryTable: string; const ForeignCatalog: string;
   const ForeignSchema: string; const ForeignTable: string): IZResultSet;
 begin
-    inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
+    Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
                                         ForeignCatalog, ForeignSchema, ForeignTable);
 
     with GetStatement.ExecuteQuery(
@@ -3692,7 +3693,7 @@ end;
 }
 function TZSybaseDatabaseMetadata.UncachedGetTypeInfo: IZResultSet;
 begin
-    inherited UncachedGetTypeInfo;
+    Result:=inherited UncachedGetTypeInfo;
 
     with GetStatement.ExecuteQuery('exec sp_jdbc_datatype_info') do
     begin
@@ -3798,7 +3799,7 @@ function TZSybaseDatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
 var
   Is_Unique, Accuracy: string;
 begin
-    inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
+    Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
 
     if Unique then
       Is_Unique := '''1'''
@@ -3888,7 +3889,7 @@ var
   I: Integer;
   UDTypes: string;
 begin
-    inherited UncachedGetUDTs(Catalog, SchemaPattern, TypeNamePattern, Types);
+    Result:=inherited UncachedGetUDTs(Catalog, SchemaPattern, TypeNamePattern, Types);
 
     UDTypes := '';
     for I := 0 to Length(Types) - 1 do

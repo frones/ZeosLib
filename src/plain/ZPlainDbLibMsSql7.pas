@@ -57,7 +57,7 @@ interface
 
 {$I ZPlain.inc}
 
-uses Classes, ZCompatibility, ZPlainLoader, ZPlainDBLibDriver;
+uses Classes, ZCompatibility, ZPlainLoader, ZPlainDbLibConstants, ZPlainDBLibDriver;
 
 const
   WINDOWS_DLL_LOCATION ='ntwdblib.dll';

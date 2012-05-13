@@ -64,25 +64,31 @@ uses
   {$ENDIF}
 {$ENDIF}
   Types, Classes, SysUtils, ZClasses, ZDbcIntfs, ZTokenizer, ZCompatibility,
-  ZGenericSqlToken, ZGenericSqlAnalyser, ZPlainDriver, ZURL;
+  ZGenericSqlToken, ZGenericSqlAnalyser, ZPlainDriver, ZURL, ZCollections,
+  ZVariant;
 
 type
 
   {** Implements Abstract Database Driver. }
+  {$WARNINGS OFF} //to supress the deprecated Warning of connect
   TZAbstractDriver = class(TInterfacedObject, IZDriver)
   private
     FTokenizer: IZTokenizer;
     FAnalyser: IZStatementAnalyser;
-
   protected
-    function GetPlainDriver(const Url: TZURL): IZPlainDriver; virtual;
+    FCachedPlainDrivers: IZHashMap;
+    FSupportedProtocols: TStringDynArray;
+    procedure AddSupportedProtocol(AProtocol: String);
+    function AddPlainDriverToCache(PlainDriver: IZPlainDriver; const Protocol: string = ''; LibLocation: string = ''): String;
+    function GetPlainDriverFromCache(const Protocol, LibLocation: string): IZPlainDriver;
+    function GetPlainDriver(const Url: TZURL; const InitDriver: Boolean = True): IZPlainDriver; virtual;
     property Tokenizer: IZTokenizer read FTokenizer write FTokenizer;
     property Analyser: IZStatementAnalyser read FAnalyser write FAnalyser;
   public
-    constructor Create;
+    constructor Create; virtual;
     destructor Destroy; override;
 
-    function GetSupportedProtocols: TStringDynArray; virtual; abstract;
+    function GetSupportedProtocols: TStringDynArray;
     function Connect(const Url: string; Info: TStrings = nil): IZConnection; overload; deprecated;
     function Connect(const Url: TZURL): IZConnection; overload; virtual;
     function AcceptsURL(const Url: string): Boolean; virtual;
@@ -95,6 +101,7 @@ type
     function GetStatementAnalyser: IZStatementAnalyser; virtual;
     function GetClientVersion(const Url: string): Integer; virtual;
   end;
+  {$WARNINGS OFF}
 
   {** Implements Abstract Database Connection. }
 
@@ -273,6 +280,7 @@ uses ZMessages, ZSysUtils, ZDbcMetadata;
 }
 constructor TZAbstractDriver.Create;
 begin
+  FCachedPlainDrivers := TZHashMap.Create;
 end;
 
 {**
@@ -280,7 +288,14 @@ end;
 }
 destructor TZAbstractDriver.Destroy;
 begin
+  FCachedPlainDrivers.Clear;
+  FCachedPlainDrivers := nil;
   inherited Destroy;
+end;
+
+function TZAbstractDriver.GetSupportedProtocols: TStringDynArray;
+begin
+  Result := FSupportedProtocols;
 end;
 
 {**
@@ -306,6 +321,7 @@ end;
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
+{$WARNINGS OFF}
 function TZAbstractDriver.Connect(const Url: string; Info: TStrings): IZConnection;
 var
   TempURL:  TZURL;
@@ -314,6 +330,7 @@ begin
   Result := Connect(TempURL);
   TempUrl.Free;
 end;
+{$WARNINGS ON}
 
 function TZAbstractDriver.Connect(const Url: TZURL): IZConnection;
 begin
@@ -343,9 +360,58 @@ begin
   end;
 end;
 
-function TZAbstractDriver.GetPlainDriver(const Url: TZURL): IZPlainDriver;
+procedure TZAbstractDriver.AddSupportedProtocol(AProtocol: String);
 begin
-  Result := nil;
+  SetLength(FSupportedProtocols, Length(FSupportedProtocols)+1);
+  FSupportedProtocols[High(FSupportedProtocols)] := AProtocol;
+end;
+
+function TZAbstractDriver.AddPlainDriverToCache(PlainDriver: IZPlainDriver;
+  const Protocol: string = ''; LibLocation: string = ''): String;
+var
+  TempKey: IZAnyValue;
+begin
+  if Protocol = '' then
+  begin
+    Result := PlainDriver.GetProtocol;
+    TempKey := TZAnyValue.CreateWithString(PlainDriver.GetProtocol)
+  end
+  else
+  begin
+    Result := Protocol;
+    TempKey := TZAnyValue.CreateWithString(Protocol+LibLocation);
+  end;
+  FCachedPlainDrivers.Put(TempKey, PlainDriver);
+end;
+
+function TZAbstractDriver.GetPlainDriverFromCache(const Protocol, LibLocation: string): IZPlainDriver;
+var
+  TempKey: IZAnyValue;
+  TempPlain: IZPlainDriver;
+begin
+  TempKey := TZAnyValue.CreateWithString(Protocol+LibLocation);
+  Result := FCachedPlainDrivers.Get(TempKey) as IZPlainDriver;
+  if Result = nil then
+  begin
+    TempKey := nil;
+    TempKey := TZAnyValue.CreateWithString(Protocol);
+    TempPlain := FCachedPlainDrivers.Get(TempKey) as IZPlainDriver;
+    if Assigned(TempPlain) then
+      Result := TempPlain.Clone;
+  end;
+end;
+
+{**
+  Gets plain driver for selected protocol.
+  @param Url a database connection URL.
+  @return a selected plaindriver.
+}
+function TZAbstractDriver.GetPlainDriver(const Url: TZURL;
+  const InitDriver: Boolean): IZPlainDriver;
+begin
+  Result := GetPlainDriverFromCache(Url.Protocol, Url.LibLocation);
+  if InitDriver then
+    Result.Initialize(Url.LibLocation);
 end;
 
 {**
@@ -1235,3 +1301,4 @@ begin
 end;
 
 end.
+

@@ -346,11 +346,16 @@ begin
         Variable.TypeCode := SQLT_TIMESTAMP;
         Length := SizeOf(POCIDateTime);
       end;
-    stString:
+    stString, stUnicodeString:
       begin
         Variable.TypeCode := SQLT_STR;
         Length := Variable.DataSize + 1;
       end;
+{    stUnicodeString:
+      begin
+        Variable.TypeCode := SQLT_VST;
+        Length := Variable.DataSize + 1;
+      end;}
     stAsciiStream, stUnicodeStream, stBinaryStream:
       begin
         if not (Variable.TypeCode in [SQLT_CLOB, SQLT_BLOB]) then
@@ -432,12 +437,18 @@ begin
           end;
         SQLT_STR:
           begin
-            StrLCopy(PAnsiChar(CurrentVar.Data),
-{$IFDEF DELPHI12_UP}
-                PAnsiChar(UTF8String(DefVarManager.GetAsString(Values[I]))), 1024);
-{$ELSE}
-                PAnsiChar(DefVarManager.GetAsString(Values[I])), 1024);
-{$ENDIF}
+            case Values[i].VType of
+              vtString:
+                StrLCopy(PAnsiChar(CurrentVar.Data),
+                  {$IFDEF DELPHI12_UP}
+                    PAnsiChar(UTF8String(DefVarManager.GetAsString(Values[I]))), 1024);
+                  {$ELSE}
+                    PAnsiChar(DefVarManager.GetAsString(Values[I])), 1024);
+                  {$ENDIF}
+              vtUnicodeString:
+                StrLCopy(PAnsiChar(CurrentVar.Data),
+                    PAnsiChar(UTF8Encode(DefVarManager.GetAsUnicodeString(Values[I]))), 1024);
+            end;
           end;
         SQLT_TIMESTAMP:
           begin
@@ -488,74 +499,6 @@ begin
     CurrentVar.Data := CurrentVar.DupData;
   end;
 end;
-
-(*
-
-{**
-  Converts a MySQL native types into ZDBC SQL types.
-  @param PlainDriver a native MySQL plain driver.
-  @param FieldHandle a handler to field description structure.
-  @param FieldFlags a field flags.
-  @return a SQL undepended type.
-}
-function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
-  FieldHandle: PZMySQLField; FieldFlags: Integer): TZSQLType;
-begin
-  case PlainDriver.GetFieldType(FieldHandle) of
-    FIELD_TYPE_TINY:
-      begin
-        if (UNSIGNED_FLAG and FieldFlags) = 0 then
-          Result := stByte
-        else Result := stShort;
-      end;
-    FIELD_TYPE_YEAR, FIELD_TYPE_SHORT:
-      begin
-        if (UNSIGNED_FLAG and FieldFlags) = 0 then
-          Result := stShort
-        else Result := stInteger;
-      end;
-    FIELD_TYPE_INT24, FIELD_TYPE_LONG:
-      begin
-        if (UNSIGNED_FLAG and FieldFlags) = 0 then
-          Result := stInteger
-        else Result := stLong;
-      end;
-    FIELD_TYPE_LONGLONG:
-      begin
-        if (UNSIGNED_FLAG and FieldFlags) = 0 then
-          Result := stLong
-        else Result := stBigDecimal;
-      end;
-    FIELD_TYPE_FLOAT:
-      Result := stFloat;
-    FIELD_TYPE_DECIMAL:
-      begin
-        if PlainDriver.GetFieldDecimals(FieldHandle) = 0 then
-        begin
-          if PlainDriver.GetFieldLength(FieldHandle) < 11 then
-            Result := stInteger
-          else Result := stLong;
-        end else
-          Result := stDouble;
-      end;
-    FIELD_TYPE_DOUBLE:
-      Result := stDouble;
-    FIELD_TYPE_DATE, FIELD_TYPE_NEWDATE:
-      Result := stDate;
-    FIELD_TYPE_TIME:
-      Result := stTime;
-    FIELD_TYPE_DATETIME, FIELD_TYPE_TIMESTAMP:
-      Result := stTimestamp;
-    FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
-    FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB:
-      if (FieldFlags and BINARY_FLAG) = 0 then
-        Result := stAsciiStream
-      else Result := stBinaryStream;
-    else
-      Result := stString;
-  end;
-end;
-*)
 
 {**
   Convert string Oracle field type to SQLType

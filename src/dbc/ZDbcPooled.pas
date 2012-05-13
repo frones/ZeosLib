@@ -135,7 +135,7 @@ type
     URLList: TStringList;
     function GetEmbeddedURL(const URL: AnsiString): AnsiString;
   public
-    function GetSupportedProtocols: TStringDynArray; override;
+    //function GetSupportedProtocols: TStringDynArray; override;
     function Connect(const URL: TZURL): IZConnection; override;
     function GetClientVersion(const URL: string): Integer; override;
     function AcceptsURL(const URL: string): Boolean; override;
@@ -144,7 +144,7 @@ type
     function GetMinorVersion: Integer; override;
     function GetSubVersion: Integer; override;
   public
-    constructor Create;
+    constructor Create; override;
     destructor Destroy; override;
   end;
 
@@ -573,10 +573,11 @@ end;
 
 constructor TZDbcPooledConnectionDriver.Create;
 begin
-  inherited;
+  inherited Create;
 
   PoolList := TObjectList.Create(True);
   URLList := TStringList.Create;
+  AddSupportedProtocol(PooledPrefix + '*');
 end;
 
 destructor TZDbcPooledConnectionDriver.Destroy;
@@ -674,11 +675,11 @@ begin
   Result := 0;
 end;
 
-function TZDbcPooledConnectionDriver.GetSupportedProtocols: TStringDynArray;
+{function TZDbcPooledConnectionDriver.GetSupportedProtocols: TStringDynArray;
 begin
   SetLength(Result, 1);
   Result[0] := PooledPrefix + '*';
-end;
+end;}
 
 function TZDbcPooledConnectionDriver.GetEmbeddedURL(const URL: AnsiString): AnsiString;
 begin

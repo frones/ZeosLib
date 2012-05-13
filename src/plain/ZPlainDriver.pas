@@ -66,15 +66,8 @@ type
     ['{2A0CC600-B3C4-43AF-92F5-C22A3BB1BB7D}']
     function GetProtocol: string;
     function GetDescription: string;
-    {
-    function GetClientVersion: Integer;
-    function GetServerVersion: Integer;
-    procedure GetClientVersionEx(out MajorVersion: Integer;
-     out MinorVersion: Integer; out SubVersion: Integer);
-    procedure GetServerVersionEx(out MajorVersion: Integer;
-     out MinorVersion: Integer; out SubVersion: Integer);
-    }
     procedure Initialize(const Location: String = '');
+    function Clone: IZPlainDriver;
   end;
 
   {ADDED by fduenas 15-06-2006}
@@ -83,23 +76,16 @@ type
   { TZAbstractPlainDriver }
 
   TZAbstractPlainDriver = class(TZAbstractObject, IZPlainDriver)
-   protected
-      FLoader: TZNativeLibraryLoader;
-      procedure LoadApi; virtual;
-   public
+  protected
+    FLoader: TZNativeLibraryLoader;
+    function Clone: IZPlainDriver; reintroduce; virtual; abstract;
+    procedure LoadApi; virtual;
+  public
     constructor CreateWithLibrary(const LibName : String);
     property Loader: TZNativeLibraryLoader read FLoader;
     function GetProtocol: string; virtual; abstract;
     function GetDescription: string; virtual; abstract;
-    {
-    function GetClientVersion: Integer; virtual;
-    function GetServerVersion: Integer; virtual;
-    procedure GetClientVersionEx(out MajorVersion: Integer;
-     out MinorVersion: Integer; out SubVersion: Integer); virtual;
-    procedure GetServerVersionEx(out MajorVersion: Integer;
-     out MinorVersion: Integer; out SubVersion: Integer); virtual;
-    }
-     procedure Initialize(const Location: String); virtual;
+    procedure Initialize(const Location: String = ''); virtual;
     destructor Destroy; override;
   end;
   {END ADDED by fduenas 15-06-2006}
@@ -121,6 +107,8 @@ procedure TZAbstractPlainDriver.Initialize(const Location: String);
 begin
   If Assigned(Loader) and not Loader.Loaded then
   begin
+    if Location <> '' then
+      Loader.ClearLocations;
     Loader.AddLocation(Location);
     If Loader.LoadNativeLibrary then
       LoadApi;

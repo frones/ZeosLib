@@ -24,7 +24,7 @@
     </CompilerOptions>
     <Description Value="Zeos Plain Database API"/>
     <Version Major="7"/>
-    <Files Count="19">
+    <Files Count="18">
       <Item1>
         <Filename Value="../../src/plain/ZPlainDbLibDriver.pas"/>
         <UnitName Value="ZPlainDbLibDriver"/>
@@ -38,69 +38,65 @@
         <UnitName Value="ZPlainDbLibSybaseAse125"/>
       </Item3>
       <Item4>
-        <Filename Value="../../src/plain/ZPlainFreeTDSDriver.pas"/>
-        <UnitName Value="ZPlainFreeTDSDriver"/>
-      </Item4>
-      <Item5>
-        <Filename Value="../../src/plain/ZPlainFreeTDSConstants.pas"/>
-        <UnitName Value="ZPlainFreeTDSConstants"/>
-      </Item5>
-      <Item6>
         <Filename Value="../../src/plain/ZPlainDriver.pas"/>
         <UnitName Value="ZPlainDriver"/>
-      </Item6>
-      <Item7>
+      </Item4>
+      <Item5>
         <Filename Value="../../src/plain/ZPlainLoader.pas"/>
         <UnitName Value="ZPlainLoader"/>
-      </Item7>
-      <Item8>
+      </Item5>
+      <Item6>
         <Filename Value="../../src/plain/ZPlainMySqlConstants.pas"/>
         <UnitName Value="ZPlainMySqlConstants"/>
-      </Item8>
-      <Item9>
+      </Item6>
+      <Item7>
         <Filename Value="../../src/plain/ZPlainMySqlDriver.pas"/>
         <UnitName Value="ZPlainMySqlDriver"/>
-      </Item9>
-      <Item10>
+      </Item7>
+      <Item8>
         <Filename Value="../../src/plain/ZPlainOracle9i.pas"/>
         <UnitName Value="ZPlainOracle9i"/>
-      </Item10>
-      <Item11>
+      </Item8>
+      <Item9>
         <Filename Value="../../src/plain/ZPlainOracleDriver.pas"/>
         <UnitName Value="ZPlainOracleDriver"/>
-      </Item11>
-      <Item12>
+      </Item9>
+      <Item10>
         <Filename Value="../../src/plain/ZPlainPostgreSqlDriver.pas"/>
         <UnitName Value="ZPlainPostgreSqlDriver"/>
-      </Item12>
-      <Item13>
+      </Item10>
+      <Item11>
         <Filename Value="../../src/plain/ZPlainSqLiteDriver.pas"/>
         <UnitName Value="ZPlainSqLiteDriver"/>
-      </Item13>
-      <Item14>
+      </Item11>
+      <Item12>
         <Filename Value="../../src/plain/ZPlainASADriver.pas"/>
         <UnitName Value="ZPlainASADriver"/>
-      </Item14>
-      <Item15>
+      </Item12>
+      <Item13>
         <Filename Value="../../src/plain/ZPlainASA9.pas"/>
         <UnitName Value="ZPlainASA9"/>
-      </Item15>
-      <Item16>
+      </Item13>
+      <Item14>
         <Filename Value="../../src/plain/ZPlainASA8.pas"/>
         <UnitName Value="ZPlainASA8"/>
-      </Item16>
-      <Item17>
+      </Item14>
+      <Item15>
         <Filename Value="../../src/plain/ZPlainASA7.pas"/>
         <UnitName Value="ZPlainASA7"/>
-      </Item17>
-      <Item18>
+      </Item15>
+      <Item16>
         <Filename Value="../../src/plain/ZPlainFirebirdDriver.pas"/>
         <UnitName Value="ZPlainFirebirdDriver"/>
-      </Item18>
-      <Item19>
+      </Item16>
+      <Item17>
         <Filename Value="../../src/plain/ZPlainFirebirdInterbaseConstants.pas"/>
         <UnitName Value="ZPlainFirebirdInterbaseConstants"/>
-      </Item19>
+      </Item17>
+      <Item18>
+        <Filename Value="../../src/plain/ZPlainDbLibConstants.pas"/>
+        <UnitName Value="ZPlainDbLibConstants"/>
+      </Item18>
     </Files>
     <RequiredPkgs Count="3">
       <Item1>

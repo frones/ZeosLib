@@ -976,7 +976,7 @@ function TZMySQLDatabaseMetadata.UncachedGetTables(const Catalog: string;
 var
   LCatalog, LTableNamePattern: string;
 begin
-    Result := ConstructVirtualResultSet(TableColumnsDynArray);
+    Result := inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
 
     GetCatalogAndNamePattern(Catalog, SchemaPattern, TableNamePattern,
       LCatalog, LTableNamePattern);
@@ -1037,7 +1037,7 @@ end;
 }
 function TZMySQLDatabaseMetadata.UncachedGetCatalogs: IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(CatalogColumnsDynArray);
+    Result:=inherited UncachedGetCatalogs;
 
     with GetConnection.CreateStatement.ExecuteQuery('SHOW DATABASES') do
     begin
@@ -1067,7 +1067,8 @@ end;
 }
 function TZMySQLDatabaseMetadata.UncachedGetTableTypes: IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(TableTypeColumnsDynArray);
+    Result:=inherited UncachedGetTableTypes;
+
     Result.MoveToInsertRow;
     Result.UpdateString(1, 'TABLE');
     Result.InsertRow;
@@ -1149,7 +1150,7 @@ var
   Res : IZResultset;
 
 begin
-    Res := ConstructVirtualResultSet(TableColColumnsDynArray);
+    Res:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
     GetCatalogAndNamePattern(Catalog, SchemaPattern, ColumnNamePattern,
       TempCatalog, TempColumnNamePattern);
@@ -1451,7 +1452,7 @@ var
   AllPrivileges, ColumnName, Privilege: Ansistring;
   PrivilegesList: TStrings;
 begin
-    Result := ConstructVirtualResultSet(TableColPrivColumnsDynArray);
+  Result:=inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
 
     GetCatalogAndNamePattern(Catalog, Schema, ColumnNamePattern,
       LCatalog, LColumnNamePattern);
@@ -1544,7 +1545,7 @@ var
   AllPrivileges, Privilege: Ansistring;
   PrivilegesList: TStrings;
 begin
-    Result := ConstructVirtualResultSet(TablePrivColumnsDynArray);
+    Result:=inherited UncachedGetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
 
     GetCatalogAndNamePattern(Catalog, SchemaPattern, TableNamePattern,
       LCatalog, LTableNamePattern);
@@ -1623,7 +1624,8 @@ var
 begin
     if Table = '' then
       raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
-    Result := ConstructVirtualResultSet(PrimaryKeyColumnsDynArray);
+
+    Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
 
     if Catalog = '' then
     begin
@@ -1742,7 +1744,8 @@ var
 begin
     if Table = '' then
       raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
-    Result := ConstructVirtualResultSet(ImportedKeyColumnsDynArray);
+
+    Result := inherited UncachedGetImportedKeys(Catalog, Schema, Table);
 
     if Catalog = '' then
     begin
@@ -1891,7 +1894,8 @@ var
 begin
     if Table = '' then
       raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
-    Result := ConstructVirtualResultSet(ExportedKeyColumnsDynArray);
+
+    Result:=inherited UncachedGetExportedKeys(Catalog, Schema, Table);
 
     if Catalog = '' then
     begin
@@ -2049,7 +2053,9 @@ var
 begin
     if PrimaryTable = '' then
       raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
-    Result := ConstructVirtualResultSet(CrossRefColumnsDynArray);
+
+    Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
+                                                ForeignCatalog, ForeignSchema, ForeignTable);
 
     if ForeignCatalog = '' then
       LForeignCatalog := FDatabase
@@ -2197,7 +2203,7 @@ const
 var
   I: Integer;
 begin
-    Result := ConstructVirtualResultSet(TypeInfoColumnsDynArray);
+    Result:=inherited UncachedGetTypeInfo;
 
     for I := 1 to MaxTypeCount do
     begin
@@ -2298,7 +2304,8 @@ var
 begin
     if Table = '' then
       raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
-    Result := ConstructVirtualResultSet(IndexInfoColumnsDynArray);
+
+    Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
 
     if Catalog = '' then
     begin
@@ -2380,7 +2387,7 @@ end;
 function TZMySQLDatabaseMetadata.UncachedGetVersionColumns(const Catalog, Schema,
   Table: string): IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(TableColVerColumnsDynArray);
+    Result:=inherited UncachedGetVersionColumns(Catalog, Schema, Table);
 
     Result.MoveToInsertRow;
     Result.UpdateNull(1);
@@ -2423,7 +2430,7 @@ begin
     else
       LCatalog := Catalog;
 
-  Result := ConstructVirtualResultSet(CollationCharSetColumnsDynArray);
+  Result:=inherited UncachedGetCollationAndCharSet(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
   if LCatalog <> '' then
   begin
@@ -2518,7 +2525,7 @@ end;
 }
 function TZMySQLDatabaseMetadata.UncachedGetCharacterSets: IZResultSet; //EgonHugeist
 begin
-  Result := ConstructVirtualResultSet(CharacterSetsColumnsDynArray);
+  Result:=inherited UncachedGetCharacterSets;
 
   with GetConnection.CreateStatement.ExecuteQuery(
     'SELECT CHARACTER_SET_NAME '+

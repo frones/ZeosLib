@@ -66,15 +66,9 @@ type
 
   {** Implements PostgreSQL Database Driver. }
   TZPostgreSQLDriver = class(TZAbstractDriver)
-  private
-    FPlainDrivers: Array of IZPostgreSQLPlainDriver;
-  protected
-    function GetPlainDriver(const Url: TZURL): IZPlainDriver; override;
   public
-    constructor Create;
+    constructor Create; override;
     function Connect(const Url: TZURL): IZConnection; override;
-
-    function GetSupportedProtocols: TStringDynArray; override;
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
 
@@ -87,7 +81,7 @@ type
     ['{8E62EA93-5A49-4F20-928A-0EA44ABCE5DB}']
 
     function IsOidAsBlob: Boolean;
-
+    function StandardConformingStrings: Boolean;
     function GetTypeNameByOid(Id: Oid): string;
     function GetPlainDriver: IZPostgreSQLPlainDriver;
     function GetConnectionHandle: PZPostgreSQLConnect;
@@ -99,6 +93,7 @@ type
   {** Implements PostgreSQL Database Connection. }
   TZPostgreSQLConnection = class(TZAbstractConnection, IZPostgreSQLConnection)
   private
+    FStandardConformingStrings: Boolean;
     FHandle: PZPostgreSQLConnect;
     FBeginRequired: Boolean;
     FTypeList: TStrings;
@@ -114,6 +109,7 @@ type
     function BuildConnectStr: AnsiString;
     procedure StartTransactionSupport;
     procedure LoadServerVersion;
+    function StandardConformingStrings: Boolean;
   public
     destructor Destroy; override;
 
@@ -184,9 +180,10 @@ end;
 }
 constructor TZPostgreSQLDriver.Create;
 begin
-  SetLength(FPlainDrivers,2);
-  FPlainDrivers[0]  := TZPostgreSQL7PlainDriver.Create;
-  FPlainDrivers[1]  := TZPostgreSQL8PlainDriver.Create;
+  inherited Create;
+  AddSupportedProtocol(AddPlainDriverToCache(TZPostgreSQL8PlainDriver.Create, 'postgresql'));
+  AddSupportedProtocol(AddPlainDriverToCache(TZPostgreSQL7PlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZPostgreSQL8PlainDriver.Create));
 end;
 
 {**
@@ -255,42 +252,6 @@ begin
   if Analyser = nil then
     Analyser := TZPostgreSQLStatementAnalyser.Create;
   Result := Analyser;
-end;
-
-{**
-  Get a name of the supported subprotocol.
-  For example: postgresql74 or postgresql81
-}
-function TZPostgreSQLDriver.GetSupportedProtocols: TStringDynArray;
-var
-   i: smallint;
-begin
-  SetLength(Result, high(FPlainDrivers)+2);
-  // Generic driver
-  Result[0] := 'postgresql';
-  For i := 0 to high(FPlainDrivers) do
-    Result[i+1] := FPlainDrivers[i].GetProtocol;
-end;
-
-{**
-  Gets plain driver for selected protocol.
-  @param Url a database connection URL.
-  @return a selected protocol.
-}
-function TZPostgreSQLDriver.GetPlainDriver(const Url: TZURL): IZPlainDriver;
-var
-  i: smallint;
-begin
-  For i := 0 to high(FPlainDrivers) do
-    if Url.Protocol = FPlainDrivers[i].GetProtocol then
-      begin
-        Result := FPlainDrivers[i];
-        break;
-      end;
-  // Generic driver
-  If result = nil then
-    Result := FPlainDrivers[1];    // Postgresql 8
-  Result.Initialize(Url.LibLocation);
 end;
 
 { TZPostgreSQLConnection }
@@ -496,6 +457,21 @@ begin
     //  PQsetNoticeProcessor(FHandle, NoticeProc, Self);
 
     inherited Open;
+    { sets now the standard_conforming_strings which decides the escaping behavior
+      if not available }
+    if Info.Values['standard_conforming_strings']<>'' then
+    begin
+      FStandardConformingStrings := UpperCase(Info.Values['standard_conforming_strings']) = 'ON';
+      SQL := PAnsiChar(AnsiString(Format('SET standard_conforming_strings=''%s''',
+                                          [Info.Values['standard_conforming_strings']])));
+      QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, SQL);
+      CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute,
+                            SQL,QueryHandle);
+      GetPlainDriver.Clear(QueryHandle);
+      DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
+    end
+    else
+      FStandardConformingStrings := Self.GetServerMajorVersion < 9;
   finally
     if self.IsClosed and (Self.FHandle <> nil) then
     begin
@@ -932,12 +908,17 @@ begin
   end;
 end;
 
-{** 
-Ping Current Connection's server, if client was disconnected, 
-the connection is resumed. 
-@return 0 if succesfull or error code if any error occurs 
-} 
-function TZPostgreSQLConnection.PingServer: Integer; 
+function TZPostgreSQLConnection.StandardConformingStrings: Boolean;
+begin
+  Result := Self.FStandardConformingStrings;
+end;
+
+{**
+Ping Current Connection's server, if client was disconnected,
+the connection is resumed.
+@return 0 if succesfull or error code if any error occurs
+}
+function TZPostgreSQLConnection.PingServer: Integer;
   const 
     PING_ERROR_ZEOSCONNCLOSED = -1; 
   var 
