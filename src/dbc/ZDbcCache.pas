@@ -351,11 +351,16 @@ function TZRowAccessor.GetBlobObject(Buffer: PZRowBuffer;
   ColumnIndex: Integer): IZBlob;
 var
   BlobPtr: PPointer;
-  NullPtr: PBoolean;
+  NullPtr: {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF};
 begin
   BlobPtr := PPointer(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
-  NullPtr := PBoolean(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1]]);
-  if NullPtr^ = {$IFDEF FPC}0{$ELSE}false{$ENDIF} then
+  NullPtr := {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF}(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1]]);
+
+  {$IFNDEF FPC}
+  if NullPtr^ = {$IFDEF WIN64}false{$ELSE}0{$ENDIF} then  //M.A. if NullPtr^ = 0 then
+  {$ELSE}
+  if NullPtr^ = 0 then
+  {$ENDIF}
     Result := IZBlob(BlobPtr^)
   else
     Result := nil;
@@ -371,19 +376,32 @@ procedure TZRowAccessor.SetBlobObject(Buffer: PZRowBuffer; ColumnIndex: Integer;
   Value: IZBlob);
 var
   BlobPtr: PPointer;
-  NullPtr: PBoolean;
+  NullPtr: {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF};
 begin
   BlobPtr := PPointer(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
-  NullPtr := PBoolean(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1]]);
-  if NullPtr^ = {$IFDEF FPC}0{$ELSE}false{$ENDIF} then
+  NullPtr := {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF}(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1]]);
+
+  {$IFNDEF FPC}
+  if NullPtr^ = {$IFDEF WIN64}false{$ELSE}0{$ENDIF} then  //M.A. if NullPtr^ = 0 then
+  {$ELSE}
+  if NullPtr^ = 0 then
+  {$ENDIF}
     IZBlob(BlobPtr^) := nil
   else
     BlobPtr^ := nil;
+
   IZBlob(BlobPtr^) := Value;
+
   if Value <> nil then
-    NullPtr^ := {$IFDEF FPC}0{$ELSE}false{$ENDIF}
+  {$IFNDEF FPC}
+    NullPtr^ := {$IFDEF WIN64}false{$ELSE}0{$ENDIF}  //M.A. NullPtr^ := 0
   else
-    NullPtr^ := {$IFDEF FPC}1{$ELSE}True{$ENDIF};
+    NullPtr^ := {$IFDEF WIN64}true{$ELSE}1{$ENDIF};  //M.A. NullPtr^ := 1;
+  {$ELSE}
+    NullPtr^ := 0
+  else
+    NullPtr^ := 1;
+  {$ENDIF}
 end;
 
 {**
