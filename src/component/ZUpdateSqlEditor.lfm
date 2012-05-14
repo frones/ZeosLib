@@ -1,7 +1,7 @@
 object ZUpdateSQLEditForm: TZUpdateSQLEditForm
-  Left = 339
+  Left = 447
   Height = 258
-  Top = 271
+  Top = 246
   Width = 398
   Caption = 'ZUpdateSQLEditForm'
   ClientHeight = 258
@@ -11,12 +11,12 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnResize = FormResize
   Position = poScreenCenter
   LCLVersion = '1.1'
   object PageControl: TPageControl
     Left = 0
     Height = 221
-    Top = 0
     Top = 0
     Width = 398
     ActivePage = SQLPage
@@ -31,7 +31,6 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
       object GroupBox1: TGroupBox
         Left = 0
         Height = 195
-        Top = 0
         Top = 0
         Width = 390
         Align = alClient
@@ -169,7 +168,7 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
         Top = 56
         Width = 373
         Align = alCustom
-        Anchors = [akTop, akLeft, akRight]
+        Anchors = [akTop, akLeft, akRight, akBottom]
         OnKeyPress = SQLMemoKeyPress
         ScrollBars = ssVertical
         TabOrder = 0
@@ -211,7 +210,6 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
     Width = 398
     Align = alBottom
     BevelOuter = bvNone
-    Caption = ''
     ClientHeight = 37
     ClientWidth = 398
     TabOrder = 1

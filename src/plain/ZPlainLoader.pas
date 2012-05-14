@@ -70,7 +70,7 @@ type
   {$IFDEF FPC}
     FHandle: PtrInt;
   {$ELSE}
-    FHandle: LongWord;
+    FHandle: THandle;  //M.A. LongWord;
   {$ENDIF}
     FLoaded: Boolean;
     FCurrentLocation: String;
@@ -92,7 +92,7 @@ type
   {$IFDEF FPC}
     property Handle: PtrInt read FHandle write FHandle;
   {$ELSE}
-    property Handle: LongWord read FHandle write FHandle;
+    property Handle: THandle { M.A. LongWord} read FHandle write FHandle;
   {$ENDIF}
     property CurrentLocation: String read FCurrentLocation write FCurrentLocation;
     function GetAddress(ProcName: PAnsiChar): Pointer;
