@@ -356,8 +356,8 @@ begin
   BlobPtr := PPointer(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
   NullPtr := {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF}(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1]]);
 
-  {$IFDEF FPC}
-  	if NullPtr^ = {$IFDEF WIN64}false{$ELSE}0{$ENDIF} then
+  {$IFNDEF FPC}
+  if NullPtr^ = {$IFDEF WIN64}false{$ELSE}0{$ENDIF} then  //M.A. if NullPtr^ = 0 then
   {$ELSE}
   if NullPtr^ = 0 then
   {$ENDIF}
@@ -381,8 +381,8 @@ begin
   BlobPtr := PPointer(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
   NullPtr := {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF}(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1]]);
 
-  {$IFDEF FPC}
-  	if NullPtr^ = {$IFDEF WIN64}false{$ELSE}0{$ENDIF} then
+  {$IFNDEF FPC}
+  if NullPtr^ = {$IFDEF WIN64}false{$ELSE}0{$ENDIF} then  //M.A. if NullPtr^ = 0 then
   {$ELSE}
   if NullPtr^ = 0 then
   {$ENDIF}
@@ -393,10 +393,10 @@ begin
   IZBlob(BlobPtr^) := Value;
 
   if Value <> nil then
-  {$IFDEF FPC}
-    NullPtr^ := {$IFDEF WIN64}false{$ELSE}0{$ENDIF}
+  {$IFNDEF FPC}
+    NullPtr^ := {$IFDEF WIN64}false{$ELSE}0{$ENDIF}  //M.A. NullPtr^ := 0
   else
-    NullPtr^ := {$IFDEF WIN64}true{$ELSE}1{$ENDIF};
+    NullPtr^ := {$IFDEF WIN64}true{$ELSE}1{$ENDIF};  //M.A. NullPtr^ := 1;
   {$ELSE}
     NullPtr^ := 0
   else
