@@ -355,7 +355,7 @@ var
 begin
   BlobPtr := PPointer(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
   NullPtr := PBoolean(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1]]);
-  if NullPtr^ = false then
+  if NullPtr^ = {$IFDEF FPC}0{$ELSE}false{$ENDIF} then
     Result := IZBlob(BlobPtr^)
   else
     Result := nil;
@@ -375,15 +375,15 @@ var
 begin
   BlobPtr := PPointer(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
   NullPtr := PBoolean(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1]]);
-  if NullPtr^ = false then
+  if NullPtr^ = {$IFDEF FPC}0{$ELSE}false{$ENDIF} then
     IZBlob(BlobPtr^) := nil
   else
     BlobPtr^ := nil;
   IZBlob(BlobPtr^) := Value;
   if Value <> nil then
-    NullPtr^ := false
+    NullPtr^ := {$IFDEF FPC}0{$ELSE}false{$ENDIF}
   else
-    NullPtr^ := true;
+    NullPtr^ := {$IFDEF FPC}1{$ELSE}True{$ENDIF};
 end;
 
 {**
