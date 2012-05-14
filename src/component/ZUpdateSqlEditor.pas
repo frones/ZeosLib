@@ -106,6 +106,7 @@ type
     CancelButton: TButton;
     HelpButton: TButton;
     procedure FormCreate(Sender: TObject);
+    procedure FormResize(Sender: TObject);
     procedure HelpButtonClick(Sender: TObject);
     procedure StatementTypeClick(Sender: TObject);
     procedure OkButtonClick(Sender: TObject);
@@ -1013,6 +1014,14 @@ end;
 procedure TZUpdateSQLEditForm.FormCreate(Sender: TObject);
 begin
 //  HelpContext := hcDUpdateSQL;
+end;
+
+procedure TZUpdateSQLEditForm.FormResize(Sender: TObject);
+Var i: Integer
+begin
+  i := PageControl.Height - 92;
+  If i < 0 Then i := 0;
+  SQLMemo.Height := i;
 end;
 
 procedure TZUpdateSQLEditForm.HelpButtonClick(Sender: TObject);
