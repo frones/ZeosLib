@@ -48,6 +48,9 @@
   {$INTERFACES COM}
 
   {$IFDEF FPC_FULLVERSION}  // FPC_FULLVERSION was added in FPC 2.2.4
+    {$IF FPC_FULLVERSION<=20204}
+      {$DEFINE OLDFPC}
+    {$IFEND}
 
     {$MACRO ON}             // Macros needed for FPC_VERSION and FPC_RELEASE
 
@@ -76,7 +79,7 @@
 
   {$DEFINE WITH_FUNIDIRECTIONAL} // FPC has references a field instead of a setter here.  (at least in 2.6.0)
 
-  {$IF FPC_FULLVERSION>20600} // will be introduced in 2.6.2 (and up to date 2.6.1)
+  {$IF FPC_FULLVERSION>20602} // will be introduced in 2.6.2 (and up to date 2.6.1)
     {$DEFINE WITH_TRECORDBUFFER}
     {$DEFINE WITH_TBOOKMARK}              // Have TBookmark
   {$IFEND}
