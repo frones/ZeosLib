@@ -128,12 +128,13 @@ type
     procedure UpdateDouble(const Index: Integer; Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
     procedure UpdatePChar(const Index: Integer; Value: PAnsiChar);
-    procedure UpdateString(const Index: Integer; Value: String);
+    procedure UpdateString(const Index: Integer; Value: AnsiString);
     procedure UpdateBytes(const Index: Integer; Value: TByteDynArray);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
     procedure UpdateTime(const Index: Integer; Value: TDateTime);
     procedure UpdateTimestamp(const Index: Integer; Value: TDateTime);
     procedure UpdateQuad(const Index: Word; const Value: TISC_QUAD);
+    function ZPlainString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
   end;
 
   { Result interface for sqlda}
@@ -206,13 +207,7 @@ type
     It clas can only write data to parameters/fields }
   TZParamsSQLDA = class (TZSQLDA, IZParamsSQLDA)
   private
-    //AVZ
-    {$IFDEF DELPHI12_UP}
-    procedure EncodeString(Code: Smallint; const Index: Word; const Str: String);
-    {$ELSE}
     procedure EncodeString(Code: Smallint; const Index: Word; const Str: AnsiString);
-    {$ENDIF}
-
     procedure UpdateDateTime(const Index: Integer; Value: TDateTime);
   public
     destructor Destroy; override;
@@ -229,7 +224,7 @@ type
     procedure UpdateDouble(const Index: Integer; Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
     procedure UpdatePChar(const Index: Integer; Value: PAnsiChar);
-    procedure UpdateString(const Index: Integer; Value: String);
+    procedure UpdateString(const Index: Integer; Value: AnsiString);
     procedure UpdateBytes(const Index: Integer; Value: TByteDynArray);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
     procedure UpdateTime(const Index: Integer; Value: TDateTime);
@@ -1084,9 +1079,9 @@ begin
           SoftVarManager.GetAsFloat(InParamValues[I]));
       stString:
         ParamSqlData.UpdateString(I,
-          SoftVarManager.GetAsString(InParamValues[I]));
+          ParamSqlData.ZPlainString(SoftVarManager.GetAsString(InParamValues[I])));
       stUnicodeString:
-        ParamSqlData.UpdateString(I,(SoftVarManager.GetAsUnicodeString(InParamValues[I]))); //AVZ
+        ParamSqlData.UpdateString(I, UTF8Encode(SoftVarManager.GetAsUnicodeString(InParamValues[I])));
       stBytes:
         ParamSqlData.UpdateBytes(I,
           StrToBytes(AnsiString(SoftVarManager.GetAsString(InParamValues[I]))));
@@ -1801,14 +1796,11 @@ end;
 }
 
 procedure TZParamsSQLDA.EncodeString(Code: Smallint; const Index: Word;
-  const Str: String);
+  const Str: AnsiString);
 var
   Len: Cardinal;
-  TempAnsi: AnsiString;
 begin
-  TempAnsi := ZPlainString(Str);
-  Len := Length(TempAnsi);
-
+  Len := Length(Str);
   {$R-}
    with FXSQLDA.sqlvar[Index] do
     case Code of
@@ -1819,7 +1811,7 @@ begin
           else
             IbReAlloc(sqldata, 0, Len + 1);
           sqllen := Len;
-          Move(PAnsiChar(TempAnsi)^, sqldata^, sqllen);
+          Move(PAnsiChar(Str)^, sqldata^, sqllen);
         end;
       SQL_VARYING :
         begin
@@ -1829,7 +1821,7 @@ begin
           else
             IbReAlloc(sqldata, 0, Len + 2);
           PISC_VARYING(sqldata).strlen :=  Len;
-          Move(PAnsiChar(TempAnsi)^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
+          Move(PAnsiChar(Str)^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
         end;
     end;
   {$IFOPT D+}
@@ -1877,8 +1869,8 @@ begin
         SQL_BOOLEAN   : PSmallint(sqldata)^ := Trunc(Value);
         SQL_SHORT     : PSmallint(sqldata)^ := Trunc(Value);
         SQL_INT64     : PInt64(sqldata)^ := Trunc(Value);
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, FloatToStr(Value));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, FloatToStr(Value));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, AnsiString(FloatToStr(Value)));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, AnsiString(FloatToStr(Value)));
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
       end;
@@ -1928,8 +1920,8 @@ begin
         SQL_BOOLEAN   : PSmallint(sqldata)^ := ord(Value);
         SQL_SHORT     : PSmallint(sqldata)^ := ord(Value);
         SQL_INT64     : PInt64(sqldata)^ := ord(Value);
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, IntToStr(ord(Value)));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, IntToStr(ord(Value)));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, AnsiString(IntToStr(ord(Value))));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, AnsiString(IntToStr(ord(Value))));
       else
         raise EZIBConvertError.Create(SUnsupportedParameterType);
       end;
@@ -1985,8 +1977,8 @@ begin
                      end;
         SQL_SHORT     : PSmallint(sqldata)^ := Value;
         SQL_INT64     : PInt64(sqldata)^ := Value;
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, IntToStr(Value));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, IntToStr(Value));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, AnsiString(IntToStr(Value)));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, AnsiString(IntToStr(Value)));
       else
         raise EZIBConvertError.Create(SUnsupportedParameterType);
       end;
@@ -2112,8 +2104,8 @@ begin
         SQL_BOOLEAN   : PSmallint(sqldata)^ := Trunc(Value);
         SQL_SHORT     : PSmallint(sqldata)^ := Trunc(Value);
         SQL_INT64     : PInt64(sqldata)^ := Trunc(Value);
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, FloatToStr(Value));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, FloatToStr(Value));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, AnsiString(FloatToStr(Value)));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, AnsiString(FloatToStr(Value)));
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
       end;
@@ -2166,8 +2158,8 @@ begin
         SQL_BOOLEAN   : PSmallint(sqldata)^ := Trunc(Value);
         SQL_SHORT     : PSmallint(sqldata)^ := Trunc(Value);
         SQL_INT64     : PInt64(sqldata)^ := Trunc(Value);
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, FloatToStr(Value));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, FloatToStr(Value));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, AnsiString(FloatToStr(Value)));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, AnsiString(FloatToStr(Value)));
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
       end;
@@ -2218,8 +2210,8 @@ begin
         SQL_BOOLEAN   : PSmallint(sqldata)^ := Value;
         SQL_SHORT     : PSmallint(sqldata)^ := Value;
         SQL_INT64     : PInt64(sqldata)^ := Value;
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, IntToStr(Value));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, IntToStr(Value));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, AnsiString(IntToStr(Value)));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, AnsiString(IntToStr(Value)));
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
       end;
@@ -2270,8 +2262,8 @@ begin
         SQL_BOOLEAN   : PSmallint(sqldata)^ := Value;
         SQL_SHORT     : PSmallint(sqldata)^ := Value;
         SQL_INT64     : PInt64(sqldata)^ := Value;
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, IntToStr(Value));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, IntToStr(Value));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, AnsiString(IntToStr(Value)));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, AnsiString(IntToStr(Value)));
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
       end;
@@ -2383,8 +2375,8 @@ begin
         SQL_BOOLEAN   : PSmallint(sqldata)^ := Value;
         SQL_SHORT     : PSmallint(sqldata)^ := Value;
         SQL_INT64     : PInt64(sqldata)^ := Value;
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, IntToStr(Value));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, IntToStr(Value));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, AnsiString(IntToStr(Value)));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, AnsiString(IntToStr(Value)));
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
       end;
@@ -2402,7 +2394,7 @@ end;
    @param Value the source value
 }
 
-procedure TZParamsSQLDA.UpdateString(const Index: Integer; Value: String);
+procedure TZParamsSQLDA.UpdateString(const Index: Integer; Value: AnsiString);
 var
  SQLCode: SmallInt;
  Stream: TStream;
@@ -2418,13 +2410,13 @@ begin
     case SQLCode of
       SQL_TEXT      : EncodeString(SQL_TEXT, Index, Value);
       SQL_VARYING   : EncodeString(SQL_VARYING, Index, Value);
-      SQL_LONG      : PInteger (sqldata)^ := Round(StrToFloat(Value) * IBScaleDivisor[sqlscale]); //AVZ
-      SQL_SHORT     : PInteger (sqldata)^ := StrToInt(Value);
+      SQL_LONG      : PInteger (sqldata)^ := Round(StrToFloat(String(Value)) * IBScaleDivisor[sqlscale]); //AVZ
+      SQL_SHORT     : PInteger (sqldata)^ := StrToInt(String(Value));
       SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, Value);
-      SQL_DOUBLE    : PDouble (sqldata)^ := StrToFloat(Value) * IBScaleDivisor[sqlscale]; //AVZ
+      SQL_DOUBLE    : PDouble (sqldata)^ := StrToFloat(String(Value)) * IBScaleDivisor[sqlscale]; //AVZ
       SQL_D_FLOAT,
-      SQL_FLOAT     : PSingle (sqldata)^ := StrToFloat(Value) * IBScaleDivisor[sqlscale];  //AVZ
-      SQL_INT64     : PInt64(sqldata)^ := Trunc(StrToFloat(Value) * IBScaleDivisor[sqlscale]); //AVZ - INT64 value was not recognized
+      SQL_FLOAT     : PSingle (sqldata)^ := StrToFloat(String(Value)) * IBScaleDivisor[sqlscale];  //AVZ
+      SQL_INT64     : PInt64(sqldata)^ := Trunc(StrToFloat(String(Value)) * IBScaleDivisor[sqlscale]); //AVZ - INT64 value was not recognized
       SQL_BLOB:
         begin
           Stream := TStringStream.Create(Value);
@@ -2530,13 +2522,19 @@ function TZResultSQLDA.DecodeString(const Code: Smallint;
    const Index: Word): AnsiString;
 var
    l: integer;
+  procedure SetAnsi(Ansi: PAnsiChar; Len: Longint);
+  begin
+    SetLength(Result, Len);
+    System.Move(Ansi^, PAnsiChar(Result)^, Len);
+  end;
 begin
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   case Code of
     SQL_TEXT:
       begin
-        Result := AnsiString(BufferToStr(sqldata, sqllen));
+        //Result := AnsiString(BufferToStr(sqldata, sqllen));
+        SetAnsi(sqldata, sqllen);
         // Trim only spaces. TrimRight also removes other characters)
         l := sqllen;
         while (l > 0) and (Result[l] = ' ') do
@@ -2544,7 +2542,7 @@ begin
         if l < sqllen then
            result := copy(result, 1, l);
       end;
-    SQL_VARYING : System.SetString(Result, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
+    SQL_VARYING : SetAnsi(PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);//System.SetString(Result, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
   end;
   {$IFOPT D+}
 {$R+}
@@ -2872,7 +2870,7 @@ function TZResultSQLDA.GetPChar(const Index: Integer): PChar;
 var
   TempStr: String;
 begin
-  TempStr := GetString(Index);
+  TempStr := ZDbcString(GetString(Index));
   Result := PChar(TempStr);
 end;
 
@@ -2981,7 +2979,7 @@ begin
                           FDefaults[Index] := TempAnsi;
                         end
                         else
-                          Result := FDefaults[Index];
+                          Result := AnsiString(FDefaults[Index]);
 
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,

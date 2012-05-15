@@ -1455,7 +1455,7 @@ begin
       Ansi := UTF8Encode(WS);
     end
     else
-      if Length(String(PAnsiChar(TMemoryStream(Value).Memory))) = 1 then
+      if StrLen(PAnsiChar(TMemoryStream(Value).Memory)) < Value.Size then //PWideChar written
       begin
         SetLength(WS, Value.Size div 2);
         System.Move(PWideString(TMemoryStream(Value).Memory)^,
@@ -1463,7 +1463,7 @@ begin
         Ansi := UTF8Encode(WS);
       end
       else
-        if Length(String(PAnsiChar(TMemoryStream(Value).Memory))) = Value.Size then
+        if StrLen(PAnsiChar(TMemoryStream(Value).Memory)) = Value.Size then
         begin
           if DetectUTF8Encoding(PAnsiChar(TMemoryStream(Value).Memory)) = etAnsi then
             Ansi := AnsiToUTF8(PAnsiChar(TMemoryStream(Value).Memory))

@@ -654,7 +654,7 @@ begin
   Params := TStringList.Create;
 
   { Set transaction parameters by TransactIsolationLevel }
-  Params.Values['isc_dpb_lc_ctype'] := FClientCodePage; //Set CharacterSet allways if option is set
+  //Params.Values['isc_dpb_lc_ctype'] := FClientCodePage; //Set CharacterSet allways if option is set
   Params.Add('isc_tpb_version3');
   case TransactIsolationLevel of
     tiReadCommitted:

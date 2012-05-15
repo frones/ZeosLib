@@ -447,7 +447,7 @@ begin
   //the Log-params fails!
   for I := 0 to FParamSQLData.GetFieldCount - 1 do
   begin
-    FParamSQLData.UpdateNull(I, DefVarManager.IsNull(InParamValues[I])); 
+    FParamSQLData.UpdateNull(I, DefVarManager.IsNull(InParamValues[I]));
     if DefVarManager.IsNull(InParamValues[I])then
       Continue 
     else
@@ -478,10 +478,10 @@ begin
           SoftVarManager.GetAsFloat(InParamValues[I]));
       stString:
         FParamSQLData.UpdateString(I,
-          SoftVarManager.GetAsString(InParamValues[I]));
+          ZPlainString(SoftVarManager.GetAsString(InParamValues[I])));
       stUnicodeString:
         FParamSQLData.UpdateString(I,
-          SoftVarManager.GetAsUnicodeString(InParamValues[I]));
+          UTF8Encode(SoftVarManager.GetAsUnicodeString(InParamValues[I])));
       stBytes:
         FParamSQLData.UpdateBytes(I,
           StrToBytes(AnsiString(SoftVarManager.GetAsString(InParamValues[I]))));
@@ -835,9 +835,8 @@ begin
       case StatementType of
         stCommit, stRollback, stUnknown: Result := -1;
         stSelect           : FreeStatement(GetPlainDriver, StmtHandle, DSQL_CLOSE);  //AVZ
-        stDelete, stUpdate : begin
-                     if (Result = 0) then Result := 1; //AVZ - A delete statement may return zero affected rows, calling procedure expects 1 as Result or Error!
-                   end;
+        stDelete: if (Result = 0) then Result := 1; //AVZ - A delete statement may return zero affected rows, calling procedure expects 1 as Result or Error!
+        stUpdate: ; //EgonHugeist - but not a UpdateStatement!
       end;
 
 
@@ -1193,9 +1192,9 @@ begin
       stBigDecimal:
         DefVarManager.SetAsFloat(Temp, Value.GetBigDecimal(I));
       stString:
-        DefVarManager.SetAsString(Temp, String(Value.GetString(I)));
+        DefVarManager.SetAsString(Temp, ZDbcString(Value.GetString(I)));
       stUnicodeString:
-        DefVarManager.SetAsUnicodeString(Temp, String(Value.GetString(I)));
+        DefVarManager.SetAsUnicodeString(Temp, UTF8ToString(Value.GetString(I)));
       stDate:
         DefVarManager.SetAsDateTime(Temp, Value.GetDate(I));
       stTime:
