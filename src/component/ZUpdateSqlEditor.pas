@@ -1017,7 +1017,7 @@ begin
 end;
 
 procedure TZUpdateSQLEditForm.FormResize(Sender: TObject);
-Var i: Integer
+Var i: Integer;
 begin
   i := PageControl.Height - 92;
   If i < 0 Then i := 0;
