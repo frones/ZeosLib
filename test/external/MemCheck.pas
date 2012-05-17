@@ -88,6 +88,9 @@ the fifteen, but this would be more work, and I know it is useless).
 unit MemCheck;
 {$A+}
 {$H+}
+{$IFDEF VER230}
+  {$DEFINE DELPHI16_UP} // Used in code
+{$ENDIF}
 {$IFDEF VER180}
   //VER180 = Delphi 2006 for Win32
   //Don't define DELPHI71_OR_LATER for Delphi 2006 for Win32.
@@ -1101,7 +1104,7 @@ begin
 	LinkedListSynchro.Release;
 end;
 
-function LeakTrackingGetMem(Size: Integer): Pointer;
+function LeakTrackingGetMem(Size: {$IFDEF DELPHI16_UP}NativeInt{$ELSE}Integer{$ENDIF}): Pointer;
 begin
 	{$IFDEF DELPHI6_OR_LATER}
 	if ltgmCallerIsNewAnsiString or CallerIsDynamicArrayAllocation then
@@ -1182,7 +1185,7 @@ begin
 		end;
 end;
 
-function HeapCheckingGetMem(Size: Integer): Pointer;
+function HeapCheckingGetMem(Size: {$IFDEF DELPHI16_UP}NativeInt{$ELSE}Integer{$ENDIF}): Pointer;
 begin
 	HeapStatusSynchro.Acquire;
 	Result:= nil;	//Note: I don't understand right now why I get a warning if I suppress this line
@@ -1406,7 +1409,7 @@ begin
 	UpdateLastHeapStatus;
 end;
 
-function LeakTrackingReallocMem(P: Pointer; Size: Integer): Pointer;
+function LeakTrackingReallocMem(P: Pointer; Size: {$IFDEF DELPHI16_UP}NativeInt{$ELSE}Integer{$ENDIF}): Pointer;
 var
 	Block: PMemoryBlocHeader;
 begin
@@ -1428,7 +1431,7 @@ begin
 		Result := OldMemoryManager.ReallocMem(P, Size);
 end;
 
-function HeapCheckingReallocMem(P: Pointer; Size: Integer): Pointer;
+function HeapCheckingReallocMem(P: Pointer; {$IFDEF DELPHI16_UP}NativeInt{$ELSE}Integer{$ENDIF}): Pointer;
 begin
 	if HeapStatusesDifferent(LastHeapStatus, GetHeapStatus) then
 		raise HeapCorrupted;
