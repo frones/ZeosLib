@@ -400,6 +400,7 @@ var
   TempBlob: IZBlob;
   TempStream: TStream;
   WriteTempBlob: IZPostgreSQLBlob;
+  Decoded: PAnsiChar;
 begin
   TempBytes := nil;
   if InParamCount <= ParamIndex then
@@ -421,7 +422,10 @@ begin
       stString, stBytes:
         Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
       stUnicodeString:
-        Result := Self.GetConnection.GetEscapeString(String(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))));
+        begin
+          Decoded := PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)));
+          Result := Self.GetConnection.GetEscapeString(String(Decoded));
+        end;
       stDate:
         Result := Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]);
@@ -567,6 +571,7 @@ var
   TempBlob: IZBlob;
   TempStream: TStream;
   WriteTempBlob: IZPostgreSQLBlob;
+  Decoded: PAnsiChar;
 begin
   TempBytes := nil;
   if InParamCount <= ParamIndex then
@@ -588,7 +593,11 @@ begin
       stString, stBytes:
         Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
       stUnicodeString:
-        Result := Self.GetConnection.GetEscapeString(String(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))));
+        begin
+          Decoded := PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)));
+          Result := Self.GetConnection.GetEscapeString(String(Decoded));
+        end;
+
       stDate:
         Result := Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]);

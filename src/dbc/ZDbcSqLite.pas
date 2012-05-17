@@ -586,10 +586,17 @@ end;
 function TZSQLiteConnection.GetEscapeString(const Value: String;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
-  if StartsWith(Value, '''') and EndsWith(Value, '''') then
-    Result := inherited GetEscapeString(Value, EscapeMarkSequence)
+  if GetPreprepareSQL then
+    if StartsWith(Value, '''') and EndsWith(Value, '''') then
+      Result := inherited GetEscapeString(Value, EscapeMarkSequence)
+    else
+      Result := inherited GetEscapeString(QuotedStr(Value), EscapeMarkSequence)
   else
-    Result := inherited GetEscapeString(QuotedStr(Value), EscapeMarkSequence);
+    if StartsWith(Value, '''') and EndsWith(Value, '''') then
+      Result := Value
+    else
+      Result := QuotedStr(Value);
+
 end;
 
 initialization

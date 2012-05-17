@@ -2533,7 +2533,6 @@ begin
   case Code of
     SQL_TEXT:
       begin
-        //Result := AnsiString(BufferToStr(sqldata, sqllen));
         SetAnsi(sqldata, sqllen);
         // Trim only spaces. TrimRight also removes other characters)
         l := sqllen;
@@ -2542,7 +2541,7 @@ begin
         if l < sqllen then
            result := copy(result, 1, l);
       end;
-    SQL_VARYING : SetAnsi(PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);//System.SetString(Result, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
+    SQL_VARYING : SetAnsi(PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
   end;
   {$IFOPT D+}
 {$R+}

@@ -59,7 +59,8 @@ interface
 
 uses
   Classes, SysUtils, ZDbcIntfs, ZDbcStatement, ZPlainSqLiteDriver,
-  ZCompatibility, ZDbcLogging, ZVariant;
+  ZCompatibility, ZDbcLogging, ZVariant
+  {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF};
 
 type
 
@@ -88,7 +89,6 @@ type
     FPlainDriver: IZSQLitePlainDriver;
   protected
     function CreateExecStatement: IZStatement; override;
-    //function GetEscapeString(const Value: string): string;
     function PrepareSQLParam(ParamIndex: Integer): string; override;
   public
     constructor Create(PlainDriver: IZSQLitePlainDriver;
@@ -311,16 +311,6 @@ begin
 end;
 
 {**
-  Converts an string into escape SQLite format.
-  @param Value a regular string.
-  @return a string in SQLite escape format.
-}
-{function TZSQLitePreparedStatement.GetEscapeString(const Value: string): string;
-begin
-  Result := AnsiQuotedStr(UTF8Encode(Value), '''');
-end;}
-
-{**
   Prepares an SQL parameter for the query.
   @param ParameterIndex the first parameter is 1, the second is 2, ...
   @return a string representation of the parameter.
@@ -330,6 +320,7 @@ var
   Value: TZVariant;
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
+  Decoded: PAnsiChar;
 begin
   TempBytes := nil;
   if InParamCount <= ParamIndex then
@@ -348,15 +339,26 @@ begin
                Result := '''N''';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
-      stString, stUnicodeString:
+      stString:
         if GetConnection.PreprepareSQL then
           Result := AnsiQuotedStr(SoftVarManager.GetAsString(Value), '''')
         else
           {$IFDEF DELPHI12_UP}
-          Result := AnsiQuotedStr(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)), '''');
+          Result := AnsiQuotedStr(UTF8Encode(SoftVarManager.GetAsString(Value)), '''');
           {$ELSE}
-          Result := AnsiQuotedStr(SoftVarManager.GetAsString(Value), '''');
+          if DetectUTF8Encoding(SoftVarManager.GetAsString(Value)) = etAnsi then
+            Result := AnsiQuotedStr(AnsiToUTF8(SoftVarManager.GetAsString(Value)), '''')
+          else
+            Result := AnsiQuotedStr(SoftVarManager.GetAsString(Value), '''');
           {$ENDIF}
+      stUnicodeString:
+        if GetConnection.PreprepareSQL then
+        begin
+          Decoded := PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)));
+          Result := GetConnection.GetEscapeString(String(Decoded));
+        end
+        else
+          Result := AnsiQuotedStr(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)), '''');
       stBytes:
         Result := GetConnection.GetAnsiEscapeString(AnsiString(SoftVarManager.GetAsString(Value)));  //Egonhugeist stBytes can be from #0 -> ~ so this encoding must be!
       stDate:
