@@ -1190,11 +1190,11 @@ begin
       end;
   else
     try
-      {$IFDEF WIN64}
-         TimeStamp := MSecsToTimeStamp(PComp(Buffer)^); //EgonHugeist: FPC Win64: expected Int64 instead of TDateTime(double)
+      {$IF defined(WIN64) and Defined(FPC)}
+      TimeStamp := MSecsToTimeStamp(System.Trunc(Int(TDateTime(Buffer^))));
       {$ELSE}
         TimeStamp := MSecsToTimeStamp(TDateTime(Buffer^));
-      {$ENDIF}
+      {$IFEND}
     except
       TimeStamp.Time := 0;
       TimeStamp.Date := 0;
