@@ -414,7 +414,7 @@ begin
   DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol, LogMessage);
 
   LogMessage := 'set textlimit=2147483647';
-  if GetPlainDriver.dbsetopt(FHandle, GetPlainDriver.GetVariables.dboptions[Z_TEXTSIZE] , '2147483647') <> DBSUCCEED then
+  if GetPlainDriver.dbsetopt(FHandle, DBTEXTLIMIT, '2147483647') <> DBSUCCEED then
     CheckDBLibError(lcConnect, LogMessage);
   DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol, LogMessage);
 
