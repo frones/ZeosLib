@@ -703,11 +703,11 @@ var
 
 begin 
   TableName := DefineTableName; 
-  DefineInsertColumns(Columns); 
+  DefineInsertColumns(Columns);
   if Columns.Count = 0 then 
   begin 
     Result := ''; 
-    Exit; 
+    Exit;
   end; 
 
   Temp1 := '';    l1 := 0; 
@@ -803,7 +803,6 @@ begin
     else
       Result := Result + 'NULL';
   end;
-  // Result := 'SELECT ' + Result + ' FROM ' + DefineTableName;
   Result := 'SELECT ' + Result;
 end;
 
@@ -855,7 +854,7 @@ begin
           begin
         SQL := FormUpdateStatement(SQLParams, OldRowAccessor, NewRowAccessor);
             If SQL =''then // no fields have been changed
-               exit; 
+               exit;
             If Assigned(UpdateStatement) and (SQL <> UpdateStatement.GetSQL) then
               UpdateStatement := nil;
             If (not Assigned(UpdateStatement)) and (Trim(SQL) <> '') then 
@@ -942,17 +941,13 @@ begin
               stFloat:
                 RowAccessor.SetFloat(Current.ColumnIndex, ResultSet.GetFloat(I));
               stDouble:
-                RowAccessor.SetDouble(Current.ColumnIndex,
-                  ResultSet.GetDouble(I));
+                RowAccessor.SetDouble(Current.ColumnIndex, ResultSet.GetDouble(I));
               stBigDecimal:
-                RowAccessor.SetBigDecimal(Current.ColumnIndex,
-                  ResultSet.GetBigDecimal(I));
+                RowAccessor.SetBigDecimal(Current.ColumnIndex, ResultSet.GetBigDecimal(I));
               stString, stAsciiStream:
-                RowAccessor.SetString(Current.ColumnIndex,
-                  String(ResultSet.GetString(I)));
-              stUnicodeString:
-                RowAccessor.SetUnicodeString(Current.ColumnIndex,
-                  ResultSet.GetUnicodeString(I));
+                RowAccessor.SetString(Current.ColumnIndex, ResultSet.GetString(I));
+              stUnicodeString, stUnicodeStream:
+                RowAccessor.SetUnicodeString(Current.ColumnIndex, ResultSet.GetUnicodeString(I));
               stBytes:
                 RowAccessor.SetBytes(Current.ColumnIndex, ResultSet.GetBytes(I));
               stDate:
