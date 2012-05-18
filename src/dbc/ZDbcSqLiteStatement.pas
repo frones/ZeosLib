@@ -339,28 +339,12 @@ begin
                Result := '''N''';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
-      stString:
-        if GetConnection.PreprepareSQL then
-          Result := AnsiQuotedStr(SoftVarManager.GetAsString(Value), '''')
-        else
-          {$IFDEF DELPHI12_UP}
-          Result := AnsiQuotedStr(UTF8Encode(SoftVarManager.GetAsString(Value)), '''');
-          {$ELSE}
-          if DetectUTF8Encoding(SoftVarManager.GetAsString(Value)) = etAnsi then
-            Result := AnsiQuotedStr(AnsiToUTF8(SoftVarManager.GetAsString(Value)), '''')
-          else
-            Result := AnsiQuotedStr(SoftVarManager.GetAsString(Value), '''');
-          {$ENDIF}
-      stUnicodeString:
-        if GetConnection.PreprepareSQL then
-        begin
-          Decoded := PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)));
-          Result := GetConnection.GetEscapeString(String(Decoded));
-        end
-        else
-          Result := AnsiQuotedStr(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)), '''');
       stBytes:
-        Result := GetConnection.GetAnsiEscapeString(AnsiString(SoftVarManager.GetAsString(Value)));  //Egonhugeist stBytes can be from #0 -> ~ so this encoding must be!
+        Result := Self.GetConnection.GetEscapeString(PAnsiChar(AnsiString(SoftVarManager.GetAsString(Value))));
+      stString:
+        Result := Self.GetConnection.GetEscapeString(PAnsiChar(ZPlainString(SoftVarManager.GetAsString(Value))));
+      stUnicodeString:
+        Result := Self.GetConnection.GetEscapeString(PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))));
       stDate:
         Result := '''' + FormatDateTime('yyyy-mm-dd',
           SoftVarManager.GetAsDateTime(Value)) + '''';

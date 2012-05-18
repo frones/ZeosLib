@@ -232,7 +232,9 @@ type
     function GetAnsiEscapeString(const Value: AnsiString;
       const EscapeMarkSequence: String = '~<|'): String; virtual;
     function GetEscapeString(const Value: String;
-      const EscapeMarkSequence: String = '~<|'): String; virtual;
+      const EscapeMarkSequence: String = '~<|'): String; overload; virtual;
+    function GetEscapeString(const Value: PAnsiChar;
+      const EscapeMarkSequence: String = '~<|'): String; overload; virtual;
 
     function UseMetadata: boolean;
     procedure SetUseMetadata(Value: Boolean);
@@ -667,6 +669,7 @@ begin
     FURL := TZURL.Create(ZURL);
   FDriver := DriverManager.GetDriver(ZURL.URL);
   FIZPlainDriver := FDriver.GetPlainDriver(ZUrl);
+  Info.NameValueSeparator := '=';
   FClientCodePage := Info.Values['codepage'];
   FPreprepareSQL := Info.Values['PreprepareSQL'] = 'ON'; //compatibitity Option for existing Applications
   {Pick out the values from Info}
@@ -1251,6 +1254,16 @@ begin
   else
     Result := Value;
 end;
+
+function TZAbstractConnection.GetEscapeString(const Value: PAnsiChar;
+  const EscapeMarkSequence: String = '~<|'): String;
+var
+  Ansi: AnsiString;
+begin
+  Ansi := StrPas(Value);
+  Result := GetEscapeString(String(Ansi));
+end;
+
 
 {**
   Result 100% Compiler-Compatible

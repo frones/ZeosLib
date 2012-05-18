@@ -419,13 +419,12 @@ begin
           Result := 'FALSE';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
-      stString, stBytes:
-        Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
+      stBytes:
+        Result := Self.GetConnection.GetEscapeString(PAnsiChar(AnsiString(SoftVarManager.GetAsString(Value))));
+      stString:
+        Result := Self.GetConnection.GetEscapeString(PAnsiChar(ZPlainString(SoftVarManager.GetAsString(Value))));
       stUnicodeString:
-        begin
-          Decoded := PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)));
-          Result := Self.GetConnection.GetEscapeString(String(Decoded));
-        end;
+        Result := Self.GetConnection.GetEscapeString(PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))));
       stDate:
         Result := Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]);
@@ -590,14 +589,12 @@ begin
           Result := 'FALSE';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
-      stString, stBytes:
-        Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
+      stBytes:
+        Result := Self.GetConnection.GetEscapeString(PAnsiChar(AnsiString(SoftVarManager.GetAsString(Value))));
+      stString:
+        Result := Self.GetConnection.GetEscapeString(PAnsiChar(ZPlainString(SoftVarManager.GetAsString(Value))));
       stUnicodeString:
-        begin
-          Decoded := PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)));
-          Result := Self.GetConnection.GetEscapeString(String(Decoded));
-        end;
-
+        Result := Self.GetConnection.GetEscapeString(PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))));
       stDate:
         Result := Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]);

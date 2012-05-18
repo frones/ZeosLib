@@ -280,7 +280,9 @@ type
     function GetAnsiEscapeString(const Value: AnsiString;
       const EscapeMarkSequence: String = '~<|'): String;
     function GetEscapeString(const Value: String;
-      const EscapeMarkSequence: String = '~<|'): String;
+      const EscapeMarkSequence: String = '~<|'): String; overload;
+    function GetEscapeString(const Value: PAnsiChar;
+      const EscapeMarkSequence: String = '~<|'): String; overload;
     function GetClientCodePageInformations(const ClientCharacterSet: String = ''): PZCodePage; //EgonHugeist
     function GetUTF8StringAsWideField: Boolean;
     procedure SetUTF8StringAsWideField(const Value: Boolean);
@@ -800,8 +802,6 @@ type
       const ColumnDirs: TBooleanDynArray): Integer;
 
     function GetStatement: IZStatement;
-    //function ComponentString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
-    //function DatabaseString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
     function GetClientCodePage: PZCodePage;
   end;
 

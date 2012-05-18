@@ -470,8 +470,12 @@ begin
                Result := '''N''';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
-      stString, stUnicodeString, stBytes:
-        Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
+      stBytes:
+        Result := Self.GetConnection.GetEscapeString(PAnsiChar(AnsiString(SoftVarManager.GetAsString(Value))));
+      stString:
+        Result := Self.GetConnection.GetEscapeString(PAnsiChar(ZPlainString(SoftVarManager.GetAsString(Value))));
+      stUnicodeString:
+        Result := Self.GetConnection.GetEscapeString(PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))));
       stDate:
       begin
         DecodeDateTime(SoftVarManager.GetAsDateTime(Value),

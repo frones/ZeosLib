@@ -138,7 +138,9 @@ type
     function GetAnsiEscapeString(const Value: AnsiString;
       const EscapeMarkSequence: String = '~<|'): String;
     function GetEscapeString(const Value: String;
-      const EscapeMarkSequence: String = '~<|'): String;
+      const EscapeMarkSequence: String = '~<|'): String; overload; virtual;
+    function GetEscapeString(const Value: PAnsiChar;
+      const EscapeMarkSequence: String = '~<|'): String; overload; virtual;
   end;
 
   TZDbcPooledConnectionDriver = class(TZAbstractDriver)
@@ -665,6 +667,12 @@ function TZDbcPooledConnection.GetEscapeString(const Value: String;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
   Result := Self.GetDriver.GetTokenizer.GetEscapeString(Value);
+end;
+
+function TZDbcPooledConnection.GetEscapeString(const Value: PAnsiChar;
+  const EscapeMarkSequence: String = '~<|'): String;
+begin
+  GetEscapeString(String(Value));
 end;
 
 {**
