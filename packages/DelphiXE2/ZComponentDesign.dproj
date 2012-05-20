@@ -36,6 +36,12 @@
 			<CfgParent>Base</CfgParent>
 			<Base>true</Base>
 		</PropertyGroup>
+		<PropertyGroup Condition="('$(Platform)'=='Win32' and '$(Cfg_2)'=='true') or '$(Cfg_2_Win32)'!=''">
+			<Cfg_2_Win32>true</Cfg_2_Win32>
+			<CfgParent>Cfg_2</CfgParent>
+			<Cfg_2>true</Cfg_2>
+			<Base>true</Base>
+		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
 			<DCC_UsePackage>dbrtl;$(DCC_UsePackage)</DCC_UsePackage>
 			<DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;Winapi;Vcl;$(DCC_Namespace)</DCC_Namespace>
@@ -76,6 +82,8 @@
 			<DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
+			<DCC_Optimize>false</DCC_Optimize>
+			<DCC_DebugInfoInExe>true</DCC_DebugInfoInExe>
 			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
 			<Version>7.0</Version>
 			<DCC_IntegerOverflowCheck>True</DCC_IntegerOverflowCheck>
@@ -83,6 +91,10 @@
 			<DCC_ResourcePath>$(BDSCOMMONDIR)\Bpl;$(DCC_ResourcePath)</DCC_ResourcePath>
 			<DCC_ObjPath>$(BDSCOMMONDIR)\Bpl;$(DCC_ObjPath)</DCC_ObjPath>
 			<DCC_IncludePath>$(BDSCOMMONDIR)\Bpl;$(DCC_IncludePath)</DCC_IncludePath>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
+			<DCC_DebugDCUs>true</DCC_DebugDCUs>
+			<DCC_Optimize>false</DCC_Optimize>
 		</PropertyGroup>
 		<ItemGroup>
 			<DelphiCompile Include="$(MainSource)">

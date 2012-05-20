@@ -100,7 +100,6 @@
 			<DCC_RangeChecking>True</DCC_RangeChecking>
 			<DCC_GenerateStackFrames>True</DCC_GenerateStackFrames>
 			<DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
-			<DCC_MapFile>3</DCC_MapFile>
 			<DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
 			<DCC_ResourcePath>$(BDSCOMMONDIR)\Bpl;$(DCC_ResourcePath)</DCC_ResourcePath>
 			<DCC_ObjPath>$(BDSCOMMONDIR)\Bpl;$(DCC_ObjPath)</DCC_ObjPath>
@@ -115,22 +114,24 @@
 			<VerInfo_Locale>1033</VerInfo_Locale>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
+			<DCC_DebugInfoInExe>true</DCC_DebugInfoInExe>
 			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
 			<Version>7.0</Version>
 			<DCC_Optimize>False</DCC_Optimize>
 			<DCC_IntegerOverflowCheck>True</DCC_IntegerOverflowCheck>
 			<DCC_RangeChecking>True</DCC_RangeChecking>
 			<DCC_GenerateStackFrames>True</DCC_GenerateStackFrames>
-			<DCC_MapFile>3</DCC_MapFile>
 			<DCC_ResourcePath>$(BDSCOMMONDIR)\Bpl;$(DCC_ResourcePath)</DCC_ResourcePath>
 			<DCC_ObjPath>$(BDSCOMMONDIR)\Bpl;$(DCC_ObjPath)</DCC_ObjPath>
 			<DCC_IncludePath>$(BDSCOMMONDIR)\Bpl;$(DCC_IncludePath)</DCC_IncludePath>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2_Win64)'!=''">
+			<DCC_RemoteDebug>true</DCC_RemoteDebug>
 			<VerInfo_Locale>1033</VerInfo_Locale>
 			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
+			<DCC_DebugDCUs>true</DCC_DebugDCUs>
 			<DCC_MapFile>0</DCC_MapFile>
 			<VerInfo_Locale>1033</VerInfo_Locale>
 			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
