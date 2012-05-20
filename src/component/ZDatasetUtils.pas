@@ -1182,12 +1182,8 @@ begin
   case DataType of
     ftDate:
       begin
-        {$IFDEF FPC}
-        TimeStamp := DateTimeToTimeStamp(TDateTime(Buffer^));
-        {$ELSE}
         TimeStamp.Time := 0;
         TimeStamp.Date := Integer(Buffer^);
-        {$ENDIF}
       end;
     ftTime:
       begin
