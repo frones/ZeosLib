@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
-  Menus, ExtCtrls, StdCtrls, Spin, ZConnection;
+  Menus, ExtCtrls, StdCtrls, ZConnection;
 
 const
   { Names of the main test groups }
@@ -162,6 +162,99 @@ type
     property Changed: Boolean read FHasChanged;
   end;
 
+  TPerformanceConfig = class(TObject)
+  private
+    FAPIPlain: Boolean;
+    FAPIdbc: Boolean;
+    FAPIdbcchached: Boolean;
+    FAPIdataset: Boolean;
+    FAPImidas: Boolean;
+    FAPIoldzeos: Boolean;
+    FAPIbde: Boolean;
+    FAPIado: Boolean;
+    FAPIdbx: Boolean;
+    FAPIdbxc: Boolean;
+    FAPIibx: Boolean;
+    FTestConncet: Boolean;
+    FTestInsert: Boolean;
+    FTestOpen: Boolean;
+    FTestFetch: Boolean;
+    FTestSort: Boolean;
+    FTestFilter: Boolean;
+    FTestUpdate: Boolean;
+    FTestDelete: Boolean;
+    FTestDirectUpdate: Boolean;
+    FBaseAPIPlain: Boolean;
+    FBaseAPIdbc: Boolean;
+    FBaseAPIdbcchached: Boolean;
+    FBaseAPIdataset: Boolean;
+    FResultOutput: String;
+    FRepeat: Integer;
+    FCount: Integer;
+    FDetails: Boolean;
+    FHasChanged: Boolean;
+    procedure SetAPIPlain(const Value: Boolean);
+    procedure SetAPIdbc(const Value: Boolean);
+    procedure SetAPIdbcchached(const Value: Boolean);
+    procedure SetAPIdataset(const Value: Boolean);
+    procedure SetAPImidas(const Value: Boolean);
+    procedure SetAPIoldzeos(const Value: Boolean);
+    procedure SetAPIbde(const Value: Boolean);
+    procedure SetAPIado(const Value: Boolean);
+    procedure SetAPIdbx(const Value: Boolean);
+    procedure SetAPIdbxc(const Value: Boolean);
+    procedure SetAPIibx(const Value: Boolean);
+    procedure SetTestConncet(const Value: Boolean);
+    procedure SetTestInsert(const Value: Boolean);
+    procedure SetTestOpen(const Value: Boolean);
+    procedure SetTestFetch(const Value: Boolean);
+    procedure SetTestSort(const Value: Boolean);
+    procedure SetTestFilter(const Value: Boolean);
+    procedure SetTestUpdate(const Value: Boolean);
+    procedure SetTestDelete(const Value: Boolean);
+    procedure SetTestDirectUpdate(const Value: Boolean);
+    procedure SetBaseAPIPlain(const Value: Boolean);
+    procedure SetBaseAPIdbc(const Value: Boolean);
+    procedure SetBaseAPIdbcchached(const Value: Boolean);
+    procedure SetBaseAPIdataset(const Value: Boolean);
+    procedure SetResultOutput(const Value: String);
+    procedure SetRepeat(const Value: Integer);
+    procedure SetCount(const Value: Integer);
+    procedure SetDetails(const Value: Boolean);
+  public
+    constructor Create;
+    procedure PostUpdates;
+    property APIPlain: Boolean read FAPIPlain write SetAPIPlain;
+    property APIdbc: Boolean read FAPIdbc write SetAPIdbc;
+    property APIdbcchached: Boolean read FAPIdbcchached write SetAPIdbcchached;
+    property APIdataset: Boolean read FAPIdataset write SetAPIdataset;
+    property APImidas: Boolean read FAPImidas write SetAPImidas;
+    property APIoldzeos: Boolean read FAPIoldzeos write SetAPIoldzeos;
+    property APIbde: Boolean read FAPIbde write SetAPIbde;
+    property APIado: Boolean read FAPIado write SetAPIado;
+    property APIdbx: Boolean read FAPIdbx write SetAPIdbx;
+    property APIdbxc: Boolean read FAPIdbxc write SetAPIdbxc;
+    property APIibx: Boolean read FAPIibx write SetAPIibx;
+    property TestConncet: Boolean read FTestConncet write SetTestConncet;
+    property TestInsert: Boolean read FTestInsert write SetTestInsert;
+    property TestOpen: Boolean read FTestOpen write SetTestOpen;
+    property TestFetch: Boolean read FTestFetch write SetTestFetch;
+    property TestSort: Boolean read FTestSort write SetTestSort;
+    property TestFilter: Boolean read FTestFilter write SetTestFilter;
+    property TestUpdate: Boolean read FTestUpdate write SetTestUpdate;
+    property TestDelete: Boolean read FTestDelete write SetTestDelete;
+    property TestDirectUpdate: Boolean read FTestDirectUpdate write SetTestDirectUpdate;
+    property BaseAPIPlain: Boolean read FBaseAPIPlain write SetBaseAPIPlain;
+    property BaseAPIdbc: Boolean read FBaseAPIdbc write SetBaseAPIdbc;
+    property BaseAPIdbcchached: Boolean read FBaseAPIdbcchached write SetBaseAPIdbcchached;
+    property BaseAPIdataset: Boolean read FBaseAPIdataset write SetBaseAPIdataset;
+    property ResultOutput: String read FResultOutput write SetResultOutput;
+    property RepeatCount: Integer read FRepeat write SetRepeat;
+    property Records: Integer read FCount write SetCount;
+    property Details: Boolean read FDetails write SetDetails;
+    property Changed: Boolean read FHasChanged;
+  end;
+
   { TfrmMain }
   TfrmMain = class(TForm)
     cbgTests: TCheckGroup;
@@ -171,10 +264,16 @@ type
     cbCreateDB: TCheckBox;
     cbAnsiCP: TComboBox;
     cbUnicodeCP: TComboBox;
+    cbDetails: TCheckBox;
+    CheckGroup1: TCheckGroup;
+    CheckGroup2: TCheckGroup;
+    CheckGroup3: TCheckGroup;
     eDatabase: TEdit;
     eDelimiter: TEdit;
     eDelimiterType: TEdit;
     eBuildScripts: TEdit;
+    eRecords: TEdit;
+    eRepeat: TEdit;
     ePort: TEdit;
     eDropScripts: TEdit;
     eLibLocation: TEdit;
@@ -183,10 +282,14 @@ type
     eHost: TEdit;
     GroupBox1: TGroupBox;
     GroupBox2: TGroupBox;
+    GroupBox3: TGroupBox;
     Label1: TLabel;
     Label10: TLabel;
     Label11: TLabel;
     Label12: TLabel;
+    Label13: TLabel;
+    Label14: TLabel;
+    lbDrivers: TListBox;
     Properties: TLabel;
     Label2: TLabel;
     Label3: TLabel;
@@ -196,7 +299,6 @@ type
     Label7: TLabel;
     Label8: TLabel;
     Label9: TLabel;
-    lbDrivers: TListBox;
     MainMenu1: TMainMenu;
     mProperties: TMemo;
     MenuItem1: TMenuItem;
@@ -208,6 +310,7 @@ type
     MenuItem9: TMenuItem;
     OpenDialog1: TOpenDialog;
     PageControl1: TPageControl;
+    RadioGroup1: TRadioGroup;
     tsPerformance: TTabSheet;
     tsMain: TTabSheet;
     ZConnection1: TZConnection;
@@ -230,6 +333,8 @@ type
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure lbDriversSelectionChange(Sender: TObject; User: boolean);
+    procedure miNewClick(Sender: TObject);
+    procedure miOpenClick(Sender: TObject);
     procedure miPostClick(Sender: TObject);
     procedure mPropertiesEditingDone(Sender: TObject);
   private
@@ -561,6 +666,184 @@ begin
   FCreateDatabase := Value;
 end;
 
+constructor TPerformanceConfig.Create;
+begin
+
+end;
+
+procedure TPerformanceConfig.PostUpdates;
+begin
+
+end;
+
+procedure TPerformanceConfig.SetAPIPlain(const Value: Boolean);
+begin
+  FHasChanged := FAPIPlain <> Value;
+  FAPIPlain := Value;
+end;
+
+procedure TPerformanceConfig.SetAPIdbc(const Value: Boolean);
+begin
+  FHasChanged := FAPIdbc <> Value;
+  FAPIdbc := Value;
+end;
+
+procedure TPerformanceConfig.SetAPIdbcchached(const Value: Boolean);
+begin
+  FHasChanged := FAPIdbcchached <> Value;
+  FAPIdbcchached := Value;
+end;
+
+procedure TPerformanceConfig.SetAPIdataset(const Value: Boolean);
+begin
+  FHasChanged := FAPIdataset <> Value;
+  FAPIdataset := Value;
+end;
+
+procedure TPerformanceConfig.SetAPImidas(const Value: Boolean);
+begin
+  FHasChanged := FAPImidas <> Value;
+  FAPImidas := Value;
+end;
+
+procedure TPerformanceConfig.SetAPIoldzeos(const Value: Boolean);
+begin
+  FHasChanged := FAPIoldzeos <> Value;
+  FAPIoldzeos := Value;
+end;
+
+procedure TPerformanceConfig.SetAPIbde(const Value: Boolean);
+begin
+  FHasChanged := FAPIbde <> Value;
+  FAPIbde := Value;
+end;
+
+procedure TPerformanceConfig.SetAPIado(const Value: Boolean);
+begin
+  FHasChanged := FAPIado <> Value;
+  FAPIado := Value;
+end;
+
+procedure TPerformanceConfig.SetAPIdbx(const Value: Boolean);
+begin
+  FHasChanged := FAPIdbx <> Value;
+  FAPIdbx := Value;
+end;
+
+procedure TPerformanceConfig.SetAPIdbxc(const Value: Boolean);
+begin
+  FHasChanged := FAPIdbxc <> Value;
+  FAPIdbxc := Value;
+end;
+
+procedure TPerformanceConfig.SetAPIibx(const Value: Boolean);
+begin
+  FHasChanged := FAPIibx <> Value;
+  FAPIibx := Value;
+end;
+
+procedure TPerformanceConfig.SetTestConncet(const Value: Boolean);
+begin
+  FHasChanged := FTestConncet <> Value;
+  FTestConncet := Value;
+end;
+
+procedure TPerformanceConfig.SetTestInsert(const Value: Boolean);
+begin
+  FHasChanged := FTestInsert <> Value;
+  FTestInsert := Value;
+end;
+
+procedure TPerformanceConfig.SetTestOpen(const Value: Boolean);
+begin
+  FHasChanged := FTestOpen <> Value;
+  FTestOpen := Value;
+end;
+
+procedure TPerformanceConfig.SetTestFetch(const Value: Boolean);
+begin
+  FHasChanged := FTestFetch <> Value;
+  FTestFetch := Value;
+end;
+
+procedure TPerformanceConfig.SetTestSort(const Value: Boolean);
+begin
+  FHasChanged := FTestSort <> Value;
+  FTestSort := Value;
+end;
+
+procedure TPerformanceConfig.SetTestFilter(const Value: Boolean);
+begin
+  FHasChanged := FTestFilter <> Value;
+  FTestFilter := Value;
+end;
+
+procedure TPerformanceConfig.SetTestUpdate(const Value: Boolean);
+begin
+  FHasChanged := FTestUpdate <> Value;
+  FTestUpdate := Value;
+end;
+
+procedure TPerformanceConfig.SetTestDelete(const Value: Boolean);
+begin
+  FHasChanged := FTestDelete <> Value;
+  FTestDelete := Value;
+end;
+
+procedure TPerformanceConfig.SetTestDirectUpdate(const Value: Boolean);
+begin
+  FHasChanged := FTestDirectUpdate <> Value;
+  FTestDirectUpdate := Value;
+end;
+
+procedure TPerformanceConfig.SetBaseAPIPlain(const Value: Boolean);
+begin
+  FHasChanged := FBaseAPIPlain <> Value;
+  FBaseAPIPlain := Value;
+end;
+
+procedure TPerformanceConfig.SetBaseAPIdbc(const Value: Boolean);
+begin
+  FHasChanged := FBaseAPIdbc <> Value;
+  FBaseAPIdbc := Value;
+end;
+
+procedure TPerformanceConfig.SetBaseAPIdbcchached(const Value: Boolean);
+begin
+  FHasChanged := FBaseAPIdbc <> Value;
+  FBaseAPIdbc := Value;
+end;
+
+procedure TPerformanceConfig.SetBaseAPIdataset(const Value: Boolean);
+begin
+  FHasChanged := FBaseAPIdataset <> Value;
+  FBaseAPIdataset := Value;
+end;
+
+procedure TPerformanceConfig.SetResultOutput(const Value: String);
+begin
+  FHasChanged := FResultOutput <> Value;
+  FResultOutput := Value;
+end;
+
+procedure TPerformanceConfig.SetRepeat(const Value: Integer);
+begin
+  FHasChanged := FRepeat <> Value;
+  FRepeat := Value;
+end;
+
+procedure TPerformanceConfig.SetCount(const Value: Integer);
+begin
+  FHasChanged := FCount <> Value;
+  FCount := Value;
+end;
+
+procedure TPerformanceConfig.SetDetails(const Value: Boolean);
+begin
+  FHasChanged := FDetails <> Value;
+  FDetails := Value;
+end;
+
 { TfrmMain }
 procedure TfrmMain.FormCreate(Sender: TObject);
 var
@@ -620,6 +903,50 @@ begin
     eDropScripts.Text := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).DropScripts;
     mProperties.Text := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Properties;
   end;
+end;
+
+procedure TfrmMain.miNewClick(Sender: TObject);
+var
+  I: Integer;
+  FChanged: Boolean;
+  procedure OpenIniFile;
+  begin
+    if OpenDialog1.Execute then
+    begin
+      Self.lbDrivers.Clear;
+      if OpenDialog1.Filename <> '' then
+      begin
+        if Assigned(Ini) then
+          Ini.Free;
+        Ini := TIniFile.Create(OpenDialog1.Filename);
+      end;
+    end;
+  end;
+begin
+  FChanged := False;
+  for i := 0 to lbDrivers.items.Count -1 do
+    if TPlainConfig(lbDrivers.items.Objects[i]).Changed then
+    begin
+      FChanged := True;
+      Break;
+    end;
+  if FChanged then
+    case MessageDlg('Settings have been changed. Post updates?', mtConfirmation,
+      [mbYes, mbNo, mbAbort], 0) of
+      mrYes:
+        begin
+          miPostClick(Sender);
+          OpenIniFile;
+        end;
+      mrNo: OpenIniFile;
+      mrAbort:;
+    end
+  else OpenIniFile;
+end;
+
+procedure TfrmMain.miOpenClick(Sender: TObject);
+begin
+  miNewClick(Sender);
 end;
 
 procedure TfrmMain.miPostClick(Sender: TObject);
