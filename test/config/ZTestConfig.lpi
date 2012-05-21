@@ -77,7 +77,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="19"/>
-        <UsageCount Value="37"/>
+        <UsageCount Value="38"/>
         <Loaded Value="True"/>
       </Unit0>
       <Unit1>
@@ -86,33 +86,33 @@
         <ComponentName Value="frmMain"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="FormMain"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="645"/>
-        <CursorPos X="48" Y="652"/>
-        <UsageCount Value="37"/>
+        <TopLine Value="353"/>
+        <CursorPos X="33" Y="399"/>
+        <UsageCount Value="38"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit1>
       <Unit2>
         <Filename Value="..\..\src\dbc\ZDbcIntfs.pas"/>
         <UnitName Value="ZDbcIntfs"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="11"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="385"/>
-        <CursorPos X="8" Y="408"/>
-        <UsageCount Value="19"/>
+        <TopLine Value="454"/>
+        <CursorPos X="32" Y="482"/>
+        <UsageCount Value="20"/>
         <Loaded Value="True"/>
       </Unit2>
       <Unit3>
         <Filename Value="..\..\src\core\ZVariant.pas"/>
         <UnitName Value="ZVariant"/>
-        <EditorIndex Value="14"/>
+        <EditorIndex Value="13"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1297"/>
         <CursorPos X="30" Y="1320"/>
-        <UsageCount Value="19"/>
+        <UsageCount Value="20"/>
         <Loaded Value="True"/>
       </Unit3>
       <Unit4>
@@ -130,7 +130,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="534"/>
         <CursorPos X="45" Y="557"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="11"/>
         <Loaded Value="True"/>
       </Unit5>
       <Unit6>
@@ -140,18 +140,16 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="36" Y="11"/>
-        <UsageCount Value="19"/>
+        <UsageCount Value="20"/>
         <Loaded Value="True"/>
       </Unit6>
       <Unit7>
         <Filename Value="..\framework\ZTestConfig.pas"/>
         <UnitName Value="ZTestConfig"/>
-        <EditorIndex Value="12"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="100"/>
-        <CursorPos X="17" Y="100"/>
+        <TopLine Value="261"/>
+        <CursorPos X="13" Y="284"/>
         <UsageCount Value="18"/>
-        <Loaded Value="True"/>
       </Unit7>
       <Unit8>
         <Filename Value="..\..\src\core\ZURL.pas"/>
@@ -160,7 +158,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="220"/>
         <CursorPos X="1" Y="234"/>
-        <UsageCount Value="18"/>
+        <UsageCount Value="19"/>
         <Loaded Value="True"/>
       </Unit8>
       <Unit9>
@@ -174,11 +172,11 @@
       <Unit10>
         <Filename Value="..\..\src\core\ZSysUtils.pas"/>
         <UnitName Value="ZSysUtils"/>
-        <EditorIndex Value="13"/>
+        <EditorIndex Value="12"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="201"/>
-        <CursorPos X="27" Y="221"/>
-        <UsageCount Value="16"/>
+        <TopLine Value="1094"/>
+        <CursorPos X="37" Y="1115"/>
+        <UsageCount Value="17"/>
         <Loaded Value="True"/>
       </Unit10>
       <Unit11>
@@ -187,7 +185,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="529"/>
         <CursorPos X="1" Y="561"/>
-        <UsageCount Value="15"/>
+        <UsageCount Value="16"/>
         <Loaded Value="True"/>
       </Unit11>
       <Unit12>
@@ -196,7 +194,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1662"/>
         <CursorPos X="1" Y="1685"/>
-        <UsageCount Value="13"/>
+        <UsageCount Value="14"/>
         <Loaded Value="True"/>
       </Unit12>
       <Unit13>
@@ -205,7 +203,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="5219"/>
         <CursorPos X="1" Y="5242"/>
-        <UsageCount Value="13"/>
+        <UsageCount Value="14"/>
         <Loaded Value="True"/>
       </Unit13>
       <Unit14>
@@ -215,7 +213,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="94"/>
         <CursorPos X="1" Y="121"/>
-        <UsageCount Value="13"/>
+        <UsageCount Value="14"/>
         <Loaded Value="True"/>
       </Unit14>
       <Unit15>
@@ -224,7 +222,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="2573"/>
         <CursorPos X="1" Y="2605"/>
-        <UsageCount Value="13"/>
+        <UsageCount Value="14"/>
         <Loaded Value="True"/>
       </Unit15>
       <Unit16>
@@ -234,130 +232,130 @@
         <WindowIndex Value="0"/>
         <TopLine Value="386"/>
         <CursorPos X="1" Y="409"/>
-        <UsageCount Value="13"/>
+        <UsageCount Value="14"/>
         <Loaded Value="True"/>
       </Unit16>
     </Units>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
-        <Filename Value="Units\formmain.pas"/>
-        <Caret Line="669" Column="1" TopLine="653"/>
+        <Filename Value="..\..\src\core\ZSysUtils.pas"/>
+        <Caret Line="771" Column="1" TopLine="746"/>
       </Position1>
       <Position2>
         <Filename Value="Units\formmain.pas"/>
-        <Caret Line="670" Column="46" TopLine="653"/>
+        <Caret Line="313" Column="1" TopLine="275"/>
       </Position2>
       <Position3>
         <Filename Value="Units\formmain.pas"/>
-        <Caret Line="691" Column="1" TopLine="653"/>
+        <Caret Line="252" Column="1" TopLine="229"/>
       </Position3>
       <Position4>
         <Filename Value="Units\formmain.pas"/>
-        <Caret Line="700" Column="1" TopLine="677"/>
+        <Caret Line="253" Column="1" TopLine="229"/>
       </Position4>
       <Position5>
         <Filename Value="Units\formmain.pas"/>
-        <Caret Line="691" Column="1" TopLine="677"/>
+        <Caret Line="254" Column="1" TopLine="229"/>
       </Position5>
       <Position6>
         <Filename Value="Units\formmain.pas"/>
-        <Caret Line="668" Column="1" TopLine="645"/>
+        <Caret Line="256" Column="1" TopLine="229"/>
       </Position6>
       <Position7>
         <Filename Value="Units\formmain.pas"/>
-        <Caret Line="669" Column="1" TopLine="645"/>
+        <Caret Line="257" Column="1" TopLine="229"/>
       </Position7>
       <Position8>
-        <Filename Value="Units\formmain.pas"/>
-        <Caret Line="670" Column="26" TopLine="645"/>
+        <Filename Value="..\..\src\core\ZSysUtils.pas"/>
+        <Caret Line="769" Column="1" TopLine="746"/>
       </Position8>
       <Position9>
-        <Filename Value="Units\formmain.pas"/>
-        <Caret Line="691" Column="1" TopLine="652"/>
+        <Filename Value="..\..\src\core\ZSysUtils.pas"/>
+        <Caret Line="770" Column="1" TopLine="746"/>
       </Position9>
       <Position10>
-        <Filename Value="Units\formmain.pas"/>
-        <Caret Line="668" Column="1" TopLine="652"/>
+        <Filename Value="..\..\src\core\ZSysUtils.pas"/>
+        <Caret Line="771" Column="1" TopLine="746"/>
       </Position10>
       <Position11>
-        <Filename Value="Units\formmain.pas"/>
-        <Caret Line="669" Column="1" TopLine="652"/>
+        <Filename Value="..\..\src\core\ZSysUtils.pas"/>
+        <Caret Line="752" Column="1" TopLine="744"/>
       </Position11>
       <Position12>
-        <Filename Value="Units\formmain.pas"/>
-        <Caret Line="670" Column="1" TopLine="652"/>
+        <Filename Value="..\..\src\core\ZSysUtils.pas"/>
+        <Caret Line="753" Column="1" TopLine="744"/>
       </Position12>
       <Position13>
-        <Filename Value="Units\formmain.pas"/>
-        <Caret Line="680" Column="17" TopLine="654"/>
+        <Filename Value="..\..\src\core\ZSysUtils.pas"/>
+        <Caret Line="755" Column="1" TopLine="744"/>
       </Position13>
       <Position14>
-        <Filename Value="Units\formmain.pas"/>
-        <Caret Line="626" Column="3" TopLine="610"/>
+        <Filename Value="..\..\src\core\ZSysUtils.pas"/>
+        <Caret Line="756" Column="1" TopLine="744"/>
       </Position14>
       <Position15>
-        <Filename Value="Units\formmain.pas"/>
-        <Caret Line="618" Column="1" TopLine="610"/>
+        <Filename Value="..\..\src\core\ZSysUtils.pas"/>
+        <Caret Line="758" Column="1" TopLine="744"/>
       </Position15>
       <Position16>
         <Filename Value="Units\formmain.pas"/>
-        <Caret Line="619" Column="1" TopLine="610"/>
+        <Caret Line="313" Column="1" TopLine="277"/>
       </Position16>
       <Position17>
         <Filename Value="Units\formmain.pas"/>
-        <Caret Line="622" Column="1" TopLine="610"/>
+        <Caret Line="315" Column="1" TopLine="277"/>
       </Position17>
       <Position18>
         <Filename Value="Units\formmain.pas"/>
-        <Caret Line="616" Column="26" TopLine="610"/>
+        <Caret Line="317" Column="1" TopLine="278"/>
       </Position18>
       <Position19>
         <Filename Value="Units\formmain.pas"/>
-        <Caret Line="618" Column="1" TopLine="610"/>
+        <Caret Line="319" Column="1" TopLine="280"/>
       </Position19>
       <Position20>
         <Filename Value="Units\formmain.pas"/>
-        <Caret Line="619" Column="1" TopLine="610"/>
+        <Caret Line="322" Column="58" TopLine="282"/>
       </Position20>
       <Position21>
         <Filename Value="Units\formmain.pas"/>
-        <Caret Line="622" Column="1" TopLine="610"/>
+        <Caret Line="321" Column="1" TopLine="282"/>
       </Position21>
       <Position22>
         <Filename Value="Units\formmain.pas"/>
-        <Caret Line="623" Column="1" TopLine="610"/>
+        <Caret Line="322" Column="1" TopLine="283"/>
       </Position22>
       <Position23>
         <Filename Value="Units\formmain.pas"/>
-        <Caret Line="631" Column="1" TopLine="610"/>
+        <Caret Line="323" Column="1" TopLine="284"/>
       </Position23>
       <Position24>
         <Filename Value="Units\formmain.pas"/>
-        <Caret Line="648" Column="1" TopLine="609"/>
+        <Caret Line="317" Column="34" TopLine="286"/>
       </Position24>
       <Position25>
         <Filename Value="Units\formmain.pas"/>
-        <Caret Line="647" Column="45" TopLine="609"/>
+        <Caret Line="722" Column="70" TopLine="720"/>
       </Position25>
       <Position26>
         <Filename Value="Units\formmain.pas"/>
-        <Caret Line="627" Column="28" TopLine="604"/>
+        <Caret Line="160" Column="69" TopLine="137"/>
       </Position26>
       <Position27>
-        <Filename Value="..\..\src\component\ZPropertyEditor.pas"/>
-        <Caret Line="11" Column="36" TopLine="1"/>
+        <Filename Value="Units\formmain.pas"/>
+        <Caret Line="560" Column="1" TopLine="552"/>
       </Position27>
       <Position28>
-        <Filename Value="..\..\src\component\ZPropertyEditor.pas"/>
-        <Caret Line="557" Column="45" TopLine="534"/>
+        <Filename Value="Units\formmain.pas"/>
+        <Caret Line="561" Column="1" TopLine="295"/>
       </Position28>
       <Position29>
-        <Filename Value="..\..\src\dbc\ZDbcIntfs.pas"/>
-        <Caret Line="970" Column="1" TopLine="945"/>
+        <Filename Value="Units\formmain.pas"/>
+        <Caret Line="560" Column="1" TopLine="537"/>
       </Position29>
       <Position30>
-        <Filename Value="..\..\src\dbc\ZDbcIntfs.pas"/>
-        <Caret Line="407" Column="4" TopLine="384"/>
+        <Filename Value="Units\formmain.pas"/>
+        <Caret Line="662" Column="54" TopLine="633"/>
       </Position30>
     </JumpHistory>
   </ProjectOptions>
@@ -372,11 +370,6 @@
       <OtherUnitFiles Value="Units;..\..\src\plain;..\..\src\parsesql;..\..\src\core;..\..\packages\lazarus;..\..\src\dbc;..\..\src\component"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
-    <CodeGeneration>
-      <Optimizations>
-        <OptimizationLevel Value="3"/>
-      </Optimizations>
-    </CodeGeneration>
     <Linking>
       <Options>
         <Win32>
@@ -392,6 +385,12 @@
     </Other>
   </CompilerOptions>
   <Debugging>
+    <BreakPoints Count="1">
+      <Item1>
+        <Source Value="Units\formmain.pas"/>
+        <Line Value="560"/>
+      </Item1>
+    </BreakPoints>
     <Exceptions Count="3">
       <Item1>
         <Name Value="EAbort"/>

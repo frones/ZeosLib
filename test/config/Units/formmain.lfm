@@ -409,6 +409,7 @@ object frmMain: TfrmMain
   end
   object ZConnection1: TZConnection
     UTF8StringsAsWideField = False
+    PreprepareSQL = False
     Properties.Strings = (
       'PreprepareSQL=ON'
     )

@@ -264,7 +264,7 @@ end;
 
 constructor TPlainConfig.Create(const AProtocol: String);
 var
-  SL: TStrings;
+  SL: TStringList;
 begin
   SL := TStringList.Create;
   FProtocol := AProtocol;
@@ -310,14 +310,16 @@ begin
     FAnsiCodePage := ReadProperty(AProtocol, 'ansi.charset', '');
     FPreprepareSQL := StrToBoolEx(ReadProperty(AProtocol, DATABASE_PREPREPARESQL_KEY, 'Yes'));
     FCreateDatabase := StrToBoolEx(ReadProperty(AProtocol, DATABASE_CREATE_KEY, 'No'));
-    PutSplitStringEx(SL, ReadProperty(AProtocol, DATABASE_PROPERTIES_KEY, ''), LIST_DELIMITERS);
+    PutSplitStringEx(SL, ReadProperty(AProtocol, DATABASE_PROPERTIES_KEY, ''), ';');
     {Drop common values}
     if SL.Values[DATABASE_LIBRARY_KEY] <> '' then
-      SL.Values[DATABASE_LIBRARY_KEY] := '';
+      SL.Delete(SL.IndexOfName(DATABASE_LIBRARY_KEY));
     if SL.Values[DATABASE_CODEPAGE_KEY] <> '' then
-      SL.Values[DATABASE_CODEPAGE_KEY] := '';
+      SL.Delete(SL.IndexOfName(DATABASE_CODEPAGE_KEY));
     if SL.Values[DATABASE_CREATE_KEY] <> '' then
-      SL.Values[DATABASE_CREATE_KEY] := '';
+      SL.Delete(SL.IndexOfName(DATABASE_CREATE_KEY));
+    if SL.Values[DATABASE_PREPREPARESQL_KEY] <> '' then
+      SL.Delete(SL.IndexOfName(DATABASE_PREPREPARESQL_KEY));
     FProperties := SL.Text;
   end;
   SL.Free;
@@ -389,7 +391,7 @@ begin
     else
       WriteProperty(FProtocol, DATABASE_CREATE_KEY, 'No');
 
-    AddPropText(DATABASE_PROPERTIES_KEY, StringReplace(FProperties, LineEnding, ';', [rfReplaceAll]));
+    AddPropText('', StringReplace(TrimRight(FProperties), LineEnding, ';', [rfReplaceAll]));
 
     WriteProperty(FProtocol, DATABASE_PROPERTIES_KEY, SProperties);
     FHasChanged := False;
