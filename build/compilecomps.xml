@@ -44,36 +44,36 @@
     </condition>
     <antcall target="delphi9_compile"/>
 
-    <condition property="delphi10.compile">
-      <istrue value="${delphi10.active}"/>
+    <condition property="delphi2005.compile">
+      <istrue value="${delphi2005.active}"/>
     </condition>
-    <antcall target="delphi10_compile"/>
+    <antcall target="delphi2005_compile"/>
 
 
-    <condition property="delphi11.compile">
-      <istrue value="${delphi11.active}"/>
+    <condition property="delphi2007.compile">
+      <istrue value="${delphi2007.active}"/>
     </condition>
-    <antcall target="delphi11_compile"/>
+    <antcall target="delphi2007_compile"/>
 
-    <condition property="delphi12.compile">
-      <istrue value="${delphi12.active}"/>
+    <condition property="delphi2009.compile">
+      <istrue value="${delphi2009.active}"/>
     </condition>
-    <antcall target="delphi12_compile"/>
+    <antcall target="delphi2009_compile"/>
 
-    <condition property="delphi14.compile">
-      <istrue value="${delphi14.active}"/>
+    <condition property="delphi2010.compile">
+      <istrue value="${delphi2010.active}"/>
     </condition>
-    <antcall target="delphi14_compile"/>
+    <antcall target="delphi2010_compile"/>
 
-    <condition property="delphi15.compile">
-      <istrue value="${delphi15.active}"/>
+    <condition property="delphiXE.compile">
+      <istrue value="${delphiXE.active}"/>
     </condition>
-    <antcall target="delphi15_compile"/>
+    <antcall target="delphiXE_compile"/>
 	
-	<condition property="delphi16.compile">
-      <istrue value="${delphi16.active}"/>
+	<condition property="delphiXE2.compile">
+      <istrue value="${delphiXE2.active}"/>
     </condition>
-    <antcall target="delphi16_compile"/>
+    <antcall target="delphiXE2_compile"/>
 
     <condition property="lazarus.compile">
       <istrue value="${lazarus.active}"/>
@@ -100,58 +100,58 @@
     </antcall>
   </target>
   
-  <target name="delphi10_compile" if="delphi10.compile">
-    <property name="bpl.dir" value="${delphi10.bpl.dir}"/>
+  <target name="delphi2005_compile" if="delphi2005.compile">
+    <property name="bpl.dir" value="${delphi2005.bpl.dir}"/>
     <antcall target="delphi_compile">
-      <param name="compile" value="${delphi10.compile}"/>
-      <param name="compiler" value="delphi10"/>
-      <param name="compiler.dir" value="${delphi10.home}"/>
+      <param name="compile" value="${delphi2005.compile}"/>
+      <param name="compiler" value="delphi2005"/>
+      <param name="compiler.dir" value="${delphi2005.home}"/>
     </antcall>
   </target>
   
 
-  <target name="delphi11_compile" if="delphi11.compile">
-    <property name="bpl.dir" value="${delphi11.bpl.dir}"/>
+  <target name="delphi2007_compile" if="delphi2007.compile">
+    <property name="bpl.dir" value="${delphi2007.bpl.dir}"/>
     <antcall target="delphi_compile">
-      <param name="compile" value="${delphi11.compile}"/>
-      <param name="compiler" value="delphi11"/>
-      <param name="compiler.dir" value="${delphi11.home}"/>
+      <param name="compile" value="${delphi2007.compile}"/>
+      <param name="compiler" value="delphi2007"/>
+      <param name="compiler.dir" value="${delphi2007.home}"/>
     </antcall>
   </target>
   
-  <target name="delphi12_compile" if="delphi12.compile">
-    <property name="bpl.dir" value="${delphi12.bpl.dir}"/>
+  <target name="delphi2009_compile" if="delphi2009.compile">
+    <property name="bpl.dir" value="${delphi2009.bpl.dir}"/>
     <antcall target="delphi_compile">
-      <param name="compile" value="${delphi12.compile}"/>
-      <param name="compiler" value="delphi12"/>
-      <param name="compiler.dir" value="${delphi12.home}"/>
+      <param name="compile" value="${delphi2009.compile}"/>
+      <param name="compiler" value="delphi2009"/>
+      <param name="compiler.dir" value="${delphi2009.home}"/>
     </antcall>
   </target>
 
-  <target name="delphi14_compile" if="delphi14.compile">
-    <property name="bpl.dir" value="${delphi14.bpl.dir}"/>
+  <target name="delphi2010_compile" if="delphi2010.compile">
+    <property name="bpl.dir" value="${delphi2010.bpl.dir}"/>
     <antcall target="delphi_compile">
-      <param name="compile" value="${delphi14.compile}"/>
-      <param name="compiler" value="delphi14"/>
-      <param name="compiler.dir" value="${delphi14.home}"/>
+      <param name="compile" value="${delphi2010.compile}"/>
+      <param name="compiler" value="delphi2010"/>
+      <param name="compiler.dir" value="${delphi2010.home}"/>
     </antcall>
   </target>
 
-  <target name="delphi15_compile" if="delphi15.compile">
-    <property name="bpl.dir" value="${delphi15.bpl.dir}"/>
+  <target name="delphiXE_compile" if="delphiXE.compile">
+    <property name="bpl.dir" value="${delphiXE.bpl.dir}"/>
     <antcall target="delphi_compile">
-      <param name="compile" value="${delphi15.compile}"/>
-      <param name="compiler" value="delphi15"/>
-      <param name="compiler.dir" value="${delphi15.home}"/>
+      <param name="compile" value="${delphiXE.compile}"/>
+      <param name="compiler" value="delphiXE"/>
+      <param name="compiler.dir" value="${delphiXE.home}"/>
     </antcall>
   </target>
   
-  <target name="delphi16_compile" if="delphi16.compile">
-    <property name="bpl.dir" value="${delphi16.bpl.dir}"/>
+  <target name="delphiXE2_compile" if="delphiXE2.compile">
+    <property name="bpl.dir" value="${delphiXE2.bpl.dir}"/>
     <antcall target="delphi_compile">
-      <param name="compile" value="${delphi16.compile}"/>
-      <param name="compiler" value="delphi16"/>
-      <param name="compiler.dir" value="${delphi16.home}"/>
+      <param name="compile" value="${delphiXE2.compile}"/>
+      <param name="compiler" value="delphiXE2"/>
+      <param name="compiler.dir" value="${delphiXE2.home}"/>
     </antcall>
   </target>
   
