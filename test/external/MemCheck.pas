@@ -1431,7 +1431,7 @@ begin
 		Result := OldMemoryManager.ReallocMem(P, Size);
 end;
 
-function HeapCheckingReallocMem(P: Pointer; {$IFDEF DELPHI16_UP}NativeInt{$ELSE}Integer{$ENDIF}): Pointer;
+function HeapCheckingReallocMem(P: Pointer; Size: {$IFDEF DELPHI16_UP}NativeInt{$ELSE}Integer{$ENDIF}): Pointer;
 begin
 	if HeapStatusesDifferent(LastHeapStatus, GetHeapStatus) then
 		raise HeapCorrupted;
