@@ -563,8 +563,11 @@ begin
               Connection.GetConnectionHandle,
               FErrorHandle, PPOCIDescriptor(SQLVarHolder.Data)^,
               Year, Month, Day);
-//            CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, '');
-            if Status = OCI_SUCCESS then
+            // attention : this code handles all timestamps on 01/01/0001 as a pure time value
+            // reason : oracle doesn't have a pure time datatype so all time comparisons compare
+            //          TDateTime values on 30 Dec 1899 against oracle timestamps on 01 januari 0001 (negative TDateTime)
+            if (Status = OCI_SUCCESS) and
+               ((Year <> 1) or (Month <> 1) or (Day <> 1)) then
               Result := EncodeDate(Year, Month, Day)
             else
               Result := 0;
@@ -577,21 +580,12 @@ begin
               Connection.GetConnectionHandle,
               FErrorHandle, PPOCIDescriptor(SQLVarHolder.Data)^,
               Hour, Minute, Second, Millis);
-//            CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, '');
             if Status = OCI_SUCCESS then
             begin
               Millis := Round(Millis / 1000000);
               if Millis >= 1000 then Millis := 999;
-              if Result >= 0 then
-              begin
                 Result := Result + EncodeTime(
                   Hour, Minute, Second, Millis);
-              end
-              else
-              begin
-                Result := Result - EncodeTime(
-                  Hour, Minute, Second, Millis);
-              end;
             end;
           end;
         end;
