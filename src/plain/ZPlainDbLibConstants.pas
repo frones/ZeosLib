@@ -25,7 +25,7 @@ const
 
 { Bulk Copy Definitions (bcp) }
   DB_IN	                = 1;  { Transfer from client to server }
-  DB_OUT	        = 2;  { Transfer from server to client }
+  DB_OUT	              = 2;  { Transfer from server to client }
 
   BCPMAXERRS            = 1;  { bcp_control parameter }
   BCPFIRST              = 2;  { bcp_control parameter }
@@ -33,6 +33,14 @@ const
   BCPBATCH              = 4;  { bcp_control parameter }
   BCPKEEPNULLS          = 5;  { bcp_control parameter }
   BCPABORT              = 6;  { bcp_control parameter }
+  BCPKEEPIDENTITY	      = 8;  { bcp_control parameter }
+
+  BCPLABELED            = 5;  { bcp_control parameter }
+  BCPHINTS              = 6;  { bcp_control parameter }
+
+  DBCMDNONE             = 0;  { bcp_control parameter }
+  DBCMDPEND             = 1;  { bcp_control parameter }
+  DBCMDSENT             = 2;  { bcp_control parameter }
 
   TINYBIND              = 1;
   SMALLBIND             = 2;
@@ -84,57 +92,40 @@ const
   DBVERSION_72 = 6;
   DBVERSION_73 = 7;
 
-{ DBTDS_xxx are returned by DBTDS() }
-  DBTDS_UNKNOWN= 0;
-  DBTDS_42     = 4;  // SQL Server 4.2
-  DBTDS_50     = 7;	 // Sybase SQL Server 5.0; use this for connecting to Sybase (ASA or ASE)
-  DBTDS_70     = 8;	 // Microsoft SQL Server 7.0
-  DBTDS_71     = 9;  // Microsoft SQL Server 2000
-  DBTDS_72     = 10; // Microsoft SQL Server 2005
-  DBTDS_73     = 11; // Microsoft SQL Server 2008
+{ TDS_DBVERSION_xxx are used with dbsetversion() }
+  TDSDBVERSION_UNKNOWN  = 0;
+  TDSDBVERSION_46       = 1;
+  TDSDBVERSION_100      = 2; // Sybase TDS 5.0
+  TDSDBVERSION_42       = 3; // This can be used for old Microsoft and Sybase servers
+  TDSDBVERSION_70       = 4;
+  TDSDBVERSION_71       = 5;
+  TDSDBVERSION_80       = TDSDBVERSION_71;
+  TDSDBVERSION_72       = 6;
+  TDSDBVERSION_73       = 7;
 
-  //from FreeTDS.sybdb.h
-  DBSETHOST     = 1;
-  DBSETUSER     = 2;
-  DBSETPWD      = 3;
-  DBSETHID      = 4; //not implemented
-  DBSETAPP      = 5;
-  DBSETBCP      = 6;
-  DBSETNATLANG  = 7;
-  DBSETNOSHORT  = 8; //not implemented
-  DBSETHIER     = 9; //not implemented
-  DBSETCHARSET  = 10;
-  DBSETPACKET   = 11;
-  DBSETENCRYPT  = 12;
-  DBSETLABELED  = 13;
-  DBSETDBNAME   = 14;
+{ these two are defined by Microsoft for dbsetlversion() }
+  DBVER42 	            = DBVERSION_42;
+  DBVER60 	            = DBVERSION_70;	{ our best approximation }
 
-  //These two are defined by Microsoft for dbsetlversion():
-  DBVER42=  DBVERSION_42;
-  DBVER60=  DBVERSION_71;
-  DBSET_LOGINTIME=10;
-  DBSETFALLBACK=12;
+(**
+ * DBTDS_xxx are returned by DBTDS()
+ * The integer values of the constants are poorly chosen.
+ *)
+  DBTDS_UNKNOWN           = 0;
+  DBTDS_2_0               = 1;	{ pre 4.0 SQL Server }
+  DBTDS_3_4               = 2;	{ Microsoft SQL Server (3.0) }
+  DBTDS_4_0               = 3;	{ 4.0 SQL Server }
+  DBTDS_4_2               = 4;	{ 4.2 SQL Server }
+  DBTDS_4_6               = 5;	{ 2.0 OpenServer and 4.6 SQL Server. }
+  DBTDS_4_9_5             = 6;	{ 4.9.5 (NCR) SQL Server }
+  DBTDS_5_0               = 7;	{ 5.0 SQL Server }
+  DBTDS_7_0               = 8;	{ Microsoft SQL Server 7.0 }
+  DBTDS_8_0               = 9;	{ Microsoft SQL Server 2000 }
+  DBTDS_9_0               = 10;	{ Microsoft SQL Server 2005 }
+  DBTDS_7_1               = 9;	{ Microsoft SQL Server 2000 }
+  DBTDS_7_2               = 10;	{ Microsoft SQL Server 2005 }
+  DBTDS_7_3               = 11;	{ Microsoft SQL Server 2008 }
 
-{ dboptions }
-  DBBUFFER              = 0;
-  DBOFFSET              = 1;
-  DBROWCOUNT            = 2;
-  DBSTAT                = 3;
-  DBTEXTLIMIT           = 7;
-  DBTEXTSIZE            = 17;
-  DBARITHABORT          = 6;
-  DBARITHIGNORE         = 7;
-  DBNOAUTOFREE          = 15;
-  DBNOCOUNT             = 9;
-  DBNOEXEC              = 10;
-  DBPARSEONLY           = 11;
-  DBSHOWPLAN            = 12;
-  DBSTORPROCID		      = 13;
-  DBANSITOOEM		        = 14;
-  DBOEMTOANSI	          = 15;
-  DBCLIENTCURSORS       = 16;
-  DBSET_TIME            = 17;
-  DBQUOTEDIDENT         = 35;
 
 { Data Type Tokens }
   SQLVOID               = $1f;
@@ -162,8 +153,6 @@ const
   SQLNUMERIC            = $6c;
 
   //from tds.h:
-  SYBNTEXT=$63;
-  SYBINT8=$7F;
   SYBUNIQUE=$24;
   //XSYBVARCHAR=$A7;
   //XSYBNVARCHAR=$E7;
@@ -499,7 +488,7 @@ const
   NE_E_INVALIDCONN      = 14;  { Invalid connection. }
   NE_E_NETDATAERR       = 15;  { Error reading or writing network data. }
   NE_E_TOOMANYFILES     = 16;  { Too many open file handles. }
-  NE_E_CANTCONNECT	= 17;  { SQL Server does not exist or access denied. }
+  NE_E_CANTCONNECT	    = 17;  { SQL Server does not exist or access denied. }
 
   NE_MAX_NETERROR       = 17;
 
@@ -513,6 +502,52 @@ const
   INVALID_UROWNUM       = Cardinal(-1);
 
 
+{ copied from tds.h }
+//enum
+	SYBCHAR               = $2F;
+	SYBVARCHAR            = $27;
+	SYBINTN               = $26;
+	SYBINT1               = $30;
+	SYBINT2               = $34;
+	SYBINT4               = $38;
+	SYBINT8               = $7F;
+	SYBFLT8               = $3E;
+	SYBDATETIME           = $3D;
+	SYBBIT                = $32;
+	SYBBITN               = $68;
+	SYBTEXT               = $23;
+	SYBNTEXT              = $63;
+	SYBIMAGE              = $22;
+	SYBMONEY4             = $7A;
+	SYBMONEY              = $3C;
+	SYBDATETIME4          = $3A;
+	SYBREAL               = $3B;
+	SYBBINARY             = $2D;
+	SYBVOID               = $1F;
+	SYBVARBINARY          = $25;
+	SYBNUMERIC            = $6C;
+	SYBDECIMAL            = $6A;
+	SYBFLTN               = $6D;
+	SYBMONEYN             = $6E;
+	SYBDATETIMN           = $6F;
+	SYBNVARCHAR           = $67;
+
+  SYBAOPCNT             = $4b;
+  SYBAOPCNTU            = $4c;
+  SYBAOPSUM             = $4d;
+  SYBAOPSUMU            = $4e;
+  SYBAOPAVG             = $4f;
+  SYBAOPAVGU            = $50;
+  SYBAOPMIN             = $51;
+  SYBAOPMAX             = $52;
+
+{ mssql2k compute operator }
+  SYBAOPCNT_BIG		      = $09;
+  SYBAOPSTDEV		        = $30;
+  SYBAOPSTDEVP		      = $31;
+  SYBAOPVAR		          = $32;
+  SYBAOPVARP		        = $33;
+  SYBAOPCHECKSUM_AGG	  = $72;
   {****************** Plain API Types definition *****************}
 type
 { DBPROCESS, LOGINREC and DBCURSOR }
@@ -520,12 +555,11 @@ type
   PLOGINREC             = Pointer;
   PDBCURSOR             = Pointer;
   PDBHANDLE             = Pointer;
-
+  DBXLATE               = Pointer;
+  DBSORTORDER           = Pointer;
+  DBLOGINFO             = Pointer;
+  DBVOIDPTR             = PPointer;
 type
-  RETCODE               = Integer;
-  PRETCODE              = ^RETCODE;
-  STATUS                = Integer;
-
 { DB-Library datatypes }
   DBBOOL                = Byte;
   DBCHAR                = AnsiChar;
@@ -543,6 +577,16 @@ type
   DBMONEY4              = LongInt;
   PDBMONEY4             = ^DBMONEY4;
 
+  RETCODE               = Integer;
+  PRETCODE              = ^RETCODE;
+  STATUS                = Integer;
+
+(*typedef int (*INTFUNCPTR) (void *, ...);
+typedef int (*DBWAITFUNC) (void);
+typedef DBWAITFUNC(*DB_DBBUSY_FUNC) (void *dbproc);
+typedef void (*DB_DBIDLE_FUNC) (DBWAITFUNC dfunc, void *dbproc);
+typedef int (*DB_DBCHKINTR_FUNC) (void *dbproc);
+typedef int (*DB_DBHNDLINTR_FUNC) (void *dbproc); *)
   DBREAL                = DBFLT4;
   DBUBOOL               = Cardinal;
 
@@ -555,60 +599,22 @@ type
   {$IFDEF FPC}
     {$PACKRECORDS C}
   {$ENDIF}
-  DBDATETIME = packed record
-    dtdays:	DBINT;          // Days since Jan 1, 1900
-    dttime:	ULONG;       // 300ths of a second since midnight, 25920000 unit is 1 day
-  end;
-  PDBDATETIME = ^DBDATETIME;
-
-{ DBDATEREC structure used by dbdatecrack }
-  DBDATEREC = packed record
-    case boolean of
-    false:(
-      oldyear:        DBINT; { 1753 - 9999 }
-      oldmonth:       DBINT; { 1 - 4 }
-      oldday:         DBINT; { 1 - 12 }
-      olddayofyear:   DBINT; { 1 - 366 (in sybdb.h dayofyear and day are changed around!) }
-      oldweekday:     DBINT; { 1 - 7  (Mon - Sun) }
-      oldhour:        DBINT; { 0 - 23 }
-      oldminute:      DBINT; { 0 - 59 }
-      oldsecond:      DBINT; { 0 - 59 }
-      oldmillisecond: DBINT; { 0 - 999 }
-      oldtzone:       DBINT; { 0 - 127 (Sybase only!) }
-    );
-    true:(
-      year:           DBINT; { 1753 - 9999 }
-      quarter:        DBINT; { 1 - 4 }
-      month:          DBINT; { 1 - 12 }
-      day:            DBINT; { 1 - 31 }
-      dayofyear:      DBINT; { 1 - 366 (in sybdb.h dayofyear and day are changed around!) }
-      week:           DBINT; { 1 - 54 (for leap years) }
-      weekday:        DBINT; { 1 - 7  (Mon - Sun) }
-      hour:           DBINT; { 0 - 23 }
-      minute:         DBINT; { 0 - 59 }
-      second:         DBINT; { 0 - 59 }
-      millisecond:    DBINT; { 0 - 999 }
-      tzone:          DBINT; { 0 - 127 (Sybase only!) }
-    );
-  end;
-  PDBDATEREC = ^DBDATEREC;
-
 type
   DBNUMERIC = packed record
     Precision:  Byte;
     Scale:      Byte;
     Sign:       Byte; { 1 = Positive, 0 = Negative }
-    Val:        array[0..MAXNUMERICLEN-1] of Byte;
+    Val:        array[0..MAXNUMERICLEN{$IFNDEF FreeTDS}-1{$ENDIF}] of Byte;
   end;
   DBDECIMAL = DBNUMERIC;
 
   DBVARYCHAR = packed record
-    Len: {$IFDEF FREETDS}DBINT{$ELSE}DBSMALLINT{$ENDIF};
-    Str: array[0..DBMAXCHAR-1] of DBCHAR; //CHAR = Wide D12UP
+    Len: DBSMALLINT;
+    Str: array[0..DBMAXCHAR-1] of DBCHAR;
   end;
 
   DBVARYBIN = packed record
-    Len: {$IFDEF FREETDS}DBINT{$ELSE}DBSMALLINT{$ENDIF};
+    Len: DBSMALLINT;
     Bytes: array[0..DBMAXCHAR-1] of Byte;
   end;
 
@@ -717,350 +723,17 @@ type
 
   DBERRHANDLE_PROC = function(Proc: PDBPROCESS; Severity, DbErr, OsErr: Integer;
     DbErrStr, OsErrStr: PAnsiChar): Integer; cdecl;
-  DBMSGHANDLE_FUNC = function(Proc: PDBPROCESS; MsgNo: DBINT; MsgState,
+  DBMSGHANDLE_PROC = function(Proc: PDBPROCESS; MsgNo: DBINT; MsgState,
     Severity: Integer; MsgText, SrvName, ProcName: PAnsiChar; Line: DBUSMALLINT):
     Integer; cdecl;
 
-  Tdbadata        = function(dbproc: PDBPROCESS; ComputeId, Column: Integer): PByte; cdecl;
-  Tdbadlen        = function(dbproc: PDBPROCESS; ComputeId, Column: Integer): DBINT; cdecl;
-  Tdbaltbind      = function(dbproc: PDBPROCESS; ComputeId, Column: Integer; VarType: Integer; VarLen: DBINT; VarAddr: PByte): RETCODE; cdecl;
-  Tdbaltbind_ps   = function(dbproc: PDBPROCESS; ComputeId, Column: Integer; VarType: Integer; VarLen: DBINT; VarAddr: PByte; typinfo: PDBTYPEINFO): RETCODE;
-  Tdbaltcolid     = function(dbproc: PDBPROCESS; ComputeId, Column: Integer): Integer; cdecl;
-  Tdbaltlen       = function(dbproc: PDBPROCESS; ComputeId, Column: Integer): DBINT; cdecl;
-  Tdbaltop        = function(dbproc: PDBPROCESS; ComputeId, Column: Integer): Integer; cdecl;
-  Tdbalttype      = function(dbproc: PDBPROCESS; ComputeId, Column: Integer): Integer; cdecl;
-  Tdbaltutype     = function(dbproc: PDBPROCESS; ComputeId, Column: Integer): DBINT; cdecl;
-  Tdbanullbind    = function(dbproc: PDBPROCESS; ComputeId, Column: Integer; Indicator: PDBINT): RETCODE; cdecl;
-  Tdbbind         = function(dbproc: PDBPROCESS; Column, VarType, VarLen: Integer; VarAddr: PByte): RETCODE; cdecl;
-  Tdbbind_ps      = function(dbproc: PDBPROCESS; Column, VarType, VarLen: Integer; VarAddr: PByte; typinfo: PDBTYPEINFO): RETCODE; cdecl;
-  Tdbbufsize      = function(dbproc: PDBPROCESS): Integer; cdecl;
-  Tdbbylist       = function(dbproc: PDBPROCESS; ComputeId: Integer; Size: PInteger): PByte; cdecl;
-  Tdbcancel       = function(dbproc: PDBPROCESS): RETCODE; cdecl;
-  Tdbcanquery     = function(dbproc: PDBPROCESS): RETCODE; cdecl;
-  Tdbchange       = function(dbproc: PDBPROCESS): PAnsiChar; cdecl;
-  Tdbclose        = function(dbproc: PDBPROCESS): RETCODE; cdecl;
-  Tdbclrbuf       = procedure(dbproc: PDBPROCESS; N: DBINT); cdecl;
-  Tdbclropt       = function(dbproc: PDBPROCESS; Option: Integer; Param: PAnsiChar): RETCODE; cdecl;
-  Tdbcmd          = function(dbproc: PDBPROCESS; Cmd: PAnsiChar): RETCODE; cdecl;
-  Tdbcmdrow       = function(dbproc: PDBPROCESS): RETCODE; cdecl;
-  Tdbtablecolinfo = function(dbproc: PDBPROCESS; Column: DBINT; pdbcol: DBCOL): RETCODE;
-  Tdbcolinfo      = function(Handle: PDBHANDLE; Typ, Column, ComputeId: Integer; DbColumn: PDBCOL): RETCODE; cdecl;
-  Tdbcollen       = function(dbproc: PDBPROCESS; Column: Integer): DBINT; cdecl;
-  Tdbcolname      = function(dbproc: PDBPROCESS; Column: Integer): PAnsiChar; cdecl;
-  Tdbcolsource    = function(dbproc: PDBPROCESS; Column: Integer): PAnsiChar; cdecl;
-  Tdbcoltype      = function(dbproc: PDBPROCESS; Column: Integer): Integer; cdecl;
-  Tdbcolutype     = function(dbproc: PDBPROCESS; Column: Integer): DBINT; cdecl;
-  Tdbconvert      = function(dbproc: PDBPROCESS; SrcType: Integer; Src: PByte; SrcLen: DBINT; DestType: Integer; Dest: PByte; DestLen: DBINT): Integer; cdecl;
-  Tdbconvert_ps   = function(dbproc: PDBPROCESS; SrcType: Integer; Src: PByte; SrcLen: DBINT; DestType: Integer; Dest: PByte; DestLen: DBINT; typinfo: PDBTYPEINFO): Integer; cdecl;
-  Tdbiscount      = function(dbproc: PDBPROCESS): DBBOOL;
-  Tdbcount        = function(dbproc: PDBPROCESS): DBINT; cdecl;
-  Tdbcurcmd       = function(dbproc: PDBPROCESS): Integer; cdecl;
-  Tdbcurrow       = function(dbproc: PDBPROCESS): DBINT; cdecl;
-  Tdbdata         = function(dbproc: PDBPROCESS; Column: Integer): PByte; cdecl;
-  Tdbdatecmp      = function(dbproc: PDBPROCESS; d1, d2: PDBDATETIME): Integer;
-  Tdbdatecrack    = function(dbproc: PDBPROCESS; DateInfo: PDBDATEREC; DateType: PDBDATETIME): RETCODE; cdecl;
-  Tdbdatlen       = function(dbproc: PDBPROCESS; Column: Integer): DBINT; cdecl;
-  Tdbdead         = function(dbproc: PDBPROCESS): LongBool; cdecl;
-  Tdberrhandle    = function(Handler: DBERRHANDLE_PROC): DBERRHANDLE_PROC; cdecl;
-  Tdbexit         = procedure(); cdecl;
-  Tdbfcmd         = function(dbproc: PDBPROCESS; CmdString: PAnsiChar; var Params): RETCODE; cdecl;
-  Tdbfirstrow     = function(dbproc: PDBPROCESS): DBINT; cdecl;
-  Tdbfreebuf      = procedure(dbproc: PDBPROCESS); cdecl;
-  Tdbgetchar      = function(dbproc: PDBPROCESS; N: Integer): PAnsiChar; cdecl;
-  Tdbgetcharset   = function(dbproc: PDBPROCESS): PAnsiChar;
-  Tdbgetlusername = function(login: PLOGINREC; name_buffer: PByte; buffer_len: Integer): Integer; cdecl;
-  Tdbgetmaxprocs  = function(): Integer; cdecl;
-  Tdbgetnatlanf   = function(dbproc: PDBPROCESS): PAnsiChar; cdecl;
-  Tdbgetpacket    = function(dbproc: PDBPROCESS): Integer; cdecl;
-  Tdbgetrow       = function(dbproc: PDBPROCESS; Row: DBINT): STATUS; cdecl;
-  Tdbgettime      = function(): Integer; cdecl;
-  Tdbgetuserdata  = function(dbproc: PDBPROCESS): PByte; cdecl;
-  Tdbhasretstat   = function(dbproc: PDBPROCESS): DBBOOL; cdecl;
-  Tdbinit         = function():RETCODE; cdecl;
-  Tdbiordesc      = function(dbproc: PDBPROCESS): Integer; cdecl;
-  Tdbiowdesc      = function(dbproc: PDBPROCESS): Integer; cdecl;
-  Tdbisavail      = function(Proc: PDBPROCESS): DBBOOL; cdecl;
-  Tdbisopt        = function(Proc: PDBPROCESS; Option: Integer; const Param: PAnsiChar): DBBOOL; cdecl;
-  Tdblastrow      = function(Proc: PDBPROCESS): DBINT; cdecl;
-  Tdblogin        = function(): PLOGINREC; cdecl;
-  Tdbloginfree    = procedure(login: PLOGINREC); cdecl;
-  Tdbmny4cmp      = function(dbproc: PDBPROCESS; m1, m: PDBMONEY4): Integer; cdecl;
-  Tdbmnycmp       = function(dbproc: PDBPROCESS; m1, m2: PDBMONEY): Integer; cdecl;
-  Tdbmny4add      = function(dbproc: PDBPROCESS; m1, m2, sum: PDBMONEY4): RETCODE; cdecl;
-  Tdbmnydec       = function(dbproc: PDBPROCESS; mnyptr: PDBMONEY): RETCODE; cdecl;
-  Tdbmnyinc       = function(dbproc: PDBPROCESS; mnyptr: PDBMONEY): RETCODE; cdecl;
-  Tdbmnymaxpos    = function(dbproc: PDBPROCESS; dest: PDBMONEY): RETCODE; cdecl;
-  Tdbmnymaxneg    = function(dbproc: PDBPROCESS; dest: PDBMONEY): RETCODE; cdecl;
-  Tdbmny4minus    = function(dbproc: PDBPROCESS; src, dest: PDBMONEY): RETCODE; cdecl;
-  Tdbmnyminus     = function(dbproc: PDBPROCESS; src, dest: PDBMONEY): RETCODE; cdecl;
-  Tdbmny4sub      = function(dbproc: PDBPROCESS; m1, m2, diff: PDBMONEY4): RETCODE; cdecl;
-  Tdbmnysub       = function(dbproc: PDBPROCESS; m1, m2, diff: PDBMONEY): RETCODE; cdecl;
-  Tdbmny4copy     = function(dbproc: PDBPROCESS; m1, m2: PDBMONEY4): RETCODE; cdecl;
-  Tdbmnycopy      = function(dbproc: PDBPROCESS; src, dest: PDBMONEY): RETCODE; cdecl;
-  Tdbmny4zero     = function(dbproc: PDBPROCESS; dest: PDBMONEY4): RETCODE; cdecl;
-  Tdbmnyzero      = function(dbproc: PDBPROCESS; dest: PDBMONEY4): RETCODE; cdecl;
-  Tdbmonthname    = function(dbproc: PDBPROCESS; language: PAnsiChar; monthnum: Integer; shortform: DBBOOL): PAnsiChar; cdecl;
-  Tdbmorecmds     = function(dbproc: PDBPROCESS): RETCODE; cdecl;
-  Tdbmoretext     = function(dbproc: PDBPROCESS; Size: DBINT; const Text: PByte): RETCODE; cdecl;
-  Tdbmsghandle    = function(Handler: DBMSGHANDLE_FUNC): DBMSGHANDLE_FUNC; cdecl;
-  Tdbname         = function(dbproc: PDBPROCESS): PAnsiChar; cdecl;
-  Tdbnextrow      = function(dbproc: PDBPROCESS): STATUS; cdecl;
-  Tdbnullbind     = function(dbproc: PDBPROCESS; Column: Integer; Indicator: PDBINT): RETCODE; cdecl;
-  Tdbnumalts      = function(dbproc: PDBPROCESS; ComputeId: Integer): Integer; cdecl;
-  Tdbnumcols      = function(dbproc: PDBPROCESS): Integer; cdecl;
-  Tdbnumcompute   = function(dbproc: PDBPROCESS): Integer; cdecl;
-  Tdbnumorders    = function(dbproc: PDBPROCESS): Integer; cdecl;
-  Tdbnumrets      = function(dbproc: PDBPROCESS): Integer; cdecl;
-  Ttdsdbopen      = function(Login: PLOGINREC; const Server: PAnsiChar; msdblib: Integer): PDBPROCESS;
-  Tdbopen         = function(Login: PLOGINREC; const Server: PAnsiChar): PDBPROCESS;
+  Tdberrhandle = function(Handler: DBERRHANDLE_PROC): DBERRHANDLE_PROC; cdecl;
+  Tdbmsghandle = function(Handler: DBMSGHANDLE_PROC): DBMSGHANDLE_PROC; cdecl;
 
-{ pivot functions
-void dbpivot_count (struct col_t *output, const struct col_t *input);
-void dbpivot_sum (struct col_t *output, const struct col_t *input);
-void dbpivot_min (struct col_t *output, const struct col_t *input);
-void dbpivot_max (struct col_t *output, const struct col_t *input);
-
-struct pivot_t;
-typedef void (*DBPIVOT_FUNC)(struct col_t *output, const struct col_t *input);
-struct pivot_t * dbrows_pivoted(DBPROCESS *dbproc);
-STATUS dbnextrow_pivoted(DBPROCESS *dbproc, struct pivot_t *pp);
-RETCODE dbpivot(DBPROCESS *dbproc, int nkeys, int *keys, int ncols, int *cols, DBPIVOT_FUNC func, int val);
-
-DBPIVOT_FUNC dbpivot_lookup_name( const char name[] );
-}
-  Tdbprhead       = procedure(dbproc: PDBPROCESS); cdecl;
-  Tdbprrow        = function(dbproc: PDBPROCESS): RETCODE; cdecl;
-  Tdbprtype       = function(Token: Integer): PAnsiChar; cdecl;
-  TDRBUF          = function(dbproc: PDBPROCESS): DBBOOL; cdecl;
-  Tdbreadtext     = function(dbproc: PDBPROCESS; Buf: Pointer; BufSize: DBINT): DBINT; cdecl;
-  Tdbrecftos      = procedure(const FileName: PAnsiChar);
-  Tdbresults      = function(dbproc: PDBPROCESS): RETCODE; cdecl;
-  Tdbresults_r    = function(dbproc: PDBPROCESS; Recursive: Integer): RETCODE; cdecl;
-  Tdbretdata      = function(dbproc: PDBPROCESS; RetNum: Integer): PByte; cdecl;
-  Tdbretlen       = function(dbproc: PDBPROCESS; RetNum: Integer): DBINT; cdecl;
-  Tdbretname      = function(dbproc: PDBPROCESS; RetNum: Integer): PAnsiChar; cdecl;
-  Tdbretstatus    = function(dbproc: PDBPROCESS): DBINT; cdecl;
-  Tdbrettype      = function(dbproc: PDBPROCESS; RetNum: Integer): Integer; cdecl;
-  Tdbrows         = function(dbproc: PDBPROCESS): RETCODE; cdecl;
-  Tdbrowtype      = function(dbproc: PDBPROCESS): STATUS; cdecl;
-  Tdbrpcinit      = function(dbproc: PDBPROCESS; ProcName: PAnsiChar; Options: DBSMALLINT): RETCODE; cdecl;
-  Tdbrpcparam     = function(dbproc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte; Typ: Integer; MaxLen, DataLen: DBINT; Value: PByte): RETCODE; cdecl;
-  Tdbrpcsend      = function(dbproc: PDBPROCESS): RETCODE; cdecl;
-  Tdbsafestr      = function(dbproc: PDBPROCESS; const Src: PAnsiChar; SrcLen: DBINT; Dest: PAnsiChar; DestLen: DBINT; QuoteType: integer): RETCODE; cdecl;
-  //Tdbsechandle    = function(_Type: DBINT ; Handler: INTFUNCPTR): PRETCODE; cdecl;
-  Tdbservcharset  = function(dbproc: PDBPROCESS): PAnsiChar; cdecl;
-  Tdbsetavail     = procedure(dbproc: PDBPROCESS); cdecl;
-  //Tdbsetbusy      = procedure(dbproc: PDBPROCESS; BusyFunc: DB_DBBUSY_FUNC);  cdecl;
-  Tdbsetdefcharset= function(Charset: PAnsiChar): RETCODE; cdecl;
-  Tdbsetifile     = procedure(FileName: PAnsiChar); cdecl;
-  //Tdbsetinterrupt = procedure(dbproc: PDBPROCESS; chkintr: DB_DBCHKINTR_FUNC; hndlintr: DB_DBHNDLINTR_FUNC);
-  Tdbsetlogintime = function(Seconds: Integer): RETCODE; cdecl;
-  Tdbsetmaxprocs  = function(MaxProcs: SmallInt): RETCODE; cdecl;
-  Tdbsetlname     = function(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE; cdecl;
-  Tdbsetnull      = function(dbproc: PDBPROCESS; BindType, BindLen: Integer; BindVal: PByte): RETCODE; cdecl;
-  Tdbsetopt       = function(dbproc: PDBPROCESS; Option: DBINT; Param: PAnsiChar; int_param: DBINT): RETCODE; cdecl;
-  Tdbsetrow       = function(dbproc: PDBPROCESS; Row: DBINT): STATUS; cdecl;
-  Tdbsettime      = function(seconds: DBINT):RETCODE; cdecl;
-  Tdbsetuserdata  = procedure(dbproc: PDBPROCESS; Ptr: Pointer); cdecl;
-  Tdbsetversion   = function(Version: DBINT): RETCODE; cdecl;
-  Tdbspid         = function(dbproc: PDBPROCESS): Integer; cdecl;
-  Tdbspr1row      = function(dbproc: PDBPROCESS; Buffer: PAnsiChar; buf_len: DBINT): RETCODE; cdecl;
-  Tdbspr1rowlen   = function(dbproc: PDBPROCESS): DBINT; cdecl;
-  Tdbsprhead      = function(dbproc: PDBPROCESS; Buffer: PAnsiChar; buf_len: DBINT): RETCODE; cdecl;
-  Tdbsprline      = function(dbproc: PDBPROCESS; Buffer: PAnsiChar; buf_len: DBINT; line_char: DBCHAR): RETCODE; cdecl;
-  Tdbsqlexec      = function(dbproc: PDBPROCESS): RETCODE; cdecl;
-  Tdbsqlok        = function(dbproc: PDBPROCESS): RETCODE; cdecl;
-  Tdbsqlsend      = function(dbproc: PDBPROCESS): RETCODE; cdecl;
-  Tdbstrcpy       = function(dbproc: PDBPROCESS; Start, NumBytes: Integer; Dest: PAnsiChar): RETCODE; cdecl;
-  Tdbstrlen       = function(dbproc: PDBPROCESS): Integer; cdecl;
-  Tdbvarylen      = function(dbproc: PDBPROCESS; Column: Integer): DBINT; cdecl;
-
-  Tdbtds          = function(dbproc: PDBPROCESS): DBINT; cdecl;
-  Tdbtextsize     = function(dbproc: PDBPROCESS): DBINT; cdecl;
-  Tdbtxptr        = function(dbproc: PDBPROCESS; Column: Integer): PDBBINARY; cdecl;
-  Tdbtxtimestamp  = function(dbproc: PDBPROCESS; Column: Integer): PDBBINARY; cdecl;
-  Tdbtxtsnewval   = function(dbproc: PDBPROCESS): PDBBINARY; cdecl;
-  Tdbtxtsput      = function(dbproc: PDBPROCESS; NewTxts: PDBBINARY; Column: Integer): RETCODE; cdecl;
-  Tdbuse          = function(dbproc: PDBPROCESS; DbName: PAnsiChar): RETCODE; cdecl;
-  Tdbwillconvert  = function(SrcType, DestType: Integer): LongBool; cdecl;
-  Tdbwritetext    = function(Proc: PDBPROCESS; ObjName: PAnsiChar; TextPtr: PDBBINARY; TextPtrLen: DBTINYINT; Timestamp: PDBBINARY; Log: DBBOOL; Size: DBINT; Text: PByte): RETCODE; cdecl;
-
-  (* LOGINREC manipulation *)
-  Tdbsetlbool     = function(Login: PLOGINREC; Value, Item: Integer): RETCODE; cdecl;
-  Tdbsetllong     = function(Login: PLOGINREC; Value, Item: Integer): RETCODE; cdecl;
-  Tdbsetlversion  = function(Login: PLOGINREC; Version: Byte): RETCODE; cdecl;
-
-
-TFreeTDSAPI = Record
-  dbadata:        Tdbadata;
-  dbadlen:        Tdbadlen;
-  dbaltbind:      Tdbaltbind;
-  dbaltbind_ps:   Tdbaltbind_ps;
-  dbaltcolid:     Tdbaltcolid;
-  dbaltlen:       Tdbaltlen;
-  dbaltop:        Tdbaltop;
-  dbalttype:      Tdbalttype;
-  dbaltutype:     Tdbaltutype;
-  dbanullbind:    Tdbanullbind;
-  dbbind:         Tdbbind;
-  dbbind_ps:      Tdbbind_ps;
-  dbbufsize:      Tdbbufsize;
-  dbbylist:       Tdbbylist;
-  dbcancel:       Tdbcancel;
-  dbcanquery:     Tdbcanquery;
-  dbchange:       Tdbchange;
-  dbclose:        Tdbclose;
-  dbclrbuf:       Tdbclrbuf;
-  dbclropt:       Tdbclropt;
-  dbcmd:          Tdbcmd;
-  dbcmdrow:       Tdbcmdrow;
-  dbtablecolinfo: Tdbtablecolinfo;
-  dbcolinfo:      Tdbcolinfo;
-  dbcollen:       Tdbcollen;
-  dbcolname:      Tdbcolname;
-  dbcolsource:    Tdbcolsource;
-  dbcoltype:      Tdbcoltype;
-  dbcolutype:     Tdbcolutype;
-  dbconvert:      Tdbconvert;
-  dbconvert_ps:   Tdbconvert_ps;
-  dbiscount:      Tdbiscount;
-  dbcount:        Tdbcount;
-  dbcurcmd:       Tdbcurcmd;
-  dbcurrow:       Tdbcurrow;
-  dbdata:         Tdbdata;
-  dbdatecmp:      Tdbdatecmp;
-  dbdatecrack:    Tdbdatecrack;
-  dbdatlen:       Tdbdatlen;
-  dbdead:         Tdbdead;
-  dberrhandle:    Tdberrhandle;
-  dbexit:         Tdbexit;
-  dbfcmd:         Tdbfcmd;
-  dbfirstrow:     Tdbfirstrow;
-  dbfreebuf:      Tdbfreebuf;
-  dbgetchar:      Tdbgetchar;
-  dbgetcharset:   Tdbgetcharset;
-  dbgetlusername: Tdbgetlusername;
-  dbgetmaxprocs:  Tdbgetmaxprocs;
-  dbgetnatlanf:   Tdbgetnatlanf;
-  dbgetpacket:    Tdbgetpacket;
-  dbgetrow:       Tdbgetrow;
-  dbgettime:      Tdbgettime;
-  dbgetuserdata:  Tdbgetuserdata;
-  dbhasretstat:   Tdbhasretstat;
-  dbinit:         Tdbinit;
-  dbiordesc:      Tdbiordesc;
-  dbiowdesc:      Tdbiowdesc;
-  dbisavail:      Tdbisavail;
-  dbisopt:        Tdbisopt;
-  dblastrow:      Tdblastrow;
-  dblogin:        Tdblogin;
-  dbloginfree:    Tdbloginfree;
-  dbmny4cmp:      Tdbmny4cmp;
-  dbmnycmp:       Tdbmnycmp;
-  dbmny4add:      Tdbmny4add;
-  dbmnydec:       Tdbmnydec;
-  dbmnyinc:       Tdbmnyinc;
-  dbmnymaxpos:    Tdbmnymaxpos;
-  dbmnymaxneg:    Tdbmnymaxneg;
-  dbmny4minus:    Tdbmny4minus;
-  dbmnyminus:     Tdbmnyminus;
-  dbmny4sub:      Tdbmny4sub;
-  dbmnysub:       Tdbmnysub;
-  dbmny4copy:     Tdbmny4copy;
-  dbmnycopy:      Tdbmnycopy;
-  dbmny4zero:     Tdbmny4zero;
-  dbmnyzero:      Tdbmnyzero;
-  dbmonthname:    Tdbmonthname;
-  dbmorecmds:     Tdbmorecmds;
-  dbmoretext:     Tdbmoretext;
-  dbmsghandle:    Tdbmsghandle;
-  dbname:         Tdbname;
-  dbnextrow:      Tdbnextrow;
-  dbnullbind:     Tdbnullbind;
-  dbnumalts:      Tdbnumalts;
-  dbnumcols:      Tdbnumcols;
-  dbnumcompute:   Tdbnumcompute;
-  dbnumorders:    Tdbnumorders;
-  dbnumrets:      Tdbnumrets;
-  tdsdbopen:      Ttdsdbopen;
-  dbopen:         Tdbopen;
-
-{ pivot functions */
-void dbpivot_count (struct col_t *output, const struct col_t *input);
-void dbpivot_sum (struct col_t *output, const struct col_t *input);
-void dbpivot_min (struct col_t *output, const struct col_t *input);
-void dbpivot_max (struct col_t *output, const struct col_t *input);
-
-struct pivot_t;
-typedef void (*DBPIVOT_FUNC)(struct col_t *output, const struct col_t *input);
-struct pivot_t * dbrows_pivoted(DBPROCESS *dbproc);
-STATUS dbnextrow_pivoted(DBPROCESS *dbproc, struct pivot_t *pp);
-RETCODE dbpivot(DBPROCESS *dbproc, int nkeys, int *keys, int ncols, int *cols, DBPIVOT_FUNC func, int val);
-
-DBPIVOT_FUNC dbpivot_lookup_name( const char name[] );
-}
-  dbprhead:       Tdbprhead;
-  dbprrow:        Tdbprrow;
-  dbprtype:       Tdbprtype;
-  DRBUF:          TDRBUF;
-  dbreadtext:     Tdbreadtext;
-  dbrecftos:      Tdbrecftos;
-  dbresults:      Tdbresults;
-  dbresults_r:    Tdbresults_r;
-  dbretdata:      Tdbretdata;
-  dbretlen:       Tdbretlen;
-  dbretname:      Tdbretname;
-  dbretstatus:    Tdbretstatus;
-  dbrettype:      Tdbrettype;
-  dbrows:         Tdbrows;
-  dbrowtype:      Tdbrowtype;
-  dbrpcinit:      Tdbrpcinit;
-  dbrpcparam:     Tdbrpcparam;
-  dbrpcsend:      Tdbrpcsend;
-  dbsafestr:      Tdbsafestr;
-  //dbsechandle:    Tdbsechandle;
-  dbservcharset:  Tdbservcharset;
-  dbsetavail:     Tdbsetavail;
-  //dbsetbusy:      Tdbsetbusy;
-  dbsetdefcharset:Tdbsetdefcharset;
-  dbsetifile:     Tdbsetifile;
-  //dbsetinterrupt: Tdbsetinterrupt;
-  dbsetlogintime: Tdbsetlogintime;
-  dbsetmaxprocs:  Tdbsetmaxprocs;
-  dbsetlname:     Tdbsetlname;
-  dbsetnull:      Tdbsetnull;
-  dbsetopt:       Tdbsetopt;
-  dbsetrow:       Tdbsetrow;
-  dbsettime:      Tdbsettime;
-  dbsetuserdata:  Tdbsetuserdata;
-  dbsetversion:   Tdbsetversion;
-  dbspid:         Tdbspid;
-  dbspr1row:      Tdbspr1row;
-  dbspr1rowlen:   Tdbspr1rowlen;
-  dbsprhead:      Tdbsprhead;
-  dbsprline:      Tdbsprline;
-  dbsqlexec:      Tdbsqlexec;
-  dbsqlok:        Tdbsqlok;
-  dbsqlsend:      Tdbsqlsend;
-  dbstrcpy:       Tdbstrcpy;
-  dbstrlen:       Tdbstrlen;
-  dbvarylen:      Tdbvarylen;
-
-  dbtds:          Tdbtds;
-  dbtextsize:     Tdbtextsize;
-  dbtxptr:        Tdbtxptr;
-  dbtxtimestamp:  Tdbtxtimestamp;
-  dbtxtsnewval:   Tdbtxtsnewval;
-  dbtxtsput:      Tdbtxtsput;
-  dbuse:          Tdbuse;
-  dbwillconvert:  Tdbwillconvert;
-  dbwritetext:    Tdbwritetext;
-
-  (* LOGINREC manipulation *)
-  dbsetlbool:     Tdbsetlbool;
-  dbsetllong:     Tdbsetllong;
-  dbsetlversion:  Tdbsetlversion;
-End;
+  Tdbprocerrhandle = function(DbHandle: PDBHANDLE; Handler: DBERRHANDLE_PROC):
+    DBERRHANDLE_PROC; cdecl;
+  Tdbprocmsghandle = function(DbHandle: PDBHANDLE; Handler: DBMSGHANDLE_PROC):
+    DBMSGHANDLE_PROC; cdecl;
 
 implementation
 
