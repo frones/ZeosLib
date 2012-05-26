@@ -1621,6 +1621,7 @@ type
     constructor Create; override;
     destructor Destroy; override;
 
+    procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
 
@@ -2866,6 +2867,12 @@ begin
     DbLibAPI.dbExit;
   end;
   inherited Destroy;
+end;
+
+procedure TZDBLibMSSQL7PlainDriver.LoadCodePages;
+begin
+  AddCodePage('Not implemented!', -1);
+   { TODO -oEgonHugeist : Must be completed!!!! }
 end;
 
 function TZDBLibMSSQL7PlainDriver.GetProtocol: string;
