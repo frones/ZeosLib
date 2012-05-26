@@ -65,12 +65,12 @@
 
     <antcall target="clean_delphi7"/>
     <antcall target="clean_delphi9"/>
-    <antcall target="clean_delphi10"/>
-    <antcall target="clean_delphi11"/>
-    <antcall target="clean_delphi12"/>
-    <antcall target="clean_delphi14"/>
-    <antcall target="clean_delphi15"/>
-	<antcall target="clean_delphi16"/>	
+    <antcall target="clean_delphi2005"/>
+    <antcall target="clean_delphi2007"/>
+    <antcall target="clean_delphi2009"/>
+    <antcall target="clean_delphi2010"/>
+    <antcall target="clean_delphiXE"/>
+	<antcall target="clean_delphiXE2"/>	
     <antcall target="clean_lazarus"/>
   </target>
 
@@ -92,57 +92,57 @@
     </antcall>
   </target>
 
-  <target name="clean_delphi10">
+  <target name="clean_delphi2005">
     <condition property="do_clean">
-      <istrue value="${delphi10.active}"/>
+      <istrue value="${delphi2005.active}"/>
     </condition>
     <antcall target="clean_package_build">
-      <param name="compiler" value="delphi10"/>
+      <param name="compiler" value="delphi2005"/>
     </antcall>
   </target>
 
-  <target name="clean_delphi11">
+  <target name="clean_delphi2007">
     <condition property="do_clean">
-      <istrue value="${delphi11.active}"/>
+      <istrue value="${delphi2007.active}"/>
     </condition>
     <antcall target="clean_package_build">
-      <param name="compiler" value="delphi11"/>
+      <param name="compiler" value="delphi2007"/>
     </antcall>
   </target>
 
-  <target name="clean_delphi12">
+  <target name="clean_delphi2009">
     <condition property="do_clean">
-      <istrue value="${delphi12.active}"/>
+      <istrue value="${delphi2009.active}"/>
     </condition>
     <antcall target="clean_package_build">
-      <param name="compiler" value="delphi12"/>
+      <param name="compiler" value="delphi2009"/>
     </antcall>
   </target>
 
-  <target name="clean_delphi14">
+  <target name="clean_delphi2010">
     <condition property="do_clean">
-      <istrue value="${delphi14.active}"/>
+      <istrue value="${delphi2010.active}"/>
     </condition>
     <antcall target="clean_package_build">
-      <param name="compiler" value="delphi14"/>
+      <param name="compiler" value="delphi2010"/>
     </antcall>
   </target>
 
-  <target name="clean_delphi15">
+  <target name="clean_delphiXE">
     <condition property="do_clean">
-      <istrue value="${delphi15.active}"/>
+      <istrue value="${delphiXE.active}"/>
     </condition>
     <antcall target="clean_package_build">
-      <param name="compiler" value="delphi15"/>
+      <param name="compiler" value="delphiXE"/>
     </antcall>
   </target>
 
-  <target name="clean_delphi16">
+  <target name="clean_delphiXE2">
     <condition property="do_clean">
-      <istrue value="${delphi16.active}"/>
+      <istrue value="${delphiXE2.active}"/>
     </condition>
     <antcall target="clean_package_build">
-      <param name="compiler" value="delphi16"/>
+      <param name="compiler" value="delphiXE2"/>
     </antcall>
   </target>
 
