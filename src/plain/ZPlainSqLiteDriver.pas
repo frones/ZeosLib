@@ -813,8 +813,7 @@ begin
          //Result:='VARCHAR';
       SQLITE_BLOB:
          Result:='BLOB';
-      else
-         Result:='';
+      SQLITE_NULL: Result := '';
     end
   end else
     Result:='';
