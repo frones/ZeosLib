@@ -58,7 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses Classes, SysUtils, ZCompatibility, ZClasses, ZSysUtils, ZCollections,
-  ZDbcIntfs, ZDbcStatement, ZDbcDbLib, ZplainDbLibConstants, ZPlainDbLibDriver;
+  ZDbcIntfs, ZDbcStatement, ZDbcDbLib, ZPlainDbLibConstants, ZPlainDbLibDriver;
 
 type
   {** Implements Generic DBLib Statement. }
@@ -308,7 +308,7 @@ begin
   end;
   FDBLibConnection.CheckDBLibError(lcOther, 'FETCHRESULTS');
 
-  if Pos('FreeTDS', FPlainDriver.GetProtocol) = 0 then
+  if not FDBLibConnection.FreeTDS then
     if RowsAffected = -1 then
     begin
       FDBLibConnection.InternalExecuteStatement('select @@rowcount');
@@ -623,8 +623,8 @@ var
   DatBytes: TByteDynArray;
   Temp: TZVariant;
   ParamType: TZSQLType;
+  TempBlob: IZBlob;
 begin
-  FHandle := FDBLibConnection.GetConnectionHandle;
   S := Trim(Sql);
   if FPLainDriver.dbRPCInit(FHandle, PAnsiChar(AnsiString(S)), 0) <> DBSUCCEED then
     FDBLibConnection.CheckDBLibError(lcOther, 'EXECUTEPREPARED:dbRPCInit');
@@ -641,7 +641,11 @@ begin
 
     if DefVarManager.IsNull(InParamValues[I]) and (InParamTypes[I] <> stUnknown) then
     begin
-      FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
+      if FDBLibConnection.FreeTDS then
+        FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
+        ConvertSqlTypeToFreeTDSType(InParamTypes[I]), -1, 0, nil)
+      else
+        FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
         ConvertSqlTypeToDBLibType(InParamTypes[I]), -1, 0, nil)
     end
     else
@@ -651,37 +655,37 @@ begin
           begin
             DatBoolean := SoftVarManager.GetAsBoolean(InParamValues[I]);
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
-              SQLINT1, -1, -1, @DatBoolean);
+              FPlainDriver.GetVariables.datatypes[Z_SQLINT1], -1, -1, @DatBoolean);
           end;
         stByte:
           begin
             DatByte := Byte(SoftVarManager.GetAsInteger(InParamValues[I]));
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
-            SQLINT1, -1, -1, @DatByte);
+              FPlainDriver.GetVariables.datatypes[Z_SQLINT1], -1, -1, @DatByte);
           end;
         stShort:
           begin
             DatShort := SmallInt(SoftVarManager.GetAsInteger(InParamValues[I]));
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
-              SQLINT2, -1, -1, @DatShort);
+              FPlainDriver.GetVariables.datatypes[Z_SQLINT2], -1, -1, @DatShort);
           end;
         stInteger, stLong:
           begin
             DatInteger := Integer(SoftVarManager.GetAsInteger(InParamValues[I]));
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
-              SQLINT4, -1, -1, @DatInteger);
+              FPlainDriver.GetVariables.datatypes[Z_SQLINT4], -1, -1, @DatInteger);
           end;
         stFloat:
           begin
             DatFloat := SoftVarManager.GetAsFloat(InParamValues[I]);
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
-              SQLFLT4, -1, -1, @DatFloat);
+              FPlainDriver.GetVariables.datatypes[Z_SQLFLT4], -1, -1, @DatFloat);
           end;
         stDouble, stBigDecimal:
           begin
             DatDouble := SoftVarManager.GetAsFloat(InParamValues[I]);
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
-              SQLFLT8, -1, -1, @DatDouble);
+              FPlainDriver.GetVariables.datatypes[Z_SQLFLT8], -1, -1, @DatDouble);
           end;
         stString:
           begin
@@ -691,7 +695,7 @@ begin
             else
               DatLen := Length(DatString);
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
-                     SQLCHAR, MaxInt, DatLen, PAnsiChar(DatString));
+              FPlainDriver.GetVariables.datatypes[Z_SQLCHAR], MaxInt, DatLen, PAnsiChar(DatString));
           end;
         stUnicodeString:
           begin
@@ -701,53 +705,44 @@ begin
             else
               DatLen := Length(DatString);
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
-                     SQLCHAR, MaxInt, DatLen, PAnsiChar(DatString));
+              FPlainDriver.GetVariables.datatypes[Z_SQLCHAR], MaxInt, DatLen, PAnsiChar(DatString));
           end;
         stDate:
           begin
             DatString := AnsiString(FormatDateTime('yyyymmdd',
               SoftVarManager.GetAsDateTime(InParamValues[I])));
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
-                     SQLCHAR, MaxInt, Length(DatString), PAnsiChar(DatString));
+              FPlainDriver.GetVariables.datatypes[Z_SQLCHAR], MaxInt, Length(DatString), PAnsiChar(DatString));
           end;
         stTime:
           begin
             DatString := AnsiString(FormatDateTime('hh":"mm":"ss":"zzz',
               SoftVarManager.GetAsDateTime(InParamValues[I])));
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
-                     SQLCHAR, MaxInt, Length(DatString), PAnsiChar(DatString));
+              FPlainDriver.GetVariables.datatypes[Z_SQLCHAR], MaxInt, Length(DatString), PAnsiChar(DatString));
           end;
         stTimeStamp:
           begin
             DatString := AnsiString(FormatDateTime('yyyymmdd hh":"mm":"ss":"zzz',
               SoftVarManager.GetAsDateTime(InParamValues[I])));
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
-              SQLCHAR, MaxInt, Length(DatString), PAnsiChar(DatString));
+              FPlainDriver.GetVariables.datatypes[Z_SQLCHAR], MaxInt, Length(DatString), PAnsiChar(DatString));
           end;
-        stAsciiStream:
+        stAsciiStream, stUnicodeStream:
           begin
-            DatString := AnsiString(SoftVarManager.GetAsString(InParamValues[I]) );
+            TempBlob := SoftVarManager.GetAsInterface(InParamValues[I]) as IZBlob;
+            DatString := TempBlob.GetString;
             if DatString = ''then
               DatLen := 1
             else
               DatLen := Length(DatString);
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
-              SQLTEXT, FPlainDriver.GetVariables.dboptions[Z_TEXTSIZE], DatLen, PAnsiChar(DatString));
-          end;
-        stUnicodeStream:
-          begin
-            DatString := UTF8Encode(SoftVarManager.GetAsUnicodeString(InParamValues[I]));
-            if DatString = ''then
-              DatLen := 1
-            else
-              DatLen := Length(DatString);
-            FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
-              SQLTEXT, FPlainDriver.GetVariables.dboptions[Z_TEXTSIZE], DatLen, PAnsiChar(DatString));
+              FPlainDriver.GetVariables.datatypes[Z_SQLTEXT], FPlainDriver.GetVariables.dboptions[Z_TEXTSIZE], DatLen, PAnsiChar(DatString));
           end;
   //      stBytes,
   //      stBinaryStream
       else
-        FPlainDriver.dbRpcParam(FHandle, nil, 0, SQLCHAR, 0, 0, nil);
+        FPlainDriver.dbRpcParam(FHandle, nil, 0, FPlainDriver.GetVariables.datatypes[Z_SQLCHAR], 0, 0, nil);
     end;
   end;
   end;
@@ -772,74 +767,144 @@ begin
       Temp := NullVariant
     else
     begin
-      case FPLainDriver.dbRetType(FHandle, ParamIndex) of
-        SQLCHAR, SQLBINARY:
-          begin
-            DatLen := FPLainDriver.dbRetLen(FHandle, ParamIndex);
-            SetLength(DatBytes, DatLen);
-            Move(PAnsiChar(FPLainDriver.dbRetData(FHandle, ParamIndex))^,
-              DatBytes[0], Length(DatBytes));
-            DefVarManager.SetAsString(Temp, String(BytesToStr(DatBytes)));
-          end;
-        SQLINT1:
-          DefVarManager.SetAsInteger(Temp,
-            PByte(FPlainDriver.dbRetData(FHandle, ParamIndex))^);
-        SQLINT2:
-          DefVarManager.SetAsInteger(Temp,
-            PSmallInt(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
-        SQLINT4:
-          DefVarManager.SetAsInteger(Temp,
-            PInteger(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
-        SQLFLT4:
-          DefVarManager.SetAsFloat(Temp,
-            PSingle(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
-        SQLFLT8:
-          DefVarManager.SetAsFloat(Temp,
-            PDouble(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
-        SQLMONEY4:
-          begin
-            FPlainDriver.dbConvert(FHandle, SQLMONEY4,
-              FPlainDriver.dbRetData(FHandle, ParamIndex), 4, SQLMONEY,
-              @DatMoney, 8);
-            DefVarManager.SetAsFloat(Temp, DatMoney);
-          end;
-        SQLMONEY:
-          DefVarManager.SetAsFloat(Temp,
-            PCurrency(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
-        SQLDECIMAL:
-          begin
-            FPLainDriver.dbConvert(FHandle, SQLDECIMAL,
-              FPLainDriver.dbRetData(FHandle, ParamIndex),
-              FPLainDriver.dbRetLen(FHandle, ParamIndex),
-              SQLFLT8, @DatDouble, 8);
-            DefVarManager.SetAsFloat(Temp, DatDouble);
-          end;
-        SQLNUMERIC:
-          begin
-            FPLainDriver.dbConvert(FHandle, SQLNUMERIC,
-              FPLainDriver.dbRetData(FHandle, ParamIndex),
-              FPLainDriver.dbRetLen(FHandle, ParamIndex),
-              SQLFLT8, @DatDouble, 8);
-            DefVarManager.SetAsFloat(Temp, DatDouble);
-          end;
-        SQLDATETIM4:
-          begin
-            FPLainDriver.dbConvert(FHandle, SQLDATETIM4,
-              FPLainDriver.dbRetData(FHandle, ParamIndex), 4,
-              SQLDATETIME, @DatDBDATETIME, 8);
-            DefVarManager.SetAsDateTime(Temp,
-              DatDBDATETIME.dtdays + 2 + (DatDBDATETIME.dttime / 25920000));
-          end;
-        SQLDATETIME:
-          begin
-            DatDBDATETIME := PDBDATETIME(
-              FPLainDriver.dbRetData(FHandle, ParamIndex))^;
-            DefVarManager.SetAsDateTime(Temp,
-              DatDBDATETIME.dtdays + 2 + (DatDBDATETIME.dttime / 25920000));
-          end;
-        else
-          Temp := NullVariant;
-      end;
+      if FDBLibConnection.FreeTDS then
+        case FPLainDriver.dbRetType(FHandle, ParamIndex) of
+          TDSSQLCHAR, TDSSQLBINARY:
+            begin
+              DatLen := FPLainDriver.dbRetLen(FHandle, ParamIndex);
+              SetLength(DatBytes, DatLen);
+              Move(PAnsiChar(FPLainDriver.dbRetData(FHandle, ParamIndex))^,
+                DatBytes[0], Length(DatBytes));
+              DefVarManager.SetAsString(Temp, String(BytesToStr(DatBytes)));
+            end;
+          TDSSQLINT1:
+            DefVarManager.SetAsInteger(Temp,
+              PByte(FPlainDriver.dbRetData(FHandle, ParamIndex))^);
+          TDSSQLINT2:
+            DefVarManager.SetAsInteger(Temp,
+              PSmallInt(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
+          TDSSQLINT4:
+            DefVarManager.SetAsInteger(Temp,
+              PInteger(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
+          TDSSQLFLT4:
+            DefVarManager.SetAsFloat(Temp,
+              PSingle(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
+          TDSSQLFLT8:
+            DefVarManager.SetAsFloat(Temp,
+              PDouble(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
+          TDSSQLMONEY4:
+            begin
+              FPlainDriver.dbConvert(FHandle, TDSSQLMONEY4,
+                FPlainDriver.dbRetData(FHandle, ParamIndex), 4, TDSSQLMONEY,
+                @DatMoney, 8);
+              DefVarManager.SetAsFloat(Temp, DatMoney);
+            end;
+          TDSSQLMONEY:
+            DefVarManager.SetAsFloat(Temp,
+              PCurrency(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
+          TDSSQLDECIMAL:
+            begin
+              FPLainDriver.dbConvert(FHandle, TDSSQLDECIMAL,
+                FPLainDriver.dbRetData(FHandle, ParamIndex),
+                FPLainDriver.dbRetLen(FHandle, ParamIndex),
+                TDSSQLFLT8, @DatDouble, 8);
+              DefVarManager.SetAsFloat(Temp, DatDouble);
+            end;
+          TDSSQLNUMERIC:
+            begin
+              FPLainDriver.dbConvert(FHandle, TDSSQLNUMERIC,
+                FPLainDriver.dbRetData(FHandle, ParamIndex),
+                FPLainDriver.dbRetLen(FHandle, ParamIndex),
+                TDSSQLFLT8, @DatDouble, 8);
+              DefVarManager.SetAsFloat(Temp, DatDouble);
+            end;
+          TDSSQLDATETIM4:
+            begin
+              FPLainDriver.dbConvert(FHandle, TDSSQLDATETIM4,
+                FPLainDriver.dbRetData(FHandle, ParamIndex), 4,
+                TDSSQLDATETIME, @DatDBDATETIME, 8);
+              DefVarManager.SetAsDateTime(Temp,
+                DatDBDATETIME.dtdays + 2 + (DatDBDATETIME.dttime / 25920000));
+            end;
+          TDSSQLDATETIME:
+            begin
+              DatDBDATETIME := PDBDATETIME(
+                FPLainDriver.dbRetData(FHandle, ParamIndex))^;
+              DefVarManager.SetAsDateTime(Temp,
+                DatDBDATETIME.dtdays + 2 + (DatDBDATETIME.dttime / 25920000));
+            end;
+          else
+            Temp := NullVariant;
+        end
+      else
+        case FPLainDriver.dbRetType(FHandle, ParamIndex) of
+          DBLIBSQLCHAR, DBLIBSQLBINARY:
+            begin
+              DatLen := FPLainDriver.dbRetLen(FHandle, ParamIndex);
+              SetLength(DatBytes, DatLen);
+              Move(PAnsiChar(FPLainDriver.dbRetData(FHandle, ParamIndex))^,
+                DatBytes[0], Length(DatBytes));
+              DefVarManager.SetAsString(Temp, String(BytesToStr(DatBytes)));
+            end;
+          DBLIBSQLINT1:
+            DefVarManager.SetAsInteger(Temp,
+              PByte(FPlainDriver.dbRetData(FHandle, ParamIndex))^);
+          DBLIBSQLINT2:
+            DefVarManager.SetAsInteger(Temp,
+              PSmallInt(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
+          DBLIBSQLINT4:
+            DefVarManager.SetAsInteger(Temp,
+              PInteger(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
+          DBLIBSQLFLT4:
+            DefVarManager.SetAsFloat(Temp,
+              PSingle(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
+          DBLIBSQLFLT8:
+            DefVarManager.SetAsFloat(Temp,
+              PDouble(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
+          DBLIBSQLMONEY4:
+            begin
+              FPlainDriver.dbConvert(FHandle, DBLIBSQLMONEY4,
+                FPlainDriver.dbRetData(FHandle, ParamIndex), 4, DBLIBSQLMONEY,
+                @DatMoney, 8);
+              DefVarManager.SetAsFloat(Temp, DatMoney);
+            end;
+          DBLIBSQLMONEY:
+            DefVarManager.SetAsFloat(Temp,
+              PCurrency(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
+          DBLIBSQLDECIMAL:
+            begin
+              FPLainDriver.dbConvert(FHandle, DBLIBSQLDECIMAL,
+                FPLainDriver.dbRetData(FHandle, ParamIndex),
+                FPLainDriver.dbRetLen(FHandle, ParamIndex),
+                DBLIBSQLFLT8, @DatDouble, 8);
+              DefVarManager.SetAsFloat(Temp, DatDouble);
+            end;
+          DBLIBSQLNUMERIC:
+            begin
+              FPLainDriver.dbConvert(FHandle, DBLIBSQLNUMERIC,
+                FPLainDriver.dbRetData(FHandle, ParamIndex),
+                FPLainDriver.dbRetLen(FHandle, ParamIndex),
+                DBLIBSQLFLT8, @DatDouble, 8);
+              DefVarManager.SetAsFloat(Temp, DatDouble);
+            end;
+          DBLIBSQLDATETIM4:
+            begin
+              FPLainDriver.dbConvert(FHandle, DBLIBSQLDATETIM4,
+                FPLainDriver.dbRetData(FHandle, ParamIndex), 4,
+                DBLIBSQLDATETIME, @DatDBDATETIME, 8);
+              DefVarManager.SetAsDateTime(Temp,
+                DatDBDATETIME.dtdays + 2 + (DatDBDATETIME.dttime / 25920000));
+            end;
+          DBLIBSQLDATETIME:
+            begin
+              DatDBDATETIME := PDBDATETIME(
+                FPLainDriver.dbRetData(FHandle, ParamIndex))^;
+              DefVarManager.SetAsDateTime(Temp,
+                DatDBDATETIME.dtdays + 2 + (DatDBDATETIME.dttime / 25920000));
+            end;
+          else
+            Temp := NullVariant;
+        end;
     end;
     OutParamValues[I] := Temp;
     Inc(ParamIndex);

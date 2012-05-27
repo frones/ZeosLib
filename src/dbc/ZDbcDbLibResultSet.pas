@@ -176,11 +176,16 @@ begin
 
     ColumnInfo.ColumnLabel := ColName;
     ColumnInfo.ColumnName := ColName;
-    ColumnInfo.ColumnType := ConvertDBLibToSqlType(ColType);
-    ColumnInfo.Currency := ColType in [SQLMONEY, SQLMONEY4, SQLMONEYN];
+    if Self.FDBLibConnection.FreeTDS then
+      ColumnInfo.ColumnType := ConvertFreeTDSToSqlType(ColType)
+    else
+      ColumnInfo.ColumnType := ConvertDBLibToSqlType(ColType);
+    ColumnInfo.Currency := (ColType = FPlainDriver.GetVariables.datatypes[Z_SQLMONEY]) or
+      (ColType = FPlainDriver.GetVariables.datatypes[Z_SQLMONEY4]) or
+      (ColType = FPlainDriver.GetVariables.datatypes[Z_SQLMONEYN]);;
     ColumnInfo.Precision := FPlainDriver.dbCollen(FHandle, I);
     ColumnInfo.Scale := 0;
-    if ColType = SQLINT1 then
+    if ColType = FPlainDriver.GetVariables.datatypes[Z_SQLINT1] then
       ColumnInfo.Signed := False
     else
       ColumnInfo.Signed := True;
@@ -273,30 +278,29 @@ begin
   Result := '';
   if Assigned(Data) then
   begin
-    case DT of
-      SQLCHAR, SQLTEXT:
-        begin
-          while (DL > 0) and (PAnsiChar(Integer(Data) + DL - 1)^ = ' ') do
-                  Dec(DL);
-          if DL > 0 then
-          begin
-            SetLength(Result, DL);
-            Move(Data^, PAnsiChar(Result)^, DL);
-          end;
-        end;
-      SQLIMAGE:
-        begin
-          SetLength(Result, DL);
-          Move(Data^, PAnsiChar(Result)^, DL);
-        end;
-    else
+    if (DT = FPlainDriver.GetVariables.datatypes[Z_SQLCHAR]) or
+      (DT = FPlainDriver.GetVariables.datatypes[Z_SQLTEXT]) then
+    begin
+      while (DL > 0) and (PAnsiChar(Integer(Data) + DL - 1)^ = ' ') do
+              Dec(DL);
+      if DL > 0 then
       begin
-        SetLength(Result, 4001);
-        DL := FPlainDriver.dbconvert(FHandle, DT, Data, DL, SQLCHAR, Pointer(PAnsiChar(Result)), Length(Result));
-        while (DL > 0) and (Result[DL] = ' ') do
-            Dec(DL);
         SetLength(Result, DL);
+        Move(Data^, PAnsiChar(Result)^, DL);
       end;
+    end else
+    if (DT = FPlainDriver.GetVariables.datatypes[Z_SQLIMAGE]) then
+    begin
+      SetLength(Result, DL);
+      Move(Data^, PAnsiChar(Result)^, DL);
+    end else
+    begin
+      SetLength(Result, 4001);
+      DL := FPlainDriver.dbconvert(FHandle, DT, Data, DL,
+        FPlainDriver.GetVariables.datatypes[Z_SQLCHAR], Pointer(PAnsiChar(Result)), Length(Result));
+      while (DL > 0) and (Result[DL] = ' ') do
+          Dec(DL);
+      SetLength(Result, DL);
     end;
   end;
   //else
@@ -330,11 +334,11 @@ begin
   Result := False;
   if Assigned(Data) then
   begin
-    if DT = SQLBIT then
+    if DT = FPlainDriver.GetVariables.datatypes[Z_SQLBIT] then
       Result := PBoolean(Data)^
     else
     begin
-      FPlainDriver.dbconvert(FHandle, DT, Data, DL, SQLBIT,
+      FPlainDriver.dbconvert(FHandle, DT, Data, DL, FPlainDriver.GetVariables.datatypes[Z_SQLBIT],
         @Result, SizeOf(Result));
     end;
   end;
@@ -367,11 +371,11 @@ begin
   Result := 0;
   if Assigned(Data) then
   begin
-    if DT = SQLINT1 then
+    if DT = FPlainDriver.GetVariables.datatypes[Z_SQLINT1] then
       Result := PShortInt(Data)^
     else
     begin
-      FPlainDriver.dbconvert(FHandle, DT, Data, DL, SQLINT1,
+      FPlainDriver.dbconvert(FHandle, DT, Data, DL, FPlainDriver.GetVariables.datatypes[Z_SQLINT1],
         @Result, SizeOf(Result));
     end;
   end;
@@ -404,11 +408,11 @@ begin
   Result := 0;
   if Assigned(Data) then
   begin
-    if DT = SQLINT2 then
+    if DT = FPlainDriver.GetVariables.datatypes[Z_SQLINT2] then
       Result := PSmallInt(Data)^
     else
     begin
-      FPlainDriver.dbconvert(FHandle, DT, Data, DL, SQLINT2,
+      FPlainDriver.dbconvert(FHandle, DT, Data, DL, FPlainDriver.GetVariables.datatypes[Z_SQLINT2],
         @Result, SizeOf(Result));
     end;
   end;
@@ -441,11 +445,11 @@ begin
   Result := 0;
   if Assigned(Data) then
   begin
-    if DT = SQLINT4 then
+    if DT = FPlainDriver.GetVariables.datatypes[Z_SQLINT4] then
       Result := PLongint(Data)^
     else
     begin
-      FPlainDriver.dbconvert(FHandle, DT, Data, DL, SQLINT4,
+      FPlainDriver.dbconvert(FHandle, DT, Data, DL, FPlainDriver.GetVariables.datatypes[Z_SQLINT4],
         @Result, SizeOf(Result));
     end;
   end;
@@ -492,11 +496,11 @@ begin
   Result := 0;
   if Assigned(Data) then
   begin
-    if DT = SQLFLT4 then
+    if DT = FPlainDriver.GetVariables.datatypes[Z_SQLFLT4] then
       Result := PSingle(Data)^
     else
     begin
-      FPlainDriver.dbconvert(FHandle, DT, Data, DL, SQLFLT4,
+      FPlainDriver.dbconvert(FHandle, DT, Data, DL, FPlainDriver.GetVariables.datatypes[Z_SQLFLT4],
         @Result, SizeOf(Result));
     end;
   end;
@@ -529,11 +533,11 @@ begin
   Result := 0;
   if Assigned(Data) then
   begin
-    if DT = SQLFLT8 then
+    if DT = FPlainDriver.GetVariables.datatypes[Z_SQLFLT8] then
       Result := PDouble(Data)^
     else
     begin
-      FPlainDriver.dbconvert(FHandle, DT, Data, DL, SQLFLT8,
+      FPlainDriver.dbconvert(FHandle, DT, Data, DL, FPlainDriver.GetVariables.datatypes[Z_SQLFLT8],
         @Result, SizeOf(Result));
     end;
   end;
@@ -639,11 +643,11 @@ begin
   Result := 0;
   if Assigned(Data) then
   begin
-    if DT = SQLDATETIME then
+    if DT = FPlainDriver.GetVariables.datatypes[Z_SQLDATETIME] then
       Move(Data^, TempDate, SizeOf(TempDate))
     else
     begin
-      FPlainDriver.dbconvert(FHandle, DT, Data, DL, SQLDATETIME,
+      FPlainDriver.dbconvert(FHandle, DT, Data, DL, FPlainDriver.GetVariables.datatypes[Z_SQLDATETIME],
         @TempDate, SizeOf(TempDate));
     end;
     Result := TempDate.dtdays + 2 + (TempDate.dttime / 25920000);

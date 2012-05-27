@@ -72,6 +72,7 @@ function ConvertODBCToSqlType(FieldType: SmallInt): TZSQLType;
   @return a SQL undepended type.
 }
 function ConvertDBLibToSqlType(FieldType: SmallInt): TZSQLType;
+function ConvertFreeTDSToSqlType(FieldType: SmallInt): TZSQLType;
 
 {**
   Convert string DBLib field type to SqlType
@@ -86,6 +87,7 @@ function ConvertDBLibTypeToSqlType(Value: string): TZSQLType;
   @return a SQL undepended type.
 }
 function ConvertSqlTypeToDBLibType(FieldType: TZSQLType): Integer;
+function ConvertSqlTypeToFreeTDSType(FieldType: TZSQLType): Integer;
 
 {**
   Converts ZDBC SQL types into MS SQL native types.
@@ -93,6 +95,7 @@ function ConvertSqlTypeToDBLibType(FieldType: TZSQLType): Integer;
   @return a SQL undepended type.
 }
 function ConvertSqlTypeToDBLibTypeName(FieldType: TZSQLType): string;
+function ConvertSqlTypeToFreeTDSTypeName(FieldType: TZSQLType): string;
 
 {**
   Converts a DBLib nullability value into ZDBC TZColumnNullableType.
@@ -145,22 +148,53 @@ end;
 function ConvertDBLibToSqlType(FieldType: SmallInt): TZSQLType;
 begin
   case FieldType of
-    SQLCHAR: Result := stString;
-    SQLBIT: Result := stBoolean;
+    DBLIBSQLCHAR: Result := stString;
+    DBLIBSQLBIT: Result := stBoolean;
 //Bug #889223, bug with tinyint on mssql
-//    SQLINT1: Result := stByte;
-    SQLINT1: Result := stShort;
-    SQLINT2: Result := stShort;
-    SQLINT4: Result := stInteger;
-    SQLFLT4: Result := stDouble;
-    SQLFLT8: Result := stDouble;
-    SQLMONEY4: Result := stDouble;
-    SQLMONEY: Result := stDouble;
-    SQLDATETIM4: Result := stTimestamp;
-    SQLDATETIME: Result := stTimestamp;
-    SQLTEXT: Result := stAsciiStream;
-    SQLIMAGE: Result := stBinaryStream;
-    SQLBINARY: Result := stBinaryStream;
+//    DBLIBSQLINT1: Result := stByte;
+    DBLIBSQLINT1: Result := stShort;
+    DBLIBSQLINT2: Result := stShort;
+    DBLIBSQLINT4: Result := stInteger;
+    DBLIBSQLFLT4: Result := stDouble;
+    DBLIBSQLFLT8: Result := stDouble;
+    DBLIBSQLMONEY4: Result := stDouble;
+    DBLIBSQLMONEY: Result := stDouble;
+    DBLIBSQLDATETIM4: Result := stTimestamp;
+    DBLIBSQLDATETIME: Result := stTimestamp;
+    DBLIBSQLTEXT: Result := stAsciiStream;
+    DBLIBSQLIMAGE: Result := stBinaryStream;
+    DBLIBSQLBINARY: Result := stBinaryStream;
+  else
+    Result := stUnknown;
+  end;
+end;
+
+{**
+  Converts a FreeTDS native types into ZDBC SQL types.
+  @param FieldType dblibc native field type.
+  @return a SQL undepended type.
+}
+function ConvertFreeTDSToSqlType(FieldType: SmallInt): TZSQLType;
+begin
+  case FieldType of
+	SYBCHAR, SYBVARCHAR, XSYBCHAR, XSYBVARCHAR: Result := stString;
+  SYBINTN, SYBINT4:                           Result := stInteger;
+  SYBINT8, SYBNUMERIC:                        Result := stBigDecimal;
+  SYBINT1, SYBINT2:                           Result := stShort;
+  SYBFLT8, SYBFLTN, SYBREAL, SYBDECIMAL:      Result := stDouble;
+  SYBDATETIME, SYBDATETIME4, SYBDATETIMN:     Result := stTimestamp;
+  SYBBIT, SYBBITN:                            Result := stBoolean;
+  SYBTEXT:                                    Result := stAsciiStream;
+  SYBNTEXT:                                   Result := stUnicodeStream;
+  SYBIMAGE, SYBBINARY, SYBVARBINARY,
+  XSYBBINARY, XSYBVARBINARY:                  Result := stBinaryStream;
+  SYBMONEY4, SYBMONEY, SYBMONEYN:             Result := stDouble;
+  SYBVOID:                                    Result := stUnknown;
+	SYBNVARCHAR, XSYBNCHAR, XSYBNVARCHAR:       Result := stUnicodeString;
+  SYBMSXML:                                   Result := stBinaryStream;
+  SYBUNIQUE:                                  Result := stString;
+  SYBVARIANT:                                 Result := stString;
+  SYBMSUDT:                                   Result := stString;
   else
     Result := stUnknown;
   end;
@@ -185,22 +219,22 @@ function ConvertSqlTypeToDBLibType(FieldType: TZSQLType): Integer;
 begin
   Result := -1;
   case FieldType of
-    stBoolean: Result := SQLBIT;
-    stByte: Result := SQLINT1;
-    stShort: Result := SQLINT2;
-    stInteger: Result := SQLINT4;
-    stLong: Result := SQLFLT8;
-    stFloat: Result := SQLFLT8;
-    stDouble: Result := SQLFLT8;
-    stBigDecimal: Result := SQLFLT8;
-    stString: Result := SQLCHAR;
-    stBytes: Result := SQLBINARY;
-    stDate: Result := SQLDATETIME;
-    stTime: Result := SQLDATETIME;
-    stTimestamp: Result := SQLDATETIME;
-    stAsciiStream: Result := SQLTEXT;
-    stUnicodeStream: Result := SQLIMAGE;
-    stBinaryStream: Result := SQLIMAGE;
+    stBoolean: Result := DBLIBSQLBIT;
+    stByte: Result := DBLIBSQLINT1;
+    stShort: Result := DBLIBSQLINT2;
+    stInteger: Result := DBLIBSQLINT4;
+    stLong: Result := DBLIBSQLFLT8;
+    stFloat: Result := DBLIBSQLFLT8;
+    stDouble: Result := DBLIBSQLFLT8;
+    stBigDecimal: Result := DBLIBSQLFLT8;
+    stString: Result := DBLIBSQLCHAR;
+    stBytes: Result := DBLIBSQLBINARY;
+    stDate: Result := DBLIBSQLDATETIME;
+    stTime: Result := DBLIBSQLDATETIME;
+    stTimestamp: Result := DBLIBSQLDATETIME;
+    stAsciiStream: Result := DBLIBSQLTEXT;
+    stUnicodeStream: Result := DBLIBSQLIMAGE;
+    stBinaryStream: Result := DBLIBSQLIMAGE;
   end;
 end;
 
@@ -231,6 +265,65 @@ begin
     stBinaryStream: Result := 'image';
   end;
 end;
+
+{**
+  Converts ZDBC SQL types into FreeTDS native types.
+  @param FieldType dblibc native field type.
+  @return a SQL undepended type.
+}
+function ConvertSqlTypeToFreeTDSType(FieldType: TZSQLType): Integer;
+begin
+  Result := -1;
+  case FieldType of
+    stBoolean: Result := SYBBIT;
+    stByte: Result := SYBINT1;
+    stShort: Result := SYBINT2;
+    stInteger: Result := SYBINT4;
+    stLong: Result := SYBFLT8;
+    stFloat: Result := SYBFLT8;
+    stDouble: Result := SYBFLT8;
+    stBigDecimal: Result := SYBFLT8;
+    stString: Result := SYBCHAR;
+    stUnicodeString: Result := SYBNVARCHAR;
+    stBytes: Result := SYBBINARY;
+    stDate: Result := SYBDATETIME;
+    stTime: Result := SYBDATETIME;
+    stTimestamp: Result := SYBDATETIME;
+    stAsciiStream: Result := SYBTEXT;
+    stUnicodeStream: Result := SYBNTEXT;
+    stBinaryStream: Result := SYBIMAGE;
+  end;
+end;
+
+{**
+  Converts ZDBC SQL types into FreeTDS native types.
+  @param FieldType dblibc native field type.
+  @return a SQL undepended type.
+}
+function ConvertSqlTypeToFreeTDSTypeName(FieldType: TZSQLType): string;
+begin
+  Result := '';
+  case FieldType of
+    stBoolean: Result := 'bit';
+    stByte: Result := 'tinyint';
+    stShort: Result := 'smallint';
+    stInteger: Result := 'int';
+    stLong: Result := 'int';
+    stFloat: Result := 'float(24)';
+    stDouble: Result := 'float(53)';
+    stBigDecimal: Result := 'float(53)';
+    stString: Result := 'varchar(8000)';
+    stUnicodeString: Result := 'nvarchar(4000)';
+    stBytes: Result := 'varbinary(8000)';
+    stDate: Result := 'datetime';
+    stTime: Result := 'datetime';
+    stTimestamp: Result := 'datetime';
+    stAsciiStream: Result := 'text';
+    stUnicodeStream: Result := 'ntext';
+    stBinaryStream: Result := 'image';
+  end;
+end;
+
 
 {**
   Converts a DBLib nullability value into ZDBC TZColumnNullableType.
@@ -272,6 +365,8 @@ begin
         Result := SoftVarManager.GetAsString(Value);
       stString:
         Result := AnsiQuotedStr(SoftVarManager.GetAsString(Value), '''');
+      stUnicodeString:
+        Result := 'N'+QuotedStr(SoftVarManager.GetAsUnicodeString(Value));
       stBytes:
         begin
           TempBytes := StrToBytes(AnsiString(SoftVarManager.GetAsString(Value)));
