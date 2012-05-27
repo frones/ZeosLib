@@ -181,6 +181,31 @@ const
   Z_SETLOGINTIME          = 15;
   Z_SETFALLBACK           = 16;
 
+{ datatype plazeholders }
+  Z_SQLVOID               = 0;
+  Z_SQLTEXT               = 1;
+  Z_SQLVARBINARY          = 2;
+  Z_SQLINTN               = 3;
+  Z_SQLVARCHAR            = 4;
+  Z_SQLBINARY             = 5;
+  Z_SQLIMAGE              = 6;
+  Z_SQLCHAR               = 7;
+  Z_SQLINT1               = 8;
+  Z_SQLBIT                = 9;
+  Z_SQLINT2               = 10;
+  Z_SQLINT4               = 11;
+  Z_SQLMONEY              = 12;
+  Z_SQLDATETIME           = 13;
+  Z_SQLFLT8               = 14;
+  Z_SQLFLTN               = 15;
+  Z_SQLMONEYN             = 16;
+  Z_SQLDATETIMN           = 17;
+  Z_SQLFLT4               = 18;
+  Z_SQLMONEY4             = 19;
+  Z_SQLDATETIM4           = 20;
+  Z_SQLDECIMAL            = 21;
+  Z_SQLNUMERIC            = 22;
+
 { DBLib options }
 const
   DBLIBDBBUFFER               = 0;
@@ -336,29 +361,29 @@ const
 
 
 { Data Type Tokens }
-  SQLVOID               = $1f;
-  SQLTEXT               = $23;
-  SQLVARBINARY          = $25;
-  SQLINTN               = $26; { all nullable integers }
-  SQLVARCHAR            = $27;
-  SQLBINARY             = $2d;
-  SQLIMAGE              = $22;
-  SQLCHAR               = $2f;
-  SQLINT1               = $30;
-  SQLBIT                = $32;
-  SQLINT2               = $34;
-  SQLINT4               = $38;
-  SQLMONEY              = $3c;
-  SQLDATETIME           = $3d;
-  SQLFLT8               = $3e;
-  SQLFLTN               = $6d;
-  SQLMONEYN             = $6e;
-  SQLDATETIMN           = $6f;
-  SQLFLT4               = $3b;
-  SQLMONEY4             = $7a;
-  SQLDATETIM4           = $3a;
-  SQLDECIMAL            = $6a;
-  SQLNUMERIC            = $6c;
+  DBLIBSQLVOID               = $1f;
+  DBLIBSQLTEXT               = $23;
+  DBLIBSQLVARBINARY          = $25;
+  DBLIBSQLINTN               = $26; { all nullable integers }
+  DBLIBSQLVARCHAR            = $27;
+  DBLIBSQLBINARY             = $2d;
+  DBLIBSQLIMAGE              = $22;
+  DBLIBSQLCHAR               = $2f;
+  DBLIBSQLINT1               = $30;
+  DBLIBSQLBIT                = $32;
+  DBLIBSQLINT2               = $34;
+  DBLIBSQLINT4               = $38;
+  DBLIBSQLMONEY              = $3c;
+  DBLIBSQLDATETIME           = $3d;
+  DBLIBSQLFLT8               = $3e;
+  DBLIBSQLFLTN               = $6d;
+  DBLIBSQLMONEYN             = $6e;
+  DBLIBSQLDATETIMN           = $6f;
+  DBLIBSQLFLT4               = $3b;
+  DBLIBSQLMONEY4             = $7a;
+  DBLIBSQLDATETIM4           = $3a;
+  DBLIBSQLDECIMAL            = $6a;
+  DBLIBSQLNUMERIC            = $6c;
 
 { Data stream tokens }
   SQLCOLFMT             = $a1;
@@ -1040,6 +1065,7 @@ type
   TDBVariables = record
     dboptions: array[0..44]  of ShortInt;
     dbSetLoginRec: array[0..16] of ShortInt;
+    datatypes: array[0..22] of Integer;
   End;
 
 {common FreeTDS(dblib.dll) and ntwdblib.dll definitions

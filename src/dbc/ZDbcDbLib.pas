@@ -86,6 +86,7 @@ type
   IZDBLibConnection = interface (IZConnection)
     ['{6B0662A2-FF2A-4415-B6B0-AAC047EA0671}']
 
+    function FreeTDS: Boolean;
     function GetProvider: TDBLibProvider;
     function GetPlainDriver: IZDBLibPlainDriver;
     function GetConnectionHandle: PDBPROCESS;
@@ -97,6 +98,8 @@ type
   TZDBLibConnection = class(TZAbstractConnection, IZDBLibConnection)
   private
     FProvider: TDBLibProvider;
+    FFreeTDS: Boolean;
+    function FreeTDS: Boolean;
     function GetProvider: TDBLibProvider;
     procedure ReStartTransactionSupport;
     procedure InternalSetTransactionIsolation(Level: TZTransactIsolationLevel);
@@ -234,6 +237,7 @@ begin
     end
     else
       FMetadata := nil;
+  FFreeTDS := Pos('FreeTDS', Url.Protocol) > 0;
 
   FHandle := nil;
 end;
@@ -247,11 +251,15 @@ begin
   inherited Destroy;
 end;
 
+function TZDBLibConnection.FreeTDS: Boolean;
+begin
+  Result := FFreeTDS;
+end;
+
 function TZDBLibConnection.GetProvider: TDBLibProvider;
 begin
   Result := FProvider;
 end;
-
 
 {**
   Executes simple statements internally.
@@ -320,7 +328,7 @@ begin
     if S <> '' then
       GetPlainDriver.dbSetLoginTime(StrToIntDef(S, 60));
 
-    if Pos('FreeTDS', PlainDriver.GetProtocol) > 0 then
+    if FFreeTDS then
     begin
       if StrToBoolEx(Info.Values['log']) or StrToBoolEx(Info.Values['logging']) or
          StrToBoolEx(Info.Values['tds_dump']) then begin
