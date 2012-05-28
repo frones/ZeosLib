@@ -103,10 +103,21 @@ end;
   @return a built connection URL string. 
 }
 function TZTestDbcASACase.GetConnectionUrl: string;
+var
+  TempProperties :TStrings;
+  I: Integer;
 begin
-  if Port <> 0 then
+  TempProperties := TStringList.Create;
+  for I := 0 to High(Properties) do
+  begin
+    TempProperties.Add(Properties[I])
+  end;
+  Result := DriverManager.ConstructURL(Protocol, HostName, Database,
+  UserName, Password, Port, TempProperties);
+{  if Port <> 0 then
     Result := Format('zdbc:%s://%s:%d/%s', [Protocol, HostName, Port, Database])
-  else Result := Format('zdbc:%s://%s/%s', [Protocol, HostName, Database]);
+  else Result := Format('zdbc:%s://%s/%s', [Protocol, HostName, Database]);}
+  TempProperties.Free;
 end;
 
 {**
