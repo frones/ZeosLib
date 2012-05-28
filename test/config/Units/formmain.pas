@@ -1,3 +1,55 @@
+{*********************************************************}
+{                                                         }
+{             Zeos test-suite Configurator                }
+{                                                         }
+{        Originally written by Michael Hiergeist          }
+{                                                         }
+{*********************************************************}
+
+{@********************************************************}
+{    Copyright (c) 1999-2012 Zeos Development Group       }
+{                                                         }
+{ License Agreement:                                      }
+{                                                         }
+{ This library is distributed in the hope that it will be }
+{ useful, but WITHOUT ANY WARRANTY; without even the      }
+{ implied warranty of MERCHANTABILITY or FITNESS FOR      }
+{ A PARTICULAR PURPOSE.  See the GNU Lesser General       }
+{ Public License for more details.                        }
+{                                                         }
+{ The source code of the ZEOS Libraries and packages are  }
+{ distributed under the Library GNU General Public        }
+{ License (see the file COPYING / COPYING.ZEOS)           }
+{ with the following  modification:                       }
+{ As a special exception, the copyright holders of this   }
+{ library give you permission to link this library with   }
+{ independent modules to produce an executable,           }
+{ regardless of the license terms of these independent    }
+{ modules, and to copy and distribute the resulting       }
+{ executable under terms of your choice, provided that    }
+{ you also meet, for each linked independent module,      }
+{ the terms and conditions of the license of that module. }
+{ An independent module is a module which is not derived  }
+{ from or based on this library. If you modify this       }
+{ library, you may extend this exception to your version  }
+{ of the library, but you are not obligated to do so.     }
+{ If you do not wish to do so, delete this exception      }
+{ statement from your version.                            }
+{                                                         }
+{                                                         }
+{ The project web site is located on:                     }
+{   http://zeos.firmos.at  (FORUM)                        }
+{   http://zeosbugs.firmos.at (BUGTRACKER)                }
+{   svn://zeos.firmos.at/zeos/trunk (SVN Repository)      }
+{                                                         }
+{   http://www.sourceforge.net/projects/zeoslib.          }
+{   http://www.zeoslib.sourceforge.net                    }
+{                                                         }
+{                                                         }
+{                                                         }
+{                                 Zeos Development Group. }
+{********************************************************@}
+
 unit FormMain;
 
 {$mode objfpc}{$H+}
@@ -68,7 +120,49 @@ const
   DEFAULT_DECIMAL_SEPARATOR = ',';
   DEFAULT_PORT_VALUE        = 0;
   DEFAULT_HOST_VALUE        = 'localhost';
-
+const
+  { Performance tests values}
+  PERFORMANCE_APIS           = 'apis';
+  PERFORMANCE_TESTS          = 'tests';
+  PERFORMANCE_REPEAT         = 'repeat';
+  PERFORMANCE_REOCORDS       = 'records';
+  PERFORMANCE_OUTPUT         = 'output';
+  PERFORMANCE_BASEAPI        = 'baseapi';
+  PERFORMANCE_PRINTDETAILS   = 'printdetails';
+const
+  { Performance APIs }
+  plain         = 'plain';
+  dbc           = 'dbc';
+  dbc_cached    = 'dbc-cached';
+  dataset       = 'dataset';
+  midas         = 'midas';
+  old_zeos      = 'old-zeos';
+  bde           = 'bde';
+  ado           = 'ado';
+  dbx           = 'dbx';
+  dbxc          = 'dbxc';
+  ibx           = 'ibx';
+const
+  { Performance tests }
+  test_connect       = 'connect';
+  test_insert        = 'insert';
+  test_open          = 'open';
+  test_fetch         = 'fetch';
+  test_sort          = 'sort';
+  test_filter        = 'filter';
+  test_update        = 'update';
+  test_delete        = 'delete';
+  test_direct_update = 'direct-update';
+const
+  { Performance Output }
+  out_plain          = plain;
+  out_csv            = 'csv';
+  out_html           = 'html';
+const
+  { Performance options }
+  opt_repeat         = 'repeat';
+  opt_records        = 'records';
+  opt_print_details  = 'printdetails';
 const
   DefaultFile = {$IFDEF UNIX}'../database/test.properties'{$ELSE}'..\database\test.properties'{$ENDIF};
 type
@@ -166,16 +260,16 @@ type
   private
     FAPIPlain: Boolean;
     FAPIdbc: Boolean;
-    FAPIdbcchached: Boolean;
+    FAPIdbc_cached: Boolean;
     FAPIdataset: Boolean;
     FAPImidas: Boolean;
-    FAPIoldzeos: Boolean;
+    FAPIold_zeos: Boolean;
     FAPIbde: Boolean;
     FAPIado: Boolean;
     FAPIdbx: Boolean;
     FAPIdbxc: Boolean;
     FAPIibx: Boolean;
-    FTestConncet: Boolean;
+    FTestConnect: Boolean;
     FTestInsert: Boolean;
     FTestOpen: Boolean;
     FTestFetch: Boolean;
@@ -186,7 +280,7 @@ type
     FTestDirectUpdate: Boolean;
     FBaseAPIPlain: Boolean;
     FBaseAPIdbc: Boolean;
-    FBaseAPIdbcchached: Boolean;
+    FBaseAPIdbccached: Boolean;
     FBaseAPIdataset: Boolean;
     FResultOutput: String;
     FRepeat: Integer;
@@ -195,7 +289,7 @@ type
     FHasChanged: Boolean;
     procedure SetAPIPlain(const Value: Boolean);
     procedure SetAPIdbc(const Value: Boolean);
-    procedure SetAPIdbcchached(const Value: Boolean);
+    procedure SetAPIdbccached(const Value: Boolean);
     procedure SetAPIdataset(const Value: Boolean);
     procedure SetAPImidas(const Value: Boolean);
     procedure SetAPIoldzeos(const Value: Boolean);
@@ -204,7 +298,7 @@ type
     procedure SetAPIdbx(const Value: Boolean);
     procedure SetAPIdbxc(const Value: Boolean);
     procedure SetAPIibx(const Value: Boolean);
-    procedure SetTestConncet(const Value: Boolean);
+    procedure SetTestConnect(const Value: Boolean);
     procedure SetTestInsert(const Value: Boolean);
     procedure SetTestOpen(const Value: Boolean);
     procedure SetTestFetch(const Value: Boolean);
@@ -215,7 +309,7 @@ type
     procedure SetTestDirectUpdate(const Value: Boolean);
     procedure SetBaseAPIPlain(const Value: Boolean);
     procedure SetBaseAPIdbc(const Value: Boolean);
-    procedure SetBaseAPIdbcchached(const Value: Boolean);
+    procedure SetBaseAPIdbccached(const Value: Boolean);
     procedure SetBaseAPIdataset(const Value: Boolean);
     procedure SetResultOutput(const Value: String);
     procedure SetRepeat(const Value: Integer);
@@ -226,16 +320,16 @@ type
     procedure PostUpdates;
     property APIPlain: Boolean read FAPIPlain write SetAPIPlain;
     property APIdbc: Boolean read FAPIdbc write SetAPIdbc;
-    property APIdbcchached: Boolean read FAPIdbcchached write SetAPIdbcchached;
+    property APIdbccached: Boolean read FAPIdbc_cached write SetAPIdbccached;
     property APIdataset: Boolean read FAPIdataset write SetAPIdataset;
     property APImidas: Boolean read FAPImidas write SetAPImidas;
-    property APIoldzeos: Boolean read FAPIoldzeos write SetAPIoldzeos;
+    property APIoldzeos: Boolean read FAPIold_zeos write SetAPIoldzeos;
     property APIbde: Boolean read FAPIbde write SetAPIbde;
     property APIado: Boolean read FAPIado write SetAPIado;
     property APIdbx: Boolean read FAPIdbx write SetAPIdbx;
     property APIdbxc: Boolean read FAPIdbxc write SetAPIdbxc;
     property APIibx: Boolean read FAPIibx write SetAPIibx;
-    property TestConncet: Boolean read FTestConncet write SetTestConncet;
+    property TestConnect: Boolean read FTestConnect write SetTestConnect;
     property TestInsert: Boolean read FTestInsert write SetTestInsert;
     property TestOpen: Boolean read FTestOpen write SetTestOpen;
     property TestFetch: Boolean read FTestFetch write SetTestFetch;
@@ -246,7 +340,7 @@ type
     property TestDirectUpdate: Boolean read FTestDirectUpdate write SetTestDirectUpdate;
     property BaseAPIPlain: Boolean read FBaseAPIPlain write SetBaseAPIPlain;
     property BaseAPIdbc: Boolean read FBaseAPIdbc write SetBaseAPIdbc;
-    property BaseAPIdbcchached: Boolean read FBaseAPIdbcchached write SetBaseAPIdbcchached;
+    property BaseAPIdbccached: Boolean read FBaseAPIdbccached write SetBaseAPIdbccached;
     property BaseAPIdataset: Boolean read FBaseAPIdataset write SetBaseAPIdataset;
     property ResultOutput: String read FResultOutput write SetResultOutput;
     property RepeatCount: Integer read FRepeat write SetRepeat;
@@ -257,29 +351,29 @@ type
 
   { TfrmMain }
   TfrmMain = class(TForm)
-    cbgTests: TCheckGroup;
-    cbUnicode: TCheckBox;
-    cbPreprepareSQL: TCheckBox;
-    cbRebuild: TCheckBox;
-    cbCreateDB: TCheckBox;
     cbAnsiCP: TComboBox;
+    cbCreateDB: TCheckBox;
+    cbgTests: TCheckGroup;
+    cbPreprepareSQL: TCheckBox;
+    cbPrintDetails: TCheckBox;
+    cbRebuild: TCheckBox;
+    cbUnicode: TCheckBox;
     cbUnicodeCP: TComboBox;
-    cbDetails: TCheckBox;
-    CheckGroup1: TCheckGroup;
-    CheckGroup2: TCheckGroup;
-    CheckGroup3: TCheckGroup;
+    cgAPIS: TCheckGroup;
+    cgTests: TCheckGroup;
+    cgBaseAPIS: TCheckGroup;
+    eBuildScripts: TEdit;
     eDatabase: TEdit;
     eDelimiter: TEdit;
     eDelimiterType: TEdit;
-    eBuildScripts: TEdit;
-    eRecords: TEdit;
-    eRepeat: TEdit;
-    ePort: TEdit;
     eDropScripts: TEdit;
+    eHost: TEdit;
     eLibLocation: TEdit;
     ePassword: TEdit;
+    ePort: TEdit;
+    eRecords: TEdit;
+    eRepeat: TEdit;
     eUser: TEdit;
-    eHost: TEdit;
     GroupBox1: TGroupBox;
     GroupBox2: TGroupBox;
     GroupBox3: TGroupBox;
@@ -289,8 +383,6 @@ type
     Label12: TLabel;
     Label13: TLabel;
     Label14: TLabel;
-    lbDrivers: TListBox;
-    Properties: TLabel;
     Label2: TLabel;
     Label3: TLabel;
     Label4: TLabel;
@@ -299,8 +391,8 @@ type
     Label7: TLabel;
     Label8: TLabel;
     Label9: TLabel;
+    lbDrivers: TListBox;
     MainMenu1: TMainMenu;
-    mProperties: TMemo;
     MenuItem1: TMenuItem;
     miClose: TMenuItem;
     miNew: TMenuItem;
@@ -308,19 +400,28 @@ type
     miOpen: TMenuItem;
     miPost: TMenuItem;
     MenuItem9: TMenuItem;
+    mProperties: TMemo;
     OpenDialog1: TOpenDialog;
     PageControl1: TPageControl;
-    RadioGroup1: TRadioGroup;
+    Panel1: TPanel;
+    Properties: TLabel;
+    rgOutput: TRadioGroup;
+    Splitter1: TSplitter;
     tsPerformance: TTabSheet;
     tsMain: TTabSheet;
     ZConnection1: TZConnection;
     procedure cbCreateDBEditingDone(Sender: TObject);
     procedure cbgTestsItemClick(Sender: TObject; Index: integer);
     procedure cbPreprepareSQLEditingDone(Sender: TObject);
+    procedure cbPrintDetailsChange(Sender: TObject);
+    procedure cbPrintDetailsClick(Sender: TObject);
     procedure cbRebuildEditingDone(Sender: TObject);
     procedure cbUnicodeCPEditingDone(Sender: TObject);
     procedure cbUnicodeEditingDone(Sender: TObject);
     procedure cbAnsiCPEditingDone(Sender: TObject);
+    procedure cgAPISItemClick(Sender: TObject; Index: integer);
+    procedure cgBaseAPISItemClick(Sender: TObject; Index: integer);
+    procedure cgTestsItemClick(Sender: TObject; Index: integer);
     procedure eBuildScriptsEditingDone(Sender: TObject);
     procedure eDatabaseEditingDone(Sender: TObject);
     procedure eDelimiterEditingDone(Sender: TObject);
@@ -329,6 +430,9 @@ type
     procedure eHostEditingDone(Sender: TObject);
     procedure eLibLocationEditingDone(Sender: TObject);
     procedure ePasswordEditingDone(Sender: TObject);
+    procedure eRecordsEditingDone(Sender: TObject);
+    procedure eRepeatChange(Sender: TObject);
+    procedure eRepeatEditingDone(Sender: TObject);
     procedure eUserEditingDone(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
@@ -337,8 +441,10 @@ type
     procedure miOpenClick(Sender: TObject);
     procedure miPostClick(Sender: TObject);
     procedure mPropertiesEditingDone(Sender: TObject);
+    procedure rgOutputClick(Sender: TObject);
   private
     { private declarations }
+    PerformanceConfig: TPerformanceConfig;
   public
     { public declarations }
   end;
@@ -349,6 +455,8 @@ var
 implementation
 
 uses IniFiles, ZSysUtils;
+
+{$R *.lfm}
 
 var
   Ini: TIniFile;
@@ -667,13 +775,115 @@ begin
 end;
 
 constructor TPerformanceConfig.Create;
+var
+  SL: TStringList;
+  I: Integer;
 begin
-
+  SL := TStringList.Create;
+  if Assigned(Ini) then
+  begin
+    PutSplitStringEx(SL, ReadProperty(PERFORMANCE_TEST_GROUP, PERFORMANCE_APIS, ''), ',');
+    FAPIado := SL.IndexOf(ado) > -1;
+    frmMain.cgAPIS.Checked[frmMain.cgAPIS.items.IndexOf(ado)] := FAPIado;
+    FAPIbde := SL.IndexOf(bde) > -1;
+    frmMain.cgAPIS.Checked[frmMain.cgAPIS.items.IndexOf(bde)] := FAPIbde;
+    FAPIdataset := SL.IndexOf(dataset) > -1;
+    frmMain.cgAPIS.Checked[frmMain.cgAPIS.items.IndexOf(dataset)] := FAPIdataset;
+    FAPIdbc := SL.IndexOf(dbc) > -1;
+    frmMain.cgAPIS.Checked[frmMain.cgAPIS.items.IndexOf(dbc)] := FAPIdbc;
+    FAPIplain := SL.IndexOf(plain) > -1;
+    frmMain.cgAPIS.Checked[frmMain.cgAPIS.items.IndexOf(plain)] := FAPIplain;
+    FAPIdbc_cached := SL.IndexOf(dbc_cached) > -1;
+    frmMain.cgAPIS.Checked[frmMain.cgAPIS.items.IndexOf(dbc_cached)] := FAPIdbc_cached;
+    FAPImidas := SL.IndexOf(midas) > -1;
+    frmMain.cgAPIS.Checked[frmMain.cgAPIS.items.IndexOf(midas)] := FAPImidas;
+    FAPIold_zeos := SL.IndexOf(old_zeos) > -1;
+    frmMain.cgAPIS.Checked[frmMain.cgAPIS.items.IndexOf(old_zeos)] := FAPIold_zeos;
+    FAPIdbx := SL.IndexOf(dbx) > -1;
+    frmMain.cgAPIS.Checked[frmMain.cgAPIS.items.IndexOf(dbx)] := FAPIdbx;
+    FAPIdbxc := SL.IndexOf(dbxc) > -1;
+    frmMain.cgAPIS.Checked[frmMain.cgAPIS.items.IndexOf(dbxc)] := FAPIdbxc;
+    FAPIibx := SL.IndexOf(ibx) > -1;
+    frmMain.cgAPIS.Checked[frmMain.cgAPIS.items.IndexOf(ibx)] := FAPIibx;
+    { Available tests }
+    PutSplitStringEx(SL, ReadProperty(PERFORMANCE_TEST_GROUP, PERFORMANCE_TESTS, ''), ',');
+    FTestConnect := SL.IndexOf(test_connect) > -1;
+    frmMain.cgTests.Checked[frmMain.cgTests.items.IndexOf(test_connect)] := FTestConnect;
+    FTestInsert := SL.IndexOf(test_insert) > -1;
+    frmMain.cgTests.Checked[frmMain.cgTests.items.IndexOf(test_insert)] := FTestInsert;
+    FTestInsert := SL.IndexOf(test_insert) > -1;
+    frmMain.cgTests.Checked[frmMain.cgTests.items.IndexOf(test_insert)] := FTestInsert;
+    FTestOpen := SL.IndexOf(test_open) > -1;
+    frmMain.cgTests.Checked[frmMain.cgTests.items.IndexOf(test_open)] := FTestOpen;
+    FTestFetch := SL.IndexOf(test_fetch) > -1;
+    frmMain.cgTests.Checked[frmMain.cgTests.items.IndexOf(test_fetch)] := FTestFetch;
+    FTestSort := SL.IndexOf(test_sort) > -1;
+    frmMain.cgTests.Checked[frmMain.cgTests.items.IndexOf(test_sort)] := FTestSort;
+    FTestFilter := SL.IndexOf(test_filter) > -1;
+    frmMain.cgTests.Checked[frmMain.cgTests.items.IndexOf(test_filter)] := FTestFilter;
+    FTestUpdate := SL.IndexOf(test_update) > -1;
+    frmMain.cgTests.Checked[frmMain.cgTests.items.IndexOf(test_update)] := FTestUpdate;
+    FTestDelete := SL.IndexOf(test_delete) > -1;
+    frmMain.cgTests.Checked[frmMain.cgTests.items.IndexOf(test_delete)] := FTestDelete;
+    FTestDirectUpdate := SL.IndexOf(test_delete) > -1;
+    frmMain.cgTests.Checked[frmMain.cgTests.items.IndexOf(test_direct_update)] := FTestDirectUpdate;
+    { base apis }
+    PutSplitStringEx(SL, ReadProperty(PERFORMANCE_TEST_GROUP, PERFORMANCE_BASEAPI, ''), ',');
+    FBaseAPIPlain := SL.IndexOf(plain) > -1;
+    frmMain.cgBaseAPIS.Checked[frmMain.cgBaseAPIS.items.IndexOf(plain)] := FBaseAPIPlain;
+    FBaseAPIdbc := SL.IndexOf(dbc) > -1;
+    frmMain.cgBaseAPIS.Checked[frmMain.cgBaseAPIS.items.IndexOf(dbc)] := FBaseAPIdbc;
+    FBaseAPIdbccached := SL.IndexOf(dbc_cached) > -1;
+    frmMain.cgBaseAPIS.Checked[frmMain.cgBaseAPIS.items.IndexOf(dbc_cached)] := FBaseAPIdbccached;
+    FBaseAPIdataset := SL.IndexOf(dataset) > -1;
+    frmMain.cgBaseAPIS.Checked[frmMain.cgBaseAPIS.items.IndexOf(dataset)] := FBaseAPIdataset;
+    { Output }
+    FResultOutput := ReadProperty(PERFORMANCE_TEST_GROUP, PERFORMANCE_OUTPUT, plain);
+    frmMain.rgOutput.ItemIndex := frmMain.rgOutput.items.IndexOf(FResultOutput);
+    { Options }
+    FRepeat := StrToIntDef(ReadProperty(PERFORMANCE_TEST_GROUP, PERFORMANCE_REPEAT, '3'), 3);
+    frmMain.eRepeat.Text := IntToStr(FRepeat);
+    FCount := StrToIntDef(ReadProperty(PERFORMANCE_TEST_GROUP, PERFORMANCE_REOCORDS, '10000'), 10000);
+    frmMain.eRecords.Text := IntToStr(FCount);
+    FDetails := StrToBoolEx(ReadProperty(PERFORMANCE_TEST_GROUP, PERFORMANCE_PRINTDETAILS, 'Yes'));
+  end;
+  SL.Free;
 end;
 
 procedure TPerformanceConfig.PostUpdates;
+var
+  I: Integer;
+  Temp: String;
 begin
-
+  Temp := '';
+  for I := 0 to frmMain.cgAPIS.Items.count -1 do
+    if frmMain.cgAPIS.Checked[i] then
+      if Temp = '' then Temp := frmMain.cgAPIS.Items[i]
+      else Temp := Temp+','+frmMain.cgAPIS.Items[i];
+  WriteProperty(PERFORMANCE_TEST_GROUP, PERFORMANCE_APIS, Temp);
+  Temp := '';
+  { Available tests }
+  for I := 0 to frmMain.cgTests.Items.count -1 do
+    if frmMain.cgTests.Checked[i] then
+      if Temp = '' then Temp := frmMain.cgTests.Items[i]
+      else Temp := Temp+','+frmMain.cgTests.Items[i];
+  WriteProperty(PERFORMANCE_TEST_GROUP, PERFORMANCE_TESTS, Temp);
+  { base apis }
+  Temp := '';
+  for I := 0 to frmMain.cgBaseAPIS.Items.count -1 do
+    if frmMain.cgBaseAPIS.Checked[i] then
+      if Temp = '' then Temp := frmMain.cgBaseAPIS.Items[i]
+      else Temp := Temp+','+frmMain.cgBaseAPIS.Items[i];
+  WriteProperty(PERFORMANCE_TEST_GROUP, PERFORMANCE_BASEAPI, Temp);
+  { Output }
+  WriteProperty(PERFORMANCE_TEST_GROUP, PERFORMANCE_OUTPUT, frmMain.rgOutput.items[frmMain.rgOutput.ItemIndex]);
+  { Options }
+  WriteProperty(PERFORMANCE_TEST_GROUP, PERFORMANCE_REPEAT, frmMain.eRepeat.Text);
+  WriteProperty(PERFORMANCE_TEST_GROUP, PERFORMANCE_REOCORDS, frmMain.eRecords.Text);
+  if frmMain.cbPrintDetails.Checked then
+    WriteProperty(PERFORMANCE_TEST_GROUP, PERFORMANCE_PRINTDETAILS, 'Yes')
+  else
+    WriteProperty(PERFORMANCE_TEST_GROUP, PERFORMANCE_PRINTDETAILS, 'No');
 end;
 
 procedure TPerformanceConfig.SetAPIPlain(const Value: Boolean);
@@ -688,10 +898,10 @@ begin
   FAPIdbc := Value;
 end;
 
-procedure TPerformanceConfig.SetAPIdbcchached(const Value: Boolean);
+procedure TPerformanceConfig.SetAPIdbccached(const Value: Boolean);
 begin
-  FHasChanged := FAPIdbcchached <> Value;
-  FAPIdbcchached := Value;
+  FHasChanged := FAPIdbc_cached <> Value;
+  FAPIdbc_cached := Value;
 end;
 
 procedure TPerformanceConfig.SetAPIdataset(const Value: Boolean);
@@ -708,8 +918,8 @@ end;
 
 procedure TPerformanceConfig.SetAPIoldzeos(const Value: Boolean);
 begin
-  FHasChanged := FAPIoldzeos <> Value;
-  FAPIoldzeos := Value;
+  FHasChanged := FAPIold_zeos <> Value;
+  FAPIold_zeos := Value;
 end;
 
 procedure TPerformanceConfig.SetAPIbde(const Value: Boolean);
@@ -742,10 +952,10 @@ begin
   FAPIibx := Value;
 end;
 
-procedure TPerformanceConfig.SetTestConncet(const Value: Boolean);
+procedure TPerformanceConfig.SetTestConnect(const Value: Boolean);
 begin
-  FHasChanged := FTestConncet <> Value;
-  FTestConncet := Value;
+  FHasChanged := FTestConnect <> Value;
+  FTestConnect := Value;
 end;
 
 procedure TPerformanceConfig.SetTestInsert(const Value: Boolean);
@@ -808,10 +1018,10 @@ begin
   FBaseAPIdbc := Value;
 end;
 
-procedure TPerformanceConfig.SetBaseAPIdbcchached(const Value: Boolean);
+procedure TPerformanceConfig.SetBaseAPIdbccached(const Value: Boolean);
 begin
-  FHasChanged := FBaseAPIdbc <> Value;
-  FBaseAPIdbc := Value;
+  FHasChanged := FBaseAPIdbccached <> Value;
+  FBaseAPIdbccached := Value;
 end;
 
 procedure TPerformanceConfig.SetBaseAPIdataset(const Value: Boolean);
@@ -871,6 +1081,8 @@ begin
     lbDrivers.Items.AddObject(SL[i], TPlainConfig.Create(SL[i]));
   if lbDrivers.Items.Count > 0 then lbDrivers.ItemIndex:=0;
   lbDriversSelectionChange(Sender, True);
+  PerformanceConfig := TPerformanceConfig.create;
+  cbPrintDetails.Checked := PerformanceConfig.FDetails;
 end;
 
 procedure TfrmMain.lbDriversSelectionChange(Sender: TObject; User: boolean);
@@ -997,12 +1209,18 @@ begin
   WriteProperty(COMPONENT_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, SComponent);
   WriteProperty(BUGREPORT_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, SBugreport);
   WriteProperty(PERFORMANCE_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, SPerformance);
+  PerformanceConfig.PostUpdates;
   SL.Free;
 end;
 
 procedure TfrmMain.mPropertiesEditingDone(Sender: TObject);
 begin
   TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Properties := mProperties.Text;
+end;
+
+procedure TfrmMain.rgOutputClick(Sender: TObject);
+begin
+  Self.PerformanceConfig.ResultOutput := rgOutput.Items[rgOutput.ItemIndex];
 end;
 
 procedure TfrmMain.FormClose(Sender: TObject; var CloseAction: TCloseAction);
@@ -1017,7 +1235,7 @@ begin
       FChanged := True;
       Break;
     end;
-  if FChanged then
+  if FChanged or PerformanceConfig.Changed then
     case MessageDlg('Settings have been changed. Post updates?', mtConfirmation,
       [mbYes, mbNo, mbAbort], 0) of
       mrYes:
@@ -1028,6 +1246,7 @@ begin
       mrNo: CloseAction := caFree;
       mrAbort: CloseAction := caNone;
     end;
+  PerformanceConfig.Free;
 end;
 
 procedure TfrmMain.cbgTestsItemClick(Sender: TObject; Index: integer);
@@ -1054,6 +1273,16 @@ begin
   TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).PreprepareSQL := cbPreprepareSQL.Checked;
 end;
 
+procedure TfrmMain.cbPrintDetailsChange(Sender: TObject);
+begin
+
+end;
+
+procedure TfrmMain.cbPrintDetailsClick(Sender: TObject);
+begin
+  PerformanceConfig.Details := cbPrintDetails.Checked;
+end;
+
 procedure TfrmMain.cbRebuildEditingDone(Sender: TObject);
 begin
   TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Rebuild := cbRebuild.Checked;
@@ -1072,6 +1301,48 @@ end;
 procedure TfrmMain.cbAnsiCPEditingDone(Sender: TObject);
 begin
   TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).AnsiCodePage := cbAnsiCP.Text;
+end;
+
+procedure TfrmMain.cgAPISItemClick(Sender: TObject; Index: integer);
+begin
+  case Index of
+    0: PerformanceConfig.APIPlain := cgAPIS.Checked[Index];
+    1: PerformanceConfig.APIdbc := cgAPIS.Checked[Index];
+    2: PerformanceConfig.APIdbccached := cgAPIS.Checked[Index];
+    3: PerformanceConfig.APIdataset := cgAPIS.Checked[Index];
+    4: PerformanceConfig.APImidas := cgAPIS.Checked[Index];
+    5: PerformanceConfig.APIoldzeos := cgAPIS.Checked[Index];
+    6: PerformanceConfig.APIbde := cgAPIS.Checked[Index];
+    7: PerformanceConfig.APIado := cgAPIS.Checked[Index];
+    8: PerformanceConfig.APIdbx := cgAPIS.Checked[Index];
+    9: PerformanceConfig.APIdbxc := cgAPIS.Checked[Index];
+    10: PerformanceConfig.APIibx := cgAPIS.Checked[Index];
+  end;
+end;
+
+procedure TfrmMain.cgBaseAPISItemClick(Sender: TObject; Index: integer);
+begin
+  case Index of
+    0: PerformanceConfig.BaseAPIPlain := cgBaseAPIS.Checked[Index];
+    1: PerformanceConfig.BaseAPIdbc := cgBaseAPIS.Checked[Index];
+    2: PerformanceConfig.BaseAPIdbccached := cgBaseAPIS.Checked[Index];
+    3: PerformanceConfig.BaseAPIdataset := cgBaseAPIS.Checked[Index];
+  end;
+end;
+
+procedure TfrmMain.cgTestsItemClick(Sender: TObject; Index: integer);
+begin
+  case Index of
+    0: PerformanceConfig.TestConnect := cgTests.Checked[Index];
+    1: PerformanceConfig.TestInsert := cgTests.Checked[Index];
+    2: PerformanceConfig.TestOpen := cgTests.Checked[Index];
+    3: PerformanceConfig.TestFetch := cgTests.Checked[Index];
+    4: PerformanceConfig.TestSort := cgTests.Checked[Index];
+    5: PerformanceConfig.TestFilter := cgTests.Checked[Index];
+    6: PerformanceConfig.TestUpdate := cgTests.Checked[Index];
+    7: PerformanceConfig.TestDelete := cgTests.Checked[Index];
+    8: PerformanceConfig.TestDirectUpdate := cgTests.Checked[Index];
+  end;
 end;
 
 procedure TfrmMain.eBuildScriptsEditingDone(Sender: TObject);
@@ -1114,12 +1385,25 @@ begin
   TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Password := ePassword.Text;
 end;
 
+procedure TfrmMain.eRecordsEditingDone(Sender: TObject);
+begin
+  PerformanceConfig.Records := StrToIntDef(eRecords.Text, 10000);
+end;
+
+procedure TfrmMain.eRepeatChange(Sender: TObject);
+begin
+
+end;
+
+procedure TfrmMain.eRepeatEditingDone(Sender: TObject);
+begin
+  PerformanceConfig.RepeatCount := StrToIntDef(eRepeat.Text, 3);
+end;
+
 procedure TfrmMain.eUserEditingDone(Sender: TObject);
 begin
   TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).UserName := eUser.Text;
 end;
-
-{$R *.lfm}
 
 end.
 
