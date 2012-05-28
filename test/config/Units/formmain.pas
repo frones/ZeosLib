@@ -366,6 +366,7 @@ type
     eDatabase: TEdit;
     eDelimiter: TEdit;
     eDelimiterType: TEdit;
+    eAlias: TEdit;
     eDropScripts: TEdit;
     eHost: TEdit;
     eLibLocation: TEdit;
@@ -383,6 +384,7 @@ type
     Label12: TLabel;
     Label13: TLabel;
     Label14: TLabel;
+    Label15: TLabel;
     Label2: TLabel;
     Label3: TLabel;
     Label4: TLabel;
@@ -413,7 +415,6 @@ type
     procedure cbCreateDBEditingDone(Sender: TObject);
     procedure cbgTestsItemClick(Sender: TObject; Index: integer);
     procedure cbPreprepareSQLEditingDone(Sender: TObject);
-    procedure cbPrintDetailsChange(Sender: TObject);
     procedure cbPrintDetailsClick(Sender: TObject);
     procedure cbRebuildEditingDone(Sender: TObject);
     procedure cbUnicodeCPEditingDone(Sender: TObject);
@@ -422,6 +423,7 @@ type
     procedure cgAPISItemClick(Sender: TObject; Index: integer);
     procedure cgBaseAPISItemClick(Sender: TObject; Index: integer);
     procedure cgTestsItemClick(Sender: TObject; Index: integer);
+    procedure eAliasEditingDone(Sender: TObject);
     procedure eBuildScriptsEditingDone(Sender: TObject);
     procedure eDatabaseEditingDone(Sender: TObject);
     procedure eDelimiterEditingDone(Sender: TObject);
@@ -430,8 +432,8 @@ type
     procedure eHostEditingDone(Sender: TObject);
     procedure eLibLocationEditingDone(Sender: TObject);
     procedure ePasswordEditingDone(Sender: TObject);
+    procedure ePortEditingDone(Sender: TObject);
     procedure eRecordsEditingDone(Sender: TObject);
-    procedure eRepeatChange(Sender: TObject);
     procedure eRepeatEditingDone(Sender: TObject);
     procedure eUserEditingDone(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
@@ -483,28 +485,28 @@ begin
   FProtocol := AProtocol;
   if Assigned(Ini) then
   begin
-
-    PutSplitStringEx(SL, ReadProperty(COMMON_GROUP, ACTIVE_CONNECTIONS_KEY, ''), LIST_DELIMITERS);
+    PutSplitStringEx(SL, ReadProperty(COMMON_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
     FCommon := SL.IndexOf(AProtocol) > -1;
-    PutSplitStringEx(SL, ReadProperty(CORE_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), LIST_DELIMITERS);
+    PutSplitStringEx(SL, ReadProperty(CORE_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
     FCore := SL.IndexOf(AProtocol) > -1;
-    PutSplitStringEx(SL, ReadProperty(PARSESQL_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), LIST_DELIMITERS);
+    PutSplitStringEx(SL, ReadProperty(PARSESQL_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
     FParseSQL := SL.IndexOf(AProtocol) > -1;
-    PutSplitStringEx(SL, ReadProperty(PLAIN_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), LIST_DELIMITERS);
+    PutSplitStringEx(SL, ReadProperty(PLAIN_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
     FPlain := SL.IndexOf(AProtocol) > -1;
-    PutSplitStringEx(SL, ReadProperty(DBC_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), LIST_DELIMITERS);
+    PutSplitStringEx(SL, ReadProperty(DBC_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
     FDbc := SL.IndexOf(AProtocol) > -1;
-    PutSplitStringEx(SL, ReadProperty(COMPONENT_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), LIST_DELIMITERS);
+    PutSplitStringEx(SL, ReadProperty(COMPONENT_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
     FComponent := SL.IndexOf(AProtocol) > -1;
-    PutSplitStringEx(SL, ReadProperty(BUGREPORT_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), LIST_DELIMITERS);
+    PutSplitStringEx(SL, ReadProperty(BUGREPORT_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
     FBugreport := SL.IndexOf(AProtocol) > -1;
-    PutSplitStringEx(SL, ReadProperty(PERFORMANCE_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), LIST_DELIMITERS);
+    PutSplitStringEx(SL, ReadProperty(PERFORMANCE_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
     FPerformance := SL.IndexOf(AProtocol) > -1;
 
     FAlias := ReadProperty(AProtocol, DATABASE_ALIAS_KEY, '');
     FHostName := ReadProperty(AProtocol, DATABASE_HOST_KEY, DEFAULT_HOST_VALUE);
-    FPort := ReadProperty(AProtocol, DATABASE_PORT_KEY, '0');
+    FPort := ReadProperty(AProtocol, DATABASE_PORT_KEY, '');
     FDatabase := ReadProperty(AProtocol, DATABASE_NAME_KEY, '');
+    FUsername := ReadProperty(AProtocol, DATABASE_USER_KEY, '');
     FPassword := ReadProperty(AProtocol, DATABASE_PASSWORD_KEY, '');
     FRebuild := StrToBoolEx(ReadProperty(AProtocol, DATABASE_REBUILD_KEY, 'No'));
     if ( Pos('firebird', AProtocol) > 0 ) or (pos('interbase', AProtocol) > 0) then
@@ -513,7 +515,7 @@ begin
       FDelimiterType := ReadProperty(AProtocol, DATABASE_DELIMITER_TYPE_KEY, GO_DELIMITER)
     else
       FDelimiterType := ReadProperty(AProtocol, DATABASE_DELIMITER_TYPE_KEY, '');
-    FDelimiter := ReadProperty(AProtocol, DATABASE_DELIMITER_KEY, DEFAULT_DELIMITER);
+    FDelimiter := ReadProperty(AProtocol, DATABASE_DELIMITER_KEY, '');
 
     FUnicode := StrToBoolEx(ReadProperty(AProtocol, 'use.unicode.charset', 'Yes'));
     FBuildScripts := ReadProperty(AProtocol, DATABASE_CREATE_SCRIPTS_KEY, '');
@@ -533,7 +535,7 @@ begin
       SL.Delete(SL.IndexOfName(DATABASE_CREATE_KEY));
     if SL.Values[DATABASE_PREPREPARESQL_KEY] <> '' then
       SL.Delete(SL.IndexOfName(DATABASE_PREPREPARESQL_KEY));
-    FProperties := SL.Text;
+    FProperties := SL.Text                                  ;
   end;
   SL.Free;
 end;
@@ -565,6 +567,7 @@ begin
     WriteProperty(FProtocol, DATABASE_HOST_KEY, FHostName);
     WriteProperty(FProtocol, DATABASE_PORT_KEY, FPort);
     WriteProperty(FProtocol, DATABASE_NAME_KEY, FDatabase);
+    WriteProperty(FProtocol, DATABASE_USER_KEY, FUserName);
     WriteProperty(FProtocol, DATABASE_PASSWORD_KEY, FPassword);
     if FRebuild then
        WriteProperty(FProtocol, DATABASE_REBUILD_KEY, 'Yes')
@@ -607,177 +610,176 @@ begin
     AddPropText('', StringReplace(TrimRight(FProperties), LineEnding, ';', [rfReplaceAll]));
 
     WriteProperty(FProtocol, DATABASE_PROPERTIES_KEY, SProperties);
-    FHasChanged := False;
+    if not FHasChanged then FHasChanged := False;
   end;
 end;
 
 procedure TPlainConfig.SetCommon(const Value: Boolean);
 begin
-  FHasChanged := FCommon <> Value;
+  if not FHasChanged then FHasChanged := FCommon <> Value;
   FCommon := Value;
 end;
 
 
 procedure TPlainConfig.SetAnsiCodePage(const Value: string);
 begin
-  FHasChanged := FAnsiCodePage <> Value;
+  if not FHasChanged then FHasChanged := FAnsiCodePage <> Value;
   FAnsiCodePage := Value;
 end;
 
 procedure TPlainConfig.SetUnicodeCodePage(const Value: string);
 begin
-  FHasChanged := FUnicodeCodePage <> Value;
+  if not FHasChanged then FHasChanged := FUnicodeCodePage <> Value;
   FUnicodeCodePage := Value;
 end;
 
 procedure TPlainConfig.SetUnicode(const Value: boolean);
 begin
-  FHasChanged := FUnicode <> Value;
+  if not FHasChanged then FHasChanged := FUnicode <> Value;
   FUnicode := Value;
 end;
 
 procedure TPlainConfig.SetPreprepareSQL(const Value: Boolean);
 begin
-  FHasChanged := FPreprepareSQL <> Value;
+  if not FHasChanged then FHasChanged := FPreprepareSQL <> Value;
   FPreprepareSQL := Value;
 end;
 
 procedure TPlainConfig.SetCore(const Value: boolean);
 begin
-  FHasChanged := FCore <> Value;
+  if not FHasChanged then FHasChanged := FCore <> Value;
   FCore := Value;
 end;
 
 procedure TPlainConfig.SetDbc(const Value: boolean);
 begin
-  FHasChanged := FDbc <> Value;
+  if not FHasChanged then FHasChanged := FDbc <> Value;
   FDbc := Value;
 end;
 
 
 procedure TPlainConfig.SetParseSQL(const Value: boolean);
 begin
-  FHasChanged := FParseSQL <> Value;
+  if not FHasChanged then FHasChanged := FParseSQL <> Value;
   FParseSQL := Value;
 end;
 
 procedure TPlainConfig.SetPlain(const Value: boolean);
 begin
-  FHasChanged := FPlain <> Value;
+  if not FHasChanged then FHasChanged := FPlain <> Value;
   FPlain := Value;
 end;
 
 procedure TPlainConfig.SetComponent(const Value: boolean);
 begin
-  FHasChanged := FComponent <> Value;
+  if not FHasChanged then FHasChanged := FComponent <> Value;
   FComponent := Value;
 end;
 
 procedure TPlainConfig.SetBugreport(const Value: boolean);
 begin
-  FHasChanged := FBugReport <> Value;
+  if not FHasChanged then FHasChanged := FBugReport <> Value;
   FBugReport := Value;
 end;
 
 procedure TPlainConfig.SetPerformance(const Value: boolean);
 begin
-  FHasChanged := FPerformance <> Value;
+  if not FHasChanged then FHasChanged := FPerformance <> Value;
   FPerformance := Value;
 end;
 
 procedure TPlainConfig.SetAlias(const Value: String);
 begin
-  FHasChanged := FAlias <> Value;
+  if not FHasChanged then FHasChanged := FAlias <> Value;
   FAlias := Value;
 end;
 
 procedure TPlainConfig.SetRebuild(const Value: Boolean);
 begin
-  FHasChanged := FRebuild <> Value;
+  if not FHasChanged then FHasChanged := FRebuild <> Value;
   FRebuild := Value;
 end;
 
 procedure TPlainConfig.SetBuildScripts(const Value: string);
 begin
-  FHasChanged := FBuildScripts <> Value;
+  if not FHasChanged then FHasChanged := FBuildScripts <> Value;
   FBuildScripts := Value;
 end;
 
 procedure TPlainConfig.SetDropScripts(const Value: string);
 begin
-  FHasChanged := FDropScripts <> Value;
+  if not FHasChanged then FHasChanged := FDropScripts <> Value;
   FDropScripts := Value;
 end;
 
 procedure TPlainConfig.SetProtocol(const Value: string);
 begin
-  FHasChanged := FProtocol <> Value;
+  if not FHasChanged then FHasChanged := FProtocol <> Value;
   FProtocol := Value;
 end;
 
 procedure TPlainConfig.SetHostName(const Value: string);
 begin
-  FHasChanged := FHostName <> Value;
+  if not FHasChanged then FHasChanged := FHostName <> Value;
   FHostName := Value;
 end;
 
 procedure TPlainConfig.SetConnPort(const Value: String);
 begin
-  FHasChanged := FPort <> Value;
+  if not FHasChanged then FHasChanged := FPort <> Value;
   FPort := Value;
 end;
 
 procedure TPlainConfig.SetDatabase(const Value: string);
 begin
-  FHasChanged := FDatabase <> Value;
+  if not FHasChanged then FHasChanged := FDatabase <> Value;
   FDatabase := Value;
 end;
 
 procedure TPlainConfig.SetUserName(const Value: string);
 begin
-  FHasChanged := FUserName <> Value;
+  if not FHasChanged then FHasChanged := FUserName <> Value;
   FUserName := Value;
 end;
 
 procedure TPlainConfig.SetPassword(const Value: string);
 begin
-  FHasChanged := FPassword <> Value;
+  if not FHasChanged then FHasChanged := FPassword <> Value;
   FPassword := Value;
 end;
 
 procedure TPlainConfig.SetLibLocation(const Value: String);
 begin
-  FHasChanged := FLibLocation <> Value;
+  if not FHasChanged then FHasChanged := FLibLocation <> Value;
   FLibLocation := Value;
 end;
 procedure TPlainConfig.SetDelimiter(const Value: String);
 begin
-  FHasChanged := FDelimiter <> Value;
+  if not FHasChanged then FHasChanged := FDelimiter <> Value;
   FDelimiter := Value;
 end;
 
 procedure TPlainConfig.SetDelimiterType(const Value: String);
 begin
-  FHasChanged := FDelimiterType <> Value;
+  if not FHasChanged then FHasChanged := FDelimiterType <> Value;
   FDelimiterType := Value;
 end;
 
 procedure TPlainConfig.SetProperties(const Value: String);
 begin
-  FHasChanged := FProperties <> Value;
+  if not FHasChanged then FHasChanged := FProperties <> Value;
   FProperties := Value;
 end;
 
 procedure TPlainConfig.SetCreateDatabase(const Value: Boolean);
 begin
-  FHasChanged := FCreateDatabase <> Value;
+  if not FHasChanged then FHasChanged := FCreateDatabase <> Value;
   FCreateDatabase := Value;
 end;
 
 constructor TPerformanceConfig.Create;
 var
   SL: TStringList;
-  I: Integer;
 begin
   SL := TStringList.Create;
   if Assigned(Ini) then
@@ -888,169 +890,169 @@ end;
 
 procedure TPerformanceConfig.SetAPIPlain(const Value: Boolean);
 begin
-  FHasChanged := FAPIPlain <> Value;
+  if not FHasChanged then FHasChanged := FAPIPlain <> Value;
   FAPIPlain := Value;
 end;
 
 procedure TPerformanceConfig.SetAPIdbc(const Value: Boolean);
 begin
-  FHasChanged := FAPIdbc <> Value;
+  if not FHasChanged then FHasChanged := FAPIdbc <> Value;
   FAPIdbc := Value;
 end;
 
 procedure TPerformanceConfig.SetAPIdbccached(const Value: Boolean);
 begin
-  FHasChanged := FAPIdbc_cached <> Value;
+  if not FHasChanged then FHasChanged := FAPIdbc_cached <> Value;
   FAPIdbc_cached := Value;
 end;
 
 procedure TPerformanceConfig.SetAPIdataset(const Value: Boolean);
 begin
-  FHasChanged := FAPIdataset <> Value;
+  if not FHasChanged then FHasChanged := FAPIdataset <> Value;
   FAPIdataset := Value;
 end;
 
 procedure TPerformanceConfig.SetAPImidas(const Value: Boolean);
 begin
-  FHasChanged := FAPImidas <> Value;
+  if not FHasChanged then FHasChanged := FAPImidas <> Value;
   FAPImidas := Value;
 end;
 
 procedure TPerformanceConfig.SetAPIoldzeos(const Value: Boolean);
 begin
-  FHasChanged := FAPIold_zeos <> Value;
+  if not FHasChanged then FHasChanged := FAPIold_zeos <> Value;
   FAPIold_zeos := Value;
 end;
 
 procedure TPerformanceConfig.SetAPIbde(const Value: Boolean);
 begin
-  FHasChanged := FAPIbde <> Value;
+  if not FHasChanged then FHasChanged := FAPIbde <> Value;
   FAPIbde := Value;
 end;
 
 procedure TPerformanceConfig.SetAPIado(const Value: Boolean);
 begin
-  FHasChanged := FAPIado <> Value;
+  if not FHasChanged then FHasChanged := FAPIado <> Value;
   FAPIado := Value;
 end;
 
 procedure TPerformanceConfig.SetAPIdbx(const Value: Boolean);
 begin
-  FHasChanged := FAPIdbx <> Value;
+  if not FHasChanged then FHasChanged := FAPIdbx <> Value;
   FAPIdbx := Value;
 end;
 
 procedure TPerformanceConfig.SetAPIdbxc(const Value: Boolean);
 begin
-  FHasChanged := FAPIdbxc <> Value;
+  if not FHasChanged then FHasChanged := FAPIdbxc <> Value;
   FAPIdbxc := Value;
 end;
 
 procedure TPerformanceConfig.SetAPIibx(const Value: Boolean);
 begin
-  FHasChanged := FAPIibx <> Value;
+  if not FHasChanged then FHasChanged := FAPIibx <> Value;
   FAPIibx := Value;
 end;
 
 procedure TPerformanceConfig.SetTestConnect(const Value: Boolean);
 begin
-  FHasChanged := FTestConnect <> Value;
+  if not FHasChanged then FHasChanged := FTestConnect <> Value;
   FTestConnect := Value;
 end;
 
 procedure TPerformanceConfig.SetTestInsert(const Value: Boolean);
 begin
-  FHasChanged := FTestInsert <> Value;
+  if not FHasChanged then FHasChanged := FTestInsert <> Value;
   FTestInsert := Value;
 end;
 
 procedure TPerformanceConfig.SetTestOpen(const Value: Boolean);
 begin
-  FHasChanged := FTestOpen <> Value;
+  if not FHasChanged then FHasChanged := FTestOpen <> Value;
   FTestOpen := Value;
 end;
 
 procedure TPerformanceConfig.SetTestFetch(const Value: Boolean);
 begin
-  FHasChanged := FTestFetch <> Value;
+  if not FHasChanged then FHasChanged := FTestFetch <> Value;
   FTestFetch := Value;
 end;
 
 procedure TPerformanceConfig.SetTestSort(const Value: Boolean);
 begin
-  FHasChanged := FTestSort <> Value;
+  if not FHasChanged then FHasChanged := FTestSort <> Value;
   FTestSort := Value;
 end;
 
 procedure TPerformanceConfig.SetTestFilter(const Value: Boolean);
 begin
-  FHasChanged := FTestFilter <> Value;
+  if not FHasChanged then FHasChanged := FTestFilter <> Value;
   FTestFilter := Value;
 end;
 
 procedure TPerformanceConfig.SetTestUpdate(const Value: Boolean);
 begin
-  FHasChanged := FTestUpdate <> Value;
+  if not FHasChanged then FHasChanged := FTestUpdate <> Value;
   FTestUpdate := Value;
 end;
 
 procedure TPerformanceConfig.SetTestDelete(const Value: Boolean);
 begin
-  FHasChanged := FTestDelete <> Value;
+  if not FHasChanged then FHasChanged := FTestDelete <> Value;
   FTestDelete := Value;
 end;
 
 procedure TPerformanceConfig.SetTestDirectUpdate(const Value: Boolean);
 begin
-  FHasChanged := FTestDirectUpdate <> Value;
+  if not FHasChanged then FHasChanged := FTestDirectUpdate <> Value;
   FTestDirectUpdate := Value;
 end;
 
 procedure TPerformanceConfig.SetBaseAPIPlain(const Value: Boolean);
 begin
-  FHasChanged := FBaseAPIPlain <> Value;
+  if not FHasChanged then FHasChanged := FBaseAPIPlain <> Value;
   FBaseAPIPlain := Value;
 end;
 
 procedure TPerformanceConfig.SetBaseAPIdbc(const Value: Boolean);
 begin
-  FHasChanged := FBaseAPIdbc <> Value;
+  if not FHasChanged then FHasChanged := FBaseAPIdbc <> Value;
   FBaseAPIdbc := Value;
 end;
 
 procedure TPerformanceConfig.SetBaseAPIdbccached(const Value: Boolean);
 begin
-  FHasChanged := FBaseAPIdbccached <> Value;
+  if not FHasChanged then FHasChanged := FBaseAPIdbccached <> Value;
   FBaseAPIdbccached := Value;
 end;
 
 procedure TPerformanceConfig.SetBaseAPIdataset(const Value: Boolean);
 begin
-  FHasChanged := FBaseAPIdataset <> Value;
+  if not FHasChanged then FHasChanged := FBaseAPIdataset <> Value;
   FBaseAPIdataset := Value;
 end;
 
 procedure TPerformanceConfig.SetResultOutput(const Value: String);
 begin
-  FHasChanged := FResultOutput <> Value;
+  if not FHasChanged then FHasChanged := FResultOutput <> Value;
   FResultOutput := Value;
 end;
 
 procedure TPerformanceConfig.SetRepeat(const Value: Integer);
 begin
-  FHasChanged := FRepeat <> Value;
+  if not FHasChanged then FHasChanged := FRepeat <> Value;
   FRepeat := Value;
 end;
 
 procedure TPerformanceConfig.SetCount(const Value: Integer);
 begin
-  FHasChanged := FCount <> Value;
+  if not FHasChanged then FHasChanged := FCount <> Value;
   FCount := Value;
 end;
 
 procedure TPerformanceConfig.SetDetails(const Value: Boolean);
 begin
-  FHasChanged := FDetails <> Value;
+  if not FHasChanged then FHasChanged := FDetails <> Value;
   FDetails := Value;
 end;
 
@@ -1097,6 +1099,7 @@ begin
     cbgTests.Checked[5] := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Component;
     cbgTests.Checked[6] := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Bugreport;
     cbgTests.Checked[7] := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Performance;
+    eAlias.Text := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Alias;
     eDatabase.Text := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Database;
     eHost.Text := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).HostName;
     ePort.Text := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Port;
@@ -1197,8 +1200,7 @@ begin
                       TPlainConfig(lbDrivers.items.Objects[I]).Bugreport);
     AddGroup(SPerformance, TPlainConfig(lbDrivers.items.Objects[I]).Protocol,
                       TPlainConfig(lbDrivers.items.Objects[I]).Performance);
-    if TPlainConfig(lbDrivers.items.Objects[I]).Changed then
-      TPlainConfig(lbDrivers.items.Objects[I]).PostUpdates;
+    TPlainConfig(lbDrivers.items.Objects[I]).PostUpdates;
   end;
 
   WriteProperty(COMMON_GROUP, ACTIVE_CONNECTIONS_KEY, SCommon);
@@ -1273,11 +1275,6 @@ begin
   TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).PreprepareSQL := cbPreprepareSQL.Checked;
 end;
 
-procedure TfrmMain.cbPrintDetailsChange(Sender: TObject);
-begin
-
-end;
-
 procedure TfrmMain.cbPrintDetailsClick(Sender: TObject);
 begin
   PerformanceConfig.Details := cbPrintDetails.Checked;
@@ -1345,6 +1342,11 @@ begin
   end;
 end;
 
+procedure TfrmMain.eAliasEditingDone(Sender: TObject);
+begin
+  TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Alias := eAlias.Text;
+end;
+
 procedure TfrmMain.eBuildScriptsEditingDone(Sender: TObject);
 begin
   TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).BuildScripts := eBuildScripts.Text;
@@ -1385,14 +1387,14 @@ begin
   TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Password := ePassword.Text;
 end;
 
+procedure TfrmMain.ePortEditingDone(Sender: TObject);
+begin
+  TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Port := ePort.Text;
+end;
+
 procedure TfrmMain.eRecordsEditingDone(Sender: TObject);
 begin
   PerformanceConfig.Records := StrToIntDef(eRecords.Text, 10000);
-end;
-
-procedure TfrmMain.eRepeatChange(Sender: TObject);
-begin
-
 end;
 
 procedure TfrmMain.eRepeatEditingDone(Sender: TObject);
