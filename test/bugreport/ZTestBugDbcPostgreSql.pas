@@ -56,8 +56,8 @@ interface
 {$I ZBugReport.inc}
 
 uses
-  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZBugReport, ZCompatibility, ZDbcPostgreSql,
-  ZTestConsts;
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs,
+  ZBugReport, ZCompatibility, ZDbcPostgreSql, ZTestConsts;
 
 type
 
@@ -69,7 +69,7 @@ type
     procedure SetUp; override;
     procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-    function GetConnectionUrl: string;
+    function GetConnectionUrl(Param: String): string;
 
     property Connection: IZConnection read FConnection write FConnection;
   published
@@ -95,11 +95,23 @@ uses SysUtils, ZSysUtils, ZTestCase, ZDbcPostgreSqlUtils;
 
 { TZTestDbcPostgreSQLBugReport }
 
-function TZTestDbcPostgreSQLBugReport.GetConnectionUrl: string;
+function TZTestDbcPostgreSQLBugReport.GetConnectionUrl(Param: String): string;
+var
+  TempProperties :TStrings;
+  I: Integer;
 begin
-  if Port <> 0 then
+  TempProperties := TStringList.Create;
+  for I := 0 to High(Properties) do
+  begin
+    TempProperties.Add(Properties[I])
+  end;
+  TempProperties.Add(Param);
+  Result := DriverManager.ConstructURL(Protocol, HostName, Database,
+  UserName, Password, Port, TempProperties);
+{  if Port <> 0 then
     Result := Format('zdbc:%s://%s:%d/%s', [Protocol, HostName, Port, Database])
-  else Result := Format('zdbc:%s://%s/%s', [Protocol, HostName, Database]);
+  else Result := Format('zdbc:%s://%s/%s', [Protocol, HostName, Database]);}
+  TempProperties.Free;
 end;
 
 function TZTestDbcPostgreSQLBugReport.GetSupportedProtocols: string;
@@ -137,16 +149,18 @@ var
 begin
   if SkipClosed then Exit;
 
-  Connection := DriverManager.GetConnectionWithLogin(
-    GetConnectionUrl + '?oidasblob=true', UserName, Password);
+  Connection := DriverManager.GetConnection(GetConnectionUrl('oidasblob=true'));
+  //Connection := DriverManager.GetConnectionWithLogin(
+    //GetConnectionUrl + '?oidasblob=true', UserName, Password);
   Statement := Connection.CreateStatement;
   ResultSet := Statement.ExecuteQuery('select reltype from pg_class');
   CheckEquals(Ord(stBinaryStream), Ord(ResultSet.GetMetadata.GetColumnType(1)));
   ResultSet.Close;
   Statement.Close;
 
-  Connection := DriverManager.GetConnectionWithLogin(
-    GetConnectionUrl + '?oidasblob=false', UserName, Password);
+  Connection := DriverManager.GetConnection(GetConnectionUrl('oidasblob=false'));
+//  Connection := DriverManager.GetConnectionWithLogin(
+  //  GetConnectionUrl + '?oidasblob=false', UserName, Password);
   Statement := Connection.CreateStatement;
   ResultSet := Statement.ExecuteQuery('select reltype from pg_class');
   CheckEquals(Ord(stInteger), Ord(ResultSet.GetMetadata.GetColumnType(1)));
@@ -410,8 +424,9 @@ var
 begin
   if SkipClosed then Exit;
 
-  Connection := DriverManager.GetConnectionWithLogin(
-    GetConnectionUrl + '?oidasblob=true', UserName, Password);
+  Connection := DriverManager.GetConnection(GetConnectionUrl('oidasblob=true'));
+  //Connection := DriverManager.GetConnectionWithLogin(
+    //GetConnectionUrl + '?oidasblob=true', UserName, Password);
   Connection.SetTransactionIsolation(tiReadCommitted);
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
