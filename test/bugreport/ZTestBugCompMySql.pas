@@ -704,7 +704,11 @@ begin
     Query.SQL.Text := 'select * from table000001';
     Query.Open;
     CheckEquals(2, Query.Fields.Count);
-    CheckEquals(Ord(ftMemo), Ord(Query.Fields[0].DataType));
+    if ( FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
+      FConnection.UTF8StringsAsWideField then
+      CheckEquals(Ord(ftWideMemo), Ord(Query.Fields[0].DataType))
+    else
+      CheckEquals(Ord(ftMemo), Ord(Query.Fields[0].DataType));
     CheckEquals(Ord(ftBlob), Ord(Query.Fields[1].DataType));
     Query.Close;
   finally
@@ -767,14 +771,11 @@ begin
     CheckEquals(1, Query.RecordCount);
     CheckEquals(Ord(ftInteger), Ord(Query.Fields[0].DataType));
     //Client_Character_set sets column-type!!!!
-    if Query.Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-      {$IFNDEF FPC}
-        {$IFNDEF VER150Below}
+    if ( FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
+      FConnection.UTF8StringsAsWideField then
         CheckEquals(Ord(ftWideMemo), Ord(Query.Fields[1].DataType))
       else
-        {$ENDIF}
-      {$ENDIF}
-      CheckEquals(Ord(ftMemo), Ord(Query.Fields[1].DataType));
+        CheckEquals(Ord(ftMemo), Ord(Query.Fields[1].DataType));
 
     CheckEquals('abc', Query.Fields[1].AsString);
 
@@ -783,7 +784,7 @@ begin
     try
       Temp := 'xyz';
       if Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8] then
-        Stream.Write(PWideChar(Temp), Length(Temp)*2)
+        Stream.Write(PWideChar(Temp)^, Length(Temp)*2)
       else
         Stream.Write(PAnsiChar(AnsiString(Temp))^, Length(Temp));
     finally
@@ -1020,19 +1021,17 @@ begin
 
     CheckEquals(Ord(ftInteger), Ord(Query.Fields[0].DataType));
     //EgonHugeist: Highest Priority Client_Character_set!!!!
-    if Query.Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-    {$IFNDEF FPC}
+    if ( FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
+      FConnection.UTF8StringsAsWideField then
     begin
       CheckEquals(Ord(ftWideString), Ord(Query.Fields[1].DataType));
       CheckEquals(Ord(ftWideString), Ord(Query.Fields[2].DataType));
     end
     else
-    {$ELSE}
     begin
       CheckEquals(Ord(ftString), Ord(Query.Fields[1].DataType));
       CheckEquals(Ord(ftString), Ord(Query.Fields[2].DataType));
     end;
-    {$ENDIF}
     Query.Close;
   finally
     Query.Free;
@@ -1138,7 +1137,11 @@ begin
       + ' FROM table894367a as a, table894367b as b, table894367c as c';
     Query.Open;
 
-    CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
+    if ( FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
+      FConnection.UTF8StringsAsWideField then
+      CheckEquals(Ord(ftWideString), Ord(Query.Fields[0].DataType))
+    else
+      CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
     CheckEquals(Ord(ftFloat), Ord(Query.Fields[1].DataType));
     CheckEquals(Ord(ftLargeInt), Ord(Query.Fields[2].DataType));
     CheckEquals(Ord(ftBoolean), Ord(Query.Fields[3].DataType));
@@ -1158,7 +1161,11 @@ begin
       + ' FROM table894367a as a, table894367b as b, table894367c as c';
     Query.Open;
 
-    CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
+    if ( FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
+      FConnection.UTF8StringsAsWideField then
+      CheckEquals(Ord(ftWideString), Ord(Query.Fields[0].DataType))
+    else
+      CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
     CheckEquals(Ord(ftBoolean), Ord(Query.Fields[1].DataType));
     CheckEquals(Ord(ftLargeInt), Ord(Query.Fields[2].DataType));
     CheckEquals(Ord(ftInteger), Ord(Query.Fields[3].DataType));
@@ -1478,7 +1485,11 @@ begin
 
     Query.Open;
     CheckEquals(Ord(ftLargeInt), Ord(Query.Fields[0].DataType));
-    CheckEquals(Ord(ftString), Ord(Query.Fields[1].DataType));
+    if ( FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
+      FConnection.UTF8StringsAsWideField then
+      CheckEquals(Ord(ftWideString), Ord(Query.Fields[1].DataType))
+    else
+      CheckEquals(Ord(ftString), Ord(Query.Fields[1].DataType));
 
     Query.Append;
     Query.Fields[0].AsInteger := 1;
