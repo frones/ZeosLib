@@ -299,11 +299,7 @@ begin
     stFloat, stDouble, stBigDecimal:
       Result := ftFloat;
     stString:
-      (*if StringAsWide then
-        Result := ftWideString
-      else
-      //Result := {$IFDEF WITH_STSTRINGUNICODE}ftWideString{$ELSE}ftString{$ENDIF};
-       *)Result := ftString;
+      Result := ftString;
     stBytes:
       Result := ftBytes;
     stDate:
@@ -516,8 +512,6 @@ begin
         ResultSet.UpdateBigDecimal(ColumnIndex,
           RowAccessor.GetBigDecimal(FieldIndex, WasNull));
       ftString:
-        // gto: do we need PChar here?
-        //ResultSet.UpdatePChar(ColumnIndex, RowAccessor.GetPChar(FieldIndex, WasNull));
         ResultSet.UpdateString(ColumnIndex, RowAccessor.GetString(FieldIndex, WasNull));
       ftWidestring:
         ResultSet.UpdateUnicodeString(ColumnIndex,

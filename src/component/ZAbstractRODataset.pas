@@ -1317,7 +1317,7 @@ end;
 function TZAbstractRODataset.GetFieldData(Field: TField; Buffer: Pointer;
   NativeFormat: Boolean): Boolean;
 begin
-  if Field.DataType in [ftWideString{$IFDEF DELPHI12_UP}, ftString{$ENDIF}] then
+  if Field.DataType in [ftWideString] then
     NativeFormat := True;
   Result := inherited GetFieldData(Field, Buffer, NativeFormat);
 end;
@@ -1488,7 +1488,7 @@ begin
 
       end
       { Processes all other fields. }
-      else if (Field.FieldKind = fkData) and (Field.DataType = ftString) and
+      else if {$IFNDEF DELPHI12_UP}(Field.FieldKind = fkData) and {$ENDIF}(Field.DataType = ftString) and
         (Length(PAnsiChar(Buffer)) < RowAccessor.GetColumnDataSize(ColumnIndex)) then
       begin
         {$IFDEF DELPHI12_UP}
@@ -1499,7 +1499,7 @@ begin
         {$ENDIF}
         RowAccessor.SetNotNull(ColumnIndex);
       end
-      else
+      else  //process all others also calculatets
       begin
         System.Move(Buffer^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
           RowAccessor.GetColumnDataSize(ColumnIndex));
