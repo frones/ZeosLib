@@ -2024,7 +2024,7 @@ end;
 
 function TZFreeTDS42SybasePlainDriver.GetProtocol: string;
 begin
-  Result := 'FreeTDS_MsSQL<=6.5)';
+  Result := 'FreeTDS_MsSQL<=6.5';
 end;
 
 function TZFreeTDS42SybasePlainDriver.GetDescription: string;
