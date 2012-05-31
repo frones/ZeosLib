@@ -217,9 +217,9 @@ type
     function GetProtocol: string; override;
     function GetDescription: string; override;
 
-    function dbDead(dbProc: PDBPROCESS): Boolean;
+    function dbDead(dbProc: PDBPROCESS): Boolean; override;
     function dbLogin: PLOGINREC;
-    procedure dbLoginFree(Login: PLOGINREC);
+    procedure dbLoginFree(Login: PLOGINREC); override;
     function dbSetLoginTime(Seconds: DBINT): ZRETCODE;
     function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): ZRETCODE;
     function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): ZRETCODE;
@@ -314,8 +314,6 @@ type
     procedure tdsDumpOff;
     procedure tdsDump_Open(const FileName: String);
     procedure tdsDump_Close;
-    procedure tdsSocketInit;
-    procedure tdsSocketDone;
 
   end;
 
@@ -361,8 +359,6 @@ type
     procedure tdsDumpOff;
     procedure tdsDump_Open(const FileName: String);
     procedure tdsDump_Close;
-    procedure tdsSocketInit;
-    procedure tdsSocketDone;
     function dbdataready(Proc: PDBPROCESS): LongBool; override;
     procedure dbfreelogin(Login: PLOGINREC);
   end;
@@ -1729,6 +1725,10 @@ begin
     @FreeTDSAPI.dbsetlbool      := GetAddress('dbsetlbool');
     @FreeTDSAPI.dbsetllong      := GetAddress('dbsetllong');
     @FreeTDSAPI.dbsetlversion   := GetAddress('dbsetlversion');
+    @FreeTDSAPI.tdsdump_open    := GetAddress('tdsdump_open');
+    @FreeTDSAPI.tdsdump_on      := GetAddress('tdsdump_on');
+    @FreeTDSAPI.tdsdump_off     := GetAddress('tdsdump_off');
+    @FreeTDSAPI.tdsdump_close   := GetAddress('tdsdump_close');
 
   end;
   FreeTDSAPI.dbinit;
@@ -1906,16 +1906,6 @@ end;
 procedure TZFreeTDSBasePlainDriver.tdsDump_Open(const FileName: String);
 begin
   FreeTDSAPI.tdsdump_open(PAnsiChar( AnsiString(FileName) ));
-end;
-
-procedure TZFreeTDSBasePlainDriver.tdsSocketDone;
-begin
-
-end;
-
-procedure TZFreeTDSBasePlainDriver.tdsSocketInit;
-begin
-
 end;
 
 function TZFreeTDSBasePlainDriver.dbdataready(Proc: PDBPROCESS): LongBool;
