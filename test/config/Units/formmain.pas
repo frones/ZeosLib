@@ -411,7 +411,6 @@ type
     Splitter1: TSplitter;
     tsPerformance: TTabSheet;
     tsMain: TTabSheet;
-    ZConnection1: TZConnection;
     procedure cbCreateDBEditingDone(Sender: TObject);
     procedure cbgTestsItemClick(Sender: TObject; Index: integer);
     procedure cbPreprepareSQLEditingDone(Sender: TObject);
@@ -447,6 +446,7 @@ type
   private
     { private declarations }
     PerformanceConfig: TPerformanceConfig;
+    ZCon: TZConnection;
   public
     { public declarations }
   end;
@@ -1063,7 +1063,8 @@ var
   SL: TStrings;
 begin
   SL := TStringList.Create;
-  ZConnection1.GetProtocolNames(SL);
+  ZCon := TZconnection.Create(Self);
+  ZCon.GetProtocolNames(SL);
   TStringList(SL).Sort;
   if FileExists(DefaultFile) then
     Ini := TIniFile.Create(DefaultFile)
@@ -1249,6 +1250,7 @@ begin
       mrAbort: CloseAction := caNone;
     end;
   PerformanceConfig.Free;
+  ZCon.Free;
 end;
 
 procedure TfrmMain.cbgTestsItemClick(Sender: TObject; Index: integer);

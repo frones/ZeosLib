@@ -632,16 +632,6 @@ object frmMain: TfrmMain
       end
     end
   end
-  object ZConnection1: TZConnection
-    UTF8StringsAsWideField = False
-    PreprepareSQL = False
-    Properties.Strings = (
-      'PreprepareSQL=ON'
-    )
-    Port = 0
-    left = 72
-    top = 96
-  end
   object OpenDialog1: TOpenDialog
     Filter = 'Zeos Test Properties|*.properties'
     left = 56

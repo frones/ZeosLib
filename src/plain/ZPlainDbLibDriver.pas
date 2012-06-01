@@ -78,31 +78,31 @@ type
     function dbDead(dbProc: PDBPROCESS): Boolean;
     function dbLogin: PLOGINREC;
     procedure dbLoginFree(Login: PLOGINREC);
-    function dbSetLoginTime(Seconds: DBINT): ZRETCODE;
-    function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): ZRETCODE;
-    function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): ZRETCODE;
-    function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): ZRETCODE;
-    function dbSetLPwd(Login: PLOGINREC; Password: PAnsiChar): ZRETCODE;
-    function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): ZRETCODE;
-    function dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): ZRETCODE;
-    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): ZRETCODE;
-    function dbSetLSecure(Login: PLOGINREC): ZRETCODE;
-    function dbSetMaxprocs(MaxProcs: SmallInt): ZRETCODE;
+    function dbSetLoginTime(Seconds: DBINT): RETCODE;
+    function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): RETCODE;
+    function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
+    function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
+    function dbSetLPwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE;
+    function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE;
+    function dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): RETCODE;
+    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE;
+    function dbSetLSecure(Login: PLOGINREC): RETCODE;
+    function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE;
     function dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;
-    function dbCancel(dbProc: PDBPROCESS): ZRETCODE;
-    function dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): ZRETCODE;
-    function dbSqlExec(dbProc: PDBPROCESS; Async: Boolean=False): ZRETCODE;
-    function dbSqlExecSync(dbProc: PDBPROCESS): ZRETCODE;
-    function dbSqlExecAsync(dbProc: PDBPROCESS): ZRETCODE;
-    function dbResults(dbProc: PDBPROCESS): ZRETCODE;
-    function dbCanQuery(dbProc: PDBPROCESS): ZRETCODE;
-    function dbMoreCmds(dbProc: PDBPROCESS): ZRETCODE;
-    function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): ZRETCODE;
+    function dbCancel(dbProc: PDBPROCESS): RETCODE;
+    function dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): RETCODE;
+    function dbSqlExec(dbProc: PDBPROCESS; Async: Boolean=False): RETCODE;
+    function dbSqlExecSync(dbProc: PDBPROCESS): RETCODE;
+    function dbSqlExecAsync(dbProc: PDBPROCESS): RETCODE;
+    function dbResults(dbProc: PDBPROCESS): RETCODE;
+    function dbCanQuery(dbProc: PDBPROCESS): RETCODE;
+    function dbMoreCmds(dbProc: PDBPROCESS): RETCODE;
+    function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE;
     function dbSetOpt(dbProc: PDBPROCESS; Option: DBINT;
-      Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): ZRETCODE;
-    function dbClose(dbProc: PDBPROCESS): ZRETCODE;
+      Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): RETCODE;
+    function dbClose(dbProc: PDBPROCESS): RETCODE;
     function dbName(dbProc: PDBPROCESS): PAnsiChar;
-    function dbCmdRow(dbProc: PDBPROCESS): ZRETCODE;
+    function dbCmdRow(dbProc: PDBPROCESS): RETCODE;
     function dbNumCols(dbProc: PDBPROCESS): DBINT;
     function dbColName(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar;
     function dbColType(dbProc: PDBPROCESS; Column: DBINT): DBINT;
@@ -115,11 +115,11 @@ type
     function dbGetRow(dbProc: PDBPROCESS; Row: DBINT): STATUS;
     function dbCount(dbProc: PDBPROCESS): DBINT;
 
-    function dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): ZRETCODE;
+    function dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): RETCODE;
     function dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
-      Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): ZRETCODE;
-    function dbRpcSend(dbProc: PDBPROCESS): ZRETCODE;
-    function dbRpcExec(dbProc: PDBPROCESS): ZRETCODE;
+      Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): RETCODE;
+    function dbRpcSend(dbProc: PDBPROCESS): RETCODE;
+    function dbRpcExec(dbProc: PDBPROCESS): RETCODE;
     function dbRetStatus(dbProc: PDBPROCESS): DBINT;
     function dbHasRetStat(dbProc: PDBPROCESS): Boolean;
     function dbRetName(dbProc: PDBPROCESS; RetNum: DBINT): PAnsiChar;
@@ -148,30 +148,30 @@ type
   public
     procedure LoadApi; override;
     function dbLogin: PLOGINREC; virtual;
-    function dbSetLoginTime(Seconds: DBINT): ZRETCODE;
-    function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): ZRETCODE;
-    function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): ZRETCODE;
-    function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): ZRETCODE;
-    function dbSetLPwd(Login: PLOGINREC; Password: PAnsiChar): ZRETCODE;
-    function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): ZRETCODE;
-    function dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): ZRETCODE;
-    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): ZRETCODE; virtual; abstract;
-    function dbSetLSecure(Login: PLOGINREC): ZRETCODE; virtual; abstract;
-    function dbSetMaxprocs(MaxProcs: SmallInt): ZRETCODE; virtual; abstract;
+    function dbSetLoginTime(Seconds: DBINT): RETCODE;
+    function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): RETCODE;
+    function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
+    function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
+    function dbSetLPwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE;
+    function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE;
+    function dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): RETCODE;
+    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE; virtual; abstract;
+    function dbSetLSecure(Login: PLOGINREC): RETCODE; virtual; abstract;
+    function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE; virtual; abstract;
     function dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS; virtual;
-    function dbCancel(dbProc: PDBPROCESS): ZRETCODE;
-    function dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): ZRETCODE;
-    function dbSqlExec(dbProc: PDBPROCESS; Async: Boolean=False): ZRETCODE;
-    function dbSqlExecSync(dbProc: PDBPROCESS): ZRETCODE;
-    function dbSqlExecAsync(dbProc: PDBPROCESS): ZRETCODE;
-    function dbResults(dbProc: PDBPROCESS): ZRETCODE;
-    function dbCanQuery(dbProc: PDBPROCESS): ZRETCODE;
-    function dbMoreCmds(dbProc: PDBPROCESS): ZRETCODE;
-    function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): ZRETCODE;
-    function dbSetOpt(dbProc: PDBPROCESS; Option: DBINT; Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): ZRETCODE; virtual; abstract;
-    function dbClose(dbProc: PDBPROCESS): ZRETCODE; virtual; abstract;
+    function dbCancel(dbProc: PDBPROCESS): RETCODE;
+    function dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): RETCODE;
+    function dbSqlExec(dbProc: PDBPROCESS; Async: Boolean=False): RETCODE;
+    function dbSqlExecSync(dbProc: PDBPROCESS): RETCODE;
+    function dbSqlExecAsync(dbProc: PDBPROCESS): RETCODE;
+    function dbResults(dbProc: PDBPROCESS): RETCODE;
+    function dbCanQuery(dbProc: PDBPROCESS): RETCODE;
+    function dbMoreCmds(dbProc: PDBPROCESS): RETCODE;
+    function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE;
+    function dbSetOpt(dbProc: PDBPROCESS; Option: DBINT; Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): RETCODE; virtual; abstract;
+    function dbClose(dbProc: PDBPROCESS): RETCODE; virtual; abstract;
     function dbName(dbProc: PDBPROCESS): PAnsiChar;
-    function dbCmdRow(dbProc: PDBPROCESS): ZRETCODE;
+    function dbCmdRow(dbProc: PDBPROCESS): RETCODE;
     function dbNumCols(dbProc: PDBPROCESS): DBINT;
     function dbcolbrowse(Proc: PDBPROCESS; Column: Integer): LongBool; virtual; abstract;
 
@@ -186,11 +186,11 @@ type
     function dbGetRow(dbProc: PDBPROCESS; Row: DBINT): STATUS;
     function dbCount(dbProc: PDBPROCESS): DBINT; virtual; abstract;
 
-    function dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): ZRETCODE;
+    function dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): RETCODE;
     function dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
-      Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): ZRETCODE; virtual;
-    function dbRpcSend(dbProc: PDBPROCESS): ZRETCODE;
-    function dbRpcExec(dbProc: PDBPROCESS): ZRETCODE;
+      Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): RETCODE; virtual;
+    function dbRpcSend(dbProc: PDBPROCESS): RETCODE;
+    function dbRpcExec(dbProc: PDBPROCESS): RETCODE;
     function dbRetStatus(dbProc: PDBPROCESS): DBINT;
     function dbHasRetStat(dbProc: PDBPROCESS): Boolean; virtual; abstract;
     function dbRetName(dbProc: PDBPROCESS; RetNum: DBINT): PAnsiChar;
@@ -220,30 +220,30 @@ type
     function dbDead(dbProc: PDBPROCESS): Boolean; override;
     function dbLogin: PLOGINREC;
     procedure dbLoginFree(Login: PLOGINREC); override;
-    function dbSetLoginTime(Seconds: DBINT): ZRETCODE;
-    function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): ZRETCODE;
-    function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): ZRETCODE;
-    function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): ZRETCODE;
-    function dbSetLPwd(Login: PLOGINREC; Password: PAnsiChar): ZRETCODE;
-    function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): ZRETCODE;
-    function dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): ZRETCODE;
-    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): ZRETCODE;
-    function dbSetLSecure(Login: PLOGINREC): ZRETCODE;
-    function dbSetMaxprocs(MaxProcs: SmallInt): ZRETCODE;
+    function dbSetLoginTime(Seconds: DBINT): RETCODE;
+    function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): RETCODE;
+    function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
+    function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
+    function dbSetLPwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE;
+    function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE;
+    function dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): RETCODE;
+    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE;
+    function dbSetLSecure(Login: PLOGINREC): RETCODE;
+    function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE;
     function dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;
-    function dbCancel(dbProc: PDBPROCESS): ZRETCODE;
-    function dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): ZRETCODE;
-    function dbSqlExec(dbProc: PDBPROCESS; Async: Boolean=False): ZRETCODE; virtual;
-    function dbSqlExecSync(dbProc: PDBPROCESS): ZRETCODE;
-    function dbSqlExecAsync(dbProc: PDBPROCESS): ZRETCODE;
-    function dbResults(dbProc: PDBPROCESS): ZRETCODE;
-    function dbCanQuery(dbProc: PDBPROCESS): ZRETCODE;
-    function dbMoreCmds(dbProc: PDBPROCESS): ZRETCODE;
-    function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): ZRETCODE;
-    function dbSetOpt(dbProc: PDBPROCESS; Option: DBINT; Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): ZRETCODE;
-    function dbClose(dbProc: PDBPROCESS): ZRETCODE;
+    function dbCancel(dbProc: PDBPROCESS): RETCODE;
+    function dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): RETCODE;
+    function dbSqlExec(dbProc: PDBPROCESS; Async: Boolean=False): RETCODE; virtual;
+    function dbSqlExecSync(dbProc: PDBPROCESS): RETCODE;
+    function dbSqlExecAsync(dbProc: PDBPROCESS): RETCODE;
+    function dbResults(dbProc: PDBPROCESS): RETCODE;
+    function dbCanQuery(dbProc: PDBPROCESS): RETCODE;
+    function dbMoreCmds(dbProc: PDBPROCESS): RETCODE;
+    function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE;
+    function dbSetOpt(dbProc: PDBPROCESS; Option: DBINT; Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): RETCODE;
+    function dbClose(dbProc: PDBPROCESS): RETCODE;
     function dbName(dbProc: PDBPROCESS): PAnsiChar;
-    function dbCmdRow(dbProc: PDBPROCESS): ZRETCODE;
+    function dbCmdRow(dbProc: PDBPROCESS): RETCODE;
     function dbNumCols(dbProc: PDBPROCESS): DBINT;
     function dbcolbrowse(Proc: PDBPROCESS; Column: Integer): LongBool;
 
@@ -258,11 +258,11 @@ type
     function dbGetRow(dbProc: PDBPROCESS; Row: DBINT): STATUS;
     function dbCount(dbProc: PDBPROCESS): DBINT;
 
-    function dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): ZRETCODE;
+    function dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): RETCODE;
     function dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
-      Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): ZRETCODE;
-    function dbRpcSend(dbProc: PDBPROCESS): ZRETCODE;
-    function dbRpcExec(dbProc: PDBPROCESS): ZRETCODE;
+      Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): RETCODE;
+    function dbRpcSend(dbProc: PDBPROCESS): RETCODE;
+    function dbRpcExec(dbProc: PDBPROCESS): RETCODE;
     function dbRetStatus(dbProc: PDBPROCESS): DBINT;
     function dbHasRetStat(dbProc: PDBPROCESS): Boolean;
     function dbRetName(dbProc: PDBPROCESS; RetNum: DBINT): PAnsiChar;
@@ -291,12 +291,12 @@ type
 
     function dbDead(dbProc: PDBPROCESS): Boolean; override;
     procedure dbLoginFree(Login: PLOGINREC); override;
-    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): ZRETCODE; override;
-    function dbSetLSecure(Login: PLOGINREC): ZRETCODE; override;
-    function dbSetMaxprocs(MaxProcs: SmallInt): ZRETCODE; override;
-    function dbSqlExecAsync(dbProc: PDBPROCESS): ZRETCODE;
-    function dbSetOpt(dbProc: PDBPROCESS; Option: DBINT; Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): ZRETCODE; override;
-    function dbClose(dbProc: PDBPROCESS): ZRETCODE; override;
+    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE; override;
+    function dbSetLSecure(Login: PLOGINREC): RETCODE; override;
+    function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE; override;
+    function dbSqlExecAsync(dbProc: PDBPROCESS): RETCODE;
+    function dbSetOpt(dbProc: PDBPROCESS; Option: DBINT; Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): RETCODE; override;
+    function dbClose(dbProc: PDBPROCESS): RETCODE; override;
     function dbcolbrowse(Proc: PDBPROCESS; Column: Integer): LongBool; override;
 
     function dbDatLen(dbProc: PDBPROCESS; Column: DBINT): DBINT; override;
@@ -309,7 +309,7 @@ type
   IZFreeTDSPlainDriver = interface (IZDBLibPlainDriver)
     ['{12FA5A22-59E5-4CBF-B745-96A7CDF9FBE0}']
 
-    function dbSetTime(queryTime : Integer): ZRETCODE;
+    function dbSetTime(queryTime : Integer): RETCODE;
     procedure tdsDumpOn;
     procedure tdsDumpOff;
     procedure tdsDump_Open(const FileName: String);
@@ -333,22 +333,22 @@ type
     function GetDescription: string; override;
 
     {API functions}
-    function dbsetlversion(Login: PLOGINREC): ZRETCODE; virtual;
-    function dbsetversion: ZRETCODE; virtual;
+    function dbsetlversion(Login: PLOGINREC): RETCODE; virtual;
+    function dbsetversion: RETCODE; virtual;
 
 
     function dbDead(dbProc: PDBPROCESS): Boolean; override;
     function dbLogin: PLOGINREC; override;
     procedure dbLoginFree(Login: PLOGINREC); override;
-    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): ZRETCODE; override;
-    function dbSetLSecure(Login: PLOGINREC): ZRETCODE; override;
-    function dbSetMaxprocs(MaxProcs: SmallInt): ZRETCODE; override;
-    function dbSetTime(queryTime : Integer): ZRETCODE;
+    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE; override;
+    function dbSetLSecure(Login: PLOGINREC): RETCODE; override;
+    function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE; override;
+    function dbSetTime(queryTime : Integer): RETCODE;
 
     function dbSetOpt(dbProc: PDBPROCESS; Option: Integer;
-      Char_Param: PAnsiChar = nil; Int_Param: Integer = -1): ZRETCODE; override;
-    function dbClose(dbProc: PDBPROCESS): ZRETCODE; override;
-    function dbColInfo(dbProc: PDBPROCESS; Column: Integer; var ADBInfo: DBCOL): ZRETCODE;
+      Char_Param: PAnsiChar = nil; Int_Param: Integer = -1): RETCODE; override;
+    function dbClose(dbProc: PDBPROCESS): RETCODE; override;
+    function dbColInfo(dbProc: PDBPROCESS; Column: Integer; var ADBInfo: DBCOL): RETCODE;
     function dbDatLen(dbProc: PDBPROCESS; Column: Integer): Integer; override;
     function dbCount(dbProc: PDBPROCESS): Integer; override;
     function dbcolbrowse(Proc: PDBPROCESS; Column: Integer): LongBool; override;
@@ -371,8 +371,8 @@ type
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
-    function dbsetlversion(Login: PLOGINREC): ZRETCODE; override;
-    function dbsetversion: ZRETCODE; override;
+    function dbsetlversion(Login: PLOGINREC): RETCODE; override;
+    function dbsetversion: RETCODE; override;
   end;
 
   TZFreeTDS42SybasePlainDriver = class(TZFreeTDSBasePlainDriver)
@@ -382,8 +382,8 @@ type
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
-    function dbsetlversion(Login: PLOGINREC): ZRETCODE; override;
-    function dbsetversion: ZRETCODE; override;
+    function dbsetlversion(Login: PLOGINREC): RETCODE; override;
+    function dbsetversion: RETCODE; override;
   end;
 
   TZFreeTDS50PlainDriver = class(TZFreeTDS42SybasePlainDriver)
@@ -393,7 +393,7 @@ type
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
-    function dbsetversion: ZRETCODE; override;
+    function dbsetversion: RETCODE; override;
   end;
 
   TZFreeTDS70PlainDriver = class(TZFreeTDSBasePlainDriver)
@@ -403,8 +403,8 @@ type
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
-    function dbsetlversion(Login: PLOGINREC): ZRETCODE; override;
-    function dbsetversion: ZRETCODE; override;
+    function dbsetlversion(Login: PLOGINREC): RETCODE; override;
+    function dbsetversion: RETCODE; override;
   end;
 
   TZFreeTDS71PlainDriver = class(TZFreeTDS70PlainDriver)
@@ -414,7 +414,7 @@ type
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
-    function dbsetversion: ZRETCODE; override;
+    function dbsetversion: RETCODE; override;
   end;
 
   TZFreeTDS72PlainDriver = class(TZFreeTDS70PlainDriver)
@@ -424,7 +424,7 @@ type
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
-    function dbsetversion: ZRETCODE; override;
+    function dbsetversion: RETCODE; override;
   end;
 
 
@@ -440,7 +440,7 @@ var
 
 implementation
 
-uses SysUtils, ZPlainLoader, Windows;
+uses SysUtils, ZPlainLoader,{$IFDEF FPC}DOS{$ELSE}Windows{$ENDIF};
 
 { Handle sql server error messages }
 function SybaseErrorHandle(Proc: PDBPROCESS; Severity, DbErr, OsErr: Integer;
@@ -741,37 +741,37 @@ begin
   Result := DBLibAPI.dblogin;
 end;
 
-function TZDBLibBasePlainDriver.dbSetLoginTime(Seconds: DBINT): ZRETCODE;
+function TZDBLibBasePlainDriver.dbSetLoginTime(Seconds: DBINT): RETCODE;
 begin
   Result := DBLibAPI.dbsetlogintime(Seconds);
 end;
 
-function TZDBLibBasePlainDriver.dbsetlname(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): ZRETCODE;
+function TZDBLibBasePlainDriver.dbsetlname(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): RETCODE;
 begin
   Result := DBLibAPI.dbsetlname(Login, Value, Item);
 end;
 
-function TZDBLibBasePlainDriver.dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): ZRETCODE;
+function TZDBLibBasePlainDriver.dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
 begin
   Result := DBLibAPI.dbsetlname(Login, HostName, Self.DBVariables.dbSetLoginRec[Z_SETHOST]);
 end;
 
-function TZDBLibBasePlainDriver.dbsetluser(Login: PLOGINREC; UserName: PAnsiChar): ZRETCODE;
+function TZDBLibBasePlainDriver.dbsetluser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
 begin
   Result := DBLibAPI.dbsetlname(Login, UserName, Self.DBVariables.dbSetLoginRec[Z_SETUSER]);
 end;
 
-function TZDBLibBasePlainDriver.dbsetlpwd(Login: PLOGINREC; Password: PAnsiChar): ZRETCODE;
+function TZDBLibBasePlainDriver.dbsetlpwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE;
 begin
   Result := DBLibAPI.dbsetlname(Login, Password, Self.DBVariables.dbSetLoginRec[Z_SETPWD]);
 end;
 
-function TZDBLibBasePlainDriver.dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): ZRETCODE;
+function TZDBLibBasePlainDriver.dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE;
 begin
   Result := DBLibAPI.dbsetlname(Login, AppName, Self.DBVariables.dbSetLoginRec[Z_SETAPP]);
 end;
 
-function TZDBLibBasePlainDriver.dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): ZRETCODE;
+function TZDBLibBasePlainDriver.dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): RETCODE;
 begin
   Result := DBLibAPI.dbsetlname(Login, NatLangName, Self.DBVariables.dbSetLoginRec[Z_SETLANG]);
 end;
@@ -782,17 +782,17 @@ begin
   Result := DBLibAPI.dbOpen(Login, Host);
 end;
 
-function TZDBLibBasePlainDriver.dbCancel(dbProc: PDBPROCESS): ZRETCODE;
+function TZDBLibBasePlainDriver.dbCancel(dbProc: PDBPROCESS): RETCODE;
 begin
   Result := DBLibAPI.dbcancel(dbProc);
 end;
 
-function TZDBLibBasePlainDriver.dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): ZRETCODE;
+function TZDBLibBasePlainDriver.dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): RETCODE;
 begin
   Result := DBLibAPI.dbcmd(dbProc, Cmd);
 end;
 
-function TZDBLibBasePlainDriver.dbSqlExec(dbProc: PDBPROCESS; Async: Boolean=False): ZRETCODE;
+function TZDBLibBasePlainDriver.dbSqlExec(dbProc: PDBPROCESS; Async: Boolean=False): RETCODE;
 begin
   if Async then
     Result := dbSqlExecAsync(dbProc)
@@ -800,41 +800,42 @@ begin
     Result := dbSqlExecSync(dbProc);
 end;
 
-function TZDBLibBasePlainDriver.dbSqlExecSync(dbProc: PDBPROCESS): ZRETCODE;
+function TZDBLibBasePlainDriver.dbSqlExecSync(dbProc: PDBPROCESS): RETCODE;
 begin
   Result := DBLibAPI.dbSqlExec(dbProc);
 end;
 
-function TZDBLibBasePlainDriver.dbSqlExecAsync(dbProc: PDBPROCESS): ZRETCODE;
+function TZDBLibBasePlainDriver.dbSqlExecAsync(dbProc: PDBPROCESS): RETCODE;
 var
   lStartTick : Int64;
 begin
   Result := DBLibAPI.dbsqlsend(dbProc);
   if Result = SUCCEED then begin
-    lStartTick := GetTickCount;
+    lStartTick := {$IFDEF FPC}GetMsCount{$ELSE}GetTickCount{$ENDIF};
     repeat
       //DBApplication.ProcessMessages;
-    until (GetTickCount > lStartTick + TIMEOUT_MAXIMUM * 1000) or (dbdataready(dbProc) = TRUE);
+    until ({$IFDEF FPC}GetMsCount{$ELSE}GetTickCount{$ENDIF} > lStartTick + TIMEOUT_MAXIMUM * 1000) or
+      (dbdataready(dbProc) = TRUE);
     Result := DBLibAPI.dbsqlok(dbProc);
   end;
 end;
 
-function TZDBLibBasePlainDriver.dbResults(dbProc: PDBPROCESS): ZRETCODE;
+function TZDBLibBasePlainDriver.dbResults(dbProc: PDBPROCESS): RETCODE;
 begin
   Result := DBLibAPI.dbResults(dbProc);
 end;
 
-function TZDBLibBasePlainDriver.dbCanQuery(dbProc: PDBPROCESS): ZRETCODE;
+function TZDBLibBasePlainDriver.dbCanQuery(dbProc: PDBPROCESS): RETCODE;
 begin
   Result := DBLibAPI.dbCanQuery(dbProc);
 end;
 
-function TZDBLibBasePlainDriver.dbMoreCmds(dbProc: PDBPROCESS): ZRETCODE;
+function TZDBLibBasePlainDriver.dbMoreCmds(dbProc: PDBPROCESS): RETCODE;
 begin
   Result := DBLibAPI.dbMoreCmds(dbProc);
 end;
 
-function TZDBLibBasePlainDriver.dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): ZRETCODE;
+function TZDBLibBasePlainDriver.dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE;
 begin
   Result := DBLibAPI.dbUse(dbProc, dbName);
 end;
@@ -844,7 +845,7 @@ begin
   Result := DBLibAPI.dbName(dbProc);
 end;
 
-function TZDBLibBasePlainDriver.dbCmdRow(dbProc: PDBPROCESS): ZRETCODE;
+function TZDBLibBasePlainDriver.dbCmdRow(dbProc: PDBPROCESS): RETCODE;
 begin
   Result := DBLibAPI.dbCmdRow(dbProc);
 end;
@@ -890,23 +891,23 @@ begin
   Result := DBLibAPI.dbGetRow(dbProc, Row);
 end;
 
-function TZDBLibBasePlainDriver.dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): ZRETCODE;
+function TZDBLibBasePlainDriver.dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): RETCODE;
 begin
   Result := DBLibAPI.dbRpcInit(dbProc, RpcName, Options);
 end;
 
 function TZDBLibBasePlainDriver.dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
-  Type_: Integer; MaxLen: Integer; DataLen: Integer; Value: Pointer): ZRETCODE;
+  Type_: Integer; MaxLen: Integer; DataLen: Integer; Value: Pointer): RETCODE;
 begin
   Result := DBLibAPI.dbRpcParam(dbProc, ParamName, Status, Type_, MaxLen, DataLen, Value);
 end;
 
-function TZDBLibBasePlainDriver.dbRpcSend(dbProc: PDBPROCESS): ZRETCODE;
+function TZDBLibBasePlainDriver.dbRpcSend(dbProc: PDBPROCESS): RETCODE;
 begin
   Result := DBLibAPI.dbRpcSend(dbProc);
 end;
 
-function TZDBLibBasePlainDriver.dbRpcExec(dbProc: PDBPROCESS): ZRETCODE;
+function TZDBLibBasePlainDriver.dbRpcExec(dbProc: PDBPROCESS): RETCODE;
 begin
   Result := DBLibAPI.dbRpcSend(dbProc);
   if Result = SUCCEED then
@@ -1199,53 +1200,53 @@ begin
   SybaseAPI.dbLoginFree(Login);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbSetLoginTime(Seconds: DBINT): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSetLoginTime(Seconds: DBINT): RETCODE;
 begin
   Result := SybaseAPI.dbsetlogintime(Seconds);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbsetlname(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbsetlname(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): RETCODE;
 begin
   Result := SybaseAPI.dbsetlname(Login, Value, Item);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
 begin
   Result := SybaseAPI.dbsetlname(Login, HostName, Self.DBVariables.dbSetLoginRec[Z_SETHOST]);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbsetluser(Login: PLOGINREC; UserName: PAnsiChar): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbsetluser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
 begin
   Result := SybaseAPI.dbsetlname(Login, UserName, Self.DBVariables.dbSetLoginRec[Z_SETUSER]);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbsetlpwd(Login: PLOGINREC; Password: PAnsiChar): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbsetlpwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE;
 begin
   Result := SybaseAPI.dbsetlname(Login, Password, Self.DBVariables.dbSetLoginRec[Z_SETPWD]);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE;
 begin
   Result := SybaseAPI.dbsetlname(Login, AppName, Self.DBVariables.dbSetLoginRec[Z_SETAPP]);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): RETCODE;
 begin
   Result := SybaseAPI.dbsetlname(Login, NatLangName, Self.DBVariables.dbSetLoginRec[Z_SETLANG]);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE;
 begin
   Result := SybaseAPI.dbsetlname(Login, CharsetName, Self.DBVariables.dbSetLoginRec[Z_SETCHARSET]);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbSetLSecure(Login: PLOGINREC): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSetLSecure(Login: PLOGINREC): RETCODE;
 begin
   Result := 0
 end;
 
 function TZDBLibSybaseASE125PlainDriver.dbsetmaxprocs(
-  MaxProcs: SmallInt): ZRETCODE;
+  MaxProcs: SmallInt): RETCODE;
 begin
   Result := SybaseAPI.dbsetmaxprocs(MaxProcs);
 end;
@@ -1255,17 +1256,17 @@ begin
   Result := SybaseAPI.dbOpen(Login, Host);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbCancel(dbProc: PDBPROCESS): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbCancel(dbProc: PDBPROCESS): RETCODE;
 begin
   Result := SybaseAPI.dbcancel(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): RETCODE;
 begin
   Result := SybaseAPI.dbcmd(dbProc, Cmd);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbSqlExec(dbProc: PDBPROCESS; Async: Boolean=False): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSqlExec(dbProc: PDBPROCESS; Async: Boolean=False): RETCODE;
 begin
   if Async then
     Result := dbSqlExecSync(dbProc)
@@ -1273,51 +1274,52 @@ begin
     Result := dbSqlExecAsync(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbSqlExecSync(dbProc: PDBPROCESS): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSqlExecSync(dbProc: PDBPROCESS): RETCODE;
 begin
   Result := SybaseAPI.dbSqlExec(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbSqlExecAsync(dbProc: PDBPROCESS): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSqlExecAsync(dbProc: PDBPROCESS): RETCODE;
 var
   lStartTick : Int64;
 begin
   Result := SybaseAPI.dbsqlsend(dbProc);
   if Result = SUCCEED then begin
-    lStartTick := GetTickCount;
+    lStartTick := {$IFDEF FPC}GetMsCount{$ELSE}GetTickCount{$ENDIF};
     repeat
       continue;
-    until (GetTickCount > lStartTick + TIMEOUT_MAXIMUM * 1000) or (dbdataready(dbProc) = TRUE);
+    until ({$IFDEF FPC}GetMsCount{$ELSE}GetTickCount{$ENDIF} > lStartTick + TIMEOUT_MAXIMUM * 1000) or
+      (dbdataready(dbProc) = TRUE);
     Result := SybaseAPI.dbsqlok(dbProc);
   end;
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbResults(dbProc: PDBPROCESS): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbResults(dbProc: PDBPROCESS): RETCODE;
 begin
   Result := SybaseAPI.dbResults(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbCanQuery(dbProc: PDBPROCESS): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbCanQuery(dbProc: PDBPROCESS): RETCODE;
 begin
   Result := SybaseAPI.dbCanQuery(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbMoreCmds(dbProc: PDBPROCESS): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbMoreCmds(dbProc: PDBPROCESS): RETCODE;
 begin
   Result := SybaseAPI.dbMoreCmds(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE;
 begin
   Result := SybaseAPI.dbUse(dbProc, dbName);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbSetOpt(dbProc: PDBPROCESS; Option: DBINT; Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSetOpt(dbProc: PDBPROCESS; Option: DBINT; Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): RETCODE;
 begin
   Result := SybaseAPI.dbSetOpt(dbProc, Option, Char_Param, Int_Param);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbClose(dbProc: PDBPROCESS): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbClose(dbProc: PDBPROCESS): RETCODE;
 begin
   Result := SybaseAPI.dbClose(dbProc);
 end;
@@ -1327,7 +1329,7 @@ begin
   Result := SybaseAPI.dbName(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbCmdRow(dbProc: PDBPROCESS): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbCmdRow(dbProc: PDBPROCESS): RETCODE;
 begin
   Result := SybaseAPI.dbCmdRow(dbProc);
 end;
@@ -1383,23 +1385,23 @@ begin
   Result := SybaseAPI.dbCount(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): RETCODE;
 begin
   Result := SybaseAPI.dbRpcInit(dbProc, RpcName, Options);
 end;
 
 function TZDBLibSybaseASE125PlainDriver.dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
-  Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): ZRETCODE;
+  Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): RETCODE;
 begin
   Result := SybaseAPI.dbRpcParam(dbProc, ParamName, Status, Type_, MaxLen, DataLen, Value);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbRpcSend(dbProc: PDBPROCESS): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbRpcSend(dbProc: PDBPROCESS): RETCODE;
 begin
   Result := SybaseAPI.dbRpcSend(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbRpcExec(dbProc: PDBPROCESS): ZRETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbRpcExec(dbProc: PDBPROCESS): RETCODE;
 begin
   Result := SybaseAPI.dbRpcSend(dbProc);
   if Result = SUCCEED then
@@ -1567,7 +1569,7 @@ begin
   Result := 'Native dblib driver for MS SQL 7+';
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbsetlsecure(Login: PLOGINREC): ZRETCODE;
+function TZDBLibMSSQL7PlainDriver.dbsetlsecure(Login: PLOGINREC): RETCODE;
 begin
   Result := DBLibAPI.dbsetlname(Login, nil, Self.DBVariables.dbSetLoginRec[Z_SETSECURE]);
 end;
@@ -1587,37 +1589,38 @@ begin
   MsSQLAPI.dbfreelogin(Login);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): ZRETCODE;
+function TZDBLibMSSQL7PlainDriver.dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE;
 begin
   Result := DBFAIL;
 end;
 
 function TZDBLibMSSQL7PlainDriver.dbsetmaxprocs(
-  MaxProcs: SmallInt): ZRETCODE;
+  MaxProcs: SmallInt): RETCODE;
 begin
   Result := MsSQLAPI.dbsetmaxprocs(MaxProcs);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbSqlExecAsync(dbProc: PDBPROCESS): ZRETCODE;
+function TZDBLibMSSQL7PlainDriver.dbSqlExecAsync(dbProc: PDBPROCESS): RETCODE;
 var
   lStartTick : Int64;
 begin
   Result := DBLibAPI.dbsqlsend(dbProc);
   if Result = SUCCEED then begin
-    lStartTick := GetTickCount;
+    lStartTick := {$IFDEF FPC}GetMsCount{$ELSE}GetTickCount{$ENDIF};
     repeat
       continue;
-    until (GetTickCount > lStartTick + TIMEOUT_MAXIMUM * 1000) or (MsSQLAPI.dbdataready(dbProc) = TRUE);
+    until ({$IFDEF FPC}GetMsCount{$ELSE}GetTickCount{$ENDIF} > lStartTick + TIMEOUT_MAXIMUM * 1000) or
+      (MsSQLAPI.dbdataready(dbProc) = TRUE);
     Result := DBLibAPI.dbsqlok(dbProc);
   end;
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbSetOpt(dbProc: PDBPROCESS; Option: DBINT; Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): ZRETCODE;
+function TZDBLibMSSQL7PlainDriver.dbSetOpt(dbProc: PDBPROCESS; Option: DBINT; Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): RETCODE;
 begin
   Result := MsSQLAPI.dbSetOpt(dbProc, Option, Char_Param);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbClose(dbProc: PDBPROCESS): ZRETCODE;
+function TZDBLibMSSQL7PlainDriver.dbClose(dbProc: PDBPROCESS): RETCODE;
 begin
   Result := MsSQLAPI.dbClose(dbProc);
 end;
@@ -1867,23 +1870,23 @@ begin
     end;
 end;
 
-function TZFreeTDSBasePlainDriver.dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): ZRETCODE;
+function TZFreeTDSBasePlainDriver.dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE;
 begin
   Result := DBLibAPI.dbsetlname(Login, CharsetName, DBVariables.dbSetLoginRec[Z_SETCHARSET]);
 end;
 
-function TZFreeTDSBasePlainDriver.dbSetLSecure(Login: PLOGINREC): ZRETCODE;
+function TZFreeTDSBasePlainDriver.dbSetLSecure(Login: PLOGINREC): RETCODE;
 begin
   Result := DBLibAPI.dbsetlname(Login, nil, DBVariables.dbSetLoginRec[Z_SETSECURE]);
 //  Result := FreeTDSAPI.dbsetlbool(Login, 1, Self.DBVariables.dbSetLoginRec[Z_SETSECURE]);
 end;
 
-function TZFreeTDSBasePlainDriver.dbsetlversion(Login: PLOGINREC): ZRETCODE;
+function TZFreeTDSBasePlainDriver.dbsetlversion(Login: PLOGINREC): RETCODE;
 begin
   Result := FreeTDSAPI.dbsetlversion(Login, TDSDBVERSION_UNKNOWN);
 end;
 
-function TZFreeTDSBasePlainDriver.dbsetversion: ZRETCODE;
+function TZFreeTDSBasePlainDriver.dbsetversion: RETCODE;
 begin
   Result := FreeTDSAPI.dbsetversion(TDSDBVERSION_UNKNOWN);
 end;
@@ -1929,22 +1932,22 @@ begin
 end;
 
 function TZFreeTDSBasePlainDriver.dbsetmaxprocs(
-  MaxProcs: SmallInt): ZRETCODE;
+  MaxProcs: SmallInt): RETCODE;
 begin
   Result := FreeTDSAPI.dbsetmaxprocs(MaxProcs);
 end;
 
-function TZFreeTDSBasePlainDriver.dbSetOpt(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar = nil; Int_Param: Integer = -1): ZRETCODE;
+function TZFreeTDSBasePlainDriver.dbSetOpt(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar = nil; Int_Param: Integer = -1): RETCODE;
 begin
   Result := FreeTDSAPI.dbSetOpt(dbProc, Option, Char_Param, Int_Param);
 end;
 
-function TZFreeTDSBasePlainDriver.dbSetTime(queryTime: Integer): ZRETCODE;
+function TZFreeTDSBasePlainDriver.dbSetTime(queryTime: Integer): RETCODE;
 begin
   Result := FreeTDSAPI.dbsetmaxprocs(queryTime);
 end;
 
-function TZFreeTDSBasePlainDriver.dbClose(dbProc: PDBPROCESS): ZRETCODE;
+function TZFreeTDSBasePlainDriver.dbClose(dbProc: PDBPROCESS): RETCODE;
 begin
   FreeTDSAPI.dbClose(dbProc);
   Result := DBNOERR;
@@ -1971,7 +1974,7 @@ begin
 end;
 
 function TZFreeTDSBasePlainDriver.dbColInfo(dbProc: PDBPROCESS;
-  Column: Integer; var ADBInfo: DBCOL): ZRETCODE;
+  Column: Integer; var ADBInfo: DBCOL): RETCODE;
 begin
   FillChar(ADBInfo, SizeOf(DBCol), #0);
   ADBInfo.SizeOfStruct := SizeOf(DBCol);
@@ -1992,7 +1995,7 @@ end;
 
 function TZFreeTDS42MsSQLPlainDriver.GetProtocol: string;
 begin
-  Result := 'FreeTDS_Sybase<10)';
+  Result := 'FreeTDS_Sybase<10';
 end;
 
 function TZFreeTDS42MsSQLPlainDriver.GetDescription: string;
@@ -2000,12 +2003,12 @@ begin
   Result := 'FreeTDS 4.2 protocol for MsSQL <=6.5 Servers';
 end;
 
-function TZFreeTDS42MsSQLPlainDriver.dbsetlversion(Login: PLOGINREC): ZRETCODE;
+function TZFreeTDS42MsSQLPlainDriver.dbsetlversion(Login: PLOGINREC): RETCODE;
 begin
   Result := FreeTDSAPI.dbsetlversion(Login, DBVERSION_42);
 end;
 
-function TZFreeTDS42MsSQLPlainDriver.dbsetversion: ZRETCODE;
+function TZFreeTDS42MsSQLPlainDriver.dbsetversion: RETCODE;
 begin
   Result := FreeTDSAPI.dbsetversion(TDSDBVERSION_42);
 end;
@@ -2032,12 +2035,12 @@ begin
   Result := 'FreeTDS 4.2 protocol for Sybase <10 Servers';
 end;
 
-function TZFreeTDS42SybasePlainDriver.dbsetlversion(Login: PLOGINREC): ZRETCODE;
+function TZFreeTDS42SybasePlainDriver.dbsetlversion(Login: PLOGINREC): RETCODE;
 begin
   Result := DBSUCCEED;
 end;
 
-function TZFreeTDS42SybasePlainDriver.dbsetversion: ZRETCODE;
+function TZFreeTDS42SybasePlainDriver.dbsetversion: RETCODE;
 begin
   Result := FreeTDSAPI.dbsetversion(TDSDBVERSION_42);
 end;
@@ -2064,7 +2067,7 @@ begin
   Result := 'FreeTDS 5.0 Protocol for Sybase >= 10 Servers ';
 end;
 
-function TZFreeTDS50PlainDriver.dbsetversion: ZRETCODE;
+function TZFreeTDS50PlainDriver.dbsetversion: RETCODE;
 begin
   Result := FreeTDSAPI.dbsetversion(TDSDBVERSION_46);
 end;
@@ -2086,7 +2089,7 @@ begin
   Result := 'FreeTDS_MsSQL-7.0';
 end;
 
-function TZFreeTDS70PlainDriver.dbsetlversion(Login: PLOGINREC): ZRETCODE;
+function TZFreeTDS70PlainDriver.dbsetlversion(Login: PLOGINREC): RETCODE;
 begin
   Result := FreeTDSAPI.dbsetlversion(Login, DBVERSION_70);
 end;
@@ -2096,7 +2099,7 @@ begin
   Result := 'FreeTDS 7.0 Protocol for MsSQL 7.0 Servers';
 end;
 
-function TZFreeTDS70PlainDriver.dbsetversion: ZRETCODE;
+function TZFreeTDS70PlainDriver.dbsetversion: RETCODE;
 begin
   Result := FreeTDSAPI.dbsetversion(TDSDBVERSION_70);
 end;
@@ -2123,7 +2126,7 @@ begin
   Result := 'FreeTDS 7.1 Protocol for MsSQL 2000 Servers';
 end;
 
-function TZFreeTDS71PlainDriver.dbsetversion: ZRETCODE;
+function TZFreeTDS71PlainDriver.dbsetversion: RETCODE;
 begin
   Result := FreeTDSAPI.dbsetversion(TDSDBVERSION_70);
 end;
@@ -2150,7 +2153,7 @@ begin
   Result := 'FreeTDS 7.2 Protocol for MsSQL 2005, 2008, 2012 Servers';
 end;
 
-function TZFreeTDS72PlainDriver.dbsetversion: ZRETCODE;
+function TZFreeTDS72PlainDriver.dbsetversion: RETCODE;
 begin
   Result := FreeTDSAPI.dbsetversion(TDSDBVERSION_72);
 end;
