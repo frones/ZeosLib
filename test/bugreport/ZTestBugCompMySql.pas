@@ -706,8 +706,10 @@ begin
     CheckEquals(2, Query.Fields.Count);
     if ( FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
       FConnection.UTF8StringsAsWideField then
+    {$IFDEF WITH_WIDEMEMO}
       CheckEquals(Ord(ftWideMemo), Ord(Query.Fields[0].DataType))
     else
+    {$ENDIF}
       CheckEquals(Ord(ftMemo), Ord(Query.Fields[0].DataType));
     CheckEquals(Ord(ftBlob), Ord(Query.Fields[1].DataType));
     Query.Close;
@@ -773,8 +775,10 @@ begin
     //Client_Character_set sets column-type!!!!
     if ( FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
       FConnection.UTF8StringsAsWideField then
+    {$IFDEF WITH_WIDEMEMO}
         CheckEquals(Ord(ftWideMemo), Ord(Query.Fields[1].DataType))
       else
+    {$ENDIF}
         CheckEquals(Ord(ftMemo), Ord(Query.Fields[1].DataType));
 
     CheckEquals('abc', Query.Fields[1].AsString);
