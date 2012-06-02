@@ -241,10 +241,8 @@ begin
     FColumnOffsets[I] := FColumnsSize;
     FColumnDefaultExpressions[I] := Current.DefaultExpression;
     Inc(FColumnsSize, FColumnLengths[I] + 1);
-    if FColumnsSize > SizeOf(TZByteArray) then
-    begin
+    if FColumnsSize > SizeOf(TZByteArray)-1 then
       raise EZSQLException.Create(SRowBufferWidthExceeded);
-    end;
     FHasBlobs := FHasBlobs
       or (FColumnTypes[I] in [stAsciiStream, stUnicodeStream, stBinaryStream]);
   end;
