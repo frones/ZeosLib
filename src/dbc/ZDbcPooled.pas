@@ -78,7 +78,7 @@ type
 
   { This class embedds a real connection and redirects all methods to it.
     When it is droped or closed, it returns the real connection to the pool. }
-  TZDbcPooledConnection = class(TAbstractCodePagedInterfacedObject, IZConnection)
+  TZDbcPooledConnection = class(TZCodePagedObject, IZConnection)
   private
     FConnection: IZConnection;
     FConnectionPool: TConnectionPool;

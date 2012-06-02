@@ -58,7 +58,7 @@ interface
 {$I ZComponent.inc}
 
 uses
-  Types, Classes, SysUtils, DB, ZSysUtils, ZDbcIntfs, ZTokenizer, ZGenericSqlToken,
+  Types, Classes, SysUtils, ZDbcIntfs, ZTokenizer, ZGenericSqlToken,
   Contnrs, ZCompatibility;
 
 type

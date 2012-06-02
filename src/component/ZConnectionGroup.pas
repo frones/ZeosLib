@@ -14,8 +14,8 @@ interface
 {$I ZComponent.inc}
 
 uses
-  Types, SysUtils, Classes, ZDbcIntfs, DB, Forms,
-  ZCompatibility, ZConnection, ZSequence, Dialogs;
+  SysUtils, Classes, ZDbcIntfs, Forms,
+  ZCompatibility, Dialogs;
 
 const
   mask = 'æææ#2ææ0#ææ39æ-V„–FFVæææ';  { define your own mask  }
@@ -142,8 +142,6 @@ end;
 // === { TZConnectionGroup } =============================================
 function TZConnectionGroup.Decrypt(const str: string): string;
 var n: integer;
-    t: word;
-    l: word;
 begin
    result:='';
    for n:=1 to length(str) do
@@ -164,7 +162,6 @@ begin
 end;
 
 procedure TZConnectionGroup.WritePass(writer:twriter);
-var n: integer;
 begin
    writer.writelistbegin;
    writer.writestring(Encrypt(FPassword));
@@ -179,7 +176,6 @@ begin
 end;
 
 procedure TZConnectionGroup.WriteUser(writer:twriter);
-var n: integer;
 begin
    writer.writelistbegin;
    writer.writestring(Encrypt(FUser));

@@ -60,7 +60,7 @@ interface
 uses ZClasses, ZPlainDriver;
 
 type
-  TZAdoPlainDriver = class (TZGenericAbstractPlainDriver, IZPlainDriver)
+  TZAdoPlainDriver = class (TZLegacyPlainDriver, IZPlainDriver)
   public
     constructor Create;
 

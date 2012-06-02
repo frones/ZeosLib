@@ -68,7 +68,7 @@ type
 
   { TZAbstractStatement }
 
-  TZAbstractStatement = class(TAbstractCodePagedInterfacedObject, IZStatement)
+  TZAbstractStatement = class(TZCodePagedObject, IZStatement)
   private
     FMaxFieldSize: Integer;
     FMaxRows: Integer;

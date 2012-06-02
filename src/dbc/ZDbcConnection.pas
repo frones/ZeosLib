@@ -109,7 +109,7 @@ type
 
   { TZAbstractConnection }
 
-  TZAbstractConnection = class(TAbstractCodePagedInterfacedObject, IZConnection)
+  TZAbstractConnection = class(TZCodePagedObject, IZConnection)
   private
     FDriver: IZDriver;
     FIZPlainDriver: IZPlainDriver;
@@ -598,14 +598,11 @@ end;
 procedure TZAbstractConnection.CheckCharEncoding(CharSet: String;
   const DoArrange: Boolean = False);
 begin
-  Self.ClientCodePage := Self.GetIZPlainDriver.GetClientCodePageInformations(CharSet);
+  ClientCodePage := Self.GetIZPlainDriver.GetClientCodePageInformations(CharSet);
 
   if (DoArrange) and (ClientCodePage^.ZAlias <> '' ) then
     CheckCharEncoding(ClientCodePage^.ZAlias); //recalls em selves
   FPreprepareSQL := FPreprepareSQL and (ClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]);
-  {$IFDEF SQLPREPREPARE}
-  FPreprepareSQL := True;
-  {$ENDIF}
   FClientCodePage := ClientCodePage^.Name; //resets the developer choosen ClientCodePage
 end;
 

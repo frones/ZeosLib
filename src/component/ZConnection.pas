@@ -58,7 +58,7 @@ interface
 {$I ZComponent.inc}
 
 uses
-  Types, SysUtils, Classes,  DB, ZAbstractConnection; 
+  SysUtils, Classes,  ZAbstractConnection;
 
 type
   {** Represents a component which wraps a connection to database. }

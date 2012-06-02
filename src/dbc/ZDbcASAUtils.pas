@@ -138,7 +138,7 @@ type
 
   { Base class contain core functions to work with sqlda structure
     Can allocate memory for sqlda structure get basic information }
-  TZASASQLDA = class (TAbstractCodePagedInterfacedObject, IZASASQLDA)
+  TZASASQLDA = class (TZCodePagedObject, IZASASQLDA)
   private
     FSQLDA: PASASQLDA;
     FPlainDriver: IZASAPlainDriver;

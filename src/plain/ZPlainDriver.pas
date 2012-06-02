@@ -80,7 +80,7 @@ type
   {** implements a generic base class of a generic plain driver.
    to make the CodePage-handling tranparency for all Plain-Drivers}
 
-  TZGenericAbstractPlainDriver = class(TZAbstractObject, IZPlainDriver)
+  TZLegacyPlainDriver = class(TZAbstractObject, IZPlainDriver)
   private
     FCodePages: array of TZCodePage;
   protected
@@ -112,7 +112,7 @@ type
 
   { TZAbstractPlainDriver }
 
-  TZAbstractPlainDriver = class(TZGenericAbstractPlainDriver, IZPlainDriver)
+  TZAbstractPlainDriver = class(TZLegacyPlainDriver, IZPlainDriver)
   protected
     FLoader: TZNativeLibraryLoader;
     procedure LoadApi; virtual;
@@ -307,14 +307,14 @@ implementation
 uses ZSysUtils, SysUtils;
 
 
-{TZGenericAbstractPlainDriver}
+{TZLegacyPlainDriver}
 
-function TZGenericAbstractPlainDriver.GetUnicodeCodePageName: String;
+function TZLegacyPlainDriver.GetUnicodeCodePageName: String;
 begin
   Result := '';
 end;
 
-procedure TZGenericAbstractPlainDriver.AddCodePage(const Name: String;
+procedure TZLegacyPlainDriver.AddCodePage(const Name: String;
       const ID:  Integer; Encoding: TZCharEncoding = ceAnsi;
       {$IFDEF WITH_CHAR_CONTROL}const CP: Word = $ffff; {$ENDIF}
       const ZAlias: String = '');
@@ -325,14 +325,8 @@ begin
   FCodePages[High(FCodePages)].Encoding := Encoding;
   {$IFDEF WITH_CHAR_CONTROL} FCodePages[High(FCodePages)].CP := CP; {$ENDIF}
 
-  {$IF defined(LAZARUSUTF8HACK) or defined(UNIX)}
-    if not ( FCodePages[High(FCodePages)].Encoding = ceUTF8 ) then
-    begin
-      FCodePages[High(FCodePages)].ZAlias := GetUnicodeCodePageName;
-      FCodePages[High(FCodePages)].IsSupported := False;
-    end
-    else
-      FCodePages[High(FCodePages)].IsSupported := True;
+  {$IFDEF LAZARUSUTF8HACK}
+  FCodePages[High(FCodePages)].IsSupported := Encoding = ceUTF8;
   {$ELSE}
     {$IFDEF WITH_CHAR_CONTROL}
       if CP = $ffff then
@@ -343,10 +337,10 @@ begin
       else
     {$ENDIF}
         FCodePages[High(FCodePages)].IsSupported := True;
-  {$IFEND}
+  {$ENDIF}
 end;
 
-procedure TZGenericAbstractPlainDriver.ResetCodePage(const OldID: Integer;
+procedure TZLegacyPlainDriver.ResetCodePage(const OldID: Integer;
       const Name: String; const ID:  Integer; Encoding: TZCharEncoding = ceAnsi;
       {$IFDEF WITH_CHAR_CONTROL}const CP: Word = $ffff; {$ENDIF}
       const ZAlias: String = '');
@@ -362,14 +356,8 @@ begin
       {$IFDEF WITH_CHAR_CONTROL}FCodePages[I].CP := CP;{$ENDIF}
       FCodePages[I].ZAlias := ZAlias;
 
-      {$IF defined(LAZARUSUTF8HACK) or defined(UNIX)}
-        if not ( FCodePages[I].Encoding = ceUTF8 ) then
-        begin
-          FCodePages[i].ZAlias := GetUnicodeCodePageName;
-          FCodePages[i].IsSupported := False;
-        end
-        else
-          FCodePages[High(FCodePages)].IsSupported := True;
+      {$IFDEF LAZARUSUTF8HACK}
+      FCodePages[High(FCodePages)].IsSupported := Encoding = ceUTF8;
       {$ELSE}
         {$IFDEF WITH_CHAR_CONTROL}
         if CP = $ffff then
@@ -380,12 +368,12 @@ begin
         else
         {$ENDIF}
           FCodePages[High(FCodePages)].IsSupported := True;
-      {$IFEND}
+      {$ENDIF}
       Break;
     end;
 end;
 
-function TZGenericAbstractPlainDriver.GetSupportedClientCodePages(
+function TZLegacyPlainDriver.GetSupportedClientCodePages(
   const IgnoreUnsupported: Boolean): TStringDynArray;
 var
   I: Integer;
@@ -398,47 +386,57 @@ begin
     end;
 end;
 
-destructor TZGenericAbstractPlainDriver.Destroy;
+destructor TZLegacyPlainDriver.Destroy;
 begin
   SetLength(FCodePages, 0);
   inherited Destroy;
 end;
 
 {**
-   Checks if the given CharacterSet is Unicode-Save!
-   @param ClientCharacterSet the Value wich hast to be compared
-   @result True if ClientCharacterSet supports Unicode
+   Checks if the given ClientCharacterSet and returns the PZCodePage
+   @param ClientCharacterSet the Value wich has to be compared
+   @result the PZCodePage of the ClientCharacterSet
 }
-function TZGenericAbstractPlainDriver.GetClientCodePageInformations(
+function TZLegacyPlainDriver.GetClientCodePageInformations(
   const ClientCharacterSet: String): PZCodePage;
 var
   I: Integer;
 begin
   {now check for PlainDriver-Informations...}
-  for i := Low(FCodePages) to high(FCodePages) do
-  {$IF defined(LAZARUSUTF8HACK) or defined(UNIX) or defined(UNICODEMODE)}
-    if UpperCase(FCodePages[i].Name) = UpperCase(GetUnicodeCodePageName) then
+  {$IFDEF LAZARUSUTF8HACK} //if the user didn't set it
+  if ClientCharacterSet = '' then
+  begin
+    if ClientCharacterSet = '' then
+      if UpperCase(FCodePages[i].Name) = UpperCase(GetUnicodeCodePageName) then
+      begin
+        Result := @FCodePages[i];
+        Exit;
+      end;
+  end
+  else
   {$ELSE}
+  for i := Low(FCodePages) to high(FCodePages) do
     if UpperCase(FCodePages[i].Name) = UpperCase(ClientCharacterSet) then
-  {$IFEND}
     begin
       Result := @FCodePages[i];
       Exit;
     end;
+  {$ENDIF}
   Result := @ClientCodePageDummy;
 end;
 
-function TZGenericAbstractPlainDriver.GetClientCodePageInformations(const ClientCharacterSetID: Word): PZCodePage;
+{**
+   Checks if the given ClientCharacterSet and returns the PZCodePage
+   @param ClientCharacterSetID the id wich has to be compared
+   @result the PZCodePage of the ClientCharacterSet
+}
+function TZLegacyPlainDriver.GetClientCodePageInformations(const ClientCharacterSetID: Word): PZCodePage;
 var
   I: Integer;
 begin
   {now check for PlainDriver-Informations...}
   for i := Low(FCodePages) to high(FCodePages) do
-  {$IF defined(LAZARUSUTF8HACK) or defined(UNIX) or defined(UNICODEMODE)}
-    if UpperCase(FCodePages[i].Name) = UpperCase(GetUnicodeCodePageName) then
-  {$ELSE}
     if FCodePages[i].ID = ClientCharacterSetID then
-  {$IFEND}
     begin
       Result := @FCodePages[i];
       Exit;

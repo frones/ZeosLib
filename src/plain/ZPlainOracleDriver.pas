@@ -861,7 +861,7 @@ type
   end;
 
   {** Implements a driver for Oracle 9i }
-  TZOracle9iPlainDriver = class (TZGenericAbstractPlainDriver, IZPlainDriver,
+  TZOracle9iPlainDriver = class (TZLegacyPlainDriver, IZPlainDriver,
     IZOraclePlainDriver)
   protected
     function Clone: IZPlainDriver; override;

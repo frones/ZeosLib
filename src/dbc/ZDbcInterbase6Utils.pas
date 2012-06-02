@@ -165,7 +165,7 @@ type
 
   { Base class contain core functions to work with sqlda structure
     Can allocate memory for sqlda structure get basic information }
-  TZSQLDA = class (TAbstractCodePagedInterfacedObject, IZSQLDA)
+  TZSQLDA = class (TZCodePagedObject, IZSQLDA)
   private
     FHandle: PISC_DB_HANDLE;
     FTransactionHandle: PISC_TR_HANDLE;

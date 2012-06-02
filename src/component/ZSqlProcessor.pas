@@ -157,7 +157,7 @@ type
 
 implementation
 
-uses ZMessages, ZSysUtils, ZDbcUtils, ZAbstractRODataset, ZDatasetUtils;
+uses ZMessages, ZDbcUtils, ZAbstractRODataset, ZDatasetUtils;
 
 { TZSQLProcessor }
 

@@ -48,7 +48,7 @@ interface
 
 {$I ZPlain.inc}
 
-uses Classes, ZClasses, ZCompatibility, ZPlainDriver;
+uses Classes, ZCompatibility, ZPlainDriver;
 
 {***************** Plain API Constants definition ****************}
 
@@ -893,7 +893,7 @@ type
   end;
 
   {** Implements a driver for ASA 7.0 }
-  TZASA7PlainDriver = class (TZGenericAbstractPlainDriver, IZPlainDriver,
+  TZASA7PlainDriver = class (TZLegacyPlainDriver, IZPlainDriver,
     IZASAPlainDriver, IZASA7PlainDriver)
   protected
     function Clone: IZPlainDriver; override;
@@ -988,7 +988,7 @@ type
   end;
 
   {** Implements a driver for ASA 8.0 }
-  TZASA8PlainDriver = class (TZGenericAbstractPlainDriver, IZPlainDriver,
+  TZASA8PlainDriver = class (TZLegacyPlainDriver, IZPlainDriver,
     IZASAPlainDriver, IZASA8PlainDriver)
   protected
     function Clone: IZPlainDriver; override;
@@ -1083,7 +1083,7 @@ type
   end;
 
   {** Implements a driver for ASA 9.0 }
-  TZASA9PlainDriver = class (TZGenericAbstractPlainDriver, IZPlainDriver,
+  TZASA9PlainDriver = class (TZLegacyPlainDriver, IZPlainDriver,
     IZASAPlainDriver, IZASA9PlainDriver)
   protected
     function Clone: IZPlainDriver; override;

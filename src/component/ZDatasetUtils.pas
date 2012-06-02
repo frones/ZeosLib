@@ -58,7 +58,7 @@ interface
 {$I ZComponent.inc}
 
 uses
-  Types, Classes, SysUtils, Db, ZSysUtils, ZDbcIntfs, ZDbcCache,
+  Types, Classes, SysUtils, Db, ZDbcIntfs, ZDbcCache,
   Contnrs, ZCompatibility, ZExpression, ZVariant, ZTokenizer
   {$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
 

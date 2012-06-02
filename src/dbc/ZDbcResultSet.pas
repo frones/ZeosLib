@@ -71,7 +71,7 @@ uses
 
 type
   {** Implements Abstract ResultSet. }
-  TZAbstractResultSet = class(TAbstractCodePagedInterfacedObject, IZResultSet)
+  TZAbstractResultSet = class(TZCodePagedObject, IZResultSet)
   private
     FTemp: String;
     FRowNo: Integer;

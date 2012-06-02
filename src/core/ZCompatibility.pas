@@ -162,7 +162,7 @@ type
   end;
   PZCodePage = ^TZCodePage;
 
-  TAbstractCodePagedInterfacedObject = Class(TInterfacedObject)
+  TZCodePagedObject = Class(TInterfacedObject)
   private
     FCodePage: PZCodePage;
   protected
@@ -515,7 +515,7 @@ end;
   So what about coming UTF16/32????
 }
 
-function TAbstractCodePagedInterfacedObject.ZDbcString(const Ansi: AnsiString;
+function TZCodePagedObject.ZDbcString(const Ansi: AnsiString;
   const Encoding: TZCharEncoding = ceDefault): String;
 var
   UseEncoding: TZCharEncoding;
@@ -588,7 +588,7 @@ EgonHugeist:
     Example: CharacterSet was set to Latin1 and some "special"-String MUST BE
      UTF8 instead of Latin1. (SSL-Keys eventualy)
 }
-function TAbstractCodePagedInterfacedObject.ZPlainString(const AStr: String;
+function TZCodePagedObject.ZPlainString(const AStr: String;
   const Encoding: TZCharEncoding = ceDefault): AnsiString;
 var
   UseEncoding: TZCharEncoding;
@@ -666,7 +666,7 @@ begin
   end;
 end;
 
-function TAbstractCodePagedInterfacedObject.ZStringW(const ws: WideString; const Encoding: TZCharEncoding = ceDefault): String;
+function TZCodePagedObject.ZStringW(const ws: WideString; const Encoding: TZCharEncoding = ceDefault): String;
 var
   UseEncoding: TZCharEncoding;
 begin
@@ -723,7 +723,7 @@ begin
   end;
 end;
 
-destructor TAbstractCodePagedInterfacedObject.Destroy;
+destructor TZCodePagedObject.Destroy;
 begin
   Self.FCodePage := nil;
   inherited Destroy;

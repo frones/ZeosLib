@@ -784,7 +784,7 @@ begin
     try
       Temp := 'xyz';
       if Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8] then
-        Stream.Write(PWideChar(Temp)^, Length(Temp)*2)
+        Stream.Write(PWideChar(WideString(Temp))^, Length(Temp)*2)
       else
         Stream.Write(PAnsiChar(AnsiString(Temp))^, Length(Temp));
     finally

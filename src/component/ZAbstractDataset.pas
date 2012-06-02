@@ -58,7 +58,6 @@ interface
 {$I ZComponent.inc}
 
 uses
-  Types,
   Variants,
   SysUtils, DB, Classes, ZSqlUpdate, ZDbcIntfs, ZVariant,
   ZDbcCache, ZDbcCachedResultSet, ZAbstractRODataset,

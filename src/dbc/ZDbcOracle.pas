@@ -60,7 +60,7 @@ interface
 uses
   Types, ZCompatibility, Classes, SysUtils, Contnrs, ZDbcIntfs, ZDbcConnection,
   ZPlainOracleDriver, ZDbcLogging, ZTokenizer, ZDbcGenericResolver, ZURL,
-  ZGenericSqlAnalyser, ZPlainDriver;
+  ZGenericSqlAnalyser;
 
 type
 
@@ -155,7 +155,7 @@ var
 implementation
 
 uses
-  ZMessages, ZSysUtils, ZDbcUtils, ZGenericSqlToken, ZDbcOracleStatement,
+  ZMessages, ZGenericSqlToken, ZDbcOracleStatement,
   ZDbcOracleUtils, ZDbcOracleMetadata, ZOracleToken, ZOracleAnalyser;
 
 { TZOracleDriver }
