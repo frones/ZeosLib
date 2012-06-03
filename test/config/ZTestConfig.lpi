@@ -68,16 +68,16 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="48">
+    <Units Count="51">
       <Unit0>
         <Filename Value="ZTestConfig.lpr"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="ZTestConfig"/>
-        <EditorIndex Value="37"/>
+        <EditorIndex Value="40"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="19"/>
-        <UsageCount Value="127"/>
+        <UsageCount Value="129"/>
         <Loaded Value="True"/>
       </Unit0>
       <Unit1>
@@ -86,29 +86,28 @@
         <ComponentName Value="frmMain"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="FormMain"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1112"/>
-        <CursorPos X="48" Y="1114"/>
-        <UsageCount Value="127"/>
+        <TopLine Value="1048"/>
+        <CursorPos X="1" Y="1069"/>
+        <UsageCount Value="129"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit1>
       <Unit2>
         <Filename Value="..\..\src\dbc\ZDbcIntfs.pas"/>
         <UnitName Value="ZDbcIntfs"/>
-        <EditorIndex Value="40"/>
+        <EditorIndex Value="43"/>
         <WindowIndex Value="0"/>
         <TopLine Value="997"/>
-        <CursorPos X="1" Y="1023"/>
+        <CursorPos X="1" Y="1029"/>
         <UsageCount Value="63"/>
         <Loaded Value="True"/>
       </Unit2>
       <Unit3>
         <Filename Value="..\..\src\core\ZVariant.pas"/>
         <UnitName Value="ZVariant"/>
-        <EditorIndex Value="44"/>
+        <EditorIndex Value="47"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1297"/>
         <CursorPos X="30" Y="1320"/>
@@ -118,7 +117,7 @@
       <Unit4>
         <Filename Value="..\..\src\core\ZCollections.pas"/>
         <UnitName Value="ZCollections"/>
-        <EditorIndex Value="7"/>
+        <EditorIndex Value="10"/>
         <WindowIndex Value="0"/>
         <TopLine Value="482"/>
         <CursorPos X="1" Y="496"/>
@@ -128,7 +127,7 @@
       <Unit5>
         <Filename Value="..\..\src\component\ZPropertyEditor.pas"/>
         <UnitName Value="ZPropertyEditor"/>
-        <EditorIndex Value="30"/>
+        <EditorIndex Value="33"/>
         <WindowIndex Value="0"/>
         <TopLine Value="584"/>
         <CursorPos X="1" Y="624"/>
@@ -138,7 +137,7 @@
       <Unit6>
         <Filename Value="..\..\packages\lazarus\zcomponent.pas"/>
         <UnitName Value="zcomponent"/>
-        <EditorIndex Value="39"/>
+        <EditorIndex Value="42"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="36" Y="11"/>
@@ -156,7 +155,7 @@
       <Unit8>
         <Filename Value="..\..\src\core\ZURL.pas"/>
         <UnitName Value="ZURL"/>
-        <EditorIndex Value="38"/>
+        <EditorIndex Value="41"/>
         <WindowIndex Value="0"/>
         <TopLine Value="220"/>
         <CursorPos X="1" Y="244"/>
@@ -174,7 +173,7 @@
       <Unit10>
         <Filename Value="..\..\src\core\ZSysUtils.pas"/>
         <UnitName Value="ZSysUtils"/>
-        <EditorIndex Value="42"/>
+        <EditorIndex Value="45"/>
         <WindowIndex Value="0"/>
         <TopLine Value="744"/>
         <CursorPos X="1" Y="772"/>
@@ -183,7 +182,7 @@
       </Unit10>
       <Unit11>
         <Filename Value="C:\lazarus\lcl\include\customlistbox.inc"/>
-        <EditorIndex Value="31"/>
+        <EditorIndex Value="34"/>
         <WindowIndex Value="0"/>
         <TopLine Value="529"/>
         <CursorPos X="1" Y="555"/>
@@ -192,7 +191,7 @@
       </Unit11>
       <Unit12>
         <Filename Value="C:\lazarus\lcl\include\control.inc"/>
-        <EditorIndex Value="32"/>
+        <EditorIndex Value="35"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1662"/>
         <CursorPos X="1" Y="1685"/>
@@ -201,7 +200,7 @@
       </Unit12>
       <Unit13>
         <Filename Value="C:\lazarus\lcl\include\wincontrol.inc"/>
-        <EditorIndex Value="33"/>
+        <EditorIndex Value="36"/>
         <WindowIndex Value="0"/>
         <TopLine Value="5219"/>
         <CursorPos X="1" Y="5242"/>
@@ -211,7 +210,7 @@
       <Unit14>
         <Filename Value="C:\lazarus\lcl\lclmessageglue.pas"/>
         <UnitName Value="LCLMessageGlue"/>
-        <EditorIndex Value="34"/>
+        <EditorIndex Value="37"/>
         <WindowIndex Value="0"/>
         <TopLine Value="94"/>
         <CursorPos X="1" Y="121"/>
@@ -220,7 +219,7 @@
       </Unit14>
       <Unit15>
         <Filename Value="C:\lazarus\lcl\interfaces\win32\win32callback.inc"/>
-        <EditorIndex Value="35"/>
+        <EditorIndex Value="38"/>
         <WindowIndex Value="0"/>
         <TopLine Value="2573"/>
         <CursorPos X="1" Y="2605"/>
@@ -230,7 +229,7 @@
       <Unit16>
         <Filename Value="C:\lazarus\lcl\interfaces\win32\win32wsstdctrls.pp"/>
         <UnitName Value="Win32WSStdCtrls"/>
-        <EditorIndex Value="36"/>
+        <EditorIndex Value="39"/>
         <WindowIndex Value="0"/>
         <TopLine Value="386"/>
         <CursorPos X="1" Y="409"/>
@@ -248,7 +247,7 @@
       <Unit18>
         <Filename Value="..\..\src\plain\ZPlainDbLibDriver.pas"/>
         <UnitName Value="ZPlainDbLibDriver"/>
-        <EditorIndex Value="8"/>
+        <EditorIndex Value="11"/>
         <WindowIndex Value="0"/>
         <TopLine Value="54"/>
         <CursorPos X="1" Y="54"/>
@@ -258,7 +257,7 @@
       <Unit19>
         <Filename Value="..\..\src\plain\ZPlainDbLibConstants.pas"/>
         <UnitName Value="ZPlainDbLibConstants"/>
-        <EditorIndex Value="28"/>
+        <EditorIndex Value="31"/>
         <WindowIndex Value="0"/>
         <TopLine Value="2040"/>
         <CursorPos X="1" Y="55"/>
@@ -268,7 +267,7 @@
       <Unit20>
         <Filename Value="..\..\src\core\ZCompatibility.pas"/>
         <UnitName Value="ZCompatibility"/>
-        <EditorIndex Value="29"/>
+        <EditorIndex Value="32"/>
         <WindowIndex Value="0"/>
         <TopLine Value="41"/>
         <CursorPos X="49" Y="80"/>
@@ -277,7 +276,7 @@
       </Unit20>
       <Unit21>
         <Filename Value="C:\lazarus\fpc\2.6.0\source\rtl\win\wininc\base.inc"/>
-        <EditorIndex Value="27"/>
+        <EditorIndex Value="30"/>
         <WindowIndex Value="0"/>
         <TopLine Value="225"/>
         <CursorPos X="6" Y="248"/>
@@ -286,7 +285,7 @@
       </Unit21>
       <Unit22>
         <Filename Value="C:\lazarus\fpc\2.6.0\source\rtl\inc\objpash.inc"/>
-        <EditorIndex Value="6"/>
+        <EditorIndex Value="9"/>
         <WindowIndex Value="0"/>
         <TopLine Value="169"/>
         <CursorPos X="23" Y="192"/>
@@ -295,7 +294,7 @@
       </Unit22>
       <Unit23>
         <Filename Value="C:\lazarus\lcl\include\customcheckbox.inc"/>
-        <EditorIndex Value="43"/>
+        <EditorIndex Value="46"/>
         <WindowIndex Value="0"/>
         <TopLine Value="113"/>
         <CursorPos X="1" Y="137"/>
@@ -305,7 +304,7 @@
       <Unit24>
         <Filename Value="C:\lazarus\lcl\stdctrls.pp"/>
         <UnitName Value="StdCtrls"/>
-        <EditorIndex Value="4"/>
+        <EditorIndex Value="7"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1230"/>
         <CursorPos X="21" Y="1253"/>
@@ -315,7 +314,7 @@
       <Unit25>
         <Filename Value="C:\lazarus\lcl\controls.pp"/>
         <UnitName Value="Controls"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="8"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1220"/>
         <CursorPos X="14" Y="1243"/>
@@ -325,17 +324,17 @@
       <Unit26>
         <Filename Value="..\..\src\component\ZDatasetUtils.pas"/>
         <UnitName Value="ZDatasetUtils"/>
-        <EditorIndex Value="17"/>
+        <EditorIndex Value="20"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="40"/>
-        <CursorPos X="42" Y="61"/>
+        <TopLine Value="1164"/>
+        <CursorPos X="16" Y="1180"/>
         <UsageCount Value="11"/>
         <Loaded Value="True"/>
       </Unit26>
       <Unit27>
         <Filename Value="..\..\src\component\ZConnectionGroup.pas"/>
         <UnitName Value="ZConnectionGroup"/>
-        <EditorIndex Value="22"/>
+        <EditorIndex Value="25"/>
         <WindowIndex Value="0"/>
         <TopLine Value="112"/>
         <CursorPos X="19" Y="18"/>
@@ -345,17 +344,17 @@
       <Unit28>
         <Filename Value="..\..\src\plain\ZPlainDriver.pas"/>
         <UnitName Value="ZPlainDriver"/>
-        <EditorIndex Value="9"/>
+        <EditorIndex Value="12"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="437"/>
-        <CursorPos X="1" Y="467"/>
+        <TopLine Value="390"/>
+        <CursorPos X="1" Y="407"/>
         <UsageCount Value="11"/>
         <Loaded Value="True"/>
       </Unit28>
       <Unit29>
         <Filename Value="..\..\src\component\ZIBEventAlerter.pas"/>
         <UnitName Value="ZIBEventAlerter"/>
-        <EditorIndex Value="10"/>
+        <EditorIndex Value="13"/>
         <WindowIndex Value="0"/>
         <TopLine Value="26"/>
         <CursorPos X="22" Y="45"/>
@@ -365,7 +364,7 @@
       <Unit30>
         <Filename Value="..\..\src\component\ZStoredProcedure.pas"/>
         <UnitName Value="ZStoredProcedure"/>
-        <EditorIndex Value="12"/>
+        <EditorIndex Value="15"/>
         <WindowIndex Value="0"/>
         <TopLine Value="306"/>
         <CursorPos X="56" Y="327"/>
@@ -375,7 +374,7 @@
       <Unit31>
         <Filename Value="..\..\src\component\ZUpdateSqlEditor.pas"/>
         <UnitName Value="ZUpdateSqlEditor"/>
-        <EditorIndex Value="13"/>
+        <EditorIndex Value="16"/>
         <WindowIndex Value="0"/>
         <TopLine Value="371"/>
         <CursorPos X="29" Y="392"/>
@@ -385,7 +384,7 @@
       <Unit32>
         <Filename Value="..\..\src\component\ZSqlStrings.pas"/>
         <UnitName Value="ZSqlStrings"/>
-        <EditorIndex Value="14"/>
+        <EditorIndex Value="17"/>
         <WindowIndex Value="0"/>
         <TopLine Value="40"/>
         <CursorPos X="31" Y="61"/>
@@ -395,7 +394,7 @@
       <Unit33>
         <Filename Value="..\..\src\component\ZSqlProcessor.pas"/>
         <UnitName Value="ZSqlProcessor"/>
-        <EditorIndex Value="15"/>
+        <EditorIndex Value="18"/>
         <WindowIndex Value="0"/>
         <TopLine Value="139"/>
         <CursorPos X="17" Y="160"/>
@@ -405,7 +404,7 @@
       <Unit34>
         <Filename Value="..\..\src\component\ZAbstractRODataset.pas"/>
         <UnitName Value="ZAbstractRODataset"/>
-        <EditorIndex Value="16"/>
+        <EditorIndex Value="19"/>
         <WindowIndex Value="0"/>
         <TopLine Value="275"/>
         <CursorPos X="15" Y="296"/>
@@ -415,7 +414,7 @@
       <Unit35>
         <Filename Value="..\..\src\component\ZGroupedConnection.pas"/>
         <UnitName Value="ZGroupedConnection"/>
-        <EditorIndex Value="23"/>
+        <EditorIndex Value="26"/>
         <WindowIndex Value="0"/>
         <TopLine Value="32"/>
         <CursorPos X="48" Y="53"/>
@@ -425,7 +424,7 @@
       <Unit36>
         <Filename Value="..\..\src\dbc\ZDbcASAMetadata.pas"/>
         <UnitName Value="ZDbcASAMetadata"/>
-        <EditorIndex Value="24"/>
+        <EditorIndex Value="27"/>
         <WindowIndex Value="0"/>
         <TopLine Value="40"/>
         <CursorPos X="29" Y="61"/>
@@ -435,7 +434,7 @@
       <Unit37>
         <Filename Value="..\..\src\plain\ZPlainASADriver.pas"/>
         <UnitName Value="ZPlainASADriver"/>
-        <EditorIndex Value="25"/>
+        <EditorIndex Value="28"/>
         <WindowIndex Value="0"/>
         <TopLine Value="30"/>
         <CursorPos X="15" Y="51"/>
@@ -445,7 +444,7 @@
       <Unit38>
         <Filename Value="..\..\src\dbc\ZDbcOracle.pas"/>
         <UnitName Value="ZDbcOracle"/>
-        <EditorIndex Value="26"/>
+        <EditorIndex Value="29"/>
         <WindowIndex Value="0"/>
         <TopLine Value="42"/>
         <CursorPos X="22" Y="63"/>
@@ -455,7 +454,7 @@
       <Unit39>
         <Filename Value="..\..\src\component\ZPgEventAlerter.pas"/>
         <UnitName Value="ZPgEventAlerter"/>
-        <EditorIndex Value="11"/>
+        <EditorIndex Value="14"/>
         <WindowIndex Value="0"/>
         <TopLine Value="74"/>
         <CursorPos X="35" Y="95"/>
@@ -465,7 +464,7 @@
       <Unit40>
         <Filename Value="..\..\src\component\ZConnection.pas"/>
         <UnitName Value="ZConnection"/>
-        <EditorIndex Value="18"/>
+        <EditorIndex Value="21"/>
         <WindowIndex Value="0"/>
         <TopLine Value="38"/>
         <CursorPos X="23" Y="61"/>
@@ -475,7 +474,7 @@
       <Unit41>
         <Filename Value="..\..\src\component\ZAbstractDataset.pas"/>
         <UnitName Value="ZAbstractDataset"/>
-        <EditorIndex Value="19"/>
+        <EditorIndex Value="22"/>
         <WindowIndex Value="0"/>
         <TopLine Value="40"/>
         <CursorPos X="1" Y="61"/>
@@ -485,7 +484,7 @@
       <Unit42>
         <Filename Value="..\..\src\component\ZSqlMetadata.pas"/>
         <UnitName Value="ZSqlMetadata"/>
-        <EditorIndex Value="20"/>
+        <EditorIndex Value="23"/>
         <WindowIndex Value="0"/>
         <TopLine Value="40"/>
         <CursorPos X="13" Y="61"/>
@@ -495,7 +494,7 @@
       <Unit43>
         <Filename Value="..\..\src\component\ZComponentReg.pas"/>
         <UnitName Value="ZComponentReg"/>
-        <EditorIndex Value="21"/>
+        <EditorIndex Value="24"/>
         <WindowIndex Value="0"/>
         <TopLine Value="69"/>
         <CursorPos X="9" Y="106"/>
@@ -505,16 +504,16 @@
       <Unit44>
         <Filename Value="..\..\src\dbc\ZDbcConnection.pas"/>
         <UnitName Value="ZDbcConnection"/>
-        <EditorIndex Value="41"/>
+        <EditorIndex Value="44"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="419"/>
-        <CursorPos X="1" Y="444"/>
+        <TopLine Value="657"/>
+        <CursorPos X="21" Y="665"/>
         <UsageCount Value="11"/>
         <Loaded Value="True"/>
       </Unit44>
       <Unit45>
         <Filename Value="C:\lazarus\lcl\include\customform.inc"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
         <TopLine Value="59"/>
         <CursorPos X="1" Y="80"/>
@@ -524,144 +523,175 @@
       <Unit46>
         <Filename Value="..\..\src\plain\ZPlainLoader.pas"/>
         <UnitName Value="ZPlainLoader"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
         <TopLine Value="202"/>
         <CursorPos X="1" Y="223"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="11"/>
         <Loaded Value="True"/>
       </Unit46>
       <Unit47>
         <Filename Value="..\..\src\dbc\ZDbcMySql.pas"/>
         <UnitName Value="ZDbcMySql"/>
-        <EditorIndex Value="1"/>
+        <EditorIndex Value="3"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="222"/>
-        <CursorPos X="24" Y="250"/>
+        <TopLine Value="219"/>
+        <CursorPos X="1" Y="254"/>
         <UsageCount Value="10"/>
         <Loaded Value="True"/>
       </Unit47>
+      <Unit48>
+        <Filename Value="..\..\src\component\ZAbstractConnection.pas"/>
+        <UnitName Value="ZAbstractConnection"/>
+        <EditorIndex Value="2"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="637"/>
+        <CursorPos X="1" Y="661"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit48>
+      <Unit49>
+        <Filename Value="..\..\src\plain\ZPlainMySqlDriver.pas"/>
+        <UnitName Value="ZPlainMySqlDriver"/>
+        <EditorIndex Value="4"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="395"/>
+        <CursorPos X="16" Y="416"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit49>
+      <Unit50>
+        <Filename Value="..\..\src\component\ZAbstractTable.pas"/>
+        <UnitName Value="ZAbstractTable"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="1"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="40"/>
+        <CursorPos X="29" Y="47"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit50>
     </Units>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
-        <Filename Value="Units\formmain.pas"/>
-        <Caret Line="1089" Column="1" TopLine="1066"/>
+        <Filename Value="..\..\src\dbc\ZDbcMySql.pas"/>
+        <Caret Line="254" Column="1" TopLine="219"/>
       </Position1>
       <Position2>
-        <Filename Value="C:\lazarus\lcl\include\customform.inc"/>
-        <Caret Line="878" Column="1" TopLine="857"/>
+        <Filename Value="..\..\src\dbc\ZDbcConnection.pas"/>
+        <Caret Line="669" Column="1" TopLine="647"/>
       </Position2>
       <Position3>
-        <Filename Value="C:\lazarus\lcl\include\customform.inc"/>
-        <Caret Line="879" Column="1" TopLine="857"/>
+        <Filename Value="..\..\src\dbc\ZDbcConnection.pas"/>
+        <Caret Line="670" Column="1" TopLine="647"/>
       </Position3>
       <Position4>
-        <Filename Value="C:\lazarus\lcl\include\customform.inc"/>
-        <Caret Line="884" Column="1" TopLine="857"/>
+        <Filename Value="..\..\src\dbc\ZDbcConnection.pas"/>
+        <Caret Line="671" Column="1" TopLine="647"/>
       </Position4>
       <Position5>
-        <Filename Value="C:\lazarus\lcl\include\customform.inc"/>
-        <Caret Line="80" Column="1" TopLine="59"/>
+        <Filename Value="..\..\src\dbc\ZDbcConnection.pas"/>
+        <Caret Line="673" Column="1" TopLine="647"/>
       </Position5>
       <Position6>
-        <Filename Value="Units\formmain.pas"/>
-        <Caret Line="1133" Column="1" TopLine="1112"/>
+        <Filename Value="..\..\src\dbc\ZDbcConnection.pas"/>
+        <Caret Line="674" Column="1" TopLine="647"/>
       </Position6>
       <Position7>
-        <Filename Value="Units\formmain.pas"/>
-        <Caret Line="1134" Column="1" TopLine="1112"/>
+        <Filename Value="..\..\src\dbc\ZDbcConnection.pas"/>
+        <Caret Line="676" Column="1" TopLine="647"/>
       </Position7>
       <Position8>
-        <Filename Value="Units\formmain.pas"/>
-        <Caret Line="1136" Column="1" TopLine="1112"/>
+        <Filename Value="..\..\src\plain\ZPlainDriver.pas"/>
+        <Caret Line="407" Column="1" TopLine="386"/>
       </Position8>
       <Position9>
-        <Filename Value="Units\formmain.pas"/>
-        <Caret Line="1143" Column="1" TopLine="1112"/>
+        <Filename Value="..\..\src\plain\ZPlainDriver.pas"/>
+        <Caret Line="409" Column="1" TopLine="386"/>
       </Position9>
       <Position10>
         <Filename Value="Units\formmain.pas"/>
-        <Caret Line="1144" Column="1" TopLine="1112"/>
+        <Caret Line="1070" Column="1" TopLine="1060"/>
       </Position10>
       <Position11>
-        <Filename Value="Units\formmain.pas"/>
-        <Caret Line="1145" Column="1" TopLine="1112"/>
+        <Filename Value="..\..\src\plain\ZPlainDriver.pas"/>
+        <Caret Line="407" Column="1" TopLine="386"/>
       </Position11>
       <Position12>
-        <Filename Value="Units\formmain.pas"/>
-        <Caret Line="1133" Column="1" TopLine="1112"/>
+        <Filename Value="..\..\src\plain\ZPlainDriver.pas"/>
+        <Caret Line="409" Column="1" TopLine="386"/>
       </Position12>
       <Position13>
-        <Filename Value="Units\formmain.pas"/>
-        <Caret Line="1134" Column="1" TopLine="1112"/>
+        <Filename Value="..\..\src\plain\ZPlainDriver.pas"/>
+        <Caret Line="410" Column="1" TopLine="386"/>
       </Position13>
       <Position14>
-        <Filename Value="Units\formmain.pas"/>
-        <Caret Line="1136" Column="1" TopLine="1112"/>
+        <Filename Value="..\..\src\plain\ZPlainDriver.pas"/>
+        <Caret Line="412" Column="11" TopLine="386"/>
       </Position14>
       <Position15>
-        <Filename Value="..\..\src\dbc\ZDbcMySql.pas"/>
-        <Caret Line="240" Column="1" TopLine="219"/>
+        <Filename Value="..\..\src\plain\ZPlainDriver.pas"/>
+        <Caret Line="425" Column="1" TopLine="390"/>
       </Position15>
       <Position16>
-        <Filename Value="..\..\src\dbc\ZDbcMySql.pas"/>
-        <Caret Line="244" Column="1" TopLine="219"/>
+        <Filename Value="..\..\src\dbc\ZDbcConnection.pas"/>
+        <Caret Line="603" Column="1" TopLine="582"/>
       </Position16>
       <Position17>
         <Filename Value="..\..\src\dbc\ZDbcConnection.pas"/>
-        <Caret Line="440" Column="1" TopLine="419"/>
+        <Caret Line="605" Column="1" TopLine="582"/>
       </Position17>
       <Position18>
         <Filename Value="..\..\src\dbc\ZDbcConnection.pas"/>
-        <Caret Line="441" Column="1" TopLine="419"/>
+        <Caret Line="606" Column="1" TopLine="582"/>
       </Position18>
       <Position19>
-        <Filename Value="..\..\src\core\ZURL.pas"/>
-        <Caret Line="243" Column="1" TopLine="220"/>
+        <Filename Value="..\..\src\dbc\ZDbcConnection.pas"/>
+        <Caret Line="607" Column="1" TopLine="582"/>
       </Position19>
       <Position20>
-        <Filename Value="..\..\src\core\ZURL.pas"/>
-        <Caret Line="244" Column="1" TopLine="220"/>
+        <Filename Value="..\..\src\dbc\ZDbcConnection.pas"/>
+        <Caret Line="678" Column="1" TopLine="657"/>
       </Position20>
       <Position21>
         <Filename Value="..\..\src\dbc\ZDbcConnection.pas"/>
-        <Caret Line="442" Column="1" TopLine="419"/>
+        <Caret Line="683" Column="1" TopLine="657"/>
       </Position21>
       <Position22>
         <Filename Value="..\..\src\dbc\ZDbcConnection.pas"/>
-        <Caret Line="444" Column="1" TopLine="419"/>
+        <Caret Line="684" Column="1" TopLine="657"/>
       </Position22>
       <Position23>
-        <Filename Value="..\..\src\dbc\ZDbcMySql.pas"/>
-        <Caret Line="245" Column="1" TopLine="219"/>
+        <Filename Value="..\..\src\dbc\ZDbcConnection.pas"/>
+        <Caret Line="685" Column="1" TopLine="657"/>
       </Position23>
       <Position24>
-        <Filename Value="..\..\src\dbc\ZDbcMySql.pas"/>
-        <Caret Line="247" Column="1" TopLine="219"/>
+        <Filename Value="Units\formmain.pas"/>
+        <Caret Line="1142" Column="27" TopLine="1114"/>
       </Position24>
       <Position25>
-        <Filename Value="..\..\src\dbc\ZDbcMySql.pas"/>
-        <Caret Line="250" Column="1" TopLine="219"/>
+        <Filename Value="Units\formmain.pas"/>
+        <Caret Line="1070" Column="1" TopLine="1049"/>
       </Position25>
       <Position26>
-        <Filename Value="..\..\src\plain\ZPlainDriver.pas"/>
-        <Caret Line="459" Column="1" TopLine="437"/>
+        <Filename Value="..\..\src\plain\ZPlainMySqlDriver.pas"/>
+        <Caret Line="1149" Column="1" TopLine="1149"/>
       </Position26>
       <Position27>
-        <Filename Value="..\..\src\plain\ZPlainDriver.pas"/>
-        <Caret Line="460" Column="1" TopLine="437"/>
+        <Filename Value="..\..\src\plain\ZPlainMySqlDriver.pas"/>
+        <Caret Line="65" Column="15" TopLine="44"/>
       </Position27>
       <Position28>
-        <Filename Value="..\..\src\plain\ZPlainDriver.pas"/>
-        <Caret Line="462" Column="1" TopLine="437"/>
+        <Filename Value="Units\formmain.pas"/>
+        <Caret Line="1066" Column="16" TopLine="1049"/>
       </Position28>
       <Position29>
-        <Filename Value="..\..\src\dbc\ZDbcMySql.pas"/>
-        <Caret Line="250" Column="24" TopLine="222"/>
+        <Filename Value="Units\formmain.pas"/>
+        <Caret Line="1065" Column="16" TopLine="1048"/>
       </Position29>
       <Position30>
-        <Filename Value="Units\formmain.pas"/>
-        <Caret Line="1140" Column="45" TopLine="1112"/>
+        <Filename Value="..\..\src\component\ZAbstractTable.pas"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
       </Position30>
     </JumpHistory>
   </ProjectOptions>

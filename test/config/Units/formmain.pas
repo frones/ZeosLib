@@ -1137,7 +1137,7 @@ begin
       if CP^.Encoding = ceAnsi then
         cbAnsiCP.Items.Add(SDyn[i])
       else
-        if CP^.IsSupported and (CP^.ZAlias = '') then
+        if CP^.IsSupported then
           cbUnicodeCP.Items.Add(SDyn[i]);
     end;
     Driver := nil;
