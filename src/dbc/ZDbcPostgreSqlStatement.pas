@@ -400,7 +400,6 @@ var
   TempBlob: IZBlob;
   TempStream: TStream;
   WriteTempBlob: IZPostgreSQLBlob;
-  Decoded: PAnsiChar;
 begin
   TempBytes := nil;
   if InParamCount <= ParamIndex then
@@ -570,7 +569,6 @@ var
   TempBlob: IZBlob;
   TempStream: TStream;
   WriteTempBlob: IZPostgreSQLBlob;
-  Decoded: PAnsiChar;
 begin
   TempBytes := nil;
   if InParamCount <= ParamIndex then

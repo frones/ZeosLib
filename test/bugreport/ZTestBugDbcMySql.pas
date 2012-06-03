@@ -292,15 +292,14 @@ begin
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
   //Client_Character_set sets column-type!!!!
-  if Statement.GetConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+  if (Connection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
+    Connection.UTF8StringAsWideField then
   begin
-    {$IFNDEF FPC}
-      CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)));
-      CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(3)));
-    end
-    else
-    begin
-    {$ENDIF}
+    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)));
+    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(3)));
+  end
+  else
+  begin
     CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
     CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(3)));
   end;

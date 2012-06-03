@@ -1233,16 +1233,15 @@ begin
     Query.Open;
 
     //Client_Character_set sets column-type!!!!
-    if Query.Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-      {$IFNDEF FPC}
+    if (Connection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
+      Connection.DbcConnection.UTF8StringAsWideField then
       CheckEquals(Ord(ftWideString), Ord(Query.Fields[0].DataType))
-      else
-      {$ENDIF}
+    else
       CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
     CheckEquals('aa"aa', Query.Fields[0].AsString);
 
     Query.Close;
-    
+
     Query.SQL.Text := 'insert delayed into log_sql'
       + ' (datum, uzivid, lockid, sqlcommand)'
       + ' values (now(), 3, 11952,'

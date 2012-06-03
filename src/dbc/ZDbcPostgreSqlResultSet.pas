@@ -614,7 +614,6 @@ var
   BlobOid: Oid;
   Stream: TStream;
   TempAnsi, Decoded: AnsiString;
-  WS: WideString;
   len: Integer;
 begin
 {$IFNDEF DISABLE_CHECKING}

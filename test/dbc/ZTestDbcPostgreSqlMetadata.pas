@@ -212,7 +212,7 @@ begin
   while ResultSet.Next do
   begin
     TableName := ResultSet.GetString(1);
-    if TableName = 'zeoslib' then
+    if LowerCase(TableName) = 'zeoslib' then
       DBFound := True;
   end;
   Check(DBFound);
@@ -291,16 +291,11 @@ begin
     CheckEquals('people', GetStringByName('TABLE_NAME'));
     CheckEquals('p_resume', GetStringByName('COLUMN_NAME'));
     //EgonHugeist: the ClientCharacter-set sets now the Stream-Type
-    {$IFNDEF FPC}
-    if ResultSet.GetClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-      {$IFDEF VER150BELOW}
+    if (Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}])
+      and Connection.UTF8StringAsWideField then
+      CheckEquals(ord(stUnicodeStream), ResultSet.GetIntByName('DATA_TYPE'))
+    else
       CheckEquals(ord(stAsciiStream), ResultSet.GetIntByName('DATA_TYPE'));
-      {$ELSE}
-      CheckEquals(ord(stUnicodeStream), ResultSet.GetIntByName('DATA_TYPE'));
-      {$ENDIF}
-    {$ELSE}
-    CheckEquals(ord(stAsciiStream), ResultSet.GetIntByName('DATA_TYPE'));
-    {$ENDIF}
     CheckEquals('TEXT', UpperCase(GetStringByName('TYPE_NAME')));
     CheckEquals(-1, GetIntByName('COLUMN_SIZE'));
     CheckEquals(0, GetIntByName('BUFFER_LENGTH'));

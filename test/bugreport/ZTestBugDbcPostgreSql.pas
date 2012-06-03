@@ -356,7 +356,13 @@ begin
   begin
     Check(Next);
     CheckEquals(1, ResultSet.GetInt(1));
-    CheckEquals('Абракадабра', ResultSet.GetString(2));
+    if (Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]) then
+      if Connection.UTF8StringAsWideField then
+        CheckEquals('Абракадабра', ResultSet.GetString(2))
+      else
+        CheckEquals(UTF8Encode(WideString('Абракадабра')), ResultSet.GetString(2))
+    else
+      CheckEquals('Абракадабра', ResultSet.GetString(2));
 
     MoveToInsertRow;
     UpdateIntByName('id', 2);
@@ -370,11 +376,23 @@ begin
   begin
     Check(Next);
     CheckEquals(1, ResultSet.GetInt(1));
-    CheckEquals('Абракадабра', ResultSet.GetString(2));
+    if (Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]) then
+      if Connection.UTF8StringAsWideField then
+        CheckEquals('Абракадабра', ResultSet.GetString(2))
+      else
+        CheckEquals(UTF8Encode(WideString('Абракадабра')), ResultSet.GetString(2))
+    else
+      CheckEquals('Абракадабра', ResultSet.GetString(2));
 
     Check(Next);
     CheckEquals(2, ResultSet.GetInt(1));
-    CheckEquals('\Победа\', ResultSet.GetString(2));
+    if (Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]) then
+      if Connection.UTF8StringAsWideField then
+        CheckEquals('\Победа\', ResultSet.GetString(2))
+      else
+        CheckEquals(UTF8Encode(WideString('\Победа\')), ResultSet.GetString(2))
+    else
+      CheckEquals('\Победа\', ResultSet.GetString(2));
     Close;
   end;
 

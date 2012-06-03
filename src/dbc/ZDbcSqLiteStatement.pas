@@ -320,7 +320,6 @@ var
   Value: TZVariant;
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
-  Decoded: PAnsiChar;
 begin
   TempBytes := nil;
   if InParamCount <= ParamIndex then
