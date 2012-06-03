@@ -244,7 +244,7 @@ begin
     if Url.Properties.Count >0  then
       (Result as IZMySQLPlainDriver).SetDriverOptions(Url.Properties);
     // end added by tohenk, 2009-10-11
-    Result.Initialize(Url.LibLocation);
+    if InitDriver then Result.Initialize(Url.LibLocation);
   end
   else
     raise Exception.Create('Can''t receive Plaindriver!');
