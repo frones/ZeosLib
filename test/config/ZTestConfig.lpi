@@ -77,7 +77,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="19"/>
-        <UsageCount Value="129"/>
+        <UsageCount Value="130"/>
         <Loaded Value="True"/>
       </Unit0>
       <Unit1>
@@ -86,11 +86,12 @@
         <ComponentName Value="frmMain"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="FormMain"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1048"/>
         <CursorPos X="1" Y="1069"/>
-        <UsageCount Value="129"/>
+        <UsageCount Value="130"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit1>
@@ -101,7 +102,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="997"/>
         <CursorPos X="1" Y="1029"/>
-        <UsageCount Value="63"/>
+        <UsageCount Value="64"/>
         <Loaded Value="True"/>
       </Unit2>
       <Unit3>
@@ -111,7 +112,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1297"/>
         <CursorPos X="30" Y="1320"/>
-        <UsageCount Value="63"/>
+        <UsageCount Value="64"/>
         <Loaded Value="True"/>
       </Unit3>
       <Unit4>
@@ -121,7 +122,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="482"/>
         <CursorPos X="1" Y="496"/>
-        <UsageCount Value="25"/>
+        <UsageCount Value="26"/>
         <Loaded Value="True"/>
       </Unit4>
       <Unit5>
@@ -131,7 +132,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="584"/>
         <CursorPos X="1" Y="624"/>
-        <UsageCount Value="54"/>
+        <UsageCount Value="55"/>
         <Loaded Value="True"/>
       </Unit5>
       <Unit6>
@@ -141,7 +142,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="36" Y="11"/>
-        <UsageCount Value="63"/>
+        <UsageCount Value="64"/>
         <Loaded Value="True"/>
       </Unit6>
       <Unit7>
@@ -159,7 +160,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="220"/>
         <CursorPos X="1" Y="244"/>
-        <UsageCount Value="62"/>
+        <UsageCount Value="63"/>
         <Loaded Value="True"/>
       </Unit8>
       <Unit9>
@@ -177,7 +178,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="744"/>
         <CursorPos X="1" Y="772"/>
-        <UsageCount Value="60"/>
+        <UsageCount Value="61"/>
         <Loaded Value="True"/>
       </Unit10>
       <Unit11>
@@ -186,7 +187,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="529"/>
         <CursorPos X="1" Y="555"/>
-        <UsageCount Value="59"/>
+        <UsageCount Value="60"/>
         <Loaded Value="True"/>
       </Unit11>
       <Unit12>
@@ -195,7 +196,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1662"/>
         <CursorPos X="1" Y="1685"/>
-        <UsageCount Value="57"/>
+        <UsageCount Value="58"/>
         <Loaded Value="True"/>
       </Unit12>
       <Unit13>
@@ -204,7 +205,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="5219"/>
         <CursorPos X="1" Y="5242"/>
-        <UsageCount Value="57"/>
+        <UsageCount Value="58"/>
         <Loaded Value="True"/>
       </Unit13>
       <Unit14>
@@ -214,7 +215,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="94"/>
         <CursorPos X="1" Y="121"/>
-        <UsageCount Value="57"/>
+        <UsageCount Value="58"/>
         <Loaded Value="True"/>
       </Unit14>
       <Unit15>
@@ -223,7 +224,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="2573"/>
         <CursorPos X="1" Y="2605"/>
-        <UsageCount Value="57"/>
+        <UsageCount Value="58"/>
         <Loaded Value="True"/>
       </Unit15>
       <Unit16>
@@ -233,7 +234,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="386"/>
         <CursorPos X="1" Y="409"/>
-        <UsageCount Value="57"/>
+        <UsageCount Value="58"/>
         <Loaded Value="True"/>
       </Unit16>
       <Unit17>
@@ -251,7 +252,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="54"/>
         <CursorPos X="1" Y="54"/>
-        <UsageCount Value="26"/>
+        <UsageCount Value="27"/>
         <Loaded Value="True"/>
       </Unit18>
       <Unit19>
@@ -261,7 +262,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="2040"/>
         <CursorPos X="1" Y="55"/>
-        <UsageCount Value="26"/>
+        <UsageCount Value="27"/>
         <Loaded Value="True"/>
       </Unit19>
       <Unit20>
@@ -271,7 +272,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="41"/>
         <CursorPos X="49" Y="80"/>
-        <UsageCount Value="26"/>
+        <UsageCount Value="27"/>
         <Loaded Value="True"/>
       </Unit20>
       <Unit21>
@@ -280,7 +281,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="225"/>
         <CursorPos X="6" Y="248"/>
-        <UsageCount Value="25"/>
+        <UsageCount Value="26"/>
         <Loaded Value="True"/>
       </Unit21>
       <Unit22>
@@ -289,7 +290,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="169"/>
         <CursorPos X="23" Y="192"/>
-        <UsageCount Value="24"/>
+        <UsageCount Value="25"/>
         <Loaded Value="True"/>
       </Unit22>
       <Unit23>
@@ -298,7 +299,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="113"/>
         <CursorPos X="1" Y="137"/>
-        <UsageCount Value="14"/>
+        <UsageCount Value="15"/>
         <Loaded Value="True"/>
       </Unit23>
       <Unit24>
@@ -308,7 +309,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1230"/>
         <CursorPos X="21" Y="1253"/>
-        <UsageCount Value="14"/>
+        <UsageCount Value="15"/>
         <Loaded Value="True"/>
       </Unit24>
       <Unit25>
@@ -318,7 +319,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1220"/>
         <CursorPos X="14" Y="1243"/>
-        <UsageCount Value="14"/>
+        <UsageCount Value="15"/>
         <Loaded Value="True"/>
       </Unit25>
       <Unit26>
@@ -328,7 +329,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1164"/>
         <CursorPos X="16" Y="1180"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit26>
       <Unit27>
@@ -338,7 +339,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="112"/>
         <CursorPos X="19" Y="18"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit27>
       <Unit28>
@@ -348,7 +349,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="390"/>
         <CursorPos X="1" Y="407"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit28>
       <Unit29>
@@ -358,7 +359,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="26"/>
         <CursorPos X="22" Y="45"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit29>
       <Unit30>
@@ -368,7 +369,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="306"/>
         <CursorPos X="56" Y="327"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit30>
       <Unit31>
@@ -378,7 +379,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="371"/>
         <CursorPos X="29" Y="392"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit31>
       <Unit32>
@@ -388,7 +389,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="40"/>
         <CursorPos X="31" Y="61"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit32>
       <Unit33>
@@ -398,7 +399,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="139"/>
         <CursorPos X="17" Y="160"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit33>
       <Unit34>
@@ -408,7 +409,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="275"/>
         <CursorPos X="15" Y="296"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit34>
       <Unit35>
@@ -418,7 +419,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="32"/>
         <CursorPos X="48" Y="53"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit35>
       <Unit36>
@@ -428,7 +429,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="40"/>
         <CursorPos X="29" Y="61"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit36>
       <Unit37>
@@ -438,7 +439,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="30"/>
         <CursorPos X="15" Y="51"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit37>
       <Unit38>
@@ -448,7 +449,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="42"/>
         <CursorPos X="22" Y="63"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit38>
       <Unit39>
@@ -458,7 +459,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="74"/>
         <CursorPos X="35" Y="95"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit39>
       <Unit40>
@@ -468,7 +469,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="38"/>
         <CursorPos X="23" Y="61"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit40>
       <Unit41>
@@ -478,7 +479,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="40"/>
         <CursorPos X="1" Y="61"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit41>
       <Unit42>
@@ -488,7 +489,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="40"/>
         <CursorPos X="13" Y="61"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit42>
       <Unit43>
@@ -498,7 +499,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="69"/>
         <CursorPos X="9" Y="106"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit43>
       <Unit44>
@@ -508,7 +509,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="657"/>
         <CursorPos X="21" Y="665"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit44>
       <Unit45>
@@ -517,7 +518,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="59"/>
         <CursorPos X="1" Y="80"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit45>
       <Unit46>
@@ -527,7 +528,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="202"/>
         <CursorPos X="1" Y="223"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit46>
       <Unit47>
@@ -537,7 +538,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="219"/>
         <CursorPos X="1" Y="254"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="11"/>
         <Loaded Value="True"/>
       </Unit47>
       <Unit48>
@@ -547,7 +548,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="637"/>
         <CursorPos X="1" Y="661"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="11"/>
         <Loaded Value="True"/>
       </Unit48>
       <Unit49>
@@ -557,17 +558,16 @@
         <WindowIndex Value="0"/>
         <TopLine Value="395"/>
         <CursorPos X="16" Y="416"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="11"/>
         <Loaded Value="True"/>
       </Unit49>
       <Unit50>
         <Filename Value="..\..\src\component\ZAbstractTable.pas"/>
         <UnitName Value="ZAbstractTable"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
         <TopLine Value="40"/>
-        <CursorPos X="29" Y="47"/>
+        <CursorPos X="36" Y="46"/>
         <UsageCount Value="10"/>
         <Loaded Value="True"/>
       </Unit50>
