@@ -633,6 +633,9 @@ object frmMain: TfrmMain
     end
   end
   object OpenDialog1: TOpenDialog
+    Title = 'open/create test.properties'
+    DefaultExt = '.properties'
+    FileName = 'test.properties'
     Filter = 'Zeos Test Properties|*.properties'
     left = 56
     top = 144
