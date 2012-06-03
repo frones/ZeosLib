@@ -414,14 +414,13 @@ begin
       end;
   end
   else
-  {$ELSE}
+  {$ENDIF}
   for i := Low(FCodePages) to high(FCodePages) do
     if UpperCase(FCodePages[i].Name) = UpperCase(ClientCharacterSet) then
     begin
       Result := @FCodePages[i];
       Exit;
     end;
-  {$ENDIF}
   Result := @ClientCodePageDummy;
 end;
 

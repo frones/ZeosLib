@@ -456,7 +456,7 @@ var
 
 implementation
 
-uses IniFiles, ZSysUtils;
+uses IniFiles, ZSysUtils, ZDbcIntfs, ZCompatibility, Types, ZURL;
 
 {$R *.lfm}
 
@@ -1089,6 +1089,12 @@ begin
 end;
 
 procedure TfrmMain.lbDriversSelectionChange(Sender: TObject; User: boolean);
+var
+  SDyn: TStringDynArray;
+  Url: TZURL;
+  I: Integer;
+  Driver: IZDriver;
+  CP: PZCodePage;
 begin
   if User then
   begin
@@ -1118,6 +1124,24 @@ begin
     eBuildScripts.Text := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).BuildScripts;
     eDropScripts.Text := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).DropScripts;
     mProperties.Text := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Properties;
+
+    Url := TZURL.Create;
+    Url.Protocol :=  TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Protocol;
+    Driver := DriverManager.GetDriver(Url.URL);
+    SDyn := Driver.GetSupportedClientCodePages(Url, False);
+    cbAnsiCP.Items.Clear;
+    cbUnicodeCP.Items.Clear;
+    for i := 0 to high(SDyn) do
+    begin
+      CP := Driver.GetPlainDriver(URL, False).GetClientCodePageInformations(SDyn[i]);
+      if CP^.Encoding = ceAnsi then
+        cbAnsiCP.Items.Add(SDyn[i])
+      else
+        if CP^.IsSupported and (CP^.ZAlias = '') then
+          cbUnicodeCP.Items.Add(SDyn[i]);
+    end;
+    Driver := nil;
+    Url.Free;
   end;
 end;
 
