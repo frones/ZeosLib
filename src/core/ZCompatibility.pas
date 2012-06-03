@@ -605,14 +605,10 @@ begin
       {$IFDEF DELPHI12_UP}
       Result := AnsiString(UTF8Encode(AStr));
       {$ELSE}
-        {$IFDEF FPC}
-        Result := AStr;
-        {$ELSE}
         if DetectUTF8Encoding(AStr) in [etUTF8, etUSASCII] then
           Result := AStr
         else
           Result := AnsiToUTF8(AStr);
-        {$ENDIF}
       {$ENDIF}
     {$IFNDEF WITH_WIDECONTROLS}
     ceUTF8AsAnsi:
