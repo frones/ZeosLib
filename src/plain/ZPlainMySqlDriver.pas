@@ -62,7 +62,7 @@ interface
 
 {$I ZPlain.inc}
 
-uses Classes, ZClasses, ZPlainDriver, ZCompatibility, ZPlainMySqlConstants;
+uses Classes, ZPlainDriver, ZCompatibility, ZPlainMySqlConstants;
 
 const
 {$IFNDEF UNIX}
@@ -413,7 +413,7 @@ type
   end;
 
 implementation
-uses SysUtils, ZSysUtils, ZPlainLoader;
+uses SysUtils, ZPlainLoader;
 
 { TZMySQLPlainBaseDriver }
 function TZMySQLBaseDriver.GetUnicodeCodePageName: String;
@@ -430,8 +430,8 @@ begin
   AddCodePage('sjis', 11); {Shift-JIS Japanese}
   AddCodePage('gbk', 19, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_GB2312{$ENDIF}); {GBK Simplified Chinese}
   AddCodePage('utf8', 22, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}); {UTF-8 Unicode}
-  AddCodePage('ucs2', 23, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16{$ENDIF}, 'utf8'); {UCS-2 Unicode}
-  AddCodePage('euckr', 14, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_EUCKR{$ENDIF}, 'utf8'); {EUC-KR Korean}
+  AddCodePage('ucs2', 23, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16{$ENDIF}, 'utf8'); {UCS-2 Unicode}
+  AddCodePage('euckr', 14, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_EUCKR{$ENDIF}); {EUC-KR Korean}
   AddCodePage('gb2312', 16, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_GB2312{$ENDIF}); {GB2312 Simplified Chinese}
   AddCodePage('cp932', 35, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_SHIFTJS{$ENDIF}); {SJIS for Windows Japanese}
   AddCodePage('eucjpms', 36); {UJIS for Windows Japanese}
@@ -1236,8 +1236,8 @@ begin
   {MySQL 4.1-5.5}
   { MultiChar }
   AddCodePage('utf8mb4', 37, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}); {UTF-8 Unicode}
-  AddCodePage('utf16', 38, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16{$ENDIF}, 'utf8mb4'); {UTF-16 Unicode}
-  AddCodePage('utf32', 39, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_utf32{$ENDIF}, 'utf8mb4'); {UTF-32 Unicode} //Egonhugeist improved
+  AddCodePage('utf16', 38, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16{$ENDIF}, 'utf8'); {UTF-16 Unicode}
+  AddCodePage('utf32', 39, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_utf32{$ENDIF}, 'utf8'); {UTF-32 Unicode} //Egonhugeist improved
 end;
 
 constructor TZMySQL5PlainDriver.Create;

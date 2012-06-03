@@ -406,7 +406,7 @@ begin
   {$IFDEF LAZARUSUTF8HACK} //if the user didn't set it
   if ClientCharacterSet = '' then
   begin
-    if ClientCharacterSet = '' then
+    for i := Low(FCodePages) to high(FCodePages) do
       if UpperCase(FCodePages[i].Name) = UpperCase(GetUnicodeCodePageName) then
       begin
         Result := @FCodePages[i];

@@ -677,7 +677,11 @@ begin
   {$IFDEF LAZARUSUTF8HACK}
   FUTF8StringAsWideField := False;
   {$ELSE}
-  FUTF8StringAsWideField := True;
+    {$IFDEF DELPHI12_UP}
+    FUTF8StringAsWideField := True;
+    {$ELSE}
+    FUTF8StringAsWideField := False;
+    {$ENDIF}
   {$ENDIF}
 
   FAutoCommit := True;

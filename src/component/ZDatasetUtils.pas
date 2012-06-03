@@ -1188,7 +1188,7 @@ begin
       end;
   else
     try
-      {$IF defined(WIN64) and Defined(FPC)}
+      {$IF defined(WIN64) and defined(FPC)}
       TimeStamp := MSecsToTimeStamp(System.Trunc(Int(TDateTime(Buffer^))));
       {$ELSE}
         TimeStamp := MSecsToTimeStamp(TDateTime(Buffer^));
