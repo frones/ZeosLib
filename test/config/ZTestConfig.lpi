@@ -97,7 +97,6 @@
     </SearchPaths>
     <Linking>
       <Debugging>
-        <GenerateDebugInfo Value="True"/>
         <UseExternalDbgSyms Value="True"/>
       </Debugging>
       <LinkSmart Value="True"/>
