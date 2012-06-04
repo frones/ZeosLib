@@ -196,6 +196,7 @@ type
     FDelimiterType: String;
     FCreateDatabase: Boolean;
     FProperties: String;
+    FNotes: String;
     procedure SetCommon(const Value: Boolean);
     procedure SetAnsiCodePage(const Value: string);
     procedure SetUnicodeCodePage(const Value: string);
@@ -222,6 +223,7 @@ type
     procedure SetDelimiter(const Value: String);
     procedure SetDelimiterType(const Value: String);
     procedure SetProperties(const Value: String);
+    procedure SetNotes(const Value: String);
     procedure SetCreateDatabase(const Value: Boolean);
   public
     constructor Create(const AProtocol: String);
@@ -253,6 +255,7 @@ type
     property DelimiterType: String read FDelimiterType write SetDelimiterType;
     property CreateDatabase: Boolean read FCreateDatabase write SetCreateDatabase;
     property Properties: String read FProperties write SetProperties;
+    property Notes: String read FNotes write SetNotes;
     property Changed: Boolean read FHasChanged;
   end;
 
@@ -362,6 +365,7 @@ type
     cgAPIS: TCheckGroup;
     cgTests: TCheckGroup;
     cgBaseAPIS: TCheckGroup;
+    cbPooled: TCheckBox;
     eBuildScripts: TEdit;
     eDatabase: TEdit;
     eDelimiter: TEdit;
@@ -403,12 +407,15 @@ type
     miPost: TMenuItem;
     MenuItem9: TMenuItem;
     mProperties: TMemo;
+    mNotes: TMemo;
     OpenDialog1: TOpenDialog;
     PageControl1: TPageControl;
+    PageControl2: TPageControl;
     Panel1: TPanel;
-    Properties: TLabel;
     rgOutput: TRadioGroup;
     Splitter1: TSplitter;
+    tsNotes: TTabSheet;
+    tsProperties: TTabSheet;
     tsPerformance: TTabSheet;
     tsMain: TTabSheet;
     procedure cbCreateDBEditingDone(Sender: TObject);
@@ -535,7 +542,10 @@ begin
       SL.Delete(SL.IndexOfName(DATABASE_CREATE_KEY));
     if SL.Values[DATABASE_PREPREPARESQL_KEY] <> '' then
       SL.Delete(SL.IndexOfName(DATABASE_PREPREPARESQL_KEY));
-    FProperties := SL.Text                                  ;
+    FProperties := SL.Text;
+
+    PutSplitStringEx(SL, ReadProperty(AProtocol, 'notes', ''), ';');
+    FNotes := SL.Text;
   end;
   SL.Free;
 end;
@@ -609,6 +619,7 @@ begin
 
     AddPropText('', StringReplace(TrimRight(FProperties), LineEnding, ';', [rfReplaceAll]));
 
+    WriteProperty(FProtocol, 'notes', StringReplace(TrimRight(FNotes), LineEnding, ';', [rfReplaceAll]));
     WriteProperty(FProtocol, DATABASE_PROPERTIES_KEY, SProperties);
     if not FHasChanged then FHasChanged := False;
   end;
@@ -769,6 +780,12 @@ procedure TPlainConfig.SetProperties(const Value: String);
 begin
   if not FHasChanged then FHasChanged := FProperties <> Value;
   FProperties := Value;
+end;
+
+procedure TPlainConfig.SetNotes(const Value: String);
+begin
+  if not FHasChanged then FHasChanged := FNotes <> Value;
+  FNotes := Value;
 end;
 
 procedure TPlainConfig.SetCreateDatabase(const Value: Boolean);
@@ -1124,6 +1141,7 @@ begin
     eBuildScripts.Text := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).BuildScripts;
     eDropScripts.Text := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).DropScripts;
     mProperties.Text := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Properties;
+    mNotes.Text := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Notes;
 
     Url := TZURL.Create;
     Url.Protocol :=  TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Protocol;

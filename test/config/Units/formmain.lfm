@@ -1,10 +1,10 @@
 object frmMain: TfrmMain
   Left = 820
-  Height = 638
+  Height = 683
   Top = 320
   Width = 774
   Caption = 'Zeos Test-Suite Configurator'
-  ClientHeight = 618
+  ClientHeight = 663
   ClientWidth = 774
   Menu = MainMenu1
   OnClose = FormClose
@@ -13,7 +13,7 @@ object frmMain: TfrmMain
   LCLVersion = '0.9.30.4'
   object PageControl1: TPageControl
     Left = 8
-    Height = 618
+    Height = 663
     Top = 0
     Width = 766
     ActivePage = tsMain
@@ -23,22 +23,22 @@ object frmMain: TfrmMain
     TabOrder = 0
     object tsMain: TTabSheet
       Caption = 'Testgroup Settings'
-      ClientHeight = 590
+      ClientHeight = 635
       ClientWidth = 758
       object GroupBox1: TGroupBox
         Left = 8
-        Height = 590
+        Height = 635
         Top = 0
         Width = 225
         Align = alLeft
         BorderSpacing.Left = 8
         Caption = 'Available Drivers'
-        ClientHeight = 572
+        ClientHeight = 617
         ClientWidth = 221
         TabOrder = 0
         object lbDrivers: TListBox
           Left = 8
-          Height = 556
+          Height = 601
           Top = 8
           Width = 205
           Align = alClient
@@ -52,23 +52,23 @@ object frmMain: TfrmMain
       end
       object Splitter1: TSplitter
         Left = 233
-        Height = 590
+        Height = 635
         Top = 0
         Width = 5
       end
       object Panel1: TPanel
         Left = 238
-        Height = 590
+        Height = 635
         Top = 0
         Width = 520
         Align = alClient
         BevelOuter = bvNone
-        ClientHeight = 590
+        ClientHeight = 635
         ClientWidth = 520
         TabOrder = 2
         object GroupBox2: TGroupBox
           Left = 8
-          Height = 438
+          Height = 483
           Top = 144
           Width = 504
           Align = alClient
@@ -77,7 +77,7 @@ object frmMain: TfrmMain
           BorderSpacing.Right = 8
           BorderSpacing.Bottom = 8
           Caption = 'Connection Settings'
-          ClientHeight = 420
+          ClientHeight = 465
           ClientWidth = 500
           TabOrder = 0
           object Label1: TLabel
@@ -327,33 +327,13 @@ object frmMain: TfrmMain
             Caption = 'Drop-Scripts'
             ParentColor = False
           end
-          object mProperties: TMemo
-            Left = 96
-            Height = 72
-            Top = 336
-            Width = 392
-            Anchors = [akTop, akLeft, akRight, akBottom]
-            Lines.Strings = (
-              'mProperties'
-            )
-            OnEditingDone = mPropertiesEditingDone
-            TabOrder = 15
-          end
-          object Properties: TLabel
-            Left = 12
-            Height = 16
-            Top = 337
-            Width = 54
-            Caption = 'Properties'
-            ParentColor = False
-          end
           object ePort: TEdit
             Left = 97
             Height = 23
             Top = 89
             Width = 136
             OnEditingDone = ePortEditingDone
-            TabOrder = 16
+            TabOrder = 15
             Text = 'ePort'
           end
           object Label15: TLabel
@@ -370,8 +350,64 @@ object frmMain: TfrmMain
             Top = 17
             Width = 128
             OnEditingDone = eAliasEditingDone
-            TabOrder = 17
+            TabOrder = 16
             Text = 'eAlias'
+          end
+          object PageControl2: TPageControl
+            Left = 8
+            Height = 120
+            Top = 337
+            Width = 484
+            ActivePage = tsProperties
+            Align = alBottom
+            Anchors = [akTop, akLeft, akRight, akBottom]
+            BorderSpacing.Around = 8
+            TabIndex = 0
+            TabOrder = 17
+            object tsProperties: TTabSheet
+              Caption = 'Properties'
+              ClientHeight = 92
+              ClientWidth = 476
+              object mProperties: TMemo
+                Left = 8
+                Height = 76
+                Top = 8
+                Width = 460
+                Align = alClient
+                BorderSpacing.Around = 8
+                Lines.Strings = (
+                  'mProperties'
+                )
+                OnEditingDone = mPropertiesEditingDone
+                TabOrder = 0
+              end
+            end
+            object tsNotes: TTabSheet
+              Caption = 'Notes'
+              ClientHeight = 92
+              ClientWidth = 476
+              object mNotes: TMemo
+                Left = 8
+                Height = 76
+                Top = 8
+                Width = 460
+                Align = alClient
+                BorderSpacing.Around = 8
+                Lines.Strings = (
+                  'mProperties'
+                )
+                OnEditingDone = mPropertiesEditingDone
+                TabOrder = 0
+              end
+            end
+          end
+          object cbPooled: TCheckBox
+            Left = 245
+            Height = 19
+            Top = 166
+            Width = 96
+            Caption = 'Add to Pooled'
+            TabOrder = 18
           end
         end
         object cbgTests: TCheckGroup
@@ -380,7 +416,6 @@ object frmMain: TfrmMain
           Top = 8
           Width = 504
           Align = alTop
-          Anchors = [akTop, akLeft, akRight, akBottom]
           AutoFill = True
           BorderSpacing.Left = 8
           BorderSpacing.Top = 8
@@ -396,7 +431,7 @@ object frmMain: TfrmMain
           ChildSizing.ControlsPerLine = 2
           Columns = 2
           Items.Strings = (
-            'Common (need to run any)'
+            'Common (run all)'
             'Core'
             'ParseSQL'
             'Plain'
