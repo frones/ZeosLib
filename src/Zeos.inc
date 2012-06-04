@@ -330,6 +330,4 @@
 //Patches by EgonHugeist
 
 {.$DEFINE WITH_CHAR_CONTROL} //Disables/Enables the CharControl widget
-{.$DEFINE SQLPREPREPARE} //Test-suite-Mode! don't use it in your code!!! A spezial mode for the Test-Suites to hardly enable the PreprepareStep
-{.$DEFINE UNICODEMODE} //Run all PlainDrivers in Unicode-CharacterSets. Just for the TestSuites
 
