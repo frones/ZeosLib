@@ -86,7 +86,7 @@ uses
   ZDbcASA,
 {$ENDIF}
 {$IFDEF ENABLE_POOLED}
-  ZDBCPooled,
+  ZDbcPooled,
 {$ENDIF}
 
   SysUtils, Classes, ZDbcIntfs, DB, ZCompatibility, ZURL;
