@@ -495,50 +495,50 @@ var
   SL: TStringList;
 begin
   SL := TStringList.Create;
-  FProtocol := AProtocol;
+  FProtocol := StringReplace(AProtocol, '=', '\', [rfReplaceAll]);
   if Assigned(Ini) then
   begin
     PutSplitStringEx(SL, ReadProperty(COMMON_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
-    FCommon := SL.IndexOf(AProtocol) > -1;
+    FCommon := SL.IndexOf(FProtocol) > -1;
     PutSplitStringEx(SL, ReadProperty(CORE_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
-    FCore := SL.IndexOf(AProtocol) > -1;
+    FCore := SL.IndexOf(FProtocol) > -1;
     PutSplitStringEx(SL, ReadProperty(PARSESQL_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
-    FParseSQL := SL.IndexOf(AProtocol) > -1;
+    FParseSQL := SL.IndexOf(FProtocol) > -1;
     PutSplitStringEx(SL, ReadProperty(PLAIN_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
-    FPlain := SL.IndexOf(AProtocol) > -1;
+    FPlain := SL.IndexOf(FProtocol) > -1;
     PutSplitStringEx(SL, ReadProperty(DBC_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
-    FDbc := SL.IndexOf(AProtocol) > -1;
+    FDbc := SL.IndexOf(FProtocol) > -1;
     PutSplitStringEx(SL, ReadProperty(COMPONENT_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
-    FComponent := SL.IndexOf(AProtocol) > -1;
+    FComponent := SL.IndexOf(FProtocol) > -1;
     PutSplitStringEx(SL, ReadProperty(BUGREPORT_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
-    FBugreport := SL.IndexOf(AProtocol) > -1;
+    FBugreport := SL.IndexOf(FProtocol) > -1;
     PutSplitStringEx(SL, ReadProperty(PERFORMANCE_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
-    FPerformance := SL.IndexOf(AProtocol) > -1;
+    FPerformance := SL.IndexOf(FProtocol) > -1;
 
-    FAlias := ReadProperty(AProtocol, DATABASE_ALIAS_KEY, '');
-    FHostName := ReadProperty(AProtocol, DATABASE_HOST_KEY, DEFAULT_HOST_VALUE);
-    FPort := ReadProperty(AProtocol, DATABASE_PORT_KEY, '');
-    FDatabase := ReadProperty(AProtocol, DATABASE_NAME_KEY, '');
-    FUsername := ReadProperty(AProtocol, DATABASE_USER_KEY, '');
-    FPassword := ReadProperty(AProtocol, DATABASE_PASSWORD_KEY, '');
-    FRebuild := StrToBoolEx(ReadProperty(AProtocol, DATABASE_REBUILD_KEY, 'No'));
-    if ( Pos('firebird', AProtocol) > 0 ) or (pos('interbase', AProtocol) > 0) then
-      FDelimiterType := ReadProperty(AProtocol, DATABASE_DELIMITER_TYPE_KEY, SET_TERM_DELIMITER)
-    else if ( Pos('mssql', LowerCase(AProtocol)) > 0 ) or (pos('sybase', LowerCase(AProtocol)) > 0) then
-      FDelimiterType := ReadProperty(AProtocol, DATABASE_DELIMITER_TYPE_KEY, GO_DELIMITER)
+    FAlias := ReadProperty(FProtocol, DATABASE_ALIAS_KEY, '');
+    FHostName := ReadProperty(FProtocol, DATABASE_HOST_KEY, DEFAULT_HOST_VALUE);
+    FPort := ReadProperty(FProtocol, DATABASE_PORT_KEY, '');
+    FDatabase := ReadProperty(FProtocol, DATABASE_NAME_KEY, '');
+    FUsername := ReadProperty(FProtocol, DATABASE_USER_KEY, '');
+    FPassword := ReadProperty(FProtocol, DATABASE_PASSWORD_KEY, '');
+    FRebuild := StrToBoolEx(ReadProperty(FProtocol, DATABASE_REBUILD_KEY, 'No'));
+    if ( Pos('firebird', FProtocol) > 0 ) or (pos('interbase', FProtocol) > 0) then
+      FDelimiterType := ReadProperty(FProtocol, DATABASE_DELIMITER_TYPE_KEY, SET_TERM_DELIMITER)
+    else if ( Pos('mssql', LowerCase(FProtocol)) > 0 ) or (pos('sybase', LowerCase(FProtocol)) > 0) then
+      FDelimiterType := ReadProperty(FProtocol, DATABASE_DELIMITER_TYPE_KEY, GO_DELIMITER)
     else
-      FDelimiterType := ReadProperty(AProtocol, DATABASE_DELIMITER_TYPE_KEY, '');
-    FDelimiter := ReadProperty(AProtocol, DATABASE_DELIMITER_KEY, '');
+      FDelimiterType := ReadProperty(FProtocol, DATABASE_DELIMITER_TYPE_KEY, '');
+    FDelimiter := ReadProperty(FProtocol, DATABASE_DELIMITER_KEY, '');
 
-    FUnicode := StrToBoolEx(ReadProperty(AProtocol, 'use.unicode.charset', 'Yes'));
-    FBuildScripts := ReadProperty(AProtocol, DATABASE_CREATE_SCRIPTS_KEY, '');
-    FDropScripts := ReadProperty(AProtocol, DATABASE_DROP_SCRIPTS_KEY, '');
-    FLibLocation := ReadProperty(AProtocol, DATABASE_LIBRARY_KEY, '');
-    FUnicodeCodePage := ReadProperty(AProtocol, 'unicode.charset', '');
-    FAnsiCodePage := ReadProperty(AProtocol, 'ansi.charset', '');
-    FPreprepareSQL := StrToBoolEx(ReadProperty(AProtocol, DATABASE_PREPREPARESQL_KEY, 'Yes'));
-    FCreateDatabase := StrToBoolEx(ReadProperty(AProtocol, DATABASE_CREATE_KEY, 'No'));
-    PutSplitStringEx(SL, ReadProperty(AProtocol, DATABASE_PROPERTIES_KEY, ''), ';');
+    FUnicode := StrToBoolEx(ReadProperty(FProtocol, 'use.unicode.charset', 'Yes'));
+    FBuildScripts := ReadProperty(FProtocol, DATABASE_CREATE_SCRIPTS_KEY, '');
+    FDropScripts := ReadProperty(FProtocol, DATABASE_DROP_SCRIPTS_KEY, '');
+    FLibLocation := ReadProperty(FProtocol, DATABASE_LIBRARY_KEY, '');
+    FUnicodeCodePage := ReadProperty(FProtocol, 'unicode.charset', '');
+    FAnsiCodePage := ReadProperty(FProtocol, 'ansi.charset', '');
+    FPreprepareSQL := StrToBoolEx(ReadProperty(FProtocol, DATABASE_PREPREPARESQL_KEY, 'Yes'));
+    FCreateDatabase := StrToBoolEx(ReadProperty(FProtocol, DATABASE_CREATE_KEY, 'No'));
+    PutSplitStringEx(SL, ReadProperty(FProtocol, DATABASE_PROPERTIES_KEY, ''), ';');
     {Drop common values}
     if SL.Values[DATABASE_LIBRARY_KEY] <> '' then
       SL.Delete(SL.IndexOfName(DATABASE_LIBRARY_KEY));
@@ -550,7 +550,7 @@ begin
       SL.Delete(SL.IndexOfName(DATABASE_PREPREPARESQL_KEY));
     FProperties := SL.Text;
 
-    PutSplitStringEx(SL, ReadProperty(AProtocol, 'notes', ''), ';');
+    PutSplitStringEx(SL, ReadProperty(FProtocol, 'notes', ''), ';');
     FNotes := SL.Text;
 
     FPooled := StrToBoolEx(ReadProperty(FProtocol, DATABASE_POOLED_KEY, 'No'));
@@ -580,7 +580,7 @@ var
 begin
   if Assigned(Ini) then
   begin
-    WriteProperty(Suffix+FProtocol, DATABASE_PROTOCOL_KEY, FProtocol);
+    WriteProperty(Suffix+FProtocol, DATABASE_PROTOCOL_KEY, StringReplace(AProtocol, '\', '=', [rfReplaceAll]));
     WriteProperty(Suffix+FProtocol, DATABASE_ALIAS_KEY, FAlias);
     WriteProperty(Suffix+FProtocol, DATABASE_HOST_KEY, FHostName);
     WriteProperty(Suffix+FProtocol, DATABASE_PORT_KEY, FPort);
@@ -882,7 +882,7 @@ begin
     frmMain.eRepeat.Text := IntToStr(FRepeat);
     FCount := StrToIntDef(ReadProperty(PERFORMANCE_TEST_GROUP, PERFORMANCE_REOCORDS, '10000'), 10000);
     frmMain.eRecords.Text := IntToStr(FCount);
-    FDetails := StrToBoolEx(ReadProperty(PERFORMANCE_TEST_GROUP, PERFORMANCE_PRINTDETAILS, 'No'));
+    FDetails := StrToBoolEx(ReadProperty(PERFORMANCE_TEST_GROUP, PERFORMANCE_PRINTDETAILS, 'Yes'));
   end;
   SL.Free;
 end;
