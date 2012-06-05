@@ -100,6 +100,7 @@ const
   DATABASE_PREPREPARESQL_KEY  = 'PreprepareSQL';
   DATABASE_CREATE_KEY         = 'createNewDatabase';
   DATABASE_CODEPAGE_KEY       = 'codepage';
+  DATABASE_POOLED_KEY         = 'pooled';
 
 const
   { SQL script delimiters }
@@ -197,6 +198,7 @@ type
     FCreateDatabase: Boolean;
     FProperties: String;
     FNotes: String;
+    FPooled: Boolean;
     procedure SetCommon(const Value: Boolean);
     procedure SetAnsiCodePage(const Value: string);
     procedure SetUnicodeCodePage(const Value: string);
@@ -225,9 +227,10 @@ type
     procedure SetProperties(const Value: String);
     procedure SetNotes(const Value: String);
     procedure SetCreateDatabase(const Value: Boolean);
+    procedure SetPooled(const Value: Boolean);
   public
     constructor Create(const AProtocol: String);
-    procedure PostUpdates;
+    procedure PostUpdates(const Suffix: String = '');
     property Common: Boolean read FCommon write SetCommon;
     property AnsiCodePage: String read FAnsiCodePage write SetAnsiCodePage;
     property UnicodeCodePage: String read FUnicodeCodePage write SetUnicodeCodePage;
@@ -256,6 +259,7 @@ type
     property CreateDatabase: Boolean read FCreateDatabase write SetCreateDatabase;
     property Properties: String read FProperties write SetProperties;
     property Notes: String read FNotes write SetNotes;
+    property Pooled: Boolean read FPooled write SetPooled;
     property Changed: Boolean read FHasChanged;
   end;
 
@@ -420,6 +424,7 @@ type
     tsMain: TTabSheet;
     procedure cbCreateDBEditingDone(Sender: TObject);
     procedure cbgTestsItemClick(Sender: TObject; Index: integer);
+    procedure cbPooledEditingDone(Sender: TObject);
     procedure cbPreprepareSQLEditingDone(Sender: TObject);
     procedure cbPrintDetailsClick(Sender: TObject);
     procedure cbRebuildEditingDone(Sender: TObject);
@@ -448,6 +453,7 @@ type
     procedure miNewClick(Sender: TObject);
     procedure miOpenClick(Sender: TObject);
     procedure miPostClick(Sender: TObject);
+    procedure mNotesEditingDone(Sender: TObject);
     procedure mPropertiesEditingDone(Sender: TObject);
     procedure rgOutputClick(Sender: TObject);
   private
@@ -546,11 +552,13 @@ begin
 
     PutSplitStringEx(SL, ReadProperty(AProtocol, 'notes', ''), ';');
     FNotes := SL.Text;
+
+    FPooled := StrToBoolEx(ReadProperty(FProtocol, DATABASE_POOLED_KEY, 'No'));
   end;
   SL.Free;
 end;
 
-procedure TPlainConfig.PostUpdates;
+procedure TPlainConfig.PostUpdates(const Suffix: String = '');
 var
   SProperties: String;
 
@@ -572,55 +580,59 @@ var
 begin
   if Assigned(Ini) then
   begin
-    WriteProperty(FProtocol, DATABASE_PROTOCOL_KEY, FProtocol);
-    WriteProperty(FProtocol, DATABASE_ALIAS_KEY, FAlias);
-    WriteProperty(FProtocol, DATABASE_HOST_KEY, FHostName);
-    WriteProperty(FProtocol, DATABASE_PORT_KEY, FPort);
-    WriteProperty(FProtocol, DATABASE_NAME_KEY, FDatabase);
-    WriteProperty(FProtocol, DATABASE_USER_KEY, FUserName);
-    WriteProperty(FProtocol, DATABASE_PASSWORD_KEY, FPassword);
+    WriteProperty(Suffix+FProtocol, DATABASE_PROTOCOL_KEY, FProtocol);
+    WriteProperty(Suffix+FProtocol, DATABASE_ALIAS_KEY, FAlias);
+    WriteProperty(Suffix+FProtocol, DATABASE_HOST_KEY, FHostName);
+    WriteProperty(Suffix+FProtocol, DATABASE_PORT_KEY, FPort);
+    WriteProperty(Suffix+FProtocol, DATABASE_NAME_KEY, FDatabase);
+    WriteProperty(Suffix+FProtocol, DATABASE_USER_KEY, FUserName);
+    WriteProperty(Suffix+FProtocol, DATABASE_PASSWORD_KEY, FPassword);
     if FRebuild then
-       WriteProperty(FProtocol, DATABASE_REBUILD_KEY, 'Yes')
+       WriteProperty(Suffix+FProtocol, DATABASE_REBUILD_KEY, 'Yes')
     else
-      WriteProperty(FProtocol, DATABASE_REBUILD_KEY, 'No');
-    WriteProperty(FProtocol, DATABASE_DELIMITER_TYPE_KEY, FDelimiterType);
-    WriteProperty(FProtocol, DATABASE_DELIMITER_KEY, FDelimiter);
+      WriteProperty(Suffix+FProtocol, DATABASE_REBUILD_KEY, 'No');
+    WriteProperty(Suffix+FProtocol, DATABASE_DELIMITER_TYPE_KEY, FDelimiterType);
+    WriteProperty(Suffix+FProtocol, DATABASE_DELIMITER_KEY, FDelimiter);
 
     if FUnicode then
     begin
-       WriteProperty(FProtocol, 'use.unicode.charset', 'Yes');
+       WriteProperty(Suffix+FProtocol, 'use.unicode.charset', 'Yes');
        AddPropText(DATABASE_CODEPAGE_KEY, FUnicodeCodePage);
     end
     else
     begin
-      WriteProperty(FProtocol, 'use.unicode.charset', 'No');
+      WriteProperty(Suffix+FProtocol, 'use.unicode.charset', 'No');
       AddPropText(DATABASE_CODEPAGE_KEY, FAnsiCodePage);
     end;
-    WriteProperty(FProtocol, DATABASE_CREATE_SCRIPTS_KEY, FBuildScripts);
-    WriteProperty(FProtocol, DATABASE_DROP_SCRIPTS_KEY, FDropScripts);
-    WriteProperty(FProtocol, DATABASE_LIBRARY_KEY, FLibLocation);
+    WriteProperty(Suffix+FProtocol, DATABASE_CREATE_SCRIPTS_KEY, FBuildScripts);
+    WriteProperty(Suffix+FProtocol, DATABASE_DROP_SCRIPTS_KEY, FDropScripts);
+    WriteProperty(Suffix+FProtocol, DATABASE_LIBRARY_KEY, FLibLocation);
     AddPropText(DATABASE_LIBRARY_KEY, FLibLocation);
-    WriteProperty(FProtocol, 'unicode.charset', FUnicodeCodePage);
-    WriteProperty(FProtocol, 'ansi.charset', FAnsiCodePage);
+    WriteProperty(Suffix+FProtocol, 'unicode.charset', FUnicodeCodePage);
+    WriteProperty(Suffix+FProtocol, 'ansi.charset', FAnsiCodePage);
     if FPreprepareSQL then
     begin
-      WriteProperty(FProtocol, DATABASE_PREPREPARESQL_KEY, 'Yes');
+      WriteProperty(Suffix+FProtocol, DATABASE_PREPREPARESQL_KEY, 'Yes');
       AddPropText(DATABASE_PREPREPARESQL_KEY, 'ON');
     end
     else
-      WriteProperty(FProtocol, DATABASE_PREPREPARESQL_KEY, 'Yes');
+      WriteProperty(Suffix+FProtocol, DATABASE_PREPREPARESQL_KEY, 'Yes');
     if FCreateDatabase then
     begin
-      WriteProperty(FProtocol, DATABASE_CREATE_KEY, 'Yes');
+      WriteProperty(Suffix+FProtocol, DATABASE_CREATE_KEY, 'Yes');
       AddPropText(DATABASE_CREATE_KEY, FDatabase);
     end
     else
-      WriteProperty(FProtocol, DATABASE_CREATE_KEY, 'No');
+      WriteProperty(Suffix+FProtocol, DATABASE_CREATE_KEY, 'No');
+    if FPooled then
+      WriteProperty(Suffix+FProtocol, DATABASE_POOLED_KEY, 'Yes')
+    else
+      WriteProperty(Suffix+FProtocol, DATABASE_POOLED_KEY, 'No');
 
     AddPropText('', StringReplace(TrimRight(FProperties), LineEnding, ';', [rfReplaceAll]));
 
-    WriteProperty(FProtocol, 'notes', StringReplace(TrimRight(FNotes), LineEnding, ';', [rfReplaceAll]));
-    WriteProperty(FProtocol, DATABASE_PROPERTIES_KEY, SProperties);
+    WriteProperty(Suffix+FProtocol, 'notes', StringReplace(TrimRight(FNotes), LineEnding, ';', [rfReplaceAll]));
+    WriteProperty(Suffix+FProtocol, DATABASE_PROPERTIES_KEY, SProperties);
     if not FHasChanged then FHasChanged := False;
   end;
 end;
@@ -794,6 +806,12 @@ begin
   FCreateDatabase := Value;
 end;
 
+procedure TPlainConfig.SetPooled(const Value: Boolean);
+begin
+  if not FHasChanged then FHasChanged := FPooled <> Value;
+  FPooled := Value;
+end;
+
 constructor TPerformanceConfig.Create;
 var
   SL: TStringList;
@@ -864,7 +882,7 @@ begin
     frmMain.eRepeat.Text := IntToStr(FRepeat);
     FCount := StrToIntDef(ReadProperty(PERFORMANCE_TEST_GROUP, PERFORMANCE_REOCORDS, '10000'), 10000);
     frmMain.eRecords.Text := IntToStr(FCount);
-    FDetails := StrToBoolEx(ReadProperty(PERFORMANCE_TEST_GROUP, PERFORMANCE_PRINTDETAILS, 'Yes'));
+    FDetails := StrToBoolEx(ReadProperty(PERFORMANCE_TEST_GROUP, PERFORMANCE_PRINTDETAILS, 'No'));
   end;
   SL.Free;
 end;
@@ -1142,6 +1160,7 @@ begin
     eDropScripts.Text := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).DropScripts;
     mProperties.Text := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Properties;
     mNotes.Text := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Notes;
+    cbPooled.Checked := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Pooled;
 
     Url := TZURL.Create;
     Url.Protocol :=  TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Protocol;
@@ -1214,13 +1233,19 @@ var
   SCommon, SCore, SParseSQL, SPlain, SDbc, SComponent, SBugreport,
     SPerformance: String;
 
-  procedure AddGroup(var Ident: String; const Value: String; const Add: Boolean);
+  procedure AddGroup(var Ident: String; const Value: String; const Add, Pooled: Boolean);
   begin
     if Add then
       if Ident <> '' then
-        Ident := Ident+','+Value
+        if Pooled then
+          Ident := Ident+','+Value+','+DATABASE_POOLED_KEY+'.'+Value
+        else
+          Ident := Ident+','+Value
       else
-        Ident := Value;
+        if Pooled then
+          Ident := Value+','+DATABASE_POOLED_KEY+'.'+Value
+        else
+          Ident := Value;
   end;
 
 begin
@@ -1228,22 +1253,32 @@ begin
   for i := 0 to lbDrivers.items.Count -1 do
   begin
     AddGroup(SCommon, TPlainConfig(lbDrivers.items.Objects[I]).Protocol,
-                      TPlainConfig(lbDrivers.items.Objects[I]).Common);
+                      TPlainConfig(lbDrivers.items.Objects[I]).Common,
+                      TPlainConfig(lbDrivers.items.Objects[I]).Pooled);
     AddGroup(SCore, TPlainConfig(lbDrivers.items.Objects[I]).Protocol,
-                      TPlainConfig(lbDrivers.items.Objects[I]).Core);
+                      TPlainConfig(lbDrivers.items.Objects[I]).Core,
+                      TPlainConfig(lbDrivers.items.Objects[I]).Pooled);
     AddGroup(SParseSQL, TPlainConfig(lbDrivers.items.Objects[I]).Protocol,
-                      TPlainConfig(lbDrivers.items.Objects[I]).ParseSQL);
+                      TPlainConfig(lbDrivers.items.Objects[I]).ParseSQL,
+                      TPlainConfig(lbDrivers.items.Objects[I]).Pooled);
     AddGroup(SPlain, TPlainConfig(lbDrivers.items.Objects[I]).Protocol,
-                      TPlainConfig(lbDrivers.items.Objects[I]).Plain);
+                      TPlainConfig(lbDrivers.items.Objects[I]).Plain,
+                      TPlainConfig(lbDrivers.items.Objects[I]).Pooled);
     AddGroup(SDbc, TPlainConfig(lbDrivers.items.Objects[I]).Protocol,
-                      TPlainConfig(lbDrivers.items.Objects[I]).Dbc);
+                      TPlainConfig(lbDrivers.items.Objects[I]).Dbc,
+                      TPlainConfig(lbDrivers.items.Objects[I]).Pooled);
     AddGroup(SComponent, TPlainConfig(lbDrivers.items.Objects[I]).Protocol,
-                      TPlainConfig(lbDrivers.items.Objects[I]).Component);
+                      TPlainConfig(lbDrivers.items.Objects[I]).Component,
+                      TPlainConfig(lbDrivers.items.Objects[I]).Pooled);
     AddGroup(SBugreport, TPlainConfig(lbDrivers.items.Objects[I]).Protocol,
-                      TPlainConfig(lbDrivers.items.Objects[I]).Bugreport);
+                      TPlainConfig(lbDrivers.items.Objects[I]).Bugreport,
+                      TPlainConfig(lbDrivers.items.Objects[I]).Pooled);
     AddGroup(SPerformance, TPlainConfig(lbDrivers.items.Objects[I]).Protocol,
-                      TPlainConfig(lbDrivers.items.Objects[I]).Performance);
+                      TPlainConfig(lbDrivers.items.Objects[I]).Performance,
+                      TPlainConfig(lbDrivers.items.Objects[I]).Pooled);
     TPlainConfig(lbDrivers.items.Objects[I]).PostUpdates;
+    if TPlainConfig(lbDrivers.items.Objects[I]).Pooled then
+      TPlainConfig(lbDrivers.items.Objects[I]).PostUpdates(DATABASE_POOLED_KEY+'.');
   end;
 
   WriteProperty(COMMON_GROUP, ACTIVE_CONNECTIONS_KEY, SCommon);
@@ -1256,6 +1291,11 @@ begin
   WriteProperty(PERFORMANCE_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, SPerformance);
   PerformanceConfig.PostUpdates;
   SL.Free;
+end;
+
+procedure TfrmMain.mNotesEditingDone(Sender: TObject);
+begin
+  TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Notes := mNotes.Text;
 end;
 
 procedure TfrmMain.mPropertiesEditingDone(Sender: TObject);
@@ -1307,6 +1347,11 @@ begin
     6: TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Bugreport := cbgTests.Checked[6];
     7: TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Performance := cbgTests.Checked[7];
   end;
+end;
+
+procedure TfrmMain.cbPooledEditingDone(Sender: TObject);
+begin
+  TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Pooled := cbPooled.Checked;
 end;
 
 procedure TfrmMain.cbCreateDBEditingDone(Sender: TObject);
