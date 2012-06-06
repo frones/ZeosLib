@@ -1555,7 +1555,11 @@ begin
 
   case GetIbSqlType(Index) of
     SQL_VARYING, SQL_TEXT:
-      Result := stString;
+      case SqlSubType of
+        1: {Octets} Result := stBytes;
+        else
+          Result := stString;
+      end;
     SQL_LONG:
       begin
         if SqlScale = 0 then

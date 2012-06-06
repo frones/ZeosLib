@@ -146,9 +146,17 @@ function AQSNull(const Value: string; QuoteChar: Char = ''''): string;
 }
 function ToLikeString(const Value: string): string;
 
+{**
+  PrepareUnicodeStream checks the incoming Stream for his given Memory and
+  returns a valid UTF8 StringStream
+  @param Stream the Stream with the unknown format and data
+  @return a valid utf8 encoded stringstram
+}
+function GetValidatedUnicodeStream(const Stream: TStream): TStream;
+
 implementation
 
-uses ZMessages, ZSysUtils;
+uses ZMessages, ZSysUtils{$IFDEF WITH_WIDESTRUTILS},WideStrUtils{$ENDIF};
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -426,6 +434,55 @@ begin
     Result := '%'
   else
     Result := Value;
+end;
+
+function GetValidatedUnicodeStream(const Stream: TStream): TStream;
+var
+  Ansi: AnsiString;
+  Len: Integer;
+  WS: WideString;
+begin
+  {EgonHugeist: TempBuffer the WideString, }
+  //Step one: Findout, wat's comming in! To avoid User-Bugs
+    //it is possible that a PAnsiChar OR a PWideChar was written into
+    //the Stream!!!  And these chars could be trunced with changing the
+    //Stream.Size.
+  if Assigned(Stream) then
+  begin
+    if Length(PWideChar(TMemoryStream(Stream).Memory)) = Stream.Size then
+    begin
+      WS := PWideChar(TMemoryStream(Stream).Memory);
+      SetLength(WS, Stream.Size div 2);
+      Ansi := UTF8Encode(WS);
+    end
+    else
+      if StrLen(PAnsiChar(TMemoryStream(Stream).Memory)) < Stream.Size then //PWideChar written
+      begin
+        SetLength(WS, Stream.Size div 2);
+        System.Move(PWideString(TMemoryStream(Stream).Memory)^,
+          PWideChar(WS)^, Stream.Size);
+        Ansi := UTF8Encode(WS);
+      end
+      else
+        if StrLen(PAnsiChar(TMemoryStream(Stream).Memory)) = Stream.Size then
+        begin
+          if DetectUTF8Encoding(PAnsiChar(TMemoryStream(Stream).Memory)) = etAnsi then
+            Ansi := AnsiToUTF8(PAnsiChar(TMemoryStream(Stream).Memory))
+          else
+            Ansi := PAnsiChar(TMemoryStream(Stream).Memory);
+        end
+        else
+        begin
+          SetLength(Ansi, Stream.Size);
+          TMemoryStream(Stream).Read(PAnsiChar(Ansi)^, Stream.Size);
+          if DetectUTF8Encoding(Ansi) = etAnsi then
+            Ansi := AnsiToUTF8(Ansi);
+        end;
+    Len := Length(Ansi);
+    Result := TMemoryStream.Create;
+    Result.Write(PAnsiChar(Ansi)^, Len);
+    Result.Position := 0;
+  end;
 end;
 
 end.

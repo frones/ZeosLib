@@ -1434,10 +1434,7 @@ end;
 procedure TZAbstractCachedResultSet.UpdateUnicodeStream(
   ColumnIndex: Integer; Value: TStream);
 var
-  Ansi: AnsiString;
-  Len: Integer;
-  TempStream: TMemoryStream;
-  WS: WideString;
+  MS: TStream;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1445,44 +1442,14 @@ begin
   PrepareRowForUpdates;
   {EgonHugeist: TempBuffer the WideString, }
   if Assigned(Value) then
-  begin //Step one: Findout, wat's comming in! To avoid User-Bugs
+  begin
+    //Step one: Findout, wat's comming in! To avoid User-Bugs
     //it is possible that a PAnsiChar OR a PWideChar was written into
-    //the Stream!!!
-    if Length(PWideChar(TMemoryStream(Value).Memory)) = Value.Size then
-    begin
-      WS := PWideChar(TMemoryStream(Value).Memory);
-      SetLength(WS, Value.Size div 2);
-      Ansi := UTF8Encode(WS);
-    end
-    else
-      if StrLen(PAnsiChar(TMemoryStream(Value).Memory)) < Value.Size then //PWideChar written
-      begin
-        SetLength(WS, Value.Size div 2);
-        System.Move(PWideString(TMemoryStream(Value).Memory)^,
-          PWideChar(WS)^, Value.Size);
-        Ansi := UTF8Encode(WS);
-      end
-      else
-        if StrLen(PAnsiChar(TMemoryStream(Value).Memory)) = Value.Size then
-        begin
-          if DetectUTF8Encoding(PAnsiChar(TMemoryStream(Value).Memory)) = etAnsi then
-            Ansi := AnsiToUTF8(PAnsiChar(TMemoryStream(Value).Memory))
-          else
-            Ansi := PAnsiChar(TMemoryStream(Value).Memory);
-        end
-        else
-        begin
-          SetLength(Ansi, Value.Size);
-          TMemoryStream(Value).Read(PAnsiChar(Ansi)^, Value.Size);
-          if DetectUTF8Encoding(Ansi) = etAnsi then
-            Ansi := AnsiToUTF8(Ansi);
-        end;
-    Len := Length(Ansi);
-    TempStream := TMemoryStream.Create;
-    TempStream.Write(PAnsiChar(Ansi)^, Len);
-    TempStream.Position := 0;
-    FRowAccessor.SetUnicodeStream(ColumnIndex, TempStream);
-    TempStream.Free;
+    //the Stream!!!  And these chars could be trunced with changing the
+    //Stream.Size.
+    MS := ZDbcUtils.GetValidatedUnicodeStream(Value);
+    FRowAccessor.SetUnicodeStream(ColumnIndex, MS);
+    if Assigned(MS) then MS.Free;
   end
   else
     FRowAccessor.SetUnicodeStream(ColumnIndex, Value);

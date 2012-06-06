@@ -788,8 +788,10 @@ begin
     try
       Temp := 'xyz';
       if Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8] then
+      {$IFDEF WITH_WIDEMEMO}
         Stream.Write(PWideChar(WideString(Temp))^, Length(Temp)*2)
       else
+      {$ENDIF}
         Stream.Write(PAnsiChar(AnsiString(Temp))^, Length(Temp));
     finally
       Stream.Free;

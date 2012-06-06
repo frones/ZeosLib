@@ -437,7 +437,7 @@ procedure TZInterbase6PreparedStatement.BindInParameters;
 var
   I: Integer;
   TempBlob: IZBlob;
-  TempStream: TStream;
+  TempStream, MS: TStream;
 begin
   if InParamCount <> FParamSQLData.GetFieldCount then
     raise EZSQLException.Create(SInvalidInputParameterCount);
@@ -503,12 +503,19 @@ begin
           begin
             TempStream := TempBlob.GetStream;
             try
-              FParamSQLData.WriteBlob(I, TempStream);
+              if FParamSQLData.GetFieldSqlType(i) = stUnicodeStream then
+              begin
+                MS := GetValidatedUnicodeStream(TempStream);
+                FParamSQLData.WriteBlob(I, MS);
+                MS.Free;
+              end
+              else
+                FParamSQLData.WriteBlob(I, TempStream);
             finally
               TempStream.Free;
             end;
           end;
-        end;
+        end
       else
         raise EZIBConvertError.Create(SUnsupportedParameterType);
     end;
