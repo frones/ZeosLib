@@ -90,7 +90,6 @@ type
     procedure Test1021705;
     procedure Test_Param_LoadFromStream_StringStream_ftBlob;
     procedure Test_Param_LoadFromStream_StringStream_ftMemo;
-    procedure Test_Param_LoadFromStream_StringStream_ftWideMemo;
   end;
 
 implementation
@@ -690,70 +689,6 @@ begin
     Query.Free;
   end;
 end;
-
-procedure ZTestCompInterbaseBugReport.Test_Param_LoadFromStream_StringStream_ftWideMemo;
-var
-  WS: WideString;
-  Query: TZQuery;
-  StrStream, StrStream1: TMemoryStream;
-  SL: TStringList;
-begin
-  Query := TZQuery.Create(nil);
-  try
-    Query.Connection := Connection;
-
-    with Query do
-    begin
-      SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
-      ExecSQL;
-      //bugreport of mrLion
-      SL := TStringList.Create;
-
-      SQL.Text := 'INSERT INTO people(P_ID, P_NAME, P_RESUME)'+
-        ' VALUES (:P_ID, :P_NAME, :P_RESUME)';
-      ParamByName('P_ID').AsInteger := TEST_ROW_ID;
-      ParamByName('P_NAME').AsString := Str3;
-      SL.Text := Str2;
-
-      StrStream1 := TMemoryStream.Create;
-      SL.SaveToStream(StrStream1);
-
-      StrStream := TMemoryStream.Create;
-      WS := WideString(Str2)+LineEnding;
-      StrStream.Write(PWideChar(WS)^, Length(WS)*2);
-      StrStream.Position := 0;
-      {$IFNDEF VER150BELOW}
-      ParamByName('P_RESUME').LoadFromStream(StrStream1, ftWideMemo);
-      try
-        ExecSQL;
-        SQL.Text := 'select * from people where p_id = ' + IntToStr(TEST_ROW_ID);
-        Open;
-
-        StrStream1.Free;
-        StrStream1 := TMemoryStream.Create;
-
-        (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
-        CheckEquals(StrStream, StrStream1, 'Param().LoadFromStream(StringStream, ftWideMemo)');
-        SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
-        CheckEquals(1, Params.Count);
-        Params[0].DataType := ftInteger;
-        Params[0].AsInteger := TEST_ROW_ID;
-
-        ExecSQL;
-        CheckEquals(1, RowsAffected);
-      except
-        on E:Exception do
-            Fail('Param().LoadFromStream(StringStream, ftWideMemo): '+E.Message);
-      end;
-      {$ENDIF}
-      StrStream.Free;
-      StrStream1.Free;
-    end;
-  finally
-    Query.Free;
-  end;
-end;
-
 
 initialization
   RegisterTest('bugreport',ZTestCompInterbaseBugReport.Suite);
