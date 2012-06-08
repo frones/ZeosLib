@@ -495,50 +495,50 @@ var
   SL: TStringList;
 begin
   SL := TStringList.Create;
-  FProtocol := StringReplace(AProtocol, '=', '\', [rfReplaceAll]);
+  FProtocol := AProtocol;
   if Assigned(Ini) then
   begin
     PutSplitStringEx(SL, ReadProperty(COMMON_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
-    FCommon := SL.IndexOf(FProtocol) > -1;
+    FCommon := SL.IndexOf(AProtocol) > -1;
     PutSplitStringEx(SL, ReadProperty(CORE_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
-    FCore := SL.IndexOf(FProtocol) > -1;
+    FCore := SL.IndexOf(AProtocol) > -1;
     PutSplitStringEx(SL, ReadProperty(PARSESQL_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
-    FParseSQL := SL.IndexOf(FProtocol) > -1;
+    FParseSQL := SL.IndexOf(AProtocol) > -1;
     PutSplitStringEx(SL, ReadProperty(PLAIN_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
-    FPlain := SL.IndexOf(FProtocol) > -1;
+    FPlain := SL.IndexOf(AProtocol) > -1;
     PutSplitStringEx(SL, ReadProperty(DBC_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
-    FDbc := SL.IndexOf(FProtocol) > -1;
+    FDbc := SL.IndexOf(AProtocol) > -1;
     PutSplitStringEx(SL, ReadProperty(COMPONENT_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
-    FComponent := SL.IndexOf(FProtocol) > -1;
+    FComponent := SL.IndexOf(AProtocol) > -1;
     PutSplitStringEx(SL, ReadProperty(BUGREPORT_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
-    FBugreport := SL.IndexOf(FProtocol) > -1;
+    FBugreport := SL.IndexOf(AProtocol) > -1;
     PutSplitStringEx(SL, ReadProperty(PERFORMANCE_TEST_GROUP, ACTIVE_CONNECTIONS_KEY, ''), ',');
-    FPerformance := SL.IndexOf(FProtocol) > -1;
+    FPerformance := SL.IndexOf(AProtocol) > -1;
 
-    FAlias := ReadProperty(FProtocol, DATABASE_ALIAS_KEY, '');
-    FHostName := ReadProperty(FProtocol, DATABASE_HOST_KEY, DEFAULT_HOST_VALUE);
-    FPort := ReadProperty(FProtocol, DATABASE_PORT_KEY, '');
-    FDatabase := ReadProperty(FProtocol, DATABASE_NAME_KEY, '');
-    FUsername := ReadProperty(FProtocol, DATABASE_USER_KEY, '');
-    FPassword := ReadProperty(FProtocol, DATABASE_PASSWORD_KEY, '');
-    FRebuild := StrToBoolEx(ReadProperty(FProtocol, DATABASE_REBUILD_KEY, 'No'));
-    if ( Pos('firebird', FProtocol) > 0 ) or (pos('interbase', FProtocol) > 0) then
-      FDelimiterType := ReadProperty(FProtocol, DATABASE_DELIMITER_TYPE_KEY, SET_TERM_DELIMITER)
-    else if ( Pos('mssql', LowerCase(FProtocol)) > 0 ) or (pos('sybase', LowerCase(FProtocol)) > 0) then
-      FDelimiterType := ReadProperty(FProtocol, DATABASE_DELIMITER_TYPE_KEY, GO_DELIMITER)
+    FAlias := ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), DATABASE_ALIAS_KEY, '');
+    FHostName := ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), DATABASE_HOST_KEY, DEFAULT_HOST_VALUE);
+    FPort := ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), DATABASE_PORT_KEY, '');
+    FDatabase := ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), DATABASE_NAME_KEY, '');
+    FUsername := ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), DATABASE_USER_KEY, '');
+    FPassword := ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), DATABASE_PASSWORD_KEY, '');
+    FRebuild := StrToBoolEx(ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), DATABASE_REBUILD_KEY, 'No'));
+    if ( Pos('firebird', StringReplace(AProtocol, '=', '\', [rfReplaceAll])) > 0 ) or (pos('interbase', StringReplace(AProtocol, '=', '\', [rfReplaceAll])) > 0) then
+      FDelimiterType := ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), DATABASE_DELIMITER_TYPE_KEY, SET_TERM_DELIMITER)
+    else if ( Pos('mssql', LowerCase(StringReplace(AProtocol, '=', '\', [rfReplaceAll]))) > 0 ) or (pos('sybase', LowerCase(StringReplace(AProtocol, '=', '\', [rfReplaceAll]))) > 0) then
+      FDelimiterType := ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), DATABASE_DELIMITER_TYPE_KEY, GO_DELIMITER)
     else
-      FDelimiterType := ReadProperty(FProtocol, DATABASE_DELIMITER_TYPE_KEY, '');
-    FDelimiter := ReadProperty(FProtocol, DATABASE_DELIMITER_KEY, '');
+      FDelimiterType := ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), DATABASE_DELIMITER_TYPE_KEY, '');
+    FDelimiter := ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), DATABASE_DELIMITER_KEY, '');
 
-    FUnicode := StrToBoolEx(ReadProperty(FProtocol, 'use.unicode.charset', 'Yes'));
-    FBuildScripts := ReadProperty(FProtocol, DATABASE_CREATE_SCRIPTS_KEY, '');
-    FDropScripts := ReadProperty(FProtocol, DATABASE_DROP_SCRIPTS_KEY, '');
-    FLibLocation := ReadProperty(FProtocol, DATABASE_LIBRARY_KEY, '');
-    FUnicodeCodePage := ReadProperty(FProtocol, 'unicode.charset', '');
-    FAnsiCodePage := ReadProperty(FProtocol, 'ansi.charset', '');
-    FPreprepareSQL := StrToBoolEx(ReadProperty(FProtocol, DATABASE_PREPREPARESQL_KEY, 'Yes'));
-    FCreateDatabase := StrToBoolEx(ReadProperty(FProtocol, DATABASE_CREATE_KEY, 'No'));
-    PutSplitStringEx(SL, ReadProperty(FProtocol, DATABASE_PROPERTIES_KEY, ''), ';');
+    FUnicode := StrToBoolEx(ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), 'use.unicode.charset', 'Yes'));
+    FBuildScripts := ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), DATABASE_CREATE_SCRIPTS_KEY, '');
+    FDropScripts := ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), DATABASE_DROP_SCRIPTS_KEY, '');
+    FLibLocation := ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), DATABASE_LIBRARY_KEY, '');
+    FUnicodeCodePage := ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), 'unicode.charset', '');
+    FAnsiCodePage := ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), 'ansi.charset', '');
+    FPreprepareSQL := StrToBoolEx(ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), DATABASE_PREPREPARESQL_KEY, 'Yes'));
+    FCreateDatabase := StrToBoolEx(ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), DATABASE_CREATE_KEY, 'No'));
+    PutSplitStringEx(SL, ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), DATABASE_PROPERTIES_KEY, ''), ';');
     {Drop common values}
     if SL.Values[DATABASE_LIBRARY_KEY] <> '' then
       SL.Delete(SL.IndexOfName(DATABASE_LIBRARY_KEY));
@@ -550,10 +550,10 @@ begin
       SL.Delete(SL.IndexOfName(DATABASE_PREPREPARESQL_KEY));
     FProperties := SL.Text;
 
-    PutSplitStringEx(SL, ReadProperty(FProtocol, 'notes', ''), ';');
+    PutSplitStringEx(SL, ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), 'notes', ''), ';');
     FNotes := SL.Text;
 
-    FPooled := StrToBoolEx(ReadProperty(FProtocol, DATABASE_POOLED_KEY, 'No'));
+    FPooled := StrToBoolEx(ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), DATABASE_POOLED_KEY, 'No'));
   end;
   SL.Free;
 end;
@@ -561,6 +561,7 @@ end;
 procedure TPlainConfig.PostUpdates(const Suffix: String = '');
 var
   SProperties: String;
+  AProtocol: String;
 
   procedure AddPropText(const Ident, Value: String);
   begin
@@ -580,59 +581,60 @@ var
 begin
   if Assigned(Ini) then
   begin
-    WriteProperty(Suffix+FProtocol, DATABASE_PROTOCOL_KEY, StringReplace(AProtocol, '\', '=', [rfReplaceAll]));
-    WriteProperty(Suffix+FProtocol, DATABASE_ALIAS_KEY, FAlias);
-    WriteProperty(Suffix+FProtocol, DATABASE_HOST_KEY, FHostName);
-    WriteProperty(Suffix+FProtocol, DATABASE_PORT_KEY, FPort);
-    WriteProperty(Suffix+FProtocol, DATABASE_NAME_KEY, FDatabase);
-    WriteProperty(Suffix+FProtocol, DATABASE_USER_KEY, FUserName);
-    WriteProperty(Suffix+FProtocol, DATABASE_PASSWORD_KEY, FPassword);
+    AProtocol := StringReplace(FProtocol, '=', '\', [rfReplaceAll]);
+    WriteProperty(Suffix+AProtocol, DATABASE_PROTOCOL_KEY, FProtocol);
+    WriteProperty(Suffix+AProtocol, DATABASE_ALIAS_KEY, FAlias);
+    WriteProperty(Suffix+AProtocol, DATABASE_HOST_KEY, FHostName);
+    WriteProperty(Suffix+AProtocol, DATABASE_PORT_KEY, FPort);
+    WriteProperty(Suffix+AProtocol, DATABASE_NAME_KEY, FDatabase);
+    WriteProperty(Suffix+AProtocol, DATABASE_USER_KEY, FUserName);
+    WriteProperty(Suffix+AProtocol, DATABASE_PASSWORD_KEY, FPassword);
     if FRebuild then
-       WriteProperty(Suffix+FProtocol, DATABASE_REBUILD_KEY, 'Yes')
+       WriteProperty(Suffix+AProtocol, DATABASE_REBUILD_KEY, 'Yes')
     else
-      WriteProperty(Suffix+FProtocol, DATABASE_REBUILD_KEY, 'No');
-    WriteProperty(Suffix+FProtocol, DATABASE_DELIMITER_TYPE_KEY, FDelimiterType);
-    WriteProperty(Suffix+FProtocol, DATABASE_DELIMITER_KEY, FDelimiter);
+      WriteProperty(Suffix+AProtocol, DATABASE_REBUILD_KEY, 'No');
+    WriteProperty(Suffix+AProtocol, DATABASE_DELIMITER_TYPE_KEY, FDelimiterType);
+    WriteProperty(Suffix+AProtocol, DATABASE_DELIMITER_KEY, FDelimiter);
 
     if FUnicode then
     begin
-       WriteProperty(Suffix+FProtocol, 'use.unicode.charset', 'Yes');
+       WriteProperty(Suffix+AProtocol, 'use.unicode.charset', 'Yes');
        AddPropText(DATABASE_CODEPAGE_KEY, FUnicodeCodePage);
     end
     else
     begin
-      WriteProperty(Suffix+FProtocol, 'use.unicode.charset', 'No');
+      WriteProperty(Suffix+AProtocol, 'use.unicode.charset', 'No');
       AddPropText(DATABASE_CODEPAGE_KEY, FAnsiCodePage);
     end;
-    WriteProperty(Suffix+FProtocol, DATABASE_CREATE_SCRIPTS_KEY, FBuildScripts);
-    WriteProperty(Suffix+FProtocol, DATABASE_DROP_SCRIPTS_KEY, FDropScripts);
-    WriteProperty(Suffix+FProtocol, DATABASE_LIBRARY_KEY, FLibLocation);
+    WriteProperty(Suffix+AProtocol, DATABASE_CREATE_SCRIPTS_KEY, FBuildScripts);
+    WriteProperty(Suffix+AProtocol, DATABASE_DROP_SCRIPTS_KEY, FDropScripts);
+    WriteProperty(Suffix+AProtocol, DATABASE_LIBRARY_KEY, FLibLocation);
     AddPropText(DATABASE_LIBRARY_KEY, FLibLocation);
-    WriteProperty(Suffix+FProtocol, 'unicode.charset', FUnicodeCodePage);
-    WriteProperty(Suffix+FProtocol, 'ansi.charset', FAnsiCodePage);
+    WriteProperty(Suffix+AProtocol, 'unicode.charset', FUnicodeCodePage);
+    WriteProperty(Suffix+AProtocol, 'ansi.charset', FAnsiCodePage);
     if FPreprepareSQL then
     begin
-      WriteProperty(Suffix+FProtocol, DATABASE_PREPREPARESQL_KEY, 'Yes');
+      WriteProperty(Suffix+AProtocol, DATABASE_PREPREPARESQL_KEY, 'Yes');
       AddPropText(DATABASE_PREPREPARESQL_KEY, 'ON');
     end
     else
-      WriteProperty(Suffix+FProtocol, DATABASE_PREPREPARESQL_KEY, 'Yes');
+      WriteProperty(Suffix+AProtocol, DATABASE_PREPREPARESQL_KEY, 'Yes');
     if FCreateDatabase then
     begin
-      WriteProperty(Suffix+FProtocol, DATABASE_CREATE_KEY, 'Yes');
+      WriteProperty(Suffix+AProtocol, DATABASE_CREATE_KEY, 'Yes');
       AddPropText(DATABASE_CREATE_KEY, FDatabase);
     end
     else
-      WriteProperty(Suffix+FProtocol, DATABASE_CREATE_KEY, 'No');
+      WriteProperty(Suffix+AProtocol, DATABASE_CREATE_KEY, 'No');
     if FPooled then
-      WriteProperty(Suffix+FProtocol, DATABASE_POOLED_KEY, 'Yes')
+      WriteProperty(Suffix+AProtocol, DATABASE_POOLED_KEY, 'Yes')
     else
-      WriteProperty(Suffix+FProtocol, DATABASE_POOLED_KEY, 'No');
+      WriteProperty(Suffix+AProtocol, DATABASE_POOLED_KEY, 'No');
 
     AddPropText('', StringReplace(TrimRight(FProperties), LineEnding, ';', [rfReplaceAll]));
 
-    WriteProperty(Suffix+FProtocol, 'notes', StringReplace(TrimRight(FNotes), LineEnding, ';', [rfReplaceAll]));
-    WriteProperty(Suffix+FProtocol, DATABASE_PROPERTIES_KEY, SProperties);
+    WriteProperty(Suffix+AProtocol, 'notes', StringReplace(TrimRight(FNotes), LineEnding, ';', [rfReplaceAll]));
+    WriteProperty(Suffix+AProtocol, DATABASE_PROPERTIES_KEY, SProperties);
     if not FHasChanged then FHasChanged := False;
   end;
 end;
@@ -1234,18 +1236,21 @@ var
     SPerformance: String;
 
   procedure AddGroup(var Ident: String; const Value: String; const Add, Pooled: Boolean);
+  var
+    FProtocol: String;
   begin
+    FProtocol := StringReplace(Value, '=', '\', [rfReplaceAll]);
     if Add then
       if Ident <> '' then
         if Pooled then
-          Ident := Ident+','+Value+','+DATABASE_POOLED_KEY+'.'+Value
+          Ident := Ident+','+FProtocol+','+DATABASE_POOLED_KEY+'.'+FProtocol
         else
-          Ident := Ident+','+Value
+          Ident := Ident+','+FProtocol
       else
         if Pooled then
-          Ident := Value+','+DATABASE_POOLED_KEY+'.'+Value
+          Ident := FProtocol+','+DATABASE_POOLED_KEY+'.'+FProtocol
         else
-          Ident := Value;
+          Ident := FProtocol;
   end;
 
 begin
