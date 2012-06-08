@@ -1367,7 +1367,9 @@ function TZOracleDatabaseMetadata.UncachedGetProcedureColumns(const Catalog,
         end;
        }
         Result.UpdateInt(6,
-          Ord(ConvertOracleTypeToSQLType(TypeName,GetInt(ColumnIndexes[6]),GetInt(ColumnIndexes[7]) ))); //DATA_TYPE
+          Ord(ConvertOracleTypeToSQLType(TypeName,GetInt(ColumnIndexes[6]),GetInt(ColumnIndexes[7]),
+          Self.GetConnection.GetClientCodePageInformations^.Encoding,
+          GetConnection.UTF8StringAsWideField))); //DATA_TYPE
         Result.UpdateString(7,GetString(ColumnIndexes[4]));    //TYPE_NAME
         Result.UpdateInt(10, GetInt(ColumnIndexes[6]));
         Result.UpdateNull(9);    //BUFFER_LENGTH
@@ -1568,7 +1570,9 @@ begin
         Result.UpdateString(3, GetString(3));
         Result.UpdateString(4, GetString(4));
         Result.UpdateInt(5, Ord(ConvertOracleTypeToSQLType(
-          GetString(6), GetInt(9), GetInt(10))));
+          GetString(6), GetInt(9), GetInt(10),
+          GetConnection.GetClientCodePageInformations^.Encoding,
+          GetConnection.UTF8StringAsWideField)));
         Result.UpdateString(6, GetString(6));
         Result.UpdateInt(7, GetInt(7));
         Result.UpdateNull(8);

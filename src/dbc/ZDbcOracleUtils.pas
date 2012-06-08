@@ -140,22 +140,13 @@ procedure LoadOracleVars(PlainDriver: IZOraclePlainDriver;
 procedure UnloadOracleVars(Variables: PZSQLVars);
 
 {**
-  Converts a MySQL native types into ZDBC SQL types.
-  @param PlainDriver a native MySQL plain driver.
-  @param FieldHandle a handler to field description structure.
-  @param FieldFlags field flags.
-  @return a SQL undepended type.
-}
-//function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
-//  FieldHandle: PZMySQLField; FieldFlags: Integer): TZSQLType;
-
-{**
   Convert string Oracle field type to SQLType
   @param string field type value
   @result the SQLType field type value
 }
 function ConvertOracleTypeToSQLType(TypeName: string;
-  Precision, Scale: Integer): TZSQLType;
+  Precision, Scale: Integer; const CharEncoding: TZCharEncoding;
+  const UTF8StringAsWideField: Boolean): TZSQLType;
 
 {**
   Converts Oracle internal date into TDateTime
@@ -510,7 +501,8 @@ end;
   @result the SQLType field type value
 }
 function ConvertOracleTypeToSQLType(TypeName: string;
-  Precision, Scale: Integer): TZSQLType;
+  Precision, Scale: Integer; const CharEncoding: TZCharEncoding;
+  const UTF8StringAsWideField: Boolean): TZSQLType;
 begin
   TypeName := UpperCase(TypeName);
   Result := stUnknown;
@@ -550,6 +542,13 @@ begin
         Result := stLong  {!!in fact, unusable}
     end;
   end;
+  if ( CharEncoding = ceUTF8) and UTF8StringAsWideField then
+    case result of
+      stString: Result := stUnicodeString;
+      {$IFDEF WITH_WIDEMEMO}
+      stAsciiStream: Result := stUnicodeStream;
+      {$ENDIF}
+    end;
 end;
 
 {**

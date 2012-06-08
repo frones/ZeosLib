@@ -336,9 +336,10 @@ begin
       //Now we read a none Wide-Stream in! What happens? Zeos is now able
       //to autodetect such strange things! But Zeos converts the Ansi-Stream to
       //a WiteString-Stream. So this test must be modified...
-      {$IF not defined(FPC) and defined(WITH_WIDEMEMO)}
-      if Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+      if ( Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8) and
+        FConnection.DbcConnection.UTF8StringAsWideField then
       begin
+        StrStream.position := 0;
         SetLength(Ansi,StrStream.Size);
         StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
         WS := UTF8Decode(Ansi);
@@ -346,7 +347,6 @@ begin
         StrStream.Write(PWideChar(WS)^, Length(WS)*2);
         StrStream.Position := 0;
       end;
-      {$IFEND}
       StrStream1 := TMemoryStream.Create;
       (FieldByName('p_resume') as TBlobField).SaveToStream(StrStream1);
       CheckEquals(StrStream, StrStream1, 'Ascii Stream');
@@ -684,7 +684,6 @@ begin
       //Now we read a none Wide-Stream in! What happens? Zeos is now able
       //to autodetect such strange things! But Zeos converts the Ansi-Stream to
       //a WiteString-Stream. So this test must be modified...
-      {$IFNDEF FPC}
       if ( Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 )
         and Self.FConnection.DbcConnection.UTF8StringAsWideField then
       begin
@@ -695,7 +694,6 @@ begin
         StrStream.Write(PWideChar(WS)^, Length(WS)*2);
         StrStream.Position := 0;
       end;
-      {$ENDIF}
       BinStream := TMemoryStream.Create();
       BinStream.LoadFromFile('../../../database/images/dogs.jpg');
       BinStream.Size := 1024;

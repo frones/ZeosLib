@@ -411,7 +411,9 @@ begin
   if (CharEncoding = ceUTF8) and UTF8StringAsWideField then
   case result of
     stString: Result := stUnicodeString;
+    {$IFDEF WITH_WIDEMEMO}
     stAsciiStream: Result := stUnicodeStream;
+    {$ENDIF}
   end;
 
   if Result = stUnknown then

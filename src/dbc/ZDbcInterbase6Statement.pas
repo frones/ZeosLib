@@ -198,7 +198,7 @@ begin
   with FIBConnection do
   begin
     SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle
-      , ClientCodePage);
+      , ClientCodePage, GetConnection.UTF8StringAsWideField);
     try
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
         GetDBHandle, GetTrHandle, GetDialect, ASQL, StmtHandle);
@@ -348,7 +348,7 @@ begin
       if StatementType = stSelect then
       begin
         SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle,
-          ClientCodePage);
+          ClientCodePage, GetConnection.UTF8StringAsWideField);
         PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect, SSQL,
           StmtHandle, SQLData);
       end;
@@ -414,7 +414,7 @@ begin
   With FIBConnection do
     begin
       {create the parameter bind structure}
-      FParamSQLData := TZParamsSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle, ClientCodePage);
+      FParamSQLData := TZParamsSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle, ClientCodePage, GetConnection.UTF8StringAsWideField);
       {check dynamic sql}
       GetPlainDriver.isc_dsql_describe_bind(@StatusVector, @StmtHandle, GetDialect,
         FParamSQLData.GetData);
@@ -580,7 +580,7 @@ begin
     if StatementType in [stSelect, stExecProc] then
       begin
         SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle
-        , ClientCodePage);
+        , ClientCodePage, GetConnection.UTF8StringAsWideField);
         PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
           SQL, StmtHandle, SQLData);
       end;
@@ -893,7 +893,7 @@ begin
   FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cashedblob', 'true'));
   with FIBConnection do
     FParamSQLData := TZParamsSQLDA.Create(GetPlainDriver, GetDBHandle,
-      GetTrHandle, ClientCodePage);
+      GetTrHandle, ClientCodePage, GetConnection.UTF8StringAsWideField);
 end;
 
 {**
@@ -950,7 +950,7 @@ begin
     TrimInParameters;
     ProcSql := GetProcedureSql(False);
     SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle,
-      ClientCodePage);
+      ClientCodePage, GetConnection.UTF8StringAsWideField);
     try
       { Prepare statement }
         StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
@@ -1039,7 +1039,7 @@ begin
     TrimInParameters;
     ProcSql := GetProcedureSql(True);
     SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle,
-      ClientCodePage);
+      ClientCodePage, GetConnection.UTF8StringAsWideField);
     try
         StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
           GetDBHandle, GetTrHandle, GetDialect, ZPlainString(ProcSql), StmtHandle);
@@ -1133,7 +1133,8 @@ begin
     TrimInParameters;
 
     ProcSql := GetProcedureSql(False);
-    SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle, ClientCodePage);
+    SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle,
+      ClientCodePage, GetConnection.UTF8StringAsWideField);
     try
         StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
           GetDBHandle, GetTrHandle, GetDialect, ZPlainString(ProcSql), StmtHandle);

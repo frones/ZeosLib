@@ -172,6 +172,7 @@ type
     FXSQLDA: PXSQLDA;
     FPlainDriver: IZInterbasePlainDriver;
     Temp: AnsiString;
+    FUTF8StringAsWideField: Boolean;
     procedure CheckRange(const Index: Word);
     procedure IbReAlloc(var P; OldSize, NewSize: Integer);
     procedure SetFieldType(const Index: Word; Size: Integer; Code: Smallint;
@@ -179,7 +180,7 @@ type
   public
     constructor Create(PlainDriver: IZInterbasePlainDriver;
       Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE;
-      Encoding: PZCodePage); virtual;
+      Encoding: PZCodePage; const UTF8StringAsWideField: Boolean); virtual;
     procedure InitFields(Parameters: boolean);
     procedure AllocateSQLDA; virtual;
     procedure FreeParamtersValues;
@@ -749,12 +750,13 @@ begin
     else
       Result := ZDbcIntfs.stUnknown;
   end;
-  if CharEncoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-    if UTF8StringAsWideField then
-      case result of
-        stString: Result := stUnicodeString;
-        stAsciiStream: Result := stUnicodeStream;
-      end;
+  if ( CharEncoding = ceUTF8) and UTF8StringAsWideField then
+    case result of
+      stString: Result := stUnicodeString;
+      {$IFDEF WITH_WIDEMEMO}
+      stAsciiStream: Result := stUnicodeStream;
+      {$ENDIF}
+    end;
 end;
 
 {**
@@ -1361,10 +1363,10 @@ end;
 { TSQLDA }
 constructor TZSQLDA.Create(PlainDriver: IZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE;
-  Encoding: PZCodePage);
+  Encoding: PZCodePage; const UTF8StringAsWideField: Boolean);
 begin
   ClientCodePage := Encoding;
-
+  FUTF8StringAsWideField := UTF8StringAsWideField;
   FPlainDriver := PlainDriver;
   FHandle := Handle;
   FTransactionHandle := TransactionHandle;
@@ -1599,15 +1601,13 @@ begin
   else
       Result := stString;
   end;
-  {$IFNDEF FPC}
-  if ClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
+  if ( ClientCodePage^.Encoding = ceUTF8) and FUTF8StringAsWideField then
     case result of
       stString: Result := stUnicodeString;
       {$IFDEF WITH_WIDEMEMO}
       stAsciiStream: Result := stUnicodeStream;
       {$ENDIF}
     end;
-  {$ENDIF}
 end;
 
 {**

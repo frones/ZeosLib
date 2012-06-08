@@ -1022,7 +1022,7 @@ const
 var
   Status: Integer;
   Buf: PByteArray;
-  ReadNum, Offset, Cap: ub4;
+  ReadNumBytes, ReadNumChars, Offset, Cap: ub4;
   Connection: IZOracleConnection;
 begin
   if not Updated and (FLobLocator <> nil)
@@ -1040,19 +1040,57 @@ begin
       Offset := 0;
       Buf := nil;
       try
-        repeat
-          {Calc new progressive by 1/8 and aligned by MemDelta capacity for buffer}
-          Cap := (Offset + (Offset shr 3) + 2 * MemDelta - 1) and not (MemDelta - 1);
-          ReallocMem(Buf, Cap);
-          ReadNum := Cap - Offset;
-          Status := FPlainDriver.LobRead(Connection.GetContextHandle,
-            Connection.GetErrorHandle, FLobLocator, ReadNum, Offset + 1,
-            @Buf[Offset], ReadNum, nil, nil, 0, SQLCS_IMPLICIT);
-          CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
-            Status, lcOther, 'Read Large Object');
-          if ReadNum > 0 then
-            Inc(Offset, ReadNum);
-        until Offset < Cap;
+        case self.FBlobType of
+          stBinaryStream:
+            repeat //BLOB
+              {Calc new progressive by 1/8 and aligned by MemDelta capacity for buffer}
+              Cap := (Offset + (Offset shr 3) + 2 * MemDelta - 1) and not (MemDelta - 1);
+              ReallocMem(Buf, Cap);
+              ReadNumBytes := Cap - Offset;
+
+              Status := FPlainDriver.LobRead(Connection.GetContextHandle,
+                Connection.GetErrorHandle, FLobLocator, ReadNumBytes, Offset + 1,
+                @Buf[Offset], ReadNumBytes, nil, nil, 0, SQLCS_IMPLICIT);
+              CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
+                Status, lcOther, 'Read Large Object');
+              if ReadNumBytes > 0 then
+                Inc(Offset, ReadNumBytes);
+            until Offset < Cap;
+          else //CLob
+            if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+            begin
+              repeat
+                {Calc new progressive by 1/8 and aligned by MemDelta capacity for buffer}
+                Cap := (Offset + (Offset shr 3) + 2 * MemDelta - 1) and not (MemDelta - 1);
+                ReallocMem(Buf, Cap);
+                ReadNumBytes := Cap - Offset;
+
+                ReadNumChars := ReadNumBytes div 3;
+                Status := FPlainDriver.LobRead(Connection.GetContextHandle,
+                  Connection.GetErrorHandle, FLobLocator, ReadNumChars, Offset + 1,
+                  @Buf[Offset], ReadNumBytes, nil, nil, Connection.GetClientCodePageInformations^.ID, SQLCS_IMPLICIT);
+                CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
+                Status, lcOther, 'Read Large Object');
+                if ReadNumChars > 0 then
+                  Inc(Offset, ReadNumChars);
+              until Offset < Cap;
+            end
+            else
+            repeat
+              {Calc new progressive by 1/8 and aligned by MemDelta capacity for buffer}
+              Cap := (Offset + (Offset shr 3) + 2 * MemDelta - 1) and not (MemDelta - 1);
+              ReallocMem(Buf, Cap);
+              ReadNumBytes := Cap - Offset;
+
+              Status := FPlainDriver.LobRead(Connection.GetContextHandle,
+                Connection.GetErrorHandle, FLobLocator, ReadNumBytes, Offset + 1,
+                @Buf[Offset], ReadNumBytes, nil, nil, 0, SQLCS_IMPLICIT);
+              CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
+              Status, lcOther, 'Read Large Object');
+              if ReadNumBytes > 0 then
+                Inc(Offset, ReadNumBytes);
+            until Offset < Cap;
+          end;
       except
         FreeMem(Buf);
         raise;

@@ -88,6 +88,9 @@ type
     procedure Test984305;
     procedure Test1004584;
     procedure Test1021705;
+    procedure Test_Param_LoadFromStream_StringStream_ftBlob;
+    procedure Test_Param_LoadFromStream_StringStream_ftMemo;
+    procedure Test_Param_LoadFromStream_StringStream_ftWideMemo;
   end;
 
 implementation
@@ -565,6 +568,257 @@ begin
     Query.Free;
   end;
 end;
+const
+  Str1 = 'This license, the Lesser General Public License, applies to some specially designated software packages--typically libraries--of the Free Software Foundation and other authors who decide to use it.  You can use it too, but we suggest you first think ...';
+  Str2 = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
+  Str3 = 'ќдной из наиболее';
+
+procedure ZTestCompInterbaseBugReport.Test_Param_LoadFromStream_StringStream_ftBlob;
+var
+  WS: WideString;
+  Ansi: AnsiString;
+  Query: TZQuery;
+  StrStream: TMemoryStream;
+  StrStream1: TMemoryStream;
+  s:string;
+  SL: TStringList;
+begin
+  Query := TZQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+
+    with Query do
+    begin
+      SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
+      ExecSQL;
+      //bugreport of mrLion
+      SL := TStringList.Create;
+
+      SQL.Text := 'INSERT INTO people(P_ID, P_NAME, P_RESUME)'+
+        ' VALUES (:P_ID, :P_NAME, :P_RESUME)';
+      ParamByName('P_ID').AsInteger := TEST_ROW_ID;
+      ParamByName('P_NAME').AsString := Str3;
+      CheckEquals(3, Query.Params.Count, 'Param.Count');
+      SL.Text := Str2;
+
+      StrStream1 := TMemoryStream.Create;
+      SL.SaveToStream(StrStream1);
+      ParamByName('P_RESUME').LoadFromStream(StrStream1, ftBlob);
+      try
+        ExecSQL;
+        SQL.Text := 'select * from people where p_id = ' + IntToStr(TEST_ROW_ID);
+        StrStream1.Free;
+        StrStream1 := TMemoryStream.Create;
+        Open;
+
+        StrStream := TMemoryStream.Create;
+        if Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+          if FConnection.DbcConnection.UTF8StringAsWideField then
+          begin
+            WS := WideString(Str2)+LineEnding;
+            StrStream.Write(PWideChar(WS)^, Length(WS)*2);
+            StrStream.Position := 0;
+          end
+          else
+          begin
+            Ansi := AnsiToUTF8(str2)+LineEnding;
+            StrStream.Write(PAnsiChar(Ansi)^, Length(Ansi));
+            StrStream.Position := 0;
+          end
+        else
+        begin
+          Ansi := str2+LineEnding;
+          StrStream.Write(PAnsiChar(Ansi)^, Length(Ansi));
+          StrStream.Position := 0;
+        end;
+        StrStream1 := TMemoryStream.Create;
+        (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
+        SetLength(WS, StrStream1.Size div 2);
+        StrStream1.Read(PWideChar(WS)^, StrStream1.Size div 2);
+        CheckEquals(StrStream, StrStream1, 'Param().LoadFromStream(StringStream, ftBlob)');
+        SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
+        CheckEquals(1, Params.Count);
+        Params[0].DataType := ftInteger;
+        Params[0].AsInteger := TEST_ROW_ID;
+
+        ExecSQL;
+        CheckEquals(1, RowsAffected);
+      except
+        on E:Exception do
+            Fail('Param().LoadFromStream(StringStream, ftBlob): '+E.Message);
+      end;
+      StrStream.Free;
+      StrStream1.Free;
+    end;
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure ZTestCompInterbaseBugReport.Test_Param_LoadFromStream_StringStream_ftMemo;
+var
+  WS: WideString;
+  Ansi: AnsiString;
+  Query: TZQuery;
+  StrStream: TMemoryStream;
+  StrStream1: TMemoryStream;
+  s:string;
+  SL: TStringList;
+begin
+  Query := TZQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+
+    with Query do
+    begin
+      SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
+      ExecSQL;
+      //bugreport of mrLion
+      SL := TStringList.Create;
+
+      SQL.Text := 'INSERT INTO people(P_ID, P_NAME, P_RESUME)'+
+        ' VALUES (:P_ID, :P_NAME, :P_RESUME)';
+      ParamByName('P_ID').AsInteger := TEST_ROW_ID;
+      ParamByName('P_NAME').AsString := Str3;
+      CheckEquals(3, Query.Params.Count, 'Param.Count');
+      SL.Text := Str2;
+
+      StrStream1 := TMemoryStream.Create;
+      SL.SaveToStream(StrStream1);
+      ParamByName('P_RESUME').LoadFromStream(StrStream1, ftMemo);
+      try
+        ExecSQL;
+        SQL.Text := 'select * from people where p_id = ' + IntToStr(TEST_ROW_ID);
+        StrStream1.Free;
+        StrStream1 := TMemoryStream.Create;
+        Open;
+
+        StrStream := TMemoryStream.Create;
+        if Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+          if FConnection.DbcConnection.UTF8StringAsWideField then
+          begin
+            WS := WideString(Str2)+LineEnding;
+            StrStream.Write(PWideChar(WS)^, Length(WS)*2);
+            StrStream.Position := 0;
+          end
+          else
+          begin
+            Ansi := AnsiToUTF8(str2)+LineEnding;
+            StrStream.Write(PAnsiChar(Ansi)^, Length(Ansi));
+            StrStream.Position := 0;
+          end
+        else
+        begin
+          Ansi := str2+LineEnding;
+          StrStream.Write(PAnsiChar(Ansi)^, Length(Ansi));
+          StrStream.Position := 0;
+        end;
+        StrStream1 := TMemoryStream.Create;
+        (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
+        SetLength(WS, StrStream1.Size div 2);
+        StrStream1.Read(PWideChar(WS)^, StrStream1.Size div 2);
+        CheckEquals(StrStream, StrStream1, 'Param().LoadFromStream(StringStream, ftMemo)');
+        SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
+        CheckEquals(1, Params.Count);
+        Params[0].DataType := ftInteger;
+        Params[0].AsInteger := TEST_ROW_ID;
+
+        ExecSQL;
+        CheckEquals(1, RowsAffected);
+      except
+        on E:Exception do
+            Fail('Param().LoadFromStream(StringStream, ftMemo): '+E.Message);
+      end;
+      StrStream.Free;
+      StrStream1.Free;
+    end;
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure ZTestCompInterbaseBugReport.Test_Param_LoadFromStream_StringStream_ftWideMemo;
+var
+  Ansi: AnsiString;
+  WS: WideString;
+  Query: TZQuery;
+  StrStream, BinStream: TMemoryStream;
+  StrStream1, BinStream1: TMemoryStream;
+  s:string;
+  SL: TStringList;
+begin
+  Query := TZQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+
+    with Query do
+    begin
+      SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
+      ExecSQL;
+      //bugreport of mrLion
+      SL := TStringList.Create;
+
+      StrStream := TStringStream.Create(UTF8Encode(Str2));
+      SQL.Text := 'INSERT INTO people(P_ID, P_NAME, P_RESUME)'+
+        ' VALUES (:P_ID, :P_NAME, :P_RESUME)';
+      ParamByName('P_ID').AsInteger := TEST_ROW_ID;
+      ParamByName('P_NAME').AsString := Str3;
+      SL.Text := Str2;
+      SL.SaveToStream(StrStream1);
+      {$IFNDEF VER150BELOW}
+      ParamByName('P_RESUME').LoadFromStream(StrStream1, ftWideMemo);
+      try
+        ExecSQL;
+        SQL.Text := 'select * from people where p_id = ' + IntToStr(TEST_ROW_ID);
+        StrStream1.Free;
+        StrStream1 := TMemoryStream.Create;
+        Open;
+
+        StrStream := TMemoryStream.Create;
+        if Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+          if FConnection.DbcConnection.UTF8StringAsWideField then
+          begin
+            WS := WideString(Str2)+LineEnding;
+            StrStream.Write(PWideChar(WS)^, Length(WS)*2);
+            StrStream.Position := 0;
+          end
+          else
+          begin
+            Ansi := AnsiToUTF8(str2)+LineEnding;
+            StrStream.Write(PAnsiChar(Ansi)^, Length(Ansi));
+            StrStream.Position := 0;
+          end
+        else
+        begin
+          Ansi := str2+LineEnding;
+          StrStream.Write(PAnsiChar(Ansi)^, Length(Ansi));
+          StrStream.Position := 0;
+        end;
+        StrStream1 := TMemoryStream.Create;
+        (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
+        SetLength(WS, StrStream1.Size div 2);
+        StrStream1.Read(PWideChar(WS)^, StrStream1.Size div 2);
+        CheckEquals(StrStream, StrStream1, 'Param().LoadFromStream(StringStream, ftWideMemo)');
+        SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
+        CheckEquals(1, Params.Count);
+        Params[0].DataType := ftInteger;
+        Params[0].AsInteger := TEST_ROW_ID;
+
+        ExecSQL;
+        CheckEquals(1, RowsAffected);
+      except
+        on E:Exception do
+            Fail('Param().LoadFromStream(StringStream, ftWideMemo): '+E.Message);
+      end;
+      {$ENDIF}
+      StrStream.Free;
+      StrStream1.Free;
+    end;
+  finally
+    Query.Free;
+  end;
+end;
+
 
 initialization
   RegisterTest('bugreport',ZTestCompInterbaseBugReport.Suite);
