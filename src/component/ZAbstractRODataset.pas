@@ -1384,7 +1384,7 @@ begin
         ftString:
           begin
             System.Move(PAnsiChar(AnsiString(RowAccessor.GetString(ColumnIndex, Result)))^, Buffer^,
-              RowAccessor.GetColumnDataSize(ColumnIndex));
+              Length(AnsiString(RowAccessor.GetString(ColumnIndex, Result))));
             Result := not Result;
           end;
         {$ENDIF}
