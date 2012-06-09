@@ -705,6 +705,7 @@ begin
           Result := stString;
         end;
       end;
+    RDB_D_FLOAT: Result := stDouble;
     RDB_FLOAT: Result := stFloat;
     RDB_DOUBLE: Result := stDouble;
     RDB_BLOB_ID, RDB_QUAD: Result := stLong;
