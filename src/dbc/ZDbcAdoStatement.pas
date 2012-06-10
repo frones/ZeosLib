@@ -274,7 +274,7 @@ var
   PC: Integer;
   P: ZPlainAdo.Parameter;
   B: IZBlob;
-  V: Variant;
+  V: {$IFDEF DELPHI12_UP}OleVariant{$ELSE}Variant{$ENDIF};
   OleDBCommand: IUnknown;
   OleDBCmdParams: ICommandWithParameters;
   OleDBCmdPrepare: ICommandPrepare;
@@ -348,7 +348,7 @@ begin
     vtBoolean: V := SoftVarManager.GetAsBoolean(RetValue);
     vtInteger: V := Integer(SoftVarManager.GetAsInteger(RetValue));
     vtFloat: V := SoftVarManager.GetAsFloat(RetValue);
-    vtString: V := SoftVarManager.GetAsString(RetValue);
+    vtString: V := AnsiString(SoftVarManager.GetAsString(RetValue));
     vtUnicodeString: V := SoftVarManager.GetAsUnicodeString(RetValue);
     vtDateTime: V := SoftVarManager.GetAsDateTime(RetValue);
   end;
@@ -393,14 +393,17 @@ begin
   begin
 
     P := FAdoCommand.Parameters.Item[ParameterIndex - 1];
-    P.Type_ := T;
-    P.Size := S;
-    // by aperger:
-    // to use the new value at the next calling of the statement
-    if P.Value <> V then begin
-    	P.Value := V;
-      FAdoCommand.Prepared:=false;
+    if not ((SQLType = stBytes) and VarIsNull(V) ) then
+    begin
+      P.Type_ := T;
+      P.Size := S;
+      // by aperger:
+      // to use the new value at the next calling of the statement
+      if P.Value <> V then begin
+        P.Value := V;
+      end;
     end;
+    FAdoCommand.Prepared:=false;
   end
   else
   begin
