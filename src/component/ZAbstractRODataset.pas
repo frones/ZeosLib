@@ -476,7 +476,7 @@ implementation
 uses Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSchema,
   ZGenericSqlToken, ZTokenizer, ZGenericSqlAnalyser, ZAbstractDataset
   {$IFDEF WITH_DBCONSTS}, DBConsts {$ELSE}, DBConst{$ENDIF}
-  {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF};
+  {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF}, Dialogs;
 
 { EZDatabaseError }
 
@@ -1333,6 +1333,7 @@ function TZAbstractRODataset.GetFieldData(Field: TField;
 var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
+  Ansi: AnsiString;
 begin
   if GetActiveBuffer(RowBuffer) then
   begin
@@ -1383,8 +1384,9 @@ begin
         {$IFDEF DELPHI12_UP}
         ftString:
           begin
-            System.Move(PAnsiChar(AnsiString(RowAccessor.GetString(ColumnIndex, Result)))^, Buffer^,
-              Length(AnsiString(RowAccessor.GetString(ColumnIndex, Result))));
+            FillChar(Buffer^, RowAccessor.GetColumnDataSize(ColumnIndex), #0);
+            Ansi := AnsiString(RowAccessor.GetString(ColumnIndex, Result));
+            System.Move(PAnsiChar(Ansi)^, Buffer^, Length(Ansi));
             Result := not Result;
           end;
         {$ENDIF}
