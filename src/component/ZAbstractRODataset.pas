@@ -166,7 +166,6 @@ type
     FSortedOnlyDataFields: Boolean;
     FSortRowBuffer1: PZRowBuffer;
     FSortRowBuffer2: PZRowBuffer;
-    
     FPrepared: Boolean;
   private
     function GetReadOnly: Boolean;
@@ -1384,9 +1383,7 @@ begin
         {$IFDEF DELPHI12_UP}
         ftString:
           begin
-            FillChar(Buffer^, RowAccessor.GetColumnDataSize(ColumnIndex), #0);
-            Ansi := AnsiString(RowAccessor.GetString(ColumnIndex, Result));
-            System.Move(PAnsiChar(Ansi)^, Buffer^, Length(Ansi));
+            StrCopy(PAnsiChar(Buffer), PAnsiChar(AnsiString(RowAccessor.GetString(ColumnIndex, Result))));
             Result := not Result;
           end;
         {$ENDIF}
@@ -1591,7 +1588,7 @@ end;
 }
 procedure TZAbstractRODataset.FetchAll;
 begin
-  Connection.ShowSQLHourGlass;                          
+  Connection.ShowSQLHourGlass;
   FetchRows(0);
   if Active then
     UpdateCursorPos;
@@ -2132,18 +2129,18 @@ begin
     end;
   end
   else
-  begin 
+  begin
     if DataLink.Active and (DataLink.dataset.Fields.Count > 0) then
-    begin 
-      p1 := 1; p2 := 1; 
+    begin
+      p1 := 1; p2 := 1;
       while (P1 <= Length(LinkedFields)) and (p2 <= Length(MasterFields)) do
-      begin 
-        DetailField := FieldByName(ExtractFieldName(LinkedFields, P1)); 
-        MasterField := DataLink.DataSet.FieldByName (ExtractFieldName(MasterFields, P2)); 
-        DetailField.Assign(MasterField); 
-      end; 
-    end; 
-  end; 
+      begin
+        DetailField := FieldByName(ExtractFieldName(LinkedFields, P1));
+        MasterField := DataLink.DataSet.FieldByName (ExtractFieldName(MasterFields, P2));
+        DetailField.Assign(MasterField);
+      end;
+    end;
+  end;
   inherited DoOnNewRecord;
 end;
 
@@ -2438,7 +2435,7 @@ begin
 
   Index1 := CurrentRows.IndexOf(Pointer(PInteger(Bookmark1)^));
   Index2 := CurrentRows.IndexOf(Pointer(PInteger(Bookmark2)^));
-  
+
   if Index1 < Index2 then Result := -1
   else if Index1 > Index2 then Result := 1;
 end;
@@ -3711,5 +3708,6 @@ end;
 {====================end of bangfauzan addition====================}
 
 end.
+
 
 
