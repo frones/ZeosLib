@@ -1224,7 +1224,7 @@ end;
 }
 procedure TZAbstractConnection.GetTableNames(const Pattern: string; List: TStrings);
 begin
-  GetTableNames('',Pattern,nil,List);
+  GetTableNames(Pattern,'',nil,List);
 end;
 
 {**
