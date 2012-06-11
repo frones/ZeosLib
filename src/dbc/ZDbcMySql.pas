@@ -128,6 +128,8 @@ type
       const EscapeMarkSequence: String = '~<|'): String; override;
     function GetEscapeString(const Value: String;
       const EscapeMarkSequence: String = '~<|'): String; override;
+    function GetEscapeString(const Value: PAnsiChar;
+      const EscapeMarkSequence: String = '~<|'): String; overload; override;
   end;
 
 
@@ -788,6 +790,12 @@ function TZMySQLConnection.GetEscapeString(const Value: String;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
   Result := inherited GetEscapeString('''' + String(EscapeString(ZPlainString(Value))) + '''', EscapeMarkSequence);
+end;
+
+function TZMySQLConnection.GetEscapeString(const Value: PAnsiChar;
+  const EscapeMarkSequence: String = '~<|'): String;
+begin
+  Result := inherited GetAnsiEscapeString('''' + EscapeString(Value) + '''', EscapeMarkSequence);
 end;
 
 initialization
