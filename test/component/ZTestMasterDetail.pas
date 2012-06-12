@@ -151,7 +151,7 @@ begin
   DetailQuery.SQL.Text := 'SELECT * FROM people';
   DetailQuery.MasterSource := MasterDataSource;
   DetailQuery.MasterFields := 'dep_id';
-  DetailQuery.IndexFieldNames := 'p_dep_id';
+  DetailQuery.LinkedFields := 'p_dep_id';
   DetailQuery.Open;
 
   MasterQuery.First;

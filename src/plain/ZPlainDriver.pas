@@ -108,8 +108,10 @@ begin
   If Assigned(Loader) and not Loader.Loaded then
   begin
     if Location <> '' then
+    begin
       Loader.ClearLocations;
-    Loader.AddLocation(Location);
+      Loader.AddLocation(Location);
+    end;
     If Loader.LoadNativeLibrary then
       LoadApi;
   end;

@@ -4,6 +4,7 @@
 {      Delphi plain driver interface to DBLibrary         }
 {                                                         }
 {        Originally written by Janos Fegyverneki          }
+{         FreeTDS supportd by Bogdan Dragulin             }
 {                                                         }
 {*********************************************************}
 
@@ -57,153 +58,51 @@ interface
 
 {$I ZPlain.inc}
 
-uses Classes, ZClasses, ZCompatibility, ZPlainDriver, ZPlainDbLibConstants;
+uses Classes, ZCompatibility, ZPlainDriver, ZPlainDbLibConstants;
 
-{***************** Plain API Constants definition ****************}
 const
-  //from sqlfront.h:
-  DBSETHOST=1;
-  DBSETUSER=2;
-  DBSETPWD=3;
-  DBSETAPP=4;
-  DBSETID=5;
-  DBSETLANG=6;
-  DBSETSECURE=7;
-  //These two are defined by Microsoft for dbsetlversion():
-  DBVER42=8;
-  DBVER60=9;
-  DBSET_LOGINTIME=10;
-  DBSETFALLBACK=12;
-
-{ dboptions }
-  DBBUFFER              = 0;
-  DBOFFSET              = 1;
-  DBROWCOUNT            = 2;
-  DBSTAT                = 3;
-  DBTEXTLIMIT           = 4;
-  DBTEXTSIZE            = 5;
-  DBARITHABORT          = 6;
-  DBARITHIGNORE         = 7;
-  DBNOAUTOFREE          = 8;
-  DBNOCOUNT             = 9;
-  DBNOEXEC              = 10;
-  DBPARSEONLY           = 11;
-  DBSHOWPLAN            = 12;
-  DBSTORPROCID		      = 13;
-  DBANSITOOEM		        = 14;
-  DBOEMTOANSI	          = 15;
-  DBCLIENTCURSORS       = 16;
-  DBSET_TIME            = 17;
-  DBQUOTEDIDENT         = 18;
-
-{ Decimal constants }
-  MAXNUMERICLEN = 16;
-
-{ DB-Table constants}
-{ Pack the following structures on a word boundary }
-  MAXTABLENAME = 30;
-  MAXCOLNAMELEN= 30;
-
-{****************** Plain API Types definition *****************}
-type
-{ DB-Library datatypes }
-  {$IFDEF FPC}
-    {$PACKRECORDS C}
-  {$ENDIF}
-
-{ DBDATEREC structure used by dbdatecrack }
-  DBDATEREC = packed record
-    year:       DBINT;      { 1753 - 9999 }
-    quarter:    DBINT;      { 1 - 4 }
-    month:      DBINT;      { 1 - 12 }
-    dayofyear:  DBINT;      { 1 - 366 }
-    day:        DBINT;      { 1 - 31 }
-    week:       DBINT;      { 1 - 54 (for leap years) }
-    weekday:    DBINT;      { 1 - 7  (Mon - Sun) }
-    hour:       DBINT;      { 0 - 23 }
-    minute:     DBINT;      { 0 - 59 }
-    second:     DBINT;      { 0 - 59 }
-    millisecond: DBINT;     { 0 - 999 }
-  end;
-  PDBDATEREC = ^DBDATEREC;
-
-type
-  DBNUMERIC = packed record
-    Precision:  Byte;
-    Scale:      Byte;
-    Sign:       Byte; { 1 = Positive, 0 = Negative }
-    Val:        array[0..MAXNUMERICLEN-1] of Byte;
-  end;
-  DBDECIMAL = DBNUMERIC;
-
-  DBVARYCHAR = packed record
-    Len: DBSMALLINT;
-    Str: array[0..DBMAXCHAR-1] of DBCHAR; //CHAR = Wide D12UP
-  end;
-
-  DBVARYBIN = packed record
-    Len: DBSMALLINT;
-    Bytes: array[0..DBMAXCHAR-1] of Byte;
-  end;
-
-
-type
-{ TODO -ofjanos -cAPI :
-Strange but I had to insert X1 and X2 into the structure to make it work.
-I have not find any reason for this yet. }
-  DBCOL = packed record
-    SizeOfStruct: DBINT;
-    Name:       array[0..MAXCOLNAMELEN] of AnsiChar;
-    ActualName: array[0..MAXCOLNAMELEN] of AnsiChar;
-    TableName:  array[0..MAXTABLENAME] of AnsiChar;
-    X1:         Byte;
-    Typ:        SmallInt;
-    UserType:   DBINT;
-    MaxLength:  DBINT;
-    Precision:  Byte;
-    Scale:      Byte;
-    VarLength:  LongBool;{ TRUE, FALSE }
-    Null:       Byte;    { TRUE, FALSE or DBUNKNOWN }
-    CaseSensitive: Byte; { TRUE, FALSE or DBUNKNOWN }
-    Updatable:  Byte;    { TRUE, FALSE or DBUNKNOWN }
-    Identity:   LongBool;{ TRUE, FALSE }
-    X2:         Byte;
-  end;
-  PDBCOL = ^DBCOL;
+  NTWDBLIB_DLL_LOCATION ='ntwdblib.dll';
+  LIBSYBDB_WINDOWS_DLL_LOCATION = 'libsybdb.dll';
+  LIBSYBDB_LINUX_DLL_LOCATION = 'libsybdb.so';
+  FREETDS_WINDOWS_DLL_LOCATION = 'msdblibr.dll';
+  FREETDS_LINUX_DLL_LOCATION = 'dblib.so';
+  FREETDS_OSX_DLL_LOCATION = 'dblib.dylib';
 
 type
   {** Represents a generic interface to DBLIB native API. }
   IZDBLibPlainDriver = interface (IZPlainDriver)
     ['{7731C3B4-0608-4B6B-B089-240AC43A3463}']
 
-    procedure CheckError;
+    procedure CheckError(dbProc: PDBPROCESS);
 
     function dbDead(dbProc: PDBPROCESS): Boolean;
     function dbLogin: PLOGINREC;
     procedure dbLoginFree(Login: PLOGINREC);
-    function dbSetLoginTime(Seconds: DBINT): RETCODE;
-    function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): RETCODE;
-    function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
-    function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
-    function dbSetLPwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE;
-    function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE;
-    function dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): RETCODE;
-    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE;
-    function dbSetLSecure(Login: PLOGINREC): RETCODE;
-    function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE;
+    function dbSetLoginTime(Seconds: DBINT): ZRETCODE;
+    function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): ZRETCODE;
+    function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): ZRETCODE;
+    function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): ZRETCODE;
+    function dbSetLPwd(Login: PLOGINREC; Password: PAnsiChar): ZRETCODE;
+    function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): ZRETCODE;
+    function dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): ZRETCODE;
+    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): ZRETCODE;
+    function dbSetLSecure(Login: PLOGINREC): ZRETCODE;
+    function dbSetMaxprocs(MaxProcs: SmallInt): ZRETCODE;
     function dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;
-    function dbCancel(dbProc: PDBPROCESS): RETCODE;
-    function dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): RETCODE;
-    function dbSqlExec(dbProc: PDBPROCESS): RETCODE;
-    function dbResults(dbProc: PDBPROCESS): RETCODE;
-    function dbCanQuery(dbProc: PDBPROCESS): RETCODE;
-    function dbMoreCmds(dbProc: PDBPROCESS): RETCODE;
-    function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE;
+    function dbCancel(dbProc: PDBPROCESS): ZRETCODE;
+    function dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): ZRETCODE;
+    function dbSqlExec(dbProc: PDBPROCESS; Async: Boolean=False): ZRETCODE;
+    function dbSqlExecSync(dbProc: PDBPROCESS): ZRETCODE;
+    function dbSqlExecAsync(dbProc: PDBPROCESS): ZRETCODE;
+    function dbResults(dbProc: PDBPROCESS): ZRETCODE;
+    function dbCanQuery(dbProc: PDBPROCESS): ZRETCODE;
+    function dbMoreCmds(dbProc: PDBPROCESS): ZRETCODE;
+    function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): ZRETCODE;
     function dbSetOpt(dbProc: PDBPROCESS; Option: DBINT;
-      Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): RETCODE;
-    function dbClose(dbProc: PDBPROCESS): RETCODE;
+      Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): ZRETCODE;
+    function dbClose(dbProc: PDBPROCESS): ZRETCODE;
     function dbName(dbProc: PDBPROCESS): PAnsiChar;
-    function dbCmdRow(dbProc: PDBPROCESS): RETCODE;
+    function dbCmdRow(dbProc: PDBPROCESS): ZRETCODE;
     function dbNumCols(dbProc: PDBPROCESS): DBINT;
     function dbColName(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar;
     function dbColType(dbProc: PDBPROCESS; Column: DBINT): DBINT;
@@ -216,187 +115,137 @@ type
     function dbGetRow(dbProc: PDBPROCESS; Row: DBINT): STATUS;
     function dbCount(dbProc: PDBPROCESS): DBINT;
 
-    function dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): RETCODE;
+    function dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): ZRETCODE;
     function dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
-      Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): RETCODE;
-    function dbRpcSend(dbProc: PDBPROCESS): RETCODE;
-    function dbRpcExec(dbProc: PDBPROCESS): RETCODE;
+      Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): ZRETCODE;
+    function dbRpcSend(dbProc: PDBPROCESS): ZRETCODE;
+    function dbRpcExec(dbProc: PDBPROCESS): ZRETCODE;
     function dbRetStatus(dbProc: PDBPROCESS): DBINT;
     function dbHasRetStat(dbProc: PDBPROCESS): Boolean;
     function dbRetName(dbProc: PDBPROCESS; RetNum: DBINT): PAnsiChar;
     function dbRetData(dbProc: PDBPROCESS; RetNum: DBINT): Pointer;
     function dbRetLen(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
     function dbRetType(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
+    function dbdataready(Proc: PDBPROCESS): LongBool;
+    function GetVariables: TDBVariables;
+  end;
+
+  TZDBLibAbstractPlainDriver = class(TZAbstractPlainDriver, IZPlainDriver)
+  protected
+    DBVariables: TDBVariables;
+  public
+    function dbDead(dbProc: PDBPROCESS): Boolean; virtual; abstract;
+    procedure dbLoginFree(Login: PLOGINREC); virtual; abstract;
+    constructor Create; virtual;
+    procedure CheckError(dbProc: PDBPROCESS);
+    function GetVariables: TDBVariables;
+  end;
+
+  TZDbLibBasePlainDriver = class(TZDBLibAbstractPlainDriver, IZPlainDriver,
+    IZDBLibPlainDriver)
+  protected
+    DBLibAPI: TDBLibAPI;
+  public
+    procedure LoadApi; override;
+    function dbLogin: PLOGINREC; virtual;
+    function dbSetLoginTime(Seconds: DBINT): ZRETCODE;
+    function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): ZRETCODE;
+    function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): ZRETCODE;
+    function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): ZRETCODE;
+    function dbSetLPwd(Login: PLOGINREC; Password: PAnsiChar): ZRETCODE;
+    function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): ZRETCODE;
+    function dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): ZRETCODE;
+    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): ZRETCODE; virtual; abstract;
+    function dbSetLSecure(Login: PLOGINREC): ZRETCODE; virtual; abstract;
+    function dbSetMaxprocs(MaxProcs: SmallInt): ZRETCODE; virtual; abstract;
+    function dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS; virtual;
+    function dbCancel(dbProc: PDBPROCESS): ZRETCODE;
+    function dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): ZRETCODE;
+    function dbSqlExec(dbProc: PDBPROCESS; Async: Boolean=False): ZRETCODE;
+    function dbSqlExecSync(dbProc: PDBPROCESS): ZRETCODE;
+    function dbSqlExecAsync(dbProc: PDBPROCESS): ZRETCODE;
+    function dbResults(dbProc: PDBPROCESS): ZRETCODE;
+    function dbCanQuery(dbProc: PDBPROCESS): ZRETCODE;
+    function dbMoreCmds(dbProc: PDBPROCESS): ZRETCODE;
+    function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): ZRETCODE;
+    function dbSetOpt(dbProc: PDBPROCESS; Option: DBINT; Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): ZRETCODE; virtual; abstract;
+    function dbClose(dbProc: PDBPROCESS): ZRETCODE; virtual; abstract;
+    function dbName(dbProc: PDBPROCESS): PAnsiChar;
+    function dbCmdRow(dbProc: PDBPROCESS): ZRETCODE;
+    function dbNumCols(dbProc: PDBPROCESS): DBINT;
+    function dbcolbrowse(Proc: PDBPROCESS; Column: Integer): LongBool; virtual; abstract;
+
+    function dbColName(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar;
+    function dbColType(dbProc: PDBPROCESS; Column: DBINT): DBINT;
+    function dbColLen(dbProc: PDBPROCESS; Column: DBINT): DBInt;
+    function dbData(dbProc: PDBPROCESS; Column: DBINT): PByte;
+    function dbDatLen(dbProc: PDBPROCESS; Column: DBINT): DBINT; virtual; abstract;
+    function dbConvert(dbProc: PDBPROCESS; SrcType: DBINT; Src: PByte;
+             SrcLen: DBINT; DestType: DBINT; Dest: PByte; DestLen: DBINT): DBINT;
+    function dbNextRow(dbProc: PDBPROCESS): STATUS;
+    function dbGetRow(dbProc: PDBPROCESS; Row: DBINT): STATUS;
+    function dbCount(dbProc: PDBPROCESS): DBINT; virtual; abstract;
+
+    function dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): ZRETCODE;
+    function dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
+      Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): ZRETCODE; virtual;
+    function dbRpcSend(dbProc: PDBPROCESS): ZRETCODE;
+    function dbRpcExec(dbProc: PDBPROCESS): ZRETCODE;
+    function dbRetStatus(dbProc: PDBPROCESS): DBINT;
+    function dbHasRetStat(dbProc: PDBPROCESS): Boolean; virtual; abstract;
+    function dbRetName(dbProc: PDBPROCESS; RetNum: DBINT): PAnsiChar;
+    function dbRetData(dbProc: PDBPROCESS; RetNum: DBINT): Pointer;
+    function dbRetLen(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
+    function dbRetType(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
+    function dbdataready(Proc: PDBPROCESS): LongBool; virtual; abstract;
+    function dbrbuf(Proc: PDBPROCESS): DBINT;
   end;
 
   {** Implements a dblib driver for Sybase ASE 12.5 }
-  TZDBLibSybaseASE125PlainDriver = class (TZAbstractObject, IZPlainDriver,
-    IZDBLibPlainDriver)
-  protected
-    function Clone: IZPlainDriver; reintroduce;
-  public
-    constructor Create;
-
-    function GetProtocol: string;
-    function GetDescription: string;
-     procedure Initialize(const Location: String);
-
-    procedure CheckError;
-
-    function dbDead(dbProc: PDBPROCESS): Boolean;
-    function dbLogin: PLOGINREC;
-    procedure dbLoginFree(Login: PLOGINREC);
-    function dbSetLoginTime(Seconds: DBINT): RETCODE;
-    function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE;
-    function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
-    function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
-    function dbSetLPwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE;
-    function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE;
-    function dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): RETCODE;
-    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE;
-    function dbSetLSecure(Login: PLOGINREC): RETCODE;
-    function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE;
-    function dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;
-    function dbCancel(dbProc: PDBPROCESS): RETCODE;
-    function dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): RETCODE;
-    function dbSqlExec(dbProc: PDBPROCESS): RETCODE;
-    function dbResults(dbProc: PDBPROCESS): RETCODE;
-    function dbCanQuery(dbProc: PDBPROCESS): RETCODE;
-    function dbMoreCmds(dbProc: PDBPROCESS): RETCODE;
-    function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE;
-    function dbSetOpt(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar = nil; Int_Param: Integer = -1): RETCODE;
-    function dbClose(dbProc: PDBPROCESS): RETCODE;
-    function dbName(dbProc: PDBPROCESS): PAnsiChar;
-    function dbCmdRow(dbProc: PDBPROCESS): RETCODE;
-    function dbNumCols(dbProc: PDBPROCESS): Integer;
-    function dbColName(dbProc: PDBPROCESS; Column: Integer): PAnsiChar;
-    function dbColType(dbProc: PDBPROCESS; Column: Integer): Integer;
-    function dbColLen(dbProc: PDBPROCESS; Column: Integer): DBInt;
-    function dbData(dbProc: PDBPROCESS; Column: Integer): PByte;
-    function dbDatLen(dbProc: PDBPROCESS; Column: Integer): Integer;
-    function dbConvert(dbProc: PDBPROCESS; SrcType: Integer; Src: PByte;
-             SrcLen: DBINT; DestType: Integer; Dest: PByte; DestLen: DBINT): Integer;
-    function dbNextRow(dbProc: PDBPROCESS): STATUS;
-    function dbGetRow(dbProc: PDBPROCESS; Row: Integer): STATUS;
-    function dbCount(dbProc: PDBPROCESS): Integer;
-
-    function dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): RETCODE;
-    function dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
-      Type_: Integer; MaxLen: Integer; DataLen: Integer; Value: Pointer): RETCODE;
-    function dbRpcSend(dbProc: PDBPROCESS): RETCODE;
-    function dbRpcExec(dbProc: PDBPROCESS): RETCODE;
-    function dbRetStatus(dbProc: PDBPROCESS): Integer;
-    function dbHasRetStat(dbProc: PDBPROCESS): Boolean;
-    function dbRetName(dbProc: PDBPROCESS; RetNum: Integer): PAnsiChar;
-    function dbRetData(dbProc: PDBPROCESS; RetNum: Integer): Pointer;
-    function dbRetLen(dbProc: PDBPROCESS; RetNum: Integer): Integer;
-    function dbRetType(dbProc: PDBPROCESS; RetNum: Integer): Integer;
-  end;
-
-  {** Implements a dblib driver for MSSql7 }
-  TZDBLibMSSQL7PlainDriver = class (TZAbstractObject, IZPlainDriver,
-    IZDBLibPlainDriver)
-  protected
-    function Clone: IZPlainDriver; reintroduce;
-  public
-    constructor Create;
-
-    function GetProtocol: string;
-    function GetDescription: string;
-    procedure Initialize(const Location: String);
-
-    procedure CheckError;
-
-    function dbDead(dbProc: PDBPROCESS): Boolean;
-    function dbLogin: PLOGINREC;
-    procedure dbLoginFree(Login: PLOGINREC);
-    function dbSetLoginTime(Seconds: Integer): RETCODE;
-    function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE;
-    function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
-    function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
-    function dbSetLPwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE;
-    function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE;
-    function dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): RETCODE;
-    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE;
-    function dbSetLSecure(Login: PLOGINREC): RETCODE;
-    function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE;
-    function dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;
-    function dbCancel(dbProc: PDBPROCESS): RETCODE;
-    function dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): RETCODE;
-    function dbSqlExec(dbProc: PDBPROCESS): RETCODE;
-    function dbResults(dbProc: PDBPROCESS): RETCODE;
-    function dbCanQuery(dbProc: PDBPROCESS): RETCODE;
-    function dbMoreCmds(dbProc: PDBPROCESS): RETCODE;
-    function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE;
-    function dbSetOpt(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar = nil; Int_Param: Integer = -1): RETCODE;
-    function dbClose(dbProc: PDBPROCESS): RETCODE;
-    function dbName(dbProc: PDBPROCESS): PAnsiChar;
-    function dbCmdRow(dbProc: PDBPROCESS): RETCODE;
-    function dbNumCols(dbProc: PDBPROCESS): Integer;
-    function dbColName(dbProc: PDBPROCESS; Column: Integer): PAnsiChar;
-    function dbColType(dbProc: PDBPROCESS; Column: Integer): Integer;
-    function dbColLen(dbProc: PDBPROCESS; Column: Integer): DBInt;
-    function dbData(dbProc: PDBPROCESS; Column: Integer): PByte;
-    function dbDatLen(dbProc: PDBPROCESS; Column: Integer): Integer;
-    function dbConvert(dbProc: PDBPROCESS; SrcType: Integer; Src: PByte;
-      SrcLen: DBINT; DestType: Integer; Dest: PByte; DestLen: DBINT): Integer;
-    function dbNextRow(dbProc: PDBPROCESS): STATUS;
-    function dbGetRow(dbProc: PDBPROCESS; Row: Integer): STATUS;
-    function dbCount(dbProc: PDBPROCESS): Integer;
-
-    function dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): RETCODE;
-    function dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
-      Type_: Integer; MaxLen: Integer; DataLen: Integer; Value: Pointer): RETCODE;
-    function dbRpcSend(dbProc: PDBPROCESS): RETCODE;
-    function dbRpcExec(dbProc: PDBPROCESS): RETCODE;
-    function dbRetStatus(dbProc: PDBPROCESS): Integer;
-    function dbHasRetStat(dbProc: PDBPROCESS): Boolean;
-    function dbRetName(dbProc: PDBPROCESS; RetNum: Integer): PAnsiChar;
-    function dbRetData(dbProc: PDBPROCESS; RetNum: Integer): Pointer;
-    function dbRetLen(dbProc: PDBPROCESS; RetNum: Integer): Integer;
-    function dbRetType(dbProc: PDBPROCESS; RetNum: Integer): Integer;
-  end;
-
-  {** Implements a generic dblib driver}
-  TZDbLibBasePlainDriver = class (TZAbstractPlainDriver, IZPlainDriver,
+  TZDBLibSybaseASE125PlainDriver = class (TZDBLibAbstractPlainDriver, IZPlainDriver,
     IZDBLibPlainDriver)
   private
-    FreeTDSAPI: TFreeTDSAPI;
+    SybaseAPI: TSybaseAPI;
   protected
     procedure LoadApi; override;
+    function Clone: IZPlainDriver; override;
   public
-    constructor Create;
-    destructor Destroy;
+    constructor Create; override;
+    destructor Destroy; override;
 
-    procedure CheckError;
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
 
-    //function dbinit: RETCODE;
-    function dbDead(dbProc: PDBPROCESS): Boolean;
+    function dbDead(dbProc: PDBPROCESS): Boolean; override;
     function dbLogin: PLOGINREC;
-    procedure dbLoginFree(Login: PLOGINREC);
-    function dbSetLoginTime(Seconds: DBINT): RETCODE;
-    function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): RETCODE;
-    function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
-    function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
-    function dbSetLPwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE;
-    function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE;
-    function dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): RETCODE;
-    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE;
-    function dbSetLSecure(Login: PLOGINREC): RETCODE;
-    function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE;
+    procedure dbLoginFree(Login: PLOGINREC); override;
+    function dbSetLoginTime(Seconds: DBINT): ZRETCODE;
+    function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): ZRETCODE;
+    function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): ZRETCODE;
+    function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): ZRETCODE;
+    function dbSetLPwd(Login: PLOGINREC; Password: PAnsiChar): ZRETCODE;
+    function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): ZRETCODE;
+    function dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): ZRETCODE;
+    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): ZRETCODE;
+    function dbSetLSecure(Login: PLOGINREC): ZRETCODE;
+    function dbSetMaxprocs(MaxProcs: SmallInt): ZRETCODE;
     function dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;
-    function dbCancel(dbProc: PDBPROCESS): RETCODE;
-    function dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): RETCODE;
-    function dbSqlExec(dbProc: PDBPROCESS): RETCODE;
-    function dbResults(dbProc: PDBPROCESS): RETCODE;
-    function dbCanQuery(dbProc: PDBPROCESS): RETCODE;
-    function dbMoreCmds(dbProc: PDBPROCESS): RETCODE;
-    function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE;
-    function dbSetOpt(dbProc: PDBPROCESS; Option: DBINT; Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): RETCODE;
-    function dbClose(dbProc: PDBPROCESS): RETCODE;
+    function dbCancel(dbProc: PDBPROCESS): ZRETCODE;
+    function dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): ZRETCODE;
+    function dbSqlExec(dbProc: PDBPROCESS; Async: Boolean=False): ZRETCODE; virtual;
+    function dbSqlExecSync(dbProc: PDBPROCESS): ZRETCODE;
+    function dbSqlExecAsync(dbProc: PDBPROCESS): ZRETCODE;
+    function dbResults(dbProc: PDBPROCESS): ZRETCODE;
+    function dbCanQuery(dbProc: PDBPROCESS): ZRETCODE;
+    function dbMoreCmds(dbProc: PDBPROCESS): ZRETCODE;
+    function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): ZRETCODE;
+    function dbSetOpt(dbProc: PDBPROCESS; Option: DBINT; Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): ZRETCODE;
+    function dbClose(dbProc: PDBPROCESS): ZRETCODE;
     function dbName(dbProc: PDBPROCESS): PAnsiChar;
-    function dbCmdRow(dbProc: PDBPROCESS): RETCODE;
+    function dbCmdRow(dbProc: PDBPROCESS): ZRETCODE;
     function dbNumCols(dbProc: PDBPROCESS): DBINT;
+    function dbcolbrowse(Proc: PDBPROCESS; Column: Integer): LongBool;
+
     function dbColName(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar;
     function dbColType(dbProc: PDBPROCESS; Column: DBINT): DBINT;
     function dbColLen(dbProc: PDBPROCESS; Column: DBINT): DBInt;
@@ -408,39 +257,841 @@ type
     function dbGetRow(dbProc: PDBPROCESS; Row: DBINT): STATUS;
     function dbCount(dbProc: PDBPROCESS): DBINT;
 
-    function dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): RETCODE;
+    function dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): ZRETCODE;
     function dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
-      Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): RETCODE;
-    function dbRpcSend(dbProc: PDBPROCESS): RETCODE;
-    function dbRpcExec(dbProc: PDBPROCESS): RETCODE;
+      Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): ZRETCODE;
+    function dbRpcSend(dbProc: PDBPROCESS): ZRETCODE;
+    function dbRpcExec(dbProc: PDBPROCESS): ZRETCODE;
     function dbRetStatus(dbProc: PDBPROCESS): DBINT;
     function dbHasRetStat(dbProc: PDBPROCESS): Boolean;
     function dbRetName(dbProc: PDBPROCESS; RetNum: DBINT): PAnsiChar;
     function dbRetData(dbProc: PDBPROCESS; RetNum: DBINT): Pointer;
     function dbRetLen(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
     function dbRetType(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
+    function dbrbuf(Proc: PDBPROCESS): DBINT;
+    function dbdataready(Proc: PDBPROCESS): LongBool;
   end;
 
-  {** Implements a dblib driver for Sybase/MSSQL }
-  TZFreeTDSPlainDriver = class (TZDbLibBasePlainDriver)
+  {** Implements a dblib driver for MSSql7 }
+  TZDBLibMSSQL7PlainDriver = class (TZDbLibBasePlainDriver, IZPlainDriver,
+    IZDBLibPlainDriver)
   private
-    FreeTDSAPI: TFreeTDSAPI;
+    MsSQLAPI: TMsSQLAPI;
   protected
-    procedure LoadApi; override;
+    function Clone: IZPlainDriver; override;
   public
-    constructor Create;
-    destructor Destroy;
+    procedure LoadApi; override;
+    constructor Create; override;
+    destructor Destroy; override;
 
     function GetProtocol: string; override;
     function GetDescription: string; override;
 
+    function dbDead(dbProc: PDBPROCESS): Boolean; override;
+    procedure dbLoginFree(Login: PLOGINREC); override;
+    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): ZRETCODE; override;
+    function dbSetLSecure(Login: PLOGINREC): ZRETCODE; override;
+    function dbSetMaxprocs(MaxProcs: SmallInt): ZRETCODE; override;
+    function dbSqlExecAsync(dbProc: PDBPROCESS): ZRETCODE;
+    function dbSetOpt(dbProc: PDBPROCESS; Option: DBINT; Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): ZRETCODE; override;
+    function dbClose(dbProc: PDBPROCESS): ZRETCODE; override;
+    function dbcolbrowse(Proc: PDBPROCESS; Column: Integer): LongBool; override;
+
+    function dbDatLen(dbProc: PDBPROCESS; Column: DBINT): DBINT; override;
+    function dbCount(dbProc: PDBPROCESS): DBINT; override;
+    function dbHasRetStat(dbProc: PDBPROCESS): Boolean; override;
+    function dbdataready(Proc: PDBPROCESS): LongBool; override;
   end;
+
+  {** Implements a generic dblib driver}
+  IZFreeTDSPlainDriver = interface (IZDBLibPlainDriver)
+    ['{12FA5A22-59E5-4CBF-B745-96A7CDF9FBE0}']
+
+    function dbSetTime(queryTime : Integer): ZRETCODE;
+    procedure tdsDumpOn;
+    procedure tdsDumpOff;
+    procedure tdsDump_Open(const FileName: String);
+    procedure tdsDump_Close;
+
+  end;
+
+  {** Implements a dblib driver for Sybase/MSSQL }
+  TZFreeTDSBasePlainDriver = class (TZDbLibBasePlainDriver, IZDBLibPlainDriver,
+                           IZFreeTDSPlainDriver)
+  private
+    FreeTDSAPI: TFreeTDSAPI;
+  protected
+    function Clone: IZPlainDriver; override; abstract;
+  public
+    constructor Create; override;
+    destructor Destroy; override;
+
+    procedure LoadApi; override;
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+
+    {API functions}
+    function dbsetlversion(Login: PLOGINREC): ZRETCODE; virtual;
+    function dbsetversion: ZRETCODE; virtual;
+
+
+    function dbDead(dbProc: PDBPROCESS): Boolean; override;
+    function dbLogin: PLOGINREC; override;
+    procedure dbLoginFree(Login: PLOGINREC); override;
+    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): ZRETCODE; override;
+    function dbSetLSecure(Login: PLOGINREC): ZRETCODE; override;
+    function dbSetMaxprocs(MaxProcs: SmallInt): ZRETCODE; override;
+    function dbSetTime(queryTime : Integer): ZRETCODE;
+
+    function dbSetOpt(dbProc: PDBPROCESS; Option: Integer;
+      Char_Param: PAnsiChar = nil; Int_Param: Integer = -1): ZRETCODE; override;
+    function dbClose(dbProc: PDBPROCESS): ZRETCODE; override;
+    function dbColInfo(dbProc: PDBPROCESS; Column: Integer; var ADBInfo: DBCOL): ZRETCODE;
+    function dbDatLen(dbProc: PDBPROCESS; Column: Integer): Integer; override;
+    function dbCount(dbProc: PDBPROCESS): Integer; override;
+    function dbcolbrowse(Proc: PDBPROCESS; Column: Integer): LongBool; override;
+
+    function dbHasRetStat(dbProc: PDBPROCESS): Boolean; override;
+
+    procedure tdsDumpOn;
+    procedure tdsDumpOff;
+    procedure tdsDump_Open(const FileName: String);
+    procedure tdsDump_Close;
+    function dbdataready(Proc: PDBPROCESS): LongBool; override;
+    procedure dbfreelogin(Login: PLOGINREC);
+  end;
+
+
+  TZFreeTDS42MsSQLPlainDriver = class(TZFreeTDSBasePlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
+  public
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+    function dbsetlversion(Login: PLOGINREC): ZRETCODE; override;
+    function dbsetversion: ZRETCODE; override;
+  end;
+
+  TZFreeTDS42SybasePlainDriver = class(TZFreeTDSBasePlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
+  public
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+    function dbsetlversion(Login: PLOGINREC): ZRETCODE; override;
+    function dbsetversion: ZRETCODE; override;
+  end;
+
+  TZFreeTDS50PlainDriver = class(TZFreeTDS42SybasePlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
+  public
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+    function dbsetversion: ZRETCODE; override;
+  end;
+
+  TZFreeTDS70PlainDriver = class(TZFreeTDSBasePlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
+  public
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+    function dbsetlversion(Login: PLOGINREC): ZRETCODE; override;
+    function dbsetversion: ZRETCODE; override;
+  end;
+
+  TZFreeTDS71PlainDriver = class(TZFreeTDS70PlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
+  public
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+    function dbsetversion: ZRETCODE; override;
+  end;
+
+  TZFreeTDS72PlainDriver = class(TZFreeTDS70PlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
+  public
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+    function dbsetversion: ZRETCODE; override;
+  end;
+
+
+var
+  OldFreeTDSErrorHandle: DBERRHANDLE_PROC = nil;
+  OldFreeTDSMessageHandle: DBMSGHANDLE_PROC = nil;
+  OldSybaseErrorHandle: SYBDBERRHANDLE_PROC = nil;
+  OldSybaseMessageHandle: SYBDBMSGHANDLE_PROC = nil;
+  OldMsSQLMessageHandle: DBMSGHANDLE_PROC = nil;
+  OldMsSQLErrorHandle: DBERRHANDLE_PROC = nil;
+  SQLErrors: TList;
+  SQLMessages: TList;
 
 implementation
 
-uses SysUtils, ZPlainDbLibSybaseAse125, ZPlainDbLibMsSql7, ZPlainLoader;
+uses SysUtils, ZPlainLoader, Windows;
+
+{ Handle sql server error messages }
+function SybaseErrorHandle(Proc: PDBPROCESS; Severity, DbErr, OsErr: Integer;
+  DbErrStr, OsErrStr: PAnsiChar): Integer;
+{$IFNDEF UNIX} stdcall{$ELSE} cdecl{$ENDIF};
+var
+  SqlError: PDBLibError;
+begin
+  New(SqlError);
+  SqlError.dbProc := Proc;
+  SqlError.Severity := Severity;
+  SqlError.DbErr := DbErr;
+  SqlError.OsErr := OsErr;
+  SqlError.DbErrStr := DbErrStr;
+  SqlError.OsErrStr := OsErrStr;
+  SQLErrors.Add(SqlError);
+
+  Result := INT_CANCEL;
+end;
+
+{ Handle sql server messages }
+function SybaseMessageHandle(Proc: PDBPROCESS; MsgNo: DBINT; MsgState,
+    Severity: Integer; MsgText, SrvName, ProcName: PAnsiChar; Line: DBUSMALLINT):
+    Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+var
+  SQLMessage: PDBLibMessage;
+begin
+  New(SQLMessage);
+  SQLMessage.dbProc := Proc;
+  SQLMessage.MsgNo := MsgNo;
+  SQLMessage.MsgState := MsgState;
+  SQLMessage.Severity := Severity;
+  SQLMessage.MsgText := MsgText;
+  SQLMessage.SrvName := SrvName;
+  SQLMessage.ProcName := ProcName;
+  SQLMessage.Line := Line;
+  SQLMessages.Add(SQLMessage);
+
+  Result := 0;
+end;
+
+{ Handle sql server error messages }
+function DbLibErrorHandle(Proc: PDBPROCESS; Severity, DbErr, OsErr: Integer;
+  DbErrStr, OsErrStr: PAnsiChar): Integer; cdecl;
+var
+  SqlError: PDBLibError;
+begin
+  New(SqlError);
+  SqlError.dbProc := Proc;
+  SqlError.Severity := Severity;
+  SqlError.DbErr := DbErr;
+  SqlError.OsErr := OsErr;
+  SqlError.DbErrStr := DbErrStr;
+  SqlError.OsErrStr := OsErrStr;
+  SQLErrors.Add(SqlError);
+
+  Result := INT_CANCEL;
+end;
+
+{ Handle sql server messages }
+function DbLibMessageHandle(Proc: PDBPROCESS; MsgNo: DBINT; MsgState, Severity: Integer;
+  MsgText, SrvName, ProcName: PAnsiChar; Line: DBUSMALLINT): Integer; cdecl;
+var
+  SQLMessage: PDBLibMessage;
+begin
+  New(SQLMessage);
+  SQLMessage.dbProc := Proc;
+  SQLMessage.MsgNo := MsgNo;
+  SQLMessage.MsgState := MsgState;
+  SQLMessage.Severity := Severity;
+  SQLMessage.MsgText := MsgText;
+  SQLMessage.SrvName := SrvName;
+  SQLMessage.ProcName := ProcName;
+  SQLMessage.Line := Line;
+  SQLMessages.Add(SQLMessage);
+
+  Result := 0;
+end;
+
+constructor TZDBLibAbstractPlainDriver.Create;
+var I: Integer;
+begin
+  inherited create;
+  FLoader := TZNativeLibraryLoader.Create([]);
+  for i := 0 to high(DBVariables.DBoptions) do DBVariables.DBoptions[i] := -1;
+  for i := 0 to high(DBVariables.DBSetLoginRec) do DBVariables.DBSetLoginRec[i] := -1;
+  DBVariables.datatypes[Z_SQLVOID]      := DBLIBSQLVOID;
+  DBVariables.datatypes[Z_SQLTEXT]      := DBLIBSQLTEXT;
+  DBVariables.datatypes[Z_SQLVARBINARY] := DBLIBSQLVARBINARY;
+  DBVariables.datatypes[Z_SQLINTN]      := DBLIBSQLINTN;
+  DBVariables.datatypes[Z_SQLVARCHAR]   := DBLIBSQLVARCHAR;
+  DBVariables.datatypes[Z_SQLBINARY]    := DBLIBSQLBINARY;
+  DBVariables.datatypes[Z_SQLIMAGE]     := DBLIBSQLIMAGE;
+  DBVariables.datatypes[Z_SQLCHAR]      := DBLIBSQLCHAR;
+  DBVariables.datatypes[Z_SQLINT1]      := DBLIBSQLINT1;
+  DBVariables.datatypes[Z_SQLBIT]       := DBLIBSQLBIT;
+  DBVariables.datatypes[Z_SQLINT2]      := DBLIBSQLINT2;
+  DBVariables.datatypes[Z_SQLINT4]      := DBLIBSQLINT4;
+  DBVariables.datatypes[Z_SQLMONEY]     := DBLIBSQLMONEY;
+  DBVariables.datatypes[Z_SQLDATETIME]  := DBLIBSQLDATETIME;
+  DBVariables.datatypes[Z_SQLFLT8]      := DBLIBSQLFLT8;
+  DBVariables.datatypes[Z_SQLFLTN]      := DBLIBSQLFLTN;
+  DBVariables.datatypes[Z_SQLMONEYN]    := DBLIBSQLMONEYN;
+  DBVariables.datatypes[Z_SQLDATETIMN]  := DBLIBSQLDATETIMN;
+  DBVariables.datatypes[Z_SQLFLT4]      := DBLIBSQLFLT4;
+  DBVariables.datatypes[Z_SQLMONEY4]    := DBLIBSQLMONEY4;
+  DBVariables.datatypes[Z_SQLDATETIM4]  := DBLIBSQLDATETIM4;
+  DBVariables.datatypes[Z_SQLDECIMAL]   := DBLIBSQLDECIMAL;
+  DBVariables.datatypes[Z_SQLNUMERIC]   := DBLIBSQLNUMERIC;
+end;
+
+procedure TZDBLibAbstractPlainDriver.CheckError(dbProc: Pointer);
+var
+  I: Integer;
+  S: String;
+  lErrorEntry: PDBLibError;
+  lMesageEntry: PDBLibMessage;
+
+    procedure AddToErrorMsg(const AError: String);
+    begin
+      if S > '' then
+        S := S + #13#10;
+      S := S + AError;
+    end;
+
+begin
+  if ((SQLErrors = nil) or (SQLErrors.Count = 0)) and
+     ((SQLMessages = nil) or (SQLMessages.Count = 0)) then
+    Exit;
+  S := '';
+  I := 0;
+  while I < SQLErrors.Count do begin
+    lErrorEntry := PDBLibError(SQLErrors[I]);
+    if (dbProc = nil) or (lErrorEntry^.dbProc = dbProc) or (lErrorEntry^.dbProc = nil) then begin
+        if lErrorEntry^.Severity > EXINFO then
+          AddToErrorMsg(Format('DBError : [%4.4d] : %s', [lErrorEntry^.DbErr, String(lErrorEntry^.DbErrStr)]) );
+        if lErrorEntry^.OsErr > EXINFO then
+          AddToErrorMsg(Format('OSError : [%4.4d] : %s', [lErrorEntry^.OsErr, String(lErrorEntry^.OsErrStr)]) );
+        Dispose(lErrorEntry);
+        SQLErrors.Delete(I);
+    end
+    else
+      Inc(I);
+  end;
+  I := 0;
+  while I < SQLMessages.Count do begin
+    lMesageEntry := PDBLibMessage(SQLMessages[I]);
+    if (dbProc = nil) or (lMesageEntry^.dbProc = dbProc) or (lMesageEntry^.dbProc = nil) then begin
+      if lMesageEntry^.Severity > EXINFO then
+        AddToErrorMsg(String(lMesageEntry^.MsgText));
+      Dispose(lMesageEntry);
+      SQLMessages.Delete(I);
+    end
+    else
+      Inc(I);
+  end;
+  if S <> '' then
+    raise Exception.Create(String(S));
+end;
+
+function TZDBLibAbstractPlainDriver.GetVariables: TDBVariables;
+begin
+  Result := DBVariables;
+end;
+
+{ TZDBLibBasePlainDriver }
+
+procedure TZDBLibBasePlainDriver.LoadApi;
+begin
+  inherited LoadAPI;
+  with Loader do
+  begin
+    @DBLibAPI.dberrhandle           := GetAddress('dberrhandle');
+    @DBLibAPI.dbmsghandle           := GetAddress('dbmsghandle');
+    @DBLibAPI.dbprocerrhandle       := GetAddress('dbprocerrhandle');
+    @DBLibAPI.dbprocmsghandle       := GetAddress('dbprocmsghandle');
+    @DBLibAPI.abort_xact            := GetAddress('abort_xact');
+    @DBLibAPI.build_xact_string     := GetAddress('build_xact_string');
+    @DBLibAPI.close_commit          := GetAddress('close_commit');
+    @DBLibAPI.commit_xact           := GetAddress('commit_xact');
+    @DBLibAPI.open_commit           := GetAddress('open_commit');
+    @DBLibAPI.remove_xact           := GetAddress('remove_xact');
+    @DBLibAPI.scan_xact             := GetAddress('scan_xact');
+    @DBLibAPI.start_xact            := GetAddress('start_xact');
+    @DBLibAPI.stat_xact             := GetAddress('stat_xact');
+    @DBLibAPI.bcp_batch             := GetAddress('bcp_batch');
+    @DBLibAPI.bcp_bind              := GetAddress('bcp_bind');
+    @DBLibAPI.bcp_colfmt            := GetAddress('bcp_colfmt');
+    @DBLibAPI.bcp_collen            := GetAddress('bcp_collen');
+    @DBLibAPI.bcp_colptr            := GetAddress('bcp_colptr');
+    @DBLibAPI.bcp_columns           := GetAddress('bcp_columns');
+    @DBLibAPI.bcp_control           := GetAddress('bcp_control');
+    @DBLibAPI.bcp_done              := GetAddress('bcp_done');
+    @DBLibAPI.bcp_exec              := GetAddress('bcp_exec');
+    @DBLibAPI.bcp_init              := GetAddress('bcp_init');
+    @DBLibAPI.bcp_moretext          := GetAddress('bcp_moretext');
+    @DBLibAPI.bcp_readfmt           := GetAddress('bcp_readfmt');
+    @DBLibAPI.bcp_sendrow           := GetAddress('bcp_sendrow');
+    @DBLibAPI.bcp_setl              := GetAddress('bcp_setl');
+    @DBLibAPI.bcp_writefmt          := GetAddress('bcp_writefmt');
+    @DBLibAPI.dbadata               := GetAddress('dbadata');
+    @DBLibAPI.dbadlen               := GetAddress('dbadlen');
+    @DBLibAPI.dbaltbind             := GetAddress('dbaltbind');
+    @DBLibAPI.dbaltcolid            := GetAddress('dbaltcolid');
+    @DBLibAPI.dbaltlen              := GetAddress('dbaltlen');
+    @DBLibAPI.dbaltop               := GetAddress('dbaltop');
+    @DBLibAPI.dbalttype             := GetAddress('dbalttype');
+    @DBLibAPI.dbaltutype            := GetAddress('dbaltutype');
+    @DBLibAPI.dbanullbind           := GetAddress('dbanullbind');
+    @DBLibAPI.dbbind                := GetAddress('dbbind');
+    @DBLibAPI.dbbylist              := GetAddress('dbbylist');
+    @DBLibAPI.dbcancel              := GetAddress('dbcancel');
+    @DBLibAPI.dbcanquery            := GetAddress('dbcanquery');
+    @DBLibAPI.dbchange              := GetAddress('dbchange');
+    @DBLibAPI.dbclrbuf              := GetAddress('dbclrbuf');
+    @DBLibAPI.dbclropt              := GetAddress('dbclropt');
+    @DBLibAPI.dbcmd                 := GetAddress('dbcmd');
+    @DBLibAPI.dbcmdrow              := GetAddress('dbcmdrow');
+    @DBLibAPI.dbcollen              := GetAddress('dbcollen');
+    @DBLibAPI.dbcolname             := GetAddress('dbcolname');
+    @DBLibAPI.dbcolsource           := GetAddress('dbcolsource');
+    @DBLibAPI.dbcoltype             := GetAddress('dbcoltype');
+    @DBLibAPI.dbcolutype            := GetAddress('dbcolutype');
+    @DBLibAPI.dbconvert             := GetAddress('dbconvert');
+    @DBLibAPI.dbcurcmd              := GetAddress('dbcurcmd');
+    @DBLibAPI.dbcurrow              := GetAddress('dbcurrow');
+    @DBLibAPI.dbcursor              := GetAddress('dbcursor');
+    @DBLibAPI.dbdata                := GetAddress('dbdata');
+    @DBLibAPI.dbexit                := GetAddress('dbexit');
+    @DBLibAPI.dbfcmd                := GetAddress('dbfcmd');
+    @DBLibAPI.dbfirstrow            := GetAddress('dbfirstrow');
+    @DBLibAPI.dbfreebuf             := GetAddress('dbfreebuf');
+    @DBLibAPI.dbfreequal            := GetAddress('dbfreequal');
+    @DBLibAPI.dbgetchar             := GetAddress('dbgetchar');
+    @DBLibAPI.dbgetoff              := GetAddress('dbgetoff');
+    @DBLibAPI.dbgetrow              := GetAddress('dbgetrow');
+    @DBLibAPI.dbgettime             := GetAddress('dbgettime');
+    @DBLibAPI.dbiscount             := GetAddress('dbiscount');
+    @DBLibAPI.dblastrow             := GetAddress('dblastrow');
+    @DBLibAPI.dblogin               := GetAddress('dblogin');
+    @DBLibAPI.dbmorecmds            := GetAddress('dbmorecmds');
+    @DBLibAPI.dbmoretext            := GetAddress('dbmoretext');
+    @DBLibAPI.dbname                := GetAddress('dbname');
+    @DBLibAPI.dbnextrow             := GetAddress('dbnextrow');
+    @DBLibAPI.dbnullbind            := GetAddress('dbnullbind');
+    @DBLibAPI.dbnumalts             := GetAddress('dbnumalts');
+    @DBLibAPI.dbnumcols             := GetAddress('dbnumcols');
+    @DBLibAPI.dbnumcompute          := GetAddress('dbnumcompute');
+    @DBLibAPI.dbnumorders           := GetAddress('dbnumorders');
+    @DBLibAPI.dbnumrets             := GetAddress('dbnumrets');
+    @DBLibAPI.dbopen                := GetAddress('dbopen');
+    @DBLibAPI.dbordercol            := GetAddress('dbordercol');
+    @DBLibAPI.dbprhead              := GetAddress('dbprhead');
+    @DBLibAPI.dbprrow               := GetAddress('dbprrow');
+    @DBLibAPI.dbprtype              := GetAddress('dbprtype');
+    @DBLibAPI.dbqual                := GetAddress('dbqual');
+    @DBLibAPI.dbreadtext            := GetAddress('dbreadtext');
+    @DBLibAPI.dbresults             := GetAddress('dbresults');
+    @DBLibAPI.dbretdata             := GetAddress('dbretdata');
+    @DBLibAPI.dbretlen              := GetAddress('dbretlen');
+    @DBLibAPI.dbretname             := GetAddress('dbretname');
+    @DBLibAPI.dbretstatus           := GetAddress('dbretstatus');
+    @DBLibAPI.dbrettype             := GetAddress('dbrettype');
+    @DBLibAPI.dbrows                := GetAddress('dbrows');
+    @DBLibAPI.dbrowtype             := GetAddress('dbrowtype');
+    @DBLibAPI.dbrpcinit             := GetAddress('dbrpcinit');
+    @DBLibAPI.dbrpcparam            := GetAddress('dbrpcparam');
+    @DBLibAPI.dbrpcsend             := GetAddress('dbrpcsend');
+    @DBLibAPI.dbrpwclr              := GetAddress('dbrpwclr');
+    @DBLibAPI.dbsetavail            := GetAddress('dbsetavail');
+    @DBLibAPI.dbsetlname            := GetAddress('dbsetlname');
+    @DBLibAPI.dbsetlogintime        := GetAddress('dbsetlogintime');
+    @DBLibAPI.dbsetnull             := GetAddress('dbsetnull');
+    @DBLibAPI.dbsettime             := GetAddress('dbsettime');
+    @DBLibAPI.dbsetuserdata         := GetAddress('dbsetuserdata');
+    @DBLibAPI.dbsqlexec             := GetAddress('dbsqlexec');
+    @DBLibAPI.dbsqlok               := GetAddress('dbsqlok');
+    @DBLibAPI.dbsqlsend             := GetAddress('dbsqlsend');
+    @DBLibAPI.dbstrcpy              := GetAddress('dbstrcpy');
+    @DBLibAPI.dbstrlen              := GetAddress('dbstrlen');
+    @DBLibAPI.dbtabcount            := GetAddress('dbtabcount');
+    @DBLibAPI.dbtabname             := GetAddress('dbtabname');
+    @DBLibAPI.dbtabsource           := GetAddress('dbtabsource');
+    @DBLibAPI.dbtsnewlen            := GetAddress('dbtsnewlen');
+    @DBLibAPI.dbtsnewval            := GetAddress('dbtsnewval');
+    @DBLibAPI.dbtsput               := GetAddress('dbtsput');
+    @DBLibAPI.dbtxptr               := GetAddress('dbtxptr');
+    @DBLibAPI.dbtxtimestamp         := GetAddress('dbtxtimestamp');
+    @DBLibAPI.dbtxtsnewval          := GetAddress('dbtxtsnewval');
+    @DBLibAPI.dbtxtsput             := GetAddress('dbtxtsput');
+    @DBLibAPI.dbuse                 := GetAddress('dbuse');
+    @DBLibAPI.dbwritetext           := GetAddress('dbwritetext');
+  end;
+end;
+
+function TZDBLibBasePlainDriver.dbLogin: PLOGINREC;
+begin
+  Result := DBLibAPI.dblogin;
+end;
+
+function TZDBLibBasePlainDriver.dbSetLoginTime(Seconds: DBINT): ZRETCODE;
+begin
+  Result := DBLibAPI.dbsetlogintime(Seconds);
+end;
+
+function TZDBLibBasePlainDriver.dbsetlname(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): ZRETCODE;
+begin
+  Result := DBLibAPI.dbsetlname(Login, Value, Item);
+end;
+
+function TZDBLibBasePlainDriver.dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): ZRETCODE;
+begin
+  Result := DBLibAPI.dbsetlname(Login, HostName, Self.DBVariables.dbSetLoginRec[Z_SETHOST]);
+end;
+
+function TZDBLibBasePlainDriver.dbsetluser(Login: PLOGINREC; UserName: PAnsiChar): ZRETCODE;
+begin
+  Result := DBLibAPI.dbsetlname(Login, UserName, Self.DBVariables.dbSetLoginRec[Z_SETUSER]);
+end;
+
+function TZDBLibBasePlainDriver.dbsetlpwd(Login: PLOGINREC; Password: PAnsiChar): ZRETCODE;
+begin
+  Result := DBLibAPI.dbsetlname(Login, Password, Self.DBVariables.dbSetLoginRec[Z_SETPWD]);
+end;
+
+function TZDBLibBasePlainDriver.dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): ZRETCODE;
+begin
+  Result := DBLibAPI.dbsetlname(Login, AppName, Self.DBVariables.dbSetLoginRec[Z_SETAPP]);
+end;
+
+function TZDBLibBasePlainDriver.dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): ZRETCODE;
+begin
+  Result := DBLibAPI.dbsetlname(Login, NatLangName, Self.DBVariables.dbSetLoginRec[Z_SETLANG]);
+end;
+
+function TZDBLibBasePlainDriver.dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;
+begin
+  DBLibAPI.dbsetlogintime(10);
+  Result := DBLibAPI.dbOpen(Login, Host);
+end;
+
+function TZDBLibBasePlainDriver.dbCancel(dbProc: PDBPROCESS): ZRETCODE;
+begin
+  Result := DBLibAPI.dbcancel(dbProc);
+end;
+
+function TZDBLibBasePlainDriver.dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): ZRETCODE;
+begin
+  Result := DBLibAPI.dbcmd(dbProc, Cmd);
+end;
+
+function TZDBLibBasePlainDriver.dbSqlExec(dbProc: PDBPROCESS; Async: Boolean=False): ZRETCODE;
+begin
+  if Async then
+    Result := dbSqlExecAsync(dbProc)
+  else
+    Result := dbSqlExecSync(dbProc);
+end;
+
+function TZDBLibBasePlainDriver.dbSqlExecSync(dbProc: PDBPROCESS): ZRETCODE;
+begin
+  Result := DBLibAPI.dbSqlExec(dbProc);
+end;
+
+function TZDBLibBasePlainDriver.dbSqlExecAsync(dbProc: PDBPROCESS): ZRETCODE;
+var
+  lStartTick : Int64;
+begin
+  Result := DBLibAPI.dbsqlsend(dbProc);
+  if Result = SUCCEED then begin
+    lStartTick := GetTickCount;
+    repeat
+      //DBApplication.ProcessMessages;
+    until (GetTickCount > lStartTick + TIMEOUT_MAXIMUM * 1000) or (dbdataready(dbProc) = TRUE);
+    Result := DBLibAPI.dbsqlok(dbProc);
+  end;
+end;
+
+function TZDBLibBasePlainDriver.dbResults(dbProc: PDBPROCESS): ZRETCODE;
+begin
+  Result := DBLibAPI.dbResults(dbProc);
+end;
+
+function TZDBLibBasePlainDriver.dbCanQuery(dbProc: PDBPROCESS): ZRETCODE;
+begin
+  Result := DBLibAPI.dbCanQuery(dbProc);
+end;
+
+function TZDBLibBasePlainDriver.dbMoreCmds(dbProc: PDBPROCESS): ZRETCODE;
+begin
+  Result := DBLibAPI.dbMoreCmds(dbProc);
+end;
+
+function TZDBLibBasePlainDriver.dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): ZRETCODE;
+begin
+  Result := DBLibAPI.dbUse(dbProc, dbName);
+end;
+
+function TZDBLibBasePlainDriver.dbName(dbProc: PDBPROCESS): PAnsiChar;
+begin
+  Result := DBLibAPI.dbName(dbProc);
+end;
+
+function TZDBLibBasePlainDriver.dbCmdRow(dbProc: PDBPROCESS): ZRETCODE;
+begin
+  Result := DBLibAPI.dbCmdRow(dbProc);
+end;
+
+function TZDBLibBasePlainDriver.dbNumCols(dbProc: PDBPROCESS): Integer;
+begin
+  Result := DBLibAPI.dbNumCols(dbProc);
+end;
+
+function TZDBLibBasePlainDriver.dbColName(dbProc: PDBPROCESS; Column: Integer): PAnsiChar;
+begin
+  Result := DBLibAPI.dbColName(dbProc, Column);
+end;
+
+function TZDBLibBasePlainDriver.dbColType(dbProc: PDBPROCESS; Column: Integer): Integer;
+begin
+  Result := DBLibAPI.dbColType(dbProc, Column);
+end;
+
+function TZDBLibBasePlainDriver.dbColLen(dbProc: PDBPROCESS; Column: Integer): DBInt;
+begin
+  Result := DBLibAPI.dbColLen(dbProc, Column);
+end;
+
+function TZDBLibBasePlainDriver.dbData(dbProc: PDBPROCESS; Column: Integer): PByte;
+begin
+  Result := DBLibAPI.dbData(dbProc, Column);
+end;
+
+function TZDBLibBasePlainDriver.dbConvert(dbProc: PDBPROCESS; SrcType: Integer; Src: PByte;
+  SrcLen: DBINT; DestType: Integer; Dest: PByte; DestLen: DBINT): Integer;
+begin
+  Result := DBLibAPI.dbConvert(dbProc, SrcType, Src, SrcLen, DestType, Dest, DestLen);
+end;
+
+function TZDBLibBasePlainDriver.dbNextRow(dbProc: PDBPROCESS): STATUS;
+begin
+  Result := DBLibAPI.dbNextRow(dbProc);
+end;
+
+function TZDBLibBasePlainDriver.dbGetRow(dbProc: PDBPROCESS; Row: Integer): STATUS;
+begin
+  Result := DBLibAPI.dbGetRow(dbProc, Row);
+end;
+
+function TZDBLibBasePlainDriver.dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): ZRETCODE;
+begin
+  Result := DBLibAPI.dbRpcInit(dbProc, RpcName, Options);
+end;
+
+function TZDBLibBasePlainDriver.dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
+  Type_: Integer; MaxLen: Integer; DataLen: Integer; Value: Pointer): ZRETCODE;
+begin
+  Result := DBLibAPI.dbRpcParam(dbProc, ParamName, Status, Type_, MaxLen, DataLen, Value);
+end;
+
+function TZDBLibBasePlainDriver.dbRpcSend(dbProc: PDBPROCESS): ZRETCODE;
+begin
+  Result := DBLibAPI.dbRpcSend(dbProc);
+end;
+
+function TZDBLibBasePlainDriver.dbRpcExec(dbProc: PDBPROCESS): ZRETCODE;
+begin
+  Result := DBLibAPI.dbRpcSend(dbProc);
+  if Result = SUCCEED then
+    Result := DBLibAPI.dbSqlOk(dbProc);
+end;
+
+function TZDBLibBasePlainDriver.dbRetStatus(dbProc: PDBPROCESS): Integer;
+begin
+  Result := DBLibAPI.dbRetStatus(dbProc);
+end;
+
+function TZDBLibBasePlainDriver.dbRetName(dbProc: PDBPROCESS; RetNum: Integer): PAnsiChar;
+begin
+  Result := DBLibAPI.dbRetName(dbProc, RetNum);
+end;
+
+function TZDBLibBasePlainDriver.dbRetData(dbProc: PDBPROCESS; RetNum: Integer): Pointer;
+begin
+  Result := DBLibAPI.dbRetData(dbProc, RetNum);
+end;
+
+function TZDBLibBasePlainDriver.dbRetLen(dbProc: PDBPROCESS; RetNum: Integer): Integer;
+begin
+  Result := DBLibAPI.dbRetLen(dbProc, RetNum);
+end;
+
+function TZDBLibBasePlainDriver.dbRetType(dbProc: PDBPROCESS; RetNum: Integer): Integer;
+begin
+  Result := DBLibAPI.dbRetType(dbProc, RetNum);
+end;
+
+function TZDBLibBasePlainDriver.dbrbuf(Proc: PDBPROCESS): DBINT;
+begin
+  Result := DBINT(dbdataready(Proc));
+end;
+
 
 { TZDBLibSybaseASE125PlainDriver }
+
+procedure TZDBLibSybaseASE125PlainDriver.LoadApi;
+begin
+{ ************** Load adresses of API Functions ************* }
+  with Loader do
+  begin
+    @SybaseAPI.db12hour              := GetAddress('db12hour');
+    @SybaseAPI.dberrhandle           := GetAddress('dberrhandle');
+    @SybaseAPI.dbmsghandle           := GetAddress('dbmsghandle');
+    @SybaseAPI.abort_xact            := GetAddress('abort_xact');
+    @SybaseAPI.build_xact_string     := GetAddress('build_xact_string');
+    @SybaseAPI.close_commit          := GetAddress('close_commit');
+    @SybaseAPI.commit_xact           := GetAddress('commit_xact');
+    @SybaseAPI.open_commit           := GetAddress('open_commit');
+    @SybaseAPI.remove_xact           := GetAddress('remove_xact');
+    @SybaseAPI.scan_xact             := GetAddress('scan_xact');
+    @SybaseAPI.start_xact            := GetAddress('start_xact');
+    @SybaseAPI.stat_xact             := GetAddress('stat_xact');
+    @SybaseAPI.bcp_batch             := GetAddress('bcp_batch');
+    @SybaseAPI.bcp_bind              := GetAddress('bcp_bind');
+    @SybaseAPI.bcp_colfmt            := GetAddress('bcp_colfmt');
+    @SybaseAPI.bcp_collen            := GetAddress('bcp_collen');
+    @SybaseAPI.bcp_colptr            := GetAddress('bcp_colptr');
+    @SybaseAPI.bcp_columns           := GetAddress('bcp_columns');
+    @SybaseAPI.bcp_control           := GetAddress('bcp_control');
+    @SybaseAPI.bcp_done              := GetAddress('bcp_done');
+    @SybaseAPI.bcp_exec              := GetAddress('bcp_exec');
+    @SybaseAPI.bcp_init              := GetAddress('bcp_init');
+    @SybaseAPI.bcp_moretext          := GetAddress('bcp_moretext');
+    @SybaseAPI.bcp_readfmt           := GetAddress('bcp_readfmt');
+    @SybaseAPI.bcp_sendrow           := GetAddress('bcp_sendrow');
+    @SybaseAPI.bcp_writefmt          := GetAddress('bcp_writefmt');
+    @SybaseAPI.dbadata               := GetAddress('dbadata');
+    @SybaseAPI.dbadlen               := GetAddress('dbadlen');
+    @SybaseAPI.dbaltbind             := GetAddress('dbaltbind');
+    @SybaseAPI.dbaltcolid            := GetAddress('dbaltcolid');
+    @SybaseAPI.dbaltlen              := GetAddress('dbaltlen');
+    @SybaseAPI.dbaltop               := GetAddress('dbaltop');
+    @SybaseAPI.dbalttype             := GetAddress('dbalttype');
+    @SybaseAPI.dbaltutype            := GetAddress('dbaltutype');
+    @SybaseAPI.dbanullbind           := GetAddress('dbanullbind');
+    @SybaseAPI.dbbind                := GetAddress('dbbind');
+    @SybaseAPI.dbbylist              := GetAddress('dbbylist');
+    @SybaseAPI.dbcancel              := GetAddress('dbcancel');
+    @SybaseAPI.dbcanquery            := GetAddress('dbcanquery');
+    @SybaseAPI.dbchange              := GetAddress('dbchange');
+    @SybaseAPI.dbclose               := GetAddress('dbclose');
+    @SybaseAPI.dbclrbuf              := GetAddress('dbclrbuf');
+    @SybaseAPI.dbclropt              := GetAddress('dbclropt');
+    @SybaseAPI.dbcmd                 := GetAddress('dbcmd');
+    @SybaseAPI.dbcmdrow              := GetAddress('dbcmdrow');
+    @SybaseAPI.dbcolbrowse           := GetAddress('dbcolbrowse');
+    @SybaseAPI.dbcollen              := GetAddress('dbcollen');
+    @SybaseAPI.dbcolname             := GetAddress('dbcolname');
+    @SybaseAPI.dbcolsource           := GetAddress('dbcolsource');
+  //  @SybaseAPI.dbcoltypeinfo         := GetAddress('dbcoltypeinfo');
+    @SybaseAPI.dbcoltype             := GetAddress('dbcoltype');
+    @SybaseAPI.dbcolutype            := GetAddress('dbcolutype');
+    @SybaseAPI.dbconvert             := GetAddress('dbconvert');
+    @SybaseAPI.dbcount               := GetAddress('dbcount');
+    @SybaseAPI.dbcurcmd              := GetAddress('dbcurcmd');
+    @SybaseAPI.dbcurrow              := GetAddress('dbcurrow');
+    @SybaseAPI.dbcursor              := GetAddress('dbcursor');
+    @SybaseAPI.dbcursorbind          := GetAddress('dbcursorbind');
+    @SybaseAPI.dbcursorclose         := GetAddress('dbcursorclose');
+    @SybaseAPI.dbcursorcolinfo       := GetAddress('dbcursorcolinfo');
+    @SybaseAPI.dbcursorfetch         := GetAddress('dbcursorfetch');
+    @SybaseAPI.dbcursorinfo          := GetAddress('dbcursorinfo');
+    @SybaseAPI.dbcursoropen          := GetAddress('dbcursoropen');
+    @SybaseAPI.dbdata                := GetAddress('dbdata');
+    @SybaseAPI.dbdatecrack           := GetAddress('dbdatecrack');
+    @SybaseAPI.dbdatlen              := GetAddress('dbdatlen');
+    @SybaseAPI.dbdead                := GetAddress('dbdead');
+    @SybaseAPI.dbexit                := GetAddress('dbexit');
+    @SybaseAPI.dbfcmd                := GetAddress('dbfcmd');
+    @SybaseAPI.dbfirstrow            := GetAddress('dbfirstrow');
+    @SybaseAPI.dbfreebuf             := GetAddress('dbfreebuf');
+    @SybaseAPI.dbloginfree           := GetAddress('dbloginfree');
+    @SybaseAPI.dbfreequal            := GetAddress('dbfreequal');
+    @SybaseAPI.dbgetchar             := GetAddress('dbgetchar');
+    @SybaseAPI.dbgetmaxprocs         := GetAddress('dbgetmaxprocs');
+    @SybaseAPI.dbgetoff              := GetAddress('dbgetoff');
+    @SybaseAPI.dbgetpacket           := GetAddress('dbgetpacket');
+    @SybaseAPI.dbgetrow              := GetAddress('dbgetrow');
+    @SybaseAPI.dbgetuserdata         := GetAddress('dbgetuserdata');
+    @SybaseAPI.dbhasretstat          := GetAddress('dbhasretstat');
+    @SybaseAPI.dbinit                := GetAddress('dbinit');
+    @SybaseAPI.dbisavail             := GetAddress('dbisavail');
+    @SybaseAPI.dbisopt               := GetAddress('dbisopt');
+    @SybaseAPI.dblastrow             := GetAddress('dblastrow');
+    @SybaseAPI.dblogin               := GetAddress('dblogin');
+    @SybaseAPI.dbmorecmds            := GetAddress('dbmorecmds');
+    @SybaseAPI.dbmoretext            := GetAddress('dbmoretext');
+    @SybaseAPI.dbname                := GetAddress('dbname');
+    @SybaseAPI.dbnextrow             := GetAddress('dbnextrow');
+    @SybaseAPI.dbnullbind            := GetAddress('dbnullbind');
+    @SybaseAPI.dbnumalts             := GetAddress('dbnumalts');
+    @SybaseAPI.dbnumcols             := GetAddress('dbnumcols');
+    @SybaseAPI.dbnumcompute          := GetAddress('dbnumcompute');
+    @SybaseAPI.dbnumorders           := GetAddress('dbnumorders');
+    @SybaseAPI.dbnumrets             := GetAddress('dbnumrets');
+    @SybaseAPI.dbopen                := GetAddress('dbopen');
+    @SybaseAPI.dbordercol            := GetAddress('dbordercol');
+    @SybaseAPI.dbprhead              := GetAddress('dbprhead');
+    @SybaseAPI.dbprrow               := GetAddress('dbprrow');
+    @SybaseAPI.dbprtype              := GetAddress('dbprtype');
+    @SybaseAPI.dbqual                := GetAddress('dbqual');
+    @SybaseAPI.dbreadtext            := GetAddress('dbreadtext');
+    @SybaseAPI.dbresults             := GetAddress('dbresults');
+    @SybaseAPI.dbretdata             := GetAddress('dbretdata');
+    @SybaseAPI.dbretlen              := GetAddress('dbretlen');
+    @SybaseAPI.dbretname             := GetAddress('dbretname');
+    @SybaseAPI.dbretstatus           := GetAddress('dbretstatus');
+    @SybaseAPI.dbrettype             := GetAddress('dbrettype');
+    @SybaseAPI.dbrows                := GetAddress('dbrows');
+    @SybaseAPI.dbrowtype             := GetAddress('dbrowtype');
+    @SybaseAPI.dbrpcinit             := GetAddress('dbrpcinit');
+    @SybaseAPI.dbrpcparam            := GetAddress('dbrpcparam');
+    @SybaseAPI.dbrpcsend             := GetAddress('dbrpcsend');
+    @SybaseAPI.dbrpwclr              := GetAddress('dbrpwclr');
+    @SybaseAPI.dbsetavail            := GetAddress('dbsetavail');
+    @SybaseAPI.dbsetmaxprocs         := GetAddress('dbsetmaxprocs');
+    @SybaseAPI.dbsetlname            := GetAddress('dbsetlname');
+    @SybaseAPI.dbsetlogintime        := GetAddress('dbsetlogintime');
+    @SybaseAPI.dbsetnull             := GetAddress('dbsetnull');
+    @SybaseAPI.dbsetopt              := GetAddress('dbsetopt');
+    @SybaseAPI.dbsettime             := GetAddress('dbsettime');
+    @SybaseAPI.dbsetuserdata         := GetAddress('dbsetuserdata');
+    @SybaseAPI.dbsqlexec             := GetAddress('dbsqlexec');
+    @SybaseAPI.dbsqlok               := GetAddress('dbsqlok');
+    @SybaseAPI.dbsqlsend             := GetAddress('dbsqlsend');
+    @SybaseAPI.dbstrcpy              := GetAddress('dbstrcpy');
+    @SybaseAPI.dbstrlen              := GetAddress('dbstrlen');
+    @SybaseAPI.dbtabbrowse           := GetAddress('dbtabbrowse');
+    @SybaseAPI.dbtabcount            := GetAddress('dbtabcount');
+    @SybaseAPI.dbtabname             := GetAddress('dbtabname');
+    @SybaseAPI.dbtabsource           := GetAddress('dbtabsource');
+    @SybaseAPI.dbtsnewlen            := GetAddress('dbtsnewlen');
+    @SybaseAPI.dbtsnewval            := GetAddress('dbtsnewval');
+    @SybaseAPI.dbtsput               := GetAddress('dbtsput');
+    @SybaseAPI.dbtxptr               := GetAddress('dbtxptr');
+    @SybaseAPI.dbtxtimestamp         := GetAddress('dbtxtimestamp');
+    @SybaseAPI.dbtxtsnewval          := GetAddress('dbtxtsnewval');
+    @SybaseAPI.dbtxtsput             := GetAddress('dbtxtsput');
+    @SybaseAPI.dbuse                 := GetAddress('dbuse');
+    @SybaseAPI.dbvarylen             := GetAddress('dbvarylen');
+    @SybaseAPI.dbwillconvert         := GetAddress('dbwillconvert');
+    @SybaseAPI.dbwritetext           := GetAddress('dbwritetext');
+
+    SybaseAPI.dbinit;
+
+    OldSybaseErrorHandle := SybaseAPI.dberrhandle(SybaseErrorHandle);
+    OldSybaseMessageHandle := SybaseAPI.dbmsghandle(SybaseMessageHandle);
+  end;
+end;
 
 function TZDBLibSybaseASE125PlainDriver.Clone: IZPlainDriver;
 begin
@@ -449,6 +1100,59 @@ end;
 
 constructor TZDBLibSybaseASE125PlainDriver.Create;
 begin
+  inherited Create;
+  {$IFDEF MSWINDOWS}
+  Loader.AddLocation(LIBSYBDB_WINDOWS_DLL_LOCATION);
+  {$ELSE}
+    {$IFDEF UNIX}
+    Loader.AddLocation(LIBSYBDB_LINUX_DLL_LOCATION);
+    {$ENDIF}
+  {$ENDIF}
+
+  DBVariables.DBoptions[Z_PARSEONLY]      := DBLIBDBPARSEONLY;
+  DBVariables.DBoptions[Z_SHOWPLAN]       := DBLIBDBSHOWPLAN;
+  DBVariables.DBoptions[Z_NOEXEC]         := DBLIBDBNOEXEC;
+  DBVariables.DBoptions[Z_ARITHIGNORE]    := DBLIBDBARITHIGNORE;
+  DBVariables.DBoptions[Z_NOCOUNT]        := DBLIBDBNOCOUNT;
+  DBVariables.DBoptions[Z_ARITHABORT]     := DBLIBDBARITHABORT;
+  DBVariables.DBoptions[Z_TEXTLIMIT]      := DBLIBDBTEXTLIMIT;
+  DBVariables.DBoptions[Z_OFFSET]         := DBLIBDBOFFSET;
+  DBVariables.DBoptions[Z_STAT]           := DBLIBDBSTAT;
+  DBVariables.DBoptions[Z_STORPROCID]     := DBLIBDBSTORPROCID;
+  DBVariables.DBoptions[Z_BUFFER]         := DBLIBDBBUFFER;
+  DBVariables.DBoptions[Z_NOAUTOFREE]     := DBLIBDBNOAUTOFREE;
+  DBVariables.DBoptions[Z_ROWCOUNT]       := DBLIBDBROWCOUNT;
+  DBVariables.DBoptions[Z_TEXTSIZE]       := DBLIBDBTEXTSIZE;
+  DBVariables.DBoptions[Z_CLIENTCURSORS]  := DBLIBDBCLIENTCURSORS;
+  DBVariables.DBoptions[Z_SETTIME] 	      := DBLIBDBSET_TIME;
+  DBVariables.DBoptions[Z_QUOTEDIDENT]    := DBLIBDBQUOTEDIDENT;
+  DBVariables.DBoptions[Z_ANSITOOEM]      := DBLIBDBANSITOOEM;
+  DBVariables.DBoptions[Z_OEMTOANSI]      := DBLIBDBOEMTOANSI;
+  {MSSQL Loginrec manipulations}
+  DBVariables.DBSetLoginRec[Z_SETHOST]    := SYBDBSETHOST;
+  DBVariables.DBSetLoginRec[Z_SETUSER]    := SYBDBSETUSER;
+  DBVariables.DBSetLoginRec[Z_SETPWD]     := SYBDBSETPWD;
+  DBVariables.DBSetLoginRec[Z_SETHID]     := SYBDBSETHID;
+  DBVariables.DBSetLoginRec[Z_SETAPP]     := SYBDBSETAPP;
+  DBVariables.DBSetLoginRec[Z_SETBCP]     := SYBDBSETBCP;
+  DBVariables.DBSetLoginRec[Z_SETLANG]    := SYBDBSETLANG;
+  DBVariables.DBSetLoginRec[Z_SETNOSHORT] := SYBDBSETNOSHORT;
+  DBVariables.DBSetLoginRec[Z_SETHIER]    := SYBDBSETHIER;
+  DBVariables.DBSetLoginRec[Z_SETCHARSET] := SYBDBSETCHARSET;
+  DBVariables.DBSetLoginRec[Z_SETPACKET]  := SYBDBSETPACKET;
+  DBVariables.DBSetLoginRec[Z_SETENCRYPT] := SYBDBSETENCRYPT;
+  DBVariables.dbSetLoginRec[Z_SETLABELED] := SYBDBSETLABELED;
+end;
+
+destructor TZDBLibSybaseASE125PlainDriver.Destroy;
+begin
+  if Loader.Loaded then
+  begin
+    SybaseAPI.dberrhandle(OldSybaseErrorHandle);
+    SybaseAPI.dbmsghandle(OldSybaseMessageHandle);
+    SybaseAPI.dbexit;
+  end;
+  inherited Destroy;
 end;
 
 function TZDBLibSybaseASE125PlainDriver.GetProtocol: string;
@@ -461,281 +1165,324 @@ begin
   Result := 'Native dblib driver for Sybase ASE 12.5';
 end;
 
-procedure TZDBLibSybaseASE125PlainDriver.Initialize(const Location: String);
+function TZDBLibSybaseASE125PlainDriver.dbcolbrowse(Proc: PDBPROCESS; Column: Integer): LongBool;
 begin
-  ZPlainDBLibSybaseASE125.LibraryLoader.AddLocation(Location);
-  ZPlainDBLibSybaseASE125.LibraryLoader.LoadIfNeeded;
+  Result := SybaseAPI.dbcolbrowse(Proc, Column);
 end;
-
-
-procedure TZDBLibSybaseASE125PlainDriver.CheckError;
-var
-  I: Integer;
-  S: AnsiString;
-  lErrorEntry: PDBLibError;
-  lMesageEntry: PDBLibMessage;
-begin
-  { TODO -ofjanos -cGeneral : Error handling should be based on connection object.
-  At the moment it is global. }
-  if (SybaseErrors.Count = 0) and (SybaseMessages.Count = 0) then
-    Exit;
-  S := '';
-  for I := 0 to SybaseErrors.Count - 1 do
-    S := S + PDBLibError(SybaseErrors.Items[I]).DbErrStr + ' ' + PDBLibError(SybaseErrors.Items[I]).OsErrStr + ' '#13;
-  for I := 0 to SybaseMessages.Count - 1 do
-    if PDBLibMessage(SybaseMessages.Items[I]).Severity > EXINFO then
-      S := S + PDBLibMessage(SybaseMessages.Items[I]).MsgText + ' '#13;
-  while SybaseErrors.Count > 0 do
-  begin
-    lErrorEntry := SybaseErrors.Items[0];
-    Dispose(lErrorEntry);
-    SybaseErrors.Delete(0);
-  end;
-  SybaseErrors.Clear;
-  while SybaseMessages.Count > 0 do
-  begin
-    lMesageEntry := SybaseMessages.Items[0];
-    Dispose(lMesageEntry);
-    SybaseMessages.Delete(0);
-  end;
-  SybaseMessages.Clear;
-  if S <> '' then
-    raise Exception.Create(S);
-end;
-
 
 function TZDBLibSybaseASE125PlainDriver.dbDead(dbProc: PDBPROCESS): Boolean;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbDead(dbProc);
+  Result := SybaseAPI.dbDead(dbProc);
 end;
 
 function TZDBLibSybaseASE125PlainDriver.dbLogin: PLOGINREC;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbLogin;
+  Result := SybaseAPI.dbLogin;
 end;
 
 procedure TZDBLibSybaseASE125PlainDriver.dbLoginFree(Login: PLOGINREC);
 begin
-  ZPlainDBLibSybaseASE125.dbLoginFree(Login);
+  SybaseAPI.dbLoginFree(Login);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbSetLoginTime(Seconds: Integer): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSetLoginTime(Seconds: DBINT): ZRETCODE;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbsetlogintime(Seconds);
+  Result := SybaseAPI.dbsetlogintime(Seconds);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbsetlname(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbsetlname(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): ZRETCODE;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbsetlname(Login, Value, Item);
+  Result := SybaseAPI.dbsetlname(Login, Value, Item);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): ZRETCODE;
 begin
-  Result := ZPlainDBLibSybaseASE125.DBSETLHOST(Login, HostName);
+  Result := SybaseAPI.dbsetlname(Login, HostName, Self.DBVariables.dbSetLoginRec[Z_SETHOST]);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbsetluser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbsetluser(Login: PLOGINREC; UserName: PAnsiChar): ZRETCODE;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbsetluser(Login, UserName);
+  Result := SybaseAPI.dbsetlname(Login, UserName, Self.DBVariables.dbSetLoginRec[Z_SETUSER]);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbsetlpwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbsetlpwd(Login: PLOGINREC; Password: PAnsiChar): ZRETCODE;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbsetlpwd(Login, Password);
+  Result := SybaseAPI.dbsetlname(Login, Password, Self.DBVariables.dbSetLoginRec[Z_SETPWD]);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): ZRETCODE;
 begin
-  Result := ZPlainDBLibSybaseASE125.DBSETLAPP(Login, AppName);
+  Result := SybaseAPI.dbsetlname(Login, AppName, Self.DBVariables.dbSetLoginRec[Z_SETAPP]);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): ZRETCODE;
 begin
-  Result := ZPlainDBLibSybaseASE125.DBSETLNATLANG(Login, NatLangName);
+  Result := SybaseAPI.dbsetlname(Login, NatLangName, Self.DBVariables.dbSetLoginRec[Z_SETLANG]);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): ZRETCODE;
 begin
-  Result := ZPlainDBLibSybaseASE125.DBSETLCHARSET(Login, CharsetName);
+  Result := SybaseAPI.dbsetlname(Login, CharsetName, Self.DBVariables.dbSetLoginRec[Z_SETCHARSET]);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbsetlsecure(Login: PLOGINREC): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSetLSecure(Login: PLOGINREC): ZRETCODE;
 begin
-  Result := 0;
+  Result := 0
 end;
 
 function TZDBLibSybaseASE125PlainDriver.dbsetmaxprocs(
-  MaxProcs: SmallInt): RETCODE;
+  MaxProcs: SmallInt): ZRETCODE;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbsetmaxprocs(MaxProcs);
+  Result := SybaseAPI.dbsetmaxprocs(MaxProcs);
 end;
 
 function TZDBLibSybaseASE125PlainDriver.dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbOpen(Login, Host);
+  Result := SybaseAPI.dbOpen(Login, Host);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbCancel(dbProc: PDBPROCESS): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbCancel(dbProc: PDBPROCESS): ZRETCODE;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbcancel(dbProc);
+  Result := SybaseAPI.dbcancel(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): ZRETCODE;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbcmd(dbProc, Cmd);
+  Result := SybaseAPI.dbcmd(dbProc, Cmd);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbSqlExec(dbProc: PDBPROCESS): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSqlExec(dbProc: PDBPROCESS; Async: Boolean=False): ZRETCODE;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbSqlExec(dbProc);
+  if Async then
+    Result := dbSqlExecSync(dbProc)
+  else
+    Result := dbSqlExecAsync(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbResults(dbProc: PDBPROCESS): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSqlExecSync(dbProc: PDBPROCESS): ZRETCODE;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbResults(dbProc);
+  Result := SybaseAPI.dbSqlExec(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbCanQuery(dbProc: PDBPROCESS): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbSqlExecAsync(dbProc: PDBPROCESS): ZRETCODE;
+var
+  lStartTick : Int64;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbCanQuery(dbProc);
+  Result := SybaseAPI.dbsqlsend(dbProc);
+  if Result = SUCCEED then begin
+    lStartTick := GetTickCount;
+    repeat
+      continue;
+    until (GetTickCount > lStartTick + TIMEOUT_MAXIMUM * 1000) or (dbdataready(dbProc) = TRUE);
+    Result := SybaseAPI.dbsqlok(dbProc);
+  end;
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbMoreCmds(dbProc: PDBPROCESS): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbResults(dbProc: PDBPROCESS): ZRETCODE;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbMoreCmds(dbProc);
+  Result := SybaseAPI.dbResults(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbCanQuery(dbProc: PDBPROCESS): ZRETCODE;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbUse(dbProc, dbName);
+  Result := SybaseAPI.dbCanQuery(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbSetOpt(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar = nil; Int_Param: Integer = -1): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbMoreCmds(dbProc: PDBPROCESS): ZRETCODE;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbSetOpt(dbProc, Option, Char_Param, Int_Param);
+  Result := SybaseAPI.dbMoreCmds(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbClose(dbProc: PDBPROCESS): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): ZRETCODE;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbClose(dbProc);
+  Result := SybaseAPI.dbUse(dbProc, dbName);
+end;
+
+function TZDBLibSybaseASE125PlainDriver.dbSetOpt(dbProc: PDBPROCESS; Option: DBINT; Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): ZRETCODE;
+begin
+  Result := SybaseAPI.dbSetOpt(dbProc, Option, Char_Param, Int_Param);
+end;
+
+function TZDBLibSybaseASE125PlainDriver.dbClose(dbProc: PDBPROCESS): ZRETCODE;
+begin
+  Result := SybaseAPI.dbClose(dbProc);
 end;
 
 function TZDBLibSybaseASE125PlainDriver.dbName(dbProc: PDBPROCESS): PAnsiChar;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbName(dbProc);
+  Result := SybaseAPI.dbName(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbCmdRow(dbProc: PDBPROCESS): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbCmdRow(dbProc: PDBPROCESS): ZRETCODE;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbCmdRow(dbProc);
+  Result := SybaseAPI.dbCmdRow(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbNumCols(dbProc: PDBPROCESS): Integer;
+function TZDBLibSybaseASE125PlainDriver.dbNumCols(dbProc: PDBPROCESS): DBINT;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbNumCols(dbProc);
+  Result := SybaseAPI.dbNumCols(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbColName(dbProc: PDBPROCESS; Column: Integer): PAnsiChar;
+function TZDBLibSybaseASE125PlainDriver.dbColName(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbColName(dbProc, Column);
+  Result := SybaseAPI.dbColName(dbProc, Column);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbColType(dbProc: PDBPROCESS; Column: Integer): Integer;
+function TZDBLibSybaseASE125PlainDriver.dbColType(dbProc: PDBPROCESS; Column: DBINT): DBINT;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbColType(dbProc, Column);
+  Result := SybaseAPI.dbColType(dbProc, Column);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbColLen(dbProc: PDBPROCESS; Column: Integer): DBInt;
+function TZDBLibSybaseASE125PlainDriver.dbColLen(dbProc: PDBPROCESS; Column: DBINT): DBInt;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbColLen(dbProc, Column);
+  Result := SybaseAPI.dbColLen(dbProc, Column);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbData(dbProc: PDBPROCESS; Column: Integer): PByte;
+function TZDBLibSybaseASE125PlainDriver.dbData(dbProc: PDBPROCESS; Column: DBINT): PByte;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbData(dbProc, Column);
+  Result := SybaseAPI.dbData(dbProc, Column);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbDatLen(dbProc: PDBPROCESS; Column: Integer): Integer;
+function TZDBLibSybaseASE125PlainDriver.dbDatLen(dbProc: PDBPROCESS; Column: DBINT): DBINT;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbDatLen(dbProc, Column);
+  Result := SybaseAPI.dbDatLen(dbProc, Column);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbConvert(dbProc: PDBPROCESS; SrcType: Integer; Src: PByte;
-  SrcLen: DBINT; DestType: Integer; Dest: PByte; DestLen: DBINT): Integer;
+function TZDBLibSybaseASE125PlainDriver.dbConvert(dbProc: PDBPROCESS; SrcType: DBINT; Src: PByte;
+  SrcLen: DBINT; DestType: DBINT; Dest: PByte; DestLen: DBINT): DBINT;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbConvert(dbProc, SrcType, Src, SrcLen, DestType, Dest, DestLen);
+  Result := SybaseAPI.dbConvert(dbProc, SrcType, Src, SrcLen, DestType, Dest, DestLen);
 end;
 
 function TZDBLibSybaseASE125PlainDriver.dbNextRow(dbProc: PDBPROCESS): STATUS;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbNextRow(dbProc);
+  Result := SybaseAPI.dbNextRow(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbGetRow(dbProc: PDBPROCESS; Row: Integer): STATUS;
+function TZDBLibSybaseASE125PlainDriver.dbGetRow(dbProc: PDBPROCESS; Row: DBINT): STATUS;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbGetRow(dbProc, Row);
+  Result := SybaseAPI.dbGetRow(dbProc, Row);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbCount(dbProc: PDBPROCESS): Integer;
+function TZDBLibSybaseASE125PlainDriver.dbCount(dbProc: PDBPROCESS): DBINT;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbCount(dbProc);
+  Result := SybaseAPI.dbCount(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): ZRETCODE;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbRpcInit(dbProc, RpcName, Options);
+  Result := SybaseAPI.dbRpcInit(dbProc, RpcName, Options);
 end;
 
 function TZDBLibSybaseASE125PlainDriver.dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
-  Type_: Integer; MaxLen: Integer; DataLen: Integer; Value: Pointer): RETCODE;
+  Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): ZRETCODE;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbRpcParam(dbProc, ParamName, Status, Type_, MaxLen, DataLen, Value);
+  Result := SybaseAPI.dbRpcParam(dbProc, ParamName, Status, Type_, MaxLen, DataLen, Value);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbRpcSend(dbProc: PDBPROCESS): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbRpcSend(dbProc: PDBPROCESS): ZRETCODE;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbRpcSend(dbProc);
+  Result := SybaseAPI.dbRpcSend(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbRpcExec(dbProc: PDBPROCESS): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbRpcExec(dbProc: PDBPROCESS): ZRETCODE;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbRpcSend(dbProc);
+  Result := SybaseAPI.dbRpcSend(dbProc);
   if Result = SUCCEED then
-    Result := ZPlainDBLibSybaseASE125.dbSqlOk(dbProc);
+    Result := SybaseAPI.dbSqlOk(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbRetStatus(dbProc: PDBPROCESS): Integer;
+function TZDBLibSybaseASE125PlainDriver.dbRetStatus(dbProc: PDBPROCESS): DBINT;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbRetStatus(dbProc);
+  Result := SybaseAPI.dbRetStatus(dbProc);
 end;
 
 function TZDBLibSybaseASE125PlainDriver.dbHasRetStat(dbProc: PDBPROCESS): Boolean;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbHasRetStat(dbProc);
+  Result := SybaseAPI.dbHasRetStat(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbRetName(dbProc: PDBPROCESS; RetNum: Integer): PAnsiChar;
+function TZDBLibSybaseASE125PlainDriver.dbRetName(dbProc: PDBPROCESS; RetNum: DBINT): PAnsiChar;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbRetName(dbProc, RetNum);
+  Result := SybaseAPI.dbRetName(dbProc, RetNum);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbRetData(dbProc: PDBPROCESS; RetNum: Integer): Pointer;
+function TZDBLibSybaseASE125PlainDriver.dbRetData(dbProc: PDBPROCESS; RetNum: DBINT): Pointer;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbRetData(dbProc, RetNum);
+  Result := SybaseAPI.dbRetData(dbProc, RetNum);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbRetLen(dbProc: PDBPROCESS; RetNum: Integer): Integer;
+function TZDBLibSybaseASE125PlainDriver.dbRetLen(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbRetLen(dbProc, RetNum);
+  Result := SybaseAPI.dbRetLen(dbProc, RetNum);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbRetType(dbProc: PDBPROCESS; RetNum: Integer): Integer;
+function TZDBLibSybaseASE125PlainDriver.dbRetType(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
 begin
-  Result := ZPlainDBLibSybaseASE125.dbRetType(dbProc, RetNum);
+  Result := SybaseAPI.dbRetType(dbProc, RetNum);
 end;
 
+function TZDBLibSybaseASE125PlainDriver.dbrbuf(Proc: PDBPROCESS): DBINT;
+begin
+  Result := 0;
+end;
+
+function TZDBLibSybaseASE125PlainDriver.dbdataready(Proc: PDBPROCESS): LongBool;
+begin
+  Result := Proc <> nil;
+end;
 
 {TZDBLibMSSQL7PlainDriver}
+
+procedure TZDBLibMSSQL7PlainDriver.LoadApi;
+begin
+  inherited LoadAPI;
+{ ************** Load adresses of API Functions ************* }
+  with Loader do
+  begin
+    //@MsSQLAPI.dbtablecolinfo  := GetAddress('dbtablecolinfo');
+    @MsSQLAPI.dbdataready           := GetAddress('dbdataready');
+    @MsSQLAPI.dbdatecrack           := GetAddress('dbdatecrack');
+    @MsSQLAPI.dbdatlen              := GetAddress('dbdatlen');
+    @MsSQLAPI.dbdead                := GetAddress('dbdead');
+    @MsSQLAPI.dbclose               := GetAddress('dbclose');
+    @MsSQLAPI.dbcolbrowse           := GetAddress('dbcolbrowse');
+    @MsSQLAPI.dbcolinfo             := GetAddress('dbcolinfo');
+    @MsSQLAPI.dbcount               := GetAddress('dbcount');
+    @MsSQLAPI.dbcursorbind          := GetAddress('dbcursorbind');
+    @MsSQLAPI.dbcursorclose         := GetAddress('dbcursorclose');
+    @MsSQLAPI.dbcursorcolinfo       := GetAddress('dbcursorcolinfo');
+    @MsSQLAPI.dbcursorfetch         := GetAddress('dbcursorfetch');
+    @MsSQLAPI.dbcursorfetchex       := GetAddress('dbcursorfetchex');
+    @MsSQLAPI.dbcursorinfo          := GetAddress('dbcursorinfo');
+    @MsSQLAPI.dbcursorinfoex        := GetAddress('dbcursorinfoex');
+    @MsSQLAPI.dbcursoropen          := GetAddress('dbcursoropen');
+    @MsSQLAPI.dbWinexit             := GetAddress('dbwinexit');
+    @MsSQLAPI.dbenlisttrans         := GetAddress('dbenlisttrans');
+    @MsSQLAPI.dbenlistxatrans       := GetAddress('dbenlistxatrans');
+    @MsSQLAPI.dbfreelogin           := GetAddress('dbfreelogin');
+    @MsSQLAPI.dbgetmaxprocs         := GetAddress('dbgetmaxprocs');
+    @MsSQLAPI.dbgetpacket           := GetAddress('dbgetpacket');
+    @MsSQLAPI.dbgetuserdata         := GetAddress('dbgetuserdata');
+    @MsSQLAPI.dbhasretstat          := GetAddress('dbhasretstat');
+    @MsSQLAPI.dbinit                := GetAddress('dbinit');
+    @MsSQLAPI.dbisavail             := GetAddress('dbisavail');
+    @MsSQLAPI.dbisopt               := GetAddress('dbisopt');
+    @MsSQLAPI.dbprocinfo            := GetAddress('dbprocinfo');
+    @MsSQLAPI.dbrpcexec             := GetAddress('dbrpcexec');
+    @MsSQLAPI.dbserverenum          := GetAddress('dbserverenum');
+    @MsSQLAPI.dbsetmaxprocs         := GetAddress('dbsetmaxprocs');
+    @MsSQLAPI.dbsetlpacket          := GetAddress('dbsetlpacket');
+    @MsSQLAPI.dbsetopt              := GetAddress('dbsetopt');
+    @MsSQLAPI.dbtabbrowse           := GetAddress('dbtabbrowse');
+    @MsSQLAPI.dbvarylen             := GetAddress('dbvarylen');
+    @MsSQLAPI.dbwillconvert         := GetAddress('dbwillconvert');
+    @MsSQLAPI.dbupdatetext          := GetAddress('dbupdatetext');
+    MsSQLAPI.dbinit;
+  end;
+  OldMsSQLErrorHandle := DBLibAPI.dberrhandle(DbLibErrorHandle);
+  OldMsSQLMessageHandle := DBLibAPI.dbmsghandle(DbLibMessageHandle);
+end;
 
 function TZDBLibMSSQL7PlainDriver.Clone: IZPlainDriver;
 begin
@@ -744,6 +1491,50 @@ end;
 
 constructor TZDBLibMSSQL7PlainDriver.Create;
 begin
+  inherited Create;
+  Loader.AddLocation(NTWDBLIB_DLL_LOCATION);
+
+  DBVariables.DBoptions[Z_PARSEONLY]      := DBLIBDBPARSEONLY;
+  DBVariables.DBoptions[Z_SHOWPLAN]       := DBLIBDBSHOWPLAN;
+  DBVariables.DBoptions[Z_NOEXEC]         := DBLIBDBNOEXEC;
+  DBVariables.DBoptions[Z_ARITHIGNORE]    := DBLIBDBARITHIGNORE;
+  DBVariables.DBoptions[Z_NOCOUNT]        := DBLIBDBNOCOUNT;
+  DBVariables.DBoptions[Z_ARITHABORT]     := DBLIBDBARITHABORT;
+  DBVariables.DBoptions[Z_TEXTLIMIT]      := DBLIBDBTEXTLIMIT;
+  DBVariables.DBoptions[Z_OFFSET]         := DBLIBDBOFFSET;
+  DBVariables.DBoptions[Z_STAT]           := DBLIBDBSTAT;
+  DBVariables.DBoptions[Z_STORPROCID]     := DBLIBDBSTORPROCID;
+  DBVariables.DBoptions[Z_BUFFER]         := DBLIBDBBUFFER;
+  DBVariables.DBoptions[Z_NOAUTOFREE]     := DBLIBDBNOAUTOFREE;
+  DBVariables.DBoptions[Z_ROWCOUNT]       := DBLIBDBROWCOUNT;
+  DBVariables.DBoptions[Z_TEXTSIZE]       := DBLIBDBTEXTSIZE;
+  DBVariables.DBoptions[Z_CLIENTCURSORS]  := DBLIBDBCLIENTCURSORS;
+  DBVariables.DBoptions[Z_SETTIME] 	      := DBLIBDBSET_TIME;
+  DBVariables.DBoptions[Z_QUOTEDIDENT] 	  := DBLIBDBQUOTEDIDENT;
+  DBVariables.DBoptions[Z_ANSITOOEM]      := DBLIBDBANSITOOEM;
+  DBVariables.DBoptions[Z_OEMTOANSI]      := DBLIBDBOEMTOANSI;
+  {MsSQL Loginrec manipulations}
+  DBVariables.DBSetLoginRec[Z_SETHOST]    := MSDBSETHOST;
+  DBVariables.DBSetLoginRec[Z_SETUSER]    := MSDBSETUSER;
+  DBVariables.DBSetLoginRec[Z_SETPWD]     := MSDBSETPWD;
+  DBVariables.DBSetLoginRec[Z_SETHID]     := MSDBSETID;
+  DBVariables.DBSetLoginRec[Z_SETAPP]     := MSDBSETAPP;
+  DBVariables.DBSetLoginRec[Z_SETSECURE]  := MSDBSETSECURE;
+  DBVariables.DBSetLoginRec[Z_SETLANG]    := MSDBSETLANG;
+  DBVariables.DBSetLoginRec[Z_SETLOGINTIME]:= MSDBSET_LOGIN_TIME;
+  DBVariables.DBSetLoginRec[Z_SETFALLBACK]:= MSDBSETFALLBACK;
+end;
+
+destructor TZDBLibMSSQL7PlainDriver.Destroy;
+begin
+  if Loader.Loaded then
+  begin
+    DbLibAPI.dberrhandle(DbLibErrorHandle);
+    DbLibAPI.dbmsghandle(DbLibMessageHandle);
+    MsSQLAPI.dbWinexit;
+    DbLibAPI.dbExit;
+  end;
+  inherited Destroy;
 end;
 
 function TZDBLibMSSQL7PlainDriver.GetProtocol: string;
@@ -756,363 +1547,108 @@ begin
   Result := 'Native dblib driver for MS SQL 7+';
 end;
 
-procedure TZDBLibMSSQL7PlainDriver.Initialize(const Location: String);
+function TZDBLibMSSQL7PlainDriver.dbsetlsecure(Login: PLOGINREC): ZRETCODE;
 begin
-  ZPlainDBLibMSSql7.LibraryLoader.AddLocation(Location);
-  ZPlainDBLibMSSql7.LibraryLoader.LoadIfNeeded;
+  Result := DBLibAPI.dbsetlname(Login, nil, Self.DBVariables.dbSetLoginRec[Z_SETSECURE]);
 end;
 
-
-procedure TZDBLibMSSQL7PlainDriver.CheckError;
-var
-  I: Integer;
-  S: AnsiString;
-  lErrorEntry: PDBLibError;
-  lMesageEntry: PDBLibMessage;
+function TZDBLibMSSQL7PlainDriver.dbcolbrowse(Proc: PDBPROCESS; Column: Integer): LongBool;
 begin
-  { TODO -ofjanos -cGeneral : Error handling should be based on connection object.
-  At the moment it is global. }
-  if (MSSqlErrors.Count = 0) and (MSSqlMessages.Count = 0) then
-    Exit;
-  S := '';
-  for I := 0 to MSSqlErrors.Count - 1 do
-    S := S + PDBLibError(MSSqlErrors.Items[I]).DbErrStr + ' ' + PDBLibError(MSSqlErrors.Items[I]).OsErrStr + ' '#13;
-  for I := 0 to MSSqlMessages.Count - 1 do
-    if PDBLibMessage(MSSqlMessages.Items[I]).Severity > EXINFO then
-      S := S + PDBLibMessage(MSSqlMessages.Items[I]).MsgText + ' '#13;
-  while MSSqlErrors.Count > 0 do
-  begin
-    lErrorEntry := MSSqlErrors.Items[0];
-    Dispose(lErrorEntry);
-    MSSqlErrors.Delete(0);
-  end;
-  MSSqlErrors.Clear;
-  while MSSqlMessages.Count > 0 do
-  begin
-    lMesageEntry := MSSqlMessages.Items[0];
-    Dispose(lMesageEntry);
-    MSSqlMessages.Delete(0);
-  end;
-  MSSqlMessages.Clear;
-  if S <> '' then
-    raise Exception.Create(S);
+  Result := MsSQLAPI.dbcolbrowse(Proc, Column);
 end;
-
 
 function TZDBLibMSSQL7PlainDriver.dbDead(dbProc: PDBPROCESS): Boolean;
 begin
-  Result := ZPlainDBLibMSSql7.dbDead(dbProc);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbLogin: PLOGINREC;
-begin
-  Result := ZPlainDBLibMSSql7.dbLogin;
+  Result := MsSQLAPI.dbDead(dbProc);
 end;
 
 procedure TZDBLibMSSQL7PlainDriver.dbLoginFree(Login: PLOGINREC);
 begin
-  ZPlainDBLibMSSql7.dbFreeLogin(Login);
+  MsSQLAPI.dbfreelogin(Login);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbSetLoginTime(Seconds: Integer): RETCODE;
+function TZDBLibMSSQL7PlainDriver.dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): ZRETCODE;
 begin
-  Result := ZPlainDBLibMSSql7.dbSetLoginTime(Seconds);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbsetlname(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE;
-begin
-  Result := ZPlainDBLibMSSql7.dbsetlname(Login, Value, Item);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
-begin
-  Result := ZPlainDBLibMSSql7.DBSETLHOST(Login, HostName);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbsetluser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
-begin
-  Result := ZPlainDBLibMSSql7.dbsetluser(Login, UserName);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbsetlpwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE;
-begin
-  Result := ZPlainDBLibMSSql7.dbsetlpwd(Login, Password);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE;
-begin
-  Result := ZPlainDBLibMSSql7.DBSETLAPP(Login, AppName);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbSetLNatLang(Login: PLOGINREC; NatLangName:
-   PAnsiChar): RETCODE;
-begin
-  Result := ZPlainDBLibMSSql7.DBSETLNATLANG(Login, NatLangName);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE;
-begin
-  Result := 0;
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbsetlsecure(Login: PLOGINREC): RETCODE;
-begin
-  Result := ZPlainDBLibMSSql7.dbsetlsecure(Login);
+  Result := DBFAIL;
 end;
 
 function TZDBLibMSSQL7PlainDriver.dbsetmaxprocs(
-  MaxProcs: SmallInt): RETCODE;
+  MaxProcs: SmallInt): ZRETCODE;
 begin
-  Result := ZPlainDBLibMSSql7.dbsetmaxprocs(MaxProcs);
+  Result := MsSQLAPI.dbsetmaxprocs(MaxProcs);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;
+function TZDBLibMSSQL7PlainDriver.dbSqlExecAsync(dbProc: PDBPROCESS): ZRETCODE;
+var
+  lStartTick : Int64;
 begin
-  Result := ZPlainDBLibMSSql7.dbOpen(Login, Host);
+  Result := DBLibAPI.dbsqlsend(dbProc);
+  if Result = SUCCEED then begin
+    lStartTick := GetTickCount;
+    repeat
+      continue;
+    until (GetTickCount > lStartTick + TIMEOUT_MAXIMUM * 1000) or (MsSQLAPI.dbdataready(dbProc) = TRUE);
+    Result := DBLibAPI.dbsqlok(dbProc);
+  end;
 end;
 
-
-function TZDBLibMSSQL7PlainDriver.dbCancel(dbProc: PDBPROCESS): RETCODE;
+function TZDBLibMSSQL7PlainDriver.dbSetOpt(dbProc: PDBPROCESS; Option: DBINT; Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): ZRETCODE;
 begin
-  Result := ZPlainDBLibMSSql7.dbcancel(dbProc);
+  Result := MsSQLAPI.dbSetOpt(dbProc, Option, Char_Param);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): RETCODE;
+function TZDBLibMSSQL7PlainDriver.dbClose(dbProc: PDBPROCESS): ZRETCODE;
 begin
-  Result := ZPlainDBLibMSSql7.dbcmd(dbProc, Cmd);
+  Result := MsSQLAPI.dbClose(dbProc);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbSqlExec(dbProc: PDBPROCESS): RETCODE;
+function TZDBLibMSSQL7PlainDriver.dbDatLen(dbProc: PDBPROCESS; Column: DBINT): DBINT;
 begin
-  Result := ZPlainDBLibMSSql7.dbSqlExec(dbProc);
+  Result := MsSQLAPI.dbDatLen(dbProc, Column);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbResults(dbProc: PDBPROCESS): RETCODE;
+function TZDBLibMSSQL7PlainDriver.dbCount(dbProc: PDBPROCESS): DBINT;
 begin
-  Result := ZPlainDBLibMSSql7.dbResults(dbProc);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbCanQuery(dbProc: PDBPROCESS): RETCODE;
-begin
-  Result := ZPlainDBLibMSSql7.dbCanQuery(dbProc);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbMoreCmds(dbProc: PDBPROCESS): RETCODE;
-begin
-  Result := ZPlainDBLibMSSql7.dbMoreCmds(dbProc);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE;
-begin
-  Result := ZPlainDBLibMSSql7.dbUse(dbProc, dbName);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbSetOpt(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar = nil; Int_Param: Integer = -1): RETCODE;
-begin
-  Result := ZPlainDBLibMSSql7.dbSetOpt(dbProc, Option, Char_Param);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbClose(dbProc: PDBPROCESS): RETCODE;
-begin
-  Result := ZPlainDBLibMSSql7.dbClose(dbProc);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbName(dbProc: PDBPROCESS): PAnsiChar;
-begin
-  Result := ZPlainDBLibMSSql7.dbName(dbProc);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbCmdRow(dbProc: PDBPROCESS): RETCODE;
-begin
-  Result := ZPlainDBLibMSSql7.dbCmdRow(dbProc);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbNumCols(dbProc: PDBPROCESS): Integer;
-begin
-  Result := ZPlainDBLibMSSql7.dbNumCols(dbProc);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbColName(dbProc: PDBPROCESS; Column:
-   Integer): PAnsiChar;
-begin
-  Result := ZPlainDBLibMSSql7.dbColName(dbProc, Column);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbColType(dbProc: PDBPROCESS; Column:
-   Integer): Integer;
-begin
-  Result := ZPlainDBLibMSSql7.dbColType(dbProc, Column);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbColLen(dbProc: PDBPROCESS; Column: Integer):
-   DBInt;
-begin
-  Result := ZPlainDBLibMSSql7.dbColLen(dbProc, Column);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbData(dbProc: PDBPROCESS; Column: Integer):
-   PByte;
-begin
-  Result := ZPlainDBLibMSSql7.dbData(dbProc, Column);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbDatLen(dbProc: PDBPROCESS; Column: Integer): Integer;
-begin
-  Result := ZPlainDBLibMSSql7.dbDatLen(dbProc, Column);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbConvert(dbProc: PDBPROCESS; SrcType: Integer; Src: PByte;
-  SrcLen: DBINT; DestType: Integer; Dest: PByte; DestLen: DBINT): Integer;
-begin
-  Result := ZPlainDBLibMSSql7.dbConvert(dbProc, SrcType, Src, SrcLen, DestType, Dest, DestLen);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbNextRow(dbProc: PDBPROCESS): STATUS;
-begin
-  Result := ZPlainDBLibMSSql7.dbNextRow(dbProc);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbGetRow(dbProc: PDBPROCESS; Row: Integer):
-   STATUS;
-begin
-  Result := ZPlainDBLibMSSql7.dbGetRow(dbProc, Row);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbCount(dbProc: PDBPROCESS): Integer;
-begin
-  Result := ZPlainDBLibMSSql7.dbCount(dbProc);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): RETCODE;
-begin
-  Result := ZPlainDBLibMSSql7.dbRpcInit(dbProc, RpcName, Options);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
-  Type_: Integer; MaxLen: Integer; DataLen: Integer; Value: Pointer): RETCODE;
-begin
-  Result := ZPlainDBLibMSSql7.dbRpcParam(dbProc, ParamName, Status, Type_, MaxLen, DataLen, Value);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbRpcSend(dbProc: PDBPROCESS): RETCODE;
-begin
-  Result := ZPlainDBLibMSSql7.dbRpcSend(dbProc);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbRpcExec(dbProc: PDBPROCESS): RETCODE;
-begin
-  Result := ZPlainDBLibMSSql7.dbRpcExec(dbProc);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbRetStatus(dbProc: PDBPROCESS): Integer;
-begin
-  Result := ZPlainDBLibMSSql7.dbRetStatus(dbProc);
+  Result := MsSQLAPI.dbCount(dbProc);
 end;
 
 function TZDBLibMSSQL7PlainDriver.dbHasRetStat(dbProc: PDBPROCESS): Boolean;
 begin
-  Result := ZPlainDBLibMSSql7.dbHasRetStat(dbProc);
+  Result := MsSQLAPI.dbHasRetStat(dbProc);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbRetName(dbProc: PDBPROCESS; RetNum: Integer): PAnsiChar;
+function TZDBLibMSSQL7PlainDriver.dbdataready(Proc: PDBPROCESS): LongBool;
 begin
-  Result := ZPlainDBLibMSSql7.dbRetName(dbProc, RetNum);
+  Result := MsSQLAPI.dbdataready(Proc);
 end;
 
-function TZDBLibMSSQL7PlainDriver.dbRetData(dbProc: PDBPROCESS; RetNum: Integer): Pointer;
+{ TFreeTGDBasePlainDriver }
+
+{ TZFreeTDSBasePlainDriver }
+
+procedure TZFreeTDSBasePlainDriver.LoadApi;
 begin
-  Result := ZPlainDBLibMSSql7.dbRetData(dbProc, RetNum);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbRetLen(dbProc: PDBPROCESS; RetNum: Integer): Integer;
-begin
-  Result := ZPlainDBLibMSSql7.dbRetLen(dbProc, RetNum);
-end;
-
-function TZDBLibMSSQL7PlainDriver.dbRetType(dbProc: PDBPROCESS; RetNum: Integer): Integer;
-begin
-  Result := ZPlainDBLibMSSql7.dbRetType(dbProc, RetNum);
-end;
-
-{ TZDbLibBasePlainDriver }
-
-constructor TZDbLibBasePlainDriver.Create;
-begin
-  inherited create;
-  FLoader := TZNativeLibraryLoader.Create([]);
-{$IFNDEF MYSQL_STRICT_DLL_LOADING}
-  {$IFNDEF UNIX}
-    FLoader.AddLocation(WINDOWS_DLL_LOCATION);
-  {$ELSE}
-    FLoader.AddLocation(LINUX_DLL_LOCATION);
-  {$ENDIF}
-{$ENDIF}
-end;
-
-destructor TZDbLibBasePlainDriver.Destroy;
-begin
-
-  inherited Destroy;
-end;
-
-procedure TZDbLibBasePlainDriver.LoadApi;
-begin
-{ ************** Load adresses of API Functions ************* }
+  inherited LoadAPI;
   with Loader do
   begin
-    @FreeTDSAPI.dbadata         := GetAddress('dbadata');
-    @FreeTDSAPI.dbadlen         := GetAddress('dbadlen');
-    @FreeTDSAPI.dbaltbind       := GetAddress('dbaltbind');
+    @FreeTDSAPI.db12hour        := GetAddress('db12hour');
     @FreeTDSAPI.dbaltbind_ps    := GetAddress('dbaltbind_ps');
-    @FreeTDSAPI.dbaltcolid      := GetAddress('dbaltcolid');
-    @FreeTDSAPI.dbaltlen        := GetAddress('dbaltlen');
-    @FreeTDSAPI.dbaltop         := GetAddress('dbaltop');
-    @FreeTDSAPI.dbalttype       := GetAddress('dbalttype');
-    @FreeTDSAPI.dbaltutype      := GetAddress('dbaltutype');
-    @FreeTDSAPI.dbanullbind     := GetAddress('dbanullbind');
-    @FreeTDSAPI.dbbind          := GetAddress('dbbind');
-    @FreeTDSAPI.dbbind_ps       := GetAddress('dbbind_ps');
     @FreeTDSAPI.dbbufsize       := GetAddress('dbbufsize');
-    @FreeTDSAPI.dbbylist        := GetAddress('dbbylist');
-    @FreeTDSAPI.dbcancel        := GetAddress('dbcancel');
-    @FreeTDSAPI.dbcanquery      := GetAddress('dbcanquery');
-    @FreeTDSAPI.dbchange        := GetAddress('dbchange');
     @FreeTDSAPI.dbclose         := GetAddress('dbclose');
-    @FreeTDSAPI.dbclrbuf        := GetAddress('dbclrbuf');
-    @FreeTDSAPI.dbclropt        := GetAddress('dbclropt');
-    @FreeTDSAPI.dbcmd           := GetAddress('dbcmd');
-    @FreeTDSAPI.dbcmdrow        := GetAddress('dbcmdrow');
     @FreeTDSAPI.dbtablecolinfo  := GetAddress('dbtablecolinfo');
+    @FreeTDSAPI.dbcolbrowse     := GetAddress('dbcolbrowse');
     @FreeTDSAPI.dbcolinfo       := GetAddress('dbcolinfo');
-    @FreeTDSAPI.dbcollen        := GetAddress('dbcollen');
-    @FreeTDSAPI.dbcolname       := GetAddress('dbcolname');
-    @FreeTDSAPI.dbcolsource     := GetAddress('dbcolsource');
-    @FreeTDSAPI.dbcoltype       := GetAddress('dbcoltype');
-    @FreeTDSAPI.dbcolutype      := GetAddress('dbcolutype');
-    @FreeTDSAPI.dbconvert       := GetAddress('dbcolutype');
     @FreeTDSAPI.dbconvert_ps    := GetAddress('dbconvert_ps');
-    @FreeTDSAPI.dbiscount       := GetAddress('dbiscount');
     @FreeTDSAPI.dbcount         := GetAddress('dbcount');
-    @FreeTDSAPI.dbcurcmd        := GetAddress('dbcurcmd');
-    @FreeTDSAPI.dbcurrow        := GetAddress('dbcurrow');
-    @FreeTDSAPI.dbdata          := GetAddress('dbdata');
     @FreeTDSAPI.dbdatecmp       := GetAddress('dbdatecmp');
     @FreeTDSAPI.dbdatecrack     := GetAddress('dbdatecrack');
     @FreeTDSAPI.dbdatlen        := GetAddress('dbdatlen');
     @FreeTDSAPI.dbdead          := GetAddress('dbdead');
-    @FreeTDSAPI.dberrhandle     := GetAddress('dberrhandle');
-    @FreeTDSAPI.dbexit          := GetAddress('dbexit');
-    @FreeTDSAPI.dbfcmd          := GetAddress('dbfcmd');
-    @FreeTDSAPI.dbfirstrow      := GetAddress('dbfirstrow');
-    @FreeTDSAPI.dbfreebuf       := GetAddress('dbfreebuf');
-    @FreeTDSAPI.dbgetchar       := GetAddress('dbgetchar');
     @FreeTDSAPI.dbgetcharset    := GetAddress('dbgetcharset');
     @FreeTDSAPI.dbgetlusername  := GetAddress('dbgetlusername');
     @FreeTDSAPI.dbgetmaxprocs   := GetAddress('dbgetmaxprocs');
     @FreeTDSAPI.dbgetnatlanf    := GetAddress('dbgetnatlanf');
     @FreeTDSAPI.dbgetpacket     := GetAddress('dbgetpacket');
-    @FreeTDSAPI.dbgetrow        := GetAddress('dbgetrow');
-    @FreeTDSAPI.dbgettime       := GetAddress('dbgettime');
     @FreeTDSAPI.dbgetuserdata   := GetAddress('dbgetuserdata');
     @FreeTDSAPI.dbhasretstat    := GetAddress('dbhasretstat');
     @FreeTDSAPI.dbinit          := GetAddress('dbinit');
@@ -1120,8 +1656,6 @@ begin
     @FreeTDSAPI.dbiowdesc       := GetAddress('dbiowdesc');
     @FreeTDSAPI.dbisavail       := GetAddress('dbisavail');
     @FreeTDSAPI.dbisopt         := GetAddress('dbisopt');
-    @FreeTDSAPI.dblastrow       := GetAddress('dblastrow');
-    @FreeTDSAPI.dblogin         := GetAddress('dblogin');
     @FreeTDSAPI.dbloginfree     := GetAddress('dbloginfree');
     @FreeTDSAPI.dbmny4cmp       := GetAddress('dbmny4cmp');
     @FreeTDSAPI.dbmnycmp        := GetAddress('dbmnycmp');
@@ -1139,541 +1673,451 @@ begin
     @FreeTDSAPI.dbmny4zero      := GetAddress('dbmny4zero');
     @FreeTDSAPI.dbmnyzero       := GetAddress('dbmnyzero');
     @FreeTDSAPI.dbmonthname     := GetAddress('dbmonthname');
-    @FreeTDSAPI.dbmorecmds      := GetAddress('dbmorecmds');
-    @FreeTDSAPI.dbmoretext      := GetAddress('dbmoretext');
-    @FreeTDSAPI.dbmsghandle     := GetAddress('dbmsghandle');
-    @FreeTDSAPI.dbname          := GetAddress('dbname');
-    @FreeTDSAPI.dbnextrow       := GetAddress('dbnextrow');
-    @FreeTDSAPI.dbnullbind      := GetAddress('dbnullbind');
-    @FreeTDSAPI.dbnumalts       := GetAddress('dbnumalts');
-    @FreeTDSAPI.dbnumcols       := GetAddress('dbnumcols');
-    @FreeTDSAPI.dbnumcompute    := GetAddress('dbnumcompute');
-    @FreeTDSAPI.dbnumorders     := GetAddress('dbnumorders');
-    @FreeTDSAPI.dbnumrets       := GetAddress('dbnumrets');
     @FreeTDSAPI.tdsdbopen       := GetAddress('tdsdbopen');
-    @FreeTDSAPI.dbopen          := GetAddress('dbopen');
 
-    @FreeTDSAPI.dbprhead        := GetAddress('dbprhead');
-    @FreeTDSAPI.dbprrow         := GetAddress('dbprrow');
-    @FreeTDSAPI.dbprtype        := GetAddress('dbprtype');
+
     @FreeTDSAPI.DRBUF           := GetAddress('DRBUF');
-    @FreeTDSAPI.dbreadtext      := GetAddress('dbreadtext');
     @FreeTDSAPI.dbrecftos       := GetAddress('dbrecftos');
-    @FreeTDSAPI.dbresults       := GetAddress('dbresults');
     @FreeTDSAPI.dbresults_r     := GetAddress('dbresults_r');
-    @FreeTDSAPI.dbretdata       := GetAddress('dbretdata');
-    @FreeTDSAPI.dbretlen        := GetAddress('dbretlen');
-    @FreeTDSAPI.dbretname       := GetAddress('dbretname');
-    @FreeTDSAPI.dbretstatus     := GetAddress('dbretstatus');
-    @FreeTDSAPI.dbrettype       := GetAddress('dbrettype');
-    @FreeTDSAPI.dbrows          := GetAddress('dbrows');
-    @FreeTDSAPI.dbrowtype       := GetAddress('dbrowtype');
-    @FreeTDSAPI.dbrpcinit       := GetAddress('dbrpcinit');
-    @FreeTDSAPI.dbrpcparam      := GetAddress('dbrpcparam');
-    @FreeTDSAPI.dbrpcsend       := GetAddress('dbrpcsend');
-    @FreeTDSAPI.dbsafestr       := GetAddress('dbsafestr');
     //@FreeTDSAPI.dbsechandle     := GetAddress('dbsechandle');
     @FreeTDSAPI.dbservcharset   := GetAddress('dbservcharset');
-    @FreeTDSAPI.dbsetavail      := GetAddress('dbsetavail');
+    @FreeTDSAPI.dbsafestr       := GetAddress('dbsafestr');
     //@FreeTDSAPI.dbsetbusy       := GetAddress('dbsetbusy');
     @FreeTDSAPI.dbsetdefcharset := GetAddress('dbsetdefcharset');
     @FreeTDSAPI.dbsetifile      := GetAddress('dbsetifile');
     //@FreeTDSAPI.dbsetinterrupt  := GetAddress('dbsetinterrupt');
-    @FreeTDSAPI.dbsetlogintime  := GetAddress('dbsetlogintime');
     @FreeTDSAPI.dbsetmaxprocs   := GetAddress('dbsetmaxprocs');
-    @FreeTDSAPI.dbsetlname      := GetAddress('dbsetlname');
-    @FreeTDSAPI.dbsetnull       := GetAddress('dbsetnull');
     @FreeTDSAPI.dbsetopt        := GetAddress('dbsetopt');
     @FreeTDSAPI.dbsetrow        := GetAddress('dbsetrow');
-    @FreeTDSAPI.dbsettime       := GetAddress('dbsettime');
-    @FreeTDSAPI.dbsetuserdata   := GetAddress('dbsetuserdata');
     @FreeTDSAPI.dbsetversion    := GetAddress('dbsetversion');
     @FreeTDSAPI.dbspid          := GetAddress('dbspid');
     @FreeTDSAPI.dbspr1row       := GetAddress('dbspr1row');
     @FreeTDSAPI.dbspr1rowlen    := GetAddress('dbspr1rowlen');
     @FreeTDSAPI.dbsprhead       := GetAddress('dbsprhead');
     @FreeTDSAPI.dbsprline       := GetAddress('dbsprline');
-    @FreeTDSAPI.dbsqlexec       := GetAddress('dbsqlexec');
-    @FreeTDSAPI.dbsqlok         := GetAddress('dbsqlok');
-    @FreeTDSAPI.dbsqlsend       := GetAddress('dbsqlsend');
-    @FreeTDSAPI.dbstrcpy        := GetAddress('dbstrcpy');
-    @FreeTDSAPI.dbstrlen        := GetAddress('dbstrlen');
     @FreeTDSAPI.dbvarylen       := GetAddress('dbvarylen');
 
     @FreeTDSAPI.dbtds           := GetAddress('dbtds');
     @FreeTDSAPI.dbtextsize      := GetAddress('dbtextsize');
-    @FreeTDSAPI.dbtxptr         := GetAddress('dbtxptr');
-    @FreeTDSAPI.dbtxtimestamp   := GetAddress('dbtxtimestamp');
-    @FreeTDSAPI.dbtxtsnewval    := GetAddress('dbtxtsnewval');
-    @FreeTDSAPI.dbtxtsput       := GetAddress('dbtxtsput');
-    @FreeTDSAPI.dbuse           := GetAddress('dbuse');
     @FreeTDSAPI.dbwillconvert   := GetAddress('dbwillconvert');
-    @FreeTDSAPI.dbwritetext     := GetAddress('dbwritetext');
 
     (* LOGINREC manipulation *)
     @FreeTDSAPI.dbsetlbool      := GetAddress('dbsetlbool');
     @FreeTDSAPI.dbsetllong      := GetAddress('dbsetllong');
     @FreeTDSAPI.dbsetlversion   := GetAddress('dbsetlversion');
+    @FreeTDSAPI.tdsdump_open    := GetAddress('tdsdump_open');
+    @FreeTDSAPI.tdsdump_on      := GetAddress('tdsdump_on');
+    @FreeTDSAPI.tdsdump_off     := GetAddress('tdsdump_off');
+    @FreeTDSAPI.tdsdump_close   := GetAddress('tdsdump_close');
+
   end;
+  FreeTDSAPI.dbinit;
+
+  OldFreeTDSErrorHandle := DBLibAPI.dberrhandle(DbLibErrorHandle);
+  OldFreeTDSMessageHandle := DBLibAPI.dbmsghandle(DbLibMessageHandle);
 end;
 
-procedure TZDbLibBasePlainDriver.CheckError;
-var
-  I: DBINT;
-  S: AnsiString;
-  lErrorEntry: PDBLibError;
-  lMesageEntry: PDBLibMessage;
+constructor TZFreeTDSBasePlainDriver.Create;
 begin
-  { TODO -ofjanos -cGeneral : Error handling should be based on connection object.
-  At the moment it is global. }
-  {if (SybaseErrors.Count = 0) and (SybaseMessages.Count = 0) then
-    Exit;
-  S := '';
-  for I := 0 to SybaseErrors.Count - 1 do
-    S := S + PDBLibError(SybaseErrors.Items[I]).DbErrStr + ' ' + PDBLibError(SybaseErrors.Items[I]).OsErrStr + ' '#13;
-  for I := 0 to SybaseMessages.Count - 1 do
-    if PDBLibMessage(SybaseMessages.Items[I]).Severity > EXINFO then
-      S := S + PDBLibMessage(SybaseMessages.Items[I]).MsgText + ' '#13;
-  while SybaseErrors.Count > 0 do
+  inherited create;
+  {$IFDEF MSWINDOWS}
+    FLoader.AddLocation(FREETDS_WINDOWS_DLL_LOCATION);
+  {$ELSE}
+    {$IFDEF UNIX}
+    FLoader.AddLocation(FREETDS_LINUX_DLL_LOCATION);
+    {$ELSE}
+    FLoader.AddLocation(FREETDS_OSX_DLL_LOCATION);
+    {$ENDIF}
+  {$ENDIF}
+
+  DBVariables.DBoptions[Z_PARSEONLY]      := TDSPARSEONLY;
+  DBVariables.DBoptions[Z_ESTIMATE]       := TDSESTIMATE;
+  DBVariables.DBoptions[Z_SHOWPLAN]       := TDSSHOWPLAN;
+  DBVariables.DBoptions[Z_NOEXEC]         := TDSNOEXEC;
+  DBVariables.DBoptions[Z_ARITHIGNORE]    := TDSARITHIGNORE;
+  DBVariables.DBoptions[Z_NOCOUNT]        := TDSNOCOUNT;
+  DBVariables.DBoptions[Z_ARITHABORT]     := TDSARITHABORT;
+  DBVariables.DBoptions[Z_TEXTLIMIT]      := TDSTEXTLIMIT;
+  DBVariables.DBoptions[Z_BROWSE]         := TDSBROWSE;
+  DBVariables.DBoptions[Z_OFFSET]         := TDSOFFSET;
+  DBVariables.DBoptions[Z_STAT]           := TDSSTAT;
+  DBVariables.DBoptions[Z_ERRLVL]         := TDSERRLVL;
+  DBVariables.DBoptions[Z_CONFIRM]        := TDSCONFIRM;
+  DBVariables.DBoptions[Z_STORPROCID]     := TDSSTORPROCID;
+  DBVariables.DBoptions[Z_BUFFER]         := TDSBUFFER;
+  DBVariables.DBoptions[Z_NOAUTOFREE]     := TDSNOAUTOFREE;
+  DBVariables.DBoptions[Z_ROWCOUNT]       := TDSROWCOUNT;
+  DBVariables.DBoptions[Z_TEXTSIZE]       := TDSTEXTSIZE;
+  DBVariables.DBoptions[Z_NATLANG]        := TDSNATLANG;
+  DBVariables.DBoptions[Z_DATEFORMAT]     := TDSDATEFORMAT;
+  DBVariables.DBoptions[Z_PRPAD]          := TDSPRPAD;
+  DBVariables.DBoptions[Z_PRCOLSEP]       := TDSPRCOLSEP;
+  DBVariables.DBoptions[Z_PRLINELEN]      := TDSPRLINELEN;
+  DBVariables.DBoptions[Z_PRLINESEP]      := TDSPRLINESEP;
+  DBVariables.DBoptions[Z_LFCONVERT]      := TDSLFCONVERT;
+  DBVariables.DBoptions[Z_DATEFIRST]      := TDSDATEFIRST;
+  DBVariables.DBoptions[Z_CHAINXACTS]     := TDSCHAINXACTS;
+  DBVariables.DBoptions[Z_FIPSFLAG]	      := TDSFIPSFLAG;
+  DBVariables.DBoptions[Z_ISOLATION]      := TDSISOLATION;
+  DBVariables.DBoptions[Z_AUTH]           := TDSAUTH;
+  DBVariables.DBoptions[Z_IDENTITY]       := TDSIDENTITY;
+  DBVariables.DBoptions[Z_NOIDCOL]        := TDSNOIDCOL;
+  DBVariables.DBoptions[Z_DATESHORT]      := TDSDATESHORT;
+  DBVariables.DBoptions[Z_CLIENTCURSORS]  := TDSCLIENTCURSORS;
+  DBVariables.DBoptions[Z_SETTIME]        := TDSSETTIME;
+  DBVariables.DBoptions[Z_QUOTEDIDENT]    := TDSQUOTEDIDENT;
+  DBVariables.DBoptions[Z_NUMOPTIONS]     := TDSNUMOPTIONS;
+  DBVariables.DBoptions[Z_PADOFF]         := TDSPADOFF;
+  DBVariables.DBoptions[Z_PADON]          := TDSPADON;
+  DBVariables.DBoptions[Z_OFF]            := TDSOFF;
+  DBVariables.DBoptions[Z_ON]             := TDSON;
+  DBVariables.DBoptions[Z_NOSUCHOPTION]   := NOSUCHOPTION;
+  DBVariables.DBoptions[Z_MAXOPTTEXT]     := MAXOPTTEXT;
+  {TDS Loginrec manipulations}
+  DBVariables.DBSetLoginRec[Z_SETHOST]    := TDSDBSETHOST;
+  DBVariables.DBSetLoginRec[Z_SETUSER]    := TDSDBSETUSER;
+  DBVariables.DBSetLoginRec[Z_SETPWD]     := TDSDBSETPWD;
+  DBVariables.DBSetLoginRec[Z_SETHID]     := TDSDBSETHID;
+  DBVariables.DBSetLoginRec[Z_SETAPP]     := TDSDBSETAPP;
+  DBVariables.DBSetLoginRec[Z_SETBCP]     := TDSDBSETBCP;
+  DBVariables.DBSetLoginRec[Z_SETSECURE]  := TDSDBSETSECURE;
+  DBVariables.DBSetLoginRec[Z_SETLANG]    := TDSDBSETLANG;
+  DBVariables.DBSetLoginRec[Z_SETNOSHORT] := TDSDBSETNOSHORT;
+  DBVariables.DBSetLoginRec[Z_SETHIER]    := TDSDBSETHIER;
+  DBVariables.DBSetLoginRec[Z_SETCHARSET] := TDSDBSETCHARSET;
+  DBVariables.DBSetLoginRec[Z_SETPACKET]  := TDSDBSETPACKET;
+  DBVariables.DBSetLoginRec[Z_SETENCRYPT] := TDSDBSETENCRYPT;
+  DBVariables.DBSetLoginRec[Z_SETLABELED] := TDSDBSETLABELED;
+  DBVariables.DBSetLoginRec[Z_SETDBNAME]  := TDSDBSETDBNAME;
+  {datatypes}
+  DBVariables.datatypes[Z_SQLVOID]      := TDSSQLVOID;
+  DBVariables.datatypes[Z_SQLTEXT]      := TDSSQLTEXT;
+  DBVariables.datatypes[Z_SQLVARBINARY] := TDSSQLVARBINARY;
+  DBVariables.datatypes[Z_SQLINTN]      := TDSSQLINTN;
+  DBVariables.datatypes[Z_SQLVARCHAR]   := TDSSQLVARCHAR;
+  DBVariables.datatypes[Z_SQLBINARY]    := TDSSQLBINARY;
+  DBVariables.datatypes[Z_SQLIMAGE]     := TDSSQLIMAGE;
+  DBVariables.datatypes[Z_SQLCHAR]      := TDSSQLCHAR;
+  DBVariables.datatypes[Z_SQLINT1]      := TDSSQLINT1;
+  DBVariables.datatypes[Z_SQLBIT]       := TDSSQLBIT;
+  DBVariables.datatypes[Z_SQLINT2]      := TDSSQLINT2;
+  DBVariables.datatypes[Z_SQLINT4]      := TDSSQLINT4;
+  DBVariables.datatypes[Z_SQLMONEY]     := TDSSQLMONEY;
+  DBVariables.datatypes[Z_SQLDATETIME]  := TDSSQLDATETIME;
+  DBVariables.datatypes[Z_SQLFLT8]      := TDSSQLFLT8;
+  DBVariables.datatypes[Z_SQLFLTN]      := TDSSQLFLTN;
+  DBVariables.datatypes[Z_SQLMONEYN]    := TDSSQLMONEYN;
+  DBVariables.datatypes[Z_SQLDATETIMN]  := TDSSQLDATETIMN;
+  DBVariables.datatypes[Z_SQLFLT4]      := TDSSQLFLT4;
+  DBVariables.datatypes[Z_SQLMONEY4]    := TDSSQLMONEY4;
+  DBVariables.datatypes[Z_SQLDATETIM4]  := TDSSQLDATETIM4;
+  DBVariables.datatypes[Z_SQLDECIMAL]   := TDSSQLDECIMAL;
+  DBVariables.datatypes[Z_SQLNUMERIC]   := TDSSQLNUMERIC;
+end;
+
+destructor TZFreeTDSBasePlainDriver.Destroy;
+begin
+  if Loader.Loaded then
   begin
-    lErrorEntry := SybaseErrors.Items[0];
-    Dispose(lErrorEntry);
-    SybaseErrors.Delete(0);
+    DBLibAPI.dberrhandle(OldFreeTDSErrorHandle);
+    DBLibAPI.dbmsghandle(OldFreeTDSMessageHandle);
+    DBLibAPI.dbexit;
   end;
-  SybaseErrors.Clear;
-  while SybaseMessages.Count > 0 do
-  begin
-    lMesageEntry := SybaseMessages.Items[0];
-    Dispose(lMesageEntry);
-    SybaseMessages.Delete(0);
-  end;
-  SybaseMessages.Clear;
-  if S <> '' then
-    raise Exception.Create(S);}
+  inherited Destroy;
 end;
 
-
-function TZDbLibBasePlainDriver.dbDead(dbProc: PDBPROCESS): Boolean;
+function TZFreeTDSBasePlainDriver.GetProtocol: string;
 begin
-  Result := FreeTDSAPI.dbDead(dbProc);
+  Result := 'FreeTDS';
 end;
 
-function TZDbLibBasePlainDriver.dbLogin: PLOGINREC;
+function TZFreeTDSBasePlainDriver.GetDescription: string;
 begin
-  Result := FreeTDSAPI.dbLogin;
+  Result := 'Native FreeTDS driver for Sybase and MSSQL Servers';
 end;
 
-procedure TZDbLibBasePlainDriver.dbLoginFree(Login: PLOGINREC);
+function TZFreeTDSBasePlainDriver.dbLogin: PLOGINREC;
 begin
-  FreeTDSAPI.dbLoginFree(Login);
+  Result := inherited dbLogin;
+  if not Assigned(Result)  then
+    if not  (dbsetlversion(Result) = DBSUCCEED ) then
+    begin
+      dbloginfree(Result);
+      Result := nil;
+    end;
 end;
 
-function TZDbLibBasePlainDriver.dbSetLoginTime(Seconds: DBINT): RETCODE;
+function TZFreeTDSBasePlainDriver.dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): ZRETCODE;
 begin
-  Result := FreeTDSAPI.dbsetlogintime(Seconds);
+  Result := DBLibAPI.dbsetlname(Login, CharsetName, DBVariables.dbSetLoginRec[Z_SETCHARSET]);
 end;
 
-function TZDbLibBasePlainDriver.dbsetlname(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): RETCODE;
+function TZFreeTDSBasePlainDriver.dbSetLSecure(Login: PLOGINREC): ZRETCODE;
 begin
-  Result := FreeTDSAPI.dbsetlname(Login, Value, Item);
+  Result := DBLibAPI.dbsetlname(Login, nil, DBVariables.dbSetLoginRec[Z_SETSECURE]);
+//  Result := FreeTDSAPI.dbsetlbool(Login, 1, Self.DBVariables.dbSetLoginRec[Z_SETSECURE]);
 end;
 
-function TZDbLibBasePlainDriver.dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
+function TZFreeTDSBasePlainDriver.dbsetlversion(Login: PLOGINREC): ZRETCODE;
 begin
-  Result := FreeTDSAPI.dbsetlname(Login, HostName, DBSETHOST);
+  Result := FreeTDSAPI.dbsetlversion(Login, TDSDBVERSION_UNKNOWN);
 end;
 
-function TZDbLibBasePlainDriver.dbsetluser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
+function TZFreeTDSBasePlainDriver.dbsetversion: ZRETCODE;
 begin
-  Result := FreeTDSAPI.dbsetlname(Login, UserName, DBSETUSER);
+  Result := FreeTDSAPI.dbsetversion(TDSDBVERSION_UNKNOWN);
 end;
 
-function TZDbLibBasePlainDriver.dbsetlpwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE;
+procedure TZFreeTDSBasePlainDriver.tdsDumpOff;
 begin
-  Result := FreeTDSAPI.dbsetlname(Login, Password, DBSETPWD);
+  FreeTDSAPI.tdsdump_off();
 end;
 
-function TZDbLibBasePlainDriver.dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE;
+procedure TZFreeTDSBasePlainDriver.tdsDumpOn;
 begin
-  Result := FreeTDSAPI.dbsetlname(Login, AppName, DBSETAPP);
+  FreeTDSAPI.tdsdump_on();
 end;
 
-function TZDbLibBasePlainDriver.dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): RETCODE;
+procedure TZFreeTDSBasePlainDriver.tdsDump_Close;
 begin
-  Result := FreeTDSAPI.dbsetlname(Login, NatLangName, DBSETNATLANG);
+  FreeTDSAPI.tdsdump_close();
 end;
 
-function TZDbLibBasePlainDriver.dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE;
+procedure TZFreeTDSBasePlainDriver.tdsDump_Open(const FileName: String);
 begin
-  Result := FreeTDSAPI.dbsetlname(Login, CharsetName, DBSETCHARSET);
+  FreeTDSAPI.tdsdump_open(PAnsiChar( AnsiString(FileName) ));
 end;
 
-function TZDbLibBasePlainDriver.dbsetlsecure(Login: PLOGINREC): RETCODE;
+function TZFreeTDSBasePlainDriver.dbdataready(Proc: PDBPROCESS): LongBool;
 begin
-  Result := 0; //dbsetlname(Login, nil, DBSETSECURE);
+  Result := Proc <> nil;
 end;
 
-function TZDbLibBasePlainDriver.dbsetmaxprocs(
-  MaxProcs: SmallInt): RETCODE;
+procedure TZFreeTDSBasePlainDriver.dbfreelogin(Login: PLOGINREC);
+begin
+  FreeTDSAPI.dbloginfree(Login);
+end;
+
+function TZFreeTDSBasePlainDriver.dbDead(dbProc: PDBPROCESS): Boolean;
+begin
+  Result := FreeTDSAPI.dbDead(dbProc) = 1;
+end;
+
+procedure TZFreeTDSBasePlainDriver.dbLoginFree(Login: PLOGINREC);
+begin
+  FreeTDSAPI.dbloginfree(Login);
+end;
+
+function TZFreeTDSBasePlainDriver.dbsetmaxprocs(
+  MaxProcs: SmallInt): ZRETCODE;
 begin
   Result := FreeTDSAPI.dbsetmaxprocs(MaxProcs);
 end;
 
-function TZDbLibBasePlainDriver.dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;
-begin
-  Result := FreeTDSAPI.dbOpen(Login, Host);
-end;
-
-function TZDbLibBasePlainDriver.dbCancel(dbProc: PDBPROCESS): RETCODE;
-begin
-  Result := FreeTDSAPI.dbcancel(dbProc);
-end;
-
-function TZDbLibBasePlainDriver.dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): RETCODE;
-begin
-  Result := FreeTDSAPI.dbcmd(dbProc, Cmd);
-end;
-
-function TZDbLibBasePlainDriver.dbSqlExec(dbProc: PDBPROCESS): RETCODE;
-begin
-  Result := FreeTDSAPI.dbSqlExec(dbProc);
-end;
-
-function TZDbLibBasePlainDriver.dbResults(dbProc: PDBPROCESS): RETCODE;
-begin
-  Result := FreeTDSAPI.dbResults(dbProc);
-end;
-
-function TZDbLibBasePlainDriver.dbCanQuery(dbProc: PDBPROCESS): RETCODE;
-begin
-  Result := FreeTDSAPI.dbCanQuery(dbProc);
-end;
-
-function TZDbLibBasePlainDriver.dbMoreCmds(dbProc: PDBPROCESS): RETCODE;
-begin
-  Result := FreeTDSAPI.dbMoreCmds(dbProc);
-end;
-
-function TZDbLibBasePlainDriver.dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE;
-begin
-  Result := FreeTDSAPI.dbUse(dbProc, dbName);
-end;
-
-function TZDbLibBasePlainDriver.dbSetOpt(dbProc: PDBPROCESS; Option: DBINT; Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): RETCODE;
+function TZFreeTDSBasePlainDriver.dbSetOpt(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar = nil; Int_Param: Integer = -1): ZRETCODE;
 begin
   Result := FreeTDSAPI.dbSetOpt(dbProc, Option, Char_Param, Int_Param);
 end;
 
-function TZDbLibBasePlainDriver.dbClose(dbProc: PDBPROCESS): RETCODE;
+function TZFreeTDSBasePlainDriver.dbSetTime(queryTime: Integer): ZRETCODE;
 begin
-  Result := FreeTDSAPI.dbClose(dbProc);
+  Result := FreeTDSAPI.dbsetmaxprocs(queryTime);
 end;
 
-function TZDbLibBasePlainDriver.dbName(dbProc: PDBPROCESS): PAnsiChar;
+function TZFreeTDSBasePlainDriver.dbClose(dbProc: PDBPROCESS): ZRETCODE;
 begin
-  Result := FreeTDSAPI.dbName(dbProc);
+  FreeTDSAPI.dbClose(dbProc);
+  Result := DBNOERR;
 end;
 
-function TZDbLibBasePlainDriver.dbCmdRow(dbProc: PDBPROCESS): RETCODE;
-begin
-  Result := FreeTDSAPI.dbCmdRow(dbProc);
-end;
-
-function TZDbLibBasePlainDriver.dbNumCols(dbProc: PDBPROCESS): DBINT;
-begin
-  Result := FreeTDSAPI.dbNumCols(dbProc);
-end;
-
-function TZDbLibBasePlainDriver.dbColName(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar;
-begin
-  Result := FreeTDSAPI.dbColName(dbProc, Column);
-end;
-
-function TZDbLibBasePlainDriver.dbColType(dbProc: PDBPROCESS; Column: DBINT): DBINT;
-begin
-  Result := FreeTDSAPI.dbColType(dbProc, Column);
-end;
-
-function TZDbLibBasePlainDriver.dbColLen(dbProc: PDBPROCESS; Column: DBINT): DBInt;
-begin
-  Result := FreeTDSAPI.dbColLen(dbProc, Column);
-end;
-
-function TZDbLibBasePlainDriver.dbData(dbProc: PDBPROCESS; Column: DBINT): PByte;
-begin
-  Result := FreeTDSAPI.dbData(dbProc, Column);
-end;
-
-function TZDbLibBasePlainDriver.dbDatLen(dbProc: PDBPROCESS; Column: DBINT): DBINT;
+function TZFreeTDSBasePlainDriver.dbDatLen(dbProc: PDBPROCESS; Column: Integer): Integer;
 begin
   Result := FreeTDSAPI.dbDatLen(dbProc, Column);
 end;
 
-function TZDbLibBasePlainDriver.dbConvert(dbProc: PDBPROCESS; SrcType: DBINT; Src: PByte;
-  SrcLen: DBINT; DestType: DBINT; Dest: PByte; DestLen: DBINT): DBINT;
-begin
-  Result := FreeTDSAPI.dbConvert(dbProc, SrcType, Src, SrcLen, DestType, Dest, DestLen);
-end;
-
-function TZDbLibBasePlainDriver.dbNextRow(dbProc: PDBPROCESS): STATUS;
-begin
-  Result := FreeTDSAPI.dbNextRow(dbProc);
-end;
-
-function TZDbLibBasePlainDriver.dbGetRow(dbProc: PDBPROCESS; Row: DBINT): STATUS;
-begin
-  Result := FreeTDSAPI.dbGetRow(dbProc, Row);
-end;
-
-function TZDbLibBasePlainDriver.dbCount(dbProc: PDBPROCESS): DBINT;
+function TZFreeTDSBasePlainDriver.dbCount(dbProc: PDBPROCESS): Integer;
 begin
   Result := FreeTDSAPI.dbCount(dbProc);
 end;
 
-function TZDbLibBasePlainDriver.dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): RETCODE;
+function TZFreeTDSBasePlainDriver.dbcolbrowse(Proc: PDBPROCESS; Column: Integer): LongBool;
 begin
-  Result := FreeTDSAPI.dbRpcInit(dbProc, RpcName, Options);
+  Result := FreeTDSAPI.dbcolbrowse(Proc, Column) <> 0;
 end;
 
-function TZDbLibBasePlainDriver.dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
-  Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): RETCODE;
-begin
-  Result := FreeTDSAPI.dbRpcParam(dbProc, ParamName, Status, Type_, MaxLen, DataLen, Value);
-end;
-
-function TZDbLibBasePlainDriver.dbRpcSend(dbProc: PDBPROCESS): RETCODE;
-begin
-  Result := FreeTDSAPI.dbRpcSend(dbProc);
-end;
-
-function TZDbLibBasePlainDriver.dbRpcExec(dbProc: PDBPROCESS): RETCODE;
-begin
-  Result := FreeTDSAPI.dbRpcSend(dbProc);
-  if Result = SUCCEED then
-    Result := FreeTDSAPI.dbSqlOk(dbProc);
-end;
-
-function TZDbLibBasePlainDriver.dbRetStatus(dbProc: PDBPROCESS): DBINT;
-begin
-  Result := FreeTDSAPI.dbRetStatus(dbProc);
-end;
-
-function TZDbLibBasePlainDriver.dbHasRetStat(dbProc: PDBPROCESS): Boolean;
+function TZFreeTDSBasePlainDriver.dbHasRetStat(dbProc: PDBPROCESS): Boolean;
 begin
   Result := FreeTDSAPI.dbHasRetStat(dbProc) <> 0;
 end;
 
-function TZDbLibBasePlainDriver.dbRetName(dbProc: PDBPROCESS; RetNum: DBINT): PAnsiChar;
+function TZFreeTDSBasePlainDriver.dbColInfo(dbProc: PDBPROCESS;
+  Column: Integer; var ADBInfo: DBCOL): ZRETCODE;
 begin
-  Result := FreeTDSAPI.dbRetName(dbProc, RetNum);
+  FillChar(ADBInfo, SizeOf(DBCol), #0);
+  ADBInfo.SizeOfStruct := SizeOf(DBCol);
+  Result := FreeTDSAPI.dbcolinfo(dbProc, CI_REGULAR, Column, 0, @ADBInfo);
 end;
 
-function TZDbLibBasePlainDriver.dbRetData(dbProc: PDBPROCESS; RetNum: DBINT): Pointer;
+{ TZFreeTDS42MsSQLPlainDriver }
+function TZFreeTDS42MsSQLPlainDriver.Clone: IZPlainDriver;
 begin
-  Result := FreeTDSAPI.dbRetData(dbProc, RetNum);
+  Result := TZFreeTDS42MsSQLPlainDriver.Create;
 end;
 
-function TZDbLibBasePlainDriver.dbRetLen(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
+function TZFreeTDS42MsSQLPlainDriver.GetProtocol: string;
 begin
-  Result := FreeTDSAPI.dbRetLen(dbProc, RetNum);
+  Result := 'FreeTDS_Sybase<10)';
 end;
 
-function TZDbLibBasePlainDriver.dbRetType(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
+function TZFreeTDS42MsSQLPlainDriver.GetDescription: string;
 begin
-  Result := FreeTDSAPI.dbRetType(dbProc, RetNum);
+  Result := 'FreeTDS 4.2 protocol for MsSQL <=6.5 Servers';
 end;
 
-{ TZFreeTDSPlainDriver }
-
-constructor TZFreeTDSPlainDriver.Create;
+function TZFreeTDS42MsSQLPlainDriver.dbsetlversion(Login: PLOGINREC): ZRETCODE;
 begin
-  inherited create;
-  FLoader := TZNativeLibraryLoader.Create([]);
-{$IFNDEF MYSQL_STRICT_DLL_LOADING}
-  {$IFNDEF UNIX}
-    FLoader.AddLocation(WINDOWS_DLL_LOCATION);
-  {$ELSE}
-    FLoader.AddLocation(LINUX_DLL_LOCATION);
-  {$ENDIF}
-{$ENDIF}
+  Result := FreeTDSAPI.dbsetlversion(Login, DBVERSION_42);
 end;
 
-destructor TZFreeTDSPlainDriver.Destroy;
+function TZFreeTDS42MsSQLPlainDriver.dbsetversion: ZRETCODE;
 begin
-
-  inherited Destroy;
+  Result := FreeTDSAPI.dbsetversion(TDSDBVERSION_42);
 end;
 
-procedure TZFreeTDSPlainDriver.LoadApi;
+{ TZFreeTDS42SybasePlainDriver }
+function TZFreeTDS42SybasePlainDriver.Clone: IZPlainDriver;
 begin
-{ ************** Load adresses of API Functions ************* }
-  with Loader do
+  Result := TZFreeTDS42SybasePlainDriver.Create;
+end;
+
+function TZFreeTDS42SybasePlainDriver.GetProtocol: string;
+begin
+  Result := 'FreeTDS_MsSQL<=6.5)';
+end;
+
+function TZFreeTDS42SybasePlainDriver.GetDescription: string;
+begin
+  Result := 'FreeTDS 4.2 protocol for Sybase <10 Servers';
+end;
+
+function TZFreeTDS42SybasePlainDriver.dbsetlversion(Login: PLOGINREC): ZRETCODE;
+begin
+  Result := DBSUCCEED;
+end;
+
+function TZFreeTDS42SybasePlainDriver.dbsetversion: ZRETCODE;
+begin
+  Result := FreeTDSAPI.dbsetversion(TDSDBVERSION_42);
+end;
+
+{ TZFreeTDS50PlainDriver }
+function TZFreeTDS50PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZFreeTDS50PlainDriver.Create;
+end;
+
+function TZFreeTDS50PlainDriver.GetProtocol: string;
+begin
+  Result := 'FreeTDS_Sybase-10+';
+end;
+
+function TZFreeTDS50PlainDriver.GetDescription: string;
+begin
+  Result := 'FreeTDS 5.0 Protocol for Sybase >= 10 Servers ';
+end;
+
+function TZFreeTDS50PlainDriver.dbsetversion: ZRETCODE;
+begin
+  Result := FreeTDSAPI.dbsetversion(TDSDBVERSION_46);
+end;
+
+{ TZFreeTDS70PlainDriver }
+function TZFreeTDS70PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZFreeTDS70PlainDriver.Create;
+end;
+
+function TZFreeTDS70PlainDriver.GetProtocol: string;
+begin
+  Result := 'FreeTDS_MsSQL-7.0';
+end;
+
+function TZFreeTDS70PlainDriver.dbsetlversion(Login: PLOGINREC): ZRETCODE;
+begin
+  Result := FreeTDSAPI.dbsetlversion(Login, DBVERSION_70);
+end;
+
+function TZFreeTDS70PlainDriver.GetDescription: string;
+begin
+  Result := 'FreeTDS 7.0 Protocol for MsSQL 7.0 Servers';
+end;
+
+function TZFreeTDS70PlainDriver.dbsetversion: ZRETCODE;
+begin
+  Result := FreeTDSAPI.dbsetversion(TDSDBVERSION_70);
+end;
+
+{ TZFreeTDS71PlainDriver }
+function TZFreeTDS71PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZFreeTDS71PlainDriver.Create;
+end;
+
+function TZFreeTDS71PlainDriver.GetProtocol: string;
+begin
+  Result := 'FreeTDS_MsSQL-2000';
+end;
+
+function TZFreeTDS71PlainDriver.GetDescription: string;
+begin
+  Result := 'FreeTDS 7.1 Protocol for MsSQL 2000 Servers';
+end;
+
+function TZFreeTDS71PlainDriver.dbsetversion: ZRETCODE;
+begin
+  Result := FreeTDSAPI.dbsetversion(TDSDBVERSION_70);
+end;
+
+{ TZFreeTDS72PlainDriver }
+function TZFreeTDS72PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZFreeTDS72PlainDriver.Create;
+end;
+
+function TZFreeTDS72PlainDriver.GetProtocol: string;
+begin
+  Result := 'FreeTDS_MsSQL>=2005';
+end;
+
+function TZFreeTDS72PlainDriver.GetDescription: string;
+begin
+  Result := 'FreeTDS 7.2 Protocol for MsSQL 2005, 2008, 2012 Servers';
+end;
+
+function TZFreeTDS72PlainDriver.dbsetversion: ZRETCODE;
+begin
+  Result := FreeTDSAPI.dbsetversion(TDSDBVERSION_72);
+end;
+
+initialization
+  SQLErrors := TList.Create;
+  SQLMessages := TList.Create;
+finalization
+//Free any record in the list if any
+  while SQLErrors.Count > 0 do
   begin
-    @FreeTDSAPI.dbadata         := GetAddress('dbadata');
-    @FreeTDSAPI.dbadlen         := GetAddress('dbadlen');
-    @FreeTDSAPI.dbaltbind       := GetAddress('dbaltbind');
-    @FreeTDSAPI.dbaltbind_ps    := GetAddress('dbaltbind_ps');
-    @FreeTDSAPI.dbaltcolid      := GetAddress('dbaltcolid');
-    @FreeTDSAPI.dbaltlen        := GetAddress('dbaltlen');
-    @FreeTDSAPI.dbaltop         := GetAddress('dbaltop');
-    @FreeTDSAPI.dbalttype       := GetAddress('dbalttype');
-    @FreeTDSAPI.dbaltutype      := GetAddress('dbaltutype');
-    @FreeTDSAPI.dbanullbind     := GetAddress('dbanullbind');
-    @FreeTDSAPI.dbbind          := GetAddress('dbbind');
-    @FreeTDSAPI.dbbind_ps       := GetAddress('dbbind_ps');
-    @FreeTDSAPI.dbbufsize       := GetAddress('dbbufsize');
-    @FreeTDSAPI.dbbylist        := GetAddress('dbbylist');
-    @FreeTDSAPI.dbcancel        := GetAddress('dbcancel');
-    @FreeTDSAPI.dbcanquery      := GetAddress('dbcanquery');
-    @FreeTDSAPI.dbchange        := GetAddress('dbchange');
-    @FreeTDSAPI.dbclose         := GetAddress('dbclose');
-    @FreeTDSAPI.dbclrbuf        := GetAddress('dbclrbuf');
-    @FreeTDSAPI.dbclropt        := GetAddress('dbclropt');
-    @FreeTDSAPI.dbcmd           := GetAddress('dbcmd');
-    @FreeTDSAPI.dbcmdrow        := GetAddress('dbcmdrow');
-    @FreeTDSAPI.dbtablecolinfo  := GetAddress('dbtablecolinfo');
-    @FreeTDSAPI.dbcolinfo       := GetAddress('dbcolinfo');
-    @FreeTDSAPI.dbcollen        := GetAddress('dbcollen');
-    @FreeTDSAPI.dbcolname       := GetAddress('dbcolname');
-    @FreeTDSAPI.dbcolsource     := GetAddress('dbcolsource');
-    @FreeTDSAPI.dbcoltype       := GetAddress('dbcoltype');
-    @FreeTDSAPI.dbcolutype      := GetAddress('dbcolutype');
-    @FreeTDSAPI.dbconvert       := GetAddress('dbcolutype');
-    @FreeTDSAPI.dbconvert_ps    := GetAddress('dbconvert_ps');
-    @FreeTDSAPI.dbiscount       := GetAddress('dbiscount');
-    @FreeTDSAPI.dbcount         := GetAddress('dbcount');
-    @FreeTDSAPI.dbcurcmd        := GetAddress('dbcurcmd');
-    @FreeTDSAPI.dbcurrow        := GetAddress('dbcurrow');
-    @FreeTDSAPI.dbdata          := GetAddress('dbdata');
-    @FreeTDSAPI.dbdatecmp       := GetAddress('dbdatecmp');
-    @FreeTDSAPI.dbdatecrack     := GetAddress('dbdatecrack');
-    @FreeTDSAPI.dbdatlen        := GetAddress('dbdatlen');
-    @FreeTDSAPI.dbdead          := GetAddress('dbdead');
-    @FreeTDSAPI.dberrhandle     := GetAddress('dberrhandle');
-    @FreeTDSAPI.dbexit          := GetAddress('dbexit');
-    @FreeTDSAPI.dbfcmd          := GetAddress('dbfcmd');
-    @FreeTDSAPI.dbfirstrow      := GetAddress('dbfirstrow');
-    @FreeTDSAPI.dbfreebuf       := GetAddress('dbfreebuf');
-    @FreeTDSAPI.dbgetchar       := GetAddress('dbgetchar');
-    @FreeTDSAPI.dbgetcharset    := GetAddress('dbgetcharset');
-    @FreeTDSAPI.dbgetlusername  := GetAddress('dbgetlusername');
-    @FreeTDSAPI.dbgetmaxprocs   := GetAddress('dbgetmaxprocs');
-    @FreeTDSAPI.dbgetnatlanf    := GetAddress('dbgetnatlanf');
-    @FreeTDSAPI.dbgetpacket     := GetAddress('dbgetpacket');
-    @FreeTDSAPI.dbgetrow        := GetAddress('dbgetrow');
-    @FreeTDSAPI.dbgettime       := GetAddress('dbgettime');
-    @FreeTDSAPI.dbgetuserdata   := GetAddress('dbgetuserdata');
-    @FreeTDSAPI.dbhasretstat    := GetAddress('dbhasretstat');
-    @FreeTDSAPI.dbinit          := GetAddress('dbinit');
-    @FreeTDSAPI.dbiordesc       := GetAddress('dbiordesc');
-    @FreeTDSAPI.dbiowdesc       := GetAddress('dbiowdesc');
-    @FreeTDSAPI.dbisavail       := GetAddress('dbisavail');
-    @FreeTDSAPI.dbisopt         := GetAddress('dbisopt');
-    @FreeTDSAPI.dblastrow       := GetAddress('dblastrow');
-    @FreeTDSAPI.dblogin         := GetAddress('dblogin');
-    @FreeTDSAPI.dbloginfree     := GetAddress('dbloginfree');
-    @FreeTDSAPI.dbmny4cmp       := GetAddress('dbmny4cmp');
-    @FreeTDSAPI.dbmnycmp        := GetAddress('dbmnycmp');
-    @FreeTDSAPI.dbmny4add       := GetAddress('dbmny4add');
-    @FreeTDSAPI.dbmnydec        := GetAddress('dbmnydec');
-    @FreeTDSAPI.dbmnyinc        := GetAddress('dbmnyinc');
-    @FreeTDSAPI.dbmnymaxpos     := GetAddress('dbmnymaxpos');
-    @FreeTDSAPI.dbmnymaxneg     := GetAddress('dbmnymaxneg');
-    @FreeTDSAPI.dbmny4minus     := GetAddress('dbmny4minus');
-    @FreeTDSAPI.dbmnyminus      := GetAddress('dbmnyminus');
-    @FreeTDSAPI.dbmny4sub       := GetAddress('dbmny4sub');
-    @FreeTDSAPI.dbmnysub        := GetAddress('dbmnysub');
-    @FreeTDSAPI.dbmny4copy      := GetAddress('dbmny4copy');
-    @FreeTDSAPI.dbmnycopy       := GetAddress('dbmnycopy');
-    @FreeTDSAPI.dbmny4zero      := GetAddress('dbmny4zero');
-    @FreeTDSAPI.dbmnyzero       := GetAddress('dbmnyzero');
-    @FreeTDSAPI.dbmonthname     := GetAddress('dbmonthname');
-    @FreeTDSAPI.dbmorecmds      := GetAddress('dbmorecmds');
-    @FreeTDSAPI.dbmoretext      := GetAddress('dbmoretext');
-    @FreeTDSAPI.dbmsghandle     := GetAddress('dbmsghandle');
-    @FreeTDSAPI.dbname          := GetAddress('dbname');
-    @FreeTDSAPI.dbnextrow       := GetAddress('dbnextrow');
-    @FreeTDSAPI.dbnullbind      := GetAddress('dbnullbind');
-    @FreeTDSAPI.dbnumalts       := GetAddress('dbnumalts');
-    @FreeTDSAPI.dbnumcols       := GetAddress('dbnumcols');
-    @FreeTDSAPI.dbnumcompute    := GetAddress('dbnumcompute');
-    @FreeTDSAPI.dbnumorders     := GetAddress('dbnumorders');
-    @FreeTDSAPI.dbnumrets       := GetAddress('dbnumrets');
-    @FreeTDSAPI.tdsdbopen       := GetAddress('tdsdbopen');
-    @FreeTDSAPI.dbopen          := GetAddress('dbopen');
-
-    @FreeTDSAPI.dbprhead        := GetAddress('dbprhead');
-    @FreeTDSAPI.dbprrow         := GetAddress('dbprrow');
-    @FreeTDSAPI.dbprtype        := GetAddress('dbprtype');
-    @FreeTDSAPI.DRBUF           := GetAddress('DRBUF');
-    @FreeTDSAPI.dbreadtext      := GetAddress('dbreadtext');
-    @FreeTDSAPI.dbrecftos       := GetAddress('dbrecftos');
-    @FreeTDSAPI.dbresults       := GetAddress('dbresults');
-    @FreeTDSAPI.dbresults_r     := GetAddress('dbresults_r');
-    @FreeTDSAPI.dbretdata       := GetAddress('dbretdata');
-    @FreeTDSAPI.dbretlen        := GetAddress('dbretlen');
-    @FreeTDSAPI.dbretname       := GetAddress('dbretname');
-    @FreeTDSAPI.dbretstatus     := GetAddress('dbretstatus');
-    @FreeTDSAPI.dbrettype       := GetAddress('dbrettype');
-    @FreeTDSAPI.dbrows          := GetAddress('dbrows');
-    @FreeTDSAPI.dbrowtype       := GetAddress('dbrowtype');
-    @FreeTDSAPI.dbrpcinit       := GetAddress('dbrpcinit');
-    @FreeTDSAPI.dbrpcparam      := GetAddress('dbrpcparam');
-    @FreeTDSAPI.dbrpcsend       := GetAddress('dbrpcsend');
-    @FreeTDSAPI.dbsafestr       := GetAddress('dbsafestr');
-    //@FreeTDSAPI.dbsechandle     := GetAddress('dbsechandle');
-    @FreeTDSAPI.dbservcharset   := GetAddress('dbservcharset');
-    @FreeTDSAPI.dbsetavail      := GetAddress('dbsetavail');
-    //@FreeTDSAPI.dbsetbusy       := GetAddress('dbsetbusy');
-    @FreeTDSAPI.dbsetdefcharset := GetAddress('dbsetdefcharset');
-    @FreeTDSAPI.dbsetifile      := GetAddress('dbsetifile');
-    //@FreeTDSAPI.dbsetinterrupt  := GetAddress('dbsetinterrupt');
-    @FreeTDSAPI.dbsetlogintime  := GetAddress('dbsetlogintime');
-    @FreeTDSAPI.dbsetmaxprocs   := GetAddress('dbsetmaxprocs');
-    @FreeTDSAPI.dbsetlname      := GetAddress('dbsetlname');
-    @FreeTDSAPI.dbsetnull       := GetAddress('dbsetnull');
-    @FreeTDSAPI.dbsetopt        := GetAddress('dbsetopt');
-    @FreeTDSAPI.dbsetrow        := GetAddress('dbsetrow');
-    @FreeTDSAPI.dbsettime       := GetAddress('dbsettime');
-    @FreeTDSAPI.dbsetuserdata   := GetAddress('dbsetuserdata');
-    @FreeTDSAPI.dbsetversion    := GetAddress('dbsetversion');
-    @FreeTDSAPI.dbspid          := GetAddress('dbspid');
-    @FreeTDSAPI.dbspr1row       := GetAddress('dbspr1row');
-    @FreeTDSAPI.dbspr1rowlen    := GetAddress('dbspr1rowlen');
-    @FreeTDSAPI.dbsprhead       := GetAddress('dbsprhead');
-    @FreeTDSAPI.dbsprline       := GetAddress('dbsprline');
-    @FreeTDSAPI.dbsqlexec       := GetAddress('dbsqlexec');
-    @FreeTDSAPI.dbsqlok         := GetAddress('dbsqlok');
-    @FreeTDSAPI.dbsqlsend       := GetAddress('dbsqlsend');
-    @FreeTDSAPI.dbstrcpy        := GetAddress('dbstrcpy');
-    @FreeTDSAPI.dbstrlen        := GetAddress('dbstrlen');
-    @FreeTDSAPI.dbvarylen       := GetAddress('dbvarylen');
-
-    @FreeTDSAPI.dbtds           := GetAddress('dbtds');
-    @FreeTDSAPI.dbtextsize      := GetAddress('dbtextsize');
-    @FreeTDSAPI.dbtxptr         := GetAddress('dbtxptr');
-    @FreeTDSAPI.dbtxtimestamp   := GetAddress('dbtxtimestamp');
-    @FreeTDSAPI.dbtxtsnewval    := GetAddress('dbtxtsnewval');
-    @FreeTDSAPI.dbtxtsput       := GetAddress('dbtxtsput');
-    @FreeTDSAPI.dbuse           := GetAddress('dbuse');
-    @FreeTDSAPI.dbwillconvert   := GetAddress('dbwillconvert');
-    @FreeTDSAPI.dbwritetext     := GetAddress('dbwritetext');
-
-    (* LOGINREC manipulation *)
-    @FreeTDSAPI.dbsetlbool      := GetAddress('dbsetlbool');
-    @FreeTDSAPI.dbsetllong      := GetAddress('dbsetllong');
-    @FreeTDSAPI.dbsetlversion   := GetAddress('dbsetlversion');
+    Dispose(SQLErrors.Items[0]);
+    SQLErrors.Delete(0);
   end;
-end;
+  if SQLErrors <> nil then
+    FreeAndNil(SQLErrors);
 
-function TZFreeTDSPlainDriver.GetProtocol: string;
-begin
-  Result := 'FreeTDS_Sybase+SQLServer';
-end;
-
-function TZFreeTDSPlainDriver.GetDescription: string;
-begin
-  Result := 'Native FreeTDS driver for Sybase and MMSQL Servers';
-end;
-
+//Free any record in the list if any
+  while SQLMessages.Count > 0 do
+  begin
+    Dispose(SQLMessages.Items[0]);
+    SQLMessages.Delete(0);
+  end;
+  if SQLMessages <> nil then
+    FreeAndNil(SQLMessages);
 end.
