@@ -85,6 +85,10 @@ uses
 {$IFDEF ENABLE_ASA}
   ZDbcASA,
 {$ENDIF}
+{$IFDEF ENABLE_POOLED}
+  ZDbcPooled,
+{$ENDIF}
+
   SysUtils, Classes, ZDbcIntfs, DB, ZCompatibility, ZURL;
 
 

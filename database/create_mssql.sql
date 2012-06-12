@@ -218,7 +218,7 @@ go
 /*==============================================================*/
 /* Table : Case_Sensitive                                       */
 /*==============================================================*/
-create table [Case_Sensitive] (
+/*create table [Case_Sensitive] (
 cs_id                 INTEGER           not null,
 [Cs_Data1]            INTEGER		null,
 [cs_data1]            INTEGER		null,
@@ -226,7 +226,7 @@ cs_id                 INTEGER           not null,
 primary key (cs_id)
 )
 go
-
+*/
 /*==============================================================*/
 /* Table : case_sensitive                                       */
 /*==============================================================*/
