@@ -141,7 +141,6 @@ function GetProcAddress(Module: HMODULE; Proc: PChar): Pointer;
 type
   TZCharEncoding = (
     ceDefault, //Internal switch for the two Functions below do not use it as a CodePage-decaration!
-    //ceUnsupported,  //may be Realy Unsupported CodePages {This must be testet before}
     ceAnsi, //Base Ansi-String: prefered CodePage
     ceUTF8, //UTF8_Unicode: 1-4Byte/Char
     {$IFNDEF WITH_WIDECONTROLS}
@@ -167,7 +166,7 @@ type
     FCodePage: PZCodePage;
   protected
     function ZDbcString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
-    function ZPlainString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
+    function ZPlainString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
     function ZStringW(const ws: WideString; const Encoding: TZCharEncoding = ceDefault): String;
     property ClientCodePage: PZCodePage read FCodePage write FCodePage;
   public
@@ -530,19 +529,9 @@ begin
   case UseEncoding of
     ceUTF8:
       {$IFDEF DELPHI12_UP}
-      //if DetectUTF8Encoding(Ansi) = etUTF8 then
         Result := UTF8ToString(Ansi); //Decode the AnsiString
-      //else
-        //Result := String(Ansi); //Reference the AnsiString and move 'em up to UnicodeString
       {$ELSE}
-        {.$IFDEF FPC}
         Result := Ansi;
-        {.$ELSE}
-        {if DetectUTF8Encoding(Ansi) = etUTF8 then //Take care we've rael ansi as result
-          Result := UTF8ToAnsi(Ansi)
-        else
-          Result := Ansi;
-        {$ENDIF}
       {$ENDIF}
     {$IFNDEF WITH_WIDECONTROLS}
     ceUTF8AsAnsi: Result := UTF8ToAnsi(Ansi);
@@ -589,7 +578,7 @@ EgonHugeist:
      UTF8 instead of Latin1. (SSL-Keys eventualy)
 }
 function TZCodePagedObject.ZPlainString(const AStr: String;
-  const Encoding: TZCharEncoding = ceDefault): AnsiString;
+  const Encoding: TZCharEncoding = ceDefault): {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
 var
   UseEncoding: TZCharEncoding;
 begin
@@ -603,7 +592,7 @@ begin
   case UseEncoding of
     ceUTF8:
       {$IFDEF DELPHI12_UP}
-      Result := AnsiString(UTF8Encode(AStr));
+      Result := UTF8Encode(AStr);
       {$ELSE}
         if DetectUTF8Encoding(AStr) in [etUTF8, etUSASCII] then
           Result := AStr
@@ -729,19 +718,16 @@ end;
   {$IFDEF FPC}
 function LoadLibrary(ModuleName: PChar): HMODULE;
 begin
-  //Result := HMODULE(dlopen(Modulename, RTLD_GLOBAL));
   Result := dynlibs.LoadLibrary(ModuleName);
 end;
 
 function FreeLibrary(Module: HMODULE): LongBool;
 begin
-  //Result := longbool(dlclose(pointer(Module)));
   Result := dynlibs.FreeLibrary(Module);
 end;
 
 function GetProcAddress(Module: HMODULE; Proc: PChar): Pointer;
 begin
-  //Result := dlsym(pointer(Module), Proc);
   Result := dynlibs.GetProcAddress(Module,Proc)
 end;
   {$ENDIF}

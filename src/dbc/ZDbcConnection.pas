@@ -136,9 +136,8 @@ type
     FClientCodePage: String;
     FMetadata: TContainedObject;
     procedure InternalCreate; virtual; //abstract; //Mark, if we are ready this one should be abstract!
-    procedure CheckCharEncoding(CharSet: String;
-      const DoArrange: Boolean = False);
-    function GetClientCodePageInformations(const ClientCharacterSet: String = ''): PZCodePage; //EgonHugeist
+    procedure CheckCharEncoding(const CharSet: String; const DoArrange: Boolean = False);
+    function GetClientCodePageInformations: PZCodePage; //EgonHugeist
     function GetUTF8StringAsWideField: Boolean;
     procedure SetUTF8StringAsWideField(const Value: Boolean);
     function GetPreprepareSQL: Boolean; //EgonHugeist
@@ -599,13 +598,10 @@ end;
     default. This means it ignores the choosen Client-CharacterSet and sets a
     "more" Zeos-Compatible Client-CharacterSet if known.
 }
-procedure TZAbstractConnection.CheckCharEncoding(CharSet: String;
+procedure TZAbstractConnection.CheckCharEncoding(const CharSet: String;
   const DoArrange: Boolean = False);
 begin
-  ClientCodePage := Self.GetIZPlainDriver.GetClientCodePageInformations(CharSet);
-
-  if (DoArrange) and (ClientCodePage^.ZAlias <> '' ) then
-    CheckCharEncoding(ClientCodePage^.ZAlias); //recalls em selves
+  ClientCodePage := Self.GetIZPlainDriver.ValidateCharEncoding(CharSet, DoArrange);
   FPreprepareSQL := FPreprepareSQL and (ClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]);
   FClientCodePage := ClientCodePage^.Name; //resets the developer choosen ClientCodePage
 end;
@@ -1278,13 +1274,9 @@ end;
   @param ClientCharacterSet the CharacterSet which has to be checked
   @result PZCodePage see ZCompatible.pas
 }
-function TZAbstractConnection.GetClientCodePageInformations(
-  const ClientCharacterSet: String = ''): PZCodePage; //EgonHugeist
+function TZAbstractConnection.GetClientCodePageInformations: PZCodePage; //EgonHugeist
 begin
-  if ClientCharacterSet = '' then
-    Result := ClientCodePage
-  else
-    Result := GetIZPlainDriver.GetClientCodePageInformations(ClientCharacterSet);
+  Result := ClientCodePage
 end;
 
 function TZAbstractConnection.GetUTF8StringAsWideField: Boolean;

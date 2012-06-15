@@ -229,7 +229,7 @@ function GetOracleUpdateCount(PlainDriver: IZOraclePlainDriver;
 implementation
 
 uses ZMessages, ZDbcOracle, ZDbcOracleResultSet, ZDbcCachedResultSet,
-  ZDbcGenericResolver;
+  ZDbcGenericResolver, ZDbcUtils;
 
 {**
   Calculates size of SQLVars record.

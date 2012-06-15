@@ -683,11 +683,7 @@ var
    ConnectionLost: boolean;
 begin
   if Assigned(Handle) then
- {$IFDEF DELPHI12_UP}
-    ErrorMessage := Trim(UTF8ToUnicodeString(StrPas(PlainDriver.GetErrorMessage(Handle))))
- {$ELSE}
-    ErrorMessage := Trim(StrPas(PlainDriver.GetErrorMessage(Handle)))
- {$ENDIF}
+    ErrorMessage := Trim(String(StrPas(PlainDriver.GetErrorMessage(Handle))))
   else
     ErrorMessage := '';
   if ErrorMessage <> '' then

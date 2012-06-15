@@ -62,7 +62,8 @@ interface
 
 {$I ZPlain.inc}
 
-uses Classes, ZPlainDriver, ZCompatibility, ZPlainMySqlConstants;
+uses Classes, ZPlainDriver, ZCompatibility, ZPlainMySqlConstants,
+  ZTokenizer;
 
 const
 {$IFNDEF UNIX}
@@ -139,7 +140,8 @@ type
     function GetNumRows(Res: PZMySQLResult): Int64;
     function SetOptions(Handle: PZMySQLConnect; Option: TMySQLOption; const Arg: PAnsiChar): Integer;
     function Ping(Handle: PZMySQLConnect): Integer;
-    function ExecQuery(Handle: PZMySQLConnect; const Query: PAnsiChar): Integer;
+    function ExecQuery(Handle: PZMySQLConnect; const Query: PAnsiChar): Integer; overload;
+    function ExecQuery(Handle: PZMySQLConnect; const SQL: String; const PreprepareSQL: Boolean; out LogSQL: String): Integer; overload;
     function RealConnect(Handle: PZMySQLConnect; const Host, User, Password, Db: PAnsiChar; Port: Cardinal; UnixSocket: PAnsiChar; ClientFlag: Cardinal): PZMySQLConnect;
     function GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PAnsiChar; Length: Cardinal): Cardinal;
     function ExecRealQuery(Handle: PZMySQLConnect; const Query: PAnsiChar; Length: Integer): Integer;
@@ -241,6 +243,8 @@ type
     procedure LoadCodePages; override;
     procedure LoadApi; override;
     procedure BuildServerArguments(Options: TStrings);
+    function GetPrepreparedSQL(Handle: PZMySQLConnect; const SQL: String;
+      out LogSQL: String): {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF}; reintroduce;
   public
     constructor Create;
     destructor Destroy; override;
@@ -259,9 +263,11 @@ type
       const Host, User, Password, Db: PAnsiChar; Port: Cardinal;
       UnixSocket: PAnsiChar; ClientFlag: Cardinal): PZMySQLConnect;
     function GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PAnsiChar; Length: Cardinal): Cardinal;
+    function EscapeString(Handle: PZMySQLConnect; StrFrom: {$IFDEF DELPHI12_UP}RawByteString): RawByteString{$ELSE}AnsiString): AnsiString{$ENDIF};
     procedure Close(Handle: PZMySQLConnect);
 
-    function ExecQuery(Handle: PZMySQLConnect; const Query: PAnsiChar): Integer;
+    function ExecQuery(Handle: PZMySQLConnect; const Query: PAnsiChar): Integer; overload;
+    function ExecQuery(Handle: PZMySQLConnect; const SQL: String; const PreprepareSQL: Boolean; out LogSQL: String): Integer; overload;
     function ExecRealQuery(Handle: PZMySQLConnect; const Query: PAnsiChar;
       Length: Integer): Integer;
 
@@ -413,7 +419,7 @@ type
   end;
 
 implementation
-uses SysUtils, ZPlainLoader;
+uses SysUtils, ZPlainLoader{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
 
 { TZMySQLPlainBaseDriver }
 function TZMySQLBaseDriver.GetUnicodeCodePageName: String;
@@ -608,6 +614,35 @@ begin
   end;
 end;
 
+function TZMySQLBaseDriver.GetPrepreparedSQL(Handle: PZMySQLConnect; const SQL: String;
+  out LogSQL: String): {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
+var
+  SQLTokens: TZTokenDynArray;
+  i: Integer;
+  QuoteChar: Char;
+begin
+  LogSQL := '';
+  SQLTokens := FTokenizer.TokenizeEscapeBufferToList(SQL); //Disassembles the Query
+  for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
+  begin
+    LogSQL := LogSQL+SQLTokens[i].Value;
+    case (SQLTokens[i].TokenType) of
+      ttEscape:
+        Result := Result + {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF}(SQLTokens[i].Value);
+      ttQuoted, ttQuotedIdentifier:
+        begin
+          QuoteChar := Char(SQLTokens[i].Value[1]);
+          if QuoteChar = #39 then
+            Result := Result + ''''+EscapeString(Handle, Self.ZPlainString(SysUtils.AnsiDequotedStr(SQLTokens[i].Value, QuoteChar)))+ ''''
+          else
+            Result := Result + {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr(EscapeString(Handle, Self.ZPlainString(SysUtils.AnsiDequotedStr(SQLTokens[i].Value, QuoteChar))), AnsiChar(QuoteChar));
+        end;
+      else
+        Result := Result + {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF}(SQLTokens[i].Value);
+    end;
+  end;
+end;
+
 constructor TZMySQLBaseDriver.Create;
 begin
   inherited create;
@@ -676,6 +711,18 @@ function TZMySQLBaseDriver.ExecQuery(Handle: PZMySQLConnect;
   const Query: PAnsiChar): Integer;
 begin
   Result := MYSQL_API.mysql_query(Handle, Query);
+end;
+
+function TZMySQLBaseDriver.ExecQuery(Handle: PZMySQLConnect; const SQL: String;
+  const PreprepareSQL: Boolean; out LogSQL: String): Integer;
+begin
+  if PreprepareSQL then
+    Result := MYSQL_API.mysql_query(Handle, PAnsiChar(GetPrepreparedSQL(Handle, SQL, LogSQL)))
+  else
+  begin
+    Result := MYSQL_API.mysql_query(Handle, PAnsiChar({$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF}(SQL)));
+    LogSQL := SQL;
+  end;
 end;
 
 function TZMySQLBaseDriver.ExecRealQuery(Handle: PZMySQLConnect;
@@ -841,6 +888,24 @@ function TZMySQLBaseDriver.GetRealEscapeString(Handle: PZMySQLConnect; StrTo, St
   Length: Cardinal): Cardinal;
 begin
   Result := MYSQL_API.mysql_real_escape_string(Handle, StrTo, StrFrom, Length);
+end;
+
+{**
+  EgonHugeist: get an escaped string in dependency of the characterset
+  }
+function TZMySQLBaseDriver.EscapeString(Handle: PZMySQLConnect; StrFrom: {$IFDEF DELPHI12_UP}RawByteString): RawByteString{$ELSE}AnsiString): AnsiString{$ENDIF};
+var
+   Inlength, outlength: integer;
+   Outbuffer: {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
+begin
+   InLength := Length(StrFrom);
+   Setlength(Outbuffer,Inlength*2+1);
+   if Handle = nil then
+     OutLength := GetEscapeString(PAnsiChar(OutBuffer),PAnsiChar(StrFrom),InLength)
+   else
+     OutLength := GetRealEscapeString(Handle, PAnsiChar(OutBuffer),PAnsiChar(StrFrom),InLength);
+   Setlength(Outbuffer,OutLength);
+   Result := Outbuffer;
 end;
 
 function TZMySQLBaseDriver.Refresh(Handle: PZMySQLConnect;
@@ -1139,7 +1204,6 @@ end;
 procedure TZMySQLBaseDriver.SetDriverOptions(Options: TStrings);
 var
   PreferedLibrary: String;
-
 begin
   PreferedLibrary := Options.Values['Library'];
   if PreferedLibrary <> '' then

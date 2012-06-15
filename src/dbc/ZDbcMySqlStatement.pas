@@ -194,15 +194,12 @@ uses
 }
 constructor TZMySQLStatement.Create(PlainDriver: IZMySQLPlainDriver;
   Connection: IZConnection; Info: TStrings; Handle: PZMySQLConnect);
-//var
-//  MySQLConnection: IZMySQLConnection;
 begin
   inherited Create(Connection, Info);
   FHandle := Handle;
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
 
-  //MySQLConnection := Connection as IZMySQLConnection;
   FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
 end;
 
@@ -294,12 +291,15 @@ function TZMySQLStatement.ExecuteUpdate(const SQL: string): Integer;
 var
   QueryHandle: PZMySQLResult;
   HasResultset : Boolean;
+//  LogSQL: String;
 begin
   Result := -1;
   Self.SSQL := SQL; //Preprepare SQL
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
+//  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, LogSQL) = 0 then
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
+    //DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
     if HasResultSet then
@@ -318,6 +318,7 @@ begin
       Result := FPlainDriver.GetAffectedRows(FHandle);
   end
   else
+//    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
   LastUpdateCount := Result;
 end;
@@ -446,6 +447,7 @@ var
   Value: TZVariant;
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
+  TempStream: TStream;
 
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
 begin
@@ -473,9 +475,15 @@ begin
       stBytes:
         Result := Self.GetConnection.GetEscapeString(PAnsiChar(AnsiString(SoftVarManager.GetAsString(Value))));
       stString:
-        Result := Self.GetConnection.GetEscapeString(PAnsiChar(ZPlainString(SoftVarManager.GetAsString(Value))));
+        //{$IFDEF DELPHI12_UP}
+          //if GetConnection.PreprepareSQL then Result := QuotedStr(SoftVarManager.GetAsString(Value)) else
+        //{$ENDIF}
+          Result := Self.GetConnection.GetEscapeString(PAnsiChar(ZPlainString(SoftVarManager.GetAsString(Value))));
       stUnicodeString:
-        Result := Self.GetConnection.GetEscapeString(PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))));
+        //{$IFDEF DELPHI12_UP}
+          //if GetConnection.PreprepareSQL then Result := QuotedStr(SoftVarManager.GetAsUnicodeString(Value)) else
+        //{$ENDIF}
+          Result := Self.GetConnection.GetEscapeString(PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))));
       stDate:
       begin
         DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
@@ -497,7 +505,23 @@ begin
         Result := '''' + Format('%0.4d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d',
           [AYear, AMonth, ADay, AHour, AMinute, ASecond]) + '''';
       end;
-      stAsciiStream, stUnicodeStream,stBinaryStream:
+      stAsciiStream, stUnicodeStream:
+        begin
+          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
+          if not TempBlob.IsEmpty then
+          begin
+            if Self.GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+            begin
+              TempStream := GetValidatedUnicodeStream(TempBlob.GetStream);
+              TempBlob.SetStream(TempStream);
+              TempStream.Free;
+            end;
+            Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString);
+          end
+          else
+            Result := 'NULL';
+        end;
+      stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
@@ -617,9 +641,9 @@ end;
 
 procedure TZMysqlPreparedStatement.BindInParameters;
 var
-    caststring : AnsiString;
-    PBuffer: Pointer;
-    year, month, day, hour, minute, second, millisecond: word;
+//  caststring : {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
+  PBuffer: Pointer;
+  year, month, day, hour, minute, second, millisecond: word;
   MyType: TMysqlFieldTypes;
   I,J : integer;
 begin
@@ -631,10 +655,14 @@ begin
   For I := 0 to InParamCount - 1 do
   begin
     MyType := GetFieldType(InParamValues[I]);
-    if MyType = FIELD_TYPE_VARCHAR then
+    {if MyType = FIELD_TYPE_VARCHAR then
       FBindBuffer.AddColumn(FIELD_TYPE_STRING,length(UTF8Encode(InParamValues[I].VUnicodeString)))
     else
-      FBindBuffer.AddColumn(MyType,length(InParamValues[I].VString));
+      FBindBuffer.AddColumn(MyType,length(InParamValues[I].VString));}
+    if MyType = FIELD_TYPE_VARCHAR then
+      FBindBuffer.AddColumn(FIELD_TYPE_STRING, StrLen(PAnsiChar(UTF8Encode(InParamValues[I].VUnicodeString)))+1)
+    else
+      FBindBuffer.AddColumn(MyType,StrLen(PAnsiChar(ZPlainString(InParamValues[I].VString)))+1);
     PBuffer := @FColumnArray[I].buffer[0];
 
         if InParamValues[I].VType=vtNull then
@@ -646,6 +674,10 @@ begin
               FIELD_TYPE_STRING:
                 begin
                   if MyType = FIELD_TYPE_VARCHAR then
+                    StrCopy(PAnsiChar(PBuffer^), PAnsiChar(UTF8Encode(InParamValues[I].VUnicodeString)))
+                  else
+                    StrCopy(PAnsiChar(PBuffer^), PAnsiChar(ZPlainString(InParamValues[I].VString)));
+                  {if MyType = FIELD_TYPE_VARCHAR then
                     CastString := UTF8Encode(InParamValues[I].VUnicodeString)
                   else
                     CastString := ZPlainString(InParamValues[I].VString);
@@ -654,7 +686,7 @@ begin
                       PAnsiChar(PBuffer)^ := CastString[J];
                       inc(PAnsiChar(PBuffer));
                     end;
-                  PAnsiChar(PBuffer)^ := chr(0);
+                  PAnsiChar(PBuffer)^ := chr(0);}
                 end;
               FIELD_TYPE_LONGLONG: Int64(PBuffer^) := InParamValues[I].VInteger;
               FIELD_TYPE_DATETIME:

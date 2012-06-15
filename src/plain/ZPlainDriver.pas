@@ -57,7 +57,7 @@ interface
 
 {$I ZPlain.inc}
 
-uses ZClasses, ZPlainLoader, ZCompatibility, Types;
+uses ZClasses, ZPlainLoader, ZCompatibility, Types, ZTokenizer;
 
 type
 
@@ -70,20 +70,24 @@ type
       Why this here? -> No one else then Plaindriver knows which Characterset
       is supported. Here i've made a intervention in dependency of used Compiler.}
     function GetSupportedClientCodePages(const IgnoreUnsupported: Boolean): TStringDynArray;
-    function GetClientCodePageInformations(const ClientCharacterSet: String): PZCodePage; overload;//Egonhugeist
-    function GetClientCodePageInformations(const ClientCharacterSetID: Word): PZCodePage; overload;//Egonhugeist
+    function ValidateCharEncoding(const CharacterSetName: String; const DoArrange: Boolean = False): PZCodePage; overload;
+    function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
+    function ZDbcString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
+    function ZPlainString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
     procedure Initialize(const Location: String = '');
     function Clone: IZPlainDriver;
+    function GetTokenizer: IZTokenizer;
   end;
 
   {ADDED by EgonHugeist 20-01-2011}
   {** implements a generic base class of a generic plain driver.
    to make the CodePage-handling tranparency for all Plain-Drivers}
 
-  TZLegacyPlainDriver = class(TZAbstractObject, IZPlainDriver)
+  TZLegacyPlainDriver = class(TZCodePagedObject, IZPlainDriver)
   private
     FCodePages: array of TZCodePage;
   protected
+    FTokenizer: IZTokenizer;
     function Clone: IZPlainDriver; reintroduce; virtual; abstract;
     procedure LoadCodePages; virtual; abstract;
     procedure AddCodePage(const Name: String; const ID:  Integer;
@@ -96,15 +100,18 @@ type
       {$IFDEF WITH_CHAR_CONTROL}const CP: Word = $ffff; {$ENDIF}
       const ZAlias: String = '');
     function GetUnicodeCodePageName: String; virtual;
+    function ValidateCharEncoding(const CharacterSetName: String; const DoArrange: Boolean = False): PZCodePage; overload;
+    function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
+    function GetPrepreparedSQL(const SQL: String): {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF}; virtual;
+    function GetTokenizer: IZTokenizer;
   public
+    constructor Create;
+    destructor Destroy; override;
     function GetProtocol: string; virtual; abstract;
     function GetDescription: string; virtual; abstract;
     function GetSupportedClientCodePages(const IgnoreUnsupported: Boolean): TStringDynArray;
     procedure Initialize(const Location: String = ''); virtual; abstract;
-    destructor Destroy; override;
 
-    function GetClientCodePageInformations(const ClientCharacterSet: String): PZCodePage; overload;
-    function GetClientCodePageInformations(const ClientCharacterSetID: Word): PZCodePage; overload;//Egonhugeist
   end;
 
   {ADDED by fduenas 15-06-2006}
@@ -314,6 +321,109 @@ begin
   Result := '';
 end;
 
+{**
+   Checks if the given ClientCharacterSet and returns the PZCodePage
+   @param CharacterSetName the Name wich has to be validated
+   @param DoArrange means if the CharacterSet is empty or unsupported then find
+          a supported CodePage
+   @result the PZCodePage of the ClientCharacterSet
+}
+function TZLegacyPlainDriver.ValidateCharEncoding(const CharacterSetName: String;
+  const DoArrange: Boolean = False): PZCodePage;
+  function GetClientCodePageInformations(
+    const ClientCharacterSet: String): PZCodePage;
+  var
+    I: Integer;
+  begin
+    {now check for PlainDriver-Informations...}
+    {$IFDEF LAZARUSUTF8HACK} //if the user didn't set it
+    if ClientCharacterSet = '' then
+    begin
+      for i := Low(FCodePages) to high(FCodePages) do
+        if UpperCase(FCodePages[i].Name) = UpperCase(GetUnicodeCodePageName) then
+        begin
+          Result := @FCodePages[i];
+          Exit;
+        end;
+    end
+    else
+    {$ENDIF}
+    for i := Low(FCodePages) to high(FCodePages) do
+      if UpperCase(FCodePages[i].Name) = UpperCase(ClientCharacterSet) then
+      begin
+        Result := @FCodePages[i];
+        Exit;
+      end;
+    Result := @ClientCodePageDummy;
+  end;
+begin
+  Result := GetClientCodePageInformations(CharacterSetName);
+  ClientCodePage := Result;
+  if (DoArrange) and (ClientCodePage^.ZAlias <> '' ) then
+    ValidateCharEncoding(ClientCodePage^.ZAlias); //recalls em selves
+end;
+
+{**
+   Checks if the given ClientCharacterSet and returns the PZCodePage
+   @param CharacterSetID the ID wich has to be validated
+   @param DoArrange means if the CharacterSet is empty or unsupported then find
+          a supported CodePage
+   @result the PZCodePage of the ClientCharacterSet
+}
+function TZLegacyPlainDriver.ValidateCharEncoding(const CharacterSetID: Integer;
+  const DoArrange: Boolean = False): PZCodePage;
+  function GetClientCodePageInformations(const ClientCharacterSetID: Word): PZCodePage;
+  var
+    I: Integer;
+  begin
+    {now check for PlainDriver-Informations...}
+    for i := Low(FCodePages) to high(FCodePages) do
+      if FCodePages[i].ID = ClientCharacterSetID then
+      begin
+        Result := @FCodePages[i];
+        Exit;
+      end;
+    Result := @ClientCodePageDummy;
+  end;
+begin
+  Result := GetClientCodePageInformations(CharacterSetID);
+  ClientCodePage := Result;
+
+  if (DoArrange) and (ClientCodePage^.ZAlias <> '' ) then
+    ValidateCharEncoding(ClientCodePage^.ZAlias); //recalls em selves
+end;
+
+function TZLegacyPlainDriver.GetPrepreparedSQL(const SQL: String): {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
+var
+  SQLTokens: TZTokenDynArray;
+  i: Integer;
+begin
+  {Mark i agree: It must be enough to get the Tokens..
+  then we can build an IZUpdate/IZInsert/IZDelete-Schema
+  if this is done we can add column-specific CharacterSets/Collations
+  to the detected Columns and tell the Server which kind of Data will be sended
+  now. So this also must be done in the IZSelectSchema if somebody requests
+  converted column-data...}
+
+  SQLTokens := FTokenizer.TokenizeEscapeBufferToList(SQL); //Disassembles the Query
+  for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
+  begin
+    case (SQLTokens[i].TokenType) of
+      ttEscape:
+        Result := Result + AnsiString(SQLTokens[i].Value);
+      ttWord, ttQuoted, ttQuotedIdentifier, ttKeyword:
+        Result := Result + Self.ZPlainString(SQLTokens[i].Value);
+      else
+        Result := Result + AnsiString(SQLTokens[i].Value);
+    end;
+  end;
+end;
+
+function TZLegacyPlainDriver.GetTokenizer: IZTokenizer;
+begin
+  Result := FTokenizer;
+end;
+
 procedure TZLegacyPlainDriver.AddCodePage(const Name: String;
       const ID:  Integer; Encoding: TZCharEncoding = ceAnsi;
       {$IFDEF WITH_CHAR_CONTROL}const CP: Word = $ffff; {$ENDIF}
@@ -386,62 +496,19 @@ begin
     end;
 end;
 
+constructor TZLegacyPlainDriver.Create;
+begin
+  inherited Create;
+  FTokenizer := TZTokenizer.Create;
+end;
+
 destructor TZLegacyPlainDriver.Destroy;
 begin
   SetLength(FCodePages, 0);
+  FTokenizer := nil;
   inherited Destroy;
 end;
 
-{**
-   Checks if the given ClientCharacterSet and returns the PZCodePage
-   @param ClientCharacterSet the Value wich has to be compared
-   @result the PZCodePage of the ClientCharacterSet
-}
-function TZLegacyPlainDriver.GetClientCodePageInformations(
-  const ClientCharacterSet: String): PZCodePage;
-var
-  I: Integer;
-begin
-  {now check for PlainDriver-Informations...}
-  {$IFDEF LAZARUSUTF8HACK} //if the user didn't set it
-  if ClientCharacterSet = '' then
-  begin
-    for i := Low(FCodePages) to high(FCodePages) do
-      if UpperCase(FCodePages[i].Name) = UpperCase(GetUnicodeCodePageName) then
-      begin
-        Result := @FCodePages[i];
-        Exit;
-      end;
-  end
-  else
-  {$ENDIF}
-  for i := Low(FCodePages) to high(FCodePages) do
-    if UpperCase(FCodePages[i].Name) = UpperCase(ClientCharacterSet) then
-    begin
-      Result := @FCodePages[i];
-      Exit;
-    end;
-  Result := @ClientCodePageDummy;
-end;
-
-{**
-   Checks if the given ClientCharacterSet and returns the PZCodePage
-   @param ClientCharacterSetID the id wich has to be compared
-   @result the PZCodePage of the ClientCharacterSet
-}
-function TZLegacyPlainDriver.GetClientCodePageInformations(const ClientCharacterSetID: Word): PZCodePage;
-var
-  I: Integer;
-begin
-  {now check for PlainDriver-Informations...}
-  for i := Low(FCodePages) to high(FCodePages) do
-    if FCodePages[i].ID = ClientCharacterSetID then
-    begin
-      Result := @FCodePages[i];
-      Exit;
-    end;
-  Result := @ClientCodePageDummy;
-end;
 
 procedure TZAbstractPlainDriver.LoadApi;
 begin

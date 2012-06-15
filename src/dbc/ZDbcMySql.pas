@@ -151,12 +151,6 @@ uses
 constructor TZMySQLDriver.Create;
 begin
   inherited Create;
-{  SetLength(FPlainDrivers,4);
-  FPlainDrivers[0]  := TZMySQL41PlainDriver.Create;
-  FPlainDrivers[1]   := TZMySQL5PlainDriver.Create;
-  // embedded drivers
-  FPlainDrivers[2]  := TZMySQLD41PlainDriver.Create;
-  FPlainDrivers[3]   := TZMySQLD5PlainDriver.Create;}
   AddSupportedProtocol(AddPlainDriverToCache(TZMySQL5PlainDriver.Create, 'mysql'));
   AddSupportedProtocol(AddPlainDriverToCache(TZMySQL41PlainDriver.Create));
   AddSupportedProtocol(AddPlainDriverToCache(TZMySQL5PlainDriver.Create));
@@ -322,7 +316,7 @@ begin
   {EgonHugeist: Arrange Client-CodePage/CharacterSet first
     Now we know if UTFEncoding is neccessary or not}
   sMy_client_Char_Set := String(GetPlainDriver.GetConnectionCharacterSet(FHandle));
-  ClientCodePage := GetClientCodePageInformations(sMy_client_Char_Set); //This sets the internal use of Encodings..
+  ClientCodePage := GetPlainDriver.ValidateCharEncoding(sMy_client_Char_Set); //This sets the internal use of Encodings..
   {EgonHugeist:
     Now we know in which kind of CharacterSet we have to send the next Connection-Properties
     before we can change to the CharacterSet we want to have here..
@@ -419,9 +413,6 @@ begin
 
 
     if (FClientCodePage <> sMy_client_Char_Set) then
-      //Set CharacterSet only if wanted this is a little patch for someone who
-      //currently wrote UTF8 into a latin-database for example
-      //so this rearanges only the internal use of vtUnicodeString
     begin
       SQL := PAnsiChar(ZPlainString(Format('SET NAMES %s', [FClientCodePage])));
       GetPlainDriver.ExecQuery(FHandle, SQL);
@@ -490,7 +481,6 @@ var
    Outbuffer: AnsiString;
 begin
    InLength := Length(Value);
-//   OutLength := 0;
    Setlength(Outbuffer,Inlength*2+1);
    Closing := FHandle = nil;
    //RealConnect needs database connection handle

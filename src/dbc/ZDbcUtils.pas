@@ -438,7 +438,7 @@ end;
 
 function GetValidatedUnicodeStream(const Stream: TStream): TStream;
 var
-  Ansi: AnsiString;
+  Ansi: {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
   Len: Integer;
   WS: WideString;
 begin
@@ -480,7 +480,8 @@ begin
         end;
     Len := Length(Ansi);
     Result := TMemoryStream.Create;
-    Result.Write(PAnsiChar(Ansi)^, Len);
+    Result.Size := Len;
+    System.Move(PAnsiChar(Ansi)^, TMemoryStream(Result).Memory^, Len);
     Result.Position := 0;
   end;
 end;

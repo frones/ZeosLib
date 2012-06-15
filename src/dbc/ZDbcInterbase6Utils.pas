@@ -134,7 +134,7 @@ type
     procedure UpdateTime(const Index: Integer; Value: TDateTime);
     procedure UpdateTimestamp(const Index: Integer; Value: TDateTime);
     procedure UpdateQuad(const Index: Word; const Value: TISC_QUAD);
-    function ZPlainString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
+    function ZPlainString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
   end;
 
   { Result interface for sqlda}

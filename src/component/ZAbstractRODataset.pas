@@ -504,12 +504,7 @@ begin
  FStatusCode:=value;
 end;
 
-{ procedure EZDatabaseError.SetStatusCode(const Value: String);
-begin
-  FStatusCode := Value;
-end;
-
-TZDataLink }
+{ TZDataLink }
 
 {**
   Creates this dataset link object.
@@ -1332,7 +1327,6 @@ function TZAbstractRODataset.GetFieldData(Field: TField;
 var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
-  Ansi: AnsiString;
 begin
   if GetActiveBuffer(RowBuffer) then
   begin

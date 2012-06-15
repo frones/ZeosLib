@@ -145,7 +145,8 @@ type
 implementation
 
 uses
-  Types, ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils, ZTokenizer;
+  Types, ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils, ZTokenizer,
+  ZDbcUtils;
 
 { TZPostgreSQLStatement }
 
@@ -438,7 +439,15 @@ begin
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
+          begin
+            if Self.GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+            begin
+              TempStream := GetValidatedUnicodeStream(TempBlob.GetStream);
+              TempBlob.SetStream(TempStream);
+              TempStream.Free;
+            end;
             Result := Self.GetConnection.GetEscapeString(String(TempBlob.GetString))
+          end
           else
             Result := 'NULL';
         end;

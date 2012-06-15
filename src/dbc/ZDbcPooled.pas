@@ -92,7 +92,7 @@ type
     FClientCodePage: String;
     procedure CheckCharEncoding(CharSet: String;
       const DoArrange: Boolean = False);
-    function GetClientCodePageInformations(const ClientCharacterSet: String = ''): PZCodePage; //EgonHugeist
+    function GetClientCodePageInformations: PZCodePage; //EgonHugeist
     function GetPreprepareSQL: Boolean; //EgonHugeist
     procedure SetPreprepareSQL(const Value: Boolean);
     function CreateStatement: IZStatement;
@@ -597,10 +597,8 @@ end;
 procedure TZDbcPooledConnection.CheckCharEncoding(CharSet: String;
   const DoArrange: Boolean = False);
 begin
-  Self.ClientCodePage := Self.GetIZPlainDriver.GetClientCodePageInformations(CharSet);
+  Self.ClientCodePage := Self.GetIZPlainDriver.ValidateCharEncoding(CharSet, DoArrange);
 
-  if (DoArrange) and (ClientCodePage^.ZAlias <> '' ) then
-    CheckCharEncoding(ClientCodePage^.ZAlias); //recalls em selves
   FPreprepareSQL := FPreprepareSQL and (ClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]);
   FClientCodePage := ClientCodePage^.Name; //resets the developer choosen ClientCodePage
 end;
@@ -683,13 +681,9 @@ end;
   @param ClientCharacterSet the CharacterSet which has to be checked
   @result PZCodePage see ZCompatible.pas
 }
-function TZDbcPooledConnection.GetClientCodePageInformations(
-  const ClientCharacterSet: String = ''): PZCodePage; //EgonHugeist
+function TZDbcPooledConnection.GetClientCodePageInformations: PZCodePage; //EgonHugeist
 begin
-  if ClientCharacterSet = '' then
-    Result := ClientCodePage
-  else
-    Result := GetIZPlainDriver.GetClientCodePageInformations(ClientCharacterSet);
+  Result := ClientCodePage
 end;
 
 { TZDbcPooledConnectionDriver }

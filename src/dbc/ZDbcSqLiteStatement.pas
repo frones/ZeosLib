@@ -99,7 +99,7 @@ type
 implementation
 
 uses
-  Types, ZDbcSqLiteUtils, ZDbcSqLiteResultSet, ZSysUtils,
+  Types, ZDbcSqLiteUtils, ZDbcSqLiteResultSet, ZSysUtils, ZDbcUtils,
   ZMessages, ZDbcCachedResultSet;
 
 { TZSQLiteStatement }
@@ -320,6 +320,7 @@ var
   Value: TZVariant;
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
+  TempStream: TStream;
 begin
   TempBytes := nil;
   if InParamCount <= ParamIndex then
@@ -356,6 +357,14 @@ begin
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
+          if (InParamTypes[ParamIndex] in [stAsciiStream, stUnicodeStream]) then
+            if Self.GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+            begin
+              TempStream := GetValidatedUnicodeStream(TempBlob.GetStream);
+              TempBlob.SetStream(TempStream);
+              TempStream.Free;
+            end;
+
           if not TempBlob.IsEmpty then
           begin
             if GetConnection.PreprepareSQL then

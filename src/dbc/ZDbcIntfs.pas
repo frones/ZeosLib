@@ -283,7 +283,7 @@ type
       const EscapeMarkSequence: String = '~<|'): String; overload;
     function GetEscapeString(const Value: PAnsiChar;
       const EscapeMarkSequence: String = '~<|'): String; overload;
-    function GetClientCodePageInformations(const ClientCharacterSet: String = ''): PZCodePage; //EgonHugeist
+    function GetClientCodePageInformations: PZCodePage; //EgonHugeist
     function GetUTF8StringAsWideField: Boolean;
     procedure SetUTF8StringAsWideField(const Value: Boolean);
     function GetPreprepareSQL: Boolean;
