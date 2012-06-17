@@ -209,7 +209,7 @@ type
     function GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
     function SeekPreparedRow(Handle: PZMySqlPrepStmt; Row: PZMySQLRowOffset): PZMySQLRowOffset;
     // stmt_row_tell
-    // stmt_send_long_data
+    function SendPreparedLongData(Handle: PZMySqlPrepStmt; parameter_number: Cardinal; const data: PAnsiChar; length: Cardinal): Byte;
     function GetPreparedSQLState (Handle: PZMySqlPrepStmt): PAnsiChar;
     function StorePreparedResult (Handle: PZMySqlPrepStmt): Integer;
 
@@ -309,6 +309,7 @@ type
     function PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PAnsiChar; Length: Integer): Integer;
     function GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
     function SeekPreparedRow(Handle: PZMySqlPrepStmt; Row: PZMySQLRowOffset): PZMySQLRowOffset;
+    function SendPreparedLongData(Handle: PZMySqlPrepStmt; parameter_number: Cardinal; const data: PAnsiChar; length: Cardinal): Byte;
     function GetPreparedSQLState (Handle: PZMySqlPrepStmt): PAnsiChar;
     function StorePreparedResult (Handle: PZMySqlPrepStmt): Integer;
     procedure GetCharacterSetInfo(Handle: PZMySQLConnect; CharSetInfo: PMY_CHARSET_INFO);
@@ -1108,14 +1109,20 @@ begin
     Result := MYSQL_API.mysql_stmt_row_seek (PMYSQL_STMT(Handle), Row);
 end;
 
+function TZMySQLBaseDriver.SendPreparedLongData(Handle: PZMySqlPrepStmt;
+  parameter_number: Cardinal; const data: PAnsiChar; length: Cardinal): Byte;
+begin
+  Result := MYSQL_API.mysql_stmt_send_long_data(PMYSQL_STMT(Handle), parameter_number, data, length);
+end;
+
 function TZMySQLBaseDriver.GetPreparedSQLState(Handle: PZMySqlPrepStmt): PAnsiChar;
 begin
-    Result := MYSQL_API.mysql_stmt_sqlstate (PMYSQL_STMT(Handle));
+  Result := MYSQL_API.mysql_stmt_sqlstate (PMYSQL_STMT(Handle));
 end;
 
 function TZMySQLBaseDriver.StorePreparedResult (Handle: PZMySqlPrepStmt): Integer;
 begin
-    Result := MYSQL_API.mysql_stmt_store_result (PMYSQL_STMT(Handle));
+  Result := MYSQL_API.mysql_stmt_store_result (PMYSQL_STMT(Handle));
 end;
 
 procedure TZMySQLBaseDriver.GetCharacterSetInfo(Handle: PZMySQLConnect; CharSetInfo: PMY_CHARSET_INFO);

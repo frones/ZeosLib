@@ -519,9 +519,6 @@ begin
 end;
 
 function getMySQLFieldSize (field_type: TMysqlFieldTypes; field_size: LongWord): LongWord;
-const
-    MaxBlobSize = 65535;
-
 var
     FieldSize: LongWord;
 Begin

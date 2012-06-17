@@ -819,6 +819,9 @@ const
                                             '--datadir='+EMBEDDED_DEFAULT_DATA_DIR+#0,
                                             '--set-variable=key_buffer_size=32M'#0);
 
+const
+    MaxBlobSize = 65535;
+
 implementation
 
 

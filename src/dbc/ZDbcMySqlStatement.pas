@@ -647,6 +647,29 @@ var
   I, L: integer;
   TempBlob: IZBlob;
   TempStream: TStream;
+  procedure SendLobChunks;
+  var
+    ChunkSize: integer;
+  begin
+    ChunkSize := StrToIntDef(Info.Values['chunk_size'], 2048);
+    PBuffer := nil;
+    GetMem(PBuffer, ChunkSize);
+    TempStream := TempBlob.GetStream;
+    while TempStream.Position < TempStream.Size do
+    begin
+      if ( TempStream.Size - TempStream.Position ) < ChunkSize then
+      begin
+        ChunkSize := TempStream.Size - TempStream.Position;
+        TempStream.Read(PBuffer^, TempStream.Size - TempStream.Position);
+      end
+      else
+        TempStream.Read(PBuffer^, ChunkSize);
+      if not ( FPlainDriver.SendPreparedLongData(Self.FStmtHandle, Cardinal(i), PAnsiChar(PBuffer), Cardinal(ChunkSize)) = 0 ) then
+        //CheckMySQLPrepStmtError(FPlainDriver, Self.FHandle, lcBindPrepStmt, 'MySQL Error: Sending lob data chunks failed!');
+        raise Exception.Create('MySQL Error: Sending lob data chunks failed!');
+    end;
+
+  end;
 begin
   if InParamCount = 0 then
      exit;
@@ -684,7 +707,11 @@ begin
             else
             if MyType = FIELD_TYPE_BLOB then
             begin
-              StrCopy(PAnsiChar(PBuffer), PAnsiChar(TempBlob.GetString));
+              if TempBlob.Length > MAXBUF then
+              //if True then
+                SendLobChunks
+              else
+                StrCopy(PAnsiChar(PBuffer), PAnsiChar(TempBlob.GetString));
               TempBlob := nil;
             end
             else
@@ -704,10 +731,16 @@ begin
           end;
             FIELD_TYPE_BLOB:
             begin
-              TempStream := TempBlob.GetStream;
-              System.Move(TMemoryStream(TempStream).Memory^, PBuffer^, TempBlob.Length);
-              TempStream.Free;
-              TempBlob := nil;
+              if TempBlob.Length > MAXBUF then
+              //if True then
+                SendLobChunks
+              else
+              begin
+                TempStream := TempBlob.GetStream;
+                System.Move(TMemoryStream(TempStream).Memory^, PBuffer^, TempBlob.Length);
+                TempStream.Free;
+                TempBlob := nil;
+              end;
             end;
       end;
   end;
