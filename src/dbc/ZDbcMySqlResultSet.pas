@@ -91,7 +91,6 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPChar(ColumnIndex: Integer): PChar; override;
-    //function GetString(ColumnIndex: Integer): String; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -137,7 +136,6 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    //function GetPChar(ColumnIndex: Integer): PChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -410,7 +408,7 @@ begin
   ColumnIndex := ColumnIndex - 1;
   LengthPointer := FPlainDriver.FetchLengths(FQueryHandle);
   if LengthPointer <> nil then
-    Length  := PULong(ULong(LengthPointer) + ColumnIndex * SizeOf(ULOng))^
+    Length  := PULong(ULong(LengthPointer) + ULong(ColumnIndex) * SizeOf(ULOng))^
   else
     Length := 0;
   Buffer := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);
@@ -1064,24 +1062,6 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>PAnsiChar</code> in the Delphi programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-(*function TZMySQLPreparedResultSet.GetPChar(ColumnIndex: Integer): PChar;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckClosed;
-{$ENDIF}
-  Result := PChar(FColumnArray[ColumnIndex - 1].buffer);
-  LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
-end*)
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
   a <code>String</code> in the Java programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
@@ -1432,7 +1412,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBinaryStream);
 {$ENDIF}
-  Result := TStringStream.Create(InternalGetString(ColumnIndex));
+  Result := TMemoryStream.Create;
+  Result.Write(PAnsiChar(FColumnArray[ColumnIndex - 1].buffer), FColumnArray[ColumnIndex - 1].length);
+  Result.Position := 0;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
 end;
 
@@ -1462,8 +1444,11 @@ begin
   try
     if not LastWasNull then
     begin
+      if TZAbstractResultSetMetadata(Metadata).GetColumnType(ColumnIndex) = stBinaryStream then
+        Stream := GetBinaryStream(ColumnIndex)
+      else
       Stream := TStringStream.Create(InternalGetString(ColumnIndex));
-      Result := TZAbstractBlob.CreateWithStream(Stream)
+        Result := TZAbstractBlob.CreateWithStream(Stream)
     end
     else
       Result := TZAbstractBlob.CreateWithStream(nil);

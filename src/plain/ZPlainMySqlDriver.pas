@@ -104,6 +104,8 @@ type
 
     function GetAffectedRows(Handle: PZMySQLConnect): Int64;
     {ADDED by EgonHugeist}
+    function EscapeString(Handle: PZMySQLConnect; StrFrom: ZAnsiString): ZAnsiString; overload;
+    function EscapeString(Handle: PZMySQLConnect; StrFrom: ZAnsiString; Len: Integer): ZAnsiString; overload;
     function GetConnectionCharacterSet(Handle: PMYSQL): PAnsiChar;// char_set_name
     procedure Close(Handle: PZMySQLConnect);
     function Connect(Handle: PZMySQLConnect; const Host, User, Password: PAnsiChar): PZMySQLConnect;
@@ -200,8 +202,9 @@ type
     function GetPreparedInsertID (Handle: PZMySqlPrepStmt): Int64;
     function GetPreparedNumRows (Handle: PZMySqlPrepStmt): Int64;
     function GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal; // param_count
-    // stmt_param_metadata
-    function PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PAnsiChar; Length: Integer): Integer;
+
+    function GetStmtParamMetadata(PrepStmtHandle: PZMySqlPrepStmt): PZMySQLResult; // stmt_param_metadata
+    function PrepareStmt(PrepStmtHandle: PZMySqlPrepStmt; const Query: PAnsiChar; Length: Integer): Integer;
     // stmt_reset
     function GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
     function SeekPreparedRow(Handle: PZMySqlPrepStmt; Row: PZMySQLRowOffset): PZMySQLRowOffset;
@@ -210,7 +213,7 @@ type
     function GetPreparedSQLState (Handle: PZMySqlPrepStmt): PAnsiChar;
     function StorePreparedResult (Handle: PZMySqlPrepStmt): Integer;
 
-    // get_character_set_info
+    procedure GetCharacterSetInfo(Handle: PZMySQLConnect; CharSetInfo: PMY_CHARSET_INFO);// get_character_set_info since 5.0.10
 
     {non API functions}
     function GetFieldType(Field: PZMySQLField): TMysqlFieldTypes;
@@ -263,7 +266,8 @@ type
       const Host, User, Password, Db: PAnsiChar; Port: Cardinal;
       UnixSocket: PAnsiChar; ClientFlag: Cardinal): PZMySQLConnect;
     function GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PAnsiChar; Length: Cardinal): Cardinal;
-    function EscapeString(Handle: PZMySQLConnect; StrFrom: {$IFDEF DELPHI12_UP}RawByteString): RawByteString{$ELSE}AnsiString): AnsiString{$ENDIF};
+    function EscapeString(Handle: PZMySQLConnect; StrFrom: ZAnsiString): ZAnsiString; overload;
+    function EscapeString(Handle: PZMySQLConnect; StrFrom: ZAnsiString; Len: Integer): ZAnsiString; overload;
     procedure Close(Handle: PZMySQLConnect);
 
     function ExecQuery(Handle: PZMySQLConnect; const Query: PAnsiChar): Integer; overload;
@@ -301,11 +305,13 @@ type
     function GetPreparedInsertID (Handle: PZMySqlPrepStmt): Int64;
     function GetPreparedNumRows (Handle: PZMySqlPrepStmt): Int64;
     function GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal; // param_count
+    function GetStmtParamMetadata(PrepStmtHandle: PZMySqlPrepStmt): PZMySQLResult;
     function PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PAnsiChar; Length: Integer): Integer;
     function GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
     function SeekPreparedRow(Handle: PZMySqlPrepStmt; Row: PZMySQLRowOffset): PZMySQLRowOffset;
     function GetPreparedSQLState (Handle: PZMySqlPrepStmt): PAnsiChar;
     function StorePreparedResult (Handle: PZMySqlPrepStmt): Integer;
+    procedure GetCharacterSetInfo(Handle: PZMySQLConnect; CharSetInfo: PMY_CHARSET_INFO);
 
     function Refresh(Handle: PZMySQLConnect; Options: Cardinal): Integer;
     function Kill(Handle: PZMySQLConnect; Pid: LongInt): Integer;
@@ -893,19 +899,24 @@ end;
 {**
   EgonHugeist: get an escaped string in dependency of the characterset
   }
-function TZMySQLBaseDriver.EscapeString(Handle: PZMySQLConnect; StrFrom: {$IFDEF DELPHI12_UP}RawByteString): RawByteString{$ELSE}AnsiString): AnsiString{$ENDIF};
+function TZMySQLBaseDriver.EscapeString(Handle: PZMySQLConnect; StrFrom: ZAnsiString; Len: Integer): ZAnsiString;
 var
-   Inlength, outlength: integer;
-   Outbuffer: {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
+   outlength: integer;
+   Outbuffer: ZAnsiString;
 begin
-   InLength := Length(StrFrom);
-   Setlength(Outbuffer,Inlength*2+1);
+   Len := Length(StrFrom);
+   Setlength(Outbuffer,Len*2+1);
    if Handle = nil then
-     OutLength := GetEscapeString(PAnsiChar(OutBuffer),PAnsiChar(StrFrom),InLength)
+     OutLength := GetEscapeString(PAnsiChar(OutBuffer),PAnsiChar(StrFrom),Len)
    else
-     OutLength := GetRealEscapeString(Handle, PAnsiChar(OutBuffer),PAnsiChar(StrFrom),InLength);
+     OutLength := GetRealEscapeString(Handle, PAnsiChar(OutBuffer),PAnsiChar(StrFrom),Len);
    Setlength(Outbuffer,OutLength);
    Result := Outbuffer;
+end;
+
+function TZMySQLBaseDriver.EscapeString(Handle: PZMySQLConnect; StrFrom: ZAnsiString): ZAnsiString;
+begin
+  Result := EscapeString(Handle, StrFrom, Length(StrFrom));
 end;
 
 function TZMySQLBaseDriver.Refresh(Handle: PZMySQLConnect;
@@ -1077,7 +1088,12 @@ begin
     Result := MYSQL_API.mysql_stmt_param_count (PMYSQL_STMT(Handle));
 end;
 
-function TZMySQLBaseDriver.PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PAnsiChar; Length: Integer): Integer;
+function TZMySQLBaseDriver.GetStmtParamMetadata(PrepStmtHandle: PZMySqlPrepStmt): PZMySQLResult;
+begin
+  Result := MYSQL_API.mysql_stmt_param_metadata(PMYSQL_STMT(PrepStmtHandle));
+end;
+
+function TZMySQLBaseDriver.PrepareStmt(PrepStmtHandle: PZMySqlPrepStmt; const Query: PAnsiChar; Length: Integer): Integer;
 begin
     Result := MYSQL_API.mysql_stmt_prepare(PMYSQL_STMT(PrepStmtHandle), Query, Length);
 end;
@@ -1100,6 +1116,11 @@ end;
 function TZMySQLBaseDriver.StorePreparedResult (Handle: PZMySqlPrepStmt): Integer;
 begin
     Result := MYSQL_API.mysql_stmt_store_result (PMYSQL_STMT(Handle));
+end;
+
+procedure TZMySQLBaseDriver.GetCharacterSetInfo(Handle: PZMySQLConnect; CharSetInfo: PMY_CHARSET_INFO);
+begin
+    MYSQL_API.mysql_get_character_set_info(Handle, CharSetInfo);
 end;
 
 function TZMySQLBaseDriver.StoreResult(

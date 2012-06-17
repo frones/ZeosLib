@@ -644,8 +644,9 @@ var
   PBuffer: Pointer;
   year, month, day, hour, minute, second, millisecond: word;
   MyType: TMysqlFieldTypes;
-  I: integer;
+  I, L: integer;
   TempBlob: IZBlob;
+  TempStream: TStream;
 begin
   if InParamCount = 0 then
      exit;
@@ -658,47 +659,57 @@ begin
     if MyType = FIELD_TYPE_VARCHAR then
       FBindBuffer.AddColumn(FIELD_TYPE_STRING, StrLen(PAnsiChar(UTF8Encode(InParamValues[I].VUnicodeString)))+1)
     else
-      if MyType = FIELD_TYPE_LONG_BLOB then
+      if MyType = FIELD_TYPE_BLOB then
       begin
         TempBlob := (InParamValues[I].VInterface as IZBlob);
-        FBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length);
+        if InParamTypes[I] = stBinaryStream then
+          FBindBuffer.AddColumn(FIELD_TYPE_BLOB, TempBlob.Length)
+        else
+          FBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length)
       end
       else
         FBindBuffer.AddColumn(MyType,StrLen(PAnsiChar(ZPlainString(InParamValues[I].VString)))+1);
     PBuffer := @FColumnArray[I].buffer[0];
 
-        if InParamValues[I].VType=vtNull then
-         FColumnArray[I].is_null := 1
-        else
-         FColumnArray[I].is_null := 0;
-            case FBindBuffer.GetBufferType(I+1) of
-              FIELD_TYPE_FLOAT:    Single(PBuffer^)     := InParamValues[I].VFloat;
-              FIELD_TYPE_STRING:
-                begin
-                  if MyType = FIELD_TYPE_VARCHAR then
-                    StrCopy(PAnsiChar(PBuffer), PAnsiChar(UTF8Encode(InParamValues[I].VUnicodeString)))
-                  else
-                    if MyType = FIELD_TYPE_LONG_BLOB then
-                    begin
-                      StrLCopy(PAnsiChar(PBuffer), PAnsiChar(TempBlob.GetString), TempBlob.Length);
-                      TempBlob := nil;
-                    end
-                    else
-                      StrCopy(PAnsiChar(PBuffer), PAnsiChar(ZPlainString(InParamValues[I].VString)));
-                end;
-              FIELD_TYPE_LONGLONG: Int64(PBuffer^) := InParamValues[I].VInteger;
-              FIELD_TYPE_DATETIME:
-                begin
-                  DecodeDateTime(InParamValues[I].VDateTime, Year, Month, Day, hour, minute, second, millisecond);
-                  PMYSQL_TIME(PBuffer)^.year := year;
-                  PMYSQL_TIME(PBuffer)^.month := month;
-                  PMYSQL_TIME(PBuffer)^.day := day;
-                  PMYSQL_TIME(PBuffer)^.hour := hour;
-                  PMYSQL_TIME(PBuffer)^.minute := minute;
-                  PMYSQL_TIME(PBuffer)^.second := second;
-                  PMYSQL_TIME(PBuffer)^.second_part := millisecond;
-                end;
+    if InParamValues[I].VType=vtNull then
+      FColumnArray[I].is_null := 1
+    else
+      FColumnArray[I].is_null := 0;
+      case FBindBuffer.GetBufferType(I+1) of
+        FIELD_TYPE_FLOAT:    Single(PBuffer^)     := InParamValues[I].VFloat;
+        FIELD_TYPE_STRING:
+          begin
+            if MyType = FIELD_TYPE_VARCHAR then
+              StrCopy(PAnsiChar(PBuffer), PAnsiChar(UTF8Encode(InParamValues[I].VUnicodeString)))
+            else
+            if MyType = FIELD_TYPE_BLOB then
+            begin
+              StrCopy(PAnsiChar(PBuffer), PAnsiChar(TempBlob.GetString));
+              TempBlob := nil;
+            end
+            else
+              StrCopy(PAnsiChar(PBuffer), PAnsiChar(ZPlainString(InParamValues[I].VString)));
+          end;
+        FIELD_TYPE_LONGLONG: Int64(PBuffer^) := InParamValues[I].VInteger;
+        FIELD_TYPE_DATETIME:
+          begin
+            DecodeDateTime(InParamValues[I].VDateTime, Year, Month, Day, hour, minute, second, millisecond);
+            PMYSQL_TIME(PBuffer)^.year := year;
+            PMYSQL_TIME(PBuffer)^.month := month;
+            PMYSQL_TIME(PBuffer)^.day := day;
+            PMYSQL_TIME(PBuffer)^.hour := hour;
+            PMYSQL_TIME(PBuffer)^.minute := minute;
+            PMYSQL_TIME(PBuffer)^.second := second;
+            PMYSQL_TIME(PBuffer)^.second_part := millisecond;
+          end;
+            FIELD_TYPE_BLOB:
+            begin
+              TempStream := TempBlob.GetStream;
+              System.Move(TMemoryStream(TempStream).Memory^, PBuffer^, TempBlob.Length);
+              TempStream.Free;
+              TempBlob := nil;
             end;
+      end;
   end;
 
   if (FPlainDriver.BindParameters(FStmtHandle, FBindBuffer.GetBufferAddress) <> 0) then
@@ -726,7 +737,7 @@ begin
         vtString:    Result := FIELD_TYPE_STRING;
         vtDateTime:  Result := FIELD_TYPE_DATETIME;
         vtUnicodeString: Result := FIELD_TYPE_VARCHAR;
-        vtInterface: Result := FIELD_TYPE_LONG_BLOB;
+        vtInterface: Result := FIELD_TYPE_BLOB;
      else
         raise EZSQLException.Create(SUnsupportedDataType);
      end;

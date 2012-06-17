@@ -1230,7 +1230,7 @@ begin
             end
             else
               { the column type is decimal }
-              if StrPos(PChar(TypeInfo), ',') <> nil then
+              if Pos(TypeInfo, ',') > 0 then
               begin
                 TempPos := FirstDelimiter(',', TypeInfoSecond);
                 ColumnSize := StrToIntDef(Copy(TypeInfoSecond, 1, TempPos - 1), 0);
