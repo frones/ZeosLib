@@ -641,11 +641,10 @@ end;
 
 procedure TZMysqlPreparedStatement.BindInParameters;
 var
-//  caststring : {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
   PBuffer: Pointer;
   year, month, day, hour, minute, second, millisecond: word;
   MyType: TMysqlFieldTypes;
-  I,J : integer;
+  I: integer;
 begin
   if InParamCount = 0 then
      exit;
@@ -655,10 +654,6 @@ begin
   For I := 0 to InParamCount - 1 do
   begin
     MyType := GetFieldType(InParamValues[I]);
-    {if MyType = FIELD_TYPE_VARCHAR then
-      FBindBuffer.AddColumn(FIELD_TYPE_STRING,length(UTF8Encode(InParamValues[I].VUnicodeString)))
-    else
-      FBindBuffer.AddColumn(MyType,length(InParamValues[I].VString));}
     if MyType = FIELD_TYPE_VARCHAR then
       FBindBuffer.AddColumn(FIELD_TYPE_STRING, StrLen(PAnsiChar(UTF8Encode(InParamValues[I].VUnicodeString)))+1)
     else
@@ -674,19 +669,9 @@ begin
               FIELD_TYPE_STRING:
                 begin
                   if MyType = FIELD_TYPE_VARCHAR then
-                    StrCopy(PAnsiChar(PBuffer^), PAnsiChar(UTF8Encode(InParamValues[I].VUnicodeString)))
+                    StrCopy(PAnsiChar(PBuffer), PAnsiChar(UTF8Encode(InParamValues[I].VUnicodeString)))
                   else
-                    StrCopy(PAnsiChar(PBuffer^), PAnsiChar(ZPlainString(InParamValues[I].VString)));
-                  {if MyType = FIELD_TYPE_VARCHAR then
-                    CastString := UTF8Encode(InParamValues[I].VUnicodeString)
-                  else
-                    CastString := ZPlainString(InParamValues[I].VString);
-                  for J := 1 to system.length(CastString) do
-                    begin
-                      PAnsiChar(PBuffer)^ := CastString[J];
-                      inc(PAnsiChar(PBuffer));
-                    end;
-                  PAnsiChar(PBuffer)^ := chr(0);}
+                    StrCopy(PAnsiChar(PBuffer), PAnsiChar(ZPlainString(InParamValues[I].VString)));
                 end;
               FIELD_TYPE_LONGLONG: Int64(PBuffer^) := InParamValues[I].VInteger;
               FIELD_TYPE_DATETIME:
