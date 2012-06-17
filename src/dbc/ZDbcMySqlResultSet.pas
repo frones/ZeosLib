@@ -1413,7 +1413,7 @@ begin
   CheckColumnConvertion(ColumnIndex, stBinaryStream);
 {$ENDIF}
   Result := TMemoryStream.Create;
-  Result.Write(PAnsiChar(FColumnArray[ColumnIndex - 1].buffer), FColumnArray[ColumnIndex - 1].length);
+  Result.Write(FColumnArray[ColumnIndex - 1].buffer[0], FColumnArray[ColumnIndex - 1].length);
   Result.Position := 0;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
 end;
