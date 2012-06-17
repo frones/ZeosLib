@@ -645,6 +645,7 @@ var
   year, month, day, hour, minute, second, millisecond: word;
   MyType: TMysqlFieldTypes;
   I: integer;
+  TempBlob: IZBlob;
 begin
   if InParamCount = 0 then
      exit;
@@ -657,7 +658,13 @@ begin
     if MyType = FIELD_TYPE_VARCHAR then
       FBindBuffer.AddColumn(FIELD_TYPE_STRING, StrLen(PAnsiChar(UTF8Encode(InParamValues[I].VUnicodeString)))+1)
     else
-      FBindBuffer.AddColumn(MyType,StrLen(PAnsiChar(ZPlainString(InParamValues[I].VString)))+1);
+      if MyType = FIELD_TYPE_LONG_BLOB then
+      begin
+        TempBlob := (InParamValues[I].VInterface as IZBlob);
+        FBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length);
+      end
+      else
+        FBindBuffer.AddColumn(MyType,StrLen(PAnsiChar(ZPlainString(InParamValues[I].VString)))+1);
     PBuffer := @FColumnArray[I].buffer[0];
 
         if InParamValues[I].VType=vtNull then
@@ -671,7 +678,13 @@ begin
                   if MyType = FIELD_TYPE_VARCHAR then
                     StrCopy(PAnsiChar(PBuffer), PAnsiChar(UTF8Encode(InParamValues[I].VUnicodeString)))
                   else
-                    StrCopy(PAnsiChar(PBuffer), PAnsiChar(ZPlainString(InParamValues[I].VString)));
+                    if MyType = FIELD_TYPE_LONG_BLOB then
+                    begin
+                      StrLCopy(PAnsiChar(PBuffer), PAnsiChar(TempBlob.GetString), TempBlob.Length);
+                      TempBlob := nil;
+                    end
+                    else
+                      StrCopy(PAnsiChar(PBuffer), PAnsiChar(ZPlainString(InParamValues[I].VString)));
                 end;
               FIELD_TYPE_LONGLONG: Int64(PBuffer^) := InParamValues[I].VInteger;
               FIELD_TYPE_DATETIME:
@@ -713,6 +726,7 @@ begin
         vtString:    Result := FIELD_TYPE_STRING;
         vtDateTime:  Result := FIELD_TYPE_DATETIME;
         vtUnicodeString: Result := FIELD_TYPE_VARCHAR;
+        vtInterface: Result := FIELD_TYPE_LONG_BLOB;
      else
         raise EZSQLException.Create(SUnsupportedDataType);
      end;
