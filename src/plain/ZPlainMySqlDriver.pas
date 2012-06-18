@@ -247,9 +247,9 @@ type
     procedure LoadApi; override;
     procedure BuildServerArguments(Options: TStrings);
     function GetPrepreparedSQL(Handle: PZMySQLConnect; const SQL: String;
-      out LogSQL: String): {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF}; reintroduce;
+      out LogSQL: String): ZAnsiString; reintroduce;
   public
-    constructor Create;
+    constructor Create(Tokenizer: IZTokenizer);
     destructor Destroy; override;
 
     procedure Debug(Debug: PAnsiChar);
@@ -382,7 +382,7 @@ type
   protected
     function Clone: IZPlainDriver; override;
   public
-    constructor Create;
+    constructor Create(Tokenizer: IZTokenizer);
     function GetProtocol: string; override;
     function GetDescription: string; override;
   end;
@@ -395,7 +395,7 @@ type
   protected
     function Clone: IZPlainDriver; override;
   public
-    constructor Create;
+    constructor Create(Tokenizer: IZTokenizer);
     function GetProtocol: string; override;
     function GetDescription: string; override;
   end;
@@ -409,7 +409,7 @@ type
     procedure LoadApi; override;
     procedure LoadCodePages; override;
   public
-    constructor Create;
+    constructor Create(Tokenizer: IZTokenizer);
     function GetProtocol: string; override;
     function GetDescription: string; override;
   end;
@@ -420,7 +420,7 @@ type
   protected
     function Clone: IZPlainDriver; override;
   public
-    constructor Create;
+    constructor Create(Tokenizer: IZTokenizer);
     function GetProtocol: string; override;
     function GetDescription: string; override;
   end;
@@ -622,7 +622,7 @@ begin
 end;
 
 function TZMySQLBaseDriver.GetPrepreparedSQL(Handle: PZMySQLConnect; const SQL: String;
-  out LogSQL: String): {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
+  out LogSQL: String): ZAnsiString;
 var
   SQLTokens: TZTokenDynArray;
   i: Integer;
@@ -635,7 +635,7 @@ begin
     LogSQL := LogSQL+SQLTokens[i].Value;
     case (SQLTokens[i].TokenType) of
       ttEscape:
-        Result := Result + {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF}(SQLTokens[i].Value);
+        Result := Result + ZAnsiString(SQLTokens[i].Value);
       ttQuoted, ttQuotedIdentifier:
         begin
           QuoteChar := Char(SQLTokens[i].Value[1]);
@@ -645,15 +645,17 @@ begin
             Result := Result + {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr(EscapeString(Handle, Self.ZPlainString(SysUtils.AnsiDequotedStr(SQLTokens[i].Value, QuoteChar))), AnsiChar(QuoteChar));
         end;
       else
-        Result := Result + {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF}(SQLTokens[i].Value);
+        Result := Result + ZAnsiString(SQLTokens[i].Value);
     end;
   end;
 end;
 
-constructor TZMySQLBaseDriver.Create;
+constructor TZMySQLBaseDriver.Create(Tokenizer: IZTokenizer);
 begin
   inherited create;
   FLoader := TZNativeLibraryLoader.Create([]);
+  FTokenizer := nil;
+  FTokenizer := Tokenizer;
 {$IFNDEF MYSQL_STRICT_DLL_LOADING}
   {$IFNDEF UNIX}
     FLoader.AddLocation(WINDOWS_DLL_LOCATION);
@@ -1244,12 +1246,12 @@ end;
 
 function TZMySQL41PlainDriver.Clone: IZPlainDriver;
 begin
-  Result := TZMySQL41PlainDriver.Create;
+  Result := TZMySQL41PlainDriver.Create(FTokenizer);
 end;
 
-constructor TZMySQL41PlainDriver.Create;
+constructor TZMySQL41PlainDriver.Create(Tokenizer: IZTokenizer);
 begin
-  inherited Create;
+  inherited Create(Tokenizer);
   {$IFNDEF UNIX}
     FLoader.AddLocation(WINDOWS_DLL41_LOCATION);
   {$ELSE}
@@ -1271,12 +1273,12 @@ end;
 
 function TZMySQLD41PlainDriver.Clone: IZPlainDriver;
 begin
-  Result := TZMySQLD41PlainDriver.Create;
+  Result := TZMySQLD41PlainDriver.Create(FTokenizer);
 end;
 
-constructor TZMySQLD41PlainDriver.Create;
+constructor TZMySQLD41PlainDriver.Create(Tokenizer: IZTokenizer);
 begin
-  inherited Create;
+  inherited Create(Tokenizer);
   // only include embedded library
   FLoader.ClearLocations;
   {$IFNDEF MYSQL_STRICT_DLL_LOADING}
@@ -1308,7 +1310,7 @@ end;
 
 function TZMySQL5PlainDriver.Clone: IZPlainDriver;
 begin
-  Result := TZMySQL5PlainDriver.Create;
+  Result := TZMySQL5PlainDriver.Create(FTokenizer);
 end;
 
 procedure TZMySQL5PlainDriver.LoadApi;
@@ -1332,9 +1334,9 @@ begin
   AddCodePage('utf32', 39, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_utf32{$ENDIF}, 'utf8'); {UTF-32 Unicode} //Egonhugeist improved
 end;
 
-constructor TZMySQL5PlainDriver.Create;
+constructor TZMySQL5PlainDriver.Create(Tokenizer: IZTokenizer);
 begin
-  inherited Create;
+  inherited Create(Tokenizer);
   {$IFNDEF UNIX}
     FLoader.AddLocation(WINDOWS_DLL50_LOCATION);
     FLoader.AddLocation(WINDOWS_DLL51_LOCATION);
@@ -1359,12 +1361,12 @@ end;
 
 function TZMySQLD5PlainDriver.Clone: IZPlainDriver;
 begin
-  Result := TZMySQLD5PlainDriver.Create;
+  Result := TZMySQLD5PlainDriver.Create(FTokenizer);
 end;
 
-constructor TZMySQLD5PlainDriver.Create;
+constructor TZMySQLD5PlainDriver.Create(Tokenizer: IZTokenizer);
 begin
-  inherited Create;
+  inherited Create(Tokenizer);
   // only include embedded library
   FLoader.ClearLocations;
   {$IFNDEF MYSQL_STRICT_DLL_LOADING}

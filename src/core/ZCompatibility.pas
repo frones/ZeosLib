@@ -139,7 +139,7 @@ function GetProcAddress(Module: HMODULE; Proc: PChar): Pointer;
 
 {EgonHugeist:}
 type
-  ZAnsiString = {$IF defined(RawByteString)}RawByteString{$ELSE}AnsiString{$IFEND};
+  ZAnsiString = {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
 
   TZCharEncoding = (
     ceDefault, //Internal switch for the two Functions below do not use it as a CodePage-decaration!

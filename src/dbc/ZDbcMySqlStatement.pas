@@ -291,15 +291,15 @@ function TZMySQLStatement.ExecuteUpdate(const SQL: string): Integer;
 var
   QueryHandle: PZMySQLResult;
   HasResultset : Boolean;
-//  LogSQL: String;
+  LogSQL: String;
 begin
   Result := -1;
   Self.SSQL := SQL; //Preprepare SQL
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
-//  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, LogSQL) = 0 then
+  //if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
+  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, LogSQL) = 0 then
   begin
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
-    //DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+    //DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
     if HasResultSet then
@@ -318,8 +318,8 @@ begin
       Result := FPlainDriver.GetAffectedRows(FHandle);
   end
   else
-//    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
+//    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
   LastUpdateCount := Result;
 end;
 
@@ -475,14 +475,14 @@ begin
       stBytes:
         Result := Self.GetConnection.GetEscapeString(PAnsiChar(AnsiString(SoftVarManager.GetAsString(Value))));
       stString:
-        //{$IFDEF DELPHI12_UP}
-          //if GetConnection.PreprepareSQL then Result := QuotedStr(SoftVarManager.GetAsString(Value)) else
-        //{$ENDIF}
+        {$IFDEF DELPHI12_UP}
+          if GetConnection.PreprepareSQL then Result := QuotedStr(SoftVarManager.GetAsString(Value)) else
+        {$ENDIF}
           Result := Self.GetConnection.GetEscapeString(PAnsiChar(ZPlainString(SoftVarManager.GetAsString(Value))));
       stUnicodeString:
-        //{$IFDEF DELPHI12_UP}
-          //if GetConnection.PreprepareSQL then Result := QuotedStr(SoftVarManager.GetAsUnicodeString(Value)) else
-        //{$ENDIF}
+        {$IFDEF DELPHI12_UP}
+          if GetConnection.PreprepareSQL then Result := QuotedStr(SoftVarManager.GetAsUnicodeString(Value)) else
+        {$ENDIF}
           Result := Self.GetConnection.GetEscapeString(PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))));
       stDate:
       begin
@@ -660,7 +660,7 @@ var
       if ( TempStream.Size - TempStream.Position ) < ChunkSize then
       begin
         ChunkSize := TempStream.Size - TempStream.Position;
-        TempStream.Read(PBuffer^, TempStream.Size - TempStream.Position);
+        TempStream.Read(PBuffer^, ChunkSize);
       end
       else
         TempStream.Read(PBuffer^, ChunkSize);
