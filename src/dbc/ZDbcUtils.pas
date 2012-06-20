@@ -438,7 +438,7 @@ end;
 
 function GetValidatedUnicodeStream(const Stream: TStream): TStream;
 var
-  Ansi: {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
+  Ansi: ZAnsiString;
   Len: Integer;
   WS: WideString;
 begin

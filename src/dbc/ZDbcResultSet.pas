@@ -317,8 +317,8 @@ type
     function IsUpdated: Boolean; virtual;
     function Length: LongInt; virtual;
 
-    function GetString: AnsiString; virtual;
-    procedure SetString(const Value: AnsiString); virtual;
+    function GetString: ZAnsiString; virtual;
+    procedure SetString(const Value: ZAnsiString); virtual;
     function GetUnicodeString: WideString; virtual;
     procedure SetUnicodeString(const Value: WideString); virtual;
     function GetBytes: TByteDynArray; virtual;
@@ -326,6 +326,8 @@ type
     function GetUnicodeStream: TStream; virtual;
     function GetStream: TStream; virtual;
     procedure SetStream(Value: TStream); virtual;
+    function GetBuffer: Pointer;
+    procedure SetBuffer(Buffer: Pointer; Length: Integer);
 
     procedure Clear; virtual;
     function Clone: IZBlob; virtual;
@@ -2866,7 +2868,7 @@ end;
   Gets the string from the stored data.
   @return a string which contains the stored data.
 }
-function TZAbstractBlob.GetString: AnsiString;
+function TZAbstractBlob.GetString: ZAnsiString;
 begin
   if (FBlobSize > 0) and Assigned(FBlobData) then
   begin
@@ -2880,7 +2882,7 @@ end;
   Sets a new string data to this blob content.
   @param Value a new string data.
 }
-procedure TZAbstractBlob.SetString(const Value: AnsiString);
+procedure TZAbstractBlob.SetString(const Value: ZAnsiString);
 begin
   Clear;
   FBlobSize := System.Length(Value);
@@ -2989,6 +2991,28 @@ begin
       Value.Position := 0;
       Value.ReadBuffer(FBlobData^, FBlobSize);
     end;
+  end
+  else
+  begin
+    FBlobSize := -1;
+    FBlobData := nil;
+  end;
+  FUpdated := True;
+end;
+
+function TZAbstractBlob.GetBuffer: Pointer;
+begin
+  Result := FBlobData;
+end;
+
+procedure TZAbstractBlob.SetBuffer(Buffer: Pointer; Length: Integer);
+begin
+  FBlobSize := Length;
+  if Assigned(Buffer) and ( Length > 0 ) then
+  begin
+    FBlobData := nil;
+    GetMem(FBlobData, Length);
+    Move(FBlobData^, Buffer^, Length);
   end
   else
   begin

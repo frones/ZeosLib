@@ -164,7 +164,7 @@ type
     function IsEmpty: Boolean; override;
     function Clone: IZBlob; override;
     function GetStream: TStream; override;
-    function GetString: AnsiString; override;
+    function GetString: ZAnsiString; override;
     function GetUnicodeString: WideString; override;
     function GetBytes: TByteDynArray; override;
     property BlobSize;
@@ -973,7 +973,7 @@ begin
   Result := inherited GetStream;
 end;
 
-function TZASABlob.GetString: AnsiString;
+function TZASABlob.GetString: ZAnsiString;
 begin
   ReadBlob;
   Result := inherited GetString;

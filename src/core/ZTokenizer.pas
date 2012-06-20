@@ -68,13 +68,13 @@ type
   }
   TZTokenType = (ttUnknown, ttEOF, ttFloat, ttInteger, ttHexDecimal,
     ttNumber, ttSymbol, ttQuoted, ttQuotedIdentifier, ttWord, ttKeyword, ttWhitespace,
-    ttComment, ttSpecial, ttTime, ttDate, ttDateTime, ttEscape);
+    ttComment, ttSpecial, ttTime, ttDate, ttDateTime, ttEscape, ttEscapedQuoted);
 
   {**
     Defines options for tokenizing strings.
   }
   TZTokenOption = (toSkipUnknown, toSkipWhitespaces, toSkipComments,
-    toSkipEOF, toUnifyWhitespaces, toUnifyNumbers, toDecodeStrings);
+    toSkipEOF, toUnifyWhitespaces, toUnifyNumbers, toDecodeStrings, toAcceptEscape);
   TZTokenOptions = set of TZTokenOption;
 
   {**
@@ -1550,7 +1550,7 @@ function TZTokenizer.TokenizeEscapeBufferToList(const SQL: String;
 begin
   if ( EscapeMarkSequence <> '~<|' ) and ( EscapeMarkSequence <> '' )then
     SetEscapeMarkSequence(EscapeMarkSequence);
-  Result := TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
+  Result := TokenizeBuffer(SQL, [toSkipEOF, toAcceptEscape]); //Disassembles the Query
 end;
 
 {**
@@ -1697,6 +1697,8 @@ begin
         Token.Value := Result[Result.Count-1] + Token.Value;
         Result.Delete(Result.Count-1);
       end;
+      if (Token.Tokentype = ttEscapedQuoted) and (not (toAcceptEscape in Options)) then
+        Token.Tokentype := ttQuoted;
       { Add a read token. }
       LastTokenType := Token.TokenType;
       Result.AddObject(Token.Value, TObject(Ord(Token.TokenType)));

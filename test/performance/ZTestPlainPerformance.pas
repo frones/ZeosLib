@@ -249,7 +249,7 @@ type
 
 implementation
 
-uses ZSqlTestCase;
+uses ZSqlTestCase, ZMySqlToken;
 
 {$IFDEF ENABLE_MYSQL}
  { TZPlainMySQLPerformanceTestCase }
@@ -281,10 +281,10 @@ var
   MySQLD41PlainDriver: IZMySQLPlainDriver;
   MySQLD5PlainDriver: IZMySQLPlainDriver;
 begin
-  MySQL41PlainDriver := TZMySQL41PlainDriver.Create;
-  MySQL5PlainDriver := TZMySQL5PlainDriver.Create;
-  MySQLD41PlainDriver := TZMySQLD41PlainDriver.Create;
-  MySQLD5PlainDriver := TZMySQLD5PlainDriver.Create;
+  MySQL41PlainDriver := TZMySQL41PlainDriver.Create(TZMySQLTokenizer.Create);
+  MySQL5PlainDriver := TZMySQL5PlainDriver.Create(TZMySQLTokenizer.Create);
+  MySQLD41PlainDriver := TZMySQLD41PlainDriver.Create(TZMySQLTokenizer.Create);
+  MySQLD5PlainDriver := TZMySQLD5PlainDriver.Create(TZMySQLTokenizer.Create);
 
   if Protocol = MySQL41PlainDriver.GetProtocol then
     PlainDriver := MySQL41PlainDriver
@@ -863,7 +863,7 @@ var
 begin
   StmtHandle := nil;
   SQLData := TZResultSQLDA.Create(FPlainDriver, FHandle, FTrHandle,
-    @ZCompatibility.ClientCodePageDummy);
+    @ZCompatibility.ClientCodePageDummy, {$IFDEF DELPHI_12UP}True{$ELSE}False{$ENDIF});
 
   try
     PrepareStatement(FPlainDriver, @FHandle, @FTrHandle,

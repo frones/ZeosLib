@@ -70,6 +70,7 @@ type
     FHandle: PZPostgreSQLConnect;
     FQueryHandle: PZPostgreSQLResult;
     FPlainDriver: IZPostgreSQLPlainDriver;
+    FChunk_Size: Integer;
   protected
     function InternalGetString(ColumnIndex: Integer): AnsiString; override;
     procedure Open; override;
@@ -78,7 +79,7 @@ type
   public
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
       Statement: IZStatement; SQL: string; Handle: PZPostgreSQLConnect;
-      QueryHandle: PZPostgreSQLResult);
+      QueryHandle: PZPostgreSQLResult; Chunk_Size: Integer);
     destructor Destroy; override;
 
     procedure Close; override;
@@ -116,9 +117,10 @@ type
     FHandle: PZPostgreSQLConnect;
     FBlobOid: Oid;
     FPlainDriver: IZPostgreSQLPlainDriver;
+    FChunk_Size: Integer;
   public
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver; Data: Pointer;
-      Size: Integer; Handle: PZPostgreSQLConnect; BlobOid: Oid);
+      Size: Integer; Handle: PZPostgreSQLConnect; BlobOid: Oid; Chunk_Size: Integer);
 
     destructor Destroy; override;
 
@@ -150,7 +152,7 @@ uses
 }
 constructor TZPostgreSQLResultSet.Create(PlainDriver: IZPostgreSQLPlainDriver;
   Statement: IZStatement; SQL: string; Handle: PZPostgreSQLConnect;
-  QueryHandle: PZPostgreSQLResult);
+  QueryHandle: PZPostgreSQLResult; Chunk_Size: Integer);
 begin
   inherited Create(Statement, SQL, nil,
     Statement.GetConnection.GetClientCodePageInformations);
@@ -159,6 +161,7 @@ begin
   FQueryHandle := QueryHandle;
   FPlainDriver := PlainDriver;
   ResultSetConcurrency := rcReadOnly;
+  FChunk_Size := Chunk_Size; //size of red/write lob chunks
 
   Open;
 end;
@@ -631,7 +634,7 @@ begin
     else
       BlobOid := 0;
 
-    Result := TZPostgreSQLBlob.Create(FPlainDriver, nil, 0, FHandle, BlobOid);
+    Result := TZPostgreSQLBlob.Create(FPlainDriver, nil, 0, FHandle, BlobOid, FChunk_Size);
   end
   else
   begin
@@ -645,7 +648,6 @@ begin
           if (Statement.GetConnection as IZPostgreSQLConnection).GetServerMajorVersion >= 9 then
           begin
             Decoded := InternalGetString(ColumnIndex) ;
-            //Decoded := FPlainDriver.DecodeBYTEA(Decoded); //gives a hex-string with a starting 'x' back???
             Len := (Length(Decoded)-Pos('x', Decoded)) div 2; //GetLength of binary result
             Decoded := Copy(Decoded, Pos('x', Decoded)+1, Length(Decoded)); //remove the first 'x'sign-byte
             SetLength(TempAnsi, Len); //Set length of binary-result
@@ -741,12 +743,14 @@ end;
   @param Handle a PostgreSQL connection reference.
 }
 constructor TZPostgreSQLBlob.Create(PlainDriver: IZPostgreSQLPlainDriver;
-  Data: Pointer; Size: Integer; Handle: PZPostgreSQLConnect; BlobOid: Oid);
+  Data: Pointer; Size: Integer; Handle: PZPostgreSQLConnect; BlobOid: Oid;
+  Chunk_Size: Integer);
 begin
   inherited CreateWithData(Data, Size);
   FHandle := Handle;
   FBlobOid := BlobOid;
   FPlainDriver := PlainDriver;
+  FChunk_Size := Chunk_Size;
 end;
 
 {**
@@ -832,10 +836,10 @@ begin
   Position := 0;
   while Position < BlobSize do
   begin
-    if (BlobSize - Position) < 1024 then
+    if (BlobSize - Position) < FChunk_Size then
       Size := BlobSize - Position
     else
-      Size := 1024;
+      Size := FChunk_Size;
     FPlainDriver.WriteLargeObject(FHandle, BlobHandle,
       Pointer(LongInt(BlobData) + Position), Size);
     CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Write Large Object',nil);
@@ -863,7 +867,7 @@ end;
 function TZPostgreSQLBlob.Clone: IZBlob;
 begin
   Result := TZPostgreSQLBlob.Create(FPlainDriver, BlobData, BlobSize,
-    FHandle, FBlobOid);
+    FHandle, FBlobOid, FChunk_Size);
 end;
 
 {**

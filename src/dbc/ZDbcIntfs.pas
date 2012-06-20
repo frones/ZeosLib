@@ -842,8 +842,8 @@ type
     function IsUpdated: Boolean;
     function Length: LongInt;
 
-    function GetString: AnsiString;
-    procedure SetString(const Value: AnsiString);
+    function GetString: ZAnsiString;
+    procedure SetString(const Value: ZAnsiString);
     function GetUnicodeString: WideString;
     procedure SetUnicodeString(const Value: WideString);
     function GetBytes: TByteDynArray;
@@ -851,6 +851,8 @@ type
     function GetUnicodeStream: TStream;
     function GetStream: TStream;
     procedure SetStream(Value: TStream);
+    function GetBuffer: Pointer;
+    procedure SetBuffer(Buffer: Pointer; Length: Integer);
 
     procedure Clear;
     function Clone: IZBlob;

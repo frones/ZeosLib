@@ -144,7 +144,7 @@ type
     function IsEmpty: Boolean; override;
     function Clone: IZBlob; override;
 
-    function GetString: AnsiString; override;
+    function GetString: ZAnsiString; override;
     function GetBytes: TByteDynArray; override;
     function GetStream: TStream; override;
   end;
@@ -1199,7 +1199,7 @@ end;
   Gets the string from the stored data.
   @return a string which contains the stored data.
 }
-function TZOracleBlob.GetString: AnsiString;
+function TZOracleBlob.GetString: ZAnsiString;
 begin
   ReadBlob;
   Result := inherited GetString;

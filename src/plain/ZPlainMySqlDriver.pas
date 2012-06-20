@@ -426,7 +426,8 @@ type
   end;
 
 implementation
-uses SysUtils, ZPlainLoader{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
+uses SysUtils, ZPlainLoader{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF},
+  {$IFDEF WITH_WIDESTRUTILS}WideStrUtils{$ENDIF};
 
 { TZMySQLPlainBaseDriver }
 function TZMySQLBaseDriver.GetUnicodeCodePageName: String;
@@ -627,6 +628,7 @@ var
   SQLTokens: TZTokenDynArray;
   i: Integer;
   QuoteChar: Char;
+  Temp: ZAnsiString;
 begin
   LogSQL := '';
   SQLTokens := FTokenizer.TokenizeEscapeBufferToList(SQL); //Disassembles the Query
@@ -634,6 +636,14 @@ begin
   begin
     LogSQL := LogSQL+SQLTokens[i].Value;
     case (SQLTokens[i].TokenType) of
+      ttEscapedQuoted:
+        begin
+          Temp := ZAnsiString(SQLTokens[i].Value);
+          if DetectUTF8ENcoding(Temp) = etUTF8 then
+            Result := Result+Temp
+          else
+            Result := Result +ZPlainString(SQLTokens[i].Value);
+        end;
       ttEscape:
         Result := Result + ZAnsiString(SQLTokens[i].Value);
       ttQuoted, ttQuotedIdentifier:

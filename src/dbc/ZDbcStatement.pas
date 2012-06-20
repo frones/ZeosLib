@@ -93,6 +93,7 @@ type
     procedure SetLastResultSet(ResultSet: IZResultSet); virtual;
 
   protected
+    LogSQL: String;
     class function GetNextStatementId : integer;
     procedure RaiseUnsupportedException;
 

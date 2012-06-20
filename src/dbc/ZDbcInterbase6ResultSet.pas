@@ -123,7 +123,7 @@ type
     function IsEmpty: Boolean; override;
     function Clone: IZBlob; override;
     function GetStream: TStream; override;
-    function GetString: AnsiString; override;
+    function GetString: ZAnsiString; override;
     function GetUnicodeString: WideString; override;
     function GetBytes: TByteDynArray; override;
   end;
@@ -689,7 +689,7 @@ begin
   Result := inherited GetStream;
 end;
 
-function TZInterbase6Blob.GetString: AnsiString;
+function TZInterbase6Blob.GetString: ZAnsiString;
 begin
   ReadBlob;
   Result := inherited GetString;

@@ -264,16 +264,20 @@ end;
 function TZMySQLStatement.ExecuteQuery(const SQL: string): IZResultSet;
 begin
   Result := nil;
-  Self.SSQL := SQL; //Did preprepare the SQL
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(Self.ASQL)) = 0 then
+//  Self.SSQL := SQL; //Did preprepare the SQL
+//  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(Self.ASQL)) = 0 then
+  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, LogSQL) = 0 then
   begin
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
+//    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
     if not FPlainDriver.ResultSetExists(FHandle) then
       raise EZSQLException.Create(SCanNotOpenResultSet);
-    Result := CreateResultSet(SSQL);
+    Result := CreateResultSet(LogSQL);
+    //Result := CreateResultSet(SSQL);
   end
   else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
+    //CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
 end;
 
 {**
@@ -291,10 +295,9 @@ function TZMySQLStatement.ExecuteUpdate(const SQL: string): Integer;
 var
   QueryHandle: PZMySQLResult;
   HasResultset : Boolean;
-  LogSQL: String;
 begin
   Result := -1;
-  Self.SSQL := SQL; //Preprepare SQL
+//  Self.SSQL := SQL; //Preprepare SQL
   //if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
   if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, LogSQL) = 0 then
   begin
@@ -348,10 +351,12 @@ var
   HasResultset : Boolean;
 begin
   Result := False;
-  Self.SSQL := SQL; //Preprepare SQL and sets AnsiSQL
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
+  //Self.SSQL := SQL; //Preprepare SQL and sets AnsiSQL
+  //if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
+  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, LogSQL) = 0 then
   begin
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
+    //DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
     if HasResultSet then
@@ -367,7 +372,8 @@ begin
     end;
   end
   else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
+    //CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
 end;
 
 {**
@@ -647,30 +653,8 @@ var
   I, L: integer;
   TempBlob: IZBlob;
   TempStream: TStream;
-  procedure SendLobChunks;
-  var
-    ChunkSize: integer;
-  begin
-    ChunkSize := StrToIntDef(Info.Values['chunk_size'], 2048);
-    PBuffer := nil;
-    GetMem(PBuffer, ChunkSize);
-    TempStream := TempBlob.GetStream;
-    while TempStream.Position < TempStream.Size do
-    begin
-      if ( TempStream.Size - TempStream.Position ) < ChunkSize then
-      begin
-        ChunkSize := TempStream.Size - TempStream.Position;
-        TempStream.Read(PBuffer^, ChunkSize);
-      end
-      else
-        TempStream.Read(PBuffer^, ChunkSize);
-      if not ( FPlainDriver.SendPreparedLongData(Self.FStmtHandle, Cardinal(i), PAnsiChar(PBuffer), Cardinal(ChunkSize)) = 0 ) then
-        //CheckMySQLPrepStmtError(FPlainDriver, Self.FHandle, lcBindPrepStmt, 'MySQL Error: Sending lob data chunks failed!');
-        raise Exception.Create('MySQL Error: Sending lob data chunks failed!');
-    end;
-
-  end;
 begin
+  //http://dev.mysql.com/doc/refman/5.0/en/storage-requirements.html
   if InParamCount = 0 then
      exit;
   { Initialize Bind Array and Column Array }
@@ -707,11 +691,7 @@ begin
             else
             if MyType = FIELD_TYPE_BLOB then
             begin
-              if TempBlob.Length > MAXBUF then
-              //if True then
-                SendLobChunks
-              else
-                StrCopy(PAnsiChar(PBuffer), PAnsiChar(TempBlob.GetString));
+              StrCopy(PAnsiChar(PBuffer), PAnsiChar(TempBlob.GetString));
               TempBlob := nil;
             end
             else
@@ -729,19 +709,12 @@ begin
             PMYSQL_TIME(PBuffer)^.second := second;
             PMYSQL_TIME(PBuffer)^.second_part := millisecond;
           end;
-            FIELD_TYPE_BLOB:
+          FIELD_TYPE_BLOB:
             begin
-              if TempBlob.Length > MAXBUF then
-              //if True then
-                SendLobChunks
-              else
-              begin
-                TempStream := TempBlob.GetStream;
-                System.Move(TMemoryStream(TempStream).Memory^, PBuffer^, TempBlob.Length);
-                TempStream.Free;
-                TempBlob := nil;
-              end;
+              System.Move(TempBlob.GetBuffer^, PBuffer^, TempBlob.Length);
+              TempBlob := nil;
             end;
+          FIELD_TYPE_NULL:;
       end;
   end;
 
@@ -971,8 +944,16 @@ begin
   With FPColumnArray^[FAddedColumnCount-1] do
     begin
       length := getMySQLFieldSize(tempbuffertype,display_length);
-      SetLength(buffer,length);
-      is_null := 0;
+      if display_length = 0 then
+      begin
+        is_Null := 1;
+        buffer := nil;
+      end
+      else
+      begin
+        SetLength(buffer,length);
+        is_null := 0;
+      end;
     end;
   Case FDriverVersion of
     40100..40199 : With FBindArray41[FAddedColumnCount-1] do
