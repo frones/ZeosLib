@@ -2909,7 +2909,7 @@ end;
 }
 procedure TZAbstractBlob.SetUnicodeString(const Value: WideString);
 begin
-  SetString(AnsiString(UTF8Encode(Value)));
+  SetString(UTF8Encode(Value));
 end;
 
 {**

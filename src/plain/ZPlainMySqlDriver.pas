@@ -637,7 +637,7 @@ begin
     LogSQL := LogSQL+SQLTokens[i].Value;
     case (SQLTokens[i].TokenType) of
       ttEscapedQuoted:
-        begin
+        begin  //EgonHugeist: not a nice piece of code, i know but what can i do otherwise??....
           Temp := ZAnsiString(SQLTokens[i].Value);
           if DetectUTF8ENcoding(Temp) = etUTF8 then
             Result := Result+Temp

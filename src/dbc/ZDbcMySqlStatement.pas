@@ -482,12 +482,12 @@ begin
         Result := Self.GetConnection.GetEscapeString(PAnsiChar(AnsiString(SoftVarManager.GetAsString(Value))));
       stString:
         {$IFDEF DELPHI12_UP}
-          if GetConnection.PreprepareSQL then Result := QuotedStr(SoftVarManager.GetAsString(Value)) else
+          if GetConnection.PreprepareSQL then Result := AnsiQuotedStr(SoftVarManager.GetAsString(Value), #39) else
         {$ENDIF}
           Result := Self.GetConnection.GetEscapeString(PAnsiChar(ZPlainString(SoftVarManager.GetAsString(Value))));
       stUnicodeString:
         {$IFDEF DELPHI12_UP}
-          if GetConnection.PreprepareSQL then Result := QuotedStr(SoftVarManager.GetAsUnicodeString(Value)) else
+          if GetConnection.PreprepareSQL then Result := AnsiQuotedStr(SoftVarManager.GetAsUnicodeString(Value), #39) else
         {$ENDIF}
           Result := Self.GetConnection.GetEscapeString(PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))));
       stDate:
@@ -511,27 +511,30 @@ begin
         Result := '''' + Format('%0.4d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d',
           [AYear, AMonth, ADay, AHour, AMinute, ASecond]) + '''';
       end;
-      stAsciiStream, stUnicodeStream:
+      stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
           begin
-            if Self.GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+            if (GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) and
+              ( InParamTypes[ParamIndex] in [stAsciiStream, stUnicodeStream] ) then
             begin
               TempStream := GetValidatedUnicodeStream(TempBlob.GetStream);
               TempBlob.SetStream(TempStream);
               TempStream.Free;
             end;
-            Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString);
+            case InParamTypes[ParamIndex] of
+              stAsciiStream, stBinaryStream:
+                Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString);
+              stUnicodeStream:
+                begin
+                  {$IFDEF DELPHI12_UP}
+                  if GetConnection.PreprepareSQL then Result := AnsiQuotedStr(TempBlob.GetUnicodeString, #39) else
+                  {$ENDIF}
+                  Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString);
+                end;
+            end;
           end
-          else
-            Result := 'NULL';
-        end;
-      stBinaryStream:
-        begin
-          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
-          if not TempBlob.IsEmpty then
-            Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString)
           else
             Result := 'NULL';
         end;
