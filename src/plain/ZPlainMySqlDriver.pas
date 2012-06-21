@@ -426,8 +426,8 @@ type
   end;
 
 implementation
-uses SysUtils, ZPlainLoader{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF},
-  {$IFDEF WITH_WIDESTRUTILS}WideStrUtils{$ENDIF};
+uses SysUtils, ZPlainLoader{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF}
+  {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF};
 
 { TZMySQLPlainBaseDriver }
 function TZMySQLBaseDriver.GetUnicodeCodePageName: String;
