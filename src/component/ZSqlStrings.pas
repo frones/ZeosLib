@@ -198,8 +198,8 @@ end;
 }
 destructor TZSQLStrings.Destroy;
 begin
-  FreeAndNil(FParams);//.Free;
-  FreeAndNil(FStatements);//.Free;
+  FreeAndNil(FParams);
+  FreeAndNil(FStatements);
   inherited Destroy;
 end;
 
@@ -392,7 +392,7 @@ begin
         if (TokenType <> ttEOF) and (TokenValue <> FParamChar) then
         begin
           { Check for correct parameter type. }
-          if not (TokenType in [ttWord, ttQuoted, ttQuotedIdentifier]) then
+          if not (TokenType in [ttWord, ttQuoted, ttQuotedIdentifier, ttKeyWord]) then
             raise EZDatabaseError.Create(SIncorrectToken);
 
           SQL := SQL + '?';
