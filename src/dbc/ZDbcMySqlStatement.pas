@@ -516,23 +516,30 @@ begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
           begin
+            if InParamTypes[ParamIndex] = stBinaryStream then
+              Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString);
             if (GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) and
               ( InParamTypes[ParamIndex] in [stAsciiStream, stUnicodeStream] ) then
             begin
               TempStream := GetValidatedUnicodeStream(TempBlob.GetStream);
               TempBlob.SetStream(TempStream);
               TempStream.Free;
-            end;
+            end; //could be equal valid for unicode if the user reads the Stream as ftMemo
             case InParamTypes[ParamIndex] of
-              stAsciiStream, stBinaryStream:
+            stAsciiStream:
+              begin
+                {$IFDEF DELPHI12_UP}
+                if GetConnection.PreprepareSQL then Result := AnsiQuotedStr(ZDbcString(TempBlob.GetString), #39) else
+                {$ENDIF}
                 Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString);
-              stUnicodeStream:
-                begin
-                  {$IFDEF DELPHI12_UP}
-                  if GetConnection.PreprepareSQL then Result := AnsiQuotedStr(TempBlob.GetUnicodeString, #39) else
-                  {$ENDIF}
-                  Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString);
-                end;
+              end;
+            stUnicodeStream:
+              begin
+                {$IFDEF DELPHI12_UP}
+                if GetConnection.PreprepareSQL then Result := AnsiQuotedStr(TempBlob.GetUnicodeString, #39) else
+                {$ENDIF}
+                Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString);
+              end;
             end;
           end
           else
@@ -675,7 +682,7 @@ begin
         if InParamTypes[I] = stBinaryStream then
           FBindBuffer.AddColumn(FIELD_TYPE_BLOB, TempBlob.Length)
         else
-          FBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length)
+          FBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length);
       end
       else
         FBindBuffer.AddColumn(MyType,StrLen(PAnsiChar(ZPlainString(InParamValues[I].VString)))+1);
