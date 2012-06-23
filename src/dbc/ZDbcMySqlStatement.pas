@@ -454,7 +454,6 @@ var
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
   TempStream: TStream;
-
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
 begin
   TempBytes := nil;

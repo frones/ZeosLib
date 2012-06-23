@@ -244,7 +244,6 @@ var
   LastChar, TempLastChar: Char;
   QuoteChar: Char;
   QuoteCount: Integer;
-  Temp: String;
 begin
   Result.Value := FirstChar;
   QuoteCount := 1;

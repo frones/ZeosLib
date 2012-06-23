@@ -1521,7 +1521,6 @@ procedure ZTestCompCoreBugReport.Test985629;
 var
   Connection: TZConnection;
   Query: TZQuery;
-  i: Integer;
 begin
   if SkipClosed then Exit;
 
@@ -1532,7 +1531,6 @@ begin
 
   try
     Query.Open;
-    I := Query.RecordCount;
     //EgonHugeist: Postgre assums single precision for Float4 type which has rounding issues
     //if Pos('postgre', Connection.Protocol) = 0 then
     begin

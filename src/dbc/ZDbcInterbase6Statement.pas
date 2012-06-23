@@ -507,7 +507,8 @@ begin
           begin
             TempStream := TempBlob.GetStream;
             try
-              if FParamSQLData.GetFieldSqlType(i) = stUnicodeStream then
+              if (FParamSQLData.GetFieldSqlType(i) in [stUnicodeStream, stAsciiStream]) and
+                (Self.GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) then
               begin
                 MS := GetValidatedUnicodeStream(TempStream);
                 FParamSQLData.WriteBlob(I, MS);
