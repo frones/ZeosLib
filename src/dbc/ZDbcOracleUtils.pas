@@ -455,7 +455,11 @@ begin
         SQLT_BLOB, SQLT_CLOB:
           begin
             TempBlob := DefVarManager.GetAsInterface(Values[I]) as IZBlob;
-            TempStream := TempBlob.GetStream;
+            if (CurrentVar.TypeCode = SQLT_CLOB) and (PlainDriver.GetEncoding = ceUTF8) then
+              TempStream := ZDbcUtils.GetValidatedUnicodeStream(TempBlob.GetStream)
+            else
+              TempStream := TempBlob.GetStream;
+
             try
               WriteTempBlob := TZOracleBlob.Create(PlainDriver,
                 nil, 0, Connection, PPOCIDescriptor(CurrentVar.Data)^,
