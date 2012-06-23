@@ -1519,7 +1519,7 @@ end;
 }
 function TZASADatabaseMetadata.UncachedGetTableTypes: IZResultSet;
 const
-  TablesTypes: array [0..4] of AnsiString = ( 'TABLE', 'BASE', 'SYSTEM', 'VIEW',
+  TablesTypes: array [0..4] of String = ( 'TABLE', 'BASE', 'SYSTEM', 'VIEW',
     'GLOBAL TEMPORARY');
 var
   I: Integer;

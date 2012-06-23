@@ -662,9 +662,8 @@ var
   PBuffer: Pointer;
   year, month, day, hour, minute, second, millisecond: word;
   MyType: TMysqlFieldTypes;
-  I, L: integer;
+  I: integer;
   TempBlob: IZBlob;
-  TempStream: TStream;
 begin
   //http://dev.mysql.com/doc/refman/5.0/en/storage-requirements.html
   if InParamCount = 0 then

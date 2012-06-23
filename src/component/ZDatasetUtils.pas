@@ -823,32 +823,70 @@ function CompareDataFields(const KeyValues, RowValues: TZVariantDynArray;
 var
   I: Integer;
   Value1, Value2: AnsiString;
+  WValue1, WValue2: WideString;
 begin
   Result := True;
   for I := 0 to High(KeyValues) do
   begin
-    if CaseInsensitive then
-    begin
-      Value1 := AnsiUpperCase(SoftVarManager.GetAsString(KeyValues[I]));
-      Value2 := AnsiUpperCase(SoftVarManager.GetAsString(RowValues[I]));
-
-      if PartialKey then
-      begin
-        Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
-      end
+    case KeyValues[I].VType of
+      vtUnicodeString:
+        begin
+          if CaseInsensitive then
+          begin
+            WValue1 := WideUpperCase(SoftVarManager.GetAsUnicodeString(KeyValues[I]));
+            WValue1 := WideUpperCase(SoftVarManager.GetAsUnicodeString(RowValues[I]));
+            if PartialKey then
+            begin
+              {$IFDEF DELPHI12_UP}
+              Result := SysUtils.AnsiStrLComp(PWideChar(WValue2), PWideChar(WValue1), Length(WValue1)) = 0;
+              {$ELSE}
+              Value1 := UTF8ToAnsi(UTF8Encode(WValue1));
+              Value2 := UTF8ToAnsi(UTF8Encode(WValue2));
+              Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
+              {$ENDIF}
+            end
+            else
+              Result := Value1 = Value2
+          end
+          else
+          begin
+            WValue1 := SoftVarManager.GetAsUnicodeString(KeyValues[I]);
+            WValue1 := SoftVarManager.GetAsUnicodeString(RowValues[I]);
+            if PartialKey then
+            begin
+              {$IFDEF DELPHI12_UP}
+              Result := SysUtils.AnsiStrLComp(PWideChar(WValue2), PWideChar(WValue1), Length(WValue1)) = 0;
+              {$ELSE}
+              Value1 := UTF8ToAnsi(UTF8Encode(WValue1));
+              Value2 := UTF8ToAnsi(UTF8Encode(WValue2));
+              Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
+              {$ENDIF}
+            end
+            else
+              Result := SoftVarManager.Compare(KeyValues[I], RowValues[I]) = 0;
+          end;
+        end;
       else
-        Result := Value1 = Value2;
-    end
-    else
-    begin
-      if PartialKey then
       begin
-        Value1 := SoftVarManager.GetAsString(KeyValues[I]);
-        Value2 := SoftVarManager.GetAsString(RowValues[I]);
-        Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
-      end
-      else
-        Result := SoftVarManager.Compare(KeyValues[I], RowValues[I]) = 0;
+        if CaseInsensitive then
+        begin
+          Value1 := AnsiString(AnsiUpperCase(SoftVarManager.GetAsString(KeyValues[I])));
+          Value2 := AnsiString(AnsiUpperCase(SoftVarManager.GetAsString(RowValues[I])));
+          if PartialKey then
+            Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0
+          else
+            Result := Value1 = Value2
+        end
+        else
+        begin
+          Value1 := AnsiString(SoftVarManager.GetAsString(KeyValues[I]));
+          Value2 := AnsiString(SoftVarManager.GetAsString(RowValues[I]));
+          if PartialKey then
+            Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0
+          else
+            Result := SoftVarManager.Compare(KeyValues[I], RowValues[I]) = 0;
+        end;
+      end;
     end;
 
     if not Result then

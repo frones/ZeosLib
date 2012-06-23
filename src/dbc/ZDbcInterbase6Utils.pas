@@ -128,13 +128,12 @@ type
     procedure UpdateDouble(const Index: Integer; Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
     procedure UpdatePChar(const Index: Integer; Value: PAnsiChar);
-    procedure UpdateString(const Index: Integer; Value: AnsiString);
+    procedure UpdateString(const Index: Integer; Value: ZAnsiString);
     procedure UpdateBytes(const Index: Integer; Value: TByteDynArray);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
     procedure UpdateTime(const Index: Integer; Value: TDateTime);
     procedure UpdateTimestamp(const Index: Integer; Value: TDateTime);
     procedure UpdateQuad(const Index: Word; const Value: TISC_QUAD);
-    function ZPlainString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
   end;
 
   { Result interface for sqlda}
@@ -165,7 +164,7 @@ type
 
   { Base class contain core functions to work with sqlda structure
     Can allocate memory for sqlda structure get basic information }
-  TZSQLDA = class (TZCodePagedObject, IZSQLDA)
+  TZSQLDA = class (TInterfacedObject, IZSQLDA)
   private
     FHandle: PISC_DB_HANDLE;
     FTransactionHandle: PISC_TR_HANDLE;
@@ -225,7 +224,7 @@ type
     procedure UpdateDouble(const Index: Integer; Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
     procedure UpdatePChar(const Index: Integer; Value: PAnsiChar);
-    procedure UpdateString(const Index: Integer; Value: AnsiString);
+    procedure UpdateString(const Index: Integer; Value: ZAnsiString);
     procedure UpdateBytes(const Index: Integer; Value: TByteDynArray);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
     procedure UpdateTime(const Index: Integer; Value: TDateTime);
@@ -1082,7 +1081,7 @@ begin
           SoftVarManager.GetAsFloat(InParamValues[I]));
       stString:
         ParamSqlData.UpdateString(I,
-          ParamSqlData.ZPlainString(SoftVarManager.GetAsString(InParamValues[I])));
+          PlainDriver.ZPlainString(SoftVarManager.GetAsString(InParamValues[I])));
       stUnicodeString:
         ParamSqlData.UpdateString(I, UTF8Encode(SoftVarManager.GetAsUnicodeString(InParamValues[I])));
       stBytes:
@@ -1366,7 +1365,7 @@ constructor TZSQLDA.Create(PlainDriver: IZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE;
   Encoding: PZCodePage; const UTF8StringAsWideField: Boolean);
 begin
-  ClientCodePage := Encoding;
+  //ClientCodePage := Encoding;
   FUTF8StringAsWideField := UTF8StringAsWideField;
   FPlainDriver := PlainDriver;
   FHandle := Handle;
@@ -1467,7 +1466,7 @@ begin
   CheckRange(Index);
   {$R-}
   SetString(Temp, FXSQLDA.sqlvar[Index].aliasname, FXSQLDA.sqlvar[Index].aliasname_length);
-  Result := ZDbcString(Temp);
+  Result := FPlainDriver.ZDbcString(Temp);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}
@@ -1602,7 +1601,7 @@ begin
   else
       Result := stString;
   end;
-  if ( ClientCodePage^.Encoding = ceUTF8) and FUTF8StringAsWideField then
+  if ( Self.FPlainDriver.GetEncoding = ceUTF8) and FUTF8StringAsWideField then
     case result of
       stString: Result := stUnicodeString;
       {$IFDEF WITH_WIDEMEMO}
@@ -1621,7 +1620,7 @@ begin
   CheckRange(Index);
   {$R-}
   SetString(Temp, FXSQLDA.sqlvar[Index].OwnName, FXSQLDA.sqlvar[Index].OwnName_length);
-  Result := ZDbcString(Temp);
+  Result := FPlainDriver.ZDbcString(Temp);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}
@@ -1637,7 +1636,7 @@ begin
   CheckRange(Index);
   {$R-}
   SetString(Temp, FXSQLDA.sqlvar[Index].RelName, FXSQLDA.sqlvar[Index].RelName_length);
-  Result := ZDbcString(Temp);
+  Result := FPlainDriver.ZDbcString(Temp);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}  
@@ -1668,7 +1667,7 @@ begin
   CheckRange(Index);
   {$R-}
   SetString(Temp, FXSQLDA.sqlvar[Index].sqlname, FXSQLDA.sqlvar[Index].sqlname_length);
-  Result := ZDbcString(Temp);
+  Result := FPlainDriver.ZDbcString(Temp);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}  
@@ -2399,7 +2398,7 @@ end;
    @param Value the source value
 }
 
-procedure TZParamsSQLDA.UpdateString(const Index: Integer; Value: AnsiString);
+procedure TZParamsSQLDA.UpdateString(const Index: Integer; Value: ZAnsiString);
 var
  SQLCode: SmallInt;
  Stream: TStream;
@@ -2874,7 +2873,7 @@ function TZResultSQLDA.GetPChar(const Index: Integer): PChar;
 var
   TempStr: String;
 begin
-  TempStr := ZDbcString(GetString(Index));
+  TempStr := FPlainDriver.ZDbcString(GetString(Index));
   Result := PChar(TempStr);
 end;
 

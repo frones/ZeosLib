@@ -1363,7 +1363,9 @@ begin
         GetMem(FBlobData, FBlobSize);
         Stream.Position := 0;
         Stream.ReadBuffer(FBlobData^, FBlobSize);
-      end;
+      end
+      else
+        FBlobData := nil;
     end
     else
     begin

@@ -170,7 +170,7 @@ begin
   SetLength(DBLibColTypeCache, DBLibColumnCount + 1);
   for I := 1 to DBLibColumnCount do
   begin
-    ColName := FPlainDriver.dbColName(FHandle, I);
+    ColName := FPlainDriver.ZDbcString(FPlainDriver.dbColName(FHandle, I));
     ColType := FPlainDriver.dbColtype(FHandle, I);
     ColumnInfo := TZColumnInfo.Create;
 

@@ -467,7 +467,7 @@ begin
         if StrLen(PAnsiChar(TMemoryStream(Stream).Memory)) = Stream.Size then
         begin
           if DetectUTF8Encoding(PAnsiChar(TMemoryStream(Stream).Memory)) = etAnsi then
-            Ansi := AnsiToUTF8(PAnsiChar(TMemoryStream(Stream).Memory))
+            Ansi := AnsiToUTF8(String(PAnsiChar(TMemoryStream(Stream).Memory)))
           else
             Ansi := PAnsiChar(TMemoryStream(Stream).Memory);
         end
@@ -476,14 +476,16 @@ begin
           SetLength(Ansi, Stream.Size);
           TMemoryStream(Stream).Read(PAnsiChar(Ansi)^, Stream.Size);
           if DetectUTF8Encoding(Ansi) = etAnsi then
-            Ansi := AnsiToUTF8(Ansi);
+            Ansi := AnsiToUTF8(String(Ansi));
         end;
     Len := Length(Ansi);
     Result := TMemoryStream.Create;
     Result.Size := Len;
     System.Move(PAnsiChar(Ansi)^, TMemoryStream(Result).Memory^, Len);
     Result.Position := 0;
-  end;
+  end
+  else
+    Result := nil;
 end;
 
 end.

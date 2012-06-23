@@ -431,11 +431,7 @@ begin
             case Values[i].VType of
               vtString:
                 StrLCopy(PAnsiChar(CurrentVar.Data),
-                  {$IFDEF DELPHI12_UP}
-                    PAnsiChar(UTF8String(DefVarManager.GetAsString(Values[I]))), 1024);
-                  {$ELSE}
-                    PAnsiChar(DefVarManager.GetAsString(Values[I])), 1024);
-                  {$ENDIF}
+                  PAnsiChar(PlainDriver.ZPlainString(DefVarManager.GetAsString(Values[I]))), 1024);
               vtUnicodeString:
                 StrLCopy(PAnsiChar(CurrentVar.Data),
                     PAnsiChar(UTF8Encode(DefVarManager.GetAsUnicodeString(Values[I]))), 1024);
@@ -545,9 +541,7 @@ begin
   if ( CharEncoding = ceUTF8) and UTF8StringAsWideField then
     case result of
       stString: Result := stUnicodeString;
-      {$IFDEF WITH_WIDEMEMO}
       stAsciiStream: Result := stUnicodeStream;
-      {$ENDIF}
     end;
 end;
 

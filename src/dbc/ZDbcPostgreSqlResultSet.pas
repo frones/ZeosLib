@@ -648,8 +648,8 @@ begin
           if (Statement.GetConnection as IZPostgreSQLConnection).GetServerMajorVersion >= 9 then
           begin
             Decoded := InternalGetString(ColumnIndex) ;
-            Len := (Length(Decoded)-Pos('x', Decoded)) div 2; //GetLength of binary result
-            Decoded := Copy(Decoded, Pos('x', Decoded)+1, Length(Decoded)); //remove the first 'x'sign-byte
+            Len := (Length(Decoded)-{$IFDEF DELPHI12_UP}AnsiStrings.AnsiPos{$ELSE}Pos{$ENDIF}('x', Decoded)) div 2; //GetLength of binary result
+            Decoded := Copy(Decoded, {$IFDEF DELPHI12_UP}AnsiStrings.AnsiPos{$ELSE}Pos{$ENDIF}('x', Decoded)+1, Length(Decoded)); //remove the first 'x'sign-byte
             SetLength(TempAnsi, Len); //Set length of binary-result
             HexToBin(PAnsiChar(Decoded), PAnsichar(TempAnsi), Len); //convert hex to binary
             Stream := TStringStream.Create(TempAnsi); //write proper binary-stream
