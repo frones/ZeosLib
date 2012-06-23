@@ -265,8 +265,19 @@ begin
       Inc(QuoteCount);
       if (TempLastChar = BackSlash) and (ReadChar = QuoteChar ) then
       begin
-        Result.TokenType := ttEscapedQuoted;
-        Inc(QuoteCount);
+        if Stream.Read(TempLastChar, SizeOf(Char)) > 0 then
+        begin
+          if not ( TempLastChar = QuoteChar ) then
+          begin
+            Inc(QuoteCount);
+            Result.TokenType := ttEscapedQuoted;
+          end;
+          Stream.Seek(-SizeOf(Char), soFromCurrent)
+        end
+        else
+        begin
+          Inc(QuoteCount);
+        end;
       end;
     end else
       if (ReadChar = BackSlash) and (TempLastChar  = BackSlash) then
