@@ -424,7 +424,10 @@ begin
       stString:
         Result := Self.GetConnection.GetEscapeString(PAnsiChar(ZPlainString(SoftVarManager.GetAsString(Value))));
       stUnicodeString:
-        Result := Self.GetConnection.GetEscapeString(PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))));
+        if GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+          Result := Self.GetConnection.GetEscapeString(PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))))
+        else
+          Result := Self.GetConnection.GetEscapeString(PAnsiChar(AnsiString(SoftVarManager.GetAsUnicodeString(Value))));
       stDate:
         Result := Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]);

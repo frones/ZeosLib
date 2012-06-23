@@ -489,7 +489,10 @@ begin
         {$IFDEF DELPHI12_UP}
           if GetConnection.PreprepareSQL then Result := AnsiQuotedStr(SoftVarManager.GetAsUnicodeString(Value), #39) else
         {$ENDIF}
-          Result := Self.GetConnection.GetEscapeString(PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))));
+        if (GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) then
+          Result := Self.GetConnection.GetEscapeString(PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))))
+        else
+          Result := Self.GetConnection.GetEscapeString(PAnsiChar(AnsiString(SoftVarManager.GetAsUnicodeString(Value))));
       stDate:
       begin
         DecodeDateTime(SoftVarManager.GetAsDateTime(Value),

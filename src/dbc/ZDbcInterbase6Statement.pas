@@ -480,8 +480,12 @@ begin
         FParamSQLData.UpdateString(I,
           ZPlainString(SoftVarManager.GetAsString(InParamValues[I])));
       stUnicodeString:
-        FParamSQLData.UpdateString(I,
-          UTF8Encode(SoftVarManager.GetAsUnicodeString(InParamValues[I])));
+        if Self.Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+          FParamSQLData.UpdateString(I,
+            UTF8Encode(SoftVarManager.GetAsUnicodeString(InParamValues[I])))
+        else
+          FParamSQLData.UpdateString(I,
+            AnsiString(SoftVarManager.GetAsUnicodeString(InParamValues[I])));
       stBytes:
         FParamSQLData.UpdateBytes(I,
           StrToBytes(AnsiString(SoftVarManager.GetAsString(InParamValues[I]))));
