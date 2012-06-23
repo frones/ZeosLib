@@ -1521,6 +1521,7 @@ procedure ZTestCompCoreBugReport.Test985629;
 var
   Connection: TZConnection;
   Query: TZQuery;
+  i: Integer;
 begin
   if SkipClosed then Exit;
 
@@ -1531,11 +1532,14 @@ begin
 
   try
     Query.Open;
-
-    Query.Locate('c_cost', 643.11, []);
-    Check(Query.Found, 'Query.Locate');
-    CheckEquals(3, Query.RecNo);
-
+    I := Query.RecordCount;
+    //EgonHugeist: Postgre assums single precision for Float4 type which has rounding issues
+    //if Pos('postgre', Connection.Protocol) = 0 then
+    begin
+      Query.Locate('c_cost', 643.11, []);
+      Check(Query.Found, 'Query.Locate 643.11');
+      CheckEquals(3, Query.RecNo);
+    end;
     Query.Close;
   finally
     Query.Free;

@@ -797,7 +797,7 @@ begin
           SetCatalog(FCatalog);
           SetTransactionIsolation(FTransactIsolationLevel);
           SetUseMetadata(FUseMetadata);
-          SetUTF8StringAsWideField(FUTF8StringAsWideField);
+          SetUTF8StringAsWideField(Self.GetUTF8StringAsWideField);
           Open;
         end;
       except

@@ -773,9 +773,9 @@ begin
     CheckEquals(1, Query.RecordCount);
     CheckEquals(Ord(ftInteger), Ord(Query.Fields[0].DataType));
     //Client_Character_set sets column-type!!!!
+    {$IFDEF WITH_WIDEMEMO}
     if ( FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
       FConnection.UTF8StringsAsWideField then
-    {$IFDEF WITH_WIDEMEMO}
         CheckEquals(Ord(ftWideMemo), Ord(Query.Fields[1].DataType))
       else
     {$ENDIF}
@@ -787,8 +787,8 @@ begin
     Stream := Query.CreateBlobStream(Query.Fields[1], bmWrite);
     try
       Temp := 'xyz';
-      if Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8] then
       {$IFDEF WITH_WIDEMEMO}
+      if Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8] then
         Stream.Write(PWideChar(WideString(Temp))^, Length(Temp)*2)
       else
       {$ENDIF}
