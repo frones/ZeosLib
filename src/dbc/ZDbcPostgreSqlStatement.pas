@@ -267,7 +267,7 @@ begin
   else
     if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
       QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
-        PAnsiChar(UTF8String(SQL)))
+        PAnsiChar(ZAnsiString(SQL)))
     else
       QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
         PAnsiChar(AnsiString(SQL)));
