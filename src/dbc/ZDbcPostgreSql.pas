@@ -996,14 +996,14 @@ function TZPostgreSQLConnection.GetEscapeString(const Value: String;
 begin
   if StartsWith(Value, '''') and EndsWith(Value, '''') then
     if not FStandardConformingStrings then
-      Result := inherited GetEscapeString(Value, EscapeMarkSequence)
+      Result := Value
     else
-      Result := inherited GetEscapeString(ZDbcPostgreSqlUtils.EncodeString(TZPgCharactersetType(Self.ClientCodePage^.ID), AnsiDequotedStr(Value, '''')), EscapeMarkSequence)
+      Result := ZDbcPostgreSqlUtils.EncodeString(TZPgCharactersetType(Self.ClientCodePage^.ID), AnsiDequotedStr(Value, #39))
   else
     if not FStandardConformingStrings then
-      Result := inherited GetEscapeString(QuotedStr(Value), EscapeMarkSequence)
+      Result := AnsiQuotedStr(Value, #39)
     else
-      Result := inherited GetEscapeString(ZDbcPostgreSqlUtils.EncodeString(TZPgCharactersetType(Self.ClientCodePage^.ID), Value), EscapeMarkSequence)
+      Result := ZDbcPostgreSqlUtils.EncodeString(TZPgCharactersetType(Self.ClientCodePage^.ID), Value);
 end;
 
 { TZPostgreSQLSequence }

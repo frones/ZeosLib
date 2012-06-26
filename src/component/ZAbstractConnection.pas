@@ -325,6 +325,15 @@ var
 }
 constructor TZAbstractConnection.Create(AOwner: TComponent);
 begin
+  {$IFDEF LAZARUSUTF8HACK}
+  FUTF8StringAsWideField := False;
+  {$ELSE}
+    {$IFDEF DELPHI12_UP}
+    FUTF8StringAsWideField := True;
+    {$ELSE}
+    FUTF8StringAsWideField := False;
+    {$ENDIF}
+  {$ENDIF}
   FURL := TZURL.Create;
   inherited Create(AOwner);
   FAutoCommit := True;
@@ -337,11 +346,6 @@ begin
   FSequences:= TList.Create;
   FLoginPrompt := False;
   FDesignConnection := False;
-  {$IFDEF LAZARUSUTF8HACK}
-  FUTF8StringAsWideField := False;
-  {$ELSE}
-  FUTF8StringAsWideField := True;
-  {$ENDIF}
 end;
 
 {**

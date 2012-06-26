@@ -451,9 +451,19 @@ begin
   begin
     if Length(PWideChar(TMemoryStream(Stream).Memory)) = Stream.Size then
     begin
-      WS := PWideChar(TMemoryStream(Stream).Memory);
-      SetLength(WS, Stream.Size div 2);
-      Ansi := UTF8Encode(WS);
+      if StrLen(PAnsiChar(TMemoryStream(Stream).Memory)) > Stream.Size then  //Hack!! If no #0 is witten then the PAnsiChar could be oversized
+      begin
+        SetLength(Ansi, Stream.Size);
+        TMemoryStream(Stream).Read(PAnsiChar(Ansi)^, Stream.Size);
+        if DetectUTF8Encoding(Ansi) = etAnsi then
+          Ansi := AnsiToUTF8(String(Ansi));
+      end
+      else
+      begin
+        WS := PWideChar(TMemoryStream(Stream).Memory);
+        SetLength(WS, Stream.Size div 2);
+        Ansi := UTF8Encode(WS);
+      end;
     end
     else
       if StrLen(PAnsiChar(TMemoryStream(Stream).Memory)) < Stream.Size then //PWideChar written

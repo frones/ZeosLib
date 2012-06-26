@@ -689,7 +689,7 @@ begin
     DriverManager.LogMessage(lcTransaction, PlainDriver.GetProtocol,
       'TRANSACTION STARTED.');
   finally
-    Params.Free;
+    FreeAndNil(Params);
     StrDispose(PTEB.tpb_address);
     FreeMem(PTEB);
   end

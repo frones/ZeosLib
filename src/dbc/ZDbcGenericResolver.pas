@@ -235,13 +235,9 @@ begin
   FMetadata := nil;
   FDatabaseMetadata := nil;
 
-  FInsertColumns.Free;
-  FUpdateColumns.Free;
-  FWhereColumns.Free;
-
-  InsertStatement := nil;
-  UpdateStatement := nil;
-  DeleteStatement := nil;
+  FreeAndNil(FInsertColumns);
+  FreeAndNil(FUpdateColumns);
+  FreeAndNil(FWhereColumns);
 
   inherited Destroy;
 end;
@@ -879,7 +875,7 @@ begin
         raise EZSQLException.Create(Format(SInvalidUpdateCount, [lUpdateCount]));
     end;
   finally
-    SQLParams.Free;
+    FreeAndNil(SQLParams);
   end;
 end;
 
@@ -970,7 +966,7 @@ begin
       Statement.Close;
     end;
   finally
-    SQLParams.Free;
+    FreeAndNil(SQLParams);
   end;
 end;
 

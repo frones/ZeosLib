@@ -267,7 +267,7 @@ begin
   else
     if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
       QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
-        PAnsiChar(ZAnsiString(SQL)))
+        PAnsiChar(UTF8String(SQL)))
     else
       QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
         PAnsiChar(AnsiString(SQL)));
@@ -422,12 +422,16 @@ begin
       stBytes:
         Result := Self.GetConnection.GetEscapeString(PAnsiChar(AnsiString(SoftVarManager.GetAsString(Value))));
       stString:
-        Result := Self.GetConnection.GetEscapeString(PAnsiChar(ZPlainString(SoftVarManager.GetAsString(Value))));
+        Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
       stUnicodeString:
+        {$IFDEF DELPHI12_UP}
+          Result := GetConnection.GetEscapeString(SoftVarManager.GetAsUnicodeString(Value));
+        {$ELSE}
         if GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
           Result := Self.GetConnection.GetEscapeString(PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))))
         else
           Result := Self.GetConnection.GetEscapeString(PAnsiChar(AnsiString(SoftVarManager.GetAsUnicodeString(Value))));
+        {$ENDIF}
       stDate:
         Result := Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]);
@@ -438,48 +442,50 @@ begin
         Result := Format('''%s''::timestamp',
           [FormatDateTime('yyyy-mm-dd hh":"mm":"ss',
             SoftVarManager.GetAsDateTime(Value))]);
-      stAsciiStream, stUnicodeStream:
+      stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
           begin
-            if Self.GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+            if (Self.GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) and
+              (InParamTypes[ParamIndex] in [stAsciiStream, stUnicodeStream]) then
             begin
               TempStream := GetValidatedUnicodeStream(TempBlob.GetStream);
               TempBlob.SetStream(TempStream);
               TempStream.Free;
             end;
-            Result := Self.GetConnection.GetEscapeString(String(TempBlob.GetString))
+            case InParamTypes[ParamIndex] of
+              stBinaryStream:
+                if (GetConnection as IZPostgreSQLConnection).IsOidAsBlob then
+                begin
+                  TempStream := TempBlob.GetStream;
+                  try
+                    WriteTempBlob := TZPostgreSQLBlob.Create(FPlainDriver, nil, 0,
+                      Self.GetConnectionHandle, 0, StrToIntDef(Info.Values['chunk_size'], 1024));
+                    WriteTempBlob.SetStream(TempStream);
+                    //WriteTempBlob.SetBuffer(TempBlob.GetBuffer, TempBlob.Length);
+                    WriteTempBlob.WriteBlob;
+                    Result := IntToStr(WriteTempBlob.GetBlobOid);
+                  finally
+                    WriteTempBlob := nil;
+                    TempStream.Free;
+                  end;
+                end
+                else
+                  Result := GetConnection.GetAnsiEscapeString(TempBlob.GetString);
+              stAsciiStream:
+                Result := GetConnection.GetEscapeString(String(TempBlob.GetString));
+              stUnicodeStream:
+                {$IFDEF DELPHI12_UP}
+                  Result := GetConnection.GetEscapeString(TempBlob.GetUnicodeString);
+                {$ELSE}
+                  Result := GetConnection.GetEscapeString(TempBlob.GetString);
+                {$ENDIF}
+            end; {case..}
           end
           else
             Result := 'NULL';
-        end;
-      stBinaryStream:
-        begin
-          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
-          if not TempBlob.IsEmpty then
-          begin
-            if (GetConnection as IZPostgreSQLConnection).IsOidAsBlob then
-            begin
-              TempStream := TempBlob.GetStream;
-              try
-                WriteTempBlob := TZPostgreSQLBlob.Create(FPlainDriver, nil, 0,
-                  Self.GetConnectionHandle, 0, StrToIntDef(Info.Values['chunk_size'], 1024));
-                WriteTempBlob.SetStream(TempStream);
-                //WriteTempBlob.SetBuffer(TempBlob.GetBuffer, TempBlob.Length);
-                WriteTempBlob.WriteBlob;
-                Result := IntToStr(WriteTempBlob.GetBlobOid);
-              finally
-                WriteTempBlob := nil;
-                TempStream.Free;
-              end;
-            end
-            else
-              Result := GetConnection.GetAnsiEscapeString(TempBlob.GetString);
-          end
-          else
-            Result := 'NULL';
-        end;
+        end; {if not TempBlob.IsEmpty then}
     end;
   end;
 end;

@@ -699,7 +699,7 @@ destructor TZAbstractConnection.Destroy;
 begin
   if not FClosed then
     Close;
-  FMetadata.Free;
+  FreeAndNil(FMetadata);
   FURL.Free;
   inherited Destroy;
 end;

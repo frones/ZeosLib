@@ -698,7 +698,7 @@ begin
           CS_NONE: Result := stString;
           CS_BINARY: Result := stBytes;
           CS_ASCII: Result := stString;
-          CS_UNICODE_FSS: Result := stUnicodeString;
+          CS_UNICODE_FSS: Result := stString;//stUnicodeString;
         else
           // Bug 1177394: Bug using View
           Result := stString;
@@ -753,9 +753,7 @@ begin
   if ( CharEncoding = ceUTF8) and UTF8StringAsWideField then
     case result of
       stString: Result := stUnicodeString;
-      {$IFDEF WITH_WIDEMEMO}
       stAsciiStream: Result := stUnicodeStream;
-      {$ENDIF}
     end;
 end;
 

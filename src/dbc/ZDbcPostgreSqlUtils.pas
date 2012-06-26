@@ -725,6 +725,7 @@ begin
 
     if ResultHandle <> nil then PlainDriver.Clear(ResultHandle);
 
+
     raise EZSQLException.CreateWithStatus(StatusCode,Format(SSQLError1, [ErrorMessage]));
   end;
 end;

@@ -689,19 +689,13 @@ begin
     FInsertedRow := nil;
     FSelectedRow := nil;
 
-    FRowsList.Free;
-    FRowsList := nil;
-    FInitialRowsList.Free;
-    FInitialRowsList := nil;
-    FCurrentRowsList.Free;
-    FCurrentRowsList := nil;
+    FreeAndNil(FRowsList);
+    FreeAndNil(FInitialRowsList);
+    FreeAndNil(FCurrentRowsList);
 
-    FRowAccessor.Free;
-    FRowAccessor := nil;
-    FOldRowAccessor.Free;
-    FOldRowAccessor := nil;
-    FNewRowAccessor.Free;
-    FNewRowAccessor := nil;
+    FreeAndNil(FRowAccessor);
+    FreeAndNil(FOldRowAccessor);
+    FreeAndNil(FNewRowAccessor);
   end;
 end;
 
@@ -1433,26 +1427,17 @@ end;
 }
 procedure TZAbstractCachedResultSet.UpdateUnicodeStream(
   ColumnIndex: Integer; Value: TStream);
-var
-  MS: TStream;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
 {$ENDIF}
   PrepareRowForUpdates;
-  {EgonHugeist: TempBuffer the WideString, }
-  if Assigned(Value) then
-  begin
-    //Step one: Findout, wat's comming in! To avoid User-Bugs
-    //it is possible that a PAnsiChar OR a PWideChar was written into
-    //the Stream!!!  And these chars could be trunced with changing the
-    //Stream.Size.
-    MS := ZDbcUtils.GetValidatedUnicodeStream(Value);
-    FRowAccessor.SetUnicodeStream(ColumnIndex, MS);
-    if Assigned(MS) then MS.Free;
-  end
-  else
-    FRowAccessor.SetUnicodeStream(ColumnIndex, Value);
+  {EgonHugeist:
+    Findout, wat's comming in! To avoid User-Bugs
+    it is possible that a PAnsiChar OR a PWideChar was written into
+    the Stream!!!  And these chars could be trunced with changing the
+    Stream.Size.}
+  FRowAccessor.SetUnicodeStream(ColumnIndex, ZDbcUtils.GetValidatedUnicodeStream(Value));
 end;
 
 {**
