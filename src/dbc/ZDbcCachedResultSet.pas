@@ -746,51 +746,11 @@ end;
     value returned is <code>null</code>
 }
 function TZAbstractCachedResultSet.GetString(ColumnIndex: Integer): String;
-//var
-//  UseEncoding: TZCharEncoding;
-//  WS: WideString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckAvailable;
 {$ENDIF}
   Result := FRowAccessor.GetString(ColumnIndex, LastWasNull);
-(*  if CharEncoding = ceDefault then
-    UseEncoding := ClientCodePage^.Encoding
-  else
-    UseEncoding := CharEncoding;
-
-  case ClientCodePage^.Encoding of
-    ceAnsi:
-      case UseEncoding of
-        ceAnsi: Result := AnsiString(FRowAccessor.GetString(ColumnIndex, LastWasNull));
-        ceUTF8: Result := AnsiToUTF8(FRowAccessor.GetString(ColumnIndex, LastWasNull));
-        ceUTF16:
-          begin
-            WS := UTF8ToString(AnsiToUTF8(FRowAccessor.GetString(ColumnIndex, LastWasNull)));
-            Result := Copy(UTF8Encode(WS), 1, Length(UTF8Encode(WS)));;
-          end;
-        {$IFNDEF MSWINDOWS}
-        ceUTF32: ;
-        {$ENDIF}
-      end;
-    ceUTF8:
-      case UseEncoding of
-        ceAnsi: Result := AnsiString(UTF8ToAnsi(FRowAccessor.GetString(ColumnIndex, LastWasNull)));
-        ceUTF8: Result := AnsiString(FRowAccessor.GetString(ColumnIndex, LastWasNull));
-        ceUTF16:
-          begin
-            WS := FRowAccessor.GetUnicodeString(ColumnIndex, LastWasNull);
-            Result := Copy(UTF8Encode(WS), 1, Length(UTF8Encode(WS)));;
-          end;
-        {$IFNDEF MSWINDOWS}
-        ceUTF32: ;
-        {$ENDIF}
-      end;
-    ceUTF16: ;
-    {$IFNDEF MSWINDOWS}
-    ceUTF32: ;
-    {$ENDIF}
-  end;*)
 end;
 
 {**
