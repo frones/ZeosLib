@@ -1742,7 +1742,8 @@ begin
     if Schema <> '' then
       SQL := SQL + ' AND A.OWNER=''' + Schema + '''';
     if Table <> '' then
-       SQL := SQL + ' AND A.TABLE_OWNER=''' + Table + '''';
+        SQL := SQL + ' AND A.TABLE_NAME=''' + Table + '''';
+       //SQL := SQL + ' AND A.OWNER_NAME=''' + Table + '''';
     SQL := SQL + ' ORDER BY A.INDEX_NAME, B.COLUMN_POSITION';
 
     Result := CopyToVirtualResultSet(
