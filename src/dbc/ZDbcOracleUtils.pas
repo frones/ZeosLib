@@ -211,7 +211,7 @@ procedure FreeOracleStatementHandles(PlainDriver: IZOraclePlainDriver;
   @param ErrorHandle a holder for Error handle.
 }
 procedure PrepareOracleStatement(PlainDriver: IZOraclePlainDriver;
-  SQL: string; Handle: POCIStmt; ErrorHandle: POCIError);
+  SQL: string; Handle: POCIStmt; ErrorHandle: POCIError; PrefetchCount: ub4);
 
 {**
   Executes an Oracle statement.
@@ -419,7 +419,7 @@ begin
     if (high(Values)<I) or DefVarManager.IsNull(Values[I]) then
     begin
       CurrentVar.Indicator := -1;
-      CurrentVar.Data := nil;
+      //CurrentVar.Data := nil;
     end
     else
     begin
@@ -701,17 +701,15 @@ end;
   @param ErrorHandle a holder for Error handle.
 }
 procedure PrepareOracleStatement(PlainDriver: IZOraclePlainDriver;
-  SQL: string; Handle: POCIStmt; ErrorHandle: POCIError);
+  SQL: string; Handle: POCIStmt; ErrorHandle: POCIError; PrefetchCount: ub4);
 var
   Status: Integer;
-  PrefetchCount: ub4;
 begin
   // setting PrefetchCount to a default of 100 rows
   // this seems a good default for most queries
   // TODO : provide a way to override this using a statement.properties line
-  PrefetchCount := 100; 
-  PlainDriver.AttrSet(Handle, OCI_HTYPE_STMT, @PrefetchCount, SizeOf(ub4), 
-    OCI_ATTR_PREFETCH_ROWS, ErrorHandle); 
+  PlainDriver.AttrSet(Handle, OCI_HTYPE_STMT, @PrefetchCount, SizeOf(ub4),
+    OCI_ATTR_PREFETCH_ROWS, ErrorHandle);
   Status := PlainDriver.StmtPrepare(Handle, ErrorHandle, PAnsiChar(AnsiString(SQL)),
     Length(AnsiString(SQL)), OCI_NTV_SYNTAX, OCI_DEFAULT);
   CheckOracleError(PlainDriver, ErrorHandle, Status, lcExecute, SQL);
