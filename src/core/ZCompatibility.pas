@@ -168,7 +168,7 @@ type
     FCodePage: PZCodePage;
   protected
     function ZDbcString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
-    function ZPlainString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
+    function ZPlainString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): ZAnsiString;
     function ZStringW(const ws: WideString; const Encoding: TZCharEncoding = ceDefault): String;
     property ClientCodePage: PZCodePage read FCodePage write FCodePage;
   public
@@ -521,10 +521,11 @@ function TZCodePagedObject.ZDbcString(const Ansi: AnsiString;
 var
   UseEncoding: TZCharEncoding;
 begin
-  if not Assigned(FCodePage) then
-    raise Exception.Create('CodePage-Informations not Assigned!');
   if Encoding = ceDefault then
-    UseEncoding := FCodePage.Encoding
+    if not Assigned(FCodePage) then
+      raise Exception.Create('CodePage-Informations not Assigned!')
+    else
+      UseEncoding := FCodePage.Encoding
   else
     UseEncoding := Encoding;
 
@@ -580,14 +581,15 @@ EgonHugeist:
      UTF8 instead of Latin1. (SSL-Keys eventualy)
 }
 function TZCodePagedObject.ZPlainString(const AStr: String;
-  const Encoding: TZCharEncoding = ceDefault): {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
+  const Encoding: TZCharEncoding = ceDefault): ZAnsiString;
 var
   UseEncoding: TZCharEncoding;
 begin
-  if not Assigned(FCodePage) then
-    raise Exception.Create('CodePage-Informations not Assigned!');
   if Encoding = ceDefault then
-    UseEncoding := FCodePage.Encoding
+    if not Assigned(FCodePage) then
+      raise Exception.Create('CodePage-Informations not Assigned!')
+    else
+      UseEncoding := FCodePage.Encoding
   else
     UseEncoding := Encoding;
 
@@ -657,10 +659,11 @@ function TZCodePagedObject.ZStringW(const ws: WideString; const Encoding: TZChar
 var
   UseEncoding: TZCharEncoding;
 begin
-  if not Assigned(FCodePage) then
-    raise Exception.Create('CodePage-Informations not Assigned!');
   if Encoding = ceDefault then
-    UseEncoding := FCodePage.Encoding
+    if not Assigned(FCodePage) then
+      raise Exception.Create('CodePage-Informations not Assigned!')
+    else
+      UseEncoding := FCodePage.Encoding
   else
     UseEncoding := Encoding;
 

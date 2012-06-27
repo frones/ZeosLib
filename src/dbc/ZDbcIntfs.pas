@@ -289,6 +289,7 @@ type
     function GetPreprepareSQL: Boolean;
     procedure SetPreprepareSQL(const Value: Boolean);
     property PreprepareSQL: Boolean read GetPreprepareSQL write SetPreprepareSQL;
+    function GetEncoding: TZCharEncoding;
     property UTF8StringAsWideField: Boolean read GetUTF8StringAsWideField write SetUTF8StringAsWideField;
   end;
 
@@ -545,7 +546,7 @@ type
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;
 
-    function GetPrepreparedSQL(const SQL: String): AnsiString;
+    function GetPrepreparedSQL(const SQL: String): ZAnsiString;
   end;
 
   {** Prepared SQL statement interface. }

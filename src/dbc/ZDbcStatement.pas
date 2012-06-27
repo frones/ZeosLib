@@ -88,7 +88,7 @@ type
     FInfo: TStrings;
     FClosed: Boolean;
     FsSQL: String;
-    FaSQL: AnsiString;
+    FaSQL: ZAnsiString;
     procedure SetSSQL(const Value: String);
     procedure SetLastResultSet(ResultSet: IZResultSet); virtual;
 
@@ -120,13 +120,19 @@ type
     property Closed: Boolean read FClosed write FClosed;
 
     property SSQL: String read FsSQL write SetSSQL;
-    property ASQL: AnsiString read FaSQL;
+    property ASQL: ZAnsiString read FaSQL;
   public
     constructor Create(Connection: IZConnection; Info: TStrings);
     destructor Destroy; override;
 
-    function ExecuteQuery(const SQL: string): IZResultSet; virtual;
-    function ExecuteUpdate(const SQL: string): Integer; virtual;
+    function ExecuteQuery(const SQL: string): IZResultSet; overload; virtual;
+    function ExecuteUpdate(const SQL: string): Integer; overload; virtual;
+    function Execute(const SQL: string): Boolean; overload; virtual;
+    {$IFDEF DELPHI12_UP}
+    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; overload; virtual; abstract;
+    function ExecuteUpdate(const SQL: ZAnsiString): Integer; overload; virtual; abstract;
+    function Execute(const SQL: ZAnsiString): Boolean; overload; virtual; abstract;
+    {$ENDIF}
     procedure Close; virtual;
 
     function GetMaxFieldSize: Integer; virtual;
@@ -139,7 +145,6 @@ type
     procedure Cancel; virtual;
     procedure SetCursorName(const Value: AnsiString); virtual;
 
-    function Execute(const SQL: string): Boolean; virtual;
     function GetResultSet: IZResultSet; virtual;
     function GetUpdateCount: Integer; virtual;
     function GetMoreResults: Boolean; virtual;
@@ -168,7 +173,7 @@ type
 
     function GetWarnings: EZSQLWarning; virtual;
     procedure ClearWarnings; virtual;
-    function GetPrepreparedSQL(const SQL: String): AnsiString; virtual;
+    function GetPrepreparedSQL(const SQL: String): ZAnsiString; virtual;
   end;
 
   {** Implements Abstract Prepared SQL Statement. }
@@ -230,11 +235,7 @@ type
     procedure SetBigDecimal(ParameterIndex: Integer; Value: Extended); virtual;
     procedure SetPChar(ParameterIndex: Integer; Value: PChar); virtual;
     procedure SetString(ParameterIndex: Integer; const Value: String); virtual;
-    {$IFDEF DELPHI12_UP}
-      procedure SetUnicodeString(ParameterIndex: Integer; const Value: String);  virtual; //AVZ
-    {$ELSE}
-      procedure SetUnicodeString(ParameterIndex: Integer; const Value: WideString); virtual;  //AVZ
-    {$ENDIF}
+    procedure SetUnicodeString(ParameterIndex: Integer; const Value: {$IFDEF DELPHI12_UP}String{$ELSE}WideString{$ENDIF});  virtual; //AVZ
     procedure SetBytes(ParameterIndex: Integer; const Value: TByteDynArray); virtual;
     procedure SetDate(ParameterIndex: Integer; Value: TDateTime); virtual;
     procedure SetTime(ParameterIndex: Integer; Value: TDateTime); virtual;
@@ -612,7 +613,7 @@ procedure TZAbstractStatement.ClearWarnings;
 begin
 end;
 
-function TZAbstractStatement.GetPrepreparedSQL(const SQL: String): AnsiString;
+function TZAbstractStatement.GetPrepreparedSQL(const SQL: String): ZAnsiString;
 var
   SQLTokens: TZTokenDynArray;
   i: Integer;
@@ -632,7 +633,7 @@ begin
       case (SQLTokens[i].TokenType) of
         ttEscape:
           Result := Result + AnsiString(SQLTokens[i].Value);
-        ttWord, ttQuoted, ttQuotedIdentifier, ttKeyword:
+        ttWord, ttQuoted, ttQuotedIdentifier, ttKeyword, ttEscapedQuoted:
           Result := Result + Self.ZPlainString(SQLTokens[i].Value);
         else
           Result := Result + AnsiString(SQLTokens[i].Value);

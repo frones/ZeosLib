@@ -291,6 +291,15 @@ begin
       else
         CurrentVar.ColType := stUnknown;
     end;
+    
+    if (Statement.GetConnection.GetEncoding = ceUTF8) and
+      (Self.Statement.GetConnection.UTF8StringAsWideField)
+    then
+      case CurrentVar.ColType of
+        stString: CurrentVar.ColType := stUnicodeString;
+        stAsciiStream: CurrentVar.ColType := stUnicodeStream;
+      end;
+
 
     InitializeOracleVar(FPlainDriver, Connection, CurrentVar,
       CurrentVar.ColType, CurrentVar.TypeCode, CurrentVar.DataSize);

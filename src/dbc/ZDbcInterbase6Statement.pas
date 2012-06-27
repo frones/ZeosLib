@@ -959,7 +959,7 @@ begin
       PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
         SQL, StmtHandle, SQLData);
       PrepareParameters(GetPlainDriver, ProcSql, InParamValues, InParamTypes,
-        InParamCount, GetDialect, StmtHandle, FParamSQLData);
+        InParamCount, GetDialect, StmtHandle, FParamSQLData, FIBConnection.GetEncoding);
       GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
             GetDialect, FParamSQLData.GetData, SQLData.GetData);
       CheckInterbase6Error(SQL);
@@ -1050,7 +1050,7 @@ begin
       PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
         SQL, StmtHandle, SQLData);
       PrepareParameters(GetPlainDriver, ProcSql, InParamValues, InParamTypes,
-        InParamCount, GetDialect, StmtHandle, FParamSQLData);
+        InParamCount, GetDialect, StmtHandle, FParamSQLData, FIBConnection.GetEncoding);
 
       if (StatementType = stSelect) then     //AVZ Get many rows - only need to use execute not execute2
       begin
@@ -1145,7 +1145,7 @@ begin
       PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
         SQL, StmtHandle, SQLData);
       PrepareParameters(GetPlainDriver, ProcSql, InParamValues, InParamTypes,
-        InParamCount, GetDialect, StmtHandle, FParamSQLData);
+        InParamCount, GetDialect, StmtHandle, FParamSQLData, FIBConnection.GetEncoding);
 
       GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
         GetDialect, FParamSQLData.GetData, SQLData.GetData);

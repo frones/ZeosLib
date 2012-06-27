@@ -451,7 +451,7 @@ begin
   begin
     if Length(PWideChar(TMemoryStream(Stream).Memory)) = Stream.Size then
     begin
-      if StrLen(PAnsiChar(TMemoryStream(Stream).Memory)) > Stream.Size then  //Hack!! If no #0 is witten then the PAnsiChar could be oversized
+      if StrLen(PAnsiChar(TMemoryStream(Stream).Memory)) >= Stream.Size then  //Hack!! If no #0 is witten then the PAnsiChar could be oversized
       begin
         SetLength(Ansi, Stream.Size);
         TMemoryStream(Stream).Read(PAnsiChar(Ansi)^, Stream.Size);

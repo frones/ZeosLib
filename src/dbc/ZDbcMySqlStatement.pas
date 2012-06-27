@@ -266,7 +266,7 @@ begin
   Result := nil;
 //  Self.SSQL := SQL; //Did preprepare the SQL
 //  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(Self.ASQL)) = 0 then
-  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, LogSQL) = 0 then
+  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, Self.GetConnection.GetEncoding, LogSQL) = 0 then
   begin
 //    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
@@ -299,7 +299,7 @@ begin
   Result := -1;
 //  Self.SSQL := SQL; //Preprepare SQL
   //if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
-  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, LogSQL) = 0 then
+  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, GetConnection.GetEncoding, LogSQL) = 0 then
   begin
     //DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
@@ -353,7 +353,7 @@ begin
   Result := False;
   //Self.SSQL := SQL; //Preprepare SQL and sets AnsiSQL
   //if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
-  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, LogSQL) = 0 then
+  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, GetConnection.GetEncoding, LogSQL) = 0 then
   begin
     //DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);

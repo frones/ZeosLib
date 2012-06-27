@@ -103,6 +103,8 @@ type
   TZAbstractConnection = class(TComponent)
   private
     FUseMetaData: Boolean;
+    FPreprepareSQL: Boolean;
+    FUTF8StringAsWideField: Boolean;
     function GetVersion: string;
     procedure SetUseMetadata(AValue: Boolean);
     procedure SetVersion(const Value: string);
@@ -139,8 +141,6 @@ type
     FOnLogin: TZLoginEvent;
     FClientCodepage: String;
 
-    FPreprepareSQL: Boolean;
-    FUTF8StringAsWideField: Boolean;
     function GetPreprepareSQL: Boolean;
     procedure SetPreprepareSQL(Value: Boolean);
     function GetHostName: string;

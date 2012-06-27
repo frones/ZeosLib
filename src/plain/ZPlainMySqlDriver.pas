@@ -143,7 +143,9 @@ type
     function SetOptions(Handle: PZMySQLConnect; Option: TMySQLOption; const Arg: PAnsiChar): Integer;
     function Ping(Handle: PZMySQLConnect): Integer;
     function ExecQuery(Handle: PZMySQLConnect; const Query: PAnsiChar): Integer; overload;
-    function ExecQuery(Handle: PZMySQLConnect; const SQL: String; const PreprepareSQL: Boolean; out LogSQL: String): Integer; overload;
+    function ExecQuery(Handle: PZMySQLConnect; const SQL: String;
+      const PreprepareSQL: Boolean; const Encoding: TZCharEncoding;
+      out LogSQL: String): Integer; overload;
     function RealConnect(Handle: PZMySQLConnect; const Host, User, Password, Db: PAnsiChar; Port: Cardinal; UnixSocket: PAnsiChar; ClientFlag: Cardinal): PZMySQLConnect;
     function GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PAnsiChar; Length: Cardinal): Cardinal;
     function ExecRealQuery(Handle: PZMySQLConnect; const Query: PAnsiChar; Length: Integer): Integer;
@@ -247,7 +249,7 @@ type
     procedure LoadApi; override;
     procedure BuildServerArguments(Options: TStrings);
     function GetPrepreparedSQL(Handle: PZMySQLConnect; const SQL: String;
-      out LogSQL: String): ZAnsiString; reintroduce;
+      const Encoding: TZCharEncoding; out LogSQL: String): ZAnsiString; reintroduce;
   public
     constructor Create(Tokenizer: IZTokenizer);
     destructor Destroy; override;
@@ -271,7 +273,9 @@ type
     procedure Close(Handle: PZMySQLConnect);
 
     function ExecQuery(Handle: PZMySQLConnect; const Query: PAnsiChar): Integer; overload;
-    function ExecQuery(Handle: PZMySQLConnect; const SQL: String; const PreprepareSQL: Boolean; out LogSQL: String): Integer; overload;
+    function ExecQuery(Handle: PZMySQLConnect; const SQL: String;
+      const PreprepareSQL: Boolean; const Encoding: TZCharEncoding;
+      out LogSQL: String): Integer; overload;
     function ExecRealQuery(Handle: PZMySQLConnect; const Query: PAnsiChar;
       Length: Integer): Integer;
 
@@ -622,8 +626,8 @@ begin
   end;
 end;
 
-function TZMySQLBaseDriver.GetPrepreparedSQL(Handle: PZMySQLConnect; const SQL: String;
-  out LogSQL: String): ZAnsiString;
+function TZMySQLBaseDriver.GetPrepreparedSQL(Handle: PZMySQLConnect;
+  const SQL: String; const Encoding: TZCharEncoding; out LogSQL: String): ZAnsiString;
 var
   SQLTokens: TZTokenDynArray;
   i: Integer;
@@ -634,15 +638,14 @@ begin
   SQLTokens := FTokenizer.TokenizeEscapeBufferToList(SQL); //Disassembles the Query
   for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
   begin
-    LogSQL := LogSQL+SQLTokens[i].Value;
     case (SQLTokens[i].TokenType) of
       ttEscapedQuoted:
         begin  //EgonHugeist: not a nice piece of code, i know but what can i do otherwise??....
           Temp := ZAnsiString(SQLTokens[i].Value);
-          if DetectUTF8ENcoding(Temp) = etUTF8 then
+          if DetectUTF8Encoding(Temp) = etUTF8 then
             Result := Result+Temp
           else
-            Result := Result +ZPlainString(SQLTokens[i].Value);
+            Result := Result +ZPlainString(SQLTokens[i].Value, Encoding);
         end;
       ttEscape:
         Result := Result + ZAnsiString(SQLTokens[i].Value);
@@ -650,14 +653,20 @@ begin
         begin
           QuoteChar := Char(SQLTokens[i].Value[1]);
           if QuoteChar = #39 then
-            Result := Result + ''''+EscapeString(Handle, Self.ZPlainString(SysUtils.AnsiDequotedStr(SQLTokens[i].Value, QuoteChar)))+ ''''
+            if Length(SQLTokens[i].Value) = 2 then
+              Result := Result + SQLTokens[i].Value
+            else
+              Result := Result + ''''+EscapeString(Handle, Self.ZPlainString(SysUtils.AnsiDequotedStr(SQLTokens[i].Value, QuoteChar), Encoding))+ ''''
           else
-            Result := Result + {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr(EscapeString(Handle, Self.ZPlainString(SysUtils.AnsiDequotedStr(SQLTokens[i].Value, QuoteChar))), AnsiChar(QuoteChar));
+            Result := Result + {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr(
+              EscapeString(Handle, Self.ZPlainString(SysUtils.AnsiDequotedStr(
+                SQLTokens[i].Value, QuoteChar), Encoding)), AnsiChar(QuoteChar));
         end;
       else
         Result := Result + ZAnsiString(SQLTokens[i].Value);
     end;
   end;
+  LogSQL := String(Result);
 end;
 
 constructor TZMySQLBaseDriver.Create(Tokenizer: IZTokenizer);
@@ -733,13 +742,13 @@ begin
 end;
 
 function TZMySQLBaseDriver.ExecQuery(Handle: PZMySQLConnect; const SQL: String;
-  const PreprepareSQL: Boolean; out LogSQL: String): Integer;
+  const PreprepareSQL: Boolean; const Encoding: TZCharEncoding; out LogSQL: String): Integer;
 begin
   if PreprepareSQL then
-    Result := MYSQL_API.mysql_query(Handle, PAnsiChar(GetPrepreparedSQL(Handle, SQL, LogSQL)))
+    Result := MYSQL_API.mysql_query(Handle, PAnsiChar(GetPrepreparedSQL(Handle, SQL, Encoding, LogSQL)))
   else
   begin
-    Result := MYSQL_API.mysql_query(Handle, PAnsiChar({$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF}(SQL)));
+    Result := MYSQL_API.mysql_query(Handle, PAnsiChar(ZAnsiString(SQL)));
     LogSQL := SQL;
   end;
 end;

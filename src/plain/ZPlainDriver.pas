@@ -74,7 +74,6 @@ type
     function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
     function ZDbcString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
     function ZPlainString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): ZAnsiString;
-    function GetEncoding: TZCharEncoding;
     procedure Initialize(const Location: String = '');
     function Clone: IZPlainDriver;
     function GetTokenizer: IZTokenizer;
@@ -103,8 +102,7 @@ type
     function GetUnicodeCodePageName: String; virtual;
     function ValidateCharEncoding(const CharacterSetName: String; const DoArrange: Boolean = False): PZCodePage; overload;
     function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
-    function GetPrepreparedSQL(const SQL: String): ZAnsiString; virtual;
-    function GetEncoding: TZCharEncoding;
+    function GetPrepreparedSQL(const SQL: String; Encoding: TZCharEncoding): ZAnsiString; virtual;
     function GetTokenizer: IZTokenizer;
   public
     constructor Create;
@@ -360,9 +358,8 @@ function TZLegacyPlainDriver.ValidateCharEncoding(const CharacterSetName: String
   end;
 begin
   Result := GetClientCodePageInformations(CharacterSetName);
-  ClientCodePage := Result;
-  if (DoArrange) and (ClientCodePage^.ZAlias <> '' ) then
-    ValidateCharEncoding(ClientCodePage^.ZAlias); //recalls em selves
+  if (DoArrange) and (Result^.ZAlias <> '' ) then
+    ValidateCharEncoding(Result^.ZAlias); //recalls em selves
 end;
 
 {**
@@ -389,13 +386,12 @@ function TZLegacyPlainDriver.ValidateCharEncoding(const CharacterSetID: Integer;
   end;
 begin
   Result := GetClientCodePageInformations(CharacterSetID);
-  ClientCodePage := Result;
 
-  if (DoArrange) and (ClientCodePage^.ZAlias <> '' ) then
-    ValidateCharEncoding(ClientCodePage^.ZAlias); //recalls em selves
+  if (DoArrange) and (Result^.ZAlias <> '' ) then
+    ValidateCharEncoding(Result^.ZAlias); //recalls em selves
 end;
 
-function TZLegacyPlainDriver.GetPrepreparedSQL(const SQL: String): {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
+function TZLegacyPlainDriver.GetPrepreparedSQL(const SQL: String; Encoding: TZCharEncoding): ZAnsiString;
 var
   SQLTokens: TZTokenDynArray;
   i: Integer;
@@ -414,16 +410,11 @@ begin
       ttEscape:
         Result := Result + AnsiString(SQLTokens[i].Value);
       ttWord, ttQuoted, ttQuotedIdentifier, ttKeyword:
-        Result := Result + Self.ZPlainString(SQLTokens[i].Value);
+        Result := Result + Self.ZPlainString(SQLTokens[i].Value, Encoding);
       else
         Result := Result + AnsiString(SQLTokens[i].Value);
     end;
   end;
-end;
-
-function TZLegacyPlainDriver.GetEncoding: TZCharEncoding;
-begin
-  Result := Self.ClientCodePage^.Encoding;
 end;
 
 function TZLegacyPlainDriver.GetTokenizer: IZTokenizer;

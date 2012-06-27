@@ -172,6 +172,7 @@ type
     FPlainDriver: IZInterbasePlainDriver;
     Temp: AnsiString;
     FUTF8StringAsWideField: Boolean;
+    FClientCodePage: PZCodePage;
     procedure CheckRange(const Index: Word);
     procedure IbReAlloc(var P; OldSize, NewSize: Integer);
     procedure SetFieldType(const Index: Word; Size: Integer; Code: Smallint;
@@ -308,7 +309,8 @@ type
     var StmtHandle: TISC_STMT_HANDLE; SqlData: IZResultSQLDA);
   procedure PrepareParameters(PlainDriver: IZInterbasePlainDriver; SQL: string;
     InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray; InParamCount: Integer;
-    Dialect: Word; var StmtHandle: TISC_STMT_HANDLE; ParamSqlData: IZParamsSQLDA);
+    Dialect: Word; var StmtHandle: TISC_STMT_HANDLE; ParamSqlData: IZParamsSQLDA;
+    const Encoding: TZCharEncoding);
   procedure FreeStatement(PlainDriver: IZInterbasePlainDriver;
     StatementHandle: TISC_STMT_HANDLE; Options : Word);
   function GetStatementType(PlainDriver: IZInterbasePlainDriver;
@@ -1018,7 +1020,8 @@ end;
 }
 procedure PrepareParameters(PlainDriver: IZInterbasePlainDriver; SQL: string;
   InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray; InParamCount: Integer;
-  Dialect: Word; var StmtHandle: TISC_STMT_HANDLE; ParamSqlData: IZParamsSQLDA);
+  Dialect: Word; var StmtHandle: TISC_STMT_HANDLE; ParamSqlData: IZParamsSQLDA;
+  const Encoding: TZCharEncoding);
 var
   I: Integer;
   TempBlob: IZBlob;
@@ -1079,7 +1082,7 @@ begin
           SoftVarManager.GetAsFloat(InParamValues[I]));
       stString:
         ParamSqlData.UpdateString(I,
-          PlainDriver.ZPlainString(SoftVarManager.GetAsString(InParamValues[I])));
+          PlainDriver.ZPlainString(SoftVarManager.GetAsString(InParamValues[I]), Encoding));
       stUnicodeString:
         ParamSqlData.UpdateString(I, UTF8Encode(SoftVarManager.GetAsUnicodeString(InParamValues[I])));
       stBytes:
@@ -1363,7 +1366,7 @@ constructor TZSQLDA.Create(PlainDriver: IZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE;
   Encoding: PZCodePage; const UTF8StringAsWideField: Boolean);
 begin
-  //ClientCodePage := Encoding;
+  FClientCodePage := Encoding;
   FUTF8StringAsWideField := UTF8StringAsWideField;
   FPlainDriver := PlainDriver;
   FHandle := Handle;
@@ -1464,7 +1467,7 @@ begin
   CheckRange(Index);
   {$R-}
   SetString(Temp, FXSQLDA.sqlvar[Index].aliasname, FXSQLDA.sqlvar[Index].aliasname_length);
-  Result := FPlainDriver.ZDbcString(Temp);
+  Result := FPlainDriver.ZDbcString(Temp, FClientCodePage^.Encoding);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}
@@ -1599,12 +1602,10 @@ begin
   else
       Result := stString;
   end;
-  if ( Self.FPlainDriver.GetEncoding = ceUTF8) and FUTF8StringAsWideField then
+  if ( FClientCodePage^.Encoding = ceUTF8) and FUTF8StringAsWideField then
     case result of
       stString: Result := stUnicodeString;
-      {$IFDEF WITH_WIDEMEMO}
       stAsciiStream: Result := stUnicodeStream;
-      {$ENDIF}
     end;
 end;
 
@@ -1618,7 +1619,7 @@ begin
   CheckRange(Index);
   {$R-}
   SetString(Temp, FXSQLDA.sqlvar[Index].OwnName, FXSQLDA.sqlvar[Index].OwnName_length);
-  Result := FPlainDriver.ZDbcString(Temp);
+  Result := FPlainDriver.ZDbcString(Temp, FClientCodePage^.Encoding);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}
@@ -1634,7 +1635,7 @@ begin
   CheckRange(Index);
   {$R-}
   SetString(Temp, FXSQLDA.sqlvar[Index].RelName, FXSQLDA.sqlvar[Index].RelName_length);
-  Result := FPlainDriver.ZDbcString(Temp);
+  Result := FPlainDriver.ZDbcString(Temp, FClientCodePage^.Encoding);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}  
@@ -1665,7 +1666,7 @@ begin
   CheckRange(Index);
   {$R-}
   SetString(Temp, FXSQLDA.sqlvar[Index].sqlname, FXSQLDA.sqlvar[Index].sqlname_length);
-  Result := FPlainDriver.ZDbcString(Temp);
+  Result := FPlainDriver.ZDbcString(Temp, FClientCodePage^.Encoding);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}  
@@ -2871,7 +2872,7 @@ function TZResultSQLDA.GetPChar(const Index: Integer): PChar;
 var
   TempStr: String;
 begin
-  TempStr := FPlainDriver.ZDbcString(GetString(Index));
+  TempStr := FPlainDriver.ZDbcString(GetString(Index), FClientCodePage^.Encoding);
   Result := PChar(TempStr);
 end;
 

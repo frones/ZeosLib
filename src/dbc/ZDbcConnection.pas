@@ -136,6 +136,7 @@ type
     FClientCodePage: String;
     FMetadata: TContainedObject;
     procedure InternalCreate; virtual; //abstract; //Mark, if we are ready this one should be abstract!
+    function GetEncoding: TZCharEncoding;
     procedure CheckCharEncoding(const CharSet: String; const DoArrange: Boolean = False);
     function GetClientCodePageInformations: PZCodePage; //EgonHugeist
     function GetUTF8StringAsWideField: Boolean;
@@ -585,6 +586,11 @@ end;
 
 procedure TZAbstractConnection.InternalCreate;
 begin
+end;
+
+function TZAbstractConnection.GetEncoding: TZCharEncoding;
+begin
+  Result := Self.ClientCodePage^.Encoding;
 end;
 
 {**

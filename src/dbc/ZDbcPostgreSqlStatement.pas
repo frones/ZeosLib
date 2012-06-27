@@ -272,8 +272,8 @@ begin
       QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
         PAnsiChar(AnsiString(SQL)));
   CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
-    SSQL, QueryHandle);
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
+    SQL, QueryHandle);
+  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
 
   if QueryHandle <> nil then
   begin
@@ -474,7 +474,12 @@ begin
                 else
                   Result := GetConnection.GetAnsiEscapeString(TempBlob.GetString);
               stAsciiStream:
-                Result := GetConnection.GetEscapeString(String(TempBlob.GetString));
+                {$IFDEF DELPHI12_UP}
+                if (Self.GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) then
+                  Result := GetConnection.GetEscapeString(TempBlob.GetUnicodeString)
+                else
+                {$ENDIF}
+                  Result := GetConnection.GetEscapeString(String(TempBlob.GetString));
               stUnicodeStream:
                 {$IFDEF DELPHI12_UP}
                   Result := GetConnection.GetEscapeString(TempBlob.GetUnicodeString);

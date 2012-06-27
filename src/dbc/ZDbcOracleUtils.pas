@@ -342,11 +342,6 @@ begin
         Variable.TypeCode := SQLT_STR;
         Length := Variable.DataSize + 1;
       end;
-{    stUnicodeString:
-      begin
-        Variable.TypeCode := SQLT_VST;
-        Length := Variable.DataSize + 1;
-      end;}
     stAsciiStream, stUnicodeStream, stBinaryStream:
       begin
         if not (Variable.TypeCode in [SQLT_CLOB, SQLT_BLOB]) then
@@ -431,10 +426,14 @@ begin
             case Values[i].VType of
               vtString:
                 StrLCopy(PAnsiChar(CurrentVar.Data),
-                  PAnsiChar(PlainDriver.ZPlainString(DefVarManager.GetAsString(Values[I]))), 1024);
+                  PAnsiChar(PlainDriver.ZPlainString(DefVarManager.GetAsString(Values[I]), Connection.GetEncoding)), 1024);
               vtUnicodeString:
-                StrLCopy(PAnsiChar(CurrentVar.Data),
-                    PAnsiChar(UTF8Encode(DefVarManager.GetAsUnicodeString(Values[I]))), 1024);
+                if Connection.GetEncoding = ceUTF8 then
+                  StrLCopy(PAnsiChar(CurrentVar.Data),
+                      PAnsiChar(UTF8Encode(DefVarManager.GetAsUnicodeString(Values[I]))), 1024)
+                else
+                  StrLCopy(PAnsiChar(CurrentVar.Data),
+                      PAnsiChar(AnsiString(DefVarManager.GetAsUnicodeString(Values[I]))), 1024)
             end;
           end;
         SQLT_VST:
@@ -455,7 +454,7 @@ begin
         SQLT_BLOB, SQLT_CLOB:
           begin
             TempBlob := DefVarManager.GetAsInterface(Values[I]) as IZBlob;
-            if (CurrentVar.TypeCode = SQLT_CLOB) and (PlainDriver.GetEncoding = ceUTF8) then
+            if (CurrentVar.TypeCode = SQLT_CLOB) and (Connection.GetEncoding = ceUTF8) then
               TempStream := ZDbcUtils.GetValidatedUnicodeStream(TempBlob.GetStream)
             else
               TempStream := TempBlob.GetStream;

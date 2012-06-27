@@ -141,6 +141,7 @@ type
       const EscapeMarkSequence: String = '~<|'): String; overload; virtual;
     function GetEscapeString(const Value: PAnsiChar;
       const EscapeMarkSequence: String = '~<|'): String; overload; virtual;
+    function GetEncoding: TZCharEncoding;
   end;
 
   TZDbcPooledConnectionDriver = class(TZAbstractDriver)
@@ -671,6 +672,11 @@ function TZDbcPooledConnection.GetEscapeString(const Value: PAnsiChar;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
   GetEscapeString(String(Value));
+end;
+
+function TZDbcPooledConnection.GetEncoding: TZCharEncoding;
+begin
+  Result := ClientCodePage^.Encoding;
 end;
 
 {**
