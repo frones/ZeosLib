@@ -509,7 +509,8 @@ begin
   if (TypeName = 'CHAR') or (TypeName = 'VARCHAR2') then
     Result := stString
   else if (TypeName = 'NCHAR') or (TypeName = 'NVARCHAR2') then
-    Result := stUnicodeString
+    //Result := stUnicodeString
+    Result := stString
   else if TypeName = 'FLOAT' then
     Result := stDouble
   else if TypeName = 'DATE' then  {precission - 1 sec, so Timestamp}
@@ -521,7 +522,8 @@ begin
   else if TypeName = 'CLOB' then
     Result := stAsciiStream
   else if TypeName = 'NCLOB' then
-    Result := stUnicodeStream
+    //Result := stUnicodeStream
+    Result := stAsciiStream
   else if TypeName = 'LONG' then
     Result := stAsciiStream
   else if StartsWith(TypeName, 'TIMESTAMP') then
