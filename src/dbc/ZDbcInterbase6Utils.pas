@@ -739,14 +739,20 @@ begin
     RDB_TIMESTAMP: Result := stTimestamp;
     RDB_BLOB:
       begin
-       case SqlSubType of
-          RDB_BLOB_NONE: Result := stBinaryStream;
-          RDB_BLOB_TEXT: Result := stAsciiStream;
-          RDB_BLOB_BLR: Result := stBinaryStream;
-          RDB_BLOB_ACL: Result := stAsciiStream;
-          RDB_BLOB_RESERVED: Result := ZDbcIntfs.stUnknown;
-          RDB_BLOB_ENCODED: Result := stAsciiStream;
-          RDB_BLOB_DESCRIPTION: Result := stAsciiStream;
+        case SqlSubType of
+          { Blob Subtypes }
+          { types less than zero are reserved for customer use }
+          isc_blob_untyped: Result := stBinaryStream;
+
+          { internal subtypes }
+          isc_blob_text: Result := stAsciiStream;
+          isc_blob_blr: Result := stBinaryStream;
+          isc_blob_acl: Result := stAsciiStream;
+          isc_blob_ranges: Result := ZDbcIntfs.stUnknown;//Result := stBinaryStream;
+          isc_blob_summary: Result := stBinaryStream;
+          isc_blob_format: Result := stAsciiStream;
+          isc_blob_tra: Result := stAsciiStream;
+          isc_blob_extfile: Result := stAsciiStream;
         end;
       end;
     else
