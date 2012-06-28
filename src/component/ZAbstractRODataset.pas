@@ -1111,7 +1111,7 @@ begin
         case Param.DataType of
           ftBoolean:
             Statement.SetBoolean(I + 1, Param.AsBoolean);
-          ftSmallInt:
+          ftSmallInt, ftShortInt:
             Statement.SetShort(I + 1, Param.AsSmallInt);
           ftInteger, ftAutoInc:
             Statement.SetInt(I + 1, Param.AsInteger);
