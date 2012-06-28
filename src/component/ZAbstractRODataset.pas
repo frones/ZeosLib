@@ -1117,7 +1117,7 @@ begin
         case Param.DataType of
           ftBoolean:
             Statement.SetBoolean(I + 1, Param.AsBoolean);
-          ftSmallInt, ftShortInt:
+          ftSmallInt{$IFDEF DELPHI12_UP}, ftShortInt{$ENDIF}:
             Statement.SetShort(I + 1, Param.AsSmallInt);
           ftInteger, ftAutoInc:
             Statement.SetInt(I + 1, Param.AsInteger);
