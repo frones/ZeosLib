@@ -546,7 +546,7 @@ begin
   if ( CharEncoding = ceUTF8) and UTF8StringAsWideField then
     case result of
       stString: Result := stUnicodeString;
-      stAsciiStream: if not (TypeName = 'LONG') then Result := stUnicodeStream;
+      stAsciiStream: if not (TypeName = 'LONG') then Result := stUnicodeStream; //fix: http://zeos.firmos.at/viewtopic.php?t=3530
     end;
 end;
 
