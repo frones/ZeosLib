@@ -762,6 +762,7 @@ begin
           isc_blob_format: Result := stAsciiStream;
           isc_blob_tra: Result := stAsciiStream;
           isc_blob_extfile: Result := stAsciiStream;
+          isc_blob_debug_info: Result := stBinaryStream;
         end;
       end;
     else

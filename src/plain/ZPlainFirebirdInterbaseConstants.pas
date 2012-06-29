@@ -132,13 +132,6 @@ const
   CS_UNICODE_FSS = 3;
   CS_METADATA = CS_UNICODE_FSS;
 
-  RDB_BLOB_NONE = 0;
-  RDB_BLOB_TEXT = 1;
-  RDB_BLOB_BLR = 2;
-  RDB_BLOB_ACL = 3;
-  RDB_BLOB_RESERVED = 4;
-  RDB_BLOB_ENCODED = 5;
-  RDB_BLOB_DESCRIPTION = 6;
   RDB_NUMBERS_NONE = 0;
   RDB_NUMBERS_NUMERIC = 1;
   RDB_NUMBERS_DECIMAL = 2;
@@ -156,6 +149,8 @@ const
   isc_blob_format                = 6;
   isc_blob_tra                   = 7;
   isc_blob_extfile               = 8;
+  isc_blob_debug_info            = 9;
+  isc_blob_max_predefined_subtype= 10;
 
   { the range 20-30 is reserved for dBASE and Paradox types }
   isc_blob_formatted_memo        = 20;
