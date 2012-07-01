@@ -528,7 +528,9 @@ begin
     Result := stAsciiStream
   else if StartsWith(TypeName, 'TIMESTAMP') then
     Result := stTimestamp
-  else if TypeName = 'NUMBER' then
+  else if TypeName = 'BFILE' then
+    Result := stBinaryStream else
+  if TypeName = 'NUMBER' then
   begin
     Result := stDouble;  { default for number types}
     if (Scale = 0) and (Precision <> 0) then

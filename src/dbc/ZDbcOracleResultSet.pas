@@ -287,7 +287,12 @@ begin
         begin
           CurrentVar.ColType := stBinaryStream;
           CurrentVar.TypeCode := CurrentVar.DataType;
-        end
+        end;
+      SQLT_BFILEE, SQLT_CFILEE:
+        begin
+          CurrentVar.ColType := stBinaryStream;
+          CurrentVar.TypeCode := CurrentVar.DataType;
+        end;
       else
         CurrentVar.ColType := stUnknown;
     end;
