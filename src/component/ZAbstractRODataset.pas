@@ -289,6 +289,7 @@ type
     procedure InternalAddRecord(Buffer: Pointer; Append: Boolean); override;
     procedure InternalDelete; override;
     procedure InternalPost; override;
+    procedure CreateFields; override;
 
     procedure SetFieldData(Field: TField; Buffer: Pointer;
       NativeFormat: Boolean); override;
@@ -1548,13 +1549,11 @@ end;
 }
 
 {$IFDEF WITH_TRECORDBUFFER}
-
 function TZAbstractRODataset.AllocRecordBuffer: TRecordBuffer;
 begin
    Result := TRecordBuffer(RowAccessor.Alloc);
 end;
 {$ELSE}
-
 function TZAbstractRODataset.AllocRecordBuffer: PChar;
 begin
   Result := PChar(RowAccessor.Alloc);
@@ -2345,6 +2344,15 @@ begin
   Checkrequired;
 end;
 
+procedure TZAbstractRODataset.CreateFields;
+var I: Integer;
+begin
+  inherited CreateFields;
+  for i := 0 to Self.FieldDefs.Count-1 do
+    if Fields[i].DataType in [ftString, ftWideString] then
+      if not (ResultSet.GetMetadata.GetColumnDisplaySize(I+1) = 0) then
+        Fields[i].Size := ResultSet.GetMetadata.GetColumnDisplaySize(I+1);
+end;
 {**
   Gets a bookmark flag from the specified record.
   @param Buffer a pointer to the record buffer.
@@ -2352,10 +2360,8 @@ end;
 }
 
 {$IFDEF WITH_TRECORDBUFFER}
-
 function TZAbstractRODataset.GetBookmarkFlag(Buffer: TRecordBuffer): TBookmarkFlag;
 {$ELSE}
-
 function TZAbstractRODataset.GetBookmarkFlag(Buffer: PChar): TBookmarkFlag;
 {$ENDIF}
 begin

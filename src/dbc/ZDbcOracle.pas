@@ -337,8 +337,6 @@ begin
   begin
     GetPlainDriver.AttrGet(FHandle, OCI_HTYPE_ENV, @OCI_CLIENT_CHARSET_ID,
       nil, OCI_ATTR_ENV_CHARSET_ID, FErrorHandle); //Get Server default CodePage
-    GetPlainDriver.AttrGet(FHandle, OCI_HTYPE_ENV, @OCI_CLIENT_NCHARSET_ID,
-      nil, OCI_ATTR_ENV_NCHARSET_ID, FErrorHandle); //Get Server default NCHAR CodePage
     CheckCharEncoding(GetPlainDriver.ValidateCharEncoding(OCI_CLIENT_CHARSET_ID)^.Name);
     if OCI_CLIENT_CHARSET_ID <> OCI_CLIENT_NCHARSET_ID then
     begin

@@ -748,7 +748,7 @@ begin
           isc_blob_text: Result := stAsciiStream;
           isc_blob_blr: Result := stBinaryStream;
           isc_blob_acl: Result := stAsciiStream;
-          isc_blob_ranges: Result := ZDbcIntfs.stUnknown;//Result := stBinaryStream;
+          isc_blob_ranges: Result := stBinaryStream;
           isc_blob_summary: Result := stBinaryStream;
           isc_blob_format: Result := stAsciiStream;
           isc_blob_tra: Result := stAsciiStream;

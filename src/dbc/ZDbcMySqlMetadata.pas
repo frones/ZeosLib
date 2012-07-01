@@ -1194,10 +1194,10 @@ begin
             TypeInfoSecond := '';
 
             Res.MoveToInsertRow;
-            Res.UpdateString(1, TempCatalog);
-            Res.UpdateString(2, '');
-            Res.UpdateString(3, TempTableNamePattern) ;
-            Res.UpdateString(4, GetString(ColumnIndexes[1]));
+            Res.UpdateString(1, TempCatalog);  //TABLE_CAT
+            Res.UpdateString(2, ''); //TABLE_SCHEM
+            Res.UpdateString(3, TempTableNamePattern); //TABLE_NAME
+            Res.UpdateString(4, GetString(ColumnIndexes[1])); //COLUMN_NAME
 
             TypeInfo := GetString(ColumnIndexes[2]);
             if StrPos(PChar(TypeInfo), '(') <> nil then
@@ -1213,10 +1213,10 @@ begin
             MySQLType := ConvertMySQLTypeToSQLType(TypeInfoFirst, TypeInfo,
               GetConnection.GetClientCodePageInformations.Encoding,
               GetConnection.UTF8StringAsWideField);
-            Res.UpdateInt(5, Ord(MySQLType));
-            Res.UpdateString(6, TypeInfoFirst);
+            Res.UpdateInt(5, Ord(MySQLType)); //DATA_TYPE
+            Res.UpdateString(6, TypeInfoFirst); //TYPE_NAME
 
-            Res.UpdateInt(7, 0);
+            Res.UpdateInt(7, 0); //COLUMN_SIZE
             Res.UpdateInt(9, 0);
             { the column type is ENUM}
             if TypeInfoFirst = 'enum' then
@@ -1298,11 +1298,11 @@ begin
                     ColumnSize := 255
                  else if TypeInfoFirst = 'set' then
                     ColumnSize := 255;
-                Res.UpdateInt(7, ColumnSize);
-                Res.UpdateInt(9, 0);
+                Res.UpdateInt(7, ColumnSize); //COLUMN_SIZE
+                Res.UpdateInt(9, ColumnSize); //DECIMAL_DIGITS
               end;
 
-            Res.UpdateInt(8, MAXBUF);
+            Res.UpdateInt(8, MAXBUF); //BUFFER_LENGTH
             Res.UpdateNull(10);
 
             { Sets nullable fields. }
@@ -2436,13 +2436,15 @@ begin
     begin
       if ColumnNamePattern <> '' then
       begin
-        SQL := 'SELECT CLMS.COLLATION_NAME, CLMS.CHARACTER_SET_NAME, CS.MAXLEN '+
-          'FROM INFORMATION_SCHEMA.COLUMNS CLMS '+
+        SQL := 'SELECT CLMS.COLLATION_NAME, CLMS.CHARACTER_SET_NAME, CS.MAXLEN, '+
+          'COL.ID FROM INFORMATION_SCHEMA.COLUMNS CLMS '+
           'LEFT JOIN INFORMATION_SCHEMA.CHARACTER_SETS CS '+
           'ON CS.DEFAULT_COLLATE_NAME = CLMS.COLLATION_NAME '+
+          'LEFT JOIN INFORMATION_SCHEMA.COLLATIONS COL'+
+          'ON COL.COLLATION_NAME = CLMS.COLLATION_NAME '+
           'WHERE TABLE_SCHEMA = '''+LCatalog+ ''' AND '+
           'TABLE_NAME = '''+TableNamePattern+''' AND '+
-          'COLUMN_NAME = '''+TableNamePattern+''';';
+          'COLUMN_NAME = '''+ColumnNamePattern+''';';
         with GetConnection.CreateStatement.ExecuteQuery(SQL) do
         begin
           if Next then
@@ -2454,7 +2456,7 @@ begin
             Result.UpdateString(4, ColumnNamePattern);//COLLATION_COLUMN
             Result.UpdateString(5, GetString(FindColumn('COLLATION_NAME'))); //COLLATION_NAME
             Result.UpdateString(6, GetString(FindColumn('CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
-            Result.UpdateNull(7); //CHARACTER_SET_ID
+            Result.UpdateInt(7, GetInt(FindColumn('ID'))); //CHARACTER_SET_ID
             Result.UpdateShort(8, GetShort(FindColumn('MAXLEN'))); //CHARACTER_SET_SIZE
             Result.InsertRow;
           end;
@@ -2463,10 +2465,12 @@ begin
       end
       else
       begin
-        SQL := 'SELECT TBLS.TABLE_COLLATION, CS.CHARACTER_SET_NAME, CS.MAXLEN '+
-          'FROM INFORMATION_SCHEMA.TABLES TBLS LEFT JOIN '+
+        SQL := 'SELECT TBLS.TABLE_COLLATION, CS.CHARACTER_SET_NAME, CS.MAXLEN, '+
+          'COL.ID FROM INFORMATION_SCHEMA.TABLES TBLS LEFT JOIN '+
           'INFORMATION_SCHEMA.CHARACTER_SETS CS ON '+
           'TBLS.TABLE_COLLATION = CS.DEFAULT_COLLATE_NAME '+
+          'LEFT JOIN INFORMATION_SCHEMA.COLLATIONS COL'+
+          'ON COL.CHARACTER_SET_NAME = CLMS.CHARACTER_SET_NAME '+
           'WHERE TABLE_SCHEMA = '''+LCatalog+''''+
           'AND TBLS.TABLE_NAME = '''+TableNamePattern+''';';
         with GetConnection.CreateStatement.ExecuteQuery(SQL) do
@@ -2479,7 +2483,7 @@ begin
             Result.UpdateString(3, TableNamePattern); //COLLATION_TABLE
             Result.UpdateString(5, GetString(FindColumn('TABLE_COLLATION'))); //COLLATION_NAME
             Result.UpdateString(6, GetString(FindColumn('CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
-            Result.UpdateNull(7); //CHARACTER_SET_ID
+            Result.UpdateInt(7, GetInt(FindColumn('ID'))); //CHARACTER_SET_ID
             Result.UpdateShort(8, GetShort(FindColumn('MAXLEN'))); //CHARACTER_SET_SIZE
             Result.InsertRow;
           end;
@@ -2490,9 +2494,11 @@ begin
     else
     begin
       SQL := 'SELECT S.DEFAULT_COLLATION_NAME, S.DEFAULT_CHARACTER_SET_NAME, '+
-        'CS.MAXLEN FROM INFORMATION_SCHEMA.SCHEMATA S '+
+        'CS.MAXLEN, COL.ID FROM INFORMATION_SCHEMA.SCHEMATA S '+
         'LEFT JOIN INFORMATION_SCHEMA.CHARACTER_SETS CS '+
         'ON CS.DEFAULT_COLLATE_NAME = S.DEFAULT_COLLATION_NAME '+
+        'LEFT JOIN INFORMATION_SCHEMA.COLLATIONS COL'+
+        'ON COL.CHARACTER_SET_NAME = CLMS.CHARACTER_SET_NAME '+
         'WHERE S.SCHEMA_NAME = '''+LCatalog+'''';
       with GetConnection.CreateStatement.ExecuteQuery(SQL) do
       begin
@@ -2505,7 +2511,7 @@ begin
           Result.UpdateNull(4);//COLLATION_COLUMN
           Result.UpdateString(5, GetString(FindColumn('DEFAULT_COLLATION_NAME'))); //COLLATION_NAME
           Result.UpdateString(6, GetString(FindColumn('DEFAULT_CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
-          Result.UpdateNull(7); //CHARACTER_SET_ID
+          Result.UpdateInt(7, GetInt(FindColumn('ID'))); //CHARACTER_SET_ID
           Result.UpdateShort(8, GetShort(FindColumn('MAXLEN'))); //CHARACTER_SET_SIZE
           Result.InsertRow;
         end;

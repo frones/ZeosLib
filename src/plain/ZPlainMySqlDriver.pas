@@ -230,6 +230,7 @@ type
     function GetFieldLength(Field: PZMySQLField): ULong;
     function GetFieldMaxLength(Field: PZMySQLField): Integer;
     function GetFieldDecimals(Field: PZMySQLField): Integer;
+    function GetFieldCharsetNr(Field: PZMySQLField): UInt;
     function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PAnsiChar;
     procedure SetDriverOptions(Options: TStrings); // changed by tohenk, 2009-10-11
   end;
@@ -374,6 +375,7 @@ type
     function GetFieldLength(Field: PZMySQLField): ULong;
     function GetFieldMaxLength(Field: PZMySQLField): Integer;
     function GetFieldDecimals(Field: PZMySQLField): Integer;
+    function GetFieldCharsetNr(Field: PZMySQLField): UInt;
     function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PAnsiChar;
     procedure SetDriverOptions(Options: TStrings); virtual; // changed by tohenk, 2009-10-11
   end;
@@ -1198,9 +1200,14 @@ begin
   Result := PMYSQL_FIELD(Field)^.decimals;
 end;
 
+function TZMySQLBaseDriver.GetFieldCharsetNr(Field: PZMySQLField): UInt;
+begin
+  Result := PMYSQL_FIELD(Field)^.charsetnr;
+end;
+
 function TZMySQLBaseDriver.GetFieldLength(Field: PZMySQLField): ULong;
 begin
-    Result := PMYSQL_FIELD(Field)^.length;
+  Result := PMYSQL_FIELD(Field)^.length;
 end;
 
 function TZMySQLBaseDriver.GetFieldMaxLength(Field: PZMySQLField): Integer;
