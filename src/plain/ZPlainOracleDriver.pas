@@ -620,9 +620,6 @@ const
   OCI_ATTR_ENV_CHARSET_ID       = OCI_ATTR_CHARSET_ID;  // charset id in env
   OCI_ATTR_ENV_NCHARSET_ID      = OCI_ATTR_NCHARSET_ID; // ncharset id in env
 
-  OCI_ATTR_CHAR_USED               = 285; // char length semantics
-  OCI_ATTR_CHAR_SIZE               = 286; //char length
-
   { Piece Information }
   OCI_PARAM_IN                       = $01;  // in parameter
   OCI_PARAM_OUT                      = $02;  // out parameter

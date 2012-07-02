@@ -264,10 +264,8 @@ begin
       end;
       ColumnDisplaySize := FieldPrecision;
       AutoIncrement := False;
-      if ColumnType in [stString, stUnicodeString] then
-        Precision := FieldPrecision * 3
-      else
-        Scale := FieldDecimals;
+      Precision := FieldPrecision;
+      Scale := FieldDecimals;
       Signed := True;
       Nullable := ntNullable;
     end;
