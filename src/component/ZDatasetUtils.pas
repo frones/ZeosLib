@@ -393,7 +393,7 @@ begin
     ColumnInfo.Scale := 0;
     ColumnInfo.ColumnLabel := Current.DisplayName;
     ColumnInfo.DefaultExpression := Current.DefaultExpression;
-    ColumnInfo.ColumnDisplaySize := Current.DisplayWidth;
+
     Result.Add(ColumnInfo);
   end;
 end;
