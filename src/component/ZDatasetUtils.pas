@@ -1045,14 +1045,6 @@ begin
           {$ENDIF}
         Result := AnsiStrLComp(PAnsiChar(AValue2), PAnsiChar(AValue1), Length(AValue1)) = 0;
       end;
-
-      if CaseInsensitive then
-        {$IFDEF LAZARUSUTF8HACK}
-        AValue2 := AnsiUpperCase(Utf8ToAnsi(AValue2));
-        {$ELSE}
-        AValue2 := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiUpperCase(AValue2);
-        {$ENDIF}
-      Result := AnsiStrLComp(PAnsiChar(AValue2), PAnsiChar(AValue1), Length(AValue1)) = 0;
     end
     else
     begin
