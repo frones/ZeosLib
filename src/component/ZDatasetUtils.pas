@@ -1179,7 +1179,7 @@ begin
       end;
     ftTime:
       begin
-        {$IFDEF FPC}
+        {$IFDEF WITH_FPC_FTTIME_BUG}
         TimeStamp := DateTimeToTimeStamp(TDateTime(Buffer^));
         {$ELSE}
         TimeStamp.Time := Integer(Buffer^);
