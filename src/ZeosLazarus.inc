@@ -73,6 +73,7 @@
 
     {$DEFINE LAZARUSUTF8HACK} // Places that fixed for the Lazarus convention that all strings are UTF8  are marked with this
                               // ifdef. But probably most of them are adhoc hacks, and need revisiting in time.
+    {$DEFINE WITH_FPC_FTTIME_BUG} //http://zeos.firmos.at/viewtopic.php?t=3534&postdays=0&postorder=asc&start=0
   {$ELSE}
     {$FATAL Versions Older than 2.2.4 are not supported!}
   {$ENDIF}
@@ -82,6 +83,9 @@
   {$IF FPC_FULLVERSION>20602} // will be introduced in 2.6.2 (and up to date 2.6.1)
     {$DEFINE WITH_TRECORDBUFFER}
     {$DEFINE WITH_TBOOKMARK}              // Have TBookmark
+  {$IFEND}
+  {$IF FPC_FULLVERSION>20700}
+    {$UNDEFINE WITH_FPC_FTTIME_BUG}
   {$IFEND}
 
 
