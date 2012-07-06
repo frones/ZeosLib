@@ -565,11 +565,10 @@ begin
       + ' WHERE d65.f1=t65.f1';
     Query.Open;
 
-    {$IF not defined(FPC) and defined(WITH_FTWIDESTRING)}
-    if (Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]) then
+    if (Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}])
+      and Connection.UTF8StringsAsWideField then
       CheckEquals(ord(ftWideString), Ord(Query.Fields[0].DataType))
     else
-    {$IFEND}
       CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
     CheckEquals(Ord(ftBoolean), Ord(Query.Fields[1].DataType));
     CheckEquals(Ord(ftBoolean), Ord(Query.Fields[2].DataType));
@@ -581,11 +580,11 @@ begin
       + ' WHERE test894367a.f1=test894367b.f1';
     Query.Open;
 
-    {$IF not defined(FPC) and defined(WITH_FTWIDESTRING)}
+    if (Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}])
+      and Connection.UTF8StringsAsWideField then
     if (Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]) then
       CheckEquals(ord(ftWideString), Ord(Query.Fields[0].DataType))
     else
-    {$IFEND}
       CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
     CheckEquals(Ord(ftBoolean), Ord(Query.Fields[1].DataType));
     CheckEquals(Ord(ftBoolean), Ord(Query.Fields[2].DataType));
