@@ -1327,6 +1327,7 @@ function TZAbstractRODataset.GetFieldData(Field: TField;
 var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
+  WS:WideString;
 begin
   if GetActiveBuffer(RowBuffer) then
   begin
@@ -1370,7 +1371,10 @@ begin
             {$IFDEF WITH_WIDESTRUTILS}
               WStrCopy(Buffer, PWideChar(RowAccessor.GetUnicodeString(ColumnIndex, Result)));
             {$ELSE}
-              PWideString(Buffer)^ := RowAccessor.GetUnicodeString(ColumnIndex, Result);
+              //FPC: WideStrings are COM managed fields
+              WS:=RowAccessor.GetUnicodeString(ColumnIndex, Result);
+              //include null terminator in copy
+              System.Move(PWideChar(WS)^,buffer^,(length(WS)+1)*sizeof(WideChar));
             {$ENDIF}
             Result := not Result;
           end;
