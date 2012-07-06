@@ -279,7 +279,7 @@ begin
       CurrentVar := @Variables.Variables[I];
       if CurrentVar.Data <> nil then
       begin
-        if CurrentVar.TypeCode in [SQLT_BLOB, SQLT_CLOB] then
+        if CurrentVar.TypeCode in [SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE] then
         begin
           PlainDriver.DescriptorFree(PPOCIDescriptor(CurrentVar.Data)^,
             OCI_DTYPE_LOB);
@@ -344,7 +344,7 @@ begin
       end;
     stAsciiStream, stUnicodeStream, stBinaryStream:
       begin
-        if not (Variable.TypeCode in [SQLT_CLOB, SQLT_BLOB]) then
+        if not (Variable.TypeCode in [SQLT_CLOB, SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE]) then
         begin
           if Variable.ColType = stAsciiStream then
             Variable.TypeCode := SQLT_LVC
@@ -368,6 +368,11 @@ begin
   begin
     PlainDriver.DescriptorAlloc(OracleConnection.GetConnectionHandle,
       PPOCIDescriptor(Variable.Data)^, OCI_DTYPE_LOB, 0, nil);
+  end
+  else if Variable.TypeCode in [SQLT_BFILEE, SQLT_CFILEE] then
+  begin
+    PlainDriver.DescriptorAlloc(OracleConnection.GetConnectionHandle,
+      PPOCIDescriptor(Variable.Data)^, OCI_DTYPE_FILE, 0, nil);
   end
   else if Variable.TypeCode = SQLT_TIMESTAMP then
   begin
@@ -462,7 +467,7 @@ begin
             try
               WriteTempBlob := TZOracleBlob.Create(PlainDriver,
                 nil, 0, Connection, PPOCIDescriptor(CurrentVar.Data)^,
-                CurrentVar.ColType);
+                CurrentVar.ColType, CurrentVar.TypeCode);
               WriteTempBlob.SetStream(TempStream);
               WriteTempBlob.CreateBlob;
               WriteTempBlob.WriteBlob;
