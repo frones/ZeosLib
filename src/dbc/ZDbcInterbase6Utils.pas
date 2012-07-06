@@ -879,7 +879,7 @@ var
   iError : Integer; //Error for disconnect
 begin
   { Allocate an sql statement }
-  PlainDriver.isc_dsql_alloc_statement2(@StatusVector, Handle, @StmtHandle);
+  PlainDriver.isc_dsql_allocate_statement(@StatusVector, Handle, @StmtHandle);
   CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, String(Sql));
   { Prepare an sql statement }
     PlainDriver.isc_dsql_prepare(@StatusVector, TrHandle, @StmtHandle,
