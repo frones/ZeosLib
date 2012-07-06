@@ -369,11 +369,6 @@ begin
     PlainDriver.DescriptorAlloc(OracleConnection.GetConnectionHandle,
       PPOCIDescriptor(Variable.Data)^, OCI_DTYPE_LOB, 0, nil);
   end
-  else if Variable.TypeCode in [SQLT_BFILEE, SQLT_CFILEE] then
-  begin
-    PlainDriver.DescriptorAlloc(OracleConnection.GetConnectionHandle,
-      PPOCIDescriptor(Variable.Data)^, OCI_DTYPE_FILE, 0, nil);
-  end
   else if Variable.TypeCode = SQLT_TIMESTAMP then
   begin
     PlainDriver.DescriptorAlloc(OracleConnection.GetConnectionHandle,
@@ -467,7 +462,7 @@ begin
             try
               WriteTempBlob := TZOracleBlob.Create(PlainDriver,
                 nil, 0, Connection, PPOCIDescriptor(CurrentVar.Data)^,
-                CurrentVar.ColType, CurrentVar.TypeCode);
+                CurrentVar.ColType);
               WriteTempBlob.SetStream(TempStream);
               WriteTempBlob.CreateBlob;
               WriteTempBlob.WriteBlob;
@@ -622,15 +617,17 @@ begin
 
   if (Status <> OCI_SUCCESS) and (Status <> OCI_SUCCESS_WITH_INFO) and (ErrorMessage <> '') then
   begin
-    DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,
-      ErrorCode, ErrorMessage);
-    raise EZSQLException.CreateWithCode(ErrorCode,
-      Format(SSQLError1, [ErrorMessage]));
+    if Assigned(DriverManager) then //Thread-Safe patch
+      DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,
+        ErrorCode, ErrorMessage);
+    if not ( ( LogCategory = lcDisconnect ) and ( ErrorCode = 3314 ) ) then //patch for disconnected Server
+      //on the other hand we can't close the connction  MantisBT: #0000227
+      raise EZSQLException.CreateWithCode(ErrorCode,
+        Format(SSQLError1, [ErrorMessage]));
   end;
   if (Status = OCI_SUCCESS_WITH_INFO) and (ErrorMessage <> '') then
-  begin
-    DriverManager.LogMessage(LogCategory, PlainDriver.GetProtocol, ErrorMessage);
-  end;
+    if Assigned(DriverManager) then //Thread-Safe patch
+      DriverManager.LogMessage(LogCategory, PlainDriver.GetProtocol, ErrorMessage);
 end;
 
 {**

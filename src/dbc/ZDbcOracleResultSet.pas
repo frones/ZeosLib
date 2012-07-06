@@ -869,7 +869,7 @@ begin
 
   GetSQLVarHolder(ColumnIndex);
   CurrentVar := @FOutVars.Variables[ColumnIndex];
-  if CurrentVar.TypeCode in [SQLT_BLOB, SQLT_CLOB] then
+  if CurrentVar.TypeCode in [SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE] then
   begin
     if CurrentVar.Indicator >= 0 then
       LobLocator := PPOCIDescriptor(CurrentVar.Data)^
