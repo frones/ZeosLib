@@ -282,8 +282,7 @@ begin
 
   if FHandle <> nil then
   begin
-    try GetPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
-    except end;
+    GetPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
     FHandle := nil;
     CheckInterbase6Error(GetPlainDriver, FStatusVector, lcDisconnect);
   end;
