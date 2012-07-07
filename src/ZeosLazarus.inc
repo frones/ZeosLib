@@ -46,7 +46,6 @@
 // These are in a spearate file as Delphi compilers don't digest the macros stuff very well
   {$MODE DELPHI}
   {$INTERFACES COM}
-
   {$IFDEF FPC_FULLVERSION}  // FPC_FULLVERSION was added in FPC 2.2.4
     {$IF FPC_FULLVERSION<=20204}
       {$DEFINE OLDFPC}
@@ -85,7 +84,7 @@
     {$DEFINE WITH_TBOOKMARK}              // Have TBookmark
   {$IFEND}
   {$IF FPC_FULLVERSION>20700}
-    {$UNDEFINE WITH_FPC_FTTIME_BUG}
+    {$UNDEF WITH_FPC_FTTIME_BUG}
   {$IFEND}
 
 
