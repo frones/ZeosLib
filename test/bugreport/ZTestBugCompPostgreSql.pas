@@ -688,10 +688,14 @@ begin
     Query.FieldDefs[0].DisplayName := ' xxx xxx '; //Changes nothing since which D-Version?
 
     CheckEquals(1, Query.RecordCount);
+    {$IFDEF FPC}
+    CheckEquals(' xxx xxx ', Query.FieldDefs[0].Name);
+    {$ELSE}
     {$IFDEF VER150BELOW}
     CheckEquals(' xxx xxx ', Query.FieldDefs[0].Name); //EgonHugeist: Changed from ' xxx xxx ' -> select!
     {$ELSE}
     CheckEquals('p_name', Query.FieldDefs[0].Name); //EgonHugeist: Changed from ' xxx xxx ' -> select!
+    {$ENDIF}
     {$ENDIF}
     //CheckEquals(' xxx xxx ', Query.FieldDefs[0].DisplayName); //EgonHugeist: The TFieldDef inherites from TCollectionItem! the DisplayName is'nt changeable there. This is only possible if we create a class of TFieldDef and override the SetDisplayName method
     CheckEquals('Vasia Pupkin', Query.Fields[0].AsString);
