@@ -85,7 +85,7 @@
     {$DEFINE WITH_TBOOKMARK}              // Have TBookmark
   {$IFEND}
   {$IF FPC_FULLVERSION>20700}
-    {$UNDEFINE WITH_FPC_FTTIME_BUG}
+    {$UNDEF WITH_FPC_FTTIME_BUG}
   {$IFEND}
 
 

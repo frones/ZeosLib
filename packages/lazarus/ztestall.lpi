@@ -41,31 +41,34 @@
         <PackageName Value="FCL"/>
       </Item4>
     </RequiredPackages>
-    <Units Count="109">
+    <Units Count="124">
       <Unit0>
         <Filename Value="ztestall.lpr"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="ztestall"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="8"/>
-        <CursorPos X="74" Y="16"/>
-        <UsageCount Value="117"/>
+        <TopLine Value="1"/>
+        <CursorPos X="29" Y="7"/>
+        <UsageCount Value="120"/>
         <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit0>
       <Unit1>
-        <Filename Value="C:/lazarus/fpc/2.5.1/source/packages/fcl-base/src/custapp.pp"/>
+        <Filename Value="../../../../../../../lazarus/fpc/2.5.1/source/packages/fcl-base/src/custapp.pp"/>
         <UnitName Value="CustApp"/>
         <TopLine Value="323"/>
         <CursorPos X="3" Y="323"/>
         <UsageCount Value="6"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit1>
       <Unit2>
-        <Filename Value="C:/lazarus/components/fpcunit/console/consoletestrunner.pas"/>
+        <Filename Value="../../../../../../../lazarus/components/fpcunit/console/consoletestrunner.pas"/>
         <UnitName Value="consoletestrunner"/>
         <TopLine Value="298"/>
         <CursorPos X="1" Y="303"/>
         <UsageCount Value="8"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit2>
       <Unit3>
         <Filename Value="../../test/core/ZTestSysUtils.pas"/>
@@ -73,6 +76,7 @@
         <TopLine Value="181"/>
         <CursorPos X="1" Y="198"/>
         <UsageCount Value="11"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit3>
       <Unit4>
         <Filename Value="../../src/core/ZSysUtils.pas"/>
@@ -80,6 +84,7 @@
         <TopLine Value="96"/>
         <CursorPos X="20" Y="519"/>
         <UsageCount Value="9"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit4>
       <Unit5>
         <Filename Value="../../test/core/ZTestURL.pas"/>
@@ -88,6 +93,7 @@
         <TopLine Value="301"/>
         <CursorPos X="5" Y="379"/>
         <UsageCount Value="8"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit5>
       <Unit6>
         <Filename Value="../../test/parsesql/ZTestScriptParser.pas"/>
@@ -95,6 +101,7 @@
         <TopLine Value="263"/>
         <CursorPos X="3" Y="295"/>
         <UsageCount Value="11"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit6>
       <Unit7>
         <Filename Value="../../src/parsesql/ZScriptParser.pas"/>
@@ -102,6 +109,7 @@
         <TopLine Value="70"/>
         <CursorPos X="21" Y="103"/>
         <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit7>
       <Unit8>
         <Filename Value="../../src/core/ZTokenizer.pas"/>
@@ -110,6 +118,7 @@
         <TopLine Value="1280"/>
         <CursorPos X="1" Y="1295"/>
         <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit8>
       <Unit9>
         <Filename Value="../../src/component/ZAbstractDataset.pas"/>
@@ -117,6 +126,7 @@
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
         <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit9>
       <Unit10>
         <Filename Value="../../src/component/ZSqlProcessor.pas"/>
@@ -124,6 +134,7 @@
         <TopLine Value="529"/>
         <CursorPos X="1" Y="546"/>
         <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit10>
       <Unit11>
         <Filename Value="../../test/framework/ZTestDefinitions.pas"/>
@@ -132,6 +143,7 @@
         <TopLine Value="68"/>
         <CursorPos X="52" Y="95"/>
         <UsageCount Value="9"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit11>
       <Unit12>
         <Filename Value="../../test/framework/ZTestCase.pas"/>
@@ -139,6 +151,7 @@
         <TopLine Value="73"/>
         <CursorPos X="15" Y="90"/>
         <UsageCount Value="9"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit12>
       <Unit13>
         <Filename Value="../../test/core/ZTestExpression.pas"/>
@@ -146,6 +159,7 @@
         <TopLine Value="49"/>
         <CursorPos X="43" Y="72"/>
         <UsageCount Value="12"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit13>
       <Unit14>
         <Filename Value="../../test/bugreport/ZTestBugCompASA.pas"/>
@@ -153,6 +167,7 @@
         <TopLine Value="76"/>
         <CursorPos X="3" Y="108"/>
         <UsageCount Value="8"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit14>
       <Unit15>
         <Filename Value="../../src/core/ZExpression.pas"/>
@@ -160,17 +175,18 @@
         <TopLine Value="553"/>
         <CursorPos X="14" Y="605"/>
         <UsageCount Value="9"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit15>
       <Unit16>
-        <Filename Value="C:/lazarus/components/aggpas/src/agg_fpimage.pas"/>
+        <Filename Value="../../../../../../../lazarus/components/aggpas/src/agg_fpimage.pas"/>
         <UnitName Value="agg_fpimage"/>
         <TopLine Value="431"/>
         <CursorPos X="19" Y="448"/>
-        <SyntaxHighlighter Value="Delphi"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit16>
       <Unit17>
-        <Filename Value="C:/lazarus/components/fpcunit/guitestrunner.pas"/>
+        <Filename Value="../../../../../../../lazarus/components/fpcunit/guitestrunner.pas"/>
         <ComponentName Value="GUITestRunner"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
@@ -178,6 +194,7 @@
         <TopLine Value="216"/>
         <CursorPos X="52" Y="141"/>
         <UsageCount Value="8"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit17>
       <Unit18>
         <Filename Value="../../test/parsesql/ZTestSybaseToken.pas"/>
@@ -185,12 +202,14 @@
         <TopLine Value="61"/>
         <CursorPos X="79" Y="91"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit18>
       <Unit19>
-        <Filename Value="C:/lazarus/lcl/include/treeview.inc"/>
+        <Filename Value="../../../../../../../lazarus/lcl/include/treeview.inc"/>
         <TopLine Value="1009"/>
         <CursorPos X="1" Y="1026"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit19>
       <Unit20>
         <Filename Value="../../test/parsesql/ZTestInterbaseToken.pas"/>
@@ -198,6 +217,7 @@
         <TopLine Value="148"/>
         <CursorPos X="31" Y="73"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit20>
       <Unit21>
         <Filename Value="../../test/parsesql/ZTestSqlAnalyser.pas"/>
@@ -205,6 +225,7 @@
         <TopLine Value="542"/>
         <CursorPos X="23" Y="562"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit21>
       <Unit22>
         <Filename Value="../../src/plain/ZPlainMySqlDriver.pas"/>
@@ -213,6 +234,7 @@
         <TopLine Value="78"/>
         <CursorPos X="41" Y="96"/>
         <UsageCount Value="8"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit22>
       <Unit23>
         <Filename Value="../../src/plain/ZPlainMySqlConstants.pas"/>
@@ -220,6 +242,7 @@
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
         <UsageCount Value="8"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit23>
       <Unit24>
         <Filename Value="../../src/dbc/ZDbcMySqlResultSet.pas"/>
@@ -227,34 +250,39 @@
         <TopLine Value="389"/>
         <CursorPos X="24" Y="395"/>
         <UsageCount Value="8"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit24>
       <Unit25>
-        <Filename Value="C:/lazarus/lcl/fileutil.pas"/>
+        <Filename Value="../../../../../../../lazarus/lcl/fileutil.pas"/>
         <UnitName Value="FileUtil"/>
         <TopLine Value="22"/>
         <CursorPos X="53" Y="39"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit25>
       <Unit26>
         <Filename Value="../../src/component/ZAbstractRODataset.pas"/>
         <UnitName Value="ZAbstractRODataset"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="470"/>
-        <CursorPos X="1" Y="488"/>
-        <UsageCount Value="9"/>
+        <TopLine Value="1323"/>
+        <CursorPos X="1" Y="1331"/>
+        <UsageCount Value="11"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit26>
       <Unit27>
-        <Filename Value="C:/lazarus/fpc/2.5.1/source/rtl/objpas/classes/classesh.inc"/>
+        <Filename Value="../../../../../../../lazarus/fpc/2.5.1/source/rtl/objpas/classes/classesh.inc"/>
         <TopLine Value="276"/>
         <CursorPos X="14" Y="293"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit27>
       <Unit28>
-        <Filename Value="C:/lazarus/examples/hello.pp"/>
+        <Filename Value="../../../../../../../lazarus/examples/hello.pp"/>
         <UnitName Value="Hello_world"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="31"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit28>
       <Unit29>
         <Filename Value="../../src/dbc/ZDbcInterbase6Metadata.pas"/>
@@ -263,6 +291,7 @@
         <TopLine Value="3007"/>
         <CursorPos X="3" Y="3038"/>
         <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit29>
       <Unit30>
         <Filename Value="../../src/dbc/ZDbcInterbase6.pas"/>
@@ -271,14 +300,18 @@
         <TopLine Value="434"/>
         <CursorPos X="1" Y="452"/>
         <UsageCount Value="18"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit30>
       <Unit31>
         <Filename Value="../../src/dbc/ZDbcInterbase6Utils.pas"/>
         <UnitName Value="ZDbcInterbase6Utils"/>
+        <EditorIndex Value="8"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="3062"/>
-        <CursorPos X="1" Y="3075"/>
-        <UsageCount Value="8"/>
+        <TopLine Value="872"/>
+        <CursorPos X="42" Y="886"/>
+        <UsageCount Value="12"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit31>
       <Unit32>
         <Filename Value="../../src/dbc/ZDbcPostgreSqlResultSet.pas"/>
@@ -286,6 +319,7 @@
         <TopLine Value="746"/>
         <CursorPos X="1" Y="771"/>
         <UsageCount Value="9"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit32>
       <Unit33>
         <Filename Value="../../src/core/ZVariant.pas"/>
@@ -293,6 +327,7 @@
         <TopLine Value="665"/>
         <CursorPos X="1" Y="682"/>
         <UsageCount Value="9"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit33>
       <Unit34>
         <Filename Value="../../src/core/ZVariables.pas"/>
@@ -300,6 +335,7 @@
         <TopLine Value="151"/>
         <CursorPos X="1" Y="168"/>
         <UsageCount Value="8"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit34>
       <Unit35>
         <Filename Value="../../src/core/ZFunctions.pas"/>
@@ -307,6 +343,7 @@
         <TopLine Value="107"/>
         <CursorPos X="45" Y="124"/>
         <UsageCount Value="9"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit35>
       <Unit36>
         <Filename Value="../../src/core/ZExprParser.pas"/>
@@ -314,6 +351,7 @@
         <TopLine Value="60"/>
         <CursorPos X="1" Y="88"/>
         <UsageCount Value="8"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit36>
       <Unit37>
         <Filename Value="../../src/core/ZFunctionsConvert.pas"/>
@@ -321,6 +359,7 @@
         <TopLine Value="152"/>
         <CursorPos X="1" Y="1"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit37>
       <Unit38>
         <Filename Value="../../src/core/ZFunctionsDateTime.pas"/>
@@ -328,6 +367,7 @@
         <TopLine Value="508"/>
         <CursorPos X="91" Y="525"/>
         <UsageCount Value="8"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit38>
       <Unit39>
         <Filename Value="../../src/core/ZFunctionsMath.pas"/>
@@ -335,6 +375,7 @@
         <TopLine Value="552"/>
         <CursorPos X="5" Y="585"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit39>
       <Unit40>
         <Filename Value="../../src/core/ZFunctionsOther.pas"/>
@@ -342,31 +383,36 @@
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
         <UsageCount Value="8"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit40>
       <Unit41>
-        <Filename Value="C:/lazarus/fpc/2.5.1/source/rtl/objpas/sysutils/sysinth.inc"/>
+        <Filename Value="../../../../../../../lazarus/fpc/2.5.1/source/rtl/objpas/sysutils/sysinth.inc"/>
         <TopLine Value="127"/>
         <CursorPos X="20" Y="135"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit41>
       <Unit42>
-        <Filename Value="C:/lazarus/fpc/2.5.1/source/rtl/objpas/sysutils/sysstrh.inc"/>
+        <Filename Value="../../../../../../../lazarus/fpc/2.5.1/source/rtl/objpas/sysutils/sysstrh.inc"/>
         <TopLine Value="160"/>
         <CursorPos X="10" Y="177"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit42>
       <Unit43>
-        <Filename Value="C:/lazarus/fpc/2.5.1/source/rtl/objpas/sysutils/sysstr.inc"/>
+        <Filename Value="../../../../../../../lazarus/fpc/2.5.1/source/rtl/objpas/sysutils/sysstr.inc"/>
         <TopLine Value="1040"/>
         <CursorPos X="3" Y="1067"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit43>
       <Unit44>
-        <Filename Value="C:/lazarus/fpc/2.5.1/source/packages/fcl-fpcunit/src/fpcunit.pp"/>
+        <Filename Value="../../../../../../../lazarus/fpc/2.5.1/source/packages/fcl-fpcunit/src/fpcunit.pp"/>
         <UnitName Value="fpcunit"/>
         <TopLine Value="292"/>
         <CursorPos X="45" Y="299"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit44>
       <Unit45>
         <Filename Value="../../test/framework/ZTestConfig.pas"/>
@@ -374,6 +420,7 @@
         <TopLine Value="80"/>
         <CursorPos X="3" Y="97"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit45>
       <Unit46>
         <Filename Value="../../test/framework/ZSqlTestCase.pas"/>
@@ -382,6 +429,7 @@
         <TopLine Value="404"/>
         <CursorPos X="1" Y="422"/>
         <UsageCount Value="9"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit46>
       <Unit47>
         <Filename Value="../../src/dbc/ZDbcMetadata.pas"/>
@@ -390,6 +438,7 @@
         <TopLine Value="4458"/>
         <CursorPos X="12" Y="4488"/>
         <UsageCount Value="12"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit47>
       <Unit48>
         <Filename Value="../../test/dbc/ZTestDbcInterbaseMetadata.pas"/>
@@ -397,6 +446,7 @@
         <TopLine Value="67"/>
         <CursorPos X="1" Y="1"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit48>
       <Unit49>
         <Filename Value="../../test/dbc/ZTestDbcInterbase.pas"/>
@@ -405,6 +455,7 @@
         <TopLine Value="395"/>
         <CursorPos X="1" Y="412"/>
         <UsageCount Value="8"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit49>
       <Unit50>
         <Filename Value="../../src/dbc/ZDbcResultSet.pas"/>
@@ -413,6 +464,7 @@
         <TopLine Value="500"/>
         <CursorPos X="11" Y="518"/>
         <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit50>
       <Unit51>
         <Filename Value="../../src/dbc/ZDbcCachedResultSet.pas"/>
@@ -421,14 +473,18 @@
         <TopLine Value="876"/>
         <CursorPos X="1" Y="893"/>
         <UsageCount Value="8"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit51>
       <Unit52>
         <Filename Value="../../src/dbc/ZDbcCache.pas"/>
         <UnitName Value="ZDbcCache"/>
+        <EditorIndex Value="11"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1169"/>
-        <CursorPos X="1" Y="1186"/>
-        <UsageCount Value="8"/>
+        <TopLine Value="999"/>
+        <CursorPos X="1" Y="1014"/>
+        <UsageCount Value="11"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit52>
       <Unit53>
         <Filename Value="../../src/dbc/ZDbcGenericResolver.pas"/>
@@ -437,6 +493,7 @@
         <TopLine Value="906"/>
         <CursorPos X="1" Y="923"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit53>
       <Unit54>
         <Filename Value="../../src/dbc/ZDbcConnection.pas"/>
@@ -445,6 +502,7 @@
         <TopLine Value="510"/>
         <CursorPos X="72" Y="537"/>
         <UsageCount Value="19"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit54>
       <Unit55>
         <Filename Value="../../src/dbc/ZDbcStatement.pas"/>
@@ -453,6 +511,7 @@
         <TopLine Value="2145"/>
         <CursorPos X="1" Y="2179"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit55>
       <Unit56>
         <Filename Value="../../src/dbc/ZDbcInterbase6Statement.pas"/>
@@ -461,6 +520,7 @@
         <TopLine Value="222"/>
         <CursorPos X="1" Y="239"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit56>
       <Unit57>
         <Filename Value="../../src/plain/ZPlainFirebirdDriver.pas"/>
@@ -469,6 +529,7 @@
         <TopLine Value="93"/>
         <CursorPos X="46" Y="111"/>
         <UsageCount Value="8"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit57>
       <Unit58>
         <Filename Value="../../src/dbc/ZDbcIntfs.pas"/>
@@ -477,6 +538,7 @@
         <TopLine Value="977"/>
         <CursorPos X="1" Y="1000"/>
         <UsageCount Value="9"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit58>
       <Unit59>
         <Filename Value="../../src/core/ZCollections.pas"/>
@@ -485,6 +547,7 @@
         <TopLine Value="472"/>
         <CursorPos X="1" Y="496"/>
         <UsageCount Value="9"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit59>
       <Unit60>
         <Filename Value="../../src/dbc/ZDbcResultSetMetadata.pas"/>
@@ -493,6 +556,7 @@
         <TopLine Value="751"/>
         <CursorPos X="1" Y="767"/>
         <UsageCount Value="8"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit60>
       <Unit61>
         <Filename Value="../../test/dbc/ZTestDbcMySqlMetadata.pas"/>
@@ -501,6 +565,7 @@
         <TopLine Value="352"/>
         <CursorPos X="15" Y="370"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit61>
       <Unit62>
         <Filename Value="../../test/dbc/ZTestDbcOracle.pas"/>
@@ -509,6 +574,7 @@
         <TopLine Value="171"/>
         <CursorPos X="44" Y="189"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit62>
       <Unit63>
         <Filename Value="../../test/dbc/ZTestDbcPostgreSqlMetadata.pas"/>
@@ -517,6 +583,7 @@
         <TopLine Value="197"/>
         <CursorPos X="20" Y="215"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit63>
       <Unit64>
         <Filename Value="../../test/dbc/ZTestDbcResultSetMetadata.pas"/>
@@ -525,6 +592,7 @@
         <TopLine Value="216"/>
         <CursorPos X="1" Y="234"/>
         <UsageCount Value="9"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit64>
       <Unit65>
         <Filename Value="../../src/dbc/ZDbcOracleStatement.pas"/>
@@ -533,6 +601,7 @@
         <TopLine Value="22"/>
         <CursorPos X="47" Y="162"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit65>
       <Unit66>
         <Filename Value="../../src/dbc/ZDbcOracleResultSet.pas"/>
@@ -541,6 +610,7 @@
         <TopLine Value="304"/>
         <CursorPos X="16" Y="338"/>
         <UsageCount Value="8"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit66>
       <Unit67>
         <Filename Value="../../src/dbc/ZDbcOracleMetadata.pas"/>
@@ -549,6 +619,7 @@
         <TopLine Value="1775"/>
         <CursorPos X="75" Y="1805"/>
         <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit67>
       <Unit68>
         <Filename Value="../../src/dbc/ZDbcOracle.pas"/>
@@ -557,6 +628,7 @@
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
         <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit68>
       <Unit69>
         <Filename Value="../../src/dbc/ZDbcOracleUtils.pas"/>
@@ -565,6 +637,7 @@
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit69>
       <Unit70>
         <Filename Value="../../src/parsesql/ZSelectSchema.pas"/>
@@ -573,14 +646,16 @@
         <TopLine Value="404"/>
         <CursorPos X="1" Y="434"/>
         <UsageCount Value="8"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit70>
       <Unit71>
-        <Filename Value="C:/lazarus/lcl/lclproc.pas"/>
+        <Filename Value="../../../../../../../lazarus/lcl/lclproc.pas"/>
         <UnitName Value="LCLProc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="19"/>
         <CursorPos X="95" Y="37"/>
         <UsageCount Value="7"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit71>
       <Unit72>
         <Filename Value="../../src/core/ZURL.pas"/>
@@ -589,6 +664,7 @@
         <TopLine Value="220"/>
         <CursorPos X="1" Y="238"/>
         <UsageCount Value="12"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit72>
       <Unit73>
         <Filename Value="../../test/dbc/ZTestDbcUtils.pas"/>
@@ -597,6 +673,7 @@
         <TopLine Value="431"/>
         <CursorPos X="1" Y="449"/>
         <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit73>
       <Unit74>
         <Filename Value="../../src/dbc/ZDbcUtils.pas"/>
@@ -605,6 +682,7 @@
         <TopLine Value="217"/>
         <CursorPos X="1" Y="247"/>
         <UsageCount Value="9"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit74>
       <Unit75>
         <Filename Value="../../src/dbc/ZDbcMySql.pas"/>
@@ -613,6 +691,7 @@
         <TopLine Value="290"/>
         <CursorPos X="1" Y="320"/>
         <UsageCount Value="13"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit75>
       <Unit76>
         <Filename Value="../../src/dbc/ZDbcMySqlMetadata.pas"/>
@@ -621,6 +700,7 @@
         <TopLine Value="1458"/>
         <CursorPos X="72" Y="1455"/>
         <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit76>
       <Unit77>
         <Filename Value="../../src/plain/ZPlainDriver.pas"/>
@@ -629,6 +709,7 @@
         <TopLine Value="62"/>
         <CursorPos X="3" Y="65"/>
         <UsageCount Value="13"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit77>
       <Unit78>
         <Filename Value="../../src/dbc/ZDbcAdo.pas"/>
@@ -637,6 +718,7 @@
         <TopLine Value="163"/>
         <CursorPos X="1" Y="1"/>
         <UsageCount Value="9"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit78>
       <Unit79>
         <Filename Value="../../src/dbc/ZDbcASA.pas"/>
@@ -645,6 +727,7 @@
         <TopLine Value="455"/>
         <CursorPos X="13" Y="473"/>
         <UsageCount Value="11"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit79>
       <Unit80>
         <Filename Value="../../src/dbc/ZDbcDbLib.pas"/>
@@ -653,6 +736,7 @@
         <TopLine Value="43"/>
         <CursorPos X="42" Y="67"/>
         <UsageCount Value="18"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit80>
       <Unit81>
         <Filename Value="../../src/dbc/ZDbcPooled.pas"/>
@@ -661,6 +745,7 @@
         <TopLine Value="1"/>
         <CursorPos X="48" Y="3"/>
         <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit81>
       <Unit82>
         <Filename Value="../../src/dbc/ZDbcPostgreSql.pas"/>
@@ -669,6 +754,7 @@
         <TopLine Value="691"/>
         <CursorPos X="8" Y="709"/>
         <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit82>
       <Unit83>
         <Filename Value="../../src/dbc/ZDbcSqLite.pas"/>
@@ -677,6 +763,7 @@
         <TopLine Value="109"/>
         <CursorPos X="1" Y="109"/>
         <UsageCount Value="9"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit83>
       <Unit84>
         <Filename Value="../../src/component/ZDatasetUtils.pas"/>
@@ -685,6 +772,7 @@
         <TopLine Value="1033"/>
         <CursorPos X="34" Y="1039"/>
         <UsageCount Value="9"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit84>
       <Unit85>
         <Filename Value="../../src/parsesql/ZGenericSqlToken.pas"/>
@@ -693,6 +781,7 @@
         <TopLine Value="161"/>
         <CursorPos X="72" Y="173"/>
         <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit85>
       <Unit86>
         <Filename Value="../../test/dbc/ZTestDbcGeneric.pas"/>
@@ -701,14 +790,19 @@
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
         <UsageCount Value="9"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit86>
       <Unit87>
         <Filename Value="../../test/component/ZTestDataSetGeneric.pas"/>
         <UnitName Value="ZTestDataSetGeneric"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1368"/>
-        <CursorPos X="1" Y="1376"/>
+        <TopLine Value="756"/>
+        <CursorPos X="3" Y="760"/>
         <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit87>
       <Unit88>
         <Filename Value="../../test/parsesql/ZTestOracleToken.pas"/>
@@ -717,6 +811,7 @@
         <TopLine Value="92"/>
         <CursorPos X="21" Y="99"/>
         <UsageCount Value="11"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit88>
       <Unit89>
         <Filename Value="../../src/component/ZUpdateSqlEditor.pas"/>
@@ -728,21 +823,26 @@
         <TopLine Value="797"/>
         <CursorPos X="50" Y="815"/>
         <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit89>
       <Unit90>
-        <Filename Value="C:/lazarus/lcl/include/dblookup.inc"/>
+        <Filename Value="../../../../../../../lazarus/lcl/include/dblookup.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="203"/>
         <CursorPos X="1" Y="221"/>
         <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit90>
       <Unit91>
         <Filename Value="../../test/bugreport/ZTestBugCompInterbase.pas"/>
         <UnitName Value="ZTestBugCompInterbase"/>
+        <EditorIndex Value="9"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="255"/>
-        <CursorPos X="1" Y="291"/>
-        <UsageCount Value="10"/>
+        <TopLine Value="427"/>
+        <CursorPos X="38" Y="439"/>
+        <UsageCount Value="12"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit91>
       <Unit92>
         <Filename Value="../../src/dbc/ZDbcDbLibMetadata.pas"/>
@@ -752,6 +852,7 @@
         <CursorPos X="1" Y="1"/>
         <FoldState Value=" T7iOO{u2."/>
         <UsageCount Value="14"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit92>
       <Unit93>
         <Filename Value="../../src/dbc/ZDbcDbLibMsSqlMetadata.pas"/>
@@ -760,6 +861,7 @@
         <TopLine Value="34"/>
         <CursorPos X="1" Y="68"/>
         <UsageCount Value="9"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit93>
       <Unit94>
         <Filename Value="../../src/dbc/ZDbcDbLibSybaseMetadata.pas"/>
@@ -768,6 +870,7 @@
         <TopLine Value="34"/>
         <CursorPos X="1" Y="68"/>
         <UsageCount Value="9"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit94>
       <Unit95>
         <Filename Value="../../test/dbc/ZTestDbcMsSql.pas"/>
@@ -776,6 +879,7 @@
         <TopLine Value="42"/>
         <CursorPos X="46" Y="60"/>
         <UsageCount Value="9"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit95>
       <Unit96>
         <Filename Value="../../src/plain/ZPlainDbLibDriver.pas"/>
@@ -784,8 +888,9 @@
         <WindowIndex Value="0"/>
         <TopLine Value="398"/>
         <CursorPos X="1" Y="174"/>
-        <UsageCount Value="18"/>
+        <UsageCount Value="20"/>
         <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit96>
       <Unit97>
         <Filename Value="../../src/plain/ZPlainDbLibMsSql7.pas"/>
@@ -793,23 +898,26 @@
         <EditorIndex Value="3"/>
         <WindowIndex Value="0"/>
         <TopLine Value="53"/>
-        <CursorPos X="71" Y="73"/>
-        <UsageCount Value="18"/>
+        <CursorPos X="71" Y="61"/>
+        <UsageCount Value="20"/>
         <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit97>
       <Unit98>
         <Filename Value="../../src/plain/ZPlainDbLibSybaseAse125.pas"/>
         <UnitName Value="ZPlainDbLibSybaseAse125"/>
-        <EditorIndex Value="6"/>
+        <EditorIndex Value="7"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="60"/>
+        <TopLine Value="32"/>
         <CursorPos X="43" Y="60"/>
-        <UsageCount Value="18"/>
+        <UsageCount Value="20"/>
         <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit98>
       <Unit99>
         <Filename Value=""/>
         <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="None"/>
       </Unit99>
       <Unit100>
         <Filename Value="../../src/plain/ZPlainDbLibConstants.pas"/>
@@ -818,8 +926,9 @@
         <WindowIndex Value="0"/>
         <TopLine Value="298"/>
         <CursorPos X="65" Y="21"/>
-        <UsageCount Value="18"/>
+        <UsageCount Value="20"/>
         <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit100>
       <Unit101>
         <Filename Value="../../src/dbc/ZDbcAdoMetadata.pas"/>
@@ -828,6 +937,7 @@
         <TopLine Value="2526"/>
         <CursorPos X="78" Y="2532"/>
         <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit101>
       <Unit102>
         <Filename Value="../../src/dbc/ZDbcASAMetadata.pas"/>
@@ -836,6 +946,7 @@
         <TopLine Value="2487"/>
         <CursorPos X="79" Y="2517"/>
         <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit102>
       <Unit103>
         <Filename Value="../../src/dbc/ZDbcPostgreSqlMetadata.pas"/>
@@ -844,6 +955,7 @@
         <TopLine Value="3172"/>
         <CursorPos X="46" Y="3202"/>
         <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit103>
       <Unit104>
         <Filename Value="../../src/dbc/ZDbcSqLiteMetadata.pas"/>
@@ -852,6 +964,7 @@
         <TopLine Value="1673"/>
         <CursorPos X="46" Y="1703"/>
         <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit104>
       <Unit105>
         <Filename Value="../../src/dbc/ZDbcDbLibResultSet.pas"/>
@@ -860,6 +973,7 @@
         <TopLine Value="50"/>
         <CursorPos X="65" Y="66"/>
         <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit105>
       <Unit106>
         <Filename Value="../../src/dbc/ZDbcDbLibStatement.pas"/>
@@ -868,94 +982,186 @@
         <TopLine Value="130"/>
         <CursorPos X="33" Y="150"/>
         <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit106>
       <Unit107>
         <Filename Value="../../src/dbc/ZDbcDbLibUtils.pas"/>
         <UnitName Value="ZDbcDbLibUtils"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
         <TopLine Value="43"/>
         <CursorPos X="60" Y="113"/>
-        <UsageCount Value="12"/>
+        <UsageCount Value="14"/>
         <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit107>
       <Unit108>
         <Filename Value="../../test/bugreport/ZTestBugDbcPostgreSql.pas"/>
         <UnitName Value="ZTestBugDbcPostgreSql"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
         <TopLine Value="182"/>
-        <CursorPos X="26" Y="202"/>
+        <CursorPos X="43" Y="200"/>
+        <UsageCount Value="12"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit108>
+      <Unit109>
+        <Filename Value="../../../../../../../lazarus/fpc/svn/rtl/inc/wstrings.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="242"/>
+        <CursorPos X="1" Y="262"/>
+        <UsageCount Value="12"/>
+      </Unit109>
+      <Unit110>
+        <Filename Value="../../../../../../../lazarus/fpc/svn/rtl/i386/i386.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1421"/>
+        <CursorPos X="1" Y="1436"/>
+        <UsageCount Value="11"/>
+      </Unit110>
+      <Unit111>
+        <Filename Value="../../../../../../../lazarus/fpc/svn/packages/fcl-db/src/base/fields.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1233"/>
+        <CursorPos X="1" Y="1248"/>
+        <UsageCount Value="11"/>
+      </Unit111>
+      <Unit112>
+        <Filename Value="../../../../../../../lazarus/fpc/svn/packages/fcl-db/src/base/dataset.inc"/>
+        <EditorIndex Value="13"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="597"/>
+        <CursorPos X="1" Y="611"/>
+        <UsageCount Value="11"/>
+        <Loaded Value="True"/>
+      </Unit112>
+      <Unit113>
+        <Filename Value="../../../../../../../lazarus/fpc/svn/rtl/inc/except.inc"/>
+        <EditorIndex Value="12"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="176"/>
+        <CursorPos X="1" Y="191"/>
+        <UsageCount Value="11"/>
+        <Loaded Value="True"/>
+      </Unit113>
+      <Unit114>
+        <Filename Value="../../../../../../../lazarus/fpc/svn/rtl/win/sysos.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="294"/>
+        <CursorPos X="20" Y="309"/>
+        <UsageCount Value="11"/>
+      </Unit114>
+      <Unit115>
+        <Filename Value="../../../../../../../lazarus/fpc/svn/rtl/inc/wstringh.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="16"/>
+        <CursorPos X="21" Y="43"/>
+        <UsageCount Value="11"/>
+      </Unit115>
+      <Unit116>
+        <Filename Value="../../src/component/ZComponent.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="24"/>
+        <CursorPos X="12" Y="52"/>
+        <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit116>
+      <Unit117>
+        <Filename Value="../../src/Zeos.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="29"/>
+        <CursorPos X="11" Y="47"/>
+        <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit117>
+      <Unit118>
+        <Filename Value="../../src/ZeosLazarus.inc"/>
+        <EditorIndex Value="10"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
         <UsageCount Value="10"/>
         <Loaded Value="True"/>
-      </Unit108>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit118>
+      <Unit119>
+        <Filename Value="../../../../../../../lazarus/fpc/svn/packages/fcl-db/src/sqldb/interbase/ibconnection.pp"/>
+        <UnitName Value="IBConnection"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="741"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="10"/>
+      </Unit119>
+      <Unit120>
+        <Filename Value="../../../../../../../lazarus/fpc/svn/packages/fcl-db/src/sqldb/postgres/pqconnection.pp"/>
+        <UnitName Value="pqconnection"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="812"/>
+        <CursorPos X="44" Y="836"/>
+        <UsageCount Value="10"/>
+      </Unit120>
+      <Unit121>
+        <Filename Value="../../../../../../../lazarus/fpc/svn/packages/fcl-db/src/sqldb/mysql/mysqlconn.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="10"/>
+      </Unit121>
+      <Unit122>
+        <Filename Value="../../../../../../../lazarus/fpc/svn/rtl/inc/systemh.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="569"/>
+        <CursorPos X="11" Y="582"/>
+        <UsageCount Value="10"/>
+      </Unit122>
+      <Unit123>
+        <Filename Value="../../../Zeostesting-egonhugeist/src/component/ZAbstractRODataset.pas"/>
+        <UnitName Value="ZAbstractRODataset"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1311"/>
+        <CursorPos X="84" Y="1312"/>
+        <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit123>
     </Units>
-    <JumpHistory Count="16" HistoryIndex="15">
+    <JumpHistory Count="9" HistoryIndex="8">
       <Position1>
-        <Filename Value="../../src/plain/ZPlainDbLibDriver.pas"/>
-        <Caret Line="2028" Column="1" TopLine="1992"/>
+        <Filename Value="../../test/bugreport/ZTestBugCompInterbase.pas"/>
+        <Caret Line="447" Column="1" TopLine="433"/>
       </Position1>
       <Position2>
-        <Filename Value="../../src/plain/ZPlainDbLibDriver.pas"/>
-        <Caret Line="910" Column="23" TopLine="891"/>
+        <Filename Value="../../../../../../../lazarus/fpc/svn/packages/fcl-db/src/base/dataset.inc"/>
+        <Caret Line="611" Column="1" TopLine="597"/>
       </Position2>
       <Position3>
-        <Filename Value="../../src/plain/ZPlainDbLibDriver.pas"/>
-        <Caret Line="60" Column="77" TopLine="40"/>
+        <Filename Value="../../test/bugreport/ZTestBugCompInterbase.pas"/>
+        <Caret Line="448" Column="1" TopLine="433"/>
       </Position3>
       <Position4>
-        <Filename Value="../../src/plain/ZPlainDbLibDriver.pas"/>
-        <Caret Line="1569" Column="35" TopLine="1551"/>
+        <Filename Value="../../test/bugreport/ZTestBugCompInterbase.pas"/>
+        <Caret Line="447" Column="1" TopLine="433"/>
       </Position4>
       <Position5>
-        <Filename Value="../../src/plain/ZPlainDbLibDriver.pas"/>
-        <Caret Line="1569" Column="28" TopLine="186"/>
+        <Filename Value="../../test/bugreport/ZTestBugCompInterbase.pas"/>
+        <Caret Line="448" Column="1" TopLine="433"/>
       </Position5>
       <Position6>
-        <Filename Value="../../src/plain/ZPlainDbLibDriver.pas"/>
-        <Caret Line="909" Column="23" TopLine="903"/>
+        <Filename Value="../../test/bugreport/ZTestBugCompInterbase.pas"/>
+        <Caret Line="449" Column="1" TopLine="433"/>
       </Position6>
       <Position7>
-        <Filename Value="../../src/plain/ZPlainDbLibDriver.pas"/>
-        <Caret Line="991" Column="1" TopLine="970"/>
+        <Filename Value="../../test/bugreport/ZTestBugCompInterbase.pas"/>
+        <Caret Line="451" Column="1" TopLine="433"/>
       </Position7>
       <Position8>
-        <Filename Value="../../src/plain/ZPlainDbLibDriver.pas"/>
-        <Caret Line="989" Column="1" TopLine="980"/>
+        <Filename Value="../../test/component/ZTestDataSetGeneric.pas"/>
+        <Caret Line="1382" Column="22" TopLine="1368"/>
       </Position8>
       <Position9>
-        <Filename Value="../../src/plain/ZPlainDbLibDriver.pas"/>
-        <Caret Line="2237" Column="1" TopLine="2201"/>
+        <Filename Value="../../test/component/ZTestDataSetGeneric.pas"/>
+        <Caret Line="537" Column="16" TopLine="525"/>
       </Position9>
-      <Position10>
-        <Filename Value="../../src/plain/ZPlainDbLibDriver.pas"/>
-        <Caret Line="60" Column="65" TopLine="28"/>
-      </Position10>
-      <Position11>
-        <Filename Value="../../src/plain/ZPlainDbLibSybaseAse125.pas"/>
-        <Caret Line="1" Column="1" TopLine="1"/>
-      </Position11>
-      <Position12>
-        <Filename Value="../../src/plain/ZPlainDbLibSybaseAse125.pas"/>
-        <Caret Line="493" Column="23" TopLine="475"/>
-      </Position12>
-      <Position13>
-        <Filename Value="../../src/plain/ZPlainDbLibMsSql7.pas"/>
-        <Caret Line="513" Column="23" TopLine="495"/>
-      </Position13>
-      <Position14>
-        <Filename Value="../../src/dbc/ZDbcDbLibUtils.pas"/>
-        <Caret Line="1" Column="1" TopLine="1"/>
-      </Position14>
-      <Position15>
-        <Filename Value="../../src/dbc/ZDbcDbLibUtils.pas"/>
-        <Caret Line="148" Column="12" TopLine="130"/>
-      </Position15>
-      <Position16>
-        <Filename Value="../../test/bugreport/ZTestBugDbcPostgreSql.pas"/>
-        <Caret Line="1" Column="1" TopLine="1"/>
-      </Position16>
     </JumpHistory>
   </ProjectOptions>
   <CompilerOptions>
@@ -967,6 +1173,7 @@
     </SearchPaths>
     <Parsing>
       <SyntaxOptions>
+        <SyntaxMode Value="Delphi"/>
         <UseAnsiStrings Value="False"/>
       </SyntaxOptions>
     </Parsing>
@@ -983,8 +1190,8 @@
         <Kind Value="bpkSource"/>
         <WatchScope Value="wpsLocal"/>
         <WatchKind Value="wpkWrite"/>
-        <Source Value="../../test/bugreport/ZTestBugCompInterbase.pas"/>
-        <Line Value="197"/>
+        <Source Value="../../test/component/ZTestDataSetGeneric.pas"/>
+        <Line Value="761"/>
       </Item1>
     </BreakPoints>
     <Exceptions Count="12">
@@ -1026,4 +1233,5 @@
       </Item12>
     </Exceptions>
   </Debugging>
+  <EditorMacros Count="0"/>
 </CONFIG>
