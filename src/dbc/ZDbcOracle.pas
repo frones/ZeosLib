@@ -345,6 +345,8 @@ begin
       Exit;
     end;
   end;
+  if GetPlainDriver.GetEnvCharsetByteWidth(FHandle, FErrorHandle, ClientCodePage^.CharWidth) <> OCI_SUCCESS then
+    CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcConnect, LogMessage);
 
   GetPlainDriver.AttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FServerHandle, 0,
     OCI_ATTR_SERVER, FErrorHandle);

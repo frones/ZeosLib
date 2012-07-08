@@ -364,7 +364,7 @@ begin
 
   Variable.Length := Length;
   GetMem(Variable.Data, Variable.Length);
-  if Variable.TypeCode in [SQLT_BLOB, SQLT_CLOB] then
+  if Variable.TypeCode in [SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE] then
   begin
     PlainDriver.DescriptorAlloc(OracleConnection.GetConnectionHandle,
       PPOCIDescriptor(Variable.Data)^, OCI_DTYPE_LOB, 0, nil);
@@ -509,7 +509,6 @@ begin
   if (TypeName = 'CHAR') or (TypeName = 'VARCHAR2') then
     Result := stString
   else if (TypeName = 'NCHAR') or (TypeName = 'NVARCHAR2') then
-    //Result := stUnicodeString
     Result := stString
   else if TypeName = 'FLOAT' then
     Result := stDouble
@@ -522,7 +521,6 @@ begin
   else if TypeName = 'CLOB' then
     Result := stAsciiStream
   else if TypeName = 'NCLOB' then
-    //Result := stUnicodeStream
     Result := stAsciiStream
   else if TypeName = 'LONG' then
     Result := stAsciiStream

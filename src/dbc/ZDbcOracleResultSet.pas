@@ -1080,7 +1080,7 @@ begin
                 ReallocMem(Buf, Cap);
                 ReadNumBytes := Cap - Offset;
 
-                ReadNumChars := ReadNumBytes div 3;
+                ReadNumChars := ReadNumBytes div Connection.GetClientCodePageInformations^.CharWidth;
                 Status := FPlainDriver.LobRead(Connection.GetContextHandle,
                   Connection.GetErrorHandle, FLobLocator, ReadNumChars, Offset + 1,
                   @Buf[Offset], ReadNumBytes, nil, nil, Connection.GetClientCodePageInformations^.ID, SQLCS_IMPLICIT);

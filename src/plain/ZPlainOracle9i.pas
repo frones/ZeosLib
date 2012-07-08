@@ -676,6 +676,9 @@ const
   OCI_NUMBER_UNSIGNED = 0;
   OCI_NUMBER_SIGNED   = 2;
 
+  { NLS environmet }
+  OCI_NLS_CHARSET_MAXBYTESZ = 91;
+
 type
   PPointer = ^Pointer;
 
@@ -919,6 +922,8 @@ type
 
   TOCIResultSetToStmt = function(rsetdp: POCIHandle; errhp: POCIError): sword; cdecl;
 
+  TOCINlsNumericInfoGet = function(envhp: POCIEnv; errhp: POCIError; val: psb4; item: ub2): sword; cdecl;
+
 var
   OCIPasswordChange:      TOCIPasswordChange;
   OCIInitialize:          TOCIInitialize;
@@ -992,6 +997,7 @@ var
   OCILobTrim:             TOCILobTrim;
   OCILobWrite:            TOCILobWrite;
   OCIResultSetToStmt:     TOCIResultSetToStmt;
+  OCINlsNumericInfoGet:   TOCINlsNumericInfoGet;
 
 var
   LibraryLoader: TZNativeLibraryLoader;
@@ -1099,6 +1105,7 @@ begin
   @OCIDateTimeConstruct := GetAddress('OCIDateTimeConstruct');
   @OCIDateTimeToText  := GetAddress('OCIDateTimeToText');
   @OCIDateTimeGetTimeZoneName := GetAddress('OCIDateTimeGetTimeZoneName');
+  @OCINlsNumericInfoGet := GetAddress('OCINlsNumericInfoGet');
 
   { For Oracle < 8.1 }
   //@OCILobClose        := GetAddress('OCILobFileClose');

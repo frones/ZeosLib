@@ -154,7 +154,8 @@ type
 
   TZCodePage = {packed to slow..} record
     Name: String; //Name of Client-CharacterSet
-    ID:  Integer; {may be an ordinal value of predefined Types...}
+    ID:  Integer; {may be an ordinal value of predefined Types or the database used id}
+    CharWidth: Integer; {count of Bytes per char}
     Encoding: TZCharEncoding; //The Type of String-Translation handling
     {$IFDEF WITH_CHAR_CONTROL} CP:  Word; {$ENDIF} //The CodePage the AnsiString must have to
     ZAlias: String; //A possible (saver?) CharacterSet which is more Zeos compatible...
