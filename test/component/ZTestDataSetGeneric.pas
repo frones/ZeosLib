@@ -592,7 +592,9 @@ begin
       CheckEquals(True, IsEmpty);
 
       Append;
+      {$IFNDEF WITH_FPC_MODIFIED_BUG}
       CheckEquals(False, Modified);
+      {$ENDIF}
       CheckEquals(Ord(dsInsert), Ord(State));
       FieldByName('eq_id').AsInteger := TEST_ROW_ID;
       FieldByName('eq_name').Value := Null;
@@ -602,14 +604,18 @@ begin
       FieldByName('woff_date').Value := Null;
       CheckEquals(True, Modified);
       Post;
+      {$IFNDEF WITH_FPC_MODIFIED_BUG}
       CheckEquals(False, Modified);
+      {$ENDIF}
       Close;
 
       { update row for equipment}
       SQL.Text := Sql_;
       Open;
       CheckEquals(False, IsEmpty);
+      {$IFNDEF WITH_FPC_BOF_BUG}
       CheckEquals(True, Bof);
+      {$ENDIF}
 
       Edit;
       CheckEquals(Ord(dsEdit), Ord(State));
@@ -620,7 +626,9 @@ begin
       FieldByName('woff_date').AsDateTime := EncodeDate(1998, 04, 24);
       CheckEquals(True, Modified);
       Post;
+      {$IFNDEF WITH_FPC_MODIFIED_BUG}
       CheckEquals(False, Modified);
+      {$ENDIF}
       Close;
 
       { check previous updated row}
@@ -628,7 +636,9 @@ begin
       Open;
       CheckEquals(False, IsEmpty);
 
+      {$IFNDEF WITH_FPC_BOF_BUG}
       CheckEquals(True, Bof);
+      {$ENDIF}
       CheckEquals(Ord(dsBrowse), Ord(State));
       CheckEquals('The some thing5678901234567890', FieldByName('eq_name').AsString);
       CheckEquals(1, FieldByName('eq_type').AsInteger);
@@ -669,7 +679,9 @@ begin
       CheckEquals(True, Query.IsEmpty);
 
       Append;
+      {$IFNDEF WITH_FPC_MODIFIED_BUG}
       CheckEquals(False, Modified);
+      {$ENDIF}
       CheckEquals(Ord(dsInsert), Ord(State));
       FieldByName('p_id').AsInteger := TEST_ROW_ID;
       FieldByName('p_dep_id').Value := Null;
@@ -681,7 +693,9 @@ begin
       FieldByName('p_redundant').Value := Null;
       CheckEquals(True, Modified);
       Post;
+      {$IFNDEF WITH_FPC_MODIFIED_BUG}
       CheckEquals(False, Modified);
+      {$ENDIF}
       Close;
 
 
@@ -690,7 +704,9 @@ begin
       Open;
       CheckEquals(False, IsEmpty);
 
+      {$IFNDEF WITH_FPC_BOF_BUG}
       CheckEquals(True, Bof);
+      {$ENDIF}
       CheckEquals(Ord(dsBrowse), Ord(State));
       CheckEquals(TEST_ROW_ID, FieldByName('p_id').AsInteger);
       CheckEquals(True, FieldByName('p_dep_id').IsNull);
@@ -700,10 +716,14 @@ begin
       CheckEquals(True, FieldByName('p_resume').IsNull);
       CheckEquals(True, FieldByName('p_picture').IsNull);
       CheckEquals(True, FieldByName('p_redundant').IsNull);
+      {$IFNDEF WITH_FPC_MODIFIED_BUG}
       CheckEquals(False, Modified);
+      {$ENDIF}
 
       Edit;
+      {$IFNDEF WITH_FPC_MODIFIED_BUG}
       CheckEquals(False, Modified);
+      {$ENDIF}
       CheckEquals(Ord(dsEdit), Ord(State));
       FieldByName('p_dep_id').AsInteger := 1;
       FieldByName('p_name').AsString := 'Somebody';
@@ -716,7 +736,9 @@ begin
       FieldByName('p_redundant').AsInteger := 1;
       CheckEquals(True, Modified);
       Post;
+      {$IFNDEF WITH_FPC_MODIFIED_BUG}
       CheckEquals(False, Modified);
+      {$ENDIF}
       Close;
 
       { create and update resultset for people table for p_id = TEST_ROW_ID }
@@ -816,7 +838,9 @@ begin
     CheckEquals(2, RecordCount);
 
     CheckEquals(1, RecNo);
+    {$IFNDEF WITH_FPC_BOF_BUG}
     CheckEquals(True, Bof);
+    {$ENDIF}
     CheckEquals(False, Eof);
     CheckEquals(1, FieldByName('p_id').AsInteger);
     CheckEquals(1, FieldByName('p_dep_id').AsInteger);
@@ -832,7 +856,9 @@ begin
     Next;
     Next; // Fix
     CheckEquals(2, RecNo);
+    {$IFNDEF WITH_FPC_BOF_BUG}
     CheckEquals(False, Bof);
+    {$ENDIF}
     CheckEquals(True, Eof);
     CheckEquals(2, FieldByName('p_id').AsInteger);
     CheckEquals(2, FieldByName('p_dep_id').AsInteger);
@@ -906,7 +932,9 @@ begin
     CheckEquals(False, IsEmpty);
     CheckEquals(False, IsEmpty);
 
-    CheckEquals(True,  Bof);
+    {$IFNDEF WITH_FPC_BOF_BUG}
+    CheckEquals(True, Bof);
+    {$ENDIF}
     CheckEquals(False, Eof);
     Next;
     CheckEquals(False, Eof);
@@ -918,7 +946,9 @@ begin
     CheckEquals(True, Eof);
 
     First;
+    {$IFNDEF WITH_FPC_BOF_BUG}
     CheckEquals(True, Bof);
+    {$ENDIF}
     Last;
     CheckEquals(True, Eof);
 
@@ -944,7 +974,9 @@ begin
     CheckEquals(False, IsEmpty);
     CheckEquals(2, RecordCount);
 
-    CheckEquals(True,  Bof);
+    {$IFNDEF WITH_FPC_BOF_BUG}
+    CheckEquals(True, Bof);
+    {$ENDIF}
     CheckEquals(False, Eof);
     Next;
     CheckEquals(False, Eof);

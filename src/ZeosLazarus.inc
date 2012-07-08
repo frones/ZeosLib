@@ -46,7 +46,6 @@
 // These are in a spearate file as Delphi compilers don't digest the macros stuff very well
   {$MODE DELPHI}
   {$INTERFACES COM}
-
   {$IFDEF FPC_FULLVERSION}  // FPC_FULLVERSION was added in FPC 2.2.4
     {$IF FPC_FULLVERSION<=20204}
       {$DEFINE OLDFPC}
@@ -74,6 +73,9 @@
     {$DEFINE LAZARUSUTF8HACK} // Places that fixed for the Lazarus convention that all strings are UTF8  are marked with this
                               // ifdef. But probably most of them are adhoc hacks, and need revisiting in time.
     {$DEFINE WITH_FPC_FTTIME_BUG} //http://zeos.firmos.at/viewtopic.php?t=3534&postdays=0&postorder=asc&start=0
+    {$DEFINE WITH_FPC_BOF_BUG} //http://bugs.freepascal.org/view.php?id=22377
+    {$DEFINE WITH_FPC_MODIFIED_BUG} //http://bugs.freepascal.org/view.php?id=22381
+
   {$ELSE}
     {$FATAL Versions Older than 2.2.4 are not supported!}
   {$ENDIF}
@@ -86,6 +88,8 @@
   {$IFEND}
   {$IF FPC_FULLVERSION>20700}
     {$UNDEF WITH_FPC_FTTIME_BUG}
+    {$UNDEF WITH_FPC_BOF_BUG}
+    {$UNDEF WITH_FPC_MODIFIED_BUG}
   {$IFEND}
 
 

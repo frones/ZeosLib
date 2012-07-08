@@ -360,7 +360,10 @@ begin
 
     MoveToInsertRow;
     UpdateIntByName('id', 2);
-    UpdateStringByName('fld', '\Победа\');
+    if Connection.UTF8StringAsWideField then
+      UpdateStringByName('fld', '\Победа\')
+    else
+      UpdateStringByName('fld', UTF8Encode(WideString('\Победа\')));
     InsertRow;
     Close;
   end;

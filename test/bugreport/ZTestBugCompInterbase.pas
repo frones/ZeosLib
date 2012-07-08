@@ -561,8 +561,8 @@ end;
 
 const
   Str1 = 'This license, the Lesser General Public License, applies to some specially designated software packages--typically libraries--of the Free Software Foundation and other authors who decide to use it.  You can use it too, but we suggest you first think ...';
-  Str2 = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
-  Str3 = 'ќдной из наиболее';
+  Str2{$ifdef FPC}:widestring{$endif} = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
+  Str3{$ifdef FPC}:widestring{$endif} = 'ќдной из наиболее';
 
 procedure ZTestCompInterbaseBugReport.Test_Param_LoadFromStream_StringStream_ftBlob;
 var
@@ -586,9 +586,9 @@ begin
       SQL.Text := 'INSERT INTO people(P_ID, P_NAME, P_RESUME)'+
         ' VALUES (:P_ID, :P_NAME, :P_RESUME)';
       ParamByName('P_ID').AsInteger := TEST_ROW_ID;
-      ParamByName('P_NAME').AsString := Str3;
+      ParamByName('P_NAME').AsString := {$ifdef FPC}UTF8Encode{$endif}(Str3);
       CheckEquals(3, Query.Params.Count, 'Param.Count');
-      SL.Text := Str2;
+      SL.Text := {$ifdef FPC}UTF8Encode{$endif}(Str2);
 
       StrStream1 := TMemoryStream.Create;
       SL.SaveToStream(StrStream1);
@@ -650,9 +650,9 @@ begin
       SQL.Text := 'INSERT INTO people(P_ID, P_NAME, P_RESUME)'+
         ' VALUES (:P_ID, :P_NAME, :P_RESUME)';
       ParamByName('P_ID').AsInteger := TEST_ROW_ID;
-      ParamByName('P_NAME').AsString := Str3;
+      ParamByName('P_NAME').AsString := {$ifdef FPC}UTF8Encode{$endif}(Str3);
       CheckEquals(3, Query.Params.Count, 'Param.Count');
-      SL.Text := Str2;
+      SL.Text := {$ifdef FPC}UTF8Encode{$endif}(Str2);
 
       StrStream1 := TMemoryStream.Create;
       SL.SaveToStream(StrStream1);
