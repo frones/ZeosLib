@@ -378,7 +378,7 @@ begin
 
   Variable.Length := Length;
   GetMem(Variable.Data, Variable.Length);
-  if Variable.TypeCode in [SQLT_BLOB, SQLT_CLOB] then
+  if Variable.TypeCode in [SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE] then
   begin
     PlainDriver.DescriptorAlloc(OracleConnection.GetConnectionHandle,
       PPOCIDescriptor(Variable.Data)^, OCI_DTYPE_LOB, 0, nil);
