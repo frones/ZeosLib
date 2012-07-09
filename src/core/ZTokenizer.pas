@@ -887,7 +887,8 @@ begin
   if CharInSet(ReadChar, [#10, #13]) then
     begin
       Result := Result + ReadChar;
-      if (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) then
+      // ludob Linux line terminator is just LF, don't read further if we already have LF
+      if (ReadChar<>#10) and (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) then
         if CharInSet(ReadChar, [#10, #13]) then
           Result := Result + ReadChar
         else
