@@ -666,6 +666,7 @@ end;
 }
 constructor TZAbstractConnection.Create(const ZUrl: TZURL);
 begin
+  FClosed := True;
   if not assigned(ZUrl) then
     raise Exception.Create('ZUrl is not assigned!')
   else
@@ -691,7 +692,6 @@ begin
   {$ENDIF}
 
   FAutoCommit := True;
-  FClosed := True;
   FReadOnly := True;
   FTransactIsolationLevel := tiNone;
   FUseMetadata := True;
