@@ -57,7 +57,7 @@ interface
 
 {$I ZPlain.inc}
 
-uses ZClasses, ZPlainDriver, ZPlainOracle9i;
+uses ZClasses, ZPlainDriver, ZPlainOracle9i,ZCompatibility;
 
 type
   { Generic Oracle Types }
@@ -72,7 +72,7 @@ type
   ub1     = Byte;
   dvoid   = Pointer;
   text    = PAnsiChar;
-  size_T  = Integer;
+  size_T  = NativeUInt;
 
   pub1 = ^ub1;
   psb1 = ^sb1;
@@ -1060,8 +1060,6 @@ type
 implementation
 
 { TZOracle9iPlainDriver }
-
-uses ZCompatibility;
 
 function TZOracle9iPlainDriver.GetUnicodeCodePageName: String;
 begin

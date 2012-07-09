@@ -841,7 +841,7 @@ begin
     else
       Size := FChunk_Size;
     FPlainDriver.WriteLargeObject(FHandle, BlobHandle,
-      Pointer(LongInt(BlobData) + Position), Size);
+      Pointer(NativeUInt(BlobData) + Position), Size);
     CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Write Large Object',nil);
     Inc(Position, Size);
   end;
