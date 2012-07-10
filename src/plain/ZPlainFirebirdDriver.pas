@@ -68,42 +68,42 @@ uses ZClasses, ZCompatibility, ZPlainDriver, ZPlainLoader, ZPlainFirebirdInterba
 const
 
   WINDOWSIB6_DLL_LOCATION   = 'gds32.dll';
-  LINUXIB6_DLL_LOCATION   = 'libgds.so';
+  LINUXIB6_DLL_LOCATION   = 'libgds'+SharedSuffix;
 
   WINDOWS_DLL_LOCATION   = 'gds32.dll';
-  LINUX_DLL_LOCATION   = 'libgds32.so';
-  LINUX_IB_CRYPT_LOCATION = 'libcrypt.so';
+  LINUX_DLL_LOCATION   = 'libgds32'+SharedSuffix;
+  LINUX_IB_CRYPT_LOCATION = 'libcrypt'+SharedSuffix;
 
   WINDOWS2_DLL_LOCATION   = 'fbclient.dll';
   WINDOWS2_DLL_LOCATION_EMBEDDED = 'fbclientd.dll';
 
-  LINUX2_DLL_LOCATION   = 'libfbclient.so';
-  LINUX2_DLL_LOCATION_EMBEDDED = 'libfbembed.so';
-  LINUX2_IB_CRYPT_LOCATION = 'libcrypt.so';
+  LINUX2_DLL_LOCATION   = 'libfbclient'+SharedSuffix;
+  LINUX2_DLL_LOCATION_EMBEDDED = 'libfbembed'+SharedSuffix;
+  LINUX2_IB_CRYPT_LOCATION = 'libcrypt'+SharedSuffix;
 
   WINDOWS15_DLL_LOCATION   = 'fbclient15.dll';
   WINDOWS15_DLL_LOCATION_EMBEDDED = 'fbclientd15.dll';
-  LINUX15_DLL_LOCATION   = 'libfbclient.so.15';
-  LINUX15_IB_CRYPT_LOCATION = 'libcrypt.so.15';
-  LINUX15_DLL_LOCATION_EMBEDDED = 'libfbembed.so.15';
+  LINUX15_DLL_LOCATION   = 'libfbclient'+SharedSuffix+'.15';
+  LINUX15_IB_CRYPT_LOCATION = 'libcrypt'+SharedSuffix+'.15';
+  LINUX15_DLL_LOCATION_EMBEDDED = 'libfbembed'+SharedSuffix+'.15';
 
   WINDOWS20_DLL_LOCATION   = 'fbclient20.dll';
   WINDOWS20_DLL_LOCATION_EMBEDDED = 'fbclientd20.dll';
-  LINUX20_DLL_LOCATION   = 'libfbclient.so.20';
-  LINUX20_DLL_LOCATION_EMBEDDED = 'libfbembed.so.20';
-  LINUX20_IB_CRYPT_LOCATION = 'libcrypt.so.20';
+  LINUX20_DLL_LOCATION   = 'libfbclient'+SharedSuffix+'.20';
+  LINUX20_DLL_LOCATION_EMBEDDED = 'libfbembed'+SharedSuffix+'.20';
+  LINUX20_IB_CRYPT_LOCATION = 'libcrypt'+SharedSuffix+'.20';
 
   WINDOWS21_DLL_LOCATION   = 'fbclient21.dll';
   WINDOWS21_DLL_LOCATION_EMBEDDED = 'fbclientd21.dll';
-  LINUX21_DLL_LOCATION   = 'libfbclient.so.21';
-  LINUX21_DLL_LOCATION_EMBEDDED = 'libfbembed.so.21';
-  LINUX21_IB_CRYPT_LOCATION = 'libcrypt.so.21';
+  LINUX21_DLL_LOCATION   = 'libfbclient'+SharedSuffix+'.21';
+  LINUX21_DLL_LOCATION_EMBEDDED = 'libfbembed'+SharedSuffix+'.21';
+  LINUX21_IB_CRYPT_LOCATION = 'libcrypt'+SharedSuffix+'.21';
 
   WINDOWS25_DLL_LOCATION   = 'fbclient25.dll';
   WINDOWS25_DLL_LOCATION_EMBEDDED = 'fbclientd25.dll';
-  LINUX25_DLL_LOCATION   = 'libfbclient.so.25';
-  LINUX25_DLL_LOCATION_EMBEDDED = 'libfbembed.so.25';
-  LINUX25_IB_CRYPT_LOCATION = 'libcrypt.so.25';
+  LINUX25_DLL_LOCATION   = 'libfbclient'+SharedSuffix+'.25';
+  LINUX25_DLL_LOCATION_EMBEDDED = 'libfbembed'+SharedSuffix+'.25';
+  LINUX25_IB_CRYPT_LOCATION = 'libcrypt'+SharedSuffix+'.25';
 
 type
 

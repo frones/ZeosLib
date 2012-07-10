@@ -127,6 +127,19 @@ function Hash(S : AnsiString) : LongWord;
 function AnsiProperCase(const S: string; const WordDelims: TSysCharSet): string;
 
 {$ENDIF}
+{$IFDEF WINDOWS}
+const SharedSuffix='.dll';
+{$ELSE}
+  {$IFDEF LINUX}
+  const SharedSuffix='.so';
+  {$ELSE}
+    {$IFDEF DARWIN}
+    const SharedSuffix='.dylib';
+    {$ELSE}
+    const SharedSuffix='.dll'; //Delphi
+    {$ENDIF}
+  {$ENDIF}
+{$ENDIF}
 
 {$IFDEF UNIX}
   {$IFDEF FPC}

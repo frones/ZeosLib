@@ -82,7 +82,7 @@ const
   DEFAULT_CONFIG_DIR  = 'database';
   DEFAULT_LOG_DIR     = 'log';
   DEFAULT_CONFIG_FILE = 'test.properties';
-{$IFDEF LINUX}
+{$IFDEF UNIX}
   PATH_DELIMITER      = '/';
 {$ELSE}
   PATH_DELIMITER      = '\';
