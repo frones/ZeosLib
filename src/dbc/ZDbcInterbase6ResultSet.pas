@@ -153,7 +153,7 @@ uses
 }
 procedure TZInterbase6ResultSet.Close;
 begin
-  if FStmtHandle <> nil then
+  if FStmtHandle <> 0 then
   begin
     { Free output allocated memory }
     FSqlData := nil;
@@ -587,7 +587,7 @@ var
   FieldSqlType: TZSQLType;
   ColumnInfo: TZColumnInfo;
 begin
-  if not Assigned(FStmtHandle) then
+  if FStmtHandle=0 then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
 
   ColumnsInfo.Clear;
@@ -695,4 +695,4 @@ begin
   FBlobRead := True;
 end;
 
-end.
+end.

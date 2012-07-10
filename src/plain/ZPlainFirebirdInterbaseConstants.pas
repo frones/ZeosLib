@@ -436,7 +436,7 @@ type
   ISC_LONG             = LongInt;
   UISC_LONG            = ULong;
   ISC_INT64            = Int64;
-  ISC_STATUS           = LongInt;
+  ISC_STATUS           = NativeInt;
   UISC_STATUS          = ULong;
   PISC_LONG            = ^ISC_LONG;
   PUISC_LONG           = ^UISC_LONG;
@@ -471,13 +471,14 @@ type
   PISC_VARYING = ^TISC_VARYING;
 
   { InterBase Handle Definitions }
-  TISC_BLOB_HANDLE              = PVoid;
+  //ludob ib/FB handles are 32 bit even on 64 bit systems
+  TISC_BLOB_HANDLE              = LongWord;
   PISC_BLOB_HANDLE              = ^TISC_BLOB_HANDLE;
-  TISC_DB_HANDLE                = PVoid;
+  TISC_DB_HANDLE                = LongWord;
   PISC_DB_HANDLE                = ^TISC_DB_HANDLE;
-  TISC_STMT_HANDLE              = PVoid;
+  TISC_STMT_HANDLE              = LongWord;
   PISC_STMT_HANDLE              = ^TISC_STMT_HANDLE;
-  TISC_TR_HANDLE                = PVoid;
+  TISC_TR_HANDLE                = LongWord;
   PISC_TR_HANDLE                = ^TISC_TR_HANDLE;
   TISC_CALLBACK                 = procedure;
 

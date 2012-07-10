@@ -983,7 +983,7 @@ procedure FreeStatement(PlainDriver: IZInterbasePlainDriver; StatementHandle: TI
 var
   StatusVector: TARRAY_ISC_STATUS;
 begin
-  if StatementHandle <> nil  then
+  if StatementHandle <> 0  then
   begin
     PlainDriver.isc_dsql_free_statement(@StatusVector, @StatementHandle, Options);
     CheckInterbase6Error(PlainDriver, StatusVector);
@@ -1205,7 +1205,7 @@ var
   BlobHandle: TISC_BLOB_HANDLE;
   StatusVector: TARRAY_ISC_STATUS;
 begin
-  BlobHandle := nil;
+  BlobHandle := 0;
   CurPos := 0;
 //  SegmentLenght := UShort(DefaultBlobSegmentSize);
 
@@ -2511,7 +2511,7 @@ var
   StatusVector: TARRAY_ISC_STATUS;
   BlobSize, CurPos, SegLen: Integer;
 begin
-  BlobHandle := nil;
+  BlobHandle := 0;
   Stream.Seek(0, 0);
 
   { create blob handle }
@@ -3276,4 +3276,4 @@ begin
 end;
 
 
-end.
+end.
