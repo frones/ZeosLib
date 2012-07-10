@@ -200,7 +200,7 @@ begin
     869: ColumnInfo.Precision := 100; { inet }
     829: ColumnInfo.Precision := 17; { macaddr }
     1186: ColumnInfo.Precision := 32; { interval }
-    24: ColumnInfo.Precision := 10; { regproc }
+    24: ColumnInfo.Precision := 64; { regproc } // M.A. was 10
     17:{ bytea }
       if Connection.IsOidAsBlob then
         ColumnInfo.Precision := 256;
