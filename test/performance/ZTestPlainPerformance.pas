@@ -777,9 +777,9 @@ var
   Params: TStrings;
 begin
   PTEB := nil;
-  FHandle := nil;
-  FTrHandle := nil;
-  FStmtHandle := nil;
+  FHandle := 0;
+  FTrHandle := 0;
+  FStmtHandle := 0;
   Params := TStringList.Create;
 
   NewDPB := NewDPB + Char(isc_dpb_version1);
@@ -833,23 +833,23 @@ end;
 
 procedure TZPlainInterbase6SQLPerformanceTestCase.Disconnect;
 begin
-  if FStmtHandle <> nil then
+  if FStmtHandle <> 0 then
   begin
     FreeStatement(FPlainDriver, FStmtHandle, DSQL_Drop);
-    FStmtHandle := nil;
+    FStmtHandle := 0;
   end;
 
-  if FTrHandle <> nil then
+  if FTrHandle <> 0 then
   begin
     FPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
-    FTrHandle := nil;
+    FTrHandle := 0;
     CheckInterbase6Error;
   end;
 
-  if FHandle <> nil then
+  if FHandle <> 0 then
   begin
     FPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
-    FHandle := nil;
+    FHandle := 0;
     CheckInterbase6Error;
   end;
 end;
@@ -861,8 +861,8 @@ var
   SQLData: IZResultSQLDA;
   StatusVector: TARRAY_ISC_STATUS;
 begin
-  StmtHandle := nil;
-  SQLData := TZResultSQLDA.Create(FPlainDriver, FHandle, FTrHandle,
+  StmtHandle := 0;
+  SQLData := TZResultSQLDA.Create(FPlainDriver, @FHandle, @FTrHandle,
     @ZCompatibility.ClientCodePageDummy, {$IFDEF DELPHI_12UP}True{$ELSE}False{$ENDIF});
 
   try
@@ -891,7 +891,7 @@ var
   StmtHandle: TISC_STMT_HANDLE;
   StatusVector: TARRAY_ISC_STATUS;
 begin
-  StmtHandle := nil;
+  StmtHandle := 0;
 
   try
     PrepareStatement(FPlainDriver, @FHandle, @FTrHandle,
@@ -912,7 +912,9 @@ end;
 
 function TZPlainInterbase6SQLPerformanceTestCase.GetSupportedProtocols: string;
 begin
-  Result := 'interbase-5,interbase-6,firebird-1.0,firebird-1.5,firebird-2.0,firebird-2.1,firebirdd-1.5,firebirdd-2.0,firebirdd-2.1';
+  Result := 'interbase-5,interbase-6,firebird-1.0,firebird-1.5,firebird-2.0,'+
+    'firebird-2.1,firebird-2.5,firebirdd-1.5,firebirdd-2.0,firebirdd-2.1'+
+    'firebirdd-2.5';
 end;
 
 procedure TZPlainInterbase6SQLPerformanceTestCase.RunTestConnect;
