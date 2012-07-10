@@ -1261,7 +1261,6 @@ end;
 function ZStrToFloat(Value: PAnsiChar): Extended;
 var
   OldDecimalSeparator, OldThousandSeparator: Char;
-  ThousandsPart, DecimalPart: PAnsiChar;
 begin
   OldDecimalSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
   OldThousandSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator;
