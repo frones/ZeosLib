@@ -1327,7 +1327,9 @@ function TZAbstractRODataset.GetFieldData(Field: TField;
 var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
+  {$IFNDEF WITH_WIDESTRUTILS}
   WS:WideString;
+  {$ENDIF}
 begin
   if GetActiveBuffer(RowBuffer) then
   begin
