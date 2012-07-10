@@ -351,6 +351,20 @@ function EncodeSQLVersioning(const MajorVersion: Integer;
 }
 function FormatSQLVersion( const SQLVersion: Integer ): String;
 
+{**
+  Arranges thousand and decimal separator to a System-defaults
+  @param the value which has to be converted and arranged
+  @return a valid floating value
+}
+function ZStrToFloat(Value: PAnsiChar): Extended; overload;
+
+{**
+  Arranges thousand and decimal separator to a System-defaults
+  @param the value which has to be converted and arranged
+  @return a valid floating value
+}
+function ZStrToFloat(Value: AnsiString): Extended; overload;
+
 implementation
 
 uses ZMatchPattern, StrUtils;
@@ -1237,6 +1251,61 @@ var
 begin
  DecodeSQLVersioning(SQLVersion, MajorVersion, MinorVersion, SubVersion);
  Result := IntToStr(MajorVersion)+'.'+IntToStr(MinorVersion)+'.'+IntToStr(SubVersion);
+end;
+
+{**
+  Arranges thousand and decimal separator to a System-defaults
+  @param the value which has to be converted and arranged
+  @return a valid floating value
+}
+function ZStrToFloat(Value: PAnsiChar): Extended;
+var
+  OldDecimalSeparator, OldThousandSeparator: Char;
+  ThousandsPart, DecimalPart: PAnsiChar;
+begin
+  OldDecimalSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
+  OldThousandSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator;
+
+  if AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldDecimalSeparator))) = nil then
+    if AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator))) = nil then
+      //No DecimalSeparator and no ThousandSeparator
+      Result := StrToFloat(String(Value))
+    else
+    begin
+      //wrong DecimalSepartor
+      {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldThousandSeparator;
+      {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldDecimalSeparator;
+      Result := StrToFloat(String(Value));
+    end
+  else
+    if AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator))) = nil then
+      //default DecimalSepartor
+      Result := StrToFloat(String(Value))
+    else
+      if StrLen(AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldDecimalSeparator)))) <
+        StrLen(AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator)))) then
+          //default DecimalSepartor and ThousandSeparator
+        Result := StrToFloat(String(Value))
+      else
+      begin
+        //wrong DecimalSepartor and ThousandSeparator
+        {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldThousandSeparator;
+        {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldDecimalSeparator;
+        Result := StrToFloat(String(Value));
+      end;
+
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldThousandSeparator;
+end;
+
+{**
+  Arranges thousand and decimal separator to a System-defaults
+  @param the value which has to be converted and arranged
+  @return a valid floating value
+}
+function ZStrToFloat(Value: AnsiString): Extended;
+begin
+  Result := ZStrToFloat(PAnsiChar(Value));
 end;
 
 end.

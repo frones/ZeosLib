@@ -127,19 +127,6 @@ function Hash(S : AnsiString) : LongWord;
 function AnsiProperCase(const S: string; const WordDelims: TSysCharSet): string;
 
 {$ENDIF}
-{$IFDEF WINDOWS}
-const SharedSuffix='.dll';
-{$ELSE}
-  {$IFDEF LINUX}
-  const SharedSuffix='.so';
-  {$ELSE}
-    {$IFDEF DARWIN}
-    const SharedSuffix='.dylib';
-    {$ELSE}
-    const SharedSuffix='.dll'; //Delphi
-    {$ENDIF}
-  {$ENDIF}
-{$ENDIF}
 
 {$IFDEF UNIX}
   {$IFDEF FPC}
@@ -654,14 +641,6 @@ begin
         {$ENDIF}
       {$ELSE}
         {$IFDEF FPC}
-        { EgonHugeist:
-          Actual the FPC uses CodePage of UTF8 generally.
-          FPC doesn't support CodePage-informations so a save prepreparing
-          is'nt possible in the Resultsets. So we only can hope the data is
-          valid. Or we need a changed/addidtional Cached-Resultset which
-          is only for the user-data and NOT for Metadata. While testing these
-          prepreparations the Metadata-informations where changed. Or on the
-          other hand it's possible that the Lazarus-functions are not right there..}
           Result := AStr; //Ansi to Ansi is no Problem!!!
         {$ELSE} //Delphi7=>?<2009
           {$IFDEF WITH_CHAR_CONTROL}
@@ -713,14 +692,6 @@ begin
       Result := WS;
     {$ELSE}
       {$IFDEF FPC}
-        { EgonHugeist:
-          Actual the FPC uses CodePage of UTF8 generally.
-          FPC doesn't support CodePage-informations so a save prepreparing
-          is'nt possible in the Resultsets. So we only can hope the data is
-          valid. Or we need a changed/addidtional Cached-Resultset which
-          is only for the user-data and NOT for Metadata. While testing these
-          prepreparations the Metadata-informations where changed. Or on the
-          other hand it's possible thate Lazarus-functions are not right there..}
         Result := UTF8Encode(WS);
       {$ELSE} //Delphi7=>?<2009
         {$IFDEF WITH_CHAR_CONTROL}
