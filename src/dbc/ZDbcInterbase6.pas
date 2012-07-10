@@ -262,7 +262,7 @@ begin
   if Closed or (not Assigned(PlainDriver)) then
      Exit;
 
-  if FTrHandle <> nil then
+  if FTrHandle <> 0 then
   begin
     if AutoCommit then
     begin
@@ -276,14 +276,14 @@ begin
       DriverManager.LogMessage(lcTransaction, PlainDriver.GetProtocol,
         Format('ROLLBACK TRANSACTION "%s"', [Database]));
     end;
-    FTrHandle := nil;
+    FTrHandle := 0;
     CheckInterbase6Error(GetPlainDriver, FStatusVector, lcDisconnect);
   end;
 
-  if FHandle <> nil then
+  if FHandle <> 0 then
   begin
     GetPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
-    FHandle := nil;
+    FHandle := 0;
     CheckInterbase6Error(GetPlainDriver, FStatusVector, lcDisconnect);
   end;
 
@@ -301,12 +301,12 @@ begin
   if Closed then
      Exit;
 
-  if FTrHandle <> nil then
+  if FTrHandle <> 0 then
   begin
     if FHardCommit then
     begin
       GetPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
-      FTrHandle := nil;
+      FTrHandle := 0;
     end
     else
       GetPlainDriver.isc_commit_retaining(@FStatusVector, @FTrHandle);
@@ -434,7 +434,7 @@ end;
 }
 function TZInterbase6Connection.GetTrHandle: PISC_TR_HANDLE;
 begin
-  if (FHardCommit and (FTrHandle = nil)) then
+  if (FHardCommit and (FTrHandle = 0)) then
     StartTransaction;
   Result := @FTrHandle;
 end;
@@ -477,7 +477,7 @@ begin
     end;
 
     { Connect to Interbase6 database. }
-    FHandle := nil;
+    FHandle := 0;
     GetPlainDriver.isc_attach_database(@FStatusVector, StrLen(DBName), DBName,
         @FHandle, FDPBLength, DPB);
 
@@ -601,12 +601,12 @@ end;
 }
 procedure TZInterbase6Connection.Rollback;
 begin
-  if FTrHandle <> nil then
+  if FTrHandle <> 0 then
   begin
     if FHardCommit then
     begin
       GetPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle);
-      FTrHandle := nil;
+      FTrHandle := 0;
     end
     else
       GetPlainDriver.isc_rollback_retaining(@FStatusVector, @FTrHandle);

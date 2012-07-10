@@ -192,7 +192,7 @@ var
   StatementType: TZIbSqlStatementType;
   iError : Integer; //For closing the database //AVZ
 begin
-  StmtHandle := nil;
+  StmtHandle := 0;
   iError := 0;
   Self.SSQL := SQL; //preprepares SQL and sets AnsiSQL(ASQL)
   with FIBConnection do
@@ -264,7 +264,7 @@ var
   StatementType: TZIbSqlStatementType;
 begin
   Result := -1;
-  StmtHandle := nil;
+  StmtHandle := 0;
   with FIBConnection do
   begin
     try
@@ -331,7 +331,7 @@ var
   StmtHandle: TISC_STMT_HANDLE;
   StatementType: TZIbSqlStatementType;
 begin
-  StmtHandle := nil;
+  StmtHandle := 0;
   with FIBConnection do
   begin
     try
@@ -573,7 +573,7 @@ end;
 
 procedure TZInterbase6PreparedStatement.Prepare;
 begin
-  StmtHandle := nil;
+  StmtHandle := 0;
   with FIBConnection do
   begin
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
@@ -783,7 +783,7 @@ begin
         //The cursor will be already closed for exec2
         if (Pos('ExecProc', String(CursorName)) <> 0) then
         begin
-          StmtHandle := nil;
+          StmtHandle := 0;
         end;
 
         FreeStatement(GetPlainDriver, StmtHandle, DSQL_CLOSE); //AVZ
@@ -945,7 +945,7 @@ var
   StatementType: TZIbSqlStatementType;
 begin
   Result := False;
-  StmtHandle := nil;
+  StmtHandle := 0;
   with FIBConnection do
   begin
     TrimInParameters;
@@ -1033,7 +1033,7 @@ var
   StmtHandle: TISC_STMT_HANDLE;
   StatementType: TZIbSqlStatementType;
 begin
-  StmtHandle := nil;
+  StmtHandle := 0;
 
   with FIBConnection do
   begin
@@ -1126,7 +1126,7 @@ var
   StatementType: TZIbSqlStatementType;
 begin
 //  Result := -1;
-  StmtHandle := nil;
+  StmtHandle := 0;
 
   with FIBConnection do
   begin
