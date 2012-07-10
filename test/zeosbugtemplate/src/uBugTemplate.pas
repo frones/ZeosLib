@@ -1,21 +1,28 @@
 unit uBugTemplate;
 
+{$IFDEF FPC}
+  {$MODE Delphi}
+{$ENDIF}
+
 interface
 
 uses
+  ZAbstractRODataset, ZAbstractDataset, ZDataset,
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ZConnection, DB, ZAbstractRODataset,
-  ZAbstractDataset, ZDataset;
+  Dialogs, StdCtrls, ZConnection, ZSqlMonitor, DB;
 
 type
+
+  { TfrmBugTemplate }
+
   TfrmBugTemplate = class(TForm)
     memProgress: TMemo;
     edtBugTitle: TEdit;
     btnRunMe: TButton;
     btnClose: TButton;
-    ZQuery1: TZQuery;
     procedure btnRunMeClick(Sender: TObject);
     procedure btnCloseClick(Sender: TObject);
+    procedure ZSQLMonitorLogTrace(Sender: TObject; Event: TZLoggingEvent);
   private
     { Private declarations }
   public
@@ -30,23 +37,31 @@ var
 
 implementation
 
-{$R *.dfm}
+{$IFNDEF FPC}
+  {$R *.dfm}
+{$ELSE}
+  {$R *.lfm}
+{$ENDIF}
 
 //Path to where you have Zeos downloaded, please set in project options -> directories / conditionals -> Search Path
 { Here below for easy replacement
   c:\Temp\zeos-testing\src\component;c:\Temp\zeos-testing\src\plain;c:\Temp\zeos-testing\src\core;c:\Temp\zeos-testing\src\dbc;c:\Temp\zeos-testing\src\parsesql
 }
 
-
-
 procedure TfrmBugTemplate.btnCloseClick(Sender: TObject);
 begin
   Close;
 end;
 
+procedure TfrmBugTemplate.ZSQLMonitorLogTrace(Sender: TObject;     Event: TZLoggingEvent);
+begin
+  Log (Event.Message);
+end;
+
 procedure TfrmBugTemplate.btnRunMeClick(Sender: TObject);
 var
   Connection : TZConnection;
+  Monitor : TZSQLMonitor;
   Query : TZQuery;
 
 begin
@@ -55,6 +70,10 @@ begin
 
   //Create the Database Object
   Connection := TZConnection.Create(Self);
+  Monitor := TZSQLMonitor.Create(Self);
+  Monitor.OnLogTrace := ZSQLMonitorLogTrace;
+  Monitor.Active := True;
+  
   try
     //Try do some stuff - catch errors
     try
@@ -171,6 +190,7 @@ begin
     end;
   finally
     //Free up all the components here
+    Monitor.Free;
     Connection.Free;
   end;
 end;
