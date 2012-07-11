@@ -156,7 +156,7 @@ begin
 end;
 function ByteAt(p: pointer; const Offset: integer): byte;
 begin
-  Result:=pByte(integer(p)+Offset)^;
+  Result:=pByte(NativeUint(p)+Offset)^;
 end;
 
 function FirstByteDiff(p1, p2: pointer; size: longword; out b1, b2: byte): integer;

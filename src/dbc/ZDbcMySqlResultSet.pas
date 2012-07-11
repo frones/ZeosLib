@@ -432,7 +432,7 @@ begin
   ColumnIndex := ColumnIndex - 1;
   LengthPointer := FPlainDriver.FetchLengths(FQueryHandle);
   if LengthPointer <> nil then
-    Length  := PULong(ULong(LengthPointer) + ULong(ColumnIndex) * SizeOf(ULOng))^
+    Length  := PULong(NativeUint(LengthPointer) + ColumnIndex * SizeOf(ULOng))^
   else
     Length := 0;
   Buffer := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);

@@ -203,7 +203,7 @@ type
       bpb_address: PAnsiChar): ISC_STATUS;
     function isc_blob_info(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE; item_list_buffer_length: Short;
-      item_list_buffer: PAnsiChar; result_buffer_length: Short; result_buffer: PAnsiChar): PISC_STATUS;
+      item_list_buffer: PAnsiChar; result_buffer_length: Short; result_buffer: PAnsiChar): ISC_STATUS;
     function isc_close_blob(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE): ISC_STATUS;
     function isc_cancel_blob(status_vector: PISC_STATUS;
@@ -357,7 +357,7 @@ type
       bpb_address: PAnsiChar): ISC_STATUS;
     function isc_blob_info(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE; item_list_buffer_length: Short;
-      item_list_buffer: PAnsiChar; result_buffer_length: Short; result_buffer: PAnsiChar): PISC_STATUS;
+      item_list_buffer: PAnsiChar; result_buffer_length: Short; result_buffer: PAnsiChar): ISC_STATUS;
     function isc_close_blob(status_vector: PISC_STATUS;
       blob_handle: PISC_BLOB_HANDLE): ISC_STATUS;
     function isc_cancel_blob(status_vector: PISC_STATUS;
@@ -728,11 +728,11 @@ end;
 function TZFirebirdBaseDriver.isc_blob_info(status_vector: PISC_STATUS;
   blob_handle: PISC_BLOB_HANDLE; item_list_buffer_length: Short;
   item_list_buffer: PAnsiChar; result_buffer_length: Short;
-  result_buffer: PAnsiChar): PISC_STATUS;
+  result_buffer: PAnsiChar): ISC_STATUS;
 begin
-  Result := PISC_STATUS(FIREBIRD_API.isc_blob_info(status_vector, blob_handle,
+  Result :=FIREBIRD_API.isc_blob_info(status_vector, blob_handle,
     item_list_buffer_length, item_list_buffer, result_buffer_length,
-    result_buffer));
+    result_buffer);
 end;
 
 function TZFirebirdBaseDriver.isc_cancel_blob(status_vector: PISC_STATUS;

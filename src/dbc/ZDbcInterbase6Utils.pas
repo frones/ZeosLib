@@ -1149,8 +1149,8 @@ begin
   Items[2] := AnsiChar(isc_info_blob_total_length);
   Items[3] := AnsiChar(isc_info_blob_type);
 
-  if integer(PlainDriver.isc_blob_info(@StatusVector, @BlobHandle, 4, @items[0],
-    SizeOf(Results), @Results[0])) > 0 then
+  if PlainDriver.isc_blob_info(@StatusVector, @BlobHandle, 4, @items[0],
+    SizeOf(Results), @Results[0]) > 0 then
   CheckInterbase6Error(PlainDriver, StatusVector);
 
   while (I < SizeOf(Results)) and (Results[I] <> AnsiChar(isc_info_end)) do
@@ -3234,4 +3234,4 @@ begin
 end;
 
 
-end.
+end.
