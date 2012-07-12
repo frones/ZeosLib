@@ -54,6 +54,9 @@ unit ZTestBdePerformance;
 interface
 
 uses TestFramework, SysUtils, Classes,
+{$IFDEF WIN64}
+  {$DEFINE EXCLUDE_BDE_TEST}
+{$ENDIF}
 {$IFNDEF EXCLUDE_BDE_TEST}
   DB, DbTables,
 {$ENDIF}
