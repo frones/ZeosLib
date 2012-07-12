@@ -39,6 +39,9 @@
 			<Projects Include="ZTestBugReport.dproj">
 				<Dependencies/>
 			</Projects>
+			<Projects Include="ZTestPerformance.dproj">
+				<Dependencies/>
+			</Projects>
 		</ItemGroup>
 		<ProjectExtensions>
 			<Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -157,14 +160,23 @@
 		<Target Name="ZTestBugReport:Make">
 			<MSBuild Projects="ZTestBugReport.dproj" Targets="Make"/>
 		</Target>
+		<Target Name="ZTestPerformance">
+			<MSBuild Projects="ZTestPerformance.dproj"/>
+		</Target>
+		<Target Name="ZTestPerformance:Clean">
+			<MSBuild Projects="ZTestPerformance.dproj" Targets="Clean"/>
+		</Target>
+		<Target Name="ZTestPerformance:Make">
+			<MSBuild Projects="ZTestPerformance.dproj" Targets="Make"/>
+		</Target>
 		<Target Name="Build">
-			<CallTarget Targets="ZCore;ZParseSql;ZPlain;ZDbc;ZComponent;ZComponentDesign;ZTestFramework;ZTestCoreAll;ZTestParseSqlAll;ZTestDbcAll;ZTestComponentAll;ZTestBugReport"/>
+			<CallTarget Targets="ZCore;ZParseSql;ZPlain;ZDbc;ZComponent;ZComponentDesign;ZTestFramework;ZTestCoreAll;ZTestParseSqlAll;ZTestDbcAll;ZTestComponentAll;ZTestBugReport;ZTestPerformance"/>
 		</Target>
 		<Target Name="Clean">
-			<CallTarget Targets="ZCore:Clean;ZParseSql:Clean;ZPlain:Clean;ZDbc:Clean;ZComponent:Clean;ZComponentDesign:Clean;ZTestFramework:Clean;ZTestCoreAll:Clean;ZTestParseSqlAll:Clean;ZTestDbcAll:Clean;ZTestComponentAll:Clean;ZTestBugReport:Clean"/>
+			<CallTarget Targets="ZCore:Clean;ZParseSql:Clean;ZPlain:Clean;ZDbc:Clean;ZComponent:Clean;ZComponentDesign:Clean;ZTestFramework:Clean;ZTestCoreAll:Clean;ZTestParseSqlAll:Clean;ZTestDbcAll:Clean;ZTestComponentAll:Clean;ZTestBugReport:Clean;ZTestPerformance:Clean"/>
 		</Target>
 		<Target Name="Make">
-			<CallTarget Targets="ZCore:Make;ZParseSql:Make;ZPlain:Make;ZDbc:Make;ZComponent:Make;ZComponentDesign:Make;ZTestFramework:Make;ZTestCoreAll:Make;ZTestParseSqlAll:Make;ZTestDbcAll:Make;ZTestComponentAll:Make;ZTestBugReport:Make"/>
+			<CallTarget Targets="ZCore:Make;ZParseSql:Make;ZPlain:Make;ZDbc:Make;ZComponent:Make;ZComponentDesign:Make;ZTestFramework:Make;ZTestCoreAll:Make;ZTestParseSqlAll:Make;ZTestDbcAll:Make;ZTestComponentAll:Make;ZTestBugReport:Make;ZTestPerformance:Make"/>
 		</Target>
 		<Import Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')" Project="$(BDS)\Bin\CodeGear.Group.Targets"/>
 	</Project>
