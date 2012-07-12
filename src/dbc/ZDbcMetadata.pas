@@ -1798,7 +1798,7 @@ var
   ColumnInfo: TZColumnInfo;
   ColumnsInfo: TObjectList;
 begin
-  ColumnsInfo := TObjectList.Create;
+  ColumnsInfo := TObjectList.Create(True);
   try
     for I := 0 to High(ColumnsDefs) do
     begin
@@ -1956,7 +1956,7 @@ var
 begin
   Result := nil;
   Metadata := ResultSet.GetMetadata;
-  ColumnsInfo := TObjectList.Create;
+  ColumnsInfo := TObjectList.Create(True);
   try
     for I := 1 to Metadata.GetColumnCount do
     begin
@@ -1987,7 +1987,6 @@ end;
 }
 function TZAbstractDatabaseMetadata.GetURL: string;
 begin
-  //Result := FUrl;
   Result := GetURLString;
 end;
 

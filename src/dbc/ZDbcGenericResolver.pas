@@ -210,9 +210,9 @@ begin
   FDatabaseMetadata := Statement.GetConnection.GetMetadata;
   FIdentifierConvertor := FDatabaseMetadata.GetIdentifierConvertor;
 
-  FInsertColumns := TObjectList.Create;
-  FWhereColumns := TObjectList.Create;
-  FUpdateColumns := TObjectList.Create;
+  FInsertColumns := TObjectList.Create(True);
+  FWhereColumns := TObjectList.Create(True);
+  FUpdateColumns := TObjectList.Create(True);
 
   FCalcDefaults := StrToBoolEx(DefineStatementParameter(Statement,
     'defaults', 'true'));
@@ -822,7 +822,7 @@ begin
     and (OldRowAccessor.RowBuffer.UpdateType = utInserted) then
     Exit;
 
-  SQLParams := TObjectList.Create;
+  SQLParams := TObjectList.Create(True);
   try
     case UpdateType of
       utInserted:
@@ -903,7 +903,7 @@ begin
   if not FCalcDefaults then
      Exit;
 
-  SQLParams := TObjectList.Create;
+  SQLParams := TObjectList.Create(True);
   try
     DefineCalcColumns(SQLParams, RowAccessor);
     SQL := FormCalculateStatement(SQLParams);
