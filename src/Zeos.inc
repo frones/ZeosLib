@@ -57,6 +57,7 @@
  {$DEFINE WITH_WIDEMEMO}        // Have WIDEMEMO,  For Delphi we turn these off if not applicable
  {$DEFINE WITH_FTWIDESTRING}    // Have ftwidestring, For Delphi we turn these off if not applicable
  {$DEFINE WITH_WIDECONTROLS}
+ {$DEFINE WITH_DBTABLES}        // Have the BDE DBTables Unit
 {$ENDIF}
 
 // Compilation directives for Delphi4
@@ -158,6 +159,9 @@
 
 {$IFDEF DELPHI15_UP}
   {$DEFINE WITH_FORMATSETTINGS}
+  {$IFDEF WIN64}
+    {$UNDEF WITH_DBTABLES} //BDE unit DBTables (TestSuites) isn't supported on x64
+  {$ENDIF}
 {$ENDIF}
 
 {$IFDEF BDS4_UP}
