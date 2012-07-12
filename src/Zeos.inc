@@ -169,6 +169,7 @@
   {$DEFINE WITH_PWIDECHAR_TOWIDESTRING} // Able to pass pwidechar to a widestring parameter
   {$DEFINE WITH_IPROVIDERWIDE}          // IProvider -W widestring using interface
   {$DEFINE WITH_WIDESTRUTILS}           // WideStrUtils Unit.
+  {$DEFINE WITH_REPORTMEMORYLEAKSONSHUTDOWN} //ReportMemoryLeaksOnShutdown property does exists (testsuites)
 {$ENDIF}
 
 {$IFDEF VER150BELOW}
