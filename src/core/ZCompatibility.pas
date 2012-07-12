@@ -131,11 +131,11 @@ function AnsiProperCase(const S: string; const WordDelims: TSysCharSet): string;
 {$IFDEF WINDOWS}
 	const SharedSuffix='.dll';
 {$ELSE}
-  {$IFDEF LINUX}
-  const SharedSuffix='.so';
+  {$IFDEF DARWIN}
+  const SharedSuffix='.dylib';
   {$ELSE}
-    {$IFDEF DARWIN}
-      const SharedSuffix='.dylib';
+    {$IFDEF UNIX}
+      const SharedSuffix='.so';
     {$ELSE}
       const SharedSuffix='.dll'; //Delphi
     {$ENDIF}
