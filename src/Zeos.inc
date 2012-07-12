@@ -313,7 +313,7 @@
 // A large database may have many tables, colums and/or procedures!!!
 // Therefore there is the ability to show a warning
 // before retrieving a list of these database objects
-// {$DEFINE SHOW_WARNING}
+{.$DEFINE SHOW_WARNING}
 
 // Use libfbclient.so under linux
 // and not libfbembed.so when Firebird 1.5.2 is used under linux
@@ -323,16 +323,12 @@
 // Uncomment it when you will use SynEdit instead of a MemoEdit.
 // The SynEdit component must be installed on your system.
 // You can get SynEdit at http://synedit.sourceforge.net/
-//{$DEFINE USE_SYNEDIT}
+{.$DEFINE USE_SYNEDIT}
 
 // Compile test applications with a graphical user interface (GUI)
 // Comment this definition if you want to compile console test applications
 {.$DEFINE TESTGUI}
 
-//PATCH TO DO NO METADATALOADING / UNTESTED HIGH RISK
-{.$DEFINE FOSNOMETA}
-
 //Patches by EgonHugeist
-
 {.$DEFINE WITH_CHAR_CONTROL} //Disables/Enables the CharControl widget
 

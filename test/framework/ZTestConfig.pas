@@ -338,6 +338,13 @@ begin
     MemCheck.MemCheckLogFileName := FMemCheckLogFile;
     MemCheck.MemChk;
   end;
+{$ELSE}
+  {$IFDEF WITH_REPORTMEMORYLEAKSONSHUTDOWN}
+  if FEnableMemCheck then
+    ReportMemoryLeaksOnShutdown := DebugHook <> 0
+  else
+    ReportMemoryLeaksOnShutdown := False;
+  {$ENDIF}
 {$ENDIF}
 end;
 
