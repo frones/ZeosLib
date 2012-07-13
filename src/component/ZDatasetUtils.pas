@@ -377,7 +377,7 @@ var
   Current: TField;
   ColumnInfo: TZColumnInfo;
 begin
-  Result := TObjectList.Create;
+  Result := TObjectList.Create(True);
   for I := 0 to Fields.Count - 1 do
   begin
     Current := Fields[I];

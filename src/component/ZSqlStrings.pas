@@ -200,6 +200,7 @@ destructor TZSQLStrings.Destroy;
 begin
   FreeAndNil(FParams);
   FreeAndNil(FStatements);
+  FDataSet := nil;
   inherited Destroy;
 end;
 

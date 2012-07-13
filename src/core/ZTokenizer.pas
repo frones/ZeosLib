@@ -997,7 +997,7 @@ begin
     else
          Break;
   end;
-
+  FParent := nil;
   inherited Destroy;
 end;
 
