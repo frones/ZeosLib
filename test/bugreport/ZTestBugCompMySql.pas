@@ -1612,16 +1612,13 @@ begin
     Query.Open;
     CheckEquals(1, Query.RecordCount);
     //Client_Character_set sets column-type!!!!
-    {$IFNDEF FPC}
-    if Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] then
-      {$IFNDEF VER150BELOW}
+    if ( Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] )
+     and Connection.UTF8StringsAsWideField then
+    {$IFDEF WITH_WIDEMEMO}
       CheckEquals(Ord(ftWideMemo), Ord(Query.Fields[0].DataType))
     else
-      {$ENDIF}
-      CheckEquals(Ord(ftMemo), Ord(Query.Fields[0].DataType));
-    {$ELSE}
-    CheckEquals(Ord(ftMemo), Ord(Query.Fields[0].DataType));
     {$ENDIF}
+      CheckEquals(Ord(ftMemo), Ord(Query.Fields[0].DataType));
     CheckEquals('', Query.Fields[0].AsString);
     CheckEquals(False, Query.Fields[0].IsNull);
 
