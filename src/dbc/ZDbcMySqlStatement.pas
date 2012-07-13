@@ -453,7 +453,7 @@ var
   Value: TZVariant;
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
-  TempStream: TStream;
+  TempStream,TempStreamIn: TStream;
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
 begin
   TempBytes := nil;
@@ -523,7 +523,9 @@ begin
             if (GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) and
               ( InParamTypes[ParamIndex] in [stAsciiStream, stUnicodeStream] ) then
             begin
-              TempStream := GetValidatedUnicodeStream(TempBlob.GetStream);
+              TempStreamIn:=TempBlob.GetStream;
+              TempStream := GetValidatedUnicodeStream(TempStreamIn);
+              TempStreamIn.Free;
               TempBlob.SetStream(TempStream);
               TempStream.Free;
             end; //could be equal valid for unicode if the user reads the Stream as ftMemo

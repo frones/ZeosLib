@@ -393,7 +393,7 @@ var
   TempDate: TDateTime;
   TempBlob: IZBlob;
   WriteTempBlob: IZOracleBlob;
-  TempStream: TStream;
+  TempStream,TempStreamIn: TStream;
   Year, Month, Day, Hour, Min, Sec, MSec: Word;
   OracleConnection: IZOracleConnection;
 begin
@@ -455,7 +455,11 @@ begin
           begin
             TempBlob := DefVarManager.GetAsInterface(Values[I]) as IZBlob;
             if (CurrentVar.TypeCode = SQLT_CLOB) and (Connection.GetEncoding = ceUTF8) then
-              TempStream := ZDbcUtils.GetValidatedUnicodeStream(TempBlob.GetStream)
+              begin
+              TempStreamIn:=TempBlob.GetStream;
+              TempStream := ZDbcUtils.GetValidatedUnicodeStream(TempStreamIn);
+              TempStreamIn.Free;
+              end
             else
               TempStream := TempBlob.GetStream;
 

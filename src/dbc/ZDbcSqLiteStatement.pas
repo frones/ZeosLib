@@ -326,7 +326,7 @@ var
   Value: TZVariant;
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
-  TempStream: TStream;
+  TempStream,TempStreamIn: TStream;
 begin
   TempBytes := nil;
   if InParamCount <= ParamIndex then
@@ -366,7 +366,9 @@ begin
           if (InParamTypes[ParamIndex] in [stAsciiStream, stUnicodeStream]) then
             if Self.GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
             begin
-              TempStream := GetValidatedUnicodeStream(TempBlob.GetStream);
+              TempStreamIn:=TempBlob.GetStream;
+              TempStream := GetValidatedUnicodeStream(TempStreamIn);
+              TempStreamIn.Free;
               TempBlob.SetStream(TempStream);
               TempStream.Free;
             end;
