@@ -1091,7 +1091,7 @@ begin
         ParamSqlData.UpdateString(I,
           PlainDriver.ZPlainString(SoftVarManager.GetAsString(InParamValues[I]), Encoding));
       stUnicodeString:
-        if Ecoding = ceAnsi then
+        if (Encoding = ceAnsi) then
           ParamSqlData.UpdateString(I, AnsiString(SoftVarManager.GetAsUnicodeString(InParamValues[I])))
         else
           ParamSqlData.UpdateString(I, UTF8Encode(SoftVarManager.GetAsUnicodeString(InParamValues[I])));
@@ -1819,7 +1819,7 @@ begin
     case Code of
       SQL_TEXT :
         begin
-          if sqllen = 0 and (Str <> '') then //Manits: #0000249/pktfag
+          if (sqllen = 0) and (Str <> '') then //Manits: #0000249/pktfag
             GetMem(sqldata, Len)
           else
             IbReAlloc(sqldata, 0, Len + 1);
