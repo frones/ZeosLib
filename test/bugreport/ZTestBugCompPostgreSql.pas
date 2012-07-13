@@ -373,7 +373,6 @@ begin
     Query2.SQL.Text := 'select * from test766053b';
     DSQuery1.DataSet := Query1;
     DSQuery2.DataSet := Query2;
-    LookUp := TDBLookupComboBox.Create(nil);
     LookUp.DataSource := DSQuery1;
     LookUp.ListSource := DSQuery2;
     LookUp.DataField := 'id';

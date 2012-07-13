@@ -63,9 +63,9 @@ const
   WINDOWS_DLL_LOCATION   = 'libpq.dll';
   WINDOWS_DLL7_LOCATION   = 'libpq74.dll';
   WINDOWS_DLL8_LOCATION   = 'libpq81.dll';
-  LINUX_DLL_LOCATION   = 'libpq.so';
-  LINUX_DLL8_LOCATION  = 'libpq.so.4';
-  LINUX_DLL82_LOCATION = 'libpq.so.5';
+  LINUX_DLL_LOCATION   = 'libpq'+SharedSuffix;
+  LINUX_DLL8_LOCATION  = 'libpq'+SharedSuffix+'.4';
+  LINUX_DLL82_LOCATION = 'libpq'+SharedSuffix+'.5';
 
 { Type Lengths }
   NAMEDATALEN  = 32;

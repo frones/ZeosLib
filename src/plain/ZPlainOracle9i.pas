@@ -63,14 +63,14 @@ uses
 {$IFNDEF UNIX}
 //  Windows,
 {$ENDIF}
-  ZPlainLoader;
+  ZPlainLoader,ZCompatibility;
 
 {***************** Plain API types definition ****************}
 
 const
   WINDOWS_DLL_LOCATION = 'oci.dll';
 //  WINDOWS_DLL_LOCATION = 'ora803.dll';
-  LINUX_DLL_LOCATION = 'libclntsh.so';
+  LINUX_DLL_LOCATION = 'libclntsh'+SharedSuffix;
 //  LINUX_DLL_LOCATION = 'libwtc8.so';
 
 type

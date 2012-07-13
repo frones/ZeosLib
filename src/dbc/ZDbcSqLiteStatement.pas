@@ -255,6 +255,8 @@ begin
   ErrorMessage := '';
   SQLTail := '';
   ColumnCount := 0;
+  ColumnValues:=nil;
+  ColumnNames:=nil;
   {$IFDEF DELPHI12_UP}
   ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(AnsiString(UTF8Encode(SQL))), Length(SQL), SQLTail,
     StmtHandle, ErrorMessage);
@@ -284,6 +286,10 @@ begin
   { Processes regular query. }
   else
   begin
+    if assigned(ColumnValues) then
+      Freemem(ColumnValues);
+    if assigned(ColumnNames) then
+      Freemem(ColumnNames);
     Result := False;
     LastUpdateCount := FPlainDriver.Changes(FHandle);
     ErrorCode := FPlainDriver.Finalize(StmtHandle, ErrorMessage);

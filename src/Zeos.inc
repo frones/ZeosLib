@@ -56,6 +56,7 @@
  {$DEFINE WITH_CHECKFIELDCOMPATIBILITY}
  {$DEFINE WITH_WIDEMEMO}        // Have WIDEMEMO,  For Delphi we turn these off if not applicable
  {$DEFINE WITH_FTWIDESTRING}    // Have ftwidestring, For Delphi we turn these off if not applicable
+ {$DEFINE WITH_DBTABLES}        // Have the BDE DBTables Unit
 {$ENDIF}
 
 // Compilation directives for Delphi4
@@ -150,6 +151,9 @@
 
 {$IFDEF DELPHI15_UP}
   {$DEFINE WITH_FORMATSETTINGS}
+  {$IFDEF WIN64}
+    {$UNDEF WITH_DBTABLES} //BDE unit DBTables (TestSuites) isn't supported on x64
+  {$ENDIF}
 {$ENDIF}
 
 {$IFDEF BDS4_UP}
@@ -157,6 +161,7 @@
   {$DEFINE WITH_PWIDECHAR_TOWIDESTRING} // Able to pass pwidechar to a widestring parameter
   {$DEFINE WITH_IPROVIDERWIDE}          // IProvider -W widestring using interface
   {$DEFINE WITH_WIDESTRUTILS}           // WideStrUtils Unit.
+  {$DEFINE WITH_REPORTMEMORYLEAKSONSHUTDOWN} //ReportMemoryLeaksOnShutdown property does exists (testsuites)
 {$ENDIF}
 
 {$IFDEF VER150BELOW}
@@ -300,7 +305,7 @@
 // A large database may have many tables, colums and/or procedures!!!
 // Therefore there is the ability to show a warning
 // before retrieving a list of these database objects
-// {$DEFINE SHOW_WARNING}
+{.$DEFINE SHOW_WARNING}
 
 // Use libfbclient.so under linux
 // and not libfbembed.so when Firebird 1.5.2 is used under linux
@@ -310,7 +315,7 @@
 // Uncomment it when you will use SynEdit instead of a MemoEdit.
 // The SynEdit component must be installed on your system.
 // You can get SynEdit at http://synedit.sourceforge.net/
-//{$DEFINE USE_SYNEDIT}
+{.$DEFINE USE_SYNEDIT}
 
 // Compile test applications with a graphical user interface (GUI)
 // Comment this definition if you want to compile console test applications

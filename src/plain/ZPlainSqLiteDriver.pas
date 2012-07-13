@@ -62,8 +62,8 @@ uses ZClasses, ZCompatibility, ZPlainDriver, SysUtils, classes;
 const
   WINDOWS_DLL_LOCATION = 'sqlite.dll';
   WINDOWS_DLL3_LOCATION = 'sqlite3.dll';
-  LINUX_DLL_LOCATION = 'libsqlite.so';
-  LINUX_DLL3_LOCATION = 'libsqlite3.so';
+  LINUX_DLL_LOCATION = 'libsqlite'+SharedSuffix;
+  LINUX_DLL3_LOCATION = 'libsqlite3'+SharedSuffix;
 
   SQLITE_ISO8859   = 1;
   MASTER_NAME      = 'sqlite_master';
