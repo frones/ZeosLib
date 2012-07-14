@@ -119,7 +119,7 @@ end;
 
 destructor TZAbstractPlainDriver.Destroy;
 begin
-  FLoader.Free;
+  FreeAndNil(FLoader);
   inherited Destroy;
 end;
 

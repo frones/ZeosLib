@@ -854,9 +854,10 @@ begin
         {raise EZSQLException.CreateWithCode(ErrorCode,
           Format('SQL Error: %s. Error Code: %d. %s',
           [ErrorMessage, ErrorCode, ErrorSqlMessage]));}
-       EZSQLWarning.CreateWithCode (ErrorCode,
+        //Ludob EZSQLWarning created but not raised --> leak
+        {EZSQLWarning.CreateWithCode (ErrorCode,
           Format('SQL Error: %s. Error Code: %d. %s',
-          [ErrorMessage, ErrorCode, ErrorSqlMessage])); //AVZ
+          [ErrorMessage, ErrorCode, ErrorSqlMessage])); //AVZ}
         Result := DISCONNECT_ERROR;
       end;
     end;

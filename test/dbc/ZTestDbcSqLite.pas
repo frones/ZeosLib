@@ -162,6 +162,7 @@ begin
 
   Check(not Statement.Execute('UPDATE equipment SET eq_name=eq_name'));
   Check(Statement.Execute('SELECT * FROM equipment WHERE 1=0'));
+  Statement.Close;
 end;
 
 {**

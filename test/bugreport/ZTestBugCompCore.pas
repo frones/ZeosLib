@@ -1530,11 +1530,9 @@ begin
 
   try
     Query.Open;
-
     Query.Locate('c_cost', 643.11, []);
-    Check(Query.Found, 'Query.Locate');
+    Check(Query.Found, 'Query.Locate 643.11');
     CheckEquals(3, Query.RecNo);
-
     Query.Close;
   finally
     Query.Free;

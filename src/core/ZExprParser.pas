@@ -179,10 +179,11 @@ end;
 }
 destructor TZExpressionParser.Destroy;
 begin
+  FreeAndNil(FInitialTokens);
+  FreeAndNil(FResultTokens);
+  FreeAndNil(FVariables);
+  FTokenizer := Nil;
   inherited Destroy;
-  FInitialTokens.Free;
-  FResultTokens.Free;
-  FVariables.Free;
 end;
 
 {**

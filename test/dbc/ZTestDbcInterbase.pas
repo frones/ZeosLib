@@ -180,6 +180,7 @@ begin
 
   Check(not Statement.Execute('UPDATE equipment SET eq_name=eq_name'));
   Check(Statement.Execute('SELECT * FROM equipment'));
+  Statement.close;
 end;
 
 procedure TZTestDbcInterbaseCase.TestRegularResultSet;

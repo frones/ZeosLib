@@ -376,7 +376,7 @@ var
   Current: TField;
   ColumnInfo: TZColumnInfo;
 begin
-  Result := TObjectList.Create;
+  Result := TObjectList.Create(True);
   for I := 0 to Fields.Count - 1 do
   begin
     Current := Fields[I];
@@ -1062,7 +1062,9 @@ begin
             Result := KeyValues[I].VInteger =
               ResultSet.GetLong(ColumnIndex);
           end;
-        stFloat,
+        stFloat:
+            Result := Abs(KeyValues[I].VFloat -
+              ResultSet.GetBigDecimal(ColumnIndex)) < FLOAT_COMPARE_PRECISION_SINGLE;
         stDouble,
         stBigDecimal:
           begin
