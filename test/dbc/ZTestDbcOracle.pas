@@ -533,7 +533,11 @@ begin
     OutBytes := ResultSet.GetBytes(2);
     CheckEquals(TestSize, Length(OutBytes), 'Wrong blob bytes length');
     CheckEqualsMem(InStm.Memory, @OutBytes[0], TestSize, 'Wrong blob content (byte array)');
+    {$IFDEF DELPHI12_UP}
+    OutStr := ResultSet.GetAnsiString(2);
+    {$ELSE}
     OutStr := ResultSet.GetString(2);
+    {$ENDIF}
     CheckEquals(TestSize, Length(OutStr), 'Wrong blob string length');
     CheckEqualsMem(InStm.Memory, Pointer(OutStr), TestSize, 'Wrong blob content (string)');
   finally

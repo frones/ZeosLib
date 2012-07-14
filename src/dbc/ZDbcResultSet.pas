@@ -163,6 +163,9 @@ type
     function IsNullByName(const ColumnName: string): Boolean; virtual;
     function GetPCharByName(const ColumnName: string): PChar; virtual;
     function GetStringByName(const ColumnName: string): String; virtual;
+    {$IFDEF DELPHI12_UP}
+    function GetAnsiStringByName(const ColumnName: string): AnsiString;
+    {$ENDIF}
     function GetUnicodeStringByName(const ColumnName: string): WideString; virtual;
     function GetBooleanByName(const ColumnName: string): Boolean; virtual;
     function GetByteByName(const ColumnName: string): ShortInt; virtual;
@@ -245,6 +248,9 @@ type
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended); virtual;
     procedure UpdatePChar(ColumnIndex: Integer; Value: PChar); virtual;
     procedure UpdateString(ColumnIndex: Integer; const Value: String); virtual;
+    {$IFDEF DELPHI12_UP}
+    procedure UpdateAnsiString(ColumnIndex: Integer; const Value: AnsiString);
+    {$ENDIF}
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString); virtual;
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray); virtual;
     procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime); virtual;
@@ -271,6 +277,9 @@ type
     procedure UpdateBigDecimalByName(const ColumnName: string; Value: Extended); virtual;
     procedure UpdatePCharByName(const ColumnName: string; Value: PChar); virtual;
     procedure UpdateStringByName(const ColumnName: string; const Value: String); virtual;
+    {$IFDEF DELPHI12_UP}
+    procedure UpdateAnsiStringByName(const ColumnName: string; const Value: AnsiString);
+    {$ENDIF}
     procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: WideString); virtual;
     procedure UpdateBytesByName(const ColumnName: string; const Value: TByteDynArray); virtual;
     procedure UpdateDateByName(const ColumnName: string; Value: TDateTime); virtual;
@@ -1132,6 +1141,22 @@ function TZAbstractResultSet.GetStringByName(const ColumnName: string): String;
 begin
   Result := GetString(GetColumnIndex(ColumnName));
 end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>String</code> in the Java programming language.
+
+  @param columnName the SQL name of the column
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+{$IFDEF DELPHI12_UP}
+function TZAbstractResultSet.GetAnsiStringByName(const ColumnName: string): AnsiString;
+begin
+  Result := GetAnsiString(GetColumnIndex(ColumnName));
+end;
+{$ENDIF}
 
 {**
   Gets the value of the designated column in the current row
@@ -2061,6 +2086,23 @@ begin
 end;
 
 {**
+  Updates the designated column with a <code>String</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+{$IFDEF DELPHI12_UP}
+procedure TZAbstractResultSet.UpdateAnsiString(ColumnIndex: Integer; const Value: AnsiString);
+begin
+  UpdateString(ColumnIndex, ZDbcString(Value));
+end;
+{$ENDIF}
+
+{**
   Updates the designated column with a <code>WideString</code> value.
   The <code>updateXXX</code> methods are used to update column values in the
   current row or the insert row.  The <code>updateXXX</code> methods do not
@@ -2398,6 +2440,24 @@ procedure TZAbstractResultSet.UpdateStringByName(const ColumnName: string;
 begin
   UpdateString(GetColumnIndex(ColumnName), Value);
 end;
+
+{**
+  Updates the designated column with a <code>String</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnName the name of the column
+  @param x the new column value
+}
+{$IFDEF DELPHI12_UP}
+procedure TZAbstractResultSet.UpdateAnsiStringByName(const ColumnName: string;
+   const Value: AnsiString);
+begin
+  UpdateAnsiString(GetColumnIndex(ColumnName), Value);
+end;
+{$ENDIF}
 
 {**
   Updates the designated column with a <code>WideString</code> value.

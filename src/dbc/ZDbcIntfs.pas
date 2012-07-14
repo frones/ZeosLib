@@ -641,6 +641,9 @@ type
     function IsNull(ColumnIndex: Integer): Boolean;
     function GetPChar(ColumnIndex: Integer): PChar;
     function GetString(ColumnIndex: Integer): String;
+    {$IFDEF DELPHI12_UP}
+    function GetAnsiString(ColumnIndex: Integer): AnsiString;
+    {$ENDIF}
     function GetUnicodeString(ColumnIndex: Integer): WideString;
     function GetBoolean(ColumnIndex: Integer): Boolean;
     function GetByte(ColumnIndex: Integer): ShortInt;
@@ -668,6 +671,9 @@ type
     function IsNullByName(const ColumnName: string): Boolean;
     function GetPCharByName(const ColumnName: string): PChar;
     function GetStringByName(const ColumnName: string): String;
+    {$IFDEF DELPHI12_UP}
+    function GetAnsiStringByName(const ColumnName: string): AnsiString;
+    {$ENDIF}
     function GetUnicodeStringByName(const ColumnName: string): WideString;
     function GetBooleanByName(const ColumnName: string): Boolean;
     function GetByteByName(const ColumnName: string): ShortInt;
@@ -750,6 +756,9 @@ type
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended);
     procedure UpdatePChar(ColumnIndex: Integer; Value: PChar);
     procedure UpdateString(ColumnIndex: Integer; const Value: String);
+    {$IFDEF DELPHI12_UP}
+    procedure UpdateAnsiString(ColumnIndex: Integer; const Value: AnsiString);
+    {$ENDIF}
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString);
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray);
     procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime);
@@ -776,6 +785,9 @@ type
     procedure UpdateBigDecimalByName(const ColumnName: string; Value: Extended);
     procedure UpdatePCharByName(const ColumnName: string; Value: PChar);
     procedure UpdateStringByName(const ColumnName: string; const Value: String);
+    {$IFDEF DELPHI12_UP}
+    procedure UpdateAnsiStringByName(const ColumnName: string; const Value: AnsiString);
+    {$ENDIF}
     procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: WideString);
     procedure UpdateBytesByName(const ColumnName: string; const Value: TByteDynArray);
     procedure UpdateDateByName(const ColumnName: string; Value: TDateTime);
