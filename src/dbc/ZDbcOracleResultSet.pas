@@ -1092,7 +1092,6 @@ begin
         FreeMem(Buf);
         raise;
       end;
-      ReallocMem(Buf, Offset);
     finally
       { Closes large object or file. }
       Status := FPlainDriver.LobClose(Connection.GetContextHandle,
