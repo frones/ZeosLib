@@ -710,6 +710,8 @@ begin
     Close;
   FreeAndNil(FMetadata);
   FURL.Free;
+  FIZPlainDriver := nil;
+  FDriver := nil;
   inherited Destroy;
 end;
 

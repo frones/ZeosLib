@@ -87,6 +87,7 @@ type
     procedure Test815861;
     procedure Test933623;
     procedure Test1014416;
+    procedure Test_Mantis0000148;
   end;
 
 implementation
@@ -718,6 +719,24 @@ begin
   CheckEquals('08:00:2b:01:02:03', ResultSet.GetString(3));
 
   Check(not ResultSet.Next);
+  Statement.Close;
+end;
+
+{ http://zeosbugs.firmos.at/view.php?id=148
+	0000148: Access violation in TZRowAccessor.GetBlob
+can't open table pg_class
+}
+procedure TZTestDbcPostgreSQLBugReport.Test_Mantis0000148;
+var
+  ResultSet: IZResultSet;
+  Statement: IZStatement;
+  Blob: IZBlob;
+begin
+  Statement := Connection.CreateStatement;
+  ResultSet := Statement.ExecuteQuery('select relacl from pg_class;');
+  ///
+  Blob := ResultSet.GetBlob(1);
+  Statement.Close;
 end;
 
 initialization
