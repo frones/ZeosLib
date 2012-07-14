@@ -1531,13 +1531,9 @@ begin
 
   try
     Query.Open;
-    //EgonHugeist: Postgre assums single precision for Float4 type which has rounding issues
-    //if Pos('postgre', Connection.Protocol) = 0 then
-    begin
-      Query.Locate('c_cost', 643.11, []);
-      Check(Query.Found, 'Query.Locate 643.11');
-      CheckEquals(3, Query.RecNo);
-    end;
+    Query.Locate('c_cost', 643.11, []);
+    Check(Query.Found, 'Query.Locate 643.11');
+    CheckEquals(3, Query.RecNo);
     Query.Close;
   finally
     Query.Free;

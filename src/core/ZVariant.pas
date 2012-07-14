@@ -66,6 +66,7 @@ uses
 const
   {** Precision for float values comparison }
   FLOAT_COMPARE_PRECISION = 1.e-5;
+  FLOAT_COMPARE_PRECISION_SINGLE = 1.5e-5;
 
 type
   {** Defines variant types. }

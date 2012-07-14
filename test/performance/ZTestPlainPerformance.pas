@@ -307,8 +307,9 @@ begin
   Handle := nil;
   PlainDriver.Init(FHandle);
 //  PlainDriver.SetOptions(Handle, MYSQL_OPT_COMPRESS, nil);
-  if PlainDriver.RealConnect(Handle, PChar(HostName),
-    PChar(UserName), PChar(Password), PChar(Database),
+  if PlainDriver.RealConnect(Handle, PAnsiChar(AnsiString(HostName)),
+    PAnsiChar(AnsiString(UserName)), PAnsiChar(AnsiString(Password)),
+    PAnsiChar(AnsiString(Database)),
     Port, nil, _CLIENT_CONNECT_WITH_DB) = nil then
   Fail('Can not connect to MySql server');
 end;
@@ -331,7 +332,7 @@ end;
 }
 procedure TZPlainMySQLPerformanceTestCase.ExecuteUpdate(Query: string);
 begin
-  if PlainDriver.ExecQuery(Handle, PChar(Query)) <> 0 then
+  if PlainDriver.ExecQuery(Handle, PAnsiChar(AnsiString(Query))) <> 0 then
     Fail('Fails to execute SQL statement.');
 end;
 
@@ -343,7 +344,7 @@ end;
 function TZPlainMySQLPerformanceTestCase.ExecuteQuery(
   Query: string): PZMySQLResult;
 begin
-  if PlainDriver.ExecQuery(Handle, PChar(Query)) <> 0 then
+  if PlainDriver.ExecQuery(Handle, PAnsiChar(AnsiString(Query))) <> 0 then
     Fail('Fail execute query statement.');
   Result := PlainDriver.StoreResult(Handle);
 end;
@@ -417,7 +418,7 @@ procedure TZPlainMySQLPerformanceTestCase.RunTestFetch;
   var
     LengthPointer: PULong;
     Length: LongInt;
-    Buffer: PChar;
+    Buffer: PAnsiChar;
   begin
     LengthPointer := PlainDriver.FetchLengths(QueryHandle);
     if LengthPointer <> nil then
@@ -518,7 +519,7 @@ begin
     ConnectStr := ConnectStr + ' password=' + Password;
 
   { Connect to PostgreSQL database. }
-  FHandle := FPlainDriver.ConnectDatabase(PChar(ConnectStr));
+  FHandle := FPlainDriver.ConnectDatabase(PAnsiChar(AnsiString(ConnectStr)));
   if CheckPostgreSQLError then
     Fail('Error conenction to database server');
 
@@ -579,7 +580,7 @@ end;
 function TZPlainPostgreSQLPerformanceTestCase.ExecuteQuery(
   Query: string): PZPostgreSQLResult;
 begin
-  Result := FPlainDriver.ExecuteQuery(FHandle, PChar(Query));
+  Result := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(AnsiString(Query)));
   if CheckPostgreSQLError then
     Fail('Error sql query execution');
 end;
@@ -591,7 +592,7 @@ end;
 procedure TZPlainPostgreSQLPerformanceTestCase.ExecuteUpdate(
   Query: string);
 begin
-  QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PChar(Query));
+  QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsiChar(AnsiString(Query)));
   if CheckPostgreSQLError then
     Fail('Error sql update excution');
   FPlainDriver.Clear(FQueryHandle);
@@ -740,7 +741,7 @@ end;
 { TZPlainInterbase6SQLPerformanceTestCase }
 procedure TZPlainInterbase6SQLPerformanceTestCase.CheckInterbase6Error(Sql: string = '');
 var
-  Msg: array[0..1024] of Char;
+  Msg: array[0..1024] of AnsiChar;
   PStatusVector: PISC_STATUS;
   ErrorMessage, ErrorSqlMessage: string;
   ErrorCode: LongInt;
@@ -769,10 +770,10 @@ end;
 
 procedure TZPlainInterbase6SQLPerformanceTestCase.Connect;
 var
-  DPB: PChar;
+  DPB: PAnsiChar;
   NewDPB: String;
   FDPBLength: Word;
-  DBName: array[0..512] of Char;
+  DBName: array[0..512] of AnsiChar;
   PTEB: PISC_TEB;
   Params: TStrings;
 begin
@@ -782,13 +783,17 @@ begin
   FStmtHandle := 0;
   Params := TStringList.Create;
 
-  NewDPB := NewDPB + Char(isc_dpb_version1);
-  NewDPB := NewDPB + Char(isc_dpb_user_name) + Char(Length(UserName)) + UserName;
-  NewDPB := NewDPB + Char(isc_dpb_password) + Char(Length(Password)) + Password;
+  NewDPB := NewDPB + AnsiChar(isc_dpb_version1);
+  NewDPB := NewDPB + AnsiChar(isc_dpb_user_name) + AnsiChar(Length(UserName)) + AnsiString(UserName);
+  NewDPB := NewDPB + AnsiChar(isc_dpb_password) + AnsiChar(Length(Password)) + AnsiString(Password);
   FDPBLength := 1;
   Inc(FDPBLength, 2 + Length(UserName));
   Inc(FDPBLength, 2 + Length(Password));
+  {$IFDEF DELPHI12_UP}
+  DPB := AnsiStrAlloc(FDPBLength +1);
+  {$ELSE}
   DPB := StrAlloc(FDPBLength +1);
+  {$ENDIF}
   StrPCopy(DPB, NewDPB);
 
   if HostName = '' then

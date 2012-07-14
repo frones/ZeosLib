@@ -356,7 +356,7 @@ begin
   begin
     Check(Next);
     CheckEquals(1, ResultSet.GetInt(1));
-    if (Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]) then
+    if not (Connection.GetEncoding = ceAnsi) then
       if Connection.UTF8StringAsWideField then
         CheckEquals('Абракадабра', ResultSet.GetString(2))
       else
@@ -366,7 +366,7 @@ begin
 
     MoveToInsertRow;
     UpdateIntByName('id', 2);
-    if Connection.UTF8StringAsWideField then
+    if Connection.UTF8StringAsWideField or (Connection.GetEncoding = ceAnsi)then
       UpdateStringByName('fld', '\Победа\')
     else
       UpdateStringByName('fld', UTF8Encode(WideString('\Победа\')));

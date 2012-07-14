@@ -1072,14 +1072,13 @@ begin
       else
       begin
         AValue1 := AnsiString(KeyValues[I].VString);
-        AValue2 := AnsiString(ResultSet.GetString(ColumnIndex));
+        if ResultSet.GetClientCodePage^.Encoding = ceAnsi then
+          AValue2 := AnsiString(ResultSet.GetString(ColumnIndex))
+        else
+          AValue2 := AnsiString({$IFNDEF DELPHI12_UP}UTF8ToAnsi{$ENDIF}(ResultSet.GetString(ColumnIndex)));
 
         if CaseInsensitive then
-          {$IFDEF LAZARUSUTF8HACK}
-          AValue2 := AnsiUpperCase(Utf8ToAnsi(AValue2));
-          {$ELSE}
           AValue2 := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiUpperCase(AValue2);
-          {$ENDIF}
         Result := AnsiStrLComp(PAnsiChar(AValue2), PAnsiChar(AValue1), Length(AValue1)) = 0;
       end;
 
@@ -1100,7 +1099,9 @@ begin
             Result := KeyValues[I].VInteger =
               ResultSet.GetLong(ColumnIndex);
           end;
-        stFloat,
+        stFloat:
+            Result := Abs(KeyValues[I].VFloat -
+              ResultSet.GetBigDecimal(ColumnIndex)) < FLOAT_COMPARE_PRECISION_SINGLE;
         stDouble,
         stBigDecimal:
           begin
