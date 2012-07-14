@@ -83,6 +83,7 @@ type
     procedure TestDomainValues;
     procedure TestStoredprocedures;
     procedure TestMsec;
+    procedure TestEmptyStrings;
   end;
 
 implementation
@@ -560,6 +561,30 @@ begin
     LongTimeFormat := OldTimeFormat; 
     ResultSet.Close; 
     Statement.Close; 
+end;
+
+// There should be no
+// SQL Error:  Dynamic SQL Error SQL error code = -804 Incorrect values within SQLDA structure.
+procedure TZTestDbcInterbaseCase.TestEmptyStrings;
+const
+  CSQLd = 'delete from department where dep_id in (4,5)';
+  CSQLi = 'insert into department (dep_id, dep_shname) values (?,?)';
+var
+  PreparedStatement: IZPreparedStatement;
+begin
+  PreparedStatement := Connection.PrepareStatement(CSQLd);
+  CheckNotNull(PreparedStatement);
+  PreparedStatement.ExecutePrepared;
+  PreparedStatement.Close;
+  PreparedStatement := Connection.PrepareStatement(CSQLi);
+  CheckNotNull(PreparedStatement);
+  PreparedStatement.SetInt(1, 4);
+  PreparedStatement.SetString(2, '');
+  PreparedStatement.ExecuteUpdatePrepared;
+  PreparedStatement.SetInt(1, 5);
+  PreparedStatement.SetString(2, '');
+  PreparedStatement.ExecuteUpdatePrepared;
+  PreparedStatement.Close;
 end;
 
 initialization
