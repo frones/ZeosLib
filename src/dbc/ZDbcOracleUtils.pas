@@ -492,7 +492,7 @@ var
 begin
   for I := 1 to Variables.ActualNum do
   begin
-    CurrentVar := @Variables.Variables[I + 1];
+    CurrentVar := @Variables.Variables[I];
     CurrentVar.Blob := nil;
     CurrentVar.Data := CurrentVar.DupData;
   end;
