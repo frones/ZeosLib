@@ -154,6 +154,16 @@ function ToLikeString(const Value: string): string;
 }
 function GetValidatedUnicodeStream(const Stream: TStream): TStream;
 
+{**
+  GetSQLHexString returns a valid x'..' database understandable String from
+    binary data
+  @param Value the ansistring-pointer to the binary data
+  @param Len then length of the binary Data
+  @param ODBC a boolean if output result should be with a starting 0x...
+  @returns a valid hex formated unicode-safe string
+}
+function GetSQLHexString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): String;
+
 implementation
 
 uses ZMessages, ZSysUtils{$IFDEF WITH_WIDESTRUTILS},WideStrUtils{$ENDIF};
@@ -496,6 +506,27 @@ begin
   end
   else
     Result := nil;
+end;
+
+{**
+  GetSQLHexString returns a valid x'..' database understandable String from
+    binary data
+  @param Value the ansistring-pointer to the binary data
+  @param Length then length of the binary Data
+  @param ODBC a boolean if output result should be with a starting 0x...
+  @returns a valid hex formated unicode-safe string
+}
+function GetSQLHexString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): String;
+var
+  HexVal: AnsiString;
+begin
+  SetLength(HexVal,Len * 2 );
+  BinToHex(Value, PAnsiChar(HexVal), Len);
+
+  if ODBC then
+    Result := '0x'#39+String(HexVal)
+  else
+    Result := 'x'#39+String(HexVal)+#39;
 end;
 
 end.

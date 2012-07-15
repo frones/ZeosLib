@@ -519,7 +519,8 @@ begin
           if not TempBlob.IsEmpty then
           begin
             if InParamTypes[ParamIndex] = stBinaryStream then
-              Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString);
+              //Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString);
+              Result := GetSQLHexString(PAnsiChar(TempBlob.GetString), TempBlob.Length);
             if (GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) and
               ( InParamTypes[ParamIndex] in [stAsciiStream, stUnicodeStream] ) then
             begin

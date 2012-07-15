@@ -595,7 +595,7 @@ begin
     if StartsWith(Value, '''') and EndsWith(Value, '''') then
       Result := Value
     else
-      Result := QuotedStr(Value);
+      Result := AnsiQuotedStr(Value, #39);
 
 end;
 
