@@ -2,9 +2,9 @@ unit ZDbcPooled;
 
 interface
 
-implementation
-
 {$I ZDbc.inc}
+
+implementation
 
 uses
 {$IFNDEF UNIX}
