@@ -494,7 +494,7 @@ var
 begin
   for I := 1 to Variables.ActualNum do
   begin
-    CurrentVar := @Variables.Variables[I + 1];
+    CurrentVar := @Variables.Variables[I];
     CurrentVar.Blob := nil;
     CurrentVar.Data := CurrentVar.DupData;
   end;
@@ -709,9 +709,6 @@ procedure PrepareOracleStatement(PlainDriver: IZOraclePlainDriver;
 var
   Status: Integer;
 begin
-  // setting PrefetchCount to a default of 100 rows
-  // this seems a good default for most queries
-  // TODO : provide a way to override this using a statement.properties line
   PlainDriver.AttrSet(Handle, OCI_HTYPE_STMT, @PrefetchCount, SizeOf(ub4),
     OCI_ATTR_PREFETCH_ROWS, ErrorHandle);
   Status := PlainDriver.StmtPrepare(Handle, ErrorHandle, PAnsiChar(AnsiString(SQL)),

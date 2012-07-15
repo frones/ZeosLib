@@ -952,8 +952,20 @@ begin
   With FPColumnArray^[FAddedColumnCount-1] do
     begin
       length := getMySQLFieldSize(tempbuffertype,display_length);
-      SetLength(buffer,length);
-      is_null := 0;
+      if display_length = 0 then
+      begin
+        is_Null := 1;
+        buffer := nil;
+      end
+      else
+      begin
+        if tempbuffertype in [FIELD_TYPE_BLOB,FIELD_TYPE_STRING] then
+        //ludob: mysql adds terminating #0 on top of data. Avoid buffer overrun.
+          SetLength(buffer,length+1)
+        else
+          SetLength(buffer,length);
+        is_null := 0;
+      end;
     end;
   Case FDriverVersion of
     40100..40199 : With FBindArray41[FAddedColumnCount-1] do

@@ -327,8 +327,11 @@ var
   TempURL:  TZURL;
 begin
   TempURL := TZURL.Create(Url, Info);
-  Result := Connect(TempURL);
-  TempUrl.Free;
+  try
+    Result := Connect(TempURL);
+  finally
+    TempUrl.Free;
+  end;
 end;
 {$WARNINGS ON}
 
@@ -614,6 +617,8 @@ begin
     Close;
   FMetadata.Free;
   FURL.Free;
+  FIZPlainDriver := nil;
+  FDriver := nil;
   inherited Destroy;
 end;
 

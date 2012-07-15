@@ -284,8 +284,7 @@ begin
   end
   else if TypeName = 'bpchar' then
     Result := stString
-  else if (TypeName = 'int2vector') or (TypeName = 'oidvector')
-    or (TypeName = '_aclitem') then
+  else if (TypeName = 'int2vector') or (TypeName = 'oidvector') then
     Result := stAsciiStream
   else if (TypeName <> '') and (TypeName[1] = '_') then // ARRAY TYPES
     Result := stAsciiStream
@@ -336,6 +335,7 @@ begin
     1114,1184,702: Result := stTimestamp; { timestamp,timestamptz/abstime. no 'datetime' any more}
     1560,1562: Result := stString; {bit/ bit varying string}
     24: Result := stString; { regproc }
+    1034: Result := stAsciiStream; {aclitem[]}
     17: { bytea }
       begin
         if Connection.IsOidAsBlob then
