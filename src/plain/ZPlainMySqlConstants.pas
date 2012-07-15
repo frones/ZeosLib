@@ -381,6 +381,14 @@ TMYSQL_CLIENT_OPTIONS =
     MYSQL_STMT_FETCH_DONE
   );
 
+  mysql_timestamp_type = (
+    MYSQL_TIMESTAMP_NONE = -2,
+    MYSQL_TIMESTAMP_ERROR = -1,
+    MYSQL_TIMESTAMP_DATE = 0,
+    MYSQL_TIMESTAMP_DATETIME = 1,
+    MYSQL_TIMESTAMP_TIME = 2
+  );
+
   MYSQL_TIME = record
     year:                UInt;
     month:               UInt;
@@ -390,6 +398,8 @@ TMYSQL_CLIENT_OPTIONS =
     second:              UInt;
     second_part:         ULong;
     neg:                 Byte;
+    time_type:           mysql_timestamp_type;
+    padding:             UInt;    //ludob alignment is different? Mysql returns 36 bytes.
   end;
   PMYSQL_TIME = ^MYSQL_TIME;
 
