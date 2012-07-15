@@ -964,7 +964,11 @@ begin
       end
       else
       begin
-        SetLength(buffer,length);
+        if tempbuffertype in [FIELD_TYPE_BLOB,FIELD_TYPE_STRING] then
+        //ludob: mysql adds terminating #0 on top of data. Avoid buffer overrun.
+          SetLength(buffer,length+1)
+        else
+          SetLength(buffer,length);
         is_null := 0;
       end;
     end;
