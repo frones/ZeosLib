@@ -209,7 +209,7 @@ var
 
 begin
   {$I ztestall.lrs}
-  SetHeapTraceOutput('b:heaptrc.log');
+  SetHeapTraceOutput('heaptrc.log');
   TestGroup := COMMON_GROUP;
   RebuildTestDatabases;
   If Application.HasOption('b', 'batch') or Application.HasOption('h', 'help')then
