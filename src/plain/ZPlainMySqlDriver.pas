@@ -134,7 +134,6 @@ type
     function Init(var Handle: PZMySQLConnect): PZMySQLConnect;
     function GetLastInsertID (Handle: PZMySQLConnect): Int64;
     function Kill(Handle: PZMySQLConnect; Pid: LongInt): Integer;
-    function GetBindOffsets: MYSQL_BINDOFFSETS;
     function GetListDatabases(Handle: PZMySQLConnect; Wild: PAnsiChar): PZMySQLResult;
     function GetListFields(Handle: PZMySQLConnect; const Table, Wild: PAnsiChar): PZMySQLResult;
     function GetListProcesses(Handle: PZMySQLConnect): PZMySQLResult;
@@ -320,7 +319,6 @@ type
     function StorePreparedResult (Handle: PZMySqlPrepStmt): Integer;
     procedure GetCharacterSetInfo(Handle: PZMySQLConnect; CharSetInfo: PMY_CHARSET_INFO);
 
-    function GetBindOffsets: MYSQL_BINDOFFSETS;
     function Refresh(Handle: PZMySQLConnect; Options: Cardinal): Integer;
     function Kill(Handle: PZMySQLConnect; Pid: LongInt): Integer;
     function Ping(Handle: PZMySQLConnect): Integer;
@@ -1153,53 +1151,6 @@ end;
 procedure TZMySQLBaseDriver.GetCharacterSetInfo(Handle: PZMySQLConnect; CharSetInfo: PMY_CHARSET_INFO);
 begin
     MYSQL_API.mysql_get_character_set_info(Handle, CharSetInfo);
-end;
-
-function TZMySQLBaseDriver.GetBindOffsets: MYSQL_BINDOFFSETS;
-var
-  DriverVersion : Integer;
-begin
-  DriverVersion:=GetClientVersion;
-  case DriverVersion of
-    40100..40199 : begin
-                     result.buffer_type   := NativeUint(@(PMYSQL_BIND41(nil).buffer_type));
-                     result.buffer_length := NativeUint(@(PMYSQL_BIND41(nil).buffer_length));
-                     result.is_unsigned   := NativeUint(@(PMYSQL_BIND41(nil).is_unsigned));
-                     result.buffer        := NativeUint(@(PMYSQL_BIND41(nil).buffer));
-                     result.length        := NativeUint(@(PMYSQL_BIND41(nil).length));
-                     result.is_null       := NativeUint(@(PMYSQL_BIND41(nil).is_null));
-                     result.size          := Sizeof(MYSQL_BIND41);
-                   end;
-    50000..50099 : begin
-                     result.buffer_type   := NativeUint(@(PMYSQL_BIND50(nil).buffer_type));
-                     result.buffer_length := NativeUint(@(PMYSQL_BIND50(nil).buffer_length));
-                     result.is_unsigned   := NativeUint(@(PMYSQL_BIND50(nil).is_unsigned));
-                     result.buffer        := NativeUint(@(PMYSQL_BIND50(nil).buffer));
-                     result.length        := NativeUint(@(PMYSQL_BIND50(nil).length));
-                     result.is_null       := NativeUint(@(PMYSQL_BIND50(nil).is_null));
-                     result.size          := Sizeof(MYSQL_BIND50);
-                   end;
-    50100..59999 : begin
-                     result.buffer_type   := NativeUint(@(PMYSQL_BIND51(nil).buffer_type));
-                     result.buffer_length := NativeUint(@(PMYSQL_BIND51(nil).buffer_length));
-                     result.is_unsigned   := NativeUint(@(PMYSQL_BIND51(nil).is_unsigned));
-                     result.buffer        := NativeUint(@(PMYSQL_BIND51(nil).buffer));
-                     result.length        := NativeUint(@(PMYSQL_BIND51(nil).length));
-                     result.is_null       := NativeUint(@(PMYSQL_BIND51(nil).is_null));
-                     result.size          := Sizeof(MYSQL_BIND51);
-                   end;
-    60000..60099 : begin
-                     result.buffer_type   := NativeUint(@(PMYSQL_BIND60(nil).buffer_type));
-                     result.buffer_length := NativeUint(@(PMYSQL_BIND60(nil).buffer_length));
-                     result.is_unsigned   := NativeUint(@(PMYSQL_BIND60(nil).is_unsigned));
-                     result.buffer        := NativeUint(@(PMYSQL_BIND60(nil).buffer));
-                     result.length        := NativeUint(@(PMYSQL_BIND60(nil).length));
-                     result.is_null       := NativeUint(@(PMYSQL_BIND60(nil).is_null));
-                     result.size          := Sizeof(MYSQL_BIND60);
-                   end;
-  else
-    result.buffer_type:=0;
-  end;
 end;
 
 function TZMySQLBaseDriver.StoreResult(
