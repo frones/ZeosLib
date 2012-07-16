@@ -2675,9 +2675,15 @@ begin
     if (SupportedSchemas[SchemaIndex].SupportedRestrictions
       and (1 shl I)) <> 0 then
     begin
+      {$IFDEF DELPHI12_UP}
+      Result[I] := string(Args[I].VPWideChar);
+      if (Args[I].VType = VtUnicodeString) then
+        if string(Args[I].VPWideChar) = '' then
+      {$ELSE}
       Result[I] := string(Args[I].VAnsiString);
       if (Args[I].VType = vtAnsiString) then
         if string(Args[I].VAnsiString) = '' then
+      {$ENDIF}
           Result[I] := UnAssigned;
     end else
       Result[I] := UnAssigned;

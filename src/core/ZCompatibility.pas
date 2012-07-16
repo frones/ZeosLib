@@ -72,7 +72,13 @@ type
                             // EgonHugeist: Use always a 4Byte Integer as long the PlainDriver dll's are 32Bit for Windows64
                             //on the other hand MySQL64 and FB64 have problems on Win64!
   ULongLong             = QWord;
+  NativeInt             = PtrInt;
+  NativeUInt            = PtrUInt;
 {$ELSE}
+  {$IFNDEF DELPHI16_UP}
+  NativeInt             = Integer;
+  NativeUInt            = LongWord;
+  {$ENDIF}
   ULong                 = LongWord;
   ULongLong             = Int64; //delphi don´t have Unsigned Int64 type
 {$ENDIF}

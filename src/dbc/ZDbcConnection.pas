@@ -591,6 +591,7 @@ end;
 }
 constructor TZAbstractConnection.Create(const ZUrl: TZURL);
 begin
+  FClosed := True;
   if not assigned(ZUrl) then
     raise Exception.Create('ZUrl is not assigned!')
   else
@@ -598,7 +599,6 @@ begin
   FDriver := DriverManager.GetDriver(ZURL.URL);
   FIZPlainDriver := FDriver.GetPlainDriver(ZUrl);
   FAutoCommit := True;
-  FClosed := True;
   FReadOnly := True;
   FTransactIsolationLevel := tiNone;
   FUseMetadata := True;

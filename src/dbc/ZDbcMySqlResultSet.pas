@@ -662,7 +662,7 @@ begin
     Exit;
   end;
 
-  if IsMatch('????-??-??*', Temp) then
+  if IsMatch('????-??-??*', Temp) or IsMatch('??:??:??*', Temp) then
     Result := AnsiSQLDateToDateTime(Temp)
   else
     Result := TimestampStrToDateTime(Temp);

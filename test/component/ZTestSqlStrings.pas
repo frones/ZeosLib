@@ -115,6 +115,19 @@ begin
   CheckEquals('NEW_ADDRESS', SQLStrings.ParamNames[2]);
   CheckEquals('NEW_NAME', SQLStrings.ParamNames[3]);
 
+  SQLScript := 'INSERT INTO department VALUES (:NOT, :ORDER, :LIKE);'
+    + #10 + 'UPDATE department SET dep_name=:"quoted", dep_address=:LIKE'
+    + ' WHERE id_dep=:NOT AND dep_name=:"quoted identifier";';
+  SQLStrings.Text := SQLScript;
+
+  CheckEquals(5, SQLStrings.ParamCount);
+  CheckEquals('NOT', SQLStrings.ParamNames[0]);
+  CheckEquals('ORDER', SQLStrings.ParamNames[1]);
+  CheckEquals('LIKE', SQLStrings.ParamNames[2]);
+  CheckEquals('quoted', SQLStrings.ParamNames[3]);
+  CheckEquals('quoted identifier', SQLStrings.ParamNames[4]);
+
+
   SQLStrings.Clear;
   CheckEquals(0, SQLStrings.ParamCount);
 end;

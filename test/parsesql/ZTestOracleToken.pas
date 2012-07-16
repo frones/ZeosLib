@@ -56,7 +56,7 @@ unit ZTestOracleToken;
 interface
 {$I ZParseSql.inc}
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZClasses, ZTokenizer, ZOracleToken,
-  ZTestTokenizer;
+  ZTestTokenizer,sysutils;
 
 type
 
@@ -110,9 +110,17 @@ const
     ttWord, ttQuoted, ttDateTime, ttQuoted, ttQuoted);
   TokenValues1: array[0..4] of string = (
     '"a""aa"', '''cc''''c''', '''1/2/3456 01:23:45''', '''30/2/3456 01:23:45''', '''1/2/3456 aa:23:45''');
+var
+  oldDateSeparator,oldTimeSeparator:char;
 begin
+  oldDateSeparator:={$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator;
+  oldTimeSeparator:={$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator;
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator:='/';
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator:=':';
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString1,
     [toSkipEOF, toSkipWhitespaces]), TokenTypes1, TokenValues1);
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator:=oldDateSeparator;
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator:=oldTimeSeparator;
 end;
 
 {**

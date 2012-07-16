@@ -485,11 +485,7 @@ var
   function AbsorbDigits: string;
   begin
     Result := '';
-{$IFDEF DELPHI12_UP}
     while CharInSet(FirstChar, ['0'..'9']) do
-{$ELSE}
-    while FirstChar in ['0'..'9'] do
-{$ENDIF}
     begin
       GotAdigit := True;
       Result := Result + FirstChar;
@@ -628,16 +624,9 @@ var
   ReadStr: string;
 begin
   ReadStr := FirstChar;
-{$IFDEF DELPHI12_UP}
   while (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) and not CharInSet(ReadChar, [#10, #13]) do
       ReadStr := ReadStr + ReadChar;
-   if CharInSet(ReadChar, [#10, #13]) then
-{$ELSE}
-   while (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) and not (ReadChar in [#10, #13]) do
-      ReadStr := ReadStr + ReadChar;
-   if ReadChar in [#10, #13] then
-{$ENDIF}
-
+  if CharInSet(ReadChar, [#10, #13]) then
     Stream.Seek(-(1 * SizeOf(Char)), soFromCurrent);
 
   Result.TokenType := ttComment;
@@ -675,33 +664,20 @@ var
   ReadChar: Char;
 begin
   Result := '';
-{$IFDEF DELPHI12_UP}
   while (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) and not CharInSet(ReadChar, [#10, #13]) do
-      Result := Result + ReadChar;
-{$ELSE}
-  while (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) and not (ReadChar in [#10, #13]) do
     Result := Result + ReadChar;
-{$ENDIF}
-
   // mdaems : for single line comments the line ending must be included
   // as it should never be stripped off or unified with other whitespace characters
-{$IFDEF DELPHI12_UP}
   if CharInSet(ReadChar, [#10, #13]) then
-{$ELSE}
-  if ReadChar in [#10, #13] then
-{$ENDIF}
-    begin
-      Result := Result + ReadChar;
-      if (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) then
-{$IFDEF DELPHI12_UP}
-        if CharInSet(ReadChar, [#10, #13]) then
-{$ELSE}
-        if (ReadChar in [#10, #13]) then
-{$ENDIF}
-          Result := Result + ReadChar
-        else
-          Stream.Seek(-(1 * SizeOf(Char)), soFromCurrent);
-    end;
+  begin
+    Result := Result + ReadChar;
+    // ludob Linux line terminator is just LF, don't read further if we already have LF
+    if (ReadChar<>#10) and (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) then
+      if CharInSet(ReadChar, [#10, #13]) then
+        Result := Result + ReadChar
+      else
+        Stream.Seek(-(1 * SizeOf(Char)), soFromCurrent);
+  end;
 end;
 
 {**

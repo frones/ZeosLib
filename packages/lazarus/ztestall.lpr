@@ -26,12 +26,12 @@ uses
   ZTestSqlMetadata, ZTestSorting, ZTestMasterDetail, ZTestExecuteSql,
   ZTestDataSetGeneric, ZTestData, ZTestConnection,
   //bugreport
-  ZTestBugDbcCore,
+  {ludob empty test ZTestBugDbcCore,}
   ZTestBugDbcMySql, ZTestBugCompMySql,
   ZTestBugDbcOracle, ZTestBugCompOracle,
   ZTestBugDbcPostgreSql, ZTestBugCompPostgreSql,
   ZTestBugDbcInterbase, ZTestBugCompInterbase,
-  ZTestBugDbcDbLib, ZTestBugCompDbLib,
+  {ludob empty test ZTestBugDbcDbLib,} {ludob empty test ZTestBugCompDbLib, }
   ZTestBugCompMSSql
 ;
 

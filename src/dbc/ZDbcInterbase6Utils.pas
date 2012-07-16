@@ -748,14 +748,21 @@ begin
     RDB_TIMESTAMP: Result := stTimestamp;
     RDB_BLOB:
       begin
-       case SqlSubType of
-          RDB_BLOB_NONE: Result := stBinaryStream;
-          RDB_BLOB_TEXT: Result := stAsciiStream;
-          RDB_BLOB_BLR: Result := stBinaryStream;
-          RDB_BLOB_ACL: Result := stAsciiStream;
-          RDB_BLOB_RESERVED: Result := ZDbcIntfs.stUnknown;
-          RDB_BLOB_ENCODED: Result := stAsciiStream;
-          RDB_BLOB_DESCRIPTION: Result := stAsciiStream;
+        case SqlSubType of
+          { Blob Subtypes }
+          { types less than zero are reserved for customer use }
+          isc_blob_untyped: Result := stBinaryStream;
+
+          { internal subtypes }
+          isc_blob_text: Result := stAsciiStream;
+          isc_blob_blr: Result := stBinaryStream;
+          isc_blob_acl: Result := stAsciiStream;
+          isc_blob_ranges: Result := ZDbcIntfs.stUnknown;//Result := stBinaryStream;
+          isc_blob_summary: Result := stBinaryStream;
+          isc_blob_format: Result := stAsciiStream;
+          isc_blob_tra: Result := stAsciiStream;
+          isc_blob_extfile: Result := stAsciiStream;
+          isc_blob_debug_info: Result := stBinaryStream;
         end;
       end;
     else
@@ -876,7 +883,7 @@ var
   iError : Integer; //Error for disconnect
 begin
   { Allocate an sql statement }
-  PlainDriver.isc_dsql_alloc_statement2(@StatusVector, Handle, @StmtHandle);
+  PlainDriver.isc_dsql_allocate_statement(@StatusVector, Handle, @StmtHandle);
   CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, Sql);
 
   { Prepare an sql statement }
@@ -976,7 +983,7 @@ procedure FreeStatement(PlainDriver: IZInterbasePlainDriver; StatementHandle: TI
 var
   StatusVector: TARRAY_ISC_STATUS;
 begin
-  if StatementHandle <> nil  then
+  if StatementHandle <> 0  then
   begin
     PlainDriver.isc_dsql_free_statement(@StatusVector, @StatementHandle, Options);
     CheckInterbase6Error(PlainDriver, StatusVector);
@@ -1198,7 +1205,7 @@ var
   BlobHandle: TISC_BLOB_HANDLE;
   StatusVector: TARRAY_ISC_STATUS;
 begin
-  BlobHandle := nil;
+  BlobHandle := 0;
   CurPos := 0;
 //  SegmentLenght := UShort(DefaultBlobSegmentSize);
 
@@ -2504,7 +2511,7 @@ var
   StatusVector: TARRAY_ISC_STATUS;
   BlobSize, CurPos, SegLen: Integer;
 begin
-  BlobHandle := nil;
+  BlobHandle := 0;
   Stream.Seek(0, 0);
 
   { create blob handle }

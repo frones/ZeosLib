@@ -157,9 +157,6 @@ type
     procedure Prepare; reintroduce;
     procedure RegisterOutParameter(ParameterIndex: Integer;SQLType: Integer); reintroduce;
     procedure SetInParam(ParameterIndex: Integer;SQLType: TZSQLType; const Value: TZVariant);override;
-
-
-
   public
     function IsNull(ParameterIndex: Integer): Boolean;override;
 
@@ -167,9 +164,6 @@ type
     constructor Create(Connection: IZConnection; const pProcName: string; Info: TStrings);
     destructor Destroy;override;
     procedure ClearParameters; override;
-
-
-
   end;
 
 implementation
@@ -216,7 +210,7 @@ begin
   AllocateOracleStatementHandles(FPlainDriver, Connection, Handle, ErrorHandle);
 
   try
-    PrepareOracleStatement(FPlainDriver, SQL, Handle, ErrorHandle);
+    PrepareOracleStatement(FPlainDriver, SQL, Handle, ErrorHandle, StrToIntDef(Info.Values['prefetch_count'], 100));
     Result := CreateOracleResultSet(FPlainDriver, Self, SQL,
       Handle, ErrorHandle);
   except
@@ -246,7 +240,7 @@ begin
   AllocateOracleStatementHandles(FPlainDriver, Connection, Handle, ErrorHandle);
 
   try
-    PrepareOracleStatement(FPlainDriver, SQL, Handle, ErrorHandle);
+    PrepareOracleStatement(FPlainDriver, SQL, Handle, ErrorHandle, StrToIntDef(Info.Values['prefetch_count'], 100));
     ExecuteOracleStatement(FPlainDriver, Connection, SQL, Handle, ErrorHandle);
     Result := GetOracleUpdateCount(FPlainDriver, Handle, ErrorHandle);
   finally
@@ -290,7 +284,7 @@ begin
   AllocateOracleStatementHandles(FPlainDriver, Connection, Handle, ErrorHandle);
 
   try
-    PrepareOracleStatement(FPlainDriver, SQL, Handle, ErrorHandle);
+    PrepareOracleStatement(FPlainDriver, SQL, Handle, ErrorHandle, StrToIntDef(Info.Values['prefetch_count'], 100));
 
     StatementType := 0;
     FPlainDriver.AttrGet(Handle, OCI_HTYPE_STMT, @StatementType, nil,
@@ -521,7 +515,7 @@ begin
         FHandle, FErrorHandle);
     end;
 
-    PrepareOracleStatement(FPlainDriver, OracleSQL, Handle, ErrorHandle);
+    PrepareOracleStatement(FPlainDriver, OracleSQL, Handle, ErrorHandle, StrToIntDef(Info.Values['prefetch_count'], 100));
     AllocateOracleSQLVars(FInVars, InParamCount);
     InVars^.ActualNum := InParamCount;
 
@@ -721,7 +715,7 @@ procedure TZOracleCallableStatement.Prepare;
           FHandle, FErrorHandle);
       end;
 
-      PrepareOracleStatement(FPlainDriver, FOracleSQL, FHandle, FErrorHandle);
+      PrepareOracleStatement(FPlainDriver, FOracleSQL, FHandle, FErrorHandle, StrToIntDef(Info.Values['prefetch_count'], 100));
       AllocateOracleSQLVars(FInVars, FOracleParamsCount {InParamCount});
       FInVars^.ActualNum := FOracleParamsCount{InParamCount};
 
@@ -734,13 +728,9 @@ procedure TZOracleCallableStatement.Prepare;
       { Artificially define Oracle internal type. }
         if SQLType = stBinaryStream then
           TypeCode := SQLT_BLOB
-        else if SQLType = stAsciiStream then
-            TypeCode := SQLT_CLOB
-          else if SQLType = stUnicodeStream then
-              TypeCode := SQLT_CLOB
-//            else if SQLType = stUnicodeString then
-//               TypeCode := SQLT_VST
-            else TypeCode := SQLT_STR;
+        else if SQLType in [stAsciiStream, stUnicodeStream] then
+          TypeCode := SQLT_CLOB
+        else TypeCode := SQLT_STR;
 
         InitializeOracleVar(FPlainDriver, Connection, CurrentVar,
           SQLType, TypeCode, 1024);

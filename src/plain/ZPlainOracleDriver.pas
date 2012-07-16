@@ -57,7 +57,7 @@ interface
 
 {$I ZPlain.inc}
 
-uses ZClasses, ZPlainDriver, ZPlainOracle9i;
+uses ZClasses, ZPlainDriver, ZPlainOracle9i,ZCompatibility;
 
 type
   { Generic Oracle Types }
@@ -72,7 +72,7 @@ type
   ub1     = Byte;
   dvoid   = Pointer;
   text    = PAnsiChar;
-  size_T  = Integer;
+  size_T  = NativeUInt;
 
   pub1 = ^ub1;
   psb1 = ^sb1;
@@ -854,6 +854,9 @@ type
     function ServerVersion(hndlp: POCIHandle; errhp: POCIError; bufp: text;
       bufsz: ub4; hndltype: ub1): sword;
     function ResultSetToStmt(rsetdp: POCIHandle; errhp: POCIError): sword;
+
+    function GetEnvCharsetByteWidth(hndl: POCIEnv; err: POCIError;
+      out Value: sb4): sword;
   end;
 
   {** Implements a driver for Oracle 9i }
@@ -1044,6 +1047,8 @@ type
     function ServerVersion(hndlp: POCIHandle; errhp: POCIError; bufp: text;
       bufsz: ub4; hndltype: ub1): sword;
     function ResultSetToStmt(rsetdp: POCIHandle; errhp: POCIError): sword;
+    function GetEnvCharsetByteWidth(hndl: POCIEnv; err: POCIError;
+      out Value: sb4): sword;
   end;
 
 implementation
@@ -1388,6 +1393,12 @@ function TZOracle9iPlainDriver.ResultSetToStmt(rsetdp: POCIHandle;
   errhp: POCIError): sword;
 begin
   Result := ZPlainOracle9i.OCIResultSetToStmt(rsetdp, errhp);
+end;
+
+function TZOracle9iPlainDriver.GetEnvCharsetByteWidth(hndl: POCIEnv; err: POCIError;
+  out Value: sb4): sword;
+begin
+  Result := ZPlainOracle9i.OCINlsNumericInfoGet(hndl, err, @value, OCI_NLS_CHARSET_MAXBYTESZ);
 end;
 
 function TZOracle9iPlainDriver.ServerAttach(srvhp: POCIServer;

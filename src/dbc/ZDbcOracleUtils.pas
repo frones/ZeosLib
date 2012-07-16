@@ -211,7 +211,7 @@ procedure FreeOracleStatementHandles(PlainDriver: IZOraclePlainDriver;
   @param ErrorHandle a holder for Error handle.
 }
 procedure PrepareOracleStatement(PlainDriver: IZOraclePlainDriver;
-  SQL: string; Handle: POCIStmt; ErrorHandle: POCIError);
+  SQL: string; Handle: POCIStmt; ErrorHandle: POCIError; PrefetchCount: ub4);
 
 {**
   Executes an Oracle statement.
@@ -288,7 +288,7 @@ begin
       CurrentVar := @Variables.Variables[I];
       if CurrentVar.Data <> nil then
       begin
-        if CurrentVar.TypeCode in [SQLT_BLOB, SQLT_CLOB] then
+        if CurrentVar.TypeCode in [SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE] then
         begin
           PlainDriver.DescriptorFree(PPOCIDescriptor(CurrentVar.Data)^,
             OCI_DTYPE_LOB);
@@ -358,7 +358,7 @@ begin
       end;}
     stAsciiStream, stUnicodeStream, stBinaryStream:
       begin
-        if not (Variable.TypeCode in [SQLT_CLOB, SQLT_BLOB]) then
+        if not (Variable.TypeCode in [SQLT_CLOB, SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE]) then
         begin
           if Variable.ColType = stAsciiStream then
             Variable.TypeCode := SQLT_LVC
@@ -378,7 +378,7 @@ begin
 
   Variable.Length := Length;
   GetMem(Variable.Data, Variable.Length);
-  if Variable.TypeCode in [SQLT_BLOB, SQLT_CLOB] then
+  if Variable.TypeCode in [SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE] then
   begin
     PlainDriver.DescriptorAlloc(OracleConnection.GetConnectionHandle,
       PPOCIDescriptor(Variable.Data)^, OCI_DTYPE_LOB, 0, nil);
@@ -419,7 +419,7 @@ begin
     if (high(Values)<I) or DefVarManager.IsNull(Values[I]) then
     begin
       CurrentVar.Indicator := -1;
-      CurrentVar.Data := nil;
+      //CurrentVar.Data := nil;
     end
     else
     begin
@@ -531,7 +531,9 @@ begin
     Result := stAsciiStream
   else if StartsWith(TypeName, 'TIMESTAMP') then
     Result := stTimestamp
-  else if TypeName = 'NUMBER' then
+  else if TypeName = 'BFILE' then
+    Result := stBinaryStream else
+  if TypeName = 'NUMBER' then
   begin
     Result := stDouble;  { default for number types}
     if (Scale = 0) and (Precision <> 0) then
@@ -613,15 +615,17 @@ begin
 
   if (Status <> OCI_SUCCESS) and (Status <> OCI_SUCCESS_WITH_INFO) and (ErrorMessage <> '') then
   begin
-    DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,
-      ErrorCode, ErrorMessage);
-    raise EZSQLException.CreateWithCode(ErrorCode,
-      Format(SSQLError1, [ErrorMessage]));
+    if Assigned(DriverManager) then //Thread-Safe patch
+      DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,
+        ErrorCode, ErrorMessage);
+    if not ( ( LogCategory = lcDisconnect ) and ( ErrorCode = 3314 ) ) then //patch for disconnected Server
+      //on the other hand we can't close the connction  MantisBT: #0000227
+      raise EZSQLException.CreateWithCode(ErrorCode,
+        Format(SSQLError1, [ErrorMessage]));
   end;
   if (Status = OCI_SUCCESS_WITH_INFO) and (ErrorMessage <> '') then
-  begin
-    DriverManager.LogMessage(LogCategory, PlainDriver.GetProtocol, ErrorMessage);
-  end;
+    if Assigned(DriverManager) then //Thread-Safe patch
+      DriverManager.LogMessage(LogCategory, PlainDriver.GetProtocol, ErrorMessage);
 end;
 
 {**
@@ -701,17 +705,15 @@ end;
   @param ErrorHandle a holder for Error handle.
 }
 procedure PrepareOracleStatement(PlainDriver: IZOraclePlainDriver;
-  SQL: string; Handle: POCIStmt; ErrorHandle: POCIError);
+  SQL: string; Handle: POCIStmt; ErrorHandle: POCIError; PrefetchCount: ub4);
 var
   Status: Integer;
-  PrefetchCount: ub4;
 begin
   // setting PrefetchCount to a default of 100 rows
   // this seems a good default for most queries
   // TODO : provide a way to override this using a statement.properties line
-  PrefetchCount := 100; 
-  PlainDriver.AttrSet(Handle, OCI_HTYPE_STMT, @PrefetchCount, SizeOf(ub4), 
-    OCI_ATTR_PREFETCH_ROWS, ErrorHandle); 
+  PlainDriver.AttrSet(Handle, OCI_HTYPE_STMT, @PrefetchCount, SizeOf(ub4),
+    OCI_ATTR_PREFETCH_ROWS, ErrorHandle);
   Status := PlainDriver.StmtPrepare(Handle, ErrorHandle, PAnsiChar(AnsiString(SQL)),
     Length(AnsiString(SQL)), OCI_NTV_SYNTAX, OCI_DEFAULT);
   CheckOracleError(PlainDriver, ErrorHandle, Status, lcExecute, SQL);

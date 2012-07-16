@@ -150,6 +150,7 @@ begin
   Query.FieldByName('d_datetime').AsDateTime := NowDate;
   Query.FieldByName('d_timestamp').AsDateTime := NowDate;
 
+  {$IFNDEF WITH_FPC_FTTIME_BUG}
   if StartsWith(Protocol, 'oracle') or (Protocol = 'mssql') or (Protocol = 'sybase') then
   begin
     CheckEquals(NowDate, Query.FieldByName('d_date').AsDateTime, 1e-10);
@@ -164,13 +165,14 @@ begin
   end;
   CheckEquals(NowDate, Query.FieldByName('d_datetime').AsDateTime, 1e-10);
   CheckEquals(NowDate, Query.FieldByName('d_timestamp').AsDateTime, 1e-10);
-
+  {$ENDIF}
   Query.Post;
 
   Query.Close;
   Query.Open;
 
   CheckEquals(1, Query.RecordCount);
+  {$IFNDEF WITH_FPC_FTTIME_BUG}
   if StartsWith(Protocol, 'oracle') or (Protocol = 'mssql') or (Protocol = 'sybase') then
   begin
     CheckEqualsDate(NowDate, Query.FieldByName('d_date').AsDateTime, [dpYear..dpSec]);
@@ -185,7 +187,7 @@ begin
   end;
   CheckEqualsDate(NowDate, Query.FieldByName('d_datetime').AsDateTime, [dpYear..dpSec]);
   CheckEqualsDate(NowDate, Query.FieldByName('d_timestamp').AsDateTime, [dpYear..dpSec]);
-
+  {$ENDIF}
   Query.SQL.Text := 'DELETE FROM date_values WHERE d_id=:Id';
   Query.Params[0].DataType := ftInteger;
   Query.Params[0].Value := TEST_ROW_ID;
