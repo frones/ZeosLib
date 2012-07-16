@@ -316,7 +316,7 @@ type
   FIELD_TYPE_STRING    = 254,
   FIELD_TYPE_GEOMETRY  = 255
     );
-
+  PTMysqlFieldTypes=^TMysqlFieldTypes;
   { Options for mysql_set_option }
   TMySqlSetOption = (
     MYSQL_OPTION_MULTI_STATEMENTS_ON,
@@ -526,6 +526,18 @@ TMYSQL_CLIENT_OPTIONS =
     is_null_value:     Byte;
     extension:         Pointer;
   end;
+
+  // offsets to used MYSQL_BINDxx members. Filled by GetBindOffsets
+  MYSQL_BINDOFFSETS=record
+    buffer_type   :NativeUint;
+    buffer_length :NativeUint;
+    is_unsigned   :NativeUint;
+    buffer        :NativeUint;
+    length        :NativeUint;
+    is_null       :NativeUint;
+    size          :integer;    //size of MYSQL_BINDxx
+    end;
+
 
   PDOBindRecord2 = record
       buffer:    Array of Byte;
