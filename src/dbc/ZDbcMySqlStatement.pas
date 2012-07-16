@@ -677,11 +677,11 @@ begin
     if MyType = FIELD_TYPE_VARCHAR then
       FBindBuffer.AddColumn(FIELD_TYPE_STRING, StrLen(PAnsiChar(UTF8Encode(InParamValues[I].VUnicodeString)))+1)
     else
-      if MyType = FIELD_TYPE_BLOB then
+      if MyType = FIELD_TYPE_LONG_BLOB then
       begin
         TempBlob := (InParamValues[I].VInterface as IZBlob);
         if InParamTypes[I] = stBinaryStream then
-          FBindBuffer.AddColumn(FIELD_TYPE_BLOB, TempBlob.Length)
+          FBindBuffer.AddColumn(FIELD_TYPE_LONG_BLOB, TempBlob.Length)
         else
           FBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length);
       end
@@ -694,13 +694,13 @@ begin
     else
       FColumnArray[I].is_null := 0;
       case FBindBuffer.GetBufferType(I+1) of
-        FIELD_TYPE_FLOAT:    Single(PBuffer^)     := InParamValues[I].VFloat;
+        FIELD_TYPE_DOUBLE:    Double(PBuffer^)     := InParamValues[I].VFloat;
         FIELD_TYPE_STRING:
           begin
             if MyType = FIELD_TYPE_VARCHAR then
               StrCopy(PAnsiChar(PBuffer), PAnsiChar(UTF8Encode(InParamValues[I].VUnicodeString)))
             else
-            if MyType = FIELD_TYPE_BLOB then
+            if MyType = FIELD_TYPE_LONG_BLOB then
             begin
               StrCopy(PAnsiChar(PBuffer), PAnsiChar(TempBlob.GetString));
               TempBlob := nil;
@@ -720,7 +720,7 @@ begin
             PMYSQL_TIME(PBuffer)^.second := second;
             PMYSQL_TIME(PBuffer)^.second_part := millisecond;
           end;
-          FIELD_TYPE_BLOB:
+          FIELD_TYPE_LONG_BLOB:
             begin
               System.Move(TempBlob.GetBuffer^, PBuffer^, TempBlob.Length);
               TempBlob := nil;
@@ -750,11 +750,11 @@ begin
         vtNull:      Result := FIELD_TYPE_TINY;
         vtBoolean:   Result := FIELD_TYPE_TINY;
         vtInteger:   Result := FIELD_TYPE_LONGLONG;
-        vtFloat:     Result := FIELD_TYPE_FLOAT;
+        vtFloat:     Result := FIELD_TYPE_DOUBLE;
         vtString:    Result := FIELD_TYPE_STRING;
         vtDateTime:  Result := FIELD_TYPE_DATETIME;
         vtUnicodeString: Result := FIELD_TYPE_VARCHAR;
-        vtInterface: Result := FIELD_TYPE_BLOB;
+        vtInterface: Result := FIELD_TYPE_LONG_BLOB;
      else
         raise EZSQLException.Create(SUnsupportedDataType);
      end;
@@ -956,7 +956,7 @@ begin
       end
       else
       begin
-        if tempbuffertype in [FIELD_TYPE_BLOB,FIELD_TYPE_STRING] then
+        if tempbuffertype in [FIELD_TYPE_LONG_BLOB,FIELD_TYPE_STRING] then
         //ludob: mysql adds terminating #0 on top of data. Avoid buffer overrun.
           SetLength(buffer,length+1)
         else

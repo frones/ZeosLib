@@ -63,6 +63,9 @@ uses
 
 type
   {** Implements a test case for . }
+
+  { TZGenericTestDbcResultSet }
+
   TZGenericTestDbcResultSet = class(TZComponentPortableSQLTestCase)
   private
     FConnection: TZConnection;
@@ -94,6 +97,7 @@ type
     procedure TestDateTimeFilterExpression;
     procedure TestTimeLocateExpression;
     procedure TestDateTimeLocateExpression;
+    procedure TestDoubleFloatParams;
   end;
 
 implementation
@@ -1728,7 +1732,48 @@ begin
   finally
     Query.Free;
   end;
-end; 
+end;
+
+procedure TZGenericTestDbcResultSet.TestDoubleFloatParams;
+var
+  Query: TZQuery;
+begin
+  Query := TZQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+    Query.Options := [doPreferPrepared,doPreferPreparedResolver];
+    with Query do
+    begin
+      SQL.Text := 'DELETE FROM number_values where n_id = 1';
+      ExecSQL;
+      Sql.Text := 'INSERT INTO number_values (n_id,n_float,n_dprecission)'
+          + ' VALUES (:n_id,:n_float,:n_real)';
+      CheckEquals(3, Params.Count);
+      Params[0].DataType := ftInteger;
+      Params[1].DataType := ftFloat;
+      Params[2].DataType := ftFloat;
+      Params[0].AsInteger := 1;
+      Params[1].AsFloat := 3.14159265358979323846;
+      Params[2].AsFloat := 3.14159265358979323846;
+      ExecSQL;
+
+      CheckEquals(1, RowsAffected);
+
+      SQL.Text := 'SELECT * FROM number_values where n_id = 1';
+      CheckEquals(0, Query.Params.Count);
+
+      Open;
+      CheckEquals(1, RecordCount);
+      CheckEquals(False, IsEmpty);
+      CheckEquals(1, FieldByName('n_id').AsInteger);
+      CheckEquals(single(3.14159265358979323846), FieldByName('n_float').AsFloat,0.00001);
+      CheckEquals(double(3.14159265358979323846), FieldByName('n_dprecission').AsFloat,0.0000000000001);
+      Close;
+    end;
+  finally
+    Query.Free;
+  end;
+end;
 
 initialization
   RegisterTest('component',TZGenericTestDbcResultSet.Suite);
