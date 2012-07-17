@@ -209,7 +209,6 @@ begin
     ROQuery.SQL.Text := 'select * from department';
     DSQuery.DataSet := Query;
     DSROQuery.DataSet := ROQuery;
-    LookUp := TDBLookupComboBox.Create(nil);
     LookUp.DataSource := DSQuery;
     LookUp.ListSource := DSROQuery;
     LookUp.DataField := 'p_dep_id';
@@ -620,6 +619,7 @@ begin
         on E:Exception do
             Fail('Param().LoadFromStream(StringStream, ftBlob): '+E.Message);
       end;
+      SL.free;
       StrStream.Free;
       StrStream1.Free;
     end;
@@ -684,6 +684,7 @@ begin
       end;
       StrStream.Free;
       StrStream1.Free;
+      SL.free;
     end;
   finally
     Query.Free;

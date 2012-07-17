@@ -184,9 +184,10 @@ end;
 }
 destructor TZSQLProcessor.Destroy;
 begin
-  FParams.Free;
-  FScript.Free;
-  FScriptParser.Free;
+  FreeAndNil(FParams);
+  FreeAndNil(FScript);
+  FreeAndNil(FScriptParser);
+  FConnection := nil;
   inherited Destroy;
 end;
 

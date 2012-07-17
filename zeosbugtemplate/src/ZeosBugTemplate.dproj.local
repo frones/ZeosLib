@@ -1,0 +1,8 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>2012/07/10 18:51:25.692.pas,C:\Users\Andre van Zuydam\Documents\RAD Studio\Projects\Unit12.pas=C:\cvswork\zeosbugtemplate\src\uBugTemplate.pas</Transaction>
+    <Transaction>2012/07/10 18:51:25.692.dfm,C:\Users\Andre van Zuydam\Documents\RAD Studio\Projects\Unit12.dfm=C:\cvswork\zeosbugtemplate\src\uBugTemplate.dfm</Transaction>
+    <Transaction>2012/07/10 19:10:08.576.dproj,C:\Users\Andre van Zuydam\Documents\RAD Studio\Projects\Project19.dproj=C:\cvswork\zeosbugtemplate\src\ZeosBugTemplate.dproj</Transaction>
+  </Transactions>
+</BorlandProject>

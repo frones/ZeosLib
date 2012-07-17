@@ -3,7 +3,7 @@ program ztestall;
 {$mode objfpc}{$H+}
 
 uses
-  custapp, sysutils, comctrls,
+  heaptrc,custapp, sysutils, comctrls,
   Interfaces, Forms, GuiTestRunner, LResources,
   Classes, consoletestrunner, fpcunit, fpcunitreport, plaintestreport,
   ZTestConfig,
@@ -209,6 +209,7 @@ var
 
 begin
   {$I ztestall.lrs}
+  SetHeapTraceOutput('heaptrc.log');
   TestGroup := COMMON_GROUP;
   RebuildTestDatabases;
   If Application.HasOption('b', 'batch') or Application.HasOption('h', 'help')then

@@ -90,7 +90,7 @@ type
   end;
   {END ADDED by fduenas 15-06-2006}
 implementation
-uses ZSysUtils;
+uses SysUtils, ZSysUtils;
 procedure TZAbstractPlainDriver.LoadApi;
 begin
 
@@ -119,7 +119,7 @@ end;
 
 destructor TZAbstractPlainDriver.Destroy;
 begin
-  FLoader.Free;
+  FreeAndNil(FLoader);
   inherited Destroy;
 end;
 

@@ -66,6 +66,7 @@ uses
 const
   {** Precision for float values comparison }
   FLOAT_COMPARE_PRECISION = 1.e-5;
+  FLOAT_COMPARE_PRECISION_SINGLE = 1.5e-5;
 
 type
   {** Defines variant types. }
@@ -615,7 +616,7 @@ begin
           Result := 0;
       end;
     vtPointer:
-      Result := LongInt(Value1.VPointer) - GetAsInteger(Value2);
+      Result := sign(NativeInt(Value1.VPointer) - GetAsInteger(Value2));
     else
       Result := 0;
   end;
@@ -1206,7 +1207,7 @@ begin
         vtDateTime:
           Result.VInteger := Trunc(Value.VDateTime);
         vtPointer:
-          Result.VInteger := Integer(Value.VPointer);
+          Result.VInteger := NativeInt(Value.VPointer);
         vtInterface:
           RaiseTypeMismatchError;
       end;
@@ -1553,12 +1554,21 @@ begin
       if (Value.VInteger > -MaxInt) and (Value.VInteger < MaxInt) then
         Result := Integer(Value.VInteger)
       else
+{$ifdef fpc}
+        Result := Value.VInteger;
+{$else}
         Result := IntToStr(Value.VInteger);
+{$endif}
     vtFloat: Result := Value.VFloat;
     vtString: Result := Value.VString;
     vtUnicodeString: Result := Value.VUnicodeString;
     vtDateTime: Result := Value.VDateTime;
-    vtPointer: Result := LongInt(Value.VPointer);
+    vtPointer:
+    {$ifdef fpc}
+        Result := NativeInt(Value.VPointer);
+    {$else}
+        Result := LongInt(Value.VPointer);
+    {$endif}
     vtInterface: Result := Value.VInterface;
   else
     Result := Null;

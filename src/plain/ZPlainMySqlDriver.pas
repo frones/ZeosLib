@@ -80,15 +80,15 @@ const
   WINDOWS_DLL55_LOCATION_EMBEDDED = 'libmysqld55.dll';
 {$ELSE}
   {$IFNDEF MYSQL_STRICT_DLL_LOADING}
-  LINUX_DLL_LOCATION = 'libmysqlclient.so';
-  LINUX_DLL_LOCATION_EMBEDDED = 'libmysqld.so';
+  LINUX_DLL_LOCATION = 'libmysqlclient'+SharedSuffix;
+  LINUX_DLL_LOCATION_EMBEDDED = 'libmysqld'+SharedSuffix;
   {$ENDIF}
-  LINUX_DLL41_LOCATION = 'libmysqlclient.so.14';
-  LINUX_DLL41_LOCATION_EMBEDDED = 'libmysqld.so.14';
-  LINUX_DLL50_LOCATION = 'libmysqlclient.so.15';
-  LINUX_DLL50_LOCATION_EMBEDDED = 'libmysqld.so.15';
-  LINUX_DLL51_LOCATION = 'libmysqlclient.so.16';
-  LINUX_DLL51_LOCATION_EMBEDDED = 'libmysqld.so.16';
+  LINUX_DLL41_LOCATION = 'libmysqlclient'+SharedSuffix+'.14';
+  LINUX_DLL41_LOCATION_EMBEDDED = 'libmysqld'+SharedSuffix+'.14';
+  LINUX_DLL50_LOCATION = 'libmysqlclient'+SharedSuffix+'.15';
+  LINUX_DLL50_LOCATION_EMBEDDED = 'libmysqld'+SharedSuffix+'.15';
+  LINUX_DLL51_LOCATION = 'libmysqlclient'+SharedSuffix+'.16';
+  LINUX_DLL51_LOCATION_EMBEDDED = 'libmysqld'+SharedSuffix+'.16';
 {$ENDIF}
 
 type

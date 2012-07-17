@@ -613,6 +613,8 @@ begin
   begin
     if Active then
        Close;
+    if Assigned(Statement) then
+      Statement.Close;
     Statement := nil;
     if FConnection <> nil then
       FConnection.UnregisterDataSet(Self);
@@ -759,7 +761,11 @@ begin
   if Active then
     Close
   else
+    begin
+    if assigned(Statement) then
+      Statement.Close;
     Statement := nil;
+    end;
 
   UnPrepare;
 
@@ -1327,7 +1333,9 @@ function TZAbstractRODataset.GetFieldData(Field: TField;
 var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
+  {$IFNDEF WITH_WIDESTRUTILS}
   WS:WideString;
+  {$ENDIF}
 begin
   if GetActiveBuffer(RowBuffer) then
   begin

@@ -377,7 +377,7 @@ begin
    else
     FMetadata := Metadata;
 
-  FColumnsInfo := TObjectList.Create;
+  FColumnsInfo := TObjectList.Create(True); //Free the MemoryLeaks of TZColumnInfo
 end;
 
 {**

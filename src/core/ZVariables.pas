@@ -119,7 +119,7 @@ end;
 }
 constructor TZVariablesList.Create;
 begin
-  FVariables := TObjectList.Create;
+  FVariables := TObjectList.Create(True);
 end;
 
 {**
@@ -127,7 +127,8 @@ end;
 }
 destructor TZVariablesList.Destroy;
 begin
-  FVariables.Free;
+  FVariables.Clear;
+  FreeAndNil(FVariables);
   inherited Destroy;
 end;
 

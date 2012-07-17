@@ -119,6 +119,20 @@ function AnsiProperCase(const S: string; const WordDelims: TSysCharSet): string;
 
 {$ENDIF}
 
+{$IFDEF WINDOWS}
+	const SharedSuffix='.dll';
+{$ELSE}
+  {$IFDEF DARWIN}
+  const SharedSuffix='.dylib';
+  {$ELSE}
+    {$IFDEF UNIX}
+      const SharedSuffix='.so';
+    {$ELSE}
+      const SharedSuffix='.dll'; //Delphi
+    {$ENDIF}
+  {$ENDIF}
+{$ENDIF}
+
 {$IFDEF UNIX}
   {$IFDEF FPC}
 const
@@ -145,19 +159,16 @@ implementation
   {$IFDEF FPC}
 function LoadLibrary(ModuleName: PChar): HMODULE;
 begin
-  //Result := HMODULE(dlopen(Modulename, RTLD_GLOBAL));
   Result := dynlibs.LoadLibrary(ModuleName);
 end;
 
 function FreeLibrary(Module: HMODULE): LongBool;
 begin
-  //Result := longbool(dlclose(pointer(Module)));
   Result := dynlibs.FreeLibrary(Module);
 end;
 
 function GetProcAddress(Module: HMODULE; Proc: PChar): Pointer;
 begin
-  //Result := dlsym(pointer(Module), Proc);
   Result := dynlibs.GetProcAddress(Module,Proc)
 end;
   {$ENDIF}

@@ -131,7 +131,8 @@ end;
 }
 destructor TZSQLScriptParser.Destroy;
 begin
-  FStatements.Free;
+  FreeAndNil(FStatements);
+  FTokenizer := nil;
   inherited Destroy;
 end;
 
