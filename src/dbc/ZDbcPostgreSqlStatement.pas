@@ -201,7 +201,8 @@ var
 begin
   ConnectionHandle := GetConnectionHandle();
   NativeResultSet := TZPostgreSQLResultSet.Create(FPlainDriver, Self, SQL,
-    ConnectionHandle, QueryHandle, StrToIntDef(Info.Values['chunk_size'], 1024));
+  ConnectionHandle, QueryHandle, ChunkSize);
+
   NativeResultSet.SetConcurrency(rcReadOnly);
   if GetResultSetConcurrency = rcUpdatable then
   begin
@@ -463,7 +464,7 @@ begin
                   TempStream := TempBlob.GetStream;
                   try
                     WriteTempBlob := TZPostgreSQLBlob.Create(FPlainDriver, nil, 0,
-                      Self.GetConnectionHandle, 0, StrToIntDef(Info.Values['chunk_size'], 1024));
+                      Self.GetConnectionHandle, 0, ChunkSize);
                     WriteTempBlob.SetStream(TempStream);
                     //WriteTempBlob.SetBuffer(TempBlob.GetBuffer, TempBlob.Length);
                     WriteTempBlob.WriteBlob;
@@ -555,7 +556,7 @@ var
 begin
   ConnectionHandle := GetConnectionHandle();
   NativeResultSet := TZPostgreSQLResultSet.Create(GetPlainDriver, Self, SQL,
-    ConnectionHandle, QueryHandle, StrToIntDef(Info.Values['chunk_size'], 1024));
+    ConnectionHandle, QueryHandle, ChunkSize);
   NativeResultSet.SetConcurrency(rcReadOnly);
   if GetResultSetConcurrency = rcUpdatable then
   begin
@@ -647,7 +648,7 @@ begin
               TempStream := TempBlob.GetStream;
               try
                 WriteTempBlob := TZPostgreSQLBlob.Create(GetPlainDriver, nil, 0,
-                  Self.GetConnectionHandle, 0, StrToIntDef(Info.Values['chunk_size'], 1024));
+                  Self.GetConnectionHandle, 0, ChunkSize);
                 WriteTempBlob.SetStream(TempStream);
                 WriteTempBlob.WriteBlob;
                 Result := IntToStr(WriteTempBlob.GetBlobOid);

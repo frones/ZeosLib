@@ -242,9 +242,7 @@ end;
 procedure TZMySQLResultSet.Open;
 var
   I: Integer;
-  ColumnInfo: TZColumnInfo;
   FieldHandle: PZMySQLField;
-  FieldFlags: Integer;
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
@@ -275,62 +273,9 @@ begin
     if FieldHandle = nil then
       Break;
 
-    ColumnInfo := TZColumnInfo.Create;
-    with ColumnInfo do
-    begin
-      FieldFlags := FPlainDriver.GetFieldFlags(FieldHandle);
-
-      ColumnLabel := FPlainDriver.ZDbcString(FPlainDriver.GetFieldName(FieldHandle), ClientCodePage^.Encoding);
-      ColumnName := FPlainDriver.ZDbcString(FPlainDriver.GetFieldOrigName(FieldHandle), ClientCodePage^.Encoding);
-      TableName := FPlainDriver.ZDbcString(FPlainDriver.GetFieldTable(FieldHandle), ClientCodePage^.Encoding);
-      ReadOnly := (FPlainDriver.GetFieldTable(FieldHandle) = '');
-      Writable := not ReadOnly;
-      ColumnType := ConvertMySQLHandleToSQLType(FPlainDriver,
-        FieldHandle, FieldFlags, ClientCodePage^.Encoding,
-        Self.Statement.GetConnection.UTF8StringAsWideField);
-      //EgonHugeist: arrange the MBCS field DisplayWidth to a proper count of Chars
-      case FPlainDriver.GetFieldCharsetNr(FieldHandle) of
-        1, 84, {Big5}
-        95, 96, {cp932 japanese}
-        19, 85, {euckr}
-        24, 86, {gb2312}
-        38, 87, {gbk}
-        13, 88, {sjis}
-        35, 90, 128..151:  {ucs2}
-          ColumnDisplaySize := FPlainDriver.GetFieldLength(FieldHandle) div 2;
-        33, 83, 192..215, { utf8 }
-        97, 98, { eucjpms}
-        12, 91: {ujis}
-          ColumnDisplaySize := FPlainDriver.GetFieldLength(FieldHandle) div 3;
-        54, 55, 101..124, {utf16}
-        56, 62, {utf16le}
-        60, 61, 160..183, {utf32}
-        45, 46, 224..247: {utf8mb4}
-          ColumnDisplaySize := FPlainDriver.GetFieldLength(FieldHandle) div 4;
-        else ColumnDisplaySize := FPlainDriver.GetFieldLength(FieldHandle); //1-Byte charsets
-      end;
-      //if (ColumnType = stUnicodeString)
-        //{$IFDEF DELPHI12_UP} or (ColumnType = stString){$ENDIF} then
-        //Precision := ColumnDisplaySize * 2
-      //else
-        Precision := Max(FPlainDriver.GetFieldMaxLength(FieldHandle),
-          FPlainDriver.GetFieldLength(FieldHandle));
-      Scale := FPlainDriver.GetFieldDecimals(FieldHandle);
-      if (AUTO_INCREMENT_FLAG and FieldFlags <> 0)
-        or (TIMESTAMP_FLAG and FieldFlags <> 0) then
-        AutoIncrement := True;
-      if UNSIGNED_FLAG and FieldFlags <> 0 then
-        Signed := False
-      else
-        Signed := True;
-      if NOT_NULL_FLAG and FieldFlags <> 0 then
-        Nullable := ntNoNulls
-      else
-        Nullable := ntNullable;
-      // Properties not set via query results here will be fetched from table metadata.
-    end;
-
-    ColumnsInfo.Add(ColumnInfo);
+    ColumnsInfo.Add(GetMySQLColumnInfoFromFieldHandle(FPlainDriver,
+     FieldHandle, GetStatement.GetConnection.GetEncoding,
+     GetStatement.GetConnection.UTF8StringAsWideField));
   end;
 
   inherited Open;
@@ -1001,34 +946,9 @@ begin
     if FieldHandle = nil then
       Break;
 
-    ColumnInfo := TZColumnInfo.Create;
-    with ColumnInfo do
-    begin
-      FieldFlags := FPlainDriver.GetFieldFlags(FieldHandle);
-
-      ColumnLabel := ZDbcString(FPlainDriver.GetFieldName(FieldHandle));
-      TableName := ZDbcString(FPlainDriver.GetFieldTable(FieldHandle));
-      ReadOnly := (FPlainDriver.GetFieldTable(FieldHandle) = '');
-      ColumnType := ConvertMySQLHandleToSQLType(FPlainDriver, FieldHandle,
-        FieldFlags, GetStatement.GetConnection.GetClientCodePageInformations^.Encoding,
-        GetStatement.GetConnection.UTF8StringAsWideField);
-      ColumnDisplaySize := FPlainDriver.GetFieldLength(FieldHandle);
-      Precision := Max(FPlainDriver.GetFieldMaxLength(FieldHandle),
-        FPlainDriver.GetFieldLength(FieldHandle));
-      Scale := FPlainDriver.GetFieldDecimals(FieldHandle);
-      if (AUTO_INCREMENT_FLAG and FieldFlags <> 0)
-        or (TIMESTAMP_FLAG and FieldFlags <> 0) then
-        AutoIncrement := True;
-      if UNSIGNED_FLAG and FieldFlags <> 0 then
-        Signed := False
-      else
-        Signed := True;
-      if NOT_NULL_FLAG and FieldFlags <> 0 then
-        Nullable := ntNoNulls
-      else
-        Nullable := ntNullable;
-      // Properties not set via query results here will be fetched from table metadata.
-    end;
+    ColumnInfo := GetMySQLColumnInfoFromFieldHandle(FPlainDriver,
+     FieldHandle, GetStatement.GetConnection.GetEncoding,
+     GetStatement.GetConnection.UTF8StringAsWideField);
 
     ColumnsInfo.Add(ColumnInfo);
 

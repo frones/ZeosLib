@@ -86,6 +86,7 @@ type
     FBatchQueries: TStrings;
     FConnection: IZConnection;
     FInfo: TStrings;
+    FChunkSize: Integer; //size of buffer chunks for large lob's related to network settings
     FClosed: Boolean;
     FsSQL: String;
     FaSQL: ZAnsiString;
@@ -121,6 +122,7 @@ type
 
     property SSQL: String read FsSQL write SetSSQL;
     property ASQL: ZAnsiString read FaSQL;
+    property ChunkSize: Integer read FChunkSize;
   public
     constructor Create(Connection: IZConnection; Info: TStrings);
     destructor Destroy; override;
@@ -373,6 +375,10 @@ begin
   FInfo := TStringList.Create;
   if Info <> nil then
     FInfo.AddStrings(Info);
+  if FInfo.Values['chunk_size'] = '' then
+    FChunkSize := StrToIntDef(Connection.GetParameters.Values['chunk_size'], 1024)
+  else
+    FChunkSize := StrToIntDef(Info.Values['chunk_size'], 1024)
 end;
 
 {**
