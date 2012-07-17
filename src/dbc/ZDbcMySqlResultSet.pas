@@ -952,7 +952,7 @@ begin
 
     ColumnsInfo.Add(ColumnInfo);
 
-    FBindBuffer.AddColumn(FPlainDriver.GetFieldType(FieldHandle),ColumnInfo.ColumnDisplaySize);
+    FBindBuffer.AddColumn(FPlainDriver.GetFieldType(FieldHandle),ColumnInfo.ColumnDisplaySize,false);
     end;
   FPlainDriver.FreeResult(FResultMetaData);
   FResultMetaData := nil;

@@ -534,7 +534,7 @@ var
     FieldSize: LongWord;
 Begin
     If field_size > MaxBlobsize then
-      FieldSize := MaxBlobSize
+      FieldSize := 20000000
     else
       FieldSize := field_size;
 

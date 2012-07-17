@@ -63,6 +63,9 @@ uses
 
 type
   {** Implements a test case for . }
+
+  { TZGenericTestDbcResultSet }
+
   TZGenericTestDbcResultSet = class(TZComponentPortableSQLTestCase)
   private
     FConnection: TZConnection;
@@ -94,6 +97,8 @@ type
     procedure TestDateTimeFilterExpression;
     procedure TestTimeLocateExpression;
     procedure TestDateTimeLocateExpression;
+    procedure TestDoubleFloatParams;
+    procedure TestVeryLargeBlobs;
   end;
 
 implementation
@@ -102,7 +107,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  DateUtils, ZSysUtils, ZTestConsts, ZTestCase, ZAbstractRODataset, ZDatasetUtils;
+  DateUtils, ZSysUtils, ZTestConsts, ZTestCase, ZAbstractRODataset, ZDatasetUtils,strutils;
 
 { TZGenericTestDbcResultSet }
 
@@ -1728,7 +1733,112 @@ begin
   finally
     Query.Free;
   end;
-end; 
+end;
+
+procedure TZGenericTestDbcResultSet.TestDoubleFloatParams;
+var
+  Query: TZQuery;
+begin
+  Query := TZQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+    Query.Options := [doPreferPrepared,doPreferPreparedResolver];
+    with Query do
+    begin
+      SQL.Text := 'DELETE FROM number_values where n_id = 1';
+      ExecSQL;
+      Sql.Text := 'INSERT INTO number_values (n_id,n_float,n_dprecission)'
+          + ' VALUES (:n_id,:n_float,:n_real)';
+      CheckEquals(3, Params.Count);
+      Params[0].DataType := ftInteger;
+      Params[1].DataType := ftFloat;
+      Params[2].DataType := ftFloat;
+      Params[0].AsInteger := 1;
+      Params[1].AsFloat := 3.14159265358979323846;
+      Params[2].AsFloat := 3.14159265358979323846;
+      ExecSQL;
+
+      CheckEquals(1, RowsAffected);
+
+      SQL.Text := 'SELECT * FROM number_values where n_id = 1';
+      CheckEquals(0, Query.Params.Count);
+
+      Open;
+      CheckEquals(1, RecordCount);
+      CheckEquals(False, IsEmpty);
+      CheckEquals(1, FieldByName('n_id').AsInteger);
+      CheckEquals(3.14159265358979323846, FieldByName('n_float').AsFloat,0.00001);
+      CheckEquals(3.14159265358979323846, FieldByName('n_dprecission').AsFloat,0.0000000000001);
+      Close;
+    end;
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure TZGenericTestDbcResultSet.TestVeryLargeBlobs;
+var
+  Query: TZQuery;
+  BinStream,BinStream1,BinStreamS :TMemoryStream;
+  s:string;
+begin
+  Query := TZQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+    Query.Options := [doPreferPrepared,doPreferPreparedResolver];
+    with Query do
+    begin
+      SQL.Text := 'DELETE FROM blob_values where b_id = 1';
+      ExecSQL;
+      Sql.Text := 'INSERT INTO blob_values (b_id,b_text,b_image)'
+          + ' VALUES (:b_id,:b_text,:b_image)';
+      CheckEquals(3, Params.Count);
+      Params[0].DataType := ftInteger;
+      Params[1].DataType := ftMemo;
+      Params[2].DataType := ftBlob;
+      Params[0].AsInteger := 1;
+      BinStreamS := TMemoryStream.Create;
+      s:=DupeString('1234567890',6000);
+      BinStreamS.Write(s[1],length(s));
+      Params[1].LoadFromStream(BinStreamS, ftBlob);
+      BinStream := TMemoryStream.Create;
+      BinStream.LoadFromFile('../../../database/images/horse.jpg');
+      setlength(s,BinStream.Size);
+      BinStream.Read(s[1],length(s));
+      s:=DupeString(s,10);
+      BinStream.Position:=0;
+      BinStream.Write(s[1],length(s));
+      Params[2].LoadFromStream(BinStream, ftBlob);
+      ExecSQL;
+
+      CheckEquals(1, RowsAffected);
+
+      SQL.Text := 'SELECT * FROM blob_values where b_id = 1';
+      CheckEquals(0, Query.Params.Count);
+
+      Open;
+      CheckEquals(1, RecordCount);
+      CheckEquals(False, IsEmpty);
+      CheckEquals(1, FieldByName('b_id').AsInteger);
+      BinStream1 := TMemoryStream.Create;
+      (FieldByName('b_text') as TBlobField).SaveToStream(BinStream1);
+      CheckEquals(BinStreamS.Size, BinStream1.Size, 'Ascii Stream');
+      CheckEquals(BinStreamS, BinStream1, 'Ascii Stream');
+      BinStream1.Position:=0;
+      (FieldByName('b_image') as TBlobField).SaveToStream(BinStream1);
+      CheckEquals(BinStream.Size, BinStream1.Size, 'Binary Stream');
+      CheckEquals(BinStream, BinStream1, 'Binary Stream');
+      BinStream.Free;
+      BinStream1.Free;
+      Close;
+      SQL.Text := 'DELETE FROM blob_values where b_id = 1';
+      ExecSQL;
+    end;
+  finally
+    Query.Free;
+  end;
+end;
+
 
 initialization
   RegisterTest('component',TZGenericTestDbcResultSet.Suite);
