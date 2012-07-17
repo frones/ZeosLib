@@ -378,7 +378,7 @@ begin
   if FInfo.Values['chunk_size'] = '' then
     FChunkSize := StrToIntDef(Connection.GetParameters.Values['chunk_size'], 1024)
   else
-    FChunkSize := StrToIntDef(Info.Values['chunk_size'], 1024)
+    FChunkSize := StrToIntDef(FInfo.Values['chunk_size'], 1024)
 end;
 
 {**
