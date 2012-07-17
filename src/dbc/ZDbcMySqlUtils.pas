@@ -61,7 +61,7 @@ interface
 uses
   Classes, SysUtils, StrUtils,
   ZSysUtils, ZDbcIntfs, ZPlainMySqlDriver, ZPlainMySqlConstants,  ZDbcLogging,
-  ZCompatibility;
+  ZCompatibility, ZDbcResultSetMetadata;
 
 const
   MAXBUF = 65535;
@@ -138,9 +138,20 @@ function EncodeMySQLVersioning(const MajorVersion: Integer;
 function ConvertMySQLVersionToSQLVersion( const MySQLVersion: Integer ): Integer;
 
 function getMySQLFieldSize (field_type: TMysqlFieldTypes; field_size: LongWord): LongWord;
+
+{**
+  Returns a valid TZColumnInfo from a FieldHandle
+  @param PlainDriver the MySQL PlainDriver interface
+  @param FieldHandle the handle of the fetched field
+  @returns a new TZColumnInfo
+}
+function GetMySQLColumnInfoFromFieldHandle(PlainDriver: IZMySQLPlainDriver;
+  const FieldHandle: PZMySQLField; const Encoding: TZCharEncoding;
+  const UTF8StringAsWideField: Boolean): TZColumnInfo;
+
 implementation
 
-uses ZMessages;
+uses ZMessages, Math;
 
 threadvar
   SilentMySQLError: Integer;
@@ -542,6 +553,71 @@ Begin
     else
         Result := 255;  {unknown ??}
     end;
+end;
+
+{**
+  Returns a valid TZColumnInfo from a FieldHandle
+  @param PlainDriver the MySQL PlainDriver interface
+  @param FieldHandle the handle of the fetched field
+  @returns a new TZColumnInfo
+}
+function GetMySQLColumnInfoFromFieldHandle(PlainDriver: IZMySQLPlainDriver;
+  const FieldHandle: PZMySQLField; const Encoding: TZCharEncoding;
+  const UTF8StringAsWideField: Boolean): TZColumnInfo;
+var
+  FieldFlags: Integer;
+begin
+  if Assigned(FieldHandle) then
+  begin
+    Result := TZColumnInfo.Create;
+    FieldFlags := PlainDriver.GetFieldFlags(FieldHandle);
+
+    Result.ColumnLabel := PlainDriver.ZDbcString(PlainDriver.GetFieldName(FieldHandle), Encoding);
+    Result.ColumnName := PlainDriver.ZDbcString(PlainDriver.GetFieldOrigName(FieldHandle), Encoding);
+    Result.TableName := PlainDriver.ZDbcString(PlainDriver.GetFieldTable(FieldHandle), Encoding);
+    Result.ReadOnly := (PlainDriver.GetFieldTable(FieldHandle) = '');
+    Result.Writable := not Result.ReadOnly;
+    Result.ColumnType := ConvertMySQLHandleToSQLType(PlainDriver,
+        FieldHandle, FieldFlags, Encoding, UTF8StringAsWideField);
+    //EgonHugeist: arrange the MBCS field DisplayWidth to a proper count of Chars
+    case PlainDriver.GetFieldCharsetNr(FieldHandle) of
+      1, 84, {Big5}
+      95, 96, {cp932 japanese}
+      19, 85, {euckr}
+      24, 86, {gb2312}
+      38, 87, {gbk}
+      13, 88, {sjis}
+      35, 90, 128..151:  {ucs2}
+        Result.ColumnDisplaySize := PlainDriver.GetFieldLength(FieldHandle) div 2;
+      33, 83, 192..215, { utf8 }
+      97, 98, { eucjpms}
+      12, 91: {ujis}
+        Result.ColumnDisplaySize := PlainDriver.GetFieldLength(FieldHandle) div 3;
+      54, 55, 101..124, {utf16}
+      56, 62, {utf16le}
+      60, 61, 160..183, {utf32}
+      45, 46, 224..247: {utf8mb4}
+        Result.ColumnDisplaySize := PlainDriver.GetFieldLength(FieldHandle) div 4;
+      else Result.ColumnDisplaySize := PlainDriver.GetFieldLength(FieldHandle); //1-Byte charsets
+    end;
+    Result.Precision := Max(PlainDriver.GetFieldMaxLength(FieldHandle),
+      PlainDriver.GetFieldLength(FieldHandle));
+    Result.Scale := PlainDriver.GetFieldDecimals(FieldHandle);
+    if (AUTO_INCREMENT_FLAG and FieldFlags <> 0)
+      or (TIMESTAMP_FLAG and FieldFlags <> 0) then
+      Result.AutoIncrement := True;
+    if UNSIGNED_FLAG and FieldFlags <> 0 then
+      Result.Signed := False
+    else
+      Result.Signed := True;
+    if NOT_NULL_FLAG and FieldFlags <> 0 then
+      Result.Nullable := ntNoNulls
+    else
+      Result.Nullable := ntNullable;
+    // Properties not set via query results here will be fetched from table metadata.
+  end
+  else
+    Result := nil;
 end;
 
 end.
