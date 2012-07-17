@@ -662,7 +662,7 @@ var
   PBuffer: Pointer;
   year, month, day, hour, minute, second, millisecond: word;
   MyType: TMysqlFieldTypes;
-  I: integer;
+  I, OffSet, PiceSize: integer;
   TempBlob: IZBlob;
 
 begin
@@ -750,13 +750,21 @@ begin
             begin
               TempBlob := (InParamValues[I].VInterface as IZBlob);
               if TempBlob.Length>ChunkSize then
+              begin
+                OffSet := 0;
+                PiceSize := ChunkSize;
+                while OffSet < TempBlob.Length do
                 begin
-                  if (FPlainDriver.SendPreparedLongData(FStmtHandle,I,TempBlob.GetBuffer,TempBlob.Length) <> 0) then
-                    begin
-                      checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, SBindingFailure);
-                      exit;
-                    end;
+                  if OffSet+PiceSize > TempBlob.Length then
+                    PiceSize := TempBlob.Length - OffSet;
+                  if (FPlainDriver.SendPreparedLongData(FStmtHandle, I, PAnsiChar(TempBlob.GetBuffer)+OffSet, PiceSize) <> 0) then
+                  begin
+                    checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, SBindingFailure);
+                    exit;
+                  end;
+                  Inc(OffSet, PiceSize);
                 end;
+              end;
               TempBlob:=nil;
             end;
         end;

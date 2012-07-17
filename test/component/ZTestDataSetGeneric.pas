@@ -107,7 +107,8 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  DateUtils, ZSysUtils, ZTestConsts, ZTestCase, ZAbstractRODataset, ZDatasetUtils,strutils;
+  DateUtils, ZSysUtils, ZTestConsts, ZTestCase, ZAbstractRODataset,
+  ZDatasetUtils, strutils{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
 
 { TZGenericTestDbcResultSet }
 
@@ -1779,34 +1780,53 @@ end;
 procedure TZGenericTestDbcResultSet.TestVeryLargeBlobs;
 var
   Query: TZQuery;
-  BinStream,BinStream1,BinStreamS :TMemoryStream;
-  s:string;
+  BinStream,BinStream1,BinStreamS: TMemoryStream;
+  UnicodeStream: TStream;
+  s:  Ansistring;
+  TextLob, BinLob: String;
 begin
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
+    if StartsWith(LowerCase(Connection.Protocol), 'postgre') then
+      Query.Properties.Add('oidasblob=True');
     Query.Options := [doPreferPrepared,doPreferPreparedResolver];
     with Query do
     begin
       SQL.Text := 'DELETE FROM blob_values where b_id = 1';
       ExecSQL;
-      Sql.Text := 'INSERT INTO blob_values (b_id,b_text,b_image)'
-          + ' VALUES (:b_id,:b_text,:b_image)';
+      if StartsWith(LowerCase(Connection.Protocol), 'oracle') then
+      begin
+        TextLob := 'b_clob';
+        BinLob := 'b_blob';
+      end
+      else if StartsWith(LowerCase(Connection.Protocol), 'sqlite') then
+      begin
+        TextLob := 'b_text';
+        BinLob := 'b_blob';
+      end
+      else
+      begin
+        TextLob := 'b_text';
+        BinLob := 'b_image';
+      end;
+      Sql.Text := 'INSERT INTO blob_values (b_id,'+TextLob+','+BinLob+')'
+        + ' VALUES (:b_id,:b_text,:b_image)';
       CheckEquals(3, Params.Count);
       Params[0].DataType := ftInteger;
       Params[1].DataType := ftMemo;
       Params[2].DataType := ftBlob;
       Params[0].AsInteger := 1;
       BinStreamS := TMemoryStream.Create;
-      s:=DupeString('1234567890',6000);
+      s:={$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString('1234567890',6000);
       BinStreamS.Write(s[1],length(s));
-      Params[1].LoadFromStream(BinStreamS, ftBlob);
+      Params[1].LoadFromStream(BinStreamS, ftMemo);
       BinStream := TMemoryStream.Create;
       BinStream.LoadFromFile('../../../database/images/horse.jpg');
       setlength(s,BinStream.Size);
       BinStream.Read(s[1],length(s));
-      s:=DupeString(s,10);
-      BinStream.Position:=0;
+      s := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString(s, 10);
+      BinStream.Position := 0;
       BinStream.Write(s[1],length(s));
       Params[2].LoadFromStream(BinStream, ftBlob);
       ExecSQL;
@@ -1821,11 +1841,22 @@ begin
       CheckEquals(False, IsEmpty);
       CheckEquals(1, FieldByName('b_id').AsInteger);
       BinStream1 := TMemoryStream.Create;
-      (FieldByName('b_text') as TBlobField).SaveToStream(BinStream1);
-      CheckEquals(BinStreamS.Size, BinStream1.Size, 'Ascii Stream');
-      CheckEquals(BinStreamS, BinStream1, 'Ascii Stream');
+      (FieldByName(TextLob) as TBlobField).SaveToStream(BinStream1);
+      if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+        Connection.DbcConnection.UTF8StringAsWideField then
+      begin
+        UnicodeStream := WideStringStream(UTF8ToString(PAnsiChar(BinStreamS.Memory)));
+        CheckEquals(UnicodeStream.Size, BinStream1.Size, 'Ascii Stream');
+        CheckEquals(UnicodeStream, BinStream1, 'Ascii Stream');
+        UnicodeStream.Free;
+      end
+      else
+      begin
+        CheckEquals(BinStreamS.Size, BinStream1.Size, 'Ascii Stream');
+        CheckEquals(BinStreamS, BinStream1, 'Ascii Stream');
+      end;
       BinStream1.Position:=0;
-      (FieldByName('b_image') as TBlobField).SaveToStream(BinStream1);
+      (FieldByName(BinLob) as TBlobField).SaveToStream(BinStream1);
       CheckEquals(BinStream.Size, BinStream1.Size, 'Binary Stream');
       CheckEquals(BinStream, BinStream1, 'Binary Stream');
       BinStream.Free;

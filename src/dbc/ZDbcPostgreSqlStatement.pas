@@ -459,14 +459,14 @@ begin
             end;
             case InParamTypes[ParamIndex] of
               stBinaryStream:
-                if (GetConnection as IZPostgreSQLConnection).IsOidAsBlob then
+                if ((GetConnection as IZPostgreSQLConnection).IsOidAsBlob) or
+                  StrToBoolDef(Info.Values['oidasblob'], False) then
                 begin
                   TempStream := TempBlob.GetStream;
                   try
                     WriteTempBlob := TZPostgreSQLBlob.Create(FPlainDriver, nil, 0,
                       Self.GetConnectionHandle, 0, ChunkSize);
                     WriteTempBlob.SetStream(TempStream);
-                    //WriteTempBlob.SetBuffer(TempBlob.GetBuffer, TempBlob.Length);
                     WriteTempBlob.WriteBlob;
                     Result := IntToStr(WriteTempBlob.GetBlobOid);
                   finally
