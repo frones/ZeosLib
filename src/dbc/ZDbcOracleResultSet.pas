@@ -1184,8 +1184,6 @@ begin
         Connection.GetErrorHandle, FLobLocator, ContentSize, 1,
         BlobData, BlobSize, OCI_ONE_PIECE, nil, nil, 0, SQLCS_IMPLICIT);
     end;
-    if ContentSize <> BlobSize then
-      raise Exception.Create('Wrong lob content written!');
   end
   else
   begin
