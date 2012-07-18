@@ -488,7 +488,7 @@ function TZPlainPostgreSQLPerformanceTestCase.CheckPostgreSQLError: boolean;
 var
   msg: string;
 begin
-  msg := StrPas(FPlainDriver.GetErrorMessage(FHandle));
+  msg := String(StrPas(FPlainDriver.GetErrorMessage(FHandle)));
 
   if Trim(msg) = '' then
     Result := False
@@ -750,11 +750,11 @@ begin
   begin
     PStatusVector := @FStatusVector;
     PlainDriver.isc_interprete(Msg, @PStatusVector);
-    ErrorMessage := StrPas(Msg);
+    ErrorMessage := String(StrPas(Msg));
 
     ErrorCode := PlainDriver.isc_sqlcode(@FStatusVector);
     PlainDriver.isc_sql_interprete(ErrorCode, Msg, 1024);
-    ErrorSqlMessage := StrPas(Msg);
+    ErrorSqlMessage := String(StrPas(Msg));
 
     if SQL <> '' then
       SQL := Format('The SQL: %s; ', [SQL]);
@@ -771,7 +771,7 @@ end;
 procedure TZPlainInterbase6SQLPerformanceTestCase.Connect;
 var
   DPB: PAnsiChar;
-  NewDPB: String;
+  NewDPB: AnsiString;
   FDPBLength: Word;
   DBName: array[0..512] of AnsiChar;
   PTEB: PISC_TEB;
@@ -797,9 +797,9 @@ begin
   StrPCopy(DPB, NewDPB);
 
   if HostName = '' then
-    StrPCopy(DBName, Database)
+    StrPCopy(DBName, AnsiString(Database))
   else
-    StrPCopy(DBName, HostName + ':' + Database);
+    StrPCopy(DBName, AnsiString(HostName + ':' + Database));
 
   try
     { connect to database }
@@ -862,7 +862,7 @@ end;
 function TZPlainInterbase6SQLPerformanceTestCase.ExecuteQuery(
   SQL: string): IZResultSQLDA;
 var
-  Cursor: string;
+  Cursor: Ansistring;
   SQLData: IZResultSQLDA;
   StatusVector: TARRAY_ISC_STATUS;
 begin
@@ -872,7 +872,7 @@ begin
 
   try
     PrepareStatement(FPlainDriver, @FHandle, @FTrHandle,
-      FDialect, SQL, FStmtHandle);
+      FDialect, AnsiString(SQL), FStmtHandle);
     PrepareResultSqlData(FPlainDriver, @FHandle, FDialect,
       SQL, FStmtHandle, SQLData);
 
@@ -880,9 +880,9 @@ begin
       @FStmtHandle, FDialect, SQLData.GetData);
     CheckInterbase6Error(SQL);
 
-    Cursor := RandomString(12);
+    Cursor := AnsiString(RandomString(12));
     FPlainDriver.isc_dsql_set_cursor_name(@StatusVector,
-      @FStmtHandle, PChar(Cursor), 0);
+      @FStmtHandle, PAnsiChar(Cursor), 0);
     CheckInterbase6Error(SQL);
 
     Result := SQLData;
@@ -900,7 +900,7 @@ begin
 
   try
     PrepareStatement(FPlainDriver, @FHandle, @FTrHandle,
-      FDialect, SQL, StmtHandle);
+      FDialect, AnsiString(SQL), StmtHandle);
 
     FPlainDriver.isc_dsql_execute2(@StatusVector, @FTrHandle,
       @StmtHandle, FDialect, nil, nil);
@@ -1036,12 +1036,12 @@ end;
 { TZPlainASASQLPerformanceTestCase }
 procedure TZPlainASASQLPerformanceTestCase.CheckASAError(Sql: string = '');
 var
-  ErrorBuf: array[0..1024] of Char;
+  ErrorBuf: array[0..1024] of AnsiChar;
   ErrorMessage: string;
 begin
   if Handle.SqlCode < SQLE_NOERROR then
   begin
-    ErrorMessage := PlainDriver.sqlError_Message( Handle, ErrorBuf, SizeOf( ErrorBuf));
+    ErrorMessage := String(PlainDriver.sqlError_Message( Handle, ErrorBuf, SizeOf( ErrorBuf)));
     //SyntaxError Position in SQLCount
     if SQL <> '' then
       SQL := Format( 'The SQL: %s; ', [SQL]);
@@ -1079,7 +1079,7 @@ begin
         ConnectionString := ConnectionString + 'DBN="' + Database + '"; ';
     end;
 
-    FPlainDriver.db_string_connect( FHandle, PChar( ConnectionString));
+    FPlainDriver.db_string_connect( FHandle, PAnsiChar(AnsiString(ConnectionString)));
     CheckASAError;
 
   except
@@ -1106,7 +1106,7 @@ procedure TZPlainASASQLPerformanceTestCase.Disconnect;
 begin
   if CursorName <> '' then
   begin
-    FPlainDriver.db_close( FHandle, PChar( CursorName));
+    FPlainDriver.db_close( FHandle, PAnsiChar(AnsiString(CursorName)));
     CursorName := '';
     CheckASAError;
   end;
@@ -1140,27 +1140,27 @@ var
 begin
   StmtNum := 0;
   CursorName := RandomString(12);
-  SQLData := TZASASQLDA.Create(FPlainDriver, FHandle, CursorName,
+  SQLData := TZASASQLDA.Create(FPlainDriver, FHandle, AnsiString(CursorName),
     @ZCompatibility.ClientCodePageDummy);
 
   try
     FPlainDriver.db_prepare_describe( FHandle, nil, @StmtNum,
-      PChar( SQL), SQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
+      PAnsiChar(AnsiString(SQL)), SQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
       SQL_PREPARE_DESCRIBE_OUTPUT, 0);
-    CheckASAError( SQL);
+    CheckASAError(SQL);
 
     if SQLData.GetData^.sqld > SQLData.GetData^.sqln then
     begin
       SQLData.AllocateSQLDA( SQLData.GetData^.sqld);
       FPlainDriver.db_describe( FHandle, nil, @StmtNum,
         SQLData.GetData, SQL_DESCRIBE_OUTPUT);
-      CheckASAError( SQL);
+      CheckASAError(SQL);
     end;
 
     SQLData.InitFields;
-    FPlainDriver.db_open( FHandle, PChar( CursorName), nil, @StmtNum,
+    FPlainDriver.db_open( FHandle, PAnsiChar(AnsiString(CursorName)), nil, @StmtNum,
         nil, 20, 0, CUR_OPEN_DECLARE + CUR_UPDATE);
-    CheckASAError( SQL);
+    CheckASAError(SQL);
 
     Result := SQLData;
   except
@@ -1176,7 +1176,7 @@ end;
 
 procedure TZPlainASASQLPerformanceTestCase.ExecuteSQL(SQL: string);
 begin
-  FPlainDriver.db_execute_imm( FHandle, PChar( SQL));
+  FPlainDriver.db_execute_imm( FHandle, PAnsiChar(AnsiString(SQL)));
   CheckASAError(SQL);
 end;
 
@@ -1212,7 +1212,7 @@ begin
   for I := 1 to GetRecordCount do
   begin
     FPlainDriver.db_fetch( FHandle,
-      PChar( FCursorName), CUR_RELATIVE, 1, SQLData.GetData, BlockSize, CUR_FORREGULAR);
+      PAnsiChar(AnsiString(FCursorName)), CUR_RELATIVE, 1, SQLData.GetData, BlockSize, CUR_FORREGULAR);
     CheckASAError;
     SQLData.GetInt(0);
     SQLData.GetFloat(1);
