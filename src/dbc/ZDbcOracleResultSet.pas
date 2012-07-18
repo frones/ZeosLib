@@ -1111,9 +1111,38 @@ end;
 }
 procedure TZOracleBlob.WriteBlob;
 var
-  Status: Integer;
+  Status: sword;
   Connection: IZOracleConnection;
-  ContentSize: ub4;
+  ContentSize, OffSet: ub4;
+
+  {function DoWrite(AOffSet: ub4; AChunkSize: ub4; APiece: ub1): sword;
+  var
+    AContentSize: ub4;
+  begin
+    if Self.FBlobType = stBinaryStream then
+    begin
+      AContentSize := ContentSize;
+      Result := FPlainDriver.LobWrite(Connection.GetContextHandle,
+        Connection.GetErrorHandle, FLobLocator, AContentSize, AOffSet,
+        BlobData, AChunkSize, APiece, nil, nil, 0, SQLCS_IMPLICIT);
+    end
+    else
+    begin
+      if ContentSize > 0 then
+        AContentSize := AChunkSize div Connection.GetClientCodePageInformations^.CharWidth
+      else
+      begin
+        AContentSize := ContentSize;
+        AChunkSize := Connection.GetClientCodePageInformations^.CharWidth;
+      end;
+
+      Result := FPlainDriver.LobWrite(Connection.GetContextHandle,
+        Connection.GetErrorHandle, FLobLocator, AContentSize, AOffSet,
+        BlobData, AChunkSize, APiece, nil, nil, Connection.GetClientCodePageInformations^.ID, SQLCS_IMPLICIT);
+    end;
+    ContentSize := AContentSize;
+    inc(OffSet, AChunkSize);
+  end;}
 begin
   Connection := FHandle as IZOracleConnection;
 
@@ -1127,10 +1156,36 @@ begin
   { This test doesn't use IsEmpty because that function does allow for zero length blobs}
   if (BlobSize > 0) then
   begin
-    ContentSize := BlobSize;
-    Status := FPlainDriver.LobWrite(Connection.GetContextHandle,
-      Connection.GetErrorHandle, FLobLocator, ContentSize, 1,
-      BlobData, BlobSize, OCI_ONE_PIECE, nil, nil, 0, SQLCS_IMPLICIT);
+    {if BlobSize > FChunkSize then
+    begin
+      OffSet := 0;
+      ContentSize := 0;
+
+      Status := DoWrite(1, FChunkSize, OCI_FIRST_PIECE);
+      if Status <> OCI_NEED_DATA then
+        CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
+          Status, lcOther, 'Write Large Object');
+
+      if (BlobSize - OffSet) > FChunkSize then
+        while (BlobSize - OffSet) > FChunkSize do //take care there is room left for LastPiece
+        begin
+          Status := DoWrite(offset, FChunkSize, OCI_NEXT_PIECE);
+          if Status <> OCI_NEED_DATA then
+            CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
+              Status, lcOther, 'Write Large Object');
+
+        end;
+      Status := DoWrite(offset, BlobSize - OffSet, OCI_LAST_PIECE);
+    end
+    else}
+    begin
+      ContentSize := BlobSize;
+      Status := FPlainDriver.LobWrite(Connection.GetContextHandle,
+        Connection.GetErrorHandle, FLobLocator, ContentSize, 1,
+        BlobData, BlobSize, OCI_ONE_PIECE, nil, nil, 0, SQLCS_IMPLICIT);
+    end;
+    if ContentSize <> BlobSize then
+      raise Exception.Create('Wrong lob content written!');
   end
   else
   begin
