@@ -1789,7 +1789,10 @@ begin
   try
     Query.Connection := Connection;
     if StartsWith(LowerCase(Connection.Protocol), 'postgre') then
+      begin
       Query.Properties.Add('oidasblob=True');
+      Connection.TransactIsolationLevel:=tiReadCommitted;
+      end;
     Query.Options := [doPreferPrepared,doPreferPreparedResolver];
     with Query do
     begin
@@ -1861,6 +1864,7 @@ begin
       CheckEquals(BinStream, BinStream1, 'Binary Stream');
       BinStream.Free;
       BinStream1.Free;
+      BinStreamS.Free;
       Close;
       SQL.Text := 'DELETE FROM blob_values where b_id = 1';
       ExecSQL;
