@@ -1113,7 +1113,7 @@ procedure TZOracleBlob.WriteBlob;
 var
   Status: sword;
   Connection: IZOracleConnection;
-  ContentSize, OffSet: ub4;
+  ContentSize{, OffSet}: ub4;
 
   {function DoWrite(AOffSet: ub4; AChunkSize: ub4; APiece: ub1): sword;
   var

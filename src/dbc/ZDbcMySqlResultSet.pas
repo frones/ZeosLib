@@ -240,10 +240,10 @@ end;
   Opens this recordset.
 }
 procedure TZMySQLResultSet.Open;
+const one = AnsiString('1');
 var
   I: Integer;
   FieldHandle: PZMySQLField;
-  one: integer;
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
@@ -255,8 +255,7 @@ begin
   end
   else
   begin
-    one:=1;
-    FPlainDriver.StmtAttrSet(FHandle,STMT_ATTR_UPDATE_MAX_LENGTH,PAnsiChar(@one));
+    //FPlainDriver.StmtAttrSet(FHandle,STMT_ATTR_UPDATE_MAX_LENGTH,PAnsiChar(one));
     FQueryHandle := FPlainDriver.StoreResult(FHandle);
     if Assigned(FQueryHandle) then
       LastRowNo := FPlainDriver.GetRowCount(FQueryHandle)
@@ -278,7 +277,7 @@ begin
 
     ColumnsInfo.Add(GetMySQLColumnInfoFromFieldHandle(FPlainDriver,
      FieldHandle, GetStatement.GetConnection.GetEncoding,
-     GetStatement.GetConnection.UTF8StringAsWideField,FUseResult));
+     GetStatement.GetConnection.UTF8StringAsWideField));
   end;
 
   inherited Open;
@@ -380,7 +379,7 @@ begin
   ColumnIndex := ColumnIndex - 1;
   LengthPointer := FPlainDriver.FetchLengths(FQueryHandle);
   if LengthPointer <> nil then
-    Length  := PULong(NativeUint(LengthPointer) + ColumnIndex * SizeOf(ULOng))^
+    Length  := PULong(NativeUint(LengthPointer) + NativeUInt(ColumnIndex) * SizeOf(ULOng))^
   else
     Length := 0;
   Buffer := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);
@@ -909,13 +908,12 @@ end;
   Opens this recordset.
 }
 procedure TZMySQLPreparedResultSet.Open;
+const one = AnsiString('1');
 var
   I: Integer;
   ColumnInfo: TZColumnInfo;
   FieldHandle: PZMySQLField;
-  FieldFlags: Integer;
   FieldCount: Integer;
-  one: integer;
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
@@ -932,8 +930,7 @@ begin
     LastRowNo := 0
   else
   begin
-    one:=1;
-    FPlainDriver.StmtAttrSet(FPrepStmt,STMT_ATTR_UPDATE_MAX_LENGTH,PAnsiChar(@one));
+    //FPlainDriver.StmtAttrSet(FPrepStmt,STMT_ATTR_UPDATE_MAX_LENGTH,PAnsiChar(one));
     if (FPlainDriver.StorePreparedResult(FPrepStmt)=0) then
       LastRowNo := FPlainDriver.GetPreparedNumRows(FPrepStmt)
     else
@@ -954,7 +951,7 @@ begin
 
     ColumnInfo := GetMySQLColumnInfoFromFieldHandle(FPlainDriver,
      FieldHandle, GetStatement.GetConnection.GetEncoding,
-     GetStatement.GetConnection.UTF8StringAsWideField,FUseResult);
+     GetStatement.GetConnection.UTF8StringAsWideField);
 
     ColumnsInfo.Add(ColumnInfo);
 
@@ -1512,7 +1509,7 @@ begin
   if (MaxRows > 0) and (RowNo >= MaxRows) then
     Exit;
 
-  if FPlainDriver.FetchBoundResults(FPrepStmt) in [0, MYSQL_DATA_TRUNCATED] then
+  if FPlainDriver.FetchBoundResults(FPrepStmt) =0 then
   begin
     RowNo := RowNo + 1;
     if LastRowNo < RowNo then
