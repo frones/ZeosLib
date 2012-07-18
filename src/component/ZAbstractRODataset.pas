@@ -1788,6 +1788,7 @@ end;
 procedure TZAbstractRODataset.InternalOpen;
 var
   ColumnList: TObjectList;
+  I: Integer;
 begin
   {$IFNDEF FPC}
   If (csDestroying in Componentstate) then
@@ -1819,7 +1820,13 @@ begin
       InternalInitFieldDefs;
 
     if DefaultFields and not FRefreshInProgress then
+    begin
       CreateFields;
+      for i := 0 to Fields.Count -1 do
+        if Fields[i].DataType in [ftString, ftWideString] then
+          if not (ResultSet.GetMetadata.GetColumnDisplaySize(I+1) = 0) then
+            Fields[i].Size := ResultSet.GetMetadata.GetColumnDisplaySize(I+1);
+    end;
     BindFields(True);
 
     { Initializes accessors and buffers. }

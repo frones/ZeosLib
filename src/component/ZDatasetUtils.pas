@@ -392,6 +392,7 @@ begin
         ColumnInfo.ColumnType := stUnicodeStream;
     ColumnInfo.Scale := 0;
     ColumnInfo.ColumnLabel := Current.DisplayName;
+    ColumnInfo.ColumnDisplaySize := Current.DisplayWidth;
     ColumnInfo.DefaultExpression := Current.DefaultExpression;
 
     Result.Add(ColumnInfo);

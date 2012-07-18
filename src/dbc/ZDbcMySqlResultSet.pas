@@ -1509,7 +1509,7 @@ begin
   if (MaxRows > 0) and (RowNo >= MaxRows) then
     Exit;
 
-  if FPlainDriver.FetchBoundResults(FPrepStmt) =0 then
+  if FPlainDriver.FetchBoundResults(FPrepStmt) in [0, MYSQL_DATA_TRUNCATED] then
   begin
     RowNo := RowNo + 1;
     if LastRowNo < RowNo then
