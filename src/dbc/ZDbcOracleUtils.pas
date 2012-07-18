@@ -131,7 +131,7 @@ procedure InitializeOracleVar(PlainDriver: IZOraclePlainDriver;
 }
 procedure LoadOracleVars(PlainDriver: IZOraclePlainDriver;
   Connection: IZConnection; ErrorHandle: POCIError; Variables: PZSQLVars;
-  Values: TZVariantDynArray);
+  Values: TZVariantDynArray; ChunkSize: Integer);
 
 {**
   Unloads Oracle variables binded to SQL statement with data.
@@ -385,7 +385,7 @@ end;
 }
 procedure LoadOracleVars(PlainDriver: IZOraclePlainDriver;
   Connection: IZConnection; ErrorHandle: POCIError; Variables: PZSQLVars;
-  Values: TZVariantDynArray);
+  Values: TZVariantDynArray; ChunkSize: Integer);
 var
   I: Integer;
   Status: Integer;
@@ -466,7 +466,7 @@ begin
             try
               WriteTempBlob := TZOracleBlob.Create(PlainDriver,
                 nil, 0, Connection, PPOCIDescriptor(CurrentVar.Data)^,
-                CurrentVar.ColType);
+                CurrentVar.ColType, ChunkSize);
               WriteTempBlob.SetStream(TempStream);
               WriteTempBlob.CreateBlob;
               WriteTempBlob.WriteBlob;

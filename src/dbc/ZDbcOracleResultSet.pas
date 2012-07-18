@@ -127,12 +127,13 @@ type
     FPlainDriver: IZOraclePlainDriver;
     FBlobType: TZSQLType;
     FTemporary: Boolean;
+    FChunkSize: Integer;
   protected
     procedure InternalSetData(AData: Pointer; ASize: Integer);
   public
     constructor Create(PlainDriver: IZOraclePlainDriver; Data: Pointer;
       Size: Integer; Handle: IZConnection; LobLocator: POCILobLocator;
-      BlobType: TZSQLType);
+      BlobType: TZSQLType; ChunkSize: Integer);
     destructor Destroy; override;
 
     function GetLobLocator: POCILobLocator;
@@ -607,7 +608,7 @@ begin
       else
       begin
         Result := AnsiSQLDateToDateTime(
-          GetAsStringValue(ColumnIndex, SQLVarHolder));
+          String(GetAsStringValue(ColumnIndex, SQLVarHolder)));
       end;
     end;
   end
@@ -878,7 +879,7 @@ begin
 
     Connection := GetStatement.GetConnection as IZOracleConnection;
     Result := TZOracleBlob.Create(FPlainDriver, nil, 0, Connection, LobLocator,
-      CurrentVar.ColType);
+      CurrentVar.ColType, GetStatement.GetChunkSize);
     (Result as IZOracleBlob).ReadBlob;
   end
   else
@@ -967,7 +968,7 @@ end;
 }
 constructor TZOracleBlob.Create(PlainDriver: IZOraclePlainDriver;
   Data: Pointer; Size: Integer; Handle: IZConnection;
-  LobLocator: POCILobLocator; BlobType: TZSQLType);
+  LobLocator: POCILobLocator; BlobType: TZSQLType; ChunkSize: Integer);
 begin
   inherited CreateWithData(Data, Size);
   FHandle := Handle;
@@ -975,6 +976,7 @@ begin
   FPlainDriver := PlainDriver;
   FTemporary := False;
   FBlobType := BlobType;
+  FChunkSize := ChunkSize;
 end;
 
 {**
@@ -1178,7 +1180,7 @@ end;
 function TZOracleBlob.Clone: IZBlob;
 begin
   Result := TZOracleBlob.Create(FPlainDriver, BlobData, BlobSize,
-    FHandle, FLobLocator, FBlobType);
+    FHandle, FLobLocator, FBlobType, FChunkSize);
 end;
 
 {**

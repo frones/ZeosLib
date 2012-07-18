@@ -567,7 +567,7 @@ begin
 
   { Loads binded variables with values. }
   LoadOracleVars(FPlainDriver, Connection, ErrorHandle,
-    FInVars, InParamValues);
+    FInVars, InParamValues, ChunkSize);
 
   StatementType := 0;
   FPlainDriver.AttrGet(Handle, OCI_HTYPE_STMT, @StatementType, nil,
@@ -613,7 +613,7 @@ begin
 
   { Loads binded variables with values. }
   LoadOracleVars(FPlainDriver, Connection, ErrorHandle,
-    FInVars, InParamValues);
+    FInVars, InParamValues,ChunkSize);
 
   { Executes the statement and gets a resultset. }
   Result := CreateOracleResultSet(FPlainDriver, Self, SQL,
@@ -646,7 +646,7 @@ begin
 
   { Loads binded variables with values. }
   LoadOracleVars(FPlainDriver, Connection, ErrorHandle,
-    FInVars, InParamValues);
+    FInVars, InParamValues, ChunkSize);
 
   try
     StatementType := 0;
@@ -908,7 +908,7 @@ function TZOracleCallableStatement.ExecuteUpdatePrepared: Integer;
 
   { Loads binded variables with values. }
     LoadOracleVars(FPlainDriver , Connection, FErrorHandle,
-      FInVars, InParamValues);
+      FInVars, InParamValues, ChunkSize);
 
 
     try

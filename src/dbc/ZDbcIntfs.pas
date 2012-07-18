@@ -542,6 +542,7 @@ type
 
     function GetConnection: IZConnection;
     function GetParameters: TStrings;
+    function GetChunkSize: Integer;
 
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;

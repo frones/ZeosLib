@@ -284,7 +284,6 @@ begin
     FOidAsBlob := False;
 
   FCharactersetCode := TZPgCharactersetType(ClientCodePage^.ID);
-//  DriverManager.LogError(lcOther,'','Create',Integer(FCharactersetCode),'');
   FNoticeProcessor := DefaultNoticeProcessor;
 end;
 

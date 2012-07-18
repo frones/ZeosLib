@@ -172,6 +172,7 @@ type
 
     function GetConnection: IZConnection;
     function GetParameters: TStrings;
+    function GetChunkSize: Integer;
 
     function GetWarnings: EZSQLWarning; virtual;
     procedure ClearWarnings; virtual;
@@ -993,6 +994,14 @@ begin
   Result := FInfo;
 end;
 
+{**
+  Returns the ChunkSize for reading/writing large lobs
+  @returns the chunksize in bytes.
+}
+function TZAbstractStatement.GetChunkSize: Integer;
+begin
+  Result := FChunkSize;
+end;
 { TZAbstractPreparedStatement }
 
 {**
