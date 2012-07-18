@@ -165,6 +165,11 @@ const
   STMT_FETCH_NO_DATA    = 100;
   STMT_FETCH_DATA_TRUNC = 101;
 
+  {status codes}
+const
+   MYSQL_NO_DATA = 100;
+   MYSQL_DATA_TRUNCATED  = 101;
+
 type
   TMySqlOption = (
     MYSQL_OPT_CONNECT_TIMEOUT,
@@ -842,7 +847,7 @@ const
                                             '--set-variable=key_buffer_size=32M'#0);
 
 const
-    MaxBlobSize = 65535;
+    MaxBlobSize = 1000000;
 
 implementation
 

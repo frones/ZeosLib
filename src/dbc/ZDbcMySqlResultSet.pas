@@ -243,6 +243,7 @@ procedure TZMySQLResultSet.Open;
 var
   I: Integer;
   FieldHandle: PZMySQLField;
+  one: integer;
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
@@ -254,6 +255,8 @@ begin
   end
   else
   begin
+    one:=1;
+    FPlainDriver.StmtAttrSet(FHandle,STMT_ATTR_UPDATE_MAX_LENGTH,PAnsiChar(@one));
     FQueryHandle := FPlainDriver.StoreResult(FHandle);
     if Assigned(FQueryHandle) then
       LastRowNo := FPlainDriver.GetRowCount(FQueryHandle)
@@ -275,7 +278,7 @@ begin
 
     ColumnsInfo.Add(GetMySQLColumnInfoFromFieldHandle(FPlainDriver,
      FieldHandle, GetStatement.GetConnection.GetEncoding,
-     GetStatement.GetConnection.UTF8StringAsWideField));
+     GetStatement.GetConnection.UTF8StringAsWideField,FUseResult));
   end;
 
   inherited Open;
@@ -912,6 +915,7 @@ var
   FieldHandle: PZMySQLField;
   FieldFlags: Integer;
   FieldCount: Integer;
+  one: integer;
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
@@ -928,6 +932,8 @@ begin
     LastRowNo := 0
   else
   begin
+    one:=1;
+    FPlainDriver.StmtAttrSet(FPrepStmt,STMT_ATTR_UPDATE_MAX_LENGTH,PAnsiChar(@one));
     if (FPlainDriver.StorePreparedResult(FPrepStmt)=0) then
       LastRowNo := FPlainDriver.GetPreparedNumRows(FPrepStmt)
     else
@@ -948,7 +954,7 @@ begin
 
     ColumnInfo := GetMySQLColumnInfoFromFieldHandle(FPlainDriver,
      FieldHandle, GetStatement.GetConnection.GetEncoding,
-     GetStatement.GetConnection.UTF8StringAsWideField);
+     GetStatement.GetConnection.UTF8StringAsWideField,FUseResult);
 
     ColumnsInfo.Add(ColumnInfo);
 
@@ -1506,7 +1512,7 @@ begin
   if (MaxRows > 0) and (RowNo >= MaxRows) then
     Exit;
 
-  if FPlainDriver.FetchBoundResults(FPrepStmt) =0 then
+  if FPlainDriver.FetchBoundResults(FPrepStmt) in [0, MYSQL_DATA_TRUNCATED] then
   begin
     RowNo := RowNo + 1;
     if LastRowNo < RowNo then

@@ -190,6 +190,8 @@ type
     function GetPreparedAffectedRows (Handle: PZMySqlPrepStmt): Int64;
     // stmt_attr_get
     // stmt_attr_set
+    function StmtAttrSet(stmt: PZMySqlPrepStmt; option: TMysqlStmtAttrType;
+                                  arg: PAnsiChar): Byte;
     function BindParameters (Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
     function BindResult (Handle: PZMySqlPrepStmt;  bindArray: PZMysqlBindArray): Byte;
     function ClosePrepStmt (PrepStmtHandle: PZMySqlPrepStmt): PZMySqlPrepStmt;
@@ -297,6 +299,8 @@ type
     function Rollback (Handle: PZMySQLConnect): Boolean;
     function GetSQLState (Handle: PZMySQLConnect): AnsiString;
 
+    function StmtAttrSet(stmt: PZMySqlPrepStmt; option: TMysqlStmtAttrType;
+                                  arg: PAnsiChar): Byte;
     function GetPreparedAffectedRows (Handle: PZMySqlPrepStmt): Int64;
     function BindParameters (Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
     function BindResult (Handle: PZMySqlPrepStmt;  bindArray: PZMysqlBindArray): Byte;
@@ -1033,6 +1037,12 @@ end;
 function TZMySQLBaseDriver.getSQLState (Handle: PZMySQLConnect): AnsiString;
 begin
     Result := MYSQL_API.mysql_sqlstate (PMYSQL(Handle));
+end;
+
+function TZMySQLBaseDriver.StmtAttrSet(stmt: PMYSQL_STMT;
+  option: TMysqlStmtAttrType; arg: PAnsiChar): Byte;
+begin
+  Result :=  MYSQL_API.mysql_stmt_attr_set(PMYSQL_STMT(stmt),option,arg);
 end;
 
 function TZMySQLBaseDriver.GetPreparedAffectedRows(Handle: PZMySqlPrepStmt): Int64;

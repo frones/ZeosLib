@@ -147,7 +147,7 @@ function getMySQLFieldSize (field_type: TMysqlFieldTypes; field_size: LongWord):
 }
 function GetMySQLColumnInfoFromFieldHandle(PlainDriver: IZMySQLPlainDriver;
   const FieldHandle: PZMySQLField; const Encoding: TZCharEncoding;
-  const UTF8StringAsWideField: Boolean): TZColumnInfo;
+  const UTF8StringAsWideField: Boolean; const bUseResult:boolean): TZColumnInfo;
 
 implementation
 
@@ -533,10 +533,7 @@ function getMySQLFieldSize (field_type: TMysqlFieldTypes; field_size: LongWord):
 var
     FieldSize: LongWord;
 Begin
-    If field_size > MaxBlobsize then
-      FieldSize := 20000000
-    else
-      FieldSize := field_size;
+    FieldSize := field_size;
 
     case field_type of
         FIELD_TYPE_TINY:        Result := 1;
@@ -563,9 +560,11 @@ end;
 }
 function GetMySQLColumnInfoFromFieldHandle(PlainDriver: IZMySQLPlainDriver;
   const FieldHandle: PZMySQLField; const Encoding: TZCharEncoding;
-  const UTF8StringAsWideField: Boolean): TZColumnInfo;
+  const UTF8StringAsWideField: Boolean; const bUseResult:boolean): TZColumnInfo;
 var
   FieldFlags: Integer;
+  FieldLength:integer;
+  bUseMaxLength:boolean;
 begin
   if Assigned(FieldHandle) then
   begin
@@ -579,27 +578,40 @@ begin
     Result.Writable := not Result.ReadOnly;
     Result.ColumnType := ConvertMySQLHandleToSQLType(PlainDriver,
         FieldHandle, FieldFlags, Encoding, UTF8StringAsWideField);
-    //EgonHugeist: arrange the MBCS field DisplayWidth to a proper count of Chars
-    case PlainDriver.GetFieldCharsetNr(FieldHandle) of
-      1, 84, {Big5}
-      95, 96, {cp932 japanese}
-      19, 85, {euckr}
-      24, 86, {gb2312}
-      38, 87, {gbk}
-      13, 88, {sjis}
-      35, 90, 128..151:  {ucs2}
-        Result.ColumnDisplaySize := PlainDriver.GetFieldLength(FieldHandle) div 2;
-      33, 83, 192..215, { utf8 }
-      97, 98, { eucjpms}
-      12, 91: {ujis}
-        Result.ColumnDisplaySize := PlainDriver.GetFieldLength(FieldHandle) div 3;
-      54, 55, 101..124, {utf16}
-      56, 62, {utf16le}
-      60, 61, 160..183, {utf32}
-      45, 46, 224..247: {utf8mb4}
-        Result.ColumnDisplaySize := PlainDriver.GetFieldLength(FieldHandle) div 4;
-      else Result.ColumnDisplaySize := PlainDriver.GetFieldLength(FieldHandle); //1-Byte charsets
-    end;
+    FieldLength:=PlainDriver.GetFieldLength(FieldHandle);
+    bUseMaxLength:=false;
+    if PlainDriver.GetFieldType(FieldHandle) in [FIELD_TYPE_BLOB,FIELD_TYPE_MEDIUM_BLOB,FIELD_TYPE_LONG_BLOB,FIELD_TYPE_STRING] then
+      if bUseResult then  //PMYSQL_FIELD(Field)^.max_length not valid
+        Fieldlength:=min(MaxBlobSize,FieldLength)
+      else
+        begin
+        FieldLength:=PlainDriver.GetFieldMaxLength(FieldHandle);
+        bUseMaxLength:=true;
+        end;
+    if bUseMaxLength then  //we got the real char count here!
+      Result.ColumnDisplaySize := FieldLength
+    else
+      //EgonHugeist: arrange the MBCS field DisplayWidth to a proper count of Chars
+      case PlainDriver.GetFieldCharsetNr(FieldHandle) of
+        1, 84, {Big5}
+        95, 96, {cp932 japanese}
+        19, 85, {euckr}
+        24, 86, {gb2312}
+        38, 87, {gbk}
+        13, 88, {sjis}
+        35, 90, 128..151:  {ucs2}
+          Result.ColumnDisplaySize := FieldLength div 2;
+        33, 83, 192..215, { utf8 }
+        97, 98, { eucjpms}
+        12, 91: {ujis}
+          Result.ColumnDisplaySize := FieldLength div 3;
+        54, 55, 101..124, {utf16}
+        56, 62, {utf16le}
+        60, 61, 160..183, {utf32}
+        45, 46, 224..247: {utf8mb4}
+          Result.ColumnDisplaySize := FieldLength div 4;
+        else Result.ColumnDisplaySize := FieldLength; //1-Byte charsets
+      end;
     Result.Precision := Max(PlainDriver.GetFieldMaxLength(FieldHandle),
       PlainDriver.GetFieldLength(FieldHandle));
     Result.Scale := PlainDriver.GetFieldDecimals(FieldHandle);
