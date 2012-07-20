@@ -180,6 +180,9 @@
 // Debug/release compiler options
 {$D+}
 
+//force 4 byte enumerations. We are interfacing with c libraries !!
+{$Z+}
+
 {$IFOPT D-}
 {$DEFINE BINARY_RELEASE}
 {$ENDIF}

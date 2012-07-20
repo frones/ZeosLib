@@ -126,7 +126,7 @@ type
   public
     constructor Create(PlainDriver:IZMysqlPlainDriver; NumColumns : Integer; var ColumnArray:TZMysqlColumnBuffer);
     destructor Destroy; override;
-    procedure AddColumn(buffertype:TMysqlFieldTypes; display_length:integer; largeblob:boolean);
+    procedure AddColumn(buffertype:TMysqlFieldTypes; field_length:integer; largeblob:boolean);
     function GetColumnArray : TZMysqlColumnBuffer;
     function GetBufferAddress : Pointer;
     function GetBufferType(ColumnIndex: Integer) : TMysqlFieldTypes;
@@ -968,7 +968,7 @@ begin
 end;
 
 procedure TZMySQLBindBuffer.AddColumn(buffertype: TMysqlFieldTypes;
-  display_length: integer; largeblob:boolean);
+  field_length: integer; largeblob:boolean);
   var
     tempbuffertype: TMysqlFieldTypes;
     ColOffset:integer;
@@ -982,13 +982,13 @@ begin
   Inc(FAddedColumnCount);
   With FPColumnArray^[FAddedColumnCount-1] do
     begin
-      length := getMySQLFieldSize(tempbuffertype,display_length);
+      length := getMySQLFieldSize(tempbuffertype,field_length);
       if largeblob then
         begin
         is_Null := 0;
         buffer := nil;
         end
-      else if display_length = 0 then
+      else if field_length = 0 then
       begin
         is_Null := 1;
         buffer := nil;

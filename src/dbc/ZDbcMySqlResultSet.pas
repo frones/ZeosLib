@@ -255,7 +255,7 @@ begin
   end
   else
   begin
-    //FPlainDriver.StmtAttrSet(FHandle,STMT_ATTR_UPDATE_MAX_LENGTH,PAnsiChar(one));
+    FPlainDriver.StmtAttrSet(FHandle,STMT_ATTR_UPDATE_MAX_LENGTH,PAnsiChar(one));
     FQueryHandle := FPlainDriver.StoreResult(FHandle);
     if Assigned(FQueryHandle) then
       LastRowNo := FPlainDriver.GetRowCount(FQueryHandle)
@@ -277,7 +277,7 @@ begin
 
     ColumnsInfo.Add(GetMySQLColumnInfoFromFieldHandle(FPlainDriver,
      FieldHandle, GetStatement.GetConnection.GetEncoding,
-     GetStatement.GetConnection.UTF8StringAsWideField));
+     GetStatement.GetConnection.UTF8StringAsWideField,FUseResult));
   end;
 
   inherited Open;
@@ -930,7 +930,7 @@ begin
     LastRowNo := 0
   else
   begin
-    //FPlainDriver.StmtAttrSet(FPrepStmt,STMT_ATTR_UPDATE_MAX_LENGTH,PAnsiChar(one));
+    FPlainDriver.StmtAttrSet(FPrepStmt,STMT_ATTR_UPDATE_MAX_LENGTH,PAnsiChar(one));
     if (FPlainDriver.StorePreparedResult(FPrepStmt)=0) then
       LastRowNo := FPlainDriver.GetPreparedNumRows(FPrepStmt)
     else
@@ -951,11 +951,11 @@ begin
 
     ColumnInfo := GetMySQLColumnInfoFromFieldHandle(FPlainDriver,
      FieldHandle, GetStatement.GetConnection.GetEncoding,
-     GetStatement.GetConnection.UTF8StringAsWideField);
+     GetStatement.GetConnection.UTF8StringAsWideField,FUseResult);
 
     ColumnsInfo.Add(ColumnInfo);
 
-    FBindBuffer.AddColumn(FPlainDriver.GetFieldType(FieldHandle),ColumnInfo.ColumnDisplaySize,false);
+    FBindBuffer.AddColumn(FPlainDriver.GetFieldType(FieldHandle),ColumnInfo.MaxLenghtBytes,false);
     end;
   FPlainDriver.FreeResult(FResultMetaData);
   FResultMetaData := nil;

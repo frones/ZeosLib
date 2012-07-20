@@ -1821,7 +1821,7 @@ begin
       Params[2].DataType := ftBlob;
       Params[0].AsInteger := 1;
       BinStreamS := TMemoryStream.Create;
-      s:={$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString('1234567890',6000);
+      s:={$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString(utf8encode('123456ייאא'),6000);
       BinStreamS.Write(s[1],length(s));
       Params[1].LoadFromStream(BinStreamS, ftMemo);
       BinStream := TMemoryStream.Create;
