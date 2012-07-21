@@ -247,7 +247,7 @@ begin
       else
         Result := stBinaryStream;
     FIELD_TYPE_BIT:
-      Result := stBinaryStream;
+      Result := stShort;
     FIELD_TYPE_VARCHAR,
     FIELD_TYPE_VAR_STRING,
     FIELD_TYPE_STRING:
@@ -413,7 +413,7 @@ begin
   else if TypeName = 'SET' then
     Result := stString
   else if TypeName = 'BIT' then
-    Result := stBinaryStream
+    Result := stShort
   else
       for i := 0 to Length(GeoTypes) - 1 do
          if GeoTypes[i] = TypeName then
@@ -422,9 +422,7 @@ begin
   if (CharEncoding = ceUTF8) and UTF8StringAsWideField then
   case result of
     stString: Result := stUnicodeString;
-    {$IFDEF WITH_WIDEMEMO}
     stAsciiStream: Result := stUnicodeStream;
-    {$ENDIF}
   end;
 
   if Result = stUnknown then
@@ -580,7 +578,8 @@ begin
         FieldHandle, FieldFlags, Encoding, UTF8StringAsWideField);
     FieldLength:=PlainDriver.GetFieldLength(FieldHandle);
     //EgonHugeist: arrange the MBCS field DisplayWidth to a proper count of Chars
-    case PlainDriver.GetFieldCharsetNr(FieldHandle) of
+     if Result.ColumnType in [stString, stUnicodeString] then
+     case PlainDriver.GetFieldCharsetNr(FieldHandle) of
       1, 84, {Big5}
       95, 96, {cp932 japanese}
       19, 85, {euckr}
@@ -601,7 +600,8 @@ begin
       else Result.ColumnDisplaySize := FieldLength; //1-Byte charsets
     end;
     Result.Precision := min(MaxBlobSize,FieldLength);
-    if PlainDriver.GetFieldType(FieldHandle) in [FIELD_TYPE_BLOB,FIELD_TYPE_MEDIUM_BLOB,FIELD_TYPE_LONG_BLOB,FIELD_TYPE_STRING] then
+    if PlainDriver.GetFieldType(FieldHandle) in [FIELD_TYPE_BLOB,FIELD_TYPE_MEDIUM_BLOB,FIELD_TYPE_LONG_BLOB,FIELD_TYPE_STRING,
+      FIELD_TYPE_VAR_STRING] then
       begin
       if bUseResult then  //PMYSQL_FIELD(Field)^.max_length not valid
         Result.MaxLenghtBytes:=Result.Precision

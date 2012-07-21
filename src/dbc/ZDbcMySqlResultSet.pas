@@ -240,7 +240,6 @@ end;
   Opens this recordset.
 }
 procedure TZMySQLResultSet.Open;
-const one = AnsiString('1');
 var
   I: Integer;
   FieldHandle: PZMySQLField;
@@ -255,7 +254,6 @@ begin
   end
   else
   begin
-    FPlainDriver.StmtAttrSet(FHandle,STMT_ATTR_UPDATE_MAX_LENGTH,PAnsiChar(one));
     FQueryHandle := FPlainDriver.StoreResult(FHandle);
     if Assigned(FQueryHandle) then
       LastRowNo := FPlainDriver.GetRowCount(FQueryHandle)

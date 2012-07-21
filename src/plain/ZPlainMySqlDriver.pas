@@ -189,7 +189,6 @@ type
 
     function GetPreparedAffectedRows (Handle: PZMySqlPrepStmt): Int64;
     // stmt_attr_get
-    // stmt_attr_set
     function StmtAttrSet(stmt: PZMySqlPrepStmt; option: TMysqlStmtAttrType;
                                   arg: PAnsiChar): Byte;
     function BindParameters (Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
@@ -1052,12 +1051,12 @@ end;
 
 function TZMySQLBaseDriver.BindParameters(Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
 begin
-    Result := MYSQL_API.mysql_stmt_bind_param (PMYSQL_STMT(Handle), PMYSQL_BIND50(bindArray));
+    Result := MYSQL_API.mysql_stmt_bind_param (PMYSQL_STMT(Handle), pointer(bindArray));
 end;
 
 function TZMySQLBaseDriver.BindResult(Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
 begin
-    Result := MYSQL_API.mysql_stmt_bind_result (PMYSQL_STMT(Handle), PMYSQL_BIND50(bindArray));
+    Result := MYSQL_API.mysql_stmt_bind_result (PMYSQL_STMT(Handle), pointer(bindArray));
 end;
 
 function TZMySQLBaseDriver.ClosePrepStmt (PrepStmtHandle: PZMySqlPrepStmt): PZMySqlPrepStmt;

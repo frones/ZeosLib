@@ -126,7 +126,7 @@ type
   public
     constructor Create(PlainDriver:IZMysqlPlainDriver; NumColumns : Integer; var ColumnArray:TZMysqlColumnBuffer);
     destructor Destroy; override;
-    procedure AddColumn(buffertype:TMysqlFieldTypes; field_length:integer; largeblob:boolean);
+    procedure AddColumn(buffertype:TMysqlFieldTypes; field_length:integer; largeblobparameter:boolean);
     function GetColumnArray : TZMysqlColumnBuffer;
     function GetBufferAddress : Pointer;
     function GetBufferType(ColumnIndex: Integer) : TMysqlFieldTypes;
@@ -662,7 +662,7 @@ var
   PBuffer: Pointer;
   year, month, day, hour, minute, second, millisecond: word;
   MyType: TMysqlFieldTypes;
-  I, OffSet, PiceSize: integer;
+  I, OffSet, PieceSize: integer;
   TempBlob: IZBlob;
 
 begin
@@ -723,6 +723,7 @@ begin
             PMYSQL_TIME(PBuffer)^.second := second;
             PMYSQL_TIME(PBuffer)^.second_part := millisecond;
           end;
+          FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
           FIELD_TYPE_BLOB:
             begin
               if TempBlob.Length<=ChunkSize then
@@ -752,17 +753,17 @@ begin
               if TempBlob.Length>ChunkSize then
               begin
                 OffSet := 0;
-                PiceSize := ChunkSize;
+                PieceSize := ChunkSize;
                 while OffSet < TempBlob.Length do
                 begin
-                  if OffSet+PiceSize > TempBlob.Length then
-                    PiceSize := TempBlob.Length - OffSet;
-                  if (FPlainDriver.SendPreparedLongData(FStmtHandle, I, PAnsiChar(TempBlob.GetBuffer)+OffSet, PiceSize) <> 0) then
+                  if OffSet+PieceSize > TempBlob.Length then
+                    PieceSize := TempBlob.Length - OffSet;
+                  if (FPlainDriver.SendPreparedLongData(FStmtHandle, I, PAnsiChar(TempBlob.GetBuffer)+OffSet, PieceSize) <> 0) then
                   begin
                     checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, SBindingFailure);
                     exit;
                   end;
-                  Inc(OffSet, PiceSize);
+                  Inc(OffSet, PieceSize);
                 end;
               end;
               TempBlob:=nil;
@@ -861,9 +862,11 @@ begin
   Result := nil;
   BindInParameters;
   if (self.FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
-     begin
+     try
         checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
-        exit;
+     except
+       FBindBuffer.Free;  //MemLeak closed
+ 	     raise;
      end;
 
   FBindBuffer.Free;
@@ -889,9 +892,11 @@ begin
   Result := -1;
   BindInParameters;
   if (self.FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
-     begin
+     try
         checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
-        exit;
+     except
+       FBindBuffer.Free;  //MemLeak closed
+ 	     raise;
      end;
 
   FBindBuffer.Free;
@@ -967,8 +972,12 @@ begin
   inherited Destroy;
 end;
 
+
+// largeblobparameter: true to indicate that parameter is a blob that will be
+// sent chunked. Set to false for result set columns.
+
 procedure TZMySQLBindBuffer.AddColumn(buffertype: TMysqlFieldTypes;
-  field_length: integer; largeblob:boolean);
+  field_length: integer; largeblobparameter:boolean);
   var
     tempbuffertype: TMysqlFieldTypes;
     ColOffset:integer;
@@ -983,7 +992,7 @@ begin
   With FPColumnArray^[FAddedColumnCount-1] do
     begin
       length := getMySQLFieldSize(tempbuffertype,field_length);
-      if largeblob then
+      if largeblobparameter then
         begin
         is_Null := 0;
         buffer := nil;
@@ -995,7 +1004,8 @@ begin
       end
       else
       begin
-        if tempbuffertype in [FIELD_TYPE_BLOB,FIELD_TYPE_STRING] then
+        if tempbuffertype in [FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
+	           FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB, FIELD_TYPE_VAR_STRING, FIELD_TYPE_STRING] then
         //ludob: mysql adds terminating #0 on top of data. Avoid buffer overrun.
           SetLength(buffer,length+1)
         else

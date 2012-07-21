@@ -486,7 +486,7 @@ TMYSQL_CLIENT_OPTIONS =
 
   PMYSQL_BIND51 = ^MYSQL_BIND51;
   MYSQL_BIND51 =  record
-    // 5.1.30 definition (Still valid for 5.5.8)
+    // 5.1.30 definition (Still valid for 5.6.25)
     length:            PULong;
     is_null:           PByte;
     buffer:            PAnsiChar;
