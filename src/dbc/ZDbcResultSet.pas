@@ -3010,12 +3010,15 @@ begin
 end;
 
 function TZAbstractBlob.GetUnicodeStream: TStream;
+var
+  ws:WideString;
 begin
   Result := TMemoryStream.Create;
   if (FBlobSize > 0) and Assigned(FBlobData) then
   begin
-    Result.Size := System.Length(GetUnicodeString)*2;
-    System.Move(PWideChar(GetUnicodeString)^, TMemoryStream(Result).Memory^, FBlobSize*2);
+    ws:=GetUnicodeString;
+    Result.Size := System.Length(ws)*2;
+    System.Move(ws[1], TMemoryStream(Result).Memory^, System.Length(ws)*2);
   end;
   Result.Position := 0;
 end;
