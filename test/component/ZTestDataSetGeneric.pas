@@ -1784,15 +1784,28 @@ var
   UnicodeStream: TStream;
   s:  Ansistring;
   TextLob, BinLob: String;
+  TempConnection: TZConnection;
 begin
+  TempConnection := nil;
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
     if StartsWith(LowerCase(Connection.Protocol), 'postgre') then
-      begin
-      Query.Properties.Add('oidasblob=True');
+    begin
+      TempConnection := TZConnection.Create(nil);
+      TempConnection.HostName := Connection.HostName;
+      TempConnection.Port     := Connection.Port;
+      TempConnection.Database := Connection.Database;
+      TempConnection.User     := Connection.User;
+      TempConnection.Password := Connection.Password;
+      TempConnection.Protocol := Connection.Protocol;
+      TempConnection.Catalog  := Connection.Catalog;
+      TempConnection.Properties.Text := Connection.Properties.Text;
+      TempConnection.Properties.Add('oidasblob=True');
+      TempConnection.Connect;
+      Query.Connection := TempConnection;
       Connection.TransactIsolationLevel:=tiReadCommitted;
-      end;
+    end;
     Query.Options := [doPreferPrepared,doPreferPreparedResolver];
     with Query do
     begin
@@ -1862,14 +1875,16 @@ begin
       (FieldByName(BinLob) as TBlobField).SaveToStream(BinStream1);
       CheckEquals(BinStream.Size, BinStream1.Size, 'Binary Stream');
       CheckEquals(BinStream, BinStream1, 'Binary Stream');
-      BinStream.Free;
-      BinStream1.Free;
-      BinStreamS.Free;
       Close;
       SQL.Text := 'DELETE FROM blob_values where b_id = 1';
       ExecSQL;
     end;
   finally
+    BinStream.Free;
+    BinStream1.Free;
+    BinStreamS.Free;
+    if Assigned(TempConnection) then
+      TempConnection.Free;
     Query.Free;
   end;
 end;

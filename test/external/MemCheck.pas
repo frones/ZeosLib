@@ -1575,7 +1575,11 @@ begin
 	ProcessHandle:= openprocess(PROCESS_ALL_ACCESS, True, GetCurrentProcessId);
 	for i:= 0 to NewUnitsInfoOrder.Count - 1 do
 		begin
+      {$IFDEF DELPHI16_UP}
+			WriteProcessMemory(NativeUInt(ProcessHandle), Pointer(PChar(@UnitsInfo^.UnitInfo^[0]) + i * SizeOf(PackageUnitEntry)), NewUnitsInfoOrder[i], NativeUInt(SizeOf(PackageUnitEntry)), NativeUInt(BytesWritten));
+      {$ELSE}
 			WriteProcessMemory(ProcessHandle, Pointer(PChar(@UnitsInfo^.UnitInfo^[0]) + i * SizeOf(PackageUnitEntry)), NewUnitsInfoOrder[i], SizeOf(PackageUnitEntry), BytesWritten);
+      {$ENDIF}
 			FreeMem(NewUnitsInfoOrder[i]);
 		end;
 	CloseHandle(ProcessHandle);
@@ -2485,6 +2489,10 @@ var
 	Displ: Cardinal;
 	{Displ is the displacement of the code in the executable file. The code in SetDispl was written by Juan Vidal Pich}
 
+{$IFDEF DELPHI16_UP}
+type
+  PImageOptionalHeader = ^TImageOptionalHeader;
+{$ENDIF}
 procedure SetDispl;
 var
 	NTHeader: PImageFileHeader;
