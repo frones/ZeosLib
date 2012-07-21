@@ -1113,9 +1113,9 @@ procedure TZOracleBlob.WriteBlob;
 var
   Status: sword;
   Connection: IZOracleConnection;
-  ContentSize{, OffSet}: ub4;
+  ContentSize, OffSet: ub4;
 
-  {function DoWrite(AOffSet: ub4; AChunkSize: ub4; APiece: ub1): sword;
+  function DoWrite(AOffSet: ub4; AChunkSize: ub4; APiece: ub1): sword;
   var
     AContentSize: ub4;
   begin
@@ -1124,7 +1124,7 @@ var
       AContentSize := ContentSize;
       Result := FPlainDriver.LobWrite(Connection.GetContextHandle,
         Connection.GetErrorHandle, FLobLocator, AContentSize, AOffSet,
-        BlobData, AChunkSize, APiece, nil, nil, 0, SQLCS_IMPLICIT);
+        (PAnsiChar(BlobData)+OffSet), AChunkSize, APiece, nil, nil, 0, SQLCS_IMPLICIT);
     end
     else
     begin
@@ -1138,11 +1138,11 @@ var
 
       Result := FPlainDriver.LobWrite(Connection.GetContextHandle,
         Connection.GetErrorHandle, FLobLocator, AContentSize, AOffSet,
-        BlobData, AChunkSize, APiece, nil, nil, Connection.GetClientCodePageInformations^.ID, SQLCS_IMPLICIT);
+        (PAnsiChar(BlobData)+OffSet), AChunkSize, APiece, nil, nil, Connection.GetClientCodePageInformations^.ID, SQLCS_IMPLICIT);
     end;
     ContentSize := AContentSize;
     inc(OffSet, AChunkSize);
-  end;}
+  end;
 begin
   Connection := FHandle as IZOracleConnection;
 
@@ -1156,7 +1156,7 @@ begin
   { This test doesn't use IsEmpty because that function does allow for zero length blobs}
   if (BlobSize > 0) then
   begin
-    {if BlobSize > FChunkSize then
+    if BlobSize > FChunkSize then
     begin
       OffSet := 0;
       ContentSize := 0;
@@ -1177,7 +1177,7 @@ begin
         end;
       Status := DoWrite(offset, BlobSize - OffSet, OCI_LAST_PIECE);
     end
-    else}
+    else
     begin
       ContentSize := BlobSize;
       Status := FPlainDriver.LobWrite(Connection.GetContextHandle,
