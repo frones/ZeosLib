@@ -3292,7 +3292,7 @@ begin
    'C': Result := 'CREATE';
    'T': Result := 'CREATE TEMP';
    else Result := 'UNKNOWN';
-   end;
+ end;
 end;
 
 function TZPostgreSQLDatabaseMetadata.GetIdentifierConvertor: IZIdentifierConvertor;
@@ -3351,21 +3351,21 @@ var
   QuoteDelim: string;
 begin
   QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
-  Result := Value;
-  if (QuoteDelim <> '') and (Value <> '') then
-    if (copy(Value,1,1)=QuoteDelim) and
-       (copy(Value,length(Value),1)=QuoteDelim) then
-    begin
-      Result:=copy(Value,2,length(Value)-2);
-      Result:=StringReplace(Result,QuoteDelim+QuoteDelim,QuoteDelim,[rfReplaceAll]);
-    end;
-
-end;
-
-function TZPostgreSQLIdentifierConvertor.IsQuoted(const Value: string): Boolean;
-var
-  QuoteDelim: string;
-begin
+  Result := Value; 
+  if (QuoteDelim <> '') and (Value <> '') then 
+    if (copy(Value,1,1)=QuoteDelim) and 
+       (copy(Value,length(Value),1)=QuoteDelim) then 
+    begin 
+      Result:=copy(Value,2,length(Value)-2); 
+      Result:=StringReplace(Result,QuoteDelim+QuoteDelim,QuoteDelim,[rfReplaceAll]); 
+    end; 
+ 
+end; 
+ 
+function TZPostgreSQLIdentifierConvertor.IsQuoted(const Value: string): Boolean; 
+var 
+  QuoteDelim: string; 
+begin 
   QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
   Result := (QuoteDelim <> '') and (Value <> '') and
             (copy(Value,1,1)=QuoteDelim) and

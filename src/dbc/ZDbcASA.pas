@@ -441,7 +441,7 @@ begin
     if Links <> ''
       then ConnectionString := ConnectionString + Links + '; ';
 
-    GetPlainDriver.db_string_connect(FHandle, PAnsiChar(ConnectionString));
+    GetPlainDriver.db_string_connect(FHandle, PAnsiChar(AnsiString(ConnectionString)));
     CheckASAError( GetPlainDriver, FHandle, lcConnect);
 
     DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol,
@@ -503,11 +503,11 @@ begin
       SQLDA.sqld := 1;
       SQLDA.sqlVar[0].sqlType := DT_STRING;
       SQLDA.sqlVar[0].sqlLen := Length( Value)+1;
-      SQLDA.sqlVar[0].sqlData := PAnsiChar(Value);
-      GetPlainDriver.db_setoption(FHandle, Temporary, User, PAnsiChar(Option), SQLDA);
+      SQLDA.sqlVar[0].sqlData := PAnsiChar(AnsiString(Value));
+      GetPlainDriver.db_setoption(FHandle, Temporary, User, PAnsiChar(AnsiString(Option)), SQLDA);
 
       CheckASAError( GetPlainDriver, FHandle, lcOther);
-      S := User;
+      S := String(User);
       DriverManager.LogMessage( lcOther, PlainDriver.GetProtocol,
         Format( 'SET OPTION %s.%s = %s', [ S, Option, Value]));
     finally

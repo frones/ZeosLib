@@ -145,7 +145,8 @@ type
 implementation
 
 uses
-  Types, ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils, ZTokenizer;
+  Types, ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils, ZTokenizer,
+  ZDbcUtils;
 
 { TZPostgreSQLStatement }
 
@@ -200,11 +201,13 @@ var
 begin
   ConnectionHandle := GetConnectionHandle();
   NativeResultSet := TZPostgreSQLResultSet.Create(FPlainDriver, Self, SQL,
-    ConnectionHandle, QueryHandle);
+  ConnectionHandle, QueryHandle, ChunkSize);
+
   NativeResultSet.SetConcurrency(rcReadOnly);
   if GetResultSetConcurrency = rcUpdatable then
   begin
-    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil);
+    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil,
+      ClientCodePage);
     CachedResultSet.SetConcurrency(rcUpdatable);
     CachedResultSet.SetResolver(TZPostgreSQLCachedResolver.Create(
       Self,  NativeResultSet.GetMetadata));
@@ -227,17 +230,14 @@ var
 begin
   Result := nil;
   ConnectionHandle := GetConnectionHandle();
-  {$IFDEF DELPHI12_UP}
+  Self.SSQL := SQL; //Preprepares the SQL and Sets the AnsiSQL
   QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
-    PAnsiChar(UTF8String(SQL)));
-  {$ELSE}
-  QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
-  {$ENDIF}
+    PAnsiChar(Self.ASQL));
   CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
-    SQL, QueryHandle);
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+    SSQL, QueryHandle);
+  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, Self.SSQL);
   if QueryHandle <> nil then
-    Result := CreateResultSet(SQL, QueryHandle)
+    Result := CreateResultSet(Self.SSQL, QueryHandle)
   else
     Result := nil;
 end;
@@ -260,19 +260,25 @@ var
 begin
   Result := -1;
   ConnectionHandle := GetConnectionHandle();
-  {$IFDEF DELPHI12_UP}
-  QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
-    PAnsiChar(UTF8String(SQL)));
-  {$ELSE}
-  QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
-  {$ENDIF}
+  if Connection.PreprepareSQL then
+  begin
+    SSQL := SQL;
+    QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,PAnsiChar(ASQL));
+  end
+  else
+    if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+      QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
+        PAnsiChar(UTF8String(SQL)))
+    else
+      QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
+        PAnsiChar(AnsiString(SQL)));
   CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
     SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
 
   if QueryHandle <> nil then
   begin
-    Result := StrToIntDef(StrPas(FPlainDriver.GetCommandTuples(QueryHandle)), 0);
+    Result := StrToIntDef(String(StrPas(FPlainDriver.GetCommandTuples(QueryHandle))), 0);
     FPlainDriver.Clear(QueryHandle);
   end;
 
@@ -308,12 +314,8 @@ var
   ConnectionHandle: PZPostgreSQLConnect;
 begin
   ConnectionHandle := GetConnectionHandle();
-  {$IFDEF DELPHI12_UP}
   QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
-    PAnsiChar(UTF8String(SQL)));
-  {$ELSE}
-  QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
-  {$ENDIF}
+    PAnsiChar(GetPrepreparedSQL(SQL)));
   CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
     SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
@@ -329,15 +331,15 @@ begin
     PGRES_COMMAND_OK:
       begin
         Result := False;
-        LastUpdateCount := StrToIntDef(StrPas(
-          FPlainDriver.GetCommandTuples(QueryHandle)), 0);
+        LastUpdateCount := StrToIntDef(String(StrPas(
+          FPlainDriver.GetCommandTuples(QueryHandle))), 0);
         FPlainDriver.Clear(QueryHandle);
       end;
     else
       begin
         Result := False;
-        LastUpdateCount := StrToIntDef(StrPas(
-          FPlainDriver.GetCommandTuples(QueryHandle)), 0);
+        LastUpdateCount := StrToIntDef(String(StrPas(
+          FPlainDriver.GetCommandTuples(QueryHandle))), 0);
         FPlainDriver.Clear(QueryHandle);
       end;
   end;
@@ -398,7 +400,7 @@ var
   Value: TZVariant;
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
-  TempStream: TStream;
+  TempStream,TempStreamIn: TStream;
   WriteTempBlob: IZPostgreSQLBlob;
 begin
   TempBytes := nil;
@@ -418,16 +420,19 @@ begin
           Result := 'FALSE';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
-      stString, stBytes:
-        if (Connection as IZPostgreSQLConnection).StandardConformingStrings then
-          Result := EncodeString(FCharactersetCode,SoftVarManager.GetAsString(Value))
-        else
-          Result := QuotedStr(SoftVarManager.GetAsString(Value));
+      stBytes:
+        Result := Self.GetConnection.GetEscapeString(PAnsiChar(AnsiString(SoftVarManager.GetAsString(Value))));
+      stString:
+        Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
       stUnicodeString:
-        if (Connection as IZPostgreSQLConnection).StandardConformingStrings then
-          Result := UTF8Encode(EncodeString(FCharactersetCode,SoftVarManager.GetAsUnicodeString(Value)))
+        {$IFDEF DELPHI12_UP}
+          Result := GetConnection.GetEscapeString(SoftVarManager.GetAsUnicodeString(Value));
+        {$ELSE}
+        if GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+          Result := Self.GetConnection.GetEscapeString(PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))))
         else
-          Result := QuotedStr(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)));
+          Result := Self.GetConnection.GetEscapeString(PAnsiChar(AnsiString(SoftVarManager.GetAsUnicodeString(Value))));
+        {$ENDIF}
       stDate:
         Result := Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]);
@@ -438,69 +443,57 @@ begin
         Result := Format('''%s''::timestamp',
           [FormatDateTime('yyyy-mm-dd hh":"mm":"ss',
             SoftVarManager.GetAsDateTime(Value))]);
-      stAsciiStream:
+      stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
           begin
-            if (Connection as IZPostgreSQLConnection).StandardConformingStrings then
-              Result := EncodeString(TempBlob.GetString)
-            else
-              Result := QuotedStr(TempBlob.GetString)
-          end
-          else
-          begin
-            Result := 'NULL';
-          end;
-        end;
-      stUnicodeStream:
-        begin
-          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
-          if not TempBlob.IsEmpty then
-          begin
-            if (Connection as IZPostgreSQLConnection).StandardConformingStrings then
-              Result := EncodeString(FCharactersetCode, UTF8Encode(TempBlob.GetUnicodeString))
-            else
-              Result := QuotedStr(UTF8Encode(TempBlob.GetUnicodeString))
-          end
-          else
-          begin
-            Result := 'NULL';
-          end;
-        end;
-      stBinaryStream:
-        begin
-          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
-          if not TempBlob.IsEmpty then
-          begin
-            if (GetConnection as IZPostgreSQLConnection).IsOidAsBlob then
+            if (Self.GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) and
+              (InParamTypes[ParamIndex] in [stAsciiStream, stUnicodeStream]) then
             begin
-              TempStream := TempBlob.GetStream;
-              try
-                WriteTempBlob := TZPostgreSQLBlob.Create(FPlainDriver, nil, 0,
-                  Self.GetConnectionHandle, 0);
-                WriteTempBlob.SetStream(TempStream);
-                WriteTempBlob.WriteBlob;
-                Result := IntToStr(WriteTempBlob.GetBlobOid);
-              finally
-                WriteTempBlob := nil;
-                TempStream.Free;
-              end;
-            end
-            else
-            begin
-              result:= FPlainDriver.EncodeBYTEA(TempBlob.GetString,
-                Self.GetConnectionHandle); // FirmOS
-              {
-               Result := EncodeString(TempBlob.GetString);
-               Result := Copy(Result, 2, Length(Result) - 2);
-               Result := EncodeString(Result);
-              }
+              TempStreamIn := TempBlob.GetStream;
+              TempStream := GetValidatedUnicodeStream(TempStreamIn);
+              TempStreamIn.Free;
+              TempBlob.SetStream(TempStream);
+              TempStream.Free;
             end;
+            case InParamTypes[ParamIndex] of
+              stBinaryStream:
+                if ((GetConnection as IZPostgreSQLConnection).IsOidAsBlob) or
+                  StrToBoolDef(Info.Values['oidasblob'], False) then
+                begin
+                  TempStream := TempBlob.GetStream;
+                  try
+                    WriteTempBlob := TZPostgreSQLBlob.Create(FPlainDriver, nil, 0,
+                      Self.GetConnectionHandle, 0, ChunkSize);
+                    WriteTempBlob.SetStream(TempStream);
+                    WriteTempBlob.WriteBlob;
+                    Result := IntToStr(WriteTempBlob.GetBlobOid);
+                  finally
+                    WriteTempBlob := nil;
+                    TempStream.Free;
+                  end;
+                end
+                else
+                  Result := GetConnection.GetAnsiEscapeString(TempBlob.GetString);
+              stAsciiStream:
+                {$IFDEF DELPHI12_UP}
+                if (Self.GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) then
+                  Result := GetConnection.GetEscapeString(TempBlob.GetUnicodeString)
+                else
+                {$ENDIF}
+                  Result := GetConnection.GetEscapeString(String(TempBlob.GetString));
+              stUnicodeStream:
+                {$IFDEF DELPHI12_UP}
+                  Result := GetConnection.GetEscapeString(TempBlob.GetUnicodeString);
+                {$ELSE}
+                  Result := GetConnection.GetEscapeString(TempBlob.GetString);
+                {$ENDIF}
+            end; {case..}
           end
           else
             Result := 'NULL';
-        end;
+        end; {if not TempBlob.IsEmpty then}
     end;
   end;
 end;
@@ -563,11 +556,12 @@ var
 begin
   ConnectionHandle := GetConnectionHandle();
   NativeResultSet := TZPostgreSQLResultSet.Create(GetPlainDriver, Self, SQL,
-    ConnectionHandle, QueryHandle);
+    ConnectionHandle, QueryHandle, ChunkSize);
   NativeResultSet.SetConcurrency(rcReadOnly);
   if GetResultSetConcurrency = rcUpdatable then
   begin
-    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil);
+    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil,
+      ClientCodePage);
     CachedResultSet.SetConcurrency(rcUpdatable);
     CachedResultSet.SetResolver(TZPostgreSQLCachedResolver.Create(
       Self,  NativeResultSet.GetMetadata));
@@ -620,16 +614,12 @@ begin
           Result := 'FALSE';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
-      stString, stBytes:
-        if (Connection as IZPostgreSQLConnection).StandardConformingStrings then
-          Result := EncodeString(SoftVarManager.GetAsString(Value))
-        else
-          Result := QuotedStr(SoftVarManager.GetAsString(Value));
+      stBytes:
+        Result := Self.GetConnection.GetEscapeString(PAnsiChar(AnsiString(SoftVarManager.GetAsString(Value))));
+      stString:
+        Result := Self.GetConnection.GetEscapeString(PAnsiChar(ZPlainString(SoftVarManager.GetAsString(Value))));
       stUnicodeString:
-        if (Connection as IZPostgreSQLConnection).StandardConformingStrings then
-          Result := UTF8Encode(EncodeString(SoftVarManager.GetAsUnicodeString(Value)))
-        else
-          Result := QuotedStr(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)));
+        Result := Self.GetConnection.GetEscapeString(PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))));
       stDate:
         Result := Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]);
@@ -640,35 +630,13 @@ begin
         Result := Format('''%s''::timestamp',
           [FormatDateTime('yyyy-mm-dd hh":"mm":"ss',
             SoftVarManager.GetAsDateTime(Value))]);
-      stAsciiStream:
+      stAsciiStream, stUnicodeStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
-          begin
-            if (Connection as IZPostgreSQLConnection).StandardConformingStrings then
-              Result := EncodeString(TempBlob.GetString)
-            else
-              Result := QuotedStr(TempBlob.GetString);
-          end
+            Result := Self.GetConnection.GetEscapeString(String(TempBlob.GetString))
           else
-          begin
             Result := 'NULL';
-          end;
-        end;
-      stUnicodeStream:
-        begin
-          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
-          if not TempBlob.IsEmpty then
-          begin
-            if (Connection as IZPostgreSQLConnection).StandardConformingStrings then
-              Result := EncodeString( UTF8Encode(TempBlob.GetUnicodeString))
-            else
-              Result := QuotedStr(UTF8Encode(TempBlob.GetUnicodeString));
-          end
-          else
-          begin
-            Result := 'NULL';
-          end;
         end;
       stBinaryStream:
         begin
@@ -680,7 +648,7 @@ begin
               TempStream := TempBlob.GetStream;
               try
                 WriteTempBlob := TZPostgreSQLBlob.Create(GetPlainDriver, nil, 0,
-                  Self.GetConnectionHandle, 0);
+                  Self.GetConnectionHandle, 0, ChunkSize);
                 WriteTempBlob.SetStream(TempStream);
                 WriteTempBlob.WriteBlob;
                 Result := IntToStr(WriteTempBlob.GetBlobOid);
@@ -690,15 +658,7 @@ begin
               end;
             end
             else
-            begin
-              result:= GetPlainDriver.EncodeBYTEA(TempBlob.GetString,
-                Self.GetConnectionHandle); // FirmOS
-              {
-               Result := EncodeString(TempBlob.GetString);
-               Result := Copy(Result, 2, Length(Result) - 2);
-               Result := EncodeString(Result);
-              }
-            end;
+              result := GetConnection.GetAnsiEscapeString(TempBlob.GetString);
           end
           else
             Result := 'NULL';
@@ -721,16 +681,14 @@ var
 begin
   Result := nil;
   ConnectionHandle := GetConnectionHandle();
-  {$IFDEF DELPHI12_UP}
-  QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(UTF8String(SQL)));
-  {$ELSE}
-  QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
-  {$ENDIF}
+  Self.SSQL := SQL; //Preprepares the SQL and Sets the AnsiSQL
+  QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle,
+    PAnsiChar(ASQL));
   CheckPostgreSQLError(Connection, GetPlainDriver, ConnectionHandle, lcExecute,
     SQL, QueryHandle);
-  DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SQL);
+  DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SSQL);
   if QueryHandle <> nil then
-    Result := CreateResultSet(SQL, QueryHandle)
+    Result := CreateResultSet(SSQL, QueryHandle)
   else
     Result := nil;
 end;
@@ -786,9 +744,9 @@ var I: Integer;
   Tokens: TStrings;
   ParamIndex: Integer;
 begin
-  if Pos('?', ASql) > 0 then
+  if Pos('?', Sql) > 0 then
   begin
-    Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(ASql, [toUnifyWhitespaces]);
+    Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(Sql, [toUnifyWhitespaces]);
     try
       ParamIndex := 0;
       for I := 0 to Tokens.Count - 1 do
@@ -806,7 +764,8 @@ begin
   end
   else
     Result := ASql;
-
+  if GetConnection.PreprepareSQL then
+    Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
 end;
 
 {**
@@ -827,19 +786,16 @@ var
 begin
   Result := -1;
   ConnectionHandle := GetConnectionHandle();
-  {$IFDEF DELPHI12_UP}
+  Self.SSQL := SQL; //Preprepares the SQL and Sets the AnsiSQL
   QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle,
-    PAnsiChar(UTF8String(SQL)));
-  {$ELSE}
-  QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(SQL));
-  {$ENDIF}
+    PAnsiChar(ASQL));
   CheckPostgreSQLError(Connection, GetPlainDriver, ConnectionHandle, lcExecute,
-    SQL, QueryHandle);
-  DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SQL);
+    SSQL, QueryHandle);
+  DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SSQL);
 
   if QueryHandle <> nil then
   begin
-    Result := StrToIntDef(StrPas(GetPlainDriver.GetCommandTuples(QueryHandle)), 0);
+    Result := StrToIntDef(String(StrPas(GetPlainDriver.GetCommandTuples(QueryHandle))), 0);
     GetPlainDriver.Clear(QueryHandle);
   end;
 

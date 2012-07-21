@@ -60,17 +60,26 @@ interface
 uses ZClasses, ZPlainDriver;
 
 type
-  TZAdoPlainDriver = class (TZAbstractObject, IZPlainDriver)
+  TZAdoPlainDriver = class (TZLegacyPlainDriver, IZPlainDriver)
   public
     constructor Create;
 
-    function GetProtocol: string;
-    function GetDescription: string;
-    procedure Initialize(const Location: String = '');
-    function Clone: IZPlainDriver; reintroduce;
+    procedure LoadCodePages; override;
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+    procedure Initialize(const Location: String = ''); override;
+    function Clone: IZPlainDriver; override;
   end;
 
 implementation
+
+uses ZCompatibility;
+
+procedure TZAdoPlainDriver.LoadCodePages;
+begin
+  AddCodePage('Not implemented!', -1);
+   { TODO -oEgonHugeist : Must be completed!!!! }
+end;
 
 constructor TZAdoPlainDriver.Create;
 begin

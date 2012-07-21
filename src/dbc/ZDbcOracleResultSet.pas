@@ -76,13 +76,14 @@ type
     procedure Open; override;
     function GetSQLVarHolder(ColumnIndex: Integer): PZSQLVar;
     function GetAsStringValue(ColumnIndex: Integer;
-      SQLVarHolder: PZSQLVar): string;
+      SQLVarHolder: PZSQLVar): AnsiString;
     function GetAsLongIntValue(ColumnIndex: Integer;
       SQLVarHolder: PZSQLVar): LongInt;
     function GetAsDoubleValue(ColumnIndex: Integer;
       SQLVarHolder: PZSQLVar): Double;
     function GetAsDateTimeValue(ColumnIndex: Integer;
       SQLVarHolder: PZSQLVar): TDateTime;
+    function InternalGetString(ColumnIndex: Integer): AnsiString; override;
   public
     constructor Create(PlainDriver: IZOraclePlainDriver;
       Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
@@ -92,7 +93,6 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetString(ColumnIndex: Integer): AnsiString; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -127,12 +127,13 @@ type
     FPlainDriver: IZOraclePlainDriver;
     FBlobType: TZSQLType;
     FTemporary: Boolean;
+    FChunkSize: Integer;
   protected
     procedure InternalSetData(AData: Pointer; ASize: Integer);
   public
     constructor Create(PlainDriver: IZOraclePlainDriver; Data: Pointer;
       Size: Integer; Handle: IZConnection; LobLocator: POCILobLocator;
-      BlobType: TZSQLType);
+      BlobType: TZSQLType; ChunkSize: Integer);
     destructor Destroy; override;
 
     function GetLobLocator: POCILobLocator;
@@ -144,7 +145,7 @@ type
     function IsEmpty: Boolean; override;
     function Clone: IZBlob; override;
 
-    function GetString: AnsiString; override;
+    function GetString: ZAnsiString; override;
     function GetBytes: TByteDynArray; override;
     function GetStream: TStream; override;
   end;
@@ -168,7 +169,7 @@ constructor TZOracleResultSet.Create(PlainDriver: IZOraclePlainDriver;
   Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
   ErrorHandle: POCIError);
 begin
-  inherited Create(Statement, SQL, nil);
+  inherited Create(Statement, SQL, nil, Statement.GetConnection.GetClientCodePageInformations);
 
   FSQL := SQL;
   FStmtHandle := StmtHandle;
@@ -297,6 +298,16 @@ begin
         CurrentVar.ColType := stUnknown;
     end;
 
+    if (Statement.GetConnection.GetEncoding = ceUTF8) and
+      (Self.Statement.GetConnection.UTF8StringAsWideField)
+    then
+      case CurrentVar.ColType of
+        stString: CurrentVar.ColType := stUnicodeString;
+        stAsciiStream: if not CurrentVar.DataType in [SQLT_LNG] then
+          CurrentVar.ColType := stUnicodeStream;
+      end;
+
+
     InitializeOracleVar(FPlainDriver, Connection, CurrentVar,
       CurrentVar.ColType, CurrentVar.TypeCode, CurrentVar.DataSize);
 
@@ -424,7 +435,7 @@ end;
     value returned is <code>null</code>
 }
 function TZOracleResultSet.GetAsStringValue(ColumnIndex: Integer;
-  SQLVarHolder: PZSQLVar): string;
+  SQLVarHolder: PZSQLVar): AnsiString;
 var
   OldSeparator: Char;
   Blob: IZBlob;
@@ -435,25 +446,25 @@ begin
   begin
     case SQLVarHolder.TypeCode of
       SQLT_INT:
-        Result := IntToStr(PLongInt(SQLVarHolder.Data)^);
+        Result := AnsiString(IntToStr(PLongInt(SQLVarHolder.Data)^));
       SQLT_FLT:
         begin
           OldSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
           {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
-          Result := FloatToSqlStr(PDouble(SQLVarHolder.Data)^);
+          Result := AnsiString(FloatToSqlStr(PDouble(SQLVarHolder.Data)^));
           {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldSeparator;
         end;
       SQLT_STR:
         Result := StrPas(PAnsiChar(SQLVarHolder.Data));
       SQLT_LVB, SQLT_LVC:
         begin
-          Result := BufferToStr(PAnsiChar(SQLVarHolder.Data) + SizeOf(Integer),
-            PInteger(SQLVarHolder.Data)^);
+          Result := AnsiString(BufferToStr(PAnsiChar(SQLVarHolder.Data) + SizeOf(Integer),
+            PInteger(SQLVarHolder.Data)^));
         end;
       SQLT_DAT, SQLT_TIMESTAMP:
         begin
-          Result := DateTimeToAnsiSQLDate(
-            GetAsDateTimeValue(ColumnIndex, SQLVarHolder));
+          Result := AnsiString(DateTimeToAnsiSQLDate(
+            GetAsDateTimeValue(ColumnIndex, SQLVarHolder)));
         end;
       SQLT_BLOB, SQLT_CLOB:
         begin
@@ -597,7 +608,7 @@ begin
       else
       begin
         Result := AnsiSQLDateToDateTime(
-          GetAsStringValue(ColumnIndex, SQLVarHolder));
+          String(GetAsStringValue(ColumnIndex, SQLVarHolder)));
       end;
     end;
   end
@@ -614,7 +625,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZOracleResultSet.GetString(ColumnIndex: Integer): AnsiString;
+function TZOracleResultSet.InternalGetString(ColumnIndex: Integer): AnsiString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -638,7 +649,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-  Temp := GetAsStringValue(ColumnIndex, nil);
+  Temp := String(GetAsStringValue(ColumnIndex, nil));
   Result := (StrToIntDef(Temp, 0) <> 0) or StrToBoolEx(Temp);
 end;
 
@@ -868,7 +879,7 @@ begin
 
     Connection := GetStatement.GetConnection as IZOracleConnection;
     Result := TZOracleBlob.Create(FPlainDriver, nil, 0, Connection, LobLocator,
-      CurrentVar.ColType);
+      CurrentVar.ColType, GetStatement.GetChunkSize);
     (Result as IZOracleBlob).ReadBlob;
   end
   else
@@ -957,7 +968,7 @@ end;
 }
 constructor TZOracleBlob.Create(PlainDriver: IZOraclePlainDriver;
   Data: Pointer; Size: Integer; Handle: IZConnection;
-  LobLocator: POCILobLocator; BlobType: TZSQLType);
+  LobLocator: POCILobLocator; BlobType: TZSQLType; ChunkSize: Integer);
 begin
   inherited CreateWithData(Data, Size);
   FHandle := Handle;
@@ -965,6 +976,7 @@ begin
   FPlainDriver := PlainDriver;
   FTemporary := False;
   FBlobType := BlobType;
+  FChunkSize := ChunkSize;
 end;
 
 {**
@@ -1025,7 +1037,7 @@ procedure TZOracleBlob.ReadBlob;
 const
   MemDelta = 1 shl 12;  // read page (2^...)
 var
-  Status, CharWidth: Integer;
+  Status: Integer;
   Buf: PByteArray;
   ReadNumBytes, ReadNumChars, Offset, Cap: ub4;
   Connection: IZOracleConnection;
@@ -1040,13 +1052,9 @@ begin
       Connection.GetErrorHandle, FLobLocator, OCI_LOB_READONLY);
     CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
       Status, lcOther, 'Open Large Object');
-    Status := FPlainDriver.GetEnvCharsetByteWidth(Connection.GetConnectionHandle, Connection.GetErrorHandle, CharWidth);
-    CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
-      Status, lcOther, 'NLS Char Width');
     try
       { Reads data in chunks by MemDelta or more }
       Offset := 0;
-      Cap := 0;
       Buf := nil;
       try
         case self.FBlobType of
@@ -1072,15 +1080,10 @@ begin
               ReallocMem(Buf, Cap);
               ReadNumBytes := Cap - Offset;
 
-              ReadNumChars := ReadNumBytes div CharWidth;
-              if Lowercase(connection.GetParameters.Values['codepage'] )= 'utf8' then
-                Status := FPlainDriver.LobRead(Connection.GetContextHandle,
-                  Connection.GetErrorHandle, FLobLocator, ReadNumChars, Offset + 1,
-                  @Buf[Offset], ReadNumBytes, nil, nil, 871, SQLCS_IMPLICIT)
-              else
-                Status := FPlainDriver.LobRead(Connection.GetContextHandle,
-                  Connection.GetErrorHandle, FLobLocator, ReadNumChars, Offset + 1,
-                  @Buf[Offset], ReadNumBytes, nil, nil, 0, SQLCS_IMPLICIT);
+              ReadNumChars := ReadNumBytes div Connection.GetClientCodePageInformations^.CharWidth;
+              Status := FPlainDriver.LobRead(Connection.GetContextHandle,
+                Connection.GetErrorHandle, FLobLocator, ReadNumChars, Offset + 1,
+                @Buf[Offset], ReadNumBytes, nil, nil, Connection.GetClientCodePageInformations^.ID, SQLCS_IMPLICIT);
               CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
               Status, lcOther, 'Read Large Object');
               if ReadNumChars > 0 then
@@ -1108,9 +1111,38 @@ end;
 }
 procedure TZOracleBlob.WriteBlob;
 var
-  Status: Integer;
+  Status: sword;
   Connection: IZOracleConnection;
-  ContentSize: ub4;
+  ContentSize{, OffSet}: ub4;
+
+  {function DoWrite(AOffSet: ub4; AChunkSize: ub4; APiece: ub1): sword;
+  var
+    AContentSize: ub4;
+  begin
+    if Self.FBlobType = stBinaryStream then
+    begin
+      AContentSize := ContentSize;
+      Result := FPlainDriver.LobWrite(Connection.GetContextHandle,
+        Connection.GetErrorHandle, FLobLocator, AContentSize, AOffSet,
+        BlobData, AChunkSize, APiece, nil, nil, 0, SQLCS_IMPLICIT);
+    end
+    else
+    begin
+      if ContentSize > 0 then
+        AContentSize := AChunkSize div Connection.GetClientCodePageInformations^.CharWidth
+      else
+      begin
+        AContentSize := ContentSize;
+        AChunkSize := Connection.GetClientCodePageInformations^.CharWidth;
+      end;
+
+      Result := FPlainDriver.LobWrite(Connection.GetContextHandle,
+        Connection.GetErrorHandle, FLobLocator, AContentSize, AOffSet,
+        BlobData, AChunkSize, APiece, nil, nil, Connection.GetClientCodePageInformations^.ID, SQLCS_IMPLICIT);
+    end;
+    ContentSize := AContentSize;
+    inc(OffSet, AChunkSize);
+  end;}
 begin
   Connection := FHandle as IZOracleConnection;
 
@@ -1124,10 +1156,34 @@ begin
   { This test doesn't use IsEmpty because that function does allow for zero length blobs}
   if (BlobSize > 0) then
   begin
-    ContentSize := BlobSize;
-    Status := FPlainDriver.LobWrite(Connection.GetContextHandle,
-      Connection.GetErrorHandle, FLobLocator, ContentSize, 1,
-      BlobData, BlobSize, OCI_ONE_PIECE, nil, nil, 0, SQLCS_IMPLICIT);
+    {if BlobSize > FChunkSize then
+    begin
+      OffSet := 0;
+      ContentSize := 0;
+
+      Status := DoWrite(1, FChunkSize, OCI_FIRST_PIECE);
+      if Status <> OCI_NEED_DATA then
+        CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
+          Status, lcOther, 'Write Large Object');
+
+      if (BlobSize - OffSet) > FChunkSize then
+        while (BlobSize - OffSet) > FChunkSize do //take care there is room left for LastPiece
+        begin
+          Status := DoWrite(offset, FChunkSize, OCI_NEXT_PIECE);
+          if Status <> OCI_NEED_DATA then
+            CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
+              Status, lcOther, 'Write Large Object');
+
+        end;
+      Status := DoWrite(offset, BlobSize - OffSet, OCI_LAST_PIECE);
+    end
+    else}
+    begin
+      ContentSize := BlobSize;
+      Status := FPlainDriver.LobWrite(Connection.GetContextHandle,
+        Connection.GetErrorHandle, FLobLocator, ContentSize, 1,
+        BlobData, BlobSize, OCI_ONE_PIECE, nil, nil, 0, SQLCS_IMPLICIT);
+    end;
   end
   else
   begin
@@ -1177,7 +1233,7 @@ end;
 function TZOracleBlob.Clone: IZBlob;
 begin
   Result := TZOracleBlob.Create(FPlainDriver, BlobData, BlobSize,
-    FHandle, FLobLocator, FBlobType);
+    FHandle, FLobLocator, FBlobType, FChunkSize);
 end;
 
 {**
@@ -1194,7 +1250,7 @@ end;
   Gets the string from the stored data.
   @return a string which contains the stored data.
 }
-function TZOracleBlob.GetString: AnsiString;
+function TZOracleBlob.GetString: ZAnsiString;
 begin
   ReadBlob;
   Result := inherited GetString;

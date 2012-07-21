@@ -165,6 +165,11 @@ const
   STMT_FETCH_NO_DATA    = 100;
   STMT_FETCH_DATA_TRUNC = 101;
 
+  {status codes}
+const
+   MYSQL_NO_DATA = 100;
+   MYSQL_DATA_TRUNCATED  = 101;
+
 type
   TMySqlOption = (
     MYSQL_OPT_CONNECT_TIMEOUT,
@@ -236,7 +241,7 @@ type
 
   MYSQL_FIELD_OFFSET = UInt;
 
-  PMYSQL_OPTIONS = ^_MYSQL_OPTIONS;
+  PMYSQL_OPTIONS   = ^_MYSQL_OPTIONS;
   _MYSQL_OPTIONS = record
     connect_timeout:          UInt;
     read_timeout:             UInt;
@@ -316,7 +321,7 @@ type
   FIELD_TYPE_STRING    = 254,
   FIELD_TYPE_GEOMETRY  = 255
     );
-
+  PTMysqlFieldTypes=^TMysqlFieldTypes;
   { Options for mysql_set_option }
   TMySqlSetOption = (
     MYSQL_OPTION_MULTI_STATEMENTS_ON,
@@ -417,7 +422,7 @@ TMYSQL_CLIENT_OPTIONS =
     table:            PAnsiChar;   // Table of column if column was a field
     org_table:        PAnsiChar;   // Org table name if table was an alias
     db:               PAnsiChar;   // Database for table
-    catalog:	       PAnsiChar;   // Catalog for table
+    catalog:	        PAnsiChar;   // Catalog for table
     def:              PAnsiChar;   // Default value (set by mysql_list_fields)
     length:           ULong; // Width of column
     max_length:       ULong; // Max width of selected set
@@ -526,6 +531,18 @@ TMYSQL_CLIENT_OPTIONS =
     is_null_value:     Byte;
     extension:         Pointer;
   end;
+
+  // offsets to used MYSQL_BINDxx members. Filled by GetBindOffsets
+  MYSQL_BINDOFFSETS=record
+    buffer_type   :NativeUint;
+    buffer_length :NativeUint;
+    is_unsigned   :NativeUint;
+    buffer        :NativeUint;
+    length        :NativeUint;
+    is_null       :NativeUint;
+    size          :integer;    //size of MYSQL_BINDxx
+    end;
+
 
   PDOBindRecord2 = record
       buffer:    Array of Byte;
@@ -659,7 +676,7 @@ type
   Tmysql_more_results           = function(Handle: PMYSQL): Byte;                                      {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_next_result            = function(Handle: PMYSQL): Integer;                                   {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_rollback               = function(Handle: PMYSQL): Byte;                                      {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_set_character_set      = function(Handle: PMYSQL; csname: PAnsiChar): Integer;                    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_set_character_set      = function(Handle: PMYSQL; const csname: PAnsiChar): Integer;                    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_set_server_option      = function(Handle: PMYSQL; Option: TMysqlSetOption): Integer;          {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_shutdown               = function(Handle: PMYSQL; shutdown_level: TMysqlShutdownLevel): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_sqlstate               = function(Handle: PMYSQL): PAnsiChar;                                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
@@ -828,6 +845,9 @@ const
   DEFAULT_PARAMS : array [0..2] of PAnsiChar = ('not_used'#0,
                                             '--datadir='+EMBEDDED_DEFAULT_DATA_DIR+#0,
                                             '--set-variable=key_buffer_size=32M'#0);
+
+const
+    MaxBlobSize = 1000000;
 
 implementation
 

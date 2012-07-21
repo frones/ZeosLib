@@ -201,7 +201,9 @@ begin
       Result := True;
       NativeResultSet := TZAdoResultSet.Create(Self, SQL, AdoRecordSet);
       if ResultSetConcurrency = rcUpdatable then
-        LastResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, TZAdoCachedResolver.Create((Connection as IZAdoConnection).GetAdoConnection, Self, NativeResultSet.GetMetaData))
+        LastResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
+          TZAdoCachedResolver.Create((Connection as IZAdoConnection).GetAdoConnection,
+          Self, NativeResultSet.GetMetaData), ClientCodePage)
       else LastResultSet := NativeResultSet;
     end else
       LastUpdateCount := RC;
@@ -323,7 +325,7 @@ begin
       stAsciiStream:
         begin
           if Assigned(B) then
-            DefVarManager.SetAsString(RetValue, B.GetString);
+            DefVarManager.SetAsString(RetValue, String(B.GetString));
           SQLType := stString;
         end;
       stUnicodeStream:
@@ -335,7 +337,7 @@ begin
       stBinaryStream:
         begin
           if Assigned(B) then
-            DefVarManager.SetAsString(RetValue, BytesToStr(B.GetBytes));
+            DefVarManager.SetAsString(RetValue, String(BytesToStr(B.GetBytes)));
           SQLType := stBytes;
         end;
     end;
@@ -346,7 +348,7 @@ begin
     vtBoolean: V := SoftVarManager.GetAsBoolean(RetValue);
     vtInteger: V := Integer(SoftVarManager.GetAsInteger(RetValue));
     vtFloat: V := SoftVarManager.GetAsFloat(RetValue);
-    vtString: V := SoftVarManager.GetAsString(RetValue);
+    vtString: V := AnsiString(SoftVarManager.GetAsString(RetValue));
     vtUnicodeString: V := SoftVarManager.GetAsUnicodeString(RetValue);
     vtDateTime: V := SoftVarManager.GetAsDateTime(RetValue);
   end;

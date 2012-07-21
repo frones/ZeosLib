@@ -58,7 +58,6 @@ interface
 {$I ZComponent.inc}
 
 uses
-  Types,
   Variants,
   SysUtils, DB, Classes, ZSqlUpdate, ZDbcIntfs, ZVariant,
   ZDbcCache, ZDbcCachedResultSet, ZAbstractRODataset,
@@ -477,8 +476,8 @@ begin
       if BookmarkValid({$IFDEF WITH_TBOOKMARK}BM{$ELSE}@BM{$ENDIF}) Then
       begin
         InternalGotoBookmark({$IFDEF WITH_TBOOKMARK}BM{$ELSE}@BM{$ENDIF});
-        Resync([rmExact, rmCenter]);
-      end;
+        Resync([rmExact, rmCenter]); 
+      end; 
       DisableControls;
       InternalSort;
       BookMark:=BM;

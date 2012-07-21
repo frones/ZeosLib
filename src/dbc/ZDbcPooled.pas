@@ -21,7 +21,8 @@ uses
   ZURL,
   ZDbcConnection,
   ZDbcIntfs,
-  ZPlainDriver;
+  ZPlainDriver,
+  ZMessages;
 
 type
   TConnectionPool = class;
@@ -77,16 +78,23 @@ type
 
   { This class embedds a real connection and redirects all methods to it.
     When it is droped or closed, it returns the real connection to the pool. }
-
-  { TZDbcPooledConnection }
-
-  TZDbcPooledConnection = class(TInterfacedObject, IZConnection)
+  TZDbcPooledConnection = class(TZCodePagedObject, IZConnection)
   private
     FConnection: IZConnection;
     FConnectionPool: TConnectionPool;
+    FPreprepareSQL: Boolean;
+    FUTF8StringAsWideField: Boolean;
     FUseMetadata: Boolean;
     function GetConnection: IZConnection;
+    function GetUTF8StringAsWideField: Boolean;
+    procedure SetUTF8StringAsWideField(const Value: Boolean);
   protected // IZConnection
+    FClientCodePage: String;
+    procedure CheckCharEncoding(CharSet: String;
+      const DoArrange: Boolean = False);
+    function GetClientCodePageInformations: PZCodePage; //EgonHugeist
+    function GetPreprepareSQL: Boolean; //EgonHugeist
+    procedure SetPreprepareSQL(const Value: Boolean);
     function CreateStatement: IZStatement;
     function PrepareStatement(const SQL: string): IZPreparedStatement;
     function PrepareCall(const SQL: string): IZCallableStatement;
@@ -127,13 +135,20 @@ type
   public
     constructor Create(const ConnectionPool: TConnectionPool);
     destructor Destroy; override;
+    function GetAnsiEscapeString(const Value: AnsiString;
+      const EscapeMarkSequence: String = '~<|'): String;
+    function GetEscapeString(const Value: String;
+      const EscapeMarkSequence: String = '~<|'): String; overload; virtual;
+    function GetEscapeString(const Value: PAnsiChar;
+      const EscapeMarkSequence: String = '~<|'): String; overload; virtual;
+    function GetEncoding: TZCharEncoding;
   end;
 
   TZDbcPooledConnectionDriver = class(TZAbstractDriver)
   private
     PoolList: TObjectList;
     URLList: TStringList;
-    function GetEmbeddedURL(const URL: AnsiString): AnsiString;
+    function GetEmbeddedURL(const URL: String): String;
   public
     //function GetSupportedProtocols: TStringDynArray; override;
     function Connect(const URL: TZURL): IZConnection; override;
@@ -569,6 +584,114 @@ begin
   GetConnection.SetTransactionIsolation(Value);
 end;
 
+{**
+  EgonHugeist: Check if the given Charset for Compiler/Database-Support!!
+    Not supported means if there is a pissible String-DataLoss.
+    So it raises an Exception if case of settings. This handling
+    is an improofment to inform Zeos-Users about the troubles the given
+    CharacterSet may have.
+  @param CharSet the CharacterSet which has to be proofed
+  @param DoArrange represents a switch to check and set a aternative ZAlias as
+    default. This means it ignores the choosen Client-CharacterSet and sets a
+    "more" Zeos-Compatible Client-CharacterSet if known.
+}
+procedure TZDbcPooledConnection.CheckCharEncoding(CharSet: String;
+  const DoArrange: Boolean = False);
+begin
+  Self.ClientCodePage := Self.GetIZPlainDriver.ValidateCharEncoding(CharSet, DoArrange);
+
+  FPreprepareSQL := FPreprepareSQL and (ClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]);
+  FClientCodePage := ClientCodePage^.Name; //resets the developer choosen ClientCodePage
+end;
+
+
+{**
+  EgonHugeist: this is a compatibility-Option for exiting Applictions.
+    Zeos is now able to preprepare direct insered SQL-Statements.
+    Means do the UTF8-preparation if the CharacterSet was choosen.
+    So we do not need to do the SQLString + UTF8Encode(Edit1.Test) for example.
+  @result True if coPreprepareSQL was choosen in the TZAbstractConnection
+}
+function TZDbcPooledConnection.GetPreprepareSQL: Boolean;
+begin
+  Result := FPreprepareSQL;
+end;
+
+procedure TZDbcPooledConnection.SetPreprepareSQL(const Value: Boolean);
+begin
+  FPreprepareSQL := Value;
+end;
+
+function TZDbcPooledConnection.GetUTF8StringAsWideField: Boolean;
+begin
+  {$IFDEF LAZARUSUTF8HACK}
+  Result := False;
+  {$ELSE}
+    {$IFDEF DELPHI12_UP}
+    Result := True;
+    {$ELSE}
+    Result := FUTF8StringAsWideField;
+    {$ENDIF}
+  {$ENDIF}
+end;
+
+procedure TZDbcPooledConnection.SetUTF8StringAsWideField(const Value: Boolean);
+begin
+  {$IFDEF LAZARUSUTF8HACK}
+  FUTF8StringAsWideField := False;
+  {$ELSE}
+    {$IFDEF DELPHI12_UP}
+    FUTF8StringAsWideField := True;
+    {$ELSE}
+    FUTF8StringAsWideField := Value;
+    {$ENDIF}
+  {$ENDIF}
+end;
+
+{**
+  EgonHugeist:
+  Returns the BinaryString in a Tokenizer-detectable kind
+  If the Tokenizer don't need to predetect it Result = BinaryString
+  @param Value represents the Binary-String
+  @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
+  @result the detectable Binary String
+}
+function TZDbcPooledConnection.GetAnsiEscapeString(const Value: AnsiString;
+  const EscapeMarkSequence: String = '~<|'): String;
+begin
+  Result := Self.GetDriver.GetTokenizer.AnsiGetEscapeString(Value, EscapeMarkSequence);
+end;
+
+function TZDbcPooledConnection.GetEscapeString(const Value: String;
+  const EscapeMarkSequence: String = '~<|'): String;
+begin
+  Result := Self.GetDriver.GetTokenizer.GetEscapeString(Value);
+end;
+
+function TZDbcPooledConnection.GetEscapeString(const Value: PAnsiChar;
+  const EscapeMarkSequence: String = '~<|'): String;
+begin
+  GetEscapeString(String(Value));
+end;
+
+function TZDbcPooledConnection.GetEncoding: TZCharEncoding;
+begin
+  Result := ClientCodePage^.Encoding;
+end;
+
+{**
+  Result 100% Compiler-Compatible
+  And sets it Result to ClientCodePage by calling the
+    PlainDriver.GetClientCodePageInformations function
+
+  @param ClientCharacterSet the CharacterSet which has to be checked
+  @result PZCodePage see ZCompatible.pas
+}
+function TZDbcPooledConnection.GetClientCodePageInformations: PZCodePage; //EgonHugeist
+begin
+  Result := ClientCodePage
+end;
+
 { TZDbcPooledConnectionDriver }
 
 constructor TZDbcPooledConnectionDriver.Create;
@@ -681,7 +804,7 @@ begin
   Result[0] := PooledPrefix + '*';
 end;}
 
-function TZDbcPooledConnectionDriver.GetEmbeddedURL(const URL: AnsiString): AnsiString;
+function TZDbcPooledConnectionDriver.GetEmbeddedURL(const URL: String): String;
 begin
   if Copy(URL, 1, 5 + Length(PooledPrefix)) = 'zdbc:' + PooledPrefix then
     Result := 'zdbc:' + Copy(URL, 5 + Length(PooledPrefix) + 1, Length(URL))

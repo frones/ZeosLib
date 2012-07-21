@@ -58,7 +58,7 @@ interface
 {$I ZCore.inc}
 
 uses
-   Classes, SysUtils, ZClasses;
+   Classes, SysUtils, ZClasses, ZCompatibility;
 
 type
 
@@ -68,13 +68,13 @@ type
   }
   TZTokenType = (ttUnknown, ttEOF, ttFloat, ttInteger, ttHexDecimal,
     ttNumber, ttSymbol, ttQuoted, ttQuotedIdentifier, ttWord, ttKeyword, ttWhitespace,
-    ttComment, ttSpecial, ttTime, ttDate, ttDateTime);
+    ttComment, ttSpecial, ttTime, ttDate, ttDateTime, ttEscape, ttEscapedQuoted);
 
   {**
     Defines options for tokenizing strings.
   }
   TZTokenOption = (toSkipUnknown, toSkipWhitespaces, toSkipComments,
-    toSkipEOF, toUnifyWhitespaces, toUnifyNumbers, toDecodeStrings);
+    toSkipEOF, toUnifyWhitespaces, toUnifyNumbers, toDecodeStrings, toAcceptEscape);
   TZTokenOptions = set of TZTokenOption;
 
   {**
@@ -113,6 +113,48 @@ type
       Tokenizer: TZTokenizer): TZToken; virtual; abstract;
   end;
 
+  {**
+    EgonHugeist:
+    A <code>EsacapeState</code> object returns bininary/String-data from a reader.
+    This
+    state's idea is save work-around of DataSet given binary/String-Data.
+    So it has some requirements to pick out this data from the SQL-
+    String:
+
+      First: We have to define one or some Chars to detect this state.
+        Example: If data data was given like;
+        ~<|:%d|<~'...Binary/StringData...'~<|:%d|<~
+        we are able to predetect this State.
+
+      Second: The parameter d represents an Integer(Count of Chars)
+        if we do not use this it's possible that the Tokenizer is
+        vinny-nilly on getting binary-Data!
+
+      Third: The GenerigResolver who assambles the insert/update
+        Statements has to add this ass prefix and suffix.
+
+      Fourth: The User of this Component has to know this too. So has to do this
+        previously if he want to insert/update binary-data in a self
+        assembled Query. So i think it would be better to add an published
+        read-only Property like:
+          EscapeChars: String;
+
+    If we did this corectly we are able to disassemble all queries and
+      do execute the nessesary UTF8Encoding of the TZQuoteState and
+      TZWordState which represents either Quoted-String-Data or
+      Catalog/Table/Alias/Field name-spaces.
+
+    This State is only neccessary for <code>Delphi12_UP</code> ( 2009 and later)
+    and results of it's mixing nByte-Chars and binary-Data 1Byte-Chars.
+  }
+  TZEscapeState = class (TZTokenizerState)
+  protected
+    FEscapeMarks: String;
+  public
+    procedure SetMarks(const Value: String);
+    function NextToken(Stream: TStream; FirstChar: Char;
+      Tokenizer: TZTokenizer): TZToken; override;
+  end;
   {**
     A NumberState object returns a number from a reader. This
     state's idea of a number allows an optional, initial
@@ -414,6 +456,13 @@ type
     function GetWhitespaceState: TZWhitespaceState;
     function GetWordState: TZWordState;
     function GetCharacterState(StartChar: Char): TZTokenizerState;
+    procedure SetEscapeMarkSequence(const Value: String);
+    function AnsiGetEscapeString(const Ansi: AnsiString;
+      const EscapeMarkSequence: String = '~<|'): String;
+    function GetEscapeString(const Str: String;
+      const EscapeMarkSequence: String = '~<|'): String;
+    function TokenizeEscapeBufferToList(const SQL: String;
+      const EscapeMarkSequence: String = '~<|'): TZTokenDynArray;
   end;
 
   {** Implements a default tokenizer object. }
@@ -430,10 +479,23 @@ type
     FSymbolState: TZSymbolState;
     FWhitespaceState: TZWhitespaceState;
     FWordState: TZWordState;
+    FEscapeState: TZEscapeState; //EgonHugeist
+    FMarkSequence: String;
+    function GetEscapeMarkSequence: String;
+    procedure SetEscapeMarkSequence(const Value: String);
+  protected
+    function CheckEscapeState(const ActualState: TZTokenizerState;
+      Stream: TStream; const FirstChar: Char): TZTokenizerState; virtual;
   public
     constructor Create;
     destructor Destroy; override;
 
+    function AnsiGetEscapeString(const EscapeString: AnsiString;
+      const EscapeMarkSequence: String = '~<|'): String; virtual;
+    function GetEscapeString(const EscapeString: String;
+      const EscapeMarkSequence: String = '~<|'): String; virtual;
+    function TokenizeEscapeBufferToList(const SQL: String;
+      const EscapeMarkSequence: String = '~<|'): TZTokenDynArray; virtual;
     function TokenizeBufferToList(const Buffer: string; Options: TZTokenOptions):
       TStrings;
     function TokenizeStreamToList(Stream: TStream; Options: TZTokenOptions):
@@ -447,6 +509,7 @@ type
     function GetCharacterState(StartChar: Char): TZTokenizerState;
     procedure SetCharacterState(FromChar, ToChar: Char; State: TZTokenizerState);
 
+    function GetEscapeState: TZEscapeState;
     function GetCommentState: TZCommentState;
     function GetNumberState: TZNumberState;
     function GetQuoteState: TZQuoteState;
@@ -454,6 +517,8 @@ type
     function GetWhitespaceState: TZWhitespaceState;
     function GetWordState: TZWordState;
 
+    property EscapeState: TZEscapeState read FEscapeState write FEscapeState;
+    property EscapeMarkSequence: String read GetEscapeMarkSequence write SetEscapeMarkSequence;
     property CommentState: TZCommentState read FCommentState write FCommentState;
     property NumberState: TZNumberState read FNumberState write FNumberState;
     property QuoteState: TZQuoteState read FQuoteState write FQuoteState;
@@ -466,7 +531,157 @@ type
 implementation
 
 uses
-  Math, ZCompatibility;
+  Math;
+
+{ TZEscapeState } //EgonHugeist
+
+{**
+  Sets the Escape Mark-Sequence-String wich is used to detect EscapeFields
+
+  @return a quoted string token from a reader
+}
+procedure TZEscapeState.SetMarks(const Value: String);
+begin
+  FEscapeMarks := Value;
+end;
+
+{**
+  Return a quoted Escape-data-string of token from a reader. This method
+  will collect characters until it sees a match to the
+  character that the tokenizer used to switch to this state.
+
+  @return a quoted string token from a reader
+}
+function TZEscapeState.NextToken(Stream: TStream; FirstChar: Char;
+  Tokenizer: TZTokenizer): TZToken;
+var
+  TempChar: Char;
+  TempStr, LenString: string;
+  I, IReadCount: Integer;
+
+  function ReadNextCharToTempChar: Boolean;
+  begin
+    Result := True;
+    if Stream.Read(TempChar, 1 * SizeOf(Char)) = 0 then
+    begin
+      Result := False;
+      TempChar := #0;
+    end
+    else
+      Inc(iReadCount);
+  end;
+
+  procedure RollbackStream;
+  begin
+    Stream.Seek(-(iReadCount * SizeOf(Char)), soFromCurrent);
+    Result.Value := '';
+    IReadCount := 0;
+  end;
+
+  function CheckMarkChars(Marks: String): Boolean;
+  var
+    iMark: Integer;
+  begin
+    Result := False;
+
+    if ( TempChar = Copy(Marks, 1, 1) ) then
+      for iMark := 2 to Length(Marks) do  //First Char was predetected
+      begin
+        if ReadNextCharToTempChar then
+        begin
+          if not ( TempChar = Copy(Marks, iMark, 1) ) then
+          begin
+            RollbackStream;
+            Exit;
+          end;
+        end else
+        begin
+          RollbackStream;
+          Exit;
+        end;
+      end
+    else
+    begin
+      RollbackStream;
+      Exit;
+    end;
+    Result := True;
+  end;
+
+  function ReadLengthString: String;
+  var
+    B: Boolean;
+  begin
+    Result := ''; //init value
+    repeat
+      B := ReadNextCharToTempChar;
+      if B then
+        if CharInSet(TempChar, ['0'..'9']) then
+          Result := Result+TempChar;
+    until ( not CharInSet(TempChar, ['0'..'9'])) or ( not B );
+  end;
+
+  function GetReverted: String;
+  var
+    I: Integer;
+  begin
+    for I := Length(Self.FEscapeMarks) downto 1 do
+      Result := Result + Copy(FEscapeMarks, i, 1);
+  end;
+
+begin
+  Result.TokenType := ttUnknown;
+  Result.Value := '';
+
+  iReadCount := 0; //init Value
+  TempStr := '';
+  TempChar := FirstChar; //FirstChar: ~
+
+  if not CheckMarkChars(FEscapeMarks) then Exit;
+
+  //All inMark-Chars where test.
+  //Now Check for Numeric Chars until MarkOut was found or #0 was Resulted
+  LenString := ReadLengthString;
+  if LenString = '' then
+  begin
+    RollbackStream;
+    Exit;
+  end;
+
+  //Now Check the TempChar for it's hits on cBinDetectCharsOut
+  if not CheckMarkChars(GetReverted) then Exit;
+
+  //OutMarks where Found too. So let's read the BinarayData to the TempStr
+  //Including the Quotes
+  for i := 0 to StrToInt(LenString) do
+  begin
+    if not ReadNextCharToTempChar then
+      Exit
+    else
+      TempStr := TempStr + TempChar;
+  end;
+  //Done and still in here! Post Data to Result!
+  Result.Value := Copy(TempStr, 1, Length(TempStr)-1);
+
+  //Now Check for in Chars again..
+  if not CheckMarkChars(FEscapeMarks) then Exit;
+  //MarkIn-Chars where found now compare the read-length
+  TempStr := LenString; //Save to before compare
+  LenString := ReadLengthString;
+  if ( LenString = '' ) or ( LenString <> TempStr ) then
+  begin
+    RollbackStream;
+    Exit;
+  end;
+
+  //Now Check the TempChar for it's hits on Escape-Detect-CharsOut again..
+  if not CheckMarkChars(GetReverted) then Exit;
+  //MarkOut-Chars where found again now we are ready here
+
+  //everything was fine! Now we are sure Escape data was here
+  Result.TokenType := ttEscape;
+  //End..
+end;
 
 { TZNumberState }
 
@@ -626,7 +841,7 @@ begin
   ReadStr := FirstChar;
   while (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) and not CharInSet(ReadChar, [#10, #13]) do
       ReadStr := ReadStr + ReadChar;
-  if CharInSet(ReadChar, [#10, #13]) then
+    if CharInSet(ReadChar, [#10, #13]) then
     Stream.Seek(-(1 * SizeOf(Char)), soFromCurrent);
 
   Result.TokenType := ttComment;
@@ -665,19 +880,20 @@ var
 begin
   Result := '';
   while (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) and not CharInSet(ReadChar, [#10, #13]) do
-    Result := Result + ReadChar;
+      Result := Result + ReadChar;
+
   // mdaems : for single line comments the line ending must be included
   // as it should never be stripped off or unified with other whitespace characters
   if CharInSet(ReadChar, [#10, #13]) then
-  begin
-    Result := Result + ReadChar;
-    // ludob Linux line terminator is just LF, don't read further if we already have LF
-    if (ReadChar<>#10) and (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) then
-      if CharInSet(ReadChar, [#10, #13]) then
-        Result := Result + ReadChar
-      else
-        Stream.Seek(-(1 * SizeOf(Char)), soFromCurrent);
-  end;
+    begin
+      Result := Result + ReadChar;
+      // ludob Linux line terminator is just LF, don't read further if we already have LF
+      if (ReadChar<>#10) and (Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0) then
+        if CharInSet(ReadChar, [#10, #13]) then
+          Result := Result + ReadChar
+        else
+          Stream.Seek(-(1 * SizeOf(Char)), soFromCurrent);
+    end;
 end;
 
 {**
@@ -1143,6 +1359,28 @@ end;
 { TZTokenizer }
 
 {**
+  Gets the Binaray-Detect-Mark-String.
+}
+function TZTokenizer.GetEscapeMarkSequence: String;
+begin
+  Result := Self.FMarkSequence;
+end;
+
+{**
+  Sets the Binaray-Detect-Mark-String. Minimum Requirement-Length is 3
+}
+procedure TZTokenizer.SetEscapeMarkSequence(const Value: String);
+begin
+  if ( Value <> '~<|' ) or ( Value <> '')  then
+  begin
+    if ( Length(Value) < 3 ) then
+      raise Exception.Create('EscapeMarkSequence-String isn''t a good Identifier! MinLength = 3');
+    FMarkSequence := Value;
+    FEscapeState.SetMarks(Value);
+  end;
+end;
+
+{**
   Constructs a tokenizer with a default state table (as
   described in the class comment).
 }
@@ -1155,7 +1393,8 @@ begin
     Add('<=');
     Add('>=');
   end;
-
+  FEscapeState := TZEscapeState.Create;
+  SetEscapeMarkSequence('~<|'); //Default
   FNumberState := TZNumberState.Create;
   FQuoteState := TZQuoteState.Create;
   FWhitespaceState := TZWhitespaceState.Create;
@@ -1185,6 +1424,8 @@ end;
 }
 destructor TZTokenizer.Destroy;
 begin
+  if FEscapeState <> nil then
+    FEscapeState.Free;
   if FCommentState <> nil then
     FCommentState.Free;
   if FNumberState <> nil then
@@ -1251,6 +1492,101 @@ begin
   finally
     Stream.Free;
   end;
+end;
+
+function TZTokenizer.AnsiGetEscapeString(const EscapeString: AnsiString;
+  const EscapeMarkSequence: String = '~<|'): String;
+var
+  Temp: String;
+
+  function GetReverted: String;
+  var
+    I: Integer;
+  begin
+    for I := Length(EscapeMarkSequence) downto 1 do
+      Result := Result + Copy(EscapeMarkSequence, i, 1);
+  end;
+begin
+  Self.SetEscapeMarkSequence(EscapeMarkSequence);
+  Temp := EscapeMarkSequence+IntToStr(Length(EscapeString))+GetReverted;
+
+  if Length(EscapeString) > 0 then
+    Result := Temp+String(EscapeString)+Temp
+  else
+    Result := 'NULL';
+end;
+
+function TZTokenizer.GetEscapeString(const EscapeString: String;
+  const EscapeMarkSequence: String = '~<|'): String;
+var
+  Temp: String;
+
+  function GetReverted: String;
+  var
+    I: Integer;
+  begin
+    for I := Length(EscapeMarkSequence) downto 1 do
+      Result := Result + Copy(EscapeMarkSequence, i, 1);
+  end;
+begin
+  Self.SetEscapeMarkSequence(EscapeMarkSequence);
+  Temp := EscapeMarkSequence+IntToStr(Length(EscapeString))+GetReverted;
+
+  if Length(EscapeString) > 0 then
+    Result := Temp+EscapeString+Temp
+  else
+    Result := '';
+end;
+
+
+{**
+  Tokenizes a string buffer into a dynamic array of tokens and informs
+  the Tokenizer and EscapeState about the used sequence
+  @param SQL a string buffer to be tokenized.
+  @param EscapeMarkSequence to detect preprepared data
+  @returns a dynamic array of tokens
+}
+function TZTokenizer.TokenizeEscapeBufferToList(const SQL: String;
+  const EscapeMarkSequence: String = '~<|'): TZTokenDynArray;
+begin
+  if ( EscapeMarkSequence <> '~<|' ) and ( EscapeMarkSequence <> '' )then
+    SetEscapeMarkSequence(EscapeMarkSequence);
+  Result := TokenizeBuffer(SQL, [toSkipEOF, toAcceptEscape]); //Disassembles the Query
+end;
+
+{**
+  EgonHugeist:
+  Checks if SymboState is EscapeState and sets it ...
+  @param Stream the Read-Stream which has to checked for Next-Chars.
+  @FirstChar The FirstChar which was readed and sets the Symbolstate
+  @returns either the given SymbolState or the EscapeState
+}
+function TZTokenizer.CheckEscapeState(const ActualState: TZTokenizerState;
+  Stream: TStream; const FirstChar: Char): TZTokenizerState;
+var
+  NextChar: Char;
+  iReadCount, I: Integer;
+begin
+  Result := ActualState;
+  iReadCount := 0;
+  if  ( FirstChar = Copy(Self.EscapeMarkSequence, 1, 1) ) then //Token was set so check if its Escape
+  begin
+    for i := 2 to Length(Self.EscapeMarkSequence) do
+    if Stream.Read(NextChar, 1 * SizeOf(Char)) > 0  then //Read next Char
+      if NextChar = Copy(Self.EscapeMarkSequence, i, 1) then //Compare Chars
+        Inc(IReadCount) //increment count of read-Chars
+      else
+      begin
+        Stream.Seek(-(iReadCount * SizeOf(Char)), soFromCurrent); //Seek Stream back to starting Position
+        Exit;
+      end
+    else
+      Exit;
+  end
+  else
+    Exit;
+  Stream.Seek(-(iReadCount * SizeOf(Char)), soFromCurrent); //Seek Stream back to starting Position
+  Result := Self.EscapeState;
 end;
 
 {**
@@ -1326,6 +1662,8 @@ begin
     State := FCharacterStates[Ord(FirstChar)];
     if State <> nil then
     begin
+      State := CheckEscapeState(State, Stream, FirstChar);
+
       Token := State.NextToken(Stream, FirstChar, Self);
       { Decode strings. }
       if (State is TZQuoteState)
@@ -1359,7 +1697,9 @@ begin
       begin
         Token.Value := Result[Result.Count-1] + Token.Value;
         Result.Delete(Result.Count-1);
-      end; 
+      end;
+      if (Token.Tokentype = ttEscapedQuoted) and (not (toAcceptEscape in Options)) then
+        Token.Tokentype := ttQuoted;
       { Add a read token. }
       LastTokenType := Token.TokenType;
       Result.AddObject(Token.Value, TObject(Ord(Token.TokenType)));
@@ -1371,6 +1711,15 @@ begin
   { Adds an EOF if option is not set. }
   if not (toSkipEOF in Options) then
     Result.AddObject('', TObject(Ord(ttEOF)));
+end;
+
+{**
+  Gets a tokenizer default Escape state.
+  @returns a tokenizer default Escape state.
+}
+function TZTokenizer.GetEscapeState: TZEscapeState;
+begin
+  Result := EscapeState;
 end;
 
 {**

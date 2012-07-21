@@ -89,6 +89,8 @@ type
     destructor Destroy; override;
 
     function GetSupportedProtocols: TStringDynArray;
+    function GetSupportedClientCodePages(const Url: TZURL;
+      Const SupportedsOnly: Boolean): TStringDynArray;
     function Connect(const Url: string; Info: TStrings = nil): IZConnection; overload; deprecated;
     function Connect(const Url: TZURL): IZConnection; overload; virtual;
     function AcceptsURL(const Url: string): Boolean; virtual;
@@ -107,10 +109,12 @@ type
 
   { TZAbstractConnection }
 
-  TZAbstractConnection = class(TInterfacedObject, IZConnection)
+  TZAbstractConnection = class(TZCodePagedObject, IZConnection)
   private
     FDriver: IZDriver;
     FIZPlainDriver: IZPlainDriver;
+    FPreprepareSQL: Boolean;
+    FUTF8StringAsWideField: Boolean;
     FAutoCommit: Boolean;
     FReadOnly: Boolean;
     FTransactIsolationLevel: TZTransactIsolationLevel;
@@ -129,8 +133,16 @@ type
     procedure SetPassword(const Value: String);
     function GetInfo: TStrings;
   protected
+    FClientCodePage: String;
     FMetadata: TContainedObject;
     procedure InternalCreate; virtual; //abstract; //Mark, if we are ready this one should be abstract!
+    function GetEncoding: TZCharEncoding;
+    procedure CheckCharEncoding(const CharSet: String; const DoArrange: Boolean = False);
+    function GetClientCodePageInformations: PZCodePage; //EgonHugeist
+    function GetUTF8StringAsWideField: Boolean;
+    procedure SetUTF8StringAsWideField(const Value: Boolean);
+    function GetPreprepareSQL: Boolean; //EgonHugeist
+    procedure SetPreprepareSQL(const Value: Boolean);
     procedure RaiseUnsupportedException;
 
     function CreateRegularStatement(Info: TStrings): IZStatement;
@@ -217,6 +229,12 @@ type
 
     function GetWarnings: EZSQLWarning; virtual;
     procedure ClearWarnings; virtual;
+    function GetAnsiEscapeString(const Value: AnsiString;
+      const EscapeMarkSequence: String = '~<|'): String; virtual;
+    function GetEscapeString(const Value: String;
+      const EscapeMarkSequence: String = '~<|'): String; overload; virtual;
+    function GetEscapeString(const Value: PAnsiChar;
+      const EscapeMarkSequence: String = '~<|'): String; overload; virtual;
 
     function UseMetadata: boolean;
     procedure SetUseMetadata(Value: Boolean);
@@ -296,6 +314,21 @@ end;
 function TZAbstractDriver.GetSupportedProtocols: TStringDynArray;
 begin
   Result := FSupportedProtocols;
+end;
+
+{**
+  EgonHugeist:
+  Get names of the supported CharacterSets.
+  For example: ASCII, UTF8...
+}
+function TZAbstractDriver.GetSupportedClientCodePages(const Url: TZURL;
+  Const SupportedsOnly: Boolean): TStringDynArray;
+var
+  Plain: IZPlainDriver;
+begin
+  Plain := GetPlainDriverFromCache(Url.Protocol, '');
+  if Assigned(Plain) then
+  Result := Plain.GetSupportedClientCodePages(not SupportedsOnly);
 end;
 
 {**
@@ -558,6 +591,48 @@ procedure TZAbstractConnection.InternalCreate;
 begin
 end;
 
+function TZAbstractConnection.GetEncoding: TZCharEncoding;
+begin
+  Result := Self.ClientCodePage^.Encoding;
+end;
+
+{**
+  EgonHugeist: Check if the given Charset for Compiler/Database-Support!!
+    Not supported means if there is a pissible String-DataLoss.
+    So it raises an Exception if case of settings. This handling
+    is an improofment to inform Zeos-Users about the troubles the given
+    CharacterSet may have.
+  @param CharSet the CharacterSet which has to be proofed
+  @param DoArrange represents a switch to check and set a aternative ZAlias as
+    default. This means it ignores the choosen Client-CharacterSet and sets a
+    "more" Zeos-Compatible Client-CharacterSet if known.
+}
+procedure TZAbstractConnection.CheckCharEncoding(const CharSet: String;
+  const DoArrange: Boolean = False);
+begin
+  ClientCodePage := Self.GetIZPlainDriver.ValidateCharEncoding(CharSet, DoArrange);
+  FPreprepareSQL := FPreprepareSQL and (ClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]);
+  FClientCodePage := ClientCodePage^.Name; //resets the developer choosen ClientCodePage
+end;
+
+
+{**
+  EgonHugeist: this is a compatibility-Option for exiting Applictions.
+    Zeos is now able to preprepare direct insered SQL-Statements.
+    Means do the UTF8-preparation if the CharacterSet was choosen.
+    So we do not need to do the SQLString + UTF8Encode(Edit1.Test) for example.
+  @result True if coPreprepareSQL was choosen in the TZAbstractConnection
+}
+function TZAbstractConnection.GetPreprepareSQL: Boolean;
+begin
+  Result := FPreprepareSQL;
+end;
+
+procedure TZAbstractConnection.SetPreprepareSQL(const Value: Boolean);
+begin
+  FPreprepareSQL := Value;
+end;
+
 {**
   EgonHugeist and MDeams: The old deprecadet constructor which was used
   from the descendant classes. We left him here for compatibility reasons to
@@ -601,6 +676,24 @@ begin
     FURL := TZURL.Create(ZURL);
   FDriver := DriverManager.GetDriver(ZURL.URL);
   FIZPlainDriver := FDriver.GetPlainDriver(ZUrl);
+  Info.NameValueSeparator := '=';
+  FClientCodePage := Info.Values['codepage'];
+  FPreprepareSQL := Info.Values['PreprepareSQL'] = 'ON'; //compatibitity Option for existing Applications
+  {Pick out the values from Info}
+  Info.Values['PreprepareSQL'] := '';
+  Info.Values['codepage'] := '';
+  {CheckCharEncoding}
+  CheckCharEncoding(FClientCodePage, True);
+  {$IFDEF LAZARUSUTF8HACK}
+  FUTF8StringAsWideField := False;
+  {$ELSE}
+    {$IFDEF DELPHI12_UP}
+    FUTF8StringAsWideField := True;
+    {$ELSE}
+    FUTF8StringAsWideField := False;
+    {$ENDIF}
+  {$ENDIF}
+
   FAutoCommit := True;
   FReadOnly := True;
   FTransactIsolationLevel := tiNone;
@@ -615,7 +708,7 @@ destructor TZAbstractConnection.Destroy;
 begin
   if not FClosed then
     Close;
-  FMetadata.Free;
+  FreeAndNil(FMetadata);
   FURL.Free;
   FIZPlainDriver := nil;
   FDriver := nil;
@@ -1148,6 +1241,81 @@ begin
   FUseMetadata := Value;
 end;
 
+{**
+  EgonHugeist:
+  Returns the BinaryString in a Tokenizer-detectable kind
+  If the Tokenizer don't need to predetect it Result = BinaryString
+  @param Value represents the Binary-String
+  @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
+  @result the detectable Binary String
+}
+function TZAbstractConnection.GetAnsiEscapeString(const Value: AnsiString;
+  const EscapeMarkSequence: String = '~<|'): String;
+begin
+  if Self.FPreprepareSQL then //Set detect-sequence only if Prepreparing should be done else it's not server-understandable.
+    Result := Self.GetDriver.GetTokenizer.AnsiGetEscapeString(Value, EscapeMarkSequence)
+  else
+    Result := String(Value);
+end;
+
+function TZAbstractConnection.GetEscapeString(const Value: String;
+  const EscapeMarkSequence: String = '~<|'): String;
+begin
+  if Self.FPreprepareSQL then //Set detect-sequence only if Prepreparing should be done else it's not server-understandable.
+    Result := Self.GetDriver.GetTokenizer.GetEscapeString(Value)
+  else
+    Result := Value;
+end;
+
+function TZAbstractConnection.GetEscapeString(const Value: PAnsiChar;
+  const EscapeMarkSequence: String = '~<|'): String;
+var
+  Ansi: AnsiString;
+begin
+  Ansi := StrPas(Value);
+  Result := GetEscapeString(String(Ansi));
+end;
+
+
+{**
+  Result 100% Compiler-Compatible
+  And sets it Result to ClientCodePage by calling the
+    PlainDriver.GetClientCodePageInformations function
+
+  @param ClientCharacterSet the CharacterSet which has to be checked
+  @result PZCodePage see ZCompatible.pas
+}
+function TZAbstractConnection.GetClientCodePageInformations: PZCodePage; //EgonHugeist
+begin
+  Result := ClientCodePage
+end;
+
+function TZAbstractConnection.GetUTF8StringAsWideField: Boolean;
+begin
+  {$IF defined(LAZARUSUTF8HACK) or (not defined(WITH_FTWIDESTRING))}
+  Result := False;
+  {$ELSE}
+    {$IFDEF DELPHI12_UP}
+    Result := True;
+    {$ELSE}
+    Result := FUTF8StringAsWideField;
+    {$ENDIF}
+  {$IFEND}
+end;
+
+procedure TZAbstractConnection.SetUTF8StringAsWideField(const Value: Boolean);
+begin
+  {$IF defined(LAZARUSUTF8HACK) or (not defined(WITH_FTWIDESTRING))}
+  FUTF8StringAsWideField := False;
+  {$ELSE}
+    {$IFDEF DELPHI12_UP}
+    FUTF8StringAsWideField := True;
+    {$ELSE}
+    FUTF8StringAsWideField := Value;
+    {$ENDIF}
+  {$IFEND}
+end;
+
 { TZAbstractNotification }
 
 {**
@@ -1306,4 +1474,3 @@ begin
 end;
 
 end.
-

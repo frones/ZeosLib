@@ -58,7 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZPlainSqLiteDriver, ZDbcLogging;
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZPlainSqLiteDriver, ZDbcLogging, ZCompatibility;
 
 {**
   Convert string SQLite field type to SQLType
@@ -68,7 +68,8 @@ uses
   @result the SQLType field type value
 }
 function ConvertSQLiteTypeToSQLType(TypeName: string; var Precision: Integer;
-  var Decimals: Integer): TZSQLType;
+  var Decimals: Integer; CharEncoding: TZCharEncoding;
+  const UTF8StringAsWideField: Boolean): TZSQLType;
 
 {**
   Checks for possible sql errors.
@@ -98,7 +99,7 @@ function DecodeString(Value: ansistring): ansistring;
 
 implementation
 
-uses ZMessages, ZCompatibility;
+uses ZMessages{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
 
 {**
   Convert string SQLite field type to SQLType
@@ -108,7 +109,8 @@ uses ZMessages, ZCompatibility;
   @result the SQLType field type value
 }
 function ConvertSQLiteTypeToSQLType(TypeName: string; var Precision: Integer;
-  var Decimals: Integer): TZSQLType;
+  var Decimals: Integer; CharEncoding: TZCharEncoding;
+  const UTF8StringAsWideField: Boolean): TZSQLType;
 var
   P1, P2: Integer;
   Temp: string;
@@ -164,7 +166,15 @@ begin
   else if StartsWith(TypeName, 'CHAR') then
     Result := stString
   else if TypeName = 'VARCHAR' then
-    Result := {$IFDEF DELPHI12_UP}stUnicodeString{$ELSE}stString{$ENDIF}
+    case CharEncoding of  //SQLite supports only 2 OpenModes: either UTF8 or UTF16(le, be)
+      ceUTF8:
+        if UTF8StringAsWideField then
+          Result := stUnicodeString
+        else
+          Result := stString;
+      ceUTF16:
+        Result := stUnicodeString
+    end
   else if TypeName = 'VARBINARY' then
     Result := stBytes
   else if TypeName = 'BINARY' then
@@ -183,7 +193,6 @@ begin
     Result := stAsciiStream
   else if Pos('TEXT', TypeName) > 0 then
     Result := stAsciiStream;
-    //Result := stString;
 
   if (Result = stInteger) and (Precision <> 0) then
   begin
@@ -197,8 +206,16 @@ begin
       Result := stLong;
   end;
 
-  if (Result = stString) and (Precision = 0) then
+  if ((Result = stString) or (Result = stUnicodeString)) and (Precision = 0) then
     Precision := 255;
+  if Result = stAsciiStream then
+    case CharEncoding of
+      ceUTF8, ceUTF16:
+        if UTF8StringAsWideField then
+          Result := stUnicodeStream
+        else
+          Result := stAsciiStream;
+    end;
 end;
 
 {**
@@ -217,19 +234,23 @@ var
 begin
   if ErrorMessage <> nil then
   begin
-  {$IFDEF DELPHI12_UP} 
-    Error := trim(UTF8ToUnicodeString(ErrorMessage)); 
-  {$ELSE} 
-    Error := Trim(StrPas(ErrorMessage)); 
-  {$ENDIF} 
-    PlainDriver.FreeMem(ErrorMessage); 
+  {$IFDEF DELPHI12_UP}
+    Error := trim(UTF8ToUnicodeString(ErrorMessage));
+  {$ELSE}
+    {$IFNDEF FPC}
+    Error := Trim(UTF8ToAnsi(StrPas(ErrorMessage)));
+    {$ELSE}
+    Error := Trim(StrPas(ErrorMessage));
+    {$ENDIF}
+  {$ENDIF}
+    PlainDriver.FreeMem(ErrorMessage);
   end
   else
     Error := '';
   if not (ErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then
   begin
     if Error = '' then
-      Error := StrPas(PlainDriver.ErrorString(ErrorCode));
+      Error := String(StrPas(PlainDriver.ErrorString(ErrorCode)));
 
     DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,
       ErrorCode, Error);
@@ -254,7 +275,7 @@ begin
   ihx := 3; // set 1st hex location
   for I := 1 to SrcLength do
   begin
-    shx := IntToHex( ord(SrcBuffer^),2 ); // eg. '3E'
+    shx := AnsiString(IntToHex( ord(SrcBuffer^),2 )); // eg. '3E'
     result[ihx] := shx[1]; Inc( ihx,1 ); // copy '3'
     result[ihx] := shx[2]; Inc( ihx,1 ); // copy 'E'
     Inc( SrcBuffer,1 ); // next byte source location
@@ -263,16 +284,16 @@ begin
 end;
 
 function NewDecodeString(Value:ansistring):ansistring;
-var
-  i : integer;
-  srcbuffer : PAnsichar;
-begin
-  value := copy(value,3,length(value)-4);
-  value := AnsiLowercase(value);
-  i := length(value) div 2;
-  srcbuffer := PAnsiChar(value);
-  setlength(result,i);
-  HexToBin(PAnsiChar(srcbuffer),PAnsiChar(result),i);
+  var
+    i : integer;
+    srcbuffer : PAnsichar;
+  begin
+    value := copy(value,3,length(value)-4);
+    value := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiLowercase(value);
+    i := length(value) div 2;
+    srcbuffer := PAnsiChar(value);
+    setlength(result,i);
+    HexToBin(PAnsiChar(srcbuffer),PAnsiChar(result),i);
 end;
 
 {**
@@ -281,60 +302,8 @@ end;
   @return a string in PostgreSQL escape format.
 }
 function EncodeString(Value: ansistring): ansistring;
-var
-  I: Integer;
-  SrcLength, DestLength: Integer;
-  SrcBuffer, DestBuffer: PAnsiChar;
 begin
-
   result := NewEncodeString(Value);
-exit;
-  SrcLength := Length(Value);
-  SrcBuffer := PAnsiChar(Value);
-  DestLength := 2;
-  for I := 1 to SrcLength do
-  begin
-    if CharInSet(SrcBuffer^, [#0, '''', '%']) then
-      Inc(DestLength, 2)
-    else
-      Inc(DestLength);
-    Inc(SrcBuffer);
-  end;
-
-  SrcBuffer := PAnsiChar(Value);
-  SetLength(Result, DestLength);
-  DestBuffer := PAnsiChar(Result);
-  DestBuffer^ := '''';
-  Inc(DestBuffer);
-
-  for I := 1 to SrcLength do
-  begin
-    if SrcBuffer^ = #0 then
-    begin
-      DestBuffer[0] := '%';
-      DestBuffer[1] := '0';
-      Inc(DestBuffer, 2);
-    end
-    else if SrcBuffer^ = '%' then
-    begin
-      DestBuffer[0] := '%';
-      DestBuffer[1] := '%';
-      Inc(DestBuffer, 2);
-    end
-    else if SrcBuffer^ = '''' then
-    begin
-      DestBuffer[0] := '''';
-      DestBuffer[1] := '''';
-      Inc(DestBuffer, 2);
-    end
-    else
-    begin
-      DestBuffer^ := SrcBuffer^;
-      Inc(DestBuffer);
-    end;
-    Inc(SrcBuffer);
-  end;
-  DestBuffer^ := '''';
 end;
 
 {**
@@ -347,42 +316,39 @@ var
   SrcLength, DestLength: Integer;
   SrcBuffer, DestBuffer: PAnsiChar;
 begin
-  {$IFDEF DELPHI12_UP} 
-  value := utf8decode(value); //EgonHugeist: DataLoss!!!
-  {$ENDIF}
-  if pos('x''',value)= 1 then
+  if pos('x''',String(value))= 1 then
     result := NewDecodeString(value)
-  else result := value;
-  exit;
-
-  SrcLength := Length(Value);
-  SrcBuffer := PAnsiChar(Value);
-  SetLength(Result, SrcLength);
-  DestLength := 0;
-  DestBuffer := PAnsiChar(Result);
-
-  while SrcLength > 0 do
+  else
   begin
-    if SrcBuffer^ = '%' then
+    SrcLength := Length(Value);
+    SrcBuffer := PAnsiChar(Value);
+    SetLength(Result, SrcLength);
+    DestLength := 0;
+    DestBuffer := PAnsiChar(Result);
+
+    while SrcLength > 0 do
     begin
-      Inc(SrcBuffer);
-      if SrcBuffer^ <> '0' then
-        DestBuffer^ := SrcBuffer^
+      if SrcBuffer^ = '%' then
+      begin
+        Inc(SrcBuffer);
+        if SrcBuffer^ <> '0' then
+          DestBuffer^ := SrcBuffer^
+        else
+          DestBuffer^ := #0;
+        Inc(SrcBuffer);
+        Dec(SrcLength, 2);
+      end
       else
-        DestBuffer^ := #0;
-      Inc(SrcBuffer);
-      Dec(SrcLength, 2);
-    end
-    else
-    begin
-      DestBuffer^ := SrcBuffer^;
-      Inc(SrcBuffer);
-      Dec(SrcLength);
+      begin
+        DestBuffer^ := SrcBuffer^;
+        Inc(SrcBuffer);
+        Dec(SrcLength);
+      end;
+      Inc(DestBuffer);
+      Inc(DestLength);
     end;
-    Inc(DestBuffer);
-    Inc(DestLength);
+    SetLength(Result, DestLength);
   end;
-  SetLength(Result, DestLength);
 end;
 
 end.

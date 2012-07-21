@@ -677,9 +677,7 @@ begin
     Query.SQL.Text := 'select * from table799863';
     Query.Open;
     CheckEquals(Ord(ftSmallInt), Ord(Query.Fields[0].DataType));
-    CheckEquals(3, Query.RecordCount);
-    CheckEquals(0, Query.Fields[0].AsInteger);
-    Query.Next;
+    CheckEquals(2, Query.RecordCount);
     CheckEquals(1940, Query.Fields[0].AsInteger);
     Query.Next;
     CheckEquals(2003, Query.Fields[0].AsInteger);
@@ -706,7 +704,13 @@ begin
     Query.SQL.Text := 'select * from table000001';
     Query.Open;
     CheckEquals(2, Query.Fields.Count);
-    CheckEquals(Ord(ftMemo), Ord(Query.Fields[0].DataType));
+    if ( FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
+      FConnection.UTF8StringsAsWideField then
+    {$IFDEF WITH_WIDEMEMO}
+      CheckEquals(Ord(ftWideMemo), Ord(Query.Fields[0].DataType))
+    else
+    {$ENDIF}
+      CheckEquals(Ord(ftMemo), Ord(Query.Fields[0].DataType));
     CheckEquals(Ord(ftBlob), Ord(Query.Fields[1].DataType));
     Query.Close;
   finally
@@ -768,14 +772,27 @@ begin
     Query.Open;
     CheckEquals(1, Query.RecordCount);
     CheckEquals(Ord(ftInteger), Ord(Query.Fields[0].DataType));
-    CheckEquals(Ord(ftMemo), Ord(Query.Fields[1].DataType));
+    //Client_Character_set sets column-type!!!!
+    {$IFDEF WITH_WIDEMEMO}
+    if ( FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
+      FConnection.UTF8StringsAsWideField then
+        CheckEquals(Ord(ftWideMemo), Ord(Query.Fields[1].DataType))
+      else
+    {$ENDIF}
+        CheckEquals(Ord(ftMemo), Ord(Query.Fields[1].DataType));
+
     CheckEquals('abc', Query.Fields[1].AsString);
 
     Query.Edit;
     Stream := Query.CreateBlobStream(Query.Fields[1], bmWrite);
     try
       Temp := 'xyz';
-      Stream.Write(Temp^, StrLen(Temp));
+      {$IFDEF WITH_WIDEMEMO}
+      if Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8] then
+        Stream.Write(PWideChar(WideString(Temp))^, Length(Temp)*2)
+      else
+      {$ENDIF}
+        Stream.Write(PAnsiChar(AnsiString(Temp))^, Length(Temp));
     finally
       Stream.Free;
     end;
@@ -889,7 +906,7 @@ begin
     // Query.RequestLive := True;
     Query.Open;
     CheckEquals(1, Query.RecordCount);
-    CheckEquals(False, Query.Fields[0].IsNull);
+    CheckEquals(True, Query.Fields[0].IsNull);
     CheckEquals(0, Query.Fields[0].AsDateTime, 0);
     CheckEquals('abc', Query.Fields[1].AsString);
 
@@ -1009,9 +1026,18 @@ begin
     Query.Open;
 
     CheckEquals(Ord(ftInteger), Ord(Query.Fields[0].DataType));
-    CheckEquals(Ord(ftString), Ord(Query.Fields[1].DataType));
-    CheckEquals(Ord(ftString), Ord(Query.Fields[2].DataType));
-
+    //EgonHugeist: Highest Priority Client_Character_set!!!!
+    if ( FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
+      FConnection.UTF8StringsAsWideField then
+    begin
+      CheckEquals(Ord(ftWideString), Ord(Query.Fields[1].DataType));
+      CheckEquals(Ord(ftWideString), Ord(Query.Fields[2].DataType));
+    end
+    else
+    begin
+      CheckEquals(Ord(ftString), Ord(Query.Fields[1].DataType));
+      CheckEquals(Ord(ftString), Ord(Query.Fields[2].DataType));
+    end;
     Query.Close;
   finally
     Query.Free;
@@ -1117,14 +1143,22 @@ begin
       + ' FROM table894367a as a, table894367b as b, table894367c as c';
     Query.Open;
 
-    CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
+    if ( FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
+      FConnection.UTF8StringsAsWideField then
+      CheckEquals(Ord(ftWideString), Ord(Query.Fields[0].DataType))
+    else
+      CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
     CheckEquals(Ord(ftFloat), Ord(Query.Fields[1].DataType));
     CheckEquals(Ord(ftLargeInt), Ord(Query.Fields[2].DataType));
     CheckEquals(Ord(ftBoolean), Ord(Query.Fields[3].DataType));
     CheckEquals(Ord(ftBlob), Ord(Query.Fields[4].DataType));
     CheckEquals(Ord(ftInteger), Ord(Query.Fields[5].DataType));
     CheckEquals(Ord(ftLargeInt), Ord(Query.Fields[6].DataType));
-    CheckEquals(Ord(ftString), Ord(Query.Fields[7].DataType));
+    if ( FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
+      FConnection.UTF8StringsAsWideField then
+      CheckEquals(Ord(ftWideString), Ord(Query.Fields[7].DataType))
+    else
+      CheckEquals(Ord(ftString), Ord(Query.Fields[7].DataType));
 
     Query.Close;
 
@@ -1133,14 +1167,22 @@ begin
       + ' FROM table894367a as a, table894367b as b, table894367c as c';
     Query.Open;
 
-    CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
+    if ( FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
+      FConnection.UTF8StringsAsWideField then
+      CheckEquals(Ord(ftWideString), Ord(Query.Fields[0].DataType))
+    else
+      CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
     CheckEquals(Ord(ftBoolean), Ord(Query.Fields[1].DataType));
     CheckEquals(Ord(ftLargeInt), Ord(Query.Fields[2].DataType));
     CheckEquals(Ord(ftInteger), Ord(Query.Fields[3].DataType));
     CheckEquals(Ord(ftFloat), Ord(Query.Fields[4].DataType));
     CheckEquals(Ord(ftBlob), Ord(Query.Fields[5].DataType));
     CheckEquals(Ord(ftLargeInt), Ord(Query.Fields[6].DataType));
-    CheckEquals(Ord(ftString), Ord(Query.Fields[7].DataType));
+    if ( FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
+      FConnection.UTF8StringsAsWideField then
+      CheckEquals(Ord(ftWideString), Ord(Query.Fields[7].DataType))
+    else
+      CheckEquals(Ord(ftString), Ord(Query.Fields[7].DataType));
 
     Query.Close;
   finally
@@ -1153,15 +1195,15 @@ end;
   Bug in ZDbcMySqlUtils-TEXT Fields aren't correct identified.
 }
 procedure TZTestCompMySQLBugReport.Test914436;
-var
-  Query: TZQuery;
+{var
+  Query: TZQuery;}
 begin
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  {Test914436Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
-{
+
     Query.SQL.Text := 'SELECT fld1, fld2 FROM table914436';
     Query.Open;
 
@@ -1169,10 +1211,10 @@ begin
     CheckEquals(Ord(ftString), Ord(Query.Fields[1].DataType));
 
     Query.Close;
-}
+
   finally
     Query.Free;
-  end;
+  end;}
 end;
 
 {**
@@ -1192,11 +1234,16 @@ begin
     Query.SQL.Text := 'SELECT "aa\"aa"';
     Query.Open;
 
-    CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
+    //Client_Character_set sets column-type!!!!
+    if (Connection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
+      Connection.DbcConnection.UTF8StringAsWideField then
+      CheckEquals(Ord(ftWideString), Ord(Query.Fields[0].DataType))
+    else
+      CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
     CheckEquals('aa"aa', Query.Fields[0].AsString);
 
     Query.Close;
-    
+
     Query.SQL.Text := 'insert delayed into log_sql'
       + ' (datum, uzivid, lockid, sqlcommand)'
       + ' values (now(), 3, 11952,'
@@ -1443,7 +1490,11 @@ begin
 
     Query.Open;
     CheckEquals(Ord(ftLargeInt), Ord(Query.Fields[0].DataType));
-    CheckEquals(Ord(ftString), Ord(Query.Fields[1].DataType));
+    if ( FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
+      FConnection.UTF8StringsAsWideField then
+      CheckEquals(Ord(ftWideString), Ord(Query.Fields[1].DataType))
+    else
+      CheckEquals(Ord(ftString), Ord(Query.Fields[1].DataType));
 
     Query.Append;
     Query.Fields[0].AsInteger := 1;
@@ -1560,7 +1611,14 @@ begin
 
     Query.Open;
     CheckEquals(1, Query.RecordCount);
-    CheckEquals(Ord(ftMemo), Ord(Query.Fields[0].DataType));
+    //Client_Character_set sets column-type!!!!
+    if ( Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] )
+     and Connection.UTF8StringsAsWideField then
+    {$IFDEF WITH_WIDEMEMO}
+      CheckEquals(Ord(ftWideMemo), Ord(Query.Fields[0].DataType))
+    else
+    {$ENDIF}
+      CheckEquals(Ord(ftMemo), Ord(Query.Fields[0].DataType));
     CheckEquals('', Query.Fields[0].AsString);
     CheckEquals(False, Query.Fields[0].IsNull);
 

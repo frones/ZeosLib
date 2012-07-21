@@ -296,6 +296,8 @@ end;
 }
 constructor TZPostgreSQLTokenizer.Create;
 begin
+  EscapeState := TZEscapeState.Create;
+  EscapeMarkSequence := '~<|'; //Defaults
   WhitespaceState := TZWhitespaceState.Create;
 
   SymbolState := TZPostgreSQLSymbolState.Create;

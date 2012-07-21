@@ -60,7 +60,7 @@ interface
 uses
   Types, ZCompatibility, Classes, SysUtils, Contnrs, ZDbcIntfs, ZDbcConnection,
   ZPlainOracleDriver, ZDbcLogging, ZTokenizer, ZDbcGenericResolver, ZURL,
-  ZGenericSqlAnalyser, ZPlainDriver;
+  ZGenericSqlAnalyser;
 
 type
 
@@ -99,8 +99,6 @@ type
     FServerHandle: POCIServer;
     FSessionHandle: POCISession;
     FTransHandle: POCITrans;
-    FClientCodePage: string;
-
   protected
     procedure InternalCreate; override;
     procedure StartTransactionSupport;
@@ -157,7 +155,7 @@ var
 implementation
 
 uses
-  ZMessages, ZSysUtils, ZDbcUtils, ZGenericSqlToken, ZDbcOracleStatement,
+  ZMessages, ZGenericSqlToken, ZDbcOracleStatement,
   ZDbcOracleUtils, ZDbcOracleMetadata, ZOracleToken, ZOracleAnalyser;
 
 { TZOracleDriver }
@@ -256,10 +254,6 @@ begin
       Self.Port := 1521;
   AutoCommit := True;
   TransactIsolationLevel := tiNone;
-
-  { Processes connection properties. }
-  FClientCodePage := Trim(Info.Values['codepage']);
-
   Open;
 end;
 
@@ -293,8 +287,7 @@ procedure TZOracleConnection.Open;
 var
   Status: Integer;
   LogMessage: string;
-  OCI_CLIENT_CHARSET_ID: ub2;
-  PrefetchCount: ub4;
+  OCI_CLIENT_CHARSET_ID,  OCI_CLIENT_NCHARSET_ID: ub2;
 
   procedure CleanupOnFail;
   begin
@@ -317,13 +310,17 @@ begin
      Port := 1521;
 
   { Sets a client codepage. }
-  if UpperCase(FClientCodePage) = 'UTF8' then
-    OCI_CLIENT_CHARSET_ID:=871  // UTF8 because Lazarus DB components use UTF8 encoding
-  else
-    OCI_CLIENT_CHARSET_ID := StrToIntDef(FClientCodePage,0);
+  OCI_CLIENT_CHARSET_ID := ClientCodePage^.ID;
   { Connect to Oracle database. }
-  if FHandle = nil then
-    GetPlainDriver.EnvNlsCreate(FHandle, OCI_DEFAULT, nil, nil, nil, nil, 0, nil,OCI_CLIENT_CHARSET_ID,OCI_CLIENT_CHARSET_ID);
+  if ( FHandle = nil ) then
+    try
+      FErrorHandle := nil;
+      Status := GetPlainDriver.EnvNlsCreate(FHandle, OCI_DEFAULT, nil, nil, nil, nil, 0, nil,
+        OCI_CLIENT_CHARSET_ID, OCI_CLIENT_CHARSET_ID);
+      CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcOther, 'EnvNlsCreate failed.');
+    except
+      raise;
+    end;
   FErrorHandle := nil;
   GetPlainDriver.HandleAlloc(FHandle, FErrorHandle, OCI_HTYPE_ERROR, 0, nil);
   FServerHandle := nil;
@@ -339,6 +336,21 @@ begin
     CleanupOnFail;
     raise;
   end;
+
+  if OCI_CLIENT_CHARSET_ID = 0 then
+  begin
+    GetPlainDriver.AttrGet(FHandle, OCI_HTYPE_ENV, @OCI_CLIENT_CHARSET_ID,
+      nil, OCI_ATTR_ENV_CHARSET_ID, FErrorHandle); //Get Server default CodePage
+    CheckCharEncoding(GetPlainDriver.ValidateCharEncoding(OCI_CLIENT_CHARSET_ID)^.Name);
+    if OCI_CLIENT_CHARSET_ID <> OCI_CLIENT_NCHARSET_ID then
+    begin
+      CleanupOnFail;
+      Open;
+      Exit;
+    end;
+  end;
+  if GetPlainDriver.GetEnvCharsetByteWidth(FHandle, FErrorHandle, ClientCodePage^.CharWidth) <> OCI_SUCCESS then
+    CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcConnect, LogMessage);
 
   GetPlainDriver.AttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FServerHandle, 0,
     OCI_ATTR_SERVER, FErrorHandle);
@@ -370,7 +382,7 @@ end;
 }
 procedure TZOracleConnection.StartTransactionSupport;
 var
-  SQL: PAnsiChar;
+  SQL: PChar;
   Status: Integer;
   Isolation: Integer;
 begin
@@ -481,7 +493,7 @@ end;
 procedure TZOracleConnection.Commit;
 var
   Status: Integer;
-  SQL: PAnsiChar;
+  SQL: PChar;
 begin
   if not Closed then
   begin
@@ -505,7 +517,7 @@ end;
 procedure TZOracleConnection.Rollback;
 var
   Status: Integer;
-  SQL: PAnsiChar;
+  SQL: PChar;
 begin
   if not Closed then
   begin
@@ -598,7 +610,7 @@ procedure TZOracleConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);
 var
   Status: Integer;
-  SQL: PAnsiChar;
+  SQL: PChar;
 begin
   if TransactIsolationLevel <> Level then
   begin

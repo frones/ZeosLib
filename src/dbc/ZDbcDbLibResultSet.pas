@@ -78,6 +78,7 @@ type
     FDBLibConnection: IZDBLibConnection;
     FPlainDriver: IZDBLibPlainDriver;
     procedure Open; override;
+    function InternalGetString(ColumnIndex: Integer): AnsiString; override;
   public
     constructor Create(Statement: IZStatement; SQL: string);
     destructor Destroy; override;
@@ -85,7 +86,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetString(ColumnIndex: Integer): AnsiString; override;
+    //function GetString(ColumnIndex: Integer): String; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -129,7 +130,8 @@ uses ZMessages, ZDbcLogging, ZDbcDBLibUtils;
 }
 constructor TZDBLibResultSet.Create(Statement: IZStatement; SQL: string);
 begin
-  inherited Create(Statement, SQL, nil);
+  inherited Create(Statement, SQL, nil,
+    Statement.GetConnection.GetClientCodePageInformations);
   Statement.GetConnection.QueryInterface(IZDBLibConnection, FDBLibConnection);
   FPlainDriver := FDBLibConnection.GetPlainDriver;
   FHandle := FDBLibConnection.GetConnectionHandle;
@@ -168,7 +170,7 @@ begin
   SetLength(DBLibColTypeCache, DBLibColumnCount + 1);
   for I := 1 to DBLibColumnCount do
   begin
-    ColName := FPlainDriver.dbColName(FHandle, I);
+    ColName := FPlainDriver.ZDbcString(FPlainDriver.dbColName(FHandle, I), FDBLibConnection.GetEncoding);
     ColType := FPlainDriver.dbColtype(FHandle, I);
     ColumnInfo := TZColumnInfo.Create;
 
@@ -259,7 +261,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZDBLibResultSet.GetString(ColumnIndex: Integer): AnsiString;
+function TZDBLibResultSet.InternalGetString(ColumnIndex: Integer): AnsiString;
 var
   DL: Integer;
   Data: Pointer;
@@ -596,7 +598,7 @@ end;
 }
 function TZDBLibResultSet.GetDate(ColumnIndex: Integer): TDateTime;
 begin
-  Result := Int(GetTimestamp(ColumnIndex));
+  Result := System.Int(GetTimestamp(ColumnIndex));
 end;
 
 {**

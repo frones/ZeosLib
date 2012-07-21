@@ -85,7 +85,7 @@ type
     function MoveAbsolute(Row: Integer): Boolean; override;
     function GetRow: Integer; override;
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetString(ColumnIndex: Integer): AnsiString; override;
+    function GetString(ColumnIndex: Integer): String; override;
     function GetUnicodeString(ColumnIndex: Integer): WideString; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
@@ -128,7 +128,8 @@ uses
 }
 constructor TZAdoResultSet.Create(Statement: IZStatement; SQL: string; AdoRecordSet: ZPlainAdo.RecordSet);
 begin
-  inherited Create(Statement, SQL, nil);
+  inherited Create(Statement, SQL, nil,
+    Statement.GetConnection.GetClientCodePageInformations);
   FAdoRecordSet := AdoRecordSet;
   Open;
 end;
@@ -360,7 +361,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAdoResultSet.GetString(ColumnIndex: Integer): AnsiString;
+function TZAdoResultSet.GetString(ColumnIndex: Integer): String;
 var
   NL: Integer;
 begin
@@ -685,7 +686,7 @@ begin
   if VarIsStr(V) then
   begin
     Result := TZAbstractBlob.CreateWithStream(nil);
-    Result.SetString(V);
+    Result.SetString(AnsiString(V));
   end;
   if VarIsArray(V) then
   begin

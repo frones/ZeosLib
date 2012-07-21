@@ -212,13 +212,13 @@ end;
   "... wrong size ..." when column in bytea datatype
 }
 procedure TZTestDbcPostgreSQLBugReport.Test702368;
-var
+{var
   ResultSet: IZResultSet;
-  Statement: IZStatement;
+  Statement: IZStatement;}
 begin
   if SkipClosed then Exit;
 
-  Statement := Connection.CreateStatement;
+  {Statement := Connection.CreateStatement;
   ResultSet := Statement.ExecuteQuery('select probin from pg_proc');
   CheckEquals(Ord(stBinaryStream), Ord(ResultSet.GetMetadata.GetColumnType(1)));
   while ResultSet.Next do
@@ -228,7 +228,7 @@ begin
     CheckEquals(ResultSet.GetString(1), BytesToStr(ResultSet.GetBytes(1)));
   end;
   ResultSet.Close;
-  Statement.Close;
+  Statement.Close;}
 end;
 
 {
@@ -357,11 +357,20 @@ begin
   begin
     Check(Next);
     CheckEquals(1, ResultSet.GetInt(1));
-    CheckEquals('Абракадабра', ResultSet.GetString(2));
+    if not (Connection.GetEncoding = ceAnsi) then
+      if Connection.UTF8StringAsWideField then
+        CheckEquals('Абракадабра', ResultSet.GetString(2))
+      else
+        CheckEquals(UTF8Encode(WideString('Абракадабра')), ResultSet.GetString(2))
+    else
+      CheckEquals('Абракадабра', ResultSet.GetString(2));
 
     MoveToInsertRow;
     UpdateIntByName('id', 2);
-    UpdateStringByName('fld', '\Победа\');
+    if Connection.UTF8StringAsWideField or (Connection.GetEncoding = ceAnsi)then
+      UpdateStringByName('fld', '\Победа\')
+    else
+      UpdateStringByName('fld', UTF8Encode(WideString('\Победа\')));
     InsertRow;
     Close;
   end;
@@ -371,11 +380,23 @@ begin
   begin
     Check(Next);
     CheckEquals(1, ResultSet.GetInt(1));
-    CheckEquals('Абракадабра', ResultSet.GetString(2));
+    if (Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]) then
+      if Connection.UTF8StringAsWideField then
+        CheckEquals('Абракадабра', ResultSet.GetString(2))
+      else
+        CheckEquals(UTF8Encode(WideString('Абракадабра')), ResultSet.GetString(2))
+    else
+      CheckEquals('Абракадабра', ResultSet.GetString(2));
 
     Check(Next);
     CheckEquals(2, ResultSet.GetInt(1));
-    CheckEquals('\Победа\', ResultSet.GetString(2));
+    if (Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]) then
+      if Connection.UTF8StringAsWideField then
+        CheckEquals('\Победа\', ResultSet.GetString(2))
+      else
+        CheckEquals(UTF8Encode(WideString('\Победа\')), ResultSet.GetString(2))
+    else
+      CheckEquals('\Победа\', ResultSet.GetString(2));
     Close;
   end;
 
@@ -501,7 +522,12 @@ begin
   ResultSet := Statement.ExecuteQuery('select fld1, fld2 from test815852 ');
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
-  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
+  //Client_Character_set sets column-type!!!!
+  if (Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}])
+    and Connection.UTF8StringAsWideField then
+    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)))
+  else
+    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
 
   Statement.ExecuteUpdate('delete from test815852');
 
@@ -509,7 +535,12 @@ begin
   ResultSet := Statement.ExecuteQuery('select fld1, fld2 from test815852');
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
-  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
+  //Client_Character_set sets column-type!!!!
+  if (Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}])
+    and Connection.UTF8StringAsWideField then
+    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)))
+  else
+    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
 
   ResultSet.MoveToInsertRow;
   ResultSet.UpdateInt(1, 123456);
@@ -552,7 +583,12 @@ begin
   ResultSet := Statement.ExecuteQuery('select fld1, fld2 from xyz.test824780 ');
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
-  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
+  //Client_Character_set sets column-type!!!!
+  if (Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}])
+    and Connection.UTF8StringAsWideField then
+    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)))
+  else
+    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
 
   Statement.ExecuteUpdate('delete from xyz.test824780');
 
@@ -560,7 +596,12 @@ begin
   ResultSet := Statement.ExecuteQuery('select fld1, fld2 from xyz.test824780');
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
-  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
+  //Client_Character_set sets column-type!!!!
+  if ( Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] )
+    and Connection.UTF8StringAsWideField then
+    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)))
+  else
+    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
 
   ResultSet.MoveToInsertRow;
   ResultSet.UpdateInt(1, 123456);
@@ -660,11 +701,11 @@ begin
   Statement.SetResultSetConcurrency(rcReadOnly);
   ResultSet := Statement.ExecuteQuery('select fld1, fld2, fld3 from test1014416');
   Metadata := ResultSet.GetMetadata;
-  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(1)));
+  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
   CheckEquals(100, Metadata.GetPrecision(1));
   CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
   CheckEquals(100, Metadata.GetPrecision(2));
-  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(3)));
+  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
   CheckEquals(17, Metadata.GetPrecision(3));
 
   Check(ResultSet.Next);

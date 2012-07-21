@@ -659,7 +659,7 @@ begin
           ftString:
             Statement.SetString(I + 1, ParamValue.AsString);
           ftBytes:
-            Statement.SetString(I + 1, AnsiString(ParamValue.AsString));
+            Statement.SetString(I + 1, ParamValue.AsString);
           ftDate:
             Statement.SetDate(I + 1, ParamValue.AsDate);
           ftTime:

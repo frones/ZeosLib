@@ -109,8 +109,10 @@ type
     procedure PostRowUpdates(OldRowAccessor, NewRowAccessor: TZRowAccessor);
       override;
   public
-    constructor CreateWithStatement(const SQL: string; Statement: IZStatement);
-    constructor CreateWithColumns(ColumnsInfo: TObjectList; const SQL: string);
+    constructor CreateWithStatement(const SQL: string; Statement: IZStatement;
+      ClientCodePage: PZCodePage);
+    constructor CreateWithColumns(ColumnsInfo: TObjectList; const SQL: string;
+      ClientCodePage: PZCodePage);
     destructor Destroy; override;
   end;
 
@@ -119,7 +121,6 @@ type
   private
     FConnection: Pointer;
     FUrl: TZURL;
-    FInfo: TStrings;
     FCachedResultSets: IZHashMap;
     FDatabaseInfo: IZDatabaseInfo;
     function GetInfo: TStrings;
@@ -1812,7 +1813,8 @@ begin
       ColumnsInfo.Add(ColumnInfo);
     end;
 
-    Result := TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '');
+    Result := TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '',
+      IZConnection(FConnection).GetClientCodePageInformations);
     with Result do
     begin
       SetType(rtScrollInsensitive);
@@ -1971,7 +1973,8 @@ begin
 
     ResultSet.BeforeFirst;
     Result := CopyToVirtualResultSet(ResultSet,
-      TZVirtualResultSet.CreateWithColumns(ColumnsInfo, ''));
+      TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '',
+        IZConnection(Self.FConnection).GetClientCodePageInformations));
     ResultSet.BeforeFirst;
   finally
     ColumnsInfo.Free;
@@ -4432,9 +4435,9 @@ end;
   @param SQL an SQL query string.
 }
 constructor TZVirtualResultSet.CreateWithStatement(const SQL: string;
-   Statement: IZStatement);
+   Statement: IZStatement; ClientCodePage: PZCodePage);
 begin
-  inherited CreateWithStatement(SQL, Statement);
+  inherited CreateWithStatement(SQL, Statement, ClientCodePage);
 end;
 
 {**
@@ -4443,9 +4446,9 @@ end;
   @param SQL an SQL query string.
 }
 constructor TZVirtualResultSet.CreateWithColumns(ColumnsInfo: TObjectList;
-  const SQL: string);
+  const SQL: string; ClientCodePage: PZCodePage);
 begin
-  inherited CreateWithColumns(ColumnsInfo, SQL);
+  inherited CreateWithColumns(ColumnsInfo, SQL, ClientCodePage);
 end;
 
 {**

@@ -44,7 +44,7 @@
 
 // Compilation directives for Lazarus
 {$IFDEF FPC}
-{$I ZeosLazarus.inc}
+ {$I ZeosLazarus.inc}
 {$ELSE}
  {$DEFINE DELPHI}
   // Defines that go for ALL still supported Delphi's   (usually means they were under ifndef fpc)
@@ -56,13 +56,14 @@
  {$DEFINE WITH_CHECKFIELDCOMPATIBILITY}
  {$DEFINE WITH_WIDEMEMO}        // Have WIDEMEMO,  For Delphi we turn these off if not applicable
  {$DEFINE WITH_FTWIDESTRING}    // Have ftwidestring, For Delphi we turn these off if not applicable
+ {$DEFINE WITH_WIDECONTROLS}
  {$DEFINE WITH_DBTABLES}        // Have the BDE DBTables Unit
 {$ENDIF}
 
 // Compilation directives for Delphi4
 // Not supported since Zeoslib 7.X
 {$IFDEF VER120}
-        "Delphi versions below Delphi 7 aren't supported anymore"
+   "Delphi versions below Delphi 7 aren't supported anymore"
 {$ENDIF}
 
 // Compilation directives for Delphi 5
@@ -114,6 +115,7 @@
 {$IFDEF VER210}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
+  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code 
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
 {$ENDIF}
@@ -122,6 +124,7 @@
 {$IFDEF VER220}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
+  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code 
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
@@ -134,6 +137,7 @@
 {$IFDEF VER230}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
+  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code 
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
   {$DEFINE DELPHI16_UP} // Used in code
   {$DEFINE BDS4_UP} // Used in code
@@ -147,6 +151,10 @@
   {$DEFINE WITH_STSTRINGUNICODE}        // ststring is unicodestring.
   {$DEFINE WITH_NEWTOBJECT}             // allows new methods in TObject (D2009+/FPC 2.4.4)
   {$DEFINE WITH_CHARINSET}              // D2009's poor substitute for character specific "xx in yy"
+{$ELSE}
+  {$IFNDEF LAZARUSUTF8HACK}
+    {$UNDEF WITH_WIDECONTROLS}
+  {$ENDIF}
 {$ENDIF}
 
 {$IFDEF DELPHI15_UP}
@@ -165,12 +173,15 @@
 {$ENDIF}
 
 {$IFDEF VER150BELOW}
-     {$UNDEF WITH_WIDEMEMO}
-     {$UNDEF WITH_FTWIDESTRING}
+  {$UNDEF WITH_WIDEMEMO}
+  {$UNDEF WITH_FTWIDESTRING}    // D7 doesn't support TField.AsWideString
 {$ENDIF}
 
 // Debug/release compiler options
 {$D+}
+
+//force 4 byte enumerations. We are interfacing with c libraries !!
+{$Z+}
 
 {$IFOPT D-}
 {$DEFINE BINARY_RELEASE}
@@ -320,3 +331,7 @@
 // Compile test applications with a graphical user interface (GUI)
 // Comment this definition if you want to compile console test applications
 {.$DEFINE TESTGUI}
+
+//Patches by EgonHugeist
+{.$DEFINE WITH_CHAR_CONTROL} //Disables/Enables the CharControl widget
+

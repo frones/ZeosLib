@@ -948,7 +948,6 @@
       <Unit100>
         <Filename Value="../../test/component/ZTestData.pas"/>
         <UnitName Value="ZTestData"/>
-        <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
         <TopLine Value="183"/>
         <CursorPos X="45" Y="260"/>
@@ -1123,43 +1122,6 @@
         <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit119>
-      <Unit105>
-        <Filename Value="../../src/dbc/ZDbcDbLibResultSet.pas"/>
-        <UnitName Value="ZDbcDbLibResultSet"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="50"/>
-        <CursorPos X="65" Y="66"/>
-        <UsageCount Value="10"/>
-      </Unit105>
-      <Unit106>
-        <Filename Value="../../src/dbc/ZDbcDbLibStatement.pas"/>
-        <UnitName Value="ZDbcDbLibStatement"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="130"/>
-        <CursorPos X="33" Y="150"/>
-        <UsageCount Value="10"/>
-      </Unit106>
-      <Unit107>
-        <Filename Value="../../src/dbc/ZDbcDbLibUtils.pas"/>
-        <UnitName Value="ZDbcDbLibUtils"/>
-        <EditorIndex Value="5"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="43"/>
-        <CursorPos X="60" Y="113"/>
-        <UsageCount Value="12"/>
-        <Loaded Value="True"/>
-      </Unit107>
-      <Unit108>
-        <Filename Value="../../test/bugreport/ZTestBugDbcPostgreSql.pas"/>
-        <UnitName Value="ZTestBugDbcPostgreSql"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="4"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="182"/>
-        <CursorPos X="26" Y="202"/>
-        <UsageCount Value="10"/>
-        <Loaded Value="True"/>
-      </Unit108>
     </Units>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>

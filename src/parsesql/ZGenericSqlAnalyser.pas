@@ -583,6 +583,7 @@ end;
   @param SelectSchema a select schema object.
   @param FromTokens a list of tokens in from section.
 }
+{$HINTS OFF}
 procedure TZGenericStatementAnalyser.FillTableRefs(
   SelectSchema: IZSelectSchema; FromTokens: TStrings);
 var
@@ -695,7 +696,7 @@ begin
   if Table <> '' then
     SelectSchema.AddTable(TZTableRef.Create(Catalog, Schema, Table, Alias));
 end;
-
+{$HINTS ON}
 {**
   Extracts a select schema from the specified parsed select statement.
   @param Sections a list of sections.

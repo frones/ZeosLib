@@ -248,7 +248,12 @@ begin
   CheckEquals('', ResultSet.GetStringByName('TABLE_SCHEM'));
   CheckEquals('people', ResultSet.GetStringByName('TABLE_NAME'));
   CheckEquals('p_resume', ResultSet.GetStringByName('COLUMN_NAME'));
-  CheckEquals(ord(stAsciiStream), ResultSet.GetIntByName('DATA_TYPE'));
+  //EgonHugeist: the ClientCharacter-set sets now the Stream-Type
+  if (Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}])
+    and Connection.UTF8StringAsWideField then
+    CheckEquals(ord(stUnicodeStream), ResultSet.GetIntByName('DATA_TYPE'))
+  else
+    CheckEquals(ord(stAsciiStream), ResultSet.GetIntByName('DATA_TYPE'));
   CheckEquals('TEXT', UpperCase(ResultSet.GetStringByName('TYPE_NAME')));
   CheckEquals(65535, ResultSet.GetIntByName('COLUMN_SIZE'));
   CheckEquals(65535, ResultSet.GetIntByName('BUFFER_LENGTH'));

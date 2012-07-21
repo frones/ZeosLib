@@ -180,7 +180,7 @@ begin
   Check(Blob.IsUpdated, 'IsUpdated');
   CheckEquals(Length(FString), Blob.Length, 'Length');
   ResultString := Blob.GetString;
-  CheckEquals(FString, ResultString, 'Strings comapre');
+  CheckEquals(FString, ResultString, 'Strings compare');
 
   { bytes test}
   Blob.SetBytes(FBytes);

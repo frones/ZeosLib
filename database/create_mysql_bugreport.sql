@@ -119,7 +119,7 @@ create table table799863
   fld1 year
 );
 
-insert into table799863 values (1024);
+/*insert into table799863 values (1024);*/
 insert into table799863 values (1940);
 insert into table799863 values (2003);
 

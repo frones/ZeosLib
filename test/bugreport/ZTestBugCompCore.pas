@@ -122,6 +122,7 @@ type
     procedure Test1045500;
     procedure Test1036916;
     procedure Test1004584;
+    procedure TestUnicodeBehavior;
   end;
 
 implementation
@@ -1822,6 +1823,96 @@ begin
   end;
 end;
 
+const
+  Str1 = 'This license, the Lesser General Public License, applies to some specially designated software packages--typically libraries--of the Free Software Foundation and other authors who decide to use it.  You can use it too, but we suggest you first think ...';
+  Str2 = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
+  Str3 = 'ќдной из наиболее';
+
+procedure ZTestCompCoreBugReport.TestUnicodeBehavior;
+var
+  WS: WideString;
+  Ansi: AnsiString;
+  Query: TZQuery;
+  StrStream: TMemoryStream;
+  StrStream1: TMemoryStream;
+  SL: TStringList;
+begin
+  Query := TZQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+
+    with Query do
+    begin
+      SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
+      ExecSQL;
+      //bugreport of mrLion
+      SL := TStringList.Create;
+
+      SQL.Text := 'INSERT INTO people(P_ID, P_NAME, P_RESUME)'+
+        ' VALUES (:P_ID, :P_NAME, :P_RESUME)';
+      ParamByName('P_ID').AsInteger := TEST_ROW_ID;
+      ParamByName('P_NAME').AsString := Str3;
+      CheckEquals(3, Query.Params.Count, 'Param.Count');
+      SL.Text := Str2;
+
+      StrStream1 := TMemoryStream.Create;
+      SL.SaveToStream(StrStream1);
+      ParamByName('P_RESUME').LoadFromStream(StrStream1, ftMemo);
+
+      StrStream := TMemoryStream.Create;
+      if Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+        if FConnection.DbcConnection.UTF8StringAsWideField then
+        begin
+          WS := WideString(Str2)+LineEnding;
+          StrStream.Write(PWideChar(WS)^, Length(WS)*2);
+          StrStream.Position := 0;
+        end
+        else
+        begin
+          Ansi := AnsiToUTF8(str2)+LineEnding;
+          StrStream.Write(PAnsiChar(Ansi)^, Length(Ansi));
+          StrStream.Position := 0;
+        end
+      else
+      begin
+        Ansi := str2+LineEnding;
+        StrStream.Write(PAnsiChar(Ansi)^, Length(Ansi));
+        StrStream.Position := 0;
+      end;
+      try
+        ExecSQL;
+        SQL.Text := 'select * from people where p_id = ' + IntToStr(TEST_ROW_ID);
+        StrStream1.Free;
+        StrStream1 := TMemoryStream.Create;
+        Open;
+
+        (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
+        CheckEquals(StrStream, StrStream1, 'Param().LoadFromStream(StringStream, ftMemo)');
+        if Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+          if FConnection.DbcConnection.UTF8StringAsWideField then
+            CheckEquals(WideString(Str3), FieldByName('P_NAME').AsString)
+          else
+            CheckEquals(Utf8Encode(Str3), FieldByName('P_NAME').AsString)
+        else
+          CheckEquals(Str3, FieldByName('P_NAME').AsString);
+        SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
+        CheckEquals(1, Params.Count);
+        Params[0].DataType := ftInteger;
+        Params[0].AsInteger := TEST_ROW_ID;
+
+        //ExecSQL;
+        //CheckEquals(1, RowsAffected);
+      except
+        on E:Exception do
+            Fail('Param().LoadFromStream(StringStream, ftMemo): '+E.Message);
+      end;
+      StrStream.Free;
+      StrStream1.Free;
+    end;
+  finally
+    Query.Free;
+  end;
+end;
 {**
    Test for Bug#1004584 - problem start transaction in non autocommit mode
 }

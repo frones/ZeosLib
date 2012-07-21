@@ -48,7 +48,7 @@ interface
 
 {$I ZPlain.inc}
 
-uses Classes, ZClasses, ZCompatibility, ZPlainDriver;
+uses Classes, ZCompatibility, ZPlainDriver;
 
 {***************** Plain API Constants definition ****************}
 
@@ -893,16 +893,16 @@ type
   end;
 
   {** Implements a driver for ASA 7.0 }
-  TZASA7PlainDriver = class (TZAbstractObject, IZPlainDriver,
+  TZASA7PlainDriver = class (TZLegacyPlainDriver, IZPlainDriver,
     IZASAPlainDriver, IZASA7PlainDriver)
   protected
-    function Clone: IZPlainDriver; reintroduce;
+    function Clone: IZPlainDriver; override;
   public
+    procedure LoadCodePages; override;
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+    procedure Initialize(const Location: String = ''); override;
     constructor Create;
-
-    function GetProtocol: string;
-    function GetDescription: string;
-    procedure Initialize(const Location: String = '');
 
     function sqlerror_message(sqlca: PZASASQLCA; Buffer: PAnsiChar;
        MaxSize: Integer): PAnsiChar;
@@ -988,16 +988,16 @@ type
   end;
 
   {** Implements a driver for ASA 8.0 }
-  TZASA8PlainDriver = class (TZAbstractObject, IZPlainDriver,
+  TZASA8PlainDriver = class (TZLegacyPlainDriver, IZPlainDriver,
     IZASAPlainDriver, IZASA8PlainDriver)
   protected
-    function Clone: IZPlainDriver; reintroduce;
+    function Clone: IZPlainDriver; override;
   public
     constructor Create;
-
-    function GetProtocol: string;
-    function GetDescription: string;
-   procedure Initialize(const Location: String = '');
+    procedure LoadCodePages; override;
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+    procedure Initialize(const Location: String = ''); override;
 
     function sqlerror_message(sqlca: PZASASQLCA; Buffer: PAnsiChar;
       MaxSize: Integer): PAnsiChar;
@@ -1083,16 +1083,16 @@ type
   end;
 
   {** Implements a driver for ASA 9.0 }
-  TZASA9PlainDriver = class (TZAbstractObject, IZPlainDriver,
+  TZASA9PlainDriver = class (TZLegacyPlainDriver, IZPlainDriver,
     IZASAPlainDriver, IZASA9PlainDriver)
   protected
-    function Clone: IZPlainDriver; reintroduce;
+    function Clone: IZPlainDriver; override;
   public
+    procedure LoadCodePages; override;
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+    procedure Initialize(const Location: String = ''); override;
     constructor Create;
-
-    function GetProtocol: string;
-    function GetDescription: string;
-   procedure Initialize(const Location: String = '');
 
     function sqlerror_message(sqlca: PZASASQLCA; Buffer: PAnsiChar;
       MaxSize: Integer): PAnsiChar;
@@ -1181,8 +1181,15 @@ begin
   Result := TZASA7PlainDriver.Create;
 end;
 
+procedure TZASA7PlainDriver.LoadCodePages;
+begin
+  AddCodePage('Not implemented!', -1);
+   { TODO -oEgonHugeist : Must be completed!!!! }
+end;
+
 constructor TZASA7PlainDriver.Create;
 begin
+  inherited;
 end;
 
 function TZASA7PlainDriver.GetProtocol: string;
@@ -1461,6 +1468,14 @@ end;
 function TZASA7PlainDriver.db_cancel_request( sqlca: PZASASQLCA): Integer;
 begin
   Result := ZPlainASA7.db_cancel_request( sqlca);
+end;
+
+{TZASA8PlainDriver}
+
+procedure TZASA8PlainDriver.LoadCodePages;
+begin
+  AddCodePage('Not implemented!', -1);
+   { TODO -oEgonHugeist : Must be completed!!!! }
 end;
 
 constructor TZASA8PlainDriver.Create;
@@ -1755,6 +1770,12 @@ end;
 function TZASA9PlainDriver.Clone: IZPlainDriver;
 begin
   Result := TZASA9PlainDriver.Create;
+end;
+
+procedure TZASA9PlainDriver.LoadCodePages;
+begin
+  AddCodePage('Not implemented!', -1);
+   { TODO -oEgonHugeist : Must be completed!!!! }
 end;
 
 constructor TZASA9PlainDriver.Create;

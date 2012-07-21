@@ -104,6 +104,8 @@ type
   {** Implements a default tokenizer object. }
   TZMySQLTokenizer = class (TZTokenizer)
   public
+    function AnsiGetEscapeString(const EscapeString: AnsiString;
+      const EscapeMarkSequence: String = '~<|'): String; override;
     constructor Create;
   end;
 
@@ -261,13 +263,29 @@ begin
     begin
       Inc(QuoteCount);
       if (TempLastChar = BackSlash) and (ReadChar = QuoteChar ) then
-        Inc(QuoteCount);
-    end
-    else
-      if ReadChar = BackSlash then
-        TempLastChar := ReadChar
+      begin
+        if Stream.Read(TempLastChar, SizeOf(Char)) > 0 then
+        begin
+          if not ( TempLastChar = QuoteChar ) then
+          begin
+            Inc(QuoteCount);
+            Result.TokenType := ttEscapedQuoted;
+          end;
+          Stream.Seek(-SizeOf(Char), soFromCurrent)
+        end
+        else
+        begin
+          Inc(QuoteCount);
+        end;
+      end;
+    end else
+      if (ReadChar = BackSlash) and (TempLastChar  = BackSlash) then
+        Result.TokenType := ttEscapedQuoted
       else
-        TempLastChar := #0;
+        if ReadChar = BackSlash then
+          TempLastChar := ReadChar
+        else
+          TempLastChar := #0;
 
     if (LastChar = FirstChar) and (ReadChar <> FirstChar) then
       if QuoteCount mod 2 = 0 then
@@ -420,6 +438,47 @@ end;
 { TZMySQLTokenizer }
 
 {**
+  Converts a Binary-String to an detectable String.
+  @param BinaryString is the Binary-data-string
+  @param  BinaryMarkSequence represents the detectable String
+  @Result give's out the detectable String
+}
+function TZMySQLTokenizer.AnsiGetEscapeString(const EscapeString: AnsiString;
+  const EscapeMarkSequence: String = '~<|'): String;
+var
+  Temp: String;
+  function GetReverted: String;
+  var
+    I: Integer;
+  begin
+    for I := Length(Self.EscapeMarkSequence) downto 1 do
+      Result := Result + Copy(EscapeMarkSequence, i, 1);
+  end;
+begin
+  Self.EscapeMarkSequence := EscapeMarkSequence; //Checks if BinaryMarkSequence is valid
+  Temp := EscapeMarkSequence+IntToStr(Length(EscapeString))+GetReverted;
+
+  Result := String(EscapeString);
+  if Length(EscapeString) > 1 then //Check for Quotes
+  begin
+    if not ( EscapeString[1] = '''' ) then
+      Result := ''''+Result;
+    if not ( EscapeString[Length(EscapeString)] = '''' ) then
+      Result := Result+'''';
+  end
+  else
+    if Length(EscapeString) = 1 then
+      Result := QuotedStr(Result)
+    else
+    begin
+      Result := 'NULL';
+      Exit;
+    end;
+
+  Result := Temp+Result+Temp;
+end;
+
+{**
   Constructs a tokenizer with a default state table (as
   described in the class comment).
 }
@@ -427,6 +486,8 @@ constructor TZMySQLTokenizer.Create;
 begin
   WhitespaceState := TZWhitespaceState.Create;
 
+  EscapeState := TZEscapeState.Create;
+  EscapeMarkSequence := '~<|'; //Defaults
   SymbolState := TZMySQLSymbolState.Create;
   NumberState := TZMySQLNumberState.Create;
   QuoteState := TZMySQLQuoteState.Create;

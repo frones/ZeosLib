@@ -601,6 +601,8 @@ type
   TZPostgreSQLBaseDriver = class(TZAbstractPlainDriver, IZPlainDriver, IZPostgreSQLPlainDriver)
   protected
     POSTGRESQL_API : TZPOSTGRESQL_API;
+    function GetUnicodeCodePageName: String; override;
+    procedure LoadCodePages; override;
     procedure LoadApi; override;
   public
     constructor Create;
@@ -744,6 +746,8 @@ type
   TZPostgreSQL8PlainDriver = class(TZPostgreSQLBaseDriver, IZPlainDriver,IZPostgreSQLPlainDriver)
   protected
     function Clone: IZPlainDriver; override;
+    function GetUnicodeCodePageName: String; override;
+    procedure LoadCodePages; override;
     procedure LoadApi; override;
   public
     constructor Create;
@@ -758,6 +762,46 @@ implementation
 uses SysUtils, ZPlainLoader;
 
 { TZPostgreSQLBaseDriver }
+
+function TZPostgreSQLBaseDriver.GetUnicodeCodePageName: String;
+begin
+  Result := 'UNICODE';
+end;
+
+procedure TZPostgreSQLBaseDriver.LoadCodePages;
+begin
+  { MultiChar }
+  AddCodePage('EUC_JP', Ord(csEUC_JP)); { EUC_JP 	Japanese EUC }
+  AddCodePage('EUC_CN', Ord(csEUC_CN)); {EUC_CN 	Chinese EUC}
+  AddCodePage('EUC_KR', Ord(csEUC_KR)); {Extended UNIX Code-KR 	Korean}
+  AddCodePage('JOHAB', Ord(csJOHAB)); {JOHAB 	Korean (Hangul)}
+  AddCodePage('EUC_TW', Ord(csEUC_TW)); {Extended UNIX Code-TW 	Traditional Chinese, Taiwanese}
+  AddCodePage('UNICODE', Ord(csUNICODE_PODBC), ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}); {UNICODE 	Unicode (UTF-8)}
+  AddCodePage('MULE_INTERNAL', Ord(csMULE_INTERNAL)); { Mule internal code 	Multilingual Emacs }
+  {SingleChar}
+  AddCodePage('SQL_ASCII', Ord(csSQL_ASCII), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_ACP{$ENDIF}); {unspecified (see text) 	any}
+  AddCodePage('LATIN1', Ord(csLATIN1), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1252{$ENDIF}); { ISO 8859-1, ECMA 94 	Western European }
+  AddCodePage('LATIN2', Ord(csLATIN2));  { 	ISO 8859-2, ECMA 94 	Central European }
+  AddCodePage('LATIN3', Ord(csLATIN3));  { ISO 8859-3, ECMA 94 	South European }
+  AddCodePage('LATIN4', Ord(csLATIN4));  { ISO 8859-4, ECMA 94 	North European }
+  AddCodePage('LATIN5', Ord(csLATIN5));  { ISO 8859-9, ECMA 128 	Turkish }
+  AddCodePage('LATIN6', Ord(csLATIN6));  { ISO 8859-10, ECMA 144 	Nordic }
+  AddCodePage('LATIN7', Ord(csLATIN7));  { ISO 8859-13 	Baltic }
+  AddCodePage('LATIN8', Ord(csLATIN8));  { ISO 8859-14 	Celtic }
+  AddCodePage('LATIN9', Ord(csLATIN9));  { ISO 8859-15 	LATIN1 with Euro and accents }
+  AddCodePage('LATIN10', Ord(csLATIN10));  { ISO 8859-16, ASRO SR 14111 	Romanian }
+  AddCodePage('ISO_8859_5', Ord(csISO_8859_5)); { ISO 8859-5, ECMA 113 	Latin/Cyrillic}
+  AddCodePage('ISO_8859_6', Ord(csISO_8859_6)); { ISO 8859-6, ECMA 114 	Latin/Arabic }
+  AddCodePage('ISO_8859_7', Ord(csISO_8859_7)); { ISO 8859-7, ECMA 118 	Latin/Greek }
+  AddCodePage('ISO_8859_8', Ord(csISO_8859_8));  { ISO 8859-8, ECMA 121 	Latin/Hebrew }
+  AddCodePage('KOI8', Ord(csKOI8), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_KOI8R{$ENDIF});  { KOI8-R(U) 	Cyrillic }
+  AddCodePage('WIN', Ord(csWIN), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1251{$ENDIF}); { Windows CP1251 }
+  AddCodePage('ALT', Ord(csALT), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS866{$ENDIF}); { Windows CP866 }
+  AddCodePage('WIN1256', Ord(csWIN1256), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, cCP_WIN1256{$ENDIF});  { Windows CP1256 	Arabic }
+  AddCodePage('TCVN', Ord(csTCVN), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1258{$ENDIF}); { TCVN-5712/Windows CP1258 (Vietnamese) }
+  AddCodePage('WIN874', Ord(csWIN874), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS874{$ENDIF}); { Windows CP874 (Thai) }
+end;
+
 procedure TZPostgreSQLBaseDriver.LoadApi;
 begin
 { ************** Load adresses of API Functions ************* }
@@ -835,15 +879,15 @@ end;
 
 constructor TZPostgreSQLBaseDriver.Create;
 begin
-   inherited create;
-   FLoader := TZNativeLibraryLoader.Create([]);
-{$IFNDEF STRICT_DLL_LOADING}
-  {$IFNDEF UNIX}
-    FLoader.AddLocation(WINDOWS_DLL_LOCATION);
-  {$ELSE}
-    FLoader.AddLocation(LINUX_DLL_LOCATION);
+  inherited create;
+  FLoader := TZNativeLibraryLoader.Create([]);
+  {$IFNDEF STRICT_DLL_LOADING}
+    {$IFNDEF UNIX}
+      FLoader.AddLocation(WINDOWS_DLL_LOCATION);
+    {$ELSE}
+      FLoader.AddLocation(LINUX_DLL_LOCATION);
+    {$ENDIF}
   {$ENDIF}
-{$ENDIF}
 end;
 
 procedure TZPostgreSQLBaseDriver.Clear(Res: PZPostgreSQLResult);
@@ -904,16 +948,16 @@ end;
 
 function TZPostgreSQLBaseDriver.EncodeBYTEA(const Value: AnsiString;  Handle: PZPostgreSQLConnect): AnsiString;
 var
-   encoded: PAnsiChar;
-   len: Longword;
-   leng: cardinal;
+  encoded: PAnsiChar;
+  len: Longword;
+  leng: cardinal;
 begin
  leng := Length(Value);
  if assigned(POSTGRESQL_API.PQescapeByteaConn) then
    encoded := POSTGRESQL_API.PQescapeByteaConn(Handle, PAnsiChar(value), leng, @len)
  else
    encoded := POSTGRESQL_API.PQescapeBytea(PAnsiChar(value),leng,@len);
- SetLength(result, len - 1);
+ SetLength(result, len -1); //removes the #0 byte
  StrCopy(PAnsiChar(result), encoded);
  POSTGRESQL_API.PQFreemem(encoded);
  result := ''''+result+'''';
@@ -1294,6 +1338,7 @@ begin
   {$IFNDEF UNIX}
     FLoader.AddLocation(WINDOWS_DLL7_LOCATION);
   {$ENDIF}
+  LoadCodePages;
 end;
 
 function TZPostgreSQL7PlainDriver.GetProtocol: string;
@@ -1342,6 +1387,48 @@ begin
   Result := TZPostgreSQL8PlainDriver.Create;
 end;
 
+function TZPostgreSQL8PlainDriver.GetUnicodeCodePageName: String;
+begin
+  Result := 'UTF8';
+end;
+
+procedure TZPostgreSQL8PlainDriver.LoadCodePages;
+begin
+  inherited LoadCodePages;
+  { Version 8.1 }
+  {MultiChar}
+  ResetCodePage(Ord(csUNICODE_PODBC), 'UTF8', Ord(csUTF8), ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}); { Unicode, 8-bit 	all }
+  AddCodePage('BIG5', Ord(csBIG5), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_Big5{$ENDIF}); { Big Five 	Traditional Chinese }
+  AddCodePage('GB18030', Ord(csGB18030)); { National Standard 	Chinese }
+  AddCodePage('GBK', Ord(csGBK)); { Extended National Standard 	Simplified Chinese }
+  AddCodePage('SJIS', Ord(csSJIS), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_SHIFTJS{$ENDIF}); { Shift JIS 	Japanese }
+  AddCodePage('UHC', Ord(csUHC)); { Unified Hangul Code 	Korean }
+  {SingleByte}
+  ResetCodePage(Ord(csALT), 'WIN866', Ord(csWIN866)); { Windows CP866 	Cyrillic } //No longer in use
+  AddCodePage('WIN874', Ord(csWIN874), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS874{$ENDIF}); { Windows CP874 	Thai }
+  AddCodePage('WIN1250', Ord(csWIN1250), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1250{$ENDIF}); { Windows CP1250 	Central European }
+  ResetCodePage(Ord(csWIN), 'WIN1251', Ord(csWIN1251), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1251{$ENDIF}); { Windows CP1251 	Cyrillic } //No longer in use
+  AddCodePage('WIN1252', Ord(csWIN1252), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1252{$ENDIF}); { Windows CP1252 	Western European }
+  ResetCodePage(Ord(csTCVN), 'WIN1258', Ord(csWIN1258)); { Windows CP1258 	Vietnamese } //No longer in use
+
+  { Version 8.3 }
+  {MultiChar}
+  AddCodePage('EUC_JIS_2004', Ord(csEUC_JIS_2004)); { Extended UNIX Code-JP, JIS X 0213 	Japanese }
+  AddCodePage('SHIFT_JIS_2004', Ord(csSHIFT_JIS_2004)); { Shift JIS, JIS X 0213 	Japanese }
+  {SingleChar}
+  AddCodePage('WIN1253', Ord(csWIN1253), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1253{$ENDIF}); { Windows CP1253  Greek }
+  AddCodePage('WIN1254', Ord(csWIN1254), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1254{$ENDIF}); { Windows CP1254 	Turkish }
+  AddCodePage('WIN1255', Ord(csWIN1255), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1255{$ENDIF}); { Windows CP1255 	Hebrew }
+  AddCodePage('WIN1257', Ord(csWIN1257), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1257{$ENDIF}); { Windows CP1257 	Baltic }
+
+  { Version 8.4 }
+  {SingleChar}
+  //ResetCodePage(Ord(csKOI8), 'KOI8R', Ord(csKOI8R)); { KOI8-R 	Cyrillic (Russian) } //No longer in use
+  AddCodePage('KOI8R', Ord(csKOI8R), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_KOI8R{$ENDIF}); { KOI8-R 	Cyrillic (Russian) }
+  AddCodePage('KOI8U', Ord(csKOI8U)); { 	KOI8-U 	Cyrillic (Ukrainian) }
+  { Version 8.4 }
+  //No more changes till latest version (9.1)
+end;
 
 procedure TZPostgreSQL8PlainDriver.LoadApi;
 begin
@@ -1369,6 +1456,7 @@ begin
     FLoader.AddLocation(LINUX_DLL82_LOCATION);
     FLoader.AddLocation(LINUX_DLL8_LOCATION);
   {$ENDIF}
+  LoadCodePages;
 end;
 
 function TZPostgreSQL8PlainDriver.GetProtocol: string;

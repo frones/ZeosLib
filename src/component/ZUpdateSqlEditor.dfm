@@ -22,12 +22,14 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
     Top = 0
     Width = 390
     Height = 223
-    ActivePage = FieldsPage
+    ActivePage = SQLPage
     Align = alClient
     TabOrder = 0
     OnChanging = PageControlChanging
+    ExplicitWidth = 388
     object FieldsPage: TTabSheet
       Caption = 'Options'
+      ExplicitWidth = 380
       object GroupBox1: TGroupBox
         Left = 0
         Top = 0
@@ -36,6 +38,7 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
         Align = alClient
         Caption = ' SQL Generation '
         TabOrder = 0
+        ExplicitWidth = 380
         DesignSize = (
           382
           195)
@@ -55,6 +58,7 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
           Anchors = [akTop, akRight]
           Caption = '&Key Fields:'
           FocusControl = KeyFieldList
+          ExplicitLeft = 136
         end
         object Label4: TLabel
           Left = 256
@@ -64,13 +68,13 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
           Anchors = [akTop, akRight]
           Caption = 'Update &Fields:'
           FocusControl = UpdateFieldList
+          ExplicitLeft = 264
         end
         object UpdateTableName: TComboBox
           Left = 8
           Top = 40
           Width = 113
           Height = 21
-          ItemHeight = 13
           TabOrder = 0
           OnChange = UpdateTableNameChange
           OnClick = UpdateTableNameClick
@@ -98,6 +102,7 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
           PopupMenu = FieldListPopup
           TabOrder = 7
           OnClick = SettingsChanged
+          ExplicitWidth = 118
         end
         object GenerateButton: TButton
           Left = 8
@@ -149,6 +154,7 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
     end
     object SQLPage: TTabSheet
       Caption = 'SQL'
+      ExplicitWidth = 380
       object Label2: TLabel
         Left = 8
         Top = 40
@@ -168,6 +174,7 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
         TabOrder = 0
         WordWrap = False
         OnKeyPress = SQLMemoKeyPress
+        ExplicitWidth = 377
       end
       object StatementType: TRadioGroup
         Left = 0
@@ -183,6 +190,7 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
           '&Delete')
         TabOrder = 1
         OnClick = StatementTypeClick
+        ExplicitWidth = 380
       end
     end
   end

@@ -130,14 +130,14 @@ function EndsWith(const Str, SubStr: string): Boolean;
   @param Def a default value if the string can not be converted.
   @return a converted value or Def if conversion was failt.
 }
-function SQLStrToFloatDef(Str: string; Def: Extended): Extended;
+function SQLStrToFloatDef(Str: AnsiString; Def: Extended): Extended;
 
 {**
   Converts SQL string into float value.
   @param Str an SQL string with comma delimiter.
   @return a converted value or Def if conversion was failt.
 }
-function SQLStrToFloat(const Str: string): Extended;
+function SQLStrToFloat(const Str: AnsiString): Extended;
 
 {**
   Converts a character buffer into pascal string.
@@ -351,6 +351,20 @@ function EncodeSQLVersioning(const MajorVersion: Integer;
 }
 function FormatSQLVersion( const SQLVersion: Integer ): String;
 
+{**
+  Arranges thousand and decimal separator to a System-defaults
+  @param the value which has to be converted and arranged
+  @return a valid floating value
+}
+function ZStrToFloat(Value: PAnsiChar): Extended; overload;
+
+{**
+  Arranges thousand and decimal separator to a System-defaults
+  @param the value which has to be converted and arranged
+  @return a valid floating value
+}
+function ZStrToFloat(Value: AnsiString): Extended; overload;
+
 implementation
 
 uses ZMatchPattern, StrUtils;
@@ -494,26 +508,23 @@ end;
   @param Def a default value if the string can not be converted.
   @return a converted value or Def if conversion was failt.
 }
-function SQLStrToFloatDef(Str: string; Def: Extended): Extended;
+function SQLStrToFloatDef(Str: AnsiString; Def: Extended): Extended;
 var
-  {$IFDEF DELPHI12_UP}
-  OldDecimalSeparator: WideChar;
-  OldThousandSeparator: WideChar;
-  {$ELSE}
   OldDecimalSeparator: Char;
   OldThousandSeparator: Char;
-  {$ENDIF}
+  AString: String;
 begin
   OldDecimalSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
   OldThousandSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator;
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := ',';
-  if Pos('$', Str) = 1 then
-    Str := Copy(Str, 2, Pred(Length(Str)));
-  If Str = '' then
+  AString := String(Str);
+  if Pos('$', AString) = 1 then
+    AString := Copy(AString, 2, Pred(Length(AString)));
+  If AString = '' then
     Result := Def
   else
-    Result := StrToFloatDef(Str, Def);
+    Result := StrToFloatDef(AString, Def);
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldThousandSeparator;
 end;
@@ -523,18 +534,14 @@ end;
   @param Str an SQL string with comma delimiter.
   @return a converted value or Def if conversion was failt.
 }
-function SQLStrToFloat(const Str: string): Extended;
+function SQLStrToFloat(const Str: AnsiString): Extended;
 var
-  {$IFDEF DELPHI12_UP}
-  OldDecimalSeparator: WideChar;
-  {$ELSE}
   OldDecimalSeparator: Char;
-  {$ENDIF}
 begin
   OldDecimalSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
   try
-    Result := StrToFloat(Str);
+    Result := StrToFloat(String(Str));
   finally
     {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
   end;
@@ -1244,6 +1251,60 @@ var
 begin
  DecodeSQLVersioning(SQLVersion, MajorVersion, MinorVersion, SubVersion);
  Result := IntToStr(MajorVersion)+'.'+IntToStr(MinorVersion)+'.'+IntToStr(SubVersion);
+end;
+
+{**
+  Arranges thousand and decimal separator to a System-defaults
+  @param the value which has to be converted and arranged
+  @return a valid floating value
+}
+function ZStrToFloat(Value: PAnsiChar): Extended;
+var
+  OldDecimalSeparator, OldThousandSeparator: Char;
+begin
+  OldDecimalSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
+  OldThousandSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator;
+
+  if AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldDecimalSeparator))) = nil then
+    if AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator))) = nil then
+      //No DecimalSeparator and no ThousandSeparator
+      Result := StrToFloat(String(Value))
+    else
+    begin
+      //wrong DecimalSepartor
+      {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldThousandSeparator;
+      {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldDecimalSeparator;
+      Result := StrToFloat(String(Value));
+    end
+  else
+    if AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator))) = nil then
+      //default DecimalSepartor
+      Result := StrToFloat(String(Value))
+    else
+      if StrLen(AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldDecimalSeparator)))) <
+        StrLen(AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator)))) then
+          //default DecimalSepartor and ThousandSeparator
+        Result := StrToFloat(String(Value))
+      else
+      begin
+        //wrong DecimalSepartor and ThousandSeparator
+        {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldThousandSeparator;
+        {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldDecimalSeparator;
+        Result := StrToFloat(String(Value));
+      end;
+
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldThousandSeparator;
+end;
+
+{**
+  Arranges thousand and decimal separator to a System-defaults
+  @param the value which has to be converted and arranged
+  @return a valid floating value
+}
+function ZStrToFloat(Value: AnsiString): Extended;
+begin
+  Result := ZStrToFloat(PAnsiChar(Value));
 end;
 
 end.
