@@ -76,6 +76,7 @@ type
 
   published
     procedure TestNum1;
+    procedure TestNestedDataSetFields;
   end;
 
 implementation
@@ -124,6 +125,21 @@ begin
     Query.Free;
   end;
 end;
+
+procedure ZTestCompOracleBugReport.TestNestedDataSetFields;
+var
+  Query: TZQuery;
+begin
+  Query := TZQuery.Create(nil);
+  Query.Connection := Connection;
+  try
+    Query.SQL.Text := 'SELECT * SYSTEM.AQ$_QUEUES';
+    Query.Open;
+  finally
+    Query.Free;
+  end;
+end;
+
 initialization
   RegisterTest('bugreport',ZTestCompOracleBugReport.Suite);
 end.
