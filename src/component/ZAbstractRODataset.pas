@@ -1119,7 +1119,7 @@ begin
             Statement.SetBoolean(I + 1, Param.AsBoolean);
           ftSmallInt{$IFDEF DELPHI12_UP}, ftShortInt{$ENDIF}:
             Statement.SetShort(I + 1, Param.AsSmallInt);
-          ftInteger, ftAutoInc:
+          ftInteger, ftAutoInc{$IFDEF DELPHI12_UP}, ftByte{$ENDIF}:
             Statement.SetInt(I + 1, Param.AsInteger);
           ftFloat{$IFDEF DELPHI12_UP}, ftExtended{$ENDIF}:
             Statement.SetDouble(I + 1, Param.AsFloat);
@@ -1135,7 +1135,7 @@ begin
             Statement.SetString(I + 1, Param.AsString);
           ftWideString:
             Statement.SetUnicodeString(I + 1, {$IFDEF WITH_FTWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF});
-          ftBytes{$IFDEF DELPHI12_UP}, ftByte{$ENDIF}:
+          ftBytes:
             Statement.SetString(I + 1, Param.AsString);
           ftDate:
             Statement.SetDate(I + 1, Param.AsDate);
@@ -3445,7 +3445,7 @@ begin
               Statement.SetBoolean(I + 1, ParamValue.AsBoolean);
             ftSmallInt{$IFDEF DELPHI12_UP}, ftShortInt{$ENDIF}:
               Statement.SetShort(I + 1, ParamValue.AsSmallInt);
-            ftInteger, ftAutoInc:
+            ftInteger, ftAutoInc{$IFDEF DELPHI12_UP}, ftByte{$ENDIF}:
               Statement.SetInt(I + 1, ParamValue.AsInteger);
             ftFloat{$IFDEF DELPHI12_UP}, ftExtended{$ENDIF}:
               Statement.SetDouble(I + 1, ParamValue.AsFloat);
@@ -3461,7 +3461,7 @@ begin
               Statement.SetString(I + 1, ParamValue.AsString);
             ftWideString:
               Statement.SetUnicodeString(I + 1, {$IFDEF WITH_FTWIDESTRING}ParamValue.AsWideString{$ELSE}ParamValue.Value{$ENDIF});
-            ftBytes{$IFDEF DELPHI12_UP}, ftByte{$ENDIF}:
+            ftBytes:
               Statement.SetString(I + 1, ParamValue.AsString);
             ftDate:
               Statement.SetDate(I + 1, ParamValue.AsDate);
