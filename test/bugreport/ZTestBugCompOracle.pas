@@ -91,7 +91,7 @@ uses
 
 function ZTestCompOracleBugReport.GetSupportedProtocols: string;
 begin
-  Result := 'oracle-9i';
+  Result := 'oracle,oracle-9i';
 end;
 
 procedure ZTestCompOracleBugReport.SetUp;
