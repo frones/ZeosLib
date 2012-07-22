@@ -133,7 +133,7 @@ begin
   Query := TZQuery.Create(nil);
   Query.Connection := Connection;
   try
-    Query.SQL.Text := 'SELECT * SYSTEM.AQ$_QUEUES';
+    Query.SQL.Text := 'SELECT * FROM SYSTEM.AQ$_QUEUES';
     Query.Open;
   finally
     Query.Free;
