@@ -287,11 +287,12 @@ begin
   DetailQuery.MasterFields := 'dep_id';
   DetailQuery.LinkedFields := 'p_dep_id';
   DetailQuery.Open;
+  CommitCount := 0;
   try
     MasterQuery.Append;
     MasterQuery.FieldByName('dep_id').AsInteger := TestRowID;
     MasterQuery.FieldByName('dep_name').AsString := 'צהüüהצ';
-    MasterQuery.FieldByName('dep_shname').AsString := 'abcdef';
+    MasterQuery.FieldByName('dep_shname').AsString := 'abc';
     MasterQuery.FieldByName('dep_address').AsString := 'A adress of צהüüהצ';
     CheckEquals(True, (MasterQuery.State = dsInsert), 'MasterQuery Insert-State');
 
