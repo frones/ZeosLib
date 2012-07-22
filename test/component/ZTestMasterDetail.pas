@@ -69,17 +69,23 @@ type
     MasterDataSource: TDataSource;
     MasterQuery: TZQuery;
     DetailQuery: TZQuery;
+    DetailQuery2: TZQuery;
+    DetailQuery3: TZQuery;
   protected
     procedure SetUp; override;
     procedure TearDown; override;
   published
     procedure TestDataSource;
     procedure TestMasterFields;
+    procedure TestClientDataset;
+    procedure TestClientDatasetWithForeignKey;
   end;
 
 implementation
 
-uses Classes, ZDbcUtils, ZTestConsts, ZDbcIntfs;
+uses Classes, ZDbcUtils, ZTestConsts, ZDbcIntfs, ZSqlMonitor, ZdbcLogging;
+
+const TestRowID = 1000;
 
 { TZTestMasterDetailCase }
 
@@ -98,6 +104,12 @@ begin
 
   DetailQuery := TZQuery.Create(nil);
   DetailQuery.Connection := Connection;
+
+  DetailQuery2 := TZQuery.Create(nil);
+  DetailQuery2.Connection := Connection;
+
+  DetailQuery3 := TZQuery.Create(nil);
+  DetailQuery3.Connection := Connection;
 end;
 
 {**
@@ -107,6 +119,12 @@ procedure TZTestMasterDetailCase.TearDown;
 begin
   DetailQuery.Close;
   DetailQuery.Free;
+
+  DetailQuery2.Close;
+  DetailQuery2.Free;
+
+  DetailQuery3.Close;
+  DetailQuery3.Free;
 
   MasterQuery.Close;
   MasterQuery.Free;
@@ -163,6 +181,148 @@ begin
   CheckEquals(2, MasterQuery.FieldByName('dep_id').AsInteger);
   CheckEquals(2, DetailQuery.RecordCount);
   CheckEquals(2, DetailQuery.FieldByName('p_dep_id').AsInteger);
+end;
+
+{**
+  Runs a test for in clientdatset rules
+  All detail-queries should be updated in a single transaction.
+}
+procedure TZTestMasterDetailCase.TestClientDataset;
+var
+  SQLMonitor: TZSQLMonitor;
+  CommitCount, I: Integer;
+begin
+  SQLMonitor := TZSQLMonitor.Create(nil);
+  SQLMonitor.Active := True;
+  MasterQuery.SQL.Text := 'SELECT * FROM default_values ORDER BY d_id';
+  MasterQuery.Open;
+
+  DetailQuery.SQL.Text := 'SELECT * FROM date_values';
+  DetailQuery.MasterSource := MasterDataSource;
+  DetailQuery.MasterFields := 'd_id';
+  DetailQuery.LinkedFields := 'd_id';
+  DetailQuery.Open;
+
+  DetailQuery2.SQL.Text := 'SELECT * FROM date_values';
+  DetailQuery2.MasterSource := MasterDataSource;
+  DetailQuery2.MasterFields := 'd_id';
+  DetailQuery2.LinkedFields := 'd_id';
+  DetailQuery2.Open;
+
+  DetailQuery3.SQL.Text := 'SELECT * FROM date_values';
+  DetailQuery3.MasterSource := MasterDataSource;
+  DetailQuery3.MasterFields := 'd_id';
+  DetailQuery3.LinkedFields := 'd_id';
+  DetailQuery3.Open;
+
+  CommitCount := 0;
+  try
+    MasterQuery.Append;
+    MasterQuery.FieldByName('d_id').AsInteger := TestRowID;
+    CheckEquals(True, (MasterQuery.State = dsInsert), 'MasterQuery Insert-State');
+
+    DetailQuery.Append;
+    DetailQuery.FieldByName('d_id').AsInteger := TestRowID;
+    DetailQuery.FieldByName('d_date').AsDateTime := Date;
+    DetailQuery.FieldByName('d_time').AsDateTime := Time;
+    CheckEquals(True, (DetailQuery.State = dsInsert), 'MasterQuery Insert-State');
+
+    DetailQuery2.Append;
+    DetailQuery2.FieldByName('d_id').AsInteger := TestRowID+1;
+    DetailQuery2.FieldByName('d_date').AsDateTime := Date;
+    DetailQuery2.FieldByName('d_time').AsDateTime := Time;
+    CheckEquals(True, (DetailQuery2.State = dsInsert), 'MasterQuery Insert-State');
+
+    DetailQuery3.Append;
+    DetailQuery3.FieldByName('d_id').AsInteger := TestRowID+2;
+    DetailQuery3.FieldByName('d_date').AsDateTime := Date;
+    DetailQuery3.FieldByName('d_time').AsDateTime := Time;
+    CheckEquals(True, (DetailQuery3.State = dsInsert), 'MasterQuery Insert-State');
+
+    MasterQuery.Post;
+
+    CheckEquals(True, (MasterQuery.State = dsBrowse), 'MasterQuery Browse-State');
+    CheckEquals(True, (DetailQuery.State = dsBrowse), 'DetailQuery Browse-State');
+    CheckEquals(True, (DetailQuery2.State = dsBrowse), 'DetailQuery Browse-State');
+    CheckEquals(True, (DetailQuery3.State = dsBrowse), 'DetailQuery Browse-State');
+
+    for i := 0 to SQLMonitor.TraceCount -1 do
+      if SQLMonitor.TraceList[i].Category = lcTransaction then
+        if Pos('COMMIT', SQLMonitor.TraceList[i].Message) > 0 then
+          Inc(CommitCount);
+    CheckEquals(1, CommitCount, 'CommitCount');
+  finally
+    MasterQuery.SQL.Text := 'delete from default_values where d_id = '+IntToStr(TestRowID);
+    MasterQuery.ExecSQL;
+    MasterQuery.SQL.Text := 'delete from date_values where d_id = '+IntToStr(TestRowID);
+    MasterQuery.ExecSQL;
+    MasterQuery.SQL.Text := 'delete from date_values where d_id = '+IntToStr(TestRowID+1);
+    MasterQuery.ExecSQL;
+    MasterQuery.SQL.Text := 'delete from date_values where d_id = '+IntToStr(TestRowID+1);
+    MasterQuery.ExecSQL;
+    SQLMonitor.Free;
+  end;
+end;
+
+{**
+  Runs a test for in extendet clientdatset rules
+  All detail-queries should be updated in a single transaction.
+  But now the MasterTable should be updated first for an valid ForegnKey.
+  Then all DetailTables should have been updated.
+  Very tricky and has to deal with MetaData informations.
+}
+procedure TZTestMasterDetailCase.TestClientDatasetWithForeignKey;
+var
+  SQLMonitor: TZSQLMonitor;
+  CommitCount, I: Integer;
+
+begin
+  SQLMonitor := TZSQLMonitor.Create(nil);
+  SQLMonitor.Active := True;
+  MasterQuery.SQL.Text := 'SELECT * FROM department ORDER BY dep_id';
+  MasterQuery.Open;
+
+  DetailQuery.SQL.Text := 'SELECT * FROM people';
+  DetailQuery.MasterSource := MasterDataSource;
+  DetailQuery.MasterFields := 'dep_id';
+  DetailQuery.LinkedFields := 'p_dep_id';
+  DetailQuery.Open;
+  try
+    MasterQuery.Append;
+    MasterQuery.FieldByName('dep_id').AsInteger := TestRowID;
+    MasterQuery.FieldByName('dep_name').AsString := 'צהüüהצ';
+    MasterQuery.FieldByName('dep_shname').AsString := 'abcdef';
+    MasterQuery.FieldByName('dep_address').AsString := 'A adress of צהüüהצ';
+    CheckEquals(True, (MasterQuery.State = dsInsert), 'MasterQuery Insert-State');
+
+    DetailQuery.Append;
+    DetailQuery.FieldByName('p_id').AsInteger := TestRowID;
+    DetailQuery.FieldByName('p_dep_id').AsInteger := TestRowID;
+    DetailQuery.FieldByName('p_name').AsString := 'üהצצהü';
+    DetailQuery.FieldByName('p_begin_work').AsDateTime := now;
+    DetailQuery.FieldByName('p_end_work').AsDateTime := now;
+    DetailQuery.FieldByName('p_picture').AsString := '';
+    DetailQuery.FieldByName('p_resume').AsString := '';
+    DetailQuery.FieldByName('p_redundant').AsInteger := 5;
+    CheckEquals(True, (DetailQuery.State = dsInsert), 'MasterQuery Insert-State');
+
+    MasterQuery.Post;
+
+    CheckEquals(True, (MasterQuery.State = dsBrowse), 'MasterQuery Browse-State');
+    CheckEquals(True, (DetailQuery.State = dsBrowse), 'DetailQuery Browse-State');
+
+    for i := 0 to SQLMonitor.TraceCount -1 do
+      if SQLMonitor.TraceList[i].Category = lcTransaction then
+        if Pos('COMMIT', SQLMonitor.TraceList[i].Message) > 0 then
+          Inc(CommitCount);
+    CheckEquals(1, CommitCount, 'CommitCount');
+  finally
+    MasterQuery.SQL.Text := 'delete from department where dep_id = '+IntToStr(TestRowID);
+    MasterQuery.ExecSQL;
+    MasterQuery.SQL.Text := 'delete from people where p_id = '+IntToStr(TestRowID);
+    MasterQuery.ExecSQL;
+    SQLMonitor.Free;
+  end;
 end;
 
 initialization
