@@ -1787,6 +1787,10 @@ var
   TempConnection: TZConnection;
 begin
   TempConnection := nil;
+  BinStream:=nil;
+  BinStream1:=nil;
+  BinStreamS:=nil;
+
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -1880,9 +1884,12 @@ begin
       ExecSQL;
     end;
   finally
-    BinStream.Free;
-    BinStream1.Free;
-    BinStreamS.Free;
+    if assigned(BinStream) then
+      BinStream.Free;
+    if assigned(BinStream1) then
+      BinStream1.Free;
+    if assigned(BinStreamS) then
+      BinStreamS.Free;
     if Assigned(TempConnection) then
       TempConnection.Free;
     Query.Free;
