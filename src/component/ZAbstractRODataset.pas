@@ -1121,17 +1121,21 @@ begin
             Statement.SetShort(I + 1, Param.AsSmallInt);
           ftInteger, ftAutoInc:
             Statement.SetInt(I + 1, Param.AsInteger);
-          ftFloat:
+          ftFloat{$IFDEF DELPHI12_UP}, ftExtended{$ENDIF}:
             Statement.SetDouble(I + 1, Param.AsFloat);
+          {$IFDEF DELPHI12_UP}
+          ftLongWord:
+            Statement.SetInt(I + 1, Integer(Param.AsLongWord));
+          {$ENDIF}
           ftLargeInt:
             Statement.SetLong(I + 1, StrToInt64(Param.AsString));
-          ftCurrency:
+          ftCurrency, ftBCD:
             Statement.SetBigDecimal(I + 1, Param.AsCurrency);
           ftString, ftFixedChar:
             Statement.SetString(I + 1, Param.AsString);
           ftWideString:
             Statement.SetUnicodeString(I + 1, {$IFDEF WITH_FTWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF});
-          ftBytes:
+          ftBytes{$IFDEF DELPHI12_UP}, ftByte{$ENDIF}:
             Statement.SetString(I + 1, Param.AsString);
           ftDate:
             Statement.SetDate(I + 1, Param.AsDate);
@@ -3439,17 +3443,25 @@ begin
           case ParamValue.DataType of
             ftBoolean:
               Statement.SetBoolean(I + 1, ParamValue.AsBoolean);
-            ftSmallInt:
+            ftSmallInt{$IFDEF DELPHI12_UP}, ftShortInt{$ENDIF}:
               Statement.SetShort(I + 1, ParamValue.AsSmallInt);
             ftInteger, ftAutoInc:
               Statement.SetInt(I + 1, ParamValue.AsInteger);
-            ftFloat:
+            ftFloat{$IFDEF DELPHI12_UP}, ftExtended{$ENDIF}:
               Statement.SetDouble(I + 1, ParamValue.AsFloat);
+            {$IFDEF DELPHI12_UP}
+            ftLongWord:
+              Statement.SetInt(I + 1, Integer(ParamValue.AsLongWord));
+            {$ENDIF}
             ftLargeInt:
               Statement.SetLong(I + 1, StrToInt64(ParamValue.AsString));
-            ftString:
-              Statement.SetString(I + 1, ParamValue.AsString); //smells like DataLoss since ParamValue.String is Unicodestring (example: Big5 2Byte-Chars...)
-            ftBytes:
+            ftCurrency, ftBCD:
+              Statement.SetBigDecimal(I + 1, ParamValue.AsCurrency);
+            ftString, ftFixedChar:
+              Statement.SetString(I + 1, ParamValue.AsString);
+            ftWideString:
+              Statement.SetUnicodeString(I + 1, {$IFDEF WITH_FTWIDESTRING}ParamValue.AsWideString{$ELSE}ParamValue.Value{$ENDIF});
+            ftBytes{$IFDEF DELPHI12_UP}, ftByte{$ENDIF}:
               Statement.SetString(I + 1, ParamValue.AsString);
             ftDate:
               Statement.SetDate(I + 1, ParamValue.AsDate);
