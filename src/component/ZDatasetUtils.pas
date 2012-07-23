@@ -1552,13 +1552,13 @@ begin
     case Param.DataType of
       ftBoolean:
         Statement.SetBoolean(Index, Param.AsBoolean);
-      ftSmallInt{$IFDEF DELPHI12_UP}, ftShortInt{$ENDIF}:
+      ftSmallInt{$IFDEF WITH_FTSHORTINT}, ftShortInt{$ENDIF}:
         Statement.SetShort(Index, Param.AsSmallInt);
-      ftInteger, ftAutoInc{$IFDEF DELPHI12_UP}, ftByte{$ENDIF}:
+      ftInteger, ftAutoInc{$IFDEF WITH_FTBYTE}, ftByte{$ENDIF}:
         Statement.SetInt(Index, Param.AsInteger);
-      ftFloat{$IFDEF DELPHI12_UP}, ftExtended{$ENDIF}:
+      ftFloat{$IFDEF WITH_FTEXTENDED}, ftExtended{$ENDIF}:
         Statement.SetDouble(Index, Param.AsFloat);
-      {$IFDEF DELPHI12_UP}
+      {$IFDEF WITH_FTLONGWORD}
       ftLongWord:
         Statement.SetInt(Index, Integer(Param.AsLongWord));
       {$ENDIF}
@@ -1568,8 +1568,10 @@ begin
         Statement.SetBigDecimal(Index, Param.AsCurrency);
       ftString, ftFixedChar:
         Statement.SetString(Index, Param.AsString);
+      {$IFDEF WITH_FTWIDESTRING}
       ftWideString:
-        Statement.SetUnicodeString(Index, {$IFDEF WITH_FTWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF});
+        Statement.SetUnicodeString(Index, Param.AsWideString);
+      {$ENDIF}
       ftBytes:
         Statement.SetString(Index, Param.AsString);
       ftDate:
