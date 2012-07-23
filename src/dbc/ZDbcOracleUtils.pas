@@ -84,6 +84,7 @@ type
     TypeCode:  ub2;
     Indicator: sb2;
     Blob:      IZBlob;
+    _Object:   POCIHandle;
   end;
   PZSQLVar = ^TZSQLVar;
 
@@ -107,7 +108,7 @@ procedure AllocateOracleSQLVars(var Variables: PZSQLVars; Count: Integer);
   @param Variables a pointer to array of variables.
 }
 procedure FreeOracleSQLVars(PlainDriver: IZOraclePlainDriver;
-  var Variables: PZSQLVars);
+  var Variables: PZSQLVars; Handle: POCIEnv; ErrorHandle: POCIError);
 
 {**
   Allocates in memory and initializes the Oracle variable.
@@ -266,7 +267,7 @@ end;
   @param Variables a pointer to array of variables.
 }
 procedure FreeOracleSQLVars(PlainDriver: IZOraclePlainDriver;
-  var Variables: PZSQLVars);
+  var Variables: PZSQLVars; Handle: POCIEnv; ErrorHandle: POCIError);
 var
   I: Integer;
   CurrentVar: PZSQLVar;
@@ -277,6 +278,8 @@ begin
     for I := 1 to Variables.ActualNum do
     begin
       CurrentVar := @Variables.Variables[I];
+      if CurrentVar._Object<>nil then
+        PlainDriver.ObjectFree(Handle,ErrorHandle,CurrentVar._Object,0);
       if CurrentVar.Data <> nil then
       begin
         if CurrentVar.TypeCode in [SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE] then
@@ -344,7 +347,7 @@ begin
       end;
     stAsciiStream, stUnicodeStream, stBinaryStream:
       begin
-        if not (Variable.TypeCode in [SQLT_CLOB, SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE]) then
+        if not (Variable.TypeCode in [SQLT_CLOB, SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE,SQLT_NTY]) then
         begin
           if Variable.ColType = stAsciiStream then
             Variable.TypeCode := SQLT_LVC

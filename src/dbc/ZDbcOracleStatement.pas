@@ -435,7 +435,7 @@ begin
     FLastStatement := nil;
   end;
   FreeOracleStatementHandles(FPlainDriver, FHandle, FErrorHandle);
-  FreeOracleSQLVars(FPlainDriver, FInVars);
+  FreeOracleSQLVars(FPlainDriver, FInVars, (Connection as IZOracleConnection).GetConnectionHandle, FErrorHandle);
 end;
 
 {**

@@ -679,6 +679,21 @@ const
   { NLS environmet }
   OCI_NLS_CHARSET_MAXBYTESZ = 91;
 
+  { enum OCIPinOpt }
+  OCI_PIN_DEFAULT = 1;            //* default pin option */
+  OCI_PIN_ANY     = 3;            //* pin any copy of the object */
+  OCI_PIN_RECENT  = 4;            //* pin recent copy of the object */
+  OCI_PIN_LATEST  = 5;            //* pin latest copy of the object */
+
+  { enum OCILockOpt }
+  OCI_LOCK_NONE     = 1;          //* null (same as no lock) */
+  OCI_LOCK_X        = 2;          //* exclusive lock */
+  OCI_LOCK_X_NOWAIT = 3;          //* exclusive lock, do not wait  */
+
+  { OBJECT FREE OPTION }
+  OCI_OBJECTFREE_FORCE =1;
+  OCI_OBJECTFREE_NONULL=2;
+
 type
   PPointer = ^Pointer;
 
@@ -755,6 +770,17 @@ type
 
   TOCIBindDynamic = function(bindp: POCIBind; errhp: POCIError; ictxp: Pointer;
     icbfp: Pointer; octxp: Pointer; ocbfp: Pointer): sword; cdecl;
+
+  TOCIDefineObject = function(defnpp:POCIDefine; errhp:POCIError;
+    _type:POCIHandle; pgvpp:pointer; pvszsp:Pub4;
+    indpp:pointer; indszp:Pub4):sword;cdecl;
+
+  TOCIObjectPin = function(hndl: POCIEnv; err: POCIError;
+    object_ref:POCIHandle;corhdl:POCIHandle;
+    pin_option:ub2; pin_duration:OCIDuration;lock_option:ub2;_object:pointer):sword;cdecl;
+
+  TOCIObjectFree = function(hndl: POCIEnv; err: POCIError;
+    instance:POCIHandle;flags :ub2):sword;cdecl;
 
   TOCITransStart = function(svchp: POCISvcCtx; errhp: POCIError; timeout: word;
     flags: ub4): sword; cdecl;
@@ -947,6 +973,9 @@ var
   OCIDefineArrayOfStruct: TOCIDefineArrayOfStruct;
   OCIBindByPos:           TOCIBindByPos;
   OCIBindByName:          TOCIBindByName;
+  OCIDefineObject:        TOCIDefineObject;
+  OCIObjectPin:           TOCIObjectPin;
+  OCIObjectFree:          TOCIObjectFree;
   OCITransStart:          TOCITransStart;
   OCITransCommit:         TOCITransCommit;
   OCITransRollback:       TOCITransRollback;
@@ -1067,6 +1096,10 @@ begin
   @OCIBindByPos       := GetAddress('OCIBindByPos');
   @OCIBindByName      := GetAddress('OCIBindByName');
   @OCIBindDynamic     := GetAddress('OCIBindDynamic');
+
+  @OCIDefineObject    := GetAddress('OCIDefineObject');
+  @OCIObjectPin       := GetAddress('OCIObjectPin');
+  @OCIObjectFree      := GetAddress('OCIObjectFree');
 
   @OCILobAppend       := GetAddress('OCILobAppend');
   @OCILobAssign       := GetAddress('OCILobAssign');

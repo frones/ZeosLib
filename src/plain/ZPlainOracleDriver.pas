@@ -676,6 +676,21 @@ const
   OCI_NUMBER_UNSIGNED = 0;
   OCI_NUMBER_SIGNED   = 2;
 
+  { enum OCIPinOpt }
+  OCI_PIN_DEFAULT = 1;            //* default pin option */
+  OCI_PIN_ANY     = 3;            //* pin any copy of the object */
+  OCI_PIN_RECENT  = 4;            //* pin recent copy of the object */
+  OCI_PIN_LATEST  = 5;            //* pin latest copy of the object */
+
+  { enum OCILockOpt }
+  OCI_LOCK_NONE     = 1;          //* null (same as no lock) */
+  OCI_LOCK_X        = 2;          //* exclusive lock */
+  OCI_LOCK_X_NOWAIT = 3;          //* exclusive lock, do not wait  */
+
+  { OBJECT FREE OPTION }
+  OCI_OBJECTFREE_FORCE =1;
+  OCI_OBJECTFREE_NONULL=2;
+
 type
 
   {** Represents a generic interface to Oracle native API. }
@@ -737,6 +752,14 @@ type
       maxarr_len: ub4; curelep: Pointer; mode: ub4): sword;
     function BindDynamic(bindp: POCIBind; errhp: POCIError; ictxp: Pointer;
     icbfp: Pointer; octxp: Pointer; ocbfp: Pointer): sword;
+
+    function DefineObject(defnpp:POCIDefine; errhp:POCIError;
+      _type:POCIHandle; pgvpp,pvszsp,indpp,indszp:pointer): sword;
+    function ObjectPin(hndl: POCIEnv; err: POCIError;
+      object_ref:POCIHandle;corhdl:POCIHandle;
+      pin_option:ub2; pin_duration:OCIDuration;lock_option:ub2;_object:pointer):sword;
+    function ObjectFree(hndl: POCIEnv; err: POCIError;
+      instance:POCIHandle;flags :ub2):sword;
 
     function TransStart(svchp: POCISvcCtx; errhp: POCIError; timeout: word;
       flags: ub4): sword;
@@ -932,6 +955,14 @@ type
       maxarr_len: ub4; curelep: Pointer; mode: ub4): sword;
     function BindDynamic(bindp: POCIBind; errhp: POCIError; ictxp: Pointer;
     icbfp: Pointer; octxp: Pointer; ocbfp: Pointer): sword;
+
+    function DefineObject(defnpp:POCIDefine; errhp:POCIError;
+      _type:POCIHandle; pgvpp,pvszsp,indpp,indszp:pointer): sword;
+    function ObjectPin(hndl: POCIEnv; err: POCIError;
+      object_ref:POCIHandle;corhdl:POCIHandle;
+      pin_option:ub2; pin_duration:OCIDuration;lock_option:ub2;_object:pointer):sword;
+    function ObjectFree(hndl: POCIEnv; err: POCIError;
+      instance:POCIHandle;flags :ub2):sword;
 
     function TransStart(svchp: POCISvcCtx; errhp: POCIError; timeout: word;
       flags: ub4): sword;
@@ -1429,6 +1460,27 @@ function TZOracle9iPlainDriver.BindDynamic(bindp: POCIBind;
 begin
   Result := ZPlainOracle9i.OCIBindDynamic(bindp, errhp, ictxp, icbfp, octxp,
     ocbfp);
+end;
+
+function TZOracle9iPlainDriver.DefineObject(defnpp: POCIDefine;
+  errhp: POCIError; _type: POCIHandle; pgvpp,pvszsp,indpp,indszp:pointer): sword;
+begin
+  Result:=ZPlainOracle9i.OCIDefineObject(defnpp,
+           errhp, _type, pgvpp, pvszsp, indpp, indszp);
+end;
+
+function TZOracle9iPlainDriver.ObjectPin(hndl: POCIEnv; err: POCIError;
+  object_ref:POCIHandle;corhdl:POCIHandle;
+  pin_option:ub2; pin_duration:OCIDuration;lock_option:ub2;_object:pointer):sword;
+begin
+  Result:=ZPlainOracle9i.OCIObjectPin(hndl, err, object_ref, corhdl,
+    pin_option, pin_duration, lock_option, _object);
+end;
+
+function TZOracle9iPlainDriver.ObjectFree(hndl: POCIEnv; err: POCIError;
+  instance:POCIHandle;flags :ub2):sword;
+begin
+  Result:=ZPlainOracle9i.OCIObjectFree(hndl, err, instance, flags);
 end;
 
 function TZOracle9iPlainDriver.Break(svchp: POCISvcCtx;

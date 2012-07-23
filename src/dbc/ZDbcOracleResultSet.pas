@@ -201,6 +201,7 @@ var
   ColumnCount: ub4;
   TempColumnName: PAnsiChar;
   TempColumnNameLen: Integer;
+  ptype,addr_tdo:pointer;
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
@@ -294,6 +295,20 @@ begin
           CurrentVar.ColType := stBinaryStream;
           CurrentVar.TypeCode := CurrentVar.DataType;
         end;
+      SQLT_NTY:
+        begin
+          CurrentVar.ColType := stBinaryStream;
+          CurrentVar.TypeCode := CurrentVar.DataType;
+          CheckOracleError(FPlainDriver, FErrorHandle,
+            FPlainDriver.AttrGet(CurrentVar.Handle, OCI_DTYPE_PARAM,
+                 @ptype, nil, OCI_ATTR_REF_TDO, FErrorHandle)
+            ,lcExecute, FSQL);
+          CheckOracleError(FPlainDriver, FErrorHandle,
+            FPlainDriver.ObjectPin(Connection.GetConnectionHandle, FErrorHandle, ptype, nil,
+               OCI_PIN_ANY, OCI_DURATION_SESSION, OCI_LOCK_NONE,
+               @addr_tdo)
+            ,lcExecute, FSQL);
+        end;
       else
         CurrentVar.ColType := stUnknown;
     end;
@@ -315,6 +330,11 @@ begin
       FErrorHandle, I, CurrentVar.Data, CurrentVar.Length, CurrentVar.TypeCode,
       @CurrentVar.Indicator, nil, nil, OCI_DEFAULT);
     CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, FSQL);
+    if CurrentVar.DataType=SQLT_NTY then
+      CheckOracleError(FPlainDriver, FErrorHandle,
+        FPlainDriver.DefineObject(CurrentVar.Define, FErrorHandle, addr_tdo,
+           @CurrentVar._Object,nil,nil,nil)
+        ,lcExecute, FSQL);
   end;
 
   { Fills the column info. }
@@ -371,7 +391,8 @@ procedure TZOracleResultSet.Close;
 var
   ps: IZPreparedStatement;
 begin
-  FreeOracleSQLVars(FPlainDriver, FOutVars);
+  if assigned(FOutVars) then // else no statement anyways
+    FreeOracleSQLVars(FPlainDriver, FOutVars, (GetStatement.GetConnection as IZOracleConnection).GetConnectionHandle, FErrorHandle);
   { prepared statement own handles, so dont free them }
   if not Supports(GetStatement, IZPreparedStatement, ps) then
      FreeOracleStatementHandles(FPlainDriver, FStmtHandle, FErrorHandle);
@@ -882,6 +903,8 @@ begin
       CurrentVar.ColType, GetStatement.GetChunkSize);
     (Result as IZOracleBlob).ReadBlob;
   end
+  else if CurrentVar.TypeCode=SQLT_NTY then
+    Result := TZAbstractBlob.CreateWithStream(nil)
   else
   begin
     if CurrentVar.Indicator >= 0 then
