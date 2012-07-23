@@ -1108,80 +1108,7 @@ begin
           Continue;
       end;
 
-      if Param.IsNull then
-      begin
-         Statement.SetNull(I + 1, ConvertDatasetToDbcType(Param.DataType))
-      end
-      else
-      begin
-        case Param.DataType of
-          ftBoolean:
-            Statement.SetBoolean(I + 1, Param.AsBoolean);
-          ftSmallInt{$IFDEF DELPHI12_UP}, ftShortInt{$ENDIF}:
-            Statement.SetShort(I + 1, Param.AsSmallInt);
-          ftInteger, ftAutoInc{$IFDEF DELPHI12_UP}, ftByte{$ENDIF}:
-            Statement.SetInt(I + 1, Param.AsInteger);
-          ftFloat{$IFDEF DELPHI12_UP}, ftExtended{$ENDIF}:
-            Statement.SetDouble(I + 1, Param.AsFloat);
-          {$IFDEF DELPHI12_UP}
-          ftLongWord:
-            Statement.SetInt(I + 1, Integer(Param.AsLongWord));
-          {$ENDIF}
-          ftLargeInt:
-            Statement.SetLong(I + 1, StrToInt64(Param.AsString));
-          ftCurrency, ftBCD:
-            Statement.SetBigDecimal(I + 1, Param.AsCurrency);
-          ftString, ftFixedChar:
-            Statement.SetString(I + 1, Param.AsString);
-          ftWideString:
-            Statement.SetUnicodeString(I + 1, {$IFDEF WITH_FTWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF});
-          ftBytes:
-            Statement.SetString(I + 1, Param.AsString);
-          ftDate:
-            Statement.SetDate(I + 1, Param.AsDate);
-          ftTime:
-            Statement.SetTime(I + 1, Param.AsTime);
-          ftDateTime, ftTimestamp:
-            Statement.SetTimestamp(I + 1, Param.AsDateTime);
-          ftMemo:
-            begin
-              {EgonHugeist: On reading a Param as Memo the Stream reads Byte-wise
-                on Changing to stUnicodeString/Delphi12Up a String is from
-                Type wide/unicode so we have to give him back as
-                Stream!}
-                {$IFDEF DELPHI12_UP}
-                Stream := Param.AsStream;
-                {$ELSE}
-                Stream := TStringStream.Create(Param.AsMemo);
-                {$ENDIF}
-              try
-                Statement.SetAsciiStream(I + 1, Stream);
-              finally
-                Stream.Free;
-              end;
-            end;
-          {$IFDEF WITH_WIDEMEMO} // not available on Delhi 7
-          ftWideMemo:
-            begin
-              Stream := WideStringStream(Param.AsWideString);
-              try
-                Statement.SetUnicodeStream(I + 1, Stream);
-              finally
-                Stream.Free;
-              end;
-            end;
-          {$ENDIF}
-          ftBlob, ftGraphic:
-            begin
-              Stream := TStringStream.Create(Param.AsBlob);
-              try
-                Statement.SetBinaryStream(I + 1, Stream);
-              finally
-                Stream.Free;
-              end;
-            end;
-        end;
-      end;
+      SetStatementParam(I+ 1, Statement, Param);
     end;
   finally
     TempParam.Free;
@@ -3432,76 +3359,11 @@ begin
       FConnection.Connect;
     Statement := FConnection.DbcConnection.PrepareStatement(ASQL);
     if (AParams <> nil) and (AParams.Count > 0) then
-    begin
       for I := 0 to AParams.Count - 1 do
       begin
         ParamValue := AParams[I];
-        if ParamValue.IsNull then
-          Statement.SetNull(I + 1, ConvertDatasetToDbcType(ParamValue.DataType))
-        else
-        begin
-          case ParamValue.DataType of
-            ftBoolean:
-              Statement.SetBoolean(I + 1, ParamValue.AsBoolean);
-            ftSmallInt{$IFDEF DELPHI12_UP}, ftShortInt{$ENDIF}:
-              Statement.SetShort(I + 1, ParamValue.AsSmallInt);
-            ftInteger, ftAutoInc{$IFDEF DELPHI12_UP}, ftByte{$ENDIF}:
-              Statement.SetInt(I + 1, ParamValue.AsInteger);
-            ftFloat{$IFDEF DELPHI12_UP}, ftExtended{$ENDIF}:
-              Statement.SetDouble(I + 1, ParamValue.AsFloat);
-            {$IFDEF DELPHI12_UP}
-            ftLongWord:
-              Statement.SetInt(I + 1, Integer(ParamValue.AsLongWord));
-            {$ENDIF}
-            ftLargeInt:
-              Statement.SetLong(I + 1, StrToInt64(ParamValue.AsString));
-            ftCurrency, ftBCD:
-              Statement.SetBigDecimal(I + 1, ParamValue.AsCurrency);
-            ftString, ftFixedChar:
-              Statement.SetString(I + 1, ParamValue.AsString);
-            ftWideString:
-              Statement.SetUnicodeString(I + 1, {$IFDEF WITH_FTWIDESTRING}ParamValue.AsWideString{$ELSE}ParamValue.Value{$ENDIF});
-            ftBytes:
-              Statement.SetString(I + 1, ParamValue.AsString);
-            ftDate:
-              Statement.SetDate(I + 1, ParamValue.AsDate);
-            ftTime:
-              Statement.SetTime(I + 1, ParamValue.AsTime);
-            ftDateTime:
-              Statement.SetTimestamp(I + 1, ParamValue.AsDateTime);
-            ftMemo:
-              begin
-                Stream := TStringStream.Create(ParamValue.AsMemo);
-                try
-                  Statement.SetAsciiStream(I + 1, Stream);
-                finally
-                  Stream.Free;
-                end;
-              end;
-            {$IFDEF WITH_WIDEMEMO}
-            ftWideMemo:
-              begin
-                Stream := WideStringStream(ParamValue.AsWideString);
-                try
-                  Statement.SetUnicodeStream(I + 1, Stream);
-                 finally
-                   Stream.Free;
-                 end;
-              end;
-            {$ENDIF}
-            ftBlob, ftGraphic:
-              begin
-                Stream := TStringStream.Create(ParamValue.AsBlob);
-                try
-                  Statement.SetBinaryStream(I + 1, Stream);
-                finally
-                  Stream.Free;
-                end;
-              end;
-          end;
-        end;
+        SetStatementParam(I+1, Statement, ParamValue);
       end;
-    end;
     Result := Statement.ExecuteUpdatePrepared;
   end
   else

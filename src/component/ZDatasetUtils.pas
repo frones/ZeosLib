@@ -268,6 +268,15 @@ function DefineFieldIndices(const FieldsLookupTable: TIntegerDynArray;
 procedure SplitQualifiedObjectName(QualifiedName: string;
   var Catalog, Schema, ObjectName: string);
 
+{**
+  Assigns a Statement value from a TParam
+  @param Index the index of Statement.SetParam(Idex..);
+  @param Statement the PrepredStatement where the values have been assigned
+  @param Param the TParam where the value is assigned from
+}
+procedure SetStatementParam(Index: Integer;
+  Statement: IZPreparedStatement; Param: TParam);
+
 function WideStringStream(const AString: WideString): TStream;
 
 {** Common variables. }
@@ -1522,6 +1531,93 @@ begin
     end;
   finally
     SL.Free;
+  end;
+end;
+
+{**
+  Assigns a Statement value from a TParam
+  @param Index the index of Statement.SetXxxx(ColumnIndex, xxx);
+  @param Statement the PrepredStatement where the values have been assigned
+  @param Param the TParam where the value is assigned from
+}
+procedure SetStatementParam(Index: Integer;
+  Statement: IZPreparedStatement; Param: TParam);
+var
+  Stream: TStream;
+begin
+  if Param.IsNull then
+    Statement.SetNull(Index, ConvertDatasetToDbcType(Param.DataType))
+  else
+  begin
+    case Param.DataType of
+      ftBoolean:
+        Statement.SetBoolean(Index, Param.AsBoolean);
+      ftSmallInt{$IFDEF DELPHI12_UP}, ftShortInt{$ENDIF}:
+        Statement.SetShort(Index, Param.AsSmallInt);
+      ftInteger, ftAutoInc{$IFDEF DELPHI12_UP}, ftByte{$ENDIF}:
+        Statement.SetInt(Index, Param.AsInteger);
+      ftFloat{$IFDEF DELPHI12_UP}, ftExtended{$ENDIF}:
+        Statement.SetDouble(Index, Param.AsFloat);
+      {$IFDEF DELPHI12_UP}
+      ftLongWord:
+        Statement.SetInt(Index, Integer(Param.AsLongWord));
+      {$ENDIF}
+      ftLargeInt:
+        Statement.SetLong(Index, StrToInt64(Param.AsString));
+      ftCurrency, ftBCD:
+        Statement.SetBigDecimal(Index, Param.AsCurrency);
+      ftString, ftFixedChar:
+        Statement.SetString(Index, Param.AsString);
+      ftWideString:
+        Statement.SetUnicodeString(Index, {$IFDEF WITH_FTWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF});
+      ftBytes:
+        Statement.SetString(Index, Param.AsString);
+      ftDate:
+        Statement.SetDate(Index, Param.AsDate);
+      ftTime:
+        Statement.SetTime(Index, Param.AsTime);
+      ftDateTime:
+        Statement.SetTimestamp(Index, Param.AsDateTime);
+      ftMemo:
+        begin
+          {EgonHugeist: On reading a Param as Memo the Stream reads Byte-wise
+            on Changing to stUnicodeString/Delphi12Up a String is from
+            Type wide/unicode so we have to give him back as
+            Stream!}
+            {$IFDEF DELPHI12_UP}
+            Stream := Param.AsStream;
+            {$ELSE}
+            Stream := TStringStream.Create(Param.AsMemo);
+            {$ENDIF}
+          try
+            Statement.SetAsciiStream(Index, Stream);
+          finally
+            Stream.Free;
+          end;
+        end;
+      {$IFDEF WITH_WIDEMEMO}
+      ftWideMemo:
+        begin
+          Stream := WideStringStream(Param.AsWideString);
+          try
+            Statement.SetUnicodeStream(Index, Stream);
+           finally
+             Stream.Free;
+           end;
+        end;
+      {$ENDIF}
+      ftBlob, ftGraphic:
+        begin
+          Stream := TStringStream.Create(Param.AsBlob);
+          try
+            Statement.SetBinaryStream(Index, Stream);
+          finally
+            Stream.Free;
+          end;
+        end;
+      else
+        raise EZDatabaseError.Create(SUnKnownParamDataType);
+    end;
   end;
 end;
 
