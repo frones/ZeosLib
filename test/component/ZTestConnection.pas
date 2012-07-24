@@ -164,16 +164,16 @@ begin
    Connection.LibraryLocation:='dummy.dll';
    try
       Connection.Connect;
-      CheckEquals(false,true);
+      Fail('Incorrect behavior dummy.dll does not exist');
    except
       CheckEquals(false,Connection.Connected);
    end;
    Connection.LibraryLocation:='';
    Connection.Connect;
    CheckEquals(true,Connection.Connected);
-   {$ifdef fpc}Fail{$else}Status{$endif}('Info: '+Connection.Protocol+
-          ' Driver version: '+ Connection.ClientVersionStr+
-          ' Server version: '+ Connection.ServerVersionStr);
+//   {$ifdef fpc}Fail{$else}Status{$endif}('Info: '+Connection.Protocol+
+//          ' Driver version: '+ Connection.ClientVersionStr+
+//          ' Server version: '+ Connection.ServerVersionStr);
 end;
 
 procedure TZTestConnectionCase.ConnLogin(Sender: TObject; var Username:string ; var Password: string);
