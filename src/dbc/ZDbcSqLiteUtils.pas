@@ -176,15 +176,7 @@ begin
   else if StartsWith(TypeName, 'CHAR') then
     Result := stString
   else if TypeName = 'VARCHAR' then
-    case CharEncoding of  //SQLite supports only 2 OpenModes: either UTF8 or UTF16(le, be)
-      ceUTF8:
-        if UTF8StringAsWideField then
-          Result := stUnicodeString
-        else
-          Result := stString;
-      ceUTF16:
-        Result := stUnicodeString
-    end
+    Result := stString
   else if TypeName = 'VARBINARY' then
     Result := stBytes
   else if TypeName = 'BINARY' then
@@ -218,14 +210,11 @@ begin
 
   if ((Result = stString) or (Result = stUnicodeString)) and (Precision = 0) then
     Precision := 255;
-  if Result = stAsciiStream then
-    case CharEncoding of
-      ceUTF8, ceUTF16:
-        if UTF8StringAsWideField then
-          Result := stUnicodeStream
-        else
-          Result := stAsciiStream;
-    end;
+
+  case Result of
+    stString: if UTF8StringAsWideField then Result := stUnicodeString;
+    stAsciiStream: if UTF8StringAsWideField then Result := stUnicodeStream;
+  end;
 end;
 
 {**
