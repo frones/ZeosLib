@@ -262,6 +262,8 @@ type
       npasswd: text; npasswd_len: sb4; mode: ub4): sword;
     function ServerVersion(hndlp: POCIHandle; errhp: POCIError; bufp: text;
       bufsz: ub4; hndltype: ub1): sword;
+    function ServerRelease(hndlp: POCIHandle;
+      errhp: POCIError; bufp: text; bufsz: ub4; hndltype: ub1; version:pointer): sword;
     function ResultSetToStmt(rsetdp: POCIHandle; errhp: POCIError): sword;
 
     function GetEnvCharsetByteWidth(hndl: POCIEnv; err: POCIError;
@@ -470,6 +472,8 @@ type
       npasswd: text; npasswd_len: sb4; mode: ub4): sword;
     function ServerVersion(hndlp: POCIHandle; errhp: POCIError; bufp: text;
       bufsz: ub4; hndltype: ub1): sword;
+    function ServerRelease(hndlp: POCIHandle;
+      errhp: POCIError; bufp: text; bufsz: ub4; hndltype: ub1; version:pointer): sword;
     function ResultSetToStmt(rsetdp: POCIHandle; errhp: POCIError): sword;
     function GetEnvCharsetByteWidth(hndl: POCIEnv; err: POCIError;
       out Value: sb4): sword;
@@ -801,6 +805,7 @@ begin
     @OracleAPI.OCIServerAttach    := GetAddress('OCIServerAttach');
     @OracleAPI.OCIServerDetach    := GetAddress('OCIServerDetach');
     @OracleAPI.OCIServerVersion   := GetAddress('OCIServerVersion');
+    @OracleAPI.OCIServerRelease   := GetAddress('OCIServerRelease');
     @OracleAPI.OCIBreak           := GetAddress('OCIBreak');
 
     { For Oracle >= 8.1 }
@@ -1281,6 +1286,15 @@ function TZOracle9iPlainDriver.ServerVersion(hndlp: POCIHandle;
 begin
   Result := OracleAPI.OCIServerVersion(hndlp, errhp, bufp, bufsz,
     hndltype);
+end;
+
+function TZOracle9iPlainDriver.ServerRelease(hndlp: POCIHandle;
+  errhp: POCIError; bufp: text; bufsz: ub4; hndltype: ub1; version:pointer): sword;
+begin
+  Result:=OCI_ERROR;
+  if assigned(OracleAPI.OCIServerRelease) then
+    Result := OracleAPI.OCIServerRelease(hndlp, errhp, bufp, bufsz,
+      hndltype, version);
 end;
 
 function TZOracle9iPlainDriver.SessionBegin(svchp: POCISvcCtx;

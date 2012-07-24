@@ -958,6 +958,9 @@ type
   TOCIServerVersion = function(hndlp: POCIHandle; errhp: POCIError; bufp: text;
     bufsz: ub4; hndltype: ub1): sword; cdecl;
 
+  TOCIServerRelease = function(hndlp: POCIHandle; errhp: POCIError; bufp: text;
+    bufsz: ub4; hndltype: ub1; version:pointer): sword; cdecl;
+
   TOCIResultSetToStmt = function(rsetdp: POCIHandle; errhp: POCIError): sword; cdecl;
 
   TOCINlsNumericInfoGet = function(envhp: POCIEnv; errhp: POCIError; val: psb4; item: ub2): sword; cdecl;
@@ -1006,6 +1009,7 @@ type
     OCIStmtGetPieceInfo:    TOCIStmtGetPieceInfo;
     OCIStmtSetPieceInfo:    TOCIStmtSetPieceInfo;
     OCIServerVersion:       TOCIServerVersion;
+    OCIServerRelease:       TOCIServerRelease;
     OCIBindDynamic:         TOCIBindDynamic;
     OCIDateTimeAssign:      TOCIDateTimeAssign;
     OCIDateTimeCheck:       TOCIDateTimeCheck;

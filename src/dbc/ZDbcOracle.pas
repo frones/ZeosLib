@@ -133,6 +133,7 @@ type
     function GetSessionHandle: POCISession;
     function GetTransactionHandle: POCITrans;
     function GetClientVersion: Integer; override;
+    function GetHostVersion: Integer; override;
   end;
 
   TZOracleSequence = class(TZAbstractSequence)
@@ -713,6 +714,19 @@ begin
       @patch_num, @port_update_num);
   Result := EncodeSQLVersioning(major_version,minor_version,update_num);
 end;
+
+function TZOracleConnection.GetHostVersion: Integer;
+var
+  buf:text;
+  version:ub4;
+begin
+  result:=0;
+  getmem(buf,1024);
+  if GetPlainDriver.ServerRelease(FServerHandle,FErrorHandle,buf,1024,OCI_HTYPE_SERVER,@version)=OCI_SUCCESS then
+    Result := EncodeSQLVersioning((version shr 24) and $ff,(version shr 20) and $f,(version shr 12) and $ff);
+  freemem(buf);
+end;
+
 { TZOracleSequence }
 
 {**
