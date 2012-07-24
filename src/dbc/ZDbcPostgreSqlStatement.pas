@@ -770,9 +770,9 @@ var I: Integer;
   Tokens: TStrings;
   ParamIndex: Integer;
 begin
-  if Pos('?', Sql) > 0 then
+  if Pos('?', ASql) > 0 then
   begin
-    Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(Sql, [toUnifyWhitespaces]);
+    Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(ASql, [toUnifyWhitespaces]);
     try
       ParamIndex := 0;
       for I := 0 to Tokens.Count - 1 do
