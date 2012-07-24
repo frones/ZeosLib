@@ -29,14 +29,6 @@
         <Filename Value="../../src/plain/ZPlainDbLibDriver.pas"/>
         <UnitName Value="ZPlainDbLibDriver"/>
       </Item1>
-      <Item2>
-        <Filename Value="../../src/plain/ZPlainDbLibMsSql7.pas"/>
-        <UnitName Value="ZPlainDbLibMsSql7"/>
-      </Item2>
-      <Item3>
-        <Filename Value="../../src/plain/ZPlainDbLibSybaseAse125.pas"/>
-        <UnitName Value="ZPlainDbLibSybaseAse125"/>
-      </Item3>
       <Item4>
         <Filename Value="../../src/plain/ZPlainDriver.pas"/>
         <UnitName Value="ZPlainDriver"/>
@@ -54,8 +46,8 @@
         <UnitName Value="ZPlainMySqlDriver"/>
       </Item7>
       <Item8>
-        <Filename Value="../../src/plain/ZPlainOracle9i.pas"/>
-        <UnitName Value="ZPlainOracle9i"/>
+        <Filename Value="../../src/plain/ZPlainOracleConstants.pas"/>
+        <UnitName Value="ZPlainOracleConstants"/>
       </Item8>
       <Item9>
         <Filename Value="../../src/plain/ZPlainOracleDriver.pas"/>

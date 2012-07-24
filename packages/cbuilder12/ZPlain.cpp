@@ -22,10 +22,6 @@ USEUNIT("..\..\src\plain\ZPlainDbLibDriver.pas");
 
 USEUNIT("..\..\src\plain\ZPlainDbLibConstants.pas");
 
-USEUNIT("..\..\src\plain\ZPlainDbLibMsSql7.pas");
-
-USEUNIT("..\..\src\plain\ZPlainDbLibSybaseAse125.pas");
-
 USEUNIT("..\..\src\plain\ZPlainDriver.pas");
 
 USEUNIT("..\..\src\plain\ZPlainFirebirdDriver.pas");
@@ -36,7 +32,7 @@ USEUNIT("..\..\src\plain\ZPlainMySqlDriver.pas");
 
 USEUNIT("..\..\src\plain\ZPlainSqLiteDriver.pas");
 
-USEUNIT("..\..\src\plain\ZPlainOracle9i.pas");
+USEUNIT("..\..\src\plain\ZPlainOracleConstants.pas");
 
 USEUNIT("..\..\src\plain\ZPlainOracleDriver.pas");
 

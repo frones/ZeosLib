@@ -118,7 +118,7 @@
 				<BuildOrder>77</BuildOrder>
 				<BuildOrder>12</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\plain\ZPlainOracle9i.pas">
+			<DelphiCompile Include="..\..\src\plain\ZPlainOracleConstants.pas">
 				<BuildOrder>74</BuildOrder>
 				<BuildOrder>13</BuildOrder>
 			</DelphiCompile>
@@ -155,14 +155,6 @@
 				<BuildOrder>23</BuildOrder>
 			</PackageImport>
 			<DelphiCompile Include="..\..\src\plain\ZPlainDbLibConstants.pas">
-				<BuildOrder>26</BuildOrder>
-				<BuildOrder>29</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\plain\ZPlainDbLibSybaseAse125.pas">
-				<BuildOrder>29</BuildOrder>
-				<BuildOrder>28</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\plain\ZPlainDbLibMsSql7.pas">
 				<BuildOrder>26</BuildOrder>
 				<BuildOrder>29</BuildOrder>
 			</DelphiCompile>
