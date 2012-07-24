@@ -59,7 +59,8 @@ interface
 
 uses
   Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcStatement,Db, ZDbcLogging,
-  ZPlainOracleDriver, ZCompatibility, ZVariant, ZDbcOracleUtils;
+  ZPlainOracleDriver, ZCompatibility, ZVariant, ZDbcOracleUtils,
+  ZPlainOracleConstants;
 
 type
 

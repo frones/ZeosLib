@@ -60,7 +60,7 @@ interface
 uses
   Classes, SysUtils, Types, ZSysUtils, ZDbcIntfs,
   ZDbcResultSet, ZPlainOracleDriver, ZDbcResultSetMetadata, ZDbcLogging,
-  ZCompatibility, ZDbcOracleUtils;
+  ZCompatibility, ZDbcOracleUtils, ZPlainOracleConstants;
 
 type
 

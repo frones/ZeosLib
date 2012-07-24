@@ -370,10 +370,10 @@ end;
 }
 function ConvertSQLiteVersionToSQLVersion( const SQLiteVersion: PAnsiChar ): Integer;
 var
-   MajorVersion, MinorVersion, SubVersion: Integer;
+  MajorVersion, MinorVersion, SubVersion: Integer;
   s:string;
 begin
-  s:=SQLiteVersion;
+  s:=String(SQLiteVersion);
   MajorVersion:=StrToIntDef(copy(s,1,pos('.',s)-1),0);
   delete(s,1,pos('.',s));
   MinorVersion:=StrToIntDef(copy(s,1,pos('.',s)-1),0);

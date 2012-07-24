@@ -60,7 +60,7 @@ interface
 uses
   Types, ZCompatibility, Classes, SysUtils, Contnrs, ZDbcIntfs, ZDbcConnection,
   ZPlainOracleDriver, ZDbcLogging, ZTokenizer, ZDbcGenericResolver, ZURL,
-  ZGenericSqlAnalyser;
+  ZGenericSqlAnalyser, ZPlainOracleConstants;
 
 type
 
@@ -132,6 +132,7 @@ type
     function GetServerHandle: POCIServer;
     function GetSessionHandle: POCISession;
     function GetTransactionHandle: POCITrans;
+    function GetClientVersion: Integer; override;
   end;
 
   TZOracleSequence = class(TZAbstractSequence)
@@ -155,7 +156,7 @@ var
 implementation
 
 uses
-  ZMessages, ZGenericSqlToken, ZDbcOracleStatement,
+  ZMessages, ZGenericSqlToken, ZDbcOracleStatement, ZSysUtils,
   ZDbcOracleUtils, ZDbcOracleMetadata, ZOracleToken, ZOracleAnalyser;
 
 { TZOracleDriver }
@@ -237,7 +238,6 @@ begin
     Analyser := TZOracleStatementAnalyser.Create;
   Result := Analyser;
 end;
-
 
 { TZOracleConnection }
 
@@ -704,6 +704,15 @@ begin
   Result := FTransHandle;
 end;
 
+function TZOracleConnection.GetClientVersion: Integer;
+var
+  major_version, minor_version, update_num,
+      patch_num, port_update_num: sword;
+begin
+  GetPlainDriver.ClientVersion(@major_version, @minor_version, @update_num,
+      @patch_num, @port_update_num);
+  Result := EncodeSQLVersioning(major_version,minor_version,update_num);
+end;
 { TZOracleSequence }
 
 {**

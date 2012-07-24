@@ -62,7 +62,7 @@ uses
   Types,
 {$ENDIF}
   Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZVariant, ZPlainOracleDriver,
-  ZDbcLogging, ZCompatibility;
+  ZDbcLogging, ZCompatibility, ZPlainOracleConstants;
 
 const
   MAX_SQLVAR_LIMIT = 1024;
