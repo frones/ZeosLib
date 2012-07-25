@@ -1327,19 +1327,6 @@ var
   Temp: string;
   Precision, Decimals, ColumnCount: Integer;
   Temp_scheme: string;
-
-  function IsPrimaryKey(const ColumnName: String): Boolean;
-  begin
-    Result := False;
-    with UncachedGetPrimaryKeys(Catalog, SchemaPattern, TableNamePattern) do
-    begin
-      BeforeFirst;
-      if Next then //Primary key is unique
-        if GetString(4)=ColumnName then
-          Result := True;
-      Close;
-    end;
-  end;
 begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
@@ -1366,11 +1353,10 @@ begin
         GetString(3), Precision, Decimals,
         GetConnection.GetClientCodePageInformations.Encoding,
         GetConnection.UTF8StringAsWideField)));
-      { no column definition( '' ) and is PrimaryKey -> Type Integer!!
-        second curiosity: If definition = '' and FirsColumn then -> Type Integer!!
+        { curiosity: If TypeDefinition = '' and Column=FirstColumn then -> Type Integer!!
        Manits #0000263}
       if GetString(3) = '' then
-        if ( ColumnCount = 1 ) or IsPrimaryKey(GetString(2)) then
+        if ( ColumnCount = 1 ) then
           Result.UpdateInt(5, Ord(stInteger));
 
       { Defines a table name. }
