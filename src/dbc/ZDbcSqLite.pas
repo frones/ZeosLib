@@ -229,8 +229,10 @@ begin
 
   {$IFNDEF WITH_WIDECONTROLS}
   if Self.ClientCodePage^.Encoding = ceUTF8AsAnsi then
-    FClientCodePage := 'UTF-8';
+    FClientCodePage := 'UTF-8' else
   {$ENDIF}
+  if GetEncoding = ceAnsi then
+    CheckCharEncoding('UTF-8');
   Open;
 end;
 

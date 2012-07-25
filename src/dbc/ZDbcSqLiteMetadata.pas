@@ -1325,7 +1325,7 @@ function TZSQLiteDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const ColumnNamePattern: string): IZResultSet;
 var
   Temp: string;
-  Precision, Decimals: Integer;
+  Precision, Decimals, ColumnCount: Integer;
   Temp_scheme: string;
 
   function IsPrimaryKey(const ColumnName: String): Boolean;
@@ -1341,79 +1341,82 @@ var
     end;
   end;
 begin
-    Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
+  Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
-    if SchemaPattern = '' then
-      Temp_scheme := '' // OR  'main.'
-    else
-      Temp_scheme := SchemaPattern +'.';
+  ColumnCount := 0;
+  if SchemaPattern = '' then
+    Temp_scheme := '' // OR  'main.'
+  else
+    Temp_scheme := SchemaPattern +'.';
 
-    with GetConnection.CreateStatement.ExecuteQuery(
-      Format('PRAGMA %s table_info(''%s'')', [Temp_scheme, TableNamePattern])) do
+  with GetConnection.CreateStatement.ExecuteQuery(
+    Format('PRAGMA %s table_info(''%s'')', [Temp_scheme, TableNamePattern])) do
+  begin
+    while Next do
     begin
-      while Next do
+      Inc(ColumnCount);
+      Result.MoveToInsertRow;
+      if SchemaPattern <> '' then
+        Result.UpdateString(1, SchemaPattern)
+      else Result.UpdateNull(1);
+      Result.UpdateNull(2);
+      Result.UpdateString(3, TableNamePattern);
+      Result.UpdateString(4, GetString(2));
+      Result.UpdateInt(5, Ord(ConvertSQLiteTypeToSQLType(
+        GetString(3), Precision, Decimals,
+        GetConnection.GetClientCodePageInformations.Encoding,
+        GetConnection.UTF8StringAsWideField)));
+      { no column definition( '' ) and is PrimaryKey -> Type Integer!!
+        second curiosity: If definition = '' and FirsColumn then -> Type Integer!!
+       Manits #0000263}
+      if GetString(3) = '' then
+        if ( ColumnCount = 1 ) or IsPrimaryKey(GetString(2)) then
+          Result.UpdateInt(5, Ord(stInteger));
+
+      { Defines a table name. }
+      Temp := UpperCase(GetString(3));
+      if Pos('(', Temp) > 0 then
+        Temp := Copy(Temp, 1, Pos('(', Temp) - 1);
+      Result.UpdateString(6, Temp);
+
+      Result.UpdateInt(7, Precision);
+      Result.UpdateNull(8);
+      Result.UpdateInt(9, Decimals);
+      Result.UpdateInt(10, 0);
+
+      if GetInt(4) <> 0 then
       begin
-        Result.MoveToInsertRow;
-        if SchemaPattern <> '' then
-          Result.UpdateString(1, SchemaPattern)
-        else Result.UpdateNull(1);
-        Result.UpdateNull(2);
-        Result.UpdateString(3, TableNamePattern);
-        Result.UpdateString(4, GetString(2));
-        Result.UpdateInt(5, Ord(ConvertSQLiteTypeToSQLType(
-          GetString(3), Precision, Decimals,
-          GetConnection.GetClientCodePageInformations.Encoding,
-          GetConnection.UTF8StringAsWideField)));
-        { no column definition( '' ) and is PrimaryKey -> Type Integer!!
-         Manits #0000263}
-        if GetString(3) = '' then
-          if IsPrimaryKey(GetString(2)) then
-            Result.UpdateInt(5, Ord(stInteger));
-
-        { Defines a table name. }
-        Temp := UpperCase(GetString(3));
-        if Pos('(', Temp) > 0 then
-          Temp := Copy(Temp, 1, Pos('(', Temp) - 1);
-        Result.UpdateString(6, Temp);
-
-        Result.UpdateInt(7, Precision);
-        Result.UpdateNull(8);
-        Result.UpdateInt(9, Decimals);
-        Result.UpdateInt(10, 0);
-
-        if GetInt(4) <> 0 then
-        begin
-          Result.UpdateInt(11, Ord(ntNoNulls));
-          Result.UpdateString(18, 'NO');
-        end
-        else
-        begin
-          Result.UpdateInt(11, Ord(ntNullable));
-          Result.UpdateString(18, 'YES');
-        end;
-
-        Result.UpdateNull(12);
-        if Trim(GetString(5)) <> '' then
-          Result.UpdateString(13, GetString(5))
-//          Result.UpdateString(13, '''' + GetString(5) + '''')
-        else Result.UpdateNull(13);
-        Result.UpdateNull(14);
-        Result.UpdateNull(15);
-        Result.UpdateNull(16);
-        Result.UpdateInt(17, GetInt(1) + 1);
-
-        Result.UpdateBooleanByName('AUTO_INCREMENT',
-          (GetInt(6) = 1) and (Temp = 'INTEGER'));
-        Result.UpdateBooleanByName('CASE_SENSITIVE', False);
-        Result.UpdateBooleanByName('SEARCHABLE', True);
-        Result.UpdateBooleanByName('WRITABLE', True);
-        Result.UpdateBooleanByName('DEFINITELYWRITABLE', True);
-        Result.UpdateBooleanByName('READONLY', False);
-
-        Result.InsertRow;
+        Result.UpdateInt(11, Ord(ntNoNulls));
+        Result.UpdateString(18, 'NO');
+      end
+      else
+      begin
+        Result.UpdateInt(11, Ord(ntNullable));
+        Result.UpdateString(18, 'YES');
       end;
-      Close;
+
+      Result.UpdateNull(12);
+      if Trim(GetString(5)) <> '' then
+        Result.UpdateString(13, GetString(5))
+//          Result.UpdateString(13, '''' + GetString(5) + '''')
+      else Result.UpdateNull(13);
+      Result.UpdateNull(14);
+      Result.UpdateNull(15);
+      Result.UpdateNull(16);
+      Result.UpdateInt(17, GetInt(1) + 1);
+
+      Result.UpdateBooleanByName('AUTO_INCREMENT',
+        (GetInt(6) = 1) and (Temp = 'INTEGER'));
+      Result.UpdateBooleanByName('CASE_SENSITIVE', False);
+      Result.UpdateBooleanByName('SEARCHABLE', True);
+      Result.UpdateBooleanByName('WRITABLE', True);
+      Result.UpdateBooleanByName('DEFINITELYWRITABLE', True);
+      Result.UpdateBooleanByName('READONLY', False);
+
+      Result.InsertRow;
     end;
+    Close;
+  end;
 end;
 
 {**
