@@ -1336,10 +1336,8 @@ var
       BeforeFirst;
       if Next then //Primary key is unique
         if GetString(4)=ColumnName then
-        begin
-          Close;
           Result := True;
-        end;
+      Close;
     end;
   end;
 begin
