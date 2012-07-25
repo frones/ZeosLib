@@ -2227,10 +2227,8 @@ end;
 }
 
 {$IFDEF WITH_TRECORDBUFFER}
-
 procedure TZAbstractRODataset.InternalSetToRecord(Buffer: TRecordBuffer);
 {$ELSE}
-
 procedure TZAbstractRODataset.InternalSetToRecord(Buffer: PChar);
 {$ENDIF}
 begin
@@ -2262,11 +2260,9 @@ end;
 }
 procedure TZAbstractRODataset.InternalPost;
   procedure Checkrequired;
-
   var
     I: longint;
     columnindex : integer;
-
   begin
     For I:=0 to Fields.Count-1 do
       With Fields[i] do
@@ -2318,11 +2314,9 @@ end;
 }
 
 {$IFDEF WITH_TRECORDBUFFER}
-
 procedure TZAbstractRODataset.SetBookmarkFlag(Buffer: TRecordBuffer;
   Value: TBookmarkFlag);
 {$ELSE}
-
 procedure TZAbstractRODataset.SetBookmarkFlag(Buffer: PChar;
   Value: TBookmarkFlag);
 {$ENDIF}

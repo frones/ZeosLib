@@ -248,7 +248,7 @@ begin
 
     for i := 0 to SQLMonitor.TraceCount -1 do
       if SQLMonitor.TraceList[i].Category = lcTransaction then
-        if Pos('COMMIT', SQLMonitor.TraceList[i].Message) > 0 then
+        if Pos('COMMIT', UpperCase(SQLMonitor.TraceList[i].Message)) > 0 then
           Inc(CommitCount);
     CheckEquals(1, CommitCount, 'CommitCount');
   finally
@@ -314,13 +314,13 @@ begin
 
     for i := 0 to SQLMonitor.TraceCount -1 do
       if SQLMonitor.TraceList[i].Category = lcTransaction then
-        if Pos('COMMIT', SQLMonitor.TraceList[i].Message) > 0 then
+        if Pos('COMMIT', UpperCase(SQLMonitor.TraceList[i].Message)) > 0 then
           Inc(CommitCount);
     CheckEquals(1, CommitCount, 'CommitCount');
   finally
-    MasterQuery.SQL.Text := 'delete from department where dep_id = '+IntToStr(TestRowID);
-    MasterQuery.ExecSQL;
     MasterQuery.SQL.Text := 'delete from people where p_id = '+IntToStr(TestRowID);
+    MasterQuery.ExecSQL;
+    MasterQuery.SQL.Text := 'delete from department where dep_id = '+IntToStr(TestRowID);
     MasterQuery.ExecSQL;
     SQLMonitor.Free;
   end;

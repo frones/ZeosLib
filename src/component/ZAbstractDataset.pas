@@ -84,6 +84,7 @@ type
   }
   TZAbstractDataset = class(TZAbstractRODataset)
   private
+    FCachedUpdatesBeforeMasterUpdate: Boolean;
     FCachedUpdates: Boolean;
     FUpdateObject: TZUpdateSQL;
     FCachedResultSet: IZCachedResultSet;
@@ -447,6 +448,9 @@ var
   {$ELSE}
   BM:TBookMarkStr;
   {$ENDIF}
+  DetailLinks: TList;
+  I: Integer;
+  FCachedUpdates: Array of Boolean;
 begin
   if (FSequenceField <> '') and Assigned(FSequence) then
   begin
@@ -456,15 +460,49 @@ begin
 
   //inherited;  //AVZ - Firebird defaults come through when this is commented out
 
+  DetailLinks := TList.Create;
+
   if not GetActiveBuffer(RowBuffer) then
     raise EZDatabaseError.Create(SInternalError);
 
   Connection.ShowSqlHourGlass;
   try
+    //revert Master Detail updates makes it possible to update
+    // with ForeignKey relations
+    GetDetailDataSets(DetailLinks);
+
+    if Assigned(MasterLink.DataSet) then
+    begin //This is an detail-table
+      FCachedUpdatesBeforeMasterUpdate := CachedUpdates; //buffer old value
+      CachedUpdates := True; //Execute without writing
+    end;
+    // Do cache the updates
+    if DetailLinks.Count > 0 then
+      for i := 0 to DetailLinks.Count -1 do
+        if (TDataSet(DetailLinks.Items[i]) is TZAbstractDataset) then
+        begin
+          SetLength(FCachedUpdates, Length(FCachedUpdates)+1);
+          FCachedUpdates[High(FCachedUpdates)] := TZAbstractDataset(TDataSet(DetailLinks.Items[i])).FCachedUpdatesBeforeMasterUpdate;
+        end
+        else
+          DetailLinks.Items[I] := nil; //no Zeos DataSet
+
+    //Excute Own Update First
     if State = dsInsert then
       InternalAddRecord(RowBuffer, False)
     else
       InternalUpdate;
+
+    // Apply Detail updates
+    if DetailLinks.Count > 0 then
+      for i := 0 to DetailLinks.Count -1 do
+        if Assigned(DetailLinks.Items[I]) then
+          if (TDataSet(DetailLinks.Items[i]) is TZAbstractDataset) then
+            begin
+              TZAbstractDataset(TDataSet(DetailLinks.Items[i])).ApplyUpdates;
+              TZAbstractDataset(TDataSet(DetailLinks.Items[i])).CachedUpdates := FCachedUpdates[I];
+            end;
+    SetLength(FCachedUpdates, 0);
 
     {BUG-FIX: bangfauzan addition}
     if (SortedFields <> '') and not (doDontSortOnPost in Options) then
@@ -476,8 +514,8 @@ begin
       if BookmarkValid({$IFDEF WITH_TBOOKMARK}BM{$ELSE}@BM{$ENDIF}) Then
       begin
         InternalGotoBookmark({$IFDEF WITH_TBOOKMARK}BM{$ELSE}@BM{$ENDIF});
-        Resync([rmExact, rmCenter]); 
-      end; 
+        Resync([rmExact, rmCenter]);
+      end;
       DisableControls;
       InternalSort;
       BookMark:=BM;
@@ -487,6 +525,7 @@ begin
     {end of bangfauzan addition}
   finally
     Connection.HideSqlHourGlass;
+    DetailLinks.Free;
   end;
 end;
 
