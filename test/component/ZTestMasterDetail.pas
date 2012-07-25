@@ -258,7 +258,7 @@ begin
     MasterQuery.ExecSQL;
     MasterQuery.SQL.Text := 'delete from date_values where d_id = '+IntToStr(TestRowID+1);
     MasterQuery.ExecSQL;
-    MasterQuery.SQL.Text := 'delete from date_values where d_id = '+IntToStr(TestRowID+1);
+    MasterQuery.SQL.Text := 'delete from date_values where d_id = '+IntToStr(TestRowID+2);
     MasterQuery.ExecSQL;
     SQLMonitor.Free;
   end;
