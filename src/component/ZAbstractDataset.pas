@@ -465,11 +465,11 @@ begin
   if not GetActiveBuffer(RowBuffer) then
     raise EZDatabaseError.Create(SInternalError);
 
-  Connection.ShowSqlHourGlass;
+  Connection.ShowSqlHourGlass;}
   try
     //revert Master Detail updates makes it possible to update
     // with ForeignKey relations
-    GetDetailDataSets(DetailLinks);
+    {GetDetailDataSets(DetailLinks);
 
     if Assigned(MasterLink.DataSet) then
     begin //This is an detail-table
@@ -525,7 +525,7 @@ begin
     {end of bangfauzan addition}
   finally
     Connection.HideSqlHourGlass;
-    DetailLinks.Free;
+    //DetailLinks.Free;
   end;
 end;
 
