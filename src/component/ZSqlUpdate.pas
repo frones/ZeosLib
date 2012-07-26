@@ -541,10 +541,8 @@ var
   ParamValue: TParam;
   ParamName: string;
   OldParam: Boolean;
-//  SeqParam: Boolean;
   WasNull: Boolean;
   RowAccessor: TZRowAccessor;
-  Stream: TStream;
   TempBlob: IZBlob;
 begin
   WasNull := False;

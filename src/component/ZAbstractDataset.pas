@@ -448,9 +448,9 @@ var
   {$ELSE}
   BM:TBookMarkStr;
   {$ENDIF}
-  DetailLinks: TList;
+  {DetailLinks: TList;
   I: Integer;
-  FCachedUpdates: Array of Boolean;
+  FCachedUpdates: Array of Boolean;}
 begin
   if (FSequenceField <> '') and Assigned(FSequence) then
   begin
@@ -460,7 +460,7 @@ begin
 
   //inherited;  //AVZ - Firebird defaults come through when this is commented out
 
-  DetailLinks := TList.Create;
+  {DetailLinks := TList.Create;
 
   if not GetActiveBuffer(RowBuffer) then
     raise EZDatabaseError.Create(SInternalError);
@@ -486,14 +486,14 @@ begin
         end
         else
           DetailLinks.Items[I] := nil; //no Zeos DataSet
-
+    }
     //Excute Own Update First
     if State = dsInsert then
       InternalAddRecord(RowBuffer, False)
     else
       InternalUpdate;
 
-    // Apply Detail updates
+    {// Apply Detail updates
     if DetailLinks.Count > 0 then
       for i := 0 to DetailLinks.Count -1 do
         if Assigned(DetailLinks.Items[I]) then
@@ -502,7 +502,7 @@ begin
               TZAbstractDataset(TDataSet(DetailLinks.Items[i])).ApplyUpdates;
               TZAbstractDataset(TDataSet(DetailLinks.Items[i])).CachedUpdates := FCachedUpdates[I];
             end;
-    SetLength(FCachedUpdates, 0);
+    SetLength(FCachedUpdates, 0);}
 
     {BUG-FIX: bangfauzan addition}
     if (SortedFields <> '') and not (doDontSortOnPost in Options) then
