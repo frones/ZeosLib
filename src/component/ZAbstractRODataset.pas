@@ -77,7 +77,8 @@ type
 
   {** Options for dataset. }
   TZDatasetOption = (doOemTranslate, doCalcDefaults, doAlwaysDetailResync,
-    doSmartOpen, doPreferPrepared, doPreferPreparedResolver, doDontSortOnPost);
+    doSmartOpen, doPreferPrepared, doPreferPreparedResolver, doDontSortOnPost,
+    doUpdateMasterFirst);
 
   {** Set of dataset options. }
   TZDatasetOptions = set of TZDatasetOption;

@@ -98,7 +98,8 @@ type
 
     FBeforeApplyUpdates: TNotifyEvent; {bangfauzan addition}
     FAfterApplyUpdates: TNotifyEvent; {bangfauzan addition}
-
+    FDetailDataSets: TList;
+    FDetailCachedUpdates: array of Boolean;
   private
     function GetUpdatesPending: Boolean;
     procedure SetUpdateObject(Value: TZUpdateSQL);
@@ -139,7 +140,7 @@ type
     function PSUpdateRecord(UpdateKind: TUpdateKind;
       Delta: TDataSet): Boolean; override;
   {$ENDIF}
-
+    procedure RegisterDetailDataSet(Value: TZAbstractDataset; CachedUpdates: Boolean);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -208,6 +209,7 @@ begin
   FWhereMode := wmWhereKeyOnly;
   FUpdateMode := umUpdateChanged;
   RequestLive := True;
+  FDetailDataSets := TList.Create;
 end;
 
 {**
@@ -215,6 +217,7 @@ end;
 }
 destructor TZAbstractDataset.Destroy;
 begin
+  FreeAndNil(FDetailDataSets);
   inherited Destroy;
 end;
 
@@ -448,9 +451,7 @@ var
   {$ELSE}
   BM:TBookMarkStr;
   {$ENDIF}
-  {DetailLinks: TList;
   I: Integer;
-  FCachedUpdates: Array of Boolean;}
 begin
   if (FSequenceField <> '') and Assigned(FSequence) then
   begin
@@ -460,49 +461,40 @@ begin
 
   //inherited;  //AVZ - Firebird defaults come through when this is commented out
 
-  {DetailLinks := TList.Create;
 
   if not GetActiveBuffer(RowBuffer) then
     raise EZDatabaseError.Create(SInternalError);
 
-  Connection.ShowSqlHourGlass;}
+  Connection.ShowSqlHourGlass;
   try
     //revert Master Detail updates makes it possible to update
-    // with ForeignKey relations
-    {GetDetailDataSets(DetailLinks);
-
+    // with ForeignKey contraints
     if Assigned(MasterLink.DataSet) then
-    begin //This is an detail-table
-      FCachedUpdatesBeforeMasterUpdate := CachedUpdates; //buffer old value
-      CachedUpdates := True; //Execute without writing
-    end;
-    // Do cache the updates
-    if DetailLinks.Count > 0 then
-      for i := 0 to DetailLinks.Count -1 do
-        if (TDataSet(DetailLinks.Items[i]) is TZAbstractDataset) then
-        begin
-          SetLength(FCachedUpdates, Length(FCachedUpdates)+1);
-          FCachedUpdates[High(FCachedUpdates)] := TZAbstractDataset(TDataSet(DetailLinks.Items[i])).FCachedUpdatesBeforeMasterUpdate;
-        end
-        else
-          DetailLinks.Items[I] := nil; //no Zeos DataSet
-    }
-    //Excute Own Update First
+      if (TDataSet(MasterLink.DataSet) is TZAbstractDataset) then
+        if ( doUpdateMasterFirst in TZAbstractDataset(MasterLink.DataSet).Options )
+         or ( doUpdateMasterFirst in Options ) then
+        begin //This is an detail-table
+          FCachedUpdatesBeforeMasterUpdate := CachedUpdates; //buffer old value
+          CachedUpdates := True; //Execute without writing
+          TZAbstractDataset(MasterLink.DataSet).RegisterDetailDataSet(Self,
+            TZAbstractDataset(MasterLink.DataSet).CachedUpdates);
+        end;
+
     if State = dsInsert then
       InternalAddRecord(RowBuffer, False)
     else
       InternalUpdate;
 
-    {// Apply Detail updates
-    if DetailLinks.Count > 0 then
-      for i := 0 to DetailLinks.Count -1 do
-        if Assigned(DetailLinks.Items[I]) then
-          if (TDataSet(DetailLinks.Items[i]) is TZAbstractDataset) then
-            begin
-              TZAbstractDataset(TDataSet(DetailLinks.Items[i])).ApplyUpdates;
-              TZAbstractDataset(TDataSet(DetailLinks.Items[i])).CachedUpdates := FCachedUpdates[I];
-            end;
-    SetLength(FCachedUpdates, 0);}
+    // Apply Detail updates now
+    if FDetailDataSets.Count > 0 then
+      for i := 0 to FDetailDataSets.Count -1 do
+        if (TDataSet(FDetailDataSets.Items[i]) is TZAbstractDataset) then
+          begin
+            TZAbstractDataset(TDataSet(FDetailDataSets.Items[i])).ApplyUpdates;
+            TZAbstractDataset(TDataSet(FDetailDataSets.Items[i])).CachedUpdates := Self.FDetailCachedUpdates[I];
+          end;
+    FDetailDataSets.Clear;
+    SetLength(FDetailCachedUpdates, 0);
 
     {BUG-FIX: bangfauzan addition}
     if (SortedFields <> '') and not (doDontSortOnPost in Options) then
@@ -909,6 +901,13 @@ begin
 end;
 
 {$ENDIF}
+procedure TZAbstractDataset.RegisterDetailDataSet(Value: TZAbstractDataset;
+  CachedUpdates: Boolean);
+begin
+  FDetailDataSets.Add(Value);
+  SetLength(Self.FDetailCachedUpdates, Length(FDetailCachedUpdates)+1);
+  FDetailCachedUpdates[High(FDetailCachedUpdates)] := CachedUpdates;
+end;
 
 {============================bangfauzan addition===================}
 

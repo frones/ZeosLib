@@ -83,7 +83,8 @@ type
 
 implementation
 
-uses Classes, ZDbcUtils, ZTestConsts, ZDbcIntfs, ZSqlMonitor, ZdbcLogging;
+uses Classes, ZDbcUtils, ZTestConsts, ZDbcIntfs, ZSqlMonitor, ZdbcLogging,
+  ZAbstractRODataset;
 
 const TestRowID = 1000;
 
@@ -104,12 +105,15 @@ begin
 
   DetailQuery := TZQuery.Create(nil);
   DetailQuery.Connection := Connection;
+  DetailQuery.Options := DetailQuery.Options + [doUpdateMasterFirst];
 
   DetailQuery2 := TZQuery.Create(nil);
   DetailQuery2.Connection := Connection;
+  DetailQuery2.Options := DetailQuery2.Options + [doUpdateMasterFirst];
 
   DetailQuery3 := TZQuery.Create(nil);
   DetailQuery3.Connection := Connection;
+  DetailQuery3.Options := DetailQuery3.Options + [doUpdateMasterFirst];
 end;
 
 {**
