@@ -76,7 +76,8 @@ uses
   ZTestBugDbcInterbase in '..\..\test\bugreport\ZTestBugDbcInterbase.pas',
   ZTestBugDbcMySql in '..\..\test\bugreport\ZTestBugDbcMySql.pas',
   ZTestBugDbcOracle in '..\..\test\bugreport\ZTestBugDbcOracle.pas',
-  ZTestBugDbcPostgreSql in '..\..\test\bugreport\ZTestBugDbcPostgreSql.pas';
+  ZTestBugDbcPostgreSql in '..\..\test\bugreport\ZTestBugDbcPostgreSql.pas',
+  ZTestBugCompSQLite in '..\..\test\bugreport\ZTestBugCompSQLite.pas';
 
 begin
   TestGroup := BUGREPORT_TEST_GROUP;

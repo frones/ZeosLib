@@ -51,8 +51,7 @@ contains
   ZTestCase in '..\..\test\framework\ZTestCase.pas',
   ZBugReport in '..\..\test\framework\ZBugReport.pas',
   ZPerformanceTestCase in '..\..\test\framework\ZPerformanceTestCase.pas',
-  TestFramework in 'C:\DUnit\src\TestFramework.pas'
-  {$IFNDEF WIN64}, MemCheck in '..\..\test\external\MemCheck.pas'{$ENDIF};
+  MemCheck in '..\..\test\external\MemCheck.pas';
 
 {TextTestRunner in '..\..\test\external\TextTestRunner.pas',
   GUITestRunner in '..\..\test\external\GUITestRunner.pas',

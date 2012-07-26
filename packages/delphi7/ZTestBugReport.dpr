@@ -59,36 +59,24 @@ program ZTestBugReport;
 
 uses
   TestFrameWork,
-{$IFDEF TESTGUI}
   GUITestRunner,
-{$ELSE}
   TextTestRunner,
-{$ENDIF}
   ZTestConfig,
   ZSqlTestCase,
   ZTestBugDbcCore in '..\..\test\bugreport\ZTestBugDbcCore.pas',
   ZTestBugCompCore in '..\..\test\bugreport\ZTestBugCompCore.pas',
-{$IFDEF ENABLE_MYSQL}
   ZTestBugDbcMySql in '..\..\test\bugreport\ZTestBugDbcMySql.pas',
   ZTestBugCompMySql in '..\..\test\bugreport\ZTestBugCompMySql.pas',
-{$ENDIF}
-{$IFDEF ENABLE_ORACLE}
   ZTestBugDbcOracle in '..\..\test\bugreport\ZTestBugDbcOracle.pas',
   ZTestBugCompOracle in '..\..\test\bugreport\ZTestBugCompOracle.pas',
-{$ENDIF}
-{$IFDEF ENABLE_POSTGRESQL}
   ZTestBugDbcPostgreSql in '..\..\test\bugreport\ZTestBugDbcPostgreSql.pas',
   ZTestBugCompPostgreSql in '..\..\test\bugreport\ZTestBugCompPostgreSql.pas',
-{$ENDIF}
-{$IFDEF ENABLE_INTERBASE}
   ZTestBugDbcInterbase in '..\..\test\bugreport\ZTestBugDbcInterbase.pas',
   ZTestBugCompInterbase in '..\..\test\bugreport\ZTestBugCompInterbase.pas',
-{$ENDIF}
-{$IFDEF ENABLE_DBLIB}
   ZTestBugDbcDbLib in '..\..\test\bugreport\ZTestBugDbcDbLib.pas',
   ZTestBugCompDbLib in '..\..\test\bugreport\ZTestBugCompDbLib.pas',
-{$ENDIF}
-  ZTestBugCompMSSql in '..\..\test\bugreport\ZTestBugCompMSSql.pas';
+  ZTestBugCompMSSql in '..\..\test\bugreport\ZTestBugCompMSSql.pas',
+  ZTestBugCompSQLite in '..\..\test\bugreport\ZTestBugCompSQLite.pas';
 
 begin
   TestGroup := BUGREPORT_TEST_GROUP;

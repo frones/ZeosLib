@@ -9,8 +9,9 @@
 			<Platform>Win32</Platform>
 			<AppType>Console</AppType>
 			<FrameworkType>None</FrameworkType>
+			<Basis>True</Basis>
 		</PropertyGroup>
-		<PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
+		<PropertyGroup Condition="'$(Config)'=='Basis' or '$(Base)'!=''">
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Config)'=='Release' or '$(Cfg_1)'!=''">
@@ -52,26 +53,30 @@
 			<DelphiCompile Include="ZTestDbcAll.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
-			<DCCReference Include="..\..\test\dbc\ZTestDbcUtils.pas"/>
+			<DCCReference Include="..\..\test\dbc\ZTestDbcASA.pas"/>
+			<DCCReference Include="..\..\test\dbc\ZTestDbcASAMetadata.pas"/>
 			<DCCReference Include="..\..\test\dbc\ZTestDbcCache.pas"/>
 			<DCCReference Include="..\..\test\dbc\ZTestDbcCachedResultSet.pas"/>
+			<DCCReference Include="..\..\test\dbc\ZTestDbcGeneric.pas"/>
+			<DCCReference Include="..\..\test\dbc\ZTestDbcInterbase.pas"/>
+			<DCCReference Include="..\..\test\dbc\ZTestDbcInterbaseMetadata.pas"/>
+			<DCCReference Include="..\..\test\dbc\ZTestDbcMetadata.pas"/>
+			<DCCReference Include="..\..\test\dbc\ZTestDbcMsSql.pas"/>
+			<DCCReference Include="..\..\test\dbc\ZTestDbcMySql.pas"/>
+			<DCCReference Include="..\..\test\dbc\ZTestDbcMySqlMetadata.pas"/>
+			<DCCReference Include="..\..\test\dbc\ZTestDbcOracle.pas"/>
+			<DCCReference Include="..\..\test\dbc\ZTestDbcPostgreSql.pas"/>
+			<DCCReference Include="..\..\test\dbc\ZTestDbcPostgreSqlMetadata.pas"/>
+			<DCCReference Include="..\..\test\dbc\ZTestDbcResolver.pas"/>
 			<DCCReference Include="..\..\test\dbc\ZTestDbcResultSet.pas"/>
 			<DCCReference Include="..\..\test\dbc\ZTestDbcResultSetMetadata.pas"/>
-			<DCCReference Include="..\..\test\dbc\ZTestDbcResolver.pas"/>
-			<DCCReference Include="..\..\test\dbc\ZTestDbcMetadata.pas"/>
-			<DCCReference Include="..\..\test\dbc\ZTestDbcGeneric.pas"/>
-			<DCCReference Include="..\..\test\dbc\ZTestDbcMySqlMetadata.pas"/>
-			<DCCReference Include="..\..\test\dbc\ZTestDbcMySql.pas"/>
-			<DCCReference Include="..\..\test\dbc\ZTestDbcPostgreSqlMetadata.pas"/>
-			<DCCReference Include="..\..\test\dbc\ZTestDbcPostgreSql.pas"/>
-			<DCCReference Include="..\..\test\dbc\ZTestDbcSqLite.pas">
-				<Form>/  ZTestDbcInterbaseMetadata in &apos;..\..\test\dbc\ZTestDbcInterbaseMetadata.pas&apos;,</Form>
-			</DCCReference>
+			<DCCReference Include="..\..\test\dbc\ZTestDbcSqLite.pas"/>
+			<DCCReference Include="..\..\test\dbc\ZTestDbcUtils.pas"/>
 			<BuildConfiguration Include="Debug">
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>
 			</BuildConfiguration>
-			<BuildConfiguration Include="Base">
+			<BuildConfiguration Include="Basis">
 				<Key>Base</Key>
 			</BuildConfiguration>
 			<BuildConfiguration Include="Release">

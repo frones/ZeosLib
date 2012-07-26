@@ -60,22 +60,20 @@ program ZTestComponentAll;
 
 uses
   TestFrameWork,
-{$IFDEF TESTGUI}
-  GUITestRunner,
-{$ELSE}
   TextTestRunner,
-{$ENDIF}
   ZTestConfig,
   ZSqlTestCase,
-  ZTestSqlStrings in '..\..\test\component\ZTestSqlStrings.pas',
-  ZTestSqlProcessor in '..\..\test\component\ZTestSqlProcessor.pas',
-  ZTestStoredProcedure in '..\..\test\component\ZTestStoredProcedure.pas',
   ZTestConnection in '..\..\test\component\ZTestConnection.pas',
-  ZTestExecuteSql in '..\..\test\component\ZTestExecuteSql.pas',
-  ZTestSqlTypes in '..\..\test\component\ZTestSqlTypes.pas',
+  ZTestData in '..\..\test\component\ZTestData.pas',
   ZTestDataSetGeneric in '..\..\test\component\ZTestDataSetGeneric.pas',
-  ZTestData in '..\..\test\component\ZTestData.pas'{,
-  ZTestMidas in '..\..\test\component\ZTestMidas.pas'} {ZRemoteDM: TRemoteDataModule};
+  ZTestExecuteSql in '..\..\test\component\ZTestExecuteSql.pas',
+  ZTestMasterDetail in '..\..\test\component\ZTestMasterDetail.pas',
+  ZTestSorting in '..\..\test\component\ZTestSorting.pas',
+  ZTestSqlMetadata in '..\..\test\component\ZTestSqlMetadata.pas',
+  ZTestSqlProcessor in '..\..\test\component\ZTestSqlProcessor.pas',
+  ZTestSqlStrings in '..\..\test\component\ZTestSqlStrings.pas',
+  ZTestSqlTypes in '..\..\test\component\ZTestSqlTypes.pas',
+  ZTestStoredProcedure in '..\..\test\component\ZTestStoredProcedure.pas';
 
 begin
   TestGroup := COMPONENT_TEST_GROUP;

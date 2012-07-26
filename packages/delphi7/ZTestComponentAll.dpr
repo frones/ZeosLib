@@ -59,11 +59,8 @@ program ZTestComponentAll;
 
 uses
   TestFrameWork,
-{$IFDEF TESTGUI}
   GUITestRunner,
-{$ELSE}
   TextTestRunner,
-{$ENDIF}
   ZTestConfig,
   ZSqlTestCase,
   ZTestSqlStrings in '..\..\test\component\ZTestSqlStrings.pas',
@@ -74,7 +71,8 @@ uses
   ZTestSqlTypes in '..\..\test\component\ZTestSqlTypes.pas',
   ZTestDataSetGeneric in '..\..\test\component\ZTestDataSetGeneric.pas',
   ZTestData in '..\..\test\component\ZTestData.pas',
-  ZTestMidas in '..\..\test\component\ZTestMidas.pas';
+  ZTestMidas in '..\..\test\component\ZTestMidas.pas',
+  ZTestMasterDetail in '..\..\test\component\ZTestMasterDetail.pas';
 
 begin
   TestGroup := COMPONENT_TEST_GROUP;
