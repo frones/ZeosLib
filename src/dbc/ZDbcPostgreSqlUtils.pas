@@ -675,17 +675,50 @@ procedure CheckPostgreSQLError(Connection: IZConnection;
   Handle: PZPostgreSQLConnect; LogCategory: TZLoggingCategory;
   const LogMessage: string;
   ResultHandle: PZPostgreSQLResult);
-
 var
    ErrorMessage: string;
 //FirmOS
    StatusCode: string;
    ConnectionLost: boolean;
+
+   function GetMessage(AMessage: PAnsiChar): String;
+   begin
+    if Assigned(Connection) then
+      {$IFDEF DELPHI12_UP}
+      ErrorMessage := Trim(PlainDriver.ZDbcString(StrPas(AMessage), Connection.GetEncoding))
+      {$ELSE}
+        case Connection.GetEncoding of
+          ceAnsi:
+            {$IF defined(LAZARUSUTF8) or defined(UNIX)}
+            Result := Trim(AnsiToUtf8(StrPas(AMessage)));
+            {$ELSE}
+            Result := Trim(StrPas(AMessage));
+            {$IFEND}
+          ceUTF8:
+            {$IF defined(LAZARUSUTF8) or defined (UNIX)}
+            Result := Trim(StrPas(AMessage));
+            {$ELSE}
+            Result := Trim(Utf8ToAnsi(StrPas(AMessage)));
+            {$IFEND}
+        end
+     {$ENDIF}
+    else
+      {$IFDEF DELPHI12_UP}
+      ErrorMessage := Trim(UTF8ToString(StrPas(AMessage)));
+      {$ELSE}
+        {$IF defined(LAZARUSUTF8) or defined (UNIX)}
+        Result := Trim(StrPas(AMessage));
+        {$ELSE}
+        Result := Trim(Utf8ToAnsi(StrPas(AMessage)));
+        {$IFEND}
+     {$ENDIF}
+   end;
 begin
   if Assigned(Handle) then
-    ErrorMessage := Trim(String(StrPas(PlainDriver.GetErrorMessage(Handle))))
+    ErrorMessage := GetMessage(PlainDriver.GetErrorMessage(Handle))
   else
     ErrorMessage := '';
+
   if ErrorMessage <> '' then
   begin
     if Assigned(ResultHandle) then
@@ -701,8 +734,8 @@ begin
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SOURCE_FILE)));
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SOURCE_LINE)));
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SOURCE_FUNCTION)));
-}     
-     StatusCode := Trim(String(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SQLSTATE))));
+}
+     StatusCode := GetMessage(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SQLSTATE));
     end
     else
     begin
