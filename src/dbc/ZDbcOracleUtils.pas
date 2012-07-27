@@ -69,7 +69,7 @@ const
 
 type
   {** Declares SQL Object }
-  TZSQLVar = packed record
+  TZSQLVar = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
     Handle:    POCIHandle;
     Define:    POCIHandle;
     BindHandle: POCIBind;
@@ -88,7 +88,7 @@ type
   end;
   PZSQLVar = ^TZSQLVar;
 
-  TZSQLVars = packed record
+  TZSQLVars = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
     AllocNum:  ub4;
     ActualNum: ub4;
     Variables: array[1..MAX_SQLVAR_LIMIT] of TZSQLVar;

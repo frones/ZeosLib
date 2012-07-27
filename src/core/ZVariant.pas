@@ -74,7 +74,7 @@ type
     vtUnicodeString, vtDateTime, vtPointer, vtInterface);
 
   {** Defines a variant structure. }
-  TZVariant = packed record
+  TZVariant = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
     VType: TZVariantType;
     VString: String;
     {$IFDEF DELPHI12_UP}

@@ -85,7 +85,7 @@ type
     token is a receptacle, and relies on a tokenizer to decide
     precisely how to divide a string into tokens.
   }
-  TZToken = packed record
+  TZToken = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
     Value: string;
     TokenType: TZTokenType;
   end;
