@@ -114,7 +114,8 @@ function EncodeBinaryString(const Value: AnsiString): AnsiString;
   @param Value the regular string.
   @return the encoded string.
 }
-function EncodeString(CharactersetCode: TZPgCharactersetType; const Value: string): string; overload;
+function EncodeString(const StandardConformingStrings: Boolean;
+  const CharactersetCode: TZPgCharactersetType; const Value: string): string; overload;
 
 {**
   Converts an string from escape PostgreSQL format.
@@ -507,52 +508,57 @@ end;
   @param Value the regular string.
   @return the encoded string.
 }
-function EncodeString(CharactersetCode: TZPgCharactersetType; const Value: string): string;
+function EncodeString(const StandardConformingStrings: Boolean;
+  const CharactersetCode: TZPgCharactersetType; const Value: string): string;
 var
   I, LastState: Integer;
   SrcLength, DestLength: Integer;
   SrcBuffer, DestBuffer: PChar;
- begin
-  SrcLength := Length(Value);
-  SrcBuffer := PChar(Value);
-  DestLength := 2;
-  LastState := 0;
-  for I := 1 to SrcLength do
+begin
+  if not (StandardConformingStrings) then
   begin
-    LastState := pg_CS_stat(LastState,integer(SrcBuffer^),CharactersetCode);
-    if CharInSet(SrcBuffer^, [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
-      Inc(DestLength, 4)
-    else
-      Inc(DestLength);
-    Inc(SrcBuffer);
-  end;
-
-  SrcBuffer := PChar(Value);
-  SetLength(Result, DestLength);
-  DestBuffer := PChar(Result);
-  DestBuffer^ := '''';
-  Inc(DestBuffer);
-
-  LastState := 0;
-  for I := 1 to SrcLength do
-  begin
-    LastState := pg_CS_stat(LastState,integer(SrcBuffer^),CharactersetCode);
-    if CharInSet(SrcBuffer^, [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
+    SrcLength := Length(Value);
+    SrcBuffer := PChar(Value);
+    DestLength := 2;
+    LastState := 0;
+    for I := 1 to SrcLength do
     begin
-      DestBuffer[0] := '\';
-      DestBuffer[1] := Char(Ord('0') + (Byte(SrcBuffer^) shr 6));
-      DestBuffer[2] := Char(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
-      DestBuffer[3] := Char(Ord('0') + (Byte(SrcBuffer^) and $07));
-      Inc(DestBuffer, 4);
-    end
-    else
-    begin
-      DestBuffer^ := SrcBuffer^;
-      Inc(DestBuffer);
+      LastState := pg_CS_stat(LastState,integer(SrcBuffer^),CharactersetCode);
+      if CharInSet(SrcBuffer^, [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
+        Inc(DestLength, 4)
+      else
+        Inc(DestLength);
+      Inc(SrcBuffer);
     end;
-    Inc(SrcBuffer);
-  end;
-  DestBuffer^ := '''';
+
+    SrcBuffer := PChar(Value);
+    SetLength(Result, DestLength);
+    DestBuffer := PChar(Result);
+    DestBuffer^ := '''';
+    Inc(DestBuffer);
+
+    LastState := 0;
+    for I := 1 to SrcLength do
+    begin
+      LastState := pg_CS_stat(LastState,integer(SrcBuffer^),CharactersetCode);
+      if CharInSet(SrcBuffer^, [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
+      begin
+        DestBuffer[0] := '\';
+        DestBuffer[1] := Char(Ord('0') + (Byte(SrcBuffer^) shr 6));
+        DestBuffer[2] := Char(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
+        DestBuffer[3] := Char(Ord('0') + (Byte(SrcBuffer^) and $07));
+        Inc(DestBuffer, 4);
+      end
+      else
+      begin
+        DestBuffer^ := SrcBuffer^;
+        Inc(DestBuffer);
+      end;
+      Inc(SrcBuffer);
+    end;
+    DestBuffer^ := '''';
+  end
+  else Result := Value;
 end;
 
 
@@ -685,7 +691,7 @@ var
    begin
     if Assigned(Connection) then
       {$IFDEF DELPHI12_UP}
-      ErrorMessage := Trim(PlainDriver.ZDbcString(StrPas(AMessage), Connection.GetEncoding))
+      Result := Trim(PlainDriver.ZDbcString(StrPas(AMessage), Connection.GetEncoding))
       {$ELSE}
         case Connection.GetEncoding of
           ceAnsi:
@@ -704,7 +710,7 @@ var
      {$ENDIF}
     else
       {$IFDEF DELPHI12_UP}
-      ErrorMessage := Trim(UTF8ToString(StrPas(AMessage)));
+      Result := Trim(UTF8ToString(StrPas(AMessage)));
       {$ELSE}
         {$IF defined(LAZARUSUTF8) or defined (UNIX)}
         Result := Trim(StrPas(AMessage));

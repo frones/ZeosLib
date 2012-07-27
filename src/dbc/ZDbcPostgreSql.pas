@@ -148,6 +148,8 @@ type
       const EscapeMarkSequence: String = '~<|'): String; override;
     function GetEscapeString(const Value: String;
       const EscapeMarkSequence: String = '~<|'): String; override;
+    function GetServerSetting(const AName: string): string;
+    procedure SetServerSetting(const AName, AValue: string);
   end;
 
   {** Implements a Postgres sequence. }
@@ -411,8 +413,7 @@ end;
 }
 procedure TZPostgreSQLConnection.Open;
 var
-  SQL, LogMessage: string;
-  QueryHandle: PZPostgreSQLResult;
+  SCS, LogMessage: string;
 begin
   if not Closed then
     Exit;
@@ -437,12 +438,7 @@ begin
     { Sets a client codepage. }
     if ( FClientCodePage <> '' ) then
     begin
-      SQL := Format('SET CLIENT_ENCODING TO ''%s''', [FClientCodePage]);
-      QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, PAnsiChar(AnsiString(SQL)));
-      CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute,
-                            SQL,QueryHandle);
-      GetPlainDriver.Clear(QueryHandle);
-      DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
+      SetServerSetting('CLIENT_ENCODING', FClientCodePage);
     end;
 
     { Turn on transaction mode }
@@ -462,21 +458,16 @@ begin
     CheckCharEncoding(FClientCodePage);
     FCharactersetCode := TZPgCharactersetType(ClientCodePage^.ID);
 
+    SCS := Info.Values['standard_conforming_strings'];
     { sets now the standard_conforming_strings which decides the escaping behavior
       if not available }
     if Info.Values['standard_conforming_strings']<>'' then
     begin
-      FStandardConformingStrings := UpperCase(Info.Values['standard_conforming_strings']) = 'ON';
-      SQL := Format('SET standard_conforming_strings=''%s''',
-                                          [Info.Values['standard_conforming_strings']]);
-      QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, PAnsiChar(ZPlainString(SQL)));
-      CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute,
-                            SQL,QueryHandle);
-      GetPlainDriver.Clear(QueryHandle);
-      DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
+      FStandardConformingStrings := UpperCase(SCS) = 'ON';
+      SetServerSetting('standard_conforming_strings', SCS);
     end
     else
-      FStandardConformingStrings := Self.GetServerMajorVersion < 9;
+      FStandardConformingStrings := UpperCase(GetServerSetting('standard_conforming_strings')) = 'ON';
 
   finally
     if self.IsClosed and (Self.FHandle <> nil) then
@@ -994,16 +985,50 @@ function TZPostgreSQLConnection.GetEscapeString(const Value: String;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
   if StartsWith(Value, '''') and EndsWith(Value, '''') then
-    if not FStandardConformingStrings then
-      Result := Value
-    else
-      Result := ZDbcPostgreSqlUtils.EncodeString(TZPgCharactersetType(Self.ClientCodePage^.ID), AnsiDequotedStr(Value, #39))
+    Result := #39+ZDbcPostgreSqlUtils.EncodeString(FStandardConformingStrings,
+      TZPgCharactersetType(Self.ClientCodePage^.ID), AnsiDequotedStr(Value, #39))+#39
   else
-    if not FStandardConformingStrings then
-      Result := AnsiQuotedStr(Value, #39)
-    else
-      Result := ZDbcPostgreSqlUtils.EncodeString(TZPgCharactersetType(Self.ClientCodePage^.ID), Value);
+    Result := AnsiQuotedStr(ZDbcPostgreSqlUtils.EncodeString(FStandardConformingStrings,
+      TZPgCharactersetType(Self.ClientCodePage^.ID), Value), #39);
 end;
+{**
+  Gets a current setting of run-time parameter.
+  @param AName a parameter name.
+  @result a parmeter value retrieved from server.
+}
+function TZPostgreSQLConnection.GetServerSetting(const AName: string): string;
+var
+  SQL: string;
+  QueryHandle: PZPostgreSQLResult;
+begin
+  SQL := Format('SHOW %s', [AName]);
+  QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, PAnsiChar(AnsiString(SQL)));
+  CheckPostgreSQLError(Self, GetPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
+  DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
+
+  Result := String(StrPas(GetPlainDriver.GetValue(QueryHandle, 0, 0)));
+  GetPlainDriver.Clear(QueryHandle);
+end;
+
+{**
+  Sets current setting of run-time parameter.
+  String values should be already quoted.
+  @param AName a parameter name.
+  @param AValue a new parameter value.
+}
+procedure TZPostgreSQLConnection.SetServerSetting(const AName, AValue: string);
+var
+  SQL: string;
+  QueryHandle: PZPostgreSQLResult;
+begin
+  SQL := Format('SET %s = %s', [AName, AValue]);
+  QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, PAnsiChar(AnsiString(SQL)));
+  CheckPostgreSQLError(Self, GetPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
+  DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
+
+  GetPlainDriver.Clear(QueryHandle);
+end;
+
 
 { TZPostgreSQLSequence }
 {**
