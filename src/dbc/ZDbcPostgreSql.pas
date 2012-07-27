@@ -985,11 +985,17 @@ function TZPostgreSQLConnection.GetEscapeString(const Value: String;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
   if StartsWith(Value, '''') and EndsWith(Value, '''') then
+    Result := ZDbcPostgreSqlUtils.EncodeString(FStandardConformingStrings,
+      TZPgCharactersetType(Self.ClientCodePage^.ID), AnsiDequotedStr(Value, #39))
+  else
+    Result := ZDbcPostgreSqlUtils.EncodeString(FStandardConformingStrings,
+      TZPgCharactersetType(Self.ClientCodePage^.ID), Value);
+  {if StartsWith(Value, '''') and EndsWith(Value, '''') then
     Result := #39+ZDbcPostgreSqlUtils.EncodeString(FStandardConformingStrings,
       TZPgCharactersetType(Self.ClientCodePage^.ID), AnsiDequotedStr(Value, #39))+#39
   else
     Result := AnsiQuotedStr(ZDbcPostgreSqlUtils.EncodeString(FStandardConformingStrings,
-      TZPgCharactersetType(Self.ClientCodePage^.ID), Value), #39);
+      TZPgCharactersetType(Self.ClientCodePage^.ID), Value), #39);}
 end;
 {**
   Gets a current setting of run-time parameter.

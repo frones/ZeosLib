@@ -517,7 +517,7 @@ var
   SrcLength, DestLength: Integer;
   SrcBuffer, DestBuffer: PChar;
 begin
-  if not (StandardConformingStrings) then
+  if not ( StandardConformingStrings) then
   begin
     SrcLength := Length(Value);
     SrcBuffer := PChar(Value);
@@ -560,7 +560,7 @@ begin
     end;
     DestBuffer^ := '''';
   end
-  else Result := Value;
+  else Result := AnsiQuotedStr(Value, #39);
 end;
 
 
