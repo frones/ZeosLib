@@ -101,6 +101,8 @@ type
 
     procedure PostUpdates;
     procedure CancelUpdates;
+    procedure PostUpdatesCached;
+    procedure DisposeCachedUpdates;
     procedure RevertRecord;
     procedure MoveToInitialRow;
     procedure RefreshRow; // FOS+ 071106
@@ -253,6 +255,8 @@ type
     procedure CancelUpdates; virtual;
     procedure RevertRecord; virtual;
     procedure MoveToInitialRow; virtual;
+    procedure PostUpdatesCached; virtual;
+    procedure DisposeCachedUpdates; virtual;
   end;
 
   {**
@@ -562,6 +566,59 @@ begin
       FInitialRowsList.Delete(0);
       FCurrentRowsList.Delete(0);
     end;
+  end;
+end;
+
+{**
+  Posts all saved updates to the server but keeps them cached.
+}
+procedure TZAbstractCachedResultSet.PostUpdatesCached;
+var
+  i: Integer;
+begin
+  CheckClosed;
+  if FInitialRowsList.Count > 0 then
+  begin
+    i := 0;
+    while i < FInitialRowsList.Count do
+    begin
+      OldRowAccessor.RowBuffer := PZRowBuffer(FInitialRowsList[i]);
+      NewRowAccessor.RowBuffer := PZRowBuffer(FCurrentRowsList[i]);
+      Inc(i);
+
+      { Updates default field values. }
+      if NewRowAccessor.RowBuffer.UpdateType = utInserted then
+        CalculateRowDefaults(NewRowAccessor);
+
+      { Posts row updates. }
+      PostRowUpdates(OldRowAccessor, NewRowAccessor);
+    end;
+  end;
+end;
+
+{**
+  Frees the updates and marks records as unmodified. Complements
+  PostUpdatesCached.
+}
+procedure TZAbstractCachedResultSet.DisposeCachedUpdates;
+begin
+  while FInitialRowsList.Count > 0 do
+  begin
+    OldRowAccessor.RowBuffer := PZRowBuffer(FInitialRowsList[0]);
+    NewRowAccessor.RowBuffer := PZRowBuffer(FCurrentRowsList[0]);
+
+    if NewRowAccessor.RowBuffer.UpdateType <> utDeleted then
+    begin
+      NewRowAccessor.RowBuffer.UpdateType := utUnmodified;
+      if (FSelectedRow <> nil)
+        and (FSelectedRow.Index = NewRowAccessor.RowBuffer.Index) then
+          FSelectedRow.UpdateType := utUnmodified;
+    end;
+
+    { Remove cached rows. }
+    OldRowAccessor.Dispose;
+    FInitialRowsList.Delete(0);
+    FCurrentRowsList.Delete(0);
   end;
 end;
 
