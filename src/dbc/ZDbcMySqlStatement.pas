@@ -914,9 +914,11 @@ begin
   Result := False;
   BindInParameters;
   if (FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
-     begin
+     try
         checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
-        exit;
+     except
+       FBindBuffer.Free;  //MemLeak closed
+       raise;
      end;
 
   FBindBuffer.Free;
