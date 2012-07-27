@@ -625,6 +625,7 @@ var
   var
     I: Integer;
   begin
+    result:='';
     for I := Length(Self.FEscapeMarks) downto 1 do
       Result := Result + Copy(FEscapeMarks, i, 1);
   end;
