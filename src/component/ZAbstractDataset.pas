@@ -139,6 +139,7 @@ type
   {$IFDEF WITH_IPROVIDER}
     function PSUpdateRecord(UpdateKind: TUpdateKind;
       Delta: TDataSet): Boolean; override;
+    procedure DisposeCachedUpdates;
   {$ENDIF}
     procedure RegisterDetailDataSet(Value: TZAbstractDataset; CachedUpdates: Boolean);
   public
@@ -475,7 +476,8 @@ begin
          or ( doUpdateMasterFirst in Options ) then
         begin //This is an detail-table
           FCachedUpdatesBeforeMasterUpdate := CachedUpdates; //buffer old value
-          CachedUpdates := True; //Execute without writing
+          if not(CachedUpdates) then
+            CachedUpdates := True; //Execute without writing
           TZAbstractDataset(MasterLink.DataSet).RegisterDetailDataSet(Self,
             TZAbstractDataset(MasterLink.DataSet).CachedUpdates);
         end;
@@ -490,7 +492,8 @@ begin
       for i := 0 to FDetailDataSets.Count -1 do
         if (TDataSet(FDetailDataSets.Items[i]) is TZAbstractDataset) then
           begin
-            TZAbstractDataset(TDataSet(FDetailDataSets.Items[i])).ApplyUpdates;
+            if not (Self.FDetailCachedUpdates[I]) then
+              TZAbstractDataset(TDataSet(FDetailDataSets.Items[i])).ApplyUpdates;
             TZAbstractDataset(TDataSet(FDetailDataSets.Items[i])).CachedUpdates := Self.FDetailCachedUpdates[I];
           end;
     FDetailDataSets.Clear;
@@ -613,7 +616,11 @@ begin
     DoBeforeApplyUpdates; {bangfauzan addition}
 
     if CachedResultSet <> nil then
-      CachedResultSet.PostUpdates;
+      if Connection.AutoCommit and
+        not ( Connection.TransactIsolationLevel in [tiReadCommitted, tiSerializable] ) then
+        CachedResultSet.PostUpdates
+      else
+        CachedResultSet.PostUpdatesCached;
 
     if not (State in [dsInactive]) then
       Resync([]);
@@ -623,6 +630,16 @@ begin
   finally
     Connection.HideSqlHourGlass;
   end;
+end;
+
+{**
+   Dispose all cached updates stored in the resultset.
+}
+procedure TZAbstractDataset.DisposeCachedUpdates;
+begin
+  CheckBrowseMode;
+  if Assigned(CachedResultSet) then
+    CachedResultSet.DisposeCachedUpdates;
 end;
 
 {**
