@@ -163,12 +163,10 @@ function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
 begin
   TypeName := LowerCase(TypeName);
   if (TypeName = 'interval') or (TypeName = 'char')
-    or (TypeName = 'varchar') or (TypeName = 'bit') or (TypeName = 'varbit') then//EgonHugeist: Highest Priority Client_Character_set!!!!
-    if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
-      if Connection.UTF8StringAsWideField then
-        Result := stUnicodeString
-      else
-        Result := stString
+    or (TypeName = 'varchar') or (TypeName = 'bit') or (TypeName = 'varbit')
+  then//EgonHugeist: Highest Priority Client_Character_set!!!!
+    if ( Connection.GetEncoding = ceUTF8 ) and Connection.UTF8StringAsWideField then
+      Result := stUnicodeString
     else
       Result := stString
   else if TypeName = 'text' then
@@ -222,7 +220,10 @@ begin
       Result := stBinaryStream;
   end
   else if TypeName = 'bpchar' then
-    Result := stString
+    if ( Connection.GetEncoding = ceUTF8 ) and Connection.UTF8StringAsWideField then
+      Result := stUnicodeString
+    else
+      Result := stString
   else if (TypeName = 'int2vector') or (TypeName = 'oidvector') then
     Result := stAsciiStream
   else if (TypeName <> '') and (TypeName[1] = '_') then // ARRAY TYPES
@@ -249,13 +250,10 @@ function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
 begin
   case TypeOid of
     1186,18,1043:  { interval/char/varchar }
-      if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
-        if Connection.UTF8StringAsWideField then
+      if ( Connection.GetEncoding = ceUTF8 ) and Connection.UTF8StringAsWideField then
           Result := stUnicodeString
         else
-          Result := stString
-      else
-        Result := stString;
+          Result := stString;
     25: Result := stAsciiStream; { text }
     26: { oid }
       begin
@@ -288,7 +286,11 @@ begin
         else
           Result := stBinaryStream;
       end;
-    1042: Result := stString; { bpchar }
+    1042: { bpchar }
+      if ( Connection.GetEncoding = ceUTF8 ) and Connection.UTF8StringAsWideField then
+        Result := stUnicodeString
+      else
+        Result := stString;
     22,30: Result := stAsciiStream; { int2vector/oidvector. no '_aclitem' }
     651, 1000..1028: Result := stAsciiStream;
     else
