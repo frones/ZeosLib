@@ -295,24 +295,24 @@ begin
   try
     MasterQuery.Append;
     MasterQuery.FieldByName('dep_id').AsInteger := TestRowID;
-    if Connection.PreprepareSQL or Connection.UTF8StringsAsWideField or
-      (Connection.DbcConnection.GetEncoding = ceAnsi) then
+    if Connection.UTF8StringsAsWideField or ( Connection.DbcConnection.GetEncoding = ceAnsi) then
         MasterQuery.FieldByName('dep_name').AsString := 'צהüüהצ'
     else
       MasterQuery.FieldByName('dep_name').AsString := Utf8Encode(WideString('צהüüהצ'));
     MasterQuery.FieldByName('dep_shname').AsString := 'abc';
-    if Connection.PreprepareSQL or Connection.UTF8StringsAsWideField or
-      (Connection.DbcConnection.GetEncoding = ceAnsi) then
+
+    if Connection.UTF8StringsAsWideField or (Connection.DbcConnection.GetEncoding = ceAnsi) then
        MasterQuery.FieldByName('dep_address').AsString := 'A adress of צהüüהצ'
     else
       MasterQuery.FieldByName('dep_address').AsString := Utf8Encode(WideString('A adress of צהüüהצ'));
+
     CheckEquals(True, (MasterQuery.State = dsInsert), 'MasterQuery Insert-State');
 
     DetailQuery.Append;
     DetailQuery.FieldByName('p_id').AsInteger := TestRowID;
     DetailQuery.FieldByName('p_dep_id').AsInteger := TestRowID;
-    if Connection.PreprepareSQL or Connection.UTF8StringsAsWideField or
-      (Connection.DbcConnection.GetEncoding = ceAnsi) then
+
+    if Connection.UTF8StringsAsWideField or (Connection.DbcConnection.GetEncoding = ceAnsi) then
         DetailQuery.FieldByName('p_name').AsString := 'üהצצהü'
     else
       DetailQuery.FieldByName('p_name').AsString := Utf8Encode(WideString('üהצצהü'));

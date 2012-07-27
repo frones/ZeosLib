@@ -457,14 +457,18 @@ begin
         SQLT_BLOB, SQLT_CLOB:
           begin
             TempBlob := DefVarManager.GetAsInterface(Values[I]) as IZBlob;
-            if (CurrentVar.TypeCode = SQLT_CLOB) and (Connection.GetEncoding = ceUTF8) then
-              begin
-              TempStreamIn:=TempBlob.GetStream;
-              TempStream := ZDbcUtils.GetValidatedUnicodeStream(TempStreamIn);
-              TempStreamIn.Free;
-              end
-            else
-              TempStream := TempBlob.GetStream;
+            if not TempBlob.IsEmpty then
+            begin
+              if (CurrentVar.TypeCode = SQLT_CLOB) and (Connection.GetEncoding = ceUTF8) then
+                begin
+                TempStreamIn:=TempBlob.GetStream;
+                TempStream := ZDbcUtils.GetValidatedUnicodeStream(TempStreamIn);
+                TempStreamIn.Free;
+                end
+              else
+                TempStream := TempBlob.GetStream;
+            end
+            else TempStream := TMemoryStream.Create;
 
             try
               WriteTempBlob := TZOracleBlob.Create(PlainDriver,

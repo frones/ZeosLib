@@ -1851,9 +1851,9 @@ begin
       SQL.Text := 'INSERT INTO people(P_ID, P_NAME, P_RESUME)'+
         ' VALUES (:P_ID, :P_NAME, :P_RESUME)';
       ParamByName('P_ID').AsInteger := TEST_ROW_ID;
-      if FConnection.PreprepareSQL or FConnection.DbcConnection.UTF8StringAsWideField or
+      if FConnection.DbcConnection.UTF8StringAsWideField or
         (FConnection.DbcConnection.GetEncoding = ceAnsi) then
-        ParamByName('P_NAME').AsString := Str3
+          ParamByName('P_NAME').AsString := Str3
       else
         ParamByName('P_NAME').AsString := UTF8Encode(WideString(Str3));
       CheckEquals(3, Query.Params.Count, 'Param.Count');
