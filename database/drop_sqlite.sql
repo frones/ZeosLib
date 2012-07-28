@@ -17,5 +17,5 @@ drop table string_values;
 drop table [case_sensitive];
 drop table high_load;
 drop table default_values;
-
+drop table empty_types;
 

@@ -188,4 +188,12 @@ data2		      CHAR(10),
 primary key (hl_id)
 );
 
-
+/*==============================================================*/
+/* Table : empty_types                                          */
+/*==============================================================*/
+create table empty_types (
+et_id		      NOT NULL,
+data1		      NOT NULL,
+data2		      NOT NULL,
+primary key (et_id)
+);
