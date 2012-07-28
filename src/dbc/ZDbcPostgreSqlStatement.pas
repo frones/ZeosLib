@@ -596,6 +596,7 @@ var
   TempBlob: IZBlob;
   TempStream: TStream;
   WriteTempBlob: IZPostgreSQLBlob;
+  TempStreamIn: TStream;
 begin
   TempBytes := nil;
   if InParamCount <= ParamIndex then
@@ -617,9 +618,16 @@ begin
       stBytes:
         Result := Self.GetConnection.GetEscapeString(PAnsiChar(AnsiString(SoftVarManager.GetAsString(Value))));
       stString:
-        Result := Self.GetConnection.GetEscapeString(PAnsiChar(ZPlainString(SoftVarManager.GetAsString(Value))));
+        Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
       stUnicodeString:
-        Result := Self.GetConnection.GetEscapeString(PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))));
+        {$IFDEF DELPHI12_UP}
+          Result := GetConnection.GetEscapeString(SoftVarManager.GetAsUnicodeString(Value));
+        {$ELSE}
+        if GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+          Result := Self.GetConnection.GetEscapeString(PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))))
+        else
+          Result := Self.GetConnection.GetEscapeString(PAnsiChar(AnsiString(SoftVarManager.GetAsUnicodeString(Value))));
+        {$ENDIF}
       stDate:
         Result := Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]);
@@ -630,39 +638,57 @@ begin
         Result := Format('''%s''::timestamp',
           [FormatDateTime('yyyy-mm-dd hh":"mm":"ss',
             SoftVarManager.GetAsDateTime(Value))]);
-      stAsciiStream, stUnicodeStream:
-        begin
-          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
-          if not TempBlob.IsEmpty then
-            Result := Self.GetConnection.GetEscapeString(String(TempBlob.GetString))
-          else
-            Result := 'NULL';
-        end;
-      stBinaryStream:
+      stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
           begin
-            if (GetConnection as IZPostgreSQLConnection).IsOidAsBlob then
+            if (Self.GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) and
+              (InParamTypes[ParamIndex] in [stAsciiStream, stUnicodeStream]) then
             begin
-              TempStream := TempBlob.GetStream;
-              try
-                WriteTempBlob := TZPostgreSQLBlob.Create(GetPlainDriver, nil, 0,
-                  Self.GetConnectionHandle, 0, ChunkSize);
-                WriteTempBlob.SetStream(TempStream);
-                WriteTempBlob.WriteBlob;
-                Result := IntToStr(WriteTempBlob.GetBlobOid);
-              finally
-                WriteTempBlob := nil;
-                TempStream.Free;
-              end;
-            end
-            else
-              result := GetConnection.GetAnsiEscapeString(TempBlob.GetString);
+              TempStreamIn := TempBlob.GetStream;
+              TempStream := GetValidatedUnicodeStream(TempStreamIn);
+              TempStreamIn.Free;
+              TempBlob.SetStream(TempStream);
+              TempStream.Free;
+            end;
+            case InParamTypes[ParamIndex] of
+              stBinaryStream:
+                if ((GetConnection as IZPostgreSQLConnection).IsOidAsBlob) or
+                  StrToBoolDef(Info.Values['oidasblob'], False) then
+                begin
+                  TempStream := TempBlob.GetStream;
+                  try
+                    WriteTempBlob := TZPostgreSQLBlob.Create(FPlainDriver, nil, 0,
+                      Self.GetConnectionHandle, 0, ChunkSize);
+                    WriteTempBlob.SetStream(TempStream);
+                    WriteTempBlob.WriteBlob;
+                    Result := IntToStr(WriteTempBlob.GetBlobOid);
+                  finally
+                    WriteTempBlob := nil;
+                    TempStream.Free;
+                  end;
+                end
+                else
+                  Result := GetConnection.GetAnsiEscapeString(TempBlob.GetString);
+              stAsciiStream:
+                {$IFDEF DELPHI12_UP}
+                if (Self.GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) then
+                  Result := GetConnection.GetEscapeString(TempBlob.GetUnicodeString)
+                else
+                {$ENDIF}
+                  Result := GetConnection.GetEscapeString(String(TempBlob.GetString));
+              stUnicodeStream:
+                {$IFDEF DELPHI12_UP}
+                  Result := GetConnection.GetEscapeString(TempBlob.GetUnicodeString);
+                {$ELSE}
+                  Result := GetConnection.GetEscapeString(TempBlob.GetString);
+                {$ENDIF}
+            end; {case..}
           end
           else
             Result := 'NULL';
-        end;
+        end; {if not TempBlob.IsEmpty then}
     end;
   end;
 end;

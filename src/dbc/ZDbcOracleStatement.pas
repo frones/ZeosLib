@@ -115,7 +115,6 @@ type
     procedure Prepare; reintroduce;
 
   public
-    Params:TParams;
     constructor Create(PlainDriver: IZOraclePlainDriver;
       Connection: IZConnection; const SQL: string; Info: TStrings);
     destructor Destroy; override;

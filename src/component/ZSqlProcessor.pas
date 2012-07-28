@@ -484,69 +484,7 @@ begin
       Param := Params.FindParam(ParamNames[I]);
       if not Assigned(Param) or (Param.ParamType in [ptOutput, ptResult]) then
         Continue;
-      if Param.IsNull then
-        Statement.SetNull(I + 1, ConvertDatasetToDbcType(Param.DataType))
-      else begin
-        case Param.DataType of
-          ftBoolean:
-            Statement.SetBoolean(I + 1, Param.AsBoolean);
-          ftSmallInt{$IFDEF DELPHI12_UP}, ftShortInt{$ENDIF}:
-            Statement.SetShort(I + 1, Param.AsSmallInt);
-          ftInteger, ftAutoInc{$IFDEF DELPHI12_UP}, ftByte{$ENDIF}:
-            Statement.SetInt(I + 1, Param.AsInteger);
-          ftFloat{$IFDEF DELPHI12_UP}, ftExtended{$ENDIF}:
-            Statement.SetDouble(I + 1, Param.AsFloat);
-          {$IFDEF DELPHI12_UP}
-          ftLongWord:
-            Statement.SetInt(I + 1, Integer(Param.AsLongWord));
-          {$ENDIF}
-          ftLargeInt:
-            Statement.SetLong(I + 1, StrToInt64(Param.AsString));
-          ftCurrency, ftBCD:
-            Statement.SetBigDecimal(I + 1, Param.AsCurrency);
-          ftString, ftFixedChar:
-            Statement.SetString(I + 1, Param.AsString);
-          ftWideString:
-            Statement.SetUnicodeString(I + 1, {$IFDEF WITH_FTWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF});
-          ftBytes:
-            Statement.SetString(I + 1, Param.AsString);
-          ftDate:
-            Statement.SetDate(I + 1, Param.AsDate);
-          ftTime:
-            Statement.SetTime(I + 1, Param.AsTime);
-          ftDateTime, ftTimestamp:
-            Statement.SetTimestamp(I + 1, Param.AsDateTime);
-          ftMemo:
-            begin
-              Stream := TStringStream.Create(Param.AsMemo);
-              try
-                Statement.SetAsciiStream(I + 1, Stream);
-              finally
-                Stream.Free;
-              end;
-            end;
-          {$IFDEF WITH_WIDEMEMO}
-          ftWideMemo:
-            begin
-              Stream := WideStringStream(Param.AsWideString);
-              try
-                Statement.SetUnicodeStream(I + 1, Stream);
-              finally
-                Stream.Free;
-              end;
-            end;
-          {$ENDIF}
-          ftBlob, ftGraphic:
-            begin
-              Stream := TStringStream.Create(Param.AsBlob);
-              try
-                Statement.SetBinaryStream(I + 1, Stream);
-              finally
-                Stream.Free;
-              end;
-            end;
-        end;
-      end;
+      SetStatementParam(I+1, Statement, Param);
     end;
   finally
     TempParam.Free;
