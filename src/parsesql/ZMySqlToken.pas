@@ -104,12 +104,14 @@ type
   {** Implements a default tokenizer object. }
   TZMySQLTokenizer = class (TZTokenizer)
   public
-    function AnsiGetEscapeString(const EscapeString: AnsiString;
+    function AnsiGetEscapeString(const EscapeString: ZAnsiString;
       const EscapeMarkSequence: String = '~<|'): String; override;
     constructor Create;
   end;
 
 implementation
+
+uses StrUtils;
 
 { TZMySQLNumberState }
 
@@ -443,20 +445,13 @@ end;
   @param  BinaryMarkSequence represents the detectable String
   @Result give's out the detectable String
 }
-function TZMySQLTokenizer.AnsiGetEscapeString(const EscapeString: AnsiString;
+function TZMySQLTokenizer.AnsiGetEscapeString(const EscapeString: ZAnsiString;
   const EscapeMarkSequence: String = '~<|'): String;
 var
   Temp: String;
-  function GetReverted: String;
-  var
-    I: Integer;
-  begin
-    for I := Length(Self.EscapeMarkSequence) downto 1 do
-      Result := Result + Copy(EscapeMarkSequence, i, 1);
-  end;
 begin
   Self.EscapeMarkSequence := EscapeMarkSequence; //Checks if BinaryMarkSequence is valid
-  Temp := EscapeMarkSequence+IntToStr(Length(EscapeString))+GetReverted;
+  Temp := EscapeMarkSequence+IntToStr(Length(EscapeString))+ReverseString(EscapeMarkSequence);
 
   Result := String(EscapeString);
   if Length(EscapeString) > 1 then //Check for Quotes
