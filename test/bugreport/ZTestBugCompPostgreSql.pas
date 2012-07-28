@@ -74,6 +74,8 @@ type
     function GetSupportedProtocols: string; override;
 
     property Connection: TZConnection read FConnection write FConnection;
+  public
+    procedure TestStandartConfirmingStrings(Query: TZQuery; Connection: TZConnection);
   published
     procedure Test707339;
     procedure Test707337;
@@ -92,6 +94,8 @@ type
     procedure Test933623;
     procedure Test994562;
     procedure Test1043252;
+    procedure TestStandartConfirmingStringsOn;
+    procedure TestStandartConfirmingStringsOff;
   end;
 
 implementation
@@ -703,6 +707,45 @@ begin
     Query.Close;
   finally
     Query.Free;
+  end;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestStandartConfirmingStrings(Query: TZQuery; Connection: TZConnection);
+begin
+  //
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestStandartConfirmingStringsOn;
+var
+  TempConnection: TZConnection;
+  Query: TZQuery;
+begin
+  TempConnection := CreateDatasetConnection;
+  TempConnection.Properties.Add('standard_conforming_strings=ON');
+  Query := TZQuery.Create(nil);
+  Query.Connection := TempConnection;
+  try
+    TestStandartConfirmingStrings(Query, TempConnection);
+  finally
+    Query.Free;
+    TempConnection.Free;
+  end;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestStandartConfirmingStringsOff;
+var
+  TempConnection: TZConnection;
+  Query: TZQuery;
+begin
+  TempConnection := CreateDatasetConnection;
+  TempConnection.Properties.Add('standard_conforming_strings=ON');
+  Query := TZQuery.Create(nil);
+  Query.Connection := TempConnection;
+  try
+    TestStandartConfirmingStrings(Query, TempConnection);
+  finally
+    Query.Free;
+    TempConnection.Free;
   end;
 end;
 
