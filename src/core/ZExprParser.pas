@@ -355,7 +355,7 @@ begin
         ttFloat:
           begin
             TokenType := ttConstant;
-            TokenValue:= EncodeFloat(SqlStrToFloat(Tokens[TokenIndex]));
+            TokenValue:= EncodeFloat(SqlStrToFloat(AnsiString(Tokens[TokenIndex])));
           end;
         ttQuoted:
           begin

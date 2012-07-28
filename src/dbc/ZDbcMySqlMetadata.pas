@@ -1138,8 +1138,8 @@ var
   TempPos: Integer;
 
   TypeInfoList: TStrings;
-  TypeInfo, TypeInfoFirst, TypeInfoSecond, Collation: Ansistring;
-  Nullable, DefaultValue: Ansistring;
+  TypeInfo, TypeInfoFirst, TypeInfoSecond: String;
+  Nullable, DefaultValue: String;
   HasDefaultValue: Boolean;
   ColumnSize, ColumnDecimals: Integer;
   OrdPosition: Integer;
@@ -1192,16 +1192,15 @@ begin
             ColumnSize := 0;
             TypeInfoFirst := '';
             TypeInfoSecond := '';
-            Collation:='';
 
             Res.MoveToInsertRow;
             Res.UpdateString(1, TempCatalog);
             Res.UpdateString(2, '');
-            Res.UpdateString(3, AnsiString(TempTableNamePattern)) ;
+            Res.UpdateString(3, TempTableNamePattern) ;
             Res.UpdateString(4, GetString(ColumnIndexes[1]));
 
             TypeInfo := GetString(ColumnIndexes[2]);
-            if StrPos(PAnsiChar(TypeInfo), '(') <> nil then
+            if StrPos(PChar(TypeInfo), '(') <> nil then
             begin
               PutSplitString(TypeInfoList, TypeInfo, '()');
               TypeInfoFirst := TypeInfoList.Strings[0];
@@ -1210,10 +1209,10 @@ begin
             else
               TypeInfoFirst := TypeInfo;
 
-            Collation:=GetString(ColumnIndexes[6]);
-
             TypeInfoFirst := LowerCase(TypeInfoFirst);
-            MySQLType := ConvertMySQLTypeToSQLType(TypeInfoFirst, TypeInfo, Collation);
+            MySQLType := ConvertMySQLTypeToSQLType(TypeInfoFirst, TypeInfo,
+              GetConnection.GetClientCodePageInformations.Encoding,
+              GetConnection.UTF8StringAsWideField);
             Res.UpdateInt(5, Ord(MySQLType));
             Res.UpdateString(6, TypeInfoFirst);
 
@@ -1231,7 +1230,7 @@ begin
             end
             else
               { the column type is decimal }
-              if StrPos(PChar(TypeInfo), ',') <> nil then
+              if Pos(TypeInfo, ',') > 0 then
               begin
                 TempPos := FirstDelimiter(',', TypeInfoSecond);
                 ColumnSize := StrToIntDef(Copy(TypeInfoSecond, 1, TempPos - 1), 0);
@@ -1393,10 +1392,9 @@ begin
             Res.UpdateInt(17, OrdPosition);
 
             Res.UpdateBoolean(19, //AUTO_INCREMENT
-              Trim(LowerCase(String(GetString(ColumnIndexes[4])))) = 'auto_increment'); //Extra
+              Trim(LowerCase(GetString(ColumnIndexes[4]))) = 'auto_increment'); //Extra
             Res.UpdateBoolean(20, //CASE_SENSITIVE
-              GetIdentifierConvertor.IsCaseSensitive(
-              String(GetString(ColumnIndexes[1])))); //Field
+              GetIdentifierConvertor.IsCaseSensitive(GetString(ColumnIndexes[1]))); //Field
             Res.UpdateBoolean(21, True);  //SEARCHABLE
             Res.UpdateBoolean(22, True);  //WRITABLE
             Res.UpdateBoolean(23, True);  //DEFINITELYWRITABLE
@@ -1448,8 +1446,8 @@ function TZMySQLDatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: stri
 var
   I: Integer;
   LCatalog, LColumnNamePattern: string;
-  Host, Database, Grantor, User, FullUser: Ansistring;
-  AllPrivileges, ColumnName, Privilege: Ansistring;
+  Host, Database, Grantor, User, FullUser: String;
+  AllPrivileges, ColumnName, Privilege: String;
   PrivilegesList: TStrings;
 begin
   Result:=inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
@@ -1485,10 +1483,10 @@ begin
           for I := 0 to PrivilegesList.Count - 1 do
           begin
             Result.MoveToInsertRow;
-            Privilege := AnsiString(Trim(PrivilegesList.Strings[I]));
-            Result.UpdateString(1, AnsiString(LCatalog));
+            Privilege := Trim(PrivilegesList.Strings[I]);
+            Result.UpdateString(1, LCatalog);
             Result.UpdateNull(2);
-            Result.UpdateString(3, AnsiString(Table));
+            Result.UpdateString(3, Table);
             Result.UpdateString(4, ColumnName);
             Result.UpdateString(5, Grantor);
             Result.UpdateString(6, FullUser);
@@ -1541,8 +1539,8 @@ function TZMySQLDatabaseMetadata.UncachedGetTablePrivileges(const Catalog: strin
 var
   I: Integer;
   LCatalog, LTableNamePattern: string;
-  Host, Database, Table, Grantor, User, FullUser: Ansistring;
-  AllPrivileges, Privilege: Ansistring;
+  Host, Database, Table, Grantor, User, FullUser: String;
+  AllPrivileges, Privilege: String;
   PrivilegesList: TStrings;
 begin
     Result:=inherited UncachedGetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
@@ -1738,7 +1736,7 @@ var
   I: Integer;
   KeySeq: Integer;
   LCatalog: string;
-  TableType, Comment, Keys: Ansistring;
+  TableType, Comment, Keys: String;
   CommentList, KeyList: TStrings;
   ColumnIndexes : Array[1..2] of integer;
 begin
@@ -1789,7 +1787,7 @@ begin
                   Result.UpdateNull(2); // PKTABLE_SCHEM
                   Result.UpdateString(3, KeyList.Strings[3]); // PKTABLE_NAME
                   Result.UpdateString(4, KeyList.Strings[4]); // PKCOLUMN_NAME
-                  Result.UpdateString(5, AnsiString(LCatalog));
+                  Result.UpdateString(5, LCatalog);
                   Result.UpdateNull(6);// FKTABLE_SCHEM
                   Result.UpdateString(7, Table); // FKTABLE_NAME
                   Result.UpdateString(8, KeyList.Strings[0]); // FKCOLUMN_NAME
@@ -1888,7 +1886,7 @@ var
   I: Integer;
   KeySeq: Integer;
   LCatalog: string;
-  TableType, Comment, Keys: Ansistring;
+  TableType, Comment, Keys: String;
   CommentList, KeyList: TStrings;
   ColumnIndexes : Array[1..3] of integer;
 begin
@@ -2209,7 +2207,7 @@ begin
     begin
       Result.MoveToInsertRow;
 
-      Result.UpdateString(1, AnsiString(TypeNames[I]));
+      Result.UpdateString(1, TypeNames[I]);
       Result.UpdateInt(2, Ord(TypeCodes[I]));
       if TypePrecision[I] >= 0 then
         Result.UpdateInt(3, TypePrecision[I])
@@ -2450,10 +2448,10 @@ begin
           if Next then
           begin
             Result.MoveToInsertRow;
-            Result.UpdateString(1, AnsiString(LCatalog));   //COLLATION_CATALOG
-            Result.UpdateString(2, AnsiString(LCatalog));   //COLLATION_SCHEMA
-            Result.UpdateString(3, AnsiString(TableNamePattern)); //COLLATION_TABLE
-            Result.UpdateString(4, AnsiString(ColumnNamePattern));//COLLATION_COLUMN
+            Result.UpdateString(1, LCatalog);   //COLLATION_CATALOG
+            Result.UpdateString(2, LCatalog);   //COLLATION_SCHEMA
+            Result.UpdateString(3, TableNamePattern); //COLLATION_TABLE
+            Result.UpdateString(4, ColumnNamePattern);//COLLATION_COLUMN
             Result.UpdateString(5, GetString(FindColumn('COLLATION_NAME'))); //COLLATION_NAME
             Result.UpdateString(6, GetString(FindColumn('CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
             Result.UpdateNull(7); //CHARACTER_SET_ID
@@ -2476,9 +2474,9 @@ begin
           if Next then
           begin
             Result.MoveToInsertRow;
-            Result.UpdateString(1, AnsiString(LCatalog));   //COLLATION_CATALOG
-            Result.UpdateString(2, AnsiString(LCatalog));   //COLLATION_SCHEMA
-            Result.UpdateString(3, AnsiString(TableNamePattern)); //COLLATION_TABLE
+            Result.UpdateString(1, LCatalog);   //COLLATION_CATALOG
+            Result.UpdateString(2, LCatalog);   //COLLATION_SCHEMA
+            Result.UpdateString(3, TableNamePattern); //COLLATION_TABLE
             Result.UpdateString(5, GetString(FindColumn('TABLE_COLLATION'))); //COLLATION_NAME
             Result.UpdateString(6, GetString(FindColumn('CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
             Result.UpdateNull(7); //CHARACTER_SET_ID
@@ -2501,8 +2499,8 @@ begin
         if Next then
         begin
           Result.MoveToInsertRow;
-          Result.UpdateString(1, AnsiString(LCatalog));   //COLLATION_CATALOG
-          Result.UpdateString(2, AnsiString(LCatalog));   //COLLATION_SCHEMA
+          Result.UpdateString(1, LCatalog);   //COLLATION_CATALOG
+          Result.UpdateString(2, LCatalog);   //COLLATION_SCHEMA
           Result.UpdateNull(3); //COLLATION_TABLE
           Result.UpdateNull(4);//COLLATION_COLUMN
           Result.UpdateString(5, GetString(FindColumn('DEFAULT_COLLATION_NAME'))); //COLLATION_NAME

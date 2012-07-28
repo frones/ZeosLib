@@ -105,14 +105,7 @@ function EncodeString(const Value: string): string; overload;
   @param Value a binary stream.
   @return a string in PostgreSQL binary string escape format.
 }
-function EncodeBinaryString(const Value: string): string;
-
-{**
-  Determine the character code in terms of enumerated number.
-  @param InputString the input string.
-  @return the character code in terms of enumerated number.
-}
-function pg_CS_code(const InputString: string): TZPgCharactersetType;
+function EncodeBinaryString(const Value: AnsiString): AnsiString;
 
 {**
   Encode string which probably consists of multi-byte characters.
@@ -128,7 +121,7 @@ function EncodeString(CharactersetCode: TZPgCharactersetType; const Value: strin
   @param Value a string in PostgreSQL escape format.
   @return a regular string.
 }
-function DecodeString(const Value: string): string;
+function DecodeString(const Value: AnsiString): AnsiString;
 
 {**
   Checks for possible sql errors.
@@ -158,67 +151,6 @@ implementation
 
 uses ZMessages, ZCompatibility;
 
-type
-
-pg_CS = record
-  name: string;
-  code: TZPgCharactersetType;
-end;
-
-const
-
-pg_CS_Table: array [0..47] of pg_CS =
-(
-  (name:'SQL_ASCII'; code: csSQL_ASCII),
-  (name:'EUC_JP'; code: csEUC_JP),
-  (name:'EUC_CN'; code: csEUC_CN),
-  (name:'EUC_KR'; code: csEUC_KR),
-  (name:'EUC_TW'; code: csEUC_TW),
-  (name:'EUC_JIS_2004'; code: csEUC_JIS_2004),
-  (name:'UTF8'; code: csUTF8),
-  (name:'MULE_INTERNAL'; code: csMULE_INTERNAL),
-  (name:'LATIN1'; code: csLATIN1),
-  (name:'LATIN2'; code: csLATIN2),
-  (name:'LATIN3'; code: csLATIN3),
-  (name:'LATIN4'; code: csLATIN4),
-  (name:'LATIN5'; code: csLATIN5),
-  (name:'LATIN6'; code: csLATIN6),
-  (name:'LATIN7'; code: csLATIN7),
-  (name:'LATIN8'; code: csLATIN8),
-  (name:'LATIN9'; code: csLATIN9),
-  (name:'LATIN10'; code: csLATIN10),
-  (name:'WIN1256'; code: csWIN1256),
-  (name:'WIN1258'; code: csWIN1258),     { since 8.1 }
-  (name:'WIN866'; code: csWIN866),     { since 8.1 }
-  (name:'WIN874'; code: csWIN874),
-  (name:'KOI8R'; code: csKOI8R),
-  (name:'WIN1251'; code: csWIN1251),
-  (name:'WIN1252'; code: csWIN1252),
-  (name:'ISO_8859_5'; code: csISO_8859_5),
-  (name:'ISO_8859_6'; code: csISO_8859_6),
-  (name:'ISO_8859_7'; code: csISO_8859_7),
-  (name:'ISO_8859_8'; code: csISO_8859_8),
-  (name:'WIN1250'; code: csWIN1250),
-  (name:'WIN1253'; code: csWIN1253),
-  (name:'WIN1254'; code: csWIN1254),
-  (name:'WIN1255'; code: csWIN1255),
-  (name:'WIN1257'; code: csWIN1257),
-  (name:'KOI8U'; code: csKOI8U),
-  (name:'SJIS'; code: csSJIS),
-  (name:'BIG5'; code: csBIG5),
-  (name:'GBK'; code: csGBK),
-  (name:'UHC'; code: csUHC),
-  (name:'WIN1250'; code: csWIN1250),
-  (name:'GB18030'; code: csGB18030),
-  (name:'JOHAB'; code: csJOHAB),
-  (name:'SHIFT_JIS_2004'; code: csSHIFT_JIS_2004),
-  (name:'UNICODE'; code: csUNICODE_PODBC),
-  (name:'TCVN'; code: csTCVN),
-  (name:'ALT'; code: csALT),
-  (name:'WIN'; code: csWIN),
-  (name:'OTHER'; code: csOTHER)
-);
-
 {**
    Return ZSQLType from PostgreSQL type name
    @param Connection a connection to PostgreSQL
@@ -230,8 +162,14 @@ function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
 begin
   TypeName := LowerCase(TypeName);
   if (TypeName = 'interval') or (TypeName = 'char')
-    or (TypeName = 'varchar') or (TypeName = 'bit') or (TypeName = 'varbit') then
-    Result := stString
+    or (TypeName = 'varchar') or (TypeName = 'bit') or (TypeName = 'varbit') then//EgonHugeist: Highest Priority Client_Character_set!!!!
+    if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+      if Connection.UTF8StringAsWideField then
+        Result := stUnicodeString
+      else
+        Result := stString
+    else
+      Result := stString
   else if TypeName = 'text' then
     Result := stAsciiStream
   else if TypeName = 'oid' then
@@ -243,7 +181,7 @@ begin
   end
   else if TypeName = 'name' then
     Result := stString
-  else if TypeName = 'enum' then 
+  else if TypeName = 'enum' then
     Result := stString
   else if TypeName = 'cidr' then
     Result := stString
@@ -291,11 +229,10 @@ begin
   else
     Result := stUnknown;
 
-  if Connection.GetCharactersetCode = csUTF8 then
-    case Result of
-      stString: Result := {$IFDEF FPC}stString{$ELSE}stUnicodeString{$ENDIF};
-      stAsciiStream: Result := stUnicodeStream;
-    end;
+  if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+    if Result = stAsciiStream then
+       if Connection.UTF8StringAsWideField then
+         Result := stUnicodeStream;
 end;
 
 {**
@@ -310,7 +247,14 @@ function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
   TypeOid: Integer): TZSQLType; overload;
 begin
   case TypeOid of
-    1186,18,1043: Result := stString; { interval/char/varchar }
+    1186,18,1043:  { interval/char/varchar }
+      if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+        if Connection.UTF8StringAsWideField then
+          Result := stUnicodeString
+        else
+          Result := stString
+      else
+        Result := stString;
     25: Result := stAsciiStream; { text }
     26: { oid }
       begin
@@ -350,12 +294,10 @@ begin
       Result := stUnknown;
   end;
 
-  if Connection.GetCharactersetCode = csUTF8 then
-    case Result of
-      stString: Result := {$IFDEF FPC}stString{$ELSE}stUnicodeString{$ENDIF};
-      stAsciiStream: Result := stUnicodeStream;
-    end;
-
+  if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+    if Result = stAsciiStream then
+      if Connection.UTF8StringAsWideField then
+        Result := stUnicodeStream;
 end;
 
 {**
@@ -415,48 +357,6 @@ begin
     end;
     Inc(SrcBuffer);
   end;
-  DestBuffer^ := '''';
-end;
-
-{**
-  Determine the character code in terms of enumerated number.
-  @param InputString the input string.
-  @return the character code in terms of enumerated number.
-}
-function pg_CS_code(const InputString: string): TZPgCharactersetType;
-var
-  i,len: integer;
-begin
-  Result := csOTHER;
-
-  i := 0;
-  while pg_CS_Table[i].code <> csOTHER do
-  begin
-    if UpperCase(InputString) = UpperCase(pg_CS_Table[i].name) then
-    begin
-        Result := pg_CS_Table[i].code;
-        break;
-    end;
-    Inc(i);
-  end;
-
-  if Result = csOTHER then { No exact match. Look for the closest match. }
-  begin
-    i := 0;
-    len := 0;
-    while pg_CS_Table[i].code <> csOTHER do
-    begin
-      if Pos(pg_CS_Table[i].name, InputString) > 0 then
-      begin
-        if Length(pg_CS_Table[i].name) >= len then
-        begin
-          len := Length(pg_CS_Table[i].name);
-          Result := pg_CS_Table[i].code;
-        end;
-      end;
-      Inc(i);
-    end;
-  end;
 end;
 
 function pg_CS_stat(stat: integer; character: integer;
@@ -468,23 +368,24 @@ begin
   case CharactersetCode of
     csUTF8, csUNICODE_PODBC:
       begin
-	if (stat < 2) and (character >= $80) then
-		begin
-			if character >= $fc then
-				stat := 6
-			else if character >= $f8 then
-				stat := 5
-			else if character >= $f0 then
-				stat := 4
-			else if character >= $e0 then
-				stat := 3
-			else if character >= $c0 then
-				stat := 2;
-		end
-		else if (stat > 2) and (character > $7f) then
-			Dec(stat)
-		else
-			stat := 0;
+	      if (stat < 2) and (character >= $80) then
+		    begin
+          if character >= $fc then
+            stat := 6
+          else if character >= $f8 then
+            stat := 5
+          else if character >= $f0 then
+            stat := 4
+          else if character >= $e0 then
+            stat := 3
+          else if character >= $c0 then
+            stat := 2;
+        end
+        else
+          if (stat > 2) and (character > $7f) then
+            Dec(stat)
+          else
+            stat := 0;
       end;
 { Shift-JIS Support. }
     csSJIS:
@@ -610,7 +511,7 @@ function EncodeString(CharactersetCode: TZPgCharactersetType; const Value: strin
 var
   I, LastState: Integer;
   SrcLength, DestLength: Integer;
-  SrcBuffer, DestBuffer: PChar; 
+  SrcBuffer, DestBuffer: PChar;
  begin
   SrcLength := Length(Value);
   SrcBuffer := PChar(Value);
@@ -664,7 +565,7 @@ end;
   @param Value a binary stream.
   @return a string in PostgreSQL binary string escape format.
 }
-function EncodeBinaryString(const Value: string): string;
+function EncodeBinaryString(const Value: AnsiString): AnsiString;
 var
   I: Integer;
   SrcLength, DestLength: Integer;
@@ -716,7 +617,7 @@ end;
   @param Value a string in PostgreSQL escape format.
   @return a regular string.
 }
-function DecodeString(const Value: string): string;
+function DecodeString(const Value: AnsiString): AnsiString;
 var
   SrcLength, DestLength: Integer;
   SrcBuffer, DestBuffer: PAnsiChar;
@@ -782,11 +683,7 @@ var
    ConnectionLost: boolean;
 begin
   if Assigned(Handle) then
- {$IFDEF DELPHI12_UP} 
-    ErrorMessage := Trim(UTF8ToUnicodeString(StrPas(PlainDriver.GetErrorMessage(Handle)))) 
- {$ELSE} 
-    ErrorMessage := Trim(StrPas(PlainDriver.GetErrorMessage(Handle))) 
- {$ENDIF} 
+    ErrorMessage := Trim(String(StrPas(PlainDriver.GetErrorMessage(Handle))))
   else
     ErrorMessage := '';
   if ErrorMessage <> '' then
@@ -805,7 +702,7 @@ begin
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SOURCE_LINE)));
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SOURCE_FUNCTION)));
 }     
-     StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SQLSTATE)));
+     StatusCode := Trim(String(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SQLSTATE))));
     end
     else
     begin
@@ -827,6 +724,7 @@ begin
       0, ErrorMessage);
 
     if ResultHandle <> nil then PlainDriver.Clear(ResultHandle);
+
 
     raise EZSQLException.CreateWithStatus(StatusCode,Format(SSQLError1, [ErrorMessage]));
   end;

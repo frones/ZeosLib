@@ -63,6 +63,14 @@
     </antcall>
   </target>
 
+  <target name="buildStable" depends="prepare">
+     <antcall target="buildZip">
+      <param name="branch" value="STABLE"/>
+      <param name="url" value="${url.stable}"/>
+      <param name="fullZip" value="true"/>
+    </antcall>
+  </target>
+
   <target name="buildTagged" depends="prepare">
      <antcall target="buildTagZip">
       <param name="branch" value="TAG"/>
@@ -102,6 +110,7 @@
       <status path="${checktemp.dir}" textStatusProperty="testStatus.textStatus" propStatusProperty="testStatus.propStatus" lastChangedRevisionProperty="testStatus.lastCommitRevision" revisionProperty="testStatus.revision" lastCommitAuthorProperty="testStatus.lastCommitAuthor" urlProperty="testStatus.url" />
     </svn>
     <property name="revision" value="${testStatus.lastCommitRevision}"/>
+    <property name="outfiles_basename" value="${release.dir}/ZEOSLIB_${branch}_REV${revision}"/>
 
 
     <delete dir="${checktemp.dir}" />
@@ -114,31 +123,32 @@
 
      <antcall target="buildFullZip" />
      <antcall target="buildSmallZip" />
+     <antcall target="buildDelphiCode2Doc" />
 
     <delete dir="${temp.dir}" />
     <echo message="Releasing Zeos DBO Project (${branch})... revision ${revision}"/>
   </target>
 
  <target name="buildFullZip" if="fullZip">
-    <delete file="${release.dir}/ZEOSLIB_${branch}_REV${revision}.zip" />
-    <zip zipfile="${release.dir}/ZEOSLIB_${branch}_REV${revision}.zip">
+    <delete file="${outfiles_basename}.zip" />
+    <zip zipfile="${outfiles_basename}.zip">
       <fileset dir="${temp.dir}"/>
     </zip>
-    <checksum file="${release.dir}/ZEOSLIB_${branch}_REV${revision}.zip" forceoverwrite="yes"/>
-    <checksum file="${release.dir}/ZEOSLIB_${branch}_REV${revision}.zip" algorithm="SHA" forceoverwrite="yes"/>
+    <checksum file="${outfiles_basename}.zip" forceoverwrite="yes"/>
+    <checksum file="${outfiles_basename}.zip" algorithm="SHA" forceoverwrite="yes"/>
   </target>
 
  <target name="buildSmallZip" if="smallZip">
-    <delete file="${release.dir}/ZEOSLIB_${branch}_REV${revision}_COMPACT.zip" />
-    <zip zipfile="${release.dir}/ZEOSLIB_${branch}_REV${revision}_COMPACT.zip">
+    <delete file="${outfiles_basename}_COMPACT.zip" />
+    <zip zipfile="${outfiles_basename}_COMPACT.zip">
       <fileset dir="${temp.dir}">
          <exclude name="**/lib/**"/>
          <exclude name="**/documentation/**"/>
          <exclude name="**/artwork/**"/>
       </fileset>
     </zip>
-    <checksum file="${release.dir}/ZEOSLIB_${branch}_REV${revision}_COMPACT.zip" forceoverwrite="yes"/>
-    <checksum file="${release.dir}/ZEOSLIB_${branch}_REV${revision}_COMPACT.zip" algorithm="SHA" forceoverwrite="yes"/>
+    <checksum file="${outfiles_basename}_COMPACT.zip" forceoverwrite="yes"/>
+    <checksum file="${outfiles_basename}_COMPACT.zip" algorithm="SHA" forceoverwrite="yes"/>
   </target>
 
   <target name="buildTagZip">
@@ -147,6 +157,7 @@
     <svn username="anonymous" password="guest">
       <export srcUrl="${url}" revision="HEAD" destPath="${temp.dir}" />
     </svn>
+    <property name="outfiles_basename" value="${release.dir}/ZEOSDBO-${build.productversion}"/>
 
      <antcall target="buildVersionZip" />
      <antcall target="buildDoxygen" />
@@ -160,8 +171,8 @@
 
     <antcall target="buildDoc" />
 
-    <delete file="${release.dir}/ZEOSDBO-${build.productversion}.zip" />
-    <zip zipfile="${release.dir}/ZEOSDBO-${build.productversion}.zip">
+    <delete file="${outfiles_basename}.zip" />
+    <zip zipfile="${outfiles_basename}.zip">
       <fileset dir="${temp.dir}">
          <include name="*.txt"/>
          <include name="doc/html/**"/>
@@ -171,15 +182,15 @@
          <include name="examples/**"/>
       </fileset>
     </zip>
-    <checksum file="${release.dir}/ZEOSDBO-${build.productversion}.zip" forceoverwrite="yes"/>
-    <checksum file="${release.dir}/ZEOSDBO-${build.productversion}.zip" algorithm="SHA" forceoverwrite="yes"/>
+    <checksum file="${outfiles_basename}.zip" forceoverwrite="yes"/>
+    <checksum file="${outfiles_basename}.zip" algorithm="SHA" forceoverwrite="yes"/>
   </target>
 
   <target name="buildDoc">
     <delete dir="${temp.dir}/doc" />
 
     <exec osfamily="windows" executable="${ede.home}/bat/docbook_deploy_all.bat" dir="${temp.dir}/documentation" output="${log.file}" append="true" failonerror="true">
-        <env key="ZEOS_DIR" path="${root.dir}/temp"/>
+        <env key="ZEOS_DIR" path="${temp.dir}"/>
     </exec>
     <copy todir="${temp.dir}/doc/html" flatten="true" overwrite="true" preservelastmodified="true" includeEmptyDirs="false">
       <fileset dir="${temp.dir}/documentation/articles_generated/output">
@@ -207,30 +218,41 @@
       </fileset>
     </copy>
     <delete dir="${temp.dir}/doc/doxy" />
+    <property name="outfiles_basename" value="${release.dir}/ZEOSDBO-${build.productversion}"/>
 
-    <delete file="${release.dir}/ZEOSDBO-${build.productversion}_doxygen.zip" />
-    <zip zipfile="${release.dir}/ZEOSDBO-${build.productversion}_doxygen.zip">
+    <delete file="${outfiles_basename}_doxygen.zip" />
+    <zip zipfile="${outfiles_basename}_doxygen.zip">
       <fileset dir="${temp.dir}/doc/doxygen">
          <include name="**"/>
       </fileset>
     </zip>
-    <checksum file="${release.dir}/ZEOSDBO-${build.productversion}_doxygen.zip" forceoverwrite="yes"/>
-    <checksum file="${release.dir}/ZEOSDBO-${build.productversion}_doxygen.zip" algorithm="SHA" forceoverwrite="yes"/>
+    <checksum file="${outfiles_basename}_doxygen.zip" forceoverwrite="yes"/>
+    <checksum file="${outfiles_basename}_doxygen.zip" algorithm="SHA" forceoverwrite="yes"/>
   </target>
   
 <target name="buildDelphiCode2Doc" depends="prepare">
-    <exec osfamily="windows" executable="${delphicode2doc.home}/DCTD_cmd" dir="${temp.dir}/documentation" output="${log.file}" append="true" failonerror="true">
-        <arg line="Zeoslibcode2doc.xml"/>
+    <exec osfamily="windows" executable="${delphicode2doc.home}/DCTD_cmd.exe" output="${log.file}" append="true" failonerror="true">
+        <arg path="${temp.dir}/documentation/Zeoslibcode2doc.xml"/>
        </exec>
+    <property name="outfiles_basename" value="${release.dir}/ZEOSDBO-${build.productversion}"/>
 
-    <delete file="${release.dir}/ZEOSDBO-${build.productversion}_DelphiCode2Doc.zip" />
-    <zip zipfile="${release.dir}/ZEOSDBO-${build.productversion}_DelphiCode2Doc.zip">
-      <fileset dir="${temp.dir}/documentation/ZeosDelphiCode2Doc">
+    <delete file="${outfiles_basename}_DelphiCode2Doc_html.zip" />
+    <zip zipfile="${outfiles_basename}_DelphiCode2Doc_html.zip">
+      <fileset dir="${temp.dir}/doc/ZeosDelphiCode2Doc/html/">
          <include name="**"/>
       </fileset>
     </zip>
-    <checksum file="${release.dir}/ZEOSDBO-${build.productversion}_DelphiCode2Doc.zip" forceoverwrite="yes"/>
-    <checksum file="${release.dir}/ZEOSDBO-${build.productversion}_DelphiCode2Doc.zip" algorithm="SHA" forceoverwrite="yes"/>
+    <checksum file="${outfiles_basename}_DelphiCode2Doc_html.zip" forceoverwrite="yes"/>
+    <checksum file="${outfiles_basename}_DelphiCode2Doc_html.zip" algorithm="SHA" forceoverwrite="yes"/>
+
+    <delete file="${outfiles_basename}_DelphiCode2Doc_chm.zip" />
+    <zip zipfile="${outfiles_basename}_DelphiCode2Doc_chm.zip">
+      <fileset dir="${temp.dir}/doc/ZeosDelphiCode2Doc/chm/">
+         <include name="*.chm"/>
+      </fileset>
+    </zip>
+    <checksum file="${outfiles_basename}_DelphiCode2Doc_chm.zip" forceoverwrite="yes"/>
+    <checksum file="${outfiles_basename}_DelphiCode2Doc_chm.zip" algorithm="SHA" forceoverwrite="yes"/>
   </target>
   
   </project>

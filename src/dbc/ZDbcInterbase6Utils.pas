@@ -60,7 +60,7 @@ interface
 uses
   Classes, SysUtils, Types, ZDbcIntfs, ZDbcStatement,
   ZPlainFirebirdDriver, ZPlainFirebirdInterbaseConstants,ZCompatibility,
-  ZDbcCachedResultSet, ZDbcLogging, ZMessages, ZVariant;
+  ZDbcCachedResultSet, ZDbcLogging, ZMessages, ZVariant, ZTokenizer;
 
 type
   { Interbase Statement Type }
@@ -101,10 +101,10 @@ type
     function IsNullable(const Index: Word): boolean;
 
     function GetFieldCount: Integer;
-    function GetFieldSqlName(const Index: Word): AnsiString;
-    function GetFieldRelationName(const Index: Word): AnsiString;
-    function GetFieldOwnerName(const Index: Word): AnsiString;
-    function GetFieldAliasName(const Index: Word): AnsiString;
+    function GetFieldSqlName(const Index: Word): String;
+    function GetFieldRelationName(const Index: Word): String;
+    function GetFieldOwnerName(const Index: Word): String;
+    function GetFieldAliasName(const Index: Word): String;
     function GetFieldIndex(const Name: AnsiString): Word;
     function GetFieldScale(const Index: Word): integer;
     function GetFieldSqlType(const Index: Word): TZSQLType;
@@ -128,11 +128,7 @@ type
     procedure UpdateDouble(const Index: Integer; Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
     procedure UpdatePChar(const Index: Integer; Value: PAnsiChar);
-    {$IFDEF DELPHI12_UP}                //AVZ - Unicode
-    procedure UpdateString(const Index: Integer; Value: String);
-    {$ELSE}
-    procedure UpdateString(const Index: Integer; Value: AnsiString);
-    {$ENDIF}
+    procedure UpdateString(const Index: Integer; Value: ZAnsiString);
     procedure UpdateBytes(const Index: Integer; Value: TByteDynArray);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
     procedure UpdateTime(const Index: Integer; Value: TDateTime);
@@ -148,7 +144,7 @@ type
     procedure ReadBlobFromVariant(const Index: Word; var Value: Variant);
 
     function IsNull(const Index: Integer): Boolean;
-    function GetPChar(const Index: Integer): PAnsiChar;
+    function GetPChar(const Index: Integer): PChar;
     function GetString(const Index: Integer): AnsiString;
     function GetBoolean(const Index: Integer): Boolean;
     function GetByte(const Index: Integer): ShortInt;
@@ -170,13 +166,21 @@ type
     Can allocate memory for sqlda structure get basic information }
   TZSQLDA = class (TInterfacedObject, IZSQLDA)
   private
+    FHandle: PISC_DB_HANDLE;
+    FTransactionHandle: PISC_TR_HANDLE;
     FXSQLDA: PXSQLDA;
     FPlainDriver: IZInterbasePlainDriver;
+    Temp: AnsiString;
+    FUTF8StringAsWideField: Boolean;
+    FClientCodePage: PZCodePage;
     procedure CheckRange(const Index: Word);
     procedure IbReAlloc(var P; OldSize, NewSize: Integer);
     procedure SetFieldType(const Index: Word; Size: Integer; Code: Smallint;
       Scale: Smallint);
   public
+    constructor Create(PlainDriver: IZInterbasePlainDriver;
+      Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE;
+      Encoding: PZCodePage; const UTF8StringAsWideField: Boolean); virtual;
     procedure InitFields(Parameters: boolean);
     procedure AllocateSQLDA; virtual;
     procedure FreeParamtersValues;
@@ -185,10 +189,10 @@ type
     function IsNullable(const Index: Word): boolean;
 
     function GetFieldCount: Integer;
-    function GetFieldSqlName(const Index: Word): AnsiString;
-    function GetFieldOwnerName(const Index: Word): AnsiString;
-    function GetFieldRelationName(const Index: Word): AnsiString;
-    function GetFieldAliasName(const Index: Word): AnsiString;
+    function GetFieldSqlName(const Index: Word): String;
+    function GetFieldOwnerName(const Index: Word): String;
+    function GetFieldRelationName(const Index: Word): String;
+    function GetFieldAliasName(const Index: Word): String;
     function GetFieldIndex(const Name: AnsiString): Word;
     function GetFieldScale(const Index: Word): integer;
     function GetFieldSqlType(const Index: Word): TZSQLType;
@@ -203,21 +207,10 @@ type
   { Parameters class for sqlda structure.
     It clas can only write data to parameters/fields }
   TZParamsSQLDA = class (TZSQLDA, IZParamsSQLDA)
-  protected
-    FHandle: PISC_DB_HANDLE;
-    FTransactionHandle: PISC_TR_HANDLE;
   private
-    //AVZ
-    {$IFDEF DELPHI12_UP}
-    procedure EncodeString(Code: Smallint; const Index: Word; const Str: String);
-    {$ELSE}
     procedure EncodeString(Code: Smallint; const Index: Word; const Str: AnsiString);
-    {$ENDIF}
-
     procedure UpdateDateTime(const Index: Integer; Value: TDateTime);
   public
-    constructor Create(PlainDriver: IZInterbasePlainDriver;
-      Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE);
     destructor Destroy; override;
 
     procedure WriteBlob(const Index: Integer; Stream: TStream);
@@ -232,11 +225,7 @@ type
     procedure UpdateDouble(const Index: Integer; Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
     procedure UpdatePChar(const Index: Integer; Value: PAnsiChar);
-    {$IFDEF DELPHI12_UP}                         //AVZ  - Unicode
-    procedure UpdateString(const Index: Integer; Value: String);
-    {$ELSE}
-    procedure UpdateString(const Index: Integer; Value: AnsiString);
-    {$ENDIF}
+    procedure UpdateString(const Index: Integer; Value: ZAnsiString);
     procedure UpdateBytes(const Index: Integer; Value: TByteDynArray);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
     procedure UpdateTime(const Index: Integer; Value: TDateTime);
@@ -247,16 +236,12 @@ type
   { Resultset class for sqlda structure.
     It class read data from sqlda fields }
   TZResultSQLDA = class (TZSQLDA, IZResultSQLDA)
-  protected
-    FDefaults: array of Variant;
-    FHandle: PISC_DB_HANDLE;
-    FTransactionHandle: PISC_TR_HANDLE;
   private
     function DecodeString(const Code: Smallint; const Index: Word): AnsiString;
     procedure DecodeString2(const Code: Smallint; const Index: Word; out Str: AnsiString);
+  protected
+    FDefaults: array of Variant;
   public
-    constructor Create(PlainDriver: IZInterbasePlainDriver;
-      Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE);
     destructor Destroy; override;
 
     procedure AllocateSQLDA; override;
@@ -266,7 +251,7 @@ type
     procedure ReadBlobFromVariant(const Index: Word; var Value: Variant);
 
     function IsNull(const Index: Integer): Boolean;
-    function GetPChar(const Index: Integer): PAnsiChar;
+    function GetPChar(const Index: Integer): PChar;
     function GetString(const Index: Integer): AnsiString;
     function GetBoolean(const Index: Integer): Boolean;
     function GetByte(const Index: Integer): ShortInt;
@@ -316,14 +301,16 @@ type
 
   { Interbase statement functions}
   function PrepareStatement(PlainDriver: IZInterbasePlainDriver;
-    Handle: PISC_DB_HANDLE; TrHandle: PISC_TR_HANDLE; Dialect: Word; SQL: string;
+    Handle: PISC_DB_HANDLE; TrHandle: PISC_TR_HANDLE; Dialect: Word;
+    SQL: AnsiString;
     var StmtHandle: TISC_STMT_HANDLE): TZIbSqlStatementType;
   procedure PrepareResultSqlData(PlainDriver: IZInterbasePlainDriver;
     Handle: PISC_DB_HANDLE; Dialect: Word; SQL: string;
     var StmtHandle: TISC_STMT_HANDLE; SqlData: IZResultSQLDA);
   procedure PrepareParameters(PlainDriver: IZInterbasePlainDriver; SQL: string;
     InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray; InParamCount: Integer;
-    Dialect: Word; var StmtHandle: TISC_STMT_HANDLE; ParamSqlData: IZParamsSQLDA);
+    Dialect: Word; var StmtHandle: TISC_STMT_HANDLE; ParamSqlData: IZParamsSQLDA;
+    const Encoding: TZCharEncoding);
   procedure FreeStatement(PlainDriver: IZInterbasePlainDriver;
     StatementHandle: TISC_STMT_HANDLE; Options : Word);
   function GetStatementType(PlainDriver: IZInterbasePlainDriver;
@@ -331,7 +318,8 @@ type
   function GetAffectedRows(PlainDriver: IZInterbasePlainDriver;
     StmtHandle: TISC_STMT_HANDLE; StatementType: TZIbSqlStatementType): integer;
 
-  function ConvertInterbase6ToSqlType(SqlType, SqlSubType: Integer): TZSqlType;
+  function ConvertInterbase6ToSqlType(SqlType, SqlSubType: Integer;
+    CharEncoding: TZCharEncoding; const UTF8StringAsWideField: Boolean): TZSqlType;
 
   { interbase blob routines }
   procedure GetBlobInfo(PlainDriver: IZInterbasePlainDriver;
@@ -454,7 +442,7 @@ const
 implementation
 
 uses
-  Variants, ZSysUtils, Math, ZDbcInterbase6;
+  Variants, ZSysUtils, Math, ZDbcInterbase6{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
 
 {**
    Generate specific length random string and return it
@@ -465,7 +453,7 @@ function RandomString(Len: integer): AnsiString;
 begin
   Result := '';
   while Length(Result) < Len do
-    Result := Result + IntToStr(Trunc(Random(High(Integer))));
+    Result := Result + AnsiString(IntToStr(Trunc(Random(High(Integer)))));
   if Length(Result) > Len then
     Result := Copy(Result, 1, Len);
 end;
@@ -486,7 +474,8 @@ begin
      or (Statement.GetResultSetType <> rtForwardOnly) then
   begin
     CachedResolver  := TZInterbase6CachedResolver.Create(Statement,  NativeResultSet.GetMetadata);
-    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, CachedResolver);
+    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
+      CachedResolver, Statement.GetConnection.GetClientCodePageInformations);
     CachedResultSet.SetConcurrency(Statement.GetResultSetConcurrency);
     Result := CachedResultSet;
   end
@@ -505,7 +494,8 @@ function GenerateDPB(Info: TStrings; var FDPBLength, Dialect: Word): PAnsiChar;
 var
   I, Pos, PValue: Integer;
   ParamNo: Word;
-  DPB, Buffer, ParamName, ParamValue: AnsiString;
+  Buffer: String;
+  DPB, ParamName, ParamValue: AnsiString;
 begin
   FDPBLength := 1;
   DPB := AnsiChar(isc_dpb_version1);
@@ -514,15 +504,15 @@ begin
   begin
     Buffer := Info.Strings[I];
     Pos := FirstDelimiter(' ='#9#10#13, Buffer);
-    ParamName := Copy(Buffer, 1, Pos - 1);
+    ParamName := AnsiString(Copy(Buffer, 1, Pos - 1));
     Delete(Buffer, 1, Pos);
-    ParamValue := Buffer;
+    ParamValue := AnsiString(Buffer);
     ParamNo := GetInterbase6DatabaseParamNumber(ParamName);
 
     case ParamNo of
       0: Continue;
       isc_dpb_set_db_SQL_dialect:
-        Dialect := StrToIntDef(ParamValue, 0);
+        Dialect := StrToIntDef(String(ParamValue), 0);
       isc_dpb_user_name, isc_dpb_password, isc_dpb_password_enc,
       isc_dpb_sys_user_name, isc_dpb_license, isc_dpb_encrypt_key,
       isc_dpb_lc_messages, isc_dpb_lc_ctype, isc_dpb_sql_role_name,
@@ -534,7 +524,7 @@ begin
       isc_dpb_num_buffers, isc_dpb_dbkey_scope, isc_dpb_force_write,
       isc_dpb_no_reserve, isc_dpb_damaged, isc_dpb_verify:
         begin
-          DPB := DPB + AnsiChar(ParamNo) + #1 + AnsiChar(StrToInt(ParamValue));
+          DPB := DPB + AnsiChar(ParamNo) + #1 + AnsiChar(StrToInt(String(ParamValue)));
           Inc(FDPBLength, 3);
         end;
       isc_dpb_sweep:
@@ -544,7 +534,7 @@ begin
         end;
       isc_dpb_sweep_interval:
         begin
-          PValue := StrToInt(ParamValue);
+          PValue := StrToInt(String(ParamValue));
           DPB := DPB + AnsiChar(ParamNo) + #4 + PAnsiChar(@PValue)[0] +
                  PAnsiChar(@PValue)[1] + PAnsiChar(@PValue)[2] + PAnsiChar(@PValue)[3];
           Inc(FDPBLength, 6);
@@ -587,7 +577,7 @@ begin
   { Prepare transaction parameters string }
   for I := 0 to Params.Count - 1 do
   begin
-    ParamValue := Params.Strings[I];
+    ParamValue := AnsiString(Params.Strings[I]);
     ParamNo := GetInterbase6TransactionParamNumber(ParamValue);
 
     case ParamNo of
@@ -651,9 +641,9 @@ var
  I: Integer;
  ParamName: AnsiString;
 begin
-  ParamName := LowerCase(Value);
+  ParamName := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiLowerCase(Value);
   Result := 0;
-  if System.Pos(BPBPrefix, ParamName) = 1 then
+  if System.Pos(BPBPrefix, String(ParamName)) = 1 then
     for I := 1 to MAX_DPB_PARAMS do
     begin
       if ParamName = DatabaseParams[I].Name then
@@ -674,9 +664,9 @@ var
  I: Integer;
  ParamName: AnsiString;
 begin
-  ParamName := LowerCase(Value);
+  ParamName := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiLowerCase(Value);
   Result := 0;
-  if System.Pos(TPBPrefix, ParamName) = 1 then
+  if System.Pos(TPBPrefix, String(ParamName)) = 1 then
     for I := 1 to MAX_TPB_PARAMS do
     begin
       if ParamName = TransactionParams[I].Name then
@@ -695,29 +685,30 @@ end;
 
   <b>Note:</b> The interbase type and subtype get from RDB$TYPES table
 }
-function ConvertInterbase6ToSqlType(SqlType, SqlSubType: Integer):
-  TZSQLType;
+function ConvertInterbase6ToSqlType(SqlType, SqlSubType: Integer;
+  CharEncoding: TZCharEncoding; const UTF8StringAsWideField: Boolean): TZSQLType;
 begin
   Result := ZDbcIntfs.stUnknown;
 
   case SqlType of
     RDB_BOOLEAN: Result := stBoolean;
-    RDB_VARCHAR2, RDB_VARCHAR, RDB_CSTRING, RDB_CSTRING2: Result := stString;
+    RDB_VARCHAR2, RDB_VARCHAR, RDB_CSTRING, RDB_CSTRING2:
+      Result := stString;
     RDB_CHAR, RDB_CHAR2:
       begin
         case SqlSubType of
           CS_NONE: Result := stString;
           CS_BINARY: Result := stBytes;
           CS_ASCII: Result := stString;
-          CS_UNICODE_FSS: Result := stUnicodeString;
+          CS_UNICODE_FSS: Result := stString;//stUnicodeString;
         else
           // Bug 1177394: Bug using View
           Result := stString;
         end;
       end;
     RDB_D_FLOAT: Result := stDouble;
+    RDB_FLOAT: Result := stFloat;
     RDB_DOUBLE: Result := stDouble;
-    RDB_FLOAT: Result := stDouble;
     RDB_BLOB_ID, RDB_QUAD: Result := stLong;
     RDB_INT64:
       begin
@@ -757,7 +748,7 @@ begin
           isc_blob_text: Result := stAsciiStream;
           isc_blob_blr: Result := stBinaryStream;
           isc_blob_acl: Result := stAsciiStream;
-          isc_blob_ranges: Result := ZDbcIntfs.stUnknown;//Result := stBinaryStream;
+          isc_blob_ranges: Result := stBinaryStream;
           isc_blob_summary: Result := stBinaryStream;
           isc_blob_format: Result := stAsciiStream;
           isc_blob_tra: Result := stAsciiStream;
@@ -768,6 +759,11 @@ begin
     else
       Result := ZDbcIntfs.stUnknown;
   end;
+  if ( CharEncoding = ceUTF8) and UTF8StringAsWideField then
+    case result of
+      stString: Result := stUnicodeString;
+      stAsciiStream: Result := stUnicodeStream;
+    end;
 end;
 
 {**
@@ -820,11 +816,11 @@ begin
     ErrorMessage := '';
     PStatusVector := @StatusVector;
     while PlainDriver.isc_interprete(Msg, @PStatusVector) > 0 do
-      ErrorMessage := ErrorMessage + ' ' + StrPas(Msg);
+      ErrorMessage := ErrorMessage + ' ' + String(StrPas(Msg));
 
     ErrorCode := PlainDriver.isc_sqlcode(@StatusVector);
     PlainDriver.isc_sql_interprete(ErrorCode, Msg, 1024);
-    ErrorSqlMessage := StrPas(Msg);
+    ErrorSqlMessage := String(StrPas(Msg));
 
 {$IFDEF INTERBASE_EXTENDED_MESSAGES}
     if SQL <> '' then
@@ -877,7 +873,7 @@ end;
 }
 function PrepareStatement(PlainDriver: IZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; TrHandle: PISC_TR_HANDLE; Dialect: Word;
-  SQL: string; var StmtHandle: TISC_STMT_HANDLE):
+  SQL: AnsiString; var StmtHandle: TISC_STMT_HANDLE):
   TZIbSqlStatementType;
 var
   StatusVector: TARRAY_ISC_STATUS;
@@ -885,17 +881,11 @@ var
 begin
   { Allocate an sql statement }
   PlainDriver.isc_dsql_allocate_statement(@StatusVector, Handle, @StmtHandle);
-  CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, Sql);
-
+  CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, String(Sql));
   { Prepare an sql statement }
-  {$IFDEF DELPHI12_UP}
-  PlainDriver.isc_dsql_prepare(@StatusVector, TrHandle, @StmtHandle,
-     0, PAnsiChar(UTF8String(SQL)), Dialect, nil);
-  {$ELSE}
-  PlainDriver.isc_dsql_prepare(@StatusVector, TrHandle, @StmtHandle,
-     0, PAnsiChar(SQL), Dialect, nil);
-  {$ENDIF}
-  iError := CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, SQL); //Check for disconnect AVZ
+    PlainDriver.isc_dsql_prepare(@StatusVector, TrHandle, @StmtHandle,
+      0, PAnsiChar(SQL), Dialect, nil);
+  iError := CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, String(SQL)); //Check for disconnect AVZ
 
   { Set Statement Type }
   if (iError <> DISCONNECT_ERROR) then //AVZ
@@ -1038,7 +1028,8 @@ end;
 }
 procedure PrepareParameters(PlainDriver: IZInterbasePlainDriver; SQL: string;
   InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray; InParamCount: Integer;
-  Dialect: Word; var StmtHandle: TISC_STMT_HANDLE; ParamSqlData: IZParamsSQLDA);
+  Dialect: Word; var StmtHandle: TISC_STMT_HANDLE; ParamSqlData: IZParamsSQLDA;
+  const Encoding: TZCharEncoding);
 var
   I: Integer;
   TempBlob: IZBlob;
@@ -1099,12 +1090,15 @@ begin
           SoftVarManager.GetAsFloat(InParamValues[I]));
       stString:
         ParamSqlData.UpdateString(I,
-          SoftVarManager.GetAsString(InParamValues[I]));
+          PlainDriver.ZPlainString(SoftVarManager.GetAsString(InParamValues[I]), Encoding));
       stUnicodeString:
-        ParamSqlData.UpdateString(I,(SoftVarManager.GetAsUnicodeString(InParamValues[I]))); //AVZ
+        if (Encoding = ceAnsi) then
+          ParamSqlData.UpdateString(I, AnsiString(SoftVarManager.GetAsUnicodeString(InParamValues[I])))
+        else
+          ParamSqlData.UpdateString(I, UTF8Encode(SoftVarManager.GetAsUnicodeString(InParamValues[I])));
       stBytes:
         ParamSqlData.UpdateBytes(I,
-          StrToBytes(SoftVarManager.GetAsString(InParamValues[I])));
+          StrToBytes(AnsiString(SoftVarManager.GetAsString(InParamValues[I]))));
       stDate:
         ParamSqlData.UpdateDate(I,
           SoftVarManager.GetAsDateTime(InParamValues[I]));
@@ -1379,7 +1373,23 @@ begin
 end;
 
 { TSQLDA }
+constructor TZSQLDA.Create(PlainDriver: IZInterbasePlainDriver;
+  Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE;
+  Encoding: PZCodePage; const UTF8StringAsWideField: Boolean);
+begin
+  FClientCodePage := Encoding;
+  FUTF8StringAsWideField := UTF8StringAsWideField;
+  FPlainDriver := PlainDriver;
+  FHandle := Handle;
+  FTransactionHandle := TransactionHandle;
 
+  GetMem(FXSQLDA, XSQLDA_LENGTH(0));
+  FillChar(FXSQLDA^, XSQLDA_LENGTH(0), 0);
+  FXSQLDA.sqln := 0;
+  FXSQLDA.sqld := 0;
+
+  FXSQLDA.version := SQLDA_VERSION1;
+end;
 {**
    Allocate memory for SQLVar in SQLDA structure for every
    fields by it length.
@@ -1463,11 +1473,12 @@ end;
    @param Index the index fields
    @return the alias name
 }
-function TZSQLDA.GetFieldAliasName(const Index: Word): AnsiString;
+function TZSQLDA.GetFieldAliasName(const Index: Word): String;
 begin
   CheckRange(Index);
   {$R-}
-  SetString(Result, FXSQLDA.sqlvar[Index].aliasname, FXSQLDA.sqlvar[Index].aliasname_length);
+  SetString(Temp, FXSQLDA.sqlvar[Index].aliasname, FXSQLDA.sqlvar[Index].aliasname_length);
+  Result := FPlainDriver.ZDbcString(Temp, FClientCodePage^.Encoding);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}
@@ -1557,7 +1568,12 @@ begin
   SqlSubType := GetIbSqlSubType(Index);
 
   case GetIbSqlType(Index) of
-    SQL_VARYING, SQL_TEXT: Result := stString;
+    SQL_VARYING, SQL_TEXT:
+      case SqlSubType of
+        1: {Octets} Result := stBytes;
+        else
+          Result := stString;
+      end;
     SQL_LONG:
       begin
         if SqlScale = 0 then
@@ -1570,9 +1586,10 @@ begin
         if SqlScale = 0 then
           Result := stShort
         else
-          Result := stdouble;
-      end;
-    SQL_FLOAT, SQL_DOUBLE: Result := stDouble;
+          Result := stFloat; //Numeric with low precision
+       end;
+    SQL_FLOAT: Result := stFloat;
+    SQL_DOUBLE: Result := stDouble;
     SQL_DATE: Result := stTimestamp;
     SQL_TYPE_TIME: Result := stTime;
     SQL_TYPE_DATE: Result := stDate;
@@ -1596,6 +1613,11 @@ begin
   else
       Result := stString;
   end;
+  if ( FClientCodePage^.Encoding = ceUTF8) and FUTF8StringAsWideField then
+    case result of
+      stString: Result := stUnicodeString;
+      stAsciiStream: Result := stUnicodeStream;
+    end;
 end;
 
 {**
@@ -1603,14 +1625,15 @@ end;
    @param Index the index fields
    @return the own name
 }
-function TZSQLDA.GetFieldOwnerName(const Index: Word): AnsiString;
+function TZSQLDA.GetFieldOwnerName(const Index: Word): String;
 begin
   CheckRange(Index);
   {$R-}
-  SetString(Result, FXSQLDA.sqlvar[Index].OwnName, FXSQLDA.sqlvar[Index].OwnName_length);
+  SetString(Temp, FXSQLDA.sqlvar[Index].OwnName, FXSQLDA.sqlvar[Index].OwnName_length);
+  Result := FPlainDriver.ZDbcString(Temp, FClientCodePage^.Encoding);
   {$IFOPT D+}
 {$R+}
-{$ENDIF}  
+{$ENDIF}
 end;
 
 {**
@@ -1618,11 +1641,12 @@ end;
    @param Index the index fields
    @return the real name
 }
-function TZSQLDA.GetFieldRelationName(const Index: Word): AnsiString;
+function TZSQLDA.GetFieldRelationName(const Index: Word): String;
 begin
   CheckRange(Index);
   {$R-}
-  SetString(Result, FXSQLDA.sqlvar[Index].RelName, FXSQLDA.sqlvar[Index].RelName_length);
+  SetString(Temp, FXSQLDA.sqlvar[Index].RelName, FXSQLDA.sqlvar[Index].RelName_length);
+  Result := FPlainDriver.ZDbcString(Temp, FClientCodePage^.Encoding);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}  
@@ -1648,11 +1672,12 @@ end;
    @param Index the index fields
    @return the sql name
 }
-function TZSQLDA.GetFieldSqlName(const Index: Word): AnsiString;
+function TZSQLDA.GetFieldSqlName(const Index: Word): String;
 begin
   CheckRange(Index);
   {$R-}
-  SetString(Result, FXSQLDA.sqlvar[Index].sqlname, FXSQLDA.sqlvar[Index].sqlname_length);
+  SetString(Temp, FXSQLDA.sqlvar[Index].sqlname, FXSQLDA.sqlvar[Index].sqlname_length);
+  Result := FPlainDriver.ZDbcString(Temp, FClientCodePage^.Encoding);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}  
@@ -1768,25 +1793,6 @@ end;
 { TParamsSQLDA }
 
 {**
-   Constructs this object and assignes the main properties.
-   param PlainDriver the interbase plain driver
-}
-constructor TZParamsSQLDA.Create(PlainDriver: IZInterbasePlainDriver;
-  Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE);
-begin
-  FPlainDriver := PlainDriver;
-  FHandle := Handle;
-  FTransactionHandle := TransactionHandle;
-
-  GetMem(FXSQLDA, XSQLDA_LENGTH(0));
-  FillChar(FXSQLDA^, XSQLDA_LENGTH(0), 0);
-  FXSQLDA.sqln := 0;
-  FXSQLDA.sqld := 0;
-
-  FXSQLDA.version := SQLDA_VERSION1;
-end;
-
-{**
    Free allocated memory and free object
 }
 destructor TZParamsSQLDA.Destroy;
@@ -1802,23 +1808,13 @@ end;
    @param Index the index target filed
    @param Str the source string
 }
-{$IFDEF DELPHI12_UP}   //AVZ
-procedure TZParamsSQLDA.EncodeString(Code: Smallint; const Index: Word;
-  const Str: String);
-{$ELSE}
+
 procedure TZParamsSQLDA.EncodeString(Code: Smallint; const Index: Word;
   const Str: AnsiString);
-{$ENDIF}
 var
   Len: Cardinal;
-  Stream : TStream;
 begin
-  {$IFDEF DELPHI12_UP}   //AVZ - fix forUNICODE Size
-  Len := Length(UTF8Encode(Str));
-  {$ELSE}
   Len := Length(Str);
-  {$ENDIF}
-
   {$R-}
    with FXSQLDA.sqlvar[Index] do
     case Code of
@@ -1834,30 +1830,12 @@ begin
       SQL_VARYING :
         begin
           sqllen := Len + 2;
-          {$IFDEF DELPHI12_UP}
-            if sqllen = 0 then
-            begin
-              GetMem(sqldata, Len + 2)
-            end
-              else
-            begin
-              IbReAlloc(sqldata, 0, (Length(UTF8Encode(Str)) * SizeOf(AnsiChar)) + 2);
-            end;
-
-             PISC_VARYING(sqldata).strlen :=  (Length(UTF8Encode(Str)) * SizeOf(AnsiChar));
-             Move(PAnsiChar(UTF8Encode((Str)))^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);  //AVZ
-          {$ELSE}
-             if sqllen = 0 then
-             begin
-               GetMem(sqldata, Len + 2)
-             end
-               else
-             begin
-               IbReAlloc(sqldata, 0, Len + 2);
-             end;
-             PISC_VARYING(sqldata).strlen :=  Len;
-             Move(PAnsiChar(Str)^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
-          {$ENDIF}
+          if sqllen = 0 then
+            GetMem(sqldata, Len + 2)
+          else
+            IbReAlloc(sqldata, 0, Len + 2);
+          PISC_VARYING(sqldata).strlen :=  Len;
+          Move(PAnsiChar(Str)^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
         end;
     end;
   {$IFOPT D+}
@@ -1980,7 +1958,7 @@ var
 begin
   CheckRange(Index);
   SetFieldType(Index, sizeof(Smallint), SQL_SHORT + 1, 0);
-  {$R-}
+  //{$R-}
   with FXSQLDA.sqlvar[Index] do
   begin
     if (sqlind <> nil) and (sqlind^ = -1) then
@@ -2430,11 +2408,7 @@ end;
    @param Value the source value
 }
 
-{$IFDEF DELPHI12_UP}
-procedure TZParamsSQLDA.UpdateString(const Index: Integer; Value: String);
-{$ELSE}
-procedure TZParamsSQLDA.UpdateString(const Index: Integer; Value: AnsiString);
-{$ENDIF}
+procedure TZParamsSQLDA.UpdateString(const Index: Integer; Value: ZAnsiString);
 var
  SQLCode: SmallInt;
  Stream: TStream;
@@ -2450,13 +2424,13 @@ begin
     case SQLCode of
       SQL_TEXT      : EncodeString(SQL_TEXT, Index, Value);
       SQL_VARYING   : EncodeString(SQL_VARYING, Index, Value);
-      SQL_LONG      : PInteger (sqldata)^ := Round(StrToFloat(Value) * IBScaleDivisor[sqlscale]); //AVZ
-      SQL_SHORT     : PInteger (sqldata)^ := StrToInt(Value);
+      SQL_LONG      : PInteger (sqldata)^ := Round(ZStrToFloat(Value) * IBScaleDivisor[sqlscale]); //AVZ
+      SQL_SHORT     : PInteger (sqldata)^ := StrToInt(String(Value));
       SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, Value);
-      SQL_DOUBLE    : PDouble (sqldata)^ := StrToFloat(Value) * IBScaleDivisor[sqlscale]; //AVZ
+      SQL_DOUBLE    : PDouble (sqldata)^ := ZStrToFloat(Value) * IBScaleDivisor[sqlscale]; //AVZ
       SQL_D_FLOAT,
-      SQL_FLOAT     : PSingle (sqldata)^ := StrToFloat(Value) * IBScaleDivisor[sqlscale];  //AVZ
-      SQL_INT64     : PInt64(sqldata)^ := Trunc(StrToFloat(Value) * IBScaleDivisor[sqlscale]); //AVZ - INT64 value was not recognized
+      SQL_FLOAT     : PSingle (sqldata)^ := ZStrToFloat(Value) * IBScaleDivisor[sqlscale];  //AVZ
+      SQL_INT64     : PInt64(sqldata)^ := Trunc(ZStrToFloat(Value) * IBScaleDivisor[sqlscale]); //AVZ - INT64 value was not recognized
       SQL_BLOB:
         begin
           Stream := TStringStream.Create(Value);
@@ -2562,21 +2536,26 @@ function TZResultSQLDA.DecodeString(const Code: Smallint;
    const Index: Word): AnsiString;
 var
    l: integer;
+  procedure SetAnsi(Ansi: PAnsiChar; Len: Longint);
+  begin
+    SetLength(Result, Len);
+    System.Move(Ansi^, PAnsiChar(Result)^, Len);
+  end;
 begin
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   case Code of
     SQL_TEXT:
-                  begin
-                    Result := BufferToStr(sqldata, sqllen);
-                    // Trim only spaces. TrimRight also removes other characters)
-                    l := sqllen;
-                    while (l > 0) and (Result[l] = ' ') do
-                       dec(l);
-                    if l < sqllen then
-                       result := copy(result, 1, l);
-                  end;
-    SQL_VARYING : SetString(Result, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
+      begin
+        SetAnsi(sqldata, sqllen);
+        // Trim only spaces. TrimRight also removes other characters)
+        l := sqllen;
+        while (l > 0) and (Result[l] = ' ') do
+           dec(l);
+        if l < sqllen then
+           result := copy(result, 1, l);
+      end;
+    SQL_VARYING : SetAnsi(PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
   end;
   {$IFOPT D+}
 {$R+}
@@ -2593,25 +2572,6 @@ procedure TZResultSQLDA.DecodeString2(const Code: Smallint; const Index: Word;
   out Str: AnsiString);
 begin
   Str := DecodeString(Code, Index);
-end;
-
-{**
-   Constructs this object and assignes the main properties.
-   param PlainDriver the interbase plain driver
-}
-constructor TZResultSQLDA.Create(PlainDriver: IZInterbasePlainDriver;
-  Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE);
-begin
-  FPlainDriver := PlainDriver;
-  FHandle := Handle;
-  FTransactionHandle := TransactionHandle;
-
-  GetMem(FXSQLDA, XSQLDA_LENGTH(0));
-  FillChar(FXSQLDA^, XSQLDA_LENGTH(0), 0);
-  FXSQLDA.sqln := 0;
-  FXSQLDA.sqld := 0;
-
-  FXSQLDA.version := SQLDA_VERSION1;
 end;
 
 {**
@@ -2654,13 +2614,13 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := StrToFloat(DecodeString(SQL_TEXT, Index));
-        SQL_VARYING   : Result := StrToFloat(DecodeString(SQL_VARYING, Index));
+        SQL_TEXT      : Result := StrToFloat(String(DecodeString(SQL_TEXT, Index)));
+        SQL_VARYING   : Result := StrToFloat(String(DecodeString(SQL_VARYING, Index)));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
       end;
-   end;   
+   end;
   {$IFOPT D+}
 {$R+}
 {$ENDIF}
@@ -2706,8 +2666,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^ <> 0;
         SQL_SHORT     : Result := PSmallint(sqldata)^ <> 0;
         SQL_INT64     : Result := PInt64(sqldata)^ <> 0;
-        SQL_TEXT      : Result := StrToInt(DecodeString(SQL_TEXT, Index)) <> 0;
-        SQL_VARYING   : Result := StrToInt(DecodeString(SQL_VARYING, Index)) <> 0;
+        SQL_TEXT      : Result := StrToInt(String(DecodeString(SQL_TEXT, Index))) <> 0;
+        SQL_VARYING   : Result := StrToInt(String(DecodeString(SQL_VARYING, Index))) <> 0;
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2788,8 +2748,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := StrToFloat(DecodeString(SQL_TEXT, Index));
-        SQL_VARYING   : Result := StrToFloat(DecodeString(SQL_VARYING, Index));
+        SQL_TEXT      : Result := StrToFloat(String(DecodeString(SQL_TEXT, Index)));
+        SQL_VARYING   : Result := StrToFloat(String(DecodeString(SQL_VARYING, Index)));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2840,8 +2800,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := StrToFloat(DecodeString(SQL_TEXT, Index));
-        SQL_VARYING   : Result := StrToFloat(DecodeString(SQL_VARYING, Index));
+        SQL_TEXT      : Result := StrToFloat(String(DecodeString(SQL_TEXT, Index)));
+        SQL_VARYING   : Result := StrToFloat(String(DecodeString(SQL_VARYING, Index)));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2902,8 +2862,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := StrToInt(DecodeString(SQL_TEXT, Index));
-        SQL_VARYING   : Result := StrToInt(DecodeString(SQL_VARYING, Index));
+        SQL_TEXT      : Result := StrToInt(String(DecodeString(SQL_TEXT, Index)));
+        SQL_VARYING   : Result := StrToInt(String(DecodeString(SQL_VARYING, Index)));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2919,12 +2879,12 @@ end;
    @param Index the field index
    @return the field PAnsiChar value
 }
-function TZResultSQLDA.GetPChar(const Index: Integer): PAnsiChar;
+function TZResultSQLDA.GetPChar(const Index: Integer): PChar;
 var
-  TempStr: AnsiString;
+  TempStr: String;
 begin
-  TempStr := GetString(Index);
-  Result := PAnsiChar(TempStr);
+  TempStr := FPlainDriver.ZDbcString(GetString(Index), FClientCodePage^.Encoding);
+  Result := PChar(TempStr);
 end;
 
 {**
@@ -2967,8 +2927,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := StrToInt(DecodeString(SQL_TEXT, Index));
-        SQL_VARYING   : Result := StrToInt(DecodeString(SQL_VARYING, Index));
+        SQL_TEXT      : Result := StrToInt(String(DecodeString(SQL_TEXT, Index)));
+        SQL_VARYING   : Result := StrToInt(String(DecodeString(SQL_VARYING, Index)));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2987,6 +2947,7 @@ end;
 function TZResultSQLDA.GetString(const Index: Integer): AnsiString;
 var
   SQLCode: SmallInt;
+  TempAnsi: AnsiString;
 begin
   CheckRange(Index);
   Result := '';
@@ -3027,11 +2988,11 @@ begin
         SQL_VARYING   : DecodeString2(SQL_VARYING, Index, Result);
         SQL_BLOB      : if VarIsEmpty(FDefaults[Index]) then
                         begin
-                          ReadBlobFromString(Index, Result);
-                          FDefaults[Index] := Result;
+                          ReadBlobFromString(Index, TempAnsi);
+                          FDefaults[Index] := TempAnsi;
                         end
                         else
-                          Result := FDefaults[Index];
+                          Result := AnsiString(FDefaults[Index]);
 
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,

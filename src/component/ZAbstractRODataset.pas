@@ -166,7 +166,6 @@ type
     FSortedOnlyDataFields: Boolean;
     FSortRowBuffer1: PZRowBuffer;
     FSortRowBuffer2: PZRowBuffer;
-    
     FPrepared: Boolean;
   private
     function GetReadOnly: Boolean;
@@ -505,12 +504,7 @@ begin
  FStatusCode:=value;
 end;
 
-{ procedure EZDatabaseError.SetStatusCode(const Value: String);
-begin
-  FStatusCode := Value;
-end;
-
-TZDataLink }
+{ TZDataLink }
 
 {**
   Creates this dataset link object.
@@ -1135,12 +1129,10 @@ begin
             Statement.SetBigDecimal(I + 1, Param.AsCurrency);
           ftString, ftFixedChar:
             Statement.SetString(I + 1, Param.AsString);
-          {$IFDEF WITH_FTWIDESTRING} // not available on Delphi 7
           ftWideString:
-            Statement.SetUnicodeString(I + 1, Param.AsWideString);
-          {$ENDIF}
+            Statement.SetUnicodeString(I + 1, {$IFDEF WITH_FTWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF});
           ftBytes:
-            Statement.SetString(I + 1, AnsiString(Param.AsString));
+            Statement.SetString(I + 1, Param.AsString);
           ftDate:
             Statement.SetDate(I + 1, Param.AsDate);
           ftTime:
@@ -1149,7 +1141,15 @@ begin
             Statement.SetTimestamp(I + 1, Param.AsDateTime);
           ftMemo:
             begin
-              Stream := TStringStream.Create(Param.AsMemo);
+              {EgonHugeist: On reading a Param as Memo the Stream reads Byte-wise
+                on Changing to stUnicodeString/Delphi12Up a String is from
+                Type wide/unicode so we have to give him back as
+                Stream!}
+                {$IFDEF DELPHI12_UP}
+                Stream := Param.AsStream;
+                {$ELSE}
+                Stream := TStringStream.Create(Param.AsMemo);
+                {$ENDIF}
               try
                 Statement.SetAsciiStream(I + 1, Stream);
               finally
@@ -1317,7 +1317,7 @@ end;
 function TZAbstractRODataset.GetFieldData(Field: TField; Buffer: Pointer;
   NativeFormat: Boolean): Boolean;
 begin
-  if Field.DataType = ftWideString then
+  if Field.DataType in [ftWideString] then
     NativeFormat := True;
   Result := inherited GetFieldData(Field, Buffer, NativeFormat);
 end;
@@ -1386,6 +1386,13 @@ begin
             {$ENDIF}
             Result := not Result;
           end;
+        {$IFDEF DELPHI12_UP}
+        ftString:
+          begin
+            StrCopy(PAnsiChar(Buffer), PAnsiChar(AnsiString(RowAccessor.GetString(ColumnIndex, Result))));
+            Result := not Result;
+          end;
+        {$ENDIF}
         { Processes all other fields. }
         else
           begin
@@ -1413,7 +1420,7 @@ end;
 procedure TZAbstractRODataset.SetFieldData(Field: TField; Buffer: Pointer;
   NativeFormat: Boolean);
 begin
-  if Field.DataType = ftWideString then
+  if Field.DataType in [ftWideString] then
     NativeFormat := True;
 
   {$IFNDEF VIRTUALSETFIELDDATA}
@@ -1486,14 +1493,18 @@ begin
 
       end
       { Processes all other fields. }
-      else if (Field.FieldKind = fkData) and (Field.DataType = ftString) and
+      else if {$IFNDEF DELPHI12_UP}(Field.FieldKind = fkData) and {$ENDIF}(Field.DataType = ftString) and
         (Length(PAnsiChar(Buffer)) < RowAccessor.GetColumnDataSize(ColumnIndex)) then
       begin
+        {$IFDEF DELPHI12_UP}
+              RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(String(PAnsichar(Buffer))));
+        {$ELSE}
         System.Move(Buffer^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
            Length(PAnsiChar(Buffer)) + 1);
+        {$ENDIF}
         RowAccessor.SetNotNull(ColumnIndex);
       end
-      else
+      else  //process all others also calculatets
       begin
         System.Move(Buffer^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
           RowAccessor.GetColumnDataSize(ColumnIndex));
@@ -1583,7 +1594,7 @@ end;
 }
 procedure TZAbstractRODataset.FetchAll;
 begin
-  Connection.ShowSQLHourGlass;                          
+  Connection.ShowSQLHourGlass;
   FetchRows(0);
   if Active then
     UpdateCursorPos;
@@ -1654,7 +1665,8 @@ begin
       for I := 1 to GetColumnCount do
       begin
         FieldType := ConvertDbcToDatasetType(GetColumnType(I));
-
+        //if IsCurrency(I) then
+          //FieldType := ftCurrency;
         if FieldType in [ftString, ftWidestring, ftBytes] then
           Size := GetPrecision(I)
         else
@@ -1776,6 +1788,7 @@ end;
 procedure TZAbstractRODataset.InternalOpen;
 var
   ColumnList: TObjectList;
+  I: Integer;
 begin
   {$IFNDEF FPC}
   If (csDestroying in Componentstate) then
@@ -1807,7 +1820,13 @@ begin
       InternalInitFieldDefs;
 
     if DefaultFields and not FRefreshInProgress then
+    begin
       CreateFields;
+      for i := 0 to Fields.Count -1 do
+        if Fields[i].DataType in [ftString, ftWideString] then
+          if not (ResultSet.GetMetadata.GetColumnDisplaySize(I+1) = 0) then
+            Fields[i].Size := ResultSet.GetMetadata.GetColumnDisplaySize(I+1);
+    end;
     BindFields(True);
 
     { Initializes accessors and buffers. }
@@ -2123,18 +2142,18 @@ begin
     end;
   end
   else
-  begin 
+  begin
     if DataLink.Active and (DataLink.dataset.Fields.Count > 0) then
-    begin 
-      p1 := 1; p2 := 1; 
+    begin
+      p1 := 1; p2 := 1;
       while (P1 <= Length(LinkedFields)) and (p2 <= Length(MasterFields)) do
-      begin 
-        DetailField := FieldByName(ExtractFieldName(LinkedFields, P1)); 
-        MasterField := DataLink.DataSet.FieldByName (ExtractFieldName(MasterFields, P2)); 
-        DetailField.Assign(MasterField); 
-      end; 
-    end; 
-  end; 
+      begin
+        DetailField := FieldByName(ExtractFieldName(LinkedFields, P1));
+        MasterField := DataLink.DataSet.FieldByName (ExtractFieldName(MasterFields, P2));
+        DetailField.Assign(MasterField);
+      end;
+    end;
+  end;
   inherited DoOnNewRecord;
 end;
 
@@ -2429,7 +2448,7 @@ begin
 
   Index1 := CurrentRows.IndexOf(Pointer(PInteger(Bookmark1)^));
   Index2 := CurrentRows.IndexOf(Pointer(PInteger(Bookmark2)^));
-  
+
   if Index1 < Index2 then Result := -1
   else if Index1 > Index2 then Result := 1;
 end;
@@ -2981,7 +3000,7 @@ begin
         Result := RowAccessor.GetAsciiStream(ColumnIndex, WasNull);
       {$IFDEF WITH_WIDEMEMO}
       ftWideMemo:
-        Result := RowAccessor.GetUnicodeStream(ColumnIndex, WasNull)
+        Result := RowAccessor.ReadUnicodeStream(ColumnIndex, WasNull)
       {$ENDIF}
       else
         Result := RowAccessor.GetBinaryStream(ColumnIndex, WasNull);
@@ -3429,9 +3448,9 @@ begin
             ftLargeInt:
               Statement.SetLong(I + 1, StrToInt64(ParamValue.AsString));
             ftString:
-              Statement.SetString(I + 1, AnsiString(ParamValue.AsString)); //smells like DataLoss since ParamValue.String is Unicodestring (example: Big5 2Byte-Chars...)
+              Statement.SetString(I + 1, ParamValue.AsString); //smells like DataLoss since ParamValue.String is Unicodestring (example: Big5 2Byte-Chars...)
             ftBytes:
-              Statement.SetString(I + 1, String(ParamValue.AsString));
+              Statement.SetString(I + 1, ParamValue.AsString);
             ftDate:
               Statement.SetDate(I + 1, ParamValue.AsDate);
             ftTime:
@@ -3702,5 +3721,6 @@ end;
 {====================end of bangfauzan addition====================}
 
 end.
+
 
 

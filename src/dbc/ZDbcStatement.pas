@@ -58,7 +58,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, ZDbcIntfs, ZTokenizer, ZCompatibility, ZVariant, ZDbcLogging;
+  Types, Classes, SysUtils, ZDbcIntfs, ZTokenizer, ZCompatibility, ZVariant,
+  ZDbcLogging;
 
 type
   TZSQLTypeArray = array of TZSQLType;
@@ -67,7 +68,7 @@ type
 
   { TZAbstractStatement }
 
-  TZAbstractStatement = class(TInterfacedObject, IZStatement)
+  TZAbstractStatement = class(TZCodePagedObject, IZStatement)
   private
     FMaxFieldSize: Integer;
     FMaxRows: Integer;
@@ -85,11 +86,15 @@ type
     FBatchQueries: TStrings;
     FConnection: IZConnection;
     FInfo: TStrings;
+    FChunkSize: Integer; //size of buffer chunks for large lob's related to network settings
     FClosed: Boolean;
-
+    FsSQL: String;
+    FaSQL: ZAnsiString;
+    procedure SetSSQL(const Value: String);
     procedure SetLastResultSet(ResultSet: IZResultSet); virtual;
 
   protected
+    LogSQL: String;
     class function GetNextStatementId : integer;
     procedure RaiseUnsupportedException;
 
@@ -114,13 +119,22 @@ type
     property Connection: IZConnection read FConnection;
     property Info: TStrings read FInfo;
     property Closed: Boolean read FClosed write FClosed;
-    
+
+    property SSQL: String read FsSQL write SetSSQL;
+    property ASQL: ZAnsiString read FaSQL;
+    property ChunkSize: Integer read FChunkSize;
   public
     constructor Create(Connection: IZConnection; Info: TStrings);
     destructor Destroy; override;
 
-    function ExecuteQuery(const SQL: string): IZResultSet; virtual;
-    function ExecuteUpdate(const SQL: string): Integer; virtual;
+    function ExecuteQuery(const SQL: string): IZResultSet; overload; virtual;
+    function ExecuteUpdate(const SQL: string): Integer; overload; virtual;
+    function Execute(const SQL: string): Boolean; overload; virtual;
+    {$IFDEF DELPHI12_UP}
+    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; overload; virtual; abstract;
+    function ExecuteUpdate(const SQL: ZAnsiString): Integer; overload; virtual; abstract;
+    function Execute(const SQL: ZAnsiString): Boolean; overload; virtual; abstract;
+    {$ENDIF}
     procedure Close; virtual;
 
     function GetMaxFieldSize: Integer; virtual;
@@ -133,7 +147,6 @@ type
     procedure Cancel; virtual;
     procedure SetCursorName(const Value: AnsiString); virtual;
 
-    function Execute(const SQL: string): Boolean; virtual;
     function GetResultSet: IZResultSet; virtual;
     function GetUpdateCount: Integer; virtual;
     function GetMoreResults: Boolean; virtual;
@@ -159,9 +172,11 @@ type
 
     function GetConnection: IZConnection;
     function GetParameters: TStrings;
+    function GetChunkSize: Integer;
 
     function GetWarnings: EZSQLWarning; virtual;
     procedure ClearWarnings; virtual;
+    function GetPrepreparedSQL(const SQL: String): ZAnsiString; virtual;
   end;
 
   {** Implements Abstract Prepared SQL Statement. }
@@ -221,13 +236,9 @@ type
     procedure SetFloat(ParameterIndex: Integer; Value: Single); virtual;
     procedure SetDouble(ParameterIndex: Integer; Value: Double); virtual;
     procedure SetBigDecimal(ParameterIndex: Integer; Value: Extended); virtual;
-    procedure SetPChar(ParameterIndex: Integer; Value: PAnsiChar); virtual;
-    procedure SetString(ParameterIndex: Integer; const Value: Ansistring); virtual;
-    {$IFDEF DELPHI12_UP}
-      procedure SetUnicodeString(ParameterIndex: Integer; const Value: String);  virtual; //AVZ
-    {$ELSE}
-      procedure SetUnicodeString(ParameterIndex: Integer; const Value: WideString); virtual;  //AVZ
-    {$ENDIF}
+    procedure SetPChar(ParameterIndex: Integer; Value: PChar); virtual;
+    procedure SetString(ParameterIndex: Integer; const Value: String); virtual;
+    procedure SetUnicodeString(ParameterIndex: Integer; const Value: {$IFDEF DELPHI12_UP}String{$ELSE}WideString{$ENDIF});  virtual; //AVZ
     procedure SetBytes(ParameterIndex: Integer; const Value: TByteDynArray); virtual;
     procedure SetDate(ParameterIndex: Integer; Value: TDateTime); virtual;
     procedure SetTime(ParameterIndex: Integer; Value: TDateTime); virtual;
@@ -252,7 +263,7 @@ type
     FOutParamTypes: TZSQLTypeArray;
     FOutParamCount: Integer;
     FLastWasNull: Boolean;
-    FTemp: string;
+    FTemp: String;
   protected
     FDBParamTypes:array[0..1024] of shortInt;
     procedure SetOutParamCount(NewParamCount: Integer); virtual;
@@ -273,8 +284,8 @@ type
     function WasNull: Boolean; virtual;
 
     function IsNull(ParameterIndex: Integer): Boolean; virtual;
-    function GetPChar(ParameterIndex: Integer): PAnsiChar; virtual;
-    function GetString(ParameterIndex: Integer): AnsiString; virtual;
+    function GetPChar(ParameterIndex: Integer): PChar; virtual;
+    function GetString(ParameterIndex: Integer): String; virtual;
     function GetUnicodeString(ParameterIndex: Integer): WideString; virtual;
     function GetBoolean(ParameterIndex: Integer): Boolean; virtual;
     function GetByte(ParameterIndex: Integer): ShortInt; virtual;
@@ -346,6 +357,7 @@ var
 constructor TZAbstractStatement.Create(Connection: IZConnection; Info: TStrings);
 begin
   { Sets the default properties. }
+  Self.ClientCodePage := Connection.GetClientCodePageInformations;
   FMaxFieldSize := 0;
   FMaxRows := 0;
   FEscapeProcessing := False;
@@ -364,6 +376,10 @@ begin
   FInfo := TStringList.Create;
   if Info <> nil then
     FInfo.AddStrings(Info);
+  if FInfo.Values['chunk_size'] = '' then
+    FChunkSize := StrToIntDef(Connection.GetParameters.Values['chunk_size'], 1024)
+  else
+    FChunkSize := StrToIntDef(FInfo.Values['chunk_size'], 1024)
 end;
 
 {**
@@ -381,6 +397,15 @@ begin
   inherited Destroy;
 end;
 
+{**
+  Sets the preprepared SQL-Statement in an String and AnsiStringForm.
+  @param Value: the SQL-String which has to be optional preprepared
+}
+procedure TZAbstractStatement.SetSSQL(const Value: String);
+begin
+  FaSQL := Self.GetPrepreparedSQL(Value);
+  FSSQL := String(FaSQL);
+end;
 {**
   Raises unsupported operation exception.
 }
@@ -593,6 +618,37 @@ end;
 }
 procedure TZAbstractStatement.ClearWarnings;
 begin
+end;
+
+function TZAbstractStatement.GetPrepreparedSQL(const SQL: String): ZAnsiString;
+var
+  SQLTokens: TZTokenDynArray;
+  i: Integer;
+begin
+  {Mark i agree: It must be enough to get the Tokens..
+  then we can build an IZUpdate/IZInsert/IZDelete-Schema
+  if this is done we can add column-specific CharacterSets/Collations
+  to the detected Columns and tell the Server which kind of Data will be sended
+  now. So this also must be done in the IZSelectSchema if somebody requests
+  converted column-data...}
+
+  if GetConnection.PreprepareSQL then
+  begin
+    SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeEscapeBufferToList(SQL); //Disassembles the Query
+    for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
+    begin
+      case (SQLTokens[i].TokenType) of
+        ttEscape:
+          Result := Result + AnsiString(SQLTokens[i].Value);
+        ttWord, ttQuoted, ttQuotedIdentifier, ttKeyword, ttEscapedQuoted:
+          Result := Result + Self.ZPlainString(SQLTokens[i].Value);
+        else
+          Result := Result + AnsiString(SQLTokens[i].Value);
+      end;
+    end;
+  end
+  else
+    Result := AnsiString(SQL);
 end;
 
 {**
@@ -938,6 +994,14 @@ begin
   Result := FInfo;
 end;
 
+{**
+  Returns the ChunkSize for reading/writing large lobs
+  @returns the chunksize in bytes.
+}
+function TZAbstractStatement.GetChunkSize: Integer;
+begin
+  Result := FChunkSize;
+end;
 { TZAbstractPreparedStatement }
 
 {**
@@ -1277,11 +1341,11 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetPChar(ParameterIndex: Integer;
-   Value: PAnsiChar);
+   Value: PChar);
 var
   Temp: TZVariant;
 begin
-  DefVarManager.SetAsString(Temp, AnsiString(Value));
+  DefVarManager.SetAsString(Temp, Value);
   SetInParam(ParameterIndex, stString, Temp);
 end;
 
@@ -1297,7 +1361,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetString(ParameterIndex: Integer;
-   const Value: AnsiString);
+   const Value: String);
 var
   Temp: TZVariant;
 begin
@@ -1316,11 +1380,9 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
-{$IFDEF DELPHI12_UP}
-procedure TZAbstractPreparedStatement.SetUnicodeString(ParameterIndex: Integer; const Value: String);  //AVZ
-{$ELSE}
-procedure TZAbstractPreparedStatement.SetUnicodeString(ParameterIndex: Integer; const Value: WideString);
-{$ENDIF}
+
+procedure TZAbstractPreparedStatement.SetUnicodeString(ParameterIndex: Integer;
+  const Value: {$IFDEF DELPHI12_UP}String{$ELSE}WideString{$ENDIF});
 var
   Temp: TZVariant;
 begin
@@ -1342,7 +1404,7 @@ procedure TZAbstractPreparedStatement.SetBytes(ParameterIndex: Integer;
 var
   Temp: TZVariant;
 begin
-  DefVarManager.SetAsString(Temp, BytesToStr(Value));
+  DefVarManager.SetAsString(Temp, String(BytesToStr(Value)));
   SetInParam(ParameterIndex, stBytes, Temp);
 end;
 
@@ -1729,14 +1791,10 @@ end;
   is <code>null</code>.
   @exception SQLException if a database access error occurs
 }
-function TZAbstractCallableStatement.GetPChar(ParameterIndex: Integer): PAnsiChar;
+function TZAbstractCallableStatement.GetPChar(ParameterIndex: Integer): PChar;
 begin
   FTemp := GetString(ParameterIndex);
-  {$IFDEF DELPHI12_UP}
-  Result := PAnsiChar(UTF8String(FTemp));
-  {$ELSE}
-  Result := PAnsiChar(FTemp);
-  {$ENDIF}
+  Result := PChar(FTemp);
 end;
 
 {**
@@ -1755,7 +1813,7 @@ end;
   is <code>null</code>.
   @exception SQLException if a database access error occurs
 }
-function TZAbstractCallableStatement.GetString(ParameterIndex: Integer): AnsiString;
+function TZAbstractCallableStatement.GetString(ParameterIndex: Integer): String;
 begin
   Result := SoftVarManager.GetAsString(GetOutParam(ParameterIndex));
 end;
@@ -1900,7 +1958,7 @@ end;
 function TZAbstractCallableStatement.GetBytes(ParameterIndex: Integer):
   TByteDynArray;
 begin
-  Result := StrToBytes(SoftVarManager.GetAsString(GetOutParam(ParameterIndex)));
+  Result := StrToBytes(AnsiString(SoftVarManager.GetAsString(GetOutParam(ParameterIndex))));
 end;
 
 {**

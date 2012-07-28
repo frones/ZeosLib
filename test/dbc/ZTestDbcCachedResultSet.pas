@@ -300,7 +300,7 @@ begin
   Collection := GetColumnsInfoCollection;
   try
     CachedResultSet := TZAbstractCachedResultSet.CreateWithColumns(
-      Collection, '');
+      Collection, '',@ClientCodePageDummy);
     CachedResultSet.SetConcurrency(rcUpdatable);
     CachedResultSet.SetType(rtScrollInsensitive);
 
@@ -366,7 +366,7 @@ begin
   Collection := GetColumnsInfoCollection;
   try
     CachedResultSet := TZAbstractCachedResultSet.CreateWithColumns(
-      Collection, '');
+      Collection, '',@ClientCodePageDummy);
     CachedResultSet.SetConcurrency(rcUpdatable);
     CachedResultSet.SetType(rtScrollInsensitive);
     FResultSet := CachedResultSet;
@@ -501,7 +501,7 @@ begin
   Collection := GetColumnsInfoCollection;
   try
     CachedResultSet := TZAbstractCachedResultSet.CreateWithColumns(
-      Collection, '');
+      Collection, '',@ClientCodePageDummy);
     CachedResultSet.SetConcurrency(rcUpdatable);
     CachedResultSet.SetType(rtScrollInsensitive);
     CachedResultSet.SetCachedUpdates(True);
@@ -632,7 +632,7 @@ begin
   Collection := GetColumnsInfoCollection;
   try
     CachedResultSet := TZAbstractCachedResultSet.CreateWithColumns(
-      Collection, '');
+      Collection, '',@ClientCodePageDummy);
     CachedResultSet.SetConcurrency(rcUpdatable);
     CachedResultSet.SetType(rtScrollInsensitive);
     CachedResultSet.SetCachedUpdates(True);
@@ -781,7 +781,7 @@ begin
   Collection := GetColumnsInfoCollection;
   try
     CachedResultSet := TZVirtualResultSet.CreateWithColumns(
-      Collection, '');
+      Collection, '', @ClientCodePageDummy);
     CachedResultSet.SetConcurrency(rcUpdatable);
     CachedResultSet.SetType(rtScrollInsensitive);
 
@@ -874,7 +874,7 @@ begin
   Collection := GetColumnsInfoCollection;
   try
     CachedResultSet := TZAbstractCachedResultSet.CreateWithColumns(
-      Collection, '');
+      Collection, '', @ClientCodePageDummy);
     CachedResultSet.SetConcurrency(rcUpdatable);
     CachedResultSet.SetType(rtScrollInsensitive);
 
@@ -956,7 +956,7 @@ begin
   Collection := GetColumnsInfoCollection;
   try
     CachedResultSet := TZAbstractCachedResultSet.CreateWithColumns(
-      Collection, '');
+      Collection, '', @ClientCodePageDummy);
     CachedResultSet.SetConcurrency(rcUpdatable);
     CachedResultSet.SetType(rtScrollInsensitive);
     CachedResultSet.SetCachedUpdates(True);

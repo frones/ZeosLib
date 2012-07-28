@@ -146,9 +146,27 @@ function AQSNull(const Value: string; QuoteChar: Char = ''''): string;
 }
 function ToLikeString(const Value: string): string;
 
+{**
+  PrepareUnicodeStream checks the incoming Stream for his given Memory and
+  returns a valid UTF8 StringStream
+  @param Stream the Stream with the unknown format and data
+  @return a valid utf8 encoded stringstram
+}
+function GetValidatedUnicodeStream(const Stream: TStream): TStream;
+
+{**
+  GetSQLHexString returns a valid x'..' database understandable String from
+    binary data
+  @param Value the ansistring-pointer to the binary data
+  @param Len then length of the binary Data
+  @param ODBC a boolean if output result should be with a starting 0x...
+  @returns a valid hex formated unicode-safe string
+}
+function GetSQLHexString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): String;
+
 implementation
 
-uses ZMessages, ZSysUtils;
+uses ZMessages, ZSysUtils{$IFDEF WITH_WIDESTRUTILS},WideStrUtils{$ENDIF};
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -426,6 +444,89 @@ begin
     Result := '%'
   else
     Result := Value;
+end;
+
+function GetValidatedUnicodeStream(const Stream: TStream): TStream;
+var
+  Ansi: ZAnsiString;
+  Len: Integer;
+  WS: WideString;
+begin
+  {EgonHugeist: TempBuffer the WideString, }
+  //Step one: Findout, wat's comming in! To avoid User-Bugs
+    //it is possible that a PAnsiChar OR a PWideChar was written into
+    //the Stream!!!  And these chars could be trunced with changing the
+    //Stream.Size.
+  if Assigned(Stream) then
+  begin
+    if Length(PWideChar(TMemoryStream(Stream).Memory)) = Stream.Size then
+    begin
+      if StrLen(PAnsiChar(TMemoryStream(Stream).Memory)) >= Stream.Size then  //Hack!! If no #0 is witten then the PAnsiChar could be oversized
+      begin
+        SetLength(Ansi, Stream.Size);
+        TMemoryStream(Stream).Read(PAnsiChar(Ansi)^, Stream.Size);
+        if DetectUTF8Encoding(Ansi) = etAnsi then
+          Ansi := AnsiToUTF8(String(Ansi));
+      end
+      else
+      begin
+        WS := PWideChar(TMemoryStream(Stream).Memory);
+        SetLength(WS, Stream.Size div 2);
+        Ansi := UTF8Encode(WS);
+      end;
+    end
+    else
+      if StrLen(PAnsiChar(TMemoryStream(Stream).Memory)) < Stream.Size then //PWideChar written
+      begin
+        SetLength(WS, Stream.Size div 2);
+        System.Move(PWideString(TMemoryStream(Stream).Memory)^,
+          PWideChar(WS)^, Stream.Size);
+        Ansi := UTF8Encode(WS);
+      end
+      else
+        if StrLen(PAnsiChar(TMemoryStream(Stream).Memory)) = Stream.Size then
+        begin
+          if DetectUTF8Encoding(PAnsiChar(TMemoryStream(Stream).Memory)) = etAnsi then
+            Ansi := AnsiToUTF8(String(PAnsiChar(TMemoryStream(Stream).Memory)))
+          else
+            Ansi := PAnsiChar(TMemoryStream(Stream).Memory);
+        end
+        else
+        begin
+          SetLength(Ansi, Stream.Size);
+          TMemoryStream(Stream).Read(PAnsiChar(Ansi)^, Stream.Size);
+          if DetectUTF8Encoding(Ansi) = etAnsi then
+            Ansi := AnsiToUTF8(String(Ansi));
+        end;
+    Len := Length(Ansi);
+    Result := TMemoryStream.Create;
+    Result.Size := Len;
+    System.Move(PAnsiChar(Ansi)^, TMemoryStream(Result).Memory^, Len);
+    Result.Position := 0;
+  end
+  else
+    Result := nil;
+end;
+
+{**
+  GetSQLHexString returns a valid x'..' database understandable String from
+    binary data
+  @param Value the ansistring-pointer to the binary data
+  @param Length then length of the binary Data
+  @param ODBC a boolean if output result should be with a starting 0x...
+  @returns a valid hex formated unicode-safe string
+}
+function GetSQLHexString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): String;
+var
+  HexVal: AnsiString;
+begin
+  SetLength(HexVal,Len * 2 );
+  BinToHex(Value, PAnsiChar(HexVal), Len);
+
+  if ODBC then
+    Result := '0x'#39+String(HexVal)
+  else
+    Result := 'x'#39+String(HexVal)+#39;
 end;
 
 end.

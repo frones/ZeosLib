@@ -59,7 +59,8 @@ interface
 
 uses
   Classes, SysUtils, ZDbcIntfs, ZDbcStatement, ZPlainSqLiteDriver,
-  ZCompatibility, ZDbcLogging, ZVariant;
+  ZCompatibility, ZDbcLogging, ZVariant
+  {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF};
 
 type
 
@@ -88,7 +89,6 @@ type
     FPlainDriver: IZSQLitePlainDriver;
   protected
     function CreateExecStatement: IZStatement; override;
-    function GetEscapeString(const Value: string): string;
     function PrepareSQLParam(ParamIndex: Integer): string; override;
   public
     constructor Create(PlainDriver: IZSQLitePlainDriver;
@@ -99,7 +99,7 @@ type
 implementation
 
 uses
-  Types, ZDbcSqLiteUtils, ZDbcSqLiteResultSet, ZSysUtils,
+  Types, ZDbcSqLiteUtils, ZDbcSqLiteResultSet, ZSysUtils, ZDbcUtils,
   ZMessages, ZDbcCachedResultSet;
 
 { TZSQLiteStatement }
@@ -133,15 +133,16 @@ var
   CachedResultSet: TZCachedResultSet;
 begin
   { Creates a native result set. }
-  NativeResultSet := TZSQLiteResultSet.Create(FPlainDriver, Self, SQL, FHandle,
+  Self.SSQL := SQL;
+  NativeResultSet := TZSQLiteResultSet.Create(FPlainDriver, Self, SSQL, FHandle,
     StmtHandle, ColumnCount, ColumnNames, ColumnValues);
   NativeResultSet.SetConcurrency(rcReadOnly);
 
   { Creates a cached result set. }
   CachedResolver := TZSQLiteCachedResolver.Create(FPlainDriver, FHandle, Self,
     NativeResultSet.GetMetaData);
-  CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
-    CachedResolver);
+  CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SSQL,
+    CachedResolver,GetConnection.GetClientCodePageInformations);
 
   { Fetches all rows to prevent blocking. }
   CachedResultSet.SetType(rtScrollInsensitive);
@@ -171,15 +172,11 @@ begin
   ErrorMessage := '';
   SQLTail := '';
   ColumnCount := 0;
-  {$IFDEF DELPHI12_UP}
-  ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(AnsiString(UTF8Encode(SQL))), Length(SQL), SQLTail,
+  SSQL := SQL; //preprepares SQL
+  ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(ASQL), Length(ASQL), SQLTail,
     StmtHandle, ErrorMessage);
-  {$ELSE}
-  ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(SQL), Length(SQL), SQLTail,
-    StmtHandle, ErrorMessage);
-  {$ENDIF}
-  CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+  CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SSQL);
+  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
 
   try
     ErrorCode := FPlainDriver.Step(StmtHandle, ColumnCount,
@@ -190,7 +187,7 @@ begin
     raise;
   end;
 
-  Result := CreateResultSet(SQL, StmtHandle, ColumnCount, ColumnNames,
+  Result := CreateResultSet(SSQL, StmtHandle, ColumnCount, ColumnNames,
     ColumnValues);
 end;
 
@@ -211,13 +208,10 @@ var
   ErrorMessage: PAnsiChar;
 begin
   ErrorMessage := '';
-  {$IFDEF DELPHI12_UP}
-  ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(AnsiString(UTF8Encode(SQL))), nil, nil,ErrorMessage);
-  {$ELSE}
-  ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,ErrorMessage);
-  {$ENDIF}
-  CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+  SSQL := SQL; //preprepares SQL
+  ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(ASQL), nil, nil,ErrorMessage);
+  CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SSQL);
+  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
   Result := FPlainDriver.Changes(FHandle);
   LastUpdateCount := Result;
 end;
@@ -257,15 +251,11 @@ begin
   ColumnCount := 0;
   ColumnValues:=nil;
   ColumnNames:=nil;
-  {$IFDEF DELPHI12_UP}
-  ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(AnsiString(UTF8Encode(SQL))), Length(SQL), SQLTail,
+  SSQL := SQL; //preprapares SQL
+  ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(ASQL), Length(ASQL), SQLTail,
     StmtHandle, ErrorMessage);
-  {$ELSE}
-  ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(SQL), Length(SQL), SQLTail,
-    StmtHandle, ErrorMessage);
-  {$ENDIF}
-  CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+  CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SSQL);
+  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
 
   try
     ErrorCode := FPlainDriver.Step(StmtHandle, ColumnCount,
@@ -280,7 +270,7 @@ begin
   if ColumnCount <> 0 then
   begin
     Result := True;
-    LastResultSet := CreateResultSet(SQL, StmtHandle, ColumnCount, ColumnNames,
+    LastResultSet := CreateResultSet(SSQL, StmtHandle, ColumnCount, ColumnNames,
       ColumnValues);
   end
   { Processes regular query. }
@@ -327,16 +317,6 @@ begin
 end;
 
 {**
-  Converts an string into escape SQLite format.
-  @param Value a regular string.
-  @return a string in SQLite escape format.
-}
-function TZSQLitePreparedStatement.GetEscapeString(const Value: string): string;
-begin
-  Result := AnsiQuotedStr(Value, '''');
-end;
-
-{**
   Prepares an SQL parameter for the query.
   @param ParameterIndex the first parameter is 1, the second is 2, ...
   @return a string representation of the parameter.
@@ -346,6 +326,7 @@ var
   Value: TZVariant;
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
+  TempStream,TempStreamIn: TStream;
 begin
   TempBytes := nil;
   if InParamCount <= ParamIndex then
@@ -364,16 +345,15 @@ begin
                Result := '''N''';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
-      stString, stUnicodeString{$IFNDEF DELPHI_12UP}, stBytes{$ENDIF}:
-        {$IFDEF DELPHI12_UP}
-        Result := GetEscapeString(String(UTF8Encode(SoftVarManager.GetAsString(Value))));
-        {$ELSE}
-        Result := GetEscapeString(SoftVarManager.GetAsString(Value));
-        {$ENDIF}
-      {$IFDEF DELPHI_12UP}
       stBytes:
-        Result := GetEscapeString(SoftVarManager.GetAsString(Value));
-      {$ENDIF}
+        Result := Self.GetConnection.GetAnsiEscapeString(AnsiString(SoftVarManager.GetAsString(Value)));
+      stString:
+        Result := AnsiQuotedStr(SoftVarManager.GetAsString(Value), #39);
+      stUnicodeString:
+        {$IFDEF DELPHI12_UP}
+        if Connection.PreprepareSQL then Result := AnsiQuotedStr(SoftVarManager.GetAsUnicodeString(Value), #39) else
+        {$ENDIF}
+        Result := GetConnection.GetEscapeString(PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))));
       stDate:
         Result := '''' + FormatDateTime('yyyy-mm-dd',
           SoftVarManager.GetAsDateTime(Value)) + '''';
@@ -386,12 +366,28 @@ begin
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
+          if (InParamTypes[ParamIndex] in [stAsciiStream, stUnicodeStream]) then
+            if Self.GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+            begin
+              TempStreamIn:=TempBlob.GetStream;
+              TempStream := GetValidatedUnicodeStream(TempStreamIn);
+              TempStreamIn.Free;
+              TempBlob.SetStream(TempStream);
+              TempStream.Free;
+            end;
+
           if not TempBlob.IsEmpty then
           begin
-            if InParamTypes[ParamIndex] = stBinaryStream then
-              Result := String(EncodeString(TempBlob.GetString))
+            if GetConnection.PreprepareSQL then
+              Result := GetConnection.GetAnsiEscapeString(TempBlob.GetString)
             else
-              Result := GetEscapeString(String(TempBlob.GetString));
+              if InParamTypes[ParamIndex] = stBinaryStream then
+                Result := String(EncodeString(TempBlob.GetString))
+              else
+                {$IFDEF DELPHI12_UP}
+                if Connection.PreprepareSQL then Result := AnsiQuotedStr(TempBlob.GetUnicodeString, #39) else
+                {$ENDIF}
+                Result := AnsiQuotedStr(String(TempBlob.GetString), #39);
           end
           else
             Result := 'NULL';

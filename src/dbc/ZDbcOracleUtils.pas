@@ -131,7 +131,7 @@ procedure InitializeOracleVar(PlainDriver: IZOraclePlainDriver;
 }
 procedure LoadOracleVars(PlainDriver: IZOraclePlainDriver;
   Connection: IZConnection; ErrorHandle: POCIError; Variables: PZSQLVars;
-  Values: TZVariantDynArray);
+  Values: TZVariantDynArray; ChunkSize: Integer);
 
 {**
   Unloads Oracle variables binded to SQL statement with data.
@@ -140,22 +140,13 @@ procedure LoadOracleVars(PlainDriver: IZOraclePlainDriver;
 procedure UnloadOracleVars(Variables: PZSQLVars);
 
 {**
-  Converts a MySQL native types into ZDBC SQL types.
-  @param PlainDriver a native MySQL plain driver.
-  @param FieldHandle a handler to field description structure.
-  @param FieldFlags field flags.
-  @return a SQL undepended type.
-}
-//function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
-//  FieldHandle: PZMySQLField; FieldFlags: Integer): TZSQLType;
-
-{**
   Convert string Oracle field type to SQLType
   @param string field type value
   @result the SQLType field type value
 }
 function ConvertOracleTypeToSQLType(TypeName: string;
-  Precision, Scale: Integer): TZSQLType;
+  Precision, Scale: Integer; const CharEncoding: TZCharEncoding;
+  const UTF8StringAsWideField: Boolean): TZSQLType;
 
 {**
   Converts Oracle internal date into TDateTime
@@ -238,7 +229,7 @@ function GetOracleUpdateCount(PlainDriver: IZOraclePlainDriver;
 implementation
 
 uses ZMessages, ZDbcOracle, ZDbcOracleResultSet, ZDbcCachedResultSet,
-  ZDbcGenericResolver;
+  ZDbcGenericResolver, ZDbcUtils;
 
 {**
   Calculates size of SQLVars record.
@@ -351,11 +342,6 @@ begin
         Variable.TypeCode := SQLT_STR;
         Length := Variable.DataSize + 1;
       end;
-{    stUnicodeString:
-      begin
-        Variable.TypeCode := SQLT_VST;
-        Length := Variable.DataSize + 1;
-      end;}
     stAsciiStream, stUnicodeStream, stBinaryStream:
       begin
         if not (Variable.TypeCode in [SQLT_CLOB, SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE]) then
@@ -399,7 +385,7 @@ end;
 }
 procedure LoadOracleVars(PlainDriver: IZOraclePlainDriver;
   Connection: IZConnection; ErrorHandle: POCIError; Variables: PZSQLVars;
-  Values: TZVariantDynArray);
+  Values: TZVariantDynArray; ChunkSize: Integer);
 var
   I: Integer;
   Status: Integer;
@@ -407,7 +393,7 @@ var
   TempDate: TDateTime;
   TempBlob: IZBlob;
   WriteTempBlob: IZOracleBlob;
-  TempStream: TStream;
+  TempStream,TempStreamIn: TStream;
   Year, Month, Day, Hour, Min, Sec, MSec: Word;
   OracleConnection: IZOracleConnection;
 begin
@@ -440,15 +426,19 @@ begin
             case Values[i].VType of
               vtString:
                 StrLCopy(PAnsiChar(CurrentVar.Data),
-                  {$IFDEF DELPHI12_UP}
-                    PAnsiChar(UTF8String(DefVarManager.GetAsString(Values[I]))), 1024);
-                  {$ELSE}
-                    PAnsiChar(DefVarManager.GetAsString(Values[I])), 1024);
-                  {$ENDIF}
+                  PAnsiChar(PlainDriver.ZPlainString(DefVarManager.GetAsString(Values[I]), Connection.GetEncoding)), 1024);
               vtUnicodeString:
-                StrLCopy(PAnsiChar(CurrentVar.Data),
-                    PAnsiChar(UTF8Encode(DefVarManager.GetAsUnicodeString(Values[I]))), 1024);
+                if Connection.GetEncoding = ceUTF8 then
+                  StrLCopy(PAnsiChar(CurrentVar.Data),
+                      PAnsiChar(UTF8Encode(DefVarManager.GetAsUnicodeString(Values[I]))), 1024)
+                else
+                  StrLCopy(PAnsiChar(CurrentVar.Data),
+                      PAnsiChar(AnsiString(DefVarManager.GetAsUnicodeString(Values[I]))), 1024)
             end;
+          end;
+        SQLT_VST:
+          begin
+            StrLCopy(PAnsiChar(CurrentVar.Data), PAnsiChar(UTF8Encode(DefVarManager.GetAsUnicodeString(Values[I]))), 1024);
           end;
         SQLT_TIMESTAMP:
           begin
@@ -464,11 +454,19 @@ begin
         SQLT_BLOB, SQLT_CLOB:
           begin
             TempBlob := DefVarManager.GetAsInterface(Values[I]) as IZBlob;
-            TempStream := TempBlob.GetStream;
+            if (CurrentVar.TypeCode = SQLT_CLOB) and (Connection.GetEncoding = ceUTF8) then
+              begin
+              TempStreamIn:=TempBlob.GetStream;
+              TempStream := ZDbcUtils.GetValidatedUnicodeStream(TempStreamIn);
+              TempStreamIn.Free;
+              end
+            else
+              TempStream := TempBlob.GetStream;
+
             try
               WriteTempBlob := TZOracleBlob.Create(PlainDriver,
                 nil, 0, Connection, PPOCIDescriptor(CurrentVar.Data)^,
-                CurrentVar.ColType);
+                CurrentVar.ColType, ChunkSize);
               WriteTempBlob.SetStream(TempStream);
               WriteTempBlob.CreateBlob;
               WriteTempBlob.WriteBlob;
@@ -506,7 +504,8 @@ end;
   @result the SQLType field type value
 }
 function ConvertOracleTypeToSQLType(TypeName: string;
-  Precision, Scale: Integer): TZSQLType;
+  Precision, Scale: Integer; const CharEncoding: TZCharEncoding;
+  const UTF8StringAsWideField: Boolean): TZSQLType;
 begin
   TypeName := UpperCase(TypeName);
   Result := stUnknown;
@@ -514,7 +513,7 @@ begin
   if (TypeName = 'CHAR') or (TypeName = 'VARCHAR2') then
     Result := stString
   else if (TypeName = 'NCHAR') or (TypeName = 'NVARCHAR2') then
-    Result := stUnicodeString
+    Result := stString
   else if TypeName = 'FLOAT' then
     Result := stDouble
   else if TypeName = 'DATE' then  {precission - 1 sec, so Timestamp}
@@ -526,7 +525,7 @@ begin
   else if TypeName = 'CLOB' then
     Result := stAsciiStream
   else if TypeName = 'NCLOB' then
-    Result := stUnicodeStream
+    Result := stAsciiStream
   else if TypeName = 'LONG' then
     Result := stAsciiStream
   else if StartsWith(TypeName, 'TIMESTAMP') then
@@ -548,6 +547,11 @@ begin
         Result := stLong  {!!in fact, unusable}
     end;
   end;
+  if ( CharEncoding = ceUTF8) and UTF8StringAsWideField then
+    case result of
+      stString: Result := stUnicodeString;
+      stAsciiStream: if not (TypeName = 'LONG') then Result := stUnicodeStream; //fix: http://zeos.firmos.at/viewtopic.php?t=3530
+    end;
 end;
 
 {**
@@ -645,7 +649,8 @@ begin
   if (Statement.GetResultSetConcurrency = rcUpdatable)
     or (Statement.GetResultSetType <> rtForwardOnly) then
   begin
-    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil);
+    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil,
+      Statement.GetConnection.GetClientCodePageInformations);
     CachedResultSet.SetConcurrency(rcUpdatable);
     CachedResultSet.SetResolver(TZOracleCachedResolver.Create(
       Statement, NativeResultSet.GetMetadata));

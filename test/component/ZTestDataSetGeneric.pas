@@ -6,7 +6,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2006 Zeos Development Group       }
+{    Copyright (c) 1999-2012 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -63,6 +63,9 @@ uses
 
 type
   {** Implements a test case for . }
+
+  { TZGenericTestDbcResultSet }
+
   TZGenericTestDbcResultSet = class(TZComponentPortableSQLTestCase)
   private
     FConnection: TZConnection;
@@ -81,6 +84,7 @@ type
     procedure TestQueryExecSql;
     procedure TestQueryUpdate;
     procedure TestPreparedStatement;
+    procedure TestRealPreparedStatement;
     procedure TestParamChar;
     procedure TestReadOnlyQueryFilter;
     procedure TestQueryFilter;
@@ -93,6 +97,8 @@ type
     procedure TestDateTimeFilterExpression;
     procedure TestTimeLocateExpression;
     procedure TestDateTimeLocateExpression;
+    procedure TestDoubleFloatParams;
+    procedure TestVeryLargeBlobs;
   end;
 
 implementation
@@ -101,7 +107,8 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  DateUtils, ZSysUtils, ZTestConsts, ZTestCase, ZAbstractRODataset, ZDatasetUtils;
+  DateUtils, ZSysUtils, ZTestConsts, ZTestCase, ZAbstractRODataset,
+  ZDatasetUtils, strutils{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
 
 { TZGenericTestDbcResultSet }
 
@@ -180,6 +187,8 @@ end;
 }
 procedure TZGenericTestDbcResultSet.TestPreparedStatement;
 var
+  Ansi: AnsiString;
+  WS: WideString;
   Query: TZQuery;
   StrStream, BinStream: TMemoryStream;
   StrStream1, BinStream1: TMemoryStream;
@@ -299,7 +308,8 @@ begin
       StrStream := TMemoryStream.Create;
       StrStream.LoadFromFile('../../../database/text/lgpl.txt');
       StrStream.Size := 1024;
-      Params[6].LoadFromStream(StrStream, {$IFDEF DELPHI12_UP}ftWideMemo{$ELSE}ftMemo{$ENDIF});
+//      Params[6].LoadFromStream(StrStream, {$IFDEF DELPHI12_UP}ftWideMemo{$ELSE}ftMemo{$ENDIF});
+      Params[6].LoadFromStream(StrStream, ftMemo);
 
       Params[7].Value := Null;
       ExecSql;
@@ -327,7 +337,222 @@ begin
       CheckEquals(0, FieldByName('p_redundant').AsInteger);
       CheckEquals(True, FieldByName('p_redundant').IsNull);
 
-      { compare aciistream }
+      { compare aciistream/unicodestream }
+      //Modification by EgonHugeist: Different behavior for the Same Field
+      //With dependencies on stUnicodeStream = CP_UTF8 for Delphi-compilers.
+      //Now we read a none Wide-Stream in! What happens? Zeos is now able
+      //to autodetect such strange things! But Zeos converts the Ansi-Stream to
+      //a WiteString-Stream. So this test must be modified...
+      if ( Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8) and
+        FConnection.DbcConnection.UTF8StringAsWideField then
+      begin
+        StrStream.position := 0;
+        SetLength(Ansi,StrStream.Size);
+        StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
+        WS := UTF8Decode(Ansi);
+        StrStream.Clear;
+        StrStream.Write(PWideChar(WS)^, Length(WS)*2);
+        StrStream.Position := 0;
+      end;
+      StrStream1 := TMemoryStream.Create;
+      (FieldByName('p_resume') as TBlobField).SaveToStream(StrStream1);
+      CheckEquals(StrStream, StrStream1, 'Ascii Stream');
+      StrStream.Free;
+      StrStream1.Free;
+
+      { compare BinaryStream }
+      BinStream1 := TMemoryStream.Create;
+      (FieldByName('p_picture') as TBlobField).SaveToStream(BinStream1);
+      CheckEquals(BinStream, BinStream1, 'Binary Stream');
+      BinStream.Free;
+      BinStream1.Free;
+      Close;
+
+      { Delete the row. }
+      SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
+      CheckEquals(1, Params.Count);
+
+      Params[0].DataType := ftInteger;
+      Params[0].AsInteger := TEST_ROW_ID;
+
+      ExecSQL;
+      CheckEquals(1, RowsAffected);
+    end;
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure TZGenericTestDbcResultSet.TestRealPreparedStatement;
+var
+  Ansi: AnsiString;
+  WS: WideString;
+  Query: TZQuery;
+  StrStream, BinStream: TMemoryStream;
+  StrStream1, BinStream1: TMemoryStream;
+  s:string;
+begin
+  Query := TZQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+    Query.Options := [doCalcDefaults,doPreferPrepared,doPreferPreparedResolver];
+    // Query.RequestLive := true;
+
+    with Query do
+    begin
+      SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
+      ExecSQL;
+      SQL.Text := 'DELETE FROM equipment where eq_id = ' + IntToStr(TEST_ROW_ID);
+      ExecSQL;
+    end;
+
+    {
+      The test for equipment table
+    }
+    with Query do
+    begin
+      { Create prepared statement for equipment table }
+      Sql.Text := 'INSERT INTO equipment (eq_id, eq_name, eq_type, eq_cost, eq_date, '
+          + ' woff_date) VALUES(:q_id, :eq_name, :eq_type, :eq_cost, :eq_date, :woff_date)';
+      CheckEquals(6, Params.Count);
+
+      Params[0].DataType := ftInteger;
+      Params[1].DataType := ftString;
+      Params[2].DataType := ftSmallint;
+      Params[3].DataType := ftFloat;
+      Params[4].DataType := ftDate;
+      Params[5].DataType := ftDate;
+
+      Params[0].AsInteger := TEST_ROW_ID;
+      Params[1].AsString := '\xyz\'+#13;
+      Params[2].AsInteger := 7;
+      Params[3].AsFloat := 1234.567;
+      Params[4].AsDateTime := EncodeDate(1999, 8, 5);
+      Params[5].Value := Null;
+      ExecSQL;
+
+      CheckEquals(1, RowsAffected);
+
+      { check inserted row from equipment table }
+      SQL.Text := 'SELECT * FROM equipment WHERE eq_id = :eq_id';
+      CheckEquals(1, Query.Params.Count);
+      Params[0].DataType := ftInteger;
+      Params[0].AsInteger := TEST_ROW_ID;
+
+      Open;
+      CheckEquals(1, RecordCount);
+      CheckEquals(False, IsEmpty);
+      CheckEquals(TEST_ROW_ID, FieldByName('eq_id').AsInteger);
+      s:=FieldByName('eq_name').AsString;
+      CheckEquals('\xyz\'#13, s);
+      CheckEquals(7, FieldByName('eq_type').AsInteger);
+      CheckEquals(1234.567, FieldByName('eq_cost').AsFloat, 0.001);
+      CheckEquals(EncodeDate(1999, 8, 5), FieldByName('eq_date').AsDateTime);
+      CheckEquals(True, FieldByName('woff_date').IsNull);
+      Close;
+
+      { update inserted row from equipment table }
+      SQL.Text := 'UPDATE equipment SET eq_name = :eq_name WHERE eq_id = :eq_id';
+      CheckEquals(2, Params.Count);
+
+      Params[0].DataType := ftString;
+      Params[1].DataType := ftInteger;
+
+      Params[0].AsString := 'xyz1';
+      Params[1].AsInteger := TEST_ROW_ID;
+
+      ExecSQL;
+      CheckEquals(1, RowsAffected);
+
+      { delete inserted row from equipment table }
+      SQL.Text := 'DELETE FROM equipment WHERE eq_id = :eq_id';
+
+      CheckEquals(1, Params.Count);
+      Params[0].DataType := ftInteger;
+      Params[0].AsInteger := TEST_ROW_ID;
+      ExecSQL;
+      CheckEquals(1, RowsAffected);
+    end;
+
+    { The test for people table }
+    with Query do
+    begin
+      { Create prepared statement for people table }
+      SQL.Text := 'INSERT INTO people (p_id, p_dep_id, p_name, p_begin_work, p_end_work,' +
+          ' p_picture, p_resume, p_redundant) VALUES(:p_id, :p_dep_id, :p_name, ' +
+          ' :p_begin_work, :p_end_work, :p_picture, :p_resume, :p_redundant)';
+      { Sets prepared statement parameters values. }
+      CheckEquals(8, Params.Count);
+
+      Params[0].DataType := ftInteger;
+      Params[1].DataType := ftSmallint;
+      Params[2].DataType := ftString;
+      Params[3].DataType := ftDateTime;
+      Params[4].DataType := ftDateTime;
+      Params[5].DataType := ftBlob;
+      Params[6].DataType := ftMemo;
+      Params[7].DataType := ftSmallint;
+
+      Params[0].AsInteger := TEST_ROW_ID;
+      Params[1].AsInteger := 2;
+      Params[2].AsString := 'xyz';
+      Params[3].AsDateTime := EncodeTime(8, 0, 0, 0);
+      Params[4].AsDateTime := EncodeTime(17, 30, 0, 0);
+
+      BinStream := TMemoryStream.Create;
+      BinStream.LoadFromFile('../../../database/images/dogs.jpg');
+      BinStream.Size := 1024;
+      Params[5].LoadFromStream(BinStream, ftBlob);
+
+      StrStream := TMemoryStream.Create;
+      StrStream.LoadFromFile('../../../database/text/lgpl.txt');
+      StrStream.Size := 1024;
+//      Params[6].LoadFromStream(StrStream, {$IFDEF DELPHI12_UP}ftWideMemo{$ELSE}ftMemo{$ENDIF});
+      Params[6].LoadFromStream(StrStream, ftMemo);
+
+      Params[7].Value := Null;
+      ExecSql;
+      CheckEquals(1, RowsAffected);
+
+      { Checks inserted row. }
+      SQL.Text := 'SELECT * FROM people WHERE p_id = :p_id';
+      CheckEquals(1, Params.Count);
+      Params[0].DataType := ftInteger;
+      Params[0].AsInteger := TEST_ROW_ID;
+      ReadOnly:=True;
+      Open;
+      CheckEquals(TEST_ROW_ID, FieldByName('p_id').AsInteger);
+      CheckEquals(False, FieldByName('p_id').IsNull);
+      CheckEquals(2, FieldByName('p_dep_id').AsInteger);
+      CheckEquals(False, FieldByName('p_dep_id').IsNull);
+      CheckEquals('xyz', FieldByName('p_name').AsString);
+      CheckEquals(False, FieldByName('p_name').IsNull);
+      CheckEquals(EncodeTime(8, 0, 0, 0), FieldByName('p_begin_work').AsDateTime, 0.0001);
+      CheckEquals(False, FieldByName('p_begin_work').IsNull);
+      CheckEquals(EncodeTime(17, 30, 0, 0), FieldByName('p_end_work').AsDateTime, 0.0001);
+      CheckEquals(False, FieldByName('p_end_work').IsNull);
+      CheckEquals(False, FieldByName('p_picture').IsNull);
+      CheckEquals(False, FieldByName('p_resume').IsNull);
+      CheckEquals(0, FieldByName('p_redundant').AsInteger);
+      CheckEquals(True, FieldByName('p_redundant').IsNull);
+
+      { compare aciistream/unicodestream }
+      //Modification by EgonHugeist: Different behavior for the Same Field
+      //With dependencies on stUnicodeStream = CP_UTF8 for Delphi-compilers.
+      //Now we read a none Wide-Stream in! What happens? Zeos is now able
+      //to autodetect such strange things! But Zeos converts the Ansi-Stream to
+      //a WiteString-Stream. So this test must be modified...
+      if ( Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8) and
+        FConnection.DbcConnection.UTF8StringAsWideField then
+      begin
+        StrStream.position := 0;
+        SetLength(Ansi,StrStream.Size);
+        StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
+        WS := UTF8Decode(Ansi);
+        StrStream.Clear;
+        StrStream.Write(PWideChar(WS)^, Length(WS)*2);
+        StrStream.Position := 0;
+      end;
       StrStream1 := TMemoryStream.Create;
       (FieldByName('p_resume') as TBlobField).SaveToStream(StrStream1);
       CheckEquals(StrStream, StrStream1, 'Ascii Stream');
@@ -562,6 +787,8 @@ end;
 procedure TZGenericTestDbcResultSet.TestQueryUpdate;
 var
   Sql_: string;
+  WS: WideString;
+  Ansi: AnsiString;
   Query: TZQuery;
   StrStream, BinStream: TMemoryStream;
   StrStream1, BinStream1: TMemoryStream;
@@ -667,6 +894,22 @@ begin
       StrStream := TMemoryStream.Create();
       StrStream.LoadFromFile('../../../database/text/lgpl.txt');
       StrStream.Size := 1024;
+
+      //Modification by EgonHugeist: Different behavior for the Same Field
+      //With dependencies on stUnicodeStream = CP_UTF8 for Delphi-compilers.
+      //Now we read a none Wide-Stream in! What happens? Zeos is now able
+      //to autodetect such strange things! But Zeos converts the Ansi-Stream to
+      //a WiteString-Stream. So this test must be modified...
+      if ( Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 )
+        and Self.FConnection.DbcConnection.UTF8StringAsWideField then
+      begin
+        SetLength(Ansi,StrStream.Size);
+        StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
+        WS := UTF8Decode(Ansi);
+        StrStream.Clear;
+        StrStream.Write(PWideChar(WS)^, Length(WS)*2);
+        StrStream.Position := 0;
+      end;
       BinStream := TMemoryStream.Create();
       BinStream.LoadFromFile('../../../database/images/dogs.jpg');
       BinStream.Size := 1024;
@@ -1491,7 +1734,146 @@ begin
   finally
     Query.Free;
   end;
-end; 
+end;
+
+procedure TZGenericTestDbcResultSet.TestDoubleFloatParams;
+var
+  Query: TZQuery;
+begin
+  Query := TZQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+    Query.Options := [doPreferPrepared,doPreferPreparedResolver];
+    with Query do
+    begin
+      SQL.Text := 'DELETE FROM number_values where n_id = 1';
+      ExecSQL;
+      Sql.Text := 'INSERT INTO number_values (n_id,n_float,n_dprecission)'
+          + ' VALUES (:n_id,:n_float,:n_real)';
+      CheckEquals(3, Params.Count);
+      Params[0].DataType := ftInteger;
+      Params[1].DataType := ftFloat;
+      Params[2].DataType := ftFloat;
+      Params[0].AsInteger := 1;
+      Params[1].AsFloat := 3.14159265358979323846;
+      Params[2].AsFloat := 3.14159265358979323846;
+      ExecSQL;
+
+      CheckEquals(1, RowsAffected);
+
+      SQL.Text := 'SELECT * FROM number_values where n_id = 1';
+      CheckEquals(0, Query.Params.Count);
+
+      Open;
+      CheckEquals(1, RecordCount);
+      CheckEquals(False, IsEmpty);
+      CheckEquals(1, FieldByName('n_id').AsInteger);
+      CheckEquals(3.14159265358979323846, FieldByName('n_float').AsFloat,0.00001);
+      CheckEquals(3.14159265358979323846, FieldByName('n_dprecission').AsFloat,0.0000000000001);
+      Close;
+    end;
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure TZGenericTestDbcResultSet.TestVeryLargeBlobs;
+var
+  Query: TZQuery;
+  BinStream,BinStream1,BinStreamS: TMemoryStream;
+  UnicodeStream: TStream;
+  s:  Ansistring;
+  TextLob, BinLob: String;
+begin
+  Query := TZQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+    if StartsWith(LowerCase(Connection.Protocol), 'postgre') then
+      begin
+      Query.Properties.Add('oidasblob=True');
+      Connection.TransactIsolationLevel:=tiReadCommitted;
+      end;
+    Query.Options := [doPreferPrepared,doPreferPreparedResolver];
+    with Query do
+    begin
+      SQL.Text := 'DELETE FROM blob_values where b_id = 1';
+      ExecSQL;
+      if StartsWith(LowerCase(Connection.Protocol), 'oracle') then
+      begin
+        TextLob := 'b_clob';
+        BinLob := 'b_blob';
+      end
+      else if StartsWith(LowerCase(Connection.Protocol), 'sqlite') then
+      begin
+        TextLob := 'b_text';
+        BinLob := 'b_blob';
+      end
+      else
+      begin
+        TextLob := 'b_text';
+        BinLob := 'b_image';
+      end;
+      Sql.Text := 'INSERT INTO blob_values (b_id,'+TextLob+','+BinLob+')'
+        + ' VALUES (:b_id,:b_text,:b_image)';
+      CheckEquals(3, Params.Count);
+      Params[0].DataType := ftInteger;
+      Params[1].DataType := ftMemo;
+      Params[2].DataType := ftBlob;
+      Params[0].AsInteger := 1;
+      BinStreamS := TMemoryStream.Create;
+      s:={$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString(utf8encode('123456ייאא'),6000);
+      BinStreamS.Write(s[1],length(s));
+      Params[1].LoadFromStream(BinStreamS, ftMemo);
+      BinStream := TMemoryStream.Create;
+      BinStream.LoadFromFile('../../../database/images/horse.jpg');
+      setlength(s,BinStream.Size);
+      BinStream.Read(s[1],length(s));
+      s := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString(s, 10);
+      BinStream.Position := 0;
+      BinStream.Write(s[1],length(s));
+      Params[2].LoadFromStream(BinStream, ftBlob);
+      ExecSQL;
+
+      CheckEquals(1, RowsAffected);
+
+      SQL.Text := 'SELECT * FROM blob_values where b_id = 1';
+      CheckEquals(0, Query.Params.Count);
+
+      Open;
+      CheckEquals(1, RecordCount);
+      CheckEquals(False, IsEmpty);
+      CheckEquals(1, FieldByName('b_id').AsInteger);
+      BinStream1 := TMemoryStream.Create;
+      (FieldByName(TextLob) as TBlobField).SaveToStream(BinStream1);
+      if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+        Connection.DbcConnection.UTF8StringAsWideField then
+      begin
+        UnicodeStream := WideStringStream(UTF8ToString(PAnsiChar(BinStreamS.Memory)));
+        CheckEquals(UnicodeStream.Size, BinStream1.Size, 'Ascii Stream');
+        CheckEquals(UnicodeStream, BinStream1, 'Ascii Stream');
+        UnicodeStream.Free;
+      end
+      else
+      begin
+        CheckEquals(BinStreamS.Size, BinStream1.Size, 'Ascii Stream');
+        CheckEquals(BinStreamS, BinStream1, 'Ascii Stream');
+      end;
+      BinStream1.Position:=0;
+      (FieldByName(BinLob) as TBlobField).SaveToStream(BinStream1);
+      CheckEquals(BinStream.Size, BinStream1.Size, 'Binary Stream');
+      CheckEquals(BinStream, BinStream1, 'Binary Stream');
+      BinStream.Free;
+      BinStream1.Free;
+      BinStreamS.Free;
+      Close;
+      SQL.Text := 'DELETE FROM blob_values where b_id = 1';
+      ExecSQL;
+    end;
+  finally
+    Query.Free;
+  end;
+end;
+
 
 initialization
   RegisterTest('component',TZGenericTestDbcResultSet.Suite);

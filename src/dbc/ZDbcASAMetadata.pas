@@ -58,7 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
+  Types, Classes, SysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
   ZDbcConnection, ZDbcASA, ZURL;
 
 type
@@ -1519,7 +1519,7 @@ end;
 }
 function TZASADatabaseMetadata.UncachedGetTableTypes: IZResultSet;
 const
-  TablesTypes: array [0..4] of AnsiString = ( 'TABLE', 'BASE', 'SYSTEM', 'VIEW',
+  TablesTypes: array [0..4] of String = ( 'TABLE', 'BASE', 'SYSTEM', 'VIEW',
     'GLOBAL TEMPORARY');
 var
   I: Integer;

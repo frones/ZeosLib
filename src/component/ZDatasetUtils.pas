@@ -58,8 +58,9 @@ interface
 {$I ZComponent.inc}
 
 uses
-  Types, Classes, SysUtils, Db, ZSysUtils, ZDbcIntfs, ZDbcCache,
-  Contnrs, ZCompatibility, ZExpression, ZVariant, ZTokenizer;
+  Types, Classes, SysUtils, Db, ZDbcIntfs, ZDbcCache,
+  Contnrs, ZCompatibility, ZExpression, ZVariant, ZTokenizer
+  {$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
 
 {**
   Converts DBC Field Type to TDataset Field Type.
@@ -276,7 +277,7 @@ var
 implementation
 
 uses
-  ZMessages, ZGenericSqlToken, {$IFDEF DELPHI12_UP}AnsiStrings,{$ENDIF}
+  ZMessages, ZGenericSqlToken,
   ZDbcResultSetMetadata, ZAbstractRODataset;
 
 {**
@@ -298,7 +299,7 @@ begin
     stFloat, stDouble, stBigDecimal:
       Result := ftFloat;
     stString:
-      Result := {$IFDEF WITH_STSTRINGUNICODE}ftWideString{$ELSE}ftString{$ENDIF};
+      Result := ftString;
     stBytes:
       Result := ftBytes;
     stDate:
@@ -391,6 +392,7 @@ begin
         ColumnInfo.ColumnType := stUnicodeStream;
     ColumnInfo.Scale := 0;
     ColumnInfo.ColumnLabel := Current.DisplayName;
+    ColumnInfo.ColumnDisplaySize := Current.DisplayWidth;
     ColumnInfo.DefaultExpression := Current.DefaultExpression;
 
     Result.Add(ColumnInfo);
@@ -442,7 +444,7 @@ begin
       ftString:
         // gto: do we need PChar here?
         //RowAccessor.SetPChar(FieldIndex, ResultSet.GetPChar(ColumnIndex));
-        RowAccessor.SetString(FieldIndex, String(ResultSet.GetString(ColumnIndex)));
+        RowAccessor.SetString(FieldIndex, ResultSet.GetString(ColumnIndex));
       ftWidestring:
         RowAccessor.SetUnicodeString(FieldIndex, ResultSet.GetUnicodeString(ColumnIndex));
       ftBytes:
@@ -511,9 +513,7 @@ begin
         ResultSet.UpdateBigDecimal(ColumnIndex,
           RowAccessor.GetBigDecimal(FieldIndex, WasNull));
       ftString:
-        // gto: do we need PChar here?
-        //ResultSet.UpdatePChar(ColumnIndex, RowAccessor.GetPChar(FieldIndex, WasNull));
-        ResultSet.UpdateString(ColumnIndex, AnsiString(RowAccessor.GetString(FieldIndex, WasNull)));
+        ResultSet.UpdateString(ColumnIndex, RowAccessor.GetString(FieldIndex, WasNull));
       ftWidestring:
         ResultSet.UpdateUnicodeString(ColumnIndex,
           RowAccessor.GetUnicodeString(FieldIndex, WasNull));
@@ -824,32 +824,70 @@ function CompareDataFields(const KeyValues, RowValues: TZVariantDynArray;
 var
   I: Integer;
   Value1, Value2: AnsiString;
+  WValue1, WValue2: WideString;
 begin
   Result := True;
   for I := 0 to High(KeyValues) do
   begin
-    if CaseInsensitive then
-    begin
-      Value1 := AnsiUpperCase(SoftVarManager.GetAsString(KeyValues[I]));
-      Value2 := AnsiUpperCase(SoftVarManager.GetAsString(RowValues[I]));
-
-      if PartialKey then
-      begin
-        Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
-      end
+    case KeyValues[I].VType of
+      vtUnicodeString:
+        begin
+          if CaseInsensitive then
+          begin
+            WValue1 := WideUpperCase(SoftVarManager.GetAsUnicodeString(KeyValues[I]));
+            WValue1 := WideUpperCase(SoftVarManager.GetAsUnicodeString(RowValues[I]));
+            if PartialKey then
+            begin
+              {$IFDEF DELPHI12_UP}
+              Result := SysUtils.AnsiStrLComp(PWideChar(WValue2), PWideChar(WValue1), Length(WValue1)) = 0;
+              {$ELSE}
+              Value1 := UTF8ToAnsi(UTF8Encode(WValue1));
+              Value2 := UTF8ToAnsi(UTF8Encode(WValue2));
+              Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
+              {$ENDIF}
+            end
+            else
+              Result := Value1 = Value2
+          end
+          else
+          begin
+            WValue1 := SoftVarManager.GetAsUnicodeString(KeyValues[I]);
+            WValue1 := SoftVarManager.GetAsUnicodeString(RowValues[I]);
+            if PartialKey then
+            begin
+              {$IFDEF DELPHI12_UP}
+              Result := SysUtils.AnsiStrLComp(PWideChar(WValue2), PWideChar(WValue1), Length(WValue1)) = 0;
+              {$ELSE}
+              Value1 := UTF8ToAnsi(UTF8Encode(WValue1));
+              Value2 := UTF8ToAnsi(UTF8Encode(WValue2));
+              Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
+              {$ENDIF}
+            end
+            else
+              Result := SoftVarManager.Compare(KeyValues[I], RowValues[I]) = 0;
+          end;
+        end;
       else
-        Result := Value1 = Value2;
-    end
-    else
-    begin
-      if PartialKey then
       begin
-        Value1 := SoftVarManager.GetAsString(KeyValues[I]);
-        Value2 := SoftVarManager.GetAsString(RowValues[I]);
-        Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
-      end
-      else
-        Result := SoftVarManager.Compare(KeyValues[I], RowValues[I]) = 0;
+        if CaseInsensitive then
+        begin
+          Value1 := AnsiString(AnsiUpperCase(SoftVarManager.GetAsString(KeyValues[I])));
+          Value2 := AnsiString(AnsiUpperCase(SoftVarManager.GetAsString(RowValues[I])));
+          if PartialKey then
+            Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0
+          else
+            Result := Value1 = Value2
+        end
+        else
+        begin
+          Value1 := AnsiString(SoftVarManager.GetAsString(KeyValues[I]));
+          Value2 := AnsiString(SoftVarManager.GetAsString(RowValues[I]));
+          if PartialKey then
+            Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0
+          else
+            Result := SoftVarManager.Compare(KeyValues[I], RowValues[I]) = 0;
+        end;
+      end;
     end;
 
     if not Result then
@@ -1035,16 +1073,16 @@ begin
       else
       begin
         AValue1 := AnsiString(KeyValues[I].VString);
-        AValue2 := AnsiString(ResultSet.GetString(ColumnIndex));
+        if ResultSet.GetClientCodePage^.Encoding = ceAnsi then
+          AValue2 := AnsiString(ResultSet.GetString(ColumnIndex))
+        else
+          AValue2 := AnsiString({$IFNDEF DELPHI12_UP}UTF8ToAnsi{$ENDIF}(ResultSet.GetString(ColumnIndex)));
 
         if CaseInsensitive then
-          {$IFDEF LAZARUSUTF8HACK}
-          AValue2 := AnsiUpperCase(Utf8ToAnsi(AValue2));
-          {$ELSE}
           AValue2 := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiUpperCase(AValue2);
-          {$ENDIF}
         Result := AnsiStrLComp(PAnsiChar(AValue2), PAnsiChar(AValue1), Length(AValue1)) = 0;
       end;
+
     end
     else
     begin
@@ -1190,7 +1228,7 @@ begin
       end;
   else
     try
-      {$IF defined(WIN64) and Defined(FPC)}
+      {$IF defined(WIN64) and defined(FPC)}
       TimeStamp := MSecsToTimeStamp(System.Trunc(Int(TDateTime(Buffer^))));
       {$ELSE}
         TimeStamp := MSecsToTimeStamp(TDateTime(Buffer^));

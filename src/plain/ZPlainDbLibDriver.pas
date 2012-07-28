@@ -213,6 +213,7 @@ type
     constructor Create; override;
     destructor Destroy; override;
 
+    procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
 
@@ -284,6 +285,7 @@ type
     constructor Create; override;
     destructor Destroy; override;
 
+    procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
 
@@ -366,6 +368,7 @@ type
   protected
     function Clone: IZPlainDriver; override;
   public
+    procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
     function dbsetlversion(Login: PLOGINREC): RETCODE; override;
@@ -376,6 +379,7 @@ type
   protected
     function Clone: IZPlainDriver; override;
   public
+    procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
     function dbsetlversion(Login: PLOGINREC): RETCODE; override;
@@ -386,6 +390,7 @@ type
   protected
     function Clone: IZPlainDriver; override;
   public
+    procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
     function dbsetversion: RETCODE; override;
@@ -395,6 +400,7 @@ type
   protected
     function Clone: IZPlainDriver; override;
   public
+    procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
     function dbsetlversion(Login: PLOGINREC): RETCODE; override;
@@ -405,6 +411,7 @@ type
   protected
     function Clone: IZPlainDriver; override;
   public
+    procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
     function dbsetversion: RETCODE; override;
@@ -414,6 +421,7 @@ type
   protected
     function Clone: IZPlainDriver; override;
   public
+    procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
     function dbsetversion: RETCODE; override;
@@ -1156,6 +1164,12 @@ begin
   inherited Destroy;
 end;
 
+procedure TZDBLibSybaseASE125PlainDriver.LoadCodePages;
+begin
+  AddCodePage('Not implemented!', -1);
+   { TODO -oEgonHugeist : Must be completed!!!! }
+end;
+
 function TZDBLibSybaseASE125PlainDriver.GetProtocol: string;
 begin
   Result := 'sybase';
@@ -1537,6 +1551,12 @@ begin
     DbLibAPI.dbExit;
   end;
   inherited Destroy;
+end;
+
+procedure TZDBLibMSSQL7PlainDriver.LoadCodePages;
+begin
+  AddCodePage('Not implemented!', -1);
+   { TODO -oEgonHugeist : Must be completed!!!! }
 end;
 
 function TZDBLibMSSQL7PlainDriver.GetProtocol: string;
@@ -1967,6 +1987,12 @@ begin
   Result := TZFreeTDS42MsSQLPlainDriver.Create;
 end;
 
+procedure TZFreeTDS42MsSQLPlainDriver.LoadCodePages;
+begin
+  AddCodePage('Not implemented!', -1);
+   { TODO -oEgonHugeist : Must be completed!!!! }
+end;
+
 function TZFreeTDS42MsSQLPlainDriver.GetProtocol: string;
 begin
   Result := 'FreeTDS_Sybase<10';
@@ -1991,6 +2017,12 @@ end;
 function TZFreeTDS42SybasePlainDriver.Clone: IZPlainDriver;
 begin
   Result := TZFreeTDS42SybasePlainDriver.Create;
+end;
+
+procedure TZFreeTDS42SybasePlainDriver.LoadCodePages;
+begin
+  AddCodePage('Not implemented!', -1);
+   { TODO -oEgonHugeist : Must be completed!!!! }
 end;
 
 function TZFreeTDS42SybasePlainDriver.GetProtocol: string;
@@ -2019,6 +2051,12 @@ begin
   Result := TZFreeTDS50PlainDriver.Create;
 end;
 
+procedure TZFreeTDS50PlainDriver.LoadCodePages;
+begin
+  AddCodePage('Not implemented!', -1);
+   { TODO -oEgonHugeist : Must be completed!!!! }
+end;
+
 function TZFreeTDS50PlainDriver.GetProtocol: string;
 begin
   Result := 'FreeTDS_Sybase-10+';
@@ -2038,6 +2076,12 @@ end;
 function TZFreeTDS70PlainDriver.Clone: IZPlainDriver;
 begin
   Result := TZFreeTDS70PlainDriver.Create;
+end;
+
+procedure TZFreeTDS70PlainDriver.LoadCodePages;
+begin
+  AddCodePage('Not implemented!', -1);
+   { TODO -oEgonHugeist : Must be completed!!!! }
 end;
 
 function TZFreeTDS70PlainDriver.GetProtocol: string;
@@ -2066,6 +2110,12 @@ begin
   Result := TZFreeTDS71PlainDriver.Create;
 end;
 
+procedure TZFreeTDS71PlainDriver.LoadCodePages;
+begin
+  AddCodePage('Not implemented!', -1);
+   { TODO -oEgonHugeist : Must be completed!!!! }
+end;
+
 function TZFreeTDS71PlainDriver.GetProtocol: string;
 begin
   Result := 'FreeTDS_MsSQL-2000';
@@ -2085,6 +2135,12 @@ end;
 function TZFreeTDS72PlainDriver.Clone: IZPlainDriver;
 begin
   Result := TZFreeTDS72PlainDriver.Create;
+end;
+
+procedure TZFreeTDS72PlainDriver.LoadCodePages;
+begin
+  AddCodePage('Not implemented!', -1);
+   { TODO -oEgonHugeist : Must be completed!!!! }
 end;
 
 function TZFreeTDS72PlainDriver.GetProtocol: string;

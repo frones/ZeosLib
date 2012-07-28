@@ -58,7 +58,7 @@ interface
 {$I ZComponent.inc}
 
 uses
-  SysUtils, DB, Classes, ZAbstractDataset;
+  SysUtils, Classes, ZAbstractDataset;
 
 type
 

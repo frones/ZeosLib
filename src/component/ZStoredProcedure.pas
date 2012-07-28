@@ -186,7 +186,7 @@ begin
         ftString, ftFixedChar:
           Statement.SetString(I+1, Param.AsString);
         ftWideString:
-          Statement.SetUnicodeString(I+1, Param.{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
+          Statement.SetUnicodeString(I+1, {$IFDEF WITH_FTWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF});
         ftBytes:
           Statement.SetString(I+1, Param.AsString);
         ftDate:
@@ -271,7 +271,7 @@ begin
         ftString:
           Param.AsString := FCallableStatement.GetString(I + 1);
         ftWideString:
-          Param.{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := FCallableStatement.GetUnicodeString(I + 1);
+          {$IFDEF WITH_FTWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF} := FCallableStatement.GetUnicodeString(I + 1);
         ftBytes:
           Param.AsString := FCallableStatement.GetString(I + 1);
         ftDate:

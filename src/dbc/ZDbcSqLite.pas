@@ -79,7 +79,7 @@ type
   {** Represents a SQLite specific connection interface. }
   IZSQLiteConnection = interface (IZConnection)
     ['{A4B797A9-7CF7-4DE9-A5BB-693DD32D07D2}']
-
+    function UseOldBlobEncoding: Boolean;
     function GetPlainDriver: IZSQLitePlainDriver;
     function GetConnectionHandle: Psqlite;
   end;
@@ -89,7 +89,7 @@ type
   private
     FCatalog: string;
     FHandle: Psqlite;
-
+    function UseOldBlobEncoding: Boolean;
   protected
     procedure InternalCreate; override;
     procedure StartTransactionSupport;
@@ -117,6 +117,10 @@ type
 
     function ReKey(const Key: string): Integer;
     function Key(const Key: string): Integer; 
+    function GetAnsiEscapeString(const Value: AnsiString;
+      const EscapeMarkSequence: String = '~<|'): String; override;
+    function GetEscapeString(const Value: String;
+      const EscapeMarkSequence: String = '~<|'): String; override;
   end;
 
 var
@@ -220,6 +224,10 @@ begin
   AutoCommit := True;
   TransactIsolationLevel := tiNone;
 
+  {$IFNDEF WITH_WIDECONTROLS}
+  if Self.ClientCodePage^.Encoding = ceUTF8AsAnsi then
+    FClientCodePage := 'UTF-8';
+  {$ENDIF}
   Open;
 end;
 
@@ -229,6 +237,11 @@ end;
 destructor TZSQLiteConnection.Destroy;
 begin
   inherited Destroy;
+end;
+
+function TZSQLiteConnection.UseOldBlobEncoding: Boolean;
+begin
+  Result := Url.Properties.Values['OldBlobEncoding'] = 'True';
 end;
 
 {**
@@ -315,18 +328,18 @@ begin
   end; 
 
   try
-    if ( Info.Values['codepage'] <> '' ) then
+    if ( FClientCodePage <> '' ) then
     begin
-        SQL := 'PRAGMA encoding = '''+Info.Values['codepage']+'''';
+        SQL := 'PRAGMA encoding = '''+AnsiString(FClientCodePage)+'''';
         ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL),
           nil, nil, ErrorMessage);
-        CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
+        CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, String(SQL));
     end;
 
     SQL := 'PRAGMA show_datatypes = ON';
     ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL),
       nil, nil, ErrorMessage);
-    CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
+    CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, String(SQL));
 
     StartTransactionSupport;
   except
@@ -404,13 +417,13 @@ procedure TZSQLiteConnection.StartTransactionSupport;
 var
   ErrorCode: Integer;
   ErrorMessage: PAnsiChar;
-  SQL: PAnsiChar;
+  SQL: String;
 begin
   if TransactIsolationLevel <> tiNone then
   begin
     ErrorMessage := '';
     SQL := 'BEGIN TRANSACTION';
-    ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
+    ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(AnsiString(SQL)), nil, nil,
       ErrorMessage);
     CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
     DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
@@ -436,8 +449,8 @@ begin
     SQL := 'COMMIT TRANSACTION';
     ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
       ErrorMessage);
-    CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
-    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
+    CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, String(SQL));
+    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, String(SQL));
 
     StartTransactionSupport;
   end;
@@ -454,13 +467,13 @@ procedure TZSQLiteConnection.Rollback;
 var
   ErrorCode: Integer;
   ErrorMessage: PAnsiChar;
-  SQL: PAnsiChar;
+  SQL: String;
 begin
   if (TransactIsolationLevel <> tiNone) and not Closed then
   begin
     ErrorMessage := '';
     SQL := 'ROLLBACK TRANSACTION';
-    ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
+    ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(AnsiString(SQL)), nil, nil,
       ErrorMessage);
     CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
     DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
@@ -520,13 +533,13 @@ procedure TZSQLiteConnection.SetTransactionIsolation(
 var
   ErrorCode: Integer;
   ErrorMessage: PAnsiChar;
-  SQL: PAnsiChar;
+  SQL: String;
 begin
   if (TransactIsolationLevel <> tiNone) and not Closed then
   begin
     ErrorMessage := '';
     SQL := 'ROLLBACK TRANSACTION';
-    ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
+    ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(AnsiString(SQL)), nil, nil,
       ErrorMessage);
     CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
     DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
@@ -554,6 +567,36 @@ end;
 function TZSQLiteConnection.GetPlainDriver: IZSQLitePlainDriver;
 begin
   Result := PlainDriver as IZSQLitePlainDriver;
+end;
+
+{**
+  EgonHugeist:
+  Returns the BinaryString in a Tokenizer-detectable kind
+  If the Tokenizer don't need to predetect it Result := BinaryString
+  @param Value represents the Binary-String
+  @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
+  @result the detectable Binary String
+}
+function TZSQLiteConnection.GetAnsiEscapeString(const Value: AnsiString;
+  const EscapeMarkSequence: String = '~<|'): String;
+begin
+  Result := inherited GetAnsiEscapeString(ZDbcSqLiteUtils.EncodeString(Value), EscapeMarkSequence);
+end;
+
+function TZSQLiteConnection.GetEscapeString(const Value: String;
+  const EscapeMarkSequence: String = '~<|'): String;
+begin
+  if GetPreprepareSQL then
+    if StartsWith(Value, '''') and EndsWith(Value, '''') then
+      Result := inherited GetEscapeString(Value, EscapeMarkSequence)
+    else
+      Result := inherited GetEscapeString(QuotedStr(Value), EscapeMarkSequence)
+  else
+    if StartsWith(Value, '''') and EndsWith(Value, '''') then
+      Result := Value
+    else
+      Result := AnsiQuotedStr(Value, #39);
+
 end;
 
 initialization

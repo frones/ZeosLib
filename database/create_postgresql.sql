@@ -190,22 +190,22 @@ CREATE FUNCTION procedure1(INT4) RETURNS integer
 /* Stored procedure: procedure2                                 */
 /*==============================================================*/
 
---CREATE FUNCTION procedure2() RETURNS refcursor AS '
---DECLARE
---        ref refcursor;
---BEGIN
---        OPEN ref FOR SELECT eq_name FROM equipment
---        RETURN ref;
---END;
---' LANGUAGE 'plpgsql';
+CREATE FUNCTION procedure2() RETURNS refcursor AS '
+DECLARE
+        ref refcursor;
+BEGIN
+        OPEN ref FOR SELECT eq_name FROM equipment;
+        RETURN ref;
+END;
+' LANGUAGE 'plpgsql';
 
 
 /*==============================================================*/
 /* Grant privileges to columns                                  */
 /*==============================================================*/
--- grant update(p_resume, p_redundant) on people to root;
+--grant update(p_resume, p_redundant) on people to postgres;
 
 /*==============================================================*/
 /* Grant privileges to table                                    */
 /*==============================================================*/
--- grant select on people to root;
+--grant select on people to postgres;

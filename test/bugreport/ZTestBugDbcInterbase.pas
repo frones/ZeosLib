@@ -340,9 +340,20 @@ begin
   with Metadata do
   begin
     CheckEquals(4, GetColumnCount);
-    CheckEquals(ord(stString), ord(GetColumnType(1)));
-    CheckEquals(ord(stString), ord(GetColumnType(2)));
-    CheckEquals(ord(stString), ord(GetColumnType(3)));
+    //Client_Character_set sets column-type!!!!
+    if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+      if Connection.UTF8StringAsWideField then
+    begin
+      CheckEquals(ord(stUnicodeString), ord(GetColumnType(1)));
+      CheckEquals(ord(stUnicodeString), ord(GetColumnType(2)));
+      CheckEquals(ord(stUnicodeString), ord(GetColumnType(3)));
+    end
+    else
+    begin
+      CheckEquals(ord(stString), ord(GetColumnType(1)));
+      CheckEquals(ord(stString), ord(GetColumnType(2)));
+      CheckEquals(ord(stString), ord(GetColumnType(3)));
+    end;
     CheckEquals(ord(stShort), ord(GetColumnType(4)));
   end;
 

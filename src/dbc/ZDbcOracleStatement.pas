@@ -567,7 +567,7 @@ begin
 
   { Loads binded variables with values. }
   LoadOracleVars(FPlainDriver, Connection, ErrorHandle,
-    FInVars, InParamValues);
+    FInVars, InParamValues, ChunkSize);
 
   StatementType := 0;
   FPlainDriver.AttrGet(Handle, OCI_HTYPE_STMT, @StatementType, nil,
@@ -613,7 +613,7 @@ begin
 
   { Loads binded variables with values. }
   LoadOracleVars(FPlainDriver, Connection, ErrorHandle,
-    FInVars, InParamValues);
+    FInVars, InParamValues,ChunkSize);
 
   { Executes the statement and gets a resultset. }
   Result := CreateOracleResultSet(FPlainDriver, Self, SQL,
@@ -646,7 +646,7 @@ begin
 
   { Loads binded variables with values. }
   LoadOracleVars(FPlainDriver, Connection, ErrorHandle,
-    FInVars, InParamValues);
+    FInVars, InParamValues, ChunkSize);
 
   try
     StatementType := 0;
@@ -781,7 +781,6 @@ procedure TZOracleCallableStatement.SetInParam(ParameterIndex: Integer;
 procedure TZOracleCallableStatement.FetchOutParam;
   var  CurrentVar: PZSQLVar;
     I:integer;
-    Status: Integer;
     OracleConnection :IZOracleConnection;
     Year:SmallInt;
     Month, Day:Byte; Hour, Min, Sec:ub1; MSec: ub4;
@@ -805,7 +804,7 @@ procedure TZOracleCallableStatement.FetchOutParam;
               try
               StrLCopy( ps,
                         {PAnsiChar }(CurrentVar.Data), 1024);  //DefVarManager.SetAsString( outParamValues[I], PAnsiChar (CurrentVar.Data)^ );
-              DefVarManager.SetAsString( OutParamValues[I], ps );
+              DefVarManager.SetAsString( OutParamValues[I], String(ps) );
               finally
                FreeMem(ps);
               end;
@@ -814,15 +813,14 @@ procedure TZOracleCallableStatement.FetchOutParam;
           begin
 
             OracleConnection := Connection as IZOracleConnection;
-            Status := FPlainDriver.DateTimeGetDate(
+            FPlainDriver.DateTimeGetDate(
               OracleConnection.GetConnectionHandle ,
               FErrorHandle, PPOCIDescriptor(CurrentVar.Data)^,
               Year, Month, Day);
-            Status := FPlainDriver.DateTimeGetTime(
+            FPlainDriver.DateTimeGetTime(
               OracleConnection.GetConnectionHandle ,
               FErrorHandle, PPOCIDescriptor(CurrentVar.Data)^,
               Hour, Min, Sec,MSec);
-
             dTmp := EncodeDate(year,month,day )+EncodeTime(Hour,min,sec,msec) ;
             DefVarManager.SetAsDateTime( outParamValues[I], dTmp );
           end;
@@ -910,7 +908,7 @@ function TZOracleCallableStatement.ExecuteUpdatePrepared: Integer;
 
   { Loads binded variables with values. }
     LoadOracleVars(FPlainDriver , Connection, FErrorHandle,
-      FInVars, InParamValues);
+      FInVars, InParamValues, ChunkSize);
 
 
     try

@@ -130,12 +130,12 @@ end;
 
 { TZInterbaseTokenizer }
 
-{**
-  Constructs a tokenizer with a default state table (as
-  described in the class comment).
-}
+{ TZInterbaseTokenizer }
+
 constructor TZInterbaseTokenizer.Create;
 begin
+  EscapeState := TZEscapeState.Create;
+  EscapeMarkSequence := '~<|'; //Defaults
   WhitespaceState := TZWhitespaceState.Create;
 
   SymbolState := TZInterbaseSymbolState.Create;

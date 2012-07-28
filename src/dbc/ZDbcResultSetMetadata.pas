@@ -79,6 +79,7 @@ type
     FNullable: TZColumnNullableType;
     FSigned: Boolean;
     FColumnDisplaySize: Integer;
+    FMaxLenghtBytes: Integer;
     FColumnLabel: string;
     FColumnName: string;
     FSchemaName: string;
@@ -92,6 +93,7 @@ type
     FDefinitelyWritable: Boolean;
     FDefaultValue: string;
     FDefaultExpression : string;
+  published
   public
     constructor Create;
     function GetColumnTypeName: string;
@@ -105,6 +107,8 @@ type
     property Signed: Boolean read FSigned write FSigned;
     property ColumnDisplaySize: Integer read FColumnDisplaySize
       write FColumnDisplaySize;
+    property MaxLenghtBytes: Integer read FMaxLenghtBytes
+      write FMaxLenghtBytes;
     property ColumnLabel: string read FColumnLabel write FColumnLabel;
     property ColumnName: string read FColumnName write FColumnName;
     property SchemaName: string read FSchemaName write FSchemaName;

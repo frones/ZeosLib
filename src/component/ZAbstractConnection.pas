@@ -103,9 +103,13 @@ type
   TZAbstractConnection = class(TComponent)
   private
     FUseMetaData: Boolean;
+    FPreprepareSQL: Boolean;
+    FUTF8StringAsWideField: Boolean;
     function GetVersion: string;
     procedure SetUseMetadata(AValue: Boolean);
     procedure SetVersion(const Value: string);
+    function GetUTF8StringAsWideField: Boolean;
+    procedure SetUTF8StringAsWideField(const Value: Boolean);
   protected
     FURL: TZURL;
     FCatalog: string;
@@ -137,6 +141,8 @@ type
     FOnLogin: TZLoginEvent;
     FClientCodepage: String;
 
+    function GetPreprepareSQL: Boolean;
+    procedure SetPreprepareSQL(Value: Boolean);
     function GetHostName: string;
     procedure SetHostName(const Value: String);
     function GetConnPort: Integer;
@@ -231,7 +237,13 @@ type
     procedure GetStoredProcNames(const Pattern: string; List: TStrings);
     procedure GetTriggerNames(const TablePattern, SchemaPattern: string; List: TStrings);
 
+    //EgonHugeist
+    function GetBinaryEscapeStringFromString(const BinaryString: AnsiString): String; overload;
+    function GetBinaryEscapeStringFromStream(const Stream: TStream): String; overload;
+    function GetBinaryEscapeStringFromFile(const FileName: String): String; overload;
+    function GetAnsiEscapeString(const Ansi: AnsiString): String;
     function GetURL: String;
+
     property InTransaction: Boolean read GetInTransaction;
 
     property HostName: string read GetHostName write SetHostName;
@@ -240,7 +252,7 @@ type
     property User: string read GetUser write SetUser;
     property Password: string read GetPassword write SetPassword;
     property Protocol: string read GetProtocol write SetProtocol;
-    property LibraryLocation: string read GetLibLocation write SetLibLocation;
+    property LibLocation: string read GetLibLocation write SetLibLocation;
 
     property DbcDriver: IZDriver read GetDbcDriver;
     property DbcConnection: IZConnection read FConnection;
@@ -251,6 +263,8 @@ type
     procedure ShowSQLHourGlass;
     procedure HideSQLHourGlass;
   published
+    property UTF8StringsAsWideField: Boolean read GetUTF8StringAsWideField write SetUTF8StringAsWideField;
+    property PreprepareSQL: Boolean read GetPreprepareSQL write SetPreprepareSQL default True;
     property ClientCodepage: String read FClientCodepage write SetClientCodePage; //EgonHugeist
     property Catalog: string read FCatalog write FCatalog;
     property Properties: TStrings read GetProperties write SetProperties;
@@ -311,6 +325,15 @@ var
 }
 constructor TZAbstractConnection.Create(AOwner: TComponent);
 begin
+  {$IFDEF LAZARUSUTF8HACK}
+  FUTF8StringAsWideField := False;
+  {$ELSE}
+    {$IFDEF DELPHI12_UP}
+    FUTF8StringAsWideField := True;
+    {$ELSE}
+    FUTF8StringAsWideField := False;
+    {$ENDIF}
+  {$ENDIF}
   FURL := TZURL.Create;
   inherited Create(AOwner);
   FAutoCommit := True;
@@ -500,7 +523,14 @@ begin
       FClientCodepage := Trim(Value.Values['codepage'])
     else
       Value.Values['codepage'] := FClientCodepage;
-    FURL.Properties.Text := Value.Text
+    if Self.Connected then
+    begin
+      DbcConnection.PreprepareSQL := Value.Values['PreprepareSQL'] = 'ON';
+      FPreprepareSQL := Value.Values['PreprepareSQL'] = 'ON';
+    end
+    else
+      FPreprepareSQL := Value.Values['PreprepareSQL'] = 'ON';
+    FURL.Properties.Text := Value.Text;
   end
   else
     FURL.Properties.Clear;
@@ -771,6 +801,7 @@ begin
           SetCatalog(FCatalog);
           SetTransactionIsolation(FTransactIsolationLevel);
           SetUseMetadata(FUseMetadata);
+          SetUTF8StringAsWideField(Self.GetUTF8StringAsWideField);
           Open;
         end;
       except
@@ -1169,7 +1200,7 @@ begin
   Metadata := DbcConnection.GetMetadata;
   ResultSet := Metadata.GetCatalogs;
   while ResultSet.Next do
-    List.Add(String(ResultSet.GetStringByName('TABLE_CAT')));
+    List.Add(ResultSet.GetStringByName('TABLE_CAT'));
 end;
 
 {**
@@ -1187,7 +1218,7 @@ begin
   Metadata := DbcConnection.GetMetadata;
   ResultSet := Metadata.GetSchemas;
   while ResultSet.Next do
-    List.Add(String(ResultSet.GetStringByName('TABLE_SCHEM')));
+    List.Add(ResultSet.GetStringByName('TABLE_SCHEM'));
 end;
 
 {**
@@ -1236,7 +1267,7 @@ begin
   Metadata := DbcConnection.GetMetadata;
   ResultSet := Metadata.GetTables('', schemaPattern, tablePattern, types);
   while ResultSet.Next do
-    List.Add(String(ResultSet.GetStringByName('TABLE_NAME')));
+    List.Add(ResultSet.GetStringByName('TABLE_NAME'));
 end;
 
 {**
@@ -1255,7 +1286,7 @@ begin
   Metadata := DbcConnection.GetMetadata;
   ResultSet := Metadata.GetColumns('', '', TablePattern, ColumnPattern);
   while ResultSet.Next do
-    List.Add(String(ResultSet.GetStringByName('COLUMN_NAME')));
+    List.Add(ResultSet.GetStringByName('COLUMN_NAME'));
 end;
 
 {**
@@ -1275,7 +1306,7 @@ begin
   Metadata := DbcConnection.GetMetadata;
   ResultSet := Metadata.GetProcedures('', '', Pattern);
   while ResultSet.Next do
-    List.Add(String(ResultSet.GetStringByName('PROCEDURE_NAME')));
+    List.Add(ResultSet.GetStringByName('PROCEDURE_NAME'));
 end;
 
 {**
@@ -1293,17 +1324,131 @@ begin
   with DbcConnection.GetMetadata.GetTriggers('', SchemaPattern, TablePattern, '') do
   begin
     while Next do
-     List.Add(String(GetStringByName('TRIGGER_NAME')));
+     List.Add(GetStringByName('TRIGGER_NAME'));
     Close;
   end;
 end;
 
+{**
+  EgonHugeist: Returns a EscapeState detectable String to inform the Tokenizer
+    to do no UTF8Encoding if neccessary
+  @param BinaryString Represents the BinaryString wich has to prepered
+  @Result: A Prepared String like '~<|1023|<~''Binary-data-string(1023 Bytes)''~<|1023|<~
+}
+function TZAbstractConnection.GetBinaryEscapeStringFromString(const BinaryString: AnsiString): String;
+begin
+  CheckConnected;
+
+  if Assigned(FConnection) then
+    Result := FConnection.GetAnsiEscapeString(BinaryString);
+end;
+
+{**
+  EgonHugeist: Returns a BinaryState detectable String to inform the Tokenizer
+    to do no UTF8Encoding if neccessary
+  @param Strem Represents the Stream wich has to prepered
+  @Result: A Prepared String like '~<|1023|<~''Binary-data-string(1023 Char's)''~<|1023|<~
+}
+function TZAbstractConnection.GetBinaryEscapeStringFromStream(const Stream: TStream): String;
+var
+  FBlobSize: Integer;
+  FBlobData: Pointer;
+  TempAnsi: AnsiString;
+begin
+  CheckConnected;
+
+  if Assigned(FConnection) then
+  begin
+    if Assigned(Stream) then
+    begin
+      FBlobSize := Stream.Size;
+      if FBlobSize > 0 then
+      begin
+        GetMem(FBlobData, FBlobSize);
+        Stream.Position := 0;
+        Stream.ReadBuffer(FBlobData^, FBlobSize);
+      end
+      else
+        FBlobData := nil;
+    end
+    else
+    begin
+      FBlobSize := -1;
+      FBlobData := nil;
+    end;
+    if (FBlobSize > 0) and Assigned(FBlobData) then
+      System.SetString(TempAnsi, PAnsiChar(FBlobData), FBlobSize)
+    else
+      TempAnsi := '';
+    if Assigned(FBlobData) then
+      FreeMem(FBlobData);
+
+    Result := FConnection.GetAnsiEscapeString(TempAnsi);
+  end;
+end;
+
+{**
+  EgonHugeist: Returns a BinaryState detectable String to inform the Tokenizer
+    to do no UTF8Encoding if neccessary
+  @param FileNaem Represents the File wich has to prepered
+  @Result: A Prepared String like '~<|1023|<~''Binary-data-string(1023 Char's)''~<|1023|<~
+}
+function TZAbstractConnection.GetBinaryEscapeStringFromFile(const FileName: String): String;
+var
+  FStream: TFileStream;
+begin
+  CheckConnected;
+
+  if FileExists(FileName) then
+  begin
+    FStream := TFileStream.Create(FileName, fmOpenRead);
+    Result := GetBinaryEscapeStringFromStream(FStream);
+    FreeAndNil(FStream);
+  end;
+end;
+
+{**
+  EgonHugeist: Returns a detectable String to inform the Tokenizer
+    to do no UTF8Encoding if neccessary
+  @param Ansi Represents the AnsiString wich has to prepered
+  @Result: A Prepared String like '~<|1023|<~''Binary-data-string(1023 Char's)''~<|1023|<~
+}
+function TZAbstractConnection.GetAnsiEscapeString(const Ansi: AnsiString): String;
+begin
+  Result := DbcConnection.GetDriver.GetTokenizer.GetEscapeString(String(Ansi));
+end;
 
 function TZAbstractConnection.GetURL: String;
 begin
   Result := ConstructURL(FURL.UserName, FURL.Password);
 end;
 
+function TZAbstractConnection.GetPreprepareSQL: Boolean;
+begin
+  if Self.Connected then
+  begin
+    Result := DbcConnection.PreprepareSQL;
+    Self.FPreprepareSQL := Result;
+  end
+  else
+    Result := FPreprepareSQL;
+end;
+
+procedure TZAbstractConnection.SetPreprepareSQL(Value: Boolean);
+begin
+  if Value then
+    FURL.Properties.Values['PreprepareSQL'] := 'ON'
+  else
+    FURL.Properties.Values['PreprepareSQL'] := '';
+
+  if Self.Connected then
+  begin
+    DbcConnection.PreprepareSQL := Value;
+    FPreprepareSQL := Value;
+  end
+  else
+    FPreprepareSQL := Value;
+end;
 
 {**
   Returns the current version of zeosdbo.
@@ -1319,6 +1464,34 @@ begin
   FUseMetaData:=AValue;
   if FConnection <> nil then
     FConnection.SetUseMetadata(FUseMetadata);
+end;
+
+function TZAbstractConnection.GetUTF8StringAsWideField: Boolean;
+begin
+  {$IF defined(LAZARUSUTF8HACK) or (not defined(WITH_FTWIDESTRING))}
+  Result := False;
+  {$ELSE}
+    {$IFDEF DELPHI12_UP}
+    Result := True;
+    {$ELSE}
+    Result := FUTF8StringAsWideField;
+    {$ENDIF}
+  {$IFEND}
+end;
+
+procedure TZAbstractConnection.SetUTF8StringAsWideField(const Value: Boolean);
+begin
+  {$IF defined(LAZARUSUTF8HACK) or (not defined(WITH_FTWIDESTRING))}
+  FUTF8StringAsWideField := False;
+  {$ELSE}
+    {$IFDEF DELPHI12_UP}
+    FUTF8StringAsWideField := True;
+    {$ELSE}
+    FUTF8StringAsWideField := Value;
+    {$ENDIF}
+  {$IFEND}
+  if Assigned(DbcConnection) then
+    DbcConnection.UTF8StringAsWideField := FUTF8StringAsWideField;
 end;
 
 procedure TZAbstractConnection.SetVersion(const Value: string);

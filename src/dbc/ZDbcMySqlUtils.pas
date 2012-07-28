@@ -60,7 +60,8 @@ interface
 
 uses
   Classes, SysUtils, StrUtils,
-  ZSysUtils, ZDbcIntfs, ZPlainMySqlDriver, ZPlainMySqlConstants,  ZDbcLogging;
+  ZSysUtils, ZDbcIntfs, ZPlainMySqlDriver, ZPlainMySqlConstants,  ZDbcLogging,
+  ZCompatibility, ZDbcResultSetMetadata;
 
 const
   MAXBUF = 65535;
@@ -77,14 +78,16 @@ type
   @return a SQL undepended type.
 }
 function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
-  FieldHandle: PZMySQLField; FieldFlags: Integer): TZSQLType;
+  FieldHandle: PZMySQLField; FieldFlags: Integer;
+  const CharEncoding: TZCharEncoding; const UTF8StringAsWideField: Boolean): TZSQLType;
 
 {**
   Convert string mysql field type to SQLType
   @param string field type value
   @result the SQLType field type value
 }
-function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull, Collation: string): TZSQLType;
+function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull: string;
+  const CharEncoding: TZCharEncoding; const UTF8StringAsWideField: Boolean): TZSQLType;
 
 {**
   Checks for possible sql errors.
@@ -135,9 +138,20 @@ function EncodeMySQLVersioning(const MajorVersion: Integer;
 function ConvertMySQLVersionToSQLVersion( const MySQLVersion: Integer ): Integer;
 
 function getMySQLFieldSize (field_type: TMysqlFieldTypes; field_size: LongWord): LongWord;
+
+{**
+  Returns a valid TZColumnInfo from a FieldHandle
+  @param PlainDriver the MySQL PlainDriver interface
+  @param FieldHandle the handle of the fetched field
+  @returns a new TZColumnInfo
+}
+function GetMySQLColumnInfoFromFieldHandle(PlainDriver: IZMySQLPlainDriver;
+  const FieldHandle: PZMySQLField; const Encoding: TZCharEncoding;
+  const UTF8StringAsWideField: Boolean; const bUseResult:boolean): TZColumnInfo;
+
 implementation
 
-uses ZMessages;
+uses ZMessages, Math;
 
 threadvar
   SilentMySQLError: Integer;
@@ -160,14 +174,15 @@ end;
   @return a SQL undepended type.
 }
 function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
-  FieldHandle: PZMySQLField; FieldFlags: Integer): TZSQLType;
+  FieldHandle: PZMySQLField; FieldFlags: Integer;
+  const CharEncoding: TZCharEncoding; const UTF8StringAsWideField: Boolean): TZSQLType;
 
   function Signed: Boolean;
   begin
     Result := (UNSIGNED_FLAG and FieldFlags) = 0;
   end;
 
-  begin
+begin
     case PlainDriver.GetFieldType(FieldHandle) of
     FIELD_TYPE_TINY:
       begin
@@ -222,43 +237,25 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
     FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
     FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB:
       if (FieldFlags and BINARY_FLAG) = 0 then
-        Result := stAsciiStream
+        If CharEncoding = ceUTF8 then
+          if UTF8StringAsWideField then
+            Result := stUnicodeStream
+          else
+            Result := stAsciiStream
+        else
+          Result := stAsciiStream
       else
         Result := stBinaryStream;
     FIELD_TYPE_BIT:
-      Result := stBinaryStream;
-    // by aperger
-    // SQL = "SELECT ID, COLLATION_NAME, CHARACTER_SET_NAME FROM INFORMATION_SCHEMA.COLLATIONS WHERE ID = :charsetnr"
-    // which provides correct result, but would be slow. maybe this table conteent is "fix".
-    // ID ==> PMYSQL_FIELD(Field)^.charsetnr
-    // http://dev.mysql.com/doc/refman/5.0/en/c-api-data-structures.html
+      Result := stShort;
     FIELD_TYPE_VARCHAR,
     FIELD_TYPE_VAR_STRING,
     FIELD_TYPE_STRING:
-    	if (PMYSQL_FIELD(FieldHandle)^.charsetnr = 63) then
-      	Result := stString // ?? stBytes // BINARY from CHAR, VARBINARY from VARCHAR, BLOB from TEXT
-      else
-      if ( // UTF8
-        	(PMYSQL_FIELD(FieldHandle)^.charsetnr = 33) or
-          (PMYSQL_FIELD(FieldHandle)^.charsetnr = 83) or
-        	((PMYSQL_FIELD(FieldHandle)^.charsetnr>=192) and
-          (PMYSQL_FIELD(FieldHandle)^.charsetnr<=210)) )(*  the end is not fix ??? *) then
-       {$IFDEF FPC}
-        Result := stString
-       {$ELSE}
-        Result := stUnicodeString
-       {$ENDIF}
-     else
-      if ( // UCS2
-        	(PMYSQL_FIELD(FieldHandle)^.charsetnr = 35) or
-          (PMYSQL_FIELD(FieldHandle)^.charsetnr = 90) or
-        	((PMYSQL_FIELD(FieldHandle)^.charsetnr>=128) and
-          (PMYSQL_FIELD(FieldHandle)^.charsetnr<=146)) )(*  the end is not fix ??? *) then
-       {$IFDEF FPC}
-        Result := stString
-       {$ELSE}
-        Result := stUnicodeString
-       {$ENDIF}
+      if CharEncoding = ceUTF8 then
+        if UTF8StringAsWideField then
+          Result := stUnicodeString
+        else
+          Result := stString
       else
         Result := stString;
     FIELD_TYPE_ENUM:
@@ -275,13 +272,13 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
       raise Exception.Create('Unknown MySQL data type!');
    end;
   { Fix by the HeidiSql team. - See their SVN repository rev.775 and 900}
-  { SHOW FULL PROCESSLIST on 4.x servers can return veeery long FIELD_TYPE_VAR_STRINGs. The following helps avoid excessive row buffer allocation later on. }
+  { SHOW FULL PROCESSLIST on 4.x servers can return veeery long FIELD_TYPE_VAR_STRINGs.
+  The following helps avoid excessive row buffer allocation later on. }
   if (Result = stString) and (PlainDriver.GetFieldLength(FieldHandle) > 8192) then
      Result := stAsciiStream;
 
   if (Result = stUnicodeString) and (PlainDriver.GetFieldLength(FieldHandle) > 8192) then
      Result := stUnicodeStream;
-
 end;
 
 {**
@@ -289,7 +286,8 @@ end;
   @param string field type value
   @result the SQLType field type value
 }
-function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull, Collation: string): TZSQLType;
+function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull: string;
+  const CharEncoding: TZCharEncoding; const UTF8StringAsWideField: Boolean): TZSQLType;
 const
   GeoTypes: array[0..7] of string = (
    'POINT','LINESTRING','POLYGON','GEOMETRY',
@@ -299,14 +297,10 @@ var
   IsUnsigned: Boolean;
   Posi, Len, i: Integer;
   Spec: string;
-	IsUnicodeField:boolean;
 begin
   TypeName := UpperCase(TypeName);
   TypeNameFull := UpperCase(TypeNameFull);
   Result := stUnknown;
-  IsUnicodeField:=
-  	StrUtils.AnsiContainsText(Collation, 'utf8') or
-    StrUtils.AnsiContainsText(Collation, 'ucs2');
 
   Posi := FirstDelimiter(' ', TypeName);
   if Posi > 0 then
@@ -376,25 +370,10 @@ begin
   end
   else if TypeName = 'DOUBLE' then
     Result := stDouble
-  else if TypeName = 'CHAR' then begin
-    if IsUnicodeField then
-    {$IFDEF FPC}
-      Result := stString
-    {$ELSE}
-      Result := stUnicodeString
-    {$ENDIF}
-    else
-     Result := stString;
-  end else if TypeName = 'VARCHAR' then begin
-    if IsUnicodeField then
-    {$IFDEF FPC}
-      Result := stString
-    {$ELSE}
-      Result := stUnicodeString
-    {$ENDIF}
-    else
-     Result := stString;
-  end
+  else if TypeName = 'CHAR' then
+    Result := stString
+  else if TypeName = 'VARCHAR' then
+    Result := stString
   else if TypeName = 'VARBINARY' then
     Result := stBytes
   else if TypeName = 'BINARY' then
@@ -434,11 +413,17 @@ begin
   else if TypeName = 'SET' then
     Result := stString
   else if TypeName = 'BIT' then
-    Result := stBinaryStream
+    Result := stShort
   else
       for i := 0 to Length(GeoTypes) - 1 do
          if GeoTypes[i] = TypeName then
             Result := stBinaryStream;
+
+  if (CharEncoding = ceUTF8) and UTF8StringAsWideField then
+  case result of
+    stString: Result := stUnicodeString;
+    stAsciiStream: Result := stUnicodeStream;
+  end;
 
   if Result = stUnknown then
      raise Exception.Create('Unknown MySQL data type!');
@@ -543,16 +528,10 @@ begin
 end;
 
 function getMySQLFieldSize (field_type: TMysqlFieldTypes; field_size: LongWord): LongWord;
-const
-    MaxBlobSize = 65535;
-
 var
     FieldSize: LongWord;
 Begin
-    If field_size > MaxBlobsize then
-      FieldSize := MaxBlobSize
-    else
-      FieldSize := field_size;
+    FieldSize := field_size;
 
     case field_type of
         FIELD_TYPE_TINY:        Result := 1;
@@ -569,6 +548,84 @@ Begin
     else
         Result := 255;  {unknown ??}
     end;
+end;
+
+{**
+  Returns a valid TZColumnInfo from a FieldHandle
+  @param PlainDriver the MySQL PlainDriver interface
+  @param FieldHandle the handle of the fetched field
+  @returns a new TZColumnInfo
+}
+function GetMySQLColumnInfoFromFieldHandle(PlainDriver: IZMySQLPlainDriver;
+  const FieldHandle: PZMySQLField; const Encoding: TZCharEncoding;
+  const UTF8StringAsWideField: Boolean; const bUseResult:boolean): TZColumnInfo;
+var
+  FieldFlags: Integer;
+  FieldLength:integer;
+  bUseMaxLength:boolean;
+begin
+  if Assigned(FieldHandle) then
+  begin
+    Result := TZColumnInfo.Create;
+    FieldFlags := PlainDriver.GetFieldFlags(FieldHandle);
+
+    Result.ColumnLabel := PlainDriver.ZDbcString(PlainDriver.GetFieldName(FieldHandle), Encoding);
+    Result.ColumnName := PlainDriver.ZDbcString(PlainDriver.GetFieldOrigName(FieldHandle), Encoding);
+    Result.TableName := PlainDriver.ZDbcString(PlainDriver.GetFieldTable(FieldHandle), Encoding);
+    Result.ReadOnly := (PlainDriver.GetFieldTable(FieldHandle) = '');
+    Result.Writable := not Result.ReadOnly;
+    Result.ColumnType := ConvertMySQLHandleToSQLType(PlainDriver,
+        FieldHandle, FieldFlags, Encoding, UTF8StringAsWideField);
+    FieldLength:=PlainDriver.GetFieldLength(FieldHandle);
+    //EgonHugeist: arrange the MBCS field DisplayWidth to a proper count of Chars
+     if Result.ColumnType in [stString, stUnicodeString] then
+     case PlainDriver.GetFieldCharsetNr(FieldHandle) of
+      1, 84, {Big5}
+      95, 96, {cp932 japanese}
+      19, 85, {euckr}
+      24, 86, {gb2312}
+      38, 87, {gbk}
+      13, 88, {sjis}
+      35, 90, 128..151:  {ucs2}
+        Result.ColumnDisplaySize := FieldLength div 2;
+      33, 83, 192..215, { utf8 }
+      97, 98, { eucjpms}
+      12, 91: {ujis}
+        Result.ColumnDisplaySize := FieldLength div 3;
+      54, 55, 101..124, {utf16}
+      56, 62, {utf16le}
+      60, 61, 160..183, {utf32}
+      45, 46, 224..247: {utf8mb4}
+        Result.ColumnDisplaySize := FieldLength div 4;
+      else Result.ColumnDisplaySize := FieldLength; //1-Byte charsets
+    end;
+    Result.Precision := min(MaxBlobSize,FieldLength);
+    if PlainDriver.GetFieldType(FieldHandle) in [FIELD_TYPE_BLOB,FIELD_TYPE_MEDIUM_BLOB,FIELD_TYPE_LONG_BLOB,FIELD_TYPE_STRING,
+      FIELD_TYPE_VAR_STRING] then
+      begin
+      if bUseResult then  //PMYSQL_FIELD(Field)^.max_length not valid
+        Result.MaxLenghtBytes:=Result.Precision
+      else
+        Result.MaxLenghtBytes:=PlainDriver.GetFieldMaxLength(FieldHandle);
+      end
+    else
+      Result.MaxLenghtBytes:=FieldLength;
+    Result.Scale := PlainDriver.GetFieldDecimals(FieldHandle);
+    if (AUTO_INCREMENT_FLAG and FieldFlags <> 0)
+      or (TIMESTAMP_FLAG and FieldFlags <> 0) then
+      Result.AutoIncrement := True;
+    if UNSIGNED_FLAG and FieldFlags <> 0 then
+      Result.Signed := False
+    else
+      Result.Signed := True;
+    if NOT_NULL_FLAG and FieldFlags <> 0 then
+      Result.Nullable := ntNoNulls
+    else
+      Result.Nullable := ntNullable;
+    // Properties not set via query results here will be fetched from table metadata.
+  end
+  else
+    Result := nil;
 end;
 
 end.

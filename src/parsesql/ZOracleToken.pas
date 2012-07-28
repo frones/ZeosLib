@@ -138,6 +138,8 @@ end;
 }
 constructor TZOracleTokenizer.Create;
 begin
+  EscapeState := TZEscapeState.Create;
+  EscapeMarkSequence := '~<|'; //Defaults
   WhitespaceState := TZWhitespaceState.Create;
 
   SymbolState := TZOracleSymbolState.Create;

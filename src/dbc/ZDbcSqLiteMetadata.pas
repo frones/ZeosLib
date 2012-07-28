@@ -1348,7 +1348,9 @@ begin
         Result.UpdateString(3, TableNamePattern);
         Result.UpdateString(4, GetString(2));
         Result.UpdateInt(5, Ord(ConvertSQLiteTypeToSQLType(
-          GetString(3), Precision, Decimals)));
+          GetString(3), Precision, Decimals,
+          GetConnection.GetClientCodePageInformations.Encoding,
+          GetConnection.UTF8StringAsWideField)));
 
         { Defines a table name. }
         Temp := UpperCase(GetString(3));
@@ -1516,7 +1518,7 @@ const
     stFloat, stFloat, stDouble, stDouble, stDouble, stDouble,
     stString, {$IFDEF DELPHI12_UP}stUnicodeString{$ELSE}stString{$ENDIF},
     stBytes, stBytes, stDate, stTime, stTimestamp,
-    stTimestamp, stBinaryStream, stAsciiStream);
+    stTimestamp, stBinaryStream, {$IFDEF DELPHI12_UP}stUnicodeStream{$ELSE}stAsciiStream{$ENDIF});
   TypePrecision: array[1..MaxTypeCount] of Integer = (
     -1, 2, 4, 9, 9, 16, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     -1, -1, -1, -1, -1);
@@ -1529,7 +1531,7 @@ begin
     begin
       Result.MoveToInsertRow;
 
-      Result.UpdateString(1, AnsiString(TypeNames[I]));
+      Result.UpdateString(1, TypeNames[I]);
       Result.UpdateInt(2, Ord(TypeCodes[I]));
       if TypePrecision[I] >= 0 then
         Result.UpdateInt(3, TypePrecision[I])
@@ -1643,10 +1645,10 @@ begin
             Result.MoveToInsertRow;
 
             if Schema <> '' then
-              Result.UpdateString(1, AnsiString(Schema))
+              Result.UpdateString(1, Schema)
             else Result.UpdateNull(1);
             Result.UpdateNull(2);
-            Result.UpdateString(3, AnsiString(Table));
+            Result.UpdateString(3, Table);
             Result.UpdateBoolean(4, GetInt(3) = 0);
             Result.UpdateNull(5);
             Result.UpdateString(6, GetString(2));

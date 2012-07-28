@@ -240,6 +240,45 @@ type
 
   Tsqlite_compile = function(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
      var ppVm: Psqlite_vm; pzTail: PAnsiChar): Integer; cdecl;
+     (*
+      int sqlite3_prepare(
+        sqlite3 *db,            /* Database handle */
+        const char *zSql,       /* SQL statement, UTF-8 encoded */
+        int nByte,              /* Maximum length of zSql in bytes. */
+        sqlite3_stmt **ppStmt,  /* OUT: Statement handle */
+        const char **pzTail     /* OUT: Pointer to unused portion of zSql *)
+
+  Tsqlite_compile_v2 = function(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
+     var ppVm: Psqlite_vm; pzTail: PAnsiChar): Integer; cdecl;
+    (*
+    int sqlite3_prepare_v2(
+      sqlite3 *db,            /* Database handle */
+      const char *zSql,       /* SQL statement, UTF-8 encoded */
+      int nByte,              /* Maximum length of zSql in bytes. */
+      sqlite3_stmt **ppStmt,  /* OUT: Statement handle */
+      const char **pzTail     /* OUT: Pointer to unused portion of zSql */
+    ); *)
+  Tsqlite_compile16 = function(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
+     var ppVm: Psqlite_vm; pzTail: PAnsiChar): Integer; cdecl;
+    (*
+    int sqlite3_prepare16(
+      sqlite3 *db,            /* Database handle */
+      const void *zSql,       /* SQL statement, UTF-16 encoded */
+      int nByte,              /* Maximum length of zSql in bytes. */
+      sqlite3_stmt **ppStmt,  /* OUT: Statement handle */
+      const void **pzTail     /* OUT: Pointer to unused portion of zSql */
+    ); *)
+  Tsqlite_compile16_v2 = function(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
+     var ppVm: Psqlite_vm; pzTail: PAnsiChar): Integer; cdecl;
+    (*
+    int sqlite3_prepare16_v2(
+      sqlite3 *db,            /* Database handle */
+      const void *zSql,       /* SQL statement, UTF-16 encoded */
+      int nByte,              /* Maximum length of zSql in bytes. */
+      sqlite3_stmt **ppStmt,  /* OUT: Statement handle */
+      const void **pzTail     /* OUT: Pointer to unused portion of zSql */
+    ); *)
+
   Tsqlite_step = function(pVm: Psqlite_vm): Integer; cdecl;
   Tsqlite_finalize = function(vm: Psqlite_vm): Integer; cdecl;
   Tsqlite_reset = function(vm: Psqlite_vm): Integer; cdecl;
@@ -407,6 +446,8 @@ type
   protected
     SQLite_API : TZSQLite_API;
     // procedure LoadApi; override; ->completely done in version dependent child classes
+    function GetUnicodeCodePageName: String; override;
+    procedure LoadCodePages; override;
   public
     constructor Create;
 
@@ -499,6 +540,23 @@ implementation
 uses ZPlainLoader;
 
 { TZSQLiteBaseDriver }
+
+function TZSQLiteBaseDriver.GetUnicodeCodePageName: String;
+begin
+  Result := 'UTF-8'
+end;
+
+procedure TZSQLiteBaseDriver.LoadCodePages;  //Egonhugeist
+begin
+  { MultiByte }
+  AddCodePage('UTF-8', 1, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF});
+  AddCodePage('UTF-16le', 2, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}, 'UTF-8'); //Setting this will be ignored by actual Excute of Plaindriver
+  AddCodePage('UTF-16be', 3, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16BE{$ENDIF}, 'UTF-8'); //Setting this will be ignored by actual Excute of Plaindriver
+  AddCodePage('UTF-16', 4, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16{$ENDIF}, 'UTF-8'); //Setting this will be ignored by actual Excute of Plaindriver
+  {$IFNDEF WITH_WIDECONTROLS}
+  AddCodePage('ZUTF8ToAnsi', 5, ceUTF8AsAnsi{$IFDEF WITH_CHAR_CONTROL}, GetACP{$ENDIF}); //Virtual from EgonHugeist
+  {$ENDIF}
+end;
 
 constructor TZSQLiteBaseDriver.Create;
 begin
@@ -958,6 +1016,7 @@ begin
   {$ELSE}
     FLoader.AddLocation(LINUX_DLL3_LOCATION);
   {$ENDIF}
+  LoadCodePages;
 end;
 
 function TZSQLite3PlainDriver.GetProtocol: string;

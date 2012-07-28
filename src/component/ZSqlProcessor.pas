@@ -157,7 +157,7 @@ type
 
 implementation
 
-uses ZMessages, ZSysUtils, ZDbcUtils, ZAbstractRODataset, ZDatasetUtils;
+uses ZMessages, ZDbcUtils, ZAbstractRODataset, ZDatasetUtils;
 
 { TZSQLProcessor }
 
@@ -484,7 +484,6 @@ begin
       Param := Params.FindParam(ParamNames[I]);
       if not Assigned(Param) or (Param.ParamType in [ptOutput, ptResult]) then
         Continue;
-
       if Param.IsNull then
         Statement.SetNull(I + 1, ConvertDatasetToDbcType(Param.DataType))
       else begin
@@ -502,11 +501,11 @@ begin
           ftCurrency:
             Statement.SetBigDecimal(I + 1, Param.AsCurrency);
           ftString:
-            Statement.SetString(I + 1, AnsiString(Param.AsString));
+            Statement.SetString(I + 1, Param.AsString);
           ftWideString:
-            Statement.SetUnicodeString(I + 1, Param.{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
+            Statement.SetUnicodeString(I + 1, {$IFDEF WITH_FTWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF});
           ftBytes:
-            Statement.SetString(I + 1, AnsiString(Param.AsString));
+            Statement.SetString(I + 1, Param.AsString);
           ftDate:
             Statement.SetDate(I + 1, Param.AsDate);
           ftTime:

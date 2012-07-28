@@ -82,6 +82,7 @@ type
     procedure Open; override;
     procedure PrepareUpdateSQLData; virtual;
     function GetFieldValue(ColumnIndex: Integer): Variant;
+    function InternalGetString(ColumnIndex: Integer): AnsiString; override;
   public
     constructor Create(Statement: IZStatement; SQL: string;
       var StmtNum: SmallInt; CursorName: AnsiString;
@@ -91,7 +92,6 @@ type
     function GetCursorName: AnsiString; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetString(ColumnIndex: Integer): AnsiString; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -125,8 +125,8 @@ type
     procedure UpdateFloat(ColumnIndex: Integer; Value: Single); override;
     procedure UpdateDouble(ColumnIndex: Integer; Value: Double); override;
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended); override;
-    procedure UpdatePChar(ColumnIndex: Integer; Value: PAnsiChar); override;
-    procedure UpdateString(ColumnIndex: Integer; const Value: AnsiString); override;
+    procedure UpdatePChar(ColumnIndex: Integer; Value: PChar); override;
+    procedure UpdateString(ColumnIndex: Integer; const Value: String); override;
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString); override;
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray); override;
     procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime); override;
@@ -164,7 +164,7 @@ type
     function IsEmpty: Boolean; override;
     function Clone: IZBlob; override;
     function GetStream: TStream; override;
-    function GetString: AnsiString; override;
+    function GetString: ZAnsiString; override;
     function GetUnicodeString: WideString; override;
     function GetBytes: TByteDynArray; override;
     property BlobSize;
@@ -195,7 +195,7 @@ constructor TZASAResultSet.Create(Statement: IZStatement; SQL: string;
       SqlData: IZASASQLDA; ParamsSqlData: IZASASQLDA;
       CachedBlob: boolean);
 begin
-  inherited Create( Statement, SQL, nil);
+  inherited Create( Statement, SQL, nil,Statement.GetConnection.GetClientCodePageInformations);
 
   FFetchStat := 0;
   FSqlData := SqlData;
@@ -468,7 +468,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZASAResultSet.GetString(ColumnIndex: Integer): AnsiString;
+function TZASAResultSet.InternalGetString(ColumnIndex: Integer): Ansistring;
 begin
   CheckClosed;
   CheckColumnConvertion( ColumnIndex, stString);
@@ -728,7 +728,7 @@ begin
   if not Assigned( FUpdateSQLData) then
   begin
     FUpdateSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
-      FASAConnection.GetDBHandle, FCursorName, FSQLData.GetFieldCount);
+      FASAConnection.GetDBHandle, FCursorName, Self.ClientCodePage,FSQLData.GetFieldCount);
   end
   else if FUpdateSQLData.GetFieldCount = 0 then
     FUpdateSQLData.AllocateSQLDA( FSQLData.GetFieldCount);
@@ -788,22 +788,22 @@ begin
   FUpdateSqlData.UpdateBigDecimal( ColumnIndex, Value);
 end;
 
-procedure TZASAResultSet.UpdatePChar(ColumnIndex: Integer; Value: PAnsiChar);
+procedure TZASAResultSet.UpdatePChar(ColumnIndex: Integer; Value: PChar);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.UpdatePChar( ColumnIndex, Value);
 end;
 
-procedure TZASAResultSet.UpdateString(ColumnIndex: Integer; const Value: Ansistring);
+procedure TZASAResultSet.UpdateString(ColumnIndex: Integer; const Value: String);
 begin
   PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateString( ColumnIndex, Value);
+  FUpdateSqlData.UpdateString(ColumnIndex, ZPlainString(Value));
 end;
 
 procedure TZASAResultSet.UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString);
 begin
   PrepareUpdateSQLData;
-  FUpdateSqlData.UpdatePChar(ColumnIndex, PAnsiChar(string(Value)));
+  FUpdateSqlData.UpdatePChar(ColumnIndex, PChar(ZStringW(Value)));
 end;
 
 procedure TZASAResultSet.UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray);
@@ -973,7 +973,7 @@ begin
   Result := inherited GetStream;
 end;
 
-function TZASABlob.GetString: AnsiString;
+function TZASABlob.GetString: ZAnsiString;
 begin
   ReadBlob;
   Result := inherited GetString;

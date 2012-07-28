@@ -42,7 +42,7 @@ unit ZIBEventAlerter;
 interface
 
 uses
-  SysUtils, Classes, Math,
+  SysUtils, Classes,
 {$IFDEF MSWINDOWS}
   Windows, 
 {$ENDIF} 

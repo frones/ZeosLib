@@ -392,6 +392,8 @@ end;
 }
 constructor TZSybaseTokenizer.Create;
 begin
+  EscapeState := TZEscapeState.Create;
+  EscapeMarkSequence := '~<|'; //Defaults
   WhitespaceState := TZWhitespaceState.Create;
 
   SymbolState := TZSybaseSymbolState.Create;

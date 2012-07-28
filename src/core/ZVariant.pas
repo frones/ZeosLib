@@ -1225,9 +1225,9 @@ begin
         vtFloat:
           Result.VFloat := Value.VFloat;
         vtString:
-          Result.VFloat := SqlStrToFloatDef(Value.VString, 0);
+          Result.VFloat := SqlStrToFloatDef(AnsiString(Value.VString), 0);
         vtUnicodeString:
-          Result.VFloat := SqlStrToFloatDef(Value.VUnicodeString, 0);
+          Result.VFloat := SqlStrToFloatDef(AnsiString(Value.VUnicodeString), 0);
         vtDateTime:
           Result.VFloat := Value.VDateTime;
         vtPointer:

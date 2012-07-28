@@ -212,7 +212,7 @@ begin
   while ResultSet.Next do
   begin
     TableName := ResultSet.GetString(1);
-    if TableName = 'zeoslib' then
+    if LowerCase(TableName) = 'zeoslib' then
       DBFound := True;
   end;
   Check(DBFound);
@@ -290,7 +290,12 @@ begin
 //    CheckEquals('public', GetStringByName('TABLE_SCHEM'));
     CheckEquals('people', GetStringByName('TABLE_NAME'));
     CheckEquals('p_resume', GetStringByName('COLUMN_NAME'));
-    CheckEquals(ord(stAsciiStream), GetIntByName('DATA_TYPE'));
+    //EgonHugeist: the ClientCharacter-set sets now the Stream-Type
+    if (Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}])
+      and Connection.UTF8StringAsWideField then
+      CheckEquals(ord(stUnicodeStream), ResultSet.GetIntByName('DATA_TYPE'))
+    else
+      CheckEquals(ord(stAsciiStream), ResultSet.GetIntByName('DATA_TYPE'));
     CheckEquals('TEXT', UpperCase(GetStringByName('TYPE_NAME')));
     CheckEquals(-1, GetIntByName('COLUMN_SIZE'));
     CheckEquals(0, GetIntByName('BUFFER_LENGTH'));

@@ -127,6 +127,9 @@ type
 
     procedure Open; override;
     procedure Close; override;
+
+    function GetAnsiEscapeString(const Value: AnsiString;
+      const EscapeMarkSequence: String = '~<|'): String; override;
   end;
 
   {** Implements a specialized cached resolver for Interbase/Firebird. }
@@ -320,14 +323,12 @@ end;
 procedure TZInterbase6Connection.InternalCreate;
 var
   RoleName: string;
-  ClientCodePage: string;
   UserSetDialect: string;
   ConnectTimeout : integer;
 begin
   Self.FMetadata := TZInterbase6DatabaseMetadata.Create(Self, Url);
 
   FHardCommit := StrToBoolEx(URL.Properties.Values['hard_commit']);
-
   { Sets a default Interbase port }
 
   if Self.Port = 0 then
@@ -347,9 +348,14 @@ begin
   self.Info.Values['isc_dpb_username'] := Url.UserName;
   self.Info.Values['isc_dpb_password'] := Url.Password;
 
-  ClientCodePage := Trim(URL.Properties.Values['codepage']);
-  if ClientCodePage <> '' then
-    self.Info.Values['isc_dpb_lc_ctype'] := UpperCase(ClientCodePage);
+  if FClientCodePage = '' then //was set on inherited Create(...)
+    if URL.Properties.Values['isc_dpb_lc_ctype'] <> '' then //Check if Dev set's it manually
+    begin
+      FClientCodePage := URL.Properties.Values['isc_dpb_lc_ctype'];
+      Self.CheckCharEncoding(FClientCodePage, True);
+      URL.Properties.Values['isc_dpb_lc_ctype'] := ''; //drop it (setting is optional)
+    end;
+  URL.Properties.Values['isc_dpb_lc_ctype'] := FClientCodePage;
 
   RoleName := Trim(URL.Properties.Values['rolename']);
   if RoleName <> '' then
@@ -453,12 +459,12 @@ begin
   if HostName <> '' then
   begin
     if Port <> 3050 then
-      StrPCopy(DBName, HostName + '/' + IntToStr(Port) + ':' + Database)
+      StrPCopy(DBName, ZPlainString(HostName + '/' + IntToStr(Port) + ':' + Database))
     else
-      StrPCopy(DBName, HostName + ':' + Database)
+      StrPCopy(DBName, ZPlainString(HostName + ':' + Database))
   end
   else
-    StrPCopy(DBName, Database);
+    StrPCopy(DBName, AnsiString(Database));
 
   try
     { Create new db if needed }
@@ -487,6 +493,20 @@ begin
       StartTransaction;
 
     inherited Open;
+
+    {Check for ClientCodePage: if empty switch to database-defaults}
+    if Self.FClientCodePage = '' then
+      with GetMetadata.GetCollationAndCharSet('', '', '', '') do
+      begin
+        if Next then
+        begin
+          FCLientCodePage := GetString(6);
+          CheckCharEncoding(FClientCodePage);
+        end
+        else
+          raise Exception.Create('Cannot determine character set of connection!'); //marsupilami
+        Close;
+      end;
   finally
     StrDispose(DPB);
   end;
@@ -633,6 +653,7 @@ begin
   Params := TStringList.Create;
 
   { Set transaction parameters by TransactIsolationLevel }
+  //Params.Values['isc_dpb_lc_ctype'] := FClientCodePage; //Set CharacterSet allways if option is set
   Params.Add('isc_tpb_version3');
   case TransactIsolationLevel of
     tiReadCommitted:
@@ -652,14 +673,14 @@ begin
       end;
   else
     begin
-      { Add user defined parameters for traansaction }
+      { Add user defined parameters for transaction }
       Params.Clear;
       Params.AddStrings(Info);
     end;
   end;
 
   try
-    { GenerateTPB return PTEB with null pointer tpb_address from defaul
+    { GenerateTPB return PTEB with null pointer tpb_address from default
       transaction }
     PTEB := GenerateTPB(Params, FHandle);
     GetPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, PTEB);
@@ -667,7 +688,7 @@ begin
     DriverManager.LogMessage(lcTransaction, PlainDriver.GetProtocol,
       'TRANSACTION STARTED.');
   finally
-    Params.Free;
+    FreeAndNil(Params);
     StrDispose(PTEB.tpb_address);
     FreeMem(PTEB);
   end
@@ -690,6 +711,24 @@ begin
   CheckInterbase6Error(GetPlainDriver, FStatusVector, lcExecute, SQL);
   GetPlainDriver.isc_detach_database(@FStatusVector, @DbHandle);
   CheckInterbase6Error(GetPlainDriver, FStatusVector, lcExecute, SQL);
+end;
+
+function TZInterbase6Connection.GetAnsiEscapeString(const Value: AnsiString;
+  const EscapeMarkSequence: String = '~<|'): String;
+var
+  Tmp: AnsiString;
+begin
+  if Self.GetPlainDriver.GetProtocol = 'firebird-2.5' then
+    if Length(Value)*2 < 32*1024 then
+    begin
+      SetLength(Tmp, Length(Value)*2);
+      BinToHex(PAnsiChar(Value), PAnsiChar(Tmp), Length(Value)*2);
+      Result := inherited GetAnsiEscapeString('x'''+Tmp+'''', EscapeMarkSequence)
+    end
+    else
+      raise Exception.Create('Binary data out of range! Use Blob-Fields!')
+  else
+    raise Exception.Create('Your Firebird-Version does''t support Binary-Data in SQL-Statements! Use Blob-Fields!');
 end;
 
 {**

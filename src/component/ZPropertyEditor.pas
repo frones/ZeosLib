@@ -407,17 +407,9 @@ begin
         ResultSet := Metadata.GetTables(Catalog, Schema, '', nil);
         while ResultSet.Next do
           begin
-            {$IFDEF DELPHI12_UP}
-            TableName := UTF8ToUnicodeString(ResultSet.GetStringByName('TABLE_NAME'));
-            {$ELSE}
             TableName := ResultSet.GetStringByName('TABLE_NAME');
-            {$ENDIF}
             TableName := IdentifierConvertor.Quote(TableName);
-            {$IFDEF DELPHI12_UP}
-            Schema := UTF8ToUnicodeString(ResultSet.GetStringByName('TABLE_SCHEM'));
-            {$ELSE}
             Schema := ResultSet.GetStringByName('TABLE_SCHEM');
-            {$ENDIF}
             if Schema <> '' then
               TableName := IdentifierConvertor.Quote(Schema) + '.' + TableName;
             if Connection.Catalog <> '' then
@@ -532,7 +524,8 @@ begin
         ResultSet := Metadata.GetSequences(Connection.Catalog, '', '');
         while ResultSet.Next do
           if ResultSet.GetStringByName('SEQUENCE_SCHEM') <> '' then
-            List.Add(ResultSet.GetStringByName('SEQUENCE_SCHEM')+'.'+ResultSet.GetStringByName('SEQUENCE_NAME'))
+            List.Add(ResultSet.GetStringByName('SEQUENCE_SCHEM')+
+              '.'+ResultSet.GetStringByName('SEQUENCE_NAME'))
           else
             List.Add(ResultSet.GetStringByName('SEQUENCE_NAME'));
       finally
@@ -602,36 +595,32 @@ end;
 procedure TZClientCodePagePropertyEditor.GetValueList(List: TStrings);
 var
   Connection: TZAbstractConnection;
-  B: Boolean;
+  I: Integer;
+  SDyn: TStringDynArray;
+  Url: TZURL;
 begin
+
   if GetZComponent is TZAbstractConnection then
-    Connection := (GetZComponent as TZAbstractConnection);
+    Connection := (GetZComponent as TZAbstractConnection)
+  else
+    Connection := nil;
+
   if Assigned(Connection) then
   begin
-    B := Connection.Connected;
-    if not B then
-    try
-      Connection.Connect;
-    except
-      List.Append('Not Connected!');
-      Connection := nil;
-      Exit;
-    end;
-    Connection.ShowSqlHourGlass;
-    try
-      with Connection.DbcConnection.GetMetadata.GetCharacterSets do
-      begin
-        while Next do
-          List.Append(GetStringByName('CHARACTER_SET_NAME'));
-        Close;
-        if List.Count = 0 then List.Append('Not implementet!');
-      end;
-    finally
-      Connection.HideSqlHourGlass;
-      Connection.Connected := B;
+    if Connection.Protocol = '' then
+      List.Append('No Protocol selected!')
+    else
+    begin
+      Url := TZURL.Create;
+      Url.Protocol :=  Connection.Protocol;
+      SDyn := DriverManager.GetDriver(Url.URL).GetSupportedClientCodePages(Url, True);
+      Url.Free;
+      for i := 0 to high(SDyn) do
+        List.Append(SDyn[i]);
+
+      TStringList(List).Sort;
     end;
   end;
-  Connection := nil;
 end;
 
 {**
@@ -696,23 +685,7 @@ begin
   if GetZComponent is TZAbstractConnection then
   try
     URL := (GetZComponent as TZAbstractConnection).GetURL;
-    {if (GetZComponent as TZAbstractConnection).Port = 0 then
-      Url := Format('zdbc:%s://%s/%s?UID=%s;PWD=%s', [
-        (GetZComponent as TZAbstractConnection).Protocol,
-        (GetZComponent as TZAbstractConnection).HostName,
-        '',
-        (GetZComponent as TZAbstractConnection).User,
-        (GetZComponent as TZAbstractConnection).Password])
-    else
-      Url := Format('zdbc:%s://%s:%d/%s?UID=%s;PWD=%s', [
-        (GetZComponent as TZAbstractConnection).Protocol,
-        (GetZComponent as TZAbstractConnection).HostName,
-        (GetZComponent as TZAbstractConnection).Port,
-        '',
-        (GetZComponent as TZAbstractConnection).User,
-        (GetZComponent as TZAbstractConnection).Password]);
-    }
-    (GetZComponent as TZAbstractConnection).ShowSqlHourGlass;
+      (GetZComponent as TZAbstractConnection).ShowSqlHourGlass;
     try
       DbcConnection := DriverManager.GetConnectionWithParams(Url,
         (GetZComponent as TZAbstractConnection).Properties);
@@ -814,9 +787,9 @@ begin
   begin
     OD := TOpenDialog.Create(nil);
     try
-      OD.InitialDir := ExtractFilePath((GetZComponent as TZAbstractConnection).LibraryLocation);
+      OD.InitialDir := ExtractFilePath((GetZComponent as TZAbstractConnection).LibLocation);
       if OD.Execute then
-        (GetZComponent as TZAbstractConnection).LibraryLocation := OD.FileName;
+        (GetZComponent as TZAbstractConnection).LibLocation := OD.FileName;
     finally
       OD.Free;
     end;
@@ -857,22 +830,6 @@ begin
   if GetZComponent is TZAbstractConnection then
   try
     URL := (GetZComponent as TZAbstractConnection).GetURL;
-    {if (GetZComponent as TZAbstractConnection).Port = 0 then
-      Url := Format('zdbc:%s://%s/%s?UID=%s;PWD=%s', [
-        (GetZComponent as TZAbstractConnection).Protocol,
-        (GetZComponent as TZAbstractConnection).HostName,
-        '',
-        (GetZComponent as TZAbstractConnection).User,
-        (GetZComponent as TZAbstractConnection).Password])
-    else
-      Url := Format('zdbc:%s://%s:%d/%s?UID=%s;PWD=%s', [
-        (GetZComponent as TZAbstractConnection).Protocol,
-        (GetZComponent as TZAbstractConnection).HostName,
-        (GetZComponent as TZAbstractConnection).Port,
-        '',
-        (GetZComponent as TZAbstractConnection).User,
-        (GetZComponent as TZAbstractConnection).Password]);}
-
     (GetZComponent as TZAbstractConnection).ShowSqlHourGlass;
     try
       DbcConnection := DriverManager.GetConnectionWithParams(Url,
@@ -1029,22 +986,6 @@ begin
   if GetZComponent is TZAbstractConnection then
   try
     URL := (GetZComponent as TZAbstractConnection).GetURL;
-    {if (GetZComponent as TZAbstractConnection).Port = 0 then
-      Url := Format('zdbc:%s://%s/%s?UID=%s;PWD=%s', [
-        (GetZComponent as TZAbstractConnection).Protocol,
-        (GetZComponent as TZAbstractConnection).HostName,
-        '',
-        (GetZComponent as TZAbstractConnection).User,
-        (GetZComponent as TZAbstractConnection).Password])
-    else
-      Url := Format('zdbc:%s://%s:%d/%s?UID=%s;PWD=%s', [
-        (GetZComponent as TZAbstractConnection).Protocol,
-        (GetZComponent as TZAbstractConnection).HostName,
-        (GetZComponent as TZAbstractConnection).Port,
-        '',
-        (GetZComponent as TZAbstractConnection).User,
-        (GetZComponent as TZAbstractConnection).Password]);}
-
     (GetZComponent as TZAbstractConnection).ShowSqlHourGlass;
     try
       DbcConnection := DriverManager.GetConnectionWithParams(Url,
@@ -1119,33 +1060,13 @@ begin
   if GetZComponent is TZConnectionGroup then
   try
     URL := (GetZComponent as TZAbstractConnection).GetURL;
-    {if (GetZComponent as TZConnectionGroup).Port = 0 then
-      Url := Format('zdbc:%s://%s/%s?UID=%s;PWD=%s', [
-        (GetZComponent as TZConnectionGroup).Protocol,
-        (GetZComponent as TZConnectionGroup).HostName,
-        '',
-        (GetZComponent as TZConnectionGroup).User,
-        (GetZComponent as TZConnectionGroup).Password])
-    else
-      Url := Format('zdbc:%s://%s:%d/%s?UID=%s;PWD=%s', [
-        (GetZComponent as TZConnectionGroup).Protocol,
-        (GetZComponent as TZConnectionGroup).HostName,
-        (GetZComponent as TZConnectionGroup).Port,
-        '',
-        (GetZComponent as TZConnectionGroup).User,
-        (GetZComponent as TZConnectionGroup).Password]);}
-
-
-
-      with DbcConnection.GetMetadata.GetCatalogs do
-      try
-        while Next do
-          List.Append(GetStringByName('TABLE_CAT'));
-      finally
-        Close;
-      end;
-
-
+    with DbcConnection.GetMetadata.GetCatalogs do
+    try
+      while Next do
+        List.Append(GetStringByName('TABLE_CAT'));
+    finally
+      Close;
+    end;
   except
 //    raise;
   end;

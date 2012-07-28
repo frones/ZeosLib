@@ -1272,12 +1272,12 @@ function TZOracleDatabaseMetadata.UncachedGetProcedureColumns(const Catalog,
     LProcedureNamePattern, LColumnNamePattern: string;
     TypeName, SubTypeName: string;
     ColumnIndexes : Array[1..8] of integer;
-    ReturnIndexes : Array[1..8] of integer;
+    //ReturnIndexes : Array[1..8] of integer;
     colName:string;
     iColName:integer;
     isFunction:boolean;
     IZStmt:IZStatement;
-    iCol,iRow:integer;
+    iCol:integer;
     bNeedInsertReturns:boolean;
     bInsertingReturns:boolean;
     PZRow1,PZRow2:PZRowBuffer;
@@ -1367,7 +1367,9 @@ function TZOracleDatabaseMetadata.UncachedGetProcedureColumns(const Catalog,
         end;
        }
         Result.UpdateInt(6,
-          Ord(ConvertOracleTypeToSQLType(TypeName,GetInt(ColumnIndexes[6]),GetInt(ColumnIndexes[7]) ))); //DATA_TYPE
+          Ord(ConvertOracleTypeToSQLType(TypeName,GetInt(ColumnIndexes[6]),GetInt(ColumnIndexes[7]),
+          Self.GetConnection.GetClientCodePageInformations^.Encoding,
+          GetConnection.UTF8StringAsWideField))); //DATA_TYPE
         Result.UpdateString(7,GetString(ColumnIndexes[4]));    //TYPE_NAME
         Result.UpdateInt(10, GetInt(ColumnIndexes[6]));
         Result.UpdateNull(9);    //BUFFER_LENGTH
@@ -1405,36 +1407,37 @@ function TZOracleDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   begin
       Result:=inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
 
-    LProcedureNamePattern := '';//ConstructNameCondition(ProcedureNamePattern,      'RDB$PROCEDURE_NAME');
-    SQL := 'select Object_Name, procedure_name from user_procedures';
+  LProcedureNamePattern := '';//ConstructNameCondition(ProcedureNamePattern,      'RDB$PROCEDURE_NAME');
+  SQL := 'select Object_Name, procedure_name from user_procedures';
 
-    if LProcedureNamePattern <> '' then
-      SQL := SQL + ' WHERE ' + LProcedureNamePattern;
+  if LProcedureNamePattern <> '' then
+    SQL := SQL + ' WHERE ' + LProcedureNamePattern;
 
-    with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+  begin
+    while Next do
     begin
-      while Next do
-      begin
-        sName :=GetString(1);
-        if GetString(2)<>'' then
-          sName := sName+'.'+GetString(2);
-        Result.MoveToInsertRow;
-        Result.UpdateNull(1);
-        Result.UpdateNull(2);
-        Result.UpdateString(3, sName); //RDB$PROCEDURE_NAME
-        Result.UpdateNull(4);
-        Result.UpdateNull(5);
-        Result.UpdateNull(6);
-        Result.UpdateNull(7);
-        //Result.UpdateString(7, GetString(3)); //RDB$DESCRIPTION
+      {}
+      sName :=GetString(1);
+      if GetString(2)<>'' then
+        sName := sName+'.'+GetString(2);
+      Result.MoveToInsertRow;
+      Result.UpdateNull(1);
+      Result.UpdateNull(2);
+      Result.UpdateString(3, sName); //RDB$PROCEDURE_NAME
+      Result.UpdateNull(4);
+      Result.UpdateNull(5);
+      Result.UpdateNull(6);
+      Result.UpdateNull(7);
+      //Result.UpdateString(7, GetString(3)); //RDB$DESCRIPTION
 //        if IsNull(2) then //RDB$PROCEDURE_OUTPUTS
-        Result.UpdateInt(8, Ord(prtNoResult));
- //       else Result.UpdateInt(8, Ord(prtReturnsResult));
-        Result.InsertRow;
-      end;
-      Close;
+      Result.UpdateInt(8, Ord(prtNoResult));
+//       else Result.UpdateInt(8, Ord(prtReturnsResult));
+      Result.InsertRow;
     end;
+    Close;
   end;
+end;
 
 
 {**
@@ -1474,7 +1477,7 @@ end;
 function TZOracleDatabaseMetadata.UncachedGetTableTypes: IZResultSet;
 const
   TableTypeCount = 4;
-  Types: array [1..TableTypeCount] of AnsiString = (
+  Types: array [1..TableTypeCount] of String = (
     'TABLE', 'SYNONYM', 'VIEW', 'SEQUENCE'
   );
 var
@@ -1567,7 +1570,9 @@ begin
         Result.UpdateString(3, GetString(3));
         Result.UpdateString(4, GetString(4));
         Result.UpdateInt(5, Ord(ConvertOracleTypeToSQLType(
-          GetString(6), GetInt(9), GetInt(10))));
+          GetString(6), GetInt(9), GetInt(10),
+          GetConnection.GetClientCodePageInformations^.Encoding,
+          GetConnection.UTF8StringAsWideField)));
         Result.UpdateString(6, GetString(6));
         Result.UpdateInt(7, GetInt(7));
         Result.UpdateNull(8);

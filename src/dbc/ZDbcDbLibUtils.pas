@@ -347,7 +347,7 @@ function PrepareSQLParameter(Value: TZVariant; ParamType: TZSQLType): string;
 var
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
-  TempString: string;
+  TempString: Ansistring;
 begin
   TempBytes := nil;
 
@@ -369,17 +369,13 @@ begin
         Result := 'N'+QuotedStr(SoftVarManager.GetAsUnicodeString(Value));
       stBytes:
         begin
-          {$IFDEF DELPHI12_UP}
-          TempBytes := StrToBytes(UTF8String(SoftVarManager.GetAsString(Value)));
-          {$ELSE}
-          TempBytes := StrToBytes(SoftVarManager.GetAsString(Value));
-          {$ENDIF}
+          TempBytes := StrToBytes(AnsiString(SoftVarManager.GetAsString(Value)));
           if Length(TempBytes) = 0 then
             Result := 'NULL'
           else
           begin
             SetLength(Result, (2 * Length(TempBytes)));
-            BinToHex(PAnsiChar(TempBytes), PAnsiChar(Result), Length(TempBytes));
+            BinToHex(PAnsiChar(TempBytes), PAnsiChar(AnsiString(Result)), Length(TempBytes));
             Result := '0x' + Result;
           end;
         end;
@@ -396,7 +392,7 @@ begin
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
-            Result := AnsiQuotedStr(StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), '''')
+            Result := AnsiQuotedStr(StringReplace(String(TempBlob.GetString), #0, '', [rfReplaceAll]), '''')
           else
             Result := 'NULL';
         end;
@@ -407,7 +403,7 @@ begin
           begin
             TempString := TempBlob.GetString;
             SetLength(Result, (2 * Length(TempString)));
-            BinToHex(PAnsiChar(TempString), PAnsiChar(Result), Length(TempString));
+            BinToHex(PAnsiChar(TempString), PAnsiChar(AnsiString(Result)), Length(TempString));
             Result := '0x' + Result;
           end
           else

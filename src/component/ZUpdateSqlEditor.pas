@@ -815,7 +815,7 @@ begin
         if ResultSet.GetBooleanByName('SEARCHABLE') then
           KeyFieldList.Items.AddObject(ResultSet.GetStringByName('COLUMN_NAME'), Pointer(ResultSet.GetIntByName('NULLABLE') <> 0));
         if ResultSet.GetBooleanByName('WRITABLE') then
-          UpdateFieldList.Items.Add(ResultSet.GetStringByName('COLUMN_NAME'));
+          UpdateFieldList.Items.Add(ResultSet.GetStringByName('COLUMN_NAME')) ;
       end;
     end;
     FDatasetDefaults := False;

@@ -360,6 +360,8 @@ end;
 }
 constructor TZSQLiteTokenizer.Create;
 begin
+  EscapeState := TZEscapeState.Create;
+  EscapeMarkSequence := '~<|'; //Defaults
   WhitespaceState := TZWhitespaceState.Create;
 
   SymbolState := TZSQLiteSymbolState.Create;

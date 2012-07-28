@@ -63,6 +63,8 @@ interface
 
 resourcestring
 
+  WUnsupportedCodePage = 'Warning high riscly selected CopdePage/CharacterSet in dependency of your Compiler!'#13#13' Possible String-DataLoss!';
+  EUnsupportedCodePage = 'Error on setting the select CopdePage/CharacterSet! May be not supported!';
 // -> ms, 09/05/2005
 {$IFDEF PORTUGUESE}
   SSQLError1 = 'Erro SQL: %s';

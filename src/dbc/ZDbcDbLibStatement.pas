@@ -290,7 +290,8 @@ begin
       NativeResultSet := TZDBLibResultSet.Create(Self, FSQL);
       NativeResultSet.SetConcurrency(rcReadOnly);
       CachedResultSet := TZCachedResultSet.Create(NativeResultSet,
-        FSQL, TZDBLibCachedResolver.Create(Self, NativeResultSet.GetMetaData));
+        FSQL, TZDBLibCachedResolver.Create(Self, NativeResultSet.GetMetaData),
+          ClientCodePage);
       CachedResultSet.SetType(rtScrollInsensitive);//!!!Cached resultsets are allways this
       CachedResultSet.Last;
       CachedResultSet.BeforeFirst; //!!!Just to invoke fetchall
@@ -492,7 +493,8 @@ begin
       NativeResultSet := TZDBLibResultSet.Create(Self, FSQL);
       NativeResultSet.SetConcurrency(rcReadOnly);
       CachedResultSet := TZCachedResultSet.Create(NativeResultSet, FSQL,
-        TZDBLibCachedResolver.Create(Self, NativeResultSet.GetMetaData));
+        TZDBLibCachedResolver.Create(Self, NativeResultSet.GetMetaData),
+        ClientCodePage);
       CachedResultSet.SetType(rtScrollInsensitive);//!!!Cached resultsets are allways this
       CachedResultSet.Last;
       CachedResultSet.BeforeFirst; //!!!Just to invoke fetchall

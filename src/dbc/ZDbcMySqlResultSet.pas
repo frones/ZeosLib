@@ -78,8 +78,10 @@ type
     FRowHandle: PZMySQLRow;
     FPlainDriver: IZMySQLPlainDriver;
     FUseResult: Boolean;
+    TempStr: String;
   protected
     procedure Open; override;
+    function InternalGetString(ColumnIndex: Integer): Ansistring; override;
   public
     constructor Create(PlainDriver: IZMySQLPlainDriver; Statement: IZStatement;
       SQL: string; Handle: PZMySQLConnect; UseResult: Boolean);
@@ -88,8 +90,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPChar(ColumnIndex: Integer): PAnsiChar; override;
-    function GetString(ColumnIndex: Integer): AnsiString; override;
+    function GetPChar(ColumnIndex: Integer): PChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -125,6 +126,7 @@ type
     function bufferasextended(ColumnIndex: Integer):Extended;
 
   protected
+    function InternalGetString(ColumnIndex: Integer): Ansistring; override;
     procedure Open; override;
   public
     constructor Create(PlainDriver: IZMySQLPlainDriver; Statement: IZStatement;
@@ -134,8 +136,6 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPChar(ColumnIndex: Integer): PAnsiChar; override;
-    function GetString(ColumnIndex: Integer): AnsiString; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -215,7 +215,8 @@ constructor TZMySQLResultSet.Create(PlainDriver: IZMySQLPlainDriver;
   UseResult: Boolean);
 begin
   inherited Create(Statement, SQL, TZMySQLResultSetMetadata.Create(
-    Statement.GetConnection.GetMetadata, SQL, Self));
+    Statement.GetConnection.GetMetadata, SQL, Self),
+      Statement.GetConnection.GetClientCodePageInformations);
 
   FHandle := Handle;
   FQueryHandle := nil;
@@ -241,9 +242,7 @@ end;
 procedure TZMySQLResultSet.Open;
 var
   I: Integer;
-  ColumnInfo: TZColumnInfo;
   FieldHandle: PZMySQLField;
-  FieldFlags: Integer;
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
@@ -274,37 +273,9 @@ begin
     if FieldHandle = nil then
       Break;
 
-    ColumnInfo := TZColumnInfo.Create;
-    with ColumnInfo do
-    begin
-      FieldFlags := FPlainDriver.GetFieldFlags(FieldHandle);
-
-      ColumnLabel := FPlainDriver.GetFieldName(FieldHandle);
-      ColumnName := FPlainDriver.GetFieldOrigName(FieldHandle);
-      TableName := FPlainDriver.GetFieldTable(FieldHandle);
-      ReadOnly := (FPlainDriver.GetFieldTable(FieldHandle) = '');
-      Writable := not ReadOnly;
-      ColumnType := ConvertMySQLHandleToSQLType(FPlainDriver,
-        FieldHandle, FieldFlags);
-      ColumnDisplaySize := FPlainDriver.GetFieldLength(FieldHandle);
-      Precision := Max(FPlainDriver.GetFieldMaxLength(FieldHandle),
-        FPlainDriver.GetFieldLength(FieldHandle));
-      Scale := FPlainDriver.GetFieldDecimals(FieldHandle);
-      if (AUTO_INCREMENT_FLAG and FieldFlags <> 0)
-        or (TIMESTAMP_FLAG and FieldFlags <> 0) then
-        AutoIncrement := True;
-      if UNSIGNED_FLAG and FieldFlags <> 0 then
-        Signed := False
-      else
-        Signed := True;
-      if NOT_NULL_FLAG and FieldFlags <> 0 then
-        Nullable := ntNoNulls
-      else
-        Nullable := ntNullable;
-      // Properties not set via query results here will be fetched from table metadata.
-    end;
-
-    ColumnsInfo.Add(ColumnInfo);
+    ColumnsInfo.Add(GetMySQLColumnInfoFromFieldHandle(FPlainDriver,
+     FieldHandle, GetStatement.GetConnection.GetEncoding,
+     GetStatement.GetConnection.UTF8StringAsWideField,FUseResult));
   end;
 
   inherited Open;
@@ -355,8 +326,8 @@ begin
   if not Result and (TZAbstractResultSetMetadata(Metadata).
     GetColumnType(ColumnIndex) in [stDate, stTimestamp]) then
   begin
-    Result := (AnsiSQLDateToDateTime(Temp) = 0)
-      and (TimestampStrToDateTime(Temp) = 0);
+    Result := (AnsiSQLDateToDateTime(String(Temp)) = 0)
+      and (TimestampStrToDateTime(String(Temp)) = 0);
   end;
 end;
 
@@ -369,7 +340,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZMySQLResultSet.GetPChar(ColumnIndex: Integer): PAnsiChar;
+function TZMySQLResultSet.GetPChar(ColumnIndex: Integer): PChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
@@ -377,20 +348,21 @@ begin
     raise EZSQLException.Create(SRowDataIsNotAvailable);
 {$ENDIF}
 
-  Result := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex - 1);
+  TempStr := ZDbcString(FPlainDriver.GetFieldData(FRowHandle, ColumnIndex - 1));
+  Result := PChar(TempStr);
   LastWasNull := Result = nil;
 end;
 
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>String</code> in the Java programming language.
+  a <code>String</code>.
 
   @param columnIndex the first column is 1, the second is 2, ...
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZMySQLResultSet.GetString(ColumnIndex: Integer): AnsiString;
+function TZMySQLResultSet.InternalGetString(ColumnIndex: Integer): Ansistring;
 var
   LengthPointer: PULong;
   Length: ULong;
@@ -405,7 +377,7 @@ begin
   ColumnIndex := ColumnIndex - 1;
   LengthPointer := FPlainDriver.FetchLengths(FQueryHandle);
   if LengthPointer <> nil then
-    Length  := PULong(NativeUint(LengthPointer) + ColumnIndex * SizeOf(ULOng))^
+    Length  := PULong(NativeUint(LengthPointer) + NativeUInt(ColumnIndex) * SizeOf(ULOng))^
   else
     Length := 0;
   Buffer := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);
@@ -431,7 +403,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-  Temp := UpperCase(GetString(ColumnIndex));
+  Temp := UpperCase(String(InternalGetString(ColumnIndex)));
   Result := (Temp = 'Y') or (Temp = 'YES') or (Temp = 'T') or
     (Temp = 'TRUE') or (StrToIntDef(Temp, 0) <> 0);
 end;
@@ -450,7 +422,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  Result := ShortInt(StrToIntDef(GetString(ColumnIndex), 0));
+  Result := ShortInt(StrToIntDef(String(InternalGetString(ColumnIndex)), 0));
 end;
 
 {**
@@ -467,7 +439,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
-  Result := SmallInt(StrToIntDef(GetString(ColumnIndex), 0));
+  Result := SmallInt(StrToIntDef(String(InternalGetString(ColumnIndex)), 0));
 end;
 
 {**
@@ -484,7 +456,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
-  Result := StrToIntDef(GetString(ColumnIndex), 0);
+  Result := StrToIntDef(String(InternalGetString(ColumnIndex)), 0);
 end;
 
 {**
@@ -501,7 +473,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-  Result := StrToInt64Def(GetString(ColumnIndex), 0);
+  Result := StrToInt64Def(String(InternalGetString(ColumnIndex)), 0);
 end;
 
 {**
@@ -518,7 +490,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
-  Result := SQLStrToFloatDef(GetString(ColumnIndex), 0);
+  Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
 end;
 
 {**
@@ -535,7 +507,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
-  Result := SQLStrToFloatDef(GetString(ColumnIndex), 0);
+  Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
 end;
 
 {**
@@ -553,7 +525,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
-  Result := SQLStrToFloatDef(GetString(ColumnIndex), 0);
+  Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
 end;
 
 {**
@@ -571,7 +543,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
 {$ENDIF}
-  Result := StrToBytes(GetString(ColumnIndex));
+  Result := StrToBytes(InternalGetString(ColumnIndex));
 end;
 
 {**
@@ -590,7 +562,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
-  Value := GetString(ColumnIndex);
+  Value := String(InternalGetString(ColumnIndex));
 
   LastWasNull := (LastWasNull or (Copy(Value, 1, 10)='0000-00-00'));
   if LastWasNull then
@@ -622,7 +594,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-  Value := GetString(ColumnIndex);
+  Value := String(InternalGetString(ColumnIndex));
 
   LastWasNull := (LastWasNull or (Copy(Value, 1, 8)='00:00:00'));
   if LastWasNull then
@@ -654,7 +626,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
 {$ENDIF}
-  Temp := GetPChar(ColumnIndex);
+  Temp := String(GetPChar(ColumnIndex));
 
   if LastWasNull then
   begin
@@ -695,7 +667,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stAsciiStream);
 {$ENDIF}
-  Result := TStringStream.Create(GetString(ColumnIndex));
+  Result := TStringStream.Create(InternalGetString(ColumnIndex));
 end;
 
 {**
@@ -727,7 +699,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
-  Result := nil;
+  Result := TStringStream.Create(InternalGetString(ColumnIndex));
 end;
 
 {**
@@ -755,7 +727,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBinaryStream);
 {$ENDIF}
-  Result := TStringStream.Create(GetString(ColumnIndex));
+  Result := TStringStream.Create(InternalGetString(ColumnIndex));
 end;
 
 {**
@@ -778,7 +750,7 @@ begin
   try
     if not IsNull(ColumnIndex) then
     begin
-      Stream := TStringStream.Create(GetString(ColumnIndex));
+      Stream := TStringStream.Create(InternalGetString(ColumnIndex));
       Result := TZAbstractBlob.CreateWithStream(Stream)
     end
     else
@@ -908,7 +880,8 @@ var
   tempPrepStmt : IZMysqlPreparedStatement;
 begin
   inherited Create(Statement, SQL, TZMySQLResultSetMetadata.Create(
-    Statement.GetConnection.GetMetadata, SQL, Self));
+    Statement.GetConnection.GetMetadata, SQL, Self),
+    Statement.GetConnection.GetClientCodePageInformations);
 
   FHandle := Handle;
   tempPrepStmt := Statement as IZMysqlPreparedStatement;
@@ -933,11 +906,11 @@ end;
   Opens this recordset.
 }
 procedure TZMySQLPreparedResultSet.Open;
+const one = AnsiString('1');
 var
   I: Integer;
   ColumnInfo: TZColumnInfo;
   FieldHandle: PZMySQLField;
-  FieldFlags: Integer;
   FieldCount: Integer;
 begin
   if ResultSetConcurrency = rcUpdatable then
@@ -955,6 +928,7 @@ begin
     LastRowNo := 0
   else
   begin
+    FPlainDriver.StmtAttrSet(FPrepStmt,STMT_ATTR_UPDATE_MAX_LENGTH,PAnsiChar(one));
     if (FPlainDriver.StorePreparedResult(FPrepStmt)=0) then
       LastRowNo := FPlainDriver.GetPreparedNumRows(FPrepStmt)
     else
@@ -973,37 +947,13 @@ begin
     if FieldHandle = nil then
       Break;
 
-    ColumnInfo := TZColumnInfo.Create;
-    with ColumnInfo do
-    begin
-      FieldFlags := FPlainDriver.GetFieldFlags(FieldHandle);
-
-      ColumnLabel := FPlainDriver.GetFieldName(FieldHandle);
-      TableName := FPlainDriver.GetFieldTable(FieldHandle);
-      ReadOnly := (FPlainDriver.GetFieldTable(FieldHandle) = '');
-      ColumnType := ConvertMySQLHandleToSQLType(FPlainDriver,
-        FieldHandle, FieldFlags);
-      ColumnDisplaySize := FPlainDriver.GetFieldLength(FieldHandle);
-      Precision := Max(FPlainDriver.GetFieldMaxLength(FieldHandle),
-        FPlainDriver.GetFieldLength(FieldHandle));
-      Scale := FPlainDriver.GetFieldDecimals(FieldHandle);
-      if (AUTO_INCREMENT_FLAG and FieldFlags <> 0)
-        or (TIMESTAMP_FLAG and FieldFlags <> 0) then
-        AutoIncrement := True;
-      if UNSIGNED_FLAG and FieldFlags <> 0 then
-        Signed := False
-      else
-        Signed := True;
-      if NOT_NULL_FLAG and FieldFlags <> 0 then
-        Nullable := ntNoNulls
-      else
-        Nullable := ntNullable;
-      // Properties not set via query results here will be fetched from table metadata.
-    end;
+    ColumnInfo := GetMySQLColumnInfoFromFieldHandle(FPlainDriver,
+     FieldHandle, GetStatement.GetConnection.GetEncoding,
+     GetStatement.GetConnection.UTF8StringAsWideField,FUseResult);
 
     ColumnsInfo.Add(ColumnInfo);
 
-    FBindBuffer.AddColumn(FPlainDriver.GetFieldType(FieldHandle),ColumnInfo.ColumnDisplaySize);
+    FBindBuffer.AddColumn(FPlainDriver.GetFieldType(FieldHandle),ColumnInfo.MaxLenghtBytes,false);
     end;
   FPlainDriver.FreeResult(FResultMetaData);
   FResultMetaData := nil;
@@ -1057,36 +1007,13 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>PAnsiChar</code> in the Delphi programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZMySQLPreparedResultSet.GetPChar(ColumnIndex: Integer): PAnsiChar;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckClosed;
-{$ENDIF}
-   {$IFDEF DELPHI12_UP}
-   Result := PAnsiChar(UTF8String(PAnsiChar(FColumnArray[ColumnIndex - 1].buffer)));
-   {$ELSE}
-   Result := PAnsiChar(FColumnArray[ColumnIndex - 1].buffer);
-   {$ENDIF}
-
-  LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
   a <code>String</code> in the Java programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZMySQLPreparedResultSet.GetString(ColumnIndex: Integer): AnsiString;
+function TZMySQLPreparedResultSet.InternalGetString(ColumnIndex: Integer): AnsiString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
@@ -1111,7 +1038,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-   Temp := UpperCase(GetString(ColumnIndex));
+   Temp := UpperCase(String(InternalGetString(ColumnIndex)));
   Result := (Temp = 'Y') or (Temp = 'YES') or (Temp = 'T') or
     (Temp = 'TRUE') or (StrToIntDef(Temp, 0) <> 0);
 end;
@@ -1274,7 +1201,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
 {$ENDIF}
-  Result := StrToBytes(GetString(ColumnIndex));
+  Result := StrToBytes(InternalGetString(ColumnIndex));
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
 end;
 
@@ -1368,7 +1295,8 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stAsciiStream);
 {$ENDIF}
-  Result := TStringStream.Create(GetString(ColumnIndex));
+  Result := TStringStream.Create(InternalGetString(ColumnIndex));
+  LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
 end;
 
 {**
@@ -1400,7 +1328,8 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
-  Result := nil;
+  Result := TStringStream.Create(InternalGetString(ColumnIndex));
+  LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
 end;
 
 {**
@@ -1428,7 +1357,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBinaryStream);
 {$ENDIF}
-  Result := TStringStream.Create(GetString(ColumnIndex));
+  Result := TMemoryStream.Create;
+  Result.Write(FColumnArray[ColumnIndex - 1].buffer[0], FColumnArray[ColumnIndex - 1].length);
+  Result.Position := 0;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
 end;
 
@@ -1458,8 +1389,11 @@ begin
   try
     if not LastWasNull then
     begin
-      Stream := TStringStream.Create(GetString(ColumnIndex));
-      Result := TZAbstractBlob.CreateWithStream(Stream)
+      if TZAbstractResultSetMetadata(Metadata).GetColumnType(ColumnIndex) = stBinaryStream then
+        Stream := GetBinaryStream(ColumnIndex)
+      else
+      Stream := TStringStream.Create(InternalGetString(ColumnIndex));
+        Result := TZAbstractBlob.CreateWithStream(Stream)
     end
     else
       Result := TZAbstractBlob.CreateWithStream(nil);
@@ -1573,7 +1507,7 @@ begin
   if (MaxRows > 0) and (RowNo >= MaxRows) then
     Exit;
 
-  if FPlainDriver.FetchBoundResults(FPrepStmt) =0 then
+  if FPlainDriver.FetchBoundResults(FPrepStmt) in [0, MYSQL_DATA_TRUNCATED] then
   begin
     RowNo := RowNo + 1;
     if LastRowNo < RowNo then

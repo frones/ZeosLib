@@ -9,6 +9,7 @@ object frmMain: TfrmMain
   Menu = MainMenu1
   OnClose = FormClose
   OnCreate = FormCreate
+  Position = poDesktopCenter
   LCLVersion = '0.9.30.4'
   object PageControl1: TPageControl
     Left = 8

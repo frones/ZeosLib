@@ -83,7 +83,6 @@ type
     FHandle: PZMySQLConnect;
     FPlainDriver: IZMySQLPlainDriver;
     FUseResult: Boolean;
-    FSQL: string;
 
     function CreateResultSet(const SQL: string): IZResultSet;
     function GetStmtHandle : PZMySqlPrepStmt;
@@ -108,8 +107,6 @@ type
     FPlainDriver: IZMySQLPlainDriver;
   protected
     function CreateExecStatement: IZStatement; override;
-    function GetEscapeString(const Value: string): string;
-    function GetAnsiEscapeString(const Value: AnsiString): AnsiString;
     function PrepareSQLParam(ParamIndex: Integer): string; override;
   public
     constructor Create(PlainDriver: IZMySQLPlainDriver;
@@ -122,17 +119,14 @@ type
   {** Encapsulates a MySQL bind buffer. }
   TZMySQLBindBuffer = class(TZAbstractObject)
   protected
-    FDriverVersion : Integer;
     FAddedColumnCount : Integer;
-    FBindArray41: Array of MYSQL_BIND41;
-    FBindArray50: Array of MYSQL_BIND50;
-    FBindArray51: Array of MYSQL_BIND51;
-    FBindArray60: Array of MYSQL_BIND60;
+    FBindOffsets: MYSQL_BINDOFFSETS;
+    FBindArray: Array of byte;
     FPColumnArray: ^TZMysqlColumnBuffer;
   public
     constructor Create(PlainDriver:IZMysqlPlainDriver; NumColumns : Integer; var ColumnArray:TZMysqlColumnBuffer);
     destructor Destroy; override;
-    procedure AddColumn(buffertype:TMysqlFieldTypes; display_length:integer);
+    procedure AddColumn(buffertype:TMysqlFieldTypes; field_length:integer; largeblobparameter:boolean);
     function GetColumnArray : TZMysqlColumnBuffer;
     function GetBufferAddress : Pointer;
     function GetBufferType(ColumnIndex: Integer) : TMysqlFieldTypes;
@@ -197,15 +191,12 @@ uses
 }
 constructor TZMySQLStatement.Create(PlainDriver: IZMySQLPlainDriver;
   Connection: IZConnection; Info: TStrings; Handle: PZMySQLConnect);
-var
-  MySQLConnection: IZMySQLConnection;
 begin
   inherited Create(Connection, Info);
   FHandle := Handle;
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
 
-  MySQLConnection := Connection as IZMySQLConnection;
   FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
 end;
 
@@ -252,7 +243,7 @@ begin
     CachedResolver := TZMySQLCachedResolver.Create(FPlainDriver, FHandle, Self,
       NativeResultSet.GetMetaData);
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
-      CachedResolver);
+      CachedResolver, ClientCodePage);
     CachedResultSet.SetConcurrency(GetResultSetConcurrency);
     Result := CachedResultSet;
   end
@@ -270,19 +261,20 @@ end;
 function TZMySQLStatement.ExecuteQuery(const SQL: string): IZResultSet;
 begin
   Result := nil;
-  {$IFDEF DELPHI12_UP}
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(AnsiString(SQL))) = 0 then
-  {$ELSE}
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
-  {$ENDIF}
+//  Self.SSQL := SQL; //Did preprepare the SQL
+//  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(Self.ASQL)) = 0 then
+  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, Self.GetConnection.GetEncoding, LogSQL) = 0 then
   begin
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+//    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
     if not FPlainDriver.ResultSetExists(FHandle) then
       raise EZSQLException.Create(SCanNotOpenResultSet);
-    Result := CreateResultSet(SQL);
+    Result := CreateResultSet(LogSQL);
+    //Result := CreateResultSet(SSQL);
   end
   else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
+    //CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
 end;
 
 {**
@@ -302,13 +294,12 @@ var
   HasResultset : Boolean;
 begin
   Result := -1;
-  {$IFDEF DELPHI12_UP}
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(AnsiString(SQL))) = 0 then
-  {$ELSE}
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
-  {$ENDIF}
+//  Self.SSQL := SQL; //Preprepare SQL
+  //if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
+  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, GetConnection.GetEncoding, LogSQL) = 0 then
   begin
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+    //DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
     if HasResultSet then
@@ -327,7 +318,8 @@ begin
       Result := FPlainDriver.GetAffectedRows(FHandle);
   end
   else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
+//    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
   LastUpdateCount := Result;
 end;
 
@@ -356,14 +348,12 @@ var
   HasResultset : Boolean;
 begin
   Result := False;
-  FSQL := SQL;
-  {$IFDEF DELPHI12_UP}
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(AnsiString(SQL))) = 0 then
-  {$ELSE}
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
-  {$ENDIF}
+  //Self.SSQL := SQL; //Preprepare SQL and sets AnsiSQL
+  //if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
+  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, GetConnection.GetEncoding, LogSQL) = 0 then
   begin
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+    //DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
     if HasResultSet then
@@ -379,7 +369,8 @@ begin
     end;
   end
   else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SQL);
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
+    //CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
 end;
 
 {**
@@ -406,7 +397,7 @@ begin
   begin
     AStatus := FPlainDriver.RetrieveNextRowset(FHandle);
     if AStatus > 0 then
-      CheckMySQLError(FPlainDriver, FHandle, lcExecute, FSQL)
+      CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL)
     else
       Result := (AStatus = 0);
 
@@ -415,7 +406,7 @@ begin
     LastResultSet := nil;
     LastUpdateCount := -1;
     if FPlainDriver.ResultSetExists(FHandle) then
-      LastResultSet := CreateResultSet(FSQL)
+      LastResultSet := CreateResultSet(SSQL)
     else
       LastUpdateCount := FPlainDriver.GetAffectedRows(FHandle);
   end;
@@ -450,52 +441,6 @@ begin
 end;
 
 {**
-  Converts an string into escape MySQL format.
-  @param Value a regular string.
-  @return a string in MySQL escape format.
-}
-function TZMySQLEmulatedPreparedStatement.GetEscapeString(const Value: string): string;
-var
-  BufferLen: Integer;
-  Buffer: PAnsiChar;
-begin
-  BufferLen := Length(Value) * 2 + 1;
-  GetMem(Buffer, BufferLen);
-  if FHandle = nil then
-  {$IFDEF DELPHI12_UP}
-    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(UTF8Encode(Value)), Length(PAnsiChar(UTF8Encode(Value))))
-  else
-    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(UTF8Encode(Value)), Length(PAnsiChar(UTF8Encode(Value))));
-  {$ELSE}
-    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(Value), Length(Value))
-   else
-    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(Value), Length(Value));
-  {$ENDIF}
-  Result := '''' + BufferToStr(Buffer, BufferLen) + '''';
-  FreeMem(Buffer);
-end;
-
-{**
-  Converts an ansi string (binary data) into escape MySQL format.
-  @param Value a regular string.
-  @return a string in MySQL escape format.
-}
-function TZMySQLEmulatedPreparedStatement.GetAnsiEscapeString(const Value: AnsiString): AnsiString;
-var
-  BufferLen: Integer;
-  Buffer: PAnsiChar;
-begin
-  BufferLen := Length(Value) * 2 + 1;
-  GetMem(Buffer, BufferLen);
-  if FHandle = nil then
-    BufferLen := FPlainDriver.GetEscapeString(Buffer, PAnsiChar(Value), Length(Value))
-   else
-    BufferLen := FPlainDriver.GetRealEscapeString(FHandle, Buffer, PAnsiChar(Value), Length(Value));
-  Result := '''' + AnsiString(BufferToStr(Buffer, BufferLen)) + '''';
-  FreeMem(Buffer);
-end;
-
-{**
   Prepares an SQL parameter for the query.
   @param ParameterIndex the first parameter is 1, the second is 2, ...
   @return a string representation of the parameter.
@@ -505,7 +450,7 @@ var
   Value: TZVariant;
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
-
+  TempStream,TempStreamIn: TStream;
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
 begin
   TempBytes := nil;
@@ -529,8 +474,21 @@ begin
                Result := '''N''';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
-      stString, stUnicodeString, stBytes:
-        Result := GetEscapeString(SoftVarManager.GetAsString(Value));
+      stBytes:
+        Result := Self.GetConnection.GetEscapeString(PAnsiChar(AnsiString(SoftVarManager.GetAsString(Value))));
+      stString:
+        {$IFDEF DELPHI12_UP}
+          if GetConnection.PreprepareSQL then Result := AnsiQuotedStr(SoftVarManager.GetAsString(Value), #39) else
+        {$ENDIF}
+          Result := Self.GetConnection.GetEscapeString(PAnsiChar(ZPlainString(SoftVarManager.GetAsString(Value))));
+      stUnicodeString:
+        {$IFDEF DELPHI12_UP}
+          if GetConnection.PreprepareSQL then Result := AnsiQuotedStr(SoftVarManager.GetAsUnicodeString(Value), #39) else
+        {$ENDIF}
+        if (GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) then
+          Result := Self.GetConnection.GetEscapeString(PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))))
+        else
+          Result := Self.GetConnection.GetEscapeString(PAnsiChar(AnsiString(SoftVarManager.GetAsUnicodeString(Value))));
       stDate:
       begin
         DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
@@ -556,7 +514,36 @@ begin
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
-            Result := GetAnsiEscapeString(TempBlob.GetString)
+          begin
+            if InParamTypes[ParamIndex] = stBinaryStream then
+              //Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString);
+              Result := GetSQLHexString(PAnsiChar(TempBlob.GetString), TempBlob.Length);
+            if (GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) and
+              ( InParamTypes[ParamIndex] in [stAsciiStream, stUnicodeStream] ) then
+            begin
+              TempStreamIn:=TempBlob.GetStream;
+              TempStream := GetValidatedUnicodeStream(TempStreamIn);
+              TempStreamIn.Free;
+              TempBlob.SetStream(TempStream);
+              TempStream.Free;
+            end; //could be equal valid for unicode if the user reads the Stream as ftMemo
+            case InParamTypes[ParamIndex] of
+            stAsciiStream:
+              begin
+                {$IFDEF DELPHI12_UP}
+                if GetConnection.PreprepareSQL then Result := AnsiQuotedStr(ZDbcString(TempBlob.GetString), #39) else
+                {$ENDIF}
+                Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString);
+              end;
+            stUnicodeStream:
+              begin
+                {$IFDEF DELPHI12_UP}
+                if GetConnection.PreprepareSQL then Result := AnsiQuotedStr(TempBlob.GetUnicodeString, #39) else
+                {$ENDIF}
+                Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString);
+              end;
+            end;
+          end
           else
             Result := 'NULL';
         end;
@@ -598,6 +585,8 @@ begin
 end;
 
 procedure TZMySQLPreparedStatement.Prepare;
+var
+  AnsiSQL: AnsiString;
 begin
   FStmtHandle := FPlainDriver.InitializePrepStmt(FHandle);
   if (FStmtHandle = nil) then
@@ -605,11 +594,8 @@ begin
       CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoInitPrepStmt);
       exit;
     end;
-  {$IFDEF DELPHI12_UP}
-  if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(AnsiString(SQL)), length(SQL)) <> 0) then
-  {$ELSE}
-  if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(SQL), length(SQL)) <> 0) then
-  {$ENDIF}
+  AnsiSQL := GetPrepreparedSQL(SQL); //do not spit Tokens twice
+  if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(AnsiSQL), length(AnsiSQL)) <> 0) then
     begin
       CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoPrepareStmt);
       exit;
@@ -656,7 +642,7 @@ begin
     CachedResolver := TZMySQLCachedResolver.Create(FPlainDriver, FHandle, (Self as IZMysqlStatement),
       NativeResultSet.GetMetaData);
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
-      CachedResolver);
+      CachedResolver, ClientCodePage);
     CachedResultSet.SetConcurrency(GetResultSetConcurrency);
     Result := CachedResultSet;
   end
@@ -676,8 +662,9 @@ var
   PBuffer: Pointer;
   year, month, day, hour, minute, second, millisecond: word;
   MyType: TMysqlFieldTypes;
-  I: integer;
+  I, OffSet, PieceSize: integer;
   TempBlob: IZBlob;
+
 begin
   //http://dev.mysql.com/doc/refman/5.0/en/storage-requirements.html
   if InParamCount = 0 then
@@ -689,18 +676,18 @@ begin
   begin
     MyType := GetFieldType(InParamValues[I]);
     if MyType = FIELD_TYPE_VARCHAR then
-      FBindBuffer.AddColumn(FIELD_TYPE_STRING, StrLen(PAnsiChar(UTF8Encode(InParamValues[I].VUnicodeString)))+1)
+      FBindBuffer.AddColumn(FIELD_TYPE_STRING, StrLen(PAnsiChar(UTF8Encode(InParamValues[I].VUnicodeString)))+1,false)
     else
-      if MyType = FIELD_TYPE_BLOB then
+      if MyType =FIELD_TYPE_BLOB then
       begin
         TempBlob := (InParamValues[I].VInterface as IZBlob);
         if InParamTypes[I] = stBinaryStream then
-          FBindBuffer.AddColumn(FIELD_TYPE_BLOB, TempBlob.Length)
+          FBindBuffer.AddColumn(FIELD_TYPE_BLOB, TempBlob.Length,TempBlob.Length>ChunkSize)
         else
-          FBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length);
+          FBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length,TempBlob.Length>ChunkSize);
       end
       else
-        FBindBuffer.AddColumn(MyType,StrLen(PAnsiChar(AnsiString(InParamValues[I].VString)))+1);
+        FBindBuffer.AddColumn(MyType,StrLen(PAnsiChar(ZPlainString(InParamValues[I].VString)))+1,false);
     PBuffer := @FColumnArray[I].buffer[0];
 
     if InParamValues[I].VType=vtNull then
@@ -709,6 +696,7 @@ begin
       FColumnArray[I].is_null := 0;
       case FBindBuffer.GetBufferType(I+1) of
         FIELD_TYPE_FLOAT:    Single(PBuffer^)     := InParamValues[I].VFloat;
+        FIELD_TYPE_DOUBLE:   Double(PBuffer^)     := InParamValues[I].VFloat;
         FIELD_TYPE_STRING:
           begin
             if MyType = FIELD_TYPE_VARCHAR then
@@ -716,11 +704,12 @@ begin
             else
             if MyType = FIELD_TYPE_BLOB then
             begin
-              StrCopy(PAnsiChar(PBuffer), PAnsiChar(TempBlob.GetString));
+              if TempBlob.Length<=ChunkSize then
+                StrCopy(PAnsiChar(PBuffer), PAnsiChar(TempBlob.GetString));
               TempBlob := nil;
             end
             else
-              StrCopy(PAnsiChar(PBuffer), PAnsiChar(AnsiString(InParamValues[I].VString)));
+              StrCopy(PAnsiChar(PBuffer), PAnsiChar(ZPlainString(InParamValues[I].VString)));
           end;
         FIELD_TYPE_LONGLONG: Int64(PBuffer^) := InParamValues[I].VInteger;
         FIELD_TYPE_DATETIME:
@@ -734,9 +723,11 @@ begin
             PMYSQL_TIME(PBuffer)^.second := second;
             PMYSQL_TIME(PBuffer)^.second_part := millisecond;
           end;
+          FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
           FIELD_TYPE_BLOB:
             begin
-              System.Move(PAnsichar(TempBlob.GetString)^, PBuffer^, TempBlob.Length);
+              if TempBlob.Length<=ChunkSize then
+                System.Move(TempBlob.GetBuffer^, PBuffer^, TempBlob.Length);
               TempBlob := nil;
             end;
           FIELD_TYPE_NULL:;
@@ -749,6 +740,36 @@ begin
       exit;
     end;
    inherited BindInParameters;
+
+  // Send large blobs in chuncks
+  For I := 0 to InParamCount - 1 do
+    begin
+      if FBindBuffer.GetBufferType(I+1) in [FIELD_TYPE_STRING,FIELD_TYPE_BLOB] then
+        begin
+          MyType := GetFieldType(InParamValues[I]);
+          if MyType = FIELD_TYPE_BLOB then
+            begin
+              TempBlob := (InParamValues[I].VInterface as IZBlob);
+              if TempBlob.Length>ChunkSize then
+              begin
+                OffSet := 0;
+                PieceSize := ChunkSize;
+                while OffSet < TempBlob.Length do
+                begin
+                  if OffSet+PieceSize > TempBlob.Length then
+                    PieceSize := TempBlob.Length - OffSet;
+                  if (FPlainDriver.SendPreparedLongData(FStmtHandle, I, PAnsiChar(TempBlob.GetBuffer)+OffSet, PieceSize) <> 0) then
+                  begin
+                    checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, SBindingFailure);
+                    exit;
+                  end;
+                  Inc(OffSet, PieceSize);
+                end;
+              end;
+              TempBlob:=nil;
+            end;
+        end;
+    end;
 end;
 
 procedure TZMySQLPreparedStatement.UnPrepareInParameters;
@@ -764,7 +785,7 @@ begin
         vtNull:      Result := FIELD_TYPE_TINY;
         vtBoolean:   Result := FIELD_TYPE_TINY;
         vtInteger:   Result := FIELD_TYPE_LONGLONG;
-        vtFloat:     Result := FIELD_TYPE_FLOAT;
+        vtFloat:     Result := FIELD_TYPE_DOUBLE;
         vtString:    Result := FIELD_TYPE_STRING;
         vtDateTime:  Result := FIELD_TYPE_DATETIME;
         vtUnicodeString: Result := FIELD_TYPE_VARCHAR;
@@ -841,9 +862,11 @@ begin
   Result := nil;
   BindInParameters;
   if (self.FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
-     begin
+     try
         checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
-        exit;
+     except
+       FBindBuffer.Free;  //MemLeak closed
+ 	     raise;
      end;
 
   FBindBuffer.Free;
@@ -869,9 +892,11 @@ begin
   Result := -1;
   BindInParameters;
   if (self.FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
-     begin
+     try
         checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
-        exit;
+     except
+       FBindBuffer.Free;  //MemLeak closed
+ 	     raise;
      end;
 
   FBindBuffer.Free;
@@ -933,21 +958,13 @@ end;
 constructor TZMySQLBindBuffer.Create(PlainDriver: IZMysqlPlainDriver; NumColumns: Integer; var ColumnArray:TZMysqlColumnBuffer);
 begin
   inherited Create;
-  FDriverVersion := PlainDriver.GetClientVersion;
+  FBindOffsets := PlainDriver.GetBindOffsets;
+  if FBindOffsets.buffer_type=0 then
+    raise EZSQLException.Create('Unknown dll version : '+IntToStr(PlainDriver.GetClientVersion));
   FPColumnArray := @ColumnArray;
-  setlength(FBindArray41,0);
-  setlength(FBindArray50,0);
-  setlength(FBindArray51,0);
-  setlength(FBindArray60,0);
+  setlength(FBindArray,0);
   setlength(ColumnArray,NumColumns);
-  Case FDriverVersion of
-    40100..40199 : setlength(FBindArray41,NumColumns);
-    50000..50099 : setlength(FBindArray50,NumColumns);
-    50100..59999 : setlength(FBindArray51,NumColumns);
-    60000..60099 : setlength(FBindArray60,NumColumns);
-  else
-    raise EZSQLException.Create('Unknown dll version : '+IntToStr(FDriverVersion));
-  End
+  setlength(FBindArray,NumColumns*FBindOffsets.size);
 end;
 
 destructor TZMySQLBindBuffer.Destroy;
@@ -955,9 +972,15 @@ begin
   inherited Destroy;
 end;
 
+
+// largeblobparameter: true to indicate that parameter is a blob that will be
+// sent chunked. Set to false for result set columns.
+
 procedure TZMySQLBindBuffer.AddColumn(buffertype: TMysqlFieldTypes;
-  display_length: integer);
-  var tempbuffertype: TMysqlFieldTypes;
+  field_length: integer; largeblobparameter:boolean);
+  var
+    tempbuffertype: TMysqlFieldTypes;
+    ColOffset:integer;
 begin
   Case buffertype of
     FIELD_TYPE_DECIMAL,
@@ -968,15 +991,21 @@ begin
   Inc(FAddedColumnCount);
   With FPColumnArray^[FAddedColumnCount-1] do
     begin
-      length := getMySQLFieldSize(tempbuffertype,display_length);
-      if display_length = 0 then
+      length := getMySQLFieldSize(tempbuffertype,field_length);
+      if largeblobparameter then
+        begin
+        is_Null := 0;
+        buffer := nil;
+        end
+      else if field_length = 0 then
       begin
         is_Null := 1;
         buffer := nil;
       end
       else
       begin
-        if tempbuffertype in [FIELD_TYPE_BLOB,FIELD_TYPE_STRING] then
+        if tempbuffertype in [FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
+	           FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB, FIELD_TYPE_VAR_STRING, FIELD_TYPE_STRING] then
         //ludob: mysql adds terminating #0 on top of data. Avoid buffer overrun.
           SetLength(buffer,length+1)
         else
@@ -984,46 +1013,13 @@ begin
         is_null := 0;
       end;
     end;
-  Case FDriverVersion of
-    40100..40199 : With FBindArray41[FAddedColumnCount-1] do
-                     begin
-                       buffer_type   := tempbuffertype;
-                       buffer_length := FPColumnArray^[FAddedColumnCount-1].length;
-                       is_unsigned   := 0;
-                       buffer        := @FPColumnArray^[FAddedColumnCount-1].buffer[0];
-                       length        := @FPColumnArray^[FAddedColumnCount-1].length;
-                       is_null       := @FPColumnArray^[FAddedColumnCount-1].is_null;
-                     end;
-    50000..50099 : With FBindArray50[FAddedColumnCount-1] do
-                     begin
-                       buffer_type   := tempbuffertype;
-                       buffer_length := FPColumnArray^[FAddedColumnCount-1].length;
-                       is_unsigned   := 0;
-                       buffer        := @FPColumnArray^[FAddedColumnCount-1].buffer[0];
-                       length        := @FPColumnArray^[FAddedColumnCount-1].length;
-                       is_null       := @FPColumnArray^[FAddedColumnCount-1].is_null;
-                     end;
-    50100..59999 : With FBindArray51[FAddedColumnCount-1] do
-                     begin
-                       buffer_type   := tempbuffertype;
-                       buffer_length := FPColumnArray^[FAddedColumnCount-1].length;
-                       is_unsigned   := 0;
-                       buffer        := @FPColumnArray^[FAddedColumnCount-1].buffer[0];
-                       length        := @FPColumnArray^[FAddedColumnCount-1].length;
-                       is_null       := @FPColumnArray^[FAddedColumnCount-1].is_null;
-                     end;
-    60000..60099 : With FBindArray60[FAddedColumnCount-1] do
-                     begin
-                       buffer_type   := tempbuffertype;
-                       buffer_length := FPColumnArray^[FAddedColumnCount-1].length;
-                       is_unsigned   := 0;
-                       buffer        := @FPColumnArray^[FAddedColumnCount-1].buffer[0];
-                       length        := @FPColumnArray^[FAddedColumnCount-1].length;
-                       is_null       := @FPColumnArray^[FAddedColumnCount-1].is_null;
-                     end;
-  else
-    raise EZSQLException.Create('Unknown dll version : '+IntToStr(FDriverVersion));
-  End
+  ColOffset:=(FAddedColumnCount-1)*FBindOffsets.size;
+  PTMysqlFieldTypes(@FbindArray[ColOffset+FBindOffsets.buffer_type])^:=tempbuffertype;
+  PULong(@FbindArray[ColOffset+FBindOffsets.buffer_length])^ := FPColumnArray^[FAddedColumnCount-1].length;
+  PByte(@FbindArray[ColOffset+FBindOffsets.is_unsigned])^:= 0;
+  PPointer(@FbindArray[ColOffset+FBindOffsets.buffer])^:= @FPColumnArray^[FAddedColumnCount-1].buffer[0];
+  PPointer(@FbindArray[ColOffset+FBindOffsets.length])^:= @FPColumnArray^[FAddedColumnCount-1].length;
+  PPointer(@FbindArray[ColOffset+FBindOffsets.is_null])^:= @FPColumnArray^[FAddedColumnCount-1].is_null;
 end;
 
 function TZMySQLBindBuffer.GetColumnArray: TZMysqlColumnBuffer;
@@ -1033,28 +1029,12 @@ end;
 
 function TZMySQLBindBuffer.GetBufferAddress: Pointer;
 begin
-  Case FDriverVersion of
-    40100..40199 : result := @FBindArray41[0];
-    50000..50099 : result := @FBindArray50[0];
-    50100..59999 : result := @FBindArray51[0];
-    60000..60099 : result := @FBindArray60[0];
-  else
-    result := nil;
-    raise EZSQLException.Create('Unknown dll version : '+IntToStr(FDriverVersion));
-  End
+  result:=@FBindArray[0];
 end;
 
 function TZMySQLBindBuffer.GetBufferType(ColumnIndex: Integer): TMysqlFieldTypes;
 begin
-  Case FDriverVersion of
-    40100..40199 : result := FBindArray41[ColumnIndex-1].buffer_type;
-    50000..50099 : result := FBindArray50[ColumnIndex-1].buffer_type;
-    50100..59999 : result := FBindArray51[ColumnIndex-1].buffer_type;
-    60000..60099 : result := FBindArray60[ColumnIndex-1].buffer_type;
-  else
-    result := TMysqlFieldTypes(0);
-    raise EZSQLException.Create('Unknown dll version : '+IntToStr(FDriverVersion));
-  End
+  result := PTMysqlFieldTypes(@FbindArray[(ColumnIndex-1)*FBindOffsets.size+FBindOffsets.buffer_type])^;
 end;
 
 end.
