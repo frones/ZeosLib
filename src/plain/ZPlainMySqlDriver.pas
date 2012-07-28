@@ -620,6 +620,9 @@ begin
     //Check if DataDir is specified, if not, then add it to the Arguments List
     if TmpList.Values['--datadir'] = '' then
        TmpList.Add('--datadir='+EMBEDDED_DEFAULT_DATA_DIR);
+
+    for i := 0 to ServerArgsLen - 1 do
+      StrDispose(ServerArgs[i]);
     ServerArgsLen := TmpList.Count;
     SetLength(ServerArgs, ServerArgsLen);
     for i := 0 to ServerArgsLen - 1 do
@@ -696,7 +699,12 @@ begin
 end;
 
 destructor TZMySQLBaseDriver.Destroy;
+var
+  i : integer;
 begin
+  for i := 0 to ServerArgsLen - 1 do
+    StrDispose(ServerArgs[i]);
+    
   if (FLoader.Loaded) and (@MYSQL_API.mysql_server_end <> nil) then
     MYSQL_API.mysql_server_end;
 
