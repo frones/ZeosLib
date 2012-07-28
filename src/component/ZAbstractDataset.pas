@@ -637,7 +637,6 @@ end;
 }
 procedure TZAbstractDataset.DisposeCachedUpdates;
 begin
-  CheckBrowseMode;
   if Assigned(CachedResultSet) then
     CachedResultSet.DisposeCachedUpdates;
 end;
