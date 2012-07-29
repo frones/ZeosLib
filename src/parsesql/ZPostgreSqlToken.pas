@@ -71,7 +71,10 @@ type
 
   {** Implements a PostgreSQL-specific quote string state object. }
   TZPostgreSQLQuoteState = class (TZMySQLQuoteState)
+  private
+    FBackslashQuote: Boolean;
   public
+    constructor Create(BackslashQuote: Boolean = False);
     function NextToken(Stream: TStream; FirstChar: Char;
       Tokenizer: TZTokenizer): TZToken; override;
   end;
@@ -98,9 +101,15 @@ type
     constructor Create;
   end;
 
+  IZPostgreSQLTokenizer = interface (IZTokenizer)
+    ['{82392175-9065-4048-9974-EE1253B921B4}']
+    procedure SetBackslashQuote(const Value: Boolean);
+  end;
+
   {** Implements a default tokenizer object. }
-  TZPostgreSQLTokenizer = class (TZTokenizer)
+  TZPostgreSQLTokenizer = class (TZTokenizer, IZPostgreSQLTokenizer)
   public
+    procedure SetBackslashQuote(const Value: Boolean);
     constructor Create;
   end;
 
@@ -193,6 +202,16 @@ begin
 end;
 
 { TZPostgreSQLQuoteState }
+
+{**
+  creates a Postgre ttQuotedState detection
+  @param BackslashQuote means '\' will be handled as QuotedChar
+}
+constructor TZPostgreSQLQuoteState.Create(BackslashQuote: Boolean = False);
+begin
+  inherited Create;
+  FBackslashQuote := BackslashQuote;
+end;
 
 {**
   Return a quoted string token from a reader. This method
@@ -323,6 +342,20 @@ begin
 end;
 
 { TZPostgreSQLTokenizer }
+
+{**
+  informs the Postgre Tokenizer '\' should be handled as ttQuoted
+  @param True means backslashes are quoted strings
+}
+procedure TZPostgreSQLTokenizer.SetBackslashQuote(const Value: Boolean);
+begin
+  if Value then
+  begin
+    QuoteState.Free;
+    QuoteState := TZPostgreSQLQuoteState.Create(True);
+    SetCharacterState('\', '\', QuoteState);
+  end;
+end;
 
 {**
   Constructs a tokenizer with a default state table (as

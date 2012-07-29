@@ -114,7 +114,7 @@ function EncodeBinaryString(const Value: AnsiString): AnsiString;
   @param Value the regular string.
   @return the encoded string.
 }
-function EncodeString(const StandardConformingStrings: Boolean;
+function EncodeString(const StandardConformingStrings, BackslashQuote: Boolean;
   const CharactersetCode: TZPgCharactersetType; const Value: string): string; overload;
 
 {**
@@ -510,7 +510,7 @@ end;
   @param Value the regular string.
   @return the encoded string.
 }
-function EncodeString(const StandardConformingStrings: Boolean;
+function EncodeString(const StandardConformingStrings, BackslashQuote: Boolean;
   const CharactersetCode: TZPgCharactersetType; const Value: string): string;
 var
   I, LastState: Integer;
@@ -560,7 +560,11 @@ begin
     end;
     DestBuffer^ := '''';
   end
-  else Result := AnsiQuotedStr(Value, #39);
+  else
+    if BackslashQuote then
+      Result := AnsiQuotedStr(Value, '\')
+    else
+     Result := AnsiQuotedStr(Value, #39);
 end;
 
 

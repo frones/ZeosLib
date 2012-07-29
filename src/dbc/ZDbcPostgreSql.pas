@@ -94,6 +94,7 @@ type
   TZPostgreSQLConnection = class(TZAbstractConnection, IZPostgreSQLConnection)
   private
     FStandardConformingStrings: Boolean;
+    FBackslashQuote: Boolean;
     FHandle: PZPostgreSQLConnect;
     FBeginRequired: Boolean;
     FTypeList: TStrings;
@@ -412,8 +413,13 @@ end;
   Opens a connection to database server with specified parameters.
 }
 procedure TZPostgreSQLConnection.Open;
+const
+  FON = String('ON');
+  standard_conforming_strings = String('standard_conforming_strings');
+  backslash_quote = String('backslash_quote');
+
 var
-  SCS, LogMessage: string;
+  SCS, BSQ, LogMessage: string;
 begin
   if not Closed then
     Exit;
@@ -458,16 +464,31 @@ begin
     CheckCharEncoding(FClientCodePage);
     FCharactersetCode := TZPgCharactersetType(ClientCodePage^.ID);
 
-    SCS := Info.Values['standard_conforming_strings'];
+    SCS := Info.Values[standard_conforming_strings];
     { sets now the standard_conforming_strings which decides the escaping behavior
       if not available }
-    if Info.Values['standard_conforming_strings']<>'' then
+    if Info.Values[standard_conforming_strings]<>'' then
     begin
-      FStandardConformingStrings := UpperCase(SCS) = 'ON';
-      SetServerSetting('standard_conforming_strings', SCS);
+      FStandardConformingStrings := UpperCase(SCS) = FON;
+      SetServerSetting(standard_conforming_strings, SCS);
     end
     else
-      FStandardConformingStrings := UpperCase(GetServerSetting('standard_conforming_strings')) = 'ON';
+      FStandardConformingStrings := UpperCase(GetServerSetting(standard_conforming_strings)) = FON;
+
+    BSQ := Info.Values[backslash_quote];
+    { sets now the backslash_quote which decides the escaping behavior
+      if not available. could be ON/OFF/safe_encoding(according client encoding) }
+    if Info.Values[backslash_quote]<>'' then
+    begin
+      FBackslashQuote := UpperCase(BSQ) = FON;
+      SetServerSetting(backslash_quote, BSQ);
+    end
+    else
+      FBackslashQuote := UpperCase(GetServerSetting(backslash_quote)) = FON;
+    { now inform the Tokenizer that '\' if interpreted as ttQuoted }
+    ( Self.GetDriver.GetTokenizer as  IZPostgreSQLTokenizer ).SetBackslashQuote(FBackslashQuote);
+    //if not FOidAsBlob then
+      //FOidAsBlob := UpperCase(GetServerSetting('default_with_oids')) = FON;
 
   finally
     if self.IsClosed and (Self.FHandle <> nil) then
@@ -984,12 +1005,22 @@ end;
 function TZPostgreSQLConnection.GetEscapeString(const Value: String;
   const EscapeMarkSequence: String = '~<|'): String;
 begin
-  if StartsWith(Value, '''') and EndsWith(Value, '''') then
-    Result := ZDbcPostgreSqlUtils.EncodeString(FStandardConformingStrings,
-      TZPgCharactersetType(Self.ClientCodePage^.ID), AnsiDequotedStr(Value, #39))
+  if FBackslashQuote then
+    if StartsWith(Value, '\') and EndsWith(Value, '\') then
+      Result := ZDbcPostgreSqlUtils.EncodeString(FStandardConformingStrings,
+        FBackslashQuote, TZPgCharactersetType(Self.ClientCodePage^.ID),
+        AnsiDequotedStr(Value, '\'))
+    else
+      Result := ZDbcPostgreSqlUtils.EncodeString(FStandardConformingStrings,
+        FBackslashQuote, TZPgCharactersetType(Self.ClientCodePage^.ID), Value)
   else
-    Result := ZDbcPostgreSqlUtils.EncodeString(FStandardConformingStrings,
-      TZPgCharactersetType(Self.ClientCodePage^.ID), Value);
+    if StartsWith(Value, '''') and EndsWith(Value, '''') then
+      Result := ZDbcPostgreSqlUtils.EncodeString(FStandardConformingStrings,
+        FBackslashQuote, TZPgCharactersetType(Self.ClientCodePage^.ID),
+        AnsiDequotedStr(Value, #39))
+    else
+      Result := ZDbcPostgreSqlUtils.EncodeString(FStandardConformingStrings,
+        FBackslashQuote, TZPgCharactersetType(Self.ClientCodePage^.ID), Value);
 end;
 {**
   Gets a current setting of run-time parameter.
