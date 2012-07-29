@@ -243,7 +243,7 @@ begin
   Result := 'mysql,mysql-4.1,mysql-5,mysqld-4.1,mysqld-5'
     + ',sybase,interbase,interbase-5,interbase-6'
     + ',firebird-1.0,firebird-1.5,firebird-2.0,firebird-2.1,firebirdd-1.5,firebirdd-2.0,firebirdd-2.1'
-    + ',postgresql,postgresql-7,postgresql-8';
+    + ',postgresql,postgresql-7,postgresql-8,postgresql-9';
 {$IFNDEF LINUX}
   Result := Result + ',mssql';
 {$ENDIF}

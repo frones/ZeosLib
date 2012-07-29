@@ -186,9 +186,10 @@ end;
 constructor TZPostgreSQLDriver.Create;
 begin
   inherited Create;
-  AddSupportedProtocol(AddPlainDriverToCache(TZPostgreSQL8PlainDriver.Create, 'postgresql'));
+  AddSupportedProtocol(AddPlainDriverToCache(TZPostgreSQL9PlainDriver.Create, 'postgresql'));
   AddSupportedProtocol(AddPlainDriverToCache(TZPostgreSQL7PlainDriver.Create));
   AddSupportedProtocol(AddPlainDriverToCache(TZPostgreSQL8PlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZPostgreSQL9PlainDriver.Create));
 end;
 
 {**
@@ -417,7 +418,6 @@ const
   FON = String('ON');
   standard_conforming_strings = String('standard_conforming_strings');
   backslash_quote = String('backslash_quote');
-
 var
   SCS, BSQ, LogMessage: string;
 begin

@@ -613,7 +613,7 @@ end;
 }
 function TZPlainPostgreSQLPerformanceTestCase.GetSupportedProtocols: string;
 begin
-  Result := 'postgresql,postgresql-7,postgresql-8';
+  Result := 'postgresql,postgresql-7,postgresql-8,postgresql-9';
 end;
 
 {**

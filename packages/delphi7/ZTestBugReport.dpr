@@ -59,8 +59,11 @@ program ZTestBugReport;
 
 uses
   TestFrameWork,
+{$IFDEF TESTGUI}
   GUITestRunner,
+{$ELSE}
   TextTestRunner,
+{$ENDIF}
   ZTestConfig,
   ZSqlTestCase,
   ZTestBugDbcCore in '..\..\test\bugreport\ZTestBugDbcCore.pas',

@@ -59,8 +59,11 @@ program ZTestComponentAll;
 
 uses
   TestFrameWork,
+{$IFDEF TESTGUI}
   GUITestRunner,
+{$ELSE}
   TextTestRunner,
+{$ENDIF}
   ZTestConfig,
   ZSqlTestCase,
   ZTestSqlStrings in '..\..\test\component\ZTestSqlStrings.pas',
