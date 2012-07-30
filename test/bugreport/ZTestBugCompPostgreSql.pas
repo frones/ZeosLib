@@ -712,7 +712,8 @@ end;
 
 procedure TZTestCompPostgreSQLBugReport.TestStandartConfirmingStrings(Query: TZQuery; Connection: TZConnection);
 const
-  QuoteString1 = String('''\'', 1 --''');
+  QuoteString1 = String('\'', 1 --''');
+  QuoteString2 = String('ТестЁЙ\000');
 begin
   Query.ParamChar := ':';
   Query.ParamCheck := True;
@@ -721,6 +722,11 @@ begin
   Query.ParamByName('test').AsString := QuoteString1;
   Query.Open;
   CheckEquals(QuoteString1, Query.Fields[0].AsString);
+  Query.Close;
+
+  Query.ParamByName('test').AsString := QuoteString2;
+  Query.Open;
+  CheckEquals(QuoteString2, Query.Fields[0].AsString);
   Query.Close;
 end;
 
