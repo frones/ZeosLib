@@ -612,7 +612,9 @@ type
       FileName: PAnsiChar): Integer;
     function GetPlainFunc:PAPI;
     function EscapeString(Handle: PZPostgreSQLConnect; Encoding: TZCharEncoding;
-      const Source: String; out Dest: String): Integer;
+      const Source: String; out Dest: String): Integer; {$IFDEF DELPHI12_UP} overload;
+    function EscapeString(Handle: PZPostgreSQLConnect; Encoding: TZCharEncoding;
+      const Source: ZAnsiString; out Dest: ZAnsiString): Integer; overload; {$ENDIF}
   end;
 
   {** Implements a base driver for PostgreSQL}
@@ -735,7 +737,9 @@ type
       FileName: PAnsiChar): Integer;
     function GetPlainFunc:PAPI;
     function EscapeString(Handle: PZPostgreSQLConnect; Encoding: TZCharEncoding;
-      const Source: String; out Dest: String): Integer;
+      const Source: String; out Dest: String): Integer; {$IFDEF DELPHI12_UP} overload;
+    function EscapeString(Handle: PZPostgreSQLConnect; Encoding: TZCharEncoding;
+      const Source: ZAnsiString; out Dest: ZAnsiString): Integer; overload; {$ENDIF}
   end;
 
   {** Implements a driver for PostgreSQL 7.4 }
@@ -1394,40 +1398,43 @@ begin
   result:= @POSTGRESQL_API;
 end;
 
+{$IFDEF DELPHI12_UP}
 function TZPostgreSQLBaseDriver.EscapeString(Handle: PZPostgreSQLConnect;
   Encoding: TZCharEncoding; const Source: String; out Dest: String): Integer;
 var
+  SourceTemp, DestTemp: RawByteString;
+begin
+  if (Source <> '') then
+  begin
+    SourceTemp := ZPlainString(Source,  Encoding);
+    Result := EscapeString(Handle, Encoding, SourceTemp, DestTemp);
+    Dest := ZDbcString(DestTemp, Encoding);
+  end
+  else
+  begin
+    Dest := Source;
+    Result := 0;
+  end;
+end;
+{$ENDIF}
+
+function TZPostgreSQLBaseDriver.EscapeString(Handle: PZPostgreSQLConnect;
+  Encoding: TZCharEncoding; const Source: ZAnsiString; out Dest: ZAnsiString): Integer;
+var
   ResLen: NativeUInt;
   Temp: PAnsiChar;
-  {$IFDEF DELPHI12_UP}
-  SourceTemp, DestTemp: RawByteString;
-  {$ENDIF}
+  SourceTemp: ZAnsiString;
 begin
-  if Assigned(POSTGRESQL_API.PQescapeStringConn) then
+  if Assigned(POSTGRESQL_API.PQescapeStringConn) and ( Source <> '' )then
   begin
-    {$IFDEF DELPHI12_UP}
-    if encoding = ceUTF8 then
-      SourceTemp := UTF8Encode(Source)
-    else
-      SourceTemp := AnsiString(Source);
+    SourceTemp := {$IFDEF DELPHI12_UP}Source{$ELSE}ZPlainString(Source,  Encoding){$ENDIF}; //check encoding too
     GetMem(Temp, Length(SourceTemp)*2);
     ResLen := POSTGRESQL_API.PQescapeStringConn(Handle, Temp,
       PAnsiChar(SourceTemp), StrLen(PAnsiChar(SourceTemp)), @Result);
-    SetLength(DestTemp, ResLen);
-    Move(Temp^, PAnsiChar(DestTemp)^, ResLen);
-    if encoding = ceUTF8 then
-      Dest := UTF8ToString(DestTemp)
-    else
-      Dest := String(DestTemp);
-    FreeMem(Temp);  
-    {$ELSE}
-    GetMem(Temp, Length(Source)*2);
-    ResLen := POSTGRESQL_API.PQescapeStringConn(Handle, Temp,
-      PAnsiChar(Source), StrLen(PAnsiChar(Source)), @Result);
     SetLength(Dest, ResLen);
     Move(Temp^, PAnsiChar(Dest)^, ResLen);
-    FreeMem(Temp);  
-    {$ENDIF}
+    FreeMem(Temp);
+    Dest := #39+Dest+#39;
   end
   else
   begin

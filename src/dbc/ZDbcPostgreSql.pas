@@ -1009,9 +1009,9 @@ var
 begin
   ErrorCode := GetPlainDriver.EscapeString(FHandle, GetEncoding, Value, Temp);
   if ErrorCode <> 0 then
-    CheckPostgreSQLError(Self, GetPlainDriver, FHandle, lcOther, 'TATA', nil)
+    CheckPostgreSQLError(Self, GetPlainDriver, FHandle, lcOther, 'Wrong escape behavior!', nil)
   else
-    Result := #39+Temp+#39;
+    Result := Temp;
   {else
   if FBackslashQuote then
     if StartsWith(Value, '\') and EndsWith(Value, '\') then

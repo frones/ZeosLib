@@ -724,9 +724,19 @@ begin
   CheckEquals(QuoteString1, Query.Fields[0].AsString);
   Query.Close;
 
-  Query.ParamByName('test').AsString := QuoteString2;
-  Query.Open;
-  CheckEquals(QuoteString2, Query.Fields[0].AsString);
+  if Connection.UTF8StringsAsWideField or
+    ( Connection.DbcConnection.GetEncoding = ceAnsi ) then
+  begin
+    Query.ParamByName('test').AsString := QuoteString2;
+    Query.Open;
+    CheckEquals(QuoteString2, Query.Fields[0].AsString);
+  end
+  else
+  begin
+    Query.ParamByName('test').AsString := UTF8Encode(WideString(QuoteString2));
+    Query.Open;
+    CheckEquals(UTF8Encode(WideString(QuoteString2)), Query.Fields[0].AsString);
+  end;
   Query.Close;
 end;
 
