@@ -1412,7 +1412,7 @@ begin
   end
   else
   begin
-    Dest := Source;
+    Dest := #39#39;
     Result := 0;
   end;
 end;
@@ -1428,19 +1428,19 @@ begin
   if Assigned(POSTGRESQL_API.PQescapeStringConn) and ( Source <> '' )then
   begin
     SourceTemp := {$IFDEF DELPHI12_UP}Source{$ELSE}ZPlainString(Source,  Encoding){$ENDIF}; //check encoding too
-    GetMem(Temp, Length(SourceTemp)*2);
+    GetMem(Temp, Length(SourceTemp) * 2 + 1);
     ResLen := POSTGRESQL_API.PQescapeStringConn(Handle, Temp,
       PAnsiChar(SourceTemp), StrLen(PAnsiChar(SourceTemp)), @Result);
     SetLength(Dest, ResLen);
     Move(Temp^, PAnsiChar(Dest)^, ResLen);
     FreeMem(Temp);
-    Dest := #39+Dest+#39;
   end
   else
   begin
     Dest := Source;
     Result := 0;
   end;
+  Dest := #39 + Dest + #39;
 end;
 
 { TZPostgreSQL7PlainDriver }
