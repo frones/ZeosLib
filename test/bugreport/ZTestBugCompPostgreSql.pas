@@ -711,8 +711,17 @@ begin
 end;
 
 procedure TZTestCompPostgreSQLBugReport.TestStandartConfirmingStrings(Query: TZQuery; Connection: TZConnection);
+const
+  QuoteString1 = String('''\'', 1 --''');
 begin
-  //
+  Query.ParamChar := ':';
+  Query.ParamCheck := True;
+  Query.SQL.Text := 'select :test';
+
+  Query.ParamByName('test').AsString := QuoteString1;
+  Query.Open;
+  CheckEquals(QuoteString1, Query.Fields[0].AsString);
+  Query.Close;
 end;
 
 procedure TZTestCompPostgreSQLBugReport.TestStandartConfirmingStringsOn;
@@ -738,7 +747,7 @@ var
   Query: TZQuery;
 begin
   TempConnection := CreateDatasetConnection;
-  TempConnection.Properties.Add('standard_conforming_strings=ON');
+  TempConnection.Properties.Add('standard_conforming_strings=OFF');
   Query := TZQuery.Create(nil);
   Query.Connection := TempConnection;
   try
