@@ -101,15 +101,9 @@ type
     constructor Create;
   end;
 
-  IZPostgreSQLTokenizer = interface (IZTokenizer)
-    ['{82392175-9065-4048-9974-EE1253B921B4}']
-    procedure SetBackslashQuote(const Value: Boolean);
-  end;
-
   {** Implements a default tokenizer object. }
-  TZPostgreSQLTokenizer = class (TZTokenizer, IZPostgreSQLTokenizer)
+  TZPostgreSQLTokenizer = class (TZTokenizer)
   public
-    procedure SetBackslashQuote(const Value: Boolean);
     constructor Create;
   end;
 
@@ -342,20 +336,6 @@ begin
 end;
 
 { TZPostgreSQLTokenizer }
-
-{**
-  informs the Postgre Tokenizer '\' should be handled as ttQuoted
-  @param True means backslashes are quoted strings
-}
-procedure TZPostgreSQLTokenizer.SetBackslashQuote(const Value: Boolean);
-begin
-  if Value then
-  begin
-    QuoteState.Free;
-    QuoteState := TZPostgreSQLQuoteState.Create(True);
-    SetCharacterState('\', '\', QuoteState);
-  end;
-end;
 
 {**
   Constructs a tokenizer with a default state table (as

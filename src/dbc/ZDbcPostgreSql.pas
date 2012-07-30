@@ -486,7 +486,6 @@ begin
     else
       FBackslashQuote := UpperCase(GetServerSetting(backslash_quote)) = FON;
     { now inform the Tokenizer that '\' if interpreted as ttQuoted }
-    ( Self.GetDriver.GetTokenizer as  IZPostgreSQLTokenizer ).SetBackslashQuote(FBackslashQuote);
     //if not FOidAsBlob then
       //FOidAsBlob := UpperCase(GetServerSetting('default_with_oids')) = FON;
 

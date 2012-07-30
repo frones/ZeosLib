@@ -28,7 +28,7 @@
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
 			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;$(DCC_UnitAlias)</DCC_UnitAlias>
-			<DCC_UnitSearchPath>build;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_UnitSearchPath>build;..\..\src\core;..\..\src\plain;..\..\src\parsesql;..\..\src\dbc;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_DcuOutput>build</DCC_DcuOutput>
 			<DCC_BplOutput>build</DCC_BplOutput>
 			<DCC_DcpOutput>build</DCC_DcpOutput>
