@@ -55,7 +55,7 @@ unit ZTestPostgreSqlToken;
 
 interface
 {$I ZParseSql.inc}
-uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZClasses, ZTokenizer, ZPostgreSqlToken,
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTokenizer, ZPostgreSqlToken,
   ZTestTokenizer;
 
 type
@@ -110,9 +110,17 @@ const
     ttWord, ttQuoted);
   TokenValues1: array[0..1] of string = (
     '"a""aa"', '''c\''c''''c''');
+
+  TokenString2: string = '$aaa$bbb$$ccc$aaa$ddd$ $$eee$$';
+  TokenTypes2: array[0..2] of TZTokenType = (
+    ttQuoted, ttWord, ttQuoted);
+  TokenValues2: array[0..2] of string = (
+    '$aaa$bbb$$ccc$aaa$', 'ddd$', '$$eee$$');
 begin
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString1,
     [toSkipEOF, toSkipWhitespaces]), TokenTypes1, TokenValues1);
+  CheckTokens(Tokenizer.TokenizeBuffer(TokenString2,
+    [toSkipEOF, toSkipWhitespaces]), TokenTypes2, TokenValues2);
 end;
 
 {**
@@ -150,11 +158,11 @@ end;
 }
 procedure TZTestPostgreSQLTokenizer.TestWordState;
 const
-  TokenString1: string = ' _a_a. p2p';
-  TokenTypes1: array[0..2] of TZTokenType = (
-    ttWord, ttSymbol, ttWord);
-  TokenValues1: array[0..2] of string = (
-    '_a_a', '.', 'p2p');
+  TokenString1: string = ' _a_a. p2p b$b';
+  TokenTypes1: array[0..3] of TZTokenType = (
+    ttWord, ttSymbol, ttWord, ttWord);
+  TokenValues1: array[0..3] of string = (
+    '_a_a', '.', 'p2p', 'b$b');
 begin
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString1,
     [toSkipEOF, toSkipWhitespaces]), TokenTypes1, TokenValues1);
