@@ -611,6 +611,8 @@ type
     function ExportLargeObject(Handle: PZPostgreSQLConnect; ObjId: Oid;
       FileName: PAnsiChar): Integer;
     function GetPlainFunc:PAPI;
+    function EscapeString(Handle: PZPostgreSQLConnect; Encoding: TZCharEncoding;
+      const Source: String; out Dest: String): Integer;
   end;
 
   {** Implements a base driver for PostgreSQL}
@@ -732,6 +734,8 @@ type
     function ExportLargeObject(Handle: PZPostgreSQLConnect; ObjId: Oid;
       FileName: PAnsiChar): Integer;
     function GetPlainFunc:PAPI;
+    function EscapeString(Handle: PZPostgreSQLConnect; Encoding: TZCharEncoding;
+      const Source: String; out Dest: String): Integer;
   end;
 
   {** Implements a driver for PostgreSQL 7.4 }
@@ -1385,10 +1389,50 @@ begin
   Result := POSTGRESQL_API.lo_write(Handle, Fd, Buffer, Length);
 end;
 
-function TZPostgreSQLBaseDriver.GetPlainFunc():PAPI; 
-begin 
-  result:= @POSTGRESQL_API; 
-end; 
+function TZPostgreSQLBaseDriver.GetPlainFunc():PAPI;
+begin
+  result:= @POSTGRESQL_API;
+end;
+
+function TZPostgreSQLBaseDriver.EscapeString(Handle: PZPostgreSQLConnect;
+  Encoding: TZCharEncoding; const Source: String; out Dest: String): Integer;
+var
+  ResLen: NativeUInt;
+  Temp: PAnsiChar;
+  {$IFDEF DELPHI12_UP}
+  SourceTemp, DestTemp: RawByteString;
+  {$ENDIF}
+begin
+  if Assigned(POSTGRESQL_API.PQescapeStringConn) then
+  begin
+    {$IFDEF DELPHI12_UP}
+    if encoding = ceUTF8 then
+      SourceTemp := UTF8Encode(Source)
+    else
+      SourceTemp := AnsiString(Source);
+    GetMem(Temp, Length(SourceTemp)*2);
+    ResLen := POSTGRESQL_API.PQescapeStringConn(Handle, Temp,
+      PAnsiChar(SourceTemp), StrLen(PAnsiChar(SourceTemp)), @Result);
+    SetLength(DestTemp, ResLen);
+    Move(Temp^, PAnsiChar(DestTemp)^, ResLen);
+    if encoding = ceUTF8 then
+      Dest := UTF8ToString(DestTemp)
+    else
+      Dest := String(DestTemp);
+    {$ELSE}
+    GetMem(Temp, Length(Source)*2);
+    ResLen := POSTGRESQL_API.PQescapeStringConn(Handle, Temp,
+      PAnsiChar(Source), StrLen(PAnsiChar(Source)), @Result);
+    SetLength(Dest, ResLen);
+    Move(Temp^, PAnsiChar(Dest)^, ResLen);
+    {$ENDIF}
+  end
+  else
+  begin
+    Dest := Source;
+    Result := 0;
+  end;
+end;
 
 { TZPostgreSQL7PlainDriver }
 

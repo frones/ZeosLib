@@ -1003,7 +1003,16 @@ end;
 }
 function TZPostgreSQLConnection.GetEscapeString(const Value: String;
   const EscapeMarkSequence: String = '~<|'): String;
+var
+  ErrorCode: Integer;
+  Temp: String;
 begin
+  ErrorCode := GetPlainDriver.EscapeString(FHandle, GetEncoding, Value, Temp);
+  if ErrorCode <> 0 then
+    CheckPostgreSQLError(Self, GetPlainDriver, FHandle, lcOther, 'TATA', nil)
+  else
+    Result := #39+Temp+#39;
+  {else
   if FBackslashQuote then
     if StartsWith(Value, '\') and EndsWith(Value, '\') then
       Result := ZDbcPostgreSqlUtils.EncodeString(FStandardConformingStrings,
@@ -1019,7 +1028,7 @@ begin
         AnsiDequotedStr(Value, #39))
     else
       Result := ZDbcPostgreSqlUtils.EncodeString(FStandardConformingStrings,
-        FBackslashQuote, TZPgCharactersetType(Self.ClientCodePage^.ID), Value);
+        FBackslashQuote, TZPgCharactersetType(Self.ClientCodePage^.ID), Value);}
 end;
 {**
   Gets a current setting of run-time parameter.

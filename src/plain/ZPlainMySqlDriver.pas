@@ -664,7 +664,7 @@ begin
           QuoteChar := Char(SQLTokens[i].Value[1]);
           if QuoteChar = #39 then
             if Length(SQLTokens[i].Value) = 2 then
-              Result := Result + SQLTokens[i].Value
+              Result := Result + ZAnsiString(SQLTokens[i].Value)
             else
               Result := Result + ''''+EscapeString(Handle, Self.ZPlainString(SysUtils.AnsiDequotedStr(SQLTokens[i].Value, QuoteChar), Encoding))+ ''''
           else
