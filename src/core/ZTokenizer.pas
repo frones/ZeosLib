@@ -481,9 +481,9 @@ type
     FWordState: TZWordState;
     FEscapeState: TZEscapeState; //EgonHugeist
     FMarkSequence: String;
+  protected
     function GetEscapeMarkSequence: String;
     procedure SetEscapeMarkSequence(const Value: String);
-  protected
     function CheckEscapeState(const ActualState: TZTokenizerState;
       Stream: TStream; const FirstChar: Char): TZTokenizerState; virtual;
   public
