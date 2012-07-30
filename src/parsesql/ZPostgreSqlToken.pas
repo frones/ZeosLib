@@ -84,6 +84,8 @@ type
     state, or return a token with just a slash in it.
   }
   TZPostgreSQLCommentState = class (TZCppCommentState)
+  protected
+    function GetMultiLineComment(Stream: TStream): string; override;
   public
     function NextToken(Stream: TStream; FirstChar: Char;
       Tokenizer: TZTokenizer): TZToken; override;
@@ -259,7 +261,35 @@ end;
 { TZPostgreSQLCommentState }
 
 {**
-  Gets a MySQL specific comments like -- or /* */.
+  Ignore everything up to a last closing star and slash, and
+  then return the tokenizer's next token.
+  @return the tokenizer's next token
+}
+function TZPostgreSQLCommentState.GetMultiLineComment(Stream: TStream): string;
+var
+  ReadChar, LastChar: Char;
+  NestedLevel: Integer;
+begin
+  LastChar := #0;
+  NestedLevel := 1;
+  Result := '';
+  while Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0 do
+  begin
+    Result := Result + ReadChar;
+    if (LastChar = '*') and (ReadChar = '/') then
+    begin
+      Dec(NestedLevel);
+      if NestedLevel = 0 then
+        Break;
+    end;
+    if (LastChar = '/') and (ReadChar = '*') then
+      Inc(NestedLevel);
+    LastChar := ReadChar;
+  end;
+end;
+
+{**
+  Gets a PostgreSQL specific comments like -- or /* */.
   @return either just a slash token, or the results of
     delegating to a comment-handling state
 }

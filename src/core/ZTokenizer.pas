@@ -200,8 +200,8 @@ type
   }
   TZCppCommentState = class (TZCommentState)
   protected
-    function GetMultiLineComment(Stream: TStream): string;
-    function GetSingleLineComment(Stream: TStream): string;
+    function GetMultiLineComment(Stream: TStream): string; virtual;
+    function GetSingleLineComment(Stream: TStream): string; virtual;
   public
     function NextToken(Stream: TStream; FirstChar: Char;
       Tokenizer: TZTokenizer): TZToken; override;

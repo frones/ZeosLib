@@ -90,11 +90,11 @@ end;
 }
 procedure TZTestPostgreSQLTokenizer.TestCommentState;
 const
-  TokenString1: string = '-aaa/*bbb*/ccc--ddd'#10;
-  TokenTypes1: array[0..4] of TZTokenType = (
-    ttSymbol, ttWord, ttComment, ttWord, ttComment);
-  TokenValues1: array[0..4] of string = (
-    '-', 'aaa', '/*bbb*/', 'ccc', '--ddd'#10);
+  TokenString1: string = '-aaa/*bbb*/ccc--ddd'#10'/*eee/*eee*/eee*/';
+  TokenTypes1: array[0..5] of TZTokenType = (
+    ttSymbol, ttWord, ttComment, ttWord, ttComment, ttComment);
+  TokenValues1: array[0..5] of string = (
+    '-', 'aaa', '/*bbb*/', 'ccc', '--ddd'#10, '/*eee/*eee*/eee*/');
 begin
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString1, [toSkipEOF]),
     TokenTypes1, TokenValues1);
