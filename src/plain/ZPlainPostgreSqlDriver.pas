@@ -1419,12 +1419,14 @@ begin
       Dest := UTF8ToString(DestTemp)
     else
       Dest := String(DestTemp);
+    FreeMem(Temp);  
     {$ELSE}
     GetMem(Temp, Length(Source)*2);
     ResLen := POSTGRESQL_API.PQescapeStringConn(Handle, Temp,
       PAnsiChar(Source), StrLen(PAnsiChar(Source)), @Result);
     SetLength(Dest, ResLen);
     Move(Temp^, PAnsiChar(Dest)^, ResLen);
+    FreeMem(Temp);  
     {$ENDIF}
   end
   else
