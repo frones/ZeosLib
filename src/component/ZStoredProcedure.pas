@@ -160,7 +160,6 @@ procedure TZStoredProc.SetStatementParams(Statement: IZPreparedStatement;
 var
   I: Integer;
   Param: TParam;
-  Stream: TStream;
 begin
   for I := 0 to Params.Count - 1 do
   begin

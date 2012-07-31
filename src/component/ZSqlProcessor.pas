@@ -474,7 +474,6 @@ procedure TZSQLProcessor.SetStatementParams(Statement: IZPreparedStatement;
 var
   I: Integer;
   TempParam, Param: TParam;
-  Stream: TStream;
 begin
   TempParam := TParam.Create(nil);
 

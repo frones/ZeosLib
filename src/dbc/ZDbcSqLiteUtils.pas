@@ -97,6 +97,16 @@ function EncodeString(Value: ansistring): ansistring;
 }
 function DecodeString(Value: ansistring): ansistring;
 
+{**
+  Decodes a SQLite Version Value and Encodes it to a Zeos SQL Version format:
+   (major_version * 1,000,000) + (minor_version * 1,000) + sub_version
+  into separated major, minor and subversion values
+  @param SQLiteVersion an integer containing the Full Version to decode.
+  @return Encoded Zeos SQL Version Value.
+}
+function ConvertSQLiteVersionToSQLVersion( const SQLiteVersion: PAnsiChar ): Integer;
+
+
 implementation
 
 uses ZMessages{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
@@ -349,6 +359,27 @@ begin
     end;
     SetLength(Result, DestLength);
   end;
+end;
+
+{**
+  Decodes a SQLite Version Value and Encodes it to a Zeos SQL Version format:
+   (major_version * 1,000,000) + (minor_version * 1,000) + sub_version
+  into separated major, minor and subversion values
+  @param SQLiteVersion an integer containing the Full Version to decode.
+  @return Encoded Zeos SQL Version Value.
+}
+function ConvertSQLiteVersionToSQLVersion( const SQLiteVersion: PAnsiChar ): Integer;
+var
+   MajorVersion, MinorVersion, SubVersion: Integer;
+  s:string;
+begin
+  s:=SQLiteVersion;
+  MajorVersion:=StrToIntDef(copy(s,1,pos('.',s)-1),0);
+  delete(s,1,pos('.',s));
+  MinorVersion:=StrToIntDef(copy(s,1,pos('.',s)-1),0);
+  delete(s,1,pos('.',s));
+  SubVersion:=StrToIntDef(s,0);
+  Result := EncodeSQLVersioning(MajorVersion,MinorVersion,SubVersion);
 end;
 
 end.

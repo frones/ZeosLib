@@ -112,6 +112,9 @@ type
 
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
 
+    function GetClientVersion: Integer; override;
+    function GetHostVersion: Integer; override;
+
     function GetPlainDriver: IZSQLitePlainDriver;
     function GetConnectionHandle: Psqlite;
 
@@ -515,6 +518,11 @@ begin
   Result := FCatalog;
 end;
 
+function TZSQLiteConnection.GetClientVersion: Integer;
+begin
+  Result := ConvertSQLiteVersionToSQLVersion(GetPlainDriver.LibVersion);
+end;
+
 {**
   Sets a new selected catalog name.
   @param Catalog a selected catalog name.
@@ -597,6 +605,11 @@ begin
     else
       Result := AnsiQuotedStr(Value, #39);
 
+end;
+
+function TZSQLiteConnection.GetHostVersion: Integer;
+begin
+  Result := ConvertSQLiteVersionToSQLVersion(GetPlainDriver.LibVersion);
 end;
 
 initialization

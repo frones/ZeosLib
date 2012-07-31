@@ -1077,7 +1077,6 @@ procedure TZAbstractRODataset.SetStatementParams(Statement: IZPreparedStatement;
 var
   I: Integer;
   TempParam, Param: TParam;
-  Stream: TStream;
   Dataset: TDataset;
   Field: TField;
 begin
@@ -3351,7 +3350,6 @@ var
   I: Integer;
   Statement: IZPreparedStatement;
   ParamValue: TParam;
-  Stream: TStream;
 begin
   if Assigned(FConnection) then
   begin
