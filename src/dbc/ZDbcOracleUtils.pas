@@ -62,14 +62,14 @@ uses
   Types,
 {$ENDIF}
   Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZVariant, ZPlainOracleDriver,
-  ZDbcLogging, ZCompatibility;
+  ZDbcLogging, ZCompatibility, ZPlainOracleConstants;
 
 const
   MAX_SQLVAR_LIMIT = 1024;
 
 type
   {** Declares SQL Object }
-  TZSQLVar = packed record
+  TZSQLVar = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
     Handle:    POCIHandle;
     Define:    POCIHandle;
     BindHandle: POCIBind;
@@ -84,10 +84,11 @@ type
     TypeCode:  ub2;
     Indicator: sb2;
     Blob:      IZBlob;
+    _Object:   POCIHandle;
   end;
   PZSQLVar = ^TZSQLVar;
 
-  TZSQLVars = packed record
+  TZSQLVars = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
     AllocNum:  ub4;
     ActualNum: ub4;
     Variables: array[1..MAX_SQLVAR_LIMIT] of TZSQLVar;
@@ -107,7 +108,7 @@ procedure AllocateOracleSQLVars(var Variables: PZSQLVars; Count: Integer);
   @param Variables a pointer to array of variables.
 }
 procedure FreeOracleSQLVars(PlainDriver: IZOraclePlainDriver;
-  var Variables: PZSQLVars);
+  var Variables: PZSQLVars; Handle: POCIEnv; ErrorHandle: POCIError);
 
 {**
   Allocates in memory and initializes the Oracle variable.
@@ -266,7 +267,7 @@ end;
   @param Variables a pointer to array of variables.
 }
 procedure FreeOracleSQLVars(PlainDriver: IZOraclePlainDriver;
-  var Variables: PZSQLVars);
+  var Variables: PZSQLVars; Handle: POCIEnv; ErrorHandle: POCIError);
 var
   I: Integer;
   CurrentVar: PZSQLVar;
@@ -277,6 +278,8 @@ begin
     for I := 1 to Variables.ActualNum do
     begin
       CurrentVar := @Variables.Variables[I];
+      if CurrentVar._Object<>nil then
+        PlainDriver.ObjectFree(Handle,ErrorHandle,CurrentVar._Object,0);
       if CurrentVar.Data <> nil then
       begin
         if CurrentVar.TypeCode in [SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE] then
@@ -344,7 +347,7 @@ begin
       end;
     stAsciiStream, stUnicodeStream, stBinaryStream:
       begin
-        if not (Variable.TypeCode in [SQLT_CLOB, SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE]) then
+        if not (Variable.TypeCode in [SQLT_CLOB, SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE,SQLT_NTY]) then
         begin
           if Variable.ColType = stAsciiStream then
             Variable.TypeCode := SQLT_LVC
@@ -454,14 +457,18 @@ begin
         SQLT_BLOB, SQLT_CLOB:
           begin
             TempBlob := DefVarManager.GetAsInterface(Values[I]) as IZBlob;
-            if (CurrentVar.TypeCode = SQLT_CLOB) and (Connection.GetEncoding = ceUTF8) then
-              begin
-              TempStreamIn:=TempBlob.GetStream;
-              TempStream := ZDbcUtils.GetValidatedUnicodeStream(TempStreamIn);
-              TempStreamIn.Free;
-              end
-            else
-              TempStream := TempBlob.GetStream;
+            if not TempBlob.IsEmpty then
+            begin
+              if (CurrentVar.TypeCode = SQLT_CLOB) and (Connection.GetEncoding = ceUTF8) then
+                begin
+                TempStreamIn:=TempBlob.GetStream;
+                TempStream := ZDbcUtils.GetValidatedUnicodeStream(TempStreamIn);
+                TempStreamIn.Free;
+                end
+              else
+                TempStream := TempBlob.GetStream;
+            end
+            else TempStream := TMemoryStream.Create;
 
             try
               WriteTempBlob := TZOracleBlob.Create(PlainDriver,

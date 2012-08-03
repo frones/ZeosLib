@@ -96,7 +96,7 @@ PackageDLLOutputDir=build
 PackageDCPOutputDir=build
 SearchPath=build
 Packages=vcl;rtl;dbrtl;adortl;vcldb;vclx;bdertl;vcldbx;ibxpress;dsnap;cds;bdecds;qrpt;teeui;teedb;tee;dss;teeqr;visualclx;visualdbclx;dsnapcrba;dsnapcon;VclSmp;vclshlctrls;vclie;xmlrtl;inet;inetdbbde;inetdbxpress;inetdb;nmfast;webdsnap;websnap;dbexpress;dbxcds;indy;dclOffice2k;ZCore;ZParse;ZParseSql;ZPlain;ZDbc;ZComponent
-Conditionals=TESTGUI
+Conditionals=
 DebugSourceDirs=build
 UsePackages=0
 [Parameters]

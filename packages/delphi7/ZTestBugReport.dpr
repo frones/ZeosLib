@@ -87,8 +87,11 @@ uses
 {$IFDEF ENABLE_DBLIB}
   ZTestBugDbcDbLib in '..\..\test\bugreport\ZTestBugDbcDbLib.pas',
   ZTestBugCompDbLib in '..\..\test\bugreport\ZTestBugCompDbLib.pas',
+  ZTestBugCompMSSql in '..\..\test\bugreport\ZTestBugCompMSSql.pas',
 {$ENDIF}
-  ZTestBugCompMSSql in '..\..\test\bugreport\ZTestBugCompMSSql.pas';
+{$IFDEF ENABLE_SQLITE}
+  ZTestBugCompSQLite in '..\..\test\bugreport\ZTestBugCompSQLite.pas';
+{$ENDIF}
 
 begin
   TestGroup := BUGREPORT_TEST_GROUP;

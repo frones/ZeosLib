@@ -138,6 +138,9 @@ Comments=
 Count=2
 Item0=build
 Item1=$(ZEOSDBO_BUILD)
+[HistoryLists\hlConditionals]
+Count=1
+Item0=TESTGUI
 [HistoryLists\hlUnitAliases]
 Count=1
 Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;

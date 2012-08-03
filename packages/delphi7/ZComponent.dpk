@@ -23,7 +23,7 @@ package ZComponent;
 {$IMAGEBASE $400000}
 {$DESCRIPTION 'Zeos Database Components'}
 {$LIBSUFFIX '70'}
-{$RUNONLY ON}
+{$RUNONLY}
 {$IMPLICITBUILD OFF}
 {$I ZPackages.inc}
 

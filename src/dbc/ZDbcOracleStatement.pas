@@ -59,7 +59,8 @@ interface
 
 uses
   Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcStatement,Db, ZDbcLogging,
-  ZPlainOracleDriver, ZCompatibility, ZVariant, ZDbcOracleUtils;
+  ZPlainOracleDriver, ZCompatibility, ZVariant, ZDbcOracleUtils,
+  ZPlainOracleConstants;
 
 type
 
@@ -434,7 +435,7 @@ begin
     FLastStatement := nil;
   end;
   FreeOracleStatementHandles(FPlainDriver, FHandle, FErrorHandle);
-  FreeOracleSQLVars(FPlainDriver, FInVars);
+  FreeOracleSQLVars(FPlainDriver, FInVars, (Connection as IZOracleConnection).GetConnectionHandle, FErrorHandle);
 end;
 
 {**

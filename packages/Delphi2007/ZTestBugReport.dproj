@@ -56,6 +56,7 @@
     <DCCReference Include="..\..\test\bugreport\ZTestBugCompMySql.pas" />
     <DCCReference Include="..\..\test\bugreport\ZTestBugCompOracle.pas" />
     <DCCReference Include="..\..\test\bugreport\ZTestBugCompPostgreSql.pas" />
+    <DCCReference Include="..\..\test\bugreport\ZTestBugCompSQLite.pas" />
     <DCCReference Include="..\..\test\bugreport\ZTestBugDbcASA.pas" />
     <DCCReference Include="..\..\test\bugreport\ZTestBugDbcCore.pas" />
     <DCCReference Include="..\..\test\bugreport\ZTestBugDbcDbLib.pas" />

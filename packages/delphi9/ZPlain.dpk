@@ -36,8 +36,6 @@ contains
 
 {$IFDEF ENABLE_DBLIB}
   ZPlainDbLibDriver in '..\..\src\plain\ZPlainDbLibDriver.pas',
-  ZPlainDbLibMsSql7 in '..\..\src\plain\ZPlainDbLibMsSql7.pas',
-  ZPlainDbLibSybaseAse125 in '..\..\src\plain\ZPlainDbLibSybaseAse125.pas',
   ZPlainDbLibConstants in '..\..\src\plain\ZPlainDbLibConstants.pas',
 {$ENDIF}
 
@@ -62,7 +60,7 @@ contains
 
 {$IFDEF ENABLE_ORACLE}
   ZPlainOracleDriver in '..\..\src\plain\ZPlainOracleDriver.pas',
-  ZPlainOracle9i in '..\..\src\plain\ZPlainOracle9i.pas',
+  ZPlainOracleConstants in '..\..\src\plain\ZPlainOracleConstants.pas',
 {$ENDIF}
 
 {$IFDEF ENABLE_SQLITE}

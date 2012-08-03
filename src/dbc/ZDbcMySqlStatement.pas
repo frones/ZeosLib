@@ -261,19 +261,14 @@ end;
 function TZMySQLStatement.ExecuteQuery(const SQL: string): IZResultSet;
 begin
   Result := nil;
-//  Self.SSQL := SQL; //Did preprepare the SQL
-//  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(Self.ASQL)) = 0 then
   if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, Self.GetConnection.GetEncoding, LogSQL) = 0 then
   begin
-//    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
     if not FPlainDriver.ResultSetExists(FHandle) then
       raise EZSQLException.Create(SCanNotOpenResultSet);
     Result := CreateResultSet(LogSQL);
-    //Result := CreateResultSet(SSQL);
   end
   else
-    //CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
 end;
 
@@ -294,11 +289,8 @@ var
   HasResultset : Boolean;
 begin
   Result := -1;
-//  Self.SSQL := SQL; //Preprepare SQL
-  //if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
   if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, GetConnection.GetEncoding, LogSQL) = 0 then
   begin
-    //DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
@@ -319,7 +311,6 @@ begin
   end
   else
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
-//    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
   LastUpdateCount := Result;
 end;
 
@@ -348,11 +339,8 @@ var
   HasResultset : Boolean;
 begin
   Result := False;
-  //Self.SSQL := SQL; //Preprepare SQL and sets AnsiSQL
-  //if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
   if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, GetConnection.GetEncoding, LogSQL) = 0 then
   begin
-    //DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
@@ -370,7 +358,6 @@ begin
   end
   else
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
-    //CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
 end;
 
 {**
@@ -927,9 +914,11 @@ begin
   Result := False;
   BindInParameters;
   if (FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
-     begin
+     try
         checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
-        exit;
+     except
+       FBindBuffer.Free;  //MemLeak closed
+       raise;
      end;
 
   FBindBuffer.Free;

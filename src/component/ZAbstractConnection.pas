@@ -311,7 +311,7 @@ implementation
 
 uses ZMessages, ZClasses, ZAbstractRODataset, ZSysUtils,
       // Modified by cipto 8/2/2007 10:00:22 AM
-      ZSequence;
+      ZSequence, ZAbstractDataset;
 
 var
   SqlHourGlassLock: Integer;
@@ -918,9 +918,13 @@ end;
 {**
   Commits the current transaction.
 }
+type //To get protected methodes
+  THack_ZAbstractDataset = Class(TZAbstractDataset);
+
 procedure TZAbstractConnection.Commit;
 var
   ExplicitTran: Boolean;
+  i: Integer;
 begin
   CheckConnected;
   CheckNonAutoCommitMode;
@@ -932,6 +936,8 @@ begin
     ShowSQLHourGlass;
     try
       try
+        for i := 0 to FDatasets.Count -1 do
+          THack_ZAbstractDataset(FDatasets[i]).DisposeCachedUpdates;
         FConnection.Commit;
       finally
         FExplicitTransactionCounter := 0;

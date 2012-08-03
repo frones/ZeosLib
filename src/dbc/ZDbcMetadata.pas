@@ -86,7 +86,7 @@ type
   {$ENDIF}
 
   {** Defines a metadata resultset column definition. }
-  TZMetadataColumnDef = packed record
+  TZMetadataColumnDef = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
     Name: string;
     SQLType: TZSQLType;
     Length: Integer

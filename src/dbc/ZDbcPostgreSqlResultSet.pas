@@ -643,23 +643,7 @@ begin
       Stream := nil;
       try
         if GetMetadata.GetColumnType(ColumnIndex) = stBinaryStream then
-        begin
-          {EgonHugeist: Mantis-BugTracker #0000247 / }
-          if (Statement.GetConnection as IZPostgreSQLConnection).GetServerMajorVersion >= 9 then
-          begin
-            Decoded := InternalGetString(ColumnIndex) ;
-            Len := (Length(Decoded)-{$IFDEF DELPHI12_UP}AnsiStrings.AnsiPos{$ELSE}Pos{$ENDIF}('x', Decoded)) div 2; //GetLength of binary result
-            Decoded := Copy(Decoded, {$IFDEF DELPHI12_UP}AnsiStrings.AnsiPos{$ELSE}Pos{$ENDIF}('x', Decoded)+1, Length(Decoded)); //remove the first 'x'sign-byte
-            SetLength(TempAnsi, Len); //Set length of binary-result
-            HexToBin(PAnsiChar(Decoded), PAnsichar(TempAnsi), Len); //convert hex to binary
-            Stream := TStringStream.Create(TempAnsi); //write proper binary-stream
-          end
-          else
-            if (Statement.GetConnection as IZPostgreSQLConnection).GetServerMajorVersion >= 8 then
-              Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(InternalGetString(ColumnIndex)))
-            else
-              Stream := TStringStream.Create(InternalGetString(ColumnIndex)); //Egonhugeist: not sure about DecodeBinaryString...
-        end
+          Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(InternalGetString(ColumnIndex), Self.FHandle))
         else
           Stream := TStringStream.Create(InternalGetString(ColumnIndex));
         Result := TZAbstractBlob.CreateWithStream(Stream);

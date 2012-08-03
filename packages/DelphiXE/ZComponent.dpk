@@ -25,7 +25,6 @@ package ZComponent;
 {$LIBSUFFIX '150'}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
-{$WARN IMPLICIT_IMPORT OFF}
 {$I ZPackages.inc}
 
 requires

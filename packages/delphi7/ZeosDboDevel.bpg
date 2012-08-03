@@ -9,7 +9,7 @@ MAKE = $(ROOT)\bin\make.exe -$(MAKEFLAGS) -f$**
 DCC = $(ROOT)\bin\dcc32.exe $**
 BRCC = $(ROOT)\bin\brcc32.exe $**
 #------------------------------------------------------------------------------
-PROJECTS = ZCore.bpl ZParseSql.bpl ZPlain.bpl ZDbc.bpl ZComponent.bpl \
+PROJECTS = ZCore.bpl ZPlain.bpl ZParseSql.bpl ZDbc.bpl ZComponent.bpl \
   ZComponentDesign70.bpl ZTestFramework.bpl ZTestCoreAll.exe ZTestParseSqlAll.exe \
   ZTestDbcAll.exe ZTestComponentAll.exe ZTestBugReport.exe ZTestPerformance.exe
 #------------------------------------------------------------------------------

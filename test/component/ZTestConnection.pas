@@ -69,10 +69,11 @@ type
     procedure TearDown; override;
     procedure ConnLogin(Sender: TObject; var Username:string ; var Password: string);
   published
+    procedure TestLibrary;
     procedure TestExecuteDirect;
     procedure TestExecuteDirect2;
     procedure TestLoginPromptConnection;
-  end;
+   end;
 
 implementation
 
@@ -155,6 +156,24 @@ begin
    gloPassword := locPassword;
    Connection.Connect;
    CheckEquals(true,Connection.Connected);
+end;
+
+procedure TZTestConnectionCase.TestLibrary;
+begin
+   Connection.Disconnect;
+   Connection.LibraryLocation:='dummy.dll';
+   try
+      Connection.Connect;
+      Fail('Incorrect behavior dummy.dll does not exist');
+   except
+      CheckEquals(false,Connection.Connected);
+   end;
+   Connection.LibraryLocation:='';
+   Connection.Connect;
+   CheckEquals(true,Connection.Connected);
+//   {$ifdef fpc}Fail{$else}Status{$endif}('Info: '+Connection.Protocol+
+//          ' Driver version: '+ Connection.ClientVersionStr+
+//          ' Server version: '+ Connection.ServerVersionStr);
 end;
 
 procedure TZTestConnectionCase.ConnLogin(Sender: TObject; var Username:string ; var Password: string);

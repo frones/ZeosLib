@@ -73,10 +73,23 @@ type
 
   TZByteArray = array[0..65535] of Byte;
   {** Defines a header for row buffer. }
-  TZRowBuffer = packed record
+  {ludob. Notes on alignment:
+  Columns contains a record per field with the structure
+    null:byte;
+    fielddata:anything;
+  field records are addressed through offsets in Columns stored in FColumnOffsets.
+  Since anything can be stored as fielddata including pointers, fielddata needs
+  to be aligned to pointer. To do this Columns is aligned to pointer and
+  FColumnOffsets is aligned to pointer - 1 (the null:byte). The latter is
+  done in TZRowAccessor.Create where FColumnOffsets is filled in.
+  FPC_REQUIRES_PROPER_ALIGNMENT is a fpc build in define}
+  TZRowBuffer = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
     Index: Integer;
     UpdateType: TZRowUpdateType;
     BookmarkFlag: Byte;
+    {$ifdef FPC_REQUIRES_PROPER_ALIGNMENT}
+    dummyalign:pointer;
+    {$endif}
     Columns: TZByteArray;
   end;
   PZRowBuffer = ^TZRowBuffer;
@@ -223,6 +236,9 @@ begin
   FBuffer := nil;
   FColumnCount := ColumnsInfo.Count;
   FColumnsSize := 0;
+  {$ifdef FPC_REQUIRES_PROPER_ALIGNMENT}
+  FColumnsSize:=align(FColumnsSize+1,sizeof(pointer))-1;
+  {$endif}
   SetLength(FColumnNames, FColumnCount);
   SetLength(FColumnCases, FColumnCount);
   SetLength(FColumnTypes, FColumnCount);
@@ -241,6 +257,9 @@ begin
     FColumnOffsets[I] := FColumnsSize;
     FColumnDefaultExpressions[I] := Current.DefaultExpression;
     Inc(FColumnsSize, FColumnLengths[I] + 1);
+    {$ifdef FPC_REQUIRES_PROPER_ALIGNMENT}
+    FColumnsSize:=align(FColumnsSize+1,sizeof(pointer))-1;
+    {$endif}
     if FColumnsSize > SizeOf(TZByteArray)-1 then
       raise EZSQLException.Create(SRowBufferWidthExceeded);
     FHasBlobs := FHasBlobs

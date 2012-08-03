@@ -9,8 +9,9 @@
 			<Platform>Win32</Platform>
 			<AppType>Console</AppType>
 			<FrameworkType>None</FrameworkType>
+			<Basis>True</Basis>
 		</PropertyGroup>
-		<PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
+		<PropertyGroup Condition="'$(Config)'=='Basis' or '$(Base)'!=''">
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Config)'=='Release' or '$(Cfg_1)'!=''">
@@ -53,22 +54,22 @@
 			<DelphiCompile Include="ZTestComponentAll.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
-			<DCCReference Include="..\..\test\component\ZTestSqlStrings.pas"/>
-			<DCCReference Include="..\..\test\component\ZTestSqlProcessor.pas"/>
-			<DCCReference Include="..\..\test\component\ZTestStoredProcedure.pas"/>
 			<DCCReference Include="..\..\test\component\ZTestConnection.pas"/>
-			<DCCReference Include="..\..\test\component\ZTestExecuteSql.pas"/>
-			<DCCReference Include="..\..\test\component\ZTestSqlTypes.pas"/>
+			<DCCReference Include="..\..\test\component\ZTestData.pas"/>
 			<DCCReference Include="..\..\test\component\ZTestDataSetGeneric.pas"/>
-			<DCCReference Include="..\..\test\component\ZTestData.pas">
-				<Form>,
-  ZTestMidas in &apos;..\..\test\component\ZTestMidas.pas&apos;</Form>
-			</DCCReference>
+			<DCCReference Include="..\..\test\component\ZTestExecuteSql.pas"/>
+			<DCCReference Include="..\..\test\component\ZTestMasterDetail.pas"/>
+			<DCCReference Include="..\..\test\component\ZTestSorting.pas"/>
+			<DCCReference Include="..\..\test\component\ZTestSqlMetadata.pas"/>
+			<DCCReference Include="..\..\test\component\ZTestSqlProcessor.pas"/>
+			<DCCReference Include="..\..\test\component\ZTestSqlStrings.pas"/>
+			<DCCReference Include="..\..\test\component\ZTestSqlTypes.pas"/>
+			<DCCReference Include="..\..\test\component\ZTestStoredProcedure.pas"/>
 			<BuildConfiguration Include="Debug">
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>
 			</BuildConfiguration>
-			<BuildConfiguration Include="Base">
+			<BuildConfiguration Include="Basis">
 				<Key>Base</Key>
 			</BuildConfiguration>
 			<BuildConfiguration Include="Release">
@@ -123,9 +124,6 @@
 						<Excluded_Packages Name="$(BDSBIN)\dcloffice2k150.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
 						<Excluded_Packages Name="$(BDSBIN)\dclofficexp150.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
 					</Excluded_Packages>
-					<Language>
-						<Language Name="RootDir">..\..\..\..\..\repo\zeos\packages\delphi15\</Language>
-					</Language>
 				</Delphi.Personality>
 				<Platforms>
 					<Platform value="Win32">True</Platform>

@@ -60,7 +60,7 @@ interface
 uses
   Types, ZCompatibility, Classes, SysUtils, Contnrs, ZDbcIntfs, ZDbcConnection,
   ZPlainOracleDriver, ZDbcLogging, ZTokenizer, ZDbcGenericResolver, ZURL,
-  ZGenericSqlAnalyser;
+  ZGenericSqlAnalyser, ZPlainOracleConstants;
 
 type
 
@@ -132,6 +132,8 @@ type
     function GetServerHandle: POCIServer;
     function GetSessionHandle: POCISession;
     function GetTransactionHandle: POCITrans;
+    function GetClientVersion: Integer; override;
+    function GetHostVersion: Integer; override;
   end;
 
   TZOracleSequence = class(TZAbstractSequence)
@@ -155,7 +157,7 @@ var
 implementation
 
 uses
-  ZMessages, ZGenericSqlToken, ZDbcOracleStatement,
+  ZMessages, ZGenericSqlToken, ZDbcOracleStatement, ZSysUtils,
   ZDbcOracleUtils, ZDbcOracleMetadata, ZOracleToken, ZOracleAnalyser;
 
 { TZOracleDriver }
@@ -238,7 +240,6 @@ begin
   Result := Analyser;
 end;
 
-
 { TZOracleConnection }
 
 {**
@@ -315,7 +316,7 @@ begin
   if ( FHandle = nil ) then
     try
       FErrorHandle := nil;
-      Status := GetPlainDriver.EnvNlsCreate(FHandle, OCI_DEFAULT, nil, nil, nil, nil, 0, nil,
+      Status := GetPlainDriver.EnvNlsCreate(FHandle, OCI_OBJECT, nil, nil, nil, nil, 0, nil,
         OCI_CLIENT_CHARSET_ID, OCI_CLIENT_CHARSET_ID);
       CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcOther, 'EnvNlsCreate failed.');
     except
@@ -702,6 +703,28 @@ end;
 function TZOracleConnection.GetTransactionHandle: POCITrans;
 begin
   Result := FTransHandle;
+end;
+
+function TZOracleConnection.GetClientVersion: Integer;
+var
+  major_version, minor_version, update_num,
+      patch_num, port_update_num: sword;
+begin
+  GetPlainDriver.ClientVersion(@major_version, @minor_version, @update_num,
+      @patch_num, @port_update_num);
+  Result := EncodeSQLVersioning(major_version,minor_version,update_num);
+end;
+
+function TZOracleConnection.GetHostVersion: Integer;
+var
+  buf:text;
+  version:ub4;
+begin
+  result:=0;
+  getmem(buf,1024);
+  if GetPlainDriver.ServerRelease(FServerHandle,FErrorHandle,buf,1024,OCI_HTYPE_SERVER,@version)=OCI_SUCCESS then
+    Result := EncodeSQLVersioning((version shr 24) and $ff,(version shr 20) and $f,(version shr 12) and $ff);
+  freemem(buf);
 end;
 
 { TZOracleSequence }

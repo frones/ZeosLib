@@ -94,7 +94,6 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPChar(ColumnIndex: Integer): PChar; override;
-    //function GetString(ColumnIndex: Integer): String; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -270,6 +269,7 @@ begin
         else
           Precision := FieldPrecision;
       end;
+      Precision := FieldPrecision;
       Scale := FieldDecimals;
       Signed := True;
       Nullable := ntNullable;
@@ -647,7 +647,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stAsciiStream);
 {$ENDIF}
-  Result := TStringStream.Create(GetString(ColumnIndex));
+  Result := TStringStream.Create(InternalGetString(ColumnIndex));
 end;
 
 {**

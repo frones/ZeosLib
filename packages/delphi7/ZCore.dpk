@@ -1,5 +1,4 @@
 package ZCore;
-{$LIBSUFFIX '70'}
 {$R *.res}
 {$ALIGN 8}
 {$ASSERTIONS ON}
@@ -13,6 +12,7 @@ package ZCore;
 {$OPENSTRINGS ON}
 {$OPTIMIZATION ON}
 {$OVERFLOWCHECKS ON}
+{$RANGECHECKS OFF}
 {$REFERENCEINFO ON}
 {$SAFEDIVIDE OFF}
 {$STACKFRAMES ON}
@@ -22,7 +22,8 @@ package ZCore;
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
 {$DESCRIPTION 'Zeos Core Classes and Interfaces'}
-{$RUNONLY ON}
+{$LIBSUFFIX '70'}
+{$RUNONLY}
 {$IMPLICITBUILD OFF}
 
 requires

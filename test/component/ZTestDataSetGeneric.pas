@@ -1746,7 +1746,7 @@ begin
     Query.Options := [doPreferPrepared,doPreferPreparedResolver];
     with Query do
     begin
-      SQL.Text := 'DELETE FROM number_values where n_id = 1';
+      SQL.Text := 'DELETE FROM number_values where n_id = '+ IntToStr(TEST_ROW_ID);
       ExecSQL;
       Sql.Text := 'INSERT INTO number_values (n_id,n_float,n_dprecission)'
           + ' VALUES (:n_id,:n_float,:n_real)';
@@ -1754,20 +1754,20 @@ begin
       Params[0].DataType := ftInteger;
       Params[1].DataType := ftFloat;
       Params[2].DataType := ftFloat;
-      Params[0].AsInteger := 1;
+      Params[0].AsInteger := TEST_ROW_ID;
       Params[1].AsFloat := 3.14159265358979323846;
       Params[2].AsFloat := 3.14159265358979323846;
       ExecSQL;
 
       CheckEquals(1, RowsAffected);
 
-      SQL.Text := 'SELECT * FROM number_values where n_id = 1';
+      SQL.Text := 'SELECT * FROM number_values where n_id = '+ IntToStr(TEST_ROW_ID);
       CheckEquals(0, Query.Params.Count);
 
       Open;
       CheckEquals(1, RecordCount);
       CheckEquals(False, IsEmpty);
-      CheckEquals(1, FieldByName('n_id').AsInteger);
+      CheckEquals(TEST_ROW_ID, FieldByName('n_id').AsInteger);
       CheckEquals(3.14159265358979323846, FieldByName('n_float').AsFloat,0.00001);
       CheckEquals(3.14159265358979323846, FieldByName('n_dprecission').AsFloat,0.0000000000001);
       Close;
@@ -1784,19 +1784,36 @@ var
   UnicodeStream: TStream;
   s:  Ansistring;
   TextLob, BinLob: String;
+  TempConnection: TZConnection;
 begin
+  TempConnection := nil;
+  BinStream:=nil;
+  BinStream1:=nil;
+  BinStreamS:=nil;
+
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
     if StartsWith(LowerCase(Connection.Protocol), 'postgre') then
-      begin
-      Query.Properties.Add('oidasblob=True');
+    begin
+      TempConnection := TZConnection.Create(nil);
+      TempConnection.HostName := Connection.HostName;
+      TempConnection.Port     := Connection.Port;
+      TempConnection.Database := Connection.Database;
+      TempConnection.User     := Connection.User;
+      TempConnection.Password := Connection.Password;
+      TempConnection.Protocol := Connection.Protocol;
+      TempConnection.Catalog  := Connection.Catalog;
+      TempConnection.Properties.Text := Connection.Properties.Text;
+      TempConnection.Properties.Add('oidasblob=True');
+      TempConnection.Connect;
+      Query.Connection := TempConnection;
       Connection.TransactIsolationLevel:=tiReadCommitted;
-      end;
+    end;
     Query.Options := [doPreferPrepared,doPreferPreparedResolver];
     with Query do
     begin
-      SQL.Text := 'DELETE FROM blob_values where b_id = 1';
+      SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
       ExecSQL;
       if StartsWith(LowerCase(Connection.Protocol), 'oracle') then
       begin
@@ -1819,7 +1836,7 @@ begin
       Params[0].DataType := ftInteger;
       Params[1].DataType := ftMemo;
       Params[2].DataType := ftBlob;
-      Params[0].AsInteger := 1;
+      Params[0].AsInteger := TEST_ROW_ID-1;
       BinStreamS := TMemoryStream.Create;
       s:={$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString(utf8encode('123456ייאא'),6000);
       BinStreamS.Write(s[1],length(s));
@@ -1836,13 +1853,13 @@ begin
 
       CheckEquals(1, RowsAffected);
 
-      SQL.Text := 'SELECT * FROM blob_values where b_id = 1';
+      SQL.Text := 'SELECT * FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
       CheckEquals(0, Query.Params.Count);
 
       Open;
       CheckEquals(1, RecordCount);
       CheckEquals(False, IsEmpty);
-      CheckEquals(1, FieldByName('b_id').AsInteger);
+      CheckEquals(TEST_ROW_ID-1, FieldByName('b_id').AsInteger);
       BinStream1 := TMemoryStream.Create;
       (FieldByName(TextLob) as TBlobField).SaveToStream(BinStream1);
       if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
@@ -1862,14 +1879,19 @@ begin
       (FieldByName(BinLob) as TBlobField).SaveToStream(BinStream1);
       CheckEquals(BinStream.Size, BinStream1.Size, 'Binary Stream');
       CheckEquals(BinStream, BinStream1, 'Binary Stream');
-      BinStream.Free;
-      BinStream1.Free;
-      BinStreamS.Free;
       Close;
-      SQL.Text := 'DELETE FROM blob_values where b_id = 1';
+      SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
       ExecSQL;
     end;
   finally
+    if assigned(BinStream) then
+      BinStream.Free;
+    if assigned(BinStream1) then
+      BinStream1.Free;
+    if assigned(BinStreamS) then
+      BinStreamS.Free;
+    if Assigned(TempConnection) then
+      TempConnection.Free;
     Query.Free;
   end;
 end;

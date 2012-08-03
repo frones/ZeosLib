@@ -1,5 +1,4 @@
 package ZTestFramework;
-{$LIBSUFFIX '70'}
 {$R *.res}
 {$ALIGN 8}
 {$ASSERTIONS ON}
@@ -23,6 +22,7 @@ package ZTestFramework;
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
 {$DESCRIPTION 'Zeos Testing Framework'}
+{$LIBSUFFIX '70'}
 {$IMPLICITBUILD OFF}
 
 requires

@@ -9,8 +9,9 @@
 			<Platform>Win32</Platform>
 			<AppType>Console</AppType>
 			<FrameworkType>None</FrameworkType>
+			<Basis>True</Basis>
 		</PropertyGroup>
-		<PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
+		<PropertyGroup Condition="'$(Config)'=='Basis' or '$(Base)'!=''">
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Config)'=='Release' or '$(Cfg_1)'!=''">
@@ -64,7 +65,7 @@
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>
 			</BuildConfiguration>
-			<BuildConfiguration Include="Base">
+			<BuildConfiguration Include="Basis">
 				<Key>Base</Key>
 			</BuildConfiguration>
 			<BuildConfiguration Include="Release">
@@ -111,7 +112,7 @@
 						<VersionInfoKeys Name="Comments"/>
 					</VersionInfoKeys>
 					<Language>
-						<Language Name="RootDir">..\..\..\..\..\repo\zeos\packages\delphi15\</Language>
+						<Language Name="RootDir">D:\Developer\Delphi XE\Components\ZEOS\packages\DelphiXE\</Language>
 					</Language>
 				</Delphi.Personality>
 				<Platforms>

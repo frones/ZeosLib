@@ -436,24 +436,6 @@
         <UsageCount Value="85"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit38>
-      <Unit39>
-        <Filename Value="../../src/plain/ZPlainDbLibMsSql7.pas"/>
-        <UnitName Value="ZPlainDbLibMsSql7"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="32"/>
-        <CursorPos X="1" Y="1"/>
-        <UsageCount Value="20"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit39>
-      <Unit40>
-        <Filename Value="../../src/plain/ZPlainDbLibSybaseAse125.pas"/>
-        <UnitName Value="ZPlainDbLibSybaseAse125"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
-        <UsageCount Value="20"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit40>
       <Unit41>
         <Filename Value="../../src/dbc/ZDbcSqLiteMetadata.pas"/>
         <UnitName Value="ZDbcSqLiteMetadata"/>

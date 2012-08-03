@@ -84,6 +84,7 @@ type
   }
   TZAbstractDataset = class(TZAbstractRODataset)
   private
+    FCachedUpdatesBeforeMasterUpdate: Boolean;
     FCachedUpdates: Boolean;
     FUpdateObject: TZUpdateSQL;
     FCachedResultSet: IZCachedResultSet;
@@ -97,7 +98,8 @@ type
 
     FBeforeApplyUpdates: TNotifyEvent; {bangfauzan addition}
     FAfterApplyUpdates: TNotifyEvent; {bangfauzan addition}
-
+    FDetailDataSets: TList;
+    FDetailCachedUpdates: array of Boolean;
   private
     function GetUpdatesPending: Boolean;
     procedure SetUpdateObject(Value: TZUpdateSQL);
@@ -137,8 +139,9 @@ type
   {$IFDEF WITH_IPROVIDER}
     function PSUpdateRecord(UpdateKind: TUpdateKind;
       Delta: TDataSet): Boolean; override;
+    procedure DisposeCachedUpdates;
   {$ENDIF}
-
+    procedure RegisterDetailDataSet(Value: TZAbstractDataset; CachedUpdates: Boolean);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -207,6 +210,7 @@ begin
   FWhereMode := wmWhereKeyOnly;
   FUpdateMode := umUpdateChanged;
   RequestLive := True;
+  FDetailDataSets := TList.Create;
 end;
 
 {**
@@ -214,6 +218,7 @@ end;
 }
 destructor TZAbstractDataset.Destroy;
 begin
+  FreeAndNil(FDetailDataSets);
   inherited Destroy;
 end;
 
@@ -447,6 +452,7 @@ var
   {$ELSE}
   BM:TBookMarkStr;
   {$ENDIF}
+  I: Integer;
 begin
   if (FSequenceField <> '') and Assigned(FSequence) then
   begin
@@ -456,15 +462,42 @@ begin
 
   //inherited;  //AVZ - Firebird defaults come through when this is commented out
 
+
   if not GetActiveBuffer(RowBuffer) then
     raise EZDatabaseError.Create(SInternalError);
 
   Connection.ShowSqlHourGlass;
   try
+    //revert Master Detail updates makes it possible to update
+    // with ForeignKey contraints
+    if Assigned(MasterLink.DataSet) then
+      if (TDataSet(MasterLink.DataSet) is TZAbstractDataset) then
+        if ( doUpdateMasterFirst in TZAbstractDataset(MasterLink.DataSet).Options )
+         or ( doUpdateMasterFirst in Options ) then
+        begin //This is an detail-table
+          FCachedUpdatesBeforeMasterUpdate := CachedUpdates; //buffer old value
+          if not(CachedUpdates) then
+            CachedUpdates := True; //Execute without writing
+          TZAbstractDataset(MasterLink.DataSet).RegisterDetailDataSet(Self,
+            TZAbstractDataset(MasterLink.DataSet).CachedUpdates);
+        end;
+
     if State = dsInsert then
       InternalAddRecord(RowBuffer, False)
     else
       InternalUpdate;
+
+    // Apply Detail updates now
+    if FDetailDataSets.Count > 0 then
+      for i := 0 to FDetailDataSets.Count -1 do
+        if (TDataSet(FDetailDataSets.Items[i]) is TZAbstractDataset) then
+          begin
+            if not (Self.FDetailCachedUpdates[I]) then
+              TZAbstractDataset(TDataSet(FDetailDataSets.Items[i])).ApplyUpdates;
+            TZAbstractDataset(TDataSet(FDetailDataSets.Items[i])).CachedUpdates := Self.FDetailCachedUpdates[I];
+          end;
+    FDetailDataSets.Clear;
+    SetLength(FDetailCachedUpdates, 0);
 
     {BUG-FIX: bangfauzan addition}
     if (SortedFields <> '') and not (doDontSortOnPost in Options) then
@@ -476,8 +509,8 @@ begin
       if BookmarkValid({$IFDEF WITH_TBOOKMARK}BM{$ELSE}@BM{$ENDIF}) Then
       begin
         InternalGotoBookmark({$IFDEF WITH_TBOOKMARK}BM{$ELSE}@BM{$ENDIF});
-        Resync([rmExact, rmCenter]); 
-      end; 
+        Resync([rmExact, rmCenter]);
+      end;
       DisableControls;
       InternalSort;
       BookMark:=BM;
@@ -487,6 +520,7 @@ begin
     {end of bangfauzan addition}
   finally
     Connection.HideSqlHourGlass;
+    //DetailLinks.Free;
   end;
 end;
 
@@ -582,7 +616,11 @@ begin
     DoBeforeApplyUpdates; {bangfauzan addition}
 
     if CachedResultSet <> nil then
-      CachedResultSet.PostUpdates;
+      if Connection.AutoCommit and
+        not ( Connection.TransactIsolationLevel in [tiReadCommitted, tiSerializable] ) then
+        CachedResultSet.PostUpdates
+      else
+        CachedResultSet.PostUpdatesCached;
 
     if not (State in [dsInactive]) then
       Resync([]);
@@ -592,6 +630,16 @@ begin
   finally
     Connection.HideSqlHourGlass;
   end;
+end;
+
+{**
+   Dispose all cached updates stored in the resultset.
+}
+procedure TZAbstractDataset.DisposeCachedUpdates;
+begin
+  CheckBrowseMode;
+  if Assigned(CachedResultSet) then
+    CachedResultSet.DisposeCachedUpdates;
 end;
 
 {**
@@ -870,6 +918,13 @@ begin
 end;
 
 {$ENDIF}
+procedure TZAbstractDataset.RegisterDetailDataSet(Value: TZAbstractDataset;
+  CachedUpdates: Boolean);
+begin
+  FDetailDataSets.Add(Value);
+  SetLength(Self.FDetailCachedUpdates, Length(FDetailCachedUpdates)+1);
+  FDetailCachedUpdates[High(FDetailCachedUpdates)] := CachedUpdates;
+end;
 
 {============================bangfauzan addition===================}
 

@@ -93,7 +93,6 @@ type
     FDefinitelyWritable: Boolean;
     FDefaultValue: string;
     FDefaultExpression : string;
-  published
   public
     constructor Create;
     function GetColumnTypeName: string;

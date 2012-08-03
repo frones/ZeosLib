@@ -11,8 +11,9 @@
 			<Platform>Win32</Platform>
 			<AppType>Package</AppType>
 			<FrameworkType>None</FrameworkType>
+			<Basis>True</Basis>
 		</PropertyGroup>
-		<PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
+		<PropertyGroup Condition="'$(Config)'=='Basis' or '$(Base)'!=''">
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Config)'=='Release' or '$(Cfg_1)'!=''">
@@ -32,7 +33,6 @@
 			<DCC_BplOutput>build</DCC_BplOutput>
 			<DCC_DcpOutput>build</DCC_DcpOutput>
 			<DCC_ImageBase>00400000</DCC_ImageBase>
-			<DesignOnlyPackage>false</DesignOnlyPackage>
 			<DllSuffix>150</DllSuffix>
 			<DCC_Description>Zeos Low Level Database API</DCC_Description>
 			<RuntimeOnlyPackage>true</RuntimeOnlyPackage>
@@ -59,6 +59,8 @@
 			<DCC_IncludePath>$(BDSCOMMONDIR)\Bpl;$(DCC_IncludePath)</DCC_IncludePath>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
+			<DCC_BplOutput>$(BDSCOMMONDIR)\Bpl</DCC_BplOutput>
+			<DCC_DcpOutput>$(BDSCOMMONDIR)\Dcp</DCC_DcpOutput>
 			<Version>7.0</Version>
 			<DCC_IntegerOverflowCheck>True</DCC_IntegerOverflowCheck>
 			<DCC_GenerateStackFrames>True</DCC_GenerateStackFrames>
@@ -92,7 +94,7 @@
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>
 			</BuildConfiguration>
-			<BuildConfiguration Include="Base">
+			<BuildConfiguration Include="Basis">
 				<Key>Base</Key>
 			</BuildConfiguration>
 			<BuildConfiguration Include="Release">

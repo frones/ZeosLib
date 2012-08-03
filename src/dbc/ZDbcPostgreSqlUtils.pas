@@ -114,7 +114,8 @@ function EncodeBinaryString(const Value: AnsiString): AnsiString;
   @param Value the regular string.
   @return the encoded string.
 }
-function EncodeString(CharactersetCode: TZPgCharactersetType; const Value: string): string; overload;
+function EncodeString(const StandardConformingStrings: Boolean;
+  const CharactersetCode: TZPgCharactersetType; const Value: string): string; overload;
 
 {**
   Converts an string from escape PostgreSQL format.
@@ -162,12 +163,10 @@ function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
 begin
   TypeName := LowerCase(TypeName);
   if (TypeName = 'interval') or (TypeName = 'char')
-    or (TypeName = 'varchar') or (TypeName = 'bit') or (TypeName = 'varbit') then//EgonHugeist: Highest Priority Client_Character_set!!!!
-    if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
-      if Connection.UTF8StringAsWideField then
-        Result := stUnicodeString
-      else
-        Result := stString
+    or (TypeName = 'varchar') or (TypeName = 'bit') or (TypeName = 'varbit')
+  then//EgonHugeist: Highest Priority Client_Character_set!!!!
+    if ( Connection.GetEncoding = ceUTF8 ) and Connection.UTF8StringAsWideField then
+      Result := stUnicodeString
     else
       Result := stString
   else if TypeName = 'text' then
@@ -221,7 +220,10 @@ begin
       Result := stBinaryStream;
   end
   else if TypeName = 'bpchar' then
-    Result := stString
+    if ( Connection.GetEncoding = ceUTF8 ) and Connection.UTF8StringAsWideField then
+      Result := stUnicodeString
+    else
+      Result := stString
   else if (TypeName = 'int2vector') or (TypeName = 'oidvector') then
     Result := stAsciiStream
   else if (TypeName <> '') and (TypeName[1] = '_') then // ARRAY TYPES
@@ -248,13 +250,10 @@ function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
 begin
   case TypeOid of
     1186,18,1043:  { interval/char/varchar }
-      if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
-        if Connection.UTF8StringAsWideField then
+      if ( Connection.GetEncoding = ceUTF8 ) and Connection.UTF8StringAsWideField then
           Result := stUnicodeString
         else
-          Result := stString
-      else
-        Result := stString;
+          Result := stString;
     25: Result := stAsciiStream; { text }
     26: { oid }
       begin
@@ -287,7 +286,11 @@ begin
         else
           Result := stBinaryStream;
       end;
-    1042: Result := stString; { bpchar }
+    1042: { bpchar }
+      if ( Connection.GetEncoding = ceUTF8 ) and Connection.UTF8StringAsWideField then
+        Result := stUnicodeString
+      else
+        Result := stString;
     22,30: Result := stAsciiStream; { int2vector/oidvector. no '_aclitem' }
     651, 1000..1028: Result := stAsciiStream;
     else
@@ -507,52 +510,57 @@ end;
   @param Value the regular string.
   @return the encoded string.
 }
-function EncodeString(CharactersetCode: TZPgCharactersetType; const Value: string): string;
+function EncodeString(const StandardConformingStrings: Boolean;
+  const CharactersetCode: TZPgCharactersetType; const Value: string): string;
 var
   I, LastState: Integer;
   SrcLength, DestLength: Integer;
   SrcBuffer, DestBuffer: PChar;
- begin
-  SrcLength := Length(Value);
-  SrcBuffer := PChar(Value);
-  DestLength := 2;
-  LastState := 0;
-  for I := 1 to SrcLength do
+begin
+  if not ( StandardConformingStrings) then
   begin
-    LastState := pg_CS_stat(LastState,integer(SrcBuffer^),CharactersetCode);
-    if CharInSet(SrcBuffer^, [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
-      Inc(DestLength, 4)
-    else
-      Inc(DestLength);
-    Inc(SrcBuffer);
-  end;
-
-  SrcBuffer := PChar(Value);
-  SetLength(Result, DestLength);
-  DestBuffer := PChar(Result);
-  DestBuffer^ := '''';
-  Inc(DestBuffer);
-
-  LastState := 0;
-  for I := 1 to SrcLength do
-  begin
-    LastState := pg_CS_stat(LastState,integer(SrcBuffer^),CharactersetCode);
-    if CharInSet(SrcBuffer^, [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
+    SrcLength := Length(Value);
+    SrcBuffer := PChar(Value);
+    DestLength := 2;
+    LastState := 0;
+    for I := 1 to SrcLength do
     begin
-      DestBuffer[0] := '\';
-      DestBuffer[1] := Char(Ord('0') + (Byte(SrcBuffer^) shr 6));
-      DestBuffer[2] := Char(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
-      DestBuffer[3] := Char(Ord('0') + (Byte(SrcBuffer^) and $07));
-      Inc(DestBuffer, 4);
-    end
-    else
-    begin
-      DestBuffer^ := SrcBuffer^;
-      Inc(DestBuffer);
+      LastState := pg_CS_stat(LastState,integer(SrcBuffer^),CharactersetCode);
+      if CharInSet(SrcBuffer^, [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
+        Inc(DestLength, 4)
+      else
+        Inc(DestLength);
+      Inc(SrcBuffer);
     end;
-    Inc(SrcBuffer);
-  end;
-  DestBuffer^ := '''';
+
+    SrcBuffer := PChar(Value);
+    SetLength(Result, DestLength);
+    DestBuffer := PChar(Result);
+    DestBuffer^ := '''';
+    Inc(DestBuffer);
+
+    LastState := 0;
+    for I := 1 to SrcLength do
+    begin
+      LastState := pg_CS_stat(LastState,integer(SrcBuffer^),CharactersetCode);
+      if CharInSet(SrcBuffer^, [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
+      begin
+        DestBuffer[0] := '\';
+        DestBuffer[1] := Char(Ord('0') + (Byte(SrcBuffer^) shr 6));
+        DestBuffer[2] := Char(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
+        DestBuffer[3] := Char(Ord('0') + (Byte(SrcBuffer^) and $07));
+        Inc(DestBuffer, 4);
+      end
+      else
+      begin
+        DestBuffer^ := SrcBuffer^;
+        Inc(DestBuffer);
+      end;
+      Inc(SrcBuffer);
+    end;
+    DestBuffer^ := '''';
+  end
+  else Result := AnsiQuotedStr(Value, #39);
 end;
 
 
@@ -675,17 +683,50 @@ procedure CheckPostgreSQLError(Connection: IZConnection;
   Handle: PZPostgreSQLConnect; LogCategory: TZLoggingCategory;
   const LogMessage: string;
   ResultHandle: PZPostgreSQLResult);
-
 var
    ErrorMessage: string;
 //FirmOS
    StatusCode: string;
    ConnectionLost: boolean;
+
+   function GetMessage(AMessage: PAnsiChar): String;
+   begin
+    if Assigned(Connection) then
+      {$IFDEF DELPHI12_UP}
+      Result := Trim(PlainDriver.ZDbcString(StrPas(AMessage), Connection.GetEncoding))
+      {$ELSE}
+        case Connection.GetEncoding of
+          ceAnsi:
+            {$IF defined(LAZARUSUTF8) or defined(UNIX)}
+            Result := Trim(AnsiToUtf8(StrPas(AMessage)));
+            {$ELSE}
+            Result := Trim(StrPas(AMessage));
+            {$IFEND}
+          ceUTF8:
+            {$IF defined(LAZARUSUTF8) or defined (UNIX)}
+            Result := Trim(StrPas(AMessage));
+            {$ELSE}
+            Result := Trim(Utf8ToAnsi(StrPas(AMessage)));
+            {$IFEND}
+        end
+     {$ENDIF}
+    else
+      {$IFDEF DELPHI12_UP}
+      Result := Trim(UTF8ToString(StrPas(AMessage)));
+      {$ELSE}
+        {$IF defined(LAZARUSUTF8) or defined (UNIX)}
+        Result := Trim(StrPas(AMessage));
+        {$ELSE}
+        Result := Trim(Utf8ToAnsi(StrPas(AMessage)));
+        {$IFEND}
+     {$ENDIF}
+   end;
 begin
   if Assigned(Handle) then
-    ErrorMessage := Trim(String(StrPas(PlainDriver.GetErrorMessage(Handle))))
+    ErrorMessage := GetMessage(PlainDriver.GetErrorMessage(Handle))
   else
     ErrorMessage := '';
+
   if ErrorMessage <> '' then
   begin
     if Assigned(ResultHandle) then
@@ -701,8 +742,8 @@ begin
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SOURCE_FILE)));
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SOURCE_LINE)));
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SOURCE_FUNCTION)));
-}     
-     StatusCode := Trim(String(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SQLSTATE))));
+}
+     StatusCode := GetMessage(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SQLSTATE));
     end
     else
     begin

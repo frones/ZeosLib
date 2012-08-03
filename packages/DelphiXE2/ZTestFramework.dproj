@@ -124,9 +124,6 @@
 			<DCCReference Include="..\..\test\framework\ZTestCase.pas"/>
 			<DCCReference Include="..\..\test\framework\ZBugReport.pas"/>
 			<DCCReference Include="..\..\test\framework\ZPerformanceTestCase.pas"/>
-			<DCCReference Include="C:\DUnit\src\TestFramework.pas">
-				<Form>$IFNDEF WIN64</Form>
-			</DCCReference>
 			<DCCReference Include="..\..\test\external\MemCheck.pas">
 				<Form>$ENDIF</Form>
 			</DCCReference>

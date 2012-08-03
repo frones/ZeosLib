@@ -127,7 +127,7 @@ function TZOldZeosPerformanceTestCase.GetSupportedProtocols: string;
 begin
   Result := 'mysql,mysql-4.1,mysql-5,mysqld-4.1,mysqld-5s'
     + ',sybase,interbase,interbase-5,interbase-6'
-    + ',postgresql,postgresql-7,postgresql-8';
+    + ',postgresql,postgresql-7,postgresql-8,postgresql-9';
 {$IFNDEF LINUX}
   Result := Result + ',mssql';
 {$ENDIF}

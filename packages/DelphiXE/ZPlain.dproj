@@ -11,8 +11,9 @@
 			<Platform>Win32</Platform>
 			<AppType>Package</AppType>
 			<FrameworkType>VCL</FrameworkType>
+			<Basis>True</Basis>
 		</PropertyGroup>
-		<PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
+		<PropertyGroup Condition="'$(Config)'=='Basis' or '$(Base)'!=''">
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Config)'=='Release' or '$(Cfg_1)'!=''">
@@ -33,7 +34,6 @@
 			<DCC_DcpOutput>build</DCC_DcpOutput>
 			<DCC_DependencyCheckOutputName>build\ZPlain150.bpl</DCC_DependencyCheckOutputName>
 			<DCC_ImageBase>00400000</DCC_ImageBase>
-			<DesignOnlyPackage>false</DesignOnlyPackage>
 			<RuntimeOnlyPackage>true</RuntimeOnlyPackage>
 			<DCC_RangeChecking>true</DCC_RangeChecking>
 			<DCC_Optimize>false</DCC_Optimize>
@@ -64,6 +64,8 @@
 			<DCC_IncludePath>$(BDSCOMMONDIR)\Bpl;$(DCC_IncludePath)</DCC_IncludePath>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
+			<DCC_BplOutput>$(BDSCOMMONDIR)\Bpl</DCC_BplOutput>
+			<DCC_DcpOutput>$(BDSCOMMONDIR)\Dcp</DCC_DcpOutput>
 			<Version>7.0</Version>
 			<DCC_Optimize>False</DCC_Optimize>
 			<DCC_IntegerOverflowCheck>True</DCC_IntegerOverflowCheck>
@@ -90,7 +92,7 @@
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>
 			</BuildConfiguration>
-			<BuildConfiguration Include="Base">
+			<BuildConfiguration Include="Basis">
 				<Key>Base</Key>
 			</BuildConfiguration>
 			<BuildConfiguration Include="Release">
@@ -136,7 +138,7 @@
 						<Source Name="MainSource">ZPlain.dpk</Source>
 					</Source>
 					<Language>
-						<Language Name="RootDir">..\..\..\..\..\repo\zeos\packages\delphi15\</Language>
+						<Language Name="RootDir">D:\Developer\Delphi XE\Components\ZEOS\packages\DelphiXE\</Language>
 					</Language>
 				</Delphi.Personality>
 				<Platforms>

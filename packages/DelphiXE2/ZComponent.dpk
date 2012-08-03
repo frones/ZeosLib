@@ -108,16 +108,13 @@ contains
   ZPlainASADriver in '..\..\src\plain\ZPlainASADriver.pas',
   ZPlainDbLibConstants in '..\..\src\plain\ZPlainDbLibConstants.pas',
   ZPlainDbLibDriver in '..\..\src\plain\ZPlainDbLibDriver.pas',
-  ZPlainDbLibMsSql7 in '..\..\src\plain\ZPlainDbLibMsSql7.pas',
-  ZPlainDbLibSybaseAse125 in '..\..\src\plain\ZPlainDbLibSybaseAse125.pas',
   ZPlainFirebirdDriver in '..\..\src\plain\ZPlainFirebirdDriver.pas',
   ZPlainFirebirdInterbaseConstants in '..\..\src\plain\ZPlainFirebirdInterbaseConstants.pas',
   ZPlainMySqlConstants in '..\..\src\plain\ZPlainMySqlConstants.pas',
   ZPlainMySqlDriver in '..\..\src\plain\ZPlainMySqlDriver.pas',
-  ZPlainOracle9i in '..\..\src\plain\ZPlainOracle9i.pas',
   ZDbcDbLib in '..\..\src\dbc\ZDbcDbLib.pas',
-
   ZIBEventAlerter in '..\..\src\component\ZIBEventAlerter.pas',
-  ZPgEventAlerter in '..\..\src\component\ZPgEventAlerter.pas';
+  ZPgEventAlerter in '..\..\src\component\ZPgEventAlerter.pas',
+  ZPlainOracleConstants in '..\..\src\plain\ZPlainOracleConstants.pas';
 
 end.
