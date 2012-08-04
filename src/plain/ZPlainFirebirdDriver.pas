@@ -89,6 +89,7 @@ const
 
   WINDOWS20_DLL_LOCATION   = 'fbclient20.dll';
   WINDOWS20_DLL_LOCATION_EMBEDDED = 'fbclientd20.dll';
+  LINUX2_DLL_LOCATION2   = 'libfbclient'+SharedSuffix+'.2';
   LINUX20_DLL_LOCATION   = 'libfbclient'+SharedSuffix+'.20';
   LINUX20_DLL_LOCATION_EMBEDDED = 'libfbembed'+SharedSuffix+'.20';
   LINUX20_IB_CRYPT_LOCATION = 'libcrypt'+SharedSuffix+'.20';
@@ -1268,6 +1269,7 @@ begin
       FLoader.AddLocation(LINUX2_DLL_LOCATION);
     {$ENDIF}
     FLoader.AddLocation(LINUX20_DLL_LOCATION);
+    FLoader.AddLocation(LINUX2_DLL_LOCATION2);
     {$IFDEF ENABLE_INTERBASE_CRYPT}
       {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
         FPreLoader.AddLocation(LINUX2_IB_CRYPT_LOCATION);
@@ -1386,6 +1388,7 @@ begin
       FLoader.AddLocation(LINUX2_DLL_LOCATION);
     {$ENDIF}
     FLoader.AddLocation(LINUX21_DLL_LOCATION);
+    FLoader.AddLocation(LINUX2_DLL_LOCATION2);
     {$IFDEF ENABLE_INTERBASE_CRYPT}
       {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
         FPreLoader.AddLocation(LINUX2_IB_CRYPT_LOCATION);
@@ -1515,6 +1518,7 @@ begin
       FLoader.AddLocation(LINUX2_DLL_LOCATION);
     {$ENDIF}
     FLoader.AddLocation(LINUX25_DLL_LOCATION);
+    FLoader.AddLocation(LINUX2_DLL_LOCATION2);
     {$IFDEF ENABLE_INTERBASE_CRYPT}
       {$IFNDEF FIREBIRD_STRICT_DLL_LOADING}
         FPreLoader.AddLocation(LINUX2_IB_CRYPT_LOCATION);
