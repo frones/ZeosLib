@@ -210,7 +210,8 @@ begin
   AllocateOracleStatementHandles(FPlainDriver, Connection, Handle, ErrorHandle);
 
   try
-    PrepareOracleStatement(FPlainDriver, SQL, Handle, ErrorHandle, StrToIntDef(Info.Values['prefetch_count'], 100));
+    PrepareOracleStatement(FPlainDriver, SQL, Handle, ErrorHandle,
+      StrToIntDef(Info.Values['prefetch_count'], 100), ClientCodePage^.Encoding);
     Result := CreateOracleResultSet(FPlainDriver, Self, SQL,
       Handle, ErrorHandle);
   except
@@ -240,7 +241,8 @@ begin
   AllocateOracleStatementHandles(FPlainDriver, Connection, Handle, ErrorHandle);
 
   try
-    PrepareOracleStatement(FPlainDriver, SQL, Handle, ErrorHandle, StrToIntDef(Info.Values['prefetch_count'], 100));
+    PrepareOracleStatement(FPlainDriver, SQL, Handle,
+      ErrorHandle, StrToIntDef(Info.Values['prefetch_count'], 100), ClientCodePage^.Encoding);
     ExecuteOracleStatement(FPlainDriver, Connection, SQL, Handle, ErrorHandle);
     Result := GetOracleUpdateCount(FPlainDriver, Handle, ErrorHandle);
   finally
@@ -284,7 +286,8 @@ begin
   AllocateOracleStatementHandles(FPlainDriver, Connection, Handle, ErrorHandle);
 
   try
-    PrepareOracleStatement(FPlainDriver, SQL, Handle, ErrorHandle, StrToIntDef(Info.Values['prefetch_count'], 100));
+    PrepareOracleStatement(FPlainDriver, SQL, Handle, ErrorHandle,
+      StrToIntDef(Info.Values['prefetch_count'], 100), ClientCodePage^.Encoding);
 
     StatementType := 0;
     FPlainDriver.AttrGet(Handle, OCI_HTYPE_STMT, @StatementType, nil,
@@ -515,7 +518,9 @@ begin
         FHandle, FErrorHandle);
     end;
 
-    PrepareOracleStatement(FPlainDriver, OracleSQL, Handle, ErrorHandle, StrToIntDef(Info.Values['prefetch_count'], 100));
+    PrepareOracleStatement(FPlainDriver, OracleSQL, Handle, ErrorHandle,
+      StrToIntDef(Info.Values['prefetch_count'], 100), ClientCodePage^.Encoding);
+
     AllocateOracleSQLVars(FInVars, InParamCount);
     InVars^.ActualNum := InParamCount;
 
@@ -715,7 +720,8 @@ procedure TZOracleCallableStatement.Prepare;
           FHandle, FErrorHandle);
       end;
 
-      PrepareOracleStatement(FPlainDriver, FOracleSQL, FHandle, FErrorHandle, StrToIntDef(Info.Values['prefetch_count'], 100));
+      PrepareOracleStatement(FPlainDriver, FOracleSQL, FHandle, FErrorHandle,
+        StrToIntDef(Info.Values['prefetch_count'], 100), ClientCodePage^.Encoding);
       AllocateOracleSQLVars(FInVars, FOracleParamsCount {InParamCount});
       FInVars^.ActualNum := FOracleParamsCount{InParamCount};
 

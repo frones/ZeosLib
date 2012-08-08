@@ -104,7 +104,7 @@ type
     procedure UpdateDouble(const Index: Integer; Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
     procedure UpdatePChar(const Index: Integer; Value: PChar);
-    procedure UpdateString(const Index: Integer; Value: AnsiString);
+    procedure UpdateString(const Index: Integer; Value: ZAnsiString);
     procedure UpdateBytes(const Index: Integer; Value: TByteDynArray);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
     procedure UpdateTime(const Index: Integer; Value: TDateTime);
@@ -123,7 +123,7 @@ type
     function GetDouble(const Index: Integer): Double;
     function GetBigDecimal(const Index: Integer): Extended;
     function GetPChar(const Index: Integer): PAnsiChar;
-    function GetString(const Index: Integer): string;
+    function GetString(const Index: Integer): ZAnsiString;
     function GetBytes(const Index: Integer): TByteDynArray;
     function GetDate(const Index: Integer): TDateTime;
     function GetTime(const Index: Integer): TDateTime;
@@ -132,7 +132,7 @@ type
 
     procedure ReadBlobToMem(const Index: Word; var Buffer: Pointer; var Length: LongWord);
     procedure ReadBlobToStream(const Index: Word; Stream: TStream);
-    procedure ReadBlobToString(const Index: Word; var str: string);
+    procedure ReadBlobToString(const Index: Word; var str: ZAnsiString);
     procedure ReadBlobToVariant(const Index: Word; var Value: Variant);
   end;
 
@@ -182,7 +182,7 @@ type
     procedure UpdateDouble(const Index: Integer; Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
     procedure UpdatePChar(const Index: Integer; Value: PChar);
-    procedure UpdateString(const Index: Integer; Value: AnsiString);
+    procedure UpdateString(const Index: Integer; Value: ZAnsiString);
     procedure UpdateBytes(const Index: Integer; Value: TByteDynArray);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
     procedure UpdateTime(const Index: Integer; Value: TDateTime);
@@ -202,7 +202,7 @@ type
     function GetDouble(const Index: Integer): Double;
     function GetBigDecimal(const Index: Integer): Extended;
     function GetPChar(const Index: Integer): PAnsiChar;
-    function GetString(const Index: Integer): string;
+    function GetString(const Index: Integer): ZAnsiString;
     function GetBytes(const Index: Integer): TByteDynArray;
     function GetDate(const Index: Integer): TDateTime;
     function GetTime(const Index: Integer): TDateTime;
@@ -211,7 +211,7 @@ type
 
     procedure ReadBlobToMem(const Index: Word; var Buffer: Pointer; var Length: LongWord);
     procedure ReadBlobToStream(const Index: Word; Stream: TStream);
-    procedure ReadBlobToString(const Index: Word; var str: string);
+    procedure ReadBlobToString(const Index: Word; var str: ZAnsiString);
     procedure ReadBlobToVariant(const Index: Word; var Value: Variant);
   end;
 
@@ -255,13 +255,14 @@ procedure ASAPrepare( FASAConnection: IZASAConnection; FSQLData, FParamsSQLData:
 
 procedure PrepareParameters( PlainDriver: IZASAPlainDriver;
   InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray;
-  InParamCount: Integer; ParamSqlData: IZASASQLDA);
+  InParamCount: Integer; ParamSqlData: IZASASQLDA;
+  Encoding: TZCharEncoding);
 
 function RandomString( Len: integer): string;
 
 implementation
 
-uses Variants, ZMessages, ZDbcCachedResultSet, Math;
+uses Variants, ZMessages, ZDbcCachedResultSet, Math, ZDbcUtils;
 
 { TZASASQLDA }
 
@@ -504,7 +505,7 @@ begin
       if StrLIComp(@FSQLDA.sqlvar[Result].sqlname.data, PAnsiChar(UTF8String(Name)), Length(name)) = 0 then
       {$ELSE}
       if StrLIComp(@FSQLDA.sqlvar[Result].sqlname.data, PAnsiChar(Name), Length(name)) = 0 then
-      {$ENDIF} 
+      {$ENDIF}
             Exit;
   CreateException( Format( SFieldNotFound1, [name]));
   Result := 0; // satisfy compiler
@@ -912,7 +913,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZASASQLDA.UpdateString(const Index: Integer; Value: Ansistring);
+procedure TZASASQLDA.UpdateString(const Index: Integer; Value: ZAnsistring);
 var
   BlobSize: Integer;
 begin
@@ -1073,15 +1074,13 @@ begin
     varDate       : UpdateDateTime( Index, Value);
     varStrArg,
     varString,
-    varOleStr     : UpdateString( Index, Value);
+    varOleStr     : UpdateString( Index, ZAnsiString(Value));
     varBoolean    : UpdateBoolean( Index, Value);
     varByte       : UpdateByte( Index, Value);
-{$IFDEF COMPILER6_UP}
     varInt64      : UpdateLong( Index, Value);
     varShortInt   : UpdateByte( Index, Value);
     varLongWord   : UpdateInt( Index, Value);
     varWord       : UpdateShort( Index, Value);
-{$ENDIF}
   else
     if VarArrayDimCount( Value) = 1 then
     begin
@@ -1140,7 +1139,7 @@ end;
 {**
    Indicate sqldata assigned
    @param Index the field index
-   @return true if assigned field data 
+   @return true if assigned field data
 }
 function TZASASQLDA.IsAssigned(const Index: Integer): Boolean;
 begin
@@ -1490,7 +1489,7 @@ end;
    @param Index the field index
    @return the field String value
 }
-function TZASASQLDA.GetString(const Index: Integer): string;
+function TZASASQLDA.GetString(const Index: Integer): ZAnsiString;
 begin
   CheckRange(Index);
   with FSQLDA.sqlvar[Index] do
@@ -1500,20 +1499,20 @@ begin
        Exit;
 
     case sqlType and $FFFE of
-      DT_SMALLINT    : Result := IntToStr( PSmallint(sqldata)^);
-      DT_UNSSMALLINT : Result := IntToStr( PWord(sqldata)^);
-      DT_INT         : Result := IntToStr( PInteger(sqldata)^);
-      DT_UNSINT      : Result := IntToStr( PLongWord(sqldata)^);
-      DT_FLOAT       : Result := FloatToStr( PSingle(sqldata)^);
-      DT_DOUBLE      : Result := FloatToStr( PDouble(sqldata)^);
+      DT_SMALLINT    : Result := ZAnsiString(IntToStr( PSmallint(sqldata)^));
+      DT_UNSSMALLINT : Result := ZAnsiString(IntToStr( PWord(sqldata)^));
+      DT_INT         : Result := ZAnsiString(IntToStr( PInteger(sqldata)^));
+      DT_UNSINT      : Result := ZAnsiString(IntToStr( PLongWord(sqldata)^));
+      DT_FLOAT       : Result := ZAnsiString(FloatToStr( PSingle(sqldata)^));
+      DT_DOUBLE      : Result := ZAnsiString(FloatToStr( PDouble(sqldata)^));
       DT_VARCHAR     : SetString(Result, PAnsiChar(@PZASASQLSTRING(sqlData).data[0]),
                          PZASASQLSTRING( sqlData).length);
       DT_LONGVARCHAR : ReadBlobToString( Index, Result);
-      DT_TIMESTAMP_STRUCT : Result := DateToStr( GetTimestamp( Index));
-      DT_TINYINT     : Result := IntToStr( PByte(sqldata)^);
-      DT_BIT         : Result := BoolToStr( ( PByte(sqldata)^ = 1), True);
+      DT_TIMESTAMP_STRUCT : Result := ZAnsiString(DateToStr( GetTimestamp( Index)));
+      DT_TINYINT     : Result := ZAnsiString(IntToStr( PByte(sqldata)^));
+      DT_BIT         : Result := ZAnsiString(BoolToStr( ( PByte(sqldata)^ = 1), True));
       DT_BIGINT,
-      DT_UNSBIGINT   : Result := IntToStr( PInt64(sqldata)^);
+      DT_UNSBIGINT   : Result := ZAnsiString(IntToStr( PInt64(sqldata)^));
     else
       CreateException( Format( SErrorConvertionField,
         [ GetFieldName(Index), ConvertASATypeToString( sqlType)]));
@@ -1752,7 +1751,7 @@ end;
    @param Index an filed index
    @param Str destination string
 }
-procedure TZASASQLDA.ReadBlobToString(const Index: Word; var Str: string);
+procedure TZASASQLDA.ReadBlobToString(const Index: Word; var Str: ZAnsiString);
 begin
   CheckRange(Index);
   with FSQLDA.sqlvar[Index] do
@@ -1764,7 +1763,7 @@ begin
     if sqlType and $FFFE = DT_LONGVARCHAR then
     begin
       SetLength( Str, PZASABlobStruct( sqlData).untrunc_len);
-      ReadBlob(Index, PAnsiChar(AnsiString(Str)), Length(Str));
+      ReadBlob(Index, PAnsiChar(Str), Length(Str));
     end
     else
       CreateException( Format( SErrorConvertionField,
@@ -2088,7 +2087,7 @@ begin
       GetPlainDriver.db_prepare_describe( GetDBHandle, nil, StmtNum,
             PAnsiChar(SQL), FParamsSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
             SQL_PREPARE_DESCRIBE_INPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);
-      {$ENDIF} 
+      {$ENDIF}
       ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, SQL);
 
       FMoreResults := GetDBHandle.sqlerrd[2] = 0;
@@ -2136,11 +2135,11 @@ end;
 
 procedure PrepareParameters( PlainDriver: IZASAPlainDriver;
   InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray;
-  InParamCount: Integer; ParamSqlData: IZASASQLDA);
+  InParamCount: Integer; ParamSqlData: IZASASQLDA; Encoding: TZCharEncoding);
 var
   i: Integer;
   TempBlob: IZBlob;
-  TempStream: TStream;
+  TempStreamIn, TempStream: TStream;
 begin
   if InParamCount <> ParamSqlData.GetFieldCount then
     raise EZSQLException.Create( SInvalidInputParameterCount);
@@ -2176,10 +2175,14 @@ begin
             SoftVarManager.GetAsFloat( InParamValues[i]));
         stString:
           ParamSqlData.UpdateString( i,
-            SoftVarManager.GetAsString( InParamValues[i]));
+            PlainDriver.ZPlainString(SoftVarManager.GetAsString( InParamValues[i]), Encoding));
         stUnicodeString:
-          ParamSqlData.UpdateString( i,
-            SoftVarManager.GetAsUnicodeString( InParamValues[i]));
+          if Encoding = ceUTF8 then
+            ParamSqlData.UpdateString( i,
+              UTF8Encode(SoftVarManager.GetAsUnicodeString( InParamValues[i])))
+          else
+            ParamSqlData.UpdateString( i,
+              AnsiString(SoftVarManager.GetAsUnicodeString( InParamValues[i])));
         stBytes:
           ParamSqlData.UpdateBytes( i,
             StrToBytes(AnsiString(SoftVarManager.GetAsString( InParamValues[i]))));
@@ -2199,7 +2202,15 @@ begin
             TempBlob := DefVarManager.GetAsInterface( InParamValues[i]) as IZBlob;
             if not TempBlob.IsEmpty then
             begin
-              TempStream := TempBlob.GetStream;
+              if (Encoding = ceUTF8) and
+                (InParamTypes[I] in [stAsciiStream, stUnicodeStream]) then
+              begin
+                TempStreamIn := TempBlob.GetStream;
+                TempStream := GetValidatedUnicodeStream(TempStreamIn);
+                TempStreamIn.Free;
+              end
+              else
+                TempStream := TempBlob.GetStream;
               try
                 ParamSqlData.WriteBlob( i, TempStream);
               finally
@@ -2228,3 +2239,4 @@ begin
 end;
 
 end.
+

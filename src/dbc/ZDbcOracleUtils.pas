@@ -203,7 +203,8 @@ procedure FreeOracleStatementHandles(PlainDriver: IZOraclePlainDriver;
   @param ErrorHandle a holder for Error handle.
 }
 procedure PrepareOracleStatement(PlainDriver: IZOraclePlainDriver;
-  SQL: string; Handle: POCIStmt; ErrorHandle: POCIError; PrefetchCount: ub4);
+  SQL: string; Handle: POCIStmt; ErrorHandle: POCIError; PrefetchCount: ub4;
+  const Encoding: TZCharEncoding);
 
 {**
   Executes an Oracle statement.
@@ -717,14 +718,19 @@ end;
   @param ErrorHandle a holder for Error handle.
 }
 procedure PrepareOracleStatement(PlainDriver: IZOraclePlainDriver;
-  SQL: string; Handle: POCIStmt; ErrorHandle: POCIError; PrefetchCount: ub4);
+  SQL: string; Handle: POCIStmt; ErrorHandle: POCIError; PrefetchCount: ub4;
+  const Encoding: TZCharEncoding);
 var
   Status: Integer;
 begin
   PlainDriver.AttrSet(Handle, OCI_HTYPE_STMT, @PrefetchCount, SizeOf(ub4),
     OCI_ATTR_PREFETCH_ROWS, ErrorHandle);
-  Status := PlainDriver.StmtPrepare(Handle, ErrorHandle, PAnsiChar(AnsiString(SQL)),
-    Length(AnsiString(SQL)), OCI_NTV_SYNTAX, OCI_DEFAULT);
+  if Encoding = ceAnsi then
+    Status := PlainDriver.StmtPrepare(Handle, ErrorHandle, PAnsiChar(AnsiString(SQL)),
+      Length(AnsiString(SQL)), OCI_NTV_SYNTAX, OCI_DEFAULT)
+  else
+    Status := PlainDriver.StmtPrepare(Handle, ErrorHandle, PAnsiChar(UTF8String(SQL)),
+      Length(UTF8String(SQL)), OCI_NTV_SYNTAX, OCI_DEFAULT);
   CheckOracleError(PlainDriver, ErrorHandle, Status, lcExecute, SQL);
 end;
 

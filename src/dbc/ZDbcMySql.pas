@@ -108,7 +108,7 @@ type
     procedure Rollback; override;
 
     function PingServer: Integer; override;
-    function EscapeString(Value: AnsiString): AnsiString; override;
+    function EscapeString(Value: ZAnsiString): ZAnsiString; override;
 
     procedure Open; override;
     procedure Close; override;
@@ -124,12 +124,10 @@ type
     {END ADDED by fduenas 15-06-2006}
     function GetPlainDriver: IZMySQLPlainDriver;
     function GetConnectionHandle: PZMySQLConnect;
-    function GetAnsiEscapeString(const Value: AnsiString;
-      const EscapeMarkSequence: String = '~<|'): String; override;
-    function GetEscapeString(const Value: String;
-      const EscapeMarkSequence: String = '~<|'): String; override;
-    function GetEscapeString(const Value: PAnsiChar;
-      const EscapeMarkSequence: String = '~<|'): String; overload; override;
+    function GetEscapeString(const Value: String): String; override;
+    {$IFDEF DELPHI12_UP}
+    function GetEscapeString(const Value: ZAnsiString): String; override;
+    {$ENDIF}
   end;
 
 
@@ -474,22 +472,9 @@ end;
   @param value string that should be escaped
   @return Escaped string
 }
-function TZMySQLConnection.EscapeString(Value: AnsiString): AnsiString;
-var
-   Closing: boolean;
-   Inlength, outlength: integer;
-   Outbuffer: AnsiString;
+function TZMySQLConnection.EscapeString(Value: ZAnsiString): ZAnsiString;
 begin
-   InLength := Length(Value);
-   Setlength(Outbuffer,Inlength*2+1);
-   Closing := FHandle = nil;
-   //RealConnect needs database connection handle
-   if Closed or Closing then
-     OutLength := GetPlainDriver.GetEscapeString(PAnsiChar(OutBuffer),PAnsiChar(Value),InLength)
-   else
-     OutLength := GetPlainDriver.GetRealEscapeString(FHandle, PAnsiChar(OutBuffer),PAnsiChar(Value),InLength);
-   Setlength(Outbuffer,OutLength);
-   Result := Outbuffer;
+  Result := Self.PlainDriver.EscapeString(Self.FHandle, Value, GetEncoding);
 end;
 
 {**
@@ -770,23 +755,17 @@ end;
   @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
   @result the detectable Binary String
 }
-function TZMySQLConnection.GetAnsiEscapeString(const Value: AnsiString;
-  const EscapeMarkSequence: String = '~<|'): String;
+function TZMySQLConnection.GetEscapeString(const Value: String): String;
 begin
-  Result := inherited GetAnsiEscapeString('''' + EscapeString(Value) + '''', EscapeMarkSequence);
+  Result := inherited GetEscapeString(GetPlainDriver.EscapeString(FHandle, Value, GetEncoding));
 end;
 
-function TZMySQLConnection.GetEscapeString(const Value: String;
-  const EscapeMarkSequence: String = '~<|'): String;
+{$IFDEF DELPHI12_UP}
+function TZMySQLConnection.GetEscapeString(const Value: ZAnsiString): String;
 begin
-  Result := inherited GetEscapeString('''' + String(EscapeString(ZPlainString(Value))) + '''', EscapeMarkSequence);
+  Result := inherited GetEscapeString(GetPlainDriver.EscapeString(FHandle, Value, GetEncoding));
 end;
-
-function TZMySQLConnection.GetEscapeString(const Value: PAnsiChar;
-  const EscapeMarkSequence: String = '~<|'): String;
-begin
-  Result := inherited GetAnsiEscapeString('''' + EscapeString(Value) + '''', EscapeMarkSequence);
-end;
+{$ENDIF}
 
 initialization
   MySQLDriver := TZMySQLDriver.Create;

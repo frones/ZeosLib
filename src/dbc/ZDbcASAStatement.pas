@@ -253,7 +253,7 @@ begin
   begin
     try
       GetPlainDriver.db_prepare_describe( GetDBHandle, nil, @FStmtNum,
-            PAnsiChar(SQL), FSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
+            PAnsiChar(ZPlainString(SQL)), FSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
             SQL_PREPARE_DESCRIBE_OUTPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);
       ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, SQL);
 
@@ -551,7 +551,7 @@ begin
   with FASAConnection do
   begin
     PrepareParameters( GetPlainDriver, InParamValues, InParamTypes,
-      InParamCount, FParamSQLData);
+      InParamCount, FParamSQLData, FASAConnection.GetEncoding);
     if ResultSetConcurrency = rcUpdatable then
       CursorOptions := CUR_OPEN_DECLARE + CUR_UPDATE
     else
@@ -626,7 +626,7 @@ begin
   begin
 
     PrepareParameters( GetPlainDriver, InParamValues, InParamTypes,
-      InParamCount, FParamSQLData);
+      InParamCount, FParamSQLData, FASAConnection.GetEncoding);
     GetPlainDriver.db_execute_into( GetDBHandle, nil, nil, @FStmtNum,
       FParamSQLData.GetData, nil);
     if ( GetDBHandle.SqlCode <> -185) or ( FSQLData.GetData^.sqld = 0) then
@@ -837,7 +837,7 @@ begin
     with FASAConnection do
     begin
       PrepareParameters( GetPlainDriver, InParamValues, InParamTypes,
-        InParamCount, FParamSQLData);
+        InParamCount, FParamSQLData, FASAConnection.GetEncoding);
       if ResultSetConcurrency = rcUpdatable then
         CursorOptions := CUR_OPEN_DECLARE + CUR_UPDATE
       else
@@ -920,7 +920,7 @@ begin
     begin
 
       PrepareParameters( GetPlainDriver, InParamValues, InParamTypes,
-        InParamCount, FParamSQLData);
+        InParamCount, FParamSQLData, FASAConnection.GetEncoding);
       GetPlainDriver.db_execute_into( GetDBHandle, nil, nil, @FStmtNum,
         FParamSQLData.GetData, FSQLData.GetData);
       ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, SQL);
@@ -972,9 +972,9 @@ begin
       stBigDecimal:
         DefVarManager.SetAsFloat(Temp, Value.GetBigDecimal(I));
       stString:
-        DefVarManager.SetAsString(Temp, Value.GetString(I));
+        DefVarManager.SetAsString(Temp, ZDbcString(Value.GetString(I)));
       stUnicodeString:
-        DefVarManager.SetAsUnicodeString(Temp, Value.GetString(I));
+        DefVarManager.SetAsUnicodeString(Temp, UTF8ToString(Value.GetString(I)));
       stBytes:
         DefVarManager.SetAsString( Temp, String(BytesToStr( Value.GetBytes( I))));
       stDate:

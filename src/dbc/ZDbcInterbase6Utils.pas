@@ -172,11 +172,12 @@ type
     FPlainDriver: IZInterbasePlainDriver;
     Temp: AnsiString;
     FUTF8StringAsWideField: Boolean;
-    FClientCodePage: PZCodePage;
     procedure CheckRange(const Index: Word);
     procedure IbReAlloc(var P; OldSize, NewSize: Integer);
     procedure SetFieldType(const Index: Word; Size: Integer; Code: Smallint;
       Scale: Smallint);
+  protected
+    FClientCodePage: PZCodePage;
   public
     constructor Create(PlainDriver: IZInterbasePlainDriver;
       Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE;
@@ -208,7 +209,7 @@ type
     It clas can only write data to parameters/fields }
   TZParamsSQLDA = class (TZSQLDA, IZParamsSQLDA)
   private
-    procedure EncodeString(Code: Smallint; const Index: Word; const Str: AnsiString);
+    procedure EncodeString(Code: Smallint; const Index: Word; const Str: ZAnsiString);
     procedure UpdateDateTime(const Index: Integer; Value: TDateTime);
   public
     destructor Destroy; override;
@@ -1810,7 +1811,7 @@ end;
 }
 
 procedure TZParamsSQLDA.EncodeString(Code: Smallint; const Index: Word;
-  const Str: AnsiString);
+  const Str: ZAnsiString);
 var
   Len: Cardinal;
 begin
@@ -1830,7 +1831,7 @@ begin
       SQL_VARYING :
         begin
           sqllen := Len + 2;
-          if sqllen = 0 then
+          if sqllen = 0 then   //Egonhugeist: Todo: Need test case. Can't believe this line is correct! sqllen is min 2
             GetMem(sqldata, Len + 2)
           else
             IbReAlloc(sqldata, 0, Len + 2);

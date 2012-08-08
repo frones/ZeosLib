@@ -421,7 +421,7 @@ begin
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
       stBytes:
-        Result := Self.GetConnection.GetEscapeString(PAnsiChar(AnsiString(SoftVarManager.GetAsString(Value))));
+        Result := Self.GetConnection.GetBinaryEscapeString(AnsiString(SoftVarManager.GetAsString(Value)));
       stString:
         Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
       stUnicodeString:
@@ -475,7 +475,7 @@ begin
                   end;
                 end
                 else
-                  Result := GetConnection.GetAnsiEscapeString(TempBlob.GetString);
+                  Result := GetConnection.GetBinaryEscapeString(TempBlob.GetString);
               stAsciiStream:
                 {$IFDEF DELPHI12_UP}
                 if (Self.GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) then
@@ -616,7 +616,7 @@ begin
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
       stBytes:
-        Result := Self.GetConnection.GetEscapeString(PAnsiChar(AnsiString(SoftVarManager.GetAsString(Value))));
+        Result := Self.GetConnection.GetBinaryEscapeString(AnsiString(SoftVarManager.GetAsString(Value)));
       stString:
         Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
       stUnicodeString:
@@ -670,7 +670,7 @@ begin
                   end;
                 end
                 else
-                  Result := GetConnection.GetAnsiEscapeString(TempBlob.GetString);
+                  Result := GetConnection.GetEscapeString(TempBlob.GetString);
               stAsciiStream:
                 {$IFDEF DELPHI12_UP}
                 if (Self.GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) then

@@ -119,11 +119,8 @@ type
     function GetConnectionHandle: Psqlite;
 
     function ReKey(const Key: string): Integer;
-    function Key(const Key: string): Integer; 
-    function GetAnsiEscapeString(const Value: AnsiString;
-      const EscapeMarkSequence: String = '~<|'): String; override;
-    function GetEscapeString(const Value: String;
-      const EscapeMarkSequence: String = '~<|'): String; override;
+    function Key(const Key: string): Integer;
+    function GetBinaryEscapeString(const Value: ZAnsiString): String; override;
   end;
 
 var
@@ -587,26 +584,12 @@ end;
   @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
   @result the detectable Binary String
 }
-function TZSQLiteConnection.GetAnsiEscapeString(const Value: AnsiString;
-  const EscapeMarkSequence: String = '~<|'): String;
-begin
-  Result := inherited GetAnsiEscapeString(ZDbcSqLiteUtils.EncodeString(Value), EscapeMarkSequence);
-end;
-
-function TZSQLiteConnection.GetEscapeString(const Value: String;
-  const EscapeMarkSequence: String = '~<|'): String;
+function TZSQLiteConnection.GetBinaryEscapeString(const Value: ZAnsiString): String;
 begin
   if GetPreprepareSQL then
-    if StartsWith(Value, '''') and EndsWith(Value, '''') then
-      Result := inherited GetEscapeString(Value, EscapeMarkSequence)
-    else
-      Result := inherited GetEscapeString(QuotedStr(Value), EscapeMarkSequence)
+    Result := GetDriver.GetTokenizer.AnsiGetEscapeString(ZDbcSqLiteUtils.EncodeString(Value))
   else
-    if StartsWith(Value, '''') and EndsWith(Value, '''') then
-      Result := Value
-    else
-      Result := AnsiQuotedStr(Value, #39);
-
+    Result := String(ZDbcSqLiteUtils.EncodeString(Value));
 end;
 
 function TZSQLiteConnection.GetHostVersion: Integer;

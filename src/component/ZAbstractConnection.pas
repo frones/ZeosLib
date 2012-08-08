@@ -1346,7 +1346,7 @@ begin
   CheckConnected;
 
   if Assigned(FConnection) then
-    Result := FConnection.GetAnsiEscapeString(BinaryString);
+    Result := FConnection.GetBinaryEscapeString(BinaryString);
 end;
 
 {**
@@ -1389,7 +1389,7 @@ begin
     if Assigned(FBlobData) then
       FreeMem(FBlobData);
 
-    Result := FConnection.GetAnsiEscapeString(TempAnsi);
+    Result := FConnection.GetBinaryEscapeString(TempAnsi);
   end;
 end;
 

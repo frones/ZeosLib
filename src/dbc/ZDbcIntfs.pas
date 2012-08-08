@@ -250,7 +250,7 @@ type
     //Ping Server Support (firmos) 27032006
 
     function PingServer: Integer;
-    function EscapeString(Value: AnsiString): AnsiString;
+    function EscapeString(Value: ZAnsiString): ZAnsiString;
 
     procedure Open;
     procedure Close;
@@ -277,12 +277,11 @@ type
 
     function UseMetadata: boolean;
     procedure SetUseMetadata(Value: Boolean);
-    function GetAnsiEscapeString(const Value: AnsiString;
-      const EscapeMarkSequence: String = '~<|'): String;
-    function GetEscapeString(const Value: String;
-      const EscapeMarkSequence: String = '~<|'): String; overload;
-    function GetEscapeString(const Value: PAnsiChar;
-      const EscapeMarkSequence: String = '~<|'): String; overload;
+    function GetBinaryEscapeString(const Value: ZAnsiString): String;
+    function GetEscapeString(const Value: String): String; overload;
+    {$IFDEF DELPHI12_UP}
+    function GetEscapeString(const Value: ZAnsiString): String; overload;
+    {$ENDIF}
     function GetClientCodePageInformations: PZCodePage; //EgonHugeist
     function GetUTF8StringAsWideField: Boolean;
     procedure SetUTF8StringAsWideField(const Value: Boolean);

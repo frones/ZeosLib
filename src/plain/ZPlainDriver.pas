@@ -64,6 +64,7 @@ type
   {** Represents a generic interface to plain driver. }
   IZPlainDriver = interface (IZInterface)
     ['{2A0CC600-B3C4-43AF-92F5-C22A3BB1BB7D}']
+    function IsAnsiDriver: Boolean;
     function GetProtocol: string;
     function GetDescription: string;
     {EgonHugeist:
@@ -76,7 +77,13 @@ type
     function ZPlainString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): ZAnsiString;
     procedure Initialize(const Location: String = '');
     function Clone: IZPlainDriver;
-    function GetTokenizer: IZTokenizer;
+    function GetPrepreparedSQL(Handle: Pointer; const SQL: String;
+      const Encoding: TZCharEncoding; out LogSQL: String;
+      const PreprepareSQL: Boolean): ZAnsiString;
+    function EscapeString(Handle: Pointer; const Value: ZWideString;
+      const Encoding: TZCharEncoding): ZWideString; overload;
+    function EscapeString(Handle: Pointer; const Value: ZAnsiString;
+      const Encoding: TZCharEncoding): ZAnsiString; overload;
   end;
 
   {ADDED by EgonHugeist 20-01-2011}
@@ -88,6 +95,7 @@ type
     FCodePages: array of TZCodePage;
   protected
     FTokenizer: IZTokenizer;
+    function IsAnsiDriver: Boolean; virtual;
     function Clone: IZPlainDriver; reintroduce; virtual; abstract;
     procedure LoadCodePages; virtual; abstract;
     procedure AddCodePage(const Name: String; const ID:  Integer;
@@ -102,8 +110,14 @@ type
     function GetUnicodeCodePageName: String; virtual;
     function ValidateCharEncoding(const CharacterSetName: String; const DoArrange: Boolean = False): PZCodePage; overload;
     function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
-    function GetPrepreparedSQL(const SQL: String; Encoding: TZCharEncoding): ZAnsiString; virtual;
+    function GetPrepreparedSQL(Handle: Pointer; const SQL: String;
+      const Encoding: TZCharEncoding; out LogSQL: String;
+      const PreprepareSQL: Boolean): ZAnsiString; virtual;
     function GetTokenizer: IZTokenizer;
+    function EscapeString(Handle: Pointer; const Value: ZWideString;
+      const Encoding: TZCharEncoding): ZWideString; overload;
+    function EscapeString(Handle: Pointer; const Value: ZAnsiString;
+      const Encoding: TZCharEncoding): ZAnsiString; overload; virtual;
   public
     constructor Create;
     destructor Destroy; override;
@@ -311,10 +325,15 @@ const
 
 implementation
 
-uses ZSysUtils, SysUtils;
+uses ZSysUtils, SysUtils {$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
 
 
 {TZLegacyPlainDriver}
+
+function TZLegacyPlainDriver.IsAnsiDriver: Boolean;
+begin
+  Result := True;
+end;
 
 function TZLegacyPlainDriver.GetUnicodeCodePageName: String;
 begin
@@ -391,30 +410,57 @@ begin
     ValidateCharEncoding(Result^.ZAlias); //recalls em selves
 end;
 
-function TZLegacyPlainDriver.GetPrepreparedSQL(const SQL: String; Encoding: TZCharEncoding): ZAnsiString;
+function TZLegacyPlainDriver.GetPrepreparedSQL(Handle: Pointer;
+  const SQL: String; const Encoding: TZCharEncoding; out LogSQL: String;
+  const PreprepareSQL: Boolean): ZAnsiString;
 var
   SQLTokens: TZTokenDynArray;
   i: Integer;
 begin
-  {Mark i agree: It must be enough to get the Tokens..
-  then we can build an IZUpdate/IZInsert/IZDelete-Schema
-  if this is done we can add column-specific CharacterSets/Collations
-  to the detected Columns and tell the Server which kind of Data will be sended
-  now. So this also must be done in the IZSelectSchema if somebody requests
-  converted column-data...}
-
-  SQLTokens := FTokenizer.TokenizeEscapeBufferToList(SQL); //Disassembles the Query
-  for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
+  if PreprepareSQL then
   begin
-    case (SQLTokens[i].TokenType) of
-      ttEscape:
-        Result := Result + AnsiString(SQLTokens[i].Value);
-      ttWord, ttQuoted, ttQuotedIdentifier, ttKeyword:
-        Result := Result + Self.ZPlainString(SQLTokens[i].Value, Encoding);
-      else
-        Result := Result + AnsiString(SQLTokens[i].Value);
+    SQLTokens := FTokenizer.TokenizeEscapeBufferToList(SQL); //Disassembles the Query
+    for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
+    begin
+      case (SQLTokens[i].TokenType) of
+        ttEscape:
+          Result := Result + {$IFDEF DELPHI12_UP}ZPlainString(SQLTokens[i].Value, Encoding){$ELSE}SQLTokens[i].Value{$ENDIF};
+        ttQuoted, {: Result := EscapeString(ZPlainString(SQLTokens[i].Value));}
+        ttWord, ttQuotedIdentifier, ttKeyword, ttEscapedQuoted:
+          Result := Result + ZPlainString(SQLTokens[i].Value, Encoding);
+        else
+          Result := Result + ZAnsiString(SQLTokens[i].Value);
+      end;
     end;
-  end;
+  end
+  else
+    {$IFDEF DELPHI12_UP}
+    if Encoding = ceUTF8 then
+      Result := UTF8String(SQL)
+    else
+      Result := AnsiString(SQL);
+    {$ELSE}
+    Result := SQL;
+    {$ENDIF}
+  LogSQL := String(Result);
+end;
+
+function TZLegacyPlainDriver.EscapeString(Handle: Pointer; const Value: ZWideString;
+  const Encoding: TZCharEncoding): ZWideString;
+var
+  StrFrom: ZAnsiString;
+  Outbuffer: ZAnsiString;
+begin
+  StrFrom := ZPlainString(Value, Encoding);
+  Outbuffer := EscapeString(Handle, StrFrom, Encoding);
+  Result := ZDbcString(Outbuffer, Encoding);
+end;
+
+function TZLegacyPlainDriver.EscapeString(Handle: Pointer; const Value: ZAnsiString;
+  const Encoding: TZCharEncoding): ZAnsiString;
+begin
+  //Result := #39+Value+#39;
+  Result := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr(Value, #39);
 end;
 
 function TZLegacyPlainDriver.GetTokenizer: IZTokenizer;

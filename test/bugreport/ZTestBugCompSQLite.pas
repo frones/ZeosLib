@@ -157,7 +157,7 @@ begin
     InsertValues(str5, str5, str5, str5);
     InsertValues(str6, str6, str6, str6);
 
-    if Connection.PreprepareSQL then
+    if Connection.PreprepareSQL or Connection.UTF8StringsAsWideField then
     begin
       Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
       Query.Open;

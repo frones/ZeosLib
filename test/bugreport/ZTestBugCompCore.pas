@@ -123,6 +123,7 @@ type
     procedure Test1036916;
     procedure Test1004584;
     procedure TestUnicodeBehavior;
+    procedure TestNonAsciiChars;
   end;
 
 implementation
@@ -132,6 +133,15 @@ uses
   Variants,
 {$ENDIF}
   SysUtils, ZSysUtils, ZTestConsts, ZAbstractRODataset, ZDbcCache;
+
+const {Test Strings}
+  Str1 = 'This license, the Lesser General Public License, applies to some specially designated software packages--typically libraries--of the Free Software Foundation and other authors who decide to use it.  You can use it too, but we suggest you first think ...';
+  Str2 = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
+  Str3 = 'ќдной из наиболее';
+  Str4 = 'тривиальных задач';
+  Str5 = 'решаемых многими';
+  Str6 = 'коллективами программистов';
+
 
 { ZTestCompCoreBugReport }
 
@@ -1823,11 +1833,6 @@ begin
   end;
 end;
 
-const
-  Str1 = 'This license, the Lesser General Public License, applies to some specially designated software packages--typically libraries--of the Free Software Foundation and other authors who decide to use it.  You can use it too, but we suggest you first think ...';
-  Str2 = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
-  Str3 = 'ќдной из наиболее';
-
 procedure ZTestCompCoreBugReport.TestUnicodeBehavior;
 var
   WS: WideString;
@@ -1936,6 +1941,101 @@ begin
   end;
   Connection.Disconnect;
 end;
+
+procedure ZTestCompCoreBugReport.TestNonAsciiChars;
+const TestRowID = 248;
+var
+  Query: TZQuery;
+  RowCounter: Integer;
+  I: Integer;
+  procedure InsertValues(s_char, s_varchar, s_nchar, s_nvarchar: String);
+  begin
+    if Connection.PreprepareSQL or (Connection.DbcConnection.GetEncoding = ceAnsi)
+      or Connection.UTF8StringsAsWideField then
+    begin
+      Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
+      Query.ParamByName('s_char').AsString := s_char;
+      Query.ParamByName('s_varchar').AsString := s_varchar;
+      Query.ParamByName('s_nchar').AsString := s_nchar;
+      Query.ParamByName('s_nvarchar').AsString := s_nvarchar;
+    end
+    else
+    begin
+      Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
+      Query.ParamByName('s_char').AsString := UTF8Encode(WideString(s_char));
+      Query.ParamByName('s_varchar').AsString := UTF8Encode(WideString(s_varchar));
+      Query.ParamByName('s_nchar').AsString := UTF8Encode(WideString(s_nchar));
+      Query.ParamByName('s_nvarchar').AsString := UTF8Encode(WideString(s_nvarchar));
+    end;
+    Query.ExecSQL;
+    inc(RowCounter);
+  end;
+
+begin
+  Query := TZQuery.Create(nil);
+  Query.Connection := Connection;
+  Connection.Connect;
+  try
+    RowCounter := 0;
+    Query.SQL.Text := 'Insert into string_values (s_id, s_char, s_varchar, s_nchar, s_nvarchar)'+
+      ' values (:s_id, :s_char, :s_varchar, :s_nchar, :s_nvarchar)';
+    InsertValues(str1, str2, str1, str2);
+    InsertValues(str3, str3, str3, str3);
+    InsertValues(str4, str4, str4, str4);
+    InsertValues(str5, str5, str5, str5);
+    InsertValues(str6, str6, str6, str6);
+
+    if Connection.PreprepareSQL or (Connection.DbcConnection.GetEncoding = ceAnsi)
+      or Connection.UTF8StringsAsWideField then
+    begin
+      Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
+      Query.Open;
+      CheckEquals(True, Query.RecordCount = 5);
+      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str2+'%', #39);
+      Query.Open;
+      CheckEquals(True, Query.RecordCount = 1);
+      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str3+'%', #39);
+      Query.Open;
+      CheckEquals(True, Query.RecordCount = 2);
+      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str4+'%', #39);
+      Query.Open;
+      CheckEquals(True, Query.RecordCount = 2);
+      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str5+'%', #39);
+      Query.Open;
+      CheckEquals(True, Query.RecordCount = 2);
+      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str6+'%', #39);
+      Query.Open;
+    end
+    else
+    begin
+      Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
+      Query.Open;
+      CheckEquals(True, Query.RecordCount = 5);
+      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str2)+'%', #39);
+      Query.Open;
+      CheckEquals(True, Query.RecordCount = 1);
+      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str3)+'%', #39);
+      Query.Open;
+      CheckEquals(True, Query.RecordCount = 2);
+      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str4)+'%', #39);
+      Query.Open;
+      CheckEquals(True, Query.RecordCount = 2);
+      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str5)+'%', #39);
+      Query.Open;
+      CheckEquals(True, Query.RecordCount = 2);
+      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str6)+'%', #39);
+      Query.Open;
+    end;
+  finally
+    for i := TestRowID to TestRowID+RowCounter do
+    begin
+      Query.SQL.Text := 'delete from string_values where s_id = '+IntToStr(i);
+      Query.ExecSQL;
+    end;
+    Query.Free;
+  end;
+end;
+
 
 initialization
   RegisterTest('bugreport',ZTestCompCoreBugReport.Suite);
