@@ -56,11 +56,11 @@ interface
 {$I ZBugReport.inc}
 
 uses
-  Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
+  Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
+  ZDataset, ZConnection, ZDbcIntfs, ZBugReport, ZCompatibility
   {$IFNDEF LINUX}
-    DBCtrls,
-  {$ENDIF}
-  ZCompatibility;
+    ,DBCtrls
+  {$ENDIF};
 type
 
   {** Implements a bug report test case for Interbase components. }
@@ -90,6 +90,7 @@ type
     procedure Test1021705;
     procedure Test_Param_LoadFromStream_StringStream_ftBlob;
     procedure Test_Param_LoadFromStream_StringStream_ftMemo;
+    procedure Test_Mantis214;
   end;
 
 implementation
@@ -752,6 +753,116 @@ begin
     end;
   finally
     Query.Free;
+  end;
+end;
+
+{**
+Database: Firebird 2.1.3 (latest as of 2010-01-04)
+ZEOSLib: 7.0.0 (latest from SVN trunk as of 2010-01-04)
+System: Windows (english) mit CodeGear Delphi 2009
+
+Situation:
+
+I have a firebird-2.1 database with UTF-8 as default charset and a single table t with two columns i (integer) and s (string). I insert a row into the table via a prepared statement "insert into t(i,s) values (:i1,:s1)". Depending on the contents of the unicode string given as named parameter s1, I see the following behavior:
+
+1. String contains german Umlauts: query fails with malformed string error
+2. String contains ASCII chars and cyrillic letters: query succeeds but reading back the row via select gives the original string with the cyrillic letters replaced by question marks
+3. String contains only ASCII chars: query succeeds but reading back the row via select gives the original string
+
+I consider cases 1 and 2 as errors.
+
+If no parameter is used for the insert query, i.e. using something like "insert into t(i,s) values (:i1,'+QuotedStr(s)+')'" all three cases are correct.
+
+For sample code see Additional Information. Minimalistic program to reproduce the error promptly available on request.
+
+Please let me know what I can do to track down the bug.
+
+}
+procedure ZTestCompInterbaseBugReport.Test_Mantis214;
+const
+  RowID = 214;
+  { three cases }
+  S1 = ZAnsiString('Müller äöüÄÖÜß'); // gives malformed expression error on ExecSQL
+  S2 = ZAnsiString('000 Петър 000'); // can be stored but cyrillic letters cannot be read back
+  S3 = ZAnsiString('abc'); // can be written and reread
+var
+  iqry: TZQuery;
+  Procedure AddRecord(ID: Integer; WS: ZWideString);
+  begin
+    iqry.ParamByName('i1').AsInteger:= ID;
+    {$IFDEF DELPHI12_UP}
+    iqry.ParamByName('s1').AsString := WS;
+    {$ELSE}
+    iqry.ParamByName('s1').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF} := WS;
+    {$ENDIF}
+    iqry.ExecSQL;
+  end;
+begin
+  { prepared insert statement }
+  iqry:= TZQuery.Create(nil);
+  iqry.Connection:= Connection;
+  try
+    Connection.Connect;
+    if Connection.DbcConnection.GetEncoding = ceUTF8 then
+    begin
+      if Connection.UTF8StringsAsWideField then
+      begin
+        iqry.SQL.Add('insert into string_values(s_id,s_varchar) values (:i1,:s1)');
+        iqry.Prepare;
+        AddRecord(RowID, UTF8ToString(S1));
+        AddRecord(RowID+1,UTF8ToString(S2));
+        AddRecord(RowID+2,UTF8ToString(S3));
+
+        iqry.SQL.Text := 'select s_varchar from string_values where s_id > 213 and s_id < 217';
+        iqry.open;
+
+        CheckEquals(3, iqry.RecordCount, 'RecordCount');
+        {$IFDEF WITH_FTWIDESTRING}
+          {$IFDEF DELPHI12_UP}
+          CheckEquals(UTF8ToString(S1), iqry.Fields[0].AsString);
+          iqry.Next;
+          CheckEquals(UTF8ToString(S2), iqry.Fields[0].AsString);
+          iqry.Next;
+          CheckEquals(UTF8ToString(S3), iqry.Fields[0].AsString);
+          {$ELSE}
+          CheckEquals(UTF8Decode(S1), iqry.Fields[0].AsWideString);
+          iqry.Next;
+          CheckEquals(UTF8Decode(S2), iqry.Fields[0].AsWideString);
+          iqry.Next;
+          CheckEquals(UTF8Decode(S3), iqry.Fields[0].AsWideString);
+          {$ENDIF}
+        {$ENDIF}
+      end
+      else
+      begin
+        iqry.SQL.Add('insert into string_values(s_id,s_varchar) values (:i1,:s1)');
+        iqry.Prepare;
+        iqry.ParamByName('i1').AsInteger:= RowID;
+        iqry.ParamByName('s1').AsString:= S1;
+        iqry.ExecSQL;
+        iqry.ParamByName('i1').AsInteger:= RowID+1;
+        iqry.ParamByName('s1').AsString:= S2;
+        iqry.ExecSQL;
+        iqry.ParamByName('i1').AsInteger:= RowID+2;
+        iqry.ParamByName('s1').AsString:= S3;
+        iqry.ExecSQL;
+        iqry.Unprepare;
+
+        iqry.SQL.Text := 'select s_varchar from string_values where s_id > 213 and s_id < 217';
+        iqry.open;
+
+        CheckEquals(3, iqry.RecordCount, 'RecordCount');
+        CheckEquals(S1, iqry.Fields[0].AsString);
+        iqry.Next;
+        CheckEquals(S2, iqry.Fields[0].AsString);
+        iqry.Next;
+        CheckEquals(S3, iqry.Fields[0].AsString);
+      end;
+    end;
+  finally
+    iqry.SQL.Text := 'delete from string_values where s_id > 213 and s_id < 217';
+    iqry.ExecSQL;
+    iqry.Free;
   end;
 end;
 
