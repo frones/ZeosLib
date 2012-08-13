@@ -292,7 +292,9 @@ begin
       else
         Result := stString;
     22,30: Result := stAsciiStream; { int2vector/oidvector. no '_aclitem' }
-    651, 1000..1028: Result := stAsciiStream;
+    143,629,651,719,791,1000..1028,1040,1041,1115,1182,1183,1185,1187,1231,1263,
+    1270,1561,1563,2201,2207..2211,2949,2951,3643,3644,3645,3735,3770 : { other array types }
+      Result := stAsciiStream;
     else
       Result := stUnknown;
   end;
