@@ -78,6 +78,7 @@ type
     FPassword: string;
     FLibLocation: String;
     FProperties: TZURLStringList;
+    FOnPropertiesChange: TNotifyEvent;
     procedure SetPrefix(const Value: string);
     procedure SetProtocol(const Value: string);
     procedure SetHostName(const Value: string);
@@ -92,7 +93,7 @@ type
     procedure SetLibLocation(const Value: String);
     function GetURL: string;
     procedure SetURL(const Value: string);
-    procedure OnPropertiesChange(Sender: TObject);
+    procedure DoOnPropertiesChange(Sender: TObject);
   public
     constructor Create; overload;
     constructor Create(const AURL: String); overload;
@@ -112,6 +113,8 @@ type
     property LibLocation: string read GetLibLocation write SetLibLocation;
     property Properties: TZURLStringList read FProperties;
     property URL: string read GetURL write SetURL;
+
+    property OnPropertiesChange: TNotifyEvent read FOnPropertiesChange write FOnPropertiesChange;
   end;
 
 implementation
@@ -147,7 +150,7 @@ begin
   FPrefix := 'zdbc';
   FProperties := TZURLStringList.Create;
   FProperties.CaseSensitive := False;
-  FProperties.OnChange := OnPropertiesChange;
+  FProperties.OnChange := DoOnPropertiesChange;
 end;
 
 constructor TZURL.Create(const AURL: String);
@@ -401,7 +404,7 @@ begin
   end;
 end;
 
-procedure TZURL.OnPropertiesChange(Sender: TObject);
+procedure TZURL.DoOnPropertiesChange(Sender: TObject);
 begin
   FProperties.OnChange := nil;
   try
@@ -436,8 +439,11 @@ begin
     end;
 
   finally
-    FProperties.OnChange := OnPropertiesChange;
+    FProperties.OnChange := DoOnPropertiesChange;
   end;
+
+  if Assigned(FOnPropertiesChange) then
+    FOnPropertiesChange(Sender);
 end;
 
 end.

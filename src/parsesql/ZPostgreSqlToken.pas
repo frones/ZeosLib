@@ -72,14 +72,15 @@ type
   {** Implements a PostgreSQL-specific quote string state object. }
   TZPostgreSQLQuoteState = class (TZMySQLQuoteState)
   private
-    FBackslashQuote: Boolean;
+    FStandardConformingStrings: Boolean;
   protected
+    function CheckEscapeSyntax(Stream: TStream): Boolean;
     function GetDollarQuotedString(Stream: TStream; QuoteChar: Char): string;
     function GetQuotedString(Stream: TStream; QuoteChar: Char; EscapeSyntax: Boolean): String;
   public
-    constructor Create(BackslashQuote: Boolean = False);
     function NextToken(Stream: TStream; FirstChar: Char;
       Tokenizer: TZTokenizer): TZToken; override;
+    procedure SetStandardConformingStrings(const Value: Boolean);
   end;
 
   {**
@@ -106,9 +107,15 @@ type
     constructor Create;
   end;
 
+  IZPostgreSQLTokenizer = interface (IZTokenizer)
+    ['{82392175-9065-4048-9974-EE1253B921B4}']
+    procedure SetStandardConformingStrings(const Value: Boolean);
+  end;
+
   {** Implements a default tokenizer object. }
-  TZPostgreSQLTokenizer = class (TZTokenizer)
+  TZPostgreSQLTokenizer = class (TZTokenizer, IZPostgreSQLTokenizer)
   public
+    procedure SetStandardConformingStrings(const Value: Boolean);
     constructor Create;
   end;
 
@@ -203,13 +210,26 @@ end;
 { TZPostgreSQLQuoteState }
 
 {**
-  creates a Postgre ttQuotedState detection
-  @param BackslashQuote means '\' will be handled as QuotedChar
+  Checks whether escape syntax is used.
+
+  @return a True if escape syntax is used.
 }
-constructor TZPostgreSQLQuoteState.Create(BackslashQuote: Boolean = False);
+function TZPostgreSQLQuoteState.CheckEscapeSyntax(Stream: TStream): Boolean;
+var
+  ReadChar: Char;
 begin
-  inherited Create;
-  FBackslashQuote := BackslashQuote;
+  Result := not FStandardConformingStrings;
+  if FStandardConformingStrings then
+  begin
+    Stream.Seek(-SizeOf(Char), soFromCurrent);
+    if Stream.Position >= SizeOf(Char) then
+    begin
+      Stream.Seek(-SizeOf(Char), soFromCurrent);
+      Stream.Read(ReadChar, SizeOf(Char));
+      Result := UpperCase(ReadChar) = 'E';
+      Stream.Seek(SizeOf(Char), soFromCurrent);
+    end;
+  end;
 end;
 
 {**
@@ -324,9 +344,18 @@ begin
   else
   begin
     Result.TokenType := ttQuoted;
-    // Handle all strings as escaped until we add FStandardConformingStrings
-    Result.Value := GetQuotedString(Stream, FirstChar, True);
+    Result.Value := GetQuotedString(Stream, FirstChar, CheckEscapeSyntax(Stream));
   end;
+end;
+
+{**
+  Sets how backslashes in quoted strings are handled
+  @param True means backslashes are escape characters
+}
+procedure TZPostgreSQLQuoteState.SetStandardConformingStrings(const Value:
+    Boolean);
+begin
+  FStandardConformingStrings := Value;
 end;
 
 { TZPostgreSQLCommentState }
@@ -437,7 +466,15 @@ begin
   SetWordChars(Char($c0), Char($ff), True);
 end;
 
-{ TZPostgreSQLTokenizer }
+{**
+  informs the Postgre Tokenizer '\' should be handled as Escape-char
+  @param True means backslashes are quoted strings
+}
+procedure TZPostgreSQLTokenizer.SetStandardConformingStrings(
+  const Value: Boolean);
+begin
+  (QuoteState as TZPostgreSQLQuoteState).SetStandardConformingStrings(Value);
+end;
 
 {**
   Constructs a tokenizer with a default state table (as
