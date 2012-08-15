@@ -2432,7 +2432,7 @@ begin
       SQL_D_FLOAT,
       SQL_FLOAT     : PSingle (sqldata)^ := ZStrToFloat(Value) * IBScaleDivisor[sqlscale];  //AVZ
       SQL_INT64     : PInt64(sqldata)^ := Trunc(ZStrToFloat(Value) * IBScaleDivisor[sqlscale]); //AVZ - INT64 value was not recognized
-      SQL_BLOB:
+      SQL_BLOB, SQL_QUAD:
         begin
           Stream := TStringStream.Create(Value);
           try
