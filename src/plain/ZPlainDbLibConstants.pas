@@ -58,6 +58,9 @@ interface
 
 {$I ZPlain.inc}
 
+uses // M.A.
+   ZCompatibility; // M.A.
+   
 {***************** Plain API Constants definition ****************}
 const
 { General  #define }

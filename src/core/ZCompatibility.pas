@@ -87,6 +87,7 @@ type
   {$IFNDEF DELPHI16_UP}
   NativeInt             = Integer;
   NativeUInt            = LongWord;
+  PWord                 = ^Word; // M.A.
   {$ENDIF}
   ULong                 = LongWord;
   ULongLong             = Int64; //delphi don´t have Unsigned Int64 type
