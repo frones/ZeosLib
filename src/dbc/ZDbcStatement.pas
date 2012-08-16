@@ -88,9 +88,10 @@ type
     FInfo: TStrings;
     FChunkSize: Integer; //size of buffer chunks for large lob's related to network settings
     FClosed: Boolean;
-    FsSQL: String;
+    FWSQL: ZWideString;
     FaSQL: ZAnsiString;
-    procedure SetSSQL(const Value: String);
+    procedure SetWSQL(const Value: ZWideString);
+    procedure SetASQL(const Value: ZAnsiString);
     procedure SetLastResultSet(ResultSet: IZResultSet); virtual;
 
   protected
@@ -120,21 +121,25 @@ type
     property Info: TStrings read FInfo;
     property Closed: Boolean read FClosed write FClosed;
 
-    property SSQL: String read FsSQL write SetSSQL;
-    property ASQL: ZAnsiString read FaSQL;
+    {EgonHugeist SSQL only becouse of compatibility to the old code available}
+    property SSQL: String read {$IFDEF DELPHI12_UP}FWSQL{$ELSE}FaSQL{$ENDIF} write {$IFDEF DELPHI12_UP}SetWSQL{$ELSE}SetASQL{$ENDIF};
+    property WSQL: ZWideString read FWSQL write SetWSQL;
+    property ASQL: ZAnsiString read FaSQL write SetASQL;
+    {EgonHugeist LogSQL Should be readonly and result of setting WSQL or ASQL!!!}
+    //property LogSQL: String read {$IFDEF DELPHI12_UP}FWSQL{$ELSE}FaSQL{$ENDIF};
     property ChunkSize: Integer read FChunkSize;
   public
     constructor Create(Connection: IZConnection; Info: TStrings);
     destructor Destroy; override;
 
-    function ExecuteQuery(const SQL: string): IZResultSet; overload; virtual;
-    function ExecuteUpdate(const SQL: string): Integer; overload; virtual;
-    function Execute(const SQL: string): Boolean; overload; virtual;
-    {$IFDEF DELPHI12_UP}
-    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; overload; virtual; abstract;
-    function ExecuteUpdate(const SQL: ZAnsiString): Integer; overload; virtual; abstract;
-    function Execute(const SQL: ZAnsiString): Boolean; overload; virtual; abstract;
-    {$ENDIF}
+    function ExecuteQuery(const SQL: ZWideString): IZResultSet; overload; virtual;
+    function ExecuteUpdate(const SQL: ZWideString): Integer; overload; virtual;
+    function Execute(const SQL: ZWideString): Boolean; overload; virtual;
+
+    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; overload; virtual;
+    function ExecuteUpdate(const SQL: ZAnsiString): Integer; overload; virtual;
+    function Execute(const SQL: ZAnsiString): Boolean; overload; virtual;
+
     procedure Close; virtual;
 
     function GetMaxFieldSize: Integer; virtual;
@@ -401,11 +406,49 @@ end;
   Sets the preprepared SQL-Statement in an String and AnsiStringForm.
   @param Value: the SQL-String which has to be optional preprepared
 }
-procedure TZAbstractStatement.SetSSQL(const Value: String);
+procedure TZAbstractStatement.SetWSQL(const Value: ZWideString);
 begin
-  FaSQL := Self.GetPrepreparedSQL(Value);
-  FSSQL := String(FaSQL);
+  if WSQL <> Value then
+  begin
+    if Connection.PreprepareSQL then
+    begin
+      {$IFDEF DELPHI12_UP}
+      FaSQL := Self.GetPrepreparedSQL(Value);
+      {$ELSE}
+      if Connection.GetEncoding = ceUTF8 then
+        FaSQL := GetPrepreparedSQL(UTF8Encode(Value))
+      else
+        FaSQL := GetPrepreparedSQL(AnsiString(Value))
+      {$ENDIF}
+    end
+    else
+      if Connection.GetEncoding = ceUTF8 then
+        FaSQL := UTF8Encode(Value)
+      else
+        FaSQL := AnsiString(Value);
+    FWSQL := Value;
+  end;
+  {$IFDEF DELPHI12_UP} LogSQL := Value; {$ENDIF}
 end;
+
+procedure TZAbstractStatement.SetASQL(const Value: ZAnsiString);
+begin
+  if ASQL <> Value then
+  begin
+    {$IFNDEF DELPHI12_UP}
+    if Connection.PreprepareSQL then
+      FASQL := GetPrepreparedSQL(Value)
+    else
+    {$ENDIF}
+      FASQL := Value;
+    if Connection.GetEncoding = ceUTF8 then
+      FWSQL := UTF8ToString(FASQL)
+    else
+      FWSQL := ZWideString(FASQL);
+  end;
+  {$IFNDEF DELPHI12_UP} LogSQL := Value; {$ENDIF}
+end;
+
 {**
   Raises unsupported operation exception.
 }
@@ -438,7 +481,13 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZAbstractStatement.ExecuteQuery(const SQL: string): IZResultSet;
+function TZAbstractStatement.ExecuteQuery(const SQL: ZWideString): IZResultSet;
+begin
+  WSQL := SQL;
+  Result := ExecuteQuery(ASQL);
+end;
+
+function TZAbstractStatement.ExecuteQuery(const SQL: ZAnsiString): IZResultSet;
 begin
   Result := nil;
   RaiseUnsupportedException;
@@ -455,7 +504,13 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZAbstractStatement.ExecuteUpdate(const SQL: string): Integer;
+function TZAbstractStatement.ExecuteUpdate(const SQL: ZWideString): Integer;
+begin
+  WSQL := SQL;
+  Result := ExecuteUpdate(ASQL);
+end;
+
+function TZAbstractStatement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
 begin
   Result := 0;
   RaiseUnsupportedException;
@@ -634,7 +689,7 @@ begin
         ttEscape:
           Result := Result + {$IFDEF DELPHI12_UP}ZPlainString{$ENDIF}(SQLTokens[i].Value);
         ttQuoted, {: Result := GetConnection.EscapeString(ZPlainString(SQLTokens[i].Value));}
-        ttWord, ttQuotedIdentifier, ttKeyword, ttEscapedQuoted:
+        ttWord, ttQuotedIdentifier, ttKeyword:
           Result := Result + ZPlainString(SQLTokens[i].Value);
         else
           Result := Result + ZAnsiString(SQLTokens[i].Value);
@@ -699,7 +754,13 @@ end;
   @see #getUpdateCount
   @see #getMoreResults
 }
-function TZAbstractStatement.Execute(const SQL: string): Boolean;
+function TZAbstractStatement.Execute(const SQL: ZWideString): Boolean;
+begin
+  WSQL := SQL;
+  Result := Execute(ASQL);
+end;
+
+function TZAbstractStatement.Execute(const SQL: ZAnsiString): Boolean;
 begin
   Result := False;
   LastResultSet := nil;
@@ -1016,11 +1077,11 @@ constructor TZAbstractPreparedStatement.Create(Connection: IZConnection;
 begin
   inherited Create(Connection, Info);
   FSQL := SQL;
+  ASQL := GetPrepreparedSQL(SQL);
   FInParamCount := 0;
   SetInParamCount(0);
   FPrepared := False;
   FStatementId := Self.GetNextStatementId;
-
 end;
 
 {**

@@ -426,7 +426,7 @@ begin
         ttEscape:
           Result := Result + {$IFDEF DELPHI12_UP}ZPlainString(SQLTokens[i].Value, Encoding){$ELSE}SQLTokens[i].Value{$ENDIF};
         ttQuoted, {: Result := EscapeString(ZPlainString(SQLTokens[i].Value));}
-        ttWord, ttQuotedIdentifier, ttKeyword, ttEscapedQuoted:
+        ttWord, ttQuotedIdentifier, ttKeyword:
           Result := Result + ZPlainString(SQLTokens[i].Value, Encoding);
         else
           Result := Result + ZAnsiString(SQLTokens[i].Value);

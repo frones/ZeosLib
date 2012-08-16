@@ -90,6 +90,13 @@ function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
   TypeOid: Integer): TZSQLType; overload;
 
 {**
+   Return PostgreSQL type name from ZSQLType
+   @param The ZSQLType type
+   @return The Postgre TypeName
+}
+function SQLTypeToPostgreSQL(SQLType: TZSQLType): string;
+
+{**
   Converts an string into escape PostgreSQL format.
   @param Value a regular string.
   @return a string in PostgreSQL escape format.
@@ -303,6 +310,20 @@ begin
     if Result = stAsciiStream then
       if Connection.UTF8StringAsWideField then
         Result := stUnicodeStream;
+end;
+
+function SQLTypeToPostgreSQL(SQLType: TZSQLType): string;
+begin
+  case SQLType of
+    stBoolean: Result := 'bool';
+    stByte, stShort, stInteger, stLong: Result := 'int';
+    stFloat, stDouble, stBigDecimal: Result := 'numeric';
+    stString, stUnicodeString, stAsciiStream, stUnicodeStream: Result := 'text';
+    stDate: Result := 'date';
+    stTime: Result := 'time';
+    stTimestamp: Result := 'timestamp';
+    stBinaryStream, stBytes: Result := 'bytea';
+  end;
 end;
 
 {**

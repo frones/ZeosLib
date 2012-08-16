@@ -88,6 +88,7 @@ type
     function GetServerMajorVersion: Integer;
     function GetServerMinorVersion: Integer;
     function GetCharactersetCode: TZPgCharactersetType;
+    function EncodeBinary(const Value: ZAnsiString): ZAnsiString;
   end;
 
   {** Implements PostgreSQL Database Connection. }
@@ -110,6 +111,7 @@ type
     procedure LoadServerVersion;
     procedure OnPropertiesChange(Sender: TObject); override;
     procedure SetStandardConformingStrings(const Value: Boolean);
+    function EncodeBinary(const Value: ZAnsiString): ZAnsiString;
   public
     destructor Destroy; override;
 
@@ -420,6 +422,20 @@ begin
 end;
 
 {**
+  Encodes a Binary-AnsiString to a PostgreSQL format
+  @param Value the Binary String
+  @result the encoded String
+}
+function TZPostgreSQLConnection.EncodeBinary(const Value: ZAnsiString): ZAnsiString;
+begin
+  if ( Self.GetServerMajorVersion > 7 ) or
+    ((GetServerMajorVersion = 7) and (GetServerMinorVersion >= 3)) then
+    Result := GetPlainDriver.EncodeBYTEA(Value, GetConnectionHandle)
+  else
+    Result := ZDbcPostgreSqlUtils.EncodeBinaryString(Value);
+end;
+
+{**
   Opens a connection to database server with specified parameters.
 }
 procedure TZPostgreSQLConnection.Open;
@@ -557,8 +573,19 @@ function TZPostgreSQLConnection.CreatePreparedStatement(
 begin
   if IsClosed then
      Open;
-  Result := TZPostgreSQLPreparedStatement.Create(GetPlainDriver,
+  Result := TZPostgreSQLEmulatedPreparedStatement.Create(GetPlainDriver,
     Self, SQL, Info);
+  if Assigned(Info) then
+    if StrToBoolEx(Info.Values['preferprepared']) then
+      //Result := TZPostgreSQLPreparedStatement.Create(GetPlainDriver, Self, SQL, Info)
+      Result := TZPostgreSQLEmulatedPreparedStatement.Create(GetPlainDriver,
+        Self, SQL, Info)
+    else
+      Result := TZPostgreSQLEmulatedPreparedStatement.Create(GetPlainDriver,
+        Self, SQL, Info)
+  else
+    Result := TZPostgreSQLEmulatedPreparedStatement.Create(GetPlainDriver,
+      Self, SQL, Info);
 end;
 
 
@@ -913,12 +940,12 @@ the connection is resumed.
 @return 0 if succesfull or error code if any error occurs 
 } 
 function TZPostgreSQLConnection.PingServer: Integer; 
-  const 
-    PING_ERROR_ZEOSCONNCLOSED = -1; 
-  var 
-    Closing: boolean;
-    res: PZPostgreSQLResult;
-    isset: boolean;
+const 
+  PING_ERROR_ZEOSCONNCLOSED = -1; 
+var 
+  Closing: boolean;
+  res: PZPostgreSQLResult;
+  isset: boolean;
 begin
   Result := PING_ERROR_ZEOSCONNCLOSED;
   Closing := FHandle = nil;
@@ -978,11 +1005,7 @@ end;
 }
 function TZPostgreSQLConnection.GetBinaryEscapeString(const Value: ZAnsiString): String;
 begin
-  if ( Self.GetServerMajorVersion > 7 ) or
-    ((GetServerMajorVersion = 7) and (GetServerMinorVersion >= 3)) then
-      Result := String(GetPlainDriver.EncodeBYTEA(Value, GetConnectionHandle))
-    else
-      Result := String(ZDbcPostgreSqlUtils.EncodeBinaryString(Value));
+  Result := String(EncodeBinary(Value));
   if GetPreprepareSQL then
     Result := GetDriver.GetTokenizer.GetEscapeString(Result);
 end;

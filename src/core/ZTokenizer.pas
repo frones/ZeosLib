@@ -67,14 +67,14 @@ type
     such as "number", "symbol" or "word".
   }
   TZTokenType = (ttUnknown, ttEOF, ttFloat, ttInteger, ttHexDecimal,
-    ttNumber, ttSymbol, ttQuoted, ttQuotedIdentifier, ttWord, ttKeyword, ttWhitespace,
-    ttComment, ttSpecial, ttTime, ttDate, ttDateTime, ttEscape, ttEscapedQuoted);
+    ttNumber, ttSymbol, ttQuoted, ttQuotedIdentifier, ttWord, ttKeyword,
+    ttWhitespace, ttComment, ttSpecial, ttTime, ttDate, ttDateTime, ttEscape);
 
   {**
     Defines options for tokenizing strings.
   }
   TZTokenOption = (toSkipUnknown, toSkipWhitespaces, toSkipComments,
-    toSkipEOF, toUnifyWhitespaces, toUnifyNumbers, toDecodeStrings, toAcceptEscape);
+    toSkipEOF, toUnifyWhitespaces, toUnifyNumbers, toDecodeStrings);
   TZTokenOptions = set of TZTokenOption;
 
   {**
@@ -1478,7 +1478,7 @@ end;
 }
 function TZTokenizer.TokenizeEscapeBufferToList(const SQL: String): TZTokenDynArray;
 begin
-  Result := TokenizeBuffer(SQL, [toSkipEOF, toAcceptEscape]); //Disassembles the Query
+  Result := TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
 end;
 
 {**
@@ -1625,8 +1625,6 @@ begin
         Token.Value := Result[Result.Count-1] + Token.Value;
         Result.Delete(Result.Count-1);
       end;
-      if (Token.Tokentype = ttEscapedQuoted) and (not (toAcceptEscape in Options)) then
-        Token.Tokentype := ttQuoted;
       { Add a read token. }
       LastTokenType := Token.TokenType;
       Result.AddObject(Token.Value, TObject(Ord(Token.TokenType)));
