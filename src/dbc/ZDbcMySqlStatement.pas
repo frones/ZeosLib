@@ -864,7 +864,6 @@ end;
 }
 function TZMySQLPreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
-  Result := -1;
   BindInParameters;
   if (self.FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
      try
@@ -899,7 +898,6 @@ end;
 }
 function TZMySQLPreparedStatement.ExecutePrepared: Boolean;
 begin
-  Result := False;
   BindInParameters;
   if (FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
      try

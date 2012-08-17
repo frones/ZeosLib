@@ -345,7 +345,7 @@ type
   }
   TZWhitespaceState = class (TZTokenizerState)
   private
-    FWhitespaceChars: array[0..255] of Boolean;
+    FWhitespaceChars: array[0..ord(high(char))] of Boolean;
   public
     constructor Create;
 
@@ -379,11 +379,7 @@ type
   }
   TZWordState = class (TZTokenizerState)
   private
-  {$IFDEF DELPHI12_UP}
     FWordChars: array[0..ord(high(char))] of Boolean;
-  {$ELSE}
-    FWordChars: array[0..255] of Boolean;
-  {$ENDIF}
   public
     constructor Create;
 
@@ -463,11 +459,7 @@ type
   {** Implements a default tokenizer object. }
   TZTokenizer = class (TZAbstractObject, IZTokenizer)
   private
-    {$IFDEF DELPHI12_UP}
     FCharacterStates: array[0..ord(high(char))] of TZTokenizerState;
-    {$ELSE}
-    FCharacterStates: array[0..255] of TZTokenizerState;
-    {$ENDIF}
     FCommentState: TZCommentState;
     FNumberState: TZNumberState;
     FQuoteState: TZQuoteState;
@@ -1214,7 +1206,7 @@ end;
 }
 constructor TZWhitespaceState.Create;
 begin
-  SetWhitespaceChars(' ', Chr(255), False);
+  SetWhitespaceChars(' ', high(char), False);
   SetWhitespaceChars(Chr(0), ' ', True);
 end;
 
@@ -1269,18 +1261,14 @@ end;
 }
 constructor TZWordState.Create;
 begin
-  {$IFDEF DELPHI12_UP}
-  SetWordChars(#0, high(char), False);
-  {$ELSE}
-  SetWordChars(#0, #255, False);
-  {$ENDIF}
+  SetWordChars(#0, #191, False);
+  SetWordChars(#192, high(char), True);
   SetWordChars('a', 'z', True);
   SetWordChars('A', 'Z', True);
   SetWordChars('0', '9', True);
   SetWordChars('-', '-', True);
   SetWordChars('_', '_', True);
   SetWordChars('''', '''', True);
-  SetWordChars(Char($c0), Char($ff), True); //chars from #192 (À) ~ 255 (ÿ)
 end;
 
 {**
@@ -1321,11 +1309,7 @@ procedure TZWordState.SetWordChars(FromChar, ToChar: Char; Enable: Boolean);
 var
   I: Integer;
 begin
-  {$IFDEF DELPHI12_UP}
   for I := Ord(FromChar) to MinIntValue([Ord(ToChar), Ord(high(char)) ]) do
-  {$ELSE}
-  for I := Ord(FromChar) to MinIntValue([Ord(ToChar), 255]) do
-  {$ENDIF}
     FWordChars[I] := Enable;
 end;
 
@@ -1351,16 +1335,12 @@ begin
   FWordState := TZWordState.Create;
   FCommentState := TZCppCommentState.Create;
 
-  {$IFDEF DELPHI12_UP}
-  SetCharacterState(#0, high(char), FSymbolState);
-  {$ELSE}
-  SetCharacterState(#0, #255, FSymbolState);
-  {$ENDIF}
+  SetCharacterState(#0, #32, FWhitespaceState);
+  SetCharacterState(#33, #191, FSymbolState);
+  SetCharacterState(#192, High(Char), FWordState);
 
-  SetCharacterState(#0, ' ', FWhitespaceState);
   SetCharacterState('a', 'z', FWordState);
   SetCharacterState('A', 'Z', FWordState);
-  SetCharacterState(Chr($c0),  Chr($ff), FWordState); //chars from #192 (À) ~ 255 (ÿ)
   SetCharacterState('0', '9', FNumberState);
   SetCharacterState('-', '-', FNumberState);
   SetCharacterState('.', '.', FNumberState);

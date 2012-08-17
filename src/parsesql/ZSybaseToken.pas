@@ -373,7 +373,8 @@ end;
 }
 constructor TZSybaseWordState.Create;
 begin
-  SetWordChars(#0, #255, False);
+  SetWordChars(#0, #191, False);
+  SetWordChars(#192, high(char), True);
   SetWordChars('a', 'z', True);
   SetWordChars('A', 'Z', True);
   SetWordChars('0', '9', True);
@@ -381,7 +382,6 @@ begin
   SetWordChars('_', '_', True);
   SetWordChars('@', '@', True);
   SetWordChars('#', '#', True);
-  SetWordChars(Char($c0), Char($ff), True);
 end;
 
 { TZSybaseTokenizer }
@@ -401,13 +401,12 @@ begin
   WordState := TZSybaseWordState.Create;
   CommentState := TZSybaseCommentState.Create;
 
-  SetCharacterState(#0, #255, SymbolState);
-
-  SetCharacterState(#0, ' ', WhitespaceState);
+  SetCharacterState(#0, #32, WhitespaceState);
+  SetCharacterState(#33, #191, SymbolState);
+  SetCharacterState(#192, High(Char), WordState);
 
   SetCharacterState('a', 'z', WordState);
   SetCharacterState('A', 'Z', WordState);
-  SetCharacterState(Chr($c0),  Chr($ff), WordState);
   SetCharacterState('_', '_', WordState);
   SetCharacterState('$', '$', WordState);
   SetCharacterState('@', '@', WordState);

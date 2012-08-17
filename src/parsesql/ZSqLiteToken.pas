@@ -369,8 +369,9 @@ begin
   WordState := TZSQLiteWordState.Create;
   CommentState := TZSQLiteCommentState.Create;
 
-  SetCharacterState(#0, #255, SymbolState);
-  SetCharacterState(#0, ' ', WhitespaceState);
+  SetCharacterState(#0, #32, WhitespaceState);
+  SetCharacterState(#33, #191, SymbolState);
+  SetCharacterState(#192, High(Char), WordState);
 
   SetCharacterState('a', 'z', WordState);
   SetCharacterState('A', 'Z', WordState);
