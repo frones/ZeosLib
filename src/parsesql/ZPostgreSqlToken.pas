@@ -448,6 +448,9 @@ begin
   Add('<>');
   Add('<<');
   Add('>>');
+  Add('~*');
+  Add('!~');
+  Add('!~*');
 end;
 
 { TZPostgreSQLWordState }

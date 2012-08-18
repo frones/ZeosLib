@@ -1479,16 +1479,17 @@ begin
   if  ( FirstChar = EscapeMarkSequence[1]) then //Token was set so check if its Escape
   begin
     for i := 2 to Length(EscapeMarkSequence) do
-    if Stream.Read(NextChar, 1 * SizeOf(Char)) > 0  then //Read next Char
-      if NextChar = Copy(EscapeMarkSequence, i, 1) then //Compare Chars
-        Inc(IReadCount) //increment count of read-Chars
-      else
+      if Stream.Read(NextChar, 1 * SizeOf(Char)) > 0  then //Read next Char
       begin
-        Stream.Seek(-(iReadCount * SizeOf(Char)), soFromCurrent); //Seek Stream back to starting Position
-        Exit;
+        Inc(IReadCount); //increment count of read-Chars
+        if NextChar <> Copy(EscapeMarkSequence, i, 1) then //Compare Chars
+        begin
+          Stream.Seek(-(iReadCount * SizeOf(Char)), soFromCurrent); //Seek Stream back to starting Position
+          Exit;
+        end
       end
-    else
-      Exit;
+      else
+        Exit;
   end
   else
     Exit;
