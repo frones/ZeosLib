@@ -261,7 +261,7 @@ begin
     if ReadChar = QuoteChar then Inc(QuoteCount);
     if (LastChar = FirstChar) and (ReadChar <> FirstChar) then
     begin
-      if QuoteCount mod 2 = 0 then
+      //if QuoteCount mod 2 = 0 then // only valid for Pascal AnsiQuoted/QuotedStr
       begin
         Stream.Seek(-SizeOf(Char), soFromCurrent);
         Break;
@@ -269,7 +269,10 @@ begin
     end;
     Result.Value := Result.Value + ReadChar;
     if LastChar = BackSlash then
+//    begin
+//      if Readchar = FirstChar then Inc(QuoteCount);  //Escaped single Quote (A QuoteChar instead of FirstChar would be better..)
       LastChar := #0
+//    end
     else if (LastChar = FirstChar) and (ReadChar = FirstChar) then
       LastChar := #0
     else LastChar := ReadChar;
