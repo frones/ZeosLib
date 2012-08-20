@@ -717,7 +717,7 @@ const
 begin
   Query.ParamChar := ':';
   Query.ParamCheck := True;
-  Query.SQL.Text := 'select :test';
+  Query.SQL.Text := 'select cast(:test as TEXT)';
 
   Query.ParamByName('test').AsString := QuoteString1;
   Query.Open;
