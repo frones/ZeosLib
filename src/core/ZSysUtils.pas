@@ -283,7 +283,7 @@ function TimestampStrToDateTime(const Value: string): TDateTime;
   @param Value an encoded TDateTime value.
   @return a  date and time string.
 }
-function DateTimeToAnsiSQLDate(Value: TDateTime): string;
+function DateTimeToAnsiSQLDate(Value: TDateTime; WithMMSec: Boolean = False): string;
 
 {**
   Converts an string into escape PostgreSQL format.
@@ -1014,15 +1014,20 @@ end;
   @param Value an encoded TDateTime value.
   @return a  date and time string.
 }
-function DateTimeToAnsiSQLDate(Value: TDateTime): string;
-//var
-  //a, MSec:Word;
+function DateTimeToAnsiSQLDate(Value: TDateTime; WithMMSec: Boolean = False): string;
+var
+  a, MSec:Word;
 begin
-  //DecodeTime(Value,a,a,a,MSec);
-  //if MSec=0 then
+  if WithMMSec then
+  begin
+    DecodeTime(Value,a,a,a,MSec);
+    if MSec=0 then
+      Result := FormatDateTime('yyyy-mm-dd hh:nn:ss', Value)
+    else
+      Result := FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', Value);
+  end
+  else
     Result := FormatDateTime('yyyy-mm-dd hh:nn:ss', Value)
-  //else
-  //  Result := FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', Value);
 end;
 
 { TZSortedList }

@@ -94,7 +94,7 @@ function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
    @param The ZSQLType type
    @return The Postgre TypeName
 }
-function SQLTypeToPostgreSQL(SQLType: TZSQLType): string;
+function SQLTypeToPostgreSQL(SQLType: TZSQLType; IsOidAsBlob: Boolean): string;
 
 {**
   Converts an string into escape PostgreSQL format.
@@ -302,7 +302,7 @@ begin
         Result := stUnicodeStream;
 end;
 
-function SQLTypeToPostgreSQL(SQLType: TZSQLType): string;
+function SQLTypeToPostgreSQL(SQLType: TZSQLType; IsOidAsBlob: boolean): string;
 begin
   case SQLType of
     stBoolean: Result := 'bool';
@@ -312,7 +312,11 @@ begin
     stDate: Result := 'date';
     stTime: Result := 'time';
     stTimestamp: Result := 'timestamp';
-    stBinaryStream, stBytes: Result := 'bytea';
+    stBinaryStream, stBytes:
+      if IsOidAsBlob then
+        Result := 'oid'
+      else
+        Result := 'bytea';
   end;
 end;
 

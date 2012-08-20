@@ -1077,7 +1077,7 @@ constructor TZAbstractPreparedStatement.Create(Connection: IZConnection;
 begin
   inherited Create(Connection, Info);
   FSQL := SQL;
-  ASQL := GetPrepreparedSQL(SQL);
+  {$IFDEF DELPHI12_UP}WSQL{$ELSE}ASQL{$ENDIF} := SQL;
   FInParamCount := 0;
   SetInParamCount(0);
   FPrepared := False;
