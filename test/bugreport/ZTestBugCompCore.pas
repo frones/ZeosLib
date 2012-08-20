@@ -1979,7 +1979,10 @@ begin
     RowCounter := 0;
     Query.SQL.Text := 'Insert into string_values (s_id, s_char, s_varchar, s_nchar, s_nvarchar)'+
       ' values (:s_id, :s_char, :s_varchar, :s_nchar, :s_nvarchar)';
-    InsertValues(str1, str2, str1, str2);
+    if StartsWith(Connection.Protocol, 'oracle') then
+      InsertValues(str1, Copy(str2, 1, Length(Str1) div 2), str1, Copy(str2, 1, Length(Str1) div 2))
+    else
+      InsertValues(str1, str2, str1, str2);
     InsertValues(str3, str3, str3, str3);
     InsertValues(str4, str4, str4, str4);
     InsertValues(str5, str5, str5, str5);
@@ -1991,7 +1994,10 @@ begin
       Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
       Query.Open;
       CheckEquals(True, Query.RecordCount = 5);
-      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str2+'%', #39);
+      if StartsWith(Connection.Protocol, 'oracle') then
+        Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Copy(str2, 1, Length(Str1) div 2)+'%', #39)
+      else
+        Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str2+'%', #39);
       Query.Open;
       CheckEquals(True, Query.RecordCount = 1);
       Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str3+'%', #39);
