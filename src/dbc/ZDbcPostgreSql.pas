@@ -573,9 +573,7 @@ function TZPostgreSQLConnection.CreatePreparedStatement(
 begin
   if IsClosed then
      Open;
-  Result := TZPostgreSQLEmulatedPreparedStatement.Create(GetPlainDriver,
-    Self, SQL, Info);
-{  if Assigned(Info) then
+  if Assigned(Info) then
     if StrToBoolEx(Info.Values['preferprepared']) then
       Result := TZPostgreSQLPreparedStatement.Create(GetPlainDriver, Self, SQL, Info)
     else
@@ -583,7 +581,7 @@ begin
         Self, SQL, Info)
   else
     Result := TZPostgreSQLEmulatedPreparedStatement.Create(GetPlainDriver,
-      Self, SQL, Info);}
+      Self, SQL, Info);
 end;
 
 

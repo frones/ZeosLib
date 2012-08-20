@@ -118,7 +118,7 @@ type
 
     function GetAnsiSQLQuery: ZAnsiString;
 
-    function CreateResultSet(const SQL: string; QueryHandle: PZPostgreSQLResult): IZResultSet;
+    function CreateResultSet(QueryHandle: PZPostgreSQLResult): IZResultSet;
   protected
     function PrepareAnsiSQLParam(ParamIndex: Integer; Escaped: Boolean): ZAnsiString;
     procedure PrepareInParameters; override;
@@ -604,21 +604,21 @@ end;
   Creates a result set based on the current settings.
   @return a created result set object.
 }
-function TZPostgreSQLPreparedStatement.CreateResultSet(const SQL: string;
-  QueryHandle: PZPostgreSQLResult): IZResultSet;
+function TZPostgreSQLPreparedStatement.CreateResultSet(QueryHandle:
+  PZPostgreSQLResult): IZResultSet;
 var
   NativeResultSet: TZPostgreSQLResultSet;
   CachedResultSet: TZCachedResultSet;
   ConnectionHandle: PZPostgreSQLConnect;
 begin
   ConnectionHandle := FPostgreSQLConnection.GetConnectionHandle;
-  NativeResultSet := TZPostgreSQLResultSet.Create(FPlainDriver, Self, SQL,
+  NativeResultSet := TZPostgreSQLResultSet.Create(FPlainDriver, Self, Self.SQL,
   ConnectionHandle, QueryHandle, ChunkSize);
 
   NativeResultSet.SetConcurrency(rcReadOnly);
   if GetResultSetConcurrency = rcUpdatable then
   begin
-    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil,
+    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, Self.SQL, nil,
       ClientCodePage);
     CachedResultSet.SetConcurrency(rcUpdatable);
     CachedResultSet.SetResolver(TZPostgreSQLCachedResolver.Create(
@@ -747,7 +747,15 @@ begin
     Tokens := Connection.GetDriver.GetTokenizer.
       TokenizeBufferToList(SQL, [toUnifyWhitespaces]);
     try
-      TempSQL := 'PREPARE '+ZDbcString(FPlanName)+' AS ';{+'(';
+      TempSQL := 'PREPARE '+ZDbcString(FPlanName)+' AS ';
+
+      {EgonHugeist: This i've commented out. For those who are able/take care to
+        declare the right Parameter-Types it speeds the Statements up too,
+        because PostgreSQL must not finc the right types. On the other hand if
+        you assign a type like Params[0].AsString := IntToStr(ID); it makes
+        trouble, because PosgreSQL does not convert or check the types again!
+        Without pre-defining the types PostgreSQL does the casts.
+      TempSQL := 'PREPARE '+ZDbcString(FPlanName)+'(';
       for i := 0 to InParamCount -1 do
         if I = 0 then
           TempSQL := TempSQL + SQLTypeToPostgreSQL(Self.InParamTypes[i], FPostgreSQLConnection.IsOidAsBlob)
@@ -764,19 +772,20 @@ begin
         end else
           TempSQL := TempSQL + Tokens[I];
       end;
-      {$IFDEF DELPHI12_UP}WSQL{$ELSE}ASQL{$ENDIF} := TempSQL;
-      ConnectionHandle := FPostgreSQLConnection.GetConnectionHandle;
-      QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
-        PAnsiChar(ASQL));
-      CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
-        SSQL, QueryHandle);
-      DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
-      FPlainDriver.Clear(QueryHandle);
     finally
       Tokens.Free;
     end;
-  end else
-    TempSQL := SQL;
+  end
+  else Exit;
+
+  {$IFDEF DELPHI12_UP}WSQL{$ELSE}ASQL{$ENDIF} := TempSQL;
+  ConnectionHandle := FPostgreSQLConnection.GetConnectionHandle;
+  QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
+    PAnsiChar(ASQL));
+  CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
+    SSQL, QueryHandle);
+  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
+  FPlainDriver.Clear(QueryHandle);
 end;
 
 procedure TZPostgreSQLPreparedStatement.BindInParameters;
@@ -796,9 +805,7 @@ begin
       FExecSQL := FExecSQL+');';
     end
     else
-    begin
       FExecSQL := GetAnsiSQLQuery;
-    end;
   end
   else
     FExecSQL := ASQL;
@@ -821,22 +828,16 @@ begin
   FPlainDriver := PlainDriver;
   FExecCount := 0;
   ResultSetType := rtScrollInsensitive;
-  FPlanName := '"'+AnsiString(IntToStr(Hash(ASQL)+FStatementId))+'"';
+  FPlanName := '"'+AnsiString(IntToStr(Hash(ASQL)+Cardinal(FStatementId)))+'"';
 end;
 
 procedure TZPostgreSQLPreparedStatement.Prepare;
 begin
   { EgonHugeist: assume automated Prepare after third execution. That's the way
     the JDBC Drivers go too... }
-  if (not Prepared ) and ( InParamCount > 0 ) {and ( Self.FExecCount > 2 )}then
+  if (not Prepared ) and ( InParamCount > 0 ) and ( Self.FExecCount > 2 ) then
     inherited Prepare;
-  if Prepared then
-  begin
-    BindInParameters;
-    {$IFDEF DELPHI12_UP}ASQL := FExecSQL;{$ENDIF}
-  end
-  else
-    {$IFDEF DELPHI12_UP}ASQL := GetAnsiSQLQuery{$ENDIF};
+  BindInParameters;
 end;
 
 {**
@@ -848,26 +849,37 @@ end;
 function TZPostgreSQLPreparedStatement.ExecuteQuery(const SQL: ZAnsiString): IZResultSet;
 begin
   Result := nil;
-  {$IFNDEF DELPHI12_UP}ASQL := SQL;{$ENDIF} //Preprepares the SQL and Sets the AnsiSQL
+  ASQL := SQL; //Preprepares the SQL and Sets the AnsiSQL
   QueryHandle := FPlainDriver.ExecuteQuery(FPostgreSQLConnection.GetConnectionHandle,
     PAnsiChar(ASQL));
   CheckPostgreSQLError(Connection, FPlainDriver,
     FPostgreSQLConnection.GetConnectionHandle, lcExecute, SSQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, Self.SSQL);
   if QueryHandle <> nil then
-    Result := CreateResultSet(Self.SSQL, QueryHandle)
+    Result := CreateResultSet(QueryHandle)
   else
     Result := nil;
   Inc(FExecCount);
 end;
 
+{**
+  Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
+  <code>DELETE</code> statement. In addition,
+  SQL statements that return nothing, such as SQL DDL statements,
+  can be executed.
+
+  @param sql an SQL <code>INSERT</code>, <code>UPDATE</code> or
+    <code>DELETE</code> statement or an SQL statement that returns nothing
+  @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
+    or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
+}
 function TZPostgreSQLPreparedStatement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
 var
   QueryHandle: PZPostgreSQLResult;
   ConnectionHandle: PZPostgreSQLConnect;
 begin
   Result := -1;
-  {$IFNDEF DELPHI12_UP}ASQL := SQL;{$ENDIF} //Preprepares the SQL and Sets the AnsiSQL
+  ASQL := SQL; //Preprepares the SQL and Sets the AnsiSQL
   ConnectionHandle := Self.FPostgreSQLConnection.GetConnectionHandle;
   QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(ASQL));
   CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
@@ -886,13 +898,33 @@ begin
   Inc(FExecCount);
 end;
 
+{**
+  Executes an SQL statement that may return multiple results.
+  Under some (uncommon) situations a single SQL statement may return
+  multiple result sets and/or update counts.  Normally you can ignore
+  this unless you are (1) executing a stored procedure that you know may
+  return multiple results or (2) you are dynamically executing an
+  unknown SQL string.  The  methods <code>execute</code>,
+  <code>getMoreResults</code>, <code>getResultSet</code>,
+  and <code>getUpdateCount</code> let you navigate through multiple results.
+
+  The <code>execute</code> method executes an SQL statement and indicates the
+  form of the first result.  You can then use the methods
+  <code>getResultSet</code> or <code>getUpdateCount</code>
+  to retrieve the result, and <code>getMoreResults</code> to
+  move to any subsequent result(s).
+
+  @param sql any SQL statement
+  @return <code>true</code> if the next result is a <code>ResultSet</code> object;
+  <code>false</code> if it is an update count or there are no more results
+}
 function TZPostgreSQLPreparedStatement.Execute(const SQL: ZAnsiString): Boolean;
 var
   QueryHandle: PZPostgreSQLResult;
   ResultStatus: TZPostgreSQLExecStatusType;
   ConnectionHandle: PZPostgreSQLConnect;
 begin
-  {$IFNDEF DELPHI12_UP}ASQL := SQL{$ENDIF};
+  ASQL := SQL; //Preprepares the SQL and Sets the AnsiSQL
   ConnectionHandle := FPostgreSQLConnection.GetConnectionHandle;
   QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
     PAnsiChar(ASQL));
@@ -906,7 +938,7 @@ begin
     PGRES_TUPLES_OK:
       begin
         Result := True;
-        LastResultSet := CreateResultSet(SSQL, QueryHandle);
+        LastResultSet := CreateResultSet(QueryHandle);
       end;
     PGRES_COMMAND_OK:
       begin
@@ -930,24 +962,49 @@ begin
   Inc(FExecCount);
 end;
 
+{**
+  Executes the SQL query in this <code>PreparedStatement</code> object
+  and returns the result set generated by the query.
+
+  @return a <code>ResultSet</code> object that contains the data produced by the
+    query; never <code>null</code>
+}
 function TZPostgreSQLPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   Prepare;
-  Result := ExecuteQuery(ASQL);
+  Result := ExecuteQuery(FExecSQL);
   inherited ExecuteQueryPrepared;
 end;
 
+{**
+  Executes the SQL INSERT, UPDATE or DELETE statement
+  in this <code>PreparedStatement</code> object.
+  In addition,
+  SQL statements that return nothing, such as SQL DDL statements,
+  can be executed.
+
+  @return either the row count for INSERT, UPDATE or DELETE statements;
+  or 0 for SQL statements that return nothing
+}
 function TZPostgreSQLPreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
   Prepare;
-  Result := ExecuteUpdate(ASQL);
+  Result := ExecuteUpdate(FExecSQL);
   inherited ExecuteUpdatePrepared;
 end;
 
+{**
+  Executes any kind of SQL statement.
+  Some prepared statements return multiple results; the <code>execute</code>
+  method handles these complex statements as well as the simpler
+  form of statements handled by the methods <code>executeQuery</code>
+  and <code>executeUpdate</code>.
+  @see Statement#execute
+}
 function TZPostgreSQLPreparedStatement.ExecutePrepared: Boolean;
 begin
   Prepare;
-  Result := Execute(ASQL);
+  Result := Execute(FExecSQL);
   inherited ExecutePrepared;
 end;
 
