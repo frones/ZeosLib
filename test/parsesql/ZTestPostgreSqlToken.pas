@@ -118,6 +118,12 @@ const
     ttQuoted, ttWord, ttQuoted);
   TokenValues2: array[0..2] of string = (
     '$aaa$bbb$$ccc$aaa$', 'ddd$', '$$eee$$');
+
+  TokenString3: string = 'E''eee'' B''bbb'' X''xxx'' U&''uuu'' U$''zzz''';
+  TokenTypes3: array[0..5] of TZTokenType = (
+    ttQuoted, ttQuoted, ttQuoted, ttQuoted, ttWord, ttQuoted);
+  TokenValues3: array[0..5] of string = (
+    'E''eee''', 'B''bbb''', 'X''xxx''', 'U&''uuu''', 'U$', '''zzz''');
 begin
   (Tokenizer as TZPostgreSQLTokenizer).SetStandardConformingStrings(False);
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString1,
@@ -129,6 +135,9 @@ begin
 
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString2,
     [toSkipEOF, toSkipWhitespaces]), TokenTypes2, TokenValues2);
+
+  CheckTokens(Tokenizer.TokenizeBuffer(TokenString3,
+    [toSkipEOF, toSkipWhitespaces]), TokenTypes3, TokenValues3);
 end;
 
 {**
