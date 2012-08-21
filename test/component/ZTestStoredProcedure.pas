@@ -240,6 +240,10 @@ begin
   StoredProc.ExecProc;
   CheckEquals('', StoredProc.ParamByName('returnValue').AsString);
   CheckEquals(4, StoredProc.Params.Count);
+  StoredProc.Open;
+  CheckEquals(2, StoredProc.Fields.Count);
+  CheckEquals(600, StoredProc.FieldByName('p4').AsInteger);
+  CheckEquals('aa', StoredProc.FieldByName('p5').AsString);
 end;
 
 initialization
