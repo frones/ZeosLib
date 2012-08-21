@@ -199,6 +199,25 @@ BEGIN
 END;
 ' LANGUAGE 'plpgsql';
 
+/*==============================================================*/
+/* Stored procedure: abtest					*/
+/*==============================================================*/
+
+CREATE OR REPLACE FUNCTION abtest (
+  p1 integer,
+  p2 integer,
+  p3 varchar,
+  out p4 integer,
+  out p5 varchar
+)
+RETURNS record AS
+$body$
+BEGIN
+	p4 = p1 * 10 + p2;
+	p5 = p3 || p3;
+END;
+$body$
+LANGUAGE 'plpgsql';
 
 /*==============================================================*/
 /* Grant privileges to columns                                  */

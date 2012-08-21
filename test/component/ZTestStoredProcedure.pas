@@ -61,35 +61,49 @@ uses
   ZConnection, ZDataset, ZTestDefinitions, ZStoredProcedure;
 
 type
-
-  {** Implements a test case for class TZReadOnlyQuery. }
-  TZTestInterbaseStoredProcedure = class(TZComponentSpecificSQLTestCase)
+  {** Implements a test case for class TZStoredProc. }
+  TZTestStoredProcedure = class(TZComponentSpecificSQLTestCase)
   private
     Connection: TZConnection;
     StoredProc: TZStoredProc;
   protected
     procedure SetUp; override;
     procedure TearDown; override;
-    function GetSupportedProtocols: string; override;
     function GetConnectionUrl: string;
+  end;
 
+  {** Implements a test case for class TZStoredProc. }
+  TZTestInterbaseStoredProcedure = class(TZTestStoredProcedure)
+  private
+    Connection: TZConnection;
+    StoredProc: TZStoredProc;
+  protected
+    function GetSupportedProtocols: string; override;
   published
     procedure TestStoredProc;
   end;
 
-    {** Implements a test case for class TZReadOnlyQuery. }
-  TZTestDbLibStoredProcedure = class(TZComponentSpecificSQLTestCase)
+
+  {** Implements a test case for class TZStoredProc. }
+  TZTestDbLibStoredProcedure = class(TZTestStoredProcedure)
   private
     Connection: TZConnection;
     StoredProc: TZStoredProc;
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-    function GetConnectionUrl: string;
-
   published
     procedure TestStoredProc;
+  end;
+
+  {** Impleme nts a test case for class TZStoredProc. }
+  TZTestPostgreSQLStoredProcedure = class(TZTestStoredProcedure)
+  private
+    Connection: TZConnection;
+    StoredProc: TZStoredProc;
+  protected
+    function GetSupportedProtocols: string; override;
+  published
+    procedure Test_abtest;
   end;
 
 implementation
@@ -97,7 +111,49 @@ implementation
 uses Classes, ZSysUtils, ZDbcUtils, ZTestConsts, ZDbcIntfs, ZAbstractDataset,
   ZTestCase;
 
+
 { TZTestStoredProcedure }
+
+{**
+  Prepares initial data before each test.
+}
+procedure TZTestStoredProcedure.SetUp;
+begin
+  Connection := CreateDatasetConnection;
+  Connection.Connect;
+  StoredProc := TZStoredProc.Create(nil);
+  StoredProc.Connection := Connection;
+  StoredProc.ParamCheck := True;
+end;
+
+{**
+  Removes data after each test.
+}
+procedure TZTestStoredProcedure.TearDown;
+begin
+  StoredProc.Close;
+  StoredProc.Free;
+  Connection.Disconnect;
+  Connection.Free;
+end;
+
+{**
+  Gets a connection URL string.
+  @return a built connection URL string.
+}
+function TZTestStoredProcedure.GetConnectionUrl: string;
+var
+  TempProperties :TStrings;
+  I: Integer;
+begin
+  TempProperties := TStringList.Create;
+  for I := 0 to High(Properties) do
+  begin
+    TempProperties.Add(Properties[I])
+  end;
+  Result := DriverManager.ConstructURL(Protocol, HostName, Database,
+  UserName, Password, Port, TempProperties);
+end;
 
 {**
   Gets an array of protocols valid for this test.
@@ -112,47 +168,6 @@ end;
   Gets a connection URL string.
   @return a built connection URL string.
 }
-function TZTestInterbaseStoredProcedure.GetConnectionUrl: string;
-var
-  TempProperties :TStrings;
-  I: Integer;
-begin
-  TempProperties := TStringList.Create;
-  for I := 0 to High(Properties) do
-  begin
-    TempProperties.Add(Properties[I])
-  end;
-  Result := DriverManager.ConstructURL(Protocol, HostName, Database,
-  UserName, Password, Port, TempProperties);
-{  if Port <> 0 then
-    Result := Format('zdbc:%s://%s:%d/%s', [Protocol, HostName, Port, Database])
-  else Result := Format('zdbc:%s://%s/%s', [Protocol, HostName, Database]);}
-  TempProperties.Free;
-end;
-
-{**
-  Prepares initial data before each test.
-}
-procedure TZTestInterbaseStoredProcedure.SetUp;
-begin
-  Connection := CreateDatasetConnection;
-  Connection.Connect;
-  StoredProc := TZStoredProc.Create(nil);
-  StoredProc.Connection := Connection;
-  StoredProc.ParamCheck := True;
-end;
-
-{**
-  Removes data after each test.
-}
-procedure TZTestInterbaseStoredProcedure.TearDown;
-begin
-  StoredProc.Close;
-  StoredProc.Free;
-  Connection.Disconnect;
-  Connection.Free;
-end;
-
 {**
    Testing executil stored procedures
 }
@@ -174,57 +189,12 @@ end;
 { TZTestDbLibStoredProcedure }
 
 {**
-  Gets a connection URL string.
-  @return a built connection URL string.
-}
-function TZTestDbLibStoredProcedure.GetConnectionUrl: string;
-var
-  TempProperties :TStrings;
-  I: Integer;
-begin
-  TempProperties := TStringList.Create;
-  for I := 0 to High(Properties) do
-  begin
-    TempProperties.Add(Properties[I])
-  end;
-  Result := DriverManager.ConstructURL(Protocol, HostName, Database,
-  UserName, Password, Port, TempProperties);
-{  if Port <> 0 then
-    Result := Format('zdbc:%s://%s:%d/%s', [Protocol, HostName, Port, Database])
-  else Result := Format('zdbc:%s://%s/%s', [Protocol, HostName, Database]);}
-  TempProperties.Free;
-end;
-
-{**
   Gets an array of protocols valid for this test.
   @return an array of valid protocols
 }
 function TZTestDbLibStoredProcedure.GetSupportedProtocols: string;
 begin
   Result := 'sybase, mssql';
-end;
-
-{**
-  Prepares initial data before each test.
-}
-procedure TZTestDbLibStoredProcedure.SetUp;
-begin
-  Connection := CreateDatasetConnection;
-  Connection.Connect;
-  StoredProc := TZStoredProc.Create(nil);
-  StoredProc.Connection := Connection;
-  StoredProc.ParamCheck := True;
-end;
-
-{**
-  Removes data after each test.
-}
-procedure TZTestDbLibStoredProcedure.TearDown;
-begin
-  StoredProc.Close;
-  StoredProc.Free;
-  Connection.Disconnect;
-  Connection.Free;
 end;
 
 {**
@@ -245,6 +215,25 @@ begin
   StoredProc.ExecProc;
   CheckEquals(12346, StoredProc.Params[1].AsInteger);
   CheckEquals(2, StoredProc.Params.Count);
+end;
+
+{ TZTestPosgreSQLStoredProcedure }
+
+{**
+  Prepares initial data before each test.
+}
+function TZTestPostgreSQLStoredProcedure.GetSupportedProtocols: string;
+begin
+  Result := 'postgresql,postgresql-7,postgresql-8,postgresql-9';
+end;
+
+{**
+   Testing executil stored procedures
+}
+procedure TZTestPostgreSQLStoredProcedure.Test_abtest;
+begin
+  // add the testcode here
+  StoredProc.StoredProcName := 'abtest'
 end;
 
 initialization
