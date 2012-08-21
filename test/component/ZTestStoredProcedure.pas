@@ -74,9 +74,6 @@ type
 
   {** Implements a test case for class TZStoredProc. }
   TZTestInterbaseStoredProcedure = class(TZTestStoredProcedure)
-  private
-    Connection: TZConnection;
-    StoredProc: TZStoredProc;
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -86,9 +83,6 @@ type
 
   {** Implements a test case for class TZStoredProc. }
   TZTestDbLibStoredProcedure = class(TZTestStoredProcedure)
-  private
-    Connection: TZConnection;
-    StoredProc: TZStoredProc;
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -97,9 +91,6 @@ type
 
   {** Impleme nts a test case for class TZStoredProc. }
   TZTestPostgreSQLStoredProcedure = class(TZTestStoredProcedure)
-  private
-    Connection: TZConnection;
-    StoredProc: TZStoredProc;
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -233,7 +224,22 @@ end;
 procedure TZTestPostgreSQLStoredProcedure.Test_abtest;
 begin
   // add the testcode here
-  //StoredProc.StoredProcName := 'abtest'
+  StoredProc.StoredProcName := 'public.abtest';
+  CheckEquals(4, StoredProc.Params.Count);
+  CheckEquals('returnValue', StoredProc.Params[0].Name);
+  CheckEquals('$0', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals('$1', StoredProc.Params[2].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
+  CheckEquals('$2', StoredProc.Params[3].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[3].ParamType));
+
+  StoredProc.ParamByName('$0').AsInteger := 50;
+  StoredProc.ParamByName('$1').AsInteger := 100;
+  StoredProc.ParamByName('$2').AsString := 'a';
+  StoredProc.ExecProc;
+  CheckEquals('', StoredProc.ParamByName('returnValue').AsString);
+  CheckEquals(4, StoredProc.Params.Count);
 end;
 
 initialization

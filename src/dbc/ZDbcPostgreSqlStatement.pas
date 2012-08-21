@@ -1290,8 +1290,8 @@ begin
   end
   else
     Result := ASql;
-  if GetConnection.PreprepareSQL then
-    Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
+  //if GetConnection.PreprepareSQL then
+    //Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
 end;
 
 {**
