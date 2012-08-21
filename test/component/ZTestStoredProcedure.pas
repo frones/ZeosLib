@@ -233,10 +233,11 @@ end;
 procedure TZTestPostgreSQLStoredProcedure.Test_abtest;
 begin
   // add the testcode here
-  StoredProc.StoredProcName := 'abtest'
+  //StoredProc.StoredProcName := 'abtest'
 end;
 
 initialization
   RegisterTest('component',TZTestInterbaseStoredProcedure.Suite);
   RegisterTest('component',TZTestDbLibStoredProcedure.Suite);
+  RegisterTest('component',TZTestPostgreSQLStoredProcedure.Suite);
 end.
