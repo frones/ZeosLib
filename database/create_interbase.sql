@@ -230,6 +230,27 @@ BEGIN
   SUSPEND;
 END
 ^
+
+
+/*==============================================================*/
+/* Stored procedure: ABTEST                                     */
+/*==============================================================*/
+
+create or alter procedure abtest (
+    P1 integer,
+    P2 integer,
+    P3 varchar(10))
+returns (
+    P4 integer,
+    P5 varchar(20))
+as
+begin
+  P4 = P1 * 10 + P2;
+  P5 = P3 || P3;
+  suspend;
+end
+^ 
+
 SET TERM ; ^
 
 /*==============================================================*/
