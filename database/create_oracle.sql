@@ -200,6 +200,16 @@ alter table people
 
 
 /*==============================================================*/
+/* Stored procedure: abtest                                     */
+/*==============================================================*/
+/*Create FUNCTION System.ABTEST (p1 NUMBER, p2 NUMBER, p3 VARCHAR,
+  p4 OUT NUMBER, p5 OUT VARCHAR) IS
+BEGIN
+  p4 := p1 * 10 + p2;
+  p5 := p3 || p3;
+END; */
+
+/*==============================================================*/
 /* Grant privileges to columns                                  */
 /*==============================================================*/
 grant update(p_resume, p_redundant) on people to sys;

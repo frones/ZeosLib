@@ -203,7 +203,7 @@ END;
 /* Stored procedure: abtest					*/
 /*==============================================================*/
 
-CREATE OR REPLACE FUNCTION abtest (
+CREATE OR REPLACE FUNCTION "ABTEST" (
   p1 integer,
   p2 integer,
   p3 varchar,

@@ -242,7 +242,7 @@ var
   i: integer;
   S: String;
 begin
-  StoredProc.StoredProcName := 'abtest';
+  StoredProc.StoredProcName := 'ABTEST';
   CheckEquals(5, StoredProc.Params.Count);
   CheckEquals('P4', StoredProc.Params[0].Name);
   CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
@@ -262,22 +262,22 @@ begin
   CheckEquals(600, StoredProc.ParamByName('P4').AsInteger);
   CheckEquals('aa', StoredProc.ParamByName('P5').AsString);
   CheckEquals(5, StoredProc.Params.Count);
-//Fix it!!  StoredProc.Open;
 
   StoredProc.Prepare;
   for i:= 0 to 99 do
   begin
-    StoredProc.Unprepare; //Fix it!!
     StoredProc.Params[2].AsInteger:= i;
     StoredProc.Params[3].AsInteger:= 100;
     StoredProc.Params[4].AsString:= 'a';
-
     StoredProc.ExecProc;
   end;
   StoredProc.Unprepare;
-  //EgonHugeist: Fix it!
   S := StoredProc.ParamByName('P4').AsString +
     ' ' + StoredProc.ParamByName('P5').AsString;
+  StoredProc.Open;
+  StoredProc.ParamByName('P1').AsInteger := 50;
+  StoredProc.ParamByName('P2').AsInteger := 100;
+  StoredProc.ParamByName('P3').AsString := 'a';
   StoredProc.Open;
 end;
 
@@ -330,56 +330,43 @@ var
   i: integer;
   S: String;
 begin
-  StoredProc.StoredProcName := 'public.abtest';
-  CheckEquals(4, StoredProc.Params.Count); //Fix it should 5
-  CheckEquals('returnValue', StoredProc.Params[0].Name); //Fix it!!
-  CheckEquals('$0', StoredProc.Params[1].Name);
-  // Fix it! CheckEquals('P1', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
-  CheckEquals('$1', StoredProc.Params[2].Name);
-  //Fix it! CheckEquals('P2', StoredProc.Params[2].Name);
+  StoredProc.StoredProcName := 'ABTEST';
+  CheckEquals(5, StoredProc.Params.Count);
+  CheckEquals('P4', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
+  CheckEquals('P5', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[1].ParamType));
+  CheckEquals('P1', StoredProc.Params[2].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
-  CheckEquals('$2', StoredProc.Params[3].Name);
-  //Fix it! CheckEquals('P3', StoredProc.Params[3].Name);
+  CheckEquals('P2', StoredProc.Params[3].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[3].ParamType));
+  CheckEquals('P3', StoredProc.Params[4].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[4].ParamType));
 
-  StoredProc.ParamByName('$0').AsInteger := 50;
-  StoredProc.ParamByName('$1').AsInteger := 100;
-  StoredProc.ParamByName('$2').AsString := 'a';
-  {Fix it!:
   StoredProc.ParamByName('P1').AsInteger := 50;
   StoredProc.ParamByName('P2').AsInteger := 100;
   StoredProc.ParamByName('P3').AsString := 'a';
-  }
   StoredProc.ExecProc;
-  //CheckEquals('', StoredProc.ParamByName('returnValue').AsString);
-  CheckEquals(4, StoredProc.Params.Count);
-  StoredProc.Open;
-  CheckEquals(2, StoredProc.Fields.Count);
-  CheckEquals(600, StoredProc.FieldByName('p4').AsInteger);
-  CheckEquals('aa', StoredProc.FieldByName('p5').AsString);
+  CheckEquals(600, StoredProc.ParamByName('P4').AsInteger);
+  CheckEquals('aa', StoredProc.ParamByName('P5').AsString);
+  CheckEquals(5, StoredProc.Params.Count);
 
   StoredProc.Prepare;
   for i:= 0 to 99 do
   begin
-    //EgonHugeist: Fix it!
-    {StoredProc.Params[2].AsInteger:= i;
+    StoredProc.Params[2].AsInteger:= i;
     StoredProc.Params[3].AsInteger:= 100;
-    StoredProc.Params[4].AsString:= 'a';}
-
-    StoredProc.Params[1].AsInteger:= i;
-    StoredProc.Params[2].AsInteger:= 100;
-    StoredProc.Params[3].AsString:= 'a';
-
+    StoredProc.Params[4].AsString:= 'a';
     StoredProc.ExecProc;
   end;
   StoredProc.Unprepare;
-  //EgonHugeist: Fix it!
-  {S := StoredProc.ParamByName('P4').AsString +
-    ' ' + StoredProc.ParamByName('P5').AsString;}
+  S := StoredProc.ParamByName('P4').AsString +
+    ' ' + StoredProc.ParamByName('P5').AsString;
   StoredProc.Open;
-  S := StoredProc.FieldByName('P4').AsString +
-    ' ' + StoredProc.FieldByName('P5').AsString;
+  StoredProc.ParamByName('P1').AsInteger := 50;
+  StoredProc.ParamByName('P2').AsInteger := 100;
+  StoredProc.ParamByName('P3').AsString := 'a';
+  StoredProc.Open;
 end;
 
 initialization

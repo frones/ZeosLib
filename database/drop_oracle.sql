@@ -1,7 +1,4 @@
-/*==============================================================*/
-/* Database name:  zeoslib.gdb                                  */
-/* DBMS name:      Interbase 6                                  */
-/*==============================================================*/
+/*drop procedure ABTEST;*/
 drop view dep_view;
 drop table blob_values;
 drop table binary_values;
