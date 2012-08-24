@@ -125,7 +125,6 @@ type
     procedure CheckInterbase6Error(const Sql: string = '');
     procedure FetchOutParams(Value: IZResultSQLDA);
     function GetProcedureSql(SelectProc: boolean): string;
-    procedure TrimInParameters;
   public
     constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
 
@@ -1246,36 +1245,6 @@ begin
     Result := 'SELECT * FROM ' + SQL + InParams
   else
     Result := 'EXECUTE PROCEDURE ' + SQL + InParams;
-end;
-
-{**
-   Function remove stUnknown paramters from InParamTypes and InParamValues
-}
-procedure TZInterbase6CallableStatement.TrimInParameters;
-var
-  I: integer;
-  ParamValues: TZVariantDynArray;
-  ParamTypes: TZSQLTypeArray;
-  ParamCount: Integer;
-begin
-  ParamCount := 0;
-  SetLength(ParamValues, InParamCount);
-  SetLength(ParamTypes, InParamCount);
-
-  for I := 0 to High(InParamTypes) do
-  begin
-    if ( InParamTypes[I] = ZDbcIntfs.stUnknown ) then
-     Continue;
-    if (Self.FDBParamTypes[i] in [2, 4]) then continue; //EgonHugeist: Ignore known OutParams! else InparamCount <> isc_Params
-    ParamTypes[ParamCount] := InParamTypes[I];
-    ParamValues[ParamCount] := InParamValues[I];
-    Inc(ParamCount);
-  end;
-  if ParamCount = InParamCount then
-    Exit;
-  InParamTypes := ParamTypes;
-  InParamValues := ParamValues;
-  SetInParamCount(ParamCount); //AVZ
 end;
 
 end.

@@ -271,6 +271,7 @@ type
     FTemp: String;
   protected
     FDBParamTypes:array[0..1024] of shortInt;
+    procedure TrimInParameters;
     procedure SetOutParamCount(NewParamCount: Integer); virtual;
     function GetOutParam(ParameterIndex: Integer): TZVariant; virtual;
 
@@ -1722,6 +1723,39 @@ begin
   FOutParamCount := 0;
   SetOutParamCount(0);
   FLastWasNull := True;
+end;
+
+{**
+   Function remove stUnknown and ptResult, ptOutput paramters from
+   InParamTypes and InParamValues because the out-params are added after
+   fetching.
+}
+procedure TZAbstractCallableStatement.TrimInParameters;
+var
+  I: integer;
+  ParamValues: TZVariantDynArray;
+  ParamTypes: TZSQLTypeArray;
+  ParamCount: Integer;
+begin
+  ParamCount := 0;
+  SetLength(ParamValues, InParamCount);
+  SetLength(ParamTypes, InParamCount);
+
+  for I := 0 to High(InParamTypes) do
+  begin
+    if ( InParamTypes[I] = ZDbcIntfs.stUnknown ) then
+     Continue;
+    if (Self.FDBParamTypes[i] in [2, 4]) then //[ptResult, ptOutput]
+      continue; //EgonHugeist: Ignore known OutParams! else StatmentInparamCount <> expect ProcedureParamCount
+    ParamTypes[ParamCount] := InParamTypes[I];
+    ParamValues[ParamCount] := InParamValues[I];
+    Inc(ParamCount);
+  end;
+  if ParamCount = InParamCount then
+    Exit;
+  InParamTypes := ParamTypes;
+  InParamValues := ParamValues;
+  SetInParamCount(ParamCount); //AVZ
 end;
 
 {**

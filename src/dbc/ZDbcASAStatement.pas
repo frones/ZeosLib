@@ -125,7 +125,6 @@ type
   protected
     procedure FetchOutParams( Value: IZASASQLDA);
     function GetProcedureSQL: String;
-    procedure TrimInParameters;
   public
     constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
     destructor Destroy; override;
@@ -1024,36 +1023,6 @@ begin
   if InParams <> '' then
     InParams := '(' + InParams + ')';
   Result := 'call ' + SQL + InParams;
-end;
-
-{**
-   Function remove stUnknown paramters from InParamTypes and InParamValues
-}
-procedure TZASACallableStatement.TrimInParameters;
-var
-  I: integer;
-  ParamValues: TZVariantDynArray;
-  ParamTypes: TZSQLTypeArray;
-  ParamCount: Integer;
-begin
-  ParamCount := 0;
-  SetLength(ParamValues, InParamCount);
-  SetLength(ParamTypes, InParamCount);
-
-  for I := 0 to High(InParamTypes) do
-  begin
-    if InParamTypes[I] = ZDbcIntfs.stUnknown then
-     Continue;
-
-    ParamTypes[ParamCount] := InParamTypes[I];
-    ParamValues[ParamCount] := InParamValues[I];
-    Inc(ParamCount);
-  end;
-  if ParamCount = InParamCount then
-    Exit;
-  InParamTypes := ParamTypes;
-  InParamValues := ParamValues;
-  SetInParamCount(ParamCount);
 end;
 
 end.
