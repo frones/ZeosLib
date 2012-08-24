@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2006 Zeos Development Group       }
+{    Copyright (c) 1999-2012 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -1048,7 +1048,7 @@ begin
 //        raise EZSQLException.Create(SStatementIsNotAllowed);
 
       PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
-        SQL, StmtHandle, SQLData);
+        ProcSQL, StmtHandle, SQLData);
       PrepareParameters(GetPlainDriver, ProcSql, InParamValues, InParamTypes,
         InParamCount, GetDialect, StmtHandle, FParamSQLData, FIBConnection.GetEncoding);
 
@@ -1264,9 +1264,9 @@ begin
 
   for I := 0 to High(InParamTypes) do
   begin
-    if InParamTypes[I] = ZDbcIntfs.stUnknown then
+    if ( InParamTypes[I] = ZDbcIntfs.stUnknown ) then
      Continue;
-
+    if (Self.FDBParamTypes[i] in [2, 4]) then continue; //EgonHugeist: Ignore known OutParams! else InparamCount <> isc_Params
     ParamTypes[ParamCount] := InParamTypes[I];
     ParamValues[ParamCount] := InParamValues[I];
     Inc(ParamCount);
