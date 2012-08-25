@@ -2877,15 +2877,14 @@ function TZInterbase6DatabaseMetadata.HasNoWildcards(
   const Pattern: string): Boolean;
 var
   I: Integer;
-  PreviousChar: string[1];
   PreviousCharWasEscape: Boolean;
-  EscapeChar : string;
+  EscapeChar,PreviousChar: Char;
   WildcardsSet: TZWildcardsSet;
 begin
   Result := False;
-  PreviousChar := '';
+  PreviousChar := #0;
   PreviousCharWasEscape := False;
-  EscapeChar := GetDatabaseInfo.GetSearchStringEscape;
+  EscapeChar := Char(GetDatabaseInfo.GetSearchStringEscape[1]);
   WildcardsSet := GetWildcardsSet;
   for I := 1 to Length(Pattern) do
   begin
@@ -2894,7 +2893,7 @@ begin
 
     PreviousCharWasEscape := (Pattern[I] = EscapeChar) and (PreviousChar <> EscapeChar);
     if (PreviousCharWasEscape) and (Pattern[I] = EscapeChar) then
-      PreviousChar := ''
+      PreviousChar := #0
     else
       PreviousChar := Pattern[I];
   end;
@@ -2910,10 +2909,10 @@ function TZInterbase6DatabaseMetadata.StripEscape(
   const Pattern: string): string;
 var
   I: Integer;
-  PreviousChar: string[1];
+  PreviousChar: Char;
   EscapeChar: string;
 begin
-  PreviousChar := '';
+  PreviousChar := #0;
   Result := '';
   EscapeChar := GetDatabaseInfo.GetSearchStringEscape;
   for I := 1 to Length(Pattern) do
@@ -2928,7 +2927,7 @@ begin
       if (PreviousChar = EscapeChar) then
       begin
         Result := Result + Pattern[I];
-        PreviousChar := '';
+        PreviousChar := #0;
       end
       else
         PreviousChar := Pattern[i];

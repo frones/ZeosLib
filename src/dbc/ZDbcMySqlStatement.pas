@@ -462,20 +462,18 @@ begin
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
       stBytes:
-        Result := Self.GetConnection.GetEscapeString(PAnsiChar(AnsiString(SoftVarManager.GetAsString(Value))));
+        Result := Self.GetConnection.GetBinaryEscapeString(AnsiString(SoftVarManager.GetAsString(Value)));
       stString:
-        {$IFDEF DELPHI12_UP}
-          if GetConnection.PreprepareSQL then Result := AnsiQuotedStr(SoftVarManager.GetAsString(Value), #39) else
-        {$ENDIF}
-          Result := Self.GetConnection.GetEscapeString(PAnsiChar(ZPlainString(SoftVarManager.GetAsString(Value))));
+        Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
       stUnicodeString:
         {$IFDEF DELPHI12_UP}
-          if GetConnection.PreprepareSQL then Result := AnsiQuotedStr(SoftVarManager.GetAsUnicodeString(Value), #39) else
+          if GetConnection.PreprepareSQL then
+            Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsUnicodeString(Value)) else
         {$ENDIF}
         if (GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) then
-          Result := Self.GetConnection.GetEscapeString(PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))))
+          Result := Self.GetConnection.GetEscapeString(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)))
         else
-          Result := Self.GetConnection.GetEscapeString(PAnsiChar(AnsiString(SoftVarManager.GetAsUnicodeString(Value))));
+          Result := Self.GetConnection.GetEscapeString(AnsiString(SoftVarManager.GetAsUnicodeString(Value)));
       stDate:
       begin
         DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
@@ -503,32 +501,22 @@ begin
           if not TempBlob.IsEmpty then
           begin
             if InParamTypes[ParamIndex] = stBinaryStream then
-              //Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString);
-              Result := GetSQLHexString(PAnsiChar(TempBlob.GetString), TempBlob.Length);
-            if (GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) and
-              ( InParamTypes[ParamIndex] in [stAsciiStream, stUnicodeStream] ) then
+              Result := Self.GetConnection.GetBinaryEscapeString(TempBlob.GetString)
+            else
             begin
-              TempStreamIn:=TempBlob.GetStream;
-              TempStream := GetValidatedUnicodeStream(TempStreamIn);
-              TempStreamIn.Free;
-              TempBlob.SetStream(TempStream);
-              TempStream.Free;
-            end; //could be equal valid for unicode if the user reads the Stream as ftMemo
-            case InParamTypes[ParamIndex] of
-            stAsciiStream:
-              begin
-                {$IFDEF DELPHI12_UP}
-                if GetConnection.PreprepareSQL then Result := AnsiQuotedStr(ZDbcString(TempBlob.GetString), #39) else
-                {$ENDIF}
-                Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString);
+              if (GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) then
+              begin //could be equal valid for unicode if the user reads the Stream as ftMemo
+                TempStreamIn:=TempBlob.GetStream;
+                TempStream := GetValidatedUnicodeStream(TempStreamIn);
+                TempStreamIn.Free;
+                TempBlob.SetStream(TempStream);
+                TempStream.Free;
               end;
-            stUnicodeStream:
-              begin
-                {$IFDEF DELPHI12_UP}
-                if GetConnection.PreprepareSQL then Result := AnsiQuotedStr(TempBlob.GetUnicodeString, #39) else
-                {$ENDIF}
-                Result := Self.GetConnection.GetAnsiEscapeString(TempBlob.GetString);
-              end;
+              {$IFDEF DELPHI12_UP}
+              if GetConnection.PreprepareSQL then
+                Result := Self.GetConnection.GetEscapeString(ZDbcString(TempBlob.GetString)) else
+              {$ENDIF}
+              Result := GetConnection.GetEscapeString(TempBlob.GetString)
             end;
           end
           else
@@ -969,7 +957,7 @@ procedure TZMySQLBindBuffer.AddColumn(buffertype: TMysqlFieldTypes;
   field_length: integer; largeblobparameter:boolean);
   var
     tempbuffertype: TMysqlFieldTypes;
-    ColOffset:integer;
+    ColOffset:NativeUInt;
 begin
   Case buffertype of
     FIELD_TYPE_DECIMAL,
@@ -1002,7 +990,7 @@ begin
         is_null := 0;
       end;
     end;
-  ColOffset:=(FAddedColumnCount-1)*FBindOffsets.size;
+  ColOffset:=NativeUInt((FAddedColumnCount-1)*FBindOffsets.size);
   PTMysqlFieldTypes(@FbindArray[ColOffset+FBindOffsets.buffer_type])^:=tempbuffertype;
   PULong(@FbindArray[ColOffset+FBindOffsets.buffer_length])^ := FPColumnArray^[FAddedColumnCount-1].length;
   PByte(@FbindArray[ColOffset+FBindOffsets.is_unsigned])^:= 0;
@@ -1023,7 +1011,7 @@ end;
 
 function TZMySQLBindBuffer.GetBufferType(ColumnIndex: Integer): TMysqlFieldTypes;
 begin
-  result := PTMysqlFieldTypes(@FbindArray[(ColumnIndex-1)*FBindOffsets.size+FBindOffsets.buffer_type])^;
+  result := PTMysqlFieldTypes(@FbindArray[NativeUInt((ColumnIndex-1)*FBindOffsets.size)+FBindOffsets.buffer_type])^;
 end;
 
 end.

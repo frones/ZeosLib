@@ -1268,8 +1268,8 @@ THackCachedResultSet = class(TZAbstractCachedResultSet);
 function TZOracleDatabaseMetadata.UncachedGetProcedureColumns(const Catalog,
   SchemaPattern, ProcedureNamePattern, ColumnNamePattern: string): IZResultSet;
   var
-    SQL, Where: string;
-    LProcedureNamePattern, LColumnNamePattern: string;
+    SQL{, Where}: string;
+    LProcedureNamePattern{, LColumnNamePattern}: string;
     TypeName, SubTypeName: string;
     ColumnIndexes : Array[1..8] of integer;
     //ReturnIndexes : Array[1..8] of integer;
@@ -1312,20 +1312,19 @@ function TZOracleDatabaseMetadata.UncachedGetProcedureColumns(const Catalog,
       ColumnIndexes[7] := FindColumn('DATA_SCALE');//RDB$FIELD_SCALE');
       ColumnIndexes[8] := 0;//FindColumn('RDB$NULL_FLAG');
 
-
+      isFunction := False;
       while Next do
       begin
-
-      if iCol=0 then
-      begin
-         isFunction := (GetString(FindColumn('IN_OUT'))='OUT'); // find another way to test...   //IsOracleFunction(GetConnection.GetIZPlainDriver,IZStmt. GetString(FindColumn('object_name')));
-//         if isFunction then
-//            begin
-//              inc(iCol);
-//              bNeedInsertReturns := true;
-//              continue;
-//            end;
-      end;
+        if iCol=0 then
+        begin
+           isFunction := (GetString(FindColumn('IN_OUT'))='OUT'); // find another way to test...   //IsOracleFunction(GetConnection.GetIZPlainDriver,IZStmt. GetString(FindColumn('object_name')));
+  //         if isFunction then
+  //            begin
+  //              inc(iCol);
+  //              bNeedInsertReturns := true;
+  //              continue;
+  //            end;
+        end;
 
 
 //        InsertingRecord:

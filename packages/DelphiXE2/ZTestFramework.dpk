@@ -28,6 +28,7 @@ package ZTestFramework;
 {$DESCRIPTION 'Zeos Testing Framework'}
 {$LIBSUFFIX '160'}
 {$IMPLICITBUILD OFF}
+{$I ..\..\src\Zeos.inc}
 
 requires
   ZComponent,
@@ -50,8 +51,10 @@ contains
   ZSqlTestCase in '..\..\test\framework\ZSqlTestCase.pas',
   ZTestCase in '..\..\test\framework\ZTestCase.pas',
   ZBugReport in '..\..\test\framework\ZBugReport.pas',
-  ZPerformanceTestCase in '..\..\test\framework\ZPerformanceTestCase.pas',
-  MemCheck in '..\..\test\external\MemCheck.pas';
+  {$IFNDEF WITH_REPORTMEMORYLEAKSONSHUTDOWN}
+  MemCheck in '..\..\test\external\MemCheck.pas',
+  {$ENDIF}
+  ZPerformanceTestCase in '..\..\test\framework\ZPerformanceTestCase.pas';
 
 {TextTestRunner in '..\..\test\external\TextTestRunner.pas',
   GUITestRunner in '..\..\test\external\GUITestRunner.pas',

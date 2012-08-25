@@ -135,7 +135,6 @@ end;
 constructor TZInterbaseTokenizer.Create;
 begin
   EscapeState := TZEscapeState.Create;
-  EscapeMarkSequence := '~<|'; //Defaults
   WhitespaceState := TZWhitespaceState.Create;
 
   SymbolState := TZInterbaseSymbolState.Create;

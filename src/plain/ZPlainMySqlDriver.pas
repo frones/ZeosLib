@@ -104,8 +104,8 @@ type
 
     function GetAffectedRows(Handle: PZMySQLConnect): Int64;
     {ADDED by EgonHugeist}
-    function EscapeString(Handle: PZMySQLConnect; StrFrom: ZAnsiString): ZAnsiString; overload;
-    function EscapeString(Handle: PZMySQLConnect; StrFrom: ZAnsiString; Len: Integer): ZAnsiString; overload;
+    //omited function EscapeString(Handle: PZMySQLConnect; StrFrom: ZAnsiString): ZAnsiString; overload;
+    //omited function EscapeString(Handle: PZMySQLConnect; StrFrom: ZAnsiString; Len: Integer): ZAnsiString; overload;
     function GetConnectionCharacterSet(Handle: PMYSQL): PAnsiChar;// char_set_name
     procedure Close(Handle: PZMySQLConnect);
     function Connect(Handle: PZMySQLConnect; const Host, User, Password: PAnsiChar): PZMySQLConnect;
@@ -117,7 +117,7 @@ type
     // eof
     function GetLastErrorCode(Handle: PZMySQLConnect): Integer;
     function GetLastError(Handle: PZMySQLConnect): PAnsiChar;
-    function GetEscapeString(StrTo, StrFrom: PAnsiChar; Length: Cardinal): Cardinal;
+    //function GetEscapeString(StrTo, StrFrom: PAnsiChar; Length: Cardinal): Cardinal;
     function FetchField(Res: PZMySQLResult): PZMySQLField;
     // fetch_field_direct
     // fetch_fields
@@ -148,7 +148,7 @@ type
       const PreprepareSQL: Boolean; const Encoding: TZCharEncoding;
       out LogSQL: String): Integer; overload;
     function RealConnect(Handle: PZMySQLConnect; const Host, User, Password, Db: PAnsiChar; Port: Cardinal; UnixSocket: PAnsiChar; ClientFlag: Cardinal): PZMySQLConnect;
-    function GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PAnsiChar; Length: Cardinal): Cardinal;
+    //function GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PAnsiChar; Length: Cardinal): Cardinal;
     function ExecRealQuery(Handle: PZMySQLConnect; const Query: PAnsiChar; Length: Integer): Integer;
     function Refresh(Handle: PZMySQLConnect; Options: Cardinal): Integer;
     function SeekRow(Res: PZMySQLResult; Row: PZMySQLRowOffset): PZMySQLRowOffset;
@@ -251,8 +251,9 @@ type
     procedure LoadCodePages; override;
     procedure LoadApi; override;
     procedure BuildServerArguments(Options: TStrings);
-    function GetPrepreparedSQL(Handle: PZMySQLConnect; const SQL: String;
-      const Encoding: TZCharEncoding; out LogSQL: String): ZAnsiString; reintroduce;
+    {function GetPrepreparedSQL(Handle: Pointer; const SQL: String;
+      const Encoding: TZCharEncoding; out LogSQL: String;
+      const PreprepareSQL: Boolean): ZAnsiString;  override;}
   public
     constructor Create(Tokenizer: IZTokenizer);
     destructor Destroy; override;
@@ -270,9 +271,8 @@ type
     function RealConnect(Handle: PZMySQLConnect;
       const Host, User, Password, Db: PAnsiChar; Port: Cardinal;
       UnixSocket: PAnsiChar; ClientFlag: Cardinal): PZMySQLConnect;
-    function GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PAnsiChar; Length: Cardinal): Cardinal;
-    function EscapeString(Handle: PZMySQLConnect; StrFrom: ZAnsiString): ZAnsiString; overload;
-    function EscapeString(Handle: PZMySQLConnect; StrFrom: ZAnsiString; Len: Integer): ZAnsiString; overload;
+    //function GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PAnsiChar; Length: Cardinal): Cardinal;
+    //function EscapeString(Handle: PZMySQLConnect; StrFrom: ZAnsiString): ZAnsiString;
     procedure Close(Handle: PZMySQLConnect);
 
     function ExecQuery(Handle: PZMySQLConnect; const Query: PAnsiChar): Integer; overload;
@@ -331,8 +331,8 @@ type
     function GetStatInfo(Handle: PZMySQLConnect): PAnsiChar;
     function SetOptions(Handle: PZMySQLConnect; Option: TMySQLOption;
       const Arg: PAnsiChar): Integer;
-    function GetEscapeString(StrTo, StrFrom: PAnsiChar; Length: Cardinal): Cardinal;
-
+    function EscapeString(Handle: Pointer; const Value: ZAnsiString;
+      const Encoding: TZCharEncoding): ZAnsiString; override;
     function GetServerInfo(Handle: PZMySQLConnect): PAnsiChar;
     function GetClientInfo: PAnsiChar;
     function GetHostInfo(Handle: PZMySQLConnect): PAnsiChar;
@@ -636,48 +636,38 @@ begin
   end;
 end;
 
-function TZMySQLBaseDriver.GetPrepreparedSQL(Handle: PZMySQLConnect;
-  const SQL: String; const Encoding: TZCharEncoding; out LogSQL: String): ZAnsiString;
+(*function TZMySQLBaseDriver.GetPrepreparedSQL(Handle: Pointer; const SQL: String;
+  const Encoding: TZCharEncoding; out LogSQL: String;
+  const PreprepareSQL: Boolean): ZAnsiString;
 var
   SQLTokens: TZTokenDynArray;
   i: Integer;
-  QuoteChar: Char;
-  Temp: ZAnsiString;
+  //QuoteChar: Char;
 begin
   LogSQL := '';
   SQLTokens := FTokenizer.TokenizeEscapeBufferToList(SQL); //Disassembles the Query
   for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
   begin
     case (SQLTokens[i].TokenType) of
-      ttEscapedQuoted:
-        begin  //EgonHugeist: not a nice piece of code, i know but what can i do otherwise??....
-          Temp := ZAnsiString(SQLTokens[i].Value);
-          if DetectUTF8Encoding(Temp) = etUTF8 then
-            Result := Result+Temp
-          else
-            Result := Result +ZPlainString(SQLTokens[i].Value, Encoding);
-        end;
       ttEscape:
-        Result := Result + ZAnsiString(SQLTokens[i].Value);
-      ttQuoted, ttQuotedIdentifier:
+        Result := Result + {$IFDEF DELPHI12_UP}ZPlainString(SQLTokens[i].Value, Encoding){$ELSE}SQLTokens[i].Value{$ENDIF};
+      ttQuoted, ttEscapedQuoted, ttQuotedIdentifier:
         begin
-          QuoteChar := Char(SQLTokens[i].Value[1]);
+          (*QuoteChar := Char(SQLTokens[i].Value[1]);
           if QuoteChar = #39 then
             if Length(SQLTokens[i].Value) = 2 then
               Result := Result + ZAnsiString(SQLTokens[i].Value)
             else
-              Result := Result + ''''+EscapeString(Handle, Self.ZPlainString(SysUtils.AnsiDequotedStr(SQLTokens[i].Value, QuoteChar), Encoding))+ ''''
+              Result := Result + EscapeString(Handle, ZPlainString(SysUtils.AnsiDequotedStr(SQLTokens[i].Value, QuoteChar), Encoding), Encoding)
           else
-            Result := Result + {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr(
-              EscapeString(Handle, Self.ZPlainString(SysUtils.AnsiDequotedStr(
-                SQLTokens[i].Value, QuoteChar), Encoding)), AnsiChar(QuoteChar));
+            Result := Result + ZPlainString(SQLTokens[i].Value, Encoding);
         end;
       else
         Result := Result + ZAnsiString(SQLTokens[i].Value);
     end;
   end;
   LogSQL := String(Result);
-end;
+end;*)
 
 constructor TZMySQLBaseDriver.Create(Tokenizer: IZTokenizer);
 begin
@@ -760,10 +750,21 @@ function TZMySQLBaseDriver.ExecQuery(Handle: PZMySQLConnect; const SQL: String;
   const PreprepareSQL: Boolean; const Encoding: TZCharEncoding; out LogSQL: String): Integer;
 begin
   if PreprepareSQL then
-    Result := MYSQL_API.mysql_query(Handle, PAnsiChar(GetPrepreparedSQL(Handle, SQL, Encoding, LogSQL)))
+    Result := MYSQL_API.mysql_query(Handle, PAnsiChar(GetPrepreparedSQL(Handle, SQL, Encoding, LogSQL, True)))
   else
   begin
+    {$IF defined(DELPHI12_UP) and defined(WRONG_UNICODE_BEHAVIOR)}  {out commented to keep the old compatibility}
     Result := MYSQL_API.mysql_query(Handle, PAnsiChar(ZAnsiString(SQL)));
+    {$ELSE}
+      {$IFDEF DELPHI12_UP}
+      if Encoding = ceUTF8 then
+        Result := MYSQL_API.mysql_query(Handle, PAnsiChar(Utf8String(SQL)))
+      else
+        Result := MYSQL_API.mysql_query(Handle, PAnsiChar(AnsiString(SQL)));
+      {$ELSE}
+      Result := MYSQL_API.mysql_query(Handle, PAnsiChar(SQL));
+      {$ENDIF}
+    {$IFEND}
     LogSQL := SQL;
   end;
 end;
@@ -826,10 +827,28 @@ begin
   Result := MYSQL_API.mysql_get_client_info;
 end;
 
-function TZMySQLBaseDriver.GetEscapeString(StrTo, StrFrom: PAnsiChar;
+{function TZMySQLBaseDriver.GetEscapeString(StrTo, StrFrom: PAnsiChar;
   Length: Cardinal): Cardinal;
 begin
   Result := MYSQL_API.mysql_escape_string(StrTo, StrFrom, Length);
+end;}
+
+function TZMySQLBaseDriver.EscapeString(Handle: Pointer; const Value: ZAnsiString;
+  const Encoding: TZCharEncoding): ZAnsiString;
+var
+  Len, outlength: integer;
+  Outbuffer: ZAnsiString;
+  TempValue: ZAnsiString;
+begin
+  TempValue := {$IFDEF DELPHI12_UP}Value{$ELSE}ZPlainString(Value,  Encoding){$ENDIF}; //check encoding too
+  Len := Length(TempValue);
+  Setlength(Outbuffer,Len*2+1);
+  if Handle = nil then
+    OutLength := MYSQL_API.mysql_escape_string(PAnsiChar(OutBuffer), PAnsiChar(TempValue), Len)
+  else
+    OutLength := MYSQL_API.mysql_real_escape_string(Handle, PAnsiChar(OutBuffer), PAnsiChar(TempValue), Len);
+  Setlength(Outbuffer,OutLength);
+  Result := #39+Outbuffer+#39;
 end;
 
 function TZMySQLBaseDriver.GetHostInfo(Handle: PZMySQLConnect): PAnsiChar;
@@ -927,34 +946,11 @@ begin
     Port, UnixSocket, ClientFlag);
 end;
 
-function TZMySQLBaseDriver.GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PAnsiChar;
+{function TZMySQLBaseDriver.GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PAnsiChar;
   Length: Cardinal): Cardinal;
 begin
   Result := MYSQL_API.mysql_real_escape_string(Handle, StrTo, StrFrom, Length);
-end;
-
-{**
-  EgonHugeist: get an escaped string in dependency of the characterset
-  }
-function TZMySQLBaseDriver.EscapeString(Handle: PZMySQLConnect; StrFrom: ZAnsiString; Len: Integer): ZAnsiString;
-var
-   outlength: integer;
-   Outbuffer: ZAnsiString;
-begin
-   Len := Length(StrFrom);
-   Setlength(Outbuffer,Len*2+1);
-   if Handle = nil then
-     OutLength := GetEscapeString(PAnsiChar(OutBuffer),PAnsiChar(StrFrom),Len)
-   else
-     OutLength := GetRealEscapeString(Handle, PAnsiChar(OutBuffer),PAnsiChar(StrFrom),Len);
-   Setlength(Outbuffer,OutLength);
-   Result := Outbuffer;
-end;
-
-function TZMySQLBaseDriver.EscapeString(Handle: PZMySQLConnect; StrFrom: ZAnsiString): ZAnsiString;
-begin
-  Result := EscapeString(Handle, StrFrom, Length(StrFrom));
-end;
+end;}
 
 function TZMySQLBaseDriver.Refresh(Handle: PZMySQLConnect;
   Options: Cardinal): Integer;

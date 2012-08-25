@@ -162,6 +162,8 @@ function GetValidatedUnicodeStream(const Stream: TStream): TStream;
   @param ODBC a boolean if output result should be with a starting 0x...
   @returns a valid hex formated unicode-safe string
 }
+function GetSQLHexWideString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): ZWideString;
+function GetSQLHexAnsiString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): ZAnsiString;
 function GetSQLHexString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): String;
 
 implementation
@@ -516,7 +518,8 @@ end;
   @param ODBC a boolean if output result should be with a starting 0x...
   @returns a valid hex formated unicode-safe string
 }
-function GetSQLHexString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): String;
+
+function GetSQLHexWideString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): ZWideString;
 var
   HexVal: AnsiString;
 begin
@@ -524,9 +527,31 @@ begin
   BinToHex(Value, PAnsiChar(HexVal), Len);
 
   if ODBC then
-    Result := '0x'#39+String(HexVal)
+    Result := '0x'#39+WideString(HexVal)
   else
-    Result := 'x'#39+String(HexVal)+#39;
+    Result := 'x'#39+WideString(HexVal)+#39;
+end;
+
+function GetSQLHexAnsiString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): ZAnsiString;
+var
+  HexVal: AnsiString;
+begin
+  SetLength(HexVal,Len * 2 );
+  BinToHex(Value, PAnsiChar(HexVal), Len);
+
+  if ODBC then
+    Result := '0x'#39+HexVal
+  else
+    Result := 'x'#39+HexVal+#39;
+end;
+
+function GetSQLHexString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): String;
+begin
+  {$IFDEF DELPHI12_UP}
+  Result := GetSQLHexWideString(Value, Len, ODBC);
+  {$ELSE}
+  Result := GetSQLHexAnsiString(Value, Len, ODBC);
+  {$ENDIF}
 end;
 
 end.

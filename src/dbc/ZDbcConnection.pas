@@ -203,7 +203,7 @@ type
 
     //Ping Support initially for MySQL 27032006 (firmos)
     function PingServer: Integer; virtual;
-    function EscapeString(Value: AnsiString): AnsiString; virtual;
+    function EscapeString(Value: ZAnsiString): ZAnsiString; virtual;
 
     procedure Open; virtual;
     procedure Close; virtual;
@@ -229,13 +229,11 @@ type
 
     function GetWarnings: EZSQLWarning; virtual;
     procedure ClearWarnings; virtual;
-    function GetAnsiEscapeString(const Value: AnsiString;
-      const EscapeMarkSequence: String = '~<|'): String; virtual;
-    function GetEscapeString(const Value: String;
-      const EscapeMarkSequence: String = '~<|'): String; overload; virtual;
-    function GetEscapeString(const Value: PAnsiChar;
-      const EscapeMarkSequence: String = '~<|'): String; overload; virtual;
-
+    function GetBinaryEscapeString(const Value: ZAnsiString): String; virtual;
+    function GetEscapeString(const Value: String): String; overload; virtual;
+    {$IFDEF DELPHI12_UP}
+    function GetEscapeString(const Value: ZAnsiString): String; overload; virtual;
+    {$ENDIF}
     function UseMetadata: boolean;
     procedure SetUseMetadata(Value: Boolean);
 end;
@@ -289,7 +287,8 @@ end;
 
 implementation
 
-uses ZMessages, ZSysUtils, ZDbcMetadata;
+uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils
+  {$IFDEF DELPHI12_UP},AnsiStrings{$ENDIF};
 
 { TZAbstractDriver }
 
@@ -1037,7 +1036,7 @@ end;
   @param value string that should be escaped
   @return Escaped string
 }
-function TZAbstractConnection.EscapeString(Value : AnsiString) : AnsiString;
+function TZAbstractConnection.EscapeString(Value : ZAnsiString) : ZAnsiString;
 begin
   Result := AnsiString(EncodeCString(String(Value)));
 end;
@@ -1249,33 +1248,44 @@ end;
   @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
   @result the detectable Binary String
 }
-function TZAbstractConnection.GetAnsiEscapeString(const Value: AnsiString;
-  const EscapeMarkSequence: String = '~<|'): String;
+function TZAbstractConnection.GetBinaryEscapeString(const Value: ZAnsiString): String;
 begin
   if Self.FPreprepareSQL then //Set detect-sequence only if Prepreparing should be done else it's not server-understandable.
-    Result := Self.GetDriver.GetTokenizer.AnsiGetEscapeString(Value, EscapeMarkSequence)
+    Result := Self.GetDriver.GetTokenizer.AnsiGetEscapeString(GetSQLHexAnsiString(PAnsiChar(Value), Length(Value)))
   else
-    Result := String(Value);
+    Result := GetSQLHexAnsiString(PAnsiChar(Value), Length(Value));
 end;
 
-function TZAbstractConnection.GetEscapeString(const Value: String;
-  const EscapeMarkSequence: String = '~<|'): String;
+function TZAbstractConnection.GetEscapeString(const Value: String): String;
 begin
-  if Self.FPreprepareSQL then //Set detect-sequence only if Prepreparing should be done else it's not server-understandable.
-    Result := Self.GetDriver.GetTokenizer.GetEscapeString(Value)
+  if GetPreprepareSQL then
+    if StartsWith(Value, '''') and EndsWith(Value, '''') then
+      Result := GetDriver.GetTokenizer.GetEscapeString(Value)
+    else
+      Result := GetDriver.GetTokenizer.GetEscapeString(AnsiQuotedStr(Value, #39))
   else
-    Result := Value;
+    if StartsWith(Value, '''') and EndsWith(Value, '''') then
+      Result := Value
+    else
+      Result := AnsiQuotedStr(Value, #39);
 end;
 
-function TZAbstractConnection.GetEscapeString(const Value: PAnsiChar;
-  const EscapeMarkSequence: String = '~<|'): String;
-var
-  Ansi: AnsiString;
+{$IFDEF DELPHI12_UP}
+function TZAbstractConnection.GetEscapeString(const Value: ZAnsiString): String;
 begin
-  Ansi := StrPas(Value);
-  Result := GetEscapeString(String(Ansi));
+  if GetPreprepareSQL then
+    if StartsWith(Value, '''') and EndsWith(Value, '''') then
+      Result := GetDriver.GetTokenizer.GetEscapeString(ZDbcString(Value))
+    else
+      Result := GetDriver.GetTokenizer.GetEscapeString(AnsiQuotedStr(ZDbcString(Value), #39))
+  else
+    {String instead of ZDbcString used to keep the old wrong compatibility}
+    if StartsWith(Value, '''') and EndsWith(Value, '''') then
+      Result := {$IFDEF WRONG_UNICODE_BEHAVIOR}String{$ELSE}ZDbcString{$ENDIF}(Value)
+    else
+      Result := AnsiQuotedStr({$IFDEF WRONG_UNICODE_BEHAVIOR}String{$ELSE}ZDbcString{$ENDIF}(Value), #39);
 end;
-
+{$ENDIF}
 
 {**
   Result 100% Compiler-Compatible

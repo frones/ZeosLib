@@ -128,8 +128,7 @@ type
     procedure Open; override;
     procedure Close; override;
 
-    function GetAnsiEscapeString(const Value: AnsiString;
-      const EscapeMarkSequence: String = '~<|'): String; override;
+    function GetBinaryEscapeString(const Value: ZAnsiString): String; override;
   end;
 
   {** Implements a specialized cached resolver for Interbase/Firebird. }
@@ -713,18 +712,11 @@ begin
   CheckInterbase6Error(GetPlainDriver, FStatusVector, lcExecute, SQL);
 end;
 
-function TZInterbase6Connection.GetAnsiEscapeString(const Value: AnsiString;
-  const EscapeMarkSequence: String = '~<|'): String;
-var
-  Tmp: AnsiString;
+function TZInterbase6Connection.GetBinaryEscapeString(const Value: ZAnsiString): String;
 begin
   if Self.GetPlainDriver.GetProtocol = 'firebird-2.5' then
     if Length(Value)*2 < 32*1024 then
-    begin
-      SetLength(Tmp, Length(Value)*2);
-      BinToHex(PAnsiChar(Value), PAnsiChar(Tmp), Length(Value)*2);
-      Result := inherited GetAnsiEscapeString('x'''+Tmp+'''', EscapeMarkSequence)
-    end
+      GetSQLHexString(PAnsiChar(Value), Length(Value))
     else
       raise Exception.Create('Binary data out of range! Use Blob-Fields!')
   else

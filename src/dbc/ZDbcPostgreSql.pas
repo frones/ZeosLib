@@ -144,11 +144,13 @@ type
     function GetServerSubVersion: Integer;
 
     function PingServer: Integer; override;
+    function EscapeString(Value: ZAnsiString): ZAnsiString; override;
     function GetCharactersetCode: TZPgCharactersetType;
-    function GetAnsiEscapeString(const Value: AnsiString;
-      const EscapeMarkSequence: String = '~<|'): String; override;
-    function GetEscapeString(const Value: String;
-      const EscapeMarkSequence: String = '~<|'): String; override;
+    function GetBinaryEscapeString(const Value: ZAnsiString): String; override;
+    function GetEscapeString(const Value: String): String; override;
+    {$IFDEF DELPHI12_UP}
+    function GetEscapeString(const Value: ZAnsiString): String; override;
+    {$ENDIF}
     function GetServerSetting(const AName: string): string;
     procedure SetServerSetting(const AName, AValue: string);
   end;
@@ -953,9 +955,13 @@ begin
       except
         Result := 1;
       end;
-  end; 
-end; 
+  end;
+end;
 
+function TZPostgreSQLConnection.EscapeString(Value: ZAnsiString): ZAnsiString;
+begin
+  Result := PlainDriver.EscapeString(Self.FHandle, Value, GetEncoding)
+end;
 {**
   Creates a sequence generator object.
   @param Sequence a name of the sequence generator.
@@ -985,13 +991,15 @@ end;
   @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
   @result the detectable Binary String
 }
-function TZPostgreSQLConnection.GetAnsiEscapeString(const Value: AnsiString;
-  const EscapeMarkSequence: String = '~<|'): String;
+function TZPostgreSQLConnection.GetBinaryEscapeString(const Value: ZAnsiString): String;
 begin
-  if Self.GetServerMajorVersion >= 8 then
-    Result := inherited GetAnsiEscapeString(GetPlainDriver.EncodeBYTEA(Value, GetConnectionHandle))
-  else
-    Result := inherited GetAnsiEscapeString(ZDbcPostgreSqlUtils.EncodeBinaryString(Value));
+  if ( Self.GetServerMajorVersion > 7 ) or
+    ((GetServerMajorVersion = 7) and (GetServerMinorVersion >= 3)) then
+      Result := String(GetPlainDriver.EncodeBYTEA(Value, GetConnectionHandle))
+    else
+      Result := String(ZDbcPostgreSqlUtils.EncodeBinaryString(Value));
+  if GetPreprepareSQL then
+    Result := GetDriver.GetTokenizer.GetEscapeString(Result);
 end;
 
 {**
@@ -1002,35 +1010,20 @@ end;
   @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
   @result the detectable Postrgres-compatible String
 }
-function TZPostgreSQLConnection.GetEscapeString(const Value: String;
-  const EscapeMarkSequence: String = '~<|'): String;
-var
-  ErrorCode: Integer;
-  Temp: String;
+function TZPostgreSQLConnection.GetEscapeString(const Value: String): String;
 begin
-  ErrorCode := GetPlainDriver.EscapeString(FHandle, GetEncoding, Value, Temp);
-  if ErrorCode <> 0 then
-    CheckPostgreSQLError(Self, GetPlainDriver, FHandle, lcOther, 'Wrong escape behavior!', nil)
-  else
-    Result := Temp;
-  {else
-  if FBackslashQuote then
-    if StartsWith(Value, '\') and EndsWith(Value, '\') then
-      Result := ZDbcPostgreSqlUtils.EncodeString(FStandardConformingStrings,
-        FBackslashQuote, TZPgCharactersetType(Self.ClientCodePage^.ID),
-        AnsiDequotedStr(Value, '\'))
-    else
-      Result := ZDbcPostgreSqlUtils.EncodeString(FStandardConformingStrings,
-        FBackslashQuote, TZPgCharactersetType(Self.ClientCodePage^.ID), Value)
-  else
-    if StartsWith(Value, '''') and EndsWith(Value, '''') then
-      Result := ZDbcPostgreSqlUtils.EncodeString(FStandardConformingStrings,
-        FBackslashQuote, TZPgCharactersetType(Self.ClientCodePage^.ID),
-        AnsiDequotedStr(Value, #39))
-    else
-      Result := ZDbcPostgreSqlUtils.EncodeString(FStandardConformingStrings,
-        FBackslashQuote, TZPgCharactersetType(Self.ClientCodePage^.ID), Value);}
+  Result := GetPlainDriver.EscapeString(FHandle, Value, GetEncoding);
+  if GetPreprepareSQL then
+    Result := GetDriver.GetTokenizer.GetEscapeString(Result);
 end;
+
+{$IFDEF DELPHI12_UP}
+function TZPostgreSQLConnection.GetEscapeString(const Value: ZAnsiString): String;
+begin
+  Result := ZDbcString(GetPlainDriver.EscapeString(FHandle, Value, GetEncoding));
+end;
+{$ENDIF}
+
 {**
   Gets a current setting of run-time parameter.
   @param AName a parameter name.

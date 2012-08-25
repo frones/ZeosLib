@@ -363,9 +363,9 @@ type
   TPQgetResult     = function(Handle: PPGconn): PPGresult; cdecl;
   TPQisBusy        = function(Handle: PPGconn): Integer; cdecl;
   TPQconsumeInput  = function(Handle: PPGconn): Integer; cdecl;
-  TPQgetCancel     = function(Handle: PPGconn): PGcancel; cdecl; 
-  TPQfreeCancel    = procedure(Canc: PGcancel); cdecl; 
-  TPQcancel        = function(Canc: PGcancel; Buffer: PChar; BufSize: Integer): Integer; 
+  TPQgetCancel     = function(Handle: PPGconn): PGcancel; cdecl;
+  TPQfreeCancel    = procedure(Canc: PGcancel); cdecl;
+  TPQcancel        = function(Canc: PGcancel; Buffer: PChar; BufSize: Integer): Integer;
   TPQgetline       = function(Handle: PPGconn; Str: PAnsiChar; length: Integer): Integer; cdecl;
   TPQputline       = function(Handle: PPGconn; Str: PAnsiChar): Integer; cdecl;
   TPQgetlineAsync  = function(Handle: PPGconn; Buffer: PAnsiChar; BufSize: Integer): Integer; cdecl;
@@ -451,9 +451,9 @@ TZPOSTGRESQL_API = record
   PQgetResult:     TPQgetResult;
   PQisBusy:        TPQisBusy;
   PQconsumeInput:  TPQconsumeInput;
-  PQgetCancel:     TPQgetCancel; 
-  PQfreeCancel:    TPQfreeCancel; 
-  PQcancel:        TPQcancel; 
+  PQgetCancel:     TPQgetCancel;
+  PQfreeCancel:    TPQfreeCancel;
+  PQcancel:        TPQcancel;
   PQgetline:       TPQgetline;
   PQputline:       TPQputline;
   PQgetlineAsync:  TPQgetlineAsync;
@@ -547,9 +547,9 @@ type
     function GetResult(Handle: PZPostgreSQLConnect): PZPostgreSQLResult;
     function IsBusy(Handle: PZPostgreSQLConnect): Integer;
     function ConsumeInput(Handle: PZPostgreSQLConnect): Integer;
-    function GetCancel(Handle: PZPostgreSQLConnect): PZPostgreSQLCancel; 
-    procedure FreeCancel( Canc: PZPostgreSQLCancel); 
-    function Cancel( Canc: PZPostgreSQLCancel; Buffer: PChar; Length: Integer): Integer; 
+    function GetCancel(Handle: PZPostgreSQLConnect): PZPostgreSQLCancel;
+    procedure FreeCancel( Canc: PZPostgreSQLCancel);
+    function Cancel( Canc: PZPostgreSQLCancel; Buffer: PChar; Length: Integer): Integer;
     function GetLine(Handle: PZPostgreSQLConnect; Str: PAnsiChar;
       Length: Integer): Integer;
     function PutLine(Handle: PZPostgreSQLConnect; Str: PAnsiChar): Integer;
@@ -611,10 +611,6 @@ type
     function ExportLargeObject(Handle: PZPostgreSQLConnect; ObjId: Oid;
       FileName: PAnsiChar): Integer;
     function GetPlainFunc:PAPI;
-    function EscapeString(Handle: PZPostgreSQLConnect; Encoding: TZCharEncoding;
-      const Source: String; out Dest: String): Integer; {$IFDEF DELPHI12_UP} overload;
-    function EscapeString(Handle: PZPostgreSQLConnect; Encoding: TZCharEncoding;
-      const Source: ZAnsiString; out Dest: ZAnsiString): Integer; overload; {$ENDIF}
   end;
 
   {** Implements a base driver for PostgreSQL}
@@ -736,10 +732,8 @@ type
     function ExportLargeObject(Handle: PZPostgreSQLConnect; ObjId: Oid;
       FileName: PAnsiChar): Integer;
     function GetPlainFunc:PAPI;
-    function EscapeString(Handle: PZPostgreSQLConnect; Encoding: TZCharEncoding;
-      const Source: String; out Dest: String): Integer; {$IFDEF DELPHI12_UP} overload;
-    function EscapeString(Handle: PZPostgreSQLConnect; Encoding: TZCharEncoding;
-      const Source: ZAnsiString; out Dest: ZAnsiString): Integer; overload; {$ENDIF}
+    function EscapeString(Handle: Pointer; const Value: ZAnsiString;
+      const Encoding: TZCharEncoding): ZAnsiString; override;
   end;
 
   {** Implements a driver for PostgreSQL 7.4 }
@@ -955,15 +949,15 @@ begin
   Result := POSTGRESQL_API.PQconsumeInput(Handle);
 end;
 
-function TZPostgreSQLBaseDriver.GetCancel(Handle: PZPostgreSQLConnect): PZPostgreSQLCancel; 
+function TZPostgreSQLBaseDriver.GetCancel(Handle: PZPostgreSQLConnect): PZPostgreSQLCancel;
 begin
   if Assigned(POSTGRESQL_API.PQgetCancel) then
     Result := POSTGRESQL_API.PQgetCancel(Handle)
   else
     Result := nil;
-end; 
+end;
 
-procedure TZPostgreSQLBaseDriver.FreeCancel(Canc: PZPostgreSQLCancel); 
+procedure TZPostgreSQLBaseDriver.FreeCancel(Canc: PZPostgreSQLCancel);
 begin
   if Assigned(POSTGRESQL_API.PQfreeCancel) then
     POSTGRESQL_API.PQfreeCancel( Canc);
@@ -1398,49 +1392,29 @@ begin
   result:= @POSTGRESQL_API;
 end;
 
-{$IFDEF DELPHI12_UP}
-function TZPostgreSQLBaseDriver.EscapeString(Handle: PZPostgreSQLConnect;
-  Encoding: TZCharEncoding; const Source: String; out Dest: String): Integer;
-var
-  SourceTemp, DestTemp: RawByteString;
-begin
-  if (Source <> '') then
-  begin
-    SourceTemp := ZPlainString(Source,  Encoding);
-    Result := EscapeString(Handle, Encoding, SourceTemp, DestTemp);
-    Dest := ZDbcString(DestTemp, Encoding);
-  end
-  else
-  begin
-    Dest := #39#39;
-    Result := 0;
-  end;
-end;
-{$ENDIF}
-
-function TZPostgreSQLBaseDriver.EscapeString(Handle: PZPostgreSQLConnect;
-  Encoding: TZCharEncoding; const Source: ZAnsiString; out Dest: ZAnsiString): Integer;
+function TZPostgreSQLBaseDriver.EscapeString(Handle: Pointer; const Value: ZAnsiString;
+  const Encoding: TZCharEncoding): ZAnsiString;
 var
   ResLen: NativeUInt;
   Temp: PAnsiChar;
   SourceTemp: ZAnsiString;
+  IError: Integer;
 begin
-  if Assigned(POSTGRESQL_API.PQescapeStringConn) and ( Source <> '' )then
+  if Assigned(POSTGRESQL_API.PQescapeStringConn) and ( Value <> '' )then
   begin
-    SourceTemp := {$IFDEF DELPHI12_UP}Source{$ELSE}ZPlainString(Source,  Encoding){$ENDIF}; //check encoding too
-    GetMem(Temp, Length(SourceTemp) * 2 + 1);
+    SourceTemp := {$IFDEF DELPHI12_UP}Value{$ELSE}ZPlainString(Value,  Encoding){$ENDIF}; //check encoding too
+    GetMem(Temp, Length(SourceTemp)*2);
     ResLen := POSTGRESQL_API.PQescapeStringConn(Handle, Temp,
-      PAnsiChar(SourceTemp), StrLen(PAnsiChar(SourceTemp)), @Result);
-    SetLength(Dest, ResLen);
-    Move(Temp^, PAnsiChar(Dest)^, ResLen);
+      PAnsiChar(SourceTemp), StrLen(PAnsiChar(SourceTemp)), @IError);
+    if not (IError = 0) then
+      raise Exception.Create('Wrong escape behavior!');
+    SetLength(Result, ResLen);
+    Move(Temp^, PAnsiChar(Result)^, ResLen);
     FreeMem(Temp);
   end
   else
-  begin
-    Dest := Source;
-    Result := 0;
-  end;
-  Dest := #39 + Dest + #39;
+    Result := Value;
+  Result := #39+Result+#39;
 end;
 
 { TZPostgreSQL7PlainDriver }
@@ -1570,3 +1544,4 @@ begin
 end;
 
 end.
+

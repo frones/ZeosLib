@@ -562,7 +562,7 @@ function GetMySQLColumnInfoFromFieldHandle(PlainDriver: IZMySQLPlainDriver;
 var
   FieldFlags: Integer;
   FieldLength:integer;
-  bUseMaxLength:boolean;
+//  bUseMaxLength:boolean;
 begin
   if Assigned(FieldHandle) then
   begin

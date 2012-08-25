@@ -346,14 +346,15 @@ begin
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := SoftVarManager.GetAsString(Value);
       stBytes:
-        Result := Self.GetConnection.GetAnsiEscapeString(AnsiString(SoftVarManager.GetAsString(Value)));
+        Result := Self.GetConnection.GetBinaryEscapeString(AnsiString(SoftVarManager.GetAsString(Value)));
       stString:
         Result := AnsiQuotedStr(SoftVarManager.GetAsString(Value), #39);
       stUnicodeString:
         {$IFDEF DELPHI12_UP}
-        if Connection.PreprepareSQL then Result := AnsiQuotedStr(SoftVarManager.GetAsUnicodeString(Value), #39) else
-        {$ENDIF}
+        Result := GetConnection.GetEscapeString(SoftVarManager.GetAsUnicodeString(Value));
+        {$ELSE}
         Result := GetConnection.GetEscapeString(PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))));
+        {$ENDIF}
       stDate:
         Result := '''' + FormatDateTime('yyyy-mm-dd',
           SoftVarManager.GetAsDateTime(Value)) + '''';
@@ -382,9 +383,10 @@ begin
                 Result := String(EncodeString(TempBlob.GetString))
               else
                 {$IFDEF DELPHI12_UP}
-                if Connection.PreprepareSQL then Result := AnsiQuotedStr(TempBlob.GetUnicodeString, #39) else
+                Result := GetConnection.GetEscapeString(TempBlob.GetUnicodeString);
+                {$ELSE}
+                Result := GetConnection.GetEscapeString(TempBlob.GetString);
                 {$ENDIF}
-                Result := GetConnection.GetAnsiEscapeString(TempBlob.GetString);
           end
           else
             Result := 'NULL';

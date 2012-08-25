@@ -112,7 +112,7 @@ type
     procedure CommitPrepared(const transactionid: string);
     procedure RollbackPrepared(const transactionid: string);
     function PingServer: Integer;
-    function EscapeString(Value : AnsiString) : AnsiString;
+    function EscapeString(Value : ZAnsiString) : ZAnsiString;
     procedure Open;
     procedure Close;
     function IsClosed: Boolean;
@@ -135,12 +135,11 @@ type
   public
     constructor Create(const ConnectionPool: TConnectionPool);
     destructor Destroy; override;
-    function GetAnsiEscapeString(const Value: AnsiString;
-      const EscapeMarkSequence: String = '~<|'): String;
-    function GetEscapeString(const Value: String;
-      const EscapeMarkSequence: String = '~<|'): String; overload; virtual;
-    function GetEscapeString(const Value: PAnsiChar;
-      const EscapeMarkSequence: String = '~<|'): String; overload; virtual;
+    function GetBinaryEscapeString(const Value: ZAnsiString): String;
+    function GetEscapeString(const Value: String): String; overload; virtual;
+    {$IFDEF DELPHI12_UP}
+    function GetEscapeString(const Value: ZAnsiString): String; overload; virtual;
+    {$ENDIF}
     function GetEncoding: TZCharEncoding;
   end;
 
@@ -449,7 +448,7 @@ begin
   Result := GetConnection.CreateStatementWithParams(Info);
 end;
 
-function TZDbcPooledConnection.EscapeString(Value: AnsiString): AnsiString;
+function TZDbcPooledConnection.EscapeString(Value: ZAnsiString): ZAnsiString;
 begin
   Result := GetConnection.EscapeString(Value);
 end;
@@ -656,23 +655,22 @@ end;
   @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
   @result the detectable Binary String
 }
-function TZDbcPooledConnection.GetAnsiEscapeString(const Value: AnsiString;
-  const EscapeMarkSequence: String = '~<|'): String;
+function TZDbcPooledConnection.GetBinaryEscapeString(const Value: ZAnsiString): String;
 begin
-  Result := Self.GetDriver.GetTokenizer.AnsiGetEscapeString(Value, EscapeMarkSequence);
+  Result := GetConnection.GetBinaryEscapeString(Value);
 end;
 
-function TZDbcPooledConnection.GetEscapeString(const Value: String;
-  const EscapeMarkSequence: String = '~<|'): String;
+function TZDbcPooledConnection.GetEscapeString(const Value: String): String;
 begin
-  Result := Self.GetDriver.GetTokenizer.GetEscapeString(Value);
+  Result := GetConnection.GetEscapeString(Value);
 end;
 
-function TZDbcPooledConnection.GetEscapeString(const Value: PAnsiChar;
-  const EscapeMarkSequence: String = '~<|'): String;
+{$IFDEF DELPHI12_UP}
+function TZDbcPooledConnection.GetEscapeString(const Value: ZAnsiString): String;
 begin
-  GetEscapeString(String(Value));
+  Result := GetConnection.GetEscapeString(Value);
 end;
+{$ENDIF}
 
 function TZDbcPooledConnection.GetEncoding: TZCharEncoding;
 begin

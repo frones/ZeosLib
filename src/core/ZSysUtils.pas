@@ -114,8 +114,8 @@ function MemLCompAnsi(P1, P2: PAnsiChar; Len: Integer): Boolean;
   @param SubStr a string to test at the start of the Str.
   @return <code>True</code> if Str started with SubStr;
 }
-function StartsWith(const Str, SubStr: string): Boolean;
-
+function StartsWith(const Str, SubStr: string): Boolean; {$IFDEF DELPHI12_UP} overload;
+function StartsWith(const Str, SubStr: RawByteString): Boolean; overload; {$ENDIF}
 {**
   Checks is the string ends with substring.
   @param Str a string to be checked.
@@ -470,6 +470,22 @@ begin
   else
     Result := False;
 end;
+
+{$IFDEF DELPHI12_UP}
+function StartsWith(const Str, SubStr: RawByteString): Boolean; overload;
+var
+  LenSubStr: Integer;
+begin
+  LenSubStr := Length(SubStr);
+  if SubStr = '' then
+    Result := True
+   else
+    if LenSubStr <= Length(Str) then
+      Result := MemLCompAnsi(PAnsiChar(Str), PAnsiChar(SubStr), LenSubStr)
+    else
+      Result := False;
+end;
+{$ENDIF}
 
 {**
   Checks is the string ends with substring.

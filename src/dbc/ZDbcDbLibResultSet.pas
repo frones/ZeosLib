@@ -281,7 +281,7 @@ begin
     if (DT = FPlainDriver.GetVariables.datatypes[Z_SQLCHAR]) or
       (DT = FPlainDriver.GetVariables.datatypes[Z_SQLTEXT]) then
     begin
-      while (DL > 0) and (PAnsiChar(NativeUint(Data) + DL - 1)^ = ' ') do
+      while (DL > 0) and (PAnsiChar(NativeUint(Data) + NativeUint(DL - 1))^ = ' ') do
               Dec(DL);
       if DL > 0 then
       begin

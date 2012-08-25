@@ -238,7 +238,7 @@ type
     procedure SetBigDecimal(ParameterIndex: Integer; Value: Extended); virtual;
     procedure SetPChar(ParameterIndex: Integer; Value: PChar); virtual;
     procedure SetString(ParameterIndex: Integer; const Value: String); virtual;
-    procedure SetUnicodeString(ParameterIndex: Integer; const Value: {$IFDEF DELPHI12_UP}String{$ELSE}WideString{$ENDIF});  virtual; //AVZ
+    procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString);  virtual; //AVZ
     procedure SetBytes(ParameterIndex: Integer; const Value: TByteDynArray); virtual;
     procedure SetDate(ParameterIndex: Integer; Value: TDateTime); virtual;
     procedure SetTime(ParameterIndex: Integer; Value: TDateTime); virtual;
@@ -625,13 +625,6 @@ var
   SQLTokens: TZTokenDynArray;
   i: Integer;
 begin
-  {Mark i agree: It must be enough to get the Tokens..
-  then we can build an IZUpdate/IZInsert/IZDelete-Schema
-  if this is done we can add column-specific CharacterSets/Collations
-  to the detected Columns and tell the Server which kind of Data will be sended
-  now. So this also must be done in the IZSelectSchema if somebody requests
-  converted column-data...}
-
   if GetConnection.PreprepareSQL then
   begin
     SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeEscapeBufferToList(SQL); //Disassembles the Query
@@ -639,16 +632,24 @@ begin
     begin
       case (SQLTokens[i].TokenType) of
         ttEscape:
-          Result := Result + AnsiString(SQLTokens[i].Value);
-        ttWord, ttQuoted, ttQuotedIdentifier, ttKeyword, ttEscapedQuoted:
-          Result := Result + Self.ZPlainString(SQLTokens[i].Value);
+          Result := Result + {$IFDEF DELPHI12_UP}ZPlainString{$ENDIF}(SQLTokens[i].Value);
+        ttQuoted, {: Result := GetConnection.EscapeString(ZPlainString(SQLTokens[i].Value));}
+        ttWord, ttQuotedIdentifier, ttKeyword, ttEscapedQuoted:
+          Result := Result + ZPlainString(SQLTokens[i].Value);
         else
-          Result := Result + AnsiString(SQLTokens[i].Value);
+          Result := Result + ZAnsiString(SQLTokens[i].Value);
       end;
     end;
   end
   else
-    Result := AnsiString(SQL);
+    {$IFDEF DELPHI12_UP}
+    if GetConnection.GetEncoding = ceUTF8 then
+      Result := UTF8String(SQL)
+    else
+      Result := AnsiString(SQL);
+    {$ELSE}
+    Result := SQL;
+    {$ENDIF}
 end;
 
 {**
@@ -1142,12 +1143,13 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     query; never <code>null</code>
 }
+{$WARNINGS OFF}
 function TZAbstractPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   { Logging Execution }
   LogPrepStmtMessage(lcExecPrepStmt);
 end;
-
+{$WARNINGS ON}
 {**
   Executes the SQL INSERT, UPDATE or DELETE statement
   in this <code>PreparedStatement</code> object.
@@ -1158,12 +1160,13 @@ end;
   @return either the row count for INSERT, UPDATE or DELETE statements;
   or 0 for SQL statements that return nothing
 }
+{$WARNINGS OFF}
 function TZAbstractPreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
   { Logging Execution }
   LogPrepStmtMessage(lcExecPrepStmt);
 end;
-
+{$WARNINGS ON}
 {**
   Sets the designated parameter the default SQL value.
   <P><B>Note:</B> You must specify the default value.
@@ -1382,7 +1385,7 @@ end;
 }
 
 procedure TZAbstractPreparedStatement.SetUnicodeString(ParameterIndex: Integer;
-  const Value: {$IFDEF DELPHI12_UP}String{$ELSE}WideString{$ENDIF});
+  const Value: ZWideString);
 var
   Temp: TZVariant;
 begin
@@ -1593,11 +1596,13 @@ end;
   and <code>executeUpdate</code>.
   @see Statement#execute
 }
+{$WARNINGS OFF}
 function TZAbstractPreparedStatement.ExecutePrepared: Boolean;
 begin
   { Logging Execution }
   LogPrepStmtMessage(lcExecPrepStmt, '');
 end;
+{$WARNINGS ON}
 
 function TZAbstractPreparedStatement.GetSQL: String;
 begin
@@ -2243,3 +2248,4 @@ begin
 end;
 
 end.
+

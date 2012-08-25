@@ -104,8 +104,6 @@ type
   {** Implements a default tokenizer object. }
   TZMySQLTokenizer = class (TZTokenizer)
   public
-    function AnsiGetEscapeString(const EscapeString: ZAnsiString;
-      const EscapeMarkSequence: String = '~<|'): String; override;
     constructor Create;
   end;
 
@@ -440,40 +438,6 @@ end;
 { TZMySQLTokenizer }
 
 {**
-  Converts a Binary-String to an detectable String.
-  @param BinaryString is the Binary-data-string
-  @param  BinaryMarkSequence represents the detectable String
-  @Result give's out the detectable String
-}
-function TZMySQLTokenizer.AnsiGetEscapeString(const EscapeString: ZAnsiString;
-  const EscapeMarkSequence: String = '~<|'): String;
-var
-  Temp: String;
-begin
-  Self.EscapeMarkSequence := EscapeMarkSequence; //Checks if BinaryMarkSequence is valid
-  Temp := EscapeMarkSequence+IntToStr(Length(EscapeString))+ReverseString(EscapeMarkSequence);
-
-  Result := String(EscapeString);
-  if Length(EscapeString) > 1 then //Check for Quotes
-  begin
-    if not ( EscapeString[1] = '''' ) then
-      Result := ''''+Result;
-    if not ( EscapeString[Length(EscapeString)] = '''' ) then
-      Result := Result+'''';
-  end
-  else
-    if Length(EscapeString) = 1 then
-      Result := QuotedStr(Result)
-    else
-    begin
-      Result := 'NULL';
-      Exit;
-    end;
-
-  Result := Temp+Result+Temp;
-end;
-
-{**
   Constructs a tokenizer with a default state table (as
   described in the class comment).
 }
@@ -482,7 +446,6 @@ begin
   WhitespaceState := TZWhitespaceState.Create;
 
   EscapeState := TZEscapeState.Create;
-  EscapeMarkSequence := '~<|'; //Defaults
   SymbolState := TZMySQLSymbolState.Create;
   NumberState := TZMySQLNumberState.Create;
   QuoteState := TZMySQLQuoteState.Create;

@@ -87,7 +87,7 @@ type
       vtBoolean: (VBoolean: Boolean); 
       vtInteger: (VInteger: Int64); 
       vtFloat: (VFloat: Extended); 
-      VtDateTime: (VDateTime: TDateTime); 
+      VtDateTime: (VDateTime: Double);  // M.A. was TDateTime
       VtPointer: (VPointer: Pointer); 
   end;
 
