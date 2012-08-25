@@ -862,9 +862,9 @@ begin
   if Assigned(SQLite_API.sqlite_column_type) then begin
     case SQLite_API.sqlite_column_type(stmt,iCol) of
       SQLITE_INTEGER:
-         Result:='INT';
+         Result:='INT(19)';
       SQLITE_FLOAT:
-         Result:='FLOAT';
+         Result:='FLOAT(16)';
       SQLITE3_TEXT:
          RESULT := 'CHAR'; //EgonHugeist: Need to boil down this type  !
                            //Else Metadatainformations are not readable !

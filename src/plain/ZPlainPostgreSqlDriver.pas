@@ -611,6 +611,10 @@ type
     function ExportLargeObject(Handle: PZPostgreSQLConnect; ObjId: Oid;
       FileName: PAnsiChar): Integer;
     function GetPlainFunc:PAPI;
+    function EscapeString(Handle: PZPostgreSQLConnect; Encoding: TZCharEncoding;
+      const Source: String; out Dest: String): Integer; {$IFDEF DELPHI12_UP} overload;
+    function EscapeString(Handle: PZPostgreSQLConnect; Encoding: TZCharEncoding;
+      const Source: ZAnsiString; out Dest: ZAnsiString): Integer; overload; {$ENDIF}
   end;
 
   {** Implements a base driver for PostgreSQL}
@@ -732,6 +736,10 @@ type
     function ExportLargeObject(Handle: PZPostgreSQLConnect; ObjId: Oid;
       FileName: PAnsiChar): Integer;
     function GetPlainFunc:PAPI;
+    function EscapeString(Handle: PZPostgreSQLConnect; Encoding: TZCharEncoding;
+      const Source: String; out Dest: String): Integer; {$IFDEF DELPHI12_UP} overload;
+    function EscapeString(Handle: PZPostgreSQLConnect; Encoding: TZCharEncoding;
+      const Source: ZAnsiString; out Dest: ZAnsiString): Integer; overload; {$ENDIF}
   end;
 
   {** Implements a driver for PostgreSQL 7.4 }
@@ -1385,10 +1393,55 @@ begin
   Result := POSTGRESQL_API.lo_write(Handle, Fd, Buffer, Length);
 end;
 
-function TZPostgreSQLBaseDriver.GetPlainFunc():PAPI; 
-begin 
-  result:= @POSTGRESQL_API; 
-end; 
+function TZPostgreSQLBaseDriver.GetPlainFunc():PAPI;
+begin
+  result:= @POSTGRESQL_API;
+end;
+
+{$IFDEF DELPHI12_UP}
+function TZPostgreSQLBaseDriver.EscapeString(Handle: PZPostgreSQLConnect;
+  Encoding: TZCharEncoding; const Source: String; out Dest: String): Integer;
+var
+  SourceTemp, DestTemp: RawByteString;
+begin
+  if (Source <> '') then
+  begin
+    SourceTemp := ZPlainString(Source,  Encoding);
+    Result := EscapeString(Handle, Encoding, SourceTemp, DestTemp);
+    Dest := ZDbcString(DestTemp, Encoding);
+  end
+  else
+  begin
+    Dest := #39#39;
+    Result := 0;
+  end;
+end;
+{$ENDIF}
+
+function TZPostgreSQLBaseDriver.EscapeString(Handle: PZPostgreSQLConnect;
+  Encoding: TZCharEncoding; const Source: ZAnsiString; out Dest: ZAnsiString): Integer;
+var
+  ResLen: NativeUInt;
+  Temp: PAnsiChar;
+  SourceTemp: ZAnsiString;
+begin
+  if Assigned(POSTGRESQL_API.PQescapeStringConn) and ( Source <> '' )then
+  begin
+    SourceTemp := {$IFDEF DELPHI12_UP}Source{$ELSE}ZPlainString(Source,  Encoding){$ENDIF}; //check encoding too
+    GetMem(Temp, Length(SourceTemp) * 2 + 1);
+    ResLen := POSTGRESQL_API.PQescapeStringConn(Handle, Temp,
+      PAnsiChar(SourceTemp), StrLen(PAnsiChar(SourceTemp)), @Result);
+    SetLength(Dest, ResLen);
+    Move(Temp^, PAnsiChar(Dest)^, ResLen);
+    FreeMem(Temp);
+  end
+  else
+  begin
+    Dest := Source;
+    Result := 0;
+  end;
+  Dest := #39 + Dest + #39;
+end;
 
 { TZPostgreSQL7PlainDriver }
 

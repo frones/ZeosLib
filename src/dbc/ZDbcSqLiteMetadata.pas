@@ -1325,12 +1325,11 @@ function TZSQLiteDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const ColumnNamePattern: string): IZResultSet;
 var
   Temp: string;
-  Precision, Decimals, ColumnCount: Integer;
+  Precision, Decimals: Integer;
   Temp_scheme: string;
 begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
-  ColumnCount := 0;
   if SchemaPattern = '' then
     Temp_scheme := '' // OR  'main.'
   else
@@ -1341,7 +1340,6 @@ begin
   begin
     while Next do
     begin
-      Inc(ColumnCount);
       Result.MoveToInsertRow;
       if SchemaPattern <> '' then
         Result.UpdateString(1, SchemaPattern)
@@ -1353,11 +1351,6 @@ begin
         GetString(3), Precision, Decimals,
         GetConnection.GetClientCodePageInformations.Encoding,
         GetConnection.UTF8StringAsWideField)));
-        { curiosity: If TypeDefinition = '' and Column=FirstColumn then -> Type Integer!!
-       Manits #0000263}
-      if GetString(3) = '' then
-        if ( ColumnCount = 1 ) then
-          Result.UpdateInt(5, Ord(stInteger));
 
       { Defines a table name. }
       Temp := UpperCase(GetString(3));

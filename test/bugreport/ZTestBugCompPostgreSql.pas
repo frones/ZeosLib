@@ -74,6 +74,8 @@ type
     function GetSupportedProtocols: string; override;
 
     property Connection: TZConnection read FConnection write FConnection;
+  public
+    procedure TestStandartConfirmingStrings(Query: TZQuery; Connection: TZConnection);
   published
     procedure Test707339;
     procedure Test707337;
@@ -92,6 +94,8 @@ type
     procedure Test933623;
     procedure Test994562;
     procedure Test1043252;
+    procedure TestStandartConfirmingStringsOn;
+    procedure TestStandartConfirmingStringsOff;
   end;
 
 implementation
@@ -703,6 +707,70 @@ begin
     Query.Close;
   finally
     Query.Free;
+  end;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestStandartConfirmingStrings(Query: TZQuery; Connection: TZConnection);
+const
+  QuoteString1 = String('\'', 1 --''');
+  QuoteString2 = String('ТестЁЙ\000');
+begin
+  Query.ParamChar := ':';
+  Query.ParamCheck := True;
+  Query.SQL.Text := 'select :test';
+
+  Query.ParamByName('test').AsString := QuoteString1;
+  Query.Open;
+  CheckEquals(QuoteString1, Query.Fields[0].AsString);
+  Query.Close;
+
+  if Connection.UTF8StringsAsWideField or
+    ( Connection.DbcConnection.GetEncoding = ceAnsi ) then
+  begin
+    Query.ParamByName('test').AsString := QuoteString2;
+    Query.Open;
+    CheckEquals(QuoteString2, Query.Fields[0].AsString);
+  end
+  else
+  begin
+    Query.ParamByName('test').AsString := UTF8Encode(WideString(QuoteString2));
+    Query.Open;
+    CheckEquals(UTF8Encode(WideString(QuoteString2)), Query.Fields[0].AsString);
+  end;
+  Query.Close;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestStandartConfirmingStringsOn;
+var
+  TempConnection: TZConnection;
+  Query: TZQuery;
+begin
+  TempConnection := CreateDatasetConnection;
+  TempConnection.Properties.Add('standard_conforming_strings=ON');
+  Query := TZQuery.Create(nil);
+  Query.Connection := TempConnection;
+  try
+    TestStandartConfirmingStrings(Query, TempConnection);
+  finally
+    Query.Free;
+    TempConnection.Free;
+  end;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestStandartConfirmingStringsOff;
+var
+  TempConnection: TZConnection;
+  Query: TZQuery;
+begin
+  TempConnection := CreateDatasetConnection;
+  TempConnection.Properties.Add('standard_conforming_strings=OFF');
+  Query := TZQuery.Create(nil);
+  Query.Connection := TempConnection;
+  try
+    TestStandartConfirmingStrings(Query, TempConnection);
+  finally
+    Query.Free;
+    TempConnection.Free;
   end;
 end;
 

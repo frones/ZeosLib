@@ -200,8 +200,8 @@ type
   }
   TZCppCommentState = class (TZCommentState)
   protected
-    function GetMultiLineComment(Stream: TStream): string;
-    function GetSingleLineComment(Stream: TStream): string;
+    function GetMultiLineComment(Stream: TStream): string; virtual;
+    function GetSingleLineComment(Stream: TStream): string; virtual;
   public
     function NextToken(Stream: TStream; FirstChar: Char;
       Tokenizer: TZTokenizer): TZToken; override;
@@ -457,7 +457,7 @@ type
     function GetWordState: TZWordState;
     function GetCharacterState(StartChar: Char): TZTokenizerState;
     procedure SetEscapeMarkSequence(const Value: String);
-    function AnsiGetEscapeString(const Ansi: AnsiString;
+    function AnsiGetEscapeString(const Ansi: ZAnsiString;
       const EscapeMarkSequence: String = '~<|'): String;
     function GetEscapeString(const Str: String;
       const EscapeMarkSequence: String = '~<|'): String;
@@ -481,16 +481,16 @@ type
     FWordState: TZWordState;
     FEscapeState: TZEscapeState; //EgonHugeist
     FMarkSequence: String;
+  protected
     function GetEscapeMarkSequence: String;
     procedure SetEscapeMarkSequence(const Value: String);
-  protected
     function CheckEscapeState(const ActualState: TZTokenizerState;
       Stream: TStream; const FirstChar: Char): TZTokenizerState; virtual;
   public
     constructor Create;
     destructor Destroy; override;
 
-    function AnsiGetEscapeString(const EscapeString: AnsiString;
+    function AnsiGetEscapeString(const EscapeString: ZAnsiString;
       const EscapeMarkSequence: String = '~<|'): String; virtual;
     function GetEscapeString(const EscapeString: String;
       const EscapeMarkSequence: String = '~<|'): String; virtual;
@@ -531,7 +531,7 @@ type
 implementation
 
 uses
-  Math;
+  Math, StrUtils;
 
 { TZEscapeState } //EgonHugeist
 
@@ -620,16 +620,6 @@ var
           Result := Result+TempChar;
     until ( not CharInSet(TempChar, ['0'..'9'])) or ( not B );
   end;
-
-  function GetReverted: String;
-  var
-    I: Integer;
-  begin
-    result:='';
-    for I := Length(Self.FEscapeMarks) downto 1 do
-      Result := Result + Copy(FEscapeMarks, i, 1);
-  end;
-
 begin
   Result.TokenType := ttUnknown;
   Result.Value := '';
@@ -650,7 +640,7 @@ begin
   end;
 
   //Now Check the TempChar for it's hits on cBinDetectCharsOut
-  if not CheckMarkChars(GetReverted) then Exit;
+  if not CheckMarkChars(ReverseString(FEscapeMarks)) then Exit;
 
   //OutMarks where Found too. So let's read the BinarayData to the TempStr
   //Including the Quotes
@@ -676,7 +666,7 @@ begin
   end;
 
   //Now Check the TempChar for it's hits on Escape-Detect-CharsOut again..
-  if not CheckMarkChars(GetReverted) then Exit;
+  if not CheckMarkChars(ReverseString(FEscapeMarks)) then Exit;
   //MarkOut-Chars where found again now we are ready here
 
   //everything was fine! Now we are sure Escape data was here
@@ -1495,21 +1485,13 @@ begin
   end;
 end;
 
-function TZTokenizer.AnsiGetEscapeString(const EscapeString: AnsiString;
+function TZTokenizer.AnsiGetEscapeString(const EscapeString: ZAnsiString;
   const EscapeMarkSequence: String = '~<|'): String;
 var
   Temp: String;
-
-  function GetReverted: String;
-  var
-    I: Integer;
-  begin
-    for I := Length(EscapeMarkSequence) downto 1 do
-      Result := Result + Copy(EscapeMarkSequence, i, 1);
-  end;
 begin
   Self.SetEscapeMarkSequence(EscapeMarkSequence);
-  Temp := EscapeMarkSequence+IntToStr(Length(EscapeString))+GetReverted;
+  Temp := EscapeMarkSequence+IntToStr(Length(EscapeString))+ReverseString(EscapeMarkSequence);
 
   if Length(EscapeString) > 0 then
     Result := Temp+String(EscapeString)+Temp
@@ -1521,17 +1503,9 @@ function TZTokenizer.GetEscapeString(const EscapeString: String;
   const EscapeMarkSequence: String = '~<|'): String;
 var
   Temp: String;
-
-  function GetReverted: String;
-  var
-    I: Integer;
-  begin
-    for I := Length(EscapeMarkSequence) downto 1 do
-      Result := Result + Copy(EscapeMarkSequence, i, 1);
-  end;
 begin
   Self.SetEscapeMarkSequence(EscapeMarkSequence);
-  Temp := EscapeMarkSequence+IntToStr(Length(EscapeString))+GetReverted;
+  Temp := EscapeMarkSequence+IntToStr(Length(EscapeString))+ReverseString(EscapeMarkSequence);
 
   if Length(EscapeString) > 0 then
     Result := Temp+EscapeString+Temp

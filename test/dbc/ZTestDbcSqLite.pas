@@ -84,6 +84,7 @@ type
     procedure TestPreparedStatement;
     procedure TestAutoIncFields;
     procedure TestDefaultValues;
+    procedure TestEmptyTypes;
   end;
 
 
@@ -313,6 +314,62 @@ begin
     EncodeTime(23, 12, 11, 0), ResultSet.GetTimestamp(7), 3);
 
   ResultSet.DeleteRow;
+
+  ResultSet.Close;
+  Statement.Close;
+end;
+
+{**
+  Runs a test for SQLite empty types.
+}
+procedure TZTestDbcSQLiteCase.TestEmptyTypes;
+var
+  PreparedStatement: IZPreparedStatement;
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+begin
+  Statement := Connection.CreateStatement;
+  CheckNotNull(Statement);
+
+  Statement.Execute('delete from empty_types');
+
+  PreparedStatement := Connection.PrepareStatement(
+    'INSERT INTO empty_types(et_id, data1, data2) VALUES(?,?,?)');
+  CheckNotNull(PreparedStatement);
+
+  PreparedStatement.SetInt(1, 0);
+  PreparedStatement.SetInt(2, 1);
+  PreparedStatement.SetString(3, 'xyz');
+  PreparedStatement.ExecuteUpdatePrepared;
+  PreparedStatement.SetString(1, 'qwe');
+  PreparedStatement.SetString(2, 'asd');
+  PreparedStatement.SetString(3, 'xyzz');
+  PreparedStatement.ExecuteUpdatePrepared;
+  PreparedStatement.SetFloat(1, 1.25);
+  PreparedStatement.SetFloat(2, 2.25);
+  PreparedStatement.SetString(3, 'xyzzz');
+  PreparedStatement.ExecuteUpdatePrepared;
+
+  ResultSet := Statement.ExecuteQuery('SELECT et_id,data1,data2 FROM empty_types where data2=''xyz''');
+  CheckNotNull(ResultSet);
+
+  ResultSet.Next;
+  CheckEquals(0, ResultSet.GetInt(1));
+  CheckEquals(1, ResultSet.GetInt(2));
+
+  ResultSet := Statement.ExecuteQuery('SELECT et_id,data1,data2 FROM empty_types where data2="xyzz"');
+  CheckNotNull(ResultSet);
+
+  ResultSet.Next;
+  CheckEquals('qwe', ResultSet.GetString(1));
+  CheckEquals('asd', ResultSet.GetString(2));
+
+  ResultSet := Statement.ExecuteQuery('SELECT et_id,data1,data2 FROM empty_types where data2=''xyzzz''');
+  CheckNotNull(ResultSet);
+
+  ResultSet.Next;
+  CheckEquals(1.25, ResultSet.GetFloat(1));
+  CheckEquals(2.25, ResultSet.GetFloat(2));
 
   ResultSet.Close;
   Statement.Close;

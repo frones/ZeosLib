@@ -71,7 +71,13 @@ type
 
   {** Implements a PostgreSQL-specific quote string state object. }
   TZPostgreSQLQuoteState = class (TZMySQLQuoteState)
+  private
+    FBackslashQuote: Boolean;
+  protected
+    function GetDollarQuotedString(Stream: TStream; QuoteChar: Char): string;
+    function GetQuotedString(Stream: TStream; QuoteChar: Char; EscapeSyntax: Boolean): String;
   public
+    constructor Create(BackslashQuote: Boolean = False);
     function NextToken(Stream: TStream; FirstChar: Char;
       Tokenizer: TZTokenizer): TZToken; override;
   end;
@@ -81,6 +87,8 @@ type
     state, or return a token with just a slash in it.
   }
   TZPostgreSQLCommentState = class (TZCppCommentState)
+  protected
+    function GetMultiLineComment(Stream: TStream): string; override;
   public
     function NextToken(Stream: TStream; FirstChar: Char;
       Tokenizer: TZTokenizer): TZToken; override;
@@ -195,6 +203,104 @@ end;
 { TZPostgreSQLQuoteState }
 
 {**
+  creates a Postgre ttQuotedState detection
+  @param BackslashQuote means '\' will be handled as QuotedChar
+}
+constructor TZPostgreSQLQuoteState.Create(BackslashQuote: Boolean = False);
+begin
+  inherited Create;
+  FBackslashQuote := BackslashQuote;
+end;
+
+{**
+  Return a quoted string token from a reader. This method
+  will get Tag from first char to $ and will collect
+  characters until reaches same Tag.
+
+  @return a quoted string token from a reader
+}
+function TZPostgreSQLQuoteState.GetDollarQuotedString(Stream: TStream; QuoteChar: Char): string;
+var
+  ReadChar: Char;
+  Tag, TempTag: string;
+  TagState: integer;
+begin
+  Result := QuoteChar;
+  TagState := 0;
+  while Stream.Read(ReadChar, SizeOf(Char)) > 0 do
+  begin
+    if (ReadChar = QuoteChar) then
+    begin
+      if (TagState = 0) then
+      begin
+        TagState := 1;
+        Tag := Result;
+      end
+      else if (TagState = 1) then
+      begin
+        TagState := 2;
+        TempTag := '';
+      end
+      else if (TagState = 2) then
+      begin
+        if TempTag = Tag then
+          TagState := 3
+        else
+          TempTag := '';
+      end;
+    end;
+
+    Result := Result + ReadChar;
+
+    if TagState = 2 then
+      TempTag := TempTag + ReadChar
+    else if TagState = 3 then
+      Break;
+  end;
+end;
+
+{**
+  Return a quoted string token from a reader. This method
+  will collect characters until it sees same QuoteChar,
+  ommitting doubled chars
+
+  @return a quoted string token from a reader
+}
+function TZPostgreSQLQuoteState.GetQuotedString(Stream: TStream; QuoteChar: Char;
+  EscapeSyntax: Boolean): String;
+const BackSlash = Char('\');
+var
+  ReadChar: Char;
+  LastChar: Char;
+  QuoteCount: Integer;
+begin
+  LastChar := #0;
+  Result := QuoteChar;
+  QuoteCount := 1;
+
+  while Stream.Read(ReadChar, SizeOf(Char)) > 0 do
+  begin
+    if ReadChar = QuoteChar then
+      Inc(QuoteCount);
+
+    if (LastChar = QuoteChar) and (ReadChar <> QuoteChar) then
+    begin
+      if QuoteCount mod 2 = 0 then
+      begin
+        Stream.Seek(-SizeOf(Char), soFromCurrent);
+        Break;
+      end;
+    end;
+    Result := Result + ReadChar;
+    if (LastChar = BackSlash) and EscapeSyntax then
+      LastChar := #0
+    else if (LastChar = QuoteChar) and (ReadChar = QuoteChar) then
+      LastChar := #0
+    else LastChar := ReadChar;
+  end;
+end;
+
+{**
   Return a quoted string token from a reader. This method
   will collect characters until it sees a match to the
   character that the tokenizer used to switch to this state.
@@ -203,50 +309,58 @@ end;
 }
 function TZPostgreSQLQuoteState.NextToken(Stream: TStream;
   FirstChar: Char; Tokenizer: TZTokenizer): TZToken;
-const BackSlash = Char('\');
-var
-  ReadChar: Char;
-  LastChar: Char;
-  QuoteChar: Char;
-  QuoteCount: Integer;
 begin
   Result.Value := FirstChar;
-  QuoteCount := 1;
-  If FirstChar = '`' then
-    Result.TokenType := ttQuotedIdentifier
-  Else
-    Result.TokenType := ttQuoted;
-
-  QuoteChar := FirstChar;
-
-  LastChar := #0;
-
-  while Stream.Read(ReadChar, SizeOf(Char)) > 0 do
-  begin
-    if ReadChar = QuoteChar then Inc(QuoteCount);
-    if (LastChar = FirstChar) and (ReadChar <> FirstChar) then
-    begin
-      if QuoteCount mod 2 = 0 then
-      begin
-        Stream.Seek(-SizeOf(Char), soFromCurrent);
-        Break;
-      end;
-    end;
-    Result.Value := Result.Value + ReadChar;
-    if LastChar = BackSlash then
-      LastChar := #0
-    else if (LastChar = FirstChar) and (ReadChar = FirstChar) then
-      LastChar := #0
-    else LastChar := ReadChar;
-  end;
   if FirstChar = '"' then
+  begin
     Result.TokenType := ttWord;
+    Result.Value := GetQuotedString(Stream, FirstChar, False);
+  end
+  else if FirstChar = '$' then
+  begin
+    Result.TokenType := ttQuoted;
+    Result.Value := GetDollarQuotedString(Stream, FirstChar);
+  end
+  else
+  begin
+    Result.TokenType := ttQuoted;
+    // Handle all strings as escaped until we add FStandardConformingStrings
+    Result.Value := GetQuotedString(Stream, FirstChar, True);
+  end;
 end;
 
 { TZPostgreSQLCommentState }
 
 {**
-  Gets a MySQL specific comments like -- or /* */.
+  Ignore everything up to a last closing star and slash, and
+  then return the tokenizer's next token.
+  @return the tokenizer's next token
+}
+function TZPostgreSQLCommentState.GetMultiLineComment(Stream: TStream): string;
+var
+  ReadChar, LastChar: Char;
+  NestedLevel: Integer;
+begin
+  LastChar := #0;
+  NestedLevel := 1;
+  Result := '';
+  while Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0 do
+  begin
+    Result := Result + ReadChar;
+    if (LastChar = '*') and (ReadChar = '/') then
+    begin
+      Dec(NestedLevel);
+      if NestedLevel = 0 then
+        Break;
+    end;
+    if (LastChar = '/') and (ReadChar = '*') then
+      Inc(NestedLevel);
+    LastChar := ReadChar;
+  end;
+end;
+
+{**
+  Gets a PostgreSQL specific comments like -- or /* */.
   @return either just a slash token, or the results of
     delegating to a comment-handling state
 }
@@ -319,6 +433,7 @@ begin
   SetWordChars('A', 'Z', True);
   SetWordChars('0', '9', True);
   SetWordChars('_', '_', True);
+  SetWordChars('$', '$', True);
   SetWordChars(Char($c0), Char($ff), True);
 end;
 
@@ -353,6 +468,7 @@ begin
 
   SetCharacterState('"', '"', QuoteState);
   SetCharacterState(#39, #39, QuoteState);
+  SetCharacterState('$', '$', QuoteState);
 
   SetCharacterState('/', '/', CommentState);
   SetCharacterState('-', '-', CommentState);
