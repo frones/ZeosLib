@@ -566,6 +566,7 @@ begin
     FLoader.AddLocation(WINDOWS_DLL_LOCATION);
   {$ELSE}
     FLoader.AddLocation(LINUX_DLL_LOCATION);
+    FLoader.AddLocation(LINUX_DLL_LOCATION+'.0');
   {$ENDIF}
 end;
 
@@ -1015,6 +1016,7 @@ begin
     FLoader.AddLocation(WINDOWS_DLL3_LOCATION);
   {$ELSE}
     FLoader.AddLocation(LINUX_DLL3_LOCATION);
+    FLoader.AddLocation(LINUX_DLL3_LOCATION+'.0');
   {$ENDIF}
   LoadCodePages;
 end;
