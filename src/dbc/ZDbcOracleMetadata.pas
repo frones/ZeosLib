@@ -1278,7 +1278,7 @@ function TZOracleDatabaseMetadata.UncachedGetProcedureColumns(const Catalog,
     isFunction:boolean;
     IZStmt:IZStatement;
     iCol:integer;
-    bNeedInsertReturns:boolean;
+//    bNeedInsertReturns:boolean;
     bInsertingReturns:boolean;
     PZRow1,PZRow2:PZRowBuffer;
 
@@ -1289,7 +1289,7 @@ function TZOracleDatabaseMetadata.UncachedGetProcedureColumns(const Catalog,
 
     iColName:=0;
     iCol:= 0;
-    bNeedInsertReturns:=false;
+//    bNeedInsertReturns:=false;
     bInsertingReturns:=false;
 
     LProcedureNamePattern := '';//;ConstructNameCondition(ProcedureNamePattern,

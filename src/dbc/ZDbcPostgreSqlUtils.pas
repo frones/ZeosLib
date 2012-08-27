@@ -162,7 +162,7 @@ function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
   TypeName: string): TZSQLType;
 begin
   TypeName := LowerCase(TypeName);
-  if (TypeName = 'interval') or (TypeName = 'char')
+  if (TypeName = 'interval') or (TypeName = 'char') or (TypeName = 'bpchar')
     or (TypeName = 'varchar') or (TypeName = 'bit') or (TypeName = 'varbit')
   then//EgonHugeist: Highest Priority Client_Character_set!!!!
     if ( Connection.GetEncoding = ceUTF8 ) and Connection.UTF8StringAsWideField then
@@ -219,11 +219,6 @@ begin
     else
       Result := stBinaryStream;
   end
-  else if TypeName = 'bpchar' then
-    if ( Connection.GetEncoding = ceUTF8 ) and Connection.UTF8StringAsWideField then
-      Result := stUnicodeString
-    else
-      Result := stString
   else if (TypeName = 'int2vector') or (TypeName = 'oidvector') then
     Result := stAsciiStream
   else if (TypeName <> '') and (TypeName[1] = '_') then // ARRAY TYPES
@@ -249,7 +244,7 @@ function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
   TypeOid: Integer): TZSQLType; overload;
 begin
   case TypeOid of
-    1186,18,1043:  { interval/char/varchar }
+    1186,18,1042,1043:  { interval/char/bpchar/varchar }
       if ( Connection.GetEncoding = ceUTF8 ) and Connection.UTF8StringAsWideField then
           Result := stUnicodeString
         else
@@ -286,11 +281,6 @@ begin
         else
           Result := stBinaryStream;
       end;
-    1042: { bpchar }
-      if ( Connection.GetEncoding = ceUTF8 ) and Connection.UTF8StringAsWideField then
-        Result := stUnicodeString
-      else
-        Result := stString;
     22,30: Result := stAsciiStream; { int2vector/oidvector. no '_aclitem' }
     143,629,651,719,791,1000..1028,1040,1041,1115,1182,1183,1185,1187,1231,1263,
     1270,1561,1563,2201,2207..2211,2949,2951,3643,3644,3645,3735,3770 : { other array types }
