@@ -143,6 +143,7 @@ type
     procedure SetUTF8StringAsWideField(const Value: Boolean);
     function GetPreprepareSQL: Boolean; //EgonHugeist
     procedure SetPreprepareSQL(const Value: Boolean);
+    procedure OnPropertiesChange(Sender: TObject); virtual;
     procedure RaiseUnsupportedException;
 
     function CreateRegularStatement(Info: TStrings): IZStatement;
@@ -672,9 +673,13 @@ begin
   if not assigned(ZUrl) then
     raise Exception.Create('ZUrl is not assigned!')
   else
-    FURL := TZURL.Create(ZURL);
+    FURL := TZURL.Create();
   FDriver := DriverManager.GetDriver(ZURL.URL);
   FIZPlainDriver := FDriver.GetPlainDriver(ZUrl);
+
+  FURL.OnPropertiesChange := OnPropertiesChange;
+  FURL.URL := ZUrl.URL;
+
   Info.NameValueSeparator := '=';
   FClientCodePage := Info.Values['codepage'];
   FPreprepareSQL := Info.Values['PreprepareSQL'] = 'ON'; //compatibitity Option for existing Applications
@@ -1311,6 +1316,11 @@ begin
     Result := FUTF8StringAsWideField;
     {$ENDIF}
   {$IFEND}
+end;
+
+procedure TZAbstractConnection.OnPropertiesChange(Sender: TObject);
+begin
+  // do nothing in base class
 end;
 
 procedure TZAbstractConnection.SetUTF8StringAsWideField(const Value: Boolean);

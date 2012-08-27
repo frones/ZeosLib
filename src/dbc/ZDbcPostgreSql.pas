@@ -94,7 +94,6 @@ type
   TZPostgreSQLConnection = class(TZAbstractConnection, IZPostgreSQLConnection)
   private
     FStandardConformingStrings: Boolean;
-    FBackslashQuote: Boolean;
     FHandle: PZPostgreSQLConnect;
     FBeginRequired: Boolean;
     FTypeList: TStrings;
@@ -109,6 +108,8 @@ type
     function BuildConnectStr: AnsiString;
     procedure StartTransactionSupport;
     procedure LoadServerVersion;
+    procedure OnPropertiesChange(Sender: TObject); override;
+    procedure SetStandardConformingStrings(const Value: Boolean);
   public
     destructor Destroy; override;
 
@@ -175,6 +176,10 @@ uses
   ZMessages, ZSysUtils, ZDbcUtils, ZDbcPostgreSqlStatement,
   ZDbcPostgreSqlUtils, ZDbcPostgreSqlMetadata, ZPostgreSqlToken,
   ZPostgreSqlAnalyser;
+
+const
+  FON = String('ON');
+  standard_conforming_strings = String('standard_conforming_strings');
 
 procedure DefaultNoticeProcessor(arg: Pointer; message: PAnsiChar); cdecl;
 begin
@@ -289,6 +294,8 @@ begin
   else
     FOidAsBlob := False;
 
+  OnPropertiesChange(nil);
+
   FCharactersetCode := TZPgCharactersetType(ClientCodePage^.ID);
   FNoticeProcessor := DefaultNoticeProcessor;
 end;
@@ -365,7 +372,7 @@ end;
 
 {**
   Checks is oid should be treated as Large Object.
-  @return <code>True</code> if oid should represent a Large Object. 
+  @return <code>True</code> if oid should represent a Large Object.
 }
 function TZPostgreSQLConnection.IsOidAsBlob: Boolean;
 begin
@@ -416,13 +423,9 @@ end;
   Opens a connection to database server with specified parameters.
 }
 procedure TZPostgreSQLConnection.Open;
-const
-  FON = String('ON');
-  standard_conforming_strings = String('standard_conforming_strings');
-  backslash_quote = String('backslash_quote');
 
 var
-  SCS, BSQ, LogMessage: string;
+  SCS, LogMessage: string;
 begin
   if not Closed then
     Exit;
@@ -467,28 +470,11 @@ begin
     CheckCharEncoding(FClientCodePage);
     FCharactersetCode := TZPgCharactersetType(ClientCodePage^.ID);
 
+    { sets standard_conforming_strings according to Properties if available }
     SCS := Info.Values[standard_conforming_strings];
-    { sets now the standard_conforming_strings which decides the escaping behavior
-      if not available }
-    if Info.Values[standard_conforming_strings]<>'' then
-    begin
-      FStandardConformingStrings := UpperCase(SCS) = FON;
+    if SCS <> '' then
       SetServerSetting(standard_conforming_strings, SCS);
-    end
-    else
-      FStandardConformingStrings := UpperCase(GetServerSetting(standard_conforming_strings)) = FON;
 
-    BSQ := Info.Values[backslash_quote];
-    { sets now the backslash_quote which decides the escaping behavior
-      if not available. could be ON/OFF/safe_encoding(according client encoding) }
-    if Info.Values[backslash_quote]<>'' then
-    begin
-      FBackslashQuote := UpperCase(BSQ) = FON;
-      SetServerSetting(backslash_quote, BSQ);
-    end
-    else
-      FBackslashQuote := UpperCase(GetServerSetting(backslash_quote)) = FON;
-    { now inform the Tokenizer that '\' if interpreted as ttQuoted }
     //if not FOidAsBlob then
       //FOidAsBlob := UpperCase(GetServerSetting('default_with_oids')) = FON;
 
@@ -1043,6 +1029,20 @@ begin
   GetPlainDriver.Clear(QueryHandle);
 end;
 
+procedure TZPostgreSQLConnection.OnPropertiesChange(Sender: TObject);
+var
+  SCS: string;
+begin
+  inherited OnPropertiesChange(Sender);
+
+  { Define standard_conforming_strings setting}
+  SCS := Trim(Info.Values[standard_conforming_strings]);
+  if SCS <> '' then
+    SetStandardConformingStrings(UpperCase(SCS) = FON)
+  else
+    SetStandardConformingStrings(GetPlainDriver.GetStandardConformingStrings);
+end;
+
 {**
   Sets current setting of run-time parameter.
   String values should be already quoted.
@@ -1060,6 +1060,12 @@ begin
   DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
 
   GetPlainDriver.Clear(QueryHandle);
+end;
+
+procedure TZPostgreSQLConnection.SetStandardConformingStrings(const Value: Boolean);
+begin
+  FStandardConformingStrings := Value;
+  ( Self.GetDriver.GetTokenizer as IZPostgreSQLTokenizer ).SetStandardConformingStrings(FStandardConformingStrings);
 end;
 
 

@@ -105,11 +105,13 @@ end;
 }
 procedure TZTestPostgreSQLTokenizer.TestQuoteState;
 const
-  TokenString1: string = '"a""aa" ''c\''c''''c''';
-  TokenTypes1: array[0..1] of TZTokenType = (
-    ttWord, ttQuoted);
-  TokenValues1: array[0..1] of string = (
-    '"a""aa"', '''c\''c''''c''');
+  TokenString1: string = '"a\""\''aa" ''c\'' ''c''''c''';
+
+  TokenTypes1Off: array[0..1] of TZTokenType = (ttWord, ttQuoted);
+  TokenValues1Off: array[0..1] of string = ('"a\""\''aa"', '''c\'' ''c''''c''');
+
+  TokenTypes1On: array[0..2] of TZTokenType = (ttWord, ttQuoted, ttQuoted);
+  TokenValues1On: array[0..2] of string = ('"a\""\''aa"', '''c\''', '''c''''c''');
 
   TokenString2: string = '$aaa$bbb$$ccc$aaa$ddd$ $$eee$$';
   TokenTypes2: array[0..2] of TZTokenType = (
@@ -117,8 +119,14 @@ const
   TokenValues2: array[0..2] of string = (
     '$aaa$bbb$$ccc$aaa$', 'ddd$', '$$eee$$');
 begin
+  (Tokenizer as TZPostgreSQLTokenizer).SetStandardConformingStrings(False);
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString1,
-    [toSkipEOF, toSkipWhitespaces]), TokenTypes1, TokenValues1);
+    [toSkipEOF, toSkipWhitespaces]), TokenTypes1Off, TokenValues1Off);
+
+  (Tokenizer as TZPostgreSQLTokenizer).SetStandardConformingStrings(True);
+  CheckTokens(Tokenizer.TokenizeBuffer(TokenString1,
+    [toSkipEOF, toSkipWhitespaces]), TokenTypes1On, TokenValues1On);
+
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString2,
     [toSkipEOF, toSkipWhitespaces]), TokenTypes2, TokenValues2);
 end;
