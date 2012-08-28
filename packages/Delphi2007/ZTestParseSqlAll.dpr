@@ -62,14 +62,7 @@ uses
   TextTestRunner,
   ZTestConfig,
   ZSqlTestCase,
-  ZTestInterbaseToken in '..\..\test\parsesql\ZTestInterbaseToken.pas',
-  ZTestMySqlToken in '..\..\test\parsesql\ZTestMySqlToken.pas',
-  ZTestOracleToken in '..\..\test\parsesql\ZTestOracleToken.pas',
-  ZTestPostgreSqlToken in '..\..\test\parsesql\ZTestPostgreSqlToken.pas',
-  ZTestScriptParser in '..\..\test\parsesql\ZTestScriptParser.pas',
-  ZTestSqlAnalyser in '..\..\test\parsesql\ZTestSqlAnalyser.pas',
-  ZTestSqLiteToken in '..\..\test\parsesql\ZTestSqLiteToken.pas',
-  ZTestSybaseToken in '..\..\test\parsesql\ZTestSybaseToken.pas';
+  ZTestParseSql in '..\..\test\parsesql\ZTestParseSql.pas';
 
 begin
   TestGroup := PARSESQL_TEST_GROUP;

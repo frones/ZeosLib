@@ -66,17 +66,8 @@ uses
 {$ENDIF}
   ZTestConfig,
   ZSqlTestCase,
-  ZTestSqlStrings in '..\..\test\component\ZTestSqlStrings.pas',
-  ZTestSqlProcessor in '..\..\test\component\ZTestSqlProcessor.pas',
-  ZTestStoredProcedure in '..\..\test\component\ZTestStoredProcedure.pas',
-  ZTestConnection in '..\..\test\component\ZTestConnection.pas',
-  ZTestExecuteSql in '..\..\test\component\ZTestExecuteSql.pas',
-  ZTestSqlTypes in '..\..\test\component\ZTestSqlTypes.pas',
-  ZTestDataSetGeneric in '..\..\test\component\ZTestDataSetGeneric.pas',
-  ZTestData in '..\..\test\component\ZTestData.pas',
   ZTestMidas in '..\..\test\component\ZTestMidas.pas',
-  ZTestMasterDetail in '..\..\test\component\ZTestMasterDetail.pas';
-
+  ZTestComponents in '..\..\test\component\ZTestComponents.pas';
 begin
   TestGroup := COMPONENT_TEST_GROUP;
   RebuildTestDatabases;
