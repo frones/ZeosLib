@@ -74,9 +74,10 @@ type
   private
     FStandardConformingStrings: Boolean;
   protected
-    function CheckEscapeSyntax(Stream: TStream): Boolean;
+    function GetModifier(Stream: TStream; FirstChar: Char; ResetPosition: Boolean = True): string;
     function GetDollarQuotedString(Stream: TStream; QuoteChar: Char): string;
     function GetQuotedString(Stream: TStream; QuoteChar: Char; EscapeSyntax: Boolean): String;
+    function GetQuotedStringWithModifier(Stream: TStream; FirstChar: Char): string;
   public
     function NextToken(Stream: TStream; FirstChar: Char;
       Tokenizer: TZTokenizer): TZToken; override;
@@ -114,13 +115,22 @@ type
 
   {** Implements a default tokenizer object. }
   TZPostgreSQLTokenizer = class (TZTokenizer, IZPostgreSQLTokenizer)
+  protected
+    function CheckEscapeState(const ActualState: TZTokenizerState; Stream: TStream;
+        const FirstChar: Char): TZTokenizerState; override;
   public
     procedure SetStandardConformingStrings(const Value: Boolean);
     constructor Create;
   end;
 
 implementation
+
 uses ZCompatibility;
+
+const
+  NameQuoteChar   = Char('"');
+  DollarQuoteChar = Char('$');
+  SingleQuoteChar = Char('''');
 
 { TZPostgreSQLNumberState }
 
@@ -210,31 +220,42 @@ end;
 { TZPostgreSQLQuoteState }
 
 {**
-  Checks whether escape syntax is used.
-
-  @return a True if escape syntax is used.
+  Retrieves string modifier from quoted string.
+  @return a string with modifier for valid quoted string with modifier
+  or empty string otherwise.
 }
-function TZPostgreSQLQuoteState.CheckEscapeSyntax(Stream: TStream): Boolean;
+function TZPostgreSQLQuoteState.GetModifier(Stream: TStream;
+    FirstChar: Char; ResetPosition: boolean = True): string;
 var
   ReadChar: Char;
+  Modifier: string;
+  ReadNum: Integer;
 begin
-  Result := not FStandardConformingStrings;
-  if FStandardConformingStrings then
+  Result := '';
+  if CharInSet(FirstChar, ['E', 'e', 'B', 'b', 'X', 'x', 'U', 'u']) then
   begin
-    Stream.Seek(-SizeOf(Char), soFromCurrent);
-    if Stream.Position >= SizeOf(Char) then
+    Modifier := FirstChar;
+    ReadNum := Stream.Read(ReadChar, SizeOf(Char));
+    if ReadNum = SizeOf(Char) then
     begin
-      Stream.Seek(-SizeOf(Char), soFromCurrent);
-      Stream.Read(ReadChar, SizeOf(Char));
-      Result := UpperCase(ReadChar) = 'E';
-      Stream.Seek(SizeOf(Char), soFromCurrent);
+      if (UpperCase(FirstChar) = 'U') and (ReadChar = '&') then // Check for U& modifier
+      begin
+        Modifier := Modifier + ReadChar;
+        ReadNum := ReadNum + Stream.Read(ReadChar, SizeOf(Char));
+      end;
+
+      if (ReadChar = SingleQuoteChar) then
+         Result := Modifier;
+
+      if ResetPosition then
+        Stream.Seek(-ReadNum, soFromCurrent);
     end;
   end;
 end;
 
 {**
-  Return a quoted string token from a reader. This method
-  will get Tag from first char to $ and will collect
+  Returns a quoted string token from a reader. This method
+  will get Tag from first char to QuoteChar and will collect
   characters until reaches same Tag.
 
   @return a quoted string token from a reader
@@ -280,7 +301,7 @@ begin
 end;
 
 {**
-  Return a quoted string token from a reader. This method
+  Returns a quoted string token from a reader. This method
   will collect characters until it sees same QuoteChar,
   ommitting doubled chars
 
@@ -321,6 +342,25 @@ begin
 end;
 
 {**
+  Returns a quoted string token with leading modifier from a reader.
+
+  @return a quoted string token from a reader
+}
+function TZPostgreSQLQuoteState.GetQuotedStringWithModifier(Stream: TStream;
+    FirstChar: Char): string;
+var
+  Modifier: string;
+  EscapeSyntax: Boolean;
+begin
+  Modifier := GetModifier(Stream, FirstChar, False);
+  if (Modifier <> '') then
+    FirstChar := SingleQuoteChar;
+  EscapeSyntax := (not FStandardConformingStrings and (Modifier = '')) or
+    (UpperCase(Modifier) = 'E');
+  Result := Modifier + GetQuotedString(Stream, FirstChar, EscapeSyntax);
+end;
+
+{**
   Return a quoted string token from a reader. This method
   will collect characters until it sees a match to the
   character that the tokenizer used to switch to this state.
@@ -331,12 +371,12 @@ function TZPostgreSQLQuoteState.NextToken(Stream: TStream;
   FirstChar: Char; Tokenizer: TZTokenizer): TZToken;
 begin
   Result.Value := FirstChar;
-  if FirstChar = '"' then
+  if FirstChar = NameQuoteChar then
   begin
     Result.TokenType := ttWord;
     Result.Value := GetQuotedString(Stream, FirstChar, False);
   end
-  else if FirstChar = '$' then
+  else if FirstChar = DollarQuoteChar then
   begin
     Result.TokenType := ttQuoted;
     Result.Value := GetDollarQuotedString(Stream, FirstChar);
@@ -344,7 +384,7 @@ begin
   else
   begin
     Result.TokenType := ttQuoted;
-    Result.Value := GetQuotedString(Stream, FirstChar, CheckEscapeSyntax(Stream));
+    Result.Value := GetQuotedStringWithModifier(Stream, FirstChar);
   end;
 end;
 
@@ -505,12 +545,32 @@ begin
   SetCharacterState('0', '9', NumberState);
   SetCharacterState('.', '.', NumberState);
 
-  SetCharacterState('"', '"', QuoteState);
-  SetCharacterState(#39, #39, QuoteState);
-  SetCharacterState('$', '$', QuoteState);
+  SetCharacterState(NameQuoteChar, NameQuoteChar, QuoteState);
+  SetCharacterState(SingleQuoteChar, SingleQuoteChar, QuoteState);
+  SetCharacterState(DollarQuoteChar, DollarQuoteChar, QuoteState);
 
   SetCharacterState('/', '/', CommentState);
   SetCharacterState('-', '-', CommentState);
+end;
+
+{**
+  Checks if WordState is QuoteState with modifier and sets QuoteState.
+  @param Stream the Read-Stream which has to checked for Next-Chars.
+  @FirstChar The FirstChar which was readed and sets the Symbolstate
+  @returns either the given SymbolState or the QuoteState
+}
+function TZPostgreSQLTokenizer.CheckEscapeState(const ActualState:
+    TZTokenizerState; Stream: TStream; const FirstChar: Char): TZTokenizerState;
+var
+  Modifier: string;
+begin
+  Result := inherited CheckEscapeState(ActualState, Stream, FirstChar);
+  if (Result is TZWordState) then
+  begin
+    Modifier := (QuoteState as TZPostgreSQLQuoteState).GetModifier(Stream, FirstChar);
+    if (Modifier <> '') then
+      Result := QuoteState;
+  end;
 end;
 
 end.
