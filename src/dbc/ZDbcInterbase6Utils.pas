@@ -303,12 +303,12 @@ type
   { Interbase statement functions}
   function PrepareStatement(PlainDriver: IZInterbasePlainDriver;
     Handle: PISC_DB_HANDLE; TrHandle: PISC_TR_HANDLE; Dialect: Word;
-    SQL: AnsiString;
+    SQL: ZAnsiString; LogSQL: String;
     var StmtHandle: TISC_STMT_HANDLE): TZIbSqlStatementType;
   procedure PrepareResultSqlData(PlainDriver: IZInterbasePlainDriver;
-    Handle: PISC_DB_HANDLE; Dialect: Word; SQL: string;
+    Handle: PISC_DB_HANDLE; Dialect: Word; LogSQL: string;
     var StmtHandle: TISC_STMT_HANDLE; SqlData: IZResultSQLDA);
-  procedure PrepareParameters(PlainDriver: IZInterbasePlainDriver; SQL: string;
+  procedure PrepareParameters(PlainDriver: IZInterbasePlainDriver; LogSQL: string;
     InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray; InParamCount: Integer;
     Dialect: Word; var StmtHandle: TISC_STMT_HANDLE; ParamSqlData: IZParamsSQLDA;
     const Encoding: TZCharEncoding);
@@ -874,7 +874,7 @@ end;
 }
 function PrepareStatement(PlainDriver: IZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; TrHandle: PISC_TR_HANDLE; Dialect: Word;
-  SQL: AnsiString; var StmtHandle: TISC_STMT_HANDLE):
+  SQL: ZAnsiString; LogSQL: String; var StmtHandle: TISC_STMT_HANDLE):
   TZIbSqlStatementType;
 var
   StatusVector: TARRAY_ISC_STATUS;
@@ -882,21 +882,17 @@ var
 begin
   { Allocate an sql statement }
   PlainDriver.isc_dsql_allocate_statement(@StatusVector, Handle, @StmtHandle);
-  CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, String(Sql));
+  CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, LogSQL);
   { Prepare an sql statement }
-    PlainDriver.isc_dsql_prepare(@StatusVector, TrHandle, @StmtHandle,
-      0, PAnsiChar(SQL), Dialect, nil);
-  iError := CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, String(SQL)); //Check for disconnect AVZ
+  PlainDriver.isc_dsql_prepare(@StatusVector, TrHandle, @StmtHandle,
+    0, PAnsiChar(SQL), Dialect, nil);
+  iError := CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, LogSQL); //Check for disconnect AVZ
 
   { Set Statement Type }
   if (iError <> DISCONNECT_ERROR) then //AVZ
-  begin
-    Result := GetStatementType(PlainDriver, StmtHandle);
-  end
-    else
-  begin
+    Result := GetStatementType(PlainDriver, StmtHandle)
+  else
     Result := stDisconnect;
-  end;
 
   if Result in [stUnknown, stGetSegment, stPutSegment, stStartTrans] then
   begin
@@ -915,7 +911,7 @@ end;
    @param SqlData a interbase sql result data
 }
 procedure PrepareResultSqlData(PlainDriver: IZInterbasePlainDriver;
-    Handle: PISC_DB_HANDLE; Dialect: Word; SQL: string;
+    Handle: PISC_DB_HANDLE; Dialect: Word; LogSQL: string;
     var StmtHandle: TISC_STMT_HANDLE; SqlData: IZResultSQLDA);
 var
   StatusVector: TARRAY_ISC_STATUS;
@@ -923,14 +919,14 @@ begin
   { Initialise ouput param and fields }
   PlainDriver.isc_dsql_describe(@StatusVector, @StmtHandle, Dialect,
     SqlData.GetData);
-  CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, SQL);
+  CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, LogSQL);
 
   if SqlData.GetData^.sqld > SqlData.GetData^.sqln then
   begin
     SqlData.AllocateSQLDA;
     PlainDriver.isc_dsql_describe(@StatusVector, @StmtHandle,
       Dialect, SqlData.GetData);
-    CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, Sql);
+    CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, LogSql);
   end;
   SqlData.InitFields(False);
 end;
@@ -978,6 +974,8 @@ begin
   if StatementHandle <> 0  then
   begin
     PlainDriver.isc_dsql_free_statement(@StatusVector, @StatementHandle, Options);
+    if Options = DSQL_drop  then
+      StatementHandle := 0;
     CheckInterbase6Error(PlainDriver, StatusVector);
   end;
 end;
@@ -1027,7 +1025,7 @@ end;
    @param StmtHandle a statement handle
    @param SqlData a interbase sql result data
 }
-procedure PrepareParameters(PlainDriver: IZInterbasePlainDriver; SQL: string;
+procedure PrepareParameters(PlainDriver: IZInterbasePlainDriver; LogSQL: string;
   InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray; InParamCount: Integer;
   Dialect: Word; var StmtHandle: TISC_STMT_HANDLE; ParamSqlData: IZParamsSQLDA;
   const Encoding: TZCharEncoding);
@@ -1040,7 +1038,7 @@ begin
   {check dynamic sql}
   PlainDriver.isc_dsql_describe_bind(@StatusVector, @StmtHandle, Dialect,
     ParamSqlData.GetData);
-  CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, SQL);
+  CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, LogSQL);
 
   { Resize XSQLDA structure if needed }
   if ParamSqlData.GetData^.sqld > ParamSqlData.GetData^.sqln then
@@ -1048,7 +1046,7 @@ begin
     ParamSqlData.AllocateSQLDA;
     PlainDriver.isc_dsql_describe_bind(@StatusVector, @StmtHandle, Dialect,
       ParamSqlData.GetData);
-    CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, SQL);
+    CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, LogSQL);
   end;
 
   ParamSqlData.InitFields(True);

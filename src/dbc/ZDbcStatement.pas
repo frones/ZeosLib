@@ -198,6 +198,7 @@ type
     FPrepared : Boolean;
   protected
     FStatementId : Integer;
+    FExecCount: Integer;
     procedure PrepareInParameters; virtual;
     procedure BindInParameters; virtual;
     procedure UnPrepareInParameters; virtual;
@@ -269,11 +270,13 @@ type
     FOutParamCount: Integer;
     FLastWasNull: Boolean;
     FTemp: String;
+    FProcSql: String;
   protected
     FDBParamTypes:array[0..1024] of shortInt;
     procedure TrimInParameters;
     procedure SetOutParamCount(NewParamCount: Integer); virtual;
     function GetOutParam(ParameterIndex: Integer): TZVariant; virtual;
+    procedure SetProcSQL(const Value: String); virtual;
 
     property OutParamValues: TZVariantDynArray
       read FOutParamValues write FOutParamValues;
@@ -281,6 +284,7 @@ type
       read FOutParamTypes write FOutParamTypes;
     property OutParamCount: Integer read FOutParamCount write FOutParamCount;
     property LastWasNull: Boolean read FLastWasNull write FLastWasNull;
+    property ProcSql: String read FProcSQL write SetProcSQL;
   public
     constructor Create(Connection: IZConnection; SQL: string; Info: TStrings);
     procedure ClearParameters; override;
@@ -1722,6 +1726,7 @@ begin
   inherited Create(Connection, SQL, Info);
   FOutParamCount := 0;
   SetOutParamCount(0);
+  FProcSql := ''; //Init -> FPC
   FLastWasNull := True;
 end;
 
@@ -1848,6 +1853,11 @@ begin
     Result:=NullVariant;
     FLastWasNull:=True;
   end;
+end;
+
+procedure TZAbstractCallableStatement.SetProcSQL(const Value: String);
+begin
+  FProcSql := Value;
 end;
 
 {**
