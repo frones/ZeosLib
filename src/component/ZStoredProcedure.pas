@@ -115,7 +115,7 @@ type
 implementation
 
 uses
-  ZAbstractRODataset, ZMessages, ZDatasetUtils;
+  ZAbstractRODataset, ZMessages, ZDatasetUtils, ZSysUtils;
 
 { TZStoredProc }
 

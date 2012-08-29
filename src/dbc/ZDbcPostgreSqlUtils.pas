@@ -155,9 +155,16 @@ procedure CheckPostgreSQLError(Connection: IZConnection;
 }
 function GetMinorVersion(const Value: string): Word;
 
+{**
+   Quotes qualified ientifier
+   @param Value a idintifier
+   @return a quoted identifier
+}
+function QuoteQualifiedIdentifier(const Value: string): string;
+
 implementation
 
-uses ZMessages, ZCompatibility;
+uses ZMessages, ZCompatibility, ZSysUtils;
 
 {**
    Return ZSQLType from PostgreSQL type name
@@ -809,6 +816,29 @@ begin
     else
       Break;
   Result := StrToIntDef(Temp, 0);
+end;
+
+{**
+   Quotes qualified identifier
+   @param Value a idintifier
+   @return a quoted identifier
+}
+function QuoteQualifiedIdentifier(const Value: string): string;
+var
+  Catalog: string;
+  Schema: string;
+  ObjectName: string;
+const
+  QuoteChar = Char('"');
+begin
+  SplitQualifiedObjectName(Value, Catalog, Schema, ObjectName);
+  if (Catalog <> '') and (Catalog[1] <> QuoteChar) then
+    Catalog := AnsiQuotedStr(Catalog, QuoteChar);
+  if (Schema <> '') and (Schema[1] <> QuoteChar) then
+    Schema := AnsiQuotedStr(Schema, QuoteChar);
+  if (ObjectName <> '') and (ObjectName[1] <> QuoteChar) then
+    ObjectName := AnsiQuotedStr(ObjectName, QuoteChar);
+  Result := QualifiedObjectName(Catalog, Schema, ObjectName);
 end;
 
 end.
