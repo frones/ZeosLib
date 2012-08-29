@@ -872,7 +872,7 @@ begin
 
   try
     PrepareStatement(FPlainDriver, @FHandle, @FTrHandle,
-      FDialect, AnsiString(SQL), FStmtHandle);
+      FDialect, AnsiString(SQL), SQL, FStmtHandle);
     PrepareResultSqlData(FPlainDriver, @FHandle, FDialect,
       SQL, FStmtHandle, SQLData);
 
@@ -900,7 +900,7 @@ begin
 
   try
     PrepareStatement(FPlainDriver, @FHandle, @FTrHandle,
-      FDialect, AnsiString(SQL), StmtHandle);
+      FDialect, AnsiString(SQL), SQL, StmtHandle);
 
     FPlainDriver.isc_dsql_execute2(@StatusVector, @FTrHandle,
       @StmtHandle, FDialect, nil, nil);
