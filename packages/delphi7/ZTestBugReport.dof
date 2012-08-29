@@ -94,7 +94,7 @@ OutputDir=build
 UnitOutputDir=build
 PackageDLLOutputDir=build
 PackageDCPOutputDir=build
-SearchPath=build
+SearchPath=build;..\..\test\bugreport
 Packages=vcl;rtl;dbrtl;adortl;vcldb;vclx;bdertl;vcldbx;ibxpress;dsnap;cds;bdecds;qrpt;teeui;teedb;tee;dss;teeqr;visualclx;visualdbclx;dsnapcrba;dsnapcon;VclSmp;vclshlctrls;vclie;xmlrtl;inet;inetdbbde;inetdbxpress;inetdb;nmfast;webdsnap;websnap;dbexpress;dbxcds;indy;dclOffice2k
 Conditionals=
 DebugSourceDirs=build
@@ -134,6 +134,18 @@ OriginalFilename=
 ProductName=
 ProductVersion=1.0.0.0
 Comments=
+[Excluded Packages]
+d:\program files\borland\delphi7\Bin\dclclxstd70.bpl=Borland CLX Standard Components
+d:\program files\borland\delphi7\Bin\dclclxdb70.bpl=Borland CLX Database Components
+d:\program files\borland\delphi7\Bin\dcl31w70.bpl=Delphi 1.0 Compatibility Components
+d:\program files\borland\delphi7\Bin\dclIndyCore70.bpl=Indy 10 Core Design Time
+d:\program files\borland\delphi7\Bin\dclIndyProtocols70.bpl=Indy 10 Protocols Design Time
+d:\program files\borland\delphi7\Bin\dclaxserver70.bpl=Microsoft Office 97 Sample Automation Server Wrapper Components
+d:\program files\borland\delphi7\Bin\dcloffice2k70.bpl=Microsoft Office 2000 Sample Automation Server Wrapper Components
+d:\program files\borland\delphi7\Bin\dclqrt70.bpl=QuickReport Components
+d:\program files\borland\delphi7\Bin\dcltqr70.bpl=TeeChart for QuickReport Components
+d:\program files\borland\delphi7\Bin\dclRave70.bpl=Rave Reports BE 5.0 Package
+d:\program files\borland\delphi7\Bin\dclIntraweb_50_70.bpl=Intraweb 5.0 Design Package for Delphi 7
 [HistoryLists\hlDebugSourcePath]
 Count=2
 Item0=build
@@ -145,10 +157,17 @@ Item0=TESTGUI
 Count=1
 Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
 [HistoryLists\hlSearchPath]
-Count=3
-Item0=build
-Item1=build;../../test/framework
-Item2=$(ZEOSDBO_BUILD)
+Count=10
+Item0=build;..\..\test\performance
+Item1=build;..\..\test\bugreport
+Item2=build;..\..\test\framework;..\..\test\component
+Item3=build;..\..\test\component
+Item4=build;..\..\test\dbc
+Item5=build;..\..\test\parsesql
+Item6=build;..\..\test\core
+Item7=build
+Item8=build;../../test/framework
+Item9=$(ZEOSDBO_BUILD)
 [HistoryLists\hlUnitOutputDirectory]
 Count=2
 Item0=build
