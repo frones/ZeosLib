@@ -365,18 +365,6 @@ function ZStrToFloat(Value: PAnsiChar): Extended; overload;
 }
 function ZStrToFloat(Value: AnsiString): Extended; overload;
 
-{**
-  Makes up a qualified object name from catalog, schema and objectname.
-}
-function QualifiedObjectName(const Catalog, Schema, ObjectName: string): string;
-
-{**
-  Splits up a qualified object name into pieces. Catalog, schema
-  and objectname.
-}
-procedure SplitQualifiedObjectName(QualifiedName: string;
-  var Catalog, Schema, ObjectName: string);
-
 implementation
 
 uses ZMatchPattern, StrUtils;
@@ -1338,119 +1326,6 @@ end;
 function ZStrToFloat(Value: AnsiString): Extended;
 begin
   Result := ZStrToFloat(PAnsiChar(Value));
-end;
-
-{**
-  Makes up a qualified object name from catalog, schema and objectname.
-}
-function QualifiedObjectName(const Catalog, Schema, ObjectName: string): string;
-begin
-  Result := ObjectName;
-  if Schema <> '' then
-    Result := Schema + '.' + Result;
-  if Catalog <> '' then
-    Result := Catalog + '.' + Result;
-end;
-
-{**
-  Splits up a qualified object name into pieces. Catalog, schema
-  and objectname.
-}
-procedure SplitQualifiedObjectName(QualifiedName: string;
-  var Catalog, Schema, ObjectName: string);
-
-{$IFDEF OLDFPC}
-function ExtractStrings(Separators, WhiteSpace: TSysCharSet; Content: PChar;
-  Strings: TStrings): Integer;
-var
-  Head, Tail: PChar;
-  EOS, InQuote: Boolean;
-  QuoteChar: Char;
-  Item: string;
-begin
-  Result := 0;
-  if (Content = nil) or (Content^ = #0) or (Strings = nil) then
-     Exit;
-  Tail := Content;
-  InQuote := False;
-  QuoteChar := #0;
-  Strings.BeginUpdate;
-  try
-    repeat
-      while CharInSet(Tail^, WhiteSpace + [#13, #10]) do
-        Inc(Tail);
-      Head := Tail;
-      while True do
-      begin
-        while (InQuote and not CharInSet(Tail^, [QuoteChar, #0])) or
-               not CharInSet(Tail^, Separators + [#0, #13, #10, '''', '"']) do
-           Inc(Tail);
-        if CharInSet(Tail^, ['''', '"']) then
-        begin
-          if (QuoteChar <> #0) and (QuoteChar = Tail^) then
-            QuoteChar := #0
-          else
-            QuoteChar := Tail^;
-          InQuote := QuoteChar <> #0;
-          Inc(Tail);
-        end
-        else
-          Break;
-      end;
-      EOS := Tail^ = #0;
-      if (Head <> Tail) and (Head^ <> #0) then
-      begin
-        if Strings <> nil then
-        begin
-          SetString(Item, Head, Tail - Head);
-          Strings.Add(Item);
-        end;
-        Inc(Result);
-      end;
-      Inc(Tail);
-    until EOS;
-  finally
-    Strings.EndUpdate;
-  end;
-end;
-{$ENDIF}
-
-var
-  SL: TStringList;
-  I: Integer;
-begin
-  SL := TStringList.Create;
-  try
-    Catalog := '';
-    Schema := '';
-    ObjectName := QualifiedName;
-    ExtractStrings(['.'], [' '], PChar(QualifiedName), SL);
-    case SL.Count of
-      0, 1: ;
-      2: begin
-           Schema := SL.Strings[0];
-           ObjectName := SL.Strings[1];
-         end;
-      3: begin
-           Catalog := SL.Strings[0];
-           Schema := SL.Strings[1];
-           ObjectName := SL.Strings[2];
-         end;
-    else
-      begin
-        ObjectName := SL.Strings[SL.Count - 1];
-        Schema := SL.Strings[SL.Count - 2];
-        for I := 0 to SL.Count - 3 do
-        begin
-          Catalog := Catalog + SL.Strings[I];
-          if I < SL.Count - 3 then
-            Catalog := Catalog + '.';
-        end;
-      end;
-    end;
-  finally
-    SL.Free;
-  end;
 end;
 
 end.
