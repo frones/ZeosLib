@@ -1467,10 +1467,10 @@ begin
         Result.UpdateString(3, GetString(ColumnIndexes[1]));    //TABLE_NAME
         Result.UpdateString(4, GetString(ColumnIndexes[2]));    //COLUMN_NAME
         case GetInt(ColumnIndexes[3]) of
-          0: Result.UpdateInt(5, 1);//ptInput
-          1: Result.UpdateInt(5, 4);//ptResult
+          0: Result.UpdateInt(5, Ord(pctIn));
+          1: Result.UpdateInt(5, Ord(pctReturn));
         else
-            Result.UpdateInt(5, 0); //ptUnknown
+            Result.UpdateInt(5, Ord(pctUnknown));
         end;
 
         Result.UpdateInt(6,

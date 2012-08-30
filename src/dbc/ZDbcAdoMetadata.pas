@@ -1390,12 +1390,12 @@ begin
           Result.UpdateStringByName('COLUMN_NAME',
             GetStringByName('PARAMETER_NAME'));
           case GetShortByName('PARAMETER_TYPE') of
-            1: Result.UpdateShortByName('COLUMN_TYPE', 1); //ptInput
-            2: Result.UpdateShortByName('COLUMN_TYPE', 3); //ptInputOutput
-            3: Result.UpdateShortByName('COLUMN_TYPE', 2); //ptOutput
-            4: Result.UpdateShortByName('COLUMN_TYPE', 4); //ptResult
+            1: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctIn));
+            2: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctInOut));
+            3: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctOut));
+            4: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctReturn));
           else
-            Result.UpdateShortByName('COLUMN_TYPE', 0); //ptUnknown
+            Result.UpdateShortByName('COLUMN_TYPE', Ord(pctUnknown));
           end;
           Result.UpdateShortByName('DATA_TYPE',
             Ord(ConvertAdoToSqlType(GetShortByName('DATA_TYPE'))));
