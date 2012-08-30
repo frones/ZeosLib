@@ -143,7 +143,7 @@ begin
     if Params[I].ParamType in [ptResult, ptOutput, ptInputOutput] then
       CallableStatement.RegisterOutParameter(I + 1,
         Ord(ConvertDatasetToDbcType(Params[I].DataType)));
-    TZAbstractCallableStatement(CallableStatement).RegisterParamType( I+1, ord(Params[I].ParamType)  );
+    CallableStatement.RegisterParamType( I+1, ord(Params[I].ParamType)  );
   end;
   Result := CallableStatement;
 end;
