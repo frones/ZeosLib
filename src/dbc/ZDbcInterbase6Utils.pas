@@ -312,6 +312,10 @@ type
     InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray; InParamCount: Integer;
     Dialect: Word; var StmtHandle: TISC_STMT_HANDLE; ParamSqlData: IZParamsSQLDA;
     const Encoding: TZCharEncoding);
+  procedure BindSQLDAInParameters(PlainDriver: IZInterbasePlainDriver;
+    InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray;
+    InParamCount: Integer; ParamSqlData: IZParamsSQLDA;
+    const Encoding: TZCharEncoding);
   procedure FreeStatement(PlainDriver: IZInterbasePlainDriver;
     StatementHandle: TISC_STMT_HANDLE; Options : Word);
   function GetStatementType(PlainDriver: IZInterbasePlainDriver;
@@ -443,7 +447,8 @@ const
 implementation
 
 uses
-  Variants, ZSysUtils, Math, ZDbcInterbase6{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
+  Variants, ZSysUtils, Math, ZDbcInterbase6, ZDbcUtils
+  {$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
 
 {**
    Generate specific length random string and return it
@@ -974,8 +979,6 @@ begin
   if StatementHandle <> 0  then
   begin
     PlainDriver.isc_dsql_free_statement(@StatusVector, @StatementHandle, Options);
-    if Options = DSQL_drop  then
-      StatementHandle := 0;
     CheckInterbase6Error(PlainDriver, StatusVector);
   end;
 end;
@@ -1030,9 +1033,6 @@ procedure PrepareParameters(PlainDriver: IZInterbasePlainDriver; LogSQL: string;
   Dialect: Word; var StmtHandle: TISC_STMT_HANDLE; ParamSqlData: IZParamsSQLDA;
   const Encoding: TZCharEncoding);
 var
-  I: Integer;
-  TempBlob: IZBlob;
-  TempStream: TStream;
   StatusVector: TARRAY_ISC_STATUS;
 begin
   {check dynamic sql}
@@ -1050,18 +1050,27 @@ begin
   end;
 
   ParamSqlData.InitFields(True);
+end;
 
+procedure BindSQLDAInParameters(PlainDriver: IZInterbasePlainDriver;
+  InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray;
+  InParamCount: Integer; ParamSqlData: IZParamsSQLDA;
+  const Encoding: TZCharEncoding);
+var
+  I: Integer;
+  TempBlob: IZBlob;
+  TempStream, MS: TStream;
+begin
   if InParamCount <> ParamSqlData.GetFieldCount then
     raise EZSQLException.Create(SInvalidInputParameterCount);
 
   {$R-}
   for I := 0 to ParamSqlData.GetFieldCount - 1 do
   begin
+    ParamSqlData.UpdateNull(I, DefVarManager.IsNull(InParamValues[I]));
     if DefVarManager.IsNull(InParamValues[I])then
-    begin
-      ParamSqlData.UpdateNull(I, True);
-      Continue;
-    end;
+      Continue
+    else
     case InParamTypes[I] of
       stBoolean:
         ParamSqlData.UpdateBoolean(I,
@@ -1091,10 +1100,12 @@ begin
         ParamSqlData.UpdateString(I,
           PlainDriver.ZPlainString(SoftVarManager.GetAsString(InParamValues[I]), Encoding));
       stUnicodeString:
-        if (Encoding = ceAnsi) then
-          ParamSqlData.UpdateString(I, AnsiString(SoftVarManager.GetAsUnicodeString(InParamValues[I])))
+        if Encoding = ceUTF8 then
+          ParamSqlData.UpdateString(I,
+            UTF8Encode(SoftVarManager.GetAsUnicodeString(InParamValues[I])))
         else
-          ParamSqlData.UpdateString(I, UTF8Encode(SoftVarManager.GetAsUnicodeString(InParamValues[I])));
+          ParamSqlData.UpdateString(I,
+            AnsiString(SoftVarManager.GetAsUnicodeString(InParamValues[I])));
       stBytes:
         ParamSqlData.UpdateBytes(I,
           StrToBytes(AnsiString(SoftVarManager.GetAsString(InParamValues[I]))));
@@ -1116,18 +1127,25 @@ begin
           begin
             TempStream := TempBlob.GetStream;
             try
-              ParamSqlData.WriteBlob(I, TempStream);
+              if (ParamSqlData.GetFieldSqlType(i) in [stUnicodeStream, stAsciiStream]) and
+                (Encoding = ceUTF8) then
+              begin
+                MS := GetValidatedUnicodeStream(TempStream);
+                ParamSqlData.WriteBlob(I, MS);
+                MS.Free;
+              end
+              else
+                ParamSqlData.WriteBlob(I, TempStream);
             finally
               TempStream.Free;
             end;
           end;
-        end;
+        end
       else
         raise EZIBConvertError.Create(SUnsupportedParameterType);
     end;
   end;
  {$IFOPT D+}
-{$R+}
 {$ENDIF}
 end;
 

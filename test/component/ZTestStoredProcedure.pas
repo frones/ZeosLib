@@ -239,7 +239,7 @@ end;
 }
 procedure TZTestInterbaseStoredProcedure.Test_abtest;
 var
-  i: integer;
+  i, P2: integer;
   S: String;
 begin
   StoredProc.StoredProcName := 'ABTEST';
@@ -264,12 +264,19 @@ begin
   CheckEquals(5, StoredProc.Params.Count);
 
   StoredProc.Prepare;
-  for i:= 0 to 99 do
+  S := 'a';
+  P2 := 100;
+  for i:= 1 to 100 do
   begin
     StoredProc.Params[2].AsInteger:= i;
-    StoredProc.Params[3].AsInteger:= 100;
-    StoredProc.Params[4].AsString:= 'a';
+    StoredProc.Params[3].AsInteger:= P2;
+    StoredProc.Params[4].AsString:= S;
     StoredProc.ExecProc;
+    CheckEquals(S+S, StoredProc.ParamByName('P5').AsString);
+    CheckEquals(I*10+P2, StoredProc.ParamByName('P4').AsInteger);
+    if Length(S) = 10 then s := 'a'
+    else S := S+'a';
+    P2 := 100 - I;
   end;
   StoredProc.Unprepare;
   S := StoredProc.ParamByName('P4').AsString +

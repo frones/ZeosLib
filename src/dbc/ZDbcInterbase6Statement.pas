@@ -131,6 +131,7 @@ type
     function GetProcedureSql(SelectProc: boolean): string;
 
     procedure PrepareInParameters; override;
+    procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
   public
     constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
@@ -442,102 +443,15 @@ begin
 end;
 
 procedure TZInterbase6PreparedStatement.BindInParameters;
-var
-  I: Integer;
-  TempBlob: IZBlob;
-  TempStream, MS: TStream;
 begin
-  if InParamCount <> FParamSQLData.GetFieldCount then
-    raise EZSQLException.Create(SInvalidInputParameterCount);
-
-  for I := 0 to FParamSQLData.GetFieldCount - 1 do
-  begin
-    FParamSQLData.UpdateNull(I, DefVarManager.IsNull(InParamValues[I]));
-    if DefVarManager.IsNull(InParamValues[I])then
-      Continue 
-    else
-    case InParamTypes[I] of
-      stBoolean:
-        FParamSQLData.UpdateBoolean(I,
-          SoftVarManager.GetAsBoolean(InParamValues[I]));
-      stByte:
-        FParamSQLData.UpdateByte(I,
-          SoftVarManager.GetAsInteger(InParamValues[I]));
-      stShort:
-        FParamSQLData.UpdateShort(I,
-          SoftVarManager.GetAsInteger(InParamValues[I]));
-      stInteger:
-        FParamSQLData.UpdateInt(I,
-          SoftVarManager.GetAsInteger(InParamValues[I]));
-      stLong:
-        FParamSQLData.UpdateLong(I,
-          SoftVarManager.GetAsInteger(InParamValues[I]));
-      stFloat:
-        FParamSQLData.UpdateFloat(I,
-          SoftVarManager.GetAsFloat(InParamValues[I]));
-      stDouble:
-        FParamSQLData.UpdateDouble(I,
-          SoftVarManager.GetAsFloat(InParamValues[I]));
-      stBigDecimal:
-        FParamSQLData.UpdateBigDecimal(I,
-          SoftVarManager.GetAsFloat(InParamValues[I]));
-      stString:
-        FParamSQLData.UpdateString(I,
-          ZPlainString(SoftVarManager.GetAsString(InParamValues[I])));
-      stUnicodeString:
-        if Self.Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
-          FParamSQLData.UpdateString(I,
-            UTF8Encode(SoftVarManager.GetAsUnicodeString(InParamValues[I])))
-        else
-          FParamSQLData.UpdateString(I,
-            AnsiString(SoftVarManager.GetAsUnicodeString(InParamValues[I])));
-      stBytes:
-        FParamSQLData.UpdateBytes(I,
-          StrToBytes(AnsiString(SoftVarManager.GetAsString(InParamValues[I]))));
-      stDate:
-        FParamSQLData.UpdateDate(I,
-          SoftVarManager.GetAsDateTime(InParamValues[I]));
-      stTime:
-        FParamSQLData.UpdateTime(I,
-          SoftVarManager.GetAsDateTime(InParamValues[I]));
-      stTimestamp:
-        FParamSQLData.UpdateTimestamp(I,
-          SoftVarManager.GetAsDateTime(InParamValues[I]));
-      stAsciiStream,
-      stUnicodeStream,
-      stBinaryStream:
-        begin
-          TempBlob := DefVarManager.GetAsInterface(InParamValues[I]) as IZBlob;
-          if not TempBlob.IsEmpty then
-          begin
-            TempStream := TempBlob.GetStream;
-            try
-              if (FParamSQLData.GetFieldSqlType(i) in [stUnicodeStream, stAsciiStream]) and
-                (Self.GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) then
-              begin
-                MS := GetValidatedUnicodeStream(TempStream);
-                FParamSQLData.WriteBlob(I, MS);
-                MS.Free;
-              end
-              else
-                FParamSQLData.WriteBlob(I, TempStream);
-            finally
-              TempStream.Free;
-            end;
-          end;
-        end
-      else
-        raise EZIBConvertError.Create(SUnsupportedParameterType);
-    end;
-  end;
- {$IFOPT D+}
-{$ENDIF}
+  BindSQLDAInParameters(FIBConnection.GetPlainDriver, InParamValues,
+    InParamTypes, InParamCount, FParamSQLData, GetConnection.GetEncoding);
   inherited BindInParameters;
 end;
 
 procedure TZInterbase6PreparedStatement.UnPrepareInParameters;
 begin
-  if assigned(FParamSQLData) then 
+  if assigned(FParamSQLData) then
     FParamSQLData.FreeParamtersValues;
 end;
 
@@ -892,7 +806,7 @@ begin
   with FIBConnection do
   begin
     FParamSQLData := TZParamsSQLDA.Create(GetPlainDriver, GetDBHandle,
-      GetTrHandle, ClientCodePage, GetConnection.UTF8StringAsWideField);
+      GetTrHandle, ClientCodePage, UTF8StringAsWideField);
     FResultSQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle,
       GetTrHandle, ClientCodePage, UTF8StringAsWideField);
   end;
@@ -910,6 +824,13 @@ begin
     PrepareParameters(GetPlainDriver, ProcSql, InParamValues, InParamTypes,
       InParamCount, GetDialect, FStmtHandle, FParamSQLData, FIBConnection.GetEncoding);
   end;
+end;
+
+procedure TZInterbase6CallableStatement.BindInParameters;
+begin
+  BindSQLDAInParameters(FIBConnection.GetPlainDriver, InParamValues,
+    InParamTypes, InParamCount, FParamSQLData, GetConnection.GetEncoding);
+  inherited BindInParameters;
 end;
 
 procedure TZInterbase6CallableStatement.UnPrepareInParameters;
@@ -930,10 +851,6 @@ begin
     FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_drop);
   FResultSQLData := nil;
   FParamSQLData := nil;
-  {if Assigned(FResultSQLData) then
-    FreeAndNil(FResultSQLData);
-  if Assigned(FParamSQLData) then
-    FreeAndNil(FParamSQLData);}
   inherited Destroy;
 end;
 {**
@@ -984,6 +901,7 @@ begin
   with FIBConnection do
   begin
     ProcSql := GetProcedureSql(False);
+    BindInParameters;
     try
       GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @FStmtHandle,
             GetDialect, FParamSQLData.GetData, Self.FResultSQLData.GetData);
@@ -1058,6 +976,7 @@ begin
   with FIBConnection do
   begin
     ProcSql := GetProcedureSql(True); //Prepares the Statement
+    BindInParameters;
     try
       if (FStatementType = stSelect) then     //AVZ Get many rows - only need to use execute not execute2
         GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle, @FStmtHandle,
@@ -1131,6 +1050,7 @@ begin
   begin
     try
       ProcSQL := Self.GetProcedureSql(False);
+      BindInParameters;
       GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @FStmtHandle,
         GetDialect, FParamSQLData.GetData, FResultSQLData.GetData);
       CheckInterbase6Error(ProcSql);
