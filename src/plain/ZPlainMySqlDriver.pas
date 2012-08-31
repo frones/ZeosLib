@@ -90,6 +90,8 @@ const
   LINUX_DLL50_LOCATION_EMBEDDED = 'libmysqld'+SharedSuffix+'.15';
   LINUX_DLL51_LOCATION = 'libmysqlclient'+SharedSuffix+'.16';
   LINUX_DLL51_LOCATION_EMBEDDED = 'libmysqld'+SharedSuffix+'.16';
+  LINUX_DLL55_LOCATION = 'libmysqlclient'+SharedSuffix+'.18';
+  LINUX_DLL55_LOCATION_EMBEDDED = 'libmysqld'+SharedSuffix+'.18';
 {$ENDIF}
 
 type
@@ -1432,6 +1434,7 @@ begin
   {$ELSE}
     FLoader.AddLocation(LINUX_DLL50_LOCATION);
     FLoader.AddLocation(LINUX_DLL51_LOCATION);
+    FLoader.AddLocation(LINUX_DLL55_LOCATION);
   {$ENDIF}
 end;
 
@@ -1471,6 +1474,7 @@ begin
   {$ELSE}
     FLoader.AddLocation(LINUX_DLL50_LOCATION_EMBEDDED);
     FLoader.AddLocation(LINUX_DLL51_LOCATION_EMBEDDED);
+    FLoader.AddLocation(LINUX_DLL55_LOCATION_EMBEDDED);
   {$ENDIF}
   IsEmbeddedDriver := True;
 end;
