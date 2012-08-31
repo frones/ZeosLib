@@ -4,7 +4,7 @@
 /* Created on:     04.02.2003 19:48:39                          */
 /*==============================================================*/
 
-/*drop procedure ABTEST;*/
+drop procedure ABTEST;
 drop table blob_values;
 drop table date_values;
 drop table default_values;

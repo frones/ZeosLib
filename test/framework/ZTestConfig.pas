@@ -130,6 +130,7 @@ const
   { SQL script delimiters }
   DEFAULT_DELIMITER    = 'default';
   SET_TERM_DELIMITER   = 'setterm';
+  DELIMITER_DELIMITER  = 'delimiter';
   GO_DELIMITER         = 'go';
   EMPTY_LINE_DELIMITER = 'emptyline';
 

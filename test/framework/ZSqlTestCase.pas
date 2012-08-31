@@ -229,6 +229,8 @@ procedure TZAbstractSQLTestCase.LoadConfiguration;
       Result := dtGo
     else if LowerCase(Value) = LowerCase(SET_TERM_DELIMITER) then
       Result := dtSetTerm
+    else if LowerCase(Value) = LowerCase(DELIMITER_DELIMITER) then
+      Result := dtDelimiter
     else if LowerCase(Value) = LowerCase(EMPTY_LINE_DELIMITER) then
       Result := dtEmptyLine
     else Result := dtDefault;

@@ -190,10 +190,11 @@ create table high_load
 /*==============================================================*/
 create index cargo_FK on cargo (c_dep_id);
 
+
+DELIMITER //
 /*==============================================================*/
 /* Stored Procedure: ABTEST                                     */
 /*==============================================================*/
-/*delimiter //
 CREATE PROCEDURE `ABTEST`(
         IN `p1` INTEGER,
         IN `p2` INTEGER,
@@ -209,7 +210,8 @@ BEGIN
   set `p4` = `p1` * 10 + `p2`;
   set `p5` = concat(`p3`, `p3`);
 END; //
-delimiter ; */
+
+DELIMITER ;
 
 /*==============================================================*/
 /* Grant privileges to columns                                  */
