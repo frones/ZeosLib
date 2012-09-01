@@ -224,13 +224,13 @@ begin
   StoredProc.StoredProcName := 'PROCEDURE1';
 
   CheckEquals(2, StoredProc.Params.Count);
-  CheckEquals('R1', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
-  CheckEquals('P1', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
-  StoredProc.Params[1].AsInteger := 12345;
+  CheckEquals('P1', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals('R1', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[1].ParamType));
+  StoredProc.ParamByName('P1').AsInteger := 12345;
   StoredProc.ExecProc;
-  CheckEquals(12346, StoredProc.Params[0].AsInteger);
+  CheckEquals(12346, StoredProc.ParamByName('R1').AsInteger);
   CheckEquals(2, StoredProc.Params.Count);
 end;
 
@@ -244,16 +244,16 @@ var
 begin
   StoredProc.StoredProcName := 'ABTEST';
   CheckEquals(5, StoredProc.Params.Count);
-  CheckEquals('P4', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
-  CheckEquals('P5', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[1].ParamType));
-  CheckEquals('P1', StoredProc.Params[2].Name);
+  CheckEquals('P1', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals('P2', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals('P3', StoredProc.Params[2].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
-  CheckEquals('P2', StoredProc.Params[3].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[3].ParamType));
-  CheckEquals('P3', StoredProc.Params[4].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[4].ParamType));
+  CheckEquals('P4', StoredProc.Params[3].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[3].ParamType));
+  CheckEquals('P5', StoredProc.Params[4].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[4].ParamType));
 
   StoredProc.ParamByName('P1').AsInteger := 50;
   StoredProc.ParamByName('P2').AsInteger := 100;
@@ -268,9 +268,9 @@ begin
   P2 := 100;
   for i:= 1 to 100 do
   begin
-    StoredProc.Params[2].AsInteger:= i;
-    StoredProc.Params[3].AsInteger:= P2;
-    StoredProc.Params[4].AsString:= S;
+    StoredProc.Params[0].AsInteger:= i;
+    StoredProc.Params[1].AsInteger:= P2;
+    StoredProc.Params[2].AsString:= S;
     StoredProc.ExecProc;
     CheckEquals(S+S, StoredProc.ParamByName('P5').AsString);
     CheckEquals(I*10+P2, StoredProc.ParamByName('P4').AsInteger);

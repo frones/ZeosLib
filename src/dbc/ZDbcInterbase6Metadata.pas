@@ -1419,7 +1419,7 @@ begin
         Where := ' WHERE ' + Where;
 
       SQL := SQL + Where + ' ORDER BY  P.RDB$PROCEDURE_NAME,'
-        + ' PP.RDB$PARAMETER_TYPE desc, PP.RDB$PARAMETER_NUMBER';
+        + ' PP.RDB$PARAMETER_TYPE, PP.RDB$PARAMETER_NUMBER';
     end
     else
     begin
@@ -1443,7 +1443,7 @@ begin
         Where := ' WHERE ' + Where;
 
       SQL := SQL + Where + ' ORDER BY  P.RDB$PROCEDURE_NAME,'
-        + ' PP.RDB$PARAMETER_TYPE desc, PP.RDB$PARAMETER_NUMBER';
+        + ' PP.RDB$PARAMETER_TYPE, PP.RDB$PARAMETER_NUMBER';
     end;
 
     with GetConnection.CreateStatement.ExecuteQuery(SQL) do

@@ -1078,12 +1078,18 @@ end;
 procedure TZInterbase6CallableStatement.FetchOutParams(
   Value: IZResultSQLDA);
 var
-  I: Integer;
+  ParamIndex, I: Integer;
   Temp: TZVariant;
 begin
-  SetOutParamCount(Value.GetFieldCount);
-  for I := 0 to Value.GetFieldCount-1 do
+  I := 0;
+  for ParamIndex := 0 to OutParamCount - 1 do
   begin
+    if not (FDBParamTypes[ParamIndex] in [2, 3, 4]) then // ptOutput, ptInputOutput, ptResult
+      Continue;
+
+    if I >= Value.GetFieldCount then
+      Break;
+
     if Value.IsNull(I) then
       DefVarManager.SetNull(Temp)
     else
@@ -1115,7 +1121,8 @@ begin
       stTimestamp:
         DefVarManager.SetAsDateTime(Temp, Value.GetTimestamp(I));
     end;
-    OutParamValues[I] := Temp;
+    OutParamValues[ParamIndex] := Temp;
+    Inc(I);
   end;
 end;
 
@@ -1155,5 +1162,3 @@ begin
 end;
 
 end.
-
-
