@@ -337,7 +337,7 @@ var
   i: integer;
   S: String;
 begin
-  StoredProc.StoredProcName := 'ABTEST';
+  StoredProc.StoredProcName := '"ABTEST"';
   CheckEquals(5, StoredProc.Params.Count);
   CheckEquals('p4', StoredProc.Params[0].Name);
   CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));

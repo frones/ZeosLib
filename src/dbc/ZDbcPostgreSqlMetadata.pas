@@ -1401,10 +1401,7 @@ function TZPostgreSQLDatabaseMetadata.UncachedGetProcedures(const Catalog: strin
 var
   SQL, LProcedureNamePattern: string;
 begin
-    if ProcedureNamePattern = '' then
-      LProcedureNamePattern := '%'
-    else
-      LProcedureNamePattern := ProcedureNamePattern;
+    LProcedureNamePattern := ToLikeString(ProcedureNamePattern);
 
     if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
     begin
@@ -1505,8 +1502,13 @@ var
   Ver73Up, Ver80Up: Boolean;
   ResultSet,
   ColumnsRS: IZResultSet;
+  EscapedSchemaPattern, EscapedProcedureName: string;
 begin
     Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
+
+    EscapedSchemaPattern := EscapeString(GetIdentifierConvertor.ExtractQuote(SchemaPattern));
+    EscapedProcedureName := EscapeString(ToLikeString(
+      GetIdentifierConvertor.ExtractQuote(ProcedureNamePattern)));
 
     Ver80Up := (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(8, 0);
     Ver73Up := Ver80Up or (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3);
@@ -1517,8 +1519,8 @@ begin
         + 'FROM pg_catalog.pg_proc p, pg_catalog.pg_namespace n, pg_catalog.pg_type t '
         + 'WHERE p.pronamespace=n.oid AND p.prorettype=t.oid';
       if SchemaPattern <> '' then
-        SQL := SQL + ' AND n.nspname LIKE ' + EscapeString(SchemaPattern);
-      SQL := SQL + ' AND p.proname LIKE ' + EscapeString(ToLikeString(ProcedureNamePattern))
+        SQL := SQL + ' AND n.nspname LIKE ' + EscapedSchemaPattern;
+      SQL := SQL + ' AND p.proname LIKE ' + EscapedProcedureName
         + ' ORDER BY n.nspname, p.proname';
     end
     else
@@ -1529,8 +1531,8 @@ begin
         + 'FROM pg_catalog.pg_proc p, pg_catalog.pg_namespace n,'
         + ' pg_catalog.pg_type t WHERE p.pronamespace=n.oid AND p.prorettype=t.oid';
       if SchemaPattern <> '' then
-        SQL := SQL + ' AND n.nspname LIKE ' + EscapeString(SchemaPattern);
-      SQL := SQL + ' AND p.proname LIKE ' + EscapeString(ToLikeString(ProcedureNamePattern))
+        SQL := SQL + ' AND n.nspname LIKE ' + EscapedSchemaPattern;
+      SQL := SQL + ' AND p.proname LIKE ' + EscapedProcedureName
         + ' ORDER BY n.nspname, p.proname';
     end
     else
@@ -1539,7 +1541,7 @@ begin
         + ' FROM pg_proc p, pg_type t'
         + ' WHERE p.prorettype=t.oid'
         + ' AND p.proname LIKE '
-        +   EscapeString(ToLikeString(ProcedureNamePattern))
+        +   EscapedProcedureName
         + ' ORDER BY p.proname';
 
     ArgTypes := TStringList.Create;
@@ -1553,6 +1555,10 @@ begin
         begin
           ReturnType := StrToInt(GetStringByName('prorettype'));
           ReturnTypeType := GetStringByName('typtype');
+
+          ArgTypes.Clear;
+          ArgNames.Clear;
+          ArgModes.Clear;
 
           if (IsNullByName('proallargtypes')) then
             PutSplitString(ArgTypes, GetStringByName('proargtypes'), #10#13#9' ')
@@ -1578,7 +1584,7 @@ begin
             Result.UpdateInt(12, Ord(ntNullableUnknown));
             Result.UpdateNull(13);
             Result.InsertRow;
-          end;
+            end;
 
           for I := 0 to ArgTypes.Count-1 do
           begin
@@ -1605,7 +1611,7 @@ begin
             Result.UpdateInt(12, Ord(ntNullableUnknown));
             Result.UpdateNull(13);
             Result.InsertRow;
-          end;
+            end;
 
           if ReturnTypeType = 'c' then
           begin
@@ -1634,8 +1640,8 @@ begin
               Result.InsertRow;
             end;
             ColumnsRS.Close;
+            end;
           end;
-        end;
         Close;
       end;
     finally
