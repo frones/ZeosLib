@@ -4,16 +4,16 @@
 /* Created on:     04.02.2003 19:48:39                          */
 /*==============================================================*/
 
-drop procedure ABTEST;
-drop table blob_values;
-drop table date_values;
-drop table default_values;
-drop table department;
-drop table equipment;
-drop table equipment2;
-drop table extension;
-drop table number_values;
-drop table people;
-drop table string_values;
-drop table cargo;
-drop table high_load;
+drop procedure IF EXISTS ABTEST;
+drop table IF EXISTS blob_values;
+drop table IF EXISTS date_values;
+drop table IF EXISTS default_values;
+drop table IF EXISTS department;
+drop table IF EXISTS equipment;
+drop table IF EXISTS equipment2;
+drop table IF EXISTS extension;
+drop table IF EXISTS number_values;
+drop table IF EXISTS people;
+drop table IF EXISTS string_values;
+drop table IF EXISTS cargo;
+drop table IF EXISTS high_load;
