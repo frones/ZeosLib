@@ -273,7 +273,7 @@ type
     FProcSql: String;
   protected
     FDBParamTypes:array[0..1024] of shortInt;
-    procedure TrimInParameters;
+    procedure TrimInParameters; virtual;
     procedure SetOutParamCount(NewParamCount: Integer); virtual;
     function GetOutParam(ParameterIndex: Integer): TZVariant; virtual;
     procedure SetProcSQL(const Value: String); virtual;

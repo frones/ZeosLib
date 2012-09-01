@@ -363,6 +363,21 @@ begin
     CheckEquals('', GetStringByName('PROCEDURE_CAT'));
 //    CheckEquals('public', GetStringByName('PROCEDURE_SCHEM'));
     CheckEquals('procedure1', GetStringByName('PROCEDURE_NAME'));
+    CheckEquals('$1', GetStringByName('COLUMN_NAME'));
+    CheckEquals('1', GetStringByName('COLUMN_TYPE'));
+    CheckEquals('4', GetStringByName('DATA_TYPE'));
+    CheckEquals('int4', GetStringByName('TYPE_NAME'));
+    CheckEquals('', GetStringByName('PRECISION'));
+    CheckEquals('', GetStringByName('LENGTH'));
+    CheckEquals('', GetStringByName('SCALE'));
+    CheckEquals('', GetStringByName('RADIX'));
+    CheckEquals('2', GetStringByName('NULLABLE'));
+    CheckEquals('', GetStringByName('REMARKS'));
+
+    CheckEquals(True, Next);
+    CheckEquals('', GetStringByName('PROCEDURE_CAT'));
+//    CheckEquals('public', GetStringByName('PROCEDURE_SCHEM'));
+    CheckEquals('procedure1', GetStringByName('PROCEDURE_NAME'));
     CheckEquals('returnValue', GetStringByName('COLUMN_NAME'));
     CheckEquals('4', GetStringByName('COLUMN_TYPE'));
     CheckEquals('4', GetStringByName('DATA_TYPE'));

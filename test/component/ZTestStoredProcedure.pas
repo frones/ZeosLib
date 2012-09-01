@@ -107,6 +107,12 @@ type
     function GetSupportedProtocols: string; override;
   published
     procedure Test_abtest;
+    procedure Test_nonames;
+    procedure Test_onename;
+    procedure Test_noout;
+    procedure Test_composite;
+    procedure Test_mixedorder;
+    procedure Test_set;
   end;
 
 implementation
@@ -339,16 +345,16 @@ var
 begin
   StoredProc.StoredProcName := '"ABTEST"';
   CheckEquals(5, StoredProc.Params.Count);
-  CheckEquals('p4', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
-  CheckEquals('p5', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[1].ParamType));
-  CheckEquals('p1', StoredProc.Params[2].Name);
+  CheckEquals('p1', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals('p2', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals('p3', StoredProc.Params[2].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
-  CheckEquals('p2', StoredProc.Params[3].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[3].ParamType));
-  CheckEquals('p3', StoredProc.Params[4].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[4].ParamType));
+  CheckEquals('p4', StoredProc.Params[3].Name);
+  CheckEquals(ord(ptOutput), ord(StoredProc.Params[3].ParamType));
+  CheckEquals('p5', StoredProc.Params[4].Name);
+  CheckEquals(ord(ptOutput), ord(StoredProc.Params[4].ParamType));
 
   StoredProc.ParamByName('p1').AsInteger := 50;
   StoredProc.ParamByName('p2').AsInteger := 100;
@@ -361,9 +367,9 @@ begin
   StoredProc.Prepare;
   for i:= 0 to 99 do
   begin
-    StoredProc.Params[2].AsInteger:= i;
-    StoredProc.Params[3].AsInteger:= 100;
-    StoredProc.Params[4].AsString:= 'a';
+    StoredProc.Params[0].AsInteger:= i;
+    StoredProc.Params[1].AsInteger:= 100;
+    StoredProc.Params[2].AsString:= 'a';
     StoredProc.ExecProc;
   end;
   StoredProc.Unprepare;
@@ -374,6 +380,158 @@ begin
   StoredProc.ParamByName('p2').AsInteger := 100;
   StoredProc.ParamByName('p3').AsString := 'a';
   StoredProc.Open;
+end;
+
+procedure TZTestPostgreSQLStoredProcedure.Test_composite;
+begin
+  StoredProc.StoredProcName := 'proc_composite';
+  CheckEquals(4, StoredProc.Params.Count);
+  CheckEquals('p1', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals('p2', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals('f1', StoredProc.Params[2].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[2].ParamType));
+  CheckEquals('f2', StoredProc.Params[3].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[3].ParamType));
+
+  StoredProc.ParamByName('p1').AsInteger := 50;
+  StoredProc.ParamByName('p2').AsInteger := 100;
+  StoredProc.ExecProc;
+  CheckEquals(50, StoredProc.ParamByName('f1').AsInteger);
+  CheckEquals(100, StoredProc.ParamByName('f2').AsInteger);
+  StoredProc.Unprepare;
+
+  StoredProc.ParamByName('p1').AsInteger := 20;
+  StoredProc.ParamByName('p2').AsInteger := 30;
+  StoredProc.Open;
+  CheckEquals(20, StoredProc.ParamByName('f1').AsInteger);
+  CheckEquals(30, StoredProc.ParamByName('f2').AsInteger);
+  CheckEquals(2, StoredProc.FieldCount);
+  CheckEquals(20, StoredProc.Fields[0].AsInteger);
+  CheckEquals(30, StoredProc.Fields[1].AsInteger);
+end;
+
+procedure TZTestPostgreSQLStoredProcedure.Test_mixedorder;
+begin
+  StoredProc.StoredProcName := 'proc_mixedorder';
+  CheckEquals(3, StoredProc.Params.Count);
+  CheckEquals('p1', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptOutput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals('p2', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals('p3', StoredProc.Params[2].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
+
+  StoredProc.ParamByName('p2').AsInteger := 50;
+  StoredProc.ParamByName('p3').AsInteger := 100;
+  StoredProc.ExecProc;
+  CheckEquals(150, StoredProc.ParamByName('p1').AsInteger);
+  CheckEquals(5000, StoredProc.ParamByName('p2').AsInteger);
+  StoredProc.Unprepare;
+
+  StoredProc.ParamByName('p2').AsInteger := 20;
+  StoredProc.ParamByName('p3').AsInteger := 30;
+  StoredProc.Open;
+  CheckEquals(50, StoredProc.ParamByName('p1').AsInteger);
+  CheckEquals(600, StoredProc.ParamByName('p2').AsInteger);
+  CheckEquals(2, StoredProc.FieldCount);
+  CheckEquals(50, StoredProc.Fields[0].AsInteger);
+  CheckEquals(600, StoredProc.Fields[1].AsInteger);
+end;
+
+procedure TZTestPostgreSQLStoredProcedure.Test_nonames;
+begin
+  StoredProc.StoredProcName := 'proc_nonames';
+  CheckEquals(3, StoredProc.Params.Count);
+  CheckEquals('$1', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals('$2', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals('$3', StoredProc.Params[2].Name);
+  CheckEquals(ord(ptOutput), ord(StoredProc.Params[2].ParamType));
+
+  StoredProc.ParamByName('$1').AsInteger := 50;
+  StoredProc.ParamByName('$2').AsInteger := 100;
+  StoredProc.ExecProc;
+  CheckEquals(150, StoredProc.ParamByName('$3').AsInteger);
+  StoredProc.Unprepare;
+
+  StoredProc.ParamByName('$1').AsInteger := 20;
+  StoredProc.ParamByName('$2').AsInteger := 30;
+  StoredProc.Open;
+  CheckEquals(50, StoredProc.ParamByName('$3').AsInteger);
+  CheckEquals(1, StoredProc.FieldCount);
+  CheckEquals(50, StoredProc.Fields[0].AsInteger);
+end;
+
+procedure TZTestPostgreSQLStoredProcedure.Test_noout;
+begin
+  StoredProc.StoredProcName := 'proc_noout';
+  CheckEquals(3, StoredProc.Params.Count);
+  CheckEquals('p1', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals('', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals('returnValue', StoredProc.Params[2].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[2].ParamType));
+
+  StoredProc.ParamByName('p1').AsInteger := 50;
+  StoredProc.Params[1].AsInteger := 100;
+  StoredProc.ExecProc;
+  CheckEquals(150, StoredProc.Params[2].AsInteger);
+  StoredProc.Unprepare;
+
+  StoredProc.ParamByName('p1').AsInteger := 20;
+  StoredProc.Params[1].AsInteger := 30;
+  StoredProc.Open;
+  CheckEquals(50, StoredProc.Params[2].AsInteger);
+  CheckEquals(1, StoredProc.FieldCount);
+  CheckEquals(50, StoredProc.Fields[0].AsInteger);
+end;
+
+procedure TZTestPostgreSQLStoredProcedure.Test_onename;
+begin
+  StoredProc.StoredProcName := 'proc_onename';
+  CheckEquals(3, StoredProc.Params.Count);
+  CheckEquals('p1', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals('', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals('', StoredProc.Params[2].Name);
+  CheckEquals(ord(ptOutput), ord(StoredProc.Params[2].ParamType));
+
+  StoredProc.ParamByName('p1').AsInteger := 50;
+  StoredProc.Params[1].AsInteger := 100;
+  StoredProc.ExecProc;
+  CheckEquals(150, StoredProc.Params[2].AsInteger);
+  StoredProc.Unprepare;
+
+  StoredProc.ParamByName('p1').AsInteger := 20;
+  StoredProc.Params[1].AsInteger := 30;
+  StoredProc.Open;
+  CheckEquals(50, StoredProc.Params[2].AsInteger);
+  CheckEquals(1, StoredProc.FieldCount);
+  CheckEquals(50, StoredProc.Fields[0].AsInteger);
+end;
+
+procedure TZTestPostgreSQLStoredProcedure.Test_set;
+begin
+  StoredProc.StoredProcName := 'proc_set';
+  CheckEquals(1, StoredProc.Params.Count);
+  CheckEquals('returnValue', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
+
+  StoredProc.ExecProc;
+  CheckEquals('Volvo', StoredProc.ParamByName('returnValue').AsString);
+  StoredProc.Unprepare;
+
+  StoredProc.Open;
+  CheckEquals('Volvo', StoredProc.ParamByName('returnValue').AsString);
+  CheckEquals(1, StoredProc.FieldCount);
+  CheckEquals('Volvo', StoredProc.Fields[0].AsString);
+  StoredProc.Next;
+  CheckEquals('Laboratoy', StoredProc.Fields[0].AsString);
 end;
 
 initialization

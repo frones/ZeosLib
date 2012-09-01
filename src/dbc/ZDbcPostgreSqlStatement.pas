@@ -153,6 +153,8 @@ type
     function GetPlainDriver:IZPostgreSQLPlainDriver;
     function CreateResultSet(const SQL: string;
       QueryHandle: PZPostgreSQLResult): IZResultSet;
+    procedure FetchOutParams(ResultSet: IZResultSet);
+    procedure TrimInParameters; override;
   public
     constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
 
@@ -1022,6 +1024,8 @@ constructor TZPostgreSQLCallableStatement.Create(
 begin
   inherited Create(Connection, SQL, Info);
 
+  ResultSetType := rtScrollInsensitive;
+
   { Processes connection properties. }
   if Self.Info.Values['oidasblob'] <> '' then
     FOidAsBlob := StrToBoolEx(Self.Info.Values['oidasblob'])
@@ -1092,13 +1096,11 @@ function TZPostgreSQLCallableStatement.PrepareSQLParam(
   ParamIndex: Integer): string;
 var
   Value: TZVariant;
-  TempBytes: TByteDynArray;
   TempBlob: IZBlob;
   TempStream: TStream;
   WriteTempBlob: IZPostgreSQLBlob;
   TempStreamIn: TStream;
 begin
-  TempBytes := nil;
   if InParamCount <= ParamIndex then
     raise EZSQLException.Create(SInvalidInputParameterCount);
 
@@ -1214,7 +1216,10 @@ begin
     SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SSQL);
   if QueryHandle <> nil then
-    Result := CreateResultSet(SSQL, QueryHandle)
+  begin
+    Result := CreateResultSet(SSQL, QueryHandle);
+    FetchOutParams(Result);
+  end
   else
     Result := nil;
 end;
@@ -1227,10 +1232,10 @@ end;
 function TZPostgreSQLCallableStatement.ExecuteQueryPrepared: IZResultSet;
 Var SQL: String;
 begin
+  TrimInParameters;
   SQL := GetProcedureSql();
   SQL := FillParams(SQL);
-  Result := self.ExecuteQuery(SQL);
-
+  Result := Self.ExecuteQuery(SQL);
 end;
 
 {**
@@ -1243,6 +1248,7 @@ function TZPostgreSQLCallableStatement.GetProcedureSql: string;
   var
     I: integer;
   begin
+    Result := '';
     for I := 0 to Count - 1 do
     begin
       if Result <> '' then
@@ -1254,11 +1260,8 @@ function TZPostgreSQLCallableStatement.GetProcedureSql: string;
 var
   InParams: string;
 begin
-
-  InParams := GenerateParamsStr(High(InParamValues));
-  InParams := '(' + InParams + ')';
-
-  Result := 'SELECT * FROM ' + SQL + InParams
+  InParams := GenerateParamsStr(Length(InParamValues));
+  Result := Format('SELECT * FROM %s(%s)', [SQL, InParams]);
 end;
 
 {**
@@ -1279,8 +1282,8 @@ begin
       begin
         if Tokens[I] = '?' then
         begin
-          Inc(ParamIndex);
           Tokens[I] := PrepareSQLParam(ParamIndex);
+          Inc(ParamIndex);
         end
       end;
       Result := StringReplace(Tokens.Text, #13#10, ' ', [rfReplaceAll]);
@@ -1322,7 +1325,7 @@ begin
   if QueryHandle <> nil then
   begin
     Result := StrToIntDef(String(StrPas(GetPlainDriver.GetCommandTuples(QueryHandle))), 0);
-    GetPlainDriver.Clear(QueryHandle);
+    FetchOutParams(CreateResultSet(SSQL, QueryHandle));
   end;
 
   { Autocommit statement. }
@@ -1334,10 +1337,101 @@ end;
 function TZPostgreSQLCallableStatement.ExecuteUpdatePrepared: Integer;
 Var SQL: String;
 begin
+  TrimInParameters;
   SQL := GetProcedureSql();
   SQL := FillParams(SQL);
-  Result := self.ExecuteUpdate(SQL);
+  Result := Self.ExecuteUpdate(SQL);
+end;
 
+{**
+  Sets output parameters from a ResultSet
+  @param Value a IZResultSet object.
+}
+procedure TZPostgreSQLCallableStatement.FetchOutParams(ResultSet: IZResultSet);
+var
+  ParamIndex, I: Integer;
+  Temp: TZVariant;
+  HasRows: Boolean;
+begin
+  ResultSet.BeforeFirst;
+  HasRows := ResultSet.Next;
+
+  I := 1;
+  for ParamIndex := 0 to OutParamCount - 1 do
+  begin
+    if not (FDBParamTypes[ParamIndex] in [2, 3, 4]) then // ptOutput, ptInputOutput, ptResult
+      Continue;
+
+    if I > ResultSet.GetMetadata.GetColumnCount then
+      Break;
+
+    if (not HasRows) or (ResultSet.IsNull(I)) then
+      DefVarManager.SetNull(Temp)
+    else
+      case ResultSet.GetMetadata.GetColumnType(I) of
+      stBoolean:
+        DefVarManager.SetAsBoolean(Temp, ResultSet.GetBoolean(I));
+      stByte:
+        DefVarManager.SetAsInteger(Temp, ResultSet.GetByte(I));
+      stShort:
+        DefVarManager.SetAsInteger(Temp, ResultSet.GetShort(I));
+      stInteger:
+        DefVarManager.SetAsInteger(Temp, ResultSet.GetInt(I));
+      stLong:
+        DefVarManager.SetAsInteger(Temp, ResultSet.GetLong(I));
+      stFloat:
+        DefVarManager.SetAsFloat(Temp, ResultSet.GetFloat(I));
+      stDouble:
+        DefVarManager.SetAsFloat(Temp, ResultSet.GetDouble(I));
+      stBigDecimal:
+        DefVarManager.SetAsFloat(Temp, ResultSet.GetBigDecimal(I));
+      stString:
+        DefVarManager.SetAsString(Temp, ResultSet.GetString(I));
+      stUnicodeString:
+        DefVarManager.SetAsUnicodeString(Temp, ResultSet.GetString(I));
+      stDate:
+        DefVarManager.SetAsDateTime(Temp, ResultSet.GetDate(I));
+      stTime:
+        DefVarManager.SetAsDateTime(Temp, ResultSet.GetTime(I));
+      stTimestamp:
+        DefVarManager.SetAsDateTime(Temp, ResultSet.GetTimestamp(I));
+      end;
+    OutParamValues[ParamIndex] := Temp;
+    Inc(I);
+  end;
+  ResultSet.BeforeFirst;
+end;
+
+{**
+   Function removes ptResult, ptOutput parameters from
+   InParamTypes and InParamValues
+}
+procedure TZPostgreSQLCallableStatement.TrimInParameters;
+var
+  I: integer;
+  ParamValues: TZVariantDynArray;
+  ParamTypes: TZSQLTypeArray;
+  ParamCount: Integer;
+begin
+  ParamCount := 0;
+  SetLength(ParamValues, InParamCount);
+  SetLength(ParamTypes, InParamCount);
+
+  for I := 0 to High(InParamTypes) do
+  begin
+    if (Self.FDBParamTypes[i] in [2, 4]) then //[ptResult, ptOutput]
+      Continue;
+    ParamTypes[ParamCount] := InParamTypes[I];
+    ParamValues[ParamCount] := InParamValues[I];
+    Inc(ParamCount);
+  end;
+
+  if ParamCount = InParamCount then
+    Exit;
+
+  InParamTypes := ParamTypes;
+  InParamValues := ParamValues;
+  SetInParamCount(ParamCount);
 end;
 
 { TZPostgreSQLCachedResolver }

@@ -22,7 +22,16 @@ drop table high_load;
 
 drop function procedure1(INT4);
 drop function procedure2();
-DROP FUNCTION IF EXISTS abtest(integer, integer, character varying);
+drop function "ABTEST"(integer, integer, character varying);
+drop function proc_nonames (integer, integer);
+drop function proc_onename (integer, integer);
+drop function proc_noout (integer, integer);
+drop function proc_composite (integer, integer);
+drop function proc_mixedorder (integer, integer);
+drop function proc_set ();
+
+drop type compositetype;
+
 /*
 drop SEQUENCE cargo_c_id_seq;
 drop SEQUENCE default_values_d_id_seq;
