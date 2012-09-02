@@ -90,12 +90,11 @@ type
     FClosed: Boolean;
     FWSQL: ZWideString;
     FaSQL: ZAnsiString;
-    procedure SetWSQL(const Value: ZWideString);
-    procedure SetASQL(const Value: ZAnsiString);
     procedure SetLastResultSet(ResultSet: IZResultSet); virtual;
-
   protected
     LogSQL: String;
+    procedure SetASQL(const Value: ZAnsiString); virtual;
+    procedure SetWSQL(const Value: ZWideString); virtual;
     class function GetNextStatementId : integer;
     procedure RaiseUnsupportedException;
 
@@ -196,9 +195,9 @@ type
     FInParamDefaultValues: TStringDynArray;
     FInParamCount: Integer;
     FPrepared : Boolean;
+    FExecCount: Integer;
   protected
     FStatementId : Integer;
-    FExecCount: Integer;
     procedure PrepareInParameters; virtual;
     procedure BindInParameters; virtual;
     procedure UnPrepareInParameters; virtual;
@@ -209,6 +208,7 @@ type
     procedure LogPrepStmtMessage(Category: TZLoggingCategory; const Msg: string = '');
     function GetInParamLogValue(Value: TZVariant): String;
 
+    property ExecCount: Integer read FExecCount;
     property SQL: string read FSQL write FSQL;
     property InParamValues: TZVariantDynArray
       read FInParamValues write FInParamValues;
@@ -310,6 +310,16 @@ type
     function GetTime(ParameterIndex: Integer): TDateTime; virtual;
     function GetTimestamp(ParameterIndex: Integer): TDateTime; virtual;
     function GetValue(ParameterIndex: Integer): TZVariant; virtual;
+  end;
+
+  {** Implements a real Prepared Callable SQL Statement. }
+  TZAbstractPreparedCallableStatement = CLass(TZAbstractCallableStatement)
+  protected
+    procedure SetProcSQL(const Value: String); override;
+  public
+    function ExecuteQuery(const SQL: string): IZResultSet; override;
+    function ExecuteUpdate(const SQL: string): Integer; override;
+    function Execute(const SQL: string): Boolean; override;
   end;
 
   {** Implements an Emulated Prepared SQL Statement. }
@@ -1069,6 +1079,7 @@ function TZAbstractStatement.GetChunkSize: Integer;
 begin
   Result := FChunkSize;
 end;
+
 { TZAbstractPreparedStatement }
 
 {**
@@ -1086,6 +1097,7 @@ begin
   FInParamCount := 0;
   SetInParamCount(0);
   FPrepared := False;
+  FExecCount := 0;
   FStatementId := Self.GetNextStatementId;
 end;
 
@@ -1214,6 +1226,7 @@ function TZAbstractPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   { Logging Execution }
   LogPrepStmtMessage(lcExecPrepStmt);
+  Inc(FExecCount);
 end;
 {$WARNINGS ON}
 {**
@@ -1231,6 +1244,7 @@ function TZAbstractPreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
   { Logging Execution }
   LogPrepStmtMessage(lcExecPrepStmt);
+  Inc(FExecCount);
 end;
 {$WARNINGS ON}
 {**
@@ -1667,6 +1681,7 @@ function TZAbstractPreparedStatement.ExecutePrepared: Boolean;
 begin
   { Logging Execution }
   LogPrepStmtMessage(lcExecPrepStmt, '');
+  Inc(FExecCount);
 end;
 {$WARNINGS ON}
 
@@ -2124,6 +2139,77 @@ function TZAbstractCallableStatement.GetValue(ParameterIndex: Integer):
   TZVariant;
 begin
   Result := GetOutParam(ParameterIndex);
+end;
+
+{ TZAbstractPreparedCallableStatement }
+
+procedure TZAbstractPreparedCallableStatement.SetProcSQL(const Value: String);
+begin
+  if Value <> ProcSQL then Unprepare;
+  inherited SetProcSQL(Value);
+  if (Value <> '') and ( not Prepared ) then Prepare;
+end;
+
+{**
+  Executes an SQL statement that returns a single <code>ResultSet</code> object.
+  @param sql typically this is a static SQL <code>SELECT</code> statement
+  @return a <code>ResultSet</code> object that contains the data produced by the
+    given query; never <code>null</code>
+}
+function TZAbstractPreparedCallableStatement.ExecuteQuery(const SQL: string): IZResultSet;
+begin
+  if (SQL <> Self.SQL) and (Prepared) then Unprepare;
+  Self.SQL := SQL;
+  Result := ExecuteQueryPrepared;
+end;
+
+{**
+  Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
+  <code>DELETE</code> statement. In addition,
+  SQL statements that return nothing, such as SQL DDL statements,
+  can be executed.
+
+  @param sql an SQL <code>INSERT</code>, <code>UPDATE</code> or
+    <code>DELETE</code> statement or an SQL statement that returns nothing
+  @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
+    or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
+}
+function TZAbstractPreparedCallableStatement.ExecuteUpdate(const SQL: string): Integer;
+begin
+  if (SQL <> Self.SQL) and (Prepared) then Unprepare;
+  Self.SQL := SQL;
+  Result := ExecuteUpdatePrepared;
+end;
+
+{**
+  Executes an SQL statement that may return multiple results.
+  Under some (uncommon) situations a single SQL statement may return
+  multiple result sets and/or update counts.  Normally you can ignore
+  this unless you are (1) executing a stored procedure that you know may
+  return multiple results or (2) you are dynamically executing an
+  unknown SQL string.  The  methods <code>execute</code>,
+  <code>getMoreResults</code>, <code>getResultSet</code>,
+  and <code>getUpdateCount</code> let you navigate through multiple results.
+
+  The <code>execute</code> method executes an SQL statement and indicates the
+  form of the first result.  You can then use the methods
+  <code>getResultSet</code> or <code>getUpdateCount</code>
+  to retrieve the result, and <code>getMoreResults</code> to
+  move to any subsequent result(s).
+
+  @param sql any SQL statement
+  @return <code>true</code> if the next result is a <code>ResultSet</code> object;
+  <code>false</code> if it is an update count or there are no more results
+  @see #getResultSet
+  @see #getUpdateCount
+  @see #getMoreResults
+}
+
+function TZAbstractPreparedCallableStatement.Execute(const SQL: string): Boolean;
+begin
+  if (SQL <> Self.SQL) and (Prepared) then Unprepare;
+  Self.SQL := SQL;
+  Result := ExecutePrepared;
 end;
 
 { TZEmulatedPreparedStatement }
