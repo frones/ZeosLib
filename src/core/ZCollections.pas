@@ -74,7 +74,7 @@ type
   end;
 
   {** Interface list types. }
-  TZInterfaceList = array[0..MaxListSize - 1] of IZInterface;
+  TZInterfaceList = array[0..{$IFDEF DELPHI16_UP}Maxint div 16{$ELSE}MaxListSize{$ENDIF} - 1] of IZInterface;
   PZInterfaceList = ^TZInterfaceList;
 
   {** Implenments a collection of interfaces. }
@@ -311,7 +311,7 @@ end;
 procedure TZCollection.SetCapacity(NewCapacity: Integer);
 begin
 {$IFOPT R+}
-  if (NewCapacity < FCount) or (NewCapacity > MaxListSize) then
+  if (NewCapacity < FCount) or (NewCapacity > {$IFDEF DELPHI16_UP}Maxint div 16{$ELSE}MaxListSize{$ENDIF}) then
     Error(SListCapacityError, NewCapacity);
 {$ENDIF}
   if NewCapacity <> FCapacity then
