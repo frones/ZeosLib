@@ -242,23 +242,23 @@ const BackSlash = Char('\');
 var
   ReadChar: Char;
   LastChar: Char;
-  QuoteChar: Char;
-  QuoteCount: Integer;
+  //QuoteChar: Char;
+  //QuoteCount: Integer;
 begin
   Result.Value := FirstChar;
-  QuoteCount := 1;
+  //QuoteCount := 1;
   If FirstChar = '`' then
     Result.TokenType := ttQuotedIdentifier
   Else
     Result.TokenType := ttQuoted;
 
-  QuoteChar := FirstChar;
+  //QuoteChar := FirstChar;
 
   LastChar := #0;
 
   while Stream.Read(ReadChar, SizeOf(Char)) > 0 do
   begin
-    if ReadChar = QuoteChar then Inc(QuoteCount);
+    //if ReadChar = QuoteChar then Inc(QuoteCount);
     if (LastChar = FirstChar) and (ReadChar <> FirstChar) then
     begin
       //if QuoteCount mod 2 = 0 then // only valid for Pascal AnsiQuoted/QuotedStr
