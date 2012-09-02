@@ -573,11 +573,13 @@ function TZPostgreSQLConnection.CreatePreparedStatement(
 begin
   if IsClosed then
      Open;
-  //Result := TZPostgreSQLCAPIPreparedStatement.Create(GetPlainDriver, Self, SQL, Info);
 
   if Assigned(Info) then
     if StrToBoolEx(Info.Values['preferprepared']) then
-      Result := TZPostgreSQLPreparedStatement.Create(GetPlainDriver, Self, SQL, Info)
+      if self.GetServerMajorVersion >= 8 then
+        Result := TZPostgreSQLCAPIPreparedStatement.Create(GetPlainDriver, Self, SQL, Info)
+      else
+        Result := TZPostgreSQLPreparedStatement.Create(GetPlainDriver, Self, SQL, Info)
     else
       Result := TZPostgreSQLEmulatedPreparedStatement.Create(GetPlainDriver,
         Self, SQL, Info)
