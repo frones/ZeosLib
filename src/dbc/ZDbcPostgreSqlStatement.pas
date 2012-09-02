@@ -139,7 +139,7 @@ type
   end;
 
   {** EgonHugeist: Implements Prepared SQL Statement based on Protocol3
-    ServerVersion 7.4Up and ClientVersion 8.0Up. with CAPI usage}
+    ServerVersion 7.4Up and ClientVersion 8.0Up. with C++API usage}
   TZPostgreSQLCAPIPreparedStatement = class(TZAbstractPreparedStatement)
   private
     FPlanName: String;
@@ -1217,7 +1217,7 @@ begin
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
   FConnectionHandle := Connection.GetConnectionHandle;
-  FPlanName := '"'+IntToStr(Hash(ASQL)+Cardinal(FStatementId)+NativeUInt(FConnectionHandle))+'"';
+  FPlanName := IntToStr(Hash(ASQL)+Cardinal(FStatementId)+NativeUInt(FConnectionHandle));
 end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.Prepare;
@@ -1265,9 +1265,9 @@ begin
   if Prepared then
   begin
     inherited Unprepare;
-    TempSQL := 'DEALLOCATE '+FPlanName+';';
-    //QueryHandle := ExectuteInternal(ZAnsiString(TempSQL), TempSQL, lcExecute);
-    //FPlainDriver.Clear(QueryHandle);
+    TempSQL := 'DEALLOCATE "'+FPlanName+'";';
+    QueryHandle := ExectuteInternal(ZAnsiString(TempSQL), TempSQL, lcExecute);
+    FPlainDriver.Clear(QueryHandle);
   end;
 end;
 
