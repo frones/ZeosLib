@@ -182,6 +182,10 @@
   {$UNDEF WITH_FTWIDESTRING}    // D7 doesn't support TField.AsWideString
 {$ENDIF}
 
+{$IFDEF DELPHI16_UP}
+  {$DEFINE WITH_MAXLISTSIZE_DEPRECATED}
+{$ENDIF}
+
 // Debug/release compiler options
 {$D+}
 
