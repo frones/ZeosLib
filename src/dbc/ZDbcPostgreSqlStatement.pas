@@ -146,13 +146,12 @@ type
     FPostgreSQLConnection: IZPostgreSQLConnection;
     FConnectionHandle: PZPostgreSQLConnect;
     FPlainDriver: IZPostgreSQLPlainDriver;
-    FPrepQueryHandle: PZPostgreSQLResult;
     QueryHandle: PZPostgreSQLResult;
 
-    FPQparamTypes: TPQparamTypes;
+    //FPQparamTypes: TPQparamTypes;
     FPQparamValues: TPQparamValues;
-    FPQparamLengths: TPQparamLengths;
-    FPQparamFormats: TPQparamFormats;
+    //FPQparamLengths: TPQparamLengths;
+    //FPQparamFormats: TPQparamFormats;
     function CreateResultSet(QueryHandle: PZPostgreSQLResult): IZResultSet;
     function ExectuteInternal(const SQL: ZAnsiString; const LogSQL: String;
       const LoggingCategory: TZLoggingCategory): PZPostgreSQLResult;
@@ -1101,10 +1100,10 @@ end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.PrepareInParameters;
 begin
-  SetLength(FPQparamTypes, InParamCount);
-  SetLength(FPQparamValues, InParamCount);
-  SetLength(FPQparamLengths, InParamCount);
-  SetLength(FPQparamFormats, InParamCount);
+  //SetLength(FPQparamTypes, InParamCount);
+  //SetLength(FPQparamValues, InParamCount);
+  //SetLength(FPQparamLengths, InParamCount);
+  //SetLength(FPQparamFormats, InParamCount);
 end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.BindInParameters;
@@ -1117,11 +1116,11 @@ var
 
   procedure UpdateString(Value: ZAnsiString; const Index: Integer;
     const ALen: Integer = -1);
-  var
-    len: Integer;
+  //var
+    //len: Integer;
   begin
-    Value := #39+Value+#39;
-    if ALen = -1 then
+    FPQparamValues[ParamIndex] := StrNew(PAnsichar(Value));
+    {if ALen = -1 then
     begin
       FPQparamValues[ParamIndex] := StrNew(PAnsichar(Value));
       FPQparamLengths[ParamIndex] := StrLen(FPQparamValues[ParamIndex]);
@@ -1132,18 +1131,18 @@ var
       ReallocMem(FPQparamValues[ParamIndex], Len);
       System.Move(PAnsichar(Value)^, FPQparamValues[ParamIndex], Len);
       FPQparamLengths[ParamIndex] := Len;
-    end;
+    end;}
   end;
 
   procedure UpdateNull(Index: Integer);
   begin
-    FreeMem(FPQparamValues[ParamIndex]);
+    StrDispose(FPQparamValues[ParamIndex]);
     FPQparamValues[ParamIndex] := nil;
-    FPQparamLengths[ParamIndex] := 0;
+    //FPQparamLengths[ParamIndex] := 0;
   end;
 begin
-  if InParamCount <> High(FPQparamValues)+1 then
-    raise EZSQLException.Create(SInvalidInputParameterCount);
+  //if InParamCount <> High(FPQparamValues)+1 then
+    //raise EZSQLException.Create(SInvalidInputParameterCount);
 
   for ParamIndex := 0 to InParamCount -1 do
   begin
@@ -1158,7 +1157,7 @@ begin
         stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
           UpdateString(ZAnsiString(SoftVarManager.GetAsString(Value)), ParamIndex);
         stBytes:
-          UpdateString(ZAnsiString(SoftVarManager.GetAsString(Value)), ParamIndex, Length(SoftVarManager.GetAsString(Value)));
+          UpdateString(FPostgreSQLConnection.EncodeBinary(ZAnsiString(SoftVarManager.GetAsString(Value))), ParamIndex);
         stString:
           UpdateString(ZPlainString(SoftVarManager.GetAsString(Value), GetConnection.GetEncoding), ParamIndex);
         stUnicodeString:
@@ -1204,7 +1203,7 @@ begin
                     end;
                   end
                   else
-                    UpdateString(TempBlob.GetString, ParamIndex);
+                    UpdateString(FPostgreSQLConnection.EncodeBinary(TempBlob.GetString), ParamIndex);
                 stAsciiStream, stUnicodeStream:
                   UpdateString(TempBlob.GetString, ParamIndex);
               end; {case..}
@@ -1223,16 +1222,16 @@ var
   I: Integer;
 begin
   { release allocated memory }
-  for i := 0 to high(FPQparamTypes) do
+  for i := 0 to InParamCount-1 do
   begin
-    FreeMem(FPQparamTypes[i]);
+    //FreeMem(FPQparamTypes[i]);
     StrDispose(FPQparamValues[i]);
-
+    FPQparamValues[i] := nil;
   end;
-  SetLength(FPQparamTypes, 0);
+  {SetLength(FPQparamTypes, 0);
   SetLength(FPQparamValues, 0);
   SetLength(FPQparamLengths, 0);
-  SetLength(FPQparamFormats, 0);
+  SetLength(FPQparamFormats, 0);}
 end;
 
 constructor TZPostgreSQLCAPIPreparedStatement.Create(PlainDriver: IZPostgreSQLPlainDriver;
@@ -1277,14 +1276,10 @@ begin
 
     if ( N > 0 ) or ( ExecCount > 2 ) then //prepare only if Params are available
     begin
-      FPrepQueryHandle := ExectuteInternal(GetPrepreparedSQL(TempSQL), 'PREPRARE '#39+TempSQL+#39, lcPrepStmt);
+      QueryHandle := ExectuteInternal(GetPrepreparedSQL(TempSQL), 'PREPRARE '#39+TempSQL+#39, lcPrepStmt);
       inherited Prepare;
-      //FPlainDriver.Clear(QueryHandle);
-    end
-    //else
-      //QueryHandle := ExectuteInternal(ASQL, SSQL, lcExecute);
-
-
+      FPlainDriver.Clear(QueryHandle);
+    end;
   end;
 end;
 
@@ -1296,9 +1291,9 @@ begin
   begin
     inherited Unprepare;
     TempSQL := 'DEALLOCATE '+FPlanName+';';
-    QueryHandle := ExectuteInternal(ZAnsiString(TempSQL), TempSQL, lcExecute);
-    FPlainDriver.Clear(QueryHandle);
-    FPlainDriver.Clear(FPrepQueryHandle);
+    //QueryHandle := ExectuteInternal(ZAnsiString(TempSQL), TempSQL, lcExecute);
+    //FPlainDriver.Clear(QueryHandle);
+    //FPlainDriver.Clear(FPrepQueryHandle);
   end;
 end;
 
@@ -1685,8 +1680,6 @@ begin
   end
   else
     Result := ASql;
-  //if GetConnection.PreprepareSQL then
-    //Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
 end;
 
 {**

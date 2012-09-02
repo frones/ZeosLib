@@ -324,16 +324,16 @@ type
 
 {Prepared statement types}
   PPQparamTypes = ^TPQparamTypes;
-  TPQparamTypes = array of POid;
+  TPQparamTypes = {array of }POid;
 
   PPQparamValues = ^TPQparamValues;
-  TPQparamValues = array of PAnsichar;
+  TPQparamValues = {array of PAnsichar}PPAnsichar;
 
   PPQparamLengths = ^TPQparamLengths;
-  TPQparamLengths = array of Integer;
+  TPQparamLengths = {array of } PLongInt;
 
   PPQparamFormats = ^TPQparamFormats;
-  TPQparamFormats = array of Integer;
+  TPQparamFormats = {array of Integer}PLongInt;
 
 
 { ************** Plain API Function types definition ************* }
