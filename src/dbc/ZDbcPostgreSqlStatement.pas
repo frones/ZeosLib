@@ -1072,11 +1072,15 @@ begin
     lcExecPrepStmt:
       Result := FPlainDriver.ExecPrepared(FConnectionHandle,
         PAnsiChar(ZAnsiString(FPLanName)), InParamCount, FPQparamValues, nil, nil, 0);
+    lcUnprepStmt:
+       if Assigned(FPostgreSQLConnection.GetConnectionHandle) then
+        Result := FPlainDriver.ExecuteQuery(FConnectionHandle, PAnsiChar(SQL));
     else
       Result := FPlainDriver.ExecuteQuery(FConnectionHandle, PAnsiChar(SQL));
   end;
-  CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
-    LoggingCategory, LogSQL, Result);
+  if Assigned(FPostgreSQLConnection.GetConnectionHandle) then
+    CheckPostgreSQLError(Connection, FPlainDriver, FPostgreSQLConnection.GetConnectionHandle,
+      LoggingCategory, LogSQL, Result);
   DriverManager.LogMessage(LoggingCategory, FPlainDriver.GetProtocol, LogSQL);
 end;
 
@@ -1252,8 +1256,8 @@ begin
     if ( N > 0 ) or ( ExecCount > 2 ) then //prepare only if Params are available or certain executions expected
     begin
       QueryHandle := ExectuteInternal(GetPrepreparedSQL(TempSQL), 'PREPRARE '#39+TempSQL+#39, lcPrepStmt);
-      inherited Prepare;
       FPlainDriver.Clear(QueryHandle);
+      inherited Prepare;
     end;
   end;
 end;
@@ -1262,11 +1266,11 @@ procedure TZPostgreSQLCAPIPreparedStatement.Unprepare;
 var
   TempSQL: String;
 begin
-  if Prepared then
+  if Prepared and Assigned(FPostgreSQLConnection) then
   begin
     inherited Unprepare;
     TempSQL := 'DEALLOCATE "'+FPlanName+'";';
-    QueryHandle := ExectuteInternal(ZAnsiString(TempSQL), TempSQL, lcExecute);
+    QueryHandle := ExectuteInternal(ZAnsiString(TempSQL), TempSQL, lcUnprepStmt);
     FPlainDriver.Clear(QueryHandle);
   end;
 end;
