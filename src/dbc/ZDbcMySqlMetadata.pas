@@ -239,8 +239,8 @@ type
       Unique: Boolean; Approximate: Boolean): IZResultSet; override;
 //     function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
 //      const SequenceNamePattern: string): IZResultSet; override; -> Not implemented
-//    function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
-//      const ProcedureNamePattern: string): IZResultSet; override;
+    function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
+      const ProcedureNamePattern: string): IZResultSet; override;
 //    function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
 //      const ProcedureNamePattern: string; const ColumnNamePattern: string):
 //      IZResultSet; override;
@@ -2350,6 +2350,41 @@ begin
       end;
       Close;
     end;
+end;
+
+function TZMySQLDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
+  const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
+var
+  LCatalog, SQL: string;
+begin
+  if Catalog = '' then
+  begin
+    if SchemaPattern <> '' then
+      LCatalog := SchemaPattern
+    else
+      LCatalog := FDatabase;
+  end
+  else
+    LCatalog := Catalog;
+
+  SQL := 'SELECT NULL AS PROCEDURE_CAT, p.db AS PROCEDURE_SCHEM, '+
+      'p.name AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2, '+
+      'NULL AS RESERVED3, p.comment AS REMARKS, '+
+    IntToStr(ProcedureReturnsResult)+' AS PROCEDURE_TYPE  from  mysql.proc p ';
+    if ( LCataLog <> '' ) or ( ProcedureNamePattern <> '' ) then
+      SQL := SQL + 'WHERE ';
+    if ( LCataLog <> '' ) then
+      SQL := SQL + ' p.db LIKE '+QuotedStr(LCatalog);
+    if ( ProcedureNamePattern <> '' ) then
+    begin
+      if ( LCataLog <> '' ) then
+        SQL := SQL + ' AND ';
+      SQL := SQL + ' p.name LIKE '+QuotedStr(ProcedureNamePattern)
+    end;
+    SQL := SQL + ' ORDER BY p.db, p.name';
+    Result := CopyToVirtualResultSet(
+    GetConnection.CreateStatement.ExecuteQuery(SQL),
+    ConstructVirtualResultSet(ProceduresColumnsDynArray));
 end;
 
 {**
