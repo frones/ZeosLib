@@ -213,7 +213,7 @@ implementation
 
 uses
   Types, ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils, ZTokenizer,
-  ZDbcUtils;
+  ZDbcUtils{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
 
 { TZPostgreSQLStatement }
 
@@ -1114,6 +1114,7 @@ var
   TempStream, TempStreamIn: TStream;
   WriteTempBlob: IZPostgreSQLBlob;
   ParamIndex: Integer;
+  Temp: ZAnsiString;
 
   procedure UpdateString(Value: ZAnsiString; const Index: Integer;
     const ALen: Integer = -1);
@@ -1125,6 +1126,16 @@ var
   begin
     StrDispose(PAnsiChar(FPQparamValues[ParamIndex]));
     FPQparamValues[ParamIndex] := nil;
+  end;
+
+  function EncodeBytea(const Value: PAnsiChar; Len: Integer): AnsiString;
+  var
+    HexVal: AnsiString;
+  begin
+    SetLength(HexVal, Len * 2 );
+    BinToHex(Value, PAnsiChar(HexVal), Len);
+
+    Result := '\x'+{$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}LowerCase(HexVal);
   end;
 begin
   if InParamCount <> High(FPQparamValues)+1 then
@@ -1143,8 +1154,10 @@ begin
         stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
           UpdateString(ZAnsiString(SoftVarManager.GetAsString(Value)), ParamIndex);
         stBytes:
-          UpdateString(FPlainDriver.EncodeBYTEA(ZAnsiString(SoftVarManager.GetAsString(Value)),
-            FConnectionHandle, False), ParamIndex);
+          begin
+            Temp := ZAnsiString(SoftVarManager.GetAsString(Value));
+            UpdateString(EncodeBytea(PAnsiChar(Temp), Length(Temp)), ParamIndex);
+          end;
         stString:
           UpdateString(ZPlainString(SoftVarManager.GetAsString(Value), GetConnection.GetEncoding), ParamIndex);
         stUnicodeString:
@@ -1190,7 +1203,7 @@ begin
                     end;
                   end
                   else
-                    UpdateString(FPlainDriver.EncodeBYTEA(TempBlob.GetString, FConnectionHandle, False), ParamIndex);
+                    UpdateString(EncodeBytea(TempBlob.GetBuffer, TempBlob.Length), ParamIndex);
                 stAsciiStream, stUnicodeStream:
                   UpdateString(TempBlob.GetString, ParamIndex);
               end; {case..}
