@@ -132,7 +132,7 @@ begin
     lcPrepStmt: Result := Result + 'Prepare';
     lcBindPrepStmt: Result := Result + 'Bind prepared';
     lcExecPrepStmt: Result := Result + 'Execute prepared';
-    lcUnprepStmt: Result := + 'Unprepare prepared';
+    lcUnprepStmt: Result := Result + 'Unprepare prepared';
   else
     Result := Result + 'Other';
   end;
