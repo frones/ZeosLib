@@ -1076,8 +1076,9 @@ begin
       Result := FPlainDriver.ExecPrepared(FConnectionHandle,
         PAnsiChar(ZAnsiString(FPLanName)), InParamCount, FPQparamValues, nil, nil, 0);
     lcUnprepStmt:
-       if Assigned(FPostgreSQLConnection.GetConnectionHandle) then
-        Result := FPlainDriver.ExecuteQuery(FConnectionHandle, PAnsiChar(SQL));
+      if Assigned(FPostgreSQLConnection.GetConnectionHandle) then
+        Result := FPlainDriver.ExecuteQuery(FConnectionHandle, PAnsiChar(SQL))
+      else Result := nil;
     else
       Result := FPlainDriver.ExecuteQuery(FConnectionHandle, PAnsiChar(SQL));
   end;
