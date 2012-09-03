@@ -387,6 +387,11 @@ type
          paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
          resultFormat: Integer): Integer; cdecl;
   TPQgetResult     = function(Handle: PPGconn): PPGresult;  cdecl;
+//* Describe prepared statements and portals */
+  TPQdescribePrepared = function(Handle: PPGconn; const stmt: PAnsiChar): PPGresult; cdecl;
+  TPQdescribePortal = function(Handle: PPGconn; const portal: PAnsiChar): PPGresult; cdecl;
+  TPQsendDescribePrepared = function(Handle: PPGconn; const stmt: PAnsiChar): Integer; cdecl;
+  TPQsendDescribePortal = function(Handle: PPGconn; const portal: PAnsiChar): Integer; cdecl;
 
   TPQnotifies      = function(Handle: PPGconn): PPGnotify; cdecl;
   TPQfreeNotify    = procedure(Handle: PPGnotify);cdecl;
@@ -482,6 +487,11 @@ TZPOSTGRESQL_API = record
   PQsendPrepare:   TPQsendPrepare;
   PQsendQueryPrepared: TPQsendQueryPrepared;
   PQgetResult:     TPQgetResult;
+  //* Describe prepared statements and portals */
+  PQdescribePrepared:     TPQdescribePrepared;
+  PQdescribePortal:       TPQdescribePortal;
+  PQsendDescribePrepared: TPQsendDescribePrepared;
+  PQsendDescribePortal:   TPQsendDescribePortal;
   PQnotifies:      TPQnotifies;
   PQfreeNotify:    TPQfreeNotify;
   PQisBusy:        TPQisBusy;
@@ -597,6 +607,11 @@ type
          paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
          resultFormat: Integer): Integer;
     function GetResult(Handle: PZPostgreSQLConnect): PZPostgreSQLResult;
+    //* Describe prepared statements and portals */
+    function DescribePrepared(Handle: PPGconn; const stmt: PAnsiChar): PPGresult;
+    function DescribePortal(Handle: PPGconn; const portal: PAnsiChar): PPGresult;
+    function SendDescribePrepared(Handle: PPGconn; const stmt: PAnsiChar): Integer;
+    function SendDescribePortal(Handle: PPGconn; const portal: PAnsiChar): Integer;
     function Notifies(Handle: PZPostgreSQLConnect): PZPostgreSQLNotify;
     procedure FreeNotify(Handle: PZPostgreSQLNotify);
 
@@ -731,6 +746,10 @@ type
          paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
          resultFormat: Integer): Integer;
     function GetResult(Handle: PZPostgreSQLConnect): PZPostgreSQLResult;
+    function DescribePrepared(Handle: PPGconn; const stmt: PAnsiChar): PPGresult;
+    function DescribePortal(Handle: PPGconn; const portal: PAnsiChar): PPGresult;
+    function SendDescribePrepared(Handle: PPGconn; const stmt: PAnsiChar): Integer;
+    function SendDescribePortal(Handle: PPGconn; const portal: PAnsiChar): Integer;
 
     function Notifies(Handle: PZPostgreSQLConnect): PZPostgreSQLNotify;
     procedure FreeNotify(Handle: PZPostgreSQLNotify);
@@ -1205,6 +1224,42 @@ end;
 function TZPostgreSQLBaseDriver.GetResult(Handle: PZPostgreSQLConnect): PZPostgreSQLResult;
 begin
   Result := POSTGRESQL_API.PQgetResult(Handle);
+end;
+
+function TZPostgreSQLBaseDriver.DescribePrepared(Handle: PPGconn;
+  const stmt: PAnsiChar): PPGresult;
+begin
+  if Assigned(POSTGRESQL_API.PQdescribePrepared) then
+    Result := POSTGRESQL_API.PQdescribePrepared(Handle, stmt)
+  else
+    Result := nil;
+end;
+
+function TZPostgreSQLBaseDriver.DescribePortal(Handle: PPGconn;
+  const portal: PAnsiChar): PPGresult;
+begin
+  if Assigned(POSTGRESQL_API.PQdescribePortal) then
+    Result := POSTGRESQL_API.PQdescribePortal(Handle, portal)
+  else
+    Result := nil;
+end;
+
+function TZPostgreSQLBaseDriver.SendDescribePrepared(Handle: PPGconn;
+  const stmt: PAnsiChar): Integer;
+begin
+  if Assigned(POSTGRESQL_API.PQsendDescribePrepared) then
+    Result := POSTGRESQL_API.PQsendDescribePrepared(Handle, stmt)
+  else
+    Result := nil;
+end;
+
+function TZPostgreSQLBaseDriver.SendDescribePortal(Handle: PPGconn;
+  const portal: PAnsiChar): Integer;
+begin
+  if Assigned(POSTGRESQL_API.PQsendDescribePortal) then
+    Result := POSTGRESQL_API.PQsendDescribePortal(Handle, portal)
+  else
+    Result := nil;
 end;
 
 function TZPostgreSQLBaseDriver.ExportLargeObject(
