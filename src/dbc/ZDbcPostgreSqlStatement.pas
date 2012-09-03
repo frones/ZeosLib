@@ -1070,7 +1070,11 @@ begin
       begin
         Result := FPlainDriver.Prepare(FConnectionHandle, PAnsiChar(ZAnsiString(FPlanName)),
           PAnsiChar(SQL), InParamCount, nil);
+        CheckPostgreSQLError(Connection, FPlainDriver, FPostgreSQLConnection.GetConnectionHandle,
+          LoggingCategory, LogSQL, Result);
+        DriverManager.LogMessage(LoggingCategory, FPlainDriver.GetProtocol, LogSQL);
         FPostgreSQLConnection.RegisterPreparedStmtName(FPlanName);
+        Exit;
       end;
     lcExecPrepStmt:
       Result := FPlainDriver.ExecPrepared(FConnectionHandle,
