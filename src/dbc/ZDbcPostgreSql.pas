@@ -316,9 +316,9 @@ destructor TZPostgreSQLConnection.Destroy;
 begin
   if FTypeList <> nil then
     FTypeList.Free;
+  inherited Destroy;
   if Assigned(FPreparedStmts) then
     FreeAndNil(FPreparedStmts);
-  inherited Destroy;
 end;
 
 {**
