@@ -598,9 +598,9 @@ begin
 
   if Assigned(Info) then
     if StrToBoolEx(Info.Values['preferprepared']) then
-      if self.GetServerMajorVersion >= 8 then
-        Result := TZPostgreSQLCAPIPreparedStatement.Create(GetPlainDriver, Self, SQL, Info)
-      else
+      //if self.GetServerMajorVersion >= 8 then
+        //Result := TZPostgreSQLCAPIPreparedStatement.Create(GetPlainDriver, Self, SQL, Info)
+      //else
         Result := TZPostgreSQLPreparedStatement.Create(GetPlainDriver, Self, SQL, Info)
     else
       Result := TZPostgreSQLEmulatedPreparedStatement.Create(GetPlainDriver,
