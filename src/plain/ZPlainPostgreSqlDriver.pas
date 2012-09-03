@@ -1250,7 +1250,7 @@ begin
   if Assigned(POSTGRESQL_API.PQsendDescribePrepared) then
     Result := POSTGRESQL_API.PQsendDescribePrepared(Handle, stmt)
   else
-    Result := nil;
+    Result := -1;
 end;
 
 function TZPostgreSQLBaseDriver.SendDescribePortal(Handle: PPGconn;
@@ -1259,7 +1259,7 @@ begin
   if Assigned(POSTGRESQL_API.PQsendDescribePortal) then
     Result := POSTGRESQL_API.PQsendDescribePortal(Handle, portal)
   else
-    Result := nil;
+    Result := -1;
 end;
 
 function TZPostgreSQLBaseDriver.ExportLargeObject(
