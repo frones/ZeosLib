@@ -1067,8 +1067,11 @@ function TZPostgreSQLCAPIPreparedStatement.ExectuteInternal(const SQL: ZAnsiStri
 begin
   case LoggingCategory of
     lcPrepStmt:
-      Result := FPlainDriver.Prepare(FConnectionHandle, PAnsiChar(ZAnsiString(FPlanName)),
-        PAnsiChar(SQL), InParamCount, nil);
+      begin
+        Result := FPlainDriver.Prepare(FConnectionHandle, PAnsiChar(ZAnsiString(FPlanName)),
+          PAnsiChar(SQL), InParamCount, nil);
+        FPostgreSQLConnection.RegisterPreparedStmtName(FPlanName);
+      end;
     lcExecPrepStmt:
       Result := FPlainDriver.ExecPrepared(FConnectionHandle,
         PAnsiChar(ZAnsiString(FPLanName)), InParamCount, FPQparamValues, nil, nil, 0);
@@ -1272,6 +1275,7 @@ begin
     TempSQL := 'DEALLOCATE "'+FPlanName+'";';
     QueryHandle := ExectuteInternal(ZAnsiString(TempSQL), TempSQL, lcUnprepStmt);
     FPlainDriver.Clear(QueryHandle);
+    FPostgreSQLConnection.UnregisterPreparedStmtName(FPlanName);
   end;
 end;
 
