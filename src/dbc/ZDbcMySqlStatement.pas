@@ -1236,6 +1236,8 @@ begin
         DefVarManager.SetAsDateTime(Temp, ResultSet.GetTime(I));
       stTimestamp:
         DefVarManager.SetAsDateTime(Temp, ResultSet.GetTimestamp(I));
+      else
+        DefVarManager.SetAsString(Temp, ResultSet.GetString(I));
       end;
     OutParamValues[ParamIndex] := Temp;
     Inc(I);
