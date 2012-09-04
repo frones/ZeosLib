@@ -115,6 +115,15 @@ type
     procedure Test_set;
   end;
 
+  {** Implements a test case for class TZStoredProc. }
+  TZTestMySQLStoredProcedure = class(TZTestStoredProcedureSpecific)
+  protected
+    function GetSupportedProtocols: string; override;
+  published
+    procedure Test_abtest;
+  end;
+
+
 implementation
 
 uses Classes, ZSysUtils, ZDbcUtils, ZTestConsts, ZDbcIntfs, ZAbstractDataset,
@@ -534,9 +543,67 @@ begin
   CheckEquals('Laboratoy', StoredProc.Fields[0].AsString);
 end;
 
+{ TZTestMySQLStoredProcedure }
+function TZTestMySQLStoredProcedure.GetSupportedProtocols: string;
+begin
+  Result := 'mysql,mysql-4.1,mysql-5,mysqld-4.1,mysqld-5';
+end;
+
+procedure TZTestMySQLStoredProcedure.Test_abtest;
+var
+  i, P2: integer;
+  S: String;
+begin
+  StoredProc.StoredProcName := 'ABTEST';
+  CheckEquals(5, StoredProc.Params.Count);
+  CheckEquals('P1', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals('P2', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals('P3', StoredProc.Params[2].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
+  CheckEquals('P4', StoredProc.Params[3].Name);
+  CheckEquals(ord(ptOutput), ord(StoredProc.Params[3].ParamType));
+  CheckEquals('P5', StoredProc.Params[4].Name);
+  CheckEquals(ord(ptOutput), ord(StoredProc.Params[4].ParamType));
+
+  StoredProc.ParamByName('P1').AsInteger := 50;
+  StoredProc.ParamByName('P2').AsInteger := 100;
+  StoredProc.ParamByName('P3').AsString := 'a';
+  StoredProc.ExecProc;
+  CheckEquals(600, StoredProc.ParamByName('P4').AsInteger);
+  CheckEquals('aa', StoredProc.ParamByName('P5').AsString);
+  CheckEquals(5, StoredProc.Params.Count);
+
+  StoredProc.Prepare;
+  S := 'a';
+  P2 := 100;
+  for i:= 1 to 100 do
+  begin
+    StoredProc.Params[0].AsInteger:= i;
+    StoredProc.Params[1].AsInteger:= P2;
+    StoredProc.Params[2].AsString:= S;
+    StoredProc.ExecProc;
+    CheckEquals(S+S, StoredProc.ParamByName('P5').AsString);
+    CheckEquals(I*10+P2, StoredProc.ParamByName('P4').AsInteger);
+    if Length(S) = 10 then s := 'a'
+    else S := S+'a';
+    P2 := 100 - I;
+  end;
+  StoredProc.Unprepare;
+  S := StoredProc.ParamByName('P4').AsString +
+    ' ' + StoredProc.ParamByName('P5').AsString;
+  StoredProc.Open;
+  StoredProc.ParamByName('P1').AsInteger := 50;
+  StoredProc.ParamByName('P2').AsInteger := 100;
+  StoredProc.ParamByName('P3').AsString := 'a';
+  StoredProc.Open;
+end;
+
 initialization
   RegisterTest('component',TZTestInterbaseStoredProcedure.Suite);
   RegisterTest('component',TZTestDbLibStoredProcedure.Suite);
   RegisterTest('component',TZTestPostgreSQLStoredProcedure.Suite);
+  //RegisterTest('component',TZTestMySQLStoredProcedure.Suite);
   RegisterTest('component',TZTestStoredProcedure.Suite);
 end.
