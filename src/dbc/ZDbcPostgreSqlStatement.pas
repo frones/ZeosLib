@@ -1773,13 +1773,15 @@ begin
       stString:
         DefVarManager.SetAsString(Temp, ResultSet.GetString(I));
       stUnicodeString:
-        DefVarManager.SetAsUnicodeString(Temp, ResultSet.GetString(I));
+        DefVarManager.SetAsUnicodeString(Temp, ResultSet.GetUnicodeString(I));
       stDate:
         DefVarManager.SetAsDateTime(Temp, ResultSet.GetDate(I));
       stTime:
         DefVarManager.SetAsDateTime(Temp, ResultSet.GetTime(I));
       stTimestamp:
         DefVarManager.SetAsDateTime(Temp, ResultSet.GetTimestamp(I));
+      else
+        DefVarManager.SetAsString(Temp, ResultSet.GetString(I));
       end;
     OutParamValues[ParamIndex] := Temp;
     Inc(I);

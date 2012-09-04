@@ -214,6 +214,15 @@ begin
           Param.AsString := FCallableStatement.GetString(I + 1);
         ftWideString:
           {$IFDEF WITH_FTWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF} := FCallableStatement.GetUnicodeString(I + 1);
+        ftMemo:
+          Param.AsMemo := FCallableStatement.GetString(I + 1);
+        {$IFDEF WITH_WIDEMEMO}
+        ftWideMemo:
+        begin
+          {$IFDEF WITH_FTWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF} := FCallableStatement.GetUnicodeString(I + 1);
+          Param.DataType := ftWideMemo;
+        end;
+        {$ENDIF}
         ftBytes:
           Param.AsString := FCallableStatement.GetString(I + 1);
         ftDate:
