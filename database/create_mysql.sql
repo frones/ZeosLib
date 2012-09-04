@@ -196,19 +196,19 @@ DELIMITER //
 /* Stored Procedure: ABTEST                                     */
 /*==============================================================*/
 CREATE PROCEDURE `ABTEST`(
-        IN `p1` INTEGER,
-        IN `p2` INTEGER,
-        IN `p3` VARCHAR(10),
-        OUT `p4` INTEGER,
-        OUT `p5` VARCHAR(20)
+        IN `P1` INTEGER,
+        IN `P2` INTEGER,
+        IN `P3` VARCHAR(10),
+        OUT `P4` INTEGER,
+        OUT `P5` VARCHAR(20)
     )
     DETERMINISTIC
     NO SQL
     SQL SECURITY DEFINER
     COMMENT ''
 BEGIN
-  set `p4` = `p1` * 10 + `p2`;
-  set `p5` = concat(`p3`, `p3`);
+  set `P4` = `P1` * 10 + `P2`;
+  set `P5` = concat(`P3`, `P3`);
 END; //
 
 DELIMITER ;
