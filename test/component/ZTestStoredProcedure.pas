@@ -604,6 +604,6 @@ initialization
   RegisterTest('component',TZTestInterbaseStoredProcedure.Suite);
   RegisterTest('component',TZTestDbLibStoredProcedure.Suite);
   RegisterTest('component',TZTestPostgreSQLStoredProcedure.Suite);
-  //RegisterTest('component',TZTestMySQLStoredProcedure.Suite);
+  RegisterTest('component',TZTestMySQLStoredProcedure.Suite);
   RegisterTest('component',TZTestStoredProcedure.Suite);
 end.
