@@ -174,6 +174,36 @@ type
     function IsPreparedStatement: Boolean;
   end;
 
+  {** Implements callable Postgresql Statement. }
+  TZMySQLSQLCallableStatement = class(TZAbstractCallableStatement, IZMySQLStatement)
+  private
+    FPlainDriver: IZMysqlPlainDriver;
+    FHandle: PZMySQLConnect;
+    FUseResult: Boolean;
+    function GetCallSQL: string;
+    function GetOutParamSQL: String;
+    function FillParams(const ASql:String):String;
+    function PrepareSQLParam(ParamIndex: Integer): string;
+    function GetStmtHandle : PZMySqlPrepStmt;
+  protected
+    function CreateResultSet(const SQL: string): IZResultSet;
+    procedure FetchOutParams(ResultSet: IZResultSet);
+  public
+    constructor Create(PlainDriver: IZMySQLPlainDriver;
+      Connection: IZConnection; const SQL: string; Info: TStrings;
+      Handle: PZMySQLConnect);
+
+    function ExecuteQuery(const SQL: string): IZResultSet; override;
+    function ExecuteUpdate(const SQL: string): Integer; override;
+    function Execute(const SQL: string): Boolean; override;
+
+    function ExecuteQueryPrepared: IZResultSet; override;
+    function ExecuteUpdatePrepared: Integer; override;
+
+    function IsUseResult: Boolean;
+    function IsPreparedStatement: Boolean;
+  end;
+
 implementation
 
 uses
@@ -928,6 +958,471 @@ begin
   Result := FStmtHandle;
 end;
 
+{ TZMySQLSQLCallableStatement }
+
+{**
+   Create sql string for calling stored procedure.
+   @return a Stored Procedure SQL string
+}
+function TZMySQLSQLCallableStatement.GetCallSQL: string;
+  function GenerateParamsStr(Count: integer): string;
+  var
+    I: integer;
+  begin
+    Result := '';
+    for I := 1 to Count do
+    begin
+      if I > 1 then
+        Result := Result + ',';
+      if FDBParamTypes[i-1] in [2, 4] then
+        Result := Result + '@P'+IntToStr(i)
+      else
+        Result := Result + '?';
+    end;
+  end;
+
+var
+  InParams: string;
+begin
+  InParams := GenerateParamsStr(OutParamCount);
+  Result := Format('CALL `%s`(%s)', [SQL, InParams])
+end;
+
+function TZMySQLSQLCallableStatement.GetOutParamSQL: String;
+  function GenerateParamsStr(Count: integer; InParam: Boolean): string;
+  var
+    I: integer;
+  begin
+    Result := '';
+    I := 0;
+    while True do
+      if FDBParamTypes[i] = 0 then
+        break
+      else
+      begin
+        if FDBParamTypes[i] in [2, 4] then
+        begin
+          if Result <> '' then
+            Result := Result + ',';
+          Result := Result + '@P'+IntToStr(i+1);
+        end;
+        Inc(i);
+      end;
+  end;
+
+var
+  OutParams: String;
+begin
+  OutParams := GenerateParamsStr(Self.OutParamCount-Length(InParamValues), False);
+  Result := 'SELECT '+ OutParams;
+end;
+
+{**
+   Fills the parameter (?) tokens with corresponding parameter value
+   @return a prepared SQL query for execution
+}
+function TZMySQLSQLCallableStatement.FillParams(const ASql:String):String;
+var I: Integer;
+  Tokens: TStrings;
+  ParamIndex: Integer;
+begin
+  if Pos('?', ASql) > 0 then
+  begin
+    Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(ASql, []);
+    try
+      ParamIndex := 0;
+      for I := 0 to Tokens.Count - 1 do
+      begin
+        if Tokens[I] = '?' then
+        begin
+          Tokens[I] := PrepareSQLParam(ParamIndex);
+          Inc(ParamIndex);
+        end
+      end;
+      Result := StringReplace(Tokens.Text, #13#10, '', [rfReplaceAll]);
+    finally
+      Tokens.Free;
+    end;
+  end
+  else
+    Result := ASql;
+end;
+
+{**
+  Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
+  <code>DELETE</code> statement. In addition,
+  SQL statements that return nothing, such as SQL DDL statements,
+  can be executed.
+
+  @param sql an SQL <code>INSERT</code>, <code>UPDATE</code> or
+    <code>DELETE</code> statement or an SQL statement that returns nothing
+  @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
+    or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
+}
+function TZMySQLSQLCallableStatement.PrepareSQLParam(ParamIndex: Integer): string;
+var
+  Value: TZVariant;
+  TempBytes: TByteDynArray;
+  TempBlob: IZBlob;
+  TempStream,TempStreamIn: TStream;
+  AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
+begin
+  TempBytes := nil;
+  if InParamCount <= ParamIndex then
+    raise EZSQLException.Create(SInvalidInputParameterCount);
+
+  Value := InParamValues[ParamIndex];
+  if DefVarManager.IsNull(Value) then
+    if (InParamDefaultValues[ParamIndex] <> '') and
+      StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
+      Result := InParamDefaultValues[ParamIndex]
+    else
+      Result := 'NULL'
+  else
+  begin
+    case InParamTypes[ParamIndex] of
+      stBoolean:
+            if SoftVarManager.GetAsBoolean(Value) then
+               Result := '''Y'''
+            else
+               Result := '''N''';
+      stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
+        Result := SoftVarManager.GetAsString(Value);
+      stBytes:
+        Result := Self.GetConnection.GetBinaryEscapeString(AnsiString(SoftVarManager.GetAsString(Value)));
+      stString:
+        Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
+      stUnicodeString:
+        {$IFDEF DELPHI12_UP}
+          if GetConnection.PreprepareSQL then
+            Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsUnicodeString(Value)) else
+        {$ENDIF}
+        if (GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) then
+          Result := Self.GetConnection.GetEscapeString(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)))
+        else
+          Result := Self.GetConnection.GetEscapeString(AnsiString(SoftVarManager.GetAsUnicodeString(Value)));
+      stDate:
+      begin
+        DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
+          AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
+        Result := '''' + Format('%0.4d-%0.2d-%0.2d',
+          [AYear, AMonth, ADay]) + '''';
+      end;
+      stTime:
+      begin
+        DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
+          AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
+        Result := '''' + Format('%0.2d:%0.2d:%0.2d',
+          [AHour, AMinute, ASecond]) + '''';
+      end;
+      stTimestamp:
+      begin
+        DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
+          AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
+        Result := '''' + Format('%0.4d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d',
+          [AYear, AMonth, ADay, AHour, AMinute, ASecond]) + '''';
+      end;
+      stAsciiStream, stUnicodeStream, stBinaryStream:
+        begin
+          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
+          if not TempBlob.IsEmpty then
+          begin
+            if InParamTypes[ParamIndex] = stBinaryStream then
+              Result := Self.GetConnection.GetBinaryEscapeString(TempBlob.GetString)
+            else
+            begin
+              if (GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) then
+              begin //could be equal valid for unicode if the user reads the Stream as ftMemo
+                TempStreamIn:=TempBlob.GetStream;
+                TempStream := GetValidatedUnicodeStream(TempStreamIn);
+                TempStreamIn.Free;
+                TempBlob.SetStream(TempStream);
+                TempStream.Free;
+              end;
+              {$IFDEF DELPHI12_UP}
+              if GetConnection.PreprepareSQL then
+                Result := Self.GetConnection.GetEscapeString(ZDbcString(TempBlob.GetString)) else
+              {$ENDIF}
+              Result := GetConnection.GetEscapeString(TempBlob.GetString)
+            end;
+          end
+          else
+            Result := 'NULL';
+        end;
+    end;
+  end;
+end;
+
+function TZMySQLSQLCallableStatement.GetStmtHandle: PZMySqlPrepStmt;
+begin
+  Result := nil;
+end;
+
+{**
+  Creates a result set based on the current settings.
+  @return a created result set object.
+}
+function TZMySQLSQLCallableStatement.CreateResultSet(const SQL: string): IZResultSet;
+var
+  CachedResolver: TZMySQLCachedResolver;
+  NativeResultSet: TZMySQLResultSet;
+  CachedResultSet: TZCachedResultSet;
+begin
+  NativeResultSet := TZMySQLResultSet.Create(FPlainDriver, Self, SQL, FHandle,
+    FUseResult);
+  NativeResultSet.SetConcurrency(rcReadOnly);
+  if (GetResultSetConcurrency <> rcReadOnly) or (FUseResult
+    and (GetResultSetType <> rtForwardOnly)) then
+  begin
+    CachedResolver := TZMySQLCachedResolver.Create(FPlainDriver, FHandle, Self,
+      NativeResultSet.GetMetaData);
+    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
+      CachedResolver, ClientCodePage);
+    CachedResultSet.SetConcurrency(GetResultSetConcurrency);
+    Result := CachedResultSet;
+  end
+  else
+    Result := NativeResultSet;
+end;
+
+{**
+  Sets output parameters from a ResultSet
+  @param Value a IZResultSet object.
+}
+procedure TZMySQLSQLCallableStatement.FetchOutParams(ResultSet: IZResultSet);
+var
+  ParamIndex, I: Integer;
+  Temp: TZVariant;
+  HasRows: Boolean;
+begin
+  ResultSet.BeforeFirst;
+  HasRows := ResultSet.Next;
+
+  I := 1;
+  for ParamIndex := 0 to OutParamCount - 1 do
+  begin
+    if not (FDBParamTypes[ParamIndex] in [2, 3, 4]) then // ptOutput, ptInputOutput, ptResult
+      Continue;
+    if I > ResultSet.GetMetadata.GetColumnCount then
+      Break;
+
+    if (not HasRows) or (ResultSet.IsNull(I)) then
+      DefVarManager.SetNull(Temp)
+    else
+      case ResultSet.GetMetadata.GetColumnType(I) of
+      stBoolean:
+        DefVarManager.SetAsBoolean(Temp, ResultSet.GetBoolean(I));
+      stByte:
+        DefVarManager.SetAsInteger(Temp, ResultSet.GetByte(I));
+      stShort:
+        DefVarManager.SetAsInteger(Temp, ResultSet.GetShort(I));
+      stInteger:
+        DefVarManager.SetAsInteger(Temp, ResultSet.GetInt(I));
+      stLong:
+        DefVarManager.SetAsInteger(Temp, ResultSet.GetLong(I));
+      stFloat:
+        DefVarManager.SetAsFloat(Temp, ResultSet.GetFloat(I));
+      stDouble:
+        DefVarManager.SetAsFloat(Temp, ResultSet.GetDouble(I));
+      stBigDecimal:
+        DefVarManager.SetAsFloat(Temp, ResultSet.GetBigDecimal(I));
+      stString, stAsciiStream:
+        DefVarManager.SetAsString(Temp, ResultSet.GetString(I));
+      stUnicodeString, stUnicodeStream:
+        DefVarManager.SetAsUnicodeString(Temp, ResultSet.GetUnicodeString(I));
+      stDate:
+        DefVarManager.SetAsDateTime(Temp, ResultSet.GetDate(I));
+      stTime:
+        DefVarManager.SetAsDateTime(Temp, ResultSet.GetTime(I));
+      stTimestamp:
+        DefVarManager.SetAsDateTime(Temp, ResultSet.GetTimestamp(I));
+      end;
+    OutParamValues[ParamIndex] := Temp;
+    Inc(I);
+  end;
+  ResultSet.BeforeFirst;
+end;
+
+constructor TZMySQLSQLCallableStatement.Create(PlainDriver: IZMySQLPlainDriver;
+  Connection: IZConnection; const SQL: string; Info: TStrings;
+  Handle: PZMySQLConnect);
+begin
+  inherited Create(Connection, SQL, Info);
+  FHandle := Handle;
+  FPlainDriver := PlainDriver;
+  ResultSetType := rtScrollInsensitive;
+
+  FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
+end;
+
+{**
+  Executes an SQL statement that returns a single <code>ResultSet</code> object.
+  @param sql typically this is a static SQL <code>SELECT</code> statement
+  @return a <code>ResultSet</code> object that contains the data produced by the
+    given query; never <code>null</code>
+}
+function TZMySQLSQLCallableStatement.ExecuteQuery(const SQL: string): IZResultSet;
+begin
+  Result := nil;
+  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, Self.GetConnection.GetEncoding, LogSQL) = 0 then
+  begin
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+    if not FPlainDriver.ResultSetExists(FHandle) then
+      raise EZSQLException.Create(SCanNotOpenResultSet);
+    Result := CreateResultSet(LogSQL);
+  end
+  else
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
+end;
+
+{**
+  Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
+  <code>DELETE</code> statement. In addition,
+  SQL statements that return nothing, such as SQL DDL statements,
+  can be executed.
+
+  @param sql an SQL <code>INSERT</code>, <code>UPDATE</code> or
+    <code>DELETE</code> statement or an SQL statement that returns nothing
+  @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
+    or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
+}
+function TZMySQLSQLCallableStatement.ExecuteUpdate(const SQL: string): Integer;
+var
+  QueryHandle: PZMySQLResult;
+  HasResultset : Boolean;
+begin
+  Result := -1;
+  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, GetConnection.GetEncoding, LogSQL) = 0 then
+  begin
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+    HasResultSet := FPlainDriver.ResultSetExists(FHandle);
+    { Process queries with result sets }
+    if HasResultSet then
+    begin
+      QueryHandle := FPlainDriver.StoreResult(FHandle);
+      if QueryHandle <> nil then
+      begin
+        Result := FPlainDriver.GetRowCount(QueryHandle);
+        FPlainDriver.FreeResult(QueryHandle);
+      end
+      else
+        Result := FPlainDriver.GetAffectedRows(FHandle);
+    end
+    { Process regular query }
+    else
+      Result := FPlainDriver.GetAffectedRows(FHandle);
+  end
+  else
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
+  LastUpdateCount := Result;
+end;
+
+{**
+  Executes an SQL statement that may return multiple results.
+  Under some (uncommon) situations a single SQL statement may return
+  multiple result sets and/or update counts.  Normally you can ignore
+  this unless you are (1) executing a stored procedure that you know may
+  return multiple results or (2) you are dynamically executing an
+  unknown SQL string.  The  methods <code>execute</code>,
+  <code>getMoreResults</code>, <code>getResultSet</code>,
+  and <code>getUpdateCount</code> let you navigate through multiple results.
+
+  The <code>execute</code> method executes an SQL statement and indicates the
+  form of the first result.  You can then use the methods
+  <code>getResultSet</code> or <code>getUpdateCount</code>
+  to retrieve the result, and <code>getMoreResults</code> to
+  move to any subsequent result(s).
+
+  @param sql any SQL statement
+  @return <code>true</code> if the next result is a <code>ResultSet</code> object;
+  <code>false</code> if it is an update count or there are no more results
+}
+function TZMySQLSQLCallableStatement.Execute(const SQL: string): Boolean;
+var
+  HasResultset : Boolean;
+begin
+  Result := False;
+  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, GetConnection.GetEncoding, LogSQL) = 0 then
+  begin
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+    HasResultSet := FPlainDriver.ResultSetExists(FHandle);
+    { Process queries with result sets }
+    if HasResultSet then
+    begin
+      Result := True;
+      LastResultSet := CreateResultSet(SQL);
+    end
+    { Processes regular query. }
+    else
+    begin
+      Result := False;
+      LastUpdateCount := FPlainDriver.GetAffectedRows(FHandle);
+    end;
+  end
+  else
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
+end;
+
+{**
+  Executes the SQL query in this <code>PreparedStatement</code> object
+  and returns the result set generated by the query.
+
+  @return a <code>ResultSet</code> object that contains the data produced by the
+    query; never <code>null</code>
+}
+function TZMySQLSQLCallableStatement.ExecuteQueryPrepared: IZResultSet;
+Var SQL: String;
+begin
+  TrimInParameters;
+  SQL := GetCallSQL;
+  SQL := FillParams(SQL);
+  Self.ExecuteUpdate(SQL);
+  SQL := GetOutParamSQL;
+  Result := Self.ExecuteQuery(SQL);
+  FetchOutParams(Result);
+end;
+
+{**
+  Executes the SQL INSERT, UPDATE or DELETE statement
+  in this <code>PreparedStatement</code> object.
+  In addition,
+  SQL statements that return nothing, such as SQL DDL statements,
+  can be executed.
+
+  @return either the row count for INSERT, UPDATE or DELETE statements;
+  or 0 for SQL statements that return nothing
+}
+function TZMySQLSQLCallableStatement.ExecuteUpdatePrepared: Integer;
+Var
+  SQL: String;
+begin
+  TrimInParameters;
+  SQL := GetCallSQL;
+  SQL := FillParams(SQL);
+  Result := Self.ExecuteUpdate(SQL);
+  SQL := GetOutParamSQL;
+  FetchOutParams(ExecuteQuery(SQL));
+end;
+
+{**
+  Checks is use result should be used in result sets.
+  @return <code>True</code> use result in result sets,
+    <code>False</code> store result in result sets.
+}
+function TZMySQLSQLCallableStatement.IsUseResult: Boolean;
+begin
+  Result := FUseResult;
+end;
+
+{**
+  Checks if this is a prepared mysql statement.
+  @return <code>False</code> This is not a prepared mysql statement.
+}
+function TZMySQLSQLCallableStatement.IsPreparedStatement: Boolean;
+begin
+  Result := False;
+end;
+
 { TZMySQLBindBuffer }
 
 constructor TZMySQLBindBuffer.Create(PlainDriver: IZMysqlPlainDriver; NumColumns: Integer; var ColumnArray:TZMysqlColumnBuffer);
@@ -1011,5 +1506,6 @@ function TZMySQLBindBuffer.GetBufferType(ColumnIndex: Integer): TMysqlFieldTypes
 begin
   result := PTMysqlFieldTypes(@FbindArray[NativeUInt((ColumnIndex-1)*FBindOffsets.size)+FBindOffsets.buffer_type])^;
 end;
+
 
 end.
