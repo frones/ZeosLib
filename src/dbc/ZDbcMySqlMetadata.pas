@@ -2374,9 +2374,27 @@ function TZMySQLDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: stri
   const ColumnNamePattern: string): IZResultSet;
 var
   LCatalog, SQL, TypeName, TypeInfoSecond: string;
-  ParamList, Params: TStrings;
-  I, N, ColumnSize, Precision: Integer;
+  ParamList, Params, Names: TStrings;
+  I, ColumnSize, Precision: Integer;
   FieldType: TZSQLType;
+
+  function GetNextName(const AName: String): String;
+  var N: Integer;
+  begin
+    if Names.IndexOf(AName) = -1 then
+    begin
+      Names.Add(AName);
+      Result := AName;
+    end
+    else
+      for N := 1 to MaxInt do
+        if Names.IndexOf(AName+IntToStr(N)) = -1 then
+        begin
+          Names.Add(AName);
+          Result := AName;
+          Break;
+        end;
+  end;
 begin
   if Catalog = '' then
   begin
@@ -2410,77 +2428,67 @@ begin
       begin
         ParamList := TStringList.Create;
         Params := TStringList.Create;
+        Names := TStringList.Create;
         while Next do
         begin
-          PutSplitString(ParamList, Trim(GetString(4)), LineEnding);
-          N := 0;
+          PutSplitString(ParamList, Trim(GetString(4)), ',');
           for i := 0 to ParamList.Count -1 do
           begin
             ParamList[i] := Trim(ParamList[i]);
             if ParamList[i] = '' then
-              Continue
-            else
-              if EndsWith(ParamList[i], ',') then
-              begin
-                ParamList[i] := Copy(ParamList[i], 1, Length(ParamList[i])-1);
-                Trim(ParamList[i]);
-              end;
-
-            if not (ParamList[i] = '') then
+              Continue;
+            PutSplitString(Params, ParamList[i], ' ');
+            if Params.Count = 2 then {no name available}
+              Params.Insert(1,'');
+            Result.MoveToInsertRow;
+            Result.UpdateString(1, GetString(1)); //PROCEDURE_CAT
+            Result.UpdateString(2, GetString(2)); //PROCEDURE_SCHEM
+            Result.UpdateString(3, GetString(3)); //PROCEDURE_NAME
+            ConvertMySQLColumnInfoFromString(Params[2],
+              GetConnection.GetEncoding, GetConnection.UTF8StringAsWideField,
+              TypeName, TypeInfoSecond, FieldType, ColumnSize, Precision);
+            { process COLUMN_NAME }
+            if Params[1] = '' then
             begin
-              PutSplitString(Params, ParamList[i], ' ');
-              if Params.Count = 2 then {no name available}
-                Params.Insert(1,'');
-              Result.MoveToInsertRow;
-              Result.UpdateString(1, GetString(1)); //PROCEDURE_CAT
-              Result.UpdateString(2, GetString(2)); //PROCEDURE_SCHEM
-              Result.UpdateString(3, GetString(3)); //PROCEDURE_NAME
-              ConvertMySQLColumnInfoFromString(Params[2],
-                GetConnection.GetEncoding, GetConnection.UTF8StringAsWideField,
-                TypeName, TypeInfoSecond, FieldType, ColumnSize, Precision);
-              { process COLUMN_NAME }
-              if Params[1] = '' then
-              begin
-                Inc(N);
-                Result.UpdateString(4, '$'+IntToStr(N));
-              end
+              Result.UpdateString(4, GetNextName('$'));
+            end
+            else
+              if GetIdentifierConvertor.IsQuoted(Params[1]) then
+                Result.UpdateString(4, GetNextName(Copy(Params[1], 2, Length(Params[1])-2)))
               else
-                if GetIdentifierConvertor.IsQuoted(Params[1]) then
-                  Result.UpdateString(4, Copy(Params[1], 2, Length(Params[1])-2))
-                else
-                  Result.UpdateString(4, Params[1]);
-              { COLUMN_TYPE }
-              if UpperCase(Params[0]) = 'OUT' then
-                Result.UpdateInt(5, Ord(pctOut))
+                Result.UpdateString(4, GetNextName(Params[1]));
+            { COLUMN_TYPE }
+            if UpperCase(Params[0]) = 'OUT' then
+              Result.UpdateInt(5, Ord(pctOut))
+            else
+              if UpperCase(Params[0]) = 'INOUT' then
+                Result.UpdateInt(5, Ord(pctInOut))
               else
-                if UpperCase(Params[0]) = 'INOUT' then
-                  Result.UpdateInt(5, Ord(pctInOut))
+                if UpperCase(Params[0]) = 'IN' then
+                  Result.UpdateInt(5, Ord(pctIn))
                 else
-                  if UpperCase(Params[0]) = 'IN' then
-                    Result.UpdateInt(5, Ord(pctIn))
-                  else
-                    Result.UpdateInt(5, Ord(pctUnknown));
+                  Result.UpdateInt(5, Ord(pctUnknown));
 
-              { DATA_TYPE }
-              Result.UpdateInt(6, Ord(FieldType));
-              { TYPE_NAME }
-              Result.UpdateString(7, TypeName);
-              { PRECISION }
-              Result.UpdateInt(8, ColumnSize);
-              { LENGTH }
-              Result.UpdateInt(9, Precision);
+            { DATA_TYPE }
+            Result.UpdateInt(6, Ord(FieldType));
+            { TYPE_NAME }
+            Result.UpdateString(7, TypeName);
+            { PRECISION }
+            Result.UpdateInt(8, ColumnSize);
+            { LENGTH }
+            Result.UpdateInt(9, Precision);
 
-              Result.UpdateNull(10);
-              Result.UpdateNull(11);
-              Result.UpdateInt(12, Ord(ntNullableUnknown));
-              Result.UpdateNull(13);
-              Result.InsertRow;
-            end;
+            Result.UpdateNull(10);
+            Result.UpdateNull(11);
+            Result.UpdateInt(12, Ord(ntNullableUnknown));
+            Result.UpdateNull(13);
+            Result.InsertRow;
           end;
         end;
         Close;
       end;
     finally
+      FreeAndNil(Names);
       FreeAndNil(Params);
       FreeAndNil(ParamList);
     end;
