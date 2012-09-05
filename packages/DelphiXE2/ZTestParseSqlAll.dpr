@@ -66,14 +66,7 @@ uses
 {$ENDIF}
   ZTestConfig,
   ZSqlTestCase,
-  ZTestSqlAnalyser in '..\..\test\parsesql\ZTestSqlAnalyser.pas',
-  ZTestSybaseToken in '..\..\test\parsesql\ZTestSybaseToken.pas',
-  ZTestMySqlToken in '..\..\test\parsesql\ZTestMySqlToken.pas',
-  ZTestPostgreSqlToken in '..\..\test\parsesql\ZTestPostgreSqlToken.pas',
-  ZTestScriptParser in '..\..\test\parsesql\ZTestScriptParser.pas',
-  ZTestInterbaseToken in '..\..\test\parsesql\ZTestInterbaseToken.pas',
-  ZTestOracleToken in '..\..\test\parsesql\ZTestOracleToken.pas',
-  ZTestSqLiteToken in '..\..\test\parsesql\ZTestSqLiteToken.pas';
+  ZTestParseSql in '..\..\test\parsesql\ZTestParseSql.pas';
 
 begin
   TestGroup := PARSESQL_TEST_GROUP;

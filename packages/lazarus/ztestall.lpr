@@ -9,31 +9,16 @@ uses
   ZTestConfig,
   ZSqlTestCase,
   //core
-  ZTestSysUtils, ZTestVariant, ZTestTokenizer,
-  ZTestList, ZTestFramework, ZTestExprToken, ZTestExpression, ZTestURL,
+  ZTestCore,
   //parsesql
-  ZTestSybaseToken, ZTestSqLiteToken,
-  ZTestSqlAnalyser, ZTestScriptParser, ZTestPostgreSqlToken, ZTestOracleToken,
-  ZTestMySqlToken, ZTestInterbaseToken,
+  ZTestParseSql,
   //dbc
-  ZTestDbcResultSet, ZTestDbcUtils, ZTestDbcCache,
-  ZTestDbcCachedResultSet, ZTestDbcMetadata,ZTestDbcResultSetMetadata, ZTestDbcResolver,
-  ZTestDbcSqLite, ZTestDbcPostgreSqlMetadata,  ZTestDbcPostgreSql, ZTestDbcOracle,
-  ZTestDbcMySqlMetadata, ZTestDbcMySql, ZTestDbcMsSql, ZTestDbcInterbaseMetadata,
-  ZTestDbcInterbase, ZTestDbcASA, ZTestDbcASAMetadata,
+  ZTestDbc,
   //component
-  ZTestSqlTypes, ZTestSqlStrings, ZTestSqlProcessor,
-  ZTestSqlMetadata, ZTestSorting, ZTestMasterDetail, ZTestExecuteSql,
-  ZTestDataSetGeneric, ZTestData, ZTestConnection,
+  ZTestComponents,
   //bugreport
-  {ludob empty test ZTestBugDbcCore,}
-  ZTestBugDbcMySql, ZTestBugCompMySql,
-  ZTestBugDbcOracle, ZTestBugCompOracle,
-  ZTestBugDbcPostgreSql, ZTestBugCompPostgreSql,
-  ZTestBugDbcInterbase, ZTestBugCompInterbase,
-  {ludob empty test ZTestBugDbcDbLib,} {ludob empty test ZTestBugCompDbLib, }
-  ZTestBugCompMSSql
-;
+  ZTestBugReports
+  ;
 
 type
 

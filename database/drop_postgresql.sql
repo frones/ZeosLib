@@ -22,6 +22,7 @@ drop table high_load;
 
 drop function procedure1(INT4);
 drop function procedure2();
+DROP FUNCTION IF EXISTS abtest(integer, integer, character varying);
 /*
 drop SEQUENCE cargo_c_id_seq;
 drop SEQUENCE default_values_d_id_seq;

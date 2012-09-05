@@ -117,12 +117,14 @@ const
   TokenTypes2: array[0..2] of TZTokenType = (
     ttWord, ttWhiteSpace, ttQuoted);
   TokenValues2: array[0..2] of string = (
-    'select', ' ', '''ab\''''cd\''''ef''');
+    'select', ' ', '''ab\''cd\''ef''');
 begin
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString1,
     [toSkipEOF, toSkipWhitespaces]), TokenTypes1, TokenValues1);
-  CheckTokens(Tokenizer.TokenizeBuffer(TokenString2+QuotedStr(Tokenstring3),
+  CheckTokens(Tokenizer.TokenizeBuffer(TokenString2+#39+Tokenstring3+#39,
     [toSkipEOF]), TokenTypes2, TokenValues2);
+  //CheckTokens(Tokenizer.TokenizeBuffer(TokenString2+QuotedStr(Tokenstring3),
+    //[toSkipEOF]), TokenTypes2, TokenValues2);
 end;
 
 {**

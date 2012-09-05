@@ -1501,16 +1501,32 @@ function TZPostgreSQLDatabaseMetadata.UncachedGetProcedureColumns(const Catalog:
 var
   I, ReturnType, ColumnTypeOid, ArgOid: Integer;
   SQL, ReturnTypeType: string;
-  ArgTypes: TStrings;
+  ArgTypes, ArgNames, ArgModes: TStrings;
+  Ver73Up, Ver80Up: Boolean;
   ResultSet,
   ColumnsRS: IZResultSet;
 begin
     Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
-    if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+    Ver80Up := (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(8, 0);
+    Ver73Up := Ver80Up or (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3);
+    if Ver80Up then
     begin
       SQL := 'SELECT n.nspname,p.proname,p.prorettype,p.proargtypes,t.typtype,'
-        + 't.typrelid FROM pg_catalog.pg_proc p, pg_catalog.pg_namespace n,'
+        + 'p.proallargtypes,p.proargnames,p.proargmodes,t.typrelid '
+        + 'FROM pg_catalog.pg_proc p, pg_catalog.pg_namespace n, pg_catalog.pg_type t '
+        + 'WHERE p.pronamespace=n.oid AND p.prorettype=t.oid';
+      if SchemaPattern <> '' then
+        SQL := SQL + ' AND n.nspname LIKE ' + EscapeString(SchemaPattern);
+      SQL := SQL + ' AND p.proname LIKE ' + EscapeString(ToLikeString(ProcedureNamePattern))
+        + ' ORDER BY n.nspname, p.proname';
+    end
+    else
+    if Ver73Up then
+    begin
+      SQL := 'SELECT n.nspname,p.proname,p.prorettype,p.proargtypes,t.typtype,'
+        + 'NULL AS proallargtypes,NULL AS proargnames,NULL AS proargnames,t.typrelid '
+        + 'FROM pg_catalog.pg_proc p, pg_catalog.pg_namespace n,'
         + ' pg_catalog.pg_type t WHERE p.pronamespace=n.oid AND p.prorettype=t.oid';
       if SchemaPattern <> '' then
         SQL := SQL + ' AND n.nspname LIKE ' + EscapeString(SchemaPattern);
@@ -1519,13 +1535,16 @@ begin
     end
     else
       SQL := 'SELECT NULL AS nspname,p.proname,p.prorettype,p.proargtypes,'
-        + 't.typtype,t.typrelid FROM pg_proc p, pg_type t'
+        + ' NULL AS proallargtypes,NULL AS proargnames,NULL AS proargnames,t.typtype,t.typrelid'
+        + ' FROM pg_proc p, pg_type t'
         + ' WHERE p.prorettype=t.oid'
         + ' AND p.proname LIKE '
         +   EscapeString(ToLikeString(ProcedureNamePattern))
         + ' ORDER BY p.proname';
 
     ArgTypes := TStringList.Create;
+    ArgNames := TStringList.Create;
+    ArgModes := TStringList.Create;
     try
       ResultSet:=GetConnection.CreateStatement.ExecuteQuery(SQL); //FirmOS Patch
       with ResultSet do
@@ -1534,7 +1553,13 @@ begin
         begin
           ReturnType := StrToInt(GetStringByName('prorettype'));
           ReturnTypeType := GetStringByName('typtype');
-          PutSplitString(ArgTypes, GetStringByName('proargtypes'), #10#13#9' ');
+
+          if (IsNullByName('proallargtypes')) then
+            PutSplitString(ArgTypes, GetStringByName('proargtypes'), #10#13#9' ')
+          else
+            ParseACLArray(ArgTypes, GetStringByName('proallargtypes'));
+          ParseACLArray(ArgNames, GetStringByName('proargnames'));
+          ParseACLArray(ArgModes, GetStringByName('proargmodes'));
 
           if ReturnTypeType <> 'c' then
           begin
@@ -1557,12 +1582,19 @@ begin
 
           for I := 0 to ArgTypes.Count-1 do
           begin
+            if ArgModes.Count > I then
+              if not CharInSet(ArgModes[I][1], ['i', 'b', 'v']) then
+                 Continue;
+
             ArgOid := StrToInt(ArgTypes.Strings[i]);
             Result.MoveToInsertRow;
             Result.UpdateNull(1);
             Result.UpdateString(2, GetStringByName('nspname'));
             Result.UpdateString(3, GetStringByName('proname'));
-            Result.UpdateString(4, '$' + IntToStr(I));
+            if ArgNames.Count > I then
+              Result.UpdateString(4, ArgNames.Strings[I])
+            else
+              Result.UpdateString(4, '$' + IntToStr(I));
             Result.UpdateInt(5, Ord(pctIn));
             Result.UpdateInt(6, Ord(GetSQLTypeByOid(ArgOid)));
             Result.UpdateString(7, GetPostgreSQLType(ArgOid));
@@ -1608,6 +1640,8 @@ begin
       end;
     finally
       ArgTypes.Free;
+      ArgNames.Free;
+      ArgModes.Free;
     end;
 end;
 

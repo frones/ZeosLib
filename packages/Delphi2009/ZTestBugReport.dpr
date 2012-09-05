@@ -63,23 +63,7 @@ uses
   GUITestRunner,
   ZTestConfig,
   ZSqlTestCase,
-  ZTestBugDbcCore in '..\..\test\bugreport\ZTestBugDbcCore.pas',
-//  ZTestBugDbcMySql in '..\..\test\bugreport\ZTestBugDbcMySql.pas',
-  ZTestBugDbcPostgreSql in '..\..\test\bugreport\ZTestBugDbcPostgreSql.pas',
-//  ZTestBugDbcASA in '..\..\test\bugreport\ZTestBugDbcASA.pas',
-  ZTestBugDbcDbLib in '..\..\test\bugreport\ZTestBugDbcDbLib.pas',
-  ZTestBugCompCore in '..\..\test\bugreport\ZTestBugCompCore.pas',
-//  ZTestBugCompMySql in '..\..\test\bugreport\ZTestBugCompMySql.pas',
-//  ZTestBugCompMSSql in '..\..\test\bugreport\ZTestBugCompMSSql.pas',
-{$IFDEF ENABLE_ORACLE}
-  ZTestBugDbcOracle in '..\..\test\bugreport\ZTestBugDbcOracle.pas',
-  ZTestBugCompOracle in '..\..\test\bugreport\ZTestBugCompOracle.pas',
-{$ENDIF}
-  ZTestBugCompPostgreSql in '..\..\test\bugreport\ZTestBugCompPostgreSql.pas';
-//  ZTestBugCompASA in '..\..\test\bugreport\ZTestBugCompASA.pas',
-//  ZTestBugCompDbLib in '..\..\test\bugreport\ZTestBugCompDbLib.pas',
-//  ZTestBugDbcInterbase in '..\..\test\bugreport\ZTestBugDbcInterbase.pas',
-//  ZTestCBugompInterbase in '..\..\test\bugreport\ZTestCBugompInterbase.pas';
+  ZTestBugReports in '..\..\test\bugreport\ZTestBugReports.pas';
 
 begin
   TestGroup := BUGREPORT_TEST_GROUP;

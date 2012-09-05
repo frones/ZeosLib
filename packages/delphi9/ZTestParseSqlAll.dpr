@@ -66,26 +66,7 @@ uses
 {$ENDIF}
   ZTestConfig,
   ZSqlTestCase,
-{$IFDEF ENABLE_DBLIB}
-  ZTestSybaseToken in '..\..\test\parsesql\ZTestSybaseToken.pas',
-{$ENDIF}
-{$IFDEF ENABLE_MYSQL}
-  ZTestMySqlToken in '..\..\test\parsesql\ZTestMySqlToken.pas',
-{$ENDIF}
-{$IFDEF ENABLE_POSTGRESQL}
-  ZTestPostgreSqlToken in '..\..\test\parsesql\ZTestPostgreSqlToken.pas',
-{$ENDIF}
-{$IFDEF ENABLE_INTERBASE}
-  ZTestInterbaseToken in '..\..\test\parsesql\ZTestInterbaseToken.pas',
-{$ENDIF}
-{$IFDEF ENABLE_ORACLE}
-  ZTestOracleToken in '..\..\test\parsesql\ZTestOracleToken.pas',
-{$ENDIF}
-{$IFDEF ENABLE_SQLITE}
-  ZTestSqLiteToken in '..\..\test\parsesql\ZTestSqLiteToken.pas',
-{$ENDIF}
-  ZTestScriptParser in '..\..\test\parsesql\ZTestScriptParser.pas',
-  ZTestSqlAnalyser in '..\..\test\parsesql\ZTestSqlAnalyser.pas';
+  ZTestParseSql in '..\..\test\parsesql\ZTestParseSql.pas';
 
 begin
   TestGroup := PARSESQL_TEST_GROUP;

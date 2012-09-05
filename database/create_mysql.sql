@@ -191,6 +191,27 @@ create table high_load
 create index cargo_FK on cargo (c_dep_id);
 
 /*==============================================================*/
+/* Stored Procedure: ABTEST                                     */
+/*==============================================================*/
+/*delimiter //
+CREATE PROCEDURE `ABTEST`(
+        IN `p1` INTEGER,
+        IN `p2` INTEGER,
+        IN `p3` VARCHAR(10),
+        OUT `p4` INTEGER,
+        OUT `p5` VARCHAR(20)
+    )
+    DETERMINISTIC
+    NO SQL
+    SQL SECURITY DEFINER
+    COMMENT ''
+BEGIN
+  set `p4` = `p1` * 10 + `p2`;
+  set `p5` = concat(`p3`, `p3`);
+END; //
+delimiter ; */
+
+/*==============================================================*/
 /* Grant privileges to columns                                  */
 /*==============================================================*/
 

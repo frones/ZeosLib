@@ -2,6 +2,7 @@
 /* Database name:  zeoslib.gdb                                  */
 /* DBMS name:      Interbase 6                                  */
 /*==============================================================*/
+drop procedure ABTEST;
 drop procedure procedure2;
 drop procedure procedure1;
 drop view dep_view;

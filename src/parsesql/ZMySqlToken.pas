@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2006 Zeos Development Group       }
+{    Copyright (c) 1999-2012 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -241,7 +241,7 @@ function TZMySQLQuoteState.NextToken(Stream: TStream; FirstChar: Char;
 const BackSlash = Char('\');
 var
   ReadChar: Char;
-  LastChar, TempLastChar: Char;
+  LastChar: Char;
   QuoteChar: Char;
   QuoteCount: Integer;
 begin
@@ -255,47 +255,24 @@ begin
   QuoteChar := FirstChar;
 
   LastChar := #0;
-  TempLastChar := #0;
 
   while Stream.Read(ReadChar, SizeOf(Char)) > 0 do
   begin
-    if ReadChar = QuoteChar then
-    begin
-      Inc(QuoteCount);
-      if (TempLastChar = BackSlash) and (ReadChar = QuoteChar ) then
-      begin
-        if Stream.Read(TempLastChar, SizeOf(Char)) > 0 then
-        begin
-          if not ( TempLastChar = QuoteChar ) then
-          begin
-            Inc(QuoteCount);
-            Result.TokenType := ttEscapedQuoted;
-          end;
-          Stream.Seek(-SizeOf(Char), soFromCurrent)
-        end
-        else
-        begin
-          Inc(QuoteCount);
-        end;
-      end;
-    end else
-      if (ReadChar = BackSlash) and (TempLastChar  = BackSlash) then
-        Result.TokenType := ttEscapedQuoted
-      else
-        if ReadChar = BackSlash then
-          TempLastChar := ReadChar
-        else
-          TempLastChar := #0;
-
+    if ReadChar = QuoteChar then Inc(QuoteCount);
     if (LastChar = FirstChar) and (ReadChar <> FirstChar) then
-      if QuoteCount mod 2 = 0 then
+    begin
+      //if QuoteCount mod 2 = 0 then // only valid for Pascal AnsiQuoted/QuotedStr
       begin
         Stream.Seek(-SizeOf(Char), soFromCurrent);
         Break;
       end;
+    end;
     Result.Value := Result.Value + ReadChar;
     if LastChar = BackSlash then
+//    begin
+//      if Readchar = FirstChar then Inc(QuoteCount);  //Escaped single Quote (A QuoteChar instead of FirstChar would be better..)
       LastChar := #0
+//    end
     else if (LastChar = FirstChar) and (ReadChar = FirstChar) then
       LastChar := #0
     else LastChar := ReadChar;

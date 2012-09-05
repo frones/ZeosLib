@@ -61,35 +61,52 @@ uses
   ZConnection, ZDataset, ZTestDefinitions, ZStoredProcedure;
 
 type
-
-  {** Implements a test case for class TZReadOnlyQuery. }
-  TZTestInterbaseStoredProcedure = class(TZComponentSpecificSQLTestCase)
+  {** Implements a generic test case for class TZStoredProc. }
+  TZTestStoredProcedure = class(TZComponentPortableSQLTestCase)
   private
     Connection: TZConnection;
     StoredProc: TZStoredProc;
   protected
     procedure SetUp; override;
     procedure TearDown; override;
-    function GetSupportedProtocols: string; override;
     function GetConnectionUrl: string;
+  end;
 
+  {** Implements a protocol specific test case for class TZStoredProc. }
+  TZTestStoredProcedureSpecific = class(TZComponentSpecificSQLTestCase)
+  private
+    Connection: TZConnection;
+    StoredProc: TZStoredProc;
+  protected
+    procedure SetUp; override;
+    procedure TearDown; override;
+    function GetConnectionUrl: string;
+  end;
+
+  {** Implements a test case for class TZStoredProc. }
+  TZTestInterbaseStoredProcedure = class(TZTestStoredProcedureSpecific)
+  protected
+    function GetSupportedProtocols: string; override;
+  published
+    procedure TestStoredProc;
+    procedure Test_abtest;
+  end;
+
+
+  {** Implements a test case for class TZStoredProc. }
+  TZTestDbLibStoredProcedure = class(TZTestStoredProcedureSpecific)
+  protected
+    function GetSupportedProtocols: string; override;
   published
     procedure TestStoredProc;
   end;
 
-    {** Implements a test case for class TZReadOnlyQuery. }
-  TZTestDbLibStoredProcedure = class(TZComponentSpecificSQLTestCase)
-  private
-    Connection: TZConnection;
-    StoredProc: TZStoredProc;
+  {** Impleme nts a test case for class TZStoredProc. }
+  TZTestPostgreSQLStoredProcedure = class(TZTestStoredProcedureSpecific)
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-    function GetConnectionUrl: string;
-
   published
-    procedure TestStoredProc;
+    procedure Test_abtest;
   end;
 
 implementation
@@ -97,43 +114,13 @@ implementation
 uses Classes, ZSysUtils, ZDbcUtils, ZTestConsts, ZDbcIntfs, ZAbstractDataset,
   ZTestCase;
 
+
 { TZTestStoredProcedure }
-
-{**
-  Gets an array of protocols valid for this test.
-  @return an array of valid protocols
-}
-function TZTestInterbaseStoredProcedure.GetSupportedProtocols: string;
-begin
-  Result := 'interbase,interbase-6.5,interbase-7.2,firebird-1.0,firebird-1.5,firebird-2.0,firebird-2.1,firebirdd-1.5,firebirdd-2.0,firebirdd-2.1';
-end;
-
-{**
-  Gets a connection URL string.
-  @return a built connection URL string.
-}
-function TZTestInterbaseStoredProcedure.GetConnectionUrl: string;
-var
-  TempProperties :TStrings;
-  I: Integer;
-begin
-  TempProperties := TStringList.Create;
-  for I := 0 to High(Properties) do
-  begin
-    TempProperties.Add(Properties[I])
-  end;
-  Result := DriverManager.ConstructURL(Protocol, HostName, Database,
-  UserName, Password, Port, TempProperties);
-{  if Port <> 0 then
-    Result := Format('zdbc:%s://%s:%d/%s', [Protocol, HostName, Port, Database])
-  else Result := Format('zdbc:%s://%s/%s', [Protocol, HostName, Database]);}
-  TempProperties.Free;
-end;
 
 {**
   Prepares initial data before each test.
 }
-procedure TZTestInterbaseStoredProcedure.SetUp;
+procedure TZTestStoredProcedure.SetUp;
 begin
   Connection := CreateDatasetConnection;
   Connection.Connect;
@@ -145,7 +132,7 @@ end;
 {**
   Removes data after each test.
 }
-procedure TZTestInterbaseStoredProcedure.TearDown;
+procedure TZTestStoredProcedure.TearDown;
 begin
   StoredProc.Close;
   StoredProc.Free;
@@ -153,6 +140,82 @@ begin
   Connection.Free;
 end;
 
+{**
+  Gets a connection URL string.
+  @return a built connection URL string.
+}
+function TZTestStoredProcedure.GetConnectionUrl: string;
+var
+  TempProperties :TStrings;
+  I: Integer;
+begin
+  TempProperties := TStringList.Create;
+  for I := 0 to High(Properties) do
+  begin
+    TempProperties.Add(Properties[I])
+  end;
+  Result := DriverManager.ConstructURL(Protocol, HostName, Database,
+  UserName, Password, Port, TempProperties);
+end;
+
+{ TZTestStoredProcedureSpecific }
+
+{**
+  Prepares initial data before each test.
+}
+procedure TZTestStoredProcedureSpecific.SetUp;
+begin
+  Connection := CreateDatasetConnection;
+  Connection.Connect;
+  StoredProc := TZStoredProc.Create(nil);
+  StoredProc.Connection := Connection;
+  StoredProc.ParamCheck := True;
+end;
+
+{**
+  Removes data after each test.
+}
+procedure TZTestStoredProcedureSpecific.TearDown;
+begin
+  StoredProc.Close;
+  StoredProc.Free;
+  Connection.Disconnect;
+  Connection.Free;
+end;
+
+{**
+  Gets a connection URL string.
+  @return a built connection URL string.
+}
+function TZTestStoredProcedureSpecific.GetConnectionUrl: string;
+var
+  TempProperties :TStrings;
+  I: Integer;
+begin
+  TempProperties := TStringList.Create;
+  for I := 0 to High(Properties) do
+  begin
+    TempProperties.Add(Properties[I])
+  end;
+  Result := DriverManager.ConstructURL(Protocol, HostName, Database,
+  UserName, Password, Port, TempProperties);
+end;
+
+{**
+  Gets an array of protocols valid for this test.
+  @return an array of valid protocols
+}
+function TZTestInterbaseStoredProcedure.GetSupportedProtocols: string;
+begin
+  Result := 'interbase,interbase-6.5,interbase-7.2,firebird-1.0,firebird-1.5,'+
+    'firebird-2.0,firebird-2.1,firebird-2.5,firebirdd-1.5,firebirdd-2.0,'+
+    'firebirdd-2.1,firebirdd-2.5';
+end;
+
+{**
+  Gets a connection URL string.
+  @return a built connection URL string.
+}
 {**
    Testing executil stored procedures
 }
@@ -171,29 +234,54 @@ begin
   CheckEquals(2, StoredProc.Params.Count);
 end;
 
-{ TZTestDbLibStoredProcedure }
-
 {**
-  Gets a connection URL string.
-  @return a built connection URL string.
+   Testing executil stored procedures
 }
-function TZTestDbLibStoredProcedure.GetConnectionUrl: string;
+procedure TZTestInterbaseStoredProcedure.Test_abtest;
 var
-  TempProperties :TStrings;
-  I: Integer;
+  i: integer;
+  S: String;
 begin
-  TempProperties := TStringList.Create;
-  for I := 0 to High(Properties) do
+  StoredProc.StoredProcName := 'ABTEST';
+  CheckEquals(5, StoredProc.Params.Count);
+  CheckEquals('P4', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
+  CheckEquals('P5', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[1].ParamType));
+  CheckEquals('P1', StoredProc.Params[2].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
+  CheckEquals('P2', StoredProc.Params[3].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[3].ParamType));
+  CheckEquals('P3', StoredProc.Params[4].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[4].ParamType));
+
+  StoredProc.ParamByName('P1').AsInteger := 50;
+  StoredProc.ParamByName('P2').AsInteger := 100;
+  StoredProc.ParamByName('P3').AsString := 'a';
+  StoredProc.ExecProc;
+  CheckEquals(600, StoredProc.ParamByName('P4').AsInteger);
+  CheckEquals('aa', StoredProc.ParamByName('P5').AsString);
+  CheckEquals(5, StoredProc.Params.Count);
+
+  StoredProc.Prepare;
+  for i:= 0 to 99 do
   begin
-    TempProperties.Add(Properties[I])
+    StoredProc.Params[2].AsInteger:= i;
+    StoredProc.Params[3].AsInteger:= 100;
+    StoredProc.Params[4].AsString:= 'a';
+    StoredProc.ExecProc;
   end;
-  Result := DriverManager.ConstructURL(Protocol, HostName, Database,
-  UserName, Password, Port, TempProperties);
-{  if Port <> 0 then
-    Result := Format('zdbc:%s://%s:%d/%s', [Protocol, HostName, Port, Database])
-  else Result := Format('zdbc:%s://%s/%s', [Protocol, HostName, Database]);}
-  TempProperties.Free;
+  StoredProc.Unprepare;
+  S := StoredProc.ParamByName('P4').AsString +
+    ' ' + StoredProc.ParamByName('P5').AsString;
+  StoredProc.Open;
+  StoredProc.ParamByName('P1').AsInteger := 50;
+  StoredProc.ParamByName('P2').AsInteger := 100;
+  StoredProc.ParamByName('P3').AsString := 'a';
+  StoredProc.Open;
 end;
+
+{ TZTestDbLibStoredProcedure }
 
 {**
   Gets an array of protocols valid for this test.
@@ -202,29 +290,6 @@ end;
 function TZTestDbLibStoredProcedure.GetSupportedProtocols: string;
 begin
   Result := 'sybase, mssql';
-end;
-
-{**
-  Prepares initial data before each test.
-}
-procedure TZTestDbLibStoredProcedure.SetUp;
-begin
-  Connection := CreateDatasetConnection;
-  Connection.Connect;
-  StoredProc := TZStoredProc.Create(nil);
-  StoredProc.Connection := Connection;
-  StoredProc.ParamCheck := True;
-end;
-
-{**
-  Removes data after each test.
-}
-procedure TZTestDbLibStoredProcedure.TearDown;
-begin
-  StoredProc.Close;
-  StoredProc.Free;
-  Connection.Disconnect;
-  Connection.Free;
 end;
 
 {**
@@ -247,7 +312,66 @@ begin
   CheckEquals(2, StoredProc.Params.Count);
 end;
 
+{ TZTestPosgreSQLStoredProcedure }
+
+{**
+  Prepares initial data before each test.
+}
+function TZTestPostgreSQLStoredProcedure.GetSupportedProtocols: string;
+begin
+  Result := 'postgresql,postgresql-7,postgresql-8,postgresql-9';
+end;
+
+{**
+   Testing executil stored procedures
+}
+procedure TZTestPostgreSQLStoredProcedure.Test_abtest;
+var
+  i: integer;
+  S: String;
+begin
+  StoredProc.StoredProcName := 'ABTEST';
+  CheckEquals(5, StoredProc.Params.Count);
+  CheckEquals('p4', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
+  CheckEquals('p5', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[1].ParamType));
+  CheckEquals('p1', StoredProc.Params[2].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
+  CheckEquals('p2', StoredProc.Params[3].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[3].ParamType));
+  CheckEquals('p3', StoredProc.Params[4].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[4].ParamType));
+
+  StoredProc.ParamByName('p1').AsInteger := 50;
+  StoredProc.ParamByName('p2').AsInteger := 100;
+  StoredProc.ParamByName('p3').AsString := 'a';
+  StoredProc.ExecProc;
+  CheckEquals(600, StoredProc.ParamByName('p4').AsInteger);
+  CheckEquals('aa', StoredProc.ParamByName('p5').AsString);
+  CheckEquals(5, StoredProc.Params.Count);
+
+  StoredProc.Prepare;
+  for i:= 0 to 99 do
+  begin
+    StoredProc.Params[2].AsInteger:= i;
+    StoredProc.Params[3].AsInteger:= 100;
+    StoredProc.Params[4].AsString:= 'a';
+    StoredProc.ExecProc;
+  end;
+  StoredProc.Unprepare;
+  S := StoredProc.ParamByName('p4').AsString +
+    ' ' + StoredProc.ParamByName('p5').AsString;
+  StoredProc.Open;
+  StoredProc.ParamByName('p1').AsInteger := 50;
+  StoredProc.ParamByName('p2').AsInteger := 100;
+  StoredProc.ParamByName('p3').AsString := 'a';
+  StoredProc.Open;
+end;
+
 initialization
   RegisterTest('component',TZTestInterbaseStoredProcedure.Suite);
   RegisterTest('component',TZTestDbLibStoredProcedure.Suite);
+  RegisterTest('component',TZTestPostgreSQLStoredProcedure.Suite);
+  RegisterTest('component',TZTestStoredProcedure.Suite);
 end.

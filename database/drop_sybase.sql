@@ -43,3 +43,6 @@ go
 drop table high_load
 go
 
+/*
+drop procedure abtest
+go */

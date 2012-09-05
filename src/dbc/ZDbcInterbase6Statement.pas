@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2006 Zeos Development Group       }
+{    Copyright (c) 1999-2012 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -119,15 +119,23 @@ type
   private
     FCachedBlob: boolean;
     FParamSQLData: IZParamsSQLDA;
+    FResultSQLData: IZResultSQLDA;
+    FStmtHandle: TISC_STMT_HANDLE;
+    FStatementType: TZIbSqlStatementType;
     FStatusVector: TARRAY_ISC_STATUS;
     FIBConnection: IZInterbase6Connection;
   protected
+    procedure SetProcSQL(const Value: String); override;
     procedure CheckInterbase6Error(const Sql: string = '');
     procedure FetchOutParams(Value: IZResultSQLDA);
     function GetProcedureSql(SelectProc: boolean): string;
-    procedure TrimInParameters;
+
+    procedure PrepareInParameters; override;
+    procedure UnPrepareInParameters; override;
   public
     constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
+    destructor Destroy; override;
+    procedure Unprepare; override;
 
     function ExecuteQuery(const SQL: string): IZResultSet; override;
     function ExecuteUpdate(const SQL: string): Integer; override;
@@ -201,7 +209,7 @@ begin
       , ClientCodePage, GetConnection.UTF8StringAsWideField);
     try
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-        GetDBHandle, GetTrHandle, GetDialect, ASQL, StmtHandle);
+        GetDBHandle, GetTrHandle, GetDialect, ASQL, SSQL, StmtHandle);
 //      if not(StatementType in [stSelect, stSelectForUpdate]) then
 //        raise EZSQLException.Create(SStatementIsNotAllowed);
 
@@ -270,7 +278,7 @@ begin
     try
       SSQL := SQL;
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-        GetDBHandle, GetTrHandle, GetDialect, ASQL, StmtHandle);
+        GetDBHandle, GetTrHandle, GetDialect, ASQL, SSQL, StmtHandle);
 
 //      if StatementType in [stExecProc, stSelect, stSelectForUpdate] then
 //        raise EZSQLException.Create(SStatementIsNotAllowed);
@@ -338,14 +346,14 @@ begin
       Result := False;
       SSQL := SQL; //Preprepares SQL
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-        GetDBHandle, GetTrHandle, GetDialect, GetPrepreparedSQL(SSQL), StmtHandle);
+        GetDBHandle, GetTrHandle, GetDialect, ASQL, SSQL, StmtHandle);
 
       { Check statement type }
 //      if not (StatementType in [stExecProc]) then
 //        raise EZSQLException.Create(SStatementIsNotAllowed);
 
       { Create Result SQLData if statement returns result }
-      if StatementType = stSelect then
+      if StatementType in [stSelect, stExecProc] then
       begin
         SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle,
           ClientCodePage, GetConnection.UTF8StringAsWideField);
@@ -531,7 +539,6 @@ procedure TZInterbase6PreparedStatement.UnPrepareInParameters;
 begin
   if assigned(FParamSQLData) then 
     FParamSQLData.FreeParamtersValues;
-  inherited UnPrepareInParameters;
 end;
 
 {**
@@ -577,7 +584,7 @@ begin
   with FIBConnection do
   begin
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-        GetDBHandle, GetTrHandle, GetDialect, GetPrepreparedSQL(SQL), StmtHandle);
+        GetDBHandle, GetTrHandle, GetDialect, GetPrepreparedSQL(SQL), SQL, StmtHandle);
     if StatementType in [stSelect, stExecProc] then
       begin
         SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle
@@ -639,23 +646,17 @@ begin
       BindInParameters;     
 
       if (StatementType = stSelect) then     //AVZ Get many rows - only need to use execute not execute2
-      begin
         GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle, @StmtHandle,
-          GetDialect, FParamSQLData.GetData);
-      end
-        else
+          GetDialect, FParamSQLData.GetData)
+      else
       begin
         CursorName := 'ExecProc'+RandomString(12); //AVZ - Need a way to return one row so we give the cursor a name
         if (SQLData = nil) then
-        begin
           GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
-            GetDialect, FParamSQLData.GetData, nil); //not expecting a result
-        end
-          else
-        begin
+            GetDialect, FParamSQLData.GetData, nil) //not expecting a result
+        else
           GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
             GetDialect, FParamSQLData.GetData, SQLData.GetData); //expecting a result
-        end;  
       end;
 
       CheckInterbase6Error(SQL);
@@ -762,29 +763,19 @@ begin
         end;
 
         if (iError <> DISCONNECT_ERROR) then
-        begin
           Result := GetCachedResultSet(SQL, Self, TZInterbase6ResultSet.Create(Self, SQL, StmtHandle, Cursor, SQLData, nil, FCachedBlob));
-        end;
       end
-        else
-      begin
+      else
         if (iError <> DISCONNECT_ERROR) then    //AVZ
-        begin
-          raise EZSQLException.Create(SCanNotRetrieveResultSetData);
-        end
-          else
-        begin
+          raise EZSQLException.Create(SCanNotRetrieveResultSetData)
+        else
           Result := nil;
-        end;
-      end;
     except
       on E: Exception do
       begin
         //The cursor will be already closed for exec2
         if (Pos('ExecProc', String(CursorName)) <> 0) then
-        begin
           StmtHandle := 0;
-        end;
 
         FreeStatement(GetPlainDriver, StmtHandle, DSQL_CLOSE); //AVZ
         raise;
@@ -867,6 +858,12 @@ end;
 
 { TZInterbase6CallableStatement }
 
+procedure TZInterbase6CallableStatement.SetProcSQL(const Value: String);
+begin
+  if Value <> ProcSQL then Unprepare;
+  inherited SetProcSQL(Value);
+  if (Value <> '') and ( not Prepared ) then Prepare;
+end;
 {**
    Check interbase error status
    @param Sql the used sql tring
@@ -893,10 +890,52 @@ begin
   ResultSetType := rtScrollInsensitive;
   FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cashedblob', 'true'));
   with FIBConnection do
+  begin
     FParamSQLData := TZParamsSQLDA.Create(GetPlainDriver, GetDBHandle,
       GetTrHandle, ClientCodePage, GetConnection.UTF8StringAsWideField);
+    FResultSQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle,
+      GetTrHandle, ClientCodePage, UTF8StringAsWideField);
+  end;
 end;
 
+procedure TZInterbase6CallableStatement.PrepareInParameters;
+begin
+  with FIBConnection do
+  begin
+    { Prepare statement }
+    FStatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
+      GetDBHandle, GetTrHandle, GetDialect, ZPlainString(ProcSql), ProcSQL, FStmtHandle);
+    PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
+      SQL, FStmtHandle, FResultSQLData);
+    PrepareParameters(GetPlainDriver, ProcSql, InParamValues, InParamTypes,
+      InParamCount, GetDialect, FStmtHandle, FParamSQLData, FIBConnection.GetEncoding);
+  end;
+end;
+
+procedure TZInterbase6CallableStatement.UnPrepareInParameters;
+begin
+  if assigned(FParamSQLData) then
+    FParamSQLData.FreeParamtersValues;
+end;
+
+procedure TZInterbase6CallableStatement.Unprepare;
+begin
+  inherited Unprepare;
+  FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_unprepare);
+end;
+
+destructor TZInterbase6CallableStatement.Destroy;
+begin
+  if FStmtHandle <> 0 then
+    FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_drop);
+  FResultSQLData := nil;
+  FParamSQLData := nil;
+  {if Assigned(FResultSQLData) then
+    FreeAndNil(FResultSQLData);
+  if Assigned(FParamSQLData) then
+    FreeAndNil(FParamSQLData);}
+  inherited Destroy;
+end;
 {**
   Executes an SQL statement that may return multiple results.
   Under some (uncommon) situations a single SQL statement may return
@@ -923,6 +962,7 @@ end;
 
 function TZInterbase6CallableStatement.Execute(const SQL: string): Boolean;
 begin
+  if (SQL <> Self.SQL) and (Prepared) then Unprepare;
   Self.SQL := SQL;
   Result := ExecutePrepared;
 end;
@@ -938,35 +978,20 @@ end;
 {$HINTS OFF}
 function TZInterbase6CallableStatement.ExecutePrepared: Boolean;
 var
-  ProcSql: String;
   Cursor: AnsiString;
-  SQLData: IZResultSQLDA;
-  StmtHandle: TISC_STMT_HANDLE;
-  StatementType: TZIbSqlStatementType;
 begin
   Result := False;
-  StmtHandle := 0;
   with FIBConnection do
   begin
-    TrimInParameters;
     ProcSql := GetProcedureSql(False);
-    SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle,
-      ClientCodePage, GetConnection.UTF8StringAsWideField);
     try
-      { Prepare statement }
-        StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-          GetDBHandle, GetTrHandle, GetDialect, ZPlainString(ProcSql), StmtHandle);
-      PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
-        SQL, StmtHandle, SQLData);
-      PrepareParameters(GetPlainDriver, ProcSql, InParamValues, InParamTypes,
-        InParamCount, GetDialect, StmtHandle, FParamSQLData, FIBConnection.GetEncoding);
-      GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
-            GetDialect, FParamSQLData.GetData, SQLData.GetData);
+      GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @FStmtHandle,
+            GetDialect, FParamSQLData.GetData, Self.FResultSQLData.GetData);
       CheckInterbase6Error(SQL);
 
-      LastUpdateCount := GetAffectedRows(GetPlainDriver, StmtHandle, StatementType);
+      LastUpdateCount := GetAffectedRows(GetPlainDriver, FStmtHandle, FStatementType);
 
-      case StatementType of
+      case FStatementType of
         stInsert, stDelete, stUpdate, stSelectForUpdate: Result := False;
       else
         Result := True;
@@ -974,18 +999,18 @@ begin
 
       { Create ResultSet if possible else free Stateent Handle, ResultSQlData and
         ParamSqlData }
-      if (StatementType in [stSelect, stExecProc])
-        and (SQLData.GetFieldCount <> 0) then
+      if (FStatementType in [stSelect, stExecProc])
+        and (FResultSQLData.GetFieldCount <> 0) then
       begin
         Cursor := RandomString(12);
         LastResultSet := GetCachedResultSet(SQL, Self,
-           TZInterbase6ResultSet.Create(Self, SQL, StmtHandle, Cursor, SQLData, nil, FCachedBlob));
+           TZInterbase6ResultSet.Create(Self, SQL, FStmtHandle, Cursor, FResultSQLData, nil, FCachedBlob));
       end
       else
       begin
         { Fetch data and fill Output params }
-        FetchOutParams(SQLData);
-        FreeStatement(GetPlainDriver, StmtHandle, DSQL_CLOSE); //AVZ
+        FetchOutParams(FResultSQLData);
+        FreeStatement(GetPlainDriver, FStmtHandle, DSQL_CLOSE); //AVZ
         LastResultSet := nil;
       end;
 
@@ -997,7 +1022,7 @@ begin
     except
       on E: Exception do
       begin
-       FreeStatement(GetPlainDriver, StmtHandle, DSQL_CLOSE); //AVZ
+       FreeStatement(GetPlainDriver, FStmtHandle, DSQL_CLOSE); //AVZ
        raise;
       end;
     end;
@@ -1013,6 +1038,7 @@ end;
 }
 function TZInterbase6CallableStatement.ExecuteQuery(const SQL: string): IZResultSet;
 begin
+  if (SQL <> Self.SQL) and (Prepared) then Unprepare;
   Self.SQL := SQL;
   Result := ExecuteQueryPrepared;
 end;
@@ -1028,62 +1054,42 @@ end;
 function TZInterbase6CallableStatement.ExecuteQueryPrepared: IZResultSet;
 var
   Cursor: AnsiString;
-  ProcSql: String;
-  SQLData: IZResultSQLDA;
-  StmtHandle: TISC_STMT_HANDLE;
-  StatementType: TZIbSqlStatementType;
 begin
-  StmtHandle := 0;
-
   with FIBConnection do
   begin
-    TrimInParameters;
-    ProcSql := GetProcedureSql(True);
-    SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle,
-      ClientCodePage, GetConnection.UTF8StringAsWideField);
+    ProcSql := GetProcedureSql(True); //Prepares the Statement
     try
-        StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-          GetDBHandle, GetTrHandle, GetDialect, ZPlainString(ProcSql), StmtHandle);
-//      if not(StatementType in [stSelect, stSelectForUpdate]) then
-//        raise EZSQLException.Create(SStatementIsNotAllowed);
-
-      PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
-        SQL, StmtHandle, SQLData);
-      PrepareParameters(GetPlainDriver, ProcSql, InParamValues, InParamTypes,
-        InParamCount, GetDialect, StmtHandle, FParamSQLData, FIBConnection.GetEncoding);
-
-      if (StatementType = stSelect) then     //AVZ Get many rows - only need to use execute not execute2
-      begin
-        GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle, @StmtHandle,
-          GetDialect, FParamSQLData.GetData);
-      end
-        else
+      if (FStatementType = stSelect) then     //AVZ Get many rows - only need to use execute not execute2
+        GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle, @FStmtHandle,
+          GetDialect, FParamSQLData.GetData)
+      else
       begin
         CursorName := 'ExecProc'+RandomString(12); //AVZ - Need a way to return one row so we give the cursor a name
-        GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
-          GetDialect, FParamSQLData.GetData, SQLData.GetData);
+        GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @FStmtHandle,
+          GetDialect, FParamSQLData.GetData, FResultSQLData.GetData);
       end;
 
       CheckInterbase6Error(ProcSql);
 
-      if (StatementType in [stSelect, stExecProc]) and (SQLData.GetFieldCount <> 0) then
+      if (FStatementType in [stSelect, stExecProc]) and (FResultSQLData.GetFieldCount <> 0) then
       begin
         if CursorName <> '' then
         begin
           Cursor := CursorName;
-          GetPlainDriver.isc_dsql_set_cursor_name(@FStatusVector, @StmtHandle, PAnsiChar(Cursor), 0);
+          GetPlainDriver.isc_dsql_set_cursor_name(@FStatusVector, @FStmtHandle, PAnsiChar(Cursor), 0);
           CheckInterbase6Error(ProcSql);
-        end;  
+        end;
 
-        Result := GetCachedResultSet(ProcSql, Self, TZInterbase6ResultSet.Create(Self, ProcSql, StmtHandle, Cursor, SQLData, nil, FCachedBlob));
+        Result := GetCachedResultSet(ProcSql, Self,
+          TZInterbase6ResultSet.Create(Self, ProcSql, FStmtHandle, Cursor,
+          FResultSQLData, nil, FCachedBlob));
       end;
-          
       { Logging SQL Command }
-      DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SQL);
+      DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, ProcSql);
     except
       on E: Exception do
       begin
-        FreeStatement(GetPlainDriver, StmtHandle, DSQL_unprepare); //AVZ
+        FreeStatement(GetPlainDriver, FStmtHandle, DSQL_unprepare); //AVZ
         raise;
       end;
     end;
@@ -1104,6 +1110,7 @@ end;
 }
 function TZInterbase6CallableStatement.ExecuteUpdate(const SQL: string): Integer;
 begin
+  if (SQL <> Self.SQL) and (Prepared) then Unprepare;
   Self.SQL := SQL;
   Result := ExecuteUpdatePrepared;
 end;
@@ -1119,57 +1126,34 @@ end;
   or 0 for SQL statements that return nothing
 }
 function TZInterbase6CallableStatement.ExecuteUpdatePrepared: Integer;
-var
-  ProcSql: String;
-  SQLData: IZResultSQLDA;
-  StmtHandle: TISC_STMT_HANDLE;
-  StatementType: TZIbSqlStatementType;
 begin
-//  Result := -1;
-  StmtHandle := 0;
-
   with FIBConnection do
   begin
-
-    TrimInParameters;
-
-    ProcSql := GetProcedureSql(False);
-    SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle,
-      ClientCodePage, GetConnection.UTF8StringAsWideField);
     try
-        StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-          GetDBHandle, GetTrHandle, GetDialect, ZPlainString(ProcSql), StmtHandle);
-//      if not (StatementType in [stSelect, stSelectForUpdate]) then
-//        raise EZSQLException.Create(SStatementIsNotAllowed);
-
-      PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
-        SQL, StmtHandle, SQLData);
-      PrepareParameters(GetPlainDriver, ProcSql, InParamValues, InParamTypes,
-        InParamCount, GetDialect, StmtHandle, FParamSQLData, FIBConnection.GetEncoding);
-
-      GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
-        GetDialect, FParamSQLData.GetData, SQLData.GetData);
+      ProcSQL := Self.GetProcedureSql(False);
+      GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @FStmtHandle,
+        GetDialect, FParamSQLData.GetData, FResultSQLData.GetData);
       CheckInterbase6Error(ProcSql);
 
-      Result := GetAffectedRows(GetPlainDriver, StmtHandle, StatementType);
+      Result := GetAffectedRows(GetPlainDriver, FStmtHandle, FStatementType);
       LastUpdateCount := Result;
       { Fetch data and fill Output params }
-      FetchOutParams(SQLData);
+      FetchOutParams(FResultSQLData);
       { Autocommit statement. }
       if Connection.GetAutoCommit then
         Connection.Commit;
       { Logging SQL Command }
-      DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SQL);
+      DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, ProcSQL);
     finally
-        FreeStatement(GetPlainDriver, StmtHandle, DSQL_unprepare); //AVZ -- unprepare the statement - not close it
+      //FreeStatement(GetPlainDriver, FStmtHandle, DSQL_unprepare); //AVZ -- unprepare the statement - not close it
 
     end;
   end;
 end;
 
 {**
-  Set output parameters values from IZResultSQLDA.
-  @param Value a IZResultSQLDA object.
+  Set output parameters values from TZResultSQLDA.
+  @param Value a TZResultSQLDA object.
 }
 procedure TZInterbase6CallableStatement.FetchOutParams(
   Value: IZResultSQLDA);
@@ -1227,9 +1211,10 @@ function TZInterbase6CallableStatement.GetProcedureSql(SelectProc: boolean): str
   var
     I: integer;
   begin
+    Result := ''; //init Result -> FPC
     for I := 0 to Count - 1 do
     begin
-      if Result <> '' then
+      if I > 0 then
         Result := Result + ',';
       Result := Result + '?';
     end;
@@ -1238,6 +1223,7 @@ function TZInterbase6CallableStatement.GetProcedureSql(SelectProc: boolean): str
 var
   InParams: string;
 begin
+  TrimInParameters;
   InParams := GenerateParamsStr(High(InParamValues) + 1);
   if InParams <> '' then
     InParams := '(' + InParams + ')';
@@ -1246,36 +1232,6 @@ begin
     Result := 'SELECT * FROM ' + SQL + InParams
   else
     Result := 'EXECUTE PROCEDURE ' + SQL + InParams;
-end;
-
-{**
-   Function remove stUnknown paramters from InParamTypes and InParamValues
-}
-procedure TZInterbase6CallableStatement.TrimInParameters;
-var
-  I: integer;
-  ParamValues: TZVariantDynArray;
-  ParamTypes: TZSQLTypeArray;
-  ParamCount: Integer;
-begin
-  ParamCount := 0;
-  SetLength(ParamValues, InParamCount);
-  SetLength(ParamTypes, InParamCount);
-
-  for I := 0 to High(InParamTypes) do
-  begin
-    if InParamTypes[I] = ZDbcIntfs.stUnknown then
-     Continue;
-
-    ParamTypes[ParamCount] := InParamTypes[I];
-    ParamValues[ParamCount] := InParamValues[I];
-    Inc(ParamCount);
-  end;
-  if ParamCount = InParamCount then
-    Exit;
-  InParamTypes := ParamTypes;
-  InParamValues := ParamValues;
-  SetInParamCount(ParamCount); //AVZ
 end;
 
 end.

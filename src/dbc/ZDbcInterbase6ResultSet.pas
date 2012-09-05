@@ -161,7 +161,7 @@ begin
     { Free allocate sql statement }
     FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_CLOSE); //AVZ
   end;
-inherited Close;
+  inherited Close;
 end;
 
 {**

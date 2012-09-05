@@ -62,25 +62,7 @@ uses
   TextTestRunner,
   ZTestConfig,
   ZSqlTestCase,
-  ZTestDbcASA in '..\..\test\dbc\ZTestDbcASA.pas',
-  ZTestDbcASAMetadata in '..\..\test\dbc\ZTestDbcASAMetadata.pas',
-  ZTestDbcCache in '..\..\test\dbc\ZTestDbcCache.pas',
-  ZTestDbcCachedResultSet in '..\..\test\dbc\ZTestDbcCachedResultSet.pas',
-  ZTestDbcGeneric in '..\..\test\dbc\ZTestDbcGeneric.pas',
-  ZTestDbcInterbase in '..\..\test\dbc\ZTestDbcInterbase.pas',
-  ZTestDbcInterbaseMetadata in '..\..\test\dbc\ZTestDbcInterbaseMetadata.pas',
-  ZTestDbcMetadata in '..\..\test\dbc\ZTestDbcMetadata.pas',
-  ZTestDbcMsSql in '..\..\test\dbc\ZTestDbcMsSql.pas',
-  ZTestDbcMySql in '..\..\test\dbc\ZTestDbcMySql.pas',
-  ZTestDbcMySqlMetadata in '..\..\test\dbc\ZTestDbcMySqlMetadata.pas',
-  ZTestDbcOracle in '..\..\test\dbc\ZTestDbcOracle.pas',
-  ZTestDbcPostgreSql in '..\..\test\dbc\ZTestDbcPostgreSql.pas',
-  ZTestDbcPostgreSqlMetadata in '..\..\test\dbc\ZTestDbcPostgreSqlMetadata.pas',
-  ZTestDbcResolver in '..\..\test\dbc\ZTestDbcResolver.pas',
-  ZTestDbcResultSet in '..\..\test\dbc\ZTestDbcResultSet.pas',
-  ZTestDbcResultSetMetadata in '..\..\test\dbc\ZTestDbcResultSetMetadata.pas',
-  ZTestDbcSqLite in '..\..\test\dbc\ZTestDbcSqLite.pas',
-  ZTestDbcUtils in '..\..\test\dbc\ZTestDbcUtils.pas';
+  ZTestDbc in '..\..\test\dbc\ZTestDbc.pas';
 
 begin
   TestGroup := DBC_TEST_GROUP;
