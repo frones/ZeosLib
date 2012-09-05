@@ -2293,7 +2293,7 @@ begin
   else
     LCatalog := Catalog;
 
-  SQL := 'SELECT NULL AS PROCEDURE_CAT, p.db AS PROCEDURE_SCHEM, '+
+  SQL := 'SELECT p.db AS PROCEDURE_CAT, NULL AS PROCEDURE_SCHEM, '+
       'p.name AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2, '+
       'NULL AS RESERVED3, p.comment AS REMARKS, '+
     IntToStr(ProcedureReturnsResult)+' AS PROCEDURE_TYPE  from  mysql.proc p ';
