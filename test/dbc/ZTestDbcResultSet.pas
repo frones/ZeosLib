@@ -52,7 +52,7 @@
 unit ZTestDbcResultSet;
 
 interface
-{.$I ZDbc.inc}
+{$I ZDbc.inc}
 uses
   Classes, SysUtils, Types, ZDbcIntfs, ZClasses, ZCollections,
   ZSysUtils, ZDbcResultSet, ZCompatibility, ZTestConsts, ZTestDefinitions,{$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF};

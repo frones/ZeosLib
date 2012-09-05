@@ -54,7 +54,7 @@
 unit ZTestDbcResultSetMetadata;
 
 interface
-{.$I ZDbc.inc}
+{$I ZDbc.inc}
 uses Classes, SysUtils, ZTestDefinitions, ZDbcIntfs, ZClasses,
   ZCollections, ZDbcResultSet, ZDbcResultSetMetadata,{$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF};
 

@@ -34,8 +34,8 @@ go
 drop table string_values
 go
 
-drop table "Case_Sensitive"
-go
+/*drop table "Case_Sensitive"
+go*/
 
 drop table case_sensitive
 go
@@ -52,5 +52,5 @@ go
 drop procedure procedure2
 go
 
-/*drop procedure abtest
-go*/
+/*drop procedure abtest*/
+/*go*/
