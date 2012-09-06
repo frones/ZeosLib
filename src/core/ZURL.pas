@@ -261,10 +261,11 @@ begin
   // Protocol
   Result := Result + Protocol + ':';
 
+  Result := Result + '//'; //Allways set the doubleslash  to avoid unix '/' path issues if host is empty
+
   // HostName/Port
   if HostName <> '' then
   begin
-    Result := Result + '//';
     Result := Result + HostName;
     if Port <> 0 then
       Result := Result + ':' + IntToStr(Port);
