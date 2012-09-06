@@ -2373,9 +2373,9 @@ function TZMySQLDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: stri
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 var
-  LCatalog, SQL, TypeName, TypeInfoSecond: string;
+  LCatalog, SQL, TypeName, Temp: string;
   ParamList, Params, Names: TStrings;
-  I, ColumnSize, Precision: Integer;
+  I,J, ColumnSize, Precision: Integer;
   FieldType: TZSQLType;
 
   function GetNextName(const AName: String; NameEmpty: Boolean = False): String;
@@ -2390,10 +2390,17 @@ var
       for N := 1 to MaxInt do
         if Names.IndexOf(AName+IntToStr(N)) = -1 then
         begin
-          Names.Add(AName);
-          Result := AName;
+          Names.Add(AName+IntToStr(N));
+          Result := AName+IntToStr(N);
           Break;
         end;
+  end;
+  procedure AddTempString(Const Value: String);
+  begin
+    if Temp = '' then
+      Temp := Trim(Value)
+    else
+      Temp := Temp + LineEnding+ Trim(Value);
   end;
 begin
   if Catalog = '' then
@@ -2432,11 +2439,31 @@ begin
         while Next do
         begin
           PutSplitString(ParamList, Trim(GetString(4)), ',');
+          J := 0;
+          Temp := '';
+          for I := 0 to ParamList.Count -1 do
+            if J < ParamList.Count then
+            begin
+              if (Pos('(', (ParamList[J])) > 0) and (Pos(')', (ParamList[J])) = 0) then
+                if ( Pos('real', LowerCase(ParamList[J])) > 0 ) or
+                   ( Pos('float', LowerCase(ParamList[J])) > 0 ) or
+                   ( Pos('decimal', LowerCase(ParamList[J])) > 0 ) or
+                   ( Pos('numeric', LowerCase(ParamList[J])) > 0 ) or
+                   ( Pos('double', LowerCase(ParamList[J])) > 0 ) then
+                begin
+                  AddTempString(ParamList[j]+','+ParamList[j+1]);
+                  Inc(j);
+                end
+                else
+                  AddTempString(ParamList[j])
+              else
+                if not (ParamList[j] = '') then
+                  AddTempString(ParamList[j]);
+              Inc(J);
+            end;
+          PutSplitString(ParamList, Temp, LineEnding);
           for i := 0 to ParamList.Count -1 do
           begin
-            ParamList[i] := Trim(ParamList[i]);
-            if ParamList[i] = '' then
-              Continue;
             PutSplitString(Params, ParamList[i], ' ');
             if Params.Count = 2 then {no name available}
               Params.Insert(1,'');
@@ -2446,7 +2473,7 @@ begin
             Result.UpdateString(3, GetString(3)); //PROCEDURE_NAME
             ConvertMySQLColumnInfoFromString(Params[2],
               GetConnection.GetEncoding, GetConnection.UTF8StringAsWideField,
-              TypeName, TypeInfoSecond, FieldType, ColumnSize, Precision);
+              TypeName, Temp, FieldType, ColumnSize, Precision);
             { process COLUMN_NAME }
             if Params[1] = '' then
             begin
@@ -2454,7 +2481,7 @@ begin
             end
             else
               if GetIdentifierConvertor.IsQuoted(Params[1]) then
-                Result.UpdateString(4, GetNextName(Copy(Params[1], 2, Length(Params[1])-2), (Length(Params[1])>2)))
+                Result.UpdateString(4, GetNextName(Copy(Params[1], 2, Length(Params[1])-2), (Length(Params[1])=2)))
               else
                 Result.UpdateString(4, GetNextName(Params[1]));
             { COLUMN_TYPE }
