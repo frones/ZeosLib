@@ -626,6 +626,11 @@ type
     function GetValue(ParameterIndex: Integer): TZVariant;
   end;
 
+  IZParamNamedCallableStatement = interface(IZCallableStatement)
+    ['{99882891-81B2-4F3E-A3D7-35B6DCAA7136}']
+    procedure RegisterParamName(const ParameterIndex:integer; const ParamName: String);
+  end;
+
   {** Rows returned by SQL query. }
   IZResultSet = interface(IZInterface)
     ['{8F4C4D10-2425-409E-96A9-7142007CC1B2}']

@@ -175,11 +175,13 @@ type
   end;
 
   {** Implements callable Postgresql Statement. }
-  TZMySQLSQLCallableStatement = class(TZAbstractCallableStatement, IZMySQLStatement)
+  TZMySQLSQLCallableStatement = class(TZAbstractCallableStatement,
+    IZMySQLStatement, IZParamNamedCallableStatement)
   private
     FPlainDriver: IZMysqlPlainDriver;
     FHandle: PZMySQLConnect;
     FUseResult: Boolean;
+    FParamNames: array [0..1024] of String;
     function GetCallSQL: string;
     function GetOutParamSQL: String;
     function FillParams(const ASql:String):String;
@@ -188,6 +190,7 @@ type
   protected
     function CreateResultSet(const SQL: string): IZResultSet;
     procedure FetchOutParams(ResultSet: IZResultSet);
+    procedure RegisterParamName(const ParameterIndex:integer; const ParamName: String);
   public
     constructor Create(PlainDriver: IZMySQLPlainDriver;
       Connection: IZConnection; const SQL: string; Info: TStrings;
@@ -1243,6 +1246,12 @@ begin
     Inc(I);
   end;
   ResultSet.BeforeFirst;
+end;
+
+procedure TZMySQLSQLCallableStatement.RegisterParamName(const ParameterIndex:integer;
+  const ParamName: String);
+begin
+  FParamNames[ParameterIndex] := ParamName;
 end;
 
 constructor TZMySQLSQLCallableStatement.Create(PlainDriver: IZMySQLPlainDriver;

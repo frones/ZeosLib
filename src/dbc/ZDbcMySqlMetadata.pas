@@ -2293,7 +2293,7 @@ begin
   else
     LCatalog := Catalog;
 
-  SQL := 'SELECT p.db AS PROCEDURE_CAT, NULL AS PROCEDURE_SCHEM, '+
+  SQL := 'SELECT NULL AS PROCEDURE_CAT, p.db AS PROCEDURE_SCHEM, '+
       'p.name AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2, '+
       'NULL AS RESERVED3, p.comment AS REMARKS, '+
     IntToStr(ProcedureReturnsResult)+' AS PROCEDURE_TYPE  from  mysql.proc p ';
@@ -2378,10 +2378,10 @@ var
   I, ColumnSize, Precision: Integer;
   FieldType: TZSQLType;
 
-  function GetNextName(const AName: String): String;
+  function GetNextName(const AName: String; NameEmpty: Boolean = False): String;
   var N: Integer;
   begin
-    if Names.IndexOf(AName) = -1 then
+    if (Names.IndexOf(AName) = -1) and not NameEmpty then
     begin
       Names.Add(AName);
       Result := AName;
@@ -2450,11 +2450,11 @@ begin
             { process COLUMN_NAME }
             if Params[1] = '' then
             begin
-              Result.UpdateString(4, GetNextName('$'));
+              Result.UpdateString(4, GetNextName('$', True));
             end
             else
               if GetIdentifierConvertor.IsQuoted(Params[1]) then
-                Result.UpdateString(4, GetNextName(Copy(Params[1], 2, Length(Params[1])-2)))
+                Result.UpdateString(4, GetNextName(Copy(Params[1], 2, Length(Params[1])-2), (Length(Params[1])>2)))
               else
                 Result.UpdateString(4, GetNextName(Params[1]));
             { COLUMN_TYPE }
