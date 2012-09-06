@@ -144,7 +144,10 @@ begin
     if Params[I].ParamType in [ptResult, ptOutput, ptInputOutput] then
       CallableStatement.RegisterOutParameter(I + 1,
         Ord(ConvertDatasetToDbcType(Params[I].DataType)));
-    CallableStatement.RegisterParamType( I+1, ord(Params[I].ParamType)  );
+    CallableStatement.RegisterParamType( I+1, ord(Params[I].ParamType));
+    if Supports(CallableStatement, IZParamNamedCallableStatement) then
+      (CallableStatement as IZParamNamedCallableStatement).RegisterParamName(I, Params[i].Name);
+
   end;
   Result := CallableStatement;
 end;

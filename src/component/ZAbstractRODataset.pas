@@ -2037,6 +2037,7 @@ end;
 {**
   Initializes new record with master fields.
 }
+{$WARNINGS OFF}
 procedure TZAbstractRODataset.DoOnNewRecord;
 var
   I: Integer;
@@ -2087,6 +2088,7 @@ begin
   end;
   inherited DoOnNewRecord;
 end;
+{$WARNINGS ON}
 
 {**
   Gets a list of index field names.

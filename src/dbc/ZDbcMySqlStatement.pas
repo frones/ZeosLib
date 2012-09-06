@@ -184,10 +184,13 @@ type
     FParamNames: array [0..1024] of String;
     function GetCallSQL: string;
     function GetOutParamSQL: String;
-    function FillParams(const ASql:String):String;
-    function PrepareSQLParam(ParamIndex: Integer): string;
+    function PrepareSQLParam(ParamIndex: Integer): ZAnsiString;
     function GetStmtHandle : PZMySqlPrepStmt;
+
   protected
+    //procedure PrepareInParameters; override;
+    procedure BindInParameters; override;
+    //procedure UnPrepareInParameters; override;
     function CreateResultSet(const SQL: string): IZResultSet;
     procedure FetchOutParams(ResultSet: IZResultSet);
     procedure RegisterParamName(const ParameterIndex:integer; const ParamName: String);
@@ -977,10 +980,7 @@ function TZMySQLSQLCallableStatement.GetCallSQL: string;
     begin
       if I > 1 then
         Result := Result + ',';
-      if FDBParamTypes[i-1] in [2, 4] then
-        Result := Result + '@P'+IntToStr(i)
-      else
-        Result := Result + '?';
+      Result := Result + FParamNames[I-1]
     end;
   end;
 
@@ -1003,11 +1003,11 @@ function TZMySQLSQLCallableStatement.GetOutParamSQL: String;
         break
       else
       begin
-        if FDBParamTypes[i] in [2, 4] then
+        if FDBParamTypes[i] in [2, 3, 4] then
         begin
           if Result <> '' then
             Result := Result + ',';
-          Result := Result + '@P'+IntToStr(i+1);
+          Result := Result + FParamNames[I];
         end;
         Inc(i);
       end;
@@ -1021,37 +1021,6 @@ begin
 end;
 
 {**
-   Fills the parameter (?) tokens with corresponding parameter value
-   @return a prepared SQL query for execution
-}
-function TZMySQLSQLCallableStatement.FillParams(const ASql:String):String;
-var I: Integer;
-  Tokens: TStrings;
-  ParamIndex: Integer;
-begin
-  if Pos('?', ASql) > 0 then
-  begin
-    Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(ASql, []);
-    try
-      ParamIndex := 0;
-      for I := 0 to Tokens.Count - 1 do
-      begin
-        if Tokens[I] = '?' then
-        begin
-          Tokens[I] := PrepareSQLParam(ParamIndex);
-          Inc(ParamIndex);
-        end
-      end;
-      Result := StringReplace(Tokens.Text, #13#10, '', [rfReplaceAll]);
-    finally
-      Tokens.Free;
-    end;
-  end
-  else
-    Result := ASql;
-end;
-
-{**
   Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
   <code>DELETE</code> statement. In addition,
   SQL statements that return nothing, such as SQL DDL statements,
@@ -1062,7 +1031,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZMySQLSQLCallableStatement.PrepareSQLParam(ParamIndex: Integer): string;
+function TZMySQLSQLCallableStatement.PrepareSQLParam(ParamIndex: Integer): ZAnsiString;
 var
   Value: TZVariant;
   TempBytes: TByteDynArray;
@@ -1078,7 +1047,7 @@ begin
   if DefVarManager.IsNull(Value) then
     if (InParamDefaultValues[ParamIndex] <> '') and
       StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
-      Result := InParamDefaultValues[ParamIndex]
+      Result := ZAnsiString(InParamDefaultValues[ParamIndex])
     else
       Result := 'NULL'
   else
@@ -1090,64 +1059,51 @@ begin
             else
                Result := '''N''';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
-        Result := SoftVarManager.GetAsString(Value);
+        Result := ZAnsiString(SoftVarManager.GetAsString(Value));
       stBytes:
-        Result := Self.GetConnection.GetBinaryEscapeString(AnsiString(SoftVarManager.GetAsString(Value)));
+        Result := FPlainDriver.EscapeString(FHandle, AnsiString(SoftVarManager.GetAsString(Value)), GetConnection.GetEncoding);
       stString:
-        Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
+        Result := #39+ZPlainString(SoftVarManager.GetAsString(Value))+#39;
       stUnicodeString:
-        {$IFDEF DELPHI12_UP}
-          if GetConnection.PreprepareSQL then
-            Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsUnicodeString(Value)) else
-        {$ENDIF}
         if (GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) then
-          Result := Self.GetConnection.GetEscapeString(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)))
+          Result := FPlainDriver.EscapeString(FHandle, UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)), GetConnection.GetEncoding)
         else
-          Result := Self.GetConnection.GetEscapeString(AnsiString(SoftVarManager.GetAsUnicodeString(Value)));
+          Result := FPlainDriver.EscapeString(FHandle, AnsiString(SoftVarManager.GetAsUnicodeString(Value)), GetConnection.GetEncoding);
       stDate:
       begin
         DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
           AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-        Result := '''' + Format('%0.4d-%0.2d-%0.2d',
-          [AYear, AMonth, ADay]) + '''';
+        Result := '''' + ZAnsiString(Format('%0.4d-%0.2d-%0.2d',
+          [AYear, AMonth, ADay])) + '''';
       end;
       stTime:
       begin
         DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
           AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-        Result := '''' + Format('%0.2d:%0.2d:%0.2d',
-          [AHour, AMinute, ASecond]) + '''';
+        Result := '''' + ZAnsiString(Format('%0.2d:%0.2d:%0.2d',
+          [AHour, AMinute, ASecond])) + '''';
       end;
       stTimestamp:
       begin
         DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
           AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-        Result := '''' + Format('%0.4d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d',
-          [AYear, AMonth, ADay, AHour, AMinute, ASecond]) + '''';
+        Result := '''' + ZAnsiString(Format('%0.4d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d',
+          [AYear, AMonth, ADay, AHour, AMinute, ASecond])) + '''';
       end;
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
           begin
-            if InParamTypes[ParamIndex] = stBinaryStream then
-              Result := Self.GetConnection.GetBinaryEscapeString(TempBlob.GetString)
-            else
-            begin
-              if (GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) then
-              begin //could be equal valid for unicode if the user reads the Stream as ftMemo
-                TempStreamIn:=TempBlob.GetStream;
-                TempStream := GetValidatedUnicodeStream(TempStreamIn);
-                TempStreamIn.Free;
-                TempBlob.SetStream(TempStream);
-                TempStream.Free;
-              end;
-              {$IFDEF DELPHI12_UP}
-              if GetConnection.PreprepareSQL then
-                Result := Self.GetConnection.GetEscapeString(ZDbcString(TempBlob.GetString)) else
-              {$ENDIF}
-              Result := GetConnection.GetEscapeString(TempBlob.GetString)
+            if (GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) then
+            begin //could be equal valid for unicode if the user reads the Stream as ftMemo
+              TempStreamIn:=TempBlob.GetStream;
+              TempStream := GetValidatedUnicodeStream(TempStreamIn);
+              TempStreamIn.Free;
+              TempBlob.SetStream(TempStream);
+              TempStream.Free;
             end;
+            Result := FPlainDriver.EscapeString(FHandle, TempBlob.GetString, GetConnection.GetEncoding)
           end
           else
             Result := 'NULL';
@@ -1159,6 +1115,31 @@ end;
 function TZMySQLSQLCallableStatement.GetStmtHandle: PZMySqlPrepStmt;
 begin
   Result := nil;
+end;
+
+procedure TZMySQLSQLCallableStatement.BindInParameters;
+var
+  I: integer;
+  ExecQuery: ZAnsiString;
+begin
+  I := 0;
+  while True do
+    if FDBParamTypes[i] = 0 then
+      break
+    else
+    begin
+      if FDBParamTypes[i] in [1, 3] then
+      begin
+        ExecQuery := 'SET '+ZPlainString(FParamNames[i])+' = '+PrepareSQLParam(I);
+        if ExecQuery = '' then
+          ExecQuery := ExecQuery;
+        if FPlainDriver.ExecQuery(Self.FHandle, PAnsiChar(ExecQuery)) = 0 then
+          DriverManager.LogMessage(lcBindPrepStmt, FPlainDriver.GetProtocol, String(ExecQuery))
+        else
+          CheckMySQLError(FPlainDriver, FHandle, lcExecute, String(ExecQuery));
+      end;
+      Inc(i);
+    end;
 end;
 
 {**
@@ -1239,6 +1220,8 @@ begin
         DefVarManager.SetAsDateTime(Temp, ResultSet.GetTime(I));
       stTimestamp:
         DefVarManager.SetAsDateTime(Temp, ResultSet.GetTimestamp(I));
+      stBinaryStream:
+        DefVarManager.SetAsInterface(Temp, ResultSet.GetBlob(I));
       else
         DefVarManager.SetAsString(Temp, ResultSet.GetString(I));
       end;
@@ -1251,7 +1234,7 @@ end;
 procedure TZMySQLSQLCallableStatement.RegisterParamName(const ParameterIndex:integer;
   const ParamName: String);
 begin
-  FParamNames[ParameterIndex] := ParamName;
+  FParamNames[ParameterIndex] := '@'+ParamName;
 end;
 
 constructor TZMySQLSQLCallableStatement.Create(PlainDriver: IZMySQLPlainDriver;
@@ -1384,9 +1367,8 @@ end;
 function TZMySQLSQLCallableStatement.ExecuteQueryPrepared: IZResultSet;
 Var SQL: String;
 begin
-  TrimInParameters;
+  BindInParameters;
   SQL := GetCallSQL;
-  SQL := FillParams(SQL);
   Self.ExecuteUpdate(SQL);
   SQL := GetOutParamSQL;
   Result := Self.ExecuteQuery(SQL);
@@ -1407,9 +1389,8 @@ function TZMySQLSQLCallableStatement.ExecuteUpdatePrepared: Integer;
 Var
   SQL: String;
 begin
-  TrimInParameters;
+  BindInParameters;
   SQL := GetCallSQL;
-  SQL := FillParams(SQL);
   Result := Self.ExecuteUpdate(SQL);
   SQL := GetOutParamSQL;
   FetchOutParams(ExecuteQuery(SQL));
