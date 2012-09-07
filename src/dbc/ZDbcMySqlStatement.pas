@@ -182,7 +182,7 @@ type
     FHandle: PZMySQLConnect;
     FUseResult: Boolean;
     FParamNames: array [0..1024] of String;
-    function GetCallSQL: string;
+    function GetCallSQL: ZAnsiString;
     function GetOutParamSQL: String;
     function PrepareSQLParam(ParamIndex: Integer): ZAnsiString;
     function GetStmtHandle : PZMySqlPrepStmt;
@@ -200,8 +200,9 @@ type
       Handle: PZMySQLConnect);
 
     function ExecuteQuery(const SQL: string): IZResultSet; override;
-    function ExecuteUpdate(const SQL: string): Integer; override;
     function Execute(const SQL: string): Boolean; override;
+
+    function ExecuteUpdate(const SQL: ZAnsiString): Integer; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -970,25 +971,28 @@ end;
    Create sql string for calling stored procedure.
    @return a Stored Procedure SQL string
 }
-function TZMySQLSQLCallableStatement.GetCallSQL: string;
-  function GenerateParamsStr(Count: integer): string;
+function TZMySQLSQLCallableStatement.GetCallSQL: ZAnsiString;
+  function GenerateParamsStr(Count: integer): ZAnsiString;
   var
     I: integer;
   begin
     Result := '';
-    for I := 1 to Count do
+    for I := 0 to Count-1 do
     begin
-      if I > 1 then
+      if I > 0 then
         Result := Result + ',';
-      Result := Result + '@'+FParamNames[I-1]
+      if FDBParamTypes[i] in [2, 3, 4] then
+        Result := Result + '@'+ZPlainString(FParamNames[I])
+      else
+        Result := Result + PrepareSQLParam(I);
     end;
   end;
 
 var
-  InParams: string;
+  InParams: ZAnsiString;
 begin
   InParams := GenerateParamsStr(OutParamCount);
-  Result := Format('CALL `%s`(%s)', [SQL, InParams])
+  Result := 'CALL `'+ZPlainString(SQL)+'`('+InParams+')';
 end;
 
 function TZMySQLSQLCallableStatement.GetOutParamSQL: String;
@@ -1054,14 +1058,14 @@ begin
   begin
     case InParamTypes[ParamIndex] of
       stBoolean:
-            if SoftVarManager.GetAsBoolean(Value) then
-               Result := '''Y'''
-            else
-               Result := '''N''';
+        if SoftVarManager.GetAsBoolean(Value) then
+          Result := '''Y'''
+        else
+          Result := '''N''';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := ZAnsiString(SoftVarManager.GetAsString(Value));
       stBytes:
-        Result := FPlainDriver.EscapeString(FHandle, AnsiString(SoftVarManager.GetAsString(Value)), GetConnection.GetEncoding);
+        Result := GetSQLHexAnsiString(PAnsiChar(AnsiString(SoftVarManager.GetAsString(Value))), Length(SoftVarManager.GetAsString(Value)));
       stString:
         Result := #39+ZPlainString(SoftVarManager.GetAsString(Value))+#39;
       stUnicodeString:
@@ -1103,7 +1107,10 @@ begin
               TempBlob.SetStream(TempStream);
               TempStream.Free;
             end;
-            Result := FPlainDriver.EscapeString(FHandle, TempBlob.GetString, GetConnection.GetEncoding)
+            if ( InParamTypes[ParamIndex] = stBinaryStream ) then
+              Result := GetSQLHexAnsiString(PAnsiChar(TempBlob.GetString), TempBlob.Length)
+            else
+              Result := FPlainDriver.EscapeString(FHandle, TempBlob.GetString, GetConnection.GetEncoding)
           end
           else
             Result := 'NULL';
@@ -1128,7 +1135,7 @@ begin
       break
     else
     begin
-      if FDBParamTypes[i] in [1, 3] then
+      if FDBParamTypes[i] = 3 then //ptInputOutput
       begin
         ExecQuery := 'SET @'+ZPlainString(FParamNames[i])+' = '+PrepareSQLParam(I);
         if ExecQuery = '' then
@@ -1280,15 +1287,16 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZMySQLSQLCallableStatement.ExecuteUpdate(const SQL: string): Integer;
+function TZMySQLSQLCallableStatement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
 var
   QueryHandle: PZMySQLResult;
   HasResultset : Boolean;
 begin
   Result := -1;
-  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, GetConnection.GetEncoding, LogSQL) = 0 then
+  ASQL := SQL;
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
   begin
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
     if HasResultSet then
@@ -1307,7 +1315,7 @@ begin
       Result := FPlainDriver.GetAffectedRows(FHandle);
   end
   else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
   LastUpdateCount := Result;
 end;
 
@@ -1365,13 +1373,10 @@ end;
     query; never <code>null</code>
 }
 function TZMySQLSQLCallableStatement.ExecuteQueryPrepared: IZResultSet;
-Var SQL: String;
 begin
   BindInParameters;
-  SQL := GetCallSQL;
-  Self.ExecuteUpdate(SQL);
-  SQL := GetOutParamSQL;
-  Result := Self.ExecuteQuery(SQL);
+  ExecuteUpdate(GetCallSQL);
+  Result := Self.ExecuteQuery(GetOutParamSQL);
   FetchOutParams(Result);
 end;
 
@@ -1386,14 +1391,10 @@ end;
   or 0 for SQL statements that return nothing
 }
 function TZMySQLSQLCallableStatement.ExecuteUpdatePrepared: Integer;
-Var
-  SQL: String;
 begin
   BindInParameters;
-  SQL := GetCallSQL;
-  Result := Self.ExecuteUpdate(SQL);
-  SQL := GetOutParamSQL;
-  FetchOutParams(ExecuteQuery(SQL));
+  Result := ExecuteUpdate(GetCallSQL);
+  FetchOutParams(ExecuteQuery(GetOutParamSQL));
 end;
 
 {**
