@@ -1603,13 +1603,13 @@ begin
         Result.UpdateStringByName('COLUMN_NAME',
           GetStringByName('COLUMN_NAME'));
         case GetShortByName('COLUMN_TYPE') of
-          1: Result.UpdateShortByName('COLUMN_TYPE', 1); //ptInput
-          2: Result.UpdateShortByName('COLUMN_TYPE', 3); //ptInputOutput
-          3: Result.UpdateShortByName('COLUMN_TYPE', 0); //ptUnknown
-          4: Result.UpdateShortByName('COLUMN_TYPE', 3); //ptInputOutput
-          5: Result.UpdateShortByName('COLUMN_TYPE', 4); //ptResult
+          1: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctIn));
+          2: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctInOut));
+          3: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctUnknown));
+          4: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctInOut));
+          5: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctReturn));
         else
-          Result.UpdateShortByName('COLUMN_TYPE', 0); //ptUnknown
+          Result.UpdateShortByName('COLUMN_TYPE', Ord(pctUnknown));
         end;
         Result.UpdateShortByName('DATA_TYPE',
           Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'))));
@@ -2684,13 +2684,13 @@ begin
         Result.UpdateStringByName('COLUMN_NAME',
           GetStringByName('COLUMN_NAME'));
         case GetShortByName('COLUMN_TYPE') of
-          0, 1: Result.UpdateShortByName('COLUMN_TYPE', 1); //ptInput
-          2: Result.UpdateShortByName('COLUMN_TYPE', 3); //ptInputOutput
-          3: Result.UpdateShortByName('COLUMN_TYPE', 0); //ptUnknown
-          4: Result.UpdateShortByName('COLUMN_TYPE', 3); //ptInputOutput
-          5: Result.UpdateShortByName('COLUMN_TYPE', 4); //ptResult
+          0, 1: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctIn));
+          2: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctInOut));
+          3: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctUnknown));
+          4: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctInOut));
+          5: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctReturn));
         else
-          Result.UpdateShortByName('COLUMN_TYPE', 0); //ptUnknown
+          Result.UpdateShortByName('COLUMN_TYPE', Ord(pctUnknown));
         end;
         Result.UpdateShortByName('DATA_TYPE',
           Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'))));
@@ -2744,13 +2744,13 @@ begin
         else
           status2 := 0;
         case status2 of
-          0, 1: Result.UpdateShortByName('COLUMN_TYPE', 1); //ptInput
-          2: Result.UpdateShortByName('COLUMN_TYPE', 3); //ptInputOutput
-          3: Result.UpdateShortByName('COLUMN_TYPE', 0); //ptUnknown
-          4: Result.UpdateShortByName('COLUMN_TYPE', 3); //ptInputOutput
-          5: Result.UpdateShortByName('COLUMN_TYPE', 4); //ptResult
+          0, 1: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctIn));
+          2: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctInOut));
+          3: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctUnknown));
+          4: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctInOut));
+          5: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctReturn));
         else
-          Result.UpdateShortByName('COLUMN_TYPE', 0); //ptUnknown
+          Result.UpdateShortByName('COLUMN_TYPE', Ord(pctUnknown));
         end;
         Result.UpdateRow;
       end;

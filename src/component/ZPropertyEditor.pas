@@ -412,8 +412,8 @@ begin
             Schema := ResultSet.GetStringByName('TABLE_SCHEM');
             if Schema <> '' then
               TableName := IdentifierConvertor.Quote(Schema) + '.' + TableName;
-            if Connection.Catalog <> '' then
-              TableName := IdentifierConvertor.Quote(Connection.Catalog) + '.' + TableName;
+            if Catalog <> '' then
+              TableName := IdentifierConvertor.Quote(Catalog) + '.' + TableName;
             List.Add(TableName);
           end;
       finally
@@ -433,14 +433,18 @@ procedure TZProcedureNamePropertyEditor.GetValueList(List: TStrings);
 var
   Connection: TZAbstractConnection;
   Metadata: IZDatabaseMetadata;
+  IdentifierConvertor: IZIdentifierConvertor;
   ResultSet: IZResultSet;
-{$IFDEF USE_METADATA}
   Catalog, Schema: string;
-{$ENDIF}
+  ProcedureName: string;
 begin
   Connection := GetObjectProp(GetZComponent, 'Connection') as TZAbstractConnection;
   if Assigned(Connection) and Connection.Connected then
   begin
+    Metadata := Connection.DbcConnection.GetMetadata;
+    IdentifierConvertor := Metadata.GetIdentifierConvertor;
+    Catalog := Connection.Catalog;
+    Schema := '';
 {$IFDEF USE_METADATA}
     if GetZComponent is TZSqlMetadata then
     begin
@@ -450,26 +454,30 @@ begin
       if not (IsEmpty(Catalog) and IsEmpty(Schema)) or
        (MessageDlg(SPropertyQuery + CRLF + SPropertyProcedures + CRLF +
         SPropertyExecute, mtWarning, [mbYes,mbNo], 0) = mrYes) then
+        begin
+        // continue
+        end
+      else
+        exit;
 {$ENDIF}
-      try
-        Metadata := Connection.DbcConnection.GetMetadata;
-        // Look for the Procedures of the defined Catalog and Schema
-        ResultSet := Metadata.GetProcedures(Catalog, Schema, '');
-        while ResultSet.Next do
-          List.Add(ResultSet.GetStringByName('PROCEDURE_NAME'));
-      finally
-        ResultSet.Close;
-      end;
-    end
-    else
+    end;
 {$ENDIF}
     begin
       try
         Metadata := Connection.DbcConnection.GetMetadata;
         // Look for the Procedures
-        ResultSet := Metadata.GetProcedures(Connection.Catalog, '', '');
+        ResultSet := Metadata.GetProcedures(Catalog, Schema, '');
         while ResultSet.Next do
-          List.Add(ResultSet.GetStringByName('PROCEDURE_NAME'));
+        begin
+          ProcedureName := ResultSet.GetStringByName('PROCEDURE_NAME');
+          ProcedureName := IdentifierConvertor.Quote(ProcedureName);
+          Schema := ResultSet.GetStringByName('PROCEDURE_SCHEM');
+          if Schema <> '' then
+            ProcedureName := IdentifierConvertor.Quote(Schema) + '.' + ProcedureName;
+          if Catalog <> '' then
+            ProcedureName := IdentifierConvertor.Quote(Catalog) + '.' + ProcedureName;
+          List.Add(ProcedureName);
+        end;
       finally
         ResultSet.Close;
       end;

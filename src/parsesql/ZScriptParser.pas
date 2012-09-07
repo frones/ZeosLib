@@ -61,7 +61,7 @@ uses Classes, SysUtils, ZTokenizer;
 
 type
   {** Defines a SQL delimiter type. }
-  TZDelimiterType = (dtDefault, dtGo, dtSetTerm, dtEmptyLine);
+  TZDelimiterType = (dtDefault, dtDelimiter, dtGo, dtSetTerm, dtEmptyLine);
 
   {** Implements a SQL script parser. }
   TZSQLScriptParser = class
@@ -218,6 +218,14 @@ var
     end;
   end;
 
+  procedure SetNextToken;
+  begin
+    TokenValue := Tokens[TokenIndex];
+    TokenType := TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
+      Tokens.Objects[TokenIndex]{$IFDEF FPC}){$ENDIF});
+    Inc(TokenIndex);
+  end;
+
 begin
   if Tokenizer = nil then
     raise Exception.Create(STokenizerIsNotDefined);
@@ -225,6 +233,9 @@ begin
   if CleanupStatements then
     Tokens := Tokenizer.TokenizeBufferToList(Text, [toSkipComments])
   else Tokens := Tokenizer.TokenizeBufferToList(Text, []);
+
+  if ( DelimiterType = dtDelimiter ) and ( Delimiter = '' ) then
+    Delimiter := ';'; //use default delimiter
 
   TokenIndex := 0;
   SQL := FUncompletedStatement;
@@ -236,20 +247,63 @@ begin
   end;
   FUncompletedStatement := '';
   FStatements.Clear;
-
   try
     repeat
-      TokenValue := Tokens[TokenIndex];
-      TokenType := TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
-        Tokens.Objects[TokenIndex]{$IFDEF FPC}){$ENDIF});
-      Inc(TokenIndex);
+      SetNextToken;
 
       case DelimiterType of
         dtDefault:
           EndOfStatement := (TokenValue = ';');
+        dtDelimiter:
+          begin
+            EndOfStatement := False;
+            if not (TokenType in [ttWhitespace, ttEOF]) then
+            begin
+              if (Uppercase(TokenValue) = 'DELIMITER') then
+              begin
+                Delimiter := '';
+                Temp := TokenValue; {process the DELITITER}
+                Temp := Temp + Tokens[TokenIndex]; {process the first ' ' char}
+                Inc(TokenIndex);
+                while TokenType <> ttWhitespace do
+                begin
+                  SetNextToken;
+                  if not (TokenType in [ttWhitespace, ttEOF]) then
+                    Delimiter := Delimiter + TokenValue; //get the new delimiter
+                end;
+                SQL := SQL + Temp + Delimiter;
+                EndOfStatement := True;
+              end
+              else
+              begin
+                Temp := TokenValue;
+                Extract := True;
+                while (Delimiter[1]=Temp[1]) and
+                      (Length(Delimiter) > Length(Temp))
+                       and not (TokenType in [ttWhitespace, ttEOF]) do
+                begin
+                  SetNextToken;
+
+                  if not (TokenType in [ttWhitespace, ttEOF]) then
+                  begin
+                    Temp := Temp + TokenValue;
+                    Extract := True;
+                  end else
+                    Extract := False;
+                end;
+                EndOfStatement := (Delimiter = Temp);
+                if not EndOfStatement then
+                begin
+                  if Extract then
+                    Temp := Copy(Temp, 1, Length(Temp) - Length(TokenValue));
+                  SQL := SQL + Temp;
+                end;
+              end;
+            end;
+          end;
         dtGo:
           EndOfStatement := (UpperCase(TokenValue) = 'GO');
-       dtEmptyLine:
+        dtEmptyLine:
           begin
             EndOfStatement := False;
             if TokenType = ttWhitespace then
@@ -257,10 +311,7 @@ begin
               Temp := TokenValue;
               while (CountChars(Temp, #10) < 2) and (TokenType = ttWhitespace) do
               begin
-                TokenValue := Tokens[TokenIndex];
-                TokenType := TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
-                  Tokens.Objects[TokenIndex]{$IFDEF FPC}){$ENDIF});
-                Inc(TokenIndex);
+                SetNextToken;
 
                 if TokenType = ttWhitespace then
                   Temp := Temp + TokenValue;
@@ -273,6 +324,7 @@ begin
               end;
             end;
           end;
+
         dtSetTerm:
           begin
             EndOfStatement := False;
@@ -284,10 +336,7 @@ begin
                     (Length(Delimiter) > Length(Temp))
                      and not (TokenType in [ttWhitespace, ttEOF]) do
               begin
-                TokenValue := Tokens[TokenIndex];
-                TokenType := TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
-                  Tokens.Objects[TokenIndex]{$IFDEF FPC}){$ENDIF});
-                Inc(TokenIndex);
+                SetNextToken;
 
                 if not (TokenType in [ttWhitespace, ttEOF]) then
                 begin
@@ -323,17 +372,19 @@ begin
           else Temp := SQL;
           if (DelimiterType = dtSetTerm)
             and StartsWith(UpperCase(Temp), 'SET TERM ') then
-          begin
-            Delimiter := Copy(Temp, 10, Length(Temp) - 9);
-          end
+            Delimiter := Copy(Temp, 10, Length(Temp) - 9)
           else
-          begin
-            if (DelimiterType = dtEmptyLine) and EndsWith(SQL, ';') then
-              SQL := Copy(SQL, 1, Length(SQL) - 1);
-            if CleanupStatements then
-              SQL := Trim(SQL);
-            FStatements.Add(SQL);
-          end;
+            if (DelimiterType = dtDelimiter)
+              and StartsWith(UpperCase(Temp), 'DELIMITER ') then
+              Delimiter := Copy(Temp, 11, Length(Temp) - 10)
+            else
+            begin
+              if (DelimiterType = dtEmptyLine) and EndsWith(SQL, ';') then
+                SQL := Copy(SQL, 1, Length(SQL) - 1);
+              if CleanupStatements then
+                SQL := Trim(SQL);
+              FStatements.Add(SQL);
+            end;
         end;
         SQL := '';
       end
@@ -354,7 +405,7 @@ begin
             // is last token:
             if (Tokenindex = Tokens.count-1) then
               TokenValue := '';
-            // next(!) token is also ttWhitespace or delimiter 
+            // next(!) token is also ttWhitespace or delimiter
             // (TokenIndex was already incremented!)
             if (Tokenindex < Tokens.count-1) then
               if ((TZTokenType({$IFDEF FPC}Pointer({$ENDIF}

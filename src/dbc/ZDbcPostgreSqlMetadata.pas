@@ -1401,10 +1401,7 @@ function TZPostgreSQLDatabaseMetadata.UncachedGetProcedures(const Catalog: strin
 var
   SQL, LProcedureNamePattern: string;
 begin
-    if ProcedureNamePattern = '' then
-      LProcedureNamePattern := '%'
-    else
-      LProcedureNamePattern := ProcedureNamePattern;
+    LProcedureNamePattern := ToLikeString(ProcedureNamePattern);
 
     if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
     begin
@@ -1498,15 +1495,48 @@ end;
 function TZPostgreSQLDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
+
+  procedure InsertProcedureColumnRow(AResultSet: IZResultSet;
+    const ASchema, AProcedureName, AColumnName: string;
+    const AColumnType, ADataType: integer; const ATypeName: string;
+    const ANullable: integer);
+  begin
+    AResultSet.MoveToInsertRow;
+    AResultSet.UpdateNullByName('PROCEDURE_CAT');
+    AResultSet.UpdateStringByName('PROCEDURE_SCHEM', ASchema);
+    AResultSet.UpdateStringByName('PROCEDURE_NAME', AProcedureName);
+    AResultSet.UpdateStringByName('COLUMN_NAME', AColumnName);
+    AResultSet.UpdateIntByName('COLUMN_TYPE', AColumnType);
+    AResultSet.UpdateIntByName('DATA_TYPE', ADataType);
+    AResultSet.UpdateStringByName('TYPE_NAME', ATypeName);
+    AResultSet.UpdateNullByName('PRECISION');
+    AResultSet.UpdateNullByName('LENGTH');
+    AResultSet.UpdateNullByName('SCALE');
+    AResultSet.UpdateNullByName('RADIX');
+    AResultSet.UpdateIntByName('NULLABLE', ANullable);
+    AResultSet.UpdateNullByName('REMARKS');
+    AResultSet.InsertRow;
+  end;
+
 var
   I, ReturnType, ColumnTypeOid, ArgOid: Integer;
   SQL, ReturnTypeType: string;
+  IsInParam, IsOutParam: Boolean;
   ArgTypes, ArgNames, ArgModes: TStrings;
   Ver73Up, Ver80Up: Boolean;
-  ResultSet,
+  ResultSet: IZResultSet;
   ColumnsRS: IZResultSet;
+  ArgMode: Char;
+  OutParamCount: Integer;
+  ColumnName: string;
+  ColumnType: Integer;
+  EscapedSchemaPattern, EscapedProcedureName: string;
 begin
-    Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
+    Result := inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
+
+    EscapedSchemaPattern := EscapeString(GetIdentifierConvertor.ExtractQuote(SchemaPattern));
+    EscapedProcedureName := EscapeString(ToLikeString(
+      GetIdentifierConvertor.ExtractQuote(ProcedureNamePattern)));
 
     Ver80Up := (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(8, 0);
     Ver73Up := Ver80Up or (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3);
@@ -1517,8 +1547,8 @@ begin
         + 'FROM pg_catalog.pg_proc p, pg_catalog.pg_namespace n, pg_catalog.pg_type t '
         + 'WHERE p.pronamespace=n.oid AND p.prorettype=t.oid';
       if SchemaPattern <> '' then
-        SQL := SQL + ' AND n.nspname LIKE ' + EscapeString(SchemaPattern);
-      SQL := SQL + ' AND p.proname LIKE ' + EscapeString(ToLikeString(ProcedureNamePattern))
+        SQL := SQL + ' AND n.nspname LIKE ' + EscapedSchemaPattern;
+      SQL := SQL + ' AND p.proname LIKE ' + EscapedProcedureName
         + ' ORDER BY n.nspname, p.proname';
     end
     else
@@ -1529,8 +1559,8 @@ begin
         + 'FROM pg_catalog.pg_proc p, pg_catalog.pg_namespace n,'
         + ' pg_catalog.pg_type t WHERE p.pronamespace=n.oid AND p.prorettype=t.oid';
       if SchemaPattern <> '' then
-        SQL := SQL + ' AND n.nspname LIKE ' + EscapeString(SchemaPattern);
-      SQL := SQL + ' AND p.proname LIKE ' + EscapeString(ToLikeString(ProcedureNamePattern))
+        SQL := SQL + ' AND n.nspname LIKE ' + EscapedSchemaPattern;
+      SQL := SQL + ' AND p.proname LIKE ' + EscapedProcedureName
         + ' ORDER BY n.nspname, p.proname';
     end
     else
@@ -1539,20 +1569,24 @@ begin
         + ' FROM pg_proc p, pg_type t'
         + ' WHERE p.prorettype=t.oid'
         + ' AND p.proname LIKE '
-        +   EscapeString(ToLikeString(ProcedureNamePattern))
+        +   EscapedProcedureName
         + ' ORDER BY p.proname';
 
     ArgTypes := TStringList.Create;
     ArgNames := TStringList.Create;
     ArgModes := TStringList.Create;
     try
-      ResultSet:=GetConnection.CreateStatement.ExecuteQuery(SQL); //FirmOS Patch
+      ResultSet := GetConnection.CreateStatement.ExecuteQuery(SQL); //FirmOS Patch
       with ResultSet do
       begin
         while Next do
         begin
           ReturnType := StrToInt(GetStringByName('prorettype'));
           ReturnTypeType := GetStringByName('typtype');
+
+          ArgTypes.Clear;
+          ArgNames.Clear;
+          ArgModes.Clear;
 
           if (IsNullByName('proallargtypes')) then
             PutSplitString(ArgTypes, GetStringByName('proargtypes'), #10#13#9' ')
@@ -1561,53 +1595,54 @@ begin
           ParseACLArray(ArgNames, GetStringByName('proargnames'));
           ParseACLArray(ArgModes, GetStringByName('proargmodes'));
 
-          if ReturnTypeType <> 'c' then
+          OutParamCount := 0;
+          for I := 0 to ArgTypes.Count - 1 do
           begin
-            Result.MoveToInsertRow;
-            Result.UpdateNull(1);
-            Result.UpdateString(2, GetStringByName('nspname'));
-            Result.UpdateString(3, GetStringByName('proname'));
-            Result.UpdateString(4, 'returnValue');
-            Result.UpdateInt(5, Ord(pctReturn));
-            Result.UpdateInt(6, Ord(GetSQLTypeByOid(ReturnType)));
-            Result.UpdateString(7, GetPostgreSQLType(ReturnType));
-            Result.UpdateNull(8);
-            Result.UpdateNull(9);
-            Result.UpdateNull(10);
-            Result.UpdateNull(11);
-            Result.UpdateInt(12, Ord(ntNullableUnknown));
-            Result.UpdateNull(13);
-            Result.InsertRow;
-          end;
-
-          for I := 0 to ArgTypes.Count-1 do
-          begin
+            IsInParam := True;
+            IsOutParam := False;
             if ArgModes.Count > I then
-              if not CharInSet(ArgModes[I][1], ['i', 'b', 'v']) then
-                 Continue;
+            begin
+              ArgMode := ArgModes[I][1];
+              IsInParam := CharInSet(ArgMode, ['i', 'b', 'v']);
+              IsOutParam := CharInSet(ArgMode, ['o', 'b', 't']);
+            end;
 
+            if IsOutParam then
+              Inc(OutParamCount);
+
+            // column name
             ArgOid := StrToInt(ArgTypes.Strings[i]);
-            Result.MoveToInsertRow;
-            Result.UpdateNull(1);
-            Result.UpdateString(2, GetStringByName('nspname'));
-            Result.UpdateString(3, GetStringByName('proname'));
             if ArgNames.Count > I then
-              Result.UpdateString(4, ArgNames.Strings[I])
+              ColumnName := ArgNames.Strings[I]
             else
-              Result.UpdateString(4, '$' + IntToStr(I));
-            Result.UpdateInt(5, Ord(pctIn));
-            Result.UpdateInt(6, Ord(GetSQLTypeByOid(ArgOid)));
-            Result.UpdateString(7, GetPostgreSQLType(ArgOid));
-            Result.UpdateNull(8);
-            Result.UpdateNull(9);
-            Result.UpdateNull(10);
-            Result.UpdateNull(11);
-            Result.UpdateInt(12, Ord(ntNullableUnknown));
-            Result.UpdateNull(13);
-            Result.InsertRow;
+              ColumnName := '$' + IntToStr(I + 1);
+
+            // column type
+            if IsInParam then
+            begin
+              if IsOutParam then
+                ColumnType := Ord(pctInOut)
+              else
+                ColumnType := Ord(pctIn);
+            end
+            else
+            begin
+             if IsOutParam then
+               ColumnType := Ord(pctOut)
+             else
+               ColumnType := Ord(pctUnknown);
+            end;
+
+            InsertProcedureColumnRow(Result, GetStringByName('nspname'),
+              GetStringByName('proname'), ColumnName, ColumnType,
+              Ord(GetSQLTypeByOid(ArgOid)), GetPostgreSQLType(ArgOid),
+              Ord(ntNullableUnknown));
           end;
 
-          if ReturnTypeType = 'c' then
+          if (OutParamCount > 0) then
+            Continue;
+
+          if (ReturnTypeType = 'c') then // Extract composit type columns
           begin
             ColumnsRS := GetConnection.CreateStatement.ExecuteQuery(
               Format('SELECT a.attname,a.atttypid'
@@ -1617,23 +1652,22 @@ begin
             while ColumnsRS.Next do
             begin
               ColumnTypeOid := ColumnsRS.GetIntByName('atttypid');
-              Result.MoveToInsertRow;
-              Result.UpdateNull(1);
-              Result.UpdateString(2, GetStringByName('nspname'));
-              Result.UpdateString(3, GetStringByName('proname'));
-              Result.UpdateString(4, ColumnsRS.GetStringByName('attname'));
-              Result.UpdateInt(5, Ord(pctResultSet));
-              Result.UpdateInt(6, Ord(GetSQLTypeByOid(ColumnTypeOid)));
-              Result.UpdateString(7, GetPostgreSQLType(ColumnTypeOid));
-              Result.UpdateNull(8);
-              Result.UpdateNull(9);
-              Result.UpdateNull(10);
-              Result.UpdateNull(11);
-              Result.UpdateInt(12, Ord(ntNullableUnknown));
-              Result.UpdateNull(13);
-              Result.InsertRow;
+              InsertProcedureColumnRow(Result, GetStringByName('nspname'),
+                GetStringByName('proname'), ColumnsRS.GetStringByName('attname'),
+                Ord(pctResultSet), Ord(GetSQLTypeByOid(ColumnTypeOid)),
+                GetPostgreSQLType(ColumnTypeOid), Ord(ntNullableUnknown));
             end;
             ColumnsRS.Close;
+          end
+          else
+          begin
+            if (ReturnTypeType <> 'p') then // Single non-pseudotype return value
+            begin
+              InsertProcedureColumnRow(Result, GetStringByName('nspname'),
+                GetStringByName('proname'), 'returnValue', Ord(pctReturn),
+                Ord(GetSQLTypeByOid(ReturnType)), GetPostgreSQLType(ReturnType),
+                Ord(ntNullableUnknown));
+            end;
           end;
         end;
         Close;

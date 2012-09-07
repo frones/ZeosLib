@@ -75,6 +75,7 @@ type
     procedure RetrieveParamValues;
     function GetStoredProcName: string;
     procedure SetStoredProcName(const Value: string);
+    function GetParamType(const Value: TZProcedureColumnType): TParamType;
   protected
 {    property CallableResultSet: IZCallableStatement read FCallableStatement
       write FCallableStatement;}
@@ -257,6 +258,7 @@ var
   Catalog,
   Schema,
   ObjectName: string;
+  ColumnType: Integer;
 begin
   if AnsiCompareText(Trim(SQL.Text), Trim(Value)) <> 0 then
   begin
@@ -273,9 +275,13 @@ begin
           OldParams.Assign(Params);
           Params.Clear;
           while ResultSet.Next do
-            if ResultSet.GetInt(5) >= 0 then //-1 is result column
-              Params.CreateParam(ConvertDbcToDatasetType(TZSqlType(ResultSet.GetInt(6))),
-                ResultSet.GetString(4), TParamType(ResultSet.GetInt(5)));
+          begin
+            ColumnType := ResultSet.GetIntByName('COLUMN_TYPE');
+            if ColumnType >= 0 then //-1 is result column
+              Params.CreateParam(ConvertDbcToDatasetType(TZSqlType(ResultSet.GetIntByName('DATA_TYPE'))),
+                ResultSet.GetStringByName('COLUMN_NAME'),
+                GetParamType(TZProcedureColumnType(ColumnType)));
+          end;
           Params.AssignValues(OldParams);
         finally
           OldParams.Free;
@@ -297,6 +303,29 @@ begin
     RetrieveParamValues;
   finally
     Connection.HideSQLHourGlass;
+  end;
+end;
+
+{**
+  Converts procedure column type to dataset param type.
+  @param Value a initial procedure column type.
+  @return a corresponding param type.
+}
+function TZStoredProc.GetParamType(const Value: TZProcedureColumnType): TParamType;
+begin
+  case Value of
+    pctIn:
+      Result := ptInput;
+    pctInOut:
+      Result := ptInputOutput;
+    pctOut:
+      Result := ptOutput;
+    pctReturn:
+      Result := ptResult;
+    pctResultSet:
+      Result := ptResult;
+  else
+    Result := ptUnknown;
   end;
 end;
 

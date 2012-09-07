@@ -1336,33 +1336,33 @@ function TZOracleDatabaseMetadata.UncachedGetProcedureColumns(const Catalog,
         Result.UpdateNull(1);    //PROCEDURE_CAT
         Result.UpdateNull(2);    //PROCEDURE_SCHEM
         Result.UpdateString(3, GetString(ColumnIndexes[1]));    //TABLE_NAME
-        if GetString(ColumnIndexes[3])='IN' then
-          result.UpdateInt(5,1) //ptInput
+        if GetString(ColumnIndexes[3]) = 'IN' then
+          Result.UpdateInt(5, Ord(pctIn))
         else
-          if GetString(ColumnIndexes[3])='OUT' then
+          if GetString(ColumnIndexes[3]) = 'OUT' then
           begin
-            result.UpdateInt(5,2); //ptOutPut
-            if colName='' then
+            Result.UpdateInt(5, Ord(pctOut));
+            if colName = '' then
             begin
-               colName := 'RESULT';
-               result.UpdateInt(5,4); // ptResult
+              colName := 'RESULT';
+              Result.UpdateInt(5, Ord(pctReturn));
             end;
-            if iColName>0 then
-               colName := 'RESULT'+IntToStr(iColName);
-            inc(iColName);
+            if iColName > 0 then
+               colName := 'RESULT' + IntToStr(iColName);
+            Inc(iColName);
           end
           else
-            if GetString(ColumnIndexes[3])='IN/OUT' then
-              result.UpdateInt(5,3) //ptOutPut
+            if GetString(ColumnIndexes[3]) = 'IN/OUT' then
+              Result.UpdateInt(5, Ord(pctInOut))
             else
-              Result.UpdateInt(5, 0); //ptUnknown
+              Result.UpdateInt(5, Ord(pctUnknown));
         Result.UpdateString(4, colName);    //COLUMN_NAME
 
        { case GetInt(ColumnIndexes[3]) of
-          0: Result.UpdateInt(5, 1);//ptInput
-          1: Result.UpdateInt(5, 4);//ptResult
+          0: Result.UpdateInt(5, Ord(pctIn));
+          1: Result.UpdateInt(5, Ord(pctReturn));
         else
-            Result.UpdateInt(5, 0); //ptUnknown
+            Result.UpdateInt(5, Ord(pctUnknown));
         end;
        }
         Result.UpdateInt(6,

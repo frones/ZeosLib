@@ -1419,7 +1419,7 @@ begin
         Where := ' WHERE ' + Where;
 
       SQL := SQL + Where + ' ORDER BY  P.RDB$PROCEDURE_NAME,'
-        + ' PP.RDB$PARAMETER_TYPE desc, PP.RDB$PARAMETER_NUMBER';
+        + ' PP.RDB$PARAMETER_TYPE, PP.RDB$PARAMETER_NUMBER';
     end
     else
     begin
@@ -1443,7 +1443,7 @@ begin
         Where := ' WHERE ' + Where;
 
       SQL := SQL + Where + ' ORDER BY  P.RDB$PROCEDURE_NAME,'
-        + ' PP.RDB$PARAMETER_TYPE desc, PP.RDB$PARAMETER_NUMBER';
+        + ' PP.RDB$PARAMETER_TYPE, PP.RDB$PARAMETER_NUMBER';
     end;
 
     with GetConnection.CreateStatement.ExecuteQuery(SQL) do
@@ -1467,10 +1467,10 @@ begin
         Result.UpdateString(3, GetString(ColumnIndexes[1]));    //TABLE_NAME
         Result.UpdateString(4, GetString(ColumnIndexes[2]));    //COLUMN_NAME
         case GetInt(ColumnIndexes[3]) of
-          0: Result.UpdateInt(5, 1);//ptInput
-          1: Result.UpdateInt(5, 4);//ptResult
+          0: Result.UpdateInt(5, Ord(pctIn));
+          1: Result.UpdateInt(5, Ord(pctReturn));
         else
-            Result.UpdateInt(5, 0); //ptUnknown
+            Result.UpdateInt(5, Ord(pctUnknown));
         end;
 
         Result.UpdateInt(6,

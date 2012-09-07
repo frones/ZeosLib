@@ -200,10 +200,10 @@ END;
 ' LANGUAGE 'plpgsql';
 
 /*==============================================================*/
-/* Stored procedure: abtest					*/
+/* Stored procedure: ABTEST                                     */
 /*==============================================================*/
 
-CREATE OR REPLACE FUNCTION "ABTEST" (
+CREATE FUNCTION "ABTEST" (
   p1 integer,
   p2 integer,
   p3 varchar,
@@ -218,6 +218,79 @@ BEGIN
 END;
 $body$
 LANGUAGE 'plpgsql';
+
+/*==============================================================*/
+/* Stored procedure: proc_nonames                               */
+/*==============================================================*/
+
+CREATE FUNCTION proc_nonames (
+  integer,
+  integer,
+  out integer
+)
+RETURNS integer AS
+'SELECT $1 + $2'
+LANGUAGE 'sql';
+
+/*==============================================================*/
+/* Stored procedure: proc_onename                               */
+/*==============================================================*/
+
+CREATE FUNCTION proc_onename (
+  p1 integer,
+  integer,
+  out integer
+)
+RETURNS integer AS
+'SELECT $1 + $2'
+LANGUAGE 'sql';
+
+/*==============================================================*/
+/* Stored procedure: proc_noout                                 */
+/*==============================================================*/
+
+CREATE FUNCTION proc_noout (
+  p1 integer,
+  integer
+)
+RETURNS integer AS
+'SELECT $1 + $2'
+LANGUAGE 'sql';
+
+/*==============================================================*/
+/* Stored procedure: proc_mixedorder                             */
+/*==============================================================*/
+
+CREATE FUNCTION proc_mixedorder (
+  OUT p1 integer,
+  INOUT p2 integer,
+  p3 integer
+) AS
+'SELECT $1 + $2, $1 * $2'
+LANGUAGE 'sql';
+
+/*==============================================================*/
+/* Stored procedure: proc_composite                             */
+/*==============================================================*/
+
+CREATE TYPE compositetype AS (f1 integer, f2 integer);
+
+CREATE FUNCTION proc_composite (
+  p1 integer,
+  p2 integer
+)
+RETURNS compositetype AS
+'SELECT cast(($1, $2) as compositetype)'
+LANGUAGE 'sql';
+
+/*==============================================================*/
+/* Stored procedure: proc_set                                   */
+/*==============================================================*/
+
+CREATE FUNCTION proc_set ()
+RETURNS SETOF VARCHAR AS
+'SELECT eq_name FROM equipment'
+LANGUAGE 'sql';
 
 /*==============================================================*/
 /* Grant privileges to columns                                  */

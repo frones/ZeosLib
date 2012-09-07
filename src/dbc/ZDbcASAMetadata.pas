@@ -1374,12 +1374,12 @@ begin
         Result.UpdateStringByName('COLUMN_NAME',
           GetStringByName('COLUMN_NAME'));
         case GetShortByName('COLUMN_TYPE') of
-          1: Result.UpdateShortByName('COLUMN_TYPE', 1); //ptInput
-          2: Result.UpdateShortByName('COLUMN_TYPE', 3); //ptInputOutput
-          3: Result.UpdateShortByName('COLUMN_TYPE', 2); //ptOutput
-          5: Result.UpdateShortByName('COLUMN_TYPE', 4); //ptResult
+          1: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctIn));
+          2: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctInOut));
+          3: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctOut));
+          5: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctReturn));
         else
-          Result.UpdateShortByName('COLUMN_TYPE', 0); //ptUnknown
+          Result.UpdateShortByName('COLUMN_TYPE', Ord(pctUnknown));
         end;
         Result.UpdateShortByName('DATA_TYPE',
           Ord(ConvertASAJDBCToSqlType(GetShortByName('DATA_TYPE'))));

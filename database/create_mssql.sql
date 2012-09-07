@@ -274,7 +274,7 @@ go
 /*==============================================================*/
 /*SET ANSI_NULLS ON 
 go
-CREATE PROCEDURE [ABTEST]*/
+CREATE PROCEDURE [ABTEST]
   @p1 int,
   @p2 int,
   @p3 varchar(10),
