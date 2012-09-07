@@ -121,13 +121,14 @@ type
     function GetSupportedProtocols: string; override;
   published
     procedure Test_abtest;
+    procedure Test_TEST_All_TYPES;
   end;
 
 
 implementation
 
 uses Classes, ZSysUtils, ZDbcUtils, ZTestConsts, ZDbcIntfs, ZAbstractDataset,
-  ZTestCase;
+  ZTestCase, ZCompatibility;
 
 
 { TZTestStoredProcedure }
@@ -558,14 +559,27 @@ begin
   CheckEquals(5, StoredProc.Params.Count);
   CheckEquals('P1', StoredProc.Params[0].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals(ord(ftInteger), ord(StoredProc.Params[0].DataType));
   CheckEquals('P2', StoredProc.Params[1].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(ord(ftInteger), ord(StoredProc.Params[1].DataType));
   CheckEquals('P3', StoredProc.Params[2].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    CheckEquals(ord(ftWideString), ord(StoredProc.Params[2].DataType))
+  else
+    CheckEquals(ord(ftString), ord(StoredProc.Params[2].DataType));
   CheckEquals('P4', StoredProc.Params[3].Name);
   CheckEquals(ord(ptOutput), ord(StoredProc.Params[3].ParamType));
+  CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
   CheckEquals('P5', StoredProc.Params[4].Name);
   CheckEquals(ord(ptOutput), ord(StoredProc.Params[4].ParamType));
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    CheckEquals(ord(ftWideString), ord(StoredProc.Params[4].DataType))
+  else
+    CheckEquals(ord(ftString), ord(StoredProc.Params[4].DataType));
 
   StoredProc.ParamByName('P1').AsInteger := 50;
   StoredProc.ParamByName('P2').AsInteger := 100;
@@ -574,6 +588,20 @@ begin
   CheckEquals(600, StoredProc.ParamByName('P4').AsInteger);
   CheckEquals('aa', StoredProc.ParamByName('P5').AsString);
   CheckEquals(5, StoredProc.Params.Count);
+
+  CheckEquals(ord(ftInteger), ord(StoredProc.Params[0].DataType));
+  CheckEquals(ord(ftInteger), ord(StoredProc.Params[1].DataType));
+  {if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    CheckEquals(ord(ftWideString), ord(StoredProc.Params[2].DataType))
+  else
+    CheckEquals(ord(ftString), ord(StoredProc.Params[2].DataType));}
+  CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    CheckEquals(ord(ftWideString), ord(StoredProc.Params[4].DataType))
+  else
+    CheckEquals(ord(ftString), ord(StoredProc.Params[4].DataType));
 
   StoredProc.Prepare;
   S := 'a';
@@ -597,7 +625,40 @@ begin
   StoredProc.ParamByName('P1').AsInteger := 50;
   StoredProc.ParamByName('P2').AsInteger := 100;
   StoredProc.ParamByName('P3').AsString := 'a';
+  CheckEquals('P4', StoredProc.Params[3].Name);
+  CheckEquals('P5', StoredProc.Params[4].Name);
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    CheckEquals(ord(ftWideString), ord(StoredProc.Params[4].DataType))
+  else
+    CheckEquals(ord(ftString), ord(StoredProc.Params[4].DataType));
   StoredProc.Open;
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    CheckEquals(ord(ftWideString), ord(StoredProc.Params[4].DataType))
+  else
+    CheckEquals(ord(ftString), ord(StoredProc.Params[4].DataType));
+end;
+
+procedure TZTestMySQLStoredProcedure.Test_TEST_All_TYPES;
+var
+  i, P2: integer;
+  S: String;
+begin
+  StoredProc.StoredProcName := 'TEST_All_TYPES';
+  CheckEquals(28, StoredProc.Params.Count);
+
+  CheckEquals('P1', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals(ord(ftSmallInt), ord(StoredProc.Params[0].DataType));
+
+  CheckEquals('P2', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(ord(ftSmallInt), ord(StoredProc.Params[1].DataType));
+
+  CheckEquals('P3', StoredProc.Params[2].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[2].ParamType));
+  CheckEquals(ord(ftSmallInt), ord(StoredProc.Params[2].DataType));
 end;
 
 initialization
