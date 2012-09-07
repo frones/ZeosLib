@@ -184,6 +184,7 @@ var
   I: Integer;
   Param: TParam;
   FCallableStatement: IZCallableStatement;
+  TempBlob: IZBlob;
 begin
   if not Assigned(FCallableStatement) then
   begin
@@ -196,6 +197,7 @@ begin
   for I := 0 to Params.Count - 1 do
   begin
     Param := Params[I];
+
     if not (Param.ParamType in [ptResult, ptOutput, ptInputOutput]) then
       Continue;
 
@@ -214,11 +216,17 @@ begin
         ftLargeInt:
           Param.Value := FCallableStatement.GetLong(I + 1);
         ftString:
-          Param.AsString := FCallableStatement.GetString(I + 1);
+          begin
+            Param.AsString := FCallableStatement.GetString(I + 1);
+            {$IFDEF DELPHI12_UP}Param.DataType := ftString;{$ENDIF} //Hack: D12_UP sets ftWideString on assigning a UnicodeString
+          end;
         ftWideString:
           {$IFDEF WITH_FTWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF} := FCallableStatement.GetUnicodeString(I + 1);
         ftMemo:
-          Param.AsMemo := FCallableStatement.GetString(I + 1);
+          begin
+            Param.AsMemo := FCallableStatement.GetString(I + 1);
+            {$IFDEF DELPHI12_UP}Param.DataType := ftMemo;{$ENDIF} //Hack: D12_UP sets ftWideMemo on assigning a UnicodeString
+          end;
         {$IFDEF WITH_WIDEMEMO}
         ftWideMemo:
         begin
@@ -234,6 +242,13 @@ begin
           Param.AsTime := FCallableStatement.GetTime(I + 1);
         ftDateTime:
           Param.AsDateTime := FCallableStatement.GetTimestamp(I + 1);
+        ftBlob:
+          begin
+            TempBlob := FCallableStatement.GetValue(I +1).VInterface as IZBlob;
+            if not TempBlob.IsEmpty then
+              Param.SetBlobData(TempBlob.GetBuffer, TempBlob.Length);
+            TempBlob := nil;
+          end
         else
            raise EZDatabaseError.Create(SUnKnownParamDataType);
       end;
