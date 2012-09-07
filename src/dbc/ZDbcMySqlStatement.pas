@@ -980,7 +980,7 @@ function TZMySQLSQLCallableStatement.GetCallSQL: string;
     begin
       if I > 1 then
         Result := Result + ',';
-      Result := Result + FParamNames[I-1]
+      Result := Result + '@'+FParamNames[I-1]
     end;
   end;
 
@@ -1007,7 +1007,7 @@ function TZMySQLSQLCallableStatement.GetOutParamSQL: String;
         begin
           if Result <> '' then
             Result := Result + ',';
-          Result := Result + FParamNames[I];
+          Result := Result + '@'+FParamNames[I]+ ' AS '+FParamNames[I]
         end;
         Inc(i);
       end;
@@ -1130,7 +1130,7 @@ begin
     begin
       if FDBParamTypes[i] in [1, 3] then
       begin
-        ExecQuery := 'SET '+ZPlainString(FParamNames[i])+' = '+PrepareSQLParam(I);
+        ExecQuery := 'SET @'+ZPlainString(FParamNames[i])+' = '+PrepareSQLParam(I);
         if ExecQuery = '' then
           ExecQuery := ExecQuery;
         if FPlainDriver.ExecQuery(Self.FHandle, PAnsiChar(ExecQuery)) = 0 then
@@ -1234,7 +1234,7 @@ end;
 procedure TZMySQLSQLCallableStatement.RegisterParamName(const ParameterIndex:integer;
   const ParamName: String);
 begin
-  FParamNames[ParameterIndex] := '@'+ParamName;
+  FParamNames[ParameterIndex] := ParamName;
 end;
 
 constructor TZMySQLSQLCallableStatement.Create(PlainDriver: IZMySQLPlainDriver;
