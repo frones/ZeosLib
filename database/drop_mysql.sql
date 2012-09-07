@@ -5,6 +5,7 @@
 /*==============================================================*/
 
 drop procedure IF EXISTS ABTEST;
+drop procedure IF EXISTS TEST_All_TYPES;
 drop table IF EXISTS blob_values;
 drop table IF EXISTS date_values;
 drop table IF EXISTS default_values;
