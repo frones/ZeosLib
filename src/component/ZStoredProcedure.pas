@@ -117,7 +117,7 @@ type
 implementation
 
 uses
-  ZAbstractRODataset, ZMessages, ZDatasetUtils;
+  ZAbstractRODataset, ZMessages, ZDatasetUtils, ZSysUtils;
 
 { TZStoredProc }
 
@@ -191,6 +191,8 @@ var
   Param: TParam;
   FCallableStatement: IZCallableStatement;
   TempBlob: IZBlob;
+  TempBytes: TByteDynArray;
+  {$IFDEF WITH_ASBYTES}Bts: TBytes;{$ENDIF}
 begin
   if not Assigned(FCallableStatement) then
   begin
@@ -240,8 +242,17 @@ begin
           Param.DataType := ftWideMemo;
         end;
         {$ENDIF}
-        ftBytes:
-          Param.AsString := FCallableStatement.GetString(I + 1);
+        ftBytes, ftVarBytes:
+          begin
+            {$IFDEF WITH_ASBYTES}
+            TempBytes := StrToBytes(ZAnsiString(FCallableStatement.GetString(I + 1)));
+            SetLength(Bts, High(TempBytes)+1);
+            Move(PAnsiChar(TempBytes)^, PAnsiChar(Bts)^, High(TempBytes)+1);
+            Param.AsBytes := Bts;
+            {$ELSE}
+            Param.AsString := FCallableStatement.GetString(I + 1);
+            {$ENDIF}
+          end;
         ftDate:
           Param.AsDate := FCallableStatement.GetDate(I + 1);
         ftTime:

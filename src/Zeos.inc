@@ -155,6 +155,7 @@
   {$DEFINE WITH_FTBYTE}                 // ftByte is supported
   {$DEFINE WITH_FTEXTENDED}             // ftExtended is supported
   {$DEFINE WITH_FTLONGWORD}             // ftLongWord is supported
+  {$DEFINE WITH_ASBYTES}                //  AsBytes is supported
   {.$DEFINE WRONG_UNICODE_BEHAVIOR}      // EgonHugeist: a define for those why do use self assambled queries with still encoded partial strings
 {$ELSE}
   {$IFNDEF LAZARUSUTF8HACK}

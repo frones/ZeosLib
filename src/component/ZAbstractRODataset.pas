@@ -1296,7 +1296,7 @@ begin
           begin
             PVariant(Buffer)^ := BytesToVar(
               RowAccessor.GetBytes(ColumnIndex, Result));
-            System.Move((PChar(RowAccessor.GetColumnData(ColumnIndex, Result)) + 2)^, Buffer^,
+            System.Move((PAnsiChar(RowAccessor.GetColumnData(ColumnIndex, Result)) + 2)^, Buffer^,
               RowAccessor.GetColumnDataSize(ColumnIndex)-2);
             Result := not Result;
           end;
