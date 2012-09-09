@@ -1118,15 +1118,10 @@ begin
             Offset := 0;
             DoRead;
             if Status = OCI_NEED_DATA then
-            begin
               while Status = OCI_NEED_DATA do
                 DoRead;
-              CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
-                Status, lcOther, 'Read Large Object');
-            end
-            else
-              CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
-                Status, lcOther, 'Read Large Object');
+            CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
+              Status, lcOther, 'Read Large Object');
             ReallocMem(Buf, Offset);
             Move(PAnsichar(AnsiTemp)^, PAnsichar(Buf)^,Offset);
           end;
