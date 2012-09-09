@@ -241,10 +241,13 @@ begin
     FIELD_TYPE_VARCHAR,
     FIELD_TYPE_VAR_STRING,
     FIELD_TYPE_STRING:
-      if ( CharEncoding = ceUTF8 ) and UTF8StringAsWideField then
-        Result := stUnicodeString
+      if (FieldFlags and BINARY_FLAG) = 0 then
+        if ( CharEncoding = ceUTF8 ) and UTF8StringAsWideField then
+          Result := stUnicodeString
+        else
+          Result := stString
       else
-        Result := stString;
+        Result := stBytes;
     FIELD_TYPE_ENUM:
       Result := stString;
     FIELD_TYPE_SET:
