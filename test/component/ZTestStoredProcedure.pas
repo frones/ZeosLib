@@ -128,7 +128,7 @@ type
 implementation
 
 uses Classes, ZSysUtils, ZDbcUtils, ZTestConsts, ZDbcIntfs, ZAbstractDataset,
-  ZTestCase, ZCompatibility,ZVariant;
+  ZTestCase, ZCompatibility, ZVariant, Types;
 
 
 { TZTestStoredProcedure }
@@ -653,6 +653,7 @@ var
   i, P2: integer;
   S: String;
   SQLTime: TDateTime;
+  TempBytes: TByteDynArray;
 begin
   StoredProc.StoredProcName := 'TEST_All_TYPES';
   CheckEquals(28, StoredProc.Params.Count);
@@ -812,8 +813,8 @@ begin
       StoredProc.Params[10].AsString := UTF8Encode(WideString(Str1))
     else
       StoredProc.Params[10].AsString := AnsiString(Str1);
-  StoredProc.Params[11].AsDate := TDate(SQLTime);
-  StoredProc.Params[12].AsTime := TTime(SQLTime);
+  StoredProc.Params[11].AsDate := SQLTime;
+  StoredProc.Params[12].AsTime := SQLTime;
   StoredProc.Params[13].AsSmallInt := 40;
   StoredProc.Params[14].AsDateTime := SQLTime;
   StoredProc.Params[15].AsDateTime := SQLTime;
@@ -849,6 +850,7 @@ begin
       StoredProc.Params[23].AsString := UTF8Encode(WideString(Str1))
     else
       StoredProc.Params[23].AsString := AnsiString(Str1);
+  StoredProc.Params[24].Value := StrToBytes('121415');
   StoredProc.Params[25].AsString := 'a';
   StoredProc.Params[26].AsInteger := 50000;
   StoredProc.Params[27].AsInteger := 60000;
@@ -1030,8 +1032,10 @@ begin
     end;
 
   CheckEquals('P25', StoredProc.Fields[24].DisplayName);
-  //CheckEquals(DateTimeToStr(SQLTime), DateTimeToStr(StoredProc.Fields[24].AsDateTime));
-  CheckEquals(ord(ftBlob), ord(StoredProc.Fields[24].DataType));
+  TempBytes :=StrToBytes(ZAnsiString('121415'));
+  SetLength(TempBytes, StoredProc.Fields[24].Size);
+  CheckEquals(TempBytes, {$IFDEF WITH_ASBYTES}TByteDynArray(StoredProc.Fields[24].AsBytes){$ELSE}StrToBytes(StoredProc.Fields[24].AsString){$ENDIF});
+  CheckEquals(ord(ftBytes), ord(StoredProc.Fields[24].DataType));
 
   CheckEquals('P26', StoredProc.Fields[25].DisplayName);
   CheckEquals('a', StoredProc.Fields[25].AsString);
