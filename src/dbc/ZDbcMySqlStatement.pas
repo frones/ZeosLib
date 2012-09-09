@@ -1070,7 +1070,7 @@ begin
       stBytes:
         Result := GetSQLHexAnsiString(PAnsiChar(AnsiString(SoftVarManager.GetAsString(Value))), Length(SoftVarManager.GetAsString(Value)));
       stString:
-        Result := #39+ZPlainString(SoftVarManager.GetAsString(Value))+#39;
+        Result := FPlainDriver.EscapeString(FHandle, ZPlainString(SoftVarManager.GetAsString(Value), GetConnection.GetEncoding), GetConnection.GetEncoding);
       stUnicodeString:
         if (GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) then
           Result := FPlainDriver.EscapeString(FHandle, UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)), GetConnection.GetEncoding)
@@ -1256,7 +1256,8 @@ begin
        ( Pos('double', LowerCase(ParamTypeName)) > 0 ) then
       FParamTypeNames[ParameterIndex] := 'DECIMAL('+IntToStr(ColumnSize)+')'
     else}
-      if ( Pos('char', LowerCase(ParamTypeName)) > 0 ) then
+      if ( Pos('char', LowerCase(ParamTypeName)) > 0 ) or
+         ( Pos('set', LowerCase(ParamTypeName)) > 0 ) then
         FParamTypeNames[ParameterIndex] := 'CHAR('+IntToStr(ColumnSize)+')'
       else
         if ( Pos('set', LowerCase(ParamTypeName)) > 0 ) then
@@ -1276,7 +1277,10 @@ begin
                    ( Pos('year', LowerCase(ParamTypeName)) > 0 ) then
                   FParamTypeNames[ParameterIndex] := 'SIGNED'
                 else
-                  FParamTypeNames[ParameterIndex] := ''
+                  if ( Pos('binary', LowerCase(ParamTypeName)) > 0 ) then
+                    FParamTypeNames[ParameterIndex] := 'BINARY('+IntToStr(ColumnSize)+')'
+                  else
+                    FParamTypeNames[ParameterIndex] := '';
 end;
 
 constructor TZMySQLSQLCallableStatement.Create(PlainDriver: IZMySQLPlainDriver;
