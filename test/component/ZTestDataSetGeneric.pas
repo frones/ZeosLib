@@ -796,9 +796,6 @@ begin
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
-    // Query.RequestLive := true;
-  //  CheckEquals(Ord(rtScrollInsensitive), Ord(Query.DbcStatement.GetResultSetType));
-  //  CheckEquals(Ord(rcUpdatable), Ord(Query.DbcStatement.GetResultSetConcurrency));
 
     Query.SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
     Query.ExecSQL;
@@ -1002,10 +999,10 @@ begin
       CheckEquals(1, FieldByName('p_redundant').AsInteger);
       Delete;
 
-      BinStream.Free;
-      BinStream1.Free;
-      StrStream.Free;
-      StrStream1.Free;
+      FreeAndNil(BinStream);
+      FreeAndNil(BinStream1);
+      FreeAndNil(StrStream);
+      FreeAndNil(StrStream1);
 
       { create and update resultset for equipment table for eq_id = TEST_ROW_ID }
       SQL.Text := Sql_;
@@ -1014,6 +1011,14 @@ begin
       Close;
     end;
   finally
+    if Assigned(BinStream) then
+       FreeAndNil(BinStream);
+    if Assigned(BinStream1) then
+      FreeAndNil(BinStream1);
+    if Assigned(StrStream) then
+      FreeAndNil(StrStream);
+    if Assigned(StrStream1) then
+      FreeAndNil(StrStream1);
     Query.Free;
   end;
 end;
@@ -1786,6 +1791,7 @@ var
   TextLob, BinLob: String;
   TempConnection: TZConnection;
   WS: WideString;
+  i: Integer;
 begin
   TempConnection := nil;
   BinStream:=nil;
@@ -1842,12 +1848,14 @@ begin
       if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) then
       begin
         s:={$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString(utf8encode('123456ייאא'),6000);
-        CheckEquals(StrLen(PAnsiChar(utf8encode('123456ייאא')))*6000, StrLen(PAnsiChar(s)), 'Length of DupeString Text');
+        I := StrLen(PAnsiChar(s));
+        CheckEquals(StrLen(PAnsiChar(utf8encode('123456ייאא')))*6000, I, 'Length of DupeString Text');
       end
       else
       begin
         s:={$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString('123456ייאא',6000);
-        CheckEquals(StrLen(PAnsiChar('123456ייאא'))*6000, StrLen(PAnsiChar(s)), 'Length of DupeString Text');
+        I := StrLen(PAnsiChar(s));
+        CheckEquals(StrLen(PAnsiChar('123456ייאא'))*6000, I, 'Length of DupeString Text');
       end;
       TextStreamS.Write(s[1],length(s));
       Params[1].LoadFromStream(TextStreamS, ftMemo);

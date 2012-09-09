@@ -191,8 +191,10 @@ var
   Param: TParam;
   FCallableStatement: IZCallableStatement;
   TempBlob: IZBlob;
+  {$IFDEF WITH_ASBYTES}
   TempBytes: TByteDynArray;
-  {$IFDEF WITH_ASBYTES}Bts: TBytes;{$ENDIF}
+  Bts: TBytes;
+  {$ENDIF}
 begin
   if not Assigned(FCallableStatement) then
   begin
@@ -297,13 +299,11 @@ end;
 
 procedure TZStoredProc.SetStoredProcName(const Value: string);
 var
-  ResultSet: IZResultSet;
   OldParams: TParams;
   Catalog,
   Schema,
   ObjectName: string;
   ColumnType: Integer;
-  OldTypes: TStrings;
 begin
   if AnsiCompareText(Trim(SQL.Text), Trim(Value)) <> 0 then
   begin

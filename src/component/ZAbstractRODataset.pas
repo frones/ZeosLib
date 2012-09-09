@@ -111,6 +111,7 @@ type
     constructor Create(ADataset: TZAbstractRODataset);
   end;
 
+{$WARNINGS OFF}
   {** Abstract dataset component optimized for read/only access. }
   {$IFDEF WITH_WIDEDATASET}
   TZAbstractRODataset = class(TWideDataSet)
@@ -470,6 +471,7 @@ type
     property Filter;
     property Filtered;
   end;
+{$WARNINGS ON}
 
 implementation
 
@@ -3317,10 +3319,12 @@ end;
 }
 // Silvio Clécio
 {$IFDEF WITH_IPROVIDERWIDE}
+{$WARNINGS OFF}
 function TZAbstractRODataset.PSGetKeyFieldsW: WideString;
 begin
   Result := inherited PSGetKeyFieldsW;
 end;
+{$WARNINGS ON}
 {$ELSE}
 function TZAbstractRODataset.PSGetKeyFields: string;
 begin
