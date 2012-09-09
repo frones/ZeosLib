@@ -335,6 +335,16 @@ BEGIN
   SET `P28` = FP28;
 END; //
 
+CREATE PROCEDURE `TripleResultVarying`(
+  IN p_in INT,
+  OUT p_out INT,
+  INOUT p_inout INT)
+BEGIN
+  SELECT p_in, p_out, p_inout;
+  SET p_in = 100, p_out = 200, p_inout = 300;
+  SELECT p_in, p_out, p_inout;
+END;//
+
 DELIMITER ;
 
 /*==============================================================*/
