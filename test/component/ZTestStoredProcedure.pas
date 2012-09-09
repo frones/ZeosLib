@@ -128,7 +128,7 @@ type
 implementation
 
 uses Classes, ZSysUtils, ZDbcUtils, ZTestConsts, ZDbcIntfs, ZAbstractDataset,
-  ZTestCase, ZCompatibility;
+  ZTestCase, ZCompatibility,ZVariant;
 
 
 { TZTestStoredProcedure }
@@ -591,11 +591,15 @@ begin
 
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[0].DataType));
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[1].DataType));
-  {if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+  {$IFDEF DELPHI12_UP}
+  CheckEquals(ord(ftWideString), ord(StoredProc.Params[2].DataType));
+  {$ELSE}
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
     ( Connection.DbcConnection.UTF8StringAsWideField) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[2].DataType))
   else
-    CheckEquals(ord(ftString), ord(StoredProc.Params[2].DataType));}
+    CheckEquals(ord(ftString), ord(StoredProc.Params[2].DataType));
+  {$ENDIF}
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
   if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
     ( Connection.DbcConnection.UTF8StringAsWideField) then
@@ -621,18 +625,21 @@ begin
   StoredProc.Unprepare;
   S := StoredProc.ParamByName('P4').AsString +
     ' ' + StoredProc.ParamByName('P5').AsString;
-  StoredProc.Open;
   StoredProc.ParamByName('P1').AsInteger := 50;
   StoredProc.ParamByName('P2').AsInteger := 100;
   StoredProc.ParamByName('P3').AsString := 'a';
   CheckEquals('P4', StoredProc.Params[3].Name);
   CheckEquals('P5', StoredProc.Params[4].Name);
+  StoredProc.Open;
+
   if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
     ( Connection.DbcConnection.UTF8StringAsWideField) then
-    CheckEquals(ord(ftWideString), ord(StoredProc.Params[4].DataType))
+    CheckEquals(ord(ftWideString), ord(StoredProc.Fields[1].DataType))
   else
-    CheckEquals(ord(ftString), ord(StoredProc.Params[4].DataType));
-  StoredProc.Open;
+    CheckEquals(ord(ftString), ord(StoredProc.Fields[1].DataType));
+  CheckEquals(2, ord(StoredProc.Fields.Count));
+
+  CheckEquals(ord(ftLargeint), ord(StoredProc.Fields[0].DataType));
   if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
     ( Connection.DbcConnection.UTF8StringAsWideField) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[4].DataType))
@@ -641,9 +648,11 @@ begin
 end;
 
 procedure TZTestMySQLStoredProcedure.Test_TEST_All_TYPES;
+const Str1 = 'צהüךבאüהצ';
 var
   i, P2: integer;
   S: String;
+  SQLTime: TDateTime;
 begin
   StoredProc.StoredProcName := 'TEST_All_TYPES';
   CheckEquals(28, StoredProc.Params.Count);
@@ -659,6 +668,386 @@ begin
   CheckEquals('P3', StoredProc.Params[2].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[2].ParamType));
   CheckEquals(ord(ftSmallInt), ord(StoredProc.Params[2].DataType));
+
+  CheckEquals('P4', StoredProc.Params[3].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[3].ParamType));
+  CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
+
+  CheckEquals('P5', StoredProc.Params[4].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[4].ParamType));
+  CheckEquals(ord(ftInteger), ord(StoredProc.Params[4].DataType));
+
+  CheckEquals('P6', StoredProc.Params[5].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[5].ParamType));
+  CheckEquals(ord(ftLargeInt), ord(StoredProc.Params[5].DataType));
+
+  CheckEquals('P7', StoredProc.Params[6].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[6].ParamType));
+  CheckEquals(ord(ftFloat), ord(StoredProc.Params[6].DataType));
+
+  CheckEquals('P8', StoredProc.Params[7].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[7].ParamType));
+  CheckEquals(ord(ftFloat), ord(StoredProc.Params[7].DataType));
+
+  CheckEquals('P9', StoredProc.Params[8].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[8].ParamType));
+  CheckEquals(ord(ftFloat), ord(StoredProc.Params[8].DataType));
+
+  CheckEquals('P10', StoredProc.Params[9].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[9].ParamType));
+  CheckEquals(ord(ftLargeInt), ord(StoredProc.Params[9].DataType));
+
+  CheckEquals('P11', StoredProc.Params[10].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[10].ParamType));
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    CheckEquals(ord(ftWideString), ord(StoredProc.Params[10].DataType))
+  else
+    CheckEquals(ord(ftString), ord(StoredProc.Params[10].DataType));
+
+  CheckEquals('P12', StoredProc.Params[11].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[11].ParamType));
+  CheckEquals(ord(ftDate), ord(StoredProc.Params[11].DataType));
+
+  CheckEquals('P13', StoredProc.Params[12].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[12].ParamType));
+  CheckEquals(ord(ftTime), ord(StoredProc.Params[12].DataType));
+
+  CheckEquals('P14', StoredProc.Params[13].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[13].ParamType));
+  CheckEquals(ord(ftSmallInt), ord(StoredProc.Params[13].DataType));
+
+  CheckEquals('P15', StoredProc.Params[14].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[14].ParamType));
+  CheckEquals(ord(ftDateTime), ord(StoredProc.Params[14].DataType));
+
+  CheckEquals('P16', StoredProc.Params[15].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[15].ParamType));
+  CheckEquals(ord(ftDateTime), ord(StoredProc.Params[15].DataType));
+
+  CheckEquals('P17', StoredProc.Params[16].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[16].ParamType));
+  CheckEquals(ord(ftBlob), ord(StoredProc.Params[16].DataType));
+
+  CheckEquals('P18', StoredProc.Params[17].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[17].ParamType));
+  CheckEquals(ord(ftBlob), ord(StoredProc.Params[17].DataType));
+
+  CheckEquals('P19', StoredProc.Params[18].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[18].ParamType));
+  CheckEquals(ord(ftBlob), ord(StoredProc.Params[18].DataType));
+
+  CheckEquals('P20', StoredProc.Params[19].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[19].ParamType));
+  CheckEquals(ord(ftBlob), ord(StoredProc.Params[19].DataType));
+
+  CheckEquals('P21', StoredProc.Params[20].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[20].ParamType));
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    CheckEquals(ord({$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftMemo{$ENDIF}), ord(StoredProc.Params[20].DataType))
+  else
+    CheckEquals(ord(ftMemo), ord(StoredProc.Params[20].DataType));
+
+  CheckEquals('P22', StoredProc.Params[21].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[21].ParamType));
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    CheckEquals(ord({$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftMemo{$ENDIF}), ord(StoredProc.Params[21].DataType))
+  else
+    CheckEquals(ord(ftMemo), ord(StoredProc.Params[21].DataType));
+
+  CheckEquals('P23', StoredProc.Params[22].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[22].ParamType));
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    CheckEquals(ord({$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftMemo{$ENDIF}), ord(StoredProc.Params[22].DataType))
+  else
+    CheckEquals(ord(ftMemo), ord(StoredProc.Params[22].DataType));
+
+  CheckEquals('P24', StoredProc.Params[23].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[23].ParamType));
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    CheckEquals(ord({$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftMemo{$ENDIF}), ord(StoredProc.Params[23].DataType))
+  else
+    CheckEquals(ord(ftMemo), ord(StoredProc.Params[23].DataType));
+
+  CheckEquals('P25', StoredProc.Params[24].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[24].ParamType));
+  CheckEquals(ord(ftBytes), ord(StoredProc.Params[24].DataType));
+
+  CheckEquals('P26', StoredProc.Params[25].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[25].ParamType));
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    CheckEquals(ord({$IFDEF WITH_FTWIDESTRING}ftWideString{$ELSE}ftString{$ENDIF}), ord(StoredProc.Params[25].DataType))
+  else
+    CheckEquals(ord(ftString), ord(StoredProc.Params[25].DataType));
+
+  CheckEquals('P27', StoredProc.Params[26].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[26].ParamType));
+  CheckEquals(ord(ftInteger), ord(StoredProc.Params[26].DataType));
+
+  CheckEquals('P28', StoredProc.Params[27].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[27].ParamType));
+  CheckEquals(ord(ftInteger), ord(StoredProc.Params[27].DataType));
+
+  StoredProc.Params[0].AsSmallInt := 10;
+  StoredProc.Params[1].AsSmallInt := 20;
+  StoredProc.Params[2].AsSmallInt := 30;
+  StoredProc.Params[3].AsInteger := 1000;
+  StoredProc.Params[4].AsInteger := 2000;
+  StoredProc.Params[5].AsInteger := 30000;
+  SQLTime := now;
+  StoredProc.Params[6].AsFloat := SQLTime;
+  StoredProc.Params[7].AsFloat := SQLTime;
+  StoredProc.Params[8].AsFloat := SQLTime;
+  StoredProc.Params[9].AsInteger := 40000;
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    StoredProc.Params[10].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF} := {$IFDEF WITH_FTWIDESTRING}WideString{$ENDIF}(Str1)
+  else
+    if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) then
+      StoredProc.Params[10].AsString := UTF8Encode(WideString(Str1))
+    else
+      StoredProc.Params[10].AsString := AnsiString(Str1);
+  StoredProc.Params[11].AsDate := TDate(SQLTime);
+  StoredProc.Params[12].AsTime := TTime(SQLTime);
+  StoredProc.Params[13].AsSmallInt := 40;
+  StoredProc.Params[14].AsDateTime := SQLTime;
+  StoredProc.Params[15].AsDateTime := SQLTime;
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    StoredProc.Params[20].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF} := {$IFDEF WITH_FTWIDESTRING}WideString{$ENDIF}(Str1)
+  else
+    if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) then
+      StoredProc.Params[20].AsString := UTF8Encode(WideString(Str1))
+    else
+      StoredProc.Params[20].AsString := AnsiString(Str1);
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    StoredProc.Params[21].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF} := {$IFDEF WITH_FTWIDESTRING}WideString{$ENDIF}(Str1)
+  else
+    if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) then
+      StoredProc.Params[21].AsString := UTF8Encode(WideString(Str1))
+    else
+      StoredProc.Params[21].AsString := AnsiString(Str1);
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    StoredProc.Params[22].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF} := {$IFDEF WITH_FTWIDESTRING}WideString{$ENDIF}(Str1)
+  else
+    if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) then
+      StoredProc.Params[22].AsString := UTF8Encode(WideString(Str1))
+    else
+      StoredProc.Params[22].AsString := AnsiString(Str1);
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    StoredProc.Params[23].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF} := {$IFDEF WITH_FTWIDESTRING}WideString{$ENDIF}(Str1)
+  else
+    if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) then
+      StoredProc.Params[23].AsString := UTF8Encode(WideString(Str1))
+    else
+      StoredProc.Params[23].AsString := AnsiString(Str1);
+  StoredProc.Params[25].AsString := 'a';
+  StoredProc.Params[26].AsInteger := 50000;
+  StoredProc.Params[27].AsInteger := 60000;
+  StoredProc.ExecProc;
+  CheckEquals(28, StoredProc.Params.Count);
+  StoredProc.Open;
+  CheckEquals(28, StoredProc.Fields.Count);
+
+  CheckEquals('P1', StoredProc.Fields[0].DisplayName);
+  CheckEquals(10, StoredProc.Fields[0].AsInteger);
+  //CheckEquals(ord(ftSmallint), ord(StoredProc.Fields[0].DataType));
+
+  CheckEquals('P2', StoredProc.Fields[1].DisplayName);
+  CheckEquals(20, StoredProc.Fields[1].AsInteger);
+  //CheckEquals(ord(ftSmallint), ord(StoredProc.Fields[1].DataType));
+
+  CheckEquals('P3', StoredProc.Fields[2].DisplayName);
+  CheckEquals(30, StoredProc.Fields[2].AsInteger);
+  //CheckEquals(ord(ftSmallint), ord(StoredProc.Fields[2].DataType));
+
+  CheckEquals('P4', StoredProc.Fields[3].DisplayName);
+  CheckEquals(1000, StoredProc.Fields[3].AsInteger);
+  //CheckEquals(ord(ftInteger), ord(StoredProc.Fields[3].DataType));
+
+  CheckEquals('P5', StoredProc.Fields[4].DisplayName);
+  CheckEquals(2000, StoredProc.Fields[4].AsInteger);
+  //CheckEquals(ord(ftInteger), ord(StoredProc.Fields[4].DataType));
+
+  CheckEquals('P6', StoredProc.Fields[5].DisplayName);
+  CheckEquals(30000, StoredProc.Fields[5].AsInteger);
+  CheckEquals(ord(ftLargeInt), ord(StoredProc.Fields[5].DataType));
+
+  CheckEquals('P7', StoredProc.Fields[6].DisplayName);
+  CheckEquals(True, Abs(SQLTime - StoredProc.Fields[6].AsFloat) < FLOAT_COMPARE_PRECISION);
+  CheckEquals(ord(ftFloat), ord(StoredProc.Fields[6].DataType));
+
+  CheckEquals('P8', StoredProc.Fields[7].DisplayName);
+  //CheckEquals(True, Abs(SQLTime - StoredProc.Fields[7].AsFloat) < FLOAT_COMPARE_PRECISION_SINGLE);
+  CheckEquals(ord(ftFloat), ord(StoredProc.Fields[7].DataType));
+
+  CheckEquals('P9', StoredProc.Fields[8].DisplayName);
+  //CheckEquals(SQLTime, StoredProc.Fields[8].AsFloat);
+  CheckEquals(ord(ftFloat), ord(StoredProc.Fields[8].DataType));
+
+  CheckEquals('P10', StoredProc.Fields[9].DisplayName);
+  CheckEquals(40000, StoredProc.Fields[9].AsInteger);
+  CheckEquals(ord(ftFloat), ord(StoredProc.Fields[9].DataType));
+
+  CheckEquals('P11', StoredProc.Fields[10].DisplayName);
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  begin
+    CheckEquals({$IFDEF WITH_FTWIDESTRING}WideString{$ENDIF}(Str1), StoredProc.Fields[10].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF});
+    CheckEquals(ord({$IFDEF WITH_FTWIDESTRING}ftWideString{$ELSE}ftString{$ENDIF}), ord(StoredProc.Fields[10].DataType));
+  end
+  else
+    if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) then
+    begin
+      CheckEquals(UTF8Encode({$IFDEF WITH_FTWIDESTRING}WideString{$ENDIF}(Str1)), StoredProc.Fields[10].AsString);
+      CheckEquals(ord(ftString), ord(StoredProc.Fields[10].DataType));
+    end
+    else
+    begin
+      CheckEquals(Str1, StoredProc.Fields[10].AsString);
+      CheckEquals(ord(ftString), ord(StoredProc.Fields[10].DataType));
+    end;
+
+  CheckEquals('P12', StoredProc.Fields[11].DisplayName);
+  CheckEquals(Int(SQLTime), StoredProc.Fields[11].AsDateTime);
+  CheckEquals(ord(ftDate), ord(StoredProc.Fields[11].DataType));
+
+  CheckEquals('P13', StoredProc.Fields[12].DisplayName);
+  CheckEquals(StrToTime(TimeToStr(SQLTime)), StoredProc.Fields[12].AsDateTime);
+  CheckEquals(ord(ftTime), ord(StoredProc.Fields[12].DataType));
+
+  CheckEquals('P14', StoredProc.Fields[13].DisplayName);
+  CheckEquals(2040, StoredProc.Fields[13].AsInteger);
+  CheckEquals(ord(ftLargeInt), ord(StoredProc.Fields[13].DataType));
+
+  CheckEquals('P15', StoredProc.Fields[14].DisplayName);
+  CheckEquals(DateTimeToStr(SQLTime), DateTimeToStr(StoredProc.Fields[14].AsDateTime));
+  CheckEquals(ord(ftDateTime), ord(StoredProc.Fields[14].DataType));
+
+  CheckEquals('P16', StoredProc.Fields[15].DisplayName);
+  CheckEquals(DateTimeToStr(SQLTime), DateTimeToStr(StoredProc.Fields[15].AsDateTime));
+  CheckEquals(ord(ftDateTime), ord(StoredProc.Fields[15].DataType));
+
+  CheckEquals('P17', StoredProc.Fields[16].DisplayName);
+  //CheckEquals(DateTimeToStr(SQLTime), DateTimeToStr(StoredProc.Fields[16].AsDateTime));
+  CheckEquals(ord(ftBlob), ord(StoredProc.Fields[16].DataType));
+
+  CheckEquals('P18', StoredProc.Fields[17].DisplayName);
+  //CheckEquals(DateTimeToStr(SQLTime), DateTimeToStr(StoredProc.Fields[17].AsDateTime));
+  CheckEquals(ord(ftBlob), ord(StoredProc.Fields[17].DataType));
+
+  CheckEquals('P19', StoredProc.Fields[18].DisplayName);
+  //CheckEquals(DateTimeToStr(SQLTime), DateTimeToStr(StoredProc.Fields[18].AsDateTime));
+  CheckEquals(ord(ftBlob), ord(StoredProc.Fields[18].DataType));
+
+  CheckEquals('P20', StoredProc.Fields[19].DisplayName);
+  //CheckEquals(DateTimeToStr(SQLTime), DateTimeToStr(StoredProc.Fields[19].AsDateTime));
+  CheckEquals(ord(ftBlob), ord(StoredProc.Fields[19].DataType));
+
+  CheckEquals('P21', StoredProc.Fields[20].DisplayName);
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  begin
+    CheckEquals({$IFDEF WITH_FTWIDESTRING}WideString{$ENDIF}(Str1), StoredProc.Fields[20].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF});
+    CheckEquals(ord({$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftMemo{$ENDIF}), ord(StoredProc.Fields[20].DataType));
+  end
+  else
+    if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) then
+    begin
+      CheckEquals(UTF8Encode({$IFDEF WITH_FTWIDESTRING}WideString{$ENDIF}(Str1)), StoredProc.Fields[20].AsString);
+      CheckEquals(ord(ftMemo), ord(StoredProc.Fields[20].DataType));
+    end
+    else
+    begin
+      CheckEquals(Str1, StoredProc.Fields[20].AsString);
+      CheckEquals(ord(ftMemo), ord(StoredProc.Fields[20].DataType));
+    end;
+
+
+  CheckEquals('P22', StoredProc.Fields[21].DisplayName);
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  begin
+    CheckEquals({$IFDEF WITH_FTWIDESTRING}WideString{$ENDIF}(Str1), StoredProc.Fields[21].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF});
+    CheckEquals(ord({$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftMemo{$ENDIF}), ord(StoredProc.Fields[21].DataType));
+  end
+  else
+    if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) then
+    begin
+      CheckEquals(UTF8Encode({$IFDEF WITH_FTWIDESTRING}WideString{$ENDIF}(Str1)), StoredProc.Fields[21].AsString);
+      CheckEquals(ord(ftMemo), ord(StoredProc.Fields[21].DataType));
+    end
+    else
+    begin
+      CheckEquals(Str1, StoredProc.Fields[21].AsString);
+      CheckEquals(ord(ftMemo), ord(StoredProc.Fields[21].DataType));
+    end;
+
+  CheckEquals('P23', StoredProc.Fields[22].DisplayName);
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  begin
+    CheckEquals({$IFDEF WITH_FTWIDESTRING}WideString{$ENDIF}(Str1), StoredProc.Fields[22].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF});
+    CheckEquals(ord({$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftMemo{$ENDIF}), ord(StoredProc.Fields[22].DataType));
+  end
+  else
+    if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) then
+    begin
+      CheckEquals(UTF8Encode({$IFDEF WITH_FTWIDESTRING}WideString{$ENDIF}(Str1)), StoredProc.Fields[22].AsString);
+      CheckEquals(ord(ftMemo), ord(StoredProc.Fields[22].DataType));
+    end
+    else
+    begin
+      CheckEquals(Str1, StoredProc.Fields[22].AsString);
+      CheckEquals(ord(ftMemo), ord(StoredProc.Fields[22].DataType));
+    end;
+
+  CheckEquals('P24', StoredProc.Fields[23].DisplayName);
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  begin
+    CheckEquals({$IFDEF WITH_FTWIDESTRING}WideString{$ENDIF}(Str1), StoredProc.Fields[23].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF});
+    CheckEquals(ord({$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftMemo{$ENDIF}), ord(StoredProc.Fields[23].DataType));
+  end
+  else
+    if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) then
+    begin
+      CheckEquals(UTF8Encode({$IFDEF WITH_FTWIDESTRING}WideString{$ENDIF}(Str1)), StoredProc.Fields[23].AsString);
+      CheckEquals(ord(ftMemo), ord(StoredProc.Fields[23].DataType));
+    end
+    else
+    begin
+      CheckEquals(Str1, StoredProc.Fields[23].AsString);
+      CheckEquals(ord(ftMemo), ord(StoredProc.Fields[23].DataType));
+    end;
+
+  CheckEquals('P25', StoredProc.Fields[24].DisplayName);
+  //CheckEquals(DateTimeToStr(SQLTime), DateTimeToStr(StoredProc.Fields[24].AsDateTime));
+  CheckEquals(ord(ftBlob), ord(StoredProc.Fields[24].DataType));
+
+  CheckEquals('P26', StoredProc.Fields[25].DisplayName);
+  CheckEquals('a', StoredProc.Fields[25].AsString);
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    CheckEquals(ord({$IFDEF WITH_FTWIDESTRING}ftWideString{$ELSE}ftString{$ENDIF}), ord(StoredProc.Fields[25].DataType))
+  else
+    CheckEquals(ord(ftString), ord(StoredProc.Fields[25].DataType));
+
+  CheckEquals('P27', StoredProc.Fields[26].DisplayName);
+  CheckEquals(50000, StoredProc.Fields[26].AsInteger);
+  //CheckEquals(ord(ftInteger), ord(StoredProc.Fields[26].DataType));
+
+  CheckEquals('P28', StoredProc.Fields[27].DisplayName);
+  CheckEquals(60000, StoredProc.Fields[27].AsInteger);
+  //CheckEquals(ord(ftInteger), ord(StoredProc.Fields[27].DataType));
 end;
 
 initialization
