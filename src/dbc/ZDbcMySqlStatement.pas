@@ -182,6 +182,7 @@ type
     FHandle: PZMySQLConnect;
     FUseResult: Boolean;
     FParamNames: array [0..1024] of String;
+    FParamTypeNames: array [0..1024] of String;
     function GetCallSQL: ZAnsiString;
     function GetOutParamSQL: String;
     function PrepareSQLParam(ParamIndex: Integer): ZAnsiString;
@@ -193,7 +194,8 @@ type
     //procedure UnPrepareInParameters; override;
     function CreateResultSet(const SQL: string): IZResultSet;
     procedure FetchOutParams(ResultSet: IZResultSet);
-    procedure RegisterParamName(const ParameterIndex:integer; const ParamName: String);
+    procedure RegisterParamTypeAndName(const ParameterIndex:integer;
+      const ParamTypeName, ParamName: String; Const ColumnSize, Precision: Integer);
   public
     constructor Create(PlainDriver: IZMySQLPlainDriver;
       Connection: IZConnection; const SQL: string; Info: TStrings;
@@ -747,41 +749,41 @@ begin
   end;
 
   if (FPlainDriver.BindParameters(FStmtHandle, FBindBuffer.GetBufferAddress) <> 0) then
-    begin
-      checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, SBindingFailure);
-      exit;
-    end;
-   inherited BindInParameters;
+  begin
+    checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, SBindingFailure);
+    exit;
+  end;
+ inherited BindInParameters;
 
   // Send large blobs in chuncks
   For I := 0 to InParamCount - 1 do
-    begin
-      if FBindBuffer.GetBufferType(I+1) in [FIELD_TYPE_STRING,FIELD_TYPE_BLOB] then
-        begin
-          MyType := GetFieldType(InParamValues[I]);
-          if MyType = FIELD_TYPE_BLOB then
+  begin
+    if FBindBuffer.GetBufferType(I+1) in [FIELD_TYPE_STRING,FIELD_TYPE_BLOB] then
+      begin
+        MyType := GetFieldType(InParamValues[I]);
+        if MyType = FIELD_TYPE_BLOB then
+          begin
+            TempBlob := (InParamValues[I].VInterface as IZBlob);
+            if TempBlob.Length>ChunkSize then
             begin
-              TempBlob := (InParamValues[I].VInterface as IZBlob);
-              if TempBlob.Length>ChunkSize then
+              OffSet := 0;
+              PieceSize := ChunkSize;
+              while OffSet < TempBlob.Length do
               begin
-                OffSet := 0;
-                PieceSize := ChunkSize;
-                while OffSet < TempBlob.Length do
+                if OffSet+PieceSize > TempBlob.Length then
+                  PieceSize := TempBlob.Length - OffSet;
+                if (FPlainDriver.SendPreparedLongData(FStmtHandle, I, PAnsiChar(TempBlob.GetBuffer)+OffSet, PieceSize) <> 0) then
                 begin
-                  if OffSet+PieceSize > TempBlob.Length then
-                    PieceSize := TempBlob.Length - OffSet;
-                  if (FPlainDriver.SendPreparedLongData(FStmtHandle, I, PAnsiChar(TempBlob.GetBuffer)+OffSet, PieceSize) <> 0) then
-                  begin
-                    checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, SBindingFailure);
-                    exit;
-                  end;
-                  Inc(OffSet, PieceSize);
+                  checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, SBindingFailure);
+                  exit;
                 end;
+                Inc(OffSet, PieceSize);
               end;
-              TempBlob:=nil;
             end;
-        end;
-    end;
+            TempBlob:=nil;
+          end;
+      end;
+  end;
 end;
 
 procedure TZMySQLPreparedStatement.UnPrepareInParameters;
@@ -793,18 +795,18 @@ end;
 
 function TZMysqlPreparedStatement.getFieldType (testVariant: TZVariant): TMysqlFieldTypes;
 begin
-    case testVariant.vType of
-        vtNull:      Result := FIELD_TYPE_TINY;
-        vtBoolean:   Result := FIELD_TYPE_TINY;
-        vtInteger:   Result := FIELD_TYPE_LONGLONG;
-        vtFloat:     Result := FIELD_TYPE_DOUBLE;
-        vtString:    Result := FIELD_TYPE_STRING;
-        vtDateTime:  Result := FIELD_TYPE_DATETIME;
-        vtUnicodeString: Result := FIELD_TYPE_VARCHAR;
-        vtInterface: Result := FIELD_TYPE_BLOB;
-     else
-        raise EZSQLException.Create(SUnsupportedDataType);
-     end;
+  case testVariant.vType of
+    vtNull:      Result := FIELD_TYPE_TINY;
+    vtBoolean:   Result := FIELD_TYPE_TINY;
+    vtInteger:   Result := FIELD_TYPE_LONGLONG;
+    vtFloat:     Result := FIELD_TYPE_DOUBLE;
+    vtString:    Result := FIELD_TYPE_STRING;
+    vtDateTime:  Result := FIELD_TYPE_DATETIME;
+    vtUnicodeString: Result := FIELD_TYPE_VARCHAR;
+    vtInterface: Result := FIELD_TYPE_BLOB;
+  else
+    raise EZSQLException.Create(SUnsupportedDataType);
+  end;
 end;
 
 {**
@@ -980,11 +982,9 @@ function TZMySQLSQLCallableStatement.GetCallSQL: ZAnsiString;
     for I := 0 to Count-1 do
     begin
       if I > 0 then
-        Result := Result + ',';
-      if FDBParamTypes[i] in [2, 3, 4] then
+        Result := Result + ', ';
+      if FDBParamTypes[i] in [1, 2, 3, 4] then
         Result := Result + '@'+ZPlainString(FParamNames[I])
-      else
-        Result := Result + PrepareSQLParam(I);
     end;
   end;
 
@@ -1011,7 +1011,10 @@ function TZMySQLSQLCallableStatement.GetOutParamSQL: String;
         begin
           if Result <> '' then
             Result := Result + ',';
-          Result := Result + '@'+FParamNames[I]+ ' AS '+FParamNames[I]
+          if FParamTypeNames[i] = '' then
+            Result := Result + ' @'+FParamNames[I]+' AS '+FParamNames[I]
+          else
+            Result := Result + ' CAST(@'+FParamNames[I]+ ' AS '+FParamTypeNames[i]+') AS '+FParamNames[I];
         end;
         Inc(i);
       end;
@@ -1130,23 +1133,24 @@ var
   ExecQuery: ZAnsiString;
 begin
   I := 0;
+  ExecQuery := '';
   while True do
     if FDBParamTypes[i] = 0 then
       break
     else
     begin
-      if FDBParamTypes[i] = 3 then //ptInputOutput
-      begin
-        ExecQuery := 'SET @'+ZPlainString(FParamNames[i])+' = '+PrepareSQLParam(I);
+      if FDBParamTypes[i] in [1, 3] then //ptInputOutput
         if ExecQuery = '' then
-          ExecQuery := ExecQuery;
-        if FPlainDriver.ExecQuery(Self.FHandle, PAnsiChar(ExecQuery)) = 0 then
-          DriverManager.LogMessage(lcBindPrepStmt, FPlainDriver.GetProtocol, String(ExecQuery))
+          ExecQuery := 'SET @'+ZPlainString(FParamNames[i])+' = '+PrepareSQLParam(I)
         else
-          CheckMySQLError(FPlainDriver, FHandle, lcExecute, String(ExecQuery));
-      end;
+          ExecQuery := ExecQuery + ', @'+ZPlainString(FParamNames[i])+' = '+PrepareSQLParam(I);
       Inc(i);
     end;
+  if not (ExecQuery = '') then
+    if FPlainDriver.ExecQuery(Self.FHandle, PAnsiChar(ExecQuery)) = 0 then
+      DriverManager.LogMessage(lcBindPrepStmt, FPlainDriver.GetProtocol, String(ExecQuery))
+    else
+      CheckMySQLError(FPlainDriver, FHandle, lcExecute, String(ExecQuery));
 end;
 
 {**
@@ -1238,10 +1242,41 @@ begin
   ResultSet.BeforeFirst;
 end;
 
-procedure TZMySQLSQLCallableStatement.RegisterParamName(const ParameterIndex:integer;
-  const ParamName: String);
+procedure TZMySQLSQLCallableStatement.RegisterParamTypeAndName(const ParameterIndex:integer;
+      const ParamTypeName, ParamName: String; Const ColumnSize, Precision: Integer);
 begin
   FParamNames[ParameterIndex] := ParamName;
+  {if Precision > 0 then
+    FParamTypeNames[ParameterIndex] := 'DECIMAL('+IntToStr(ColumnSize)+','+IntToStr(Precision)+')'
+  else
+    if ( Pos('real', LowerCase(ParamTypeName)) > 0 ) or
+       ( Pos('float', LowerCase(ParamTypeName)) > 0 ) or
+       ( Pos('decimal', LowerCase(ParamTypeName)) > 0 ) or
+       ( Pos('numeric', LowerCase(ParamTypeName)) > 0 ) or
+       ( Pos('double', LowerCase(ParamTypeName)) > 0 ) then
+      FParamTypeNames[ParameterIndex] := 'DECIMAL('+IntToStr(ColumnSize)+')'
+    else}
+      if ( Pos('char', LowerCase(ParamTypeName)) > 0 ) then
+        FParamTypeNames[ParameterIndex] := 'CHAR('+IntToStr(ColumnSize)+')'
+      else
+        if ( Pos('set', LowerCase(ParamTypeName)) > 0 ) then
+          FParamTypeNames[ParameterIndex] := 'CHAR('+IntToStr(ColumnSize)+')'
+        else
+          if ( Pos('datetime', LowerCase(ParamTypeName)) > 0 ) or
+             ( Pos('timestamp', LowerCase(ParamTypeName)) > 0 ) then
+            FParamTypeNames[ParameterIndex] := 'DATETIME'
+          else
+            if ( Pos('date', LowerCase(ParamTypeName)) > 0 ) then
+              FParamTypeNames[ParameterIndex] := 'DATE'
+            else
+              if ( Pos('time', LowerCase(ParamTypeName)) > 0 ) then
+                FParamTypeNames[ParameterIndex] := 'TIME'
+              else
+                if ( Pos('int', LowerCase(ParamTypeName)) > 0 ) or
+                   ( Pos('year', LowerCase(ParamTypeName)) > 0 ) then
+                  FParamTypeNames[ParameterIndex] := 'SIGNED'
+                else
+                  FParamTypeNames[ParameterIndex] := ''
 end;
 
 constructor TZMySQLSQLCallableStatement.Create(PlainDriver: IZMySQLPlainDriver;
@@ -1456,10 +1491,10 @@ begin
     begin
       length := getMySQLFieldSize(tempbuffertype,field_length);
       if largeblobparameter then
-        begin
+      begin
         is_Null := 0;
         buffer := nil;
-        end
+      end
       else if field_length = 0 then
       begin
         is_Null := 1;

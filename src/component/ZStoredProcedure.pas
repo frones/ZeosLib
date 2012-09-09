@@ -72,6 +72,7 @@ type
   }
   TZStoredProc = class(TZAbstractDataset)
   private
+    FMetaResultSet: IZResultset;
     procedure RetrieveParamValues;
     function GetStoredProcName: string;
     procedure SetStoredProcName(const Value: string);
@@ -137,7 +138,8 @@ begin
 
   CallableStatement.ClearParameters;
 
-
+  if Assigned(FMetaResultSet) then
+    FMetaResultSet.BeforeFirst;
 
   for I := 0 to Params.Count - 1 do
   begin
@@ -145,9 +147,13 @@ begin
       CallableStatement.RegisterOutParameter(I + 1,
         Ord(ConvertDatasetToDbcType(Params[I].DataType)));
     CallableStatement.RegisterParamType( I+1, ord(Params[I].ParamType));
-    if Supports(CallableStatement, IZParamNamedCallableStatement) then
-      (CallableStatement as IZParamNamedCallableStatement).RegisterParamName(I, Params[i].Name);
 
+    if Supports(CallableStatement, IZParamNamedCallableStatement) and
+      Assigned(FMetaResultSet) then
+      if FMetaResultSet.Next then
+        (CallableStatement as IZParamNamedCallableStatement).RegisterParamTypeAndName(
+          I, FMetaResultSet.GetString(7), Params[i].Name, FMetaResultSet.GetInt(8),
+          FMetaResultSet.GetInt(9));
   end;
   Result := CallableStatement;
 end;
@@ -286,6 +292,7 @@ var
   Schema,
   ObjectName: string;
   ColumnType: Integer;
+  OldTypes: TStrings;
 begin
   if AnsiCompareText(Trim(SQL.Text), Trim(Value)) <> 0 then
   begin
@@ -296,17 +303,17 @@ begin
       try
         SplitQualifiedObjectName(Value, Catalog, Schema, ObjectName);
         ObjectName := Connection.DbcConnection.GetMetadata.AddEscapeCharToWildcards(ObjectName);
-        ResultSet := Connection.DbcConnection.GetMetadata.GetProcedureColumns(Catalog, Schema, ObjectName, '');
+        FMetaResultSet := Connection.DbcConnection.GetMetadata.GetProcedureColumns(Catalog, Schema, ObjectName, '');
         OldParams := TParams.Create;
         try
           OldParams.Assign(Params);
           Params.Clear;
-          while ResultSet.Next do
+          while FMetaResultSet.Next do
           begin
-            ColumnType := ResultSet.GetIntByName('COLUMN_TYPE');
+            ColumnType := FMetaResultSet.GetIntByName('COLUMN_TYPE');
             if ColumnType >= 0 then //-1 is result column
-              Params.CreateParam(ConvertDbcToDatasetType(TZSqlType(ResultSet.GetIntByName('DATA_TYPE'))),
-                ResultSet.GetStringByName('COLUMN_NAME'),
+              Params.CreateParam(ConvertDbcToDatasetType(TZSqlType(FMetaResultSet.GetIntByName('DATA_TYPE'))),
+                FMetaResultSet.GetStringByName('COLUMN_NAME'),
                 GetParamType(TZProcedureColumnType(ColumnType)));
           end;
           Params.AssignValues(OldParams);
