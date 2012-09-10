@@ -122,6 +122,7 @@ type
   published
     procedure Test_abtest;
     procedure Test_TEST_All_TYPES;
+    procedure Test_FuncReturnInteger;
   end;
 
 
@@ -1052,6 +1053,36 @@ begin
   CheckEquals('P28', StoredProc.Fields[27].DisplayName);
   CheckEquals(60000, StoredProc.Fields[27].AsInteger);
   //CheckEquals(ord(ftInteger), ord(StoredProc.Fields[27].DataType));
+end;
+
+procedure TZTestMySQLStoredProcedure.Test_FuncReturnInteger;
+begin
+  StoredProc.StoredProcName := 'FuncReturnInteger';
+  CheckEquals(2, StoredProc.Params.Count);
+
+  CheckEquals('p_in', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[0].DataType));
+
+  CheckEquals('ReturnValue', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[1].DataType));
+
+  StoredProc.Params[0].AsInteger := 100;
+  StoredProc.ExecProc;
+
+  CheckEquals('ReturnValue', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[1].DataType));
+  CheckEquals(110, StoredProc.Params[1].AsInteger);
+
+  StoredProc.Params[0].AsInteger := 200;
+  StoredProc.Open;
+  CheckEquals(1, StoredProc.Fields.Count);
+
+  CheckEquals('ReturnValue', StoredProc.Fields[0].DisplayName);
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[0].DataType));
+  CheckEquals(210, StoredProc.Fields[0].AsInteger);
 end;
 
 initialization

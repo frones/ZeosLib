@@ -183,8 +183,10 @@ type
     FUseResult: Boolean;
     FParamNames: array [0..1024] of String;
     FParamTypeNames: array [0..1024] of String;
+    FIsFunction: Boolean;
     function GetCallSQL: ZAnsiString;
     function GetOutParamSQL: String;
+    function GetSelectFunctionSQL: ZAnsiString;
     function PrepareSQLParam(ParamIndex: Integer): ZAnsiString;
     function GetStmtHandle : PZMySqlPrepStmt;
 
@@ -200,10 +202,11 @@ type
     constructor Create(PlainDriver: IZMySQLPlainDriver;
       Connection: IZConnection; const SQL: string; Info: TStrings;
       Handle: PZMySQLConnect);
+    procedure RegisterParamType(ParameterIndex:integer;ParamType:Integer); override;
 
-    function ExecuteQuery(const SQL: string): IZResultSet; override;
     function Execute(const SQL: string): Boolean; override;
 
+    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; override;
     function ExecuteUpdate(const SQL: ZAnsiString): Integer; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
@@ -996,7 +999,7 @@ begin
 end;
 
 function TZMySQLSQLCallableStatement.GetOutParamSQL: String;
-  function GenerateParamsStr(Count: integer; InParam: Boolean): string;
+  function GenerateParamsStr(Count: integer): string;
   var
     I: integer;
   begin
@@ -1023,8 +1026,30 @@ function TZMySQLSQLCallableStatement.GetOutParamSQL: String;
 var
   OutParams: String;
 begin
-  OutParams := GenerateParamsStr(Self.OutParamCount-Length(InParamValues), False);
+  OutParams := GenerateParamsStr(Self.OutParamCount-Length(InParamValues));
   Result := 'SELECT '+ OutParams;
+end;
+
+function TZMySQLSQLCallableStatement.GetSelectFunctionSQL: ZAnsiString;
+  function GenerateInParamsStr: ZAnsiString;
+  var
+    I: Integer;
+  begin
+    Result := '';
+    for i := 0 to Length(InParamValues) -1 do
+      if Result = '' then
+        Result := Self.PrepareSQLParam(I)
+      else
+        Result := Result+', '+Self.PrepareSQLParam(I);
+  end;
+var
+  InParams: ZAnsiString;
+begin
+  InParams := GenerateInParamsStr;
+  Result := 'SELECT `'+ZPlainString(SQL)+'`'; 
+  if InParams <> '' then
+    Result := Result + '('+InParams+')';
+  Result := Result + ' AS ReturnValue';
 end;
 
 {**
@@ -1242,6 +1267,13 @@ begin
   ResultSet.BeforeFirst;
 end;
 
+procedure TZMySQLSQLCallableStatement.RegisterParamType(ParameterIndex:integer;
+  ParamType:Integer);
+begin
+  inherited RegisterParamType(ParameterIndex, ParamType);
+  if not FIsFunction then FIsFunction := ParamType = 4; //ptResult
+end;
+
 procedure TZMySQLSQLCallableStatement.RegisterParamTypeAndName(const ParameterIndex:integer;
       const ParamTypeName, ParamName: String; Const ColumnSize, Precision: Integer);
 begin
@@ -1292,6 +1324,8 @@ begin
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
 
+  FIsFunction := False;
+
   FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
 end;
 
@@ -1301,18 +1335,19 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZMySQLSQLCallableStatement.ExecuteQuery(const SQL: string): IZResultSet;
+function TZMySQLSQLCallableStatement.ExecuteQuery(const SQL: ZAnsiString): IZResultSet;
 begin
-  Result := nil;
-  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, Self.GetConnection.GetEncoding, LogSQL) = 0 then
+  Result := nil;                                  
+  ASQL := SQL;
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
   begin
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
     if not FPlainDriver.ResultSetExists(FHandle) then
       raise EZSQLException.Create(SCanNotOpenResultSet);
-    Result := CreateResultSet(LogSQL);
+    Result := CreateResultSet(SSQL);
   end
   else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
 end;
 
 {**
@@ -1413,10 +1448,18 @@ end;
 }
 function TZMySQLSQLCallableStatement.ExecuteQueryPrepared: IZResultSet;
 begin
-  BindInParameters;
-  ExecuteUpdate(GetCallSQL);
-  Result := Self.ExecuteQuery(GetOutParamSQL);
-  FetchOutParams(Result);
+  if FIsFunction then
+  begin
+    TrimInParameters;
+    Result := ExecuteQuery(GetSelectFunctionSQL);
+  end
+  else
+  begin
+    BindInParameters;
+    ExecuteUpdate(GetCallSQL);
+    Result := Self.ExecuteQuery(ZPlainString(GetOutParamSQL));
+    FetchOutParams(Result);
+  end;
 end;
 
 {**
@@ -1431,9 +1474,18 @@ end;
 }
 function TZMySQLSQLCallableStatement.ExecuteUpdatePrepared: Integer;
 begin
-  BindInParameters;
-  Result := ExecuteUpdate(GetCallSQL);
-  FetchOutParams(ExecuteQuery(GetOutParamSQL));
+  if FIsFunction then
+  begin
+    TrimInParameters;
+    FetchOutParams(ExecuteQuery(GetSelectFunctionSQL));
+    Result := LastUpdateCount;
+  end
+  else
+  begin
+    BindInParameters;
+    Result := ExecuteUpdate(GetCallSQL);
+    FetchOutParams(ExecuteQuery(ZPlainString(GetOutParamSQL)));
+  end;
 end;
 
 {**

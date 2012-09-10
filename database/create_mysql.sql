@@ -335,6 +335,13 @@ BEGIN
   SET `P28` = FP28;
 END; //
 
+CREATE FUNCTION FuncReturnInteger(`p_in` INT) RETURNS INTEGER
+BEGIN
+  DECLARE `Temp` INTEGER;
+  set Temp = `p_in` + 10;
+  RETURN IFNULL(Temp, 0);
+END;//
+
 CREATE PROCEDURE `TripleResultVarying`(
   IN p_in INT,
   OUT p_out INT,
