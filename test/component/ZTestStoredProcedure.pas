@@ -123,6 +123,7 @@ type
     procedure Test_abtest;
     procedure Test_TEST_All_TYPES;
     procedure Test_FuncReturnInteger;
+    procedure MultipleVaryingResultSets;
   end;
 
 
@@ -1083,6 +1084,45 @@ begin
   CheckEquals('ReturnValue', StoredProc.Fields[0].DisplayName);
   CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[0].DataType));
   CheckEquals(210, StoredProc.Fields[0].AsInteger);
+end;
+
+procedure TZTestMySQLStoredProcedure.MultipleVaryingResultSets;
+begin
+  StoredProc.StoredProcName := 'MultipleVaryingResultSets';
+  CheckEquals(3, StoredProc.Params.Count);
+
+  CheckEquals('p_in', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[0].DataType));
+
+  CheckEquals('p_out', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptOutput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[1].DataType));
+
+  CheckEquals('p_inout', StoredProc.Params[2].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[2].ParamType));
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[2].DataType));
+
+  StoredProc.Params[0].AsInteger := 100;
+  StoredProc.Params[1].AsInteger := 200;
+  StoredProc.Params[2].AsInteger := 300;
+  StoredProc.ExecProc;
+  StoredProc.Open;
+
+  //4 Resultsets Returned What now?
+  {CheckEquals(3, StoredProc.Fields.Count);
+
+  CheckEquals('p_in', StoredProc.Fields[0].DisplayName);
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[0].DataType));
+  CheckEquals(100, StoredProc.Fields[0].AsInteger);
+
+  CheckEquals('p_out', StoredProc.Fields[1].DisplayName);
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[1].DataType));
+  CheckEquals(0, StoredProc.Fields[1].AsInteger);
+
+  CheckEquals('p_inout', StoredProc.Fields[2].DisplayName);
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[2].DataType));
+  CheckEquals(300, StoredProc.Fields[2].AsInteger);}
 end;
 
 initialization

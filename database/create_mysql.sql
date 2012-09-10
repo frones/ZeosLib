@@ -342,7 +342,7 @@ BEGIN
   RETURN IFNULL(Temp, 0);
 END;//
 
-CREATE PROCEDURE `TripleResultVarying`(
+CREATE PROCEDURE `MultipleVaryingResultSets`(
   IN p_in INT,
   OUT p_out INT,
   INOUT p_inout INT)
