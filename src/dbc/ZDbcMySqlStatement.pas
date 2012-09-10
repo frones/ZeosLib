@@ -1391,10 +1391,10 @@ begin
     if FIsFunction then
       ClearResultSets;
     Result := CreateResultSet(SSQL);
+    FResultSets.Add(Result);
     FActiveResultset := 0;
     if FPlainDriver.CheckAnotherRowset(FHandle) then
     begin
-      FResultSets.Add(Result);
       while FPlainDriver.RetrieveNextRowset(FHandle) = 0 do
         if FPlainDriver.CheckAnotherRowset(FHandle) then
           FResultSets.Add(CreateResultSet(SQL))
@@ -1429,16 +1429,15 @@ begin
       ClearResultSets;
       FActiveResultset := 0;
       LastResultSet := CreateResultSet(SQL);
-      //LastResultSet.AfterLast;
+      FResultSets.Add(LastResultSet);
       if FPlainDriver.CheckAnotherRowset(FHandle) then
       begin
         Result := LastUpdateCount;
-        FResultSets.Add(LastResultSet);
         while FPlainDriver.RetrieveNextRowset(FHandle) = 0 do 
           if FPlainDriver.CheckAnotherRowset(FHandle) then
           begin
             FResultSets.Add(CreateResultSet(SQL));
-            inc(Result, LastUpdateCount);
+            inc(Result, LastUpdateCount); //LastUpdateCount will be returned from ResultSet.Open
           end
           else break;
          CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
@@ -1446,8 +1445,7 @@ begin
       else
         Result := LastUpdateCount;
     end
-    { Process regular query }
-    else
+    else { Process regular query }
       Result := FPlainDriver.GetAffectedRows(FHandle);
   end
   else
@@ -1519,10 +1517,10 @@ begin
   begin
     BindInParameters;
     ExecuteUpdate(GetCallSQL);
-    if Assigned(LastResultSet) then
-      Result := LastResultSet
-    else
-      Result := ExecuteQuery(ZPlainString(GetOutParamSQL));
+    //if Assigned(LastResultSet) then
+      //Result := LastResultSet //Get the First ResultSet(s)
+    //else
+      Result := ExecuteQuery(ZPlainString(GetOutParamSQL)); //Get the Last Resultset
   end;
   if Assigned(Result) then
     FetchOutParams(Result);
@@ -1550,10 +1548,10 @@ begin
   begin
     BindInParameters;
     Result := ExecuteUpdate(GetCallSQL);
-    if Assigned(LastResultSet) then
-      FetchOutParams(LastResultSet)
-    else
-      FetchOutParams(ExecuteQuery(ZPlainString(GetOutParamSQL)));
+    //if Assigned(LastResultSet) then
+      //FetchOutParams(LastResultSet) //Get the First ResultSet(s)
+    //else
+      FetchOutParams(ExecuteQuery(ZPlainString(GetOutParamSQL))); //Get the Last Resultset
     Result := LastUpdateCount;
   end;
 end;
