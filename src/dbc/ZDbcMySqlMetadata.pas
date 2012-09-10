@@ -2374,8 +2374,8 @@ function TZMySQLDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: stri
   const ColumnNamePattern: string): IZResultSet;
 var
   LCatalog, SQL, TypeName, Temp: string;
-  ParamList, Params, Names: TStrings;
-  I,J,N, ColumnSize, Precision: Integer;
+  ParamList, Params, Names, Returns: TStrings;
+  I, ColumnSize, Precision: Integer;
   FieldType: TZSQLType;
 
   function GetNextName(const AName: String; NameEmpty: Boolean = False): String;
@@ -2395,12 +2395,57 @@ var
           Break;
         end;
   end;
-  procedure AddTempString(Const Value: String);
+
+  function DecomposeParamFromList(AList: TStrings): String;
+  var
+    J, I, N: Integer;
+    Temp: String;
+    procedure AddTempString(Const Value: String);
+    begin
+      if Temp = '' then
+        Temp := Trim(Value)
+      else
+        Temp := Temp + LineEnding+ Trim(Value);
+    end;
+
   begin
-    if Temp = '' then
-      Temp := Trim(Value)
-    else
-      Temp := Temp + LineEnding+ Trim(Value);
+    J := 0;
+    Temp := '';
+    for I := 0 to AList.Count -1 do
+      if J < AList.Count then
+      begin
+        if (Pos('(', (AList[J])) > 0) and (Pos(')', (AList[J])) = 0) then
+          if ( Pos('real', LowerCase(AList[J])) > 0 ) or
+             ( Pos('float', LowerCase(AList[J])) > 0 ) or
+             ( Pos('decimal', LowerCase(AList[J])) > 0 ) or
+             ( Pos('numeric', LowerCase(AList[J])) > 0 ) or
+             ( Pos('double', LowerCase(AList[J])) > 0 ) then
+          begin
+            AddTempString(AList[j]+','+AList[j+1]);
+            Inc(j);
+          end
+          else
+            if ( Pos('set', LowerCase(AList[J])) > 0 ) and
+              ( Pos(')', LowerCase(AList[J])) = 0 ) then
+            begin
+              TypeName := AList[J];
+              for N := J+1 to AList.Count-1 do
+              begin
+                TypeName := TypeName +','+AList[N];
+                if Pos(')', AList[N]) > 0 then
+                  Break;
+              end;
+              AddTempString(TypeName);
+              J := N;
+            end
+            else
+              AddTempString(AList[j])
+        else
+          if not (AList[j] = '') then
+            AddTempString(AList[j]);
+        Inc(J);
+      end;
+    Result := Temp;
   end;
 begin
   if Catalog = '' then
@@ -2417,7 +2462,8 @@ begin
 
   SQL := 'SELECT p.db AS PROCEDURE_CAT, NULL AS PROCEDURE_SCHEM, '+
       'p.name AS PROCEDURE_NAME, p.param_list AS PARAMS, p.comment AS REMARKS, '+
-    IntToStr(ProcedureReturnsResult)+' AS PROCEDURE_TYPE  from  mysql.proc p ';
+    IntToStr(ProcedureReturnsResult)+' AS PROCEDURE_TYPE, p.returns AS RETURN_VALUES '+
+    ' from  mysql.proc p ';
     if ( LCataLog <> '' ) or ( ProcedureNamePattern <> '' ) then
       SQL := SQL + 'WHERE ';
     if ( LCataLog <> '' ) then
@@ -2436,51 +2482,35 @@ begin
         ParamList := TStringList.Create;
         Params := TStringList.Create;
         Names := TStringList.Create;
+        Returns := TStringList.Create;
         while Next do
         begin
           PutSplitString(ParamList, Trim(GetString(4)), ',');
-          J := 0;
-          Temp := '';
-          for I := 0 to ParamList.Count -1 do
-            if J < ParamList.Count then
-            begin
-              if (Pos('(', (ParamList[J])) > 0) and (Pos(')', (ParamList[J])) = 0) then
-                if ( Pos('real', LowerCase(ParamList[J])) > 0 ) or
-                   ( Pos('float', LowerCase(ParamList[J])) > 0 ) or
-                   ( Pos('decimal', LowerCase(ParamList[J])) > 0 ) or
-                   ( Pos('numeric', LowerCase(ParamList[J])) > 0 ) or
-                   ( Pos('double', LowerCase(ParamList[J])) > 0 ) then
-                begin
-                  AddTempString(ParamList[j]+','+ParamList[j+1]);
-                  Inc(j);
-                end
-                else
-                  if ( Pos('set', LowerCase(ParamList[J])) > 0 ) and
-                    ( Pos(')', LowerCase(ParamList[J])) = 0 ) then
-                  begin
-                    TypeName := ParamList[J];
-                    for N := J+1 to ParamList.Count-1 do
-                    begin
-                      TypeName := TypeName +','+ParamList[N];
-                      if Pos(')', ParamList[N]) > 0 then
-                        Break;
-                    end;
-                    AddTempString(TypeName);
-                    J := N;
-                  end
-                  else
-                    AddTempString(ParamList[j])
-              else
-                if not (ParamList[j] = '') then
-                  AddTempString(ParamList[j]);
-              Inc(J);
-            end;
-          PutSplitString(ParamList, Temp, LineEnding);
+          PutSplitString(ParamList, DecomposeParamFromList(ParamList), LineEnding);
+
+          PutSplitString(Returns, Trim(GetString(7)), ',');
+          PutSplitString(Returns, DecomposeParamFromList(Returns), LineEnding);
+
+          for I := 0 to Returns.Count-1 do
+          begin
+            Returns[i] := 'RETURNS '+Returns[i];
+            ParamList.Add(Returns[i]);
+          end;
+
           for i := 0 to ParamList.Count -1 do
           begin
             PutSplitString(Params, ParamList[i], ' ');
             if Params.Count = 2 then {no name available}
-              Params.Insert(1,'');
+              if Params[0] = 'RETURNS' then
+                Params.Insert(1,'')
+              else
+                if (UpperCase(Params[1]) = 'IN') or
+                    (UpperCase(Params[1]) = 'INOUT') or
+                    (UpperCase(Params[1]) = 'OUT') then
+                  Params.Insert(1,'')
+                else
+                  Params.Insert(0,'IN'); //Function in value
+
             Result.MoveToInsertRow;
             Result.UpdateString(1, GetString(1)); //PROCEDURE_CAT
             Result.UpdateString(2, GetString(2)); //PROCEDURE_SCHEM
@@ -2490,9 +2520,10 @@ begin
               TypeName, Temp, FieldType, ColumnSize, Precision);
             { process COLUMN_NAME }
             if Params[1] = '' then
-            begin
-              Result.UpdateString(4, GetNextName('$', True));
-            end
+              if Params[0] = 'RETURNS' then
+                Result.UpdateString(4, 'ReturnValue')
+              else
+                Result.UpdateString(4, GetNextName('$', True))
             else
               if GetIdentifierConvertor.IsQuoted(Params[1]) then
                 Result.UpdateString(4, GetNextName(Copy(Params[1], 2, Length(Params[1])-2), (Length(Params[1])=2)))
@@ -2508,7 +2539,10 @@ begin
                 if UpperCase(Params[0]) = 'IN' then
                   Result.UpdateInt(5, Ord(pctIn))
                 else
-                  Result.UpdateInt(5, Ord(pctUnknown));
+                  if UpperCase(Params[0]) = 'RETURNS' then
+                    Result.UpdateInt(5, Ord(pctReturn))
+                  else
+                    Result.UpdateInt(5, Ord(pctUnknown));
 
             { DATA_TYPE }
             Result.UpdateInt(6, Ord(FieldType));
@@ -2532,6 +2566,7 @@ begin
       FreeAndNil(Names);
       FreeAndNil(Params);
       FreeAndNil(ParamList);
+      FreeAndNil(Returns);
     end;
 end;
 
