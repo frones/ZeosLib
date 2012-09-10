@@ -350,6 +350,8 @@ BEGIN
   SELECT p_in, p_out, p_inout;
   SET p_in = 100, p_out = 200, p_inout = 300;
   SELECT p_in, p_out, p_inout;
+  SELECT p_in, p_inout;
+  SELECT 10;
 END;//
 
 DELIMITER ;
