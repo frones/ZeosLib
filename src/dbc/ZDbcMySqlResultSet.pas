@@ -78,13 +78,15 @@ type
     FRowHandle: PZMySQLRow;
     FPlainDriver: IZMySQLPlainDriver;
     FUseResult: Boolean;
+    FIgnoreUseResult: Boolean;
     TempStr: String;
   protected
     procedure Open; override;
     function InternalGetString(ColumnIndex: Integer): Ansistring; override;
   public
     constructor Create(PlainDriver: IZMySQLPlainDriver; Statement: IZStatement;
-      SQL: string; Handle: PZMySQLConnect; UseResult: Boolean);
+      SQL: string; Handle: PZMySQLConnect; UseResult: Boolean;
+      AffectedRows: PInteger; IgnoreUseResult: Boolean = False);
     destructor Destroy; override;
 
     procedure Close; override;
@@ -110,6 +112,7 @@ type
 
     function MoveAbsolute(Row: Integer): Boolean; override;
     function Next: Boolean; override;
+    procedure ReleaseHandle;
   end;
 
   {** Implements Prepared MySQL ResultSet. }
@@ -212,7 +215,7 @@ end;
 }
 constructor TZMySQLResultSet.Create(PlainDriver: IZMySQLPlainDriver;
   Statement: IZStatement; SQL: string; Handle: PZMySQLConnect;
-  UseResult: Boolean);
+  UseResult: Boolean; AffectedRows: PInteger; IgnoreUseResult: Boolean = False);
 begin
   inherited Create(Statement, SQL, TZMySQLResultSetMetadata.Create(
     Statement.GetConnection.GetMetadata, SQL, Self),
@@ -224,8 +227,11 @@ begin
   FPlainDriver := PlainDriver;
   ResultSetConcurrency := rcReadOnly;
   FUseResult := UseResult;
+  FIgnoreUseResult := IgnoreUseResult;
 
   Open;
+  if Assigned(AffectedRows) then
+    AffectedRows^ := LastRowNo;
 end;
 
 {**
@@ -247,7 +253,7 @@ begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
 
-  if FUseResult then
+  if FUseResult and (not FIgnoreUseResult) then
   begin
     FQueryHandle := FPlainDriver.UseResult(FHandle);
     LastRowNo := 0;
@@ -862,6 +868,12 @@ begin
   end;
 end;
 
+procedure TZMySQLResultSet.ReleaseHandle;
+begin
+  if FQueryHandle <> nil then
+    FPlainDriver.FreeResult(FQueryHandle);
+  FQueryHandle := nil;
+end;
 { TZMySQLPreparedResultSet }
 
 {**
