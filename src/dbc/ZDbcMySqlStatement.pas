@@ -1003,7 +1003,7 @@ var
   InParams: ZAnsiString;
 begin
   InParams := GenerateParamsStr(OutParamCount);
-  Result := 'CALL `'+ZPlainString(SQL)+'`('+InParams+')';
+  Result := 'CALL '+ZPlainString(SQL)+'('+InParams+')';
 end;
 
 function TZMySQLSQLCallableStatement.GetOutParamSQL: String;
@@ -1054,7 +1054,7 @@ var
   InParams: ZAnsiString;
 begin
   InParams := GenerateInParamsStr;
-  Result := 'SELECT `'+ZPlainString(SQL)+'`'; 
+  Result := 'SELECT '+ZPlainString(SQL);
   if InParams <> '' then
     Result := Result + '('+InParams+')';
   Result := Result + ' AS ReturnValue';
@@ -1365,11 +1365,8 @@ begin
   FHandle := Handle;
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
-
-  FIsFunction := False;
-
+  FIsFunction := False; //will be reset if RETURN parameters do exist
   FResultSets := TZCollection.Create;
-  
   FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
 end;
 
@@ -1381,7 +1378,7 @@ end;
 }
 function TZMySQLSQLCallableStatement.ExecuteQuery(const SQL: ZAnsiString): IZResultSet;
 begin
-  Result := nil;                                  
+  Result := nil;
   ASQL := SQL;
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
   begin
