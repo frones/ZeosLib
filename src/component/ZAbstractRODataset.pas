@@ -169,6 +169,8 @@ type
     FSortRowBuffer1: PZRowBuffer;
     FSortRowBuffer2: PZRowBuffer;
     FPrepared: Boolean;
+    FDoNotCloseResultset: Boolean;
+    FUseCurrentStatment: Boolean;
   private
     function GetReadOnly: Boolean;
     procedure SetReadOnly(Value: Boolean);
@@ -285,7 +287,7 @@ type
       write SetLinkedFields; {renamed by bangfauzan}
     property IndexFieldNames:String read GetIndexFieldNames
       write SetIndexFieldNames; {bangfauzan addition}
-
+    property DoNotCloseResultset: Boolean read FDoNotCloseResultset;
   protected
     { Abstracts methods }
     procedure InternalAddRecord(Buffer: Pointer; Append: Boolean); override;
@@ -361,6 +363,7 @@ type
     procedure SetFiltered(Value: Boolean); override;
     procedure SetFilterText(const Value: string); override;
 
+    procedure SetAnotherResultset(const Value: IZResultSet);
     procedure InternalSort;
     function ClearSort(Item1, Item2: Pointer): Integer;
     function HighLevelSort(Item1, Item2: Pointer): Integer;
@@ -376,7 +379,7 @@ type
     procedure Notification(AComponent: TComponent;
       Operation: TOperation); override;
 
-    procedure RefreshParams;virtual;
+    procedure RefreshParams; virtual;
 
     procedure InternalPrepare; virtual;
     procedure InternalUnPrepare; virtual;
@@ -1729,7 +1732,7 @@ begin
   If (csDestroying in Componentstate) then
     raise Exception.Create(SCanNotOpenDataSetWhenDestroying);
   {$ENDIF}
-  Prepare;
+  if not FUseCurrentStatment then Prepare;
 
   CurrentRow := 0;
   FetchCount := 0;
@@ -1738,17 +1741,18 @@ begin
   Connection.ShowSQLHourGlass;
   try
     { Creates an SQL statement and resultsets }
-    if FSQL.StatementCount> 0 then
-      ResultSet := CreateResultSet(FSQL.Statements[0].SQL, -1)
-    else
-      ResultSet := CreateResultSet('', -1);
-    if not Assigned(ResultSet) then
-    begin
-      if not (doSmartOpen in FOptions) then
-        raise Exception.Create(SCanNotOpenResultSet)
+    if not FUseCurrentStatment then
+      if FSQL.StatementCount> 0 then
+        ResultSet := CreateResultSet(FSQL.Statements[0].SQL, -1)
       else
-        Exit;
-    end;
+        ResultSet := CreateResultSet('', -1);
+      if not Assigned(ResultSet) then
+      begin
+        if not (doSmartOpen in FOptions) then
+          raise Exception.Create(SCanNotOpenResultSet)
+        else
+          Exit;
+      end;
 
     { Initializes field and index defs. }
     if not FRefreshInProgress then
@@ -1794,7 +1798,7 @@ end;
 procedure TZAbstractRODataset.InternalClose;
 begin
   if ResultSet <> nil then
-    ResultSet.Close;
+    if not FDoNotCloseResultSet then ResultSet.Close;
   ResultSet := nil;
 
   if FOldRowBuffer <> nil then
@@ -1945,6 +1949,8 @@ end;
 }
 procedure TZAbstractRODataset.SetPrepared(Value: Boolean);
 begin
+  FUseCurrentStatment := False;
+  FDoNotCloseResultSet := False;
   If Value <> FPrepared then
     begin
       If Value then
@@ -2956,6 +2962,32 @@ end;
 }
 procedure TZAbstractRODataset.CloseBlob(Field: TField);
 begin
+end;
+
+{**
+  Closes the cursor-handles. Releases(not closing) the current resultset
+  and opens the cursorhandles. The current statment is used further.
+  @param the NewResultSet
+}
+procedure TZAbstractRODataset.SetAnotherResultset(const Value: IZResultSet);
+begin
+  {EgonHugeist: I was forced to go this stupid sequence
+    first i wanted to exclude parts of InternalOpen/Close but this didn't solve
+    the DataSet issues. You can't init the fields as long the Cursor is not
+    closed.. Which is equal to cursor open}
+  if Assigned(Value) and ( Value <> ResultSet ) then
+  begin
+    FDoNotCloseResultSet := True; //hint for InternalOpen
+    SetState(dsInactive);
+    CloseCursor; //Calls InternalOpen in his sequence so InternalOpen must be prepared
+    FDoNotCloseResultSet := False; //reset hint for InternalOpen
+    ResultSet := Value;
+    ResultSet.BeforeFirst; //need this. All from dataset buffered resultsets are EOR
+    FUseCurrentStatment := True; //hint for InternalOpen
+    OpenCursor{$IFDEF FPC}(False){$ENDIF}; //Calls InternalOpen in his sequence so InternalOpen must be prepared
+    OpenCursorComplete;
+    FUseCurrentStatment := False; //reset hint for InternalOpen
+  end;
 end;
 
 {**

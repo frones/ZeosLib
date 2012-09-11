@@ -104,6 +104,10 @@ type
   public
     procedure ExecProc; virtual;
 
+    procedure FirstResultSet;
+    procedure PreviousResultSet;
+    procedure NextResultSet;
+    procedure LastResultSet;
   published
     property Active;
     property ParamCheck;
@@ -355,6 +359,34 @@ begin
   finally
     Connection.HideSQLHourGlass;
   end;
+end;
+
+procedure TZStoredProc.FirstResultSet;
+begin
+  if Supports(Statement, IZMutipleResultSetCallableStatement) then
+    if (Statement as IZMutipleResultSetCallableStatement).HasMoreResultSets then
+      SetAnotherResultset((Statement as IZMutipleResultSetCallableStatement).GetFirstResultSet);
+end;
+
+procedure TZStoredProc.PreviousResultSet;
+begin
+  if Supports(Statement, IZMutipleResultSetCallableStatement) then
+    if (Statement as IZMutipleResultSetCallableStatement).HasMoreResultSets then
+      SetAnotherResultset((Statement as IZMutipleResultSetCallableStatement).GetPreviousResultSet);
+end;
+
+procedure TZStoredProc.NextResultSet;
+begin
+  if Supports(Statement, IZMutipleResultSetCallableStatement) then
+    if (Statement as IZMutipleResultSetCallableStatement).HasMoreResultSets then
+      SetAnotherResultset((Statement as IZMutipleResultSetCallableStatement).GetNextResultSet);
+end;
+
+procedure TZStoredProc.LastResultSet;
+begin
+  if Supports(Statement, IZMutipleResultSetCallableStatement) then
+    if (Statement as IZMutipleResultSetCallableStatement).HasMoreResultSets then
+      SetAnotherResultset((Statement as IZMutipleResultSetCallableStatement).GetLastResultSet);
 end;
 
 {**
