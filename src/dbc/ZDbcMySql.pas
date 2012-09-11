@@ -572,7 +572,7 @@ end;
 function TZMySQLConnection.CreateCallableStatement(const SQL: string; Info: TStrings):
   IZCallableStatement;
 begin
-  Result := TZMySQLSQLCallableStatement.Create(GetPlainDriver, Self, SQL, Info, FHandle);
+  Result := TZMySQLCallableStatement.Create(GetPlainDriver, Self, SQL, Info, FHandle);
 end;
 
 {**
