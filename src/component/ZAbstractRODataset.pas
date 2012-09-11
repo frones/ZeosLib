@@ -1296,10 +1296,12 @@ begin
         { Processes binary array fields. }
         ftBytes:
           begin
-            PVariant(Buffer)^ := BytesToVar(
-              RowAccessor.GetBytes(ColumnIndex, Result));
+            {$IFDEF WITH_TBYTEDYNARRAYTOVARIANT}
+            PVariant(Buffer)^ := BytesToVar(RowAccessor.GetBytes(ColumnIndex, Result));
+            {$ELSE}
             System.Move((PAnsiChar(RowAccessor.GetColumnData(ColumnIndex, Result)) + 2)^, Buffer^,
               RowAccessor.GetColumnDataSize(ColumnIndex)-2);
+            {$ENDIF}
             Result := not Result;
           end;
         { Processes blob fields. }
