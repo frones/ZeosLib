@@ -175,8 +175,8 @@ type
   end;
 
   {** Implements callable Postgresql Statement. }
-  TZMySQLCallableStatement = class(TZAbstractCallableStatement,
-    IZParamNamedCallableStatement, IZMySQLStatement)
+  TZMySQLCallableStatement = class(TZAbstractCallableStatement, IZMySQLStatement,
+    IZParamNamedCallableStatement, IZMutipleResultSetCallableStatement)
   private
     FPlainDriver: IZMysqlPlainDriver;
     FHandle: PZMySQLConnect;
@@ -218,9 +218,9 @@ type
     function IsPreparedStatement: Boolean;
 
     function HasMoreResultSets: Boolean;
-    function GetNextResultSet: IZResultSet;
-    function GetPreviousResultSet: IZResultSet;
     function GetFirstResultSet: IZResultSet;
+    function GetPreviousResultSet: IZResultSet;
+    function GetNextResultSet: IZResultSet;
     function GetLastResultSet: IZResultSet;
   end;
 
@@ -1610,7 +1610,10 @@ begin
   if FResultSets.Count = 0 then
     Result := nil
   else
+  begin
+    FActiveResultset := 0;
     Result := IZResultSet(FResultSets[0]);
+  end;
 end;
 
 function TZMySQLCallableStatement.GetLastResultSet: IZResultSet;
@@ -1618,7 +1621,10 @@ begin
   if FResultSets.Count = 0 then
     Result := nil
   else
+  begin
+    FActiveResultset := FResultSets.Count -1;
     Result := IZResultSet(FResultSets[FResultSets.Count -1]);
+  end;
 end;
 
 

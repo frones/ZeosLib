@@ -632,6 +632,15 @@ type
       const ParamTypeName, ParamName: String; Const ColumnSize, Precision: Integer);
   end;
 
+  IZMutipleResultSetCallableStatement = interface(IZCallableStatement)
+    ['{1AC83538-7C6C-4897-B702-50B57D96E4EE}']
+    function HasMoreResultSets: Boolean;
+    function GetFirstResultSet: IZResultSet;
+    function GetPreviousResultSet: IZResultSet;
+    function GetNextResultSet: IZResultSet;
+    function GetLastResultSet: IZResultSet;
+  end;
+
   {** Rows returned by SQL query. }
   IZResultSet = interface(IZInterface)
     ['{8F4C4D10-2425-409E-96A9-7142007CC1B2}']
