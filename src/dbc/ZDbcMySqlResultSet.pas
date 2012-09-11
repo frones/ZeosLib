@@ -851,8 +851,8 @@ begin
   Result := False;
   if (MaxRows > 0) and (RowNo >= MaxRows) then
     Exit;
-
-  FRowHandle := FPlainDriver.FetchRow(FQueryHandle);
+  if Assigned(FQueryHandle) then
+    FRowHandle := FPlainDriver.FetchRow(FQueryHandle);
   if FRowHandle <> nil then
   begin
     RowNo := RowNo + 1;
