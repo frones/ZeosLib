@@ -487,10 +487,11 @@ begin
         begin
           ProcedureName := ResultSet.GetStringByName('PROCEDURE_NAME');
           ProcedureName := IdentifierConvertor.Quote(ProcedureName);
+          Schema := ResultSet.GetStringByName('PROCEDURE_SCHEM');
           if Connection.DbcConnection.GetMetadata.GetDatabaseInfo.SupportsCatalogsInProcedureCalls then
             if Catalog <> '' then
               if Schema <> '' then
-                ProcedureName := IdentifierConvertor.Quote(Catalog) + IdentifierConvertor.Quote(Schema) + '.' + ProcedureName
+                ProcedureName := IdentifierConvertor.Quote(Catalog) +'.'+ IdentifierConvertor.Quote(Schema) + '.' + ProcedureName
               else
                 ProcedureName := {IdentifierConvertor.Quote(Catalog) + '.' + }ProcedureName
             else
