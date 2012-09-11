@@ -132,14 +132,22 @@ function TZStoredProc.CreateStatement(const SQL: string; Properties: TStrings):
 var
   I: Integer;
   CallableStatement: IZCallableStatement;
+  Catalog, Schema, ObjectName: string;
 begin
   CallableStatement := Connection.DbcConnection.PrepareCallWithParams(
     Trim(SQL), Properties);
 
   CallableStatement.ClearParameters;
 
-  if Assigned(FMetaResultSet) then
-    FMetaResultSet.BeforeFirst;
+  if Supports(CallableStatement, IZParamNamedCallableStatement) then
+    if Assigned(FMetaResultSet) then
+      FMetaResultSet.BeforeFirst
+    else
+    begin //i need allways all types to cast and there names
+      SplitQualifiedObjectName(Trim(SQL), Catalog, Schema, ObjectName);
+      ObjectName := Connection.DbcConnection.GetMetadata.AddEscapeCharToWildcards(ObjectName);
+      FMetaResultSet := Connection.DbcConnection.GetMetadata.GetProcedureColumns(Catalog, Schema, ObjectName, '');
+    end;
 
   for I := 0 to Params.Count - 1 do
   begin
@@ -300,9 +308,7 @@ end;
 procedure TZStoredProc.SetStoredProcName(const Value: string);
 var
   OldParams: TParams;
-  Catalog,
-  Schema,
-  ObjectName: string;
+  Catalog, Schema, ObjectName: string;
   ColumnType: Integer;
 begin
   if AnsiCompareText(Trim(SQL.Text), Trim(Value)) <> 0 then
