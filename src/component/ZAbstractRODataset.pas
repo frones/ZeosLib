@@ -2982,7 +2982,8 @@ begin
     CloseCursor; //Calls InternalOpen in his sequence so InternalClose must be prepared
     FDoNotCloseResultSet := False; //reset hint for InternalClose
     ResultSet := Value; //Assign the new resultset
-    ResultSet.BeforeFirst; //need this. All from dataset buffered resultsets are EOR
+    if not ResultSet.IsBeforeFirst then
+      ResultSet.BeforeFirst; //need this. All from dataset buffered resultsets are EOR
     FUseCurrentStatment := True; //hint for InternalOpen
     OpenCursor{$IFDEF FPC}(False){$ENDIF}; //Calls InternalOpen in his sequence so InternalOpen must be prepared
     OpenCursorComplete; //set DataSet to dsActive

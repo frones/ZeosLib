@@ -393,20 +393,18 @@ end;
 
 function TZStoredProc.BOR: Boolean;
 begin
+  Result := True;
   if Supports(Statement, IZMutipleResultSetCallableStatement) then
     if (Statement as IZMutipleResultSetCallableStatement).HasMoreResultSets then
-      Result := (Statement as IZMutipleResultSetCallableStatement).BOR
-    else
-      Result := True;
+      Result := (Statement as IZMutipleResultSetCallableStatement).BOR;
 end;
 
 function TZStoredProc.EOR: Boolean;
 begin
+  Result := True;
   if Supports(Statement, IZMutipleResultSetCallableStatement) then
     if (Statement as IZMutipleResultSetCallableStatement).HasMoreResultSets then
-      Result := (Statement as IZMutipleResultSetCallableStatement).EOR
-    else
-      Result := True;
+      Result := (Statement as IZMutipleResultSetCallableStatement).EOR;
 end;
 
 {**

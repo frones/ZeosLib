@@ -1389,17 +1389,17 @@ begin
       raise EZSQLException.Create(SCanNotOpenResultSet);
     if FIsFunction then
       ClearResultSets;
-    Result := CreateResultSet(SSQL);
-    FResultSets.Add(Result);
-    FActiveResultset := 0;
+    FResultSets.Add(CreateResultSet(SSQL));
     if FPlainDriver.CheckAnotherRowset(FHandle) then
     begin
       while FPlainDriver.RetrieveNextRowset(FHandle) = 0 do
         if FPlainDriver.CheckAnotherRowset(FHandle) then
-          FResultSets.Add(CreateResultSet(SQL))
+          FResultSets.Add(CreateResultSet(SSQL))
         else break;
       CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
     end;
+    FActiveResultset := FResultSets.Count-1;
+    Result := IZResultSet(FResultSets[FActiveResultset]);
   end
   else
     CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
@@ -1427,22 +1427,23 @@ begin
     begin
       ClearResultSets;
       FActiveResultset := 0;
-      LastResultSet := CreateResultSet(SQL);
-      FResultSets.Add(LastResultSet);
+      FResultSets.Add(CreateResultSet(SSQL));
       if FPlainDriver.CheckAnotherRowset(FHandle) then
       begin
         Result := LastUpdateCount;
-        while FPlainDriver.RetrieveNextRowset(FHandle) = 0 do 
+        while FPlainDriver.RetrieveNextRowset(FHandle) = 0 do
           if FPlainDriver.CheckAnotherRowset(FHandle) then
           begin
-            FResultSets.Add(CreateResultSet(SQL));
+            FResultSets.Add(CreateResultSet(SSQL));
             inc(Result, LastUpdateCount); //LastUpdateCount will be returned from ResultSet.Open
           end
           else break;
-         CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
+        CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
       end
       else
         Result := LastUpdateCount;
+      FActiveResultset := FResultSets.Count-1;
+      LastResultSet := IZResultSet(FResultSets[FActiveResultset]);
     end
     else { Process regular query }
       Result := FPlainDriver.GetAffectedRows(FHandle);
