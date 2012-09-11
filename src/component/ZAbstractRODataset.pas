@@ -2977,15 +2977,15 @@ begin
     closed.. Which is equal to cursor open}
   if Assigned(Value) and ( Value <> ResultSet ) then
   begin
-    FDoNotCloseResultSet := True; //hint for InternalOpen
+    FDoNotCloseResultSet := True; //hint for InternalClose
     SetState(dsInactive);
-    CloseCursor; //Calls InternalOpen in his sequence so InternalOpen must be prepared
-    FDoNotCloseResultSet := False; //reset hint for InternalOpen
-    ResultSet := Value;
+    CloseCursor; //Calls InternalOpen in his sequence so InternalClose must be prepared
+    FDoNotCloseResultSet := False; //reset hint for InternalClose
+    ResultSet := Value; //Assign the new resultset
     ResultSet.BeforeFirst; //need this. All from dataset buffered resultsets are EOR
     FUseCurrentStatment := True; //hint for InternalOpen
     OpenCursor{$IFDEF FPC}(False){$ENDIF}; //Calls InternalOpen in his sequence so InternalOpen must be prepared
-    OpenCursorComplete;
+    OpenCursorComplete; //set DataSet to dsActive
     FUseCurrentStatment := False; //reset hint for InternalOpen
   end;
 end;

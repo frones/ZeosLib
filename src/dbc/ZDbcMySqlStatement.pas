@@ -222,6 +222,8 @@ type
     function GetPreviousResultSet: IZResultSet;
     function GetNextResultSet: IZResultSet;
     function GetLastResultSet: IZResultSet;
+    function BOR: Boolean;
+    function EOR: Boolean;
   end;
 
 implementation
@@ -1627,6 +1629,15 @@ begin
   end;
 end;
 
+function TZMySQLCallableStatement.BOR: Boolean;
+begin
+  Result := FActiveResultset = 0;
+end;
+
+function TZMySQLCallableStatement.EOR: Boolean;
+begin
+  Result := FActiveResultset = FResultSets.Count -1;
+end;
 
 { TZMySQLBindBuffer }
 

@@ -108,6 +108,8 @@ type
     procedure PreviousResultSet;
     procedure NextResultSet;
     procedure LastResultSet;
+    function BOR: Boolean;
+    function EOR: Boolean;
   published
     property Active;
     property ParamCheck;
@@ -387,6 +389,24 @@ begin
   if Supports(Statement, IZMutipleResultSetCallableStatement) then
     if (Statement as IZMutipleResultSetCallableStatement).HasMoreResultSets then
       SetAnotherResultset((Statement as IZMutipleResultSetCallableStatement).GetLastResultSet);
+end;
+
+function TZStoredProc.BOR: Boolean;
+begin
+  if Supports(Statement, IZMutipleResultSetCallableStatement) then
+    if (Statement as IZMutipleResultSetCallableStatement).HasMoreResultSets then
+      Result := (Statement as IZMutipleResultSetCallableStatement).BOR
+    else
+      Result := True;
+end;
+
+function TZStoredProc.EOR: Boolean;
+begin
+  if Supports(Statement, IZMutipleResultSetCallableStatement) then
+    if (Statement as IZMutipleResultSetCallableStatement).HasMoreResultSets then
+      Result := (Statement as IZMutipleResultSetCallableStatement).EOR
+    else
+      Result := True;
 end;
 
 {**

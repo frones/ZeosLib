@@ -639,6 +639,8 @@ type
     function GetPreviousResultSet: IZResultSet;
     function GetNextResultSet: IZResultSet;
     function GetLastResultSet: IZResultSet;
+    function BOR: Boolean;
+    function EOR: Boolean;
   end;
 
   {** Rows returned by SQL query. }
