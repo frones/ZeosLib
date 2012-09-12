@@ -108,6 +108,8 @@ type
     procedure PreviousResultSet;
     procedure NextResultSet;
     procedure LastResultSet;
+    procedure SetResultSet(const Index: Integer);
+    function ResultSetCount: Integer;
     function BOR: Boolean;
     function EOR: Boolean;
   published
@@ -401,6 +403,33 @@ begin
   if Assigned(Statement) then
     if (Statement as IZCallableStatement).HasMoreResultSets then
       SetAnotherResultset((Statement as IZCallableStatement).GetLastResultSet);
+end;
+
+{**
+  Retrieves a ResultSet by his index.
+  @param Integer the index of the Resultset
+  @result <code>IZResultSet</code> of the Index or nil.
+}
+procedure TZStoredProc.SetResultSet(const Index: Integer);
+begin
+  if Assigned(Statement) then
+    if ( Index < 0 ) or ( Index > (Statement as IZCallableStatement).GetResultSetCount -1 ) then
+      raise Exception.Create(Format(SListIndexError, [Index]))
+    else
+      SetAnotherResultset((Statement as IZCallableStatement).GetResultSetByIndex(Index));
+end;
+
+{**
+  Returns the Count of retrived ResultSets.
+  @result <code>Integer</code> Count
+}
+function TZStoredProc.ResultSetCount: Integer;
+begin
+  if not Assigned(Statement) then
+    Result := 0
+  else
+    if (Statement as IZCallableStatement).HasMoreResultSets then
+      Result := (Statement as IZCallableStatement).GetResultSetCount;
 end;
 
 {**

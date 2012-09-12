@@ -224,6 +224,8 @@ type
     function GetLastResultSet: IZResultSet; override;
     function BOR: Boolean; override;
     function EOR: Boolean; override;
+    function GetResultSetByIndex(const Index: Integer): IZResultSet; override;
+    function GetResultSetCount: Integer; override;
   end;
 
 implementation
@@ -1552,7 +1554,7 @@ begin
       //FetchOutParams(LastResultSet) //Get the First ResultSet(s)
     //else
       FetchOutParams(ExecuteQuery(ZPlainString(GetOutParamSQL))); //Get the Last Resultset
-    Result := LastUpdateCount;
+    Inc(Result, LastUpdateCount);
   end;
 end;
 
@@ -1666,6 +1668,29 @@ end;
 function TZMySQLCallableStatement.EOR: Boolean;
 begin
   Result := FActiveResultset = FResultSets.Count -1;
+end;
+
+{**
+  Retrieves a ResultSet by his index.
+  @param Integer the index of the Resultset
+  @result <code>IZResultSet</code> of the Index or nil.
+}
+function TZMySQLCallableStatement.GetResultSetByIndex(const Index: Integer): IZResultSet;
+begin
+  Result := nil;
+  if ( Index < 0 ) or ( Index > FResultSets.Count -1 ) then
+    raise Exception.Create(Format(SListIndexError, [Index]))
+  else
+    Result := IZResultSet(FResultSets[Index]);
+end;
+
+{**
+  Returns the Count of retrived ResultSets.
+  @result <code>Integer</code> Count
+}
+function TZMySQLCallableStatement.GetResultSetCount: Integer;
+begin
+  Result := FResultSets.Count;
 end;
 
 { TZMySQLBindBuffer }

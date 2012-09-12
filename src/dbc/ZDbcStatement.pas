@@ -296,6 +296,8 @@ type
     function GetLastResultSet: IZResultSet; virtual;
     function BOR: Boolean; virtual;
     function EOR: Boolean; virtual;
+    function GetResultSetByIndex(const Index: Integer): IZResultSet; virtual;
+    function GetResultSetCount: Integer; virtual;
 
     procedure RegisterOutParameter(ParameterIndex: Integer;
       SQLType: Integer); virtual;
@@ -1889,6 +1891,24 @@ begin
   Result := True;
 end;
 
+{**
+  Retrieves a ResultSet by his index.
+  @param Index the index of the Resultset
+  @result <code>IZResultSet</code> of the Index or nil.
+}
+function TZAbstractCallableStatement.GetResultSetByIndex(const Index: Integer): IZResultSet;
+begin
+  Result := nil;
+end;
+
+{**
+  Returns the Count of retrived ResultSets.
+  @result <code>Integer</code> Count
+}
+function TZAbstractCallableStatement.GetResultSetCount: Integer;
+begin
+  Result := 0;
+end;
 
 {**
   Registers the OUT parameter in ordinal position
