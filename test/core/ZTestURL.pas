@@ -81,6 +81,7 @@ type
     procedure TestAssignToUrl_NoHost;
     procedure TestAssignToProperties_Properties_NoHost;
     procedure TestSemicolons;
+    procedure TestUnixPathDelimiter;
   end;
 
 implementation
@@ -200,7 +201,7 @@ begin
     ZURL.Prefix := 'zdbc';
     ZURL.Protocol := 'postgresql';
     ZURL.Database := 'model';
-    CheckEquals('zdbc:postgresql:/model', ZURL.URL);
+    CheckEquals('zdbc:postgresql:///model', ZURL.URL);
   finally
     ZURL.Free;
   end;
@@ -256,7 +257,7 @@ var
 begin
   ZURL := TZURL.Create;
   try
-    CheckEquals('zdbc::', ZURL.URL);
+    CheckEquals('zdbc:://', ZURL.URL);
   finally
     ZURL.Free;
   end;
@@ -269,7 +270,7 @@ begin
   ZURL := TZURL.Create;
   try
     ZURL.Protocol := 'protocol';
-    CheckEquals('zdbc:protocol:', ZURL.URL);
+    CheckEquals('zdbc:protocol://', ZURL.URL);
   finally
     ZURL.Free;
   end;
@@ -331,7 +332,7 @@ begin
     ZURL.UserName := 'root';
     ZURL.Password := 'passwd';
     ZURL.Properties.Text := 'rolename=public'+LineEnding;
-    CheckEquals('zdbc:oracle:/C:\model?username=root;password=passwd;rolename=public', ZURL.URL);
+    CheckEquals('zdbc:oracle:///C:\model?username=root;password=passwd;rolename=public', ZURL.URL);
   finally
     ZURL.Free;
   end;
@@ -372,8 +373,39 @@ begin
     if Assigned(ZURLOut) then
       ZURLOut.Free;
   end;
-
 end;
+
+procedure TZURLTest.TestUnixPathDelimiter;
+var
+  ZURL: TZURL;
+  Temp: String;
+begin
+  // Test assignement to properties without hostname and unix path delimiter
+  ZURL := TZURL.Create;
+  try
+    ZURL.Prefix := 'zdbc';
+    ZURL.Protocol := 'oracle';
+    ZURL.HostName := '';
+    ZURL.Port := 0;
+    ZURL.Database := '/model/test/test.db';
+    ZURL.UserName := 'root';
+    ZURL.Password := 'passwd';
+    ZURL.Properties.Text := 'rolename=public'+LineEnding;
+    temp := ZURL.URL;
+    ZURL.URL := Temp;
+    CheckEquals('zdbc', ZURL.Prefix);
+    CheckEquals('oracle', ZURL.Protocol);
+    CheckEquals('', ZURL.HostName);
+    CheckEquals(0, ZURL.Port);
+    CheckEquals('/model/test/test.db', ZURL.Database);
+    CheckEquals('root', ZURL.UserName);
+    CheckEquals('passwd', ZURL.Password);
+    CheckEquals('zdbc:oracle:////model/test/test.db?username=root;password=passwd;rolename=public', ZURL.URL);
+  finally
+    ZURL.Free;
+  end;
+end;
+
 initialization
   RegisterTest('core',TZURLTest.Suite);
 

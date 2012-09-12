@@ -149,6 +149,11 @@ function GetMySQLColumnInfoFromFieldHandle(PlainDriver: IZMySQLPlainDriver;
   const FieldHandle: PZMySQLField; const Encoding: TZCharEncoding;
   const UTF8StringAsWideField: Boolean; const bUseResult:boolean): TZColumnInfo;
 
+procedure ConvertMySQLColumnInfoFromString(const TypeInfo: String;
+  const Encoding: TZCharEncoding; const UTF8StringAsWideField: Boolean;
+  out TypeName, TypeInfoSecond: String; out FieldType: TZSQLType; out ColumnSize: Integer;
+  out Precision: Integer);
+
 implementation
 
 uses ZMessages, Math;
@@ -562,7 +567,6 @@ function GetMySQLColumnInfoFromFieldHandle(PlainDriver: IZMySQLPlainDriver;
 var
   FieldFlags: Integer;
   FieldLength:integer;
-//  bUseMaxLength:boolean;
 begin
   if Assigned(FieldHandle) then
   begin
@@ -626,6 +630,116 @@ begin
   end
   else
     Result := nil;
+end;
+
+procedure ConvertMySQLColumnInfoFromString(const TypeInfo: String;
+  const Encoding: TZCharEncoding; const UTF8StringAsWideField: Boolean;
+  out TypeName, TypeInfoSecond: String; out FieldType: TZSQLType; out ColumnSize: Integer;
+  out Precision: Integer);
+var
+  TypeInfoList: TStrings;
+  TypeInfoFirst: String;
+  J, TempPos: Integer;
+  { TODO : TempStr is not set to a value in the whole method. => Length(TempStr) = 0 }
+  TempStr: string;
+begin
+  TypeInfoList := TStringList.Create;
+  TypeInfoFirst := '';
+  TypeInfoSecond := '';
+  Precision := 0;
+  ColumnSize := 0;
+
+  if StrPos(PChar(TypeInfo), '(') <> nil then
+  begin
+    PutSplitString(TypeInfoList, TypeInfo, '()');
+    TypeInfoFirst := TypeInfoList.Strings[0];
+    TypeInfoSecond := TypeInfoList.Strings[1];
+  end
+  else
+    TypeInfoFirst := TypeInfo;
+
+  TypeInfoFirst := LowerCase(TypeInfoFirst);
+  TypeName := TypeInfoFirst;
+
+  FieldType := ConvertMySQLTypeToSQLType(TypeInfoFirst, TypeInfo,
+    Encoding, UTF8StringAsWideField);
+  { the column type is ENUM}
+  if TypeInfoFirst = 'enum' then
+  begin
+    PutSplitString(TypeInfoList, TypeInfoSecond, ',');
+    for J := 0 to TypeInfoList.Count-1 do
+      ColumnSize := Max(ColumnSize, Length(TypeInfoList.Strings[J]));
+  end
+  else
+    { the column type is decimal }
+    if Pos(TypeInfo, ',') > 0 then
+    begin
+      TempPos := FirstDelimiter(',', TypeInfoSecond);
+      ColumnSize := StrToIntDef(Copy(TypeInfoSecond, 1, TempPos - 1), 0);
+      Precision := StrToIntDef(Copy(TypeInfoSecond, TempPos + 1,
+        Length(TempStr) - TempPos), 0);
+    end
+    else
+    begin
+      { the column type is other }
+       if TypeInfoSecond <> '' then
+          ColumnSize := StrToIntDef(TypeInfoSecond, 0)
+       else if TypeInfoFirst = 'tinyint' then
+          ColumnSize := 1
+       else if TypeInfoFirst = 'smallint' then
+          ColumnSize := 6
+       else if TypeInfoFirst = 'mediumint' then
+          ColumnSize := 6
+       else if TypeInfoFirst = 'int' then
+          ColumnSize := 11
+       else if TypeInfoFirst = 'integer' then
+          ColumnSize := 11
+       else if TypeInfoFirst = 'bigint' then
+          ColumnSize := 25
+       else if TypeInfoFirst = 'int24' then
+          ColumnSize := 25
+       else if TypeInfoFirst = 'real' then
+          ColumnSize := 12
+       else if TypeInfoFirst = 'float' then
+          ColumnSize := 12
+       else if TypeInfoFirst = 'decimal' then
+          ColumnSize := 12
+       else if TypeInfoFirst = 'numeric' then
+          ColumnSize := 12
+       else if TypeInfoFirst = 'double' then
+          ColumnSize := 22
+       else if TypeInfoFirst = 'char' then
+          ColumnSize := 1
+       else if TypeInfoFirst = 'varchar' then
+          ColumnSize := 255
+       else if TypeInfoFirst = 'date' then
+          ColumnSize := 10
+       else if TypeInfoFirst = 'time' then
+          ColumnSize := 8
+       else if TypeInfoFirst = 'timestamp' then
+          ColumnSize := 19
+       else if TypeInfoFirst = 'datetime' then
+          ColumnSize := 19
+       else if TypeInfoFirst = 'tinyblob' then
+          ColumnSize := 255
+       else if TypeInfoFirst = 'blob' then
+          ColumnSize := MAXBUF
+       else if TypeInfoFirst = 'mediumblob' then
+          ColumnSize := 16277215//may be 65535
+       else if TypeInfoFirst = 'longblob' then
+          ColumnSize := High(Integer)//2147483657//may be 65535
+       else if TypeInfoFirst = 'tinytext' then
+          ColumnSize := 255
+       else if TypeInfoFirst = 'text' then
+          ColumnSize := 65535
+       else if TypeInfoFirst = 'mediumtext' then
+          ColumnSize := 16277215 //may be 65535
+       else if TypeInfoFirst = 'enum' then
+          ColumnSize := 255
+       else if TypeInfoFirst = 'set' then
+          ColumnSize := 255;
+    end;
+  FreeAndNil(TypeInfoList);
 end;
 
 end.

@@ -751,7 +751,6 @@ begin
   if ErrorMessage <> '' then
   begin
     if Assigned(ResultHandle) then
-    begin
 {     StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SEVERITY)));
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_MESSAGE_PRIMARY)));
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_MESSAGE_DETAIL)));
@@ -764,12 +763,9 @@ begin
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SOURCE_LINE)));
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SOURCE_FUNCTION)));
 }
-     StatusCode := GetMessage(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SQLSTATE));
-    end
+     StatusCode := GetMessage(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SQLSTATE))
     else
-    begin
-     StatusCode:='';
-    end;
+      StatusCode:='';
   end;
 
 
@@ -787,8 +783,8 @@ begin
 
     if ResultHandle <> nil then PlainDriver.Clear(ResultHandle);
 
-
-    raise EZSQLException.CreateWithStatus(StatusCode,Format(SSQLError1, [ErrorMessage]));
+    if not ( ConnectionLost and ( LogCategory = lcUnprepStmt ) ) then
+      raise EZSQLException.CreateWithStatus(StatusCode,Format(SSQLError1, [ErrorMessage]));
   end;
 end;
 

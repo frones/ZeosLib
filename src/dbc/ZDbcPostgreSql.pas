@@ -89,6 +89,8 @@ type
     function GetServerMinorVersion: Integer;
     function GetCharactersetCode: TZPgCharactersetType;
     function EncodeBinary(const Value: ZAnsiString): ZAnsiString;
+    procedure RegisterPreparedStmtName(const value: String);
+    procedure UnregisterPreparedStmtName(const value: String);
   end;
 
   {** Implements PostgreSQL Database Connection. }
@@ -104,6 +106,7 @@ type
     FServerMinorVersion: Integer;
     FServerSubVersion: Integer;
     FNoticeProcessor: TZPostgreSQLNoticeProcessor;
+    FPreparedStmts: TStrings;
   protected
     procedure InternalCreate; override;
     function BuildConnectStr: AnsiString;
@@ -112,6 +115,8 @@ type
     procedure OnPropertiesChange(Sender: TObject); override;
     procedure SetStandardConformingStrings(const Value: Boolean);
     function EncodeBinary(const Value: ZAnsiString): ZAnsiString;
+    procedure RegisterPreparedStmtName(const value: String);
+    procedure UnregisterPreparedStmtName(const value: String);
   public
     destructor Destroy; override;
 
@@ -278,6 +283,8 @@ procedure TZPostgreSQLConnection.InternalCreate;
 begin
   FMetaData := TZPostgreSQLDatabaseMetadata.Create(Self, Url);
 
+  FPreparedStmts := TStringList.Create;
+
   { Sets a default PostgreSQL port }
   if Self.Port = 0 then
      Self.Port := 5432;
@@ -310,6 +317,8 @@ begin
   if FTypeList <> nil then
     FTypeList.Free;
   inherited Destroy;
+  if Assigned(FPreparedStmts) then
+    FreeAndNil(FPreparedStmts);
 end;
 
 {**
@@ -433,6 +442,19 @@ begin
     Result := GetPlainDriver.EncodeBYTEA(Value, GetConnectionHandle)
   else
     Result := ZDbcPostgreSqlUtils.EncodeBinaryString(Value);
+end;
+
+procedure TZPostgreSQLConnection.RegisterPreparedStmtName(const value: String);
+begin
+  FPreparedStmts.Add(Value);
+end;
+
+procedure TZPostgreSQLConnection.UnregisterPreparedStmtName(const value: String);
+var Index: Integer;
+begin
+  Index := FPreparedStmts.IndexOf(Value);
+  if Index > -1 then
+    FPreparedStmts.Delete(Index);
 end;
 
 {**
@@ -574,9 +596,13 @@ function TZPostgreSQLConnection.CreatePreparedStatement(
 begin
   if IsClosed then
      Open;
+
   if Assigned(Info) then
     if StrToBoolEx(Info.Values['preferprepared']) then
-      Result := TZPostgreSQLPreparedStatement.Create(GetPlainDriver, Self, SQL, Info)
+      if self.GetServerMajorVersion >= 8 then
+        Result := TZPostgreSQLCAPIPreparedStatement.Create(GetPlainDriver, Self, SQL, Info)
+      else
+        Result := TZPostgreSQLPreparedStatement.Create(GetPlainDriver, Self, SQL, Info)
     else
       Result := TZPostgreSQLEmulatedPreparedStatement.Create(GetPlainDriver,
         Self, SQL, Info)
@@ -712,9 +738,19 @@ end;
 procedure TZPostgreSQLConnection.Close;
 var
   LogMessage: string;
+  Stmt: IZStatement;
+  I: Integer;
 begin
   if ( Closed ) or (not Assigned(PlainDriver)) then
     Exit;
+
+  if FPreparedStmts.Count > 0 then
+  begin
+    Stmt := Self.CreateRegularStatement(Info);
+    for i := 0 to FPreparedStmts.Count -1 do
+      Stmt.Execute('DEALLOCATE "'+FPreparedStmts[i]+'";');
+    Stmt := nil;
+  end;
 
   GetPlainDriver.Finish(FHandle);
   FHandle := nil;

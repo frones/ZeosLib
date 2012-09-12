@@ -1785,6 +1785,7 @@ var
   s:  Ansistring;
   TextLob, BinLob: String;
   TempConnection: TZConnection;
+  WS: WideString;
 begin
   TempConnection := nil;
   BinStream:=nil;
@@ -1839,6 +1840,7 @@ begin
       Params[0].AsInteger := TEST_ROW_ID-1;
       BinStreamS := TMemoryStream.Create;
       s:={$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString(utf8encode('123456ייאא'),6000);
+      CheckEquals(StrLen(PAnsiChar('123456ייאא'))*6000, 60000, 'Length of DupeString');
       BinStreamS.Write(s[1],length(s));
       Params[1].LoadFromStream(BinStreamS, ftMemo);
       BinStream := TMemoryStream.Create;
@@ -1846,6 +1848,7 @@ begin
       setlength(s,BinStream.Size);
       BinStream.Read(s[1],length(s));
       s := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString(s, 10);
+      CheckEquals(BinStream.Size * 10, length(s), 'Length of DupeString result');
       BinStream.Position := 0;
       BinStream.Write(s[1],length(s));
       Params[2].LoadFromStream(BinStream, ftBlob);
@@ -1865,15 +1868,16 @@ begin
       if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
         Connection.DbcConnection.UTF8StringAsWideField then
       begin
-        UnicodeStream := WideStringStream(UTF8ToString(PAnsiChar(BinStreamS.Memory)));
-        CheckEquals(UnicodeStream.Size, BinStream1.Size, 'Ascii Stream');
-        CheckEquals(UnicodeStream, BinStream1, 'Ascii Stream');
+        WS := UTF8ToString(ZAnsiString(PAnsiChar(BinStreamS.Memory)));
+        UnicodeStream := WideStringStream(WS);
+        CheckEquals(UnicodeStream.Size, BinStream1.Size, 'Ascii Stream UTF8');
+        CheckEquals(UnicodeStream, BinStream1, 'Ascii Stream UTF8');
         UnicodeStream.Free;
       end
       else
       begin
-        CheckEquals(BinStreamS.Size, BinStream1.Size, 'Ascii Stream');
-        CheckEquals(BinStreamS, BinStream1, 'Ascii Stream');
+        CheckEquals(BinStreamS.Size, BinStream1.Size, 'Ascii Stream Ansi');
+        CheckEquals(BinStreamS, BinStream1, 'Ascii Stream Ansi');
       end;
       BinStream1.Position:=0;
       (FieldByName(BinLob) as TBlobField).SaveToStream(BinStream1);

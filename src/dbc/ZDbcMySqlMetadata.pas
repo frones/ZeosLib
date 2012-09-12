@@ -239,11 +239,11 @@ type
       Unique: Boolean; Approximate: Boolean): IZResultSet; override;
 //     function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
 //      const SequenceNamePattern: string): IZResultSet; override; -> Not implemented
-//    function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
-//      const ProcedureNamePattern: string): IZResultSet; override;
-//    function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
-//      const ProcedureNamePattern: string; const ColumnNamePattern: string):
-//      IZResultSet; override;
+    function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
+      const ProcedureNamePattern: string): IZResultSet; override;
+    function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
+      const ProcedureNamePattern: string; const ColumnNamePattern: string):
+      IZResultSet; override;
     function UncachedGetVersionColumns(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
     function UncachedGetTypeInfo: IZResultSet; override;
@@ -1129,16 +1129,11 @@ function TZMySQLDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 var
-  I, J: Integer;
+  I: Integer;
   MySQLType: TZSQLType;
   TempCatalog, TempColumnNamePattern, TempTableNamePattern: string;
 
-  { TODO : TempStr is not set to a value in the whole method. => Length(TempStr) = 0 }
-  TempStr: string;
-  TempPos: Integer;
-
-  TypeInfoList: TStrings;
-  TypeInfo, TypeInfoFirst, TypeInfoSecond: String;
+  TypeName, TypeInfoSecond: String;
   Nullable, DefaultValue: String;
   HasDefaultValue: Boolean;
   ColumnSize, ColumnDecimals: Integer;
@@ -1157,7 +1152,6 @@ begin
 
     TableNameLength := 0;
     TableNameList := TStringList.Create;
-    TypeInfoList := TStringList.Create;
     try
       with GetTables(Catalog, SchemaPattern, TableNamePattern, nil) do
       begin
@@ -1189,120 +1183,20 @@ begin
           while Next do
           begin
             {initialise some variables}
-            ColumnSize := 0;
-            TypeInfoFirst := '';
-            TypeInfoSecond := '';
-
             Res.MoveToInsertRow;
             Res.UpdateString(1, TempCatalog);
             Res.UpdateString(2, '');
             Res.UpdateString(3, TempTableNamePattern) ;
             Res.UpdateString(4, GetString(ColumnIndexes[1]));
 
-            TypeInfo := GetString(ColumnIndexes[2]);
-            if StrPos(PChar(TypeInfo), '(') <> nil then
-            begin
-              PutSplitString(TypeInfoList, TypeInfo, '()');
-              TypeInfoFirst := TypeInfoList.Strings[0];
-              TypeInfoSecond := TypeInfoList.Strings[1];
-            end
-            else
-              TypeInfoFirst := TypeInfo;
-
-            TypeInfoFirst := LowerCase(TypeInfoFirst);
-            MySQLType := ConvertMySQLTypeToSQLType(TypeInfoFirst, TypeInfo,
-              GetConnection.GetClientCodePageInformations.Encoding,
-              GetConnection.UTF8StringAsWideField);
+            ConvertMySQLColumnInfoFromString(GetString(ColumnIndexes[2]),
+              GetConnection.GetEncoding, GetConnection.UTF8StringAsWideField,
+              TypeName, TypeInfoSecond, MySQLType, ColumnSize, ColumnDecimals);
             Res.UpdateInt(5, Ord(MySQLType));
-            Res.UpdateString(6, TypeInfoFirst);
-
-            Res.UpdateInt(7, 0);
-            Res.UpdateInt(9, 0);
-            { the column type is ENUM}
-            if TypeInfoFirst = 'enum' then
-            begin
-              PutSplitString(TypeInfoList, TypeInfoSecond, ',');
-              for J := 0 to TypeInfoList.Count-1 do
-                ColumnSize := Max(ColumnSize, Length(TypeInfoList.Strings[J]));
-
-              Res.UpdateInt(7, ColumnSize);
-              Res.UpdateInt(9, 0);
-            end
-            else
-              { the column type is decimal }
-              if Pos(TypeInfo, ',') > 0 then
-              begin
-                TempPos := FirstDelimiter(',', TypeInfoSecond);
-                ColumnSize := StrToIntDef(Copy(TypeInfoSecond, 1, TempPos - 1), 0);
-                ColumnDecimals := StrToIntDef(Copy(TypeInfoSecond, TempPos + 1,
-                  Length(TempStr) - TempPos), 0);
-                Res.UpdateInt(7, ColumnSize);
-                Res.UpdateInt(9, ColumnDecimals);
-              end
-              else
-              begin
-                { the column type is other }
-                 if TypeInfoSecond <> '' then
-                    ColumnSize := StrToIntDef(TypeInfoSecond, 0)
-                 else if TypeInfoFirst = 'tinyint' then
-                    ColumnSize := 1
-                 else if TypeInfoFirst = 'smallint' then
-                    ColumnSize := 6
-                 else if TypeInfoFirst = 'mediumint' then
-                    ColumnSize := 6
-                 else if TypeInfoFirst = 'int' then
-                    ColumnSize := 11
-                 else if TypeInfoFirst = 'integer' then
-                    ColumnSize := 11
-                 else if TypeInfoFirst = 'bigint' then
-                    ColumnSize := 25
-                 else if TypeInfoFirst = 'int24' then
-                    ColumnSize := 25
-                 else if TypeInfoFirst = 'real' then
-                    ColumnSize := 12
-                 else if TypeInfoFirst = 'float' then
-                    ColumnSize := 12
-                 else if TypeInfoFirst = 'decimal' then
-                    ColumnSize := 12
-                 else if TypeInfoFirst = 'numeric' then
-                    ColumnSize := 12
-                 else if TypeInfoFirst = 'double' then
-                    ColumnSize := 22
-                 else if TypeInfoFirst = 'char' then
-                    ColumnSize := 1
-                 else if TypeInfoFirst = 'varchar' then
-                    ColumnSize := 255
-                 else if TypeInfoFirst = 'date' then
-                    ColumnSize := 10
-                 else if TypeInfoFirst = 'time' then
-                    ColumnSize := 8
-                 else if TypeInfoFirst = 'timestamp' then
-                    ColumnSize := 19
-                 else if TypeInfoFirst = 'datetime' then
-                    ColumnSize := 19
-                 else if TypeInfoFirst = 'tinyblob' then
-                    ColumnSize := 255
-                 else if TypeInfoFirst = 'blob' then
-                    ColumnSize := MAXBUF
-                 else if TypeInfoFirst = 'mediumblob' then
-                    ColumnSize := 16277215//may be 65535
-                 else if TypeInfoFirst = 'longblob' then
-                    ColumnSize := High(Integer)//2147483657//may be 65535
-                 else if TypeInfoFirst = 'tinytext' then
-                    ColumnSize := 255
-                 else if TypeInfoFirst = 'text' then
-                    ColumnSize := 65535
-                 else if TypeInfoFirst = 'mediumtext' then
-                    ColumnSize := 16277215 //may be 65535
-                 else if TypeInfoFirst = 'enum' then
-                    ColumnSize := 255
-                 else if TypeInfoFirst = 'set' then
-                    ColumnSize := 255;
-                Res.UpdateInt(7, ColumnSize);
-                Res.UpdateInt(9, 0);
-              end;
-
+            Res.UpdateString(6, TypeName);
+            Res.UpdateInt(7, ColumnSize);
             Res.UpdateInt(8, MAXBUF);
+            Res.UpdateInt(9, ColumnDecimals);
             Res.UpdateNull(10);
 
             { Sets nullable fields. }
@@ -1349,11 +1243,11 @@ begin
                 // For ENUM types, '' means: default value is first value in enum set
                 // For other types, '' means: no default value
                 HasDefaultValue := false;
-                if Pos('blob', TypeInfoFirst) > 0 then HasDefaultValue := true;
-                if Pos('text', TypeInfoFirst) > 0 then HasDefaultValue := true;
-                if Pos('char', TypeInfoFirst) > 0 then HasDefaultValue := true;
-                if 'set' = TypeInfoFirst then HasDefaultValue := true;
-                if 'enum' =  TypeInfoFirst then
+                if Pos('blob', TypeName) > 0 then HasDefaultValue := true;
+                if Pos('text', TypeName) > 0 then HasDefaultValue := true;
+                if Pos('char', TypeName) > 0 then HasDefaultValue := true;
+                if 'set' = TypeName then HasDefaultValue := true;
+                if 'enum' =  TypeName then
                   begin
                     HasDefaultValue := true;
                     DefaultValue := Copy(TypeInfoSecond, 2,length(TypeInfoSecond)-1);
@@ -1378,7 +1272,7 @@ begin
                 if DefaultValue <> 'CURRENT_TIMESTAMP' then
                   DefaultValue := '''' + DefaultValue + ''''
               end
-              else if (MySQLType = stBoolean) and (TypeInfoFirst = 'enum') then
+              else if (MySQLType = stBoolean) and (TypeName = 'enum') then
               begin
                 if (DefaultValue = 'y') or (DefaultValue = 'Y') then
                   DefaultValue := '1'
@@ -1408,7 +1302,6 @@ begin
       end;
     finally
       TableNameList.Free;
-      TypeInfoList.Free;
     end;
     Result := Res;
 end;
@@ -2349,6 +2242,282 @@ begin
         Result.InsertRow;
       end;
       Close;
+    end;
+end;
+
+{**
+  Gets a description of the stored procedures available in a
+  catalog.
+
+  <P>Only procedure descriptions matching the schema and
+  procedure name criteria are returned.  They are ordered by
+  PROCEDURE_SCHEM, and PROCEDURE_NAME.
+
+  <P>Each procedure description has the the following columns:
+   <OL>
+ 	<LI><B>PROCEDURE_CAT</B> String => procedure catalog (may be null)
+ 	<LI><B>PROCEDURE_SCHEM</B> String => procedure schema (may be null)
+ 	<LI><B>PROCEDURE_NAME</B> String => procedure name
+   <LI> reserved for future use
+   <LI> reserved for future use
+   <LI> reserved for future use
+ 	<LI><B>REMARKS</B> String => explanatory comment on the procedure
+ 	<LI><B>PROCEDURE_TYPE</B> short => kind of procedure:
+       <UL>
+       <LI> procedureResultUnknown - May return a result
+       <LI> procedureNoResult - Does not return a result
+       <LI> procedureReturnsResult - Returns a result
+       </UL>
+   </OL>
+
+  @param catalog a catalog name; "" retrieves those without a
+  catalog; null means drop catalog name from the selection criteria
+  @param schemaPattern a schema name pattern; "" retrieves those
+  without a schema
+  @param procedureNamePattern a procedure name pattern
+  @return <code>ResultSet</code> - each row is a procedure description
+  @see #getSearchStringEscape
+}
+function TZMySQLDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
+  const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
+var
+  LCatalog, SQL: string;
+begin
+  if Catalog = '' then
+  begin
+    if SchemaPattern <> '' then
+      LCatalog := SchemaPattern
+    else
+      LCatalog := FDatabase;
+  end
+  else
+    LCatalog := Catalog;
+
+  SQL := 'SELECT NULL AS PROCEDURE_CAT, p.db AS PROCEDURE_SCHEM, '+
+      'p.name AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2, '+
+      'NULL AS RESERVED3, p.comment AS REMARKS, '+
+    IntToStr(ProcedureReturnsResult)+' AS PROCEDURE_TYPE  from  mysql.proc p ';
+    if ( LCataLog <> '' ) or ( ProcedureNamePattern <> '' ) then
+      SQL := SQL + 'WHERE ';
+    if ( LCataLog <> '' ) then
+      SQL := SQL + ' p.db LIKE '+QuotedStr(LCatalog);
+    if ( ProcedureNamePattern <> '' ) then
+    begin
+      if ( LCataLog <> '' ) then
+        SQL := SQL + ' AND ';
+      SQL := SQL + ' p.name LIKE '+QuotedStr(ProcedureNamePattern)
+    end;
+    SQL := SQL + ' ORDER BY p.db, p.name';
+    Result := CopyToVirtualResultSet(
+    GetConnection.CreateStatement.ExecuteQuery(SQL),
+    ConstructVirtualResultSet(ProceduresColumnsDynArray));
+end;
+
+{**
+  Gets a description of a catalog's stored procedure parameters
+  and result columns.
+
+  <P>Only descriptions matching the schema, procedure and
+  parameter name criteria are returned.  They are ordered by
+  PROCEDURE_SCHEM and PROCEDURE_NAME. Within this, the return value,
+  if any, is first. Next are the parameter descriptions in call
+  order. The column descriptions follow in column number order.
+
+  <P>Each row in the <code>ResultSet</code> is a parameter description or
+  column description with the following fields:
+   <OL>
+ 	<LI><B>PROCEDURE_CAT</B> String => procedure catalog (may be null)
+ 	<LI><B>PROCEDURE_SCHEM</B> String => procedure schema (may be null)
+ 	<LI><B>PROCEDURE_NAME</B> String => procedure name
+ 	<LI><B>COLUMN_NAME</B> String => column/parameter name
+ 	<LI><B>COLUMN_TYPE</B> Short => kind of column/parameter:
+       <UL>
+       <LI> procedureColumnUnknown - nobody knows
+       <LI> procedureColumnIn - IN parameter
+       <LI> procedureColumnInOut - INOUT parameter
+       <LI> procedureColumnOut - OUT parameter
+       <LI> procedureColumnReturn - procedure return value
+       <LI> procedureColumnResult - result column in <code>ResultSet</code>
+       </UL>
+   <LI><B>DATA_TYPE</B> short => SQL type from java.sql.Types
+ 	<LI><B>TYPE_NAME</B> String => SQL type name, for a UDT type the
+   type name is fully qualified
+ 	<LI><B>PRECISION</B> int => precision
+ 	<LI><B>LENGTH</B> int => length in bytes of data
+ 	<LI><B>SCALE</B> short => scale
+ 	<LI><B>RADIX</B> short => radix
+ 	<LI><B>NULLABLE</B> short => can it contain NULL?
+       <UL>
+       <LI> procedureNoNulls - does not allow NULL values
+       <LI> procedureNullable - allows NULL values
+       <LI> procedureNullableUnknown - nullability unknown
+       </UL>
+ 	<LI><B>REMARKS</B> String => comment describing parameter/column
+   </OL>
+
+  <P><B>Note:</B> Some databases may not return the column
+  descriptions for a procedure. Additional columns beyond
+  REMARKS can be defined by the database.
+
+  @param catalog a catalog name; "" retrieves those without a
+  catalog; null means drop catalog name from the selection criteria
+  @param schemaPattern a schema name pattern; "" retrieves those
+  without a schema
+  @param procedureNamePattern a procedure name pattern
+  @param columnNamePattern a column name pattern
+  @return <code>ResultSet</code> - each row describes a stored procedure parameter or
+       column
+  @see #getSearchStringEscape
+}
+function TZMySQLDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: string;
+  const SchemaPattern: string; const ProcedureNamePattern: string;
+  const ColumnNamePattern: string): IZResultSet;
+var
+  LCatalog, SQL, TypeName, Temp: string;
+  ParamList, Params, Names: TStrings;
+  I,J, ColumnSize, Precision: Integer;
+  FieldType: TZSQLType;
+
+  function GetNextName(const AName: String; NameEmpty: Boolean = False): String;
+  var N: Integer;
+  begin
+    if (Names.IndexOf(AName) = -1) and not NameEmpty then
+    begin
+      Names.Add(AName);
+      Result := AName;
+    end
+    else
+      for N := 1 to MaxInt do
+        if Names.IndexOf(AName+IntToStr(N)) = -1 then
+        begin
+          Names.Add(AName+IntToStr(N));
+          Result := AName+IntToStr(N);
+          Break;
+        end;
+  end;
+  procedure AddTempString(Const Value: String);
+  begin
+    if Temp = '' then
+      Temp := Trim(Value)
+    else
+      Temp := Temp + LineEnding+ Trim(Value);
+  end;
+begin
+  if Catalog = '' then
+  begin
+    if SchemaPattern <> '' then
+      LCatalog := SchemaPattern
+    else
+      LCatalog := FDatabase;
+  end
+  else
+    LCatalog := Catalog;
+
+  Result := inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
+
+  SQL := 'SELECT p.db AS PROCEDURE_CAT, NULL AS PROCEDURE_SCHEM, '+
+      'p.name AS PROCEDURE_NAME, p.param_list AS PARAMS, p.comment AS REMARKS, '+
+    IntToStr(ProcedureReturnsResult)+' AS PROCEDURE_TYPE  from  mysql.proc p ';
+    if ( LCataLog <> '' ) or ( ProcedureNamePattern <> '' ) then
+      SQL := SQL + 'WHERE ';
+    if ( LCataLog <> '' ) then
+      SQL := SQL + ' p.db LIKE '+QuotedStr(LCatalog);
+    if ( ProcedureNamePattern <> '' ) then
+    begin
+      if ( LCataLog <> '' ) then
+        SQL := SQL + ' AND ';
+      SQL := SQL + ' p.name LIKE '+QuotedStr(ProcedureNamePattern)
+    end;
+    SQL := SQL + ' ORDER BY p.db, p.name';
+
+    try
+      with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+      begin
+        ParamList := TStringList.Create;
+        Params := TStringList.Create;
+        Names := TStringList.Create;
+        while Next do
+        begin
+          PutSplitString(ParamList, Trim(GetString(4)), ',');
+          J := 0;
+          Temp := '';
+          for I := 0 to ParamList.Count -1 do
+            if J < ParamList.Count then
+            begin
+              if (Pos('(', (ParamList[J])) > 0) and (Pos(')', (ParamList[J])) = 0) then
+                if ( Pos('real', LowerCase(ParamList[J])) > 0 ) or
+                   ( Pos('float', LowerCase(ParamList[J])) > 0 ) or
+                   ( Pos('decimal', LowerCase(ParamList[J])) > 0 ) or
+                   ( Pos('numeric', LowerCase(ParamList[J])) > 0 ) or
+                   ( Pos('double', LowerCase(ParamList[J])) > 0 ) then
+                begin
+                  AddTempString(ParamList[j]+','+ParamList[j+1]);
+                  Inc(j);
+                end
+                else
+                  AddTempString(ParamList[j])
+              else
+                if not (ParamList[j] = '') then
+                  AddTempString(ParamList[j]);
+              Inc(J);
+            end;
+          PutSplitString(ParamList, Temp, LineEnding);
+          for i := 0 to ParamList.Count -1 do
+          begin
+            PutSplitString(Params, ParamList[i], ' ');
+            if Params.Count = 2 then {no name available}
+              Params.Insert(1,'');
+            Result.MoveToInsertRow;
+            Result.UpdateString(1, GetString(1)); //PROCEDURE_CAT
+            Result.UpdateString(2, GetString(2)); //PROCEDURE_SCHEM
+            Result.UpdateString(3, GetString(3)); //PROCEDURE_NAME
+            ConvertMySQLColumnInfoFromString(Params[2],
+              GetConnection.GetEncoding, GetConnection.UTF8StringAsWideField,
+              TypeName, Temp, FieldType, ColumnSize, Precision);
+            { process COLUMN_NAME }
+            if Params[1] = '' then
+            begin
+              Result.UpdateString(4, GetNextName('$', True));
+            end
+            else
+              if GetIdentifierConvertor.IsQuoted(Params[1]) then
+                Result.UpdateString(4, GetNextName(Copy(Params[1], 2, Length(Params[1])-2), (Length(Params[1])=2)))
+              else
+                Result.UpdateString(4, GetNextName(Params[1]));
+            { COLUMN_TYPE }
+            if UpperCase(Params[0]) = 'OUT' then
+              Result.UpdateInt(5, Ord(pctOut))
+            else
+              if UpperCase(Params[0]) = 'INOUT' then
+                Result.UpdateInt(5, Ord(pctInOut))
+              else
+                if UpperCase(Params[0]) = 'IN' then
+                  Result.UpdateInt(5, Ord(pctIn))
+                else
+                  Result.UpdateInt(5, Ord(pctUnknown));
+
+            { DATA_TYPE }
+            Result.UpdateInt(6, Ord(FieldType));
+            { TYPE_NAME }
+            Result.UpdateString(7, TypeName);
+            { PRECISION }
+            Result.UpdateInt(8, ColumnSize);
+            { LENGTH }
+            Result.UpdateInt(9, Precision);
+
+            Result.UpdateNull(10);
+            Result.UpdateNull(11);
+            Result.UpdateInt(12, Ord(ntNullableUnknown));
+            Result.UpdateNull(13);
+            Result.InsertRow;
+          end;
+        end;
+        Close;
+      end;
+    finally
+      FreeAndNil(Names);
+      FreeAndNil(Params);
+      FreeAndNil(ParamList);
     end;
 end;
 

@@ -313,7 +313,7 @@ begin
   CheckEquals(11, ResultSet.FindColumn('RADIX'));
   CheckEquals(12, ResultSet.FindColumn('NULLABLE'));
   CheckEquals(13, ResultSet.FindColumn('REMARKS'));
-  Check(not ResultSet.Next);
+  Check(ResultSet.Next);
   ResultSet.Close;
   ResultSet := nil;
 end;
@@ -331,7 +331,7 @@ begin
   CheckEquals(3, ResultSet.FindColumn('PROCEDURE_NAME'));
   CheckEquals(7, ResultSet.FindColumn('REMARKS'));
   CheckEquals(8, ResultSet.FindColumn('PROCEDURE_TYPE'));
-  Check(not ResultSet.Next);
+  Check(ResultSet.Next);
   ResultSet.Close;
   ResultSet := nil;
 end;

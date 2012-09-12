@@ -323,16 +323,9 @@ type
   PPQArgBlock = ^PQArgBlock;
 
 {Prepared statement types}
-  PPQparamTypes = ^TPQparamTypes;
-  TPQparamTypes = array of POid;
-
-  PPQparamValues = ^TPQparamValues;
+  TPQparamTypes = {array of }POid;
   TPQparamValues = array of PAnsichar;
-
-  PPQparamLengths = ^TPQparamLengths;
   TPQparamLengths = array of Integer;
-
-  PPQparamFormats = ^TPQparamFormats;
   TPQparamFormats = array of Integer;
 
 
@@ -373,27 +366,32 @@ type
 //* Simple synchronous query */
   TPQexec          = function(Handle: PPGconn; Query: PAnsiChar): PPGresult; cdecl;
   TPQexecParams    = function(Handle: PPGconn; command: PAnsichar;
-        nParams: Integer; paramTypes: PPQparamTypes; paramValues: PPQparamValues;
-        paramLengths: PPQparamLengths; paramFormats: PPQparamFormats;
+        nParams: Integer; paramTypes: TPQparamTypes; paramValues: TPQparamValues;
+        paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
         resultFormat: Integer): PPGresult; cdecl;
   TPQprepare        = function(Handle: PPGconn; stmtName: PAnsichar;
-        query: PAnsiChar; nParams: Integer; paramTypes: PPQparamTypes): PPGresult; cdecl;
+        query: PAnsiChar; nParams: Integer; paramTypes: TPQparamTypes): PPGresult; cdecl;
   TPQexecPrepared   = function(Handle: PPGconn; stmtName: PAnsichar;
-        nParams: Integer; paramValues: PPQparamValues; paramLengths: PPQparamLengths;
-        paramFormats: PPQparamFormats; resultFormat: Integer): PPGresult; cdecl;
+        nParams: Integer; paramValues: TPQparamValues; paramLengths: TPQparamLengths;
+        paramFormats: TPQparamFormats; resultFormat: Integer): PPGresult; cdecl;
 //* Interface for multiple-result or asynchronous queries */
   TPQsendQuery      = function(Handle: PPGconn; query: PAnsiChar): Integer; cdecl;
   TPQsendQueryParams= function(Handle: PPGconn; command: PAnsichar;
-        nParams: Integer; paramTypes: PPQparamTypes; paramValues: PPQparamValues;
-        paramLengths: PPQparamLengths; paramFormats: PPQparamFormats;
+        nParams: Integer; paramTypes: TPQparamTypes; paramValues: TPQparamValues;
+        paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
         resultFormat: Integer): Integer; cdecl;
   TPQsendPrepare    = function(Handle: PPGconn; stmtName: PAnsichar;
-        query: PAnsiChar; nParams: Integer; paramTypes: PPQparamTypes): Integer; cdecl;
+        query: PAnsiChar; nParams: Integer; paramTypes: TPQparamTypes): Integer; cdecl;
   TPQsendQueryPrepared = function(Handle: PPGconn; stmtName: PAnsichar;
-         nParams: Integer; paramValues: PPQparamValues;
-         paramLengths: PPQparamLengths; paramFormats: PPQparamFormats;
+         nParams: Integer; paramValues: TPQparamValues;
+         paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
          resultFormat: Integer): Integer; cdecl;
   TPQgetResult     = function(Handle: PPGconn): PPGresult;  cdecl;
+//* Describe prepared statements and portals */
+  TPQdescribePrepared = function(Handle: PPGconn; const stmt: PAnsiChar): PPGresult; cdecl;
+  TPQdescribePortal = function(Handle: PPGconn; const portal: PAnsiChar): PPGresult; cdecl;
+  TPQsendDescribePrepared = function(Handle: PPGconn; const stmt: PAnsiChar): Integer; cdecl;
+  TPQsendDescribePortal = function(Handle: PPGconn; const portal: PAnsiChar): Integer; cdecl;
 
   TPQnotifies      = function(Handle: PPGconn): PPGnotify; cdecl;
   TPQfreeNotify    = procedure(Handle: PPGnotify);cdecl;
@@ -489,6 +487,11 @@ TZPOSTGRESQL_API = record
   PQsendPrepare:   TPQsendPrepare;
   PQsendQueryPrepared: TPQsendQueryPrepared;
   PQgetResult:     TPQgetResult;
+  //* Describe prepared statements and portals */
+  PQdescribePrepared:     TPQdescribePrepared;
+  PQdescribePortal:       TPQdescribePortal;
+  PQsendDescribePrepared: TPQsendDescribePrepared;
+  PQsendDescribePortal:   TPQsendDescribePortal;
   PQnotifies:      TPQnotifies;
   PQfreeNotify:    TPQfreeNotify;
   PQisBusy:        TPQisBusy;
@@ -555,7 +558,7 @@ type
 
     function GetStandardConformingStrings: Boolean;
 
-    function  EncodeBYTEA(const Value: AnsiString; Handle: PZPostgreSQLConnect): AnsiString;
+    function  EncodeBYTEA(const Value: AnsiString; Handle: PZPostgreSQLConnect; Quoted: Boolean = True): AnsiString;
     function  DecodeBYTEA(const value: AnsiString; Handle: PZPostgreSQLConnect): AnsiString;
 
     function ConnectDatabase(ConnInfo: PAnsiChar): PZPostgreSQLConnect;
@@ -584,26 +587,31 @@ type
 
     function ExecuteQuery(Handle: PZPostgreSQLConnect;Query: PAnsiChar): PZPostgreSQLResult;
     function ExecParams(Handle: PPGconn; command: PAnsichar;
-        nParams: Integer; paramTypes: PPQparamTypes; paramValues: PPQparamValues;
-        paramLengths: PPQparamLengths; paramFormats: PPQparamFormats;
+        nParams: Integer; paramTypes: TPQparamTypes; paramValues: TPQparamValues;
+        paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
         resultFormat: Integer): PPGresult;
     function Prepare(Handle: PPGconn; stmtName: PAnsichar;
-        query: PAnsiChar; nParams: Integer; paramTypes: PPQparamTypes): PPGresult;
+        query: PAnsiChar; nParams: Integer; paramTypes: TPQparamTypes): PPGresult;
     function ExecPrepared(Handle: PPGconn; stmtName: PAnsichar;
-        nParams: Integer; paramValues: PPQparamValues; paramLengths: PPQparamLengths;
-        paramFormats: PPQparamFormats; resultFormat: Integer): PPGresult;
+        nParams: Integer; paramValues: TPQparamValues; paramLengths: TPQparamLengths;
+        paramFormats: TPQparamFormats; resultFormat: Integer): PPGresult;
     function SendQuery(Handle: PZPostgreSQLConnect; Query: PAnsiChar): Integer;
     function SendQueryParams(Handle: PPGconn; command: PAnsichar;
-        nParams: Integer; paramTypes: PPQparamTypes; paramValues: PPQparamValues;
-        paramLengths: PPQparamLengths; paramFormats: PPQparamFormats;
+        nParams: Integer; paramTypes: TPQparamTypes; paramValues: TPQparamValues;
+        paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
         resultFormat: Integer): Integer;
     function SendPrepare(Handle: PPGconn; stmtName: PAnsichar;
-        query: PAnsiChar; nParams: Integer; paramTypes: PPQparamTypes): Integer;
+        query: PAnsiChar; nParams: Integer; paramTypes: TPQparamTypes): Integer;
     function SendQueryPrepared(Handle: PPGconn; stmtName: PAnsichar;
-         nParams: Integer; paramValues: PPQparamValues;
-         paramLengths: PPQparamLengths; paramFormats: PPQparamFormats;
+         nParams: Integer; paramValues: TPQparamValues;
+         paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
          resultFormat: Integer): Integer;
     function GetResult(Handle: PZPostgreSQLConnect): PZPostgreSQLResult;
+    //* Describe prepared statements and portals */
+    function DescribePrepared(Handle: PPGconn; const stmt: PAnsiChar): PPGresult;
+    function DescribePortal(Handle: PPGconn; const portal: PAnsiChar): PPGresult;
+    function SendDescribePrepared(Handle: PPGconn; const stmt: PAnsiChar): Integer;
+    function SendDescribePortal(Handle: PPGconn; const portal: PAnsiChar): Integer;
     function Notifies(Handle: PZPostgreSQLConnect): PZPostgreSQLNotify;
     procedure FreeNotify(Handle: PZPostgreSQLNotify);
 
@@ -686,7 +694,7 @@ type
   public
     constructor Create;
 
-    function EncodeBYTEA(const Value: AnsiString; Handle: PZPostgreSQLConnect): AnsiString;
+    function EncodeBYTEA(const Value: AnsiString; Handle: PZPostgreSQLConnect; Quoted: Boolean = True): AnsiString;
     function DecodeBYTEA(const value: AnsiString; Handle: PZPostgreSQLConnect): AnsiString;
 
     function ConnectDatabase(ConnInfo: PAnsiChar): PZPostgreSQLConnect;
@@ -718,26 +726,30 @@ type
     function ExecuteQuery(Handle: PZPostgreSQLConnect;
       Query: PAnsiChar): PZPostgreSQLResult;
     function ExecParams(Handle: PPGconn; command: PAnsichar;
-        nParams: Integer; paramTypes: PPQparamTypes; paramValues: PPQparamValues;
-        paramLengths: PPQparamLengths; paramFormats: PPQparamFormats;
+        nParams: Integer; paramTypes: TPQparamTypes; paramValues: TPQparamValues;
+        paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
         resultFormat: Integer): PPGresult;
     function Prepare(Handle: PPGconn; stmtName: PAnsichar;
-        query: PAnsiChar; nParams: Integer; paramTypes: PPQparamTypes): PPGresult;
+        query: PAnsiChar; nParams: Integer; paramTypes: TPQparamTypes): PPGresult;
     function ExecPrepared(Handle: PPGconn; stmtName: PAnsichar;
-        nParams: Integer; paramValues: PPQparamValues; paramLengths: PPQparamLengths;
-        paramFormats: PPQparamFormats; resultFormat: Integer): PPGresult;
+        nParams: Integer; paramValues: TPQparamValues; paramLengths: TPQparamLengths;
+        paramFormats: TPQparamFormats; resultFormat: Integer): PPGresult;
     function SendQuery(Handle: PZPostgreSQLConnect; Query: PAnsiChar): Integer;
     function SendQueryParams(Handle: PPGconn; command: PAnsichar;
-        nParams: Integer; paramTypes: PPQparamTypes; paramValues: PPQparamValues;
-        paramLengths: PPQparamLengths; paramFormats: PPQparamFormats;
+        nParams: Integer; paramTypes: TPQparamTypes; paramValues: TPQparamValues;
+        paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
         resultFormat: Integer): Integer;
     function SendPrepare(Handle: PPGconn; stmtName: PAnsichar;
-        query: PAnsiChar; nParams: Integer; paramTypes: PPQparamTypes): Integer;
+        query: PAnsiChar; nParams: Integer; paramTypes: TPQparamTypes): Integer;
     function SendQueryPrepared(Handle: PPGconn; stmtName: PAnsichar;
-         nParams: Integer; paramValues: PPQparamValues;
-         paramLengths: PPQparamLengths; paramFormats: PPQparamFormats;
+         nParams: Integer; paramValues: TPQparamValues;
+         paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
          resultFormat: Integer): Integer;
     function GetResult(Handle: PZPostgreSQLConnect): PZPostgreSQLResult;
+    function DescribePrepared(Handle: PPGconn; const stmt: PAnsiChar): PPGresult;
+    function DescribePortal(Handle: PPGconn; const portal: PAnsiChar): PPGresult;
+    function SendDescribePrepared(Handle: PPGconn; const stmt: PAnsiChar): Integer;
+    function SendDescribePortal(Handle: PPGconn; const portal: PAnsiChar): Integer;
 
     function Notifies(Handle: PZPostgreSQLConnect): PZPostgreSQLNotify;
     procedure FreeNotify(Handle: PZPostgreSQLNotify);
@@ -1094,7 +1106,7 @@ begin
       Result := Value;
 end;
 
-function TZPostgreSQLBaseDriver.EncodeBYTEA(const Value: AnsiString;  Handle: PZPostgreSQLConnect): AnsiString;
+function TZPostgreSQLBaseDriver.EncodeBYTEA(const Value: AnsiString;  Handle: PZPostgreSQLConnect; Quoted: Boolean = True): AnsiString;
 var
   encoded: PAnsiChar;
   len: Longword;
@@ -1111,7 +1123,8 @@ begin
     SetLength(result, len -1); //removes the #0 byte
     StrCopy(PAnsiChar(result), encoded);
     POSTGRESQL_API.PQFreemem(encoded);
-    result := ''''+result+'''';
+    if Quoted then
+      result := ''''+result+'''';
   end
   else
     Result := Value;
@@ -1138,8 +1151,8 @@ begin
 end;
 
 function TZPostgreSQLBaseDriver.ExecParams(Handle: PPGconn; command: PAnsichar;
-    nParams: Integer; paramTypes: PPQparamTypes; paramValues: PPQparamValues;
-    paramLengths: PPQparamLengths; paramFormats: PPQparamFormats;
+    nParams: Integer; paramTypes: TPQparamTypes; paramValues: TPQparamValues;
+    paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
     resultFormat: Integer): PPGresult;
 begin
   if Assigned(POSTGRESQL_API.PQexecParams) then
@@ -1150,7 +1163,7 @@ begin
 end;
 
 function TZPostgreSQLBaseDriver.Prepare(Handle: PPGconn; stmtName: PAnsichar;
-    query: PAnsiChar; nParams: Integer; paramTypes: PPQparamTypes): PPGresult;
+    query: PAnsiChar; nParams: Integer; paramTypes: TPQparamTypes): PPGresult;
 begin
   if Assigned(POSTGRESQL_API.PQprepare) then
     Result := POSTGRESQL_API.PQprepare(Handle, stmtName, query, nParams, paramTypes)
@@ -1159,8 +1172,8 @@ begin
 end;
 
 function TZPostgreSQLBaseDriver.ExecPrepared(Handle: PPGconn; stmtName: PAnsichar;
-    nParams: Integer; paramValues: PPQparamValues; paramLengths: PPQparamLengths;
-    paramFormats: PPQparamFormats; resultFormat: Integer): PPGresult;
+    nParams: Integer; paramValues: TPQparamValues; paramLengths: TPQparamLengths;
+    paramFormats: TPQparamFormats; resultFormat: Integer): PPGresult;
 begin
   if Assigned(POSTGRESQL_API.PQexecPrepared) then
     Result := POSTGRESQL_API.PQexecPrepared(Handle, stmtName, nParams,
@@ -1175,8 +1188,8 @@ begin
 end;
 
 function TZPostgreSQLBaseDriver.SendQueryParams(Handle: PPGconn; command: PAnsichar;
-    nParams: Integer; paramTypes: PPQparamTypes; paramValues: PPQparamValues;
-    paramLengths: PPQparamLengths; paramFormats: PPQparamFormats;
+    nParams: Integer; paramTypes: TPQparamTypes; paramValues: TPQparamValues;
+    paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
     resultFormat: Integer): Integer;
 begin
   if Assigned(POSTGRESQL_API.PQsendQueryParams) then
@@ -1187,7 +1200,7 @@ begin
 end;
 
 function TZPostgreSQLBaseDriver.SendPrepare(Handle: PPGconn; stmtName: PAnsichar;
-    query: PAnsiChar; nParams: Integer; paramTypes: PPQparamTypes): Integer;
+    query: PAnsiChar; nParams: Integer; paramTypes: TPQparamTypes): Integer;
 begin
   if Assigned(POSTGRESQL_API.PQsendPrepare) then
     Result := POSTGRESQL_API.PQsendPrepare(Handle, stmtName, query, nParams,
@@ -1197,8 +1210,8 @@ begin
 end;
 
 function TZPostgreSQLBaseDriver.SendQueryPrepared(Handle: PPGconn; stmtName: PAnsichar;
-     nParams: Integer; paramValues: PPQparamValues;
-     paramLengths: PPQparamLengths; paramFormats: PPQparamFormats;
+     nParams: Integer; paramValues: TPQparamValues;
+     paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
      resultFormat: Integer): Integer;
 begin
   if Assigned(POSTGRESQL_API.PQsendQueryPrepared) then
@@ -1211,6 +1224,42 @@ end;
 function TZPostgreSQLBaseDriver.GetResult(Handle: PZPostgreSQLConnect): PZPostgreSQLResult;
 begin
   Result := POSTGRESQL_API.PQgetResult(Handle);
+end;
+
+function TZPostgreSQLBaseDriver.DescribePrepared(Handle: PPGconn;
+  const stmt: PAnsiChar): PPGresult;
+begin
+  if Assigned(POSTGRESQL_API.PQdescribePrepared) then
+    Result := POSTGRESQL_API.PQdescribePrepared(Handle, stmt)
+  else
+    Result := nil;
+end;
+
+function TZPostgreSQLBaseDriver.DescribePortal(Handle: PPGconn;
+  const portal: PAnsiChar): PPGresult;
+begin
+  if Assigned(POSTGRESQL_API.PQdescribePortal) then
+    Result := POSTGRESQL_API.PQdescribePortal(Handle, portal)
+  else
+    Result := nil;
+end;
+
+function TZPostgreSQLBaseDriver.SendDescribePrepared(Handle: PPGconn;
+  const stmt: PAnsiChar): Integer;
+begin
+  if Assigned(POSTGRESQL_API.PQsendDescribePrepared) then
+    Result := POSTGRESQL_API.PQsendDescribePrepared(Handle, stmt)
+  else
+    Result := -1;
+end;
+
+function TZPostgreSQLBaseDriver.SendDescribePortal(Handle: PPGconn;
+  const portal: PAnsiChar): Integer;
+begin
+  if Assigned(POSTGRESQL_API.PQsendDescribePortal) then
+    Result := POSTGRESQL_API.PQsendDescribePortal(Handle, portal)
+  else
+    Result := -1;
 end;
 
 function TZPostgreSQLBaseDriver.ExportLargeObject(
