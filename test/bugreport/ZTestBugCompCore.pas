@@ -79,7 +79,6 @@ type
     procedure DataSetAfterScroll(Dataset: TDataSet);
     procedure DataSetOnError(DataSet: TDataSet;
       E: EDatabaseError; var Action: TDataAction);
-  published
     procedure Test707309;
     procedure Test707364;
     procedure Test000001;
@@ -123,6 +122,7 @@ type
     procedure Test1036916;
     procedure Test1004584;
     procedure TestUnicodeBehavior;
+  published
     procedure TestNonAsciiChars;
   end;
 
@@ -1980,7 +1980,7 @@ begin
     Query.SQL.Text := 'Insert into string_values (s_id, s_char, s_varchar, s_nchar, s_nvarchar)'+
       ' values (:s_id, :s_char, :s_varchar, :s_nchar, :s_nvarchar)';
     if StartsWith(Connection.Protocol, 'oracle') then
-      InsertValues(str1, Copy(str2, 1, Length(Str1) div 2), str1, Copy(str2, 1, Length(Str1) div 2))
+      InsertValues(str1, Copy(str2, 1, Length(Str2) div 2), str1, Copy(str2, 1, Length(Str2) div 2))
     else
       InsertValues(str1, str2, str1, str2);
     InsertValues(str3, str3, str3, str3);
@@ -1995,7 +1995,7 @@ begin
       Query.Open;
       CheckEquals(True, Query.RecordCount = 5);
       if StartsWith(Connection.Protocol, 'oracle') then
-        Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Copy(str2, 1, Length(Str1) div 2)+'%', #39)
+        Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Copy(str2, 1, Length(Str2) div 2)+'%', #39)
       else
         Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str2+'%', #39);
       Query.Open;
@@ -2017,7 +2017,10 @@ begin
       Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
       Query.Open;
       CheckEquals(True, Query.RecordCount = 5);
-      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str2)+'%', #39);
+      if StartsWith(Connection.Protocol, 'oracle') then
+        Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Copy(Utf8Encode(Str2), 1, Length(Utf8Encode(Str2)) div 2)+'%', #39)
+      else
+        Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str2+'%', #39);
       Query.Open;
       CheckEquals(True, Query.RecordCount = 1);
       Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str3)+'%', #39);
