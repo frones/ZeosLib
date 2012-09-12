@@ -79,6 +79,7 @@ type
     procedure DataSetAfterScroll(Dataset: TDataSet);
     procedure DataSetOnError(DataSet: TDataSet;
       E: EDatabaseError; var Action: TDataAction);
+  published
     procedure Test707309;
     procedure Test707364;
     procedure Test000001;
@@ -122,7 +123,6 @@ type
     procedure Test1036916;
     procedure Test1004584;
     procedure TestUnicodeBehavior;
-  published
     procedure TestNonAsciiChars;
   end;
 
