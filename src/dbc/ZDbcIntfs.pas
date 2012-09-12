@@ -602,6 +602,14 @@ type
   {** Callable SQL statement interface. }
   IZCallableStatement = interface(IZPreparedStatement)
     ['{E6FA6C18-C764-4C05-8FCB-0582BDD1EF40}']
+    { Multiple ResultSet support API }
+    function HasMoreResultSets: Boolean;
+    function GetFirstResultSet: IZResultSet;
+    function GetPreviousResultSet: IZResultSet;
+    function GetNextResultSet: IZResultSet;
+    function GetLastResultSet: IZResultSet;
+    function BOR: Boolean;
+    function EOR: Boolean;
 
     procedure RegisterOutParameter(ParameterIndex: Integer; SQLType: Integer);
     procedure RegisterParamType(ParameterIndex:integer;ParamType:Integer);
@@ -630,17 +638,6 @@ type
     ['{99882891-81B2-4F3E-A3D7-35B6DCAA7136}']
     procedure RegisterParamTypeAndName(const ParameterIndex:integer;
       const ParamTypeName, ParamName: String; Const ColumnSize, Precision: Integer);
-  end;
-
-  IZMutipleResultSetCallableStatement = interface(IZCallableStatement)
-    ['{1AC83538-7C6C-4897-B702-50B57D96E4EE}']
-    function HasMoreResultSets: Boolean;
-    function GetFirstResultSet: IZResultSet;
-    function GetPreviousResultSet: IZResultSet;
-    function GetNextResultSet: IZResultSet;
-    function GetLastResultSet: IZResultSet;
-    function BOR: Boolean;
-    function EOR: Boolean;
   end;
 
   {** Rows returned by SQL query. }

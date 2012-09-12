@@ -288,6 +288,15 @@ type
   public
     constructor Create(Connection: IZConnection; SQL: string; Info: TStrings);
     procedure ClearParameters; override;
+
+    function HasMoreResultSets: Boolean; virtual;
+    function GetFirstResultSet: IZResultSet; virtual;
+    function GetPreviousResultSet: IZResultSet; virtual;
+    function GetNextResultSet: IZResultSet; virtual;
+    function GetLastResultSet: IZResultSet; virtual;
+    function BOR: Boolean; virtual;
+    function EOR: Boolean; virtual;
+
     procedure RegisterOutParameter(ParameterIndex: Integer;
       SQLType: Integer); virtual;
     procedure RegisterParamType(ParameterIndex:integer;ParamType:Integer);virtual;
@@ -1816,6 +1825,70 @@ begin
   end;
   SetOutParamCount(0);
 end;
+
+{**
+  Are more resultsets retrieved?
+  @result Returns <code>True</code> if more resultsets are retrieved
+}
+function TZAbstractCallableStatement.HasMoreResultSets: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Get the first resultset..
+  @result <code>IZResultSet</code> if supported
+}
+function TZAbstractCallableStatement.GetFirstResultSet: IZResultSet;
+begin
+  Result := nil;
+end;
+
+{**
+  Get the previous resultset..
+  @result <code>IZResultSet</code> if supported
+}
+function TZAbstractCallableStatement.GetPreviousResultSet: IZResultSet;
+begin
+  Result := nil;
+end;
+
+{**
+  Get the next resultset..
+  @result <code>IZResultSet</code> if supported
+}
+function TZAbstractCallableStatement.GetNextResultSet: IZResultSet;
+begin
+  Result := nil;
+end;
+
+{**
+  Get the last resultset..
+  @result <code>IZResultSet</code> if supported
+}
+function TZAbstractCallableStatement.GetLastResultSet: IZResultSet;
+begin
+  Result := nil;
+end;
+
+{**
+  First ResultSet?
+  @result <code>True</code> if first ResultSet
+}
+function TZAbstractCallableStatement.BOR: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Last ResultSet?
+  @result <code>True</code> if Last ResultSet
+}
+function TZAbstractCallableStatement.EOR: Boolean;
+begin
+  Result := True;
+end;
+
 
 {**
   Registers the OUT parameter in ordinal position

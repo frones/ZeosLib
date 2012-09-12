@@ -363,48 +363,70 @@ begin
   end;
 end;
 
+{**
+  Procedure the First retrieved resultset if the givens
+}
 procedure TZStoredProc.FirstResultSet;
 begin
-  if Supports(Statement, IZMutipleResultSetCallableStatement) then
-    if (Statement as IZMutipleResultSetCallableStatement).HasMoreResultSets then
-      SetAnotherResultset((Statement as IZMutipleResultSetCallableStatement).GetFirstResultSet);
+  if Assigned(Statement) then
+    if (Statement as IZCallableStatement).HasMoreResultSets then
+      SetAnotherResultset((Statement as IZCallableStatement).GetFirstResultSet);
 end;
 
+{**
+  Procedure the Previous retrieved resultset if the givens
+}
 procedure TZStoredProc.PreviousResultSet;
 begin
-  if Supports(Statement, IZMutipleResultSetCallableStatement) then
-    if (Statement as IZMutipleResultSetCallableStatement).HasMoreResultSets then
-      SetAnotherResultset((Statement as IZMutipleResultSetCallableStatement).GetPreviousResultSet);
+  if Assigned(Statement) then
+    if (Statement as IZCallableStatement).HasMoreResultSets then
+      SetAnotherResultset((Statement as IZCallableStatement).GetPreviousResultSet);
 end;
 
+{**
+  Procedure the Next retrieved resultset if the givens
+}
 procedure TZStoredProc.NextResultSet;
 begin
-  if Supports(Statement, IZMutipleResultSetCallableStatement) then
-    if (Statement as IZMutipleResultSetCallableStatement).HasMoreResultSets then
-      SetAnotherResultset((Statement as IZMutipleResultSetCallableStatement).GetNextResultSet);
+  if Assigned(Statement) then
+    if (Statement as IZCallableStatement).HasMoreResultSets then
+      SetAnotherResultset((Statement as IZCallableStatement).GetNextResultSet);
 end;
 
+{**
+  Procedure the Last retrieved resultset if the givens
+}
 procedure TZStoredProc.LastResultSet;
 begin
-  if Supports(Statement, IZMutipleResultSetCallableStatement) then
-    if (Statement as IZMutipleResultSetCallableStatement).HasMoreResultSets then
-      SetAnotherResultset((Statement as IZMutipleResultSetCallableStatement).GetLastResultSet);
+  if Assigned(Statement) then
+    if (Statement as IZCallableStatement).HasMoreResultSets then
+      SetAnotherResultset((Statement as IZCallableStatement).GetLastResultSet);
 end;
 
+{**
+  First ResultSet?
+  @result <code>True</code> if first ResultSet
+}
 function TZStoredProc.BOR: Boolean;
 begin
-  Result := True;
-  if Supports(Statement, IZMutipleResultSetCallableStatement) then
-    if (Statement as IZMutipleResultSetCallableStatement).HasMoreResultSets then
-      Result := (Statement as IZMutipleResultSetCallableStatement).BOR;
+  if not Assigned(Statement) then
+    Result := True
+  else
+    if (Statement as IZCallableStatement).HasMoreResultSets then
+      Result := (Statement as IZCallableStatement).BOR;
 end;
 
+{**
+  Last ResultSet?
+  @result <code>True</code> if Last ResultSet
+}
 function TZStoredProc.EOR: Boolean;
 begin
-  Result := True;
-  if Supports(Statement, IZMutipleResultSetCallableStatement) then
-    if (Statement as IZMutipleResultSetCallableStatement).HasMoreResultSets then
-      Result := (Statement as IZMutipleResultSetCallableStatement).EOR;
+  if not Assigned(Statement) then
+    Result := True
+  else
+    if (Statement as IZCallableStatement).HasMoreResultSets then
+      Result := (Statement as IZCallableStatement).EOR;
 end;
 
 {**

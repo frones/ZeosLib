@@ -176,7 +176,7 @@ type
 
   {** Implements callable Postgresql Statement. }
   TZMySQLCallableStatement = class(TZAbstractCallableStatement, IZMySQLStatement,
-    IZParamNamedCallableStatement, IZMutipleResultSetCallableStatement)
+    IZParamNamedCallableStatement)
   private
     FPlainDriver: IZMysqlPlainDriver;
     FHandle: PZMySQLConnect;
@@ -217,13 +217,13 @@ type
     function IsUseResult: Boolean;
     function IsPreparedStatement: Boolean;
 
-    function HasMoreResultSets: Boolean;
-    function GetFirstResultSet: IZResultSet;
-    function GetPreviousResultSet: IZResultSet;
-    function GetNextResultSet: IZResultSet;
-    function GetLastResultSet: IZResultSet;
-    function BOR: Boolean;
-    function EOR: Boolean;
+    function HasMoreResultSets: Boolean; override;
+    function GetFirstResultSet: IZResultSet; override;
+    function GetPreviousResultSet: IZResultSet; override;
+    function GetNextResultSet: IZResultSet; override;
+    function GetLastResultSet: IZResultSet; override;
+    function BOR: Boolean; override;
+    function EOR: Boolean; override;
   end;
 
 implementation
@@ -1220,7 +1220,7 @@ begin
       NativeResultSet.GetMetaData);
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
       CachedResolver, ClientCodePage);
-    CachedResultSet.SetConcurrency(GetResultSetConcurrency);
+    CachedResultSet.SetConcurrency(rcReadOnly);
     {Need to fetch all data. The handles must be released for mutiple
       Resultsets}
     CachedResultSet.AfterLast;//Fetch all
@@ -1575,11 +1575,19 @@ begin
   Result := False;
 end;
 
+{**
+  Are more resultsets retrieved?
+  @result Returns <code>True</code> if more resultsets are retrieved
+}
 function TZMySQLCallableStatement.HasMoreResultSets: Boolean;
 begin
   Result := FResultSets.Count > 1;
 end;
 
+{**
+  Get the first resultset..
+  @result <code>IZResultSet</code> if supported
+}
 function TZMySQLCallableStatement.GetNextResultSet: IZResultSet;
 begin
   if ( FActiveResultset < FResultSets.Count-1) and ( FResultSets.Count > 1) then
@@ -1594,6 +1602,10 @@ begin
       Result := IZResultSet(FResultSets[FActiveResultset]);
 end;
 
+{**
+  Get the previous resultset..
+  @result <code>IZResultSet</code> if supported
+}
 function TZMySQLCallableStatement.GetPreviousResultSet: IZResultSet;
 begin
   if ( FActiveResultset > 0) and ( FResultSets.Count > 0) then
@@ -1608,6 +1620,10 @@ begin
       Result := IZResultSet(FResultSets[FActiveResultset]);
 end;
 
+{**
+  Get the next resultset..
+  @result <code>IZResultSet</code> if supported
+}
 function TZMySQLCallableStatement.GetFirstResultSet: IZResultSet;
 begin
   if FResultSets.Count = 0 then
@@ -1619,6 +1635,10 @@ begin
   end;
 end;
 
+{**
+  Get the last resultset..
+  @result <code>IZResultSet</code> if supported
+}
 function TZMySQLCallableStatement.GetLastResultSet: IZResultSet;
 begin
   if FResultSets.Count = 0 then
@@ -1630,11 +1650,19 @@ begin
   end;
 end;
 
+{**
+  First ResultSet?
+  @result <code>True</code> if first ResultSet
+}
 function TZMySQLCallableStatement.BOR: Boolean;
 begin
   Result := FActiveResultset = 0;
 end;
 
+{**
+  Last ResultSet?
+  @result <code>True</code> if Last ResultSet
+}
 function TZMySQLCallableStatement.EOR: Boolean;
 begin
   Result := FActiveResultset = FResultSets.Count -1;
