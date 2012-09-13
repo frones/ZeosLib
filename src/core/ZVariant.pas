@@ -65,7 +65,11 @@ uses
 
 const
   {** Precision for float values comparison }
+  {$IFDEF DELPHI17_UP}
+  FLOAT_COMPARE_PRECISION = 1.0e-5;
+  {$ELSE}
   FLOAT_COMPARE_PRECISION = 1.e-5;
+  {$ENDIF}
   FLOAT_COMPARE_PRECISION_SINGLE = 1.5e-5;
 
 type

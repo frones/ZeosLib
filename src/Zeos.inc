@@ -144,6 +144,19 @@
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
 {$ENDIF}
+
+// Compilation directives for Delphi XE3
+{$IFDEF VER240}
+  {$DEFINE VER200BELOW} // Used in code
+  {$DEFINE DELPHI12_UP} // Used in code
+  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
+  {$DEFINE DELPHI15_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI16_UP} // Used in code
+  {$DEFINE DELPHI17_UP} // Used in code
+  {$DEFINE BDS4_UP} // Used in code
+  {$DEFINE BDS5_UP} // Used in code
+  {$DEFINE D17_STARTER_EDITION}
+{$ENDIF}
 // END of per Delphi version defines
 
 {$IFDEF DELPHI12_UP}
@@ -171,10 +184,6 @@
   {$ENDIF}
 {$ENDIF}
 
-{$IFDEF DELPHI16_UP}
-  {$DEFINE WITH_SYSTEMCLASSES}
-{$ENDIF}
-
 {$IFDEF BDS4_UP}
   {$DEFINE WIDE_DATASET}                // TWidedataset exists
   {$DEFINE WITH_PWIDECHAR_TOWIDESTRING} // Able to pass pwidechar to a widestring parameter
@@ -190,7 +199,13 @@
 {$ENDIF}
 
 {$IFDEF DELPHI16_UP}
+  {$DEFINE WITH_SYSTEMCLASSES}
   {$DEFINE WITH_MAXLISTSIZE_DEPRECATED}
+{$ENDIF}
+
+{$IFDEF D17_STARTER_EDITION}
+{$UNDEF WITH_IPROVIDERWIDE}
+{$UNDEF BDS4_UP}
 {$ENDIF}
 
 // Debug/release compiler options
