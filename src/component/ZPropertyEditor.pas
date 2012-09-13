@@ -218,7 +218,7 @@ implementation
 
 {$IFDEF WITH_PROPERTY_EDITOR}
 
-uses SysUtils, Forms, Dialogs, Controls, DB, TypInfo,
+uses SysUtils, Forms, Dialogs, Controls, DB, TypInfo, ZSysUtils,
   ZConnection, ZSelectSchema
 {$IFDEF USE_METADATA}
   , ZSqlMetadata
@@ -230,9 +230,9 @@ uses SysUtils, Forms, Dialogs, Controls, DB, TypInfo,
   {$ENDIF}
   {$ENDIF}
 {$ENDIF}
-{$IFDEF SHOW_WARNING} 
-,ZMessages 
-{$ENDIF SHOW_WARNING} 
+{$IFDEF SHOW_WARNING}
+,ZMessages
+{$ENDIF SHOW_WARNING}
 ;
 
 {$IFDEF FPC}
@@ -453,6 +453,27 @@ var
   ResultSet: IZResultSet;
   Catalog, Schema: string;
   ProcedureName: string;
+  OverloadName: String;
+
+  procedure ExtractOverload(OverloadSeparator: String);
+  var
+    I: Integer;
+    SL: TStrings;
+  begin
+    SL := TStringList.Create;
+    PutSplitString(SL, ProcedureName, OverloadSeparator);
+    if SL.Count > 1 then
+    begin
+      OverloadName := OverloadSeparator+SL[SL.Count -1];
+      SL.Delete(SL.Count -1);
+      ProcedureName := '';
+      for i := 0 to SL.Count -1 do
+        if ProcedureName = '' then
+          ProcedureName := ProcedureName + SL[i]
+        else
+          ProcedureName :=  ProcedureName +OverloadSeparator+ SL[i]; //don't forget to give the delimiter back too
+    end;
+  end;
 begin
   Connection := GetObjectProp(GetZComponent, 'Connection') as TZAbstractConnection;
   if Assigned(Connection) and Connection.Connected then
@@ -486,9 +507,17 @@ begin
         while ResultSet.Next do
         begin
           ProcedureName := ResultSet.GetStringByName('PROCEDURE_NAME');
-          ProcedureName := IdentifierConvertor.Quote(ProcedureName);
+          OverloadName := '';
+          if Metadata.GetDatabaseInfo.SupportsOverloadsInStoredProcedureName and
+            ( Metadata.GetDatabaseInfo.GetOverloadSeparator <> '') then
+          begin
+            ExtractOverload(Metadata.GetDatabaseInfo.GetOverloadSeparator);
+            ProcedureName := IdentifierConvertor.Quote(ProcedureName)+OverloadName;
+          end
+          else
+            ProcedureName := IdentifierConvertor.Quote(ProcedureName);
           Schema := ResultSet.GetStringByName('PROCEDURE_SCHEM');
-          if Connection.DbcConnection.GetMetadata.GetDatabaseInfo.SupportsCatalogsInProcedureCalls then
+          if Metadata.GetDatabaseInfo.SupportsCatalogsInProcedureCalls then
             if Catalog <> '' then
               if Schema <> '' then
                 ProcedureName := IdentifierConvertor.Quote(Catalog) +'.'+ IdentifierConvertor.Quote(Schema) + '.' + ProcedureName
