@@ -171,6 +171,10 @@
   {$ENDIF}
 {$ENDIF}
 
+{$IFDEF DELPHI16_UP}
+  {$DEFINE WITH_SYSTEMCLASSES}
+{$ENDIF}
+
 {$IFDEF BDS4_UP}
   {$DEFINE WIDE_DATASET}                // TWidedataset exists
   {$DEFINE WITH_PWIDECHAR_TOWIDESTRING} // Able to pass pwidechar to a widestring parameter
