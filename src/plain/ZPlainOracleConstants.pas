@@ -420,6 +420,8 @@ const
   SQLT_RID = 11 ;
   SQLT_DAT = 12 ;
   SQLT_VBI = 15 ;
+  SQLT_BFLOAT = 21 ;
+  SQLT_BDOUBLE = 22 ;
   SQLT_BIN = 23 ;
   SQLT_LBI = 24 ;
   _SQLT_PLI = 29;
@@ -429,6 +431,8 @@ const
   SQLT_LVB = 95 ;
   SQLT_AFC = 96 ;
   SQLT_AVC = 97 ;
+  SQLT_IBFLOAT = 100;
+  SQLT_IBDOUBLE = 101;
   SQLT_CUR = 102;
   SQLT_RDD = 104;
   SQLT_LAB = 105;
