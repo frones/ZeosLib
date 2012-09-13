@@ -361,6 +361,7 @@ type
     function SupportsCatalogsInTableDefinitions: Boolean; virtual;
     function SupportsCatalogsInIndexDefinitions: Boolean; virtual;
     function SupportsCatalogsInPrivilegeDefinitions: Boolean; virtual;
+    function SupportsOverloadsInStoredProcedureName: Boolean; virtual;
     function SupportsPositionedDelete: Boolean; virtual;
     function SupportsPositionedUpdate: Boolean; virtual;
     function SupportsSelectForUpdate: Boolean; virtual;
@@ -442,6 +443,7 @@ type
     function GetTimeDateFunctions: string; virtual;
     function GetSearchStringEscape: string; virtual;
     function GetExtraNameCharacters: string; virtual;
+    function GetOverloadSeparator: String; virtual;
   end;
 
   {** Implements a default Case Sensitive/Unsensitive identifier convertor. }
@@ -836,6 +838,15 @@ end;
   @return the string containing the extra characters
 }
 function TZAbstractDatabaseInfo.GetExtraNameCharacters: string;
+begin
+  Result := '';
+end;
+
+{**
+  What's the database vendor's preferred term for an Overload of a StoredProcedure?
+  @return the vendor term
+}
+function TZAbstractDatabaseInfo.GetOverloadSeparator: String;
 begin
   Result := '';
 end;
@@ -1238,6 +1249,15 @@ end;
   @return <code>true</code> if so; <code>false</code> otherwise
 }
 function TZAbstractDatabaseInfo.SupportsCatalogsInPrivilegeDefinitions: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can a stored procedure have an additional overload suffix?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsOverloadsInStoredProcedureName: Boolean;
 begin
   Result := False;
 end;

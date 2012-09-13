@@ -121,6 +121,7 @@ type
     function SupportsCatalogsInTableDefinitions: Boolean; override;
     function SupportsCatalogsInIndexDefinitions: Boolean; override;
     function SupportsCatalogsInPrivilegeDefinitions: Boolean; override;
+    function SupportsOverloadsInStoredProcedureName: Boolean; override;
     function SupportsPositionedDelete: Boolean; override;
     function SupportsPositionedUpdate: Boolean; override;
     function SupportsSelectForUpdate: Boolean; override;
@@ -202,6 +203,7 @@ type
     function GetTimeDateFunctions: string; override;
     function GetSearchStringEscape: string; override;
     function GetExtraNameCharacters: string; override;
+    function GetOverloadSeparator: String; override;
   end;
 
   {** Implements Ado Metadata. }
@@ -554,6 +556,15 @@ begin
   Result := '@$#';
 end;
 
+{**
+  What's the database vendor's preferred term for an Overload of a StoredProcedure?
+  @return the vendor term
+}
+function TZAdoDatabaseInfo.GetOverloadSeparator: String;
+begin
+  Result := ';';
+end;
+
 //--------------------------------------------------------------------
 // Functions describing which features are supported.
 
@@ -734,6 +745,15 @@ end;
   @return <code>true</code> if so; <code>false</code> otherwise
 }
 function TZAdoDatabaseInfo.SupportsCatalogsInPrivilegeDefinitions: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Can a stored procedure have an additional overload suffix?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAdoDatabaseInfo.SupportsOverloadsInStoredProcedureName: Boolean;
 begin
   Result := True;
 end;

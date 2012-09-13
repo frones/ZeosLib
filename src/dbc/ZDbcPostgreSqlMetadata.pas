@@ -150,6 +150,7 @@ type
     function SupportsCatalogsInTableDefinitions: Boolean; override;
     function SupportsCatalogsInIndexDefinitions: Boolean; override;
     function SupportsCatalogsInPrivilegeDefinitions: Boolean; override;
+    function SupportsOverloadsInStoredProcedureName: Boolean; override;
     function SupportsPositionedDelete: Boolean; override;
     function SupportsPositionedUpdate: Boolean; override;
     function SupportsSelectForUpdate: Boolean; override;
@@ -778,6 +779,15 @@ end;
 function TZPostgreSQLDatabaseInfo.SupportsCatalogsInPrivilegeDefinitions: Boolean;
 begin
   Result := False;
+end;
+
+{**
+  Can a stored procedure have an additional overload suffix?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZPostgreSQLDatabaseInfo.SupportsOverloadsInStoredProcedureName: Boolean;
+begin
+  Result := True;
 end;
 
 {**
