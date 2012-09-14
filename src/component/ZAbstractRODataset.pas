@@ -294,9 +294,9 @@ type
     procedure InternalDelete; override;
     procedure InternalPost; override;
 
-    procedure SetFieldData(Field: TField; Buffer: Pointer;
+    procedure SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
       NativeFormat: Boolean); override;
-    procedure SetFieldData(Field: TField; Buffer: Pointer); override;
+    procedure SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}); override;
     procedure DefineProperties(Filer: TFiler); override;
 
 {$IFDEF WITH_TRECORDBUFFER}
@@ -1250,7 +1250,7 @@ begin
   Result := RowBuffer <> nil;
 end;
 
-function TZAbstractRODataset.GetFieldData(Field: TField; Buffer: Pointer;
+function TZAbstractRODataset.GetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
   NativeFormat: Boolean): Boolean;
 begin
   if Field.DataType in [ftWideString] then
@@ -1373,7 +1373,7 @@ end;
   @param Field an field object to be stored.
   @param Buffer a field value buffer.
 }
-procedure TZAbstractRODataset.SetFieldData(Field: TField; Buffer: Pointer);
+procedure TZAbstractRODataset.SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF});
 var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
