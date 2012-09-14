@@ -65,11 +65,7 @@ uses
 
 const
   {** Precision for float values comparison }
-  {$IFDEF DELPHI17_UP}
   FLOAT_COMPARE_PRECISION = 1.0e-5;
-  {$ELSE}
-  FLOAT_COMPARE_PRECISION = 1.e-5;
-  {$ENDIF}
   FLOAT_COMPARE_PRECISION_SINGLE = 1.5e-5;
 
 type
@@ -81,11 +77,7 @@ type
   TZVariant = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
     VType: TZVariantType;
     VString: String;
-    {$IFDEF DELPHI12_UP}
-    VUnicodeString: String;
-    {$ELSE}
-    VUnicodeString: WideString;
-    {$ENDIF}
+    VUnicodeString: ZWideString;
     VInterface: IZInterface;
     case TZVariantType of 
       vtBoolean: (VBoolean: Boolean); 
@@ -120,11 +112,7 @@ type
     function GetAsInteger(const Value: TZVariant): Int64;
     function GetAsFloat(const Value: TZVariant): Extended;
     function GetAsString(const Value: TZVariant): String;
-    {$IFDEF DELPHI12_UP}
-    function GetAsUnicodeString(const Value: TZVariant): String;
-    {$ELSE}
-    function GetAsUnicodeString(const Value: TZVariant): WideString;
-    {$ENDIF}
+    function GetAsUnicodeString(const Value: TZVariant): ZWideString;
     function GetAsDateTime(const Value: TZVariant): TDateTime;
     function GetAsPointer(const Value: TZVariant): Pointer;
     function GetAsInterface(const Value: TZVariant): IZInterface;
@@ -133,11 +121,7 @@ type
     procedure SetAsInteger(var Value: TZVariant; Data: Int64);
     procedure SetAsFloat(var Value: TZVariant; Data: Extended);
     procedure SetAsString(var Value: TZVariant; const Data: String);
-    {$IFDEF DELPHI12_UP}
-    procedure SetAsUnicodeString(var Value: TZVariant; const Data: String);
-    {$ELSE}
-    procedure SetAsUnicodeString(var Value: TZVariant; const Data: WideString);
-    {$ENDIF}
+    procedure SetAsUnicodeString(var Value: TZVariant; const Data: ZWideString);
     procedure SetAsDateTime(var Value: TZVariant; Data: TDateTime);
     procedure SetAsPointer(var Value: TZVariant; Data: Pointer);
     procedure SetAsInterface(var Value: TZVariant; Data: IZInterface);
@@ -180,11 +164,7 @@ type
     function GetAsInteger(const Value: TZVariant): Int64;
     function GetAsFloat(const Value: TZVariant): Extended;
     function GetAsString(const Value: TZVariant): String;
-    {$IFDEF DELPHI12_UP}
-    function GetAsUnicodeString(const Value: TZVariant): String;
-    {$ELSE}
-    function GetAsUnicodeString(const Value: TZVariant): WideString;
-    {$ENDIF}
+    function GetAsUnicodeString(const Value: TZVariant): ZWideString;
     function GetAsDateTime(const Value: TZVariant): TDateTime;
     function GetAsPointer(const Value: TZVariant): Pointer;
     function GetAsInterface(const Value: TZVariant): IZInterface;
@@ -193,11 +173,7 @@ type
     procedure SetAsInteger(var Value: TZVariant; Data: Int64);
     procedure SetAsFloat(var Value: TZVariant; Data: Extended);
     procedure SetAsString(var Value: TZVariant; const Data: String);
-    {$IFDEF DELPHI12_UP}
-    procedure SetAsUnicodeString(var Value: TZVariant; const Data: String);
-    {$ELSE}
-    procedure SetAsUnicodeString(var Value: TZVariant; const Data: WideString);
-    {$ENDIF}
+    procedure SetAsUnicodeString(var Value: TZVariant; const Data: ZWideString);
     procedure SetAsDateTime(var Value: TZVariant; Data: TDateTime);
     procedure SetAsPointer(var Value: TZVariant; Data: Pointer);
     procedure SetAsInterface(var Value: TZVariant; Data: IZInterface);
@@ -241,11 +217,7 @@ type
     function GetInteger: Int64;
     function GetFloat: Extended;
     function GetString: String;
-    {$IFDEF DELPHI12_UP}
-    function GetUnicodeString: String;
-    {$ELSE}
-    function GetUnicodeString: WideString;
-    {$ENDIF}
+    function GetUnicodeString: ZWideString;
     function GetDateTime: TDateTime;
   end;
 
@@ -279,11 +251,7 @@ type
     function GetInteger: Int64;
     function GetFloat: Extended;
     function GetString: String;
-    {$IFDEF DELPHI12_UP}
-    function GetUnicodeString: String;
-    {$ELSE}
-    function GetUnicodeString: WideString;
-    {$ENDIF}
+    function GetUnicodeString: ZWideString;
     function GetDateTime: TDateTime;
 
     function Equals(const Value: IZInterface): Boolean; override;
@@ -353,11 +321,7 @@ function EncodeString(const Value: String): TZVariant;
   @param Value a unicodestring value to be encoded.
   @returns an encoded custom variant.
 }
-{$IFDEF DELPHI12_UP}
-function EncodeUnicodeString(const Value: String): TZVariant;
-{$ELSE}
-function EncodeUnicodeString(const Value: WideString): TZVariant;
-{$ENDIF}
+function EncodeUnicodeString(const Value: ZWideString): TZVariant;
 {**
   Encodes a TDateTime into a custom variant.
   @param Value a TDateTime value to be encoded.
@@ -694,13 +658,8 @@ end;
   @param Value a variant to be converted.
   @param a result value.
 }
-{$IFDEF DELPHI12_UP}
 function TZDefaultVariantManager.GetAsUnicodeString(
-  const Value: TZVariant): String;
-{$ELSE}
-function TZDefaultVariantManager.GetAsUnicodeString(
-  const Value: TZVariant): WideString;
-{$ENDIF}
+  const Value: TZVariant): ZWideString;
 begin
   Result := Convert(Value, vtUnicodeString).VUnicodeString;
 end;
@@ -787,13 +746,8 @@ end;
   @param Value a variant to store the value.
   @param Data a value to be assigned.
 }
-{$IFDEF DELPHI12_UP}
 procedure TZDefaultVariantManager.SetAsUnicodeString(var Value: TZVariant;
-  const Data: String);
-{$ELSE}
-procedure TZDefaultVariantManager.SetAsUnicodeString(var Value: TZVariant;
-  const Data: WideString);
-{$ENDIF}
+  const Data: ZWideString);
 begin
   Value := EncodeUnicodeString(Data);
 end;
@@ -1257,11 +1211,7 @@ begin
         vtString:
           Result.VString := Value.VString;
         vtUnicodeString:
-          {$IFDEF DELPHI12_UP}
-          Result.VString := String(UTF8String(Value.VUnicodeString));
-          {$ELSE}
-          Result.VString := Value.VUnicodeString;
-          {$ENDIF}
+          Result.VString := {$IFNDEF DELPHI12_UP}UTF8Encode{$ENDIF}(Value.VUnicodeString);
         vtDateTime:
           Result.VString := DateTimeToAnsiSQLDate(Value.VDateTime);
           // gto: Not a real threat, as it's converting dates (unicode safe)
@@ -1527,11 +1477,7 @@ end;
   Gets a stored value converted to unicode string.
   @return a stored value converted to unicode string.
 }
-{$IFDEF DELPHI12_UP}
-function TZAnyValue.GetUnicodeString: String;
-{$ELSE}
-function TZAnyValue.GetUnicodeString: WideString;
-{$ENDIF}
+function TZAnyValue.GetUnicodeString: ZWideString;
 begin
   Result := SoftVarManager.GetAsUnicodeString(FValue);
 end;
@@ -1700,11 +1646,7 @@ end;
   Creates a UnicodeString variant.
   @param Value a value to be assigned.
 }
-{$IFDEF DELPHI12_UP}
-function EncodeUnicodeString(const Value: String): TZVariant;
-{$ELSE}
-function EncodeUnicodeString(const Value: WideString): TZVariant;
-{$ENDIF}
+function EncodeUnicodeString(const Value: ZWideString): TZVariant;
 begin
   Result.VType := vtUnicodeString;
   Result.VUnicodeString := Value;
