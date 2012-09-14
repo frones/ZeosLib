@@ -1315,11 +1315,8 @@ begin
         ftWideString:
           begin
             {$IFDEF WITH_WIDESTRUTILS}
-              {$IFDEF DELPHI17_UP}
                 WStrCopy(PWideChar(Buffer), PWideChar(RowAccessor.GetUnicodeString(ColumnIndex, Result)));
               {$ELSE}
-                WStrCopy(Buffer, PWideChar(RowAccessor.GetUnicodeString(ColumnIndex, Result)));
-              {$ENDIF}            {$ELSE}
               //FPC: WideStrings are COM managed fields
               WS:=RowAccessor.GetUnicodeString(ColumnIndex, Result);
               //include null terminator in copy
@@ -1337,13 +1334,8 @@ begin
         { Processes all other fields. }
         else
           begin
-            {$IFDEF DELPHI17_UP}
-				      System.Move(RowAccessor.GetColumnData(ColumnIndex, Result)^, PWideChar(Buffer)^,
-				      RowAccessor.GetColumnDataSize(ColumnIndex));
-            {$ELSE}
-				      System.Move(RowAccessor.GetColumnData(ColumnIndex, Result)^, Buffer^,
-				      RowAccessor.GetColumnDataSize(ColumnIndex));
-            {$ENDIF}
+            System.Move(RowAccessor.GetColumnData(ColumnIndex, Result)^, PWideChar(Buffer)^,
+            RowAccessor.GetColumnDataSize(ColumnIndex));
             Result := not Result;
           end;
       end;
@@ -1452,13 +1444,8 @@ begin
       end
       else  //process all others also calculatets
       begin
-        {$IFDEF DELPHI17_UP}
-				  System.Move(PWideChar(Buffer)^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
-				  RowAccessor.GetColumnDataSize(ColumnIndex));
-        {$ELSE}
-				  System.Move(Buffer^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
-				  RowAccessor.GetColumnDataSize(ColumnIndex));
-        {$ENDIF}
+        System.Move(PWideChar(Buffer)^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
+        RowAccessor.GetColumnDataSize(ColumnIndex));
         RowAccessor.SetNotNull(ColumnIndex);
       end;
     end
