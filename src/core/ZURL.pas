@@ -252,8 +252,21 @@ begin
 end;
 
 function TZURL.GetURL: string;
+var
+  hasParamPart : boolean;
+  procedure AddParamPart(const ParamPart: String);
+  begin
+    if hasParamPart then
+      Result := Result + ';'
+    else
+      Result := Result + '?';
+    Result := Result + ParamPart;
+    hasParamPart := True;
+  end;
+
 begin
   Result := '';
+  hasParamPart := false;
 
   // Prefix
   Result := Result + Prefix + ':';
@@ -275,38 +288,21 @@ begin
   if Database <> '' then
     Result := Result + '/' + FDatabase;
 
-  // ?
-  if (FUserName <> '') or (FPassword <> '') or (Properties.Count > 0) then
-    Result := Result + '?';
-
   // UserName
   if FUserName <> '' then
-    Result := Result + 'username=' + FUserName;
+    AddParamPart('username=' + FUserName);
 
   // Password
   if FPassword <> '' then
-  begin
-    if Result[Length(Result)] <> '?' then
-      Result := Result + ';';
-    Result := Result + 'password=' + FPassword
-  end;
+    AddParamPart('password=' + FPassword);
 
-  // Properties + LibLocation
+  // Properties
   if Properties.Count > 0 then
-  begin
-    if Result[Length(Result)] <> '?' then
-      Result := Result + ';';  //in case if UserName and/or Password was set
-    Result := Result + Properties.GetURLText; //Adds the escaped string
+    AddParamPart(Properties.GetURLText); //Adds the escaped string
+
+  // LibLocation
     if FLibLocation <> '' then
-      Result := Result + ';LibLocation='+ FLibLocation;
-  end
-  else
-    if FLibLocation <> '' then
-    begin
-      if Result[Length(Result)] <> '?' then
-        Result := Result + ';';
-      Result := Result + 'LibLocation='+FLibLocation;
-    end;
+      AddParamPart('LibLocation='+ FLibLocation);
 end;
 
 procedure TZURL.SetURL(const Value: string);
