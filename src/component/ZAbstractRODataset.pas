@@ -437,8 +437,8 @@ type
       override;
     function BookmarkValid(Bookmark: TBookmark): Boolean; override;
 
-    function GetFieldData(Field: TField; Buffer: Pointer): Boolean; override;
-    function GetFieldData(Field: TField; Buffer: Pointer;
+    function GetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}): Boolean; override;
+    function GetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
       NativeFormat: Boolean): Boolean; override;
     function CreateBlobStream(Field: TField; Mode: TBlobStreamMode): TStream;
       override;
@@ -1265,12 +1265,12 @@ end;
   @return <code>True</code> if non-null value was retrieved.
 }
 function TZAbstractRODataset.GetFieldData(Field: TField;
-  Buffer: Pointer): Boolean;
+  Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}): Boolean;
 var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
   {$IFNDEF WITH_WIDESTRUTILS}
-  WS:WideString;
+  WS: WideString;
   {$ENDIF}
 begin
   if GetActiveBuffer(RowBuffer) then
@@ -1355,10 +1355,10 @@ end;
 {**
   Support for widestring field
 }
-procedure TZAbstractRODataset.SetFieldData(Field: TField; Buffer: Pointer;
+procedure TZAbstractRODataset.SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
   NativeFormat: Boolean);
 begin
-  if Field.DataType in [ftWideString] then
+  if Field.DataType in [ftWideString{$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}] then
     NativeFormat := True;
 
   {$IFNDEF VIRTUALSETFIELDDATA}

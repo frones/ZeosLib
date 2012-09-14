@@ -208,6 +208,9 @@
 {$UNDEF BDS4_UP}
 {$ENDIF}
 
+{$IFDEF DELPHI17_UP}
+  {$DEFINE WITH_TVALUEBUFFER}
+{$ENDIF}
 // Debug/release compiler options
 {$D+}
 
