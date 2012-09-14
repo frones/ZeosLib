@@ -2020,7 +2020,7 @@ begin
       if StartsWith(Connection.Protocol, 'oracle') then
         Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Copy(Utf8Encode(Str2), 1, Length(Utf8Encode(Str2)) div 2)+'%', #39)
       else
-        Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str2+'%', #39);
+        Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str2)+'%', #39);
       Query.Open;
       CheckEquals(True, Query.RecordCount = 1);
       Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str3)+'%', #39);
