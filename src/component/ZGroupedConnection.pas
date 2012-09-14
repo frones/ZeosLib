@@ -34,6 +34,7 @@ type
     Result: Longint;
   end;
 
+{$HINTS OFF}
 type
   TZGroupedConnection  = class(tZAbstractConnection)
   protected
@@ -57,6 +58,7 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
   end;
+{$HINTS ON}
 
 implementation
 
