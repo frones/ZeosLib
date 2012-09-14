@@ -508,13 +508,7 @@ begin
         begin
           ProcedureName := ResultSet.GetStringByName('PROCEDURE_NAME');
           OverloadName := '';
-          if Metadata.GetDatabaseInfo.SupportsOverloadsInStoredProcedureName and
-            ( Metadata.GetDatabaseInfo.GetOverloadSeparator <> '') then
-          begin
-            ExtractOverload(Metadata.GetDatabaseInfo.GetOverloadSeparator);
-            ProcedureName := IdentifierConvertor.Quote(ProcedureName)+OverloadName;
-          end
-          else
+          if not Metadata.GetDatabaseInfo.SupportsOverloadPrefixInStoredProcedureName then
             ProcedureName := IdentifierConvertor.Quote(ProcedureName);
           Schema := ResultSet.GetStringByName('PROCEDURE_SCHEM');
           if Metadata.GetDatabaseInfo.SupportsCatalogsInProcedureCalls then
@@ -522,7 +516,7 @@ begin
               if Schema <> '' then
                 ProcedureName := IdentifierConvertor.Quote(Catalog) +'.'+ IdentifierConvertor.Quote(Schema) + '.' + ProcedureName
               else
-                ProcedureName := {IdentifierConvertor.Quote(Catalog) + '.' + }ProcedureName
+                ProcedureName := ProcedureName
             else
               if Schema <> '' then
                 ProcedureName := IdentifierConvertor.Quote(Schema) + '.' + ProcedureName

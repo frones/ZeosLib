@@ -488,10 +488,10 @@ end;
 function TZAdoCallableStatement.GetOutParam(ParameterIndex: Integer): TZVariant;
 var
   Temp: Variant;
-  Stream: TMemoryStream;
+  {Stream: TMemoryStream;
   V: Variant;
   P: Pointer;
-  TempBlob: IZBLob;
+  TempBlob: IZBLob;}
 begin
   if ParameterIndex > OutParamCount then
     Result := NullVariant

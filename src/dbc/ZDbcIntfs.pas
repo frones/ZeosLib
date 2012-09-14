@@ -414,7 +414,7 @@ type
     function SupportsCatalogsInTableDefinitions: Boolean;
     function SupportsCatalogsInIndexDefinitions: Boolean;
     function SupportsCatalogsInPrivilegeDefinitions: Boolean;
-    function SupportsOverloadsInStoredProcedureName: Boolean;
+    function SupportsOverloadPrefixInStoredProcedureName: Boolean;
     function SupportsPositionedDelete: Boolean;
     function SupportsPositionedUpdate: Boolean;
     function SupportsSelectForUpdate: Boolean;
@@ -496,7 +496,6 @@ type
     function GetTimeDateFunctions: string;
     function GetSearchStringEscape: string;
     function GetExtraNameCharacters: string;
-    function GetOverloadSeparator: String;
   end;
 
   {** Generic SQL statement interface. }
