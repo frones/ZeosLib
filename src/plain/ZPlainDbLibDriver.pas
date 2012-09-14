@@ -209,11 +209,11 @@ type
   protected
     procedure LoadApi; override;
     function Clone: IZPlainDriver; override;
+    procedure LoadCodePages; override;
   public
     constructor Create; override;
     destructor Destroy; override;
 
-    procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
 
@@ -280,12 +280,12 @@ type
     MsSQLAPI: TMsSQLAPI;
   protected
     function Clone: IZPlainDriver; override;
+    procedure LoadCodePages; override;
   public
     procedure LoadApi; override;
     constructor Create; override;
     destructor Destroy; override;
 
-    procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
 
@@ -367,8 +367,8 @@ type
   TZFreeTDS42MsSQLPlainDriver = class(TZFreeTDSBasePlainDriver)
   protected
     function Clone: IZPlainDriver; override;
-  public
     procedure LoadCodePages; override;
+  public
     function GetProtocol: string; override;
     function GetDescription: string; override;
     function dbsetlversion(Login: PLOGINREC): RETCODE; override;
@@ -378,8 +378,8 @@ type
   TZFreeTDS42SybasePlainDriver = class(TZFreeTDSBasePlainDriver)
   protected
     function Clone: IZPlainDriver; override;
-  public
     procedure LoadCodePages; override;
+  public
     function GetProtocol: string; override;
     function GetDescription: string; override;
     function dbsetlversion(Login: PLOGINREC): RETCODE; override;
@@ -389,8 +389,8 @@ type
   TZFreeTDS50PlainDriver = class(TZFreeTDS42SybasePlainDriver)
   protected
     function Clone: IZPlainDriver; override;
-  public
     procedure LoadCodePages; override;
+  public
     function GetProtocol: string; override;
     function GetDescription: string; override;
     function dbsetversion: RETCODE; override;
@@ -399,8 +399,8 @@ type
   TZFreeTDS70PlainDriver = class(TZFreeTDSBasePlainDriver)
   protected
     function Clone: IZPlainDriver; override;
-  public
     procedure LoadCodePages; override;
+  public
     function GetProtocol: string; override;
     function GetDescription: string; override;
     function dbsetlversion(Login: PLOGINREC): RETCODE; override;
@@ -410,8 +410,8 @@ type
   TZFreeTDS71PlainDriver = class(TZFreeTDS70PlainDriver)
   protected
     function Clone: IZPlainDriver; override;
-  public
     procedure LoadCodePages; override;
+  public
     function GetProtocol: string; override;
     function GetDescription: string; override;
     function dbsetversion: RETCODE; override;
@@ -420,8 +420,8 @@ type
   TZFreeTDS72PlainDriver = class(TZFreeTDS70PlainDriver)
   protected
     function Clone: IZPlainDriver; override;
-  public
     procedure LoadCodePages; override;
+  public
     function GetProtocol: string; override;
     function GetDescription: string; override;
     function dbsetversion: RETCODE; override;
@@ -441,6 +441,46 @@ var
 implementation
 
 uses SysUtils, ZPlainLoader,{$IFDEF FPC}DOS{$ELSE}Windows{$ENDIF};
+
+type
+  THack_ZLegacyPlainDriver = Class(TZLegacyPlainDriver);
+
+procedure AddSybaseCodePages(PlainDriver: TZLegacyPlainDriver);
+begin
+  { MultiByte }
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('874THAIBIN', 1, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 874{$ENDIF}); {Windows Thailändisch, ISO8859-11, binäre Sortierung}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('932JPN', 2, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 932{$ENDIF}); {Japanese Shift-JIS mit Microsoft-Erweiterungen}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('936ZHO', 3, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 936{$ENDIF}); {Vereinfachtes Chinesisch, PRC GBK}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('949KOR', 4, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 949{$ENDIF}); {Korean KS C 5601-1987-Codierung, Wansung}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('950ZHO_HK', 5, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 950{$ENDIF}); {Traditionelles Chinesisch, Big 5-Kodierung mit HKSCS}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('950ZHO_TW', 6, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 950{$ENDIF}); {Traditionelles Chinesisch, Big 5-Kodierung}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('EUC_CHINA', 21, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_GB2312{$ENDIF}); {GB2312-80 Simplified Chinese}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('EUC_JAPAN', 22, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_SHIFTJS{$ENDIF}); {Japanisch EUC JIS X 0208-1990 und JIS X 0212-1990-Zeichensatz}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('EUC_KOREA', 23, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1361{$ENDIF}); { Koreanisch KS C 5601-1992 8-Bit-Zeichensatz, Johab}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('EUC_TAIWAN', 24, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 964{$ENDIF}); {EUC-TW-Kodierung}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('UCA', 29, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16{$ENDIF}, 'utf8'); {UCA	UCA-Standardkollatierung}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('UTF8BIN', 30, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}); {UTF-8, 8-Bit-Mehrbyte-Zeichensatz für Unicode, binäre Reihenfolge}
+
+  { SingleByte }
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('1250LATIN2', 7, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1250{$ENDIF}); {Windows Latin 2, Mittel- und Osteuropa}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('1250POL', 8, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1250{$ENDIF}); {Windows Latin 2, Polnisch}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('1251CYR', 9, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1251{$ENDIF}); {Windows Kyrillisch}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('1252LATIN1', 10, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); { Windows Latin 1, Western}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('1252LT1ACC', 11, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); {Windows-Spezial Latin 1, Western, Zeichen mit Akzent nicht gleich}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('1252NOR', 12, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); {Windows Latin 1, Norwegisch}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('1252SPA', 13, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); {Windows Latin 1, Spanisch}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('1252SWEFIN', 14, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); {Windows Latin 1, Schwedisch/Finnisch}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('1253ELL', 15, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1253{$ENDIF}); {Windows Griechisch, ISO8859-7 mit Erweiterungen}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('1254TRK', 16, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1254{$ENDIF}); {Windows Türkisch, ISO8859-9 mit Erweiterungen}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('1254TRKALT', 17, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1254{$ENDIF}); {Windows Türkisch, ISO8859-9 mit Erweiterungen, I mit I-Punkt gleich I ohne I-Punkt}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('1255HEB', 18, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1255{$ENDIF}); {Windows Hebräisch, ISO8859-8 mit Erweiterungen}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('1256ARA', 19, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1256{$ENDIF}); {Windows Arabisch, ISO8859-6 mit Erweiterungen}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('1257LIT', 20, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1257{$ENDIF}); {Windows Baltische Staaten, Litauisch}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('ISO1LATIN1', 25, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L1_ISO_8859_1{$ENDIF}); {ISO8859-1, ISO Latin 1, Western, Latin 1-Sortierreihenfolge}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('ISO9LATIN1', 26, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_ISO_8859_9{$ENDIF}); {	ISO8859-15, ISO Latin 9, Western, Latin 1-Sortierreihenfolge}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('ISO_1', 27, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L1_ISO_8859_1{$ENDIF}); {ISO8859-1, ISO Latin 1, Western}
+  THack_ZLegacyPlainDriver(PlainDriver).AddCodePage('ISO_BINENG', 28, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_ACP{$ENDIF}); {Binäre Sortierreihenfolge, Englisch ISO/ASCII 7-Bit-Zuordnung nach Groß- und Kleinschreibung}
+end;
 
 { Handle sql server error messages }
 function SybaseErrorHandle(Proc: PDBPROCESS; Severity, DbErr, OsErr: Integer;
@@ -1166,8 +1206,7 @@ end;
 
 procedure TZDBLibSybaseASE125PlainDriver.LoadCodePages;
 begin
-  AddCodePage('Not implemented!', -1);
-   { TODO -oEgonHugeist : Must be completed!!!! }
+  AddSybaseCodePages(Self);
 end;
 
 function TZDBLibSybaseASE125PlainDriver.GetProtocol: string;
@@ -2053,8 +2092,39 @@ end;
 
 procedure TZFreeTDS50PlainDriver.LoadCodePages;
 begin
-  AddCodePage('Not implemented!', -1);
-   { TODO -oEgonHugeist : Must be completed!!!! }
+  AddSybaseCodePages(Self);
+  AddCodePage('874THAIBIN', 1, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 874{$ENDIF}); {Windows Thailändisch, ISO8859-11, binäre Sortierung}
+  AddCodePage('932JPN', 2, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 932{$ENDIF}); {Japanese Shift-JIS mit Microsoft-Erweiterungen}
+  AddCodePage('936ZHO', 3, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 936{$ENDIF}); {Vereinfachtes Chinesisch, PRC GBK}
+  AddCodePage('949KOR', 4, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 949{$ENDIF}); {Korean KS C 5601-1987-Codierung, Wansung}
+  AddCodePage('950ZHO_HK', 5, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 950{$ENDIF}); {Traditionelles Chinesisch, Big 5-Kodierung mit HKSCS}
+  AddCodePage('950ZHO_TW', 6, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 950{$ENDIF}); {Traditionelles Chinesisch, Big 5-Kodierung}
+  AddCodePage('EUC_CHINA', 21, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_GB2312{$ENDIF}); {GB2312-80 Simplified Chinese}
+  AddCodePage('EUC_JAPAN', 22, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_SHIFTJS{$ENDIF}); {Japanisch EUC JIS X 0208-1990 und JIS X 0212-1990-Zeichensatz}
+  AddCodePage('EUC_KOREA', 23, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1361{$ENDIF}); { Koreanisch KS C 5601-1992 8-Bit-Zeichensatz, Johab}
+  AddCodePage('EUC_TAIWAN', 24, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 964{$ENDIF}); {EUC-TW-Kodierung}
+  AddCodePage('UCA', 29, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16{$ENDIF}, 'utf8'); {UCA	UCA-Standardkollatierung}
+  AddCodePage('UTF8BIN', 30, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}); {UTF-8, 8-Bit-Mehrbyte-Zeichensatz für Unicode, binäre Reihenfolge}
+
+  { SingleByte }
+  AddCodePage('1250LATIN2', 7, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1250{$ENDIF}); {Windows Latin 2, Mittel- und Osteuropa}
+  AddCodePage('1250POL', 8, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1250{$ENDIF}); {Windows Latin 2, Polnisch}
+  AddCodePage('1251CYR', 9, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1251{$ENDIF}); {Windows Kyrillisch}
+  AddCodePage('1252LATIN1', 10, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); { Windows Latin 1, Western}
+  AddCodePage('1252LT1ACC', 11, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); {Windows-Spezial Latin 1, Western, Zeichen mit Akzent nicht gleich}
+  AddCodePage('1252NOR', 12, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); {Windows Latin 1, Norwegisch}
+  AddCodePage('1252SPA', 13, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); {Windows Latin 1, Spanisch}
+  AddCodePage('1252SWEFIN', 14, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); {Windows Latin 1, Schwedisch/Finnisch}
+  AddCodePage('1253ELL', 15, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1253{$ENDIF}); {Windows Griechisch, ISO8859-7 mit Erweiterungen}
+  AddCodePage('1254TRK', 16, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1254{$ENDIF}); {Windows Türkisch, ISO8859-9 mit Erweiterungen}
+  AddCodePage('1254TRKALT', 17, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1254{$ENDIF}); {Windows Türkisch, ISO8859-9 mit Erweiterungen, I mit I-Punkt gleich I ohne I-Punkt}
+  AddCodePage('1255HEB', 18, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1255{$ENDIF}); {Windows Hebräisch, ISO8859-8 mit Erweiterungen}
+  AddCodePage('1256ARA', 19, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1256{$ENDIF}); {Windows Arabisch, ISO8859-6 mit Erweiterungen}
+  AddCodePage('1257LIT', 20, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1257{$ENDIF}); {Windows Baltische Staaten, Litauisch}
+  AddCodePage('ISO1LATIN1', 25, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L1_ISO_8859_1{$ENDIF}); {ISO8859-1, ISO Latin 1, Western, Latin 1-Sortierreihenfolge}
+  AddCodePage('ISO9LATIN1', 26, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_ISO_8859_9{$ENDIF}); {	ISO8859-15, ISO Latin 9, Western, Latin 1-Sortierreihenfolge}
+  AddCodePage('ISO_1', 27, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L1_ISO_8859_1{$ENDIF}); {ISO8859-1, ISO Latin 1, Western}
+  AddCodePage('ISO_BINENG', 28, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_ACP{$ENDIF}); {Binäre Sortierreihenfolge, Englisch ISO/ASCII 7-Bit-Zuordnung nach Groß- und Kleinschreibung}
 end;
 
 function TZFreeTDS50PlainDriver.GetProtocol: string;
