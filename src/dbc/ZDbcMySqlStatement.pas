@@ -185,8 +185,6 @@ type
     FParamNames: array [0..1024] of String;
     FParamTypeNames: array [0..1024] of String;
     FIsFunction: Boolean;
-    FResultSets: IZCollection;
-    FActiveResultset: Integer;
     function GetCallSQL: ZAnsiString;
     function GetOutParamSQL: String;
     function GetSelectFunctionSQL: ZAnsiString;
@@ -232,7 +230,7 @@ implementation
 
 uses
   Types, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZSysUtils, ZDbcResultSetMetadata,
-  ZMessages, ZDbcCachedResultSet, ZDbcUtils, DateUtils, ZCollections;
+  ZMessages, ZDbcCachedResultSet, ZDbcUtils, DateUtils;
 
 { TZMySQLStatement }
 
@@ -1370,7 +1368,6 @@ begin
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
   FIsFunction := False; //will be reset if RETURN parameters do exist
-  FResultSets := TZCollection.Create;
   FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
 end;
 

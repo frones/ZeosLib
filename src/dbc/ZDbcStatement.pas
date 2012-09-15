@@ -59,7 +59,7 @@ interface
 
 uses
   Types, Classes, SysUtils, ZDbcIntfs, ZTokenizer, ZCompatibility, ZVariant,
-  ZDbcLogging;
+  ZDbcLogging, ZClasses;
 
 type
   TZSQLTypeArray = array of TZSQLType;
@@ -272,6 +272,8 @@ type
     FTemp: String;
     FProcSql: String;
   protected
+    FResultSets: IZCollection;
+    FActiveResultset: Integer;
     FDBParamTypes:array[0..1024] of shortInt;
     procedure TrimInParameters; virtual;
     procedure SetOutParamCount(NewParamCount: Integer); virtual;
@@ -369,7 +371,7 @@ type
 
 implementation
 
-uses ZSysUtils, ZMessages, ZDbcResultSet;
+uses ZSysUtils, ZMessages, ZDbcResultSet, ZCollections;
 
 var
 {**
@@ -1754,6 +1756,7 @@ begin
   SetOutParamCount(0);
   FProcSql := ''; //Init -> FPC
   FLastWasNull := True;
+  FResultSets := TZCollection.Create;
 end;
 
 {**
