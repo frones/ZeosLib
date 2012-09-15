@@ -132,7 +132,8 @@ begin
 
   Query.FieldByName('d_id').AsInteger := TEST_ROW_ID;
 
-  if StartsWith(Protocol, 'oracle') or (Protocol = 'mssql') or (Protocol = 'sybase') then
+  if StartsWith(Protocol, 'oracle') or (Protocol = 'mssql') or
+    (Protocol = 'sybase') or (Protocol = 'ado') then
   begin
     CheckEquals(Ord(ftDateTime), Ord(Query.FieldByName('d_date').DataType));
     CheckEquals(Ord(ftDateTime), Ord(Query.FieldByName('d_time').DataType))
