@@ -274,7 +274,8 @@ go
 /*==============================================================*/
 SET ANSI_NULLS ON 
 go
-/*CREATE PROCEDURE [ABTEST]
+
+CREATE PROCEDURE [ABTEST]
 	@p1 int,
 	@p2 int,
 	@p3 varchar(10),
@@ -282,5 +283,5 @@ go
 	@p5 varchar(20) output
 AS
 select @p4 = @p1 * 10 + @p2;
-select @p5 = @p3 + @p3; 
-go */
+select @p5 = @p3 + @p3;
+go
