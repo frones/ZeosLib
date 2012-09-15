@@ -393,16 +393,17 @@ begin
   begin
 
     P := FAdoCommand.Parameters.Item[ParameterIndex - 1];
-    if not ((SQLType = stBytes) and VarIsNull(V) ) then
-    begin
-      P.Type_ := T;
-      P.Size := S;
-      // by aperger:
-      // to use the new value at the next calling of the statement
-      if P.Value <> V then begin
-        P.Value := V;
+    if not ( SQLType = stBytes ) then  //Variant varByte is not comparable with OleVariant -> exception
+      if not VarIsNull(V) then
+      begin
+        P.Type_ := T;
+        P.Size := S;
+        // by aperger:
+        // to use the new value at the next calling of the statement
+        if P.Value <> V then begin
+          P.Value := V;
+        end;
       end;
-    end;
     FAdoCommand.Prepared:=false;
   end
   else
