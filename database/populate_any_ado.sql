@@ -8,10 +8,10 @@ INSERT INTO department VALUES (2,'Container agency','USA','Krasnodar Komsomolska
 INSERT INTO department VALUES (1,'Line agency','RUS','Novorossiysk Lenina st. 2') 
 go
 
-INSERT INTO equipment VALUES (1,'Volvo',1,15000.0000,'1998-03-04',NULL)
-INSERT INTO equipment VALUES (2,'Laboratoy',10,40000.0000,'2001-10-07',NULL)
-INSERT INTO equipment VALUES (3,'Computer',7,900.0000,'1999-09-03',NULL)
-INSERT INTO equipment VALUES (4,'Radiostation',19,400.0000,'2000-07-08',NULL)
+INSERT INTO equipment VALUES (1,'Volvo',1,15000.0000,'1998-04-03',NULL)
+INSERT INTO equipment VALUES (2,'Laboratoy',10,40000.0000,'2001-07-10',NULL)
+INSERT INTO equipment VALUES (3,'Computer',7,900.0000,'1999-03-09',NULL)
+INSERT INTO equipment VALUES (4,'Radiostation',19,400.0000,'2000-08-07',NULL)
 go
 
 INSERT INTO equipment2 VALUES (1,1)
