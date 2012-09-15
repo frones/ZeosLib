@@ -286,8 +286,7 @@ var
 implementation
 
 uses
-  ZMessages, ZGenericSqlToken,
-  ZDbcResultSetMetadata, ZAbstractRODataset;
+  ZMessages, ZGenericSqlToken, ZDbcResultSetMetadata, ZAbstractRODataset, ZSysUtils;
 
 {**
   Converts DBC Field Type to TDataset Field Type.
@@ -1544,6 +1543,8 @@ procedure SetStatementParam(Index: Integer;
   Statement: IZPreparedStatement; Param: TParam);
 var
   Stream: TStream;
+  TempBytes: TByteDynArray;
+  {$IFDEF WITH_ASBYTES}Bts: TBytes;{$ENDIF}
 begin
   if Param.IsNull then
     Statement.SetNull(Index, ConvertDatasetToDbcType(Param.DataType))
@@ -1572,8 +1573,17 @@ begin
       ftWideString:
         Statement.SetUnicodeString(Index, Param.AsWideString);
       {$ENDIF}
-      ftBytes:
-        Statement.SetString(Index, Param.AsString);
+      ftBytes, ftVarBytes:
+        begin
+          {$IFDEF WITH_ASBYTES}
+          Bts := Param.AsBytes;
+          SetLength(TempBytes, High(Bts)+1);
+          System.Move(PAnsichar(Bts)^, PAnsichar(TempBytes)^, High(Bts)+1);
+          {$ELSE}
+          TempBytes := StrToBytes(Param.AsString);
+          {$ENDIF}
+          Statement.SetBytes(Index, TempBytes);
+        end;
       ftDate:
         Statement.SetDate(Index, Param.AsDate);
       ftTime:
@@ -1618,7 +1628,7 @@ begin
           end;
         end;
       else
-        raise EZDatabaseError.Create(SUnKnownParamDataType);
+        raise EZDatabaseError.Create(SUnKnownParamDataType + IntToStr(Ord(Param.DataType)));
     end;
   end;
 end;

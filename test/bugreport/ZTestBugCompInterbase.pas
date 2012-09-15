@@ -585,8 +585,8 @@ begin
 end;
 const
   Str1 = 'This license, the Lesser General Public License, applies to some specially designated software packages--typically libraries--of the Free Software Foundation and other authors who decide to use it.  You can use it too, but we suggest you first think ...';
-  Str2{$ifdef FPC}:widestring{$endif} = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
-  Str3{$ifdef FPC}:widestring{$endif} = 'ќдной из наиболее';
+  Str2 = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
+  Str3 = 'ќдной из наиболее';
 
 procedure ZTestCompInterbaseBugReport.Test_Param_LoadFromStream_StringStream_ftBlob;
 var
@@ -598,6 +598,8 @@ var
   SL: TStringList;
 begin
   Query := TZQuery.Create(nil);
+  SL := TStringList.Create;
+  StrStream := TMemoryStream.Create;
   try
     Query.Connection := Connection;
 
@@ -606,21 +608,26 @@ begin
       SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
       ExecSQL;
       //bugreport of mrLion
-      SL := TStringList.Create;
 
       SQL.Text := 'INSERT INTO people(P_ID, P_NAME, P_RESUME)'+
         ' VALUES (:P_ID, :P_NAME, :P_RESUME)';
       ParamByName('P_ID').AsInteger := TEST_ROW_ID;
-      ParamByName('P_NAME').AsString := {$ifdef FPC}UTF8Encode{$endif}(Str3);
+      if Self.FConnection.DbcConnection.GetEncoding = ceUTF8 then
+        if FConnection.DbcConnection.UTF8StringAsWideField then
+           ParamByName('P_NAME').AsString := WideString(Str3)
+        else
+          ParamByName('P_NAME').AsString := UTF8Encode(WideString(Str3))
+      else
+        ParamByName('P_NAME').AsString := String(Str3);
+
       CheckEquals(3, Query.Params.Count, 'Param.Count');
-      SL.Text := {$ifdef FPC}UTF8Encode{$endif}(Str2);
+      SL.Text := Str2;
 
       StrStream1 := TMemoryStream.Create;
       SL.SaveToStream(StrStream1);
       ParamByName('P_RESUME').LoadFromStream(StrStream1, ftBlob);
 
-      StrStream := TMemoryStream.Create;
-      if Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+      if Self.FConnection.DbcConnection.GetEncoding = ceUTF8 then
         if FConnection.DbcConnection.UTF8StringAsWideField then
         begin
           WS := WideString(Str2)+LineEnding;
@@ -629,11 +636,7 @@ begin
         end
         else
         begin
-          {$ifdef FPC}
-          Ansi:=UTF8Encode(str2+LineEnding);
-          {$else}
-          Ansi := AnsiToUTF8(str2)+LineEnding;
-          {$endif}
+          Ansi:=UTF8Encode(WideString(str2+LineEnding));
           StrStream.Write(PAnsiChar(Ansi)^, Length(Ansi));
           StrStream.Position := 0;
         end
@@ -661,13 +664,16 @@ begin
         CheckEquals(1, RowsAffected);
       except
         on E:Exception do
-            Fail('Param().LoadFromStream(StringStream, ftBlob): '+E.Message);
+        begin
+          Fail('Param().LoadFromStream(StringStream, ftBlob): '+E.Message);
+        end;
       end;
-      SL.free;
-      StrStream.Free;
-      StrStream1.Free;
     end;
   finally
+    SL.free;
+    StrStream.Free;
+    If Assigned(StrStream1) then
+      StrStream1.Free;
     Query.Free;
   end;
 end;
@@ -695,9 +701,15 @@ begin
       SQL.Text := 'INSERT INTO people(P_ID, P_NAME, P_RESUME)'+
         ' VALUES (:P_ID, :P_NAME, :P_RESUME)';
       ParamByName('P_ID').AsInteger := TEST_ROW_ID;
-      ParamByName('P_NAME').AsString := {$ifdef FPC}UTF8Encode{$endif}(Str3);
+      if Self.FConnection.DbcConnection.GetEncoding = ceUTF8 then
+        if FConnection.DbcConnection.UTF8StringAsWideField then
+           ParamByName('P_NAME').AsString := WideString(Str3)
+        else
+          ParamByName('P_NAME').AsString := UTF8Encode(WideString(Str3))
+      else
+        ParamByName('P_NAME').AsString := String(Str3);
       CheckEquals(3, Query.Params.Count, 'Param.Count');
-      SL.Text := {$ifdef FPC}UTF8Encode{$endif}(Str2);
+      SL.Text := Str2;
 
       StrStream1 := TMemoryStream.Create;
       SL.SaveToStream(StrStream1);
@@ -713,11 +725,7 @@ begin
         end
         else
         begin
-          {$ifdef FPC}
-          Ansi:=UTF8Encode(str2+LineEnding);
-          {$else}
-          Ansi := AnsiToUTF8(str2)+LineEnding;
-          {$endif}
+          Ansi:=UTF8Encode(WideString(str2)+LineEnding);
           StrStream.Write(PAnsiChar(Ansi)^, Length(Ansi));
           StrStream.Position := 0;
         end

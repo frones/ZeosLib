@@ -128,7 +128,6 @@ end;
 
 procedure TZConnectionGroup.Change;
   var i:Integer;
-      Current: TZConnectionGroupLink;
 begin
   if Assigned(FOnChange) then
   begin

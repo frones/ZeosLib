@@ -2375,7 +2375,7 @@ function TZMySQLDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: stri
 var
   LCatalog, SQL, TypeName, Temp: string;
   ParamList, Params, Names: TStrings;
-  I,J, ColumnSize, Precision: Integer;
+  I,J,N, ColumnSize, Precision: Integer;
   FieldType: TZSQLType;
 
   function GetNextName(const AName: String; NameEmpty: Boolean = False): String;
@@ -2455,7 +2455,21 @@ begin
                   Inc(j);
                 end
                 else
-                  AddTempString(ParamList[j])
+                  if ( Pos('set', LowerCase(ParamList[J])) > 0 ) and
+                    ( Pos(')', LowerCase(ParamList[J])) = 0 ) then
+                  begin
+                    TypeName := ParamList[J];
+                    for N := J+1 to ParamList.Count-1 do
+                    begin
+                      TypeName := TypeName +','+ParamList[N];
+                      if Pos(')', ParamList[N]) > 0 then
+                        Break;
+                    end;
+                    AddTempString(TypeName);
+                    J := N;
+                  end
+                  else
+                    AddTempString(ParamList[j])
               else
                 if not (ParamList[j] = '') then
                   AddTempString(ParamList[j]);

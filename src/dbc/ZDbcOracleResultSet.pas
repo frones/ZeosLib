@@ -1064,6 +1064,21 @@ var
   Buf: PByteArray;
   ReadNumBytes, ReadNumChars, Offset, Cap: ub4;
   Connection: IZOracleConnection;
+  AnsiTemp: ZAnsiString;
+
+  procedure DoRead;
+  begin
+    FillChar(Buf^, FChunkSize+1, #0);
+    ReadNumChars := 0;
+    Status := FPlainDriver.LobRead(Connection.GetContextHandle,
+      Connection.GetErrorHandle, FLobLocator, ReadNumChars, Offset + 1,
+      Buf, FChunkSize, nil, nil, Connection.GetClientCodePageInformations^.ID, SQLCS_IMPLICIT);
+    if ReadNumChars > 0 then
+    begin
+      Inc(Offset, ReadNumChars);
+      AnsiTemp := AnsiTemp+PAnsiChar(Buf);
+    end;
+  end;
 begin
   if not Updated and (FLobLocator <> nil)
     and (BlobData = nil) and (not FTemporary) then
@@ -1097,21 +1112,19 @@ begin
                 Inc(Offset, ReadNumBytes);
             until Offset < Cap;
           else //CLob
-            repeat
-              {Calc new progressive by 1/8 and aligned by MemDelta capacity for buffer}
-              Cap := (Offset + (Offset shr 3) + 2 * MemDelta - 1) and not (MemDelta - 1);
-              ReallocMem(Buf, Cap);
-              ReadNumBytes := Cap - Offset;
-
-              ReadNumChars := ReadNumBytes div Connection.GetClientCodePageInformations^.CharWidth;
-              Status := FPlainDriver.LobRead(Connection.GetContextHandle,
-                Connection.GetErrorHandle, FLobLocator, ReadNumChars, Offset + 1,
-                @Buf[Offset], ReadNumBytes, nil, nil, Connection.GetClientCodePageInformations^.ID, SQLCS_IMPLICIT);
-              CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
+          begin
+            GetMem(Buf, FChunkSize+1);
+            AnsiTemp := '';
+            Offset := 0;
+            DoRead;
+            if Status = OCI_NEED_DATA then
+              while Status = OCI_NEED_DATA do
+                DoRead;
+            CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
               Status, lcOther, 'Read Large Object');
-              if ReadNumChars > 0 then
-                Inc(Offset, ReadNumChars);
-            until Offset < Cap;
+            ReallocMem(Buf, Offset);
+            Move(PAnsichar(AnsiTemp)^, PAnsichar(Buf)^,Offset);
+          end;
         end;
       except
         FreeMem(Buf);

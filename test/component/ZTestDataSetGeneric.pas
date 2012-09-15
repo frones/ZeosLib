@@ -796,9 +796,6 @@ begin
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
-    // Query.RequestLive := true;
-  //  CheckEquals(Ord(rtScrollInsensitive), Ord(Query.DbcStatement.GetResultSetType));
-  //  CheckEquals(Ord(rcUpdatable), Ord(Query.DbcStatement.GetResultSetConcurrency));
 
     Query.SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
     Query.ExecSQL;
@@ -1002,10 +999,10 @@ begin
       CheckEquals(1, FieldByName('p_redundant').AsInteger);
       Delete;
 
-      BinStream.Free;
-      BinStream1.Free;
-      StrStream.Free;
-      StrStream1.Free;
+      FreeAndNil(BinStream);
+      FreeAndNil(BinStream1);
+      FreeAndNil(StrStream);
+      FreeAndNil(StrStream1);
 
       { create and update resultset for equipment table for eq_id = TEST_ROW_ID }
       SQL.Text := Sql_;
@@ -1014,6 +1011,14 @@ begin
       Close;
     end;
   finally
+    if Assigned(BinStream) then
+       FreeAndNil(BinStream);
+    if Assigned(BinStream1) then
+      FreeAndNil(BinStream1);
+    if Assigned(StrStream) then
+      FreeAndNil(StrStream);
+    if Assigned(StrStream1) then
+      FreeAndNil(StrStream1);
     Query.Free;
   end;
 end;
@@ -1780,17 +1785,18 @@ end;
 procedure TZGenericTestDbcResultSet.TestVeryLargeBlobs;
 var
   Query: TZQuery;
-  BinStream,BinStream1,BinStreamS: TMemoryStream;
+  BinStream,BinStream1,TextStreamS: TMemoryStream;
   UnicodeStream: TStream;
-  s:  Ansistring;
+  s:  ZAnsistring;
   TextLob, BinLob: String;
   TempConnection: TZConnection;
   WS: WideString;
+  i: Integer;
 begin
   TempConnection := nil;
   BinStream:=nil;
   BinStream1:=nil;
-  BinStreamS:=nil;
+  TextStreamS:=nil;
 
   Query := TZQuery.Create(nil);
   try
@@ -1838,11 +1844,21 @@ begin
       Params[1].DataType := ftMemo;
       Params[2].DataType := ftBlob;
       Params[0].AsInteger := TEST_ROW_ID-1;
-      BinStreamS := TMemoryStream.Create;
-      s:={$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString(utf8encode('123456ייאא'),6000);
-      CheckEquals(StrLen(PAnsiChar('123456ייאא'))*6000, 60000, 'Length of DupeString');
-      BinStreamS.Write(s[1],length(s));
-      Params[1].LoadFromStream(BinStreamS, ftMemo);
+      TextStreamS := TMemoryStream.Create;
+      if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) then
+      begin
+        s:={$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString(utf8encode('123456ייאא'),6000);
+        I := StrLen(PAnsiChar(s));
+        CheckEquals(StrLen(PAnsiChar(utf8encode('123456ייאא')))*6000, I, 'Length of DupeString Text');
+      end
+      else
+      begin
+        s:={$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString('123456ייאא',6000);
+        I := StrLen(PAnsiChar(s));
+        CheckEquals(StrLen(PAnsiChar('123456ייאא'))*6000, I, 'Length of DupeString Text');
+      end;
+      TextStreamS.Write(s[1],length(s));
+      Params[1].LoadFromStream(TextStreamS, ftMemo);
       BinStream := TMemoryStream.Create;
       BinStream.LoadFromFile('../../../database/images/horse.jpg');
       setlength(s,BinStream.Size);
@@ -1868,7 +1884,9 @@ begin
       if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
         Connection.DbcConnection.UTF8StringAsWideField then
       begin
-        WS := UTF8ToString(ZAnsiString(PAnsiChar(BinStreamS.Memory)));
+        SetLength(s, TextStreamS.Size);
+        Move(PAnsiChar(TextStreams.Memory)^, PAnsiChar(S)^, TextStreamS.Size);
+        WS := UTF8ToString(S);
         UnicodeStream := WideStringStream(WS);
         CheckEquals(UnicodeStream.Size, BinStream1.Size, 'Ascii Stream UTF8');
         CheckEquals(UnicodeStream, BinStream1, 'Ascii Stream UTF8');
@@ -1876,8 +1894,8 @@ begin
       end
       else
       begin
-        CheckEquals(BinStreamS.Size, BinStream1.Size, 'Ascii Stream Ansi');
-        CheckEquals(BinStreamS, BinStream1, 'Ascii Stream Ansi');
+        CheckEquals(TextStreamS.Size, BinStream1.Size, 'Ascii Stream Ansi');
+        CheckEquals(TextStreamS, BinStream1, 'Ascii Stream Ansi');
       end;
       BinStream1.Position:=0;
       (FieldByName(BinLob) as TBlobField).SaveToStream(BinStream1);
@@ -1892,8 +1910,8 @@ begin
       BinStream.Free;
     if assigned(BinStream1) then
       BinStream1.Free;
-    if assigned(BinStreamS) then
-      BinStreamS.Free;
+    if assigned(TextStreams) then
+      TextStreams.Free;
     if Assigned(TempConnection) then
       TempConnection.Free;
     Query.Free;

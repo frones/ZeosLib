@@ -190,47 +190,35 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
 begin
     case PlainDriver.GetFieldType(FieldHandle) of
     FIELD_TYPE_TINY:
-      begin
-            if Signed then
-               Result := stByte
-            else
-               Result := stShort;
-      end;
+      if Signed then
+         Result := stByte
+      else
+         Result := stShort;
     FIELD_TYPE_YEAR, FIELD_TYPE_SHORT:
-      begin
-            if Signed then
-               Result := stShort
-            else
-               Result := stInteger;
-      end;
+      if Signed then
+         Result := stShort
+      else
+         Result := stInteger;
     FIELD_TYPE_INT24, FIELD_TYPE_LONG:
-      begin
-            if Signed then
-               Result := stInteger
-            else
-               Result := stLong;
-      end;
+      if Signed then
+         Result := stInteger
+      else
+         Result := stLong;
     FIELD_TYPE_LONGLONG:
-      begin
-            if Signed then
-               Result := stLong
-            else
-               Result := stBigDecimal;
-      end;
+      if Signed then
+         Result := stLong
+      else
+         Result := stBigDecimal;
     FIELD_TYPE_FLOAT:
       Result := stDouble;
     FIELD_TYPE_DECIMAL, FIELD_TYPE_NEWDECIMAL: {ADDED FIELD_TYPE_NEWDECIMAL by fduenas 20-06-2006}
-      begin
-        if PlainDriver.GetFieldDecimals(FieldHandle) = 0 then
-        begin
-          if PlainDriver.GetFieldLength(FieldHandle) < 11 then
-            Result := stInteger
-          else
-            Result := stLong;
-          end
+      if PlainDriver.GetFieldDecimals(FieldHandle) = 0 then
+        if PlainDriver.GetFieldLength(FieldHandle) < 11 then
+          Result := stInteger
         else
-          Result := stDouble;
-      end;
+          Result := stLong
+      else
+        Result := stDouble;
     FIELD_TYPE_DOUBLE:
       Result := stDouble;
     FIELD_TYPE_DATE, FIELD_TYPE_NEWDATE:
@@ -242,11 +230,8 @@ begin
     FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
     FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB:
       if (FieldFlags and BINARY_FLAG) = 0 then
-        If CharEncoding = ceUTF8 then
-          if UTF8StringAsWideField then
-            Result := stUnicodeStream
-          else
-            Result := stAsciiStream
+        If ( CharEncoding = ceUTF8 ) and UTF8StringAsWideField then
+          Result := stUnicodeStream
         else
           Result := stAsciiStream
       else
@@ -256,13 +241,13 @@ begin
     FIELD_TYPE_VARCHAR,
     FIELD_TYPE_VAR_STRING,
     FIELD_TYPE_STRING:
-      if CharEncoding = ceUTF8 then
-        if UTF8StringAsWideField then
+      if (FieldFlags and BINARY_FLAG) = 0 then
+        if ( CharEncoding = ceUTF8 ) and UTF8StringAsWideField then
           Result := stUnicodeString
         else
           Result := stString
       else
-        Result := stString;
+        Result := stBytes;
     FIELD_TYPE_ENUM:
       Result := stString;
     FIELD_TYPE_SET:
@@ -640,8 +625,6 @@ var
   TypeInfoList: TStrings;
   TypeInfoFirst: String;
   J, TempPos: Integer;
-  { TODO : TempStr is not set to a value in the whole method. => Length(TempStr) = 0 }
-  TempStr: string;
 begin
   TypeInfoList := TStringList.Create;
   TypeInfoFirst := '';
@@ -672,17 +655,17 @@ begin
   end
   else
     { the column type is decimal }
-    if Pos(TypeInfo, ',') > 0 then
+    if ( Pos(',', TypeInfoSecond) > 0 ) and not ( TypeInfoFirst = 'set' ) then
     begin
       TempPos := FirstDelimiter(',', TypeInfoSecond);
       ColumnSize := StrToIntDef(Copy(TypeInfoSecond, 1, TempPos - 1), 0);
       Precision := StrToIntDef(Copy(TypeInfoSecond, TempPos + 1,
-        Length(TempStr) - TempPos), 0);
+        Length(TypeInfoSecond) - TempPos), 0);
     end
     else
     begin
       { the column type is other }
-       if TypeInfoSecond <> '' then
+       if (TypeInfoSecond <> '') and not (TypeInfoFirst = 'set') then
           ColumnSize := StrToIntDef(TypeInfoSecond, 0)
        else if TypeInfoFirst = 'tinyint' then
           ColumnSize := 1

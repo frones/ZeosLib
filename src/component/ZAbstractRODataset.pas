@@ -111,6 +111,7 @@ type
     constructor Create(ADataset: TZAbstractRODataset);
   end;
 
+{$WARNINGS OFF}
   {** Abstract dataset component optimized for read/only access. }
   {$IFDEF WITH_WIDEDATASET}
   TZAbstractRODataset = class(TWideDataSet)
@@ -470,6 +471,7 @@ type
     property Filter;
     property Filtered;
   end;
+{$WARNINGS ON}
 
 implementation
 
@@ -1296,7 +1298,7 @@ begin
           begin
             PVariant(Buffer)^ := BytesToVar(
               RowAccessor.GetBytes(ColumnIndex, Result));
-            System.Move((PChar(RowAccessor.GetColumnData(ColumnIndex, Result)) + 2)^, Buffer^,
+            System.Move((PAnsiChar(RowAccessor.GetColumnData(ColumnIndex, Result)) + 2)^, Buffer^,
               RowAccessor.GetColumnDataSize(ColumnIndex)-2);
             Result := not Result;
           end;
@@ -2037,6 +2039,7 @@ end;
 {**
   Initializes new record with master fields.
 }
+{$WARNINGS OFF}
 procedure TZAbstractRODataset.DoOnNewRecord;
 var
   I: Integer;
@@ -2087,6 +2090,7 @@ begin
   end;
   inherited DoOnNewRecord;
 end;
+{$WARNINGS ON}
 
 {**
   Gets a list of index field names.
@@ -3315,10 +3319,12 @@ end;
 }
 // Silvio Clécio
 {$IFDEF WITH_IPROVIDERWIDE}
+{$WARNINGS OFF}
 function TZAbstractRODataset.PSGetKeyFieldsW: WideString;
 begin
   Result := inherited PSGetKeyFieldsW;
 end;
+{$WARNINGS ON}
 {$ELSE}
 function TZAbstractRODataset.PSGetKeyFields: string;
 begin

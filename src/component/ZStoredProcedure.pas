@@ -72,6 +72,7 @@ type
   }
   TZStoredProc = class(TZAbstractDataset)
   private
+    FMetaResultSet: IZResultset;
     procedure RetrieveParamValues;
     function GetStoredProcName: string;
     procedure SetStoredProcName(const Value: string);
@@ -116,7 +117,7 @@ type
 implementation
 
 uses
-  ZAbstractRODataset, ZMessages, ZDatasetUtils;
+  ZAbstractRODataset, ZMessages, ZDatasetUtils, ZSysUtils;
 
 { TZStoredProc }
 
@@ -137,14 +138,22 @@ begin
 
   CallableStatement.ClearParameters;
 
-
+  if Assigned(FMetaResultSet) then
+    FMetaResultSet.BeforeFirst;
 
   for I := 0 to Params.Count - 1 do
   begin
     if Params[I].ParamType in [ptResult, ptOutput, ptInputOutput] then
       CallableStatement.RegisterOutParameter(I + 1,
         Ord(ConvertDatasetToDbcType(Params[I].DataType)));
-    CallableStatement.RegisterParamType( I+1, ord(Params[I].ParamType)  );
+    CallableStatement.RegisterParamType( I+1, ord(Params[I].ParamType));
+
+    if Supports(CallableStatement, IZParamNamedCallableStatement) and
+      Assigned(FMetaResultSet) then
+      if FMetaResultSet.Next then
+        (CallableStatement as IZParamNamedCallableStatement).RegisterParamTypeAndName(
+          I, FMetaResultSet.GetString(7), Params[i].Name, FMetaResultSet.GetInt(8),
+          FMetaResultSet.GetInt(9));
   end;
   Result := CallableStatement;
 end;
@@ -181,6 +190,11 @@ var
   I: Integer;
   Param: TParam;
   FCallableStatement: IZCallableStatement;
+  TempBlob: IZBlob;
+  {$IFDEF WITH_ASBYTES}
+  TempBytes: TByteDynArray;
+  Bts: TBytes;
+  {$ENDIF}
 begin
   if not Assigned(FCallableStatement) then
   begin
@@ -193,6 +207,7 @@ begin
   for I := 0 to Params.Count - 1 do
   begin
     Param := Params[I];
+
     if not (Param.ParamType in [ptResult, ptOutput, ptInputOutput]) then
       Continue;
 
@@ -211,11 +226,17 @@ begin
         ftLargeInt:
           Param.Value := FCallableStatement.GetLong(I + 1);
         ftString:
-          Param.AsString := FCallableStatement.GetString(I + 1);
+          begin
+            Param.AsString := FCallableStatement.GetString(I + 1);
+            {$IFDEF DELPHI12_UP}Param.DataType := ftString;{$ENDIF} //Hack: D12_UP sets ftWideString on assigning a UnicodeString
+          end;
         ftWideString:
           {$IFDEF WITH_FTWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF} := FCallableStatement.GetUnicodeString(I + 1);
         ftMemo:
-          Param.AsMemo := FCallableStatement.GetString(I + 1);
+          begin
+            Param.AsMemo := FCallableStatement.GetString(I + 1);
+            {$IFDEF DELPHI12_UP}Param.DataType := ftMemo;{$ENDIF} //Hack: D12_UP sets ftWideMemo on assigning a UnicodeString
+          end;
         {$IFDEF WITH_WIDEMEMO}
         ftWideMemo:
         begin
@@ -223,14 +244,30 @@ begin
           Param.DataType := ftWideMemo;
         end;
         {$ENDIF}
-        ftBytes:
-          Param.AsString := FCallableStatement.GetString(I + 1);
+        ftBytes, ftVarBytes:
+          begin
+            {$IFDEF WITH_ASBYTES}
+            TempBytes := StrToBytes(ZAnsiString(FCallableStatement.GetString(I + 1)));
+            SetLength(Bts, High(TempBytes)+1);
+            Move(PAnsiChar(TempBytes)^, PAnsiChar(Bts)^, High(TempBytes)+1);
+            Param.AsBytes := Bts;
+            {$ELSE}
+            Param.AsString := FCallableStatement.GetString(I + 1);
+            {$ENDIF}
+          end;
         ftDate:
           Param.AsDate := FCallableStatement.GetDate(I + 1);
         ftTime:
           Param.AsTime := FCallableStatement.GetTime(I + 1);
         ftDateTime:
           Param.AsDateTime := FCallableStatement.GetTimestamp(I + 1);
+        ftBlob:
+          begin
+            TempBlob := FCallableStatement.GetValue(I +1).VInterface as IZBlob;
+            if not TempBlob.IsEmpty then
+              Param.SetBlobData(TempBlob.GetBuffer, TempBlob.Length);
+            TempBlob := nil;
+          end
         else
            raise EZDatabaseError.Create(SUnKnownParamDataType);
       end;
@@ -262,7 +299,6 @@ end;
 
 procedure TZStoredProc.SetStoredProcName(const Value: string);
 var
-  ResultSet: IZResultSet;
   OldParams: TParams;
   Catalog,
   Schema,
@@ -278,17 +314,17 @@ begin
       try
         SplitQualifiedObjectName(Value, Catalog, Schema, ObjectName);
         ObjectName := Connection.DbcConnection.GetMetadata.AddEscapeCharToWildcards(ObjectName);
-        ResultSet := Connection.DbcConnection.GetMetadata.GetProcedureColumns(Catalog, Schema, ObjectName, '');
+        FMetaResultSet := Connection.DbcConnection.GetMetadata.GetProcedureColumns(Catalog, Schema, ObjectName, '');
         OldParams := TParams.Create;
         try
           OldParams.Assign(Params);
           Params.Clear;
-          while ResultSet.Next do
+          while FMetaResultSet.Next do
           begin
-            ColumnType := ResultSet.GetIntByName('COLUMN_TYPE');
+            ColumnType := FMetaResultSet.GetIntByName('COLUMN_TYPE');
             if ColumnType >= 0 then //-1 is result column
-              Params.CreateParam(ConvertDbcToDatasetType(TZSqlType(ResultSet.GetIntByName('DATA_TYPE'))),
-                ResultSet.GetStringByName('COLUMN_NAME'),
+              Params.CreateParam(ConvertDbcToDatasetType(TZSqlType(FMetaResultSet.GetIntByName('DATA_TYPE'))),
+                FMetaResultSet.GetStringByName('COLUMN_NAME'),
                 GetParamType(TZProcedureColumnType(ColumnType)));
           end;
           Params.AssignValues(OldParams);

@@ -106,8 +106,6 @@ type
 
     function GetAffectedRows(Handle: PZMySQLConnect): Int64;
     {ADDED by EgonHugeist}
-    //omited function EscapeString(Handle: PZMySQLConnect; StrFrom: ZAnsiString): ZAnsiString; overload;
-    //omited function EscapeString(Handle: PZMySQLConnect; StrFrom: ZAnsiString; Len: Integer): ZAnsiString; overload;
     function GetConnectionCharacterSet(Handle: PMYSQL): PAnsiChar;// char_set_name
     procedure Close(Handle: PZMySQLConnect);
     function Connect(Handle: PZMySQLConnect; const Host, User, Password: PAnsiChar): PZMySQLConnect;
@@ -119,7 +117,6 @@ type
     // eof
     function GetLastErrorCode(Handle: PZMySQLConnect): Integer;
     function GetLastError(Handle: PZMySQLConnect): PAnsiChar;
-    //function GetEscapeString(StrTo, StrFrom: PAnsiChar; Length: Cardinal): Cardinal;
     function FetchField(Res: PZMySQLResult): PZMySQLField;
     // fetch_field_direct
     // fetch_fields
@@ -150,7 +147,6 @@ type
       const PreprepareSQL: Boolean; const Encoding: TZCharEncoding;
       out LogSQL: String): Integer; overload;
     function RealConnect(Handle: PZMySQLConnect; const Host, User, Password, Db: PAnsiChar; Port: Cardinal; UnixSocket: PAnsiChar; ClientFlag: Cardinal): PZMySQLConnect;
-    //function GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PAnsiChar; Length: Cardinal): Cardinal;
     function ExecRealQuery(Handle: PZMySQLConnect; const Query: PAnsiChar; Length: Integer): Integer;
     function Refresh(Handle: PZMySQLConnect; Options: Cardinal): Integer;
     function SeekRow(Res: PZMySQLResult; Row: PZMySQLRowOffset): PZMySQLRowOffset;
@@ -273,8 +269,6 @@ type
     function RealConnect(Handle: PZMySQLConnect;
       const Host, User, Password, Db: PAnsiChar; Port: Cardinal;
       UnixSocket: PAnsiChar; ClientFlag: Cardinal): PZMySQLConnect;
-    //function GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PAnsiChar; Length: Cardinal): Cardinal;
-    //function EscapeString(Handle: PZMySQLConnect; StrFrom: ZAnsiString): ZAnsiString;
     procedure Close(Handle: PZMySQLConnect);
 
     function ExecQuery(Handle: PZMySQLConnect; const Query: PAnsiChar): Integer; overload;
