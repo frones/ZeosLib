@@ -153,12 +153,41 @@ begin
 end;
 
 function TZAdoStatement.ExecuteUpdate(const SQL: string): Integer;
+var
+  RC: OleVariant;
 begin
-  Result := -1;
+  try
+    LastResultSet := nil;
+    LastUpdateCount := -1;
+    Self.SQL := sql;
+    if IsSelect(SQL) then
+    begin
+      AdoRecordSet := CoRecordSet.Create;
+      AdoRecordSet.MaxRecords := MaxRows;
+      AdoRecordSet.Open(SQL, (Connection as IZAdoConnection).GetAdoConnection,
+        adOpenStatic, adLockOptimistic, adAsyncFetch);
+      GetCurrentResult(RC);
+      AdoRecordSet.Close;
+      AdoRecordSet := nil;
+    end
+    else
+      AdoRecordSet := (Connection as IZAdoConnection).GetAdoConnection.Execute(SQL, RC, adExecuteNoRecords);
+    Result := RC;
+    LastUpdateCount := Result;
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+  except
+    on E: Exception do
+    begin
+      DriverManager.LogError(lcExecute, FPlainDriver.GetProtocol, SQL, 0, E.Message);
+      raise;
+    end;
+  end
+
+{  Result := -1;
   LastResultSet := nil;
   LastUpdateCount := -1;
   if Execute(Sql) then
-    Result := LastUpdateCount;
+    Result := LastUpdateCount;}
 end;
 
 function TZAdoStatement.Execute(const SQL: string): Boolean;
@@ -195,7 +224,6 @@ var
 begin
   Result := False;
   if Assigned(AdoRecordset) then
-  begin
     if (AdoRecordSet.State and adStateOpen) = adStateOpen then
     begin
       Result := True;
@@ -205,9 +233,8 @@ begin
           TZAdoCachedResolver.Create((Connection as IZAdoConnection).GetAdoConnection,
           Self, NativeResultSet.GetMetaData), ClientCodePage)
       else LastResultSet := NativeResultSet;
-    end else
-      LastUpdateCount := RC;
-  end;
+    end;
+  LastUpdateCount := RC;
 end;
 
 function TZAdoStatement.GetMoreResults: Boolean;
