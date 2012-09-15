@@ -160,20 +160,23 @@ end;
 
 procedure TZTestConnectionCase.TestLibrary;
 begin
-   Connection.Disconnect;
-   Connection.LibraryLocation:='dummy.dll';
-   try
+  if not ( Connection.Protocol = 'ado' ) then
+  begin
+    Connection.Disconnect;
+    Connection.LibraryLocation:='dummy.dll';
+    try
       Connection.Connect;
       Fail('Incorrect behavior dummy.dll does not exist');
-   except
+    except
       CheckEquals(false,Connection.Connected);
-   end;
-   Connection.LibraryLocation:='';
-   Connection.Connect;
-   CheckEquals(true,Connection.Connected);
+    end;
+    Connection.LibraryLocation:='';
+    Connection.Connect;
+    CheckEquals(true,Connection.Connected);
 //   {$ifdef fpc}Fail{$else}Status{$endif}('Info: '+Connection.Protocol+
 //          ' Driver version: '+ Connection.ClientVersionStr+
 //          ' Server version: '+ Connection.ServerVersionStr);
+  end;
 end;
 
 procedure TZTestConnectionCase.ConnLogin(Sender: TObject; var Username:string ; var Password: string);
