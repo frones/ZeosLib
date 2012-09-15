@@ -2609,22 +2609,25 @@ begin
       FAdoConnection := AdoConnection.GetAdoConnection;
     end;
     (FAdoConnection as ADOConnectionConstruction).Get_Session(OleDBSession);
-    OleDBSession.QueryInterface(IDBSchemaRowset, SchemaRS);
-    if Assigned(SchemaRS) then
+    if Assigned(OleDBSession) then
     begin
-      SchemaRS.GetSchemas(Nr, PG, PInteger(IA));
-      OriginalPG := PG;
-      SetLength(SupportedSchemas, Nr);
-      for I := 0 to Nr - 1 do
+      OleDBSession.QueryInterface(IDBSchemaRowset, SchemaRS);
+      if Assigned(SchemaRS) then
       begin
-        SupportedSchemas[I].SchemaGuid := PG^;
-        SupportedSchemas[I].SupportedRestrictions := IA^[I];
-        SupportedSchemas[I].AdoSchemaId := ConvertOleDBToAdoSchema(PG^);
-        Inc({$IFDEF DELPHI16_UP}NativeInt{$ELSE}Integer{$ENDIF}(PG), SizeOf(TGuid));  //M.A. Inc(Integer(PG), SizeOf(TGuid));
+        SchemaRS.GetSchemas(Nr, PG, PInteger(IA));
+        OriginalPG := PG;
+        SetLength(SupportedSchemas, Nr);
+        for I := 0 to Nr - 1 do
+        begin
+          SupportedSchemas[I].SchemaGuid := PG^;
+          SupportedSchemas[I].SupportedRestrictions := IA^[I];
+          SupportedSchemas[I].AdoSchemaId := ConvertOleDBToAdoSchema(PG^);
+          Inc({$IFDEF DELPHI16_UP}NativeInt{$ELSE}Integer{$ENDIF}(PG), SizeOf(TGuid));  //M.A. Inc(Integer(PG), SizeOf(TGuid));
+        end;
+        FSupportedSchemasInitialized := True;
+        if Assigned(OriginalPG) then ZAdoMalloc.Free(OriginalPG);
+        if Assigned(IA) then ZAdoMalloc.Free(IA);
       end;
-      FSupportedSchemasInitialized := True;
-      if Assigned(OriginalPG) then ZAdoMalloc.Free(OriginalPG);
-      if Assigned(IA) then ZAdoMalloc.Free(IA);
     end;
   end;
 end;
