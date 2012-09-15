@@ -421,6 +421,7 @@ begin
 
     P := FAdoCommand.Parameters.Item[ParameterIndex - 1];
     if not ( SQLType = stBytes ) then  //Variant varByte is not comparable with OleVariant -> exception
+    begin
       if not VarIsNull(V) then
       begin
         P.Type_ := T;
@@ -431,6 +432,9 @@ begin
           P.Value := V;
         end;
       end;
+    end
+    else
+      P.Value := V;
     FAdoCommand.Prepared:=false;
   end
   else
