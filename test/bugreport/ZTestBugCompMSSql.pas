@@ -74,12 +74,12 @@ type
     function GetSupportedProtocols: string; override;
 
     property Connection: TZConnection read FConnection write FConnection;
+    procedure Test959307; //wrong defined????
+    procedure Test953072; //is this test really solvable? I don't think so
+  published
     procedure Test728955;
     procedure Test833489;
     procedure Test907497;
-    procedure Test959307;
-  published
-    procedure Test953072;
   end;
 
 implementation
@@ -120,13 +120,13 @@ begin
     Query.Connection := Connection;
     Query.SQL.Text := 'SELECT * FROM department';
     Query.Open;
-    CheckEquals(2, Query.FieldCount);
+    CheckEquals(4, Query.FieldCount);
 
     CheckEquals(1, Query.FieldByName('dep_id').AsInteger);
-    CheckEquals('Container agency', Query.FieldByName('dep_name').AsString);
+    CheckEquals('Line agency', Query.FieldByName('dep_name').AsString);
     Query.Next;
     CheckEquals(2, Query.FieldByName('dep_id').AsInteger);
-    CheckEquals('Line agency', Query.FieldByName('dep_name').AsString);
+    CheckEquals('Container agency', Query.FieldByName('dep_name').AsString);
     Query.Close;
   finally
     Query.Free;

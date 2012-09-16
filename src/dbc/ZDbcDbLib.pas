@@ -620,6 +620,8 @@ begin
 
   S := 'SET TRANSACTION ISOLATION LEVEL ' + IL[GetTransactionIsolation, Index];
   InternalExecuteStatement(S);
+  if not (AutoCommit) then
+    InternalExecuteStatement('BEGIN TRANSACTION');
 end;
 
 {**
