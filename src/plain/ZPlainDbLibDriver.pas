@@ -966,7 +966,10 @@ end;
 
 function TZDBLibBasePlainDriver.dbRetData(dbProc: PDBPROCESS; RetNum: Integer): Pointer;
 begin
-  Result := DBLibAPI.dbRetData(dbProc, RetNum);
+  if Assigned(DBLibAPI.dbRetData) then
+    Result := DBLibAPI.dbRetData(dbProc, RetNum)
+  else
+    Result := nil;
 end;
 
 function TZDBLibBasePlainDriver.dbRetLen(dbProc: PDBPROCESS; RetNum: Integer): Integer;
@@ -2009,7 +2012,10 @@ end;
 
 function TZFreeTDSBasePlainDriver.dbHasRetStat(dbProc: PDBPROCESS): Boolean;
 begin
-  Result := FreeTDSAPI.dbHasRetStat(dbProc) <> 0;
+  if Assigned(FreeTDSAPI.dbHasRetStat) then
+    Result := FreeTDSAPI.dbHasRetStat(dbProc) <> 0
+  else
+    Result := False;
 end;
 
 function TZFreeTDSBasePlainDriver.dbColInfo(dbProc: PDBPROCESS;
