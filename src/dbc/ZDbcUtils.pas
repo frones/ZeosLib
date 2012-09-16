@@ -527,7 +527,7 @@ begin
   BinToHex(Value, PAnsiChar(HexVal), Len);
 
   if ODBC then
-    Result := '0x'#39+WideString(HexVal)
+    Result := '0x'+WideString(HexVal)
   else
     Result := 'x'#39+WideString(HexVal)+#39;
 end;
@@ -540,7 +540,7 @@ begin
   BinToHex(Value, PAnsiChar(HexVal), Len);
 
   if ODBC then
-    Result := '0x'#39+HexVal
+    Result := '0x'+HexVal
   else
     Result := 'x'#39+HexVal+#39;
 end;

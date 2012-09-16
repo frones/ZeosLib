@@ -176,6 +176,7 @@ procedure TZAdoConnection.InternalCreate;
 begin
   FAdoConnection := CoConnection.Create;
   Self.FMetadata := TZAdoDatabaseMetadata.Create(Self, URL);
+  Open;
 end;
 
 {**
