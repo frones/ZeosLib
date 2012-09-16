@@ -190,8 +190,8 @@ type
     function GetSelectFunctionSQL: ZAnsiString;
     function PrepareSQLParam(ParamIndex: Integer): ZAnsiString;
     function GetStmtHandle : PZMySqlPrepStmt;
-    procedure ClearResultSets;
   protected
+    procedure ClearResultSets; override;
     procedure BindInParameters; override;
     function CreateResultSet(const SQL: string): IZResultSet;
     procedure FetchOutParams(ResultSet: IZResultSet);
@@ -202,7 +202,6 @@ type
       Connection: IZConnection; const SQL: string; Info: TStrings;
       Handle: PZMySQLConnect);
     procedure RegisterParamType(ParameterIndex:integer;ParamType:Integer); override;
-    procedure Close; override;
 
     function Execute(const SQL: string): Boolean; override;
 
@@ -1163,13 +1162,8 @@ begin
 end;
 
 procedure TZMySQLCallableStatement.ClearResultSets;
-var
-  I: Integer;
 begin
-  for i := 0 to FResultSets.Count -1 do
-    IZResultSet(FResultSets[i]).Close;
-  FResultSets.Clear;
-  LastResultSet := nil;
+  inherited;
   FPlainDriver.FreeResult(FQueryHandle);
   FQueryHandle := nil;
 end;
@@ -1299,23 +1293,6 @@ procedure TZMySQLCallableStatement.RegisterParamType(ParameterIndex:integer;
 begin
   inherited RegisterParamType(ParameterIndex, ParamType);
   if not FIsFunction then FIsFunction := ParamType = 4; //ptResult
-end;
-
-{**
-  Releases this <code>Statement</code> object's database
-  and JDBC resources immediately instead of waiting for
-  this to happen when it is automatically closed.
-  It is generally good practice to release resources as soon as
-  you are finished with them to avoid tying up database
-  resources.
-  <P><B>Note:</B> A <code>Statement</code> object is automatically closed when it is
-  garbage collected. When a <code>Statement</code> object is closed, its current
-  <code>ResultSet</code> object, if one exists, is also closed.
-}
-procedure TZMySQLCallableStatement.Close;
-begin
-  ClearResultSets;
-  inherited Close;
 end;
 
 procedure TZMySQLCallableStatement.RegisterParamTypeAndName(const ParameterIndex:integer;

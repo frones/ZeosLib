@@ -102,7 +102,7 @@ type
   {** Implements Prepared ADO Statement. }
   TZAdoCallableStatement = class(TZAdoPreparedStatement)
   protected
-    FOutParamIndexes: TIntegerDynArray;
+    //FOutParamIndexes: TIntegerDynArray;
     function GetOutParam(ParameterIndex: Integer): TZVariant; override;
   public
     constructor Create(PlainDriver: IZPlainDriver; Connection: IZConnection;
@@ -301,11 +301,11 @@ var
   PC: Integer;
   P: ZPlainAdo.Parameter;
   B: IZBlob;
-  V: {$IFDEF DELPHI12_UP}OleVariant{$ELSE}Variant{$ENDIF};
+  V: OleVariant;
   OleDBCommand: IUnknown;
   OleDBCmdParams: ICommandWithParameters;
   OleDBCmdPrepare: ICommandPrepare;
-  OleDBPC: {$IFDEF DELPHI16_UP}NativeUInt{$ELSE}Cardinal{$ENDIF};
+  OleDBPC: NativeUInt;
   ParamInfo: PDBParamInfo;
   NamesBuffer: PPOleStr;
   RetValue: TZVariant;
@@ -428,9 +428,8 @@ begin
         P.Size := S;
         // by aperger:
         // to use the new value at the next calling of the statement
-        if P.Value <> V then begin
+        if P.Value <> V then
           P.Value := V;
-        end;
       end;
     end
     else
@@ -498,7 +497,7 @@ begin
       AdoRecordSet.Open(FAdoCommand, EmptyParam, adOpenForwardOnly, adLockOptimistic, adAsyncFetch);
     end
     else
-      AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, -1{adExecuteNoRecords});
+      AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, adOptionUnspecified{-1{adExecuteNoRecords});
     Result := GetCurrentResult(RC);
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
   except
@@ -520,10 +519,9 @@ end;
 function TZAdoCallableStatement.GetOutParam(ParameterIndex: Integer): TZVariant;
 var
   Temp: Variant;
-  {Stream: TMemoryStream;
   V: Variant;
   P: Pointer;
-  TempBlob: IZBLob;}
+  TempBlob: IZBLob;
 begin
   if ParameterIndex > OutParamCount then
     Result := NullVariant
@@ -531,7 +529,7 @@ begin
   begin
     Temp := FAdoCommand.Parameters.Item[ParameterIndex - 1].Value;
 
-    (*case ConvertAdoToSqlType(FAdoCommand.Parameters.Item[ParameterIndex - 1].Type_) of
+    case ConvertAdoToSqlType(FAdoCommand.Parameters.Item[ParameterIndex - 1].Type_) of
       stBoolean:
         DefVarManager.SetAsBoolean(Result, Temp);
       stByte, stShort, stInteger, stLong:
@@ -568,8 +566,8 @@ begin
         end
       else
         DefVarManager.SetNull(Result);
-    end; *)
-    //!! Please fix.
+    end;
+    (*//!! Please fix.
     case VarType(Temp) of
       varString, varOleStr:
         DefVarManager.SetAsString(Result, Temp);
@@ -585,7 +583,7 @@ begin
         DefVarManager.SetAsFloat(Result, Temp);
       else
         DefVarManager.SetNull(Result);
-    end;
+    end;*)
   end;
 
   LastWasNull := DefVarManager.IsNull(Result);

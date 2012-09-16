@@ -366,12 +366,12 @@ begin
     TempUrl.Free;
   end;
 end;
-{$WARNINGS ON}
 
 function TZAbstractDriver.Connect(const Url: TZURL): IZConnection;
 begin
   Result := nil;
 end;
+{$WARNINGS ON}
 
 {**
   Returns true if the driver thinks that it can open a connection
