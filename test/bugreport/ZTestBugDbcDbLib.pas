@@ -71,6 +71,7 @@ type
 
     property Connection: IZConnection read FConnection write FConnection;
   published
+    procedure EmptyTest;
   end;
 
 implementation
@@ -79,7 +80,7 @@ implementation
 
 function ZTestDbcDbLibBugReport.GetSupportedProtocols: string;
 begin
-  Result := 'mssql,sybase';
+  Result := 'mssql,sybase,FreeTDS_MsSQL<=6.5,FreeTDS_MsSQL-7.0,FreeTDS_MsSQL-2000,FreeTDS_MsSQL>=2005,FreeTDS_Sybase<10,FreeTDS_Sybase-10+';
 end;
 
 procedure ZTestDbcDbLibBugReport.SetUp;
@@ -91,6 +92,11 @@ procedure ZTestDbcDbLibBugReport.TearDown;
 begin
   Connection.Close;
   Connection := nil;
+end;
+
+procedure ZTestDbcDbLibBugReport.EmptyTest;
+begin
+  //need a dummy
 end;
 
 initialization
