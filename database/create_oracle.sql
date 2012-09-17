@@ -198,16 +198,19 @@ alter table equipment2
 alter table people
    add foreign key (p_dep_id) references department (dep_id);
 
+SET TERM ^ ;
 
 /*==============================================================*/
 /* Stored procedure: abtest                                     */
 /*==============================================================*/
-/*Create FUNCTION System.ABTEST (p1 NUMBER, p2 NUMBER, p3 VARCHAR,
-  p4 OUT NUMBER, p5 OUT VARCHAR) IS
+Create or replace procedure "ABTEST" (P1 NUMBER, P2 NUMBER, P3 VARCHAR,
+  P4 OUT NUMBER, P5 OUT VARCHAR) IS
 BEGIN
   p4 := p1 * 10 + p2;
   p5 := p3 || p3;
-END; */
+END; ^
+
+SET TERM ; ^
 
 /*==============================================================*/
 /* Grant privileges to columns                                  */
