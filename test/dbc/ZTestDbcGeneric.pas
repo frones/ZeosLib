@@ -196,7 +196,8 @@ var
   ResultSet: IZResultSet;
   Metadata: IZDatabaseMetadata;
 begin
-  if StartsWith(Protocol, 'mysql') or StartsWith(Protocol, 'FreeTDS') or ( Protocol = 'mssql') then
+  if StartsWith(Protocol, 'mysql') or StartsWith(Protocol, 'FreeTDS') or
+    ( Protocol = 'mssql') or ( Protocol = 'ado') or ( Protocol = 'sybase') then
     Exit;
 
   Metadata := Connection.GetMetadata;
