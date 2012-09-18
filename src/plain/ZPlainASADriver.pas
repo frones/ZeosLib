@@ -292,6 +292,7 @@ begin
     @ASA_API.dbpp_prepare_into      := GetAddress('dbpp_prepare_into');
     @ASA_API.dbpp_describe_cursor   := GetAddress('dbpp_describe_cursor');
     @ASA_API.dbpp_prepare_describe  := GetAddress('dbpp_prepare_describe');
+    @ASA_API.dbpp_prepare_describe_12  := GetAddress('dbpp_prepare_describe_12');
     @ASA_API.dbpp_select            := GetAddress('dbpp_select');
     @ASA_API.dbpp_open              := GetAddress('dbpp_open');
     @ASA_API.dbpp_close             := GetAddress('dbpp_close');
@@ -483,9 +484,18 @@ end;
 procedure TZASABasePlainDriver.db_prepare_describe( sqlca: PZASASQLCA;
    ProgName: PAnsiChar; StatementNum: PSmallInt; SqlStatement: PAnsiChar;
   Descriptor: PASASQLDA; WhatToDesc: LongWord; LongNames: Word);
+var
+  U1, U2, U3: Word;
 begin
-  ASA_API.dbpp_prepare_describe( sqlca, nil, ProgName, StatementNum,
-    SqlStatement, nil, Descriptor, WhatToDesc, LongNames);
+  U1 := 0;
+  U2 := 0;
+  if Assigned(ASA_API.dbpp_prepare_describe) then
+    ASA_API.dbpp_prepare_describe( sqlca, nil, ProgName, StatementNum,
+      SqlStatement, nil, Descriptor, WhatToDesc, LongNames)
+  else
+    if Assigned(ASA_API.dbpp_prepare_describe_12) then
+    ASA_API.dbpp_prepare_describe_12(sqlca, nil, ProgName, StatementNum,
+        SqlStatement, nil, Descriptor, WhatToDesc, U1, LongNames, U2);
 end;
 
 procedure TZASABasePlainDriver.db_declare(sqlca: PZASASQLCA; CursorName: PAnsiChar;

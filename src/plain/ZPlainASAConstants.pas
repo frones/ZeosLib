@@ -953,6 +953,12 @@ type
   TASAdb_cancel_request = function( sqlca: PZASASQLCA): Integer;
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
+  {ASA12}
+  TASAdbpp_prepare_describe_12 = procedure (SQLCA: PZASASQLCA; UnKnown: PAnsiChar;
+    ProgName: PAnsiChar; RecordStatementNum: PSmallInt; SqlStatement: PAnsiChar;
+    Descriptor1: PASASQLDA; Descriptor2: PASASQLDA; WhatToDesc: LongWord;
+    UnknownUint, LongNames, UnknownUint2: word)
+    {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 { ************* Plain API Function variables definition ************ }
 
 TASA_API = record
@@ -977,6 +983,8 @@ TASA_API = record
   dbpp_disconnect:        TASAdbpp_setConnect;
   dbpp_prepare_into:      TASAdbpp_prepare_into;
   dbpp_prepare_describe:  TASAdbpp_prepare_describe;
+  dbpp_prepare_describe_12: TASAdbpp_prepare_describe_12;
+  //dbpp_prepare_describe_exec_12: TASAdbpp_prepare_describe_exec_12;
   dbpp_select:            TASAdbpp_select;
   dbpp_open:              TASAdbpp_open;
   dbpp_close:             TASAdbpp_close;
