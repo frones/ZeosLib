@@ -86,15 +86,16 @@ type
       const Encoding: TZCharEncoding): ZAnsiString; overload;
   end;
 
-  {ADDED by EgonHugeist 20-01-2011}
-  {** implements a generic base class of a generic plain driver.
-   to make the CodePage-handling tranparency for all Plain-Drivers}
+  {ADDED by fduenas 15-06-2006}
+  {** Base class of a generic plain driver with TZNativeLibraryLoader-object. }
 
-  TZLegacyPlainDriver = class(TZCodePagedObject, IZPlainDriver)
+  TZAbstractPlainDriver = class(TZCodePagedObject, IZPlainDriver)
   private
     FCodePages: array of TZCodePage;
   protected
     FTokenizer: IZTokenizer;
+    FLoader: TZNativeLibraryLoader;
+    procedure LoadApi; virtual;
     function IsAnsiDriver: Boolean; virtual;
     function Clone: IZPlainDriver; reintroduce; virtual; abstract;
     procedure LoadCodePages; virtual; abstract;
@@ -120,30 +121,14 @@ type
       const Encoding: TZCharEncoding): ZAnsiString; overload; virtual;
   public
     constructor Create;
+    constructor CreateWithLibrary(const LibName : String);
     destructor Destroy; override;
     function GetProtocol: string; virtual; abstract;
     function GetDescription: string; virtual; abstract;
     function GetSupportedClientCodePages(const IgnoreUnsupported: Boolean): TStringDynArray;
-    procedure Initialize(const Location: String = ''); virtual; abstract;
+    procedure Initialize(const Location: String = ''); virtual;
 
-  end;
-
-  {ADDED by fduenas 15-06-2006}
-  {** Base class of a generic plain driver with TZNativeLibraryLoader-object. }
-
-  { TZAbstractPlainDriver }
-
-  TZAbstractPlainDriver = class(TZLegacyPlainDriver, IZPlainDriver)
-  protected
-    FLoader: TZNativeLibraryLoader;
-    procedure LoadApi; virtual;
-  public
-    constructor CreateWithLibrary(const LibName : String);
     property Loader: TZNativeLibraryLoader read FLoader;
-    function GetProtocol: string; override; abstract;
-    function GetDescription: string; override; abstract;
-    procedure Initialize(const Location: String = ''); override;
-    destructor Destroy; override;
   end;
   {END ADDED by fduenas 15-06-2006}
 
@@ -328,14 +313,14 @@ implementation
 uses ZSysUtils, SysUtils {$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
 
 
-{TZLegacyPlainDriver}
+{TZAbstractPlainDriver}
 
-function TZLegacyPlainDriver.IsAnsiDriver: Boolean;
+function TZAbstractPlainDriver.IsAnsiDriver: Boolean;
 begin
   Result := True;
 end;
 
-function TZLegacyPlainDriver.GetUnicodeCodePageName: String;
+function TZAbstractPlainDriver.GetUnicodeCodePageName: String;
 begin
   Result := '';
 end;
@@ -347,7 +332,7 @@ end;
           a supported CodePage
    @result the PZCodePage of the ClientCharacterSet
 }
-function TZLegacyPlainDriver.ValidateCharEncoding(const CharacterSetName: String;
+function TZAbstractPlainDriver.ValidateCharEncoding(const CharacterSetName: String;
   const DoArrange: Boolean = False): PZCodePage;
   function GetClientCodePageInformations(
     const ClientCharacterSet: String): PZCodePage;
@@ -388,7 +373,7 @@ end;
           a supported CodePage
    @result the PZCodePage of the ClientCharacterSet
 }
-function TZLegacyPlainDriver.ValidateCharEncoding(const CharacterSetID: Integer;
+function TZAbstractPlainDriver.ValidateCharEncoding(const CharacterSetID: Integer;
   const DoArrange: Boolean = False): PZCodePage;
   function GetClientCodePageInformations(const ClientCharacterSetID: Word): PZCodePage;
   var
@@ -410,7 +395,7 @@ begin
     ValidateCharEncoding(Result^.ZAlias); //recalls em selves
 end;
 
-function TZLegacyPlainDriver.GetPrepreparedSQL(Handle: Pointer;
+function TZAbstractPlainDriver.GetPrepreparedSQL(Handle: Pointer;
   const SQL: String; const Encoding: TZCharEncoding; out LogSQL: String;
   const PreprepareSQL: Boolean): ZAnsiString;
 var
@@ -445,7 +430,7 @@ begin
   LogSQL := String(Result);
 end;
 
-function TZLegacyPlainDriver.EscapeString(Handle: Pointer; const Value: ZWideString;
+function TZAbstractPlainDriver.EscapeString(Handle: Pointer; const Value: ZWideString;
   const Encoding: TZCharEncoding): ZWideString;
 var
   StrFrom: ZAnsiString;
@@ -456,19 +441,19 @@ begin
   Result := ZDbcString(Outbuffer, Encoding);
 end;
 
-function TZLegacyPlainDriver.EscapeString(Handle: Pointer; const Value: ZAnsiString;
+function TZAbstractPlainDriver.EscapeString(Handle: Pointer; const Value: ZAnsiString;
   const Encoding: TZCharEncoding): ZAnsiString;
 begin
   //Result := #39+Value+#39;
   Result := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr(Value, #39);
 end;
 
-function TZLegacyPlainDriver.GetTokenizer: IZTokenizer;
+function TZAbstractPlainDriver.GetTokenizer: IZTokenizer;
 begin
   Result := FTokenizer;
 end;
 
-procedure TZLegacyPlainDriver.AddCodePage(const Name: String;
+procedure TZAbstractPlainDriver.AddCodePage(const Name: String;
       const ID:  Integer; Encoding: TZCharEncoding = ceAnsi;
       {$IFDEF WITH_CHAR_CONTROL}const CP: Word = $ffff; {$ENDIF}
       const ZAlias: String = '');
@@ -494,7 +479,7 @@ begin
   {$ENDIF}
 end;
 
-procedure TZLegacyPlainDriver.ResetCodePage(const OldID: Integer;
+procedure TZAbstractPlainDriver.ResetCodePage(const OldID: Integer;
       const Name: String; const ID:  Integer; Encoding: TZCharEncoding = ceAnsi;
       {$IFDEF WITH_CHAR_CONTROL}const CP: Word = $ffff; {$ENDIF}
       const ZAlias: String = '');
@@ -527,7 +512,7 @@ begin
     end;
 end;
 
-function TZLegacyPlainDriver.GetSupportedClientCodePages(
+function TZAbstractPlainDriver.GetSupportedClientCodePages(
   const IgnoreUnsupported: Boolean): TStringDynArray;
 var
   I: Integer;
@@ -540,16 +525,18 @@ begin
     end;
 end;
 
-constructor TZLegacyPlainDriver.Create;
+constructor TZAbstractPlainDriver.Create;
 begin
   inherited Create;
   FTokenizer := TZTokenizer.Create;
 end;
 
-destructor TZLegacyPlainDriver.Destroy;
+destructor TZAbstractPlainDriver.Destroy;
 begin
   SetLength(FCodePages, 0);
   FTokenizer := nil;
+  if Assigned(FLoader) then
+    FreeAndNil(FLoader);
   inherited Destroy;
 end;
 
@@ -562,28 +549,26 @@ end;
 constructor TZAbstractPlainDriver.CreateWithLibrary(const LibName: String);
 begin
   Inherited Create;
-  Loader.ClearLocations;
-  Loader.AddLocation(LibName);
+  if Assigned(FLoader) then
+  begin
+    Loader.ClearLocations;
+    Loader.AddLocation(LibName);
+  end;
 end;
 
 procedure TZAbstractPlainDriver.Initialize(const Location: String = '');
 begin
-  If Assigned(Loader) and not Loader.Loaded then
-  begin
-    if Location <> '' then
+  If Assigned(Loader) then
+    if not Loader.Loaded then
     begin
-      Loader.ClearLocations;
-      Loader.AddLocation(Location);
+      if Location <> '' then
+      begin
+        Loader.ClearLocations;
+        Loader.AddLocation(Location);
+      end;
+      If Loader.LoadNativeLibrary then
+        LoadApi;
     end;
-    If Loader.LoadNativeLibrary then
-      LoadApi;
-  end;
-end;
-
-destructor TZAbstractPlainDriver.Destroy;
-begin
-  FreeAndNil(FLoader);
-  inherited Destroy;
 end;
 
 end.

@@ -497,7 +497,7 @@ begin
       AdoRecordSet.Open(FAdoCommand, EmptyParam, adOpenForwardOnly, adLockOptimistic, adAsyncFetch);
     end
     else
-      AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, adOptionUnspecified{-1{adExecuteNoRecords});
+      AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, -1{adExecuteNoRecords});
     Result := GetCurrentResult(RC);
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
   except
