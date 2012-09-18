@@ -348,7 +348,6 @@ function PrepareSQLParameter(Value: TZVariant; ParamType: TZSQLType): string;
 var
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
-  TempString: Ansistring;
 begin
   TempBytes := nil;
 

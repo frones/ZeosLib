@@ -68,9 +68,7 @@ contains
 
 {$IFDEF ENABLE_ASA}
   ZPlainASADriver in '..\..\src\plain\ZPlainASADriver.pas',
-  ZPlainASA9 in '..\..\src\plain\ZPlainASA9.pas',
-  ZPlainASA8 in '..\..\src\plain\ZPlainASA8.pas',
-  ZPlainASA7 in '..\..\src\plain\ZPlainASA7.pas',
+  ZPlainASAConstants in '..\..\src\plain\ZPlainASAConstants.pas',
 {$ENDIF}
 
   ZPlainDriver in '..\..\src\plain\ZPlainDriver.pas',

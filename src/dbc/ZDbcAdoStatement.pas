@@ -541,7 +541,7 @@ begin
       stUnicodeString, stUnicodeStream:
         DefVarManager.SetAsUnicodeString(Result, Temp);
       stBytes:
-        DefVarManager.SetAsString(Result, BytesToStr(Temp));
+        DefVarManager.SetAsString(Result, String(BytesToStr(Temp)));
       stDate, stTime, stTimestamp:
         DefVarManager.SetAsDateTime(Result, Temp);
       stBinaryStream:

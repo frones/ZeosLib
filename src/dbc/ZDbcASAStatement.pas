@@ -145,7 +145,7 @@ type
 
 implementation
 
-uses ZSysUtils, ZDbcUtils;
+uses ZSysUtils, ZDbcUtils, ZPlainASAConstants;
 
 { TZASAStatement }
 

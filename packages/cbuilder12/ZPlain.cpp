@@ -38,11 +38,7 @@ USEUNIT("..\..\src\plain\ZPlainOracleDriver.pas");
 
 USEUNIT("..\..\src\plain\ZPlainASADriver.pas");
 
-USEUNIT("..\..\src\plain\ZPlainASA9.pas");
-
-USEUNIT("..\..\src\plain\ZPlainASA8.pas");
-
-USEUNIT("..\..\src\plain\ZPlainASA7.pas");
+USEUNIT("..\..\src\plain\ZPlainASAConstants.pas");
 
 //---------------------------------------------------------------------------
 

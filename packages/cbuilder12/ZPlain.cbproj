@@ -98,21 +98,13 @@
 				<BuildOrder>56</BuildOrder>
 				<BuildOrder>7</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\plain\ZPlainASA9.pas">
-				<BuildOrder>89</BuildOrder>
-				<BuildOrder>8</BuildOrder>
-			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\plain\ZPlainASADriver.pas">
 				<BuildOrder>86</BuildOrder>
 				<BuildOrder>9</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\plain\ZPlainASA7.pas">
+			<DelphiCompile Include="..\..\src\plain\ZPlainASAConstants.pas">
 				<BuildOrder>95</BuildOrder>
 				<BuildOrder>10</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\plain\ZPlainASA8.pas">
-				<BuildOrder>92</BuildOrder>
-				<BuildOrder>11</BuildOrder>
 			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\plain\ZPlainOracleDriver.pas">
 				<BuildOrder>77</BuildOrder>

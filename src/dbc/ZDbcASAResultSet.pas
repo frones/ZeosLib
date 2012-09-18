@@ -177,7 +177,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  SysUtils, Math, ZdbcLogging;
+  SysUtils, Math, ZdbcLogging, ZPlainASAConstants;
 
 { TZASAResultSet }
 
