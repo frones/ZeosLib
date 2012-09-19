@@ -261,14 +261,15 @@ begin
       begin
         if FSQLData.GetData^.sqld <= 0 then
           raise EZSQLException.Create( SCanNotRetrieveResultSetData)
-        else if ( FSQLData.GetData^.sqld > FSQLData.GetData^.sqln) then
-        begin
-          FSQLData.AllocateSQLDA( FSQLData.GetData^.sqld);
-          GetPlainDriver.db_describe( GetDBHandle, nil, @FStmtNum,
-            FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
-          ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute,
-            SQL);
-        end;
+        else
+          if ( FSQLData.GetData^.sqld > FSQLData.GetData^.sqln) then
+          begin
+            FSQLData.AllocateSQLDA( FSQLData.GetData^.sqld);
+            GetPlainDriver.db_describe( GetDBHandle, nil, @FStmtNum,
+              FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
+            ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute,
+              SQL);
+          end;
         FSQLData.InitFields;
       end;
       if ResultSetConcurrency = rcUpdatable then
@@ -278,7 +279,7 @@ begin
       if ResultSetType = rtScrollInsensitive then
         CursorOptions := CursorOptions + CUR_INSENSITIVE;
       Cursor := CursorName;
-       GetPlainDriver.db_open(GetDBHandle, PAnsiChar(Cursor), nil, @FStmtNum,
+      GetPlainDriver.db_open(GetDBHandle, PAnsiChar(Cursor), nil, @FStmtNum,
             nil, FetchSize, 0, CursorOptions);
       ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute,
         SQL);
@@ -290,7 +291,6 @@ begin
       Result := GetCachedResultSet( SQL, Self,
         TZASAResultSet.Create( Self, SQL, FStmtNum, Cursor, FSQLData, nil,
         FCachedBlob));
-
       { Logging SQL Command }
       DriverManager.LogMessage( lcExecute, GetPlainDriver.GetProtocol, SQL);
     except

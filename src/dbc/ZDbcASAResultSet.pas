@@ -604,14 +604,13 @@ end;
 function TZASAResultSet.MoveRelative(Rows: Integer): Boolean;
 begin
   Result := False;
-  if (MaxRows > 0) and ( Abs( RowNo) + Rows >= MaxRows) then
+  if (RowNo > LastRowNo) or ((MaxRows > 0) and (RowNo >= MaxRows)) then
     Exit;
-
   FASAConnection.GetPlainDriver.db_fetch( FASAConnection.GetDBHandle,
     PAnsiChar( FCursorName), CUR_RELATIVE, Rows, FSqlData.GetData, BlockSize, CUR_FORREGULAR);
-  ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
-    FASAConnection.GetDBHandle, lcOther);
-
+    ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
+      FASAConnection.GetDBHandle, lcOther, '', SQLE_CURSOR_NOT_OPEN); //handle a known null resultset issue (cursor not open)
+  if FASAConnection.GetDBHandle.sqlCode = SQLE_CURSOR_NOT_OPEN then Exit;
   if FASAConnection.GetDBHandle.sqlCode <> SQLE_NOTFOUND then
   begin
     if ( RowNo > 0) or ( RowNo + Rows < 0) then
@@ -705,7 +704,11 @@ end;
 
 procedure TZASAResultSet.Close;
 begin
-  Self.FASAConnection.GetPlainDriver.db_close(FASAConnection.GetDBHandle, PAnsiChar(FCursorName));
+  if FCursorName <> '' then
+  begin
+    FASAConnection.GetPlainDriver.db_close(FASAConnection.GetDBHandle, PAnsiChar(FCursorName));
+    FCursorName := '';
+  end;
   inherited Close;
 end;
 

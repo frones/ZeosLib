@@ -242,7 +242,8 @@ function ASADateTimeToSQLTimeStamp( ASADT: PZASASQLDateTime): TSQLTimeStamp;
   @param LogMessage a logging message.
 }
 procedure CheckASAError(PlainDriver: IZASAPlainDriver;
-  Handle: PZASASQLCA; LogCategory: TZLoggingCategory; LogMessage: string = '');
+  Handle: PZASASQLCA; LogCategory: TZLoggingCategory; LogMessage: string = '';
+  SupressExceptionID: Integer = 0);
 
 function GetCachedResultSet(SQL: string;
   Statement: IZStatement; NativeResultSet: IZResultSet): IZResultSet;
@@ -1992,7 +1993,8 @@ end;
   @param LogMessage a logging message.
 }
 procedure CheckASAError( PlainDriver: IZASAPlainDriver;
-  Handle: PZASASQLCA; LogCategory: TZLoggingCategory; LogMessage: string = '');
+  Handle: PZASASQLCA; LogCategory: TZLoggingCategory; LogMessage: string = '';
+  SupressExceptionID: Integer = 0);
 var
   ErrorBuf: array[0..1024] of AnsiChar;
   ErrorMessage: string;
@@ -2001,10 +2003,14 @@ begin
   begin
     ErrorMessage := String(PlainDriver.sqlError_Message( Handle, ErrorBuf, SizeOf( ErrorBuf)));
     //SyntaxError Position in SQLCount
-    DriverManager.LogError( LogCategory, PlainDriver.GetProtocol, LogMessage,
-      Handle.SqlCode, ErrorMessage);
-    raise EZSQLException.CreateWithCode( Handle.SqlCode,
-      Format(SSQLError1, [ErrorMessage]));
+    if not (SupressExceptionID = Handle.SqlCode ) then
+    begin
+      DriverManager.LogError( LogCategory, PlainDriver.GetProtocol, LogMessage,
+        Handle.SqlCode, ErrorMessage);
+
+      raise EZSQLException.CreateWithCode( Handle.SqlCode,
+        Format(SSQLError1, [ErrorMessage]));
+    end;
   end;
 end;
 

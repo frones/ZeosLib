@@ -1490,7 +1490,8 @@ function TZASADatabaseMetadata.UncachedGetSchemas: IZResultSet;
 begin
     Result:=inherited UncachedGetSchemas;
 
-    with GetStatement.ExecuteQuery('exec sp_jdbc_getschemas') do
+    with GetStatement.ExecuteQuery('select TABLE_SCHEM=name  from sysusers where suid >= -2 order by name'
+ {'exec sp_jdbc_getschemas'}) do
     begin
       while Next do
       begin
