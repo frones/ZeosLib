@@ -750,7 +750,7 @@ end;
 }
 function TZPostgreSQLDatabaseInfo.SupportsCatalogsInProcedureCalls: Boolean;
 begin
-  Result := False;
+  Result := HasMinimumServerVersion(7, 3);
 end;
 
 {**
@@ -759,7 +759,7 @@ end;
 }
 function TZPostgreSQLDatabaseInfo.SupportsCatalogsInTableDefinitions: Boolean;
 begin
-  Result := False;
+  Result := HasMinimumServerVersion(7, 3);
 end;
 
 {**

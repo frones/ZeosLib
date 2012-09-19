@@ -410,6 +410,22 @@ begin
             TableName := ResultSet.GetStringByName('TABLE_NAME');
             TableName := IdentifierConvertor.Quote(TableName);
             Schema := ResultSet.GetStringByName('TABLE_SCHEM');
+            (*if Connection.DbcConnection.GetMetadata.GetDatabaseInfo.SupportsCatalogsInTableDefinitions then
+              if Catalog <> '' then
+                if Schema <> '' then
+                  TableName := IdentifierConvertor.Quote(Catalog) + IdentifierConvertor.Quote(Schema) + '.' + TableName
+                else
+                  TableName := {IdentifierConvertor.Quote(Catalog) + '.' + }TableName
+              else
+                if Schema <> '' then
+                  TableName := IdentifierConvertor.Quote(Schema) + '.' + TableName
+                else
+                  TableName := TableName
+            else
+              if Schema <> '' then
+                TableName := IdentifierConvertor.Quote(Schema) + '.' + TableName
+              else
+                TableName := TableName;*)
             if Schema <> '' then
               TableName := IdentifierConvertor.Quote(Schema) + '.' + TableName;
             if Catalog <> '' then
@@ -472,10 +488,22 @@ begin
           ProcedureName := ResultSet.GetStringByName('PROCEDURE_NAME');
           ProcedureName := IdentifierConvertor.Quote(ProcedureName);
           Schema := ResultSet.GetStringByName('PROCEDURE_SCHEM');
-          if Schema <> '' then
-            ProcedureName := IdentifierConvertor.Quote(Schema) + '.' + ProcedureName;
-          if Catalog <> '' then
-            ProcedureName := IdentifierConvertor.Quote(Catalog) + '.' + ProcedureName;
+          if Connection.DbcConnection.GetMetadata.GetDatabaseInfo.SupportsCatalogsInProcedureCalls then
+            if Catalog <> '' then
+              if Schema <> '' then
+                ProcedureName := IdentifierConvertor.Quote(Catalog) +'.'+ IdentifierConvertor.Quote(Schema) + '.' + ProcedureName
+              else
+                ProcedureName := {IdentifierConvertor.Quote(Catalog) + '.' + }ProcedureName
+            else
+              if Schema <> '' then
+                ProcedureName := IdentifierConvertor.Quote(Schema) + '.' + ProcedureName
+              else
+                ProcedureName := ProcedureName
+          else
+            if Schema <> '' then
+              ProcedureName := IdentifierConvertor.Quote(Schema) + '.' + ProcedureName
+            else
+              ProcedureName := ProcedureName;
           List.Add(ProcedureName);
         end;
       finally

@@ -58,6 +58,7 @@
  {$DEFINE WITH_FTWIDESTRING}    // Have ftwidestring, For Delphi we turn these off if not applicable
  {$DEFINE WITH_WIDECONTROLS}
  {$DEFINE WITH_DBTABLES}        // Have the BDE DBTables Unit
+ {$DEFINE WITH_TBYTEDYNARRAYTOVARIANT}// Variant does support TByteDynArray
 {$ENDIF}
 
 // Compilation directives for Delphi4
@@ -181,6 +182,7 @@
 {$IFDEF VER150BELOW}
   {$UNDEF WITH_WIDEMEMO}
   {$UNDEF WITH_FTWIDESTRING}    // D7 doesn't support TField.AsWideString
+  {$UNDEF WITH_TBYTEDYNARRAYTOVARIANT} //D7 Does not support TByteDynArray as Variant
 {$ENDIF}
 
 {$IFDEF DELPHI16_UP}

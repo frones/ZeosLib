@@ -288,6 +288,17 @@ type
   public
     constructor Create(Connection: IZConnection; SQL: string; Info: TStrings);
     procedure ClearParameters; override;
+
+    function HasMoreResultSets: Boolean; virtual;
+    function GetFirstResultSet: IZResultSet; virtual;
+    function GetPreviousResultSet: IZResultSet; virtual;
+    function GetNextResultSet: IZResultSet; virtual;
+    function GetLastResultSet: IZResultSet; virtual;
+    function BOR: Boolean; virtual;
+    function EOR: Boolean; virtual;
+    function GetResultSetByIndex(const Index: Integer): IZResultSet; virtual;
+    function GetResultSetCount: Integer; virtual;
+
     procedure RegisterOutParameter(ParameterIndex: Integer;
       SQLType: Integer); virtual;
     procedure RegisterParamType(ParameterIndex:integer;ParamType:Integer);virtual;
@@ -1815,6 +1826,88 @@ begin
     OutParamTypes[I - 1] := stUnknown;
   end;
   SetOutParamCount(0);
+end;
+
+{**
+  Are more resultsets retrieved?
+  @result Returns <code>True</code> if more resultsets are retrieved
+}
+function TZAbstractCallableStatement.HasMoreResultSets: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Get the first resultset..
+  @result <code>IZResultSet</code> if supported
+}
+function TZAbstractCallableStatement.GetFirstResultSet: IZResultSet;
+begin
+  Result := nil;
+end;
+
+{**
+  Get the previous resultset..
+  @result <code>IZResultSet</code> if supported
+}
+function TZAbstractCallableStatement.GetPreviousResultSet: IZResultSet;
+begin
+  Result := nil;
+end;
+
+{**
+  Get the next resultset..
+  @result <code>IZResultSet</code> if supported
+}
+function TZAbstractCallableStatement.GetNextResultSet: IZResultSet;
+begin
+  Result := nil;
+end;
+
+{**
+  Get the last resultset..
+  @result <code>IZResultSet</code> if supported
+}
+function TZAbstractCallableStatement.GetLastResultSet: IZResultSet;
+begin
+  Result := nil;
+end;
+
+{**
+  First ResultSet?
+  @result <code>True</code> if first ResultSet
+}
+function TZAbstractCallableStatement.BOR: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Last ResultSet?
+  @result <code>True</code> if Last ResultSet
+}
+function TZAbstractCallableStatement.EOR: Boolean;
+begin
+  Result := True;
+end;
+
+{**
+  Retrieves a ResultSet by his index.
+  @param Index the index of the Resultset
+  @result <code>IZResultSet</code> of the Index or nil.
+}
+function TZAbstractCallableStatement.GetResultSetByIndex(const Index: Integer): IZResultSet;
+begin
+  Result := nil;
+end;
+
+{**
+  Returns the Count of retrived ResultSets.
+  @result <code>Integer</code> Count
+}
+function TZAbstractCallableStatement.GetResultSetCount: Integer;
+begin
+  Result := 0;
 end;
 
 {**

@@ -230,8 +230,8 @@ type
     procedure GetCatalogNames(List: TStrings);
     procedure GetSchemaNames(List: TStrings);
     procedure GetTableNames(const Pattern: string; List: TStrings);overload;
-    procedure GetTableNames(const tablePattern,schemaPattern: string; List: TStrings);overload;
-    procedure GetTableNames(const tablePattern,schemaPattern: string; Types: TStringDynArray; List: TStrings);overload;
+    procedure GetTableNames(const schemaPattern, tablePattern: string; List: TStrings);overload;
+    procedure GetTableNames(const schemaPattern, tablePattern: string; Types: TStringDynArray; List: TStrings);overload;
     procedure GetColumnNames(const TablePattern, ColumnPattern: string; List: TStrings);
 
     procedure GetStoredProcNames(const Pattern: string; List: TStrings);
@@ -1243,9 +1243,9 @@ end;
   @param schemaPattern a pattern for schema names.
   @param List a string list to fill out.
 }
-procedure TZAbstractConnection.GetTableNames(const tablePattern,schemaPattern: string; List: TStrings);
+procedure TZAbstractConnection.GetTableNames(const schemaPattern, tablePattern: string; List: TStrings);
 begin
-  GetTableNames(tablePattern,schemaPattern,nil,List);
+  GetTableNames(schemaPattern, tablePattern, nil,List);
 end;
 
 {**
@@ -1262,7 +1262,7 @@ end;
                                        'TEMPORARY INDEX'
   @param List a string list to fill out.
 }
-procedure TZAbstractConnection.GetTableNames(const tablePattern,schemaPattern: string; Types: TStringDynArray; List: TStrings);
+procedure TZAbstractConnection.GetTableNames(const schemaPattern, tablePattern: string; Types: TStringDynArray; List: TStrings);
 var
   Metadata: IZDatabaseMetadata;
   ResultSet: IZResultSet;

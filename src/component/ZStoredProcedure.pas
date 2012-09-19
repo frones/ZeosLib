@@ -104,6 +104,14 @@ type
   public
     procedure ExecProc; virtual;
 
+    procedure FirstResultSet;
+    procedure PreviousResultSet;
+    procedure NextResultSet;
+    procedure LastResultSet;
+    procedure SetResultSet(const Index: Integer);
+    function ResultSetCount: Integer;
+    function BOR: Boolean;
+    function EOR: Boolean;
   published
     property Active;
     property ParamCheck;
@@ -132,14 +140,22 @@ function TZStoredProc.CreateStatement(const SQL: string; Properties: TStrings):
 var
   I: Integer;
   CallableStatement: IZCallableStatement;
+  Catalog, Schema, ObjectName: string;
 begin
   CallableStatement := Connection.DbcConnection.PrepareCallWithParams(
     Trim(SQL), Properties);
 
   CallableStatement.ClearParameters;
 
-  if Assigned(FMetaResultSet) then
-    FMetaResultSet.BeforeFirst;
+  if Supports(CallableStatement, IZParamNamedCallableStatement) then
+    if Assigned(FMetaResultSet) then
+      FMetaResultSet.BeforeFirst
+    else
+    begin //i need allways all types to cast and there names
+      SplitQualifiedObjectName(Trim(SQL), Catalog, Schema, ObjectName);
+      ObjectName := Connection.DbcConnection.GetMetadata.AddEscapeCharToWildcards(ObjectName);
+      FMetaResultSet := Connection.DbcConnection.GetMetadata.GetProcedureColumns(Catalog, Schema, ObjectName, '');
+    end;
 
   for I := 0 to Params.Count - 1 do
   begin
@@ -300,9 +316,7 @@ end;
 procedure TZStoredProc.SetStoredProcName(const Value: string);
 var
   OldParams: TParams;
-  Catalog,
-  Schema,
-  ObjectName: string;
+  Catalog, Schema, ObjectName: string;
   ColumnType: Integer;
 begin
   if AnsiCompareText(Trim(SQL.Text), Trim(Value)) <> 0 then
@@ -349,6 +363,99 @@ begin
   finally
     Connection.HideSQLHourGlass;
   end;
+end;
+
+{**
+  Procedure the First retrieved resultset if the givens
+}
+procedure TZStoredProc.FirstResultSet;
+begin
+  if Assigned(Statement) then
+    if (Statement as IZCallableStatement).HasMoreResultSets then
+      SetAnotherResultset((Statement as IZCallableStatement).GetFirstResultSet);
+end;
+
+{**
+  Procedure the Previous retrieved resultset if the givens
+}
+procedure TZStoredProc.PreviousResultSet;
+begin
+  if Assigned(Statement) then
+    if (Statement as IZCallableStatement).HasMoreResultSets then
+      SetAnotherResultset((Statement as IZCallableStatement).GetPreviousResultSet);
+end;
+
+{**
+  Procedure the Next retrieved resultset if the givens
+}
+procedure TZStoredProc.NextResultSet;
+begin
+  if Assigned(Statement) then
+    if (Statement as IZCallableStatement).HasMoreResultSets then
+      SetAnotherResultset((Statement as IZCallableStatement).GetNextResultSet);
+end;
+
+{**
+  Procedure the Last retrieved resultset if the givens
+}
+procedure TZStoredProc.LastResultSet;
+begin
+  if Assigned(Statement) then
+    if (Statement as IZCallableStatement).HasMoreResultSets then
+      SetAnotherResultset((Statement as IZCallableStatement).GetLastResultSet);
+end;
+
+{**
+  Retrieves a ResultSet by his index.
+  @param Integer the index of the Resultset
+  @result <code>IZResultSet</code> of the Index or nil.
+}
+procedure TZStoredProc.SetResultSet(const Index: Integer);
+begin
+  if Assigned(Statement) then
+    if ( Index < 0 ) or ( Index > (Statement as IZCallableStatement).GetResultSetCount -1 ) then
+      raise Exception.Create(Format(SListIndexError, [Index]))
+    else
+      SetAnotherResultset((Statement as IZCallableStatement).GetResultSetByIndex(Index));
+end;
+
+{**
+  Returns the Count of retrived ResultSets.
+  @result <code>Integer</code> Count
+}
+function TZStoredProc.ResultSetCount: Integer;
+begin
+  if not Assigned(Statement) then
+    Result := 0
+  else
+    if (Statement as IZCallableStatement).HasMoreResultSets then
+      Result := (Statement as IZCallableStatement).GetResultSetCount;
+end;
+
+{**
+  First ResultSet?
+  @result <code>True</code> if first ResultSet
+}
+function TZStoredProc.BOR: Boolean;
+begin
+  if not Assigned(Statement) then
+    Result := True
+  else
+    if (Statement as IZCallableStatement).HasMoreResultSets then
+      Result := (Statement as IZCallableStatement).BOR;
+end;
+
+{**
+  Last ResultSet?
+  @result <code>True</code> if Last ResultSet
+}
+function TZStoredProc.EOR: Boolean;
+begin
+  if not Assigned(Statement) then
+    Result := True
+  else
+    if (Statement as IZCallableStatement).HasMoreResultSets then
+      Result := (Statement as IZCallableStatement).EOR;
 end;
 
 {**

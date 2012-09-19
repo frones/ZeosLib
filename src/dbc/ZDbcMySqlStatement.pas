@@ -175,23 +175,26 @@ type
   end;
 
   {** Implements callable Postgresql Statement. }
-  TZMySQLSQLCallableStatement = class(TZAbstractCallableStatement,
-    IZMySQLStatement, IZParamNamedCallableStatement)
+  TZMySQLCallableStatement = class(TZAbstractCallableStatement, IZMySQLStatement,
+    IZParamNamedCallableStatement)
   private
     FPlainDriver: IZMysqlPlainDriver;
     FHandle: PZMySQLConnect;
+    FQueryHandle: PZMySQLResult;
     FUseResult: Boolean;
     FParamNames: array [0..1024] of String;
     FParamTypeNames: array [0..1024] of String;
+    FIsFunction: Boolean;
+    FResultSets: IZCollection;
+    FActiveResultset: Integer;
     function GetCallSQL: ZAnsiString;
     function GetOutParamSQL: String;
+    function GetSelectFunctionSQL: ZAnsiString;
     function PrepareSQLParam(ParamIndex: Integer): ZAnsiString;
     function GetStmtHandle : PZMySqlPrepStmt;
-
+    procedure ClearResultSets;
   protected
-    //procedure PrepareInParameters; override;
     procedure BindInParameters; override;
-    //procedure UnPrepareInParameters; override;
     function CreateResultSet(const SQL: string): IZResultSet;
     procedure FetchOutParams(ResultSet: IZResultSet);
     procedure RegisterParamTypeAndName(const ParameterIndex:integer;
@@ -200,10 +203,12 @@ type
     constructor Create(PlainDriver: IZMySQLPlainDriver;
       Connection: IZConnection; const SQL: string; Info: TStrings;
       Handle: PZMySQLConnect);
+    procedure RegisterParamType(ParameterIndex:integer;ParamType:Integer); override;
+    procedure Close; override;
 
-    function ExecuteQuery(const SQL: string): IZResultSet; override;
     function Execute(const SQL: string): Boolean; override;
 
+    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; override;
     function ExecuteUpdate(const SQL: ZAnsiString): Integer; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
@@ -211,13 +216,23 @@ type
 
     function IsUseResult: Boolean;
     function IsPreparedStatement: Boolean;
+
+    function HasMoreResultSets: Boolean; override;
+    function GetFirstResultSet: IZResultSet; override;
+    function GetPreviousResultSet: IZResultSet; override;
+    function GetNextResultSet: IZResultSet; override;
+    function GetLastResultSet: IZResultSet; override;
+    function BOR: Boolean; override;
+    function EOR: Boolean; override;
+    function GetResultSetByIndex(const Index: Integer): IZResultSet; override;
+    function GetResultSetCount: Integer; override;
   end;
 
 implementation
 
 uses
   Types, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZSysUtils, ZDbcResultSetMetadata,
-  ZMessages, ZDbcCachedResultSet, ZDbcUtils, DateUtils;
+  ZMessages, ZDbcCachedResultSet, ZDbcUtils, DateUtils, ZCollections;
 
 { TZMySQLStatement }
 
@@ -274,7 +289,7 @@ var
   CachedResultSet: TZCachedResultSet;
 begin
   NativeResultSet := TZMySQLResultSet.Create(FPlainDriver, Self, SQL, FHandle,
-    FUseResult);
+    FUseResult, nil);
   NativeResultSet.SetConcurrency(rcReadOnly);
   if (GetResultSetConcurrency <> rcReadOnly) or (FUseResult
     and (GetResultSetType <> rtForwardOnly)) then
@@ -967,13 +982,13 @@ begin
   Result := FStmtHandle;
 end;
 
-{ TZMySQLSQLCallableStatement }
+{ TZMySQLCallableStatement }
 
 {**
    Create sql string for calling stored procedure.
    @return a Stored Procedure SQL string
 }
-function TZMySQLSQLCallableStatement.GetCallSQL: ZAnsiString;
+function TZMySQLCallableStatement.GetCallSQL: ZAnsiString;
   function GenerateParamsStr(Count: integer): ZAnsiString;
   var
     I: integer;
@@ -992,11 +1007,11 @@ var
   InParams: ZAnsiString;
 begin
   InParams := GenerateParamsStr(OutParamCount);
-  Result := 'CALL `'+ZPlainString(SQL)+'`('+InParams+')';
+  Result := 'CALL '+ZPlainString(SQL)+'('+InParams+')';
 end;
 
-function TZMySQLSQLCallableStatement.GetOutParamSQL: String;
-  function GenerateParamsStr(Count: integer; InParam: Boolean): string;
+function TZMySQLCallableStatement.GetOutParamSQL: String;
+  function GenerateParamsStr(Count: integer): string;
   var
     I: integer;
   begin
@@ -1023,8 +1038,30 @@ function TZMySQLSQLCallableStatement.GetOutParamSQL: String;
 var
   OutParams: String;
 begin
-  OutParams := GenerateParamsStr(Self.OutParamCount-Length(InParamValues), False);
+  OutParams := GenerateParamsStr(Self.OutParamCount-Length(InParamValues));
   Result := 'SELECT '+ OutParams;
+end;
+
+function TZMySQLCallableStatement.GetSelectFunctionSQL: ZAnsiString;
+  function GenerateInParamsStr: ZAnsiString;
+  var
+    I: Integer;
+  begin
+    Result := '';
+    for i := 0 to Length(InParamValues) -1 do
+      if Result = '' then
+        Result := Self.PrepareSQLParam(I)
+      else
+        Result := Result+', '+Self.PrepareSQLParam(I);
+  end;
+var
+  InParams: ZAnsiString;
+begin
+  InParams := GenerateInParamsStr;
+  Result := 'SELECT '+ZPlainString(SQL);
+  if InParams <> '' then
+    Result := Result + '('+InParams+')';
+  Result := Result + ' AS ReturnValue';
 end;
 
 {**
@@ -1038,7 +1075,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZMySQLSQLCallableStatement.PrepareSQLParam(ParamIndex: Integer): ZAnsiString;
+function TZMySQLCallableStatement.PrepareSQLParam(ParamIndex: Integer): ZAnsiString;
 var
   Value: TZVariant;
   TempBytes: TByteDynArray;
@@ -1122,12 +1159,24 @@ begin
   end;
 end;
 
-function TZMySQLSQLCallableStatement.GetStmtHandle: PZMySqlPrepStmt;
+function TZMySQLCallableStatement.GetStmtHandle: PZMySqlPrepStmt;
 begin
   Result := nil;
 end;
 
-procedure TZMySQLSQLCallableStatement.BindInParameters;
+procedure TZMySQLCallableStatement.ClearResultSets;
+var
+  I: Integer;
+begin
+  for i := 0 to FResultSets.Count -1 do
+    IZResultSet(FResultSets[i]).Close;
+  FResultSets.Clear;
+  LastResultSet := nil;
+  FPlainDriver.FreeResult(FQueryHandle);
+  FQueryHandle := nil;
+end;
+
+procedure TZMySQLCallableStatement.BindInParameters;
 var
   I: integer;
   ExecQuery: ZAnsiString;
@@ -1157,23 +1206,28 @@ end;
   Creates a result set based on the current settings.
   @return a created result set object.
 }
-function TZMySQLSQLCallableStatement.CreateResultSet(const SQL: string): IZResultSet;
+function TZMySQLCallableStatement.CreateResultSet(const SQL: string): IZResultSet;
 var
   CachedResolver: TZMySQLCachedResolver;
   NativeResultSet: TZMySQLResultSet;
   CachedResultSet: TZCachedResultSet;
 begin
   NativeResultSet := TZMySQLResultSet.Create(FPlainDriver, Self, SQL, FHandle,
-    FUseResult);
+    FUseResult, @LastUpdateCount, not FIsFunction);
   NativeResultSet.SetConcurrency(rcReadOnly);
   if (GetResultSetConcurrency <> rcReadOnly) or (FUseResult
-    and (GetResultSetType <> rtForwardOnly)) then
+    and (GetResultSetType <> rtForwardOnly)) or (not FIsFunction) then
   begin
     CachedResolver := TZMySQLCachedResolver.Create(FPlainDriver, FHandle, Self,
       NativeResultSet.GetMetaData);
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
       CachedResolver, ClientCodePage);
-    CachedResultSet.SetConcurrency(GetResultSetConcurrency);
+    CachedResultSet.SetConcurrency(rcReadOnly);
+    {Need to fetch all data. The handles must be released for mutiple
+      Resultsets}
+    CachedResultSet.AfterLast;//Fetch all
+    CachedResultSet.BeforeFirst;//Move to first pos
+    NativeResultSet.ReleaseHandle; //Release the handles
     Result := CachedResultSet;
   end
   else
@@ -1184,7 +1238,7 @@ end;
   Sets output parameters from a ResultSet
   @param Value a IZResultSet object.
 }
-procedure TZMySQLSQLCallableStatement.FetchOutParams(ResultSet: IZResultSet);
+procedure TZMySQLCallableStatement.FetchOutParams(ResultSet: IZResultSet);
 var
   ParamIndex, I: Integer;
   Temp: TZVariant;
@@ -1242,7 +1296,31 @@ begin
   ResultSet.BeforeFirst;
 end;
 
-procedure TZMySQLSQLCallableStatement.RegisterParamTypeAndName(const ParameterIndex:integer;
+procedure TZMySQLCallableStatement.RegisterParamType(ParameterIndex:integer;
+  ParamType:Integer);
+begin
+  inherited RegisterParamType(ParameterIndex, ParamType);
+  if not FIsFunction then FIsFunction := ParamType = 4; //ptResult
+end;
+
+{**
+  Releases this <code>Statement</code> object's database
+  and JDBC resources immediately instead of waiting for
+  this to happen when it is automatically closed.
+  It is generally good practice to release resources as soon as
+  you are finished with them to avoid tying up database
+  resources.
+  <P><B>Note:</B> A <code>Statement</code> object is automatically closed when it is
+  garbage collected. When a <code>Statement</code> object is closed, its current
+  <code>ResultSet</code> object, if one exists, is also closed.
+}
+procedure TZMySQLCallableStatement.Close;
+begin
+  ClearResultSets;
+  inherited Close;
+end;
+
+procedure TZMySQLCallableStatement.RegisterParamTypeAndName(const ParameterIndex:integer;
       const ParamTypeName, ParamName: String; Const ColumnSize, Precision: Integer);
 begin
   FParamNames[ParameterIndex] := ParamName;
@@ -1283,7 +1361,7 @@ begin
                     FParamTypeNames[ParameterIndex] := '';
 end;
 
-constructor TZMySQLSQLCallableStatement.Create(PlainDriver: IZMySQLPlainDriver;
+constructor TZMySQLCallableStatement.Create(PlainDriver: IZMySQLPlainDriver;
   Connection: IZConnection; const SQL: string; Info: TStrings;
   Handle: PZMySQLConnect);
 begin
@@ -1291,7 +1369,8 @@ begin
   FHandle := Handle;
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
-
+  FIsFunction := False; //will be reset if RETURN parameters do exist
+  FResultSets := TZCollection.Create;
   FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
 end;
 
@@ -1301,18 +1380,31 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZMySQLSQLCallableStatement.ExecuteQuery(const SQL: string): IZResultSet;
+function TZMySQLCallableStatement.ExecuteQuery(const SQL: ZAnsiString): IZResultSet;
 begin
   Result := nil;
-  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, Self.GetConnection.GetEncoding, LogSQL) = 0 then
+  ASQL := SQL;
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
   begin
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
     if not FPlainDriver.ResultSetExists(FHandle) then
       raise EZSQLException.Create(SCanNotOpenResultSet);
-    Result := CreateResultSet(LogSQL);
+    if FIsFunction then
+      ClearResultSets;
+    FResultSets.Add(CreateResultSet(SSQL));
+    if FPlainDriver.CheckAnotherRowset(FHandle) then
+    begin
+      while FPlainDriver.RetrieveNextRowset(FHandle) = 0 do
+        if FPlainDriver.CheckAnotherRowset(FHandle) then
+          FResultSets.Add(CreateResultSet(SSQL))
+        else break;
+      CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
+    end;
+    FActiveResultset := FResultSets.Count-1;
+    Result := IZResultSet(FResultSets[FActiveResultset]);
   end
   else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
 end;
 
 {**
@@ -1326,31 +1418,36 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZMySQLSQLCallableStatement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
-var
-  QueryHandle: PZMySQLResult;
-  HasResultset : Boolean;
+function TZMySQLCallableStatement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
 begin
   Result := -1;
   ASQL := SQL;
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
   begin
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
-    HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
-    if HasResultSet then
+    if FPlainDriver.ResultSetExists(FHandle) then
     begin
-      QueryHandle := FPlainDriver.StoreResult(FHandle);
-      if QueryHandle <> nil then
+      ClearResultSets;
+      FActiveResultset := 0;
+      FResultSets.Add(CreateResultSet(SSQL));
+      if FPlainDriver.CheckAnotherRowset(FHandle) then
       begin
-        Result := FPlainDriver.GetRowCount(QueryHandle);
-        FPlainDriver.FreeResult(QueryHandle);
+        Result := LastUpdateCount;
+        while FPlainDriver.RetrieveNextRowset(FHandle) = 0 do
+          if FPlainDriver.CheckAnotherRowset(FHandle) then
+          begin
+            FResultSets.Add(CreateResultSet(SSQL));
+            inc(Result, LastUpdateCount); //LastUpdateCount will be returned from ResultSet.Open
+          end
+          else break;
+        CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
       end
       else
-        Result := FPlainDriver.GetAffectedRows(FHandle);
+        Result := LastUpdateCount;
+      FActiveResultset := FResultSets.Count-1;
+      LastResultSet := IZResultSet(FResultSets[FActiveResultset]);
     end
-    { Process regular query }
-    else
+    else { Process regular query }
       Result := FPlainDriver.GetAffectedRows(FHandle);
   end
   else
@@ -1378,7 +1475,7 @@ end;
   @return <code>true</code> if the next result is a <code>ResultSet</code> object;
   <code>false</code> if it is an update count or there are no more results
 }
-function TZMySQLSQLCallableStatement.Execute(const SQL: string): Boolean;
+function TZMySQLCallableStatement.Execute(const SQL: string): Boolean;
 var
   HasResultset : Boolean;
 begin
@@ -1411,12 +1508,24 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     query; never <code>null</code>
 }
-function TZMySQLSQLCallableStatement.ExecuteQueryPrepared: IZResultSet;
+function TZMySQLCallableStatement.ExecuteQueryPrepared: IZResultSet;
 begin
-  BindInParameters;
-  ExecuteUpdate(GetCallSQL);
-  Result := Self.ExecuteQuery(GetOutParamSQL);
-  FetchOutParams(Result);
+  if FIsFunction then
+  begin
+    TrimInParameters;
+    Result := ExecuteQuery(GetSelectFunctionSQL);
+  end
+  else
+  begin
+    BindInParameters;
+    ExecuteUpdate(GetCallSQL);
+    //if Assigned(LastResultSet) then
+      //Result := LastResultSet //Get the First ResultSet(s)
+    //else
+      Result := ExecuteQuery(ZPlainString(GetOutParamSQL)); //Get the Last Resultset
+  end;
+  if Assigned(Result) then
+    FetchOutParams(Result);
 end;
 
 {**
@@ -1429,11 +1538,24 @@ end;
   @return either the row count for INSERT, UPDATE or DELETE statements;
   or 0 for SQL statements that return nothing
 }
-function TZMySQLSQLCallableStatement.ExecuteUpdatePrepared: Integer;
+function TZMySQLCallableStatement.ExecuteUpdatePrepared: Integer;
 begin
-  BindInParameters;
-  Result := ExecuteUpdate(GetCallSQL);
-  FetchOutParams(ExecuteQuery(GetOutParamSQL));
+  if FIsFunction then
+  begin
+    TrimInParameters;
+    Result := ExecuteUpdate(GetSelectFunctionSQL);
+    FetchOutParams(LastResultSet);
+  end
+  else
+  begin
+    BindInParameters;
+    Result := ExecuteUpdate(GetCallSQL);
+    //if Assigned(LastResultSet) then
+      //FetchOutParams(LastResultSet) //Get the First ResultSet(s)
+    //else
+      FetchOutParams(ExecuteQuery(ZPlainString(GetOutParamSQL))); //Get the Last Resultset
+    Inc(Result, LastUpdateCount);
+  end;
 end;
 
 {**
@@ -1441,7 +1563,7 @@ end;
   @return <code>True</code> use result in result sets,
     <code>False</code> store result in result sets.
 }
-function TZMySQLSQLCallableStatement.IsUseResult: Boolean;
+function TZMySQLCallableStatement.IsUseResult: Boolean;
 begin
   Result := FUseResult;
 end;
@@ -1450,9 +1572,125 @@ end;
   Checks if this is a prepared mysql statement.
   @return <code>False</code> This is not a prepared mysql statement.
 }
-function TZMySQLSQLCallableStatement.IsPreparedStatement: Boolean;
+function TZMySQLCallableStatement.IsPreparedStatement: Boolean;
 begin
   Result := False;
+end;
+
+{**
+  Are more resultsets retrieved?
+  @result Returns <code>True</code> if more resultsets are retrieved
+}
+function TZMySQLCallableStatement.HasMoreResultSets: Boolean;
+begin
+  Result := FResultSets.Count > 1;
+end;
+
+{**
+  Get the first resultset..
+  @result <code>IZResultSet</code> if supported
+}
+function TZMySQLCallableStatement.GetNextResultSet: IZResultSet;
+begin
+  if ( FActiveResultset < FResultSets.Count-1) and ( FResultSets.Count > 1) then
+  begin
+    Inc(FActiveResultset);
+    Result := IZResultSet(FResultSets[FActiveResultset]);
+  end
+  else
+    if FResultSets.Count = 0 then
+      Result := nil
+    else
+      Result := IZResultSet(FResultSets[FActiveResultset]);
+end;
+
+{**
+  Get the previous resultset..
+  @result <code>IZResultSet</code> if supported
+}
+function TZMySQLCallableStatement.GetPreviousResultSet: IZResultSet;
+begin
+  if ( FActiveResultset > 0) and ( FResultSets.Count > 0) then
+  begin
+    Dec(FActiveResultset);
+    Result := IZResultSet(FResultSets[FActiveResultset]);
+  end
+  else
+    if FResultSets.Count = 0 then
+      Result := nil
+    else
+      Result := IZResultSet(FResultSets[FActiveResultset]);
+end;
+
+{**
+  Get the next resultset..
+  @result <code>IZResultSet</code> if supported
+}
+function TZMySQLCallableStatement.GetFirstResultSet: IZResultSet;
+begin
+  if FResultSets.Count = 0 then
+    Result := nil
+  else
+  begin
+    FActiveResultset := 0;
+    Result := IZResultSet(FResultSets[0]);
+  end;
+end;
+
+{**
+  Get the last resultset..
+  @result <code>IZResultSet</code> if supported
+}
+function TZMySQLCallableStatement.GetLastResultSet: IZResultSet;
+begin
+  if FResultSets.Count = 0 then
+    Result := nil
+  else
+  begin
+    FActiveResultset := FResultSets.Count -1;
+    Result := IZResultSet(FResultSets[FResultSets.Count -1]);
+  end;
+end;
+
+{**
+  First ResultSet?
+  @result <code>True</code> if first ResultSet
+}
+function TZMySQLCallableStatement.BOR: Boolean;
+begin
+  Result := FActiveResultset = 0;
+end;
+
+{**
+  Last ResultSet?
+  @result <code>True</code> if Last ResultSet
+}
+function TZMySQLCallableStatement.EOR: Boolean;
+begin
+  Result := FActiveResultset = FResultSets.Count -1;
+end;
+
+{**
+  Retrieves a ResultSet by his index.
+  @param Integer the index of the Resultset
+  @result <code>IZResultSet</code> of the Index or nil.
+}
+function TZMySQLCallableStatement.GetResultSetByIndex(const Index: Integer): IZResultSet;
+begin
+  Result := nil;
+  if ( Index < 0 ) or ( Index > FResultSets.Count -1 ) then
+    raise Exception.Create(Format(SListIndexError, [Index]))
+  else
+    Result := IZResultSet(FResultSets[Index]);
+end;
+
+{**
+  Returns the Count of retrived ResultSets.
+  @result <code>Integer</code> Count
+}
+function TZMySQLCallableStatement.GetResultSetCount: Integer;
+begin
+  Result := FResultSets.Count;
 end;
 
 { TZMySQLBindBuffer }

@@ -556,7 +556,7 @@ type
     function ExecuteQueryPrepared: IZResultSet;
     function ExecuteUpdatePrepared: Integer;
     function ExecutePrepared: Boolean;
-    
+
     function GetSQL : String;
 //    procedure Prepare;
 //    procedure Unprepare;
@@ -575,13 +575,7 @@ type
     procedure SetBigDecimal(ParameterIndex: Integer; Value: Extended);
     procedure SetPChar(ParameterIndex: Integer; Value: PChar);
     procedure SetString(ParameterIndex: Integer; const Value: String);
-
-    {$IFDEF DELPHI12_UP}
-      procedure SetUnicodeString(ParameterIndex: Integer; const Value: String); //AVZ
-    {$ELSE}
-      procedure SetUnicodeString(ParameterIndex: Integer; const Value: WideString); //AVZ
-    {$ENDIF}
-
+    procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); //AVZ
     procedure SetBytes(ParameterIndex: Integer; const Value: TByteDynArray);
     procedure SetDate(ParameterIndex: Integer; Value: TDateTime);
     procedure SetTime(ParameterIndex: Integer; Value: TDateTime);
@@ -602,6 +596,16 @@ type
   {** Callable SQL statement interface. }
   IZCallableStatement = interface(IZPreparedStatement)
     ['{E6FA6C18-C764-4C05-8FCB-0582BDD1EF40}']
+    { Multiple ResultSet support API }
+    function HasMoreResultSets: Boolean;
+    function GetFirstResultSet: IZResultSet;
+    function GetPreviousResultSet: IZResultSet;
+    function GetNextResultSet: IZResultSet;
+    function GetLastResultSet: IZResultSet;
+    function BOR: Boolean;
+    function EOR: Boolean;
+    function GetResultSetByIndex(const Index: Integer): IZResultSet;
+    function GetResultSetCount: Integer;
 
     procedure RegisterOutParameter(ParameterIndex: Integer; SQLType: Integer);
     procedure RegisterParamType(ParameterIndex:integer;ParamType:Integer);

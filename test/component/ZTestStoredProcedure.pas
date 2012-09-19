@@ -122,6 +122,8 @@ type
   published
     procedure Test_abtest;
     procedure Test_TEST_All_TYPES;
+    procedure Test_FuncReturnInteger;
+    procedure MultipleVaryingResultSets;
   end;
 
 
@@ -650,8 +652,6 @@ end;
 procedure TZTestMySQLStoredProcedure.Test_TEST_All_TYPES;
 const Str1 = 'צהüךבאüהצ';
 var
-  i, P2: integer;
-  S: String;
   SQLTime: TDateTime;
   TempBytes: TByteDynArray;
 begin
@@ -1052,6 +1052,194 @@ begin
   CheckEquals('P28', StoredProc.Fields[27].DisplayName);
   CheckEquals(60000, StoredProc.Fields[27].AsInteger);
   //CheckEquals(ord(ftInteger), ord(StoredProc.Fields[27].DataType));
+end;
+
+procedure TZTestMySQLStoredProcedure.Test_FuncReturnInteger;
+begin
+  StoredProc.StoredProcName := 'FuncReturnInteger';
+  CheckEquals(2, StoredProc.Params.Count);
+
+  CheckEquals('p_in', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[0].DataType));
+
+  CheckEquals('ReturnValue', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[1].DataType));
+
+  StoredProc.Params[0].AsInteger := 100;
+  StoredProc.ExecProc;
+
+  CheckEquals('ReturnValue', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[1].DataType));
+  CheckEquals(110, StoredProc.Params[1].AsInteger);
+
+  StoredProc.Params[0].AsInteger := 200;
+  StoredProc.Open;
+  CheckEquals(1, StoredProc.Fields.Count);
+
+  CheckEquals('ReturnValue', StoredProc.Fields[0].DisplayName);
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[0].DataType));
+  CheckEquals(210, StoredProc.Fields[0].AsInteger);
+end;
+
+procedure TZTestMySQLStoredProcedure.MultipleVaryingResultSets;
+begin
+  StoredProc.StoredProcName := 'MultipleVaryingResultSets';
+  CheckEquals(3, StoredProc.Params.Count);
+
+  CheckEquals('p_in', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[0].DataType));
+
+  CheckEquals('p_out', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptOutput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[1].DataType));
+
+  CheckEquals('p_inout', StoredProc.Params[2].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[2].ParamType));
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[2].DataType));
+
+  StoredProc.Params[0].AsInteger := 100;
+  StoredProc.Params[1].AsInteger := 200;
+  StoredProc.Params[2].AsInteger := 300;
+  StoredProc.ExecProc;
+  StoredProc.Open;
+
+  CheckEquals(True, StoredProc.EOR);
+  CheckEquals(False, StoredProc.BOR);
+
+  //5 Resultsets Returned What now?
+
+  //The call resultset is retieved..
+  CheckEquals(2, StoredProc.Fields.Count);
+
+  CheckEquals('p_out', StoredProc.Fields[0].DisplayName);
+  CheckEquals(Ord(ftLargeInt), Ord(StoredProc.Fields[0].DataType));
+  CheckEquals(200, StoredProc.Fields[0].AsInteger);
+
+  CheckEquals('p_inout', StoredProc.Fields[1].DisplayName);
+  CheckEquals(Ord(ftLargeInt), Ord(StoredProc.Fields[1].DataType));
+  CheckEquals(300, StoredProc.Fields[1].AsInteger);
+
+  {check first resultset of procedure body}
+  StoredProc.FirstResultSet;
+
+  CheckEquals(3, StoredProc.Fields.Count);
+
+  CheckEquals('p_in', StoredProc.Fields[0].DisplayName);
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[0].DataType));
+  CheckEquals(100, StoredProc.Fields[0].AsInteger);
+
+  CheckEquals('p_out', StoredProc.Fields[1].DisplayName);
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[1].DataType));
+  CheckEquals(0, StoredProc.Fields[1].AsInteger);
+
+  CheckEquals('p_inout', StoredProc.Fields[2].DisplayName);
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[2].DataType));
+  CheckEquals(300, StoredProc.Fields[2].AsInteger);
+
+  {check second resultset}
+  StoredProc.NextResultSet;
+
+  CheckEquals(3, StoredProc.Fields.Count);
+
+  CheckEquals('p_in', StoredProc.Fields[0].DisplayName);
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[0].DataType));
+  CheckEquals(100, StoredProc.Fields[0].AsInteger);
+
+  CheckEquals('p_out', StoredProc.Fields[1].DisplayName);
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[1].DataType));
+  CheckEquals(200, StoredProc.Fields[1].AsInteger);
+
+  CheckEquals('p_inout', StoredProc.Fields[2].DisplayName);
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[2].DataType));
+  CheckEquals(300, StoredProc.Fields[2].AsInteger);
+
+  {check third resultset}
+  StoredProc.NextResultSet;
+
+  CheckEquals(2, StoredProc.Fields.Count);
+
+  CheckEquals('p_in', StoredProc.Fields[0].DisplayName);
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[0].DataType));
+  CheckEquals(100, StoredProc.Fields[0].AsInteger);
+
+  CheckEquals('p_inout', StoredProc.Fields[1].DisplayName);
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[1].DataType));
+  CheckEquals(300, StoredProc.Fields[1].AsInteger);
+
+  {check fourths resultset}
+  StoredProc.NextResultSet;
+
+  CheckEquals(1, StoredProc.Fields.Count);
+
+  CheckEquals('10', StoredProc.Fields[0].DisplayName);
+  CheckEquals(Ord(ftLargeInt), Ord(StoredProc.Fields[0].DataType));
+  CheckEquals(10, StoredProc.Fields[0].AsInteger);
+
+  CheckEquals(False, StoredProc.EOR);
+  CheckEquals(False, StoredProc.BOR);
+
+  {check call resultset again}
+  StoredProc.LastResultSet;
+
+  CheckEquals(2, StoredProc.Fields.Count);
+
+  CheckEquals('p_out', StoredProc.Fields[0].DisplayName);
+  CheckEquals(Ord(ftLargeInt), Ord(StoredProc.Fields[0].DataType));
+  CheckEquals(200, StoredProc.Fields[0].AsInteger);  //these are the paramters. They have been resettet now
+
+  CheckEquals('p_inout', StoredProc.Fields[1].DisplayName);
+  CheckEquals(Ord(ftLargeInt), Ord(StoredProc.Fields[1].DataType));
+  CheckEquals(300, StoredProc.Fields[1].AsInteger);  //these are the paramters. They have been resettet now
+
+  CheckEquals(True, StoredProc.EOR);
+  CheckEquals(False, StoredProc.BOR);
+
+  {check first resultset of procedure body again}
+  StoredProc.FirstResultSet;
+
+  CheckEquals(3, StoredProc.Fields.Count);
+
+  CheckEquals('p_in', StoredProc.Fields[0].DisplayName);
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[0].DataType));
+  CheckEquals(100, StoredProc.Fields[0].AsInteger);
+
+  CheckEquals('p_out', StoredProc.Fields[1].DisplayName);
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[1].DataType));
+  CheckEquals(0, StoredProc.Fields[1].AsInteger);
+
+  CheckEquals('p_inout', StoredProc.Fields[2].DisplayName);
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[2].DataType));
+  CheckEquals(300, StoredProc.Fields[2].AsInteger);
+
+  CheckEquals(False, StoredProc.EOR);
+  CheckEquals(True, StoredProc.BOR);
+
+  {check call resultset again}
+  StoredProc.LastResultSet;
+
+  CheckEquals(2, StoredProc.Fields.Count);
+
+  CheckEquals('p_out', StoredProc.Fields[0].DisplayName);
+  CheckEquals(Ord(ftLargeInt), Ord(StoredProc.Fields[0].DataType));
+  CheckEquals(200, StoredProc.Fields[0].AsInteger);
+
+  CheckEquals('p_inout', StoredProc.Fields[1].DisplayName);
+  CheckEquals(Ord(ftLargeInt), Ord(StoredProc.Fields[1].DataType));
+  CheckEquals(300, StoredProc.Fields[1].AsInteger);
+
+  {check third resultset again}
+  StoredProc.PreviousResultSet;
+
+  CheckEquals(1, StoredProc.Fields.Count);
+
+  CheckEquals('10', StoredProc.Fields[0].DisplayName);
+  CheckEquals(Ord(ftLargeInt), Ord(StoredProc.Fields[0].DataType));
+  CheckEquals(10, StoredProc.Fields[0].AsInteger);
+
 end;
 
 initialization
