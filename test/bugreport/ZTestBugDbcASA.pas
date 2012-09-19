@@ -72,6 +72,7 @@ type
 
     property Connection: IZConnection read FConnection write FConnection;
   published
+    procedure EmptyTest;
   end;
 
 implementation
@@ -82,7 +83,7 @@ uses ZTestCase, ZTestConsts;
 
 function TZTestDbcASABugReport.GetSupportedProtocols: string;
 begin
-  Result := 'ASA7,ASA8,ASA9';
+  Result := 'ASA7,ASA8,ASA9,ASA12';
 end;
 
 procedure TZTestDbcASABugReport.SetUp;
@@ -94,6 +95,11 @@ procedure TZTestDbcASABugReport.TearDown;
 begin
   Connection.Close;
   Connection := nil;
+end;
+
+procedure TZTestDbcASABugReport.EmptyTest;
+begin
+  //drop me if bugs are reported
 end;
 
 

@@ -80,7 +80,6 @@ type
     FDelete: Boolean;
   protected
     procedure Open; override;
-    procedure Close; override;
     procedure PrepareUpdateSQLData; virtual;
     function GetFieldValue(ColumnIndex: Integer): Variant;
     function InternalGetString(ColumnIndex: Integer): AnsiString; override;
@@ -91,6 +90,7 @@ type
       CachedBlob: boolean);
 
     function GetCursorName: AnsiString; override;
+    procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
