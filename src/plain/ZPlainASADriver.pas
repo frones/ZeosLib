@@ -487,7 +487,7 @@ procedure TZASABasePlainDriver.db_prepare_describe( sqlca: PZASASQLCA;
    ProgName: PAnsiChar; StatementNum: PSmallInt; SqlStatement: PAnsiChar;
   Descriptor: PASASQLDA; WhatToDesc: LongWord; LongNames: Word);
 var
-  U1, U2, U3: Word;
+  U1, U2: Word;
 begin
   U1 := 0;
   U2 := 0;
