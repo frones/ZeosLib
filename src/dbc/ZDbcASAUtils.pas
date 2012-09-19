@@ -501,11 +501,7 @@ function TZASASQLDA.GetFieldIndex(const Name: String): Word;
 begin
   for Result := 0 to FSQLDA.sqld - 1 do
     if FSQLDA.sqlvar[Result].sqlname.length = Length(name) then
-      {$IFDEF DELPHI12_UP}
-      if StrLIComp(@FSQLDA.sqlvar[Result].sqlname.data, PAnsiChar(UTF8String(Name)), Length(name)) = 0 then
-      {$ELSE}
-      if StrLIComp(@FSQLDA.sqlvar[Result].sqlname.data, PAnsiChar(Name), Length(name)) = 0 then
-      {$ENDIF}
+      if StrLIComp(@FSQLDA.sqlvar[Result].sqlname.data, PAnsiChar(ZPlainString(Name)), Length(name)) = 0 then
             Exit;
   CreateException( Format( SFieldNotFound1, [name]));
   Result := 0; // satisfy compiler
@@ -1634,13 +1630,8 @@ begin
       DT_TIMESTAMP_STRUCT : Result := GetTimeStamp( Index);
       DT_TINYINT     : Result := PByte(sqldata)^;
       DT_BIT         : Result := Boolean( PByte(sqldata)^);
-  {$IFDEF COMPILER6_UP}
       DT_BIGINT,
       DT_UNSBIGINT   : Result := PInt64(sqldata)^;
-  {$ELSE}
-      DT_BIGINT,
-      DT_UNSBIGINT   : Result := Integer( PInt64(sqldata)^);
-  {$ENDIF}
     else
       CreateException( Format( SErrorConvertionField,
         [ GetFieldName(Index), ConvertASATypeToString( sqlType)]));
@@ -2065,7 +2056,12 @@ end;
 
 procedure ASAPrepare( FASAConnection: IZASAConnection; FSQLData, FParamsSQLData: IZASASQLDA;
    const SQL: String; StmtNum: PSmallInt; var FPrepared, FMoreResults: Boolean);
+var
+  AnsiSQL: ZAnsiString;
+  LogSQL: String;
 begin
+  AnsiSQL := FASAConnection.GetPlainDriver.GetPrepreparedSQL(FASAConnection.GetDBHandle,
+    SQL, FASAConnection.GetEncoding, LogSQL, FASAConnection.PreprepareSQL);
   with FASAConnection do
   begin
     if FPrepared then
@@ -2079,15 +2075,9 @@ begin
       end;
     end;
     try
-      {$IFDEF DELPHI12_UP}
-      GetPlainDriver.db_prepare_describe(GetDBHandle, nil, StmtNum,
-            PAnsiChar(UTF8String(SQL)), FParamsSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
-            SQL_PREPARE_DESCRIBE_INPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);
-      {$ELSE}
       GetPlainDriver.db_prepare_describe( GetDBHandle, nil, StmtNum,
-            PAnsiChar(SQL), FParamsSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
+            PAnsiChar(AnsiSQL), FParamsSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
             SQL_PREPARE_DESCRIBE_INPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);
-      {$ENDIF}
       ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, SQL);
 
       FMoreResults := GetDBHandle.sqlerrd[2] = 0;
@@ -2199,25 +2189,25 @@ begin
         stUnicodeStream,
         stBinaryStream:
           begin
-            TempBlob := DefVarManager.GetAsInterface( InParamValues[i]) as IZBlob;
+            TempBlob := DefVarManager.GetAsInterface(InParamValues[I]) as IZBlob;
             if not TempBlob.IsEmpty then
             begin
-              if (Encoding = ceUTF8) and
-                (InParamTypes[I] in [stAsciiStream, stUnicodeStream]) then
-              begin
-                TempStreamIn := TempBlob.GetStream;
-                TempStream := GetValidatedUnicodeStream(TempStreamIn);
-                TempStreamIn.Free;
-              end
-              else
-                TempStream := TempBlob.GetStream;
+              TempStream := TempBlob.GetStream;
               try
-                ParamSqlData.WriteBlob( i, TempStream);
+                if (ParamSqlData.GetFieldSqlType(i) in [stUnicodeStream, stAsciiStream]) and
+                  (Encoding = ceUTF8) then
+                begin
+                  TempStreamIn := GetValidatedUnicodeStream(TempStream);
+                  ParamSqlData.WriteBlob(I, TempStreamIn);
+                  TempStreamIn.Free;
+                end
+                else
+                  ParamSqlData.WriteBlob(I, TempStream);
               finally
                 TempStream.Free;
               end;
             end;
-          end;
+          end
         else
           raise EZASAConvertError.Create( SUnsupportedParameterType);
       end;

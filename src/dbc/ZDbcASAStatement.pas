@@ -247,12 +247,12 @@ var
   CursorOptions: SmallInt;
 begin
   Close;
-
+  ASQL := Self.GetPrepreparedSQL(SQL);
   with FASAConnection do
   begin
     try
       GetPlainDriver.db_prepare_describe( GetDBHandle, nil, @FStmtNum,
-            PAnsiChar(ZPlainString(SQL)), FSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
+            PAnsiChar(ASQL), FSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
             SQL_PREPARE_DESCRIBE_OUTPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);
       ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, SQL);
 
@@ -318,15 +318,12 @@ end;
 {$HINTS OFF}
 function TZASAStatement.ExecuteUpdate(const SQL: string): Integer;
 begin
+  ASQL := Self.GetPrepreparedSQL(SQL);
   Close;
   Result := -1;
   with FASAConnection do
   begin
-    {$IFDEF DELPHI12_UP}
-    GetPlainDriver.db_execute_imm(GetDBHandle, PAnsiChar(UTF8String(SQL)));
-    {$ELSE}
-    GetPlainDriver.db_execute_imm(GetDBHandle, PAnsiChar(SQL)); 
-    {$ENDIF}      
+    GetPlainDriver.db_execute_imm(GetDBHandle, PAnsiChar(ASQL));
     ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, SQL);
 
     Result := GetDBHandle.sqlErrd[2];
