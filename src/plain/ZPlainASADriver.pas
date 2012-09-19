@@ -315,6 +315,8 @@ begin
     @ASA_API.db_register_a_callback := GetAddress('db_register_a_callback');
     @ASA_API.dbpp_resume            := GetAddress('dbpp_resume');
     @ASA_API.db_cancel_request      := GetAddress('db_cancel_request');
+    @ASA_API.db_change_char_charset := GetAddress('db_change_char_charset');
+    @ASA_API.db_change_nchar_charset:= GetAddress('db_change_nchar_charset');
   end;
 end;
 

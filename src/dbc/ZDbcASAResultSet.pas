@@ -80,6 +80,7 @@ type
     FDelete: Boolean;
   protected
     procedure Open; override;
+    procedure Close; override;
     procedure PrepareUpdateSQLData; virtual;
     function GetFieldValue(ColumnIndex: Integer): Variant;
     function InternalGetString(ColumnIndex: Integer): AnsiString; override;
@@ -700,6 +701,12 @@ begin
   end;
   LastRowNo := MaxInt;
   inherited Open;
+end;
+
+procedure TZASAResultSet.Close;
+begin
+  Self.FASAConnection.GetPlainDriver.db_close(FASAConnection.GetDBHandle, PAnsiChar(FCursorName));
+  inherited Close;
 end;
 
 function TZASAResultSet.GetCursorName: AnsiString;

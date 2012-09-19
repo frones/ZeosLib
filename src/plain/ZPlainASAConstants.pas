@@ -854,6 +854,13 @@ type
     LongNames: Word);
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
+  {ASA12 dbpp_prepare_describe_12, (SQLCA *,char *,char *,short int *,char *,struct sqlda *,struct sqlda *,unsigned int, unsigned short int, a_sql_uint32 ))}
+  TASAdbpp_prepare_describe_12 = procedure (SQLCA: PZASASQLCA; UnKnown: PAnsiChar;
+    ProgName: PAnsiChar; RecordStatementNum: PSmallInt; SqlStatement: PAnsiChar;
+    Descriptor1: PASASQLDA; Descriptor2: PASASQLDA; WhatToDesc: LongWord;
+    UnknownUint, LongNames, UnknownUint2: word)
+    {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
+
   TASAdbpp_select = procedure(sqlca: PZASASQLCA; UnKnown: PAnsiChar;
     ProgName: PAnsiChar; RecordStatementNum: PSmallInt; Descriptor1,
     Descriptor2: PASASQLDA);
@@ -953,12 +960,12 @@ type
   TASAdb_cancel_request = function( sqlca: PZASASQLCA): Integer;
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
-  {ASA12}
-  TASAdbpp_prepare_describe_12 = procedure (SQLCA: PZASASQLCA; UnKnown: PAnsiChar;
-    ProgName: PAnsiChar; RecordStatementNum: PSmallInt; SqlStatement: PAnsiChar;
-    Descriptor1: PASASQLDA; Descriptor2: PASASQLDA; WhatToDesc: LongWord;
-    UnknownUint, LongNames, UnknownUint2: word)
+  TASAdb_change_char_charset = function( sqlca: PZASASQLCA; const CharSet: PAnsiChar): Word;
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
+
+  TASAdb_change_nchar_charset = function( sqlca: PZASASQLCA; const CharSet: PAnsiChar): Word;
+    {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
+
 { ************* Plain API Function variables definition ************ }
 
 TASA_API = record
@@ -984,7 +991,6 @@ TASA_API = record
   dbpp_prepare_into:      TASAdbpp_prepare_into;
   dbpp_prepare_describe:  TASAdbpp_prepare_describe;
   dbpp_prepare_describe_12: TASAdbpp_prepare_describe_12;
-  //dbpp_prepare_describe_exec_12: TASAdbpp_prepare_describe_exec_12;
   dbpp_select:            TASAdbpp_select;
   dbpp_open:              TASAdbpp_open;
   dbpp_close:             TASAdbpp_close;
@@ -1007,6 +1013,8 @@ TASA_API = record
   dbpp_fetch_array:       TASAdbpp_fetch_array;
   dbpp_resume:            TASAdbpp_resume;
   db_cancel_request:      TASAdb_cancel_request;
+  db_change_char_charset: TASAdb_change_char_charset;
+  db_change_nchar_charset:  TASAdb_change_nchar_charset;
 end;
 
 implementation
