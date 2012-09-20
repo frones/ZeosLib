@@ -150,7 +150,7 @@ procedure TZAdoResultSet.Open;
 var
   OleDBRowset: IUnknown;
   OleDBColumnsInfo: IColumnsInfo;
-  pcColumns: {$IFDEF DELPHI16_UP}NativeUInt{$ELSE}Cardinal{$ENDIF};
+  pcColumns: NativeUInt;
   prgInfo, OriginalprgInfo: PDBColumnInfo;
   ppStringsBuffer: PWideChar;
   I: Integer;
@@ -189,7 +189,7 @@ begin
 
   if Assigned(prgInfo) then
     if prgInfo.iOrdinal = 0 then
-      Inc({$IFDEF DELPHI16_UP}NativeInt{$ELSE}Integer{$ENDIF}(prgInfo), SizeOf(TDBColumnInfo)); //M.A. Inc(Integer(prgInfo), SizeOf(TDBColumnInfo));
+      Inc(NativeInt(prgInfo), SizeOf(TDBColumnInfo));
 
   for I := 0 to AdoColumnCount - 1 do
   begin

@@ -414,6 +414,7 @@ type
     function SupportsCatalogsInTableDefinitions: Boolean;
     function SupportsCatalogsInIndexDefinitions: Boolean;
     function SupportsCatalogsInPrivilegeDefinitions: Boolean;
+    function SupportsOverloadPrefixInStoredProcedureName: Boolean;
     function SupportsPositionedDelete: Boolean;
     function SupportsPositionedUpdate: Boolean;
     function SupportsSelectForUpdate: Boolean;

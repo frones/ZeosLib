@@ -116,7 +116,7 @@ uses
   Variants,
 {$ENDIF}
   OleDB, ActiveX, ComObj,
-  ZDbcLogging, ZDbcCachedResultSet,
+  ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet,
   ZDbcAdoResultSet, ZDbcAdoUtils;
 
 constructor TZAdoStatement.Create(PlainDriver: IZPlainDriver; Connection: IZConnection; SQL: string;
@@ -488,12 +488,55 @@ end;
 function TZAdoCallableStatement.GetOutParam(ParameterIndex: Integer): TZVariant;
 var
   Temp: Variant;
+  {Stream: TMemoryStream;
+  V: Variant;
+  P: Pointer;
+  TempBlob: IZBLob;}
 begin
   if ParameterIndex > OutParamCount then
     Result := NullVariant
-  else begin
+  else
+  begin
     Temp := FAdoCommand.Parameters.Item[ParameterIndex - 1].Value;
 
+    (*case ConvertAdoToSqlType(FAdoCommand.Parameters.Item[ParameterIndex - 1].Type_) of
+      stBoolean:
+        DefVarManager.SetAsBoolean(Result, Temp);
+      stByte, stShort, stInteger, stLong:
+        DefVarManager.SetAsInteger(Result, Temp);
+      stFloat, stDouble, stBigDecimal:
+        DefVarManager.SetAsFloat(Result, Temp);
+      stString, stAsciiStream:
+        DefVarManager.SetAsString(Result, Temp);
+      stUnicodeString, stUnicodeStream:
+        DefVarManager.SetAsUnicodeString(Result, Temp);
+      stBytes:
+        DefVarManager.SetAsString(Result, BytesToStr(Temp));
+      stDate, stTime, stTimestamp:
+        DefVarManager.SetAsDateTime(Result, Temp);
+      stBinaryStream:
+        begin
+          if VarIsStr(V) then
+          begin
+            TempBlob := TZAbstractBlob.CreateWithStream(nil);
+            TempBlob.SetString(AnsiString(V));
+          end
+          else
+            if VarIsArray(V) then
+            begin
+              P := VarArrayLock(V);
+              try
+                TempBlob := TZAbstractBlob.CreateWithData(P, VarArrayHighBound(V, 1)+1);
+              finally
+                VarArrayUnLock(V);
+              end;
+            end;
+          DefVarManager.SetAsInterface(Result, TempBlob);
+          TempBlob := nil;
+        end
+      else
+        DefVarManager.SetNull(Result);
+    end; *)
     //!! Please fix.
     case VarType(Temp) of
       varString, varOleStr:

@@ -74,11 +74,12 @@ type
   protected
     procedure SetUp; override;
     procedure TearDown; override;
-  published
+    procedure TestClientDatasetWithForeignKey_ApplyUpdates;
+published
     procedure TestDataSource;
     procedure TestMasterFields;
     procedure TestClientDataset;
-    procedure TestClientDatasetWithForeignKey;
+    procedure TestClientDatasetWithForeignKey_doUpdateMasterFirst;
   end;
 
 implementation
@@ -105,15 +106,12 @@ begin
 
   DetailQuery := TZQuery.Create(nil);
   DetailQuery.Connection := Connection;
-  DetailQuery.Options := DetailQuery.Options + [doUpdateMasterFirst];
 
   DetailQuery2 := TZQuery.Create(nil);
   DetailQuery2.Connection := Connection;
-  DetailQuery2.Options := DetailQuery2.Options + [doUpdateMasterFirst];
 
   DetailQuery3 := TZQuery.Create(nil);
   DetailQuery3.Connection := Connection;
-  DetailQuery3.Options := DetailQuery3.Options + [doUpdateMasterFirst];
 end;
 
 {**
@@ -275,7 +273,7 @@ end;
   Then all DetailTables should have been updated.
   Very tricky and has to deal with MetaData informations.
 }
-procedure TZTestMasterDetailCase.TestClientDatasetWithForeignKey;
+procedure TZTestMasterDetailCase.TestClientDatasetWithForeignKey_doUpdateMasterFirst;
 var
   SQLMonitor: TZSQLMonitor;
   CommitCount, I: Integer;
@@ -290,6 +288,7 @@ begin
   DetailQuery.MasterSource := MasterDataSource;
   DetailQuery.MasterFields := 'dep_id';
   DetailQuery.LinkedFields := 'p_dep_id';
+  DetailQuery.Options := DetailQuery.Options + [doUpdateMasterFirst];
   DetailQuery.Open;
   CommitCount := 0;
   try
@@ -334,6 +333,86 @@ begin
         if Pos('COMMIT', UpperCase(SQLMonitor.TraceList[i].Message)) > 0 then
           Inc(CommitCount);
     //fix it CheckEquals(1, CommitCount, 'CommitCount');
+  finally
+    MasterQuery.SQL.Text := 'delete from people where p_id = '+IntToStr(TestRowID);
+    MasterQuery.ExecSQL;
+    MasterQuery.SQL.Text := 'delete from department where dep_id = '+IntToStr(TestRowID);
+    MasterQuery.ExecSQL;
+    SQLMonitor.Free;
+  end;
+end;
+
+procedure TZTestMasterDetailCase.TestClientDatasetWithForeignKey_ApplyUpdates;
+var
+  SQLMonitor: TZSQLMonitor;
+  I: Integer;
+
+  procedure SetTheData(Index: Integer);
+  begin
+    MasterQuery.Append;
+    MasterQuery.FieldByName('dep_id').AsInteger := TestRowID + Index;
+    if Connection.UTF8StringsAsWideField or ( Connection.DbcConnection.GetEncoding = ceAnsi) then
+        MasterQuery.FieldByName('dep_name').AsString := 'צהüüהצ'
+    else
+      MasterQuery.FieldByName('dep_name').AsString := Utf8Encode(WideString('צהüüהצ'));
+    MasterQuery.FieldByName('dep_shname').AsString := 'abc';
+
+    if Connection.UTF8StringsAsWideField or (Connection.DbcConnection.GetEncoding = ceAnsi) then
+       MasterQuery.FieldByName('dep_address').AsString := 'A adress of צהüüהצ'
+    else
+      MasterQuery.FieldByName('dep_address').AsString := Utf8Encode(WideString('A adress of צהüüהצ'));
+
+    CheckEquals(True, (MasterQuery.State = dsInsert), 'MasterQuery Insert-State');
+
+    DetailQuery.Append;
+    DetailQuery.FieldByName('p_id').AsInteger := TestRowID + Index;
+    DetailQuery.FieldByName('p_dep_id').AsInteger := TestRowID + Index;
+
+    if Connection.UTF8StringsAsWideField or (Connection.DbcConnection.GetEncoding = ceAnsi) then
+        DetailQuery.FieldByName('p_name').AsString := 'üהצצהü'
+    else
+      DetailQuery.FieldByName('p_name').AsString := Utf8Encode(WideString('üהצצהü'));
+
+    DetailQuery.FieldByName('p_begin_work').AsDateTime := now;
+    DetailQuery.FieldByName('p_end_work').AsDateTime := now;
+    DetailQuery.FieldByName('p_picture').AsString := '';
+    DetailQuery.FieldByName('p_resume').AsString := '';
+    DetailQuery.FieldByName('p_redundant').AsInteger := 5;
+    CheckEquals(True, (DetailQuery.State = dsInsert), 'MasterQuery Insert-State');
+  end;
+begin
+  Connection.AutoCommit := False;
+  //Connection.TransactIsolationLevel := tiReadCommitted;
+  SQLMonitor := TZSQLMonitor.Create(nil);
+  SQLMonitor.Active := True;
+  MasterQuery.SQL.Text := 'SELECT * FROM department ORDER BY dep_id';
+  MasterQuery.CachedUpdates := True;
+  MasterQuery.Open;
+
+  DetailQuery.SQL.Text := 'SELECT * FROM people';
+  DetailQuery.MasterSource := MasterDataSource;
+  DetailQuery.MasterFields := 'dep_id';
+  DetailQuery.LinkedFields := 'p_dep_id';
+  DetailQuery.CachedUpdates := True;
+  DetailQuery.Open;
+  SetTheData(0);
+  try
+    try
+      DetailQuery.ApplyUpdates;
+      MasterQuery.ApplyUpdates;
+      Connection.Commit;
+      Fail('Wrong ApplayUpdates behavior!');
+    except
+      DetailQuery.CancelUpdates;
+      MasterQuery.CancelUpdates;
+      SetTheData(1);
+      //DetailQuery.Options := DetailQuery.Options + [doUpdateMasterFirst];
+      MasterQuery.ApplyUpdates;
+      DetailQuery.ApplyUpdates;
+      Connection.Commit;
+      CheckEquals(True, (MasterQuery.State = dsBrowse), 'MasterQuery Browse-State');
+      CheckEquals(True, (DetailQuery.State = dsBrowse), 'DetailQuery Browse-State');
+    end;
   finally
     MasterQuery.SQL.Text := 'delete from people where p_id = '+IntToStr(TestRowID);
     MasterQuery.ExecSQL;

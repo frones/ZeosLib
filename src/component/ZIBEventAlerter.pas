@@ -497,6 +497,7 @@ begin
   end;
 end;
 
+{$WARNINGS OFF}
 constructor TIBEventThread.Create(Owner: TZIBEventAlerter;
   EventGrp: integer; TermEvent: TNotifyEvent);
 begin
@@ -508,6 +509,7 @@ begin
   OnTerminate := TermEvent;
   Resume;
 end;
+{$WARNINGS ON}
 
 destructor TIBEventThread.Destroy;
 begin

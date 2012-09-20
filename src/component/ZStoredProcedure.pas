@@ -425,9 +425,8 @@ end;
 }
 function TZStoredProc.ResultSetCount: Integer;
 begin
-  if not Assigned(Statement) then
-    Result := 0
-  else
+  Result := 0;
+  if Assigned(Statement) then
     if (Statement as IZCallableStatement).HasMoreResultSets then
       Result := (Statement as IZCallableStatement).GetResultSetCount;
 end;
@@ -438,9 +437,8 @@ end;
 }
 function TZStoredProc.BOR: Boolean;
 begin
-  if not Assigned(Statement) then
-    Result := True
-  else
+  Result := True;
+  if Assigned(Statement) then
     if (Statement as IZCallableStatement).HasMoreResultSets then
       Result := (Statement as IZCallableStatement).BOR;
 end;
@@ -451,9 +449,8 @@ end;
 }
 function TZStoredProc.EOR: Boolean;
 begin
-  if not Assigned(Statement) then
-    Result := True
-  else
+  Result := True;
+  if Assigned(Statement) then
     if (Statement as IZCallableStatement).HasMoreResultSets then
       Result := (Statement as IZCallableStatement).EOR;
 end;

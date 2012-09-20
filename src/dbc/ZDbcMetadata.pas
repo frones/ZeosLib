@@ -361,6 +361,7 @@ type
     function SupportsCatalogsInTableDefinitions: Boolean; virtual;
     function SupportsCatalogsInIndexDefinitions: Boolean; virtual;
     function SupportsCatalogsInPrivilegeDefinitions: Boolean; virtual;
+    function SupportsOverloadPrefixInStoredProcedureName: Boolean; virtual;
     function SupportsPositionedDelete: Boolean; virtual;
     function SupportsPositionedUpdate: Boolean; virtual;
     function SupportsSelectForUpdate: Boolean; virtual;
@@ -1238,6 +1239,15 @@ end;
   @return <code>true</code> if so; <code>false</code> otherwise
 }
 function TZAbstractDatabaseInfo.SupportsCatalogsInPrivilegeDefinitions: Boolean;
+begin
+  Result := False;
+end;
+
+{**
+  Can a stored procedure have an additional overload suffix?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZAbstractDatabaseInfo.SupportsOverloadPrefixInStoredProcedureName: Boolean;
 begin
   Result := False;
 end;

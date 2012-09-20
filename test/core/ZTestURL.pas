@@ -65,7 +65,6 @@ type
   { TZURLTest }
 
   TZURLTest = class (TZCoreGenericTestCase)
-  private
   published
     procedure TestAssignToUrl;
     procedure TestAssignToProperties;
@@ -75,6 +74,7 @@ type
     procedure TestAssignToProperties_Properties;
     procedure TestAssignToProperties_Properties2;
     procedure TestAssignToProperties_ProtocolOnly;
+    procedure TestAssignToProperties_LibLocationOnly;
     procedure TestAssignToUrl_UID_PWD;
     procedure TestAssignToUrl_UID_PWD2;
     procedure TestEmpty;
@@ -186,6 +186,24 @@ begin
     ZURL.HostName := '127.0.0.1';
     ZURL.Database := 'model';
     CheckEquals('zdbc:firebird-2.0://127.0.0.1/model', ZURL.URL);
+  finally
+    ZURL.Free;
+  end;
+end;
+
+procedure TZURLTest.TestAssignToProperties_LibLocationOnly;
+var
+  ZURL: TZURL;
+begin
+  // Test assignment to properties without port, user, password and properties
+  ZURL := TZURL.Create;
+  try
+    ZURL.Prefix := 'zdbc';
+    ZURL.Protocol := 'firebird-2.0';
+    ZURL.HostName := '127.0.0.1';
+    ZURL.Database := 'model';
+    ZURL.LibLocation := 'liblocpath';
+    CheckEquals('zdbc:firebird-2.0://127.0.0.1/model?LibLocation=liblocpath', ZURL.URL);
   finally
     ZURL.Free;
   end;

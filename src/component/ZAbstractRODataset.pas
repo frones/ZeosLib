@@ -294,9 +294,9 @@ type
     procedure InternalDelete; override;
     procedure InternalPost; override;
 
-    procedure SetFieldData(Field: TField; Buffer: Pointer;
+    procedure SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
       NativeFormat: Boolean); override;
-    procedure SetFieldData(Field: TField; Buffer: Pointer); override;
+    procedure SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}); override;
     procedure DefineProperties(Filer: TFiler); override;
 
 {$IFDEF WITH_TRECORDBUFFER}
@@ -437,8 +437,8 @@ type
       override;
     function BookmarkValid(Bookmark: TBookmark): Boolean; override;
 
-    function GetFieldData(Field: TField; Buffer: Pointer): Boolean; override;
-    function GetFieldData(Field: TField; Buffer: Pointer;
+    function GetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}): Boolean; override;
+    function GetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
       NativeFormat: Boolean): Boolean; override;
     function CreateBlobStream(Field: TField; Mode: TBlobStreamMode): TStream;
       override;
@@ -1250,7 +1250,7 @@ begin
   Result := RowBuffer <> nil;
 end;
 
-function TZAbstractRODataset.GetFieldData(Field: TField; Buffer: Pointer;
+function TZAbstractRODataset.GetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
   NativeFormat: Boolean): Boolean;
 begin
   if Field.DataType in [ftWideString] then
@@ -1265,12 +1265,12 @@ end;
   @return <code>True</code> if non-null value was retrieved.
 }
 function TZAbstractRODataset.GetFieldData(Field: TField;
-  Buffer: Pointer): Boolean;
+  Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}): Boolean;
 var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
   {$IFNDEF WITH_WIDESTRUTILS}
-  WS:WideString;
+  WS: WideString;
   {$ENDIF}
 begin
   if GetActiveBuffer(RowBuffer) then
@@ -1315,8 +1315,8 @@ begin
         ftWideString:
           begin
             {$IFDEF WITH_WIDESTRUTILS}
-              WStrCopy(Buffer, PWideChar(RowAccessor.GetUnicodeString(ColumnIndex, Result)));
-            {$ELSE}
+                WStrCopy(PWideChar(Buffer), PWideChar(RowAccessor.GetUnicodeString(ColumnIndex, Result)));
+              {$ELSE}
               //FPC: WideStrings are COM managed fields
               WS:=RowAccessor.GetUnicodeString(ColumnIndex, Result);
               //include null terminator in copy
@@ -1334,8 +1334,8 @@ begin
         { Processes all other fields. }
         else
           begin
-            System.Move(RowAccessor.GetColumnData(ColumnIndex, Result)^, Buffer^,
-              RowAccessor.GetColumnDataSize(ColumnIndex));
+            System.Move(RowAccessor.GetColumnData(ColumnIndex, Result)^, PWideChar(Buffer)^,
+            RowAccessor.GetColumnDataSize(ColumnIndex));
             Result := not Result;
           end;
       end;
@@ -1355,10 +1355,10 @@ end;
 {**
   Support for widestring field
 }
-procedure TZAbstractRODataset.SetFieldData(Field: TField; Buffer: Pointer;
+procedure TZAbstractRODataset.SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
   NativeFormat: Boolean);
 begin
-  if Field.DataType in [ftWideString] then
+  if Field.DataType in [ftWideString{$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}] then
     NativeFormat := True;
 
   {$IFNDEF VIRTUALSETFIELDDATA}
@@ -1373,7 +1373,7 @@ end;
   @param Field an field object to be stored.
   @param Buffer a field value buffer.
 }
-procedure TZAbstractRODataset.SetFieldData(Field: TField; Buffer: Pointer);
+procedure TZAbstractRODataset.SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF});
 var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
@@ -1444,8 +1444,8 @@ begin
       end
       else  //process all others also calculatets
       begin
-        System.Move(Buffer^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
-          RowAccessor.GetColumnDataSize(ColumnIndex));
+        System.Move(PWideChar(Buffer)^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
+        RowAccessor.GetColumnDataSize(ColumnIndex));
         RowAccessor.SetNotNull(ColumnIndex);
       end;
     end
@@ -3478,6 +3478,18 @@ const
     ftLongWord, ftShortint, ftByte, ftExtended, ftConnection, ftParams, ftStream,
     ftTimeStampOffset, ftObject, ftSingle );
 {$ELSE}
+{$IFDEF VER240}
+const
+  BaseFieldTypes: array[TFieldType] of TFieldType = (
+    ftUnknown, ftString, ftSmallint, ftInteger, ftWord, ftBoolean, ftFloat,
+    ftCurrency, ftBCD, ftDate, ftTime, ftDateTime, ftBytes, ftVarBytes, ftAutoInc,
+    ftBlob, ftMemo, ftGraphic, ftFmtMemo, ftParadoxOle, ftDBaseOle, ftTypedBinary,
+    ftCursor, ftFixedChar, ftWideString, ftLargeint, ftADT, ftArray, ftReference,
+    ftDataSet, ftOraBlob, ftOraClob, ftVariant, ftInterface, ftIDispatch, ftGuid,
+    ftTimeStamp, ftFMTBcd, ftFixedWideChar, ftWideMemo, ftOraTimeStamp, ftOraInterval,
+    ftLongWord, ftShortint, ftByte, ftExtended, ftConnection, ftParams, ftStream,
+    ftTimeStampOffset, ftObject, ftSingle );
+{$ELSE}
  const
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,
@@ -3487,6 +3499,7 @@ const
     ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimestamp, ftFMTBcd);
 
  {$ENDIF}
+{$ENDIF}
 {$ENDIF}
 {$ENDIF}
 {$ENDIF}

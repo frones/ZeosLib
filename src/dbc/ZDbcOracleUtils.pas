@@ -522,7 +522,7 @@ begin
     Result := stString
   else if (TypeName = 'NCHAR') or (TypeName = 'NVARCHAR2') then
     Result := stString
-  else if TypeName = 'FLOAT' then
+  else if (TypeName = 'FLOAT') or (TypeName = 'BINARY_FLOAT') or (TypeName = 'BINARY_DOUBLE') then
     Result := stDouble
   else if TypeName = 'DATE' then  {precission - 1 sec, so Timestamp}
     Result := stTimestamp

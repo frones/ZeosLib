@@ -262,6 +262,8 @@ begin
               CurrentVar.ColType := stLong;
           end
         end;
+      SQLT_BFLOAT, SQLT_BDOUBLE, SQLT_IBFLOAT, SQLT_IBDOUBLE:
+        CurrentVar.ColType := stDouble;
       SQLT_INT, _SQLT_PLI:
         CurrentVar.ColType := stInteger;
       SQLT_LNG, SQLT_LVC:

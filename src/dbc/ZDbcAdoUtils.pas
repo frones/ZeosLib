@@ -198,7 +198,7 @@ begin
     adSmallInt, adUnsignedSmallInt: Result := stShort;
     adInteger, adUnsignedInt: Result := stInteger;
     adBigInt, adUnsignedBigInt: Result := stLong;
-    adSingle: Result := stDouble;
+    adSingle: Result := stFloat;
     adDouble: Result := stDouble;
     adDecimal: Result := stBigDecimal;
     adNumeric, adVarNumeric: Result := stBigDecimal;
