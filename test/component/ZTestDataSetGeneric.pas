@@ -99,6 +99,7 @@ type
     procedure TestDateTimeLocateExpression;
     procedure TestDoubleFloatParams;
     procedure TestVeryLargeBlobs;
+    procedure TestCommitBehavior;
   end;
 
 implementation
@@ -1918,6 +1919,34 @@ begin
   end;
 end;
 
+procedure TZGenericTestDbcResultSet.TestCommitBehavior;
+var
+  Query: TZQuery;
+  Table: TZTable;
+  ROQuery: TZReadOnlyQuery;
+begin
+  Query := TZQuery.Create(nil);
+  Table := TZTable.Create(nil);
+  ROQuery := TZReadOnlyQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+    Table.Connection := Connection;
+    ROQuery.Connection := Connection;
+    Connection.Connect;
+    Connection.StartTransaction;
+    Connection.Commit;
+
+    Query.SQL.Text := 'select * from people';
+    Query.Open;
+    Connection.Connect;
+    Connection.StartTransaction;
+    Connection.Commit;
+  finally
+    Query.Free;
+    Table.Free;
+    ROQuery.Free;
+  end;
+end;
 
 initialization
   RegisterTest('component',TZGenericTestDbcResultSet.Suite);

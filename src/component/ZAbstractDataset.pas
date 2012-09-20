@@ -141,15 +141,15 @@ type
       Delta: TDataSet): Boolean; override;
   {$ENDIF}
     procedure RegisterDetailDataSet(Value: TZAbstractDataset; CachedUpdates: Boolean);
-    {$IFDEF WITH_POINTER_CAN_HANDLE_INTERFACE}
+    {.$IFDEF WITH_POINTER_CAN_HANDLE_INTERFACE}
     procedure DisposeCachedUpdates;
-    {$ENDIF}
+    {.$ENDIF}
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
     procedure ApplyUpdates;
-    procedure CommitUpdates;{$IFDEF WITH_POINTER_CAN_HANDLE_INTERFACE} deprecated 'Commit did clear the RowBuffer';{$ENDIF}
+    procedure CommitUpdates;//{$IFDEF WITH_POINTER_CAN_HANDLE_INTERFACE} deprecated; 'Commit did clear the RowBuffer';{$ENDIF}
     procedure CancelUpdates;
     procedure RevertRecord;
     procedure RefreshCurrentRow(const RefreshDetails:Boolean); //FOS+ 07112006
@@ -178,7 +178,6 @@ type
 
 
   published
-//    property Constraints;
     property BeforeInsert;
     property AfterInsert;
     property BeforeEdit;
@@ -640,15 +639,12 @@ end;
 {**
    Dispose all cached updates stored in the resultset.
 }
-
-{$IFDEF WITH_POINTER_CAN_HANDLE_INTERFACE}
 procedure TZAbstractDataset.DisposeCachedUpdates;
 begin
   if Active then
     if Assigned(CachedResultSet) then
       CachedResultSet.DisposeCachedUpdates;
 end;
-{$ENDIF}
 
 {**
   Clears cached updates buffer.
