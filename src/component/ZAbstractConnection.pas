@@ -918,9 +918,10 @@ end;
 {**
   Commits the current transaction.
 }
+{$IFDEF WITH_POINTER_CAN_HANDLE_INTERFACE}
 type //To get protected methodes
   THack_ZAbstractDataset = Class(TZAbstractDataset);
-
+{$ENDIF}
 procedure TZAbstractConnection.Commit;
 var
   ExplicitTran: Boolean;
@@ -936,8 +937,11 @@ begin
     ShowSQLHourGlass;
     try
       try
+        {$IFDEF WITH_POINTER_CAN_HANDLE_INTERFACE}
         for i := 0 to FDatasets.Count -1 do
-          THack_ZAbstractDataset(FDatasets[i]).DisposeCachedUpdates;
+          if Assigned(FDatasets[i]) then
+            THack_ZAbstractDataset(FDatasets[i]).DisposeCachedUpdates;
+        {$ENDIF}
         FConnection.Commit;
       finally
         FExplicitTransactionCounter := 0;
@@ -1110,8 +1114,7 @@ begin
 end;
 
 {**
-  Unregisters a new dataset object.
-  @param DataSet a new dataset to be unregistered.
+  Unregisters all dataset objects.
 }
 procedure TZAbstractConnection.UnregisterAllDataSets;
 var

@@ -139,15 +139,17 @@ type
   {$IFDEF WITH_IPROVIDER}
     function PSUpdateRecord(UpdateKind: TUpdateKind;
       Delta: TDataSet): Boolean; override;
-    procedure DisposeCachedUpdates;
   {$ENDIF}
     procedure RegisterDetailDataSet(Value: TZAbstractDataset; CachedUpdates: Boolean);
+    {$IFDEF WITH_POINTER_CAN_HANDLE_INTERFACE}
+    procedure DisposeCachedUpdates;
+    {$ENDIF}
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
     procedure ApplyUpdates;
-    procedure CommitUpdates;
+    procedure CommitUpdates;{$IFDEF WITH_POINTER_CAN_HANDLE_INTERFACE} deprecated 'Commit did clear the RowBuffer';{$ENDIF}
     procedure CancelUpdates;
     procedure RevertRecord;
     procedure RefreshCurrentRow(const RefreshDetails:Boolean); //FOS+ 07112006
@@ -638,11 +640,15 @@ end;
 {**
    Dispose all cached updates stored in the resultset.
 }
+
+{$IFDEF WITH_POINTER_CAN_HANDLE_INTERFACE}
 procedure TZAbstractDataset.DisposeCachedUpdates;
 begin
-  if Assigned(CachedResultSet) then
-    CachedResultSet.DisposeCachedUpdates;
+  if Active then
+    if Assigned(CachedResultSet) then
+      CachedResultSet.DisposeCachedUpdates;
 end;
+{$ENDIF}
 
 {**
   Clears cached updates buffer.
@@ -679,29 +685,32 @@ var
     i: Integer;
     ostate:TDataSetState;
 begin
-  if State=dsBrowse then begin
-   if CachedResultSet <> nil then begin
-    UpdateCursorPos;
-    RowNo := Integer(CurrentRows[CurrentRow - 1]);
-    CachedResultSet.MoveAbsolute(RowNo);
-    CachedResultSet.RefreshRow;
-    if not (State in [dsInactive]) then begin
-     if RefreshDetails then begin
-      Resync([]);
-     end else begin
-      FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
-      ostate:=State;
-      SetTempState(dsInternalCalc);
-      try
-       for I := 0 to Fields.Count - 1 do begin
-        DataEvent(deFieldChange,ULong(Fields[i]));
-       end;
-      finally
-       RestoreState(ostate);
+  if State=dsBrowse then
+  begin
+    if CachedResultSet <> nil then
+    begin
+      UpdateCursorPos;
+      RowNo := Integer(CurrentRows[CurrentRow - 1]);
+      CachedResultSet.MoveAbsolute(RowNo);
+      CachedResultSet.RefreshRow;
+      if not (State in [dsInactive]) then
+      begin
+        if RefreshDetails then
+          Resync([])
+        else
+        begin
+          FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
+          ostate:=State;
+          SetTempState(dsInternalCalc);
+          try
+            for I := 0 to Fields.Count - 1 do
+              DataEvent(deFieldChange,ULong(Fields[i]));
+          finally
+            RestoreState(ostate);
+          end;
+        end;
       end;
-     end;
     end;
-   end;
   end
   else
   begin

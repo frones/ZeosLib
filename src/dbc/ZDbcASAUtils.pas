@@ -1658,7 +1658,7 @@ begin
         'Blob Record is not correctly initialized');
       if PZASABlobStruct( sqlData).array_len <> Length then
         CreateException( 'Could''nt complete BLOB-Read');
-      move( PZASABlobStruct( sqlData).arr[0], PChar( Buffer)[0], PZASABlobStruct( sqlData).array_len);
+      move( PZASABlobStruct( sqlData).arr[0], PAnsiChar( Buffer)[0], PZASABlobStruct( sqlData).array_len);
     end
     else
     begin
