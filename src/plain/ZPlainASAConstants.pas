@@ -689,29 +689,33 @@ const
   DT_NULLS_ALLOWED  = $0001;
 
 {dataTypes }
-   DT_NOTYPE             =   0;
-   DT_SMALLINT           = 500;
-   DT_INT                = 496;
-   DT_DECIMAL            = 484;
-   DT_FLOAT              = 482;
-   DT_DOUBLE             = 480;
-   DT_DATE               = 384;
-   DT_STRING             = 460;
-   DT_FIXCHAR            = 452;
-   DT_VARCHAR            = 448;
-   DT_LONGVARCHAR        = 456;
-   DT_TIME               = 388;
-   DT_TIMESTAMP          = 392;
-   DT_TIMESTAMP_STRUCT   = 390;
-   DT_BINARY             = 524;
-   DT_LONGBINARY         = 528;
-   DT_VARIABLE           = 600;
-   DT_TINYINT            = 604;
-   DT_BIGINT	           = 608;
-   DT_UNSINT             = 612;
-   DT_UNSSMALLINT	       = 616;
-   DT_UNSBIGINT	         = 620;
-   DT_BIT      	         = 624;
+  DT_NOTYPE             =   0;
+  DT_SMALLINT           = 500;
+  DT_INT                = 496;
+  DT_DECIMAL            = 484;
+  DT_FLOAT              = 482;
+  DT_DOUBLE             = 480;
+  DT_DATE               = 384;
+  DT_STRING             = 460;
+  DT_FIXCHAR            = 452;
+  DT_VARCHAR            = 448;
+  DT_LONGVARCHAR        = 456;
+  DT_TIME               = 388;
+  DT_TIMESTAMP          = 392;
+  DT_TIMESTAMP_STRUCT   = 390;
+  DT_BINARY             = 524;
+  DT_LONGBINARY         = 528;
+  DT_VARIABLE           = 600;
+  DT_TINYINT            = 604;
+  DT_BIGINT	            = 608;
+  DT_UNSINT             = 612;
+  DT_UNSSMALLINT	      = 616;
+  DT_UNSBIGINT	        = 620;
+  DT_BIT      	        = 624;
+  DT_NSTRING	          = 628;
+  DT_NFIXCHAR	          = 632;
+  DT_NVARCHAR	          = 636;
+  DT_LONGNVARCHAR	      = 640;
 
 //Message Types Markus
    MESSAGE_TYPE_INFO	   = 0;

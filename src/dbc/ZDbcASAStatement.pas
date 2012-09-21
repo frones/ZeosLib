@@ -625,8 +625,8 @@ begin
       InParamCount, FParamSQLData, FASAConnection.GetEncoding);
     GetPlainDriver.db_execute_into( GetDBHandle, nil, nil, @FStmtNum,
       FParamSQLData.GetData, nil);
-    if ( GetDBHandle.SqlCode <> -185) or ( FSQLData.GetData^.sqld = 0) then
-      ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, SQL);
+    ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, SQL,
+      SQLE_TOO_MANY_RECORDS);
 
     Result := GetDBHandle.sqlErrd[2];
     LastUpdateCount := Result;

@@ -1070,8 +1070,12 @@ begin
     varCurrency   : UpdateBigDecimal( Index, Value);
     varDate       : UpdateDateTime( Index, Value);
     varStrArg,
-    varString,
-    varOleStr     : UpdateString( Index, ZAnsiString(Value));
+    varString     : UpdateString(Index, AnsiString(Value));
+    varOleStr     :
+      if ClientCodePage.Encoding = ceAnsi then
+        UpdateString(Index, AnsiString(Value))
+      else
+        UpdateString(Index, UTF8Encode(Value));
     varBoolean    : UpdateBoolean( Index, Value);
     varByte       : UpdateByte( Index, Value);
     varInt64      : UpdateLong( Index, Value);
@@ -1101,11 +1105,19 @@ begin
   CheckIndex( Index);
   Stream.Position := 0;
   BlobSize := Stream.Size;
+  case FSQLDA.sqlvar[Index].sqlType and $FFFE of
+      DT_LONGVARCHAR:
+        SetFieldType( Index, DT_LONGVARCHAR or 1, BlobSize);
+      DT_LONGBINARY:
+       SetFieldType( Index, DT_LONGBINARY or 1, BlobSize);
+      DT_LONGNVARCHAR:
+       SetFieldType( Index, DT_LONGNVARCHAR or 1, BlobSize);
+  end;
   SetFieldType( Index, DT_LONGBINARY or 1, BlobSize);
   with FSQLDA.sqlvar[Index] do
   begin
     case sqlType and $FFFE of
-      DT_LONGVARCHAR,
+      DT_LONGVARCHAR, DT_LONGNVARCHAR,
       DT_LONGBINARY:
                       begin
                         Stream.ReadBuffer( PZASABlobStruct( sqlData).arr[0], BlobSize);
@@ -1668,7 +1680,13 @@ begin
       try
         with TempSQLDA.sqlvar[ 0] do
         begin
-          sqlType := DT_FIXCHAR;
+          if Self.ClientCodePage.Encoding = ceAnsi then
+            sqlType := DT_FIXCHAR
+          else
+            if ( FSQLDA.sqlvar[Index].sqlType and $FFFE = DT_LONGVARCHAR) then
+              sqlType := DT_FIXCHAR
+            else
+              sqlType := DT_STRING;
           sqlname.length := 0;
           sqlname.data[0] := #0;
           TempSQLDA.sqld := TempSQLDA.sqln;
@@ -1682,7 +1700,7 @@ begin
           begin
             FPlainDriver.db_get_data(FHandle, PAnsiChar(FCursorName), Index + 1, Offs, TempSQLDA);
             CheckASAError( FPlainDriver, FHandle, lcOther);
-            if sqlind^ < 0 then
+            if ( sqlind^ < 0 ) then
               break;
             Inc( Rd, sqllen);
             if sqlind^ = 0 then
