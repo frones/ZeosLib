@@ -110,7 +110,7 @@ type
     procedure UpdateTime(const Index: Integer; Value: TDateTime);
     procedure UpdateTimestamp(const Index: Integer; Value: TDateTime);
     procedure UpdateValue(const Index: Word; Value: Variant);
-    procedure WriteBlob(const Index: Integer; Stream: TStream);
+    procedure WriteBlob(const Index: Integer; Stream: TStream; const BlobType: TZSQLType);
 
     function IsNull(const Index: Integer): Boolean;
     function IsAssigned(const Index: Integer): Boolean;
@@ -138,8 +138,10 @@ type
 
   { Base class contain core functions to work with sqlda structure
     Can allocate memory for sqlda structure get basic information }
-  TZASASQLDA = class (TZCodePagedObject, IZASASQLDA)
+  TZASASQLDA = class (TInterfacedObject, IZASASQLDA)
   private
+    FEncoding: TZCharEncoding;
+    FUTF8AsWideString: Boolean;
     FSQLDA: PASASQLDA;
     FPlainDriver: IZASAPlainDriver;
     FHandle: PZASASQLCA;
@@ -154,7 +156,8 @@ type
     procedure ReadBlob(const Index: Word; Buffer: Pointer; Length: LongWord);
   public
     constructor Create(PlainDriver: IZASAPlainDriver; Handle: PZASASQLCA;
-      CursorName: AnsiString; ClientCodePage: PZCodePage; NumVars: Word = StdVars);
+      CursorName: AnsiString; const Encoding: TZCharEncoding;
+      Const UTF8AsWideString: Boolean; NumVars: Word = StdVars);
     destructor Destroy; override;
 
     procedure AllocateSQLDA( NumVars: Word);
@@ -189,7 +192,7 @@ type
     procedure UpdateDateTime(const Index: Integer; Value: TDateTime);
     procedure UpdateTimestamp(const Index: Integer; Value: TDateTime);
     procedure UpdateValue(const Index: Word; Value: Variant);
-    procedure WriteBlob(const Index: Integer; Stream: TStream);
+    procedure WriteBlob(const Index: Integer; Stream: TStream; const BlobType: TZSQLType);
 
     function IsNull(const Index: Integer): Boolean;
     function IsAssigned(const Index: Integer): Boolean;
@@ -220,7 +223,8 @@ type
   @param FieldHandle a handler to field description structure.
   @return a SQL undepended type.
 }
-function ConvertASATypeToSQLType( SQLType: SmallInt): TZSQLType;
+function ConvertASATypeToSQLType(const SQLType: SmallInt;
+  const Encoding: TZCharEncoding; Const UTF8AsWideString: Boolean): TZSQLType;
 
 {**
   Converts a ASA native type into String.
@@ -229,7 +233,8 @@ function ConvertASATypeToSQLType( SQLType: SmallInt): TZSQLType;
 }
 function ConvertASATypeToString( SQLType: SmallInt): String;
 
-function ConvertASAJDBCToSqlType( FieldType: SmallInt): TZSQLType;
+function ConvertASAJDBCToSqlType(const FieldType: SmallInt; const
+  Encoding: TZCharEncoding; Const UTF8AsWideString: Boolean): TZSQLType;
 {
 procedure TSQLTimeStampToASADateTime( DT: TSQLTimeStamp; const ASADT: PZASASQLDateTime);
 function ASADateTimeToSQLTimeStamp( ASADT: PZASASQLDateTime): TSQLTimeStamp;
@@ -333,13 +338,15 @@ begin
 end;
 
 constructor TZASASQLDA.Create(PlainDriver: IZASAPlainDriver; Handle: PZASASQLCA;
-   CursorName: AnsiString; ClientCodePage: PZCodePage; NumVars: Word = StdVars);
+   CursorName: AnsiString; const Encoding: TZCharEncoding;
+   Const UTF8AsWideString: Boolean; NumVars: Word = StdVars);
 begin
   FPlainDriver := PlainDriver;
   FHandle := Handle;
   FCursorName := CursorName;
   AllocateSQLDA( NumVars);
-  Self.ClientCodePage := ClientCodePage;
+  FEncoding := Encoding;
+  FUTF8AsWideString := UTF8AsWideString;
   inherited Create;
 end;
 
@@ -502,7 +509,7 @@ function TZASASQLDA.GetFieldIndex(const Name: String): Word;
 begin
   for Result := 0 to FSQLDA.sqld - 1 do
     if FSQLDA.sqlvar[Result].sqlname.length = Length(name) then
-      if StrLIComp(@FSQLDA.sqlvar[Result].sqlname.data, PAnsiChar(ZPlainString(Name)), Length(name)) = 0 then
+      if StrLIComp(@FSQLDA.sqlvar[Result].sqlname.data, PAnsiChar(FPlainDriver.ZPlainString(Name, FEncoding)), Length(name)) = 0 then
             Exit;
   CreateException( Format( SFieldNotFound1, [name]));
   Result := 0; // satisfy compiler
@@ -545,9 +552,9 @@ function TZASASQLDA.GetFieldSqlType(const Index: Word): TZSQLType;
 begin
   CheckIndex(Index);
   if FSQLDA.sqlvar[Index].sqlType and $FFFE <> DT_TIMESTAMP_STRUCT then
-    Result := ConvertASATypeToSQLType( FSQLDA.sqlvar[Index].sqlType)
+    Result := ConvertASATypeToSQLType(FSQLDA.sqlvar[Index].sqlType, FEncoding, FUTF8AsWideString)
   else
-    Result := ConvertASATypeToSQLType( FDeclType[Index].sqlType)
+    Result := ConvertASATypeToSQLType( FDeclType[Index].sqlType, FEncoding, FUTF8AsWideString)
 end;
 
 {**
@@ -875,7 +882,7 @@ var
   AnsiTmp: AnsiString;
 begin
   CheckIndex( Index);
-  AnsiTmp := ZPlainString(Value);
+  AnsiTmp := FPlainDriver.ZPlainString(Value, FEncoding);
   BlobSize := StrLen( Value);
   if BlobSize < MinBLOBSize then
     SetFieldType( Index, DT_VARCHAR or 1, MinBLOBSize - 1)
@@ -1072,7 +1079,7 @@ begin
     varStrArg,
     varString     : UpdateString(Index, AnsiString(Value));
     varOleStr     :
-      if ClientCodePage.Encoding = ceAnsi then
+      if FEncoding = ceAnsi then
         UpdateString(Index, AnsiString(Value))
       else
         UpdateString(Index, UTF8Encode(Value));
@@ -1098,14 +1105,25 @@ end;
    @param Index an index field number
    @param Stream the souse data stream
 }
-procedure TZASASQLDA.WriteBlob(const Index: Integer; Stream: TStream);
+procedure TZASASQLDA.WriteBlob(const Index: Integer; Stream: TStream;
+  const BlobType: TZSQLType);
 var
   BlobSize: Integer;
 begin
   CheckIndex( Index);
   Stream.Position := 0;
   BlobSize := Stream.Size;
-  case FSQLDA.sqlvar[Index].sqlType and $FFFE of
+  case BlobType of
+    stAsciiStream:
+        SetFieldType( Index, DT_LONGVARCHAR or 1, BlobSize);
+    stUnicodeStream:
+       SetFieldType( Index, DT_LONGNVARCHAR or 1, BlobSize);
+    stBinaryStream:
+       SetFieldType( Index, DT_LONGBINARY or 1, BlobSize);
+    else
+      CreateException( SUnsupportedParameterType);
+  end;
+  {case FSQLDA.sqlvar[Index].sqlType and $FFFE of
       DT_LONGVARCHAR:
         SetFieldType( Index, DT_LONGVARCHAR or 1, BlobSize);
       DT_LONGBINARY:
@@ -1113,18 +1131,18 @@ begin
       DT_LONGNVARCHAR:
        SetFieldType( Index, DT_LONGNVARCHAR or 1, BlobSize);
   end;
-  SetFieldType( Index, DT_LONGBINARY or 1, BlobSize);
+  SetFieldType( Index, DT_LONGBINARY or 1, BlobSize);}
   with FSQLDA.sqlvar[Index] do
   begin
     case sqlType and $FFFE of
       DT_LONGVARCHAR, DT_LONGNVARCHAR,
       DT_LONGBINARY:
-                      begin
-                        Stream.ReadBuffer( PZASABlobStruct( sqlData).arr[0], BlobSize);
-                        Stream.Position := 0;
-                        PZASABlobStruct( sqlData).stored_len := BlobSize;
-                        PZASABlobStruct( sqlData).untrunc_len := BlobSize;
-                      end;
+        begin
+          Stream.ReadBuffer( PZASABlobStruct( sqlData).arr[0], BlobSize);
+          Stream.Position := 0;
+          PZASABlobStruct( sqlData).stored_len := BlobSize;
+          PZASABlobStruct( sqlData).untrunc_len := BlobSize;
+        end;
     else
       CreateException( SUnsupportedParameterType);
     end;
@@ -1680,13 +1698,7 @@ begin
       try
         with TempSQLDA.sqlvar[ 0] do
         begin
-          if Self.ClientCodePage.Encoding = ceAnsi then
-            sqlType := DT_FIXCHAR
-          else
-            if ( FSQLDA.sqlvar[Index].sqlType and $FFFE = DT_LONGVARCHAR) then
-              sqlType := DT_FIXCHAR
-            else
-              sqlType := DT_STRING;
+          sqlType := DT_FIXCHAR;
           sqlname.length := 0;
           sqlname.data[0] := #0;
           TempSQLDA.sqld := TempSQLDA.sqln;
@@ -1847,7 +1859,8 @@ end;
   @param SQLType Field of TASASQLVar structure.
   @return a SQL undepended type.
 }
-function ConvertASATypeToSQLType( SQLType: SmallInt): TZSQLType;
+function ConvertASATypeToSQLType(const SQLType: SmallInt;
+  const Encoding: TZCharEncoding; Const UTF8AsWideString: Boolean): TZSQLType;
 begin
   case SQLType and $FFFE of
     DT_NOTYPE:
@@ -1864,10 +1877,16 @@ begin
       Result := stDouble;
     DT_DATE:
       Result := stDate;
-    DT_VARIABLE, DT_STRING, DT_FIXCHAR, DT_VARCHAR:
-      Result := stString;
-    DT_LONGVARCHAR:
-      Result := stAsciiStream;
+    DT_VARIABLE, DT_STRING, DT_FIXCHAR, DT_VARCHAR, DT_NSTRING, DT_NFIXCHAR, DT_NVARCHAR:
+      if (Encoding = ceUTF8) and UTF8AsWideString then
+        Result := stUnicodeString
+      else
+        Result := stString;
+    DT_LONGVARCHAR, DT_LONGNVARCHAR:
+      if (Encoding = ceUTF8) and UTF8AsWideString then
+        Result := stUnicodeStream
+      else
+        Result := stAsciiStream;
     DT_TIME:
       Result := stTime;
     DT_TIMESTAMP:
@@ -1947,6 +1966,14 @@ begin
       Result := 'DT_UNSBIGINT';
     DT_BIT:
       Result := 'DT_BIT';
+    DT_NSTRING:
+      Result := 'DT_NSTRING';
+    DT_NFIXCHAR:
+      Result := 'DT_NFIXCHAR';
+    DT_NVARCHAR:
+      Result := 'DT_NVARCHAR';
+    DT_LONGNVARCHAR:
+      Result := 'DT_LONGNVARCHAR';
   else
     Result := 'Unknown';
   end;
@@ -1957,10 +1984,15 @@ end;
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertASAJDBCToSqlType(FieldType: SmallInt): TZSQLType;
+function ConvertASAJDBCToSqlType(const FieldType: SmallInt; const
+  Encoding: TZCharEncoding; Const UTF8AsWideString: Boolean): TZSQLType;
 begin
   case FieldType of
-    1, 12, -8, -9: Result := stString;
+    1, 12, -8, -9:
+      if (Encoding = ceUTF8) and UTF8AsWideString then
+        Result := stUnicodeString
+      else
+        Result := stString;
     -7: Result := stBoolean;
     -6: Result := stByte;
     5: Result := stShort;
@@ -1969,7 +2001,11 @@ begin
     6, 7, 8: Result := stDouble;
     2, 3: Result := stDouble;  //BCD Feld
     11, 93: Result := stTimestamp;
-    -1, -10: Result := stAsciiStream;
+    -1, -10:
+      if (Encoding = ceUTF8) and UTF8AsWideString then
+        Result := stUnicodeStream
+      else
+        Result := stAsciiStream;
     -4, -11, 1111: Result := stBinaryStream;
     -3, -2: Result := stBytes;
     92: Result := stTime;
@@ -2222,11 +2258,11 @@ begin
                   (Encoding = ceUTF8) then
                 begin
                   TempStreamIn := GetValidatedUnicodeStream(TempStream);
-                  ParamSqlData.WriteBlob(I, TempStreamIn);
+                  ParamSqlData.WriteBlob(I, TempStreamIn, InParamTypes[i]);
                   TempStreamIn.Free;
                 end
                 else
-                  ParamSqlData.WriteBlob(I, TempStream);
+                  ParamSqlData.WriteBlob(I, TempStream, stBinaryStream);
               finally
                 TempStream.Free;
               end;

@@ -738,7 +738,8 @@ begin
   if not Assigned( FUpdateSQLData) then
   begin
     FUpdateSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
-      FASAConnection.GetDBHandle, FCursorName, Self.ClientCodePage,FSQLData.GetFieldCount);
+      FASAConnection.GetDBHandle, FCursorName, ClientCodePage^.Encoding,
+      FASAConnection.UTF8StringAsWideField,FSQLData.GetFieldCount);
   end
   else if FUpdateSQLData.GetFieldCount = 0 then
     FUpdateSQLData.AllocateSQLDA( FSQLData.GetFieldCount);
@@ -843,19 +844,19 @@ end;
 procedure TZASAResultSet.UpdateAsciiStream(ColumnIndex: Integer; Value: TStream);
 begin
   PrepareUpdateSQLData;
-  FUpdateSqlData.WriteBlob( ColumnIndex, Value);
+  FUpdateSqlData.WriteBlob( ColumnIndex, Value, stAsciiStream);
 end;
 
 procedure TZASAResultSet.UpdateUnicodeStream(ColumnIndex: Integer; Value: TStream);
 begin
   PrepareUpdateSQLData;
-  FUpdateSqlData.WriteBlob( ColumnIndex, Value);
+  FUpdateSqlData.WriteBlob( ColumnIndex, Value, stUnicodeStream);
 end;
 
 procedure TZASAResultSet.UpdateBinaryStream(ColumnIndex: Integer; Value: TStream);
 begin
   PrepareUpdateSQLData;
-  FUpdateSqlData.WriteBlob( ColumnIndex, Value);
+  FUpdateSqlData.WriteBlob( ColumnIndex, Value, stBinaryStream);
 end;
 
 procedure TZASAResultSet.UpdateValue(ColumnIndex: Integer; const Value: TZVariant);

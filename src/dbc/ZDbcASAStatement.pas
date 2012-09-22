@@ -168,7 +168,8 @@ begin
   FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cashedblob', 'true'));
   CursorName := AnsiString(RandomString(12));
   FSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
-    FASAConnection.GetDBHandle, CursorName, ClientCodePage);
+    FASAConnection.GetDBHandle, CursorName, ClientCodePage^.Encoding,
+    Connection.UTF8StringAsWideField );
 end;
 
 destructor TZASAStatement.Destroy;
@@ -390,9 +391,11 @@ begin
   FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cashedblob', 'true'));
   CursorName := AnsiString(RandomString(12));
   FParamSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
-    FASAConnection.GetDBHandle, CursorName, ClientCodePage);
+    FASAConnection.GetDBHandle, CursorName, ClientCodePage^.Encoding,
+    Connection.UTF8StringAsWideField);
   FSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
-    FASAConnection.GetDBHandle, CursorName, ClientCodePage);
+    FASAConnection.GetDBHandle, CursorName, ClientCodePage^.Encoding,
+    Connection.UTF8StringAsWideField);
   ASAPrepare( FASAConnection, FSQLData, FParamSQLData, SQL, @FStmtNum, FPrepared,
     FMoreResults);
 end;
@@ -658,9 +661,11 @@ begin
   FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cashedblob', 'true'));
   CursorName := AnsiString(RandomString(12));
   FParamSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
-    FASAConnection.GetDBHandle, CursorName, ClientCodePage);
+    FASAConnection.GetDBHandle, CursorName, ClientCodePage^.Encoding,
+    Connection.UTF8StringAsWideField);
   FSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
-    FASAConnection.GetDBHandle, CursorName, ClientCodePage);
+    FASAConnection.GetDBHandle, CursorName, ClientCodePage^.Encoding,
+    Connection.UTF8StringAsWideField);
 end;
 
 destructor TZASACallableStatement.Destroy;
