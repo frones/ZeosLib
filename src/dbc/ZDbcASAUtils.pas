@@ -1703,7 +1703,7 @@ begin
             if ( sqlind^ < 0 ) then
               break;
             Inc( Rd, sqllen);
-            if sqlind^ = 0 then
+            if ( sqlind^ = 0 ) or ( RD = Length) then
               break;
             Inc( Offs, sqllen);
             Inc(PAnsiChar(sqlData), sqllen);
@@ -2218,7 +2218,7 @@ begin
             begin
               TempStream := TempBlob.GetStream;
               try
-                if (ParamSqlData.GetFieldSqlType(i) in [stUnicodeStream, stAsciiStream]) and
+                if (InParamTypes[i] in [stUnicodeStream, stAsciiStream]) and
                   (Encoding = ceUTF8) then
                 begin
                   TempStreamIn := GetValidatedUnicodeStream(TempStream);
