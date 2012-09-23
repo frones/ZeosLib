@@ -332,7 +332,7 @@ type
   procedure ReadBlobBufer(PlainDriver: IZInterbasePlainDriver;
     Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE;
     BlobId: TISC_QUAD; var Size: Integer; var Buffer: Pointer);
-
+  function GetIBScaleDivisor(Scale: SmallInt): Int64;
 
 
 const
@@ -774,7 +774,7 @@ end;
 
 {**
    Return Interbase SqlType by it number
-   @param Value the SqlType number 
+   @param Value the SqlType number
 }
 function GetNameSqlType(Value: Word): AnsiString;
 begin
@@ -1010,7 +1010,7 @@ begin
     case StatementType of
       stUpdate: Result := PlainDriver.isc_vax_integer(@OutBuffer[6], 4);
       stDelete: Result := PlainDriver.isc_vax_integer(@OutBuffer[13], 4);
-      stSelect: Result := PlainDriver.isc_vax_integer(@OutBuffer[20], 4); 
+      stSelect: Result := PlainDriver.isc_vax_integer(@OutBuffer[20], 4);
       stInsert: Result := PlainDriver.isc_vax_integer(@OutBuffer[27], 4);
     else
        Result := -1;
@@ -1231,7 +1231,7 @@ begin
   BlobSize := BlobInfo.TotalSize;
   Size := BlobSize;
 
-  SegmentLenght := BlobInfo.MaxSegmentSize; 
+  SegmentLenght := BlobInfo.MaxSegmentSize;
 
   { Allocates a blob buffer }
   Buffer := AllocMem(BlobSize);
@@ -1256,6 +1256,19 @@ begin
   CheckInterbase6Error(PlainDriver, StatusVector);
 end;
 
+function GetIBScaleDivisor(Scale: SmallInt): Int64;
+var
+  i: Integer;
+begin
+  Result := 1;
+  if Scale > 0 then
+    for i := 1 to Scale do
+      Result := Result * 10
+  else
+    if Scale < 0 then
+      for i := -1 downto Scale do
+        Result := Result * 10;
+end;
 {**
    Return interbase server version string
    @param PlainDriver a interbase plain driver
@@ -1447,7 +1460,7 @@ begin
         ReallocMem(SqlVar.sqlind, SizeOf(Short))
       else
         SqlVar.sqlind := nil;
-    end;    
+    end;
   end;
   {$IFOPT D+}
 {$R+}
@@ -1455,7 +1468,7 @@ begin
 end;
 
 {**
-   Clear allocated data for SQLDA paramters 
+   Clear allocated data for SQLDA paramters
 }
 procedure TZSQLDA.FreeParamtersValues;
 var
@@ -1666,7 +1679,7 @@ begin
   Result := FPlainDriver.ZDbcString(Temp, FClientCodePage^.Encoding);
   {$IFOPT D+}
 {$R+}
-{$ENDIF}  
+{$ENDIF}
 end;
 
 {**
@@ -1697,7 +1710,7 @@ begin
   Result := FPlainDriver.ZDbcString(Temp, FClientCodePage^.Encoding);
   {$IFOPT D+}
 {$R+}
-{$ENDIF}  
+{$ENDIF}
 end;
 
 {**
@@ -1868,7 +1881,6 @@ end;
 procedure TZParamsSQLDA.UpdateBigDecimal(const Index: Integer; Value: Extended);
 var
   SQLCode: SmallInt;
-
 begin
   CheckRange(Index);
 
@@ -1877,15 +1889,16 @@ begin
   begin
     if (sqlind <> nil) and (sqlind^ = -1) then
        Exit;
+
     SQLCode := (sqltype and not(1));
 
     if (sqlscale < 0)  then
-    begin
+    begin //http://code.google.com/p/fbclient/wiki/DatatypeMapping
       case SQLCode of
         SQL_SHORT  : PSmallInt(sqldata)^ := Trunc(Value * IBScaleDivisor[sqlscale]);
         SQL_LONG   : PInteger(sqldata)^  := Trunc(Value * IBScaleDivisor[sqlscale]);
         SQL_INT64,
-        SQL_QUAD   : PInt64(sqldata)^    := Trunc(Value * IBScaleDivisor[sqlscale]); //AVZ - Trunc was cutting off decimals
+        SQL_QUAD   : PInt64(sqldata)^    := Trunc(Value * GetIBScaleDivisor(sqlscale));//IBScaleDivisor[sqlscale]); //AVZ - Trunc was cutting off decimals
         SQL_DOUBLE : PDouble(sqldata)^   := Value;                                        //I have tested with Query.ParamByName ().AsCurrency to check this, problem does not lie with straight SQL
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
@@ -2077,14 +2090,14 @@ begin
 
     case SQLCode of
       SQL_TYPE_DATE : FPlainDriver.isc_encode_sql_date(@TmpDate, PISC_DATE(sqldata));
-      SQL_TYPE_TIME : begin 
-                        FPlainDriver.isc_encode_sql_time(@TmpDate, PISC_TIME(sqldata)); 
-                        PISC_TIME(sqldata)^ := PISC_TIME(sqldata)^ + msec*10; 
-                      end; 
-      SQL_TIMESTAMP : begin 
-                        FPlainDriver.isc_encode_timestamp(@TmpDate,PISC_TIMESTAMP(sqldata)); 
-                        PISC_TIMESTAMP(sqldata).timestamp_time :=PISC_TIMESTAMP(sqldata).timestamp_time + msec*10; 
-                      end; 
+      SQL_TYPE_TIME : begin
+                        FPlainDriver.isc_encode_sql_time(@TmpDate, PISC_TIME(sqldata));
+                        PISC_TIME(sqldata)^ := PISC_TIME(sqldata)^ + msec*10;
+                      end;
+      SQL_TIMESTAMP : begin
+                        FPlainDriver.isc_encode_timestamp(@TmpDate,PISC_TIMESTAMP(sqldata));
+                        PISC_TIMESTAMP(sqldata).timestamp_time :=PISC_TIMESTAMP(sqldata).timestamp_time + msec*10;
+                      end;
       else
         raise EZIBConvertError.Create(SInvalidState);
     end;
@@ -3050,10 +3063,10 @@ begin
 
     case (sqltype and not(1)) of
         SQL_TIMESTAMP : begin
-                          FPlainDriver.isc_decode_timestamp(PISC_TIMESTAMP(sqldata), @TempDate); 
+                          FPlainDriver.isc_decode_timestamp(PISC_TIMESTAMP(sqldata), @TempDate);
                           Result := SysUtils.EncodeDate(TempDate.tm_year + 1900,
                             TempDate.tm_mon + 1, TempDate.tm_mday) + EncodeTime(TempDate.tm_hour,
-                          TempDate.tm_min, TempDate.tm_sec, Word((PISC_TIMESTAMP(sqldata).timestamp_time mod 10000) div 10)); 
+                          TempDate.tm_min, TempDate.tm_sec, Word((PISC_TIMESTAMP(sqldata).timestamp_time mod 10000) div 10));
                         end;
         SQL_TYPE_DATE : begin
                           FPlainDriver.isc_decode_sql_date(PISC_DATE(sqldata), @TempDate);
@@ -3256,3 +3269,4 @@ end;
 
 
 end.
+
