@@ -4,7 +4,7 @@ ZeosLib 7.0 Lazarus Edition
 Introduction
 ------------
 
-ZeosLib 7.0 has been tested to work with Lazarus 0.9.24.
+ZeosLib 7.0 has been tested to work with Lazarus 1.0
 
 
 Installation
