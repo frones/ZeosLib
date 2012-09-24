@@ -724,6 +724,15 @@ const
    MESSAGE_TYPE_STATUS   = 3;
 
 type
+  a_sql_len = SmallInt;
+  a_sql_ulen = Word;
+  a_sql_int32 = LongInt;
+  a_sql_type = SmallInt;
+
+  an_sql_code = LongInt;
+  an_sql_state = array[0..5] of AnsiChar;
+
+type
   TZASASQLWARN = record
       sqlWarn0: array[0..0] of AnsiChar;
       sqlWarn1: array[0..0] of AnsiChar;
@@ -740,12 +749,12 @@ type
   PZASASQLCA = ^TZASASQLCA;
   TZASASQLCA = record
     sqlcaID: array[0..7] of AnsiChar;
-    sqlcAbc   : LongWord;
-    sqlCode   : LongInt;
+    sqlcAbc   : a_sql_int32;
+    sqlCode   : an_sql_code;
     sqlErrml  : SmallInt;
-    sqlErrmc: array[0..69] of AnsiChar;
-    sqlErrp: array[0..7] of AnsiChar;
-    sqlErrd   : array[0..5] of LongInt;
+    sqlErrmc  : array[0..69] of AnsiChar;
+    sqlErrp   : array[0..7] of AnsiChar;
+    sqlErrd   : array[0..5] of a_sql_int32;
     sqlWarn   : TZASASQLWARN;
     sqlState: array[0..5] of AnsiChar;
   end;
@@ -765,7 +774,7 @@ type
   PZASASQLVAR = ^TZASASQLVAR;
   TZASASQLVAR = record
     sqlType: SmallInt;
-    sqlLen : Word;
+    sqlLen : a_sql_len;
     sqlData: Pointer;
     sqlInd : PSmallInt;
     sqlName: TZASASQLNAME;
@@ -775,8 +784,8 @@ type
   TASASQLDA = record
     sqldaid: array[0..7] of AnsiChar;
     sqldabc : LongWord;
-    sqln    : Word;
-    sqld    : Word;
+    sqln    : SmallInt;
+    sqld    : SmallInt;
     sqlVar  : array[0..32767] of TZASASQLVAR;
   end;
 
@@ -862,7 +871,7 @@ type
   TASAdbpp_prepare_describe_12 = procedure (SQLCA: PZASASQLCA; UnKnown: PAnsiChar;
     ProgName: PAnsiChar; RecordStatementNum: PSmallInt; SqlStatement: PAnsiChar;
     Descriptor1: PASASQLDA; Descriptor2: PASASQLDA; WhatToDesc: LongWord;
-    UnknownUint, LongNames, UnknownUint2: word)
+    LongNames: Word; UnknownUint2: Longword)
     {$IFNDEF LINUX} stdcall {$ELSE} cdecl {$ENDIF};
 
   TASAdbpp_select = procedure(sqlca: PZASASQLCA; UnKnown: PAnsiChar;

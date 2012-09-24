@@ -491,17 +491,16 @@ procedure TZASABasePlainDriver.db_prepare_describe( sqlca: PZASASQLCA;
    ProgName: PAnsiChar; StatementNum: PSmallInt; SqlStatement: PAnsiChar;
   Descriptor: PASASQLDA; WhatToDesc: LongWord; LongNames: Word);
 var
-  U1, U2: Word;
+  U1: LongWord;
 begin
   U1 := 0;
-  U2 := 0;
   if Assigned(ASA_API.dbpp_prepare_describe) then
     ASA_API.dbpp_prepare_describe( sqlca, nil, ProgName, StatementNum,
       SqlStatement, nil, Descriptor, WhatToDesc, LongNames)
   else
     if Assigned(ASA_API.dbpp_prepare_describe_12) then
     ASA_API.dbpp_prepare_describe_12(sqlca, nil, ProgName, StatementNum,
-        SqlStatement, nil, Descriptor, WhatToDesc, U1, LongNames, U2);
+        SqlStatement, nil, Descriptor, WhatToDesc, LongNames, U1);
 end;
 
 procedure TZASABasePlainDriver.db_declare(sqlca: PZASASQLCA; CursorName: PAnsiChar;

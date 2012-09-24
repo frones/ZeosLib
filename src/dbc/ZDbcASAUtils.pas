@@ -287,7 +287,7 @@ end;
 procedure TZASASQLDA.CheckIndex(const Index: Word);
 begin
   Assert( Assigned( FSQLDA), 'SQLDA not initialized.');
-  Assert( Index < FSQLDA.sqld, 'Out of Range.');
+  Assert( Index < Word(FSQLDA.sqld), 'Out of Range.');
 end;
 
 procedure TZASASQLDA.CheckRange(const Index: Word);
