@@ -110,6 +110,7 @@
   {$DEFINE DELPHI12_UP} // Used in code
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
+  {$DEFINE WITH_INLINE_ANSISTRLCOMP}
 {$ENDIF}
 
 // Compilation directives for Delphi 2010
@@ -170,6 +171,7 @@
   {$DEFINE WITH_FTEXTENDED}             // ftExtended is supported
   {$DEFINE WITH_FTLONGWORD}             // ftLongWord is supported
   {$DEFINE WITH_ASBYTES}                //  AsBytes is supported
+  {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF
   {.$DEFINE WRONG_UNICODE_BEHAVIOR}      // EgonHugeist: a define for those why do use self assambled queries with still encoded partial strings
 {$ELSE}
   {$IFNDEF LAZARUSUTF8HACK}

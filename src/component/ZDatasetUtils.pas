@@ -286,7 +286,8 @@ var
 implementation
 
 uses
-  ZMessages, ZGenericSqlToken, ZDbcResultSetMetadata, ZAbstractRODataset, ZSysUtils;
+  ZMessages, ZGenericSqlToken, ZDbcResultSetMetadata, ZAbstractRODataset,
+  ZSysUtils{$IFDEF WITH_INLINE_ANSISTRLCOMP}, Windows{$ENDIF};
 
 {**
   Converts DBC Field Type to TDataset Field Type.
