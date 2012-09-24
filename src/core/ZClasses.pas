@@ -61,8 +61,11 @@ uses
   SysUtils, Classes;
 
 const
+  ZEOS_MAJOR_VERSION = 7;
+  ZEOS_MINOR_VERSION = 0;
+  ZEOS_SUB_VERSION = 0;
+  ZEOS_STATUS = 'dev';
   ZEOS_VERSION = '7.0.0-dev';
-
 {$IFDEF ENABLE_POOLED}
   {Pooled Protocol Prefix, including final dot}
   PooledPrefix = 'pooled.';
