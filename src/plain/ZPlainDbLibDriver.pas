@@ -445,44 +445,41 @@ implementation
 
 uses SysUtils, ZPlainLoader,{$IFDEF FPC}DOS{$ELSE}Windows{$ENDIF};
 
-type
-  THack_ZAbstractPlainDriver = Class(TZAbstractPlainDriver);
-
 procedure AddSybaseCodePages(PlainDriver: TZAbstractPlainDriver);
 begin
   { MultiByte }
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('874THAIBIN', 1, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 874{$ENDIF}); {Windows Thailändisch, ISO8859-11, binäre Sortierung}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('932JPN', 2, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 932{$ENDIF}); {Japanese Shift-JIS mit Microsoft-Erweiterungen}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('936ZHO', 3, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 936{$ENDIF}); {Vereinfachtes Chinesisch, PRC GBK}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('949KOR', 4, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 949{$ENDIF}); {Korean KS C 5601-1987-Codierung, Wansung}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('950ZHO_HK', 5, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 950{$ENDIF}); {Traditionelles Chinesisch, Big 5-Kodierung mit HKSCS}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('950ZHO_TW', 6, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 950{$ENDIF}); {Traditionelles Chinesisch, Big 5-Kodierung}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('EUC_CHINA', 21, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_GB2312{$ENDIF}); {GB2312-80 Simplified Chinese}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('EUC_JAPAN', 22, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_SHIFTJS{$ENDIF}); {Japanisch EUC JIS X 0208-1990 und JIS X 0212-1990-Zeichensatz}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('EUC_KOREA', 23, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1361{$ENDIF}); { Koreanisch KS C 5601-1992 8-Bit-Zeichensatz, Johab}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('EUC_TAIWAN', 24, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 964{$ENDIF}); {EUC-TW-Kodierung}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('UCA', 29, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16{$ENDIF}, 'utf8'); {UCA	UCA-Standardkollatierung}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('UTF8BIN', 30, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}); {UTF-8, 8-Bit-Mehrbyte-Zeichensatz für Unicode, binäre Reihenfolge}
+  PlainDriver.AddCodePage('874THAIBIN', 1, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 874{$ENDIF}); {Windows Thailändisch, ISO8859-11, binäre Sortierung}
+  PlainDriver.AddCodePage('932JPN', 2, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 932{$ENDIF}); {Japanese Shift-JIS mit Microsoft-Erweiterungen}
+  PlainDriver.AddCodePage('936ZHO', 3, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 936{$ENDIF}); {Vereinfachtes Chinesisch, PRC GBK}
+  PlainDriver.AddCodePage('949KOR', 4, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 949{$ENDIF}); {Korean KS C 5601-1987-Codierung, Wansung}
+  PlainDriver.AddCodePage('950ZHO_HK', 5, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 950{$ENDIF}); {Traditionelles Chinesisch, Big 5-Kodierung mit HKSCS}
+  PlainDriver.AddCodePage('950ZHO_TW', 6, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 950{$ENDIF}); {Traditionelles Chinesisch, Big 5-Kodierung}
+  PlainDriver.AddCodePage('EUC_CHINA', 21, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_GB2312{$ENDIF}); {GB2312-80 Simplified Chinese}
+  PlainDriver.AddCodePage('EUC_JAPAN', 22, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_SHIFTJS{$ENDIF}); {Japanisch EUC JIS X 0208-1990 und JIS X 0212-1990-Zeichensatz}
+  PlainDriver.AddCodePage('EUC_KOREA', 23, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1361{$ENDIF}); { Koreanisch KS C 5601-1992 8-Bit-Zeichensatz, Johab}
+  PlainDriver.AddCodePage('EUC_TAIWAN', 24, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 964{$ENDIF}); {EUC-TW-Kodierung}
+  PlainDriver.AddCodePage('UCA', 29, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16{$ENDIF}, 'utf8'); {UCA	UCA-Standardkollatierung}
+  PlainDriver.AddCodePage('UTF8BIN', 30, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}); {UTF-8, 8-Bit-Mehrbyte-Zeichensatz für Unicode, binäre Reihenfolge}
 
   { SingleByte }
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('1250LATIN2', 7, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1250{$ENDIF}); {Windows Latin 2, Mittel- und Osteuropa}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('1250POL', 8, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1250{$ENDIF}); {Windows Latin 2, Polnisch}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('1251CYR', 9, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1251{$ENDIF}); {Windows Kyrillisch}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('1252LATIN1', 10, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); { Windows Latin 1, Western}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('1252LT1ACC', 11, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); {Windows-Spezial Latin 1, Western, Zeichen mit Akzent nicht gleich}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('1252NOR', 12, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); {Windows Latin 1, Norwegisch}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('1252SPA', 13, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); {Windows Latin 1, Spanisch}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('1252SWEFIN', 14, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); {Windows Latin 1, Schwedisch/Finnisch}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('1253ELL', 15, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1253{$ENDIF}); {Windows Griechisch, ISO8859-7 mit Erweiterungen}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('1254TRK', 16, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1254{$ENDIF}); {Windows Türkisch, ISO8859-9 mit Erweiterungen}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('1254TRKALT', 17, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1254{$ENDIF}); {Windows Türkisch, ISO8859-9 mit Erweiterungen, I mit I-Punkt gleich I ohne I-Punkt}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('1255HEB', 18, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1255{$ENDIF}); {Windows Hebräisch, ISO8859-8 mit Erweiterungen}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('1256ARA', 19, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1256{$ENDIF}); {Windows Arabisch, ISO8859-6 mit Erweiterungen}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('1257LIT', 20, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1257{$ENDIF}); {Windows Baltische Staaten, Litauisch}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('ISO1LATIN1', 25, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L1_ISO_8859_1{$ENDIF}); {ISO8859-1, ISO Latin 1, Western, Latin 1-Sortierreihenfolge}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('ISO9LATIN1', 26, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_ISO_8859_9{$ENDIF}); {	ISO8859-15, ISO Latin 9, Western, Latin 1-Sortierreihenfolge}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('ISO_1', 27, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L1_ISO_8859_1{$ENDIF}); {ISO8859-1, ISO Latin 1, Western}
-  THack_ZAbstractPlainDriver(PlainDriver).AddCodePage('ISO_BINENG', 28, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_ACP{$ENDIF}); {Binäre Sortierreihenfolge, Englisch ISO/ASCII 7-Bit-Zuordnung nach Groß- und Kleinschreibung}
+  PlainDriver.AddCodePage('1250LATIN2', 7, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1250{$ENDIF}); {Windows Latin 2, Mittel- und Osteuropa}
+  PlainDriver.AddCodePage('1250POL', 8, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1250{$ENDIF}); {Windows Latin 2, Polnisch}
+  PlainDriver.AddCodePage('1251CYR', 9, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1251{$ENDIF}); {Windows Kyrillisch}
+  PlainDriver.AddCodePage('1252LATIN1', 10, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); { Windows Latin 1, Western}
+  PlainDriver.AddCodePage('1252LT1ACC', 11, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); {Windows-Spezial Latin 1, Western, Zeichen mit Akzent nicht gleich}
+  PlainDriver.AddCodePage('1252NOR', 12, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); {Windows Latin 1, Norwegisch}
+  PlainDriver.AddCodePage('1252SPA', 13, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); {Windows Latin 1, Spanisch}
+  PlainDriver.AddCodePage('1252SWEFIN', 14, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); {Windows Latin 1, Schwedisch/Finnisch}
+  PlainDriver.AddCodePage('1253ELL', 15, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1253{$ENDIF}); {Windows Griechisch, ISO8859-7 mit Erweiterungen}
+  PlainDriver.AddCodePage('1254TRK', 16, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1254{$ENDIF}); {Windows Türkisch, ISO8859-9 mit Erweiterungen}
+  PlainDriver.AddCodePage('1254TRKALT', 17, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1254{$ENDIF}); {Windows Türkisch, ISO8859-9 mit Erweiterungen, I mit I-Punkt gleich I ohne I-Punkt}
+  PlainDriver.AddCodePage('1255HEB', 18, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1255{$ENDIF}); {Windows Hebräisch, ISO8859-8 mit Erweiterungen}
+  PlainDriver.AddCodePage('1256ARA', 19, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1256{$ENDIF}); {Windows Arabisch, ISO8859-6 mit Erweiterungen}
+  PlainDriver.AddCodePage('1257LIT', 20, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1257{$ENDIF}); {Windows Baltische Staaten, Litauisch}
+  PlainDriver.AddCodePage('ISO1LATIN1', 25, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L1_ISO_8859_1{$ENDIF}); {ISO8859-1, ISO Latin 1, Western, Latin 1-Sortierreihenfolge}
+  PlainDriver.AddCodePage('ISO9LATIN1', 26, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_ISO_8859_9{$ENDIF}); {	ISO8859-15, ISO Latin 9, Western, Latin 1-Sortierreihenfolge}
+  PlainDriver.AddCodePage('ISO_1', 27, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L1_ISO_8859_1{$ENDIF}); {ISO8859-1, ISO Latin 1, Western}
+  PlainDriver.AddCodePage('ISO_BINENG', 28, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_ACP{$ENDIF}); {Binäre Sortierreihenfolge, Englisch ISO/ASCII 7-Bit-Zuordnung nach Groß- und Kleinschreibung}
 end;
 
 { Handle sql server error messages }

@@ -532,45 +532,42 @@ begin
   Result := SizeOf(TXSQLDA) + ((Value - 1) * SizeOf(TXSQLVAR));
 end;
 
-type
-  THackPlainDriver = Class(TZAbstractPlainDriver);
-
 procedure AddFireBird15CodePages(PlainDriver: TZAbstractPlainDriver);
 begin
-  THackPlainDriver(PlainDriver).AddCodePage('DOS737', 9, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS737{$ENDIF}); {Greek}
-  THackPlainDriver(PlainDriver).AddCodePage('DOS775', 15, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS775{$ENDIF}); {Baltic}
-  THackPlainDriver(PlainDriver).AddCodePage('DOS858', 16, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS858{$ENDIF}); {Latin I + Euro symbol}
-  THackPlainDriver(PlainDriver).AddCodePage('DOS862', 17, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS862{$ENDIF}); {Hebrew}
-  THackPlainDriver(PlainDriver).AddCodePage('DOS864', 18, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS864{$ENDIF}); {Arabic}
-  THackPlainDriver(PlainDriver).AddCodePage('DOS866', 48, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS866{$ENDIF}); {Russian}
-  THackPlainDriver(PlainDriver).AddCodePage('DOS869', 49, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS869{$ENDIF}); {Modern Greek}
-  THackPlainDriver(PlainDriver).AddCodePage('ISO8859_2', 22, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L2_ISO_8859_2{$ENDIF}); {Latin 2 —  Latin3 — Southern European (Maltese, Esperanto)}
-  THackPlainDriver(PlainDriver).AddCodePage('ISO8859_3', 23, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L3_ISO_8859_3{$ENDIF}); {Latin 1}
-  THackPlainDriver(PlainDriver).AddCodePage('ISO8859_4', 34, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L4_ISO_8859_4{$ENDIF}); {Latin 4 — Northern European (Estonian, Latvian, Lithuanian, Greenlandic, Lappish)}
-  THackPlainDriver(PlainDriver).AddCodePage('ISO8859_5', 35, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L5_ISO_8859_5{$ENDIF}); {Cyrillic (Russian)}
-  THackPlainDriver(PlainDriver).AddCodePage('ISO8859_6', 36, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L6_ISO_8859_6{$ENDIF}); {Arabic}
-  THackPlainDriver(PlainDriver).AddCodePage('ISO8859_7', 37, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L7_ISO_8859_7{$ENDIF}); {Greek}
-  THackPlainDriver(PlainDriver).AddCodePage('ISO8859_8', 38, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L8_ISO_8859_8{$ENDIF}); {Hebrew}
-  THackPlainDriver(PlainDriver).AddCodePage('ISO8859_9', 39, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_ISO_8859_9{$ENDIF}); {Latin 5}
-  THackPlainDriver(PlainDriver).AddCodePage('ISO8859_13', 40, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_ISO_8859_13{$ENDIF}); {Latin 7 — Baltic Rim}
-  THackPlainDriver(PlainDriver).AddCodePage('WIN1255', 58, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1255{$ENDIF}); {ANSI Hebrew}
-  THackPlainDriver(PlainDriver).AddCodePage('WIN1256', 59, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, cCP_WIN1256{$ENDIF}); {ANSI Arabic}
-  THackPlainDriver(PlainDriver).AddCodePage('WIN1257', 60, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1257{$ENDIF}); {ANSI Baltic}
+  PlainDriver.AddCodePage('DOS737', 9, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS737{$ENDIF}); {Greek}
+  PlainDriver.AddCodePage('DOS775', 15, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS775{$ENDIF}); {Baltic}
+  PlainDriver.AddCodePage('DOS858', 16, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS858{$ENDIF}); {Latin I + Euro symbol}
+  PlainDriver.AddCodePage('DOS862', 17, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS862{$ENDIF}); {Hebrew}
+  PlainDriver.AddCodePage('DOS864', 18, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS864{$ENDIF}); {Arabic}
+  PlainDriver.AddCodePage('DOS866', 48, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS866{$ENDIF}); {Russian}
+  PlainDriver.AddCodePage('DOS869', 49, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS869{$ENDIF}); {Modern Greek}
+  PlainDriver.AddCodePage('ISO8859_2', 22, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L2_ISO_8859_2{$ENDIF}); {Latin 2 —  Latin3 — Southern European (Maltese, Esperanto)}
+  PlainDriver.AddCodePage('ISO8859_3', 23, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L3_ISO_8859_3{$ENDIF}); {Latin 1}
+  PlainDriver.AddCodePage('ISO8859_4', 34, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L4_ISO_8859_4{$ENDIF}); {Latin 4 — Northern European (Estonian, Latvian, Lithuanian, Greenlandic, Lappish)}
+  PlainDriver.AddCodePage('ISO8859_5', 35, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L5_ISO_8859_5{$ENDIF}); {Cyrillic (Russian)}
+  PlainDriver.AddCodePage('ISO8859_6', 36, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L6_ISO_8859_6{$ENDIF}); {Arabic}
+  PlainDriver.AddCodePage('ISO8859_7', 37, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L7_ISO_8859_7{$ENDIF}); {Greek}
+  PlainDriver.AddCodePage('ISO8859_8', 38, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L8_ISO_8859_8{$ENDIF}); {Hebrew}
+  PlainDriver.AddCodePage('ISO8859_9', 39, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_ISO_8859_9{$ENDIF}); {Latin 5}
+  PlainDriver.AddCodePage('ISO8859_13', 40, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_ISO_8859_13{$ENDIF}); {Latin 7 — Baltic Rim}
+  PlainDriver.AddCodePage('WIN1255', 58, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1255{$ENDIF}); {ANSI Hebrew}
+  PlainDriver.AddCodePage('WIN1256', 59, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, cCP_WIN1256{$ENDIF}); {ANSI Arabic}
+  PlainDriver.AddCodePage('WIN1257', 60, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1257{$ENDIF}); {ANSI Baltic}
 end;
 
 procedure AddFireBird2CodePages(PlainDriver: TZAbstractPlainDriver);
 begin
-  THackPlainDriver(PlainDriver).AddCodePage('WIN1258', 65, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1258{$ENDIF}); {Vietnamese}
-  THackPlainDriver(PlainDriver).AddCodePage('KOI8R', 63, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_KOI8R{$ENDIF}); {Russian}
-  THackPlainDriver(PlainDriver).AddCodePage('KOI8U', 64, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_KOI8U{$ENDIF}); {Ukrainian}
-  THackPlainDriver(PlainDriver).AddCodePage('UTF8', 4, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}, '', 4); {All}
+  PlainDriver.AddCodePage('WIN1258', 65, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1258{$ENDIF}); {Vietnamese}
+  PlainDriver.AddCodePage('KOI8R', 63, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_KOI8R{$ENDIF}); {Russian}
+  PlainDriver.AddCodePage('KOI8U', 64, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_KOI8U{$ENDIF}); {Ukrainian}
+  PlainDriver.AddCodePage('UTF8', 4, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}, '', 4); {All}
 end;
 
 procedure AddFireBird21CodePages(PlainDriver: TZAbstractPlainDriver);
 begin
-  THackPlainDriver(PlainDriver).AddCodePage('CP943C', 68, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 943{$ENDIF}, '', 2); {Japanese}
-  THackPlainDriver(PlainDriver).AddCodePage('GBK', 67, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_GB2312{$ENDIF}, '', 2); {Chinese}
-  THackPlainDriver(PlainDriver).AddCodePage('TIS620', 66); {Thai}
+  PlainDriver.AddCodePage('CP943C', 68, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 943{$ENDIF}, '', 2); {Japanese}
+  PlainDriver.AddCodePage('GBK', 67, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_GB2312{$ENDIF}, '', 2); {Chinese}
+  PlainDriver.AddCodePage('TIS620', 66); {Thai}
 end;
 
 { IZFirebirdPlainDriver }

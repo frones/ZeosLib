@@ -99,15 +99,6 @@ type
     function IsAnsiDriver: Boolean; virtual;
     function Clone: IZPlainDriver; reintroduce; virtual; abstract;
     procedure LoadCodePages; virtual; abstract;
-    procedure AddCodePage(const Name: String; const ID:  Integer;
-      Encoding: TZCharEncoding = ceAnsi;
-      {$IFDEF WITH_CHAR_CONTROL}const CP: Word = $ffff; {$ENDIF}
-      const ZAlias: String = ''; CharWidth: Integer = 1); virtual;
-    procedure ResetCodePage(const OldID: Integer; const Name: String;
-      const ID:  Integer; {may be an ordinal value of predefined Types...}
-      Encoding: TZCharEncoding = ceAnsi;
-      {$IFDEF WITH_CHAR_CONTROL}const CP: Word = $ffff; {$ENDIF}
-      const ZAlias: String = ''; CharWidth: Integer = 1);
     function GetUnicodeCodePageName: String; virtual;
     function ValidateCharEncoding(const CharacterSetName: String; const DoArrange: Boolean = False): PZCodePage; overload;
     function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
@@ -129,6 +120,15 @@ type
     procedure Initialize(const Location: String = ''); virtual;
 
     property Loader: TZNativeLibraryLoader read FLoader;
+    procedure AddCodePage(const Name: String; const ID:  Integer;
+      Encoding: TZCharEncoding = ceAnsi;
+      {$IFDEF WITH_CHAR_CONTROL}const CP: Word = $ffff; {$ENDIF}
+      const ZAlias: String = ''; CharWidth: Integer = 1); virtual;
+    procedure ResetCodePage(const OldID: Integer; const Name: String;
+      const ID:  Integer; {may be an ordinal value of predefined Types...}
+      Encoding: TZCharEncoding = ceAnsi;
+      {$IFDEF WITH_CHAR_CONTROL}const CP: Word = $ffff; {$ENDIF}
+      const ZAlias: String = ''; CharWidth: Integer = 1);
   end;
   {END ADDED by fduenas 15-06-2006}
 
