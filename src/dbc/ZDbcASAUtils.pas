@@ -1684,7 +1684,6 @@ procedure TZASASQLDA.ReadBlob(const Index: Word; Buffer: Pointer;
 var
   TempSQLDA: PASASQLDA;
   Offs, Rd: LongWord;
-  ZASABlobStruct: TZASABlobStruct;
 const
   BlockSize = 32700;
 begin
@@ -1729,16 +1728,15 @@ begin
           while True do
           begin
             FPlainDriver.db_get_data(FHandle, PAnsiChar(FCursorName), Index + 1, Offs, TempSQLDA);
-            ZASABlobStruct := PZASABlobStruct( sqlData)^;
             CheckASAError( FPlainDriver, FHandle, lcOther);
             if ( sqlind^ < 0 ) then
               break;
-            Inc( Rd, ZASABlobStruct.stored_len);
-            if Offs = 0 then ReallocMem(Buffer, ZASABlobStruct.untrunc_len);
-            Move((ZASABlobStruct.arr[0]), (PAnsiChar(Buffer)+Offs)^, ZASABlobStruct.stored_len);
+            Inc( Rd, PZASABlobStruct( sqlData)^.stored_len);
+            if Offs = 0 then ReallocMem(Buffer, PZASABlobStruct( sqlData)^.untrunc_len);
+            Move((PZASABlobStruct( sqlData)^.arr[0]), (PAnsiChar(Buffer)+Offs)^, PZASABlobStruct( sqlData)^.stored_len);
             if ( sqlind^ = 0 ) or ( RD = Length) then
               break;
-            Inc( Offs, ZASABlobStruct.stored_len);
+            Inc( Offs, PZASABlobStruct( sqlData)^.stored_len);
             sqllen := Min( BlockSize, Length-Rd);
           end;
           if Rd <> Length then
@@ -1746,7 +1744,7 @@ begin
 
           DriverManager.LogMessage( lcExecute, FPlainDriver.GetProtocol,
             Format( 'GET DATA for Column: %s', [ GetFieldName(Index)]));
-
+          FreeMem(sqlData, SizeOf(TZASABlobStruct)+Min( BlockSize, Length));
           FPlainDriver.db_free_sqlda( TempSQLDA);
           TempSQLDA := nil;
         end;
