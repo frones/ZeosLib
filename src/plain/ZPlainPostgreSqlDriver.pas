@@ -887,14 +887,14 @@ end;
 procedure TZPostgreSQLBaseDriver.LoadCodePages;
 begin
   { MultiByte }
-  AddCodePage('EUC_JP', Ord(csEUC_JP)); { EUC_JP 	Japanese EUC }
-  AddCodePage('EUC_CN', Ord(csEUC_CN)); {EUC_CN 	Chinese EUC}
-  AddCodePage('EUC_KR', Ord(csEUC_KR)); {Extended UNIX Code-KR 	Korean}
-  AddCodePage('JOHAB', Ord(csJOHAB)); {JOHAB 	Korean (Hangul)}
-  AddCodePage('EUC_TW', Ord(csEUC_TW)); {Extended UNIX Code-TW 	Traditional Chinese, Taiwanese}
-  AddCodePage('UNICODE', Ord(csUNICODE_PODBC), ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}); {UNICODE 	Unicode (UTF-8)}
-  AddCodePage('MULE_INTERNAL', Ord(csMULE_INTERNAL)); { Mule internal code 	Multilingual Emacs }
-  {SingleChar}
+  AddCodePage('EUC_JP', Ord(csEUC_JP), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 3); { EUC_JP 	Japanese EUC }
+  AddCodePage('EUC_CN', Ord(csEUC_CN), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 3); {EUC_CN 	Chinese EUC}
+  AddCodePage('EUC_KR', Ord(csEUC_KR), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 3); {Extended UNIX Code-KR 	Korean}
+  AddCodePage('JOHAB', Ord(csJOHAB), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 3); {JOHAB 	Korean (Hangul)}
+  AddCodePage('EUC_TW', Ord(csEUC_TW), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 3); {Extended UNIX Code-TW 	Traditional Chinese, Taiwanese}
+  AddCodePage('UNICODE', Ord(csUNICODE_PODBC), ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}, '', 4); {UNICODE 	Unicode (UTF-8)}
+  AddCodePage('MULE_INTERNAL', Ord(csMULE_INTERNAL), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 4); { Mule internal code 	Multilingual Emacs }
+  {SingleByte}
   AddCodePage('SQL_ASCII', Ord(csSQL_ASCII), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_ACP{$ENDIF}); {unspecified (see text) 	any}
   AddCodePage('LATIN1', Ord(csLATIN1), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1252{$ENDIF}); { ISO 8859-1, ECMA 94 	Western European }
   AddCodePage('LATIN2', Ord(csLATIN2));  { 	ISO 8859-2, ECMA 94 	Central European }
@@ -1666,12 +1666,12 @@ begin
   inherited LoadCodePages;
   { Version 8.1 }
   {MultiByte}
-  ResetCodePage(Ord(csUNICODE_PODBC), 'UTF8', Ord(csUTF8), ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}); { Unicode, 8-bit 	all }
-  AddCodePage('BIG5', Ord(csBIG5), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_Big5{$ENDIF}); { Big Five 	Traditional Chinese }
-  AddCodePage('GB18030', Ord(csGB18030)); { National Standard 	Chinese }
-  AddCodePage('GBK', Ord(csGBK)); { Extended National Standard 	Simplified Chinese }
-  AddCodePage('SJIS', Ord(csSJIS), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_SHIFTJS{$ENDIF}); { Shift JIS 	Japanese }
-  AddCodePage('UHC', Ord(csUHC)); { Unified Hangul Code 	Korean }
+  ResetCodePage(Ord(csUNICODE_PODBC), 'UTF8', Ord(csUTF8), ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}, '', 4); { Unicode, 8-bit 	all }
+  AddCodePage('BIG5', Ord(csBIG5), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_Big5{$ENDIF}, '', 2); { Big Five 	Traditional Chinese }
+  AddCodePage('GB18030', Ord(csGB18030), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 2); { National Standard 	Chinese }
+  AddCodePage('GBK', Ord(csGBK), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 2); { Extended National Standard 	Simplified Chinese }
+  AddCodePage('SJIS', Ord(csSJIS), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_SHIFTJS{$ENDIF}, '', 2); { Shift JIS 	Japanese }
+  AddCodePage('UHC', Ord(csUHC), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 2); { Unified Hangul Code 	Korean }
   {SingleByte}
   ResetCodePage(Ord(csALT), 'WIN866', Ord(csWIN866)); { Windows CP866 	Cyrillic } //No longer in use
   AddCodePage('WIN874', Ord(csWIN874), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS874{$ENDIF}); { Windows CP874 	Thai }
@@ -1682,8 +1682,8 @@ begin
 
   { Version 8.3 }
   {MultiByte}
-  AddCodePage('EUC_JIS_2004', Ord(csEUC_JIS_2004)); { Extended UNIX Code-JP, JIS X 0213 	Japanese }
-  AddCodePage('SHIFT_JIS_2004', Ord(csSHIFT_JIS_2004)); { Shift JIS, JIS X 0213 	Japanese }
+  AddCodePage('EUC_JIS_2004', Ord(csEUC_JIS_2004), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 3); { Extended UNIX Code-JP, JIS X 0213 	Japanese }
+  AddCodePage('SHIFT_JIS_2004', Ord(csSHIFT_JIS_2004), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 3); { Shift JIS, JIS X 0213 	Japanese }
   {SingleChar}
   AddCodePage('WIN1253', Ord(csWIN1253), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1253{$ENDIF}); { Windows CP1253  Greek }
   AddCodePage('WIN1254', Ord(csWIN1254), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1254{$ENDIF}); { Windows CP1254 	Turkish }

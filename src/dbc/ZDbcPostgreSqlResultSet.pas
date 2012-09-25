@@ -259,11 +259,19 @@ begin
       begin
         Precision := Max(Max(FPlainDriver.GetFieldMode(FQueryHandle, I) - 4,
           FPlainDriver.GetFieldSize(FQueryHandle, I)), 0);
-      end;
 
-      if ((ColumnType = stString) or (ColumnType = stUnicodeString))
-        and ((Precision = 0) or (ColumnLabel = 'expr')) then
-        Precision := 255;
+        if ColumnType in [stString, stUnicodeString] then
+          if ( (ColumnLabel = 'expr') and ( Precision = 0 ) ) then
+            Precision := 255
+          else {all othere char/string fields can have mbcs chars}
+          begin
+            ColumnDisplaySize := Precision;
+            if (ColumnType = stString) then
+              Precision := ColumnDisplaySize * ClientCodePage^.CharWidth
+            else
+              Precision := Precision * 2;
+          end;
+      end;
     end;
 
     ColumnsInfo.Add(ColumnInfo);
