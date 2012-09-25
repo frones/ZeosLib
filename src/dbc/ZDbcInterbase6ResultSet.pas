@@ -629,9 +629,14 @@ begin
       ColumnLabel := GetFieldAliasName(I);
       ColumnType := FieldSqlType;
 
+      if FieldSqlType in [stString, stUnicodeString] then
+      begin
+        MaxLenghtBytes := GetFieldLength(I);
+        ColumnDisplaySize := MaxLenghtBytes div ClientCodePage^.CharWidth;
+      end;
       case FieldSqlType of
-        stString,
-        stUnicodeString: Precision := GetFieldLength(I);
+        stString: Precision := MaxLenghtBytes;
+        stUnicodeString: Precision := MaxLenghtBytes div ClientCodePage^.CharWidth * 2;
       end;
 
       ReadOnly := (GetFieldRelationName(I) = '') or (GetFieldSqlName(I) = '')
