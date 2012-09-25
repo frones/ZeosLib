@@ -70,6 +70,7 @@ type
 
     property Connection: IZConnection read FConnection write FConnection;
   published
+    procedure EmptyTest;
   end;
 
 implementation
@@ -85,6 +86,11 @@ procedure TZTestDbcCoreBugReport.TearDown;
 begin
   Connection.Close;
   Connection := nil;
+end;
+
+procedure TZTestDbcCoreBugReport.EmptyTest;
+begin
+  Check(True);
 end;
 
 initialization

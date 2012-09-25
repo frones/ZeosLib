@@ -100,6 +100,7 @@ end;
 procedure TZTestDbcASABugReport.EmptyTest;
 begin
   //drop me if bugs are reported
+  Check(True);
 end;
 
 
