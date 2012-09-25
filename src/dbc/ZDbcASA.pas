@@ -60,7 +60,7 @@ interface
 uses
   ZCompatibility, Types, Classes, Contnrs, SysUtils, ZDbcIntfs, ZDbcConnection,
   ZPlainASADriver, ZSysUtils, ZTokenizer, ZDbcGenericResolver, ZURL,
-  ZPlainDriver, ZGenericSqlAnalyser;
+  ZPlainDriver, ZGenericSqlAnalyser, ZPlainASAConstants;
 
 type
   {** Implements a ASA Database Driver. }
@@ -169,6 +169,7 @@ begin
   AddSupportedProtocol(AddPlainDriverToCache(TZASA7PlainDriver.Create));
   AddSupportedProtocol(AddPlainDriverToCache(TZASA8PlainDriver.Create));
   AddSupportedProtocol(AddPlainDriverToCache(TZASA9PlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZASA12PlainDriver.Create));
 end;
 
 {**

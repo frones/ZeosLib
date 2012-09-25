@@ -274,13 +274,14 @@ go
 /*==============================================================*/
 /*SET ANSI_NULLS ON 
 go
+
 CREATE PROCEDURE [ABTEST]
-  @p1 int,
-  @p2 int,
-  @p3 varchar(10),
-  @p4 int output,
-  @p5 varchar(20) output
+	@p1 int,
+	@p2 int,
+	@p3 varchar(10),
+	@p4 int output,
+	@p5 varchar(20) output
 AS
 select @p4 = @p1 * 10 + @p2;
 select @p5 = @p3 + @p3;
-go */ 
+go

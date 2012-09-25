@@ -55,6 +55,7 @@ unit ZTestPlainPerformance;
 interface
 
 uses TestFramework, SysUtils, Classes, ZPerformanceTestCase, ZCompatibility,
+  ZPlainASAConstants,
  {$IFDEF ENABLE_DBLIB}
  {$ENDIF}
  {$IFDEF ENABLE_INTERBASE}
@@ -1251,9 +1252,9 @@ end;
 
 procedure TZPlainASASQLPerformanceTestCase.SetUp;
 var
-  FASA7PlainDriver: IZASA7PlainDriver;
-  FASA8PlainDriver: IZASA8PlainDriver;
-  FASA9PlainDriver: IZASA9PlainDriver;
+  FASA7PlainDriver: IZASAPlainDriver;
+  FASA8PlainDriver: IZASAPlainDriver;
+  FASA9PlainDriver: IZASAPlainDriver;
 begin
   FASA7PlainDriver := TZASA7PlainDriver.Create;
   FASA8PlainDriver := TZASA8PlainDriver.Create;

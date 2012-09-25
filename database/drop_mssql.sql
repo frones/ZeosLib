@@ -52,5 +52,5 @@ go
 drop procedure procedure2
 go
 
-/*drop procedure abtest*/
-/*go*/
+drop procedure abtest
+go

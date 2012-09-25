@@ -102,7 +102,7 @@ type
   {** Implements Prepared ADO Statement. }
   TZAdoCallableStatement = class(TZAdoPreparedStatement)
   protected
-    FOutParamIndexes: TIntegerDynArray;
+    //FOutParamIndexes: TIntegerDynArray;
     function GetOutParam(ParameterIndex: Integer): TZVariant; override;
   public
     constructor Create(PlainDriver: IZPlainDriver; Connection: IZConnection;
@@ -153,12 +153,41 @@ begin
 end;
 
 function TZAdoStatement.ExecuteUpdate(const SQL: string): Integer;
+var
+  RC: OleVariant;
 begin
-  Result := -1;
+  try
+    LastResultSet := nil;
+    LastUpdateCount := -1;
+    Self.SQL := sql;
+    if IsSelect(SQL) then
+    begin
+      AdoRecordSet := CoRecordSet.Create;
+      AdoRecordSet.MaxRecords := MaxRows;
+      AdoRecordSet.Open(SQL, (Connection as IZAdoConnection).GetAdoConnection,
+        adOpenStatic, adLockOptimistic, adAsyncFetch);
+      GetCurrentResult(RC);
+      AdoRecordSet.Close;
+      AdoRecordSet := nil;
+    end
+    else
+      AdoRecordSet := (Connection as IZAdoConnection).GetAdoConnection.Execute(SQL, RC, adExecuteNoRecords);
+    Result := RC;
+    LastUpdateCount := Result;
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+  except
+    on E: Exception do
+    begin
+      DriverManager.LogError(lcExecute, FPlainDriver.GetProtocol, SQL, 0, E.Message);
+      raise;
+    end;
+  end
+
+{  Result := -1;
   LastResultSet := nil;
   LastUpdateCount := -1;
   if Execute(Sql) then
-    Result := LastUpdateCount;
+    Result := LastUpdateCount;}
 end;
 
 function TZAdoStatement.Execute(const SQL: string): Boolean;
@@ -195,7 +224,6 @@ var
 begin
   Result := False;
   if Assigned(AdoRecordset) then
-  begin
     if (AdoRecordSet.State and adStateOpen) = adStateOpen then
     begin
       Result := True;
@@ -205,9 +233,8 @@ begin
           TZAdoCachedResolver.Create((Connection as IZAdoConnection).GetAdoConnection,
           Self, NativeResultSet.GetMetaData), ClientCodePage)
       else LastResultSet := NativeResultSet;
-    end else
-      LastUpdateCount := RC;
-  end;
+    end;
+  LastUpdateCount := RC;
 end;
 
 function TZAdoStatement.GetMoreResults: Boolean;
@@ -274,11 +301,11 @@ var
   PC: Integer;
   P: ZPlainAdo.Parameter;
   B: IZBlob;
-  V: {$IFDEF DELPHI12_UP}OleVariant{$ELSE}Variant{$ENDIF};
+  V: OleVariant;
   OleDBCommand: IUnknown;
   OleDBCmdParams: ICommandWithParameters;
   OleDBCmdPrepare: ICommandPrepare;
-  OleDBPC: {$IFDEF DELPHI16_UP}NativeUInt{$ELSE}Cardinal{$ENDIF};
+  OleDBPC: NativeUInt;
   ParamInfo: PDBParamInfo;
   NamesBuffer: PPOleStr;
   RetValue: TZVariant;
@@ -393,16 +420,20 @@ begin
   begin
 
     P := FAdoCommand.Parameters.Item[ParameterIndex - 1];
-    if not ((SQLType = stBytes) and VarIsNull(V) ) then
+    if not ( SQLType = stBytes ) then  //Variant varByte is not comparable with OleVariant -> exception
     begin
-      P.Type_ := T;
-      P.Size := S;
-      // by aperger:
-      // to use the new value at the next calling of the statement
-      if P.Value <> V then begin
-        P.Value := V;
+      if not VarIsNull(V) then
+      begin
+        P.Type_ := T;
+        P.Size := S;
+        // by aperger:
+        // to use the new value at the next calling of the statement
+        if P.Value <> V then
+          P.Value := V;
       end;
-    end;
+    end
+    else
+      P.Value := V;
     FAdoCommand.Prepared:=false;
   end
   else
@@ -488,10 +519,9 @@ end;
 function TZAdoCallableStatement.GetOutParam(ParameterIndex: Integer): TZVariant;
 var
   Temp: Variant;
-  {Stream: TMemoryStream;
   V: Variant;
   P: Pointer;
-  TempBlob: IZBLob;}
+  TempBlob: IZBLob;
 begin
   if ParameterIndex > OutParamCount then
     Result := NullVariant
@@ -499,7 +529,7 @@ begin
   begin
     Temp := FAdoCommand.Parameters.Item[ParameterIndex - 1].Value;
 
-    (*case ConvertAdoToSqlType(FAdoCommand.Parameters.Item[ParameterIndex - 1].Type_) of
+    case ConvertAdoToSqlType(FAdoCommand.Parameters.Item[ParameterIndex - 1].Type_) of
       stBoolean:
         DefVarManager.SetAsBoolean(Result, Temp);
       stByte, stShort, stInteger, stLong:
@@ -511,7 +541,7 @@ begin
       stUnicodeString, stUnicodeStream:
         DefVarManager.SetAsUnicodeString(Result, Temp);
       stBytes:
-        DefVarManager.SetAsString(Result, BytesToStr(Temp));
+        DefVarManager.SetAsString(Result, String(BytesToStr(Temp)));
       stDate, stTime, stTimestamp:
         DefVarManager.SetAsDateTime(Result, Temp);
       stBinaryStream:
@@ -536,8 +566,8 @@ begin
         end
       else
         DefVarManager.SetNull(Result);
-    end; *)
-    //!! Please fix.
+    end;
+    (*//!! Please fix.
     case VarType(Temp) of
       varString, varOleStr:
         DefVarManager.SetAsString(Result, Temp);
@@ -553,7 +583,7 @@ begin
         DefVarManager.SetAsFloat(Result, Temp);
       else
         DefVarManager.SetNull(Result);
-    end;
+    end;*)
   end;
 
   LastWasNull := DefVarManager.IsNull(Result);

@@ -113,7 +113,8 @@ function PrepareSQLParameter(Value: TZVariant; ParamType: TZSQLType): string;
 
 implementation
 
-uses Types, ZCompatibility, ZSysUtils, ZPlainDbLibConstants, ZPlainDBLibDriver;
+uses Types, ZCompatibility, ZSysUtils, ZPlainDbLibConstants, ZPlainDBLibDriver,
+ ZDbcUtils;
 
 {**
   Converts an ODBC native types into ZDBC SQL types.
@@ -347,7 +348,6 @@ function PrepareSQLParameter(Value: TZVariant; ParamType: TZSQLType): string;
 var
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
-  TempString: Ansistring;
 begin
   TempBytes := nil;
 
@@ -373,41 +373,33 @@ begin
           if Length(TempBytes) = 0 then
             Result := 'NULL'
           else
-          begin
-            SetLength(Result, (2 * Length(TempBytes)));
-            BinToHex(PAnsiChar(TempBytes), PAnsiChar(AnsiString(Result)), Length(TempBytes));
-            Result := '0x' + Result;
-          end;
+            Result := GetSQLHexString(PAnsiChar(TempBytes), Length(TempBytes), True);
         end;
       stDate:
-        Result := '''' + FormatDateTime('yyyymmdd',
+        Result := '''' + FormatDateTime('yyyy/mm/dd',
           SoftVarManager.GetAsDateTime(Value)) + '''';
       stTime:
         Result := '''' + FormatDateTime('hh":"mm":"ss":"zzz',
           SoftVarManager.GetAsDateTime(Value)) + '''';
       stTimestamp:
-        Result := '''' + FormatDateTime('yyyymmdd hh":"mm":"ss":"zzz',
+        Result := '''' + FormatDateTime('yyyy/mm/dd hh":"mm":"ss":"zzz',
           SoftVarManager.GetAsDateTime(Value)) + '''';
-      stAsciiStream, stUnicodeStream:
-        begin
-          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
-          if not TempBlob.IsEmpty then
-            Result := AnsiQuotedStr(StringReplace(String(TempBlob.GetString), #0, '', [rfReplaceAll]), '''')
-          else
-            Result := 'NULL';
-        end;
-      stBinaryStream:
+      stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
           begin
-            TempString := TempBlob.GetString;
-            SetLength(Result, (2 * Length(TempString)));
-            BinToHex(PAnsiChar(TempString), PAnsiChar(AnsiString(Result)), Length(TempString));
-            Result := '0x' + Result;
+            if ParamType = stBinaryStream then
+              Result := GetSQLHexString(PAnsiChar(TempBlob.GetBuffer), TempBlob.Length, True)
+            else
+              if ParamType = stUnicodeStream then
+                Result := 'N'+AnsiQuotedStr(StringReplace(String(TempBlob.GetString), #0, '', [rfReplaceAll]), '''')
+              else
+              Result := AnsiQuotedStr(StringReplace(String(TempBlob.GetString), #0, '', [rfReplaceAll]), '''');
           end
           else
             Result := 'NULL';
+          TempBlob := nil;
         end;
       else
         Result := 'NULL';

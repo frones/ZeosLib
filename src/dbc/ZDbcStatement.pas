@@ -59,7 +59,7 @@ interface
 
 uses
   Types, Classes, SysUtils, ZDbcIntfs, ZTokenizer, ZCompatibility, ZVariant,
-  ZDbcLogging;
+  ZDbcLogging, ZClasses;
 
 type
   TZSQLTypeArray = array of TZSQLType;
@@ -272,7 +272,10 @@ type
     FTemp: String;
     FProcSql: String;
   protected
+    FResultSets: IZCollection;
+    FActiveResultset: Integer;
     FDBParamTypes:array[0..1024] of shortInt;
+    procedure ClearResultSets; virtual;
     procedure TrimInParameters; virtual;
     procedure SetOutParamCount(NewParamCount: Integer); virtual;
     function GetOutParam(ParameterIndex: Integer): TZVariant; virtual;
@@ -288,6 +291,7 @@ type
   public
     constructor Create(Connection: IZConnection; SQL: string; Info: TStrings);
     procedure ClearParameters; override;
+    procedure Close; override;
 
     function HasMoreResultSets: Boolean; virtual;
     function GetFirstResultSet: IZResultSet; virtual;
@@ -369,7 +373,7 @@ type
 
 implementation
 
-uses ZSysUtils, ZMessages, ZDbcResultSet;
+uses ZSysUtils, ZMessages, ZDbcResultSet, ZCollections;
 
 var
 {**
@@ -1754,6 +1758,20 @@ begin
   SetOutParamCount(0);
   FProcSql := ''; //Init -> FPC
   FLastWasNull := True;
+  FResultSets := TZCollection.Create;
+end;
+
+{**
+  Close and release a list of returned resultsets.
+}
+procedure TZAbstractCallableStatement.ClearResultSets;
+var
+  I: Integer;
+begin
+  for i := 0 to FResultSets.Count -1 do
+    IZResultSet(FResultSets[i]).Close;
+  FResultSets.Clear;
+  LastResultSet := nil;
 end;
 
 {**
@@ -1826,6 +1844,23 @@ begin
     OutParamTypes[I - 1] := stUnknown;
   end;
   SetOutParamCount(0);
+end;
+
+{**
+  Releases this <code>Statement</code> object's database
+  and JDBC resources immediately instead of waiting for
+  this to happen when it is automatically closed.
+  It is generally good practice to release resources as soon as
+  you are finished with them to avoid tying up database
+  resources.
+  <P><B>Note:</B> A <code>Statement</code> object is automatically closed when it is
+  garbage collected. When a <code>Statement</code> object is closed, its current
+  <code>ResultSet</code> object, if one exists, is also closed.
+}
+procedure TZAbstractCallableStatement.Close;
+begin
+  ClearResultSets;
+  inherited Close;
 end;
 
 {**

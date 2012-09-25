@@ -60,7 +60,7 @@ interface
 
 uses
   Classes, SysUtils, Types, ZSysUtils, ZDbcIntfs, ZPlainASADriver, ZDbcLogging,
-  ZCompatibility, ZDbcASA, ZDbcStatement, ZVariant;   // SQLTimSt, FmtBCD,
+  ZCompatibility, ZDbcASA, ZDbcStatement, ZVariant, ZPlainASAConstants;   // SQLTimSt, FmtBCD,
 
 const
   StdVars = 20;

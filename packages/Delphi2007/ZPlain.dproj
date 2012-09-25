@@ -59,9 +59,7 @@
     </DelphiCompile>
     <DCCReference Include="..\..\src\plain\ZPlainAdo.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainAdoDriver.pas" />
-    <DCCReference Include="..\..\src\plain\ZPlainASA7.pas" />
-    <DCCReference Include="..\..\src\plain\ZPlainASA8.pas" />
-    <DCCReference Include="..\..\src\plain\ZPlainASA9.pas" />
+    <DCCReference Include="..\..\src\plain\ZPlainASAConstants.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainASADriver.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainDbLibDriver.pas" />
     <DCCReference Include="..\..\src\plain\ZPlainDbLibConstants.pas" />

@@ -72,8 +72,8 @@ type
 
     property Connection: IZConnection read FConnection write FConnection;
 
-  published
     procedure TestConnection;
+  published
     procedure TestStoredResultSet;
     procedure TestUseResultSet;
     procedure TestPreparedStatement;
@@ -94,7 +94,7 @@ uses ZSysUtils, ZTestConsts;
 }
 function TZTestDbcMSSqlCase.GetSupportedProtocols: string;
 begin
-  Result := 'mssql';
+  Result := 'mssql,FreeTDS_MsSQL<=6.5,FreeTDS_MsSQL-7.0,FreeTDS_MsSQL-2000,FreeTDS_MsSQL>=2005';
 end;
 
 {**

@@ -1716,7 +1716,12 @@ uses ComObj;
 
 class function CoConnection.Create: Connection15;
 begin
-  Result := CreateComObject(CLASS_Connection) as Connection15;
+  try
+    Result := CreateComObject(CLASS_Connection) as Connection15;
+  except
+    CoInitialize(nil);
+    Result := CreateComObject(CLASS_Connection) as Connection15;
+  end;
 end;
 
 class function CoConnection.CreateRemote(const MachineName: string): Connection15;
