@@ -208,8 +208,11 @@ begin
       Result := stLong;
   end;
 
-  if ((Result = stString) or (Result = stUnicodeString)) and (Precision = 0) then
-    Precision := 255;
+  if ((Result = stString) or (Result = stUnicodeString)) then
+    if (Precision = 0) then
+      Precision := 255 {$IFNDEF DELPHI12_UP}* 4{$ENDIF}//UTF8 assumes 4Byte/Char
+    else
+      Precision := Precision{$IFNDEF DELPHI12_UP} *4{$ENDIF};//UTF8 assumes 4Byte/Char
 
   case Result of
     stString: if UTF8StringAsWideField then Result := stUnicodeString;

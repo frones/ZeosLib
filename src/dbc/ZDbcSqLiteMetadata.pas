@@ -1358,7 +1358,7 @@ begin
         Temp := Copy(Temp, 1, Pos('(', Temp) - 1);
       Result.UpdateString(6, Temp);
 
-      Result.UpdateInt(7, Precision);
+      Result.UpdateInt(7, Precision);  //Precision will be converted higher up
       Result.UpdateNull(8);
       Result.UpdateInt(9, Decimals);
       Result.UpdateInt(10, 0);
