@@ -1614,8 +1614,8 @@ begin
   //        Ord(ConvertASAJDBCToSqlType(GetShortByName('DATA_TYPE'))));
         Result.UpdateStringByName('TYPE_NAME',
           GetStringByName('TYPE_NAME'));
-        Result.UpdateIntByName('COLUMN_SIZE',
-          GetIntByName('COLUMN_SIZE'));
+        //Result.UpdateIntByName('COLUMN_SIZE',
+          //GetIntByName('COLUMN_SIZE'));
         Result.UpdateIntByName('BUFFER_LENGTH',
           GetIntByName('BUFFER_LENGTH'));
         Result.UpdateIntByName('DECIMAL_DIGITS',

@@ -149,8 +149,13 @@ type
     property SQLData: IZASASQLDA read FSQLData;
   end;
 
+  IZASABlob = interface(IZBlob)
+    ['{1E043426-5856-4953-88B8-F6FB276B7B61}']
+    procedure ReadBlob;
+  end;
+
   {** Implements external blob wrapper object for PostgreSQL. }
-  TZASABlob = class(TZAbstractBlob)
+  TZASABlob = class(TZAbstractBlob, IZASABlob)
   private
     FBlobRead: Boolean;
     FResultSet: TZASAResultSet;
@@ -178,7 +183,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  SysUtils, Math, ZdbcLogging, ZPlainASAConstants;
+  SysUtils, Math, ZdbcLogging, ZPlainASAConstants, ZDbcUtils;
 
 { TZASAResultSet }
 
@@ -262,7 +267,7 @@ end;
 }
 function TZASAResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
-  Blob: TZASABlob;
+  Blob: IZASABlob;
 begin
   Result := nil;
   CheckClosed;
@@ -680,7 +685,7 @@ begin
 
       case FieldSqlType of
         stString,
-        stUnicodeString: Precision := GetFieldLength(I);
+        stUnicodeString: Precision := GetFieldSize(FieldSqlType, GetFieldLength(I)-4, ClientCodePage.CharWidth, True);
       end;
 
       ReadOnly := False;
@@ -704,6 +709,9 @@ end;
 
 procedure TZASAResultSet.Close;
 begin
+  FSqlData := nil;
+  FParamsSqlData := nil;
+  FUpdateSqlData := nil;
   if FCursorName <> '' then
   begin
     FASAConnection.GetPlainDriver.db_close(FASAConnection.GetDBHandle, PAnsiChar(FCursorName));
@@ -992,7 +1000,6 @@ end;
 
 function TZASABlob.GetUnicodeString: WideString;
 begin
-  ReadBlob;
   Result := inherited GetUnicodeString;
 end;
 
@@ -1009,6 +1016,8 @@ var
 begin
   if FBlobRead then
    Exit;
+  if Assigned(BlobData) then
+    FreeMem(BlobData);
 
   if FResultSet.FInsert or ( FResultSet.FUpdate and FResultSet.FUpdateSQLData.IsAssigned( FColID)) then
     FResultSet.FUpdateSQLData.ReadBlobToMem( FColID, Buffer, Size)

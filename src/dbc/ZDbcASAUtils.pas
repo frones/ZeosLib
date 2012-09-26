@@ -353,7 +353,7 @@ begin
   FPlainDriver := PlainDriver;
   FHandle := Handle;
   FCursorName := CursorName;
-  AllocateSQLDA( NumVars);
+  AllocateSQLDA(NumVars);
   FEncoding := Encoding;
   FUTF8AsWideString := UTF8AsWideString;
   inherited Create;
@@ -375,7 +375,7 @@ begin
   FSQLDA := FPlainDriver.db_alloc_sqlda( NumVars);
   if not Assigned( FSQLDA) then
     CreateException( 'Not enough memory for SQLDA');
-  SetLength( FDeclType, FSQLDA.sqln);
+  SetLength(FDeclType, FSQLDA.sqln);
 end;
 
 {**
@@ -446,12 +446,17 @@ begin
   begin
     for i := 0 to FSQLDA.sqln-1 do
     begin
+      FSQLDA.sqlVar[i].sqlInd := nil;
       if Assigned( FSQLDA.sqlVar[i].sqlData) then
+      begin
         FreeMem( FSQLDA.sqlVar[i].sqlData);
+        FSQLDA.sqlVar[i].sqlData := nil;
+      end;
     end;
     FPlainDriver.db_free_sqlda( FSQLDA);
     FSQLDA := nil;
   end;
+  SetLength(FDeclType, 0);
   FDeclType := nil;
 end;
 

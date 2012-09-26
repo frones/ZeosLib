@@ -344,7 +344,7 @@ begin
   //AddCodePage('EUC_KOREA', 23, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1361{$ENDIF}); { Koreanisch KS C 5601-1992 8-Bit-Zeichensatz, Johab}
   //AddCodePage('EUC_TAIWAN', 24, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 964{$ENDIF}); {EUC-TW-Kodierung}
   //AddCodePage('UCA', 29, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16{$ENDIF}, 'utf8'); {UCA	UCA-Standardkollatierung}
-  AddCodePage('UTF-8', 30, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}, '', 4); {UTF-8, 8-Bit-Mehrbyte-Zeichensatz für Unicode, binäre Reihenfolge}
+  AddCodePage('UTF-8', 30, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}, '', 3); {UTF-8, 8-Bit-Mehrbyte-Zeichensatz für Unicode, binäre Reihenfolge}
 
   { SingleByte }
   //AddCodePage('1250LATIN2', 7, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1250{$ENDIF}); {Windows Latin 2, Mittel- und Osteuropa}
