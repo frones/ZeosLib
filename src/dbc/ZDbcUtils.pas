@@ -166,6 +166,17 @@ function GetSQLHexWideString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = Fal
 function GetSQLHexAnsiString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): ZAnsiString;
 function GetSQLHexString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): String;
 
+{**
+  Returns a FieldSize in Bytes dependend to the FieldType and CharWidth
+  @param <code>TZSQLType</code> the Zeos FieldType
+  @param <code>Integer</code> the Current given FieldLength
+  @param <code>Integer</code> the Current CountOfByte/Char
+  @param <code>Boolean</code> does the Driver returns the FullSizeInBytes
+  @returns <code>Integer</code> the count of AnsiChars for Field.Size * SizeOf(Char)
+}
+function GetFieldSize(const SQLType: TZSQLType;
+  const Precision, CharWidth: Integer; SizeInBytes: Boolean = False): Integer;
+
 implementation
 
 uses ZMessages, ZSysUtils{$IFDEF WITH_WIDESTRUTILS},WideStrUtils{$ENDIF};
@@ -552,6 +563,36 @@ begin
   {$ELSE}
   Result := GetSQLHexAnsiString(Value, Len, ODBC);
   {$ENDIF}
+end;
+
+{**
+  Returns a FieldSize in Bytes dependend to the FieldType and CharWidth
+  @param <code>TZSQLType</code> the Zeos FieldType
+  @param <code>Integer</code> the Current given FieldLength
+  @param <code>Integer</code> the Current CountOfByte/Char
+  @param <code>Boolean</code> does the Driver returns the FullSizeInBytes
+  @returns <code>Integer</code> the count of AnsiChars for Field.Size * SizeOf(Char)
+}
+function GetFieldSize(const SQLType: TZSQLType;
+  const Precision, CharWidth: Integer; SizeInBytes: Boolean = False): Integer;
+var
+  TempPrecision: Integer;
+begin
+  if ( SQLType in [stString, stUnicodeString] ) and ( Precision <> 0 )then
+  begin
+    if SizeInBytes then
+      TempPrecision := Precision div CharWidth
+    else
+      TempPrecision := Precision;
+    {$IFNDEF DELPHI12_UP}
+    if SQLType = stString then
+      Result := TempPrecision * CharWidth
+    else
+    {$ENDIF}
+      Result := TempPrecision;
+  end
+  else
+    Result := Precision;
 end;
 
 end.
