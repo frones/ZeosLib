@@ -577,14 +577,14 @@ begin
         13, 88, {sjis}
         35, 90, 128..151:  {ucs2}
           begin
-            Result.ColumnDisplaySize := (FieldLength div 4)-1;
+            Result.ColumnDisplaySize := (FieldLength div 4);
             Result.Precision := GetFieldSize(Result.ColumnType, Result.ColumnDisplaySize, 2);
           end;
         33, 83, 192..215, { utf8 }
         97, 98, { eucjpms}
         12, 91: {ujis}
           begin
-            Result.ColumnDisplaySize := (FieldLength div 3)-1;
+            Result.ColumnDisplaySize := (FieldLength div 3);
             Result.Precision := GetFieldSize(Result.ColumnType, Result.ColumnDisplaySize, 3);
           end;
         54, 55, 101..124, {utf16}
@@ -592,13 +592,13 @@ begin
         60, 61, 160..183, {utf32}
         45, 46, 224..247: {utf8mb4}
           begin
-            Result.ColumnDisplaySize := (FieldLength div 4)-1;
+            Result.ColumnDisplaySize := (FieldLength div 4);
             Result.Precision := GetFieldSize(Result.ColumnType, Result.ColumnDisplaySize, 4);
           end;
         else
         begin
-          Result.ColumnDisplaySize := FieldLength-1; //1-Byte charsets
-          Result.Precision := FieldLength-1; //1-Byte charsets
+          Result.ColumnDisplaySize := FieldLength; //1-Byte charsets
+          Result.Precision := FieldLength; //1-Byte charsets
         end;
       end
     else
