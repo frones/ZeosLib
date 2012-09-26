@@ -272,7 +272,7 @@ go
 /*==============================================================*/
 /* Stored procedure: abtest                                     */
 /*==============================================================*/
-/*SET ANSI_NULLS ON 
+SET ANSI_NULLS ON 
 go
 
 CREATE PROCEDURE [ABTEST]
