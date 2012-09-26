@@ -134,7 +134,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  SysUtils;
+  SysUtils, ZDbcUtils;
 
 { TZInterbase6ResultSet }
 
@@ -633,10 +633,7 @@ begin
       begin
         MaxLenghtBytes := GetFieldLength(I);
         ColumnDisplaySize := MaxLenghtBytes div ClientCodePage^.CharWidth;
-      end;
-      case FieldSqlType of
-        stString: Precision := MaxLenghtBytes;
-        stUnicodeString: Precision := MaxLenghtBytes div ClientCodePage^.CharWidth * 2;
+        Precision := GetFieldSize(ColumnType, MaxLenghtBytes, ClientCodePage^.CharWidth, True);
       end;
 
       ReadOnly := (GetFieldRelationName(I) = '') or (GetFieldSqlName(I) = '')
