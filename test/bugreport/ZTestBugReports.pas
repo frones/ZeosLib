@@ -6,7 +6,7 @@ interface
 
 uses
 {$IFDEF ENABLE_ASA}
-  ZTestBugDbcASA, ZTestCompASABugReport,
+  ZTestBugDbcASA, ZTestBugCompASA,
 {$ENDIF}
 {$IFDEF ENABLE_MYSQL}
   ZTestBugDbcMySql, ZTestBugCompMySql,
