@@ -168,7 +168,8 @@ begin
   FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cashedblob', 'true'));
   CursorName := AnsiString(RandomString(12));
   FSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
-    FASAConnection.GetDBHandle, CursorName, ClientCodePage);
+    FASAConnection.GetDBHandle, CursorName, ClientCodePage^.Encoding,
+    Connection.UTF8StringAsWideField );
 end;
 
 destructor TZASAStatement.Destroy;
@@ -247,12 +248,12 @@ var
   CursorOptions: SmallInt;
 begin
   Close;
-
+  ASQL := Self.GetPrepreparedSQL(SQL);
   with FASAConnection do
   begin
     try
       GetPlainDriver.db_prepare_describe( GetDBHandle, nil, @FStmtNum,
-            PAnsiChar(ZPlainString(SQL)), FSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
+            PAnsiChar(ASQL), FSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
             SQL_PREPARE_DESCRIBE_OUTPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);
       ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, SQL);
 
@@ -261,14 +262,15 @@ begin
       begin
         if FSQLData.GetData^.sqld <= 0 then
           raise EZSQLException.Create( SCanNotRetrieveResultSetData)
-        else if ( FSQLData.GetData^.sqld > FSQLData.GetData^.sqln) then
-        begin
-          FSQLData.AllocateSQLDA( FSQLData.GetData^.sqld);
-          GetPlainDriver.db_describe( GetDBHandle, nil, @FStmtNum,
-            FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
-          ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute,
-            SQL);
-        end;
+        else
+          if ( FSQLData.GetData^.sqld > FSQLData.GetData^.sqln) then
+          begin
+            FSQLData.AllocateSQLDA( FSQLData.GetData^.sqld);
+            GetPlainDriver.db_describe( GetDBHandle, nil, @FStmtNum,
+              FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
+            ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute,
+              SQL);
+          end;
         FSQLData.InitFields;
       end;
       if ResultSetConcurrency = rcUpdatable then
@@ -278,7 +280,7 @@ begin
       if ResultSetType = rtScrollInsensitive then
         CursorOptions := CursorOptions + CUR_INSENSITIVE;
       Cursor := CursorName;
-       GetPlainDriver.db_open(GetDBHandle, PAnsiChar(Cursor), nil, @FStmtNum,
+      GetPlainDriver.db_open(GetDBHandle, PAnsiChar(Cursor), nil, @FStmtNum,
             nil, FetchSize, 0, CursorOptions);
       ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute,
         SQL);
@@ -290,7 +292,6 @@ begin
       Result := GetCachedResultSet( SQL, Self,
         TZASAResultSet.Create( Self, SQL, FStmtNum, Cursor, FSQLData, nil,
         FCachedBlob));
-
       { Logging SQL Command }
       DriverManager.LogMessage( lcExecute, GetPlainDriver.GetProtocol, SQL);
     except
@@ -318,15 +319,12 @@ end;
 {$HINTS OFF}
 function TZASAStatement.ExecuteUpdate(const SQL: string): Integer;
 begin
+  ASQL := Self.GetPrepreparedSQL(SQL);
   Close;
   Result := -1;
   with FASAConnection do
   begin
-    {$IFDEF DELPHI12_UP}
-    GetPlainDriver.db_execute_imm(GetDBHandle, PAnsiChar(UTF8String(SQL)));
-    {$ELSE}
-    GetPlainDriver.db_execute_imm(GetDBHandle, PAnsiChar(SQL)); 
-    {$ENDIF}      
+    GetPlainDriver.db_execute_imm(GetDBHandle, PAnsiChar(ASQL));
     ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, SQL);
 
     Result := GetDBHandle.sqlErrd[2];
@@ -393,9 +391,11 @@ begin
   FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cashedblob', 'true'));
   CursorName := AnsiString(RandomString(12));
   FParamSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
-    FASAConnection.GetDBHandle, CursorName, ClientCodePage);
+    FASAConnection.GetDBHandle, CursorName, ClientCodePage^.Encoding,
+    Connection.UTF8StringAsWideField);
   FSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
-    FASAConnection.GetDBHandle, CursorName, ClientCodePage);
+    FASAConnection.GetDBHandle, CursorName, ClientCodePage^.Encoding,
+    Connection.UTF8StringAsWideField);
   ASAPrepare( FASAConnection, FSQLData, FParamSQLData, SQL, @FStmtNum, FPrepared,
     FMoreResults);
 end;
@@ -628,8 +628,8 @@ begin
       InParamCount, FParamSQLData, FASAConnection.GetEncoding);
     GetPlainDriver.db_execute_into( GetDBHandle, nil, nil, @FStmtNum,
       FParamSQLData.GetData, nil);
-    if ( GetDBHandle.SqlCode <> -185) or ( FSQLData.GetData^.sqld = 0) then
-      ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, SQL);
+    ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, SQL,
+      SQLE_TOO_MANY_RECORDS);
 
     Result := GetDBHandle.sqlErrd[2];
     LastUpdateCount := Result;
@@ -661,9 +661,11 @@ begin
   FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cashedblob', 'true'));
   CursorName := AnsiString(RandomString(12));
   FParamSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
-    FASAConnection.GetDBHandle, CursorName, ClientCodePage);
+    FASAConnection.GetDBHandle, CursorName, ClientCodePage^.Encoding,
+    Connection.UTF8StringAsWideField);
   FSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
-    FASAConnection.GetDBHandle, CursorName, ClientCodePage);
+    FASAConnection.GetDBHandle, CursorName, ClientCodePage^.Encoding,
+    Connection.UTF8StringAsWideField);
 end;
 
 destructor TZASACallableStatement.Destroy;

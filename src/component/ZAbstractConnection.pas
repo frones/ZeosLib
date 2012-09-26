@@ -920,7 +920,6 @@ end;
 }
 type //To get protected methodes
   THack_ZAbstractDataset = Class(TZAbstractDataset);
-
 procedure TZAbstractConnection.Commit;
 var
   ExplicitTran: Boolean;
@@ -937,7 +936,9 @@ begin
     try
       try
         for i := 0 to FDatasets.Count -1 do
-          THack_ZAbstractDataset(FDatasets[i]).DisposeCachedUpdates;
+          if Assigned(FDatasets[i]) then
+            if TObject(FDatasets[i]) is TZAbstractDataset then
+              THack_ZAbstractDataset(FDatasets[i]).DisposeCachedUpdates;
         FConnection.Commit;
       finally
         FExplicitTransactionCounter := 0;
@@ -1110,8 +1111,7 @@ begin
 end;
 
 {**
-  Unregisters a new dataset object.
-  @param DataSet a new dataset to be unregistered.
+  Unregisters all dataset objects.
 }
 procedure TZAbstractConnection.UnregisterAllDataSets;
 var

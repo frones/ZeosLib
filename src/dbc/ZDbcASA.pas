@@ -448,6 +448,11 @@ begin
     DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol,
       Format('CONNECT TO "%s" AS USER "%s"', [Database, User]));
 
+    if ( FClientCodePage <> '' ) then
+      if ( GetPlainDriver.db_change_char_charset(FHandle, PAnsiChar(AnsiString(FClientCodePage))) = 0 ) or
+         ( GetPlainDriver.db_change_nchar_charset(FHandle, PAnsiChar(AnsiString(FClientCodePage))) = 0 ) then
+        CheckASAError( GetPlainDriver, FHandle, lcOther, 'Set client CharacterSet failed.');
+
     StartTransaction;
 
     //SetConnOptions     RowCount;

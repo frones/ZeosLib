@@ -75,6 +75,7 @@ type
     property Connection: TZConnection read FConnection write FConnection;
 
   published
+    procedure EmptyTest;
   end;
 
 implementation
@@ -89,12 +90,17 @@ uses
 
 function ZTestCompASABugReport.GetSupportedProtocols: string;
 begin
-  Result := 'ASA7,ASA8,ASA9';
+  Result := 'ASA7,ASA8,ASA9,ASA12';
 end;
 
 procedure ZTestCompASABugReport.SetUp;
 begin
   Connection := CreateDatasetConnection;
+end;
+
+procedure ZTestCompASABugReport.EmptyTest;
+begin
+  //drop me if bugs are reported
 end;
 
 procedure ZTestCompASABugReport.TearDown;

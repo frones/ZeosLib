@@ -132,53 +132,71 @@ end;
 procedure TZGenericTestDbcResultSet.TestConnection;
 var
   MetadataList: TStrings;
+  Query: TZQuery;
+  Table: TZTable;
+  ROQuery: TZReadOnlyQuery;
 begin
-  CheckEquals(False, Connection.Connected);
-  CheckEquals(False, Connection.ReadOnly);
-  CheckEquals(True, Connection.AutoCommit);
-
-  Connection.AutoCommit := False;
-  CheckEquals(Ord(tiNone), Ord(Connection.TransactIsolationLevel));
-
-  { Checks without transactions. }
-  Connection.Connect;
-  CheckEquals(True, Connection.Connected);
-  Connection.Commit;
-  Connection.Rollback;
-  Connection.Disconnect;
-  CheckEquals(False, Connection.Connected);
-
-  { Checks with transactions. }
-  Connection.TransactIsolationLevel := tiReadCommitted;
-  Connection.Connect;
-  CheckEquals(True, Connection.Connected);
-  Connection.Commit;
-  Connection.Rollback;
-  Connection.Disconnect;
-  CheckEquals(False, Connection.Connected);
-
+  Query := TZQuery.Create(nil);
+  Table := TZTable.Create(nil);
+  ROQuery := TZReadOnlyQuery.Create(nil);
   MetadataList := TStringList.Create;
   try
-    Connection.GetProtocolNames(MetadataList);
-    Check(MetadataList.Count > 0, 'GetProtocolNames returns an empty list');
-    Check(MetadataList.IndexOf(Protocol) >= 0, 'Error in GetProtocolNames');
+    CheckEquals(False, Connection.Connected);
+    CheckEquals(False, Connection.ReadOnly);
+    CheckEquals(True, Connection.AutoCommit);
+
+    Query.Connection := Connection;
+    Table.Connection := Connection;
+    ROQuery.Connection := Connection;
+
+    Connection.AutoCommit := False;
+    CheckEquals(Ord(tiNone), Ord(Connection.TransactIsolationLevel));
+
+    { Checks without transactions. }
+    Connection.Connect;
+    CheckEquals(True, Connection.Connected);
+    Connection.Commit;
+    Connection.Rollback;
+    Connection.Disconnect;
+    CheckEquals(False, Connection.Connected);
+
+    { Checks with transactions. }
+    Connection.TransactIsolationLevel := tiReadCommitted;
+    Connection.Connect;
+    CheckEquals(True, Connection.Connected);
+    Connection.Commit;
+    Connection.Rollback;
+    Connection.Disconnect;
+    CheckEquals(False, Connection.Connected);
 
     try
+      Connection.GetProtocolNames(MetadataList);
+      Check(MetadataList.Count > 0, 'GetProtocolNames returns an empty list');
+      Check(MetadataList.IndexOf(Protocol) >= 0, 'Error in GetProtocolNames');
+
+      try
+        Connection.GetCatalogNames(MetadataList);
+        Fail('On closed connection call should throw exception');
+      except
+        // Ignore.
+      end;
+
+      Connection.Connect;
+
       Connection.GetCatalogNames(MetadataList);
-      Fail('On closed connection call should throw exception');
-    except
-      // Ignore.
+      Connection.GetSchemaNames(MetadataList);
+      Connection.GetTableNames('', MetadataList);
+      Check(MetadataList.Count > 0, 'Error in GetTableNames');
+      Connection.GetStoredProcNames('', MetadataList);
+    finally
+      //nothing happens here
     end;
-
-    Connection.Connect;
-
-    Connection.GetCatalogNames(MetadataList);
-    Connection.GetSchemaNames(MetadataList);
-    Connection.GetTableNames('', MetadataList);
-    Check(MetadataList.Count > 0, 'Error in GetTableNames');
-    Connection.GetStoredProcNames('', MetadataList);
   finally
+    //FreeMemory
     MetadataList.Free;
+    Query.Free;
+    Table.Free;
+    ROQuery.Free;
   end;
 end;
 
@@ -1917,7 +1935,6 @@ begin
     Query.Free;
   end;
 end;
-
 
 initialization
   RegisterTest('component',TZGenericTestDbcResultSet.Suite);

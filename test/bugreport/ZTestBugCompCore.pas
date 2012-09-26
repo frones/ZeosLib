@@ -1994,10 +1994,13 @@ begin
       Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
       Query.Open;
       CheckEquals(True, Query.RecordCount = 5);
-      if StartsWith(Connection.Protocol, 'oracle') then
-        Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Copy(str2, 1, Length(Str2) div 2)+'%', #39)
+      if StartsWith(Connection.Protocol, 'ASA') then //ASA has a limitation of 125chars for like statements
+        Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Copy(str2, 1, 125)+'%', #39)
       else
-        Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str2+'%', #39);
+        if StartsWith(Connection.Protocol, 'oracle')  then
+          Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Copy(str2, 1, Length(Str2) div 2)+'%', #39)
+        else
+          Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str2+'%', #39);
       Query.Open;
       CheckEquals(True, Query.RecordCount = 1);
       Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str3+'%', #39);

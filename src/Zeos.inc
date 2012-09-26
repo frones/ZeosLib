@@ -116,7 +116,7 @@
 {$IFDEF VER210}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
-  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code 
+  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
 {$ENDIF}
@@ -125,7 +125,7 @@
 {$IFDEF VER220}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
-  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code 
+  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
@@ -138,7 +138,7 @@
 {$IFDEF VER230}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
-  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code 
+  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
   {$DEFINE DELPHI16_UP} // Used in code
   {$DEFINE BDS4_UP} // Used in code

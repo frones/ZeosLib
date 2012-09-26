@@ -1382,7 +1382,8 @@ begin
           Result.UpdateShortByName('COLUMN_TYPE', Ord(pctUnknown));
         end;
         Result.UpdateShortByName('DATA_TYPE',
-          Ord(ConvertASAJDBCToSqlType(GetShortByName('DATA_TYPE'))));
+          Ord(ConvertASAJDBCToSqlType(GetShortByName('DATA_TYPE'),
+            GetConnection.GetEncoding, GetConnection.UTF8StringAsWideField)));
         Result.UpdateStringByName('TYPE_NAME',
           GetStringByName('TYPE_NAME'));
         Result.UpdateIntByName('PRECISION',
@@ -1490,7 +1491,8 @@ function TZASADatabaseMetadata.UncachedGetSchemas: IZResultSet;
 begin
     Result:=inherited UncachedGetSchemas;
 
-    with GetStatement.ExecuteQuery('exec sp_jdbc_getschemas') do
+    with GetStatement.ExecuteQuery('select TABLE_SCHEM=name  from sysusers where suid >= -2 order by name'
+ {'exec sp_jdbc_getschemas'}) do
     begin
       while Next do
       begin
@@ -1850,7 +1852,8 @@ begin
         Result.UpdateStringByName('COLUMN_NAME',
           GetStringByName('COLUMN_NAME'));
         Result.UpdateShortByName('DATA_TYPE',
-          Ord(ConvertASAJDBCToSqlType(GetShortByName('DATA_TYPE'))));
+          Ord(ConvertASAJDBCToSqlType(GetShortByName('DATA_TYPE'),
+            GetConnection.GetEncoding, GetConnection.UTF8StringAsWideField)));
         Result.UpdateStringByName('TYPE_NAME',
           GetStringByName('TYPE_NAME'));
         Result.UpdateIntByName('COLUMN_SIZE',
@@ -2326,7 +2329,8 @@ begin
         Result.UpdateStringByName('TYPE_NAME',
           GetStringByName('TYPE_NAME'));
         Result.UpdateShortByName('DATA_TYPE',
-          Ord(ConvertASAJDBCToSqlType(GetShortByName('DATA_TYPE'))));
+          Ord(ConvertASAJDBCToSqlType(GetShortByName('DATA_TYPE'),
+            GetConnection.GetEncoding, GetConnection.UTF8StringAsWideField)));
         Result.UpdateIntByName('PRECISION',
           GetIntByName('PRECISION'));
         Result.UpdateStringByName('LITERAL_PREFIX',
@@ -2541,7 +2545,8 @@ begin
         Result.UpdateStringByName('JAVA_CLASS',
           GetStringByName('JAVA_CLASS'));
         Result.UpdateShortByName('DATA_TYPE',
-          Ord(ConvertASAJDBCToSqlType(GetShortByName('DATA_TYPE'))));
+          Ord(ConvertASAJDBCToSqlType(GetShortByName('DATA_TYPE'),
+            GetConnection.GetEncoding, GetConnection.UTF8StringAsWideField)));
         Result.UpdateStringByName('REMARKS',
           GetStringByName('REMARKS'));
         Result.InsertRow;

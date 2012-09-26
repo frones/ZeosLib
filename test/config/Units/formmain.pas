@@ -1172,7 +1172,7 @@ begin
     cbUnicodeCP.Items.Clear;
     for i := 0 to high(SDyn) do
     begin
-      CP := Driver.GetPlainDriver(URL, False).GetClientCodePageInformations(SDyn[i]);
+      CP := Driver.GetPlainDriver(URL, False).ValidateCharEncoding(SDyn[i]);
       if CP^.Encoding = ceAnsi then
         cbAnsiCP.Items.Add(SDyn[i])
       else

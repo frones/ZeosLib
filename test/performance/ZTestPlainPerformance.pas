@@ -1015,8 +1015,8 @@ begin
   else if Protocol = FFirebird21PlainDriver.GetProtocol then 
     PlainDriver := FFirebird21PlainDriver 
   else if Protocol = FFirebirdd15PlainDriver.GetProtocol then 
-    PlainDriver := FFirebirdd15PlainDriver 
-  else if Protocol = FFirebirdd21PlainDriver.GetProtocol then 
+    PlainDriver := FFirebirdd15PlainDriver
+  else if Protocol = FFirebirdd21PlainDriver.GetProtocol then
     PlainDriver := FFirebird21PlainDriver
   else PlainDriver := FFirebird10PlainDriver;
 
@@ -1188,7 +1188,7 @@ end;
 
 function TZPlainASASQLPerformanceTestCase.GetSupportedProtocols: string;
 begin
-  Result := 'ASA7,ASA8,ASA9';
+  Result := 'ASA7,ASA8,ASA9,ASA12';
 end;
 
 procedure TZPlainASASQLPerformanceTestCase.RunTestConnect;
@@ -1255,17 +1255,21 @@ var
   FASA7PlainDriver: IZASAPlainDriver;
   FASA8PlainDriver: IZASAPlainDriver;
   FASA9PlainDriver: IZASAPlainDriver;
+  FASA12PlainDriver: IZASAPlainDriver;
 begin
   FASA7PlainDriver := TZASA7PlainDriver.Create;
   FASA8PlainDriver := TZASA8PlainDriver.Create;
   FASA9PlainDriver := TZASA9PlainDriver.Create;
+  FASA12PlainDriver := TZASA12PlainDriver.Create;
 
   if Protocol = FASA7PlainDriver.GetProtocol then
     PlainDriver := FASA7PlainDriver
   else if Protocol = FASA8PlainDriver.GetProtocol then
     PlainDriver := FASA8PlainDriver
   else  if Protocol = FASA9PlainDriver.GetProtocol then
-    PlainDriver := FASA9PlainDriver;
+    PlainDriver := FASA9PlainDriver
+  else  if Protocol = FASA12PlainDriver.GetProtocol then
+    PlainDriver := FASA12PlainDriver;
 
   PlainDriver.Initialize;
 end;

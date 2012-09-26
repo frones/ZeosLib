@@ -95,7 +95,7 @@ uses SysUtils, ZSysUtils, ZTestConsts, ZTestCase;
 }
 function TZTestDbcASACase.GetSupportedProtocols: string;
 begin
-  Result := 'ASA7,ASA8,ASA9';
+  Result := 'ASA7,ASA8,ASA9,ASA12';
 end;
 
 {**
@@ -114,9 +114,6 @@ begin
   end;
   Result := DriverManager.ConstructURL(Protocol, HostName, Database,
   UserName, Password, Port, TempProperties);
-{  if Port <> 0 then
-    Result := Format('zdbc:%s://%s:%d/%s', [Protocol, HostName, Port, Database])
-  else Result := Format('zdbc:%s://%s/%s', [Protocol, HostName, Database]);}
   TempProperties.Free;
 end;
 
@@ -327,6 +324,8 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
+  if Protocol='ASA12' then exit;
+
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);

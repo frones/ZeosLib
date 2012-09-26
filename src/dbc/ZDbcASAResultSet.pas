@@ -90,6 +90,7 @@ type
       CachedBlob: boolean);
 
     function GetCursorName: AnsiString; override;
+    procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
@@ -603,14 +604,13 @@ end;
 function TZASAResultSet.MoveRelative(Rows: Integer): Boolean;
 begin
   Result := False;
-  if (MaxRows > 0) and ( Abs( RowNo) + Rows >= MaxRows) then
+  if (RowNo > LastRowNo) or ((MaxRows > 0) and (RowNo >= MaxRows)) then
     Exit;
-
   FASAConnection.GetPlainDriver.db_fetch( FASAConnection.GetDBHandle,
     PAnsiChar( FCursorName), CUR_RELATIVE, Rows, FSqlData.GetData, BlockSize, CUR_FORREGULAR);
-  ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
-    FASAConnection.GetDBHandle, lcOther);
-
+    ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
+      FASAConnection.GetDBHandle, lcOther, '', SQLE_CURSOR_NOT_OPEN); //handle a known null resultset issue (cursor not open)
+  if FASAConnection.GetDBHandle.sqlCode = SQLE_CURSOR_NOT_OPEN then Exit;
   if FASAConnection.GetDBHandle.sqlCode <> SQLE_NOTFOUND then
   begin
     if ( RowNo > 0) or ( RowNo + Rows < 0) then
@@ -702,6 +702,16 @@ begin
   inherited Open;
 end;
 
+procedure TZASAResultSet.Close;
+begin
+  if FCursorName <> '' then
+  begin
+    FASAConnection.GetPlainDriver.db_close(FASAConnection.GetDBHandle, PAnsiChar(FCursorName));
+    FCursorName := '';
+  end;
+  inherited Close;
+end;
+
 function TZASAResultSet.GetCursorName: AnsiString;
 begin
   Result := FCursorName;
@@ -728,7 +738,8 @@ begin
   if not Assigned( FUpdateSQLData) then
   begin
     FUpdateSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
-      FASAConnection.GetDBHandle, FCursorName, Self.ClientCodePage,FSQLData.GetFieldCount);
+      FASAConnection.GetDBHandle, FCursorName, ClientCodePage^.Encoding,
+      FASAConnection.UTF8StringAsWideField,FSQLData.GetFieldCount);
   end
   else if FUpdateSQLData.GetFieldCount = 0 then
     FUpdateSQLData.AllocateSQLDA( FSQLData.GetFieldCount);
@@ -833,19 +844,19 @@ end;
 procedure TZASAResultSet.UpdateAsciiStream(ColumnIndex: Integer; Value: TStream);
 begin
   PrepareUpdateSQLData;
-  FUpdateSqlData.WriteBlob( ColumnIndex, Value);
+  FUpdateSqlData.WriteBlob( ColumnIndex, Value, stAsciiStream);
 end;
 
 procedure TZASAResultSet.UpdateUnicodeStream(ColumnIndex: Integer; Value: TStream);
 begin
   PrepareUpdateSQLData;
-  FUpdateSqlData.WriteBlob( ColumnIndex, Value);
+  FUpdateSqlData.WriteBlob( ColumnIndex, Value, stUnicodeStream);
 end;
 
 procedure TZASAResultSet.UpdateBinaryStream(ColumnIndex: Integer; Value: TStream);
 begin
   PrepareUpdateSQLData;
-  FUpdateSqlData.WriteBlob( ColumnIndex, Value);
+  FUpdateSqlData.WriteBlob( ColumnIndex, Value, stBinaryStream);
 end;
 
 procedure TZASAResultSet.UpdateValue(ColumnIndex: Integer; const Value: TZVariant);
