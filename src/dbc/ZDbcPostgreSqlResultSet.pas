@@ -137,7 +137,7 @@ type
 implementation
 
 uses
-  Math, ZMessages, ZMatchPattern, ZDbcPostgreSql,
+  Math, ZMessages, ZMatchPattern, ZDbcPostgreSql, ZDbcUtils,
   ZDbcPostgreSqlUtils;
 
 { TZPostgreSQLResultSet }
@@ -262,14 +262,11 @@ begin
 
         if ColumnType in [stString, stUnicodeString] then
           if ( (ColumnLabel = 'expr') and ( Precision = 0 ) ) then
-            Precision := 255
-          else {all othere char/string fields can have mbcs chars}
+            Precision := GetFieldSize(ColumnType, 255, ClientCodePage^.CharWidth, True)
+          else
           begin
             ColumnDisplaySize := Precision;
-            if (ColumnType = stString) then
-              Precision := ColumnDisplaySize * ClientCodePage^.CharWidth
-            else
-              Precision := Precision * 2;
+            Precision := GetFieldSize(ColumnType, Precision, ClientCodePage^.CharWidth);
           end;
       end;
     end;
