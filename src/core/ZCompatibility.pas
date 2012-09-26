@@ -160,7 +160,7 @@ function GetProcAddress(Module: HMODULE; Proc: PChar): Pointer;
 
 {EgonHugeist:}
 type
-  ZAnsiString = {$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
+  ZAnsiString = {$IFDEF WITH_RAWBYTESTRING}RawByteString{$ELSE}AnsiString{$ENDIF};
   ZWideString = {$IFDEF DELPHI12_UP}String{$ELSE}WideString{$ENDIF};
 
   TZCharEncoding = (
@@ -200,8 +200,8 @@ type
 
 const
   ClientCodePageDummy: TZCodepage =
-    (Name: ''; ID: 0; Encoding: ceAnsi; {$IFDEF WITH_CHAR_CONTROL}
-      CP: 0;{$ENDIF} ZAlias: '');
+    (Name: ''; ID: 0; CharWidth: 1; Encoding: ceAnsi;
+      {$IFDEF WITH_CHAR_CONTROL}CP: $ffff;{$ENDIF} ZAlias: '');
 
 {$IFDEF WITH_CHAR_CONTROL}
   ZFullMultiByteCodePages: array[0..21] of Word = (50220, 50221, 50222, 50225,
