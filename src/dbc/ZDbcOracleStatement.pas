@@ -113,7 +113,7 @@ type
     property LastStatement: IZStatement read FLastStatement write SetLastStatement;
     property InVars: PZSQLVars read FInVars write FInVars;
 
-    procedure Prepare; reintroduce;
+
 
   public
     constructor Create(PlainDriver: IZOraclePlainDriver;
@@ -121,7 +121,7 @@ type
     destructor Destroy; override;
 
     procedure Close; override;
-
+    procedure Prepare; override;
     function ExecuteQuery(const SQL: string): IZResultSet; override;
     function ExecuteUpdate(const SQL: string): Integer; override;
     function Execute(const SQL: string): Boolean; override;
@@ -154,10 +154,10 @@ type
     procedure FetchOutParam;
   protected
     function GetProcedureSql(SelectProc: boolean): string;
-    procedure Prepare; reintroduce;
     procedure RegisterOutParameter(ParameterIndex: Integer;SQLType: Integer); reintroduce;
     procedure SetInParam(ParameterIndex: Integer;SQLType: TZSQLType; const Value: TZVariant);override;
   public
+    procedure Prepare; override;
     function IsNull(ParameterIndex: Integer): Boolean;override;
 
     Function ExecuteUpdatePrepared: Integer; override;
@@ -211,7 +211,8 @@ begin
 
   try
     PrepareOracleStatement(FPlainDriver, SQL, Handle, ErrorHandle,
-      StrToIntDef(Info.Values['prefetch_count'], 100), ClientCodePage^.Encoding);
+      StrToIntDef(Info.Values['prefetch_count'], 100), ClientCodePage^.Encoding,
+      Connection.PreprepareSQL);
     Result := CreateOracleResultSet(FPlainDriver, Self, SQL,
       Handle, ErrorHandle);
   except
@@ -242,7 +243,8 @@ begin
 
   try
     PrepareOracleStatement(FPlainDriver, SQL, Handle,
-      ErrorHandle, StrToIntDef(Info.Values['prefetch_count'], 100), ClientCodePage^.Encoding);
+      ErrorHandle, StrToIntDef(Info.Values['prefetch_count'], 100),
+      ClientCodePage^.Encoding, Connection.PreprepareSQL);
     ExecuteOracleStatement(FPlainDriver, Connection, SQL, Handle, ErrorHandle);
     Result := GetOracleUpdateCount(FPlainDriver, Handle, ErrorHandle);
   finally
@@ -287,7 +289,8 @@ begin
 
   try
     PrepareOracleStatement(FPlainDriver, SQL, Handle, ErrorHandle,
-      StrToIntDef(Info.Values['prefetch_count'], 100), ClientCodePage^.Encoding);
+      StrToIntDef(Info.Values['prefetch_count'], 100), ClientCodePage^.Encoding,
+      Connection.PreprepareSQL);
 
     StatementType := 0;
     FPlainDriver.AttrGet(Handle, OCI_HTYPE_STMT, @StatementType, nil,
@@ -519,7 +522,8 @@ begin
     end;
 
     PrepareOracleStatement(FPlainDriver, OracleSQL, Handle, ErrorHandle,
-      StrToIntDef(Info.Values['prefetch_count'], 100), ClientCodePage^.Encoding);
+      StrToIntDef(Info.Values['prefetch_count'], 100), ClientCodePage^.Encoding,
+      Connection.PreprepareSQL);
 
     AllocateOracleSQLVars(FInVars, InParamCount);
     InVars^.ActualNum := InParamCount;
@@ -721,7 +725,8 @@ procedure TZOracleCallableStatement.Prepare;
       end;
 
       PrepareOracleStatement(FPlainDriver, FOracleSQL, FHandle, FErrorHandle,
-        StrToIntDef(Info.Values['prefetch_count'], 100), ClientCodePage^.Encoding);
+        StrToIntDef(Info.Values['prefetch_count'], 100), ClientCodePage^.Encoding,
+      Connection.PreprepareSQL);
       AllocateOracleSQLVars(FInVars, FOracleParamsCount {InParamCount});
       FInVars^.ActualNum := FOracleParamsCount{InParamCount};
 

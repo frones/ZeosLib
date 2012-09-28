@@ -58,7 +58,15 @@ interface
 {$I ZComponent.inc}
 
 uses
-  SysUtils, Classes,  ZAbstractConnection;
+  SysUtils, Classes,  ZAbstractConnection, ZClasses;
+
+const
+  ZEOS_MAJOR_VERSION = ZClasses.ZEOS_MAJOR_VERSION;
+  ZEOS_MINOR_VERSION = ZClasses.ZEOS_MINOR_VERSION;
+  ZEOS_SUB_VERSION = ZClasses.ZEOS_SUB_VERSION;
+  ZEOS_STATUS = ZClasses.ZEOS_STATUS;
+  ZEOS_VERSION = ZClasses.ZEOS_VERSION;
+
 
 type
   {** Represents a component which wraps a connection to database. }

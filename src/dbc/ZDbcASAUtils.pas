@@ -150,7 +150,9 @@ type
     procedure CheckIndex(const Index: Word);
     procedure CheckRange(const Index: Word);
     procedure SetFieldType(const Index: Word; ASAType: Smallint; Len: LongWord;
-      SetDeclType: Boolean = true);
+      SetDeclType: Boolean = true); overload;
+    procedure SetFieldType(ToSQLDA: PASASQLDA; const Index: Word; ASAType: Smallint; Len: LongWord;
+      SetDeclType: Boolean = true); overload;
   protected
     FDeclType: array of TZASADECLTYPE;
     procedure ReadBlob(const Index: Word; Buffer: Pointer; Length: LongWord);
@@ -285,7 +287,7 @@ end;
 procedure TZASASQLDA.CheckIndex(const Index: Word);
 begin
   Assert( Assigned( FSQLDA), 'SQLDA not initialized.');
-  Assert( Index < FSQLDA.sqld, 'Out of Range.');
+  Assert( Index < Word(FSQLDA.sqld), 'Out of Range.');
 end;
 
 procedure TZASASQLDA.CheckRange(const Index: Word);
@@ -295,13 +297,14 @@ begin
     'No memory for variable in SQLDA.');
 end;
 
-procedure TZASASQLDA.SetFieldType(const Index: Word; ASAType: Smallint;
-  Len: LongWord; SetDeclType: Boolean = true);
+procedure TZASASQLDA.SetFieldType(ToSQLDA: PASASQLDA; const Index: Word;
+  ASAType: Smallint; Len: LongWord; SetDeclType: Boolean = true);
 begin
   CheckIndex(Index);
-  with FSQLDA.sqlvar[Index] do
+  with ToSQLDA.sqlvar[Index] do
   begin
     if ( ASAType and $FFFE = DT_LONGBINARY) or
+       ( ASAType and $FFFE = DT_LONGNVARCHAR) or
        ( ASAType and $FFFE = DT_LONGVARCHAR) then
     begin
       if Assigned( sqlData) then
@@ -335,6 +338,12 @@ begin
       FDeclType[Index].sqlLen := sqlLen;
     end;
   end;
+end;
+
+procedure TZASASQLDA.SetFieldType(const Index: Word; ASAType: Smallint;
+  Len: LongWord; SetDeclType: Boolean = true);
+begin
+  SetFieldType(FSQLDA, Index, ASAType, Len, SetDeclType);
 end;
 
 constructor TZASASQLDA.Create(PlainDriver: IZASAPlainDriver; Handle: PZASASQLCA;
@@ -1675,12 +1684,14 @@ procedure TZASASQLDA.ReadBlob(const Index: Word; Buffer: Pointer;
 var
   TempSQLDA: PASASQLDA;
   Offs, Rd: LongWord;
+  ZASABlobStruct: TZASABlobStruct;
 const
   BlockSize = 32700;
 begin
   with FSQLDA.sqlvar[Index] do
   begin
     if ( ( sqlType and $FFFE = DT_LONGVARCHAR) or
+         ( sqlType and $FFFE = DT_LONGNVARCHAR) or
          ( sqlType and $FFFE = DT_LONGBINARY)) and
        ( PZASABlobStruct( sqlData).array_len > 0) then
     begin
@@ -1698,27 +1709,36 @@ begin
       try
         with TempSQLDA.sqlvar[ 0] do
         begin
-          sqlType := DT_FIXCHAR;
+          case Self.GetFieldSqlType(Index) of
+            stAsciiStream:
+              SetFieldType(TempSQLDA, 0, DT_LONGVARCHAR, Min( BlockSize, Length));
+            stUnicodeStream:
+              SetFieldType(TempSQLDA, 0, DT_LONGNVARCHAR, Min( BlockSize, Length));
+            stBinaryStream:
+              SetFieldType(TempSQLDA, 0, DT_LONGBINARY, Min( BlockSize, Length));
+            else
+              sqlType := DT_FIXCHAR;
+          end;
           sqlname.length := 0;
           sqlname.data[0] := #0;
           TempSQLDA.sqld := TempSQLDA.sqln;
 
-          sqlData := Buffer;
           Offs := 0;
-          sqllen := Min( BlockSize, Length);
           Rd := 0;
 
           while True do
           begin
             FPlainDriver.db_get_data(FHandle, PAnsiChar(FCursorName), Index + 1, Offs, TempSQLDA);
+            ZASABlobStruct := PZASABlobStruct( sqlData)^;
             CheckASAError( FPlainDriver, FHandle, lcOther);
             if ( sqlind^ < 0 ) then
               break;
-            Inc( Rd, sqllen);
+            Inc( Rd, ZASABlobStruct.stored_len);
+            if Offs = 0 then ReallocMem(Buffer, ZASABlobStruct.untrunc_len);
+            Move((ZASABlobStruct.arr[0]), (PAnsiChar(Buffer)+Offs)^, ZASABlobStruct.stored_len);
             if ( sqlind^ = 0 ) or ( RD = Length) then
               break;
-            Inc( Offs, sqllen);
-            Inc(PAnsiChar(sqlData), sqllen);
+            Inc( Offs, ZASABlobStruct.stored_len);
             sqllen := Min( BlockSize, Length-Rd);
           end;
           if Rd <> Length then

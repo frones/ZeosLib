@@ -708,8 +708,6 @@ begin
   GetPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @DbHandle, @TrHandle,
     0, PAnsiChar(AnsiString(sql)), FDialect, nil);
   CheckInterbase6Error(GetPlainDriver, FStatusVector, lcExecute, SQL);
-  GetPlainDriver.isc_detach_database(@FStatusVector, @DbHandle);
-  CheckInterbase6Error(GetPlainDriver, FStatusVector, lcExecute, SQL);
 end;
 
 function TZInterbase6Connection.GetBinaryEscapeString(const Value: ZAnsiString): String;

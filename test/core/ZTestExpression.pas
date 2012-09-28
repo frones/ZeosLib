@@ -150,8 +150,6 @@ end;
 procedure TZTestExpressionCase.TestFunctionsConvert;
 var
   Expression: IZExpression;
-  v1, v2, v3: TZVariant;
-  i         : Int64;
 begin
   Expression := TZExpression.Create;
   with Expression do
@@ -337,8 +335,6 @@ end;
 procedure TZTestExpressionCase.TestFunctionsMath;
 var
   Expression: IZExpression;
-  v1, v2, v3: TZVariant;
-  i         : Int64;
 begin
   Expression := TZExpression.Create;
   with Expression do
@@ -400,8 +396,6 @@ end;
 procedure TZTestExpressionCase.TestFunctionsOther;
 var
   Expression: IZExpression;
-  v1, v2, v3: TZVariant;
-  i         : Int64;
 begin
   Expression := TZExpression.Create;
   with Expression do
@@ -438,8 +432,6 @@ end;
 procedure TZTestExpressionCase.TestFunctionsStrings;
 var
   Expression: IZExpression;
-  v1, v2, v3: TZVariant;
-  i         : Int64;
 begin
   Expression := TZExpression.Create;
   with Expression do

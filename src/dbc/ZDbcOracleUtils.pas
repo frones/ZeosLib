@@ -204,7 +204,7 @@ procedure FreeOracleStatementHandles(PlainDriver: IZOraclePlainDriver;
 }
 procedure PrepareOracleStatement(PlainDriver: IZOraclePlainDriver;
   SQL: string; Handle: POCIStmt; ErrorHandle: POCIError; PrefetchCount: ub4;
-  const Encoding: TZCharEncoding);
+  const Encoding: TZCharEncoding; const PreprepareSQL: Boolean);
 
 {**
   Executes an Oracle statement.
@@ -719,18 +719,18 @@ end;
 }
 procedure PrepareOracleStatement(PlainDriver: IZOraclePlainDriver;
   SQL: string; Handle: POCIStmt; ErrorHandle: POCIError; PrefetchCount: ub4;
-  const Encoding: TZCharEncoding);
+  const Encoding: TZCharEncoding; const PreprepareSQL: Boolean);
 var
   Status: Integer;
+  AnsiSQL: ZAnsiString;
+  LogSQL: String;
 begin
+  LogSQL := ''; //Makes the FPC compiler happy
+  AnsiSQL := PlainDriver.GetPrepreparedSQL(nil, SQL, Encoding, LogSQL, PreprepareSQL);
   PlainDriver.AttrSet(Handle, OCI_HTYPE_STMT, @PrefetchCount, SizeOf(ub4),
     OCI_ATTR_PREFETCH_ROWS, ErrorHandle);
-  if Encoding = ceAnsi then
-    Status := PlainDriver.StmtPrepare(Handle, ErrorHandle, PAnsiChar(AnsiString(SQL)),
-      Length(AnsiString(SQL)), OCI_NTV_SYNTAX, OCI_DEFAULT)
-  else
-    Status := PlainDriver.StmtPrepare(Handle, ErrorHandle, PAnsiChar(UTF8String(SQL)),
-      Length(UTF8String(SQL)), OCI_NTV_SYNTAX, OCI_DEFAULT);
+  Status := PlainDriver.StmtPrepare(Handle, ErrorHandle, PAnsiChar(AnsiSQL),
+    Length(AnsiSQL), OCI_NTV_SYNTAX, OCI_DEFAULT);
   CheckOracleError(PlainDriver, ErrorHandle, Status, lcExecute, SQL);
 end;
 
