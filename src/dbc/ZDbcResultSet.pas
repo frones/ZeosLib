@@ -2932,7 +2932,12 @@ function TZAbstractBlob.GetString: ZAnsiString;
 begin
   if (FBlobSize > 0) and Assigned(FBlobData) then
   begin
+    {$IFDEF WITH_RAWBYTESTRING}
+    SetLength(Result, FBlobSize);
+    System.Move(PAnsiChar(FBlobData)^, PAnsiChar(Result)^, FBlobSize);
+    {$ELSE}
     System.SetString(Result, PAnsiChar(FBlobData), FBlobSize);
+    {$ENDIF}
   end
   else
     Result := '';
