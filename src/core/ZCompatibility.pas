@@ -160,7 +160,7 @@ function GetProcAddress(Module: HMODULE; Proc: PChar): Pointer;
 
 {EgonHugeist:}
 type
-  ZAnsiString = {$IFDEF WITH_RAWBYTESTRING}RawByteString{$ELSE}AnsiString{$ENDIF};
+  ZAnsiString = {.$IFDEF WITH_RAWBYTESTRING}{$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
   ZWideString = {$IFDEF DELPHI12_UP}String{$ELSE}WideString{$ENDIF};
 
   TZCharEncoding = (
