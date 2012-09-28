@@ -623,16 +623,16 @@ begin
     ColumnInfo := TZColumnInfo.Create;
     with ColumnInfo, FSqlData  do
     begin
-      FieldSqlType := GetFieldSqlType(I);
       ColumnName := GetFieldSqlName(I);
       TableName := GetFieldRelationName(I);
       ColumnLabel := GetFieldAliasName(I);
+      FieldSqlType := GetFieldSqlType(I);
       ColumnType := FieldSqlType;
 
-      if FieldSqlType in [stString, stUnicodeString] then
+      if FieldSqlType in [stBytes, stString, stUnicodeString] then
       begin
         MaxLenghtBytes := GetFieldLength(I);
-        if FSqlData.GetIbSqlType(I) = SQL_TEXT then
+        if (FSqlData.GetIbSqlType(I) = SQL_TEXT) or ( FieldSQLType = stBytes ) then
         begin
           ColumnDisplaySize := MaxLenghtBytes;
           Precision := MaxLenghtBytes;

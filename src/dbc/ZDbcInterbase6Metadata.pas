@@ -1816,8 +1816,9 @@ begin
         case TypeName of
           7, 8 : Result.UpdateInt(7, 0);
           16   : Result.UpdateInt(7, GetInt(ColumnIndexes[9]));
+          37, 38: Result.UpdateInt(7, GetFieldSize(SQLType, GetInt(ColumnIndexes[10]), CharWidth, True)); //FireBird return Char*Bytes for Varchar
         else
-          Result.UpdateInt(7, GetFieldSize(SQLType, GetInt(ColumnIndexes[10]), CharWidth, True));
+          Result.UpdateInt(7, GetInt(ColumnIndexes[10]));
         end;
 
         Result.UpdateNull(8);    //BUFFER_LENGTH
