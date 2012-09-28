@@ -632,8 +632,16 @@ begin
       if FieldSqlType in [stString, stUnicodeString] then
       begin
         MaxLenghtBytes := GetFieldLength(I);
-        ColumnDisplaySize := MaxLenghtBytes div ClientCodePage^.CharWidth;
-        Precision := GetFieldSize(ColumnType, MaxLenghtBytes, ClientCodePage^.CharWidth, True);
+        if FSqlData.GetIbSqlType(I) = SQL_TEXT then
+        begin
+          ColumnDisplaySize := MaxLenghtBytes;
+          Precision := MaxLenghtBytes;
+        end
+        else
+        begin
+          ColumnDisplaySize := MaxLenghtBytes div ClientCodePage^.CharWidth;
+          Precision := GetFieldSize(ColumnType, MaxLenghtBytes, ClientCodePage^.CharWidth, True);
+        end;
       end;
 
       ReadOnly := (GetFieldRelationName(I) = '') or (GetFieldSqlName(I) = '')
