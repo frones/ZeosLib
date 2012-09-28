@@ -261,7 +261,7 @@ begin
           FPlainDriver.GetFieldSize(FQueryHandle, I)), 0);
 
         if ColumnType in [stString, stUnicodeString] then
-          if ( (ColumnLabel = 'expr') and ( Precision = 0 ) ) then
+          if ( (ColumnLabel = 'expr') or ( Precision = 0 ) ) then
             Precision := GetFieldSize(ColumnType, 255, ClientCodePage^.CharWidth, True)
           else
           begin
