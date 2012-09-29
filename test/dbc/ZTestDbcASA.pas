@@ -218,31 +218,33 @@ begin
   TextStream := TStringStream.Create('ABCDEFG');
   ImageStream := TMemoryStream.Create;
   ImageStream.LoadFromFile('../../../database/images/zapotec.bmp');
+  try
+    PreparedStatement := Connection.PrepareStatement(
+      'INSERT INTO BLOB_VALUES (B_ID, B_TEXT, B_IMAGE) VALUES(?,?,?)');
+    PreparedStatement.SetInt(1, TEST_ROW_ID);
+    PreparedStatement.SetAsciiStream(2, TextStream);
+    PreparedStatement.SetBinaryStream(3, ImageStream);
+    CheckEquals(1, PreparedStatement.ExecuteUpdatePrepared);
 
-  PreparedStatement := Connection.PrepareStatement(
-    'INSERT INTO BLOB_VALUES (B_ID, B_TEXT, B_IMAGE) VALUES(?,?,?)');
-  PreparedStatement.SetInt(1, TEST_ROW_ID);
-  PreparedStatement.SetAsciiStream(2, TextStream);
-  PreparedStatement.SetBinaryStream(3, ImageStream);
-  CheckEquals(1, PreparedStatement.ExecuteUpdatePrepared);
+    ResultSet := Statement.ExecuteQuery('SELECT * FROM BLOB_VALUES'
+      + ' WHERE b_id=' + IntToStr(TEST_ROW_ID));
+    CheckNotNull(ResultSet);
+    Check(ResultSet.Next);
+    CheckEquals(TEST_ROW_ID, ResultSet.GetIntByName('B_ID'));
+    TempStream := ResultSet.GetAsciiStreamByName('B_TEXT');
+    CheckEquals(TextStream, TempStream);
+    TempStream.Free;
+    TempStream := ResultSet.GetBinaryStreamByName('B_IMAGE');
+    CheckEquals(ImageStream, TempStream);
+  finally
+    TempStream.Free;
+    ResultSet.Close;
 
-  ResultSet := Statement.ExecuteQuery('SELECT * FROM BLOB_VALUES'
-    + ' WHERE b_id=' + IntToStr(TEST_ROW_ID));
-  CheckNotNull(ResultSet);
-  Check(ResultSet.Next);
-  CheckEquals(TEST_ROW_ID, ResultSet.GetIntByName('B_ID'));
-  TempStream := ResultSet.GetAsciiStreamByName('B_TEXT');
-  CheckEquals(TextStream, TempStream);
-  TempStream.Free;
-  TempStream := ResultSet.GetBinaryStreamByName('B_IMAGE');
-  CheckEquals(ImageStream, TempStream);
-  TempStream.Free;
-  ResultSet.Close;
+    TextStream.Free;
+    ImageStream.Free;
 
-  TextStream.Free;
-  ImageStream.Free;
-
-  Statement.Close;
+    Statement.Close;
+  end;
 end;
 { Sybase ASA isn't case sensitive per default
 procedure TZTestDbcASACase.TestCaseSensitive;
