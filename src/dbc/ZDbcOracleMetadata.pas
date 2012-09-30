@@ -1262,26 +1262,13 @@ begin
 end;
 
 
-type
-THackCachedResultSet = class(TZAbstractCachedResultSet);
-
 function TZOracleDatabaseMetadata.UncachedGetProcedureColumns(const Catalog,
   SchemaPattern, ProcedureNamePattern, ColumnNamePattern: string): IZResultSet;
 var
-  SQL{, Where}: string;
-  LProcedureNamePattern{, LColumnNamePattern}: string;
-  TypeName, SubTypeName: string;
   ColumnIndexes : Array[1..8] of integer;
-  //ReturnIndexes : Array[1..8] of integer;
-  colName:string;
-  isFunction:boolean;
-  IZStmt:IZStatement;
-  iCol:integer;
-//    bNeedInsertReturns:boolean;
-  bInsertingReturns:boolean;
-  PZRow1,PZRow2:PZRowBuffer;
-//  Label InsertingRecord;
-
+  colName: string;
+  IZStmt: IZStatement;
+  TempSet: IZResultSet;
   Names: TStrings;
 
   function GetNextName(const AName: String; NameEmpty: Boolean = False): String;
@@ -1301,26 +1288,68 @@ var
           Break;
         end;
   end;
+
+  procedure InsertProcedureColumnValues(Source: IZResultSet; IsResultParam: Boolean = False);
+  var
+    TypeName, SubTypeName: string;
+  begin
+    TypeName := Source.GetString(ColumnIndexes[4]);
+    SubTypeName := Source.GetString(ColumnIndexes[5]);
+
+    Result.MoveToInsertRow;
+    Result.UpdateNull(1);    //PROCEDURE_CAT
+    Result.UpdateNull(2);    //PROCEDURE_SCHEM
+    Result.UpdateString(3, Source.GetString(ColumnIndexes[1]));    //TABLE_NAME
+    if IsResultParam then
+      Result.UpdateInt(5, Ord(pctReturn))
+    else
+      if Source.GetString(ColumnIndexes[3]) = 'IN' then
+        Result.UpdateInt(5, Ord(pctIn))
+      else
+        if Source.GetString(ColumnIndexes[3]) = 'OUT' then
+          Result.UpdateInt(5, Ord(pctOut))
+        else
+          if ( Source.GetString(ColumnIndexes[3]) = 'IN/OUT') then
+            Result.UpdateInt(5, Ord(pctInOut))
+          else
+            Result.UpdateInt(5, Ord(pctUnknown));
+
+    ColName := Source.GetString(ColumnIndexes[2]);
+    if IsResultParam then
+      Result.UpdateString(4, 'ReturnValue')    //COLUMN_NAME
+    else
+      Result.UpdateString(4, GetNextName(ColName, Length(ColName) = 0));    //COLUMN_NAME
+
+    Result.UpdateInt(6, Ord(ConvertOracleTypeToSQLType(TypeName,
+      Source.GetInt(ColumnIndexes[6]),Source.GetInt(ColumnIndexes[7]),
+      Self.GetConnection.GetClientCodePageInformations^.Encoding,
+      GetConnection.UTF8StringAsWideField))); //DATA_TYPE
+    Result.UpdateString(7,TypeName);    //TYPE_NAME
+    Result.UpdateInt(10, Source.GetInt(ColumnIndexes[6])); //PRECISION
+    Result.UpdateNull(9);    //BUFFER_LENGTH
+    Result.UpdateInt(10, Source.GetInt(ColumnIndexes[7]));
+    Result.UpdateInt(11, 10);
+    //Result.UpdateInt(12, GetInt(ColumnIndexes[8]));
+    Result.UpdateNull(12);
+    Result.UpdateString(12, Source.GetString(ColumnIndexes[6]));
+    Result.InsertRow;
+  end;
+
+  function GetColumnSQL(PosChar: String): String;
+  begin
+    Result := 'select * from user_arguments where object_name = '''+ProcedureNamePattern+''' '+
+      'AND POSITION '+PosChar+' 0 ORDER BY POSITION';
+  end;
 begin
   Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
   Names := TStringList.Create;
 
-  iCol:= 0;
-//    bNeedInsertReturns:=false;
-  bInsertingReturns:=false;
-
-  LProcedureNamePattern := '';//;ConstructNameCondition(ProcedureNamePattern,
-//      'P.RDB$PROCEDURE_NAME');
-//    LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,
-//      'PP.RDB$PARAMETER_NAME');
-  SQL := 'select * from user_arguments where object_name = '''+ProcedureNamePattern+''' '+// AND PACKAGE_NAME {IS NULL}
-    'ORDER BY POSITION';
-
   IZStmt := GetConnection.CreateStatement;
-  with IZStmt.ExecuteQuery(SQL) do
-  begin
+  TempSet := IZStmt.ExecuteQuery(GetColumnSQL('>')); //ParameterValues have allways Position > 0
 
+  with TempSet  do
+  begin
     ColumnIndexes[1] := FindColumn('object_name');
     ColumnIndexes[2] := FindColumn('argument_name');
     ColumnIndexes[3] := FindColumn('IN_OUT'); //'RDB$PARAMETER_TYPE');
@@ -1330,76 +1359,21 @@ begin
     ColumnIndexes[7] := FindColumn('DATA_SCALE');//RDB$FIELD_SCALE');
     ColumnIndexes[8] := 0;//FindColumn('RDB$NULL_FLAG');
 
-    isFunction := False;
     while Next do
-    begin
-      if iCol=0 then
-      begin
-         isFunction := (GetString(FindColumn('IN_OUT'))='OUT'); // find another way to test...   //IsOracleFunction(GetConnection.GetIZPlainDriver,IZStmt. GetString(FindColumn('object_name')));
-//         if isFunction then
-//            begin
-//              inc(iCol);
-//              bNeedInsertReturns := true;
-//              continue;
-//            end;
-      end;
-
-
-//        InsertingRecord:
-      TypeName := GetString(ColumnIndexes[4]);
-      SubTypeName := GetString(ColumnIndexes[5]);
-
-      Result.MoveToInsertRow;
-      Result.UpdateNull(1);    //PROCEDURE_CAT
-      Result.UpdateNull(2);    //PROCEDURE_SCHEM
-      Result.UpdateString(3, GetString(ColumnIndexes[1]));    //TABLE_NAME
-      if GetString(ColumnIndexes[3]) = 'IN' then
-        Result.UpdateInt(5, Ord(pctIn))
-      else
-        if GetString(ColumnIndexes[3]) = 'OUT' then
-          Result.UpdateInt(5, Ord(pctOut))
-        else
-          if ( GetString(ColumnIndexes[3]) = 'IN/OUT') or
-            ( GetString(ColumnIndexes[3]) = 'INOUT') then
-            Result.UpdateInt(5, Ord(pctInOut))
-          else
-            if GetString(ColumnIndexes[3]) = '' then
-              Result.UpdateInt(5, Ord(pctUnknown))
-            else
-              Result.UpdateInt(5, Ord(pctReturn));
-      ColName := GetString(ColumnIndexes[2]);
-      Result.UpdateString(4, GetNextName(ColName, Length(ColName) = 0));    //COLUMN_NAME
-
-      Result.UpdateInt(6, Ord(ConvertOracleTypeToSQLType(TypeName,
-        GetInt(ColumnIndexes[6]),GetInt(ColumnIndexes[7]),
-        Self.GetConnection.GetClientCodePageInformations^.Encoding,
-        GetConnection.UTF8StringAsWideField))); //DATA_TYPE
-      Result.UpdateString(7,GetString(ColumnIndexes[4]));    //TYPE_NAME
-      Result.UpdateInt(10, GetInt(ColumnIndexes[6])); //PRECISION
-      Result.UpdateNull(9);    //BUFFER_LENGTH
-      Result.UpdateInt(10, GetInt(ColumnIndexes[7]));
-      Result.UpdateInt(11, 10);
-      //Result.UpdateInt(12, GetInt(ColumnIndexes[8]));
-      Result.UpdateNull(12);
-      Result.UpdateString(12, GetString(ColumnIndexes[6]));
-      Result.InsertRow;
-      if bInsertingReturns then break;
-      inc(iCol);
-    end;
-    if isFunction {and (bInsertingReturns=false)} then
-    begin
-      with THackCachedResultSet(result) do  // change first per last
-      begin
-         PZRow2 := SelectedRow;
-         result.First;
-         PZRow1 := SelectedRow;
-         SelectedRow := PZRow2;
-         result.Last ;
-         SelectedRow := PZRow1;
-      end;
-    end;
+      InsertProcedureColumnValues(TempSet);
     Close;
   end;
+
+  TempSet := IZStmt.ExecuteQuery(GetColumnSQL('=')); //ReturnValue has allways Position = 0
+  with TempSet do
+  begin
+    if Next then
+      InsertProcedureColumnValues(TempSet, True);
+    Close;
+  end;
+
+  TempSet := nil;
+  IZStmt.Close;
   FreeAndNil(Names);
 end;
 
