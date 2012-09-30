@@ -60,7 +60,7 @@ interface
 uses
   Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcStatement,Db, ZDbcLogging,
   ZPlainOracleDriver, ZCompatibility, ZVariant, ZDbcOracleUtils,
-  ZPlainOracleConstants;
+  ZPlainOracleConstants, Types;
 
 type
 
@@ -140,8 +140,8 @@ type
     pOut:boolean;
   End;
 
-
-  TZOracleCallableStatement = class(TZAbstractCallableStatement)
+  TZOracleCallableStatement = class(TZAbstractCallableStatement,
+    IZParamNamedCallableStatement)
   private
     FErrorHandle: POCIError;
     FInVars: PZSQLVars;
@@ -149,20 +149,24 @@ type
     FOracleSQL:string;
     FPrepared:boolean;
     FHandle: POCIStmt;
-    FOracleParams : array[0..255] of TZOracleParam;
-    FOracleParamsCount:Integer;
+    FOracleParams: array of TZOracleParam;
+    FOracleParamsCount: Integer;
     procedure FetchOutParam;
   protected
     function GetProcedureSql(SelectProc: boolean): string;
-    procedure RegisterOutParameter(ParameterIndex: Integer;SQLType: Integer); reintroduce;
-    procedure SetInParam(ParameterIndex: Integer;SQLType: TZSQLType; const Value: TZVariant);override;
+    procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
+      const Value: TZVariant); override;
+    procedure RegisterParamTypeAndName(const ParameterIndex:integer;
+      const ParamTypeName, ParamName: String; Const ColumnSize, Precision: Integer);
   public
+    procedure RegisterOutParameter(ParameterIndex: Integer;SQLType: Integer); override;
     procedure Prepare; override;
     function IsNull(ParameterIndex: Integer): Boolean;override;
 
     Function ExecuteUpdatePrepared: Integer; override;
+    function ExecuteQueryPrepared: IZResultSet; override;
     constructor Create(Connection: IZConnection; const pProcName: string; Info: TStrings);
-    destructor Destroy;override;
+    destructor Destroy; override;
     procedure ClearParameters; override;
   end;
 
@@ -706,144 +710,157 @@ end;
 
 
 procedure TZOracleCallableStatement.Prepare;
-  var
-    I: Integer;
-    Status: Integer;
-    TypeCode: ub2;
-    CurrentVar: PZSQLVar;
-    SQLType:TZSQLType;
+var
+  I: Integer;
+  Status: Integer;
+  TypeCode: ub2;
+  CurrentVar: PZSQLVar;
+  SQLType:TZSQLType;
+begin
+  if not FPrepared then
   begin
-    if not FPrepared then
-    begin
-      FOracleSQL := GetProcedureSql(False);
+    FOracleSQL := GetProcedureSql(False);
 
     { Allocates statement handles. }
-      if (FHandle = nil) or (FErrorHandle = nil) then
-      begin
-        AllocateOracleStatementHandles(FPlainDriver, Connection,
-          FHandle, FErrorHandle);
-      end;
-
-      PrepareOracleStatement(FPlainDriver, FOracleSQL, FHandle, FErrorHandle,
-        StrToIntDef(Info.Values['prefetch_count'], 100), ClientCodePage^.Encoding,
-      Connection.PreprepareSQL);
-      AllocateOracleSQLVars(FInVars, FOracleParamsCount {InParamCount});
-      FInVars^.ActualNum := FOracleParamsCount{InParamCount};
-
-      for I := 0 to FOracleParamsCount{InParamCount} - 1 do
-      begin
-        CurrentVar := @FInVars.Variables[I + 1];
-        CurrentVar.Handle := nil;
-        SQLType := TZSQLType(FOracleParams[I].pSQLType);
-
-      { Artificially define Oracle internal type. }
-        if SQLType = stBinaryStream then
-          TypeCode := SQLT_BLOB
-        else if SQLType in [stAsciiStream, stUnicodeStream] then
-          TypeCode := SQLT_CLOB
-        else TypeCode := SQLT_STR;
-
-        InitializeOracleVar(FPlainDriver, Connection, CurrentVar,
-          SQLType, TypeCode, 1024);
-
-        Status := FPlainDriver.BindByPos(FHandle, CurrentVar.BindHandle,
-          FErrorHandle, I + 1, CurrentVar.Data, CurrentVar.Length,
-          CurrentVar.TypeCode, @CurrentVar.Indicator, nil, nil, 0, nil,
-          OCI_DEFAULT);
-        CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, SQL);
-      end;
-
-      DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
-      FPrepared := True;
+    if (FHandle = nil) or (FErrorHandle = nil) then
+    begin
+      AllocateOracleStatementHandles(FPlainDriver, Connection,
+        FHandle, FErrorHandle);
     end;
-  end;
 
+    PrepareOracleStatement(FPlainDriver, FOracleSQL, FHandle, FErrorHandle,
+      StrToIntDef(Info.Values['prefetch_count'], 100), ClientCodePage^.Encoding,
+    Connection.PreprepareSQL);
+    AllocateOracleSQLVars(FInVars, FOracleParamsCount {InParamCount});
+    FInVars^.ActualNum := FOracleParamsCount{InParamCount};
+
+    for I := 0 to FOracleParamsCount{InParamCount} - 1 do
+    begin
+      CurrentVar := @FInVars.Variables[I + 1];
+      CurrentVar.Handle := nil;
+      SQLType := TZSQLType(FOracleParams[I].pSQLType);
+
+    { Artificially define Oracle internal type. }
+      if SQLType = stBinaryStream then
+        TypeCode := SQLT_BLOB
+      else if SQLType in [stAsciiStream, stUnicodeStream] then
+        TypeCode := SQLT_CLOB
+      else TypeCode := SQLT_STR;
+
+      InitializeOracleVar(FPlainDriver, Connection, CurrentVar,
+        SQLType, TypeCode, 1024);
+
+      Status := FPlainDriver.BindByPos(FHandle, CurrentVar.BindHandle,
+        FErrorHandle, I + 1, CurrentVar.Data, CurrentVar.Length,
+        CurrentVar.TypeCode, @CurrentVar.Indicator, nil, nil, 0, nil,
+        OCI_DEFAULT);
+      CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, SQL);
+    end;
+
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+    FPrepared := True;
+  end;
+end;
 
 procedure TZOracleCallableStatement.RegisterOutParameter(ParameterIndex,
   SQLType: Integer);
+begin
+  inherited RegisterOutParameter(ParameterIndex,SQLType);
+  if ParameterIndex > FOracleParamsCount then
+    FOracleParamsCount := ParameterIndex;
+
+  if ParameterIndex > High(FOracleParams) then
+    SetLength(FOracleParams, ParameterIndex+1);
+  with FOracleParams[ParameterIndex-1] do
   begin
-    inherited RegisterOutParameter(ParameterIndex,SQLType);
-    if ParameterIndex>FOracleParamsCount then
-      FOracleParamsCount := ParameterIndex;
-    with FOracleParams[ParameterIndex-1] do
-    begin
-      pName := 'pOut'+IntToStr(ParameterIndex);
-      pSQLType := SQLType;
-      pOut := true;
-    end;
+    //pName := 'pOut'+IntToStr(ParameterIndex);
+    pSQLType := SQLType;
+    pOut := true;
   end;
+end;
 
 procedure TZOracleCallableStatement.SetInParam(ParameterIndex: Integer;
   SQLType: TZSQLType; const Value: TZVariant);
-  begin
-    inherited;
-    if ParameterIndex>FOracleParamsCount then
-      FOracleParamsCount := ParameterIndex;
-    with FOracleParams[ParameterIndex-1] do
-    begin
-      pName := 'p'+IntToStr(ParameterIndex);
-      pSQLType := ord(SQLType);
-      pValue := Value;
-      pOut := false;
-    end;
+begin
+  inherited;
+  if ParameterIndex > FOracleParamsCount then
+    FOracleParamsCount := ParameterIndex;
+  if ParameterIndex > High(FOracleParams) then
+    SetLength(FOracleParams, ParameterIndex+1);
 
+  with FOracleParams[ParameterIndex-1] do
+  begin
+    //pName := 'p'+IntToStr(ParameterIndex);
+    pSQLType := ord(SQLType);
+    pValue := Value;
+    pOut := false;
   end;
+end;
+
+procedure TZOracleCallableStatement.RegisterParamTypeAndName(const ParameterIndex: integer;
+  const ParamTypeName, ParamName: String; Const ColumnSize, Precision: Integer);
+begin
+  if ParameterIndex > High(FOracleParams) then
+    SetLength(FOracleParams, ParameterIndex+1);
+  FOracleParams[ParameterIndex].pName := ParamName;
+end;
 
 procedure TZOracleCallableStatement.FetchOutParam;
-  var  CurrentVar: PZSQLVar;
-    I:integer;
-    OracleConnection :IZOracleConnection;
-    Year:SmallInt;
-    Month, Day:Byte; Hour, Min, Sec:ub1; MSec: ub4;
-    dTmp:TDateTime;
-    ps:PAnsiChar;
+var  CurrentVar: PZSQLVar;
+  I:integer;
+  OracleConnection :IZOracleConnection;
+  Year:SmallInt;
+  Month, Day:Byte; Hour, Min, Sec:ub1; MSec: ub4;
+  dTmp:TDateTime;
+  ps:PAnsiChar;
+begin
+  for I := 0 to FOracleParamsCount -1 do
   begin
-    for I := 0 to FOracleParamsCount -1 do
+    if FOracleParams[I].pOut then
     begin
-      if FOracleParams[I].pOut then
-      begin
 
-        CurrentVar:= @FInVars.Variables[I+1];
-        CurrentVar.Data := CurrentVar.DupData;
+      CurrentVar:= @FInVars.Variables[I+1];
+      CurrentVar.Data := CurrentVar.DupData;
 
-        case CurrentVar.TypeCode of
-          SQLT_INT: DefVarManager.SetAsInteger( outParamValues[I], PLongInt(CurrentVar.Data)^ );
-          SQLT_FLT:  DefVarManager.SetAsFloat( outParamValues[I], PDouble(CurrentVar.Data)^ );
-          SQLT_STR:
-            begin
-              GetMem(ps,1025);
-              try
-              StrLCopy( ps,
-                        {PAnsiChar }(CurrentVar.Data), 1024);  //DefVarManager.SetAsString( outParamValues[I], PAnsiChar (CurrentVar.Data)^ );
-              DefVarManager.SetAsString( OutParamValues[I], String(ps) );
-              finally
-               FreeMem(ps);
-              end;
-            end;
-          SQLT_TIMESTAMP:
+      case CurrentVar.TypeCode of
+        SQLT_INT: DefVarManager.SetAsInteger( outParamValues[I], PLongInt(CurrentVar.Data)^ );
+        SQLT_FLT:  DefVarManager.SetAsFloat( outParamValues[I], PDouble(CurrentVar.Data)^ );
+        SQLT_STR:
           begin
-
-            OracleConnection := Connection as IZOracleConnection;
-            FPlainDriver.DateTimeGetDate(
-              OracleConnection.GetConnectionHandle ,
-              FErrorHandle, PPOCIDescriptor(CurrentVar.Data)^,
-              Year, Month, Day);
-            FPlainDriver.DateTimeGetTime(
-              OracleConnection.GetConnectionHandle ,
-              FErrorHandle, PPOCIDescriptor(CurrentVar.Data)^,
-              Hour, Min, Sec,MSec);
-            dTmp := EncodeDate(year,month,day )+EncodeTime(Hour,min,sec,msec) ;
-            DefVarManager.SetAsDateTime( outParamValues[I], dTmp );
+            GetMem(ps,1025);
+            try
+            StrLCopy( ps,
+                      {PAnsiChar }(CurrentVar.Data), 1024);  //DefVarManager.SetAsString( outParamValues[I], PAnsiChar (CurrentVar.Data)^ );
+            DefVarManager.SetAsString( OutParamValues[I], String(ps) );
+            finally
+             FreeMem(ps);
+            end;
           end;
-        end;
+        SQLT_TIMESTAMP:
+        begin
 
+          OracleConnection := Connection as IZOracleConnection;
+          FPlainDriver.DateTimeGetDate(
+            OracleConnection.GetConnectionHandle ,
+            FErrorHandle, PPOCIDescriptor(CurrentVar.Data)^,
+            Year, Month, Day);
+          FPlainDriver.DateTimeGetTime(
+            OracleConnection.GetConnectionHandle ,
+            FErrorHandle, PPOCIDescriptor(CurrentVar.Data)^,
+            Hour, Min, Sec,MSec);
+          dTmp := EncodeDate(year,month,day )+EncodeTime(Hour,min,sec,msec) ;
+          DefVarManager.SetAsDateTime( outParamValues[I], dTmp );
+        end;
       end;
+
     end;
   end;
+end;
 
 function TZOracleCallableStatement.GetProcedureSql(SelectProc: boolean): string;
+var
+  sFunc:string;
 
-  var sFunc:string;
   function GenerateParamsStr(Count: integer): string;
     var
       I: integer;
@@ -862,42 +879,41 @@ function TZOracleCallableStatement.GetProcedureSql(SelectProc: boolean): string;
       end;
     end;
 
-  var  InParams: string;
-  begin
+var
+  InParams: string;
+begin
 
-    sFunc := '';
-    InParams := GenerateParamsStr( FOracleParamsCount );
-    if SelectProc then
-      Result := 'SELECT * FROM ' + SQL + '('+InParams+')'
-    else
-      Result := 'BEGIN  ' + sFunc +' '+SQL+'(' + InParams+'); END;';
-  end;
-
-
+  sFunc := '';
+  InParams := GenerateParamsStr( FOracleParamsCount );
+  if SelectProc then
+    Result := 'SELECT * FROM ' + SQL + '('+InParams+')'
+  else
+    Result := 'BEGIN  ' + sFunc +' '+SQL+'(' + InParams+'); END;';
+end;
 
 function TZOracleCallableStatement.IsNull(ParameterIndex: Integer): Boolean;
-  begin
-    result := inherited IsNull(ParameterIndex);
-  end;
+begin
+  result := inherited IsNull(ParameterIndex);
+end;
 
 procedure TZOracleCallableStatement.ClearParameters;
-  begin
-    inherited;
-    FOracleParamsCount := 0;
-  end;
+begin
+  inherited;
+  FOracleParamsCount := 0;
+  SetLength(FOracleParams, 0);
+end;
 
 constructor TZOracleCallableStatement.Create(Connection: IZConnection;
   const pProcName: string; Info: TStrings);
-  begin
+begin
+  inherited Create(Connection, SQL, Info);
 
-    inherited Create(Connection, SQL, Info);
-    FOracleParamsCount:=0;
-    SQL := pProcName;
-    FPlainDriver := Connection.GetIZPlainDriver as IZOraclePlainDriver;
-    ResultSetType := rtForwardOnly;
-    FPrepared := False;
-
-  end;
+  FOracleParamsCount := 0;
+  SQL := pProcName;
+  FPlainDriver := Connection.GetIZPlainDriver as IZOraclePlainDriver;
+  ResultSetType := rtForwardOnly;
+  FPrepared := False;
+end;
 
 destructor TZOracleCallableStatement.Destroy;
   begin
@@ -905,59 +921,62 @@ destructor TZOracleCallableStatement.Destroy;
   end;
 
 function TZOracleCallableStatement.ExecuteUpdatePrepared: Integer;
-  var
-    StatementType: ub2;
-    ResultSet: IZResultSet;
-  begin
+var
+  StatementType: ub2;
+  ResultSet: IZResultSet;
+begin
   { Prepares a statement. }
-
-
-
-
-    if not Prepared then
-      Prepare;
+  if not Prepared then
+    Prepare;
 
   { Loads binded variables with values. }
-    LoadOracleVars(FPlainDriver , Connection, FErrorHandle,
-      FInVars, InParamValues, ChunkSize);
+  LoadOracleVars(FPlainDriver , Connection, FErrorHandle,
+    FInVars, InParamValues, ChunkSize);
 
 
-    try
-      StatementType := 0;
-      FPlainDriver.AttrGet(FHandle, OCI_HTYPE_STMT, @StatementType, nil,
-        OCI_ATTR_STMT_TYPE, FErrorHandle);
+  try
+    StatementType := 0;
+    FPlainDriver.AttrGet(FHandle, OCI_HTYPE_STMT, @StatementType, nil,
+      OCI_ATTR_STMT_TYPE, FErrorHandle);
 
-      if StatementType = OCI_STMT_SELECT then
-      begin
+    if StatementType = OCI_STMT_SELECT then
+    begin
       { Executes the statement and gets a resultset. }
-        ResultSet := CreateOracleResultSet(FPlainDriver, Self,
-          FOracleSQL, FHandle, FErrorHandle);
-        try
-          while ResultSet.Next do;
-          LastUpdateCount := ResultSet.GetRow;
-        finally
-          ResultSet.Close;
-        end;
-      end
-      else
-      begin
-      { Executes the statement and gets a result. }
-        ExecuteOracleStatement(FPlainDriver, Connection, FOracleSQL,
-          FHandle, FErrorHandle);
-        LastUpdateCount := GetOracleUpdateCount(FPlainDriver, FHandle, FErrorHandle);
-        FetchOutParam;
+      ResultSet := CreateOracleResultSet(FPlainDriver, Self,
+        FOracleSQL, FHandle, FErrorHandle);
+      try
+        while ResultSet.Next do;
+        LastUpdateCount := ResultSet.GetRow;
+      finally
+        ResultSet.Close;
       end;
-      Result := LastUpdateCount;
-
-      DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, FOracleSQL);
-    finally
-    { Unloads binded variables with values. }
-      UnloadOracleVars(FInVars);
+    end
+    else
+    begin
+      { Executes the statement and gets a result. }
+      ExecuteOracleStatement(FPlainDriver, Connection, FOracleSQL,
+        FHandle, FErrorHandle);
+      LastUpdateCount := GetOracleUpdateCount(FPlainDriver, FHandle, FErrorHandle);
+      FetchOutParam;
     end;
+    Result := LastUpdateCount;
+
+    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, FOracleSQL);
+  finally
+    { Unloads binded variables with values. }
+    UnloadOracleVars(FInVars);
+  end;
 
   { Autocommit statement. }
-    if Connection.GetAutoCommit then
-      Connection.Commit;
-  end;
+  if Connection.GetAutoCommit then
+    Connection.Commit;
+end;
+
+function TZOracleCallableStatement.ExecuteQueryPrepared: IZResultSet;
+begin
+  ExecuteUpdatePrepared;
+  // CreateOracleResultSet(FPlainDriver, Self, FOracleSQL, FHandle, FErrorHandle);
+  Result := nil;
+end;
 
 end.
