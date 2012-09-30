@@ -152,7 +152,8 @@ type
     FHandle: POCIStmt;
     FOracleParams: array of TZOracleParam;
     FOracleParamsCount: Integer;
-    procedure FetchOutParam;
+    procedure FetchOutParamsFromOracleVars;
+    procedure FetchOutParamsFromResultSet(ResultSet: IZResultSet);
   protected
     function GetProcedureSql(SelectProc: boolean): string;
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
@@ -788,6 +789,7 @@ end;
 
 procedure TZOracleCallableStatement.SetInParam(ParameterIndex: Integer;
   SQLType: TZSQLType; const Value: TZVariant);
+var AConnection: IZConnection;
 begin
   inherited;
   if ParameterIndex > FOracleParamsCount then
@@ -797,7 +799,8 @@ begin
 
   with FOracleParams[ParameterIndex-1] do
   begin
-    if not GetConnection.UseMetadata then
+    AConnection := GetConnection;
+    if Assigned(AConnection) and ( not AConnection.UseMetadata ) then
       pName := 'p'+IntToStr(ParameterIndex);
     pSQLType := ord(SQLType);
     pValue := Value;
@@ -814,7 +817,7 @@ begin
   FOracleParams[ParameterIndex].pTypeName := ParamTypeName;
 end;
 
-procedure TZOracleCallableStatement.FetchOutParam;
+procedure TZOracleCallableStatement.FetchOutParamsFromOracleVars;
 var  CurrentVar: PZSQLVar;
   I: integer;
   OracleConnection :IZOracleConnection;
@@ -866,6 +869,64 @@ begin
   end;
 end;
 
+procedure TZOracleCallableStatement.FetchOutParamsFromResultSet(ResultSet: IZResultSet);
+var
+  ParamIndex, I: Integer;
+  Temp: TZVariant;
+  HasRows: Boolean;
+begin
+  //ResultSet.BeforeFirst;
+  HasRows := ResultSet.Next;
+
+  I := 1;
+  for ParamIndex := 0 to OutParamCount - 1 do
+  begin
+    if not (FDBParamTypes[ParamIndex] in [2, 3, 4]) then // ptOutput, ptInputOutput, ptResult
+      Continue;
+    if I > ResultSet.GetMetadata.GetColumnCount then
+      Break;
+
+    if (not HasRows) or (ResultSet.IsNull(I)) then
+      DefVarManager.SetNull(Temp)
+    else
+      case ResultSet.GetMetadata.GetColumnType(I) of
+      stBoolean:
+        DefVarManager.SetAsBoolean(Temp, ResultSet.GetBoolean(I));
+      stByte:
+        DefVarManager.SetAsInteger(Temp, ResultSet.GetByte(I));
+      stShort:
+        DefVarManager.SetAsInteger(Temp, ResultSet.GetShort(I));
+      stInteger:
+        DefVarManager.SetAsInteger(Temp, ResultSet.GetInt(I));
+      stLong:
+        DefVarManager.SetAsInteger(Temp, ResultSet.GetLong(I));
+      stFloat:
+        DefVarManager.SetAsFloat(Temp, ResultSet.GetFloat(I));
+      stDouble:
+        DefVarManager.SetAsFloat(Temp, ResultSet.GetDouble(I));
+      stBigDecimal:
+        DefVarManager.SetAsFloat(Temp, ResultSet.GetBigDecimal(I));
+      stString, stAsciiStream:
+        DefVarManager.SetAsString(Temp, ResultSet.GetString(I));
+      stUnicodeString, stUnicodeStream:
+        DefVarManager.SetAsUnicodeString(Temp, ResultSet.GetUnicodeString(I));
+      stDate:
+        DefVarManager.SetAsDateTime(Temp, ResultSet.GetDate(I));
+      stTime:
+        DefVarManager.SetAsDateTime(Temp, ResultSet.GetTime(I));
+      stTimestamp:
+        DefVarManager.SetAsDateTime(Temp, ResultSet.GetTimestamp(I));
+      stBinaryStream:
+        DefVarManager.SetAsInterface(Temp, ResultSet.GetBlob(I));
+      else
+        DefVarManager.SetAsString(Temp, ResultSet.GetString(I));
+      end;
+    OutParamValues[ParamIndex] := Temp;
+    Inc(I);
+  end;
+  //ResultSet.BeforeFirst;
+end;
+
 function TZOracleCallableStatement.GetProcedureSql(SelectProc: boolean): string;
 var
   sFunc:string;
@@ -885,6 +946,7 @@ var
           Result := Result + ',';
         Result := Result + ':'+FOracleParams[I].pName;
       end;
+      Result := '('+Result+')'
     end;
 
 var
@@ -894,12 +956,12 @@ begin
   sFunc := '';
   InParams := GenerateParamsStr( FOracleParamsCount );
   if IsFunction then
-    Result := 'SELECT '+SQL+FOracleParams[0].pName+'('+InParams+') FROM DUAL;'
+    Result := 'SELECT "'+SQL+'"'+InParams+' AS '+FOracleParams[High(FOracleParams)].pName+' FROM DUAL'
   else
     if SelectProc then
-      Result := 'SELECT * FROM ' + SQL + '('+InParams+');'
+      Result := 'SELECT * FROM ' + SQL +InParams
     else
-      Result := 'BEGIN  ' + sFunc +' '+SQL+'(' + InParams+'); END;';
+      Result := 'BEGIN  ' + sFunc +' '+SQL + InParams+'; END;';
 end;
 
 function TZOracleCallableStatement.IsNull(ParameterIndex: Integer): Boolean;
@@ -955,9 +1017,12 @@ begin
       ResultSet := CreateOracleResultSet(FPlainDriver, Self,
         FOracleSQL, FHandle, FErrorHandle);
       try
-        while ResultSet.Next do;
+        if not IsFunction then
+          while ResultSet.Next do;
         LastUpdateCount := ResultSet.GetRow;
       finally
+        if IsFunction then
+          FetchOutParamsFromResultSet(ResultSet);
         ResultSet.Close;
       end;
     end
@@ -967,7 +1032,7 @@ begin
       ExecuteOracleStatement(FPlainDriver, Connection, FOracleSQL,
         FHandle, FErrorHandle);
       LastUpdateCount := GetOracleUpdateCount(FPlainDriver, FHandle, FErrorHandle);
-      FetchOutParam;
+      FetchOutParamsFromOracleVars;
     end;
     Result := LastUpdateCount;
 
