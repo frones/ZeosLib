@@ -210,6 +210,31 @@ BEGIN
   p5 := p3 || p3;
 END; ^
 
+/*==============================================================*/
+/* Stored procedure: myfuncInOutReturn                          */
+/*==============================================================*/
+CREATE OR REPLACE FUNCTION "myfuncInOutReturn"(x IN OUT VARCHAR) RETURN VARCHAR IS
+BEGIN
+  x := x||'outvalue';
+  RETURN 'returned string';
+END; ^
+
+/*==============================================================*/
+/* Stored procedure: simple_func                                */
+/*==============================================================*/
+CREATE OR REPLACE FUNCTION "simple_func" RETURN INTEGER IS
+BEGIN
+  RETURN 1111;
+END; ^
+
+/*==============================================================*/
+/* Stored procedure: simple_func                                */
+/*==============================================================*/
+CREATE OR REPLACE FUNCTION "simplefunc" RETURN INTEGER IS
+BEGIN
+  RETURN 2222;
+END; ^
+
 SET TERM ; ^
 
 /*==============================================================*/

@@ -141,6 +141,9 @@ type
     function GetSupportedProtocols: string; override;
   published
     procedure Test_abtest;
+    procedure Test_myfuncInOutReturn;
+    procedure Test_simple_func;
+    procedure Test_simplefunc;
   end;
 
 implementation
@@ -1465,6 +1468,67 @@ begin
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[4].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Params[4].DataType));
+end;
+
+procedure TZTestOracleStoredProcedure.Test_myfuncInOutReturn;
+var
+  S: String;
+begin
+  StoredProc.StoredProcName := 'myfuncInOutReturn';
+  CheckEquals(2, StoredProc.Params.Count);
+  CheckEquals('X', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[0].ParamType));
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    CheckEquals(ord(ftWideString), ord(StoredProc.Params[0].DataType))
+  else
+    CheckEquals(ord(ftString), ord(StoredProc.Params[0].DataType));
+  CheckEquals('ReturnValue', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[1].ParamType));
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    CheckEquals(ord(ftWideString), ord(StoredProc.Params[1].DataType))
+  else
+    CheckEquals(ord(ftString), ord(StoredProc.Params[1].DataType));
+
+  StoredProc.ParamByName('x').AsString := 'a';
+  StoredProc.ExecProc;
+
+  CheckEquals('aoutvalue', StoredProc.ParamByName('x').AsString);
+  CheckEquals('returned string', StoredProc.ParamByName('ReturnValue').AsString);
+  CheckEquals(2, StoredProc.Params.Count);
+end;
+
+procedure TZTestOracleStoredProcedure.Test_simple_func;
+var
+  S: String;
+begin
+  StoredProc.StoredProcName := 'simple_func';
+  CheckEquals(1, StoredProc.Params.Count);
+  CheckEquals('ReturnValue', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
+  //CheckEquals(ord(ftInteger), ord(StoredProc.Params[0].DataType));
+
+  StoredProc.ExecProc;
+
+  CheckEquals(1111, StoredProc.ParamByName('ReturnValue').AsInteger);
+  CheckEquals(1, StoredProc.Params.Count);
+end;
+
+procedure TZTestOracleStoredProcedure.Test_simplefunc;
+var
+  S: String;
+begin
+  StoredProc.StoredProcName := 'simplefunc';
+  CheckEquals(1, StoredProc.Params.Count);
+  CheckEquals('ReturnValue', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
+  //CheckEquals(ord(ftInteger), ord(StoredProc.Params[0].DataType));
+
+  StoredProc.ExecProc;
+
+  CheckEquals(2222, StoredProc.ParamByName('ReturnValue').AsInteger);
+  CheckEquals(1, StoredProc.Params.Count);
 end;
 
 initialization
