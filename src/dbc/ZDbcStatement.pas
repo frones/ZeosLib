@@ -271,6 +271,7 @@ type
     FLastWasNull: Boolean;
     FTemp: String;
     FProcSql: String;
+    FIsFunction: Boolean;
   protected
     FResultSets: IZCollection;
     FActiveResultset: Integer;
@@ -293,6 +294,7 @@ type
     procedure ClearParameters; override;
     procedure Close; override;
 
+    function IsFunction: Boolean;
     function HasMoreResultSets: Boolean; virtual;
     function GetFirstResultSet: IZResultSet; virtual;
     function GetPreviousResultSet: IZResultSet; virtual;
@@ -1759,6 +1761,7 @@ begin
   FProcSql := ''; //Init -> FPC
   FLastWasNull := True;
   FResultSets := TZCollection.Create;
+  FIsFunction := False;
 end;
 
 {**
@@ -1861,6 +1864,16 @@ procedure TZAbstractCallableStatement.Close;
 begin
   ClearResultSets;
   inherited Close;
+end;
+
+
+{**
+  Do we call a function or a procedure?
+  @result Returns <code>True</code> if we call a function
+}
+function TZAbstractCallableStatement.IsFunction: Boolean;
+begin
+  Result := FIsFunction;
 end;
 
 {**
@@ -1976,6 +1989,7 @@ procedure TZAbstractCallableStatement.RegisterParamType(ParameterIndex,
   ParamType: Integer);
 begin
   FDBParamTypes[ParameterIndex - 1] := ParamType;
+  if not FIsFunction then FIsFunction := ParamType = 4; //ptResult
 end;
 
 {**
