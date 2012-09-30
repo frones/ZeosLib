@@ -58,7 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcStatement,Db, ZDbcLogging,
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcStatement, ZDbcLogging,
   ZPlainOracleDriver, ZCompatibility, ZVariant, ZDbcOracleUtils,
   ZPlainOracleConstants, Types;
 
@@ -137,6 +137,7 @@ type
     pName:string;
     pSQLType:Integer;
     pValue:TZVariant;
+    pTypeName: String;
     pOut:boolean;
   End;
 
@@ -719,7 +720,12 @@ var
 begin
   if not FPrepared then
   begin
-    FOracleSQL := GetProcedureSql(False);
+    FOracleSQL := GetProcedureSql(IsFunction);
+    if IsFunction then
+    begin
+      TrimInParameters;
+      FOracleParamsCount := InParamCount;
+    end;
 
     { Allocates statement handles. }
     if (FHandle = nil) or (FErrorHandle = nil) then
@@ -731,10 +737,10 @@ begin
     PrepareOracleStatement(FPlainDriver, FOracleSQL, FHandle, FErrorHandle,
       StrToIntDef(Info.Values['prefetch_count'], 100), ClientCodePage^.Encoding,
     Connection.PreprepareSQL);
-    AllocateOracleSQLVars(FInVars, FOracleParamsCount {InParamCount});
-    FInVars^.ActualNum := FOracleParamsCount{InParamCount};
+    AllocateOracleSQLVars(FInVars, FOracleParamsCount);
+    FInVars^.ActualNum := FOracleParamsCount;
 
-    for I := 0 to FOracleParamsCount{InParamCount} - 1 do
+    for I := 0 to FOracleParamsCount - 1 do
     begin
       CurrentVar := @FInVars.Variables[I + 1];
       CurrentVar.Handle := nil;
@@ -770,10 +776,11 @@ begin
     FOracleParamsCount := ParameterIndex;
 
   if ParameterIndex > High(FOracleParams) then
-    SetLength(FOracleParams, ParameterIndex+1);
+    SetLength(FOracleParams, ParameterIndex);
   with FOracleParams[ParameterIndex-1] do
   begin
-    //pName := 'pOut'+IntToStr(ParameterIndex);
+    if not GetConnection.UseMetadata then
+      pName := 'pOut'+IntToStr(ParameterIndex);
     pSQLType := SQLType;
     pOut := true;
   end;
@@ -786,11 +793,12 @@ begin
   if ParameterIndex > FOracleParamsCount then
     FOracleParamsCount := ParameterIndex;
   if ParameterIndex > High(FOracleParams) then
-    SetLength(FOracleParams, ParameterIndex+1);
+    SetLength(FOracleParams, ParameterIndex);
 
   with FOracleParams[ParameterIndex-1] do
   begin
-    //pName := 'p'+IntToStr(ParameterIndex);
+    if not GetConnection.UseMetadata then
+      pName := 'p'+IntToStr(ParameterIndex);
     pSQLType := ord(SQLType);
     pValue := Value;
     pOut := false;
@@ -803,11 +811,12 @@ begin
   if ParameterIndex > High(FOracleParams) then
     SetLength(FOracleParams, ParameterIndex+1);
   FOracleParams[ParameterIndex].pName := ParamName;
+  FOracleParams[ParameterIndex].pTypeName := ParamTypeName;
 end;
 
 procedure TZOracleCallableStatement.FetchOutParam;
 var  CurrentVar: PZSQLVar;
-  I:integer;
+  I: integer;
   OracleConnection :IZOracleConnection;
   Year:SmallInt;
   Month, Day:Byte; Hour, Min, Sec:ub1; MSec: ub4;
@@ -831,7 +840,7 @@ begin
             try
             StrLCopy( ps,
                       {PAnsiChar }(CurrentVar.Data), 1024);  //DefVarManager.SetAsString( outParamValues[I], PAnsiChar (CurrentVar.Data)^ );
-            DefVarManager.SetAsString( OutParamValues[I], String(ps) );
+            DefVarManager.SetAsString( OutParamValues[I], ZDbcString(ps) );
             finally
              FreeMem(ps);
             end;
@@ -867,12 +876,11 @@ var
     begin
       for I := 0 to Count - 1 do
       begin
-        if (I=0) then
-          if TParamType( FDBParamTypes[I] ) = ptResult then
-          begin
-            sFunc := ' :'+FOracleParams[I].pName+' := ';
-            continue;
-          end;
+        if ( FDBParamTypes[I] ) = 4 then //ptResult
+        begin
+          sFunc := ' :'+FOracleParams[I].pName+' := ';
+          continue;
+        end;
         if Result <> '' then
           Result := Result + ',';
         Result := Result + ':'+FOracleParams[I].pName;
@@ -885,10 +893,13 @@ begin
 
   sFunc := '';
   InParams := GenerateParamsStr( FOracleParamsCount );
-  if SelectProc then
-    Result := 'SELECT * FROM ' + SQL + '('+InParams+')'
+  if IsFunction then
+    Result := 'SELECT '+SQL+FOracleParams[0].pName+'('+InParams+') FROM DUAL;'
   else
-    Result := 'BEGIN  ' + sFunc +' '+SQL+'(' + InParams+'); END;';
+    if SelectProc then
+      Result := 'SELECT * FROM ' + SQL + '('+InParams+');'
+    else
+      Result := 'BEGIN  ' + sFunc +' '+SQL+'(' + InParams+'); END;';
 end;
 
 function TZOracleCallableStatement.IsNull(ParameterIndex: Integer): Boolean;
@@ -933,13 +944,12 @@ begin
   LoadOracleVars(FPlainDriver , Connection, FErrorHandle,
     FInVars, InParamValues, ChunkSize);
 
-
   try
     StatementType := 0;
     FPlainDriver.AttrGet(FHandle, OCI_HTYPE_STMT, @StatementType, nil,
       OCI_ATTR_STMT_TYPE, FErrorHandle);
 
-    if StatementType = OCI_STMT_SELECT then
+    if ( StatementType = OCI_STMT_SELECT ) then
     begin
       { Executes the statement and gets a resultset. }
       ResultSet := CreateOracleResultSet(FPlainDriver, Self,
