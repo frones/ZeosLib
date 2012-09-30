@@ -261,7 +261,7 @@ begin
   CheckEquals('P1', StoredProc.Params[0].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
   CheckEquals('R1', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(ord(ptOutput), ord(StoredProc.Params[1].ParamType));
   StoredProc.ParamByName('P1').AsInteger := 12345;
   StoredProc.ExecProc;
   CheckEquals(12346, StoredProc.ParamByName('R1').AsInteger);
@@ -285,9 +285,9 @@ begin
   CheckEquals('P3', StoredProc.Params[2].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
   CheckEquals('P4', StoredProc.Params[3].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[3].ParamType));
+  CheckEquals(ord(ptOutput), ord(StoredProc.Params[3].ParamType));
   CheckEquals('P5', StoredProc.Params[4].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[4].ParamType));
+  CheckEquals(ord(ptOutput), ord(StoredProc.Params[4].ParamType));
 
   StoredProc.ParamByName('P1').AsInteger := 50;
   StoredProc.ParamByName('P2').AsInteger := 100;

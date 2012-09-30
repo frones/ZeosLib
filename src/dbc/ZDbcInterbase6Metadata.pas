@@ -1468,7 +1468,7 @@ begin
         Result.UpdateString(4, GetString(ColumnIndexes[2]));    //COLUMN_NAME
         case GetInt(ColumnIndexes[3]) of
           0: Result.UpdateInt(5, Ord(pctIn));
-          1: Result.UpdateInt(5, Ord(pctReturn));
+          1: Result.UpdateInt(5, Ord(pctOut));
         else
             Result.UpdateInt(5, Ord(pctUnknown));
         end;
