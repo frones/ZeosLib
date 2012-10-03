@@ -272,10 +272,11 @@ type
     FTemp: String;
     FProcSql: String;
     FIsFunction: Boolean;
+    FHasOutParameter: Boolean;
   protected
     FResultSets: IZCollection;
     FActiveResultset: Integer;
-    FDBParamTypes:array[0..1024] of shortInt;
+    FDBParamTypes: array[0..1024] of shortInt;
     procedure ClearResultSets; virtual;
     procedure TrimInParameters; virtual;
     procedure SetOutParamCount(NewParamCount: Integer); virtual;
@@ -295,6 +296,7 @@ type
     procedure Close; override;
 
     function IsFunction: Boolean;
+    function HasOutParameter: Boolean;
     function HasMoreResultSets: Boolean; virtual;
     function GetFirstResultSet: IZResultSet; virtual;
     function GetPreviousResultSet: IZResultSet; virtual;
@@ -1877,6 +1879,15 @@ begin
 end;
 
 {**
+  Do we have ptInputOutput or ptOutput paramets in a function or procedure?
+  @result Returns <code>True</code> if ptInputOutput or ptOutput is available
+}
+function TZAbstractCallableStatement.HasOutParameter: Boolean;
+begin
+  Result := FHasOutParameter;
+end;
+
+{**
   Are more resultsets retrieved?
   @result Returns <code>True</code> if more resultsets are retrieved
 }
@@ -1990,6 +2001,7 @@ procedure TZAbstractCallableStatement.RegisterParamType(ParameterIndex,
 begin
   FDBParamTypes[ParameterIndex - 1] := ParamType;
   if not FIsFunction then FIsFunction := ParamType = 4; //ptResult
+  if not FHasOutParameter then FHasOutParameter := ParamType in [2,3]; //ptOutput, ptInputOutput
 end;
 
 {**
