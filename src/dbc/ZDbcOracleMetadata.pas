@@ -1267,135 +1267,141 @@ THackCachedResultSet = class(TZAbstractCachedResultSet);
 
 function TZOracleDatabaseMetadata.UncachedGetProcedureColumns(const Catalog,
   SchemaPattern, ProcedureNamePattern, ColumnNamePattern: string): IZResultSet;
-  var
-    SQL{, Where}: string;
-    LProcedureNamePattern{, LColumnNamePattern}: string;
-    TypeName, SubTypeName: string;
-    ColumnIndexes : Array[1..8] of integer;
-    //ReturnIndexes : Array[1..8] of integer;
-    colName:string;
-    iColName:integer;
-    isFunction:boolean;
-    IZStmt:IZStatement;
-    iCol:integer;
+var
+  SQL{, Where}: string;
+  LProcedureNamePattern{, LColumnNamePattern}: string;
+  TypeName, SubTypeName: string;
+  ColumnIndexes : Array[1..8] of integer;
+  //ReturnIndexes : Array[1..8] of integer;
+  colName:string;
+  isFunction:boolean;
+  IZStmt:IZStatement;
+  iCol:integer;
 //    bNeedInsertReturns:boolean;
-    bInsertingReturns:boolean;
-    PZRow1,PZRow2:PZRowBuffer;
-
+  bInsertingReturns:boolean;
+  PZRow1,PZRow2:PZRowBuffer;
 //  Label InsertingRecord;
 
+  Names: TStrings;
+
+  function GetNextName(const AName: String; NameEmpty: Boolean = False): String;
+  var N: Integer;
   begin
-    Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
+    if (Names.IndexOf(AName) = -1) and not NameEmpty then
+    begin
+      Names.Add(AName);
+      Result := AName;
+    end
+    else
+      for N := 1 to MaxInt do
+        if Names.IndexOf(AName+IntToStr(N)) = -1 then
+        begin
+          Names.Add(AName+IntToStr(N));
+          Result := AName+IntToStr(N);
+          Break;
+        end;
+  end;
+begin
+  Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
-    iColName:=0;
-    iCol:= 0;
+  Names := TStringList.Create;
+
+  iCol:= 0;
 //    bNeedInsertReturns:=false;
-    bInsertingReturns:=false;
+  bInsertingReturns:=false;
 
-    LProcedureNamePattern := '';//;ConstructNameCondition(ProcedureNamePattern,
+  LProcedureNamePattern := '';//;ConstructNameCondition(ProcedureNamePattern,
 //      'P.RDB$PROCEDURE_NAME');
 //    LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,
 //      'PP.RDB$PARAMETER_NAME');
-    SQL := 'select * from user_arguments where object_name = '''+ProcedureNamePattern+''' '+// AND PACKAGE_NAME {IS NULL}
-      'ORDER BY POSITION';
+  SQL := 'select * from user_arguments where object_name = '''+ProcedureNamePattern+''' '+// AND PACKAGE_NAME {IS NULL}
+    'ORDER BY POSITION';
 
-    IZStmt := GetConnection.CreateStatement;
-    with IZStmt.ExecuteQuery(SQL) do
+  IZStmt := GetConnection.CreateStatement;
+  with IZStmt.ExecuteQuery(SQL) do
+  begin
+
+    ColumnIndexes[1] := FindColumn('object_name');
+    ColumnIndexes[2] := FindColumn('argument_name');
+    ColumnIndexes[3] := FindColumn('IN_OUT'); //'RDB$PARAMETER_TYPE');
+    ColumnIndexes[4] := FindColumn('DATA_TYPE');//'RDB$FIELD_TYPE');
+    ColumnIndexes[5] := FindColumn('TYPE_SUBNAME');//RDB$FIELD_SUB_TYPE');
+    ColumnIndexes[6] := FindColumn('DATA_PRECISION');//RDB$FIELD_PRECISION');
+    ColumnIndexes[7] := FindColumn('DATA_SCALE');//RDB$FIELD_SCALE');
+    ColumnIndexes[8] := 0;//FindColumn('RDB$NULL_FLAG');
+
+    isFunction := False;
+    while Next do
     begin
-
-      ColumnIndexes[1] := FindColumn('object_name');
-      ColumnIndexes[2] := FindColumn('argument_name');
-      ColumnIndexes[3] := FindColumn('IN_OUT'); //'RDB$PARAMETER_TYPE');
-      ColumnIndexes[4] := FindColumn('DATA_TYPE');//'RDB$FIELD_TYPE');
-      ColumnIndexes[5] := FindColumn('TYPE_SUBNAME');//RDB$FIELD_SUB_TYPE');
-      ColumnIndexes[6] := FindColumn('DATA_PRECISION');//RDB$FIELD_PRECISION');
-      ColumnIndexes[7] := FindColumn('DATA_SCALE');//RDB$FIELD_SCALE');
-      ColumnIndexes[8] := 0;//FindColumn('RDB$NULL_FLAG');
-
-      isFunction := False;
-      while Next do
+      if iCol=0 then
       begin
-        if iCol=0 then
-        begin
-           isFunction := (GetString(FindColumn('IN_OUT'))='OUT'); // find another way to test...   //IsOracleFunction(GetConnection.GetIZPlainDriver,IZStmt. GetString(FindColumn('object_name')));
-  //         if isFunction then
-  //            begin
-  //              inc(iCol);
-  //              bNeedInsertReturns := true;
-  //              continue;
-  //            end;
-        end;
+         isFunction := (GetString(FindColumn('IN_OUT'))='OUT'); // find another way to test...   //IsOracleFunction(GetConnection.GetIZPlainDriver,IZStmt. GetString(FindColumn('object_name')));
+//         if isFunction then
+//            begin
+//              inc(iCol);
+//              bNeedInsertReturns := true;
+//              continue;
+//            end;
+      end;
 
 
 //        InsertingRecord:
-        TypeName := GetString(ColumnIndexes[4]);
-        SubTypeName := GetString(ColumnIndexes[5]);
-        colName := GetString(ColumnIndexes[2]);
+      TypeName := GetString(ColumnIndexes[4]);
+      SubTypeName := GetString(ColumnIndexes[5]);
 
-        Result.MoveToInsertRow;
-        Result.UpdateNull(1);    //PROCEDURE_CAT
-        Result.UpdateNull(2);    //PROCEDURE_SCHEM
-        Result.UpdateString(3, GetString(ColumnIndexes[1]));    //TABLE_NAME
-        if GetString(ColumnIndexes[3]) = 'IN' then
-          Result.UpdateInt(5, Ord(pctIn))
+      Result.MoveToInsertRow;
+      Result.UpdateNull(1);    //PROCEDURE_CAT
+      Result.UpdateNull(2);    //PROCEDURE_SCHEM
+      Result.UpdateString(3, GetString(ColumnIndexes[1]));    //TABLE_NAME
+      if GetString(ColumnIndexes[3]) = 'IN' then
+        Result.UpdateInt(5, Ord(pctIn))
+      else
+        if GetString(ColumnIndexes[3]) = 'OUT' then
+          Result.UpdateInt(5, Ord(pctOut))
         else
-          if GetString(ColumnIndexes[3]) = 'OUT' then
-          begin
-            Result.UpdateInt(5, Ord(pctOut));
-            if colName = '' then
-            begin
-              colName := 'RESULT';
-              Result.UpdateInt(5, Ord(pctReturn));
-            end;
-            if iColName > 0 then
-               colName := 'RESULT' + IntToStr(iColName);
-            Inc(iColName);
-          end
+          if ( GetString(ColumnIndexes[3]) = 'IN/OUT') or
+            ( GetString(ColumnIndexes[3]) = 'INOUT') then
+            Result.UpdateInt(5, Ord(pctInOut))
           else
-            if GetString(ColumnIndexes[3]) = 'IN/OUT' then
-              Result.UpdateInt(5, Ord(pctInOut))
+            if GetString(ColumnIndexes[3]) = '' then
+              Result.UpdateInt(5, Ord(pctUnknown))
             else
-              Result.UpdateInt(5, Ord(pctUnknown));
-        Result.UpdateString(4, colName);    //COLUMN_NAME
+              Result.UpdateInt(5, Ord(pctReturn));
+      ColName := GetString(ColumnIndexes[2]);
+      Result.UpdateString(4, GetNextName(ColName, Length(ColName) = 0));    //COLUMN_NAME
 
-       { case GetInt(ColumnIndexes[3]) of
-          0: Result.UpdateInt(5, Ord(pctIn));
-          1: Result.UpdateInt(5, Ord(pctReturn));
-        else
-            Result.UpdateInt(5, Ord(pctUnknown));
-        end;
-       }
-        Result.UpdateInt(6,
-          Ord(ConvertOracleTypeToSQLType(TypeName,GetInt(ColumnIndexes[6]),GetInt(ColumnIndexes[7]),
-          Self.GetConnection.GetClientCodePageInformations^.Encoding,
-          GetConnection.UTF8StringAsWideField))); //DATA_TYPE
-        Result.UpdateString(7,GetString(ColumnIndexes[4]));    //TYPE_NAME
-        Result.UpdateInt(10, GetInt(ColumnIndexes[6]));
-        Result.UpdateNull(9);    //BUFFER_LENGTH
-        Result.UpdateInt(10, GetInt(ColumnIndexes[7]));
-        Result.UpdateInt(11, 10);
-        //Result.UpdateInt(12, GetInt(ColumnIndexes[8]));
-        Result.UpdateNull(12);
-        Result.UpdateString(12, GetString(ColumnIndexes[6]));
-        Result.InsertRow;
-        if bInsertingReturns then break;
-        inc(iCol);
-      end;
-      if isFunction {and (bInsertingReturns=false)} then
-      begin
-        with THackCachedResultSet(result) do  // change first per last
-        begin
-           PZRow2 := SelectedRow;
-           result.First;
-           PZRow1 := SelectedRow;
-           SelectedRow := PZRow2;
-           result.Last ;
-           SelectedRow := PZRow1;
-        end;
-      end;
-      Close;
+      Result.UpdateInt(6, Ord(ConvertOracleTypeToSQLType(TypeName,
+        GetInt(ColumnIndexes[6]),GetInt(ColumnIndexes[7]),
+        Self.GetConnection.GetClientCodePageInformations^.Encoding,
+        GetConnection.UTF8StringAsWideField))); //DATA_TYPE
+      Result.UpdateString(7,GetString(ColumnIndexes[4]));    //TYPE_NAME
+      Result.UpdateInt(10, GetInt(ColumnIndexes[6])); //PRECISION
+      Result.UpdateNull(9);    //BUFFER_LENGTH
+      Result.UpdateInt(10, GetInt(ColumnIndexes[7]));
+      Result.UpdateInt(11, 10);
+      //Result.UpdateInt(12, GetInt(ColumnIndexes[8]));
+      Result.UpdateNull(12);
+      Result.UpdateString(12, GetString(ColumnIndexes[6]));
+      Result.InsertRow;
+      if bInsertingReturns then break;
+      inc(iCol);
     end;
+    if isFunction {and (bInsertingReturns=false)} then
+    begin
+      with THackCachedResultSet(result) do  // change first per last
+      begin
+         PZRow2 := SelectedRow;
+         result.First;
+         PZRow1 := SelectedRow;
+         SelectedRow := PZRow2;
+         result.Last ;
+         SelectedRow := PZRow1;
+      end;
+    end;
+    Close;
   end;
+  FreeAndNil(Names);
+end;
 
 function TZOracleDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
@@ -1548,8 +1554,12 @@ function TZOracleDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const ColumnNamePattern: string): IZResultSet;
 var
   SQL: string;
+  SQLType: TZSQLType;
+  CharWidth: Integer;
 begin
     Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
+
+    CharWidth := GetConnection.GetClientCodePageInformations^.CharWidth;
 
     SQL := 'SELECT NULL, OWNER, TABLE_NAME, COLUMN_NAME, NULL, DATA_TYPE,'
       + ' DATA_LENGTH, NULL, DATA_PRECISION, DATA_SCALE, NULLABLE, NULL,'
@@ -1568,12 +1578,13 @@ begin
         Result.UpdateString(2, GetString(2));
         Result.UpdateString(3, GetString(3));
         Result.UpdateString(4, GetString(4));
-        Result.UpdateInt(5, Ord(ConvertOracleTypeToSQLType(
+        SQLType := ConvertOracleTypeToSQLType(
           GetString(6), GetInt(9), GetInt(10),
           GetConnection.GetClientCodePageInformations^.Encoding,
-          GetConnection.UTF8StringAsWideField)));
+          GetConnection.UTF8StringAsWideField);
+        Result.UpdateInt(5, Ord(SQLType));
         Result.UpdateString(6, GetString(6));
-        Result.UpdateInt(7, GetInt(7));
+        Result.UpdateInt(7, GetFieldSize(SQLType, GetInt(7), CharWidth)); //FIELD_SIZE
         Result.UpdateNull(8);
         Result.UpdateInt(9, GetInt(9));
         Result.UpdateInt(10, GetInt(10));

@@ -446,16 +446,16 @@ procedure TZMySQLBaseDriver.LoadCodePages;
 begin
   {MySQL 3.23-4.1}
   { MultiByte }
-  AddCodePage('big5', 1, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_Big5{$ENDIF}); {Big5 Traditional Chinese}
-  AddCodePage('ujis', 10); {EUC-JP Japanese}
-  AddCodePage('sjis', 11); {Shift-JIS Japanese}
-  AddCodePage('gbk', 19, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_GB2312{$ENDIF}); {GBK Simplified Chinese}
-  AddCodePage('utf8', 22, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}); {UTF-8 Unicode}
-  AddCodePage('ucs2', 23, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16{$ENDIF}, 'utf8'); {UCS-2 Unicode}
-  AddCodePage('euckr', 14, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_EUCKR{$ENDIF}); {EUC-KR Korean}
-  AddCodePage('gb2312', 16, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_GB2312{$ENDIF}); {GB2312 Simplified Chinese}
-  AddCodePage('cp932', 35, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_SHIFTJS{$ENDIF}); {SJIS for Windows Japanese}
-  AddCodePage('eucjpms', 36); {UJIS for Windows Japanese}
+  AddCodePage('big5', 1, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_Big5{$ENDIF}, '', 2); {Big5 Traditional Chinese}
+  AddCodePage('ujis', 10, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 3); {EUC-JP Japanese}
+  AddCodePage('sjis', 11, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 2); {Shift-JIS Japanese}
+  AddCodePage('gbk', 19, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_GB2312{$ENDIF}, '', 2); {GBK Simplified Chinese}
+  AddCodePage('utf8', 22, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}, '', 3); {UTF-8 Unicode}
+  AddCodePage('ucs2', 23, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16{$ENDIF}, 'utf8', 2); {UCS-2 Unicode}
+  AddCodePage('euckr', 14, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_EUCKR{$ENDIF}, '', 2); {EUC-KR Korean}
+  AddCodePage('gb2312', 16, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_GB2312{$ENDIF}, '', 2); {GB2312 Simplified Chinese}
+  AddCodePage('cp932', 35, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_SHIFTJS{$ENDIF}, '', 2); {SJIS for Windows Japanese}
+  AddCodePage('eucjpms', 36, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 3); {UJIS for Windows Japanese}
   { SingleChar }
   AddCodePage('dec8', 2); {DEC West European}
   AddCodePage('cp850', 3, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS850{$ENDIF}); {DOS West European}
@@ -1412,10 +1412,10 @@ procedure TZMySQL5PlainDriver.LoadCodePages;
 begin
   inherited LoadCodePages;
   {MySQL 4.1-5.5}
-  { MultiChar }
-  AddCodePage('utf8mb4', 37, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}); {UTF-8 Unicode}
-  AddCodePage('utf16', 38, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16{$ENDIF}, 'utf8'); {UTF-16 Unicode}
-  AddCodePage('utf32', 39, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_utf32{$ENDIF}, 'utf8'); {UTF-32 Unicode} //Egonhugeist improved
+  { MultiByte }
+  AddCodePage('utf8mb4', 37, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}, '', 4); {UTF-8 Unicode}
+  AddCodePage('utf16', 38, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16{$ENDIF}, 'utf8', 4); {UTF-16 Unicode}
+  AddCodePage('utf32', 39, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_utf32{$ENDIF}, 'utf8', 4); {UTF-32 Unicode} //Egonhugeist improved
 end;
 
 constructor TZMySQL5PlainDriver.Create(Tokenizer: IZTokenizer);

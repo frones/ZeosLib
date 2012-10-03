@@ -99,15 +99,6 @@ type
     function IsAnsiDriver: Boolean; virtual;
     function Clone: IZPlainDriver; reintroduce; virtual; abstract;
     procedure LoadCodePages; virtual; abstract;
-    procedure AddCodePage(const Name: String; const ID:  Integer;
-      Encoding: TZCharEncoding = ceAnsi;
-      {$IFDEF WITH_CHAR_CONTROL}const CP: Word = $ffff; {$ENDIF}
-      const ZAlias: String = ''); virtual;
-    procedure ResetCodePage(const OldID: Integer; const Name: String;
-      const ID:  Integer; {may be an ordinal value of predefined Types...}
-      Encoding: TZCharEncoding = ceAnsi;
-      {$IFDEF WITH_CHAR_CONTROL}const CP: Word = $ffff; {$ENDIF}
-      const ZAlias: String = '');
     function GetUnicodeCodePageName: String; virtual;
     function ValidateCharEncoding(const CharacterSetName: String; const DoArrange: Boolean = False): PZCodePage; overload;
     function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
@@ -129,6 +120,15 @@ type
     procedure Initialize(const Location: String = ''); virtual;
 
     property Loader: TZNativeLibraryLoader read FLoader;
+    procedure AddCodePage(const Name: String; const ID:  Integer;
+      Encoding: TZCharEncoding = ceAnsi;
+      {$IFDEF WITH_CHAR_CONTROL}const CP: Word = $ffff; {$ENDIF}
+      const ZAlias: String = ''; CharWidth: Integer = 1); virtual;
+    procedure ResetCodePage(const OldID: Integer; const Name: String;
+      const ID:  Integer; {may be an ordinal value of predefined Types...}
+      Encoding: TZCharEncoding = ceAnsi;
+      {$IFDEF WITH_CHAR_CONTROL}const CP: Word = $ffff; {$ENDIF}
+      const ZAlias: String = ''; CharWidth: Integer = 1);
   end;
   {END ADDED by fduenas 15-06-2006}
 
@@ -456,13 +456,14 @@ end;
 procedure TZAbstractPlainDriver.AddCodePage(const Name: String;
       const ID:  Integer; Encoding: TZCharEncoding = ceAnsi;
       {$IFDEF WITH_CHAR_CONTROL}const CP: Word = $ffff; {$ENDIF}
-      const ZAlias: String = '');
+      const ZAlias: String = ''; CharWidth: Integer = 1);
 begin
   SetLength(FCodePages, Length(FCodePages)+1);
   FCodePages[High(FCodePages)].Name := Name;
   FCodePages[High(FCodePages)].ID := ID;
   FCodePages[High(FCodePages)].Encoding := Encoding;
   {$IFDEF WITH_CHAR_CONTROL} FCodePages[High(FCodePages)].CP := CP; {$ENDIF}
+  FCodePages[High(FCodePages)].CharWidth := CharWidth;
 
   {$IFDEF LAZARUSUTF8HACK}
   FCodePages[High(FCodePages)].IsSupported := Encoding = ceUTF8;
@@ -482,7 +483,7 @@ end;
 procedure TZAbstractPlainDriver.ResetCodePage(const OldID: Integer;
       const Name: String; const ID:  Integer; Encoding: TZCharEncoding = ceAnsi;
       {$IFDEF WITH_CHAR_CONTROL}const CP: Word = $ffff; {$ENDIF}
-      const ZAlias: String = '');
+      const ZAlias: String = ''; CharWidth: Integer = 1);
 var
   I: Integer;
 begin
@@ -494,6 +495,7 @@ begin
       FCodePages[I].Encoding := Encoding;
       {$IFDEF WITH_CHAR_CONTROL}FCodePages[I].CP := CP;{$ENDIF}
       FCodePages[I].ZAlias := ZAlias;
+      FCodePages[High(FCodePages)].CharWidth := CharWidth;
 
       {$IFDEF LAZARUSUTF8HACK}
       FCodePages[High(FCodePages)].IsSupported := Encoding = ceUTF8;

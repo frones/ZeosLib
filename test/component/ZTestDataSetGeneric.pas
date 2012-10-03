@@ -1830,7 +1830,8 @@ begin
       TempConnection.Protocol := Connection.Protocol;
       TempConnection.Catalog  := Connection.Catalog;
       TempConnection.Properties.Text := Connection.Properties.Text;
-      TempConnection.Properties.Add('oidasblob=True');
+      TempConnection.Properties.Add('oidasblob=true');
+      TempConnection.TransactIsolationLevel := tiReadCommitted;
       TempConnection.Connect;
       Query.Connection := TempConnection;
       Connection.TransactIsolationLevel:=tiReadCommitted;

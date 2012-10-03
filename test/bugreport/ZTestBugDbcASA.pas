@@ -56,7 +56,7 @@ interface
 {$I ZBugReport.inc}
 
 uses
-  Classes, SysUtils, TestFramework, ZDbcIntfs, ZBugReport, ZCompatibility,
+  Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZBugReport, ZCompatibility,
   ZDbcASA;
 
 type
@@ -100,6 +100,7 @@ end;
 procedure TZTestDbcASABugReport.EmptyTest;
 begin
   //drop me if bugs are reported
+  Check(True);
 end;
 
 

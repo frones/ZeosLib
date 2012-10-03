@@ -353,7 +353,7 @@ begin
   FPlainDriver := PlainDriver;
   FHandle := Handle;
   FCursorName := CursorName;
-  AllocateSQLDA( NumVars);
+  AllocateSQLDA(NumVars);
   FEncoding := Encoding;
   FUTF8AsWideString := UTF8AsWideString;
   inherited Create;
@@ -375,7 +375,7 @@ begin
   FSQLDA := FPlainDriver.db_alloc_sqlda( NumVars);
   if not Assigned( FSQLDA) then
     CreateException( 'Not enough memory for SQLDA');
-  SetLength( FDeclType, FSQLDA.sqln);
+  SetLength(FDeclType, FSQLDA.sqln);
 end;
 
 {**
@@ -446,12 +446,17 @@ begin
   begin
     for i := 0 to FSQLDA.sqln-1 do
     begin
+      FSQLDA.sqlVar[i].sqlInd := nil;
       if Assigned( FSQLDA.sqlVar[i].sqlData) then
+      begin
         FreeMem( FSQLDA.sqlVar[i].sqlData);
+        FSQLDA.sqlVar[i].sqlData := nil;
+      end;
     end;
     FPlainDriver.db_free_sqlda( FSQLDA);
     FSQLDA := nil;
   end;
+  SetLength(FDeclType, 0);
   FDeclType := nil;
 end;
 
@@ -1684,7 +1689,6 @@ procedure TZASASQLDA.ReadBlob(const Index: Word; Buffer: Pointer;
 var
   TempSQLDA: PASASQLDA;
   Offs, Rd: LongWord;
-  ZASABlobStruct: TZASABlobStruct;
 const
   BlockSize = 32700;
 begin
@@ -1729,16 +1733,15 @@ begin
           while True do
           begin
             FPlainDriver.db_get_data(FHandle, PAnsiChar(FCursorName), Index + 1, Offs, TempSQLDA);
-            ZASABlobStruct := PZASABlobStruct( sqlData)^;
             CheckASAError( FPlainDriver, FHandle, lcOther);
             if ( sqlind^ < 0 ) then
               break;
-            Inc( Rd, ZASABlobStruct.stored_len);
-            if Offs = 0 then ReallocMem(Buffer, ZASABlobStruct.untrunc_len);
-            Move((ZASABlobStruct.arr[0]), (PAnsiChar(Buffer)+Offs)^, ZASABlobStruct.stored_len);
+            Inc( Rd, PZASABlobStruct( sqlData)^.stored_len);
+            if Offs = 0 then ReallocMem(Buffer, PZASABlobStruct( sqlData)^.untrunc_len);
+            Move((PZASABlobStruct( sqlData)^.arr[0]), (PAnsiChar(Buffer)+Offs)^, PZASABlobStruct( sqlData)^.stored_len);
             if ( sqlind^ = 0 ) or ( RD = Length) then
               break;
-            Inc( Offs, ZASABlobStruct.stored_len);
+            Inc( Offs, PZASABlobStruct( sqlData)^.stored_len);
             sqllen := Min( BlockSize, Length-Rd);
           end;
           if Rd <> Length then
@@ -1746,7 +1749,7 @@ begin
 
           DriverManager.LogMessage( lcExecute, FPlainDriver.GetProtocol,
             Format( 'GET DATA for Column: %s', [ GetFieldName(Index)]));
-
+          FreeMem(sqlData, SizeOf(TZASABlobStruct)+Min( BlockSize, Length));
           FPlainDriver.db_free_sqlda( TempSQLDA);
           TempSQLDA := nil;
         end;

@@ -1723,8 +1723,10 @@ begin
             GetIntByName('CHARACTER_OCTET_LENGTH'));
           Result.UpdateIntByName('ORDINAL_POSITION',
             GetIntByName('ORDINAL_POSITION'));
-          Result.UpdateStringByName('IS_NULLABLE',
-            GetStringByName('IS_NULLABLE'));
+          if UpperCase(GetStringByName('IS_NULLABLE')) = 'FALSE' then
+            Result.UpdateStringByName('IS_NULLABLE', 'NO')
+          else
+            Result.UpdateStringByName('IS_NULLABLE', 'YES');
 
           Result.UpdateBooleanByName('WRITABLE',
             (Flags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) <> 0)); 

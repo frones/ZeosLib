@@ -262,7 +262,7 @@ type
 
 implementation
 
-uses ZMessages, ZDbcInterbase6Utils;
+uses ZMessages, ZDbcInterbase6Utils, ZDbcUtils;
 
 { TZInterbase6DatabaseInfo }
 
@@ -1673,11 +1673,14 @@ function TZInterbase6DatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const ColumnNamePattern: string): IZResultSet;
 var
   SQL, Where, ColumnName, DefaultValue: String;
-  TypeName, SubTypeName, FieldScale: integer;
+  TypeName, SubTypeName, FieldScale, CharWidth: integer;
   LTableNamePattern, LColumnNamePattern: string;
   ColumnIndexes : Array[1..14] of integer;
+  SQLType: TZSQLType;
 begin
     Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
+
+    CharWidth := GetConnection.GetClientCodePageInformations^.CharWidth;
 
     LTableNamePattern := ConstructNameCondition(TableNamePattern,
       'a.RDB$RELATION_NAME');
@@ -1788,9 +1791,10 @@ begin
         Result.UpdateNull(2);    //TABLE_SCHEM
         Result.UpdateString(3, GetString(ColumnIndexes[7]));    //TABLE_NAME
         Result.UpdateString(4, ColumnName);    //COLUMN_NAME
-        Result.UpdateInt(5, Ord(ConvertInterbase6ToSqlType(TypeName, SubTypeName
+        SQLType := ConvertInterbase6ToSqlType(TypeName, SubTypeName
           , GetConnection.GetClientCodePageInformations^.Encoding,
-          GetConnection.UTF8StringAsWideField)));
+          GetConnection.UTF8StringAsWideField);
+        Result.UpdateInt(5, Ord(SQLType));
         // TYPE_NAME
         case TypeName of
           7  : Result.UpdateString(6, 'SMALLINT');
@@ -1812,8 +1816,9 @@ begin
         case TypeName of
           7, 8 : Result.UpdateInt(7, 0);
           16   : Result.UpdateInt(7, GetInt(ColumnIndexes[9]));
+          37, 38: Result.UpdateInt(7, GetFieldSize(SQLType, GetInt(ColumnIndexes[10]), CharWidth, True)); //FireBird return Char*Bytes for Varchar
         else
-            Result.UpdateInt(7, GetInt(ColumnIndexes[10]));
+          Result.UpdateInt(7, GetInt(ColumnIndexes[10]));
         end;
 
         Result.UpdateNull(8);    //BUFFER_LENGTH

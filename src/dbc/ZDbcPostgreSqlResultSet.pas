@@ -137,7 +137,7 @@ type
 implementation
 
 uses
-  Math, ZMessages, ZMatchPattern, ZDbcPostgreSql,
+  Math, ZMessages, ZMatchPattern, ZDbcPostgreSql, ZDbcUtils,
   ZDbcPostgreSqlUtils;
 
 { TZPostgreSQLResultSet }
@@ -259,11 +259,16 @@ begin
       begin
         Precision := Max(Max(FPlainDriver.GetFieldMode(FQueryHandle, I) - 4,
           FPlainDriver.GetFieldSize(FQueryHandle, I)), 0);
-      end;
 
-      if ((ColumnType = stString) or (ColumnType = stUnicodeString))
-        and ((Precision = 0) or (ColumnLabel = 'expr')) then
-        Precision := 255;
+        if ColumnType in [stString, stUnicodeString] then
+          if ( (ColumnLabel = 'expr') or ( Precision = 0 ) ) then
+            Precision := GetFieldSize(ColumnType, 255, ClientCodePage^.CharWidth, True)
+          else
+          begin
+            ColumnDisplaySize := Precision;
+            Precision := GetFieldSize(ColumnType, Precision, ClientCodePage^.CharWidth);
+          end;
+      end;
     end;
 
     ColumnsInfo.Add(ColumnInfo);

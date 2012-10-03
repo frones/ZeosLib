@@ -153,7 +153,7 @@ type
 implementation
 
 uses
-  Math, ZMessages, ZDbcOracle;
+  Math, ZMessages, ZDbcOracle, ZDbcUtils;
 
 { TZOracleResultSet }
 
@@ -335,8 +335,7 @@ begin
     if CurrentVar.DataType=SQLT_NTY then
       CheckOracleError(FPlainDriver, FErrorHandle,
         FPlainDriver.DefineObject(CurrentVar.Define, FErrorHandle, addr_tdo,
-           @CurrentVar._Object,nil,nil,nil)
-        ,lcExecute, FSQL);
+           @CurrentVar._Object,nil,nil,nil), lcExecute, FSQL);
   end;
 
   { Fills the column info. }
@@ -365,7 +364,10 @@ begin
       ColumnType := CurrentVar.ColType;
       Scale := CurrentVar.Scale;
       if (ColumnType = stString) or (ColumnType = stUnicodeString) then
-        Precision := CurrentVar.DataSize
+      begin
+        ColumnDisplaySize := CurrentVar.DataSize;
+        Precision := GetFieldSize(ColumnType, CurrentVar.DataSize, ClientCodePage^.CharWidth, False);
+      end
       else
         Precision := CurrentVar.Precision;
     end;

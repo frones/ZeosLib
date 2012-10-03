@@ -1987,10 +1987,13 @@ function TZPostgreSQLDatabaseMetadata.UncachedGetColumns(const Catalog: string;
 {const
   VARHDRSZ = 4;
 }var
-  TypeOid, AttTypMod: Integer;
+  TypeOid, AttTypMod, CharWidth: Integer;
   SQL, PgType: string;
+  SQLType: TZSQLType;
 begin
     Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
+
+    CharWidth := GetConnection.GetClientCodePageInformations^.CharWidth;
 
     if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
     begin
@@ -2020,7 +2023,7 @@ begin
           + EscapeString(SchemaPattern);
       end else begin
          SQL := SQL + ' AND pg_table_is_visible (c.oid) ';
-      end; 
+      end;
     end
     else
     begin
@@ -2055,15 +2058,16 @@ begin
         Result.UpdateNull(1);
         Result.UpdateString(2, GetString(1 {nspname}));
         Result.UpdateString(3, GetString(2 {relname}));
-        Result.UpdateString(4, GetString(3 {attname})); 
-        Result.UpdateInt(5, Ord(GetSQLTypeByOid(TypeOid)));
+        Result.UpdateString(4, GetString(3 {attname}));
+        SQLType := GetSQLTypeByOid(TypeOid);
+        Result.UpdateInt(5, Ord(SQLType));
         Result.UpdateString(6, PgType);
         Result.UpdateInt(8, 0);
 
         if (PgType = 'bpchar') or (PgType = 'varchar') or (PgType = 'enum') then
         begin
           if AttTypMod <> -1 then
-            Result.UpdateInt(7, AttTypMod - 4)
+            Result.UpdateInt(7, GetFieldSize(SQLType, (AttTypMod - 4), CharWidth))
           else Result.UpdateInt(7, 0);
         end
         else if (PgType = 'numeric') or (PgType = 'decimal') then

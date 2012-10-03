@@ -97,6 +97,7 @@ end;
 procedure ZTestDbcDbLibBugReport.EmptyTest;
 begin
   //need a dummy
+  Check(True);
 end;
 
 initialization

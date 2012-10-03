@@ -134,7 +134,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  SysUtils;
+  SysUtils, ZDbcUtils;
 
 { TZInterbase6ResultSet }
 
@@ -623,15 +623,25 @@ begin
     ColumnInfo := TZColumnInfo.Create;
     with ColumnInfo, FSqlData  do
     begin
-      FieldSqlType := GetFieldSqlType(I);
       ColumnName := GetFieldSqlName(I);
       TableName := GetFieldRelationName(I);
       ColumnLabel := GetFieldAliasName(I);
+      FieldSqlType := GetFieldSqlType(I);
       ColumnType := FieldSqlType;
 
-      case FieldSqlType of
-        stString,
-        stUnicodeString: Precision := GetFieldLength(I);
+      if FieldSqlType in [stBytes, stString, stUnicodeString] then
+      begin
+        MaxLenghtBytes := GetFieldLength(I);
+        if (FSqlData.GetIbSqlType(I) = SQL_TEXT) or ( FieldSQLType = stBytes ) then
+        begin
+          ColumnDisplaySize := MaxLenghtBytes;
+          Precision := MaxLenghtBytes;
+        end
+        else
+        begin
+          ColumnDisplaySize := MaxLenghtBytes div ClientCodePage^.CharWidth;
+          Precision := GetFieldSize(ColumnType, MaxLenghtBytes, ClientCodePage^.CharWidth, True);
+        end;
       end;
 
       ReadOnly := (GetFieldRelationName(I) = '') or (GetFieldSqlName(I) = '')

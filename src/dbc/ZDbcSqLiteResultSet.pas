@@ -261,14 +261,9 @@ begin
           FieldPrecision, FieldDecimals, ClientCodePage^.Encoding,
           Statement.GetConnection.UTF8StringAsWideField);
       end;
-      ColumnDisplaySize := FieldPrecision;
+      if ColumnType in [stString, stUnicodeString] then
+        ColumnDisplaySize := FieldPrecision{$IFNDEF DELPHI12_UP} div 4{$ENDIF};
       AutoIncrement := False;
-      case ColumnType of
-        stString: Precision := FieldPrecision *3+3;
-        stUnicodeString: Precision := FieldPrecision * 2+2;
-        else
-          Precision := FieldPrecision;
-      end;
       Precision := FieldPrecision;
       Scale := FieldDecimals;
       Signed := True;

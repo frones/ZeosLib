@@ -5,6 +5,9 @@ unit ZTestBugReports;
 interface
 
 uses
+{$IFDEF ENABLE_ASA}
+  ZTestBugDbcASA, ZTestBugCompASA,
+{$ENDIF}
 {$IFDEF ENABLE_MYSQL}
   ZTestBugDbcMySql, ZTestBugCompMySql,
 {$ENDIF}
@@ -18,8 +21,8 @@ uses
   ZTestBugDbcInterbase, ZTestBugCompInterbase,
 {$ENDIF}
 {$IFDEF ENABLE_DBLIB}
-  {ludob empty test ZTestBugDbcDbLib,}
-  {ludob empty test ZTestBugCompDbLib, }
+  ZTestBugDbcDbLib,
+  ZTestBugCompDbLib,
   ZTestBugCompMSSql,
 {$ENDIF}
 {$IFDEF ENABLE_SQLITE}

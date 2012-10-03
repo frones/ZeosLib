@@ -71,6 +71,7 @@ type
     FASAConnection: IZASAConnection;
     FSQLData: IZASASQLDA;
     FMoreResults: Boolean;
+    function InternalExecuteQuery(const SQL: string): IZResultSet;
   public
     constructor Create(Connection: IZConnection; Info: TStrings);
     destructor Destroy; override;
@@ -149,6 +150,70 @@ uses ZSysUtils, ZDbcUtils, ZPlainASAConstants;
 
 { TZASAStatement }
 
+function TZASAStatement.InternalExecuteQuery(const SQL: string): IZResultSet;
+var
+  Cursor: AnsiString;
+  CursorOptions: SmallInt;
+begin
+  Close;
+  ASQL := Self.GetPrepreparedSQL(SQL);
+  with FASAConnection do
+  begin
+    try
+      GetPlainDriver.db_prepare_describe( GetDBHandle, nil, @FStmtNum,
+            PAnsiChar(ASQL), FSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
+            SQL_PREPARE_DESCRIBE_OUTPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);
+      ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, SQL);
+
+      FMoreResults := GetDBHandle.sqlerrd[2] = 0;
+      if not FMoreResults then
+      begin
+        if FSQLData.GetData^.sqld <= 0 then
+        begin
+          Result := nil;
+          Exit;
+        end
+        else
+          if ( FSQLData.GetData^.sqld > FSQLData.GetData^.sqln) then
+          begin
+            FSQLData.AllocateSQLDA( FSQLData.GetData^.sqld);
+            GetPlainDriver.db_describe( GetDBHandle, nil, @FStmtNum,
+              FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
+            ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute,
+              SQL);
+          end;
+        FSQLData.InitFields;
+      end;
+      if ResultSetConcurrency = rcUpdatable then
+        CursorOptions := CUR_OPEN_DECLARE + CUR_UPDATE
+      else
+        CursorOptions := CUR_OPEN_DECLARE + CUR_READONLY;
+      if ResultSetType = rtScrollInsensitive then
+        CursorOptions := CursorOptions + CUR_INSENSITIVE;
+      Cursor := CursorName;
+      GetPlainDriver.db_open(GetDBHandle, PAnsiChar(Cursor), nil, @FStmtNum,
+            nil, FetchSize, 0, CursorOptions);
+      ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute,
+        SQL);
+      Closed := false;
+      if FMoreResults then
+        DescribeCursor( FASAConnection, FSQLData, Cursor, SQL);
+
+      LastUpdateCount := -1;
+      Result := GetCachedResultSet( SQL, Self,
+        TZASAResultSet.Create( Self, SQL, FStmtNum, Cursor, FSQLData, nil,
+        FCachedBlob));
+      { Logging SQL Command }
+      DriverManager.LogMessage( lcExecute, GetPlainDriver.GetProtocol, SQL);
+    except
+      on E: Exception do
+      begin
+        Self.Close;
+        raise;
+      end;
+    end;
+  end;
+end;
 {**
   Constructs this object and assignes the main properties.
   @param Connection a database connection object.
@@ -241,69 +306,12 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-{$HINTS OFF}
 function TZASAStatement.ExecuteQuery(const SQL: string): IZResultSet;
-var
-  Cursor: AnsiString;
-  CursorOptions: SmallInt;
 begin
-  Close;
-  ASQL := Self.GetPrepreparedSQL(SQL);
-  with FASAConnection do
-  begin
-    try
-      GetPlainDriver.db_prepare_describe( GetDBHandle, nil, @FStmtNum,
-            PAnsiChar(ASQL), FSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
-            SQL_PREPARE_DESCRIBE_OUTPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);
-      ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, SQL);
-
-      FMoreResults := GetDBHandle.sqlerrd[2] = 0;
-      if not FMoreResults then
-      begin
-        if FSQLData.GetData^.sqld <= 0 then
-          raise EZSQLException.Create( SCanNotRetrieveResultSetData)
-        else
-          if ( FSQLData.GetData^.sqld > FSQLData.GetData^.sqln) then
-          begin
-            FSQLData.AllocateSQLDA( FSQLData.GetData^.sqld);
-            GetPlainDriver.db_describe( GetDBHandle, nil, @FStmtNum,
-              FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
-            ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute,
-              SQL);
-          end;
-        FSQLData.InitFields;
-      end;
-      if ResultSetConcurrency = rcUpdatable then
-        CursorOptions := CUR_OPEN_DECLARE + CUR_UPDATE
-      else
-        CursorOptions := CUR_OPEN_DECLARE + CUR_READONLY;
-      if ResultSetType = rtScrollInsensitive then
-        CursorOptions := CursorOptions + CUR_INSENSITIVE;
-      Cursor := CursorName;
-      GetPlainDriver.db_open(GetDBHandle, PAnsiChar(Cursor), nil, @FStmtNum,
-            nil, FetchSize, 0, CursorOptions);
-      ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute,
-        SQL);
-      Closed := false;
-      if FMoreResults then
-        DescribeCursor( FASAConnection, FSQLData, Cursor, SQL);
-
-      LastUpdateCount := -1;
-      Result := GetCachedResultSet( SQL, Self,
-        TZASAResultSet.Create( Self, SQL, FStmtNum, Cursor, FSQLData, nil,
-        FCachedBlob));
-      { Logging SQL Command }
-      DriverManager.LogMessage( lcExecute, GetPlainDriver.GetProtocol, SQL);
-    except
-      on E: Exception do
-      begin
-        Self.Close;
-        raise;
-      end;
-    end;
-  end;
+  Result := InternalExecuteQuery(SQL);
+  if Result = nil then
+    raise EZSQLException.Create( SCanNotRetrieveResultSetData)
 end;
-{$HINTS OFF}
 
 {**
   Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
@@ -361,13 +369,10 @@ end;
 }
 function TZASAStatement.Execute(const SQL: string): Boolean;
 begin
-  try
-    LastResultSet := ExecuteQuery( SQL);
-    Result := true;
-  except
+  LastResultSet := InternalExecuteQuery(SQL);
+  Result := Assigned(LastResultSet);
+  if not Result then
     ExecuteUpdate( SQL);
-    Result := false;
-  end;
 end;
 
 { TZASAPreparedStatement }
