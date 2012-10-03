@@ -584,12 +584,23 @@ begin
       TempPrecision := Precision div CharWidth
     else
       TempPrecision := Precision;
-    {$IFNDEF DELPHI12_UP}
+
     if SQLType = stString then
+      //the RowAccessor assumes SizeOf(Char)*Precision+SizeOf(Char)
+      //the Field assumes Precision*SizeOf(Char)
+      {$IFDEF DELPHI12_UP}
+      if CharWidth = 3 then //All others > 3 are UTF8
+        Result := Trunc(TempPrecision * 1.5) //add more mem for a reserved thirt byte
+      else //two and one byte AnsiChars are one WideChar
+        Result := TempPrecision
+      {$ELSE}
       Result := TempPrecision * CharWidth
-    else
-    {$ENDIF}
-      Result := TempPrecision;
+      {$ENDIF}
+    else //stUnicodeString
+      //UTF8 can pickup LittleEndian/BigEndian 4 Byte Chars
+      //the RowAccessor assumes 2*Precision+2
+      //the Field assumes 2*Precision
+      Result := TempPrecision * 2;
   end
   else
     Result := Precision;

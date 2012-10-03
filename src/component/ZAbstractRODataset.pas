@@ -1605,8 +1605,10 @@ begin
         FieldType := ConvertDbcToDatasetType(GetColumnType(I));
         //if IsCurrency(I) then
           //FieldType := ftCurrency;
-        if FieldType in [ftString, ftBytes] then
+        if FieldType = ftBytes then
           Size := GetPrecision(I)
+        else if FieldType = ftString then
+          Size := GetPrecision(I) * SizeOf(Char)
         else if FieldType = ftWidestring then
           Size := GetPrecision(I)*2
         else
