@@ -1013,7 +1013,7 @@ function TZMySQLCallableStatement.GetOutParamSQL: String;
     Result := '';
     I := 0;
     while True do
-      if FDBParamTypes[i] = 0 then
+      if (FDBParamTypes[i] = 0) or ( I = Length(FDBParamTypes)) then
         break
       else
       begin
@@ -1483,10 +1483,7 @@ begin
   begin
     BindInParameters;
     ExecuteUpdate(GetCallSQL);
-    //if Assigned(LastResultSet) then
-      //Result := LastResultSet //Get the First ResultSet(s)
-    //else
-      Result := ExecuteQuery(ZPlainString(GetOutParamSQL)); //Get the Last Resultset
+    Result := ExecuteQuery(ZPlainString(GetOutParamSQL)); //Get the Last Resultset
   end;
   if Assigned(Result) then
     FetchOutParams(Result);

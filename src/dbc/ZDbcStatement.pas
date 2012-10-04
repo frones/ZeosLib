@@ -276,7 +276,7 @@ type
   protected
     FResultSets: IZCollection;
     FActiveResultset: Integer;
-    FDBParamTypes: array[0..1024] of shortInt;
+    FDBParamTypes: array of ShortInt;
     procedure ClearResultSets; virtual;
     procedure TrimInParameters; virtual;
     procedure SetOutParamCount(NewParamCount: Integer); virtual;
@@ -1795,6 +1795,9 @@ begin
   SetLength(ParamValues, InParamCount);
   SetLength(ParamTypes, InParamCount);
 
+  if Length(FDBParamTypes) = 0 then
+    SetLength(FDBParamTypes, InParamCount);
+
   for I := 0 to High(InParamTypes) do
   begin
     if ( InParamTypes[I] = ZDbcIntfs.stUnknown ) then
@@ -1999,6 +2002,9 @@ end;
 procedure TZAbstractCallableStatement.RegisterParamType(ParameterIndex,
   ParamType: Integer);
 begin
+  if (Length(FDBParamTypes) < ParameterIndex) then
+    SetLength(FDBParamTypes, ParameterIndex);
+
   FDBParamTypes[ParameterIndex - 1] := ParamType;
   if not FIsFunction then FIsFunction := ParamType = 4; //ptResult
   if not FHasOutParameter then FHasOutParameter := ParamType in [2,3]; //ptOutput, ptInputOutput

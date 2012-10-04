@@ -174,7 +174,16 @@ procedure CheckOracleError(PlainDriver: IZOraclePlainDriver;
 }
 function CreateOracleResultSet(PlainDriver: IZOraclePlainDriver;
   Statement: IZStatement; SQL: string; Handle: POCIStmt;
-  ErrorHandle: POCIError): IZResultSet;
+  ErrorHandle: POCIError): IZResultSet; overload;
+
+{**
+  Creates an Oracle result set based on the current settings.
+  @return a created result set object.
+}
+function CreateOracleResultSet(PlainDriver: IZOraclePlainDriver;
+  Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
+  ErrorHandle: POCIError; OutVars: PZSQLVars; FieldNames: TStringDynArray;
+  ParamTypes: array of shortInt): IZResultSet; overload;
 
 {**
   Allocates in memory Oracle handlers for Statement object.
@@ -373,11 +382,12 @@ begin
     PlainDriver.DescriptorAlloc(OracleConnection.GetConnectionHandle,
       PPOCIDescriptor(Variable.Data)^, OCI_DTYPE_LOB, 0, nil);
   end
-  else if Variable.TypeCode = SQLT_TIMESTAMP then
-  begin
-    PlainDriver.DescriptorAlloc(OracleConnection.GetConnectionHandle,
-      PPOCIDescriptor(Variable.Data)^, OCI_DTYPE_TIMESTAMP, 0, nil);
-  end;
+  else
+    if Variable.TypeCode = SQLT_TIMESTAMP then
+    begin
+      PlainDriver.DescriptorAlloc(OracleConnection.GetConnectionHandle,
+        PPOCIDescriptor(Variable.Data)^, OCI_DTYPE_TIMESTAMP, 0, nil);
+    end;
 end;
 
 {**
@@ -666,6 +676,31 @@ begin
   end
   else
     Result := NativeResultSet;
+end;
+
+{**
+  Creates an Oracle result set based on the current settings.
+  @return a created result set object.
+}
+function CreateOracleResultSet(PlainDriver: IZOraclePlainDriver;
+      Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
+      ErrorHandle: POCIError; OutVars: PZSQLVars; FieldNames: TStringDynArray;
+      ParamTypes: array of shortInt): IZResultSet;
+var
+  NativeResultSet: TZOracleCallableResultSet;
+  CachedResultSet: TZCachedResultSet;
+begin
+  NativeResultSet := TZOracleCallableResultSet.Create(PlainDriver,
+    Statement, SQL, StmtHandle, ErrorHandle, OutVars, FieldNames, ParamTypes);
+  NativeResultSet.SetConcurrency(rcReadOnly);
+  CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil,
+    Statement.GetConnection.GetClientCodePageInformations);
+  CachedResultSet.SetConcurrency(rcReadOnly);
+  CachedResultSet.SetResolver(TZOracleCachedResolver.Create(
+    Statement, NativeResultSet.GetMetadata));
+  CachedResultSet.Last;
+  CachedResultSet.BeforeFirst;
+  Result := CachedResultSet;
 end;
 
 {**
