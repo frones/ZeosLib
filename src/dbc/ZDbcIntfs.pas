@@ -439,6 +439,7 @@ type
     function SupportsResultSetConcurrency(_Type: TZResultSetType;
       Concurrency: TZResultSetConcurrency): Boolean;
     function SupportsBatchUpdates: Boolean;
+    function SupportsNonEscapedSearchStrings: Boolean;
 
     // maxima:
     function GetMaxBinaryLiteralLength: Integer;

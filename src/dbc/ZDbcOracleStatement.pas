@@ -942,10 +942,7 @@ var
 begin
   sFunc := '';
   InParams := GenerateParamsStr( FOracleParamsCount );
-  if IsFunction then
-    Result := 'BEGIN  ' + sFunc +' "'+SQL +'"'+ InParams+'; END;'
-  else
-    Result := 'BEGIN  ' + sFunc +' '+SQL + InParams+'; END;';
+  Result := 'BEGIN  ' + sFunc +' '+SQL + InParams+'; END;';
 end;
 
 function TZOracleCallableStatement.IsNull(ParameterIndex: Integer): Boolean;

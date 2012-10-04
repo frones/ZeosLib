@@ -146,6 +146,7 @@ type
     function SupportsResultSetConcurrency(_Type: TZResultSetType;
       Concurrency: TZResultSetConcurrency): Boolean; override;
 //    function SupportsBatchUpdates: Boolean; override; -> Not implemented
+    function SupportsNonEscapedSearchStrings: Boolean; override;
 
     // maxima:
     function GetMaxBinaryLiteralLength: Integer; override;
@@ -1216,6 +1217,15 @@ begin
   Result := True;
 end;
 
+{**
+  Does the Database or Actual Version understand non escaped search strings?
+  @return <code>true</code> if the DataBase does understand non escaped
+  search strings
+}
+function TZAdoDatabaseInfo.SupportsNonEscapedSearchStrings: Boolean;
+begin
+  Result := True;
+end;
 
 { TZAdoDatabaseMetadata }
 

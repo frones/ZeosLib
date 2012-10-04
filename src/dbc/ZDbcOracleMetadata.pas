@@ -148,6 +148,7 @@ type
     function SupportsResultSetConcurrency(_Type: TZResultSetType;
       Concurrency: TZResultSetConcurrency): Boolean; override;
 //    function SupportsBatchUpdates: Boolean; override; -> Not implemented
+    function SupportsNonEscapedSearchStrings: Boolean; override;
 
     // maxima:
     function GetMaxBinaryLiteralLength: Integer; override;
@@ -1144,6 +1145,15 @@ begin
   Result := (_Type = rtForwardOnly) and (Concurrency = rcReadOnly);
 end;
 
+{**
+  Does the Database or Actual Version understand non escaped search strings?
+  @return <code>true</code> if the DataBase does understand non escaped
+  search strings
+}
+function TZOracleDatabaseInfo.SupportsNonEscapedSearchStrings: Boolean;
+begin
+  Result := MetaData.GetConnection.GetClientVersion > 10000000;
+end;
 
 { TZOracleDatabaseMetadata }
 
@@ -1337,8 +1347,9 @@ var
 
   function GetColumnSQL(PosChar: String): String;
   begin
-    Result := 'select * from user_arguments where object_name like '''+ProcedureNamePattern+''' '+
-      'AND POSITION '+PosChar+' 0 ORDER BY POSITION';
+    Result := 'select * from user_arguments where object_name like '''+
+      ToLikeString(GetIdentifierConvertor.ExtractQuote(ProcedureNamePattern))+''' '+
+        'AND POSITION '+PosChar+' 0 ORDER BY POSITION';
   end;
 begin
   Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
