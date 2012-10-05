@@ -145,8 +145,6 @@ type
     procedure FillWildcards; virtual;
     //End Added by Cipto
 
-    //property Url: string read FUrl;
-    //property Info: TStrings read FInfo;
     property Url: string read GetURLString;
     property Info: TStrings read GetInfo;
     property CachedResultSets: IZHashMap read FCachedResultSets
@@ -386,6 +384,7 @@ type
     function SupportsResultSetConcurrency(_Type: TZResultSetType;
       Concurrency: TZResultSetConcurrency): Boolean; virtual;
     function SupportsBatchUpdates: Boolean; virtual;
+    function SupportsNonEscapedSearchStrings: Boolean; virtual;
 
     // maxima:
     function GetMaxBinaryLiteralLength: Integer; virtual;
@@ -1727,6 +1726,15 @@ begin
   Result := True;
 end;
 
+{**
+  Does the Database or Actual Version understand non escaped search strings?
+  @return <code>true</code> if the DataBase does understand non escaped
+  search strings
+}
+function TZAbstractDatabaseInfo.SupportsNonEscapedSearchStrings: Boolean;
+begin
+  Result := False;
+end;
 
 { TZAbstractDatabaseMetadata }
 
@@ -4096,15 +4104,21 @@ end;
 }
 function TZAbstractDatabaseMetadata.AddEscapeCharToWildcards(
   const Pattern: string): string;
-var i:Integer;
-    EscapeChar : string;
+var
+  i:Integer;
+  EscapeChar : string;
 begin
-  EscapeChar:=GetDatabaseInfo.GetSearchStringEscape;
-  if WildcardsArray<>nil then
+  if GetDatabaseInfo.SupportsNonEscapedSearchStrings then
+    Result := Pattern
+  else
   begin
-    Result:=StringReplace(Pattern,EscapeChar,EscapeChar+EscapeChar,[rfReplaceAll]);
-    for i:=0 to High(WildcardsArray) do
-      Result:=StringReplace(Result,WildcardsArray[i],EscapeChar+WildcardsArray[i],[rfReplaceAll]);
+    EscapeChar:=GetDatabaseInfo.GetSearchStringEscape;
+    if WildcardsArray<>nil then
+    begin
+      Result:=StringReplace(Pattern,EscapeChar,EscapeChar+EscapeChar,[rfReplaceAll]);
+      for i:=0 to High(WildcardsArray) do
+        Result:=StringReplace(Result,WildcardsArray[i],EscapeChar+WildcardsArray[i],[rfReplaceAll]);
+    end;
   end;
 end;
 

@@ -65,7 +65,7 @@ uses
 type
 
   {** Implements Oracle ResultSet. }
-  TZOracleResultSet = class(TZAbstractResultSet)
+  TZOracleAbstractResultSet = class(TZAbstractResultSet)
   private
     FSQL: string;
     FStmtHandle: POCIStmt;
@@ -73,7 +73,6 @@ type
     FPlainDriver: IZOraclePlainDriver;
     FOutVars: PZSQLVars;
   protected
-    procedure Open; override;
     function GetSQLVarHolder(ColumnIndex: Integer): PZSQLVar;
     function GetAsStringValue(ColumnIndex: Integer;
       SQLVarHolder: PZSQLVar): AnsiString;
@@ -88,9 +87,6 @@ type
     constructor Create(PlainDriver: IZOraclePlainDriver;
       Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
       ErrorHandle: POCIError);
-    destructor Destroy; override;
-
-    procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
@@ -106,9 +102,31 @@ type
     function GetTime(ColumnIndex: Integer): TDateTime; override;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
-
-    function Next(): Boolean; override;
   end;
+
+  TZOracleResultSet = class(TZOracleAbstractResultSet)
+  protected
+    procedure Open; override;
+  public
+    procedure Close; override;
+    function Next: Boolean; override;
+  end;
+
+  TZOracleCallableResultSet = Class(TZOracleAbstractResultSet)
+  private
+    FFieldNames: TStringDynArray;
+    function PrepareOracleOutVars(Statement: IZStatement; InVars: PZSQLVars;
+      FieldNames: TStringDynArray; ParamTypes: array of shortInt): PZSQLVars;
+  protected
+    procedure Open; override;
+  public
+    constructor Create(PlainDriver: IZOraclePlainDriver;
+      Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
+      ErrorHandle: POCIError; OutVars: PZSQLVars; FieldNames: TStringDynArray;
+      ParamTypes: array of shortInt);
+    procedure Close; override;
+    function Next: Boolean; override;
+  End;
 
   {** Represents an interface, specific for Oracle blobs. }
   IZOracleBlob = interface(IZBlob)
@@ -155,7 +173,7 @@ implementation
 uses
   Math, ZMessages, ZDbcOracle, ZDbcUtils;
 
-{ TZOracleResultSet }
+{ TZOracleAbstractResultSet }
 
 {**
   Constructs this object, assignes main properties and
@@ -165,7 +183,7 @@ uses
   @param SQL a SQL statement.
   @param Handle a Oracle specific query handle.
 }
-constructor TZOracleResultSet.Create(PlainDriver: IZOraclePlainDriver;
+constructor TZOracleAbstractResultSet.Create(PlainDriver: IZOraclePlainDriver;
   Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
   ErrorHandle: POCIError);
 begin
@@ -181,12 +199,531 @@ begin
 end;
 
 {**
-  Destroys this object and cleanups the memory.
+  Indicates if the value of the designated column in the current row
+  of this <code>ResultSet</code> object is Null.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return if the value is SQL <code>NULL</code>, the
+    value returned is <code>true</code>. <code>false</code> otherwise.
 }
-destructor TZOracleResultSet.Destroy;
+function TZOracleAbstractResultSet.IsNull(ColumnIndex: Integer): Boolean;
+var
+  CurrentVar: PZSQLVar;
 begin
-  inherited Destroy;
+{$IFNDEF DISABLE_CHECKING}
+  CheckClosed;
+  if (RowNo < 1) or (RowNo > LastRowNo) then
+    raise EZSQLException.Create(SRowDataIsNotAvailable);
+  if (ColumnIndex <=0) or (ColumnIndex > FOutVars.ActualNum) then
+  begin
+    raise EZSQLException.Create(
+      Format(SColumnIsNotAccessable, [ColumnIndex]));
+  end;
+{$ENDIF}
+
+  CurrentVar := @FOutVars.Variables[ColumnIndex];
+  Result := (CurrentVar.Indicator < 0);
 end;
+
+{**
+  Gets a holder for SQL output variable.
+  @param ColumnIndex an index of the column to read.
+  @returns an output variable holder or <code>nil</code> if column is empty.
+}
+function TZOracleAbstractResultSet.GetSQLVarHolder(ColumnIndex: Integer): PZSQLVar;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckClosed;
+  if (RowNo < 1) or (RowNo > LastRowNo) then
+    raise EZSQLException.Create(SRowDataIsNotAvailable);
+{$ENDIF}
+
+  Result := @FOutVars.Variables[ColumnIndex];
+  LastWasNull := (Result.Indicator < 0) or (Result.Data = nil);
+  if LastWasNull then
+    Result := nil;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as a <code>String</code>.
+
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @param SQLVarHolder a reference to SQL variable holder or <code>nil</code>
+    to force retrieving the variable.
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZOracleAbstractResultSet.GetAsStringValue(ColumnIndex: Integer;
+  SQLVarHolder: PZSQLVar): AnsiString;
+var
+  OldSeparator: Char;
+  Blob: IZBlob;
+begin
+  if SQLVarHolder = nil then
+    SQLVarHolder := GetSQLVarHolder(ColumnIndex);
+  if SQLVarHolder <> nil then
+  begin
+    case SQLVarHolder.TypeCode of
+      SQLT_INT:
+        Result := AnsiString(IntToStr(PLongInt(SQLVarHolder.Data)^));
+      SQLT_FLT:
+        begin
+          OldSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
+          {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
+          Result := AnsiString(FloatToSqlStr(PDouble(SQLVarHolder.Data)^));
+          {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldSeparator;
+        end;
+      SQLT_STR:
+        Result := StrPas(PAnsiChar(SQLVarHolder.Data));
+      SQLT_LVB, SQLT_LVC:
+        begin
+          Result := AnsiString(BufferToStr(PAnsiChar(SQLVarHolder.Data) + SizeOf(Integer),
+            PInteger(SQLVarHolder.Data)^));
+        end;
+      SQLT_DAT, SQLT_TIMESTAMP:
+        begin
+          Result := AnsiString(DateTimeToAnsiSQLDate(
+            GetAsDateTimeValue(ColumnIndex, SQLVarHolder)));
+        end;
+      SQLT_BLOB, SQLT_CLOB:
+        begin
+          Blob := GetBlob(ColumnIndex);
+          Result := Blob.GetString;
+        end;
+    end;
+  end
+  else
+    Result := '';
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as a <code>LongInt</code>.
+
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @param SQLVarHolder a reference to SQL variable holder or <code>nil</code>
+    to force retrieving the variable.
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZOracleAbstractResultSet.GetAsLongIntValue(ColumnIndex: Integer;
+  SQLVarHolder: PZSQLVar): LongInt;
+begin
+  if SQLVarHolder = nil then
+    SQLVarHolder := GetSQLVarHolder(ColumnIndex);
+  if SQLVarHolder <> nil then
+  begin
+    case SQLVarHolder.TypeCode of
+      SQLT_INT:
+        Result := PLongInt(SQLVarHolder.Data)^;
+      SQLT_FLT:
+        Result := Trunc(PDouble(SQLVarHolder.Data)^);
+      else
+      begin
+        Result := Trunc(SqlStrToFloatDef(
+          GetAsStringValue(ColumnIndex, SQLVarHolder), 0));
+      end;
+    end;
+  end
+  else
+    Result := 0;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as a <code>Double</code>.
+
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @param SQLVarHolder a reference to SQL variable holder or <code>nil</code>
+    to force retrieving the variable.
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0.0</code>
+}
+function TZOracleAbstractResultSet.GetAsDoubleValue(ColumnIndex: Integer;
+  SQLVarHolder: PZSQLVar): Double;
+begin
+  if SQLVarHolder = nil then
+    SQLVarHolder := GetSQLVarHolder(ColumnIndex);
+  if SQLVarHolder <> nil then
+  begin
+    case SQLVarHolder.TypeCode of
+      SQLT_INT:
+        Result := PLongInt(SQLVarHolder.Data)^;
+      SQLT_FLT:
+        Result := PDouble(SQLVarHolder.Data)^;
+      else
+      begin
+        Result := SqlStrToFloatDef(
+          GetAsStringValue(ColumnIndex, SQLVarHolder), 0);
+      end;
+    end;
+  end
+  else
+    Result := 0;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as a <code>DateTime</code>.
+
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @param SQLVarHolder a reference to SQL variable holder or <code>nil</code>
+    to force retrieving the variable.
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZOracleAbstractResultSet.GetAsDateTimeValue(ColumnIndex: Integer;
+  SQLVarHolder: PZSQLVar): TDateTime;
+var
+  Status: Integer;
+  Year: SmallInt;
+  Month, Day: Byte;
+  Hour, Minute, Second: Byte;
+  Millis: Integer;
+  Connection: IZOracleConnection;
+begin
+  if SQLVarHolder = nil then
+    SQLVarHolder := GetSQLVarHolder(ColumnIndex);
+  if SQLVarHolder <> nil then
+  begin
+    case SQLVarHolder.TypeCode of
+      SQLT_DAT:
+        Result := OraDateToDateTime(SQLVarHolder.Data);
+      SQLT_TIMESTAMP:
+        begin
+          Connection := GetStatement.GetConnection as IZOracleConnection;
+          if SQLVarHolder.ColType in [stDate, stTimestamp] then
+          begin
+            Status := FPlainDriver.DateTimeGetDate(
+              Connection.GetConnectionHandle,
+              FErrorHandle, PPOCIDescriptor(SQLVarHolder.Data)^,
+              Year, Month, Day);
+            // attention : this code handles all timestamps on 01/01/0001 as a pure time value
+            // reason : oracle doesn't have a pure time datatype so all time comparisons compare
+            //          TDateTime values on 30 Dec 1899 against oracle timestamps on 01 januari 0001 (negative TDateTime)
+            if (Status = OCI_SUCCESS) and
+               ((Year <> 1) or (Month <> 1) or (Day <> 1)) then
+              Result := EncodeDate(Year, Month, Day)
+            else
+              Result := 0;
+          end
+          else
+            Result := 0;
+          if SQLVarHolder.ColType in [stTime, stTimestamp] then
+          begin
+            Status := FPlainDriver.DateTimeGetTime(
+              Connection.GetConnectionHandle,
+              FErrorHandle, PPOCIDescriptor(SQLVarHolder.Data)^,
+              Hour, Minute, Second, Millis);
+            if Status = OCI_SUCCESS then
+            begin
+              Millis := Round(Millis / 1000000);
+              if Millis >= 1000 then Millis := 999;
+                Result := Result + EncodeTime(
+                  Hour, Minute, Second, Millis);
+            end;
+          end;
+        end;
+      else
+      begin
+        Result := AnsiSQLDateToDateTime(
+          String(GetAsStringValue(ColumnIndex, SQLVarHolder)));
+      end;
+    end;
+  end
+  else
+    Result := 0;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>String</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZOracleAbstractResultSet.InternalGetString(ColumnIndex: Integer): AnsiString;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stString);
+{$ENDIF}
+  Result := GetAsStringValue(ColumnIndex, nil);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>boolean</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>false</code>
+}
+function TZOracleAbstractResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
+var
+  Temp: string;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stBoolean);
+{$ENDIF}
+  Temp := String(GetAsStringValue(ColumnIndex, nil));
+  Result := (StrToIntDef(Temp, 0) <> 0) or StrToBoolEx(Temp);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>byte</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZOracleAbstractResultSet.GetByte(ColumnIndex: Integer): ShortInt;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stByte);
+{$ENDIF}
+  Result := ShortInt(GetAsLongIntValue(ColumnIndex, nil));
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>short</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZOracleAbstractResultSet.GetShort(ColumnIndex: Integer): SmallInt;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stShort);
+{$ENDIF}
+  Result := SmallInt(GetAsLongIntValue(ColumnIndex, nil));
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  an <code>int</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZOracleAbstractResultSet.GetInt(ColumnIndex: Integer): Integer;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stInteger);
+{$ENDIF}
+  Result := Integer(GetAsLongIntValue(ColumnIndex, nil));
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>long</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZOracleAbstractResultSet.GetLong(ColumnIndex: Integer): Int64;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stLong);
+{$ENDIF}
+  Result := Trunc(GetAsDoubleValue(ColumnIndex, nil));
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>float</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZOracleAbstractResultSet.GetFloat(ColumnIndex: Integer): Single;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stFloat);
+{$ENDIF}
+  Result := GetAsDoubleValue(ColumnIndex, nil);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>double</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZOracleAbstractResultSet.GetDouble(ColumnIndex: Integer): Double;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stDouble);
+{$ENDIF}
+  Result := GetAsDoubleValue(ColumnIndex, nil);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>java.sql.BigDecimal</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param scale the number of digits to the right of the decimal point
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZOracleAbstractResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stBigDecimal);
+{$ENDIF}
+  Result := GetAsDoubleValue(ColumnIndex, nil);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>byte</code> array in the Java programming language.
+  The bytes represent the raw values returned by the driver.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZOracleAbstractResultSet.GetBytes(ColumnIndex: Integer): TByteDynArray;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stBytes);
+{$ENDIF}
+  Result := StrToBytes(GetAsStringValue(ColumnIndex, nil));
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>java.sql.Date</code> object in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZOracleAbstractResultSet.GetDate(ColumnIndex: Integer): TDateTime;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stDate);
+{$ENDIF}
+  Result := Trunc(GetAsDateTimeValue(ColumnIndex, nil));
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>java.sql.Time</code> object in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZOracleAbstractResultSet.GetTime(ColumnIndex: Integer): TDateTime;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stTime);
+{$ENDIF}
+  Result := Frac(GetAsDateTimeValue(ColumnIndex, nil));
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>java.sql.Timestamp</code> object in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+  value returned is <code>null</code>
+  @exception SQLException if a database access error occurs
+}
+function TZOracleAbstractResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stTimestamp);
+{$ENDIF}
+  Result := GetAsDateTimeValue(ColumnIndex, nil);
+end;
+
+{**
+  Returns the value of the designated column in the current row
+  of this <code>ResultSet</code> object as a <code>Blob</code> object
+  in the Java programming language.
+
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
+    the specified column
+}
+function TZOracleAbstractResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
+var
+  Connection: IZOracleConnection;
+  CurrentVar: PZSQLVar;
+  LobLocator: POCILobLocator;
+  Stream: TStream;
+begin
+  Result := nil ;
+{$IFNDEF DISABLE_CHECKING}
+  CheckBlobColumn(ColumnIndex);
+{$ENDIF}
+
+  LastWasNull := IsNull(ColumnIndex);
+  if LastWasNull then
+      Exit;
+
+  GetSQLVarHolder(ColumnIndex);
+  CurrentVar := @FOutVars.Variables[ColumnIndex];
+  if CurrentVar.TypeCode in [SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE] then
+  begin
+    if CurrentVar.Indicator >= 0 then
+      LobLocator := PPOCIDescriptor(CurrentVar.Data)^
+    else
+      LobLocator := nil;
+
+    Connection := GetStatement.GetConnection as IZOracleConnection;
+    Result := TZOracleBlob.Create(FPlainDriver, nil, 0, Connection, LobLocator,
+      CurrentVar.ColType, GetStatement.GetChunkSize);
+    (Result as IZOracleBlob).ReadBlob;
+  end
+  else if CurrentVar.TypeCode=SQLT_NTY then
+    Result := TZAbstractBlob.CreateWithStream(nil)
+  else
+  begin
+    if CurrentVar.Indicator >= 0 then
+    begin
+      Stream := nil;
+      try
+        Stream := TStringStream.Create(
+          GetAsStringValue(ColumnIndex, CurrentVar));
+        Result := TZAbstractBlob.CreateWithStream(Stream);
+      finally
+        if Assigned(Stream) then
+          Stream.Free;
+      end;
+    end
+    else
+      Result := TZAbstractBlob.CreateWithStream(nil);
+  end;
+end;
+
+{ TZOracleResultSet }
 
 {**
   Opens this recordset.
@@ -404,531 +941,6 @@ begin
 end;
 
 {**
-  Indicates if the value of the designated column in the current row
-  of this <code>ResultSet</code> object is Null.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return if the value is SQL <code>NULL</code>, the
-    value returned is <code>true</code>. <code>false</code> otherwise.
-}
-function TZOracleResultSet.IsNull(ColumnIndex: Integer): Boolean;
-var
-  CurrentVar: PZSQLVar;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckClosed;
-  if (RowNo < 1) or (RowNo > LastRowNo) then
-    raise EZSQLException.Create(SRowDataIsNotAvailable);
-  if (ColumnIndex <=0) or (ColumnIndex > FOutVars.ActualNum) then
-  begin
-    raise EZSQLException.Create(
-      Format(SColumnIsNotAccessable, [ColumnIndex]));
-  end;
-{$ENDIF}
-
-  CurrentVar := @FOutVars.Variables[ColumnIndex];
-  Result := (CurrentVar.Indicator < 0);
-end;
-
-{**
-  Gets a holder for SQL output variable.
-  @param ColumnIndex an index of the column to read.
-  @returns an output variable holder or <code>nil</code> if column is empty.
-}
-function TZOracleResultSet.GetSQLVarHolder(ColumnIndex: Integer): PZSQLVar;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckClosed;
-  if (RowNo < 1) or (RowNo > LastRowNo) then
-    raise EZSQLException.Create(SRowDataIsNotAvailable);
-{$ENDIF}
-
-  Result := @FOutVars.Variables[ColumnIndex];
-  LastWasNull := (Result.Indicator < 0) or (Result.Data = nil);
-  if LastWasNull then
-    Result := nil;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as a <code>String</code>.
-
-  @param ColumnIndex the first column is 1, the second is 2, ...
-  @param SQLVarHolder a reference to SQL variable holder or <code>nil</code>
-    to force retrieving the variable.
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZOracleResultSet.GetAsStringValue(ColumnIndex: Integer;
-  SQLVarHolder: PZSQLVar): AnsiString;
-var
-  OldSeparator: Char;
-  Blob: IZBlob;
-begin
-  if SQLVarHolder = nil then
-    SQLVarHolder := GetSQLVarHolder(ColumnIndex);
-  if SQLVarHolder <> nil then
-  begin
-    case SQLVarHolder.TypeCode of
-      SQLT_INT:
-        Result := AnsiString(IntToStr(PLongInt(SQLVarHolder.Data)^));
-      SQLT_FLT:
-        begin
-          OldSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
-          {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
-          Result := AnsiString(FloatToSqlStr(PDouble(SQLVarHolder.Data)^));
-          {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldSeparator;
-        end;
-      SQLT_STR:
-        Result := StrPas(PAnsiChar(SQLVarHolder.Data));
-      SQLT_LVB, SQLT_LVC:
-        begin
-          Result := AnsiString(BufferToStr(PAnsiChar(SQLVarHolder.Data) + SizeOf(Integer),
-            PInteger(SQLVarHolder.Data)^));
-        end;
-      SQLT_DAT, SQLT_TIMESTAMP:
-        begin
-          Result := AnsiString(DateTimeToAnsiSQLDate(
-            GetAsDateTimeValue(ColumnIndex, SQLVarHolder)));
-        end;
-      SQLT_BLOB, SQLT_CLOB:
-        begin
-          Blob := GetBlob(ColumnIndex);
-          Result := Blob.GetString;
-        end;
-    end;
-  end
-  else
-    Result := '';
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as a <code>LongInt</code>.
-
-  @param ColumnIndex the first column is 1, the second is 2, ...
-  @param SQLVarHolder a reference to SQL variable holder or <code>nil</code>
-    to force retrieving the variable.
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZOracleResultSet.GetAsLongIntValue(ColumnIndex: Integer;
-  SQLVarHolder: PZSQLVar): LongInt;
-begin
-  if SQLVarHolder = nil then
-    SQLVarHolder := GetSQLVarHolder(ColumnIndex);
-  if SQLVarHolder <> nil then
-  begin
-    case SQLVarHolder.TypeCode of
-      SQLT_INT:
-        Result := PLongInt(SQLVarHolder.Data)^;
-      SQLT_FLT:
-        Result := Trunc(PDouble(SQLVarHolder.Data)^);
-      else
-      begin
-        Result := Trunc(SqlStrToFloatDef(
-          GetAsStringValue(ColumnIndex, SQLVarHolder), 0));
-      end;
-    end;
-  end
-  else
-    Result := 0;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as a <code>Double</code>.
-
-  @param ColumnIndex the first column is 1, the second is 2, ...
-  @param SQLVarHolder a reference to SQL variable holder or <code>nil</code>
-    to force retrieving the variable.
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0.0</code>
-}
-function TZOracleResultSet.GetAsDoubleValue(ColumnIndex: Integer;
-  SQLVarHolder: PZSQLVar): Double;
-begin
-  if SQLVarHolder = nil then
-    SQLVarHolder := GetSQLVarHolder(ColumnIndex);
-  if SQLVarHolder <> nil then
-  begin
-    case SQLVarHolder.TypeCode of
-      SQLT_INT:
-        Result := PLongInt(SQLVarHolder.Data)^;
-      SQLT_FLT:
-        Result := PDouble(SQLVarHolder.Data)^;
-      else
-      begin
-        Result := SqlStrToFloatDef(
-          GetAsStringValue(ColumnIndex, SQLVarHolder), 0);
-      end;
-    end;
-  end
-  else
-    Result := 0;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as a <code>DateTime</code>.
-
-  @param ColumnIndex the first column is 1, the second is 2, ...
-  @param SQLVarHolder a reference to SQL variable holder or <code>nil</code>
-    to force retrieving the variable.
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZOracleResultSet.GetAsDateTimeValue(ColumnIndex: Integer;
-  SQLVarHolder: PZSQLVar): TDateTime;
-var
-  Status: Integer;
-  Year: SmallInt;
-  Month, Day: Byte;
-  Hour, Minute, Second: Byte;
-  Millis: Integer;
-  Connection: IZOracleConnection;
-begin
-  if SQLVarHolder = nil then
-    SQLVarHolder := GetSQLVarHolder(ColumnIndex);
-  if SQLVarHolder <> nil then
-  begin
-    case SQLVarHolder.TypeCode of
-      SQLT_DAT:
-        Result := OraDateToDateTime(SQLVarHolder.Data);
-      SQLT_TIMESTAMP:
-        begin
-          Connection := GetStatement.GetConnection as IZOracleConnection;
-          if SQLVarHolder.ColType in [stDate, stTimestamp] then
-          begin
-            Status := FPlainDriver.DateTimeGetDate(
-              Connection.GetConnectionHandle,
-              FErrorHandle, PPOCIDescriptor(SQLVarHolder.Data)^,
-              Year, Month, Day);
-            // attention : this code handles all timestamps on 01/01/0001 as a pure time value
-            // reason : oracle doesn't have a pure time datatype so all time comparisons compare
-            //          TDateTime values on 30 Dec 1899 against oracle timestamps on 01 januari 0001 (negative TDateTime)
-            if (Status = OCI_SUCCESS) and
-               ((Year <> 1) or (Month <> 1) or (Day <> 1)) then
-              Result := EncodeDate(Year, Month, Day)
-            else
-              Result := 0;
-          end
-          else
-            Result := 0;
-          if SQLVarHolder.ColType in [stTime, stTimestamp] then
-          begin
-            Status := FPlainDriver.DateTimeGetTime(
-              Connection.GetConnectionHandle,
-              FErrorHandle, PPOCIDescriptor(SQLVarHolder.Data)^,
-              Hour, Minute, Second, Millis);
-            if Status = OCI_SUCCESS then
-            begin
-              Millis := Round(Millis / 1000000);
-              if Millis >= 1000 then Millis := 999;
-                Result := Result + EncodeTime(
-                  Hour, Minute, Second, Millis);
-            end;
-          end;
-        end;
-      else
-      begin
-        Result := AnsiSQLDateToDateTime(
-          String(GetAsStringValue(ColumnIndex, SQLVarHolder)));
-      end;
-    end;
-  end
-  else
-    Result := 0;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>String</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZOracleResultSet.InternalGetString(ColumnIndex: Integer): AnsiString;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stString);
-{$ENDIF}
-  Result := GetAsStringValue(ColumnIndex, nil);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>boolean</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>false</code>
-}
-function TZOracleResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
-var
-  Temp: string;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stBoolean);
-{$ENDIF}
-  Temp := String(GetAsStringValue(ColumnIndex, nil));
-  Result := (StrToIntDef(Temp, 0) <> 0) or StrToBoolEx(Temp);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>byte</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZOracleResultSet.GetByte(ColumnIndex: Integer): ShortInt;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stByte);
-{$ENDIF}
-  Result := ShortInt(GetAsLongIntValue(ColumnIndex, nil));
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>short</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZOracleResultSet.GetShort(ColumnIndex: Integer): SmallInt;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stShort);
-{$ENDIF}
-  Result := SmallInt(GetAsLongIntValue(ColumnIndex, nil));
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  an <code>int</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZOracleResultSet.GetInt(ColumnIndex: Integer): Integer;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stInteger);
-{$ENDIF}
-  Result := Integer(GetAsLongIntValue(ColumnIndex, nil));
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>long</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZOracleResultSet.GetLong(ColumnIndex: Integer): Int64;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stLong);
-{$ENDIF}
-  Result := Trunc(GetAsDoubleValue(ColumnIndex, nil));
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>float</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZOracleResultSet.GetFloat(ColumnIndex: Integer): Single;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stFloat);
-{$ENDIF}
-  Result := GetAsDoubleValue(ColumnIndex, nil);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>double</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZOracleResultSet.GetDouble(ColumnIndex: Integer): Double;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stDouble);
-{$ENDIF}
-  Result := GetAsDoubleValue(ColumnIndex, nil);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>java.sql.BigDecimal</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param scale the number of digits to the right of the decimal point
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZOracleResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stBigDecimal);
-{$ENDIF}
-  Result := GetAsDoubleValue(ColumnIndex, nil);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>byte</code> array in the Java programming language.
-  The bytes represent the raw values returned by the driver.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZOracleResultSet.GetBytes(ColumnIndex: Integer): TByteDynArray;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stBytes);
-{$ENDIF}
-  Result := StrToBytes(GetAsStringValue(ColumnIndex, nil));
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>java.sql.Date</code> object in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZOracleResultSet.GetDate(ColumnIndex: Integer): TDateTime;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stDate);
-{$ENDIF}
-  Result := Trunc(GetAsDateTimeValue(ColumnIndex, nil));
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>java.sql.Time</code> object in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZOracleResultSet.GetTime(ColumnIndex: Integer): TDateTime;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stTime);
-{$ENDIF}
-  Result := Frac(GetAsDateTimeValue(ColumnIndex, nil));
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>java.sql.Timestamp</code> object in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-  value returned is <code>null</code>
-  @exception SQLException if a database access error occurs
-}
-function TZOracleResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stTimestamp);
-{$ENDIF}
-  Result := GetAsDateTimeValue(ColumnIndex, nil);
-end;
-
-{**
-  Returns the value of the designated column in the current row
-  of this <code>ResultSet</code> object as a <code>Blob</code> object
-  in the Java programming language.
-
-  @param ColumnIndex the first column is 1, the second is 2, ...
-  @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
-    the specified column
-}
-function TZOracleResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
-var
-  Connection: IZOracleConnection;
-  CurrentVar: PZSQLVar;
-  LobLocator: POCILobLocator;
-  Stream: TStream;
-begin
-  Result := nil ;
-{$IFNDEF DISABLE_CHECKING}
-  CheckBlobColumn(ColumnIndex);
-{$ENDIF}
-
-  LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then
-      Exit;
-
-  GetSQLVarHolder(ColumnIndex);
-  CurrentVar := @FOutVars.Variables[ColumnIndex];
-  if CurrentVar.TypeCode in [SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE] then
-  begin
-    if CurrentVar.Indicator >= 0 then
-      LobLocator := PPOCIDescriptor(CurrentVar.Data)^
-    else
-      LobLocator := nil;
-
-    Connection := GetStatement.GetConnection as IZOracleConnection;
-    Result := TZOracleBlob.Create(FPlainDriver, nil, 0, Connection, LobLocator,
-      CurrentVar.ColType, GetStatement.GetChunkSize);
-    (Result as IZOracleBlob).ReadBlob;
-  end
-  else if CurrentVar.TypeCode=SQLT_NTY then
-    Result := TZAbstractBlob.CreateWithStream(nil)
-  else
-  begin
-    if CurrentVar.Indicator >= 0 then
-    begin
-      Stream := nil;
-      try
-        Stream := TStringStream.Create(
-          GetAsStringValue(ColumnIndex, CurrentVar));
-        Result := TZAbstractBlob.CreateWithStream(Stream);
-      finally
-        if Assigned(Stream) then
-          Stream.Free;
-      end;
-    end
-    else
-      Result := TZAbstractBlob.CreateWithStream(nil);
-  end;
-end;
-
-{**
   Moves the cursor down one row from its current position.
   A <code>ResultSet</code> cursor is initially positioned
   before the first row; the first call to the method
@@ -980,6 +992,164 @@ begin
       RowNo := LastRowNo + 1;
     Result := False;
   end;
+end;
+
+{ TZOracleCallableResultSet }
+function TZOracleCallableResultSet.PrepareOracleOutVars(Statement: IZStatement;
+  InVars: PZSQLVars; FieldNames: TStringDynArray; ParamTypes: array of shortInt): PZSQLVars;
+var
+  I, J, OutParamCount: Integer;
+  Connection: IZConnection;
+
+  procedure PrepareVar(ColumnName: String);
+  begin
+    Result.Variables[J].ColType := InVars.Variables[I].ColType;
+    Result.Variables[J].TypeCode := InVars.Variables[I].TypeCode;
+    Result.Variables[J].DataSize := InVars.Variables[I].DataSize;
+    Result.Variables[J].Length := InVars.Variables[I].Length;
+    GetMem(Result.Variables[J].Data, InVars.Variables[I].Length);
+    Move(InVars.Variables[i].Data^, Result.Variables[J].Data^, InVars.Variables[i].Length);
+    //Result.Variables[J].Data := InVars.Variables[i].Data;
+    SetLength(FFieldNames, J);
+    FFieldNames[j-1] := ColumnName;
+  end;
+begin
+  Connection := Statement.GetConnection;
+
+  OutParamCount := 0;
+  for i := 0 to InVars.ActualNum-1 do
+    if ParamTypes[I] in [2,3,4] then
+      Inc(OutParamCount);
+
+  Result := nil;
+  AllocateOracleSQLVars(Result, OutParamCount);
+  Result.ActualNum := OutParamCount;
+
+  J := 0;
+  for i := 1 to InVars.ActualNum do
+    if ParamTypes[i-1] in [2,3] then
+    begin
+      Inc(J);
+      PrepareVar(FieldNames[I-1]);
+    end;
+  if ParamTypes[High(ParamTypes)] = 4 then //ptResult
+  begin
+    Inc(J);
+    I := 1;
+    PrepareVar(FieldNames[High(FieldNames)]);
+  end;
+end;
+
+procedure TZOracleCallableResultSet.Open;
+var
+  I: Integer;
+  ColumnInfo: TZColumnInfo;
+  CurrentVar: PZSQLVar;
+  Connection: IZConnection;
+begin
+  Connection := GetStatement.GetConnection;
+  { Fills the column info. }
+  ColumnsInfo.Clear;
+  for I := 1 to FOutVars.ActualNum do
+  begin
+    CurrentVar := @FOutVars.Variables[I];
+    ColumnInfo := TZColumnInfo.Create;
+
+    with ColumnInfo do
+    begin
+      ColumnName := '';
+      TableName := '';
+
+      ColumnLabel := FFieldNames[i-1];
+      ColumnDisplaySize := 0;
+      AutoIncrement := False;
+      Signed := True;
+      Nullable := ntNullable;
+
+      ColumnType := CurrentVar.ColType;
+      Scale := CurrentVar.Scale;
+      if (ColumnType = stUnicodeString) and ( Connection.GetEncoding = ceAnsi) then
+        ColumnType := stString;
+      if (ColumnType = stUnicodeStream) and ( Connection.GetEncoding = ceAnsi) then
+        ColumnType := stAsciiStream;
+      if (ColumnType = stString) or (ColumnType = stUnicodeString) then
+      begin
+        ColumnDisplaySize := CurrentVar.DataSize;
+        Precision := GetFieldSize(ColumnType, CurrentVar.DataSize, ClientCodePage^.CharWidth, False);
+      end
+      else
+        Precision := CurrentVar.Precision;
+    end;
+
+    ColumnsInfo.Add(ColumnInfo);
+  end;
+
+  inherited Open;
+end;
+
+{**
+  Constructs this object, assignes main properties and
+  opens the record set.
+  @param PlainDriver a Oracle plain driver.
+  @param Statement a related SQL statement object.
+  @param SQL a SQL statement.
+  @param Handle a Oracle specific query handle.
+}
+constructor TZOracleCallableResultSet.Create(PlainDriver: IZOraclePlainDriver;
+  Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
+  ErrorHandle: POCIError; OutVars: PZSQLVars; FieldNames: TStringDynArray;
+  ParamTypes: array of shortInt);
+begin
+  FOutVars := PrepareOracleOutVars(Statement, OutVars, FieldNames, ParamTypes);
+  inherited Create(PlainDriver, Statement, SQL, StmtHandle, ErrorHandle);
+  MaxRows := 1;
+end;
+
+{**
+  Releases this <code>ResultSet</code> object's database and
+  JDBC resources immediately instead of waiting for
+  this to happen when it is automatically closed.
+
+  <P><B>Note:</B> A <code>ResultSet</code> object
+  is automatically closed by the
+  <code>Statement</code> object that generated it when
+  that <code>Statement</code> object is closed,
+  re-executed, or is used to retrieve the next result from a
+  sequence of multiple results. A <code>ResultSet</code> object
+  is also automatically closed when it is garbage collected.
+}
+procedure TZOracleCallableResultSet.Close;
+var
+  I: Integer;
+  CurrentVar: PZSQLVar;
+begin
+  if FOutVars <> nil then
+  begin
+    { Frees allocated memory for output variables }
+    for I := 1 to FOutVars.ActualNum do
+    begin
+      CurrentVar := @FOutVars.Variables[I];
+      if CurrentVar.Data <> nil then
+      begin
+        CurrentVar.DupData := nil;
+        FreeMem(CurrentVar.Data);
+        CurrentVar.Data := nil;
+      end;
+    end;
+    FreeMem(FOutVars);
+  end;
+  FOutVars := nil;
+  inherited Close;
+end;
+
+function TZOracleCallableResultSet.Next: Boolean;
+begin
+  { Checks for maximum row. }
+  Result := False;
+  if (RowNo >= MaxRows) then
+    Exit;
+  RowNo := LastRowNo + 1;
+  Result := True;
 end;
 
 { TZOracleBlob }

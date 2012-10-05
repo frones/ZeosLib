@@ -146,6 +146,7 @@ type
     function SupportsResultSetConcurrency(_Type: TZResultSetType;
       Concurrency: TZResultSetConcurrency): Boolean; override;
 //    function SupportsBatchUpdates: Boolean; override; -> Not implemented
+    function SupportsNonEscapedSearchStrings: Boolean; override;
 
     // maxima:
     function GetMaxBinaryLiteralLength: Integer; override;
@@ -1216,6 +1217,15 @@ begin
   Result := True;
 end;
 
+{**
+  Does the Database or Actual Version understand non escaped search strings?
+  @return <code>true</code> if the DataBase does understand non escaped
+  search strings
+}
+function TZAdoDatabaseInfo.SupportsNonEscapedSearchStrings: Boolean;
+begin
+  Result := True;
+end;
 
 { TZAdoDatabaseMetadata }
 
@@ -2246,6 +2256,22 @@ function TZAdoDatabaseMetadata.UncachedGetCrossReference(const PrimaryCatalog: s
   const ForeignSchema: string; const ForeignTable: string): IZResultSet;
 var
   AdoRecordSet: ZPlainAdo.RecordSet;
+
+  function GetRuleType(const Rule: String): TZImportedKey;
+  begin
+    if Rule = 'RESTRICT' then
+      Result := ikRestrict
+    else if Rule = 'NO ACTION' then
+      Result := ikNoAction
+    else if Rule = 'CASCADE' then
+      Result := ikCascade
+    else if Rule = 'SET DEFAULT' then
+      Result := ikSetDefault
+    else if Rule = 'SET NULL' then
+      Result := ikSetNull
+    else
+      Result := ikNotDeferrable; //impossible!
+  end;
 begin
     Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
                                                 ForeignCatalog, ForeignSchema, ForeignTable);
@@ -2278,10 +2304,10 @@ begin
             GetStringByName('FK_COLUMN_NAME'));
           Result.UpdateShortByName('KEY_SEQ',
             GetShortByName('ORDINAL'));
-    //!!!      Result.UpdateShortByName('UPDATE_RULE',
-    //!!!        GetShortByName('UPDATE_RULE'));
-    //!!!      Result.UpdateShortByName('DELETE_RULE',
-    //!!!        GetShortByName('DELETE_RULE'));
+          Result.UpdateShortByName('UPDATE_RULE',
+            Ord(GetRuleType(GetStringByName('UPDATE_RULE'))));
+          Result.UpdateShortByName('DELETE_RULE',
+            Ord(GetRuleType(GetStringByName('DELETE_RULE'))));
           Result.UpdateStringByName('FK_NAME',
             GetStringByName('FK_NAME'));
           Result.UpdateStringByName('PK_NAME',

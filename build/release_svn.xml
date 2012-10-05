@@ -21,10 +21,10 @@
 
 
 <!-- default SVN dirs-->
-  <property name="url.testing" value="svn://www.firmos.at/zeos/branches/testing"/>
-  <property name="url.trunk" value="svn://www.firmos.at/zeos/trunk"/>
-  <property name="url.stable" value="svn://www.firmos.at/zeos/trunk"/>
-  <property name="url.tag" value="svn://www.firmos.at/zeos/tags/${build.productversion}"/>
+  <property name="url.testing" value="https://svn.code.sf.net/p/zeoslib/code-0/branches/testing"/>
+  <property name="url.trunk" value="https://svn.code.sf.net/p/zeoslib/code-0/trunk"/>
+  <property name="url.stable" value="https://svn.code.sf.net/p/zeoslib/code-0/trunk"/>
+  <property name="url.tag" value="https://svn.code.sf.net/p/zeoslib/code-0/tags/${build.productversion}"/>
  
   <!-- path to the svnant libraries. Usually they will be located in ANT_HOME/lib -->
   <path id="project.classpath">
@@ -34,7 +34,6 @@
   </path>  
   <!-- load the svn task -->
   <taskdef resource="svntask.properties" classpathref="project.classpath"/>
-    
   <target name="prepare">
     <mkdir dir="${logs.dir}" />
 
@@ -105,7 +104,8 @@
 
   <target name="buildZip">
     <delete dir="${checktemp.dir}" />
-    <svn username="anonymous" password="guest">
+    <!--svn username="anonymous" password="guest"-->
+    <svn>
       <checkout url="${url}" recurse="false" revision="HEAD" destPath="${checktemp.dir}" />
       <status path="${checktemp.dir}" textStatusProperty="testStatus.textStatus" propStatusProperty="testStatus.propStatus" lastChangedRevisionProperty="testStatus.lastCommitRevision" revisionProperty="testStatus.revision" lastCommitAuthorProperty="testStatus.lastCommitAuthor" urlProperty="testStatus.url" />
     </svn>
@@ -132,7 +132,7 @@
  <target name="buildFullZip" if="fullZip">
     <delete file="${outfiles_basename}.zip" />
     <zip zipfile="${outfiles_basename}.zip">
-      <fileset dir="${temp.dir}"/>
+      <fileset dir="${temp.dir}" casesensitive="no"/>
     </zip>
     <checksum file="${outfiles_basename}.zip" forceoverwrite="yes"/>
     <checksum file="${outfiles_basename}.zip" algorithm="SHA" forceoverwrite="yes"/>
@@ -141,7 +141,7 @@
  <target name="buildSmallZip" if="smallZip">
     <delete file="${outfiles_basename}_COMPACT.zip" />
     <zip zipfile="${outfiles_basename}_COMPACT.zip">
-      <fileset dir="${temp.dir}">
+      <fileset dir="${temp.dir}" casesensitive="no">
          <exclude name="**/lib/**"/>
          <exclude name="**/documentation/**"/>
          <exclude name="**/artwork/**"/>
@@ -161,7 +161,7 @@
 
      <antcall target="buildVersionZip" />
      <antcall target="buildDoxygen" />
-     <antcall target="buildDelphiCode2Doc" />
+     <!--antcall target="buildDelphiCode2Doc" /-->
 
     <delete dir="${temp.dir}" />
     <echo message="Releasing Zeos DBO Project (Version ${build.productversion})"/>
@@ -173,13 +173,16 @@
 
     <delete file="${outfiles_basename}.zip" />
     <zip zipfile="${outfiles_basename}.zip">
-      <fileset dir="${temp.dir}">
+      <fileset dir="${temp.dir}" casesensitive="no">
          <include name="*.txt"/>
          <include name="doc/html/**"/>
          <include name="doc/pdf/**"/>
          <include name="src/**"/>
-         <include name="packages/**"/>
+         <include name="packages/*/*"/>
          <include name="examples/**"/>
+         <exclude name="packages/*/ztest*"/>
+         <exclude name="packages/*/*dev*"/>
+         <include name="packages/*/build/dummy.txt"/>
       </fileset>
     </zip>
     <checksum file="${outfiles_basename}.zip" forceoverwrite="yes"/>
@@ -193,17 +196,17 @@
         <env key="ZEOS_DIR" path="${temp.dir}"/>
     </exec>
     <copy todir="${temp.dir}/doc/html" flatten="true" overwrite="true" preservelastmodified="true" includeEmptyDirs="false">
-      <fileset dir="${temp.dir}/documentation/articles_generated/output">
+      <fileset dir="${temp.dir}/documentation/articles_generated/output"  casesensitive="no">
          <include name="*/html/*"/>
       </fileset>
     </copy>
     <copy todir="${temp.dir}/doc/html/images" flatten="true" overwrite="true" preservelastmodified="true" includeEmptyDirs="false">
-      <fileset dir="${temp.dir}/documentation/articles_generated/output">
+      <fileset dir="${temp.dir}/documentation/articles_generated/output"  casesensitive="no">
          <include name="*/html/images/*"/>
       </fileset>
     </copy>
     <copy todir="${temp.dir}/doc/pdf" flatten="true" overwrite="true" preservelastmodified="true" includeEmptyDirs="false">
-      <fileset dir="${temp.dir}/documentation/articles_generated/output">
+      <fileset dir="${temp.dir}/documentation/articles_generated/output"  casesensitive="no">
          <include name="*/pdf/*.pdf"/>
       </fileset>
     </copy>
@@ -213,7 +216,7 @@
     <exec osfamily="windows" executable="${temp.dir}/documentation/doxygen_build.bat" dir="${temp.dir}/documentation" output="${log.file}" append="true" failonerror="true"/>
 
     <copy todir="${temp.dir}/doc/doxygen" overwrite="true" preservelastmodified="true" includeEmptyDirs="false" >
-      <fileset dir="${temp.dir}/doc/doxy/html">
+      <fileset dir="${temp.dir}/doc/doxy/html"  casesensitive="no">
          <include name="**"/>
       </fileset>
     </copy>
@@ -222,7 +225,7 @@
 
     <delete file="${outfiles_basename}_doxygen.zip" />
     <zip zipfile="${outfiles_basename}_doxygen.zip">
-      <fileset dir="${temp.dir}/doc/doxygen">
+      <fileset dir="${temp.dir}/doc/doxygen"  casesensitive="no">
          <include name="**"/>
       </fileset>
     </zip>
@@ -238,7 +241,7 @@
 
     <delete file="${outfiles_basename}_DelphiCode2Doc_html.zip" />
     <zip zipfile="${outfiles_basename}_DelphiCode2Doc_html.zip">
-      <fileset dir="${temp.dir}/doc/ZeosDelphiCode2Doc/html/">
+      <fileset dir="${temp.dir}/doc/ZeosDelphiCode2Doc/html/" casesensitive="no">
          <include name="**"/>
       </fileset>
     </zip>
@@ -247,7 +250,7 @@
 
     <delete file="${outfiles_basename}_DelphiCode2Doc_chm.zip" />
     <zip zipfile="${outfiles_basename}_DelphiCode2Doc_chm.zip">
-      <fileset dir="${temp.dir}/doc/ZeosDelphiCode2Doc/chm/">
+      <fileset dir="${temp.dir}/doc/ZeosDelphiCode2Doc/chm/"  casesensitive="no">
          <include name="*.chm"/>
       </fileset>
     </zip>

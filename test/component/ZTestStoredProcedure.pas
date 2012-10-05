@@ -141,6 +141,9 @@ type
     function GetSupportedProtocols: string; override;
   published
     procedure Test_abtest;
+    procedure Test_myfuncInOutReturn;
+    procedure Test_simple_func;
+    procedure Test_simplefunc;
   end;
 
 implementation
@@ -261,7 +264,7 @@ begin
   CheckEquals('P1', StoredProc.Params[0].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
   CheckEquals('R1', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(ord(ptOutput), ord(StoredProc.Params[1].ParamType));
   StoredProc.ParamByName('P1').AsInteger := 12345;
   StoredProc.ExecProc;
   CheckEquals(12346, StoredProc.ParamByName('R1').AsInteger);
@@ -285,9 +288,9 @@ begin
   CheckEquals('P3', StoredProc.Params[2].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
   CheckEquals('P4', StoredProc.Params[3].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[3].ParamType));
+  CheckEquals(ord(ptOutput), ord(StoredProc.Params[3].ParamType));
   CheckEquals('P5', StoredProc.Params[4].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[4].ParamType));
+  CheckEquals(ord(ptOutput), ord(StoredProc.Params[4].ParamType));
 
   StoredProc.ParamByName('P1').AsInteger := 50;
   StoredProc.ParamByName('P2').AsInteger := 100;
@@ -1406,7 +1409,7 @@ begin
   StoredProc.ParamByName('P3').AsString := 'a';
   StoredProc.ExecProc;
   CheckEquals(600, StoredProc.ParamByName('P4').AsInteger);
-  CheckEquals('aa', StoredProc.ParamByName('RESULT1').AsString);
+  CheckEquals('aa', StoredProc.ParamByName('P5').AsString);
   CheckEquals(5, StoredProc.Params.Count);
 
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[0].DataType));
@@ -1420,7 +1423,7 @@ begin
   else
     CheckEquals(ord(ftString), ord(StoredProc.Params[2].DataType));
   {$ENDIF}
-  CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
+  //CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
   if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
     ( Connection.DbcConnection.UTF8StringAsWideField) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[4].DataType))
@@ -1459,12 +1462,93 @@ begin
     CheckEquals(ord(ftString), ord(StoredProc.Fields[1].DataType));
   CheckEquals(2, ord(StoredProc.Fields.Count));
 
-  CheckEquals(ord(ftLargeint), ord(StoredProc.Fields[0].DataType));
+ // CheckEquals(ord(ftLargeint), ord(StoredProc.Fields[0].DataType));
   if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
     ( Connection.DbcConnection.UTF8StringAsWideField) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[4].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Params[4].DataType));
+  CheckEquals(600, StoredProc.FieldByName('P4').AsInteger);
+  CheckEquals('aa', StoredProc.FieldByName('P5').AsString);
+end;
+
+procedure TZTestOracleStoredProcedure.Test_myfuncInOutReturn;
+var
+  S: String;
+begin
+  StoredProc.StoredProcName := '"myfuncInOutReturn"';
+  CheckEquals(2, StoredProc.Params.Count);
+  CheckEquals('X', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[0].ParamType));
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    CheckEquals(ord(ftWideString), ord(StoredProc.Params[0].DataType))
+  else
+    CheckEquals(ord(ftString), ord(StoredProc.Params[0].DataType));
+  CheckEquals('ReturnValue', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[1].ParamType));
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    CheckEquals(ord(ftWideString), ord(StoredProc.Params[1].DataType))
+  else
+    CheckEquals(ord(ftString), ord(StoredProc.Params[1].DataType));
+
+  StoredProc.ParamByName('x').AsString := 'a';
+  StoredProc.ExecProc;
+
+  CheckEquals('aoutvalue', StoredProc.ParamByName('x').AsString);
+  CheckEquals('returned string', StoredProc.ParamByName('ReturnValue').AsString);
+  CheckEquals(2, StoredProc.Params.Count);
+
+  StoredProc.Open;
+  CheckEquals(2, StoredProc.Fields.Count);
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    CheckEquals(ord(ftWideString), ord(StoredProc.Fields[0].DataType))
+  else
+    CheckEquals(ord(ftString), ord(StoredProc.Fields[0].DataType));
+  CheckEquals('X', StoredProc.Fields[0].DisplayName);
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    CheckEquals(ord(ftWideString), ord(StoredProc.Fields[1].DataType))
+  else
+    CheckEquals(ord(ftString), ord(StoredProc.Fields[1].DataType));
+  CheckEquals('ReturnValue', StoredProc.Fields[1].DisplayName);
+
+  CheckEquals('aoutvalueoutvalue', StoredProc.ParamByName('x').AsString);
+  CheckEquals('returned string', StoredProc.ParamByName('ReturnValue').AsString);
+end;
+
+procedure TZTestOracleStoredProcedure.Test_simple_func;
+var
+  S: String;
+begin
+  StoredProc.StoredProcName := '"simple_func"';
+  CheckEquals(1, StoredProc.Params.Count);
+  CheckEquals('ReturnValue', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
+  //CheckEquals(ord(ftInteger), ord(StoredProc.Params[0].DataType));
+
+  StoredProc.ExecProc;
+
+  CheckEquals(1111, StoredProc.ParamByName('ReturnValue').AsInteger);
+  CheckEquals(1, StoredProc.Params.Count);
+end;
+
+procedure TZTestOracleStoredProcedure.Test_simplefunc;
+var
+  S: String;
+begin
+  StoredProc.StoredProcName := '"simplefunc"';
+  CheckEquals(1, StoredProc.Params.Count);
+  CheckEquals('ReturnValue', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
+  //CheckEquals(ord(ftInteger), ord(StoredProc.Params[0].DataType));
+
+  StoredProc.ExecProc;
+
+  CheckEquals(2222, StoredProc.ParamByName('ReturnValue').AsInteger);
+  CheckEquals(1, StoredProc.Params.Count);
 end;
 
 initialization

@@ -439,6 +439,7 @@ type
     function SupportsResultSetConcurrency(_Type: TZResultSetType;
       Concurrency: TZResultSetConcurrency): Boolean;
     function SupportsBatchUpdates: Boolean;
+    function SupportsNonEscapedSearchStrings: Boolean;
 
     // maxima:
     function GetMaxBinaryLiteralLength: Integer;
@@ -597,6 +598,7 @@ type
   {** Callable SQL statement interface. }
   IZCallableStatement = interface(IZPreparedStatement)
     ['{E6FA6C18-C764-4C05-8FCB-0582BDD1EF40}']
+    function IsFunction: Boolean;
     { Multiple ResultSet support API }
     function HasMoreResultSets: Boolean;
     function GetFirstResultSet: IZResultSet;

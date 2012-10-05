@@ -197,12 +197,6 @@ type
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
-    {function ExecuteUpdate(const SQL: string): Integer; override;
-    function Execute(const SQL: string): Boolean; override;
-
-
-
-    function ExecutePrepared: Boolean; override; }
   end;
 
   {** Implements a specialized cached resolver for PostgreSQL. }

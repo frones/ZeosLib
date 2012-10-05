@@ -148,6 +148,7 @@ type
     function SupportsResultSetConcurrency(_Type: TZResultSetType;
       Concurrency: TZResultSetConcurrency): Boolean; override;
 //    function SupportsBatchUpdates: Boolean; override; -> Not implemented
+    function SupportsNonEscapedSearchStrings: Boolean; override;
 
     // maxima:
     function GetMaxBinaryLiteralLength: Integer; override;
@@ -1144,6 +1145,15 @@ begin
   Result := (_Type = rtForwardOnly) and (Concurrency = rcReadOnly);
 end;
 
+{**
+  Does the Database or Actual Version understand non escaped search strings?
+  @return <code>true</code> if the DataBase does understand non escaped
+  search strings
+}
+function TZOracleDatabaseInfo.SupportsNonEscapedSearchStrings: Boolean;
+begin
+  Result := MetaData.GetConnection.GetClientVersion > 10000000;
+end;
 
 { TZOracleDatabaseMetadata }
 
@@ -1211,77 +1221,64 @@ var
   end;
 
 begin
-    if IncludedType('TABLE') then
-    begin
-      SQL := 'SELECT NULL AS TABLE_CAT, OWNER AS TABLE_SCHEM, TABLE_NAME,'
-        + ' ''TABLE'' AS TABLE_TYPE, NULL AS REMARKS FROM SYS.ALL_TABLES'
-        + ' WHERE OWNER LIKE ''' + ToLikeString(SchemaPattern) + ''' AND TABLE_NAME LIKE '''
-        + ToLikeString(TableNamePattern) + '''';
-    end else
-      SQL := '';
+  if IncludedType('TABLE') then
+  begin
+    SQL := 'SELECT NULL AS TABLE_CAT, OWNER AS TABLE_SCHEM, TABLE_NAME,'
+      + ' ''TABLE'' AS TABLE_TYPE, NULL AS REMARKS FROM SYS.ALL_TABLES'
+      + ' WHERE OWNER LIKE ''' + ToLikeString(SchemaPattern) + ''' AND TABLE_NAME LIKE '''
+      + ToLikeString(TableNamePattern) + '''';
+  end else
+    SQL := '';
 
-    if IncludedType('SYNONYM') then
-    begin
-      PartSQL := 'SELECT NULL AS TABLE_CAT, OWNER AS TABLE_SCHEM,'
-        + ' SYNONYM_NAME AS TABLE_NAME, ''SYNONYM'' AS TABLE_TYPE,'
-        + ' NULL AS REMARKS FROM SYS.ALL_SYNONYMS WHERE OWNER LIKE '''
-        + ToLikeString(SchemaPattern) + ''' AND SYNONYM_NAME LIKE ''' + ToLikeString(TableNamePattern) + '''';
+  if IncludedType('SYNONYM') then
+  begin
+    PartSQL := 'SELECT NULL AS TABLE_CAT, OWNER AS TABLE_SCHEM,'
+      + ' SYNONYM_NAME AS TABLE_NAME, ''SYNONYM'' AS TABLE_TYPE,'
+      + ' NULL AS REMARKS FROM SYS.ALL_SYNONYMS WHERE OWNER LIKE '''
+      + ToLikeString(SchemaPattern) + ''' AND SYNONYM_NAME LIKE ''' + ToLikeString(TableNamePattern) + '''';
 
-      if SQL <> '' then
-        SQL := SQL + ' UNION ';
-      SQL := SQL + PartSQL;
-    end;
+    if SQL <> '' then
+      SQL := SQL + ' UNION ';
+    SQL := SQL + PartSQL;
+  end;
 
-    if IncludedType('VIEW') then
-    begin
-      PartSQL := 'SELECT NULL AS TABLE_CAT, OWNER AS TABLE_SCHEM,'
-        + ' VIEW_NAME AS TABLE_NAME, ''VIEW'' AS TABLE_TYPE,'
-        + ' NULL AS REMARKS FROM SYS.ALL_VIEWS WHERE OWNER LIKE '''
-        + ToLikeString(SchemaPattern) + ''' AND VIEW_NAME LIKE ''' + ToLikeString(TableNamePattern) + '''';
+  if IncludedType('VIEW') then
+  begin
+    PartSQL := 'SELECT NULL AS TABLE_CAT, OWNER AS TABLE_SCHEM,'
+      + ' VIEW_NAME AS TABLE_NAME, ''VIEW'' AS TABLE_TYPE,'
+      + ' NULL AS REMARKS FROM SYS.ALL_VIEWS WHERE OWNER LIKE '''
+      + ToLikeString(SchemaPattern) + ''' AND VIEW_NAME LIKE ''' + ToLikeString(TableNamePattern) + '''';
 
-      if SQL <> '' then
-        SQL := SQL + ' UNION ';
-      SQL := SQL + PartSQL;
-    end;
+    if SQL <> '' then
+      SQL := SQL + ' UNION ';
+    SQL := SQL + PartSQL;
+  end;
 
-    if IncludedType('SEQUENCE') then
-    begin
-      PartSQL := 'SELECT NULL AS TABLE_CAT, SEQUENCE_OWNER AS TABLE_SCHEM,'
-        + ' SEQUENCE_NAME AS TABLE_NAME, ''SEQUENCE'' AS TABLE_TYPE,'
-        + ' NULL AS REMARKS FROM SYS.ALL_SEQUENCES WHERE SEQUENCE_OWNER LIKE '''
-        + ToLikeString(SchemaPattern) + ''' AND SEQUENCE_NAME LIKE ''' + ToLikeString(TableNamePattern) + '''';
+  if IncludedType('SEQUENCE') then
+  begin
+    PartSQL := 'SELECT NULL AS TABLE_CAT, SEQUENCE_OWNER AS TABLE_SCHEM,'
+      + ' SEQUENCE_NAME AS TABLE_NAME, ''SEQUENCE'' AS TABLE_TYPE,'
+      + ' NULL AS REMARKS FROM SYS.ALL_SEQUENCES WHERE SEQUENCE_OWNER LIKE '''
+      + ToLikeString(SchemaPattern) + ''' AND SEQUENCE_NAME LIKE ''' + ToLikeString(TableNamePattern) + '''';
 
-      if SQL <> '' then
-        SQL := SQL + ' UNION ';
-      SQL := SQL + PartSQL;
-    end;
+    if SQL <> '' then
+      SQL := SQL + ' UNION ';
+    SQL := SQL + PartSQL;
+  end;
 
-    Result := CopyToVirtualResultSet(
-      GetConnection.CreateStatement.ExecuteQuery(SQL),
-      ConstructVirtualResultSet(TableColumnsDynArray));
+  Result := CopyToVirtualResultSet(
+    GetConnection.CreateStatement.ExecuteQuery(SQL),
+    ConstructVirtualResultSet(TableColumnsDynArray));
 end;
 
-
-type
-THackCachedResultSet = class(TZAbstractCachedResultSet);
 
 function TZOracleDatabaseMetadata.UncachedGetProcedureColumns(const Catalog,
   SchemaPattern, ProcedureNamePattern, ColumnNamePattern: string): IZResultSet;
 var
-  SQL{, Where}: string;
-  LProcedureNamePattern{, LColumnNamePattern}: string;
-  TypeName, SubTypeName: string;
   ColumnIndexes : Array[1..8] of integer;
-  //ReturnIndexes : Array[1..8] of integer;
-  colName:string;
-  isFunction:boolean;
-  IZStmt:IZStatement;
-  iCol:integer;
-//    bNeedInsertReturns:boolean;
-  bInsertingReturns:boolean;
-  PZRow1,PZRow2:PZRowBuffer;
-//  Label InsertingRecord;
-
+  colName: string;
+  IZStmt: IZStatement;
+  TempSet: IZResultSet;
   Names: TStrings;
 
   function GetNextName(const AName: String; NameEmpty: Boolean = False): String;
@@ -1301,26 +1298,69 @@ var
           Break;
         end;
   end;
+
+  procedure InsertProcedureColumnValues(Source: IZResultSet; IsResultParam: Boolean = False);
+  var
+    TypeName, SubTypeName: string;
+  begin
+    TypeName := Source.GetString(ColumnIndexes[4]);
+    SubTypeName := Source.GetString(ColumnIndexes[5]);
+
+    Result.MoveToInsertRow;
+    Result.UpdateNull(1);    //PROCEDURE_CAT
+    Result.UpdateNull(2);    //PROCEDURE_SCHEM
+    Result.UpdateString(3, Source.GetString(ColumnIndexes[1]));    //TABLE_NAME
+    if IsResultParam then
+      Result.UpdateInt(5, Ord(pctReturn))
+    else
+      if Source.GetString(ColumnIndexes[3]) = 'IN' then
+        Result.UpdateInt(5, Ord(pctIn))
+      else
+        if Source.GetString(ColumnIndexes[3]) = 'OUT' then
+          Result.UpdateInt(5, Ord(pctOut))
+        else
+          if ( Source.GetString(ColumnIndexes[3]) = 'IN/OUT') then
+            Result.UpdateInt(5, Ord(pctInOut))
+          else
+            Result.UpdateInt(5, Ord(pctUnknown));
+
+    ColName := Source.GetString(ColumnIndexes[2]);
+    if IsResultParam then
+      Result.UpdateString(4, 'ReturnValue')    //COLUMN_NAME
+    else
+      Result.UpdateString(4, GetNextName(ColName, Length(ColName) = 0));    //COLUMN_NAME
+
+    Result.UpdateInt(6, Ord(ConvertOracleTypeToSQLType(TypeName,
+      Source.GetInt(ColumnIndexes[6]),Source.GetInt(ColumnIndexes[7]),
+      Self.GetConnection.GetClientCodePageInformations^.Encoding,
+      GetConnection.UTF8StringAsWideField))); //DATA_TYPE
+    Result.UpdateString(7,TypeName);    //TYPE_NAME
+    Result.UpdateInt(10, Source.GetInt(ColumnIndexes[6])); //PRECISION
+    Result.UpdateNull(9);    //BUFFER_LENGTH
+    Result.UpdateInt(10, Source.GetInt(ColumnIndexes[7]));
+    Result.UpdateInt(11, 10);
+    //Result.UpdateInt(12, GetInt(ColumnIndexes[8]));
+    Result.UpdateNull(12);
+    Result.UpdateString(12, Source.GetString(ColumnIndexes[6]));
+    Result.InsertRow;
+  end;
+
+  function GetColumnSQL(PosChar: String): String;
+  begin
+    Result := 'select * from user_arguments where object_name like '''+
+      ToLikeString(GetIdentifierConvertor.ExtractQuote(ProcedureNamePattern))+''' '+
+        'AND POSITION '+PosChar+' 0 ORDER BY POSITION';
+  end;
 begin
   Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
   Names := TStringList.Create;
 
-  iCol:= 0;
-//    bNeedInsertReturns:=false;
-  bInsertingReturns:=false;
-
-  LProcedureNamePattern := '';//;ConstructNameCondition(ProcedureNamePattern,
-//      'P.RDB$PROCEDURE_NAME');
-//    LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,
-//      'PP.RDB$PARAMETER_NAME');
-  SQL := 'select * from user_arguments where object_name = '''+ProcedureNamePattern+''' '+// AND PACKAGE_NAME {IS NULL}
-    'ORDER BY POSITION';
-
   IZStmt := GetConnection.CreateStatement;
-  with IZStmt.ExecuteQuery(SQL) do
-  begin
+  TempSet := IZStmt.ExecuteQuery(GetColumnSQL('>')); //ParameterValues have allways Position > 0
 
+  with TempSet  do
+  begin
     ColumnIndexes[1] := FindColumn('object_name');
     ColumnIndexes[2] := FindColumn('argument_name');
     ColumnIndexes[3] := FindColumn('IN_OUT'); //'RDB$PARAMETER_TYPE');
@@ -1330,76 +1370,21 @@ begin
     ColumnIndexes[7] := FindColumn('DATA_SCALE');//RDB$FIELD_SCALE');
     ColumnIndexes[8] := 0;//FindColumn('RDB$NULL_FLAG');
 
-    isFunction := False;
     while Next do
-    begin
-      if iCol=0 then
-      begin
-         isFunction := (GetString(FindColumn('IN_OUT'))='OUT'); // find another way to test...   //IsOracleFunction(GetConnection.GetIZPlainDriver,IZStmt. GetString(FindColumn('object_name')));
-//         if isFunction then
-//            begin
-//              inc(iCol);
-//              bNeedInsertReturns := true;
-//              continue;
-//            end;
-      end;
-
-
-//        InsertingRecord:
-      TypeName := GetString(ColumnIndexes[4]);
-      SubTypeName := GetString(ColumnIndexes[5]);
-
-      Result.MoveToInsertRow;
-      Result.UpdateNull(1);    //PROCEDURE_CAT
-      Result.UpdateNull(2);    //PROCEDURE_SCHEM
-      Result.UpdateString(3, GetString(ColumnIndexes[1]));    //TABLE_NAME
-      if GetString(ColumnIndexes[3]) = 'IN' then
-        Result.UpdateInt(5, Ord(pctIn))
-      else
-        if GetString(ColumnIndexes[3]) = 'OUT' then
-          Result.UpdateInt(5, Ord(pctOut))
-        else
-          if ( GetString(ColumnIndexes[3]) = 'IN/OUT') or
-            ( GetString(ColumnIndexes[3]) = 'INOUT') then
-            Result.UpdateInt(5, Ord(pctInOut))
-          else
-            if GetString(ColumnIndexes[3]) = '' then
-              Result.UpdateInt(5, Ord(pctUnknown))
-            else
-              Result.UpdateInt(5, Ord(pctReturn));
-      ColName := GetString(ColumnIndexes[2]);
-      Result.UpdateString(4, GetNextName(ColName, Length(ColName) = 0));    //COLUMN_NAME
-
-      Result.UpdateInt(6, Ord(ConvertOracleTypeToSQLType(TypeName,
-        GetInt(ColumnIndexes[6]),GetInt(ColumnIndexes[7]),
-        Self.GetConnection.GetClientCodePageInformations^.Encoding,
-        GetConnection.UTF8StringAsWideField))); //DATA_TYPE
-      Result.UpdateString(7,GetString(ColumnIndexes[4]));    //TYPE_NAME
-      Result.UpdateInt(10, GetInt(ColumnIndexes[6])); //PRECISION
-      Result.UpdateNull(9);    //BUFFER_LENGTH
-      Result.UpdateInt(10, GetInt(ColumnIndexes[7]));
-      Result.UpdateInt(11, 10);
-      //Result.UpdateInt(12, GetInt(ColumnIndexes[8]));
-      Result.UpdateNull(12);
-      Result.UpdateString(12, GetString(ColumnIndexes[6]));
-      Result.InsertRow;
-      if bInsertingReturns then break;
-      inc(iCol);
-    end;
-    if isFunction {and (bInsertingReturns=false)} then
-    begin
-      with THackCachedResultSet(result) do  // change first per last
-      begin
-         PZRow2 := SelectedRow;
-         result.First;
-         PZRow1 := SelectedRow;
-         SelectedRow := PZRow2;
-         result.Last ;
-         SelectedRow := PZRow1;
-      end;
-    end;
+      InsertProcedureColumnValues(TempSet);
     Close;
   end;
+
+  TempSet := IZStmt.ExecuteQuery(GetColumnSQL('=')); //ReturnValue has allways Position = 0
+  with TempSet do
+  begin
+    if Next then
+      InsertProcedureColumnValues(TempSet, True);
+    Close;
+  end;
+
+  TempSet := nil;
+  IZStmt.Close;
   FreeAndNil(Names);
 end;
 
@@ -1557,68 +1542,68 @@ var
   SQLType: TZSQLType;
   CharWidth: Integer;
 begin
-    Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
+  Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
-    CharWidth := GetConnection.GetClientCodePageInformations^.CharWidth;
+  CharWidth := GetConnection.GetClientCodePageInformations^.CharWidth;
 
-    SQL := 'SELECT NULL, OWNER, TABLE_NAME, COLUMN_NAME, NULL, DATA_TYPE,'
-      + ' DATA_LENGTH, NULL, DATA_PRECISION, DATA_SCALE, NULLABLE, NULL,'
-      + ' DATA_DEFAULT, NULL, NULL, NULL, COLUMN_ID, NULLABLE'
-      + ' FROM SYS.ALL_TAB_COLUMNS'
-      + ' WHERE OWNER LIKE ''' + ToLikeString(SchemaPattern) + ''' AND TABLE_NAME LIKE '''
-      + ToLikeString(TableNamePattern) + ''' AND COLUMN_NAME LIKE '''
-      + ToLikeString(ColumnNamePattern) + '''';
+  SQL := 'SELECT NULL, OWNER, TABLE_NAME, COLUMN_NAME, NULL, DATA_TYPE,'
+    + ' DATA_LENGTH, NULL, DATA_PRECISION, DATA_SCALE, NULLABLE, NULL,'
+    + ' DATA_DEFAULT, NULL, NULL, NULL, COLUMN_ID, NULLABLE'
+    + ' FROM SYS.ALL_TAB_COLUMNS'
+    + ' WHERE OWNER LIKE ''' + ToLikeString(SchemaPattern) + ''' AND TABLE_NAME LIKE '''
+    + ToLikeString(TableNamePattern) + ''' AND COLUMN_NAME LIKE '''
+    + ToLikeString(ColumnNamePattern) + '''';
 
-    with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+  begin
+    while Next do
     begin
-      while Next do
+      Result.MoveToInsertRow;
+      Result.UpdateNull(1);
+      Result.UpdateString(2, GetString(2));
+      Result.UpdateString(3, GetString(3));
+      Result.UpdateString(4, GetString(4));
+      SQLType := ConvertOracleTypeToSQLType(
+        GetString(6), GetInt(9), GetInt(10),
+        GetConnection.GetClientCodePageInformations^.Encoding,
+        GetConnection.UTF8StringAsWideField);
+      Result.UpdateInt(5, Ord(SQLType));
+      Result.UpdateString(6, GetString(6));
+      Result.UpdateInt(7, GetFieldSize(SQLType, GetInt(7), CharWidth)); //FIELD_SIZE
+      Result.UpdateNull(8);
+      Result.UpdateInt(9, GetInt(9));
+      Result.UpdateInt(10, GetInt(10));
+
+      if UpperCase(GetString(11)) = 'N' then
       begin
-        Result.MoveToInsertRow;
-        Result.UpdateNull(1);
-        Result.UpdateString(2, GetString(2));
-        Result.UpdateString(3, GetString(3));
-        Result.UpdateString(4, GetString(4));
-        SQLType := ConvertOracleTypeToSQLType(
-          GetString(6), GetInt(9), GetInt(10),
-          GetConnection.GetClientCodePageInformations^.Encoding,
-          GetConnection.UTF8StringAsWideField);
-        Result.UpdateInt(5, Ord(SQLType));
-        Result.UpdateString(6, GetString(6));
-        Result.UpdateInt(7, GetFieldSize(SQLType, GetInt(7), CharWidth)); //FIELD_SIZE
-        Result.UpdateNull(8);
-        Result.UpdateInt(9, GetInt(9));
-        Result.UpdateInt(10, GetInt(10));
-
-        if UpperCase(GetString(11)) = 'N' then
-        begin
-          Result.UpdateInt(11, Ord(ntNoNulls));
-          Result.UpdateString(18, 'NO');
-        end
-        else
-        begin
-          Result.UpdateInt(11, Ord(ntNullable));
-          Result.UpdateString(18, 'YES');
-        end;
-
-        Result.UpdateNull(12);
-        Result.UpdateString(13, GetString(13));
-        Result.UpdateNull(14);
-        Result.UpdateNull(15);
-        Result.UpdateNull(16);
-        Result.UpdateInt(17, GetInt(17));
-
-        Result.UpdateNull(19);   //AUTO_INCREMENT
-        Result.UpdateBoolean(20, //CASE_SENSITIVE
-          GetIdentifierConvertor.IsCaseSensitive(GetString(4)));
-        Result.UpdateBoolean(21, True);  //SEARCHABLE
-        Result.UpdateBoolean(22, True);  //WRITABLE
-        Result.UpdateBoolean(23, True);  //DEFINITELYWRITABLE
-        Result.UpdateBoolean(24, False); //READONLY
-
-        Result.InsertRow;
+        Result.UpdateInt(11, Ord(ntNoNulls));
+        Result.UpdateString(18, 'NO');
+      end
+      else
+      begin
+        Result.UpdateInt(11, Ord(ntNullable));
+        Result.UpdateString(18, 'YES');
       end;
-      Close;
+
+      Result.UpdateNull(12);
+      Result.UpdateString(13, GetString(13));
+      Result.UpdateNull(14);
+      Result.UpdateNull(15);
+      Result.UpdateNull(16);
+      Result.UpdateInt(17, GetInt(17));
+
+      Result.UpdateNull(19);   //AUTO_INCREMENT
+      Result.UpdateBoolean(20, //CASE_SENSITIVE
+        GetIdentifierConvertor.IsCaseSensitive(GetString(4)));
+      Result.UpdateBoolean(21, True);  //SEARCHABLE
+      Result.UpdateBoolean(22, True);  //WRITABLE
+      Result.UpdateBoolean(23, True);  //DEFINITELYWRITABLE
+      Result.UpdateBoolean(24, False); //READONLY
+
+      Result.InsertRow;
     end;
+    Close;
+  end;
 end;
 
 {**
@@ -1742,23 +1727,23 @@ function TZOracleDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
 var
   SQL: string;
 begin
-    SQL := 'SELECT NULL AS TABLE_CAT, A.OWNER AS TABLE_SCHEM, A.TABLE_NAME,'
-      + ' B.COLUMN_NAME, B.COLUMN_POSITION AS KEY_SEQ, A.INDEX_NAME AS PK_NAME'
-      + ' FROM ALL_INDEXES A, ALL_IND_COLUMNS B'
-      + ' WHERE A.OWNER=B.INDEX_OWNER AND A.INDEX_NAME=B.INDEX_NAME'
-      + ' AND A.TABLE_OWNER=B.TABLE_OWNER AND A.TABLE_NAME=B.TABLE_NAME'
-      + ' AND A.UNIQUENESS=''UNIQUE'' AND A.GENERATED=''Y'''
-      + ' AND A.INDEX_NAME LIKE ''SYS_%''';
-    if Schema <> '' then
-      SQL := SQL + ' AND A.OWNER=''' + Schema + '''';
-    if Table <> '' then
-        SQL := SQL + ' AND A.TABLE_NAME=''' + Table + '''';
-       //SQL := SQL + ' AND A.OWNER_NAME=''' + Table + '''';
-    SQL := SQL + ' ORDER BY A.INDEX_NAME, B.COLUMN_POSITION';
+  SQL := 'SELECT NULL AS TABLE_CAT, A.OWNER AS TABLE_SCHEM, A.TABLE_NAME,'
+    + ' B.COLUMN_NAME, B.COLUMN_POSITION AS KEY_SEQ, A.INDEX_NAME AS PK_NAME'
+    + ' FROM ALL_INDEXES A, ALL_IND_COLUMNS B'
+    + ' WHERE A.OWNER=B.INDEX_OWNER AND A.INDEX_NAME=B.INDEX_NAME'
+    + ' AND A.TABLE_OWNER=B.TABLE_OWNER AND A.TABLE_NAME=B.TABLE_NAME'
+    + ' AND A.UNIQUENESS=''UNIQUE'' AND A.GENERATED=''Y'''
+    + ' AND A.INDEX_NAME LIKE ''SYS_%''';
+  if Schema <> '' then
+    SQL := SQL + ' AND A.OWNER=''' + Schema + '''';
+  if Table <> '' then
+      SQL := SQL + ' AND A.TABLE_NAME=''' + Table + '''';
+     //SQL := SQL + ' AND A.OWNER_NAME=''' + Table + '''';
+  SQL := SQL + ' ORDER BY A.INDEX_NAME, B.COLUMN_POSITION';
 
-    Result := CopyToVirtualResultSet(
-      GetConnection.CreateStatement.ExecuteQuery(SQL),
-      ConstructVirtualResultSet(PrimaryKeyColumnsDynArray));
+  Result := CopyToVirtualResultSet(
+    GetConnection.CreateStatement.ExecuteQuery(SQL),
+    ConstructVirtualResultSet(PrimaryKeyColumnsDynArray));
 end;
 
 {**
@@ -1818,48 +1803,48 @@ function TZOracleDatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
 var
   SQL: string;
 begin
-    Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
+  Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
 
-    SQL := 'SELECT NULL, A.OWNER, A.TABLE_NAME, A.UNIQUENESS, NULL,'
-      + ' A.INDEX_NAME, 3, B.COLUMN_POSITION, B.COLUMN_NAME, B.DESCEND,'
-      + ' 0, 0, NULL FROM ALL_INDEXES A, ALL_IND_COLUMNS B'
-      + ' WHERE A.OWNER=B.INDEX_OWNER AND A.INDEX_NAME=B.INDEX_NAME'
-      + ' AND A.TABLE_OWNER=B.TABLE_OWNER AND A.TABLE_NAME=B.TABLE_NAME';
-    if Schema <> '' then
-      SQL := SQL + ' AND A.TABLE_OWNER=''' + Schema + '''';
-    if Table <> '' then
-      SQL := SQL + ' AND A.TABLE_NAME=''' + Table + '''';
-    if Unique then
-      SQL := SQL + ' AND A.UNIQUENESS=''UNIQUE''';
-    SQL := SQL + ' ORDER BY A.UNIQUENESS DESC, A.INDEX_NAME, B.COLUMN_POSITION';
+  SQL := 'SELECT NULL, A.OWNER, A.TABLE_NAME, A.UNIQUENESS, NULL,'
+    + ' A.INDEX_NAME, 3, B.COLUMN_POSITION, B.COLUMN_NAME, B.DESCEND,'
+    + ' 0, 0, NULL FROM ALL_INDEXES A, ALL_IND_COLUMNS B'
+    + ' WHERE A.OWNER=B.INDEX_OWNER AND A.INDEX_NAME=B.INDEX_NAME'
+    + ' AND A.TABLE_OWNER=B.TABLE_OWNER AND A.TABLE_NAME=B.TABLE_NAME';
+  if Schema <> '' then
+    SQL := SQL + ' AND A.TABLE_OWNER=''' + Schema + '''';
+  if Table <> '' then
+    SQL := SQL + ' AND A.TABLE_NAME=''' + Table + '''';
+  if Unique then
+    SQL := SQL + ' AND A.UNIQUENESS=''UNIQUE''';
+  SQL := SQL + ' ORDER BY A.UNIQUENESS DESC, A.INDEX_NAME, B.COLUMN_POSITION';
 
-    with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+  begin
+    while Next do
     begin
-      while Next do
-      begin
-        Result.MoveToInsertRow;
+      Result.MoveToInsertRow;
 
-        Result.UpdateNull(1);
-        Result.UpdateString(2, GetString(2));
-        Result.UpdateString(3, GetString(3));
-        Result.UpdateBoolean(4,
-          UpperCase(GetString(4)) <> 'UNIQUE');
-        Result.UpdateNull(5);
-        Result.UpdateString(6, GetString(6));
-        Result.UpdateInt(7, GetInt(7));
-        Result.UpdateInt(8, GetInt(8));
-        Result.UpdateString(9, GetString(9));
-        if GetString(10) = 'ASC' then
-          Result.UpdateString(10, 'A')
-        else Result.UpdateString(10, 'D');
-        Result.UpdateInt(11, GetInt(11));
-        Result.UpdateInt(12, GetInt(12));
-        Result.UpdateNull(13);
+      Result.UpdateNull(1);
+      Result.UpdateString(2, GetString(2));
+      Result.UpdateString(3, GetString(3));
+      Result.UpdateBoolean(4,
+        UpperCase(GetString(4)) <> 'UNIQUE');
+      Result.UpdateNull(5);
+      Result.UpdateString(6, GetString(6));
+      Result.UpdateInt(7, GetInt(7));
+      Result.UpdateInt(8, GetInt(8));
+      Result.UpdateString(9, GetString(9));
+      if GetString(10) = 'ASC' then
+        Result.UpdateString(10, 'A')
+      else Result.UpdateString(10, 'D');
+      Result.UpdateInt(11, GetInt(11));
+      Result.UpdateInt(12, GetInt(12));
+      Result.UpdateNull(13);
 
-        Result.InsertRow;
-      end;
-      Close;
+      Result.InsertRow;
     end;
+    Close;
+  end;
 end;
 
 end.

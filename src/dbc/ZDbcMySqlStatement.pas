@@ -184,7 +184,6 @@ type
     FUseResult: Boolean;
     FParamNames: array [0..1024] of String;
     FParamTypeNames: array [0..1024] of String;
-    FIsFunction: Boolean;
     function GetCallSQL: ZAnsiString;
     function GetOutParamSQL: String;
     function GetSelectFunctionSQL: ZAnsiString;
@@ -201,7 +200,6 @@ type
     constructor Create(PlainDriver: IZMySQLPlainDriver;
       Connection: IZConnection; const SQL: string; Info: TStrings;
       Handle: PZMySQLConnect);
-    procedure RegisterParamType(ParameterIndex:integer;ParamType:Integer); override;
 
     function Execute(const SQL: string): Boolean; override;
 
@@ -1015,7 +1013,7 @@ function TZMySQLCallableStatement.GetOutParamSQL: String;
     Result := '';
     I := 0;
     while True do
-      if FDBParamTypes[i] = 0 then
+      if (FDBParamTypes[i] = 0) or ( I = Length(FDBParamTypes)) then
         break
       else
       begin
@@ -1205,10 +1203,10 @@ var
   CachedResultSet: TZCachedResultSet;
 begin
   NativeResultSet := TZMySQLResultSet.Create(FPlainDriver, Self, SQL, FHandle,
-    FUseResult, @LastUpdateCount, not FIsFunction);
+    FUseResult, @LastUpdateCount, not IsFunction);
   NativeResultSet.SetConcurrency(rcReadOnly);
   if (GetResultSetConcurrency <> rcReadOnly) or (FUseResult
-    and (GetResultSetType <> rtForwardOnly)) or (not FIsFunction) then
+    and (GetResultSetType <> rtForwardOnly)) or (not IsFunction) then
   begin
     CachedResolver := TZMySQLCachedResolver.Create(FPlainDriver, FHandle, Self,
       NativeResultSet.GetMetaData);
@@ -1288,13 +1286,6 @@ begin
   ResultSet.BeforeFirst;
 end;
 
-procedure TZMySQLCallableStatement.RegisterParamType(ParameterIndex:integer;
-  ParamType:Integer);
-begin
-  inherited RegisterParamType(ParameterIndex, ParamType);
-  if not FIsFunction then FIsFunction := ParamType = 4; //ptResult
-end;
-
 procedure TZMySQLCallableStatement.RegisterParamTypeAndName(const ParameterIndex:integer;
       const ParamTypeName, ParamName: String; Const ColumnSize, Precision: Integer);
 begin
@@ -1344,7 +1335,6 @@ begin
   FHandle := Handle;
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
-  FIsFunction := False; //will be reset if RETURN parameters do exist
   FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
 end;
 
@@ -1363,7 +1353,7 @@ begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
     if not FPlainDriver.ResultSetExists(FHandle) then
       raise EZSQLException.Create(SCanNotOpenResultSet);
-    if FIsFunction then
+    if IsFunction then
       ClearResultSets;
     FResultSets.Add(CreateResultSet(SSQL));
     if FPlainDriver.CheckAnotherRowset(FHandle) then
@@ -1484,7 +1474,7 @@ end;
 }
 function TZMySQLCallableStatement.ExecuteQueryPrepared: IZResultSet;
 begin
-  if FIsFunction then
+  if IsFunction then
   begin
     TrimInParameters;
     Result := ExecuteQuery(GetSelectFunctionSQL);
@@ -1493,10 +1483,7 @@ begin
   begin
     BindInParameters;
     ExecuteUpdate(GetCallSQL);
-    //if Assigned(LastResultSet) then
-      //Result := LastResultSet //Get the First ResultSet(s)
-    //else
-      Result := ExecuteQuery(ZPlainString(GetOutParamSQL)); //Get the Last Resultset
+    Result := ExecuteQuery(ZPlainString(GetOutParamSQL)); //Get the Last Resultset
   end;
   if Assigned(Result) then
     FetchOutParams(Result);
@@ -1514,7 +1501,7 @@ end;
 }
 function TZMySQLCallableStatement.ExecuteUpdatePrepared: Integer;
 begin
-  if FIsFunction then
+  if IsFunction then
   begin
     TrimInParameters;
     Result := ExecuteUpdate(GetSelectFunctionSQL);

@@ -271,10 +271,12 @@ type
     FLastWasNull: Boolean;
     FTemp: String;
     FProcSql: String;
+    FIsFunction: Boolean;
+    FHasOutParameter: Boolean;
   protected
     FResultSets: IZCollection;
     FActiveResultset: Integer;
-    FDBParamTypes:array[0..1024] of shortInt;
+    FDBParamTypes: array of ShortInt;
     procedure ClearResultSets; virtual;
     procedure TrimInParameters; virtual;
     procedure SetOutParamCount(NewParamCount: Integer); virtual;
@@ -293,6 +295,8 @@ type
     procedure ClearParameters; override;
     procedure Close; override;
 
+    function IsFunction: Boolean;
+    function HasOutParameter: Boolean;
     function HasMoreResultSets: Boolean; virtual;
     function GetFirstResultSet: IZResultSet; virtual;
     function GetPreviousResultSet: IZResultSet; virtual;
@@ -1759,6 +1763,7 @@ begin
   FProcSql := ''; //Init -> FPC
   FLastWasNull := True;
   FResultSets := TZCollection.Create;
+  FIsFunction := False;
 end;
 
 {**
@@ -1789,6 +1794,9 @@ begin
   ParamCount := 0;
   SetLength(ParamValues, InParamCount);
   SetLength(ParamTypes, InParamCount);
+
+  if Length(FDBParamTypes) = 0 then
+    SetLength(FDBParamTypes, InParamCount);
 
   for I := 0 to High(InParamTypes) do
   begin
@@ -1861,6 +1869,25 @@ procedure TZAbstractCallableStatement.Close;
 begin
   ClearResultSets;
   inherited Close;
+end;
+
+
+{**
+  Do we call a function or a procedure?
+  @result Returns <code>True</code> if we call a function
+}
+function TZAbstractCallableStatement.IsFunction: Boolean;
+begin
+  Result := FIsFunction;
+end;
+
+{**
+  Do we have ptInputOutput or ptOutput paramets in a function or procedure?
+  @result Returns <code>True</code> if ptInputOutput or ptOutput is available
+}
+function TZAbstractCallableStatement.HasOutParameter: Boolean;
+begin
+  Result := FHasOutParameter;
 end;
 
 {**
@@ -1975,7 +2002,12 @@ end;
 procedure TZAbstractCallableStatement.RegisterParamType(ParameterIndex,
   ParamType: Integer);
 begin
+  if (Length(FDBParamTypes) < ParameterIndex) then
+    SetLength(FDBParamTypes, ParameterIndex);
+
   FDBParamTypes[ParameterIndex - 1] := ParamType;
+  if not FIsFunction then FIsFunction := ParamType = 4; //ptResult
+  if not FHasOutParameter then FHasOutParameter := ParamType in [2,3]; //ptOutput, ptInputOutput
 end;
 
 {**
