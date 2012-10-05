@@ -193,6 +193,7 @@ begin
   end;
   Result := DriverManager.ConstructURL(Protocol, HostName, Database,
   UserName, Password, Port, TempProperties);
+  TempProperties.Free;
 end;
 
 { TZTestStoredProcedureSpecific }
@@ -236,6 +237,7 @@ begin
   end;
   Result := DriverManager.ConstructURL(Protocol, HostName, Database,
   UserName, Password, Port, TempProperties);
+  TempProperties.Free;
 end;
 
 {**
@@ -1473,8 +1475,6 @@ begin
 end;
 
 procedure TZTestOracleStoredProcedure.Test_myfuncInOutReturn;
-var
-  S: String;
 begin
   StoredProc.StoredProcName := '"myfuncInOutReturn"';
   CheckEquals(2, StoredProc.Params.Count);
@@ -1520,10 +1520,8 @@ begin
 end;
 
 procedure TZTestOracleStoredProcedure.Test_simple_func;
-var
-  S: String;
 begin
-  StoredProc.StoredProcName := '"simple_func"';
+  StoredProc.StoredProcName := 'simple_func';
   CheckEquals(1, StoredProc.Params.Count);
   CheckEquals('ReturnValue', StoredProc.Params[0].Name);
   CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
@@ -1536,10 +1534,8 @@ begin
 end;
 
 procedure TZTestOracleStoredProcedure.Test_simplefunc;
-var
-  S: String;
 begin
-  StoredProc.StoredProcName := '"simplefunc"';
+  StoredProc.StoredProcName := 'simplefunc';
   CheckEquals(1, StoredProc.Params.Count);
   CheckEquals('ReturnValue', StoredProc.Params[0].Name);
   CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
