@@ -1275,26 +1275,33 @@ end;
 function TZOracleDatabaseMetadata.UncachedGetProcedureColumns(const Catalog,
   SchemaPattern, ProcedureNamePattern, ColumnNamePattern: string): IZResultSet;
 var
-  ColumnIndexes : Array[1..8] of integer;
+  ColumnIndexes : Array[1..9] of integer;
   colName: string;
   IZStmt: IZStatement;
   TempSet: IZResultSet;
   Names: TStrings;
+  PackageName, ProcName: String;
 
   function GetNextName(const AName: String; NameEmpty: Boolean = False): String;
-  var N: Integer;
+  var
+    N: Integer;
+    NewName: String;
   begin
-    if (Names.IndexOf(AName) = -1) and not NameEmpty then
+    if PackageName = '' then
+      NewName := AName
+    else
+      NewName := ProcName+'.'+AName;
+    if (Names.IndexOf(NewName) = -1) and not NameEmpty then
     begin
-      Names.Add(AName);
-      Result := AName;
+      Names.Add(NewName);
+      Result := NewName;
     end
     else
       for N := 1 to MaxInt do
-        if Names.IndexOf(AName+IntToStr(N)) = -1 then
+        if Names.IndexOf(NewName+IntToStr(N)) = -1 then
         begin
-          Names.Add(AName+IntToStr(N));
-          Result := AName+IntToStr(N);
+          Result := NewName+IntToStr(N);
+          Names.Add(Result);
           Break;
         end;
   end;
@@ -1305,6 +1312,8 @@ var
   begin
     TypeName := Source.GetString(ColumnIndexes[4]);
     SubTypeName := Source.GetString(ColumnIndexes[5]);
+    PackageName := Source.GetString(ColumnIndexes[8]);
+    ProcName := Source.GetString(ColumnIndexes[9]);
 
     Result.MoveToInsertRow;
     Result.UpdateNull(1);    //PROCEDURE_CAT
@@ -1346,8 +1355,6 @@ var
   end;
 
   function GetColumnSQL(PosChar: String): String;
-  var
-    PackageName, ProcName: String;
 
     procedure SplitPackageAndProc(Value: String);
     var
@@ -1369,8 +1376,9 @@ var
     end;
   begin
     SplitPackageAndProc(GetIdentifierConvertor.ExtractQuote(ProcedureNamePattern));
-    Result := 'select * from user_arguments where package_name '+PackageName+
+    Result := 'select * from user_arguments where (package_name '+PackageName+
       ' AND object_name like '''+ ToLikeString(ProcName)+''' '+
+      ' OR package_name like '''+ ToLikeString(ProcName)+''' )'+
         'AND POSITION '+PosChar+' 0 ORDER BY POSITION';
   end;
 begin
@@ -1390,7 +1398,8 @@ begin
     ColumnIndexes[5] := FindColumn('TYPE_SUBNAME');//RDB$FIELD_SUB_TYPE');
     ColumnIndexes[6] := FindColumn('DATA_PRECISION');//RDB$FIELD_PRECISION');
     ColumnIndexes[7] := FindColumn('DATA_SCALE');//RDB$FIELD_SCALE');
-    ColumnIndexes[8] := 0;//FindColumn('RDB$NULL_FLAG');
+    ColumnIndexes[8] := FindColumn('package_name');
+    ColumnIndexes[9] := FindColumn('object_name');
 
     while Next do
       InsertProcedureColumnValues(TempSet);
