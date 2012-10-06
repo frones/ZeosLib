@@ -1346,9 +1346,31 @@ var
   end;
 
   function GetColumnSQL(PosChar: String): String;
+  var
+    PackageName, ProcName: String;
+
+    procedure SplitPackageAndProc(Value: String);
+    var
+      iPos: Integer;
+    begin
+      PackageName := '';
+      ProcName := 'Value';
+      iPos := Pos('.', Value);
+        if (iPos > 0) then
+        begin
+          PackageName := '= '+#39+Copy(Value, 1, iPos-1)+#39;
+          ProcName := Copy(Value, iPos+1,Length(Value)-iPos);
+        end
+        else
+        begin
+          PackageName := 'IS NULL';
+          ProcName := Value;
+        end;
+    end;
   begin
-    Result := 'select * from user_arguments where object_name like '''+
-      ToLikeString(GetIdentifierConvertor.ExtractQuote(ProcedureNamePattern))+''' '+
+    SplitPackageAndProc(GetIdentifierConvertor.ExtractQuote(ProcedureNamePattern));
+    Result := 'select * from user_arguments where package_name '+PackageName+
+      ' AND object_name like '''+ ToLikeString(ProcName)+''' '+
         'AND POSITION '+PosChar+' 0 ORDER BY POSITION';
   end;
 begin
