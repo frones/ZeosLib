@@ -1335,7 +1335,7 @@ var
 
     ColName := Source.GetString(ColumnIndexes[2]);
     if IsResultParam then
-      Result.UpdateString(4, 'ReturnValue')    //COLUMN_NAME
+      Result.UpdateString(4, GetNextName('ReturnValue', False))    //COLUMN_NAME
     else
       Result.UpdateString(4, GetNextName(ColName, Length(ColName) = 0));    //COLUMN_NAME
 
@@ -1409,7 +1409,7 @@ begin
   TempSet := IZStmt.ExecuteQuery(GetColumnSQL('=')); //ReturnValue has allways Position = 0
   with TempSet do
   begin
-    if Next then
+    while Next do
       InsertProcedureColumnValues(TempSet, True);
     Close;
   end;
