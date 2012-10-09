@@ -1549,7 +1549,8 @@ end;
   @param RowsAffected the number of rows that were affected by the statement.
   Returns an indication if execution was succesfull.
 }
-function TZAbstractConnection.ExecuteDirect(SQL:string; var RowsAffected:integer):boolean;
+function TZAbstractConnection.ExecuteDirect(SQL: string;
+  var RowsAffected: integer):boolean;
 var
   stmt : IZStatement;
 begin
@@ -1562,6 +1563,7 @@ begin
     except
       RowsAffected := -1;
       result := False;
+      raise; {------ added by Henk 09-10-2012 --------}
     end;
   finally
     stmt:=nil;
