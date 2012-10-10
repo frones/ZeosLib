@@ -1174,7 +1174,7 @@ begin
   I := 0;
   ExecQuery := '';
   while True do
-    if FDBParamTypes[i] = 0 then
+    if (i = Length(FDBParamTypes)) then
       break
     else
     begin

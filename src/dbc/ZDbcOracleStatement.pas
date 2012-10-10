@@ -112,9 +112,6 @@ type
     property ExecStatement: IZStatement read FExecStatement write FExecStatement;
     property LastStatement: IZStatement read FLastStatement write SetLastStatement;
     property InVars: PZSQLVars read FInVars write FInVars;
-
-
-
   public
     constructor Create(PlainDriver: IZOraclePlainDriver;
       Connection: IZConnection; const SQL: string; Info: TStrings);
@@ -138,7 +135,8 @@ type
     pSQLType:Integer;
     pValue: TZVariant;
     pTypeName: String;
-    pOut:boolean;
+    pType: ShortInt;
+    pProcIndex: Integer;
   End;
 
   TZOracleCallableStatement = class(TZAbstractCallableStatement,
@@ -153,6 +151,9 @@ type
     FOracleParams: array of TZOracleParam;
     FOracleParamsCount: Integer;
     FParamNames: TStringDynArray;
+    PackageIncludedList: TStrings;
+    FFunctionResultOffsetsIn: array of ShortInt;
+    FFunctionResultOffsetsOut: TIntegerDynArray;
     procedure ArrangeInParams;
     procedure FetchOutParamsFromOracleVars;
   protected
@@ -162,7 +163,8 @@ type
     procedure RegisterParamTypeAndName(const ParameterIndex:integer;
       const ParamTypeName, ParamName: String; Const ColumnSize, Precision: Integer);
   public
-    procedure RegisterOutParameter(ParameterIndex: Integer;SQLType: Integer); override;
+    procedure RegisterOutParameter(ParameterIndex: Integer; SQLType: Integer); override;
+    procedure RegisterParamType(ParameterIndex:integer;ParamType:Integer); override;
     procedure Prepare; override;
     function IsNull(ParameterIndex: Integer): Boolean;override;
 
@@ -768,18 +770,27 @@ procedure TZOracleCallableStatement.RegisterOutParameter(ParameterIndex,
   SQLType: Integer);
 begin
   inherited RegisterOutParameter(ParameterIndex,SQLType);
-  if ParameterIndex > FOracleParamsCount then
-    FOracleParamsCount := ParameterIndex;
-
-  if ParameterIndex > High(FOracleParams) then
-    SetLength(FOracleParams, ParameterIndex);
+  if FOracleParams[ParameterIndex-1].pType = 4 then
+  begin
+    SetLength(FFunctionResultOffsetsOut, Length(FFunctionResultOffsetsOut)+1);
+    FFunctionResultOffsetsOut[High(FFunctionResultOffsetsOut)] := ParameterIndex-1;
+  end;
   with FOracleParams[ParameterIndex-1] do
   begin
     if not GetConnection.UseMetadata then
       pName := 'pOut'+IntToStr(ParameterIndex);
     pSQLType := SQLType;
-    pOut := true;
   end;
+end;
+
+procedure TZOracleCallableStatement.RegisterParamType(ParameterIndex:integer;ParamType:Integer);
+begin
+  inherited RegisterParamType(ParameterIndex, ParamType);
+  if ParameterIndex > High(FOracleParams) then
+    SetLength(FOracleParams, ParameterIndex);
+  if ParameterIndex > FOracleParamsCount then
+    FOracleParamsCount := ParameterIndex;
+  FOracleParams[ParameterIndex-1].pType := ParamType;
 end;
 
 procedure TZOracleCallableStatement.SetInParam(ParameterIndex: Integer;
@@ -787,11 +798,6 @@ procedure TZOracleCallableStatement.SetInParam(ParameterIndex: Integer;
 var AConnection: IZConnection;
 begin
   inherited SetInParam(ParameterIndex, SQLType, Value);
-  if ParameterIndex > FOracleParamsCount then
-    FOracleParamsCount := ParameterIndex;
-
-  if ParameterIndex > High(FOracleParams) then
-    SetLength(FOracleParams, ParameterIndex);
   with FOracleParams[ParameterIndex-1] do
   begin
     AConnection := GetConnection;
@@ -799,39 +805,93 @@ begin
       pName := 'p'+IntToStr(ParameterIndex);
     pSQLType := ord(SQLType);
     pValue := Value;
-    pOut := FDBParamTypes[ParameterIndex] in [2,3,4];
   end;
 end;
 
 procedure TZOracleCallableStatement.RegisterParamTypeAndName(const ParameterIndex: integer;
   const ParamTypeName, ParamName: String; Const ColumnSize, Precision: Integer);
+var
+  iPos, I: Integer;
+  ProcName: String;
 begin
-  if ParameterIndex > High(FOracleParams) then
-    SetLength(FOracleParams, ParameterIndex+1);
   FOracleParams[ParameterIndex].pName := ParamName;
   FOracleParams[ParameterIndex].pTypeName := ParamTypeName;
+  iPos := Pos('.', ParamName);
+  if iPos > 0 then
+  begin
+    ProcName := Copy(ParamName, 1, iPos-1); //extract function or Procedure names
+    FOracleParams[ParameterIndex].pProcIndex := PackageIncludedList.IndexOf(ProcName);
+    if  FOracleParams[ParameterIndex].pProcIndex = -1 then //Check if exists
+      FOracleParams[ParameterIndex].pProcIndex := PackageIncludedList.Add(ProcName); //Add to List if not exists
+    if FOracleParams[ParameterIndex].pType = 4 then //Returnvalues are coming in first
+    begin
+      for i := 0 to high(FOracleParams) do //Now get First offset of function
+        if FOracleParams[ParameterIndex].pProcIndex = FOracleParams[I].pProcIndex then Break;
+      SetLength(FFunctionResultOffsetsIn, Length(FFunctionResultOffsetsIn)+1);
+      FFunctionResultOffsetsIn[High(FFunctionResultOffsetsIn)] := I;
+    end;
+  end
+  else //No package
+    if Self.FDBParamTypes[ParameterIndex] = 4 then
+    begin
+      SetLength(FFunctionResultOffsetsIn, 1);
+      FFunctionResultOffsetsIn[0] := 0;
+    end;
+
 end;
 
 procedure TZOracleCallableStatement.ArrangeInParams;
 var
-  I: Integer;
+  I, NewProcIndex, VarStartProcIndex: Integer;
+  TempVars: TZVariantDynArray;
+
+  procedure MoveAndSetNullVariant(ToPos: Integer; AVar: TZVariant);
+  var
+    I: Integer;
+  begin
+    for i := High(TempVars) downto ToPos+1 do
+      TempVars[I] := TempVars[I-1];
+    TempVars[ToPos] := AVar;
+    DefVarManager.SetNull(TempVars[ToPos]);
+  end;
 begin
-  if IsFunction then
-    if Length(FOracleParams) > 1 then
-    {now move Returnvalue to first position}
+  if PackageIncludedList.Count > 0 then
+  begin
+    SetLength(TempVars, Length(FOracleParams));
+    NewProcIndex := -1;
+    VarStartProcIndex := 0;
+    for i := 0 to high(FOracleParams) do
     begin
-      SetInParamCount(Length(InParamValues)+1);
-      for i := High(InParamValues) downto 1 do
-        InParamValues[I] := InParamValues[I-1];
-      DefVarManager.SetNull(InParamValues[0]);
+      if NewProcIndex <> FOracleParams[i].pProcIndex then
+      begin
+        NewProcIndex := FOracleParams[i].pProcIndex;
+        VarStartProcIndex := i;
+      end;
+      if FOracleParams[I].pType in [1,2,3] then
+        TempVars[i] := FOracleParams[i].pValue
+      else
+        MoveAndSetNullVariant(VarStartProcIndex, FOracleParams[i].pValue); //move Last to First
     end;
+    InParamValues := TempVars;
+  end
+  else
+    if IsFunction then
+      if Length(FOracleParams) > 1 then
+      {now move Returnvalue to first position}
+      begin
+        if Length(InParamValues) < Length(FOracleParams) then
+          SetInParamCount(Length(InParamValues)+1);
+        for i := High(InParamValues) downto 1 do
+          InParamValues[I] := InParamValues[I-1];
+        DefVarManager.SetNull(InParamValues[0]);
+      end;
 end;
 
 procedure TZOracleCallableStatement.FetchOutParamsFromOracleVars;
 var
   CurrentVar: PZSQLVar;
   LobLocator: POCILobLocator;
-  I, StartFrom, Align: integer;
+  I,Align, ResultOffSetCount: integer;
   TempBlob: IZBlob;
 
   procedure SetOutParam(CurrentVar: PZSQLVar; Index: Integer);
@@ -888,61 +948,89 @@ var
       end;
   end;
 begin
-  if IsFunction and HasOutParameter then
-  begin
-    StartFrom := 1;
-    Align := -1;
-  end
-  else
-  begin
-    StartFrom := 0;
-    Align := 0;
-  end;
+  ResultOffSetCount := 0;
+  Align := 1;
 
-  for I := StartFrom to FOracleParamsCount -1 do
-    if FOracleParams[I].pOut then
-    begin
-      CurrentVar:= @FInVars.Variables[I+1];
+  for I := 0 to FOracleParamsCount -1 do
+    if ( Length(FFunctionResultOffsetsIn) > 0) and (FOracleParams[I].pType = 4) then
+    begin //ptResult
+      CurrentVar:= @FInVars.Variables[FFunctionResultOffsetsIn[ResultOffSetCount]+1];
       CurrentVar.Data := CurrentVar.DupData;
-      SetOutParam(CurrentVar, I+Align);
-    end;
-
-  if IsFunction and HasOutParameter then
-  begin
-    CurrentVar:= @FInVars.Variables[1];
-    CurrentVar.Data := CurrentVar.DupData;
-    SetOutParam(CurrentVar, High(outParamValues));
-  end;
+      SetOutParam(CurrentVar, Self.FFunctionResultOffsetsOut[ResultOffSetCount]);
+      Inc(ResultOffSetCount);
+      Inc(Align);
+    end
+    else
+      if FOracleParams[I].pType in [2,3] then
+      begin
+        if ( Length(FFunctionResultOffsetsIn) > 0) and
+           (FFunctionResultOffsetsIn[ResultOffSetCount] = i) then
+          Inc(Align); //Jump over ReturnValue
+        CurrentVar:= @FInVars.Variables[I+Align];
+        CurrentVar.Data := CurrentVar.DupData;
+        SetOutParam(CurrentVar, I-ResultOffSetCount);
+      end;
 end;
 
 function TZOracleCallableStatement.GetProcedureSql(SelectProc: boolean): string;
 var
   sFunc: string;
+  I, IncludeCount: Integer;
+  PackageBody: TStrings;
 
   function GenerateParamsStr(Count: integer): string;
-    var
-      I: integer;
+  var
+    I: integer;
+  begin
+    for I := 0 to Count - 1 do
     begin
-      for I := 0 to Count - 1 do
+      if ( FDBParamTypes[I] = 4 ) then //ptResult
       begin
-        if ( FDBParamTypes[I] ) = 4 then //ptResult
-        begin
-          sFunc := ' :'+FOracleParams[I].pName+' := ';
-          continue;
-        end;
-        if Result <> '' then
-          Result := Result + ',';
-        Result := Result + ':'+FOracleParams[I].pName;
+        sFunc := ' :'+FOracleParams[I].pName+' := ';
+        continue;
       end;
-      Result := '('+Result+')'
+      if Result <> '' then
+        Result := Result + ',';
+      Result := Result + ':'+FOracleParams[I].pName;
     end;
+    Result := '('+Result+')'
+  end;
 
 var
   InParams: string;
 begin
   sFunc := '';
-  InParams := GenerateParamsStr( FOracleParamsCount );
-  Result := 'BEGIN  ' + sFunc +' '+SQL + InParams+'; END;';
+  if PackageIncludedList.Count > 0 then
+  begin
+    PackageBody := TStringList.Create;
+    PackageBody.Add('BEGIN');
+    for IncludeCount := 0 to PackageIncludedList.Count -1 do
+    begin
+      InParams := '';
+      sFunc := '';
+      for i := 0 to high(FOracleParams) do
+      begin
+        if IncludeCount = FOracleParams[i].pProcIndex then
+          if ( FDBParamTypes[I] = 4 ) then //ptResult
+            sFunc := ' :'+StringReplace(FOracleParams[I].pName, '.', '', [rfReplaceAll])+' := '
+          else
+            if InParams <> '' then
+              InParams := InParams +', :'+StringReplace(FOracleParams[I].pName, '.', '', [rfReplaceAll])
+            else
+              InParams := InParams +':'+StringReplace(FOracleParams[I].pName, '.', '', [rfReplaceAll])
+      end;
+      PackageBody.Add('BEGIN '+sFunc+GetConnection.GetMetadata.GetIdentifierConvertor.Quote(SQL)+
+        '.'+GetConnection.GetMetadata.GetIdentifierConvertor.Quote(PackageIncludedList[IncludeCount])+'('+InParams+'); END;');
+    end;
+    PackageBody.Add('END;');
+    Result := TrimRight(PackageBody.Text);
+    FreeAndNil(PackageBody);
+  end
+  else
+  begin
+    InParams := GenerateParamsStr( FOracleParamsCount );
+    Result := 'BEGIN ' + sFunc +SQL + InParams+'; END;';
+  end;
 end;
 
 function TZOracleCallableStatement.IsNull(ParameterIndex: Integer): Boolean;
@@ -967,10 +1055,12 @@ begin
   FPlainDriver := Connection.GetIZPlainDriver as IZOraclePlainDriver;
   ResultSetType := rtForwardOnly;
   FPrepared := False;
+  PackageIncludedList := TStringList.Create;
 end;
 
 destructor TZOracleCallableStatement.Destroy;
 begin
+  PackageIncludedList.Free;
   inherited;
 end;
 
@@ -1019,7 +1109,7 @@ begin
       FHandle, FErrorHandle);
     FetchOutParamsFromOracleVars;
     LastResultSet := CreateOracleResultSet(FPlainDriver, Self, FOracleSQL,
-      FHandle, FErrorHandle, FInVars, FParamNames, FDBParamTypes);
+      FHandle, FErrorHandle, FInVars, FParamNames, FDBParamTypes, FFunctionResultOffsetsIn);
     Result := LastResultSet;
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, FOracleSQL);
   finally

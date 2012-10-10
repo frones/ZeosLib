@@ -1795,14 +1795,11 @@ begin
   SetLength(ParamValues, InParamCount);
   SetLength(ParamTypes, InParamCount);
 
-  if Length(FDBParamTypes) = 0 then
-    SetLength(FDBParamTypes, InParamCount);
-
   for I := 0 to High(InParamTypes) do
   begin
     if ( InParamTypes[I] = ZDbcIntfs.stUnknown ) then
      Continue;
-    if (Self.FDBParamTypes[i] in [2, 4]) then //[ptResult, ptOutput]
+    if (FDBParamTypes[i] in [2, 4]) then //[ptResult, ptOutput]
       continue; //EgonHugeist: Ignore known OutParams! else StatmentInparamCount <> expect ProcedureParamCount
     ParamTypes[ParamCount] := InParamTypes[I];
     ParamValues[ParamCount] := InParamValues[I];

@@ -159,10 +159,11 @@ begin
 
   for I := 0 to Params.Count - 1 do
   begin
+    CallableStatement.RegisterParamType( I+1, ord(Params[I].ParamType));
+
     if Params[I].ParamType in [ptResult, ptOutput, ptInputOutput] then
       CallableStatement.RegisterOutParameter(I + 1,
         Ord(ConvertDatasetToDbcType(Params[I].DataType)));
-    CallableStatement.RegisterParamType( I+1, ord(Params[I].ParamType));
 
     if Supports(CallableStatement, IZParamNamedCallableStatement) and
       Assigned(FMetaResultSet) then

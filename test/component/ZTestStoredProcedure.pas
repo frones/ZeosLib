@@ -144,6 +144,7 @@ type
     procedure Test_myfuncInOutReturn;
     procedure Test_simple_func;
     procedure Test_simplefunc;
+    procedure Test_MYPACKAGE;
   end;
 
 implementation
@@ -1515,8 +1516,10 @@ begin
     CheckEquals(ord(ftString), ord(StoredProc.Fields[1].DataType));
   CheckEquals('ReturnValue', StoredProc.Fields[1].DisplayName);
 
-  CheckEquals('aoutvalueoutvalue', StoredProc.ParamByName('x').AsString);
+  CheckEquals('aoutvalueoutvalue', StoredProc.ParamByName('X').AsString);
   CheckEquals('returned string', StoredProc.ParamByName('ReturnValue').AsString);
+  CheckEquals('aoutvalueoutvalue', StoredProc.FieldByName('X').AsString);
+  CheckEquals('returned string', StoredProc.FieldByName('ReturnValue').AsString);
 end;
 
 procedure TZTestOracleStoredProcedure.Test_simple_func;
@@ -1547,6 +1550,91 @@ begin
   CheckEquals(1, StoredProc.Params.Count);
 end;
 
+procedure TZTestOracleStoredProcedure.Test_MYPACKAGE;
+begin
+  StoredProc.StoredProcName := 'MYPACKAGE';
+  CheckEquals(9, StoredProc.Params.Count);
+
+  CheckEquals('ABTEST.P1', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  //CheckEquals(ord(ftInteger), ord(StoredProc.Params[0].DataType));
+
+  CheckEquals('ABTEST.P2', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  //CheckEquals(ord(ftInteger), ord(StoredProc.Params[1].DataType));
+
+  CheckEquals('ABTEST.P3', StoredProc.Params[2].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    CheckEquals(ord(ftWideString), ord(StoredProc.Params[2].DataType))
+  else
+    CheckEquals(ord(ftString), ord(StoredProc.Params[2].DataType));
+
+  CheckEquals('ABTEST.P4', StoredProc.Params[3].Name);
+  CheckEquals(ord(ptOutput), ord(StoredProc.Params[3].ParamType));
+  //CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
+
+  CheckEquals('ABTEST.P5', StoredProc.Params[4].Name);
+  CheckEquals(ord(ptOutput), ord(StoredProc.Params[4].ParamType));
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    CheckEquals(ord(ftWideString), ord(StoredProc.Params[4].DataType))
+  else
+    CheckEquals(ord(ftString), ord(StoredProc.Params[4].DataType));
+
+  CheckEquals('myfuncInOutReturn.X', StoredProc.Params[5].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[5].ParamType));
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    CheckEquals(ord(ftWideString), ord(StoredProc.Params[5].DataType))
+  else
+    CheckEquals(ord(ftString), ord(StoredProc.Params[5].DataType));
+
+  CheckEquals('myfuncInOutReturn.ReturnValue', StoredProc.Params[6].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[6].ParamType));
+  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+    ( Connection.DbcConnection.UTF8StringAsWideField) then
+    CheckEquals(ord(ftWideString), ord(StoredProc.Params[6].DataType))
+  else
+    CheckEquals(ord(ftString), ord(StoredProc.Params[6].DataType));
+
+  CheckEquals('SIMPLE_FUNC.ReturnValue', StoredProc.Params[7].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[7].ParamType));
+  //CheckEquals(ord(ftInteger), ord(StoredProc.Params[7].DataType));
+
+  CheckEquals('SIMPLEFUNC.ReturnValue', StoredProc.Params[8].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[8].ParamType));
+  //CheckEquals(ord(ftInteger), ord(StoredProc.Params[8].DataType));
+
+  StoredProc.ParamByName('myfuncInOutReturn.X').AsString := 'myfuncInOutReturn';
+  StoredProc.ParamByName('ABTEST.P1').AsInteger := 50;
+  StoredProc.ParamByName('ABTEST.P2').AsInteger := 100;
+  StoredProc.ParamByName('ABTEST.P3').AsString := 'abc';
+  StoredProc.ExecProc;
+  CheckEquals(600, StoredProc.ParamByName('ABTEST.P4').AsInteger);
+  CheckEquals('abcabc', StoredProc.ParamByName('ABTEST.P5').AsString);
+  CheckEquals('myfuncInOutReturnoutvalue', StoredProc.ParamByName('myfuncInOutReturn.X').AsString);
+  CheckEquals('returned string', StoredProc.ParamByName('myfuncInOutReturn.ReturnValue').AsString);
+  CheckEquals(1111, StoredProc.ParamByName('SIMPLE_FUNC.ReturnValue').AsInteger);
+  CheckEquals(2222, StoredProc.ParamByName('SIMPLEFUNC.ReturnValue').AsInteger);
+
+  StoredProc.Open;
+
+  CheckEquals(600, StoredProc.ParamByName('ABTEST.P4').AsInteger);
+  CheckEquals('abcabc', StoredProc.ParamByName('ABTEST.P5').AsString);
+  CheckEquals('myfuncInOutReturnoutvalueoutvalue', StoredProc.ParamByName('myfuncInOutReturn.X').AsString);
+  CheckEquals('returned string', StoredProc.ParamByName('myfuncInOutReturn.ReturnValue').AsString);
+  CheckEquals(1111, StoredProc.ParamByName('SIMPLE_FUNC.ReturnValue').AsInteger);
+  CheckEquals(2222, StoredProc.ParamByName('SIMPLEFUNC.ReturnValue').AsInteger);
+
+  CheckEquals(600, StoredProc.FieldByName('ABTEST.P4').AsInteger);
+  CheckEquals('abcabc', StoredProc.FieldByName('ABTEST.P5').AsString);
+  CheckEquals('myfuncInOutReturnoutvalueoutvalue', StoredProc.FieldByName('myfuncInOutReturn.X').AsString);
+  CheckEquals('returned string', StoredProc.FieldByName('myfuncInOutReturn.ReturnValue').AsString);
+  CheckEquals(1111, StoredProc.FieldByName('SIMPLE_FUNC.ReturnValue').AsInteger);
+  CheckEquals(2222, StoredProc.FieldByName('SIMPLEFUNC.ReturnValue').AsInteger);
+end;
 initialization
   RegisterTest('component',TZTestInterbaseStoredProcedure.Suite);
   RegisterTest('component',TZTestDbLibStoredProcedure.Suite);
