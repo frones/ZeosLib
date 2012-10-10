@@ -459,16 +459,23 @@ begin
   Comment := '# Comment...'+NewLine;
   Delimiter := '^';
 
-  Text := ' Set Term ^ ;' + NewLine + Comment + NewLine + Line + Delimiter + NewLine +
-    '   ' + NewLine + Line + Comment + NewLine + Delimiter + NewLine + 'Set Term ; ^' +
-    Comment + NewLine + Line;
+  Text := Comment + NewLine +
+          ' Set Term ' + Delimiter + ' ;' + NewLine +
+          Comment + NewLine +
+          Line + Delimiter + NewLine +
+          '   ' + NewLine + 
+          Line + Comment + NewLine + 
+          Delimiter + NewLine + 
+          'Set Term ; ^' +
+          Comment + NewLine + Line;
   FProcessor.Script.Text := Text;
   FProcessor.Parse;
 
-  CheckEquals(3, FProcessor.StatementCount);
-  CheckEquals(Comment + NewLine + Line, FProcessor.Statements[0]);
-  CheckEquals(Line + Comment, FProcessor.Statements[1]);
-  CheckEquals(Comment + NewLine + Line, FProcessor.Statements[2]);
+  CheckEquals(4, FProcessor.StatementCount);
+  CheckEquals(Comment + NewLine, FProcessor.Statements[0]);
+  CheckEquals(Comment + NewLine + Line, FProcessor.Statements[1]);
+  CheckEquals(Line + Comment, FProcessor.Statements[2]);
+  CheckEquals(Comment + NewLine + Line, FProcessor.Statements[3]);
 end;
 
 initialization
