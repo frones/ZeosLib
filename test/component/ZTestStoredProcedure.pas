@@ -136,14 +136,22 @@ type
   end;
 
   {** Implements a test case for class TZStoredProc. }
+
+  { TZTestOracleStoredProcedure }
+
   TZTestOracleStoredProcedure = class(TZTestStoredProcedureSpecific)
   protected
     function GetSupportedProtocols: string; override;
+    procedure abtest(prefix:string ='');
+    procedure myfuncInOutReturn(prefix:string ='');
+    procedure simple_func(prefix:string ='');
+    procedure simplefunc(prefix:string ='');
   published
     procedure Test_abtest;
     procedure Test_myfuncInOutReturn;
     procedure Test_simple_func;
     procedure Test_simplefunc;
+    procedure Test_packaged;
     procedure Test_MYPACKAGE;
   end;
 
@@ -375,7 +383,6 @@ end;
 procedure TZTestPostgreSQLStoredProcedure.Test_abtest;
 var
   i: integer;
-  S: String;
 begin
   StoredProc.StoredProcName := '"ABTEST"';
   CheckEquals(5, StoredProc.Params.Count);
@@ -407,8 +414,6 @@ begin
     StoredProc.ExecProc;
   end;
   StoredProc.Unprepare;
-  S := StoredProc.ParamByName('p4').AsString +
-    ' ' + StoredProc.ParamByName('p5').AsString;
   StoredProc.Open;
   StoredProc.ParamByName('p1').AsInteger := 50;
   StoredProc.ParamByName('p2').AsInteger := 100;
@@ -1376,12 +1381,12 @@ begin
   Result := 'oracle,oracle-9i';
 end;
 
-procedure TZTestOracleStoredProcedure.Test_abtest;
+procedure TZTestOracleStoredProcedure.abtest(prefix: string);
 var
   i, P2: integer;
   S: String;
 begin
-  StoredProc.StoredProcName := 'ABTEST';
+  StoredProc.StoredProcName := prefix+'ABTEST';
   CheckEquals(5, StoredProc.Params.Count);
   CheckEquals('P1', StoredProc.Params[0].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
@@ -1475,9 +1480,9 @@ begin
   CheckEquals('aa', StoredProc.FieldByName('P5').AsString);
 end;
 
-procedure TZTestOracleStoredProcedure.Test_myfuncInOutReturn;
+procedure TZTestOracleStoredProcedure.myfuncInOutReturn(prefix: string);
 begin
-  StoredProc.StoredProcName := '"myfuncInOutReturn"';
+  StoredProc.StoredProcName := prefix+'"myfuncInOutReturn"';
   CheckEquals(2, StoredProc.Params.Count);
   CheckEquals('X', StoredProc.Params[0].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[0].ParamType));
@@ -1522,9 +1527,9 @@ begin
   CheckEquals('returned string', StoredProc.FieldByName('ReturnValue').AsString);
 end;
 
-procedure TZTestOracleStoredProcedure.Test_simple_func;
+procedure TZTestOracleStoredProcedure.simple_func(prefix: string);
 begin
-  StoredProc.StoredProcName := 'simple_func';
+  StoredProc.StoredProcName := prefix+'simple_func';
   CheckEquals(1, StoredProc.Params.Count);
   CheckEquals('ReturnValue', StoredProc.Params[0].Name);
   CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
@@ -1536,9 +1541,9 @@ begin
   CheckEquals(1, StoredProc.Params.Count);
 end;
 
-procedure TZTestOracleStoredProcedure.Test_simplefunc;
+procedure TZTestOracleStoredProcedure.simplefunc(prefix: string);
 begin
-  StoredProc.StoredProcName := 'simplefunc';
+  StoredProc.StoredProcName := prefix+'simplefunc';
   CheckEquals(1, StoredProc.Params.Count);
   CheckEquals('ReturnValue', StoredProc.Params[0].Name);
   CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
@@ -1548,6 +1553,34 @@ begin
 
   CheckEquals(2222, StoredProc.ParamByName('ReturnValue').AsInteger);
   CheckEquals(1, StoredProc.Params.Count);
+end;
+
+procedure TZTestOracleStoredProcedure.Test_abtest;
+begin
+  abtest();
+end;
+
+procedure TZTestOracleStoredProcedure.Test_myfuncInOutReturn;
+begin
+  myfuncInOutReturn();
+end;
+
+procedure TZTestOracleStoredProcedure.Test_simple_func;
+begin
+  simple_func();
+end;
+
+procedure TZTestOracleStoredProcedure.Test_simplefunc;
+begin
+  simplefunc();
+end;
+
+procedure TZTestOracleStoredProcedure.Test_packaged;
+begin
+  abtest('MYPACKAGE.');
+  myfuncInOutReturn('MYPACKAGE.');
+  simple_func('MYPACKAGE.');
+  simplefunc('MYPACKAGE.');
 end;
 
 procedure TZTestOracleStoredProcedure.Test_MYPACKAGE;
@@ -1642,5 +1675,5 @@ initialization
   RegisterTest('component',TZTestMySQLStoredProcedure.Suite);
   RegisterTest('component',TZTestADOStoredProcedure.Suite);
   RegisterTest('component',TZTestOracleStoredProcedure.Suite);
-  RegisterTest('component',TZTestStoredProcedure.Suite);
+//  RegisterTest('component',TZTestStoredProcedure.Suite);
 end.
