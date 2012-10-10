@@ -65,6 +65,7 @@ uses
 type
 
   {** Implements PostgreSQL Database Driver. }
+  {$WARNINGS OFF}
   TZPostgreSQLDriver = class(TZAbstractDriver)
   public
     constructor Create; override;
@@ -75,6 +76,7 @@ type
     function GetTokenizer: IZTokenizer; override;
     function GetStatementAnalyser: IZStatementAnalyser; override;
   end;
+  {$WARNINGS ON}
 
   {** Defines a PostgreSQL specific connection. }
   IZPostgreSQLConnection = interface(IZConnection)
@@ -229,10 +231,12 @@ end;
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
+{$WARNINGS OFF}
 function TZPostgreSQLDriver.Connect(const Url: TZURL): IZConnection;
 begin
   Result := TZPostgreSQLConnection.Create(Url);
 end;
+{$WARNINGS ON}
 
 {**
   Gets the driver's major version number. Initially this should be 1.

@@ -143,6 +143,7 @@ type
     function GetEncoding: TZCharEncoding;
   end;
 
+  {$WARNINGS OFF}
   TZDbcPooledConnectionDriver = class(TZAbstractDriver)
   private
     PoolList: TObjectList;
@@ -161,6 +162,7 @@ type
     constructor Create; override;
     destructor Destroy; override;
   end;
+  {$WARNINGS ON}
 
 { TConnectionPool }
 
