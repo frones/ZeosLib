@@ -1795,6 +1795,11 @@ begin
   SetLength(ParamValues, InParamCount);
   SetLength(ParamTypes, InParamCount);
 
+  {Need for dbc access, where no metadata is used to register the ParamTypes}
+  if Length(FDBParamTypes) < InParamCount then
+    SetLength(FDBParamTypes, InParamCount);
+  {end for dbc access}
+
   for I := 0 to High(InParamTypes) do
   begin
     if ( InParamTypes[I] = ZDbcIntfs.stUnknown ) then
