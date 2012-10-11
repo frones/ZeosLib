@@ -234,7 +234,12 @@ begin
     Tokens := Tokenizer.TokenizeBufferToList(Text, [toSkipComments])
   else Tokens := Tokenizer.TokenizeBufferToList(Text, []);
 
-  if ( DelimiterType = dtDelimiter ) and ( Delimiter = '' ) then
+  if ( (DelimiterType = dtDelimiter) or
+       (DelimiterType = dtSetTerm) ) and
+     ( Delimiter = '' ) then
+    Delimiter := ';'; //use default delimiter
+
+  if (DelimiterType = dtDefault) then
     Delimiter := ';'; //use default delimiter
 
   TokenIndex := 0;
@@ -252,17 +257,39 @@ begin
       SetNextToken;
 
       case DelimiterType of
-        dtDefault:
-          EndOfStatement := (TokenValue = ';');
-        dtDelimiter:
+        dtGo:
+          EndOfStatement := (UpperCase(TokenValue) = 'GO');
+        dtEmptyLine:
+          begin
+            EndOfStatement := False;
+            if TokenType = ttWhitespace then
+            begin
+              Temp := TokenValue;
+              while (CountChars(Temp, #10) < 2) and (TokenType = ttWhitespace) do
+              begin
+                SetNextToken;
+                if TokenType = ttWhitespace then
+                  Temp := Temp + TokenValue;
+              end;
+              EndOfStatement := (TokenType = ttWhitespace) or EndsWith(Sql, #10);
+              if not EndOfStatement then
+              begin
+                if SQL <> '' then
+                  SQL := Trim(SQL) + ' ';
+              end;
+            end;
+          end;
+        dtDelimiter,
+        dtDefault,
+        dtSetTerm:
           begin
             EndOfStatement := False;
             if not (TokenType in [ttWhitespace, ttEOF]) then
             begin
-              if (Uppercase(TokenValue) = 'DELIMITER') then
+              if (DelimiterType = dtDelimiter) and (Uppercase(TokenValue) = 'DELIMITER') then
               begin
                 Delimiter := '';
-                Temp := TokenValue; {process the DELITITER}
+                Temp := TokenValue; {process the DELIMITER}
                 Temp := Temp + Tokens[TokenIndex]; {process the first ' ' char}
                 Inc(TokenIndex);
                 while TokenType <> ttWhitespace do
@@ -298,59 +325,6 @@ begin
                     Temp := Copy(Temp, 1, Length(Temp) - Length(TokenValue));
                   SQL := SQL + Temp;
                 end;
-              end;
-            end;
-          end;
-        dtGo:
-          EndOfStatement := (UpperCase(TokenValue) = 'GO');
-        dtEmptyLine:
-          begin
-            EndOfStatement := False;
-            if TokenType = ttWhitespace then
-            begin
-              Temp := TokenValue;
-              while (CountChars(Temp, #10) < 2) and (TokenType = ttWhitespace) do
-              begin
-                SetNextToken;
-
-                if TokenType = ttWhitespace then
-                  Temp := Temp + TokenValue;
-              end;
-              EndOfStatement := (TokenType = ttWhitespace) or EndsWith(Sql, #10);
-              if not EndOfStatement then
-              begin
-                if SQL <> '' then
-                  SQL := Trim(SQL) + ' ';
-              end;
-            end;
-          end;
-
-        dtSetTerm:
-          begin
-            EndOfStatement := False;
-            if not (TokenType in [ttWhitespace, ttEOF]) then
-            begin
-              Temp := TokenValue;
-              Extract := True;
-              while (Delimiter[1]=Temp[1]) and
-                    (Length(Delimiter) > Length(Temp))
-                     and not (TokenType in [ttWhitespace, ttEOF]) do
-              begin
-                SetNextToken;
-
-                if not (TokenType in [ttWhitespace, ttEOF]) then
-                begin
-                  Temp := Temp + TokenValue;
-                  Extract := True;
-                end else
-                  Extract := False;
-              end;
-              EndOfStatement := (Delimiter = Temp);
-              if not EndOfStatement then
-              begin
-                if Extract then
-                  Temp := Copy(Temp, 1, Length(Temp) - Length(TokenValue));
-                SQL := SQL + Temp;
               end;
             end;
           end;
