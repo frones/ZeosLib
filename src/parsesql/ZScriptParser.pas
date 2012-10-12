@@ -197,14 +197,16 @@ end;
   @oaram Text a text of the SQL script to be parsed.
 }
 procedure TZSQLScriptParser.ParseText(const Text: string);
+const SetTerm = String('SET TERM ');
 var
   Tokens: TStrings;
   TokenType: TZTokenType;
   TokenValue: string;
-  TokenIndex: Integer;
+  TokenIndex, LastStmtEndingIndex, iPos: Integer;
   SQL, Temp: string;
   EndOfStatement: Boolean;
   Extract: Boolean;
+  LastComment: String;
 
   function CountChars(const Str: string; Chr: Char): Integer;
   var
@@ -223,6 +225,8 @@ var
     TokenValue := Tokens[TokenIndex];
     TokenType := TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
       Tokens.Objects[TokenIndex]{$IFDEF FPC}){$ENDIF});
+    if TokenValue = Delimiter  then
+      LastStmtEndingIndex := TokenIndex;
     Inc(TokenIndex);
   end;
 
@@ -344,21 +348,30 @@ begin
           if not CleanupStatements then
             Temp := Trim(SQL)
           else Temp := SQL;
-          if (DelimiterType = dtSetTerm)
-            and StartsWith(UpperCase(Temp), 'SET TERM ') then
-            Delimiter := Copy(Temp, 10, Length(Temp) - 9)
-          else
-            if (DelimiterType = dtDelimiter)
-              and StartsWith(UpperCase(Temp), 'DELIMITER ') then
-              Delimiter := Copy(Temp, 11, Length(Temp) - 10)
+          if (DelimiterType = dtSetTerm) and StartsWith(UpperCase(Temp), SetTerm) then
+              Delimiter := Copy(Temp, 10, Length(Temp) - 9)
             else
-            begin
-              if (DelimiterType = dtEmptyLine) and EndsWith(SQL, ';') then
-                SQL := Copy(SQL, 1, Length(SQL) - 1);
-              if CleanupStatements then
-                SQL := Trim(SQL);
-              FStatements.Add(SQL);
-            end;
+              if (DelimiterType = dtSetTerm) and ( Pos(SetTerm, UpperCase(Temp)) > 0) then
+              begin
+                iPos := Pos(SetTerm, UpperCase(Temp))+8;
+                Delimiter := Copy(Temp, iPos+1, Length(Temp) - iPos);
+                LastComment := TrimRight(Copy(Temp, 1, iPos-9));
+              end
+              else
+                if (DelimiterType = dtDelimiter)
+                  and StartsWith(UpperCase(Temp), 'DELIMITER ') then
+                  Delimiter := Copy(Temp, 11, Length(Temp) - 10)
+                else
+                begin
+                  if (DelimiterType = dtEmptyLine) and EndsWith(SQL, ';') then
+                    SQL := Copy(SQL, 1, Length(SQL) - 1);
+                  if LastComment <> '' then
+                    SQL := LastComment+#13#10+SQL;
+                  if CleanupStatements then
+                    SQL := Trim(SQL);
+                  FStatements.Add(SQL);
+                  LastComment := '';
+                end;
         end;
         SQL := '';
       end
@@ -397,6 +410,11 @@ begin
         SQL := SQL + TokenValue;
       end;
     until TokenType = ttEOF;
+    if ( LastComment <> '' ) and ( FStatements.Count > 0) then
+      if CleanupStatements then
+        FStatements[FStatements.Count-1] := FStatements[FStatements.Count-1]+' '+Trim(LastComment)
+      else
+        FStatements[FStatements.Count-1] := FStatements[FStatements.Count-1]+#13#10+LastComment;
   finally
     Tokens.Free;
   end;

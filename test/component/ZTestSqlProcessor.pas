@@ -80,6 +80,7 @@ type
     procedure TestSetTermProcessor;
     procedure TestUncompleted;
     procedure TestParamChar;
+    procedure TestScriptParser;
   end;
 
   {** Implements a test case for class TZSqlProcessor. }
@@ -246,10 +247,10 @@ begin
   FProcessor.Script.Text := Text;
   FProcessor.Parse;
 
-  CheckEquals(4, FProcessor.StatementCount);
-  CheckEquals(Comment + NewLine + Line, FProcessor.Statements[1]);
-  CheckEquals(Line + Comment, FProcessor.Statements[2]);
-  CheckEquals(Comment + NewLine + Line, FProcessor.Statements[3]);
+  CheckEquals(3, FProcessor.StatementCount);
+  CheckEquals(Comment + NewLine + Comment + NewLine + Line, FProcessor.Statements[0]);
+  CheckEquals(Line + Comment, FProcessor.Statements[1]);
+  CheckEquals(Comment  + NewLine + Line, FProcessor.Statements[2]);
 end;
 
 {**
@@ -324,6 +325,56 @@ begin
   CheckEquals(Line, FProcessor.Statements[1]);
   CheckEquals(1, FProcessor.Params.Count);
   CheckEquals('b', FProcessor.Params[0].Name);;
+end;
+
+procedure TZTestSQLProcessorCase.TestScriptParser;
+const
+  stmt1 = String(
+    'create table domain_values'+LineEnding+'('+LineEnding+
+    '   d_id                       INTEGER not null,'+LineEnding+
+    '   d_fld1                     tinteger,'+LineEnding+
+    '   d_fld2                     tfloat,'+LineEnding+
+    '   d_fld3                     tstring,'+LineEnding+
+    '   primary key (d_id)'+LineEnding+
+    ')');
+
+  stmt2 = String(
+    '/*==============================================================*/'+LineEnding+
+    '/* Stored procedure: procedure1                                 */'+LineEnding+
+    '/*==============================================================*/'+LineEnding+
+    LineEnding+
+    'CREATE PROCEDURE PROCEDURE1(P1 INTEGER)'+LineEnding+
+    '   RETURNS(R1 INTEGER)'+LineEnding+
+    'AS'+LineEnding+
+    'BEGIN'+LineEnding+
+    '  R1 = P1 + 1;'+LineEnding+
+    'SUSPEND;'+LineEnding+
+    'END');
+
+  stmt3 = String(
+    '/*==============================================================*/'+LineEnding+
+    '/* Stored procedure: procedure2                                 */'+LineEnding+
+    '/*==============================================================*/'+LineEnding+
+    LineEnding+
+    'CREATE PROCEDURE PROCEDURE2'+LineEnding+
+    '   RETURNS(R1 VARCHAR(30))'+LineEnding+
+    'AS'+LineEnding+
+    'BEGIN'+LineEnding+
+    '  FOR SELECT eq_name FROM equipment ORDER BY eq_name INTO :R1'+LineEnding+
+    '  DO'+LineEnding+
+    '  SUSPEND;'+LineEnding+
+    'END'+LineEnding+
+    '/*==============================================================*/'+LineEnding+
+    '/* Grant privileges to columns                                  */'+LineEnding+
+    '/*==============================================================*/');
+begin
+  FProcessor.DelimiterType := dtSetTerm;
+  Fprocessor.LoadFromFile('..\..\..\database\text\TestSQLProcessor3Stmts.sql');
+  Fprocessor.Parse;
+  CheckEquals(3, FProcessor.StatementCount);
+  CheckEquals(stmt1,FProcessor.Statements[0]);
+  CheckEquals(stmt2,FProcessor.Statements[1]);
+  CheckEquals(stmt3,FProcessor.Statements[2]);
 end;
 
 { TZTestSQLProcessorMysqlCase }
@@ -475,10 +526,10 @@ begin
   FProcessor.Script.Text := Text;
   FProcessor.Parse;
 
-  CheckEquals(4, FProcessor.StatementCount);
-  CheckEquals(Comment + NewLine + Line, FProcessor.Statements[1]);
-  CheckEquals(Line + Comment, FProcessor.Statements[2]);
-  CheckEquals(Comment + NewLine + Line, FProcessor.Statements[3]);
+  CheckEquals(3, FProcessor.StatementCount);
+  CheckEquals(Comment + Comment + NewLine + Line, FProcessor.Statements[0]);
+  CheckEquals(Line + Comment, FProcessor.Statements[1]);
+  CheckEquals(Comment  + NewLine + Line, FProcessor.Statements[2]);
 end;
 
 initialization
