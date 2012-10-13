@@ -620,14 +620,10 @@ begin
 
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[0].DataType));
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[1].DataType));
-  {$IFDEF DELPHI12_UP}
+  {$IFDEF DELPHI14_UP}
   CheckEquals(ord(ftWideString), ord(StoredProc.Params[2].DataType));
   {$ELSE}
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
-    CheckEquals(ord(ftWideString), ord(StoredProc.Params[2].DataType))
-  else
-    CheckEquals(ord(ftString), ord(StoredProc.Params[2].DataType));
+  CheckEquals(ord(ftString), ord(StoredProc.Params[2].DataType));
   {$ENDIF}
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
   if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
@@ -1319,14 +1315,10 @@ begin
 
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[1].DataType));
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[2].DataType));
-  {$IFDEF DELPHI12_UP}
+  {$IFDEF DELPHI14_UP}
   CheckEquals(ord(ftWideString), ord(StoredProc.Params[3].DataType));
   {$ELSE}
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
-    CheckEquals(ord(ftWideString), ord(StoredProc.Params[3].DataType))
-  else
-    CheckEquals(ord(ftString), ord(StoredProc.Params[3].DataType));
+  CheckEquals(ord(ftString), ord(StoredProc.Params[3].DataType));
   {$ENDIF}
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[4].DataType));
   if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
@@ -1422,14 +1414,10 @@ begin
 
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[0].DataType));
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[1].DataType));
-  {$IFDEF DELPHI12_UP}
+  {$IFDEF DELPHI14_UP}
   CheckEquals(ord(ftWideString), ord(StoredProc.Params[2].DataType));
   {$ELSE}
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
-    CheckEquals(ord(ftWideString), ord(StoredProc.Params[2].DataType))
-  else
-    CheckEquals(ord(ftString), ord(StoredProc.Params[2].DataType));
+  CheckEquals(ord(ftString), ord(StoredProc.Params[2].DataType));
   {$ENDIF}
   //CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
   if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
