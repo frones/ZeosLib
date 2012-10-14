@@ -103,7 +103,7 @@ begin
     finally
       TempStream.Free;
     end;
-  end;
+  end
 end;
 
 type THackedDataset = class(TDataset);
@@ -112,12 +112,31 @@ type THackedDataset = class(TDataset);
   Destroys this object and cleanups the memory.
 }
 destructor TZBlobStream.Destroy;
+{$IFDEF WITH_WIDEMEMO}
+var
+  WS: ZWideString;
+  Ansi: ZAnsiString;
+{$ENDIF}
 begin
   if Mode in [bmWrite, bmReadWrite] then
   begin
     if Assigned(Self.Memory) then
+    begin
+    {$IFDEF WITH_WIDEMEMO}
+      if FField.DataType = ftWideMemo then
+      begin
+        SetLength(Ws, Self.Size div 2);
+        System.Move(PWideChar(Memory)^, PWideChar(Ws)^, Size);
+        Clear;
+        Ansi := UTF8Encode(WS);
+        Size := Length(Ansi);
+        System.Move(PAnsichar(Ansi)^, PAnsiChar(Memory)^, Size);
+      end
+    {$ENDIF};
       Blob.SetStream(Self)
-    else Blob.SetStream(nil);
+    end
+    else
+      Blob.SetStream(nil);
     try
       if Assigned(FField.Dataset) then
         THackedDataset(FField.DataSet).DataEvent(deFieldChange, ULong(FField));
