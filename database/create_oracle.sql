@@ -203,7 +203,7 @@ SET TERM ^ ;
 /*==============================================================*/
 /* Stored procedure: abtest                                     */
 /*==============================================================*/
-Create or replace procedure "ABTEST" (P1 NUMBER, P2 NUMBER, P3 VARCHAR,
+Create or replace procedure ABTEST (P1 NUMBER, P2 NUMBER, P3 VARCHAR,
   P4 OUT NUMBER, P5 OUT VARCHAR) IS
 BEGIN
   p4 := p1 * 10 + p2;
@@ -222,7 +222,7 @@ END; ^
 /*==============================================================*/
 /* Stored procedure: simple_func                                */
 /*==============================================================*/
-CREATE OR REPLACE FUNCTION "simple_func" RETURN INTEGER IS
+CREATE OR REPLACE FUNCTION simple_func RETURN INTEGER IS
 BEGIN
   RETURN 1111;
 END; ^
@@ -230,10 +230,45 @@ END; ^
 /*==============================================================*/
 /* Stored procedure: simple_func                                */
 /*==============================================================*/
-CREATE OR REPLACE FUNCTION "simplefunc" RETURN INTEGER IS
+CREATE OR REPLACE FUNCTION simplefunc RETURN INTEGER IS
 BEGIN
   RETURN 2222;
 END; ^
+
+CREATE OR REPLACE 
+PACKAGE MYPACKAGE AS 
+  procedure ABTEST (P1 NUMBER, P2 NUMBER, P3 VARCHAR2, P4 OUT NUMBER, P5 OUT VARCHAR2);
+  FUNCTION "myfuncInOutReturn"(x IN OUT VARCHAR) RETURN VARCHAR2;
+  FUNCTION simple_func RETURN INTEGER;
+  FUNCTION simplefunc RETURN INTEGER;
+END MYPACKAGE; ^
+
+CREATE OR REPLACE
+PACKAGE BODY MYPACKAGE AS
+
+  procedure ABTEST (P1 NUMBER, P2 NUMBER, P3 VARCHAR2, P4 OUT NUMBER, P5 OUT VARCHAR2) AS
+  BEGIN
+    p4 := p1 * 10 + p2;
+    p5 := p3 || p3;
+  END ABTEST;
+
+  FUNCTION "myfuncInOutReturn"(x IN OUT VARCHAR) RETURN VARCHAR2 AS
+  BEGIN
+    x := x||'outvalue';
+    RETURN 'returned string';
+  END "myfuncInOutReturn";
+
+  FUNCTION simple_func RETURN INTEGER AS
+  BEGIN
+    RETURN 1111;
+  END simple_func;
+
+  FUNCTION simplefunc RETURN INTEGER AS
+  BEGIN
+     RETURN 2222;
+  END simplefunc;
+
+END MYPACKAGE; ^
 
 SET TERM ; ^
 

@@ -65,6 +65,7 @@ uses
 type
 
   {** Implements SQLite Database Driver. }
+  {$WARNINGS OFF}
   TZSQLiteDriver = class(TZAbstractDriver)
   public
     constructor Create; override;
@@ -75,6 +76,7 @@ type
     function GetTokenizer: IZTokenizer; override;
     function GetStatementAnalyser: IZStatementAnalyser; override;
   end;
+  {$WARNINGS ON}
 
   {** Represents a SQLite specific connection interface. }
   IZSQLiteConnection = interface (IZConnection)
@@ -168,10 +170,12 @@ end;
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
+{$WARNINGS OFF}
 function TZSQLiteDriver.Connect(const Url: TZURL): IZConnection;
 begin
   Result := TZSQLiteConnection.Create(Url);
 end;
+{$WARNINGS ON}
 
 {**
   Gets the driver's major version number. Initially this should be 1.

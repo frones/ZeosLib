@@ -180,7 +180,7 @@ function CreateOracleResultSet(PlainDriver: IZOraclePlainDriver;
 function CreateOracleResultSet(PlainDriver: IZOraclePlainDriver;
   Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
   ErrorHandle: POCIError; OutVars: PZSQLVars; FieldNames: TStringDynArray;
-  ParamTypes: array of shortInt): IZResultSet; overload;
+  ParamTypes, FunctionResultOffsets: array of shortInt): IZResultSet; overload;
 
 {**
   Allocates in memory Oracle handlers for Statement object.
@@ -682,13 +682,13 @@ end;
 function CreateOracleResultSet(PlainDriver: IZOraclePlainDriver;
       Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
       ErrorHandle: POCIError; OutVars: PZSQLVars; FieldNames: TStringDynArray;
-      ParamTypes: array of shortInt): IZResultSet;
+      ParamTypes, FunctionResultOffsets: array of shortInt): IZResultSet;
 var
   NativeResultSet: TZOracleCallableResultSet;
   CachedResultSet: TZCachedResultSet;
 begin
-  NativeResultSet := TZOracleCallableResultSet.Create(PlainDriver,
-    Statement, SQL, StmtHandle, ErrorHandle, OutVars, FieldNames, ParamTypes);
+  NativeResultSet := TZOracleCallableResultSet.Create(PlainDriver, Statement,
+    SQL, StmtHandle, ErrorHandle, OutVars, FieldNames, ParamTypes, FunctionResultOffsets);
   NativeResultSet.SetConcurrency(rcReadOnly);
   CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil,
     Statement.GetConnection.GetClientCodePageInformations);

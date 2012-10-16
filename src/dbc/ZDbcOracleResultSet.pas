@@ -116,14 +116,15 @@ type
   private
     FFieldNames: TStringDynArray;
     function PrepareOracleOutVars(Statement: IZStatement; InVars: PZSQLVars;
-      FieldNames: TStringDynArray; ParamTypes: array of shortInt): PZSQLVars;
+      FieldNames: TStringDynArray; ParamTypes,
+      FFunctionResultOffsets: array of shortInt): PZSQLVars;
   protected
     procedure Open; override;
   public
     constructor Create(PlainDriver: IZOraclePlainDriver;
       Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
       ErrorHandle: POCIError; OutVars: PZSQLVars; FieldNames: TStringDynArray;
-      ParamTypes: array of shortInt);
+      ParamTypes, FunctionResultOffsets: array of shortInt);
     procedure Close; override;
     function Next: Boolean; override;
   End;
@@ -996,22 +997,22 @@ end;
 
 { TZOracleCallableResultSet }
 function TZOracleCallableResultSet.PrepareOracleOutVars(Statement: IZStatement;
-  InVars: PZSQLVars; FieldNames: TStringDynArray; ParamTypes: array of shortInt): PZSQLVars;
+  InVars: PZSQLVars; FieldNames: TStringDynArray;
+  ParamTypes, FFunctionResultOffsets: array of shortInt): PZSQLVars;
 var
-  I, J, OutParamCount: Integer;
+  I, J, K, OutParamCount, ResultOffSet: Integer;
   Connection: IZConnection;
 
-  procedure PrepareVar(ColumnName: String);
+  procedure PrepareVar;
   begin
-    Result.Variables[J].ColType := InVars.Variables[I].ColType;
-    Result.Variables[J].TypeCode := InVars.Variables[I].TypeCode;
-    Result.Variables[J].DataSize := InVars.Variables[I].DataSize;
-    Result.Variables[J].Length := InVars.Variables[I].Length;
-    GetMem(Result.Variables[J].Data, InVars.Variables[I].Length);
-    Move(InVars.Variables[i].Data^, Result.Variables[J].Data^, InVars.Variables[i].Length);
-    //Result.Variables[J].Data := InVars.Variables[i].Data;
+    Result.Variables[J].ColType := InVars.Variables[K].ColType;
+    Result.Variables[J].TypeCode := InVars.Variables[K].TypeCode;
+    Result.Variables[J].DataSize := InVars.Variables[K].DataSize;
+    Result.Variables[J].Length := InVars.Variables[K].Length;
+    GetMem(Result.Variables[J].Data, InVars.Variables[K].Length);
+    Move(InVars.Variables[K].Data^, Result.Variables[J].Data^, InVars.Variables[K].Length);
     SetLength(FFieldNames, J);
-    FFieldNames[j-1] := ColumnName;
+    FFieldNames[j-1] := FieldNames[I-1];
   end;
 begin
   Connection := Statement.GetConnection;
@@ -1026,17 +1027,26 @@ begin
   Result.ActualNum := OutParamCount;
 
   J := 0;
+  K := 0;
+  ResultOffSet := 0;
   for i := 1 to InVars.ActualNum do
+  begin
+    Inc(K);
+    if ( Length(FFunctionResultOffsets) > 0 ) and  (FFunctionResultOffsets[ResultOffSet] = i -1) then
+      Inc(K);
     if ParamTypes[i-1] in [2,3] then
     begin
-      Inc(J);
-      PrepareVar(FieldNames[I-1]);
-    end;
-  if ParamTypes[High(ParamTypes)] = 4 then //ptResult
-  begin
-    Inc(J);
-    I := 1;
-    PrepareVar(FieldNames[High(FieldNames)]);
+      inc(J);
+      PrepareVar;
+    end
+    else
+      if ParamTypes[i-1] = 4 then //ptResult
+      begin
+        inc(J);
+        K := FFunctionResultOffsets[ResultOffSet]+1;
+        PrepareVar;
+        Inc(ResultOffSet);
+      end;
   end;
 end;
 
@@ -1098,9 +1108,10 @@ end;
 constructor TZOracleCallableResultSet.Create(PlainDriver: IZOraclePlainDriver;
   Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
   ErrorHandle: POCIError; OutVars: PZSQLVars; FieldNames: TStringDynArray;
-  ParamTypes: array of shortInt);
+  ParamTypes, FunctionResultOffsets: array of shortInt);
 begin
-  FOutVars := PrepareOracleOutVars(Statement, OutVars, FieldNames, ParamTypes);
+  FOutVars := PrepareOracleOutVars(Statement, OutVars, FieldNames, ParamTypes,
+                FunctionResultOffsets);
   inherited Create(PlainDriver, Statement, SQL, StmtHandle, ErrorHandle);
   MaxRows := 1;
 end;

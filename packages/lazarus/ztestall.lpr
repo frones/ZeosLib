@@ -100,11 +100,10 @@ function TMyGUITestRunner.FindNode(NodeText: String): TTreeNode;
 var
   i: integer;
   Function CheckNodes (node:TTreeNode; ATestName:string):TTreeNode;
-  var s, c, nodetext : string;
+  var s, c : string;
       I, p : integer;
   begin
     result := nil;
-    nodetext := node.text;
       begin
       p := pos ('.', ATestName);
       if p > 0 then
@@ -163,13 +162,14 @@ end;
 procedure TMyTestRunner.WriteCustomHelp;
 begin
   inherited WriteCustomHelp;
+  writeln('  -c <filename>             custom config file name');
   writeln('  -b or --batch             don''t run the GUI interface');
   writeln('  -v or --verbose           show full output (otherwise compact report is used)');
 end;
 
 function TMyTestRunner.GetShortOpts: string;
 begin
-  Result:=inherited GetShortOpts+'bv';
+  Result:=inherited GetShortOpts+'bvc';
 end;
 
 function TMyTestRunner.GetResultsWriter: TCustomResultsWriter;
@@ -196,8 +196,10 @@ begin
   {$I ztestall.lrs}
   SetHeapTraceOutput('heaptrc.log');
   TestGroup := COMMON_GROUP;
-  RebuildTestDatabases;
-  If Application.HasOption('b', 'batch') or Application.HasOption('h', 'help')then
+  If Not Application.HasOption('h', 'help')then
+    RebuildTestDatabases;
+
+ If Application.HasOption('b', 'batch') then
   begin
     Applicationc := TMyTestRunner.Create(nil);
     Applicationc.Initialize;

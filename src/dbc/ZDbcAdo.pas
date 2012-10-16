@@ -63,6 +63,7 @@ uses
 
 type
   {** Implements Ado Database Driver. }
+  {$WARNINGS OFF}
   TZAdoDriver = class(TZAbstractDriver)
   public
     constructor Create; override;
@@ -70,6 +71,7 @@ type
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
   end;
+  {$WARNINGS ON}
 
   {** Represents an Ado specific connection interface. }
   IZAdoConnection = interface (IZConnection)
@@ -147,10 +149,12 @@ end;
 {**
   Attempts to make a database connection to the given URL.
 }
+{$WARNINGS OFF}
 function TZAdoDriver.Connect(const Url: TZURL): IZConnection;
 begin
   Result := TZAdoConnection.Create(Url);
 end;
+{$WARNINGS ON}
 
 {**
   Gets the driver's major version number. Initially this should be 1.

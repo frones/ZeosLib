@@ -1275,26 +1275,33 @@ end;
 function TZOracleDatabaseMetadata.UncachedGetProcedureColumns(const Catalog,
   SchemaPattern, ProcedureNamePattern, ColumnNamePattern: string): IZResultSet;
 var
-  ColumnIndexes : Array[1..8] of integer;
+  ColumnIndexes : Array[1..9] of integer;
   colName: string;
   IZStmt: IZStatement;
   TempSet: IZResultSet;
-  Names: TStrings;
+  Names, Procs: TStrings;
+  PackageName, ProcName, TempProcedureNamePattern: String;
 
   function GetNextName(const AName: String; NameEmpty: Boolean = False): String;
-  var N: Integer;
+  var
+    N: Integer;
+    NewName: String;
   begin
-    if (Names.IndexOf(AName) = -1) and not NameEmpty then
+    if PackageName = '' then
+      NewName := AName
+    else
+      NewName := ProcName+'.'+AName;
+    if (Names.IndexOf(NewName) = -1) and not NameEmpty then
     begin
-      Names.Add(AName);
-      Result := AName;
+      Names.Add(NewName);
+      Result := NewName;
     end
     else
       for N := 1 to MaxInt do
-        if Names.IndexOf(AName+IntToStr(N)) = -1 then
+        if Names.IndexOf(NewName+IntToStr(N)) = -1 then
         begin
-          Names.Add(AName+IntToStr(N));
-          Result := AName+IntToStr(N);
+          Result := NewName+IntToStr(N);
+          Names.Add(Result);
           Break;
         end;
   end;
@@ -1305,6 +1312,8 @@ var
   begin
     TypeName := Source.GetString(ColumnIndexes[4]);
     SubTypeName := Source.GetString(ColumnIndexes[5]);
+    PackageName := Source.GetString(ColumnIndexes[8]);
+    ProcName := Source.GetString(ColumnIndexes[9]);
 
     Result.MoveToInsertRow;
     Result.UpdateNull(1);    //PROCEDURE_CAT
@@ -1326,7 +1335,7 @@ var
 
     ColName := Source.GetString(ColumnIndexes[2]);
     if IsResultParam then
-      Result.UpdateString(4, 'ReturnValue')    //COLUMN_NAME
+      Result.UpdateString(4, GetNextName('ReturnValue', False))    //COLUMN_NAME
     else
       Result.UpdateString(4, GetNextName(ColName, Length(ColName) = 0));    //COLUMN_NAME
 
@@ -1345,16 +1354,77 @@ var
     Result.InsertRow;
   end;
 
-  function GetColumnSQL(PosChar: String): String;
+  function GetColumnSQL(PosChar: String; Package: String = ''): String;
+
+    procedure SplitPackageAndProc(Value: String);
+    var
+      iPos: Integer;
+    begin
+      PackageName := '';
+      ProcName := 'Value';
+      iPos := Pos('.', Value);
+        if (iPos > 0) then
+        begin
+          PackageName := '= '+#39+Copy(Value, 1, iPos-1)+#39;
+          ProcName := Copy(Value, iPos+1,Length(Value)-iPos);
+        end
+        else
+        begin
+          PackageName := 'IS NULL';
+          ProcName := Value;
+        end;
+    end;
   begin
-    Result := 'select * from user_arguments where object_name like '''+
-      ToLikeString(GetIdentifierConvertor.ExtractQuote(ProcedureNamePattern))+''' '+
+    SplitPackageAndProc(GetIdentifierConvertor.ExtractQuote(TempProcedureNamePattern));
+    Result := 'select * from user_arguments where (package_name '+PackageName+
+      ' AND object_name like '''+ ToLikeString(ProcName)+''' '+
+      ' OR package_name like '''+ ToLikeString(ProcName)+''' )'+
         'AND POSITION '+PosChar+' 0 ORDER BY POSITION';
+  end;
+
+  procedure AddColumns(WasNext: Boolean; WasFunc: Boolean);
+  begin
+    if WasNext then InsertProcedureColumnValues(TempSet, WasFunc);
+    while TempSet.Next do
+      InsertProcedureColumnValues(TempSet, WasFunc);
+    TempSet.Close;
+
+    if not WasFunc then
+    begin
+      TempSet := IZStmt.ExecuteQuery(GetColumnSQL('=')); //ReturnValue has allways Position = 0
+      with TempSet do
+      begin
+        while Next do
+          InsertProcedureColumnValues(TempSet, True);
+        Close;
+      end;
+    end;
+  end;
+
+  procedure GetMoreProcedures;
+  var
+    i: Integer;
+  begin
+    TempSet.Close;
+    TempSet := IZStmt.ExecuteQuery('select object_name from user_arguments where package_name = '+
+      #39+ProcedureNamePattern+#39+' GROUP BY object_name order by object_name');
+    while TempSet.Next do
+      Procs.Add(TempSet.GetString(1));
+    TempSet.Close;
+    for i := 0 to Procs.Count -1 do
+    begin
+      TempProcedureNamePattern := '"'+ProcedureNamePattern+'.'+Procs[i]+'"';
+      TempSet := IZStmt.ExecuteQuery(GetColumnSQL('>')); //ParameterValues have allways Position > 0
+      AddColumns(False, False);
+    end;
   end;
 begin
   Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
+  TempProcedureNamePattern := ProcedureNamePattern;
+
   Names := TStringList.Create;
+  Procs := TStringList.Create;
 
   IZStmt := GetConnection.CreateStatement;
   TempSet := IZStmt.ExecuteQuery(GetColumnSQL('>')); //ParameterValues have allways Position > 0
@@ -1368,24 +1438,33 @@ begin
     ColumnIndexes[5] := FindColumn('TYPE_SUBNAME');//RDB$FIELD_SUB_TYPE');
     ColumnIndexes[6] := FindColumn('DATA_PRECISION');//RDB$FIELD_PRECISION');
     ColumnIndexes[7] := FindColumn('DATA_SCALE');//RDB$FIELD_SCALE');
-    ColumnIndexes[8] := 0;//FindColumn('RDB$NULL_FLAG');
-
-    while Next do
-      InsertProcedureColumnValues(TempSet);
-    Close;
+    ColumnIndexes[8] := FindColumn('package_name');
+    ColumnIndexes[9] := FindColumn('object_name');
   end;
-
-  TempSet := IZStmt.ExecuteQuery(GetColumnSQL('=')); //ReturnValue has allways Position = 0
-  with TempSet do
-  begin
-    if Next then
-      InsertProcedureColumnValues(TempSet, True);
-    Close;
-  end;
-
+    if ( PackageName <> 'IS NULL' ) and ( ProcName <> '' ) then
+      AddColumns(False, False)
+    else
+      if TempSet.Next then
+        if ( TempSet.GetString(ColumnIndexes[8]) = ProcName ) then
+        {Package without proc found}
+          GetMoreProcedures
+        else
+          AddColumns(True, False)
+      else
+      begin
+        TempSet.Close;
+        TempSet := IZStmt.ExecuteQuery(GetColumnSQL('=')); //ParameterValues have allways Position > 0
+        if TempSet.Next then
+          if ( TempSet.GetString(ColumnIndexes[8]) = ProcName ) then
+          {Package without proc found}
+            GetMoreProcedures
+          else
+            AddColumns(True, True)
+      end;
   TempSet := nil;
   IZStmt.Close;
   FreeAndNil(Names);
+  FreeAndNil(Procs);
 end;
 
 function TZOracleDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
