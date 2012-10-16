@@ -323,18 +323,9 @@ var
 begin
   Result := -1;
   ConnectionHandle := GetConnectionHandle();
-  if Connection.PreprepareSQL then
-  begin
-    SSQL := SQL;
-    QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,PAnsiChar(ASQL));
-  end
-  else
-    if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
-      QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
-        PAnsiChar(UTF8String(SQL)))
-    else
-      QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
-        PAnsiChar(AnsiString(SQL)));
+
+  SSQL := SQL; //Prepares SQL if needed
+  QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,PAnsiChar(ASQL));
   CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
     SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);

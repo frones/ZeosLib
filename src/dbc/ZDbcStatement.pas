@@ -722,7 +722,7 @@ begin
       case (SQLTokens[i].TokenType) of
         ttEscape:
           Result := Result + {$IFDEF DELPHI12_UP}ZPlainString{$ENDIF}(SQLTokens[i].Value);
-        ttQuoted, {: Result := GetConnection.EscapeString(ZPlainString(SQLTokens[i].Value));}
+        ttQuoted,
         ttWord, ttQuotedIdentifier, ttKeyword:
           Result := Result + ZPlainString(SQLTokens[i].Value);
         else
