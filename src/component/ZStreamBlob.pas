@@ -125,7 +125,7 @@ begin
     {$IFDEF WITH_WIDEMEMO}
       if FField.DataType = ftWideMemo then
       begin
-        if (({$IFDEF DELPHI14_UP}StrLen{$ELSE}Length{$ENDIF}(PWideChar(Memory)) *2) = Size) or
+        if (({$IFDEF DELPHI14_UP}StrLen{$ELSE}Length{$ENDIF}(PWideChar(Memory)) *2) = Size) and
            (StrLen(PAnsiChar(Memory)) <> Size) then
         begin
           SetLength(Ws, Self.Size div 2);
