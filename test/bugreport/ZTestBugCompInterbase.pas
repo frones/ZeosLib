@@ -627,7 +627,9 @@ begin
       SL.SaveToStream(StrStream1);
       ParamByName('P_RESUME').LoadFromStream(StrStream1, ftBlob);
 
-      if Self.FConnection.DbcConnection.GetEncoding = ceUTF8 then
+      if ( FConnection.DbcConnection.GetEncoding = ceUTF8 ) and
+        not ( (FConnection.DbcConnection.GetConSettings.CPType = cGET_ACP) and
+            FConnection.DbcConnection.AutoEncodeStrings ) then
         if FConnection.DbcConnection.UTF8StringAsWideField then
         begin
           WS := WideString(Str2)+LineEnding;
@@ -716,7 +718,9 @@ begin
       ParamByName('P_RESUME').LoadFromStream(StrStream1, ftMemo);
 
       StrStream := TMemoryStream.Create;
-      if Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+      if ( FConnection.DbcConnection.GetEncoding = ceUTF8 ) and
+        not ( (FConnection.DbcConnection.GetConSettings.CPType = cGET_ACP) and
+            FConnection.DbcConnection.AutoEncodeStrings ) then
         if FConnection.DbcConnection.UTF8StringAsWideField then
         begin
           WS := WideString(Str2)+LineEnding;
@@ -860,11 +864,23 @@ begin
         iqry.open;
 
         CheckEquals(3, iqry.RecordCount, 'RecordCount');
-        CheckEquals(S1, iqry.Fields[0].AsString);
+        if (FConnection.DbcConnection.GetConSettings.CPType = cGET_ACP ) and
+          FConnection.DbcConnection.AutoEncodeStrings then
+          CheckEquals(String(UTF8ToString(S1)), iqry.Fields[0].AsString)
+        else
+          CheckEquals(S1, iqry.Fields[0].AsString);
         iqry.Next;
-        CheckEquals(S2, iqry.Fields[0].AsString);
+        if (FConnection.DbcConnection.GetConSettings.CPType = cGET_ACP ) and
+          FConnection.DbcConnection.AutoEncodeStrings then
+          CheckEquals(String(UTF8ToString(S2)), iqry.Fields[0].AsString)
+        else
+          CheckEquals(S2, iqry.Fields[0].AsString);
         iqry.Next;
-        CheckEquals(S3, iqry.Fields[0].AsString);
+        if (FConnection.DbcConnection.GetConSettings.CPType = cGET_ACP ) and
+          FConnection.DbcConnection.AutoEncodeStrings then
+          CheckEquals(String(UTF8ToString(S3)), iqry.Fields[0].AsString)
+        else
+          CheckEquals(S3, iqry.Fields[0].AsString);
       end;
     end;
   finally

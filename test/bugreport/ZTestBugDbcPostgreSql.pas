@@ -358,12 +358,16 @@ begin
     Check(Next);
     CheckEquals(1, ResultSet.GetInt(1));
     if not (Connection.GetEncoding = ceAnsi) then
-      if Connection.UTF8StringAsWideField then
+      if Connection.UTF8StringAsWideField or
+         ( (Connection.GetConSettings.CPType = cGET_ACP) and Connection.GetConSettings.AutoEncode) then
         CheckEquals('Абракадабра', ResultSet.GetString(2))
       else
         CheckEquals(UTF8Encode(WideString('Абракадабра')), ResultSet.GetString(2))
     else
-      CheckEquals('Абракадабра', ResultSet.GetString(2));
+      if (Connection.GetConSettings.CPType = cCP_UTF8) and Connection.GetConSettings.AutoEncode then
+        CheckEquals(UTF8Encode(WideString('Абракадабра')), ResultSet.GetString(2))
+      else
+        CheckEquals('Абракадабра', ResultSet.GetString(2));
 
     MoveToInsertRow;
     UpdateIntByName('id', 2);
@@ -380,23 +384,31 @@ begin
   begin
     Check(Next);
     CheckEquals(1, ResultSet.GetInt(1));
-    if (Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]) then
-      if Connection.UTF8StringAsWideField then
+    if (Connection.GetEncoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]) then
+      if Connection.UTF8StringAsWideField or
+      ( (Connection.GetConSettings.CPType = cGET_ACP) and Connection.GetConSettings.AutoEncode) then
         CheckEquals('Абракадабра', ResultSet.GetString(2))
       else
         CheckEquals(UTF8Encode(WideString('Абракадабра')), ResultSet.GetString(2))
     else
-      CheckEquals('Абракадабра', ResultSet.GetString(2));
+      if (Connection.GetConSettings.CPType = cCP_UTF8) and Connection.GetConSettings.AutoEncode then
+        CheckEquals(UTF8Encode(WideString('Абракадабра')), ResultSet.GetString(2))
+      else
+        CheckEquals('Абракадабра', ResultSet.GetString(2));
 
     Check(Next);
     CheckEquals(2, ResultSet.GetInt(1));
     if (Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]) then
-      if Connection.UTF8StringAsWideField then
+      if Connection.UTF8StringAsWideField or
+      ( (Connection.GetConSettings.CPType = cGET_ACP) and Connection.GetConSettings.AutoEncode) then
         CheckEquals('\Победа\', ResultSet.GetString(2))
       else
         CheckEquals(UTF8Encode(WideString('\Победа\')), ResultSet.GetString(2))
     else
-      CheckEquals('\Победа\', ResultSet.GetString(2));
+      if (Connection.GetConSettings.CPType = cCP_UTF8) and Connection.GetConSettings.AutoEncode then
+        CheckEquals(UTF8Encode(WideString('\Победа\')), ResultSet.GetString(2))
+      else
+        CheckEquals('\Победа\', ResultSet.GetString(2));
     Close;
   end;
 

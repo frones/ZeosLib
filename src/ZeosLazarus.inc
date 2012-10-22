@@ -70,12 +70,14 @@
       {$DEFINE FPC2_6UP}
     {$IFEND}
 
+    {.$IFNDEF MSWINDOWS}
+      {.$DEFINE WITH_LCONVENCODING} //Only available for Lazarus to activate the LConv uncomment this define
+    {.$ENDIF}
     {$DEFINE LAZARUSUTF8HACK} // Places that fixed for the Lazarus convention that all strings are UTF8  are marked with this
                               // ifdef. But probably most of them are adhoc hacks, and need revisiting in time.
     {$DEFINE WITH_FPC_FTTIME_BUG} //http://zeos.firmos.at/viewtopic.php?t=3534&postdays=0&postorder=asc&start=0
     {$DEFINE WITH_FPC_BOF_BUG} //http://bugs.freepascal.org/view.php?id=22377
     {$DEFINE WITH_FPC_MODIFIED_BUG} //http://bugs.freepascal.org/view.php?id=22381
-    {$DEFINE WITH_FPC_VARARRAY_BUG} //http://bugs.freepascal.org/view.php?id=23149
   {$ELSE}
     {$FATAL Versions Older than 2.2.4 are not supported!}
   {$ENDIF}
@@ -102,4 +104,4 @@
   //                             ifdef. But probably most of them are adhoc hacks, and need constant reevaluation.
   //   OLDFPC      : IFDEF FPC's so old that I can't remember which version are put under IFDEF OLDFPC. In time these
   //                   blocks can be killed.
-
+  

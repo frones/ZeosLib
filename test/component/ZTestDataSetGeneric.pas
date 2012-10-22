@@ -1864,18 +1864,12 @@ begin
       Params[2].DataType := ftBlob;
       Params[0].AsInteger := TEST_ROW_ID-1;
       TextStreamS := TMemoryStream.Create;
-      if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) then
-      begin
-        s:={$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString(utf8encode('123456ייאא'),6000);
-        I := StrLen(PAnsiChar(s));
-        CheckEquals(StrLen(PAnsiChar(utf8encode('123456ייאא')))*6000, I, 'Length of DupeString Text');
-      end
+      if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+        not ( (Connection.DbcConnection.GetConSettings.CPType = cGET_ACP) and
+          Connection.DbcConnection.GetConSettings.AutoEncode )  then
+        s:={$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString(utf8encode('123456ייאא'),6000)
       else
-      begin
         s:={$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString('123456ייאא',6000);
-        I := StrLen(PAnsiChar(s));
-        CheckEquals(StrLen(PAnsiChar('123456ייאא'))*6000, I, 'Length of DupeString Text');
-      end;
       TextStreamS.Write(s[1],length(s));
       Params[1].LoadFromStream(TextStreamS, ftMemo);
       BinStream := TMemoryStream.Create;

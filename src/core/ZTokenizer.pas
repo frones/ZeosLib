@@ -108,10 +108,7 @@ type
     tokenizer argument.
   }
   TZTokenizerState = class (TObject)
-  //protected
-    //FCharSize: SamllInt;
   public
-    //constructor Create(CharSize: SmallInt = SizeOf(Char));
     function NextToken(Stream: TStream; FirstChar: Char;
       Tokenizer: TZTokenizer): TZToken; virtual; abstract;
   end;
@@ -1447,7 +1444,6 @@ begin
   else
     Result := '';
 end;
-
 
 {**
   Tokenizes a string buffer into a dynamic array of tokens and informs

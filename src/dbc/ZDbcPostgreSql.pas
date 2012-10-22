@@ -309,7 +309,7 @@ begin
 
   OnPropertiesChange(nil);
 
-  FCharactersetCode := TZPgCharactersetType(ClientCodePage^.ID);
+  FCharactersetCode := TZPgCharactersetType(Consettings.ClientCodePage^.ID);
   FNoticeProcessor := DefaultNoticeProcessor;
 end;
 
@@ -509,7 +509,7 @@ begin
         Close;
       end;
     CheckCharEncoding(FClientCodePage);
-    FCharactersetCode := TZPgCharactersetType(ClientCodePage^.ID);
+    FCharactersetCode := TZPgCharactersetType(ConSettings.ClientCodePage^.ID);
 
     { sets standard_conforming_strings according to Properties if available }
     SCS := Info.Values[standard_conforming_strings];
@@ -1008,7 +1008,7 @@ end;
 
 function TZPostgreSQLConnection.EscapeString(Value: ZAnsiString): ZAnsiString;
 begin
-  Result := PlainDriver.EscapeString(Self.FHandle, Value, GetEncoding)
+  Result := PlainDriver.EscapeString(Self.FHandle, Value, ConSettings)
 end;
 {**
   Creates a sequence generator object.
@@ -1042,7 +1042,7 @@ end;
 function TZPostgreSQLConnection.GetBinaryEscapeString(const Value: ZAnsiString): String;
 begin
   Result := String(EncodeBinary(Value));
-  if GetPreprepareSQL then
+  if GetAutoEncodeStrings then
     Result := GetDriver.GetTokenizer.GetEscapeString(Result);
 end;
 
@@ -1056,15 +1056,15 @@ end;
 }
 function TZPostgreSQLConnection.GetEscapeString(const Value: String): String;
 begin
-  Result := GetPlainDriver.EscapeString(FHandle, Value, GetEncoding);
-  if GetPreprepareSQL then
+  Result := GetPlainDriver.EscapeString(FHandle, Value, ConSettings);
+  if GetAutoEncodeStrings then
     Result := GetDriver.GetTokenizer.GetEscapeString(Result);
 end;
 
 {$IFDEF DELPHI12_UP}
 function TZPostgreSQLConnection.GetEscapeString(const Value: ZAnsiString): String;
 begin
-  Result := ZDbcString(GetPlainDriver.EscapeString(FHandle, Value, GetEncoding));
+  Result := ZDbcString(GetPlainDriver.EscapeString(FHandle, Value, ConSettings));
 end;
 {$ENDIF}
 

@@ -142,7 +142,7 @@ begin
   CachedResolver := TZSQLiteCachedResolver.Create(FPlainDriver, FHandle, Self,
     NativeResultSet.GetMetaData);
   CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SSQL,
-    CachedResolver,GetConnection.GetClientCodePageInformations);
+    CachedResolver,GetConnection.GetConSettings);
 
   { Fetches all rows to prevent blocking. }
   CachedResultSet.SetType(rtScrollInsensitive);

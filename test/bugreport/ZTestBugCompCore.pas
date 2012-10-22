@@ -1869,7 +1869,7 @@ begin
       ParamByName('P_RESUME').LoadFromStream(StrStream1, ftMemo);
 
       StrStream := TMemoryStream.Create;
-      if Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+      if ( FConnection.DbcConnection.GetEncoding = ceUTF8 ) then
         if FConnection.DbcConnection.UTF8StringAsWideField then
         begin
           WS := WideString(Str2)+LineEnding;
@@ -1877,17 +1877,25 @@ begin
           StrStream.Position := 0;
         end
         else
+          if FConnection.DbcConnection.AutoEncodeStrings and
+            (FConnection.DbcConnection.GetConSettings.CPType = cGET_ACP) then
+          begin
+            Ansi := str2+LineEnding;
+            StrStream.Write(PAnsiChar(Ansi)^, Length(Ansi));
+            StrStream.Position := 0;
+          end
+          else
+          begin
+            Ansi := AnsiToUTF8(str2)+LineEnding;
+            StrStream.Write(PAnsiChar(Ansi)^, Length(Ansi));
+            StrStream.Position := 0;
+          end
+        else
         begin
-          Ansi := AnsiToUTF8(str2)+LineEnding;
+          Ansi := str2+LineEnding;
           StrStream.Write(PAnsiChar(Ansi)^, Length(Ansi));
           StrStream.Position := 0;
-        end
-      else
-      begin
-        Ansi := str2+LineEnding;
-        StrStream.Write(PAnsiChar(Ansi)^, Length(Ansi));
-        StrStream.Position := 0;
-      end;
+        end;
       try
         ExecSQL;
         SQL.Text := 'select * from people where p_id = ' + IntToStr(TEST_ROW_ID);
@@ -1897,13 +1905,21 @@ begin
 
         (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
         CheckEquals(StrStream, StrStream1, 'Param().LoadFromStream(StringStream, ftMemo)');
-        if Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+        if ( FConnection.DbcConnection.GetEncoding = ceUTF8) then
           if FConnection.DbcConnection.UTF8StringAsWideField then
             CheckEquals(WideString(Str3), FieldByName('P_NAME').AsString)
           else
-            CheckEquals(Utf8Encode(Str3), FieldByName('P_NAME').AsString)
+            if (FConnection.DbcConnection.GetConSettings.CPType = cGET_ACP) and
+               (FConnection.DbcConnection.GetConSettings.AutoEncode) then
+              CheckEquals(Str3, FieldByName('P_NAME').AsString)
+            else
+              CheckEquals(Utf8Encode(Str3), FieldByName('P_NAME').AsString)
         else
-          CheckEquals(Str3, FieldByName('P_NAME').AsString);
+          if (FConnection.DbcConnection.GetConSettings.CPType = cCP_UTF8) and
+             (FConnection.DbcConnection.GetConSettings.AutoEncode) then
+            CheckEquals(Utf8Encode(Str3), FieldByName('P_NAME').AsString)
+          else
+            CheckEquals(Str3, FieldByName('P_NAME').AsString);
         SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
         CheckEquals(1, Params.Count);
         Params[0].DataType := ftInteger;

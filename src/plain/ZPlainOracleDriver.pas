@@ -493,8 +493,8 @@ end;
 
 procedure TZOracle9iPlainDriver.LoadCodePages;
 begin
-(*  AddCodePage('AL16UTF16', 2000, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16{$ENDIF}); {Unicode 3.1 UTF-16 Universal character set}
-  AddCodePage('AL32UTF8', 873, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}); {Unicode 3.1 UTF-8 Universal character set}
+(*  AddCodePage('AL16UTF16', 2000, ceUTF16, zCP_UTF16); {Unicode 3.1 UTF-16 Universal character set}
+  AddCodePage('AL32UTF8', 873, ceUTF8, zCP_UTF8); {Unicode 3.1 UTF-8 Universal character set}
   //AddCodePage('AR8ADOS710', 3); {Arabic MS-DOS 710 Server 8-bit Latin/Arabic}
 //  AddCodePage('AR8ADOS710T', 4); {Arabic MS-DOS 710 8-bit Latin/Arabic}
   AddCodePage('AR8ADOS720', 558); {Arabic MS-DOS 720 Server 8-bit Latin/Arabic}
@@ -561,12 +561,12 @@ begin
 //  AddCodePage('CH7DEC', 65); {DEC VT100 7-bit Swiss (German/French)}
 //  AddCodePage('SF7DEC', 66); {DEC VT100 7-bit Finnish}
 //  AddCodePage('WE8DG', 67); {DG 8-bit West European}
-//  AddCodePage('WE8EBCDIC37', 68, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_EBC037{$ENDIF}); {EBCDIC Code Page 37 8-bit West European}
-//  AddCodePage('D8EBCDIC273', 69, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_EBC273{$ENDIF}); {EBCDIC Code Page 273/1 8-bit Austrian German}
-//  AddCodePage('DK8EBCDIC277', 70, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_EBC277{$ENDIF}); {EBCDIC Code Page 277/1 8-bit Danish}
-//  AddCodePage('S8EBCDIC278', 71, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_EBC278{$ENDIF}); {EBCDIC Code Page 278/1 8-bit Swedish}
-//  AddCodePage('I8EBCDIC280', 72, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_EBC280{$ENDIF}); {EBCDIC Code Page 280/1 8-bit Italian}
-//  AddCodePage('WE8EBCDIC284', 73, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_EBC284{$ENDIF}); {EBCDIC Code Page 284 8-bit Latin American/Spanish}
+//  AddCodePage('WE8EBCDIC37', 68, ceAnsi, zCP_EBC037); {EBCDIC Code Page 37 8-bit West European}
+//  AddCodePage('D8EBCDIC273', 69, ceAnsi, zCP_EBC273); {EBCDIC Code Page 273/1 8-bit Austrian German}
+//  AddCodePage('DK8EBCDIC277', 70, ceAnsi, zCP_EBC277); {EBCDIC Code Page 277/1 8-bit Danish}
+//  AddCodePage('S8EBCDIC278', 71, ceAnsi, zCP_EBC278); {EBCDIC Code Page 278/1 8-bit Swedish}
+//  AddCodePage('I8EBCDIC280', 72, ceAnsi, zCP_EBC280); {EBCDIC Code Page 280/1 8-bit Italian}
+//  AddCodePage('WE8EBCDIC284', 73, ceAnsi, zCP_EBC284); {EBCDIC Code Page 284 8-bit Latin American/Spanish}
 //  AddCodePage('WE8EBCDIC285', 74); {EBCDIC Code Page 285 8-bit West European}
 //  AddCodePage('WE8EBCDIC924', 75); {Latin 9 EBCDIC 924}
 //  AddCodePage('WE8EBCDIC1047', 76); {EBCDIC Code Page 1047 8-bit West European}
@@ -653,17 +653,17 @@ begin
   AddCodePage('BG8MSWIN', 157); {MS Windows 8-bit Bulgarian Cyrillic}
   AddCodePage('LT8MSWIN921', 158); {MS Windows Code Page 921 8-bit Lithuanian}
   AddCodePage('ET8MSWIN923', 159); {MS Windows Code Page 923 8-bit Estonian}
-  AddCodePage('EE8MSWIN1250', 160, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1250{$ENDIF}); {MS Windows Code Page 1250 8-bit East European}
-  AddCodePage('CL8MSWIN1251', 161, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1251{$ENDIF}); {MS Windows Code Page 1251 8-bit Latin/Cyrillic}
-  AddCodePage('WE8MSWIN1252', 162, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1252{$ENDIF}); {MS Windows Code Page 1252 8-bit West European}
-  AddCodePage('EL8MSWIN1253', 163, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1253{$ENDIF}); {MS Windows Code Page 1253 8-bit Latin/Greek}
-  AddCodePage('BLT8MSWIN1257', 164, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1257{$ENDIF}); {MS Windows Code Page 1257 8-bit Baltic}
+  AddCodePage('EE8MSWIN1250', 160, ceAnsi, zCP_WIN1250); {MS Windows Code Page 1250 8-bit East European}
+  AddCodePage('CL8MSWIN1251', 161, ceAnsi, zCP_WIN1251); {MS Windows Code Page 1251 8-bit Latin/Cyrillic}
+  AddCodePage('WE8MSWIN1252', 162, ceAnsi, zCP_WIN1252); {MS Windows Code Page 1252 8-bit West European}
+  AddCodePage('EL8MSWIN1253', 163, ceAnsi, zCP_WIN1253); {MS Windows Code Page 1253 8-bit Latin/Greek}
+  AddCodePage('BLT8MSWIN1257', 164, ceAnsi, zCP_WIN1257); {MS Windows Code Page 1257 8-bit Baltic}
   AddCodePage('BLT8CP921', 165); {Latvian Standard LVS8-92(1) Windows/Unix 8-bit Baltic}
-  AddCodePage('LV8PC8LR', 166, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS866{$ENDIF}); {Latvian Version IBM-PC Code Page 866 8-bit Latin/Cyrillic}
+  AddCodePage('LV8PC8LR', 166, ceAnsi, zCP_DOS866); {Latvian Version IBM-PC Code Page 866 8-bit Latin/Cyrillic}
   AddCodePage('WE8NCR4970', 167); {NCR 4970 8-bit West European}
   AddCodePage('WE8NEXTSTEP', 168); {NeXTSTEP PostScript 8-bit West European}
   AddCodePage('CL8ISOIR111', 169); {ISOIR111 Cyrillic}
-  AddCodePage('CL8KOI8R', 170, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_KOI8R{$ENDIF}); {RELCOM Internet Standard 8-bit Latin/Cyrillic}
+  AddCodePage('CL8KOI8R', 170, ceAnsi, zCP_KOI8R); {RELCOM Internet Standard 8-bit Latin/Cyrillic}
   AddCodePage('CL8KOI8U', 171); {KOI8 Ukrainian Cyrillic}
   AddCodePage('US8BS2000', 172); {Siemens 9750-62 EBCDIC 8-bit American}
   AddCodePage('DK8BS2000', 173); {Siemens 9750-62 EBCDIC 8-bit Danish}
@@ -689,7 +689,7 @@ begin
   AddCodePage('IW8EBCDIC1086', 193); {EBCDIC Code Page 1086 8-bit Hebrew}
   AddCodePage('AR8EBCDIC420S', 194); {EBCDIC Code Page 420 Server 8-bit Latin/Arabic}
   AddCodePage('AR8EBCDICX', 195); {EBCDIC XBASIC Server 8-bit Latin/Arabic}
-  AddCodePage('TR8EBCDIC1026', 196, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_IBM1026{$ENDIF}); {EBCDIC Code Page 1026 8-bit Turkish}
+  AddCodePage('TR8EBCDIC1026', 196, ceAnsi, zCP_IBM1026); {EBCDIC Code Page 1026 8-bit Turkish}
   AddCodePage('TR8EBCDIC1026S', 197); {EBCDIC Code Page 1026 Server 8-bit Turkish}
   AddCodePage('AR8HPARABIC8T', 198); {HP 8-bit Latin/Arabic}
   AddCodePage('TR8PC857', 199); {IBM-PC Code Page 857 8-bit Turkish}
@@ -719,69 +719,69 @@ begin
   AddCodePage('AR8SAKHR707T', 223); {SAKHR 707 8-bit Latin/Arabic}
   AddCodePage('AR8XBASIC', 224); {XBASIC 8-bit Latin/Arabic}
   AddCodePage('WE8BS2000L5', 225); {Siemens EBCDIC.DF.04.L5 8-bit West European/Turkish})
-  AddCodePage('UTF8', 871, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}); {Unicode 3.0 UTF-8 Universal character set, CESU-8 compliant}
-  AddCodePage('UTFE', 227, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}); {EBCDIC form of Unicode 3.0 UTF-8 Universal character set}
+  AddCodePage('UTF8', 871, ceUTF8, zCP_UTF8); {Unicode 3.0 UTF-8 Universal character set, CESU-8 compliant}
+  AddCodePage('UTFE', 227, ceUTF8, zCP_UTF8); {EBCDIC form of Unicode 3.0 UTF-8 Universal character set}
 *)
 
   //All supporteds from XE
-  AddCodePage('US7ASCII', 1, ceAnsi);
-  AddCodePage('US8PC437', 4, ceAnsi);
-  AddCodePage('WE8PC850', 10, ceAnsi);
-  AddCodePage('WE8PC858', 28, ceAnsi);
-  AddCodePage('WE8ISO8859P1', 31, ceAnsi);
-  AddCodePage('EE8ISO8859P2', 32, ceAnsi);
-  AddCodePage('SE8ISO8859P3', 33, ceAnsi);
-  AddCodePage('NEE8ISO8859P4', 34, ceAnsi);
-  AddCodePage('CL8ISO8859P5', 35, ceAnsi);
-  AddCodePage('AR8ISO8859P6', 36, ceAnsi);
-  AddCodePage('EL8ISO8859P7', 37, ceAnsi);
-  AddCodePage('IW8ISO8859P8', 38, ceAnsi);
-  AddCodePage('WE8ISO8859P9', 39, ceAnsi);
-  AddCodePage('NE8ISO8859P10', 40, ceAnsi);
+  AddCodePage('US7ASCII', 1, ceAnsi, zCP_ACP);
+  AddCodePage('US8PC437', 4, ceAnsi, zCP_DOS437);
+  AddCodePage('WE8PC850', 10, ceAnsi, zCP_DOS850);
+  AddCodePage('WE8PC858', 28, ceAnsi, zCP_DOS858);
+  AddCodePage('WE8ISO8859P1', 31, ceAnsi, zCP_L1_ISO_8859_1);
+  AddCodePage('EE8ISO8859P2', 32, ceAnsi, zCP_L2_ISO_8859_2);
+  AddCodePage('SE8ISO8859P3', 33, ceAnsi, zCP_L3_ISO_8859_3);
+  AddCodePage('NEE8ISO8859P4', 34, ceAnsi, zCP_L4_ISO_8859_4);
+  AddCodePage('CL8ISO8859P5', 35, ceAnsi, zCP_L5_ISO_8859_5);
+  AddCodePage('AR8ISO8859P6', 36, ceAnsi, zCP_L6_ISO_8859_6);
+  AddCodePage('EL8ISO8859P7', 37, ceAnsi, zCP_L7_ISO_8859_7);
+  AddCodePage('IW8ISO8859P8', 38, ceAnsi, zCP_L8_ISO_8859_8);
+  AddCodePage('WE8ISO8859P9', 39, ceAnsi, zCP_L5_ISO_8859_9);
+  AddCodePage('NE8ISO8859P10', 40, ceAnsi, zCP_L6_ISO_8859_10);
   AddCodePage('TH8TISASCII', 41, ceAnsi);
-  AddCodePage('VN8MSWIN1258', 45, ceAnsi);
-  AddCodePage('WE8ISO8859P15', 46, ceAnsi);
-  AddCodePage('BLT8ISO8859P13', 47, ceAnsi);
-  AddCodePage('CEL8ISO8859P14', 48, ceAnsi);
-  AddCodePage('CL8KOI8U', 51, ceAnsi);
+  AddCodePage('VN8MSWIN1258', 45, ceAnsi, zCP_WIN1258);
+  AddCodePage('WE8ISO8859P15', 46, ceAnsi, zCP_L9_ISO_8859_15);
+  AddCodePage('BLT8ISO8859P13', 47, ceAnsi, zCP_L7_ISO_8859_13);
+  AddCodePage('CEL8ISO8859P14', 48, ceAnsi, zCP_L8_ISO_8859_14);
+  AddCodePage('CL8KOI8U', 51, ceAnsi, zCP_KOI8U);
   AddCodePage('AZ8ISO8859P9E', 52, ceAnsi);
-  AddCodePage('EE8PC852', 150, ceAnsi);
-  AddCodePage('RU8PC866', 152, ceAnsi);
-  AddCodePage('TR8PC857', 156, ceAnsi);
-  AddCodePage('EE8MSWIN1250', 170, ceAnsi);
-  AddCodePage('CL8MSWIN1251', 171, ceAnsi);
-  AddCodePage('ET8MSWIN923', 172, ceAnsi);
-  AddCodePage('EL8MSWIN1253', 174, ceAnsi);
-  AddCodePage('IW8MSWIN1255', 175, ceAnsi);
-  AddCodePage('LT8MSWIN921', 176, ceAnsi);
-  AddCodePage('TR8MSWIN1254', 177, ceAnsi);
-  AddCodePage('WE8MSWIN1252', 178, ceAnsi);
-  AddCodePage('BLT8MSWIN1257', 179, ceAnsi);
-  AddCodePage('BLT8CP921', 191, ceAnsi);
-  AddCodePage('CL8KOI8R', 196, ceAnsi);
-  AddCodePage('BLT8PC775', 197, ceAnsi);
-  AddCodePage('EL8PC737', 382, ceAnsi);
+  AddCodePage('EE8PC852', 150, ceAnsi, zCP_DOS852);
+  AddCodePage('RU8PC866', 152, ceAnsi, zCP_DOS856);
+  AddCodePage('TR8PC857', 156, ceAnsi, zCP_DOS857);
+  AddCodePage('EE8MSWIN1250', 170, ceAnsi, zCP_WIN1250);
+  AddCodePage('CL8MSWIN1251', 171, ceAnsi, zCP_WIN1251);
+  AddCodePage('ET8MSWIN923', 172, ceAnsi, zCP_MSWIN923);
+  AddCodePage('EL8MSWIN1253', 174, ceAnsi, zCP_WIN1253);
+  AddCodePage('IW8MSWIN1255', 175, ceAnsi, zCP_WIN1255);
+  AddCodePage('LT8MSWIN921', 176, ceAnsi, zCP_MSWIN921);
+  AddCodePage('TR8MSWIN1254', 177, ceAnsi, zCP_WIN1254);
+  AddCodePage('WE8MSWIN1252', 178, ceAnsi, zCP_WIN1252);
+  AddCodePage('BLT8MSWIN1257', 179, ceAnsi, zCP_WIN1257);
+  AddCodePage('BLT8CP921', 191, ceAnsi, 921);
+  AddCodePage('CL8KOI8R', 196, ceAnsi, zCP_KOI8R);
+  AddCodePage('BLT8PC775', 197, ceAnsi, zCP_DOS775);
+  AddCodePage('EL8PC737', 382, ceAnsi, zCP_DOS737);
   AddCodePage('AR8ASMO8X', 500, ceAnsi);
-  AddCodePage('AR8ADOS720', 558, ceAnsi);
-  AddCodePage('AR8MSWIN1256', 560, ceAnsi);
-  AddCodePage('JA16EUC', 830, ceAnsi);
-  AddCodePage('JA16SJIS', 832, ceAnsi);
+  AddCodePage('AR8ADOS720', 558, ceAnsi, zCP_DOS720);
+  AddCodePage('AR8MSWIN1256', 560, ceAnsi, cCP_WIN1256);
+  AddCodePage('JA16EUC', 830, ceAnsi, zCP_euc_JP_win);
+  AddCodePage('JA16SJIS', 832, ceAnsi, zCP_csISO2022JP);
   AddCodePage('JA16EUCTILDE', 837, ceAnsi);
   AddCodePage('JA16SJISTILDE', 838, ceAnsi);
-  AddCodePage('KO16KSC5601', 840, ceAnsi);
-  AddCodePage('KO16MSWIN949', 846, ceAnsi);
-  AddCodePage('ZHS16CGB231280', 850, ceAnsi);
+  AddCodePage('KO16KSC5601', 840, ceAnsi, 601);
+  AddCodePage('KO16MSWIN949', 846, ceAnsi, zCP_EUCKR);
+  AddCodePage('ZHS16CGB231280', 850, ceAnsi, zCP_GB2312);
   AddCodePage('ZHS16GBK', 852, ceAnsi);
-  AddCodePage('ZHS32GB18030', 854, ceAnsi);
-  AddCodePage('ZHT32EUC', 860, ceAnsi);
-  AddCodePage('ZHT16BIG5', 865, ceAnsi);
-  AddCodePage('ZHT16MSWIN950', 867, ceAnsi);
+  AddCodePage('ZHS32GB18030', 854, ceAnsi, zCP_GB18030);
+  AddCodePage('ZHT32EUC', 860, ceAnsi, zCP_EUCKR);
+  AddCodePage('ZHT16BIG5', 865, ceAnsi, zCP_Big5);
+  AddCodePage('ZHT16MSWIN950', 867, ceAnsi, zCP_Big5);
   AddCodePage('ZHT16HKSCS', 868, ceAnsi);
-  AddCodePage('UTF8', 871, ceUTF8);
-  AddCodePage('AL32UTF8', 873, ceUTF8);
-  AddCodePage('UTF16', 1000, ceUTF16);
-  AddCodePage('AL16UTF16', 2000, ceUTF16);
-  AddCodePage('AL16UTF16LE', 2002, ceUTF16);
+  AddCodePage('UTF8', 871, ceUTF8, zCP_UTF8);
+  AddCodePage('AL32UTF8', 873, ceUTF8, zCP_UTF8);
+  AddCodePage('UTF16', 1000, ceUTF16, zCP_UTF16);
+  AddCodePage('AL16UTF16', 2000, ceUTF16, zCP_UTF16);
+  AddCodePage('AL16UTF16LE', 2002, ceUTF16, zCP_UTF16);
 end;
 
 procedure TZOracle9iPlainDriver.LoadApi;

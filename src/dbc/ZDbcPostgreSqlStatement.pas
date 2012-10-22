@@ -269,8 +269,7 @@ begin
   NativeResultSet.SetConcurrency(rcReadOnly);
   if GetResultSetConcurrency = rcUpdatable then
   begin
-    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil,
-      ClientCodePage);
+    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil, ConSettings);
     CachedResultSet.SetConcurrency(rcUpdatable);
     CachedResultSet.SetResolver(TZPostgreSQLCachedResolver.Create(
       Self,  NativeResultSet.GetMetadata));
@@ -369,7 +368,7 @@ var
 begin
   ConnectionHandle := GetConnectionHandle();
   QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
-    PAnsiChar(GetPrepreparedSQL(SQL)));
+    PAnsiChar(GetEncodedSQL(SQL)));
   CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
     SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
@@ -640,7 +639,7 @@ begin
   if GetResultSetConcurrency = rcUpdatable then
   begin
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, Self.SQL, nil,
-      ClientCodePage);
+      ConSettings);
     CachedResultSet.SetConcurrency(rcUpdatable);
     CachedResultSet.SetResolver(TZPostgreSQLCachedResolver.Create(
       Self,  NativeResultSet.GetMetadata));
@@ -679,7 +678,7 @@ begin
         Result := FPostgreSQLConnection.EncodeBinary(AnsiString(SoftVarManager.GetAsString(Value)));
       stString:
         Result :=  Self.FPlainDriver.EscapeString(FPostgreSQLConnection.GetConnectionHandle,
-          ZPlainString(SoftVarManager.GetAsString(Value)), FPostgreSQLConnection.GetEncoding);
+          ZPlainString(SoftVarManager.GetAsString(Value)), FPostgreSQLConnection.GetConSettings);
       stUnicodeString:
         begin
           if GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
@@ -687,7 +686,7 @@ begin
           else
             Result := AnsiString(SoftVarManager.GetAsUnicodeString(Value));
           Result := Self.FPlainDriver.EscapeString(FPostgreSQLConnection.GetConnectionHandle,
-            Result, FPostgreSQLConnection.GetEncoding)
+            Result, FPostgreSQLConnection.GetConSettings)
         end;
       stDate:
         if Escaped then
@@ -742,7 +741,7 @@ begin
                   Result := FPostgreSQLConnection.EncodeBinary(TempBlob.GetString);
               stAsciiStream, stUnicodeStream:
                 Result := FPlainDriver.EscapeString(FPostgreSQLConnection.GetConnectionHandle,
-                  TempBlob.GetString, FPostgreSQLConnection.GetEncoding)
+                  TempBlob.GetString, FPostgreSQLConnection.GetConSettings)
             end; {case..}
             TempBlob := nil;
           end
@@ -1039,7 +1038,7 @@ begin
   if GetResultSetConcurrency = rcUpdatable then
   begin
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, Self.SQL, nil,
-      ClientCodePage);
+      ConSettings);
     CachedResultSet.SetConcurrency(rcUpdatable);
     CachedResultSet.SetResolver(TZPostgreSQLCachedResolver.Create(
       Self,  NativeResultSet.GetMetadata));
@@ -1274,7 +1273,7 @@ begin
 
     if ( N > 0 ) or ( ExecCount > 2 ) then //prepare only if Params are available or certain executions expected
     begin
-      QueryHandle := ExectuteInternal(GetPrepreparedSQL(TempSQL), 'PREPARE '#39+TempSQL+#39, lcPrepStmt);
+      QueryHandle := ExectuteInternal(GetEncodedSQL(TempSQL), 'PREPARE '#39+TempSQL+#39, lcPrepStmt);
       FPlainDriver.Clear(QueryHandle);
       inherited Prepare;
     end;
@@ -1450,7 +1449,7 @@ begin
   if GetResultSetConcurrency = rcUpdatable then
   begin
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil,
-      ClientCodePage);
+      ConSettings);
     CachedResultSet.SetConcurrency(rcUpdatable);
     CachedResultSet.SetResolver(TZPostgreSQLCachedResolver.Create(
       Self,  NativeResultSet.GetMetadata));

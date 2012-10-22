@@ -201,7 +201,7 @@ type
 
     function GetSupportedProtocols: TStringDynArray;
     function GetSupportedClientCodePages(const Url: TZURL;
-      Const SupportedsOnly: Boolean): TStringDynArray;
+      Const {$IFDEF FPC}AutoEncode,{$ENDIF} SupportedsOnly: Boolean): TStringDynArray;
     function Connect(const Url: string; Info: TStrings): IZConnection; overload;
     function Connect(const Url: TZURL): IZConnection; overload;
     function GetClientVersion(const Url: string): Integer;
@@ -285,10 +285,11 @@ type
     function GetClientCodePageInformations: PZCodePage; //EgonHugeist
     function GetUTF8StringAsWideField: Boolean;
     procedure SetUTF8StringAsWideField(const Value: Boolean);
-    function GetPreprepareSQL: Boolean;
-    procedure SetPreprepareSQL(const Value: Boolean);
-    property PreprepareSQL: Boolean read GetPreprepareSQL write SetPreprepareSQL;
+    function GetAutoEncodeStrings: Boolean;
+    procedure SetAutoEncodeStrings(const Value: Boolean);
+    property AutoEncodeStrings: Boolean read GetAutoEncodeStrings write SetAutoEncodeStrings;
     function GetEncoding: TZCharEncoding;
+    function GetConSettings: PZConSettings;
     property UTF8StringAsWideField: Boolean read GetUTF8StringAsWideField write SetUTF8StringAsWideField;
   end;
 
@@ -503,8 +504,12 @@ type
   IZStatement = interface(IZInterface)
     ['{22CEFA7E-6A6D-48EC-BB9B-EE66056E90F1}']
 
-    function ExecuteQuery(const SQL: string): IZResultSet;
-    function ExecuteUpdate(const SQL: string): Integer;
+    function ExecuteQuery(const SQL: ZWideString): IZResultSet; overload;
+    function ExecuteUpdate(const SQL: ZWideString): Integer; overload;
+    function Execute(const SQL: ZWideString): Boolean; overload;
+    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; overload;
+    function ExecuteUpdate(const SQL: ZAnsiString): Integer; overload;
+    function Execute(const SQL: ZAnsiString): Boolean; overload;
     procedure Close;
 
     function GetMaxFieldSize: Integer;
@@ -517,7 +522,6 @@ type
     procedure Cancel;
     procedure SetCursorName(const Value: AnsiString);
 
-    function Execute(const SQL: string): Boolean;
     function GetResultSet: IZResultSet;
     function GetUpdateCount: Integer;
     function GetMoreResults: Boolean;
@@ -548,7 +552,7 @@ type
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;
 
-    function GetPrepreparedSQL(const SQL: String): ZAnsiString;
+    function GetEncodedSQL(const SQL: String): ZAnsiString;
   end;
 
   {** Prepared SQL statement interface. }

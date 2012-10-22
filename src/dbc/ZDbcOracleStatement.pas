@@ -220,8 +220,7 @@ begin
 
   try
     PrepareOracleStatement(FPlainDriver, SQL, Handle, ErrorHandle,
-      StrToIntDef(Info.Values['prefetch_count'], 100), ClientCodePage^.Encoding,
-      Connection.PreprepareSQL);
+      StrToIntDef(Info.Values['prefetch_count'], 100), ConSettings);
     Result := CreateOracleResultSet(FPlainDriver, Self, SQL,
       Handle, ErrorHandle);
   except
@@ -251,9 +250,8 @@ begin
   AllocateOracleStatementHandles(FPlainDriver, Connection, Handle, ErrorHandle);
 
   try
-    PrepareOracleStatement(FPlainDriver, SQL, Handle,
-      ErrorHandle, StrToIntDef(Info.Values['prefetch_count'], 100),
-      ClientCodePage^.Encoding, Connection.PreprepareSQL);
+    PrepareOracleStatement(FPlainDriver, SQL, Handle, ErrorHandle,
+      StrToIntDef(Info.Values['prefetch_count'], 100), ConSettings);
     ExecuteOracleStatement(FPlainDriver, Connection, SQL, Handle, ErrorHandle);
     Result := GetOracleUpdateCount(FPlainDriver, Handle, ErrorHandle);
   finally
@@ -298,8 +296,7 @@ begin
 
   try
     PrepareOracleStatement(FPlainDriver, SQL, Handle, ErrorHandle,
-      StrToIntDef(Info.Values['prefetch_count'], 100), ClientCodePage^.Encoding,
-      Connection.PreprepareSQL);
+      StrToIntDef(Info.Values['prefetch_count'], 100), ConSettings);
 
     StatementType := 0;
     FPlainDriver.AttrGet(Handle, OCI_HTYPE_STMT, @StatementType, nil,
@@ -531,8 +528,7 @@ begin
     end;
 
     PrepareOracleStatement(FPlainDriver, OracleSQL, Handle, ErrorHandle,
-      StrToIntDef(Info.Values['prefetch_count'], 100), ClientCodePage^.Encoding,
-      Connection.PreprepareSQL);
+      StrToIntDef(Info.Values['prefetch_count'], 100), ConSettings);
 
     AllocateOracleSQLVars(FInVars, InParamCount);
     InVars^.ActualNum := InParamCount;
@@ -735,8 +731,7 @@ begin
     end;
 
     PrepareOracleStatement(FPlainDriver, FOracleSQL, FHandle, FErrorHandle,
-      StrToIntDef(Info.Values['prefetch_count'], 100), ClientCodePage^.Encoding,
-    Connection.PreprepareSQL);
+      StrToIntDef(Info.Values['prefetch_count'], 100), ConSettings);
     AllocateOracleSQLVars(FInVars, FOracleParamsCount);
     FInVars^.ActualNum := FOracleParamsCount;
 

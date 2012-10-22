@@ -321,8 +321,7 @@ type
     function CreateResultSet(const SQL: string; MaxRows: Integer):
       IZResultSet; virtual;
 
-    procedure CheckFieldCompatibility(Field: TField; FieldDef: TFieldDef);
-                    {$IFDEF WITH_CHECKFIELDCOMPATIBILITY} override;{$ENDIF}
+    procedure CheckFieldCompatibility(Field: TField; FieldDef: TFieldDef); {$IFDEF WITH_CHECKFIELDCOMPATIBILITY} override;{$ENDIF}
 {$IFDEF WITH_TRECORDBUFFER}
     procedure ClearCalcFields(Buffer: TRecordBuffer); override;
 {$ELSE}

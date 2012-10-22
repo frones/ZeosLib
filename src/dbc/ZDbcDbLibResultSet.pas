@@ -78,7 +78,7 @@ type
     FDBLibConnection: IZDBLibConnection;
     FPlainDriver: IZDBLibPlainDriver;
     procedure Open; override;
-    function InternalGetString(ColumnIndex: Integer): AnsiString; override;
+    function InternalGetString(ColumnIndex: Integer): ZAnsiString; override;
   public
     constructor Create(Statement: IZStatement; SQL: string);
     destructor Destroy; override;
@@ -86,7 +86,6 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    //function GetString(ColumnIndex: Integer): String; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -130,8 +129,7 @@ uses ZMessages, ZDbcLogging, ZDbcDBLibUtils;
 }
 constructor TZDBLibResultSet.Create(Statement: IZStatement; SQL: string);
 begin
-  inherited Create(Statement, SQL, nil,
-    Statement.GetConnection.GetClientCodePageInformations);
+  inherited Create(Statement, SQL, nil, Statement.GetConnection.GetConSettings);
   Statement.GetConnection.QueryInterface(IZDBLibConnection, FDBLibConnection);
   FPlainDriver := FDBLibConnection.GetPlainDriver;
   FHandle := FDBLibConnection.GetConnectionHandle;
@@ -170,7 +168,8 @@ begin
   SetLength(DBLibColTypeCache, DBLibColumnCount + 1);
   for I := 1 to DBLibColumnCount do
   begin
-    ColName := FPlainDriver.ZDbcString(FPlainDriver.dbColName(FHandle, I), FDBLibConnection.GetEncoding);
+    ColName := FPlainDriver.ZDbcString(FPlainDriver.dbColName(FHandle, I),
+      FDBLibConnection.GetConSettings);
     ColType := FPlainDriver.dbColtype(FHandle, I);
     ColumnInfo := TZColumnInfo.Create;
 
@@ -261,7 +260,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZDBLibResultSet.InternalGetString(ColumnIndex: Integer): AnsiString;
+function TZDBLibResultSet.InternalGetString(ColumnIndex: Integer): ZAnsiString;
 var
   DL: Integer;
   Data: Pointer;
@@ -678,6 +677,11 @@ begin
   Data := FPlainDriver.dbdata(FHandle, ColumnIndex);
   LastWasNull := Data = nil;
   Result := TZAbstractBlob.CreateWithData(Data, DL);
+  {$IFNDEF DELPHI12_UP}
+  if ConSettings.AutoEncode and ( GetMetadata.GetColumnType(ColumnIndex) = stAsciiStream ) and
+      ( ConSettings.OS_CP <> ConSettings.ClientCodePage.CP ) then
+    Result.SetString(AnsiToStringEx(Result.GetString, ConSettings.ClientCodePage.CP, ConSettings.OS_CP));
+  {$ENDIF}
 end;
 
 {**

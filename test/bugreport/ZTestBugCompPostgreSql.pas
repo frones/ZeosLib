@@ -724,8 +724,8 @@ begin
   CheckEquals(QuoteString1, Query.Fields[0].AsString);
   Query.Close;
 
-  if Connection.UTF8StringsAsWideField or
-    ( Connection.DbcConnection.GetEncoding = ceAnsi ) then
+  if ( Connection.UTF8StringsAsWideField or ( Connection.DbcConnection.GetEncoding = ceAnsi ) ) or
+    ( Connection.DbcConnection.AutoEncodeStrings and ( Connection.DbcConnection.GetConSettings.CPType = cGET_ACP ) ) then
   begin
     Query.ParamByName('test').AsString := QuoteString2;
     Query.Open;

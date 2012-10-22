@@ -271,6 +271,7 @@ end;
 procedure TZDBLibConnection.InternalExecuteStatement(const SQL: string);
 var
   LSQL: string;
+  ASQL: ZAnsiString;
 begin
   FHandle := GetConnectionHandle;
   if GetPlainDriver.dbCancel(FHandle) <> DBSUCCEED then
@@ -280,18 +281,9 @@ begin
   else
     LSQL := SQL;
 
-  if FProvider = dpMsSQL then
-  begin
-    if GetPlainDriver.dbcmd(FHandle, PAnsiChar(AnsiString(LSql))) <> DBSUCCEED then
+  ASQL := ZPlainString(LSQL);
+    if GetPlainDriver.dbcmd(FHandle, PAnsiChar(ASQL)) <> DBSUCCEED then
       CheckDBLibError(lcExecute, LSQL);
-  end
-  else
-    {$IFDEF DELPHI12_UP}
-    if GetPlainDriver.dbcmd(FHandle, PAnsiChar(UTF8String(LSql))) <> DBSUCCEED then
-    {$ELSE}
-    if GetPlainDriver.dbcmd(FHandle, PAnsiChar(LSql)) <> DBSUCCEED then
-    {$ENDIF}
-    CheckDBLibError(lcExecute, LSQL);
   if GetPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED then
     CheckDBLibError(lcExecute, LSQL);
   repeat
@@ -370,18 +362,9 @@ begin
     begin
       S := Info.Values['codepage'];
       if S <> '' then
-        {$IFDEF DELPHI12_UP}
-        GetPlainDriver.dbSetLCharSet(LoginRec, PAnsiChar(UTF8String(S)));
-        {$ELSE}
-        GetPlainDriver.dbSetLCharSet(LoginRec, PAnsiChar(S));
-        {$ENDIF}
-      {$IFDEF DELPHI12_UP}
-      GetPlainDriver.dbsetluser(LoginRec, PAnsiChar(UTF8String(User)));
-      GetPlainDriver.dbsetlpwd(LoginRec, PAnsiChar(UTF8String(Password)));
-      {$ELSE}
-      GetPLainDriver.dbsetluser(LoginRec, PAnsiChar(User));
-      GetPLainDriver.dbsetlpwd(LoginRec, PAnsiChar(Password));
-      {$ENDIF}
+        GetPlainDriver.dbSetLCharSet(LoginRec, PAnsiChar(ZPlainString(S)));
+      GetPlainDriver.dbsetluser(LoginRec, PAnsiChar(ZPlainString(User)));
+      GetPlainDriver.dbsetlpwd(LoginRec, PAnsiChar(ZPlainString(Password)));
       LogMessage := LogMessage + Format(' AS USER "%s"', [User]);
     end;
 

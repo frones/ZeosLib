@@ -146,8 +146,8 @@ function getMySQLFieldSize (field_type: TMysqlFieldTypes; field_size: LongWord):
   @returns a new TZColumnInfo
 }
 function GetMySQLColumnInfoFromFieldHandle(PlainDriver: IZMySQLPlainDriver;
-  const FieldHandle: PZMySQLField; const Encoding: TZCharEncoding;
-  const UTF8StringAsWideField: Boolean; const bUseResult:boolean): TZColumnInfo;
+  const FieldHandle: PZMySQLField; ConSettings: PZConSettings;
+  const bUseResult:boolean): TZColumnInfo;
 
 procedure ConvertMySQLColumnInfoFromString(const TypeInfo: String;
   const Encoding: TZCharEncoding; const UTF8StringAsWideField: Boolean;
@@ -547,8 +547,8 @@ end;
   @returns a new TZColumnInfo
 }
 function GetMySQLColumnInfoFromFieldHandle(PlainDriver: IZMySQLPlainDriver;
-  const FieldHandle: PZMySQLField; const Encoding: TZCharEncoding;
-  const UTF8StringAsWideField: Boolean; const bUseResult:boolean): TZColumnInfo;
+  const FieldHandle: PZMySQLField; ConSettings: PZConSettings;
+  const bUseResult:boolean): TZColumnInfo;
 var
   FieldFlags: Integer;
   FieldLength:integer;
@@ -558,13 +558,13 @@ begin
     Result := TZColumnInfo.Create;
     FieldFlags := PlainDriver.GetFieldFlags(FieldHandle);
 
-    Result.ColumnLabel := PlainDriver.ZDbcString(PlainDriver.GetFieldName(FieldHandle), Encoding);
-    Result.ColumnName := PlainDriver.ZDbcString(PlainDriver.GetFieldOrigName(FieldHandle), Encoding);
-    Result.TableName := PlainDriver.ZDbcString(PlainDriver.GetFieldTable(FieldHandle), Encoding);
+    Result.ColumnLabel := PlainDriver.ZDbcString(PlainDriver.GetFieldName(FieldHandle), ConSettings);
+    Result.ColumnName := PlainDriver.ZDbcString(PlainDriver.GetFieldOrigName(FieldHandle), ConSettings);
+    Result.TableName := PlainDriver.ZDbcString(PlainDriver.GetFieldTable(FieldHandle), ConSettings);
     Result.ReadOnly := (PlainDriver.GetFieldTable(FieldHandle) = '');
     Result.Writable := not Result.ReadOnly;
     Result.ColumnType := ConvertMySQLHandleToSQLType(PlainDriver,
-        FieldHandle, FieldFlags, Encoding, UTF8StringAsWideField);
+        FieldHandle, FieldFlags, ConSettings.ClientCodePage.Encoding, ConSettings.UTF8AsWideString);
     FieldLength:=PlainDriver.GetFieldLength(FieldHandle);
     //EgonHugeist: arrange the MBCS field DisplayWidth to a proper count of Chars
     if Result.ColumnType in [stString, stUnicodeString] then

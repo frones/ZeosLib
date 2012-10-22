@@ -72,7 +72,7 @@ type
     FPlainDriver: IZPostgreSQLPlainDriver;
     FChunk_Size: Integer;
   protected
-    function InternalGetString(ColumnIndex: Integer): AnsiString; override;
+    function InternalGetString(ColumnIndex: Integer): ZAnsiString; override;
     procedure Open; override;
     procedure DefinePostgreSQLToSQLType(ColumnIndex: Integer;
       ColumnInfo: TZColumnInfo; TypeOid: Oid);
@@ -154,8 +154,7 @@ constructor TZPostgreSQLResultSet.Create(PlainDriver: IZPostgreSQLPlainDriver;
   Statement: IZStatement; SQL: string; Handle: PZPostgreSQLConnect;
   QueryHandle: PZPostgreSQLResult; Chunk_Size: Integer);
 begin
-  inherited Create(Statement, SQL, nil,
-    Statement.GetConnection.GetClientCodePageInformations);
+  inherited Create(Statement, SQL, nil, Statement.GetConnection.GetConSettings);
 
   FHandle := Handle;
   FQueryHandle := QueryHandle;
@@ -262,11 +261,11 @@ begin
 
         if ColumnType in [stString, stUnicodeString] then
           if ( (ColumnLabel = 'expr') or ( Precision = 0 ) ) then
-            Precision := GetFieldSize(ColumnType, 255, ClientCodePage^.CharWidth, True)
+            Precision := GetFieldSize(ColumnType, 255, ConSettings.ClientCodePage^.CharWidth, True)
           else
           begin
             ColumnDisplaySize := Precision;
-            Precision := GetFieldSize(ColumnType, Precision, ClientCodePage^.CharWidth);
+            Precision := GetFieldSize(ColumnType, Precision, ConSettings.ClientCodePage^.CharWidth);
           end;
       end;
     end;
@@ -328,7 +327,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZPostgreSQLResultSet.InternalGetString(ColumnIndex: Integer): AnsiString;
+function TZPostgreSQLResultSet.InternalGetString(ColumnIndex: Integer): ZAnsiString;
 begin
   ColumnIndex := ColumnIndex - 1;
   LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1,
@@ -621,6 +620,7 @@ function TZPostgreSQLResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
   BlobOid: Oid;
   Stream: TStream;
+  Connection: IZConnection;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
@@ -629,6 +629,7 @@ begin
     raise EZSQLException.Create(SRowDataIsNotAvailable);
 {$ENDIF}
 
+  Connection := Statement.GetConnection;
   if (GetMetadata.GetColumnType(ColumnIndex) = stBinaryStream)
     and (Statement.GetConnection as IZPostgreSQLConnection).IsOidAsBlob then
   begin
@@ -648,7 +649,13 @@ begin
         if GetMetadata.GetColumnType(ColumnIndex) = stBinaryStream then
           Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(InternalGetString(ColumnIndex), Self.FHandle))
         else
-          Stream := TStringStream.Create(InternalGetString(ColumnIndex));
+          {$IFNDEF DELPHI12_UP}
+          if Connection.AutoEncodeStrings and ( GetMetadata.GetColumnType(ColumnIndex) = stAsciiStream ) and
+              ( Connection.GetConSettings.OS_CP <> Connection.GetConSettings.ClientCodePage.CP ) then
+            Stream := TStringStream.Create(AnsiToStringEx(InternalGetString(ColumnIndex), Connection.GetConSettings.ClientCodePage.CP, Connection.GetConSettings.OS_CP))
+          else
+          {$ENDIF}
+            Stream := TStringStream.Create(InternalGetString(ColumnIndex));
         Result := TZAbstractBlob.CreateWithStream(Stream);
       finally
         if Assigned(Stream) then

@@ -227,7 +227,8 @@ implementation
 
 uses
   Types, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZSysUtils, ZDbcResultSetMetadata,
-  ZMessages, ZDbcCachedResultSet, ZDbcUtils, DateUtils;
+  ZMessages, ZDbcCachedResultSet, ZDbcUtils, DateUtils
+  {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF};
 
 { TZMySQLStatement }
 
@@ -292,7 +293,7 @@ begin
     CachedResolver := TZMySQLCachedResolver.Create(FPlainDriver, FHandle, Self,
       NativeResultSet.GetMetaData);
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
-      CachedResolver, ClientCodePage);
+      CachedResolver, ConSettings);
     CachedResultSet.SetConcurrency(GetResultSetConcurrency);
     Result := CachedResultSet;
   end
@@ -309,8 +310,9 @@ end;
 }
 function TZMySQLStatement.ExecuteQuery(const SQL: string): IZResultSet;
 begin
+  SSQL := SQL;
   Result := nil;
-  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, Self.GetConnection.GetEncoding, LogSQL) = 0 then
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
     if not FPlainDriver.ResultSetExists(FHandle) then
@@ -337,8 +339,9 @@ var
   QueryHandle: PZMySQLResult;
   HasResultset : Boolean;
 begin
+  SSQL := SQL;
   Result := -1;
-  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, GetConnection.GetEncoding, LogSQL) = 0 then
+  if FPlainDriver.ExecQuery(FHandle, PAnsichar(ASQL)) = 0 then
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
@@ -387,8 +390,9 @@ function TZMySQLStatement.Execute(const SQL: string): Boolean;
 var
   HasResultset : Boolean;
 begin
+  SSQL := SQL;
   Result := False;
-  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, GetConnection.GetEncoding, LogSQL) = 0 then
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
@@ -516,7 +520,7 @@ begin
         Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsString(Value));
       stUnicodeString:
         {$IFDEF DELPHI12_UP}
-          if GetConnection.PreprepareSQL then
+          if GetConnection.AutoEncodeStrings then
             Result := Self.GetConnection.GetEscapeString(SoftVarManager.GetAsUnicodeString(Value)) else
         {$ENDIF}
         if (GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) then
@@ -562,7 +566,7 @@ begin
                 TempStream.Free;
               end;
               {$IFDEF DELPHI12_UP}
-              if GetConnection.PreprepareSQL then
+              if GetConnection.AutoEncodeStrings then
                 Result := Self.GetConnection.GetEscapeString(ZDbcString(TempBlob.GetString)) else
               {$ENDIF}
               Result := GetConnection.GetEscapeString(TempBlob.GetString)
@@ -618,7 +622,7 @@ begin
       CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoInitPrepStmt);
       exit;
     end;
-  AnsiSQL := GetPrepreparedSQL(SQL); //do not spit Tokens twice
+  AnsiSQL := GetEncodedSQL(SQL); //do not spit Tokens twice
   if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(AnsiSQL), length(AnsiSQL)) <> 0) then
     begin
       CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoPrepareStmt);
@@ -666,7 +670,7 @@ begin
     CachedResolver := TZMySQLCachedResolver.Create(FPlainDriver, FHandle, (Self as IZMysqlStatement),
       NativeResultSet.GetMetaData);
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
-      CachedResolver, ClientCodePage);
+      CachedResolver, ConSettings);
     CachedResultSet.SetConcurrency(GetResultSetConcurrency);
     Result := CachedResultSet;
   end
@@ -688,7 +692,7 @@ var
   MyType: TMysqlFieldTypes;
   I, OffSet, PieceSize: integer;
   TempBlob: IZBlob;
-
+  TempAnsi: ZAnsiString;
 begin
   //http://dev.mysql.com/doc/refman/5.0/en/storage-requirements.html
   if InParamCount = 0 then
@@ -708,7 +712,35 @@ begin
         if InParamTypes[I] = stBinaryStream then
           FBindBuffer.AddColumn(FIELD_TYPE_BLOB, TempBlob.Length,TempBlob.Length>ChunkSize)
         else
-          FBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length,TempBlob.Length>ChunkSize);
+        begin
+          if ( InParamTypes[I] = stAsciiStream ) and ConSettings.AutoEncode then
+          begin
+            TempAnsi := TempBlob.GetString;
+            if (GetConnection.GetEncoding = ceUTF8 )then
+            begin
+              if (DetectUTF8Encoding(TempAnsi) = etAnsi ) then
+              begin
+                {$IFDEF DELPHI12_UP}
+                TempAnsi := AnsiToUTF8(String(TempAnsi));
+                {$ELSE}
+                TempAnsi := AnsiToStringEx(TempAnsi, ConSettings.OS_CP, 65001);
+                {$ENDIF}
+                TempBlob.SetString(TempAnsi);
+              end;
+            end
+            else
+              if not (DetectUTF8Encoding(TempAnsi) = etAnsi ) then
+              begin
+                {$IFDEF DELPHI12_UP}
+                TempAnsi := ZAnsiString(UTF8ToAnsi(TempAnsi));
+                {$ELSE}
+                TempAnsi := AnsiToStringEx(TempAnsi, 65001, ConSettings.ClientCodePage.CP);
+                {$ENDIF}
+                TempBlob.SetString(TempAnsi);
+              end;
+          end;
+          FBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length, TempBlob.Length>ChunkSize);
+        end;
       end
       else
         FBindBuffer.AddColumn(MyType,StrLen(PAnsiChar(ZPlainString(InParamValues[I].VString)))+1,false);
@@ -1102,12 +1134,12 @@ begin
       stBytes:
         Result := GetSQLHexAnsiString(PAnsiChar(AnsiString(SoftVarManager.GetAsString(Value))), Length(SoftVarManager.GetAsString(Value)));
       stString:
-        Result := FPlainDriver.EscapeString(FHandle, ZPlainString(SoftVarManager.GetAsString(Value), GetConnection.GetEncoding), GetConnection.GetEncoding);
+        Result := FPlainDriver.EscapeString(FHandle, ZPlainString(SoftVarManager.GetAsString(Value), ConSettings), ConSettings);
       stUnicodeString:
         if (GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) then
-          Result := FPlainDriver.EscapeString(FHandle, UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)), GetConnection.GetEncoding)
+          Result := FPlainDriver.EscapeString(FHandle, UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)), ConSettings)
         else
-          Result := FPlainDriver.EscapeString(FHandle, AnsiString(SoftVarManager.GetAsUnicodeString(Value)), GetConnection.GetEncoding);
+          Result := FPlainDriver.EscapeString(FHandle, AnsiString(SoftVarManager.GetAsUnicodeString(Value)), ConSettings);
       stDate:
       begin
         DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
@@ -1145,7 +1177,7 @@ begin
             if ( InParamTypes[ParamIndex] = stBinaryStream ) then
               Result := GetSQLHexAnsiString(PAnsiChar(TempBlob.GetString), TempBlob.Length)
             else
-              Result := FPlainDriver.EscapeString(FHandle, TempBlob.GetString, GetConnection.GetEncoding)
+              Result := FPlainDriver.EscapeString(FHandle, TempBlob.GetString, ConSettings)
           end
           else
             Result := 'NULL';
@@ -1211,7 +1243,7 @@ begin
     CachedResolver := TZMySQLCachedResolver.Create(FPlainDriver, FHandle, Self,
       NativeResultSet.GetMetaData);
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
-      CachedResolver, ClientCodePage);
+      CachedResolver, ConSettings);
     CachedResultSet.SetConcurrency(rcReadOnly);
     {Need to fetch all data. The handles must be released for mutiple
       Resultsets}
@@ -1444,7 +1476,8 @@ var
   HasResultset : Boolean;
 begin
   Result := False;
-  if FPlainDriver.ExecQuery(FHandle, SQL, Connection.PreprepareSQL, GetConnection.GetEncoding, LogSQL) = 0 then
+  SSQL := SQL;
+  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);

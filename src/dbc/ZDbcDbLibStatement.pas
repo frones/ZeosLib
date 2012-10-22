@@ -64,7 +64,6 @@ type
   {** Implements Generic DBLib Statement. }
   TZDBLibStatement = class(TZAbstractStatement)
   protected
-    FSQL: string;
     FDBLibConnection: IZDBLibConnection;
     FPlainDriver: IZDBLibPlainDriver;
     FHandle: PDBPROCESS;
@@ -72,7 +71,8 @@ type
     FRetrievedResultSet: IZResultSet;
     FRetrievedUpdateCount: Integer;
 
-    procedure InternalExecuteStatement(SQL: string); virtual;
+    procedure SetASQL(const Value: ZAnsiString); override;
+    procedure InternalExecuteStatement(SQL: ZAnsiString);
     procedure FetchResults; virtual;
 
   public
@@ -80,20 +80,26 @@ type
     destructor Destroy; override;
 
     function GetMoreResults: Boolean; override;
-    function ExecuteQuery(const SQL: string): IZResultSet; override;
-    function ExecuteUpdate(const SQL: string): Integer; override;
-    function Execute(const SQL: string): Boolean; override;
+    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: ZAnsiString): Integer; override;
+    function Execute(const SQL: ZAnsiString): Boolean; override;
   end;
 
   {** Implements Prepared SQL Statement. With emulation}
   TZDBLibPreparedStatementEmulated = class(TZEmulatedPreparedStatement)
+  private
+    FPlainDriver: IZDBLibPlainDriver;
   protected
     function GetEscapeString(Value: string): string;
-    function PrepareSQLParam(ParamIndex: Integer): string; override;
+    function PrepareAnsiSQLParam(ParamIndex: Integer): ZAnsiString; override;
     function CreateExecStatement: IZStatement; override;
   public
     constructor Create(Connection: IZConnection; SQL: string; Info: TStrings);
     function GetMetaData: IZResultSetMetaData; override;
+
+    function ExecuteQueryPrepared: IZResultSet; override;
+    function ExecuteUpdatePrepared: Integer; override;
+    function ExecutePrepared: Boolean; override;
   end;
 
   TZDBLibCallableStatement = class(TZAbstractCallableStatement)
@@ -147,7 +153,7 @@ implementation
 
 uses
   Types, ZDbcLogging, ZDbcCachedResultSet, ZDbcDbLibUtils, ZDbcDbLibResultSet,
-  ZVariant;
+  ZVariant{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
 
 constructor TZUpdateCount.Create(ACount: Integer);
 begin
@@ -189,6 +195,16 @@ begin
   inherited Destroy;
 end;
 
+procedure TZDBLibStatement.SetASQL(const Value: ZAnsiString);
+begin
+  if FDBLibConnection.GetProvider = dpMsSQL then
+    //This one is to avoid a bug in dblib interface as it drops a single backslash before line end
+    inherited SetASQL({$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}StringReplace(Value, '\'#13, '\\'#13, [rfReplaceAll]))
+  else
+    //This one is to avoid sybase error: Invalid operator for datatype op: is null type: VOID TYPE
+    inherited SetASQL({$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}StringReplace(Value, ' AND NULL IS NULL', '', [rfReplaceAll]));
+end;
+
 {**
   Executes a Statement.
   Used internally to execute statements.
@@ -196,33 +212,19 @@ end;
   @param Handle a DBLib connection handle.
   @sql string containing the statements to execute
 }
-procedure TZDBLibStatement.InternalExecuteStatement(SQL: string);
+procedure TZDBLibStatement.InternalExecuteStatement(SQL: ZAnsiString);
 begin
   FHandle := FDBLibConnection.GetConnectionHandle;
   FPlainDriver := FDBLibConnection.GetPlainDriver;
   if FPlainDriver.dbcancel(FHandle) <> DBSUCCEED then
-    FDBLibConnection.CheckDBLibError(lcExecute, SQL);
-//This one is to avoid a bug in dblib interface as it drops a single backslash before line end
-  if FDBLibConnection.GetProvider = dpMsSQL then
-  begin
-    SQL := StringReplace(Sql, '\'#13, '\\'#13, [rfReplaceAll]);
-    if FPlainDriver.dbcmd(FHandle, PAnsiChar(AnsiString(SQL))) <> DBSUCCEED then
-      FDBLibConnection.CheckDBLibError(lcExecute, SQL);
-  end;
-//This one is to avoid sybase error: Invalid operator for datatype op: is null type: VOID TYPE
-  if FDBLibConnection.GetProvider = dpSybase then
-  begin
-    SQL := StringReplace(Sql, ' AND NULL IS NULL', '', [rfReplaceAll]);
-    {$IFDEF DELPHI12_UP}
-    if FPlainDriver.dbcmd(FHandle, PAnsiChar(UTF8String(SQL))) <> DBSUCCEED then
-    {$ELSE}
-    if FPlainDriver.dbcmd(FHandle, PAnsiChar(SQL)) <> DBSUCCEED then
-    {$ENDIF}
-      FDBLibConnection.CheckDBLibError(lcExecute, SQL);
-  end;
+    FDBLibConnection.CheckDBLibError(lcExecute, LogSQL);
+
+  if FPlainDriver.dbcmd(FHandle, PAnsiChar(SQL)) <> DBSUCCEED then
+    FDBLibConnection.CheckDBLibError(lcExecute, LogSQL);
+
   if FPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED then
-    FDBLibConnection.CheckDBLibError(lcExecute, SQL);
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+    FDBLibConnection.CheckDBLibError(lcExecute, LogSQL);
+  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
 end;
 
 {**
@@ -287,11 +289,10 @@ begin
   begin
     if FPlainDriver.dbcmdrow(FHandle) = DBSUCCEED then
     begin
-      NativeResultSet := TZDBLibResultSet.Create(Self, FSQL);
+      NativeResultSet := TZDBLibResultSet.Create(Self, LogSQL);
       NativeResultSet.SetConcurrency(rcReadOnly);
       CachedResultSet := TZCachedResultSet.Create(NativeResultSet,
-        FSQL, TZDBLibCachedResolver.Create(Self, NativeResultSet.GetMetaData),
-          ClientCodePage);
+        LogSQL, TZDBLibCachedResolver.Create(Self, NativeResultSet.GetMetaData), ConSettings);
       CachedResultSet.SetType(rtScrollInsensitive);//!!!Cached resultsets are allways this
       CachedResultSet.Last;
       CachedResultSet.BeforeFirst; //!!!Just to invoke fetchall
@@ -335,12 +336,13 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZDBLibStatement.ExecuteQuery(const SQL: string): IZResultSet;
+function TZDBLibStatement.ExecuteQuery(const SQL: ZAnsiString): IZResultSet;
 begin
   Result := nil;
-  FSQL := SQL;
+  if ASQL <> SQL then
+    ASQL := SQL;
   try
-    InternalExecuteStatement(SQL);
+    InternalExecuteStatement(ASQL);
     FetchResults;
     repeat
       if GetMoreResults then
@@ -364,10 +366,11 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZDBLibStatement.ExecuteUpdate(const SQL: string): Integer;
+function TZDBLibStatement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
 begin
-  FSQL := SQL;
-  InternalExecuteStatement(SQL);
+  if ASQL <> SQL then
+    ASQL := SQL;
+  InternalExecuteStatement(ASQL);
   FetchResults;
   GetMoreResults;
   Result := FRetrievedUpdateCount;
@@ -394,10 +397,11 @@ end;
   @return <code>true</code> if the next result is a <code>ResultSet</code> object;
   <code>false</code> if it is an update count or there are no more results
 }
-function TZDBLibStatement.Execute(const SQL: string): Boolean;
+function TZDBLibStatement.Execute(const SQL: ZAnsiString): Boolean;
 begin
-  FSQL := SQL;
-  InternalExecuteStatement(SQL);
+  if ASQL <> SQL then
+    ASQL := SQL;
+  InternalExecuteStatement(ASQL);
   FetchResults;
   Result := GetMoreResults;
   LastResultSet := FRetrievedResultSet;
@@ -417,6 +421,7 @@ constructor TZDBLibPreparedStatementEmulated.Create(Connection: IZConnection;
   SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
+  FPlainDriver := (Connection as IZDBLibConnection).GetPlainDriver;
   ResultSetType := rtScrollInsensitive;
 end;
 
@@ -435,15 +440,14 @@ end;
   @param ParameterIndex the first parameter is 1, the second is 2, ...
   @return a string representation of the parameter.
 }
-function TZDBLibPreparedStatementEmulated.PrepareSQLParam(
-  ParamIndex: Integer): string;
+function TZDBLibPreparedStatementEmulated.PrepareAnsiSQLParam(ParamIndex: Integer): ZAnsiString;
 begin
   if InParamCount <= ParamIndex then
     Result := 'NULL'
   else
   begin
     Result := PrepareSQLParameter(InParamValues[ParamIndex],
-      InParamTypes[ParamIndex]);
+      InParamTypes[ParamIndex], ConSettings, FPlainDriver);
   end;
 end;
 
@@ -455,6 +459,45 @@ end;
 function TZDBLibPreparedStatementEmulated.GetMetaData: IZResultSetMetaData;
 begin
   Result := nil;
+end;
+
+{**
+  Executes the SQL query in this <code>PreparedStatement</code> object
+  and returns the result set generated by the query.
+
+  @return a <code>ResultSet</code> object that contains the data produced by the
+    query; never <code>null</code>
+}
+function TZDBLibPreparedStatementEmulated.ExecutePrepared: Boolean;
+begin
+  Result := GetExecStatement.Execute(PrepareAnsiSQLQuery);
+end;
+
+{**
+  Executes the SQL query in this <code>PreparedStatement</code> object
+  and returns the result set generated by the query.
+
+  @return a <code>ResultSet</code> object that contains the data produced by the
+    query; never <code>null</code>
+}
+function TZDBLibPreparedStatementEmulated.ExecuteQueryPrepared: IZResultSet;
+begin
+  Result := GetExecStatement.ExecuteQuery(PrepareAnsiSQLQuery);
+end;
+
+{**
+  Executes the SQL INSERT, UPDATE or DELETE statement
+  in this <code>PreparedStatement</code> object.
+  In addition,
+  SQL statements that return nothing, such as SQL DDL statements,
+  can be executed.
+
+  @return either the row count for INSERT, UPDATE or DELETE statements;
+  or 0 for SQL statements that return nothing
+}
+function TZDBLibPreparedStatementEmulated.ExecuteUpdatePrepared: Integer;
+begin
+  Result := GetExecStatement.ExecuteUpdate(PrepareAnsiSQLQuery);
 end;
 
 {**
@@ -493,8 +536,7 @@ begin
       NativeResultSet := TZDBLibResultSet.Create(Self, FSQL);
       NativeResultSet.SetConcurrency(rcReadOnly);
       CachedResultSet := TZCachedResultSet.Create(NativeResultSet, FSQL,
-        TZDBLibCachedResolver.Create(Self, NativeResultSet.GetMetaData),
-        ClientCodePage);
+        TZDBLibCachedResolver.Create(Self, NativeResultSet.GetMetaData), ConSettings);
       CachedResultSet.SetType(rtScrollInsensitive);//!!!Cached resultsets are allways this
       CachedResultSet.Last;
       CachedResultSet.BeforeFirst; //!!!Just to invoke fetchall
@@ -617,7 +659,7 @@ var
   DatInteger: Integer;
   DatFloat: Single;
   DatDouble: Double;
-  DatString: AnsiString;
+  DatString: ZAnsiString;
   DatMoney: Currency;
   DatDBDATETIME: DBDATETIME;
   DatBytes: TByteDynArray;
@@ -689,7 +731,7 @@ begin
           end;
         stString:
           begin
-            DatString := AnsiString(SoftVarManager.GetAsString(InParamValues[I]) );
+            DatString := ZPlainString(SoftVarManager.GetAsString(InParamValues[I]));
             if DatString = ''then
               DatLen := 1
             else
@@ -728,19 +770,27 @@ begin
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
               FPlainDriver.GetVariables.datatypes[Z_SQLCHAR], MaxInt, Length(DatString), PAnsiChar(DatString));
           end;
-        stAsciiStream, stUnicodeStream:
+        stAsciiStream, stUnicodeStream, stBinaryStream:
           begin
             TempBlob := SoftVarManager.GetAsInterface(InParamValues[I]) as IZBlob;
             DatString := TempBlob.GetString;
-            if DatString = ''then
+            if DatString = '' then
               DatLen := 1
             else
               DatLen := Length(DatString);
-            FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
-              FPlainDriver.GetVariables.datatypes[Z_SQLTEXT], FPlainDriver.GetVariables.dboptions[Z_TEXTSIZE], DatLen, PAnsiChar(DatString));
+            if ParamType = stBinaryStream then
+              FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
+                FPlainDriver.GetVariables.datatypes[Z_SQLBINARY], MaxInt, Length(DatString), PAnsiChar(DatString))
+            else
+              FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
+                FPlainDriver.GetVariables.datatypes[Z_SQLTEXT], FPlainDriver.GetVariables.dboptions[Z_TEXTSIZE], DatLen, PAnsiChar(DatString));
           end;
-  //      stBytes,
-  //      stBinaryStream
+        stBytes:
+          begin
+            DatString := AnsiString(SoftVarManager.GetAsString(InParamValues[I]));
+            FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
+              FPlainDriver.GetVariables.datatypes[Z_SQLBINARY], MaxInt, Length(DatString), PAnsiChar(DatString));
+          end;
       else
         FPlainDriver.dbRpcParam(FHandle, nil, 0, FPlainDriver.GetVariables.datatypes[Z_SQLCHAR], 0, 0, nil);
     end;

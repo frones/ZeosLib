@@ -227,13 +227,6 @@ begin
   FMetadata := TZSQLiteDatabaseMetadata.Create(Self, Url);
   AutoCommit := True;
   TransactIsolationLevel := tiNone;
-
-  {$IFNDEF WITH_WIDECONTROLS}
-  if Self.ClientCodePage^.Encoding = ceUTF8AsAnsi then
-    FClientCodePage := 'UTF-8' else
-  {$ENDIF}
-  if GetEncoding = ceAnsi then
-    CheckCharEncoding('UTF-8');
   Open;
 end;
 
@@ -590,7 +583,7 @@ end;
 }
 function TZSQLiteConnection.GetBinaryEscapeString(const Value: ZAnsiString): String;
 begin
-  if GetPreprepareSQL then
+  if GetAutoEncodeStrings then
     Result := GetDriver.GetTokenizer.AnsiGetEscapeString(ZDbcSqLiteUtils.EncodeString(Value))
   else
     Result := String(ZDbcSqLiteUtils.EncodeString(Value));

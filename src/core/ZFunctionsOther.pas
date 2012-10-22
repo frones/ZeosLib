@@ -58,7 +58,7 @@ interface
 {$I ZCore.inc}
 
 uses
-  SysUtils, ZClasses, ZFunctions, ZExpression, ZVariant;
+  SysUtils, ZFunctions, ZExpression, ZVariant;
 
 {** Other functions}
 

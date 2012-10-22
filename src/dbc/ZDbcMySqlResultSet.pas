@@ -82,7 +82,7 @@ type
     TempStr: String;
   protected
     procedure Open; override;
-    function InternalGetString(ColumnIndex: Integer): Ansistring; override;
+    function InternalGetString(ColumnIndex: Integer): ZAnsistring; override;
   public
     constructor Create(PlainDriver: IZMySQLPlainDriver; Statement: IZStatement;
       SQL: string; Handle: PZMySQLConnect; UseResult: Boolean;
@@ -129,7 +129,7 @@ type
     function bufferasextended(ColumnIndex: Integer):Extended;
 
   protected
-    function InternalGetString(ColumnIndex: Integer): Ansistring; override;
+    function InternalGetString(ColumnIndex: Integer): ZAnsistring; override;
     procedure Open; override;
   public
     constructor Create(PlainDriver: IZMySQLPlainDriver; Statement: IZStatement;
@@ -219,7 +219,7 @@ constructor TZMySQLResultSet.Create(PlainDriver: IZMySQLPlainDriver;
 begin
   inherited Create(Statement, SQL, TZMySQLResultSetMetadata.Create(
     Statement.GetConnection.GetMetadata, SQL, Self),
-      Statement.GetConnection.GetClientCodePageInformations);
+      Statement.GetConnection.GetConSettings);
 
   FHandle := Handle;
   FQueryHandle := nil;
@@ -280,8 +280,7 @@ begin
       Break;
 
     ColumnsInfo.Add(GetMySQLColumnInfoFromFieldHandle(FPlainDriver,
-     FieldHandle, GetStatement.GetConnection.GetEncoding,
-     GetStatement.GetConnection.UTF8StringAsWideField,FUseResult));
+     FieldHandle, ConSettings, FUseResult));
   end;
 
   inherited Open;
@@ -368,7 +367,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZMySQLResultSet.InternalGetString(ColumnIndex: Integer): Ansistring;
+function TZMySQLResultSet.InternalGetString(ColumnIndex: Integer): ZAnsistring;
 var
   LengthPointer: PULong;
   Length: ULong;
@@ -756,7 +755,13 @@ begin
   try
     if not IsNull(ColumnIndex) then
     begin
-      Stream := TStringStream.Create(InternalGetString(ColumnIndex));
+      {$IFNDEF DELPHI12_UP}
+      if ConSettings.AutoEncode and (ConSettings.OS_CP <> ConSettings.ClientCodePage.CP) and
+          ( GetMetaData.GetColumnType(ColumnIndex) = stAsciiStream ) then
+        Stream := TStringStream.Create(AnsiToStringEx(InternalGetString(ColumnIndex), ConSettings.ClientCodePage.CP, ConSettings.OS_CP))
+      else
+      {$ENDIF}
+       Stream := TStringStream.Create(InternalGetString(ColumnIndex));
       Result := TZAbstractBlob.CreateWithStream(Stream)
     end
     else
@@ -893,7 +898,7 @@ var
 begin
   inherited Create(Statement, SQL, TZMySQLResultSetMetadata.Create(
     Statement.GetConnection.GetMetadata, SQL, Self),
-    Statement.GetConnection.GetClientCodePageInformations);
+    Statement.GetConnection.GetConSettings);
 
   FHandle := Handle;
   tempPrepStmt := Statement as IZMysqlPreparedStatement;
@@ -960,8 +965,7 @@ begin
       Break;
 
     ColumnInfo := GetMySQLColumnInfoFromFieldHandle(FPlainDriver,
-     FieldHandle, GetStatement.GetConnection.GetEncoding,
-     GetStatement.GetConnection.UTF8StringAsWideField,FUseResult);
+     FieldHandle, GetStatement.GetConnection.GetConSettings, FUseResult);
 
     ColumnsInfo.Add(ColumnInfo);
 
@@ -1025,7 +1029,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZMySQLPreparedResultSet.InternalGetString(ColumnIndex: Integer): AnsiString;
+function TZMySQLPreparedResultSet.InternalGetString(ColumnIndex: Integer): ZAnsiString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
@@ -1404,7 +1408,13 @@ begin
       if TZAbstractResultSetMetadata(Metadata).GetColumnType(ColumnIndex) = stBinaryStream then
         Stream := GetBinaryStream(ColumnIndex)
       else
-      Stream := TStringStream.Create(InternalGetString(ColumnIndex));
+      {$IFNDEF DELPHI12_UP}
+      if ConSettings.AutoEncode and (ConSettings.OS_CP <> ConSettings.ClientCodePage.CP) and
+          ( GetMetaData.GetColumnType(ColumnIndex) = stAsciiStream ) then
+        Stream := TStringStream.Create(AnsiToStringEx(InternalGetString(ColumnIndex), ConSettings.ClientCodePage.CP, ConSettings.OS_CP))
+      else
+      {$ENDIF}
+       Stream := TStringStream.Create(InternalGetString(ColumnIndex));
         Result := TZAbstractBlob.CreateWithStream(Stream)
     end
     else

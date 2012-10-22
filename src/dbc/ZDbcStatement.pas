@@ -92,7 +92,6 @@ type
     FaSQL: ZAnsiString;
     procedure SetLastResultSet(ResultSet: IZResultSet); virtual;
   protected
-    LogSQL: String;
     procedure SetASQL(const Value: ZAnsiString); virtual;
     procedure SetWSQL(const Value: ZWideString); virtual;
     class function GetNextStatementId : integer;
@@ -124,8 +123,7 @@ type
     property SSQL: String read {$IFDEF DELPHI12_UP}FWSQL{$ELSE}FaSQL{$ENDIF} write {$IFDEF DELPHI12_UP}SetWSQL{$ELSE}SetASQL{$ENDIF};
     property WSQL: ZWideString read FWSQL write SetWSQL;
     property ASQL: ZAnsiString read FaSQL write SetASQL;
-    {EgonHugeist LogSQL Should be readonly and result of setting WSQL or ASQL!!!}
-    //property LogSQL: String read {$IFDEF DELPHI12_UP}FWSQL{$ELSE}FaSQL{$ENDIF};
+    property LogSQL: String read {$IFDEF DELPHI12_UP}FWSQL{$ELSE}FaSQL{$ENDIF};
     property ChunkSize: Integer read FChunkSize;
   public
     constructor Create(Connection: IZConnection; Info: TStrings);
@@ -180,7 +178,7 @@ type
 
     function GetWarnings: EZSQLWarning; virtual;
     procedure ClearWarnings; virtual;
-    function GetPrepreparedSQL(const SQL: String): ZAnsiString; virtual;
+    function GetEncodedSQL(const SQL: String): ZAnsiString; virtual;
   end;
 
   {** Implements Abstract Prepared SQL Statement. }
@@ -356,11 +354,12 @@ type
     property LastStatement: IZStatement read FLastStatement write SetLastStatement;
 
     function CreateExecStatement: IZStatement; virtual; abstract;
-    function PrepareSQLParam(ParamIndex: Integer): string; virtual; abstract;
+    function PrepareSQLParam(ParamIndex: Integer): string; virtual;
+    function PrepareAnsiSQLParam(ParamIndex: Integer): ZAnsiString; virtual;
     function GetExecStatement: IZStatement;
     function TokenizeSQLQuery: TStrings;
-    function PrepareSQLQuery: string; virtual;
-
+    function PrepareSQLQuery: String; virtual;
+    function PrepareAnsiSQLQuery: ZAnsiString; virtual;
   public
     destructor Destroy; override;
 
@@ -396,7 +395,8 @@ var
 constructor TZAbstractStatement.Create(Connection: IZConnection; Info: TStrings);
 begin
   { Sets the default properties. }
-  Self.ClientCodePage := Connection.GetClientCodePageInformations;
+  inherited Create;
+  ConSettings := Connection.GetConSettings;
   FMaxFieldSize := 0;
   FMaxRows := 0;
   FEscapeProcessing := False;
@@ -444,15 +444,15 @@ procedure TZAbstractStatement.SetWSQL(const Value: ZWideString);
 begin
   if WSQL <> Value then
   begin
-    if Connection.PreprepareSQL then
+    if Connection.AutoEncodeStrings then
     begin
       {$IFDEF DELPHI12_UP}
-      FaSQL := Self.GetPrepreparedSQL(Value);
+      FaSQL := GetEncodedSQL(Value);
       {$ELSE}
       if Connection.GetEncoding = ceUTF8 then
-        FaSQL := GetPrepreparedSQL(UTF8Encode(Value))
+        FaSQL := GetEncodedSQL(UTF8Encode(Value))
       else
-        FaSQL := GetPrepreparedSQL(AnsiString(Value))
+        FaSQL := GetEncodedSQL(AnsiString(Value))
       {$ENDIF}
     end
     else
@@ -462,7 +462,6 @@ begin
         FaSQL := AnsiString(Value);
     FWSQL := Value;
   end;
-  {$IFDEF DELPHI12_UP} LogSQL := Value; {$ENDIF}
 end;
 
 procedure TZAbstractStatement.SetASQL(const Value: ZAnsiString);
@@ -470,8 +469,8 @@ begin
   if ASQL <> Value then
   begin
     {$IFNDEF DELPHI12_UP}
-    if Connection.PreprepareSQL then
-      FASQL := GetPrepreparedSQL(Value)
+    if Connection.AutoEncodeStrings then
+      FASQL := GetEncodedSQL(Value)
     else
     {$ENDIF}
       FASQL := Value;
@@ -480,7 +479,6 @@ begin
     else
       FWSQL := ZWideString(FASQL);
   end;
-  {$IFNDEF DELPHI12_UP} LogSQL := Value; {$ENDIF}
 end;
 
 {**
@@ -709,12 +707,12 @@ procedure TZAbstractStatement.ClearWarnings;
 begin
 end;
 
-function TZAbstractStatement.GetPrepreparedSQL(const SQL: String): ZAnsiString;
+function TZAbstractStatement.GetEncodedSQL(const SQL: String): ZAnsiString;
 var
   SQLTokens: TZTokenDynArray;
   i: Integer;
 begin
-  if GetConnection.PreprepareSQL then
+  if GetConnection.AutoEncodeStrings then
   begin
     SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeEscapeBufferToList(SQL); //Disassembles the Query
     for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
@@ -2398,6 +2396,16 @@ begin
   FLastStatement := LastStatement;
 end;
 
+function TZEmulatedPreparedStatement.PrepareSQLParam(ParamIndex: Integer): string;
+begin
+  Result := '';
+end;
+
+function TZEmulatedPreparedStatement.PrepareAnsiSQLParam(ParamIndex: Integer): ZAnsiString;
+begin
+  Result := '';
+end;
+
 {**
   Creates a temporary statement which executes queries.
   @param Info a statement parameters.
@@ -2468,7 +2476,7 @@ end;
   Prepares an SQL statement and inserts all data values.
   @return a prepared SQL statement.
 }
-function TZEmulatedPreparedStatement.PrepareSQLQuery: string;
+function TZEmulatedPreparedStatement.PrepareSQLQuery: String;
 var
   I: Integer;
   ParamIndex: Integer;
@@ -2486,8 +2494,38 @@ begin
       Inc(ParamIndex);
     end
     else
-      Result := Result + Tokens[I];
+      Result := Result + (Tokens[I]);
   end;
+end;
+
+{**
+  Prepares an SQL statement and inserts all data values.
+  @return a prepared SQL statement.
+}
+function TZEmulatedPreparedStatement.PrepareAnsiSQLQuery: ZAnsiString;
+var
+  I: Integer;
+  ParamIndex: Integer;
+  Tokens: TStrings;
+begin
+  ParamIndex := 0;
+  Result := '';
+  Tokens := TokenizeSQLQuery;
+
+  for I := 0 to Tokens.Count - 1 do
+  begin
+    if Tokens[I] = '?' then
+    begin
+      Result := Result + PrepareAnsiSQLParam(ParamIndex);
+      Inc(ParamIndex);
+    end
+    else
+      Result := Result + ZPlainString(Tokens[I]);
+  end;
+  {$IFNDEF DELPHI12_UP}
+  if GetConnection.AutoEncodeStrings then
+     Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
+  {$ENDIF}
 end;
 
 {**

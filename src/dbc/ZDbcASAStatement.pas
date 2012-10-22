@@ -156,7 +156,7 @@ var
   CursorOptions: SmallInt;
 begin
   Close;
-  ASQL := Self.GetPrepreparedSQL(SQL);
+  ASQL := GetEncodedSQL(SQL);
   with FASAConnection do
   begin
     try
@@ -233,8 +233,7 @@ begin
   FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cashedblob', 'true'));
   CursorName := AnsiString(RandomString(12));
   FSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
-    FASAConnection.GetDBHandle, CursorName, ClientCodePage^.Encoding,
-    Connection.UTF8StringAsWideField );
+    FASAConnection.GetDBHandle, CursorName, ConSettings);
 end;
 
 destructor TZASAStatement.Destroy;
@@ -327,7 +326,7 @@ end;
 {$HINTS OFF}
 function TZASAStatement.ExecuteUpdate(const SQL: string): Integer;
 begin
-  ASQL := Self.GetPrepreparedSQL(SQL);
+  ASQL := GetEncodedSQL(SQL);
   Close;
   Result := -1;
   with FASAConnection do
@@ -396,11 +395,9 @@ begin
   FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cashedblob', 'true'));
   CursorName := AnsiString(RandomString(12));
   FParamSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
-    FASAConnection.GetDBHandle, CursorName, ClientCodePage^.Encoding,
-    Connection.UTF8StringAsWideField);
+    FASAConnection.GetDBHandle, CursorName, ConSettings);
   FSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
-    FASAConnection.GetDBHandle, CursorName, ClientCodePage^.Encoding,
-    Connection.UTF8StringAsWideField);
+    FASAConnection.GetDBHandle, CursorName, ConSettings);
   ASAPrepare( FASAConnection, FSQLData, FParamSQLData, SQL, @FStmtNum, FPrepared,
     FMoreResults);
 end;
@@ -555,7 +552,7 @@ begin
   with FASAConnection do
   begin
     PrepareParameters( GetPlainDriver, InParamValues, InParamTypes,
-      InParamCount, FParamSQLData, FASAConnection.GetEncoding);
+      InParamCount, FParamSQLData, FASAConnection.GetConSettings);
     if ResultSetConcurrency = rcUpdatable then
       CursorOptions := CUR_OPEN_DECLARE + CUR_UPDATE
     else
@@ -563,7 +560,8 @@ begin
     if ResultSetType = rtScrollInsensitive then
       CursorOptions := CursorOptions + CUR_INSENSITIVE;
     Cursor := CursorName;
-    GetPlainDriver.db_open(GetDBHandle, PAnsiChar(Cursor), nil, @FStmtNum, FParamSQLData.GetData, FetchSize, 0, CursorOptions);
+    GetPlainDriver.db_open(GetDBHandle, PAnsiChar(Cursor), nil, @FStmtNum,
+      FParamSQLData.GetData, FetchSize, 0, CursorOptions);
     ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute,
       SQL);
     Closed := false;
@@ -630,7 +628,7 @@ begin
   begin
 
     PrepareParameters( GetPlainDriver, InParamValues, InParamTypes,
-      InParamCount, FParamSQLData, FASAConnection.GetEncoding);
+      InParamCount, FParamSQLData, FASAConnection.GetConSettings);
     GetPlainDriver.db_execute_into( GetDBHandle, nil, nil, @FStmtNum,
       FParamSQLData.GetData, nil);
     ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, SQL,
@@ -666,11 +664,9 @@ begin
   FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cashedblob', 'true'));
   CursorName := AnsiString(RandomString(12));
   FParamSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
-    FASAConnection.GetDBHandle, CursorName, ClientCodePage^.Encoding,
-    Connection.UTF8StringAsWideField);
+    FASAConnection.GetDBHandle, CursorName, ConSettings);
   FSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
-    FASAConnection.GetDBHandle, CursorName, ClientCodePage^.Encoding,
-    Connection.UTF8StringAsWideField);
+    FASAConnection.GetDBHandle, CursorName, ConSettings);
 end;
 
 destructor TZASACallableStatement.Destroy;
@@ -843,7 +839,7 @@ begin
     with FASAConnection do
     begin
       PrepareParameters( GetPlainDriver, InParamValues, InParamTypes,
-        InParamCount, FParamSQLData, FASAConnection.GetEncoding);
+        InParamCount, FParamSQLData, FASAConnection.GetConSettings);
       if ResultSetConcurrency = rcUpdatable then
         CursorOptions := CUR_OPEN_DECLARE + CUR_UPDATE
       else
@@ -851,7 +847,8 @@ begin
       if ResultSetType = rtScrollInsensitive then
         CursorOptions := CursorOptions + CUR_INSENSITIVE;
       Cursor := CursorName;
-      GetPlainDriver.db_open(GetDBHandle, PAnsiChar(Cursor), nil, @FStmtNum, FParamSQLData.GetData, FetchSize, 0, CursorOptions);
+      GetPlainDriver.db_open(GetDBHandle, PAnsiChar(Cursor), nil, @FStmtNum,
+        FParamSQLData.GetData, FetchSize, 0, CursorOptions);
       ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute,
         SQL);
       Closed := false;
@@ -926,7 +923,7 @@ begin
     begin
 
       PrepareParameters( GetPlainDriver, InParamValues, InParamTypes,
-        InParamCount, FParamSQLData, FASAConnection.GetEncoding);
+        InParamCount, FParamSQLData, FASAConnection.GetConSettings);
       GetPlainDriver.db_execute_into( GetDBHandle, nil, nil, @FStmtNum,
         FParamSQLData.GetData, FSQLData.GetData);
       ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, SQL);

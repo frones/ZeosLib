@@ -201,8 +201,7 @@ begin
   Self.SSQL := SQL; //preprepares SQL and sets AnsiSQL(ASQL)
   with FIBConnection do
   begin
-    SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle
-      , ClientCodePage, GetConnection.UTF8StringAsWideField);
+    SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle, ConSettings);
     try
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
         GetDBHandle, GetTrHandle, GetDialect, ASQL, SSQL, StmtHandle);
@@ -351,8 +350,7 @@ begin
       { Create Result SQLData if statement returns result }
       if StatementType in [stSelect, stExecProc] then
       begin
-        SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle,
-          ClientCodePage, GetConnection.UTF8StringAsWideField);
+        SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle, ConSettings);
         PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect, SSQL,
           StmtHandle, SQLData);
       end;
@@ -418,7 +416,7 @@ begin
   With FIBConnection do
     begin
       {create the parameter bind structure}
-      FParamSQLData := TZParamsSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle, ClientCodePage, GetConnection.UTF8StringAsWideField);
+      FParamSQLData := TZParamsSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle, ConSettings);
       {check dynamic sql}
       GetPlainDriver.isc_dsql_describe_bind(@StatusVector, @StmtHandle, GetDialect,
         FParamSQLData.GetData);
@@ -440,7 +438,7 @@ end;
 procedure TZInterbase6PreparedStatement.BindInParameters;
 begin
   BindSQLDAInParameters(FIBConnection.GetPlainDriver, InParamValues,
-    InParamTypes, InParamCount, FParamSQLData, GetConnection.GetEncoding);
+    InParamTypes, InParamCount, FParamSQLData, GetConnection.GetConSettings);
   inherited BindInParameters;
 end;
 
@@ -493,11 +491,11 @@ begin
   with FIBConnection do
   begin
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-        GetDBHandle, GetTrHandle, GetDialect, GetPrepreparedSQL(SQL), SQL, StmtHandle);
+        GetDBHandle, GetTrHandle, GetDialect, GetEncodedSQL(SQL), SQL, StmtHandle);
     if StatementType in [stSelect, stExecProc] then
       begin
         SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle
-        , ClientCodePage, GetConnection.UTF8StringAsWideField);
+        , ConSettings);
         PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
           SQL, StmtHandle, SQLData);
       end;
@@ -795,9 +793,9 @@ begin
   with FIBConnection do
   begin
     FParamSQLData := TZParamsSQLDA.Create(GetPlainDriver, GetDBHandle,
-      GetTrHandle, ClientCodePage, UTF8StringAsWideField);
+      GetTrHandle, ConSettings);
     FResultSQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle,
-      GetTrHandle, ClientCodePage, UTF8StringAsWideField);
+      GetTrHandle, ConSettings);
   end;
 end;
 
@@ -818,7 +816,7 @@ end;
 procedure TZInterbase6CallableStatement.BindInParameters;
 begin
   BindSQLDAInParameters(FIBConnection.GetPlainDriver, InParamValues,
-    InParamTypes, InParamCount, FParamSQLData, GetConnection.GetEncoding);
+    InParamTypes, InParamCount, FParamSQLData, ConSettings);
   inherited BindInParameters;
 end;
 

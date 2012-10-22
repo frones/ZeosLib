@@ -714,7 +714,7 @@ var
    begin
     if Assigned(Connection) then
       {$IFDEF DELPHI12_UP}
-      Result := Trim(PlainDriver.ZDbcString(StrPas(AMessage), Connection.GetEncoding))
+      Result := Trim(PlainDriver.ZDbcString(StrPas(AMessage), Connection.GetConSettings))
       {$ELSE}
         case Connection.GetEncoding of
           ceAnsi:

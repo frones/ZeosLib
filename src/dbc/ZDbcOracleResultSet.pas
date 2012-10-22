@@ -75,14 +75,14 @@ type
   protected
     function GetSQLVarHolder(ColumnIndex: Integer): PZSQLVar;
     function GetAsStringValue(ColumnIndex: Integer;
-      SQLVarHolder: PZSQLVar): AnsiString;
+      SQLVarHolder: PZSQLVar): ZAnsiString;
     function GetAsLongIntValue(ColumnIndex: Integer;
       SQLVarHolder: PZSQLVar): LongInt;
     function GetAsDoubleValue(ColumnIndex: Integer;
       SQLVarHolder: PZSQLVar): Double;
     function GetAsDateTimeValue(ColumnIndex: Integer;
       SQLVarHolder: PZSQLVar): TDateTime;
-    function InternalGetString(ColumnIndex: Integer): AnsiString; override;
+    function InternalGetString(ColumnIndex: Integer): ZAnsiString; override;
   public
     constructor Create(PlainDriver: IZOraclePlainDriver;
       Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
@@ -188,7 +188,7 @@ constructor TZOracleAbstractResultSet.Create(PlainDriver: IZOraclePlainDriver;
   Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
   ErrorHandle: POCIError);
 begin
-  inherited Create(Statement, SQL, nil, Statement.GetConnection.GetClientCodePageInformations);
+  inherited Create(Statement, SQL, nil, Statement.GetConnection.GetConSettings);
 
   FSQL := SQL;
   FStmtHandle := StmtHandle;
@@ -256,7 +256,7 @@ end;
     value returned is <code>null</code>
 }
 function TZOracleAbstractResultSet.GetAsStringValue(ColumnIndex: Integer;
-  SQLVarHolder: PZSQLVar): AnsiString;
+  SQLVarHolder: PZSQLVar): ZAnsiString;
 var
   OldSeparator: Char;
   Blob: IZBlob;
@@ -446,7 +446,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZOracleAbstractResultSet.InternalGetString(ColumnIndex: Integer): AnsiString;
+function TZOracleAbstractResultSet.InternalGetString(ColumnIndex: Integer): ZAnsiString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -703,25 +703,26 @@ begin
       CurrentVar.ColType, GetStatement.GetChunkSize);
     (Result as IZOracleBlob).ReadBlob;
   end
-  else if CurrentVar.TypeCode=SQLT_NTY then
-    Result := TZAbstractBlob.CreateWithStream(nil)
   else
-  begin
-    if CurrentVar.Indicator >= 0 then
-    begin
-      Stream := nil;
-      try
-        Stream := TStringStream.Create(
-          GetAsStringValue(ColumnIndex, CurrentVar));
-        Result := TZAbstractBlob.CreateWithStream(Stream);
-      finally
-        if Assigned(Stream) then
-          Stream.Free;
-      end;
-    end
+    if CurrentVar.TypeCode=SQLT_NTY then
+      Result := TZAbstractBlob.CreateWithStream(nil)
     else
-      Result := TZAbstractBlob.CreateWithStream(nil);
-  end;
+    begin
+      if CurrentVar.Indicator >= 0 then
+      begin
+        Stream := nil;
+        try
+          Stream := TStringStream.Create(
+            GetAsStringValue(ColumnIndex, CurrentVar));
+          Result := TZAbstractBlob.CreateWithStream(Stream);
+        finally
+          if Assigned(Stream) then
+            Stream.Free;
+        end;
+      end
+      else
+        Result := TZAbstractBlob.CreateWithStream(nil);
+    end;
 end;
 
 { TZOracleResultSet }
@@ -904,7 +905,7 @@ begin
       if (ColumnType = stString) or (ColumnType = stUnicodeString) then
       begin
         ColumnDisplaySize := CurrentVar.DataSize;
-        Precision := GetFieldSize(ColumnType, CurrentVar.DataSize, ClientCodePage^.CharWidth, False);
+        Precision := GetFieldSize(ColumnType, CurrentVar.DataSize, ConSettings.ClientCodePage^.CharWidth, False);
       end
       else
         Precision := CurrentVar.Precision;
@@ -1085,7 +1086,7 @@ begin
       if (ColumnType = stString) or (ColumnType = stUnicodeString) then
       begin
         ColumnDisplaySize := CurrentVar.DataSize;
-        Precision := GetFieldSize(ColumnType, CurrentVar.DataSize, ClientCodePage^.CharWidth, False);
+        Precision := GetFieldSize(ColumnType, CurrentVar.DataSize, ConSettings.ClientCodePage^.CharWidth, False);
       end
       else
         Precision := CurrentVar.Precision;
@@ -1429,6 +1430,11 @@ begin
   Clear;
   BlobData := AData;
   BlobSize := ASize;
+  {$IFNDEF DELPHI12_UP}
+  if FHandle.AutoEncodeStrings and ( FBlobType = stAsciiStream ) and
+      ( FHandle.GetConSettings.OS_CP <> FHandle.GetConSettings.ClientCodePage.CP ) then
+    SetString(AnsiToStringEx(GetString, FHandle.GetConSettings.ClientCodePage.CP, FHandle.GetConSettings.OS_CP));
+  {$ENDIF}
 end;
 
 {**

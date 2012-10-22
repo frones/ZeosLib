@@ -56,7 +56,7 @@
  {$DEFINE WITH_CHECKFIELDCOMPATIBILITY}
  {$DEFINE WITH_WIDEMEMO}        // Have WIDEMEMO,  For Delphi we turn these off if not applicable
  {$DEFINE WITH_FTWIDESTRING}    // Have ftwidestring, For Delphi we turn these off if not applicable
- {$DEFINE WITH_WIDECONTROLS}
+ {$DEFINE WITH_WIDECONTROLS}	// Wide-fields are supported
  {$DEFINE WITH_DBTABLES}        // Have the BDE DBTables Unit
  {$DEFINE WITH_TBYTEDYNARRAYTOVARIANT}// Variant does support TByteDynArray
 {$ENDIF}
@@ -367,7 +367,3 @@
 // Compile test applications with a graphical user interface (GUI)
 // Comment this definition if you want to compile console test applications
 {.$DEFINE TESTGUI}
-
-//Patches by EgonHugeist
-{.$DEFINE WITH_CHAR_CONTROL} //Disables/Enables the CharControl widget
-

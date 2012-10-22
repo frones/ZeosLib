@@ -315,7 +315,7 @@ begin
      Port := 1521;
 
   { Sets a client codepage. }
-  OCI_CLIENT_CHARSET_ID := ClientCodePage^.ID;
+  OCI_CLIENT_CHARSET_ID := ConSettings.ClientCodePage^.ID;
   { Connect to Oracle database. }
   if ( FHandle = nil ) then
     try
@@ -347,7 +347,7 @@ begin
     OCI_CLIENT_NCHARSET_ID := High(ub2);
     GetPlainDriver.AttrGet(FHandle, OCI_HTYPE_ENV, @OCI_CLIENT_CHARSET_ID,
       nil, OCI_ATTR_ENV_CHARSET_ID, FErrorHandle); //Get Server default CodePage
-    CheckCharEncoding(GetPlainDriver.ValidateCharEncoding(OCI_CLIENT_CHARSET_ID)^.Name);
+    CheckCharEncoding(GetPlainDriver.ValidateCharEncoding(OCI_CLIENT_CHARSET_ID{$IFDEF FPC}, ConSettings.AutoEncode{$ENDIF})^.Name);
     if OCI_CLIENT_CHARSET_ID <> OCI_CLIENT_NCHARSET_ID then
     begin
       CleanupOnFail;
@@ -355,7 +355,7 @@ begin
       Exit;
     end;
   end;
-  if GetPlainDriver.GetEnvCharsetByteWidth(FHandle, FErrorHandle, ClientCodePage^.CharWidth) <> OCI_SUCCESS then
+  if GetPlainDriver.GetEnvCharsetByteWidth(FHandle, FErrorHandle, ConSettings.ClientCodePage^.CharWidth) <> OCI_SUCCESS then
     CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcConnect, LogMessage);
 
   GetPlainDriver.AttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FServerHandle, 0,

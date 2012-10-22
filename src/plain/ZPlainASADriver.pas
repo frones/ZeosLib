@@ -333,38 +333,38 @@ end;
 procedure TZASABasePlainDriver.LoadCodePages;
 begin
   { MultiByte }
-  //AddCodePage('874THAIBIN', 1, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 874{$ENDIF}); {Windows Thailändisch, ISO8859-11, binäre Sortierung}
-  //AddCodePage('932JPN', 2, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 932{$ENDIF}); {Japanese Shift-JIS mit Microsoft-Erweiterungen}
-  //AddCodePage('936ZHO', 3, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 936{$ENDIF}); {Vereinfachtes Chinesisch, PRC GBK}
-  //AddCodePage('949KOR', 4, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 949{$ENDIF}); {Korean KS C 5601-1987-Codierung, Wansung}
-  //AddCodePage('950ZHO_HK', 5, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 950{$ENDIF}); {Traditionelles Chinesisch, Big 5-Kodierung mit HKSCS}
-  //AddCodePage('950ZHO_TW', 6, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 950{$ENDIF}); {Traditionelles Chinesisch, Big 5-Kodierung}
-  //AddCodePage('EUC_CHINA', 21, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_GB2312{$ENDIF}); {GB2312-80 Simplified Chinese}
-  //AddCodePage('EUC_JAPAN', 22, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_SHIFTJS{$ENDIF}); {Japanisch EUC JIS X 0208-1990 und JIS X 0212-1990-Zeichensatz}
-  //AddCodePage('EUC_KOREA', 23, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1361{$ENDIF}); { Koreanisch KS C 5601-1992 8-Bit-Zeichensatz, Johab}
-  //AddCodePage('EUC_TAIWAN', 24, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 964{$ENDIF}); {EUC-TW-Kodierung}
-  //AddCodePage('UCA', 29, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16{$ENDIF}, 'utf8'); {UCA	UCA-Standardkollatierung}
-  AddCodePage('UTF-8', 30, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}, '', 3); {UTF-8, 8-Bit-Mehrbyte-Zeichensatz für Unicode, binäre Reihenfolge}
+  //AddCodePage('874THAIBIN', 1, ceAnsi, 874); {Windows Thailändisch, ISO8859-11, binäre Sortierung}
+  //AddCodePage('932JPN', 2, ceAnsi, 932 {Japanese Shift-JIS mit Microsoft-Erweiterungen}
+  //AddCodePage('936ZHO', 3, ceAnsi, 936); {Vereinfachtes Chinesisch, PRC GBK}
+  //AddCodePage('949KOR', 4, ceAnsi, 949); {Korean KS C 5601-1987-Codierung, Wansung}
+  //AddCodePage('950ZHO_HK', 5, ceAnsi, 950); {Traditionelles Chinesisch, Big 5-Kodierung mit HKSCS}
+  //AddCodePage('950ZHO_TW', 6, ceAnsi, 950); {Traditionelles Chinesisch, Big 5-Kodierung}
+  //AddCodePage('EUC_CHINA', 21, ceAnsi, zCP_GB2312); {GB2312-80 Simplified Chinese}
+  //AddCodePage('EUC_JAPAN', 22, ceAnsi, zCP_SHIFTJS); {Japanisch EUC JIS X 0208-1990 und JIS X 0212-1990-Zeichensatz}
+  //AddCodePage('EUC_KOREA', 23, ceAnsi, 1361); { Koreanisch KS C 5601-1992 8-Bit-Zeichensatz, Johab}
+  //AddCodePage('EUC_TAIWAN', 24, ceAnsi, 964); {EUC-TW-Kodierung}
+  //AddCodePage('UCA', 29, ceUTF16, zCP_UTF16, 'utf8'); {UCA	UCA-Standardkollatierung}
+  AddCodePage('UTF-8', 30, ceUTF8, zCP_UTF8, '', 3); {UTF-8, 8-Bit-Mehrbyte-Zeichensatz für Unicode, binäre Reihenfolge}
 
   { SingleByte }
-  //AddCodePage('1250LATIN2', 7, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1250{$ENDIF}); {Windows Latin 2, Mittel- und Osteuropa}
-  //AddCodePage('1250POL', 8, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1250{$ENDIF}); {Windows Latin 2, Polnisch}
-  //AddCodePage('1251CYR', 9, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1251{$ENDIF}); {Windows Kyrillisch}
-  //AddCodePage('1252LATIN1', 10, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); { Windows Latin 1, Western}
-  //AddCodePage('1252LT1ACC', 11, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); {Windows-Spezial Latin 1, Western, Zeichen mit Akzent nicht gleich}
-  //AddCodePage('1252NOR', 12, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); {Windows Latin 1, Norwegisch}
-  //AddCodePage('1252SPA', 13, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); {Windows Latin 1, Spanisch}
-  //AddCodePage('1252SWEFIN', 14, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1252{$ENDIF}); {Windows Latin 1, Schwedisch/Finnisch}
-  //AddCodePage('1253ELL', 15, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1253{$ENDIF}); {Windows Griechisch, ISO8859-7 mit Erweiterungen}
-  //AddCodePage('1254TRK', 16, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1254{$ENDIF}); {Windows Türkisch, ISO8859-9 mit Erweiterungen}
-  //AddCodePage('1254TRKALT', 17, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1254{$ENDIF}); {Windows Türkisch, ISO8859-9 mit Erweiterungen, I mit I-Punkt gleich I ohne I-Punkt}
-  //AddCodePage('1255HEB', 18, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1255{$ENDIF}); {Windows Hebräisch, ISO8859-8 mit Erweiterungen}
-  //AddCodePage('1256ARA', 19, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1256{$ENDIF}); {Windows Arabisch, ISO8859-6 mit Erweiterungen}
-  //AddCodePage('1257LIT', 20, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, 1257{$ENDIF}); {Windows Baltische Staaten, Litauisch}
-  //AddCodePage('ISO1LATIN1', 25, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L1_ISO_8859_1{$ENDIF}); {ISO8859-1, ISO Latin 1, Western, Latin 1-Sortierreihenfolge}
-  //AddCodePage('ISO9LATIN1', 26, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_ISO_8859_9{$ENDIF}); {	ISO8859-15, ISO Latin 9, Western, Latin 1-Sortierreihenfolge}
-  //AddCodePage('ISO_1', 27, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L1_ISO_8859_1{$ENDIF}); {ISO8859-1, ISO Latin 1, Western}
-  //AddCodePage('ISO_BINENG', 28, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_ACP{$ENDIF}); {Binäre Sortierreihenfolge, Englisch ISO/ASCII 7-Bit-Zuordnung nach Groß- und Kleinschreibung}
+  //AddCodePage('1250LATIN2', 7, ceAnsi, 1250); {Windows Latin 2, Mittel- und Osteuropa}
+  //AddCodePage('1250POL', 8, ceAnsi, 1250); {Windows Latin 2, Polnisch}
+  //AddCodePage('1251CYR', 9, ceAnsi, 1251); {Windows Kyrillisch}
+  //AddCodePage('1252LATIN1', 10, ceAnsi, 1252); { Windows Latin 1, Western}
+  //AddCodePage('1252LT1ACC', 11, ceAnsi, 1252); {Windows-Spezial Latin 1, Western, Zeichen mit Akzent nicht gleich}
+  //AddCodePage('1252NOR', 12, ceAnsi, 1252); {Windows Latin 1, Norwegisch}
+  //AddCodePage('1252SPA', 13, ceAnsi, 1252); {Windows Latin 1, Spanisch}
+  //AddCodePage('1252SWEFIN', 14, ceAnsi, 1252); {Windows Latin 1, Schwedisch/Finnisch}
+  //AddCodePage('1253ELL', 15, ceAnsi, 1253); {Windows Griechisch, ISO8859-7 mit Erweiterungen}
+  //AddCodePage('1254TRK', 16, ceAnsi, 1254); {Windows Türkisch, ISO8859-9 mit Erweiterungen}
+  //AddCodePage('1254TRKALT', 17, ceAnsi, 1254); {Windows Türkisch, ISO8859-9 mit Erweiterungen, I mit I-Punkt gleich I ohne I-Punkt}
+  //AddCodePage('1255HEB', 18, ceAnsi, 1255); {Windows Hebräisch, ISO8859-8 mit Erweiterungen}
+  //AddCodePage('1256ARA', 19, ceAnsi, 1256); {Windows Arabisch, ISO8859-6 mit Erweiterungen}
+  //AddCodePage('1257LIT', 20, ceAnsi, 1257); {Windows Baltische Staaten, Litauisch}
+  //AddCodePage('ISO1LATIN1', 25, ceAnsi, zCP_L1_ISO_8859_1); {ISO8859-1, ISO Latin 1, Western, Latin 1-Sortierreihenfolge}
+  //AddCodePage('ISO9LATIN1', 26, ceAnsi, zCP_ISO_8859_9); {	ISO8859-15, ISO Latin 9, Western, Latin 1-Sortierreihenfolge}
+  //AddCodePage('ISO_1', 27, ceAnsi, zCP_L1_ISO_8859_1); {ISO8859-1, ISO Latin 1, Western}
+  //AddCodePage('ISO_BINENG', 28, ceAnsi, zCP_ACP); {Binäre Sortierreihenfolge, Englisch ISO/ASCII 7-Bit-Zuordnung nach Groß- und Kleinschreibung}
 end;
 
 constructor TZASABasePlainDriver.Create;
