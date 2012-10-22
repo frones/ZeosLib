@@ -1966,7 +1966,7 @@ var
   I: Integer;
   procedure InsertValues(s_char, s_varchar, s_nchar, s_nvarchar: String);
   begin
-    if Connection.PreprepareSQL or (Connection.DbcConnection.GetEncoding = ceAnsi)
+    if Connection.DbcConnection.AutoEncodeStrings or (Connection.DbcConnection.GetEncoding = ceAnsi)
       or Connection.UTF8StringsAsWideField then
     begin
       Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
@@ -2004,7 +2004,7 @@ begin
     InsertValues(str5, str5, str5, str5);
     InsertValues(str6, str6, str6, str6);
 
-    if Connection.PreprepareSQL or (Connection.DbcConnection.GetEncoding = ceAnsi)
+    if Connection.DbcConnection.AutoEncodeStrings or (Connection.DbcConnection.GetEncoding = ceAnsi)
       or Connection.UTF8StringsAsWideField then
     begin
       Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);

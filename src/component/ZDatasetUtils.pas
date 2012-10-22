@@ -1546,6 +1546,7 @@ var
   Stream: TStream;
   TempBytes: TByteDynArray;
   {$IFDEF WITH_ASBYTES}Bts: TBytes;{$ENDIF}
+  {$IFDEF WITHOUT_VARBYTESASSTRING}V: Variant;{$ENDIF}
 begin
   if Param.IsNull then
     Statement.SetNull(Index, ConvertDatasetToDbcType(Param.DataType))
@@ -1581,7 +1582,12 @@ begin
           SetLength(TempBytes, High(Bts)+1);
           System.Move(PAnsichar(Bts)^, PAnsichar(TempBytes)^, High(Bts)+1);
           {$ELSE}
-          TempBytes := StrToBytes(Param.AsString);
+            {$IFDEF WITHOUT_VARBYTESASSTRING}
+            V := Param.Value;
+            TempBytes := V;
+            {$ELSE}
+            TempBytes := StrToBytes(Param.AsString);
+            {$ENDIF}
           {$ENDIF}
           Statement.SetBytes(Index, TempBytes);
         end;

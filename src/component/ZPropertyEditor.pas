@@ -672,7 +672,7 @@ begin
     begin
       Url := TZURL.Create;
       Url.Protocol :=  Connection.Protocol;
-      SDyn := DriverManager.GetDriver(Url.URL).GetSupportedClientCodePages(Url, {$IFDEF FPC}Connection.PreprepareSQL,{$ENDIF} True);
+      SDyn := DriverManager.GetDriver(Url.URL).GetSupportedClientCodePages(Url, {$IFDEF FPC}Connection.AutoEncodeStrings, {$ENDIF} True);
       Url.Free;
       for i := 0 to high(SDyn) do
         List.Append(SDyn[i]);

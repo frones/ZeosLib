@@ -827,7 +827,7 @@ type
       FileName: PAnsiChar): Integer;
     function GetPlainFunc:PAPI;
     function EscapeString(Handle: Pointer; const Value: ZAnsiString;
-      ConSettings: PZConSettings): ZAnsiString; override;
+      ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString; override;
   end;
 
   {** Implements a driver for PostgreSQL 7.4 }
@@ -1601,7 +1601,7 @@ begin
 end;
 
 function TZPostgreSQLBaseDriver.EscapeString(Handle: Pointer; const Value: ZAnsiString;
-  ConSettings: PZConSettings): ZAnsiString;
+  ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString;
 var
   ResLen: NativeUInt;
   Temp: PAnsiChar;
@@ -1610,7 +1610,14 @@ var
 begin
   if Assigned(POSTGRESQL_API.PQescapeStringConn) and ( Value <> '' )then
   begin
-    SourceTemp := {$IFDEF DELPHI12_UP}Value{$ELSE}ZPlainString(Value, ConSettings){$ENDIF}; //check encoding too
+    {$IFDEF DELPHI12_UP}
+    SourceTemp := Value;
+    {$ELSE}
+    if WasEncoded then
+      SourceTemp := Value
+    else
+      SourceTemp := ZPlainString(Value, ConSettings); //check encoding too
+    {$ENDIF}
     GetMem(Temp, Length(SourceTemp)*2);
     ResLen := POSTGRESQL_API.PQescapeStringConn(Handle, Temp,
       PAnsiChar(SourceTemp), StrLen(PAnsiChar(SourceTemp)), @IError);

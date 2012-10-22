@@ -628,7 +628,7 @@ end;
     Zeos is now able to preprepare direct insered SQL-Statements.
     Means do the UTF8-preparation if the CharacterSet was choosen.
     So we do not need to do the SQLString + UTF8Encode(Edit1.Test) for example.
-  @result True if coPreprepareSQL was choosen in the TZAbstractConnection
+  @result True if AutoEncodeStrings was choosen in the TZAbstractConnection
 }
 function TZAbstractConnection.GetAutoEncodeStrings: Boolean;
 begin
@@ -728,7 +728,7 @@ begin
       end
       else // nothing was found
       begin
-        {$IFDEF LAZARUSUTF8HACK}
+        {$IFDEF FPC}
         ConSettings.CPType := cCP_UTF8;
         ConSettings.OS_CP := 65001;
         {$ELSE}

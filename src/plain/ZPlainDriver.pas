@@ -71,13 +71,8 @@ type
       Why this here? -> No one else then Plaindriver knows which Characterset
       is supported. Here i've made a intervention in dependency of used Compiler.}
     function GetSupportedClientCodePages(const {$IFDEF FPC}AutoEncode,{$ENDIF} IgnoreUnsupported: Boolean): TStringDynArray;
-    {$IF defined(FPC)}
-    function ValidateCharEncoding(const CharacterSetName: String; const AutoEncode: Boolean; const DoArrange: Boolean = False): PZCodePage; overload;
-    function ValidateCharEncoding(const CharacterSetID: Integer; const AutoEncode: Boolean; const DoArrange: Boolean = False): PZCodePage; overload;
-    {$ELSE}
     function ValidateCharEncoding(const CharacterSetName: String; const DoArrange: Boolean = False): PZCodePage; overload;
     function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
-    {$IFEND}
     function ZDbcString(const Ansi: ZAnsiString; ConSettings: PZConSettings): String;
     function ZPlainString(const AStr: String; ConSettings: PZConSettings): ZAnsiString;
     function GetPrepreparedSQL(Handle: Pointer; const SQL: String;
@@ -85,7 +80,7 @@ type
     function EscapeString(Handle: Pointer; const Value: ZWideString;
       ConSettings: PZConSettings): ZWideString; overload;
     function EscapeString(Handle: Pointer; const Value: ZAnsiString;
-      ConSettings: PZConSettings): ZAnsiString; overload;
+      ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString; overload;
     procedure Initialize(const Location: String = '');
     function Clone: IZPlainDriver;
   end;
@@ -104,19 +99,14 @@ type
     function Clone: IZPlainDriver; reintroduce; virtual; abstract;
     procedure LoadCodePages; virtual; abstract;
     function GetUnicodeCodePageName: String; virtual;
-    {$IF defined(FPC)}
-    function ValidateCharEncoding(const CharacterSetName: String; const AutoEncode: Boolean; const DoArrange: Boolean = False): PZCodePage; overload;
-    function ValidateCharEncoding(const CharacterSetID: Integer; const AutoEncode: Boolean; const DoArrange: Boolean = False): PZCodePage; overload;
-    {$ELSE}
     function ValidateCharEncoding(const CharacterSetName: String; const DoArrange: Boolean = False): PZCodePage; overload;
     function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
-    {$IFEND}
     function GetPrepreparedSQL(Handle: Pointer; const SQL: String;
       ConSettings: PZConSettings; out LogSQL: String): ZAnsiString; virtual;
     function EscapeString(Handle: Pointer; const Value: ZWideString;
       ConSettings: PZConSettings): ZWideString; overload;
     function EscapeString(Handle: Pointer; const Value: ZAnsiString;
-      ConSettings: PZConSettings): ZAnsiString; overload; virtual;
+      ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString; overload; virtual;
     function GetTokenizer: IZTokenizer;
   public
     constructor Create;
@@ -342,20 +332,16 @@ end;
           a supported CodePage
    @result the PZCodePage of the ClientCharacterSet
 }
-{$IF defined(FPC)}
-function TZAbstractPlainDriver.ValidateCharEncoding(const CharacterSetName: String;
-  const AutoEncode: Boolean; const DoArrange: Boolean = False): PZCodePage;
-{$ELSE}
 function TZAbstractPlainDriver.ValidateCharEncoding(const CharacterSetName: String;
   const DoArrange: Boolean = False): PZCodePage;
-{$IFEND}
+
   function GetClientCodePageInformations(
     const ClientCharacterSet: String): PZCodePage;
   var
     I: Integer;
   begin
     {now check for PlainDriver-Informations...}
-    {$IFDEF LAZARUSUTF8HACK} //if the user didn't set it
+    {$IFDEF FPC} //if the user didn't set it
     if ClientCharacterSet = '' then
     begin
       for i := Low(FCodePages) to high(FCodePages) do
@@ -378,11 +364,7 @@ function TZAbstractPlainDriver.ValidateCharEncoding(const CharacterSetName: Stri
 begin
   Result := GetClientCodePageInformations(CharacterSetName);
   if (DoArrange) and (Result^.ZAlias <> '' ) then
-  {$IF defined(FPC)}
-    ValidateCharEncoding(Result^.ZAlias, AutoEncode); //recalls em selves
-  {$ELSE}
-  ValidateCharEncoding(Result^.ZAlias); //recalls em selves
-  {$IFEND}
+    ValidateCharEncoding(Result^.ZAlias); //recalls em selves
 end;
 
 {**
@@ -392,13 +374,9 @@ end;
           a supported CodePage
    @result the PZCodePage of the ClientCharacterSet
 }
-{$IF defined(FPC)}
-function TZAbstractPlainDriver.ValidateCharEncoding(const CharacterSetID: Integer;
-  const AutoEncode: Boolean; const DoArrange: Boolean = False): PZCodePage;
-{$ELSE}
 function TZAbstractPlainDriver.ValidateCharEncoding(const CharacterSetID: Integer;
   const DoArrange: Boolean = False): PZCodePage;
-{$IFEND}
+
   function GetClientCodePageInformations(const ClientCharacterSetID: Word): PZCodePage;
   var
     I: Integer;
@@ -416,11 +394,7 @@ begin
   Result := GetClientCodePageInformations(CharacterSetID);
 
   if (DoArrange) and (Result^.ZAlias <> '' ) then
-    {$IF defined(FPC)}
-    ValidateCharEncoding(Result^.ZAlias, AutoEncode); //recalls em selves
-    {$ELSE}
     ValidateCharEncoding(Result^.ZAlias); //recalls em selves
-    {$IFEND}
 end;
 
 function TZAbstractPlainDriver.GetPrepreparedSQL(Handle: Pointer;
@@ -466,18 +440,18 @@ begin
   {$IFDEF DELPHI12_UP}
   StrFrom := ZPlainString(Value, ConSettings);
   {$ELSE}
-  StrFrom := UTF8Encode(Value);
+  StrFrom := ZStringFromUnicode(Value);
   {$ENDIF}
-  Outbuffer := EscapeString(Handle, StrFrom, ConSettings);
+  Outbuffer := EscapeString(Handle, StrFrom, ConSettings, True);
   {$IFDEF DELPHI12_UP}
-  Result := ZDbcString(Outbuffer, ConSettings);
+  Result := ZDbcString(OutBuffer, ConSettings);
   {$ELSE}
-  StrFrom := UTF8Decode(Value);
+  Result := ZUnicodeFromString(Outbuffer);
   {$ENDIF}
 end;
 
 function TZAbstractPlainDriver.EscapeString(Handle: Pointer;
-  const Value: ZAnsiString; ConSettings: PZConSettings): ZAnsiString;
+  const Value: ZAnsiString; ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString;
 begin
   Result := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr(Value, #39);
 end;
@@ -498,7 +472,7 @@ begin
   FCodePages[High(FCodePages)].CP := CP;
   FCodePages[High(FCodePages)].CharWidth := CharWidth;
 
-  {$IF defined(WITH_LCONVENCODING) or defined(MSWINDOWS) or defined(DELPHI)}
+  {$IF defined(WITH_LCONVENCODING) or (defined(MSWINDOWS) and not defined(WinCE)) or defined(DELPHI)}
   if CP = $ffff then
   begin
     FCodePages[High(FCodePages)].ZAlias := GetUnicodeCodePageName;
@@ -536,7 +510,7 @@ begin
       FCodePages[I].ZAlias := ZAlias;
       FCodePages[I].CharWidth := CharWidth;
 
-      {$IF defined(WITH_LCONVENCODING) or defined(MSWINDOWS) or defined(DELPHI)}
+      {$IF defined(WITH_LCONVENCODING) or (defined(MSWINDOWS) and not defined(WinCE)) or defined(DELPHI)}
       if CP = $ffff then
       begin
         FCodePages[I].ZAlias := GetUnicodeCodePageName;
@@ -566,7 +540,7 @@ var
 begin
   for i := low(FCodePages) to high(FCodePages) do
     {$IFDEF FPC}
-      {$IF defined(MSWINDOWS) and not defined(WITH_LCONVENCODING)}
+      {$IF (defined(MSWINDOWS) and not defined(WinCE)) and not defined(WITH_LCONVENCODING)}
       if ( not ( FCodePages[i].CP = $ffff ) ) and AutoEncode then
       {$ELSE}
         {$IF defined(WITH_LCONVENCODING)}

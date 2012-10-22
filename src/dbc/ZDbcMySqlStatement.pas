@@ -1134,12 +1134,12 @@ begin
       stBytes:
         Result := GetSQLHexAnsiString(PAnsiChar(AnsiString(SoftVarManager.GetAsString(Value))), Length(SoftVarManager.GetAsString(Value)));
       stString:
-        Result := FPlainDriver.EscapeString(FHandle, ZPlainString(SoftVarManager.GetAsString(Value), ConSettings), ConSettings);
+        Result := FPlainDriver.EscapeString(FHandle, ZPlainString(SoftVarManager.GetAsString(Value), ConSettings), ConSettings, True);
       stUnicodeString:
         if (GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) then
-          Result := FPlainDriver.EscapeString(FHandle, UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)), ConSettings)
+          Result := FPlainDriver.EscapeString(FHandle, UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)), ConSettings, True)
         else
-          Result := FPlainDriver.EscapeString(FHandle, AnsiString(SoftVarManager.GetAsUnicodeString(Value)), ConSettings);
+          Result := FPlainDriver.EscapeString(FHandle, AnsiString(SoftVarManager.GetAsUnicodeString(Value)), ConSettings, True);
       stDate:
       begin
         DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
@@ -1177,7 +1177,7 @@ begin
             if ( InParamTypes[ParamIndex] = stBinaryStream ) then
               Result := GetSQLHexAnsiString(PAnsiChar(TempBlob.GetString), TempBlob.Length)
             else
-              Result := FPlainDriver.EscapeString(FHandle, TempBlob.GetString, ConSettings)
+              Result := FPlainDriver.EscapeString(FHandle, TempBlob.GetString, ConSettings, True)
           end
           else
             Result := 'NULL';

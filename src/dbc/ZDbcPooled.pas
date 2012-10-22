@@ -601,8 +601,6 @@ procedure TZDbcPooledConnection.CheckCharEncoding(CharSet: String;
   const DoArrange: Boolean = False);
 begin
   Self.GetConSettings.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(CharSet, DoArrange);
-
-  FAutoEncodeStrings := FAutoEncodeStrings and (ConSettings.ClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]);
   FClientCodePage := ConSettings.ClientCodePage^.Name; //resets the developer choosen ClientCodePage
 end;
 
@@ -626,25 +624,23 @@ end;
 
 function TZDbcPooledConnection.GetUTF8StringAsWideField: Boolean;
 begin
-  {$IFDEF LAZARUSUTF8HACK}
-  Result := False;
+  {$IFDEF DELPHI12_UP}
+  Result := True;
   {$ELSE}
-    {$IFDEF DELPHI12_UP}
-    Result := True;
-    {$ELSE}
+    {$IFDEF WITH_FTWIDESTRING}
     Result := FUTF8StringAsWideField;
+    {$ELSE}
+    Result := False;
     {$ENDIF}
   {$ENDIF}
 end;
 
 procedure TZDbcPooledConnection.SetUTF8StringAsWideField(const Value: Boolean);
 begin
-  {$IFDEF LAZARUSUTF8HACK}
-  FUTF8StringAsWideField := False;
+  {$IFDEF DELPHI12_UP}
+  FUTF8StringAsWideField := True;
   {$ELSE}
-    {$IFDEF DELPHI12_UP}
-    FUTF8StringAsWideField := True;
-    {$ELSE}
+    {$IFDEF WITH_FTWIDESTRING}
     FUTF8StringAsWideField := Value;
     {$ENDIF}
   {$ENDIF}

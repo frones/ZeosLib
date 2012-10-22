@@ -166,7 +166,7 @@ type
   ZWideString = {$IFDEF DELPHI12_UP}String{$ELSE}WideString{$ENDIF};
 
   {** Defines the Target Ansi codepages for the Controls }
-  TZControlsCodePage = ({$IFDEF DELPHI12_UP}cCP_UTF16, cCP_UTF8, cGET_ACP{$ELSE}{$IFDEF LAZARUSUTF8HACK}cCP_UTF8, cCP_UTF16, cGET_ACP{$ELSE}cGET_ACP, cCP_UTF8, cCP_UTF16{$ENDIF}{$ENDIF});
+  TZControlsCodePage = ({$IFDEF DELPHI12_UP}cCP_UTF16, cCP_UTF8, cGET_ACP{$ELSE}{$IFDEF FPC}cCP_UTF8, cCP_UTF16, cGET_ACP{$ELSE}cGET_ACP, cCP_UTF8, cCP_UTF16{$ENDIF}{$ENDIF});
 
   TZCharEncoding = (
     ceDefault,  //Internal switch for the two Functions below do not use it as a CodePage-declaration!
@@ -761,10 +761,17 @@ begin
   else
     UseEncoding := Encoding;
 
-  TempEncoding := FConSettings.ClientCodePage^.Encoding;
-  FConSettings.ClientCodePage^.Encoding := UseEncoding;
-  Result := ZDbcString(Ansi, FConSettings);
-  FConSettings.ClientCodePage^.Encoding := TempEncoding;
+  {$IFNDEF DELPHI12_UP}
+  if not FConSettings.AutoEncode and ( FConSettings.ClientCodePage^.Encoding = UseEncoding ) then
+    Result := Ansi
+  else
+  {$ENDIF}
+  begin
+    TempEncoding := FConSettings.ClientCodePage^.Encoding;
+    FConSettings.ClientCodePage^.Encoding := UseEncoding;
+    Result := ZDbcString(Ansi, FConSettings);
+    FConSettings.ClientCodePage^.Encoding := TempEncoding;
+  end;
 end;
 
 {**
@@ -850,10 +857,17 @@ begin
   else
     UseEncoding := Encoding;
 
-  TempEncoding := FConSettings.ClientCodePage.Encoding;
-  FConSettings.ClientCodePage.Encoding := UseEncoding;
-  Result := ZPlainString(AStr, FConSettings);
-  FConSettings.ClientCodePage.Encoding := TempEncoding;
+  {$IFNDEF DELPHI12_UP}
+  if not FConSettings.AutoEncode and ( FConSettings.ClientCodePage^.Encoding = UseEncoding ) then
+    Result := AStr
+  else
+  {$ENDIF}
+  begin
+    TempEncoding := FConSettings.ClientCodePage.Encoding;
+    FConSettings.ClientCodePage.Encoding := UseEncoding;
+    Result := ZPlainString(AStr, FConSettings);
+    FConSettings.ClientCodePage.Encoding := TempEncoding;
+  end;
 end;
 
 function TZCodePagedObject.ZStringFromUnicode(const ws: ZWideString; const Encoding: TZCharEncoding = ceDefault): String;

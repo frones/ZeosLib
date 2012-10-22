@@ -246,9 +246,6 @@ type
     procedure LoadCodePages; override;
     procedure LoadApi; override;
     procedure BuildServerArguments(Options: TStrings);
-    {function GetPrepreparedSQL(Handle: Pointer; const SQL: String;
-      const Encoding: TZCharEncoding; out LogSQL: String;
-      const PreprepareSQL: Boolean): ZAnsiString;  override;}
   public
     constructor Create(Tokenizer: IZTokenizer);
     destructor Destroy; override;
@@ -322,7 +319,7 @@ type
     function SetOptions(Handle: PZMySQLConnect; Option: TMySQLOption;
       const Arg: PAnsiChar): Integer;
     function EscapeString(Handle: Pointer; const Value: ZAnsiString;
-      ConSettings: PZConSettings): ZAnsiString; override;
+      ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString; override;
     function GetServerInfo(Handle: PZMySQLConnect): PAnsiChar;
     function GetClientInfo: PAnsiChar;
     function GetHostInfo(Handle: PZMySQLConnect): PAnsiChar;
@@ -762,13 +759,20 @@ begin
 end;
 
 function TZMySQLBaseDriver.EscapeString(Handle: Pointer; const Value: ZAnsiString;
-  ConSettings: PZConSettings): ZAnsiString;
+  ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString;
 var
   Len, outlength: integer;
   Outbuffer: ZAnsiString;
   TempValue: ZAnsiString;
 begin
-  TempValue := {$IFDEF DELPHI12_UP}Value{$ELSE}ZPlainString(Value, ConSettings){$ENDIF}; //check encoding too
+  {$IFDEF DELPHI12_UP}
+  TempValue := Value;
+  {$ELSE}
+  if WasEncoded then
+    TempValue := Value
+  else
+    TempValue := ZPlainString(Value, ConSettings); //check encoding too
+  {$ENDIF}
   Len := Length(TempValue);
   Setlength(Outbuffer,Len*2+1);
   if Handle = nil then

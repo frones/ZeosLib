@@ -678,7 +678,7 @@ begin
         Result := FPostgreSQLConnection.EncodeBinary(AnsiString(SoftVarManager.GetAsString(Value)));
       stString:
         Result :=  Self.FPlainDriver.EscapeString(FPostgreSQLConnection.GetConnectionHandle,
-          ZPlainString(SoftVarManager.GetAsString(Value)), FPostgreSQLConnection.GetConSettings);
+          ZPlainString(SoftVarManager.GetAsString(Value)), FPostgreSQLConnection.GetConSettings, True);
       stUnicodeString:
         begin
           if GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
@@ -686,7 +686,7 @@ begin
           else
             Result := AnsiString(SoftVarManager.GetAsUnicodeString(Value));
           Result := Self.FPlainDriver.EscapeString(FPostgreSQLConnection.GetConnectionHandle,
-            Result, FPostgreSQLConnection.GetConSettings)
+            Result, FPostgreSQLConnection.GetConSettings, True)
         end;
       stDate:
         if Escaped then
@@ -741,7 +741,7 @@ begin
                   Result := FPostgreSQLConnection.EncodeBinary(TempBlob.GetString);
               stAsciiStream, stUnicodeStream:
                 Result := FPlainDriver.EscapeString(FPostgreSQLConnection.GetConnectionHandle,
-                  TempBlob.GetString, FPostgreSQLConnection.GetConSettings)
+                  TempBlob.GetString, FPostgreSQLConnection.GetConSettings, True)
             end; {case..}
             TempBlob := nil;
           end

@@ -267,7 +267,7 @@ type
   published
     property ControlsCodePage: TZControlsCodePage read FControlsCodePage write SetControlsCodePage;
     property UTF8StringsAsWideField: Boolean read GetUTF8StringAsWideField write SetUTF8StringAsWideField;
-    property PreprepareSQL: Boolean read GetAutoEncode write SetAutoEncode default True;
+    property AutoEncodeStrings: Boolean read GetAutoEncode write SetAutoEncode default True;
     property ClientCodepage: String read FClientCodepage write SetClientCodePage; //EgonHugeist
     property Catalog: string read FCatalog write FCatalog;
     property Properties: TStrings read GetProperties write SetProperties;
@@ -328,14 +328,10 @@ var
 }
 constructor TZAbstractConnection.Create(AOwner: TComponent);
 begin
-  {$IFDEF LAZARUSUTF8HACK}
-  FUTF8StringAsWideField := False;
+  {$IFDEF DELPHI12_UP}
+  FUTF8StringAsWideField := True;
   {$ELSE}
-    {$IFDEF DELPHI12_UP}
-    FUTF8StringAsWideField := True;
-    {$ELSE}
-    FUTF8StringAsWideField := False;
-    {$ENDIF}
+  FUTF8StringAsWideField := False;
   {$ENDIF}
   FURL := TZURL.Create;
   inherited Create(AOwner);
@@ -526,14 +522,18 @@ begin
       FClientCodepage := Trim(Value.Values['codepage'])
     else
       Value.Values['codepage'] := FClientCodepage;
-    if Self.Connected then
+
+    {$IF (defined(MSWINDOWS) and not defined(WINCE)) or defined(DELPHI) or defined(WITH_LCONVENCODING)}
+    if Connected then
     begin
       DbcConnection.AutoEncodeStrings := Value.Values['AutoEncodeStrings'] = 'ON';
       FAutoEncode := Value.Values['AutoEncodeStrings'] = 'ON';
     end
     else
       FAutoEncode := Value.Values['AutoEncodeStrings'] = 'ON';
-    FURL.Properties.Text := Value.Text;
+    {$ELSE}
+    Value.Values['AutoEncodeStrings'] := '';
+    {$IFEND}
 
     if Value.IndexOf('controls_cp') = -1 then
     {$IFDEF DELPHI12_UP}
@@ -545,6 +545,8 @@ begin
       cGET_ACP: Value.values['controls_cp'] := 'GET_ACP';
     end;
     {$ENDIF}
+
+    FURL.Properties.Text := Value.Text;
   end
   else
     FURL.Properties.Clear;
@@ -1448,33 +1450,41 @@ begin
   {$IFDEF DELPHI12_UP}
   Result := True;
   {$ELSE}
-  if Self.Connected then
-  begin
-    Result := DbcConnection.GetConSettings.AutoEncode;
-    FAutoEncode := Result;
-  end
-  else
-    Result := FAutoEncode;
+    {$IF (defined(MSWINDOWS) and not defined(WINCE)) or defined(DELPHI) or defined(WITH_LCONVENCODING)}
+    if Self.Connected then
+    begin
+      Result := DbcConnection.GetConSettings.AutoEncode;
+      FAutoEncode := Result;
+    end
+    else
+      Result := FAutoEncode;
+    {$ELSE}
+    Result := False;
+    {$IFEND}
   {$ENDIF}
 end;
 
 procedure TZAbstractConnection.SetAutoEncode(Value: Boolean);
 begin
   {$IFNDEF DELPHI12_UP}
-  if Value then
-    FURL.Properties.Values['AutoEncodeStrings'] := 'ON'
-  else
-    FURL.Properties.Values['AutoEncodeStrings'] := '';
+    {$IF (defined(MSWINDOWS) and not defined(WINCE)) or defined(DELPHI) or defined(WITH_LCONVENCODING)}
+    if Value then
+      FURL.Properties.Values['AutoEncodeStrings'] := 'ON'
+    else
+      FURL.Properties.Values['AutoEncodeStrings'] := '';
 
-  if Value <> FAutoEncode then
-  begin
-    FAutoEncode := Value;
-    if Self.Connected then
+    if Value <> FAutoEncode then
     begin
-      Connected := False;
-      Connected := True;
+      FAutoEncode := Value;
+      if Self.Connected then
+      begin
+        Connected := False;
+        Connected := True;
+      end;
     end;
-  end;
+    {$ELSE}
+    FURL.Properties.Values['AutoEncodeStrings'] := '';
+    {$IFEND}
   {$ENDIF}
 end;
 
@@ -1496,7 +1506,7 @@ end;
 
 function TZAbstractConnection.GetUTF8StringAsWideField: Boolean;
 begin
-  {$IF defined(LAZARUSUTF8HACK) or (not defined(WITH_FTWIDESTRING))}
+  {$IF not defined(WITH_FTWIDESTRING)}
   Result := False;
   {$ELSE}
     {$IFDEF DELPHI12_UP}
@@ -1509,7 +1519,7 @@ end;
 
 procedure TZAbstractConnection.SetUTF8StringAsWideField(const Value: Boolean);
 begin
-  {$IF defined(LAZARUSUTF8HACK) or (not defined(WITH_FTWIDESTRING))}
+  {$IF not defined(WITH_FTWIDESTRING))}
   FUTF8StringAsWideField := False;
   {$ELSE}
     {$IFDEF DELPHI12_UP}
