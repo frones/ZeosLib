@@ -56,7 +56,7 @@
  {$DEFINE WITH_CHECKFIELDCOMPATIBILITY}
  {$DEFINE WITH_WIDEMEMO}        // Have WIDEMEMO,  For Delphi we turn these off if not applicable
  {$DEFINE WITH_FTWIDESTRING}    // Have ftwidestring, For Delphi we turn these off if not applicable
- {$DEFINE WITH_WIDECONTROLS}	// Wide-fields are supported
+ {$DEFINE WITH_WIDEFIELDS}	// Wide-fields are supported (common define for ftWideString/ftWideMemo)
  {$DEFINE WITH_DBTABLES}        // Have the BDE DBTables Unit
  {$DEFINE WITH_TBYTEDYNARRAYTOVARIANT}// Variant does support TByteDynArray
 {$ENDIF}

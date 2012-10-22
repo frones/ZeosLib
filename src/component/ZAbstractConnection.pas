@@ -540,7 +540,7 @@ begin
     Value.values['controls_cp'] := 'CP_UTF16';
     {$ELSE}
     case FControlsCodePage of
-      cCP_UTF16: Value.values['controls_cp'] := {$IFDEF WITH_WIDECONTROLS}'CP_UTF16'{$ELSE}'CP_UTF8'{$ENDIF};
+      cCP_UTF16: Value.values['controls_cp'] := {$IFDEF WITH_WIDEFIELDS}'CP_UTF16'{$ELSE}'CP_UTF8'{$ENDIF};
       cCP_UTF8: Value.values['controls_cp'] := 'CP_UTF8';
       cGET_ACP: Value.values['controls_cp'] := 'GET_ACP';
     end;
@@ -1519,7 +1519,7 @@ end;
 
 procedure TZAbstractConnection.SetUTF8StringAsWideField(const Value: Boolean);
 begin
-  {$IF not defined(WITH_FTWIDESTRING))}
+  {$IF not defined(WITH_WIDEFIELDS))}
   FUTF8StringAsWideField := False;
   {$ELSE}
     {$IFDEF DELPHI12_UP}
@@ -1539,11 +1539,15 @@ procedure TZAbstractConnection.SetControlsCodePage(const Value: TZControlsCodePa
     Properties.values['controls_cp'] := 'CP_UTF16';
     {$ELSE}
     case Value of
-      cCP_UTF16: Properties.values['controls_cp'] := {$IFDEF WITH_WIDECONTROLS}'CP_UTF16'{$ELSE}'CP_UTF8'{$ENDIF};
+      cCP_UTF16: Properties.values['controls_cp'] := {$IFDEF WITH_WIDEFIELDS}'CP_UTF16'{$ELSE}'CP_UTF8'{$ENDIF};
       cCP_UTF8: Properties.values['controls_cp'] := 'CP_UTF8';
       cGET_ACP: Properties.values['controls_cp'] := 'GET_ACP';
     end;
     {$ENDIF}
+    {$IFDEF WITH_WIDEFIELDS}
+      if Value <> cCP_UTF16 then
+    {$ENDIF}
+      FControlsCodePage := Value;
   end;
 begin
   {$IFNDEF DELPHI12_UP}

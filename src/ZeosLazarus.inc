@@ -67,6 +67,7 @@
        {$DEFINE WITH_ASCURRENCY}      // Has AsCurrency.
        {$DEFINE WITH_ASVARIANT}
        {$DEFINE WITH_FORMATSETTINGS}
+       {$DEFINE WITH_WIDEFIELDS}	// Wide-fields are supported (common define for ftWideString/ftWideMemo)
       {$DEFINE FPC2_6UP}
     {$IFEND}
 

@@ -628,7 +628,7 @@ end;
     Zeos is now able to preprepare direct insered SQL-Statements.
     Means do the UTF8-preparation if the CharacterSet was choosen.
     So we do not need to do the SQLString + UTF8Encode(Edit1.Test) for example.
-  @result True if AutoEncodeStrings was choosen in the TZAbstractConnection
+  @result True if coPreprepareSQL was choosen in the TZAbstractConnection
 }
 function TZAbstractConnection.GetAutoEncodeStrings: Boolean;
 begin
@@ -722,7 +722,7 @@ begin
     else
       if Info.values['controls_cp'] = 'CP_UTF16' then
       begin
-        ConSettings.CPType := {$IFDEF WITH_WIDECONTROLS}cCP_UTF16{$ELSE}cCP_UTF8{$ENDIF};
+        ConSettings.CPType := {$IFDEF WITH_WIDEFIELDS}cCP_UTF16{$ELSE}cCP_UTF8{$ENDIF};
         ConSettings.OS_CP := 65001;
         SetUTF8StringAsWideField(True);
       end
@@ -1351,7 +1351,7 @@ end;
 
 function TZAbstractConnection.GetUTF8StringAsWideField: Boolean;
 begin
-  {$IFNDEF WITH_WIDECONTROLS}
+  {$IFNDEF WITH_WIDEFIELDS}
   Result := False;
   {$ELSE}
     {$IFDEF DELPHI12_UP}
@@ -1369,7 +1369,7 @@ end;
 
 procedure TZAbstractConnection.SetUTF8StringAsWideField(const Value: Boolean);
 begin
-  {$IFNDEF WITH_WIDECONTROLS}
+  {$IFNDEF WITH_WIDEFIELDS}
   FUTF8StringAsWideField := False;
   {$ELSE}
     {$IFDEF DELPHI12_UP}
