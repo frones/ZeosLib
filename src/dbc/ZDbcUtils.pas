@@ -463,7 +463,8 @@ function GetValidatedUnicodeStream(const Stream: TStream): TStream;
 var
   Ansi: ZAnsiString;
   Len: Integer;
-  WS: WideString;
+  WS: ZWideString;
+  Bytes: TByteDynArray;
 begin
   {EgonHugeist: TempBuffer the WideString, }
   //Step one: Findout, wat's comming in! To avoid User-Bugs
@@ -472,14 +473,16 @@ begin
     //Stream.Size.
   if Assigned(Stream) then
   begin
-    if Length(PWideChar(TMemoryStream(Stream).Memory)) = Stream.Size then
+    SetLength(Bytes, Stream.Size +2);
+    System.move(TMemoryStream(Stream).Memory^, Pointer(Bytes)^, Stream.Size);
+    if {$IFDEF DELPHI14_UP}StrLen{$ELSE}Length{$ENDIF}(PWideChar(Bytes)) = Stream.Size then
     begin
-      if StrLen(PAnsiChar(TMemoryStream(Stream).Memory)) >= Stream.Size then  //Hack!! If no #0 is witten then the PAnsiChar could be oversized
+      if StrLen(PAnsiChar(Bytes)) >= Stream.Size then  //Hack!! If no #0 is witten then the PAnsiChar could be oversized
       begin
-        SetLength(Ansi, Stream.Size);
-        TMemoryStream(Stream).Read(PAnsiChar(Ansi)^, Stream.Size);
-        if DetectUTF8Encoding(Ansi) = etAnsi then
-          Ansi := AnsiToUTF8(String(Ansi));
+        if DetectUTF8Encoding(PAnsiChar(Bytes)) = etAnsi then
+          Ansi := AnsiToUTF8(String(PAnsiChar(Bytes)))
+        else
+          Ansi := PAnsiChar(Bytes);
       end
       else
       begin
@@ -489,7 +492,7 @@ begin
       end;
     end
     else
-      if StrLen(PAnsiChar(TMemoryStream(Stream).Memory)) < Stream.Size then //PWideChar written
+      if StrLen(PAnsiChar(Bytes)) < Stream.Size then //PWideChar written
       begin
         SetLength(WS, Stream.Size div 2);
         System.Move(PWideString(TMemoryStream(Stream).Memory)^,
@@ -497,17 +500,16 @@ begin
         Ansi := UTF8Encode(WS);
       end
       else
-        if StrLen(PAnsiChar(TMemoryStream(Stream).Memory)) = Stream.Size then
+        if StrLen(PAnsiChar(Bytes)) = Stream.Size then
         begin
-          if DetectUTF8Encoding(PAnsiChar(TMemoryStream(Stream).Memory)) = etAnsi then
-            Ansi := AnsiToUTF8(String(PAnsiChar(TMemoryStream(Stream).Memory)))
+          if DetectUTF8Encoding(PAnsiChar(Bytes)) = etAnsi then
+            Ansi := AnsiToUTF8(String(PAnsiChar(Bytes)))
           else
-            Ansi := PAnsiChar(TMemoryStream(Stream).Memory);
+            Ansi := PAnsiChar(PAnsiChar(Bytes));
         end
         else
         begin
-          SetLength(Ansi, Stream.Size);
-          TMemoryStream(Stream).Read(PAnsiChar(Ansi)^, Stream.Size);
+          Ansi := PAnsiChar(Bytes);
           if DetectUTF8Encoding(Ansi) = etAnsi then
             Ansi := AnsiToUTF8(String(Ansi));
         end;
@@ -516,6 +518,7 @@ begin
     Result.Size := Len;
     System.Move(PAnsiChar(Ansi)^, TMemoryStream(Result).Memory^, Len);
     Result.Position := 0;
+    SetLength(Bytes, 0);
   end
   else
     Result := nil;
@@ -581,7 +584,7 @@ begin
   if ( SQLType in [stString, stUnicodeString] ) and ( Precision <> 0 )then
   begin
     if SizeInBytes then
-      TempPrecision := Precision div CharWidth
+      TempPrecision := (Precision div CharWidth) + (Precision mod CharWidth)
     else
       TempPrecision := Precision;
 

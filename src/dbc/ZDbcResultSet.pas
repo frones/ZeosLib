@@ -3016,14 +3016,23 @@ end;
 
 function TZAbstractBlob.GetUnicodeStream: TStream;
 var
-  ws:WideString;
+  ws: WideString;
 begin
   Result := TMemoryStream.Create;
   if (FBlobSize > 0) and Assigned(FBlobData) then
   begin
-    ws:=GetUnicodeString;
-    Result.Size := System.Length(ws)*2;
-    System.Move(ws[1], TMemoryStream(Result).Memory^, System.Length(ws)*2);
+    if ( not ( StrLen(PAnsiChar(FBlobData)) = Cardinal(FBlobSize) ) ) and
+       ( {$IFDEF DELPHI14_UP}StrLen{$ELSE}System.Length{$ENDIF}(PWideChar(FBlobData)) = Cardinal(FBlobSize) div 2 ) then
+    begin
+      Result.Size := FBlobSize;
+      System.Move(PWidechar(FBlobData)^, TMemoryStream(Result).Memory^, FBlobSize);
+    end
+    else
+    begin
+      ws:=GetUnicodeString;
+      Result.Size := System.Length(WS)*2;
+      System.Move(ws[1], TMemoryStream(Result).Memory^, Result.Size);
+    end;
   end;
   Result.Position := 0;
 end;

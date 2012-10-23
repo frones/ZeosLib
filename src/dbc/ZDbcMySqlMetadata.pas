@@ -1159,7 +1159,7 @@ begin
       begin
         while Next do
         begin
-          TableNameList.Add(String(GetString(3))); //TABLE_NAME
+          TableNameList.Add(GetString(3)); //TABLE_NAME
           TableNameLength := Max(TableNameLength, Length(TableNameList[TableNameList.Count - 1]));
         end;
         Close;
