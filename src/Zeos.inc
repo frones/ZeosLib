@@ -174,10 +174,6 @@
   {$DEFINE WITH_FTLONGWORD}             // ftLongWord is supported
   {$DEFINE WITH_ASBYTES}                //  AsBytes is supported
   {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF
-{$ELSE}
-  {$IFNDEF LAZARUSUTF8HACK}
-    {$UNDEF WITH_WIDECONTROLS}
-  {$ENDIF}
 {$ENDIF}
 
 {$IFDEF DELPHI15_UP}

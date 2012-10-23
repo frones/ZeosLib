@@ -1328,7 +1328,6 @@ begin
     else
       Result := GetDriver.GetTokenizer.GetEscapeString(AnsiQuotedStr(ZDbcString(Value), #39))
   else
-    {String instead of ZDbcString used to keep the old wrong compatibility}
     if StartsWith(Value, '''') and EndsWith(Value, '''') then
       Result := ZDbcString(Value)
     else

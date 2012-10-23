@@ -83,7 +83,9 @@ type
     FConnection: IZConnection;
     FConnectionPool: TConnectionPool;
     FAutoEncodeStrings: Boolean;
+    {$IFDEF WITH_WIDEFIELDS}
     FUTF8StringAsWideField: Boolean;
+    {$ENDIF}
     FUseMetadata: Boolean;
     function GetConnection: IZConnection;
     function GetUTF8StringAsWideField: Boolean;
@@ -627,7 +629,7 @@ begin
   {$IFDEF DELPHI12_UP}
   Result := True;
   {$ELSE}
-    {$IFDEF WITH_FTWIDESTRING}
+    {$IFDEF WITH_WIDEFIELDS}
     Result := FUTF8StringAsWideField;
     {$ELSE}
     Result := False;
@@ -640,7 +642,7 @@ begin
   {$IFDEF DELPHI12_UP}
   FUTF8StringAsWideField := True;
   {$ELSE}
-    {$IFDEF WITH_FTWIDESTRING}
+    {$IFDEF WITH_WIDEFIELDS}
     FUTF8StringAsWideField := Value;
     {$ENDIF}
   {$ENDIF}
