@@ -1330,9 +1330,9 @@ begin
   else
     {String instead of ZDbcString used to keep the old wrong compatibility}
     if StartsWith(Value, '''') and EndsWith(Value, '''') then
-      Result := {$IFDEF WRONG_UNICODE_BEHAVIOR}String{$ELSE}ZDbcString{$ENDIF}(Value)
+      Result := ZDbcString(Value)
     else
-      Result := AnsiQuotedStr({$IFDEF WRONG_UNICODE_BEHAVIOR}String{$ELSE}ZDbcString{$ENDIF}(Value), #39);
+      Result := AnsiQuotedStr(ZDbcString(Value), #39);
 end;
 {$ENDIF}
 
