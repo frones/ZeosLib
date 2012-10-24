@@ -470,7 +470,7 @@ end;
 }
 function TZDBLibPreparedStatementEmulated.ExecutePrepared: Boolean;
 begin
-  Result := GetExecStatement.Execute(PrepareAnsiSQLQuery);
+  Result := inherited Execute(PrepareAnsiSQLQuery);
 end;
 
 {**
@@ -482,7 +482,7 @@ end;
 }
 function TZDBLibPreparedStatementEmulated.ExecuteQueryPrepared: IZResultSet;
 begin
-  Result := GetExecStatement.ExecuteQuery(PrepareAnsiSQLQuery);
+  Result := inherited ExecuteQuery(PrepareAnsiSQLQuery);
 end;
 
 {**
@@ -497,7 +497,7 @@ end;
 }
 function TZDBLibPreparedStatementEmulated.ExecuteUpdatePrepared: Integer;
 begin
-  Result := GetExecStatement.ExecuteUpdate(PrepareAnsiSQLQuery);
+  Result := inherited ExecuteUpdate(PrepareAnsiSQLQuery);
 end;
 
 {**
