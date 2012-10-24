@@ -590,8 +590,6 @@ const
 
 procedure ZTestCompInterbaseBugReport.Test_Param_LoadFromStream_StringStream_ftBlob;
 var
-  WS: WideString;
-  Ansi: AnsiString;
   Query: TZQuery;
   StrStream1: TMemoryStream;
   SL: TStringList;
@@ -657,8 +655,6 @@ end;
 
 procedure ZTestCompInterbaseBugReport.Test_Param_LoadFromStream_StringStream_ftMemo;
 var
-  WS: WideString;
-  Ansi: AnsiString;
   Query: TZQuery;
   StrStream1: TMemoryStream;
   SL: TStringList;

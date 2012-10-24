@@ -1813,8 +1813,6 @@ end;
 
 procedure ZTestCompCoreBugReport.TestUnicodeBehavior;
 var
-  WS: WideString;
-  Ansi: AnsiString;
   Query: TZQuery;
   StrStream1: TMemoryStream;
   SL: TStringList;
