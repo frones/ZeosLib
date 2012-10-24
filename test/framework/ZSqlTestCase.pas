@@ -140,6 +140,7 @@ type
     procedure StartSQLTrace;
     procedure StopSQLTrace;
 
+    function GetDBTestString(const Value: String; ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False): String;
   public
     destructor Destroy; override;
 
@@ -373,6 +374,55 @@ procedure TZAbstractSQLTestCase.StopSQLTrace;
 begin
   DriverManager.RemoveLoggingListener(Self);
 end;
+
+{**
+  Get a valid String to Test the encoding. If AutoEncodeStrings then the
+  Encoding is reverted to get proper test-behavior.
+  @param Value a string which should be prepared for the Test.
+  @return the right or reverted encoded string to check the behavior.
+}
+{$IFDEF DELPHI12_UP}
+  {$WARNINGS OFF}
+{$ENDIF}
+function TZAbstractSQLTestCase.GetDBTestString(const Value: String;
+  ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False): String;
+begin
+  Result := Value;
+  if ConSettings.CPType = cCP_UTF16 then
+    if isUTF8Encoded then
+      Result := UTF8ToString(ZAnsiString(Value))
+    else
+      Result := Value
+  else
+    case ConSettings.ClientCodePage.Encoding of
+      ceDefault: Result := Value; //Souldn't be possible
+      ceAnsi:
+        if ConSettings.AutoEncode then //Revert the expected value to test
+          if IsUTF8Encoded then
+            Result := Value
+          else
+            Result := UTF8Encode(WideString(Value))
+        else  //Return the expected value to test
+          if IsUTF8Encoded then
+            Result := UTF8ToAnsi(Value)
+          else
+            Result := Value;
+      else //ceUTF8, ceUTF16, ceUTF32
+        if ConSettings.AutoEncode then //Revert the expected value to test
+          if IsUTF8Encoded then
+            Result := UTF8ToAnsi(Value)
+          else
+            Result := Value
+        else
+          if IsUTF8Encoded then
+            Result := Value
+          else
+            Result := UTF8Encode(WideString(Value)); //Return the expected value to test
+    end;
+end;
+{$IFDEF DELPHI12_UP}
+  {$WARNINGS ON}
+{$ENDIF}
 
 {$IFNDEF FPC}
 {**
