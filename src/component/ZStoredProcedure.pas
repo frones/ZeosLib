@@ -59,11 +59,8 @@ interface
 {$I ZComponent.inc}
 
 uses
-{$IFDEF MSWINDOWS}
-  Windows,
-{$ENDIF}
   Types, SysUtils, DB, Classes, ZConnection, ZDbcIntfs,
-  ZAbstractDataset, ZCompatibility, ZDbcStatement;
+  ZAbstractDataset, ZCompatibility;
 
 type
 
@@ -125,7 +122,7 @@ type
 implementation
 
 uses
-  ZAbstractRODataset, ZMessages, ZDatasetUtils, ZSysUtils;
+  ZAbstractRODataset, ZMessages, ZDatasetUtils{$IFDEF WITH_ASBYTES}, ZSysUtils{$ENDIF};
 
 { TZStoredProc }
 
@@ -257,7 +254,7 @@ begin
         {$IFDEF WITH_WIDEMEMO}
         ftWideMemo:
         begin
-          {$IFDEF WITH_FTWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF} := FCallableStatement.GetUnicodeString(I + 1);
+          Param.AsWideString := FCallableStatement.GetUnicodeString(I + 1);
           Param.DataType := ftWideMemo;
         end;
         {$ENDIF}

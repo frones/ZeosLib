@@ -344,28 +344,6 @@ begin
   end;
 end;
 
-{**
-  Bugs report #707364.
-  findnext doesnt work in dbo 6.0.6 beta
-  hi, the following code:
-
-  procedure TFrMain.loadTables;
-  var
-    i:Integer;
-  begin
-    i:=1;
-    with dmMain.qrSelSeeFreight do begin
-      open;
-      repeat
-        sgSeefracht.RowCount:=i+1;
-        sgSeefracht.Cells[0,i]:=fieldByName('caloadid').AsString;
-        ...
-        inc(i);
-      until not findnext;
-      close;
-    end;
-  end;
-}
 procedure ZTestCompCoreBugReport.Test715099;
 var
   Query: TZQuery;
@@ -1838,7 +1816,6 @@ var
   WS: WideString;
   Ansi: AnsiString;
   Query: TZQuery;
-  StrStream: TMemoryStream;
   StrStream1: TMemoryStream;
   SL: TStringList;
 begin
@@ -1868,34 +1845,6 @@ begin
       SL.SaveToStream(StrStream1);
       ParamByName('P_RESUME').LoadFromStream(StrStream1, ftMemo);
 
-      StrStream := TMemoryStream.Create;
-      if ( FConnection.DbcConnection.GetEncoding = ceUTF8 ) then
-        if FConnection.DbcConnection.UTF8StringAsWideField then
-        begin
-          WS := WideString(Str2)+LineEnding;
-          StrStream.Write(PWideChar(WS)^, Length(WS)*2);
-          StrStream.Position := 0;
-        end
-        else
-          if FConnection.DbcConnection.AutoEncodeStrings and
-            (FConnection.DbcConnection.GetConSettings.CPType = cGET_ACP) then
-          begin
-            Ansi := str2+LineEnding;
-            StrStream.Write(PAnsiChar(Ansi)^, Length(Ansi));
-            StrStream.Position := 0;
-          end
-          else
-          begin
-            Ansi := AnsiToUTF8(str2)+LineEnding;
-            StrStream.Write(PAnsiChar(Ansi)^, Length(Ansi));
-            StrStream.Position := 0;
-          end
-        else
-        begin
-          Ansi := str2+LineEnding;
-          StrStream.Write(PAnsiChar(Ansi)^, Length(Ansi));
-          StrStream.Position := 0;
-        end;
       try
         ExecSQL;
         SQL.Text := 'select * from people where p_id = ' + IntToStr(TEST_ROW_ID);
@@ -1904,22 +1853,10 @@ begin
         Open;
 
         (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
-        CheckEquals(StrStream, StrStream1, 'Param().LoadFromStream(StringStream, ftMemo)');
-        if ( FConnection.DbcConnection.GetEncoding = ceUTF8) then
-          if FConnection.DbcConnection.UTF8StringAsWideField then
-            CheckEquals(WideString(Str3), FieldByName('P_NAME').AsString)
-          else
-            if (FConnection.DbcConnection.GetConSettings.CPType = cGET_ACP) and
-               (FConnection.DbcConnection.GetConSettings.AutoEncode) then
-              CheckEquals(Str3, FieldByName('P_NAME').AsString)
-            else
-              CheckEquals(Utf8Encode(Str3), FieldByName('P_NAME').AsString)
-        else
-          if (FConnection.DbcConnection.GetConSettings.CPType = cCP_UTF8) and
-             (FConnection.DbcConnection.GetConSettings.AutoEncode) then
-            CheckEquals(Utf8Encode(Str3), FieldByName('P_NAME').AsString)
-          else
-            CheckEquals(Str3, FieldByName('P_NAME').AsString);
+
+        CheckEquals(Str2+LineEnding, StrStream1, FConnection.DbcConnection.GetConSettings, 'Param().LoadFromStream(StringStream, ftMemo)');
+        CheckEquals(Str3, FieldByName('P_NAME').AsString, FConnection.DbcConnection.GetConSettings);
+
         SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
         CheckEquals(1, Params.Count);
         Params[0].DataType := ftInteger;
@@ -1931,7 +1868,6 @@ begin
         on E:Exception do
             Fail('Param().LoadFromStream(StringStream, ftMemo): '+E.Message);
       end;
-      StrStream.Free;
       StrStream1.Free;
     end;
   finally
@@ -1987,6 +1923,59 @@ var
     inc(RowCounter);
   end;
 
+  procedure CheckAnsi;
+  begin
+    Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
+    Query.Open;
+    CheckEquals(True, Query.RecordCount = 5);
+    if StartsWith(Connection.Protocol, 'ASA') then //ASA has a limitation of 125chars for like statements
+      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Copy(str2, 1, 125)+'%', #39)
+    else
+      if StartsWith(Connection.Protocol, 'oracle')  then
+        Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Copy(str2, 1, Length(Str2) div 2)+'%', #39)
+      else
+        Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str2+'%', #39);
+    Query.Open;
+    CheckEquals(True, Query.RecordCount = 1);
+    Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str3+'%', #39);
+    Query.Open;
+    CheckEquals(True, Query.RecordCount = 2);
+    Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str4+'%', #39);
+    Query.Open;
+    CheckEquals(True, Query.RecordCount = 2);
+    Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str5+'%', #39);
+    Query.Open;
+    CheckEquals(True, Query.RecordCount = 2);
+    Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str6+'%', #39);
+    Query.Open;
+  end;
+
+  procedure CheckUTF8;
+  begin
+    Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
+    Query.Open;
+    CheckEquals(True, Query.RecordCount = 5);
+    if StartsWith(Connection.Protocol, 'ASA') then //ASA has a limitation of 125chars for like statements
+      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Copy(Utf8Encode(Str2), 1, 125)+'%', #39)
+    else
+      if StartsWith(Connection.Protocol, 'oracle') then
+        Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Copy(Utf8Encode(Str2), 1, Length(Utf8Encode(Str2)) div 2)+'%', #39)
+      else
+        Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str2)+'%', #39);
+    Query.Open;
+    CheckEquals(True, Query.RecordCount = 1);
+    Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str3)+'%', #39);
+    Query.Open;
+    CheckEquals(True, Query.RecordCount = 2);
+    Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str4)+'%', #39);
+    Query.Open;
+    CheckEquals(True, Query.RecordCount = 2);
+    Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str5)+'%', #39);
+    Query.Open;
+    CheckEquals(True, Query.RecordCount = 2);
+    Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str6)+'%', #39);
+    Query.Open;
+  end;
 begin
   Query := TZQuery.Create(nil);
   Query.Connection := Connection;
@@ -2004,59 +1993,25 @@ begin
     InsertValues(str5, str5, str5, str5);
     InsertValues(str6, str6, str6, str6);
 
-    if Connection.DbcConnection.AutoEncodeStrings or (Connection.DbcConnection.GetEncoding = ceAnsi)
-      or Connection.UTF8StringsAsWideField then
-    begin
-      Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
-      Query.Open;
-      CheckEquals(True, Query.RecordCount = 5);
-      if StartsWith(Connection.Protocol, 'ASA') then //ASA has a limitation of 125chars for like statements
-        Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Copy(str2, 1, 125)+'%', #39)
+    if Connection.DbcConnection.GetEncoding = ceUTF8 then
+      if Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 then
+        CheckAnsi
       else
-        if StartsWith(Connection.Protocol, 'oracle')  then
-          Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Copy(str2, 1, Length(Str2) div 2)+'%', #39)
+        if Connection.DbcConnection.GetConSettings.AutoEncode then
+          if Connection.DbcConnection.GetConSettings.CPType = cCP_UTF8 then
+            CheckUTF8
+          else
+            CheckAnsi
         else
-          Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str2+'%', #39);
-      Query.Open;
-      CheckEquals(True, Query.RecordCount = 1);
-      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str3+'%', #39);
-      Query.Open;
-      CheckEquals(True, Query.RecordCount = 2);
-      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str4+'%', #39);
-      Query.Open;
-      CheckEquals(True, Query.RecordCount = 2);
-      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str5+'%', #39);
-      Query.Open;
-      CheckEquals(True, Query.RecordCount = 2);
-      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str6+'%', #39);
-      Query.Open;
-    end
+          CheckUTF8
     else
-    begin
-      Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
-      Query.Open;
-      CheckEquals(True, Query.RecordCount = 5);
-      if StartsWith(Connection.Protocol, 'ASA') then //ASA has a limitation of 125chars for like statements
-        Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Copy(Utf8Encode(Str2), 1, 125)+'%', #39)
-      else
-        if StartsWith(Connection.Protocol, 'oracle') then
-          Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Copy(Utf8Encode(Str2), 1, Length(Utf8Encode(Str2)) div 2)+'%', #39)
+      if Connection.DbcConnection.GetConSettings.AutoEncode then
+        if Connection.DbcConnection.GetConSettings.CPType = cCP_UTF8 then
+          CheckUTF8
         else
-          Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str2)+'%', #39);
-      Query.Open;
-      CheckEquals(True, Query.RecordCount = 1);
-      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str3)+'%', #39);
-      Query.Open;
-      CheckEquals(True, Query.RecordCount = 2);
-      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str4)+'%', #39);
-      Query.Open;
-      CheckEquals(True, Query.RecordCount = 2);
-      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str5)+'%', #39);
-      Query.Open;
-      CheckEquals(True, Query.RecordCount = 2);
-      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str6)+'%', #39);
-      Query.Open;
-    end;
+          CheckAnsi
+      else
+        CheckAnsi;
   finally
     for i := TestRowID to TestRowID+RowCounter do
     begin

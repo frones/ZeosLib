@@ -286,8 +286,9 @@ var
 implementation
 
 uses
-  ZMessages, ZGenericSqlToken, ZDbcResultSetMetadata, ZAbstractRODataset,
-  ZSysUtils{$IFDEF WITH_INLINE_ANSISTRLCOMP}, Windows{$ENDIF};
+  ZMessages, ZGenericSqlToken, ZDbcResultSetMetadata, ZAbstractRODataset
+  {$IFNDEF WITHOUT_VARBYTESASSTRING}, ZSysUtils{$ENDIF}
+  {$IFDEF WITH_INLINE_ANSISTRLCOMP}, Windows{$ENDIF};
 
 {**
   Converts DBC Field Type to TDataset Field Type.
@@ -773,6 +774,9 @@ end;
   @param ResultSet an initial result set object.
   @param Variables a list of variables.
 }
+{$IFDEF FPC}
+  {$HINTS OFF} //Temp seems not to be init...
+{$ENDIF}
 procedure CopyDataFieldsToVars(const Fields: TObjectDynArray;
   ResultSet: IZResultSet; Variables: IZVariablesList);
 var
@@ -819,6 +823,9 @@ begin
     end;
   end;
 end;
+{$IFDEF FPC}
+  {$HINTS OFF}
+{$ENDIF}
 
 {**
   Compares row field values with the given ones.
@@ -844,7 +851,7 @@ begin
           if CaseInsensitive then
           begin
             WValue1 := WideUpperCase(SoftVarManager.GetAsUnicodeString(KeyValues[I]));
-            WValue1 := WideUpperCase(SoftVarManager.GetAsUnicodeString(RowValues[I]));
+            WValue2 := WideUpperCase(SoftVarManager.GetAsUnicodeString(RowValues[I]));
             if PartialKey then
             begin
               {$IFDEF DELPHI12_UP}

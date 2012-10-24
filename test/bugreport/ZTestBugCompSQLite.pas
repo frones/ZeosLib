@@ -147,6 +147,7 @@ var
 begin
   Query := TZQuery.Create(nil);
   Query.Connection := Connection;
+  Connection.Connect;
   try
     RowCounter := 0;
     Query.SQL.Text := 'Insert into string_values (s_id, s_char, s_varchar, s_nchar, s_nvarchar)'+

@@ -51,12 +51,7 @@ interface
 {$I ZComponent.inc}
 uses
   SysUtils, Classes, ExtCtrls,
-{$IFDEF MSWINDOWS}
-  Windows,
-{$ELSE}
-{$ENDIF}
-  ZDbcPostgreSql, ZPlainPostgreSqlDriver, ZConnection, ZAbstractRODataset,
-  ZDataset;
+  ZDbcPostgreSql, ZPlainPostgreSqlDriver, ZConnection, ZAbstractRODataset;
 
 type
   TZPgNotifyEvent = procedure(Sender: TObject; Event: string;

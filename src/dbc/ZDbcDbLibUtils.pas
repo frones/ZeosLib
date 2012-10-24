@@ -404,7 +404,11 @@ begin
               if ParamType = stUnicodeStream then
                 Result := 'N'+{$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr({$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), '''')
               else
-                Result := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr({$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), '''');
+                {$IFDEF DELPHI12_UP}
+                Result := AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), '''');
+                {$ELSE}
+                Result := AnsiQuotedStr(PlainDriver.ZPlainString(StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), ConSettings), '''');
+                {$ENDIF}
           end
           else
             Result := 'NULL';

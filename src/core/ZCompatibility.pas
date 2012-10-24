@@ -828,7 +828,7 @@ begin
               else
                 Result := ConSettings.PlainConvertFunc(AnsiToUTF8(AStr));
               {$ELSE}
-              Result := StringToAnsiEx(AStr, ConSettings.OS_CP, ConSettings.ClientCodePage.CP);
+              Result := Astr;
               {$IFEND}
             else
               {$IF defined(WITH_LCONVENCODING) and not defined(MSWINDOWS)}

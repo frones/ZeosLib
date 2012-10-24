@@ -43,9 +43,9 @@ interface
 
 uses
   SysUtils, Classes,
-{$IFDEF MSWINDOWS}
-  Windows, 
-{$ENDIF} 
+{$IF defined(MSWINDOWS)and not defined(FPC)}
+  Windows,
+{$IFEND}
   ZDbcInterbase6, ZConnection, ZDbcIntfs,
   ZPlainFirebirdDriver, ZPlainFirebirdInterbaseConstants;
 
@@ -529,9 +529,7 @@ procedure TZIBEventAlerter.EventChange(Sender: TObject);
 var
   i: integer;
   WasRegistered: boolean;
-  ErrorStr: string;
 begin
-  ErrorStr := EmptyStr;
   WasRegistered := Registered;
   try
     if WasRegistered then

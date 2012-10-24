@@ -726,17 +726,11 @@ begin
 
   if ( Connection.UTF8StringsAsWideField or ( Connection.DbcConnection.GetEncoding = ceAnsi ) ) or
     ( Connection.DbcConnection.AutoEncodeStrings and ( Connection.DbcConnection.GetConSettings.CPType = cGET_ACP ) ) then
-  begin
-    Query.ParamByName('test').AsString := QuoteString2;
-    Query.Open;
-    CheckEquals(QuoteString2, Query.Fields[0].AsString);
-  end
+    Query.ParamByName('test').AsString := QuoteString2
   else
-  begin
     Query.ParamByName('test').AsString := UTF8Encode(WideString(QuoteString2));
-    Query.Open;
-    CheckEquals(UTF8Encode(WideString(QuoteString2)), Query.Fields[0].AsString);
-  end;
+  Query.Open;
+  CheckEquals(QuoteString2, Query.Fields[0].AsString, Connection.DbcConnection.GetConSettings);
   Query.Close;
 end;
 
