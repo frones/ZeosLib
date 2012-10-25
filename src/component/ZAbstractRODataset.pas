@@ -108,7 +108,8 @@ type
     procedure ActiveChanged; override;
     procedure RecordChanged(Field: TField); override;
   public
-    constructor Create(ADataset: TZAbstractRODataset);
+    constructor Create(ADataset: TZAbstractRODataset); {$IFDEF FPC}reintroduce;{$ENDIF}
+
   end;
 
 {$WARNINGS OFF}
@@ -344,10 +345,12 @@ type
 {$IFDEF WITH_TRECORDBUFFER}
     procedure InternalSetToRecord(Buffer: TRecordBuffer); override;
 
-    procedure GetBookmarkData(Buffer: TRecordBuffer; Data: Pointer); override;
+    procedure GetBookmarkData(Buffer: TRecordBuffer;
+      Data:{$IFDEF WITH_BOOKMARKDATA_TBOOKMARK}TBookMark{$ELSE}Pointer{$ENDIF}); override;
     function GetBookmarkFlag(Buffer: TRecordBuffer): TBookmarkFlag; override;
     procedure SetBookmarkFlag(Buffer: TRecordBuffer; Value: TBookmarkFlag); override;
-    procedure SetBookmarkData(Buffer: TRecordBuffer; Data: Pointer); override;
+    procedure SetBookmarkData(Buffer: TRecordBuffer;
+      Data: {$IFDEF WITH_BOOKMARKDATA_TBOOKMARK}TBookMark{$ELSE}Pointer{$ENDIF}); override;
 {$ELSE}
     procedure InternalSetToRecord(Buffer: PChar); override;
 
@@ -2342,11 +2345,9 @@ end;
   @param Data a pointer to the bookmark value.
 }
 
-{$IFDEF WITH_TRECORDBUFFER}
-procedure TZAbstractRODataset.GetBookmarkData(Buffer: TRecordBuffer; Data: Pointer);
-{$ELSE}
-procedure TZAbstractRODataset.GetBookmarkData(Buffer: PChar; Data: Pointer);
-{$ENDIF}
+procedure TZAbstractRODataset.GetBookmarkData(
+  Buffer: {$IFDEF WITH_TRECORDBUFFER}TRecordBuffer{$ELSE}PChar{$ENDIF};
+  Data: {$IFDEF WITH_BOOKMARKDATA_TBOOKMARK}TBookMark{$ELSE}Pointer{$ENDIF});
 begin
   PInteger(Data)^ := PZRowBuffer(Buffer)^.Index;
 end;
@@ -2357,11 +2358,10 @@ end;
   @param Data a pointer to the bookmark value.
 }
 
-{$IFDEF WITH_TRECORDBUFFER}
-procedure TZAbstractRODataset.SetBookmarkData(Buffer: TRecordBuffer; Data: Pointer);
-{$ELSE}
-procedure TZAbstractRODataset.SetBookmarkData(Buffer: PChar; Data: Pointer);
-{$ENDIF}
+
+procedure TZAbstractRODataset.SetBookmarkData(
+  Buffer: {$IFDEF WITH_TRECORDBUFFER}TRecordBuffer{$ELSE}PChar{$ENDIF};
+  Data: {$IFDEF WITH_BOOKMARKDATA_TBOOKMARK}TBookMark{$ELSE}Pointer{$ENDIF});
 begin
   PZRowBuffer(Buffer)^.Index := PInteger(Data)^;
 end;
