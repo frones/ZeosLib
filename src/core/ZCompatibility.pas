@@ -162,7 +162,7 @@ function GetProcAddress(Module: HMODULE; Proc: PChar): Pointer;
 
 {EgonHugeist:}
 type
-  ZAnsiString = {.$IFDEF WITH_RAWBYTESTRING}{$IFDEF DELPHI12_UP}RawByteString{$ELSE}AnsiString{$ENDIF};
+  ZAnsiString = {$IFDEF WITH_RAWBYTESTRING}RawByteString{$ELSE}AnsiString{$ENDIF};
   ZWideString = {$IFDEF DELPHI12_UP}String{$ELSE}WideString{$ENDIF};
 
   {** Defines the Target Ansi codepages for the Controls }
@@ -209,8 +209,9 @@ type
     function ZDbcString(const Ansi: ZAnsiString; const Encoding: TZCharEncoding = ceDefault): String; overload;
     function ZPlainString(const AStr: String; ConSettings: PZConSettings): ZAnsiString; overload;
     function ZPlainString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): ZAnsiString; overload;
-    function ZStringFromUnicode(const ws: ZWideString; const Encoding: TZCharEncoding = ceDefault): String;
-    function ZUnicodeFromString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): ZWideString;
+    function ZStringFromUnicode(const ws: ZWideString; const Encoding: TZCharEncoding = ceDefault): {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}ZAnsiString{$ELSE}String{$IFEND}; overload;
+    function ZStringFromUnicode(const ws: ZWideString; ConSettings: PZConSettings): {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}ZAnsiString{$ELSE}String{$IFEND}; overload;
+    function ZUnicodeFromString(const AStr: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}ZAnsiString{$ELSE}String{$IFEND}; const Encoding: TZCharEncoding = ceDefault): ZWideString;
     property ConSettings: PZConSettings read FConSettings write FConSettings;
   public
     destructor Destroy; override;
@@ -533,7 +534,7 @@ begin
 end;
 {$IFEND}
 
-function AnsiToWide(const S: ZAnsiString; const CP: Word): ZWideString;
+function AnsiToWide(const S: ZAnsiString; const CP: Word): {$IFDEF DELPHI15_UP}UnicodeString{$ELSE}WideString{$ENDIF};
 var
   {$IFDEF DELPHI15_UP}wlen, ulen{$ELSE}l{$ENDIF}: Integer;
 begin
@@ -581,7 +582,7 @@ begin
     {$IFEND}
 end;
 
-function WideToAnsi(const ws: ZWideString; CP: Word): ZAnsiString;
+function WideToAnsi(const ws: {$IFDEF DELPHI15_UP}UnicodeString{$ELSE}WideString{$ENDIF}; CP: Word): ZAnsiString;
 var
   {$IFDEF DELPHI15_UP}wlen, ulen{$ELSE}l{$ENDIF}: Integer;
 begin
@@ -796,6 +797,10 @@ EgonHugeist:
 }
 function TZCodePagedObject.ZPlainString(const AStr: String;
   ConSettings: PZConSettings): ZAnsiString;
+{$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+var
+  TempAnsi: ZAnsiString;
+{$ENDIF}
 begin
   case ConSettings.ClientCodePage.Encoding of
     ceUTF8:
@@ -807,7 +812,17 @@ begin
             Result := AStr
           else
             if ( ConSettings.OS_CP = 65001 ) then //avoid "no success" for expected Codepage UTF8 of the Controls
+            {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+            begin
+              //stupid workaround to cut of the origin tracking of AStr
+              //on the other hand Result = AStr after some more procs
+              TempAnsi := AnsiToUTF8(AStr);
+              SetLength(Result, Length(TempAnsi));
+              Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
+            end
+            {$ELSE}
               Result := AnsiToUTF8(AStr)
+            {$ENDIF}
             else
               Result := StringToAnsiEx(AStr, ConSettings.OS_CP, 65001)
         else
@@ -870,7 +885,8 @@ begin
   end;
 end;
 
-function TZCodePagedObject.ZStringFromUnicode(const ws: ZWideString; const Encoding: TZCharEncoding = ceDefault): String;
+function TZCodePagedObject.ZStringFromUnicode(const ws: ZWideString;
+  const Encoding: TZCharEncoding = ceDefault): {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}ZAnsiString{$ELSE}String{$IFEND};
 {$IFNDEF DELPHI12_UP}
 var
   UseEncoding: TZCharEncoding;
@@ -896,7 +912,22 @@ begin
   {$ENDIF}
 end;
 
-function TZCodePagedObject.ZUnicodeFromString(const AStr: String;
+function TZCodePagedObject.ZStringFromUnicode(const ws: ZWideString;
+  ConSettings: PZConSettings): {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}ZAnsiString{$ELSE}String{$IFEND};
+begin
+  {$IFDEF DELPHI12_UP}
+  Result := WS;
+  {$ELSE}
+  case ConSettings.ClientCodePage.Encoding of
+    ceUTF8:
+      Result := UTF8Encode(WS);
+    else
+      Result := WideToAnsi(ws, ConSettings.OS_CP);
+  end;
+  {$ENDIF}
+end;
+
+function TZCodePagedObject.ZUnicodeFromString(const AStr: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}ZAnsiString{$ELSE}String{$IFEND};
   const Encoding: TZCharEncoding = ceDefault): ZWideString;
 {$IFNDEF DELPHI12_UP}
 var

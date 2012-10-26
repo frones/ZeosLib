@@ -350,6 +350,7 @@ function PrepareSQLParameter(Value: TZVariant; ParamType: TZSQLType;
 var
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
+  TempStream: TStream;
 begin
   TempBytes := nil;
 
@@ -401,8 +402,14 @@ begin
             if ParamType = stBinaryStream then
               Result := GetSQLHexAnsiString(PAnsiChar(TempBlob.GetBuffer), TempBlob.Length, True)
             else
-              if ParamType = stUnicodeStream then
-                Result := 'N'+{$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr({$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), '''')
+              if ( ParamType in [stUnicodeStream, stAsciiStream] ) and
+                ConSettings.Autoencode then
+              begin
+                TempStream := GetValidatedUnicodeStream(TempBlob.GetBuffer, TempBlob.Length);
+                TempBlob.SetStream(TempStream);
+                TempStream.Free;
+                Result := 'N'+{$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr({$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), '''');
+              end
               else
                 {$IFDEF DELPHI12_UP}
                 Result := AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), '''');

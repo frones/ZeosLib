@@ -170,7 +170,7 @@ procedure CheckOracleError(PlainDriver: IZOraclePlainDriver;
   @return a created result set object.
 }
 function CreateOracleResultSet(PlainDriver: IZOraclePlainDriver;
-  Statement: IZStatement; SQL: string; Handle: POCIStmt;
+  Statement: IZStatement; LogSQL: string; Handle: POCIStmt;
   ErrorHandle: POCIError): IZResultSet; overload;
 
 {**
@@ -178,7 +178,7 @@ function CreateOracleResultSet(PlainDriver: IZOraclePlainDriver;
   @return a created result set object.
 }
 function CreateOracleResultSet(PlainDriver: IZOraclePlainDriver;
-  Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
+  Statement: IZStatement; LogSQL: string; StmtHandle: POCIStmt;
   ErrorHandle: POCIError; OutVars: PZSQLVars; FieldNames: TStringDynArray;
   ParamTypes, FunctionResultOffsets: array of shortInt): IZResultSet; overload;
 
@@ -209,8 +209,8 @@ procedure FreeOracleStatementHandles(PlainDriver: IZOraclePlainDriver;
   @param ErrorHandle a holder for Error handle.
 }
 procedure PrepareOracleStatement(PlainDriver: IZOraclePlainDriver;
-  SQL: string; Handle: POCIStmt; ErrorHandle: POCIError; PrefetchCount: ub4;
-  ConSettings: PZConSettings);
+  SQL: ZAnsiString; LogSQL: String; Handle: POCIStmt; ErrorHandle: POCIError;
+  PrefetchCount: ub4; ConSettings: PZConSettings);
 
 {**
   Executes an Oracle statement.
@@ -221,7 +221,7 @@ procedure PrepareOracleStatement(PlainDriver: IZOraclePlainDriver;
   @param ErrorHandle a holder for Error handle.
 }
 procedure ExecuteOracleStatement(PlainDriver: IZOraclePlainDriver;
-  Connection: IZConnection; SQL: string; Handle: POCIStmt;
+  Connection: IZConnection; LogSQL: string; Handle: POCIStmt;
   ErrorHandle: POCIError);
 
 {**
@@ -404,7 +404,7 @@ var
   TempDate: TDateTime;
   TempBlob: IZBlob;
   WriteTempBlob: IZOracleBlob;
-  TempStream,TempStreamIn: TStream;
+  TempStream: TStream;
   Year, Month, Day, Hour, Min, Sec, MSec: Word;
   OracleConnection: IZOracleConnection;
 begin
@@ -439,12 +439,12 @@ begin
                 StrLCopy(PAnsiChar(CurrentVar.Data),
                   PAnsiChar(PlainDriver.ZPlainString(DefVarManager.GetAsString(Values[I]), Connection.GetConSettings)), 1024);
               vtUnicodeString:
-                if Connection.GetEncoding = ceUTF8 then
-                  StrLCopy(PAnsiChar(CurrentVar.Data),
-                      PAnsiChar(UTF8Encode(DefVarManager.GetAsUnicodeString(Values[I]))), 1024)
-                else
-                  StrLCopy(PAnsiChar(CurrentVar.Data),
-                      PAnsiChar(AnsiString(DefVarManager.GetAsUnicodeString(Values[I]))), 1024)
+                StrLCopy(PAnsiChar(CurrentVar.Data),
+                {$IFDEF DELPHI12_UP}
+                  PAnsiChar(PlainDriver.ZPlainString(DefVarManager.GetAsUnicodeString(Values[I]), Connection.GetConSettings)), 1024);
+                {$ELSE}
+                  PAnsiChar(PlainDriver.ZStringFromUnicode(DefVarManager.GetAsUnicodeString(Values[I]), Connection.GetConSettings)), 1024);
+                {$ENDIF}
             end;
           end;
         SQLT_VST:
@@ -467,11 +467,16 @@ begin
             TempBlob := DefVarManager.GetAsInterface(Values[I]) as IZBlob;
             if not TempBlob.IsEmpty then
             begin
-              if (CurrentVar.TypeCode = SQLT_CLOB) and (Connection.GetEncoding = ceUTF8) then
+              if (CurrentVar.TypeCode = SQLT_CLOB) then
+                if (Connection.GetEncoding = ceUTF8) and Connection.GetConSettings.AutoEncode then
+                  TempStream := ZDbcUtils.GetValidatedUnicodeStream(TempBlob.GetBuffer, TempBlob.Length)
+                else
                 begin
-                TempStreamIn:=TempBlob.GetStream;
-                TempStream := ZDbcUtils.GetValidatedUnicodeStream(TempStreamIn);
-                TempStreamIn.Free;
+                  {$IFNDEF DELPHI12_UP}
+                  if Connection.GetConSettings.AutoEncode then
+                    TempBlob.SetString(PlainDriver.ZPlainString(TempBlob.GetString, Connection.GetConSettings));
+                  {$ENDIF}
+                  TempStream := TempBlob.GetStream;
                 end
               else
                 TempStream := TempBlob.GetStream;
@@ -652,19 +657,19 @@ end;
   @return a created result set object.
 }
 function CreateOracleResultSet(PlainDriver: IZOraclePlainDriver;
-  Statement: IZStatement; SQL: string; Handle: POCIStmt;
+  Statement: IZStatement; LogSQL: string; Handle: POCIStmt;
   ErrorHandle: POCIError): IZResultSet;
 var
   NativeResultSet: TZOracleResultSet;
   CachedResultSet: TZCachedResultSet;
 begin
   NativeResultSet := TZOracleResultSet.Create(PlainDriver, Statement,
-    SQL, Handle, ErrorHandle);
+    LogSQL, Handle, ErrorHandle);
   NativeResultSet.SetConcurrency(rcReadOnly);
   if (Statement.GetResultSetConcurrency = rcUpdatable)
     or (Statement.GetResultSetType <> rtForwardOnly) then
   begin
-    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil,
+    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, LogSQL, nil,
       Statement.GetConnection.GetConSettings);
     CachedResultSet.SetConcurrency(rcUpdatable);
     CachedResultSet.SetResolver(TZOracleCachedResolver.Create(
@@ -680,7 +685,7 @@ end;
   @return a created result set object.
 }
 function CreateOracleResultSet(PlainDriver: IZOraclePlainDriver;
-      Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
+      Statement: IZStatement; LogSQL: string; StmtHandle: POCIStmt;
       ErrorHandle: POCIError; OutVars: PZSQLVars; FieldNames: TStringDynArray;
       ParamTypes, FunctionResultOffsets: array of shortInt): IZResultSet;
 var
@@ -688,9 +693,9 @@ var
   CachedResultSet: TZCachedResultSet;
 begin
   NativeResultSet := TZOracleCallableResultSet.Create(PlainDriver, Statement,
-    SQL, StmtHandle, ErrorHandle, OutVars, FieldNames, ParamTypes, FunctionResultOffsets);
+    LogSQL, StmtHandle, ErrorHandle, OutVars, FieldNames, ParamTypes, FunctionResultOffsets);
   NativeResultSet.SetConcurrency(rcReadOnly);
-  CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil,
+  CachedResultSet := TZCachedResultSet.Create(NativeResultSet, LogSQL, nil,
     Statement.GetConnection.GetConSettings);
   CachedResultSet.SetConcurrency(rcReadOnly);
   CachedResultSet.SetResolver(TZOracleCachedResolver.Create(
@@ -750,20 +755,16 @@ end;
   @param ErrorHandle a holder for Error handle.
 }
 procedure PrepareOracleStatement(PlainDriver: IZOraclePlainDriver;
-  SQL: string; Handle: POCIStmt; ErrorHandle: POCIError; PrefetchCount: ub4;
-  ConSettings: PZConSettings);
+  SQL: ZAnsiString; LogSQL: String; Handle: POCIStmt;
+  ErrorHandle: POCIError; PrefetchCount: ub4; ConSettings: PZConSettings);
 var
   Status: Integer;
-  AnsiSQL: ZAnsiString;
-  LogSQL: String;
 begin
-  LogSQL := ''; //Makes the FPC compiler happy
-  AnsiSQL := PlainDriver.GetPrepreparedSQL(nil, SQL, ConSettings, LogSQL);
   PlainDriver.AttrSet(Handle, OCI_HTYPE_STMT, @PrefetchCount, SizeOf(ub4),
     OCI_ATTR_PREFETCH_ROWS, ErrorHandle);
-  Status := PlainDriver.StmtPrepare(Handle, ErrorHandle, PAnsiChar(AnsiSQL),
-    Length(AnsiSQL), OCI_NTV_SYNTAX, OCI_DEFAULT);
-  CheckOracleError(PlainDriver, ErrorHandle, Status, lcExecute, SQL);
+  Status := PlainDriver.StmtPrepare(Handle, ErrorHandle, PAnsiChar(SQL),
+    Length(SQL), OCI_NTV_SYNTAX, OCI_DEFAULT);
+  CheckOracleError(PlainDriver, ErrorHandle, Status, lcExecute, LogSQL);
 end;
 
 {**
@@ -775,7 +776,7 @@ end;
   @param ErrorHandle a holder for Error handle.
 }
 procedure ExecuteOracleStatement(PlainDriver: IZOraclePlainDriver;
-  Connection: IZConnection; SQL: string; Handle: POCIStmt; ErrorHandle: POCIError);
+  Connection: IZConnection; LogSQL: string; Handle: POCIStmt; ErrorHandle: POCIError);
 var
   Status: Integer;
   OracleConnection: IZOracleConnection;
@@ -783,7 +784,7 @@ begin
   OracleConnection := Connection as IZOracleConnection;
   Status := PlainDriver.StmtExecute(OracleConnection.GetContextHandle,
     Handle, ErrorHandle, 1, 0, nil, nil, OCI_DEFAULT);
-  CheckOracleError(PlainDriver, ErrorHandle, Status, lcExecute, SQL);
+  CheckOracleError(PlainDriver, ErrorHandle, Status, lcExecute, LogSQL);
 end;
 
 {**

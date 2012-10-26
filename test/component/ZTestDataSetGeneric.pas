@@ -1805,9 +1805,12 @@ const teststring = '123456ייאא';
 var
   Query: TZQuery;
   BinStream,BinStream1,TextStreamS: TMemoryStream;
+  UnicodeStream: TStream;
   s:  ZAnsistring;
   TextLob, BinLob: String;
   TempConnection: TZConnection;
+  WS: WideString;
+  i: Integer;
 begin
   TempConnection := nil;
   BinStream:=nil;

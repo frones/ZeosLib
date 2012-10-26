@@ -138,10 +138,8 @@ type
     constructor Create(const ConnectionPool: TConnectionPool);
     destructor Destroy; override;
     function GetBinaryEscapeString(const Value: ZAnsiString): String;
-    function GetEscapeString(const Value: String): String; overload; virtual;
-    {$IFDEF DELPHI12_UP}
-    function GetEscapeString(const Value: ZAnsiString): String; overload; virtual;
-    {$ENDIF}
+    function GetEscapeString(const Value: ZWideString): ZWideString; overload; virtual;
+    function GetEscapeString(const Value: ZAnsiString): ZAnsiString; overload; virtual;
     function GetEncoding: TZCharEncoding;
     function GetConSettings: PZConSettings;
   end;
@@ -661,17 +659,15 @@ begin
   Result := GetConnection.GetBinaryEscapeString(Value);
 end;
 
-function TZDbcPooledConnection.GetEscapeString(const Value: String): String;
+function TZDbcPooledConnection.GetEscapeString(const Value: ZWideString): ZWideString;
 begin
   Result := GetConnection.GetEscapeString(Value);
 end;
 
-{$IFDEF DELPHI12_UP}
-function TZDbcPooledConnection.GetEscapeString(const Value: ZAnsiString): String;
+function TZDbcPooledConnection.GetEscapeString(const Value: ZAnsiString): ZAnsiString;
 begin
   Result := GetConnection.GetEscapeString(Value);
 end;
-{$ENDIF}
 
 function TZDbcPooledConnection.GetEncoding: TZCharEncoding;
 begin

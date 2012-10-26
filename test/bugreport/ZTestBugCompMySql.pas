@@ -788,7 +788,8 @@ begin
     try
       Temp := 'xyz';
       {$IFDEF WITH_WIDEMEMO}
-      if Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8] then
+      if ( Connection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
+        ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
         Stream.Write(PWideChar(WideString(Temp))^, Length(Temp)*2)
       else
       {$ENDIF}

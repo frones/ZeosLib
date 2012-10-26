@@ -234,10 +234,8 @@ type
     function GetWarnings: EZSQLWarning; virtual;
     procedure ClearWarnings; virtual;
     function GetBinaryEscapeString(const Value: ZAnsiString): String; virtual;
-    function GetEscapeString(const Value: String): String; overload; virtual;
-    {$IFDEF DELPHI12_UP}
-    function GetEscapeString(const Value: ZAnsiString): String; overload; virtual;
-    {$ENDIF}
+    function GetEscapeString(const Value: ZWideString): ZWideString; overload; virtual;
+    function GetEscapeString(const Value: ZAnsiString): ZAnsiString; overload; virtual;
     function UseMetadata: boolean;
     procedure SetUseMetadata(Value: Boolean);
 end;
@@ -698,11 +696,12 @@ begin
 
   {CheckCharEncoding}
   ConSettings := New(PZConSettings);
-  ConSettings.AutoEncode := Info.Values['AutoEncodeStrings'] = 'ON'; //compatibitity Option for existing Applications;
   {$IFDEF DELPHI12_UP}
   ConSettings.OS_CP := 1200;
   ConSettings.CPType := cCP_UTF16;
+  ConSettings.AutoEncode := True;
   {$ELSE}
+  ConSettings.AutoEncode := Info.Values['AutoEncodeStrings'] = 'ON'; //compatibitity Option for existing Applications;
   if Info.values['controls_cp'] = 'GET_ACP' then
   begin
     {$IF defined(MSWINDOWS) and not defined(WinCE)}
@@ -1300,40 +1299,50 @@ end;
 function TZAbstractConnection.GetBinaryEscapeString(const Value: ZAnsiString): String;
 begin
   if GetAutoEncodeStrings then //Set detect-sequence only if Prepreparing should be done else it's not server-understandable.
-    Result := Self.GetDriver.GetTokenizer.AnsiGetEscapeString(GetSQLHexAnsiString(PAnsiChar(Value), Length(Value)))
+    Result := Self.GetDriver.GetTokenizer.AnsiGetEscapeString(GetSQLHexString(PAnsiChar(Value), Length(Value)))
   else
-    Result := GetSQLHexAnsiString(PAnsiChar(Value), Length(Value));
+    Result := GetSQLHexString(PAnsiChar(Value), Length(Value));
 end;
 
-function TZAbstractConnection.GetEscapeString(const Value: String): String;
+function TZAbstractConnection.GetEscapeString(const Value: ZWideString): ZWideString;
 begin
   if GetAutoEncodeStrings then
     if StartsWith(Value, '''') and EndsWith(Value, '''') then
       Result := GetDriver.GetTokenizer.GetEscapeString(Value)
     else
-      Result := GetDriver.GetTokenizer.GetEscapeString(AnsiQuotedStr(Value, #39))
+      {$IFDEF DELPHI12_UP}
+      Result := AnsiQuotedStr(Value, #39)
+      {$ELSE}
+      Result := ZUnicodeFromString(GetDriver.GetTokenizer.GetEscapeString(AnsiQuotedStr(ZStringFromUnicode(Value), #39)))
+      {$ENDIF}
   else
     if StartsWith(Value, '''') and EndsWith(Value, '''') then
       Result := Value
     else
+      {$IFDEF DELPHI12_UP}
       Result := AnsiQuotedStr(Value, #39);
+      {$ELSE}
+      Result := ZUnicodeFromString(AnsiQuotedStr(ZStringFromUnicode(Value), #39));
+      {$ENDIF}
 end;
 
-{$IFDEF DELPHI12_UP}
-function TZAbstractConnection.GetEscapeString(const Value: ZAnsiString): String;
+function TZAbstractConnection.GetEscapeString(const Value: ZAnsiString): ZAnsiString;
 begin
   if GetAutoEncodeStrings then
     if StartsWith(Value, '''') and EndsWith(Value, '''') then
-      Result := GetDriver.GetTokenizer.GetEscapeString(ZDbcString(Value))
+      Result := {$IFNDEF DELPHI12_UP}GetDriver.GetTokenizer.GetEscapeString{$ENDIF}(Value)
     else
+      {$IFDEF DELPHI12_UP}
+      AnsiStrings.AnsiQuotedStr(Value, #39)
+      {$ELSE}
       Result := GetDriver.GetTokenizer.GetEscapeString(AnsiQuotedStr(ZDbcString(Value), #39))
+      {$ENDIF}
   else
     if StartsWith(Value, '''') and EndsWith(Value, '''') then
-      Result := ZDbcString(Value)
+      Result := Value
     else
-      Result := AnsiQuotedStr(ZDbcString(Value), #39);
+      Result := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr(Value, #39);
 end;
-{$ENDIF}
 
 {**
   Result 100% Compiler-Compatible

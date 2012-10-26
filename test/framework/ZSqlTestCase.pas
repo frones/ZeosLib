@@ -141,6 +141,7 @@ type
     procedure StopSQLTrace;
 
     function GetDBTestString(const Value: String; ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False): String;
+    function GetDBTestStream(const Value: String; ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False): TStream;
   public
     destructor Destroy; override;
 
@@ -423,6 +424,53 @@ end;
 {$IFDEF DELPHI12_UP}
   {$WARNINGS ON}
 {$ENDIF}
+
+function TZAbstractSQLTestCase.GetDBTestStream(const Value: String; ConSettings:
+  PZConSettings; IsUTF8Encoded: Boolean = False): TStream;
+var
+  WS: ZWideString;
+  Ansi: ZAnsiString;
+begin
+  Result := TMemoryStream.Create;
+  if ( ConSettings.CPType = cCP_UTF16 ) and ( ConSettings.ClientCodePage.Encoding = ceUTF8 ) then
+  begin
+    if isUTF8Encoded then
+      WS := UTF8ToString(ZAnsiString(Value))
+    else
+      WS := ZWideString(Value);
+    Result.Write(PWideChar(WS)^, Length(WS)*2);
+    Result.Position := 0;
+  end
+  else
+  begin
+    case ConSettings.ClientCodePage.Encoding of
+      ceAnsi:
+        if ConSettings.AutoEncode then //Revert the expected value to test
+          if IsUTF8Encoded then
+            Ansi := ZAnsiString(Value)
+          else
+            Ansi := UTF8Encode(WideString(Value))
+        else  //Return the expected value to test
+          if IsUTF8Encoded then
+            Ansi := ZAnsiString(UTF8ToAnsi(ZAnsiString(Value)))
+          else
+            Ansi := ZAnsiString(Value);
+      else //ceUTF8, ceUTF16, ceUTF32
+        if ConSettings.AutoEncode then //Revert the expected value to test
+          if IsUTF8Encoded then
+            Ansi := ZAnsiString(UTF8ToAnsi(ZAnsiString(Value)))
+          else
+            Ansi := ZAnsiString(Value)
+        else
+          if IsUTF8Encoded then
+            Ansi := ZAnsiString(Value)
+          else
+            Ansi := UTF8Encode(WideString(Value)); //Return the expected value to test
+    end;
+    Result.Write(PAnsiChar(Ansi)^, Length(Ansi));
+    Result.Position := 0;
+  end;
+end;
 
 {$IFNDEF FPC}
 {**

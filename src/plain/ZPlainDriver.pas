@@ -75,6 +75,7 @@ type
     function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
     function ZDbcString(const Ansi: ZAnsiString; ConSettings: PZConSettings): String;
     function ZPlainString(const AStr: String; ConSettings: PZConSettings): ZAnsiString;
+    function ZStringFromUnicode(const ws: ZWideString; ConSettings: PZConSettings): {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}ZAnsiString{$ELSE}String{$IFEND};
     function GetPrepreparedSQL(Handle: Pointer; const SQL: String;
     ConSettings: PZConSettings; out LogSQL: String): ZAnsiString;
     function EscapeString(Handle: Pointer; const Value: ZWideString;

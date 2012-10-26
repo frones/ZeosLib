@@ -14,7 +14,7 @@ interface
 {$I ZComponent.inc}
 
 uses
-  Types, SysUtils, Messages, Classes, ZDbcIntfs, DB,Forms,
+  SysUtils, Messages, Classes, ZDbcIntfs, DB,Forms,
   ZCompatibility, ZAbstractConnection, ZSequence, Dialogs,
   ZConnectionGroup {$IFDEF FPC}, LMessages{$ENDIF};
 

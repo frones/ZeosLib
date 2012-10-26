@@ -282,40 +282,29 @@ begin
   SQLMonitor := TZSQLMonitor.Create(nil);
   SQLMonitor.Active := True;
   MasterQuery.SQL.Text := 'SELECT * FROM department ORDER BY dep_id';
+  MasterQuery.Options := MasterQuery.Options + [doDontSortOnPost];
   MasterQuery.Open;
 
   DetailQuery.SQL.Text := 'SELECT * FROM people';
   DetailQuery.MasterSource := MasterDataSource;
   DetailQuery.MasterFields := 'dep_id';
   DetailQuery.LinkedFields := 'p_dep_id';
-  DetailQuery.Options := DetailQuery.Options + [doUpdateMasterFirst];
+  DetailQuery.Options := DetailQuery.Options + [doUpdateMasterFirst, doDontSortOnPost];
   DetailQuery.Open;
   CommitCount := 0;
   try
     MasterQuery.Append;
     MasterQuery.FieldByName('dep_id').AsInteger := TestRowID;
-    if Connection.UTF8StringsAsWideField or ( Connection.DbcConnection.GetEncoding = ceAnsi) then
-        MasterQuery.FieldByName('dep_name').AsString := 'צהüüהצ'
-    else
-      MasterQuery.FieldByName('dep_name').AsString := Utf8Encode(WideString('צהüüהצ'));
+    MasterQuery.FieldByName('dep_name').AsString := GetDBTestString('צהüüהצ', Connection.DbcConnection.GetConSettings);
     MasterQuery.FieldByName('dep_shname').AsString := 'abc';
-
-    if Connection.UTF8StringsAsWideField or (Connection.DbcConnection.GetEncoding = ceAnsi) then
-       MasterQuery.FieldByName('dep_address').AsString := 'A adress of צהüüהצ'
-    else
-      MasterQuery.FieldByName('dep_address').AsString := Utf8Encode(WideString('A adress of צהüüהצ'));
-
+    MasterQuery.FieldByName('dep_address').AsString := GetDBTestString('A adress of צהüüהצ', Connection.DbcConnection.GetConSettings);
     CheckEquals(True, (MasterQuery.State = dsInsert), 'MasterQuery Insert-State');
 
     DetailQuery.Append;
     DetailQuery.FieldByName('p_id').AsInteger := TestRowID;
     DetailQuery.FieldByName('p_dep_id').AsInteger := TestRowID;
 
-    if Connection.UTF8StringsAsWideField or (Connection.DbcConnection.GetEncoding = ceAnsi) then
-        DetailQuery.FieldByName('p_name').AsString := 'üהצצהü'
-    else
-      DetailQuery.FieldByName('p_name').AsString := Utf8Encode(WideString('üהצצהü'));
-
+    DetailQuery.FieldByName('p_name').AsString := GetDBTestString('üהצצהü', Connection.DbcConnection.GetConSettings);
     DetailQuery.FieldByName('p_begin_work').AsDateTime := now;
     DetailQuery.FieldByName('p_end_work').AsDateTime := now;
     DetailQuery.FieldByName('p_picture').AsString := '';
@@ -345,33 +334,22 @@ end;
 procedure TZTestMasterDetailCase.TestClientDatasetWithForeignKey_ApplyUpdates;
 var
   SQLMonitor: TZSQLMonitor;
+  I: Integer;
 
   procedure SetTheData(Index: Integer);
   begin
     MasterQuery.Append;
     MasterQuery.FieldByName('dep_id').AsInteger := TestRowID + Index;
-    if Connection.UTF8StringsAsWideField or ( Connection.DbcConnection.GetEncoding = ceAnsi) then
-        MasterQuery.FieldByName('dep_name').AsString := 'צהüüהצ'
-    else
-      MasterQuery.FieldByName('dep_name').AsString := Utf8Encode(WideString('צהüüהצ'));
+    MasterQuery.FieldByName('dep_name').AsString := GetDBTestString('צהüüהצ', Connection.DbcConnection.GetConSettings);
     MasterQuery.FieldByName('dep_shname').AsString := 'abc';
-
-    if Connection.UTF8StringsAsWideField or (Connection.DbcConnection.GetEncoding = ceAnsi) then
-       MasterQuery.FieldByName('dep_address').AsString := 'A adress of צהüüהצ'
-    else
-      MasterQuery.FieldByName('dep_address').AsString := Utf8Encode(WideString('A adress of צהüüהצ'));
+    MasterQuery.FieldByName('dep_address').AsString := GetDBTestString('A adress of צהüüהצ', Connection.DbcConnection.GetConSettings);
 
     CheckEquals(True, (MasterQuery.State = dsInsert), 'MasterQuery Insert-State');
 
     DetailQuery.Append;
     DetailQuery.FieldByName('p_id').AsInteger := TestRowID + Index;
     DetailQuery.FieldByName('p_dep_id').AsInteger := TestRowID + Index;
-
-    if Connection.UTF8StringsAsWideField or (Connection.DbcConnection.GetEncoding = ceAnsi) then
-        DetailQuery.FieldByName('p_name').AsString := 'üהצצהü'
-    else
-      DetailQuery.FieldByName('p_name').AsString := Utf8Encode(WideString('üהצצהü'));
-
+    DetailQuery.FieldByName('p_name').AsString := GetDBTestString('üהצצהü', Connection.DbcConnection.GetConSettings);
     DetailQuery.FieldByName('p_begin_work').AsDateTime := now;
     DetailQuery.FieldByName('p_end_work').AsDateTime := now;
     DetailQuery.FieldByName('p_picture').AsString := '';

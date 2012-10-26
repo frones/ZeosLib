@@ -328,12 +328,21 @@ end;
     value returned is <code>null</code>
 }
 function TZPostgreSQLResultSet.InternalGetString(ColumnIndex: Integer): ZAnsiString;
+{$IFDEF WITH_RAWBYTESTRING}
+var Len: Integer;
+{$ENDIF}
 begin
   ColumnIndex := ColumnIndex - 1;
   LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1,
     ColumnIndex) <> 0;
+  {$IFDEF WITH_RAWBYTESTRING}
+  Len := FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex);
+  SetLength(Result, Len);
+  Move(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex)^, PAnsiChar(Result)^, Len);
+  {$ELSE}
   SetString(Result, FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex),
     FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex));
+  {$ENDIF}
   if FPlainDriver.GetFieldType(FQueryHandle, ColumnIndex) = 1042 then
     Result := TrimRight(Result);
 end;

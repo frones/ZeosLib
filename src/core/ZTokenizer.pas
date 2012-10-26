@@ -449,7 +449,11 @@ type
     function GetWordState: TZWordState;
     function GetCharacterState(StartChar: Char): TZTokenizerState;
     function AnsiGetEscapeString(const Ansi: ZAnsiString): String;
-    function GetEscapeString(const Str: String): String;
+    {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
+    function GetEscapeString(const EscapeString: ZAnsiString): ZAnsiString;
+    {$ELSE}
+    function GetEscapeString(const EscapeString: String): String;
+    {$IFEND}
     function TokenizeEscapeBufferToList(const SQL: String): TZTokenDynArray;
   end;
 
@@ -472,7 +476,11 @@ type
     destructor Destroy; override;
 
     function AnsiGetEscapeString(const EscapeString: ZAnsiString): String; virtual;
-    function GetEscapeString(const EscapeString: String): String; virtual;
+    {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
+    function GetEscapeString(const EscapeString: ZAnsiString): ZAnsiString;
+    {$ELSE}
+    function GetEscapeString(const EscapeString: String): String;
+    {$IFEND}
     function TokenizeEscapeBufferToList(const SQL: String): TZTokenDynArray; virtual;
     function TokenizeBufferToList(const Buffer: string; Options: TZTokenOptions):
       TStrings;
@@ -901,6 +909,9 @@ end;
   @return either just a slash token, or the results of
     delegating to a comment-handling state
 }
+{$IFDEF FPC}
+  {$HINTS OFF}
+{$ENDIF}
 function TZCCommentState.NextToken(Stream: TStream; FirstChar: Char;
   Tokenizer: TZTokenizer): TZToken;
 var
@@ -928,6 +939,9 @@ begin
   if (Result.TokenType = ttUnknown) and (Tokenizer.SymbolState <> nil) then
     Result := Tokenizer.SymbolState.NextToken(Stream, FirstChar, Tokenizer);
 end;
+{$IFDEF FPC}
+  {$HINTS ON}
+{$ENDIF}
 
 { TZSymbolNode }
 
@@ -989,6 +1003,9 @@ end;
 {**
   Find the descendant that takes as many characters as possible from the input.
 }
+{$IFDEF FPC}
+  {$HINTS OFF}
+{$ENDIF}
 function TZSymbolNode.DeepestRead(Stream: TStream): TZSymbolNode;
 var
   TempChar: Char;
@@ -1009,6 +1026,9 @@ begin
   else
     Result := Node.DeepestRead(Stream);
 end;
+{$IFDEF FPC}
+  {$HINTS ON}
+{$ENDIF}
 
 {**
   Find or create a child for the given character.
@@ -1433,14 +1453,22 @@ begin
     Result := 'NULL';
 end;
 
+{$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
+function TZTokenizer.GetEscapeString(const EscapeString: ZAnsiString): ZAnsiString;
+{$ELSE}
 function TZTokenizer.GetEscapeString(const EscapeString: String): String;
+{$IFEND}
 var
   Temp: String;
 begin
   Temp := EscapeMarkSequence+IntToStr(Length(EscapeString))+ReverseString(EscapeMarkSequence);
 
   if Length(EscapeString) > 0 then
+    {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
+    Result := ZAnsiString(Temp)+EscapeString+ZAnsiString(Temp)
+    {$ELSE}
     Result := Temp+EscapeString+Temp
+    {$IFEND}
   else
     Result := '';
 end;

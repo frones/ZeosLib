@@ -59,6 +59,7 @@
  {$DEFINE WITH_WIDEFIELDS}	// Wide-fields are supported (common define for ftWideString/ftWideMemo)
  {$DEFINE WITH_DBTABLES}        // Have the BDE DBTables Unit
  {$DEFINE WITH_TBYTEDYNARRAYTOVARIANT}// Variant does support TByteDynArray
+ {$DEFINE WITH_INLINE_ANSICOMPARETEXT}
 {$ENDIF}
 
 // Compilation directives for Delphi4
@@ -174,6 +175,7 @@
   {$DEFINE WITH_FTLONGWORD}             // ftLongWord is supported
   {$DEFINE WITH_ASBYTES}                //  AsBytes is supported
   {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF
+  {$UNDEF WITH_INLINE_ANSICOMPARETEXT}
 {$ENDIF}
 
 {$IFDEF DELPHI15_UP}

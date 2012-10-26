@@ -77,9 +77,9 @@ type
     constructor Create(PlainDriver: IZSQLitePlainDriver;
       Connection: IZConnection; Info: TStrings; Handle: Psqlite);
 
-    function ExecuteQuery(const SQL: string): IZResultSet; override;
-    function ExecuteUpdate(const SQL: string): Integer; override;
-    function Execute(const SQL: string): Boolean; override;
+    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: ZAnsiString): Integer; override;
+    function Execute(const SQL: ZAnsiString): Boolean; override;
   end;
 
   {** Implements Prepared SQL Statement. }
@@ -89,7 +89,7 @@ type
     FPlainDriver: IZSQLitePlainDriver;
   protected
     function CreateExecStatement: IZStatement; override;
-    function PrepareSQLParam(ParamIndex: Integer): string; override;
+    function PrepareAnsiSQLParam(ParamIndex: Integer): ZAnsiString; override;
   public
     constructor Create(PlainDriver: IZSQLitePlainDriver;
       Connection: IZConnection; const SQL: string; Info: TStrings;
@@ -100,7 +100,7 @@ implementation
 
 uses
   Types, ZDbcSqLiteUtils, ZDbcSqLiteResultSet, ZSysUtils, ZDbcUtils,
-  ZMessages, ZDbcCachedResultSet;
+  ZMessages, ZDbcCachedResultSet{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
 
 { TZSQLiteStatement }
 
@@ -159,7 +159,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZSQLiteStatement.ExecuteQuery(const SQL: string): IZResultSet;
+function TZSQLiteStatement.ExecuteQuery(const SQL: ZAnsiString): IZResultSet;
 var
   ErrorCode: Integer;
   ErrorMessage: PAnsiChar;
@@ -172,11 +172,11 @@ begin
   ErrorMessage := '';
   SQLTail := '';
   ColumnCount := 0;
-  SSQL := SQL; //preprepares SQL
+  ASQL := SQL; //preprepares SQL
   ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(ASQL), Length(ASQL), SQLTail,
     StmtHandle, ErrorMessage);
-  CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SSQL);
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
+  CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, LogSQL);
+  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
 
   try
     ErrorCode := FPlainDriver.Step(StmtHandle, ColumnCount,
@@ -202,13 +202,13 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZSQLiteStatement.ExecuteUpdate(const SQL: string): Integer;
+function TZSQLiteStatement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
 var
   ErrorCode: Integer;
   ErrorMessage: PAnsiChar;
 begin
   ErrorMessage := '';
-  SSQL := SQL; //preprepares SQL
+  ASQL := SQL; //preprepares SQL
   ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(ASQL), nil, nil,ErrorMessage);
   CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SSQL);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
@@ -236,7 +236,7 @@ end;
   @return <code>true</code> if the next result is a <code>ResultSet</code> object;
   <code>false</code> if it is an update count or there are no more results
 }
-function TZSQLiteStatement.Execute(const SQL: string): Boolean;
+function TZSQLiteStatement.Execute(const SQL: ZAnsiString): Boolean;
 var
   ErrorCode: Integer;
   ErrorMessage: PAnsiChar;
@@ -251,7 +251,7 @@ begin
   ColumnCount := 0;
   ColumnValues:=nil;
   ColumnNames:=nil;
-  SSQL := SQL; //preprapares SQL
+  ASQL := SQL; //preprapares SQL
   ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(ASQL), Length(ASQL), SQLTail,
     StmtHandle, ErrorMessage);
   CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SSQL);
@@ -321,12 +321,12 @@ end;
   @param ParameterIndex the first parameter is 1, the second is 2, ...
   @return a string representation of the parameter.
 }
-function TZSQLitePreparedStatement.PrepareSQLParam(ParamIndex: Integer): string;
+function TZSQLitePreparedStatement.PrepareAnsiSQLParam(ParamIndex: Integer): ZAnsiString;
 var
   Value: TZVariant;
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
-  TempStream,TempStreamIn: TStream;
+  TempStream: TStream;
 begin
   TempBytes := nil;
   if InParamCount <= ParamIndex then
@@ -344,50 +344,42 @@ begin
             else
                Result := '''N''';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
-        Result := SoftVarManager.GetAsString(Value);
+        Result := ZAnsiString(SoftVarManager.GetAsString(Value));
       stBytes:
-        Result := Self.GetConnection.GetBinaryEscapeString(AnsiString(SoftVarManager.GetAsString(Value)));
+        Result := EncodeString(AnsiString(SoftVarManager.GetAsString(Value)));
       stString:
-        Result := AnsiQuotedStr(SoftVarManager.GetAsString(Value), #39);
+        Result := ZPlainString(AnsiQuotedStr(SoftVarManager.GetAsString(Value), #39));
       stUnicodeString:
         {$IFDEF DELPHI12_UP}
-        Result := GetConnection.GetEscapeString(SoftVarManager.GetAsUnicodeString(Value));
+        Result := ZPlainString(AnsiQuotedStr(SoftVarManager.GetAsUnicodeString(Value), #39));
         {$ELSE}
-        Result := GetConnection.GetEscapeString(PAnsiChar(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value))));
+        Result := AnsiQuotedStr(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)), #39);
         {$ENDIF}
       stDate:
-        Result := '''' + FormatDateTime('yyyy-mm-dd',
-          SoftVarManager.GetAsDateTime(Value)) + '''';
+        Result := '''' + ZAnsiString(FormatDateTime('yyyy-mm-dd',
+          SoftVarManager.GetAsDateTime(Value))) + '''';
       stTime:
-        Result := '''' + FormatDateTime('hh:mm:ss',
-          SoftVarManager.GetAsDateTime(Value)) + '''';
+        Result := '''' + ZAnsiString(FormatDateTime('hh:mm:ss',
+          SoftVarManager.GetAsDateTime(Value))) + '''';
       stTimestamp:
-        Result := '''' + FormatDateTime('yyyy-mm-dd hh:mm:ss',
-          SoftVarManager.GetAsDateTime(Value)) + '''';
+        Result := '''' + ZAnsiString(FormatDateTime('yyyy-mm-dd hh:mm:ss',
+          SoftVarManager.GetAsDateTime(Value))) + '''';
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
-          begin
-            if (InParamTypes[ParamIndex] in [stAsciiStream, stUnicodeStream]) then
-              if Self.GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+            if InParamTypes[ParamIndex] = stBinaryStream then
+              Result := EncodeString(TempBlob.GetString)
+            else
+            begin
+              if ConSettings.AutoEncode then
               begin
-                TempStreamIn:=TempBlob.GetStream;
-                TempStream := GetValidatedUnicodeStream(TempStreamIn);
-                TempStreamIn.Free;
+                TempStream := GetValidatedUnicodeStream(TempBlob.GetBuffer, Tempblob.Length);
                 TempBlob.SetStream(TempStream);
                 TempStream.Free;
               end;
-
-              if InParamTypes[ParamIndex] = stBinaryStream then
-                Result := String(EncodeString(TempBlob.GetString))
-              else
-                {$IFDEF DELPHI12_UP}
-                Result := GetConnection.GetEscapeString(TempBlob.GetUnicodeString);
-                {$ELSE}
-                Result := GetConnection.GetEscapeString(TempBlob.GetString);
-                {$ENDIF}
-          end
+              Result := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr(TempBlob.GetString, #39);
+            end
           else
             Result := 'NULL';
         end;

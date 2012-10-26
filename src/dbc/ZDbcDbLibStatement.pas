@@ -80,6 +80,7 @@ type
     destructor Destroy; override;
 
     function GetMoreResults: Boolean; override;
+
     function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; override;
     function ExecuteUpdate(const SQL: ZAnsiString): Integer; override;
     function Execute(const SQL: ZAnsiString): Boolean; override;

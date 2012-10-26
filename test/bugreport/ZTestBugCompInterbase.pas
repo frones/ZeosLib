@@ -596,6 +596,7 @@ var
 begin
   Query := TZQuery.Create(nil);
   SL := TStringList.Create;
+  StrStream1 := TMemoryStream.Create;
   try
     Query.Connection := Connection;
 
@@ -608,18 +609,11 @@ begin
       SQL.Text := 'INSERT INTO people(P_ID, P_NAME, P_RESUME)'+
         ' VALUES (:P_ID, :P_NAME, :P_RESUME)';
       ParamByName('P_ID').AsInteger := TEST_ROW_ID;
-      if Self.FConnection.DbcConnection.GetEncoding = ceUTF8 then
-        if FConnection.DbcConnection.UTF8StringAsWideField then
-           ParamByName('P_NAME').AsString := WideString(Str3)
-        else
-          ParamByName('P_NAME').AsString := UTF8Encode(WideString(Str3))
-      else
-        ParamByName('P_NAME').AsString := String(Str3);
+      ParamByName('P_NAME').AsString := GetDBTestString(Str3, FConnection.DbcConnection.GetConSettings);
 
       CheckEquals(3, Query.Params.Count, 'Param.Count');
-      SL.Text := Str2;
+      SL.Text := GetDBTestString(Str2, FConnection.DbcConnection.GetConSettings);
 
-      StrStream1 := TMemoryStream.Create;
       SL.SaveToStream(StrStream1);
       ParamByName('P_RESUME').LoadFromStream(StrStream1, ftBlob);
       try
@@ -673,15 +667,10 @@ begin
       SQL.Text := 'INSERT INTO people(P_ID, P_NAME, P_RESUME)'+
         ' VALUES (:P_ID, :P_NAME, :P_RESUME)';
       ParamByName('P_ID').AsInteger := TEST_ROW_ID;
-      if Self.FConnection.DbcConnection.GetEncoding = ceUTF8 then
-        if FConnection.DbcConnection.UTF8StringAsWideField then
-           ParamByName('P_NAME').AsString := WideString(Str3)
-        else
-          ParamByName('P_NAME').AsString := UTF8Encode(WideString(Str3))
-      else
-        ParamByName('P_NAME').AsString := String(Str3);
       CheckEquals(3, Query.Params.Count, 'Param.Count');
-      SL.Text := Str2;
+
+      ParamByName('P_NAME').AsString := GetDBTestString(Str3, FConnection.DbcConnection.GetConSettings);
+      SL.Text := GetDBTestString(Str2, FConnection.DbcConnection.GetConSettings);
 
       StrStream1 := TMemoryStream.Create;
       SL.SaveToStream(StrStream1);

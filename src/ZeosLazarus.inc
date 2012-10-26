@@ -94,9 +94,12 @@
     {$UNDEF WITH_FPC_FTTIME_BUG}
     {$UNDEF WITH_FPC_BOF_BUG}
     {$UNDEF WITH_FPC_MODIFIED_BUG}
-    {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF
-  {$IFEND}
+    {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF Hint: Works not properly with FPC2.7.1(20121018)
+    	{$IFDEF WITH_RAWBYTESTRING}
+	  {$DEFINE WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+	{$ENDIF}
 
+  {$IFEND}
 
   // todo
   //   VIRTUALSETFIELDDATA: in nativeformat versions of SETFIELDDATA, inherited wasn't called.
