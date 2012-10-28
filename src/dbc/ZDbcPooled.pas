@@ -225,14 +225,14 @@ begin
 
   while True do
   begin
-  FCriticalSection.Enter;
-  try
+    FCriticalSection.Enter;
+    try
       // Try to get an existing connection
       I := 0;
       while I < FSlotsInUse.Size do
       begin
         if (FConnections[I] <> nil) and (not FSlotsInUse[I]) then
-    begin
+        begin
           try
             // Test for dead connections
             FConnections[I].Rollback; // PingServer didn´t work (tested with FB)

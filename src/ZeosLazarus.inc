@@ -71,9 +71,7 @@
       {$DEFINE FPC2_6UP}
     {$IFEND}
 
-    {.$IFNDEF MSWINDOWS}
-      {.$DEFINE WITH_LCONVENCODING} //Only available for Lazarus to activate the LConv uncomment this define
-    {.$ENDIF}
+    {.$DEFINE WITH_LCONVENCODING} //Only available for Lazarus to activate the LConv uncomment this define
     {$DEFINE LAZARUSUTF8HACK} // Places that fixed for the Lazarus convention that all strings are UTF8  are marked with this
                               // ifdef. But probably most of them are adhoc hacks, and need revisiting in time.
     {$DEFINE WITH_FPC_FTTIME_BUG} //http://zeos.firmos.at/viewtopic.php?t=3534&postdays=0&postorder=asc&start=0
@@ -109,4 +107,14 @@
   //                             ifdef. But probably most of them are adhoc hacks, and need constant reevaluation.
   //   OLDFPC      : IFDEF FPC's so old that I can't remember which version are put under IFDEF OLDFPC. In time these
   //                   blocks can be killed.
-  
+
+{$IF defined(WITH_LCONVENCODING) and defined(MSWINDOWS)}
+  {$UNDEF WITH_LCONVENCODING}
+{$IFEND}
+
+//{$IFDEF WITH_LIBICONV}
+//  {$IF defined(WITH_LCONVENCODING) and defined(MSWINDOWS)}
+//    {$UNDEF WITH_LIBICONV}
+//  {$IFEND}
+//{$ENDIF}
+

@@ -63,9 +63,9 @@ uses
     Comobj,
   {$ENDIF}
 {$ENDIF}
-{$IF defined(WITH_LCONVENCODING) and not defined(MSWINDOWS)}
+{$IFDEF WITH_LCONVENCODING}
   LConvEncoding,
-{$IFEND}
+{$ENDIF}
   Types, Classes, SysUtils, ZClasses, ZDbcIntfs, ZTokenizer, ZCompatibility,
   ZGenericSqlToken, ZGenericSqlAnalyser, ZPlainDriver, ZURL, ZCollections,
   ZVariant;
@@ -614,10 +614,10 @@ procedure TZAbstractConnection.CheckCharEncoding(const CharSet: String;
 begin
   ConSettings.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(CharSet, DoArrange);
   FClientCodePage := ConSettings.ClientCodePage^.Name; //resets the developer choosen ClientCodePage
-  {$IF defined(WITH_LCONVENCODING) and not defined(MSWINDOWS)}
+  {$IFDEF WITH_LCONVENCODING}
   SetConvertFunctions(ConSettings.OS_CP, ConSettings.ClientCodePage.CP,
     ConSettings.PlainConvertFunc, ConSettings.DbcConvertFunc);
-  {$IFEND}
+  {$ENDIF}
 end;
 
 
