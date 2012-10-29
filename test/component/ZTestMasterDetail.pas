@@ -334,8 +334,6 @@ end;
 procedure TZTestMasterDetailCase.TestClientDatasetWithForeignKey_ApplyUpdates;
 var
   SQLMonitor: TZSQLMonitor;
-  I: Integer;
-
   procedure SetTheData(Index: Integer);
   begin
     MasterQuery.Append;
