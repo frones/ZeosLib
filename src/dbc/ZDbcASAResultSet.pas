@@ -82,7 +82,7 @@ type
     procedure Open; override;
     procedure PrepareUpdateSQLData; virtual;
     function GetFieldValue(ColumnIndex: Integer): Variant;
-    function InternalGetString(ColumnIndex: Integer): AnsiString; override;
+    function InternalGetString(ColumnIndex: Integer): ZAnsiString; override;
   public
     constructor Create(Statement: IZStatement; SQL: string;
       var StmtNum: SmallInt; CursorName: AnsiString;
@@ -201,7 +201,7 @@ constructor TZASAResultSet.Create(Statement: IZStatement; SQL: string;
       SqlData: IZASASQLDA; ParamsSqlData: IZASASQLDA;
       CachedBlob: boolean);
 begin
-  inherited Create( Statement, SQL, nil,Statement.GetConnection.GetClientCodePageInformations);
+  inherited Create( Statement, SQL, nil,Statement.GetConnection.GetConSettings);
 
   FFetchStat := 0;
   FSqlData := SqlData;
@@ -280,6 +280,11 @@ begin
   Blob := TZASABlob.Create( Self, ColumnIndex - 1);
   if FCachedBlob then
     Blob.ReadBlob;
+  {$IFNDEF DELPHI12_UP}
+  if ConSettings.AutoEncode and ( GetMetadata.GetColumnType(ColumnIndex) = stAsciiStream ) and
+      ( ConSettings.OS_CP <> ConSettings.ClientCodePage.CP ) then
+    Blob.SetString(AnsiToStringEx(Blob.GetString, ConSettings.ClientCodePage.CP, ConSettings.OS_CP));
+  {$ENDIF}
   Result := Blob;
 end;
 
@@ -474,7 +479,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZASAResultSet.InternalGetString(ColumnIndex: Integer): Ansistring;
+function TZASAResultSet.InternalGetString(ColumnIndex: Integer): ZAnsistring;
 begin
   CheckClosed;
   CheckColumnConvertion( ColumnIndex, stString);
@@ -685,7 +690,7 @@ begin
 
       case FieldSqlType of
         stString,
-        stUnicodeString: Precision := GetFieldSize(FieldSqlType, GetFieldLength(I)-4, ClientCodePage.CharWidth, True);
+        stUnicodeString: Precision := GetFieldSize(FieldSqlType, GetFieldLength(I)-4, ConSettings.ClientCodePage.CharWidth, True);
       end;
 
       ReadOnly := False;
@@ -746,8 +751,7 @@ begin
   if not Assigned( FUpdateSQLData) then
   begin
     FUpdateSQLData := TZASASQLDA.Create( FASAConnection.GetPlainDriver,
-      FASAConnection.GetDBHandle, FCursorName, ClientCodePage^.Encoding,
-      FASAConnection.UTF8StringAsWideField,FSQLData.GetFieldCount);
+      FASAConnection.GetDBHandle, FCursorName, ConSettings, FSQLData.GetFieldCount);
   end
   else if FUpdateSQLData.GetFieldCount = 0 then
     FUpdateSQLData.AllocateSQLDA( FSQLData.GetFieldCount);
@@ -822,7 +826,7 @@ end;
 procedure TZASAResultSet.UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString);
 begin
   PrepareUpdateSQLData;
-  FUpdateSqlData.UpdatePChar(ColumnIndex, PChar(ZStringW(Value)));
+  FUpdateSqlData.UpdatePChar(ColumnIndex, PChar(ZStringFromUnicode(Value)));
 end;
 
 procedure TZASAResultSet.UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray);

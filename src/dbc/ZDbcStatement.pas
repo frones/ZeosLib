@@ -92,7 +92,6 @@ type
     FaSQL: ZAnsiString;
     procedure SetLastResultSet(ResultSet: IZResultSet); virtual;
   protected
-    LogSQL: String;
     procedure SetASQL(const Value: ZAnsiString); virtual;
     procedure SetWSQL(const Value: ZWideString); virtual;
     class function GetNextStatementId : integer;
@@ -124,8 +123,7 @@ type
     property SSQL: String read {$IFDEF DELPHI12_UP}FWSQL{$ELSE}FaSQL{$ENDIF} write {$IFDEF DELPHI12_UP}SetWSQL{$ELSE}SetASQL{$ENDIF};
     property WSQL: ZWideString read FWSQL write SetWSQL;
     property ASQL: ZAnsiString read FaSQL write SetASQL;
-    {EgonHugeist LogSQL Should be readonly and result of setting WSQL or ASQL!!!}
-    //property LogSQL: String read {$IFDEF DELPHI12_UP}FWSQL{$ELSE}FaSQL{$ENDIF};
+    property LogSQL: String read {$IFDEF DELPHI12_UP}FWSQL{$ELSE}FaSQL{$ENDIF};
     property ChunkSize: Integer read FChunkSize;
   public
     constructor Create(Connection: IZConnection; Info: TStrings);
@@ -180,7 +178,7 @@ type
 
     function GetWarnings: EZSQLWarning; virtual;
     procedure ClearWarnings; virtual;
-    function GetPrepreparedSQL(const SQL: String): ZAnsiString; virtual;
+    function GetEncodedSQL(const SQL: String): ZAnsiString; virtual;
   end;
 
   {** Implements Abstract Prepared SQL Statement. }
@@ -356,19 +354,23 @@ type
     property LastStatement: IZStatement read FLastStatement write SetLastStatement;
 
     function CreateExecStatement: IZStatement; virtual; abstract;
-    function PrepareSQLParam(ParamIndex: Integer): string; virtual; abstract;
+    function PrepareSQLParam(ParamIndex: Integer): string; virtual;
+    function PrepareAnsiSQLParam(ParamIndex: Integer): ZAnsiString; virtual;
     function GetExecStatement: IZStatement;
     function TokenizeSQLQuery: TStrings;
-    function PrepareSQLQuery: string; virtual;
-
+    function PrepareSQLQuery: String; virtual;
+    function PrepareAnsiSQLQuery: ZAnsiString; virtual;
   public
     destructor Destroy; override;
 
     procedure Close; override;
 
-    function ExecuteQuery(const SQL: string): IZResultSet; override;
-    function ExecuteUpdate(const SQL: string): Integer; override;
-    function Execute(const SQL: string): Boolean; override;
+    function ExecuteQuery(const SQL: ZWideString): IZResultSet; override;
+    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: ZWideString): Integer; override;
+    function ExecuteUpdate(const SQL: ZAnsiString): Integer; override;
+    function Execute(const SQL: ZWideString): Boolean; override;
+    function Execute(const SQL: ZAnsiString): Boolean; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -396,7 +398,8 @@ var
 constructor TZAbstractStatement.Create(Connection: IZConnection; Info: TStrings);
 begin
   { Sets the default properties. }
-  Self.ClientCodePage := Connection.GetClientCodePageInformations;
+  inherited Create;
+  ConSettings := Connection.GetConSettings;
   FMaxFieldSize := 0;
   FMaxRows := 0;
   FEscapeProcessing := False;
@@ -444,15 +447,15 @@ procedure TZAbstractStatement.SetWSQL(const Value: ZWideString);
 begin
   if WSQL <> Value then
   begin
-    if Connection.PreprepareSQL then
+    if Connection.AutoEncodeStrings then
     begin
       {$IFDEF DELPHI12_UP}
-      FaSQL := Self.GetPrepreparedSQL(Value);
+      FaSQL := GetEncodedSQL(Value);
       {$ELSE}
       if Connection.GetEncoding = ceUTF8 then
-        FaSQL := GetPrepreparedSQL(UTF8Encode(Value))
+        FaSQL := GetEncodedSQL(UTF8Encode(Value))
       else
-        FaSQL := GetPrepreparedSQL(AnsiString(Value))
+        FaSQL := GetEncodedSQL(AnsiString(Value))
       {$ENDIF}
     end
     else
@@ -462,7 +465,6 @@ begin
         FaSQL := AnsiString(Value);
     FWSQL := Value;
   end;
-  {$IFDEF DELPHI12_UP} LogSQL := Value; {$ENDIF}
 end;
 
 procedure TZAbstractStatement.SetASQL(const Value: ZAnsiString);
@@ -470,8 +472,8 @@ begin
   if ASQL <> Value then
   begin
     {$IFNDEF DELPHI12_UP}
-    if Connection.PreprepareSQL then
-      FASQL := GetPrepreparedSQL(Value)
+    if Connection.AutoEncodeStrings then
+      FASQL := GetEncodedSQL(Value)
     else
     {$ENDIF}
       FASQL := Value;
@@ -480,7 +482,6 @@ begin
     else
       FWSQL := ZWideString(FASQL);
   end;
-  {$IFNDEF DELPHI12_UP} LogSQL := Value; {$ENDIF}
 end;
 
 {**
@@ -709,12 +710,12 @@ procedure TZAbstractStatement.ClearWarnings;
 begin
 end;
 
-function TZAbstractStatement.GetPrepreparedSQL(const SQL: String): ZAnsiString;
+function TZAbstractStatement.GetEncodedSQL(const SQL: String): ZAnsiString;
 var
   SQLTokens: TZTokenDynArray;
   i: Integer;
 begin
-  if GetConnection.PreprepareSQL then
+  if GetConnection.AutoEncodeStrings then
   begin
     SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeEscapeBufferToList(SQL); //Disassembles the Query
     for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
@@ -722,7 +723,7 @@ begin
       case (SQLTokens[i].TokenType) of
         ttEscape:
           Result := Result + {$IFDEF DELPHI12_UP}ZPlainString{$ENDIF}(SQLTokens[i].Value);
-        ttQuoted, {: Result := GetConnection.EscapeString(ZPlainString(SQLTokens[i].Value));}
+        ttQuoted,
         ttWord, ttQuotedIdentifier, ttKeyword:
           Result := Result + ZPlainString(SQLTokens[i].Value);
         else
@@ -2398,6 +2399,16 @@ begin
   FLastStatement := LastStatement;
 end;
 
+function TZEmulatedPreparedStatement.PrepareSQLParam(ParamIndex: Integer): string;
+begin
+  Result := '';
+end;
+
+function TZEmulatedPreparedStatement.PrepareAnsiSQLParam(ParamIndex: Integer): ZAnsiString;
+begin
+  Result := '';
+end;
+
 {**
   Creates a temporary statement which executes queries.
   @param Info a statement parameters.
@@ -2468,7 +2479,7 @@ end;
   Prepares an SQL statement and inserts all data values.
   @return a prepared SQL statement.
 }
-function TZEmulatedPreparedStatement.PrepareSQLQuery: string;
+function TZEmulatedPreparedStatement.PrepareSQLQuery: String;
 var
   I: Integer;
   ParamIndex: Integer;
@@ -2486,8 +2497,38 @@ begin
       Inc(ParamIndex);
     end
     else
-      Result := Result + Tokens[I];
+      Result := Result + (Tokens[I]);
   end;
+end;
+
+{**
+  Prepares an SQL statement and inserts all data values.
+  @return a prepared SQL statement.
+}
+function TZEmulatedPreparedStatement.PrepareAnsiSQLQuery: ZAnsiString;
+var
+  I: Integer;
+  ParamIndex: Integer;
+  Tokens: TStrings;
+begin
+  ParamIndex := 0;
+  Result := '';
+  Tokens := TokenizeSQLQuery;
+
+  for I := 0 to Tokens.Count - 1 do
+  begin
+    if Tokens[I] = '?' then
+    begin
+      Result := Result + PrepareAnsiSQLParam(ParamIndex);
+      Inc(ParamIndex);
+    end
+    else
+      Result := Result + ZPlainString(Tokens[I]);
+  end;
+  {$IFNDEF DELPHI12_UP}
+  if GetConnection.AutoEncodeStrings then
+     Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
+  {$ENDIF}
 end;
 
 {**
@@ -2523,7 +2564,37 @@ end;
   @return <code>true</code> if the next result is a <code>ResultSet</code> object;
   <code>false</code> if it is an update count or there are no more results
 }
-function TZEmulatedPreparedStatement.Execute(const SQL: string): Boolean;
+function TZEmulatedPreparedStatement.Execute(const SQL: ZWideString): Boolean;
+begin
+  LastStatement := GetExecStatement;
+  Result := LastStatement.Execute(SQL);
+  if Result then
+    LastResultSet := LastStatement.GetResultSet
+  else
+    LastUpdateCount := LastStatement.GetUpdateCount;
+end;
+
+{**
+  Executes an SQL statement that may return multiple results.
+  Under some (uncommon) situations a single SQL statement may return
+  multiple result sets and/or update counts.  Normally you can ignore
+  this unless you are (1) executing a stored procedure that you know may
+  return multiple results or (2) you are dynamically executing an
+  unknown SQL string.  The  methods <code>execute</code>,
+  <code>getMoreResults</code>, <code>getResultSet</code>,
+  and <code>getUpdateCount</code> let you navigate through multiple results.
+
+  The <code>execute</code> method executes an SQL statement and indicates the
+  form of the first result.  You can then use the methods
+  <code>getResultSet</code> or <code>getUpdateCount</code>
+  to retrieve the result, and <code>getMoreResults</code> to
+  move to any subsequent result(s).
+
+  @param sql any SQL statement
+  @return <code>true</code> if the next result is a <code>ResultSet</code> object;
+  <code>false</code> if it is an update count or there are no more results
+}
+function TZEmulatedPreparedStatement.Execute(const SQL: ZAnsiString): Boolean;
 begin
   LastStatement := GetExecStatement;
   Result := LastStatement.Execute(SQL);
@@ -2539,7 +2610,18 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZEmulatedPreparedStatement.ExecuteQuery(const SQL: string): IZResultSet;
+function TZEmulatedPreparedStatement.ExecuteQuery(const SQL: ZWideString): IZResultSet;
+begin
+  Result := GetExecStatement.ExecuteQuery(SQL);
+end;
+
+{**
+  Executes an SQL statement that returns a single <code>ResultSet</code> object.
+  @param sql typically this is a static SQL <code>SELECT</code> statement
+  @return a <code>ResultSet</code> object that contains the data produced by the
+    given query; never <code>null</code>
+}
+function TZEmulatedPreparedStatement.ExecuteQuery(const SQL: ZAnsiString): IZResultSet;
 begin
   Result := GetExecStatement.ExecuteQuery(SQL);
 end;
@@ -2555,7 +2637,24 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZEmulatedPreparedStatement.ExecuteUpdate(const SQL: string): Integer;
+function TZEmulatedPreparedStatement.ExecuteUpdate(const SQL: ZWideString): Integer;
+begin
+  Result := GetExecStatement.ExecuteUpdate(SQL);
+  LastUpdateCount := Result;
+end;
+
+{**
+  Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
+  <code>DELETE</code> statement. In addition,
+  SQL statements that return nothing, such as SQL DDL statements,
+  can be executed.
+
+  @param sql an SQL <code>INSERT</code>, <code>UPDATE</code> or
+    <code>DELETE</code> statement or an SQL statement that returns nothing
+  @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
+    or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
+}
+function TZEmulatedPreparedStatement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
 begin
   Result := GetExecStatement.ExecuteUpdate(SQL);
   LastUpdateCount := Result;

@@ -350,7 +350,7 @@ begin
         ttInteger:
           begin
             TokenType := ttConstant;
-            TokenValue:= EncodeInteger(StrToInt(Tokens[TokenIndex]));
+            TokenValue:= EncodeInteger(StrToInt64(Tokens[TokenIndex]));
           end;
         ttFloat:
           begin

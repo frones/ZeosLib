@@ -77,7 +77,7 @@ type
   protected
     procedure Open; override;
     function GetFieldValue(ColumnIndex: Integer): Variant;
-    function InternalGetString(ColumnIndex: Integer): AnsiString; override;
+    function InternalGetString(ColumnIndex: Integer): ZAnsiString; override;
   public
     constructor Create(Statement: IZStatement; SQL: string;
       var StatementHandle: TISC_STMT_HANDLE; CursorName: AnsiString;
@@ -178,7 +178,7 @@ constructor TZInterbase6ResultSet.Create(Statement: IZStatement; SQL: string;
   SqlData: IZResultSQLDA; ParamsSqlData: IZParamsSQLDA; CachedBlob: boolean);
 begin
   inherited Create(Statement, SQL, nil,
-    Statement.GetConnection.GetClientCodePageInformations);
+    Statement.GetConnection.GetConSettings);
   
   FFetchStat := 0;
   FSqlData := SqlData;
@@ -266,6 +266,11 @@ begin
         ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle,
           BlobId, Size, Buffer);
       Result := TZAbstractBlob.CreateWithData(Buffer, Size);
+      {$IFNDEF DELPHI12_UP}
+      if ConSettings.AutoEncode and ( GetMetadata.GetColumnType(ColumnIndex) = stAsciiStream ) and
+          ( ConSettings.OS_CP <> ConSettings.ClientCodePage.CP ) then
+        Result.SetString(AnsiToStringEx(Result.GetString, ConSettings.ClientCodePage.CP, ConSettings.OS_CP));
+      {$ENDIF}
     finally
       FreeMem(Buffer, Size);
     end;
@@ -458,7 +463,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZInterbase6ResultSet.InternalGetString(ColumnIndex: Integer): AnsiString;
+function TZInterbase6ResultSet.InternalGetString(ColumnIndex: Integer): ZAnsiString;
 begin
   CheckClosed;
 {$IFNDEF DISABLE_CHECKING}
@@ -639,8 +644,8 @@ begin
         end
         else
         begin
-          ColumnDisplaySize := MaxLenghtBytes div ClientCodePage^.CharWidth;
-          Precision := GetFieldSize(ColumnType, MaxLenghtBytes, ClientCodePage^.CharWidth, True);
+          ColumnDisplaySize := MaxLenghtBytes div ConSettings.ClientCodePage^.CharWidth;
+          Precision := GetFieldSize(ColumnType, MaxLenghtBytes, ConSettings.ClientCodePage^.CharWidth, True);
         end;
       end;
 

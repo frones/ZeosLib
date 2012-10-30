@@ -110,9 +110,9 @@ type
       override;
   public
     constructor CreateWithStatement(const SQL: string; Statement: IZStatement;
-      ClientCodePage: PZCodePage);
+      ConSettings: PZConSettings);
     constructor CreateWithColumns(ColumnsInfo: TObjectList; const SQL: string;
-      ClientCodePage: PZCodePage);
+      ConSettings: PZConSettings);
     destructor Destroy; override;
   end;
 
@@ -1832,7 +1832,7 @@ begin
     end;
 
     Result := TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '',
-      IZConnection(FConnection).GetClientCodePageInformations);
+      IZConnection(FConnection).GetConSettings);
     with Result do
     begin
       SetType(rtScrollInsensitive);
@@ -1992,7 +1992,7 @@ begin
     ResultSet.BeforeFirst;
     Result := CopyToVirtualResultSet(ResultSet,
       TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '',
-        IZConnection(Self.FConnection).GetClientCodePageInformations));
+        IZConnection(Self.FConnection).GetConSettings));
     ResultSet.BeforeFirst;
   finally
     ColumnsInfo.Free;
@@ -4459,9 +4459,9 @@ end;
   @param SQL an SQL query string.
 }
 constructor TZVirtualResultSet.CreateWithStatement(const SQL: string;
-   Statement: IZStatement; ClientCodePage: PZCodePage);
+   Statement: IZStatement; ConSettings: PZConSettings);
 begin
-  inherited CreateWithStatement(SQL, Statement, ClientCodePage);
+  inherited CreateWithStatement(SQL, Statement, ConSettings);
 end;
 
 {**
@@ -4470,9 +4470,9 @@ end;
   @param SQL an SQL query string.
 }
 constructor TZVirtualResultSet.CreateWithColumns(ColumnsInfo: TObjectList;
-  const SQL: string; ClientCodePage: PZCodePage);
+  const SQL: string; ConSettings: PZConSettings);
 begin
-  inherited CreateWithColumns(ColumnsInfo, SQL, ClientCodePage);
+  inherited CreateWithColumns(ColumnsInfo, SQL, ConSettings);
 end;
 
 {**

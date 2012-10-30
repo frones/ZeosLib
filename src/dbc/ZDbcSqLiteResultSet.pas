@@ -83,7 +83,7 @@ type
   protected
     procedure Open; override;
     procedure FreeHandle;
-    function InternalGetString(ColumnIndex: Integer): AnsiString; override;
+    function InternalGetString(ColumnIndex: Integer): ZAnsiString; override;
   public
     constructor Create(PlainDriver: IZSQLitePlainDriver; Statement: IZStatement;
       SQL: string; Handle: Psqlite; StmtHandle: Psqlite_vm;
@@ -186,7 +186,7 @@ constructor TZSQLiteResultSet.Create(PlainDriver: IZSQLitePlainDriver;
 begin
   inherited Create(Statement, SQL, TZSQLiteResultSetMetadata.Create(
     Statement.GetConnection.GetMetadata, SQL, Self),
-    Statement.GetConnection.GetClientCodePageInformations);
+    Statement.GetConnection.GetConSettings);
 
   FHandle := Handle;
   FStmtHandle := StmtHandle;
@@ -251,14 +251,14 @@ begin
       if TypeName^ <> nil then
       begin
         ColumnType := ConvertSQLiteTypeToSQLType(String(TypeName^),
-          FieldPrecision, FieldDecimals, ClientCodePage^.Encoding,
+          FieldPrecision, FieldDecimals, ConSettings.ClientCodePage^.Encoding,
           Statement.GetConnection.UTF8StringAsWideField);
         Inc(TypeName);
       end
       else
       begin
         ColumnType := ConvertSQLiteTypeToSQLType(FPlainDriver.GetColumnDataType(FStmtHandle,I-1),
-          FieldPrecision, FieldDecimals, ClientCodePage^.Encoding,
+          FieldPrecision, FieldDecimals, ConSettings.ClientCodePage^.Encoding,
           Statement.GetConnection.UTF8StringAsWideField);
       end;
       if ColumnType in [stString, stUnicodeString] then
@@ -369,7 +369,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZSQLiteResultSet.InternalGetString(ColumnIndex: Integer): AnsiString;
+function TZSQLiteResultSet.InternalGetString(ColumnIndex: Integer): ZAnsiString;
 var
   Temp: PPAnsiChar;
 begin
@@ -731,8 +731,13 @@ begin
   try
     if not LastWasNull then
     begin
-     if TZAbstractResultSetMetadata(Metadata).GetColumnType(ColumnIndex) = stAsciiStream then
-        Stream := TStringStream.Create(InternalGetString(ColumnIndex))
+     if TZAbstractResultSetMetadata(Metadata).GetColumnType(ColumnIndex) in [stAsciiStream, stUnicodeStream] then
+        {$IFNDEF DELPHI12_UP}
+        if ConSettings.AutoEncode and (ConSettings.OS_CP <> ConSettings.ClientCodePage.CP) then
+          Stream := TStringStream.Create(AnsiToStringEx(InternalGetString(ColumnIndex), ConSettings.ClientCodePage.CP, ConSettings.OS_CP))
+        else
+        {$ENDIF}
+          Stream := TStringStream.Create(InternalGetString(ColumnIndex))
       else
         {introduced the old Zeos6 blob-encoding cause of compatibility reasons}
         if (Statement.GetConnection as IZSQLiteConnection).UseOldBlobEncoding then

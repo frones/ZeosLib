@@ -76,7 +76,8 @@ type
 
 implementation
 
-uses ZCompatibility;
+uses {$IFDEF WITH_WIDESTRUTILS}WideStrUtils, {$ENDIF}
+  {$IFDEF WITH_WIDEMEMO}Types, {$ENDIF}ZCompatibility;
 
 { TZBlobStream }
 
@@ -116,6 +117,7 @@ destructor TZBlobStream.Destroy;
 var
   WS: ZWideString;
   Ansi: ZAnsiString;
+  Bytes: TByteDynArray;
 {$ENDIF}
 begin
   if Mode in [bmWrite, bmReadWrite] then
@@ -125,10 +127,21 @@ begin
     {$IFDEF WITH_WIDEMEMO}
       if FField.DataType = ftWideMemo then
       begin
-        SetLength(Ws, Self.Size div 2);
-        System.Move(PWideChar(Memory)^, PWideChar(Ws)^, Size);
-        Clear;
-        Ansi := UTF8Encode(WS);
+        SetLength(Bytes, Size +2);
+        System.move(Memory^, Pointer(Bytes)^, Size);
+        if (({$IFDEF DELPHI14_UP}StrLen{$ELSE}Length{$ENDIF}(PWideChar(Bytes)) *2) = Size) and
+           (StrLen(PAnsiChar(Bytes)) <> Size) then
+        begin
+          SetLength(Ws, Self.Size div 2);
+          System.Move(PWideChar(Bytes)^, PWideChar(Ws)^, Size);
+          Ansi := UTF8Encode(WS);
+        end
+        else
+          if DetectUTF8Encoding(PAnsiChar(Memory)) = etAnsi then
+            Ansi := AnsiToUTF8(String(PAnsiChar(Bytes)))
+          else
+            Ansi := PAnsiChar(Memory);
+          Clear;
         Size := Length(Ansi);
         System.Move(PAnsichar(Ansi)^, PAnsiChar(Memory)^, Size);
       end

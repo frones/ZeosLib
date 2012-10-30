@@ -319,7 +319,7 @@ begin
   {EgonHugeist: Arrange Client-CodePage/CharacterSet first
     Now we know if UTFEncoding is neccessary or not}
   sMy_client_Char_Set := String(GetPlainDriver.GetConnectionCharacterSet(FHandle));
-  ClientCodePage := GetPlainDriver.ValidateCharEncoding(sMy_client_Char_Set); //This sets the internal use of Encodings..
+  ConSettings.ClientCodePage := GetPlainDriver.ValidateCharEncoding(sMy_client_Char_Set); //This sets the internal use of Encodings..
   {EgonHugeist:
     Now we know in which kind of CharacterSet we have to send the next Connection-Properties
     before we can change to the CharacterSet we want to have here..
@@ -479,7 +479,7 @@ end;
 }
 function TZMySQLConnection.EscapeString(Value: ZAnsiString): ZAnsiString;
 begin
-  Result := Self.PlainDriver.EscapeString(Self.FHandle, Value, GetEncoding);
+  Result := PlainDriver.EscapeString(Self.FHandle,  Value, ConSettings);
 end;
 
 {**
@@ -794,13 +794,13 @@ end;
 }
 function TZMySQLConnection.GetEscapeString(const Value: String): String;
 begin
-  Result := inherited GetEscapeString(GetPlainDriver.EscapeString(FHandle, Value, GetEncoding));
+  Result := inherited GetEscapeString(GetPlainDriver.EscapeString(FHandle, Value, ConSettings));
 end;
 
 {$IFDEF DELPHI12_UP}
 function TZMySQLConnection.GetEscapeString(const Value: ZAnsiString): String;
 begin
-  Result := inherited GetEscapeString(GetPlainDriver.EscapeString(FHandle, Value, GetEncoding));
+  Result := inherited GetEscapeString(GetPlainDriver.EscapeString(FHandle, Value, ConSettings));
 end;
 {$ENDIF}
 

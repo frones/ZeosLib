@@ -210,7 +210,7 @@ procedure FreeOracleStatementHandles(PlainDriver: IZOraclePlainDriver;
 }
 procedure PrepareOracleStatement(PlainDriver: IZOraclePlainDriver;
   SQL: string; Handle: POCIStmt; ErrorHandle: POCIError; PrefetchCount: ub4;
-  const Encoding: TZCharEncoding; const PreprepareSQL: Boolean);
+  ConSettings: PZConSettings);
 
 {**
   Executes an Oracle statement.
@@ -437,7 +437,7 @@ begin
             case Values[i].VType of
               vtString:
                 StrLCopy(PAnsiChar(CurrentVar.Data),
-                  PAnsiChar(PlainDriver.ZPlainString(DefVarManager.GetAsString(Values[I]), Connection.GetEncoding)), 1024);
+                  PAnsiChar(PlainDriver.ZPlainString(DefVarManager.GetAsString(Values[I]), Connection.GetConSettings)), 1024);
               vtUnicodeString:
                 if Connection.GetEncoding = ceUTF8 then
                   StrLCopy(PAnsiChar(CurrentVar.Data),
@@ -665,7 +665,7 @@ begin
     or (Statement.GetResultSetType <> rtForwardOnly) then
   begin
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil,
-      Statement.GetConnection.GetClientCodePageInformations);
+      Statement.GetConnection.GetConSettings);
     CachedResultSet.SetConcurrency(rcUpdatable);
     CachedResultSet.SetResolver(TZOracleCachedResolver.Create(
       Statement, NativeResultSet.GetMetadata));
@@ -691,7 +691,7 @@ begin
     SQL, StmtHandle, ErrorHandle, OutVars, FieldNames, ParamTypes, FunctionResultOffsets);
   NativeResultSet.SetConcurrency(rcReadOnly);
   CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil,
-    Statement.GetConnection.GetClientCodePageInformations);
+    Statement.GetConnection.GetConSettings);
   CachedResultSet.SetConcurrency(rcReadOnly);
   CachedResultSet.SetResolver(TZOracleCachedResolver.Create(
     Statement, NativeResultSet.GetMetadata));
@@ -751,14 +751,14 @@ end;
 }
 procedure PrepareOracleStatement(PlainDriver: IZOraclePlainDriver;
   SQL: string; Handle: POCIStmt; ErrorHandle: POCIError; PrefetchCount: ub4;
-  const Encoding: TZCharEncoding; const PreprepareSQL: Boolean);
+  ConSettings: PZConSettings);
 var
   Status: Integer;
   AnsiSQL: ZAnsiString;
   LogSQL: String;
 begin
   LogSQL := ''; //Makes the FPC compiler happy
-  AnsiSQL := PlainDriver.GetPrepreparedSQL(nil, SQL, Encoding, LogSQL, PreprepareSQL);
+  AnsiSQL := PlainDriver.GetPrepreparedSQL(nil, SQL, ConSettings, LogSQL);
   PlainDriver.AttrSet(Handle, OCI_HTYPE_STMT, @PrefetchCount, SizeOf(ub4),
     OCI_ATTR_PREFETCH_ROWS, ErrorHandle);
   Status := PlainDriver.StmtPrepare(Handle, ErrorHandle, PAnsiChar(AnsiSQL),

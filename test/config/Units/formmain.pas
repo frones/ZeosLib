@@ -97,7 +97,7 @@ const
   DATABASE_DROP_SCRIPTS_KEY   = 'drop.scripts';
   DATABASE_PROPERTIES_KEY     = 'properties';
   DATABASE_LIBRARY_KEY        = 'LibLocation';
-  DATABASE_PREPREPARESQL_KEY  = 'PreprepareSQL';
+  DATABASE_AUTOENCODE_KEY     = 'AutoEncodeStrings';
   DATABASE_CREATE_KEY         = 'createNewDatabase';
   DATABASE_CODEPAGE_KEY       = 'codepage';
   DATABASE_POOLED_KEY         = 'pooled';
@@ -361,7 +361,7 @@ type
     cbAnsiCP: TComboBox;
     cbCreateDB: TCheckBox;
     cbgTests: TCheckGroup;
-    cbPreprepareSQL: TCheckBox;
+    cbAutoEncode: TCheckBox;
     cbPrintDetails: TCheckBox;
     cbRebuild: TCheckBox;
     cbUnicode: TCheckBox;
@@ -425,7 +425,7 @@ type
     procedure cbCreateDBEditingDone(Sender: TObject);
     procedure cbgTestsItemClick(Sender: TObject; Index: integer);
     procedure cbPooledEditingDone(Sender: TObject);
-    procedure cbPreprepareSQLEditingDone(Sender: TObject);
+    procedure cbAutoEncodeEditingDone(Sender: TObject);
     procedure cbPrintDetailsClick(Sender: TObject);
     procedure cbRebuildEditingDone(Sender: TObject);
     procedure cbUnicodeCPEditingDone(Sender: TObject);
@@ -536,7 +536,7 @@ begin
     FLibLocation := ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), DATABASE_LIBRARY_KEY, '');
     FUnicodeCodePage := ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), 'unicode.charset', '');
     FAnsiCodePage := ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), 'ansi.charset', '');
-    FPreprepareSQL := StrToBoolEx(ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), DATABASE_PREPREPARESQL_KEY, 'Yes'));
+    FPreprepareSQL := StrToBoolEx(ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), DATABASE_AUTOENCODE_KEY, 'Yes'));
     FCreateDatabase := StrToBoolEx(ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), DATABASE_CREATE_KEY, 'No'));
     PutSplitStringEx(SL, ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), DATABASE_PROPERTIES_KEY, ''), ';');
     {Drop common values}
@@ -546,8 +546,8 @@ begin
       SL.Delete(SL.IndexOfName(DATABASE_CODEPAGE_KEY));
     if SL.Values[DATABASE_CREATE_KEY] <> '' then
       SL.Delete(SL.IndexOfName(DATABASE_CREATE_KEY));
-    if SL.Values[DATABASE_PREPREPARESQL_KEY] <> '' then
-      SL.Delete(SL.IndexOfName(DATABASE_PREPREPARESQL_KEY));
+    if SL.Values[DATABASE_AUTOENCODE_KEY] <> '' then
+      SL.Delete(SL.IndexOfName(DATABASE_AUTOENCODE_KEY));
     FProperties := SL.Text;
 
     PutSplitStringEx(SL, ReadProperty(StringReplace(AProtocol, '=', '\', [rfReplaceAll]), 'notes', ''), ';');
@@ -614,11 +614,11 @@ begin
     WriteProperty(Suffix+AProtocol, 'ansi.charset', FAnsiCodePage);
     if FPreprepareSQL then
     begin
-      WriteProperty(Suffix+AProtocol, DATABASE_PREPREPARESQL_KEY, 'Yes');
-      AddPropText(DATABASE_PREPREPARESQL_KEY, 'ON');
+      WriteProperty(Suffix+AProtocol, DATABASE_AUTOENCODE_KEY, 'Yes');
+      AddPropText(DATABASE_AUTOENCODE_KEY, 'ON');
     end
     else
-      WriteProperty(Suffix+AProtocol, DATABASE_PREPREPARESQL_KEY, 'Yes');
+      WriteProperty(Suffix+AProtocol, DATABASE_AUTOENCODE_KEY, 'Yes');
     if FCreateDatabase then
     begin
       WriteProperty(Suffix+AProtocol, DATABASE_CREATE_KEY, 'Yes');
@@ -1154,7 +1154,7 @@ begin
     cbAnsiCP.Text := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).AnsiCodePage;
     cbUnicodeCP.Text := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).UnicodeCodePage;
     cbUnicode.Checked := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Unicode;
-    cbPreprepareSQL.Checked := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).PreprepareSQL;
+    cbAutoEncode.Checked := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).PreprepareSQL;
     cbRebuild.Checked := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Rebuild;
     cbCreateDB.Checked := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).CreateDatabase;
     eDelimiterType.Text := TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).DelimiterType;
@@ -1167,7 +1167,7 @@ begin
     Url := TZURL.Create;
     Url.Protocol :=  TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).Protocol;
     Driver := DriverManager.GetDriver(Url.URL);
-    SDyn := Driver.GetSupportedClientCodePages(Url, False);
+    SDyn := Driver.GetSupportedClientCodePages(Url, cbAutoEncode.Checked, False);
     cbAnsiCP.Items.Clear;
     cbUnicodeCP.Items.Clear;
     for i := 0 to high(SDyn) do
@@ -1364,9 +1364,9 @@ begin
   TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).CreateDatabase := cbCreateDB.Checked;
 end;
 
-procedure TfrmMain.cbPreprepareSQLEditingDone(Sender: TObject);
+procedure TfrmMain.cbAutoEncodeEditingDone(Sender: TObject);
 begin
-  TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).PreprepareSQL := cbPreprepareSQL.Checked;
+  TPlainConfig(lbDrivers.items.Objects[lbDrivers.ItemIndex]).PreprepareSQL := cbAutoEncode.Checked;
 end;
 
 procedure TfrmMain.cbPrintDetailsClick(Sender: TObject);

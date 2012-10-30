@@ -82,8 +82,10 @@ type
   private
     FConnection: IZConnection;
     FConnectionPool: TConnectionPool;
-    FPreprepareSQL: Boolean;
+    FAutoEncodeStrings: Boolean;
+    {$IFDEF WITH_WIDEFIELDS}
     FUTF8StringAsWideField: Boolean;
+    {$ENDIF}
     FUseMetadata: Boolean;
     function GetConnection: IZConnection;
     function GetUTF8StringAsWideField: Boolean;
@@ -93,8 +95,8 @@ type
     procedure CheckCharEncoding(CharSet: String;
       const DoArrange: Boolean = False);
     function GetClientCodePageInformations: PZCodePage; //EgonHugeist
-    function GetPreprepareSQL: Boolean; //EgonHugeist
-    procedure SetPreprepareSQL(const Value: Boolean);
+    function GetAutoEncodeStrings: Boolean; //EgonHugeist
+    procedure SetAutoEncodeStrings(const Value: Boolean);
     function CreateStatement: IZStatement;
     function PrepareStatement(const SQL: string): IZPreparedStatement;
     function PrepareCall(const SQL: string): IZCallableStatement;
@@ -141,6 +143,7 @@ type
     function GetEscapeString(const Value: ZAnsiString): String; overload; virtual;
     {$ENDIF}
     function GetEncoding: TZCharEncoding;
+    function GetConSettings: PZConSettings;
   end;
 
   {$WARNINGS OFF}
@@ -599,10 +602,8 @@ end;
 procedure TZDbcPooledConnection.CheckCharEncoding(CharSet: String;
   const DoArrange: Boolean = False);
 begin
-  Self.ClientCodePage := Self.GetIZPlainDriver.ValidateCharEncoding(CharSet, DoArrange);
-
-  FPreprepareSQL := FPreprepareSQL and (ClientCodePage^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]);
-  FClientCodePage := ClientCodePage^.Name; //resets the developer choosen ClientCodePage
+  Self.GetConSettings.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(CharSet, DoArrange);
+  FClientCodePage := ConSettings.ClientCodePage^.Name; //resets the developer choosen ClientCodePage
 end;
 
 
@@ -611,39 +612,37 @@ end;
     Zeos is now able to preprepare direct insered SQL-Statements.
     Means do the UTF8-preparation if the CharacterSet was choosen.
     So we do not need to do the SQLString + UTF8Encode(Edit1.Test) for example.
-  @result True if coPreprepareSQL was choosen in the TZAbstractConnection
+  @result True if coAutoEncodeStrings was choosen in the TZAbstractConnection
 }
-function TZDbcPooledConnection.GetPreprepareSQL: Boolean;
+function TZDbcPooledConnection.GetAutoEncodeStrings: Boolean;
 begin
-  Result := FPreprepareSQL;
+  Result := FAutoEncodeStrings;
 end;
 
-procedure TZDbcPooledConnection.SetPreprepareSQL(const Value: Boolean);
+procedure TZDbcPooledConnection.SetAutoEncodeStrings(const Value: Boolean);
 begin
-  FPreprepareSQL := Value;
+  FAutoEncodeStrings := Value;
 end;
 
 function TZDbcPooledConnection.GetUTF8StringAsWideField: Boolean;
 begin
-  {$IFDEF LAZARUSUTF8HACK}
-  Result := False;
+  {$IFDEF DELPHI12_UP}
+  Result := True;
   {$ELSE}
-    {$IFDEF DELPHI12_UP}
-    Result := True;
-    {$ELSE}
+    {$IFDEF WITH_WIDEFIELDS}
     Result := FUTF8StringAsWideField;
+    {$ELSE}
+    Result := False;
     {$ENDIF}
   {$ENDIF}
 end;
 
 procedure TZDbcPooledConnection.SetUTF8StringAsWideField(const Value: Boolean);
 begin
-  {$IFDEF LAZARUSUTF8HACK}
-  FUTF8StringAsWideField := False;
+  {$IFDEF DELPHI12_UP}
+  FUTF8StringAsWideField := True;
   {$ELSE}
-    {$IFDEF DELPHI12_UP}
-    FUTF8StringAsWideField := True;
-    {$ELSE}
+    {$IFDEF WITH_WIDEFIELDS}
     FUTF8StringAsWideField := Value;
     {$ENDIF}
   {$ENDIF}
@@ -676,9 +675,13 @@ end;
 
 function TZDbcPooledConnection.GetEncoding: TZCharEncoding;
 begin
-  Result := ClientCodePage^.Encoding;
+  Result := ConSettings.ClientCodePage^.Encoding;
 end;
 
+function TZDbcPooledConnection.GetConSettings: PZConSettings;
+begin
+  Result := @ConSettings;
+end;
 {**
   Result 100% Compiler-Compatible
   And sets it Result to ClientCodePage by calling the
@@ -689,7 +692,7 @@ end;
 }
 function TZDbcPooledConnection.GetClientCodePageInformations: PZCodePage; //EgonHugeist
 begin
-  Result := ClientCodePage
+  Result := ConSettings.ClientCodePage
 end;
 
 { TZDbcPooledConnectionDriver }

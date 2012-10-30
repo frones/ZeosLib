@@ -80,7 +80,6 @@ type
     property Protocol: string read GetProtocol write SetProtocol;
     property Catalog: string read FCatalog write FCatalog;
     property LibraryLocation: String read GetLibLocation write SetLibLocation;
-    property PreprepareSQL;
   end;
 
 implementation

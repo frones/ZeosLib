@@ -231,7 +231,7 @@ begin
       if ResultSetConcurrency = rcUpdatable then
         LastResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
           TZAdoCachedResolver.Create((Connection as IZAdoConnection).GetAdoConnection,
-          Self, NativeResultSet.GetMetaData), ClientCodePage)
+          Self, NativeResultSet.GetMetaData), ConSettings)
       else LastResultSet := NativeResultSet;
     end;
   LastUpdateCount := RC;

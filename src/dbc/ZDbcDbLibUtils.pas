@@ -57,7 +57,7 @@ interface
 
 {$I ZDbc.inc}
 
-uses Classes, SysUtils, ZVariant, ZDbcIntfs;
+uses Classes, SysUtils, ZVariant, ZDbcIntfs, ZPlainDBLibDriver, ZCompatibility;
 
 {**
   Converts an ODBC native types into ZDBC SQL types.
@@ -109,12 +109,13 @@ function ConvertDBLibNullability(DBLibNullability: Byte): TZColumnNullableType;
   @param ParameterIndex the first parameter is 1, the second is 2, ...
   @return a string representation of the parameter.
 }
-function PrepareSQLParameter(Value: TZVariant; ParamType: TZSQLType): string;
+function PrepareSQLParameter(Value: TZVariant; ParamType: TZSQLType;
+  ConSettings: PZConSettings; PlainDriver: IZDBLibPlainDriver): ZAnsiString;
 
 implementation
 
-uses Types, ZCompatibility, ZSysUtils, ZPlainDbLibConstants, ZPlainDBLibDriver,
- ZDbcUtils;
+uses Types, ZSysUtils, ZPlainDbLibConstants,
+ ZDbcUtils{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
 
 {**
   Converts an ODBC native types into ZDBC SQL types.
@@ -344,7 +345,8 @@ end;
   @param ParameterIndex the first parameter is 1, the second is 2, ...
   @return a string representation of the parameter.
 }
-function PrepareSQLParameter(Value: TZVariant; ParamType: TZSQLType): string;
+function PrepareSQLParameter(Value: TZVariant; ParamType: TZSQLType;
+  ConSettings: PZConSettings; PlainDriver: IZDBLibPlainDriver): ZAnsiString;
 var
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
@@ -362,40 +364,51 @@ begin
         else
           Result := '0';
       stByte, stShort, stInteger, stLong, stFloat, stDouble, stBigDecimal:
-        Result := SoftVarManager.GetAsString(Value);
+        Result := ZAnsiString(SoftVarManager.GetAsString(Value));
       stString:
-        Result := AnsiQuotedStr(SoftVarManager.GetAsString(Value), '''');
+        Result := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr(PlainDriver.ZPlainString(SoftVarManager.GetAsString(Value), ConSettings), '''');
       stUnicodeString:
-        Result := 'N'+QuotedStr(SoftVarManager.GetAsUnicodeString(Value));
+        {$IFDEF DELPHI12_UP}
+        if ConSettings.ClientCodePage.Encoding = ceUTF8 then
+          Result := 'N'+AnsiStrings.AnsiQuotedStr(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)),'''')
+        else
+          Result := AnsiStrings.AnsiQuotedStr(PlainDriver.ZPlainString(SoftVarManager.GetAsUnicodeString(Value), ConSettings),'''');
+        {$ELSE}
+        Result := 'N'+AnsiQuotedStr(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)),'''');
+        {$ENDIF}
       stBytes:
         begin
           TempBytes := StrToBytes(AnsiString(SoftVarManager.GetAsString(Value)));
           if Length(TempBytes) = 0 then
             Result := 'NULL'
           else
-            Result := GetSQLHexString(PAnsiChar(TempBytes), Length(TempBytes), True);
+            Result := GetSQLHexAnsiString(PAnsiChar(TempBytes), Length(TempBytes), True);
         end;
       stDate:
-        Result := '''' + FormatDateTime('yyyy/mm/dd',
-          SoftVarManager.GetAsDateTime(Value)) + '''';
+        Result := ZAnsiString('''' + FormatDateTime('yyyy/mm/dd',
+          SoftVarManager.GetAsDateTime(Value)) + '''');
       stTime:
-        Result := '''' + FormatDateTime('hh":"mm":"ss":"zzz',
-          SoftVarManager.GetAsDateTime(Value)) + '''';
+        Result := ZAnsiString('''' + FormatDateTime('hh":"mm":"ss":"zzz',
+          SoftVarManager.GetAsDateTime(Value)) + '''');
       stTimestamp:
-        Result := '''' + FormatDateTime('yyyy/mm/dd hh":"mm":"ss":"zzz',
-          SoftVarManager.GetAsDateTime(Value)) + '''';
+        Result := ZAnsiString('''' + FormatDateTime('yyyy/mm/dd hh":"mm":"ss":"zzz',
+          SoftVarManager.GetAsDateTime(Value)) + '''');
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
           begin
             if ParamType = stBinaryStream then
-              Result := GetSQLHexString(PAnsiChar(TempBlob.GetBuffer), TempBlob.Length, True)
+              Result := GetSQLHexAnsiString(PAnsiChar(TempBlob.GetBuffer), TempBlob.Length, True)
             else
               if ParamType = stUnicodeStream then
-                Result := 'N'+AnsiQuotedStr(StringReplace(String(TempBlob.GetString), #0, '', [rfReplaceAll]), '''')
+                Result := 'N'+{$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr({$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), '''')
               else
-              Result := AnsiQuotedStr(StringReplace(String(TempBlob.GetString), #0, '', [rfReplaceAll]), '''');
+                {$IFDEF DELPHI12_UP}
+                Result := AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), '''');
+                {$ELSE}
+                Result := AnsiQuotedStr(PlainDriver.ZPlainString(StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), ConSettings), '''');
+                {$ENDIF}
           end
           else
             Result := 'NULL';

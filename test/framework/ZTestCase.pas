@@ -115,6 +115,10 @@ type
     { Additional checking methods. }
     procedure CheckEquals(Array1, Array2: TByteDynArray;
       _Message: string = ''); overload;
+    procedure CheckEquals(Expected, Actual: String; ConSettings: PZConSettings;
+      _Message: string = ''); overload;
+    procedure CheckEquals(OrgStr: String; ActualLobStream: TStream; ConSettings: PZConSettings;
+      const Msg: string = ''); overload;
     procedure CheckEquals(Expected, Actual: TStream;
       const Msg: string = ''); overload;
     procedure CheckEqualsDate(const Expected, Actual: TDateTime;
@@ -363,6 +367,88 @@ begin
   P2 := Addr(Array2);
   if CompareMem(P1, P2, High(Array1)) then
     Fail('Arrays not equal.' +  _Message)
+end;
+
+{**
+   Function compare two strings with depenedent to the ConnectionSettings.
+   If strings not equals raise exception.
+   @param Expected the first stream for compare
+   @param Actual the second stream for compare
+   @param ConSettings the Connection given settings
+}
+procedure TZAbstractTestCase.CheckEquals(Expected, Actual: String; ConSettings: PZConSettings;
+  _Message: string = '');
+begin
+  {$IFDEF DELPHI12_UP}
+  CheckEquals(Expected, Actual, _Message);
+  {$ELSE}
+    if ConSettings.ClientCodePage.Encoding = ceUTF8 then
+      if (ConSettings.CPType = cCP_UTF8) then
+        CheckEquals(UTF8Encode(WideString(Expected)), Actual, _Message)
+      else //cGET_ACP / cCP_UTF16
+        if ConSettings.AutoEncode or ( ConSettings.CPType = cCP_UTF16 ) then
+          CheckEquals(Expected, Actual, _Message)
+        else
+          CheckEquals(UTF8Encode(WideString(Expected)), Actual, _Message)
+    else //ceAnsi
+      if ( ConSettings.CPType = cGET_ACP ) or ( ConSettings.CPType = cCP_UTF16 ) then //ftWideString returns a decoded value
+        CheckEquals(Expected, Actual, _Message)
+      else //cCP_UTF8
+        if ConSettings.AutoEncode then
+          CheckEquals(UTF8Encode(WideString(Expected)), Actual, _Message)
+        else
+          CheckEquals(Expected, Actual, _Message)
+  {$ENDIF}
+end;
+
+{**
+   Function compare a Original-given String with then BlobStream dependend to the ConnectionSettings.
+   If streams not equals raise exception.
+   @param Expected the first stream for compare
+   @param Actual the second stream for compare
+   @param ConSettings the Connection given settings
+}
+procedure TZAbstractTestCase.CheckEquals(OrgStr: String; ActualLobStream: TStream;
+  ConSettings: PZConSettings; const Msg: string = '');
+var
+  WS: WideString;
+  StrStream: TMemoryStream;
+
+  procedure SetAnsiStream(Value: ZAnsiString);
+  begin
+    StrStream.Write(PAnsiChar(Value)^, Length(Value));
+    StrStream.Position := 0;
+  end;
+begin
+  StrStream := TMemoryStream.Create;
+  if ( ConSettings.ClientCodePage.Encoding = ceUTF8 ) then
+    if ConSettings.UTF8AsWideString then
+    begin
+      WS := WideString(OrgStr);
+      StrStream.Write(PWideChar(WS)^, Length(WS)*2);
+      StrStream.Position := 0;
+    end
+    else
+      if ConSettings.AutoEncode then
+        if (ConSettings.CPType = cGET_ACP) or (ConSettings.CPType = cCP_UTF16) then
+          SetAnsiStream(ZAnsiString(OrgStr))
+        else
+          SetAnsiStream(ZAnsiString(UTF8Encode(WideString(OrgStr))))
+      else
+        SetAnsiStream(ZAnsiString(UTF8Encode(WideString(OrgStr))))
+  else //ceAnsi
+    if ConSettings.AutoEncode then
+      if (ConSettings.CPType = cCP_UTF8) then
+        SetAnsiStream(ZAnsiString(UTF8Encode(WideString(OrgStr))))
+      else
+        SetAnsiStream(ZAnsiString(OrgStr))
+    else
+      SetAnsiStream(ZAnsiString(OrgStr));
+  try
+    CheckEquals(StrStream, ActualLobStream, Msg);
+  finally
+    StrStream.Free;
+  end;
 end;
 
 {**

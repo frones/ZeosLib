@@ -1211,7 +1211,7 @@ begin
         vtString:
           Result.VString := Value.VString;
         vtUnicodeString:
-          Result.VString := {$IFNDEF DELPHI12_UP}UTF8Encode{$ENDIF}(Value.VUnicodeString);
+          Result.VString := Value.VUnicodeString; //hint: VarArrayOf(['Test']) returns allways varOleStr which is type WideString don't change that again
         vtDateTime:
           Result.VString := DateTimeToAnsiSQLDate(Value.VDateTime);
           // gto: Not a real threat, as it's converting dates (unicode safe)

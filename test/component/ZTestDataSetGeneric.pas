@@ -1801,15 +1801,13 @@ begin
 end;
 
 procedure TZGenericTestDbcResultSet.TestVeryLargeBlobs;
+const teststring = '123456ייאא';
 var
   Query: TZQuery;
   BinStream,BinStream1,TextStreamS: TMemoryStream;
-  UnicodeStream: TStream;
   s:  ZAnsistring;
   TextLob, BinLob: String;
   TempConnection: TZConnection;
-  WS: WideString;
-  i: Integer;
 begin
   TempConnection := nil;
   BinStream:=nil;
@@ -1864,18 +1862,12 @@ begin
       Params[2].DataType := ftBlob;
       Params[0].AsInteger := TEST_ROW_ID-1;
       TextStreamS := TMemoryStream.Create;
-      if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) then
-      begin
-        s:={$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString(utf8encode('123456ייאא'),6000);
-        I := StrLen(PAnsiChar(s));
-        CheckEquals(StrLen(PAnsiChar(utf8encode('123456ייאא')))*6000, I, 'Length of DupeString Text');
-      end
+      if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
+        not ( (Connection.DbcConnection.GetConSettings.CPType = cGET_ACP) and
+          Connection.DbcConnection.GetConSettings.AutoEncode )  then
+        s:={$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString(utf8encode(teststring),6000)
       else
-      begin
-        s:={$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString('123456ייאא',6000);
-        I := StrLen(PAnsiChar(s));
-        CheckEquals(StrLen(PAnsiChar('123456ייאא'))*6000, I, 'Length of DupeString Text');
-      end;
+        s:={$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString(teststring,6000);
       TextStreamS.Write(s[1],length(s));
       Params[1].LoadFromStream(TextStreamS, ftMemo);
       BinStream := TMemoryStream.Create;
@@ -1900,22 +1892,8 @@ begin
       CheckEquals(TEST_ROW_ID-1, FieldByName('b_id').AsInteger);
       BinStream1 := TMemoryStream.Create;
       (FieldByName(TextLob) as TBlobField).SaveToStream(BinStream1);
-      if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-        Connection.DbcConnection.UTF8StringAsWideField then
-      begin
-        SetLength(s, TextStreamS.Size);
-        Move(PAnsiChar(TextStreams.Memory)^, PAnsiChar(S)^, TextStreamS.Size);
-        WS := UTF8ToString(S);
-        UnicodeStream := WideStringStream(WS);
-        CheckEquals(UnicodeStream.Size, BinStream1.Size, 'Ascii Stream UTF8');
-        CheckEquals(UnicodeStream, BinStream1, 'Ascii Stream UTF8');
-        UnicodeStream.Free;
-      end
-      else
-      begin
-        CheckEquals(TextStreamS.Size, BinStream1.Size, 'Ascii Stream Ansi');
-        CheckEquals(TextStreamS, BinStream1, 'Ascii Stream Ansi');
-      end;
+
+      CheckEquals(DupeString(teststring, 6000), BinStream1, Connection.DbcConnection.GetConSettings, 'Text-Stream');
       BinStream1.Position:=0;
       (FieldByName(BinLob) as TBlobField).SaveToStream(BinStream1);
       CheckEquals(BinStream.Size, BinStream1.Size, 'Binary Stream');

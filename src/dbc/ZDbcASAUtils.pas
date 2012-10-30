@@ -140,8 +140,7 @@ type
     Can allocate memory for sqlda structure get basic information }
   TZASASQLDA = class (TInterfacedObject, IZASASQLDA)
   private
-    FEncoding: TZCharEncoding;
-    FUTF8AsWideString: Boolean;
+    FConSettings: PZConSettings;
     FSQLDA: PASASQLDA;
     FPlainDriver: IZASAPlainDriver;
     FHandle: PZASASQLCA;
@@ -158,8 +157,7 @@ type
     procedure ReadBlob(const Index: Word; Buffer: Pointer; Length: LongWord);
   public
     constructor Create(PlainDriver: IZASAPlainDriver; Handle: PZASASQLCA;
-      CursorName: AnsiString; const Encoding: TZCharEncoding;
-      Const UTF8AsWideString: Boolean; NumVars: Word = StdVars);
+      CursorName: AnsiString; ConSettings: PZConSettings; NumVars: Word = StdVars);
     destructor Destroy; override;
 
     procedure AllocateSQLDA( NumVars: Word);
@@ -264,7 +262,7 @@ procedure ASAPrepare( FASAConnection: IZASAConnection; FSQLData, FParamsSQLData:
 procedure PrepareParameters( PlainDriver: IZASAPlainDriver;
   InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray;
   InParamCount: Integer; ParamSqlData: IZASASQLDA;
-  Encoding: TZCharEncoding);
+  ConSettings: PZConSettings);
 
 function RandomString( Len: integer): string;
 
@@ -347,15 +345,13 @@ begin
 end;
 
 constructor TZASASQLDA.Create(PlainDriver: IZASAPlainDriver; Handle: PZASASQLCA;
-   CursorName: AnsiString; const Encoding: TZCharEncoding;
-   Const UTF8AsWideString: Boolean; NumVars: Word = StdVars);
+   CursorName: AnsiString; ConSettings: PZConSettings; NumVars: Word = StdVars);
 begin
   FPlainDriver := PlainDriver;
   FHandle := Handle;
   FCursorName := CursorName;
   AllocateSQLDA(NumVars);
-  FEncoding := Encoding;
-  FUTF8AsWideString := UTF8AsWideString;
+  FConSettings := ConSettings;
   inherited Create;
 end;
 
@@ -523,7 +519,7 @@ function TZASASQLDA.GetFieldIndex(const Name: String): Word;
 begin
   for Result := 0 to FSQLDA.sqld - 1 do
     if FSQLDA.sqlvar[Result].sqlname.length = Length(name) then
-      if StrLIComp(@FSQLDA.sqlvar[Result].sqlname.data, PAnsiChar(FPlainDriver.ZPlainString(Name, FEncoding)), Length(name)) = 0 then
+      if StrLIComp(@FSQLDA.sqlvar[Result].sqlname.data, PAnsiChar(FPlainDriver.ZPlainString(Name, FConSettings)), Length(name)) = 0 then
             Exit;
   CreateException( Format( SFieldNotFound1, [name]));
   Result := 0; // satisfy compiler
@@ -566,9 +562,11 @@ function TZASASQLDA.GetFieldSqlType(const Index: Word): TZSQLType;
 begin
   CheckIndex(Index);
   if FSQLDA.sqlvar[Index].sqlType and $FFFE <> DT_TIMESTAMP_STRUCT then
-    Result := ConvertASATypeToSQLType(FSQLDA.sqlvar[Index].sqlType, FEncoding, FUTF8AsWideString)
+    Result := ConvertASATypeToSQLType(FSQLDA.sqlvar[Index].sqlType,
+      FConSettings.ClientCodePage.Encoding, FConSettings.UTF8AsWideString)
   else
-    Result := ConvertASATypeToSQLType( FDeclType[Index].sqlType, FEncoding, FUTF8AsWideString)
+    Result := ConvertASATypeToSQLType( FDeclType[Index].sqlType,
+      FConSettings.ClientCodePage.Encoding, FConSettings.UTF8AsWideString)
 end;
 
 {**
@@ -893,10 +891,10 @@ end;
 procedure TZASASQLDA.UpdatePChar(const Index: Integer; Value: PChar);
 var
   BlobSize: Integer;
-  AnsiTmp: AnsiString;
+  AnsiTmp: ZAnsiString;
 begin
   CheckIndex( Index);
-  AnsiTmp := FPlainDriver.ZPlainString(Value, FEncoding);
+  AnsiTmp := FPlainDriver.ZPlainString(Value, FConSettings);
   BlobSize := StrLen( Value);
   if BlobSize < MinBLOBSize then
     SetFieldType( Index, DT_VARCHAR or 1, MinBLOBSize - 1)
@@ -1093,7 +1091,7 @@ begin
     varStrArg,
     varString     : UpdateString(Index, AnsiString(Value));
     varOleStr     :
-      if FEncoding = ceAnsi then
+      if FConSettings.ClientCodePage.Encoding = ceAnsi then
         UpdateString(Index, AnsiString(Value))
       else
         UpdateString(Index, UTF8Encode(Value));
@@ -2107,7 +2105,7 @@ begin
     or (Statement.GetResultSetType <> rtForwardOnly) then
   begin
     CachedResultSet := TZCachedResultSet.Create( NativeResultSet, SQL, nil,
-      Statement.GetConnection.GetClientCodePageInformations);
+      Statement.GetConnection.GetConSettings);
     CachedResultSet.SetResolver( TZASACachedResolver.Create(
       Statement, NativeResultSet.GetMetadata));
     CachedResultSet.SetConcurrency( Statement.GetResultSetConcurrency);
@@ -2143,10 +2141,9 @@ var
   AnsiSQL: ZAnsiString;
   LogSQL: String;
 begin
-  AnsiSQL := FASAConnection.GetPlainDriver.GetPrepreparedSQL(FASAConnection.GetDBHandle,
-    SQL, FASAConnection.GetEncoding, LogSQL, FASAConnection.PreprepareSQL);
   with FASAConnection do
   begin
+    AnsiSQL := GetPlainDriver.GetPrepreparedSQL(GetDBHandle, SQL, GetConSettings, LogSQL);
     if FPrepared then
     begin
       FParamsSQLData.AllocateSQLDA( StdVars);
@@ -2208,7 +2205,7 @@ end;
 
 procedure PrepareParameters( PlainDriver: IZASAPlainDriver;
   InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray;
-  InParamCount: Integer; ParamSqlData: IZASASQLDA; Encoding: TZCharEncoding);
+  InParamCount: Integer; ParamSqlData: IZASASQLDA; ConSettings: PZConSettings);
 var
   i: Integer;
   TempBlob: IZBlob;
@@ -2248,9 +2245,9 @@ begin
             SoftVarManager.GetAsFloat( InParamValues[i]));
         stString:
           ParamSqlData.UpdateString( i,
-            PlainDriver.ZPlainString(SoftVarManager.GetAsString( InParamValues[i]), Encoding));
+            PlainDriver.ZPlainString(SoftVarManager.GetAsString( InParamValues[i]), ConSettings));
         stUnicodeString:
-          if Encoding = ceUTF8 then
+          if ConSettings.ClientCodePage.Encoding = ceUTF8 then
             ParamSqlData.UpdateString( i,
               UTF8Encode(SoftVarManager.GetAsUnicodeString( InParamValues[i])))
           else
@@ -2278,7 +2275,7 @@ begin
               TempStream := TempBlob.GetStream;
               try
                 if (InParamTypes[i] in [stUnicodeStream, stAsciiStream]) and
-                  (Encoding = ceUTF8) then
+                  (ConSettings.ClientCodePage.Encoding = ceUTF8) then
                 begin
                   TempStreamIn := GetValidatedUnicodeStream(TempStream);
                   ParamSqlData.WriteBlob(I, TempStreamIn, InParamTypes[i]);

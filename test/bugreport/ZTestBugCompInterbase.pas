@@ -590,16 +590,12 @@ const
 
 procedure ZTestCompInterbaseBugReport.Test_Param_LoadFromStream_StringStream_ftBlob;
 var
-  WS: WideString;
-  Ansi: AnsiString;
   Query: TZQuery;
-  StrStream: TMemoryStream;
   StrStream1: TMemoryStream;
   SL: TStringList;
 begin
   Query := TZQuery.Create(nil);
   SL := TStringList.Create;
-  StrStream := TMemoryStream.Create;
   try
     Query.Connection := Connection;
 
@@ -626,26 +622,6 @@ begin
       StrStream1 := TMemoryStream.Create;
       SL.SaveToStream(StrStream1);
       ParamByName('P_RESUME').LoadFromStream(StrStream1, ftBlob);
-
-      if Self.FConnection.DbcConnection.GetEncoding = ceUTF8 then
-        if FConnection.DbcConnection.UTF8StringAsWideField then
-        begin
-          WS := WideString(Str2)+LineEnding;
-          StrStream.Write(PWideChar(WS)^, Length(WS)*2);
-          StrStream.Position := 0;
-        end
-        else
-        begin
-          Ansi:=UTF8Encode(WideString(str2+LineEnding));
-          StrStream.Write(PAnsiChar(Ansi)^, Length(Ansi));
-          StrStream.Position := 0;
-        end
-      else
-      begin
-        Ansi := str2+LineEnding;
-        StrStream.Write(PAnsiChar(Ansi)^, Length(Ansi));
-        StrStream.Position := 0;
-      end;
       try
         ExecSQL;
         SQL.Text := 'select * from people where p_id = ' + IntToStr(TEST_ROW_ID);
@@ -654,7 +630,7 @@ begin
         Open;
 
         (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
-        CheckEquals(StrStream, StrStream1, 'Param().LoadFromStream(StringStream, ftBlob)');
+        CheckEquals(str2+LineEnding, StrStream1, FConnection.DbcConnection.GetConSettings, 'Param().LoadFromStream(StringStream, ftBlob)');
         SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
         CheckEquals(1, Params.Count);
         Params[0].DataType := ftInteger;
@@ -671,7 +647,6 @@ begin
     end;
   finally
     SL.free;
-    StrStream.Free;
     If Assigned(StrStream1) then
       StrStream1.Free;
     Query.Free;
@@ -680,10 +655,7 @@ end;
 
 procedure ZTestCompInterbaseBugReport.Test_Param_LoadFromStream_StringStream_ftMemo;
 var
-  WS: WideString;
-  Ansi: AnsiString;
   Query: TZQuery;
-  StrStream: TMemoryStream;
   StrStream1: TMemoryStream;
   SL: TStringList;
 begin
@@ -715,26 +687,6 @@ begin
       SL.SaveToStream(StrStream1);
       ParamByName('P_RESUME').LoadFromStream(StrStream1, ftMemo);
 
-      StrStream := TMemoryStream.Create;
-      if Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
-        if FConnection.DbcConnection.UTF8StringAsWideField then
-        begin
-          WS := WideString(Str2)+LineEnding;
-          StrStream.Write(PWideChar(WS)^, Length(WS)*2);
-          StrStream.Position := 0;
-        end
-        else
-        begin
-          Ansi:=UTF8Encode(WideString(str2)+LineEnding);
-          StrStream.Write(PAnsiChar(Ansi)^, Length(Ansi));
-          StrStream.Position := 0;
-        end
-      else
-      begin
-        Ansi := str2+LineEnding;
-        StrStream.Write(PAnsiChar(Ansi)^, Length(Ansi));
-        StrStream.Position := 0;
-      end;
       try
         ExecSQL;
         SQL.Text := 'select * from people where p_id = ' + IntToStr(TEST_ROW_ID);
@@ -743,7 +695,7 @@ begin
         Open;
 
         (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
-        CheckEquals(StrStream, StrStream1, 'Param().LoadFromStream(StringStream, ftMemo)');
+        CheckEquals(Str2+LineEnding, StrStream1, FConnection.DbcConnection.GetConSettings, 'Param().LoadFromStream(StringStream, ftMemo)');
         SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
         CheckEquals(1, Params.Count);
         Params[0].DataType := ftInteger;
@@ -755,7 +707,6 @@ begin
         on E:Exception do
             Fail('Param().LoadFromStream(StringStream, ftMemo): '+E.Message);
       end;
-      StrStream.Free;
       StrStream1.Free;
       SL.free;
     end;
@@ -860,11 +811,23 @@ begin
         iqry.open;
 
         CheckEquals(3, iqry.RecordCount, 'RecordCount');
-        CheckEquals(S1, iqry.Fields[0].AsString);
+        if (FConnection.DbcConnection.GetConSettings.CPType = cGET_ACP ) and
+          FConnection.DbcConnection.AutoEncodeStrings then
+          CheckEquals(String(UTF8ToString(S1)), iqry.Fields[0].AsString)
+        else
+          CheckEquals(S1, iqry.Fields[0].AsString);
         iqry.Next;
-        CheckEquals(S2, iqry.Fields[0].AsString);
+        if (FConnection.DbcConnection.GetConSettings.CPType = cGET_ACP ) and
+          FConnection.DbcConnection.AutoEncodeStrings then
+          CheckEquals(String(UTF8ToString(S2)), iqry.Fields[0].AsString)
+        else
+          CheckEquals(S2, iqry.Fields[0].AsString);
         iqry.Next;
-        CheckEquals(S3, iqry.Fields[0].AsString);
+        if (FConnection.DbcConnection.GetConSettings.CPType = cGET_ACP ) and
+          FConnection.DbcConnection.AutoEncodeStrings then
+          CheckEquals(String(UTF8ToString(S3)), iqry.Fields[0].AsString)
+        else
+          CheckEquals(S3, iqry.Fields[0].AsString);
       end;
     end;
   finally

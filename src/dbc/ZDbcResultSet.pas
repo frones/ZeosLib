@@ -90,7 +90,7 @@ type
   protected
     LastWasNull: Boolean;
 
-    function InternalGetString(ColumnIndex: Integer): AnsiString; virtual;
+    function InternalGetString(ColumnIndex: Integer): ZAnsiString; virtual;
 
     procedure RaiseUnsupportedException;
     procedure RaiseForwardOnlyException;
@@ -116,7 +116,7 @@ type
 
   public
     constructor Create(Statement: IZStatement; SQL: string;
-      Metadata: TContainedObject; ClientCodePage: PZCodePage);
+      Metadata: TContainedObject; ConSettings: PZConSettings);
     destructor Destroy; override;
 
     procedure SetType(Value: TZResultSetType);
@@ -355,11 +355,11 @@ uses ZMessages, ZDbcUtils, ZDbcResultSetMetadata;
   @param Metadata a resultset metadata object.
 }
 constructor TZAbstractResultSet.Create(Statement: IZStatement; SQL: string;
-  Metadata: TContainedObject; ClientCodePage: PZCodePage);
+  Metadata: TContainedObject; ConSettings: PZConSettings);
 var
   DatabaseMetadata: IZDatabaseMetadata;
 begin
-  Self.ClientCodePage := ClientCodePage;
+  Self.ConSettings := ConSettings;
   LastWasNull := True;
   FRowNo := 0;
   FLastRowNo := 0;
@@ -416,7 +416,7 @@ begin
   inherited Destroy;
 end;
 
-function TZAbstractResultSet.InternalGetString(ColumnIndex: Integer): AnsiString;
+function TZAbstractResultSet.InternalGetString(ColumnIndex: Integer): ZAnsiString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -638,7 +638,10 @@ end;
 }
 function TZAbstractResultSet.GetString(ColumnIndex: Integer): String;
 begin
-  Result := ZDbcString(InternalGetString(ColumnIndex));
+  if Self.GetMetaData.GetColumnType(ColumnIndex) in [stBytes, stBinaryStream] then
+    Result := String(InternalGetString(ColumnIndex))
+  else
+    Result := ZDbcString(InternalGetString(ColumnIndex));
 end;
 
 {**
@@ -670,7 +673,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeString);
 {$ENDIF}
-  if Self.ClientCodePage^.Encoding in [ceUTF8] then
+  if ConSettings.ClientCodePage^.Encoding in [ceUTF8] then
     Result := UTF8ToString(InternalGetString(ColumnIndex))
   else
     Result := WideString(GetString(ColumnIndex))
@@ -2819,7 +2822,7 @@ end;
 
 function TZAbstractResultSet.GetClientCodePage: PZCodePage;
 begin
-  Result := ClientCodePage;
+  Result := ConSettings.ClientCodePage;
 end;
 
 { TZAbstractBlob }

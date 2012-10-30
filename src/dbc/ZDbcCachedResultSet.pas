@@ -160,9 +160,9 @@ type
     {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   public
     constructor CreateWithStatement(SQL: string; Statement: IZStatement;
-      ClientCodePage: PZCodePage);
+      ConSettings: PZConSettings);
     constructor CreateWithColumns(ColumnsInfo: TObjectList; SQL: string;
-      ClientCodePage: PZCodePage);
+      ConSettings: PZConSettings);
     destructor Destroy; override;
 
     procedure Close; override;
@@ -274,7 +274,7 @@ type
     property ResultSet: IZResultSet read FResultSet write FResultSet;
   public
     constructor Create(ResultSet: IZResultSet; SQL: string;
-      Resolver: IZCachedResolver; ClientCodePage: PZCodePage);
+      Resolver: IZCachedResolver; ConSettings: PZConSettings);
     destructor Destroy; override;
 
     procedure Close; override;
@@ -300,9 +300,9 @@ uses ZMessages, ZDbcResultSetMetadata, ZDbcGenericResolver, ZDbcUtils
   @param SQL an SQL query.
 }
 constructor TZAbstractCachedResultSet.CreateWithStatement(SQL: string;
-  Statement: IZStatement; ClientCodePage: PZCodePage);
+  Statement: IZStatement; ConSettings: PZConSettings);
 begin
-  inherited Create(Statement, SQL, nil, ClientCodePage);
+  inherited Create(Statement, SQL, nil, ConSettings);
   FCachedUpdates := False;
 end;
 
@@ -312,9 +312,9 @@ end;
   @param ColumnsInfo a columns info for cached rows.
 }
 constructor TZAbstractCachedResultSet.CreateWithColumns(
-  ColumnsInfo: TObjectList; SQL: string; ClientCodePage: PZCodePage);
+  ColumnsInfo: TObjectList; SQL: string; ConSettings: PZConSettings);
 begin
-  inherited Create(nil, SQL, nil, ClientCodePage);
+  inherited Create(nil, SQL, nil, ConSettings);
 
   CopyColumnsInfo(ColumnsInfo, Self.ColumnsInfo);
   FCachedUpdates := False;
@@ -1816,9 +1816,9 @@ end;
   @param Resolver a cached updates resolver object.
 }
 constructor TZCachedResultSet.Create(ResultSet: IZResultSet; SQL: string;
-  Resolver: IZCachedResolver; ClientCodePage: PZCodePage);
+  Resolver: IZCachedResolver; ConSettings: PZConSettings);
 begin
-  inherited Create(ResultSet.GetStatement, SQL, nil,ClientCodePage);
+  inherited Create(ResultSet.GetStatement, SQL, nil, ConSettings);
   FResultSet := ResultSet;
   FResolver := Resolver;
   {BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}

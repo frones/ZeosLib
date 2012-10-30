@@ -827,7 +827,7 @@ type
       FileName: PAnsiChar): Integer;
     function GetPlainFunc:PAPI;
     function EscapeString(Handle: Pointer; const Value: ZAnsiString;
-      const Encoding: TZCharEncoding): ZAnsiString; override;
+      ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString; override;
   end;
 
   {** Implements a driver for PostgreSQL 7.4 }
@@ -887,35 +887,35 @@ end;
 procedure TZPostgreSQLBaseDriver.LoadCodePages;
 begin
   { MultiByte }
-  AddCodePage('EUC_JP', Ord(csEUC_JP), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 3); { EUC_JP 	Japanese EUC }
-  AddCodePage('EUC_CN', Ord(csEUC_CN), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 3); {EUC_CN 	Chinese EUC}
-  AddCodePage('EUC_KR', Ord(csEUC_KR), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 3); {Extended UNIX Code-KR 	Korean}
-  AddCodePage('JOHAB', Ord(csJOHAB), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 3); {JOHAB 	Korean (Hangul)}
-  AddCodePage('EUC_TW', Ord(csEUC_TW), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 3); {Extended UNIX Code-TW 	Traditional Chinese, Taiwanese}
-  AddCodePage('UNICODE', Ord(csUNICODE_PODBC), ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}, '', 4); {UNICODE 	Unicode (UTF-8)}
-  AddCodePage('MULE_INTERNAL', Ord(csMULE_INTERNAL), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 4); { Mule internal code 	Multilingual Emacs }
+  AddCodePage('EUC_JP', Ord(csEUC_JP), ceAnsi, zCP_EUC_JP, '', 3); { EUC_JP 	Japanese EUC }
+  AddCodePage('EUC_CN', Ord(csEUC_CN), ceAnsi, zCP_EUC_CN, '', 3); {EUC_CN 	Chinese EUC}
+  AddCodePage('EUC_KR', Ord(csEUC_KR), ceAnsi, zCP_euc_kr, '', 3); {Extended UNIX Code-KR 	Korean}
+  AddCodePage('JOHAB', Ord(csJOHAB), ceAnsi, ZCP_JOHAB, '', 3); {JOHAB 	Korean (Hangul)}
+  AddCodePage('EUC_TW', Ord(csEUC_TW), ceAnsi, $ffff, '', 3); {Extended UNIX Code-TW 	Traditional Chinese, Taiwanese}
+  AddCodePage('UNICODE', Ord(csUNICODE_PODBC), ceUTF8, zCP_UTF8, '', 4); {UNICODE 	Unicode (UTF-8)}
+  AddCodePage('MULE_INTERNAL', Ord(csMULE_INTERNAL), ceAnsi, $ffff, '', 4); { Mule internal code 	Multilingual Emacs }
   {SingleByte}
-  AddCodePage('SQL_ASCII', Ord(csSQL_ASCII), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_ACP{$ENDIF}); {unspecified (see text) 	any}
-  AddCodePage('LATIN1', Ord(csLATIN1), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1252{$ENDIF}); { ISO 8859-1, ECMA 94 	Western European }
-  AddCodePage('LATIN2', Ord(csLATIN2));  { 	ISO 8859-2, ECMA 94 	Central European }
-  AddCodePage('LATIN3', Ord(csLATIN3));  { ISO 8859-3, ECMA 94 	South European }
-  AddCodePage('LATIN4', Ord(csLATIN4));  { ISO 8859-4, ECMA 94 	North European }
-  AddCodePage('LATIN5', Ord(csLATIN5));  { ISO 8859-9, ECMA 128 	Turkish }
-  AddCodePage('LATIN6', Ord(csLATIN6));  { ISO 8859-10, ECMA 144 	Nordic }
-  AddCodePage('LATIN7', Ord(csLATIN7));  { ISO 8859-13 	Baltic }
-  AddCodePage('LATIN8', Ord(csLATIN8));  { ISO 8859-14 	Celtic }
-  AddCodePage('LATIN9', Ord(csLATIN9));  { ISO 8859-15 	LATIN1 with Euro and accents }
-  AddCodePage('LATIN10', Ord(csLATIN10));  { ISO 8859-16, ASRO SR 14111 	Romanian }
-  AddCodePage('ISO_8859_5', Ord(csISO_8859_5)); { ISO 8859-5, ECMA 113 	Latin/Cyrillic}
-  AddCodePage('ISO_8859_6', Ord(csISO_8859_6)); { ISO 8859-6, ECMA 114 	Latin/Arabic }
-  AddCodePage('ISO_8859_7', Ord(csISO_8859_7)); { ISO 8859-7, ECMA 118 	Latin/Greek }
-  AddCodePage('ISO_8859_8', Ord(csISO_8859_8));  { ISO 8859-8, ECMA 121 	Latin/Hebrew }
-  AddCodePage('KOI8', Ord(csKOI8), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_KOI8R{$ENDIF});  { KOI8-R(U) 	Cyrillic }
-  AddCodePage('WIN', Ord(csWIN), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1251{$ENDIF}); { Windows CP1251 }
-  AddCodePage('ALT', Ord(csALT), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS866{$ENDIF}); { Windows CP866 }
-  AddCodePage('WIN1256', Ord(csWIN1256), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, cCP_WIN1256{$ENDIF});  { Windows CP1256 	Arabic }
-  AddCodePage('TCVN', Ord(csTCVN), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1258{$ENDIF}); { TCVN-5712/Windows CP1258 (Vietnamese) }
-  AddCodePage('WIN874', Ord(csWIN874), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS874{$ENDIF}); { Windows CP874 (Thai) }
+  AddCodePage('SQL_ASCII', Ord(csSQL_ASCII), ceAnsi, zCP_ACP); {unspecified (see text) 	any}
+  AddCodePage('LATIN1', Ord(csLATIN1), ceAnsi, zCP_WIN1252); { ISO 8859-1, ECMA 94 	Western European }
+  AddCodePage('LATIN2', Ord(csLATIN2), ceAnsi, zCP_L2_ISO_8859_2);  { 	ISO 8859-2, ECMA 94 	Central European }
+  AddCodePage('LATIN3', Ord(csLATIN3), ceAnsi, zCP_L3_ISO_8859_3);  { ISO 8859-3, ECMA 94 	South European }
+  AddCodePage('LATIN4', Ord(csLATIN4), ceAnsi, zCP_L4_ISO_8859_4);  { ISO 8859-4, ECMA 94 	North European }
+  AddCodePage('LATIN5', Ord(csLATIN5), ceAnsi, zCP_L5_ISO_8859_9);  { ISO 8859-9, ECMA 128 	Turkish }
+  AddCodePage('LATIN6', Ord(csLATIN6), ceAnsi, zCP_L6_ISO_8859_10);  { ISO 8859-10, ECMA 144 	Nordic }
+  AddCodePage('LATIN7', Ord(csLATIN7), ceAnsi, zCP_L7_ISO_8859_13);  { ISO 8859-13 	Baltic }
+  AddCodePage('LATIN8', Ord(csLATIN8), ceAnsi, zCP_L8_ISO_8859_14);  { ISO 8859-14 	Celtic }
+  AddCodePage('LATIN9', Ord(csLATIN9), ceAnsi, zCP_L9_ISO_8859_15);  { ISO 8859-15 	LATIN1 with Euro and accents }
+  AddCodePage('LATIN10', Ord(csLATIN10), ceAnsi, zCP_L10_ISO_8859_16);  { ISO 8859-16, ASRO SR 14111 	Romanian }
+  AddCodePage('ISO_8859_5', Ord(csISO_8859_5), ceAnsi, zCP_L5_ISO_8859_5); { ISO 8859-5, ECMA 113 	Latin/Cyrillic}
+  AddCodePage('ISO_8859_6', Ord(csISO_8859_6), ceAnsi, zCP_L6_ISO_8859_6); { ISO 8859-6, ECMA 114 	Latin/Arabic }
+  AddCodePage('ISO_8859_7', Ord(csISO_8859_7), ceAnsi, zCP_L7_ISO_8859_7); { ISO 8859-7, ECMA 118 	Latin/Greek }
+  AddCodePage('ISO_8859_8', Ord(csISO_8859_8), ceAnsi, zCP_L8_ISO_8859_8);  { ISO 8859-8, ECMA 121 	Latin/Hebrew }
+  AddCodePage('KOI8', Ord(csKOI8), ceAnsi, zCP_KOI8R);  { KOI8-R(U) 	Cyrillic }
+  AddCodePage('WIN', Ord(csWIN), ceAnsi, zCP_WIN1251); { Windows CP1251 }
+  AddCodePage('ALT', Ord(csALT), ceAnsi, zCP_DOS866); { Windows CP866 }
+  AddCodePage('WIN1256', Ord(csWIN1256), ceAnsi, cCP_WIN1256);  { Windows CP1256 	Arabic }
+  AddCodePage('TCVN', Ord(csTCVN), ceAnsi, zCP_WIN1258); { TCVN-5712/Windows CP1258 (Vietnamese) }
+  AddCodePage('WIN874', Ord(csWIN874), ceAnsi, zCP_DOS874); { Windows CP874 (Thai) }
 end;
 
 procedure TZPostgreSQLBaseDriver.LoadApi;
@@ -1601,7 +1601,7 @@ begin
 end;
 
 function TZPostgreSQLBaseDriver.EscapeString(Handle: Pointer; const Value: ZAnsiString;
-  const Encoding: TZCharEncoding): ZAnsiString;
+  ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString;
 var
   ResLen: NativeUInt;
   Temp: PAnsiChar;
@@ -1610,7 +1610,14 @@ var
 begin
   if Assigned(POSTGRESQL_API.PQescapeStringConn) and ( Value <> '' )then
   begin
-    SourceTemp := {$IFDEF DELPHI12_UP}Value{$ELSE}ZPlainString(Value,  Encoding){$ENDIF}; //check encoding too
+    {$IFDEF DELPHI12_UP}
+    SourceTemp := Value;
+    {$ELSE}
+    if WasEncoded then
+      SourceTemp := Value
+    else
+      SourceTemp := ZPlainString(Value, ConSettings); //check encoding too
+    {$ENDIF}
     GetMem(Temp, Length(SourceTemp)*2);
     ResLen := POSTGRESQL_API.PQescapeStringConn(Handle, Temp,
       PAnsiChar(SourceTemp), StrLen(PAnsiChar(SourceTemp)), @IError);
@@ -1666,33 +1673,33 @@ begin
   inherited LoadCodePages;
   { Version 8.1 }
   {MultiByte}
-  ResetCodePage(Ord(csUNICODE_PODBC), 'UTF8', Ord(csUTF8), ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}, '', 4); { Unicode, 8-bit 	all }
-  AddCodePage('BIG5', Ord(csBIG5), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_Big5{$ENDIF}, '', 2); { Big Five 	Traditional Chinese }
-  AddCodePage('GB18030', Ord(csGB18030), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 2); { National Standard 	Chinese }
-  AddCodePage('GBK', Ord(csGBK), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 2); { Extended National Standard 	Simplified Chinese }
-  AddCodePage('SJIS', Ord(csSJIS), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_SHIFTJS{$ENDIF}, '', 2); { Shift JIS 	Japanese }
-  AddCodePage('UHC', Ord(csUHC), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 2); { Unified Hangul Code 	Korean }
+  ResetCodePage(Ord(csUNICODE_PODBC), 'UTF8', Ord(csUTF8), ceUTF8, zCP_UTF8, '', 4); { Unicode, 8-bit 	all }
+  AddCodePage('BIG5', Ord(csBIG5), ceAnsi, zCP_Big5, '', 2); { Big Five 	Traditional Chinese }
+  AddCodePage('GB18030', Ord(csGB18030), ceAnsi, zCP_GB18030, '', 2); { National Standard 	Chinese }
+  AddCodePage('GBK', Ord(csGBK), ceAnsi, $ffff, '', 2); { Extended National Standard 	Simplified Chinese }
+  AddCodePage('SJIS', Ord(csSJIS), ceAnsi, zCP_SHIFTJS, '', 2); { Shift JIS 	Japanese }
+  AddCodePage('UHC', Ord(csUHC), ceAnsi, $ffff, '', 2); { Unified Hangul Code 	Korean }
   {SingleByte}
-  ResetCodePage(Ord(csALT), 'WIN866', Ord(csWIN866)); { Windows CP866 	Cyrillic } //No longer in use
-  AddCodePage('WIN874', Ord(csWIN874), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS874{$ENDIF}); { Windows CP874 	Thai }
-  AddCodePage('WIN1250', Ord(csWIN1250), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1250{$ENDIF}); { Windows CP1250 	Central European }
-  ResetCodePage(Ord(csWIN), 'WIN1251', Ord(csWIN1251), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1251{$ENDIF}); { Windows CP1251 	Cyrillic } //No longer in use
-  AddCodePage('WIN1252', Ord(csWIN1252), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1252{$ENDIF}); { Windows CP1252 	Western European }
+  ResetCodePage(Ord(csALT), 'WIN866', Ord(csWIN866), ceAnsi, zCP_DOS866); { Windows CP866 	Cyrillic } //No longer in use
+  AddCodePage('WIN874', Ord(csWIN874), ceAnsi, zCP_DOS874); { Windows CP874 	Thai }
+  AddCodePage('WIN1250', Ord(csWIN1250), ceAnsi, zCP_WIN1250); { Windows CP1250 	Central European }
+  ResetCodePage(Ord(csWIN), 'WIN1251', Ord(csWIN1251), ceAnsi, zCP_WIN1251); { Windows CP1251 	Cyrillic } //No longer in use
+  AddCodePage('WIN1252', Ord(csWIN1252), ceAnsi, zCP_WIN1252); { Windows CP1252 	Western European }
   ResetCodePage(Ord(csTCVN), 'WIN1258', Ord(csWIN1258)); { Windows CP1258 	Vietnamese } //No longer in use
 
   { Version 8.3 }
   {MultiByte}
-  AddCodePage('EUC_JIS_2004', Ord(csEUC_JIS_2004), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 3); { Extended UNIX Code-JP, JIS X 0213 	Japanese }
-  AddCodePage('SHIFT_JIS_2004', Ord(csSHIFT_JIS_2004), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 3); { Shift JIS, JIS X 0213 	Japanese }
+  AddCodePage('EUC_JIS_2004', Ord(csEUC_JIS_2004), ceAnsi, $ffff, '', 3); { Extended UNIX Code-JP, JIS X 0213 	Japanese }
+  AddCodePage('SHIFT_JIS_2004', Ord(csSHIFT_JIS_2004), ceAnsi, zCP_SHIFTJS, '', 3); { Shift JIS, JIS X 0213 	Japanese }
   {SingleChar}
-  AddCodePage('WIN1253', Ord(csWIN1253), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1253{$ENDIF}); { Windows CP1253  Greek }
-  AddCodePage('WIN1254', Ord(csWIN1254), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1254{$ENDIF}); { Windows CP1254 	Turkish }
-  AddCodePage('WIN1255', Ord(csWIN1255), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1255{$ENDIF}); { Windows CP1255 	Hebrew }
-  AddCodePage('WIN1257', Ord(csWIN1257), ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1257{$ENDIF}); { Windows CP1257 	Baltic }
+  AddCodePage('WIN1253', Ord(csWIN1253), ceAnsi, zCP_WIN1253); { Windows CP1253  Greek }
+  AddCodePage('WIN1254', Ord(csWIN1254), ceAnsi, zCP_WIN1254); { Windows CP1254 	Turkish }
+  AddCodePage('WIN1255', Ord(csWIN1255), ceAnsi, zCP_WIN1255); { Windows CP1255 	Hebrew }
+  AddCodePage('WIN1257', Ord(csWIN1257), ceAnsi, zCP_WIN1257); { Windows CP1257 	Baltic }
 
   { Version 8.4 }
   {SingleChar}
-  AddCodePage('KOI8U', Ord(csKOI8U)); { 	KOI8-U 	Cyrillic (Ukrainian) }
+  AddCodePage('KOI8U', Ord(csKOI8U), ceAnsi, zCP_KOI8U); { 	KOI8-U 	Cyrillic (Ukrainian) }
 end;
 
 constructor TZPostgreSQL8PlainDriver.Create;

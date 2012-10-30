@@ -70,20 +70,19 @@ type
     {EgonHugeist:
       Why this here? -> No one else then Plaindriver knows which Characterset
       is supported. Here i've made a intervention in dependency of used Compiler.}
-    function GetSupportedClientCodePages(const IgnoreUnsupported: Boolean): TStringDynArray;
+    function GetSupportedClientCodePages(const {$IFDEF FPC}AutoEncode,{$ENDIF} IgnoreUnsupported: Boolean): TStringDynArray;
     function ValidateCharEncoding(const CharacterSetName: String; const DoArrange: Boolean = False): PZCodePage; overload;
     function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
-    function ZDbcString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
-    function ZPlainString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): ZAnsiString;
+    function ZDbcString(const Ansi: ZAnsiString; ConSettings: PZConSettings): String;
+    function ZPlainString(const AStr: String; ConSettings: PZConSettings): ZAnsiString;
+    function GetPrepreparedSQL(Handle: Pointer; const SQL: String;
+    ConSettings: PZConSettings; out LogSQL: String): ZAnsiString;
+    function EscapeString(Handle: Pointer; const Value: ZWideString;
+      ConSettings: PZConSettings): ZWideString; overload;
+    function EscapeString(Handle: Pointer; const Value: ZAnsiString;
+      ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString; overload;
     procedure Initialize(const Location: String = '');
     function Clone: IZPlainDriver;
-    function GetPrepreparedSQL(Handle: Pointer; const SQL: String;
-      const Encoding: TZCharEncoding; out LogSQL: String;
-      const PreprepareSQL: Boolean): ZAnsiString;
-    function EscapeString(Handle: Pointer; const Value: ZWideString;
-      const Encoding: TZCharEncoding): ZWideString; overload;
-    function EscapeString(Handle: Pointer; const Value: ZAnsiString;
-      const Encoding: TZCharEncoding): ZAnsiString; overload;
   end;
 
   {ADDED by fduenas 15-06-2006}
@@ -103,37 +102,33 @@ type
     function ValidateCharEncoding(const CharacterSetName: String; const DoArrange: Boolean = False): PZCodePage; overload;
     function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
     function GetPrepreparedSQL(Handle: Pointer; const SQL: String;
-      const Encoding: TZCharEncoding; out LogSQL: String;
-      const PreprepareSQL: Boolean): ZAnsiString; virtual;
-    function GetTokenizer: IZTokenizer;
+      ConSettings: PZConSettings; out LogSQL: String): ZAnsiString; virtual;
     function EscapeString(Handle: Pointer; const Value: ZWideString;
-      const Encoding: TZCharEncoding): ZWideString; overload;
+      ConSettings: PZConSettings): ZWideString; overload;
     function EscapeString(Handle: Pointer; const Value: ZAnsiString;
-      const Encoding: TZCharEncoding): ZAnsiString; overload; virtual;
+      ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString; overload; virtual;
+    function GetTokenizer: IZTokenizer;
   public
     constructor Create;
     constructor CreateWithLibrary(const LibName : String);
     destructor Destroy; override;
     function GetProtocol: string; virtual; abstract;
     function GetDescription: string; virtual; abstract;
-    function GetSupportedClientCodePages(const IgnoreUnsupported: Boolean): TStringDynArray;
+    function GetSupportedClientCodePages(const {$IFDEF FPC}AutoEncode,{$ENDIF} IgnoreUnsupported: Boolean): TStringDynArray;
     procedure Initialize(const Location: String = ''); virtual;
 
     property Loader: TZNativeLibraryLoader read FLoader;
     procedure AddCodePage(const Name: String; const ID:  Integer;
-      Encoding: TZCharEncoding = ceAnsi;
-      {$IFDEF WITH_CHAR_CONTROL}const CP: Word = $ffff; {$ENDIF}
+      Encoding: TZCharEncoding = ceAnsi; const CP: Word = $ffff;
       const ZAlias: String = ''; CharWidth: Integer = 1); virtual;
     procedure ResetCodePage(const OldID: Integer; const Name: String;
       const ID:  Integer; {may be an ordinal value of predefined Types...}
-      Encoding: TZCharEncoding = ceAnsi;
-      {$IFDEF WITH_CHAR_CONTROL}const CP: Word = $ffff; {$ENDIF}
+      Encoding: TZCharEncoding = ceAnsi; const CP: Word = $ffff;
       const ZAlias: String = ''; CharWidth: Integer = 1);
   end;
   {END ADDED by fduenas 15-06-2006}
 
 
-{$IFDEF WITH_CHAR_CONTROL}
 const
   zCP_ACP = 0; {ASCII US}
   zCP_EBC037 = 37; {IBM EBCDIC US-Canada}
@@ -156,6 +151,7 @@ const
   zCP_DOS852 = 852; {ibm852	852	Osteuropäisch (DOS)}
   zCP_DOS853 = 853;	{MS-DOS Codepage 853 (Multilingual Latin 3)}
   zCP_DOS855 = 855;	{MS-DOS Codepage 855 (Russia) - obsolete}
+  zCP_DOS856 = 856;
   zCP_DOS857 = 857;	{MS-DOS Codepage 857 (Multilingual Latin 5)}
   zCP_DOS858 = 858; {MS-DOS Codepage 858  {Latin I + Euro symbol}
   zCP_DOS895 = 895; {MS-DOS Codepage 895 (Kamenicky CS)}
@@ -170,6 +166,8 @@ const
   zCP_DOS870 = 870; {IBM EBCDIC Multilingual/ROECE (Latin 2); IBM EBCDIC Multilingual Latin 2}
   zCP_DOS874 = 874; {ANSI/OEM Thai (same as 28605, ISO 8859-15); Thai (Windows)}
   zCP_EBC875 = 875;	{EBCDIC Codepage 875 (Greek)}
+  zCP_MSWIN921 = 921;
+  zCP_MSWIN923 = 923;
   zCP_EBC924 = 924; {Latin 9 EBCDIC 924}
   zCP_SHIFTJS = 932; {ANSI/OEM Japanese; Japanese (Shift-JIS)}
   zCP_GB2312 = 936; {ANSI/OEM Simplified Chinese (PRC, Singapore); Chinese Simplified (GB2312)}
@@ -266,9 +264,12 @@ const
   zCP_L6_ISO_8859_6 = 28596; {ISO 8859-6 Arabic}
   zCP_L7_ISO_8859_7 = 28597; {ISO 8859-7 Greek}
   zCP_L8_ISO_8859_8 = 28598; {ISO 8859-8 Hebrew; Hebrew (ISO-Visual)}
-  zCP_ISO_8859_9 = 28599; {ISO 8859-9 Turkish}
-  zCP_ISO_8859_13 = 28603; {ISO 8859-13 Estonian}
+  zCP_L5_ISO_8859_9 = 28599; {ISO 8859-9 Turkish}
+  zCP_L6_ISO_8859_10 = 28600; { ISO 8859-10, ECMA 144 	Nordic }
+  zCP_L7_ISO_8859_13 = 28603; {ISO 8859-13 Estonian}
+  zCP_L8_ISO_8859_14 = 28604; { ISO 8859-14 	Celtic }
   zCP_L9_ISO_8859_15 = 28605; {ISO 8859-15 Latin 9}
+  zCP_L10_ISO_8859_16 = 28606;  { ISO 8859-16, ASRO SR 14111 	Romanian }
   zCP_x_Europa = 29001; {Europa 3}
   zCP_iso_8859_8_i = 38598;	{ISO 8859-8 Hebrew; Hebrew (ISO-Logical)}
 
@@ -305,7 +306,6 @@ const
   zCP_x_iscii_pa = 57011; {ISCII Punjabi}
   zCP_UTF8 = 65001;
   zCP_UTF7 = 65000;
-{$ENDIF}
 
 
 implementation
@@ -334,13 +334,14 @@ end;
 }
 function TZAbstractPlainDriver.ValidateCharEncoding(const CharacterSetName: String;
   const DoArrange: Boolean = False): PZCodePage;
+
   function GetClientCodePageInformations(
     const ClientCharacterSet: String): PZCodePage;
   var
     I: Integer;
   begin
     {now check for PlainDriver-Informations...}
-    {$IFDEF LAZARUSUTF8HACK} //if the user didn't set it
+    {$IFDEF FPC} //if the user didn't set it
     if ClientCharacterSet = '' then
     begin
       for i := Low(FCodePages) to high(FCodePages) do
@@ -375,6 +376,7 @@ end;
 }
 function TZAbstractPlainDriver.ValidateCharEncoding(const CharacterSetID: Integer;
   const DoArrange: Boolean = False): PZCodePage;
+
   function GetClientCodePageInformations(const ClientCharacterSetID: Word): PZCodePage;
   var
     I: Integer;
@@ -396,23 +398,22 @@ begin
 end;
 
 function TZAbstractPlainDriver.GetPrepreparedSQL(Handle: Pointer;
-  const SQL: String; const Encoding: TZCharEncoding; out LogSQL: String;
-  const PreprepareSQL: Boolean): ZAnsiString;
+  const SQL: String; ConSettings: PZConSettings; out LogSQL: String): ZAnsiString;
 var
   SQLTokens: TZTokenDynArray;
   i: Integer;
 begin
-  if PreprepareSQL then
+  if ConSettings.AutoEncode then
   begin
     SQLTokens := FTokenizer.TokenizeEscapeBufferToList(SQL); //Disassembles the Query
     for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
     begin
       case (SQLTokens[i].TokenType) of
         ttEscape:
-          Result := Result + {$IFDEF DELPHI12_UP}ZPlainString(SQLTokens[i].Value, Encoding){$ELSE}SQLTokens[i].Value{$ENDIF};
-        ttQuoted, {: Result := EscapeString(ZPlainString(SQLTokens[i].Value));}
-        ttWord, ttQuotedIdentifier, ttKeyword:
-          Result := Result + ZPlainString(SQLTokens[i].Value, Encoding);
+          Result := Result + {$IFDEF DELPHI12_UP}ZPlainString(SQLTokens[i].Value,
+            ConSettings){$ELSE}SQLTokens[i].Value{$ENDIF};
+        ttQuoted,  ttWord, ttQuotedIdentifier, ttKeyword:
+          Result := Result + ZPlainString(SQLTokens[i].Value, ConSettings)
         else
           Result := Result + ZAnsiString(SQLTokens[i].Value);
       end;
@@ -420,7 +421,7 @@ begin
   end
   else
     {$IFDEF DELPHI12_UP}
-    if Encoding = ceUTF8 then
+    if ConSettings.ClientCodePage.Encoding = ceUTF8 then
       Result := UTF8String(SQL)
     else
       Result := AnsiString(SQL);
@@ -430,21 +431,28 @@ begin
   LogSQL := String(Result);
 end;
 
-function TZAbstractPlainDriver.EscapeString(Handle: Pointer; const Value: ZWideString;
-  const Encoding: TZCharEncoding): ZWideString;
+function TZAbstractPlainDriver.EscapeString(Handle: Pointer;
+  const Value: ZWideString; ConSettings: PZConSettings): ZWideString;
 var
   StrFrom: ZAnsiString;
   Outbuffer: ZAnsiString;
 begin
-  StrFrom := ZPlainString(Value, Encoding);
-  Outbuffer := EscapeString(Handle, StrFrom, Encoding);
-  Result := ZDbcString(Outbuffer, Encoding);
+  {$IFDEF DELPHI12_UP}
+  StrFrom := ZPlainString(Value, ConSettings);
+  {$ELSE}
+  StrFrom := ZStringFromUnicode(Value);
+  {$ENDIF}
+  Outbuffer := EscapeString(Handle, StrFrom, ConSettings, True);
+  {$IFDEF DELPHI12_UP}
+  Result := ZDbcString(OutBuffer, ConSettings);
+  {$ELSE}
+  Result := ZUnicodeFromString(Outbuffer);
+  {$ENDIF}
 end;
 
-function TZAbstractPlainDriver.EscapeString(Handle: Pointer; const Value: ZAnsiString;
-  const Encoding: TZCharEncoding): ZAnsiString;
+function TZAbstractPlainDriver.EscapeString(Handle: Pointer;
+  const Value: ZAnsiString; ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString;
 begin
-  //Result := #39+Value+#39;
   Result := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr(Value, #39);
 end;
 
@@ -455,34 +463,39 @@ end;
 
 procedure TZAbstractPlainDriver.AddCodePage(const Name: String;
       const ID:  Integer; Encoding: TZCharEncoding = ceAnsi;
-      {$IFDEF WITH_CHAR_CONTROL}const CP: Word = $ffff; {$ENDIF}
-      const ZAlias: String = ''; CharWidth: Integer = 1);
+      const CP: Word = $ffff; const ZAlias: String = ''; CharWidth: Integer = 1);
 begin
   SetLength(FCodePages, Length(FCodePages)+1);
   FCodePages[High(FCodePages)].Name := Name;
   FCodePages[High(FCodePages)].ID := ID;
   FCodePages[High(FCodePages)].Encoding := Encoding;
-  {$IFDEF WITH_CHAR_CONTROL} FCodePages[High(FCodePages)].CP := CP; {$ENDIF}
+  FCodePages[High(FCodePages)].CP := CP;
   FCodePages[High(FCodePages)].CharWidth := CharWidth;
 
-  {$IFDEF LAZARUSUTF8HACK}
-  FCodePages[High(FCodePages)].IsSupported := Encoding = ceUTF8;
-  {$ELSE}
-    {$IFDEF WITH_CHAR_CONTROL}
-      if CP = $ffff then
-      begin
-        FCodePages[High(FCodePages)].ZAlias := GetUnicodeCodePageName;
-        FCodePages[High(FCodePages)].IsSupported := False;
-      end
-      else
+  {$IF defined(WITH_LCONVENCODING) or (defined(MSWINDOWS) and not defined(WinCE)) or defined(DELPHI)}
+  if CP = $ffff then
+  begin
+    FCodePages[High(FCodePages)].ZAlias := GetUnicodeCodePageName;
+    FCodePages[High(FCodePages)].IsSupported := False;
+  end
+  else
+    {$IFDEF WITH_LCONVENCODING}
+    FCodePages[High(FCodePages)].IsSupported := IsLConvEncodingCodePage(CP) or (Encoding = ceUTF8);
+    {$ELSE}
+      {$IFDEF FPC}
+      FCodePages[High(FCodePages)].IsSupported := Encoding = ceUTF8;
+      {$ELSE}
+      FCodePages[High(FCodePages)].IsSupported := True;
+      {$ENDIF}
     {$ENDIF}
-        FCodePages[High(FCodePages)].IsSupported := True;
-  {$ENDIF}
+  {$ELSE}
+    FCodePages[High(FCodePages)].IsSupported := Encoding = ceUTF8;
+  {$IFEND}
 end;
 
 procedure TZAbstractPlainDriver.ResetCodePage(const OldID: Integer;
       const Name: String; const ID:  Integer; Encoding: TZCharEncoding = ceAnsi;
-      {$IFDEF WITH_CHAR_CONTROL}const CP: Word = $ffff; {$ENDIF}
+      const CP: Word = $ffff;
       const ZAlias: String = ''; CharWidth: Integer = 1);
 var
   I: Integer;
@@ -493,34 +506,52 @@ begin
       FCodePages[I].ID := ID;
       FCodePages[I].Name := Name;
       FCodePages[I].Encoding := Encoding;
-      {$IFDEF WITH_CHAR_CONTROL}FCodePages[I].CP := CP;{$ENDIF}
+      FCodePages[I].CP := CP;
       FCodePages[I].ZAlias := ZAlias;
-      FCodePages[High(FCodePages)].CharWidth := CharWidth;
+      FCodePages[I].CharWidth := CharWidth;
 
-      {$IFDEF LAZARUSUTF8HACK}
-      FCodePages[High(FCodePages)].IsSupported := Encoding = ceUTF8;
-      {$ELSE}
-        {$IFDEF WITH_CHAR_CONTROL}
-        if CP = $ffff then
-        begin
-          FCodePages[i].ZAlias := GetUnicodeCodePageName;
-          FCodePages[i].IsSupported := False;
-        end
-        else
+      {$IF defined(WITH_LCONVENCODING) or (defined(MSWINDOWS) and not defined(WinCE)) or defined(DELPHI)}
+      if CP = $ffff then
+      begin
+        FCodePages[I].ZAlias := GetUnicodeCodePageName;
+        FCodePages[I].IsSupported := False;
+      end
+      else
+        {$IFDEF WITH_LCONVENCODING}
+        FCodePages[I].IsSupported := IsLConvEncodingCodePage(CP) or (Encoding = ceUTF8);
+        {$ELSE}
+          {$IFDEF FPC}
+          FCodePages[I].IsSupported := Encoding = ceUTF8;
+          {$ELSE}
+          FCodePages[I].IsSupported := True;
+          {$ENDIF}
         {$ENDIF}
-          FCodePages[High(FCodePages)].IsSupported := True;
-      {$ENDIF}
+      {$ELSE}
+        FCodePages[I].IsSupported := Encoding = ceUTF8;
+      {$IFEND}
       Break;
     end;
 end;
 
 function TZAbstractPlainDriver.GetSupportedClientCodePages(
-  const IgnoreUnsupported: Boolean): TStringDynArray;
+  const {$IFDEF FPC}AutoEncode,{$ENDIF} IgnoreUnsupported: Boolean): TStringDynArray;
 var
   I: Integer;
 begin
   for i := low(FCodePages) to high(FCodePages) do
+    {$IFDEF FPC}
+      {$IF (defined(MSWINDOWS) and not defined(WinCE)) and not defined(WITH_LCONVENCODING)}
+      if ( not ( FCodePages[i].CP = $ffff ) ) and AutoEncode then
+      {$ELSE}
+        {$IF defined(WITH_LCONVENCODING)}
+        if IsLConvEncodingCodePage(FCodePages[i].CP) and AutoEncode then
+        {$ELSE}
+        if ( FCodePages[i].IsSupported ) or ( IgnoreUnsupported ) then
+        {$IFEND}
+      {$IFEND}
+    {$ELSE}
     if ( FCodePages[i].IsSupported ) or ( IgnoreUnsupported ) then
+    {$ENDIF}
     begin
       SetLength(Result, Length(Result)+1);
       Result[High(Result)] := FCodePages[i].Name;

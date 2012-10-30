@@ -65,7 +65,7 @@ uses
 {$ENDIF}
   Forms, DB, ExtCtrls, StdCtrls, Controls, ComCtrls,
   Classes, SysUtils, {$IFNDEF FPC}Windows, {$ELSE}LCLIntf, LResources, {$ENDIF}
-  Menus, ZConnection, ZAbstractDataset,
+  Menus, ZAbstractDataset,
 {$IFDEF UNIX}
   {$IFNDEF FPC}
     QMenus, QTypes, QExtCtrls, QStdCtrls, QControls, QComCtrls,

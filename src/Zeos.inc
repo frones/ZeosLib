@@ -56,7 +56,7 @@
  {$DEFINE WITH_CHECKFIELDCOMPATIBILITY}
  {$DEFINE WITH_WIDEMEMO}        // Have WIDEMEMO,  For Delphi we turn these off if not applicable
  {$DEFINE WITH_FTWIDESTRING}    // Have ftwidestring, For Delphi we turn these off if not applicable
- {$DEFINE WITH_WIDECONTROLS}
+ {$DEFINE WITH_WIDEFIELDS}	// Wide-fields are supported (common define for ftWideString/ftWideMemo)
  {$DEFINE WITH_DBTABLES}        // Have the BDE DBTables Unit
  {$DEFINE WITH_TBYTEDYNARRAYTOVARIANT}// Variant does support TByteDynArray
 {$ENDIF}
@@ -111,6 +111,7 @@
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
   {$DEFINE WITH_INLINE_ANSISTRLCOMP}
+  {$UNDEF WITH_TBYTEDYNARRAYTOVARIANT} //bug on using it
 {$ENDIF}
 
 // Compilation directives for Delphi 2010
@@ -120,6 +121,7 @@
   {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
+  {$UNDEF WITH_TBYTEDYNARRAYTOVARIANT} //bug on using it
 {$ENDIF}
 
 // Compilation directives for Delphi XE
@@ -172,14 +174,10 @@
   {$DEFINE WITH_FTLONGWORD}             // ftLongWord is supported
   {$DEFINE WITH_ASBYTES}                //  AsBytes is supported
   {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF
-  {.$DEFINE WRONG_UNICODE_BEHAVIOR}      // EgonHugeist: a define for those why do use self assambled queries with still encoded partial strings
-{$ELSE}
-  {$IFNDEF LAZARUSUTF8HACK}
-    {$UNDEF WITH_WIDECONTROLS}
-  {$ENDIF}
 {$ENDIF}
 
 {$IFDEF DELPHI15_UP}
+  {$DEFINE WITH_TBYTEDYNARRAYTOVARIANT}
   {$DEFINE WITH_FORMATSETTINGS}
   {$IFDEF WIN64}
     {$UNDEF WITH_DBTABLES} //BDE unit DBTables (TestSuites) isn't supported on x64
@@ -367,7 +365,3 @@
 // Compile test applications with a graphical user interface (GUI)
 // Comment this definition if you want to compile console test applications
 {.$DEFINE TESTGUI}
-
-//Patches by EgonHugeist
-{.$DEFINE WITH_CHAR_CONTROL} //Disables/Enables the CharControl widget
-

@@ -143,9 +143,6 @@ type
     function SetOptions(Handle: PZMySQLConnect; Option: TMySQLOption; const Arg: PAnsiChar): Integer;
     function Ping(Handle: PZMySQLConnect): Integer;
     function ExecQuery(Handle: PZMySQLConnect; const Query: PAnsiChar): Integer; overload;
-    function ExecQuery(Handle: PZMySQLConnect; const SQL: String;
-      const PreprepareSQL: Boolean; const Encoding: TZCharEncoding;
-      out LogSQL: String): Integer; overload;
     function RealConnect(Handle: PZMySQLConnect; const Host, User, Password, Db: PAnsiChar; Port: Cardinal; UnixSocket: PAnsiChar; ClientFlag: Cardinal): PZMySQLConnect;
     function ExecRealQuery(Handle: PZMySQLConnect; const Query: PAnsiChar; Length: Integer): Integer;
     function Refresh(Handle: PZMySQLConnect; Options: Cardinal): Integer;
@@ -249,9 +246,6 @@ type
     procedure LoadCodePages; override;
     procedure LoadApi; override;
     procedure BuildServerArguments(Options: TStrings);
-    {function GetPrepreparedSQL(Handle: Pointer; const SQL: String;
-      const Encoding: TZCharEncoding; out LogSQL: String;
-      const PreprepareSQL: Boolean): ZAnsiString;  override;}
   public
     constructor Create(Tokenizer: IZTokenizer);
     destructor Destroy; override;
@@ -272,9 +266,6 @@ type
     procedure Close(Handle: PZMySQLConnect);
 
     function ExecQuery(Handle: PZMySQLConnect; const Query: PAnsiChar): Integer; overload;
-    function ExecQuery(Handle: PZMySQLConnect; const SQL: String;
-      const PreprepareSQL: Boolean; const Encoding: TZCharEncoding;
-      out LogSQL: String): Integer; overload;
     function ExecRealQuery(Handle: PZMySQLConnect; const Query: PAnsiChar;
       Length: Integer): Integer;
 
@@ -328,7 +319,7 @@ type
     function SetOptions(Handle: PZMySQLConnect; Option: TMySQLOption;
       const Arg: PAnsiChar): Integer;
     function EscapeString(Handle: Pointer; const Value: ZAnsiString;
-      const Encoding: TZCharEncoding): ZAnsiString; override;
+      ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString; override;
     function GetServerInfo(Handle: PZMySQLConnect): PAnsiChar;
     function GetClientInfo: PAnsiChar;
     function GetHostInfo(Handle: PZMySQLConnect): PAnsiChar;
@@ -446,41 +437,41 @@ procedure TZMySQLBaseDriver.LoadCodePages;
 begin
   {MySQL 3.23-4.1}
   { MultiByte }
-  AddCodePage('big5', 1, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_Big5{$ENDIF}, '', 2); {Big5 Traditional Chinese}
-  AddCodePage('ujis', 10, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 3); {EUC-JP Japanese}
-  AddCodePage('sjis', 11, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 2); {Shift-JIS Japanese}
-  AddCodePage('gbk', 19, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_GB2312{$ENDIF}, '', 2); {GBK Simplified Chinese}
-  AddCodePage('utf8', 22, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}, '', 3); {UTF-8 Unicode}
-  AddCodePage('ucs2', 23, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16{$ENDIF}, 'utf8', 2); {UCS-2 Unicode}
-  AddCodePage('euckr', 14, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_EUCKR{$ENDIF}, '', 2); {EUC-KR Korean}
-  AddCodePage('gb2312', 16, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_GB2312{$ENDIF}, '', 2); {GB2312 Simplified Chinese}
-  AddCodePage('cp932', 35, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_SHIFTJS{$ENDIF}, '', 2); {SJIS for Windows Japanese}
-  AddCodePage('eucjpms', 36, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, $ffff{$ENDIF}, '', 3); {UJIS for Windows Japanese}
+  AddCodePage('big5', 1, ceAnsi, zCP_Big5, '', 2); {Big5 Traditional Chinese}
+  AddCodePage('ujis', 10, ceAnsi, $ffff, '', 3); {EUC-JP Japanese}
+  AddCodePage('sjis', 11, ceAnsi, $ffff, '', 2); {Shift-JIS Japanese}
+  AddCodePage('gbk', 19, ceAnsi, zCP_GB2312, '', 2); {GBK Simplified Chinese}
+  AddCodePage('utf8', 22, ceUTF8, zCP_UTF8, '', 3); {UTF-8 Unicode}
+  AddCodePage('ucs2', 23, ceUTF16, zCP_UTF16, 'utf8', 2); {UCS-2 Unicode}
+  AddCodePage('euckr', 14, ceAnsi, zCP_EUCKR, '', 2); {EUC-KR Korean}
+  AddCodePage('gb2312', 16, ceAnsi, zCP_GB2312, '', 2); {GB2312 Simplified Chinese}
+  AddCodePage('cp932', 35, ceAnsi, zCP_SHIFTJS, '', 2); {SJIS for Windows Japanese}
+  AddCodePage('eucjpms', 36, ceAnsi, $ffff, '', 3); {UJIS for Windows Japanese}
   { SingleChar }
   AddCodePage('dec8', 2); {DEC West European}
-  AddCodePage('cp850', 3, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS850{$ENDIF}); {DOS West European}
+  AddCodePage('cp850', 3, ceAnsi, zCP_DOS850); {DOS West European}
   AddCodePage('hp8', 4); {HP West European}
-  AddCodePage('koi8r', 5, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_KOI8R{$ENDIF}); {KOI8-R Relcom Russian}
-  AddCodePage('latin1', 6, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1252{$ENDIF}); {cp1252 West European}
-  AddCodePage('latin2', 7, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L2_ISO_8859_2{$ENDIF}); {ISO 8859-2 Central European}
-  AddCodePage('swe7', 8, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_x_IA5_Swedish{$ENDIF}); {7bit Swedish}
-  AddCodePage('ascii', 9, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_us_ascii{$ENDIF}); {US ASCII}
-  AddCodePage('hebrew', 12, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L8_ISO_8859_8{$ENDIF}); {ISO 8859-8 Hebrew}
+  AddCodePage('koi8r', 5, ceAnsi, zCP_KOI8R); {KOI8-R Relcom Russian}
+  AddCodePage('latin1', 6, ceAnsi, zCP_WIN1252); {cp1252 West European}
+  AddCodePage('latin2', 7, ceAnsi, zCP_L2_ISO_8859_2); {ISO 8859-2 Central European}
+  AddCodePage('swe7', 8, ceAnsi, zCP_x_IA5_Swedish); {7bit Swedish}
+  AddCodePage('ascii', 9, ceAnsi, zCP_us_ascii); {US ASCII}
+  AddCodePage('hebrew', 12, ceAnsi, zCP_L8_ISO_8859_8); {ISO 8859-8 Hebrew}
   AddCodePage('tis620', 13); {TIS620 Thai}
-  AddCodePage('koi8u', 15, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_KOI8U{$ENDIF}); {KOI8-U Ukrainian}
-  AddCodePage('greek', 17, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_L7_ISO_8859_7{$ENDIF}); {ISO 8859-7 Greek}
-  AddCodePage('cp1250', 18, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1250{$ENDIF}); {Windows Central European}
-  AddCodePage('latin5', 20, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_ISO_8859_9{$ENDIF}); {ISO 8859-9 Turkish}
-  AddCodePage('armscii8', 21, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_ACP{$ENDIF}); {ARMSCII-8 Armenian}
-  AddCodePage('cp866', 24, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS866{$ENDIF}); {DOS Russian}
+  AddCodePage('koi8u', 15, ceAnsi, zCP_KOI8U); {KOI8-U Ukrainian}
+  AddCodePage('greek', 17, ceAnsi, zCP_L7_ISO_8859_7); {ISO 8859-7 Greek}
+  AddCodePage('cp1250', 18, ceAnsi, zCP_WIN1250); {Windows Central European}
+  AddCodePage('latin5', 20, ceAnsi, zCP_L5_ISO_8859_9); {ISO 8859-9 Turkish}
+  AddCodePage('armscii8', 21, ceAnsi, zCP_ACP); {ARMSCII-8 Armenian}
+  AddCodePage('cp866', 24, ceAnsi, zCP_DOS866); {DOS Russian}
   AddCodePage('keybcs2', 25); {DOS Kamenicky Czech-Slovak}
-  AddCodePage('macce', 26, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_x_mac_ce{$ENDIF}); {Mac Central European}
-  AddCodePage('macroman', 27, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_macintosh{$ENDIF}); {Mac West European}
-  AddCodePage('cp852', 28, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_DOS852{$ENDIF}); {DOS Central European}
-  AddCodePage('latin7', 29, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_ISO_8859_13{$ENDIF}); {ISO 8859-13 Baltic}
-  AddCodePage('cp1251', 30, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1251{$ENDIF}); {Windows Cyrillic}
-  AddCodePage('cp1256', 31, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, cCP_WIN1256{$ENDIF}); {Windows Arabic}
-  AddCodePage('cp1257', 32, ceAnsi{$IFDEF WITH_CHAR_CONTROL}, zCP_WIN1257{$ENDIF}); {Windows Baltic}
+  AddCodePage('macce', 26, ceAnsi, zCP_x_mac_ce); {Mac Central European}
+  AddCodePage('macroman', 27, ceAnsi, zCP_macintosh); {Mac West European}
+  AddCodePage('cp852', 28, ceAnsi, zCP_DOS852); {DOS Central European}
+  AddCodePage('latin7', 29, ceAnsi, zCP_L7_ISO_8859_13); {ISO 8859-13 Baltic}
+  AddCodePage('cp1251', 30, ceAnsi, zCP_WIN1251); {Windows Cyrillic}
+  AddCodePage('cp1256', 31, ceAnsi, cCP_WIN1256); {Windows Arabic}
+  AddCodePage('cp1257', 32, ceAnsi, zCP_WIN1257); {Windows Baltic}
   AddCodePage('binary', 33); {Binary pseudo charset}
   AddCodePage('geostd8', 34); {GEOSTD8 Georgian}
 end;
@@ -632,39 +623,6 @@ begin
   end;
 end;
 
-(*function TZMySQLBaseDriver.GetPrepreparedSQL(Handle: Pointer; const SQL: String;
-  const Encoding: TZCharEncoding; out LogSQL: String;
-  const PreprepareSQL: Boolean): ZAnsiString;
-var
-  SQLTokens: TZTokenDynArray;
-  i: Integer;
-  //QuoteChar: Char;
-begin
-  LogSQL := '';
-  SQLTokens := FTokenizer.TokenizeEscapeBufferToList(SQL); //Disassembles the Query
-  for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
-  begin
-    case (SQLTokens[i].TokenType) of
-      ttEscape:
-        Result := Result + {$IFDEF DELPHI12_UP}ZPlainString(SQLTokens[i].Value, Encoding){$ELSE}SQLTokens[i].Value{$ENDIF};
-      ttQuoted, ttEscapedQuoted, ttQuotedIdentifier:
-        begin
-          (*QuoteChar := Char(SQLTokens[i].Value[1]);
-          if QuoteChar = #39 then
-            if Length(SQLTokens[i].Value) = 2 then
-              Result := Result + ZAnsiString(SQLTokens[i].Value)
-            else
-              Result := Result + EscapeString(Handle, ZPlainString(SysUtils.AnsiDequotedStr(SQLTokens[i].Value, QuoteChar), Encoding), Encoding)
-          else
-            Result := Result + ZPlainString(SQLTokens[i].Value, Encoding);
-        end;
-      else
-        Result := Result + ZAnsiString(SQLTokens[i].Value);
-    end;
-  end;
-  LogSQL := String(Result);
-end;*)
-
 constructor TZMySQLBaseDriver.Create(Tokenizer: IZTokenizer);
 begin
   inherited create;
@@ -742,29 +700,6 @@ begin
   Result := MYSQL_API.mysql_query(Handle, Query);
 end;
 
-function TZMySQLBaseDriver.ExecQuery(Handle: PZMySQLConnect; const SQL: String;
-  const PreprepareSQL: Boolean; const Encoding: TZCharEncoding; out LogSQL: String): Integer;
-begin
-  if PreprepareSQL then
-    Result := MYSQL_API.mysql_query(Handle, PAnsiChar(GetPrepreparedSQL(Handle, SQL, Encoding, LogSQL, True)))
-  else
-  begin
-    {$IF defined(DELPHI12_UP) and defined(WRONG_UNICODE_BEHAVIOR)}  {out commented to keep the old compatibility}
-    Result := MYSQL_API.mysql_query(Handle, PAnsiChar(ZAnsiString(SQL)));
-    {$ELSE}
-      {$IFDEF DELPHI12_UP}
-      if Encoding = ceUTF8 then
-        Result := MYSQL_API.mysql_query(Handle, PAnsiChar(Utf8String(SQL)))
-      else
-        Result := MYSQL_API.mysql_query(Handle, PAnsiChar(AnsiString(SQL)));
-      {$ELSE}
-      Result := MYSQL_API.mysql_query(Handle, PAnsiChar(SQL));
-      {$ENDIF}
-    {$IFEND}
-    LogSQL := SQL;
-  end;
-end;
-
 function TZMySQLBaseDriver.ExecRealQuery(Handle: PZMySQLConnect;
   const Query: PAnsiChar; Length: Integer): Integer;
 begin
@@ -823,20 +758,21 @@ begin
   Result := MYSQL_API.mysql_get_client_info;
 end;
 
-{function TZMySQLBaseDriver.GetEscapeString(StrTo, StrFrom: PAnsiChar;
-  Length: Cardinal): Cardinal;
-begin
-  Result := MYSQL_API.mysql_escape_string(StrTo, StrFrom, Length);
-end;}
-
 function TZMySQLBaseDriver.EscapeString(Handle: Pointer; const Value: ZAnsiString;
-  const Encoding: TZCharEncoding): ZAnsiString;
+  ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString;
 var
   Len, outlength: integer;
   Outbuffer: ZAnsiString;
   TempValue: ZAnsiString;
 begin
-  TempValue := {$IFDEF DELPHI12_UP}Value{$ELSE}ZPlainString(Value,  Encoding){$ENDIF}; //check encoding too
+  {$IFDEF DELPHI12_UP}
+  TempValue := Value;
+  {$ELSE}
+  if WasEncoded then
+    TempValue := Value
+  else
+    TempValue := ZPlainString(Value, ConSettings); //check encoding too
+  {$ENDIF}
   Len := Length(TempValue);
   Setlength(Outbuffer,Len*2+1);
   if Handle = nil then
@@ -1413,9 +1349,9 @@ begin
   inherited LoadCodePages;
   {MySQL 4.1-5.5}
   { MultiByte }
-  AddCodePage('utf8mb4', 37, ceUTF8{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF8{$ENDIF}, '', 4); {UTF-8 Unicode}
-  AddCodePage('utf16', 38, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_UTF16{$ENDIF}, 'utf8', 4); {UTF-16 Unicode}
-  AddCodePage('utf32', 39, ceUTF16{$IFDEF WITH_CHAR_CONTROL}, zCP_utf32{$ENDIF}, 'utf8', 4); {UTF-32 Unicode} //Egonhugeist improved
+  AddCodePage('utf8mb4', 37, ceUTF8, zCP_UTF8, '', 4); {UTF-8 Unicode}
+  AddCodePage('utf16', 38, ceUTF16, zCP_UTF16, 'utf8', 4); {UTF-16 Unicode}
+  AddCodePage('utf32', 39, ceUTF16, zCP_utf32, 'utf8', 4); {UTF-32 Unicode} //Egonhugeist improved
 end;
 
 constructor TZMySQL5PlainDriver.Create(Tokenizer: IZTokenizer);
