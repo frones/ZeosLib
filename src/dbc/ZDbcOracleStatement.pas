@@ -934,7 +934,7 @@ var
           TempBlob := nil;
         end;
       SQLT_NTY:
-        DefVarManager.SetAsInterface(outParamValues[Index], TZOracleBlob.CreateWithStream(nil));
+        DefVarManager.SetAsInterface(outParamValues[Index], TZOracleBlob.CreateWithStream(nil, GetConnection));
       end;
   end;
 begin

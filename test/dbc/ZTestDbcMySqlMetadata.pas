@@ -248,9 +248,7 @@ begin
   CheckEquals('', ResultSet.GetStringByName('TABLE_SCHEM'));
   CheckEquals('people', ResultSet.GetStringByName('TABLE_NAME'));
   CheckEquals('p_resume', ResultSet.GetStringByName('COLUMN_NAME'));
-  //EgonHugeist: the ClientCharacter-set sets now the Stream-Type
-  if (Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}])
-    and Connection.UTF8StringAsWideField then
+  if ( Connection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(stUnicodeStream), ResultSet.GetIntByName('DATA_TYPE'))
   else
     CheckEquals(ord(stAsciiStream), ResultSet.GetIntByName('DATA_TYPE'));

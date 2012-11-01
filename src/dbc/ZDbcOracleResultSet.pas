@@ -172,7 +172,7 @@ type
 implementation
 
 uses
-  Math, ZMessages, ZDbcOracle, ZDbcUtils;
+  Math, ZMessages, ZDbcOracle, ZDbcUtils, ZEncoding;
 
 { TZOracleAbstractResultSet }
 
@@ -702,10 +702,11 @@ begin
     Result := TZOracleBlob.Create(FPlainDriver, nil, 0, Connection, LobLocator,
       CurrentVar.ColType, GetStatement.GetChunkSize);
     (Result as IZOracleBlob).ReadBlob;
+
   end
   else
     if CurrentVar.TypeCode=SQLT_NTY then
-      Result := TZAbstractBlob.CreateWithStream(nil)
+      Result := TZAbstractBlob.CreateWithStream(nil, GetStatement.GetConnection)
     else
     begin
       if CurrentVar.Indicator >= 0 then
@@ -714,14 +715,14 @@ begin
         try
           Stream := TStringStream.Create(
             GetAsStringValue(ColumnIndex, CurrentVar));
-          Result := TZAbstractBlob.CreateWithStream(Stream);
+          Result := TZAbstractBlob.CreateWithStream(Stream, GetStatement.GetConnection);
         finally
           if Assigned(Stream) then
             Stream.Free;
         end;
       end
       else
-        Result := TZAbstractBlob.CreateWithStream(nil);
+        Result := TZAbstractBlob.CreateWithStream(nil, GetStatement.GetConnection);
     end;
 end;
 
@@ -854,12 +855,10 @@ begin
         CurrentVar.ColType := stUnknown;
     end;
 
-    if (Statement.GetConnection.GetEncoding = ceUTF8) and
-      (Self.Statement.GetConnection.UTF8StringAsWideField)
-    then
+    if (Statement.GetConnection.GetConSettings.CPType = cCP_UTF16) then
       case CurrentVar.ColType of
         stString: CurrentVar.ColType := stUnicodeString;
-        stAsciiStream: if not CurrentVar.DataType in [SQLT_LNG] then
+        stAsciiStream: if not ( CurrentVar.DataType in [SQLT_LNG]) then
           CurrentVar.ColType := stUnicodeStream;
       end;
 
@@ -1079,9 +1078,9 @@ begin
 
       ColumnType := CurrentVar.ColType;
       Scale := CurrentVar.Scale;
-      if (ColumnType = stUnicodeString) and ( Connection.GetEncoding = ceAnsi) then
+      if (ColumnType = stUnicodeString) and not ( Connection.GetConSettings.CPType = cCP_UTF16) then
         ColumnType := stString;
-      if (ColumnType = stUnicodeStream) and ( Connection.GetEncoding = ceAnsi) then
+      if (ColumnType = stUnicodeStream) and not ( Connection.GetConSettings.CPType = cCP_UTF16) then
         ColumnType := stAsciiStream;
       if (ColumnType = stString) or (ColumnType = stUnicodeString) then
       begin
@@ -1179,7 +1178,7 @@ constructor TZOracleBlob.Create(PlainDriver: IZOraclePlainDriver;
   Data: Pointer; Size: Integer; Handle: IZConnection;
   LobLocator: POCILobLocator; BlobType: TZSQLType; ChunkSize: Integer);
 begin
-  inherited CreateWithData(Data, Size);
+  inherited CreateWithData(Data, Size, Handle);
   FHandle := Handle;
   FLobLocator := LobLocator;
   FPlainDriver := PlainDriver;
@@ -1251,6 +1250,7 @@ var
   ReadNumBytes, ReadNumChars, Offset, Cap: ub4;
   Connection: IZOracleConnection;
   AnsiTemp: ZAnsiString;
+  Stream: TStream;
 
   procedure DoRead;
   begin
@@ -1281,7 +1281,7 @@ begin
       Offset := 0;
       Buf := nil;
       try
-        case self.FBlobType of
+        case FBlobType of
           stBinaryStream:
             repeat //BLOB
               {Calc new progressive by 1/8 and aligned by MemDelta capacity for buffer}
@@ -1308,8 +1308,15 @@ begin
                 DoRead;
             CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
               Status, lcOther, 'Read Large Object');
-            ReallocMem(Buf, Offset);
-            Move(PAnsichar(AnsiTemp)^, PAnsichar(Buf)^,Offset);
+            if FBlobType = stUnicodeStream then
+              Stream := ZEncoding.GetValidatedUnicodeStream(AnsiTemp, Connection.GetConSettings, True)
+            else
+              Stream := ZEncoding.GetValidatedAnsiStream(AnsiTemp, Connection.GetConSettings, True);
+            ReallocMem(Buf, Stream.Size);
+            Move(TMemoryStream(Stream).Memory^, PAnsichar(Buf)^, Stream.Size);
+            OffSet := Stream.Size;
+            Stream.Free;
+            FDecoded := FBlobType = stUnicodeStream;
           end;
         end;
       except
@@ -1430,11 +1437,6 @@ begin
   Clear;
   BlobData := AData;
   BlobSize := ASize;
-  {$IFNDEF DELPHI12_UP}
-  if FHandle.AutoEncodeStrings and ( FBlobType = stAsciiStream ) and
-      ( FHandle.GetConSettings.OS_CP <> FHandle.GetConSettings.ClientCodePage.CP ) then
-    SetString(AnsiToStringEx(GetString, FHandle.GetConSettings.ClientCodePage.CP, FHandle.GetConSettings.OS_CP));
-  {$ENDIF}
 end;
 
 {**

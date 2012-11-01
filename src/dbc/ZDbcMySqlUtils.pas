@@ -79,7 +79,7 @@ type
 }
 function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
   FieldHandle: PZMySQLField; FieldFlags: Integer;
-  const CharEncoding: TZCharEncoding; const UTF8StringAsWideField: Boolean): TZSQLType;
+  const CtrlsCPType: TZControlsCodePage): TZSQLType;
 
 {**
   Convert string mysql field type to SQLType
@@ -87,7 +87,7 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
   @result the SQLType field type value
 }
 function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull: string;
-  const CharEncoding: TZCharEncoding; const UTF8StringAsWideField: Boolean): TZSQLType;
+  const CtrlsCPType: TZControlsCodePage): TZSQLType;
 
 {**
   Checks for possible sql errors.
@@ -150,9 +150,9 @@ function GetMySQLColumnInfoFromFieldHandle(PlainDriver: IZMySQLPlainDriver;
   const bUseResult:boolean): TZColumnInfo;
 
 procedure ConvertMySQLColumnInfoFromString(const TypeInfo: String;
-  const Encoding: TZCharEncoding; const UTF8StringAsWideField: Boolean;
-  const CharWidth: Integer; out TypeName, TypeInfoSecond: String;
-  out FieldType: TZSQLType; out ColumnSize: Integer; out Precision: Integer);
+  const CtrlsCPType: TZControlsCodePage; const CharWidth: Integer;
+  out TypeName, TypeInfoSecond: String; out FieldType: TZSQLType;
+  out ColumnSize: Integer; out Precision: Integer);
 
 implementation
 
@@ -180,7 +180,7 @@ end;
 }
 function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
   FieldHandle: PZMySQLField; FieldFlags: Integer;
-  const CharEncoding: TZCharEncoding; const UTF8StringAsWideField: Boolean): TZSQLType;
+  const CtrlsCPType: TZControlsCodePage): TZSQLType;
 
   function Signed: Boolean;
   begin
@@ -230,7 +230,7 @@ begin
     FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
     FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB:
       if (FieldFlags and BINARY_FLAG) = 0 then
-        If ( CharEncoding = ceUTF8 ) and UTF8StringAsWideField then
+        If ( CtrlsCPType = cCP_UTF16) then
           Result := stUnicodeStream
         else
           Result := stAsciiStream
@@ -242,7 +242,7 @@ begin
     FIELD_TYPE_VAR_STRING,
     FIELD_TYPE_STRING:
       if (FieldFlags and BINARY_FLAG) = 0 then
-        if ( CharEncoding = ceUTF8 ) and UTF8StringAsWideField then
+        if ( CtrlsCPType = cCP_UTF16) then
           Result := stUnicodeString
         else
           Result := stString
@@ -277,7 +277,7 @@ end;
   @result the SQLType field type value
 }
 function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull: string;
-  const CharEncoding: TZCharEncoding; const UTF8StringAsWideField: Boolean): TZSQLType;
+  const CtrlsCPType: TZControlsCodePage): TZSQLType;
 const
   GeoTypes: array[0..7] of string = (
    'POINT','LINESTRING','POLYGON','GEOMETRY',
@@ -409,7 +409,7 @@ begin
          if GeoTypes[i] = TypeName then
             Result := stBinaryStream;
 
-  if (CharEncoding = ceUTF8) and UTF8StringAsWideField then
+  if ( CtrlsCPType = cCP_UTF16) then
   case result of
     stString: Result := stUnicodeString;
     stAsciiStream: Result := stUnicodeStream;
@@ -564,7 +564,7 @@ begin
     Result.ReadOnly := (PlainDriver.GetFieldTable(FieldHandle) = '');
     Result.Writable := not Result.ReadOnly;
     Result.ColumnType := ConvertMySQLHandleToSQLType(PlainDriver,
-        FieldHandle, FieldFlags, ConSettings.ClientCodePage.Encoding, ConSettings.UTF8AsWideString);
+        FieldHandle, FieldFlags, ConSettings.CPType);
     FieldLength:=PlainDriver.GetFieldLength(FieldHandle);
     //EgonHugeist: arrange the MBCS field DisplayWidth to a proper count of Chars
     if Result.ColumnType in [stString, stUnicodeString] then
@@ -632,9 +632,9 @@ begin
 end;
 
 procedure ConvertMySQLColumnInfoFromString(const TypeInfo: String;
-  const Encoding: TZCharEncoding; const UTF8StringAsWideField: Boolean;
-  const CharWidth: Integer; out TypeName, TypeInfoSecond: String;
-  out FieldType: TZSQLType; out ColumnSize: Integer; out Precision: Integer);
+  const CtrlsCPType: TZControlsCodePage; const CharWidth: Integer;
+  out TypeName, TypeInfoSecond: String; out FieldType: TZSQLType;
+  out ColumnSize: Integer; out Precision: Integer);
 var
   TypeInfoList: TStrings;
   TypeInfoFirst: String;
@@ -658,8 +658,7 @@ begin
   TypeInfoFirst := LowerCase(TypeInfoFirst);
   TypeName := TypeInfoFirst;
 
-  FieldType := ConvertMySQLTypeToSQLType(TypeInfoFirst, TypeInfo,
-    Encoding, UTF8StringAsWideField);
+  FieldType := ConvertMySQLTypeToSQLType(TypeInfoFirst, TypeInfo, CtrlsCPType);
   { the column type is ENUM}
   if TypeInfoFirst = 'enum' then
   begin

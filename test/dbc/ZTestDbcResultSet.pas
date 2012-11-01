@@ -175,11 +175,11 @@ begin
   Check(CompareMem(@Buffer, FBuffer, BINARY_BUFFER_SIZE));
 
   {string test}
-  Blob.SetString(FString);
+  Blob.SetString(ZAnsiString(FString));
   Check(not Blob.IsEmpty, 'IsEmpty');
   Check(Blob.IsUpdated, 'IsUpdated');
   CheckEquals(Length(FString), Blob.Length, 'Length');
-  ResultString := Blob.GetString;
+  ResultString := String(Blob.GetString);
   CheckEquals(FString, ResultString, 'Strings compare');
 
   { bytes test}

@@ -525,7 +525,7 @@ type
 
 implementation
 
-uses SysUtils;
+uses SysUtils, ZEncoding;
 
 function XSQLDA_LENGTH(Value: LongInt): LongInt;
 begin
@@ -567,7 +567,7 @@ procedure AddFireBird21CodePages(PlainDriver: TZAbstractPlainDriver);
 begin
   PlainDriver.AddCodePage('CP943C', 68, ceAnsi, 943, '', 2); {Japanese}
   PlainDriver.AddCodePage('GBK', 67, ceAnsi, zCP_GB2312, '', 2); {Chinese}
-  PlainDriver.AddCodePage('TIS620', 66); {Thai}
+  PlainDriver.AddCodePage('TIS620', 66, ceAnsi, zCP_IBM_Thai); {Thai}
 end;
 
 { IZFirebirdPlainDriver }
@@ -595,7 +595,7 @@ begin
   Self.AddCodePage('ISO8859_1', 21, ceAnsi, zCP_L1_ISO_8859_1); {Latin 1}
   Self.AddCodePage('KSC_5601', 44, ceAnsi, zCP_EUCKR, '', 2); {Korean (Unified Hangeul)}
   Self.AddCodePage('NEXT', 19);  {NeXTSTEP encoding}
-  Self.AddCodePage('NONE', 0, ceAnsi, zCP_us_ascii); {Codepage-neutral. Uppercasing limited to ASCII codes 97-122}
+  Self.AddCodePage('NONE', 0, ceAnsi); {Codepage-neutral. Uppercasing limited to ASCII codes 97-122}
   Self.AddCodePage('OCTETS', 1); {Binary character}
   Self.AddCodePage('SJIS_0208', 5, ceAnsi, zCP_EUC_JP, '', 2); {Japanese}
   Self.AddCodePage('UNICODE_FSS', 3, ceUTF8, zCP_UTF8, '', 3); {UNICODE}

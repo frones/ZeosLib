@@ -183,7 +183,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  SysUtils, Math, ZdbcLogging, ZPlainASAConstants, ZDbcUtils;
+  SysUtils, Math, ZdbcLogging, ZPlainASAConstants, ZDbcUtils, ZEncoding;
 
 { TZASAResultSet }
 
@@ -268,6 +268,7 @@ end;
 function TZASAResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
   Blob: IZASABlob;
+  TempStream: TStream;
 begin
   Result := nil;
   CheckClosed;
@@ -280,11 +281,17 @@ begin
   Blob := TZASABlob.Create( Self, ColumnIndex - 1);
   if FCachedBlob then
     Blob.ReadBlob;
+  if ( GetMetadata.GetColumnType(ColumnIndex) = stUnicodeStream ) then
+  begin
+    TempStream := GetValidatedUnicodeStream(Blob.GetBuffer, Blob.Length, ConSettings, True);
+    Blob.SetStream(TempStream, True);
+    TempStream.Free;
+  end
   {$IFNDEF DELPHI12_UP}
-  if ConSettings.AutoEncode and ( GetMetadata.GetColumnType(ColumnIndex) = stAsciiStream ) and
-      ( ConSettings.OS_CP <> ConSettings.ClientCodePage.CP ) then
-    Blob.SetString(AnsiToStringEx(Blob.GetString, ConSettings.ClientCodePage.CP, ConSettings.OS_CP));
-  {$ENDIF}
+  else
+    if  ConSettings.AutoEncode and ( GetMetadata.GetColumnType(ColumnIndex) in [stAsciiStream, stUnicodeStream] ) then
+      Blob.SetString(ZDbcString(Blob.GetString))
+  {$ENDIF};
   Result := Blob;
 end;
 
@@ -826,7 +833,7 @@ end;
 procedure TZASAResultSet.UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString);
 begin
   PrepareUpdateSQLData;
-  FUpdateSqlData.UpdatePChar(ColumnIndex, PChar(ZStringFromUnicode(Value)));
+  FUpdateSqlData.UpdateString(ColumnIndex, ZPlainString(Value));
 end;
 
 procedure TZASAResultSet.UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray);
@@ -971,7 +978,7 @@ end;
 
 constructor TZASABlob.CreateWithStream(Stream: TStream);
 begin
-  inherited CreateWithStream( Stream);
+  inherited CreateWithStream(Stream, FResultSet.GetStatement.GetConnection);
   FBlobRead := true;
 end;
 

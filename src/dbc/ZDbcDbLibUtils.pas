@@ -114,8 +114,8 @@ function PrepareSQLParameter(Value: TZVariant; ParamType: TZSQLType;
 
 implementation
 
-uses Types, ZSysUtils, ZPlainDbLibConstants,
- ZDbcUtils{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
+uses Types, ZSysUtils, ZPlainDbLibConstants, ZEncoding, ZDbcUtils
+  {$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
 
 {**
   Converts an ODBC native types into ZDBC SQL types.
@@ -402,20 +402,15 @@ begin
             if ParamType = stBinaryStream then
               Result := GetSQLHexAnsiString(PAnsiChar(TempBlob.GetBuffer), TempBlob.Length, True)
             else
-              if ( ParamType in [stUnicodeStream, stAsciiStream] ) and
-                ConSettings.Autoencode then
-              begin
-                TempStream := GetValidatedUnicodeStream(TempBlob.GetBuffer, TempBlob.Length);
-                TempBlob.SetStream(TempStream);
-                TempStream.Free;
-                Result := 'N'+{$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr({$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), '''');
-              end
+            begin
+              TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
+              TempBlob.SetStream(TempStream);
+              TempStream.Free;
+              if ParamType = stUnicodeStream then
+                Result := 'N'+{$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr({$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), '''')
               else
-                {$IFDEF DELPHI12_UP}
-                Result := AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), '''');
-                {$ELSE}
-                Result := AnsiQuotedStr(PlainDriver.ZPlainString(StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), ConSettings), '''');
-                {$ENDIF}
+                Result := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr({$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), '''');
+            end;
           end
           else
             Result := 'NULL';

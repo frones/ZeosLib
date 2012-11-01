@@ -1528,8 +1528,6 @@ begin
     FUTF8StringAsWideField := Value;
     {$ENDIF}
   {$IFEND}
-  if Assigned(DbcConnection) then
-    DbcConnection.UTF8StringAsWideField := FUTF8StringAsWideField;
 end;
 
 procedure TZAbstractConnection.SetControlsCodePage(const Value: TZControlsCodePage);

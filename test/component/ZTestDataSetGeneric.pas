@@ -361,8 +361,7 @@ begin
       //Now we read a none Wide-Stream in! What happens? Zeos is now able
       //to autodetect such strange things! But Zeos converts the Ansi-Stream to
       //a WiteString-Stream. So this test must be modified...
-      if ( Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8) and
-        FConnection.DbcConnection.UTF8StringAsWideField then
+      if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
       begin
         StrStream.position := 0;
         SetLength(Ansi,StrStream.Size);
@@ -560,8 +559,7 @@ begin
       //Now we read a none Wide-Stream in! What happens? Zeos is now able
       //to autodetect such strange things! But Zeos converts the Ansi-Stream to
       //a WiteString-Stream. So this test must be modified...
-      if ( Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8) and
-        FConnection.DbcConnection.UTF8StringAsWideField then
+      if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
       begin
         StrStream.position := 0;
         SetLength(Ansi,StrStream.Size);
@@ -915,8 +913,7 @@ begin
       //Now we read a none Wide-Stream in! What happens? Zeos is now able
       //to autodetect such strange things! But Zeos converts the Ansi-Stream to
       //a WiteString-Stream. So this test must be modified...
-      if ( Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 )
-        and Self.FConnection.DbcConnection.UTF8StringAsWideField then
+      if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
       begin
         SetLength(Ansi,StrStream.Size);
         StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);

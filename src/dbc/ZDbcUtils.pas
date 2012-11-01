@@ -58,7 +58,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, Contnrs, ZCompatibility, ZDbcIntfs, ZDbcResultSetMetadata;
+  Types, Classes, SysUtils, Contnrs,
+  ZCompatibility, ZDbcIntfs, ZDbcResultSetMetadata, ZPlainDriver;
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -147,14 +148,6 @@ function AQSNull(const Value: string; QuoteChar: Char = ''''): string;
 function ToLikeString(const Value: string): string;
 
 {**
-  PrepareUnicodeStream checks the incoming Stream for his given Memory and
-  returns a valid UTF8 StringStream
-  @param Stream the Stream with the unknown format and data
-  @return a valid utf8 encoded stringstram
-}
-function GetValidatedUnicodeStream(const Buffer: Pointer; Size: Cardinal): TStream;
-
-{**
   GetSQLHexString returns a valid x'..' database understandable String from
     binary data
   @param Value the ansistring-pointer to the binary data
@@ -177,9 +170,11 @@ function GetSQLHexString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False):
 function GetFieldSize(const SQLType: TZSQLType;
   const Precision, CharWidth: Integer; SizeInBytes: Boolean = False): Integer;
 
+function WideStringStream(const AString: WideString): TStream;
+
 implementation
 
-uses ZMessages, ZSysUtils{$IFDEF WITH_WIDESTRUTILS},WideStrUtils{$ENDIF};
+uses ZMessages, ZSysUtils;
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -459,71 +454,6 @@ begin
     Result := Value;
 end;
 
-function GetValidatedUnicodeStream(const Buffer: Pointer; Size: Cardinal): TStream;
-var
-  Ansi: ZAnsiString;
-  Len: Integer;
-  WS: ZWideString;
-  Bytes: TByteDynArray;
-begin
-  {EgonHugeist: TempBuffer the WideString, }
-  //Step one: Findout, wat's comming in! To avoid User-Bugs
-    //it is possible that a PAnsiChar OR a PWideChar was written into
-    //the Stream!!!  And these chars could be trunced with changing the
-    //Stream.Size.
-  if Assigned(Buffer) and ( Size > 0 ) then
-  begin
-    SetLength(Bytes, Size +2);
-    System.move(Buffer^, Pointer(Bytes)^, Size);
-    if {$IFDEF DELPHI14_UP}StrLen{$ELSE}Length{$ENDIF}(PWideChar(Bytes)) = Size then
-    begin
-      if StrLen(PAnsiChar(Bytes)) >= Size then  //Hack!! If no #0 is witten then the PAnsiChar could be oversized
-      begin
-        if DetectUTF8Encoding(PAnsiChar(Bytes)) = etAnsi then
-          Ansi := AnsiToUTF8(String(PAnsiChar(Bytes)))
-        else
-          Ansi := PAnsiChar(Bytes);
-      end
-      else
-      begin
-        WS := PWideChar(Bytes);
-        SetLength(WS, Size div 2);
-        Ansi := UTF8Encode(WS);
-      end;
-    end
-    else
-      if StrLen(PAnsiChar(Bytes)) < Size then //PWideChar written
-      begin
-        SetLength(WS, Size div 2);
-        System.Move(PWideString(Bytes)^,
-          PWideChar(WS)^, Size);
-        Ansi := UTF8Encode(WS);
-      end
-      else
-        if StrLen(PAnsiChar(Bytes)) = Size then
-        begin
-          if DetectUTF8Encoding(PAnsiChar(Bytes)) = etAnsi then
-            Ansi := AnsiToUTF8(String(PAnsiChar(Bytes)))
-          else
-            Ansi := PAnsiChar(PAnsiChar(Bytes));
-        end
-        else
-        begin
-          Ansi := PAnsiChar(Bytes);
-          if DetectUTF8Encoding(Ansi) = etAnsi then
-            Ansi := AnsiToUTF8(String(Ansi));
-        end;
-    Len := Length(Ansi);
-    Result := TMemoryStream.Create;
-    Result.Size := Len;
-    System.Move(PAnsiChar(Ansi)^, TMemoryStream(Result).Memory^, Len);
-    Result.Position := 0;
-    SetLength(Bytes, 0);
-  end
-  else
-    Result := nil;
-end;
-
 {**
   GetSQLHexString returns a valid x'..' database understandable String from
     binary data
@@ -608,6 +538,14 @@ begin
   else
     Result := Precision;
 end;
+
+function WideStringStream(const AString: WideString): TStream;
+begin
+  Result := TMemoryStream.Create;
+  Result.Write(PWideChar(AString)^, Length(AString)*2);
+  Result.Position := 0;
+end;
+
 
 end.
 

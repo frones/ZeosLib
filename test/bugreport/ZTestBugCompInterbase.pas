@@ -354,8 +354,7 @@ begin
     Query.Post;
     Query.Close;
 
-    if ( Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8) and
-      FConnection.DbcConnection.UTF8StringAsWideField then
+    if (Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16) then
     begin
       StrStream.position := 0;
       SetLength(Ansi,StrStream.Size);
@@ -452,8 +451,7 @@ begin
     'order by rc.rdb$relation_name';
     Query.Open;
     //Client_Character_set sets column-type!!!!
-    if Self.FConnection.DbcConnection.GetClientCodePageInformations^.Encoding = ceUTF8 then
-      if FConnection.DbcConnection.UTF8StringAsWideField then
+    if (Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16) then
     begin
       CheckEquals(ord(ftWideString), ord(Query.Fields[0].DataType));
       CheckEquals(ord(ftWideString), ord(Query.Fields[1].DataType));
@@ -753,7 +751,7 @@ begin
     Connection.Connect;
     if Connection.DbcConnection.GetEncoding = ceUTF8 then
     begin
-      if Connection.UTF8StringsAsWideField then
+      if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
       begin
         iqry.SQL.Add('insert into string_values(s_id,s_varchar) values (:i1,:s1)');
         iqry.Prepare;

@@ -484,6 +484,8 @@ type
 
 implementation
 
+uses ZEncoding;
+
 { TZOracle9iPlainDriver }
 
 function TZOracle9iPlainDriver.GetUnicodeCodePageName: String;
@@ -724,7 +726,7 @@ begin
 *)
 
   //All supporteds from XE
-  AddCodePage('US7ASCII', 1, ceAnsi, zCP_ACP);
+  AddCodePage('US7ASCII', 1, ceAnsi, zCP_us_ascii);
   AddCodePage('US8PC437', 4, ceAnsi, zCP_DOS437);
   AddCodePage('WE8PC850', 10, ceAnsi, zCP_DOS850);
   AddCodePage('WE8PC858', 28, ceAnsi, zCP_DOS858);

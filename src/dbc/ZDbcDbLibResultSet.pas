@@ -117,7 +117,7 @@ type
 
 implementation
 
-uses ZMessages, ZDbcLogging, ZDbcDBLibUtils;
+uses ZMessages, ZDbcLogging, ZDbcDBLibUtils, ZEncoding;
 
 { TZDBLibResultSet }
 
@@ -668,6 +668,7 @@ function TZDBLibResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
   DL: Integer;
   Data: Pointer;
+  TempStream: TStream;
 begin
   CheckClosed;
   CheckColumnIndex(ColumnIndex);
@@ -676,12 +677,18 @@ begin
   DL := FPlainDriver.dbdatlen(FHandle, ColumnIndex);
   Data := FPlainDriver.dbdata(FHandle, ColumnIndex);
   LastWasNull := Data = nil;
-  Result := TZAbstractBlob.CreateWithData(Data, DL);
-  {$IFNDEF DELPHI12_UP}
-  if ConSettings.AutoEncode and ( GetMetadata.GetColumnType(ColumnIndex) = stAsciiStream ) and
-      ( ConSettings.OS_CP <> ConSettings.ClientCodePage.CP ) then
-    Result.SetString(AnsiToStringEx(Result.GetString, ConSettings.ClientCodePage.CP, ConSettings.OS_CP));
-  {$ENDIF}
+  Result := TZAbstractBlob.CreateWithData(Data, DL, FDBLibConnection);
+  if (GetMetaData.GetColumnType(ColumnIndex) = stAsciiStream) then
+
+  if (GetMetaData.GetColumnType(ColumnIndex) in [stAsciiStream, stUnicodeStream]) then
+  begin
+    if (GetMetaData.GetColumnType(ColumnIndex) = stAsciiStream ) then
+      TempStream := ZEncoding.GetValidatedAnsiStream(Result.GetBuffer, Result.Length, ConSettings, ConSettings.CTRL_CP)
+    else
+      TempStream := ZEncoding.GetValidatedUnicodeStream(Result.GetBuffer, Result.Length, ConSettings, True);
+    Result.SetStream(TempStream);
+    TempStream.Free;
+  end;
 end;
 
 {**

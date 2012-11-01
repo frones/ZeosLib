@@ -99,7 +99,7 @@ type
 implementation
 
 uses
-  Types, ZDbcSqLiteUtils, ZDbcSqLiteResultSet, ZSysUtils, ZDbcUtils,
+  Types, ZDbcSqLiteUtils, ZDbcSqLiteResultSet, ZSysUtils, ZEncoding,
   ZMessages, ZDbcCachedResultSet{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
 
 { TZSQLiteStatement }
@@ -353,7 +353,7 @@ begin
         {$IFDEF DELPHI12_UP}
         Result := ZPlainString(AnsiQuotedStr(SoftVarManager.GetAsUnicodeString(Value), #39));
         {$ELSE}
-        Result := AnsiQuotedStr(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)), #39);
+        Result := AnsiQuotedStr(ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), #39);
         {$ENDIF}
       stDate:
         Result := '''' + ZAnsiString(FormatDateTime('yyyy-mm-dd',
@@ -372,12 +372,9 @@ begin
               Result := EncodeString(TempBlob.GetString)
             else
             begin
-              if ConSettings.AutoEncode then
-              begin
-                TempStream := GetValidatedUnicodeStream(TempBlob.GetBuffer, Tempblob.Length);
-                TempBlob.SetStream(TempStream);
-                TempStream.Free;
-              end;
+              TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
+              TempBlob.SetStream(TempStream);
+              TempStream.Free;
               Result := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr(TempBlob.GetString, #39);
             end
           else

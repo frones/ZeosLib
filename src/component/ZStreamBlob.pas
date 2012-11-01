@@ -66,18 +66,19 @@ type
     FField: TBlobField;
     FBlob: IZBlob;
     FMode: TBlobStreamMode;
+    FConnection: IZConnection;
   protected
     property Blob: IZBlob read FBlob write FBlob;
     property Mode: TBlobStreamMode read FMode write FMode;
   public
-    constructor Create(Field: TBlobField; Blob: IZBlob; Mode: TBlobStreamMode);
+    constructor Create(Field: TBlobField; Blob: IZBlob; Mode: TBlobStreamMode;
+      Connection: IZConnection);
     destructor Destroy; override;
   end;
 
 implementation
 
-uses {$IFDEF WITH_WIDESTRUTILS}WideStrUtils, {$ENDIF}
-  {$IFDEF WITH_WIDEMEMO}Types, {$ENDIF}ZCompatibility;
+uses {$IFDEF WITH_WIDESTRUTILS}WideStrUtils, {$ENDIF}ZCompatibility, ZEncoding;
 
 { TZBlobStream }
 
@@ -85,7 +86,8 @@ uses {$IFDEF WITH_WIDESTRUTILS}WideStrUtils, {$ENDIF}
   Constructs this object and assignes the main properties.
   @param Blob
 }
-constructor TZBlobStream.Create(Field: TBlobField; Blob: IZBlob; Mode: TBlobStreamMode);
+constructor TZBlobStream.Create(Field: TBlobField; Blob: IZBlob;
+  Mode: TBlobStreamMode; Connection: IZConnection);
 var
   TempStream: TStream;
 begin
@@ -94,6 +96,7 @@ begin
   FBlob := Blob;
   FMode := Mode;
   FField := Field;
+  FConnection := Connection;
   if (Mode in [bmRead, bmReadWrite]) and not Blob.IsEmpty then
   begin
     TempStream := Blob.GetStream;
@@ -115,9 +118,7 @@ type THackedDataset = class(TDataset);
 destructor TZBlobStream.Destroy;
 {$IFDEF WITH_WIDEMEMO}
 var
-  WS: ZWideString;
-  Ansi: ZAnsiString;
-  Bytes: TByteDynArray;
+  TempStream: TStream;
 {$ENDIF}
 begin
   if Mode in [bmWrite, bmReadWrite] then
@@ -127,25 +128,12 @@ begin
     {$IFDEF WITH_WIDEMEMO}
       if FField.DataType = ftWideMemo then
       begin
-        SetLength(Bytes, Size +2);
-        System.move(Memory^, Pointer(Bytes)^, Size);
-        if (({$IFDEF DELPHI14_UP}StrLen{$ELSE}Length{$ENDIF}(PWideChar(Bytes)) *2) = Size) and
-           (StrLen(PAnsiChar(Bytes)) <> Size) then
-        begin
-          SetLength(Ws, Self.Size div 2);
-          System.Move(PWideChar(Bytes)^, PWideChar(Ws)^, Size);
-          Ansi := UTF8Encode(WS);
-        end
-        else
-          if DetectUTF8Encoding(PAnsiChar(Memory)) = etAnsi then
-            Ansi := AnsiToUTF8(String(PAnsiChar(Bytes)))
-          else
-            Ansi := PAnsiChar(Memory);
-          Clear;
-        Size := Length(Ansi);
-        System.Move(PAnsichar(Ansi)^, PAnsiChar(Memory)^, Size);
+        TempStream := ZEncoding.GetValidatedUnicodeStream(Memory, Cardinal(Size), FConnection.GetConSettings, False);
+        Blob.SetStream(TempStream, True);
+        TempStream.Free;
       end
-    {$ENDIF};
+      else
+    {$ENDIF}
       Blob.SetStream(Self)
     end
     else

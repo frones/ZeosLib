@@ -548,7 +548,7 @@ begin
         begin
           if VarIsStr(V) then
           begin
-            TempBlob := TZAbstractBlob.CreateWithStream(nil);
+            TempBlob := TZAbstractBlob.CreateWithStream(nil, GetConnection);
             TempBlob.SetString(AnsiString(V));
           end
           else
@@ -556,7 +556,7 @@ begin
             begin
               P := VarArrayLock(V);
               try
-                TempBlob := TZAbstractBlob.CreateWithData(P, VarArrayHighBound(V, 1)+1);
+                TempBlob := TZAbstractBlob.CreateWithData(P, VarArrayHighBound(V, 1)+1, GetConnection);
               finally
                 VarArrayUnLock(V);
               end;

@@ -223,8 +223,7 @@ implementation
 
 uses
   Types, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZSysUtils, ZDbcResultSetMetadata,
-  ZMessages, ZDbcCachedResultSet, ZDbcUtils, DateUtils
-  {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF};
+  ZMessages, ZDbcCachedResultSet, ZDbcUtils, DateUtils, ZEncoding;
 
 { TZMySQLStatement }
 
@@ -515,11 +514,7 @@ begin
       stString:
         Result := FPlainDriver.EscapeString(FHandle, ZPlainString(SoftVarManager.GetAsString(Value)), ConSettings, True);
       stUnicodeString:
-        {$IFDEF DELPHI12_UP}
         Result := FPlainDriver.EscapeString(FHandle, ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), ConSettings, True);
-        {$ELSE}
-        Result := FPlainDriver.EscapeString(FHandle, ZStringFromUnicode(SoftVarManager.GetAsUnicodeString(Value)), ConSettings, True);
-        {$ENDIF}
       stDate:
         begin
           DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
@@ -550,16 +545,12 @@ begin
               stBinaryStream:
                 Result := GetSQLHexAnsiString(PAnsichar(TempBlob.GetBuffer), TempBlob.Length);
               else
-                if ( Connection.GetConSettings.ClientCodePage.Encoding = ceUTF8 ) and
-                  Connection.GetConSettings.AutoEncode then
-                begin
-                  TempStream := GetValidatedUnicodeStream(TempBlob.GetBuffer, TempBlob.Length);
-                  TempBlob.SetStream(TempStream);
-                  TempStream.Free;
-                  Result := FPlainDriver.EscapeString(FHandle, TempBlob.GetString, ConSettings, True)
-                end
-                else
-                  Result := FPlainDriver.EscapeString(FHandle, {$IFNDEF DELPHI12_UP}ZPlainString{$ENDIF}(TempBlob.GetString), ConSettings, True);
+              begin
+                TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
+                TempBlob.SetStream(TempStream);
+                TempStream.Free;
+                Result := FPlainDriver.EscapeString(FHandle, TempBlob.GetString, ConSettings, True)
+              end
             end;
           end
           else
@@ -703,18 +694,9 @@ begin
           FBindBuffer.AddColumn(FIELD_TYPE_BLOB, TempBlob.Length,TempBlob.Length > ChunkSize)
         else
         begin
-          if ( InParamTypes[I] in [stAsciiStream, stUnicodeString] ) then
-            if (GetConnection.GetEncoding = ceUTF8 ) and GetConnection.GetConSettings.AutoEncode then
-            begin
-              TempStream := GetValidatedUnicodeStream(TempBlob.GetBuffer, TempBlob.Length);
-              TempBlob.SetStream(TempStream);
-              TempStream.Free;
-            end
-            {$IFNDEF DELPHI12_UP}
-            else
-              if GetConnection.GetConSettings.AutoEncode then
-                TempBlob.SetString(ZPlainString(TempBlob.GetString))
-            {$ENDIF};
+          TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
+          TempBlob.SetStream(TempStream);
+          TempStream.Free;
           FBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length, TempBlob.Length > ChunkSize);
         end;
       end
@@ -1090,18 +1072,12 @@ begin
               stBinaryStream:
                 Result := GetSQLHexAnsiString(PAnsichar(TempBlob.GetBuffer), TempBlob.Length);
               else
-                begin
-                  if ( Connection.GetConSettings.ClientCodePage.Encoding = ceUTF8 )
-                    and ConSettings.AutoEncode then
-                  begin
-                    TempStream := GetValidatedUnicodeStream(TempBlob.GetBuffer, TempBlob.Length);
-                    TempBlob.SetStream(TempStream);
-                    TempStream.Free;
-                    Result := FPlainDriver.EscapeString(FHandle, TempBlob.GetString, ConSettings, True)
-                  end
-                  else
-                    Result := FPlainDriver.EscapeString(FHandle, {$IFNDEF DELPHI12_UP}ZPlainString{$ENDIF}(TempBlob.GetString), ConSettings, True);
-                end;
+              begin
+                TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
+                TempBlob.SetStream(TempStream);
+                TempStream.Free;
+                Result := FPlainDriver.EscapeString(FHandle, TempBlob.GetString, ConSettings, True)
+              end;
             end
           else
             Result := 'NULL';

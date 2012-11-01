@@ -498,7 +498,7 @@ begin
     inherited Open;
 
     {Check for ClientCodePage: if empty switch to database-defaults}
-    if Self.FClientCodePage = '' then
+    if FClientCodePage = '' then
       with GetMetadata.GetCollationAndCharSet('', '', '', '') do
       begin
         if Next then

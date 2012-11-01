@@ -684,14 +684,14 @@ begin
   V := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
   if VarIsStr(V) then
   begin
-    Result := TZAbstractBlob.CreateWithStream(nil);
+    Result := TZAbstractBlob.CreateWithStream(nil, GetStatement.GetConnection);
     Result.SetString(AnsiString(V));
   end;
   if VarIsArray(V) then
   begin
     P := VarArrayLock(V);
     try
-      Result := TZAbstractBlob.CreateWithData(P, VarArrayHighBound(V, 1)+1);
+      Result := TZAbstractBlob.CreateWithData(P, VarArrayHighBound(V, 1)+1, GetStatement.GetConnection);
     finally
       VarArrayUnLock(V);
     end;

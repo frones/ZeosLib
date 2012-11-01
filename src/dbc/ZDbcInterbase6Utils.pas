@@ -322,7 +322,7 @@ type
     StmtHandle: TISC_STMT_HANDLE; StatementType: TZIbSqlStatementType): integer;
 
   function ConvertInterbase6ToSqlType(SqlType, SqlSubType: Integer;
-    CharEncoding: TZCharEncoding; const UTF8StringAsWideField: Boolean): TZSqlType;
+    const CtrlsCPType: TZControlsCodePage): TZSqlType;
 
   { interbase blob routines }
   procedure GetBlobInfo(PlainDriver: IZInterbasePlainDriver;
@@ -445,7 +445,7 @@ const
 implementation
 
 uses
-  Variants, ZSysUtils, Math, ZDbcInterbase6, ZDbcUtils
+  Variants, ZSysUtils, Math, ZDbcInterbase6, ZEncoding
   {$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
 
 {**
@@ -690,7 +690,7 @@ end;
   <b>Note:</b> The interbase type and subtype get from RDB$TYPES table
 }
 function ConvertInterbase6ToSqlType(SqlType, SqlSubType: Integer;
-  CharEncoding: TZCharEncoding; const UTF8StringAsWideField: Boolean): TZSQLType;
+  const CtrlsCPType: TZControlsCodePage): TZSQLType;
 begin
   Result := ZDbcIntfs.stUnknown;
 
@@ -763,7 +763,7 @@ begin
     else
       Result := ZDbcIntfs.stUnknown;
   end;
-  if ( CharEncoding = ceUTF8) and UTF8StringAsWideField then
+  if ( CtrlsCPType = cCP_UTF16) then
     case result of
       stString: Result := stUnicodeString;
       stAsciiStream: Result := stUnicodeStream;
@@ -1097,12 +1097,8 @@ begin
         ParamSqlData.UpdateString(I,
           PlainDriver.ZPlainString(SoftVarManager.GetAsString(InParamValues[I]), ConSettings));
       stUnicodeString:
-        if ConSettings.ClientcodePage^.Encoding = ceUTF8 then
-          ParamSqlData.UpdateString(I,
-            UTF8Encode(SoftVarManager.GetAsUnicodeString(InParamValues[I])))
-        else
-          ParamSqlData.UpdateString(I,
-            AnsiString(SoftVarManager.GetAsUnicodeString(InParamValues[I])));
+        ParamSqlData.UpdateString(I,
+          PlainDriver.ZPlainString(SoftVarManager.GetAsUnicodeString(InParamValues[I]), ConSettings));
       stBytes:
         ParamSqlData.UpdateBytes(I,
           StrToBytes(AnsiString(SoftVarManager.GetAsString(InParamValues[I]))));
@@ -1122,21 +1118,10 @@ begin
           TempBlob := DefVarManager.GetAsInterface(InParamValues[I]) as IZBlob;
           if not TempBlob.IsEmpty then
           begin
-            if (ParamSqlData.GetFieldSqlType(i) in [stUnicodeStream, stAsciiStream]) and
-              (ConSettings.ClientCodePage.Encoding = ceUTF8)
-              {$IFNDEF DELPHI12_UP}and ConSettings.AutoEncode{$ENDIF} then
-              TempStream := GetValidatedUnicodeStream(TempBlob.GetBuffer, TempBlob.Length)
+            if (ParamSqlData.GetFieldSqlType(i) in [stUnicodeStream, stAsciiStream] ) then
+              TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer, TempBlob.Length, ConSettings)
             else
-              if (ParamSqlData.GetFieldSqlType(i) in [stUnicodeStream, stAsciiStream]) then
-              begin
-                {$IFNDEF DELPHI12_UP}
-                if ConSettings.AutoEncode then
-                  TempBlob.SetString(PlainDriver.ZPlainString(TempBlob.GetString, ConSettings));
-                {$ENDIF}
-                TempStream := TempBlob.GetStream;
-              end
-              else
-                TempStream := TempBlob.GetStream;
+              TempStream := TempBlob.GetStream;
             if Assigned(TempStream) then
             begin
               ParamSqlData.WriteBlob(I, TempStream);
@@ -1645,8 +1630,7 @@ begin
   else
       Result := stString;
   end;
-  if ( FConSettings.ClientCodePage^.Encoding = ceUTF8) and
-    FConSettings.UTF8AsWideString then
+  if ( FConSettings.CPType = cCP_UTF16 ) then
     case result of
       stString: Result := stUnicodeString;
       stAsciiStream: Result := stUnicodeStream;

@@ -84,7 +84,7 @@ type
 
 implementation
 
-uses ZTestCase, ZTestConsts;
+uses ZTestCase, ZTestConsts, ZEncoding;
 
 { TZTestDbcInterbaseBugReport }
 
@@ -341,8 +341,7 @@ begin
   begin
     CheckEquals(4, GetColumnCount);
     //Client_Character_set sets column-type!!!!
-    if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
-      if Connection.UTF8StringAsWideField then
+    if ( Connection.GetConSettings.CPType = cCP_UTF16 ) then
     begin
       CheckEquals(ord(stUnicodeString), ord(GetColumnType(1)));
       CheckEquals(ord(stUnicodeString), ord(GetColumnType(2)));

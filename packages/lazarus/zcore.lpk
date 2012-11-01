@@ -23,7 +23,7 @@
     </CompilerOptions>
     <Description Value="Zeos Core Classes and Interfaces"/>
     <Version Major="7"/>
-    <Files Count="14">
+    <Files Count="15">
       <Item1>
         <Filename Value="../../src/core/ZClasses.pas"/>
         <UnitName Value="ZClasses"/>
@@ -80,6 +80,10 @@
         <Filename Value="../../src/core/ZURL.pas"/>
         <UnitName Value="ZURL"/>
       </Item14>
+      <Item15>
+        <Filename Value="../../src/core/ZEncoding.pas"/>
+        <UnitName Value="ZEncoding"/>
+      </Item15>
     </Files>
     <RequiredPkgs Count="2">
       <Item1>

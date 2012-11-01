@@ -277,8 +277,6 @@ procedure SplitQualifiedObjectName(QualifiedName: string;
 procedure SetStatementParam(Index: Integer;
   Statement: IZPreparedStatement; Param: TParam);
 
-function WideStringStream(const AString: WideString): TStream;
-
 {** Common variables. }
 var
   CommonTokenizer: IZTokenizer;
@@ -286,7 +284,8 @@ var
 implementation
 
 uses
-  ZMessages, ZGenericSqlToken, ZDbcResultSetMetadata, ZAbstractRODataset
+  ZMessages, ZGenericSqlToken, ZDbcResultSetMetadata, ZAbstractRODataset,
+  ZDbcUtils
   {$IFNDEF WITHOUT_VARBYTESASSTRING}, ZSysUtils{$ENDIF}
   {$IFDEF WITH_INLINE_ANSISTRLCOMP}, Windows{$ENDIF};
 
@@ -1645,13 +1644,6 @@ begin
         raise EZDatabaseError.Create(SUnKnownParamDataType + IntToStr(Ord(Param.DataType)));
     end;
   end;
-end;
-
-function WideStringStream(const AString: WideString): TStream;
-begin
-  Result := TMemoryStream.Create;
-  Result.Write(PWideChar(AString)^, Length(AString)*2);
-  Result.Position := 0;
 end;
 
 initialization

@@ -270,7 +270,7 @@ type
 
 implementation
 
-uses SysUtils, ZPlainLoader;
+uses SysUtils, ZPlainLoader, ZEncoding;
 
 procedure TZASABasePlainDriver.LoadApi;
 begin

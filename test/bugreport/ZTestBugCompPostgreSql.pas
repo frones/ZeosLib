@@ -567,8 +567,7 @@ begin
       + ' WHERE d65.f1=t65.f1';
     Query.Open;
 
-    if (Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}])
-      and Connection.UTF8StringsAsWideField then
+    if (Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
       CheckEquals(ord(ftWideString), Ord(Query.Fields[0].DataType))
     else
       CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
@@ -582,9 +581,7 @@ begin
       + ' WHERE test894367a.f1=test894367b.f1';
     Query.Open;
 
-    if (Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}])
-      and Connection.UTF8StringsAsWideField then
-    if (Connection.DbcConnection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]) then
+    if (Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
       CheckEquals(ord(ftWideString), Ord(Query.Fields[0].DataType))
     else
       CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));

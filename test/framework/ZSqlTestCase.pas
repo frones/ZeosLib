@@ -432,7 +432,7 @@ var
   Ansi: ZAnsiString;
 begin
   Result := TMemoryStream.Create;
-  if ( ConSettings.CPType = cCP_UTF16 ) and ( ConSettings.ClientCodePage.Encoding = ceUTF8 ) then
+  if ( ConSettings.CPType = cCP_UTF16 ) then
   begin
     if isUTF8Encoded then
       WS := UTF8ToString(ZAnsiString(Value))

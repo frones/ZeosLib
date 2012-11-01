@@ -1192,9 +1192,8 @@ begin
             Res.UpdateString(4, GetString(ColumnIndexes[1]));
 
             ConvertMySQLColumnInfoFromString(GetString(ColumnIndexes[2]),
-              GetConnection.GetEncoding, GetConnection.UTF8StringAsWideField,
-              CharWidth, TypeName, TypeInfoSecond, MySQLType, ColumnSize,
-              ColumnDecimals);
+              GetConnection.GetConSettings.CPType, CharWidth, TypeName,
+              TypeInfoSecond, MySQLType, ColumnSize, ColumnDecimals);
             Res.UpdateInt(5, Ord(MySQLType));
             Res.UpdateString(6, TypeName);
             Res.UpdateInt(7, ColumnSize);
@@ -2521,8 +2520,8 @@ begin
             Result.UpdateString(2, GetString(2)); //PROCEDURE_SCHEM
             Result.UpdateString(3, GetString(3)); //PROCEDURE_NAME
             ConvertMySQLColumnInfoFromString(Params[2],
-              GetConnection.GetEncoding, GetConnection.UTF8StringAsWideField,
-              CharWidth, TypeName, Temp, FieldType, ColumnSize, Precision);
+              GetConnection.GetConSettings.CPType, CharWidth, TypeName, Temp,
+              FieldType, ColumnSize, Precision);
             { process COLUMN_NAME }
             if Params[1] = '' then
               if Params[0] = 'RETURNS' then

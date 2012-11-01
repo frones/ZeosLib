@@ -292,8 +292,7 @@ begin
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
   //Client_Character_set sets column-type!!!!
-  if (Connection.GetClientCodePageInformations^.Encoding = ceUTF8 ) and
-    Connection.UTF8StringAsWideField then
+  if ( Connection.GetConSettings.CPType = cCP_UTF16 ) then
   begin
     CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)));
     CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(3)));

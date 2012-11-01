@@ -124,22 +124,12 @@ var
   I: Integer;
   procedure InsertValues(s_char, s_varchar, s_nchar, s_nvarchar: String);
   begin
-    if Connection.AutoEncodeStrings or Connection.UTF8StringsAsWideField then
-    begin
-      Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
-      Query.ParamByName('s_char').AsString := s_char;
-      Query.ParamByName('s_varchar').AsString := s_varchar;
-      Query.ParamByName('s_nchar').AsString := s_nchar;
-      Query.ParamByName('s_nvarchar').AsString := s_nvarchar;
-    end
-    else
-    begin
-      Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
-      Query.ParamByName('s_char').AsString := UTF8Encode(WideString(s_char));
-      Query.ParamByName('s_varchar').AsString := UTF8Encode(WideString(s_varchar));
-      Query.ParamByName('s_nchar').AsString := UTF8Encode(WideString(s_nchar));
-      Query.ParamByName('s_nvarchar').AsString := UTF8Encode(WideString(s_nvarchar));
-    end;
+    Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
+    Query.ParamByName('s_char').AsString := GetDBTestString(s_char, Connection.DbcConnection.GetConSettings);
+    Query.ParamByName('s_varchar').AsString := GetDBTestString(s_varchar, Connection.DbcConnection.GetConSettings);
+    Query.ParamByName('s_nchar').AsString := GetDBTestString(s_nchar, Connection.DbcConnection.GetConSettings);
+    Query.ParamByName('s_nvarchar').AsString := GetDBTestString(s_nvarchar, Connection.DbcConnection.GetConSettings);
+
     Query.ExecSQL;
     inc(RowCounter);
   end;

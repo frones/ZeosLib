@@ -83,13 +83,8 @@ type
     FConnection: IZConnection;
     FConnectionPool: TConnectionPool;
     FAutoEncodeStrings: Boolean;
-    {$IFDEF WITH_WIDEFIELDS}
-    FUTF8StringAsWideField: Boolean;
-    {$ENDIF}
     FUseMetadata: Boolean;
     function GetConnection: IZConnection;
-    function GetUTF8StringAsWideField: Boolean;
-    procedure SetUTF8StringAsWideField(const Value: Boolean);
   protected // IZConnection
     FClientCodePage: String;
     procedure CheckCharEncoding(CharSet: String;
@@ -620,30 +615,6 @@ end;
 procedure TZDbcPooledConnection.SetAutoEncodeStrings(const Value: Boolean);
 begin
   FAutoEncodeStrings := Value;
-end;
-
-function TZDbcPooledConnection.GetUTF8StringAsWideField: Boolean;
-begin
-  {$IFDEF DELPHI12_UP}
-  Result := True;
-  {$ELSE}
-    {$IFDEF WITH_WIDEFIELDS}
-    Result := FUTF8StringAsWideField;
-    {$ELSE}
-    Result := False;
-    {$ENDIF}
-  {$ENDIF}
-end;
-
-procedure TZDbcPooledConnection.SetUTF8StringAsWideField(const Value: Boolean);
-begin
-  {$IFDEF DELPHI12_UP}
-  FUTF8StringAsWideField := True;
-  {$ELSE}
-    {$IFDEF WITH_WIDEFIELDS}
-    FUTF8StringAsWideField := Value;
-    {$ENDIF}
-  {$ENDIF}
 end;
 
 {**
