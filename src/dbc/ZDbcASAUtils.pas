@@ -1098,11 +1098,7 @@ begin
     varDate       : UpdateDateTime( Index, Value);
     varStrArg,
     varString     : UpdateString(Index, AnsiString(Value));
-    varOleStr     :
-      if FConSettings.ClientCodePage.Encoding = ceAnsi then
-        UpdateString(Index, AnsiString(Value))
-      else
-        UpdateString(Index, UTF8Encode(Value));
+    varOleStr     : UpdateString(Index, FPlainDriver.ZPlainString(WideString(Value), FConSettings));
     varBoolean    : UpdateBoolean( Index, Value);
     varByte       : UpdateByte( Index, Value);
     varInt64      : UpdateLong( Index, Value);
@@ -1129,15 +1125,10 @@ procedure TZASASQLDA.WriteBlob(const Index: Integer; Stream: TStream;
   const BlobType: TZSQLType);
 var
   BlobSize: Integer;
-  TempStream: TStream;
 begin
   CheckIndex( Index);
-  if BlobType in [stAsciiStream, stUnicodeStream] then
-    TempStream := GetValidatedAnsiStream(TMemoryStream(Stream).Memory, Stream.Size, FConSettings)
-  else
-    TempStream := Stream;
-  TempStream.Position := 0;
-  BlobSize := TempStream.Size;
+  stream.Position := 0;
+  BlobSize := stream.Size;
   case BlobType of
     stAsciiStream:   SetFieldType( Index, DT_LONGVARCHAR or 1, BlobSize);
     stUnicodeStream: SetFieldType( Index, DT_LONGNVARCHAR or 1, BlobSize);
@@ -1160,8 +1151,8 @@ begin
       DT_LONGVARCHAR, DT_LONGNVARCHAR,
       DT_LONGBINARY:
         begin
-          TempStream.ReadBuffer( PZASABlobStruct( sqlData).arr[0], BlobSize);
-          TempStream.Position := 0;
+          stream.ReadBuffer( PZASABlobStruct( sqlData).arr[0], BlobSize);
+          stream.Position := 0;
           PZASABlobStruct( sqlData).stored_len := BlobSize;
           PZASABlobStruct( sqlData).untrunc_len := BlobSize;
         end;
@@ -1171,8 +1162,6 @@ begin
     if (sqlind <> nil) then
        sqlind^ := 0; // not null
   end;
-  if BlobType = stUnicodeStream then
-    TempStream.Free;
 end;
 
 {**
@@ -2325,7 +2314,8 @@ begin
             if not TempBlob.IsEmpty then
             begin
               if (InParamTypes[i] in [stUnicodeStream, stAsciiStream]) then
-                TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer, TempBlob.Length, ConSettings)
+                TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer,
+                  TempBlob.Length, TempBlob.WasDecoded, ConSettings)
               else
                 TempStream := TempBlob.GetStream;
               if Assigned(TempStream) then

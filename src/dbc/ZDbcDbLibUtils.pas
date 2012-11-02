@@ -403,7 +403,7 @@ begin
               Result := GetSQLHexAnsiString(PAnsiChar(TempBlob.GetBuffer), TempBlob.Length, True)
             else
             begin
-              TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
+              TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer, TempBlob.Length, TempBlob.WasDecoded, ConSettings);
               TempBlob.SetStream(TempStream);
               TempStream.Free;
               if ParamType = stUnicodeStream then

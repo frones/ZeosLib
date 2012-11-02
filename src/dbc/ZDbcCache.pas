@@ -2355,7 +2355,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
-  GetBlob(ColumnIndex, IsNull).SetStream(Value);
+  GetBlob(ColumnIndex, IsNull).SetStream(Value, True);
 end;
 
 {**

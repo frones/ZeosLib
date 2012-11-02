@@ -339,6 +339,9 @@ function GetValidatedAnsiStream(const Buffer: Pointer; Size: Cardinal;
 function GetValidatedAnsiStream(const Buffer: Pointer; Size: Cardinal;
   ConSettings: PZConSettings; ToCP: Word): TStream; overload;
 
+function GetValidatedAnsiStream(const Buffer: Pointer; Size: Cardinal;
+  WasDecoded: Boolean; ConSettings: PZConSettings): TStream; overload;
+
 function GetValidatedAnsiStream(const Ansi: ZAnsiString;
   ConSettings: PZConSettings; const FromDB: Boolean): TStream; overload;
 
@@ -802,6 +805,35 @@ begin
     Result := nil; // not done yet
 end;
 
+function GetValidatedAnsiStream(const Buffer: Pointer; Size: Cardinal;
+  WasDecoded: Boolean; ConSettings: PZConSettings): TStream;
+var
+  Ansi: ZAnsiString;
+  WS: ZWideString;
+begin
+  if WasDecoded then
+  begin
+    SetLength(WS, Size div 2);
+    System.Move(Buffer^, PWideChar(WS)^, Size);
+
+    {$IF defined(DELPHI) or defined (MSWINDOWS)}
+    Ansi := WideToAnsi(WS, ConSettings.ClientCodePage.CP);
+    {$ELSE}
+      {$IFDEF WITH_LCONVENCODING}
+      Ansi := Consettings.PlainConvert(UTF8Encode(WS));
+      {$ELSE}
+      Ansi := ZAnsiString(WS); //no idea what to do here
+      {$ENDIF}
+    {$IFEND}
+
+    Result := TMemoryStream.Create;
+    Result.Size := Length(Ansi);
+    System.Move(PAnsiChar(Ansi)^, TMemoryStream(Result).Memory^, Result.Size);
+    Result.Position := 0;
+  end
+  else
+    Result := GetValidatedAnsiStream(Buffer, Size, ConSettings);
+end;
 {**
   GetValidatedUnicodeStream the incoming Stream for his given Memory and
   returns a valid Unicode/Widestring Stream
@@ -844,6 +876,11 @@ begin
                 WS := UTF8ToString(AnsiToUTF8(String(PAnsiChar(Bytes)))); //random success
                 {$IFEND}
             end;
+        ceAnsi: //We've to start from the premisse we've got a Unicode string i there
+          begin
+            SetLength(WS, Size div 2);
+            System.Move(PWideChar(Bytes)^, PWideChar(WS)^, Size);
+          end;
         ceUTF8: WS := UTF8ToString(PAnsiChar(Bytes));
         ceUTF16:
           begin

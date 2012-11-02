@@ -511,7 +511,8 @@ begin
                   Result := (Connection as IZPostgreSQLConnection).EncodeBinary(TempBlob.GetString);
               stAsciiStream, stUnicodeStream:
                 begin
-                  TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
+                  TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer,
+                    TempBlob.Length, TempBlob.WasDecoded, ConSettings);
                   TempBlob.SetStream(TempStream);
                   TempStream.Free;
                   Result := FPlainDriver.EscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle, Tempblob.GetString, ConSettings, True);
@@ -702,7 +703,8 @@ begin
                   Result := FPostgreSQLConnection.EncodeBinary(TempBlob.GetString);
               else
               begin
-                TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
+                TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer,
+                  TempBlob.Length, TempBlob.WasDecoded, ConSettings);
                 TempBlob.SetStream(TempStream);
                 TempStream.Free;
                 Result := FPlainDriver.EscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle, Tempblob.GetString, ConSettings, True);
@@ -1161,7 +1163,8 @@ begin
                     UpdateBinary(TempBlob.GetBuffer, TempBlob.Length, ParamIndex);
                 stAsciiStream, stUnicodeStream:
                   begin
-                    TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
+                    TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer,
+                      TempBlob.Length, TempBlob.WasDecoded, ConSettings);
                     TempBlob.SetStream(TempStream);
                     TempStream.Free;
                     UpdateString(Tempblob.GetString, ParamIndex);
@@ -1505,7 +1508,8 @@ begin
                   Result := GetConnection.GetEscapeString(TempBlob.GetString);
               stAsciiStream, stUnicodeStream:
                 begin
-                  TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
+                  TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer,
+                    TempBlob.Length, TempBlob.WasDecoded, ConSettings);
                   TempBlob.SetStream(TempStream);
                   TempStream.Free;
                   Result := FPlainDriver.EscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle, TempBlob.GetString, ConSettings, True);

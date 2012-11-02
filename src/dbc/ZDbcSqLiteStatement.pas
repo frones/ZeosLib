@@ -372,7 +372,8 @@ begin
               Result := EncodeString(TempBlob.GetString)
             else
             begin
-              TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
+              TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer,
+                TempBlob.Length, TempBlob.WasDecoded, ConSettings);
               TempBlob.SetStream(TempStream);
               TempStream.Free;
               Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(TempBlob.GetString, #39);
