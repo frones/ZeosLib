@@ -154,7 +154,7 @@ implementation
 
 uses
   Types, ZDbcLogging, ZDbcCachedResultSet, ZDbcDbLibUtils, ZDbcDbLibResultSet,
-  ZVariant{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
+  ZVariant{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 constructor TZUpdateCount.Create(ACount: Integer);
 begin
@@ -200,10 +200,10 @@ procedure TZDBLibStatement.SetASQL(const Value: ZAnsiString);
 begin
   if FDBLibConnection.GetProvider = dpMsSQL then
     //This one is to avoid a bug in dblib interface as it drops a single backslash before line end
-    inherited SetASQL({$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}StringReplace(Value, '\'#13, '\\'#13, [rfReplaceAll]))
+    inherited SetASQL({$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(Value, '\'#13, '\\'#13, [rfReplaceAll]))
   else
     //This one is to avoid sybase error: Invalid operator for datatype op: is null type: VOID TYPE
-    inherited SetASQL({$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}StringReplace(Value, ' AND NULL IS NULL', '', [rfReplaceAll]));
+    inherited SetASQL({$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(Value, ' AND NULL IS NULL', '', [rfReplaceAll]));
 end;
 
 {**

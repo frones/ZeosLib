@@ -287,7 +287,7 @@ end;
 implementation
 
 uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils, ZEncoding
-  {$IFDEF DELPHI12_UP},AnsiStrings{$ENDIF}
+  {$IFDEF WITH_UNITANSISTRINGS},AnsiStrings{$ENDIF}
   {$IFDEF MSWINDOWS}, Windows{$ENDIF};
 
 { TZAbstractDriver }
@@ -1289,7 +1289,7 @@ begin
     if StartsWith(Value, '''') and EndsWith(Value, '''') then
       Result := {$IFNDEF DELPHI12_UP}GetDriver.GetTokenizer.GetEscapeString{$ENDIF}(Value)
     else
-      {$IFDEF DELPHI12_UP}
+      {$IFDEF WITH_UNITANSISTRINGS}
       AnsiStrings.AnsiQuotedStr(Value, #39)
       {$ELSE}
       Result := GetDriver.GetTokenizer.GetEscapeString(AnsiQuotedStr(ZDbcString(Value), #39))
@@ -1298,7 +1298,7 @@ begin
     if StartsWith(Value, '''') and EndsWith(Value, '''') then
       Result := Value
     else
-      Result := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr(Value, #39);
+      Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(Value, #39);
 end;
 
 {**

@@ -115,7 +115,7 @@ function PrepareSQLParameter(Value: TZVariant; ParamType: TZSQLType;
 implementation
 
 uses Types, ZSysUtils, ZPlainDbLibConstants, ZEncoding, ZDbcUtils
-  {$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
   Converts an ODBC native types into ZDBC SQL types.
@@ -367,9 +367,9 @@ begin
       stByte, stShort, stInteger, stLong, stFloat, stDouble, stBigDecimal:
         Result := ZAnsiString(SoftVarManager.GetAsString(Value));
       stString:
-        Result := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr(PlainDriver.ZPlainString(SoftVarManager.GetAsString(Value), ConSettings), '''');
+        Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(PlainDriver.ZPlainString(SoftVarManager.GetAsString(Value), ConSettings), '''');
       stUnicodeString:
-        {$IFDEF DELPHI12_UP}
+        {$IFDEF WITH_UNITANSISTRINGS}
         if ConSettings.ClientCodePage.Encoding = ceUTF8 then
           Result := 'N'+AnsiStrings.AnsiQuotedStr(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)),'''')
         else
@@ -407,9 +407,9 @@ begin
               TempBlob.SetStream(TempStream);
               TempStream.Free;
               if ParamType = stUnicodeStream then
-                Result := 'N'+{$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr({$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), '''')
+                Result := 'N'+{$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr({$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), '''')
               else
-                Result := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr({$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), '''');
+                Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr({$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), '''');
             end;
           end
           else

@@ -209,7 +209,7 @@ implementation
 
 uses
   Types, ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils, ZTokenizer,
-  ZEncoding{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
+  ZEncoding;
 
 { TZPostgreSQLStatement }
 

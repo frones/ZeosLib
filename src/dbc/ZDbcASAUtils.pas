@@ -1132,7 +1132,7 @@ var
   TempStream: TStream;
 begin
   CheckIndex( Index);
-  if BlobType = stUnicodeStream then
+  if BlobType in [stAsciiStream, stUnicodeStream] then
     TempStream := GetValidatedAnsiStream(TMemoryStream(Stream).Memory, Stream.Size, FConSettings)
   else
     TempStream := Stream;

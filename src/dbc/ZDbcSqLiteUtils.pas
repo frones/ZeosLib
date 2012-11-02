@@ -108,7 +108,7 @@ function ConvertSQLiteVersionToSQLVersion( const SQLiteVersion: PAnsiChar ): Int
 
 implementation
 
-uses ZMessages{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
+uses ZMessages{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
   Convert string SQLite field type to SQLType
@@ -297,7 +297,7 @@ function NewDecodeString(Value:ansistring):ansistring;
     srcbuffer : PAnsichar;
   begin
     value := copy(value,3,length(value)-4);
-    value := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiLowercase(value);
+    value := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiLowercase(value);
     i := length(value) div 2;
     srcbuffer := PAnsiChar(value);
     setlength(result,i);

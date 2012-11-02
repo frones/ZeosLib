@@ -57,7 +57,7 @@ interface
 
 {$I ZComponent.inc}
 
-uses Classes, SysUtils, ZDbcIntfs, DB;
+uses Classes, SysUtils, ZDbcIntfs, DB, ZCompatibility;
 
 type
   {** Implements a class for blobs stream. }
@@ -66,19 +66,19 @@ type
     FField: TBlobField;
     FBlob: IZBlob;
     FMode: TBlobStreamMode;
-    FConnection: IZConnection;
+    FConSettings: PZConSettings;
   protected
     property Blob: IZBlob read FBlob write FBlob;
     property Mode: TBlobStreamMode read FMode write FMode;
   public
     constructor Create(Field: TBlobField; Blob: IZBlob; Mode: TBlobStreamMode;
-      Connection: IZConnection);
+      ConSettings: PZConSettings);
     destructor Destroy; override;
   end;
 
 implementation
 
-uses {$IFDEF WITH_WIDESTRUTILS}WideStrUtils, {$ENDIF}ZCompatibility, ZEncoding;
+uses ZEncoding;
 
 { TZBlobStream }
 
@@ -87,7 +87,7 @@ uses {$IFDEF WITH_WIDESTRUTILS}WideStrUtils, {$ENDIF}ZCompatibility, ZEncoding;
   @param Blob
 }
 constructor TZBlobStream.Create(Field: TBlobField; Blob: IZBlob;
-  Mode: TBlobStreamMode; Connection: IZConnection);
+  Mode: TBlobStreamMode; ConSettings: PZConSettings);
 var
   TempStream: TStream;
 begin
@@ -96,7 +96,7 @@ begin
   FBlob := Blob;
   FMode := Mode;
   FField := Field;
-  FConnection := Connection;
+  FConSettings := ConSettings;
   if (Mode in [bmRead, bmReadWrite]) and not Blob.IsEmpty then
   begin
     TempStream := Blob.GetStream;
@@ -128,7 +128,8 @@ begin
     {$IFDEF WITH_WIDEMEMO}
       if FField.DataType = ftWideMemo then
       begin
-        TempStream := ZEncoding.GetValidatedUnicodeStream(Memory, Cardinal(Size), FConnection.GetConSettings, False);
+        TempStream := GetValidatedUnicodeStream(Memory, Cardinal(Size),
+          FConSettings, False);
         Blob.SetStream(TempStream, True);
         TempStream.Free;
       end

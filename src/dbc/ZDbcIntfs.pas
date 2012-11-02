@@ -820,7 +820,7 @@ type
       const ColumnDirs: TBooleanDynArray): Integer;
 
     function GetStatement: IZStatement;
-    function GetClientCodePage: PZCodePage;
+    function GetConSettings: PZConsettings;
   end;
 
   {** ResultSet metadata interface. }

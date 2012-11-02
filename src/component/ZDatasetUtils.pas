@@ -60,7 +60,7 @@ interface
 uses
   Types, Classes, SysUtils, Db, ZDbcIntfs, ZDbcCache,
   Contnrs, ZCompatibility, ZExpression, ZVariant, ZTokenizer
-  {$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
   Converts DBC Field Type to TDataset Field Type.
@@ -1088,13 +1088,14 @@ begin
       else
       begin
         AValue1 := AnsiString(KeyValues[I].VString);
-        if ResultSet.GetClientCodePage^.Encoding = ceAnsi then
+        if (ResultSet.GetConSettings.ClientCodePage^.Encoding = ceAnsi)
+          or (ResultSet.GetConSettings.AutoEncode and ( ResultSet.GetConSettings.CTRL_CP <> 65001 )) then
           AValue2 := AnsiString(ResultSet.GetString(ColumnIndex))
         else
           AValue2 := AnsiString({$IFNDEF DELPHI12_UP}UTF8ToAnsi{$ENDIF}(ResultSet.GetString(ColumnIndex)));
 
         if CaseInsensitive then
-          AValue2 := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiUpperCase(AValue2);
+          AValue2 := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiUpperCase(AValue2);
         Result := AnsiStrLComp(PAnsiChar(AValue2), PAnsiChar(AValue1), Length(AValue1)) = 0;
       end;
 

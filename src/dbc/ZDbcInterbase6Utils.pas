@@ -446,7 +446,7 @@ implementation
 
 uses
   Variants, ZSysUtils, Math, ZDbcInterbase6, ZEncoding
-  {$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
    Generate specific length random string and return it
@@ -645,7 +645,7 @@ var
  I: Integer;
  ParamName: AnsiString;
 begin
-  ParamName := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiLowerCase(Value);
+  ParamName := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiLowerCase(Value);
   Result := 0;
   if System.Pos(BPBPrefix, String(ParamName)) = 1 then
     for I := 1 to MAX_DPB_PARAMS do
@@ -668,7 +668,7 @@ var
  I: Integer;
  ParamName: AnsiString;
 begin
-  ParamName := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiLowerCase(Value);
+  ParamName := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiLowerCase(Value);
   Result := 0;
   if System.Pos(TPBPrefix, String(ParamName)) = 1 then
     for I := 1 to MAX_TPB_PARAMS do

@@ -117,7 +117,8 @@ type
 
 implementation
 
-uses ZMessages, ZDbcLogging, ZDbcDBLibUtils, ZEncoding;
+uses ZMessages, ZDbcLogging, ZDbcDBLibUtils, ZEncoding
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZDBLibResultSet }
 
@@ -669,6 +670,7 @@ var
   DL: Integer;
   Data: Pointer;
   TempStream: TStream;
+  TempAnsi: ZAnsiString;
 begin
   CheckClosed;
   CheckColumnIndex(ColumnIndex);
@@ -682,10 +684,12 @@ begin
 
   if (GetMetaData.GetColumnType(ColumnIndex) in [stAsciiStream, stUnicodeStream]) then
   begin
+    TempAnsi := Result.GetString;
+    TempAnsi := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(TempAnsi, #0, '', [rfReplaceAll]);
     if (GetMetaData.GetColumnType(ColumnIndex) = stAsciiStream ) then
-      TempStream := ZEncoding.GetValidatedAnsiStream(Result.GetBuffer, Result.Length, ConSettings, ConSettings.CTRL_CP)
+      TempStream := ZEncoding.GetValidatedAnsiStream(TempAnsi, ConSettings, True)
     else
-      TempStream := ZEncoding.GetValidatedUnicodeStream(Result.GetBuffer, Result.Length, ConSettings, True);
+      TempStream := ZEncoding.GetValidatedUnicodeStream(TempAnsi, ConSettings, True);
     Result.SetStream(TempStream);
     TempStream.Free;
   end;

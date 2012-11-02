@@ -58,8 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, {$IFDEF DELPHI12_UP} AnsiStrings, {$ENDIF} SysUtils,
-  Types, ZSysUtils, ZDbcIntfs, ZDbcResultSet,
+  Classes, SysUtils, Types, ZSysUtils, ZDbcIntfs, ZDbcResultSet,
   ZPlainPostgreSqlDriver, ZDbcResultSetMetadata, ZDbcLogging, ZCompatibility;
 
 type
@@ -138,7 +137,7 @@ implementation
 
 uses
   Math, ZMessages, ZMatchPattern, ZDbcPostgreSql, ZDbcUtils, ZEncoding,
-  ZDbcPostgreSqlUtils;
+  ZDbcPostgreSqlUtils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZPostgreSQLResultSet }
 
@@ -344,7 +343,7 @@ begin
     FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex));
   {$ENDIF}
   if FPlainDriver.GetFieldType(FQueryHandle, ColumnIndex) = 1042 then
-    Result := TrimRight(Result);
+    Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}TrimRight(Result);
 end;
 
 {**

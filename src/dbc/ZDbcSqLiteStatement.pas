@@ -100,7 +100,7 @@ implementation
 
 uses
   Types, ZDbcSqLiteUtils, ZDbcSqLiteResultSet, ZSysUtils, ZEncoding,
-  ZMessages, ZDbcCachedResultSet{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
+  ZMessages, ZDbcCachedResultSet{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZSQLiteStatement }
 
@@ -375,7 +375,7 @@ begin
               TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
               TempBlob.SetStream(TempStream);
               TempStream.Free;
-              Result := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr(TempBlob.GetString, #39);
+              Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(TempBlob.GetString, #39);
             end
           else
             Result := 'NULL';

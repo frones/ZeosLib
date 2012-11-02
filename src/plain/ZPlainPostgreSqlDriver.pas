@@ -876,7 +876,7 @@ type
 implementation
 
 uses SysUtils, ZPlainLoader, Classes, ZEncoding
-  {$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZPostgreSQLBaseDriver }
 
@@ -1088,8 +1088,8 @@ var
 begin
   if ( POSTGRESQL_API.PQserverVersion(Handle) div 10000 >= 9 ) then
   begin
-    Len := (Length(value)-{$IFDEF DELPHI12_UP}AnsiStrings.AnsiPos{$ELSE}Pos{$ENDIF}('x', value)) div 2; //GetLength of binary result
-    Ansi := AnsiString(Copy(value, {$IFDEF DELPHI12_UP}AnsiStrings.AnsiPos{$ELSE}Pos{$ENDIF}('x', value)+1, Length(value))); //remove the first 'x'sign-byte
+    Len := (Length(value)-{$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.AnsiPos{$ELSE}Pos{$ENDIF}('x', value)) div 2; //GetLength of binary result
+    Ansi := AnsiString(Copy(value, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.AnsiPos{$ELSE}Pos{$ENDIF}('x', value)+1, Length(value))); //remove the first 'x'sign-byte
     SetLength(Result, Len); //Set length of binary-result
     HexToBin(PAnsiChar(Ansi), PAnsichar(Result), Len); //convert hex to binary
   end

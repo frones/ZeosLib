@@ -132,7 +132,7 @@ type
 
 implementation
 
-uses ZSysUtils, SysUtils, ZEncoding{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
+uses ZSysUtils, SysUtils, ZEncoding{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 
 {TZAbstractPlainDriver}
@@ -271,7 +271,7 @@ end;
 function TZAbstractPlainDriver.EscapeString(Handle: Pointer;
   const Value: ZAnsiString; ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString;
 begin
-  Result := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiQuotedStr(Value, #39);
+  Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(Value, #39);
 end;
 
 function TZAbstractPlainDriver.GetTokenizer: IZTokenizer;

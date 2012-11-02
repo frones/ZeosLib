@@ -425,9 +425,7 @@ type
 
 implementation
 
-uses SysUtils, ZPlainLoader, ZEncoding
-  {$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF}
-  {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF};
+uses SysUtils, ZPlainLoader, ZEncoding;
 
 { TZMySQLPlainBaseDriver }
 function TZMySQLBaseDriver.GetUnicodeCodePageName: String;

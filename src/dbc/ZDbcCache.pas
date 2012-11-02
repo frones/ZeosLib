@@ -219,7 +219,8 @@ const
 
 implementation
 
-uses Math, ZMessages, ZSysUtils, ZDbcUtils{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
+uses Math, ZMessages, ZSysUtils, ZDbcUtils
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZRowAccessor }
 
@@ -668,7 +669,7 @@ begin
               Result := 1;
           end
           else if FColumnTypes[ColumnIndex] = stAsciiStream then
-            {$IFDEF DELPHI12_UP}
+            {$IFDEF WITH_UNITANSISTRINGS}
             Result := AnsiStrings.AnsiCompareStr(Blob1.GetString, Blob2.GetString)
             {$ELSE}
             Result := AnsiCompareStr(Blob1.GetString, Blob2.GetString)

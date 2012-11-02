@@ -173,6 +173,7 @@
   {$DEFINE WITH_ASBYTES}                //  AsBytes is supported
   {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF
   {$DEFINE WITH_DEFAULTSYSTEMCODEPAGE}  // determine the AnsiString CP
+  {$DEFINE WITH_UNITANSISTRINGS}        // Have unit AnsiStrings
   {$UNDEF WITH_INLINE_ANSICOMPARETEXT}
 {$ENDIF}
 

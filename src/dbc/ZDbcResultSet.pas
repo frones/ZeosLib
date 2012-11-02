@@ -295,7 +295,7 @@ type
 
     function GetStatement: IZStatement; virtual;
 
-    function GetClientCodePage: PZCodePage;
+    function GetConSettings: PZConsettings;
     property ColumnsInfo: TObjectList read FColumnsInfo write FColumnsInfo;
   end;
 
@@ -2811,9 +2811,9 @@ begin
   Result := FStatement;
 end;
 
-function TZAbstractResultSet.GetClientCodePage: PZCodePage;
+function TZAbstractResultSet.GetConSettings: PZConsettings;
 begin
-  Result := ConSettings.ClientCodePage;
+  Result := ConSettings;
 end;
 
 { TZAbstractBlob }

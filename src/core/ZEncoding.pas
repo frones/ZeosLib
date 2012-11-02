@@ -598,6 +598,35 @@ begin
   {$ENDIF}
 end;
 
+function TestEncoding(const Bytes: TByteDynArray; const Size: Cardinal;
+  const ConSettings: PZConSettings): TZCharEncoding;
+begin
+  Result := ceDefault;
+  {EgonHugeist:
+    Step one: Findout, wat's comming in! To avoid User-Bugs
+      it is possible that a PAnsiChar OR a PWideChar was written into
+      the Stream!!!  And these chars could be trunced with changing the
+      Stream.Size.
+      I know this can lead to pain with two byte ansi chars, but what else can i do?
+    step two: detect the encoding }
+
+  if ( StrLen(PAnsiChar(Bytes)) < Size ) then //Sure PWideChar written!! A #0 was in the byte-sequence!
+    result := ceUTF16
+  else
+    if ConSettings.AutoEncode then
+      case DetectUTF8Encoding(PAnsichar(Bytes)) of
+        etUSASCII: Result := ceDefault; //Exact!
+        etAnsi:
+          { Sure this isn't right in all cases!
+            Two/four byte WideChars causing the same result!
+            Leads to pain! Is there a way to get a better test?}
+          Result := ceAnsi;
+        etUTF8: Result := ceUTF8; //Exact!
+      end
+    else
+      Result := ceDefault
+end;
+
 {**
   GetValidatedTextStream the incoming Stream for his given Memory and
   returns a valid UTF8/Ansi StringStream
@@ -611,99 +640,80 @@ var
   Len: Integer;
   WS: ZWideString;
   Bytes: TByteDynArray;
-
-  procedure SetFromAnsi;
-  begin
-    if ConSettings.AutoEncode then
-      case DetectUTF8Encoding(PAnsiChar(Bytes)) of
-        etUSASCII: Ansi := PAnsiChar(Bytes);
-        etAnsi:
-          if ConSettings.ClientCodePage.Encoding = ceAnsi then
-            if ( ConSettings.CTRL_CP = zCP_UTF8) or (ConSettings.CTRL_CP = ConSettings.ClientCodePage.CP) then
-              Ansi := PAnsiChar(Bytes)
-            else
-              {$IF defined(DELPHI) or defined (MSWINDOWS)}
-              Ansi := WideToAnsi(AnsiToWide(PAnsiChar(Bytes), ConSettings.CTRL_CP), ConSettings.ClientCodePage.CP)
-              {$ELSE}
-              Ansi := PAnsiChar(Bytes) //trust in compatible results
-              {$IFEND}
-          else  //UTF8 expected
-            if ( ConSettings.CTRL_CP = zCP_UTF8) then
-              Ansi := AnsiToUTF8(String(PAnsiChar(Bytes))) //Can't localize the ansi CP
-            else
-              {$IF defined(DELPHI) or defined (MSWINDOWS)}
-              Ansi := UTF8Encode(AnsiToWide(PAnsiChar(Bytes), ConSettings.CTRL_CP))
-              {$ELSE}
-              Ansi := AnsiToUTF8(String(PAnsiChar(Bytes))) //Can't localize the ansi CP
-              {$IFEND}
-        else //UTF8 found
-          if ConSettings.ClientCodePage.Encoding = ceAnsi then //ansi expected
-            {$IF defined(DELPHI) or defined (MSWINDOWS)}
-            Ansi := WideToAnsi(UTF8ToString(PAnsiChar(Bytes)), ConSettings.ClientCodePage.CP)
-            {$ELSE}
-              {$IFDEF WITH_LCONVENCODING}
-              Ansi := Consettings.PlainConvert(PAnsiChar(Bytes))
-              {$ELSE}
-              Ansi := ZAnsiString(UTF8ToAnsi(PAnsiChar(Bytes))) //tust in compatible results
-              {$ENDIF}
-            {$IFEND}
-          else //UTF8 Expected
-            Ansi := PAnsiChar(Bytes);
-      end
-    else
-      Ansi := PAnsiChar(Bytes);
-  end;
-
-  procedure SetFromWide;
-  begin
-    SetLength(WS, Size div 2);
-    System.Move(PWideChar(Bytes)^, PWideChar(WS)^, Size);
-    if ConSettings.ClientCodePage.Encoding = ceAnsi then
-      {$IF defined(DELPHI) or defined (MSWINDOWS)}
-      Ansi := WideToAnsi(WS, ConSettings.ClientCodePage.CP)
-      {$ELSE}
-        {$IFDEF WITH_LCONVENCODING}
-        Ansi := Consettings.PlainConvert(UTF8Encode(PAnsiChar(Bytes)))
-        {$ELSE}
-        Ansi := AnsiString(WS)
-        {$ENDIF}
-      {$IFEND}
-    else
-      Ansi := UTF8Encode(WS);
-  end;
 begin
-  {EgonHugeist: TempBuffer the WideString}
-  //Step one: Findout, wat's comming in! To avoid User-Bugs
-    //it is possible that a PAnsiChar OR a PWideChar was written into
-    //the Stream!!!  And these chars could be trunced with changing the
-    //Stream.Size.
-  if Assigned(Buffer) and ( Size > 0 ) then
+  Result := nil;
+
+  if Size = 0 then
+    Ansi := ''
+  else
   begin
     SetLength(Bytes, Size +2);
     System.move(Buffer^, Pointer(Bytes)^, Size);
-    if {$IFDEF DELPHI14_UP}StrLen{$ELSE}Length{$ENDIF}(PWideChar(Bytes)) = {$IFNDEF DELPHI14_UP}Integer{$ENDIF}(Size) then
-      if StrLen(PAnsiChar(Bytes)) >= Size then  //Hack!! If no #0 is witten then the PAnsiChar could be oversized
-        SetFromAnsi
+    case TestEncoding(Bytes, Size, ConSettings) of
+      ceDefault: Ansi := PAnsiChar(Bytes);
+      ceAnsi:
+        if ConSettings.ClientCodePage.Encoding = ceAnsi then
+          if ( ConSettings.CTRL_CP = zCP_UTF8) or (ConSettings.CTRL_CP = ConSettings.ClientCodePage.CP) then
+            Ansi := PAnsiChar(Bytes)
+          else
+            {$IF defined(DELPHI) or defined (MSWINDOWS)}
+            Ansi := WideToAnsi(AnsiToWide(PAnsiChar(Bytes), ConSettings.CTRL_CP), ConSettings.ClientCodePage.CP)
+            {$ELSE}
+            Ansi := PAnsiChar(Bytes) //trust in compatible results
+            {$IFEND}
+        else  //UTF8 expected
+          if ( ConSettings.CTRL_CP = zCP_UTF8) then
+            Ansi := AnsiToUTF8(String(PAnsiChar(Bytes))) //Can't localize the ansi CP
+          else
+            {$IF defined(DELPHI) or defined (MSWINDOWS)}
+            Ansi := UTF8Encode(AnsiToWide(PAnsiChar(Bytes), ConSettings.CTRL_CP));
+            {$ELSE}
+            Ansi := AnsiToUTF8(String(PAnsiChar(Bytes))); //Can't localize the ansi CP
+            {$IFEND}
+      ceUTF8:
+        if ConSettings.ClientCodePage.Encoding = ceAnsi then //ansi expected
+          {$IF defined(DELPHI) or defined (MSWINDOWS)}
+          Ansi := WideToAnsi(UTF8ToString(PAnsiChar(Bytes)), ConSettings.ClientCodePage.CP)
+          {$ELSE}
+            {$IFDEF WITH_LCONVENCODING}
+            Ansi := Consettings.PlainConvert(PAnsiChar(Bytes))
+            {$ELSE}
+            Ansi := ZAnsiString(UTF8ToAnsi(PAnsiChar(Bytes))) //tust in compatible results
+            {$ENDIF}
+          {$IFEND}
+         else //UTF8 Expected
+           Ansi := PAnsiChar(Bytes);
+      ceUTF16:
+        begin
+          SetLength(WS, Size div 2);
+          System.Move(PWideChar(Bytes)^, PWideChar(WS)^, Size);
+          if ConSettings.ClientCodePage.Encoding = ceAnsi then
+            {$IF defined(DELPHI) or defined (MSWINDOWS)}
+            Ansi := WideToAnsi(WS, ConSettings.ClientCodePage.CP)
+            {$ELSE}
+              {$IFDEF WITH_LCONVENCODING}
+              Ansi := Consettings.PlainConvert(UTF8Encode(WS))
+              {$ELSE}
+              Ansi := ZAnsiString(WS) //no idea what to do here
+              {$ENDIF}
+            {$IFEND}
+          else
+            Ansi := UTF8Encode(WS);
+        end;
       else
-        SetFromWide
-    else
-      if StrLen(PAnsiChar(Bytes)) < Size then //PWideChar written
-        SetFromWide
-      else
-        if StrLen(PAnsiChar(Bytes)) = Size then
-          SetFromAnsi
-        else
-          SetFromAnsi;
+        Ansi := '';
+    end;
+    SetLength(Bytes, 0);
+  end;
 
-    Len := Length(Ansi);
+  Len := Length(Ansi);
+  if Len > 0 then
+  begin
     Result := TMemoryStream.Create;
     Result.Size := Len;
     System.Move(PAnsiChar(Ansi)^, TMemoryStream(Result).Memory^, Len);
     Result.Position := 0;
-    SetLength(Bytes, 0);
-  end
-  else
-    Result := nil;
+  end;
 end;
 
 function GetValidatedAnsiStream(const Buffer: Pointer; Size: Cardinal;
@@ -758,38 +768,46 @@ var
     System.Move(PWideChar(Bytes)^, PWideChar(WS)^, Size);
   end;
 begin
-  {EgonHugeist: TempBuffer the WideString}
-  //Step one: Findout, wat's comming in! To avoid User-Bugs
-    //it is possible that a PAnsiChar OR a PWideChar was written into
-    //the Stream!!!  And these chars could be trunced with changing the
-    //Stream.Size.
   Result := nil;
+  WS := '';
   if Assigned(Buffer) and ( Size > 0 ) then
   begin
     SetLength(Bytes, Size +2);
     System.move(Buffer^, Pointer(Bytes)^, Size);
-    if {$IFDEF DELPHI14_UP}StrLen{$ELSE}Length{$ENDIF}(PWideChar(Bytes)) = {$IFNDEF DELPHI14_UP}Integer{$ENDIF}(Size) then
-      if StrLen(PAnsiChar(Bytes)) >= Size then  //Hack!! If no #0 is witten then the PAnsiChar could be oversized
-        Result := GetValidatedUnicodeStream(PAnsiChar(Bytes), ConSettings, FromDB)
-      else
-        SetFromWide
+    if FromDB then //do not check encoding twice
+      Result := GetValidatedUnicodeStream(PAnsiChar(Bytes), ConSettings, FromDB)
     else
-      if (StrLen(PAnsiChar(Bytes)) < Size) then
-        SetFromWide
-      else
-        if StrLen(PAnsiChar(Bytes)) = Size then
-          Result := GetValidatedUnicodeStream(PAnsiChar(Bytes), ConSettings, FromDB)
-        else
-          Result := GetValidatedUnicodeStream(PAnsiChar(Bytes), ConSettings, FromDB);
-    if not Assigned(Result) then
+      case TestEncoding(Bytes, Size, ConSettings) of
+        ceDefault:
+          case Consettings.ClientCodePage.Encoding of
+            ceUTF8: WS := UTF8ToString(PAnsiChar(Bytes));
+            ceAnsi:
+              if ( ConSettings.CTRL_CP = zCP_UTF8) then
+                WS := UTF8ToString(AnsiToUTF8(String(PAnsiChar(Bytes)))) //random success
+              else
+                {$IF defined(DELPHI) or defined (MSWINDOWS)}
+                WS := AnsiToWide(PAnsiChar(Bytes), ConSettings.CTRL_CP);
+                {$ELSE}
+                WS := UTF8ToString(AnsiToUTF8(String(PAnsiChar(Bytes)))); //random success
+                {$IFEND}
+            end;
+        ceUTF8: WS := UTF8ToString(PAnsiChar(Bytes));
+        ceUTF16:
+          begin
+            SetLength(WS, Size div 2);
+            System.Move(PWideChar(Bytes)^, PWideChar(WS)^, Size);
+          end;
+      end;
+
+    Len := Length(WS)*2;
+    if not Assigned(Result) and (Len > 0) then
     begin
-      Len := Length(WS)*2;
       Result := TMemoryStream.Create;
       Result.Size := Len;
       System.Move(PWideChar(WS)^, TMemoryStream(Result).Memory^, Len);
       Result.Position := 0;
-      SetLength(Bytes, 0);
     end;
+    SetLength(Bytes, 0);
   end;
 end;
 
@@ -799,9 +817,8 @@ var
   Len: Integer;
   WS: ZWideString;
 begin
-  if Ansi = '' then
-    Result := nil
-  else
+  Result := nil;
+  if Ansi <> '' then
   begin
     if FromDB then
       {$IF defined(DELPHI) or defined (MSWINDOWS)}
@@ -818,7 +835,7 @@ begin
         etUSASCII, etUTF8: WS := UTF8ToString(Ansi);
         etAnsi:
           if ( ConSettings.CTRL_CP = zCP_UTF8) then
-            WS := UTF8ToString(AnsiToUTF8(String(Ansi))); //random success
+            WS := UTF8ToString(AnsiToUTF8(String(Ansi))) //random success
           else
             {$IF defined(DELPHI) or defined (MSWINDOWS)}
             WS := AnsiToWide(Ansi, ConSettings.CTRL_CP);
@@ -828,10 +845,13 @@ begin
       end;
 
     Len := Length(WS)*2;
-    Result := TMemoryStream.Create;
-    Result.Size := Len;
-    System.Move(PWideChar(WS)^, TMemoryStream(Result).Memory^, Len);
-    Result.Position := 0;
+    if Len > 0 then
+    begin
+      Result := TMemoryStream.Create;
+      Result.Size := Len;
+      System.Move(PWideChar(WS)^, TMemoryStream(Result).Memory^, Len);
+      Result.Position := 0;
+    end;
   end;
 end;
 

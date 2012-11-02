@@ -1301,12 +1301,8 @@ begin
         { Processes binary array fields. }
         ftBytes:
           begin
-            (*{$IFDEF WITH_TBYTEDYNARRAYTOVARIANT}
-            PVariant(Buffer)^ := BytesToVar(RowAccessor.GetBytes(ColumnIndex, Result));
-            {$ELSE}*)
             System.Move((PAnsiChar(RowAccessor.GetColumnData(ColumnIndex, Result)) + 2)^, PAnsiChar(Buffer)^,
               RowAccessor.GetColumnDataSize(ColumnIndex)-2);
-            {.$ENDIF}
             Result := not Result;
           end;
         { Processes blob fields. }
@@ -2948,7 +2944,8 @@ begin
       if Blob <> nil then
         Blob := Blob.Clone;
       RowAccessor.SetBlob(ColumnIndex, Blob);
-      Result := TZBlobStream.Create(Field as TBlobField, Blob, Mode, FConnection.DbcConnection);
+      Result := TZBlobStream.Create(Field as TBlobField, Blob, Mode,
+        FConnection.DbcConnection.GetConSettings);
     end;
   end;
   if Result = nil then
