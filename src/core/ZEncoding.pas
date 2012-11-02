@@ -732,7 +732,7 @@ begin
           Ansi := WideToAnsi(UTF8ToString(PAnsiChar(Bytes)), ConSettings.ClientCodePage.CP)
           {$ELSE}
             {$IFDEF WITH_LCONVENCODING}
-            Ansi := Consettings.PlainConvert(PAnsiChar(Bytes))
+            Ansi := Consettings.PlainConvert(String(PAnsiChar(Bytes)))
             {$ELSE}
             Ansi := ZAnsiString(UTF8ToAnsi(PAnsiChar(Bytes))) //tust in compatible results
             {$ENDIF}
