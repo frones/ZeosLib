@@ -495,7 +495,7 @@ begin
   if FromCP = zCP_UTF8 then
     Result := UTF8Decode(AStr)
   else
-    WideString(AStr);
+    Result := WideString(AStr); //default WideString cast, can't convert
   {$IFEND}
 end;
 
@@ -535,7 +535,7 @@ begin
           if DetectUTF8Encoding(AStr) in [etUTF8, etUSASCII] then
             Result := AStr
           else
-            if ( ConSettings.CTRL_CP = zCP_UTF8 ) then //avoid "no success" for expected Codepage UTF8 of the Controls
+            if ( ConSettings.CTRL_CP = zCP_UTF8 ) or (ConSettings.CTRL_CP = zCP_UTF8) then //avoid "no success" for expected Codepage UTF8 of the Controls
             {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
             begin
               //stupid workaround to cut of the origin tracking of AStr
@@ -548,7 +548,11 @@ begin
               Result := AnsiToUTF8(AStr)
             {$ENDIF}
             else
+              {$IF defined(DELPHI) or defined(MSWINDOWS)}
               Result := StringToAnsiEx(AStr, ConSettings.CTRL_CP, zCP_UTF8)
+              {$ELSE}
+              Result := AStr; //actually i can't convert anything here
+              {$IFEND}
         else
           Result := AStr;
       {$ENDIF}
@@ -573,7 +577,11 @@ begin
               {$IFDEF WITH_LCONVENCODING}
               Result := ConSettings.PlainConvertFunc(AStr);
               {$ELSE}
-              Result := StringToAnsiEx(AStr, zCP_UTF8, ConSettings.ClientCodePage.CP);
+                {$IF defined(DELPHI) or defined(MSWINDOWS)}
+                Result := StringToAnsiEx(AStr, zCP_UTF8, ConSettings.ClientCodePage.CP);
+                {$ELSE}
+                Result := AStr;
+                {$IFEND}
               {$ENDIF}
           end
         else
@@ -631,11 +639,11 @@ end;
 function TZCodePagedObject.ZPlainString(const AStr: WideString;
   ConSettings: PZConSettings): ZAnsiString;
 begin
-  {$IF defined(DELPHI) or defined(MSWINDOWS)}
-  Result := WideToAnsi(AStr, ConSettings.ClientCodePage.CP);
+  {$IFDEF WITH_LCONVENCODING}
+  Result := ConSettings.PlainConvertFunc(UTF8Encode(AStr));
   {$ELSE}
-    {$IFDEF WITH_LCONVENCODING}
-    Result := ConSettings.PlainConvertFunc(UTF8Encode(AStr));
+    {$IF defined(DELPHI) or defined(MSWINDOWS)}
+    Result := WideToAnsi(AStr, ConSettings.ClientCodePage.CP);
     {$ELSE}
       case ConSettings.ClientCodePage.Encoding of
         ceAnsi:
@@ -647,8 +655,8 @@ begin
         else
           Result := UTF8Encode(WS);
       end;
-    {$ENDIF}
-  {$IFEND}
+    {$IFEND}
+  {$ENDIF}
 end;
 
 function TZCodePagedObject.ZPlainUnicodeString(const AStr: String): WideString;
@@ -656,11 +664,11 @@ begin
   {$IFDEF DELPHI12_UP}
   Result := AStr;
   {$ELSE}
-    {$IF defined(DELPHI) or defined(MSWINDOWS)}
-    Result := AnsiToWide(AStr, FConSettings.CTRL_CP);
+    {$IFDEF WITH_LCONVENCODING}
+    Result := UTF8ToString(AStr);
     {$ELSE}
-      {$IFDEF WITH_LCONVENCODING}
-      Result := UTF8ToString(AStr);
+      {$IF defined(DELPHI) or defined(MSWINDOWS)}
+      Result := AnsiToWide(AStr, FConSettings.CTRL_CP);
       {$ELSE}
       case Consettings.CPType of
         cGET_ACP:
@@ -671,8 +679,8 @@ begin
         else
           Result := UTF8Decode(AStr);
       end;
-      {$ENDIF}
-    {$IFEND}
+      {$IFEND}
+    {$ENDIF}
   {$ENDIF}
 end;
 
