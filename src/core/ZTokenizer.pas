@@ -522,6 +522,10 @@ implementation
 uses
   Math, StrUtils;
 
+{$IFDEF FPC}
+  {$HINTS OFF}
+{$ENDIF}
+
 { TZEscapeState } //EgonHugeist
 
 {**
@@ -909,9 +913,6 @@ end;
   @return either just a slash token, or the results of
     delegating to a comment-handling state
 }
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
 function TZCCommentState.NextToken(Stream: TStream; FirstChar: Char;
   Tokenizer: TZTokenizer): TZToken;
 var
@@ -939,9 +940,6 @@ begin
   if (Result.TokenType = ttUnknown) and (Tokenizer.SymbolState <> nil) then
     Result := Tokenizer.SymbolState.NextToken(Stream, FirstChar, Tokenizer);
 end;
-{$IFDEF FPC}
-  {$HINTS ON}
-{$ENDIF}
 
 { TZSymbolNode }
 
@@ -1003,9 +1001,6 @@ end;
 {**
   Find the descendant that takes as many characters as possible from the input.
 }
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
 function TZSymbolNode.DeepestRead(Stream: TStream): TZSymbolNode;
 var
   TempChar: Char;
@@ -1026,9 +1021,6 @@ begin
   else
     Result := Node.DeepestRead(Stream);
 end;
-{$IFDEF FPC}
-  {$HINTS ON}
-{$ENDIF}
 
 {**
   Find or create a child for the given character.
