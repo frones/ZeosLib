@@ -551,7 +551,7 @@ begin
               {$IF defined(DELPHI) or defined(MSWINDOWS)}
               Result := StringToAnsiEx(AStr, ConSettings.CTRL_CP, zCP_UTF8)
               {$ELSE}
-              Result := AStr; //actually i can't convert anything here
+              Result := AnsiToUTF8(AStr); //actually i can't convert anything here
               {$IFEND}
         else
           Result := AStr;
