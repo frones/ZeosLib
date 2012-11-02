@@ -728,15 +728,15 @@ begin
             {$IFEND}
       ceUTF8:
         if ConSettings.ClientCodePage.Encoding = ceAnsi then //ansi expected
-          {$IF defined(DELPHI) or defined (MSWINDOWS)}
-          Ansi := WideToAnsi(UTF8ToString(PAnsiChar(Bytes)), ConSettings.ClientCodePage.CP)
+          {$IFDEF WITH_LCONVENCODING}
+          Ansi := Consettings.PlainConvertFunc(String(PAnsiChar(Bytes)))
           {$ELSE}
-            {$IFDEF WITH_LCONVENCODING}
-            Ansi := Consettings.PlainConvert(String(PAnsiChar(Bytes)))
+            {$IF defined(DELPHI) or defined (MSWINDOWS)}
+            Ansi := WideToAnsi(UTF8ToString(PAnsiChar(Bytes)), ConSettings.ClientCodePage.CP)
             {$ELSE}
             Ansi := ZAnsiString(UTF8ToAnsi(PAnsiChar(Bytes))) //tust in compatible results
-            {$ENDIF}
-          {$IFEND}
+            {$IFEND}
+          {$ENDIF}
          else //UTF8 Expected
            Ansi := PAnsiChar(Bytes);
       ceUTF16:
@@ -744,15 +744,15 @@ begin
           SetLength(WS, Size div 2);
           System.Move(PWideChar(Bytes)^, PWideChar(WS)^, Size);
           if ConSettings.ClientCodePage.Encoding = ceAnsi then
-            {$IF defined(DELPHI) or defined (MSWINDOWS)}
-            Ansi := WideToAnsi(WS, ConSettings.ClientCodePage.CP)
+            {$IFDEF WITH_LCONVENCODING}
+            Ansi := Consettings.PlainConvertFunc(UTF8Encode(WS))
             {$ELSE}
-              {$IFDEF WITH_LCONVENCODING}
-              Ansi := Consettings.PlainConvert(UTF8Encode(WS))
+              {$IF defined(DELPHI) or defined (MSWINDOWS)}
+              Ansi := WideToAnsi(WS, ConSettings.ClientCodePage.CP)
               {$ELSE}
-              Ansi := ZAnsiString(WS) //no idea what to do here
-              {$ENDIF}
-            {$IFEND}
+              Ansi := ZAnsiString(WS) //no idea what to do now
+              {$IFEND}
+            {$ENDIF}
           else
             Ansi := UTF8Encode(WS);
         end;
@@ -789,18 +789,18 @@ begin
     if ( ConSettings.CTRL_CP = ConSettings.ClientCodePage.CP ) or not ConSettings.AutoEncode then
       Result := TStringStream.Create(Ansi)
     else
-      {$IF defined(DELPHI) or defined (MSWINDOWS)}
-      Result := TStringStream.Create(WideToAnsi(AnsiToWide(Ansi, ConSettings.ClientCodePage.CP), ConSettings.CTRL_CP))
+      {$IFDEF WITH_LCONVENCODING}
+      Result := TStringStream.Create(Consettings.DbcConvertFunc(Ansi))
       {$ELSE}
-        {$IFDEF WITH_LCONVENCODING}
-        Result := TStringStream.Create(Consettings.DbcConvert(Ansi))
+        {$IF defined(DELPHI) or defined (MSWINDOWS)}
+        Result := TStringStream.Create(WideToAnsi(AnsiToWide(Ansi, ConSettings.ClientCodePage.CP), ConSettings.CTRL_CP))
         {$ELSE}
         if ConSettings.ClientCodePage.Encoding = ceUTF8 then
           Result := TStringStream.Create(UTF8ToAnsi(Ansi)) //random success
         else
           Result := TStringStream.Create(Ansi)
-        {$ENDIF}
-      {$IFEND}
+        {$IFEND}
+      {$ENDIF}
   else
     Result := nil; // not done yet
 end;
@@ -816,15 +816,15 @@ begin
     SetLength(WS, Size div 2);
     System.Move(Buffer^, PWideChar(WS)^, Size);
 
-    {$IF defined(DELPHI) or defined (MSWINDOWS)}
-    Ansi := WideToAnsi(WS, ConSettings.ClientCodePage.CP);
+    {$IFDEF WITH_LCONVENCODING}
+    Ansi := Consettings.PlainConvertFunc(UTF8Encode(WS));
     {$ELSE}
-      {$IFDEF WITH_LCONVENCODING}
-      Ansi := Consettings.PlainConvert(UTF8Encode(WS));
+      {$IF defined(DELPHI) or defined (MSWINDOWS)}
+      Ansi := WideToAnsi(WS, ConSettings.ClientCodePage.CP);
       {$ELSE}
       Ansi := ZAnsiString(WS); //no idea what to do here
-      {$ENDIF}
-    {$IFEND}
+      {$IFEND}
+    {$ENDIF}
 
     Result := TMemoryStream.Create;
     Result.Size := Length(Ansi);
@@ -911,15 +911,15 @@ begin
   if Ansi <> '' then
   begin
     if FromDB then
-      {$IF defined(DELPHI) or defined (MSWINDOWS)}
-      WS := AnsiToWide(Ansi, ConSettings.ClientCodePage.CP)
+      {$IFDEF WITH_LCONVENCODING}
+      WS := UTF8ToString(Consettings.DbcConvertFunc(Ansi))
       {$ELSE}
-        {$IFDEF WITH_LCONVENCODING}
-        WS := UTF8ToString(Consettings.DbcConvert(Ansi))
+        {$IF defined(DELPHI) or defined (MSWINDOWS)}
+        WS := AnsiToWide(Ansi, ConSettings.ClientCodePage.CP)
         {$ELSE}
         WS := UTF8ToString(AnsiToUTF8(String(Ansi))) //random success
-        {$ENDIF}
-      {$IFEND}
+        {$IFEND}
+      {$ENDIF}
     else
       case DetectUTF8Encoding(Ansi) of
         etUSASCII, etUTF8: WS := UTF8ToString(Ansi);
