@@ -713,6 +713,7 @@ begin
         begin
           ConSettings.CPType := {$IFDEF WITH_WIDEFIELDS}cCP_UTF16{$ELSE}cCP_UTF8{$ENDIF};
           ConSettings.CTRL_CP := zCP_UTF8;
+          ConSettings.AutoEncode := True;
         end
         else // nothing was found set defaults
         begin
