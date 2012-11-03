@@ -416,6 +416,15 @@ begin
       DATABASE_DROP_SCRIPTS_KEY, ''), LIST_DELIMITERS);
     Current.Properties := SplitStringToArray(ReadProperty(_ConnectionName,
       DATABASE_PROPERTIES_KEY, ''), LIST_DELIMITERS);
+    {$IFDEF FPC}
+    if Current.Protocol = 'ado' then
+      try
+        Current.Free;
+      finally
+        continue;
+      end;
+    {$ENDIF}
+
     FConnections.Add(Current);
 
     {child settings on demand}
