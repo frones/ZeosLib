@@ -273,10 +273,12 @@ begin
         stAsciiStream:
           begin
             Result := TZAbstractBlob.CreateWithData(Buffer, Size, FIBConnection);
-            {$IFNDEF DELPHI12_UP}
-            if ConSettings.AutoEncode then
-               Result.SetString(ZDbcString(Result.GetString))
-            {$ENDIF}
+            TempStream := GetValidatedAnsiStream(Result.GetString, Consettings, True);
+            if Assigned(TempStream) then
+            begin
+              Result.SetStream(TempStream);
+              TempStream.Free;
+            end;
           end;
         else
           begin

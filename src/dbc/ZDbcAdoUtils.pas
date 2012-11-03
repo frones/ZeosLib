@@ -57,7 +57,7 @@ interface
 
 {$I ZDbc.inc}
 
-uses Windows, Classes, SysUtils, ActiveX, ZDbcIntfs;
+uses Windows, Classes, SysUtils, ActiveX, ZDbcIntfs, ZCompatibility;
 
 {**
   Converts an ADO native types into string related.
@@ -71,7 +71,7 @@ function ConvertAdoToTypeName(FieldType: SmallInt): string;
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertAdoToSqlType(FieldType: SmallInt): TZSQLType;
+function ConvertAdoToSqlType(FieldType: SmallInt; CtrlsCPType: TZControlsCodePage): TZSQLType;
 
 {**
   Converts a Zeos type into ADO types.
@@ -126,7 +126,7 @@ var
 implementation
 
 uses
-  ComObj, OleDB, ZCompatibility, ZSysUtils, ZPlainAdo;
+  ComObj, OleDB, ZSysUtils, ZPlainAdo;
 
 {**
   Converts an ADO native types into string related.
@@ -186,7 +186,7 @@ end;
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertAdoToSqlType(FieldType: SmallInt): TZSQLType;
+function ConvertAdoToSqlType(FieldType: SmallInt; CtrlsCPType: TZControlsCodePage): TZSQLType;
 begin
   case FieldType of
     adChar, adVarChar, adBSTR: Result := stString;
@@ -205,7 +205,7 @@ begin
     adCurrency: Result := stBigDecimal;
     adDBDate: Result := stDate;
     adDBTime: Result := stTime;
-    adDate : Result := stDate; 
+    adDate : Result := stDate;
     adDBTimeStamp, adFileTime: Result := stTimestamp;
     adLongVarChar: Result := stAsciiStream;
     adLongVarWChar: Result := stUnicodeStream;
@@ -217,6 +217,11 @@ begin
   else
     Result := stString;
   end;
+  if CtrlsCPType = cCP_UTF16 then
+    case Result of
+      stString: Result := stUnicodeString;
+      stAsciiStream: Result := stUnicodeStream;
+    end;
 end;
 
 {**

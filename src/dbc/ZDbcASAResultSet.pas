@@ -281,17 +281,16 @@ begin
   Blob := TZASABlob.Create( Self, ColumnIndex - 1);
   if FCachedBlob then
     Blob.ReadBlob;
-  if ( GetMetadata.GetColumnType(ColumnIndex) = stUnicodeStream ) then
+  if ( GetMetadata.GetColumnType(ColumnIndex) in [stUnicodeStream, stAsciiStream] ) then
   begin
-    TempStream := GetValidatedUnicodeStream(Blob.GetBuffer, Blob.Length, ConSettings, True);
+    case GetMetaData.GetColumnType(ColumnIndex) of
+      stAsciiStream: TempStream := GetValidatedAnsiStream(Blob.GetString, ConSettings, True);
+      else
+        TempStream := GetValidatedUnicodeStream(Blob.GetBuffer, Blob.Length, ConSettings, True);
+    end;
     Blob.SetStream(TempStream, True);
     TempStream.Free;
-  end
-  {$IFNDEF DELPHI12_UP}
-  else
-    if  ConSettings.AutoEncode and ( GetMetadata.GetColumnType(ColumnIndex) in [stAsciiStream, stUnicodeStream] ) then
-      Blob.SetString(ZDbcString(Blob.GetString))
-  {$ENDIF};
+  end;
   Result := Blob;
 end;
 

@@ -529,7 +529,7 @@ begin
   begin
     Temp := FAdoCommand.Parameters.Item[ParameterIndex - 1].Value;
 
-    case ConvertAdoToSqlType(FAdoCommand.Parameters.Item[ParameterIndex - 1].Type_) of
+    case ConvertAdoToSqlType(FAdoCommand.Parameters.Item[ParameterIndex - 1].Type_, ConSettings.CPType) of
       stBoolean:
         DefVarManager.SetAsBoolean(Result, Temp);
       stByte, stShort, stInteger, stLong:
