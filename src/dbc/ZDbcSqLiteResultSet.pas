@@ -256,8 +256,11 @@ begin
         ColumnType := ConvertSQLiteTypeToSQLType(FPlainDriver.GetColumnDataType(FStmtHandle,I-1),
           FieldPrecision, FieldDecimals, ConSettings.CPType);
       end;
-      if ColumnType in [stString, stUnicodeString] then
-        ColumnDisplaySize := FieldPrecision{$IFNDEF DELPHI12_UP} div 4{$ENDIF};
+      if ColumnType = stString then
+        ColumnDisplaySize := FieldPrecision div {$IFDEF DELPHI12_UP}2{$ELSE}4{$ENDIF};
+      if ColumnType = stUnicodeString then
+        ColumnDisplaySize := FieldPrecision div 2;
+
       AutoIncrement := False;
       Precision := FieldPrecision;
       Scale := FieldDecimals;
