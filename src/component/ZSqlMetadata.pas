@@ -142,6 +142,9 @@ end;
   @param MaxRows a maximum rows number (-1 for all).
   @returns a created DBC resultset.
 }
+{$IFDEF FPC}
+  {$HINTS OFF}
+{$ENDIF}
 function TZSQLMetadata.CreateResultSet(const SQL: string; MaxRows: Integer):
   IZResultSet;
 var
@@ -203,6 +206,9 @@ begin
     Connection.HideSQLHourGlass;
   end;
 end;
+{$IFDEF FPC}
+  {$HINTS ON}
+{$ENDIF}
 
 {**
   Checks the SQL query. The query has no meaning for this class.

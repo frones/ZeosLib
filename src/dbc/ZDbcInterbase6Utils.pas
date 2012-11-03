@@ -1056,7 +1056,7 @@ procedure BindSQLDAInParameters(PlainDriver: IZInterbasePlainDriver;
 var
   I: Integer;
   TempBlob: IZBlob;
-  TempStream, MS: TStream;
+  TempStream: TStream;
 begin
   if InParamCount <> ParamSqlData.GetFieldCount then
     raise EZSQLException.Create(SInvalidInputParameterCount);
@@ -1122,18 +1122,24 @@ begin
           TempBlob := DefVarManager.GetAsInterface(InParamValues[I]) as IZBlob;
           if not TempBlob.IsEmpty then
           begin
-            TempStream := TempBlob.GetStream;
-            try
-              if (ParamSqlData.GetFieldSqlType(i) in [stUnicodeStream, stAsciiStream]) and
-                (ConSettings.ClientCodePage^.Encoding = ceUTF8) then
+            if (ParamSqlData.GetFieldSqlType(i) in [stUnicodeStream, stAsciiStream]) and
+              (ConSettings.ClientCodePage.Encoding = ceUTF8)
+              {$IFNDEF DELPHI12_UP}and ConSettings.AutoEncode{$ENDIF} then
+              TempStream := GetValidatedUnicodeStream(TempBlob.GetBuffer, TempBlob.Length)
+            else
+              if (ParamSqlData.GetFieldSqlType(i) in [stUnicodeStream, stAsciiStream]) then
               begin
-                MS := GetValidatedUnicodeStream(TempStream);
-                ParamSqlData.WriteBlob(I, MS);
-                MS.Free;
+                {$IFNDEF DELPHI12_UP}
+                if ConSettings.AutoEncode then
+                  TempBlob.SetString(PlainDriver.ZPlainString(TempBlob.GetString, ConSettings));
+                {$ENDIF}
+                TempStream := TempBlob.GetStream;
               end
               else
-                ParamSqlData.WriteBlob(I, TempStream);
-            finally
+                TempStream := TempBlob.GetStream;
+            if Assigned(TempStream) then
+            begin
+              ParamSqlData.WriteBlob(I, TempStream);
               TempStream.Free;
             end;
           end;

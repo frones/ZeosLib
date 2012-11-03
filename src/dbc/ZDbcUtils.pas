@@ -152,7 +152,7 @@ function ToLikeString(const Value: string): string;
   @param Stream the Stream with the unknown format and data
   @return a valid utf8 encoded stringstram
 }
-function GetValidatedUnicodeStream(const Stream: TStream): TStream;
+function GetValidatedUnicodeStream(const Buffer: Pointer; Size: Cardinal): TStream;
 
 {**
   GetSQLHexString returns a valid x'..' database understandable String from
@@ -459,7 +459,7 @@ begin
     Result := Value;
 end;
 
-function GetValidatedUnicodeStream(const Stream: TStream): TStream;
+function GetValidatedUnicodeStream(const Buffer: Pointer; Size: Cardinal): TStream;
 var
   Ansi: ZAnsiString;
   Len: Integer;
@@ -471,13 +471,13 @@ begin
     //it is possible that a PAnsiChar OR a PWideChar was written into
     //the Stream!!!  And these chars could be trunced with changing the
     //Stream.Size.
-  if Assigned(Stream) then
+  if Assigned(Buffer) and ( Size > 0 ) then
   begin
-    SetLength(Bytes, Stream.Size +2);
-    System.move(TMemoryStream(Stream).Memory^, Pointer(Bytes)^, Stream.Size);
-    if {$IFDEF DELPHI14_UP}StrLen{$ELSE}Length{$ENDIF}(PWideChar(Bytes)) = Stream.Size then
+    SetLength(Bytes, Size +2);
+    System.move(Buffer^, Pointer(Bytes)^, Size);
+    if {$IFDEF DELPHI14_UP}StrLen{$ELSE}Length{$ENDIF}(PWideChar(Bytes)) = Size then
     begin
-      if StrLen(PAnsiChar(Bytes)) >= Stream.Size then  //Hack!! If no #0 is witten then the PAnsiChar could be oversized
+      if StrLen(PAnsiChar(Bytes)) >= Size then  //Hack!! If no #0 is witten then the PAnsiChar could be oversized
       begin
         if DetectUTF8Encoding(PAnsiChar(Bytes)) = etAnsi then
           Ansi := AnsiToUTF8(String(PAnsiChar(Bytes)))
@@ -486,21 +486,21 @@ begin
       end
       else
       begin
-        WS := PWideChar(TMemoryStream(Stream).Memory);
-        SetLength(WS, Stream.Size div 2);
+        WS := PWideChar(Bytes);
+        SetLength(WS, Size div 2);
         Ansi := UTF8Encode(WS);
       end;
     end
     else
-      if StrLen(PAnsiChar(Bytes)) < Stream.Size then //PWideChar written
+      if StrLen(PAnsiChar(Bytes)) < Size then //PWideChar written
       begin
-        SetLength(WS, Stream.Size div 2);
-        System.Move(PWideString(TMemoryStream(Stream).Memory)^,
-          PWideChar(WS)^, Stream.Size);
+        SetLength(WS, Size div 2);
+        System.Move(PWideString(Bytes)^,
+          PWideChar(WS)^, Size);
         Ansi := UTF8Encode(WS);
       end
       else
-        if StrLen(PAnsiChar(Bytes)) = Stream.Size then
+        if StrLen(PAnsiChar(Bytes)) = Size then
         begin
           if DetectUTF8Encoding(PAnsiChar(Bytes)) = etAnsi then
             Ansi := AnsiToUTF8(String(PAnsiChar(Bytes)))

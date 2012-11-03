@@ -124,7 +124,7 @@ var
   I: Integer;
   procedure InsertValues(s_char, s_varchar, s_nchar, s_nvarchar: String);
   begin
-    if Connection.DbcConnection.AutoEncodeStrings or Connection.UTF8StringsAsWideField then
+    if Connection.AutoEncodeStrings or Connection.UTF8StringsAsWideField then
     begin
       Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
       Query.ParamByName('s_char').AsString := s_char;

@@ -218,10 +218,17 @@ begin
     EditUpdateSQL(TZUpdateSQL(Component));
 end;
 
+{$IFDEF FPC}
+  {$HINTS OFF}
+{$ENDIF}
 function TZUpdateSqlEditor.GetVerb(Index: Integer): string;
 begin
   Result := 'UpdateSql editor...';
 end;
+{$IFDEF FPC}
+  {$HINTS ON}
+{$ENDIF}
+
 
 function TZUpdateSqlEditor.GetVerbCount: Integer;
 begin
@@ -389,14 +396,12 @@ var
   P, TokenStart: PChar;
   IsParam: Boolean;
 
+  {$IFNDEF FPC}
   function IsKatakana(const Chr: Byte): Boolean;
   begin
-    {$IFNDEF FPC}
     Result := (SysLocale.PriLangID = LANG_JAPANESE) and (Chr in [$A1..$DF]);
-    {$ELSE}
-    Result := False;
-    {$ENDIF}
   end;
+  {$ENDIF}
 
 begin
   if FToken = stEnd then SysUtils.Abort;
@@ -420,7 +425,7 @@ begin
             while TRUE do
             begin
               if CharInSet(P^, ['A'..'Z', 'a'..'z', '0'..'9', '_', '.', '"', '$']) or
-                 IsKatakana(Byte(P^)) then
+                 {$IFNDEF FPC}IsKatakana(Byte(P^)){$ELSE}False{$ENDIF} then
                 Inc(P)
               else
                 if CharInSet(P^, LeadBytes) then

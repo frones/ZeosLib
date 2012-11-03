@@ -389,7 +389,14 @@ begin
   LastWasNull := Buffer = nil;
   Result := '';
   if not LastWasNull then
+  {$IFDEF WITH_RAWBYTESTRING}
+  begin
+    SetLength(Result, Length);
+    Move(Buffer^, PAnsiChar(Result)^, Length);
+  end;
+  {$ELSE}
     SetString(Result, Buffer, Length);
+  {$ENDIF}
 end;
 
 {**

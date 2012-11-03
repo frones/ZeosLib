@@ -138,10 +138,8 @@ type
     constructor Create(const ConnectionPool: TConnectionPool);
     destructor Destroy; override;
     function GetBinaryEscapeString(const Value: ZAnsiString): String;
-    function GetEscapeString(const Value: String): String; overload; virtual;
-    {$IFDEF DELPHI12_UP}
-    function GetEscapeString(const Value: ZAnsiString): String; overload; virtual;
-    {$ENDIF}
+    function GetEscapeString(const Value: ZWideString): ZWideString; overload; virtual;
+    function GetEscapeString(const Value: ZAnsiString): ZAnsiString; overload; virtual;
     function GetEncoding: TZCharEncoding;
     function GetConSettings: PZConSettings;
   end;
@@ -227,14 +225,14 @@ begin
 
   while True do
   begin
-  FCriticalSection.Enter;
-  try
+    FCriticalSection.Enter;
+    try
       // Try to get an existing connection
       I := 0;
       while I < FSlotsInUse.Size do
       begin
         if (FConnections[I] <> nil) and (not FSlotsInUse[I]) then
-    begin
+        begin
           try
             // Test for dead connections
             FConnections[I].Rollback; // PingServer didn´t work (tested with FB)
@@ -661,17 +659,15 @@ begin
   Result := GetConnection.GetBinaryEscapeString(Value);
 end;
 
-function TZDbcPooledConnection.GetEscapeString(const Value: String): String;
+function TZDbcPooledConnection.GetEscapeString(const Value: ZWideString): ZWideString;
 begin
   Result := GetConnection.GetEscapeString(Value);
 end;
 
-{$IFDEF DELPHI12_UP}
-function TZDbcPooledConnection.GetEscapeString(const Value: ZAnsiString): String;
+function TZDbcPooledConnection.GetEscapeString(const Value: ZAnsiString): ZAnsiString;
 begin
   Result := GetConnection.GetEscapeString(Value);
 end;
-{$ENDIF}
 
 function TZDbcPooledConnection.GetEncoding: TZCharEncoding;
 begin

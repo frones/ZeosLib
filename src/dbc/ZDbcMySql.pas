@@ -127,10 +127,8 @@ type
     {END ADDED by fduenas 15-06-2006}
     function GetPlainDriver: IZMySQLPlainDriver;
     function GetConnectionHandle: PZMySQLConnect;
-    function GetEscapeString(const Value: String): String; override;
-    {$IFDEF DELPHI12_UP}
-    function GetEscapeString(const Value: ZAnsiString): String; override;
-    {$ENDIF}
+    function GetEscapeString(const Value: ZWideString): ZWideString; override;
+    function GetEscapeString(const Value: ZAnsiString): ZAnsiString; override;
   end;
 
 
@@ -792,17 +790,15 @@ end;
   @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
   @result the detectable Binary String
 }
-function TZMySQLConnection.GetEscapeString(const Value: String): String;
+function TZMySQLConnection.GetEscapeString(const Value: ZWideString): ZWideString;
 begin
   Result := inherited GetEscapeString(GetPlainDriver.EscapeString(FHandle, Value, ConSettings));
 end;
 
-{$IFDEF DELPHI12_UP}
-function TZMySQLConnection.GetEscapeString(const Value: ZAnsiString): String;
+function TZMySQLConnection.GetEscapeString(const Value: ZAnsiString): ZAnsiString;
 begin
   Result := inherited GetEscapeString(GetPlainDriver.EscapeString(FHandle, Value, ConSettings));
 end;
-{$ENDIF}
 
 initialization
   MySQLDriver := TZMySQLDriver.Create;

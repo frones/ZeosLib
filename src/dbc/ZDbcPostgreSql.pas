@@ -157,10 +157,8 @@ type
     function EscapeString(Value: ZAnsiString): ZAnsiString; override;
     function GetCharactersetCode: TZPgCharactersetType;
     function GetBinaryEscapeString(const Value: ZAnsiString): String; override;
-    function GetEscapeString(const Value: String): String; override;
-    {$IFDEF DELPHI12_UP}
-    function GetEscapeString(const Value: ZAnsiString): String; override;
-    {$ENDIF}
+    function GetEscapeString(const Value: ZWideString): ZWideString; overload; override;
+    function GetEscapeString(const Value: ZAnsiString): ZAnsiString; overload; override;
     function GetServerSetting(const AName: string): string;
     procedure SetServerSetting(const AName, AValue: string);
   end;
@@ -1055,19 +1053,21 @@ end;
   @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
   @result the detectable Postrgres-compatible String
 }
-function TZPostgreSQLConnection.GetEscapeString(const Value: String): String;
+function TZPostgreSQLConnection.GetEscapeString(const Value: ZWideString): ZWideString;
 begin
   Result := GetPlainDriver.EscapeString(FHandle, Value, ConSettings);
   if GetAutoEncodeStrings then
     Result := GetDriver.GetTokenizer.GetEscapeString(Result);
 end;
 
-{$IFDEF DELPHI12_UP}
-function TZPostgreSQLConnection.GetEscapeString(const Value: ZAnsiString): String;
+function TZPostgreSQLConnection.GetEscapeString(const Value: ZAnsiString): ZAnsiString;
 begin
-  Result := ZDbcString(GetPlainDriver.EscapeString(FHandle, Value, ConSettings));
+  Result := GetPlainDriver.EscapeString(FHandle, Value, ConSettings);
+  {$IFNDEF DELPHI12_UP}
+  if GetAutoEncodeStrings then
+    Result := GetDriver.GetTokenizer.GetEscapeString(Result);
+  {$ENDIF}
 end;
-{$ENDIF}
 
 {**
   Gets a current setting of run-time parameter.

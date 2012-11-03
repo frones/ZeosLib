@@ -60,7 +60,7 @@ interface
 {$IFDEF WITH_PROPERTY_EDITOR}
 
 uses
-  Types, Classes, ZClasses, ZCompatibility, ZDbcIntfs, ZGroupedConnection ,
+  Types, Classes, ZClasses, ZCompatibility, ZDbcIntfs,
   ZConnectionGroup, ZAbstractConnection, ZURL,
 {$IFDEF BDS4_UP}
   WideStrings,
@@ -218,8 +218,7 @@ implementation
 
 {$IFDEF WITH_PROPERTY_EDITOR}
 
-uses SysUtils, Forms, Dialogs, Controls, DB, TypInfo, ZSysUtils,
-  ZConnection, ZSelectSchema
+uses SysUtils, Forms, Dialogs, Controls, DB, TypInfo, ZSysUtils, ZSelectSchema
 {$IFDEF USE_METADATA}
   , ZSqlMetadata
 {$ENDIF}
@@ -453,7 +452,6 @@ var
   ResultSet: IZResultSet;
   Catalog, Schema: string;
   ProcedureName: string;
-  OverloadName: String;
 
   procedure ExtractOverload(OverloadSeparator: String);
   var
@@ -464,7 +462,6 @@ var
     PutSplitString(SL, ProcedureName, OverloadSeparator);
     if SL.Count > 1 then
     begin
-      OverloadName := OverloadSeparator+SL[SL.Count -1];
       SL.Delete(SL.Count -1);
       ProcedureName := '';
       for i := 0 to SL.Count -1 do
@@ -507,7 +504,6 @@ begin
         while ResultSet.Next do
         begin
           ProcedureName := ResultSet.GetStringByName('PROCEDURE_NAME');
-          OverloadName := '';
           if not Metadata.GetDatabaseInfo.SupportsOverloadPrefixInStoredProcedureName then
             ProcedureName := IdentifierConvertor.Quote(ProcedureName);
           Schema := ResultSet.GetStringByName('PROCEDURE_SCHEM');
@@ -1114,11 +1110,10 @@ end;
 procedure TZConnectionGroupPropertyEditor.GetValueList(List: TStrings);
 var
   DbcConnection: IZConnection;
-  Url: string;
 begin
   if GetZComponent is TZConnectionGroup then
   try
-    URL := (GetZComponent as TZAbstractConnection).GetURL;
+    DbcConnection := (GetZComponent as TZAbstractConnection).DbcConnection;
     with DbcConnection.GetMetadata.GetCatalogs do
     try
       while Next do

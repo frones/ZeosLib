@@ -58,7 +58,7 @@ interface
 {$I ZParseSql.inc}
 
 uses
-  Classes, SysUtils, ZTokenizer, ZCompatibility, ZSysUtils;
+  Classes, SysUtils, ZTokenizer, ZCompatibility;
 
 type
 
@@ -165,6 +165,9 @@ end;
 
   @return a quoted string token from a reader
 }
+{$IFDEF FPC}
+  {$HINTS OFF}
+{$ENDIF}
 function TZGenericSQLQuoteState.NextToken(Stream: TStream;
   FirstChar: Char; Tokenizer: TZTokenizer): TZToken;
 var
@@ -271,6 +274,9 @@ begin
         Result.TokenType := ttTime;
       end;}
 end;
+{$IFDEF FPC}
+  {$HINTS ON}
+{$ENDIF}
 
 {**
   Encodes a string value.

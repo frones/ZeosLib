@@ -75,9 +75,9 @@ type
   public
     constructor Create(Connection: IZConnection; Info: TStrings);
 
-    function ExecuteQuery(const SQL: string): IZResultSet; override;
-    function ExecuteUpdate(const SQL: string): Integer; override;
-    function Execute(const SQL: string): Boolean; override;
+    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: ZAnsiString): Integer; override;
+    function Execute(const SQL: ZAnsiString): Boolean; override;
   end;
 
   {** Implements Prepared SQL Statement. }
@@ -105,10 +105,6 @@ type
     destructor Destroy; override;
 
     procedure Prepare; override;
-
-    function ExecuteQuery(const SQL: string): IZResultSet; override;
-    function ExecuteUpdate(const SQL: string): Integer; override;
-    function Execute(const SQL: string): Boolean; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -188,7 +184,7 @@ end;
     given query; never <code>null</code>
 }
 {$HINTS OFF}
-function TZInterbase6Statement.ExecuteQuery(const SQL: string): IZResultSet;
+function TZInterbase6Statement.ExecuteQuery(const SQL: ZAnsiString): IZResultSet;
 var
   Cursor: AnsiString;
   SQLData: IZResultSQLDA;
@@ -198,7 +194,7 @@ var
 begin
   StmtHandle := 0;
   iError := 0;
-  Self.SSQL := SQL; //preprepares SQL and sets AnsiSQL(ASQL)
+  {$IFNDEF DELPHI12_UP}ASQL := SQL;{$ENDIF} //preprepares SQL and sets AnsiSQL(ASQL)
   with FIBConnection do
   begin
     SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle, ConSettings);
@@ -227,7 +223,7 @@ begin
         end;
 
         Result := GetCachedResultSet(SSQL, Self,
-               TZInterbase6ResultSet.Create(Self, SQL, StmtHandle, Cursor, SQLData, nil, FCachedBlob));
+               TZInterbase6ResultSet.Create(Self, LogSQL, StmtHandle, Cursor, SQLData, nil, FCachedBlob));
       end
         else
       begin
@@ -261,7 +257,7 @@ end;
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
 {$HINTS OFF}
-function TZInterbase6Statement.ExecuteUpdate(const SQL: string): Integer;
+function TZInterbase6Statement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
 var
   StmtHandle: TISC_STMT_HANDLE;
   StatementType: TZIbSqlStatementType;
@@ -271,7 +267,7 @@ begin
   with FIBConnection do
   begin
     try
-      SSQL := SQL;
+      {$IFNDEF DELPHI12_UP}ASQL := SQL;{$ENDIF} //preprepares SQL and sets AnsiSQL(ASQL)
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
         GetDBHandle, GetTrHandle, GetDialect, ASQL, SSQL, StmtHandle);
 
@@ -327,7 +323,7 @@ end;
   @see #getMoreResults
 }
 {$HINTS OFF}
-function TZInterbase6Statement.Execute(const SQL: string): Boolean;
+function TZInterbase6Statement.Execute(const SQL: ZAnsiString): Boolean;
 var
   Cursor: AnsiString;
   SQLData: IZResultSQLDA;
@@ -339,9 +335,9 @@ begin
   begin
     try
       Result := False;
-      SSQL := SQL; //Preprepares SQL
+      {$IFNDEF DELPHI12_UP}ASQL := SQL;{$ENDIF} //preprepares SQL and sets AnsiSQL(ASQL)
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-        GetDBHandle, GetTrHandle, GetDialect, ASQL, SSQL, StmtHandle);
+        GetDBHandle, GetTrHandle, GetDialect, ASQL, LogSQL, StmtHandle);
 
       { Check statement type }
 //      if not (StatementType in [stExecProc]) then
@@ -351,14 +347,14 @@ begin
       if StatementType in [stSelect, stExecProc] then
       begin
         SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle, ConSettings);
-        PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect, SSQL,
+        PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect, LogSQL,
           StmtHandle, SQLData);
       end;
 
       { Execute prepared statement }
       GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle,
               @StmtHandle, GetDialect, nil);
-      CheckInterbase6Error(Sql);
+      CheckInterbase6Error(LogSQL);
       { Set updated rows count }
       LastUpdateCount := GetAffectedRows(GetPlainDriver, StmtHandle, StatementType);
 
@@ -506,36 +502,6 @@ begin
 end;
 
 {**
-  Executes an SQL statement that may return multiple results.
-  Under some (uncommon) situations a single SQL statement may return
-  multiple result sets and/or update counts.  Normally you can ignore
-  this unless you are (1) executing a stored procedure that you know may
-  return multiple results or (2) you are dynamically executing an
-  unknown SQL string.  The  methods <code>execute</code>,
-  <code>getMoreResults</code>, <code>getResultSet</code>,
-  and <code>getUpdateCount</code> let you navigate through multiple results.
-
-  The <code>execute</code> method executes an SQL statement and indicates the
-  form of the first result.  You can then use the methods
-  <code>getResultSet</code> or <code>getUpdateCount</code>
-  to retrieve the result, and <code>getMoreResults</code> to
-  move to any subsequent result(s).
-
-  @param sql any SQL statement
-  @return <code>true</code> if the next result is a <code>ResultSet</code> object;
-  <code>false</code> if it is an update count or there are no more results
-  @see #getResultSet
-  @see #getUpdateCount
-  @see #getMoreResults
-}
-
-function TZInterbase6PreparedStatement.Execute(const SQL: string): Boolean;
-begin
-  Self.SQL := SQL;
-  Result := ExecutePrepared;
-end;
-
-{**
   Executes any kind of SQL statement.
   Some prepared statements return multiple results; the <code>execute</code>
   method handles these complex statements as well as the simpler
@@ -609,18 +575,6 @@ end;
 {$HINTS ON}
 
 {**
-  Executes an SQL statement that returns a single <code>ResultSet</code> object.
-  @param sql typically this is a static SQL <code>SELECT</code> statement
-  @return a <code>ResultSet</code> object that contains the data produced by the
-    given query; never <code>null</code>
-}
-function TZInterbase6PreparedStatement.ExecuteQuery(const SQL: string): IZResultSet;
-begin
-  Self.SQL := SQL;
-  Result := ExecuteQueryPrepared;
-end;
-
-{**
   Executes the SQL query in this <code>PreparedStatement</code> object
   and returns the result set generated by the query.
 
@@ -692,23 +646,6 @@ begin
   inherited ExecuteQueryPrepared;
 end;
 {$HINTS ON}
-
-{**
-  Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
-  <code>DELETE</code> statement. In addition,
-  SQL statements that return nothing, such as SQL DDL statements,
-  can be executed.
-
-  @param sql an SQL <code>INSERT</code>, <code>UPDATE</code> or
-    <code>DELETE</code> statement or an SQL statement that returns nothing
-  @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
-    or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
-}
-function TZInterbase6PreparedStatement.ExecuteUpdate(const SQL: string): Integer;
-begin
-  Self.SQL := SQL;
-  Result := ExecuteUpdatePrepared;
-end;
 
 {**
   Executes the SQL INSERT, UPDATE or DELETE statement

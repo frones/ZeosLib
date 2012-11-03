@@ -695,6 +695,9 @@ end;
   @param Item an object to be added.
   @return a position of the added object.
 }
+{$IFDEF FPC}
+  {$HINTS OFF}
+{$ENDIF}
 function TZUnmodifiableCollection.Add(const Item: IZInterface): Integer;
 begin
   Result := -1;
@@ -711,6 +714,9 @@ begin
   Result := False;
   RaiseException;
 end;
+{$IFDEF FPC}
+  {$HINTS ON}
+{$ENDIF}
 
 {**
   Clears the content of this collection.

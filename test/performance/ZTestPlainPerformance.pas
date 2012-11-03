@@ -869,7 +869,7 @@ var
 begin
   StmtHandle := 0;
   SQLData := TZResultSQLDA.Create(FPlainDriver, @FHandle, @FTrHandle,
-    @ZCompatibility.ClientCodePageDummy, {$IFDEF DELPHI_12UP}True{$ELSE}False{$ENDIF});
+    @ZCompatibility.ConSettingsDummy);
 
   try
     PrepareStatement(FPlainDriver, @FHandle, @FTrHandle,

@@ -277,12 +277,11 @@ type
 
     function UseMetadata: boolean;
     procedure SetUseMetadata(Value: Boolean);
+    //EgonHugeist
     function GetBinaryEscapeString(const Value: ZAnsiString): String;
-    function GetEscapeString(const Value: String): String; overload;
-    {$IFDEF DELPHI12_UP}
-    function GetEscapeString(const Value: ZAnsiString): String; overload;
-    {$ENDIF}
-    function GetClientCodePageInformations: PZCodePage; //EgonHugeist
+    function GetEscapeString(const Value: ZWideString): ZWideString; overload;
+    function GetEscapeString(const Value: ZAnsiString): ZAnsiString; overload;
+    function GetClientCodePageInformations: PZCodePage;
     function GetUTF8StringAsWideField: Boolean;
     procedure SetUTF8StringAsWideField(const Value: Boolean);
     function GetAutoEncodeStrings: Boolean;
@@ -552,7 +551,7 @@ type
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;
 
-    function GetEncodedSQL(const SQL: String): ZAnsiString;
+    function GetEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}ZAnsiString{$ELSE}String{$IFEND}): ZAnsiString;
   end;
 
   {** Prepared SQL statement interface. }

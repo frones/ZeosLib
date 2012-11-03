@@ -1831,13 +1831,9 @@ begin
       SQL.Text := 'INSERT INTO people(P_ID, P_NAME, P_RESUME)'+
         ' VALUES (:P_ID, :P_NAME, :P_RESUME)';
       ParamByName('P_ID').AsInteger := TEST_ROW_ID;
-      if FConnection.DbcConnection.UTF8StringAsWideField or
-        (FConnection.DbcConnection.GetEncoding = ceAnsi) then
-          ParamByName('P_NAME').AsString := Str3
-      else
-        ParamByName('P_NAME').AsString := UTF8Encode(WideString(Str3));
+      ParamByName('P_NAME').AsString := GetDBTestString(Str3, FConnection.DbcConnection.GetConSettings);
       CheckEquals(3, Query.Params.Count, 'Param.Count');
-      SL.Text := Str2;
+      SL.Text := GetDBTestString(Str2, FConnection.DbcConnection.GetConSettings);
 
       StrStream1 := TMemoryStream.Create;
       SL.SaveToStream(StrStream1);
@@ -1900,23 +1896,11 @@ var
   I: Integer;
   procedure InsertValues(s_char, s_varchar, s_nchar, s_nvarchar: String);
   begin
-    if Connection.DbcConnection.AutoEncodeStrings or (Connection.DbcConnection.GetEncoding = ceAnsi)
-      or Connection.UTF8StringsAsWideField then
-    begin
-      Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
-      Query.ParamByName('s_char').AsString := s_char;
-      Query.ParamByName('s_varchar').AsString := s_varchar;
-      Query.ParamByName('s_nchar').AsString := s_nchar;
-      Query.ParamByName('s_nvarchar').AsString := s_nvarchar;
-    end
-    else
-    begin
-      Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
-      Query.ParamByName('s_char').AsString := UTF8Encode(WideString(s_char));
-      Query.ParamByName('s_varchar').AsString := UTF8Encode(WideString(s_varchar));
-      Query.ParamByName('s_nchar').AsString := UTF8Encode(WideString(s_nchar));
-      Query.ParamByName('s_nvarchar').AsString := UTF8Encode(WideString(s_nvarchar));
-    end;
+    Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
+    Query.ParamByName('s_char').AsString := GetDBTestString(s_char, Connection.DbcConnection.GetConSettings);;
+    Query.ParamByName('s_varchar').AsString := GetDBTestString(s_varchar, Connection.DbcConnection.GetConSettings);
+    Query.ParamByName('s_nchar').AsString := GetDBTestString(s_nchar, Connection.DbcConnection.GetConSettings);
+    Query.ParamByName('s_nvarchar').AsString := GetDBTestString(s_nvarchar, Connection.DbcConnection.GetConSettings);
     Query.ExecSQL;
     inc(RowCounter);
   end;

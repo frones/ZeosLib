@@ -408,7 +408,6 @@ begin
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
-    // Query.RequestLive := True;
     Query.SQL.Text := 'select fld1, fld2 from test816846 order by fld1';
     Query.Open;
 
@@ -724,12 +723,9 @@ begin
   CheckEquals(QuoteString1, Query.Fields[0].AsString);
   Query.Close;
 
-  if ( Connection.UTF8StringsAsWideField or ( Connection.DbcConnection.GetEncoding = ceAnsi ) ) or
-    ( Connection.DbcConnection.AutoEncodeStrings and ( Connection.DbcConnection.GetConSettings.CPType = cGET_ACP ) ) then
-    Query.ParamByName('test').AsString := QuoteString2
-  else
-    Query.ParamByName('test').AsString := UTF8Encode(WideString(QuoteString2));
+  Query.ParamByName('test').AsString := GetDBTestString(QuoteString2, Connection.DbcConnection.GetConSettings);
   Query.Open;
+
   CheckEquals(QuoteString2, Query.Fields[0].AsString, Connection.DbcConnection.GetConSettings);
   Query.Close;
 end;

@@ -1445,7 +1445,7 @@ end;
 procedure TZAbstractCachedResultSet.UpdateUnicodeStream(
   ColumnIndex: Integer; Value: TStream);
 var
-    TempStream: TStream;
+  TempStream: TStream;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1456,9 +1456,14 @@ begin
     it is possible that a PAnsiChar OR a PWideChar was written into
     the Stream!!!  And these chars could be trunced with changing the
     Stream.Size.}
-  TempStream:=ZDbcUtils.GetValidatedUnicodeStream(Value);
-  FRowAccessor.SetUnicodeStream(ColumnIndex, TempStream);
-  TempStream.Free;
+  if Assigned(Value) then
+  begin
+    TempStream := ZDbcUtils.GetValidatedUnicodeStream(TMemoryStream(Value).Memory, Value.Size);
+    FRowAccessor.SetUnicodeStream(ColumnIndex, TempStream);
+    TempStream.Free;
+  end
+  else
+    FRowAccessor.SetUnicodeStream(ColumnIndex, nil);
 end;
 
 {**
