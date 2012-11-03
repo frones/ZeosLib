@@ -1419,7 +1419,7 @@ begin
           end;
           Result.UpdateShortByName('DATA_TYPE',
             Ord(ConvertAdoToSqlType(GetShortByName('DATA_TYPE'),
-              GetStatement.GetConnection.GetConSettings.CPType)));
+              ConSettings.CPType)));
           Result.UpdateStringByName('TYPE_NAME',
             GetStringByName('TYPE_NAME'));
           Result.UpdateIntByName('PRECISION',
@@ -1704,15 +1704,15 @@ begin
             GetStringByName('COLUMN_NAME'));
           Result.UpdateShortByName('DATA_TYPE',
             Ord(ConvertAdoToSqlType(GetShortByName('DATA_TYPE'),
-              GetStatement.GetConnection.GetConSettings.CPType)));
+              ConSettings.CPType)));
           Flags := GetIntByName('COLUMN_FLAGS');
   //!!!If the field type is long then this is the only way to know it because it just returns string type
           if ConvertAdoToSqlType(GetShortByName('DATA_TYPE'),
-              GetStatement.GetConnection.GetConSettings.CPType) = stString then
+              ConSettings.CPType) = stString then
             if (GetIntByName('COLUMN_FLAGS') and DBCOLUMNFLAGS_ISLONG) <> 0 then
               Result.UpdateShortByName('DATA_TYPE', Ord(stAsciiStream));
           if ConvertAdoToSqlType(GetShortByName('DATA_TYPE'),
-              GetStatement.GetConnection.GetConSettings.CPType) = stUnicodeString then
+              ConSettings.CPType) = stUnicodeString then
             if (GetIntByName('COLUMN_FLAGS') and DBCOLUMNFLAGS_ISLONG) <> 0 then
               Result.UpdateShortByName('DATA_TYPE', Ord(stUnicodeStream));
           Result.UpdateIntByName('COLUMN_SIZE',
@@ -1956,7 +1956,7 @@ begin
             GetStringByName('COLUMN_NAME'));
           Result.UpdateShortByName('DATA_TYPE',
             Ord(ConvertAdoToSqlType(GetShortByName('DATA_TYPE'),
-              GetStatement.GetConnection.GetConSettings.CPType)));
+              ConSettings.CPType)));
           Result.UpdateStringByName('TYPE_NAME',
             GetStringByName('TYPE_NAME'));
           Result.UpdateIntByName('COLUMN_SIZE',
@@ -2390,7 +2390,7 @@ begin
             GetStringByName('TYPE_NAME'));
           Result.UpdateShortByName('DATA_TYPE',
             Ord(ConvertAdoToSqlType(GetShortByName('DATA_TYPE'),
-              GetStatement.GetConnection.GetConSettings.CPType)));
+              ConSettings.CPType)));
           Result.UpdateIntByName('PRECISION',
             0);//GetIntByName('PRECISION'));
           Result.UpdateStringByName('LITERAL_PREFIX',

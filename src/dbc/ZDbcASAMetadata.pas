@@ -1383,7 +1383,7 @@ begin
         end;
         Result.UpdateShortByName('DATA_TYPE',
           Ord(ConvertASAJDBCToSqlType(GetShortByName('DATA_TYPE'),
-            GetConnection.GetConSettings.CPType)));
+            ConSettings.CPType)));
         Result.UpdateStringByName('TYPE_NAME',
           GetStringByName('TYPE_NAME'));
         Result.UpdateIntByName('PRECISION',
@@ -1853,7 +1853,7 @@ begin
           GetStringByName('COLUMN_NAME'));
         Result.UpdateShortByName('DATA_TYPE',
           Ord(ConvertASAJDBCToSqlType(GetShortByName('DATA_TYPE'),
-            GetConnection.GetConSettings.CPType)));
+            ConSettings.CPType)));
         Result.UpdateStringByName('TYPE_NAME',
           GetStringByName('TYPE_NAME'));
         Result.UpdateIntByName('COLUMN_SIZE',
@@ -2330,7 +2330,7 @@ begin
           GetStringByName('TYPE_NAME'));
         Result.UpdateShortByName('DATA_TYPE',
           Ord(ConvertASAJDBCToSqlType(GetShortByName('DATA_TYPE'),
-            GetConnection.GetConSettings.CPType)));
+            ConSettings.CPType)));
         Result.UpdateIntByName('PRECISION',
           GetIntByName('PRECISION'));
         Result.UpdateStringByName('LITERAL_PREFIX',
@@ -2546,7 +2546,7 @@ begin
           GetStringByName('JAVA_CLASS'));
         Result.UpdateShortByName('DATA_TYPE',
           Ord(ConvertASAJDBCToSqlType(GetShortByName('DATA_TYPE'),
-            GetConnection.GetConSettings.CPType)));
+            ConSettings.CPType)));
         Result.UpdateStringByName('REMARKS',
           GetStringByName('REMARKS'));
         Result.InsertRow;

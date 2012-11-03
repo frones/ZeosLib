@@ -855,7 +855,7 @@ begin
         CurrentVar.ColType := stUnknown;
     end;
 
-    if (Statement.GetConnection.GetConSettings.CPType = cCP_UTF16) then
+    if (ConSettings.CPType = cCP_UTF16) then
       case CurrentVar.ColType of
         stString: CurrentVar.ColType := stUnicodeString;
         stAsciiStream: if not ( CurrentVar.DataType in [SQLT_LNG]) then

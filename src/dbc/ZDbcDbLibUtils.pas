@@ -64,15 +64,15 @@ uses Classes, SysUtils, ZVariant, ZDbcIntfs, ZPlainDBLibDriver, ZCompatibility;
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertODBCToSqlType(FieldType: SmallInt): TZSQLType;
+function ConvertODBCToSqlType(FieldType: SmallInt; CtrlsCPType: TZControlsCodePage): TZSQLType;
 
 {**
   Converts a DBLib native types into ZDBC SQL types.
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertDBLibToSqlType(FieldType: SmallInt): TZSQLType;
-function ConvertFreeTDSToSqlType(FieldType: SmallInt): TZSQLType;
+function ConvertDBLibToSqlType(FieldType: SmallInt; CtrlsCPType: TZControlsCodePage): TZSQLType;
+function ConvertFreeTDSToSqlType(FieldType: SmallInt; CtrlsCPType: TZControlsCodePage): TZSQLType;
 
 {**
   Convert string DBLib field type to SqlType
@@ -122,7 +122,8 @@ uses Types, ZSysUtils, ZPlainDbLibConstants, ZEncoding, ZDbcUtils
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertODBCToSqlType(FieldType: SmallInt): TZSQLType;
+function ConvertODBCToSqlType(FieldType: SmallInt;
+  CtrlsCPType: TZControlsCodePage): TZSQLType;
 begin
   case FieldType of
     1, 12, -8, -9: Result := stString;
@@ -140,6 +141,11 @@ begin
   else
     Result := stUnknown;
   end;
+  if CtrlsCPType = cCP_UTF16 then
+  case Result of
+    stString: Result := stUnicodeString;
+    stAsciiStream: Result := stUnicodeStream;
+  end;
 end;
 
 {**
@@ -147,7 +153,8 @@ end;
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertDBLibToSqlType(FieldType: SmallInt): TZSQLType;
+function ConvertDBLibToSqlType(FieldType: SmallInt;
+  CtrlsCPType: TZControlsCodePage): TZSQLType;
 begin
   case FieldType of
     DBLIBSQLCHAR: Result := stString;
@@ -169,6 +176,11 @@ begin
   else
     Result := stUnknown;
   end;
+  if CtrlsCPType = cCP_UTF16 then
+  case Result of
+    stString: Result := stUnicodeString;
+    stAsciiStream: Result := stUnicodeStream;
+  end;
 end;
 
 {**
@@ -176,29 +188,35 @@ end;
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertFreeTDSToSqlType(FieldType: SmallInt): TZSQLType;
+function ConvertFreeTDSToSqlType(FieldType: SmallInt;
+  CtrlsCPType: TZControlsCodePage): TZSQLType;
 begin
   case FieldType of
-	SYBCHAR, SYBVARCHAR, XSYBCHAR, XSYBVARCHAR: Result := stString;
-  SYBINTN, SYBINT4:                           Result := stInteger;
-  SYBINT8, SYBNUMERIC:                        Result := stBigDecimal;
-  SYBINT1, SYBINT2:                           Result := stShort;
-  SYBFLT8, SYBFLTN, SYBREAL, SYBDECIMAL:      Result := stDouble;
-  SYBDATETIME, SYBDATETIME4, SYBDATETIMN:     Result := stTimestamp;
-  SYBBIT, SYBBITN:                            Result := stBoolean;
-  SYBTEXT:                                    Result := stAsciiStream;
-  SYBNTEXT:                                   Result := stUnicodeStream;
-  SYBIMAGE, SYBBINARY, SYBVARBINARY,
-  XSYBBINARY, XSYBVARBINARY:                  Result := stBinaryStream;
-  SYBMONEY4, SYBMONEY, SYBMONEYN:             Result := stDouble;
-  SYBVOID:                                    Result := stUnknown;
-	SYBNVARCHAR, XSYBNCHAR, XSYBNVARCHAR:       Result := stUnicodeString;
-  SYBMSXML:                                   Result := stBinaryStream;
-  SYBUNIQUE:                                  Result := stString;
-  SYBVARIANT:                                 Result := stString;
-  SYBMSUDT:                                   Result := stString;
-  else
-    Result := stUnknown;
+    SYBCHAR, SYBVARCHAR, XSYBCHAR, XSYBVARCHAR: Result := stString;
+    SYBINTN, SYBINT4:                           Result := stInteger;
+    SYBINT8, SYBNUMERIC:                        Result := stBigDecimal;
+    SYBINT1, SYBINT2:                           Result := stShort;
+    SYBFLT8, SYBFLTN, SYBREAL, SYBDECIMAL:      Result := stDouble;
+    SYBDATETIME, SYBDATETIME4, SYBDATETIMN:     Result := stTimestamp;
+    SYBBIT, SYBBITN:                            Result := stBoolean;
+    SYBTEXT:                                    Result := stAsciiStream;
+    SYBNTEXT:                                   Result := stUnicodeStream;
+    SYBIMAGE, SYBBINARY, SYBVARBINARY,
+    XSYBBINARY, XSYBVARBINARY:                  Result := stBinaryStream;
+    SYBMONEY4, SYBMONEY, SYBMONEYN:             Result := stDouble;
+    SYBVOID:                                    Result := stUnknown;
+    SYBNVARCHAR, XSYBNCHAR, XSYBNVARCHAR:       Result := stUnicodeString;
+    SYBMSXML:                                   Result := stBinaryStream;
+    SYBUNIQUE:                                  Result := stString;
+    SYBVARIANT:                                 Result := stString;
+    SYBMSUDT:                                   Result := stString;
+    else
+      Result := stUnknown;
+  end;
+  if CtrlsCPType = cCP_UTF16 then
+  case Result of
+    stString: Result := stUnicodeString;
+    stAsciiStream: Result := stUnicodeStream;
   end;
 end;
 

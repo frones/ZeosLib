@@ -1475,7 +1475,7 @@ begin
 
         Result.UpdateInt(6,
           Ord(ConvertInterbase6ToSqlType(TypeName, SubTypeName,
-            GetConnection.GetConSettings.CPType))); //DATA_TYPE
+            ConSettings.CPType))); //DATA_TYPE
         Result.UpdateString(7,GetString(ColumnIndexes[4]));    //TYPE_NAME
         Result.UpdateInt(10, GetInt(ColumnIndexes[6]));
         Result.UpdateNull(9);    //BUFFER_LENGTH
@@ -1791,7 +1791,7 @@ begin
         Result.UpdateString(3, GetString(ColumnIndexes[7]));    //TABLE_NAME
         Result.UpdateString(4, ColumnName);    //COLUMN_NAME
         SQLType := ConvertInterbase6ToSqlType(TypeName, SubTypeName
-          , GetConnection.GetConSettings.CPType);
+          , ConSettings.CPType);
         Result.UpdateInt(5, Ord(SQLType));
         // TYPE_NAME
         case TypeName of
@@ -2671,7 +2671,7 @@ begin
         Result.MoveToInsertRow;
         Result.UpdateString(1, GetString(2));
         Result.UpdateInt(2, Ord(ConvertInterbase6ToSqlType(GetInt(1), 0,
-          GetConnection.GetConSettings.CPType)));
+          ConSettings.CPType)));
         Result.UpdateInt(3, 9);
         Result.UpdateInt(7, Ord(ntNoNulls));
         Result.UpdateBoolean(8, false);

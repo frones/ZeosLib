@@ -1341,7 +1341,7 @@ var
 
     Result.UpdateInt(6, Ord(ConvertOracleTypeToSQLType(TypeName,
       Source.GetInt(ColumnIndexes[6]),Source.GetInt(ColumnIndexes[7]),
-      GetConnection.GetConSettings.CPType))); //DATA_TYPE
+      ConSettings.CPType))); //DATA_TYPE
     Result.UpdateString(7,TypeName);    //TYPE_NAME
     Result.UpdateInt(10, Source.GetInt(ColumnIndexes[6])); //PRECISION
     Result.UpdateNull(9);    //BUFFER_LENGTH
@@ -1642,7 +1642,7 @@ begin
       Result.UpdateString(3, GetString(3));
       Result.UpdateString(4, GetString(4));
       SQLType := ConvertOracleTypeToSQLType(GetString(6), GetInt(9),
-        GetInt(10), GetConnection.GetConSettings.CPType);
+        GetInt(10), ConSettings.CPType);
       Result.UpdateInt(5, Ord(SQLType));
       Result.UpdateString(6, GetString(6));
       Result.UpdateInt(7, GetFieldSize(SQLType, GetInt(7), CharWidth)); //FIELD_SIZE

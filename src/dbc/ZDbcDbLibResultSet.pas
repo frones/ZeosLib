@@ -177,9 +177,9 @@ begin
     ColumnInfo.ColumnLabel := ColName;
     ColumnInfo.ColumnName := ColName;
     if Self.FDBLibConnection.FreeTDS then
-      ColumnInfo.ColumnType := ConvertFreeTDSToSqlType(ColType)
+      ColumnInfo.ColumnType := ConvertFreeTDSToSqlType(ColType, ConSettings.CPType)
     else
-      ColumnInfo.ColumnType := ConvertDBLibToSqlType(ColType);
+      ColumnInfo.ColumnType := ConvertDBLibToSqlType(ColType, ConSettings.CPType);
     ColumnInfo.Currency := (ColType = FPlainDriver.GetVariables.datatypes[Z_SQLMONEY]) or
       (ColType = FPlainDriver.GetVariables.datatypes[Z_SQLMONEY4]) or
       (ColType = FPlainDriver.GetVariables.datatypes[Z_SQLMONEYN]);;
@@ -680,8 +680,6 @@ begin
   Data := FPlainDriver.dbdata(FHandle, ColumnIndex);
   LastWasNull := Data = nil;
   Result := TZAbstractBlob.CreateWithData(Data, DL, FDBLibConnection);
-  if (GetMetaData.GetColumnType(ColumnIndex) = stAsciiStream) then
-
   if (GetMetaData.GetColumnType(ColumnIndex) in [stAsciiStream, stUnicodeStream]) then
   begin
     TempAnsi := Result.GetString;

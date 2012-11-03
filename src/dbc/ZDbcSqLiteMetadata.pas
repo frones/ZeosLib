@@ -1348,7 +1348,7 @@ begin
       Result.UpdateString(3, TableNamePattern);
       Result.UpdateString(4, GetString(2));
       Result.UpdateInt(5, Ord(ConvertSQLiteTypeToSQLType(GetString(3),
-        Precision, Decimals, GetConnection.GetConSettings.CPType)));
+        Precision, Decimals, ConSettings.CPType)));
 
       { Defines a table name. }
       Temp := UpperCase(GetString(3));
