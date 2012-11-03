@@ -416,9 +416,13 @@ begin
             Result := ConSettings.DbcConvertFunc(Ansi);
             {$ELSE}
               {$IFDEF WITH_LIBICONV}
-              Result := Ansi;
+              Result := UTF8ToAnsi(Ansi);
               {$ELSE}
-              Result := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP);
+                {$IF defined(DELPHI) or defined(MSWINDOWS)}
+                Result := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP);
+                {$ELSE}
+                Result := UTF8ToAnsi(Ansi);
+                {$IFEND}
               {$ENDIF}
             {$ENDIF}
         {$ENDIF}
@@ -433,7 +437,14 @@ begin
               {$IFDEF WITH_LIBICONV}
               Result := Ansi;
               {$ELSE}
-              Result := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP)
+                {$IF defined(DELPHI) or defined(MSWINDOWS)}
+                Result := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP)
+                {$ELSE}
+                if ( ConSettings.CPType in [cCP_UTF8, cCP_UTF16] ) then
+                  Result := AnsiToUTF8(Ansi)
+                else
+                  Result := Ansi
+                {$IFEND}
               {$ENDIF}
             {$ENDIF}
           else
