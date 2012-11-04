@@ -989,7 +989,7 @@ begin
         begin
           GetMem( P, PZASABlobStruct( Value.GetData.sqlvar[I].sqlData).untrunc_len);
           Value.ReadBlobToMem( I, P, L);
-          TempBlob := TZASABlob.CreateWithData( P, L);
+          TempBlob := TZASABlob.CreateWithData( P, L, GetConnection);
           DefVarManager.SetAsInterface( Temp, TempBlob);
         end;
     end;

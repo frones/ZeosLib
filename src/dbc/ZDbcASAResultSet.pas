@@ -164,8 +164,8 @@ type
     procedure ReadBlob;
   public
     constructor Create( ResultSet: TZASAResultSet; ColID: Integer);
-    constructor CreateWithStream(Stream: TStream);
-    constructor CreateWithData(Data: Pointer; Size: Integer);
+    constructor CreateWithStream(Stream: TStream; Connection: IZConnection);
+    constructor CreateWithData(Data: Pointer; Size: Integer; Connection: IZConnection);
 
     function IsEmpty: Boolean; override;
     function Clone: IZBlob; override;
@@ -284,11 +284,17 @@ begin
   if ( GetMetadata.GetColumnType(ColumnIndex) in [stUnicodeStream, stAsciiStream] ) then
   begin
     case GetMetaData.GetColumnType(ColumnIndex) of
-      stAsciiStream: TempStream := GetValidatedAnsiStream(Blob.GetString, ConSettings, True);
+      stAsciiStream:
+        begin
+          TempStream := GetValidatedAnsiStream(Blob.GetString, ConSettings, True);
+          Blob.SetStream(TempStream);
+        end
       else
+      begin
         TempStream := GetValidatedUnicodeStream(Blob.GetBuffer, Blob.Length, ConSettings, True);
+        Blob.SetStream(TempStream, True);
+      end;
     end;
-    Blob.SetStream(TempStream, True);
     TempStream.Free;
   end;
   Result := Blob;
@@ -959,7 +965,7 @@ begin
     GetMem( Dt, BlobSize);
     System.Move( BlobData^, Dt^, BlobSize);
   end;
-  Result := TZASABlob.CreateWithData( Dt, BlobSize);
+  Result := TZASABlob.CreateWithData( Dt, BlobSize, FConnection);
 end;
 
 {**
@@ -970,20 +976,23 @@ end;
 constructor TZASABlob.Create( ResultSet: TZASAResultSet; ColID: Integer);
 begin
   inherited Create;
+  FConnection := ResultSet.GetStatement.GetConnection;
   FBlobRead := False;
   FResultSet := ResultSet;
   FColID := ColID;
 end;
 
-constructor TZASABlob.CreateWithStream(Stream: TStream);
+constructor TZASABlob.CreateWithStream(Stream: TStream; Connection: IZConnection);
 begin
-  inherited CreateWithStream(Stream, FResultSet.GetStatement.GetConnection);
+  inherited CreateWithStream(Stream, Connection);
   FBlobRead := true;
 end;
 
-constructor TZASABlob.CreateWithData(Data: Pointer; Size: Integer);
+constructor TZASABlob.CreateWithData(Data: Pointer; Size: Integer;
+  Connection: IZConnection);
 begin
   inherited Create;
+  FConnection := Connection;
   BlobData := Data;
   BlobSize := Size;
   Updated := False;

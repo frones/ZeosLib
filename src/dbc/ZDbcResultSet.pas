@@ -305,8 +305,8 @@ type
     FBlobData: Pointer;
     FBlobSize: Integer;
     FUpdated: Boolean;
-    FConnection: IZConnection;
   protected
+    FConnection: IZConnection;
     FDecoded: Boolean;
     property BlobData: Pointer read FBlobData write FBlobData;
     property BlobSize: Integer read FBlobSize write FBlobSize;
