@@ -664,7 +664,7 @@ begin
           Result := ZAnsiString(AStr);
           {$ENDIF}
         else
-          Result := UTF8Encode(WS);
+          Result := UTF8Encode(AStr);
       end;
     {$IFEND}
   {$ENDIF}
