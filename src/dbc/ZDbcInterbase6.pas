@@ -502,15 +502,16 @@ begin
       and no conversations where done except the collumns using collations}
     with GetMetadata.GetCollationAndCharSet('', '', '', '') do
     begin
-      if FCLientCodePage = '' then
-      begin
-        FCLientCodePage := GetString(6);
-        CheckCharEncoding(FClientCodePage);
-      end
-      else
-        if GetString(6) = 'NONE' then
-          ConSettings.ClientCodePage.CharWidth := 1;
-      Close;
+      if Next then
+        if FCLientCodePage = '' then
+        begin
+          FCLientCodePage := GetString(6);
+          CheckCharEncoding(FClientCodePage);
+        end
+        else
+          if GetString(6) = 'NONE' then
+            ConSettings.ClientCodePage.CharWidth := 1;
+        Close;
     end;
   finally
     StrDispose(DPB);
