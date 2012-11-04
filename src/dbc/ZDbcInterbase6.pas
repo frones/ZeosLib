@@ -497,19 +497,21 @@ begin
 
     inherited Open;
 
-    {Check for ClientCodePage: if empty switch to database-defaults}
-    if FClientCodePage = '' then
-      with GetMetadata.GetCollationAndCharSet('', '', '', '') do
+    {Check for ClientCodePage: if empty switch to database-defaults
+      and/or check for charset 'NONE' which has a different byte-width
+      and no conversations where done except the collumns using collations}
+    with GetMetadata.GetCollationAndCharSet('', '', '', '') do
+    begin
+      if FCLientCodePage = '' then
       begin
-        if Next then
-        begin
-          FCLientCodePage := GetString(6);
-          CheckCharEncoding(FClientCodePage);
-        end
-        else
-          raise Exception.Create('Cannot determine character set of connection!'); //marsupilami
-        Close;
-      end;
+        FCLientCodePage := GetString(6);
+        CheckCharEncoding(FClientCodePage);
+      end
+      else
+        if GetString(6) = 'NONE' then
+          ConSettings.ClientCodePage.CharWidth := 1;
+      Close;
+    end;
   finally
     StrDispose(DPB);
   end;
