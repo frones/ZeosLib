@@ -82,7 +82,7 @@ type
     procedure TestAssignToProperties_Properties_NoHost;
     procedure TestSemicolons;
     procedure TestUnixPathDelimiter;
-    procedure TestSFTicket8;
+    procedure TestSFTicket8_HostPort_NoDB_Properties;
   end;
 
 implementation
@@ -433,7 +433,7 @@ Value = 'localhost:3306?username=root;password=test'
 
 HostName will be "localhost:3306" and Port will be 0
 }
-procedure TZURLTest.TestSFTicket8;
+procedure TZURLTest.TestSFTicket8_HostPort_NoDB_Properties;
 var
   ZURL: TZURL;
 begin
