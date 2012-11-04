@@ -684,7 +684,7 @@ begin
       case Consettings.CPType of
         cGET_ACP:
           if FConSettings.CTRL_CP = zCP_UTF8 then
-            UTF8Decode(Astring)
+            UTF8Decode(AStr)
           else
             Result := WideString(AStr); //default Ansi to Wide cast for all comilers
         else
