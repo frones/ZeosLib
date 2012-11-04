@@ -492,7 +492,7 @@ begin
           Result := UTF8Decode(AnsiToUTF8(AStr)); //!!!!! NOT SAFE
         {$ENDIF}
       else
-        Result := UTF8Decode(ConSettings.DbcConvertFunc(AStr))
+        Result := UTF8ToString(AStr)
     end;
   {$IFEND}
 end;
