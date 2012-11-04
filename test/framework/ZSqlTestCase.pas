@@ -123,7 +123,7 @@ type
     FDropScripts: TStringDynArray;
     FProperties: TStringDynArray;
     FExtendedTest: Boolean;
-    FScipNonZeosIssues: Boolean;
+    FSkipNonZeosIssues: Boolean;
     function GetProtocol : string;
   protected
     property Connections: TObjectList read FConnections write FConnections;
@@ -170,7 +170,7 @@ type
     property CreateScripts: TStringDynArray read FCreateScripts;
     property DropScripts: TStringDynArray read FDropScripts;
     property Properties: TStringDynArray read FProperties;
-    property ScipNonZeosIssues: Boolean read FScipNonZeosIssues;
+    property SkipNonZeosIssues: Boolean read FSkipNonZeosIssues;
   end;
 
   {** Implements a test case which runs all active connections. }
@@ -249,7 +249,7 @@ var
   Current, MyCurrent: TZConnectionConfig;
   CharacterSets: TStringDynArray;
 
-  function CreateChildConectionConfiguration(const MyCurrent: TZConnectionConfig;
+  function CreateChildConnectionConfiguration(const MyCurrent: TZConnectionConfig;
     const Suffix: String): TZConnectionConfig;
   var
     I: Integer;
@@ -307,7 +307,7 @@ var
   begin
     for iCharacterSets := 0 to high(CharacterSets) do
     begin
-      MyCurrent := CreateChildConectionConfiguration(Current, CharacterSets[iCharacterSets]);
+      MyCurrent := CreateChildConnectionConfiguration(Current, CharacterSets[iCharacterSets]);
       SetProperty(MyCurrent, 'codepage',CharacterSets[iCharacterSets]);
       FConnections.Add(MyCurrent);
     end;
@@ -316,7 +316,7 @@ var
   procedure SetAutoEncodings(const Current: TZConnectionConfig);
   var MyCurrent: TZConnectionConfig;
   begin
-    MyCurrent := CreateChildConectionConfiguration(Current, 'AutoEncodeStrings');
+    MyCurrent := CreateChildConnectionConfiguration(Current, 'AutoEncodeStrings');
     SetProperty(MyCurrent, 'AutoEncodeStrings','ON');
     FConnections.Add(MyCurrent);
     SetCharacterSets(MyCurrent);
@@ -360,7 +360,7 @@ var
           {$ENDIF}
         {$ENDIF}
       {$ENDIF}
-      MyCurrent := CreateChildConectionConfiguration(Current, CPTypes[iCtrlsCPs]);
+      MyCurrent := CreateChildConnectionConfiguration(Current, CPTypes[iCtrlsCPs]);
       SetProperty(MyCurrent, 'controls_cp',CPTypes[iCtrlsCPs]);
       FConnections.Add(MyCurrent);
       if (CPTypes[iCtrlsCPs] = 'CP_UTF16') then //autoencoding is allways true
@@ -374,8 +374,8 @@ begin
 
   FExtendedTest := StrToBoolEx(ReadProperty(COMMON_GROUP,
     EXTENDED_TEST_KEY, FALSE_VALUE));
-  FScipNonZeosIssues := StrToBoolEx(ReadProperty(COMMON_GROUP,
-    SCIP_NON_ZEOS_ISUUES, FALSE_VALUE));
+  FSkipNonZeosIssues := StrToBoolEx(ReadProperty(COMMON_GROUP,
+    SKIP_NON_ZEOS_ISSUES, FALSE_VALUE));
 
 
   { Resets a connection configuration list. }

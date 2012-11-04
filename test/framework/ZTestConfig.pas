@@ -110,7 +110,7 @@ const
   SKIP_CLOSED_KEY          = 'skip.closed';
   ACTIVE_CONNECTIONS_KEY   = 'connections';
   EXTENDED_TEST_KEY       =  'extended.test';
-  SCIP_NON_ZEOS_ISUUES     = 'scip.non.zeos.issues';
+  SKIP_NON_ZEOS_ISSUES     = 'skip.non.zeos.issues';
 
 const
   { Names of the connection configuration keys. }
