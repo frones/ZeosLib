@@ -418,11 +418,10 @@ begin
       DATABASE_PROPERTIES_KEY, ''), LIST_DELIMITERS);
     {$IFDEF FPC}
     if Current.Protocol = 'ado' then
-      try
-        Current.Free;
-      finally
-        continue;
-      end;
+    begin
+      Current.Free;
+      continue;
+    end;
     {$ENDIF}
 
     FConnections.Add(Current);
