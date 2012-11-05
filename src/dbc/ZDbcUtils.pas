@@ -532,9 +532,9 @@ begin
       else //two and one byte AnsiChars are one WideChar
         Result := TempPrecision
       {$ELSE}
-        if ( ConSettings.CPType = cCP_UTF8 ) or (ConSettings.CTRL_CP = zCP_UTF8) then
+        {if ( ConSettings.CPType = cCP_UTF8 ) or (ConSettings.CTRL_CP = zCP_UTF8) then
           Result := TempPrecision * 4
-        else
+        else}
           Result := TempPrecision * CharWidth
       {$ENDIF}
     else //stUnicodeString

@@ -283,7 +283,7 @@ begin
         else
           begin
             TempStream := GetValidatedUnicodeStream(Buffer, Size, ConSettings, True);
-            Result := TZAbstractBlob.CreateWithStream(TempStream, FIBConnection);
+            Result := TZAbstractBlob.CreateWithStream(TempStream, FIBConnection, True);
             TempStream.Free;
           end;
       end;
