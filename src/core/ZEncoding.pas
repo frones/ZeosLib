@@ -709,7 +709,7 @@ begin
       ceDefault: Ansi := PAnsiChar(Bytes);
       ceAnsi:
         if ConSettings.ClientCodePage.Encoding = ceAnsi then
-          if ( ConSettings.CTRL_CP = cGET_ACP) or (ConSettings.CTRL_CP = ConSettings.ClientCodePage.CP) then //second test avoids encode the string twice
+          if ( ConSettings.CTRL_CP <> zCP_UTF8) or (ConSettings.CTRL_CP = ConSettings.ClientCodePage.CP) then //second test avoids encode the string twice
             Ansi := PAnsiChar(Bytes)  //should be exact
           else
             {$IF defined(DELPHI) or defined (MSWINDOWS)}
