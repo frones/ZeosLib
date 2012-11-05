@@ -243,10 +243,10 @@ procedure TZAbstractSQLTestCase.LoadConfiguration;
   end;
 
 var
-  I, j, iDataBases: Integer;
+  I: Integer;
   _ConnectionName, Temp: string;
   ActiveConnections: TStringDynArray;
-  Current, MyCurrent: TZConnectionConfig;
+  Current: TZConnectionConfig;
   CharacterSets: TStringDynArray;
 
   function CreateChildConnectionConfiguration(const MyCurrent: TZConnectionConfig;
@@ -329,35 +329,15 @@ var
     iCtrlsCPs: Integer;
     MyCurrent: TZConnectionConfig;
   begin
-    for iCtrlsCPs := 0 to High(CPTypes) do
+    for iCtrlsCPs := 0 to 2 do
     begin
       {$IFDEF DELPHI12_UP}
       if (CPTypes[iCtrlsCPs] = 'CP_UTF8') then //not supported, will be resettet to UTF16
-        continue
-      else
-        if (CPTypes[iCtrlsCPs] = 'CP_UTF16') then //default no self subcreation needed
-        begin
-          SetCharacterSets(Current);
-          continue;
-        end;
+        continue;
       {$ELSE}
         {$IFNDEF WITH_WIDEFIELDS}
         if (CPTypes[iCtrlsCPs] = 'CP_UTF16') then //not supported, will be resettet to GET_ACP
-          continue
-        else
-          if (CPTypes[iCtrlsCPs] = 'GET_ACP') then //default no self subcreation needed
-          begin
-            SetCharacterSets(Current);
-            continue;
-          end;
-        {$ELSE}
-          {$IFDEF FPC}
-          if (CPTypes[iCtrlsCPs] = 'CP_UTF8') then //default no self subcreation needed
-            continue;
-          {$ELSE}
-          if (CPTypes[iCtrlsCPs] = 'GET_ACP') then //default no self subcreation needed
-            continue;
-          {$ENDIF}
+          continue;
         {$ENDIF}
       {$ENDIF}
       MyCurrent := CreateChildConnectionConfiguration(Current, CPTypes[iCtrlsCPs]);
@@ -561,7 +541,11 @@ begin
       else //ceUTF8, ceUTF16, ceUTF32
         if ConSettings.AutoEncode then //Revert the expected value to test
           if IsUTF8Encoded then
+            {$IFDEF DELPHI12_UP}
+            Result := UTF8ToString(Value)
+            {$ELSE}
             Result := UTF8ToAnsi(Value)
+            {$ENDIF}
           else
             Result := Value
         else
