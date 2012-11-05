@@ -99,7 +99,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  ZTestCase, ZTestConsts, ZSqlUpdate, ZSqlTestCase;
+  ZTestCase, ZTestConsts, ZSqlUpdate, ZSqlTestCase, ZEncoding;
 
 { ZTestCompInterbaseBugReport }
 
@@ -797,23 +797,40 @@ begin
         iqry.open;
 
         CheckEquals(3, iqry.RecordCount, 'RecordCount');
-        if (FConnection.DbcConnection.GetConSettings.CPType = cGET_ACP ) and
-          FConnection.DbcConnection.AutoEncodeStrings then
-          CheckEquals(UTF8ToAnsi(S1), iqry.Fields[0].AsString)
+        if (FConnection.DbcConnection.GetConSettings.CPType = cGET_ACP ) then
+        begin
+          if not  (FConnection.DbcConnection.AutoEncodeStrings) then
+            CheckEquals(S1, iqry.Fields[0].AsString)
+          else
+            if ZDefaultSystemCodePage = zCP_WIN1252 then
+              CheckEquals(UTF8ToAnsi(S1), iqry.Fields[0].AsString);
+          iqry.Next;
+          if not  (FConnection.DbcConnection.AutoEncodeStrings) then
+            CheckEquals(S2, iqry.Fields[0].AsString)
+          else
+            if ZDefaultSystemCodePage = zCP_WIN1251 then
+              CheckEquals(UTF8ToAnsi(S2), iqry.Fields[0].AsString); //i can't display the russian chars right
+          iqry.Next;
+          CheckEquals(String(UTF8ToString(S3)), iqry.Fields[0].AsString);
+        end
         else
-          CheckEquals(S1, iqry.Fields[0].AsString);
-        iqry.Next;
-        if (FConnection.DbcConnection.GetConSettings.CPType = cGET_ACP ) and
-          FConnection.DbcConnection.AutoEncodeStrings then
-          CheckNotEquals(UTF8ToAnsi(S2), iqry.Fields[0].AsString) //i can't display the russian chars right
-        else
-          CheckEquals(S2, iqry.Fields[0].AsString);
-        iqry.Next;
-        if (FConnection.DbcConnection.GetConSettings.CPType = cGET_ACP ) and
-          FConnection.DbcConnection.AutoEncodeStrings then
-          CheckEquals(String(UTF8ToString(S3)), iqry.Fields[0].AsString)
-        else
+        begin //CPType = cCP_UTF8
+          if ( ZDefaultSystemCodePage = zCP_WIN1252 ) and
+             ( FConnection.DbcConnection.AutoEncodeStrings ) then
+            CheckEquals(S1, iqry.Fields[0].AsString)
+          else
+            if not (FConnection.DbcConnection.AutoEncodeStrings) then
+              CheckEquals(S1, iqry.Fields[0].AsString);
+          iqry.Next;
+          if ( ZDefaultSystemCodePage = zCP_WIN1251 ) and
+              ( FConnection.DbcConnection.AutoEncodeStrings ) then
+            CheckEquals(S2, iqry.Fields[0].AsString)
+          else
+            if not (FConnection.DbcConnection.AutoEncodeStrings) then
+              CheckEquals(S2, iqry.Fields[0].AsString);
+          iqry.Next;
           CheckEquals(S3, iqry.Fields[0].AsString);
+        end;
       end;
     end;
   finally
