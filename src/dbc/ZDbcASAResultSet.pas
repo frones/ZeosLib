@@ -702,7 +702,8 @@ begin
 
       case FieldSqlType of
         stString,
-        stUnicodeString: Precision := GetFieldSize(FieldSqlType, GetFieldLength(I)-4, ConSettings.ClientCodePage.CharWidth, True);
+        stUnicodeString: Precision := GetFieldSize(FieldSqlType, ConSettings,
+          GetFieldLength(I)-4, ConSettings.ClientCodePage.CharWidth, @ColumnDisplaySize, True);
       end;
 
       ReadOnly := False;

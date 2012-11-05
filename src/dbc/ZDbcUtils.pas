@@ -167,14 +167,15 @@ function GetSQLHexString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False):
   @param <code>Boolean</code> does the Driver returns the FullSizeInBytes
   @returns <code>Integer</code> the count of AnsiChars for Field.Size * SizeOf(Char)
 }
-function GetFieldSize(const SQLType: TZSQLType;
-  const Precision, CharWidth: Integer; SizeInBytes: Boolean = False): Integer;
+function GetFieldSize(const SQLType: TZSQLType;ConSettings: PZConSettings;
+  const Precision, CharWidth: Integer; DisplaySize: PInteger = nil;
+    SizeInBytes: Boolean = False): Integer;
 
 function WideStringStream(const AString: WideString): TStream;
 
 implementation
 
-uses ZMessages, ZSysUtils;
+uses ZMessages, ZSysUtils, ZEncoding;
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -506,33 +507,40 @@ end;
   @param <code>Boolean</code> does the Driver returns the FullSizeInBytes
   @returns <code>Integer</code> the count of AnsiChars for Field.Size * SizeOf(Char)
 }
-function GetFieldSize(const SQLType: TZSQLType;
-  const Precision, CharWidth: Integer; SizeInBytes: Boolean = False): Integer;
+function GetFieldSize(const SQLType: TZSQLType; ConSettings: PZConSettings;
+  const Precision, CharWidth: Integer; DisplaySize: PInteger = nil;
+    SizeInBytes: Boolean = False): Integer;
 var
   TempPrecision: Integer;
 begin
   if ( SQLType in [stString, stUnicodeString] ) and ( Precision <> 0 )then
   begin
     if SizeInBytes then
-      TempPrecision := (Precision div CharWidth) + (Precision mod CharWidth)
+      TempPrecision := Precision div CharWidth
     else
       TempPrecision := Precision;
+
+    if Assigned(DisplaySize) then
+      DisplaySize^ := TempPrecision;
 
     if SQLType = stString then
       //the RowAccessor assumes SizeOf(Char)*Precision+SizeOf(Char)
       //the Field assumes Precision*SizeOf(Char)
       {$IFDEF DELPHI12_UP}
-      if CharWidth = 3 then //All others > 3 are UTF8
-        Result := Trunc(TempPrecision * 1.5) //add more mem for a reserved thirt byte
+      if ConSettings.ClientCodePage.CharWidth >= 2 then //All others > 3 are UTF8
+        Result := TempPrecision * 2 //add more mem for a reserved thirt byte
       else //two and one byte AnsiChars are one WideChar
         Result := TempPrecision
       {$ELSE}
-      Result := TempPrecision * CharWidth
+        if ( ConSettings.CPType = cCP_UTF8 ) or (ConSettings.CTRL_CP = zCP_UTF8) then
+          Result := TempPrecision * 4
+        else
+          Result := TempPrecision * CharWidth
       {$ENDIF}
     else //stUnicodeString
       //UTF8 can pickup LittleEndian/BigEndian 4 Byte Chars
-      //the RowAccessor assumes 2*Precision+2
-      //the Field assumes 2*Precision
+      //the RowAccessor assumes 2*Precision+2!
+      //the Field assumes 2*Precision ??Does it?
       Result := TempPrecision * 2;
   end
   else

@@ -150,9 +150,8 @@ function GetMySQLColumnInfoFromFieldHandle(PlainDriver: IZMySQLPlainDriver;
   const bUseResult:boolean): TZColumnInfo;
 
 procedure ConvertMySQLColumnInfoFromString(const TypeInfo: String;
-  const CtrlsCPType: TZControlsCodePage; const CharWidth: Integer;
-  out TypeName, TypeInfoSecond: String; out FieldType: TZSQLType;
-  out ColumnSize: Integer; out Precision: Integer);
+  ConSettings: PZConSettings; out TypeName, TypeInfoSecond: String;
+  out FieldType: TZSQLType; out ColumnSize: Integer; out Precision: Integer);
 
 implementation
 
@@ -578,14 +577,16 @@ begin
         35, 90, 128..151:  {ucs2}
           begin
             Result.ColumnDisplaySize := (FieldLength div 4);
-            Result.Precision := GetFieldSize(Result.ColumnType, Result.ColumnDisplaySize, 2);
+            Result.Precision := GetFieldSize(Result.ColumnType, ConSettings,
+              Result.ColumnDisplaySize, 2, nil);
           end;
         33, 83, 192..215, { utf8 }
         97, 98, { eucjpms}
         12, 91: {ujis}
           begin
             Result.ColumnDisplaySize := (FieldLength div 3);
-            Result.Precision := GetFieldSize(Result.ColumnType, Result.ColumnDisplaySize, 3);
+            Result.Precision := GetFieldSize(Result.ColumnType,
+              ConSettings, Result.ColumnDisplaySize, 3, nil);
           end;
         54, 55, 101..124, {utf16}
         56, 62, {utf16le}
@@ -593,12 +594,14 @@ begin
         45, 46, 224..247: {utf8mb4}
           begin
             Result.ColumnDisplaySize := (FieldLength div 4);
-            Result.Precision := GetFieldSize(Result.ColumnType, Result.ColumnDisplaySize, 4);
+            Result.Precision := GetFieldSize(Result.ColumnType,
+              ConSettings, Result.ColumnDisplaySize, 4, nil);
           end;
-        else
+        else //1-Byte charsets
         begin
-          Result.ColumnDisplaySize := FieldLength; //1-Byte charsets
-          Result.Precision := FieldLength; //1-Byte charsets
+          Result.ColumnDisplaySize := FieldLength;
+          Result.Precision := GetFieldSize(Result.ColumnType,
+            ConSettings, Result.ColumnDisplaySize, 1, nil);
         end;
       end
     else
@@ -632,9 +635,8 @@ begin
 end;
 
 procedure ConvertMySQLColumnInfoFromString(const TypeInfo: String;
-  const CtrlsCPType: TZControlsCodePage; const CharWidth: Integer;
-  out TypeName, TypeInfoSecond: String; out FieldType: TZSQLType;
-  out ColumnSize: Integer; out Precision: Integer);
+  ConSettings: PZConSettings; out TypeName, TypeInfoSecond:
+  String; out FieldType: TZSQLType; out ColumnSize: Integer; out Precision: Integer);
 var
   TypeInfoList: TStrings;
   TypeInfoFirst: String;
@@ -658,7 +660,7 @@ begin
   TypeInfoFirst := LowerCase(TypeInfoFirst);
   TypeName := TypeInfoFirst;
 
-  FieldType := ConvertMySQLTypeToSQLType(TypeInfoFirst, TypeInfo, CtrlsCPType);
+  FieldType := ConvertMySQLTypeToSQLType(TypeInfoFirst, TypeInfo, Consettings.CPType);
   { the column type is ENUM}
   if TypeInfoFirst = 'enum' then
   begin
@@ -736,7 +738,8 @@ begin
           ColumnSize := 255;
     end;
     if FieldType in [stString, stUnicodeString] then
-      ColumnSize := GetFieldSize(FieldType, ColumnSize, CharWidth);
+      ColumnSize := GetFieldSize(FieldType, consettings, ColumnSize,
+        ConSettings.ClientCodePage.CharWidth, nil);
 
   FreeAndNil(TypeInfoList);
 end;

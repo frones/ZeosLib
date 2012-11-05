@@ -511,7 +511,7 @@ begin
         else
           if GetString(6) = 'NONE' then
             ConSettings.ClientCodePage.CharWidth := 1;
-        Close;
+      Close;
     end;
   finally
     StrDispose(DPB);

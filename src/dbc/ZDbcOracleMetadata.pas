@@ -1618,11 +1618,8 @@ function TZOracleDatabaseMetadata.UncachedGetColumns(const Catalog: string;
 var
   SQL: string;
   SQLType: TZSQLType;
-  CharWidth: Integer;
 begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
-
-  CharWidth := GetConnection.GetClientCodePageInformations^.CharWidth;
 
   SQL := 'SELECT NULL, OWNER, TABLE_NAME, COLUMN_NAME, NULL, DATA_TYPE,'
     + ' DATA_LENGTH, NULL, DATA_PRECISION, DATA_SCALE, NULLABLE, NULL,'
@@ -1645,7 +1642,7 @@ begin
         GetInt(10), ConSettings.CPType);
       Result.UpdateInt(5, Ord(SQLType));
       Result.UpdateString(6, GetString(6));
-      Result.UpdateInt(7, GetFieldSize(SQLType, GetInt(7), CharWidth)); //FIELD_SIZE
+      Result.UpdateInt(7, GetFieldSize(SQLType, ConSettings, GetInt(7), ConSettings.ClientCodePage.CharWidth)); //FIELD_SIZE
       Result.UpdateNull(8);
       Result.UpdateInt(9, GetInt(9));
       Result.UpdateInt(10, GetInt(10));

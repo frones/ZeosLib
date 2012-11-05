@@ -904,7 +904,8 @@ begin
       if (ColumnType = stString) or (ColumnType = stUnicodeString) then
       begin
         ColumnDisplaySize := CurrentVar.DataSize;
-        Precision := GetFieldSize(ColumnType, CurrentVar.DataSize, ConSettings.ClientCodePage^.CharWidth, False);
+        Precision := GetFieldSize(ColumnType, ConSettings, CurrentVar.DataSize,
+          ConSettings.ClientCodePage^.CharWidth);
       end
       else
         Precision := CurrentVar.Precision;
@@ -1085,7 +1086,8 @@ begin
       if (ColumnType = stString) or (ColumnType = stUnicodeString) then
       begin
         ColumnDisplaySize := CurrentVar.DataSize;
-        Precision := GetFieldSize(ColumnType, CurrentVar.DataSize, ConSettings.ClientCodePage^.CharWidth, False);
+        Precision := GetFieldSize(ColumnType, ConSettings, CurrentVar.DataSize,
+          ConSettings.ClientCodePage^.CharWidth);
       end
       else
         Precision := CurrentVar.Precision;

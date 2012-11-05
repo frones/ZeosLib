@@ -659,10 +659,8 @@ begin
           Precision := MaxLenghtBytes;
         end
         else
-        begin
-          ColumnDisplaySize := MaxLenghtBytes div ConSettings.ClientCodePage^.CharWidth;
-          Precision := GetFieldSize(ColumnType, MaxLenghtBytes, ConSettings.ClientCodePage^.CharWidth, True);
-        end;
+          Precision := GetFieldSize(ColumnType, ConSettings, MaxLenghtBytes,
+            ConSettings.ClientCodePage^.CharWidth, @ColumnDisplaySize, True);
       end;
 
       ReadOnly := (GetFieldRelationName(I) = '') or (GetFieldSqlName(I) = '')

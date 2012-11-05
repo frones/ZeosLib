@@ -672,7 +672,7 @@ end;
 
 function TZCodePagedObject.ZPlainUnicodeString(const AStr: String): WideString;
 begin
-  {$IFDEF DELPHI12_UP}
+  {$IFDEF UNICODE}
   Result := AStr;
   {$ELSE}
     {$IFDEF WITH_LCONVENCODING}
@@ -699,7 +699,7 @@ procedure TZCodePagedObject.SetConSettingsFromInfo(Info: TStrings);
 begin
   if Assigned(Info) and Assigned(FConSettings) then
   begin
-    {$IFDEF DELPHI12_UP}
+    {$IFDEF UNICODE}
     ConSettings.CTRL_CP := ZDefaultSystemCodePage;
     if Info.values['controls_cp'] = 'GET_ACP' then
       ConSettings.CPType := cGET_ACP

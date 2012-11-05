@@ -709,15 +709,15 @@ begin
       ceDefault: Ansi := PAnsiChar(Bytes);
       ceAnsi:
         if ConSettings.ClientCodePage.Encoding = ceAnsi then
-          if ( ConSettings.CTRL_CP = zCP_UTF8) or (ConSettings.CTRL_CP = ConSettings.ClientCodePage.CP) then
-            Ansi := PAnsiChar(Bytes)
+          if ( ConSettings.CTRL_CP = cGET_ACP) or (ConSettings.CTRL_CP = ConSettings.ClientCodePage.CP) then //second test avoids encode the string twice
+            Ansi := PAnsiChar(Bytes)  //should be exact
           else
             {$IF defined(DELPHI) or defined (MSWINDOWS)}
             Ansi := WideToAnsi(AnsiToWide(PAnsiChar(Bytes), ConSettings.CTRL_CP), ConSettings.ClientCodePage.CP)
             {$ELSE}
             Ansi := PAnsiChar(Bytes) //trust in compatible results
             {$IFEND}
-        else  //UTF8 expected
+        else  //Database expects UTF8
           if ( ConSettings.CTRL_CP = zCP_UTF8) then
             Ansi := AnsiToUTF8(String(PAnsiChar(Bytes))) //Can't localize the ansi CP
           else
@@ -802,7 +802,7 @@ begin
         {$IFEND}
       {$ENDIF}
   else
-    Result := nil; // not done yet
+    Result := nil; // not done yet  and not needed. Makes the compiler happy
 end;
 
 function GetValidatedAnsiStream(const Buffer: Pointer; Size: Cardinal;

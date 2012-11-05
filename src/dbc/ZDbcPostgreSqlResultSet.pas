@@ -260,12 +260,11 @@ begin
 
         if ColumnType in [stString, stUnicodeString] then
           if ( (ColumnLabel = 'expr') or ( Precision = 0 ) ) then
-            Precision := GetFieldSize(ColumnType, 255, ConSettings.ClientCodePage^.CharWidth, True)
+            Precision := GetFieldSize(ColumnType, ConSettings, 255,
+              ConSettings.ClientCodePage^.CharWidth, nil, True)
           else
-          begin
-            ColumnDisplaySize := Precision;
-            Precision := GetFieldSize(ColumnType, Precision, ConSettings.ClientCodePage^.CharWidth);
-          end;
+            Precision := GetFieldSize(ColumnType, ConSettings, Precision,
+              ConSettings.ClientCodePage^.CharWidth, @ColumnDisplaySize);
       end;
     end;
 
