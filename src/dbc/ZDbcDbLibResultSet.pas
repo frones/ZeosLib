@@ -61,7 +61,7 @@ uses
 {$IFNDEF FPC}
   DateUtils,
 {$ENDIF}
-  Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcResultSet,
+  Types, Classes, SysUtils, ZDbcIntfs, ZDbcResultSet,
   ZCompatibility, ZDbcResultsetMetadata, ZDbcGenericResolver, ZDbcCachedResultSet,
   ZDbcCache, ZDbcDBLib, ZPlainDbLibConstants, ZPlainDBLibDriver;
 

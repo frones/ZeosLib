@@ -412,8 +412,8 @@ begin
 
   Check(ResultSet.Next);
   CheckEquals(2, ResultSet.GetInt(1));
-  CheckEquals('Test string', ResultSet.GetBlob(2).GetString);
-  CheckEquals('Test string', ResultSet.GetBlob(3).GetString);
+  CheckEquals(ZAnsiString('Test string'), ResultSet.GetBlob(2).GetString);
+  CheckEquals(ZAnsiString('Test string'), ResultSet.GetBlob(3).GetString);
   CheckEquals(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00,
     ResultSet.GetBlob(4).GetString);
 

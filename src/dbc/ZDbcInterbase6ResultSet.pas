@@ -58,7 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, Types, ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcInterbase6,
+  Classes, Types, ZDbcIntfs, ZDbcResultSet, ZDbcInterbase6,
   ZPlainFirebirdInterbaseConstants,
   ZCompatibility, ZDbcResultSetMetadata, ZDbcInterbase6Utils, ZMessages;
 
@@ -244,6 +244,9 @@ end;
   @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
     the specified column
 }
+{$IFDEF FPC}
+  {$HINTS OFF}
+{$ENDIF}
 function TZInterbase6ResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
   Size: Integer;
@@ -297,6 +300,9 @@ begin
     Result := TZInterbase6Blob.Create(FIBConnection, BlobId);
   end;
 end;
+{$IFDEF FPC}
+  {$HINTS ON}
+{$ENDIF}
 
 {**
   Gets the value of the designated column in the current row
@@ -736,6 +742,9 @@ begin
   Result := inherited IsEmpty;
 end;
 
+{$IFDEF FPC}
+  {$HINTS OFF}
+{$ENDIF}
 procedure TZInterbase6Blob.ReadBlob;
 var
   Size: Integer;
@@ -750,5 +759,8 @@ begin
   BlobData := Buffer;
   FBlobRead := True;
 end;
+{$IFDEF FPC}
+  {$HINTS ON}
+{$ENDIF}
 
 end.

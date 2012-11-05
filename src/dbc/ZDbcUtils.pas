@@ -59,7 +59,7 @@ interface
 
 uses
   Types, Classes, SysUtils, Contnrs,
-  ZCompatibility, ZDbcIntfs, ZDbcResultSetMetadata, ZPlainDriver;
+  ZCompatibility, ZDbcIntfs, ZDbcResultSetMetadata;
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -175,7 +175,7 @@ function WideStringStream(const AString: WideString): TStream;
 
 implementation
 
-uses ZMessages, ZSysUtils, ZEncoding;
+uses ZMessages, ZSysUtils;
 
 {**
   Resolves a connection protocol and raises an exception with protocol

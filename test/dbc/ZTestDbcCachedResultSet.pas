@@ -335,7 +335,7 @@ begin
      end;
 
 
-     CheckEquals('', GetCursorName, 'GetCursorName');
+     CheckEquals('', String(GetCursorName), 'GetCursorName');
      { Check Warnings working}
      Warnings := GetWarnings;
      CheckNull(Warnings);
@@ -813,7 +813,7 @@ begin
         InsertRow;
       end;
 
-      CheckEquals('', GetCursorName, 'GetCursorName');
+      CheckEquals('', String(GetCursorName), 'GetCursorName');
 
       { Check Warnings working}
       Warnings := GetWarnings;

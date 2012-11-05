@@ -215,6 +215,7 @@ begin
   Statement.ExecuteUpdate('DELETE FROM BLOB_VALUES WHERE B_ID='
     + IntToStr(TEST_ROW_ID));
 
+  TempStream := nil;
   TextStream := TStringStream.Create('ABCDEFG');
   ImageStream := TMemoryStream.Create;
   ImageStream.LoadFromFile('../../../database/images/zapotec.bmp');
@@ -237,7 +238,8 @@ begin
     TempStream := ResultSet.GetBinaryStreamByName('B_IMAGE');
     CheckEquals(ImageStream, TempStream);
   finally
-    TempStream.Free;
+    if Assigned(TempStream) then
+      TempStream.Free;
     ResultSet.Close;
 
     TextStream.Free;

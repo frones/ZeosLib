@@ -366,7 +366,7 @@ begin
         StrStream.position := 0;
         SetLength(Ansi,StrStream.Size);
         StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
-        WS := UTF8Decode(Ansi);
+        WS := UTF8ToString(Ansi);
         StrStream.Clear;
         StrStream.Write(PWideChar(WS)^, Length(WS)*2);
         StrStream.Position := 0;
@@ -403,7 +403,7 @@ end;
 procedure TZGenericTestDbcResultSet.TestRealPreparedStatement;
 var
   Ansi: AnsiString;
-  WS: WideString;
+  WS: ZWideString;
   Query: TZQuery;
   StrStream, BinStream: TMemoryStream;
   StrStream1, BinStream1: TMemoryStream;
@@ -564,7 +564,7 @@ begin
         StrStream.position := 0;
         SetLength(Ansi,StrStream.Size);
         StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
-        WS := UTF8Decode(Ansi);
+        WS := UTF8ToString(Ansi);
         StrStream.Clear;
         StrStream.Write(PWideChar(WS)^, Length(WS)*2);
         StrStream.Position := 0;
@@ -803,7 +803,7 @@ end;
 procedure TZGenericTestDbcResultSet.TestQueryUpdate;
 var
   Sql_: string;
-  WS: WideString;
+  WS: ZWideString;
   Ansi: AnsiString;
   Query: TZQuery;
   StrStream, BinStream: TMemoryStream;
@@ -917,7 +917,7 @@ begin
       begin
         SetLength(Ansi,StrStream.Size);
         StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
-        WS := UTF8Decode(Ansi);
+        WS := UTF8ToString(Ansi);
         StrStream.Clear;
         StrStream.Write(PWideChar(WS)^, Length(WS)*2);
         StrStream.Position := 0;

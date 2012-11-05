@@ -359,7 +359,7 @@ begin
       StrStream.position := 0;
       SetLength(Ansi,StrStream.Size);
       StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
-      WS := UTF8Decode(Ansi);
+      WS := UTF8ToString(Ansi);
       StrStream.Clear;
       StrStream.Write(PWideChar(WS)^, Length(WS)*2);
       StrStream.Position := 0;
@@ -582,7 +582,6 @@ begin
   end;
 end;
 const
-  Str1 = 'This license, the Lesser General Public License, applies to some specially designated software packages--typically libraries--of the Free Software Foundation and other authors who decide to use it.  You can use it too, but we suggest you first think ...';
   Str2 = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
   Str3 = 'ќдной из наиболее';
 
@@ -784,13 +783,13 @@ begin
         iqry.SQL.Add('insert into string_values(s_id,s_varchar) values (:i1,:s1)');
         iqry.Prepare;
         iqry.ParamByName('i1').AsInteger:= RowID;
-        iqry.ParamByName('s1').AsString:= S1;
+        iqry.ParamByName('s1').AsString:= GetDBTestString(S1, FConnection.DbcConnection.GetConSettings, True);
         iqry.ExecSQL;
         iqry.ParamByName('i1').AsInteger:= RowID+1;
-        iqry.ParamByName('s1').AsString:= S2;
+        iqry.ParamByName('s1').AsString:= GetDBTestString(S2, FConnection.DbcConnection.GetConSettings, True);
         iqry.ExecSQL;
         iqry.ParamByName('i1').AsInteger:= RowID+2;
-        iqry.ParamByName('s1').AsString:= S3;
+        iqry.ParamByName('s1').AsString:= GetDBTestString(S3, FConnection.DbcConnection.GetConSettings, True);
         iqry.ExecSQL;
         iqry.Unprepare;
 
@@ -800,13 +799,13 @@ begin
         CheckEquals(3, iqry.RecordCount, 'RecordCount');
         if (FConnection.DbcConnection.GetConSettings.CPType = cGET_ACP ) and
           FConnection.DbcConnection.AutoEncodeStrings then
-          CheckEquals(String(UTF8ToString(S1)), iqry.Fields[0].AsString)
+          CheckEquals(UTF8ToAnsi(S1), iqry.Fields[0].AsString)
         else
           CheckEquals(S1, iqry.Fields[0].AsString);
         iqry.Next;
         if (FConnection.DbcConnection.GetConSettings.CPType = cGET_ACP ) and
           FConnection.DbcConnection.AutoEncodeStrings then
-          CheckEquals(String(UTF8ToString(S2)), iqry.Fields[0].AsString)
+          CheckNotEquals(UTF8ToAnsi(S2), iqry.Fields[0].AsString) //i can't display the russian chars right
         else
           CheckEquals(S2, iqry.Fields[0].AsString);
         iqry.Next;

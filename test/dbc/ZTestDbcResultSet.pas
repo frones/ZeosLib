@@ -262,7 +262,7 @@ begin
 
   {string test}
   Blob := TZAbstractBlob.CreateWithStream(nil);
-  Blob.SetString(FString);
+  Blob.SetString(ZAnsiString(FString));
   Check(not Blob.IsEmpty, 'IsEmpty');
   Check(Blob.IsUpdated, 'IsUpdated');
   CheckEquals(Length(FString), Blob.Length, 'Length');
