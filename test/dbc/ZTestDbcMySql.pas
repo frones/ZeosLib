@@ -120,6 +120,8 @@ end;
 }
 procedure TZTestDbcMySQLCase.TestConnection;
 begin
+  if SkipTest then Exit;
+
   CheckEquals(True, Connection.IsReadOnly);
 //  CheckEquals(True, Connection.IsClosed);
   CheckEquals(True, Connection.GetAutoCommit);
@@ -151,6 +153,8 @@ var
   Statement: IZPreparedStatement;
   Stream: TStream;
 begin
+  if SkipTest then Exit;
+
   Statement := Connection.PrepareStatement(
     'INSERT INTO department(dep_id,dep_name,dep_shname,dep_address)'
     + ' VALUES(?,?,?,?)');
@@ -192,6 +196,8 @@ procedure TZTestDbcMySQLCase.TestStatement;
 var
   Statement: IZStatement;
 begin
+  if SkipTest then Exit;
+
   Statement := Connection.CreateStatement;
   try
     CheckNotNull(Statement);
@@ -214,6 +220,8 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -236,6 +244,8 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtForwardOnly);
@@ -258,6 +268,8 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -290,6 +302,8 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);

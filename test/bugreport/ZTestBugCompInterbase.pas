@@ -125,6 +125,8 @@ end;
 }
 procedure ZTestCompInterbaseBugReport.Test1004584;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   CheckEquals(Ord(tiNone), Ord(Connection.TransactIsolationLevel));
@@ -148,6 +150,8 @@ var
   Error: Boolean;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Error := True;
   Query := TZQuery.Create(nil);
   try
@@ -197,6 +201,8 @@ var
   LookUp: TDBLookupComboBox;
 {$ENDIF}
 begin
+  if SkipTest then Exit;
+
 {$IFNDEF LINUX}
   Query := TZQuery.Create(nil);
   ROQuery := TZReadOnlyQuery.Create(nil);;
@@ -252,6 +258,8 @@ procedure ZTestCompInterbaseBugReport.Test789879;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -277,6 +285,8 @@ end;
 }
 procedure ZTestCompInterbaseBugReport.Test833489;
 begin
+  if SkipTest then Exit;
+
   Connection.Disconnect;
   Connection.AutoCommit := False;
   Connection.Connect;
@@ -291,6 +301,8 @@ var
   Temp: boolean;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Temp := False;
   Query := TZQuery.Create(nil);
   try
@@ -321,6 +333,8 @@ var
   Ansi: AnsiString;
   WS: WideString;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
 
   Query.Connection := Connection;
@@ -388,6 +402,8 @@ procedure ZTestCompInterbaseBugReport.Test864622;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   Query.Connection := Connection;
   // Query.RequestLive := True;
@@ -411,6 +427,8 @@ procedure ZTestCompInterbaseBugReport.Test886194;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   Query.Connection := Connection;
   // Query.RequestLive := True;
@@ -437,6 +455,8 @@ procedure ZTestCompInterbaseBugReport.Test886854;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   Query.Connection := Connection;
   // Query.RequestLive := True;
@@ -483,6 +503,8 @@ procedure ZTestCompInterbaseBugReport.Test897631;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   Query.Connection := Connection;
   // Query.RequestLive := True;
@@ -511,6 +533,8 @@ var
   Query: TZQuery;
   UpdateSQL: TZUpdateSQL;
 begin
+  if SkipTest then Exit;
+
   Error := True;
   Query := TZQuery.Create(nil);
   Query.Connection := Connection;
@@ -558,6 +582,8 @@ var
   Error: boolean;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Error := True;
   Query := TZQuery.Create(nil);
   Query.Connection := Connection;
@@ -591,6 +617,8 @@ var
   StrStream1: TMemoryStream;
   SL: TStringList;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   SL := TStringList.Create;
   StrStream1 := TMemoryStream.Create;
@@ -650,6 +678,8 @@ var
   StrStream1: TMemoryStream;
   SL: TStringList;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -743,6 +773,8 @@ var
     iqry.ExecSQL;
   end;
 begin
+  if SkipTest then Exit;
+
   { prepared insert statement }
   iqry:= TZQuery.Create(nil);
   iqry.Connection:= Connection;

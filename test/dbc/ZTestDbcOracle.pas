@@ -91,7 +91,7 @@ type
 
 implementation
 
-uses Types, ZSysUtils, ZTestConsts, ZTestCase, ZSqlTestCase;
+uses Types, ZTestConsts, ZTestCase, ZSqlTestCase;
 
 { TZTestDbcOracleCase }
 
@@ -126,6 +126,8 @@ end;
 }
 procedure TZTestDbcOracleCase.TestConnection;
 begin
+  if SkipTest then Exit;
+
   CheckEquals(True, Connection.IsReadOnly);
 //  CheckEquals(True, Connection.IsClosed);
   CheckEquals(True, Connection.GetAutoCommit);
@@ -156,6 +158,8 @@ procedure TZTestDbcOracleCase.TestStatement;
 var
   Statement: IZStatement;
 begin
+  if SkipTest then Exit;
+
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
 
@@ -181,6 +185,8 @@ var
   ResultSet: IZResultSet;
   Metadata: IZDatabaseMetadata;
 begin
+  if SkipTest then Exit;
+
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -242,6 +248,8 @@ var
   ResultSet: IZResultSet;
   Stream: TStream;
 begin
+  if SkipTest then Exit;
+
   Statement := Connection.PrepareStatement(
     'DELETE FROM department WHERE dep_id=?');
   CheckNotNull(Statement);
@@ -315,6 +323,8 @@ var
   ResultSet: IZResultSet;
   Stream: TStream;
 begin
+  if SkipTest then Exit;
+
   Statement := Connection.PrepareStatement(
     'update blob_values set b_blob=? where b_id = 1');
   CheckNotNull(Statement);
@@ -395,6 +405,8 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
 //  Statement.SetResultSetType(rtScrollInsensitive);
@@ -467,6 +479,8 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
 
@@ -502,6 +516,8 @@ var
   PStatement: IZPreparedStatement;
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   InStm := TMemoryStream.Create;
   try
     TestSize := 1050 * 1024 + Random(100000); // relative big random size
@@ -557,6 +573,8 @@ var
   PStatement: IZPreparedStatement;
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   TestDate := EncodeDate(2009, 12, 20) + EncodeTime(20, 09, 11, 0);
   try
     // inserting
@@ -596,6 +614,8 @@ var
   PStatement: IZPreparedStatement;
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   // inserting
   PStatement := Connection.PrepareStatement(
   'insert into string_values(s_id, s_varchar) values(?, ?)');
@@ -641,6 +661,8 @@ var
   ResultSet1: IZResultSet;
   ResultSet2: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
 

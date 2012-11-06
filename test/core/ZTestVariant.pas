@@ -76,9 +76,7 @@ type
     procedure TestInteger;
     procedure TestDouble;
     procedure TestString;
-{$IFNDEF VER130BELOW}
     procedure TestArray;
-{$ENDIF}
   end;
 
 implementation
@@ -243,7 +241,6 @@ end;
 {**
   Runs a test for variant arrays.
 }
-{$IFNDEF VER130BELOW}
 procedure TZTestVariantCase.TestArray;
 const
   MAX_ITEM_COUNT = 10;
@@ -273,7 +270,6 @@ begin
       Check(I = Value[I], 'Incorrect Int64 array processing');
   end;
 end;
-{$ENDIF}
 
 initialization
   RegisterTest('core',TZTestVariantCase.Suite);

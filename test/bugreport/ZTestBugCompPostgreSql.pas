@@ -142,6 +142,8 @@ var
   Query: TZQuery;
 *)
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 (*
   Query := TZQuery.Create(nil);
@@ -173,6 +175,8 @@ procedure TZTestCompPostgreSQLBugReport.Test707337;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -199,6 +203,8 @@ procedure TZTestCompPostgreSQLBugReport.Test707338;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -222,6 +228,8 @@ procedure TZTestCompPostgreSQLBugReport.Test709879;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -245,6 +253,8 @@ procedure TZTestCompPostgreSQLBugReport.Test739519;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -286,6 +296,8 @@ procedure TZTestCompPostgreSQLBugReport.Test739444;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -317,6 +329,8 @@ procedure TZTestCompPostgreSQLBugReport.Test759184;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -337,6 +351,8 @@ procedure TZTestCompPostgreSQLBugReport.Test765111;
 var
   Batch: TZSqlProcessor;
 begin
+  if SkipTest then Exit;
+
   Connection.AutoCommit := True;
   Batch := TZSqlProcessor.Create(nil);
   try
@@ -364,6 +380,8 @@ var
   LookUp: TDBLookupComboBox;
 {$ENDIF}
 begin
+  if SkipTest then Exit;
+
 {$IFNDEF LINUX}
   Query1 := TZQuery.Create(nil);
   Query2 := TZQuery.Create(nil);
@@ -403,6 +421,8 @@ procedure TZTestCompPostgreSQLBugReport.Test816846;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -444,6 +464,8 @@ procedure TZTestCompPostgreSQLBugReport.Test824780;
 var
   Metadata: TZSQLMetadata;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
   if Connection.Protocol <> 'postgresql-7' then
     Exit;
@@ -473,6 +495,8 @@ procedure TZTestCompPostgreSQLBugReport.Test815854;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
   if Connection.Protocol <> 'postgresql-7' then
     Exit;
@@ -517,6 +541,8 @@ procedure TZTestCompPostgreSQLBugReport.Test831559;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -556,6 +582,8 @@ procedure TZTestCompPostgreSQLBugReport.Test894367;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -602,6 +630,8 @@ procedure TZTestCompPostgreSQLBugReport.Test933623;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection.AutoCommit := True;
@@ -635,6 +665,8 @@ procedure TZTestCompPostgreSQLBugReport.Test994562;
 var
   Query: TZReadOnlyQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZReadOnlyQuery.Create(nil);
@@ -667,7 +699,9 @@ procedure TZTestCompPostgreSQLBugReport.Test1043252;
 var
   Query: TZQuery;
 begin
-//  if SkipClosed then Exit;
+  if SkipTest then Exit;
+
+  if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
   try
@@ -732,6 +766,8 @@ var
   TempConnection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   TempConnection := CreateDatasetConnection;
   TempConnection.Properties.Add('standard_conforming_strings=ON');
   Query := TZQuery.Create(nil);
@@ -749,6 +785,8 @@ var
   TempConnection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   TempConnection := CreateDatasetConnection;
   TempConnection.Properties.Add('standard_conforming_strings=OFF');
   Query := TZQuery.Create(nil);

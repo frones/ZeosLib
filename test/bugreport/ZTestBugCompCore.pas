@@ -207,6 +207,8 @@ procedure ZTestCompCoreBugReport.Test000002;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -234,6 +236,8 @@ procedure ZTestCompCoreBugReport.Test000001;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -277,6 +281,8 @@ var
   TextStream: TMemoryStream;
   BinaryStream: TMemoryStream;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -327,6 +333,8 @@ procedure ZTestCompCoreBugReport.Test707364;
 var
   Processor: TZSQLProcessor;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Processor := TZSQLProcessor.Create(nil);
@@ -349,6 +357,8 @@ var
   Query: TZQuery;
   RecNo: Integer;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -380,6 +390,8 @@ procedure ZTestCompCoreBugReport.Test722651;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -428,6 +440,8 @@ procedure ZTestCompCoreBugReport.Test000003;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -454,6 +468,8 @@ procedure ZTestCompCoreBugReport.Test773022;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -510,6 +526,8 @@ procedure ZTestCompCoreBugReport.Test772926;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -579,6 +597,8 @@ procedure ZTestCompCoreBugReport.Test793351;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -627,6 +647,8 @@ var
   FieldDefs: TFieldDefs;
   CalcField: TField;
 begin
+  if SkipTest then Exit;
+
 //  if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -676,6 +698,8 @@ var
   FieldDefs: TFieldDefs;
   CalcField: TField;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   {$IFDEF FPC}
@@ -731,6 +755,8 @@ var
   Query: TZQuery;
   RefreshQuery: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -783,6 +809,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := TZConnection.Create(nil);
@@ -802,6 +830,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -830,6 +860,8 @@ var
   Connection: TZConnection;
   SQLProcessor: TZSQLProcessor;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -857,6 +889,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -902,6 +936,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -987,6 +1023,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1019,6 +1057,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1063,6 +1103,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1093,6 +1135,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1121,6 +1165,8 @@ var
   Query: TZQuery;
   UpdateSQL: TZUpdateSQL;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -1145,6 +1191,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1182,6 +1230,8 @@ procedure ZTestCompCoreBugReport.Test880459;
 var
   Processor: TZSQLProcessor;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Processor := TZSQLProcessor.Create(nil);
@@ -1211,6 +1261,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1247,6 +1299,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1279,6 +1333,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1317,6 +1373,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1380,6 +1438,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1427,6 +1487,8 @@ var
   Query: TZQuery;
   UpdateSQL: TZUpdateSQL;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1514,6 +1576,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1541,6 +1605,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1573,6 +1639,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1611,6 +1679,8 @@ procedure ZTestCompCoreBugReport.Test996283;
 var
   Query: TZReadOnlyQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZReadOnlyQuery.Create(nil);
@@ -1648,6 +1718,8 @@ procedure ZTestCompCoreBugReport.Test1004534;
 var
   Query: TZReadOnlyQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZReadOnlyQuery.Create(nil);
@@ -1677,6 +1749,8 @@ procedure ZTestCompCoreBugReport.Test1012751;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -1700,6 +1774,8 @@ procedure ZTestCompCoreBugReport.Test1022415;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -1723,6 +1799,8 @@ procedure ZTestCompCoreBugReport.Test1049821;
 var
   Processor: TZSQLProcessor;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Processor := TZSQLProcessor.Create(nil);
@@ -1747,6 +1825,8 @@ procedure ZTestCompCoreBugReport.Test1045500;
 var
   Metadata: TZSQLMetadata;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Metadata := TZSQLMetadata.Create(nil);
@@ -1769,6 +1849,8 @@ procedure ZTestCompCoreBugReport.Test1036916;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -1821,6 +1903,8 @@ var
   StrStream1: TMemoryStream;
   SL: TStringList;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -1877,6 +1961,8 @@ end;
 }
 procedure ZTestCompCoreBugReport.Test1004584;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   CheckEquals(Ord(tiNone), Ord(Connection.TransactIsolationLevel));
@@ -1963,6 +2049,8 @@ var
     Query.Open;
   end;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   Query.Connection := Connection;
   Connection.Connect;

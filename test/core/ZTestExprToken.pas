@@ -142,6 +142,8 @@ const
   TokenValues1: array[0..3] of string = (
     'aaa', ' '#9, 'ccc', #10#13);
 begin
+  if SkipTest then Exit;
+
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString1, [toSkipEOF]),
     TokenTypes1, TokenValues1);
 end;
@@ -157,6 +159,8 @@ const
   TokenValues1: array[0..4] of string = (
     '_a_a', '.', 'p2p', 'Null', 'IS');
 begin
+  if SkipTest then Exit;
+
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString1,
     [toSkipEOF, toSkipWhitespaces]), TokenTypes1, TokenValues1);
 end;
@@ -172,6 +176,8 @@ const
   TokenValues1: array[0..7] of string = (
     '.', 'A', '.123', '123.456', 'a', '123.456e10', '2E-12', 'c');
 begin
+  if SkipTest then Exit;
+
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString1,
     [toSkipEOF, toSkipWhitespaces]), TokenTypes1, TokenValues1);
 end;
