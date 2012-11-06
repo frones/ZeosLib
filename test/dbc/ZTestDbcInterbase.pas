@@ -553,10 +553,10 @@ begin
     ResultSet.InsertRow;
     ResultSet.Last;
     Check(ResultSet.GetInt(1) <> 0);
-    CheckEquals(Trunc(ThisTime), ResultSet.GetDate(2));
-    CheckEquals(RoundTo(Frac(ThisTime),-11), RoundTo(ResultSet.GetTime(3),-11));
-    CheckEquals(ThisTime, ResultSet.GetTimeStamp(4));
-    CheckEquals(ThisTime, ResultSet.GetTimeStamp(5));
+    CheckEquals(Trunc(ThisTime), ResultSet.GetDate(2),'Failure field 2');
+    CheckEquals(RoundTo(Frac(ThisTime),-10), RoundTo(ResultSet.GetTime(3),-10),'Failure field 3');
+    CheckEquals(ThisTime, ResultSet.GetTimeStamp(4),'Failure field 4');
+    CheckEquals(ThisTime, ResultSet.GetTimeStamp(5),'Failure field 5');
     ResultSet.DeleteRow;
     {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat := OldTimeFormat;
     ResultSet.Close;
