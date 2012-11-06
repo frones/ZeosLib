@@ -161,7 +161,7 @@ function GetProcAddress(Module: HMODULE; Proc: PChar): Pointer;
 {EgonHugeist:}
 type
   ZAnsiString = {$IFDEF WITH_RAWBYTESTRING}RawByteString{$ELSE}AnsiString{$ENDIF};
-  ZWideString = {$IFDEF DELPHI12_UP}String{$ELSE}WideString{$ENDIF};
+  ZWideString = {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF};
 
   {** Defines the Target Ansi codepages for the Controls }
   TZControlsCodePage = ({$IFDEF DELPHI12_UP}cCP_UTF16, cCP_UTF8, cGET_ACP{$ELSE}{$IFDEF FPC}cCP_UTF8, cCP_UTF16, cGET_ACP{$ELSE}cGET_ACP, cCP_UTF8, cCP_UTF16{$ENDIF}{$ENDIF});
@@ -393,10 +393,8 @@ end;
 }
 function TZCodePagedObject.ZDbcString(const Ansi: ZAnsiString;
   ConSettings: PZConSettings): String;
-{$IFDEF WITH_LIBICONV}
-var
-  Len: Integer;
-  Temp: ZAnsiString;
+{$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+var TempAnsi: ZAnsiString;
 {$ENDIF}
 begin
   {$IFNDEF DELPHI12_UP}
@@ -419,7 +417,17 @@ begin
               Result := UTF8ToAnsi(Ansi);
               {$ELSE}
                 {$IF defined(DELPHI) or defined(MSWINDOWS)}
-                Result := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP);
+                  {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+                  begin
+                    //stupid workaround to cut of the origin tracking of AStr
+                    //on the other hand Result = AStr after some more procs
+                    TempAnsi := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP);
+                    SetLength(Result, Length(TempAnsi));
+                    Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
+                  end
+                  {$ELSE}
+                  Result := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP);
+                  {$ENDIF}
                 {$ELSE}
                 Result := UTF8ToAnsi(Ansi);
                 {$IFEND}
@@ -438,7 +446,17 @@ begin
               Result := Ansi;
               {$ELSE}
                 {$IF defined(DELPHI) or defined(MSWINDOWS)}
-                Result := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP)
+                  {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+                  begin
+                    //stupid workaround to cut of the origin tracking of AStr
+                    //on the other hand Result = AStr after some more procs
+                    TempAnsi := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP);
+                    SetLength(Result, Length(TempAnsi));
+                    Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
+                  end
+                  {$ELSE}
+                  Result := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP)
+                  {$ENDIF}
                 {$ELSE}
                 if ( ConSettings.CPType in [cCP_UTF8, cCP_UTF16] ) then
                   Result := AnsiToUTF8(Ansi)
@@ -560,7 +578,17 @@ begin
             {$ENDIF}
             else
               {$IF defined(DELPHI) or defined(MSWINDOWS)}
-              Result := StringToAnsiEx(AStr, ConSettings.CTRL_CP, zCP_UTF8)
+                {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+                begin
+                  //stupid workaround to cut of the origin tracking of AStr
+                  //on the other hand Result = AStr after some more procs
+                  TempAnsi := StringToAnsiEx(AStr, ConSettings.CTRL_CP, zCP_UTF8);
+                  SetLength(Result, Length(TempAnsi));
+                  Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
+                end
+                {$ELSE}
+                Result := StringToAnsiEx(AStr, ConSettings.CTRL_CP, zCP_UTF8)
+                {$ENDIF}
               {$ELSE}
               Result := AnsiToUTF8(AStr) //actually i can't convert anything here
               {$IFEND}
