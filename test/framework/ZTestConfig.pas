@@ -108,9 +108,13 @@ const
   SUPPRESS_TEST_OUTPUT_KEY = 'suppress.output';
   ENABLE_KEY               = 'enable';
   SKIP_CLOSED_KEY          = 'skip.closed';
+  SKIP_TEST_KEY            = 'skip.test';
   ACTIVE_CONNECTIONS_KEY   = 'connections';
-  EXTENDED_TEST_KEY       =  'extended.test';
-  SKIP_NON_ZEOS_ISSUES     = 'skip.non.zeos.issues';
+  EXTENDED_TEST_KEY        = 'extended.test';
+  SKIP_NON_ZEOS_ISSUES_KEY = 'skip.non.zeos.issues';
+  SKIP_CGET_ACP_KEY        = 'skip.cget_acp';
+  SKIP_CCP_UTF8_KEY        = 'skip.ccp_utf8';
+  SKIP_CCP_UTF16_KEY       = 'skip.ccp_utf16';
 
 const
   { Names of the connection configuration keys. }
