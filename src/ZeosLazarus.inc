@@ -92,11 +92,12 @@
     {$UNDEF WITH_FPC_FTTIME_BUG}
     {$UNDEF WITH_FPC_BOF_BUG}
     {$UNDEF WITH_FPC_MODIFIED_BUG}
-    {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF Hint: Works not properly with FPC2.7.1(20121018)
-    	{$IFDEF WITH_RAWBYTESTRING}
-	  {$DEFINE WITH_FPC_RAWBYTE_CONVERSATION_BUG}
-	{$ENDIF}
+    {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF
+      {$IFDEF WITH_RAWBYTESTRING}
+        {$DEFINE WITH_FPC_RAWBYTE_CONVERSATION_BUG} //After string conversations to RawByteString like AnsiZoUTF8 the results are equal to original value
+      {$ENDIF}
     {$DEFINE WITH_DEFAULTSYSTEMCODEPAGE}
+    {$DEFINE WITH_PWIDECHAR_TOWIDESTRING}
   {$IFEND}
 
   // todo
@@ -117,6 +118,3 @@
 //    {$UNDEF WITH_LIBICONV}
 //  {$IFEND}
 //{$ENDIF}
-
-{.$DEFINE WITH_LCONVENCODING}
-
