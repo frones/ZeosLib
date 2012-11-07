@@ -150,7 +150,7 @@ type
     procedure CheckStringFieldType(Actual: TFieldType; ConSettings: PZConSettings);
     procedure CheckMemoFieldType(Actual: TFieldType; ConSettings: PZConSettings);
 
-    function GetDBTestString(const Value: String; ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False): String;
+    function GetDBTestString(const Value: String; ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False; MaxLen: Integer = -1): String;
     function GetDBValidString(const Value: String; ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False): String;
     function GetDBTestStream(const Value: String; ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False): TStream;
   public
@@ -573,7 +573,8 @@ end;
   {$WARNINGS OFF}
 {$ENDIF}
 function TZAbstractSQLTestCase.GetDBTestString(const Value: String;
-  ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False): String;
+  ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False;
+  MaxLen: Integer = -1): String;
 var Temp: {$IFNDEF UNICODE}ZAnsiString{$ELSe}String{$ENDIF};
 begin
   Result := Value;
@@ -612,8 +613,16 @@ begin
           else
             Temp := UTF8Encode(WideString(Value)); //Return the expected value to test
     end;
-  SetLength(Result, Length(Temp));
-  System.Move(PChar(Temp)^, PChar(Result)^, Length(Temp)*SizeOf(Char));
+  if (MaxLen = -1) then
+  begin
+    SetLength(Result, Length(Temp));
+    System.Move(PChar(Temp)^, PChar(Result)^, Length(Temp)*SizeOf(Char));
+  end
+  else
+  begin
+    SetLength(Result, MaxLen);
+    System.Move(PChar(Temp)^, PChar(Result)^, MaxLen*SizeOf(Char));
+  end;
 end;
 
 function TZAbstractSQLTestCase.GetDBValidString(const Value: String;
