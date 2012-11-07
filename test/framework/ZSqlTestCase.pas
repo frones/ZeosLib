@@ -378,7 +378,7 @@ var
         else
           if ( CPTypes[iCtrlsCPs] = 'CP_UTF16' ) and not FSkip_cGet_UTF16 then
             CloneConfig
-          else SetAutoEncodings(MyCurrent);
+          else SetAutoEncodings(Current);
 
      end;
   end;
