@@ -56,7 +56,8 @@ interface
 {$I ZBugReport.inc}
 
 uses
-  Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
+  Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
+  ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
   {$IFNDEF LINUX}
     DBCtrls,
   {$ENDIF}
@@ -81,10 +82,7 @@ type
 implementation
 
 uses
-{$IFNDEF VER130BELOW}
-  Variants,
-{$ENDIF}
-  ZTestCase, ZTestConsts, ZSqlUpdate, ZSqlTestCase;
+  Variants, ZTestCase, ZTestConsts, ZSqlUpdate, ZSqlTestCase;
 
 const
 

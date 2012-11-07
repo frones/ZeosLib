@@ -711,33 +711,16 @@ var
    function GetMessage(AMessage: PAnsiChar): String;
    begin
     if Assigned(Connection) then
-      {$IFDEF DELPHI12_UP}
       Result := Trim(PlainDriver.ZDbcString(StrPas(AMessage), Connection.GetConSettings))
-      {$ELSE}
-        case Connection.GetEncoding of
-          ceAnsi:
-            {$IF defined(LAZARUSUTF8) or defined(UNIX)}
-            Result := Trim(AnsiToUtf8(StrPas(AMessage)));
-            {$ELSE}
-            Result := Trim(StrPas(AMessage));
-            {$IFEND}
-          ceUTF8:
-            {$IF defined(LAZARUSUTF8) or defined (UNIX)}
-            Result := Trim(StrPas(AMessage));
-            {$ELSE}
-            Result := Trim(Utf8ToAnsi(StrPas(AMessage)));
-            {$IFEND}
-        end
-     {$ENDIF}
     else
-      {$IFDEF DELPHI12_UP}
+      {$IFDEF UNICODE}
       Result := Trim(UTF8ToString(StrPas(AMessage)));
       {$ELSE}
-        {$IF defined(LAZARUSUTF8) or defined (UNIX)}
-        Result := Trim(StrPas(AMessage));
-        {$ELSE}
+        {$IFDEF DELPHI}
         Result := Trim(Utf8ToAnsi(StrPas(AMessage)));
-        {$IFEND}
+        {$ELSE}
+        Result := Trim(StrPas(AMessage));
+        {$ENDIF}
      {$ENDIF}
    end;
 begin
