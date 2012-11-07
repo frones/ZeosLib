@@ -846,10 +846,9 @@ begin
                  @ptype, nil, OCI_ATTR_REF_TDO, FErrorHandle)
             ,lcExecute, FSQL);
           CheckOracleError(FPlainDriver, FErrorHandle,
-            FPlainDriver.ObjectPin(Connection.GetConnectionHandle, FErrorHandle, ptype, nil,
-               OCI_PIN_ANY, OCI_DURATION_SESSION, OCI_LOCK_NONE,
-               @addr_tdo)
-            ,lcExecute, FSQL);
+            FPlainDriver.ObjectPin(Connection.GetConnectionHandle, FErrorHandle,
+              ptype, nil, OCI_PIN_ANY, OCI_DURATION_SESSION, OCI_LOCK_NONE,
+                @addr_tdo) ,lcExecute, FSQL);
         end;
       else
         CurrentVar.ColType := stUnknown;
@@ -901,7 +900,7 @@ begin
 
       ColumnType := CurrentVar.ColType;
       Scale := CurrentVar.Scale;
-      if (ColumnType = stString) or (ColumnType = stUnicodeString) then
+      if (ColumnType in [stString, stUnicodeString]) then
       begin
         ColumnDisplaySize := CurrentVar.DataSize;
         Precision := GetFieldSize(ColumnType, ConSettings, CurrentVar.DataSize,
@@ -1079,11 +1078,18 @@ begin
 
       ColumnType := CurrentVar.ColType;
       Scale := CurrentVar.Scale;
-      if (ColumnType = stUnicodeString) and not ( Connection.GetConSettings.CPType = cCP_UTF16) then
-        ColumnType := stString;
+
+      {Reset the column type which can be changed by user before}
       if (ColumnType = stUnicodeStream) and not ( Connection.GetConSettings.CPType = cCP_UTF16) then
         ColumnType := stAsciiStream;
-      if (ColumnType = stString) or (ColumnType = stUnicodeString) then
+      if (ColumnType = stAsciiStream) and ( Connection.GetConSettings.CPType = cCP_UTF16) then
+        ColumnType := stUnicodeStream;
+      if (ColumnType = stUnicodeString) and not ( Connection.GetConSettings.CPType = cCP_UTF16) then
+        ColumnType := stString;
+      if (ColumnType = stString) and ( Connection.GetConSettings.CPType = cCP_UTF16) then
+        ColumnType := stUnicodeString;
+
+      if ( ColumnType in [stString, stUnicodeString] ) then
       begin
         ColumnDisplaySize := CurrentVar.DataSize;
         Precision := GetFieldSize(ColumnType, ConSettings, CurrentVar.DataSize,
