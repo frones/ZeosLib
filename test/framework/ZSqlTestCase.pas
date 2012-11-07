@@ -549,7 +549,7 @@ procedure TZAbstractSQLTestCase.CheckStringFieldType(Actual: TFieldType;
   ConSettings: PZConSettings);
 begin
   case ConSettings.CPType of
-    cGET_ACP, cCP_UTF8{$IFNDEF WITH_WIDEFIELDS}cCP_UTF16{$ENDIF}: CheckEquals(Ord(ftString), Ord(Actual), 'String-FieldType');
+    cGET_ACP, cCP_UTF8{$IFNDEF WITH_WIDEFIELDS},cCP_UTF16{$ENDIF}: CheckEquals(Ord(ftString), Ord(Actual), 'String-FieldType');
     {$IFDEF WITH_WIDEFIELDS}cCP_UTF16: CheckEquals(Ord(ftWideString), Ord(Actual), 'String-FieldType');{$ENDIF}
   end;
 end;
@@ -558,7 +558,7 @@ procedure TZAbstractSQLTestCase.CheckMemoFieldType(Actual: TFieldType;
   ConSettings: PZConSettings);
 begin
   case ConSettings.CPType of
-    cGET_ACP, cCP_UTF8{$IFNDEF WITH_WIDEFIELDS}cCP_UTF16{$ENDIF}: CheckEquals(Ord(ftMemo), Ord(Actual), 'Memo-FieldType');
+    cGET_ACP, cCP_UTF8{$IFNDEF WITH_WIDEFIELDS},cCP_UTF16{$ENDIF}: CheckEquals(Ord(ftMemo), Ord(Actual), 'Memo-FieldType');
     {$IFDEF WITH_WIDEFIELDS}cCP_UTF16: CheckEquals(Ord(ftWideMemo), Ord(Actual), 'Memo-FieldType');{$ENDIF}
   end;
 end;

@@ -1925,6 +1925,7 @@ begin
 
       StrStream1 := TMemoryStream.Create;
       SL.SaveToStream(StrStream1);
+      SL.Free;
       ParamByName('P_RESUME').LoadFromStream(StrStream1, ftMemo);
 
       try
@@ -1950,10 +1951,10 @@ begin
         on E:Exception do
             Fail('Param().LoadFromStream(StringStream, ftMemo): '+E.Message);
       end;
-      StrStream1.Free;
     end;
   finally
     Query.Free;
+    StrStream1.Free;
   end;
 end;
 {**
