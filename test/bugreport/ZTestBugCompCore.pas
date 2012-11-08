@@ -2019,12 +2019,12 @@ begin
     Query.Open;
     CheckEquals(True, Query.RecordCount = 5);
     if StartsWith(Connection.Protocol, 'ASA') then //ASA has a limitation of 125chars for like statements
-      Query.SQL.Text := 'select * from string_values where s_varchar like '+GetDBTestString('''%'+Str2+'%''', Connection.DbcConnection.GetConSettings , False, 125)
+      Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str2, Connection.DbcConnection.GetConSettings , False, 125)+'%'''
     else
       if StartsWith(Connection.Protocol, 'oracle') then
-      Query.SQL.Text := 'select * from string_values where s_varchar like '+GetDBTestString('''%'+Str2+'%''', Connection.DbcConnection.GetConSettings , False, Length(Str2) div 2)
+        Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Copy(str2, 1, Length(Str2) div 2), Connection.DbcConnection.GetConSettings)+'%'''
       else
-        Query.SQL.Text := 'select * from string_values where s_varchar like '+GetDBTestString('''%'+Str2+'%''', Connection.DbcConnection.GetConSettings);
+        Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str2, Connection.DbcConnection.GetConSettings)+'%''';
     Query.Open;
     CheckEquals(True, Query.RecordCount = 1);
     Query.SQL.Text := 'select * from string_values where s_varchar like '+GetDBTestString('''%'+Str3+'%''', Connection.DbcConnection.GetConSettings);
