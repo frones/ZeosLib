@@ -291,7 +291,7 @@ begin
   FCodePages[High(FCodePages)].CP := CP;
   FCodePages[High(FCodePages)].CharWidth := CharWidth;
 
-  {$IF defined(WITH_LCONVENCODING) or (defined(MSWINDOWS) and not defined(WinCE)) or defined(DELPHI)}
+  {$IF defined(WITH_LCONVENCODING) or defined(WITH_WIDEMOVEPROCS_WITH_CP) or (defined(MSWINDOWS) and not defined(WinCE)) or defined(DELPHI)}
   if CP = $ffff then
   begin
     FCodePages[High(FCodePages)].ZAlias := GetUnicodeCodePageName;
@@ -301,11 +301,11 @@ begin
     {$IFDEF WITH_LCONVENCODING}
     FCodePages[High(FCodePages)].IsSupported := IsLConvEncodingCodePage(CP) or (Encoding = ceUTF8);
     {$ELSE}
-      {$IFDEF FPC}
+      {$IF defined(FPC) and not defined(WITH_WIDEMOVEPROCS_WITH_CP)}
       FCodePages[High(FCodePages)].IsSupported := Encoding = ceUTF8;
       {$ELSE}
       FCodePages[High(FCodePages)].IsSupported := True;
-      {$ENDIF}
+      {$IFEND}
     {$ENDIF}
   {$ELSE}
     FCodePages[High(FCodePages)].IsSupported := Encoding = ceUTF8;
@@ -329,7 +329,7 @@ begin
       FCodePages[I].ZAlias := ZAlias;
       FCodePages[I].CharWidth := CharWidth;
 
-      {$IF defined(WITH_LCONVENCODING) or (defined(MSWINDOWS) and not defined(WinCE)) or defined(DELPHI)}
+      {$IF defined(WITH_LCONVENCODING) or defined(WITH_WIDEMOVEPROCS_WITH_CP) or (defined(MSWINDOWS) and not defined(WinCE)) or defined(DELPHI)}
       if CP = $ffff then
       begin
         FCodePages[I].ZAlias := GetUnicodeCodePageName;
@@ -339,11 +339,11 @@ begin
         {$IFDEF WITH_LCONVENCODING}
         FCodePages[I].IsSupported := IsLConvEncodingCodePage(CP) or (Encoding = ceUTF8);
         {$ELSE}
-          {$IFDEF FPC}
+          {$IF defined(FPC) and not (defined(WITH_WIDEMOVEPROCS_WITH_CP) or defined(MSWINDOWS))}
           FCodePages[I].IsSupported := Encoding = ceUTF8;
           {$ELSE}
           FCodePages[I].IsSupported := True;
-          {$ENDIF}
+          {$IFEND}
         {$ENDIF}
       {$ELSE}
         FCodePages[I].IsSupported := Encoding = ceUTF8;
@@ -359,7 +359,7 @@ var
 begin
   for i := low(FCodePages) to high(FCodePages) do
     {$IFDEF FPC}
-      {$IF (defined(MSWINDOWS) and not defined(WinCE)) and not defined(WITH_LCONVENCODING)}
+      {$IF ((defined(MSWINDOWS) and not defined(WinCE)) or defined(WITH_WIDEMOVEPROCS_WITH_CP)) and not defined(WITH_LCONVENCODING)}
       if ( not ( FCodePages[i].CP = $ffff ) ) and AutoEncode then
       {$ELSE}
         {$IF defined(WITH_LCONVENCODING)}

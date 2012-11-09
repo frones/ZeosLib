@@ -694,8 +694,8 @@ begin
 
   {CheckCharEncoding}
   ConSettings := New(PZConSettings);
-  SetConSettingsFromInfo(Info);
   CheckCharEncoding(FClientCodePage, True);
+  SetConSettingsFromInfo(Info);
 
   FAutoCommit := True;
   FReadOnly := True;

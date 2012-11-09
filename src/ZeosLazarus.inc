@@ -93,6 +93,7 @@
     {$UNDEF WITH_FPC_BOF_BUG}
     {$UNDEF WITH_FPC_MODIFIED_BUG}
     {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF
+    {$DEFINE WITH_WIDEMOVEPROCS_WITH_CP}
       {$IFDEF WITH_RAWBYTESTRING}
         {$DEFINE WITH_FPC_RAWBYTE_CONVERSATION_BUG} //After string conversations to RawByteString like AnsiZoUTF8 the results are equal to original value
       {$ENDIF}

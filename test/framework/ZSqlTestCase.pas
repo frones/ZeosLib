@@ -127,6 +127,7 @@ type
     FSkip_cGet_ACP: Boolean;
     FSkip_cGet_UTF8: Boolean;
     FSkip_cGet_UTF16: Boolean;
+    FSkipSetup: Boolean;
     function GetProtocol : string;
     function GetSkipNonZeosIssues: Boolean;
   protected
@@ -182,6 +183,7 @@ type
     property Skip_cGet_ACP: Boolean read FSkip_cGet_ACP;
     property Skip_cGet_UTF8: Boolean read FSkip_cGet_UTF8;
     property Skip_cGet_UTF16: Boolean read FSkip_cGet_UTF16;
+    property SkipSetup: Boolean read FSkipSetup;
   end;
 
   {** Implements a test case which runs all active connections. }
@@ -378,7 +380,12 @@ var
         else
           if ( CPTypes[iCtrlsCPs] = 'CP_UTF16' ) and not FSkip_cGet_UTF16 then
             CloneConfig
-          else SetAutoEncodings(Current);
+          else
+            {$IF defined(MSWINDOWS) or defined(WITH_WIDEMOVEPROCS_WITH_CP) or defined(WITH_LCONVENCODING) or defined(DELPHI)}
+            SetAutoEncodings(Current);
+            {$ELSE}
+            SetCharacterSets(Current);
+            {$IFEND}
 
      end;
   end;
@@ -549,8 +556,8 @@ procedure TZAbstractSQLTestCase.CheckStringFieldType(Actual: TFieldType;
   ConSettings: PZConSettings);
 begin
   case ConSettings.CPType of
-    cGET_ACP, cCP_UTF8{$IFNDEF WITH_WIDEFIELDS},cCP_UTF16{$ENDIF}: CheckEquals(Ord(ftString), Ord(Actual), 'String-FieldType');
-    {$IFDEF WITH_WIDEFIELDS}cCP_UTF16: CheckEquals(Ord(ftWideString), Ord(Actual), 'String-FieldType');{$ENDIF}
+    cGET_ACP, cCP_UTF8{$IFNDEF WITH_WIDEFIELDS},cCP_UTF16{$ENDIF}: CheckEquals(Ord(ftString), Ord(Actual), 'String Field/Parameter-Type');
+    {$IFDEF WITH_WIDEFIELDS}cCP_UTF16: CheckEquals(Ord(ftWideString), Ord(Actual), 'String Field/Parameter-Type');{$ENDIF}
   end;
 end;
 
@@ -558,8 +565,8 @@ procedure TZAbstractSQLTestCase.CheckMemoFieldType(Actual: TFieldType;
   ConSettings: PZConSettings);
 begin
   case ConSettings.CPType of
-    cGET_ACP, cCP_UTF8{$IFNDEF WITH_WIDEFIELDS},cCP_UTF16{$ENDIF}: CheckEquals(Ord(ftMemo), Ord(Actual), 'Memo-FieldType');
-    {$IFDEF WITH_WIDEFIELDS}cCP_UTF16: CheckEquals(Ord(ftWideMemo), Ord(Actual), 'Memo-FieldType');{$ENDIF}
+    cGET_ACP, cCP_UTF8{$IFNDEF WITH_WIDEFIELDS},cCP_UTF16{$ENDIF}: CheckEquals(Ord(ftMemo), Ord(Actual), 'Memo-Field/Parmeter-Type');
+    {$IFDEF WITH_WIDEFIELDS}cCP_UTF16: CheckEquals(Ord(ftWideMemo), Ord(Actual), 'Memo-FieldParameter-Type');{$ENDIF}
   end;
 end;
 

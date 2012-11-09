@@ -103,7 +103,7 @@ type
   TZAbstractConnection = class(TComponent)
   private
     FUseMetaData: Boolean;
-    FAutoEncode: Boolean;
+    {$IFNDEF UNICODE}FAutoEncode: Boolean;{$ENDIF}
     FUTF8StringAsWideField: Boolean;
     FControlsCodePage: TZControlsCodePage;
     function GetVersion: string;
@@ -530,19 +530,17 @@ begin
       Value.Values['codepage'] := FClientCodepage;
 
     { check autoencodestrings }
-    {.$IF defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(WITH_LIBICONV) and not defined(UNICODE)}
-    {$IFNDEF UNICODE}
+    {$IF (defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(WITH_WIDEMOVEPROCS_WITH_CP)) and not defined(UNICODE)}
     if Connected then
       DbcConnection.AutoEncodeStrings := Value.Values['AutoEncodeStrings'] = 'ON';
     FAutoEncode := Value.Values['AutoEncodeStrings'] = 'ON';
     {$ELSE}
-      {.$IFDEF UNICODE}
+      {$IFDEF UNICODE}
       Value.Values['AutoEncodeStrings'] := 'ON';
-      {.$ELSE}
-      //Value.Values['AutoEncodeStrings'] := '';
-      {.$ENDIF}
-    {.$IFEND}
-    {$ENDIF}
+      {$ELSE}
+      Value.Values['AutoEncodeStrings'] := '';
+      {$ENDIF}
+    {$IFEND}
 
     if Value.IndexOf('controls_cp') = -1 then
       {$IFDEF UNICODE}
@@ -565,11 +563,11 @@ begin
         FControlsCodePage := cCP_UTF16;
       end;
       {$ELSE}
-        {$IFNDEF WITH_WIDEFIELDS}
+        {$IFNDEF WITH_WIDEFIELDS} //old FPC and D7
         if Value.values['controls_cp'] = 'CP_UTF16' then
         begin
           FControlsCodePage := cGET_ACP;
-          Value.values['controls_cp'] := 'GET_ACP';
+          Value.values['controls_cp'] := {$IFDEF DLEPHI}'GET_ACP'{$ELSE}'CP_UTF8'{$ENDIF};
         end;
         {$ELSE}
         if Value.values['controls_cp'] = 'GET_ACP' then
@@ -1492,24 +1490,24 @@ begin
   {$IFDEF UNICODE}
   Result := True;
   {$ELSE}
-    {.$IF defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(WITH_LIBICONV)}
-    if Self.Connected then
+    {$IF defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(WITH_WIDEMOVEPROCS_WITH_CP)}
+    if Connected then
     begin
       Result := DbcConnection.GetConSettings.AutoEncode;
       FAutoEncode := Result;
     end
     else
       Result := FAutoEncode;
-    {.$ELSE}
-    //Result := False;
-    {.$IFEND}
+    {$ELSE}
+    Result := False;
+    {$IFEND}
   {$ENDIF}
 end;
 
 procedure TZAbstractConnection.SetAutoEncode(Value: Boolean);
 begin
   {$IFNDEF UNICODE}
-    //{$IF defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(WITH_LIBICONV)}
+    {$IF defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(WITH_WIDEMOVEPROCS_WITH_CP)}
     if Value then
       FURL.Properties.Values['AutoEncodeStrings'] := 'ON'
     else
@@ -1524,9 +1522,9 @@ begin
         Connected := True;
       end;
     end;
-    {.$ELSE}
-    //FURL.Properties.Values['AutoEncodeStrings'] := '';
-    {.$IFEND}
+    {$ELSE}
+    FURL.Properties.Values['AutoEncodeStrings'] := '';
+    {$IFEND}
   {$ENDIF}
 end;
 

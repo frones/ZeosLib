@@ -682,7 +682,11 @@ begin
       ConSettings.CPType := cCP_UTF16;
     ConSettings.AutoEncode := True;
     {$ELSE}
-    ConSettings.AutoEncode := Info.Values['AutoEncodeStrings'] = 'ON'; //compatibitity Option for existing Applications;
+      {$IF defined(MSWINDOWS) or defined(WITH_WIDEMOVEPROCS_WITH_CP) or defined(WITH_LCONVENCODING)}
+      ConSettings.AutoEncode := Info.Values['AutoEncodeStrings'] = 'ON'; //compatibitity Option for existing Applications;
+      {$ELSE}
+      ConSettings.AutoEncode := False;
+      {$IFEND}
     if Info.values['controls_cp'] = 'GET_ACP' then
     begin
       ConSettings.CPType := cGET_ACP;
@@ -697,9 +701,24 @@ begin
       else
         if Info.values['controls_cp'] = 'CP_UTF16' then
         begin
+          {$IF defined(MSWINDOWS) or defined(WITH_WIDEMOVEPROCS_WITH_CP) or defined(WITH_LCONVENCODING)}
           ConSettings.CPType := {$IFDEF WITH_WIDEFIELDS}cCP_UTF16{$ELSE}cCP_UTF8{$ENDIF};
           ConSettings.CTRL_CP := zCP_UTF8;
           ConSettings.AutoEncode := True;
+          {$ELSE}
+          if ConSettings.ClientCodePage.Encoding = ceUTF8 then
+          begin
+            ConSettings.CPType := {$IFDEF WITH_WIDEFIELDS}cCP_UTF16{$ELSE}cCP_UTF8{$ENDIF};
+            ConSettings.CTRL_CP := zCP_UTF8;
+            ConSettings.AutoEncode := True;
+          end
+          else
+          begin
+            ConSettings.CPType := cCP_UTF8;
+            ConSettings.CTRL_CP := zCP_UTF8;
+            ConSettings.AutoEncode := False;
+          end;
+          {$IFEND}
         end
         else // nothing was found set defaults
         begin

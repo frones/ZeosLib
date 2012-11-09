@@ -115,6 +115,7 @@ const
   SKIP_CGET_ACP_KEY        = 'skip.cget_acp';
   SKIP_CCP_UTF8_KEY        = 'skip.ccp_utf8';
   SKIP_CCP_UTF16_KEY       = 'skip.ccp_utf16';
+  SKIP_SETUP_KEY           = 'skip.setup';
 
 const
   { Names of the connection configuration keys. }

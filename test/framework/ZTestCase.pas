@@ -80,7 +80,6 @@ type
     FDecimalSeparator: Char;
     FSuppressTestOutput: Boolean;
     FSkipTest: Boolean;
-    function GetSkipTest: Boolean;
   protected
     {$IFDEF FPC}
     frefcount : longint;
@@ -105,6 +104,7 @@ type
     procedure LoadConfiguration; virtual;
 
     { Configuration properties accessing methods. }
+    function GetSkipTest: Boolean; virtual;
     function ReadProperty(const Group, Key, Default: string): string;
     function ReadGroupProperty(const Key, Default: string): string;
     function ReadInheritProperty(const Key, Default: string): string;
