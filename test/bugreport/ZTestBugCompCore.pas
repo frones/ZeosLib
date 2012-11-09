@@ -1611,20 +1611,23 @@ begin
 
   Connection := Self.CreateDatasetConnection;
   Query := TZQuery.Create(nil);
-  Query.Connection := Connection;
-  Query.SQL.Text := 'Insert into number_values(n_id, n_money) values(999999,643.11)';
-  Query.ExecSQL;
-
   try
-    Query.SQL.Text := 'select n_money from number_values where n_id=999999';
-    Query.Open;
-    // uses format to avoid local separator differences 
-    CheckEquals(trim(Format('%8.2f', [643.11])),Query.Fields[0].AsString);
+    Query.Connection := Connection;
+    Query.SQL.Text := 'Insert into number_values(n_id, n_money) values(999999,643.11)';
+    Query.ExecSQL;
 
-    Query.Close;
+    try
+      Query.SQL.Text := 'select n_money from number_values where n_id=999999';
+      Query.Open;
+      // uses format to avoid local separator differences
+      CheckEquals(trim(Format('%8.2f', [643.11])),Query.Fields[0].AsString);
+
+      Query.Close;
+    finally
+      Query.SQL.Text := 'delete from number_values where n_id=999999';
+      Query.execSql;
+    end;
   finally
-    Query.SQL.Text := 'delete from number_values where n_id=999999';
-    Query.execSql;
     Query.Free;
     Connection.Free;
   end;

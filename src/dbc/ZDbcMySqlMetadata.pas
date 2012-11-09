@@ -1377,7 +1377,7 @@ begin
           begin
             Result.MoveToInsertRow;
             Privilege := Trim(PrivilegesList.Strings[I]);
-            Result.UpdateString(1, LCatalog);
+            Result.UpdateString(1, Database);
             Result.UpdateNull(2);
             Result.UpdateString(3, Table);
             Result.UpdateString(4, ColumnName);

@@ -627,7 +627,6 @@ function TZPostgreSQLResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
   BlobOid: Oid;
   Stream: TStream;
-  Connection: IZConnection;
   WS: ZWideString;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -637,7 +636,6 @@ begin
     raise EZSQLException.Create(SRowDataIsNotAvailable);
 {$ENDIF}
 
-  Connection := Statement.GetConnection;
   if (GetMetadata.GetColumnType(ColumnIndex) = stBinaryStream)
     and (Statement.GetConnection as IZPostgreSQLConnection).IsOidAsBlob then
   begin
