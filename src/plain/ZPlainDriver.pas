@@ -225,6 +225,7 @@ var
   SQLTokens: TZTokenDynArray;
   i: Integer;
 begin
+  Result := '';
   if ConSettings.AutoEncode then
   begin
     SQLTokens := FTokenizer.TokenizeEscapeBufferToList(SQL); //Disassembles the Query

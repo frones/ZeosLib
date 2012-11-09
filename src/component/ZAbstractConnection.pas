@@ -530,17 +530,19 @@ begin
       Value.Values['codepage'] := FClientCodepage;
 
     { check autoencodestrings }
-    {$IF defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(WITH_LIBICONV) and not defined(UNICODE)}
+    {.$IF defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(WITH_LIBICONV) and not defined(UNICODE)}
+    {$IFNDEF UNICODE}
     if Connected then
       DbcConnection.AutoEncodeStrings := Value.Values['AutoEncodeStrings'] = 'ON';
     FAutoEncode := Value.Values['AutoEncodeStrings'] = 'ON';
     {$ELSE}
-      {$IFDEF UNICODE}
+      {.$IFDEF UNICODE}
       Value.Values['AutoEncodeStrings'] := 'ON';
-      {$ELSE}
-      Value.Values['AutoEncodeStrings'] := '';
-      {$ENDIF}
-    {$IFEND}
+      {.$ELSE}
+      //Value.Values['AutoEncodeStrings'] := '';
+      {.$ENDIF}
+    {.$IFEND}
+    {$ENDIF}
 
     if Value.IndexOf('controls_cp') = -1 then
       {$IFDEF UNICODE}
@@ -1490,7 +1492,7 @@ begin
   {$IFDEF UNICODE}
   Result := True;
   {$ELSE}
-    {$IF defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(WITH_LIBICONV)}
+    {.$IF defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(WITH_LIBICONV)}
     if Self.Connected then
     begin
       Result := DbcConnection.GetConSettings.AutoEncode;
@@ -1498,16 +1500,16 @@ begin
     end
     else
       Result := FAutoEncode;
-    {$ELSE}
-    Result := False;
-    {$IFEND}
+    {.$ELSE}
+    //Result := False;
+    {.$IFEND}
   {$ENDIF}
 end;
 
 procedure TZAbstractConnection.SetAutoEncode(Value: Boolean);
 begin
   {$IFNDEF UNICODE}
-    {$IF defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(WITH_LIBICONV)}
+    //{$IF defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(WITH_LIBICONV)}
     if Value then
       FURL.Properties.Values['AutoEncodeStrings'] := 'ON'
     else
@@ -1522,9 +1524,9 @@ begin
         Connected := True;
       end;
     end;
-    {$ELSE}
-    FURL.Properties.Values['AutoEncodeStrings'] := '';
-    {$IFEND}
+    {.$ELSE}
+    //FURL.Properties.Values['AutoEncodeStrings'] := '';
+    {.$IFEND}
   {$ENDIF}
 end;
 
