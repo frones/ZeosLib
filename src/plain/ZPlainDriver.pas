@@ -70,7 +70,7 @@ type
     {EgonHugeist:
       Why this here? -> No one else then Plaindriver knows which Characterset
       is supported. Here i've made a intervention in dependency of used Compiler.}
-    function GetSupportedClientCodePages(const {$IFDEF FPC}AutoEncode,{$ENDIF} IgnoreUnsupported: Boolean): TStringDynArray;
+    function GetSupportedClientCodePages(const {$IFNDEF UNICODE}AutoEncode,{$ENDIF} IgnoreUnsupported: Boolean): TStringDynArray;
     function ValidateCharEncoding(const CharacterSetName: String; const DoArrange: Boolean = False): PZCodePage; overload;
     function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
     function ZDbcString(const Ansi: ZAnsiString; ConSettings: PZConSettings): String;
@@ -116,7 +116,7 @@ type
     destructor Destroy; override;
     function GetProtocol: string; virtual; abstract;
     function GetDescription: string; virtual; abstract;
-    function GetSupportedClientCodePages(const {$IFDEF FPC}AutoEncode,{$ENDIF} IgnoreUnsupported: Boolean): TStringDynArray;
+    function GetSupportedClientCodePages(const {$IFNDEF UNICODE}AutoEncode,{$ENDIF} IgnoreUnsupported: Boolean): TStringDynArray;
     procedure Initialize(const Location: String = ''); virtual;
 
     property Loader: TZNativeLibraryLoader read FLoader;
@@ -132,7 +132,7 @@ type
 
 implementation
 
-uses ZSysUtils, SysUtils, ZEncoding{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+uses SysUtils, ZEncoding{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 
 {TZAbstractPlainDriver}
@@ -219,6 +219,9 @@ begin
     ValidateCharEncoding(Result^.ZAlias); //recalls em selves
 end;
 
+{$IFDEF FPC}
+  {$HINTS OFF}
+{$ENDIF}
 function TZAbstractPlainDriver.GetPrepreparedSQL(Handle: Pointer;
   const SQL: String; ConSettings: PZConSettings; out LogSQL: String): ZAnsiString;
 var
@@ -268,12 +271,14 @@ begin
   Result := ZDbcUnicodeString(Outbuffer);
   {$ENDIF}
 end;
-
 function TZAbstractPlainDriver.EscapeString(Handle: Pointer;
   const Value: ZAnsiString; ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString;
 begin
   Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(Value, #39);
 end;
+{$IFDEF FPC}
+  {$HINTS ON}
+{$ENDIF}
 
 function TZAbstractPlainDriver.GetTokenizer: IZTokenizer;
 begin
@@ -290,26 +295,10 @@ begin
   FCodePages[High(FCodePages)].Encoding := Encoding;
   FCodePages[High(FCodePages)].CP := CP;
   FCodePages[High(FCodePages)].CharWidth := CharWidth;
+  FCodePages[High(FCodePages)].ZAlias := ZAlias;
 
-  {$IF defined(WITH_LCONVENCODING) or defined(WITH_WIDEMOVEPROCS_WITH_CP) or (defined(MSWINDOWS) and not defined(WinCE)) or defined(DELPHI)}
   if CP = $ffff then
-  begin
     FCodePages[High(FCodePages)].ZAlias := GetUnicodeCodePageName;
-    FCodePages[High(FCodePages)].IsSupported := False;
-  end
-  else
-    {$IFDEF WITH_LCONVENCODING}
-    FCodePages[High(FCodePages)].IsSupported := IsLConvEncodingCodePage(CP) or (Encoding = ceUTF8);
-    {$ELSE}
-      {$IF defined(FPC) and not defined(WITH_WIDEMOVEPROCS_WITH_CP)}
-      FCodePages[High(FCodePages)].IsSupported := Encoding = ceUTF8;
-      {$ELSE}
-      FCodePages[High(FCodePages)].IsSupported := True;
-      {$IFEND}
-    {$ENDIF}
-  {$ELSE}
-    FCodePages[High(FCodePages)].IsSupported := Encoding = ceUTF8;
-  {$IFEND}
 end;
 
 procedure TZAbstractPlainDriver.ResetCodePage(const OldID: Integer;
@@ -329,47 +318,40 @@ begin
       FCodePages[I].ZAlias := ZAlias;
       FCodePages[I].CharWidth := CharWidth;
 
-      {$IF defined(WITH_LCONVENCODING) or defined(WITH_WIDEMOVEPROCS_WITH_CP) or (defined(MSWINDOWS) and not defined(WinCE)) or defined(DELPHI)}
       if CP = $ffff then
-      begin
         FCodePages[I].ZAlias := GetUnicodeCodePageName;
-        FCodePages[I].IsSupported := False;
-      end
-      else
-        {$IFDEF WITH_LCONVENCODING}
-        FCodePages[I].IsSupported := IsLConvEncodingCodePage(CP) or (Encoding = ceUTF8);
-        {$ELSE}
-          {$IF defined(FPC) and not (defined(WITH_WIDEMOVEPROCS_WITH_CP) or defined(MSWINDOWS))}
-          FCodePages[I].IsSupported := Encoding = ceUTF8;
-          {$ELSE}
-          FCodePages[I].IsSupported := True;
-          {$IFEND}
-        {$ENDIF}
-      {$ELSE}
-        FCodePages[I].IsSupported := Encoding = ceUTF8;
-      {$IFEND}
       Break;
     end;
 end;
 
 function TZAbstractPlainDriver.GetSupportedClientCodePages(
-  const {$IFDEF FPC}AutoEncode,{$ENDIF} IgnoreUnsupported: Boolean): TStringDynArray;
+  const {$IFNDEF UNICODE}AutoEncode,{$ENDIF} IgnoreUnsupported: Boolean): TStringDynArray;
 var
   I: Integer;
 begin
+  SetLength(Result, 0);
   for i := low(FCodePages) to high(FCodePages) do
     {$IFDEF FPC}
-      {$IF ((defined(MSWINDOWS) and not defined(WinCE)) or defined(WITH_WIDEMOVEPROCS_WITH_CP)) and not defined(WITH_LCONVENCODING)}
-      if ( not ( FCodePages[i].CP = $ffff ) ) and AutoEncode then
+      {$IFDEF WITH_LCONVENCODING} //Lazarus only
+      if ( IsLConvEncodingCodePage(FCodePages[i].CP) and AutoEncode ) or
+        ( FCodePages[i].Encoding = ceUTF8 ) or IgnoreUnsupported  then
       {$ELSE}
-        {$IF defined(WITH_LCONVENCODING)}
-        if IsLConvEncodingCodePage(FCodePages[i].CP) and AutoEncode then
+        {$IF (defined(MSWINDOWS) and not defined(WinCE)) or defined(WITH_WIDEMOVEPROCS_WITH_CP)}
+        if ( ( FCodePages[i].CP <> $ffff ) or IgnoreUnsupported ) and
+           ( ( AutoEncode and ( FCodePages[i].Encoding = ceAnsi ) ) or IgnoreUnsupported  or
+           ( FCodePages[i].Encoding = ceUTF8 ) or ( ZEncoding.ZDefaultSystemCodePage = FCodePages[i].CP) ) then
         {$ELSE}
-        if ( FCodePages[i].IsSupported ) or ( IgnoreUnsupported ) then
+        if ( FCodePages[i].Encoding = ceUTF8 ) or IgnoreUnsupported then
         {$IFEND}
-      {$IFEND}
+      {$ENDIF}
     {$ELSE}
-    if ( FCodePages[i].IsSupported ) or ( IgnoreUnsupported ) then
+      {$IFDEF UNICODE}
+      if ( FCodePages[i].CP <> $ffff ) or ( IgnoreUnsupported ) then
+      {$ELSE}
+      if ( ( FCodePages[i].CP <> $ffff ) or IgnoreUnsupported ) and
+         ( ( AutoEncode and ( FCodePages[i].Encoding = ceAnsi ) ) or IgnoreUnsupported  or
+         ( FCodePages[i].Encoding = ceUTF8 ) or ( ZEncoding.ZDefaultSystemCodePage = FCodePages[i].CP) ) then
+      {$ENDIF}
     {$ENDIF}
     begin
       SetLength(Result, Length(Result)+1);

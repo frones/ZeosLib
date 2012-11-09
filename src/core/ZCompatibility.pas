@@ -183,7 +183,6 @@ type
     Encoding: TZCharEncoding; //The Type of String-Translation handling
     CP:  Word;                //The CodePage the AnsiString must have to
     ZAlias: String;           //A possible (saver?) CharacterSet which is more Zeos compatible... If it's empty it will be ignored!!!
-    IsSupported: Boolean;     //Is the choosen CP supported?
   end;
 
   PZConSettings = ^TZConSettings;
@@ -224,7 +223,7 @@ type
 const
   ClientCodePageDummy: TZCodepage =
     (Name: ''; ID: 0; CharWidth: 1; Encoding: ceAnsi;
-      CP: $ffff; ZAlias: ''; IsSupported: True);
+      CP: $ffff; ZAlias: '');
 
   ConSettingsDummy: TZConSettings =
     (AutoEncode: False;
@@ -506,15 +505,11 @@ EgonHugeist:
   Now use the new Functions to get encoded Strings instead of
   hard-Coded Compiler-Directives or UTF8Encode/Decode:
 
-  function ZDbcString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
   function ZPlainString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
 
   These functions do auto arrange the in/out-coming AnsiStrings in
-  dependency of the used CharacterSet and the used Compiler whithout
-  String-DataLoss!!.
-  So my thouths where Use only these two function for all
-  String/Ansi/Unicode-handlings. Which means in full effect no more Directives
-  in Zeos Source-Code then here to do this Handling
+  dependency of the used CharacterSet and the database uses whithout
+  String-DataLoss!! (if possible -> UTF8 is save).
   @param AStr: the String which has to be handled.
   @param Encoding is set to Default-Character-Set we've choosen bevor (on conecting)
     Change this if you need some Transtations to a specified Encoding.

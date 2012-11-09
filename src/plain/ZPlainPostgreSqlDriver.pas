@@ -1686,7 +1686,7 @@ begin
   AddCodePage('WIN1250', Ord(csWIN1250), ceAnsi, zCP_WIN1250); { Windows CP1250 	Central European }
   ResetCodePage(Ord(csWIN), 'WIN1251', Ord(csWIN1251), ceAnsi, zCP_WIN1251); { Windows CP1251 	Cyrillic } //No longer in use
   AddCodePage('WIN1252', Ord(csWIN1252), ceAnsi, zCP_WIN1252); { Windows CP1252 	Western European }
-  ResetCodePage(Ord(csTCVN), 'WIN1258', Ord(csWIN1258)); { Windows CP1258 	Vietnamese } //No longer in use
+  ResetCodePage(Ord(csTCVN), 'WIN1258', Ord(csWIN1258),ceAnsi, zCP_WIN1258); { Windows CP1258 	Vietnamese } //No longer in use
 
   { Version 8.3 }
   {MultiByte}

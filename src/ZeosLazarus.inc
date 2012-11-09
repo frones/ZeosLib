@@ -78,6 +78,7 @@
     {$DEFINE WITH_FPC_BOF_BUG} //http://bugs.freepascal.org/view.php?id=22377
     {$DEFINE WITH_FPC_MODIFIED_BUG} //http://bugs.freepascal.org/view.php?id=22381
     {$DEFINE WITHOUT_VARBYTESASSTRING}
+    {$DEFINE WITH_PWIDECHAR_TOWIDESTRING}
   {$ELSE}
     {$FATAL Versions Older than 2.2.4 are not supported!}
   {$ENDIF}
@@ -98,7 +99,6 @@
         {$DEFINE WITH_FPC_RAWBYTE_CONVERSATION_BUG} //After string conversations to RawByteString like AnsiZoUTF8 the results are equal to original value
       {$ENDIF}
     {$DEFINE WITH_DEFAULTSYSTEMCODEPAGE}
-    {$DEFINE WITH_PWIDECHAR_TOWIDESTRING}
   {$IFEND}
 
   // todo
@@ -110,12 +110,7 @@
   //   OLDFPC      : IFDEF FPC's so old that I can't remember which version are put under IFDEF OLDFPC. In time these
   //                   blocks can be killed.
 
-{$IF defined(WITH_LCONVENCODING) and defined(MSWINDOWS)}
+{$IF defined(WITH_LCONVENCODING) and (defined(MSWINDOWS) or defined(WITH_WIDEMOVEPROCS_WITH_CP))}
   {$UNDEF WITH_LCONVENCODING}
 {$IFEND}
 
-//{$IFDEF WITH_LIBICONV}
-//  {$IF defined(WITH_LCONVENCODING) and defined(MSWINDOWS)}
-//    {$UNDEF WITH_LIBICONV}
-//  {$IFEND}
-//{$ENDIF}
