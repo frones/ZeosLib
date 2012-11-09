@@ -164,7 +164,7 @@ type
   ZWideString = {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF};
 
   {** Defines the Target Ansi codepages for the Controls }
-  TZControlsCodePage = ({$IFDEF DELPHI12_UP}cCP_UTF16, cCP_UTF8, cGET_ACP{$ELSE}{$IFDEF FPC}cCP_UTF8, cCP_UTF16, cGET_ACP{$ELSE}cGET_ACP, cCP_UTF8, cCP_UTF16{$ENDIF}{$ENDIF});
+  TZControlsCodePage = ({$IFDEF UNICODE}cCP_UTF16, cCP_UTF8, cGET_ACP{$ELSE}{$IFDEF FPC}cCP_UTF8, cCP_UTF16, cGET_ACP{$ELSE}cGET_ACP, cCP_UTF8, cCP_UTF16{$ENDIF}{$ENDIF});
 
   TZCharEncoding = (
     ceDefault,  //Internal switch for the two Functions below do not use it as a CodePage-declaration!
@@ -195,12 +195,6 @@ type
     {$IFDEF WITH_LCONVENCODING}
     PlainConvertFunc: TConvertEncodingFunction;
     DbcConvertFunc: TConvertEncodingFunction;
-    {$ENDIF}
-    {$IFDEF WITH_LIBICONV}
-    ZDbcString: iconv_t;
-    ZDbcUnicodeString: iconv_t;
-    ZPlainString: iconv_t;
-    ZPlainUnicodeString: iconv_t;
     {$ENDIF}
   end;
 
@@ -234,13 +228,14 @@ const
 
   ConSettingsDummy: TZConSettings =
     (AutoEncode: False;
-     CPType: {$IFDEF DELPHI}{$IFDEF DELPHI12_UP}cCP_UTF16{$ELSE}cGET_ACP{$ENDIF}{$ELSE}cCP_UTF8{$ENDIF};
-     CTRL_CP: $ffff;
-     ClientCodePage: @ClientCodePageDummy;
-     {$IFDEF WITH_LCONVENCODING}
-     PlainConvertFunc: @NoConvert;
-     DbcConvertFunc: @NoConvert
-     {$ENDIF});
+      CPType: {$IFDEF DELPHI}{$IFDEF UNICODE}cCP_UTF16{$ELSE}cGET_ACP{$ENDIF}{$ELSE}cCP_UTF8{$ENDIF};
+      CTRL_CP: $ffff;
+      ClientCodePage: @ClientCodePageDummy;
+      {$IFDEF WITH_LCONVENCODING}
+      PlainConvertFunc: @NoConvert;
+      DbcConvertFunc: @NoConvert;
+      {$ENDIF}
+    );
 
 {$IF not Declared(DetectUTF8Encoding)}
 {$DEFINE ZDetectUTF8Encoding}
@@ -397,14 +392,14 @@ function TZCodePagedObject.ZDbcString(const Ansi: ZAnsiString;
 var TempAnsi: ZAnsiString;
 {$ENDIF}
 begin
-  {$IFNDEF DELPHI12_UP}
+  {$IFNDEF UNICODE}
   if not ConSettings.AutoEncode then
     Result := Ansi
   else
   {$ENDIF}
     case ConSettings.ClientCodePage.Encoding of
       ceUTF8:
-        {$IFDEF DELPHI12_UP}
+        {$IFDEF UNICODE}
           Result := UTF8ToString(Ansi);
         {$ELSE}
           if ( ConSettings.CPType in [cCP_UTF8, cCP_UTF16] ) then
@@ -413,56 +408,35 @@ begin
             {$IFDEF WITH_LCONVENCODING}
             Result := ConSettings.DbcConvertFunc(Ansi);
             {$ELSE}
-              {$IFDEF WITH_LIBICONV}
-              Result := UTF8ToAnsi(Ansi);
+              {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+              begin
+                //avoid string conversations -> move memory
+                TempAnsi := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP);
+                SetLength(Result, Length(TempAnsi));
+                Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
+              end;
               {$ELSE}
-                {$IF defined(DELPHI) or defined(MSWINDOWS)}
-                  {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
-                  begin
-                    //stupid workaround to cut of the origin tracking of AStr
-                    //on the other hand Result = AStr after some more procs
-                    TempAnsi := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP);
-                    SetLength(Result, Length(TempAnsi));
-                    Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
-                  end
-                  {$ELSE}
-                  Result := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP);
-                  {$ENDIF}
-                {$ELSE}
-                Result := UTF8ToAnsi(Ansi);
-                {$IFEND}
+              Result := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP);
               {$ENDIF}
             {$ENDIF}
         {$ENDIF}
       else
-        {$IFDEF DELPHI12_UP}
-          Result := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP);
+        {$IFDEF UNICODE}
+        Result := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP);
         {$ELSE}
           if ConSettings.AutoEncode then
             {$IFDEF WITH_LCONVENCODING}
             Result := ConSettings.DbcConvertFunc(Ansi)
             {$ELSE}
-              {$IFDEF WITH_LIBICONV}
-              Result := Ansi;
+              {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+              begin
+                //avoid string conversations -> move memory
+                TempAnsi := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP);
+                SetLength(Result, Length(TempAnsi));
+                Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
+              end
               {$ELSE}
-                {$IF defined(DELPHI) or defined(MSWINDOWS)}
-                  {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
-                  begin
-                    //stupid workaround to cut of the origin tracking of AStr
-                    //on the other hand Result = AStr after some more procs
-                    TempAnsi := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP);
-                    SetLength(Result, Length(TempAnsi));
-                    Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
-                  end
-                  {$ELSE}
-                  Result := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP)
-                  {$ENDIF}
-                {$ELSE}
-                if ( ConSettings.CPType in [cCP_UTF8, cCP_UTF16] ) then
-                  Result := AnsiToUTF8(Ansi)
-                else
-                  Result := Ansi
-                {$IFEND}
+              Result := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP)
               {$ENDIF}
             {$ENDIF}
           else
@@ -484,7 +458,7 @@ begin
   else
     UseEncoding := Encoding;
 
-  {$IFNDEF DELPHI12_UP}
+  {$IFNDEF UNICODE}
   if not FConSettings.AutoEncode and ( FConSettings.ClientCodePage^.Encoding = UseEncoding ) then
     Result := Ansi
   else
@@ -499,33 +473,32 @@ end;
 
 function TZCodePagedObject.ZDbcUnicodeString(const AStr: ZAnsiString): ZWideString;
 begin
-  {$IF defined(DELPHI) or defined(MSWINDOWS)}
+  {$IFNDEF WITH_LCONVENCODING}
   Result := AnsiToWide(AStr, FConSettings.ClientCodePage.CP);
   {$ELSE}
     case Consettings.ClientCodePage.Encoding of
       ceAnsi:
-        {$IFDEF WITH_LCONVENCODING}
-          Result := UTF8Decode(ConSettings.DbcConvertFunc(AStr)); //!!!!SLOW Job don twice (Ansi up to wide to UTF8 to Wide)
-        {$ELSE}
-          Result := UTF8Decode(AnsiToUTF8(AStr)); //!!!!! NOT SAFE
-        {$ENDIF}
+        Result := UTF8Decode(ConSettings.DbcConvertFunc(AStr)); //!!!!SLOW Job don twice (Ansi up to wide to UTF8 to Wide)
       else
         Result := UTF8ToString(AStr)
     end;
-  {$IFEND}
+  {$ENDIF}
 end;
 
 function TZCodePagedObject.ZDbcUnicodeString(const AStr: ZAnsiString;
   const FromCP: Word): ZWideString;
 begin
-  {$IF defined(DELPHI) or defined(MSWINDOWS)}
+  {$IFNDEF WITH_LCONVENCODING}
   Result := AnsiToWide(AStr, FromCP);
   {$ELSE}
   if FromCP = zCP_UTF8 then
     Result := UTF8Decode(AStr)
   else
-    Result := WideString(AStr); //default WideString cast, can't convert
-  {$IFEND}
+    if FromCP = ConSettings.ClientCodePage.CP then
+      Result := UTF8Decode(ConSettings.DbcConvertFunc(AStr))
+    else
+      Result := WideString(AStr); //default WideString cast, can't convert
+  {$ENDIF}
 end;
 
 {**
@@ -557,7 +530,7 @@ var
 begin
   case ConSettings.ClientCodePage.Encoding of
     ceUTF8:
-      {$IFDEF DELPHI12_UP}
+      {$IFDEF UNICODE}
       Result := UTF8Encode(AStr);
       {$ELSE}
         if ConSettings.AutoEncode then
@@ -565,39 +538,33 @@ begin
             Result := AStr
           else
             if ( ConSettings.CTRL_CP = zCP_UTF8 ) or (ConSettings.CTRL_CP = zCP_UTF8) then //avoid "no success" for expected Codepage UTF8 of the Controls
-            {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
-            begin
-              //stupid workaround to cut of the origin tracking of AStr
-              //on the other hand Result = AStr after some more procs
-              TempAnsi := AnsiToUTF8(AStr);
-              SetLength(Result, Length(TempAnsi));
-              Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
-            end
-            {$ELSE}
-              Result := AnsiToUTF8(AStr)
-            {$ENDIF}
-            else
-              {$IF defined(DELPHI) or defined(MSWINDOWS)}
-                {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
-                begin
-                  //stupid workaround to cut of the origin tracking of AStr
-                  //on the other hand Result = AStr after some more procs
-                  TempAnsi := StringToAnsiEx(AStr, ConSettings.CTRL_CP, zCP_UTF8);
-                  SetLength(Result, Length(TempAnsi));
-                  Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
-                end
-                {$ELSE}
-                Result := StringToAnsiEx(AStr, ConSettings.CTRL_CP, zCP_UTF8)
-                {$ENDIF}
+              {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+              begin
+                //avoid string conversations -> move memory
+                TempAnsi := AnsiToUTF8(AStr);
+                SetLength(Result, Length(TempAnsi));
+                Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
+              end
               {$ELSE}
-              Result := AnsiToUTF8(AStr) //actually i can't convert anything here
-              {$IFEND}
+              Result := AnsiToUTF8(AStr)
+              {$ENDIF}
+            else
+              {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+              begin
+                //avoid string conversations -> move memory
+                TempAnsi := StringToAnsiEx(AStr, ConSettings.CTRL_CP, zCP_UTF8);
+                SetLength(Result, Length(TempAnsi));
+                Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
+              end
+              {$ELSE}
+              Result := StringToAnsiEx(AStr, ConSettings.CTRL_CP, zCP_UTF8)
+              {$ENDIF}
         else
           Result := AStr;
       {$ENDIF}
     else
       begin
-      {$IFDEF DELPHI12_UP}
+      {$IFDEF UNICODE}
         Result := StringToAnsiEx(AStr, ConSettings.ClientCodePage.CP);
       {$ELSE}
         if ConSettings.AutoEncode then
@@ -616,11 +583,16 @@ begin
               {$IFDEF WITH_LCONVENCODING}
               Result := ConSettings.PlainConvertFunc(AStr);
               {$ELSE}
-                {$IF defined(DELPHI) or defined(MSWINDOWS)}
-                Result := StringToAnsiEx(AStr, zCP_UTF8, ConSettings.ClientCodePage.CP);
+                {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+                begin
+                  //avoid string conversations -> move memory
+                  TempAnsi := StringToAnsiEx(AStr, zCP_UTF8, ConSettings.ClientCodePage.CP);
+                  SetLength(Result, Length(TempAnsi));
+                  Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
+                end;
                 {$ELSE}
-                Result := AStr;
-                {$IFEND}
+                Result := StringToAnsiEx(AStr, zCP_UTF8, ConSettings.ClientCodePage.CP);
+                {$ENDIF}
               {$ENDIF}
           end
         else
@@ -643,7 +615,7 @@ begin
   else
     UseEncoding := Encoding;
 
-  {$IFNDEF DELPHI12_UP}
+  {$IFNDEF UNICODE}
   if not FConSettings.AutoEncode and ( FConSettings.ClientCodePage^.Encoding = UseEncoding ) then
     Result := AStr
   else
@@ -681,20 +653,7 @@ begin
   {$IFDEF WITH_LCONVENCODING}
   Result := ConSettings.PlainConvertFunc(UTF8Encode(AStr));
   {$ELSE}
-    {$IF defined(DELPHI) or defined(MSWINDOWS)}
-    Result := WideToAnsi(AStr, ConSettings.ClientCodePage.CP);
-    {$ELSE}
-      case ConSettings.ClientCodePage.Encoding of
-        ceAnsi:
-          {$IFDEF WITH_LIBICONV}
-          Result := ZAnsiString(AStr);
-          {$ELSE}
-          Result := ZAnsiString(AStr);
-          {$ENDIF}
-        else
-          Result := UTF8Encode(AStr);
-      end;
-    {$IFEND}
+  Result := WideToAnsi(AStr, ConSettings.ClientCodePage.CP);
   {$ENDIF}
 end;
 
@@ -706,19 +665,7 @@ begin
     {$IFDEF WITH_LCONVENCODING}
     Result := UTF8ToString(AStr);
     {$ELSE}
-      {$IF defined(DELPHI) or defined(MSWINDOWS)}
-      Result := AnsiToWide(AStr, FConSettings.CTRL_CP);
-      {$ELSE}
-      case Consettings.CPType of
-        cGET_ACP:
-          if FConSettings.CTRL_CP = zCP_UTF8 then
-            UTF8Decode(AStr)
-          else
-            Result := WideString(AStr); //default Ansi to Wide cast for all comilers
-        else
-          Result := UTF8Decode(AStr);
-      end;
-      {$IFEND}
+    Result := AnsiToWide(AStr, FConSettings.CTRL_CP);
     {$ENDIF}
   {$ENDIF}
 end;
